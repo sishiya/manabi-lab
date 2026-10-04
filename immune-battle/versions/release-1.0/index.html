@@ -1,0 +1,197 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>免疫のたたかい</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="microWrap">
+      <canvas id="micro" aria-label="感染した場所の断面をミクロの大きさで見る画面。細胞や病原体をタップすると説明が出る"></canvas>
+      <div id="zoomCtl" role="group" aria-label="ズーム（ホイール・ピンチでも）"><button id="zoomOut" aria-label="引いて見る">−</button><div id="zoomStops"></div><button id="zoomIn" aria-label="近づいて見る">＋</button></div>
+      <div id="hoverTip" hidden></div>
+      <div id="pickCard" hidden></div>
+      <div id="teamKey" aria-hidden="true"><span><i class="e"></i>敵</span><span><i class="a"></i>味方（免疫）</span><span><i class="s"></i>からだ</span><span><i class="d"></i>くすり</span></div>
+      <section id="bodyWin" aria-label="からだ全体の様子">
+        <div class="bwHead"><span>からだ全体</span><button id="bwToggle" aria-label="小窓をたたむ">−</button></div>
+        <div id="bwBody">
+          <canvas id="body" aria-hidden="true"></canvas>
+          <div id="bwInfo"></div>
+        </div>
+      </section>
+      <div id="timebar">
+        <button id="play" aria-label="一時停止">❚❚</button>
+        <div class="seg" id="speeds" role="group" aria-label="時間の速さ"></div>
+        <span id="clock" class="mono"></span>
+        <button id="reset" aria-label="最初から">⟲<span class="rs"> 最初から</span></button>
+      </div>
+    </div>
+    <div id="status" role="status" aria-live="off"></div>
+    <div id="chartWrap">
+      <div id="chartLegend"></div>
+      <canvas id="chart" aria-label="日ごとの経過のグラフ。実線はここまで、点線は予測"></canvas>
+    </div>
+  </main>
+
+  <aside id="panel">
+    <header>
+      <div class="eyebrow">IMMUNE BATTLE</div>
+      <h1>免疫のたたかい</h1>
+      <p class="lead">ウイルスや細菌がからだに入ってから、増えて、免疫に片づけられるまで。数を変えたり、くすりやワクチンを使ったりすると、その後の経過（点線）がすぐ変わる。</p>
+    </header>
+
+    <section class="box" id="nowBox">
+      <h2>いま何がどれだけ働いているか</h2>
+      <div id="now"></div>
+    </section>
+
+    <section class="box">
+      <h2>入ってくるもの</h2>
+      <div id="pathogens" class="cards2"></div>
+      <p id="route" class="note"></p>
+    </section>
+
+    <section class="box">
+      <h2>からだ</h2>
+      <div id="bodies" class="seg wrap" role="group" aria-label="からだの例"></div>
+      <p id="bodyNote" class="note"></p>
+      <div class="row"><span class="lab">前の記憶</span><div id="mems" class="seg wrap" role="group" aria-label="前の記憶"></div></div>
+    </section>
+
+    <section class="box">
+      <h2>数を調整する</h2>
+      <label class="slider"><span class="lab">入ってきた数</span><input type="range" id="dose"><output id="doseV" class="mono"></output></label>
+      <label class="slider"><span class="lab">自然免疫の細胞<small>好中球・マクロファージ・NK</small></span><input type="range" id="inn" min="-4.4" max="1.6" step="0.1"><output id="innV" class="mono"></output></label>
+      <label class="slider"><span class="lab">獲得免疫の細胞<small>T細胞・B細胞</small></span><input type="range" id="adp" min="-4.4" max="1.6" step="0.1"><output id="adpV" class="mono"></output></label>
+      <p class="note">免疫の細胞の数は、動かしている途中でも変えられる（予測の点線がすぐ変わる）。入ってきた数・からだ・記憶を変えると最初から。</p>
+      <div class="row"><button id="again">＋ 同じ数がもう一度入ってくる</button></div>
+    </section>
+
+    <section class="box" id="medBox">
+      <h2>くすり・治療</h2>
+      <div id="strainRow" class="row"><span class="lab">菌の種類</span><div id="strains" class="seg wrap" role="group" aria-label="菌の種類"></div></div>
+      <div id="meds"></div>
+      <p id="medNote" class="note"></p>
+    </section>
+
+    <section class="box" id="abxBox">
+      <h2>抗生物質は何にどう効く？</h2>
+      <p class="note" style="margin-top:0">抗生物質は、<b>菌にはあって、ヒトの細胞にはない（または形がちがう）しくみ</b>をねらう。だから菌だけをやっつけられる。番号にさわると、図のその場所が光る。</p>
+      <svg id="abxSvg" viewBox="0 0 330 168" role="img" aria-label="菌の断面と、抗生物質がねらう場所">
+        <g transform="translate(82,84)">
+          <text class="ttl" x="0" y="-70">グラム陽性菌</text><text class="sub" x="0" y="-58">ブドウ球菌・肺炎球菌</text>
+          <circle class="wall t1" r="46"/><circle class="mem" r="37"/>
+          <g class="t2"><circle class="ribo" cx="-14" cy="-12" r="3.2"/><circle class="ribo" cx="10" cy="-18" r="3.2"/><circle class="ribo" cx="16" cy="12" r="3.2"/><circle class="ribo" cx="-18" cy="14" r="3.2"/></g>
+          <path class="dna t3" d="M-12 2 q6 -10 12 0 t12 0 q-6 10 -12 0 t-12 0"/>
+          <g class="t4"><rect class="fol" x="-4" y="18" width="8" height="8" rx="2"/></g>
+          <text class="lab" x="0" y="66">厚い壁（ペプチドグリカン）</text>
+        </g>
+        <g transform="translate(248,84)">
+          <text class="ttl" x="0" y="-70">グラム陰性菌</text><text class="sub" x="0" y="-58">大腸菌</text>
+          <rect class="outer t5" x="-56" y="-38" width="112" height="76" rx="38"/>
+          <rect class="wall thin t1" x="-50" y="-32" width="100" height="64" rx="32"/>
+          <rect class="mem" x="-46" y="-28" width="92" height="56" rx="28"/>
+          <g class="t2"><circle class="ribo" cx="-22" cy="-8" r="3.2"/><circle class="ribo" cx="20" cy="-12" r="3.2"/><circle class="ribo" cx="24" cy="10" r="3.2"/></g>
+          <path class="dna t3" d="M-14 4 q6 -10 12 0 t12 0 q-6 10 -12 0 t-12 0"/>
+          <g class="t4"><rect class="fol" x="-26" y="10" width="8" height="8" rx="2"/></g>
+          <text class="lab" x="0" y="56">外膜 ＋ うすい壁</text>
+        </g>
+        <g class="nums">
+          <g class="t1"><circle cx="34" cy="38" r="8"/><text x="34" y="41">1</text></g>
+          <g class="t2"><circle cx="64" cy="66" r="8"/><text x="64" y="69">2</text></g>
+          <g class="t3"><circle cx="96" cy="100" r="8"/><text x="96" y="103">3</text></g>
+          <g class="t4"><circle cx="64" cy="118" r="8"/><text x="64" y="121">4</text></g>
+          <g class="t5"><circle cx="300" cy="40" r="8"/><text x="300" y="43">5</text></g>
+        </g>
+      </svg>
+      <ol id="abxList">
+        <li data-t="1"><b>細胞の壁を作れなくする</b><span class="ex">βラクタム系（ペニシリン系＝アモキシシリン、セフェム系＝セファレキシン など）、グリコペプチド系（バンコマイシン）</span>菌が分裂するとき、壁（ペプチドグリカン）を作れず破れて死ぬ（殺菌）。ヒトの細胞には壁がない。増えていない菌や、うみ・細胞の中の菌には効きにくい。バンコマイシンは大きくて外膜を通れないので、大腸菌には効かない。<span class="inapp">このアプリのセファレキシン・アモキシシリン・バンコマイシン</span></li>
+        <li data-t="2"><b>たんぱく質工場（リボソーム）を止める</b><span class="ex">マクロライド系（クラリスロマイシン など）、テトラサイクリン系、アミノグリコシド系</span>菌のリボソームはヒトのものと形がちがう（菌は70S、ヒトは80S）。たんぱく質が作れず、多くは増えるのが止まる（静菌）。</li>
+        <li data-t="3"><b>遺伝子（DNA）のコピーを止める</b><span class="ex">ニューキノロン系（レボフロキサシン など）</span>DNA のからまりをほどく菌の酵素を止め、コピーも分裂もできなくする（殺菌）。</li>
+        <li data-t="4"><b>葉酸を作らせない</b><span class="ex">ST合剤</span>菌は葉酸（DNA の材料づくりに必要）を自分で作るが、ヒトは食べ物からとる。膀胱炎などに使う。</li>
+        <li data-t="5"><b>外膜をこわす</b><span class="ex">ポリミキシン系（コリスチン）</span>グラム陰性菌の外膜に穴をあける。副作用が強く、ほかが効かないときの最後の手段。</li>
+      </ol>
+      <details><summary>ウイルスには効かない</summary><p>ウイルスには壁もリボソームもなく、ヒトの細胞の中で、ヒトの細胞のしくみを使って増える。だからインフルエンザ・コロナ・ノロ・かぜに抗生物質は効かない（ウイルスには抗ウイルス薬）。</p></details>
+      <details><summary>効かなくなる菌（耐性菌）</summary><p>菌は、①薬をこわす酵素を持つ（βラクタマーゼ。大腸菌の ESBL など）②ねらわれる場所の形を変える（MRSA は壁を作る酵素が別もの）③薬をくみ出すポンプを持つ ④薬の入口を減らす、といった方法で生き残る。薬を使うたびに、生き残った耐性の菌が増えやすくなる。必要なときだけ、医師の指示どおりに使うことが大事。</p></details>
+      <details><summary>腸の中の良い菌も減る</summary><p>抗生物質は、腸に住む役に立つ菌も減らす。そのため下痢になることがある。</p></details>
+    </section>
+
+    <section class="box" id="memBox">
+      <h2>2回目の感染・ワクチン</h2>
+      <p class="note" style="margin-top:0">一度戦うと、その相手に合うT細胞・B細胞の一部が「記憶細胞」として残る。2回目は早く、強く戦える。ワクチンは、病気にならずにこの記憶を作るしくみ。</p>
+      <div id="memBtns" class="memBtns"></div>
+      <p id="memNote" class="note"></p>
+    </section>
+
+    <section class="box">
+      <h2>いまの数</h2>
+      <table id="nums"></table>
+    </section>
+
+    <section class="box">
+      <h2>できごと</h2>
+      <ol id="log"></ol>
+    </section>
+
+    <section class="box" id="resultBox">
+      <h2 id="resultTitle">ここまでの結果</h2>
+      <div id="result"></div>
+    </section>
+
+    <section class="box" id="faq">
+      <h2>ふしぎに答える</h2>
+      <details><summary>ウイルスは細胞のまわりをうろうろしているだけ？</summary>
+        <p>ウイルスは自分では動けず、細胞の外では増えられない。粘液の流れやゆらぎで運ばれ、たまたま細胞の表面にくっつくと、細胞に飲みこまれる。中で遺伝子が核に入り、細胞の仕組みを使って自分のコピーを作らせる。6〜8時間ほどで新しいウイルスが表面から出てくる（1個の細胞から数千個）。画面では ①くっつく ②飲みこまれる ③核でコピー ④出てくる、を吹き出しで知らせる。</p></details>
+      <details><summary>結局、ウイルスは増えているの？</summary>
+        <p>画面の上の「いまの状況」に、いま1日に「生まれる数」と「消える数」を出している。生まれる方が多ければ増えている。最初の2日ほどは6〜8時間で何十倍にもなり、2〜3日目がいちばん多い。そのあと、守りを固めた細胞が増え、キラーT細胞と抗体が来て減っていく。グラフ上の色の帯（赤＝増えている、橙＝ピーク、緑＝減っている）でも分かる。</p></details>
+      <details><summary>感染した細胞はどうなるの？死ぬの？</summary>
+        <p>死ぬ。ウイルスを作りつづけた細胞は1日ほどで力尽きる。その前に NK細胞やキラーT細胞が見つけて壊すこともある（ウイルス工場をつぶすので、まわりへの広がりが止まる）。死んだ細胞ははがれ落ち、かけらはマクロファージが食べて片づける。すき間は下にある細胞が分かれて埋め、1〜2週間で元にもどる。線毛のある細胞がそろうまで、せきが長引くことがある。</p></details>
+      <details><summary>なぜ高い熱が出るの？</summary>
+        <p>ウイルスが熱を出しているのではない。感染した細胞や免疫細胞が出す合図の物質（インターフェロン、IL-1、IL-6、TNF など＝サイトカイン）が血液に乗って脳に届き、体温の中枢（視床下部）がプロスタグランジンE2という物質を作って「目標の体温」を上げる。からだは目標に合わせようとして、ふるえ（寒気）で熱を作り、皮膚の血管をしめて熱を逃がさない。熱は免疫細胞を働きやすくし、ウイルスを増えにくくすると考えられている。解熱剤はこのプロスタグランジンを作らせないので熱は下がるが、ウイルスは減らない。ズームで「頭」まで引くと、合図が体温の中枢に届く様子が見える。</p></details>
+      <details><summary>マクロファージはウイルスを食べているの？</summary>
+        <p>食べている。ただ、鼻やのどでは、ウイルスを減らしている一番の理由は粘液の流れ（とウイルスが自然にこわれること）で、後半は抗体（IgA）が大きい。マクロファージは数が少なく、多くは上皮の下で死んだ細胞のかけらを片づけている。肺の奥ではマクロファージの役わりがずっと大きい。いま何がどれだけ減らしているかは「いまの状況」の帯に出る。</p></details>
+      <details><summary>粘液は流れた先でどうなるの？</summary>
+        <p>線毛が粘液をのどの方へ運び、知らないうちに飲みこまれて食道から胃へ行き、胃酸で分解される。鼻をかんだり、くしゃみやせきで外へ出したりもする。粘液の中のウイルスや抗体もいっしょに運ばれる。ズームで「頭」まで引くと、流れの道すじが見える。</p></details>
+      <details><summary>樹状細胞は手をのばして何をしているの？</summary>
+        <p>上皮細胞のすき間から腕を表面までのばして、外から来たもののかけらを集めている（見張り）。かけらを持つとリンパ管を通ってリンパ節へ行き、そこで「このかけらに合う」キラーT細胞とB細胞を探して知らせる。知らされた細胞が何万倍にも増えて、数日後に戦いに加わる。首のリンパ節がはれるのはこのため。</p></details>
+      <details><summary>2回目にかかると、なぜ軽くすむの？</summary>
+        <p>1回目に増えたキラーT細胞・B細胞のうち一部が「記憶細胞」として何年も残る。最初は数百個しかいなかった「その相手に合う細胞」が何百倍もいて、しかも少しのかけらにもすぐ反応する。抗体を作り続ける細胞も残る。だから2回目は、働きだすまでが5〜7日から2〜3日に縮まり、増える前に片づくことも多い。ただし、インフルエンザやコロナは表面の形が少しずつ変わるので、前の抗体がくっつきにくくなり、何度もかかる。「2回目の感染・ワクチン」のボタンで試せる。</p></details>
+      <details><summary>ワクチンはなぜ効くの？</summary>
+        <p>病原体のかけら（または、かけらの設計図）だけを先に見せて、病気にならずに記憶細胞と抗体を作っておくしくみ。本物が来たときには「2回目」と同じように早く戦える。打ったあとに腕が痛くなったり熱が出たりするのは、免疫が反応している印。かからなくするだけでなく、かかっても重くなりにくくする。</p></details>
+      <details><summary>細菌はウイルスとどうちがうの？</summary>
+        <p>細菌（黄色ブドウ球菌）は自分で栄養をとって、細胞の外で2つに分かれて増える。だから細胞の壁を作れなくする抗生物質が効く。ウイルスは細胞の中でしか増えられないので抗生物質は効かず、抗ウイルス薬はウイルスの増え方の別のところを止める。</p></details>
+    </section>
+
+    <section class="box">
+      <h2>画面の見かた（タップで説明）</h2>
+      <p class="note" style="margin:0 0 8px">色のきまり: 敵は赤〜オレンジ（ぼんやり赤く光る）、味方の免疫は青〜水色、からだの細胞は肌色、くすりは黄緑。</p>
+      <div id="key"></div>
+      <label class="row"><input type="checkbox" id="labels" checked> 場所の名前を出す</label>
+      <label class="row"><input type="checkbox" id="talk" checked> 起きたことを吹き出しで説明する</label>
+      <p class="note">ホイール（スマホは2本指）で、細胞の中から全身まで切れ目なくズームできる。近づいたときはドラッグで見回せる。</p>
+    </section>
+
+    <section class="box" id="about">
+      <h2>このアプリについて</h2>
+      <p>裏で、病原体・感染した細胞・免疫細胞・抗体の数の変化を、研究で使われる形の式（微分方程式）で計算している。ミクロの画面とからだの小窓は、その数に合わせて動かしている。</p>
+      <p><span class="k k-sure">確か</span>しくみ（何が何をするか）、およその時間（ウイルスが出てくるまで6〜8時間、キラーT細胞は5〜7日目ごろ、など）。</p>
+      <p><span class="k k-est">推定</span>数・体温・傷みの量。モデルの目安で、人によって大きくちがう。</p>
+      <p><span class="k k-art">演出</span>画面の粒の数は本当の数ではない（何億個にもなるので、10倍ごとに十数個ずつ増える「対数」で描いている）。ウイルスや抗体は実際よりずっと大きく描いている。</p>
+      <p>簡単にしたところ: どの病原体も、感染した場所を1か所としてまとめた（鼻とのど・小腸・傷のまわり・肺の一部・膀胱）。肺や腎臓への広がりは「傷みや菌の数が大きいと広がるおそれ」として表しただけ。インフルエンザやコロナでも好中球が集まるが、画面とモデルには入れていない。粘液の流れは本当はずっと速い（1分に数mm）が、ゆっくり描いている。くすりは効き目の強さを一定とみなし、飲む回数ごとの上下は省いた。ワクチンは「かけらを数日あたえる」として、種類ごとのちがい（不活化・mRNA・結合型）は強さだけで表した。2回目の感染の間の日々は、病原体のいない状態でモデルを進めて、抗体や記憶細胞の減り方を計算している。ほかの病気・年齢による細かい差は入れていない。</p>
+      <p>モデルの形と数値の参考: 標的細胞が限られるウイルスのモデル（Baccam ら, J Virol 2006）、皮膚に化膿を起こす黄色ブドウ球菌の数（Elek, Ann N Y Acad Sci 1957）、ノロウイルスがうつる数（Teunis ら, J Med Virol 2008）、免疫学の教科書（Janeway's Immunobiology など）。数値は、よく知られた経過（熱の日数・治るまでの日数・薬で短くなる日数）に近くなるよう調整した目安。</p>
+      <p class="warn">しくみを知るためのものです。病気かどうか・治療の判断には使えません。熱が高い・息が苦しい・傷が赤く広がる・吐いて水分がとれない・おしっこが痛くて熱があるなどのときは医療機関へ。</p>
+    </section>
+  </aside>
+</div>
+
+<script src="js/model.js"></script>
+<script src="js/text.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/micro.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/scales.js"></script>
+<script src="js/zoom.js"></script>
+<script src="js/body.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/main.js"></script>
