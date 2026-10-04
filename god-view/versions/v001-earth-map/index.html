@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>神の視点マップ</title>
+<script>window.CESIUM_BASE_URL = 'https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/';</script>
+<script src="https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/Cesium.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/Widgets/widgets.css">
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+<div id="globe"></div>
+
+<header id="top">
+  <button id="btn-layers" class="icon" title="層のパネル" aria-label="層のパネル">☰</button>
+  <div class="title">神の視点マップ</div>
+  <form id="search" autocomplete="off">
+    <input id="search-q" type="search" placeholder="地名・住所でさがす（例: 富士山）">
+    <ul id="search-list" hidden></ul>
+  </form>
+  <button id="btn-home" class="icon" title="日本全体へ" aria-label="日本全体へ">⌂</button>
+  <button id="btn-about" class="icon" title="このアプリについて" aria-label="このアプリについて">?</button>
+</header>
+
+<aside id="layers"><div id="layers-body"></div></aside>
+
+<div id="point" hidden></div>
+
+<footer id="scale">
+  <div class="scale-now">
+    <span>画面の幅</span> <b id="scale-w">–</b>
+    <span class="what">≒ <span id="scale-what">–</span></span>
+    <span id="scale-pow" class="pow"></span>
+  </div>
+  <div id="ruler-bar"></div>
+</footer>
+
+<div id="about" class="modal" hidden>
+  <div class="card">
+    <button id="about-close" class="x" aria-label="閉じる">×</button>
+    <h2>神の視点マップ</h2>
+    <p>本物の地形・航空写真・地図を読み込んで、地球全体から家1軒までを見わたすアプリです。いずれは宇宙の果てから素粒子まで、ホイールひとつで行き来できるようにします。</p>
+    <h3>操作</h3>
+    <ul>
+      <li>ホイール／ピンチ: 寄る・引く</li>
+      <li>左ドラッグ: 動かす　右ドラッグ・Ctrl＋ドラッグ／2本指: 傾ける・回す</li>
+      <li>クリック: その地点の住所と標高（日本のみ）</li>
+    </ul>
+    <h3>印の意味</h3>
+    <p><span class="tag tag-real">実データ</span> 公開されているデータをそのまま表示　<span class="tag tag-est">推定</span> データから計算したもの　<span class="tag tag-fx">演出</span> それらしく作ったもの（本物ではない）</p>
+    <h3>注意</h3>
+    <p>地図・写真・標高は公開データで、撮影や測量の時期によって今の様子と違うことがあります。日本の外の地形は粗く、海の深さは表示していません（海面を 0m にしています）。<br>地図や写真の画像、地名検索・住所・標高は、それぞれの提供元のサーバーから直接読み込みます（見ている場所の座標が提供元に送られます）。</p>
+    <h3>使っているもの</h3>
+    <ul class="small">
+      <li>CesiumJS（Apache License 2.0）</li>
+      <li>地理院タイル（標準地図・淡色地図・写真・色別標高図・陰影起伏図・標高タイル）、地理院の地名検索・逆ジオコーダー・標高 API（国土地理院）</li>
+      <li>Nominatim（OpenStreetMap の地名検索）</li>
+      <li>Sentinel-2 cloudless 2016（EOX IT Services GmbH、CC BY 4.0、Contains modified Copernicus Sentinel data 2016）</li>
+      <li>OpenStreetMap（© OpenStreetMap contributors、ODbL）</li>
+      <li>Terrain Tiles（AWS Open Data。SRTM・GMTED・ETOPO1 などから作成）</li>
+    </ul>
+  </div>
+</div>
+
+<div id="fatal" hidden>地球を表示できませんでした。WebGL が使えるブラウザで開いてください。</div>
+
+<script src="js/sources.js"></script>
+<script src="js/terrain.js"></script>
+<script src="js/earth.js"></script>
+<script src="js/scale.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

@@ -9,6 +9,7 @@
 - `evolution/` — 別シリーズ「ヒトへの46億年」（地球と生命と人類の歴史を定点観測する3D）。企画は `evolution/PLAN.md`・`PLAN-future.md`、仕組みと確認手順は `evolution/DEVNOTES.md`（公開 URL もそこ）。**v005 から css/js に分割**: 直すときは DEVNOTES の「ファイル構成」を見て関係するファイルだけ読む。確認は `.claude/launch.json` の `apps`（http://localhost:8765/）で。
 - `animal-senses/` — 別シリーズ「いきものの感じる世界」（同じ庭を人間・カラス・マムシなどの感覚で一人称で見る。紫外線・熱などを置き換えて表示）。css/js に分割。企画は `animal-senses/PLAN.md`、仕組みと確認手順は `animal-senses/DEVNOTES.md`。
 - `immune-battle/` — 別シリーズ「免疫のたたかい」（ウイルス・細菌が入って増え、免疫に片づけられるまで。数のモデルに合わせて動くミクロの断面＋人体の小窓＋グラフと予測）。css/js に分割、Canvas 2D。企画は `immune-battle/PLAN.md`、仕組み・モデルの数値・確認手順は `immune-battle/DEVNOTES.md`。
+- `god-view/` — 別シリーズ「神の視点マップ」（宇宙から地球・街・人・原子までホイールで寄れる。地球は実データの地図・地形・建物。CesiumJS、API キーなしのデータから）。css/js に分割。企画は `god-view/PLAN.md`、仕組み・データ源・確認手順は `god-view/DEVNOTES.md`。確認は `apps`（http://localhost:8765/god-view/）で。
 - `quantum/` — 別シリーズ「量子の実験室」（二重スリット・トンネル効果・偏光板・量子もつれ・不確定性原理）。1ファイル完結。仕組みと確認手順・公開 URL は `quantum/DEVNOTES.md`。
 
 ## 進め方の約束（詳しくは `RULES.md`。どのアプリでも最初に読む）
