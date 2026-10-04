@@ -102,7 +102,10 @@ Artifact の公開・再公開、git の commit／push の**前に毎回**行う
 
 ## 10. 複数の PC で作業する（Git）
 
-- このフォルダは GitHub のリポジトリで管理する。作業の始めに pull、区切りで commit と push（その前に 7 の公開前チェック）。2台で同時に作業しない。
+- このフォルダは GitHub のリポジトリ（`sishiya/manabi-lab`、いまは Private）で管理する。作業の始めに pull、区切りで commit と push（その前に 7 の公開前チェック）。2台で同時に作業しない。
+- **役割分担**: Claude は区切りごとに公開前チェックとコミットまで行い、何をコミットしたかとチェックの結果を報告する。**push はユーザーが行う**（GitHub Desktop の「Push origin」。Claude は push しない）。pull もユーザーに頼む。
+- コミットの作者は `sishiya <85350751+sishiya@users.noreply.github.com>`（GitHub の代わりのアドレス。本当のメールアドレスは使わない）。新しい PC でも `git config user.name` と `user.email` をこの値にする。
+- コミットメッセージは日本語で、何をしたか1行（例: 「evolution v009: 想像の生き物」）。push 前のコミットは作り直してよいが、push 後は作り直さない。
 - 新しい PC では: Git と Claude デスクトップを入れてクローン → `git config core.hooksPath .githooks` と `git config core.quotepath false` → `.private-words.txt` と `PUBLISH.local.md` を作る（8章）。
 - Claude のメモリと会話の履歴は PC ごと（移らない）。だから大事なことは必ずこのフォルダのメモ（RULES・各 DEVNOTES）に書く。
 - ローカル確認のサーバーは `.claude/launch.json` の `apps`（8765）。別の会話が使っていたら `apps-2`（8766）。

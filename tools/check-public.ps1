@@ -27,7 +27,8 @@ $rules = @(
   @{ n = '郵便番号・住所';           r = '〒\s*\d{3}-?\d{4}' },
   @{ n = 'Artifact の URL（PUBLISH.local.md に書く）'; r = 'claude\.ai/(code/)?artifacts?/[A-Za-z0-9-]{8,}' }
 )
-$allow = @('(?i)@example\.(com|org|net)$', '(?i)^noreply@')
+# GitHub's no-reply commit address is meant to be public (it is on every commit anyway)
+$allow = @('(?i)@example\.(com|org|net)$', '(?i)^noreply@', '(?i)@users\.noreply\.github\.com$')
 
 $private = @()
 $pw = Join-Path $root '.private-words.txt'
