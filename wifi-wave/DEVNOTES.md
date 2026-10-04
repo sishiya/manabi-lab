@@ -5,7 +5,7 @@
 WiFiの電波が家の中をどう伝わり、壁でどう弱まるかを真上から見るアプリ。体内ダイブ系とはエンジンが別（Three.js なし、WebGL2 を直接使う）。
 
 - 公開先: タイトル「電波の見える部屋」（URL は `../PUBLISH.local.md`）
-- 状態: v4b（`versions/v004b-notes/`。公開は v4 のまま）。v4b で「体への影響を示すものではない」注記と、使っているもの（フォント＝SIL OFL）を追加。v2 で受信カードに「目安」の注記、スマホ対応（下記）。v3 で viewport メタを追加。v4 で横向きスマホをPCと同じ左右2列に。
+- 状態: v4b（`versions/v004b-notes/`。2026-10-04 に公開済み）。v4b で「体への影響を示すものではない」注記と、使っているもの（フォント＝SIL OFL）を追加。v2 で受信カードに「目安」の注記、スマホ対応（下記）。v3 で viewport メタを追加。v4 で横向きスマホをPCと同じ左右2列に。
 - 1ファイル完結（`index.html`）。`<!doctype>` なし（公開時に付く）。ローカル確認は `.claude/launch.json` の `apps`（8765）または `apps-2`（8766）で `http://localhost:<port>/wifi-wave/index.html`。
 
 ## しくみ
