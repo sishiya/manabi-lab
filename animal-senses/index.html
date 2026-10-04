@@ -1,0 +1,53 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>いきものの感じる世界</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="stage">
+  <canvas id="gl" aria-label="庭を一人称で見る3Dの画面"></canvas>
+  <div id="splitLabels" hidden><span id="slL">人間</span><span id="slR"></span></div>
+  <div id="legend"></div>
+  <div id="pad" aria-label="移動ボタン">
+    <button data-k="KeyW" aria-label="前へ">▲</button>
+    <button data-k="KeyA" aria-label="左へ">◀</button>
+    <button data-k="KeyS" aria-label="後ろへ">▼</button>
+    <button data-k="KeyD" aria-label="右へ">▶</button>
+    <button data-k="KeyE" class="fly" aria-label="上へ">上</button>
+    <button data-k="KeyQ" class="fly" aria-label="下へ">下</button>
+  </div>
+  <div id="hint">ドラッグで見回す・WASD／矢印で移動<span class="flyHint">・E／Q で上下</span></div>
+</div>
+
+<aside id="panel">
+  <header>
+    <div class="eyebrow">ANIMAL SENSES</div>
+    <h1>いきものの感じる世界</h1>
+  </header>
+  <nav id="animals" aria-label="生き物を選ぶ"></nav>
+  <section class="box">
+    <div class="row" id="timeRow" role="group" aria-label="時刻">
+      <span class="lab">時刻</span>
+      <button data-time="day">昼</button><button data-time="dusk">夕方</button><button data-time="night">夜</button>
+    </div>
+    <label class="row"><input type="checkbox" id="split"> 左半分を人間の目にして比べる</label>
+    <div id="senseCtl"></div>
+  </section>
+  <section class="box">
+    <h2>見どころ</h2>
+    <div id="pois"></div>
+  </section>
+  <section class="box" id="about">
+    <h2 id="aTitle"></h2>
+    <p id="aLead"></p>
+    <ul id="aFacts"></ul>
+    <p class="keys"><span class="k k-sure">確か</span>研究で確かめられていること <span class="k k-est">推定</span>研究による推定・幅がある <span class="k k-art">演出</span>見せるための置き換え</p>
+  </section>
+</aside>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="js/data.js"></script>
+<script src="js/world.js"></script>
+<script src="js/render.js"></script>
+<script src="js/main.js"></script>
