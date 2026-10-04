@@ -2,15 +2,15 @@
 
 最終更新: 2026-10-04
 
-病原体（インフルエンザウイルス・黄色ブドウ球菌）がからだに入ってから、増えて、免疫に片づけられるまでを、ミクロの断面（大きな画面）・人体の小窓・日ごとのグラフで見る。企画は `PLAN.md`。ほかのアプリとはエンジンが別（Canvas 2D、外部ライブラリなし）。
+病原体（インフルエンザ・新型コロナ・ノロの3つのウイルスと、黄色ブドウ球菌・肺炎球菌・大腸菌の3つの細菌）がからだに入ってから、増えて、免疫に片づけられるまでを、ミクロの断面（大きな画面）・人体の小窓・日ごとのグラフで見る。企画は `PLAN.md`。ほかのアプリとはエンジンが別（Canvas 2D、外部ライブラリなし）。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: v3（`versions/v003-zoom-status`）＝段階B＋見せ方の改善（細胞の中〜全身の切れ目ないズーム、「いまの状況」、吹き出し、ふしぎに答える、粒を減らした）。未公開。
-- **次にやること**: 段階C（ほかの病原体）。その先は `PLAN.md`。
+- **いまの状態**: v4（`versions/v004-six-pathogens`）＝段階C（6つの病原体）＋ズームを決まった5段階の切りかえにした（途中の倍率をなくした）。未公開。
+- **次にやること**: 段階D（2回目の感染・ワクチンのしくみ）か、段階E（仕上げ・公開）。ユーザーに聞く。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。
 - **動かし方**: 分割版なので `.claude/launch.json` の `apps`（8765）か `apps-2`（8766）で `http://localhost:<port>/immune-battle/index.html`。
-- **デバッグ用**: `window.__ib` — `set({pk, body, mem, dose, inn, adp, speed})`（変えて最初から）、`run(日数)`（絵を描かずに進める）、`frame(n)`（1/30秒のコマを n 回。`UI.speed` と `UI.playing` に従う。Browser ペインでは rAF が遅いのでこれで進める）、`counts()`（画面の粒の数と細胞の状態）、`err`、`SIM`（状態 `y`・観測 `o`・履歴 `hist`・予測 `fc`・消えた道の合計 `tally`）、`MI`（ミクロの画面）。
-- **モデルの調整用**: `dev/tune.js`（公開しない）。コンソールで読み込んで `tuneRun('flu','adult',5,'none',true)`、`tuneTable('staph')`。
+- **デバッグ用**: `window.__ib` — `set({pk, body, mem, dose, inn, adp, speed, resist})`（変えて最初から）、`run(日数)`（絵を描かずに進める）、`frame(n)`（1/30秒のコマを n 回。`UI.speed` と `UI.playing` に従う。Browser ペインでは rAF が遅いのでこれで進める）、`counts()`（画面の粒の数と細胞の状態）、`err`、`SIM`（状態 `y`・観測 `o`・履歴 `hist`・予測 `fc`・消えた道の合計 `tally`）、`MI`（ミクロの画面）。
+- **モデルの調整用**: `dev/tune.js`（公開しない）。コンソールで読み込んで `tuneRun('flu','adult',5,'none',true)`、`tuneTable('staph')`。モデルだけを開く `dev/model.html` でも使える（アプリが壊れていても調整できる）。
 - **区切りごとに**: ① `versions/v0NN-名前/` に index.html・css・js を丸ごとコピー ② `launcher.html` にカード・表 ③ 下の「状態」 ④ 「確認のしかた」を通す ⑤（公開済みなら）同じ URL へ再公開。
 - **公開のコマンド**（Artifact の publish）: `file_path` = `immune-battle/index.html`、`files` = `{"css/style.css":"immune-battle/css/style.css","js/model.js":"immune-battle/js/model.js","js/text.js":"immune-battle/js/text.js","js/sim.js":"immune-battle/js/sim.js","js/micro.js":"immune-battle/js/micro.js","js/draw.js":"immune-battle/js/draw.js","js/scales.js":"immune-battle/js/scales.js","js/zoom.js":"immune-battle/js/zoom.js","js/body.js":"immune-battle/js/body.js","js/chart.js":"immune-battle/js/chart.js","js/main.js":"immune-battle/js/main.js"}`。JS を足したら index.html の `<script>` とこの一覧の両方に足す。`dev/` は送らない。
 - **ユーザーの好み**: 正確さ・本物らしさ重視。説明は 確か／推定／演出 を分ける。子どもにも読める日本語。ミクロの大きさで見せつつ、小窓で人体の様子が分かるように（ユーザーの希望）。
@@ -21,16 +21,16 @@
 |---|---|---|
 | `index.html` | 骨組み（doctype なし）。読み込み順: model → text → sim → micro → draw → scales → zoom → body → chart → main | `#micro` `#bodyWin` `#timebar` `#chart` `#panel` |
 | `css/style.css` | レイアウト（PC は右パネル360px・下にグラフ210px。縦長スマホは縦に積んでページをスクロール） | |
-| `js/model.js` | 数のモデル。くすり `DRUGS`・`drugLevel()`・`apyLevel()`・`lowerFever()`、からだの例 `BODIES`、病原体 `PATHOGENS.flu / .staph`（`vars` `init(P)` `flux(y,P)` `f(y,P,d)` `obs(y,P)` `ended(y)`）、積分 `rk4()`（硬い所は自動で刻む）、`forecast()`、`HILL()`、`DT`（5分） | `P = {dose, inn, adp, fev, mem}` |
-| `js/text.js` | 画面の物の説明 `CELLS`（`team`: enemy・ally・self・drug）、チーム `TEAMS`、できごと `EVENTS[pk]`（`when(y,o,S)` で1回だけ） | |
+| `js/model.js` | 数のモデル。くすり `DRUGS`（抗ウイルス薬は `eff` と `mode`: release＝離れられない／make＝作れない、抗生物質は `kill.s`・`kill.r`）・`drugLevel()`・`apyLevel()`・`lowerFever()`、からだの例 `BODIES`、獲得免疫の共通部分 `adaptive()` `memInit()`、ウイルスの型 `makeVirus(def)`（`VIRUS_K`）、細菌の型 `makeBact(def)`（`BACT_K`、`capsule`）、病原体 `PATHOGENS.flu / covid / noro / staph / pneumo / ecoli`（ecoli は尿に浮く菌と細胞についた菌の2つに分けた別の式）、`PATHOGEN_ORDER`、積分 `rk4()`、`forecast()`、`DT`（5分） | 病原体の表示用の項目: `scene`（場面）`look`（敵の姿）`bodySite`（小窓）`drugs`（ボタン）`resistName`（耐性菌の切りかえ） |
+| `js/text.js` | 画面の物の説明 `CELLS`（後半に新しい病原体の分）、敵の姿→説明 `LOOK_KEY`（`team`: enemy・ally・self・drug）、チーム `TEAMS`、できごと `EVENTS[pk]`（`when(y,o,S)` で1回だけ） | |
 | `js/sim.js` | 進行中の経過 `SIM`。いまの状況 `simStatus()`（判定・6時間の増え方・1日に生まれる数と消える数・消え方の内訳）、`simReset()` `simAdvance(days)` `simForecast()` `simSetParams()` `simAddDose()`、くすり `simStartDrug()` `simStopDrug()` `simAntipyretic()` `simDrain()` `drugActive()`、消えた道の合計 `tally` `cellTally`、`fmtCount()`（万・億・兆）`fmtTime()` | `HIST_EVERY`（30分） |
-| `js/micro.js` | ミクロの画面の動き。配置 `LF`（空気・粘液 GEL・水の層 PCL・上皮・基底膜・血管）`LS`（皮膚）、粘液の流れ `FLOW`、粒 `spawn()`、モデルに合わせる `reconcile()`→`reconcileFlu()` `reconcileStaph()`、くすりの点 `syncDrugSpecks()`、排膿 `microDrain()`、動き `updateMicro()` `carried()`（粘液に運ばれる）`transcytosis()`（IgA）`moveDoomed()`、タップ `pickAt()` | `MI`、`vis()`（量→粒の数）、`wantCells()` |
-| `js/draw.js` | ミクロの画面の描画。組織の画面 `drawTissue(g, rect, z, cx, cy, main)`（カメラつき、背景も毎回ベクターで描く）、吹き出し `drawCallouts()`（ほかのパネルをよけて置く）、近づいたときの細胞の中 `cellDetail()`、色 `PAL`、背景 `renderBackground()`、`drawMicro()`、上皮 `drawEpithelium()`、粘液 `drawMucus()`、ウイルス `drawVirion()`、菌 `drawStaph()`、マクロファージ・好中球・リンパ球・形質細胞・樹状細胞・抗体（`drawIgG` `drawIgA`）、増え方の番号 `drawSteps()` | `PAL`、`halo()`（敵の赤い光）、`rrect()` `shade()` `mix()` |
+| `js/micro.js` | ミクロの画面の動き。場面 `MI.scene`＝airway（鼻・のど）／gut（小腸）／skin（皮膚）／alveolus（肺胞）／bladder（膀胱）。配置 `LF`（空気・粘液 GEL・水の層 PCL・上皮・基底膜・血管。腸も同じ行）`LS`（皮膚）`LA`（肺胞）`LB`（膀胱）、`EPI()` `CAPY()` `TISSUE_TOP()` `FLOWDIR()`（腸は右へ流れる）、粘液の流れ `FLOW`、粒 `spawn()`、モデルに合わせる `reconcile()`→`reconcileVirus()`（上皮の中で増えるウイルス）`reconcileBact()`（細菌。膀胱は浮いている菌と細胞についた菌の2組、傘細胞がはがれる `shedUmbrella()`、おしっこで流れる）、くすりの点 `syncDrugSpecks()`、排膿 `microDrain()`、動き `updateMicro()` `carried()`（粘液に運ばれる）`transcytosis()`（IgA）`moveDoomed()`、タップ `pickAt()` | `MI`、`vis()`（量→粒の数）、`wantCells()` |
+| `js/draw.js` | ミクロの画面の描画。組織の画面 `drawTissue(g, rect, z, cx, cy, main)`（カメラつき、背景も毎回ベクターで描く）、吹き出し `drawCallouts()`（ほかのパネルをよけて置く）、近づいたときの細胞の中 `cellDetail()`、色 `PAL`、背景 `renderBackground()`、`drawMicro()`、上皮 `drawEpithelium()`、粘液 `drawMucus()`、ウイルス `drawVirion()`（インフル）`drawCorona()` `drawNoro()`、菌 `drawStaph()` `drawPneumo()`（莢膜つきの双球菌）`drawEcoli()`（べん毛・線毛のある桿菌）、肺胞 `alveolusBackground()` `drawAlveolus()`（液がたまる）、膀胱 `bladderBackground()` `drawBladder()`（傘細胞・おしっこ）、マクロファージ・好中球・リンパ球・形質細胞・樹状細胞・抗体（`drawIgG` `drawIgA`） | `PAL`、`halo()`（敵の赤い光）、`rrect()` `shade()` `mix()` |
 | `js/scales.js` | ズームで引いたときの絵（モデルの数だけで描く）。`drawSectionFlu` `drawSectionStaph`（3mm の断面）、`drawPartFlu`（頭の横断面: 鼻→のど→食道、体温の中枢、首のリンパ節）`drawPartStaph`（前腕）、`drawBodyLevel`（全身＝`drawFigure`） | `hash()` `frac6()` `lvLabel()`、`MI.levelMag`（拡大中はラベルを消す） |
-| `js/zoom.js` | カメラ `CAM`（`L`＝見えている高さ µm の log10）。段階 `LEVELS[pk]`（fov・anchor・draw）、ホイール・ピンチ・ドラッグ、`zoomBy()` `zoomTo()` `stepZoom()`、全部を描く `renderAll()`（親の段階を拡大して描き、子の段階をその場所にはめこむ）、スケールバー、ズームボタン `ZOOM_STOPS` | `MI.tissueMain`（組織の画面が主のときだけ吹き出し・タップ） |
-| `js/body.js` | 人体の小窓 `drawBody()`（100×140 の座標） | `BW` |
-| `js/chart.js` | グラフ `drawChart()`、系列 `SERIES[pk]`、凡例 `chartLegend()` | `CH` |
-| `js/main.js` | パネル・時間・ループ `frame()`・「いまの状況」`updateStatus()`（画面の上は3行、内訳はパネル「いま何がどれだけ働いているか」）・できごとの表示・結果 `updateResult()`・`window.__ib` | `UI`、`SPEEDS` |
+| `js/zoom.js` | 決まった段階の切りかえ（途中の倍率はない）。`zoomStops()`（細胞の中・組織・粘膜／皮膚・頭／腕・全身。粘膜と頭は airway と skin だけ）、`SECTIONS` `PARTS`、`CAM.i`（いまの段階）、`setLevel()` `stepLevel()`（ホイールは90たまるごとに1段、ピンチは1.45倍ごと）、切りかえ前の画面を写した `CAM.snap` を0.28秒で消す、`renderAll()` `drawStop()`（引いた段階は高さの86%に縮めて、上の状況・下の時間の帯に隠れないようにする）、スケールバー | `CELL_Z`（細胞の中＝3.4倍）、`MI.tissueMain` |
+| `js/body.js` | 人体の小窓 `drawBody()` と全身の絵 `drawFigure(g, t, small)`（100×140 の座標）。場所は `bodySite`: nose・lung・gut・bladder・arm。熱があるときは場所→脳の点線、菌血症は全身に点線 | `BW` |
+| `js/chart.js` | グラフ `drawChart()`、系列 `SERIES.virus / bacteria` と `seriesOf()`（肺炎球菌は SpO2 も）、凡例 `chartLegend()` | `CH` |
+| `js/main.js` | パネル・時間・ループ `frame()`・病原体ごとの表 `KEYS`（画面の見かた）`TALLY` `tallyNames()`（消えた道）`MED_NOTES`・「いまの状況」`updateStatus()`（画面の上は3行、内訳はパネル「いま何がどれだけ働いているか」）・できごとの表示・結果 `updateResult()`・`window.__ib` | `UI`、`SPEEDS` |
 
 ## モデル（時間の単位は日）
 
@@ -61,6 +61,19 @@
 - 排膿 `simDrain()`: 状態を直接変える（うみ×0.1、菌×(1−0.75·うみの割合)、合図×0.6）。うみが 15% より多いときだけボタンが押せる。
 - 解熱剤: 体温の表示だけを最大1.3℃下げる（約45分で効き、4時間ほど続いて切れる）。熱が出た／下がったのできごとは薬なしの体温 `rawTemp` で判断する。
 
+### 新型コロナ・ノロ（`makeVirus` の数値を変えたもの、推定の目安）
+- 新型コロナ: 暗黒期 kE=2/日（約半日）、感染細胞の寿命 del=0.7/日、Y=1500、インターフェロンを出しにくい pF=14（ウイルスが警報をじゃまする）、Cm=60・Vs=300（約1000個から感染）。健康な大人・1万個で、5日目ごろ熱（約38℃）・ウイルスのピークは症状の出はじめ・10日ほどで消える。ワクチン（抗体0.12）で、ほぼ症状なし。高齢者に5日目からニルマトレルビル → ほとんど悪化しない。
+- ノロ: 1個あたりの感染 b=0.05、暗黒期 kE=6/日、del=2.5、Y=4000、片づけが弱い Cm=4・Vs=50（数個〜数十個でも感染。ヒトの実験で ID50 約18個＝Teunis 2008）、腸の流れ c0=1.2、強いインターフェロン pF=100、腸の細胞の入れかわり rep=1.2/日。1〜2日で吐き気・嘔吐、下痢、37〜38℃、3〜4日でおさまる。実際は治ったあとも何週間も便にウイルスが出るが、モデルでは早めに0になる（できごとに書いた）。薬はなく、経口補水液は「脱水のおそれ」を消すだけ（数は変えない）。
+
+### 肺炎球菌（`makeBact`、莢膜あり）
+- 莢膜 capsule=0.75: 抗体がないと、補体・マクロファージ・好中球の効きが25%に下がる（`cap = 0.25 + 0.75·Ab/(Ab+0.3)`）。肺胞マクロファージ Cm=20 で、1万個くらいまでは片づく。r=4/日。
+- 結果: 健康な大人・100万個で高熱・せき・息苦しさ、SpO2 は最低90%くらい（`98 − 10·傷み`、肺の一部がうまったとみなす）、治療なしでも8日目ごろ抗体がそろって急に良くなる（昔の「分利」と同じ形）。アモキシシリン（2日目から）で熱は半分ほどに。ワクチン（抗体0.8）で、ほぼ片づく。
+
+### 大腸菌（膀胱炎、別の式）
+- 尿に浮く菌 Bu（r=9/日で増えるが、1日6回のおしっこで1回に約90%流される＝ `voids·2.3`）と、傘細胞についた・中に入った菌 Ba（流されない、r=3.5/日、上限5×10⁸）。Bu はくっつき（att=3/日、抗体があると減る）、Ba は細胞の中のかたまりから尿へ出る（rel=1.5/日）。菌のついた傘細胞ははがれる（`ex·S/(S+0.6)`）。好中球は尿の菌を食べ、細胞の菌は食べにくい（nBa=0.1）。抗生物質は Ba に25%しか効かない（細胞の中）。水をたくさん飲むと、おしっこの回数が1.7倍。
+- Kd: 尿の菌が多い（3×10⁸以上）状態が続くと腎臓へ（熱・背中の痛み）。膀胱炎だけでは熱は出ない（実際と同じ）。
+- 結果: 健康な大人・30万個で、半日〜1日から痛み・頻尿、1週間ほどでおさまる（抗生物質なしで治ることも多い、は実際と同じ）。細胞の奥に数千個残る → ぶり返しの説明に使う。「終わり」は尿の菌が1000個未満で、警報が止まったとき。
+
 ### 簡単にしたところ・注意
 - 1か所（鼻〜のど／傷のまわり）としてまとめた。肺への広がりは「傷みの割合が大きい」ことで表しただけ。
 - 数値は文献の型を参考に、経過がよく知られた形（発熱の日数・ウイルスが消える日など）になるよう調整した目安。
@@ -75,7 +88,7 @@
   - 吹き出し（`callout()`）: 起きた瞬間に、その物の横に短い説明と点線の輪を4秒だけ出す。同じ種類は10〜30秒に1回、同時に2つまで、1.6秒あける。①くっつく ②飲みこまれる ③核でコピー ④出てくる、細胞の死（自分で／NK／キラーT）、修理、守り、マクロファージや好中球が食べた、抗体がつかまえた、粘液で流される、樹状細胞がリンパ節へ、IgA、菌の分裂、補体、抗生物質、うみ、くすりで離れられないウイルス。v2 の番号札（ずっと出ていた）はやめた。パネルで消せる。
   - 粒の数を半分ほどに減らした（ウイルス最大70、菌90、抗体24、好中球18、うみ20）。
   - グラフの上の帯: 赤＝増えている、橙＝ピーク、緑＝減っている（6時間の増え方）。
-  - ズーム: ホイール・2本指・ボタン。組織（高さ100µm）より近づくと細胞の中の小器官（リボソーム・ミトコンドリア）と、感染細胞でウイルスの部品が上へ運ばれる様子を描く（`MI.detail`＝1µm あたりの画面の px が18以上）。引くと 粘膜／皮膚の断面（3mm）→ 頭／腕（25cm）→ 全身（2.1m）。各段階は子の段階の中心（anchor）を中心に拡大して描き、子をその場所にはめこむので、切れ目なく変わる。頭の断面で、粘液がのど→食道→胃へ流れる道、体温の中枢へ合図が届く点線、首のリンパ節、肺への矢印。小窓は全身が見えているとき（L>4.6）は隠す。
+  - ズーム（v4 で作り直し）: ホイール・2本指・ボタンで、決まった段階だけを切りかえる（途中の倍率はない。v3 の切れ目ないズームは、途中の倍率で文字や絵が見切れてバグのように見えたのでやめた）。切りかえは前の画面の写しを0.28秒で消すフェード。段階: 細胞の中（組織の3.4倍。感染した細胞か菌の所を中心に。ドラッグで見回せる。小器官＝リボソーム・ミトコンドリア、ウイルスの部品が上へ運ばれる様子は `MI.detail`＝1µm あたりの px が9以上で描く）→ 組織（100µm）→ 粘膜／皮膚の断面（3mm、airway と skin だけ）→ 頭／腕（25cm、同じ）→ 全身（2.1m）。引いた段階では、次に近い画面の場所を白い四角で示す。頭の断面で、粘液がのど→食道→胃へ流れる道、体温の中枢へ合図が届く点線、首のリンパ節、肺への矢印。頭・全身のときは小窓を隠す。
 - **くすりの見え方**: 薬が効いている間、黄緑の点が血管からしみ出す。オセルタミビルでは感染細胞の表面にウイルスがくっついたまま離れない（`stuck`、数えない飾り）。バロキサビルでは核の中のコピーと出芽が減る。抗生物質で死ぬ菌はふくらんで壁が破れる。排膿ではうみと菌が傷口から出ていく。
 - 1単位 ≈ 1µm、高さはいつも100。ウイルスは約20倍、菌は約2倍、抗体はもっと大きく描く。
 - 粒の数 `vis(x, x0, 10倍ごとの数, 上限)`: ウイルス `vis(V,20,12,140)`、菌 `vis(B,20,12,150)`、好中球 `vis(N,2e4,4.5,30)`、キラーT `vis(T,3e4,2.5,12)`、抗体 `vis(Ab,0.004,7,46)`、うみ `vis(Pus,3e5,6,34)`。
@@ -89,17 +102,19 @@
 
 1. 全部の組み合わせで最後までエラーなし:
    ```js
-   for (const pk of ['flu','staph']) for (const body of BODY_ORDER) for (const mem of Object.keys(PATHOGENS[pk].memOptions)) { const B=BODIES[body]; __ib.set({pk, body, mem, inn:B.inn, adp:B.adp, dose:PATHOGENS[pk].doseDefault, speed:2, playing:true}); __ib.frame(1200); } __ib.err
+   for (const pk of PATHOGEN_ORDER) for (const body of BODY_ORDER) for (const mem of Object.keys(PATHOGENS[pk].memOptions)) { const B=BODIES[body]; __ib.set({pk, body, mem, inn:B.inn, adp:B.adp, dose:PATHOGENS[pk].doseDefault, speed:2, playing:true}); __ib.frame(1200); } __ib.err
    ```
+   Browser ペインでは45秒で打ち切られるので、`(async()=>{ … await new Promise(r=>setTimeout(r,10)) … })()` で区切って回し、あとで結果を読む。
+   - 新しい4つ: コロナ・1万個は4〜5日目まで「潜伏期」、ワクチンでほぼ症状なし。ノロ・100個は1〜2日で嘔吐・下痢、経口補水液で「脱水のおそれ」が消える。肺炎球菌・100万個は高熱・SpO2 90%台、8日目ごろ急に良くなる、アモキシシリンで早くよくなる。大腸菌・30万個は傘細胞にくっつき・中に入り、9秒ごとにおしっこの流れ、菌のついた細胞がはがれる、1週間ほどでおさまる。
 2. インフル・健康な大人・10万個: 2日目ごろ「熱が出た」、キラーT細胞が5日目ごろ、8日目ごろ「ウイルスがいなくなった」、自動で止まって結果が出る。画面: 紫の細胞から粒が出て、隣へ広がる、青いふちどり、NK・キラーTが細胞の下に来て壊す、終わりに抗体（Y）。
 3. インフル・1000個: 「感染しなかった」。ワクチン・100万個: ほとんど症状なし。免疫が弱い: 長引き、「肺へ広がるおそれ」。
 4. ブドウ球菌・100万個: 好中球が血管から出てきて菌を食べ、うみがたまる。1000万個: 広がり、熱。免疫が弱い（×0.15）: 少しの菌でも広がり、菌血症（小窓に金色の点線）。
 5. 自然免疫のスライダーを途中で動かすと、グラフの点線（予測）がすぐ変わる。「＋もう一度入ってくる」で再び増える。
 6. 画面の粒・細胞をタップすると説明カード、凡例のボタンでも出る。
    - 段階B: インフル・健康な大人で2日目にオセルタミビルを始めると、点線の熱の期間が縮み、感染細胞の上にウイルスが固まって残る。バロキサビルはウイルスの線が早く下がる。解熱剤は体温の線だけ下がる（ウイルスの線は同じ）。ブドウ球菌・1000万個でうみがたまったら「処置する」→ うみが傷口から出て、グラフに白い線。MRSA にするとセファレキシンが効かず、バンコマイシンは効く。
-   - v3: 吹き出しが起きたことの横に出て数秒で消える（ずっと残らない）。「いまの状況」が 潜伏期→悪化中→ピーク→快方へ→回復中→治った と変わる。グラフの上の帯の色。ホイールで 細胞の中（小器官・袋に包まれたウイルス）〜全身まで切れ目なく動き、各段階で数字・病状に合わせて絵が変わる（インフル: 赤い範囲・はれ・合図の点線、ブドウ球菌: 赤み・うみ・赤い筋）。ズームを変えても、吹き出し・名前の文字の大きさは変わらない。
+   - v3: 吹き出しが起きたことの横に出て数秒で消える（ずっと残らない）。「いまの状況」が 潜伏期→悪化中→ピーク→快方へ→回復中→治った と変わる。グラフの上の帯の色。ホイールで段階が1つずつ切りかわり（途中の倍率に止まらない）、どの段階でも文字や絵が見切れず、上の状況・下の時間の帯に隠れない。各段階で数字・病状に合わせて絵が変わる（インフル: 赤い範囲・はれ・合図の点線、ブドウ球菌: 赤み・うみ・赤い筋）。
    ```js
-   for (const L of [1.2,2,3.476,4.3,5.397,6.32]) { CAM.L = L; __ib.frame(15); } __ib.err
+   for (let i = 0; i < zoomStops().length; i++) { setLevel(i); __ib.frame(15); } setLevel(1); __ib.err
    ```
    - 敵（赤〜オレンジ・赤い光）／味方（青〜水色）／からだ（肌色）／くすり（黄緑）の色が守られている。マウスを乗せると【敵】【味方】の札。
 7. スマホ幅（375×812）: 上がミクロ（小窓は小さく症状は省略）、下にグラフ、その下にパネル。横スクロールなし。
@@ -117,3 +132,5 @@
 - v1（2026-10-04）段階A: インフルエンザ・黄色ブドウ球菌、モデル、ミクロの画面、人体の小窓、グラフと予測、からだの例、記憶、スライダー、できごと、結果（消えた道）、タップで説明。
 - v2（2026-10-04）段階B: くすり（オセルタミビル・バロキサビル・セファレキシン・バンコマイシン・解熱剤）、排膿、MRSA、グラフに薬の期間。敵味方の色分け、本物に近い姿、粘液の層と流れ、ウイルスの増え方の札 ①〜⑤、IgA の運ばれ方、形質細胞、杯細胞、樹状細胞の腕。描画を draw.js に分けた。
 - v3（2026-10-04）見せ方の改善: 切れ目ないズーム（細胞の中・組織・粘膜／皮膚・頭／腕・全身）、「いまの状況」（判定・増え方・生まれる数と消える数）と内訳、吹き出し（その場で起きたことだけ）、グラフの増減の帯、ふしぎに答える、粒を減らした。zoom.js・scales.js を追加。
+
+- v4（2026-10-04）段階C: 新型コロナ・ノロウイルス・肺炎球菌・大腸菌（膀胱炎）。場面を5つに（鼻・のど／小腸／皮膚／肺胞／膀胱）。ズームは途中の倍率をなくし、決まった段階の切りかえ＋フェードにした（ユーザー: 中途半端な縮尺で文字や絵が見切れてバグっぽい）。モデルを `makeVirus` `makeBact` の型にまとめた。

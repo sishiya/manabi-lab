@@ -1,0 +1,143 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>免疫のたたかい</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="microWrap">
+      <canvas id="micro" aria-label="感染した場所の断面をミクロの大きさで見る画面。細胞や病原体をタップすると説明が出る"></canvas>
+      <div id="zoomCtl" role="group" aria-label="ズーム（ホイール・ピンチでも）"><button id="zoomOut" aria-label="引いて見る">−</button><div id="zoomStops"></div><button id="zoomIn" aria-label="近づいて見る">＋</button></div>
+      <div id="hoverTip" hidden></div>
+      <div id="pickCard" hidden></div>
+      <div id="teamKey" aria-hidden="true"><span><i class="e"></i>敵</span><span><i class="a"></i>味方（免疫）</span><span><i class="s"></i>からだ</span><span><i class="d"></i>くすり</span></div>
+      <section id="bodyWin" aria-label="からだ全体の様子">
+        <div class="bwHead"><span>からだ全体</span><button id="bwToggle" aria-label="小窓をたたむ">−</button></div>
+        <div id="bwBody">
+          <canvas id="body" aria-hidden="true"></canvas>
+          <div id="bwInfo"></div>
+        </div>
+      </section>
+      <div id="timebar">
+        <button id="play" aria-label="一時停止">❚❚</button>
+        <div class="seg" id="speeds" role="group" aria-label="時間の速さ"></div>
+        <span id="clock" class="mono"></span>
+        <button id="reset" aria-label="最初から">⟲<span class="rs"> 最初から</span></button>
+      </div>
+    </div>
+    <div id="status" role="status" aria-live="off"></div>
+    <div id="chartWrap">
+      <div id="chartLegend"></div>
+      <canvas id="chart" aria-label="日ごとの経過のグラフ。実線はここまで、点線は予測"></canvas>
+    </div>
+  </main>
+
+  <aside id="panel">
+    <header>
+      <div class="eyebrow">IMMUNE BATTLE</div>
+      <h1>免疫のたたかい</h1>
+      <p class="lead">病原体がからだに入ってから、増えて、免疫に片づけられるまで。数を変えると、その後の経過（点線）がすぐ変わる。</p>
+    </header>
+
+    <section class="box" id="nowBox">
+      <h2>いま何がどれだけ働いているか</h2>
+      <div id="now"></div>
+    </section>
+
+    <section class="box">
+      <h2>入ってくるもの</h2>
+      <div id="pathogens" class="cards2"></div>
+      <p id="route" class="note"></p>
+    </section>
+
+    <section class="box">
+      <h2>からだ</h2>
+      <div id="bodies" class="seg wrap" role="group" aria-label="からだの例"></div>
+      <p id="bodyNote" class="note"></p>
+      <div class="row"><span class="lab">前の記憶</span><div id="mems" class="seg wrap" role="group" aria-label="前の記憶"></div></div>
+    </section>
+
+    <section class="box">
+      <h2>数を調整する</h2>
+      <label class="slider"><span class="lab">入ってきた数</span><input type="range" id="dose"><output id="doseV" class="mono"></output></label>
+      <label class="slider"><span class="lab">自然免疫の細胞<small>好中球・マクロファージ・NK</small></span><input type="range" id="inn" min="-4.4" max="1.6" step="0.1"><output id="innV" class="mono"></output></label>
+      <label class="slider"><span class="lab">獲得免疫の細胞<small>T細胞・B細胞</small></span><input type="range" id="adp" min="-4.4" max="1.6" step="0.1"><output id="adpV" class="mono"></output></label>
+      <p class="note">免疫の細胞の数は、動かしている途中でも変えられる（予測の点線がすぐ変わる）。入ってきた数・からだ・記憶を変えると最初から。</p>
+      <div class="row"><button id="again">＋ 同じ数がもう一度入ってくる</button></div>
+    </section>
+
+    <section class="box" id="medBox">
+      <h2>くすり・治療</h2>
+      <div id="strainRow" class="row"><span class="lab">菌の種類</span><div id="strains" class="seg wrap" role="group" aria-label="菌の種類"></div></div>
+      <div id="meds"></div>
+      <p id="medNote" class="note"></p>
+    </section>
+
+    <section class="box">
+      <h2>いまの数</h2>
+      <table id="nums"></table>
+    </section>
+
+    <section class="box">
+      <h2>できごと</h2>
+      <ol id="log"></ol>
+    </section>
+
+    <section class="box" id="resultBox">
+      <h2 id="resultTitle">ここまでの結果</h2>
+      <div id="result"></div>
+    </section>
+
+    <section class="box" id="faq">
+      <h2>ふしぎに答える</h2>
+      <details><summary>ウイルスは細胞のまわりをうろうろしているだけ？</summary>
+        <p>ウイルスは自分では動けず、細胞の外では増えられない。粘液の流れやゆらぎで運ばれ、たまたま細胞の表面にくっつくと、細胞に飲みこまれる。中で遺伝子が核に入り、細胞の仕組みを使って自分のコピーを作らせる。6〜8時間ほどで新しいウイルスが表面から出てくる（1個の細胞から数千個）。画面では ①くっつく ②飲みこまれる ③核でコピー ④出てくる、を吹き出しで知らせる。</p></details>
+      <details><summary>結局、ウイルスは増えているの？</summary>
+        <p>画面の上の「いまの状況」に、いま1日に「生まれる数」と「消える数」を出している。生まれる方が多ければ増えている。最初の2日ほどは6〜8時間で何十倍にもなり、2〜3日目がいちばん多い。そのあと、守りを固めた細胞が増え、キラーT細胞と抗体が来て減っていく。グラフ上の色の帯（赤＝増えている、橙＝ピーク、緑＝減っている）でも分かる。</p></details>
+      <details><summary>感染した細胞はどうなるの？死ぬの？</summary>
+        <p>死ぬ。ウイルスを作りつづけた細胞は1日ほどで力尽きる。その前に NK細胞やキラーT細胞が見つけて壊すこともある（ウイルス工場をつぶすので、まわりへの広がりが止まる）。死んだ細胞ははがれ落ち、かけらはマクロファージが食べて片づける。すき間は下にある細胞が分かれて埋め、1〜2週間で元にもどる。線毛のある細胞がそろうまで、せきが長引くことがある。</p></details>
+      <details><summary>なぜ高い熱が出るの？</summary>
+        <p>ウイルスが熱を出しているのではない。感染した細胞や免疫細胞が出す合図の物質（インターフェロン、IL-1、IL-6、TNF など＝サイトカイン）が血液に乗って脳に届き、体温の中枢（視床下部）がプロスタグランジンE2という物質を作って「目標の体温」を上げる。からだは目標に合わせようとして、ふるえ（寒気）で熱を作り、皮膚の血管をしめて熱を逃がさない。熱は免疫細胞を働きやすくし、ウイルスを増えにくくすると考えられている。解熱剤はこのプロスタグランジンを作らせないので熱は下がるが、ウイルスは減らない。ズームで「頭」まで引くと、合図が体温の中枢に届く様子が見える。</p></details>
+      <details><summary>マクロファージはウイルスを食べているの？</summary>
+        <p>食べている。ただ、鼻やのどでは、ウイルスを減らしている一番の理由は粘液の流れ（とウイルスが自然にこわれること）で、後半は抗体（IgA）が大きい。マクロファージは数が少なく、多くは上皮の下で死んだ細胞のかけらを片づけている。肺の奥ではマクロファージの役わりがずっと大きい。いま何がどれだけ減らしているかは「いまの状況」の帯に出る。</p></details>
+      <details><summary>粘液は流れた先でどうなるの？</summary>
+        <p>線毛が粘液をのどの方へ運び、知らないうちに飲みこまれて食道から胃へ行き、胃酸で分解される。鼻をかんだり、くしゃみやせきで外へ出したりもする。粘液の中のウイルスや抗体もいっしょに運ばれる。ズームで「頭」まで引くと、流れの道すじが見える。</p></details>
+      <details><summary>樹状細胞は手をのばして何をしているの？</summary>
+        <p>上皮細胞のすき間から腕を表面までのばして、外から来たもののかけらを集めている（見張り）。かけらを持つとリンパ管を通ってリンパ節へ行き、そこで「このかけらに合う」キラーT細胞とB細胞を探して知らせる。知らされた細胞が何万倍にも増えて、数日後に戦いに加わる。首のリンパ節がはれるのはこのため。</p></details>
+      <details><summary>細菌はウイルスとどうちがうの？</summary>
+        <p>細菌（黄色ブドウ球菌）は自分で栄養をとって、細胞の外で2つに分かれて増える。だから細胞の壁を作れなくする抗生物質が効く。ウイルスは細胞の中でしか増えられないので抗生物質は効かず、抗ウイルス薬はウイルスの増え方の別のところを止める。</p></details>
+    </section>
+
+    <section class="box">
+      <h2>画面の見かた（タップで説明）</h2>
+      <p class="note" style="margin:0 0 8px">色のきまり: 敵は赤〜オレンジ（ぼんやり赤く光る）、味方の免疫は青〜水色、からだの細胞は肌色、くすりは黄緑。</p>
+      <div id="key"></div>
+      <label class="row"><input type="checkbox" id="labels" checked> 場所の名前を出す</label>
+      <label class="row"><input type="checkbox" id="talk" checked> 起きたことを吹き出しで説明する</label>
+      <p class="note">ホイール（スマホは2本指）で、細胞の中から全身まで切れ目なくズームできる。近づいたときはドラッグで見回せる。</p>
+    </section>
+
+    <section class="box" id="about">
+      <h2>このアプリについて</h2>
+      <p>裏で、病原体・感染した細胞・免疫細胞・抗体の数の変化を、研究で使われる形の式（微分方程式）で計算している。ミクロの画面とからだの小窓は、その数に合わせて動かしている。</p>
+      <p><span class="k k-sure">確か</span>しくみ（何が何をするか）、およその時間（ウイルスが出てくるまで6〜8時間、キラーT細胞は5〜7日目ごろ、など）。</p>
+      <p><span class="k k-est">推定</span>数・体温・傷みの量。モデルの目安で、人によって大きくちがう。</p>
+      <p><span class="k k-art">演出</span>画面の粒の数は本当の数ではない（何億個にもなるので、10倍ごとに十数個ずつ増える「対数」で描いている）。ウイルスや抗体は実際よりずっと大きく描いている。</p>
+      <p>簡単にしたところ: インフルエンザは鼻からのどを1か所としてまとめ、肺は「傷みが大きいと広がるおそれ」として表した。ブドウ球菌は傷のまわり1か所。インフルエンザでも好中球が集まるが、画面とモデルには入れていない。粘液の流れは本当はずっと速い（1分に数mm）が、ゆっくり描いている。くすりは効き目の強さを一定とみなし、飲む回数ごとの上下は省いた。ほかの病気・年齢による細かい差は入れていない。</p>
+      <p class="warn">しくみを知るためのものです。病気かどうか・治療の判断には使えません。熱が高い・息が苦しい・傷が赤く広がるなどのときは医療機関へ。</p>
+    </section>
+  </aside>
+</div>
+
+<script src="js/model.js"></script>
+<script src="js/text.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/micro.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/scales.js"></script>
+<script src="js/zoom.js"></script>
+<script src="js/body.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/main.js"></script>
