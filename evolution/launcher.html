@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ヒトへの46億年 ランチャー</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Shippori+Mincho+B1:wght@800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: single column version list; turning points as cards */
+:root{--bg:#06080b;--ink:#eef0e8;--muted:#aab3a7;--dim:#727b70;--line:rgba(228,238,222,.15);--panel:#0e1317;--accent:#f2b45c;
+  --f-display:'Shippori Mincho B1','Yu Mincho',serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+main{max-width:760px;margin:0 auto;padding:48px 16px 64px;display:flex;flex-direction:column;gap:28px}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;color:var(--muted)}
+h1{font-family:var(--f-display);font-size:48px;margin:6px 0 0;letter-spacing:.04em}
+h2{font-size:12px;letter-spacing:.18em;color:var(--dim);font-weight:500;margin:0 0 10px}
+.cards{display:flex;flex-direction:column;gap:12px}
+.card{display:grid;grid-template-columns:auto 1fr auto;gap:6px 18px;align-items:start;padding:16px 18px;background:var(--panel);border:1px solid var(--line);border-radius:3px;text-decoration:none;color:inherit}
+.card:hover,.latest{border-color:var(--accent)}
+.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ver{font-family:var(--f-mono);font-size:13px;color:var(--accent);padding-top:3px}
+.card b{font-size:17px}
+.card p{margin:4px 0 0;font-size:13px;line-height:1.75;color:var(--muted)}
+.date{font-family:var(--f-mono);font-size:11px;color:var(--dim);white-space:nowrap;padding-top:4px}
+.note{font-size:12px;color:var(--dim);line-height:1.8}
+@media (max-width:520px){.card{grid-template-columns:1fr}h1{font-size:36px}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">FROM 4.6 BILLION YEARS AGO · VERSIONS</div>
+    <h1>ヒトへの46億年</h1>
+  </header>
+  <section>
+    <h2>版</h2>
+    <div class="cards">
+      <a class="card latest" href="index.html"><span class="ver">最新</span><div><b>作業中の最新版</b><p>いま作業フォルダにある index.html。</p></div><span class="date">—</span></a>
+      <a class="card" href="versions/v008-about-pause/index.html"><span class="ver">v8</span><div><b>説明中は時間を止める</b><p>「このアプリについて」を開いている間はタイムラインが進まない（再生・停止の状態はそのまま）。スマホ幅の表示がローカルでも効くよう viewport を追加（v7b）。</p></div><span class="date">2026-10-04</span></a>
+      <a class="card" href="versions/release-1.1/index.html"><span class="ver">1.1</span><div><b>リリース 1.1</b><p>v7 と同じ内容。1.0 に、しくみのモデル（A）・50億年後までの未来（B）・もしもの世界（C）・このアプリについて、を加えた版。</p></div><span class="date">2026-10-04</span></a>
+      <a class="card" href="versions/v007-about/index.html"><span class="ver">v7</span><div><b>このアプリについて</b><p>公開に向けた説明画面。見ている場所、描き方の約束、記録・モデル・予測・想像の区別、モデルの限界、おもな出典、操作。初回だけ自動で開く。</p></div><span class="date">2026-10-04</span></a>
+      <a class="card" href="versions/v006-ifworld/index.html"><span class="ver">v6</span><div><b>もしも（段階C）</b><p>7つの介入（酸素をつくる生物、ロディニア、植物の上陸、シベリア・トラップ、小天体、産業革命の排出、この先の火山）。本来の世界ともしもの世界を並べて計算し、景色・生き物・出来事が変わる。I キーで切り替え、「しくみ」に2本の線。</p></div><span class="date">2026-10-04</span></a>
+      <a class="card" href="versions/v005-future/index.html"><span class="ver">v5</span><div><b>未来（段階B）とファイル分割</b><p>50億年後までの未来。排出シナリオ（SSP1-2.6／2-4.5／5-8.5／いますぐゼロ）で 2100年の気温・海面、次の氷期が変わる。地溝の海、次の超大陸、植物の危機、酸素と海の消失、赤くなる太陽。文献の予測とモデルの比較。css/js を役割ごとに分割（http で開く）。</p></div><span class="date">2026-10-04</span></a>
+      <a class="card" href="versions/v004-model/index.html"><span class="ver">v4</span><div><b>しくみのモデル（段階A）</b><p>記録とは独立に、しくみだけから CO2・気温・氷・酸素・海の動物の多様さを計算する箱モデル。全球凍結3回・大酸化イベント・氷期・P-T と K-Pg の大量絶滅が自然に出る。「しくみ」パネルで記録との比較、気温の内訳、前の出来事からの変化の原因。</p></div><span class="date">2026-10-04</span></a>
+      <a class="card" href="versions/release-1.0/index.html"><span class="ver">1.0</span><div><b>初期リリース</b><p>v3 と同じ内容。原始惑星系円盤から現在まで、地表と地球全体の2つの縮尺、昼夜と街の明かり、祖先の印、約60の出来事。</p></div><span class="date">2026-10-03</span></a>
+      <a class="card" href="versions/v003-globe-daynight/index.html"><span class="ver">v3</span><div><b>地球全体のながめと昼夜</b><p>地表と地球全体の2つの縮尺（ボタン・G キー・引き切り／寄り切りで切り替え、地球側では地表を小窓に）。地球誕生前は宇宙の縮尺に固定。昼・夜・自動の時刻と現代の街の明かり。現代の野生動物は街と畑から離れる。現代のもやを解消。</p></div><span class="date">2026-10-03</span></a>
+      <a class="card" href="versions/v002-first-run/index.html"><span class="ver">v2</span><div><b>最初に動いた版</b><p>原始惑星系円盤から現在まで通しで動く。植生を濃く、生き物を大きく、雲は初期オフ、縦長画面ではカメラを引く。</p></div><span class="date">2026-10-03</span></a>
+      <a class="card" href="versions/v001-first-draft/index.html"><span class="ver">v1</span><div><b>初稿（動かない）</b><p>書き上げた直後。構文エラーで起動しない。記録用。</p></div><span class="date">2026-10-03</span></a>
+    </div>
+  </section>
+  <p class="note">企画書は PLAN.md、開発メモは DEVNOTES.md。</p>
+</main>
+</body>
+</html>

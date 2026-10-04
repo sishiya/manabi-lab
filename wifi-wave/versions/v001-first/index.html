@@ -1,0 +1,930 @@
+<title>電波の見える部屋</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: the simulated floor plan fills the left as a lit instrument screen; an instrument panel column sits on the right (stacks below on phones) */
+:root{
+  --bg:#0b1322; --stage:#060b16; --panel:#101b30; --raise:#16243d;
+  --line:rgba(170,200,255,.14); --line2:rgba(170,200,255,.28);
+  --ink:#e8eefb; --muted:#a3b3cf; --dim:#7083a3;
+  --accent:#ffc95a; --wave-pos:#ffb347; --wave-neg:#4cc9f0;
+  --good:#7fdc8a; --mid:#e8d55a; --weak:#ff9d57; --bad:#ff6b6b;
+  --f-display:'Dela Gothic One','Hiragino Sans','Yu Gothic',sans-serif;
+  --f-body:'Zen Kaku Gothic New','Hiragino Sans','Yu Gothic','Meiryo',system-ui,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 var(--f-body)}
+button,input{font:inherit;color:inherit}
+#app{display:grid;grid-template-columns:minmax(0,1fr) 340px;height:100%}
+#stage{min-width:0;display:flex;flex-direction:column;gap:10px;padding:16px;background:var(--stage)}
+#frame{position:relative;flex:1;min-height:0}
+#frame canvas{position:absolute;display:block;border-radius:6px}
+#ov{touch-action:none;cursor:crosshair}
+#glerr{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:var(--muted)}
+#hint{margin:0;color:var(--muted);font-size:13px;max-width:72ch;min-height:2.6em}
+#hint b{color:var(--accent);font-weight:500}
+
+#panel{min-width:0;overflow-y:auto;background:var(--panel);border-left:1px solid var(--line);padding:18px 16px 28px;display:flex;flex-direction:column;gap:18px}
+.brand h1{font:400 24px/1.25 var(--f-display);margin:0 0 6px;letter-spacing:.02em;text-wrap:balance}
+.brand p{margin:0;color:var(--muted);font-size:13px}
+h2{font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.12em;margin:0 0 8px}
+section{display:flex;flex-direction:column;gap:8px}
+section>h2{margin:0}
+.cap{margin:0;color:var(--muted);font-size:12px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+.card{background:var(--raise);border:1px solid var(--line);border-radius:10px;padding:12px 14px;gap:4px}
+.ro-top{display:flex;justify-content:space-between;align-items:center}
+.ro-top .lbl{font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.12em}
+.ro-num{display:flex;align-items:baseline;gap:6px;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.ro-num b{font-size:34px;font-weight:500;line-height:1.1}
+.ro-num small{color:var(--muted);font-size:13px}
+#roVerdict{font-weight:700}
+#roVerdict span{font-weight:400;color:var(--muted)}
+.ro-detail{color:var(--muted);font-size:12px;display:flex;flex-direction:column;gap:2px}
+.ro-wait b{color:var(--dim)}
+.bars{display:flex;gap:3px;align-items:flex-end;height:18px}
+.bars i{display:block;width:6px;border-radius:1.5px;background:var(--line2)}
+.bars i:nth-child(1){height:5px}.bars i:nth-child(2){height:9px}.bars i:nth-child(3){height:13px}.bars i:nth-child(4){height:18px}
+.bars i.on{background:currentColor}
+
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--stage);border:1px solid var(--line);border-radius:8px;padding:3px;gap:3px}
+.seg button{border:0;background:none;border-radius:6px;padding:7px 6px;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--raise);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line2)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line2);background:var(--raise);border-radius:8px;padding:6px 12px;cursor:pointer}
+.btn:hover,.seg button:hover,.tool:hover,.preset:hover{filter:brightness(1.15)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.chk{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted);cursor:pointer}
+input[type=range]{width:100%;accent-color:var(--accent)}
+
+.legend{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted)}
+.lg-bar{height:10px;border-radius:3px}
+.lg-ticks{position:relative;height:16px;font-family:var(--f-mono)}
+.lg-ticks span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.lg-wave{display:flex;gap:14px;flex-wrap:wrap}
+.lg-wave span{display:flex;align-items:center;gap:6px}
+.lg-wave i{width:14px;height:10px;border-radius:2px;display:inline-block}
+
+.presets{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.preset{text-align:left;border:1px solid var(--line);background:var(--raise);border-radius:8px;padding:7px 9px;cursor:pointer;line-height:1.35}
+.preset small{display:block;color:var(--dim);font-size:11px}
+.preset[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.tool{display:grid;grid-template-columns:16px 1fr auto;align-items:center;gap:7px;text-align:left;border:1px solid var(--line);background:var(--raise);border-radius:8px;padding:6px 8px;cursor:pointer;font-size:13px;min-width:0}
+.tool i{width:14px;height:14px;border-radius:3px;display:block;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+.tool span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tool em{font-style:normal;font-family:var(--f-mono);font-size:11px;color:var(--dim)}
+.tool[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+
+.explain{gap:6px}
+details{border-top:1px solid var(--line);padding-top:8px}
+summary{cursor:pointer;font-weight:700;font-size:13px;padding:2px 0}
+details p,details li{color:var(--muted);font-size:13px;margin:6px 0 0}
+details ul{margin:0;padding-left:1.2em}
+details b{color:var(--ink);font-weight:500}
+.now{background:var(--raise);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--muted)}
+.now b{color:var(--ink)}
+
+@media (max-width:860px){
+  #app{grid-template-columns:1fr;height:auto}
+  #stage{padding:12px 16px}
+  #frame{flex:none;width:100%;aspect-ratio:1.6}
+  #panel{border-left:0;border-top:1px solid var(--line);overflow:visible}
+}
+</style>
+
+<div id="app">
+  <main id="stage">
+    <div id="frame">
+      <canvas id="gl"></canvas>
+      <canvas id="ov" aria-label="間取り図。ルーターとスマホをドラッグで動かせます"></canvas>
+      <div id="glerr" hidden></div>
+    </div>
+    <p id="hint"></p>
+  </main>
+
+  <aside id="panel">
+    <header class="brand">
+      <h1>電波の見える部屋</h1>
+      <p>WiFiの電波が家の中をどう広がり、壁でどう弱まるのか。真上から見た電波のシミュレーションです。</p>
+    </header>
+
+    <section class="card" id="readout">
+      <div class="ro-top"><span class="lbl">スマホの受信</span><span class="bars" id="roBars"><i></i><i></i><i></i><i></i></span></div>
+      <div class="ro-num"><b id="roVal">—</b><small id="roUnit">dBm</small></div>
+      <div id="roVerdict"></div>
+      <div class="ro-detail" id="roDetail"></div>
+    </section>
+
+    <section>
+      <h2>表示</h2>
+      <div class="seg" id="segMode">
+        <button data-v="wave" aria-pressed="true">波の動き</button>
+        <button data-v="heat" aria-pressed="false">電波の強さ</button>
+      </div>
+      <div class="legend" id="legend"></div>
+      <label class="chk" id="chkComp"><input type="checkbox" id="optComp" checked> 遠くの波も見えるよう明るさを補正</label>
+      <label class="chk" id="chkSmooth" hidden><input type="checkbox" id="optSmooth" checked> 干渉のまだらをならす（実際のWiFiに近い）</label>
+    </section>
+
+    <section>
+      <h2>周波数</h2>
+      <div class="seg" id="segFreq">
+        <button data-v="2.4" aria-pressed="true">2.4 GHz</button>
+        <button data-v="5" aria-pressed="false">5 GHz</button>
+      </div>
+      <p class="cap" id="freqCap"></p>
+    </section>
+
+    <section>
+      <h2>時間</h2>
+      <div class="row">
+        <button class="btn" id="btnPlay">一時停止</button>
+        <button class="btn" id="btnReset">波を消す</button>
+      </div>
+      <input type="range" id="speed" min="0" max="11" value="3" aria-label="シミュレーションの速さ">
+      <p class="cap mono" id="timeCap"></p>
+    </section>
+
+    <section>
+      <h2>間取り・実験</h2>
+      <div class="presets" id="presets"></div>
+    </section>
+
+    <section>
+      <h2>壁を描く</h2>
+      <div class="tools" id="tools"></div>
+      <div class="row"><button class="btn" id="btnUndo">元に戻す</button></div>
+      <p class="cap" id="toolCap">材料を選んで図の上をドラッグすると壁が描けます。数字は壁1枚を真正面から通るときの弱まり。</p>
+    </section>
+
+    <section class="explain">
+      <h2>解説</h2>
+      <div class="now" id="nowText"></div>
+      <details open>
+        <summary>電波は壁を通り抜けるの？</summary>
+        <p>電波は光の仲間（電磁波）です。壁に当たると、<b>一部は跳ね返り（反射）</b>、<b>一部は壁の中で熱に変わり（吸収）</b>、<b>残りが向こう側へ抜けます（透過）</b>。</p>
+        <ul>
+          <li><b>木・石こうボード・ガラス</b>はほとんど通す。弱まりは数dB。</li>
+          <li><b>コンクリート</b>は中の水分で電波を吸収し、厚いので大きく弱める（2.4GHzで十数dB）。</li>
+          <li><b>金属</b>は電気をよく通すので、電波をほぼ全部はね返す。冷蔵庫や玄関ドアの裏は影になる。</li>
+          <li><b>水と人の体</b>は電波をよく吸収する。お風呂のお湯や、人が集まった部屋は電波が弱まる。</li>
+        </ul>
+        <p>dBは10ごとに強さが1/10になる目盛りです。−10dBで1/10、−20dBで1/100。</p>
+      </details>
+      <details>
+        <summary>すき間から回り込む（回折）</summary>
+        <p>波は、すき間やドアの縁で向きを変えて裏側へ回り込みます。音がドアのすき間から聞こえるのと同じです。電波の波長は12.5cm（2.4GHz）と大きいので、開いたドアや廊下を伝って、壁の陰にも届きます。</p>
+        <p>ただし<b>波長の半分より狭いすき間はほとんど通れません</b>。電子レンジの扉の網は穴が数mmなので、中の電波（WiFiと同じ2.45GHz）は外へ出ません。「すき間の実験」で確かめられます。</p>
+      </details>
+      <details>
+        <summary>2.4GHzと5GHzのちがい</summary>
+        <p><b>2.4GHz</b>は波長が長く、壁を通りやすく遠くまで届きます。ただ電子レンジやBluetoothと同じ周波数なので混み合いがち。</p>
+        <p><b>5GHz</b>は速く通信できますが、壁での吸収が大きく、回り込みも小さいので、部屋をまたぐと急に弱くなります。周波数を切り替えて比べてみましょう。</p>
+      </details>
+      <details>
+        <summary>まだら模様（干渉）</summary>
+        <p>直接届いた波と、壁ではね返った波が重なると、山と山が重なる所は強く、山と谷が重なる所は弱くなります。「電波の強さ」で「ならす」を外すと、半波長（約6cm）ごとのまだらが見えます。</p>
+        <p>実際のWiFiは少しずつ違う周波数をまとめて使うので、まだらは平均されます。それでも、スマホを数cm動かすだけで速度が変わることがあるのはこのためです。</p>
+      </details>
+      <details>
+        <summary>このシミュレーションのしくみ</summary>
+        <p>床から上を見た2次元の世界で、電場の波の方程式（マクスウェル方程式）をそのまま解いています。1マス0.75cm、1280×800マス（9.6m×6m）、1ステップは12.5ピコ秒。計算はGPUで行います。</p>
+        <p>材料の誘電率と導電率は国際電気通信連合の勧告 ITU-R P.2040 の値です（人の体だけ簡略化）。受信の強さ（dBm）は、ルーターの出力を20dBm（100mW）とし、3次元に広がる場合に換算した目安です。床や天井、家具の大半は省いています。</p>
+      </details>
+    </section>
+  </aside>
+</div>
+
+<script>
+(()=>{
+'use strict';
+// ================= constants =================
+const W=1280, H=800;                 // cells
+const DX=0.0075;                     // m per cell
+const KC=0.5;                        // Courant number c·dt/dx in air
+const C0=2.998e8, DT=KC*DX/C0;       // 12.5 ps
+const EPS0=8.854e-12;
+const PTX=20;                        // dBm
+const BETA=1/256;                    // EMA of u² per step
+const SPEEDS=[1,2,3,4,6,8,12,16,24,32,48,64];
+const CM_PER_CELL=DX*100;
+
+const FREQ={
+  '2.4':{ghz:2.437, mhz:2437, times:'24億', },
+  '5':  {ghz:5.2,   mhz:5200, times:'52億', },
+};
+
+// ITU-R P.2040: εr = a·f^b (b=0 here), σ = c·f^d (f in GHz)
+const MATS=[
+  {key:'air'},
+  {key:'board', name:'石こうボード壁', short:'石こうボード', note:'厚さ12.5mmの板2枚＋空洞', rgb:[.86,.83,.75], al:.8,  er:2.73, c:.0085, d:.9395, layers:[[-5.25,-3.75],[3.75,5.25]], eff:[[2.729,.03206],[2.729,.0355]]},
+  {key:'wood',  name:'木のドア・板',   short:'木',         note:'厚さ3.5cm',               rgb:[.68,.46,.27], al:.85, er:1.99, c:.0047, d:1.0718, layers:[[-1.75,1.75]], eff:[[1.501,.01223],[1.593,.02441]]},
+  {key:'glass', name:'ガラス窓',       short:'ガラス',     note:'厚さ1.5cm',               rgb:[.62,.88,1.0], al:.55, er:6.31, c:.0036, d:1.3394, layers:[[-.75,.75]], eff:[[5.021,.00946],[4.021,.01136]]},
+  {key:'brick', name:'レンガ',         short:'レンガ',     note:'厚さ10cm',                rgb:[.72,.33,.24], al:.85, er:3.91, c:.0238, d:.16,    layers:[[-5,5]], eff:[[3.42,.02309],[2.462,.01862]]},
+  {key:'conc',  name:'コンクリート',   short:'コンクリート',note:'鉄筋コンクリート 厚さ18cm',rgb:[.56,.58,.62], al:.86, er:5.24, c:.0462, d:.7822, layers:[[-9,9]], eff:[[4.41,.0782],[4.252,.07784]]},
+  {key:'metal', name:'金属',           short:'金属',       note:'厚さ2cm',                 rgb:[.92,.95,.99], al:.95, pec:true, layers:[[-1,1]]},
+  {key:'water', name:'水・人の体',     short:'人',         note:'人の体・お風呂のお湯',    rgb:[.27,.52,.92], al:.8,  water:true},
+];
+const MAT={}; MATS.forEach((m,i)=>{m.id=i; MAT[m.key]=m;});
+function props(m,f){
+  if(m.water) return {er:20, sig: f<3?1.7:4.3};     // body/water, εr capped for the grid
+  return {er:m.er, sig:m.c*Math.pow(f,m.d)};
+}
+// values actually used on the grid. A 0.75 cm grid is coarse for short waves inside dense
+// materials (5 GHz in glass is only 3 cells per wavelength), so εr/σ were refitted with
+// __ww.stripDb() until a plane wave through one wall loses the same dB as slabDb() predicts.
+function simProps(m,f){
+  if(m.eff){const [er,sig]=m.eff[f<3?0:1];return {er,sig};}
+  return props(m,f);
+}
+
+// ---------- complex helpers for slab transmission ----------
+const cx=(re,im)=>({re,im});
+const cadd=(a,b)=>cx(a.re+b.re,a.im+b.im), csub=(a,b)=>cx(a.re-b.re,a.im-b.im);
+const cmul=(a,b)=>cx(a.re*b.re-a.im*b.im,a.re*b.im+a.im*b.re);
+const cdiv=(a,b)=>{const d=b.re*b.re+b.im*b.im;return cx((a.re*b.re+a.im*b.im)/d,(a.im*b.re-a.re*b.im)/d);};
+const cexp=a=>{const e=Math.exp(a.re);return cx(e*Math.cos(a.im),e*Math.sin(a.im));};
+const csqrt=a=>{const r=Math.hypot(a.re,a.im);return cx(Math.sqrt((r+a.re)/2),Math.sign(a.im||1)*Math.sqrt((r-a.re)/2));};
+const cabs=a=>Math.hypot(a.re,a.im);
+// loss in dB for one wall as drawn (normal incidence, layers treated separately)
+function slabDb(m,f){
+  if(m.pec) return Infinity;
+  const {er,sig}=props(m,f), w=2*Math.PI*f*1e9, k0=w/C0;
+  const n=csqrt(cx(er,-sig/(w*EPS0)));
+  const one=cx(1,0), r=cdiv(csub(one,n),cadd(one,n)), r2=cmul(r,r);
+  let tot=0;
+  for(const [a,b] of m.layers){
+    const d=(b-a)/100, beta=cmul(cx(k0*d,0),n);
+    const e1=cexp(cx(beta.im,-beta.re)); // exp(-jβ)
+    const t=cdiv(cmul(csub(one,r2),e1), csub(one,cmul(r2,cmul(e1,e1))));
+    tot+=-20*Math.log10(cabs(t));
+  }
+  return tot;
+}
+
+// ================= WebGL =================
+const cv=document.getElementById('gl'), ov=document.getElementById('ov'), octx=ov.getContext('2d');
+const gl=cv.getContext('webgl2',{antialias:false,alpha:false,depth:false,stencil:false});
+function fail(msg){const e=document.getElementById('glerr');e.hidden=false;e.textContent=msg;}
+if(!gl){fail('このブラウザはWebGL2に対応していないため、シミュレーションを動かせません。');return;}
+if(!gl.getExtension('EXT_color_buffer_float')){fail('このブラウザ（GPU）は浮動小数点の描画に対応していないため、シミュレーションを動かせません。');return;}
+
+const VS=`#version 300 es
+void main(){vec2 p=vec2(float((gl_VertexID<<1)&2),float(gl_VertexID&2));gl_Position=vec4(p*2.-1.,0.,1.);}`;
+
+const SIM_FS=`#version 300 es
+precision highp float; precision highp int;
+uniform sampler2D uS; uniform sampler2D uM;
+uniform float uK2[8]; uniform float uA[8];
+uniform ivec2 uSize; uniform ivec2 uSrc; uniform int uLine; uniform float uSrcVal; uniform float uBeta; uniform int uStrip;
+out vec4 o;
+void main(){
+  ivec2 p=ivec2(gl_FragCoord.xy); ivec2 mx=uSize-1;
+  vec4 c=texelFetch(uS,p,0);
+  int id=clamp(int(texelFetch(uM,p,0).r*255.+.5),0,7);
+  float k2=uK2[id]; float e=c.b;
+  if(k2<0.){ o=vec4(0.,0.,e*(1.-uBeta),0.); return; }
+  float u=c.r, up=c.g;
+  float l=texelFetch(uS,min(p+ivec2(1,0),mx),0).r+texelFetch(uS,max(p-ivec2(1,0),ivec2(0)),0).r
+         +texelFetch(uS,min(p+ivec2(0,1),mx),0).r+texelFetch(uS,max(p-ivec2(0,1),ivec2(0)),0).r-4.*u;
+  float d=float(uStrip==1 ? min(p.x,mx.x-p.x) : min(min(p.x,mx.x-p.x),min(p.y,mx.y-p.y)));
+  float a=uA[id];
+  if(d<40.){ float q=(40.-d)/40.; a+=.3*q*q*q; }
+  float un=(2.*u-(1.-a)*up+k2*l)/(1.+a);
+  if((uLine==1 && p.x==uSrc.x) || (uLine==0 && p==uSrc)) un+=uSrcVal;
+  e+=uBeta*(un*un-e);
+  o=vec4(un,u,e,0.);
+}`;
+
+const DISP_FS=`#version 300 es
+precision highp float; precision highp int;
+uniform sampler2D uS; uniform sampler2D uM;
+uniform vec2 uView; uniform int uMode; uniform vec2 uSrc; uniform int uLine;
+uniform float uC; uniform float uRef; uniform float uFS; uniform float uSmooth; uniform float uComp;
+uniform vec3 uMatCol[8]; uniform float uMatA[8];
+out vec4 o;
+const float W=1280., H=800., DX=0.0075;
+vec3 heat(float d){
+  float xs[8]=float[](-95.,-85.,-75.,-67.,-55.,-45.,-35.,-25.);
+  vec3 cs[8]=vec3[](vec3(.03,.04,.09),vec3(.12,.16,.42),vec3(.22,.36,.78),vec3(.16,.68,.62),vec3(.58,.87,.37),vec3(1.,.84,.30),vec3(1.,.55,.25),vec3(1.,.95,.88));
+  if(d<=xs[0]) return cs[0];
+  for(int i=0;i<7;i++){ if(d<xs[i+1]) return mix(cs[i],cs[i+1],(d-xs[i])/(xs[i+1]-xs[i])); }
+  return cs[7];
+}
+float hash(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453); }
+float eAt(vec2 c){ ivec2 q=clamp(ivec2(c),ivec2(0),ivec2(1279,799)); return texelFetch(uS,q,0).b; }
+float lg(float x){ return log(x)*0.4342944819; }
+void main(){
+  vec2 uv=gl_FragCoord.xy/uView;
+  vec2 c=vec2(uv.x*W,(1.-uv.y)*H);
+  ivec2 p=clamp(ivec2(c),ivec2(0),ivec2(1279,799));
+  vec4 s=texelFetch(uS,p,0);
+  int id=clamp(int(texelFetch(uM,p,0).r*255.+.5),0,7);
+  float r=max(length(c-uSrc),4.);
+  vec3 bg=vec3(.035,.058,.105);
+  vec3 col;
+  if(uMode==0){
+    float A = uLine==1 ? sqrt(2.*uRef) : sqrt(2.*uC/(uComp>.5 ? r : 160.));
+    float t=tanh(s.r/A*.8);
+    col = t>0. ? mix(bg,vec3(1.,.70,.28),t) : mix(bg,vec3(.30,.79,.94),-t);
+    col += vec3(1.,.96,.88)*smoothstep(.82,1.,abs(t))*.28;
+  } else {
+    float e=s.b;
+    if(uSmooth>0.){
+      float sum=e, n=1.;
+      for(int i=0;i<16;i++){
+        float fi=float(i)+.5; float ang=fi*2.39996; float rr=uSmooth*sqrt(fi/16.);
+        sum+=eAt(c+vec2(cos(ang),sin(ang))*rr); n+=1.;
+      }
+      e=sum/n;
+    }
+    float db;
+    if(uLine==1) db=-40.+10.*lg(max(e,1e-30)/uRef);
+    else { float dm=r*DX; db=20.-(20.*lg(dm)+uFS)+10.*lg(max(e,1e-30)*r/uC); }
+    col=heat(db);
+    float fw=max(fwidth(db),1e-3);
+    float ln=0.;
+    ln=max(ln,1.-abs(db+55.)/fw/1.2); ln=max(ln,1.-abs(db+67.)/fw/1.2);
+    ln=max(ln,1.-abs(db+75.)/fw/1.2); ln=max(ln,1.-abs(db+85.)/fw/1.2);
+    col=mix(col,vec3(0.),clamp(ln,0.,1.)*.45);
+  }
+  // 1 m grid
+  float cpp=W/uView.x;
+  vec2 g=abs(fract(c/133.3333+.5)-.5)*133.3333;
+  if(min(g.x,g.y)<cpp*.7) col=mix(col,vec3(.65,.75,.95),.10);
+  if(id>0){
+    vec3 mc=uMatCol[id];
+    if(id==5) mc*=.86+.28*hash(floor(c));
+    if(id==4) mc*= (fract(c.y/8.)<.12 || fract((c.x+ (mod(floor(c.y/8.),2.)*10.))/20.)<.06) ? .7 : 1.;
+    col=mix(col,mc,uMatA[id]);
+  }
+  o=vec4(col,1.);
+}`;
+
+function compile(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;}
+function program(fs){const p=gl.createProgram();gl.attachShader(p,compile(gl.VERTEX_SHADER,VS));gl.attachShader(p,compile(gl.FRAGMENT_SHADER,fs));gl.linkProgram(p);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(p));
+  const u={};const n=gl.getProgramParameter(p,gl.ACTIVE_UNIFORMS);for(let i=0;i<n;i++){const nm=gl.getActiveUniform(p,i).name.replace(/\[0\]$/,'');u[nm]=gl.getUniformLocation(p,nm);}return {p,u};}
+let simP, dispP;
+try{ simP=program(SIM_FS); dispP=program(DISP_FS); }catch(err){ fail('シェーダの準備に失敗しました: '+err.message); window.__wwErr=err; return; }
+const vao=gl.createVertexArray();
+
+function mkTex(w,h){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA32F,w,h,0,gl.RGBA,gl.FLOAT,null);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);return t;}
+function mkFb(t){const f=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,f);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,t,0);return f;}
+
+class Sim{
+  constructor(w,h){
+    this.w=w;this.h=h;this.tex=[mkTex(w,h),mkTex(w,h)];this.fb=this.tex.map(mkFb);this.cur=0;
+    this.ids=new Uint8Array(w*h);
+    this.mt=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,this.mt);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.R8,w,h,0,gl.RED,gl.UNSIGNED_BYTE,this.ids);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    this.n=0;
+  }
+  upload(){gl.bindTexture(gl.TEXTURE_2D,this.mt);gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,this.w,this.h,gl.RED,gl.UNSIGNED_BYTE,this.ids);}
+  clear(){for(const f of this.fb){gl.bindFramebuffer(gl.FRAMEBUFFER,f);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);}this.n=0;}
+  begin(src,line,lut,strip){
+    gl.useProgram(simP.p);gl.bindVertexArray(vao);gl.viewport(0,0,this.w,this.h);
+    gl.uniform1i(simP.u.uStrip,strip?1:0);
+    gl.uniform2i(simP.u.uSize,this.w,this.h);gl.uniform2i(simP.u.uSrc,src[0],src[1]);gl.uniform1i(simP.u.uLine,line?1:0);
+    gl.uniform1f(simP.u.uBeta,BETA);gl.uniform1fv(simP.u.uK2,lut.k2);gl.uniform1fv(simP.u.uA,lut.a);
+    gl.uniform1i(simP.u.uS,0);gl.uniform1i(simP.u.uM,1);
+    gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.mt);
+  }
+  step(val){
+    gl.bindFramebuffer(gl.FRAMEBUFFER,this.fb[1-this.cur]);
+    gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.tex[this.cur]);
+    gl.uniform1f(simP.u.uSrcVal,val);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+    this.cur=1-this.cur;this.n++;
+  }
+  read(x,y,w,h,buf){
+    x=Math.max(0,Math.min(this.w-w,x|0));y=Math.max(0,Math.min(this.h-h,y|0));
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER,this.fb[this.cur]);
+    gl.readPixels(x,y,w,h,gl.RGBA,gl.FLOAT,buf);
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER,null);
+    return buf;
+  }
+}
+
+function makeLut(f){
+  const k2=new Float32Array(8), a=new Float32Array(8);
+  MATS.forEach((m,i)=>{
+    if(i===0){k2[i]=KC*KC;a[i]=0;return;}
+    if(m.pec){k2[i]=-1;a[i]=0;return;}
+    const {er,sig}=simProps(m,f);k2[i]=KC*KC/er;a[i]=sig*DT/(2*EPS0*er);
+  });
+  return {k2,a};
+}
+const lambdaCells=f=>C0/(f*1e9)/DX;
+const omegaStep=f=>2*Math.PI*KC/lambdaCells(f);
+
+// ---------- calibration: free-space level for the dBm conversion ----------
+const CAL={};
+(function calibrate(){
+  const N=320, cal=new Sim(N,N), buf=new Float32Array(N*N*4);
+  for(const k of Object.keys(FREQ)){
+    const f=FREQ[k].ghz, lut=makeLut(f), om=omegaStep(f), T=2*Math.PI/om;
+    // point source
+    cal.clear();cal.begin([N/2,N/2],false,lut);
+    for(let i=0;i<1300;i++) cal.step(Math.sin(om*i)*Math.min(1,i/(2*T)));
+    cal.read(0,0,N,N,buf);
+    const v=[];
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){const r=Math.hypot(x-N/2,y-N/2);if(r>=50&&r<=95)v.push(buf[(y*N+x)*4+2]*r);}
+    v.sort((a,b)=>a-b);
+    // line source
+    cal.clear();cal.begin([60,0],true,lut);
+    for(let i=0;i<1300;i++) cal.step(Math.sin(om*i)*Math.min(1,i/(2*T)));
+    cal.read(0,0,N,N,buf);
+    let s=0,c=0;for(let y=140;y<180;y++)for(let x=170;x<230;x++){s+=buf[(y*N+x)*4+2];c++;}
+    CAL[k]={C:v[v.length>>1], L:s/c};
+  }
+})();
+
+// ================= state =================
+const sim=new Sim(W,H);
+const ids=sim.ids;
+const S={
+  mode:'wave', freq:'2.4', speedIdx:3, paused:false, comp:true, smooth:true,
+  tool:'move', preset:null, line:false,
+  router:[0,0], phone:[0,0], lineX:93,
+  labels:[], probes:[],
+  lastChange:0, undo:[],
+};
+let lut=makeLut(FREQ[S.freq].ghz), OMEGA=omegaStep(FREQ[S.freq].ghz);
+
+const M=v=>v/DX;
+function drawWall(m,x0,y0,x1,y1){
+  const L=Math.hypot(x1-x0,y1-y0); if(L<.5) return;
+  const ux=(x1-x0)/L, uy=(y1-y0)/L, nx=-uy, ny=ux;
+  const lay=m.layers.map(([a,b])=>[a/CM_PER_CELL,b/CM_PER_CELL]);
+  const half=Math.max(...lay.map(l=>Math.max(Math.abs(l[0]),Math.abs(l[1]))));
+  const pad=half+1;
+  const bx0=Math.max(0,Math.floor(Math.min(x0,x1)-pad)), bx1=Math.min(W-1,Math.ceil(Math.max(x0,x1)+pad));
+  const by0=Math.max(0,Math.floor(Math.min(y0,y1)-pad)), by1=Math.min(H-1,Math.ceil(Math.max(y0,y1)+pad));
+  for(let y=by0;y<=by1;y++)for(let x=bx0;x<=bx1;x++){
+    const rx=x+.5-x0, ry=y+.5-y0, t=rx*ux+ry*uy;
+    if(t<-half||t>L+half) continue;
+    const s=rx*nx+ry*ny; if(Math.abs(s)>=half) continue;
+    let hit=t<0||t>L;
+    if(!hit) for(const l of lay) if(s>=l[0]&&s<l[1]){hit=true;break;}
+    if(hit) ids[y*W+x]=m.id;
+  }
+}
+const wallM=(k,x0,y0,x1,y1)=>drawWall(MAT[k],M(x0),M(y0),M(x1),M(y1));
+function rectM(k,x0,y0,x1,y1){
+  const id=MAT[k].id, a=Math.max(0,Math.round(M(x0))), b=Math.min(W,Math.round(M(x1))), c=Math.max(0,Math.round(M(y0))), d=Math.min(H,Math.round(M(y1)));
+  for(let y=c;y<d;y++)for(let x=a;x<b;x++) ids[y*W+x]=id;
+}
+function ellipse(id,cx,cy,rx,ry,ang){
+  const ca=Math.cos(ang),sa=Math.sin(ang),R=Math.max(rx,ry)+1;
+  for(let y=Math.max(0,Math.floor(cy-R));y<=Math.min(H-1,Math.ceil(cy+R));y++)
+    for(let x=Math.max(0,Math.floor(cx-R));x<=Math.min(W-1,Math.ceil(cx+R));x++){
+      const dx=x+.5-cx,dy=y+.5-cy,u=(dx*ca+dy*sa)/rx,v=(-dx*sa+dy*ca)/ry;
+      if(u*u+v*v<=1) ids[y*W+x]=id;
+    }
+}
+const personM=(x,y,ang=0)=>ellipse(MAT.water.id,M(x),M(y),M(.23),M(.13),ang);
+function eraseAt(cx,cy,r){
+  for(let y=Math.max(0,Math.floor(cy-r));y<=Math.min(H-1,Math.ceil(cy+r));y++)
+    for(let x=Math.max(0,Math.floor(cx-r));x<=Math.min(W-1,Math.ceil(cx+r));x++)
+      if((x+.5-cx)**2+(y+.5-cy)**2<=r*r) ids[y*W+x]=0;
+}
+
+// ================= presets =================
+const PRESETS=[
+  {key:'flat', name:'2LDKマンション', sub:'玄関にルーター',
+    router:[1.0,2.85], phone:[8.2,4.5],
+    hint:'マンションのルーターは玄関まわりの情報盤に置かれがち。それでもLDKまで届くのは、廊下とドアを伝って波が流れ込むから。<b>5GHzに切り替えたり、黄色のルーターやスマホをドラッグ</b>したりして、受信の変化を見てみよう。',
+    now:'<b>2LDKマンション。</b>外側の壁はコンクリート、部屋の仕切りは石こうボード、冷蔵庫と玄関ドアは金属。左の洋室の窓とLDKのベランダ側はガラスです。',
+    labels:[['洋室1',2.0,1.5],['洋室2',2.0,4.5],['浴室',4.0,1.15],['洗面',4.55,2.15],['トイレ・収納',4.55,4.5],['廊下',4.55,3.05],['玄関',1.35,3.25],['LDK',7.3,2.6],['冷蔵庫',6.07,1.62],['ベランダ側の窓',8.35,5.2]],
+    build(){
+      // outer RC walls
+      wallM('conc',.55,.55,9.05,.55); wallM('conc',.55,5.45,9.05,5.45);
+      wallM('conc',.55,.55,.55,1.15); wallM('glass',.55,1.15,.55,2.2); wallM('conc',.55,2.2,.55,2.75);
+      wallM('metal',.55,2.75,.55,3.45); wallM('conc',.55,3.45,.55,4.0); wallM('glass',.55,4.0,.55,4.9); wallM('conc',.55,4.9,.55,5.45);
+      wallM('conc',9.05,.55,9.05,1.0); wallM('glass',9.05,1.0,9.05,5.0); wallM('conc',9.05,5.0,9.05,5.45);
+      rectM('conc',.55,.55,1.0,1.0); rectM('conc',.55,5.0,1.0,5.45); rectM('conc',8.6,.55,9.05,1.0); rectM('conc',8.6,5.0,9.05,5.45);
+      // bedrooms
+      wallM('board',.55,2.6,2.3,2.6); wallM('wood',2.3,2.6,3.1,2.6); wallM('board',3.1,2.6,3.5,2.6);
+      wallM('board',.55,3.5,2.3,3.5); wallM('wood',2.3,3.5,3.1,3.5); wallM('board',3.1,3.5,3.5,3.5);
+      wallM('board',3.5,.55,3.5,2.6); wallM('board',3.5,3.5,3.5,5.45);
+      // bath block
+      wallM('board',3.5,2.6,4.0,2.6); wallM('wood',4.0,2.6,4.7,2.6); wallM('board',4.7,2.6,5.6,2.6);
+      wallM('board',3.5,1.7,4.2,1.7); wallM('glass',4.2,1.7,4.9,1.7); wallM('board',4.9,1.7,5.6,1.7);
+      wallM('board',5.6,.55,5.6,2.6);
+      rectM('water',4.55,.8,5.4,1.45);
+      // toilet / storage
+      wallM('board',3.5,3.5,4.0,3.5); wallM('wood',4.0,3.5,4.7,3.5); wallM('board',4.7,3.5,5.6,3.5);
+      wallM('board',5.6,3.5,5.6,5.45);
+      // living door with glass
+      wallM('glass',5.6,2.6,5.6,3.5);
+      // kitchen
+      rectM('metal',5.75,.75,6.4,1.4);
+      personM(7.3,3.4,.3);
+    }},
+  {key:'house', name:'木造の一戸建て', sub:'1階・リビングにルーター',
+    router:[1.1,1.0], phone:[8.0,3.3],
+    hint:'木造の家は電波が通りやすい。でもお風呂のお湯や冷蔵庫は電波をさえぎります。<b>5GHzに切り替える</b>と、洗面所のスマホはどうなる？',
+    now:'<b>木造の一戸建て（1階）。</b>外壁は木、仕切りは石こうボード、ドアは木。リビングにルーター、スマホは洗面所にあります。',
+    labels:[['リビング',2.8,2.4],['キッチン',7.0,1.55],['ホール',6.0,4.0],['洗面所',8.0,3.0],['浴室',7.6,4.85],['冷蔵庫',8.57,1.6]],
+    build(){
+      wallM('wood',.55,.55,6.0,.55); wallM('glass',6.0,.55,7.5,.55); wallM('wood',7.5,.55,9.05,.55);
+      wallM('wood',9.05,.55,9.05,5.45);
+      wallM('wood',.55,5.45,1.0,5.45); wallM('glass',1.0,5.45,4.2,5.45); wallM('wood',4.2,5.45,9.05,5.45);
+      wallM('wood',.55,.55,.55,1.5); wallM('glass',.55,1.5,.55,4.5); wallM('wood',.55,4.5,.55,5.45);
+      wallM('board',5.0,.55,5.0,1.8);
+      wallM('board',5.0,2.6,5.0,3.6); wallM('wood',5.0,3.6,5.0,4.4); wallM('board',5.0,4.4,5.0,5.45);
+      wallM('board',5.0,2.6,6.0,2.6); wallM('board',6.9,2.6,9.05,2.6);
+      wallM('board',7.0,2.6,7.0,3.3); wallM('wood',7.0,3.3,7.0,4.0); wallM('board',7.0,4.0,7.0,5.45);
+      wallM('board',7.0,4.0,7.8,4.0); wallM('glass',7.8,4.0,8.5,4.0); wallM('board',8.5,4.0,9.05,4.0);
+      rectM('water',7.9,4.45,8.85,5.25);
+      rectM('metal',8.25,.75,8.9,1.4);
+      for(let i=0;i<6;i++) wallM('wood',5.2,3.0+i*.35,6.6,3.0+i*.35);
+      personM(2.5,3.9,0); personM(3.1,3.9,0);
+    }},
+  {key:'compare', name:'壁の比べっこ', sub:'材料ごとの弱まり', line:true,
+    phone:[6.0,.3+5.4/7*5.5],
+    hint:'左から同じ強さのまっすぐな波を送り、壁を抜けた先の強さを「何もなし」と比べます。<b>2.4GHzと5GHzを切り替えて</b>数字の変化を見てみよう。',
+    now:'<b>壁の比べっこ。</b>遠くのルーターから届く波をまねて、左端からまっすぐな波（平面波）を出しています。金属の仕切りで7つの通路に分け、それぞれに1種類の壁を置きました。',
+    build(){
+      const names=[null,'glass','board','wood','brick','conc','metal'], y0=.3, lh=5.4/7;
+      for(let i=1;i<7;i++) wallM(names[i],4.5,y0+i*lh,4.5,y0+(i+1)*lh);
+      for(let i=0;i<=7;i++) rectM('metal',2.6,y0+i*lh-.0075,9.6,y0+i*lh+.0075);
+      S.probes=names.map((k,i)=>({name:k?MAT[k].name:'何もなし', x:M(7.6), y:M(y0+(i+.5)*lh), ref:i===0, v:0}));
+    }},
+  {key:'gaps', name:'すき間の実験', sub:'金属の板にあけた穴', line:true,
+    phone:[6.0,.3+1.08*3.5],
+    hint:'金属の板にあけたすき間。<b>波長の半分（2.4GHzで6.2cm、5GHzで2.9cm）より狭いすき間はほとんど通れません。</b>4cmのすき間を2.4GHzと5GHzで比べてみよう。電子レンジの扉の網も同じしくみです。',
+    now:'<b>すき間の実験。</b>厚さ8cmの金属の板に、幅20cm・8cm・4cm・2cmのすき間をあけました。一番上は板のない通路で、比べる基準です。',
+    build(){
+      const ws=[0,.20,.08,.04,.02], y0=.3, lh=1.08;
+      for(let i=1;i<5;i++){
+        const ya=y0+i*lh, yb=ya+lh, ym=(ya+yb)/2, g=ws[i]/2;
+        rectM('metal',4.46,ya,4.54,ym-g); rectM('metal',4.46,ym+g,4.54,yb);
+      }
+      for(let i=0;i<=5;i++) rectM('metal',2.6,y0+i*lh-.0075,9.6,y0+i*lh+.0075);
+      S.probes=ws.map((w,i)=>({name:i?`すき間 ${Math.round(w*100)}cm`:'板なし', x:M(7.6), y:M(y0+(i+.5)*lh), ref:i===0, v:0}));
+    }},
+  {key:'blank', name:'まっさら', sub:'自分で壁を描く',
+    router:[2.4,3.0], phone:[7.4,3.0],
+    hint:'下の「壁を描く」から材料を選んで、図の上をドラッグして壁を描こう。ルーターとスマホの間に置くと、数字がどう変わる？',
+    now:'<b>まっさらな部屋。</b>壁は何もありません。電波は円を描いて広がり、遠くなるほど弱まります。',
+    build(){}},
+];
+
+function loadPreset(key){
+  const p=PRESETS.find(q=>q.key===key); S.preset=p;
+  ids.fill(0); S.probes=[]; S.undo=[];
+  p.build();
+  S.line=!!p.line;
+  if(p.router) S.router=[M(p.router[0]),M(p.router[1])];
+  S.phone=[M(p.phone[0]),M(p.phone[1])];
+  S.labels=(p.labels||[]).map(([t,x,y])=>[t,M(x),M(y)]);
+  sim.upload(); resetField();
+  document.getElementById('hint').innerHTML=p.hint;
+  document.getElementById('nowText').innerHTML=p.now;
+  document.querySelectorAll('.preset').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===key));
+  wallsKey='';
+  updateLegend();
+}
+function resetField(){ sim.clear(); S.lastChange=0; }
+function mapChanged(){ sim.upload(); S.lastChange=sim.n; wallsKey=''; }
+
+// ================= UI =================
+const $=id=>document.getElementById(id);
+const presetsEl=$('presets');
+PRESETS.forEach(p=>{const b=document.createElement('button');b.className='preset';b.dataset.v=p.key;b.innerHTML=`${p.name}<small>${p.sub}</small>`;b.onclick=()=>loadPreset(p.key);presetsEl.appendChild(b);});
+
+const TOOLS=[{key:'move',name:'動かす',swatch:'transparent'}].concat(MATS.slice(1).map(m=>({key:m.key,name:m.key==='water'?'人を置く':m.short,mat:m}))).concat([{key:'erase',name:'消しゴム'}]);
+const toolsEl=$('tools');
+TOOLS.forEach(t=>{
+  const b=document.createElement('button');b.className='tool';b.dataset.v=t.key;b.setAttribute('aria-pressed',t.key===S.tool);
+  const col=t.mat?`rgb(${t.mat.rgb.map(v=>Math.round(v*255)).join(',')})`:(t.key==='erase'?'repeating-linear-gradient(45deg,#556,#556 3px,#223 3px,#223 6px)':'transparent');
+  b.innerHTML=`<i style="background:${col}${t.key==='move'?';box-shadow:inset 0 0 0 1.5px var(--accent);border-radius:50%':''}"></i><span>${t.name}</span><em id="tdb-${t.key}"></em>`;
+  b.title=t.mat?`${t.mat.name}（${t.mat.note}）`:'';
+  b.onclick=()=>{S.tool=t.key;document.querySelectorAll('.tool').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===t.key));ov.style.cursor=t.key==='move'?'grab':'crosshair';};
+  toolsEl.appendChild(b);
+});
+function updateToolDb(){
+  const f=FREQ[S.freq].ghz;
+  MATS.slice(1).forEach(m=>{
+    const el=$('tdb-'+m.key);
+    if(m.pec) el.textContent='反射';
+    else if(m.water) el.textContent='吸収';
+    else el.textContent='−'+slabDb(m,f).toFixed(1);
+  });
+  $('toolCap').textContent=`材料を選んで図の上をドラッグすると壁が描けます。数字は${S.freq} GHzの電波が壁1枚を真正面から通るときの弱まり（dB）。`;
+}
+
+function setSeg(el,v){el.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v));}
+$('segMode').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.mode=b.dataset.v;setSeg($('segMode'),S.mode);
+  S.speedIdx=S.mode==='wave'?3:9; $('speed').value=S.speedIdx;
+  $('chkComp').hidden=S.mode!=='wave'; $('chkSmooth').hidden=S.mode!=='heat'; updateLegend();};
+$('segFreq').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.freq=b.dataset.v;setSeg($('segFreq'),S.freq);
+  lut=makeLut(FREQ[S.freq].ghz);OMEGA=omegaStep(FREQ[S.freq].ghz);resetField();updateFreqCap();updateToolDb();};
+$('optComp').onchange=e=>S.comp=e.target.checked;
+$('optSmooth').onchange=e=>S.smooth=e.target.checked;
+$('speed').oninput=e=>S.speedIdx=+e.target.value;
+$('btnPlay').onclick=()=>{S.paused=!S.paused;$('btnPlay').textContent=S.paused?'再生':'一時停止';};
+$('btnReset').onclick=()=>resetField();
+$('btnUndo').onclick=()=>{const u=S.undo.pop();if(u){ids.set(u);mapChanged();}};
+addEventListener('keydown',e=>{if(e.code==='Space'&&e.target===document.body){e.preventDefault();$('btnPlay').click();}});
+
+function updateFreqCap(){
+  const F=FREQ[S.freq], lam=C0/(F.ghz*1e9)*100;
+  $('freqCap').textContent=`1秒間に${F.times}回ふるえる波。波長 ${lam.toFixed(1)} cm（図の山と山の間隔）。`;
+}
+
+const HEAT_STOPS=[[-95,[.03,.04,.09]],[-85,[.12,.16,.42]],[-75,[.22,.36,.78]],[-67,[.16,.68,.62]],[-55,[.58,.87,.37]],[-45,[1,.84,.30]],[-35,[1,.55,.25]],[-25,[1,.95,.88]]];
+function heatCss(d){
+  if(d<=HEAT_STOPS[0][0]) return HEAT_STOPS[0][1];
+  for(let i=0;i<HEAT_STOPS.length-1;i++){const [a,ca]=HEAT_STOPS[i],[b,cb]=HEAT_STOPS[i+1];if(d<b){const t=(d-a)/(b-a);return ca.map((v,j)=>v+(cb[j]-v)*t);}}
+  return HEAT_STOPS[HEAT_STOPS.length-1][1];
+}
+const rgb=c=>`rgb(${c.map(v=>Math.round(v*255)).join(',')})`;
+function updateLegend(){
+  const el=$('legend');
+  if(S.mode==='wave'){
+    el.innerHTML=`<div class="lg-wave"><span><i style="background:var(--wave-pos)"></i>電場が上向き（波の山）</span><span><i style="background:var(--wave-neg)"></i>下向き（波の谷）</span></div>
+    <div>ルーターのアンテナを縦に立てたときの、床に垂直な電場を色で表しています。</div>`;
+    return;
+  }
+  const lo=-95,hi=-25,stops=[];for(let d=lo;d<=hi;d+=5)stops.push(`${rgb(heatCss(d))} ${((d-lo)/(hi-lo)*100).toFixed(1)}%`);
+  const ticks=S.line?[[-40,'0'],[-55,'−15'],[-70,'−30'],[-85,'−45 dB']]:[[-85,'−85'],[-75,'−75'],[-67,'−67'],[-55,'−55'],[-35,'−35 dBm']];
+  el.innerHTML=`<div class="lg-bar" style="background:linear-gradient(90deg,${stops.join(',')})"></div>
+  <div class="lg-ticks">${ticks.map(([d,t])=>`<span style="left:${((d-lo)/(hi-lo)*100).toFixed(1)}%">${t}</span>`).join('')}</div>
+  <div>${S.line?'壁がないときと比べた強さ（dB）。':'受信の強さの目安（dBm）。黒い線はアンテナ表示が1本ずつ変わる境目。'}</div>`;
+}
+
+// ================= readout =================
+function grade(db){
+  if(db>=-55) return [4,'とても強い','4K動画も余裕','var(--good)'];
+  if(db>=-67) return [3,'強い','動画も快適','var(--good)'];
+  if(db>=-75) return [2,'ふつう','ウェブやSNSは大丈夫','var(--mid)'];
+  if(db>=-85) return [1,'弱い','途切れやすい','var(--weak)'];
+  return [0,'ほぼ圏外','つながらない','var(--bad)'];
+}
+const readBuf=new Float32Array(17*17*4);
+function probeAvg(x,y){sim.read(Math.round(x)-8,Math.round(y)-8,17,17,readBuf);let s=0;for(let i=0;i<289;i++)s+=readBuf[i*4+2];return s/289;}
+// lane probes average 1.5 m along the lane so mode beating inside the lane does not skew the comparison
+const laneBuf=new Float32Array(200*40*4);
+function laneAvg(x,y){sim.read(Math.round(x)-100,Math.round(y)-20,200,40,laneBuf);let s=0;for(let i=0;i<8000;i++)s+=laneBuf[i*4+2];return s/8000;}
+function fspl(dm){return 20*Math.log10(dm)+20*Math.log10(FREQ[S.freq].mhz)-27.55;}
+function dbmAt(x,y,e){const dc=Math.max(Math.hypot(x-S.router[0],y-S.router[1]),8);return PTX-fspl(dc*DX)+10*Math.log10(Math.max(e,1e-30)*dc/CAL[S.freq].C);}
+function relAt(e){return 10*Math.log10(Math.max(e,1e-30)/CAL[S.freq].L);}
+
+let wallsKey='', wallsText='';
+function wallsBetween(){
+  const k=[S.router,S.phone].flat().map(Math.round).join(',');
+  if(k===wallsKey) return wallsText;
+  wallsKey=k;
+  const [x0,y0]=S.router,[x1,y1]=S.phone,L=Math.hypot(x1-x0,y1-y0),n=Math.ceil(L*2);
+  const cnt={}; let prev=0, lastExit={};
+  for(let i=0;i<=n;i++){
+    const x=Math.round(x0+(x1-x0)*i/n), y=Math.round(y0+(y1-y0)*i/n), id=ids[y*W+x];
+    if(id!==prev){
+      if(id){ if(!(lastExit[id]!==undefined && i-lastExit[id]<=24)) cnt[id]=(cnt[id]||0)+1; }
+      if(prev) lastExit[prev]=i;
+      prev=id;
+    }
+  }
+  const parts=Object.keys(cnt).map(id=>`${MATS[id].short}×${cnt[id]}`);
+  wallsText=parts.length?parts.join('、'):'なし（見通し）';
+  return wallsText;
+}
+function updateReadout(){
+  const e=probeAvg(S.phone[0],S.phone[1]);
+  const dist=S.line?S.phone[0]-S.lineX:Math.hypot(S.phone[0]-S.router[0],S.phone[1]-S.router[1]);
+  const need=dist/KC*1.25+700, since=sim.n-S.lastChange, waiting=since<need;
+  const ro=$('readout');
+  let val, html=[];
+  if(S.line){
+    // compare with the reference lane when there is one: the field inside a lane is not a free plane wave
+    const ref=S.probes.find(p=>p.ref);
+    val=ref&&ref.v>0?10*Math.log10(Math.max(e,1e-30)/ref.v):relAt(e);
+    val=Math.max(val,-99);
+    $('roUnit').textContent='dB（壁なしとの差）';
+    html.push(`左端の発生源から ${(dist*DX).toFixed(1)} m`);
+  } else {
+    val=dbmAt(S.phone[0],S.phone[1],e);
+    $('roUnit').textContent='dBm';
+    const dm=Math.max(dist,8)*DX, free=PTX-fspl(dm);
+    html.push(`ルーターから ${dm.toFixed(1)} m ／ 間の壁: ${wallsBetween()}`);
+    if(!waiting) html.push(`壁がなければ ${free.toFixed(0)} dBm → 壁と反射の影響 ${(val-free>=0?'+':'−')+Math.abs(val-free).toFixed(0)} dB`);
+  }
+  if(waiting){
+    $('roVal').textContent='…'; ro.classList.add('ro-wait');
+    $('roVerdict').innerHTML=`<span>電波がスマホに届くのを待っています</span>`;
+    $('roBars').style.color='var(--dim)';[...$('roBars').children].forEach(i=>i.classList.remove('on'));
+  } else {
+    ro.classList.remove('ro-wait');
+    $('roVal').textContent=(val<0?'−':'+')+Math.abs(val).toFixed(0);
+    const g=grade(S.line?val-40:val);
+    $('roVerdict').innerHTML=S.line?`<span style="color:${g[3]}">${val>-3?'ほぼそのまま届く':val>-10?'少し弱まる':val>-20?'かなり弱まる':val>-40?'大きく弱まる':'ほとんど届かない'}</span>`
+      :`<b style="color:${g[3]}">${g[1]}</b> <span>${g[2]}</span>`;
+    $('roBars').style.color=g[3];[...$('roBars').children].forEach((i,k)=>i.classList.toggle('on',k<g[0]));
+  }
+  $('roDetail').innerHTML=html.map(t=>`<span>${t}</span>`).join('');
+  // probes
+  if(S.probes.length){
+    for(const p of S.probes) p.v=laneAvg(p.x,p.y);
+    const ref=S.probes.find(p=>p.ref).v;
+    for(const p of S.probes){p.rel=10*Math.log10(Math.max(p.v,1e-30)/Math.max(ref,1e-30)); p.ready=sim.n>(p.x-S.lineX)/KC*1.25+700;}
+  }
+}
+
+// ================= interaction =================
+let scale=1, dpr=1;
+function fit(){
+  const fr=$('frame').getBoundingClientRect();
+  scale=Math.min(fr.width/W,fr.height/H); if(!(scale>0)) scale=fr.width/W;
+  const cw=W*scale, ch=H*scale, left=(fr.width-cw)/2, top=Math.max(0,(fr.height-ch)/2);
+  dpr=Math.min(2,window.devicePixelRatio||1);
+  for(const c of [cv,ov]){c.style.width=cw+'px';c.style.height=ch+'px';c.style.left=left+'px';c.style.top=top+'px';}
+  cv.width=Math.round(cw*dpr);cv.height=Math.round(ch*dpr);ov.width=cv.width;ov.height=cv.height;
+}
+new ResizeObserver(fit).observe($('frame'));
+
+const toCell=e=>{const r=ov.getBoundingClientRect();return [(e.clientX-r.left)/scale,(e.clientY-r.top)/scale];};
+const clampC=p=>[Math.max(45,Math.min(W-46,p[0])),Math.max(45,Math.min(H-46,p[1]))];
+let drag=null;
+ov.addEventListener('pointerdown',e=>{
+  const p=toCell(e), hitR=20/scale;
+  try{ov.setPointerCapture(e.pointerId);}catch(_){}
+  if(Math.hypot(p[0]-S.phone[0],p[1]-S.phone[1])<hitR){drag={kind:'phone'};return;}
+  if(!S.line&&Math.hypot(p[0]-S.router[0],p[1]-S.router[1])<hitR){drag={kind:'router'};return;}
+  if(S.tool==='move') return;
+  S.undo.push(ids.slice()); if(S.undo.length>15) S.undo.shift();
+  if(S.tool==='erase'){drag={kind:'erase',p};eraseAt(p[0],p[1],20);mapChanged();return;}
+  if(S.tool==='water'){personM(p[0]*DX,p[1]*DX,0);mapChanged();return;}
+  drag={kind:'wall',p0:p,p1:p};
+});
+ov.addEventListener('pointermove',e=>{
+  const p=toCell(e); S.hover=p;
+  if(!drag){
+    if(S.tool==='move'||true){const near=Math.hypot(p[0]-S.phone[0],p[1]-S.phone[1])<20/scale||(!S.line&&Math.hypot(p[0]-S.router[0],p[1]-S.router[1])<20/scale);
+      ov.style.cursor=near?'grab':(S.tool==='move'?'default':'crosshair');}
+    return;
+  }
+  if(drag.kind==='phone'){S.phone=clampC(p);}
+  else if(drag.kind==='router'){S.router=clampC(p);S.lastChange=sim.n;}
+  else if(drag.kind==='erase'){eraseAt(p[0],p[1],20);mapChanged();}
+  else if(drag.kind==='wall'){
+    let q=p; if(e.shiftKey||true){const dx=q[0]-drag.p0[0],dy=q[1]-drag.p0[1];if(Math.abs(dy)<Math.abs(dx)*.12)q=[q[0],drag.p0[1]];else if(Math.abs(dx)<Math.abs(dy)*.12)q=[drag.p0[0],q[1]];}
+    drag.p1=q;
+  }
+});
+function endDrag(){
+  if(drag&&drag.kind==='wall'){const m=MAT[S.tool];drawWall(m,drag.p0[0],drag.p0[1],drag.p1[0],drag.p1[1]);mapChanged();}
+  drag=null;
+}
+ov.addEventListener('pointerup',endDrag);ov.addEventListener('pointercancel',endDrag);
+ov.addEventListener('pointerleave',()=>{S.hover=null;});
+
+// ================= drawing =================
+function drawOverlay(now){
+  const c=octx, k=scale*dpr;
+  c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,ov.width,ov.height);
+  c.setTransform(dpr,0,0,dpr,0,0);
+  const P=([x,y])=>[x*scale,y*scale];
+  c.textAlign='center';c.textBaseline='middle';
+  // room labels
+  c.font=`500 ${Math.max(10,12*Math.min(1.2,scale/0.7))}px 'Zen Kaku Gothic New',sans-serif`;
+  for(const [t,x,y] of S.labels){const [sx,sy]=P([x,y]);c.fillStyle='rgba(8,14,28,.55)';const w=c.measureText(t).width+10;c.fillRect(sx-w/2,sy-9,w,18);c.fillStyle='rgba(225,235,255,.85)';c.fillText(t,sx,sy);}
+  // lane probes
+  for(const p of S.probes){
+    const [sx,sy]=P([p.x,p.y]);
+    const txt=p.ref?'基準 0 dB':(!p.ready?'…':p.rel<-60?'届かない（−60 dB以下）':`${p.rel>=0?'+':'−'}${Math.abs(p.rel).toFixed(1)} dB`);
+    c.font=`500 12px 'Zen Kaku Gothic New',sans-serif`;
+    const w=Math.max(c.measureText(p.name).width,c.measureText(txt).width)+16;
+    c.fillStyle='rgba(8,14,28,.78)';c.beginPath();c.roundRect(sx-w/2,sy-19,w,38,6);c.fill();
+    c.fillStyle='rgba(200,215,240,.9)';c.fillText(p.name,sx,sy-8);
+    c.font=`500 13px 'IBM Plex Mono',monospace`;c.fillStyle=p.ref?'#cfd8ea':'#ffc95a';c.fillText(txt,sx,sy+9);
+  }
+  // source
+  const pulse=(now/1000)%1;
+  if(S.line){
+    const x=S.lineX*scale;c.strokeStyle='rgba(255,201,90,.9)';c.setLineDash([6,5]);c.lineWidth=2;c.beginPath();c.moveTo(x,0);c.lineTo(x,H*scale);c.stroke();c.setLineDash([]);
+    c.save();c.translate(x+12,H*scale/2);c.rotate(-Math.PI/2);c.fillStyle='rgba(255,220,150,.95)';c.font=`500 12px 'Zen Kaku Gothic New',sans-serif`;c.fillText('まっすぐな波の発生源',0,0);c.restore();
+  } else {
+    const [rx,ry]=P(S.router);
+    if(!reduceMotion){c.strokeStyle=`rgba(255,201,90,${.6*(1-pulse)})`;c.lineWidth=2;c.beginPath();c.arc(rx,ry,10+pulse*26,0,7);c.stroke();}
+    c.fillStyle='#ffc95a';c.strokeStyle='#1a1406';c.lineWidth=2;c.beginPath();c.arc(rx,ry,9,0,7);c.fill();c.stroke();
+    c.strokeStyle='#1a1406';c.lineWidth=1.6;c.beginPath();c.moveTo(rx-3,ry+3);c.lineTo(rx-3,ry-4);c.moveTo(rx+3,ry+3);c.lineTo(rx+3,ry-4);c.stroke();
+    c.font=`700 12px 'Zen Kaku Gothic New',sans-serif`;c.fillStyle='rgba(8,14,28,.7)';c.fillRect(rx-27,ry+13,54,17);c.fillStyle='#ffd88a';c.fillText('ルーター',rx,ry+22);
+  }
+  // phone
+  {
+    const [px,py]=P(S.phone);
+    c.fillStyle='#0b1322';c.strokeStyle='#e8eefb';c.lineWidth=2;c.beginPath();c.roundRect(px-7,py-11,14,22,3);c.fill();c.stroke();
+    c.fillStyle='#e8eefb';c.fillRect(px-2,py+6,4,1.6);
+    const v=$('roVal').textContent, u=S.line?'dB':'dBm';
+    c.font=`500 12px 'IBM Plex Mono',monospace`;const t=`${v} ${u}`,w=c.measureText(t).width+14;
+    c.fillStyle='rgba(8,14,28,.82)';c.beginPath();c.roundRect(px-w/2,py-36,w,19,5);c.fill();
+    c.fillStyle=getComputedStyle($('roBars')).color;c.fillText(t,px,py-26);
+  }
+  // drawing preview
+  if(drag&&drag.kind==='wall'){
+    const m=MAT[S.tool],th=Math.max(2,Math.max(...m.layers.flat().map(Math.abs))*2/CM_PER_CELL*scale);
+    c.strokeStyle=rgb(m.rgb);c.globalAlpha=.8;c.lineWidth=th;c.lineCap='square';c.beginPath();c.moveTo(...P(drag.p0));c.lineTo(...P(drag.p1));c.stroke();c.globalAlpha=1;
+    const L=Math.hypot(drag.p1[0]-drag.p0[0],drag.p1[1]-drag.p0[1])*DX;const [mx,my]=P([(drag.p0[0]+drag.p1[0])/2,(drag.p0[1]+drag.p1[1])/2]);
+    c.font=`500 12px 'IBM Plex Mono',monospace`;c.fillStyle='rgba(8,14,28,.8)';c.fillRect(mx-28,my-24,56,17);c.fillStyle='#fff';c.fillText(L.toFixed(2)+' m',mx,my-15);
+  }
+  if(S.hover&&!drag&&S.tool==='erase'){const [hx,hy]=P(S.hover);c.strokeStyle='rgba(255,255,255,.6)';c.lineWidth=1;c.beginPath();c.arc(hx,hy,20*scale,0,7);c.stroke();}
+  // scale bar
+  const bx=14,by=H*scale-14,bl=M(1)*scale;
+  c.strokeStyle='rgba(225,235,255,.8)';c.lineWidth=2;c.beginPath();c.moveTo(bx,by-5);c.lineTo(bx,by);c.lineTo(bx+bl,by);c.lineTo(bx+bl,by-5);c.stroke();
+  c.textAlign='left';c.font=`500 11px 'IBM Plex Mono',monospace`;c.fillStyle='rgba(225,235,255,.85)';c.fillText('1 m',bx+bl+6,by-3);
+}
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function display(){
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,cv.width,cv.height);
+  gl.useProgram(dispP.p);gl.bindVertexArray(vao);
+  gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,sim.tex[sim.cur]);
+  gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,sim.mt);
+  const u=dispP.u;
+  gl.uniform1i(u.uS,0);gl.uniform1i(u.uM,1);
+  gl.uniform2f(u.uView,cv.width,cv.height);gl.uniform1i(u.uMode,S.mode==='wave'?0:1);
+  gl.uniform2f(u.uSrc,S.line?-1e4:Math.round(S.router[0])+.5,S.line?0:Math.round(S.router[1])+.5);
+  gl.uniform1i(u.uLine,S.line?1:0);
+  gl.uniform1f(u.uC,CAL[S.freq].C);gl.uniform1f(u.uRef,CAL[S.freq].L);
+  gl.uniform1f(u.uFS,20*Math.log10(FREQ[S.freq].mhz)-27.55);
+  gl.uniform1f(u.uSmooth,S.smooth?lambdaCells(FREQ[S.freq].ghz)*.5:0);
+  gl.uniform1f(u.uComp,S.comp?1:0);
+  gl.uniform3fv(u.uMatCol,new Float32Array(MATS.flatMap(m=>m.rgb||[0,0,0])));
+  gl.uniform1fv(u.uMatA,new Float32Array(MATS.map(m=>m.al||0)));
+  gl.drawArrays(gl.TRIANGLES,0,3);
+}
+
+function fmtOku(x){
+  if(x>=1e12) return (x/1e12).toFixed(x>=1e13?0:1)+'兆';
+  if(x>=1e8) return (x/1e8).toFixed(x>=1e9?0:1)+'億';
+  if(x>=1e4) return (x/1e4).toFixed(0)+'万';
+  return x.toFixed(0);
+}
+
+let last=performance.now(), ftAvg=16, cap=64, frame=0, stepsPerSec=0;
+function loop(now){
+  try{
+    const dt=now-last;last=now;ftAvg+= (Math.min(dt,100)-ftAvg)*.05;
+    if(ftAvg>30&&cap>2)cap=Math.max(2,Math.floor(cap*.9));else if(ftAvg<19&&cap<64)cap++;
+    const want=SPEEDS[S.speedIdx], steps=S.paused?0:Math.min(want,cap);
+    if(steps){
+      const src=S.line?[S.lineX,0]:[Math.round(S.router[0]),Math.round(S.router[1])];
+      sim.begin(src,S.line,lut);
+      const T=2*Math.PI/OMEGA;
+      for(let i=0;i<steps;i++){const n=sim.n;sim.step(Math.sin(OMEGA*n)*Math.min(1,n/(2*T)));}
+    }
+    stepsPerSec+=(steps*1000/Math.max(dt,1)-stepsPerSec)*.05;
+    display();
+    if(frame%8===0) updateReadout();
+    drawOverlay(now);
+    if(frame%15===0){
+      const ns=sim.n*DT*1e9, slow=stepsPerSec>0?1/(stepsPerSec*DT):0;
+      $('timeCap').textContent=`経過 ${ns.toFixed(2)} ナノ秒（光は ${(ns*0.2998).toFixed(2)} m 進む）\n`+(S.paused?'一時停止中':`実際より ${fmtOku(slow)}倍 ゆっくり`)+(want>steps&&!S.paused?'（GPUの速さに合わせて調整中）':'');
+    }
+    frame++;
+  }catch(err){window.__wwErr=err;console.error(err);}
+  requestAnimationFrame(loop);
+}
+$('timeCap').style.whiteSpace='pre-line';
+
+// ================= start =================
+fit();updateFreqCap();updateToolDb();loadPreset('flat');
+// debug: advance n steps without waiting for frames
+function advance(n){
+  const src=S.line?[S.lineX,0]:[Math.round(S.router[0]),Math.round(S.router[1])];
+  sim.begin(src,S.line,lut);const T=2*Math.PI/OMEGA;
+  for(let i=0;i<n;i++){const k=sim.n;sim.step(Math.sin(OMEGA*k)*Math.min(1,k/(2*T)));}
+  display();updateReadout();drawOverlay(performance.now());
+}
+// debug: plane wave through one slab in a 1-D strip; returns transmission loss in dB
+let strip=null;
+function stripRun(f,mid,er,sig){
+  if(!strip) strip=new Sim(900,4);
+  const m=MATS[mid], l=makeLut(f);
+  if(mid&&!m.pec){l.k2[mid]=KC*KC/er;l.a[mid]=sig*DT/(2*EPS0*er);}
+  strip.ids.fill(0);
+  if(mid) for(const [a,b] of m.layers) for(let x=0;x<900;x++){const s=x+.5-350;if(s>=a/CM_PER_CELL&&s<b/CM_PER_CELL)for(let y=0;y<4;y++)strip.ids[y*900+x]=mid;}
+  strip.upload();strip.clear();strip.begin([100,0],true,l,true);
+  const om=omegaStep(f),T=2*Math.PI/om;
+  for(let i=0;i<2000;i++)strip.step(Math.sin(om*i)*Math.min(1,i/(2*T)));
+  const b=new Float32Array(900*4*4);strip.read(0,0,900,4,b);
+  let s=0;for(let x=500;x<700;x++)s+=b[(900+x)*4+2];return s/200;
+}
+function stripDb(f,mid,er,sig){return -10*Math.log10(stripRun(f,mid,er,sig)/stripRun(f,0));}
+window.__ww={S,sim,CAL,ids,loadPreset,probeAvg,dbmAt,MATS,slabDb,advance,stripDb,props,simProps};
+requestAnimationFrame(loop);
+})();
+</script>

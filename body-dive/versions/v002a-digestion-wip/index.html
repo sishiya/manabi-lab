@@ -1,0 +1,1338 @@
+<title>体内ダイブ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Shippori+Mincho+B1:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: full-bleed endoscope view inside a round lens; place info top-left, body/self panel top-right, map bottom-left, controls bottom-right */
+:root{
+  --bg:#0c0305; --ink:#f6e9e4; --muted:#c2a49e; --dim:#8c6f6a;
+  --panel:rgba(26,8,11,.66); --line:rgba(255,222,212,.16);
+  --air:#9ad4f5; --gut:#ffb48c; --hot:#fff1e4;
+  --open:#8fe0a8; --shut:#ff7a6b;
+  --f-display:'Shippori Mincho B1','Hiragino Mincho ProN','Yu Mincho',serif;
+  --f-body:'Zen Kaku Gothic New','Hiragino Sans','Yu Gothic',system-ui,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--f-body);-webkit-user-select:none;user-select:none}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#gl:active{cursor:grabbing}
+#lens{position:fixed;inset:0;pointer-events:none;transition:opacity .6s;
+  background:radial-gradient(circle at 50% 50%, transparent 0, transparent calc(min(50vw,50vh)*1.05), rgba(12,3,5,.72) calc(min(50vw,50vh)*1.4), rgba(12,3,5,.97) calc(max(50vw,50vh)*1.15));}
+body.outer #lens{opacity:0}
+#tint{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .5s;mix-blend-mode:multiply}
+#reticle{position:fixed;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;pointer-events:none;opacity:.35}
+#reticle::before,#reticle::after{content:"";position:absolute;background:var(--hot)}
+#reticle::before{left:10px;top:0;width:1px;height:22px}
+#reticle::after{top:10px;left:0;height:1px;width:22px}
+body.orbit #reticle{display:none}
+.hud{position:fixed;z-index:2}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.panel{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(6px)}
+#loc{top:calc(env(safe-area-inset-top,0px) + 18px);left:20px;max-width:min(340px,calc(100vw - 300px));transition:opacity .35s}
+#loc.swap{opacity:0}
+#locSys{display:inline-block;font-size:11px;letter-spacing:.14em;padding:3px 8px;border:1px solid currentColor;border-radius:2px;color:var(--gut)}
+#locSys.air{color:var(--air)}
+#locName{font-family:var(--f-display);font-size:42px;line-height:1.1;margin:10px 0 2px;letter-spacing:.04em;text-wrap:balance;text-shadow:0 2px 18px rgba(0,0,0,.6)}
+#locEn{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+#locDesc{font-size:13px;line-height:1.75;opacity:.9;margin:10px 0 0;padding:10px 12px;border-left:1px solid var(--line);background:var(--panel);backdrop-filter:blur(6px)}
+#ahead{margin-top:10px;font-size:12px;line-height:1.7;padding:8px 12px;display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline}
+#ahead:empty{display:none}
+#ahead .lab{font-size:10px;letter-spacing:.16em;color:var(--dim)}
+#ahead .st{white-space:nowrap}
+#ahead .st em{font-style:normal;font-family:var(--f-mono);font-size:10.5px;color:var(--muted);margin-left:4px}
+#ahead .gate{color:var(--shut)}#ahead .gate.open{color:var(--open)}
+#signs{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+.sign{position:absolute;left:0;top:0;transform:translate(-50%,-100%);white-space:nowrap;font-size:12px;line-height:1.45;padding:5px 9px;border:1px solid var(--line);background:rgba(26,8,11,.72);color:var(--ink);border-radius:2px}
+.sign b{display:block;font-size:13px;color:var(--hot)}
+.sign span{color:var(--muted);font-size:11px}
+.sign::after{content:"";position:absolute;left:50%;bottom:-7px;width:1px;height:7px;background:var(--line)}
+.sign.air b{color:var(--air)}.sign.gut b{color:var(--gut)}
+.sign.big b{font-family:var(--f-display);font-size:16px}
+#side{top:calc(env(safe-area-inset-top,0px) + 14px);right:14px;width:244px;max-height:calc(100% - 190px);overflow:auto;display:flex;flex-direction:column;gap:8px}
+#side section{padding:10px 12px}
+#side h3{margin:0 0 8px;font-size:10.5px;font-weight:500;letter-spacing:.18em;color:var(--dim);display:flex;justify-content:space-between;align-items:center}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0;font-size:11.5px}
+.kv dt{color:var(--dim)}
+.kv dd{margin:0;text-align:right;color:var(--hot);min-width:0;overflow-wrap:anywhere}
+.me{display:flex;gap:12px;align-items:center}
+.me>div:last-child{min-width:0;display:flex;flex-direction:column;gap:2px}
+#meName{font-weight:700;font-size:15px}
+#meState{font-size:12px;color:var(--ink);opacity:.9;line-height:1.5}
+#meMass{font-size:11px;color:var(--muted)}
+#swatchBox{width:58px;height:58px;flex:none;display:flex;align-items:center;justify-content:center}
+#swatch{transition:all .8s ease;box-shadow:inset -4px -6px 10px rgba(0,0,0,.35), inset 3px 4px 8px rgba(255,255,255,.25)}
+#bar{display:flex;height:8px;margin-top:10px;border-radius:1px;overflow:hidden;background:rgba(255,255,255,.06)}
+#bar i{display:block;height:100%;transition:flex-grow .6s}
+#legend{list-style:none;margin:8px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;font-size:10.5px;color:var(--muted)}
+#legend li{display:flex;gap:5px;align-items:center;min-width:0}
+#legend b{width:7px;height:7px;flex:none;border-radius:1px}
+#legend span.g{margin-left:auto;color:var(--hot);font-family:var(--f-mono)}
+#gates{list-style:none;margin:8px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;font-size:11px}
+#gates li{display:flex;align-items:center;gap:6px;color:var(--muted)}
+#gates li::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--shut);flex:none;transition:background .3s}
+#gates li.open{color:var(--ink)}
+#gates li.open::before{background:var(--open)}
+#mapWrap{left:20px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);padding:8px 8px 6px}
+#map{display:block;width:104px;height:270px;cursor:crosshair}
+#mapWrap .cap{font-size:10px;color:var(--dim);letter-spacing:.06em;margin-top:4px;text-align:center}
+#dock{right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);display:flex;flex-direction:column;align-items:flex-end;gap:7px;max-width:calc(100vw - 150px)}
+.row{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+button{font:inherit;font-size:13px;color:var(--ink);background:var(--panel);border:1px solid var(--line);padding:8px 12px;border-radius:3px;cursor:pointer;backdrop-filter:blur(6px);letter-spacing:.03em}
+button:hover{border-color:rgba(255,222,212,.45)}
+button:focus-visible{outline:2px solid var(--gut);outline-offset:2px}
+button.on{background:rgba(255,180,140,.2);border-color:var(--gut);color:var(--hot)}
+button:disabled{opacity:.35;cursor:not-allowed}
+kbd{font-family:var(--f-mono);font-size:10px;color:var(--dim);margin-left:6px}
+#keys{font-size:10.5px;color:var(--dim);letter-spacing:.03em;text-align:right;line-height:1.7}
+#toast{position:fixed;left:50%;top:64%;transform:translateX(-50%);z-index:3;font-size:14px;line-height:1.6;padding:8px 16px;opacity:0;transition:opacity .4s;pointer-events:none;max-width:min(560px,calc(100vw - 32px));text-align:center}
+#toast.show{opacity:1}
+#stick{display:none;position:fixed;z-index:2;left:24px;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);width:120px;height:120px;border-radius:50%;border:1px solid var(--line);background:rgba(26,8,11,.4);touch-action:none}
+#knob{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(255,222,212,.22);border:1px solid rgba(255,222,212,.4)}
+.overlay{position:fixed;inset:0;z-index:5;overflow:auto;display:flex;justify-content:center;padding:32px 16px;background:radial-gradient(circle at 50% 45%, rgba(12,3,5,.45), rgba(12,3,5,.93) 70%)}
+.card{max-width:640px;width:100%;margin:auto 0;display:flex;flex-direction:column;gap:16px}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;color:var(--muted)}
+.card h2{font-family:var(--f-display);font-size:60px;line-height:1;margin:0;letter-spacing:.06em}
+.card p{margin:0;line-height:1.8}
+fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;min-width:0}
+legend{font-size:12px;color:var(--muted);letter-spacing:.08em;padding:0;margin-bottom:8px}
+legend b{font-family:var(--f-mono);color:var(--gut);margin-right:8px}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.opt{position:relative}
+.opt input{position:absolute;opacity:0;pointer-events:none}
+.opt label{display:flex;flex-direction:column;gap:4px;height:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--line);background:var(--panel);cursor:pointer;border-radius:3px}
+.opt label b{font-size:15px}
+.opt label span{font-size:11px;color:var(--muted);line-height:1.55}
+.opt input:checked+label{border-color:var(--gut);background:rgba(255,180,140,.14)}
+.opt input:focus-visible+label{outline:2px solid var(--gut);outline-offset:2px}
+.opt input:disabled+label{opacity:.32;cursor:not-allowed}
+#go{align-self:flex-start;font-size:16px;padding:12px 26px;background:rgba(255,180,140,.22);border-color:var(--gut);color:var(--hot)}
+.note{font-size:11.5px;color:var(--dim)}
+#resBody{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+#resSwatchBox{width:120px;height:120px;display:flex;align-items:center;justify-content:center;flex:none}
+#resList{flex:1;min-width:220px}
+#resList .kv{font-size:13px;gap:6px 16px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:760px){
+  #loc{max-width:calc(100vw - 200px)}
+  #locName{font-size:28px}
+  #locDesc{display:none}
+  #side{width:176px;max-height:calc(100% - 170px)}
+  #side .more{display:none}
+  #side.open .more{display:block}
+  #legend{grid-template-columns:1fr}
+  #map{width:64px;height:166px}
+  .card h2{font-size:42px}
+  #keys{display:none}
+}
+@media (pointer:coarse){
+  #stick{display:block}
+  #keys{display:none}
+  #mapWrap{bottom:calc(env(safe-area-inset-bottom,0px) + 160px)}
+}
+@media (prefers-reduced-motion:reduce){#loc,#toast,#swatch,#lens,#tint{transition:none}}
+</style>
+
+<canvas id="gl"></canvas>
+<div id="tint"></div>
+<div id="lens"></div>
+<div id="reticle"></div>
+
+<div id="loc" class="hud">
+  <span id="locSys">消化管</span>
+  <h1 id="locName">口腔</h1>
+  <div id="locEn">Cavitas oris</div>
+  <p id="locDesc"></p>
+  <div id="ahead" class="panel"></div>
+</div>
+<div id="signs"></div>
+
+<aside id="side" class="hud" hidden>
+  <section class="panel" id="sMe">
+    <h3><span>あなた</span><button id="sideToggle" type="button" style="padding:2px 8px;font-size:10px">詳細</button></h3>
+    <div class="me">
+      <div id="swatchBox"><div id="swatch"></div></div>
+      <div><b id="meName">—</b><div id="meState">—</div><div id="meMass" class="mono">—</div></div>
+    </div>
+    <div class="more"><div id="bar"></div><ul id="legend"></ul></div>
+  </section>
+  <section class="panel more">
+    <h3>からだ</h3>
+    <dl class="kv mono">
+      <dt>体内時間</dt><dd id="bTime">0分</dd>
+      <dt>時間の速さ</dt><dd id="bScale">×1</dd>
+      <dt>胃の内容</dt><dd id="bStom">—</dd>
+      <dt>胃腸の動き</dt><dd id="bPhase">—</dd>
+    </dl>
+    <ul id="gates"></ul>
+  </section>
+  <section class="panel more">
+    <h3>現在地</h3>
+    <dl class="kv mono">
+      <dt>内径</dt><dd id="rDia">–</dd>
+      <dt>入口から</dt><dd id="rDist">–</dd>
+      <dt>速度</dt><dd id="rSpd">–</dd>
+      <dt>操縦</dt><dd id="rMode">手動</dd>
+    </dl>
+  </section>
+</aside>
+
+<div id="mapWrap" class="hud panel">
+  <canvas id="map" aria-label="体の正面図。クリックでその場所へ移動"></canvas>
+  <div class="cap">正面図</div>
+</div>
+
+<div id="dock" class="hud">
+  <div class="row">
+    <button id="btnGuide" type="button">順路モード: オフ<kbd>G</kbd></button>
+    <button id="btnAuto" type="button">自動航行<kbd>Space</kbd></button>
+  </div>
+  <div class="row">
+    <button id="btnFF" type="button">早送り ×10<kbd>F</kbd></button>
+    <button id="btnSpeed" type="button">速さ ×1</button>
+    <button id="btnOrbit" type="button">外観<kbd>V</kbd></button>
+    <button id="btnMenu" type="button">やり直す</button>
+  </div>
+  <div id="keys">W/S 前後 · A/D 横 · Q/E 上下 · Shift 加速 · ドラッグ 視点<br>順路モード中は W だけで順路を進む</div>
+</div>
+
+<div id="stick"><div id="knob"></div></div>
+<div id="toast" class="panel"></div>
+
+<div id="start" class="overlay">
+  <form class="card" id="startForm">
+    <div class="eyebrow">ENDOSCOPIC TOUR · 管でつながった体のなか</div>
+    <h2>体内ダイブ</h2>
+    <p>口・鼻・肛門から入って、気道と消化管を進む。食べ物になって入れば、胃液で溶かされ、胆汁に染まり、大腸で水分を抜かれて出てくる。</p>
+    <fieldset>
+      <legend><b>1</b>あなたは何になる？</legend>
+      <div class="opts" id="optMat"></div>
+    </fieldset>
+    <fieldset>
+      <legend><b>2</b>どこから入る？</legend>
+      <div class="opts" id="optEntry"></div>
+    </fieldset>
+    <fieldset>
+      <legend><b>3</b>おなかの状態</legend>
+      <div class="opts" id="optBelly"></div>
+    </fieldset>
+    <button id="go" type="submit">ダイブ開始</button>
+    <p class="note">太さはおおよそ実寸。長さは小腸・大腸を中心に大きく縮め、時間は場所ごとに早回し（胃・小腸 ×60、大腸 ×240）している。</p>
+  </form>
+</div>
+
+<div id="result" class="overlay" hidden>
+  <div class="card">
+    <div class="eyebrow" id="resEyebrow">EXIT · 肛門</div>
+    <h2 id="resTitle">外に出た</h2>
+    <div id="resBody">
+      <div id="resSwatchBox"><div id="resSwatch"></div></div>
+      <div id="resList"><dl class="kv mono" id="resKv"></dl></div>
+    </div>
+    <p id="resNote"></p>
+    <div class="btns"><button id="resAgain" type="button">もう一度</button><button id="resLook" type="button">外から体を見る</button></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
+const smooth=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t);};
+const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
+const lin=c=>c.map(v=>Math.pow(v,2.2));
+const mixc=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+const css=c=>`rgb(${c.map(v=>Math.round(clamp(v,0,1)*255)).join(',')})`;
+const $=id=>document.getElementById(id);
+const reduceMotion=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fmtT=m=>{m=Math.floor(m);const h=Math.floor(m/60);return h?`${h}時間${m%60}分`:`${m}分`;};
+
+/* ---------- 部位 ---------- */
+const AIR='気道', GUT='消化管';
+const REG={
+ nose:{n:'鼻腔',en:'Cavitas nasi',sys:AIR,c:[.86,.46,.47],fold:'turb',cf:.62,z:'air',d:'吸った空気をあたため、湿らせる部屋。左右の壁から3段のひだ（鼻甲介）が張り出し、粘液がほこりや細菌をとらえる。'},
+ mouth:{n:'口腔',en:'Cavitas oris',sys:GUT,c:[.84,.38,.40],fold:'mouth',cf:.6,z:'mouth',d:'歯で食べ物をかみ砕き、唾液と混ぜる。唾液は1日に1〜1.5Lほど出る。口にいる間は「かむ」ことになり、食べ物は細かくなる。'},
+ pharynx:{n:'咽頭',en:'Pharynx',sys:'気道・消化管の共通路',c:[.80,.40,.42],fold:'none',cf:.76,z:'pharynx',d:'空気と食べ物の交差点。下の前側が喉頭（空気）、後ろ側が食道（食べ物）。食道の入口に近づくと飲み込みの反射が起き、声門が閉じて気道を守る。'},
+ larynx:{n:'喉頭',en:'Larynx',sys:AIR,c:[.86,.52,.52],fold:'none',cf:.72,z:'air',d:'気管の入口。飲み込むときは喉頭蓋が倒れてフタになり、食べ物が入ると咳で押し戻される。'},
+ vocal:{n:'声帯',en:'Plicae vocales',sys:AIR,c:[.94,.80,.76],fold:'vocal',cf:.36,z:'air',d:'左右から張り出すひだ。吐く息で振動して声になる。飲み込むときはぴったり閉じる。'},
+ trachea:{n:'気管',en:'Trachea',sys:AIR,c:[.90,.64,.62],fold:'rings',cf:.74,z:'air',d:'長さ約10〜12cm、内径約1.5〜2cm。U字形の軟骨の輪が16〜20個並び、管がつぶれないよう支える。背中側だけは軟骨がなく、食道と接している。'},
+ bronchus:{n:'主気管支',en:'Bronchus principalis',sys:AIR,c:[.90,.62,.62],fold:'brings',cf:.72,z:'air',d:'気管は左右に分かれる。右は太く短く、傾きが急なので、誤って吸い込んだものは右に入りやすい。'},
+ lobar:{n:'葉気管支',en:'Bronchus lobaris',sys:AIR,c:[.90,.60,.62],fold:'lrings',cf:.7,z:'air',d:'右肺は3つ、左肺は2つの葉に分かれる。この先も枝分かれを20回ほどくり返し、約3〜5億個の肺胞に行き着く。'},
+ esophagus:{n:'食道',en:'Oesophagus',sys:GUT,c:[.86,.52,.50],fold:'long',cf:.66,z:'eso',d:'長さ約25cm。ふだんは平たくつぶれている。飲み込むと筋肉の波（蠕動）が約8秒で胃まで運ぶ。'},
+ stomach:{n:'胃',en:'Gaster',sys:GUT,c:[.76,.32,.34],fold:'rugae',cf:.72,z:'stomach',d:'空腹時は約50mLにしぼんでひだが目立ち、食後は1.5Lほどまで広がってひだが伸びる。胃液はpH1〜2。出口の幽門は、かゆ状になったものだけを少しずつ通す。'},
+ duodenum:{n:'十二指腸',en:'Duodenum',sys:GUT,c:[.86,.62,.40],fold:'plicae',cf:.62,vil:.8,z:'duo',d:'長さ約25cm。胆汁と膵液が流れ込み、黄色く染まる。膵液のアルカリで胃酸が中和され、消化酵素が本格的に働き始める。'},
+ jejunum:{n:'空腸',en:'Jejunum',sys:GUT,c:[.84,.46,.44],fold:'plicae',cf:.62,vil:1,z:'sb',d:'小腸の前半。輪状ひだと絨毛が表面積を広げ、分解された栄養（アミノ酸・糖・脂肪酸）を吸収する。'},
+ ileum:{n:'回腸',en:'Ileum',sys:GUT,c:[.82,.50,.47],fold:'plicae2',cf:.66,vil:.8,z:'sb',d:'小腸の後半。ビタミンB12や胆汁酸を吸収する。出口の回盲弁は、大腸からの逆流を防ぐ。'},
+ cecum:{n:'盲腸',en:'Caecum',sys:GUT,c:[.80,.58,.52],fold:'haustra',cf:.66,z:'colon',d:'大腸の始まりの袋。回腸が横から合流する。本物はこの下端から虫垂がのびている。'},
+ ascending:{n:'上行結腸',en:'Colon ascendens',sys:GUT,c:[.80,.58,.52],fold:'haustra',cf:.66,z:'colon',d:'右の腹を上る。腸内細菌が食物繊維を発酵させ、水分が吸収されていく。3本の結腸ひもに引かれて膨起が連なる。'},
+ transverse:{n:'横行結腸',en:'Colon transversum',sys:GUT,c:[.80,.58,.52],fold:'haustra',cf:.66,z:'colon',d:'胃の下を横切る。胆汁の色素ビリルビンが細菌によって茶色のステルコビリンに変わり、便が茶色くなる。'},
+ descending:{n:'下行結腸',en:'Colon descendens',sys:GUT,c:[.80,.58,.52],fold:'haustra',cf:.66,z:'colon',d:'左の腹を下る。ここまで来ると便はかなり固まっている。'},
+ sigmoid:{n:'S状結腸',en:'Colon sigmoideum',sys:GUT,c:[.80,.56,.52],fold:'haustra',cf:.66,z:'colon',d:'S字に曲がって骨盤に入る。直腸の手前で便をためておく。'},
+ rectum:{n:'直腸',en:'Rectum',sys:GUT,c:[.78,.44,.44],fold:'rectal',cf:.7,z:'rectum',d:'長さ約15〜20cm。便がたまって壁が伸びると便意が起こり、肛門括約筋がゆるむ。'},
+ anus:{n:'肛門',en:'Anus',sys:GUT,c:[.72,.38,.40],fold:'none',cf:.6,z:'rectum',d:'出口。内肛門括約筋（自分の意思では動かない）と外肛門括約筋（意思で締められる）で開け閉めする。'},
+ outside:{n:'体の外',en:'Outside',sys:'—',c:[1,1,1],fold:'none',cf:1,z:'out',d:'体の外に出た。ここでは壁をすり抜けて自由に飛べる。口・鼻・肛門に近づけば、また中に入れる。'}
+};
+for(const k in REG){REG[k].lin=lin(REG[k].c);REG[k].vil=REG[k].vil||0;}
+const TSCALE={mouth:1,pharynx:1,eso:1,air:1,stomach:60,duo:60,sb:60,colon:240,rectum:240,out:1};
+
+/* ---------- 中心線 (cm, x=体の左, y=上, z=前) ---------- */
+function digPts(){
+  const P=[
+   [0,1.8,-2.3,1.4,'pharynx'],[0,0,-2.5,1.5,'pharynx'],[0,-3,-2.6,1.6,'pharynx'],[0,-5.5,-2.5,1.5,'pharynx'],[0,-8,-2.3,1.3,'pharynx'],
+   [0,-11,-2.3,.9,'esophagus'],[0,-17,-2.5,1,'esophagus'],[.2,-24,-2.8,1,'esophagus'],[.5,-31,-2.8,1,'esophagus'],[1,-37,-2,1,'esophagus'],[1.8,-42,-.6,1.1,'esophagus'],
+   [3,-45,.5,1.6,'stomach'],[5,-46.5,1,3,'stomach'],[7.5,-49,1.5,3.6,'stomach'],[8,-53,2,3.6,'stomach'],[6.8,-56.5,2.5,3.2,'stomach'],[4,-58.5,3,2.6,'stomach'],[1,-58.5,3,2,'stomach'],[-1.5,-57.3,2.6,1.4,'stomach'],[-3,-55.5,2,.8,'stomach'],
+   [-4.5,-55.5,1.3,1.4,'duodenum'],[-6.3,-58,.5,1.4,'duodenum'],[-6.2,-61.5,.3,1.4,'duodenum'],[-4,-63.5,.5,1.4,'duodenum'],[-1,-63.5,.5,1.4,'duodenum'],
+   [2,-63,.5,1.3,'jejunum'],[5.5,-64.5,1.5,1.2,'jejunum']
+  ];
+  const rows=5,x0=6,x1=-4;
+  for(let i=0;i<rows;i++){
+    const y=-67-3.6*i,reg=i<2?'jejunum':'ileum',from=i%2?x1:x0,to=i%2?x0:x1,n=6;
+    for(let k=0;k<=n;k++){const x=from+(to-from)*k/n;P.push([x,y+.4*Math.sin(x*.8+i),1.5+Math.sin(x*1.1+i*1.7),reg==='jejunum'?1.2:1.1,reg]);}
+    if(i<rows-1)P.push([i%2?x0+1.8:x1-1.8,y-1.8,1.5,1.15,reg]);
+  }
+  P.push([-7,-81.2,2,1.1,'ileum'],[-10,-80.6,2,1.1,'ileum'],[-12.2,-80.4,2,1,'ileum']);
+  return P;
+}
+const TUBES=[
+ {id:'nasal',open:[true,false],ds:.07,radial:36,anim:2,pts:[[0,.2,10,.9,'nose'],[0,.6,8.5,1,'nose'],[0,1.4,6,1.2,'nose'],[0,1.8,3.5,1.2,'nose'],[0,1.4,1,1.1,'nose'],[0,.6,-1.2,1.1,'pharynx']]},
+ {id:'oral',open:[true,false],ds:.08,radial:44,anim:0,pts:[[0,-4.2,10.2,1.3,'mouth'],[0,-4.2,8.5,1.7,'mouth'],[0,-4,6,2,'mouth'],[0,-3.8,3,2,'mouth'],[0,-4.3,.6,1.6,'mouth'],[0,-5,-1.4,1.3,'pharynx']]},
+ {id:'dig',open:[false,false],ds:.07,radial:40,anim:1,pts:digPts()},
+ {id:'colon',open:[false,true],ds:.1,radial:48,anim:1,pts:[
+   [-12,-86,2.5,2.2,'cecum'],[-12,-83,2.3,2.6,'cecum'],[-12,-78,2,2.5,'ascending'],[-12,-70,2,2.5,'ascending'],[-12,-62,2.5,2.5,'ascending'],
+   [-11,-58.5,4.5,2.4,'transverse'],[-7,-60.5,7.3,2.4,'transverse'],[-1,-62.5,7.8,2.4,'transverse'],[5,-62,7.5,2.4,'transverse'],[10,-61,5.5,2.4,'transverse'],
+   [12.5,-60,3,2.4,'descending'],[12.8,-66,2,2.3,'descending'],[12.5,-74,2,2.3,'descending'],
+   [11.5,-81,2.5,2.2,'sigmoid'],[8,-85,4,2,'sigmoid'],[4,-86,3.5,2,'sigmoid'],
+   [1,-88,.5,2.2,'rectum'],[0,-92,-1,2.4,'rectum'],[0,-96,-.5,1.6,'rectum'],[0,-99,.5,.7,'anus']]},
+ {id:'trachea',open:[false,false],ds:.06,radial:36,anim:2,pts:[[0,-7,-1.6,1,'larynx'],[0,-8.6,-.6,1.1,'larynx'],[0,-10.2,.2,1.1,'larynx'],[0,-11.6,.5,.95,'vocal'],[0,-13,.6,1,'trachea'],[0,-18,.8,1,'trachea'],[0,-23,.7,1,'trachea'],[0,-26.5,.5,.95,'trachea'],[0,-28,.5,.9,'trachea']]},
+ {id:'bR',open:[false,false],ds:.05,radial:30,anim:2,pts:[[0,-26.3,.5,.75,'bronchus'],[-1.8,-28.3,.4,.75,'bronchus'],[-3.2,-30.5,.3,.7,'bronchus'],[-4.2,-33.5,.3,.6,'bronchus'],[-5,-37,-.2,.5,'lobar'],[-5.8,-41,-.8,.42,'lobar'],[-6.3,-44,-1.2,.35,'lobar']]},
+ {id:'bL',open:[false,false],ds:.05,radial:30,anim:2,pts:[[0,-26.3,.5,.7,'bronchus'],[2,-28.6,.4,.68,'bronchus'],[3.8,-31.5,.3,.6,'bronchus'],[4.8,-35,0,.5,'lobar'],[5.6,-39.5,-.6,.42,'lobar'],[6,-43,-1,.35,'lobar']]},
+ {id:'rul',open:[false,false],ds:.05,radial:26,anim:2,pts:[[-2.6,-29.5,.35,.5,'lobar'],[-4.5,-28.8,.4,.5,'lobar'],[-6.5,-27.8,.3,.42,'lobar'],[-8,-27,.1,.35,'lobar']]},
+ {id:'rml',open:[false,false],ds:.05,radial:26,anim:2,pts:[[-4,-33,.4,.42,'lobar'],[-5.2,-34.5,1.6,.42,'lobar'],[-6.2,-35.5,2.8,.35,'lobar']]},
+ {id:'lul',open:[false,false],ds:.05,radial:26,anim:2,pts:[[3.4,-30.8,.35,.48,'lobar'],[5.2,-30,.6,.45,'lobar'],[7,-28.8,.6,.38,'lobar'],[8.3,-27.8,.4,.32,'lobar']]}
+];
+const AIRWAY=new Set(['nasal','trachea','bR','bL','rul','rml','lul']);
+
+/* ---------- 壁のひだ ---------- */
+const TAU=Math.PI*2;
+function angDiff(a,b){let d=(a-b)%TAU;if(d>Math.PI)d-=TAU;if(d<-Math.PI)d+=TAU;return d;}
+function fold(type,s,dir,th){
+  switch(type){
+   case 'turb':{const lat=Math.abs(dir.x);let b=0;for(const c of [.55,0,-.55])b+=Math.exp(-Math.pow((dir.y-c)/.2,2));return -.32*lat*lat*b*(.85+.15*Math.sin(s*2.2));}
+   case 'mouth':{const down=Math.max(0,-dir.y),up=Math.max(0,dir.y);return -.32*smooth(.25,.95,down)-.05*smooth(.6,1,up)*Math.max(0,Math.sin(s*7));}
+   case 'vocal':return -.55*Math.pow(Math.abs(dir.x),3);
+   case 'rings':{const post=Math.max(0,-dir.z),ring=Math.pow(.5+.5*Math.sin(s*TAU/.45),3);return -.08*ring*(1-smooth(.55,.9,post));}
+   case 'brings':return -.07*Math.pow(.5+.5*Math.sin(s*TAU/.36),3);
+   case 'lrings':return -.06*Math.pow(.5+.5*Math.sin(s*TAU/.3),3);
+   case 'long':return -.2*Math.pow(.5+.5*Math.cos(8*th+.6*Math.sin(s*.5)),3);
+   case 'rugae':return -.09*Math.pow(.5+.5*Math.cos(13*th+1.6*Math.sin(s*.55+th*2)),4)-.04*Math.pow(.5+.5*Math.cos(7*th-s*.9),6);
+   case 'plicae':{const f=Math.sin(TAU*s/.7+.9*Math.sin(th*2+s*.3));return -.2*Math.pow(Math.max(0,f),6);}
+   case 'plicae2':{const f=Math.sin(TAU*s/.8+.9*Math.sin(th*2+s*.3));return -.11*Math.pow(Math.max(0,f),6);}
+   case 'haustra':{const h=((s/3.2)%1+1)%1,dd=Math.min(h,1-h)*3.2;let band=0;for(let k=0;k<3;k++)band=Math.max(band,Math.exp(-Math.pow(angDiff(th,k*TAU/3)/.16,2)));
+     return -.26*Math.exp(-Math.pow(dd/.3,2))*(1-band*.8)+.07*Math.sin(Math.PI*h)-.08*band;}
+   case 'rectal':{const h=((s/4.5)%1+1)%1,dd=Math.min(h,1-h)*4.5;return -.25*Math.exp(-Math.pow(dd/.35,2))*smooth(-.2,.6,Math.cos(th+s));}
+   default:return 0;
+  }
+}
+const dome=(d,r)=>d>=r?1:Math.max(.02,Math.sqrt(Math.max(0,1-Math.pow(1-d/r,2))));
+
+/* ---------- 中心線のサンプリング ---------- */
+function prepTube(def){
+  const P=def.pts,n=P.length;
+  const curve=new THREE.CatmullRomCurve3(P.map(p=>V3(p[0],p[1],p[2])),false,'centripetal');
+  const M=(n-1)*48,dense=[];let L=0,prev=null;
+  for(let i=0;i<=M;i++){const u=i/M,p=curve.getPoint(u);if(prev)L+=p.distanceTo(prev);dense.push({u,p,L});prev=p;}
+  const cnt=Math.max(2,Math.ceil(L/def.ds)),S=[];let j=0;
+  for(let i=0;i<=cnt;i++){
+    const s=L*i/cnt;while(j<M-1&&dense[j+1].L<s)j++;
+    const a=dense[j],b=dense[j+1],f=clamp((s-a.L)/Math.max(1e-9,b.L-a.L),0,1);
+    const u=a.u+(b.u-a.u)*f,p=a.p.clone().lerp(b.p,f);
+    const k=u*(n-1),i0=Math.min(n-2,Math.floor(k)),fr=k-i0,w=fr*fr*(3-2*fr);
+    let r=P[i0][3]+(P[i0+1][3]-P[i0][3])*w;
+    const regA=P[i0][4],regB=P[i0+1][4];
+    if(def.open[0])r*=1+.22*smooth(.9,0,s);else r*=dome(s,r);
+    if(def.open[1])r*=1+.22*smooth(.9,0,L-s);else r*=dome(L-s,r);
+    const stom=(regA==='stomach'?1-w:0)+(regB==='stomach'?w:0);
+    S.push({s,p,r,regA,regB,w,reg:w<.5?regA:regB,stom,cf:REG[regA].cf+(REG[regB].cf-REG[regA].cf)*w,jf:1});
+  }
+  const last=S.length-1;
+  S.forEach((sm,i)=>{sm.T=S[Math.min(i+1,last)].p.clone().sub(S[Math.max(i-1,0)].p).normalize();});
+  const hint=Math.abs(S[0].T.y)>.9?V3(0,0,1):V3(0,1,0);
+  const N=hint.clone().addScaledVector(S[0].T,-hint.dot(S[0].T)).normalize();
+  S.forEach(sm=>{N.addScaledVector(sm.T,-N.dot(sm.T)).normalize();sm.N=N.clone();sm.B=sm.T.clone().cross(N);});
+  const box=new THREE.Box3();let rmax=0;S.forEach(sm=>{box.expandByPoint(sm.p);rmax=Math.max(rmax,sm.r);});
+  return {def,id:def.id,S,L,box,rmax,groups:[],gates:[]};
+}
+const tubes=TUBES.map(prepTube);
+const TUB={};tubes.forEach(t=>TUB[t.id]=t);
+function nearestIdx(T,pt){let bi=0,bd=Infinity;T.S.forEach((s,i)=>{const d=s.p.distanceToSquared(pt);if(d<bd){bd=d;bi=i;}});return bi;}
+
+/* ---------- 括約筋（ふだん閉じている関門） ---------- */
+const GATES=[
+ {id:'ues',name:'上部食道',tube:'dig',at:[0,-11.5,-2.3],w:.55,open:0},
+ {id:'les',name:'下部食道',tube:'dig',at:[2.3,-43.6,0],w:.6,open:0},
+ {id:'pyl',name:'幽門',tube:'dig',at:[-3,-55.5,2],w:.45,open:0},
+ {id:'icv',name:'回盲弁',tube:'dig',at:[-8.9,-80.6,2],w:.4,open:0},
+ {id:'anal',name:'肛門',tube:'colon',fromEnd:1.2,w:.55,open:0},
+ {id:'glot',name:'声門',tube:'trachea',at:[0,-11.6,.5],w:.5,open:1}
+];
+const G={};
+GATES.forEach(g=>{const T=TUB[g.tube];g.T=T;g.s=g.fromEnd?T.L-g.fromEnd:T.S[nearestIdx(T,V3(...g.at))].s;g.p=T.S[Math.round(g.s/T.def.ds)].p;g.target=g.open;T.gates.push(g);G[g.id]=g;});
+
+/* ---------- 合流部: ひだを消し、壁に穴をあける ---------- */
+const near=(p,b,m)=>p.x>b.min.x-m&&p.x<b.max.x+m&&p.y>b.min.y-m&&p.y<b.max.y+m&&p.z>b.min.z-m&&p.z<b.max.z+m;
+for(const A of tubes)for(const B of tubes){
+  if(A===B)continue;
+  const m0=A.rmax+B.rmax+2.5;
+  if(!A.box.clone().expandByScalar(m0).intersectsBox(B.box))continue;
+  for(const a of A.S){
+    if(!near(a.p,B.box,a.r+B.rmax+2.5))continue;
+    let m=Infinity;for(let j=0;j<B.S.length;j+=2){const b=B.S[j];const d=a.p.distanceTo(b.p)-b.r-a.r;if(d<m)m=d;}
+    a.jf=Math.min(a.jf,smooth(0,2.2,m));
+  }
+  const flag=[];
+  for(let j=0;j<B.S.length;j++){
+    const b=B.S[j];if(!near(b.p,A.box,b.r+A.rmax+.5))continue;
+    for(let i=0;i<A.S.length;i+=2){const a=A.S[i];const d=b.p.distanceTo(a.p);if(Math.abs(d-a.r)<b.r+.25){flag.push(j);break;}}
+  }
+  let k=0;
+  while(k<flag.length){
+    let j0=flag[k],j1=j0;while(k+1<flag.length&&flag[k+1]-j1<=4){k++;j1=flag[k];}k++;
+    j0=Math.max(0,j0-2);j1=Math.min(B.S.length-1,j1+2);
+    const caps=[];for(let j=j0;j<j1;j+=3)caps.push([B.S[j],B.S[Math.min(j+3,j1)]]);
+    if(!caps.length)caps.push([B.S[j0],B.S[j1]]);
+    A.groups.push(caps);
+  }
+}
+
+/* ---------- 描画の準備 ---------- */
+const canvas=$('gl');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
+renderer.setSize(innerWidth,innerHeight,false);
+const FOG_S=[.10,.025,.03];
+renderer.setClearColor(new THREE.Color(FOG_S[0],FOG_S[1],FOG_S[2]));
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(72,innerWidth/innerHeight,.015,600);
+const orbitCam=new THREE.PerspectiveCamera(40,innerWidth/innerHeight,.5,2000);
+
+const U={uCam:{value:V3(0,0,0)},uTime:{value:0},uFog:{value:V3(...lin(FOG_S))},uLight:{value:1.55},uMotion:{value:reduceMotion?0:1},
+  uOut:{value:0},uStomR:{value:.6},uStomFold:{value:2},uWave:{value:0},uWavePh:{value:0}};
+const VS=`
+attribute vec3 aCol;attribute float aS;attribute float aAnim;attribute float aVil;
+attribute vec3 aAxis;attribute float aRad;attribute float aFold;attribute float aTh;attribute float aStom;
+uniform float uTime;uniform float uMotion;uniform vec4 uGate[4];uniform int uNGate;
+uniform float uStomR;uniform float uStomFold;uniform float uWave;uniform float uWavePh;
+varying vec3 vW;varying vec3 vN;varying vec3 vC;varying float vVil;varying float vGate;
+void main(){
+#ifdef BLOB
+  vec3 p=position;vGate=0.0;
+#else
+  vec3 off=position-aAxis;float len=length(off);vec3 dir=len>1e-5?off/len:vec3(0.0);
+  float fm=mix(1.0,uStomFold,aStom);
+  float sc=mix(1.0,uStomR,aStom);
+  sc*=1.0-uWave*aStom*pow(max(0.0,sin(aS*0.45-uWavePh)),4.0);
+  float gc=0.0;
+  for(int i=0;i<4;i++){if(i>=uNGate)break;vec4 g=uGate[i];float d=(aS-g.x)/g.y;gc=max(gc,exp(-d*d)*(1.0-g.z));}
+  float r=aRad*((1.0+aFold*fm)*sc*(1.0-0.93*gc)+0.1*gc*(0.5+0.5*cos(aTh*8.0)));
+  float a=0.0;
+  if(aAnim>1.5)a=sin(uTime*1.25)*0.025;else if(aAnim>0.5)a=sin(aS*0.7-uTime*1.6)*0.035;
+  vec3 p=aAxis+dir*(r+a*uMotion);
+  vGate=clamp(gc*1.5+aStom*abs(1.0-sc)*1.5,0.0,1.0);
+#endif
+  vec4 w=modelMatrix*vec4(p,1.0);vW=w.xyz;vN=normalize(mat3(modelMatrix)*normal);vC=aCol;vVil=aVil;
+  gl_Position=projectionMatrix*viewMatrix*w;
+}`;
+const FS=`
+uniform vec3 uCam;uniform vec3 uFog;uniform float uLight;uniform float uOut;
+uniform vec4 uCapA[MAXC];uniform vec4 uCapB[MAXC];uniform vec4 uGrp[MAXG];uniform vec2 uGrpR[MAXG];uniform int uNG;
+uniform float uSpec;uniform float uBump;uniform float uVein;uniform float uFreq;
+varying vec3 vW;varying vec3 vN;varying vec3 vC;varying float vVil;varying float vGate;
+float hash(vec3 p){p=fract(p*0.3183099+0.1);p*=17.0;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
+float noise(vec3 x){vec3 i=floor(x);vec3 f=fract(x);f=f*f*(3.0-2.0*f);
+ return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),
+            mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}
+float fbm(vec3 p){float s=0.0;float a=0.5;for(int i=0;i<3;i++){s+=a*noise(p);p=p*2.07+vec3(1.7,9.2,3.1);a*=0.5;}return s;}
+void main(){
+  for(int g=0;g<MAXG;g++){
+    if(g>=uNG)break;
+    if(distance(vW,uGrp[g].xyz)<uGrp[g].w){
+      int s0=int(uGrpR[g].x);int s1=int(uGrpR[g].y);
+      for(int i=0;i<MAXC;i++){
+        if(i>=s1)break;
+        if(i<s0)continue;
+        vec3 a=uCapA[i].xyz;vec3 ba=uCapB[i].xyz-a;vec3 pa=vW-a;
+        float h=clamp(dot(pa,ba)/max(dot(ba,ba),1e-6),0.0,1.0);
+        if(length(pa-ba*h)<mix(uCapA[i].w,uCapB[i].w,h))discard;
+      }
+    }
+  }
+  vec3 V=uCam-vW;float d=length(V);V/=max(d,1e-4);
+  vec3 n=normalize(vN);
+  vec3 fn=normalize(cross(dFdx(vW),dFdy(vW)));
+  n=normalize(mix(n,fn*sign(dot(fn,n)+1e-4),vGate));
+  if(dot(n,V)<0.0)n=-n;
+  vec3 q=vW*uFreq;float e=0.07;float n0=fbm(q);
+  vec3 gr=vec3(fbm(q+vec3(e,0,0))-n0,fbm(q+vec3(0,e,0))-n0,fbm(q+vec3(0,0,e))-n0)/e;
+  gr-=n*dot(gr,n);n=normalize(n-gr*uBump*(1.0-0.6*uOut));
+  if(vVil>0.01&&uOut<0.5){vec3 q2=vW*16.0;float v0=noise(q2);
+    vec3 g2=vec3(noise(q2+vec3(.1,0,0))-v0,noise(q2+vec3(0,.1,0))-v0,noise(q2+vec3(0,0,.1))-v0)/0.1;
+    g2-=n*dot(g2,n);n=normalize(n-g2*0.05*vVil);}
+  float vn=noise(vW*0.8+vec3(3.1,1.3,7.7));
+  float vein=(1.0-smoothstep(0.0,0.03,abs(vn-0.5)))*smoothstep(0.35,0.75,noise(vW*0.3+11.0))*uVein;
+  vec3 base=vC*(0.8+0.4*n0);
+  base=mix(base,base*vec3(0.5,0.12,0.25),vein*0.6);
+  float ndl=max(dot(n,V),0.0);
+  float att=mix(uLight/(1.0+0.012*d*d),1.25,uOut);
+  vec3 col=base*(0.18+0.82*ndl)*att;
+  col+=base*vec3(0.9,0.15,0.12)*pow(1.0-ndl,3.0)*att*0.35;
+  float spec=pow(ndl,80.0)*1.1+pow(ndl,14.0)*0.06;
+  col+=vec3(1.0,0.94,0.9)*spec*att*uSpec*(1.0-0.6*uOut);
+  col=col/(1.0+col*0.25);
+  col=mix(col,uFog,1.0-exp(-d*mix(0.05,0.0025,uOut)));
+  gl_FragColor=vec4(pow(max(col,vec3(0.0)),vec3(0.4545)),1.0);
+}`;
+function makeMat(groups,o,gateU){
+  o=o||{};
+  const capA=[],capB=[],grp=[],grpR=[];
+  groups.forEach(g=>{
+    const s0=capA.length,c=V3(0,0,0);
+    g.forEach(([a,b])=>{capA.push(new THREE.Vector4(a.p.x,a.p.y,a.p.z,a.r*.97));capB.push(new THREE.Vector4(b.p.x,b.p.y,b.p.z,b.r*.97));c.add(a.p).add(b.p);});
+    c.multiplyScalar(1/(2*g.length));
+    let rad=0;g.forEach(([a,b])=>{rad=Math.max(rad,c.distanceTo(a.p)+a.r,c.distanceTo(b.p)+b.r);});
+    grp.push(new THREE.Vector4(c.x,c.y,c.z,rad+.1));grpR.push(new THREE.Vector2(s0,capA.length));
+  });
+  const ng=grp.length;
+  if(!capA.length){capA.push(new THREE.Vector4());capB.push(new THREE.Vector4());}
+  if(!grp.length){grp.push(new THREE.Vector4());grpR.push(new THREE.Vector2());}
+  const defines={MAXC:capA.length,MAXG:grp.length};if(o.blob)defines.BLOB=1;
+  return new THREE.ShaderMaterial({
+    defines,extensions:{derivatives:true},
+    uniforms:{uCam:U.uCam,uTime:U.uTime,uFog:U.uFog,uLight:U.uLight,uMotion:U.uMotion,uOut:U.uOut,
+      uStomR:U.uStomR,uStomFold:U.uStomFold,uWave:U.uWave,uWavePh:U.uWavePh,
+      uGate:{value:gateU||[new THREE.Vector4(),new THREE.Vector4(),new THREE.Vector4(),new THREE.Vector4()]},uNGate:{value:gateU?gateU.n:0},
+      uCapA:{value:capA},uCapB:{value:capB},uGrp:{value:grp},uGrpR:{value:grpR},uNG:{value:ng},
+      uSpec:{value:o.spec!=null?o.spec:1},uBump:{value:o.bump!=null?o.bump:.22},uVein:{value:o.vein!=null?o.vein:1},uFreq:{value:o.freq||2.6}},
+    vertexShader:VS,fragmentShader:FS,side:THREE.DoubleSide
+  });
+}
+function buildMesh(T){
+  const {S,def}=T,R=def.radial,nv=S.length*R;
+  const pos=new Float32Array(nv*3),col=new Float32Array(nv*3),axis=new Float32Array(nv*3),
+    aS=new Float32Array(nv),aAnim=new Float32Array(nv),aVil=new Float32Array(nv),aRad=new Float32Array(nv),aFold=new Float32Array(nv),aTh=new Float32Array(nv),aStom=new Float32Array(nv);
+  const dir=V3(0,0,0);
+  S.forEach((sm,i)=>{
+    const rA=REG[sm.regA],rB=REG[sm.regB];
+    const endF=(def.open[0]?1:smooth(.3,1.8,sm.s))*(def.open[1]?1:smooth(.3,1.8,T.L-sm.s));
+    const amp=endF*sm.jf,cA=rA.lin,cB=rB.lin,vil=rA.vil+(rB.vil-rA.vil)*sm.w;
+    for(let k=0;k<R;k++){
+      const th=k/R*TAU;
+      dir.copy(sm.N).multiplyScalar(Math.cos(th)).addScaledVector(sm.B,Math.sin(th));
+      let d=0;
+      if(amp>.001){const fa=fold(rA.fold,sm.s,dir,th),fb=rA.fold===rB.fold?fa:fold(rB.fold,sm.s,dir,th);d=(fa+(fb-fa)*sm.w)*amp;}
+      const rr=sm.r*(1+d),v=i*R+k,o=v*3;
+      pos[o]=sm.p.x+dir.x*rr;pos[o+1]=sm.p.y+dir.y*rr;pos[o+2]=sm.p.z+dir.z*rr;
+      axis[o]=sm.p.x;axis[o+1]=sm.p.y;axis[o+2]=sm.p.z;
+      const sh=Math.max(.35,1+d*1.6);
+      col[o]=(cA[0]+(cB[0]-cA[0])*sm.w)*sh;col[o+1]=(cA[1]+(cB[1]-cA[1])*sm.w)*sh;col[o+2]=(cA[2]+(cB[2]-cA[2])*sm.w)*sh;
+      aS[v]=sm.s;aAnim[v]=def.anim;aVil[v]=vil;aRad[v]=sm.r;aFold[v]=d;aTh[v]=th;aStom[v]=sm.stom;
+    }
+  });
+  const idx=new Uint32Array((S.length-1)*R*6);let q=0;
+  for(let i=0;i<S.length-1;i++)for(let k=0;k<R;k++){
+    const a=i*R+k,b=(i+1)*R+k,c=(i+1)*R+(k+1)%R,d=i*R+(k+1)%R;
+    idx[q++]=a;idx[q++]=b;idx[q++]=d;idx[q++]=b;idx[q++]=c;idx[q++]=d;
+  }
+  const g=new THREE.BufferGeometry(),A=(n,arr,s)=>g.setAttribute(n,new THREE.BufferAttribute(arr,s));
+  A('position',pos,3);A('aCol',col,3);A('aAxis',axis,3);A('aS',aS,1);A('aAnim',aAnim,1);A('aVil',aVil,1);A('aRad',aRad,1);A('aFold',aFold,1);A('aTh',aTh,1);A('aStom',aStom,1);
+  g.setIndex(new THREE.BufferAttribute(idx,1));
+  g.computeVertexNormals();
+  let gateU=null;
+  if(T.gates.length){gateU=[0,1,2,3].map(()=>new THREE.Vector4());gateU.n=T.gates.length;T.gateU=gateU;}
+  const mesh=new THREE.Mesh(g,makeMat(T.groups,{},gateU));
+  mesh.frustumCulled=false;
+  scene.add(mesh);
+}
+tubes.forEach(buildMesh);
+
+/* 歯・口蓋垂・喉頭蓋 */
+function blobGeo(c){
+  const g=new THREE.SphereGeometry(1,20,14),n=g.attributes.position.count,cc=lin(c),col=new Float32Array(n*3);
+  for(let i=0;i<n;i++){col[i*3]=cc[0];col[i*3+1]=cc[1];col[i*3+2]=cc[2];}
+  g.setAttribute('aCol',new THREE.BufferAttribute(col,3));
+  ['aS','aAnim','aVil','aRad','aFold','aTh','aStom'].forEach(k=>g.setAttribute(k,new THREE.BufferAttribute(new Float32Array(n),1)));
+  g.setAttribute('aAxis',new THREE.BufferAttribute(new Float32Array(n*3),3));
+  return g;
+}
+const toothGeo=blobGeo([.96,.93,.84]),toothMat=makeMat([],{spec:.9,bump:.08,vein:0,freq:5,blob:true});
+const fleshGeo=blobGeo([.86,.44,.46]),fleshMat=makeMat([],{spec:1,bump:.2,vein:.6,blob:true});
+let epiglottis;
+{
+  const oc=V3(0,-4.2,8.6),rr=1.68*.86;
+  const put=(phi)=>{const m=new THREE.Mesh(toothGeo,toothMat);m.position.set(oc.x+Math.cos(phi)*rr,oc.y+Math.sin(phi)*rr*.92,oc.z);m.scale.set(.27,.48,.2);m.rotation.z=phi-Math.PI/2;scene.add(m);};
+  for(let i=0;i<8;i++){put((28+i*124/7)*Math.PI/180);put((208+i*124/7)*Math.PI/180);}
+  const uv=new THREE.Mesh(fleshGeo,fleshMat);uv.position.set(0,-3.3,0);uv.scale.set(.22,.62,.22);uv.rotation.x=.25;scene.add(uv);
+  epiglottis=new THREE.Mesh(fleshGeo,fleshMat);epiglottis.position.set(0,-6.2,-1.3);epiglottis.scale.set(.55,.75,.11);epiglottis.rotation.x=-.5;scene.add(epiglottis);
+}
+
+/* 外の光 */
+const glowTex=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');const g=x.createRadialGradient(64,64,0,64,64,64);
+  g.addColorStop(0,'rgba(255,252,244,1)');g.addColorStop(.35,'rgba(255,226,200,.9)');g.addColorStop(1,'rgba(255,180,150,0)');x.fillStyle=g;x.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);})();
+const OPEN_ENDS=[],glows=[];
+for(const T of tubes){[0,1].forEach(e=>{if(!T.def.open[e])return;const sm=e?T.S[T.S.length-1]:T.S[0];const out=sm.T.clone().multiplyScalar(e?1:-1);
+  OPEN_ENDS.push({p:sm.p.clone(),out,r:sm.r,T,end:e});
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(sm.r*3.2,sm.r*3.2),new THREE.MeshBasicMaterial({map:glowTex,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
+  m.position.copy(sm.p).addScaledVector(out,.4);m.lookAt(m.position.clone().sub(out));scene.add(m);glows.push(m);});}
+
+/* 浮遊する粒子 */
+const PN=320,pBase=new Float32Array(PN*3),pPos=new Float32Array(PN*3);
+for(let i=0;i<PN*3;i++)pBase[i]=Math.random()*8;
+const pGeo=new THREE.BufferGeometry();pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
+const dust=new THREE.Points(pGeo,new THREE.PointsMaterial({color:0xffd9cc,size:.03,transparent:true,opacity:.4,depthWrite:false}));
+dust.frustumCulled=false;scene.add(dust);
+
+/* ---------- 胃の内容物（液面と食べかす） ---------- */
+const STC=[];
+{const S=TUB.dig.S;for(let i=0;i<S.length-10;i+=10){const a=S[i],b=S[i+10];if(a.stom>.6&&b.stom>.6)STC.push([a,b]);}}
+const stomCenter=V3(0,0,0);STC.forEach(([a])=>stomCenter.add(a.p));stomCenter.multiplyScalar(1/STC.length);
+const fluidMat=new THREE.ShaderMaterial({
+  defines:{NS:STC.length},transparent:true,depthWrite:false,side:THREE.DoubleSide,
+  uniforms:{uCam:U.uCam,uFog:U.uFog,uStomR:U.uStomR,uTime:U.uTime,uOut:U.uOut,uFluid:{value:V3(.6,.4,.2)},
+    uSA:{value:STC.map(([a])=>new THREE.Vector4(a.p.x,a.p.y,a.p.z,a.r))},uSB:{value:STC.map(([,b])=>new THREE.Vector4(b.p.x,b.p.y,b.p.z,b.r))}},
+  vertexShader:`varying vec3 vW;void main(){vec4 w=modelMatrix*vec4(position,1.0);vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}`,
+  fragmentShader:`uniform vec3 uCam;uniform vec3 uFog;uniform float uStomR;uniform float uTime;uniform float uOut;uniform vec3 uFluid;
+  uniform vec4 uSA[NS];uniform vec4 uSB[NS];varying vec3 vW;
+  void main(){
+    bool inside=false;
+    for(int i=0;i<NS;i++){vec3 a=uSA[i].xyz;vec3 ba=uSB[i].xyz-a;vec3 pa=vW-a;float h=clamp(dot(pa,ba)/dot(ba,ba),0.0,1.0);
+      if(length(pa-ba*h)<mix(uSA[i].w,uSB[i].w,h)*uStomR*0.86){inside=true;break;}}
+    if(!inside)discard;
+    vec3 V=uCam-vW;float d=length(V);V/=d;
+    vec3 n=normalize(vec3(sin(vW.x*5.0+uTime*1.3)*0.06,1.0,cos(vW.z*4.0-uTime)*0.06));if(dot(n,V)<0.0)n=-n;
+    float ndl=max(dot(n,V),0.0);float att=mix(1.55/(1.0+0.012*d*d),1.2,uOut);
+    vec3 col=uFluid*(0.3+0.7*ndl)*att+vec3(1.0,0.96,0.9)*pow(ndl,60.0)*att;
+    col=mix(col,uFog,1.0-exp(-d*mix(0.05,0.0025,uOut)));
+    gl_FragColor=vec4(pow(max(col,vec3(0.0)),vec3(0.4545)),0.82);
+  }`
+});
+const fluid=new THREE.Mesh(new THREE.CircleGeometry(8,48),fluidMat);
+fluid.rotation.x=-Math.PI/2;fluid.position.copy(stomCenter);fluid.renderOrder=2;fluid.frustumCulled=false;scene.add(fluid);
+const FN=220,fPos=new Float32Array(FN*3),fCol=new Float32Array(FN*3);
+const fGeo=new THREE.BufferGeometry();fGeo.setAttribute('position',new THREE.BufferAttribute(fPos,3));fGeo.setAttribute('color',new THREE.BufferAttribute(fCol,3));
+const food=new THREE.Points(fGeo,new THREE.PointsMaterial({size:.22,vertexColors:true,transparent:true,opacity:.9,depthWrite:false}));
+food.frustumCulled=false;scene.add(food);
+const FOOD_COL=[[.82,.7,.5],[.62,.42,.28],[.5,.6,.25],[.9,.86,.74],[.72,.5,.36]];
+for(let i=0;i<FN;i++){const c=FOOD_COL[i%5];fCol.set(c,i*3);}
+function inStomach(p,sc){for(const [a,b] of STC){_ab.subVectors(b.p,a.p);_ap.subVectors(p,a.p);const h=clamp(_ap.dot(_ab)/_ab.lengthSq(),0,1);_ap.addScaledVector(_ab,-h);if(_ap.length()<(a.r+(b.r-a.r)*h)*sc)return true;}return false;}
+function placeFood(i,level){
+  const sc=U.uStomR.value*.8;const t=V3(0,0,0);
+  for(let k=0;k<30;k++){const [a,b]=STC[Math.floor(Math.random()*STC.length)];t.copy(a.p).lerp(b.p,Math.random());
+    t.x+=(Math.random()*2-1)*a.r*sc;t.y+=(Math.random()*2-1)*a.r*sc;t.z+=(Math.random()*2-1)*a.r*sc;
+    if(t.y<level&&inStomach(t,sc))break;}
+  fPos[i*3]=t.x;fPos[i*3+1]=t.y;fPos[i*3+2]=t.z;
+}
+
+/* 外観ビュー用: 現在地マーカーと軌跡 */
+const markTex=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');const g=x.createRadialGradient(32,32,0,32,32,32);
+  g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.3,'rgba(255,240,200,.9)');g.addColorStop(1,'rgba(255,200,120,0)');x.fillStyle=g;x.fillRect(0,0,64,64);return new THREE.CanvasTexture(c);})();
+const marker=new THREE.Sprite(new THREE.SpriteMaterial({map:markTex,depthTest:false,transparent:true}));
+marker.scale.set(4,4,1);marker.renderOrder=10;marker.visible=false;scene.add(marker);
+const TRAIL_MAX=4000,trailPos=new Float32Array(TRAIL_MAX*3);let trailN=0;
+const trailGeo=new THREE.BufferGeometry();trailGeo.setAttribute('position',new THREE.BufferAttribute(trailPos,3));trailGeo.setDrawRange(0,0);
+const trail=new THREE.Line(trailGeo,new THREE.LineBasicMaterial({color:0xfff1c8,transparent:true,opacity:.85,depthTest:false}));
+trail.renderOrder=9;trail.frustumCulled=false;trail.visible=false;scene.add(trail);
+function addTrail(p){
+  if(trailN>0){const o=(trailN-1)*3;if(Math.hypot(p.x-trailPos[o],p.y-trailPos[o+1],p.z-trailPos[o+2])<.5)return;}
+  if(trailN>=TRAIL_MAX){trailPos.copyWithin(0,3);trailN--;}
+  trailPos[trailN*3]=p.x;trailPos[trailN*3+1]=p.y;trailPos[trailN*3+2]=p.z;trailN++;
+  trailGeo.setDrawRange(0,trailN);trailGeo.attributes.position.needsUpdate=true;
+}
+
+/* ---------- 当たり判定 ---------- */
+const _ab=V3(0,0,0),_ap=V3(0,0,0),_ax=V3(0,0,0);
+const SEGS=[];
+tubes.forEach(T=>{const S=T.S;for(let i=0;i<S.length-1;i+=3){const j=Math.min(i+3,S.length-1),a=S[i],b=S[j];
+  SEGS.push({a:a.p,b:b.p,ra0:a.r*a.cf,rb0:b.r*b.cf,ra:0,rb:0,r:a.r,reg:a.reg,tube:T,i,j,sA:a.s,sB:b.s,stA:a.stom,stB:b.stom});}});
+function scaleAt(T,s,st){
+  let sc=1+(U.uStomR.value-1)*st,gc=0;
+  for(const g of T.gates){const d=(s-g.s)/g.w;gc=Math.max(gc,Math.exp(-d*d)*(1-g.open));}
+  return sc*(1-.93*gc);
+}
+function updateSegR(){for(const g of SEGS){g.ra=g.ra0*scaleAt(g.tube,g.sA,g.stA)-.1;g.rb=g.rb0*scaleAt(g.tube,g.sB,g.stB)-.1;}}
+function locate(p){
+  let best=null,bs=Infinity,bh=0;
+  for(const g of SEGS){
+    if(g.ra<.02&&g.rb<.02)continue;
+    _ab.subVectors(g.b,g.a);_ap.subVectors(p,g.a);
+    const L2=_ab.lengthSq();let h=L2>0?_ap.dot(_ab)/L2:0;h=h<0?0:h>1?1:h;
+    const dx=_ap.x-_ab.x*h,dy=_ap.y-_ab.y*h,dz=_ap.z-_ab.z*h,d=Math.sqrt(dx*dx+dy*dy+dz*dz);
+    const sc=d-Math.max(.02,g.ra+(g.rb-g.ra)*h);
+    if(sc<bs){bs=sc;best=g;bh=h;}
+  }
+  return {seg:best,score:bs,h:bh,s:best?best.sA+(best.sB-best.sA)*bh:0,tube:best?best.tube:null};
+}
+function constrain(p,vel){
+  const L=locate(p);
+  if(L.seg&&L.score>0){
+    const g=L.seg;_ab.subVectors(g.b,g.a);_ax.copy(g.a).addScaledVector(_ab,L.h);
+    const R=Math.max(.02,g.ra+(g.rb-g.ra)*L.h);_ap.subVectors(p,_ax);const d=_ap.length();
+    if(d>1e-6){_ap.multiplyScalar(1/d);p.copy(_ax).addScaledVector(_ap,R);if(vel){const vn=vel.dot(_ap);if(vn>0)vel.addScaledVector(_ap,-vn);}}
+  }
+  return L;
+}
+
+/* 閉じた関門をまたいだ移動は取り消す */
+function crossesClosed(La,Lb){
+  if(!La||!Lb||!La.tube||!Lb.tube)return false;
+  const sh=g=>g.open<.35;
+  if(La.tube===Lb.tube){for(const g of La.tube.gates)if(sh(g)&&(La.s-g.s)*(Lb.s-g.s)<0)return true;return false;}
+  if(sh(G.icv)){
+    if(La.tube===TUB.dig&&Lb.tube===TUB.colon&&La.s<G.icv.s)return true;
+    if(La.tube===TUB.colon&&Lb.tube===TUB.dig&&Lb.s<G.icv.s)return true;
+  }
+  return false;
+}
+
+/* ---------- 順路 ---------- */
+function buildRoute(label,entry,spec){
+  const P=[];
+  for(const [tid,from,to] of spec){const T=TUB[tid];const i0=from?nearestIdx(T,V3(...from)):0,i1=to?nearestIdx(T,V3(...to)):T.S.length-1;
+    const st=i0<=i1?4:-4;for(let i=i0;st>0?i<=i1:i>=i1;i+=st){const sm=T.S[i];P.push({p:sm.p,r:sm.r,T,i,reg:sm.reg,gate:T.gates.find(g=>Math.abs(sm.s-g.s)<.16)});}}
+  let L=0;P.forEach((q,k)=>{if(k)L+=q.p.distanceTo(P[k-1].p);q.L=L;});
+  return {label,entry,pts:P,L,gut:entry!=='nose'};
+}
+const ROUTES=[
+  buildRoute('口から','mouth',[['oral',null,[0,-4.6,-.6]],['dig',[0,-5,-2.4],null],['colon',[-12.2,-80.4,2],null]]),
+  buildRoute('鼻から','nose',[['nasal',null,[0,.7,-1.4]],['dig',[0,.6,-2.3],[0,-6.8,-2.3]],['trachea',null,[0,-26.4,.5]],['bR',[0,-26.6,.4],null]]),
+  buildRoute('鼻から','nose',[['nasal',null,[0,.7,-1.4]],['dig',[0,.6,-2.3],[0,-6.8,-2.3]],['trachea',null,[0,-26.4,.5]],['bL',[0,-26.6,.4],null]]),
+  buildRoute('肛門から','anus',[['colon',[0,-99,.5],[-12,-85,2.4]]])
+];
+function routeAt(R,s){
+  s=clamp(s,0,R.L);let lo=0,hi=R.pts.length-1;
+  while(hi-lo>1){const m=(lo+hi)>>1;if(R.pts[m].L<s)lo=m;else hi=m;}
+  const a=R.pts[lo],b=R.pts[hi],f=clamp((s-a.L)/Math.max(1e-6,b.L-a.L),0,1);
+  return {p:a.p.clone().lerp(b.p,f),r:a.r+(b.r-a.r)*f};
+}
+function nearestOnRoutes(p,prefer){
+  let best=null;
+  ROUTES.forEach(R=>{for(const q of R.pts){const d=q.p.distanceTo(p)-(R.entry===prefer?.6:0);if(!best||d<best.d)best={R,s:q.L,d};}});
+  if(best)best.d=routeAt(best.R,best.s).p.distanceTo(p);
+  return best;
+}
+
+/* ---------- あなた（素材）と体の状態 ---------- */
+const COMP={water:['水分','#7fb8e0'],protein:['タンパク質','#e07a6a'],fat:['脂質','#f2d27a'],carb:['炭水化物','#efe6cf'],fiber:['食物繊維','#8fbf6a'],
+  bacteria:['腸内細菌','#a98bd6'],bile:['胆汁成分','#c9b23a'],ash:['ミネラル','#cfc6b8'],metal:['ステンレス','#b7bec7'],device:['機械','#8d97a3']};
+const MATS={
+ capsule:{n:'カプセル内視鏡',d:'長さ26mm・3.7g。消化されない。気道も探検できる（咳は起きない設定）。',comp:{device:3.7},size:26,color:[.86,.89,.92],dig:false,entries:['mouth','nose','anus']},
+ meat:{n:'牛肉',d:'ひと口20g。タンパク質と脂質。胃酸で灰褐色に変わる。',comp:{water:14.2,protein:4.2,fat:1.4,ash:.2},size:20,color:[.66,.17,.17],dig:true,rate:1/170,acidC:[.6,.5,.42],entries:['mouth']},
+ rice:{n:'ごはん',d:'ひと口20g。主にでんぷん。唾液で分解が始まり、胃を早く出る。',comp:{water:12,protein:.5,fat:.06,carb:7.4,fiber:.06},size:12,color:[.95,.94,.9],dig:true,rate:1/100,acidC:[.86,.83,.72],entries:['mouth']},
+ veg:{n:'キャベツ',d:'ひと口20g。ほとんど水と食物繊維。緑は胃酸で黄緑〜オリーブ色に。',comp:{water:18.5,protein:.26,fat:.04,carb:.7,fiber:.36,ash:.1},size:25,color:[.55,.78,.38],dig:true,rate:1/120,acidC:[.55,.56,.27],entries:['mouth']},
+ metal:{n:'ステンレス球',d:'直径8mm・2.1g。溶けず吸収もされない。胃を出るには空腹期の強い収縮が必要。',comp:{metal:2.1},size:8,color:[.74,.76,.8],dig:false,entries:['mouth']}
+};
+const ENTRIES={mouth:['口','いちばん長い旅。消化管を最後まで行ける'],nose:['鼻','気道へ。咽頭で食道側にも行ける'],anus:['肛門','大腸内視鏡と同じルート。大腸をさかのぼる']};
+const BELLY={hungry:['空腹','胃はしぼみ、約100分ごとに強い収縮（空腹期収縮）が来る'],full:['満腹（食後）','胃に約800mLの食事。ひだが伸び、食後の動きが続く']};
+const BRISTOL=['','硬いコロコロ便','硬めのソーセージ状','ひびのあるソーセージ状','なめらかなバナナ状（理想的）','やわらかい半固形','泥状','水様'];
+
+const SIM={on:false,bodyT:0,ff:1,content:50,mmc:0,phase:1,lastPhase:1,swallowT:99,carry:false,cool:0,icvHold:0,icvPush:0,analHold:0,hintT:0,coughT:0,urgeShown:false};
+let P=null;
+const mass=()=>{let m=0;for(const k in P.comp)m+=P.comp[k];return m;};
+const waterFrac=()=>{const m=mass();return m>0?(P.comp.water||0)/m:0;};
+function waterToward(target,k){
+  const m=mass(),w=P.comp.water||0,dry=m-w;if(dry<=0)return;
+  const want=target*dry/(1-target),nw=w+(want-w)*Math.min(1,k);
+  if(nw<w)P.absorbed.water+=w-nw;P.comp.water=Math.max(0,nw);
+}
+function absorb(key,k){const v=P.comp[key]||0;if(!v)return;const a=v*Math.min(1,k);P.comp[key]=v-a;P.absorbed[key]=(P.absorbed[key]||0)+a;}
+function bristol(){const w=waterFrac();return w>=.9?7:w>=.85?6:w>=.8?5:w>=.74?4:w>=.7?3:w>=.65?2:1;}
+function stoolReady(){return P.tColon>=720&&(!P.mat.dig||waterFrac()<=.8);}
+
+function simStep(dt,zone){ // dt: 体内時間（分）
+  SIM.bodyT+=dt;
+  if(SIM.content>50)SIM.content=Math.max(50,SIM.content-3.2*dt);
+  const fasting=SIM.content<=60;
+  if(fasting){SIM.mmc+=dt;const m=SIM.mmc%100;SIM.phase=m<45?1:m<90?2:3;}else{SIM.mmc=0;SIM.phase=0;}
+  if(SIM.phase===3&&SIM.lastPhase!==3&&SIM.on)toast('グーッ…おなかが鳴った。空腹期の強い収縮（MMC 第3相）が胃から小腸へ進む');
+  SIM.lastPhase=SIM.phase;
+  if(!P)return;
+  const m=P.mat,food=m.dig;
+  if(zone==='mouth'&&food){P.tMouth+=dt;P.size=Math.max(2.5,P.size*Math.exp(-dt*6));const add=Math.min(4-P.saliva,6*dt);if(add>0){P.comp.water+=add;P.saliva+=add;}}
+  if(zone==='stomach'){P.tStom+=dt;if(food){
+    P.acid=Math.min(1,P.acid+dt/40);
+    P.prog=Math.min(1,P.prog+m.rate*dt/(1+Math.max(0,P.size-3)/6));
+    P.size=Math.max(.5,P.size*Math.exp(-dt/60));
+    waterToward(.85,dt*.03);
+    absorb('protein',dt*.0008);
+  }}
+  if(zone==='duo'||zone==='sb'){P.tSB+=dt;P.bile=Math.min(1,P.bile+dt/(food?12:30));
+    if(food){
+      if(zone==='duo'){if((P.comp.bile||0)<.6)P.comp.bile=(P.comp.bile||0)+.04*dt;}
+      else absorb('bile',dt/90); // 胆汁酸の大半は回腸で再吸収される（腸肝循環）
+      const k=zone==='sb'?1:.3;
+      absorb('protein',dt/50*k);absorb('fat',dt/55*k);absorb('carb',dt/40*k);absorb('ash',dt/200*k);
+      waterToward(.88,dt*.02);
+    }else P.coat=Math.min(1,P.coat+dt/150);
+  }
+  if(zone==='colon'||zone==='rectum'){P.tColon+=dt;P.sterco=Math.min(1,P.sterco+dt/600);
+    if(food){
+      const dry=mass()-(P.comp.water||0)-(P.comp.bacteria||0),want=.8*dry;
+      P.comp.bacteria=(P.comp.bacteria||0)+Math.max(0,want-(P.comp.bacteria||0))*Math.min(1,dt/300);
+      if(P.comp.fiber)P.comp.fiber-=P.comp.fiber*Math.min(1,dt/2000);
+      absorb('protein',dt/400);absorb('fat',dt/400);absorb('carb',dt/200);
+      waterToward(.72,dt/400);
+    }else P.coat=Math.min(1,P.coat+dt/200);
+  }
+}
+function colorOf(){
+  const m=P.mat;let c=m.color.slice();
+  if(m.dig){
+    c=mixc(c,m.acidC,P.acid*.8);
+    c=mixc(c,[.82,.68,.2],P.bile*.75);
+    c=mixc(c,[.55,.56,.2],P.bile*Math.min(1,P.tSB/150)*.3);
+    c=mixc(c,[.42,.26,.12],P.sterco);
+    const wf=waterFrac();c=c.map(v=>v*(.78+.3*wf));
+  }
+  return c;
+}
+const coatColor=()=>mixc([.82,.68,.2],[.42,.26,.12],P.sterco);
+function formOf(){
+  const m=P.mat;
+  if(!m.dig)return P.coat>.15?'表面に内容物が付着':'変化なし';
+  if(P.tColon>0){const t=bristol();return `ブリストル${t}型 · ${BRISTOL[t]}`;}
+  if(P.tSB>0)return '液状の糜粥（びじゅく）';
+  if(P.tStom>0)return P.prog>=1?'かゆ状（糜粥）· 幽門を通れる':`胃でほぐれ中 ${Math.round(P.prog*100)}%`;
+  if(P.size>5)return `かたまり（約${Math.round(P.size)}mm）`;
+  return '食塊（かみ砕かれた）';
+}
+function paintSwatch(el,big){
+  const m=P.mat,k=big?2:1,c=colorOf(),s=(x)=>Math.round(x*k)+'px';
+  let w,h,br;
+  if(P.mat===MATS.capsule){w=50;h=22;br='11px';}
+  else if(P.mat===MATS.metal){w=h=26;br='50%';}
+  else{
+    const sz=clamp(Math.cbrt(mass())*16,14,50);
+    if(P.tColon>0){const t=bristol();
+      if(t<=2){w=sz*.7;h=sz*.6;br='45% 55% 50% 50%';}else if(t<=5){w=sz*1.3;h=sz*.5;br='40%/50%';}else{w=sz*1.3;h=sz*.3;br='50%';}}
+    else if(P.tSB>0){w=sz*1.3;h=sz*.35;br='50%';}
+    else if(P.tStom>0){w=sz*(1+P.prog*.3);h=sz*(1-P.prog*.5);br='48% 52% 46% 54% / 55% 50% 50% 45%';}
+    else if(P.size>5){w=sz;h=sz*.8;br='38% 62% 55% 45% / 45% 40% 60% 55%';}
+    else{w=sz*.9;h=sz*.8;br='50%';}
+  }
+  el.style.width=s(w);el.style.height=s(h);el.style.borderRadius=br;
+  let bg=`radial-gradient(circle at 32% 28%, rgba(255,255,255,.55), transparent 42%), ${css(c)}`;
+  if(!m.dig&&P.coat>0)bg=`radial-gradient(circle at 32% 28%, rgba(255,255,255,.55), transparent 42%), linear-gradient(${css(c)}, ${css(c)})`;
+  el.style.background=bg;
+  el.style.outline=!m.dig&&P.coat>.05?`${Math.round(P.coat*4*k)}px solid ${css(coatColor())}`:'none';
+}
+
+/* ---------- 操作の状態 ---------- */
+let mode='demo';          // demo | play | result
+let control='free';       // free | guide
+let guideDir=1,autoOn=false,orbitOn=false,inBody=true;
+let speedMul=1,lastLook=-1e9;
+const guide={R:ROUTES[0],s:0};
+const vel=V3(0,0,0),keys={};
+let lookDX=0,lookDY=0,wheel=0;
+const stick={x:0,y:0};
+let loc=null,curReg='';
+const orbit={yaw:.5,pitch:.15,dist:170,target:V3(0,-45,1)};
+
+function teleportTo(T,i,rev){
+  const sm=T.S[i];camera.position.copy(sm.p);
+  const dir=sm.T.clone().multiplyScalar(rev?-1:1);
+  camera.up.set(0,1,0);if(Math.abs(dir.y)>.9)camera.up.set(0,0,1);
+  camera.lookAt(sm.p.clone().add(dir));vel.set(0,0,0);inBody=true;
+}
+function setControl(c,dir){
+  if(c==='guide'){
+    const n=nearestOnRoutes(camera.position,P?P.entry:null);
+    if(!inBody||!n||n.d>2.5){toast('ここからは順路に乗れない。管の中心近くで試すか、地図で太い管を選んで');control='free';autoOn=false;updateButtons();return false;}
+    guide.R=n.R;guide.s=n.s;control='guide';guideDir=dir;vel.set(0,0,0);
+  }else{control='free';autoOn=false;}
+  updateButtons();return true;
+}
+function cycleGuide(){
+  if(mode!=='play')return;
+  if(control==='free'){if(setControl('guide',1))toast('順路モード: W を押し続けると奥へ進む（S で戻る）');}
+  else if(guideDir===1){guideDir=-1;toast('逆向き: W で入口のほうへ戻る');updateButtons();}
+  else{setControl('free');toast('順路モードをオフ');}
+}
+function toggleAuto(){
+  if(mode!=='play')return;
+  if(autoOn){autoOn=false;updateButtons();toast('自動航行をオフ');return;}
+  if(control!=='guide'&&!setControl('guide',guideDir))return;
+  autoOn=true;updateButtons();toast(guideDir>0?'自動航行 · 順路を奥へ':'自動航行 · 入口へ戻る');
+}
+function updateButtons(){
+  $('btnGuide').innerHTML=(control==='guide'?(guideDir>0?'順路モード: 奥へ':'順路モード: 入口へ'):'順路モード: オフ')+'<kbd>G</kbd>';
+  $('btnGuide').classList.toggle('on',control==='guide');
+  $('btnAuto').classList.toggle('on',autoOn);
+  $('btnFF').classList.toggle('on',SIM.ff>1);
+  $('btnOrbit').classList.toggle('on',orbitOn);
+  document.body.classList.toggle('orbit',orbitOn);
+}
+
+/* ---------- 開始画面 ---------- */
+function buildOpts(box,name,obj,def,descKey){
+  box.innerHTML='';
+  for(const k in obj){const o=obj[k],id=name+'-'+k;
+    const lbl=Array.isArray(o)?o[0]:o.n,desc=Array.isArray(o)?o[1]:o.d;
+    box.insertAdjacentHTML('beforeend',`<div class="opt"><input type="radio" name="${name}" id="${id}" value="${k}" ${k===def?'checked':''}><label for="${id}"><b>${lbl}</b><span>${desc}</span></label></div>`);}
+}
+buildOpts($('optMat'),'mat',MATS,'meat');
+buildOpts($('optEntry'),'entry',ENTRIES,'mouth');
+buildOpts($('optBelly'),'belly',BELLY,'hungry');
+function syncEntries(){
+  const m=MATS[document.querySelector('input[name=mat]:checked').value];
+  document.querySelectorAll('input[name=entry]').forEach(r=>{r.disabled=!m.entries.includes(r.value);});
+  const cur=document.querySelector('input[name=entry]:checked');
+  if(!cur||cur.disabled)$('entry-mouth').checked=true;
+}
+$('optMat').addEventListener('change',syncEntries);syncEntries();
+$('startForm').addEventListener('submit',e=>{e.preventDefault();
+  begin(document.querySelector('input[name=mat]:checked').value,document.querySelector('input[name=entry]:checked').value,document.querySelector('input[name=belly]:checked').value);});
+
+function begin(matKey,entry,belly){
+  const m=MATS[matKey];m.id=matKey;
+  P={mat:m,entry,comp:Object.assign({},m.comp),size:m.size,prog:0,acid:0,bile:0,sterco:0,coat:0,tMouth:0,tStom:0,tSB:0,tColon:0,saliva:0,absorbed:{water:0},start:mass0(m)};
+  Object.assign(SIM,{on:true,bodyT:0,ff:1,content:belly==='full'?800:50,mmc:belly==='full'?0:Math.random()*80,phase:1,lastPhase:1,swallowT:99,carry:false,cool:0,icvHold:0,icvPush:0,analHold:0,hintT:0,coughT:0,urgeShown:false});
+  GATES.forEach(g=>{g.open=g.target=g.id==='glot'?1:0;});
+  if(entry==='anus')G.anal.open=1;
+  trailN=0;trailGeo.setDrawRange(0,0);
+  for(let i=0;i<FN;i++)placeFood(i,1e9);
+  if(entry==='nose')teleportTo(TUB.nasal,2);
+  else if(entry==='anus')teleportTo(TUB.colon,TUB.colon.S.length-2,true);
+  else teleportTo(TUB.oral,2);
+  mode='play';control='free';autoOn=false;orbitOn=false;guideDir=1;
+  $('start').hidden=true;$('result').hidden=true;$('side').hidden=false;
+  $('meName').textContent=m.n;
+  updateButtons();
+  toast(m.dig?`${m.n}として口から入った。口にいる間はかまれて細かくなる。W で前進、G で順路モード`:`${m.n}で${ENTRIES[entry][0]}から入った。W で前進、ドラッグで見回す、G で順路モード`);
+}
+function mass0(m){let s=0;for(const k in m.comp)s+=m.comp[k];return s;}
+function showStart(){mode='demo';$('start').hidden=false;$('result').hidden=true;$('side').hidden=true;SIM.on=false;P=null;orbitOn=false;
+  guide.R=ROUTES[0];guide.s=0;control='guide';guideDir=1;autoOn=true;teleportTo(TUB.oral,0);updateButtons();}
+$('btnMenu').onclick=showStart;
+$('btnSpeed').onclick=()=>{speedMul=speedMul===1?3:1;$('btnSpeed').textContent='速さ ×'+speedMul;};
+$('btnAuto').onclick=()=>toggleAuto();
+$('btnGuide').onclick=()=>cycleGuide();
+$('btnFF').onclick=()=>toggleFF();
+$('btnOrbit').onclick=()=>toggleOrbit();
+$('sideToggle').onclick=()=>$('side').classList.toggle('open');
+$('resAgain').onclick=showStart;
+$('resLook').onclick=()=>{$('result').hidden=true;mode='play';orbitOn=true;updateButtons();};
+function toggleFF(){if(mode!=='play')return;SIM.ff=SIM.ff>1?1:10;updateButtons();toast(SIM.ff>1?'早送り ×10（体内時間が10倍速く進む）':'早送りをオフ');}
+function toggleOrbit(){if(mode==='demo')return;orbitOn=!orbitOn;updateButtons();if(orbitOn)toast('外観ビュー: ドラッグで回転、ホイールで拡大。光る点があなたの位置');}
+
+/* ---------- 入力 ---------- */
+addEventListener('keydown',e=>{
+  if(e.target&&e.target.tagName==='INPUT')return;
+  if(e.code==='Space'){e.preventDefault();if(document.activeElement)document.activeElement.blur();if(!e.repeat)toggleAuto();return;}
+  if(e.code==='KeyG'&&!e.repeat){cycleGuide();return;}
+  if(e.code==='KeyF'&&!e.repeat){toggleFF();return;}
+  if(e.code==='KeyV'&&!e.repeat){toggleOrbit();return;}
+  if(e.code.startsWith('Arrow'))e.preventDefault();
+  keys[e.code]=true;
+  if(autoOn&&['KeyW','KeyS'].includes(e.code)){autoOn=false;updateButtons();}
+});
+addEventListener('keyup',e=>{keys[e.code]=false;});
+addEventListener('blur',()=>{for(const k in keys)keys[k]=false;});
+let drag=null;
+canvas.addEventListener('pointerdown',e=>{drag={id:e.pointerId,x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;lookDX+=e.clientX-drag.x;lookDY+=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;lastLook=performance.now();});
+const endDrag=e=>{if(drag&&drag.id===e.pointerId)drag=null;};
+canvas.addEventListener('pointerup',endDrag);canvas.addEventListener('pointercancel',endDrag);
+canvas.addEventListener('wheel',e=>{e.preventDefault();if(orbitOn){orbit.dist=clamp(orbit.dist*(1+Math.sign(e.deltaY)*.1),25,400);return;}wheel+=-Math.sign(e.deltaY);if(autoOn){autoOn=false;updateButtons();}},{passive:false});
+const stickEl=$('stick'),knob=$('knob');let stickId=null;
+function stickMove(e){const r=stickEl.getBoundingClientRect();let x=(e.clientX-r.left-r.width/2)/(r.width/2),y=(e.clientY-r.top-r.height/2)/(r.height/2);
+  const l=Math.hypot(x,y);if(l>1){x/=l;y/=l;}stick.x=x;stick.y=y;knob.style.transform=`translate(${x*37}px,${y*37}px)`;}
+stickEl.addEventListener('pointerdown',e=>{stickId=e.pointerId;stickEl.setPointerCapture(e.pointerId);stickMove(e);if(autoOn){autoOn=false;updateButtons();}});
+stickEl.addEventListener('pointermove',e=>{if(e.pointerId===stickId)stickMove(e);});
+const stickEnd=e=>{if(e.pointerId!==stickId)return;stickId=null;stick.x=stick.y=0;knob.style.transform='';};
+stickEl.addEventListener('pointerup',stickEnd);stickEl.addEventListener('pointercancel',stickEnd);
+
+let toastT=0;
+function toast(t){if(mode==='demo')return;const el=$('toast');el.textContent=t;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),3800);}
+
+/* ---------- 地図 ---------- */
+const mapC=$('map'),mctx=mapC.getContext('2d');
+const MB={x0:-15,x1:15,y0:-101,y1:12};
+let mapBg=null,mScale=1,mOx=0,mOy=0;
+function mapSetup(){
+  const dpr=Math.min(2,window.devicePixelRatio||1),w=mapC.clientWidth,h=mapC.clientHeight;
+  mapC.width=w*dpr;mapC.height=h*dpr;
+  mScale=Math.min(w/(MB.x1-MB.x0),h/(MB.y1-MB.y0));
+  mOx=w/2;mOy=(h-(MB.y1-MB.y0)*mScale)/2+MB.y1*mScale;
+  mapBg=document.createElement('canvas');mapBg.width=mapC.width;mapBg.height=mapC.height;
+  const x=mapBg.getContext('2d');x.scale(dpr,dpr);x.lineCap='round';x.lineJoin='round';
+  for(const T of tubes){
+    const isAir=AIRWAY.has(T.id);x.strokeStyle=isAir?'#9ad4f5':'#ffb48c';x.globalAlpha=isAir?.55:.32;
+    for(let i=0;i<T.S.length-4;i+=4){const a=T.S[i],b=T.S[i+4];x.lineWidth=Math.max(1.2,2*a.r*mScale);x.beginPath();x.moveTo(mOx+a.p.x*mScale,mOy-a.p.y*mScale);x.lineTo(mOx+b.p.x*mScale,mOy-b.p.y*mScale);x.stroke();}
+  }
+  x.globalAlpha=1;x.fillStyle='#fff1e4';
+  GATES.forEach(g=>{x.fillRect(mOx+g.p.x*mScale-2,mOy-g.p.y*mScale-.5,4,1);});
+}
+function drawMap(){
+  if(!mapBg)return;const w=mapC.clientWidth;
+  mctx.setTransform(1,0,0,1,0,0);mctx.clearRect(0,0,mapC.width,mapC.height);mctx.drawImage(mapBg,0,0);
+  const dpr=mapC.width/w;mctx.setTransform(dpr,0,0,dpr,0,0);
+  const p=camera.position,px=mOx+p.x*mScale,py=mOy-p.y*mScale;
+  const f=V3(0,0,-1).applyQuaternion(camera.quaternion);const fl=Math.hypot(f.x,f.y)||1;
+  mctx.strokeStyle='#fff1e4';mctx.lineWidth=1.5;mctx.beginPath();mctx.moveTo(px,py);mctx.lineTo(px+f.x/fl*12*Math.min(1,fl*1.5),py-f.y/fl*12*Math.min(1,fl*1.5));mctx.stroke();
+  mctx.fillStyle='#fff1e4';mctx.beginPath();mctx.arc(px,py,3.2,0,TAU);mctx.fill();
+  mctx.strokeStyle='rgba(255,241,228,.5)';mctx.beginPath();mctx.arc(px,py,6+2*Math.sin(performance.now()/300),0,TAU);mctx.stroke();
+}
+mapC.addEventListener('pointerdown',e=>{
+  if(mode!=='play'){toast('まず開始画面で「ダイブ開始」を押して');return;}
+  if(P.mat!==MATS.capsule){toast('食べ物は流れに沿ってしか進めない。地図で飛べるのはカプセル内視鏡だけ');return;}
+  const r=mapC.getBoundingClientRect(),wx=(e.clientX-r.left-mOx)/mScale,wy=-(e.clientY-r.top-mOy)/mScale;
+  let best=null,bd=Infinity;
+  for(const T of tubes)for(let i=0;i<T.S.length;i+=2){const s=T.S[i];if(s.r<.3)continue;const d=Math.hypot(s.p.x-wx,s.p.y-wy);if(d<bd){bd=d;best=[T,i];}}
+  if(!best)return;
+  setControl('free');orbitOn=false;updateButtons();teleportTo(best[0],best[1]);
+  toast(REG[best[0].S[best[1]].reg].n+'へ移動');
+});
+
+/* ---------- 関門の開閉と反射 ---------- */
+function gateLogic(dtR){
+  if(mode==='demo'){GATES.forEach(g=>{g.open+=(1-g.open)*Math.min(1,dtR*3);});epiglottis.rotation.x=-.5;return;}
+  const T=loc&&loc.tube,s=loc?loc.s:0,inDig=inBody&&T===TUB.dig,inColon=inBody&&T===TUB.colon;
+  const zone=REG[curReg]?REG[curReg].z:'out';
+  const food=P&&P.mat.dig, capsule=P&&P.mat===MATS.capsule;
+  const pushing=keys.KeyW||stick.y<-.3||(control==='guide'&&(autoOn||keys.KeyW)&&guideDir>0);
+  // 飲み込み
+  SIM.swallowT+=dtR;SIM.cool-=dtR;
+  if(inDig&&s<G.ues.s&&s>G.ues.s-2.2&&SIM.cool<=0&&SIM.swallowT>4){SIM.swallowT=0;SIM.carry=true;SIM.cool=5;toast('ごくん。飲み込みの反射: 声門と喉頭蓋が気道を閉じ、食道の入口が開く');}
+  const swallowing=SIM.swallowT<3;
+  G.ues.target=swallowing||(SIM.carry&&inDig&&Math.abs(s-G.ues.s)<.8)?1:0;
+  G.glot.target=SIM.swallowT<3.5?0:1;
+  G.les.target=inDig&&s>G.les.s-4&&s<G.les.s+.8&&(SIM.carry||s<G.les.s)?1:0;
+  if(inDig&&s>G.les.s+1)SIM.carry=false;
+  if(!inDig&&SIM.swallowT>12)SIM.carry=false;
+  // 幽門
+  const pylOK=P&&((food&&P.prog>=1)||SIM.phase===3);
+  G.pyl.target=inDig&&s>G.pyl.s-7&&s<G.pyl.s+.6&&pylOK?1:(G.pyl.open>.5&&inDig&&Math.abs(s-G.pyl.s)<.7?1:0);
+  // 回盲弁
+  SIM.icvHold-=dtR;
+  if(inColon&&camera.position.distanceTo(G.icv.p)<3&&pushing&&capsule){SIM.icvPush+=dtR;if(SIM.icvPush>1){SIM.icvHold=6;SIM.icvPush=0;toast('回盲弁を押し広げた（大腸内視鏡でも回腸の終わりまで入れる）');}}else if(!pushing)SIM.icvPush=0;
+  G.icv.target=(inDig&&s>G.icv.s-5&&s<G.icv.s+.5&&P&&P.tSB>=150)||SIM.icvHold>0?1:0;
+  // 肛門
+  SIM.analHold-=dtR;
+  const nearAnal=camera.position.distanceTo(G.anal.p)<4;
+  if(!inBody&&nearAnal&&capsule)SIM.analHold=5;
+  G.anal.target=(nearAnal&&P&&(P.entry==='anus'||(capsule&&!inBody)))||SIM.analHold>0||(inColon&&s>G.anal.s-5&&P&&stoolReady())?1:0;
+  if(inColon&&s>G.anal.s-8&&P&&stoolReady()&&!SIM.urgeShown){SIM.urgeShown=true;toast('便意が来た。直腸が伸びて肛門括約筋がゆるむ → そのまま外へ');}
+  GATES.forEach(g=>{g.open+=(g.target-g.open)*Math.min(1,dtR*(g.id==='glot'||g.id==='ues'?8:3));});
+  epiglottis.rotation.x=-.5+1.25*(1-G.glot.open);
+  // 誤嚥 → 咳
+  SIM.coughT-=dtR;
+  if(food&&inBody&&zone==='air'&&SIM.coughT<=0&&T){SIM.coughT=1.2;const sm=T.S[Math.min(T.S.length-1,loc.seg.i)];
+    if(control==='guide')setControl('free');vel.copy(sm.T).multiplyScalar(-25);toast('ゴホッ！ 気道に入ったので咳で押し戻された（誤嚥を防ぐ反射）');}
+  // 閉じた関門の前で理由を出す
+  SIM.hintT-=dtR;
+  if(SIM.hintT<=0&&inBody&&T&&P)for(const g of T.gates){
+    if(g.open<.3&&Math.abs(s-g.s)<1.5){const t=gateHint(g,s<g.s);if(t){toast(t);SIM.hintT=7;}break;}
+  }
+}
+function gateHint(g,up){
+  const ff=' · F で早送り';
+  switch(g.id){
+    case 'les':return up?null:'下部食道括約筋は、胃酸が逆流しないよう閉じている';
+    case 'ues':return up?null:'上部食道括約筋は閉じている。逆流を防ぐしくみ';
+    case 'pyl':
+      if(!up)return '幽門は、十二指腸から胃への逆流を防ぐため閉じている';
+      if(P.mat.dig)return `幽門は閉じている。胃でかゆ状になるまで待とう（${Math.round(P.prog*100)}%）`+ff;
+      if(SIM.phase===0)return `食後の胃は固形物を通さない。胃が空になり（あと約${Math.ceil((SIM.content-60)/3.2)}分）、空腹期の強い収縮が来るまで待とう`+ff;
+      return `大きな固形物は空腹期の強い収縮（MMC 第3相）でしか出られない。あと約${Math.ceil(90-SIM.mmc%100)}分`+ff;
+    case 'icv':
+      if(up)return `回盲弁は閉じている。小腸での消化と吸収が進むまで待とう（${fmtT(P.tSB)} / 2時間30分）`+ff;
+      return P.mat===MATS.capsule?'押し続けると回盲弁を通れる':'回盲弁は大腸からの逆流を防ぐ';
+    case 'anal':
+      if(!inBody)return null;
+      return P.mat.dig?`まだ便意がない。大腸で水分が抜けるのを待とう（大腸 ${fmtT(P.tColon)} / 目安12時間、水分 ${Math.round(waterFrac()*100)}%）`+ff
+                      :`まだ便意がない（大腸 ${fmtT(P.tColon)} / 目安12時間）`+ff;
+    case 'glot':return '飲み込み中は声門が閉じて気道を守っている';
+  }
+  return null;
+}
+
+/* ---------- 道しるべ（分岐の案内） ---------- */
+const SIGNS=[
+ {p:[0,.4,-1.9],k:'gut',t:'咽頭へ',s:'下で前（喉頭→肺）と後ろ（食道→胃）に分かれる'},
+ {p:[0,1.6,1.5],k:'air',t:'← 鼻の穴（外）',s:'戻ると体の外'},
+ {p:[0,-4.2,-.2],k:'gut',t:'↓ 咽頭',s:'まっすぐ下は食道（胃へ）'},
+ {p:[0,-1.2,-2.4],k:'air',t:'↑ 鼻腔',s:'上へ行くと鼻の穴'},
+ {p:[0,-7.3,-1.0],k:'air',t:'前の穴: 喉頭',s:'気管 → 気管支 → 肺（空気の道）'},
+ {p:[0,-9.2,-2.6],k:'gut',t:'後ろの穴: 食道',s:'胃へ（食べ物の道）· 近づくと飲み込み反射'},
+ {p:[0,-12.6,.6],k:'air',t:'声帯の下は気管',s:'約11cm下で左右に分かれる'},
+ {p:[-.9,-27.2,.5],k:'air',t:'右主気管支',s:'右肺（上・中・下の3葉）'},
+ {p:[.9,-27.2,.5],k:'air',t:'左主気管支',s:'左肺（上・下の2葉）'},
+ {p:[-2.9,-29.2,.4],k:'air',t:'右上葉気管支',s:'右肺の上の葉へ'},
+ {p:[-4.1,-32.6,.6],k:'air',t:'右中葉気管支',s:'右肺の前側の葉へ'},
+ {p:[-4.6,-35,.1],k:'air',t:'右下葉気管支',s:'右肺の下の葉へ'},
+ {p:[3.5,-30.4,.4],k:'air',t:'左上葉気管支',s:'左肺の上の葉へ'},
+ {p:[4.4,-33.6,.2],k:'air',t:'左下葉気管支',s:'左肺の下の葉へ'},
+ {p:[2.1,-42.6,-.4],k:'gut',t:'噴門 → 胃',s:'下部食道括約筋が胃酸の逆流を防ぐ'},
+ {p:[-1.8,-56.8,2.5],k:'gut',t:'幽門 → 十二指腸',s:'かゆ状になったものだけ通れる'},
+ {p:[-6.3,-58.6,.5],k:'gut',t:'大十二指腸乳頭',s:'胆汁と膵液がここから流れ込む'},
+ {p:[2,-63,.5],k:'gut',t:'空腸へ',s:'ここから約6mの小腸（このアプリでは短縮）'},
+ {p:[-8,-80.9,2],k:'gut',t:'回盲弁 → 大腸',s:'その先の下は盲腸、上は上行結腸'},
+ {p:[-11,-80.4,2.2],k:'gut',t:'回盲弁 → 回腸（小腸）',s:'ふだんは閉じて逆流を防ぐ'},
+ {p:[-12,-84.6,2.4],k:'gut',t:'盲腸の底',s:'本物はここから虫垂がのびる'},
+ {p:[-12,-76,2],k:'gut',t:'↑ 上行結腸',s:'右の腹を上る'},
+ {p:[0,-97,-.2],k:'gut',t:'肛門 → 体の外',s:'便意が来ると括約筋がゆるむ'}
+].map(o=>Object.assign(o,{v:V3(...o.p)}));
+const ORBIT_LABELS=[[0,4,11,'鼻'],[0,-4.2,12,'口'],[0,-5,-5,'咽頭'],[0,-18,1,'気管'],[-7,-36,0,'右肺へ'],[7,-36,0,'左肺へ'],[0,-24,-3.5,'食道'],[9,-50,2,'胃'],[-7,-60,.5,'十二指腸'],[1,-73,2,'小腸'],[-12.5,-70,2,'上行結腸'],[0,-62,8,'横行結腸'],[13,-70,2,'下行結腸'],[7,-86,4,'S状結腸'],[0,-92,-1,'直腸'],[0,-100,.5,'肛門']]
+  .map(([x,y,z,t])=>({v:V3(x,y,z),t,orbit:true}));
+const signBox=$('signs');
+[...SIGNS,...ORBIT_LABELS].forEach(o=>{const el=document.createElement('div');el.className='sign '+(o.orbit?'big':o.k);el.innerHTML=`<b>${o.t}</b>`+(o.s?`<span>${o.s}</span>`:'');el.hidden=true;signBox.appendChild(el);o.el=el;});
+const _pv=V3(0,0,0);
+function updateSigns(rc){
+  const W=innerWidth,H=innerHeight,c=camera.position,show=mode!=='demo';
+  for(const o of SIGNS){
+    let vis=false;
+    if(show&&!orbitOn&&inBody){const d=o.v.distanceTo(c);
+      if(d<6.5&&o.tube===undefined){const L=locate(o.v);o.tube=L.score<.5?L.tube:null;}
+      if(d<6.5&&d>.25&&(d<2.5||!loc||o.tube===loc.tube)){_pv.copy(o.v).project(rc);if(_pv.z<1&&Math.abs(_pv.x)<1.1&&Math.abs(_pv.y)<1.1){vis=true;
+        o.el.style.transform=`translate(${(_pv.x*.5+.5)*W}px,${(-_pv.y*.5+.5)*H}px) translate(-50%,-100%)`;o.el.style.opacity=clamp((6.5-d)/2.5,0,1);}}}
+    o.el.hidden=!vis;
+  }
+  for(const o of ORBIT_LABELS){
+    let vis=false;
+    if(orbitOn){_pv.copy(o.v).project(rc);if(_pv.z<1){vis=true;o.el.style.transform=`translate(${(_pv.x*.5+.5)*W}px,${(-_pv.y*.5+.5)*H}px) translate(-50%,-100%)`;}}
+    o.el.hidden=!vis;
+  }
+}
+/* この先に何があるか */
+function aheadInfo(){
+  if(!inBody||mode==='demo')return null;
+  let R,s,dir;
+  if(control==='guide'){R=guide.R;dir=guideDir;let bd=Infinity;s=guide.s;
+    for(const q of R.pts){if(Math.abs(q.L-guide.s)>4)continue;const d=q.p.distanceToSquared(camera.position);if(d<bd){bd=d;s=q.L;}}}
+  else{const n=nearestOnRoutes(camera.position,P&&P.entry);if(!n||n.d>3)return null;R=n.R;s=n.s;
+    const a=routeAt(R,s-1).p,b=routeAt(R,s+1).p,f=V3(0,0,-1).applyQuaternion(camera.quaternion);dir=f.dot(b.sub(a))>=0?1:-1;}
+  let lo=0,hi=R.pts.length-1;while(hi-lo>1){const m=(lo+hi)>>1;if(R.pts[m].L<s)lo=m;else hi=m;}
+  const out=[],seen=new Set();let reg=R.pts[lo].reg;
+  for(let k=dir>0?hi:lo;k>=0&&k<R.pts.length&&out.length<4;k+=dir){
+    const q=R.pts[k],dist=Math.abs(q.L-s);
+    if(q.gate&&!seen.has(q.gate)){seen.add(q.gate);out.push({gate:q.gate,dist});}
+    if(q.reg!==reg&&REG[q.reg].n!==REG[reg].n){reg=q.reg;out.push({reg,dist});}
+  }
+  const endName=dir>0?(R.entry==='anus'?'盲腸（行き止まり）':R.entry==='nose'?'肺の奥（行き止まり）':'肛門 → 外'):({mouth:'口 → 外',nose:'鼻の穴 → 外',anus:'肛門 → 外'})[R.entry];
+  return {out,R,dir,endName,end:dir>0?R.L-s:s};
+}
+let aheadT=0;
+function updateAhead(now){
+  if(now-aheadT<300)return;aheadT=now;
+  const a=aheadInfo(),el=$('ahead');
+  if(!a){el.innerHTML='';return;}
+  const cm=d=>d<1?'すぐ':Math.round(d)+'cm';
+  const parts=a.out.map(o=>o.gate?`<span class="st gate ${o.gate.open>.5?'open':''}">${o.gate.name}${o.gate.open>.5?'（開）':'（閉）'}<em>${cm(o.dist)}</em></span>`
+    :`<span class="st">${REG[o.reg].n}<em>${cm(o.dist)}</em></span>`);
+  if(a.out.length<4)parts.push(`<span class="st">${a.endName}<em>${cm(a.end)}</em></span>`);
+  el.innerHTML=`<span class="lab">${a.dir>0?'この先':'戻る方向'}</span>`+parts.join('<span class="lab">›</span>');
+}
+
+/* ---------- HUD ---------- */
+function showRegion(key){
+  const R=REG[key],el=$('loc');el.classList.add('swap');
+  setTimeout(()=>{$('locSys').textContent=R.sys;$('locSys').classList.toggle('air',R.sys===AIR);
+    $('locName').textContent=R.n;$('locEn').textContent=R.en;$('locDesc').textContent=R.d;el.classList.remove('swap');},reduceMotion?0:220);
+}
+$('gates').innerHTML=GATES.map(g=>`<li id="gate-${g.id}">${g.name}</li>`).join('');
+let hudT=0,lastPos=V3(0,0,0),spd=0;
+function updateHUD(dt,now){
+  spd+=(camera.position.distanceTo(lastPos)/Math.max(dt,1e-3)-spd)*Math.min(1,dt*4);lastPos.copy(camera.position);
+  if(now-hudT<150)return;hudT=now;
+  $('rDia').textContent=!inBody||!loc||!loc.seg?'—':(2*loc.seg.r).toFixed(1)+' cm';
+  const n=control==='guide'?{R:guide.R,s:guide.s,d:0}:(inBody?nearestOnRoutes(camera.position,P&&P.entry):null);
+  $('rDist').textContent=n&&n.d<3?n.R.label+' '+Math.round(n.s)+' cm':'—';
+  $('rSpd').textContent=spd.toFixed(1)+' cm/s';
+  $('rMode').textContent=autoOn?(guideDir>0?'自動 · 奥へ':'自動 · 入口へ'):control==='guide'?(guideDir>0?'順路 · 奥へ':'順路 · 入口へ'):(inBody?'手動':'手動 · 体外');
+  GATES.forEach(g=>$('gate-'+g.id).classList.toggle('open',g.open>.5));
+  if(!P)return;
+  $('bTime').textContent=fmtT(SIM.bodyT);
+  $('bScale').textContent='×'+(TSCALE[REG[curReg]?REG[curReg].z:'out']*SIM.ff);
+  $('bStom').textContent=Math.round(SIM.content)+' mL';
+  $('bPhase').textContent=SIM.phase===0?'食後期':['','空腹期 第1相（静か）','空腹期 第2相','空腹期 第3相（強い収縮）'][SIM.phase];
+  $('meState').textContent=formOf();
+  const m=mass();$('meMass').textContent=`${m.toFixed(1)} g`+(P.mat.dig?` · 水分 ${Math.round(waterFrac()*100)}%`:'');
+  paintSwatch($('swatch'));
+  const keysC=Object.keys(P.comp).filter(k=>P.comp[k]>.005).sort((a,b)=>P.comp[b]-P.comp[a]);
+  $('bar').innerHTML=keysC.map(k=>`<i style="flex-grow:${P.comp[k]};background:${COMP[k][1]}"></i>`).join('');
+  $('legend').innerHTML=keysC.slice(0,6).map(k=>`<li><b style="background:${COMP[k][1]}"></b>${COMP[k][0]}<span class="g">${P.comp[k]<1?P.comp[k].toFixed(2):P.comp[k].toFixed(1)}</span></li>`).join('');
+}
+function showResult(){
+  mode='result';autoOn=false;control='free';updateButtons();
+  const m=P.mat,food=m.dig;
+  $('resEyebrow').textContent='EXIT · 肛門 · 体内時間 '+fmtT(SIM.bodyT);
+  $('resTitle').textContent=food?(stoolReady()?'茶色い便になって出てきた':'便になって出てきた'):m===MATS.capsule?'カプセルが排出された':'金属球が出てきた';
+  paintSwatch($('resSwatch'),true);
+  const rows=[['体内にいた時間',fmtT(SIM.bodyT)],['胃',fmtT(P.tStom)],['小腸',fmtT(P.tSB)],['大腸',fmtT(P.tColon)],['重さ',`${P.start.toFixed(1)} g → ${mass().toFixed(1)} g`]];
+  if(food){
+    rows.push(['形',`ブリストル${bristol()}型 · ${BRISTOL[bristol()]}`],['水分',Math.round(waterFrac()*100)+'%']);
+    const ab=P.absorbed,f=x=>(x||0).toFixed(2)+' g';
+    rows.push(['吸収されたタンパク質',f(ab.protein)],['吸収された脂質',f(ab.fat)],['吸収された炭水化物',f(ab.carb)],['大腸などで抜けた水分',f(ab.water)]);
+  }else rows.push(['状態',P.coat>.15?'表面が便で覆われている（中身は無傷）':'ほぼそのまま']);
+  $('resKv').innerHTML=rows.map(([a,b])=>`<dt>${a}</dt><dd>${b}</dd>`).join('');
+  $('resNote').textContent=food?'便の主な中身は、食べ物の残りかすより腸内細菌と水分。茶色は胆汁のビリルビンが腸内細菌でステルコビリンに変わった色。'
+    :'消化されないものも、胃を出る・小腸を進む・大腸にとどまる、それぞれの時間はかかる。';
+  $('result').hidden=false;
+}
+
+/* ---------- ループ ---------- */
+const qTmp=new THREE.Quaternion(),mTmp=new THREE.Matrix4(),AX=V3(1,0,0),AY=V3(0,1,0);
+const inp=V3(0,0,0);
+function applyLook(dt){
+  let yaw=-lookDX*.0035,pitch=-lookDY*.0035;lookDX=lookDY=0;
+  const kr=1.7*dt;
+  if(keys.ArrowLeft)yaw+=kr;if(keys.ArrowRight)yaw-=kr;if(keys.ArrowUp)pitch+=kr;if(keys.ArrowDown)pitch-=kr;
+  if(keys.ArrowLeft||keys.ArrowRight||keys.ArrowUp||keys.ArrowDown)lastLook=performance.now();
+  if(orbitOn){orbit.yaw-=yaw;orbit.pitch=clamp(orbit.pitch-pitch,-1.4,1.4);return;}
+  if(yaw)camera.quaternion.multiply(qTmp.setFromAxisAngle(AY,yaw));
+  if(pitch)camera.quaternion.multiply(qTmp.setFromAxisAngle(AX,pitch));
+  camera.quaternion.normalize();
+}
+function flowAt(){ // 体の流れ（cm/s, 管の順方向）
+  if(!inBody||!loc||!loc.tube||!P)return 0;
+  const z=REG[curReg].z,T=loc.tube;
+  if(T===TUB.dig&&z==='eso'&&SIM.carry)return 4.5;
+  if(T===TUB.dig&&z==='stomach'&&G.pyl.target>0)return SIM.phase===3?3:1.5;
+  if(T===TUB.dig&&(z==='sb'||z==='duo')&&P.entry!=='anus')return SIM.phase===3?1.2:.3;
+  return 0;
+}
+function stepFree(dt){
+  inp.set(0,0,0);
+  if(keys.KeyW)inp.z-=1;if(keys.KeyS)inp.z+=1;if(keys.KeyA)inp.x-=1;if(keys.KeyD)inp.x+=1;if(keys.KeyE)inp.y+=1;if(keys.KeyQ)inp.y-=1;
+  inp.z+=stick.y;inp.x+=stick.x;
+  if(inp.lengthSq()>1)inp.normalize();
+  const r=inBody&&loc&&loc.seg?loc.seg.r:8;
+  const top=3.2*clamp(r/1.1,.3,inBody?2.4:12)*(keys.ShiftLeft||keys.ShiftRight?3:1)*speedMul;
+  inp.applyQuaternion(camera.quaternion);
+  vel.addScaledVector(inp,top*4*dt);
+  if(wheel){vel.addScaledVector(V3(0,0,-1).applyQuaternion(camera.quaternion),wheel*top*.35);wheel=0;}
+  const fl=flowAt();
+  if(fl){const T=loc.tube.S[Math.min(loc.tube.S.length-1,loc.seg.i)].T,cur=vel.dot(T);if(cur<fl)vel.addScaledVector(T,(fl-cur)*Math.min(1,dt*3));}
+  vel.multiplyScalar(Math.exp(-4*dt));
+  const dp=vel.clone().multiplyScalar(dt),n=Math.max(1,Math.ceil(dp.length()/.1));dp.multiplyScalar(1/n);
+  for(let i=0;i<n;i++){
+    const keep=camera.position.clone(),prevL=loc;
+    camera.position.add(dp);
+    if(inBody){const L=constrain(camera.position,vel);if(crossesClosed(prevL,L)){camera.position.copy(keep);vel.set(0,0,0);break;}loc=L;}
+  }
+  if(!inBody)tryReenter();
+}
+function stepGuide(dt,now){
+  const R=guide.R,cur=routeAt(R,guide.s);
+  let w=(keys.KeyW?1:0)-(keys.KeyS?1:0)-stick.y+(wheel*.6);wheel=0;
+  if(autoOn)w=1;
+  const base=(mode==='demo'?2.2:4.5)*clamp(cur.r/1.1,.5,2.5)*(keys.ShiftLeft||keys.ShiftRight?3:1)*(mode==='demo'?1:speedMul);
+  let ds=guideDir*w*base*dt;
+  if(R.entry==='mouth'||R.entry==='nose'&&false){const fl=flowAt();if(fl)ds+=fl*dt;}
+  const prevS=guide.s;
+  if(P&&P.mat.dig&&R.entry==='mouth'&&ds>0&&guide.s>4.5&&guide.s<7&&P.size>3){ds=0;if(!P.chewMsg){P.chewMsg=true;toast('もぐもぐ… 口の中でかみ砕かれている（約20秒）');}}
+  guide.s=clamp(guide.s+ds,0,R.L);
+  const tgt=routeAt(R,guide.s);
+  const keep=camera.position.clone(),prevL=loc;
+  camera.position.lerp(tgt.p,1-Math.exp(-dt*5));
+  const L=constrain(camera.position,null);
+  if(crossesClosed(prevL,L)){camera.position.copy(keep);guide.s=clamp(prevS-guideDir*Math.max(.05,Math.abs(ds)),0,R.L);} // 閉じた関門の前では止まる
+  else{loc=L;if(camera.position.distanceTo(tgt.p)>1.2)guide.s=prevS;}
+  if(mode==='demo'||now-lastLook>1500){
+    const ahead=routeAt(R,guide.s+guideDir*clamp(tgt.r*2.2,1.2,5));
+    const up=V3(0,1,0).applyQuaternion(camera.quaternion);
+    if(ahead.p.distanceToSquared(camera.position)>1e-4){mTmp.lookAt(camera.position,ahead.p,up);qTmp.setFromRotationMatrix(mTmp);camera.quaternion.slerp(qTmp,1-Math.exp(-dt*2.4));}
+  }
+  if(mode==='demo'&&guide.s>=R.L-.01){guide.s=0;teleportTo(TUB.oral,0);}
+  else if((guideDir>0&&guide.s>=R.L-.01)||(guideDir<0&&guide.s<=.01)){
+    const atOpen=guideDir<0||R.entry==='mouth';
+    if(atOpen&&camera.position.distanceTo(tgt.p)<.3){const e=OPEN_ENDS.reduce((a,b)=>a.p.distanceTo(camera.position)<b.p.distanceTo(camera.position)?a:b);
+      setControl('free');vel.copy(e.out).multiplyScalar(4);}
+    else if(autoOn){autoOn=false;updateButtons();toast('順路の終点に着いた');}
+  }
+}
+function tryReenter(){
+  for(const e of OPEN_ENDS){
+    _ap.subVectors(camera.position,e.p);const along=_ap.dot(e.out),perp=Math.sqrt(Math.max(0,_ap.lengthSq()-along*along));
+    if(along<.3&&along>-2&&perp<e.r*.8){inBody=true;loc=constrain(camera.position,vel);toast('体の中に戻った');return;}
+  }
+}
+function checkExit(){
+  if(!inBody||!loc)return;
+  for(const e of OPEN_ENDS){
+    _ap.subVectors(camera.position,e.p);
+    if(_ap.dot(e.out)>.12&&_ap.length()<e.r*2.5){
+      if(e.T===TUB.colon&&P&&P.entry!=='anus'&&mode==='play'){inBody=false;setControl('free');showResult();return;}
+      inBody=false;setControl('free');vel.addScaledVector(e.out,2);return;
+    }
+  }
+}
+let prevT=performance.now();
+function frame(now){
+  const dt=Math.min(.05,(now-prevT)/1000);prevT=now;
+  U.uTime.value=now/1000;
+  updateSegR();
+  applyLook(dt);
+  if(!orbitOn||mode==='demo'){
+    if(control==='guide'&&inBody)stepGuide(dt,now);else stepFree(dt);
+  }
+  if(inBody&&!loc)loc=locate(camera.position);
+  if(inBody)checkExit();
+  // 現在地
+  let reg=inBody&&loc&&loc.seg?loc.seg.reg:'outside';
+  if(reg!==curReg){curReg=reg;showRegion(reg);}
+  const zone=REG[curReg].z;
+  // 体内時間
+  const tsc=mode==='play'?TSCALE[zone]*SIM.ff:0;
+  if(mode==='play'){const dtb=dt*tsc/60;const n=Math.ceil(dtb/2)||1;for(let i=0;i<n;i++)simStep(dtb/n,zone);}
+  if(mode!=='result')gateLogic(dt);
+  for(const T of tubes)if(T.gateU)T.gates.forEach((g,i)=>T.gateU[i].set(g.s,g.w,g.open,0));
+  // 胃の状態
+  const fill=clamp((SIM.content-50)/950,0,1);
+  U.uStomR.value+=(.55+.45*fill-U.uStomR.value)*Math.min(1,dt*.8);
+  U.uStomFold.value=2.2-1.85*clamp((U.uStomR.value-.55)/.45,0,1);
+  const waveA=SIM.phase===0?.12:SIM.phase===3?.32:SIM.phase===2?.07:0;
+  U.uWave.value+=(waveA-U.uWave.value)*Math.min(1,dt);
+  U.uWavePh.value+=dt*TAU*Math.min(.6,3/60*Math.max(1,tsc));
+  // 液面
+  let bottom=Infinity;for(const [a] of STC)bottom=Math.min(bottom,a.p.y-a.r*U.uStomR.value*.85);
+  const level=bottom+.35+6.2*Math.pow(fill,.8);
+  fluid.position.y=level;
+  fluidMat.uniforms.uFluid.value.set(...lin(fill>.02?[.8,.66,.45]:[.84,.8,.55]));
+  const nf=Math.round(FN*fill);fGeo.setDrawRange(0,nf);
+  for(let i=0;i<nf;i++){if(fPos[i*3+1]>level||Math.random()<.002)placeFood(i,level);}
+  if(nf)fGeo.attributes.position.needsUpdate=true;
+  const under=inBody&&zone==='stomach'&&camera.position.y<level;
+  $('tint').style.opacity=under?.55:0;$('tint').style.background=fill>.02?'#b98a55':'#c9bf7a';
+  // 外観ビュー
+  const out=orbitOn||!inBody;
+  U.uOut.value+=((out?1:0)-U.uOut.value)*Math.min(1,dt*3);
+  document.body.classList.toggle('outer',out);
+  marker.visible=trail.visible=orbitOn;
+  if(mode==='play'&&inBody)addTrail(camera.position);
+  let rc=camera;
+  if(orbitOn){
+    marker.position.copy(camera.position);
+    const t=orbit.target,cp=Math.cos(orbit.pitch);
+    orbitCam.position.set(t.x+Math.sin(orbit.yaw)*cp*orbit.dist,t.y+Math.sin(orbit.pitch)*orbit.dist,t.z+Math.cos(orbit.yaw)*cp*orbit.dist);
+    orbitCam.lookAt(t);rc=orbitCam;
+  }
+  U.uCam.value.copy(rc.position);
+  const c=camera.position;
+  dust.visible=!orbitOn;
+  for(let i=0;i<PN;i++){for(let k=0;k<3;k++){const v=pBase[i*3+k]+Math.sin(now/4000+i)*.15;pPos[i*3+k]=c.getComponent(k)-4+(((v-c.getComponent(k))%8)+8)%8;}}
+  pGeo.attributes.position.needsUpdate=true;
+  updateHUD(dt,now);drawMap();updateSigns(rc);updateAhead(now);
+  renderer.render(scene,rc);
+  requestAnimationFrame(frame);
+}
+function onResize(){renderer.setSize(innerWidth,innerHeight,false);camera.aspect=orbitCam.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();orbitCam.updateProjectionMatrix();mapSetup();}
+addEventListener('resize',onResize);
+window.__bd={SIM,G,get P(){return P;},begin,showResult,get loc(){return loc;},camera,guide,setControl};
+if(innerWidth<760)$('side').classList.remove('open');
+showStart();
+mapSetup();
+requestAnimationFrame(frame);
+})();
+</script>

@@ -1,0 +1,1425 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>尿の旅</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Shippori+Mincho+B1:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: full-bleed endoscope view inside a round lens; info top-left, body/self panel top-right, map bottom-left, controls bottom-right */
+:root{
+  --bg:#0c0605; --ink:#f7ede4; --muted:#c6ad98; --dim:#8f7564;
+  --panel:rgba(26,14,8,.66); --line:rgba(255,232,205,.16);
+  --uri:#f3c95a; --kid:#ff9d7a; --hot:#fff4e0;
+  --open:#8fe0a8; --shut:#ff7a6b;
+  --f-display:'Shippori Mincho B1','Hiragino Mincho ProN','Yu Mincho',serif;
+  --f-body:'Zen Kaku Gothic New','Hiragino Sans','Yu Gothic',system-ui,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--f-body);-webkit-user-select:none;user-select:none}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#gl:active{cursor:grabbing}
+#lens{position:fixed;inset:0;pointer-events:none;transition:opacity .6s;
+  background:radial-gradient(circle at 50% 50%, transparent 0, transparent calc(min(50vw,50vh)*1.05), rgba(12,6,5,.72) calc(min(50vw,50vh)*1.4), rgba(12,6,5,.97) calc(max(50vw,50vh)*1.15));}
+body.outer #lens{opacity:0}
+#tint{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .5s,background .8s;mix-blend-mode:multiply}
+#reticle{position:fixed;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;pointer-events:none;opacity:.35}
+#reticle::before,#reticle::after{content:"";position:absolute;background:var(--hot)}
+#reticle::before{left:10px;top:0;width:1px;height:22px}
+#reticle::after{top:10px;left:0;height:1px;width:22px}
+body.orbit #reticle,body.tps #reticle{display:none}
+.hud{position:fixed;z-index:2}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.panel{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(6px)}
+#loc{top:calc(env(safe-area-inset-top,0px) + 18px);left:20px;max-width:min(340px,calc(100vw - 300px));transition:opacity .35s}
+#loc.swap{opacity:0}
+#locSys{display:inline-block;font-size:11px;letter-spacing:.14em;padding:3px 8px;border:1px solid currentColor;border-radius:2px;color:var(--uri)}
+#locSys.kid{color:var(--kid)}
+#locName{font-family:var(--f-display);font-size:42px;line-height:1.1;margin:10px 0 2px;letter-spacing:.04em;text-wrap:balance;text-shadow:0 2px 18px rgba(0,0,0,.6)}
+#locEn{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+#locDesc{font-size:13px;line-height:1.75;opacity:.9;margin:10px 0 0;padding:10px 12px;border-left:1px solid var(--line);background:var(--panel);backdrop-filter:blur(6px)}
+#ahead{margin-top:10px;font-size:12px;line-height:1.7;padding:8px 12px;display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline}
+#ahead:empty{display:none}
+#ahead .lab{font-size:10px;letter-spacing:.16em;color:var(--dim)}
+#ahead .st{white-space:nowrap}
+#ahead .st em{font-style:normal;font-family:var(--f-mono);font-size:10.5px;color:var(--muted);margin-left:4px}
+#ahead .gate{color:var(--shut)}#ahead .gate.open{color:var(--open)}
+#signs{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+.sign{position:absolute;left:0;top:0;transform:translate(-50%,-100%);white-space:nowrap;font-size:12px;line-height:1.45;padding:5px 9px;border:1px solid var(--line);background:rgba(26,14,8,.74);color:var(--ink);border-radius:2px}
+.sign b{display:block;font-size:13px;color:var(--uri)}
+.sign span{color:var(--muted);font-size:11px}
+.sign::after{content:"";position:absolute;left:50%;bottom:-7px;width:1px;height:7px;background:var(--line)}
+.sign.kid b{color:var(--kid)}
+.sign.big b{font-family:var(--f-display);font-size:16px;color:var(--hot)}
+#side{top:calc(env(safe-area-inset-top,0px) + 14px);right:14px;width:250px;max-height:calc(100% - 190px);overflow:auto;display:flex;flex-direction:column;gap:8px}
+#side section{padding:10px 12px}
+#side h3{margin:0 0 8px;font-size:10.5px;font-weight:500;letter-spacing:.18em;color:var(--dim);display:flex;justify-content:space-between;align-items:center}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0;font-size:11.5px}
+.kv dt{color:var(--dim)}
+.kv dd{margin:0;text-align:right;color:var(--hot);min-width:0;overflow-wrap:anywhere}
+.me{display:flex;gap:12px;align-items:center}
+.me>div:last-child{min-width:0;display:flex;flex-direction:column;gap:2px}
+#meName{font-weight:700;font-size:15px}
+#meState{font-size:12px;opacity:.9;line-height:1.5}
+#meMass{font-size:11px;color:var(--muted)}
+#swatchBox{width:58px;height:58px;flex:none;display:flex;align-items:center;justify-content:center}
+#swatch{transition:all .8s ease;box-shadow:inset -4px -6px 10px rgba(0,0,0,.35), inset 3px 4px 8px rgba(255,255,255,.3)}
+#bar{display:flex;height:8px;margin-top:10px;border-radius:1px;overflow:hidden;background:rgba(255,255,255,.06)}
+#bar:empty{display:none}
+#bar i{display:block;height:100%;transition:flex-grow .6s}
+#legend{list-style:none;margin:8px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;font-size:10.5px;color:var(--muted)}
+#legend li{display:flex;gap:5px;align-items:center;min-width:0}
+#legend b{width:7px;height:7px;flex:none;border-radius:1px}
+#legend span.g{margin-left:auto;color:var(--hot);font-family:var(--f-mono)}
+.risk1{color:#ffd27a!important}.risk2{color:#ffa060!important}.risk3{color:var(--shut)!important;font-weight:700}
+#spark{display:block;width:100%;height:46px;margin-top:8px}
+#urge{height:6px;margin-top:8px;background:rgba(255,255,255,.07);position:relative;border-radius:1px;overflow:hidden}
+#urgeFill{position:absolute;left:0;top:0;bottom:0;background:var(--uri);transition:width .3s,background .3s}
+#gates{list-style:none;margin:8px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;font-size:11px}
+#gates li{display:flex;align-items:center;gap:6px;color:var(--muted)}
+#gates li::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--shut);flex:none;transition:background .3s}
+#gates li.open{color:var(--ink)}
+#gates li.open::before{background:var(--open)}
+#mapWrap{left:20px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);padding:8px 8px 6px}
+#map{display:block;width:110px;height:270px;cursor:crosshair}
+#mapWrap .cap{font-size:10px;color:var(--dim);letter-spacing:.06em;margin-top:4px;text-align:center}
+#dock{right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);display:flex;flex-direction:column;align-items:flex-end;gap:7px;max-width:calc(100vw - 160px)}
+.row{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+button{font:inherit;font-size:13px;color:var(--ink);background:var(--panel);border:1px solid var(--line);padding:8px 12px;border-radius:3px;cursor:pointer;backdrop-filter:blur(6px);letter-spacing:.03em}
+button:hover{border-color:rgba(255,232,205,.45)}
+button:focus-visible{outline:2px solid var(--uri);outline-offset:2px}
+button.on{background:rgba(243,201,90,.2);border-color:var(--uri);color:var(--hot)}
+button.call{border-color:var(--uri);color:var(--hot)}
+kbd{font-family:var(--f-mono);font-size:10px;color:var(--dim);margin-left:6px}
+#keys{font-size:10.5px;color:var(--dim);letter-spacing:.03em;text-align:right;line-height:1.7}
+#toast{position:fixed;left:50%;top:64%;transform:translateX(-50%);z-index:3;font-size:14px;line-height:1.6;padding:8px 16px;opacity:0;transition:opacity .4s;pointer-events:none;max-width:min(560px,calc(100vw - 32px));text-align:center}
+#toast.show{opacity:1}
+#stick{display:none;position:fixed;z-index:2;left:24px;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);width:120px;height:120px;border-radius:50%;border:1px solid var(--line);background:rgba(26,14,8,.4);touch-action:none}
+#knob{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(255,232,205,.22);border:1px solid rgba(255,232,205,.4)}
+.overlay{position:fixed;inset:0;z-index:5;overflow:auto;display:flex;justify-content:center;padding:32px 16px;background:radial-gradient(circle at 50% 45%, rgba(12,6,5,.45), rgba(12,6,5,.93) 70%)}
+.card{max-width:680px;width:100%;margin:auto 0;display:flex;flex-direction:column;gap:16px}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;color:var(--muted)}
+.card h2{font-family:var(--f-display);font-size:60px;line-height:1;margin:0;letter-spacing:.06em}
+.card p{margin:0;line-height:1.8}
+fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;min-width:0}
+legend{font-size:12px;color:var(--muted);letter-spacing:.08em;padding:0;margin-bottom:8px}
+legend b{font-family:var(--f-mono);color:var(--uri);margin-right:8px}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.opt{position:relative}
+.opt input{position:absolute;opacity:0;pointer-events:none}
+.opt label{display:flex;flex-direction:column;gap:4px;height:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--line);background:var(--panel);cursor:pointer;border-radius:3px}
+.opt label b{font-size:15px}
+.opt label span{font-size:11px;color:var(--muted);line-height:1.55}
+.opt input:checked+label{border-color:var(--uri);background:rgba(243,201,90,.14)}
+.opt input:focus-visible+label{outline:2px solid var(--uri);outline-offset:2px}
+#go{align-self:flex-start;font-size:16px;padding:12px 26px;background:rgba(243,201,90,.22);border-color:var(--uri);color:var(--hot)}
+.note{font-size:11.5px;color:var(--dim)}
+.caution{font-size:12px!important;line-height:1.75!important;padding:10px 12px;border-left:2px solid var(--uri);background:var(--panel);color:var(--ink)}
+.caution b{color:var(--uri);margin-right:6px;font-weight:500}
+#resBody{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+#resSwatchBox{width:120px;height:120px;display:flex;align-items:center;justify-content:center;flex:none}
+#resList{flex:1;min-width:220px}
+#resList .kv{font-size:13px;gap:6px 16px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:760px){
+  #loc{max-width:calc(100vw - 200px)}
+  #locName{font-size:28px}
+  #locDesc{display:none}
+  #side{width:180px;max-height:calc(100% - 170px)}
+  #side .more{display:none}
+  #side.open .more{display:block}
+  #legend{grid-template-columns:1fr}
+  #map{width:66px;height:166px}
+  .card h2{font-size:42px}
+  #keys{display:none}
+}
+@media (pointer:coarse){
+  #stick{display:block}
+  #keys{display:none}
+  #mapWrap{bottom:calc(env(safe-area-inset-bottom,0px) + 160px)}
+}
+@media (prefers-reduced-motion:reduce){#loc,#toast,#swatch,#lens,#tint{transition:none}}
+</style>
+
+<canvas id="gl"></canvas>
+<div id="tint"></div>
+<div id="lens"></div>
+<div id="reticle"></div>
+
+<div id="loc" class="hud">
+  <span id="locSys">尿路</span>
+  <h1 id="locName">腎杯</h1>
+  <div id="locEn">Calyx renalis</div>
+  <p id="locDesc"></p>
+  <div id="ahead" class="panel"></div>
+</div>
+<div id="signs"></div>
+
+<aside id="side" class="hud" hidden>
+  <section class="panel" id="sMe">
+    <h3><span>あなた</span><button id="sideToggle" type="button" style="padding:2px 8px;font-size:10px">詳細</button></h3>
+    <div class="me">
+      <div id="swatchBox"><div id="swatch"></div></div>
+      <div><b id="meName">—</b><div id="meState">—</div><div id="meMass" class="mono">—</div></div>
+    </div>
+    <div class="more"><div id="bar"></div><ul id="legend"></ul></div>
+  </section>
+  <section class="panel more">
+    <h3>からだ</h3>
+    <dl class="kv mono">
+      <dt>体内時間</dt><dd id="bTime">0分</dd>
+      <dt>時間の速さ</dt><dd id="bScale">×1</dd>
+      <dt>膀胱の尿</dt><dd id="bVol">—</dd>
+      <dt>尿意</dt><dd id="bUrge">—</dd>
+      <dt>作られる尿</dt><dd id="bFlow">—</dd>
+      <dt>尿の濃さ</dt><dd id="bOsm">—</dd>
+      <dt>危険度</dt><dd id="bRisk">なし</dd>
+    </dl>
+    <div id="urge"><div id="urgeFill"></div></div>
+    <canvas id="spark"></canvas>
+    <ul id="gates"></ul>
+  </section>
+  <section class="panel more">
+    <h3>現在地</h3>
+    <dl class="kv mono">
+      <dt>内径</dt><dd id="rDia">–</dd>
+      <dt>入口から</dt><dd id="rDist">–</dd>
+      <dt>速度</dt><dd id="rSpd">–</dd>
+      <dt>操縦</dt><dd id="rMode">手動</dd>
+    </dl>
+  </section>
+</aside>
+
+<div id="mapWrap" class="hud panel">
+  <canvas id="map" aria-label="尿路の正面図。膀胱鏡のときはクリックで移動"></canvas>
+  <div class="cap">正面図</div>
+</div>
+
+<div id="dock" class="hud">
+  <div class="row">
+    <button id="btnGuide" type="button">順路: オフ<kbd>G</kbd></button>
+    <button id="btnAuto" type="button">自動航行<kbd>Space</kbd></button>
+    <button id="btnTps" type="button">三人称<kbd>T</kbd></button>
+  </div>
+  <div class="row">
+    <button id="btnESWL" type="button" class="call" hidden>衝撃波で砕く</button>
+    <button id="btnCling" type="button" hidden>しがみつく<kbd>C</kbd></button>
+    <button id="btnDrink" type="button">水を飲む<kbd>M</kbd></button>
+    <button id="btnToilet" type="button">トイレ<kbd>U</kbd></button>
+  </div>
+  <div class="row">
+    <button id="btnFF" type="button">早送り ×10<kbd>F</kbd></button>
+    <button id="btnSpeed" type="button">速さ ×1</button>
+    <button id="btnOrbit" type="button">外観<kbd>V</kbd></button>
+    <button id="btnMenu" type="button">やり直す</button>
+  </div>
+  <div id="keys">W/S 前後 · A/D 横 · Q/E 上下 · Shift 加速 · ドラッグ 視点<br>順路モード中は W だけで進む · G 向き切りかえ / 自由移動</div>
+</div>
+
+<div id="stick"><div id="knob"></div></div>
+<div id="toast" class="panel"></div>
+
+<div id="start" class="overlay">
+  <form class="card" id="startForm">
+    <div class="eyebrow">URINARY TOUR · 腎臓から外尿道口まで</div>
+    <h2>尿の旅</h2>
+    <p>腎臓でしみ出した尿は、尿管の波に運ばれて膀胱にたまり、尿道から外へ出る。尿のしずく・結石・細菌・膀胱鏡になって、その道を進む。</p>
+    <fieldset><legend><b>1</b>あなたは何になる？</legend><div class="opts" id="optMat"></div></fieldset>
+    <fieldset><legend><b>2</b>どこから入る？</legend><div class="opts" id="optEntry"></div></fieldset>
+    <fieldset><legend><b>3</b>体</legend><div class="opts" id="optSex"></div></fieldset>
+    <fieldset><legend><b>4</b>水分の状態</legend><div class="opts" id="optHyd"></div></fieldset>
+    <p class="caution"><b>ご注意</b>学習用に簡略化したシミュレーションです。数値は目安で、診断や治療の判断には使えません。体の不調は医療機関に相談してください。<br><b>対象</b>中学生以上（小学生は保護者と一緒に）。排尿や生殖器の解剖、結石や感染症も扱います。</p>
+    <button id="go" type="submit">ダイブ開始</button>
+    <p class="note">太さはおおよそ実寸（尿管だけ少し太め）。時間は場所ごとに早回し（膀胱 ×60）している。</p>
+  </form>
+</div>
+
+<div id="result" class="overlay" hidden>
+  <div class="card">
+    <div class="eyebrow" id="resEyebrow">EXIT</div>
+    <h2 id="resTitle">外に出た</h2>
+    <div id="resBody">
+      <div id="resSwatchBox"><div id="resSwatch"></div></div>
+      <div id="resList"><dl class="kv mono" id="resKv"></dl></div>
+    </div>
+    <p id="resNote"></p>
+    <div class="btns"><button id="resAgain" type="button">もう一度</button><button id="resLook" type="button">外から体を見る</button></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
+const smooth=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t);};
+const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
+const lin=c=>c.map(v=>Math.pow(v,2.2));
+const mixc=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+const css=c=>`rgb(${c.map(v=>Math.round(clamp(v,0,1)*255)).join(',')})`;
+const $=id=>document.getElementById(id);
+const reduceMotion=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fmtT=m=>{if(m<1)return Math.round(m*60)+'秒';m=Math.floor(m);const h=Math.floor(m/60);return h?`${h}時間${m%60}分`:`${m}分`;};
+const fmtN=n=>n>=1e8?(n/1e8).toFixed(1)+'億':n>=1e4?(n/1e4).toFixed(n>=1e5?0:1)+'万':Math.round(n).toString();
+const TAU=Math.PI*2;
+
+/* ---------- 部位 ---------- */
+const KID='腎臓',URI='尿路';
+const REG={
+ calyx:{n:'腎杯',en:'Calyx renalis',sys:KID,c:[.86,.6,.56],fold:'none',cf:.7,z:'kid',pel:1,d:'正面に盛り上がっているのが腎乳頭。約100万個のネフロンでこされた尿が、集合管の細かい穴（乳頭孔）からしみ出してくる。1日にこされる原尿は約150L、そのうち99%は体に戻され、尿になるのは1〜1.5L。'},
+ pelvis:{n:'腎盂',en:'Pelvis renalis',sys:KID,c:[.86,.58,.55],fold:'none',cf:.75,z:'kid',pel:1,d:'いくつもの腎杯から尿が集まる、じょうごのような部屋。ここから尿管へ流れ出す。'},
+ upj:{n:'腎盂尿管移行部',en:'Ureteropelvic junction',sys:URI,c:[.84,.55,.52],fold:'ufold',cf:.7,z:'ure',pel:.5,ure:.5,d:'尿管の第1の狭いところ。腎臓でできた結石が引っかかりやすい。'},
+ ureter:{n:'尿管',en:'Ureter',sys:URI,c:[.85,.58,.55],fold:'ufold',cf:.75,z:'ure',ure:1,d:'長さ約25〜30cm、内径3〜4mm（このアプリでは少し太め）。ふだんは星形につぶれていて、1分に数回の蠕動の波が尿のかたまりを膀胱へ送る。広がっているのは尿のあるところだけ。'},
+ iliac:{n:'総腸骨動脈との交差部',en:'Iliac crossing',sys:URI,c:[.84,.54,.52],fold:'ufold',cf:.7,z:'ure',ure:1,d:'尿管の第2の狭いところ。骨盤の入口で太い動脈をまたぐため、外から押されて細くなる。'},
+ uvj:{n:'尿管膀胱移行部',en:'Ureterovesical junction',sys:URI,c:[.84,.5,.5],fold:'ufold',cf:.7,z:'ure',d:'尿管の第3の、いちばん狭いところ。膀胱の壁を斜めに約2cm貫いている。膀胱がふくらむと押しつぶされて弁になり、尿が腎臓へ逆流するのを防ぐ。'},
+ orifice:{n:'尿管口',en:'Ostium ureteris',sys:URI,c:[.84,.5,.5],fold:'none',cf:.7,z:'bl',d:'尿管が膀胱に開く出口。蠕動の波が来ると口が開いて、尿がピュッと噴き出す。'},
+ bladder:{n:'膀胱',en:'Vesica urinaria',sys:URI,c:[.88,.62,.58],fold:'rugae',cf:.75,z:'bl',bl:1,d:'のび縮みする袋。空のときはしぼんでひだだらけ、たまると風船のようにつるつるになる。約150mLで尿意を感じはじめ、400〜500mLが限界の目安。中は尿で満たされていて空気はない。'},
+ trigone:{n:'膀胱三角',en:'Trigonum vesicae',sys:URI,c:[.86,.52,.52],fold:'none',cf:.75,z:'bl',d:'左右の尿管口と内尿道口を結ぶ三角形の部分。ここだけは壁がなめらかで、ふくらんでも伸びない。'},
+ bneck:{n:'膀胱頸部',en:'Collum vesicae',sys:URI,c:[.84,.5,.5],fold:'none',cf:.7,z:'bl',d:'膀胱の出口。内尿道括約筋があり、自分の意思とは関係なくふだんは閉じている。'},
+ urethraF:{n:'尿道（女性）',en:'Urethra feminina',sys:URI,c:[.86,.55,.55],fold:'ufold2',cf:.7,z:'uth',d:'長さ約4cm。短くまっすぐなので、細菌が膀胱までのぼりやすい。女性に膀胱炎が多い理由のひとつ。'},
+ prostatic:{n:'尿道前立腺部',en:'Pars prostatica',sys:URI,c:[.82,.52,.5],fold:'crest',cf:.7,z:'uth',d:'前立腺の中を通る約3cm。後ろの壁の盛り上がり（精丘）に射精管が開く。年をとると前立腺が大きくなり、ここが狭くなる（前立腺肥大）。'},
+ membranous:{n:'尿道隔膜部',en:'Pars membranacea',sys:URI,c:[.84,.5,.5],fold:'ufold2',cf:.7,z:'uth',d:'外尿道括約筋に囲まれた、尿道でいちばん狭い部分。ここは自分の意思で締められる。'},
+ spongy:{n:'尿道海綿体部',en:'Pars spongiosa',sys:URI,c:[.86,.56,.55],fold:'ufold2',cf:.72,z:'uth',d:'陰茎の中を通る約15cm。男性の尿道は全体で約16〜20cmあり、S字に曲がっている。'},
+ meatus:{n:'外尿道口',en:'Ostium urethrae externum',sys:URI,c:[.84,.5,.5],fold:'none',cf:.7,z:'uth',d:'出口。外の光が見える。'},
+ outside:{n:'体の外',en:'Outside',sys:'—',c:[1,1,1],fold:'none',cf:1,z:'out',d:'体の外に出た。ここでは自由に飛べる。外尿道口に近づけば、また中に入れる。'}
+};
+for(const k in REG){const r=REG[k];r.lin=lin(r.c);r.pel=r.pel||0;r.ure=r.ure||0;r.bl=r.bl||0;}
+
+/* ---------- 中心線 (cm, x=体の左, y=上, z=前) ---------- */
+function side(sx,dy,pts){return pts.map(([x,y,z,r,g])=>[x*sx,y+dy*clamp((y+75)/20,0,1),z,r,g]);}
+const MAIN=[[7.6,-47.5,-5.5,.45,'calyx'],[6.8,-49,-5.3,.55,'calyx'],[5.8,-51,-5.0,.9,'pelvis'],[5.0,-53,-4.6,.7,'pelvis'],[4.4,-55,-4.2,.22,'upj'],
+  [4.0,-59,-4.0,.25,'ureter'],[3.6,-65,-3.6,.25,'ureter'],[3.4,-71,-3.4,.25,'ureter'],[3.6,-76,-3.0,.2,'iliac'],[4.4,-81,-2.0,.25,'ureter'],[4.2,-87,-1.0,.25,'ureter'],
+  [2.6,-92.8,.4,.2,'uvj'],[1.4,-93.8,1.4,.2,'orifice']];
+const MIDC=[[7.9,-51.5,-5.6,.45,'calyx'],[6.9,-51.6,-5.3,.5,'calyx'],[5.9,-51.4,-5.0,.6,'pelvis']];
+const LOWC=[[7.6,-55.5,-5.5,.45,'calyx'],[6.7,-54.6,-5.2,.5,'calyx'],[5.4,-53.2,-4.8,.55,'pelvis']];
+const UR0=[[0,-95.2,3.1,.45,'bneck'],[0,-96.6,3.4,.3,'bneck']];
+const TUBES=[
+ {id:'urL',kid:'L',open:[false,false],ds:.04,radial:24,pts:side(1,0,MAIN)},
+ {id:'cmL',kid:'L',open:[false,false],ds:.04,radial:24,pts:side(1,0,MIDC)},
+ {id:'clL',kid:'L',open:[false,false],ds:.04,radial:24,pts:side(1,0,LOWC)},
+ {id:'urR',kid:'R',open:[false,false],ds:.04,radial:24,pts:side(-1,-2,MAIN)},
+ {id:'cmR',kid:'R',open:[false,false],ds:.04,radial:24,pts:side(-1,-2,MIDC)},
+ {id:'clR',kid:'R',open:[false,false],ds:.04,radial:24,pts:side(-1,-2,LOWC)},
+ {id:'bladder',open:[false,false],ds:.08,radial:56,pts:[[0,-82.5,2.2,2.6,'bladder'],[0,-85.5,2.6,4.2,'bladder'],[0,-89,2.6,4.6,'bladder'],[0,-92,2.5,3.6,'trigone'],[0,-94.2,2.8,2,'trigone'],[0,-95.7,3.2,.7,'bneck']]},
+ {id:'uM',sex:'M',open:[false,true],ds:.04,radial:26,pts:[...UR0.map(p=>p[4]==='@'?[...p.slice(0,4),'prostatic']:p),[0,-98.2,3.6,.3,'prostatic'],[0,-99.6,4.2,.22,'membranous'],[0,-101,5.8,.3,'spongy'],[0,-101.4,8,.3,'spongy'],[0,-102.5,11,.28,'spongy'],[0,-105,13.5,.28,'spongy'],[0,-107,14.5,.26,'meatus']]},
+ {id:'uF',sex:'F',open:[false,true],ds:.04,radial:26,pts:[...UR0.map(p=>p[4]==='@'?[...p.slice(0,4),'urethraF']:p),[0,-98.2,4.0,.28,'urethraF'],[0,-99.7,4.9,.32,'meatus']]}
+];
+
+/* ---------- 壁のひだ ---------- */
+function angDiff(a,b){let d=(a-b)%TAU;if(d>Math.PI)d-=TAU;if(d<-Math.PI)d+=TAU;return d;}
+function fold(type,s,dir,th){
+  switch(type){
+   case 'ufold':return -.3*Math.pow(.5+.5*Math.cos(5*th+.3*Math.sin(s*.4)),3);
+   case 'ufold2':return -.18*Math.pow(.5+.5*Math.cos(6*th+.4*Math.sin(s*.7)),3);
+   case 'crest':return -.32*smooth(.55,1,-dir.z)-.08*Math.pow(.5+.5*Math.cos(6*th),3);
+   case 'rugae':return -.09*Math.pow(.5+.5*Math.cos(13*th+1.6*Math.sin(s*.55+th*2)),4)-.05*Math.pow(.5+.5*Math.cos(7*th-s*.9),6);
+   default:return 0;
+  }
+}
+const dome=(d,r)=>d>=r?1:Math.max(.02,Math.sqrt(Math.max(0,1-Math.pow(1-d/r,2))));
+
+/* ---------- 中心線のサンプリング ---------- */
+function prepTube(def){
+  const P=def.pts,n=P.length;
+  const curve=new THREE.CatmullRomCurve3(P.map(p=>V3(p[0],p[1],p[2])),false,'centripetal');
+  const M=(n-1)*48,dense=[];let L=0,prev=null;
+  for(let i=0;i<=M;i++){const u=i/M,p=curve.getPoint(u);if(prev)L+=p.distanceTo(prev);dense.push({u,p,L});prev=p;}
+  const cnt=Math.max(2,Math.ceil(L/def.ds)),S=[];let j=0;
+  for(let i=0;i<=cnt;i++){
+    const s=L*i/cnt;while(j<M-1&&dense[j+1].L<s)j++;
+    const a=dense[j],b=dense[j+1],f=clamp((s-a.L)/Math.max(1e-9,b.L-a.L),0,1);
+    const u=a.u+(b.u-a.u)*f,p=a.p.clone().lerp(b.p,f);
+    const k=u*(n-1),i0=Math.min(n-2,Math.floor(k)),fr=k-i0,w=fr*fr*(3-2*fr);
+    let r=P[i0][3]+(P[i0+1][3]-P[i0][3])*w;
+    const regA=P[i0][4],regB=P[i0+1][4],A=REG[regA],B=REG[regB],bw=x=>A[x]+(B[x]-A[x])*w;
+    if(def.open[0])r*=1+.22*smooth(.9,0,s);else r*=dome(s,r);
+    if(def.open[1])r*=1+.22*smooth(.9,0,L-s);else r*=dome(L-s,r);
+    S.push({s,p,r,regA,regB,w,reg:w<.5?regA:regB,stom:bw('bl'),ure:bw('ure'),pel:bw('pel'),cf:bw('cf'),jf:1});
+  }
+  const last=S.length-1;
+  S.forEach((sm,i)=>{sm.T=S[Math.min(i+1,last)].p.clone().sub(S[Math.max(i-1,0)].p).normalize();});
+  const hint=Math.abs(S[0].T.y)>.9?V3(0,0,1):V3(0,1,0);
+  const N=hint.clone().addScaledVector(S[0].T,-hint.dot(S[0].T)).normalize();
+  S.forEach(sm=>{N.addScaledVector(sm.T,-N.dot(sm.T)).normalize();sm.N=N.clone();sm.B=sm.T.clone().cross(N);});
+  const box=new THREE.Box3();let rmax=0;S.forEach(sm=>{box.expandByPoint(sm.p);rmax=Math.max(rmax,sm.r);});
+  return {def,id:def.id,S,L,box,rmax,groups:[],gates:[],active:true,bolus:-100,hydro:null};
+}
+const tubes=TUBES.map(prepTube);
+const TUB={};tubes.forEach(t=>TUB[t.id]=t);
+const HYD={L:{value:1},R:{value:1}};
+tubes.forEach(t=>{if(t.def.kid)t.hydro=HYD[t.def.kid];});
+function nearestIdx(T,pt){let bi=0,bd=Infinity;T.S.forEach((s,i)=>{const d=s.p.distanceToSquared(pt);if(d<bd){bd=d;bi=i;}});return bi;}
+
+/* ---------- 関門 ---------- */
+const GATES=[
+ {id:'uvjL',name:'左尿管口',tube:'urL',at:[2.4,-93,.6],w:.35},
+ {id:'uvjR',name:'右尿管口',tube:'urR',at:[-2.4,-93,.6],w:.35},
+ {id:'iusM',name:'内尿道括約筋',tube:'uM',at:[0,-96.8,3.4],w:.35,sex:'M'},
+ {id:'eusM',name:'外尿道括約筋',tube:'uM',at:[0,-99.6,4.2],w:.45,sex:'M'},
+ {id:'iusF',name:'内尿道括約筋',tube:'uF',at:[0,-96.8,3.4],w:.35,sex:'F'},
+ {id:'eusF',name:'外尿道括約筋',tube:'uF',at:[0,-98.2,4.0],w:.45,sex:'F'}
+];
+const G={};
+GATES.forEach(g=>{const T=TUB[g.tube];g.T=T;g.s=T.S[nearestIdx(T,V3(...g.at))].s;g.p=T.S[Math.round(g.s/T.def.ds)].p;g.open=0;g.target=0;T.gates.push(g);G[g.id]=g;});
+
+/* ---------- 合流部: ひだを消し、壁に穴をあける ---------- */
+const near=(p,b,m)=>p.x>b.min.x-m&&p.x<b.max.x+m&&p.y>b.min.y-m&&p.y<b.max.y+m&&p.z>b.min.z-m&&p.z<b.max.z+m;
+for(const A of tubes)for(const B of tubes){
+  if(A===B||(A.def.sex&&B.def.sex))continue; // 男女の尿道どうしは同時に存在しない
+  const m0=A.rmax+B.rmax+2.5;
+  if(!A.box.clone().expandByScalar(m0).intersectsBox(B.box))continue;
+  for(const a of A.S){
+    if(!near(a.p,B.box,a.r+B.rmax+2.5))continue;
+    let m=Infinity;for(let j=0;j<B.S.length;j+=2){const b=B.S[j];const d=a.p.distanceTo(b.p)-b.r-a.r;if(d<m)m=d;}
+    a.jf=Math.min(a.jf,smooth(0,1.2,m));
+  }
+  const flag=[];
+  for(let j=0;j<B.S.length;j++){
+    const b=B.S[j];if(!near(b.p,A.box,b.r+A.rmax+.5))continue;
+    for(let i=0;i<A.S.length;i+=2){const a=A.S[i];const d=b.p.distanceTo(a.p);if(Math.abs(d-a.r)<b.r+.15){flag.push(j);break;}}
+  }
+  let k=0;
+  while(k<flag.length){
+    let j0=flag[k],j1=j0;while(k+1<flag.length&&flag[k+1]-j1<=4){k++;j1=flag[k];}k++;
+    j0=Math.max(0,j0-2);j1=Math.min(B.S.length-1,j1+2);
+    const caps=[];for(let j=j0;j<j1;j+=3)caps.push([B.S[j],B.S[Math.min(j+3,j1)]]);
+    if(!caps.length)caps.push([B.S[j0],B.S[j1]]);
+    A.groups.push(caps);
+  }
+}
+
+/* ---------- 描画の準備 ---------- */
+const canvas=$('gl');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
+renderer.setSize(innerWidth,innerHeight,false);
+const FOG_S=[.11,.05,.02];
+renderer.setClearColor(new THREE.Color(FOG_S[0],FOG_S[1],FOG_S[2]));
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(72,innerWidth/innerHeight,.01,600);
+const orbitCam=new THREE.PerspectiveCamera(40,innerWidth/innerHeight,.5,2000);
+const BASE=V3(0,-92,2.5); // 膀胱がしぼむときの基点（膀胱三角のあたり）
+
+const U={uCam:{value:V3(0,0,0)},uTime:{value:0},uFog:{value:V3(...lin(FOG_S))},uLight:{value:1.05},uMotion:{value:reduceMotion?0:1},
+  uOut:{value:0},uStomR:{value:.5},uStomFold:{value:2},uBase:{value:BASE},uSqz:{value:0}};
+const VS=`
+attribute vec3 aCol;attribute float aS;attribute float aUre;attribute float aPel;
+attribute vec3 aAxis;attribute float aRad;attribute float aFold;attribute float aTh;attribute float aStom;
+uniform float uTime;uniform float uMotion;uniform vec4 uGate[4];uniform int uNGate;
+uniform float uStomR;uniform float uStomFold;uniform vec3 uBase;uniform float uBolus;uniform float uHydro;uniform float uSqz;
+varying vec3 vW;varying vec3 vN;varying vec3 vC;varying float vGate;
+void main(){
+#ifdef BLOB
+  vec3 p=position;vGate=0.0;
+#else
+  vec3 off=position-aAxis;float len=length(off);vec3 dir=len>1e-5?off/len:vec3(0.0);
+  float fm=mix(1.0,uStomFold,aStom);
+  float sc=mix(1.0,uStomR*(1.0-uSqz*0.04*(0.5+0.5*sin(uTime*7.0+aS))),aStom);
+  float b=exp(-pow((aS-uBolus)/1.3,2.0));
+  sc*=mix(1.0,mix(0.45,1.0,b),aUre);
+  sc*=mix(1.0,uHydro,aPel);
+  float gc=0.0;
+  for(int i=0;i<4;i++){if(i>=uNGate)break;vec4 g=uGate[i];float d=(aS-g.x)/g.y;gc=max(gc,exp(-d*d)*(1.0-g.z)*g.w);}
+  float r=aRad*((1.0+aFold*fm)*sc*(1.0-gc)+0.1*gc*(0.5+0.5*cos(aTh*8.0)));
+  vec3 ax=mix(aAxis,uBase+(aAxis-uBase)*uStomR,aStom);
+  vec3 p=ax+dir*(r*(1.0+0.015*sin(uTime*1.1+aS*0.3)*uMotion));
+  vGate=clamp(gc*1.5+aStom*abs(1.0-uStomR)*1.2+aUre*(1.0-b)*0.7,0.0,1.0);
+#endif
+  vec4 w=modelMatrix*vec4(p,1.0);vW=w.xyz;vN=normalize(mat3(modelMatrix)*normal);vC=aCol;
+  gl_Position=projectionMatrix*viewMatrix*w;
+}`;
+const FS=`
+uniform vec3 uCam;uniform vec3 uFog;uniform float uLight;uniform float uOut;
+uniform vec4 uCapA[MAXC];uniform vec4 uCapB[MAXC];uniform vec4 uGrp[MAXG];uniform vec2 uGrpR[MAXG];uniform int uNG;
+uniform float uSpec;uniform float uBump;uniform float uVein;uniform float uFreq;uniform float uAlpha;
+varying vec3 vW;varying vec3 vN;varying vec3 vC;varying float vGate;
+float hash(vec3 p){p=fract(p*0.3183099+0.1);p*=17.0;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
+float noise(vec3 x){vec3 i=floor(x);vec3 f=fract(x);f=f*f*(3.0-2.0*f);
+ return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),
+            mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}
+float fbm(vec3 p){float s=0.0;float a=0.5;for(int i=0;i<3;i++){s+=a*noise(p);p=p*2.07+vec3(1.7,9.2,3.1);a*=0.5;}return s;}
+void main(){
+  for(int g=0;g<MAXG;g++){
+    if(g>=uNG)break;
+    if(distance(vW,uGrp[g].xyz)<uGrp[g].w){
+      int s0=int(uGrpR[g].x);int s1=int(uGrpR[g].y);
+      for(int i=0;i<MAXC;i++){
+        if(i>=s1)break;
+        if(i<s0)continue;
+        vec3 a=uCapA[i].xyz;vec3 ba=uCapB[i].xyz-a;vec3 pa=vW-a;
+        float h=clamp(dot(pa,ba)/max(dot(ba,ba),1e-6),0.0,1.0);
+        if(length(pa-ba*h)<mix(uCapA[i].w,uCapB[i].w,h))discard;
+      }
+    }
+  }
+  vec3 V=uCam-vW;float d=length(V);V/=max(d,1e-4);
+  vec3 n=normalize(vN);
+  vec3 fn=normalize(cross(dFdx(vW),dFdy(vW)));
+  n=normalize(mix(n,fn*sign(dot(fn,n)+1e-4),vGate));
+  if(dot(n,V)<0.0)n=-n;
+  vec3 q=vW*uFreq;float e=0.07;float n0=fbm(q);
+  vec3 gr=vec3(fbm(q+vec3(e,0,0))-n0,fbm(q+vec3(0,e,0))-n0,fbm(q+vec3(0,0,e))-n0)/e;
+  gr-=n*dot(gr,n);n=normalize(n-gr*uBump*(1.0-0.6*uOut));
+  float vn=noise(vW*4.0+vec3(3.1,1.3,7.7));
+  float vein=(1.0-smoothstep(0.0,0.04,abs(vn-0.5)))*smoothstep(0.35,0.75,noise(vW*1.5+11.0))*uVein;
+  vec3 base=vC*(0.8+0.4*n0);
+  base=mix(base,base*vec3(0.55,0.12,0.22),vein*0.65);
+  float ndl=max(dot(n,V),0.0);
+  float att=mix(uLight/(1.0+0.03*d*d),1.25,uOut);
+  vec3 col=base*(0.18+0.82*ndl)*att;
+  col+=base*vec3(0.9,0.2,0.12)*pow(1.0-ndl,3.0)*att*0.35;
+  float spec=pow(ndl,80.0)*1.1+pow(ndl,14.0)*0.06;
+  col+=vec3(1.0,0.95,0.86)*spec*att*uSpec*(1.0-0.6*uOut);
+  col=col/(1.0+col*0.25);
+  col=mix(col,uFog,1.0-exp(-d*mix(0.09,0.0025,uOut)));
+  gl_FragColor=vec4(pow(max(col,vec3(0.0)),vec3(0.4545)),uAlpha);
+}`;
+function makeMat(groups,o,T){
+  o=o||{};
+  const capA=[],capB=[],grp=[],grpR=[];
+  groups.forEach(g=>{
+    const s0=capA.length,c=V3(0,0,0);
+    g.forEach(([a,b])=>{capA.push(new THREE.Vector4(a.p.x,a.p.y,a.p.z,a.r*.97));capB.push(new THREE.Vector4(b.p.x,b.p.y,b.p.z,b.r*.97));c.add(a.p).add(b.p);});
+    c.multiplyScalar(1/(2*g.length));
+    let rad=0;g.forEach(([a,b])=>{rad=Math.max(rad,c.distanceTo(a.p)+a.r,c.distanceTo(b.p)+b.r);});
+    grp.push(new THREE.Vector4(c.x,c.y,c.z,rad+.1));grpR.push(new THREE.Vector2(s0,capA.length));
+  });
+  const ng=grp.length;
+  if(!capA.length){capA.push(new THREE.Vector4());capB.push(new THREE.Vector4());}
+  if(!grp.length){grp.push(new THREE.Vector4());grpR.push(new THREE.Vector2());}
+  const defines={MAXC:capA.length,MAXG:grp.length};if(o.blob)defines.BLOB=1;
+  const gateU=T&&T.gateU;
+  return new THREE.ShaderMaterial({
+    defines,extensions:{derivatives:true},transparent:o.alpha!=null&&o.alpha<1,depthWrite:!(o.alpha<1),
+    uniforms:{uCam:U.uCam,uTime:U.uTime,uFog:U.uFog,uLight:U.uLight,uMotion:U.uMotion,uOut:U.uOut,
+      uStomR:U.uStomR,uStomFold:U.uStomFold,uBase:U.uBase,uSqz:U.uSqz,
+      uBolus:T&&T.bolusU?T.bolusU:{value:-100},uHydro:T&&T.hydro?T.hydro:{value:1},
+      uGate:{value:gateU||[new THREE.Vector4(),new THREE.Vector4(),new THREE.Vector4(),new THREE.Vector4()]},uNGate:{value:gateU?gateU.n:0},
+      uCapA:{value:capA},uCapB:{value:capB},uGrp:{value:grp},uGrpR:{value:grpR},uNG:{value:ng},
+      uSpec:{value:o.spec!=null?o.spec:1},uBump:{value:o.bump!=null?o.bump:.1},uVein:{value:o.vein!=null?o.vein:1},uFreq:{value:o.freq||10},uAlpha:{value:o.alpha!=null?o.alpha:1}},
+    vertexShader:VS,fragmentShader:FS,side:THREE.DoubleSide
+  });
+}
+function buildMesh(T){
+  const {S,def}=T,R=def.radial,nv=S.length*R;
+  const pos=new Float32Array(nv*3),col=new Float32Array(nv*3),axis=new Float32Array(nv*3),
+    aS=new Float32Array(nv),aUre=new Float32Array(nv),aPel=new Float32Array(nv),aRad=new Float32Array(nv),aFold=new Float32Array(nv),aTh=new Float32Array(nv),aStom=new Float32Array(nv);
+  const dir=V3(0,0,0);
+  S.forEach((sm,i)=>{
+    const rA=REG[sm.regA],rB=REG[sm.regB];
+    const endF=(def.open[0]?1:smooth(.2,1,sm.s))*(def.open[1]?1:smooth(.2,1,T.L-sm.s));
+    const amp=endF*sm.jf,cA=rA.lin,cB=rB.lin;
+    for(let k=0;k<R;k++){
+      const th=k/R*TAU;
+      dir.copy(sm.N).multiplyScalar(Math.cos(th)).addScaledVector(sm.B,Math.sin(th));
+      let d=0;
+      if(amp>.001){const fa=fold(rA.fold,sm.s,dir,th),fb=rA.fold===rB.fold?fa:fold(rB.fold,sm.s,dir,th);d=(fa+(fb-fa)*sm.w)*amp;}
+      const rr=sm.r*(1+d),v=i*R+k,o=v*3;
+      pos[o]=sm.p.x+dir.x*rr;pos[o+1]=sm.p.y+dir.y*rr;pos[o+2]=sm.p.z+dir.z*rr;
+      axis[o]=sm.p.x;axis[o+1]=sm.p.y;axis[o+2]=sm.p.z;
+      const sh=Math.max(.35,1+d*1.6);
+      col[o]=(cA[0]+(cB[0]-cA[0])*sm.w)*sh;col[o+1]=(cA[1]+(cB[1]-cA[1])*sm.w)*sh;col[o+2]=(cA[2]+(cB[2]-cA[2])*sm.w)*sh;
+      aS[v]=sm.s;aUre[v]=sm.ure;aPel[v]=sm.pel;aRad[v]=sm.r;aFold[v]=d;aTh[v]=th;aStom[v]=sm.stom;
+    }
+  });
+  const idx=new Uint32Array((S.length-1)*R*6);let q=0;
+  for(let i=0;i<S.length-1;i++)for(let k=0;k<R;k++){
+    const a=i*R+k,b=(i+1)*R+k,c=(i+1)*R+(k+1)%R,d=i*R+(k+1)%R;
+    idx[q++]=a;idx[q++]=b;idx[q++]=d;idx[q++]=b;idx[q++]=c;idx[q++]=d;
+  }
+  const g=new THREE.BufferGeometry(),A=(n,arr,s)=>g.setAttribute(n,new THREE.BufferAttribute(arr,s));
+  A('position',pos,3);A('aCol',col,3);A('aAxis',axis,3);A('aS',aS,1);A('aUre',aUre,1);A('aPel',aPel,1);A('aRad',aRad,1);A('aFold',aFold,1);A('aTh',aTh,1);A('aStom',aStom,1);
+  g.setIndex(new THREE.BufferAttribute(idx,1));
+  g.computeVertexNormals();
+  if(T.gates.length){T.gateU=[0,1,2,3].map(()=>new THREE.Vector4());T.gateU.n=T.gates.length;}
+  T.bolusU={value:-100};
+  const mesh=new THREE.Mesh(g,makeMat(T.groups,{},T));
+  mesh.frustumCulled=false;T.mesh=mesh;
+  scene.add(mesh);
+}
+tubes.forEach(buildMesh);
+
+/* 腎臓・前立腺・腎乳頭（形の目印） */
+function blobGeo(c,seg){
+  const g=new THREE.SphereGeometry(1,seg||28,seg?Math.round(seg*.7):20),n=g.attributes.position.count,cc=lin(c),col=new Float32Array(n*3);
+  for(let i=0;i<n;i++){col[i*3]=cc[0];col[i*3+1]=cc[1];col[i*3+2]=cc[2];}
+  g.setAttribute('aCol',new THREE.BufferAttribute(col,3));
+  ['aS','aUre','aPel','aRad','aFold','aTh','aStom'].forEach(k=>g.setAttribute(k,new THREE.BufferAttribute(new Float32Array(n),1)));
+  g.setAttribute('aAxis',new THREE.BufferAttribute(new Float32Array(n*3),3));
+  return g;
+}
+const kidneyMat=makeMat([],{spec:.6,bump:.15,vein:.4,blob:true,freq:1.5});
+const kidneyGeo=blobGeo([.56,.2,.18],36);
+const organs=[];
+[[1,0],[-1,-2]].forEach(([sx,dy])=>{const m=new THREE.Mesh(kidneyGeo,kidneyMat);m.position.set(6.7*sx,-51.5+dy,-5.3);m.scale.set(2.6,5.5,2.1);m.rotation.z=.12*sx;scene.add(m);organs.push(m);});
+const prostate=new THREE.Mesh(blobGeo([.72,.42,.38],30),makeMat([],{spec:.5,bump:.12,vein:.3,blob:true,freq:2}));
+prostate.position.set(0,-97.5,3.5);prostate.scale.set(2,1.6,1.5);scene.add(prostate);
+const papMat=makeMat([],{spec:1.2,bump:.35,vein:.2,blob:true,freq:9});
+const papGeo=blobGeo([.9,.62,.55],24);
+tubes.filter(t=>/^(urL|urR|cmL|cmR|clL|clR)$/.test(t.id)).forEach(t=>{
+  const s0=t.S[Math.round(.18/t.def.ds)],m=new THREE.Mesh(papGeo,papMat);
+  m.position.copy(s0.p);m.scale.set(.32,.32,.32);scene.add(m);
+});
+
+/* 外の光 */
+const glowTex=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');const g=x.createRadialGradient(64,64,0,64,64,64);
+  g.addColorStop(0,'rgba(255,252,244,1)');g.addColorStop(.35,'rgba(255,236,200,.9)');g.addColorStop(1,'rgba(255,200,150,0)');x.fillStyle=g;x.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);})();
+const OPEN_ALL=[];
+for(const T of tubes){[0,1].forEach(e=>{if(!T.def.open[e])return;const sm=e?T.S[T.S.length-1]:T.S[0];const out=sm.T.clone().multiplyScalar(e?1:-1);
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(sm.r*3.6,sm.r*3.6),new THREE.MeshBasicMaterial({map:glowTex,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
+  m.position.copy(sm.p).addScaledVector(out,.3);m.lookAt(m.position.clone().sub(out));scene.add(m);
+  OPEN_ALL.push({p:sm.p.clone(),out,r:sm.r,T,end:e,glow:m});});}
+let OPEN_ENDS=OPEN_ALL;
+
+/* 浮遊する粒子（尿の中の結晶や上皮のかけら） */
+const PN=260,pBase=new Float32Array(PN*3),pPos=new Float32Array(PN*3);
+for(let i=0;i<PN*3;i++)pBase[i]=Math.random()*3;
+const pGeo=new THREE.BufferGeometry();pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
+const dust=new THREE.Points(pGeo,new THREE.PointsMaterial({color:0xfff0c0,size:.012,transparent:true,opacity:.5,depthWrite:false}));
+dust.frustumCulled=false;scene.add(dust);
+
+/* 外観ビュー用: 現在地マーカーと軌跡 */
+const markTex=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');const g=x.createRadialGradient(32,32,0,32,32,32);
+  g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.3,'rgba(255,240,180,.9)');g.addColorStop(1,'rgba(255,210,100,0)');x.fillStyle=g;x.fillRect(0,0,64,64);return new THREE.CanvasTexture(c);})();
+const marker=new THREE.Sprite(new THREE.SpriteMaterial({map:markTex,depthTest:false,transparent:true}));
+marker.scale.set(3,3,1);marker.renderOrder=10;marker.visible=false;scene.add(marker);
+const TRAIL_MAX=4000,trailPos=new Float32Array(TRAIL_MAX*3);let trailN=0;
+const trailGeo=new THREE.BufferGeometry();trailGeo.setAttribute('position',new THREE.BufferAttribute(trailPos,3));trailGeo.setDrawRange(0,0);
+const trail=new THREE.Line(trailGeo,new THREE.LineBasicMaterial({color:0xfff1c8,transparent:true,opacity:.85,depthTest:false}));
+trail.renderOrder=9;trail.frustumCulled=false;trail.visible=false;scene.add(trail);
+function addTrail(p){
+  if(trailN>0){const o=(trailN-1)*3;if(Math.hypot(p.x-trailPos[o],p.y-trailPos[o+1],p.z-trailPos[o+2])<.3)return;}
+  if(trailN>=TRAIL_MAX){trailPos.copyWithin(0,3);trailN--;}
+  trailPos[trailN*3]=p.x;trailPos[trailN*3+1]=p.y;trailPos[trailN*3+2]=p.z;trailN++;
+  trailGeo.setDrawRange(0,trailN);trailGeo.attributes.position.needsUpdate=true;
+}
+
+/* ---------- 三人称視点: いま入っているモノ ---------- */
+const NOISE_GLSL=`float hash(vec3 p){p=fract(p*0.3183099+0.1);p*=17.0;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
+float noise(vec3 x){vec3 i=floor(x);vec3 f=fract(x);f=f*f*(3.0-2.0*f);
+ return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),
+            mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}`;
+const avatarMat=new THREE.ShaderMaterial({
+  transparent:true,extensions:{derivatives:true},
+  uniforms:{uCam:U.uCam,uFog:U.uFog,uOut:U.uOut,uTime:U.uTime,uColor:{value:V3(1,1,1)},
+    uAmp:{value:.2},uFreq:{value:2.5},uWob:{value:0},uMetal:{value:0},uAlpha:{value:1},uGlow:{value:0}},
+  vertexShader:NOISE_GLSL+`
+  uniform float uTime;uniform float uAmp;uniform float uFreq;uniform float uWob;
+  varying vec3 vW;varying vec3 vN;varying vec3 vL;
+  void main(){
+    vec3 p=position;
+    float n=noise(p*uFreq+vec3(0.0,0.0,uTime*uWob))+0.5*noise(p*uFreq*2.3+vec3(0.0,0.0,uTime*uWob*1.3))-0.75;
+    p+=normal*n*uAmp*2.0;
+    vL=position;vec4 w=modelMatrix*vec4(p,1.0);vW=w.xyz;vN=normalize(mat3(modelMatrix)*normal);
+    gl_Position=projectionMatrix*viewMatrix*w;
+  }`,
+  fragmentShader:NOISE_GLSL+`
+  uniform vec3 uCam;uniform vec3 uFog;uniform vec3 uColor;uniform float uOut;uniform float uMetal;uniform float uAlpha;uniform float uGlow;
+  varying vec3 vW;varying vec3 vN;varying vec3 vL;
+  void main(){
+    vec3 V=uCam-vW;float d=length(V);V/=max(d,1e-4);
+    vec3 fn=normalize(cross(dFdx(vW),dFdy(vW)));
+    vec3 n=normalize(mix(normalize(vN),fn,0.3));if(dot(n,V)<0.0)n=-n;
+    float ndl=max(dot(n,V),0.0);
+    vec3 base=uColor*(0.85+0.3*noise(vL*12.0));
+    float att=mix(1.1/(1.0+0.03*d*d),1.2,uOut);
+    vec3 col=base*(0.22+0.78*ndl)*att+uColor*uGlow;
+    col+=vec3(1.0)*pow(ndl,mix(40.0,110.0,uMetal))*mix(0.25,1.3,uMetal)*att;
+    col+=base*pow(1.0-ndl,2.0)*0.5*uMetal*att;
+    col=col/(1.0+col*0.25);
+    col=mix(col,uFog,1.0-exp(-d*mix(0.09,0.0025,uOut)));
+    gl_FragColor=vec4(pow(max(col,vec3(0.0)),vec3(0.4545)),uAlpha);
+  }`
+});
+const AV_GEO={
+  blob:new THREE.IcosahedronGeometry(1,5),
+  rod:(()=>{const p=[];for(let i=0;i<=10;i++){const a=-Math.PI/2+i/10*Math.PI/2;p.push(new THREE.Vector2(Math.cos(a)*.21,-.29+Math.sin(a)*.21));}
+    for(let i=0;i<=10;i++){const a=i/10*Math.PI/2;p.push(new THREE.Vector2(Math.cos(a)*.21,.29+Math.sin(a)*.21));}
+    const g=new THREE.LatheGeometry(p,40);g.rotateX(Math.PI/2);return g;})()
+};
+const avatar=new THREE.Mesh(AV_GEO.blob,avatarMat);avatar.frustumCulled=false;avatar.visible=false;avatar.renderOrder=3;scene.add(avatar);
+let tps=false,avatarSize=.2;
+const tpsCam=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.01,600);
+const tpsPos=V3(0,0,0),_q=new THREE.Quaternion(),_fz=V3(0,0,1);
+
+/* ---------- 当たり判定 ---------- */
+const _ab=V3(0,0,0),_ap=V3(0,0,0),_ax=V3(0,0,0);
+const SEGS=[];
+tubes.forEach(T=>{const S=T.S;for(let i=0;i<S.length-1;i+=3){const j=Math.min(i+3,S.length-1),a=S[i],b=S[j];
+  SEGS.push({a0:a.p,b0:b.p,a:a.p.clone(),b:b.p.clone(),ra0:a.r*a.cf,rb0:b.r*b.cf,ra:0,rb:0,r:a.r,reg:a.reg,tube:T,i,j,sA:a.s,sB:b.s,stA:a.stom,stB:b.stom,uA:a.ure,uB:b.ure,pA:a.pel,pB:b.pel});}});
+function scaleAt(T,s,st,ure,pel){
+  let sc=(1+(U.uStomR.value-1)*st)*(1-.12*Math.max(0,U.uStomFold.value-1)*st);
+  if(ure){const b=Math.exp(-Math.pow((s-T.bolusU.value)/1.3,2));sc*=1+(.45+.55*b-1)*ure;}
+  if(pel&&T.hydro)sc*=1+(T.hydro.value-1)*pel;
+  let gc=0;for(const g of T.gates){if(P&&P.mat.bact&&!/^uvj/.test(g.id))continue;const d=(s-g.s)/g.w;gc=Math.max(gc,Math.exp(-d*d)*(1-g.open)*(g.depth||.93));}
+  return sc*(1-gc);
+}
+function shrinkPt(out,p0,st){const k=1+(U.uStomR.value-1)*st;out.copy(p0).sub(BASE).multiplyScalar(k).add(BASE);out.lerp(p0,0);return out;}
+function updateSegR(){
+  for(const g of SEGS){
+    if(!g.tube.active){g.ra=g.rb=-1;continue;}
+    if(g.stA>0||g.stB>0){shrinkPt(g.a,g.a0,g.stA);shrinkPt(g.b,g.b0,g.stB);}
+    const m=Math.min(.1,.35*g.r);
+    g.ra=g.ra0*scaleAt(g.tube,g.sA,g.stA,g.uA,g.pA)-m;g.rb=g.rb0*scaleAt(g.tube,g.sB,g.stB,g.uB,g.pB)-m;
+  }
+}
+function locate(p){
+  let best=null,bs=Infinity,bh=0;
+  for(const g of SEGS){
+    if(g.ra<.015&&g.rb<.015)continue;
+    _ab.subVectors(g.b,g.a);_ap.subVectors(p,g.a);
+    const L2=_ab.lengthSq();let h=L2>0?_ap.dot(_ab)/L2:0;h=h<0?0:h>1?1:h;
+    const dx=_ap.x-_ab.x*h,dy=_ap.y-_ab.y*h,dz=_ap.z-_ab.z*h,d=Math.sqrt(dx*dx+dy*dy+dz*dz);
+    const sc=d-Math.max(.015,g.ra+(g.rb-g.ra)*h);
+    if(sc<bs){bs=sc;best=g;bh=h;}
+  }
+  return {seg:best,score:bs,h:bh,s:best?best.sA+(best.sB-best.sA)*bh:0,tube:best?best.tube:null};
+}
+function constrain(p,vel){
+  const L=locate(p);
+  if(L.seg&&L.score>0){
+    const g=L.seg;_ab.subVectors(g.b,g.a);_ax.copy(g.a).addScaledVector(_ab,L.h);
+    const R=Math.max(.015,g.ra+(g.rb-g.ra)*L.h);_ap.subVectors(p,_ax);const d=_ap.length();
+    if(d>1e-6){_ap.multiplyScalar(1/d);p.copy(_ax).addScaledVector(_ap,R);if(vel){const vn=vel.dot(_ap);if(vn>0)vel.addScaledVector(_ap,-vn);}}
+  }
+  return L;
+}
+function crossesClosed(La,Lb){
+  if(!La||!Lb||!La.tube||!Lb.tube)return false;
+  if(P&&P.stuck&&(Lb.tube!==P.stuckT||Math.abs(Lb.s-P.stuckS)>.25))return true;
+  const sh=g=>g.open<.35&&!(P&&P.mat.bact&&!/^uvj/.test(g.id)); // 細菌は粘膜を伝って括約筋のすき間もくぐる
+  if(La.tube===Lb.tube){for(const g of La.tube.gates)if(sh(g)&&(La.s-g.s)*(Lb.s-g.s)<0)return true;return false;}
+  // 尿管の終わり（膀胱内）と膀胱の行き来は尿管口の弁を通る
+  for(const T of [TUB.urL,TUB.urR]){const g=T.gates[0];if(!sh(g))continue;
+    if(La.tube===T&&Lb.tube===TUB.bladder&&La.s<g.s)return true;
+    if(La.tube===TUB.bladder&&Lb.tube===T&&Lb.s<g.s)return true;}
+  return false;
+}
+
+/* ---------- 順路 ---------- */
+function projectOnRoute(R,p,around){
+  let bd=Infinity,s=around;
+  for(const q of R.pts){if(Math.abs(q.L-around)>6)continue;const d=q.p.distanceToSquared(p);if(d<bd){bd=d;s=q.L;}}
+  return s;
+}
+function buildRoute(sex,kid,spec){
+  const P=[];
+  for(const [tid,from,to] of spec){const T=TUB[tid];const i0=from?nearestIdx(T,V3(...from)):0,i1=to?nearestIdx(T,V3(...to)):T.S.length-1;
+    const st=i0<=i1?4:-4;for(let i=i0;st>0?i<=i1:i>=i1;i+=st){const sm=T.S[i];P.push({p:sm.p,r:sm.r,T,i,reg:sm.reg,gate:T.gates.find(g=>Math.abs(sm.s-g.s)<.09)});}}
+  let L=0;P.forEach((q,k)=>{if(k)L+=q.p.distanceTo(P[k-1].p);q.L=L;});
+  return {sex,kid,label:'腎臓から',fwd:'体の外へ',rev:'腎臓へ',pts:P,L};
+}
+const ALL_ROUTES=[];
+for(const sex of ['M','F'])for(const kid of ['L','R']){
+  const ur='ur'+kid,end=TUB[ur].S[TUB[ur].S.length-1].p;
+  ALL_ROUTES.push(buildRoute(sex,kid,[[ur,null,[end.x*.92,end.y,end.z]],['bladder',[end.x*.7,end.y-.2,end.z+.3],null],['u'+sex,[0,-95.6,3.2],null]]));
+}
+let ROUTES=ALL_ROUTES;
+const defaultDir=()=>P&&P.entry==='urethra'?-1:1;
+function routeAt(R,s){
+  s=clamp(s,0,R.L);let lo=0,hi=R.pts.length-1;
+  while(hi-lo>1){const m=(lo+hi)>>1;if(R.pts[m].L<s)lo=m;else hi=m;}
+  const a=R.pts[lo],b=R.pts[hi],f=clamp((s-a.L)/Math.max(1e-6,b.L-a.L),0,1);
+  return {p:a.p.clone().lerp(b.p,f),r:a.r+(b.r-a.r)*f};
+}
+function nearestOnRoutes(p,preferKid){
+  let best=null;
+  ROUTES.forEach(R=>{for(const q of R.pts){const d=q.p.distanceTo(p)-(R.kid===preferKid?.3:0);if(!best||d<best.d)best={R,s:q.L,d};}});
+  if(best)best.d=routeAt(best.R,best.s).p.distanceTo(p);
+  return best;
+}
+
+/* ---------- あなた（素材）と体の状態 ---------- */
+const MATS={
+ drop:{n:'尿のしずく',d:'腎乳頭からしみ出したばかりの尿。水分の状態で濃さと色が変わる。膀胱でためられ、排尿で外へ。',color:[.95,.85,.4],drop:true},
+ stone3:{n:'結石 3mm',d:'シュウ酸カルシウムの小さな石。多くは自然に出るが、狭いところで少し引っかかる。',color:[.78,.66,.36],stone:3},
+ stone7:{n:'結石 7mm',d:'大きめの石。尿管の狭いところに詰まり、激しい痛み（疝痛）と水腎症を起こす。',color:[.74,.6,.32],stone:7},
+ bact:{n:'大腸菌',d:'尿道口から入り、のぼっていく。膀胱で増えると膀胱炎、腎臓まで行くと腎盂腎炎。排尿で洗い流される。',color:[.55,.82,.45],bact:true},
+ scope:{n:'膀胱鏡',d:'尿道から入れる細い内視鏡。括約筋や尿管口を押し広げて、どこへでも行ける。',color:[.82,.86,.9],scope:true}
+};
+const ENTRIES={kidney:['腎臓','左の腎臓の、いちばん上の腎杯から'],urethra:['尿道口','外尿道口から、尿の流れとは逆向きに']};
+const SEXES={M:['男性','尿道は約20cm。前立腺の中を通り、S字に曲がる'],F:['女性','尿道は約4cmと短く、まっすぐ']};
+const HYDS={wet:['たっぷり飲んだ','薄くて量の多い尿（約2.5mL/分）'],normal:['ふつう','約1mL/分。1日1.5Lほど'],dry:['脱水ぎみ','抗利尿ホルモンが働き、濃くて少ない尿（約0.35mL/分）']};
+const BASEFLOW={wet:2.5,normal:1,dry:.35};
+const URGE=[[0,'なし',0],[150,'少し感じる（初発尿意）',0],[300,'行きたい',0],[450,'かなり強い',1],[600,'限界',2]];
+const urgeOf=v=>{const k=P&&P.cystitis?.4:1;let u=URGE[0];for(const x of URGE)if(v>=x[0]*k)u=x;return u;};
+const SIM={on:false,bodyT:0,ff:1,vol:80,bOsm:600,flow:1,osm:420,base:1,load:0,gut:0,voiding:false,voided:0,leak:false,hist:[],histT:0,hintT:0,urgeIdx:0};
+let P=null;
+const osmColor=o=>{const t=clamp((o-50)/1050,0,1);return t<.35?mixc([.97,.96,.78],[.96,.86,.36],t/.35):mixc([.96,.86,.36],[.8,.5,.1],(t-.35)/.65);};
+const osmName=o=>o<200?'ほぼ透明':o<450?'うすい黄色':o<800?'黄色':o<1000?'濃い黄色':'琥珀色（脱水）';
+const sg=o=>(1+o*2.8e-5).toFixed(3);
+function urineColor(o){let c=osmColor(o);if(P&&P.cystitis)c=mixc(c,[.85,.45,.4],.35);return c;}
+function urineComp(o){ // 1Lあたりのおおよその成分（g）
+  const k=o/420;return {urea:12.6*k,nacl:4.3*k,creat:1.1*k,uric:.3*k,other:2*k};
+}
+const UC={urea:['尿素','#f2d27a'],nacl:['塩分','#cfe0f2'],creat:['クレアチニン','#e0a07a'],uric:['尿酸','#c9a0e0'],other:['その他','#9aa7a0']};
+const NARROW={upj:5,iliac:4.5,uvj:3.5};
+
+function simStep(dt,zone){ // dt: 体内時間（分）
+  SIM.bodyT+=dt;
+  const a=SIM.gut*Math.min(1,dt/20);SIM.gut-=a;SIM.load+=a;
+  const ex=SIM.load*Math.min(1,dt/90);SIM.load-=ex;
+  SIM.flow=SIM.base+(dt>0?ex/dt:0);
+  SIM.osm=clamp(420/SIM.flow,50,1200);
+  if(!SIM.voiding){const add=SIM.flow*dt;SIM.bOsm=(SIM.bOsm*SIM.vol+SIM.osm*add)/(SIM.vol+add);SIM.vol+=add;}
+  SIM.histT+=dt;if(SIM.histT>=2){SIM.histT=0;SIM.hist.push(SIM.vol);if(SIM.hist.length>300)SIM.hist.shift();}
+  if(!P)return;
+  const m=P.mat;
+  ({kid:()=>P.tKid+=dt,ure:()=>P.tUre+=dt,bl:()=>P.tBl+=dt,uth:()=>P.tUth+=dt}[zone]||(()=>0))();
+  if(m.drop){if(zone==='bl')P.osm=SIM.bOsm;}
+  if(m.stone){
+    if(P.stuck){
+      P.tStuck+=dt;P.hydro=Math.min(1,P.hydro+dt/240);P.pain=8+Math.round(2*Math.abs(Math.sin(SIM.bodyT/6)));
+      const allow=NARROW[P.stuckReg]||5,rate=.02*clamp((allow+2-P.size)/2,0,1)*(1+SIM.load/500);
+      if(Math.random()<rate*dt){P.stuck=false;P.passed=(P.passed||0)+1;P.resume=true;toast('石が狭いところを抜けた。痛みが引いていく');}
+    }else{P.pain=Math.max(0,P.pain-dt*.5);P.hydro=Math.max(0,P.hydro-dt/600);}
+    P.painMax=Math.max(P.painMax,P.pain);P.hydroMax=Math.max(P.hydroMax,P.hydro);
+  }
+  if(m.bact){
+    const dbl={bl:30,kid:40,ure:120,uth:120}[zone]; // 尿の中の大腸菌はおよそ30〜40分で倍になる
+    if(dbl)P.count=Math.min(1e9,P.count*Math.pow(2,dt/dbl));
+    P.countMax=Math.max(P.countMax,P.count);
+    const perML=zone==='bl'?P.count/Math.max(20,SIM.vol):0;
+    if(perML>=1e5&&!P.cystitis){P.cystitis=true;toast('膀胱炎になった。尿1mLあたり10万個を超えた細菌で膀胱の粘膜が荒れ、尿意が近く（頻尿）、出すときに痛む。尿がにごる');}
+    if(zone==='kid'){P.tKidInf+=dt;if(P.tKidInf>30&&!P.pyelo){P.pyelo=true;toast('腎盂腎炎になった。腎臓に細菌が入り込み、高い熱と背中の痛みが出る。すぐ治療が必要');}}
+  }
+}
+function colorOf(){
+  const m=P.mat;
+  if(m.drop)return urineColor(P.osm);
+  if(m.bact)return P.cystitis?[.7,.85,.4]:m.color;
+  return m.color;
+}
+function formOf(){
+  const m=P.mat;
+  if(m.drop)return `尿 ${Math.round(P.osm)} mOsm/kg · ${osmName(P.osm)}`;
+  if(m.stone)return P.stuck?`${REG[P.stuckReg].n}に詰まっている（${P.size.toFixed(1)}mm）`:`${P.size.toFixed(1)}mm · 流れに乗って移動中`;
+  if(m.bact)return `菌数 ${fmtN(P.count)}${P.cling?' · 壁にしがみついている':''}`;
+  return '観察中';
+}
+function subOf(){
+  const m=P.mat;
+  if(m.drop)return `比重 ${sg(P.osm)} · 膀胱の尿 ${Math.round(SIM.vol)} mL`;
+  if(m.stone)return `痛み ${P.pain}/10 · 腎盂の拡張 ${Math.round(P.hydro*60)}%`;
+  if(m.bact)return `膀胱の尿1mLあたり ${fmtN(P.count/Math.max(20,SIM.vol))}`;
+  return `膀胱の尿 ${Math.round(SIM.vol)} mL`;
+}
+function paintSwatch(el,big){
+  const m=P.mat,k=big?2:1,c=colorOf(),s=x=>Math.round(x*k)+'px';
+  let w=30,h=30,br='50%';
+  if(m.drop){w=26;h=32;br='50% 50% 50% 50% / 60% 60% 40% 40%';}
+  else if(m.stone){const z=8+P.size*3.5;w=z;h=z*.85;br='42% 58% 46% 54% / 55% 44% 56% 45%';}
+  else if(m.bact){w=40;h=16;br='8px';}
+  else{w=50;h=14;br='7px';}
+  el.style.width=s(w);el.style.height=s(h);el.style.borderRadius=br;
+  el.style.background=`radial-gradient(circle at 32% 28%, rgba(255,255,255,.6), transparent 42%), ${css(c)}`;
+}
+function avatarState(){
+  const m=P.mat,r=loc&&loc.seg?loc.seg.r:.3;
+  if(m.drop)return {geo:'blob',sx:1,sy:1,sz:1.25,amp:.12,freq:2,wob:2.2,alpha:.72,metal:.4,glow:.08,along:true,size:Math.min(.12,r*.5)};
+  if(m.stone)return {geo:'blob',sx:1,sy:.85,sz:1,amp:.3,freq:6,wob:0,alpha:1,metal:.25,glow:0,along:false,size:P.size/20};
+  if(m.bact)return {geo:'rod',sx:1,sy:1,sz:1,amp:.04,freq:3,wob:3,alpha:.95,metal:.1,glow:.15,along:true,size:Math.min(.35,r*1.2)};
+  return {geo:'rod',sx:1,sy:1,sz:1,amp:0,freq:1,wob:0,alpha:1,metal:.7,glow:0,along:true,size:Math.min(.8,r*2)};
+}
+function updateAvatar(dt){
+  const show=tps&&!orbitOn&&mode!=='demo'&&!!P;avatar.visible=show;if(!show)return;
+  const o=avatarState();
+  if(avatar.geometry!==AV_GEO[o.geo])avatar.geometry=AV_GEO[o.geo];
+  avatarSize+=(o.size-avatarSize)*Math.min(1,dt*2);
+  const k=avatarSize,u=avatarMat.uniforms;
+  avatar.scale.set(o.sx*k,o.sy*k,o.sz*k);
+  avatar.position.copy(camera.position);
+  const fwd=V3(0,0,-1).applyQuaternion(camera.quaternion);
+  if(o.along&&inBody&&loc&&loc.tube){let t=loc.tube.S[Math.min(loc.tube.S.length-1,loc.seg.i)].T.clone();if(t.dot(fwd)<0)t.negate();_q.setFromUnitVectors(_fz,t);avatar.quaternion.slerp(_q,Math.min(1,dt*4));}
+  else{avatar.rotateY(dt*.4);avatar.rotateX(dt*.17);}
+  u.uColor.value.set(...lin(colorOf()));
+  u.uAmp.value+=(o.amp-u.uAmp.value)*Math.min(1,dt*2);u.uFreq.value=o.freq;
+  u.uWob.value=o.wob;u.uAlpha.value=o.alpha;u.uMetal.value=o.metal;u.uGlow.value=o.glow;
+  const up=V3(0,1,0).applyQuaternion(camera.quaternion);
+  const dist=clamp(avatarSize*Math.max(o.sz,1)*(o.geo==='rod'?3:6),.35,5);
+  const want=camera.position.clone().addScaledVector(fwd,-dist).addScaledVector(up,dist*.15);
+  if(inBody&&loc&&loc.tube){
+    const T=loc.tube,S=T.S,ds=T.def.ds,i0=Math.min(S.length-1,loc.seg.i);
+    const sgn=fwd.dot(S[i0].T)>=0?1:-1;
+    let sb=loc.s-sgn*dist,ext=0;
+    if(sb<0){ext=T.def.open[0]?-sb:0;sb=0;}else if(sb>T.L){ext=T.def.open[1]?sb-T.L:0;sb=T.L;}
+    const sm=S[clamp(Math.round(sb/ds),0,S.length-1)];
+    _ax.copy(S[i0].p);if(S[i0].stom>0)shrinkPt(_ax,S[i0].p,S[i0].stom);
+    const off=camera.position.clone().sub(_ax);off.addScaledVector(S[i0].T,-off.dot(S[i0].T));
+    const sp=sm.stom>0?shrinkPt(V3(0,0,0),sm.p,sm.stom):sm.p;
+    want.copy(sp).addScaledVector(off,.35).addScaledVector(sm.T,-sgn*ext);
+    const lim=sm.r*sm.cf*scaleAt(T,sm.s,sm.stom,sm.ure,sm.pel)*.5;_ap.copy(up).addScaledVector(sm.T,-up.dot(sm.T));
+    if(_ap.lengthSq()>1e-6)want.addScaledVector(_ap.normalize(),Math.min(dist*.15,Math.max(0,lim)));
+  }
+  tpsPos.lerp(want,1-Math.exp(-dt*7));
+  tpsCam.position.copy(tpsPos);tpsCam.up.copy(up);
+  tpsCam.lookAt(camera.position.clone().addScaledVector(fwd,dist*.35));
+}
+
+/* ---------- 操作の状態 ---------- */
+let mode='demo',control='free',guideDir=1,autoOn=false,orbitOn=false,inBody=true;
+let speedMul=1,lastLook=-1e9,sex='M';
+const guide={R:ALL_ROUTES[0],s:0};
+const vel=V3(0,0,0),keys={};
+let lookDX=0,lookDY=0,wheel=0;
+const stick={x:0,y:0};
+let loc=null,curReg='';
+const orbit={yaw:.6,pitch:.12,dist:115,target:V3(0,-76,0)};
+
+function setSex(sx){
+  sex=sx;
+  tubes.forEach(t=>{t.active=!t.def.sex||t.def.sex===sx;t.mesh.visible=t.active;});
+  OPEN_ALL.forEach(e=>e.glow.visible=e.T.active);OPEN_ENDS=OPEN_ALL.filter(e=>e.T.active);
+  ROUTES=ALL_ROUTES.filter(R=>R.sex===sx);
+  G.ius=G['ius'+sx];G.eus=G['eus'+sx];
+  prostate.visible=sx==='M';
+  GATES.forEach(g=>{const el=$('gate-'+g.id);if(el)el.hidden=!!g.sex&&g.sex!==sx;});
+  SIGNS.forEach(o=>o.tube=undefined);
+  mapSetup();
+}
+function teleportTo(T,i,rev){
+  const sm=T.S[i];camera.position.copy(sm.p);
+  const dir=sm.T.clone().multiplyScalar(rev?-1:1);
+  camera.up.set(0,1,0);if(Math.abs(dir.y)>.9)camera.up.set(0,0,1);
+  camera.lookAt(sm.p.clone().add(dir));vel.set(0,0,0);inBody=true;
+}
+function setControl(c,dir){
+  if(c==='guide'){
+    const n=nearestOnRoutes(camera.position,loc&&loc.tube&&loc.tube.def.kid);
+    if(!inBody||!n||n.d>2){toast('ここからは順路に乗れない。管の中心近くで試して');control='free';autoOn=false;updateButtons();return false;}
+    guide.R=n.R;guide.s=n.s;control='guide';guideDir=dir;vel.set(0,0,0);
+  }else{control='free';autoOn=false;}
+  updateButtons();return true;
+}
+const dirName=()=>guideDir>0?guide.R.fwd:guide.R.rev;
+function cycleGuide(){
+  if(mode!=='play')return;
+  const d0=defaultDir();
+  if(control==='free'){if(setControl('guide',d0))toast(`順路モード（${dirName()}）: W を押し続けると進む · S で戻る`);}
+  else if(guideDir===d0){guideDir=-d0;guide.s=projectOnRoute(guide.R,camera.position,guide.s);toast(`向きを反転（${dirName()}）`);updateButtons();}
+  else{setControl('free');toast('順路モードをオフ（自由移動）');}
+}
+function toggleAuto(){
+  if(mode!=='play')return;
+  if(autoOn){autoOn=false;updateButtons();toast('自動航行をオフ');return;}
+  if(control!=='guide'&&!setControl('guide',defaultDir()))return;
+  autoOn=true;updateButtons();toast(`自動航行（${dirName()}）`);
+}
+function updateButtons(){
+  $('btnGuide').innerHTML=(control==='guide'?`順路: ${dirName()}`:'順路: オフ')+'<kbd>G</kbd>';
+  $('btnGuide').classList.toggle('on',control==='guide');
+  $('btnAuto').classList.toggle('on',autoOn);
+  $('btnFF').classList.toggle('on',SIM.ff>1);
+  $('btnOrbit').classList.toggle('on',orbitOn);
+  $('btnTps').classList.toggle('on',tps);
+  $('btnCling').hidden=!(P&&P.mat.bact);$('btnCling').classList.toggle('on',!!(P&&P.cling));
+  document.body.classList.toggle('tps',tps);
+  document.body.classList.toggle('orbit',orbitOn);
+}
+
+/* ---------- 開始画面 ---------- */
+function buildOpts(box,name,obj,def){
+  box.innerHTML='';
+  for(const k in obj){const o=obj[k],id=name+'-'+k;
+    const lbl=Array.isArray(o)?o[0]:o.n,desc=Array.isArray(o)?o[1]:o.d;
+    box.insertAdjacentHTML('beforeend',`<div class="opt"><input type="radio" name="${name}" id="${id}" value="${k}" ${k===def?'checked':''}><label for="${id}"><b>${lbl}</b><span>${desc}</span></label></div>`);}
+}
+buildOpts($('optMat'),'mat',MATS,'drop');
+buildOpts($('optEntry'),'entry',ENTRIES,'kidney');
+buildOpts($('optSex'),'sex',SEXES,'M');
+buildOpts($('optHyd'),'hyd',HYDS,'normal');
+$('optMat').addEventListener('change',()=>{const m=document.querySelector('input[name=mat]:checked').value;$('entry-'+((m==='bact'||m==='scope')?'urethra':'kidney')).checked=true;});
+const val=n=>document.querySelector(`input[name=${n}]:checked`).value;
+$('startForm').addEventListener('submit',e=>{e.preventDefault();begin(val('mat'),val('entry'),val('sex'),val('hyd'));});
+
+function begin(matKey,entry,sx,hyd){
+  const m=MATS[matKey];m.id=matKey;
+  setSex(sx);
+  P={mat:m,entry,tKid:0,tUre:0,tBl:0,tUth:0,osm:0,size:m.stone||0,stuck:false,hydro:0,hydroMax:0,pain:0,painMax:0,tStuck:0,eswl:false,
+    count:5000,countMax:5000,cling:false,cystitis:false,pyelo:false,tKidInf:0,flushes:0,visited:new Set()};
+  Object.assign(SIM,{on:true,bodyT:0,ff:1,vol:entry==='urethra'?180:60,bOsm:420/BASEFLOW[hyd],base:BASEFLOW[hyd],load:hyd==='wet'?500:0,gut:0,voiding:false,voided:0,leak:false,hist:[],histT:0,hintT:0,urgeIdx:0});
+  SIM.flow=SIM.base;SIM.osm=clamp(420/SIM.flow,50,1200);SIM.bOsm=SIM.osm;P.osm=SIM.osm;
+  GATES.forEach(g=>{g.open=g.target=0;g.hold=0;g.push=0;});
+  HYD.L.value=HYD.R.value=1;
+  trailN=0;trailGeo.setDrawRange(0,0);
+  U.uStomR.value=volScale(SIM.vol);
+  if(entry==='urethra'){const T=TUB['u'+sx];teleportTo(T,T.S.length-4,true);}
+  else teleportTo(TUB.urL,Math.round(.35/TUB.urL.def.ds));
+  mode='play';control='free';autoOn=false;orbitOn=false;guideDir=1;
+  $('start').hidden=true;$('result').hidden=true;$('side').hidden=false;
+  $('meName').textContent=m.n;
+  updateSegR();loc=locate(camera.position);
+  tps=!m.scope;tpsPos.copy(camera.position);
+  setControl('guide',defaultDir());
+  updateButtons();
+  toast(`${m.n}として${ENTRIES[entry][0]}から入った（${SEXES[sx][0]}）。順路モード（${dirName()}）: W を押し続けると進む`+(m.bact?' · C で壁にしがみつく':''));
+}
+function showStart(){mode='demo';$('start').hidden=false;$('result').hidden=true;$('side').hidden=true;SIM.on=false;P=null;orbitOn=false;
+  setSex(sex);guide.R=ROUTES[0];guide.s=0;control='guide';guideDir=1;autoOn=true;teleportTo(TUB.urL,Math.round(.35/TUB.urL.def.ds));updateButtons();}
+$('btnMenu').onclick=showStart;
+$('btnSpeed').onclick=()=>{speedMul=speedMul===1?3:1;$('btnSpeed').textContent='速さ ×'+speedMul;};
+$('btnAuto').onclick=()=>toggleAuto();
+$('btnGuide').onclick=()=>cycleGuide();
+$('btnFF').onclick=()=>toggleFF();
+$('btnOrbit').onclick=()=>toggleOrbit();
+$('btnTps').onclick=()=>toggleTps();
+$('btnDrink').onclick=()=>drink();
+$('btnToilet').onclick=()=>startVoid(false);
+$('btnCling').onclick=()=>toggleCling();
+$('btnESWL').onclick=()=>eswl();
+$('sideToggle').onclick=()=>$('side').classList.toggle('open');
+$('resAgain').onclick=showStart;
+$('resLook').onclick=()=>{$('result').hidden=true;mode='play';orbitOn=true;updateButtons();};
+function toggleFF(){if(mode!=='play')return;SIM.ff=SIM.ff>1?1:10;updateButtons();toast(SIM.ff>1?'早送り ×10':'早送りをオフ');}
+function toggleOrbit(){if(mode==='demo')return;orbitOn=!orbitOn;updateButtons();if(orbitOn)toast('外観ビュー: ドラッグで回転、ホイールで拡大。光る点があなたの位置');}
+function toggleTps(){if(mode!=='play')return;tps=!tps;tpsPos.copy(camera.position);updateButtons();toast(tps?'三人称視点':'一人称視点');}
+function drink(){if(mode!=='play')return;SIM.gut+=500;toast('水を500mL飲んだ。20分ほどで吸収されて、腎臓がつくる尿が増え、薄くなっていく');}
+function toggleCling(){if(!P||!P.mat.bact)return;P.cling=!P.cling;if(P.cling){vel.set(0,0,0);if(control==='guide')setControl('free');}updateButtons();
+  toast(P.cling?'線毛（1型線毛）で粘膜にしがみついた。流されにくいが動けない':'粘膜から離れた');}
+function eswl(){if(!P||!P.stuck)return;P.stuck=false;P.size=1.5;P.eswl=true;P.resume=true;$('btnESWL').hidden=true;
+  toast('体外衝撃波結石破砕術（ESWL）: 体の外から衝撃波を当てて、石を砂粒ほどに砕いた。尿といっしょに流れていく');}
+function startVoid(forced){
+  if(mode!=='play'||SIM.voiding)return;
+  if(SIM.vol<40){toast('膀胱にほとんどたまっていない（'+Math.round(SIM.vol)+'mL）');return;}
+  SIM.voiding=true;SIM.voided=0;SIM.voidStart=SIM.vol;SIM.leak=forced;
+  toast(forced?'がまんの限界。膀胱の壁（排尿筋）が勝手に縮み、もれてしまった':'排尿反射: 膀胱の排尿筋が縮み、内尿道括約筋と外尿道括約筋がゆるむ。尿管口は押しつぶされて逆流しない');
+}
+const volScale=v=>clamp(Math.cbrt(Math.max(v,15)/480),.32,1.1);
+
+/* ---------- 入力 ---------- */
+addEventListener('keydown',e=>{
+  if(e.target&&e.target.tagName==='INPUT')return;
+  if(e.code==='Space'){e.preventDefault();if(document.activeElement)document.activeElement.blur();if(!e.repeat)toggleAuto();return;}
+  const once={KeyG:cycleGuide,KeyF:toggleFF,KeyV:toggleOrbit,KeyT:toggleTps,KeyM:drink,KeyU:()=>startVoid(false),KeyC:toggleCling}[e.code];
+  if(once){if(!e.repeat)once();return;}
+  if(e.code.startsWith('Arrow'))e.preventDefault();
+  keys[e.code]=true;
+  if(autoOn&&['KeyW','KeyS'].includes(e.code)){autoOn=false;updateButtons();}
+});
+addEventListener('keyup',e=>{keys[e.code]=false;});
+addEventListener('blur',()=>{for(const k in keys)keys[k]=false;});
+let drag=null;
+canvas.addEventListener('pointerdown',e=>{drag={id:e.pointerId,x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;lookDX+=e.clientX-drag.x;lookDY+=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;lastLook=performance.now();});
+const endDrag=e=>{if(drag&&drag.id===e.pointerId)drag=null;};
+canvas.addEventListener('pointerup',endDrag);canvas.addEventListener('pointercancel',endDrag);
+canvas.addEventListener('wheel',e=>{e.preventDefault();if(orbitOn){orbit.dist=clamp(orbit.dist*(1+Math.sign(e.deltaY)*.1),15,300);return;}wheel+=-Math.sign(e.deltaY);if(autoOn){autoOn=false;updateButtons();}},{passive:false});
+const stickEl=$('stick'),knob=$('knob');let stickId=null;
+function stickMove(e){const r=stickEl.getBoundingClientRect();let x=(e.clientX-r.left-r.width/2)/(r.width/2),y=(e.clientY-r.top-r.height/2)/(r.height/2);
+  const l=Math.hypot(x,y);if(l>1){x/=l;y/=l;}stick.x=x;stick.y=y;knob.style.transform=`translate(${x*37}px,${y*37}px)`;}
+stickEl.addEventListener('pointerdown',e=>{stickId=e.pointerId;stickEl.setPointerCapture(e.pointerId);stickMove(e);if(autoOn){autoOn=false;updateButtons();}});
+stickEl.addEventListener('pointermove',e=>{if(e.pointerId===stickId)stickMove(e);});
+const stickEnd=e=>{if(e.pointerId!==stickId)return;stickId=null;stick.x=stick.y=0;knob.style.transform='';};
+stickEl.addEventListener('pointerup',stickEnd);stickEl.addEventListener('pointercancel',stickEnd);
+let toastT=0;
+function toast(t){if(mode==='demo')return;const el=$('toast');el.textContent=t;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),4200);}
+
+/* ---------- 地図 ---------- */
+const mapC=$('map'),mctx=mapC.getContext('2d');
+const MB={x0:-11,x1:11,y0:-109,y1:-44};
+let mapBg=null,mScale=1,mOx=0,mOy=0;
+function mapSetup(){
+  const dpr=Math.min(2,window.devicePixelRatio||1),w=mapC.clientWidth,h=mapC.clientHeight;if(!w)return;
+  mapC.width=w*dpr;mapC.height=h*dpr;
+  mScale=Math.min(w/(MB.x1-MB.x0),h/(MB.y1-MB.y0));
+  mOx=w/2;mOy=(h-(MB.y1-MB.y0)*mScale)/2+MB.y1*mScale;
+  mapBg=document.createElement('canvas');mapBg.width=mapC.width;mapBg.height=mapC.height;
+  const x=mapBg.getContext('2d');x.scale(dpr,dpr);x.lineCap='round';x.lineJoin='round';
+  x.fillStyle='rgba(255,157,122,.18)';organs.forEach(o=>{x.beginPath();x.ellipse(mOx+o.position.x*mScale,mOy-o.position.y*mScale,o.scale.x*mScale,o.scale.y*mScale,0,0,TAU);x.fill();});
+  for(const T of tubes){if(!T.active)continue;
+    x.strokeStyle=T.def.kid&&!/^ur/.test(T.id)?'#ff9d7a':'#f3c95a';x.globalAlpha=.6;
+    for(let i=0;i<T.S.length-4;i+=4){const a=T.S[i],b=T.S[i+4];x.lineWidth=Math.max(1.2,2*a.r*mScale);x.beginPath();x.moveTo(mOx+a.p.x*mScale,mOy-a.p.y*mScale);x.lineTo(mOx+b.p.x*mScale,mOy-b.p.y*mScale);x.stroke();}
+  }
+  x.globalAlpha=1;x.fillStyle='#fff4e0';
+  GATES.forEach(g=>{if(g.T.active)x.fillRect(mOx+g.p.x*mScale-2,mOy-g.p.y*mScale-.5,4,1);});
+}
+function drawMap(){
+  if(!mapBg)return;const w=mapC.clientWidth;
+  mctx.setTransform(1,0,0,1,0,0);mctx.clearRect(0,0,mapC.width,mapC.height);mctx.drawImage(mapBg,0,0);
+  const dpr=mapC.width/w;mctx.setTransform(dpr,0,0,dpr,0,0);
+  const p=camera.position,px=mOx+p.x*mScale,py=mOy-p.y*mScale;
+  const f=V3(0,0,-1).applyQuaternion(camera.quaternion);const fl=Math.hypot(f.x,f.y)||1;
+  mctx.strokeStyle='#fff4e0';mctx.lineWidth=1.5;mctx.beginPath();mctx.moveTo(px,py);mctx.lineTo(px+f.x/fl*12*Math.min(1,fl*1.5),py-f.y/fl*12*Math.min(1,fl*1.5));mctx.stroke();
+  mctx.fillStyle='#fff4e0';mctx.beginPath();mctx.arc(px,py,3.2,0,TAU);mctx.fill();
+  mctx.strokeStyle='rgba(255,244,224,.5)';mctx.beginPath();mctx.arc(px,py,6+2*Math.sin(performance.now()/300),0,TAU);mctx.stroke();
+}
+mapC.addEventListener('pointerdown',e=>{
+  if(mode!=='play')return;
+  if(!P.mat.scope){toast('地図で移動できるのは膀胱鏡だけ');return;}
+  const r=mapC.getBoundingClientRect(),wx=(e.clientX-r.left-mOx)/mScale,wy=-(e.clientY-r.top-mOy)/mScale;
+  let best=null,bd=Infinity;
+  for(const T of tubes){if(!T.active)continue;for(let i=0;i<T.S.length;i+=2){const s=T.S[i];if(s.r<.15)continue;const d=Math.hypot(s.p.x-wx,s.p.y-wy);if(d<bd){bd=d;best=[T,i];}}}
+  if(!best)return;
+  setControl('free');orbitOn=false;updateButtons();teleportTo(best[0],best[1]);
+  toast(REG[best[0].S[best[1]].reg].n+'へ移動');
+});
+
+/* ---------- 関門と反射 ---------- */
+function gateLogic(dtR){
+  if(mode==='demo'){GATES.forEach(g=>{g.open+=(1-g.open)*Math.min(1,dtR*3);});return;}
+  const T=loc&&loc.tube,s=loc?loc.s:0,m=P&&P.mat;
+  const pushing=keys.KeyW||stick.y<-.3||(control==='guide'&&autoOn);
+  // 膀胱鏡は押せば開く。細菌は尿管口を時間をかけてよじ登れる
+  if(P&&inBody&&(m.scope||m.bact))GATES.forEach(g=>{
+    g.hold=(g.hold||0)-dtR;
+    const nearG=(T===g.T&&Math.abs(s-g.s)<1)||camera.position.distanceTo(g.p)<.9;
+    const need=m.scope?.8:/^uvj/.test(g.id)?4:99;
+    if(nearG&&pushing&&g.open<.5){g.push=(g.push||0)+dtR;if(g.push>need){g.hold=6;g.push=0;toast(m.scope?`${g.name}を押し広げて通過`:'鞭毛で泳ぎ、線毛で粘膜をつかみながら尿管口をよじ登った（逆流がなくても起こりうる）');}}
+    else if(!nearG||!pushing)g.push=0;
+  });
+  // 尿管の蠕動: 尿のかたまりがいるところだけ尿管が広がる
+  for(const U2 of [TUB.urL,TUB.urR]){
+    let b=-100;
+    if(T===U2)b=loc.s;else if(camera.position.distanceTo(U2.S[U2.S.length-1].p)<2)b=U2.L-.5;
+    U2.bolusU.value=b;
+  }
+  // 尿管口: 尿のかたまりが来たときだけ開く（膀胱側からは閉じた弁）
+  for(const [g,Ut] of [[G.uvjL,TUB.urL],[G.uvjR,TUB.urR]]){
+    g.target=!SIM.voiding&&T===Ut&&s>g.s-4&&s<g.s+.5?1:0;
+  }
+  // 排尿
+  const voidK=SIM.voiding?1:0;
+  G.ius.target=G.eus.target=voidK;
+  if(P&&m.scope&&P.entry==='urethra'&&!inBody&&camera.position.distanceTo(OPEN_ENDS[0].p)<3)G.eus.hold=G.ius.hold=5;
+  // 結石が狭いところに詰まる
+  if(P&&m.stone&&!P.stuck&&inBody&&loc.seg){
+    const reg=loc.seg.reg,allow=NARROW[reg];
+    if(allow&&P.size>=allow-.5&&P.lastStuckReg!==reg){P.stuck=true;P.stuckReg=reg;P.stuckT=T;P.stuckS=s;P.lastStuckReg=reg;setControl('free');vel.set(0,0,0);
+      toast(`石が${REG[reg].n}に詰まった。尿がせき止められて腎盂がふくらみ（水腎症）、尿管がけいれんして激しく痛む（腎疝痛）`+(P.size>=6?'。このままでは出ない → 衝撃波で砕く':'。水を飲むと流れやすくなる'));}
+  }
+  $('btnESWL').hidden=!(P&&P.stuck&&P.size>=5);
+  if(P&&P.resume){P.resume=false;setControl('guide',defaultDir());} // 詰まりが取れたら順路モードに戻る
+  if(P&&m.stone){const side=P.stuckT&&P.stuckT.def.kid||'L';HYD[side].value+=(1+.6*P.hydro-HYD[side].value)*Math.min(1,dtR*2);}
+  // 尿意の段階
+  if(P){const u=URGE.indexOf(urgeOf(SIM.vol));if(u>SIM.urgeIdx&&u>=1){toast(`尿意: ${URGE[u][1]}（${Math.round(SIM.vol)}mL）`+(u>=2?' · U でトイレ':''));}SIM.urgeIdx=u;}
+  if(SIM.vol>=650&&!SIM.voiding)startVoid(true);
+  GATES.forEach(g=>{if(g.hold>0)g.target=1;g.open+=(g.target-g.open)*Math.min(1,dtR*(g.id.startsWith('uvj')?6:3));});
+  // 閉じた関門の前で理由を出す
+  SIM.hintT-=dtR;
+  if(SIM.hintT<=0&&inBody&&T&&P)for(const g of T.gates){
+    if(g.open<.3&&Math.abs(s-g.s)<1){const t=gateHint(g,s<g.s);if(t){toast(t);SIM.hintT=7;}break;}
+  }
+}
+function gateHint(g,up){
+  if(P.mat.scope)return `${g.name}は閉じている。W で押し続けると押し広げて通れる`;
+  if(/^uvj/.test(g.id))return up?null:'尿管口は、膀胱から腎臓への逆流を防ぐ弁になっている'+(P.mat.bact?'。押し続けるとよじ登れる':'');
+  if(up)return `${g.name}は閉じている。尿がたまって尿意が来たら U でトイレ（いま ${Math.round(SIM.vol)}mL）`+(SIM.vol<150?' · F で早送り、M で水を飲む':'');
+  return P.mat.bact?null:`${g.name}は閉じている。外から尿道はさかのぼれない`;
+}
+
+/* ---------- 道しるべ ---------- */
+const SIGNS=[
+ {p:[7.15,-47.9,-5.45],k:'kid',t:'腎乳頭',s:'尿がしみ出す出口（乳頭孔）'},
+ {p:[5.7,-51.3,-4.95],k:'kid',t:'腎盂',s:'3つの腎杯の尿が集まる'},
+ {p:[-5.7,-53.3,-4.95],k:'kid',t:'腎盂',s:'3つの腎杯の尿が集まる'},
+ {p:[4.6,-54.4,-4.35],k:'',t:'第1狭窄部',s:'腎盂尿管移行部 · 結石が詰まりやすい'},
+ {p:[-4.6,-56.4,-4.35],k:'',t:'第1狭窄部',s:'腎盂尿管移行部 · 結石が詰まりやすい'},
+ {p:[3.5,-75.2,-3.1],k:'',t:'第2狭窄部',s:'総腸骨動脈と交差する'},
+ {p:[-3.5,-75.2,-3.1],k:'',t:'第2狭窄部',s:'総腸骨動脈と交差する'},
+ {p:[3.3,-91.6,-.2],k:'',t:'第3狭窄部',s:'尿管膀胱移行部 · いちばん細い弁'},
+ {p:[-3.3,-91.6,-.2],k:'',t:'第3狭窄部',s:'尿管膀胱移行部 · いちばん細い弁'},
+ {p:[1.1,-93.4,1.9],k:'',t:'左尿管口',s:'蠕動の波が来ると尿が噴き出す'},
+ {p:[-1.1,-93.4,1.9],k:'',t:'右尿管口',s:'蠕動の波が来ると尿が噴き出す'},
+ {p:[0,-93.9,2.7],k:'',t:'膀胱三角 → 内尿道口',s:'その先は尿道'},
+ {p:[0,-97.7,3.4],k:'',t:'精丘',s:'射精管と前立腺の管が開く',sex:'M'},
+ {p:[0,-99.2,4.0],k:'',t:'外尿道括約筋',s:'自分の意思で締める',sex:'M'},
+ {p:[0,-97.7,3.7],k:'',t:'外尿道括約筋',s:'自分の意思で締める',sex:'F'},
+ {p:[0,-106.4,14.2],k:'',t:'外尿道口 → 体の外',s:'',sex:'M'},
+ {p:[0,-99.4,4.7],k:'',t:'外尿道口 → 体の外',s:'',sex:'F'}
+].map(o=>Object.assign(o,{v:V3(...o.p)}));
+const ORBIT_LABELS=[[8,-46,-5,'左腎'],[-8,-48,-5,'右腎'],[4.5,-68,-3.5,'左尿管'],[-4.5,-68,-3.5,'右尿管'],[0,-84,5,'膀胱'],[2.5,-97.5,4,'前立腺','M'],[0,-104,13,'尿道','M'],[0,-99.5,6,'尿道','F']]
+  .map(([x,y,z,t,sx])=>({v:V3(x,y,z),t,orbit:true,sex:sx}));
+const signBox=$('signs');
+[...SIGNS,...ORBIT_LABELS].forEach(o=>{const el=document.createElement('div');el.className='sign '+(o.orbit?'big':o.k);el.innerHTML=`<b>${o.t}</b>`+(o.s?`<span>${o.s}</span>`:'');el.hidden=true;signBox.appendChild(el);o.el=el;});
+const _pv=V3(0,0,0);
+function updateSigns(rc){
+  const W=innerWidth,H=innerHeight,c=camera.position,show=mode!=='demo';
+  for(const o of SIGNS){
+    let vis=false;
+    if(show&&!orbitOn&&inBody&&(!o.sex||o.sex===sex)){const d=o.v.distanceTo(c);
+      if(d<4&&o.tube===undefined){const L=locate(o.v);o.tube=L.score<.4?L.tube:null;}
+      if(d<4&&d>.12&&(d<1.2||!loc||o.tube===loc.tube)){_pv.copy(o.v).project(rc);if(_pv.z<1&&Math.abs(_pv.x)<1.1&&Math.abs(_pv.y)<1.1){vis=true;
+        o.el.style.transform=`translate(${(_pv.x*.5+.5)*W}px,${(-_pv.y*.5+.5)*H}px) translate(-50%,-100%)`;o.el.style.opacity=clamp((4-d)/1.5,0,1);}}}
+    o.el.hidden=!vis;
+  }
+  for(const o of ORBIT_LABELS){
+    let vis=false;
+    if(orbitOn&&(!o.sex||o.sex===sex)){_pv.copy(o.v).project(rc);if(_pv.z<1){vis=true;o.el.style.transform=`translate(${(_pv.x*.5+.5)*W}px,${(-_pv.y*.5+.5)*H}px) translate(-50%,-100%)`;}}
+    o.el.hidden=!vis;
+  }
+}
+function aheadInfo(){
+  if(!inBody||mode==='demo')return null;
+  let R,s,dir;
+  if(control==='guide'){R=guide.R;dir=guideDir;s=projectOnRoute(R,camera.position,guide.s);}
+  else{const n=nearestOnRoutes(camera.position,loc&&loc.tube&&loc.tube.def.kid);if(!n||n.d>2)return null;R=n.R;s=n.s;
+    const a=routeAt(R,s-.5).p,b=routeAt(R,s+.5).p,f=V3(0,0,-1).applyQuaternion(camera.quaternion);dir=f.dot(b.sub(a))>=0?1:-1;}
+  let lo=0,hi=R.pts.length-1;while(hi-lo>1){const m=(lo+hi)>>1;if(R.pts[m].L<s)lo=m;else hi=m;}
+  const out=[],seen=new Set();let reg=R.pts[lo].reg;
+  for(let k=dir>0?hi:lo;k>=0&&k<R.pts.length&&out.length<4;k+=dir){
+    const q=R.pts[k],dist=Math.abs(q.L-s);
+    if(q.gate&&!seen.has(q.gate)){seen.add(q.gate);out.push({gate:q.gate,dist});}
+    if(q.reg!==reg&&REG[q.reg].n!==REG[reg].n){reg=q.reg;out.push({reg,dist});}
+  }
+  return {out,R,dir,endName:dir>0?'外尿道口 → 外':'腎乳頭（行き止まり）',end:dir>0?R.L-s:s};
+}
+let aheadT=0;
+function updateAhead(now){
+  if(now-aheadT<300)return;aheadT=now;
+  const a=aheadInfo(),el=$('ahead');
+  if(!a){el.innerHTML='';return;}
+  const cm=d=>d<1?'すぐ':Math.round(d)+'cm';
+  const parts=a.out.map(o=>o.gate?`<span class="st gate ${o.gate.open>.5?'open':''}">${o.gate.name}${o.gate.open>.5?'（開）':'（閉）'}<em>${cm(o.dist)}</em></span>`
+    :`<span class="st">${REG[o.reg].n}<em>${cm(o.dist)}</em></span>`);
+  if(a.out.length<4)parts.push(`<span class="st">${a.endName}<em>${cm(a.end)}</em></span>`);
+  el.innerHTML=`<span class="lab">この先（${a.dir>0?a.R.fwd:a.R.rev}）</span>`+parts.join('<span class="lab">›</span>');
+}
+
+/* ---------- HUD ---------- */
+function showRegion(key){
+  const R=REG[key],el=$('loc');el.classList.add('swap');
+  setTimeout(()=>{$('locSys').textContent=R.sys;$('locSys').classList.toggle('kid',R.sys===KID);
+    $('locName').textContent=R.n;$('locEn').textContent=R.en;$('locDesc').textContent=R.d;el.classList.remove('swap');},reduceMotion?0:220);
+}
+$('gates').innerHTML=GATES.map(g=>`<li id="gate-${g.id}">${g.name}</li>`).join('');
+let hudT=0,lastPos=V3(0,0,0),spd=0;
+function updateHUD(dt,now){
+  spd+=(camera.position.distanceTo(lastPos)/Math.max(dt,1e-3)-spd)*Math.min(1,dt*4);lastPos.copy(camera.position);
+  if(now-hudT<150)return;hudT=now;
+  $('rDia').textContent=!inBody||!loc||!loc.seg?'—':(2*loc.seg.r*10).toFixed(1)+' mm';
+  const n=control==='guide'?{R:guide.R,s:projectOnRoute(guide.R,camera.position,guide.s),d:0}:(inBody?nearestOnRoutes(camera.position,loc&&loc.tube&&loc.tube.def.kid):null);
+  $('rDist').textContent=!n||n.d>=2?'—':P&&P.entry==='urethra'?'尿道口から '+Math.round(n.R.L-n.s)+' cm':'腎乳頭から '+Math.round(n.s)+' cm';
+  $('rSpd').textContent=spd.toFixed(1)+' cm/s';
+  $('rMode').textContent=(P&&P.cling)?'しがみつき中':autoOn?'自動 · '+dirName():control==='guide'?'順路 · '+dirName():(inBody?'手動':'手動 · 体外');
+  GATES.forEach(g=>$('gate-'+g.id).classList.toggle('open',g.open>.5));
+  if(!P)return;
+  $('bTime').textContent=fmtT(SIM.bodyT);
+  $('bScale').textContent='×'+(tscNow());
+  $('bVol').textContent=Math.round(SIM.vol)+' mL'+(SIM.voiding?' · 排尿中':'');
+  const u=urgeOf(SIM.vol);$('bUrge').textContent=u[1];$('bUrge').className='risk'+u[2];
+  $('urgeFill').style.width=clamp(SIM.vol/600*100,0,100)+'%';$('urgeFill').style.background=css(urineColor(SIM.bOsm));
+  $('bFlow').textContent=SIM.flow.toFixed(1)+' mL/分';
+  $('bOsm').textContent=`${Math.round(SIM.osm)} · ${osmName(SIM.osm)}`;
+  const hz=hazard();$('bRisk').textContent=hz[0]?`${['','注意','警告','危険'][hz[0]]} · ${hz[1]}`:'なし';$('bRisk').className='risk'+hz[0];
+  drawSpark();
+  $('meState').textContent=formOf();$('meMass').textContent=subOf();
+  paintSwatch($('swatch'));
+  if(P.mat.drop){const c=urineComp(P.osm),ks=Object.keys(c);
+    $('bar').innerHTML=ks.map(k=>`<i style="flex-grow:${c[k]};background:${UC[k][1]}"></i>`).join('');
+    $('legend').innerHTML=ks.map(k=>`<li><b style="background:${UC[k][1]}"></b>${UC[k][0]}<span class="g">${c[k].toFixed(1)}</span></li>`).join('')+'<li style="grid-column:1/-1">1Lあたりのグラム数。残りは水</li>';}
+  else{$('bar').innerHTML='';$('legend').innerHTML='';}
+}
+function hazard(){
+  const list=[[0,'なし']];
+  if(SIM.osm>900)list.push([1,'脱水ぎみ（尿が濃い）']);
+  const u=urgeOf(SIM.vol);if(u[2]>=1)list.push([u[2],'膀胱がいっぱい']);
+  if(P&&P.mat.stone){if(P.stuck)list.push([2,'腎疝痛（痛み '+P.pain+'/10）']);if(P.hydro>.6)list.push([3,'水腎症が進行']);}
+  if(P&&P.cystitis)list.push([2,'膀胱炎']);
+  if(P&&P.pyelo)list.push([3,'腎盂腎炎']);
+  return list.reduce((a,b)=>b[0]>=a[0]?b:a);
+}
+function drawSpark(){
+  const c=$('spark'),dpr=Math.min(2,devicePixelRatio||1),w=c.clientWidth,h=c.clientHeight;if(!w)return;
+  if(c.width!==w*dpr){c.width=w*dpr;c.height=h*dpr;}
+  const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);
+  const H=SIM.hist,top=650,Y=v=>h-2-(v/top)*(h-4);
+  x.strokeStyle='rgba(255,122,107,.45)';x.setLineDash([3,3]);x.lineWidth=1;
+  [150,450].forEach(v=>{x.beginPath();x.moveTo(0,Y(v));x.lineTo(w,Y(v));x.stroke();});x.setLineDash([]);
+  x.fillStyle='rgba(198,173,152,.8)';x.font='9px IBM Plex Mono, monospace';x.fillText('膀胱の尿量',2,9);
+  if(H.length<2)return;
+  x.beginPath();H.forEach((v,i)=>{const px=i/(H.length-1)*w;i?x.lineTo(px,Y(v)):x.moveTo(px,Y(v));});
+  x.strokeStyle='#f3c95a';x.lineWidth=1.5;x.stroke();
+  x.lineTo(w,h);x.lineTo(0,h);x.closePath();x.fillStyle='rgba(243,201,90,.15)';x.fill();
+}
+function showResult(via){
+  mode='result';autoOn=false;control='free';updateButtons();$('btnESWL').hidden=true;
+  const m=P.mat;
+  $('resEyebrow').textContent=`EXIT · 外尿道口 · 体内時間 ${fmtT(SIM.bodyT)}`;
+  let title,rows=[['体内にいた時間',fmtT(SIM.bodyT)],['腎臓',fmtT(P.tKid)],['尿管',fmtT(P.tUre)],['膀胱',fmtT(P.tBl)]],note;
+  if(m.drop){
+    title='尿として外に出た';
+    rows.push(['いっしょに出た尿',Math.round(SIM.voidStart||SIM.voided)+' mL'+(SIM.leak?'（もれた）':'')],['尿の濃さ',Math.round(P.osm)+' mOsm/kg'],['比重',sg(P.osm)],['色',osmName(P.osm)]);
+    note='尿の色は、ウロクロムという黄色い色素の濃さで決まる。水を多く飲むと腎臓は水を体に戻さず薄い尿をたくさん出し、足りないと抗利尿ホルモンが働いて濃く少ない尿になる。';
+  }else if(m.stone){
+    title='結石が出た';
+    rows.push(['大きさ',(P.eswl?'砕いて 1.5':P.size.toFixed(1))+' mm'],['詰まっていた時間',fmtT(P.tStuck)],['痛みの最大',P.painMax+'/10'],['腎盂の拡張（最大）',Math.round(P.hydroMax*60)+'%'],['衝撃波',P.eswl?'使った':'使わずに出た']);
+    note='5mm以下の石の多くは自然に出る。大きい石は尿管の3つの狭いところで詰まりやすく、詰まったままだと腎臓が傷む。水を多めに飲むことが予防になる。';
+  }else if(m.bact){
+    title=via==='flush'?'排尿で洗い流された':'外に出た';
+    rows.push(['最大の菌数',fmtN(P.countMax)],['膀胱炎',P.cystitis?'起きた':'なし'],['腎盂腎炎',P.pyelo?'起きた':'なし']);
+    note=(sex==='F'?'女性の尿道は約4cmと短く、細菌が膀胱までのぼりやすい。':'男性の尿道は約20cmと長く、細菌はのぼりにくい。')+'排尿は細菌を洗い流すいちばんの防御。水をよく飲み、がまんしすぎないことが予防になる。';
+  }else{
+    title='膀胱鏡を抜いた';
+    rows.push(['通った関門',GATES.filter(g=>g.T.active&&g.pushed).length+'か所']);
+    note='本物の膀胱鏡も、尿道から入れて膀胱の内側を観察する。細い管を通して尿管に入れ、結石を取ることもできる（尿管鏡）。';
+  }
+  $('resTitle').textContent=title;
+  paintSwatch($('resSwatch'),true);
+  $('resKv').innerHTML=rows.map(([a,b])=>`<dt>${a}</dt><dd>${b}</dd>`).join('');
+  $('resNote').textContent=note;
+  $('result').hidden=false;
+}
+
+/* ---------- ループ ---------- */
+const qTmp=new THREE.Quaternion(),mTmp=new THREE.Matrix4(),AX=V3(1,0,0),AY=V3(0,1,0);
+const inp=V3(0,0,0);
+function applyLook(dt){
+  let yaw=-lookDX*.0035,pitch=-lookDY*.0035;lookDX=lookDY=0;
+  const kr=1.7*dt;
+  if(keys.ArrowLeft)yaw+=kr;if(keys.ArrowRight)yaw-=kr;if(keys.ArrowUp)pitch+=kr;if(keys.ArrowDown)pitch-=kr;
+  if(keys.ArrowLeft||keys.ArrowRight||keys.ArrowUp||keys.ArrowDown)lastLook=performance.now();
+  if(orbitOn){orbit.yaw-=yaw;orbit.pitch=clamp(orbit.pitch-pitch,-1.4,1.4);return;}
+  if(yaw)camera.quaternion.multiply(qTmp.setFromAxisAngle(AY,yaw));
+  if(pitch)camera.quaternion.multiply(qTmp.setFromAxisAngle(AX,pitch));
+  camera.quaternion.normalize();
+}
+const NECK=V3(0,-95.4,3.1);
+function flowVec(){ // 尿の流れ（cm/s）
+  if(!inBody||!loc||!loc.tube||!P||P.stuck||P.cling)return null;
+  const T=loc.tube,tan=T.S[Math.min(T.S.length-1,loc.seg.i)].T;
+  if(SIM.voiding){
+    if(T===TUB.bladder)return NECK.clone().sub(camera.position).setLength(6);
+    if(T.def.sex)return tan.clone().multiplyScalar(12);
+    if(T.def.kid&&loc.s>T.L-1.2)return NECK.clone().sub(camera.position).setLength(6);
+  }
+  if(P.mat.bact||P.mat.scope)return null; // 自分で泳ぐ・押して進む
+  if(T.def.kid){const z=REG[loc.seg.reg].z;return tan.clone().multiplyScalar(z==='kid'?.8:2.5);}
+  return null;
+}
+function flowAlong(){const f=flowVec();if(!f||!loc||!loc.tube)return 0;return f.dot(loc.tube.S[Math.min(loc.tube.S.length-1,loc.seg.i)].T);}
+function stepFree(dt){
+  if(P&&(P.stuck||P.cling)){vel.multiplyScalar(Math.exp(-8*dt));if(P.stuck)vel.set(0,0,0);}
+  inp.set(0,0,0);
+  if(!(P&&(P.stuck||P.cling))){
+    if(keys.KeyW)inp.z-=1;if(keys.KeyS)inp.z+=1;if(keys.KeyA)inp.x-=1;if(keys.KeyD)inp.x+=1;if(keys.KeyE)inp.y+=1;if(keys.KeyQ)inp.y-=1;
+    inp.z+=stick.y;inp.x+=stick.x;
+  }
+  if(inp.lengthSq()>1)inp.normalize();
+  const r=inBody&&loc&&loc.seg?loc.seg.r:6;
+  const top=3*clamp(r/1.1,.35,inBody?2.4:10)*(keys.ShiftLeft||keys.ShiftRight?3:1)*speedMul;
+  inp.applyQuaternion(camera.quaternion);
+  vel.addScaledVector(inp,top*4*dt);
+  if(wheel){vel.addScaledVector(V3(0,0,-1).applyQuaternion(camera.quaternion),wheel*top*.35);wheel=0;}
+  const fv=flowVec();
+  if(fv){const sp=fv.length(),d=fv.clone().normalize(),cur=vel.dot(d);if(cur<sp)vel.addScaledVector(d,(sp-cur)*Math.min(1,dt*3));}
+  vel.multiplyScalar(Math.exp(-4*dt));
+  const dp=vel.clone().multiplyScalar(dt),n=Math.max(1,Math.ceil(dp.length()/.04));dp.multiplyScalar(1/n);
+  for(let i=0;i<n;i++){
+    const keep=camera.position.clone(),prevL=loc;
+    camera.position.add(dp);
+    if(inBody){const L=constrain(camera.position,vel);if(crossesClosed(prevL,L)){camera.position.copy(keep);vel.set(0,0,0);break;}loc=L;}
+  }
+  if(!inBody)tryReenter();
+}
+function stepGuide(dt,now){
+  const R=guide.R,cur=routeAt(R,guide.s);
+  let w=(keys.KeyW?1:0)-(keys.KeyS?1:0)-stick.y+(wheel*.6);wheel=0;
+  if(autoOn)w=1;
+  const base=(mode==='demo'?2:3.5)*clamp(cur.r/.6,.6,3)*(keys.ShiftLeft||keys.ShiftRight?3:1)*(mode==='demo'?1:speedMul);
+  let ds=guideDir*w*base*dt;
+  if(guideDir>0||SIM.voiding){const fl=flowAlong();if(fl)ds+=fl*dt;}
+  const prevS=guide.s;
+  guide.s=clamp(guide.s+ds,0,R.L);
+  const tgt=routeAt(R,guide.s);
+  const keep=camera.position.clone(),prevL=loc;
+  camera.position.lerp(tgt.p,1-Math.exp(-dt*6));
+  const L=constrain(camera.position,null);
+  if(crossesClosed(prevL,L)){camera.position.copy(keep);guide.s=clamp(prevS-guideDir*Math.max(.03,Math.abs(ds)),0,R.L);}
+  else{loc=L;if(camera.position.distanceTo(tgt.p)>.8)guide.s=prevS;}
+  const cs=projectOnRoute(R,camera.position,guide.s);guide.s=clamp(guide.s,cs-1,cs+1);
+  if(mode==='demo'||now-lastLook>1500){
+    const ahead=routeAt(R,guide.s+guideDir*clamp(tgt.r*3,.6,4));
+    const up=V3(0,1,0).applyQuaternion(camera.quaternion);
+    if(ahead.p.distanceToSquared(camera.position)>1e-5){mTmp.lookAt(camera.position,ahead.p,up);qTmp.setFromRotationMatrix(mTmp);camera.quaternion.slerp(qTmp,1-Math.exp(-dt*2.4));}
+  }
+  if(mode==='demo'&&guide.s>=R.L-.01){guide.s=0;teleportTo(TUB.urL,Math.round(.35/TUB.urL.def.ds));}
+  else if(guideDir>0&&guide.s>=R.L-.01&&camera.position.distanceTo(tgt.p)<.2){const e=OPEN_ENDS[0];setControl('free');vel.copy(e.out).multiplyScalar(3);}
+  else if(autoOn&&guideDir<0&&guide.s<=.01){autoOn=false;updateButtons();toast('腎乳頭に着いた（行き止まり）');}
+}
+function tryReenter(){
+  for(const e of OPEN_ENDS){
+    _ap.subVectors(camera.position,e.p);const along=_ap.dot(e.out),perp=Math.sqrt(Math.max(0,_ap.lengthSq()-along*along));
+    if(along<-.05&&along>-1&&perp<e.r*.8){inBody=true;loc=constrain(camera.position,vel);toast('体の中に戻った');return;}
+  }
+}
+function checkExit(){
+  if(!inBody||!loc)return;
+  for(const e of OPEN_ENDS){
+    _ap.subVectors(camera.position,e.p);
+    if(_ap.dot(e.out)>.06&&_ap.length()<e.r*3){
+      inBody=false;setControl('free');
+      if(P&&mode==='play'&&(P.entry!=='urethra'||P.tBl>0||P.tUre>0||SIM.voiding)){showResult(SIM.voiding&&P.mat.bact?'flush':'meatus');return;}
+      vel.addScaledVector(e.out,2);return;
+    }
+  }
+}
+const tscNow=()=>{if(!P||mode!=='play')return 0;if(SIM.voiding)return SIM.ff>1?1:1;
+  const z=REG[curReg]?REG[curReg].z:'out';let t={kid:1,ure:1,bl:60,uth:1,out:1}[z];
+  if(P.mat.bact&&z!=='out')t=Math.max(t,30);if(P.stuck)t=60;return t*SIM.ff;};
+let prevT=performance.now();
+function frame(now){
+  try{frameBody(now);}catch(err){window.__udErr=String(err&&err.stack||err);console.error(err);}
+  requestAnimationFrame(frame);
+}
+function frameBody(now){
+  const dt=clamp((now-prevT)/1000,0,.05);prevT=Math.max(prevT,now);
+  U.uTime.value=now/1000;
+  // 膀胱の大きさ（尿量）
+  if(SIM.voiding){const d=Math.min(SIM.vol,22*dt);SIM.vol-=d;SIM.voided+=d;
+    if(SIM.vol<=3){SIM.voiding=false;toast(`排尿おわり（${Math.round(SIM.voided)}mL）`);
+      if(P&&P.mat.bact&&P.cling&&/^(bl|uth)$/.test(REG[curReg].z)){P.count*=.1;P.flushes++;toast(`排尿の流れに耐えた。ただし菌の9割は流された（残り ${fmtN(P.count)}）`);}
+      if(P&&P.mat.bact&&P.cystitis)P.count*=.5;}}
+  U.uStomR.value+=(volScale(SIM.vol)-U.uStomR.value)*Math.min(1,dt*(SIM.voiding?4:1.5));
+  U.uStomFold.value=2.4-2.1*clamp((U.uStomR.value-.32)/.68,0,1);
+  U.uSqz.value+=((SIM.voiding?1:0)-U.uSqz.value)*Math.min(1,dt*3);
+  updateSegR();
+  applyLook(dt);
+  if(!orbitOn||mode==='demo'){
+    if(control==='guide'&&inBody&&!(P&&(P.stuck||P.cling)))stepGuide(dt,now);else stepFree(dt);
+  }
+  if(inBody&&!loc)loc=locate(camera.position);
+  if(inBody)checkExit();
+  let reg=inBody&&loc&&loc.seg?loc.seg.reg:'outside';
+  if(reg!==curReg){curReg=reg;showRegion(reg);}
+  const zone=REG[curReg].z;
+  if(mode==='play'){const dtb=dt*tscNow()/60;const n=Math.ceil(dtb/2)||1;for(let i=0;i<n;i++)simStep(dtb/n,zone);}
+  if(mode!=='result')gateLogic(dt);
+  for(const T of tubes)if(T.gateU)T.gates.forEach((g,i)=>{T.gateU[i].set(g.s,g.w,g.open,g.depth||.93);if(g.open>.6&&P&&P.mat.scope)g.pushed=true;});
+  // 尿の色で中の見え方を変える（尿路の中は尿で満たされている）
+  const uc=urineColor(zone==='bl'||zone==='uth'?SIM.bOsm:SIM.osm);
+  const fogC=mixc(FOG_S,[uc[0]*.22,uc[1]*.16,uc[2]*.06],.8);
+  if(inBody&&!orbitOn){U.uFog.value.set(...lin(fogC));renderer.setClearColor(new THREE.Color(...fogC));}
+  else{U.uFog.value.set(...lin(FOG_S));renderer.setClearColor(new THREE.Color(...FOG_S));}
+  $('tint').style.opacity=inBody&&!orbitOn&&mode!=='demo'?clamp(.15+(SIM.osm-200)/2500,.12,.45):0;$('tint').style.background=css(uc);
+  const out=orbitOn||!inBody;
+  U.uOut.value+=((out?1:0)-U.uOut.value)*Math.min(1,dt*3);
+  document.body.classList.toggle('outer',out);
+  marker.visible=trail.visible=orbitOn;
+  if(mode==='play'&&inBody)addTrail(camera.position);
+  let rc=camera;
+  updateAvatar(dt);
+  if(avatar.visible)rc=tpsCam;
+  if(orbitOn){
+    marker.position.copy(camera.position);
+    const t=orbit.target,cp=Math.cos(orbit.pitch);
+    orbitCam.position.set(t.x+Math.sin(orbit.yaw)*cp*orbit.dist,t.y+Math.sin(orbit.pitch)*orbit.dist,t.z+Math.cos(orbit.yaw)*cp*orbit.dist);
+    orbitCam.lookAt(t);rc=orbitCam;
+  }
+  U.uCam.value.copy(rc.position);
+  const c=camera.position;dust.visible=!orbitOn;
+  for(let i=0;i<PN;i++){for(let k=0;k<3;k++){const v=pBase[i*3+k]+Math.sin(now/4000+i)*.05;pPos[i*3+k]=c.getComponent(k)-1.5+(((v-c.getComponent(k))%3)+3)%3;}}
+  pGeo.attributes.position.needsUpdate=true;
+  updateHUD(dt,now);if(skipRender)return;drawMap();updateSigns(rc);updateAhead(now);
+  renderer.render(scene,rc);
+}
+function onResize(){renderer.setSize(innerWidth,innerHeight,false);camera.aspect=orbitCam.aspect=tpsCam.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();orbitCam.updateProjectionMatrix();tpsCam.updateProjectionMatrix();mapSetup();}
+addEventListener('resize',onResize);
+let skipRender=false;
+// 検証用: 画面が非表示でも sec 秒ぶんシミュレーションを進める
+function simRun(sec,keysDown){(keysDown||[]).forEach(k=>keys[k]=true);skipRender=true;let t=prevT;for(let i=0;i<sec*60;i++){t+=1000/60;frameBody(t);}skipRender=false;(keysDown||[]).forEach(k=>keys[k]=false);}
+window.__ud={simRun,SIM,G,TUB,get P(){return P;},begin,showResult,get loc(){return loc;},camera,tpsCam,guide,setControl,locate};
+if(innerWidth<760)$('side').classList.remove('open');
+showStart();
+requestAnimationFrame(frame);
+})();
+</script>

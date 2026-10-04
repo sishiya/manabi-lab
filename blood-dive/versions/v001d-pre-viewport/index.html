@@ -1,0 +1,1317 @@
+<title>血管の旅</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Shippori+Mincho+B1:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: full-bleed angioscope view inside a round lens; info top-left, body/self panel top-right, map bottom-left, controls bottom-right */
+:root{
+  --bg:#0b0304; --ink:#f8eae8; --muted:#c9a3a0; --dim:#8f6765;
+  --panel:rgba(28,6,8,.68); --line:rgba(255,215,210,.16);
+  --art:#ff6b5e; --ven:#8fa8ff; --hot:#fff2ee;
+  --open:#8fe0a8; --shut:#ff7a6b;
+  --f-display:'Shippori Mincho B1','Hiragino Mincho ProN','Yu Mincho',serif;
+  --f-body:'Zen Kaku Gothic New','Hiragino Sans','Yu Gothic',system-ui,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--f-body);-webkit-user-select:none;user-select:none}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#gl:active{cursor:grabbing}
+#lens{position:fixed;inset:0;pointer-events:none;transition:opacity .6s;
+  background:radial-gradient(circle at 50% 50%, transparent 0, transparent calc(min(50vw,50vh)*1.05), rgba(11,3,4,.72) calc(min(50vw,50vh)*1.4), rgba(11,3,4,.97) calc(max(50vw,50vh)*1.15));}
+body.outer #lens{opacity:0}
+#tint{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .5s,background .8s;mix-blend-mode:multiply}
+#reticle{position:fixed;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;pointer-events:none;opacity:.35}
+#reticle::before,#reticle::after{content:"";position:absolute;background:var(--hot)}
+#reticle::before{left:10px;top:0;width:1px;height:22px}
+#reticle::after{top:10px;left:0;height:1px;width:22px}
+body.orbit #reticle,body.tps #reticle{display:none}
+.hud{position:fixed;z-index:2}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.panel{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(6px)}
+#loc{top:calc(env(safe-area-inset-top,0px) + 18px);left:20px;max-width:min(340px,calc(100vw - 300px));transition:opacity .35s}
+#loc.swap{opacity:0}
+#locSys{display:inline-block;font-size:11px;letter-spacing:.14em;padding:3px 8px;border:1px solid currentColor;border-radius:2px;color:var(--art)}
+#locSys.ven{color:var(--ven)}#locSys.heart{color:var(--hot)}
+#locName{font-family:var(--f-display);font-size:42px;line-height:1.1;margin:10px 0 2px;letter-spacing:.04em;text-wrap:balance;text-shadow:0 2px 18px rgba(0,0,0,.6)}
+#locEn{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+#locDesc{font-size:13px;line-height:1.75;opacity:.9;margin:10px 0 0;padding:10px 12px;border-left:1px solid var(--line);background:var(--panel);backdrop-filter:blur(6px)}
+#ahead{margin-top:10px;font-size:12px;line-height:1.7;padding:8px 12px;display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline}
+#ahead:empty{display:none}
+#ahead .lab{font-size:10px;letter-spacing:.16em;color:var(--dim)}
+#ahead .st{white-space:nowrap}
+#ahead .st em{font-style:normal;font-family:var(--f-mono);font-size:10.5px;color:var(--muted);margin-left:4px}
+#ahead .gate{color:var(--shut)}#ahead .gate.open{color:var(--open)}
+#signs{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+.sign{position:absolute;left:0;top:0;transform:translate(-50%,-100%);white-space:nowrap;font-size:12px;line-height:1.45;padding:5px 9px;border:1px solid var(--line);background:rgba(28,6,8,.76);color:var(--ink);border-radius:2px}
+.sign b{display:block;font-size:13px;color:var(--art)}
+.sign span{color:var(--muted);font-size:11px}
+.sign::after{content:"";position:absolute;left:50%;bottom:-7px;width:1px;height:7px;background:var(--line)}
+.sign.ven b{color:var(--ven)}.sign.heart b{color:var(--hot)}
+.sign.big b{font-family:var(--f-display);font-size:16px;color:var(--hot)}
+#side{top:calc(env(safe-area-inset-top,0px) + 14px);right:14px;width:252px;max-height:calc(100% - 210px);overflow:auto;display:flex;flex-direction:column;gap:8px}
+#side section{padding:10px 12px}
+#side h3{margin:0 0 8px;font-size:10.5px;font-weight:500;letter-spacing:.18em;color:var(--dim);display:flex;justify-content:space-between;align-items:center}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0;font-size:11.5px}
+.kv dt{color:var(--dim)}
+.kv dd{margin:0;text-align:right;color:var(--hot);min-width:0;overflow-wrap:anywhere}
+.me{display:flex;gap:12px;align-items:center}
+.me>div:last-child{min-width:0;display:flex;flex-direction:column;gap:2px}
+#meName{font-weight:700;font-size:15px}
+#meState{font-size:12px;opacity:.9;line-height:1.5}
+#meMass{font-size:11px;color:var(--muted);line-height:1.5}
+#swatchBox{width:58px;height:58px;flex:none;display:flex;align-items:center;justify-content:center}
+#swatch{transition:all .8s ease;box-shadow:inset -4px -6px 10px rgba(0,0,0,.35), inset 3px 4px 8px rgba(255,255,255,.25)}
+.risk1{color:#ffd27a!important}.risk2{color:#ffa060!important}.risk3{color:var(--shut)!important;font-weight:700}
+#ecg{display:block;width:100%;height:52px;margin-top:8px}
+#beat{font-family:var(--f-mono);font-size:11px;color:var(--dim);margin-top:4px;display:flex;justify-content:space-between}
+#beat b{color:var(--hot);font-weight:500;transition:opacity .15s}
+#gates{list-style:none;margin:8px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;font-size:11px}
+#gates li{display:flex;align-items:center;gap:6px;color:var(--muted)}
+#gates li::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--shut);flex:none;transition:background .1s}
+#gates li.open{color:var(--ink)}
+#gates li.open::before{background:var(--open)}
+#mapWrap{left:20px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);padding:8px 8px 6px}
+#map{display:block;width:96px;height:290px;cursor:crosshair}
+#mapWrap .cap{font-size:10px;color:var(--dim);letter-spacing:.06em;margin-top:4px;text-align:center}
+#dock{right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);display:flex;flex-direction:column;align-items:flex-end;gap:7px;max-width:calc(100vw - 150px)}
+.row{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+button{font:inherit;font-size:13px;color:var(--ink);background:var(--panel);border:1px solid var(--line);padding:8px 12px;border-radius:3px;cursor:pointer;backdrop-filter:blur(6px);letter-spacing:.03em}
+button:hover{border-color:rgba(255,215,210,.45)}
+button:focus-visible{outline:2px solid var(--art);outline-offset:2px}
+button.on{background:rgba(255,107,94,.2);border-color:var(--art);color:var(--hot)}
+button.call{border-color:var(--art);color:var(--hot)}
+kbd{font-family:var(--f-mono);font-size:10px;color:var(--dim);margin-left:6px}
+#keys{font-size:10.5px;color:var(--dim);letter-spacing:.03em;text-align:right;line-height:1.7}
+#toast{position:fixed;left:50%;top:64%;transform:translateX(-50%);z-index:3;font-size:14px;line-height:1.6;padding:8px 16px;opacity:0;transition:opacity .4s;pointer-events:none;max-width:min(560px,calc(100vw - 32px));text-align:center}
+#toast.show{opacity:1}
+#cap{position:fixed;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;padding:0 16px;pointer-events:none;opacity:0;transition:opacity .35s;
+  background:radial-gradient(circle at 50% 50%, rgba(120,10,16,.55), rgba(11,3,4,.95) 70%)}
+#cap.show{opacity:1}
+#cap .box{max-width:460px;display:flex;flex-direction:column;gap:10px;text-align:center}
+#cap .eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;color:var(--muted)}
+#cap h4{font-family:var(--f-display);font-size:30px;margin:0}
+#cap p{margin:0;line-height:1.8;font-size:13.5px}
+#cap .so2{font-family:var(--f-mono);font-size:15px;color:var(--hot)}
+#stick{display:none;position:fixed;z-index:2;left:24px;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);width:120px;height:120px;border-radius:50%;border:1px solid var(--line);background:rgba(28,6,8,.4);touch-action:none}
+#knob{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(255,215,210,.22);border:1px solid rgba(255,215,210,.4)}
+.overlay{position:fixed;inset:0;z-index:5;overflow:auto;display:flex;justify-content:center;padding:32px 16px;background:radial-gradient(circle at 50% 45%, rgba(11,3,4,.45), rgba(11,3,4,.93) 70%)}
+.card{max-width:680px;width:100%;margin:auto 0;display:flex;flex-direction:column;gap:16px}
+.card .eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;color:var(--muted)}
+.card h2{font-family:var(--f-display);font-size:60px;line-height:1;margin:0;letter-spacing:.06em}
+.card p{margin:0;line-height:1.8}
+fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;min-width:0}
+legend{font-size:12px;color:var(--muted);letter-spacing:.08em;padding:0;margin-bottom:8px}
+legend b{font-family:var(--f-mono);color:var(--art);margin-right:8px}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.opt{position:relative}
+.opt input{position:absolute;opacity:0;pointer-events:none}
+.opt label{display:flex;flex-direction:column;gap:4px;height:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--line);background:var(--panel);cursor:pointer;border-radius:3px}
+.opt label b{font-size:15px}
+.opt label span{font-size:11px;color:var(--muted);line-height:1.55}
+.opt input:checked+label{border-color:var(--art);background:rgba(255,107,94,.14)}
+.opt input:focus-visible+label{outline:2px solid var(--art);outline-offset:2px}
+#go{align-self:flex-start;font-size:16px;padding:12px 26px;background:rgba(255,107,94,.22);border-color:var(--art);color:var(--hot)}
+.note{font-size:11.5px;color:var(--dim)}
+.caution{font-size:12px!important;line-height:1.75!important;padding:10px 12px;border-left:2px solid var(--art);background:var(--panel);color:var(--ink)}
+.caution b{color:var(--art);margin-right:6px;font-weight:500}
+#resBody{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+#resSwatchBox{width:120px;height:120px;display:flex;align-items:center;justify-content:center;flex:none}
+#resList{flex:1;min-width:220px}
+#resList .kv{font-size:13px;gap:6px 16px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:760px){
+  #loc{max-width:calc(100vw - 200px)}
+  #locName{font-size:28px}
+  #locDesc{display:none}
+  #side{width:180px;max-height:calc(100% - 200px)}
+  #side .more{display:none}
+  #side.open .more{display:block}
+  #map{width:58px;height:176px}
+  .card h2{font-size:42px}
+  #keys{display:none}
+}
+@media (pointer:coarse){
+  #stick{display:block}
+  #keys{display:none}
+  #mapWrap{bottom:calc(env(safe-area-inset-bottom,0px) + 160px)}
+}
+@media (prefers-reduced-motion:reduce){#loc,#toast,#swatch,#lens,#tint,#cap{transition:none}}
+</style>
+
+<canvas id="gl"></canvas>
+<div id="tint"></div>
+<div id="lens"></div>
+<div id="reticle"></div>
+
+<div id="loc" class="hud">
+  <span id="locSys">動脈</span>
+  <h1 id="locName">大動脈</h1>
+  <div id="locEn">Aorta</div>
+  <p id="locDesc"></p>
+  <div id="ahead" class="panel"></div>
+</div>
+<div id="signs"></div>
+
+<aside id="side" class="hud" hidden>
+  <section class="panel" id="sMe">
+    <h3><span>あなた</span><button id="sideToggle" type="button" style="padding:2px 8px;font-size:10px">詳細</button></h3>
+    <div class="me">
+      <div id="swatchBox"><div id="swatch"></div></div>
+      <div><b id="meName">—</b><div id="meState">—</div><div id="meMass" class="mono">—</div></div>
+    </div>
+  </section>
+  <section class="panel more">
+    <h3>からだ</h3>
+    <dl class="kv mono">
+      <dt>心拍数</dt><dd id="bHr">—</dd>
+      <dt>血圧</dt><dd id="bBp">—</dd>
+      <dt>動脈血の酸素</dt><dd id="bSpo2">—</dd>
+      <dt>心臓の周期</dt><dd id="bPhase">—</dd>
+      <dt>体内時間</dt><dd id="bTime">0秒</dd>
+      <dt>危険度</dt><dd id="bRisk">なし</dd>
+    </dl>
+    <canvas id="ecg"></canvas>
+    <div id="beat"><span>心電図</span><span><b id="s1">Ⅰ音</b> · <b id="s2">Ⅱ音</b></span></div>
+    <ul id="gates"></ul>
+  </section>
+  <section class="panel more">
+    <h3>現在地</h3>
+    <dl class="kv mono">
+      <dt>内径</dt><dd id="rDia">–</dd>
+      <dt>右心房から</dt><dd id="rDist">–</dd>
+      <dt>速度</dt><dd id="rSpd">–</dd>
+      <dt>操縦</dt><dd id="rMode">手動</dd>
+    </dl>
+  </section>
+</aside>
+
+<div id="mapWrap" class="hud panel">
+  <canvas id="map" aria-label="血管の正面図。カテーテルのときはクリックで移動"></canvas>
+  <div class="cap">正面図</div>
+</div>
+
+<div id="dock" class="hud">
+  <div class="row">
+    <button id="btnGuide" type="button">順路: オフ<kbd>G</kbd></button>
+    <button id="btnAuto" type="button">自動航行<kbd>Space</kbd></button>
+    <button id="btnTps" type="button">三人称<kbd>T</kbd></button>
+  </div>
+  <div class="row">
+    <button id="btnLysis" type="button" class="call" hidden>血栓を溶かす薬</button>
+    <button id="btnDest" type="button">行き先: おまかせ<kbd>N</kbd></button>
+    <button id="btnEx" type="button">運動する<kbd>M</kbd></button>
+    <button id="btnSum" type="button">まとめ</button>
+  </div>
+  <div class="row">
+    <button id="btnSpeed" type="button">速さ ×1</button>
+    <button id="btnOrbit" type="button">外観<kbd>V</kbd></button>
+    <button id="btnMenu" type="button">やり直す</button>
+  </div>
+  <div id="keys">W/S 前後 · A/D 横 · Q/E 上下 · Shift 加速 · ドラッグ 視点<br>順路モード中は W だけで進む · 弁が閉じている間は止まって待つ</div>
+</div>
+
+<div id="cap"><div class="box"><div class="eyebrow">CAPILLARY · 毛細血管を通過中</div><h4 id="capName">肺の毛細血管</h4><p id="capText"></p><div class="so2" id="capSo2"></div></div></div>
+<div id="stick"><div id="knob"></div></div>
+<div id="toast" class="panel"></div>
+
+<div id="start" class="overlay">
+  <form class="card" id="startForm">
+    <div class="eyebrow">CIRCULATION TOUR · 心臓と血管をめぐる</div>
+    <h2>血管の旅</h2>
+    <p>全身から戻った血液は心臓の右側から肺へ、肺で酸素を受け取って心臓の左側から全身へ。弁は拍動に合わせて開け閉めされる。赤血球・血栓・カテーテルになって、その輪をめぐる。</p>
+    <fieldset><legend><b>1</b>あなたは何になる？</legend><div class="opts" id="optMat"></div></fieldset>
+    <fieldset><legend><b>2</b>どこから入る？</legend><div class="opts" id="optEntry"></div></fieldset>
+    <fieldset><legend><b>3</b>体の状態</legend><div class="opts" id="optAct"></div></fieldset>
+    <p class="caution"><b>ご注意</b>学習用に簡略化したシミュレーションです。数値は目安で、診断や治療の判断には使えません。体の不調は医療機関に相談してください。<br><b>対象</b>中学生以上（小学生は保護者と一緒に）。血栓など、命にかかわる状態も扱います。</p>
+    <button id="go" type="submit">ダイブ開始</button>
+    <p class="note">太さはおおよそ実寸（細い動脈は少し太め）、長さは脚・首を短縮。毛細血管（直径約8μm）はこの縮尺では入れないので、通過を説明つきで早回しする。本物の血管内視鏡は、血液を生理食塩水で押し流してから中を見る。</p>
+  </form>
+</div>
+
+<div id="result" class="overlay" hidden>
+  <div class="card">
+    <div class="eyebrow" id="resEyebrow">SUMMARY</div>
+    <h2 id="resTitle">旅のまとめ</h2>
+    <div id="resBody">
+      <div id="resSwatchBox"><div id="resSwatch"></div></div>
+      <div id="resList"><dl class="kv mono" id="resKv"></dl></div>
+    </div>
+    <p id="resNote"></p>
+    <div class="btns"><button id="resBack" type="button">旅を続ける</button><button id="resAgain" type="button">最初からやり直す</button></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
+const smooth=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t);};
+const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
+const lin=c=>c.map(v=>Math.pow(v,2.2));
+const mixc=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+const css=c=>`rgb(${c.map(v=>Math.round(clamp(v,0,1)*255)).join(',')})`;
+const $=id=>document.getElementById(id);
+const reduceMotion=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fmtS=s=>s<60?Math.round(s)+'秒':Math.floor(s/60)+'分'+Math.round(s%60)+'秒';
+const TAU=Math.PI*2;
+
+/* ---------- 部位 ---------- */
+const ART='動脈',VEN='静脈',HEART='心臓';
+const cA=[.86,.68,.66],cV=[.52,.26,.36],cM=[.62,.2,.21],cAt=[.68,.27,.27],cVal=[.92,.82,.74];
+const REG={
+ femv:{n:'大腿静脈',en:'Vena femoralis',sys:VEN,c:cV,cf:.72,d:'脚の血液を心臓へ戻す深い静脈。中に逆流を防ぐ弁があり、ふくらはぎの筋肉が縮むたびに血液が押し上げられる（筋ポンプ）。長く座ったままだと流れが滞り、血栓ができやすい（エコノミークラス症候群）。'},
+ ivc:{n:'下大静脈',en:'Vena cava inferior',sys:VEN,c:cV,cf:.75,d:'体の下半分の血液を右心房へ戻す、いちばん太い静脈（直径約2〜2.5cm）。脚・腎臓・肝臓からの静脈が合流する。'},
+ renv:{n:'腎静脈',en:'Vena renalis',sys:VEN,c:cV,cf:.72,d:'腎臓でこされたあとの血液を下大静脈へ戻す。'},
+ portal:{n:'門脈',en:'Vena portae',sys:VEN,c:[.5,.3,.3],cf:.72,d:'胃腸と脾臓から集めた血液を、心臓へ戻す前に肝臓へ運ぶ特別な静脈。吸収された栄養やアルコール・薬は、まず肝臓を通ってから全身に回る（初回通過効果）。'},
+ hepv:{n:'肝静脈',en:'Venae hepaticae',sys:VEN,c:cV,cf:.72,d:'肝臓を通りぬけた血液を、横隔膜のすぐ下で下大静脈へ戻す。'},
+ jug:{n:'内頸静脈',en:'Vena jugularis interna',sys:VEN,c:cV,cf:.72,d:'脳から戻る血液を運ぶ首の太い静脈。点滴や中心静脈カテーテルの入口にもなる。'},
+ bcv:{n:'腕頭静脈',en:'Vena brachiocephalica',sys:VEN,c:cV,cf:.72,d:'首と腕の静脈が合流し、左から右へ横切って上大静脈につながる。'},
+ svc:{n:'上大静脈',en:'Vena cava superior',sys:VEN,c:cV,cf:.75,d:'頭と腕の血液を右心房へ戻す。長さ約7cm。'},
+ ra:{n:'右心房',en:'Atrium dextrum',sys:HEART,c:cAt,fold:'pect',cf:.78,atr:1,d:'全身から戻った静脈血を受ける部屋。内壁に櫛状筋のすじが並ぶ。壁には心臓のリズムを作る洞結節がある。'},
+ tric:{n:'三尖弁',en:'Valva tricuspidalis',sys:HEART,c:cVal,cf:.75,d:'右心房と右心室のあいだの3枚の弁。心室が縮み始めると閉じて逆流を防ぐ（これがⅠ音「ドッ」）。'},
+ rv:{n:'右心室',en:'Ventriculus dexter',sys:HEART,c:cM,fold:'trab',cf:.72,vent:1,d:'肺へ血液を送る部屋。肺へは低い圧で足りるので、壁の厚さは左心室の約3分の1。内側は肉柱で凸凹している。'},
+ pvalve:{n:'肺動脈弁',en:'Valva trunci pulmonalis',sys:HEART,c:cVal,cf:.75,d:'3枚のポケット状の弁。心室がゆるむと閉じる（これがⅡ音「クン」）。'},
+ pa:{n:'肺動脈',en:'Arteria pulmonalis',sys:'肺循環',c:[.8,.6,.62],cf:.75,art:1,d:'酸素の少ない血液を肺へ運ぶ。動脈なのに中身は静脈血。左右に分かれ、肺の中で枝分かれをくり返して毛細血管になる。'},
+ pvein:{n:'肺静脈',en:'Venae pulmonales',sys:'肺循環',c:[.72,.34,.36],cf:.72,d:'肺で酸素を受け取った明るい赤の血液を左心房へ運ぶ。静脈なのに中身は動脈血。左右2本ずつ、計4本ある。'},
+ la:{n:'左心房',en:'Atrium sinistrum',sys:HEART,c:cAt,fold:'pect',cf:.78,atr:1,d:'肺静脈から酸素の多い血液を受ける部屋。'},
+ mitral:{n:'僧帽弁',en:'Valva mitralis',sys:HEART,c:cVal,cf:.75,d:'左心房と左心室のあいだの2枚の弁。形が司教の帽子（ミトラ）に似ている。心室が縮むと閉じる。'},
+ lv:{n:'左心室',en:'Ventriculus sinister',sys:HEART,c:[.58,.17,.18],fold:'trab',cf:.72,vent:1,d:'全身へ血液を送る主力のポンプ。壁の厚さ約1cm。1回の拍動で約70mL、安静時でも1分に約5Lを送り出す。'},
+ lvot:{n:'左室流出路',en:'Outflow tract',sys:HEART,c:[.66,.26,.26],cf:.75,d:'左心室から大動脈弁へ向かう出口の通路。すぐ隣に僧帽弁がある。'},
+ av:{n:'大動脈弁',en:'Valva aortae',sys:HEART,c:cVal,cf:.75,d:'3枚の弁。心室が縮むと開き、ゆるむと閉じる（Ⅱ音）。弁のすぐ上から、心臓自身を養う冠動脈が出る。'},
+ aoasc:{n:'上行大動脈',en:'Aorta ascendens',sys:ART,c:cA,cf:.78,art:1,d:'心臓から出てすぐの大動脈。直径約3cm。拍動のたびに血圧の波でふくらむ（脈）。'},
+ arch:{n:'大動脈弓',en:'Arcus aortae',sys:ART,c:cA,cf:.78,art:1,d:'大動脈が後ろへ曲がるところ。頭と腕への3本の太い枝（腕頭動脈・左総頸動脈・左鎖骨下動脈）が上へ出る。'},
+ aodesc:{n:'胸部下行大動脈',en:'Aorta thoracica',sys:ART,c:cA,cf:.78,art:1,d:'背骨の左前を下る。肋骨のあいだや食道へ細い枝を出す。'},
+ aoabd:{n:'腹部大動脈',en:'Aorta abdominalis',sys:ART,c:cA,cf:.78,art:1,d:'横隔膜をくぐった大動脈。腸・腎臓へ太い枝を出し、へその高さで左右の脚へ分かれる。'},
+ iliac:{n:'腸骨動脈',en:'Arteria iliaca',sys:ART,c:cA,cf:.75,art:1,d:'大動脈が左右に分かれた先。骨盤を通って脚へ向かう（このアプリでは右脚だけ）。'},
+ femart:{n:'大腿動脈',en:'Arteria femoralis',sys:ART,c:cA,cf:.75,art:1,d:'脚の付け根で脈がふれる太い動脈。心臓カテーテル検査の入口になる。'},
+ car:{n:'総頸動脈',en:'Arteria carotis communis',sys:ART,c:cA,cf:.75,art:1,d:'脳と顔へ向かう動脈。首の横で脈がふれる。動脈硬化のかけらが飛ぶと脳梗塞の原因になる。'},
+ rena:{n:'腎動脈',en:'Arteria renalis',sys:ART,c:cA,cf:.75,art:1,d:'細い枝なのに、心臓が送る血液の約20%が腎臓へ流れる。腎臓で血液がこされて尿になる。'},
+ sma:{n:'上腸間膜動脈',en:'Arteria mesenterica superior',sys:ART,c:cA,cf:.75,art:1,d:'小腸と大腸の右半分へ血液を送る。食後は流れる量が2〜3倍に増える。'},
+ outside:{n:'—',en:'',sys:'—',c:[1,1,1],cf:1,d:''}
+};
+for(const k in REG){const r=REG[k];r.lin=lin(r.c);r.fold=r.fold||'none';r.vent=r.vent||0;r.atr=r.atr||0;r.art=r.art||0;}
+
+/* ---------- 中心線 (cm, x=体の左, y=上, z=前) ---------- */
+const TUBES=[
+ {id:'femv',ds:.08,radial:28,portalIn:'leg',pts:[[-4.3,-111,3.6,.5,'femv'],[-3.9,-100,2.6,.55,'femv'],[-2.6,-88,1.0,.55,'femv'],[-1.2,-79,-2.4,.6,'femv'],[-1.6,-74.2,-2.2,.6,'ivc']]},
+ {id:'ivc',ds:.1,radial:36,pts:[[-1.8,-74.5,-2.1,1.0,'ivc'],[-1.9,-60,-2.6,1.05,'ivc'],[-2.0,-50,-3.0,1.1,'ivc'],[-2.2,-44,-2.4,1.1,'ivc'],[-2.6,-38,-.6,1.1,'ivc'],[-3,-31.6,1.2,1.0,'ra']]},
+ {id:'renv',ds:.06,radial:24,portalIn:'kidney',pts:[[-5.6,-52.6,-4.4,.38,'renv'],[-3.6,-51.8,-3.6,.4,'renv'],[-1.9,-51.4,-3.0,.4,'ivc']]},
+ {id:'portal',ds:.06,radial:28,portalIn:'gut',portalOut:'liver',pts:[[-.8,-61.5,4,.4,'portal'],[-1.6,-55,2.8,.55,'portal'],[-3.6,-49.5,1.6,.6,'portal'],[-5.8,-46.5,.8,.5,'portal']]},
+ {id:'hepv',ds:.06,radial:26,portalIn:'liver',pts:[[-5.6,-44.4,-.2,.45,'hepv'],[-3.8,-44,-1.6,.5,'hepv'],[-2.1,-43.9,-2.3,.5,'ivc']]},
+ {id:'jug',ds:.08,radial:28,portalIn:'brain',pts:[[1.6,4.5,-2.5,.45,'jug'],[2.2,-3,-1.2,.55,'jug'],[2.3,-11,.4,.6,'jug'],[.2,-14.4,1.8,.6,'bcv'],[-2.2,-13.6,1.2,.6,'svc']]},
+ {id:'rh',ds:.08,radial:48,pts:[[-2.3,-12.8,1.0,.75,'svc'],[-2.5,-18,1,.9,'svc'],[-2.8,-24,1.1,.95,'svc'],[-3,-28,1.4,2.0,'ra'],[-3,-30.5,1.5,2.3,'ra'],[-1.9,-33,3,1.35,'tric'],[-.6,-35.5,4.4,2.4,'rv'],[.4,-33.8,5.1,1.9,'rv'],[1.8,-30.2,5.6,1.3,'pvalve'],[2.6,-28,4.8,1.35,'pa'],[2.8,-26.3,3.8,1.3,'pa'],[2.8,-25,3,1.2,'pa']]},
+ {id:'paR',ds:.08,radial:30,portalOut:'lungR',pts:[[2.7,-26.6,4.0,.9,'pa'],[.6,-26.2,-1.2,.85,'pa'],[-2.5,-26.4,-1.6,.8,'pa'],[-5,-27.4,-1.6,.7,'pa'],[-7.2,-28.6,-1.2,.55,'pa']]},
+ {id:'paL',ds:.08,radial:30,portalOut:'lungL',pts:[[2.9,-26.6,4.0,.85,'pa'],[4.4,-26.4,1.4,.8,'pa'],[6.0,-27.1,-.4,.7,'pa'],[7.6,-28.6,-1.2,.55,'pa']]},
+ {id:'pvR',ds:.08,radial:28,portalIn:'lungR',pts:[[-7.2,-31.2,-2.2,.5,'pvein'],[-4.2,-30.8,-2.6,.55,'pvein'],[-1.4,-30.2,-2.2,.55,'pvein'],[.4,-29.9,-1.8,.55,'la']]},
+ {id:'pvL',ds:.08,radial:28,portalIn:'lungL',pts:[[7.5,-31.2,-2.2,.5,'pvein'],[4.8,-30.8,-2.6,.55,'pvein'],[2.9,-30.1,-2.1,.55,'la']]},
+ {id:'lh',ds:.08,radial:48,pts:[[1.3,-28.0,-1.6,1.4,'la'],[1.5,-29.6,-1.4,1.9,'la'],[2.6,-31.8,0,1.2,'mitral'],[3.8,-34.2,1.3,2.4,'lv'],[4.8,-36.6,2.1,2.2,'lv'],[5.4,-38.6,2.5,1.0,'lv']]},
+ {id:'aorta',ds:.1,radial:40,portalOut:'leg',pts:[[3.2,-33.4,2.4,.9,'lvot'],[1.6,-31.4,2.4,1.15,'av'],[.8,-28,2.1,1.3,'aoasc'],[.2,-24.5,.9,1.25,'aoasc'],[.8,-22.2,-1,1.2,'arch'],[2.6,-23.2,-3.6,1.15,'arch'],[3.2,-28,-4.4,1.1,'aodesc'],[2.7,-38,-4.2,1.05,'aodesc'],
+   [1.4,-46,-3.4,1.0,'aoabd'],[1.0,-55,-3,.95,'aoabd'],[.8,-65,-2.4,.9,'aoabd'],[.7,-72,-2.2,.85,'aoabd'],[-1.8,-78,-1,.55,'iliac'],[-4,-88,.8,.45,'femart'],[-5.4,-100,2.2,.4,'femart'],[-5.6,-111,3.4,.35,'femart']]},
+ {id:'car',ds:.06,radial:24,portalOut:'brain',pts:[[.6,-22.4,-.4,.38,'car'],[.8,-18,.6,.38,'car'],[.9,-8,.6,.36,'car'],[.6,0,-.6,.34,'car'],[0,5,-2,.3,'car']]},
+ {id:'rena',ds:.05,radial:22,portalOut:'kidney',pts:[[1.0,-50,-3.3,.3,'rena'],[-2.2,-50.5,-5.0,.3,'rena'],[-5.6,-51,-5.4,.28,'rena']]},
+ {id:'sma',ds:.05,radial:22,portalOut:'gut',pts:[[1.4,-45.6,-2.6,.32,'sma'],[1.2,-48,0,.32,'sma'],[.6,-54,2.5,.3,'sma'],[.2,-61,3.6,.28,'sma']]}
+];
+const VEINS=new Set(['femv','ivc','renv','portal','hepv','jug','pvR','pvL']);
+
+/* ---------- 壁 ---------- */
+function fold(type,s,dir,th){
+  switch(type){
+   case 'trab':return -.18*Math.pow(.5+.5*Math.cos(7*th+2.2*Math.sin(s*1.1+th*1.7)),3)-.06*Math.pow(.5+.5*Math.cos(13*th-s*2),4);
+   case 'pect':return -.09*Math.pow(.5+.5*Math.cos(11*th+.8*Math.sin(s*2)),4);
+   default:return 0;
+  }
+}
+const dome=(d,r)=>d>=r?1:Math.max(.02,Math.sqrt(Math.max(0,1-Math.pow(1-d/r,2))));
+
+/* ---------- 中心線のサンプリング ---------- */
+function prepTube(def){
+  const P=def.pts,n=P.length;
+  const curve=new THREE.CatmullRomCurve3(P.map(p=>V3(p[0],p[1],p[2])),false,'centripetal');
+  const M=(n-1)*48,dense=[];let L=0,prev=null;
+  for(let i=0;i<=M;i++){const u=i/M,p=curve.getPoint(u);if(prev)L+=p.distanceTo(prev);dense.push({u,p,L});prev=p;}
+  const cnt=Math.max(2,Math.ceil(L/def.ds)),S=[];let j=0;
+  for(let i=0;i<=cnt;i++){
+    const s=L*i/cnt;while(j<M-1&&dense[j+1].L<s)j++;
+    const a=dense[j],b=dense[j+1],f=clamp((s-a.L)/Math.max(1e-9,b.L-a.L),0,1);
+    const u=a.u+(b.u-a.u)*f,p=a.p.clone().lerp(b.p,f);
+    const k=u*(n-1),i0=Math.min(n-2,Math.floor(k)),fr=k-i0,w=fr*fr*(3-2*fr);
+    let r=P[i0][3]+(P[i0+1][3]-P[i0][3])*w;
+    const regA=P[i0][4],regB=P[i0+1][4],A=REG[regA],B=REG[regB],bw=x=>A[x]+(B[x]-A[x])*w;
+    r*=dome(s,r)*dome(L-s,r);
+    S.push({s,p,r,regA,regB,w,reg:w<.5?regA:regB,vent:bw('vent'),atr:bw('atr'),art:bw('art'),cf:bw('cf'),jf:1});
+  }
+  const last=S.length-1;
+  S.forEach((sm,i)=>{sm.T=S[Math.min(i+1,last)].p.clone().sub(S[Math.max(i-1,0)].p).normalize();});
+  const hint=Math.abs(S[0].T.y)>.9?V3(0,0,1):V3(0,1,0);
+  const N=hint.clone().addScaledVector(S[0].T,-hint.dot(S[0].T)).normalize();
+  S.forEach(sm=>{N.addScaledVector(sm.T,-N.dot(sm.T)).normalize();sm.N=N.clone();sm.B=sm.T.clone().cross(N);});
+  const box=new THREE.Box3();let rmax=0;S.forEach(sm=>{box.expandByPoint(sm.p);rmax=Math.max(rmax,sm.r);});
+  return {def,id:def.id,S,L,box,rmax,groups:[],gates:[]};
+}
+const tubes=TUBES.map(prepTube);
+const TUB={};tubes.forEach(t=>TUB[t.id]=t);
+function nearestIdx(T,pt){let bi=0,bd=Infinity;T.S.forEach((s,i)=>{const d=s.p.distanceToSquared(pt);if(d<bd){bd=d;bi=i;}});return bi;}
+
+/* ---------- 弁 ---------- */
+const GATES=[
+ {id:'tric',name:'三尖弁',tube:'rh',at:[-1.9,-33,3],w:.45,lobes:3,kind:'av'},
+ {id:'pulm',name:'肺動脈弁',tube:'rh',at:[1.8,-30.2,5.6],w:.4,lobes:3,kind:'sl'},
+ {id:'mitral',name:'僧帽弁',tube:'lh',at:[2.6,-31.8,0],w:.45,lobes:2,kind:'av'},
+ {id:'aortic',name:'大動脈弁',tube:'aorta',at:[1.6,-31.4,2.4],w:.4,lobes:3,kind:'sl'},
+ {id:'venv',name:'静脈弁（脚）',tube:'femv',at:[-3.9,-100,2.6],w:.35,lobes:2,kind:'ven'}
+];
+const G={};
+GATES.forEach(g=>{const T=TUB[g.tube];g.T=T;g.s=T.S[nearestIdx(T,V3(...g.at))].s;g.p=T.S[Math.round(g.s/T.def.ds)].p;g.open=0;g.target=0;T.gates.push(g);G[g.id]=g;});
+
+/* ---------- 合流部 ---------- */
+const near=(p,b,m)=>p.x>b.min.x-m&&p.x<b.max.x+m&&p.y>b.min.y-m&&p.y<b.max.y+m&&p.z>b.min.z-m&&p.z<b.max.z+m;
+for(const A of tubes)for(const B of tubes){
+  if(A===B)continue;
+  const m0=A.rmax+B.rmax+2.5;
+  if(!A.box.clone().expandByScalar(m0).intersectsBox(B.box))continue;
+  for(const a of A.S){
+    if(!near(a.p,B.box,a.r+B.rmax+2.5))continue;
+    let m=Infinity;for(let j=0;j<B.S.length;j+=2){const b=B.S[j];const d=a.p.distanceTo(b.p)-b.r-a.r;if(d<m)m=d;}
+    a.jf=Math.min(a.jf,smooth(0,1.5,m));
+  }
+  const flag=[];
+  for(let j=0;j<B.S.length;j++){
+    const b=B.S[j];if(!near(b.p,A.box,b.r+A.rmax+.5))continue;
+    for(let i=0;i<A.S.length;i+=2){const a=A.S[i];const d=b.p.distanceTo(a.p);if(Math.abs(d-a.r)<b.r+.2){flag.push(j);break;}}
+  }
+  let k=0;
+  while(k<flag.length){
+    let j0=flag[k],j1=j0;while(k+1<flag.length&&flag[k+1]-j1<=4){k++;j1=flag[k];}k++;
+    j0=Math.max(0,j0-2);j1=Math.min(B.S.length-1,j1+2);
+    const caps=[];for(let j=j0;j<j1;j+=3)caps.push([B.S[j],B.S[Math.min(j+3,j1)]]);
+    if(!caps.length)caps.push([B.S[j0],B.S[j1]]);
+    A.groups.push(caps);
+  }
+}
+// 合流部の近くは拍動させない（穴の位置がずれないように）
+tubes.forEach(T=>T.S.forEach(sm=>{sm.vent*=sm.jf;sm.atr*=sm.jf;sm.art*=sm.jf;}));
+
+/* ---------- 描画 ---------- */
+const canvas=$('gl');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
+renderer.setSize(innerWidth,innerHeight,false);
+const FOG_S=[.12,.02,.025];
+renderer.setClearColor(new THREE.Color(...FOG_S));
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(72,innerWidth/innerHeight,.01,800);
+const orbitCam=new THREE.PerspectiveCamera(40,innerWidth/innerHeight,.5,2000);
+
+const U={uCam:{value:V3(0,0,0)},uTime:{value:0},uFog:{value:V3(...lin(FOG_S))},uLight:{value:1.15},uOut:{value:0},uVent:{value:1},uAtr:{value:1},uArt:{value:0},uFogD:{value:.11}};
+const VS=`
+attribute vec3 aCol;attribute float aS;attribute float aArt;attribute float aAtr;
+attribute vec3 aAxis;attribute float aRad;attribute float aFold;attribute float aTh;attribute float aVent;
+uniform float uTime;uniform vec4 uGate[4];uniform vec4 uGateL;uniform int uNGate;uniform float uVent;uniform float uAtr;uniform float uArt;
+varying vec3 vW;varying vec3 vN;varying vec3 vC;varying float vGate;
+void main(){
+#ifdef BLOB
+  vec3 p=position;vGate=0.0;
+#else
+  vec3 off=position-aAxis;float len=length(off);vec3 dir=len>1e-5?off/len:vec3(0.0);
+  float sc=mix(1.0,uVent,aVent)*mix(1.0,uAtr,aAtr)*(1.0+0.06*uArt*aArt);
+  float gc=0.0;float lobes=3.0;
+  for(int i=0;i<4;i++){if(i>=uNGate)break;vec4 g=uGate[i];float d=(aS-g.x)/g.y;float c=exp(-d*d)*(1.0-g.z)*g.w;if(c>gc){gc=c;lobes=uGateL[i];}}
+  float fm=1.0+aVent*(1.0-uVent)*2.5;
+  float r=aRad*((1.0+aFold*fm)*sc*(1.0-gc)+0.13*gc*(0.5+0.5*cos(aTh*lobes)));
+  vec3 p=aAxis+dir*r;
+  vGate=clamp(gc*1.5+aVent*(1.0-uVent)*2.0,0.0,1.0);
+#endif
+  vec4 w=modelMatrix*vec4(p,1.0);vW=w.xyz;vN=normalize(mat3(modelMatrix)*normal);vC=aCol;
+  gl_Position=projectionMatrix*viewMatrix*w;
+}`;
+const FS=`
+uniform vec3 uCam;uniform vec3 uFog;uniform float uLight;uniform float uOut;uniform float uFogD;
+uniform vec4 uCapA[MAXC];uniform vec4 uCapB[MAXC];uniform vec4 uGrp[MAXG];uniform vec2 uGrpR[MAXG];uniform int uNG;
+uniform float uSpec;uniform float uBump;uniform float uVein;uniform float uFreq;uniform float uAlpha;
+varying vec3 vW;varying vec3 vN;varying vec3 vC;varying float vGate;
+float hash(vec3 p){p=fract(p*0.3183099+0.1);p*=17.0;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
+float noise(vec3 x){vec3 i=floor(x);vec3 f=fract(x);f=f*f*(3.0-2.0*f);
+ return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),
+            mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}
+float fbm(vec3 p){float s=0.0;float a=0.5;for(int i=0;i<3;i++){s+=a*noise(p);p=p*2.07+vec3(1.7,9.2,3.1);a*=0.5;}return s;}
+void main(){
+  for(int g=0;g<MAXG;g++){
+    if(g>=uNG)break;
+    if(distance(vW,uGrp[g].xyz)<uGrp[g].w){
+      int s0=int(uGrpR[g].x);int s1=int(uGrpR[g].y);
+      for(int i=0;i<MAXC;i++){
+        if(i>=s1)break;
+        if(i<s0)continue;
+        vec3 a=uCapA[i].xyz;vec3 ba=uCapB[i].xyz-a;vec3 pa=vW-a;
+        float h=clamp(dot(pa,ba)/max(dot(ba,ba),1e-6),0.0,1.0);
+        if(length(pa-ba*h)<mix(uCapA[i].w,uCapB[i].w,h))discard;
+      }
+    }
+  }
+  vec3 V=uCam-vW;float d=length(V);V/=max(d,1e-4);
+  vec3 n=normalize(vN);
+  vec3 fn=normalize(cross(dFdx(vW),dFdy(vW)));
+  n=normalize(mix(n,fn*sign(dot(fn,n)+1e-4),vGate));
+  if(dot(n,V)<0.0)n=-n;
+  vec3 q=vW*uFreq;float e=0.07;float n0=fbm(q);
+  vec3 gr=vec3(fbm(q+vec3(e,0,0))-n0,fbm(q+vec3(0,e,0))-n0,fbm(q+vec3(0,0,e))-n0)/e;
+  gr-=n*dot(gr,n);n=normalize(n-gr*uBump*(1.0-0.6*uOut));
+  float vn=noise(vW*2.5+vec3(3.1,1.3,7.7));
+  float vein=(1.0-smoothstep(0.0,0.035,abs(vn-0.5)))*smoothstep(0.35,0.75,noise(vW*.9+11.0))*uVein;
+  vec3 base=vC*(0.82+0.36*n0);
+  base=mix(base,base*vec3(0.6,0.15,0.22),vein*0.5);
+  float ndl=max(dot(n,V),0.0);
+  float att=mix(uLight/(1.0+0.03*d*d),1.25,uOut);
+  vec3 col=base*(0.18+0.82*ndl)*att;
+  col+=base*vec3(0.9,0.15,0.12)*pow(1.0-ndl,3.0)*att*0.35;
+  float spec=pow(ndl,70.0)*1.0+pow(ndl,14.0)*0.06;
+  col+=vec3(1.0,0.93,0.9)*spec*att*uSpec*(1.0-0.6*uOut);
+  col=col/(1.0+col*0.25);
+  col=mix(col,uFog,1.0-exp(-d*mix(uFogD,0.0025,uOut)));
+  gl_FragColor=vec4(pow(max(col,vec3(0.0)),vec3(0.4545)),uAlpha);
+}`;
+function makeMat(groups,o,T){
+  o=o||{};
+  const capA=[],capB=[],grp=[],grpR=[];
+  groups.forEach(g=>{
+    const s0=capA.length,c=V3(0,0,0);
+    g.forEach(([a,b])=>{capA.push(new THREE.Vector4(a.p.x,a.p.y,a.p.z,a.r*.97));capB.push(new THREE.Vector4(b.p.x,b.p.y,b.p.z,b.r*.97));c.add(a.p).add(b.p);});
+    c.multiplyScalar(1/(2*g.length));
+    let rad=0;g.forEach(([a,b])=>{rad=Math.max(rad,c.distanceTo(a.p)+a.r,c.distanceTo(b.p)+b.r);});
+    grp.push(new THREE.Vector4(c.x,c.y,c.z,rad+.1));grpR.push(new THREE.Vector2(s0,capA.length));
+  });
+  const ng=grp.length;
+  if(!capA.length){capA.push(new THREE.Vector4());capB.push(new THREE.Vector4());}
+  if(!grp.length){grp.push(new THREE.Vector4());grpR.push(new THREE.Vector2());}
+  const defines={MAXC:capA.length,MAXG:grp.length};if(o.blob)defines.BLOB=1;
+  const gateU=T&&T.gateU;
+  return new THREE.ShaderMaterial({
+    defines,extensions:{derivatives:true},transparent:o.alpha!=null&&o.alpha<1,depthWrite:!(o.alpha<1),
+    uniforms:{uCam:U.uCam,uTime:U.uTime,uFog:U.uFog,uLight:U.uLight,uOut:U.uOut,uFogD:U.uFogD,uVent:U.uVent,uAtr:U.uAtr,uArt:U.uArt,
+      uGate:{value:gateU||[0,1,2,3].map(()=>new THREE.Vector4())},uGateL:{value:T&&T.gateL||new THREE.Vector4(3,3,3,3)},uNGate:{value:gateU?gateU.n:0},
+      uCapA:{value:capA},uCapB:{value:capB},uGrp:{value:grp},uGrpR:{value:grpR},uNG:{value:ng},
+      uSpec:{value:o.spec!=null?o.spec:1},uBump:{value:o.bump!=null?o.bump:.12},uVein:{value:o.vein!=null?o.vein:.6},uFreq:{value:o.freq||7},uAlpha:{value:o.alpha!=null?o.alpha:1}},
+    vertexShader:VS,fragmentShader:FS,side:THREE.DoubleSide
+  });
+}
+function buildMesh(T){
+  const {S,def}=T,R=def.radial,nv=S.length*R;
+  const pos=new Float32Array(nv*3),col=new Float32Array(nv*3),axis=new Float32Array(nv*3),
+    aS=new Float32Array(nv),aArt=new Float32Array(nv),aAtr=new Float32Array(nv),aRad=new Float32Array(nv),aFold=new Float32Array(nv),aTh=new Float32Array(nv),aVent=new Float32Array(nv);
+  const dir=V3(0,0,0);
+  S.forEach((sm,i)=>{
+    const rA=REG[sm.regA],rB=REG[sm.regB];
+    const endF=smooth(.2,1.2,sm.s)*smooth(.2,1.2,T.L-sm.s);
+    const amp=endF*sm.jf,cA2=rA.lin,cB2=rB.lin;
+    for(let k=0;k<R;k++){
+      const th=k/R*TAU;
+      dir.copy(sm.N).multiplyScalar(Math.cos(th)).addScaledVector(sm.B,Math.sin(th));
+      let d=0;
+      if(amp>.001){const fa=fold(rA.fold,sm.s,dir,th),fb=rA.fold===rB.fold?fa:fold(rB.fold,sm.s,dir,th);d=(fa+(fb-fa)*sm.w)*amp;}
+      const rr=sm.r*(1+d),v=i*R+k,o=v*3;
+      pos[o]=sm.p.x+dir.x*rr;pos[o+1]=sm.p.y+dir.y*rr;pos[o+2]=sm.p.z+dir.z*rr;
+      axis[o]=sm.p.x;axis[o+1]=sm.p.y;axis[o+2]=sm.p.z;
+      const sh=Math.max(.35,1+d*1.6);
+      col[o]=(cA2[0]+(cB2[0]-cA2[0])*sm.w)*sh;col[o+1]=(cA2[1]+(cB2[1]-cA2[1])*sm.w)*sh;col[o+2]=(cA2[2]+(cB2[2]-cA2[2])*sm.w)*sh;
+      aS[v]=sm.s;aArt[v]=sm.art;aAtr[v]=sm.atr;aRad[v]=sm.r;aFold[v]=d;aTh[v]=th;aVent[v]=sm.vent;
+    }
+  });
+  const idx=new Uint32Array((S.length-1)*R*6);let q=0;
+  for(let i=0;i<S.length-1;i++)for(let k=0;k<R;k++){
+    const a=i*R+k,b=(i+1)*R+k,c=(i+1)*R+(k+1)%R,d=i*R+(k+1)%R;
+    idx[q++]=a;idx[q++]=b;idx[q++]=d;idx[q++]=b;idx[q++]=c;idx[q++]=d;
+  }
+  const g=new THREE.BufferGeometry(),A=(n,arr,s)=>g.setAttribute(n,new THREE.BufferAttribute(arr,s));
+  A('position',pos,3);A('aCol',col,3);A('aAxis',axis,3);A('aS',aS,1);A('aArt',aArt,1);A('aAtr',aAtr,1);A('aRad',aRad,1);A('aFold',aFold,1);A('aTh',aTh,1);A('aVent',aVent,1);
+  g.setIndex(new THREE.BufferAttribute(idx,1));
+  g.computeVertexNormals();
+  if(T.gates.length){T.gateU=[0,1,2,3].map(()=>new THREE.Vector4());T.gateU.n=T.gates.length;T.gateL=new THREE.Vector4(...[0,1,2,3].map(i=>T.gates[i]?T.gates[i].lobes:3));}
+  const mesh=new THREE.Mesh(g,makeMat(T.groups,{},T));
+  mesh.frustumCulled=false;T.mesh=mesh;scene.add(mesh);
+}
+tubes.forEach(buildMesh);
+
+/* 臓器の目印（外観ビューだけで表示） */
+function blobGeo(c){
+  const g=new THREE.SphereGeometry(1,32,22),n=g.attributes.position.count,cc=lin(c),col=new Float32Array(n*3);
+  for(let i=0;i<n;i++){col[i*3]=cc[0];col[i*3+1]=cc[1];col[i*3+2]=cc[2];}
+  g.setAttribute('aCol',new THREE.BufferAttribute(col,3));
+  ['aS','aArt','aAtr','aRad','aFold','aTh','aVent'].forEach(k=>g.setAttribute(k,new THREE.BufferAttribute(new Float32Array(n),1)));
+  g.setAttribute('aAxis',new THREE.BufferAttribute(new Float32Array(n*3),3));
+  return g;
+}
+const organs=[];
+function organ(c,pos,scl,alpha){const m=new THREE.Mesh(blobGeo(c),makeMat([],{spec:.4,bump:.08,vein:.2,blob:true,freq:1.2,alpha}));m.position.set(...pos);m.scale.set(...scl);m.renderOrder=1;m.visible=false;scene.add(m);organs.push(m);return m;}
+organ([.85,.55,.6],[-6,-29,-1],[4.2,7.5,4.5],.18);
+organ([.85,.55,.6],[6.2,-29,-1],[3.8,7.5,4.5],.18);
+organ([.55,.22,.2],[-6,-45,0],[5.5,3.2,4],.3);
+organ([.55,.2,.18],[-6,-51.8,-5.2],[2.4,5,2],.45);
+organ([.85,.65,.62],[.5,7,-1],[6.5,6,7.5],.15);
+organ([.82,.6,.5],[.2,-65,3],[6,6.5,3],.15);
+organ([.8,.5,.5],[-5.6,-112,3.4],[3.5,3,3.5],.15);
+
+/* 血液の粒（赤血球） */
+const rbcTex=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');const g=x.createRadialGradient(32,32,2,32,32,30);
+  g.addColorStop(0,'rgba(150,20,25,.85)');g.addColorStop(.45,'rgba(200,40,40,.9)');g.addColorStop(.8,'rgba(170,25,30,.9)');g.addColorStop(1,'rgba(120,10,15,0)');x.fillStyle=g;x.fillRect(0,0,64,64);return new THREE.CanvasTexture(c);})();
+const PN=420,pBase=new Float32Array(PN*3),pPos=new Float32Array(PN*3);
+for(let i=0;i<PN*3;i++)pBase[i]=Math.random()*4;
+const pGeo=new THREE.BufferGeometry();pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
+const dust=new THREE.Points(pGeo,new THREE.PointsMaterial({map:rbcTex,size:.07,transparent:true,opacity:.75,depthWrite:false}));
+dust.frustumCulled=false;scene.add(dust);
+
+/* 外観ビュー用 */
+const markTex=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');const g=x.createRadialGradient(32,32,0,32,32,32);
+  g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.3,'rgba(255,220,200,.9)');g.addColorStop(1,'rgba(255,120,100,0)');x.fillStyle=g;x.fillRect(0,0,64,64);return new THREE.CanvasTexture(c);})();
+const marker=new THREE.Sprite(new THREE.SpriteMaterial({map:markTex,depthTest:false,transparent:true}));
+marker.scale.set(4,4,1);marker.renderOrder=10;marker.visible=false;scene.add(marker);
+const TRAIL_MAX=5000,trailPos=new Float32Array(TRAIL_MAX*3);let trailN=0;
+const trailGeo=new THREE.BufferGeometry();trailGeo.setAttribute('position',new THREE.BufferAttribute(trailPos,3));trailGeo.setDrawRange(0,0);
+const trail=new THREE.LineSegments(trailGeo,new THREE.LineBasicMaterial({color:0xfff1c8,transparent:true,opacity:.85,depthTest:false}));
+trail.renderOrder=9;trail.frustumCulled=false;trail.visible=false;scene.add(trail);
+let trailLast=null;
+function addTrail(p,jump){
+  if(jump){trailLast=null;return;}
+  if(trailLast&&p.distanceTo(trailLast)<.4)return;
+  if(trailLast){if(trailN+2>TRAIL_MAX){trailPos.copyWithin(0,6);trailN-=2;}
+    trailPos.set([trailLast.x,trailLast.y,trailLast.z,p.x,p.y,p.z],trailN*3);trailN+=2;trailGeo.setDrawRange(0,trailN);trailGeo.attributes.position.needsUpdate=true;}
+  trailLast=p.clone();
+}
+
+/* ---------- 三人称 ---------- */
+const NOISE_GLSL=`float hash(vec3 p){p=fract(p*0.3183099+0.1);p*=17.0;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
+float noise(vec3 x){vec3 i=floor(x);vec3 f=fract(x);f=f*f*(3.0-2.0*f);
+ return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),
+            mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}`;
+const avatarMat=new THREE.ShaderMaterial({
+  transparent:true,extensions:{derivatives:true},
+  uniforms:{uCam:U.uCam,uFog:U.uFog,uOut:U.uOut,uFogD:U.uFogD,uTime:U.uTime,uColor:{value:V3(1,1,1)},uAmp:{value:.1},uFreq:{value:3},uWob:{value:0},uMetal:{value:0},uAlpha:{value:1}},
+  vertexShader:NOISE_GLSL+`
+  uniform float uTime;uniform float uAmp;uniform float uFreq;uniform float uWob;
+  varying vec3 vW;varying vec3 vN;varying vec3 vL;
+  void main(){
+    vec3 p=position;
+    float n=noise(p*uFreq+vec3(0.0,0.0,uTime*uWob))+0.5*noise(p*uFreq*2.3)-0.75;
+    p+=normal*n*uAmp*2.0;
+    vL=position;vec4 w=modelMatrix*vec4(p,1.0);vW=w.xyz;vN=normalize(mat3(modelMatrix)*normal);
+    gl_Position=projectionMatrix*viewMatrix*w;
+  }`,
+  fragmentShader:NOISE_GLSL+`
+  uniform vec3 uCam;uniform vec3 uFog;uniform vec3 uColor;uniform float uOut;uniform float uFogD;uniform float uMetal;uniform float uAlpha;
+  varying vec3 vW;varying vec3 vN;varying vec3 vL;
+  void main(){
+    vec3 V=uCam-vW;float d=length(V);V/=max(d,1e-4);
+    vec3 n=normalize(vN);if(dot(n,V)<0.0)n=-n;
+    float ndl=max(dot(n,V),0.0);
+    vec3 base=uColor*(0.88+0.24*noise(vL*10.0));
+    float att=mix(1.3/(1.0+0.03*d*d),1.2,uOut);
+    vec3 col=base*(0.25+0.75*ndl)*att;
+    col+=vec3(1.0)*pow(ndl,mix(40.0,110.0,uMetal))*mix(0.3,1.3,uMetal)*att;
+    col+=base*pow(1.0-ndl,2.0)*0.5*uMetal*att;
+    col=col/(1.0+col*0.25);
+    col=mix(col,uFog,1.0-exp(-d*mix(uFogD,0.0025,uOut)));
+    gl_FragColor=vec4(pow(max(col,vec3(0.0)),vec3(0.4545)),uAlpha);
+  }`
+});
+// 赤血球: 真ん中がくぼんだ円盤
+const AV_GEO={
+  rbc:(()=>{const p=[];for(let i=0;i<=24;i++){const t=i/24*Math.PI,x=Math.sin(t),y=Math.cos(t);const r=x,h=y*(.12+.38*r*r)*(1-.0);p.push(new THREE.Vector2(r,y*.18+Math.sign(y)*.24*r*r*(1-r*r)*1.8));}
+    const g=new THREE.LatheGeometry(p,48);g.rotateX(Math.PI/2);g.computeVertexNormals();return g;})(),
+  blob:new THREE.IcosahedronGeometry(1,5),
+  rod:(()=>{const g=new THREE.CylinderGeometry(.18,.18,1.6,24,1);g.rotateX(Math.PI/2);return g;})()
+};
+const avatar=new THREE.Mesh(AV_GEO.rbc,avatarMat);avatar.frustumCulled=false;avatar.visible=false;avatar.renderOrder=3;scene.add(avatar);
+let tps=false,avatarSize=.2;
+const tpsCam=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.01,800);
+const tpsPos=V3(0,0,0),_q=new THREE.Quaternion(),_fz=V3(0,0,1);
+
+/* ---------- 当たり判定 ---------- */
+const _ab=V3(0,0,0),_ap=V3(0,0,0),_ax=V3(0,0,0);
+const SEGS=[];
+tubes.forEach(T=>{const S=T.S;for(let i=0;i<S.length-1;i+=3){const j=Math.min(i+3,S.length-1),a=S[i],b=S[j];
+  SEGS.push({a:a.p,b:b.p,ra0:a.r*a.cf,rb0:b.r*b.cf,ra:0,rb:0,r:a.r,reg:a.reg,tube:T,i,j,sA:a.s,sB:b.s,vA:a.vent,vB:b.vent,tA:a.atr,tB:b.atr});}});
+function scaleAt(T,s,vent,atr){
+  let sc=(1+(U.uVent.value-1)*vent)*(1+(U.uAtr.value-1)*atr);
+  let gc=0;for(const g of T.gates){const d=(s-g.s)/g.w;gc=Math.max(gc,Math.exp(-d*d)*(1-g.open)*.93);}
+  return sc*(1-gc);
+}
+function updateSegR(){for(const g of SEGS){const m=Math.min(.1,.3*g.r);g.ra=g.ra0*scaleAt(g.tube,g.sA,g.vA,g.tA)-m;g.rb=g.rb0*scaleAt(g.tube,g.sB,g.vB,g.tB)-m;}}
+function locate(p){
+  let best=null,bs=Infinity,bh=0;
+  for(const g of SEGS){
+    if(g.ra<.015&&g.rb<.015)continue;
+    _ab.subVectors(g.b,g.a);_ap.subVectors(p,g.a);
+    const L2=_ab.lengthSq();let h=L2>0?_ap.dot(_ab)/L2:0;h=h<0?0:h>1?1:h;
+    const dx=_ap.x-_ab.x*h,dy=_ap.y-_ab.y*h,dz=_ap.z-_ab.z*h,d=Math.sqrt(dx*dx+dy*dy+dz*dz);
+    const sc=d-Math.max(.015,g.ra+(g.rb-g.ra)*h);
+    if(sc<bs){bs=sc;best=g;bh=h;}
+  }
+  return {seg:best,score:bs,h:bh,s:best?best.sA+(best.sB-best.sA)*bh:0,tube:best?best.tube:null};
+}
+function constrain(p,vel){
+  const L=locate(p);
+  if(L.seg&&L.score>0){
+    const g=L.seg;_ab.subVectors(g.b,g.a);_ax.copy(g.a).addScaledVector(_ab,L.h);
+    const R=Math.max(.015,g.ra+(g.rb-g.ra)*L.h);_ap.subVectors(p,_ax);const d=_ap.length();
+    if(d>1e-6){_ap.multiplyScalar(1/d);p.copy(_ax).addScaledVector(_ap,R);if(vel){const vn=vel.dot(_ap);if(vn>0)vel.addScaledVector(_ap,-vn);}}
+  }
+  return L;
+}
+const AO_IN=TUB.aorta.S[0].p;
+function crossesClosed(La,Lb){
+  if(!La||!Lb||!La.tube||!Lb.tube)return false;
+  if(P&&P.stuck&&(Lb.tube!==P.stuckT||Math.abs(Lb.s-P.stuckS)>.2))return true;
+  const sh=g=>g.open<.35;
+  if(La.tube===Lb.tube){for(const g of La.tube.gates)if(sh(g)&&(La.s-g.s)*(Lb.s-g.s)<0)return true;return false;}
+  // 左心室と大動脈の行き来は大動脈弁を通る
+  const g=G.aortic;if(sh(g)){
+    if(La.tube===TUB.lh&&Lb.tube===TUB.aorta&&Lb.s>g.s)return true;
+    if(La.tube===TUB.aorta&&Lb.tube===TUB.lh&&La.s>g.s)return true;}
+  return false;
+}
+
+/* ---------- 毛細血管（つなぎ目） ---------- */
+const CAP={
+ lungR:{n:'肺の毛細血管（右肺）',out:'paR',in:'pvR',set:.98,d:'肺胞を包む網の目。壁の厚さは約0.5μmで、二酸化炭素を出して酸素を受け取る。赤血球が通り抜けるのは約0.75秒。'},
+ lungL:{n:'肺の毛細血管（左肺）',out:'paL',in:'pvL',set:.98,d:'左肺は心臓があるぶん右肺より少し小さい（右3葉・左2葉）。ここでも二酸化炭素を出して酸素を受け取る。'},
+ brain:{n:'脳の毛細血管',out:'car',in:'jug',dso2:-.33,d:'脳は体重の約2%なのに、心臓が送る血液の約15%を使う。血液脳関門があり、通れる物質が厳しく選ばれる。'},
+ kidney:{n:'腎臓の糸球体と毛細血管',out:'rena',in:'renv',dso2:-.08,d:'糸球体で血漿の約20%がこされて原尿になる（尿の旅はここから始まる）。流れる量が多く、酸素はあまり使わない。'},
+ gut:{n:'腸の毛細血管（絨毛）',out:'sma',in:'portal',dso2:-.2,d:'小腸の絨毛で吸収された糖やアミノ酸、アルコールを受け取る。この血液は心臓へ戻る前に、門脈で肝臓へ向かう。'},
+ liver:{n:'肝臓の類洞',out:'portal',in:'hepv',dso2:-.15,d:'門脈と肝動脈の血液が混ざって流れる、すき間の多い特別な毛細血管。栄養をたくわえ、アルコールや薬を分解する。'},
+ leg:{n:'脚の筋肉の毛細血管',out:'aorta',in:'femv',dso2:-.25,dEx:-.5,d:'安静時は毛細血管の一部しか開いていない。運動すると一斉に開き、筋肉がずっと多くの酸素を使う。'}
+};
+
+/* ---------- 順路（右心房から1周） ---------- */
+function projectOnRoute(R,p,around){
+  let bd=Infinity,s=around;
+  for(const q of R.pts){if(Math.abs(q.L-around)>6)continue;const d=q.p.distanceToSquared(p);if(d<bd){bd=d;s=q.L;}}
+  return s;
+}
+const RA_PT=V3(-3,-30,1.5),LV_MID=V3(3.6,-33.8,1.3);
+const BRANCH={brain:TUB.car.S[0].p,kidney:TUB.rena.S[0].p,gut:TUB.sma.S[0].p};
+function buildRoute(side,dest){
+  const spec=[['rh',RA_PT,null],['pa'+side,null,null],['pv'+side,null,null,'lung'+side],['lh',TUB['pv'+side].S[TUB['pv'+side].S.length-1].p,LV_MID],['aorta',null,dest==='leg'?null:BRANCH[dest]]];
+  if(dest==='brain')spec.push(['car',null,null],['jug',null,null,'brain'],['rh',null,RA_PT]);
+  if(dest==='kidney')spec.push(['rena',null,null],['renv',null,null,'kidney'],['ivc',TUB.renv.S[TUB.renv.S.length-1].p,null]);
+  if(dest==='gut')spec.push(['sma',null,null],['portal',null,null,'gut'],['hepv',null,null,'liver'],['ivc',TUB.hepv.S[TUB.hepv.S.length-1].p,null]);
+  if(dest==='leg')spec.push(['femv',null,null,'leg'],['ivc',null,null]);
+  const P=[];let lastPt=null;
+  spec.forEach(([tid,from,to,portal],si)=>{const T=TUB[tid],nx=spec[si+1];
+    // 次の管へ乗り移る点で切る（行き過ぎて折り返すと順路が詰まる）
+    const i0=from?nearestIdx(T,from):(lastPt&&!portal?nearestIdx(T,lastPt):0);
+    const i1=to?nearestIdx(T,to):(nx&&!nx[3]?nearestIdx(T,nx[1]||TUB[nx[0]].S[0].p):T.S.length-1);
+    let first=true;
+    for(let i=i0;i<=i1;i+=3){const sm=T.S[i];P.push({p:sm.p,r:sm.r,T,i,reg:sm.reg,gate:T.gates.find(g=>Math.abs(sm.s-g.s)<.16),portal:first&&portal?portal:null});first=false;}
+    lastPt=P[P.length-1].p;});
+  let L=0;P.forEach((q,k)=>{if(k&&!q.portal)L+=q.p.distanceTo(P[k-1].p);else if(k)L+=.01;q.L=L;});
+  return {side,dest,pts:P,L,fwd:'流れに乗って',rev:'さかのぼる'};
+}
+const DESTS=['brain','kidney','gut','leg'],DEST_N={brain:'脳',kidney:'腎臓',gut:'腸と肝臓',leg:'脚',auto:'おまかせ'};
+const ROUTES=[];for(const side of ['R','L'])for(const d of DESTS)ROUTES.push(buildRoute(side,d));
+const routeOf=(side,d)=>ROUTES.find(R=>R.side===side&&R.dest===d);
+function routeAt(R,s){
+  s=clamp(s,0,R.L);let lo=0,hi=R.pts.length-1;
+  while(hi-lo>1){const m=(lo+hi)>>1;if(R.pts[m].L<s)lo=m;else hi=m;}
+  const a=R.pts[lo],b=R.pts[hi];if(b.portal)return {p:a.p.clone(),r:a.r};
+  const f=clamp((s-a.L)/Math.max(1e-6,b.L-a.L),0,1);
+  return {p:a.p.clone().lerp(b.p,f),r:a.r+(b.r-a.r)*f};
+}
+function nearestOnRoutes(p,pref){
+  let best=null;
+  ROUTES.forEach(R=>{for(const q of R.pts){const d=q.p.distanceTo(p)-(pref&&R.dest===pref?.3:0);if(!best||d<best.d)best={R,s:q.L,d};}});
+  if(best)best.d=routeAt(best.R,best.s).p.distanceTo(p);
+  return best;
+}
+
+/* ---------- あなたと体の状態 ---------- */
+const MATS={
+ rbc:{n:'赤血球',d:'直径約8μm、真ん中がくぼんだ円盤。ヘモグロビンで酸素を運ぶ。肺で明るい赤に、全身で酸素を渡すと暗い赤になる。寿命は約120日。'},
+ clot:{n:'血栓（脚の静脈）',d:'長く座っていて脚の静脈にできた血のかたまり（約8mm）。流れに乗って心臓を通り、肺動脈に詰まると肺塞栓症になる。急な息苦しさや胸の痛みは、すぐ救急へ。'},
+ cath:{n:'カテーテル',d:'足の付け根の動脈から入れる細い管。血液の流れと逆向きに大動脈をさかのぼり、弁を押し広げて心臓の中へ。'}
+};
+const ENTRIES={femv:['脚の静脈','大腿静脈から。静脈血（酸素少なめ）'],ra:['右心房','心臓の入口から'],femart:['脚の動脈','大腿動脈から（カテーテル検査と同じ入口）']};
+const ACTS={rest:['安静','心拍 約65回/分、血圧 約120/75'],ex:['運動中','心拍 約140回/分、脚の筋肉が酸素を大量に使う']};
+const SIM={on:false,t:0,phase:0,hr:65,hrT:65,spo2:.98,ex:false,beats:0,s1T:9,s2T:9,ecg:[],ecgT:0,capT:0,hintT:0,destSel:'auto'};
+let P=null;
+const so2Color=s=>mixc([.38,.04,.1],[.86,.08,.06],clamp((s-.6)/.38,0,1));
+const so2Name=s=>s>.94?'動脈血（明るい赤）':s>.8?'混ざった血':'静脈血（暗い赤）';
+function heartWave(ph){ // 弁と心臓の動き
+  const vs=ph>=.12&&ph<.5?Math.sin(Math.PI*(ph-.12)/.38):0;
+  const as=ph<.12?Math.sin(Math.PI*ph/.12):0;
+  const aw=ph>=.15&&ph<.6?Math.sin(Math.PI*(ph-.15)/.45):0;
+  return {vs,as,aw,avOpen:ph>=.5||ph<.12,slOpen:ph>=.17&&ph<.45};
+}
+function ecgAt(ph){
+  const g=(c,w,a)=>a*Math.exp(-Math.pow((ph-c)/w,2));
+  return g(.06,.025,.15)-g(.115,.006,.12)+g(.125,.008,1)-g(.135,.007,.25)+g(.36,.045,.3);
+}
+
+/* ---------- 操作の状態 ---------- */
+let mode='demo',control='free',guideDir=1,autoOn=false,orbitOn=false,inBody=true;
+let speedMul=1,lastLook=-1e9;
+const guide={R:ROUTES[0],s:0};
+const vel=V3(0,0,0),keys={};
+let lookDX=0,lookDY=0,wheel=0;
+const stick={x:0,y:0};
+let loc=null,curReg='';
+const orbit={yaw:.6,pitch:.1,dist:150,target:V3(0,-50,0)};
+
+function teleportTo(T,i,rev){
+  const sm=T.S[i];camera.position.copy(sm.p);
+  const dir=sm.T.clone().multiplyScalar(rev?-1:1);
+  camera.up.set(0,1,0);if(Math.abs(dir.y)>.9)camera.up.set(0,0,1);
+  camera.lookAt(sm.p.clone().add(dir));vel.set(0,0,0);inBody=true;addTrail(sm.p,true);
+}
+const defaultDir=()=>P&&P.mat===MATS.cath?-1:1;
+function setControl(c,dir){
+  if(c==='guide'){
+    const n=nearestOnRoutes(camera.position,P&&P.dest);
+    if(!inBody||!n||n.d>2){toast('ここからは順路に乗れない');control='free';autoOn=false;updateButtons();return false;}
+    guide.R=n.R;guide.s=n.s;control='guide';guideDir=dir;vel.set(0,0,0);
+  }else{control='free';autoOn=false;}
+  updateButtons();return true;
+}
+const dirName=()=>guideDir>0?'流れに乗って':'さかのぼる';
+function cycleGuide(){
+  if(mode!=='play')return;
+  const d0=defaultDir();
+  if(control==='free'){if(setControl('guide',d0))toast(`順路モード（${dirName()}）: W を押し続けると進む`);}
+  else if(guideDir===d0){guideDir=-d0;guide.s=projectOnRoute(guide.R,camera.position,guide.s);toast(`向きを反転（${dirName()}）`);updateButtons();}
+  else{setControl('free');toast('順路モードをオフ（自由移動）');}
+}
+function toggleAuto(){
+  if(mode!=='play')return;
+  if(autoOn){autoOn=false;updateButtons();toast('自動航行をオフ');return;}
+  if(control!=='guide'&&!setControl('guide',defaultDir()))return;
+  autoOn=true;updateButtons();toast(`自動航行（${dirName()}）`);
+}
+function updateButtons(){
+  $('btnGuide').innerHTML=(control==='guide'?`順路: ${dirName()}`:'順路: オフ')+'<kbd>G</kbd>';
+  $('btnGuide').classList.toggle('on',control==='guide');
+  $('btnAuto').classList.toggle('on',autoOn);
+  $('btnOrbit').classList.toggle('on',orbitOn);
+  $('btnTps').classList.toggle('on',tps);
+  $('btnEx').classList.toggle('on',SIM.ex);$('btnEx').innerHTML=(SIM.ex?'休む':'運動する')+'<kbd>M</kbd>';
+  $('btnDest').innerHTML=`行き先: ${DEST_N[SIM.destSel]}<kbd>N</kbd>`;
+  document.body.classList.toggle('tps',tps);
+  document.body.classList.toggle('orbit',orbitOn);
+}
+
+/* ---------- 開始画面 ---------- */
+function buildOpts(box,name,obj,def){
+  box.innerHTML='';
+  for(const k in obj){const o=obj[k],id=name+'-'+k;
+    const lbl=Array.isArray(o)?o[0]:o.n,desc=Array.isArray(o)?o[1]:o.d;
+    box.insertAdjacentHTML('beforeend',`<div class="opt"><input type="radio" name="${name}" id="${id}" value="${k}" ${k===def?'checked':''}><label for="${id}"><b>${lbl}</b><span>${desc}</span></label></div>`);}
+}
+buildOpts($('optMat'),'mat',MATS,'rbc');
+buildOpts($('optEntry'),'entry',ENTRIES,'femv');
+buildOpts($('optAct'),'act',ACTS,'rest');
+$('optMat').addEventListener('change',()=>{const m=document.querySelector('input[name=mat]:checked').value;$('entry-'+(m==='cath'?'femart':'femv')).checked=true;});
+const val=n=>document.querySelector(`input[name=${n}]:checked`).value;
+$('startForm').addEventListener('submit',e=>{e.preventDefault();begin(val('mat'),val('entry'),val('act'));});
+
+function begin(matKey,entry,act){
+  const m=MATS[matKey];m.id=matKey;
+  P={mat:m,entry,so2:entry==='femart'?.98:.72,laps:0,dist:0,organs:[],capLog:[],size:matKey==='clot'?8:0,stuck:false,lysis:0,lapStart:0,lapTimes:[],dest:null,side:'R'};
+  Object.assign(SIM,{on:true,t:0,phase:.6,hr:act==='ex'?140:65,hrT:act==='ex'?140:65,spo2:.98,ex:act==='ex',beats:0,ecg:[],capT:0,hintT:0});
+  GATES.forEach(g=>{g.open=g.target=0;});
+  trailN=0;trailGeo.setDrawRange(0,0);trailLast=null;
+  if(entry==='ra')teleportTo(TUB.rh,nearestIdx(TUB.rh,RA_PT));
+  else if(entry==='femart'){const T=TUB.aorta;teleportTo(T,T.S.length-12,true);}
+  else teleportTo(TUB.femv,Math.round(1/TUB.femv.def.ds));
+  mode='play';control='free';autoOn=false;orbitOn=false;guideDir=1;
+  $('start').hidden=true;$('result').hidden=true;$('side').hidden=false;
+  $('meName').textContent=m.n;
+  updateSegR();loc=locate(camera.position);
+  tps=m!==MATS.cath;tpsPos.copy(camera.position);
+  P.dest=pickDest();
+  setControl('guide',defaultDir());
+  updateButtons();
+  toast(`${m.n}として${ENTRIES[entry][0]}から入った。順路モード（${dirName()}）: W を押し続けると進む · 弁が閉じている間は待つ`);
+}
+function pickDest(){if(SIM.destSel!=='auto')return SIM.destSel;const i=P?P.laps%4:0;return DESTS[i];}
+function showStart(){mode='demo';$('start').hidden=false;$('result').hidden=true;$('side').hidden=true;SIM.on=false;P=null;orbitOn=false;
+  guide.R=routeOf('R','brain');guide.s=0;control='guide';guideDir=1;autoOn=true;teleportTo(TUB.rh,nearestIdx(TUB.rh,RA_PT));updateButtons();}
+$('btnMenu').onclick=showStart;
+$('btnSpeed').onclick=()=>{speedMul=speedMul===1?3:1;$('btnSpeed').textContent='速さ ×'+speedMul;};
+$('btnAuto').onclick=()=>toggleAuto();
+$('btnGuide').onclick=()=>cycleGuide();
+$('btnOrbit').onclick=()=>toggleOrbit();
+$('btnTps').onclick=()=>toggleTps();
+$('btnEx').onclick=()=>toggleEx();
+$('btnDest').onclick=()=>cycleDest();
+$('btnSum').onclick=()=>{if(mode==='play')showResult();};
+$('btnLysis').onclick=()=>lysis();
+$('sideToggle').onclick=()=>$('side').classList.toggle('open');
+$('resAgain').onclick=showStart;
+$('resBack').onclick=()=>{$('result').hidden=true;if(P&&!P.done)mode='play';};
+function toggleOrbit(){if(mode==='demo')return;orbitOn=!orbitOn;updateButtons();if(orbitOn)toast('外観ビュー: ドラッグで回転、ホイールで拡大。光る点があなたの位置');}
+function toggleTps(){if(mode!=='play')return;tps=!tps;tpsPos.copy(camera.position);updateButtons();toast(tps?'三人称視点':'一人称視点');}
+function toggleEx(){if(mode!=='play')return;SIM.ex=!SIM.ex;SIM.hrT=SIM.ex?140:65;updateButtons();
+  toast(SIM.ex?'運動を始めた。心拍が上がり、心臓が送る血液は安静時の4〜5倍に。脚の筋肉の毛細血管が一斉に開く':'休んだ。心拍がゆっくり戻っていく');}
+function cycleDest(){const k=['auto',...DESTS];SIM.destSel=k[(k.indexOf(SIM.destSel)+1)%k.length];updateButtons();
+  if(P){P.dest=pickDest();if(control==='guide'&&guide.R.dest!==P.dest)retarget();}toast(`次の行き先: ${DEST_N[SIM.destSel]}`);}
+function retarget(){ // 大動脈の分岐より手前なら、行き先の順路に乗り換える
+  const R2=routeOf(guide.R.side,P.dest);const s2=projectOnRoute(R2,camera.position,guide.s);
+  if(routeAt(R2,s2).p.distanceTo(camera.position)<1.2){guide.R=R2;guide.s=s2;}
+}
+function lysis(){if(!P||!P.stuck||P.lysis)return;P.lysis=.001;toast('血栓を溶かす薬（t-PA）を点滴した。プラスミンが働いてフィブリンの網がほどけていく');}
+
+/* ---------- 入力 ---------- */
+addEventListener('keydown',e=>{
+  if(e.target&&e.target.tagName==='INPUT')return;
+  if(e.code==='Space'){e.preventDefault();if(document.activeElement)document.activeElement.blur();if(!e.repeat)toggleAuto();return;}
+  const once={KeyG:cycleGuide,KeyV:toggleOrbit,KeyT:toggleTps,KeyM:toggleEx,KeyN:cycleDest}[e.code];
+  if(once){if(!e.repeat)once();return;}
+  if(e.code.startsWith('Arrow'))e.preventDefault();
+  keys[e.code]=true;
+  if(autoOn&&['KeyW','KeyS'].includes(e.code)){autoOn=false;updateButtons();}
+});
+addEventListener('keyup',e=>{keys[e.code]=false;});
+addEventListener('blur',()=>{for(const k in keys)keys[k]=false;});
+let drag=null;
+canvas.addEventListener('pointerdown',e=>{drag={id:e.pointerId,x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;lookDX+=e.clientX-drag.x;lookDY+=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;lastLook=performance.now();});
+const endDrag=e=>{if(drag&&drag.id===e.pointerId)drag=null;};
+canvas.addEventListener('pointerup',endDrag);canvas.addEventListener('pointercancel',endDrag);
+canvas.addEventListener('wheel',e=>{e.preventDefault();if(orbitOn){orbit.dist=clamp(orbit.dist*(1+Math.sign(e.deltaY)*.1),15,400);return;}wheel+=-Math.sign(e.deltaY);if(autoOn){autoOn=false;updateButtons();}},{passive:false});
+const stickEl=$('stick'),knob=$('knob');let stickId=null;
+function stickMove(e){const r=stickEl.getBoundingClientRect();let x=(e.clientX-r.left-r.width/2)/(r.width/2),y=(e.clientY-r.top-r.height/2)/(r.height/2);
+  const l=Math.hypot(x,y);if(l>1){x/=l;y/=l;}stick.x=x;stick.y=y;knob.style.transform=`translate(${x*37}px,${y*37}px)`;}
+stickEl.addEventListener('pointerdown',e=>{stickId=e.pointerId;stickEl.setPointerCapture(e.pointerId);stickMove(e);if(autoOn){autoOn=false;updateButtons();}});
+stickEl.addEventListener('pointermove',e=>{if(e.pointerId===stickId)stickMove(e);});
+const stickEnd=e=>{if(e.pointerId!==stickId)return;stickId=null;stick.x=stick.y=0;knob.style.transform='';};
+stickEl.addEventListener('pointerup',stickEnd);stickEl.addEventListener('pointercancel',stickEnd);
+let toastT=0;
+function toast(t){if(mode==='demo')return;const el=$('toast');el.textContent=t;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),4200);}
+
+/* ---------- 地図 ---------- */
+const mapC=$('map'),mctx=mapC.getContext('2d');
+const MB={x0:-10,x1:10,y0:-114,y1:8};
+let mapBg=null,mScale=1,mOx=0,mOy=0;
+function mapSetup(){
+  const dpr=Math.min(2,window.devicePixelRatio||1),w=mapC.clientWidth,h=mapC.clientHeight;if(!w)return;
+  mapC.width=w*dpr;mapC.height=h*dpr;
+  mScale=Math.min(w/(MB.x1-MB.x0),h/(MB.y1-MB.y0));
+  mOx=w/2;mOy=(h-(MB.y1-MB.y0)*mScale)/2+MB.y1*mScale;
+  mapBg=document.createElement('canvas');mapBg.width=mapC.width;mapBg.height=mapC.height;
+  const x=mapBg.getContext('2d');x.scale(dpr,dpr);x.lineCap='round';x.lineJoin='round';
+  for(const T of tubes){
+    x.strokeStyle=VEINS.has(T.id)?'#8fa8ff':T.id==='rh'||T.id==='lh'?'#fff2ee':T.id.startsWith('pa')?'#c79ad6':'#ff6b5e';x.globalAlpha=.6;
+    for(let i=0;i<T.S.length-4;i+=4){const a=T.S[i],b=T.S[i+4];x.lineWidth=Math.max(1,2*a.r*mScale);x.beginPath();x.moveTo(mOx+a.p.x*mScale,mOy-a.p.y*mScale);x.lineTo(mOx+b.p.x*mScale,mOy-b.p.y*mScale);x.stroke();}
+  }
+}
+function drawMap(){
+  if(!mapBg)return;const w=mapC.clientWidth;
+  mctx.setTransform(1,0,0,1,0,0);mctx.clearRect(0,0,mapC.width,mapC.height);mctx.drawImage(mapBg,0,0);
+  const dpr=mapC.width/w;mctx.setTransform(dpr,0,0,dpr,0,0);
+  const p=camera.position,px=mOx+p.x*mScale,py=mOy-p.y*mScale;
+  mctx.fillStyle='#fff2ee';mctx.beginPath();mctx.arc(px,py,3,0,TAU);mctx.fill();
+  mctx.strokeStyle='rgba(255,242,238,.5)';mctx.beginPath();mctx.arc(px,py,6+2*Math.sin(performance.now()/300),0,TAU);mctx.stroke();
+}
+mapC.addEventListener('pointerdown',e=>{
+  if(mode!=='play')return;
+  if(P.mat!==MATS.cath){toast('地図で移動できるのはカテーテルだけ');return;}
+  const r=mapC.getBoundingClientRect(),wx=(e.clientX-r.left-mOx)/mScale,wy=-(e.clientY-r.top-mOy)/mScale;
+  let best=null,bd=Infinity;
+  for(const T of tubes)for(let i=0;i<T.S.length;i+=2){const s=T.S[i];if(s.r<.25)continue;const d=Math.hypot(s.p.x-wx,s.p.y-wy);if(d<bd){bd=d;best=[T,i];}}
+  if(!best)return;
+  setControl('free');orbitOn=false;updateButtons();teleportTo(best[0],best[1]);
+  toast(REG[best[0].S[best[1]].reg].n+'へ移動');
+});
+
+/* ---------- 毛細血管を通る ---------- */
+let capHideT=0;
+function passCapillary(key){
+  const c=CAP[key],before=P.so2;
+  if(c.set)P.so2=Math.min(c.set,SIM.spo2);
+  else P.so2=clamp(P.so2+(SIM.ex&&c.dEx?c.dEx:c.dso2),.2,1);
+  P.capLog.push([c.n,before,P.so2]);if(!P.organs.includes(c.n))P.organs.push(c.n);
+  $('capName').textContent=c.n;$('capText').textContent=c.d;
+  $('capSo2').textContent=`酸素飽和度 ${Math.round(before*100)}% → ${Math.round(P.so2*100)}%`;
+  $('cap').classList.add('show');clearTimeout(capHideT);capHideT=setTimeout(()=>$('cap').classList.remove('show'),2400);
+  SIM.capT=1.6;addTrail(camera.position,true);
+}
+
+/* ---------- 弁と体の反応 ---------- */
+function heartLogic(dtR){
+  SIM.hr+=(SIM.hrT+(P&&P.stuck&&!P.lysis?30:0)-SIM.hr)*Math.min(1,dtR*.4);
+  const prev=SIM.phase;SIM.phase=(SIM.phase+dtR*SIM.hr/60)%1;
+  if(SIM.phase<prev)SIM.beats++;
+  const hw=heartWave(SIM.phase);
+  U.uVent.value=1-.24*hw.vs;U.uAtr.value=1-.1*hw.as;U.uArt.value=hw.aw;
+  if((prev<.12&&SIM.phase>=.12))SIM.s1T=0;if(prev<.45&&SIM.phase>=.45)SIM.s2T=0;
+  SIM.s1T+=dtR;SIM.s2T+=dtR;
+  const cath=P&&P.mat===MATS.cath,pushing=keys.KeyW||stick.y<-.3||(control==='guide'&&autoOn);
+  GATES.forEach(g=>{
+    if(g.kind==='av')g.target=hw.avOpen?1:0;
+    else if(g.kind==='sl')g.target=hw.slOpen?1:0;
+    else g.target=(control==='guide'?guideDir>0:true)?(.6+.4*hw.aw):0; // 静脈弁は逆向きには開かない
+    if(cath&&inBody&&loc&&((loc.tube===g.T&&Math.abs(loc.s-g.s)<1.2)||camera.position.distanceTo(g.p)<1.4)&&pushing){g.push=(g.push||0)+dtR;if(g.push>.6){g.hold=1.5;if(!g.told){g.told=true;toast(`${g.name}をカテーテルで押し広げて通過`);}}}else g.push=0;
+    g.hold=(g.hold||0)-dtR;if(g.hold>0)g.target=1;
+    g.open+=(g.target-g.open)*Math.min(1,dtR*14);
+  });
+  // 血栓が肺動脈に詰まる
+  if(P&&P.mat===MATS.clot&&!P.stuck&&inBody&&loc&&/^pa[RL]$/.test(loc.tube.id)&&loc.s>loc.tube.L*.55&&!P.lysis){
+    P.stuck=true;P.stuckT=loc.tube;P.stuckS=loc.s;setControl('free');vel.set(0,0,0);
+    toast('血栓が肺動脈に詰まった（肺塞栓症）。この先の肺に血が流れず、息苦しさ・胸の痛み・脈が速くなる。命にかかわる → 血栓を溶かす薬');}
+  if(P&&P.mat===MATS.clot){
+    SIM.spo2+=((P.stuck&&!P.lysis?.85:.98)-SIM.spo2)*Math.min(1,dtR*.3);P.spo2Min=Math.min(P.spo2Min||1,SIM.spo2);
+    if(P.lysis){P.lysis+=dtR/6;P.size=Math.max(0,8*(1-P.lysis));if(P.lysis>=1&&!P.done){P.done=true;P.stuck=false;showResult('lysis');}}
+  }
+  $('btnLysis').hidden=!(P&&P.stuck&&!P.lysis);
+  SIM.hintT-=dtR;
+  if(SIM.hintT<=0&&inBody&&loc&&loc.tube&&P)for(const g of loc.tube.gates){
+    if(g.open<.3&&Math.abs(loc.s-g.s)<.9&&g.kind!=='ven'){toast(cath?`${g.name}は閉じている。W で押し続けると通れる`:`${g.name}が閉じている。次の拍動で開くまで待つ（${g.kind==='av'?'心室がゆるむ拡張期':'心室が縮む収縮期'}に開く）`);SIM.hintT=6;break;}
+  }
+}
+
+/* ---------- 道しるべ ---------- */
+const SIGNS=[
+ {p:[-2.9,-26.6,1.3],k:'ven',t:'上大静脈 → 右心房',s:'頭と腕から戻った血液'},
+ {p:[-2.8,-33,1.4],k:'ven',t:'下大静脈の入口',s:'体の下半分から戻った血液'},
+ {p:[-2.4,-32,2.3],k:'heart',t:'三尖弁 → 右心室',s:'心室がゆるむと開く'},
+ {p:[1.2,-31.5,5.5],k:'heart',t:'肺動脈弁 → 肺へ',s:'心室が縮むと開く'},
+ {p:[2.7,-27,4.2],k:'',t:'肺動脈の分かれ道',s:'右肺・左肺へ'},
+ {p:[-6.6,-28.4,-1.3],k:'',t:'→ 肺の毛細血管',s:'この先で二酸化炭素を出し、酸素を受け取る'},
+ {p:[7,-28.4,-1.2],k:'',t:'→ 肺の毛細血管',s:'この先で二酸化炭素を出し、酸素を受け取る'},
+ {p:[1.5,-29.2,-1.5],k:'heart',t:'左心房',s:'4本の肺静脈が入る'},
+ {p:[2.2,-31.2,-.6],k:'heart',t:'僧帽弁 → 左心室',s:'2枚の弁'},
+ {p:[2.8,-32.8,2.4],k:'heart',t:'大動脈弁 → 全身へ',s:'心室が縮むと開く'},
+ {p:[.6,-23.2,.2],k:'',t:'大動脈弓の分かれ道',s:'上へ: 頭（総頸動脈） / 後ろへ: 下行大動脈'},
+ {p:[1.3,-45.2,-3.2],k:'',t:'上腸間膜動脈の分かれ道',s:'前へ: 腸 / 下へ: 腹部大動脈'},
+ {p:[1,-49.6,-3.4],k:'',t:'腎動脈の分かれ道',s:'右へ: 腎臓'},
+ {p:[.2,4.4,-1.8],k:'',t:'→ 脳の毛細血管',s:''},
+ {p:[-5.2,-50.9,-5.3],k:'',t:'→ 腎臓の糸球体',s:''},
+ {p:[.25,-60.4,3.5],k:'',t:'→ 腸の毛細血管',s:''},
+ {p:[-5.4,-46.8,.9],k:'ven',t:'→ 肝臓の類洞',s:''},
+ {p:[-5.5,-110,3.3],k:'',t:'→ 脚の筋肉の毛細血管',s:''},
+ {p:[-3.9,-99.5,2.6],k:'ven',t:'静脈弁',s:'逆流を防ぐ'},
+ {p:[-2.2,-44,-2.3],k:'ven',t:'肝静脈の合流',s:''},
+ {p:[-2,-51.4,-3],k:'ven',t:'腎静脈の合流',s:''}
+].map(o=>Object.assign(o,{v:V3(...o.p)}));
+const ORBIT_LABELS=[[0,-36,6,'心臓'],[-8,-24,-1,'右肺'],[8,-24,-1,'左肺'],[1,10,-1,'脳'],[-9,-44,0,'肝臓'],[-8,-53,-5,'右腎'],[3,-66,4,'腸'],[-6,-115,3,'脚の筋肉'],[3.5,-60,-3,'大動脈'],[-4,-62,-2.5,'下大静脈']]
+  .map(([x,y,z,t])=>({v:V3(x,y,z),t,orbit:true}));
+const signBox=$('signs');
+[...SIGNS,...ORBIT_LABELS].forEach(o=>{const el=document.createElement('div');el.className='sign '+(o.orbit?'big':o.k);el.innerHTML=`<b>${o.t}</b>`+(o.s?`<span>${o.s}</span>`:'');el.hidden=true;signBox.appendChild(el);o.el=el;});
+const _pv=V3(0,0,0);
+function updateSigns(rc){
+  const W=innerWidth,H=innerHeight,c=camera.position,show=mode!=='demo';
+  for(const o of SIGNS){
+    let vis=false;
+    if(show&&!orbitOn&&inBody){const d=o.v.distanceTo(c);
+      if(d<5&&o.tube===undefined){const L=locate(o.v);o.tube=L.score<.6?L.tube:null;}
+      if(d<5&&d>.2&&(d<1.6||!loc||o.tube===loc.tube)){_pv.copy(o.v).project(rc);if(_pv.z<1&&Math.abs(_pv.x)<1.1&&Math.abs(_pv.y)<1.1){vis=true;
+        o.el.style.transform=`translate(${(_pv.x*.5+.5)*W}px,${(-_pv.y*.5+.5)*H}px) translate(-50%,-100%)`;o.el.style.opacity=clamp((5-d)/1.8,0,1);}}}
+    o.el.hidden=!vis;
+  }
+  for(const o of ORBIT_LABELS){
+    let vis=false;
+    if(orbitOn){_pv.copy(o.v).project(rc);if(_pv.z<1){vis=true;o.el.style.transform=`translate(${(_pv.x*.5+.5)*W}px,${(-_pv.y*.5+.5)*H}px) translate(-50%,-100%)`;}}
+    o.el.hidden=!vis;
+  }
+}
+function aheadInfo(){
+  if(!inBody||mode==='demo'||control!=='guide')return null;
+  const R=guide.R,dir=guideDir,s=projectOnRoute(R,camera.position,guide.s);
+  let lo=0,hi=R.pts.length-1;while(hi-lo>1){const m=(lo+hi)>>1;if(R.pts[m].L<s)lo=m;else hi=m;}
+  const out=[],seen=new Set();let reg=R.pts[lo].reg;
+  for(let k=dir>0?hi:lo;k>=0&&k<R.pts.length&&out.length<4;k+=dir){
+    const q=R.pts[k],dist=Math.abs(q.L-s);
+    if(q.portal&&dir>0){out.push({cap:CAP[q.portal].n,dist});}
+    if(q.gate&&!seen.has(q.gate)){seen.add(q.gate);out.push({gate:q.gate,dist});}
+    if(q.reg!==reg&&REG[q.reg].n!==REG[reg].n){reg=q.reg;out.push({reg,dist});}
+  }
+  return {out,R,dir};
+}
+let aheadT=0;
+function updateAhead(now){
+  if(now-aheadT<300)return;aheadT=now;
+  const a=aheadInfo(),el=$('ahead');
+  if(!a){el.innerHTML='';return;}
+  const cm=d=>d<1?'すぐ':Math.round(d)+'cm';
+  const parts=a.out.map(o=>o.gate?`<span class="st gate ${o.gate.open>.5?'open':''}">${o.gate.name}<em>${cm(o.dist)}</em></span>`
+    :o.cap?`<span class="st">${o.cap}<em>${cm(o.dist)}</em></span>`:`<span class="st">${REG[o.reg].n}<em>${cm(o.dist)}</em></span>`);
+  el.innerHTML=`<span class="lab">この先（${a.dir>0?'行き先: '+DEST_N[a.R.dest]:'さかのぼる'}）</span>`+parts.join('<span class="lab">›</span>');
+}
+
+/* ---------- HUD ---------- */
+function showRegion(key){
+  const R=REG[key],el=$('loc');el.classList.add('swap');
+  setTimeout(()=>{$('locSys').textContent=R.sys;$('locSys').className=R.sys===VEN?'ven':R.sys===HEART?'heart':'';
+    $('locName').textContent=R.n;$('locEn').textContent=R.en;$('locDesc').textContent=R.d;el.classList.remove('swap');},reduceMotion?0:200);
+}
+$('gates').innerHTML=GATES.map(g=>`<li id="gate-${g.id}">${g.name}</li>`).join('');
+let hudT=0,lastPos=V3(0,0,0),spd=0;
+function updateHUD(dt,now){
+  if(!SIM.capT){spd+=(camera.position.distanceTo(lastPos)/Math.max(dt,1e-3)-spd)*Math.min(1,dt*4);}
+  if(P&&mode==='play'&&!SIM.capT)P.dist+=Math.min(camera.position.distanceTo(lastPos),2);
+  lastPos.copy(camera.position);
+  GATES.forEach(g=>$('gate-'+g.id).classList.toggle('open',g.open>.5));
+  $('s1').style.opacity=SIM.s1T<.15?1:.25;$('s2').style.opacity=SIM.s2T<.15?1:.25;
+  drawEcg();
+  if(now-hudT<150)return;hudT=now;
+  $('rDia').textContent=!inBody||!loc||!loc.seg?'—':(2*loc.seg.r*10).toFixed(0)+' mm';
+  $('rDist').textContent=control==='guide'?Math.round(projectOnRoute(guide.R,camera.position,guide.s))+' cm（1周 '+Math.round(guide.R.L)+'cm）':'—';
+  $('rSpd').textContent=spd.toFixed(1)+' cm/s';
+  $('rMode').textContent=autoOn?'自動 · '+dirName():control==='guide'?'順路 · '+dirName():'手動';
+  if(!P)return;
+  const ex=SIM.ex;
+  $('bHr').textContent=Math.round(SIM.hr)+' 回/分';
+  $('bBp').textContent=(ex?165:120)+(P.stuck&&!P.lysis?-25:0)+' / '+(ex?78:75)+' mmHg';
+  $('bSpo2').textContent=Math.round(SIM.spo2*100)+'%';$('bSpo2').className=SIM.spo2<.9?'risk3':'';
+  const hw=heartWave(SIM.phase);$('bPhase').textContent=hw.vs>0?'収縮期（心室が縮む）':hw.as>0?'心房が縮む':'拡張期（心室に血がたまる）';
+  $('bTime').textContent=fmtS(SIM.t);
+  const hz=hazard();$('bRisk').textContent=hz[0]?`${['','注意','警告','危険'][hz[0]]} · ${hz[1]}`:'なし';$('bRisk').className='risk'+hz[0];
+  $('meState').textContent=formOf();$('meMass').textContent=subOf();
+  paintSwatch($('swatch'));
+}
+function formOf(){
+  if(P.mat===MATS.rbc)return `酸素飽和度 ${Math.round(P.so2*100)}% · ${so2Name(P.so2)}`;
+  if(P.mat===MATS.clot)return P.stuck?(P.lysis?`溶けている（${P.size.toFixed(1)}mm）`:`肺動脈に詰まっている（${P.size.toFixed(0)}mm）`):`${P.size.toFixed(0)}mm · 流れに乗って移動中`;
+  return '観察中';
+}
+function subOf(){
+  if(P.mat===MATS.rbc)return `周回 ${P.laps} · 次の行き先 ${DEST_N[P.dest]}`;
+  if(P.mat===MATS.clot)return P.stuck?'右心室に負担がかかっている':'右心房 → 右心室 → 肺動脈へ向かう';
+  return `移動 ${Math.round(P.dist)} cm`;
+}
+function colorOf(){return P.mat===MATS.rbc?so2Color(P.so2):P.mat===MATS.clot?[.42,.06,.08]:[.85,.88,.92];}
+function paintSwatch(el,big){
+  const k=big?2:1,c=colorOf(),s=x=>Math.round(x*k)+'px';
+  let w=34,h=34,br='50%',bg=`radial-gradient(circle at 50% 50%, ${css(c.map(v=>v*.7))} 0 22%, ${css(c)} 40% 70%, ${css(c.map(v=>v*.8))} 100%)`;
+  if(P.mat===MATS.clot){w=h=8+P.size*3;br='44% 56% 50% 50% / 58% 44% 56% 42%';bg=`radial-gradient(circle at 35% 30%, rgba(255,255,255,.3), transparent 45%), ${css(c)}`;}
+  if(P.mat===MATS.cath){w=52;h=10;br='5px';bg=`linear-gradient(${css(c)},${css(c.map(v=>v*.7))})`;}
+  el.style.width=s(w);el.style.height=s(h);el.style.borderRadius=br;el.style.background=bg;
+}
+function hazard(){
+  const list=[[0,'なし']];
+  if(SIM.ex)list.push([0,'運動中']);
+  if(P&&P.mat===MATS.clot){if(P.stuck&&!P.lysis)list.push([3,'肺塞栓症']);else if(P.stuck)list.push([2,'治療中']);else list.push([1,'血栓が移動中']);}
+  if(SIM.spo2<.92)list.push([3,'低酸素（動脈血の酸素 '+Math.round(SIM.spo2*100)+'%）']);
+  return list.reduce((a,b)=>b[0]>=a[0]?b:a);
+}
+function drawEcg(){
+  const c=$('ecg'),dpr=Math.min(2,devicePixelRatio||1),w=c.clientWidth,h=c.clientHeight;if(!w||c.closest('[hidden]'))return;
+  if(c.width!==w*dpr){c.width=w*dpr;c.height=h*dpr;}
+  const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);
+  x.strokeStyle='rgba(255,215,210,.08)';x.lineWidth=1;for(let i=0;i<w;i+=12){x.beginPath();x.moveTo(i,0);x.lineTo(i,h);x.stroke();}
+  const E=SIM.ecg;if(E.length<2)return;
+  x.beginPath();E.forEach((v,i)=>{const px=i/(E.length-1)*w,py=h*.7-v*h*.6;i?x.lineTo(px,py):x.moveTo(px,py);});
+  x.strokeStyle='#8fe0a8';x.lineWidth=1.4;x.stroke();
+}
+function showResult(kind){
+  mode='result';autoOn=false;updateButtons();
+  const m=P.mat;let title,rows=[['旅した時間',fmtS(SIM.t)],['進んだ距離',Math.round(P.dist)+' cm'],['心拍の回数',SIM.beats+' 回']],note;
+  if(m===MATS.rbc){
+    title='赤血球の旅のまとめ';
+    rows.push(['周回',P.laps+' 周']);
+    if(P.lapTimes.length)rows.push(['1周の平均',fmtS(P.lapTimes.reduce((a,b)=>a+b,0)/P.lapTimes.length)]);
+    P.capLog.slice(-6).forEach(([n,a,b])=>rows.push([n,`${Math.round(a*100)}% → ${Math.round(b*100)}%`]));
+    note='血液が体を1周するのは安静時で約1分。心臓は1日に約10万回拍動し、約7000Lを送り出す。赤血球は約120日働いたあと、脾臓や肝臓で壊され、ヘモグロビンの色素は胆汁（便の色のもと）になる。';
+  }else if(m===MATS.clot){
+    title=kind==='lysis'?'血栓が溶けた':'血栓の旅のまとめ';
+    rows.push(['詰まった場所',P.stuckT?REG.pa.n+(P.stuckT.id==='paR'?'（右）':'（左）'):'—'],['動脈血の酸素（最低）',Math.round((P.spo2Min||SIM.spo2)*100)+'%']);
+    note='脚の深い静脈にできた血栓が肺に飛ぶのが肺塞栓症（エコノミークラス症候群）。長時間座るときは、ときどき足首を動かし、水分をとることで予防できる。治療には血栓を溶かす薬や、固まりにくくする薬を使う。';
+  }else{
+    title='カテーテル検査のまとめ';
+    rows.push(['通った弁',GATES.filter(g=>g.told).map(g=>g.name).join('、')||'なし']);
+    note='心臓カテーテル検査では、足の付け根や手首の動脈から細い管を心臓まで進め、造影剤で冠動脈を映したり、心臓の中の圧を測ったりする。';
+  }
+  $('resEyebrow').textContent='SUMMARY · '+(m.n);
+  $('resTitle').textContent=title;
+  paintSwatch($('resSwatch'),true);
+  $('resKv').innerHTML=rows.map(([a,b])=>`<dt>${a}</dt><dd>${b}</dd>`).join('');
+  $('resNote').textContent=note;
+  $('resBack').hidden=!!P.done;
+  $('result').hidden=false;
+}
+
+/* ---------- 流れ ---------- */
+function flowVec(){ // 血流（cm/s）。受け身の素材（赤血球・血栓）だけが流される
+  if(!inBody||!loc||!loc.tube||!P||P.stuck||P.mat===MATS.cath)return null;
+  const T=loc.tube,tan=T.S[Math.min(T.S.length-1,loc.seg.i)].T,reg=loc.seg.reg,hw=heartWave(SIM.phase),k=Math.pow(SIM.hr/65,.7);
+  let v=0;
+  if(VEINS.has(T.id))v=5*k;
+  else if(reg==='svc')v=5*k;
+  else if(reg==='ra'||reg==='la'||reg==='tric'||reg==='mitral')v=(hw.avOpen?7:1.5)*k;
+  else if(reg==='rv'||reg==='pvalve')v=hw.slOpen?14*k:0;
+  else if(T===TUB.lh&&(reg==='lv'||reg==='lvot')){
+    if(hw.slOpen)return AO_IN.clone().sub(camera.position).setLength(14*k);
+    v=hw.avOpen?3:0;
+  }
+  else v=(4+12*hw.aw)*k;
+  return v?tan.clone().multiplyScalar(v):null;
+}
+
+/* ---------- ループ ---------- */
+const qTmp=new THREE.Quaternion(),mTmp=new THREE.Matrix4(),AX=V3(1,0,0),AY=V3(0,1,0);
+const inp=V3(0,0,0);
+function applyLook(dt){
+  let yaw=-lookDX*.0035,pitch=-lookDY*.0035;lookDX=lookDY=0;
+  const kr=1.7*dt;
+  if(keys.ArrowLeft)yaw+=kr;if(keys.ArrowRight)yaw-=kr;if(keys.ArrowUp)pitch+=kr;if(keys.ArrowDown)pitch-=kr;
+  if(keys.ArrowLeft||keys.ArrowRight||keys.ArrowUp||keys.ArrowDown)lastLook=performance.now();
+  if(orbitOn){orbit.yaw-=yaw;orbit.pitch=clamp(orbit.pitch-pitch,-1.4,1.4);return;}
+  if(yaw)camera.quaternion.multiply(qTmp.setFromAxisAngle(AY,yaw));
+  if(pitch)camera.quaternion.multiply(qTmp.setFromAxisAngle(AX,pitch));
+  camera.quaternion.normalize();
+}
+function stepFree(dt){
+  if(P&&P.stuck){vel.set(0,0,0);return;}
+  inp.set(0,0,0);
+  if(keys.KeyW)inp.z-=1;if(keys.KeyS)inp.z+=1;if(keys.KeyA)inp.x-=1;if(keys.KeyD)inp.x+=1;if(keys.KeyE)inp.y+=1;if(keys.KeyQ)inp.y-=1;
+  inp.z+=stick.y;inp.x+=stick.x;
+  if(inp.lengthSq()>1)inp.normalize();
+  const r=inBody&&loc&&loc.seg?loc.seg.r:6;
+  const top=3*clamp(r/1.1,.35,2.4)*(keys.ShiftLeft||keys.ShiftRight?3:1)*speedMul;
+  inp.applyQuaternion(camera.quaternion);
+  vel.addScaledVector(inp,top*4*dt);
+  if(wheel){vel.addScaledVector(V3(0,0,-1).applyQuaternion(camera.quaternion),wheel*top*.35);wheel=0;}
+  const fv=flowVec();
+  if(fv){const sp=fv.length(),d=fv.clone().normalize(),cur=vel.dot(d);if(cur<sp)vel.addScaledVector(d,(sp-cur)*Math.min(1,dt*3));}
+  vel.multiplyScalar(Math.exp(-4*dt));
+  const dp=vel.clone().multiplyScalar(dt),n=Math.max(1,Math.ceil(dp.length()/.05));dp.multiplyScalar(1/n);
+  for(let i=0;i<n;i++){
+    const keep=camera.position.clone(),prevL=loc;
+    camera.position.add(dp);
+    const L=constrain(camera.position,vel);if(crossesClosed(prevL,L)){camera.position.copy(keep);vel.set(0,0,0);break;}loc=L;
+  }
+  // 自由移動で動脈の行き止まり（毛細血管の入口）に着いたら静脈へ
+  if(loc&&loc.tube&&loc.tube.def.portalOut&&loc.s>loc.tube.L-.5&&P&&P.mat!==MATS.cath){
+    const key=loc.tube.def.portalOut,T2=TUB[CAP[key].in];passCapillary(key);teleportTo(T2,Math.round(.5/T2.def.ds));loc=locate(camera.position);
+  }
+}
+function stepGuide(dt,now){
+  const R=guide.R,cur=routeAt(R,guide.s);
+  let w=(keys.KeyW?1:0)-(keys.KeyS?1:0)-stick.y+(wheel*.6);wheel=0;
+  if(autoOn)w=1;
+  const base=(mode==='demo'?2.5:3.5)*clamp(cur.r/.8,.6,2.5)*(keys.ShiftLeft||keys.ShiftRight?3:1)*(mode==='demo'?1:speedMul);
+  let ds=guideDir*w*base*dt;
+  if(guideDir>0&&mode==='play'){const f=flowVec();if(f)ds+=f.length()*dt*.6;}
+  const prevS=guide.s;
+  let ns=clamp(guide.s+ds,0,R.L);
+  // 毛細血管のつなぎ目をまたいだら、通過の演出をして静脈側へ移る
+  if(guideDir>0){
+    const q=R.pts.find(q=>q.portal&&q.L>prevS&&q.L<=ns);
+    if(q){if(P&&P.mat===MATS.cath){ns=prevS;toast('カテーテルは毛細血管には入れない');}
+      else{if(P)passCapillary(q.portal);guide.s=q.L+.02;camera.position.copy(q.p);loc=locate(camera.position);addTrail(q.p,true);return;}}
+  }else{
+    const q=R.pts.find(q=>q.portal&&q.L<=prevS&&q.L>ns);
+    if(q){ns=q.L+.02;if(autoOn){autoOn=false;updateButtons();}if(SIM.hintT<=0){toast('毛細血管はさかのぼれない（この縮尺では通れない細さ）');SIM.hintT=5;}}
+  }
+  guide.s=ns;
+  const tgt=routeAt(R,guide.s);
+  const keep=camera.position.clone(),prevL=loc;
+  camera.position.lerp(tgt.p,1-Math.exp(-dt*6));
+  const L=constrain(camera.position,null);
+  if(crossesClosed(prevL,L)){camera.position.copy(keep);guide.s=clamp(prevS-guideDir*Math.max(.03,Math.abs(ds)),0,R.L);}
+  else{loc=L;if(camera.position.distanceTo(tgt.p)>1)guide.s=prevS;}
+  const cs=projectOnRoute(R,camera.position,guide.s);guide.s=clamp(guide.s,cs-1.2,cs+1.2);
+  if(mode==='demo'||now-lastLook>1500){
+    const ahead=routeAt(R,guide.s+guideDir*clamp(tgt.r*2.5,.8,4));
+    const up=V3(0,1,0).applyQuaternion(camera.quaternion);
+    if(ahead.p.distanceToSquared(camera.position)>1e-4){mTmp.lookAt(camera.position,ahead.p,up);qTmp.setFromRotationMatrix(mTmp);camera.quaternion.slerp(qTmp,1-Math.exp(-dt*2.4));}
+  }
+  // 右心房に戻ったら1周。次の行き先の順路へ
+  if(guideDir>0&&guide.s>=R.L-.05){
+    if(P){P.laps++;P.lapTimes.push(SIM.t-P.lapStart);P.lapStart=SIM.t;P.side=P.side==='R'?'L':'R';P.dest=pickDest();toast(`右心房に戻った。1周 ${fmtS(P.lapTimes[P.lapTimes.length-1])}。次は${P.side==='R'?'右':'左'}肺を通って${DEST_N[P.dest]}へ`);}
+    guide.R=routeOf(P?P.side:(R.side==='R'?'L':'R'),P?P.dest:DESTS[(DESTS.indexOf(R.dest)+1)%4]);guide.s=0;
+  }
+  if(guideDir<0&&guide.s<=.05&&autoOn){autoOn=false;updateButtons();}
+}
+let prevT=performance.now(),skipRender=false;
+function frame(now){
+  try{frameBody(now);}catch(err){window.__vdErr=String(err&&err.stack||err);console.error(err);}
+  requestAnimationFrame(frame);
+}
+function frameBody(now){
+  const dt=clamp((now-prevT)/1000,0,.05);prevT=Math.max(prevT,now);
+  U.uTime.value=now/1000;
+  if(mode==='play'||mode==='demo')heartLogic(dt);
+  if(mode==='play')SIM.t+=dt;
+  SIM.ecgT+=dt;if(SIM.ecgT>1/60){SIM.ecgT=0;SIM.ecg.push(ecgAt(SIM.phase));if(SIM.ecg.length>180)SIM.ecg.shift();}
+  updateSegR();
+  applyLook(dt);
+  if(SIM.capT>0)SIM.capT=Math.max(0,SIM.capT-dt);
+  else if(!orbitOn||mode==='demo'){if(control==='guide'&&!(P&&P.stuck))stepGuide(dt,now);else stepFree(dt);}
+  if(!loc)loc=locate(camera.position);
+  let reg=loc&&loc.seg?loc.seg.reg:'outside';
+  if(reg!==curReg){curReg=reg;showRegion(reg);}
+  for(const T of tubes)if(T.gateU)T.gates.forEach((g,i)=>T.gateU[i].set(g.s,g.w,g.open,.93));
+  // 血の色で見え方を変える
+  const so2=P&&P.mat===MATS.rbc?P.so2:(loc&&loc.tube&&(VEINS.has(loc.tube.id)||/^(svc|ra|tric|rv|pvalve|pa)$/.test(reg))?.72:.98);
+  const bc=so2Color(so2),fogC=[bc[0]*.2,bc[1]*.15,bc[2]*.15];
+  if(!orbitOn){U.uFog.value.set(...lin(fogC));renderer.setClearColor(new THREE.Color(...fogC));}
+  else{U.uFog.value.set(...lin(FOG_S));renderer.setClearColor(new THREE.Color(...FOG_S));}
+  $('tint').style.opacity=!orbitOn&&mode!=='demo'?.3:0;$('tint').style.background=css(mixc(bc,[1,1,1],.35));
+  U.uOut.value+=((orbitOn?1:0)-U.uOut.value)*Math.min(1,dt*3);
+  document.body.classList.toggle('outer',orbitOn);
+  organs.forEach(o=>o.visible=orbitOn);
+  marker.visible=trail.visible=orbitOn;
+  if(mode==='play'&&!SIM.capT)addTrail(camera.position);
+  let rc=camera;
+  updateAvatar(dt);
+  if(avatar.visible)rc=tpsCam;
+  if(orbitOn){
+    marker.position.copy(camera.position);
+    const t=orbit.target,cp=Math.cos(orbit.pitch);
+    orbitCam.position.set(t.x+Math.sin(orbit.yaw)*cp*orbit.dist,t.y+Math.sin(orbit.pitch)*orbit.dist,t.z+Math.cos(orbit.yaw)*cp*orbit.dist);
+    orbitCam.lookAt(t);rc=orbitCam;
+  }
+  U.uCam.value.copy(rc.position);
+  const c=camera.position;dust.visible=!orbitOn;
+  const fl=flowVec(),fx=fl?fl.x*now/1000*.3:0,fy=fl?fl.y*now/1000*.3:0,fz=fl?fl.z*now/1000*.3:0;
+  for(let i=0;i<PN;i++){const o=[fx,fy,fz];for(let k=0;k<3;k++){const v=pBase[i*3+k]+o[k]+Math.sin(now/3000+i)*.04;pPos[i*3+k]=c.getComponent(k)-2+(((v-c.getComponent(k))%4)+4)%4;}}
+  pGeo.attributes.position.needsUpdate=true;
+  updateHUD(dt,now);if(skipRender)return;drawMap();updateSigns(rc);updateAhead(now);
+  renderer.render(scene,rc);
+}
+function avatarState(){
+  const m=P.mat,r=loc&&loc.seg?loc.seg.r:.6;
+  if(m===MATS.rbc)return {geo:'rbc',s:[1,1,1],amp:.02,freq:2,wob:1.5,metal:.15,size:Math.min(.22,r*.35)};
+  if(m===MATS.clot)return {geo:'blob',s:[1,.8,1.6],amp:.28,freq:4,wob:0,metal:.1,size:P.size/20};
+  return {geo:'rod',s:[1,1,1],amp:0,freq:1,wob:0,metal:.7,size:Math.min(.5,r*.9)};
+}
+function updateAvatar(dt){
+  const show=tps&&!orbitOn&&mode!=='demo'&&!!P&&!SIM.capT;avatar.visible=show;if(!show)return;
+  const o=avatarState();
+  if(avatar.geometry!==AV_GEO[o.geo])avatar.geometry=AV_GEO[o.geo];
+  avatarSize+=(o.size-avatarSize)*Math.min(1,dt*2);
+  const k=avatarSize,u=avatarMat.uniforms;
+  avatar.scale.set(o.s[0]*k,o.s[1]*k,o.s[2]*k);
+  avatar.position.copy(camera.position);
+  const fwd=V3(0,0,-1).applyQuaternion(camera.quaternion);
+  if(o.geo==='rbc'){avatar.rotateY(dt*.9);avatar.rotateX(dt*.5);}
+  else if(inBody&&loc&&loc.tube){let t=loc.tube.S[Math.min(loc.tube.S.length-1,loc.seg.i)].T.clone();if(t.dot(fwd)<0)t.negate();_q.setFromUnitVectors(_fz,t);avatar.quaternion.slerp(_q,Math.min(1,dt*4));}
+  u.uColor.value.set(...lin(colorOf()));u.uAmp.value=o.amp;u.uFreq.value=o.freq;u.uWob.value=o.wob;u.uMetal.value=o.metal;u.uAlpha.value=1;
+  const up=V3(0,1,0).applyQuaternion(camera.quaternion);
+  const dist=clamp(k*Math.max(o.s[2],1)*(o.geo==='rod'?3:7),.6,5);
+  const want=camera.position.clone().addScaledVector(fwd,-dist).addScaledVector(up,dist*.15);
+  if(loc&&loc.tube){
+    const T=loc.tube,S=T.S,ds=T.def.ds,i0=Math.min(S.length-1,loc.seg.i);
+    const sgn=fwd.dot(S[i0].T)>=0?1:-1;
+    const sb=clamp(loc.s-sgn*dist,0,T.L),sm=S[clamp(Math.round(sb/ds),0,S.length-1)];
+    const off=camera.position.clone().sub(S[i0].p);off.addScaledVector(S[i0].T,-off.dot(S[i0].T));
+    want.copy(sm.p).addScaledVector(off,.35);
+    const lim=sm.r*sm.cf*scaleAt(T,sm.s,sm.vent,sm.atr)*.5;_ap.copy(up).addScaledVector(sm.T,-up.dot(sm.T));
+    if(_ap.lengthSq()>1e-6)want.addScaledVector(_ap.normalize(),Math.min(dist*.15,Math.max(0,lim)));
+  }
+  tpsPos.lerp(want,1-Math.exp(-dt*7));
+  tpsCam.position.copy(tpsPos);tpsCam.up.copy(up);
+  tpsCam.lookAt(camera.position.clone().addScaledVector(fwd,dist*.35));
+}
+function onResize(){renderer.setSize(innerWidth,innerHeight,false);camera.aspect=orbitCam.aspect=tpsCam.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();orbitCam.updateProjectionMatrix();tpsCam.updateProjectionMatrix();mapSetup();}
+addEventListener('resize',onResize);
+// 検証用: 画面が非表示でも sec 秒ぶん進める
+function simRun(sec,keysDown){(keysDown||[]).forEach(k=>keys[k]=true);skipRender=true;let t=prevT;for(let i=0;i<sec*60;i++){t+=1000/60;frameBody(t);}skipRender=false;(keysDown||[]).forEach(k=>keys[k]=false);}
+window.__vd={simRun,SIM,G,TUB,get P(){return P;},begin,showResult,get loc(){return loc;},camera,guide,setControl,locate,ROUTES};
+if(innerWidth<760)$('side').classList.remove('open');
+showStart();
+mapSetup();
+requestAnimationFrame(frame);
+})();
+</script>

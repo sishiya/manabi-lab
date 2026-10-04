@@ -1,0 +1,89 @@
+﻿# Pre-publish check: finds personal info and secrets before a git commit/push or an Artifact publish.
+# Usage:
+#   powershell -NoProfile -ExecutionPolicy Bypass -File tools/check-public.ps1              # whole folder
+#   powershell -NoProfile -ExecutionPolicy Bypass -File tools/check-public.ps1 -Path evolution
+#   powershell -NoProfile -ExecutionPolicy Bypass -File tools/check-public.ps1 -Staged      # files staged for commit (pre-commit hook)
+# Exit code 0 = nothing found, 1 = something to look at (the commit is stopped).
+# Your own words to block (name, e-mail, address...) go in .private-words.txt at the repo root,
+# one regex per line. That file is in .gitignore and is never committed.
+param([string[]]$Path = @('.'), [switch]$Staged)
+
+$ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+$root = Split-Path -Parent $PSScriptRoot
+Set-Location $root
+
+$textExt = '.html','.htm','.js','.mjs','.css','.md','.txt','.json','.ps1','.sh','.yml','.yaml','.xml','.svg','.csv','.ini','.cfg','.toml',''
+$badNames = '^\.env', '\.pem$', '\.key$', '\.pfx$', '\.p12$', '^id_(rsa|ed25519|ecdsa)', '^credentials', '\.kdbx$'
+$skipDirs = '\\\.git\\', '\\node_modules\\'
+
+$rules = @(
+  @{ n = 'メールアドレス';           r = '[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}' },
+  @{ n = 'PCのユーザーフォルダ';     r = '[A-Za-z]:[\\/]+Users[\\/]+\w[^\\/\s"'']*|/Users/\w[^/\s"'']*|/home/\w[^/\s"'']*' },
+  @{ n = '秘密鍵';                   r = '-----BEGIN [A-Z ]*PRIVATE KEY-----' },
+  @{ n = 'APIキー・トークン';        r = 'sk-[A-Za-z0-9_-]{16,}|sk-ant-[A-Za-z0-9_-]{8,}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{30,}|xox[abprs]-[A-Za-z0-9-]{10,}' },
+  @{ n = 'パスワード等の書き込み';   r = '(?i)(password|passwd|pwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret)\s*[:=]\s*["''][^"'']{4,}["'']' },
+  @{ n = '電話番号';                 r = '(?<![\d.-])0\d{1,4}-\d{1,4}-\d{4}(?![\d-])' },
+  @{ n = '郵便番号・住所';           r = '〒\s*\d{3}-?\d{4}' },
+  @{ n = 'Artifact の URL（PUBLISH.local.md に書く）'; r = 'claude\.ai/(code/)?artifacts?/[A-Za-z0-9-]{8,}' }
+)
+$allow = @('(?i)@example\.(com|org|net)$', '(?i)^noreply@')
+
+$private = @()
+$pw = Join-Path $root '.private-words.txt'
+if (Test-Path $pw) {
+  $private = Get-Content $pw -Encoding UTF8 | Where-Object { $_ -and $_ -notmatch '^\s*#' }
+}
+
+# collect files
+$files = @()
+if ($Staged) {
+  $names = & git -c core.quotepath=false diff --cached --name-only --diff-filter=ACMR
+  foreach ($n in $names) { if ($n -and (Test-Path -LiteralPath $n -PathType Leaf)) { $files += (Resolve-Path -LiteralPath $n).Path } }
+} else {
+  foreach ($p in $Path) {
+    $full = (Resolve-Path -LiteralPath $p).Path
+    if (Test-Path -LiteralPath $full -PathType Leaf) { $files += $full }
+    else { $files += Get-ChildItem -LiteralPath $full -Recurse -File -Force | ForEach-Object FullName }
+  }
+}
+$files = $files | Where-Object { $f = $_; -not ($skipDirs | Where-Object { $f -match $_ }) } | Sort-Object -Unique
+
+$hits = New-Object System.Collections.ArrayList
+foreach ($f in $files) {
+  $rel = $f.Substring($root.Length).TrimStart('\')
+  $name = [IO.Path]::GetFileName($f)
+  if ($name -eq '.private-words.txt' -or $name -like '*.local.md') {
+    if ($Staged) { [void]$hits.Add("$rel : このファイルはコミットしてはいけません（.gitignore を確認）") }
+    continue
+  }
+  foreach ($b in $badNames) { if ($name -match $b) { [void]$hits.Add("$rel : 秘密情報の可能性があるファイル名") } }
+  $len = (Get-Item -LiteralPath $f).Length
+  if ($len -gt 10MB) { [void]$hits.Add("$rel : 10MB を超える大きなファイル") }
+  $ext = [IO.Path]::GetExtension($f).ToLower()
+  if ($ext -eq $name.ToLower()) { $ext = '' }   # dotfiles such as .gitignore
+  if ($textExt -notcontains $ext) { [void]$hits.Add("$rel : テキスト以外のファイル（画像なら撮影情報・写り込みを目で確認）"); continue }
+  $lines = [IO.File]::ReadAllLines($f, [Text.Encoding]::UTF8)
+  for ($i = 0; $i -lt $lines.Length; $i++) {
+    $line = $lines[$i]
+    foreach ($ru in $rules) {
+      foreach ($m in [regex]::Matches($line, $ru.r)) {
+        $v = $m.Value
+        if ($allow | Where-Object { $v -match $_ }) { continue }
+        [void]$hits.Add("${rel}:$($i+1) : $($ru.n) → $v")
+      }
+    }
+    foreach ($w in $private) {
+      if ($line -match "(?i)$w") { [void]$hits.Add("${rel}:$($i+1) : .private-words.txt の語 → $($Matches[0])") }
+    }
+  }
+}
+
+if ($hits.Count) {
+  Write-Host "公開前チェック: 要確認 $($hits.Count) 件（$($files.Count) ファイルを調べました）" -ForegroundColor Yellow
+  $hits | ForEach-Object { Write-Host "  $_" }
+  Write-Host "問題がなければ内容を直すか、tools/check-public.ps1 の allow に加えてから、もう一度実行してください。"
+  exit 1
+}
+Write-Host "公開前チェック: 問題なし（$($files.Count) ファイル）" -ForegroundColor Green
+exit 0

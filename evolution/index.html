@@ -1,0 +1,195 @@
+<title>ヒトへの46億年</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/app.css">
+
+<canvas id="gl" aria-label="地表を見下ろす3Dのフィールド"></canvas>
+<div id="flash"></div>
+<div id="labels"></div>
+<div id="fade"></div>
+<button id="mini" hidden aria-label="地表のながめに戻る"><span>地表（観測地点）</span></button>
+<div id="preEarth" hidden>地球はまだ生まれていない。ちりの円盤の中で、微惑星が集まって原始地球が育っていく。</div>
+
+<header id="info" class="hud">
+  <div id="chips"></div>
+  <div id="age">46億年前</div>
+  <div id="cal"></div>
+  <article id="ev" class="panel">
+    <span id="evKind">地球</span><span id="evWhen" class="mono"></span>
+    <h2 id="evTitle"></h2>
+    <p id="evDesc"></p>
+  </article>
+</header>
+
+<aside id="side" class="hud">
+  <button id="sideToggle" aria-expanded="false">地球のようすと祖先</button>
+  <section class="panel" id="envp">
+    <h3>このときの地球 <small>推定値</small></h3>
+    <dl id="envList"></dl>
+  </section>
+  <section class="panel" id="anc">
+    <h3>あなたの祖先</h3>
+    <b id="ancName"></b>
+    <p id="ancDesc"></p>
+    <small id="ancSeen"></small>
+  </section>
+</aside>
+
+<div id="seen" class="panel" hidden>
+  <h3>いま見えているもの</h3>
+  <p>押すと名前を表示します。生き物は見やすいように大きく描いています。</p>
+  <ul id="seenList"></ul>
+</div>
+<div id="about" hidden>
+  <article class="panel" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+    <header>
+      <p class="aeyebrow">ヒトへの46億年</p>
+      <h2 id="aboutTitle">このアプリについて</h2>
+      <button id="aboutClose" aria-label="閉じる">閉じる</button>
+    </header>
+    <div class="abody">
+      <p class="alead">ひとつの場所を空から見つめ続けて、太陽系が生まれる前から50億年後までを、切れ目なくたどる学習用のシミュレーションです。下のタイムラインを動かすと、空・海・陸・生き物・人の暮らしがその時代の姿に変わります。</p>
+
+      <section>
+        <h3>見ている場所</h3>
+        <p>いまのアフリカ東部、大地溝帯の湖のほとりになる場所です。人類の化石や石器がとくに多く見つかっている地域です。</p>
+        <p>大陸は動き続けているので、古い時代はこの場所の地殻がたどってきた姿を「代表」として描いています。大陸移動を正確に再現したものではありません。全球凍結や大量絶滅のような地球規模の出来事は、空や海の色でも表しています。</p>
+      </section>
+
+      <section>
+        <h3>描き方の約束</h3>
+        <ul>
+          <li>生き物は、見やすいように実際よりずっと大きく描いています。</li>
+          <li>生き物の顔ぶれはその時代の代表で、この場所に実際にいた種とは限りません。</li>
+          <li>酸素・CO2・気温などの数値は、研究にもとづく推定です。古い時代ほど幅が大きく、研究者のあいだでも意見が分かれています。</li>
+          <li>年代は国際年代層序表（2023年版）と主な研究にもとづきます。諸説あるものは本文に書いています。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h3>4つの区別</h3>
+        <dl class="akinds">
+          <dt><i style="background:var(--k-earth)"></i>記録</dt>
+          <dd>研究で分かっていること。年表の出来事と、過去の景色や数値。</dd>
+          <dt><i style="background:var(--accent)"></i>モデル</dt>
+          <dd>「しくみ」パネル。火山・岩石の風化・氷・光合成などのしくみだけから、CO2・気温・酸素・海の動物の多様さを計算する、学習用に簡単にしたモデルです。記録とのずれも表示しています。オルドビス紀末の大量絶滅のように、うまく説明できていないところもあります。</dd>
+          <dt><i style="background:var(--k-future)"></i>予測</dt>
+          <dd>未来の区間。IPCC 第6次評価報告書などの研究の予測と、このモデルの計算を並べています。このモデルは CO2 以外の温室効果ガスを入れていないため、2100年の気温は IPCC より低めに出ます。遠い未来ほど不確かです。</dd>
+          <dt><i style="background:var(--k-if)"></i>想像</dt>
+          <dd>「もしも」の世界でどんな生き物が栄えるか、数百万年より先の生き物の姿など、計算では決められない部分です。画面に「想像」と書いています。人類のゆくえは予測できないので、数千年より先の人と街は描いていません。</dd>
+        </dl>
+        <p class="anote">このアプリの数値は研究の成果や公式の予測ではありません。気候の将来について調べるときは、IPCC の報告書などの一次資料を見てください。</p>
+      </section>
+
+      <section>
+        <h3>おもな出典</h3>
+        <ul class="arefs">
+          <li>国際層序委員会「国際年代層序表」2023年版</li>
+          <li>IPCC 第6次評価報告書 第1作業部会（2021年）: 2100年の気温と海面のシナリオ</li>
+          <li>Joos ほか（2013）: 排出された CO2 が大気に残る割合（Bern モデル）</li>
+          <li>Gough（1981）: 太陽の明るさの変化</li>
+          <li>Caldeira と Kasting（1992）: CO2 の減少と植物の寿命</li>
+          <li>Ganopolski ほか（2016）: 次の氷期の始まりと CO2</li>
+          <li>Farnsworth ほか（2023）: 次の超大陸と哺乳類</li>
+          <li>Ozaki と Reinhard（2021）: 大気の酸素の将来</li>
+        </ul>
+      </section>
+
+      <section>
+        <h3>操作</h3>
+        <dl class="akeys">
+          <dt>ドラッグ</dt><dd>視点を回す</dd>
+          <dt>ホイール・ピンチ</dt><dd>近づく／離れる（引き切ると地球全体）</dd>
+          <dt>右ドラッグ</dt><dd>視点を動かす</dd>
+          <dt class="mono">スペース</dt><dd>再生／停止</dd>
+          <dt class="mono">[ ]</dt><dd>前／次の出来事</dd>
+          <dt class="mono">G</dt><dd>地表と地球全体</dd>
+          <dt class="mono">N</dt><dd>昼・夜・自動</dd>
+          <dt class="mono">M</dt><dd>しくみ</dd>
+          <dt class="mono">I</dt><dd>本来の世界ともしもの世界</dd>
+        </dl>
+        <p class="anote">3D で描いているので、古いスマートフォンでは動きが遅くなることがあります。</p>
+      </section>
+    </div>
+    <footer><button id="aboutStart" class="primary">はじめる</button></footer>
+  </article>
+</div>
+<section id="ifp" class="panel" hidden aria-label="もしも">
+  <header><b>もしも</b><span class="sp"></span><button id="ifClose">閉じる</button></header>
+  <p class="iflead">地球の歴史に手を入れると、そこから先をモデルで計算し直します。景色と生き物は「本来の世界」との差に合わせて変わります。</p>
+  <ul id="ifList"></ul>
+  <div class="ifbtns"><button id="ifApply" class="primary">この世界を計算して見る</button><button id="ifBase">本来の世界に戻る</button><button id="ifReset">選択をもとに戻す</button></div>
+  <p id="ifState"></p>
+  <div id="ifSum"></div>
+</section>
+<div id="pick" class="panel" hidden></div>
+<div id="toast" class="panel" hidden role="status"></div>
+<section id="mech" class="panel" hidden aria-label="しくみ（モデル）">
+  <header>
+    <b>しくみ</b>
+    <span class="key"><span><i class="rec"></i>記録</span><span><i></i>モデル</span><span><i class="snow"></i>モデルの全球凍結</span><span id="kIf" hidden><i class="ifl"></i>もしもの世界</span></span>
+    <span class="sp"></span>
+    <button id="mechClose">閉じる</button>
+  </header>
+  <div class="mbody">
+    <canvas id="mechC"></canvas>
+    <div class="mside">
+      <h4>いまの気温の内訳 <small>現代の14℃からの差</small></h4>
+      <div id="mBars"></div>
+      <h4>前の出来事からの変化</h4>
+      <p id="mWhy"></p>
+      <p id="mFit"></p>
+    </div>
+  </div>
+  <p id="mNote">モデルは「しくみ」だけから CO2・気温・氷・酸素・海の動物の多様さを計算し、年表の記録とは独立に動いています。外から与えているのは、太陽の明るさ、火山の CO2（巨大噴火をふくむ）、大陸の配置と山脈による風化のしやすさ、光合成生物と陸上植物の登場、小天体の衝突、地球の軌道のゆらぎ、人間の排出です。</p>
+</section>
+<div id="hint">ドラッグで回転・ホイールで拡大（引き切ると地球全体）・右ドラッグで移動・スペースで再生／停止・N で昼夜・生き物をクリックで名前</div>
+
+<footer id="dock" class="hud">
+  <div id="ctrl">
+    <button id="bPrev" class="ico" title="前の出来事（[）" aria-label="前の出来事"><svg viewBox="0 0 16 16"><path d="M3 2h2v12H3zM14 2v12L6 8z"/></svg></button>
+    <button id="bPlay" class="ico" title="再生／停止（スペース）" aria-label="再生"><svg viewBox="0 0 16 16" id="playIco"><path d="M4 2l10 6-10 6z"/></svg></button>
+    <button id="bNext" class="ico" title="次の出来事（]）" aria-label="次の出来事"><svg viewBox="0 0 16 16"><path d="M11 2h2v12h-2zM2 2v12l8-6z"/></svg></button>
+    <select id="speed" aria-label="再生の速さ">
+      <option value="0.5">ゆっくり</option>
+      <option value="1" selected>ふつう</option>
+      <option value="2">速い</option>
+      <option value="4">とても速い</option>
+    </select>
+    <div class="seg" role="group" aria-label="目盛り">
+      <button id="sEv" aria-pressed="true" title="どの時代にもほどよい幅を割り当てる">出来事ごと</button>
+      <button id="sLin" aria-pressed="false" title="46億年を均等に並べる">実際の長さ</button>
+    </div>
+    <select id="scen" aria-label="排出シナリオ" title="未来の排出シナリオ（モデルを計算し直します）"></select>
+    <span class="sp"></span>
+    <button id="bIf" aria-pressed="false" title="地球の歴史に手を入れる（I で本来の世界と切り替え）">もしも</button>
+    <button id="bMech" aria-pressed="false" title="モデルと記録の比較、変化の原因（M）">しくみ</button>
+    <button id="bView" aria-pressed="false" title="地球全体と地表を切り替え（G）。地表で引き切る／地球に寄り切っても切り替わります">地球を見る</button>
+    <button id="bDay" title="昼・夜・自動（N）">時刻：昼</button>
+    <button id="bSeen" aria-pressed="false">見えているもの <span id="seenN" class="mono"></span></button>
+    <button id="bNames" aria-pressed="false">名前</button>
+    <button id="bClouds" aria-pressed="false" class="wide">雲</button>
+    <button id="bAbout" title="このアプリについて（?）">このアプリについて</button>
+  </div>
+  <div id="tl" tabindex="0" role="slider" aria-label="時代" aria-valuemin="0" aria-valuemax="100">
+    <canvas id="tlc"></canvas>
+    <div id="tip" hidden></div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="js/core.js"></script>
+<script src="js/data.js"></script>
+<script src="js/model.js"></script>
+<script src="js/future.js"></script>
+<script src="js/ifworld.js"></script>
+<script src="js/terrain.js"></script>
+<script src="js/life.js"></script>
+<script src="js/effects.js"></script>
+<script src="js/globe.js"></script>
+<script src="js/world.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+<script src="js/about.js"></script>

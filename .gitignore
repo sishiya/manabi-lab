@@ -1,0 +1,25 @@
+# your own words for the pre-publish check (name, e-mail...) — never commit
+.private-words.txt
+# per-machine notes such as the Artifact URLs (PUBLISH.local.md)
+*.local.md
+
+# secrets
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.p12
+
+# Claude Code: per-machine settings
+.claude/settings.local.json
+
+# OS / editor
+Thumbs.db
+desktop.ini
+.DS_Store
+*.tmp
+*.bak
+~$*
+.vscode/
+node_modules/

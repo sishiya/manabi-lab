@@ -1,0 +1,1858 @@
+<title>ヒトへの46億年</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: full-bleed bird's-eye diorama; era + event top-left, Earth readouts + ancestor top-right, timeline dock along the bottom */
+:root{
+  --bg:#06080b; --ink:#eef0e8; --muted:#aab3a7; --dim:#727b70;
+  --panel:rgba(8,12,15,.62); --panel2:rgba(8,12,15,.82); --line:rgba(228,238,222,.15);
+  --accent:#f2b45c;          /* sunlight / you */
+  --k-earth:#e9976a; --k-life:#93d48a; --k-extinct:#ff7468; --k-human:#f2c35c;
+  --f-display:'Shippori Mincho B1','Hiragino Mincho ProN','Yu Mincho',serif;
+  --f-body:'Zen Kaku Gothic New','Hiragino Sans','Yu Gothic',system-ui,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--f-body);-webkit-user-select:none;user-select:none}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#gl:active{cursor:grabbing}
+#flash{position:fixed;inset:0;pointer-events:none;opacity:0;mix-blend-mode:screen}
+#labels{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+.lab{position:absolute;left:0;top:0;transform:translate(-50%,-100%);font-size:11px;line-height:1.3;white-space:nowrap;padding:2px 7px;background:var(--panel2);border:1px solid var(--line);border-radius:2px;color:var(--ink)}
+.lab.anc{border-color:var(--accent);color:var(--accent);font-weight:700;font-size:12px}
+.lab::after{content:"";position:absolute;left:50%;top:100%;width:1px;height:10px;background:currentColor;opacity:.6}
+.hud{position:fixed;z-index:2}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.panel{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+
+#info{top:calc(env(safe-area-inset-top,0px) + 16px);left:18px;width:min(380px,calc(100vw - 36px));display:flex;flex-direction:column;gap:6px;pointer-events:none}
+#chips{display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:11px;letter-spacing:.12em}
+#chips span{padding:2px 7px;border:1px solid var(--line);background:var(--panel);border-radius:2px}
+#chips span i{display:inline-block;width:8px;height:8px;margin-right:5px;vertical-align:0;border-radius:1px}
+#age{font-family:var(--f-display);font-weight:800;font-size:46px;line-height:1.05;letter-spacing:.02em;text-shadow:0 2px 20px rgba(0,0,0,.65);text-wrap:balance}
+#age small{font-size:.5em;font-weight:600;margin-left:.15em}
+#cal{font-size:12px;color:var(--muted);text-shadow:0 1px 8px rgba(0,0,0,.8)}
+#cal b{color:var(--ink);font-weight:500}
+#ev{padding:10px 13px 12px;margin-top:6px;pointer-events:auto}
+#evKind{font-size:10px;letter-spacing:.18em;padding:1px 6px;border:1px solid currentColor;border-radius:2px}
+#evTitle{font-family:var(--f-display);font-weight:600;font-size:19px;margin:7px 0 4px;letter-spacing:.03em;text-wrap:balance}
+#evDesc{font-size:13px;line-height:1.75;margin:0;color:#dfe3d9}
+#evWhen{font-size:11px;color:var(--dim);margin-left:8px}
+
+#side{top:calc(env(safe-area-inset-top,0px) + 16px);right:18px;width:262px;display:flex;flex-direction:column;gap:8px}
+#sideToggle{display:none}
+#side section{padding:10px 13px}
+#side h3{font-size:11px;letter-spacing:.16em;color:var(--muted);font-weight:500;margin:0 0 8px;display:flex;justify-content:space-between}
+#side h3 small{letter-spacing:.05em;color:var(--dim)}
+#envList{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;margin:0;font-size:12px}
+#envList dt{color:var(--muted)}
+#envList dd{margin:0;text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+#ancName{display:block;font-family:var(--f-display);font-size:16px;color:var(--accent);margin-bottom:4px;text-wrap:balance}
+#ancDesc{font-size:12px;line-height:1.7;margin:0 0 4px;color:#dfe3d9}
+#ancSeen{font-size:11px;color:var(--dim)}
+
+#dock{left:0;right:0;bottom:0;padding:10px 18px calc(env(safe-area-inset-bottom,0px) + 12px);background:linear-gradient(to top,rgba(6,8,11,.92),rgba(6,8,11,.55) 70%,rgba(6,8,11,0));display:flex;flex-direction:column;gap:8px}
+#ctrl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+button,select{font:inherit;font-size:12px;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:5px 10px;cursor:pointer}
+button:hover,select:hover{border-color:rgba(242,180,92,.6)}
+button:focus-visible,select:focus-visible,#tl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.ico{width:34px;padding:5px 0;display:inline-flex;justify-content:center;align-items:center}
+.ico svg{width:14px;height:14px;fill:currentColor}
+#bPlay{width:44px}
+.seg{display:inline-flex}
+.seg button{border-radius:0}
+.seg button:first-child{border-radius:3px 0 0 3px}
+.seg button:last-child{border-radius:0 3px 3px 0;border-left:0}
+.sp{flex:1}
+#scaleNote{font-size:11px;color:var(--muted)}
+#tl{position:relative;height:64px;cursor:pointer;touch-action:none;outline:none}
+#tlc{width:100%;height:100%;display:block}
+#tip{position:absolute;bottom:68px;transform:translateX(-50%);font-size:12px;white-space:nowrap;padding:4px 9px;background:var(--panel2);border:1px solid var(--line);border-radius:3px;pointer-events:none}
+#tip small{color:var(--muted);margin-left:6px}
+
+#seen{position:fixed;z-index:3;right:18px;bottom:130px;width:290px;max-height:min(52vh,460px);overflow:auto;padding:10px 12px}
+#seen h3{font-size:11px;letter-spacing:.16em;color:var(--muted);font-weight:500;margin:0 0 6px}
+#seen p{font-size:11px;color:var(--dim);margin:0 0 8px;line-height:1.6}
+#seenList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+#seenList button{width:100%;display:grid;grid-template-columns:10px 1fr auto;gap:8px;align-items:center;text-align:left;background:transparent;border-color:transparent;padding:4px 6px}
+#seenList button:hover{border-color:var(--line)}
+#seenList button[aria-pressed="true"]{border-color:var(--accent)}
+#seenList i{width:10px;height:10px;border-radius:2px}
+#seenList small{font-family:var(--f-mono);font-size:10px;color:var(--dim)}
+#pick{position:fixed;z-index:4;padding:8px 11px;font-size:12px;line-height:1.6;pointer-events:none;max-width:240px}
+#pick b{display:block;font-size:13px}
+#pick small{color:var(--muted)}
+#mech{background:rgba(8,12,15,.9);position:fixed;z-index:3;left:18px;right:18px;bottom:122px;max-width:1100px;margin:0 auto;padding:10px 12px 12px;display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 300px);overflow:auto}
+#mech header{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:12px}
+#mech header b{font-family:var(--f-display);font-size:15px;letter-spacing:.04em}
+#mech header .key{color:var(--muted);display:flex;gap:12px;align-items:center}
+#mech header .key i{display:inline-block;width:18px;height:0;border-top:2px solid var(--accent);vertical-align:3px;margin-right:4px}
+#mech header .key i.rec{border-top:2px dashed var(--muted)}
+#mech header .key i.snow{border:0;height:8px;background:rgba(190,220,255,.35)}
+#mech header .sp{flex:1}
+.mbody{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px}
+#mechC{width:100%;height:190px;display:block}
+.mside{display:flex;flex-direction:column;gap:6px;min-width:0}
+.mside h4{font-size:11px;letter-spacing:.14em;color:var(--muted);font-weight:500;margin:0;display:flex;justify-content:space-between;gap:8px}
+.mside h4 small{letter-spacing:0;color:var(--dim)}
+#mBars{display:grid;grid-template-columns:auto 1fr 44px;gap:3px 8px;align-items:center;font-size:11px}
+#mBars .bar{position:relative;height:8px;background:rgba(255,255,255,.05)}
+#mBars .bar::before{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--line)}
+#mBars .bar span{position:absolute;top:0;bottom:0;border-radius:1px}
+#mBars .v{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+#mWhy{font-size:12px;line-height:1.7;margin:0;color:#dfe3d9}
+#mWhy b{color:var(--accent);font-weight:500}
+#mFit,#mNote{font-size:10.5px;line-height:1.6;margin:0;color:var(--dim)}
+body.mech-open #mini{bottom:calc(122px + min(330px,100vh - 300px) + 10px)}
+@media (max-width:760px){#mech{left:16px;right:16px;bottom:150px}.mbody{grid-template-columns:1fr}#mechC{height:170px}}
+#fade{position:fixed;inset:0;pointer-events:none;background:#020306;opacity:0;transition:opacity .28s;z-index:1}
+#mini{position:fixed;z-index:2;right:18px;bottom:128px;width:min(30vw,300px);aspect-ratio:4/3;border:1px solid var(--line);border-radius:3px;cursor:pointer;padding:0;background:transparent;box-shadow:0 0 0 1px rgba(0,0,0,.4)}
+#mini:hover{border-color:var(--accent)}
+#mini span{position:absolute;left:6px;top:6px;font-size:10px;letter-spacing:.12em;padding:1px 6px;background:var(--panel2);border-radius:2px;color:var(--muted)}
+#preEarth{position:fixed;z-index:2;left:50%;top:58%;transform:translateX(-50%);font-size:12px;color:var(--muted);text-align:center;text-shadow:0 1px 8px #000;pointer-events:none;width:min(90vw,420px);line-height:1.7}
+#hint{position:fixed;left:18px;bottom:128px;font-size:11px;color:var(--muted);text-shadow:0 1px 6px #000;transition:opacity 1s;pointer-events:none}
+
+@media (max-width:760px){
+  #age{font-size:32px}
+  #evDesc{font-size:12px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+  #info{width:calc(100vw - 32px);left:16px}
+  #side{top:auto;bottom:150px;right:16px;width:min(262px,calc(100vw - 32px))}
+  #sideToggle{display:block;align-self:flex-end}
+  #side:not(.open) section{display:none}
+  #hint{display:none}
+  #seen{right:16px;left:16px;width:auto;bottom:150px}
+  #mini{right:auto;left:16px;bottom:150px;width:42vw}
+  #dock{padding-left:16px;padding-right:16px}
+  .wide{display:none}
+}
+@media (prefers-reduced-motion:reduce){#flash{display:none}}
+</style>
+
+<canvas id="gl" aria-label="地表を見下ろす3Dのフィールド"></canvas>
+<div id="flash"></div>
+<div id="labels"></div>
+<div id="fade"></div>
+<button id="mini" hidden aria-label="地表のながめに戻る"><span>地表（観測地点）</span></button>
+<div id="preEarth" hidden>地球はまだ生まれていない。ちりの円盤の中で、微惑星が集まって原始地球が育っていく。</div>
+
+<header id="info" class="hud">
+  <div id="chips"></div>
+  <div id="age">46億年前</div>
+  <div id="cal"></div>
+  <article id="ev" class="panel">
+    <span id="evKind">地球</span><span id="evWhen" class="mono"></span>
+    <h2 id="evTitle"></h2>
+    <p id="evDesc"></p>
+  </article>
+</header>
+
+<aside id="side" class="hud">
+  <button id="sideToggle" aria-expanded="false">地球のようすと祖先</button>
+  <section class="panel" id="envp">
+    <h3>このときの地球 <small>推定値</small></h3>
+    <dl id="envList"></dl>
+  </section>
+  <section class="panel" id="anc">
+    <h3>あなたの祖先</h3>
+    <b id="ancName"></b>
+    <p id="ancDesc"></p>
+    <small id="ancSeen"></small>
+  </section>
+</aside>
+
+<div id="seen" class="panel" hidden>
+  <h3>いま見えているもの</h3>
+  <p>押すと名前を表示します。生き物は見やすいように大きく描いています。</p>
+  <ul id="seenList"></ul>
+</div>
+<div id="pick" class="panel" hidden></div>
+<section id="mech" class="panel" hidden aria-label="しくみ（モデル）">
+  <header>
+    <b>しくみ</b>
+    <span class="key"><span><i class="rec"></i>記録</span><span><i></i>モデル</span><span><i class="snow"></i>モデルの全球凍結</span></span>
+    <span class="sp"></span>
+    <button id="mechClose">閉じる</button>
+  </header>
+  <div class="mbody">
+    <canvas id="mechC"></canvas>
+    <div class="mside">
+      <h4>いまの気温の内訳 <small>現代の14℃からの差</small></h4>
+      <div id="mBars"></div>
+      <h4>前の出来事からの変化</h4>
+      <p id="mWhy"></p>
+      <p id="mFit"></p>
+    </div>
+  </div>
+  <p id="mNote">モデルは「しくみ」だけから CO2・気温・氷・酸素・海の動物の多様さを計算し、年表の記録とは独立に動いています。外から与えているのは、太陽の明るさ、火山の CO2（巨大噴火をふくむ）、大陸の配置と山脈による風化のしやすさ、光合成生物と陸上植物の登場、小天体の衝突、地球の軌道のゆらぎ、人間の排出です。</p>
+</section>
+<div id="hint">ドラッグで回転・ホイールで拡大（引き切ると地球全体）・右ドラッグで移動・スペースで再生／停止・N で昼夜・生き物をクリックで名前</div>
+
+<footer id="dock" class="hud">
+  <div id="ctrl">
+    <button id="bPrev" class="ico" title="前の出来事（[）" aria-label="前の出来事"><svg viewBox="0 0 16 16"><path d="M3 2h2v12H3zM14 2v12L6 8z"/></svg></button>
+    <button id="bPlay" class="ico" title="再生／停止（スペース）" aria-label="再生"><svg viewBox="0 0 16 16" id="playIco"><path d="M4 2l10 6-10 6z"/></svg></button>
+    <button id="bNext" class="ico" title="次の出来事（]）" aria-label="次の出来事"><svg viewBox="0 0 16 16"><path d="M11 2h2v12h-2zM2 2v12l8-6z"/></svg></button>
+    <select id="speed" aria-label="再生の速さ">
+      <option value="0.5">ゆっくり</option>
+      <option value="1" selected>ふつう</option>
+      <option value="2">速い</option>
+      <option value="4">とても速い</option>
+    </select>
+    <div class="seg" role="group" aria-label="目盛り">
+      <button id="sEv" aria-pressed="true" title="どの時代にもほどよい幅を割り当てる">出来事ごと</button>
+      <button id="sLin" aria-pressed="false" title="46億年を均等に並べる">実際の長さ</button>
+    </div>
+    <span id="scaleNote" class="wide"></span>
+    <span class="sp"></span>
+    <button id="bMech" aria-pressed="false" title="モデルと記録の比較、変化の原因（M）">しくみ</button>
+    <button id="bView" aria-pressed="false" title="地球全体と地表を切り替え（G）。地表で引き切る／地球に寄り切っても切り替わります">地球を見る</button>
+    <button id="bDay" title="昼・夜・自動（N）">時刻：昼</button>
+    <button id="bSeen" aria-pressed="false">見えているもの <span id="seenN" class="mono"></span></button>
+    <button id="bNames" aria-pressed="false">名前</button>
+    <button id="bClouds" aria-pressed="false" class="wide">雲</button>
+  </div>
+  <div id="tl" tabindex="0" role="slider" aria-label="時代" aria-valuemin="0" aria-valuemax="100">
+    <canvas id="tlc"></canvas>
+    <div id="tip" hidden></div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+window.__evErr=[];
+window.addEventListener('error',e=>window.__evErr.push(String(e.message)));
+const $=id=>document.getElementById(id);
+const PI=Math.PI, TAU=PI*2;
+const clamp=(x,a,b)=>x<a?a:x>b?b:x;
+const lerp=(a,b,t)=>a+(b-a)*t;
+const sm=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
+const sstep=(a,b,x)=>sm((x-a)/(b-a));
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const rnd=mulberry(20261003);
+const rr=(a,b)=>a+(b-a)*rnd();
+
+/* ------------------------------------------------------------------ noise */
+function hash2(x,y){let h=Math.imul(x,374761393)+Math.imul(y,668265263)|0;h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return (h>>>0)/4294967296}
+function vnoise(x,y){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);
+  const a=hash2(xi,yi),b=hash2(xi+1,yi),c=hash2(xi,yi+1),d=hash2(xi+1,yi+1);return (a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v)*2-1}
+function fbm(x,y,o){let s=0,a=.5,f=1,n=0;for(let i=0;i<o;i++){s+=a*vnoise(x*f+i*17.3,y*f-i*9.1);n+=a;a*=.5;f*=2.03}return s/n}
+
+/* ------------------------------------------------------------------ time scale */
+const AMAX=4.6e9;
+const lg=A=>Math.log10(A+10);
+// slider position ↔ age. Anchors give every chapter of the story a fair share of the bar.
+const ANCH=[[0,4.6e9],[.02,4.567e9],[.04,4.51e9],[.06,4.45e9],[.10,4.0e9],[.15,3.5e9],[.20,2.5e9],[.235,2.0e9],[.27,1.0e9],[.30,7.2e8],[.33,6.35e8],[.36,5.39e8],[.41,4.44e8],[.445,4.19e8],[.48,3.59e8],[.515,2.99e8],[.55,2.52e8],[.585,2.01e8],[.615,1.45e8],[.645,6.65e7],[.665,6.55e7],[.70,2.3e7],[.745,7e6],[.785,2.6e6],[.825,1e6],[.855,3e5],[.88,7e4],[.905,1.2e4],[.93,5000],[.95,2000],[.97,500],[.988,120],[1,0]];
+const ANL=ANCH.map(a=>[a[0],lg(a[1])]);
+function u2A_ev(u){u=clamp(u,0,1);for(let i=1;i<ANL.length;i++)if(u<=ANL[i][0]){const t=(u-ANL[i-1][0])/(ANL[i][0]-ANL[i-1][0]);return Math.max(0,10**lerp(ANL[i-1][1],ANL[i][1],t)-10)}return 0}
+function A2u_ev(A){const L=lg(A);if(L>=ANL[0][1])return 0;for(let i=1;i<ANL.length;i++)if(L>=ANL[i][1]){const t=(L-ANL[i-1][1])/(ANL[i][1]-ANL[i-1][1]);return lerp(ANL[i-1][0],ANL[i][0],t)}return 1}
+let scaleMode='ev';
+const u2A=u=>scaleMode==='ev'?u2A_ev(u):AMAX*(1-clamp(u,0,1));
+const A2u=A=>scaleMode==='ev'?A2u_ev(A):1-A/AMAX;
+
+/* ------------------------------------------------------------------ geologic time (ICS colours) */
+const GEO=[
+ // [level, name, start, end, colour]
+ [0,'冥王代',4.6e9,4.031e9,'#AE027E'],[0,'太古代',4.031e9,2.5e9,'#F0047F'],[0,'原生代',2.5e9,5.388e8,'#F73563'],[0,'顕生代',5.388e8,0,'#9AD9DD'],
+ [1,'古原生代',2.5e9,1.6e9,'#F74370'],[1,'中原生代',1.6e9,1.0e9,'#FDB462'],[1,'新原生代',1.0e9,5.388e8,'#FEB342'],
+ [1,'古生代',5.388e8,2.519e8,'#99C08D'],[1,'中生代',2.519e8,6.6e7,'#67C5CA'],[1,'新生代',6.6e7,0,'#F2F91D'],
+ [2,'トニアン',1.0e9,7.2e8,'#FEBF4E'],[2,'クライオジェニアン',7.2e8,6.35e8,'#FECC5C'],[2,'エディアカラ紀',6.35e8,5.388e8,'#FED96A'],
+ [2,'カンブリア紀',5.388e8,4.869e8,'#7FA056'],[2,'オルドビス紀',4.869e8,4.433e8,'#009270'],[2,'シルル紀',4.433e8,4.192e8,'#B3E1B6'],
+ [2,'デボン紀',4.192e8,3.589e8,'#CB8C37'],[2,'石炭紀',3.589e8,2.989e8,'#67A599'],[2,'ペルム紀',2.989e8,2.519e8,'#F04028'],
+ [2,'三畳紀',2.519e8,2.014e8,'#812B92'],[2,'ジュラ紀',2.014e8,1.45e8,'#34B2C9'],[2,'白亜紀',1.45e8,6.6e7,'#7FC64E'],
+ [2,'古第三紀',6.6e7,2.303e7,'#FD9A52'],[2,'新第三紀',2.303e7,2.58e6,'#FFE619'],[2,'第四紀',2.58e6,0,'#F9F97F'],
+ [3,'更新世',2.58e6,11700,'#FFF2AE'],[3,'完新世',11700,0,'#FEEBD2'],
+];
+
+/* ------------------------------------------------------------------ events */
+const KIND={earth:['地球','var(--k-earth)','#e9976a'],life:['生命','var(--k-life)','#93d48a'],extinct:['絶滅','var(--k-extinct)','#ff7468'],human:['人類','var(--k-human)','#f2c35c']};
+const EVENTS=[
+[4.6e9,'earth','分子雲の収縮','銀河のガスとちりの雲（分子雲）が、自分の重さで縮み始める。近くの超新星爆発がきっかけになったという説もある。'],
+[4.567e9,'earth','太陽と原始惑星系円盤','中心に原始太陽が生まれ、まわりをガスとちりの円盤が回る。ちりはくっつき合って、数kmほどの微惑星に育っていく。太陽系で最も古い固体は、この年代を示す。'],
+[4.54e9,'earth','地球の誕生','微惑星の衝突と合体で原始地球が育つ。衝突の熱で表面は溶け、深さ数百kmのマグマの海（マグマオーシャン）におおわれた。'],
+[4.51e9,'earth','ジャイアント・インパクトと月の誕生','火星ほどの天体テイアが衝突し、飛び散った破片が集まって月ができたと考えられている（年代は諸説）。生まれたての月はずっと近く、1日は5〜6時間ほどだった。'],
+[4.4e9,'earth','海の誕生','表面が冷えて固まり、大気の水蒸気が雨になって降り続けて海ができた。約44億年前の鉱物の粒（ジルコン）が、すでに液体の水があったことを示す。太陽は今より約3割暗かった。'],
+[4.1e9,'earth','後期重爆撃期','約41億〜38億年前、多くの小天体が地球と月に降り注いだとされる時期。月のクレーターの多くはこの頃のもの（本当に集中していたかは議論がある）。'],
+[4.031e9,'earth','太古代のはじまり','カナダのアカスタ片麻岩（約40億年前）など、地球最古の岩石が残る時代に入る。'],
+[3.8e9,'life','生命の痕跡','グリーンランドの岩石に、生物がつくった可能性のある炭素が残る。生命が深海の熱水噴出孔で生まれたのか、陸の温泉のような水たまりで生まれたのかは、まだわかっていない。'],
+[3.48e9,'life','ストロマトライト','微生物のマットが層になって積み重なった岩。西オーストラリアの約35億年前の地層に残る。浅い海の底は微生物の膜でおおわれていた。'],
+[2.7e9,'life','酸素を出す光合成','シアノバクテリアが、水を分解して酸素を出す光合成を始めた（もっと古いという説もある）。酸素はしばらく海に溶けた鉄と反応して消えていった。'],
+[2.5e9,'earth','原生代のはじまり','大きな大陸が育ち、浅い海が広がる。'],
+[2.4e9,'earth','大酸化イベント','大気に酸素がたまり始めた。海の鉄は酸化して沈み、縞状鉄鉱層になった。温室効果のあるメタンが減り、メタンのもやでオレンジがかっていたとされる空は青くなった。'],
+[2.3e9,'earth','ヒューロニアン氷河時代','メタンが減って温室効果が弱まり、地球規模の氷河時代になった（約24億〜21億年前）。'],
+[1.9e9,'life','真核生物の登場','核やミトコンドリアをもつ大きな細胞、真核生物が現れた（時期は諸説）。ミトコンドリアは、細胞の中に取りこまれた細菌の子孫だ。'],
+[1.0e9,'life','多細胞の藻類','紅藻や緑藻のなかまが、たくさんの細胞でできた体をもつようになった。'],
+[7.2e8,'earth','スノーボールアース','赤道まで氷におおわれる全球凍結が2度起きた（約7.2億〜6.35億年前）。海は厚い氷のふたで閉ざされた。'],
+[6.35e8,'earth','全球凍結の終わり','火山が出し続けた二酸化炭素の温室効果で氷がとけ、急な温暖化が起きた。'],
+[5.75e8,'life','エディアカラ生物群','葉のような形のカルニア、平たい楕円形のディッキンソニアなど、大きくて柔らかい体の生き物が海底に現れた。'],
+[5.39e8,'life','カンブリア爆発','古生代のはじまり。目・かたい殻・脚をもつ動物が短い間に次々と現れた。三葉虫、大きな捕食者アノマロカリス、そして背骨のもとになる脊索をもつ小さな魚のなかまも。'],
+[4.7e8,'life','植物の上陸','コケに近い植物が陸に広がり始めた。それまで陸は、むき出しの岩と砂だった。'],
+[4.45e8,'extinct','オルドビス紀末の大量絶滅','当時アフリカは南極の近くにあり、大きな氷床ができた。海面が下がり、海の生物の種の約85%が消えた。サハラ砂漠には今もこの氷河の跡が残る。'],
+[4.33e8,'life','維管束植物','水を運ぶ管をもつクックソニアのような植物が現れた。背丈は数cm。海ではあごのある魚が増え、ウミサソリが栄えた。'],
+[3.85e8,'life','最初の森','アルカエオプテリスなど、高さ10mを超える木が森をつくった。デボン紀は「魚の時代」とも呼ばれる。'],
+[3.75e8,'life','ティクターリク','ひれの中に腕のような骨をもち、首を動かせる魚。浅い水辺で暮らし、陸に上がる四肢動物への途中の姿を示す。'],
+[3.72e8,'extinct','デボン紀後期の大量絶滅','海の酸素が減るなどして、サンゴ礁や甲冑魚の多くが消えた。'],
+[3.59e8,'life','石炭紀の大森林','リンボクなど巨大なシダ植物の湿地林が広がり、その遺骸が今の石炭になった。大気の酸素は30%を超え、翼を広げると70cmのトンボ（メガネウラ）が飛んだ。'],
+[3.12e8,'life','殻のある卵','有羊膜類が現れ、乾いた陸に卵を産めるようになった。まもなく単弓類（のちの哺乳類の系統）と、爬虫類・鳥の系統に分かれた。'],
+[2.99e8,'earth','ペルム紀とパンゲア','大陸が集まって超大陸パンゲアができ、内陸は乾いた。背中に帆をもつディメトロドンなど、単弓類が陸の主役になった。'],
+[2.52e8,'extinct','史上最大の大量絶滅','シベリアの巨大な火山活動で温暖化と海の酸欠が進み、海の生物の種の8割以上が消えた。生き残ったリストロサウルスが、一時は陸の動物の大半を占めた。'],
+[2.3e8,'life','恐竜の登場','三畳紀の後半に、2本足で走る小型の恐竜が現れた。'],
+[2.25e8,'life','最初の哺乳類のなかま','ネズミほどの大きさの哺乳形類が現れた。恐竜の時代を通して、ほとんどが小さく、夜に活動した。'],
+[2.01e8,'extinct','三畳紀末の大量絶滅','パンゲアが割れ始め、のちの大西洋になる裂け目で大噴火が起きた。ライバルが減り、ジュラ紀には恐竜が大型化して栄えた。'],
+[1.6e8,'life','ジュラマイア','ヒトをふくむ有胎盤類につながる、最古級の哺乳類。体長10cmほどで、木に登って虫を食べていた。'],
+[1.5e8,'life','鳥の登場','始祖鳥など、羽毛をもつ恐竜の一部が空を飛び始めた。鳥は恐竜の生き残りだ。'],
+[1.3e8,'life','花を咲かせる植物','被子植物が現れ、白亜紀のあいだに広がった。'],
+[6.6e7,'extinct','小天体の衝突と恐竜の絶滅','直径約10kmの小天体がメキシコのユカタン半島に衝突した。舞い上がったちりが日光をさえぎり、鳥以外の恐竜、翼竜、首長竜、アンモナイトなど、種の約75%が消えた。'],
+[6.5e7,'life','哺乳類の時代','生き残った小さな哺乳類が、空いた場所へ一気に広がった。焼け跡には、まずシダが芽吹いた。'],
+[5.6e7,'earth','暁新世-始新世温暖化極大','短いあいだに大量の炭素が大気に出て、気温が5〜8℃上がった。森は極地まで広がり、初期の霊長類が各地に現れた。'],
+[3.4e7,'earth','南極に氷床','二酸化炭素が減って寒冷化が進み、南極に大きな氷床ができた。'],
+[2.3e7,'life','類人猿の時代','ケニアのビクトリア湖のほとりで見つかったプロコンスルなど、尾のない類人猿がアフリカの森で栄えた。'],
+[1.5e7,'earth','大地溝帯と草原の広がり','東アフリカの大地が持ち上がって割れ、大地溝帯ができ始めた。高地が雨をさえぎって乾燥が進み、森はしだいに草原に変わった。'],
+[7e6,'human','人類の登場','ヒトとチンパンジーの系統が分かれた。チャドで見つかったサヘラントロプス（約700万年前）は、2本足で立っていた可能性がある。'],
+[4.4e6,'human','アルディピテクス','エチオピアの「アルディ」。森で暮らしながら、地上では2本足で歩いた。足の親指はまだものをつかめた。'],
+[3.66e6,'human','ラエトリの足跡','タンザニアの火山灰の上に、アウストラロピテクスが2本足で歩いた足跡が残る。'],
+[3.3e6,'human','最古の石器','ケニアのトゥルカナ湖の西岸（ロメクウィ）で、約330万年前の石器が見つかっている。'],
+[3.2e6,'human','ルーシー','エチオピアで見つかったアウストラロピテクス・アファレンシスの骨格。身長は約1.1m。'],
+[2.8e6,'human','ホモ属の登場','エチオピアで見つかった約280万年前のあごの骨が、最古のホモ属とされる。'],
+[2.58e6,'earth','第四紀と氷河時代','北半球に氷床が広がり、氷期と間氷期がくり返すようになった。アフリカでは湿った時期と乾いた時期が交互に来て、湖が広がったり縮んだりした。'],
+[1.9e6,'human','ホモ・エレクトス','長い脚で長い距離を歩き、初めてアフリカの外まで広がった。トゥルカナ湖のほとりでは、約150万年前の少年の骨格（トゥルカナ・ボーイ）が見つかっている。'],
+[1.76e6,'human','握斧','両面を打ち欠いた涙のしずく形の石器（アシュール文化）。ケニアで見つかった約176万年前のものが最古。'],
+[1.0e6,'human','火の使用','南アフリカのワンダーワーク洞窟に、約100万年前に火を使った跡が残る。火で調理し、夜の寒さや獣から身を守った。'],
+[3.0e5,'human','ホモ・サピエンス','私たちの種。モロッコのジェベル・イルードで見つかった約30万年前の化石が最古級。'],
+[7.0e4,'human','アフリカを出る','約7万〜6万年前、ホモ・サピエンスの一部がアフリカを出て、世界中に広がっていった。'],
+[1.17e4,'human','完新世と農耕','最終氷期が終わった。西アジアなどで農耕が始まる。この頃のサハラは草原と湖の広がる「緑のサハラ」だった。'],
+[5000,'human','牧畜が東アフリカへ','ウシやヤギを連れた牧畜民がトゥルカナ湖のあたりに広がった。同じ頃、エジプトやメソポタミアでは文字と都市が生まれた。'],
+[2000,'human','鉄と農耕の広がり','鉄器と農耕をもつ人々が東アフリカに広がり、村と畑が増えた。'],
+[226,'human','産業革命','蒸気機関で石炭を燃やすようになり、二酸化炭素の排出が急に増え始めた。'],
+[125,'human','ウガンダ鉄道','インド洋のモンバサからビクトリア湖まで鉄道が開通した（1901年）。ナイロビの町は、この鉄道の基地として生まれた。'],
+[76,'human','大加速','1950年ごろから、人口・エネルギー・二酸化炭素などが一気に増えた。'],
+[0,'human','現在','世界の人口は約82億人。二酸化炭素は約425ppmで、産業革命前より5割ほど多い。'],
+];
+
+/* ------------------------------------------------------------------ ancestors */
+const ANCESTORS=[
+[4.6e9,'まだいない','生命はまだ生まれていない。',null],
+[3.9e9,'最初の生命（諸説）','生命が生まれた時期と場所はわかっていない。すべての生物の共通祖先（LUCA）は42億年前ごろという研究もある。',null],
+[3.5e9,'原核生物','核をもたない小さな細胞。目には見えないが、浅い海の微生物マットの中で暮らしていた。',null],
+[1.9e9,'真核生物（単細胞）','細胞核とミトコンドリアをもつ細胞。まだ一つの細胞だけで生きている。',null],
+[8e8,'動物の祖先（単細胞〜群体）','襟鞭毛虫に近い単細胞生物が集まって、多細胞の動物が生まれたと考えられている。',null],
+[5.6e8,'左右相称動物（小さな虫）','前と後ろ、背と腹のある体。海底をはう米粒ほどの動物で、この画面では見えない。',null],
+[5.3e8,'初期の脊椎動物','ハイコウイクティスのような、あごのない数cmの魚のなかま。背骨のもとになる脊索をもつ。','chordate'],
+[4.6e8,'あごのない魚','骨の板で頭を守る無顎類。このあと、あごのある魚が現れる。','agnathan'],
+[4.15e8,'肉鰭類（ひれに骨のある魚）','シーラカンスやハイギョのなかま。ひれの中の骨が、のちの腕と脚になる。','lobefin'],
+[3.8e8,'ティクターリクに近いなかま','ひれに腕のような骨と、動かせる首をもつ。浅い水辺で暮らした。','tiktaalik'],
+[3.65e8,'初期の四肢動物','指のある4本の脚をもつ。まだ多くの時間を水辺で過ごした。','tetrapod'],
+[3.12e8,'初期の単弓類','殻のある卵を産み、乾いた陸で暮らせるようになった。トカゲに似ているが、哺乳類の系統。','synapsid'],
+[2.6e8,'キノドン類','犬のような歯と、体の下に伸びはじめた脚をもつ。哺乳類の直接の祖先のなかま。','cynodont'],
+[2.05e8,'初期の哺乳類','ネズミほどの動物。夜に活動し、恐竜の足もとで暮らした。','mammaliaform'],
+[6.6e7,'小さな哺乳類','恐竜が消えたあと、生き残った小型の哺乳類が一気に多様化した。','mammal'],
+[5.5e7,'初期の霊長類','木の上で暮らし、前を向いた目と、ものをつかめる手をもつ。','primate'],
+[2.3e7,'初期の類人猿（プロコンスル）','尾のない類人猿。ケニアのビクトリア湖のほとりで化石が見つかっている。','ape'],
+[7e6,'初期の人類','サヘラントロプスやアルディピテクス。森と草原の境で、2本の脚で立って歩き始めた。','hom_early'],
+[4.2e6,'アウストラロピテクス','身長1〜1.5m。脳はチンパンジーほどだが、2本足で歩いた。','australo'],
+[2.8e6,'初期のホモ属（ホモ・ハビリスなど）','脳が大きくなり、石器を作って使った。','habilis'],
+[1.9e6,'ホモ・エレクトス','現代人に近い体つきで、長い距離を歩いた。火を使うようになる。','erectus'],
+[7e5,'ホモ・ハイデルベルゲンシス','ネアンデルタール人と私たちの共通の祖先と考えられることが多い（諸説あり）。','heidel'],
+[3e5,'ホモ・サピエンス','私たちの種。狩りと採集をしながら、小さな群れで暮らした。','sapiens'],
+[5000,'ホモ・サピエンス（牧畜・農耕）','ウシを飼い、畑をつくり、村で暮らす。','sapiens'],
+[100,'ホモ・サピエンス（現代）','いまのあなた。','person'],
+];
+
+/* ------------------------------------------------------------------ environment keyframes (interpolated in log-age) */
+const KEYS=[
+[4.6e9,{tile:0,disk:1,stars:1,skyT:0x020309,skyH:0x0c0a18,fogC:0x07070c,fogD:0,sunC:0xffd7a0,sunI:.9,amb:.3,lava:1,relief:.05,coastW:0,shift:0,vol:0,crat:0,rift:0,cloud:0,cloudC:0x553a30,ice:0,veg:0,reach:0,grass:0,dry:0,mats:0,sea:0,wave:.3,rockC:0x2a201c,vegC:0x4f6b33,seaC:0x22303a,seaS:0x4a6060,bedC:0x3a3430,sandC:0x5a5048,vent:0,moon:0}],
+[4.567e9,{disk:1,tile:0,sunI:1.1}],
+[4.545e9,{disk:.2,tile:1,stars:.8,skyT:0x0c0406,skyH:0x4a160a,fogC:0x30100a,fogD:.0012}],
+[4.5e9,{moon:1}],
+[4.45e9,{lava:.9,stars:.5,cloud:.2,relief:.1,disk:0}],
+[4.4e9,{lava:.12,relief:.6,shift:-14,vol:1,vent:1,sea:1,stars:.05,skyT:0x2e211c,skyH:0x7a5a44,fogC:0x6a5444,fogD:.0035,cloud:.9,cloudC:0x6e6560,amb:.45,sunI:.75,rockC:0x262321,seaC:0x183230,seaS:0x45584a,bedC:0x2c2a28,sandC:0x3a3634,wave:.8}],
+[4.2e9,{lava:.04,crat:.3}],
+[4.0e9,{crat:1,cloud:.7}],
+[3.8e9,{crat:.8,vent:.6,skyT:0x5c4128,skyH:0xb88650,fogC:0xa07448,fogD:.003,cloud:.6,cloudC:0xb09a84,shift:-10,relief:.75,coastW:.2,lava:0}],
+[3.5e9,{mats:.7,crat:.35,vol:.75,seaC:0x1d3e36,seaS:0x58775a,wave:.5}],
+[2.7e9,{coastW:.6,shift:-6,relief:.9,vol:.4,vent:.25,crat:.1,rockC:0x3a3431}],
+[2.45e9,{skyT:0x6a5034,skyH:0xc08d58,fogC:0xa98060,ice:0}],
+[2.33e9,{skyT:0x3f6fa8,skyH:0xb7c9da,fogC:0xb0c0cc,fogD:.0026,seaC:0x173f5c,seaS:0x4e8b98,rockC:0x5b3a2e,ice:.85,cloudC:0xe4e8ec,sandC:0x8a6a50,bedC:0x4a4036}],
+[2.15e9,{ice:.85}],
+[2.05e9,{ice:0,coastW:1,shift:-3,relief:1,vol:.15,vent:.1,crat:0}],
+[1.0e9,{mats:.8}],
+[7.25e8,{ice:0}],
+[7.05e8,{ice:1,skyH:0xd8e3ea,fogC:0xd0dce4,cloud:.4}],
+[6.6e8,{ice:1}],[6.52e8,{ice:.45}],[6.45e8,{ice:1}],[6.37e8,{ice:1}],
+[6.25e8,{ice:0,skyH:0xb7c9da,fogC:0xb0c0cc,cloud:.55}],
+[5.4e8,{mats:.35,sandC:0xb09a74,bedC:0x7a6a54,fogD:.0011}],
+[4.75e8,{veg:0,reach:0,mats:.25}],
+[4.6e8,{veg:.12,reach:.03,vegC:0x6a7f3c}],
+[4.48e8,{ice:0}],[4.44e8,{ice:.75}],[4.4e8,{ice:0}],
+[4.2e8,{veg:.25,reach:.12}],
+[3.85e8,{veg:.55,reach:.45,vegC:0x45702f}],
+[3.6e8,{veg:.85,reach:.85,vegC:0x2f5d27,mats:.1}],
+[3.3e8,{ice:0}],[3.1e8,{ice:.45}],[2.9e8,{ice:.35,dry:.2,veg:.7}],
+[2.8e8,{ice:0,dry:.45,veg:.55,vegC:0x58693a,rockC:0x7a4630}],
+[2.55e8,{dry:.7,veg:.45}],
+[2.4e8,{dry:.6,veg:.35}],
+[2.1e8,{dry:.45,veg:.55,vegC:0x4a6a34}],
+[1.8e8,{dry:.2,veg:.75,vegC:0x3c6b2e}],
+[1.0e8,{shift:-5,veg:.8,vegC:0x3c7230}],
+[6.7e7,{shift:-3}],
+[5.6e7,{veg:.95,vegC:0x2d6a2a,shift:-2,coastW:1}],
+[3.4e7,{veg:.85,vegC:0x3a6c2c}],
+[2.4e7,{coastW:.7,shift:2,rift:0,grass:0,rockC:0x7a4630}],
+[1.6e7,{coastW:.12,shift:10,rift:.35,grass:.12,vegC:0x4a7430,rockC:0x6a4a34}],
+[8e6,{rift:.75,grass:.45,veg:.6,shift:11.5}],
+[4e6,{rift:.95,grass:.7,veg:.42,vegC:0x657d36,dry:.25}],
+[2.6e6,{rift:1,grass:.8,veg:.35,dry:.3}],
+[0,{rift:1,shift:12,coastW:.05,skyT:0x3f7cc4,skyH:0xb4cde2,fogD:.0007}],
+];
+const COLK=new Set(['skyT','skyH','fogC','sunC','cloudC','rockC','vegC','seaC','seaS','bedC','sandC']);
+const TR={};
+for(const [A,o] of KEYS)for(const k in o)(TR[k]||(TR[k]=[])).push([lg(A),COLK.has(k)?new THREE.Color(o[k]):o[k]]);
+const E={};for(const k in TR)E[k]=COLK.has(k)?new THREE.Color():0;
+function envAt(A){
+  const L=lg(A);
+  for(const k in TR){
+    const t=TR[k];let a=t[0],b=t[0],f=0;
+    if(L<t[0][0]){a=b=t[t.length-1];for(let i=1;i<t.length;i++)if(L>=t[i][0]){a=t[i-1];b=t[i];f=sm((a[0]-L)/(a[0]-b[0]));break}}
+    if(COLK.has(k))E[k].copy(a[1]).lerp(b[1],f);else E[k]=lerp(a[1],b[1],f);
+  }
+  return E;
+}
+
+/* readout tracks: [age, value], interpolated linearly in log-age */
+const RT={
+ o2:[[4.6e9,0],[2.45e9,0],[2.3e9,1],[2.0e9,2],[8e8,2],[6e8,10],[4.5e8,14],[3.7e8,20],[3.0e8,33],[2.6e8,22],[2.45e8,15],[2.0e8,17],[1.0e8,26],[5e7,23],[0,20.9]],
+ co2:[[4.4e9,2e5],[3.5e9,5e4],[2.5e9,2e4],[1.0e9,6000],[7.2e8,1500],[6.5e8,8e4],[6.2e8,6000],[5e8,4500],[4e8,2500],[3.5e8,800],[3e8,300],[2.6e8,1000],[2.5e8,2500],[2e8,1500],[1e8,1200],[5.6e7,1500],[3.4e7,700],[2e7,400],[3e6,350],[8e5,250],[1.2e4,260],[200,280],[76,311],[26,370],[0,425]],
+ temp:[[4.4e9,80],[4.0e9,60],[3.5e9,40],[2.5e9,25],[2.35e9,25],[2.3e9,-10],[2.15e9,-10],[2.05e9,22],[1.0e9,20],[7.25e8,18],[7.05e8,-40],[6.37e8,-40],[6.25e8,35],[5.4e8,25],[4.48e8,20],[4.44e8,12],[4.4e8,18],[4.2e8,22],[3.6e8,20],[3.0e8,13],[2.6e8,20],[2.52e8,32],[2.4e8,28],[2.0e8,22],[9e7,28],[6.6e7,22],[5.6e7,28],[4e7,22],[3.4e7,18],[1.5e7,19],[3e6,17],[1e6,14],[1.2e4,14],[200,13.8],[76,14],[0,15.3]],
+ day:[[4.51e9,6],[4.0e9,10],[3.2e9,15],[2.0e9,19],[1.0e9,19],[6.2e8,21.9],[4.0e8,22],[7e7,23.5],[0,24]],
+ moon:[[4.51e9,25000],[4.3e9,120000],[3.2e9,270000],[2.46e9,321800],[1.4e9,341000],[6.2e8,360000],[0,384400]],
+ land:[[4.4e9,.02],[3.5e9,.05],[2.5e9,.15],[1.8e9,.25],[5e8,.28],[2.5e8,.33],[9e7,.25],[0,.29]],
+ pop:[[1.2e4,5e6],[5000,1.5e7],[2025,2.3e8],[1026,3e8],[526,4.5e8],[226,9.8e8],[126,1.65e9],[99,2e9],[66,3e9],[52,4e9],[39,5e9],[27,6e9],[15,7e9],[4,8e9],[0,8.2e9]],
+};
+const RLOG=new Set(['co2','pop','moon']);
+function rt(k,A){const t=RT[k],L=lg(A);if(A>=t[0][0])return t[0][1];for(let i=1;i<t.length;i++)if(A>=t[i][0]){const a=t[i-1],b=t[i],f=(lg(a[0])-L)/(lg(a[0])-lg(b[0]));return RLOG.has(k)?Math.exp(lerp(Math.log(a[1]),Math.log(b[1]),f)):lerp(a[1],b[1],f)}return t[t.length-1][1]}
+// glacial cycles of the Pleistocene: 1 = interglacial (warm, wet), 0 = glacial maximum
+function glacial(A){
+  if(A<11700||A>2.6e6)return 1;
+  if(A>8e5)return .5+.5*Math.cos(TAU*(A-11700)/41000);
+  const s=((A-11700)%1e5)/1e5;return s<.12?1-s/.12:Math.pow((s-.12)/.88,1.6);
+}
+const solarLum=A=>A>4.567e9?.7:1/(1+.4*(1-(4.57e9-A)/4.57e9));
+RT.div=[[5.39e8,0],[5.2e8,300],[4.9e8,500],[4.5e8,1600],[4.44e8,800],[4.2e8,1300],[3.8e8,1500],[3.72e8,950],[3.6e8,900],[3.0e8,1300],[2.6e8,1300],[2.519e8,500],[2.4e8,700],[2.02e8,1200],[2.0e8,700],[1.5e8,1300],[1.0e8,2000],[6.7e7,2500],[6.5e7,1500],[3e7,2700],[0,3200]];
+
+/* ------------------------------------------------------------------ Earth-system box model
+   The record above is what happened. This is a small model of WHY: it only knows mechanisms and outside
+   forcings, and computes CO2, temperature, ice, oxygen, methane and sea-animal diversity on its own.
+   Forcings (given): Sun, volcanic CO2, how weatherable the continents are, when key life appears,
+   large igneous provinces, the K-Pg impact, orbital wobble, human emissions.                          */
+const gauss=(A,c,w)=>{const d=(A-c)/w;return Math.exp(-d*d)};
+const LIPS=[// age, half-width, extra volcanic CO2 (× present outgassing)
+  [3.72e8,.5e6,5,'ヴィリュイ洪水玄武岩'],[2.6e8,.4e6,4,'峨眉山洪水玄武岩'],[2.52e8,.35e6,16,'シベリア・トラップ'],[2.015e8,.3e6,9,'中央大西洋マグマ区'],
+  [1.83e8,.3e6,5,'カルー・フェラー'],[6.6e7,.4e6,5,'デカン・トラップ'],[5.6e7,.06e6,25,'暁新世末の炭素放出']];
+const FORCE={
+  sun:solarLum,
+  volc:A=>{let v=1+2.2*Math.pow(A/4.5e9,1.5)+1.0*gauss(A,1.1e8,4e7);for(const l of LIPS)if(Math.abs(A-l[0])<l[1]*4)v+=l[2]*gauss(A,l[0],l[1]);return v},
+  weath:A=>lerp(.25,1,sstep(4.0e9,2.0e9,A))*(1+5.0*gauss(A,7.0e8,4.5e7))*(1+1.6*gauss(A,4.45e8,6e6))*(1-.3*gauss(A,2.4e8,7e7))*(.72+.28*sstep(5e7,0,A)),
+  bio:A=>.45+.2*sstep(4.7e8,4.3e8,A)+.35*sstep(4.2e8,3.7e8,A),
+  meth:A=>sstep(3.8e9,3.4e9,A),
+  burial:A=>.9*sstep(3.0e9,2.5e9,A)+.75*sstep(7e8,5.5e8,A)+1.0*sstep(4.2e8,3.6e8,A)+1.4*gauss(A,3.15e8,3e7),
+  reduct:A=>.9*Math.pow(A/2.4e9,1.2),
+  orbit:A=>glacial(A)-1,
+  human:A=>{if(A>280)return 0;const t=[[280,0],[176,30],[126,90],[76,200],[46,380],[26,520],[16,620],[6,760],[0,830]];for(let i=1;i<t.length;i++)if(A>=t[i][0]){const f=(t[i-1][0]-A)/(t[i-1][0]-t[i][0]);return lerp(t[i-1][1],t[i][1],f)*.34/2.12}return 0},// ppm from cumulative GtC (airborne fraction)
+};
+const KC=A=>A>3e8?1600:A>1.8e8?lerp(1600,1300,sstep(3e8,2.5e8,A)):lerp(1300,3400,sstep(1.8e8,0,A));
+function runModel(){
+  const N=3200,M={N,A:new Float64Array(N)};
+  for(const k of['T','C','O2','I','D','tS','tC','tM','tI','tO','V','W','Bio','hum','snow'])M[k]=new Float32Array(N);
+  for(let i=0;i<N;i++)M.A[i]=u2A_ev(i/(N-1));
+  let C=3e5,O2=1e-6,D=0,snow=false,T=14,Tsm=14,prevA=M.A[0];
+  const st={};
+  function climate(A,Cn,O2){
+    const S=FORCE.sun(A),hum=FORCE.human(A),tS=140*(S-1),tM=18*FORCE.meth(A)*Math.exp(-O2/.003);
+    // orbital wobble only matters once the background is cold enough for northern ice sheets; the ocean then also draws CO2 down in glacials
+    const x0=Math.log((Cn+hum)/280),bg0=14+tS+4.33*x0+(x0>0?.25*x0*x0:0)+tM,amp=clamp((16.5-bg0)/3,0,1),orb=FORCE.orbit(A);
+    const Ct=Cn*(1+.32*amp*orb)+hum,x=Math.log(Ct/280),tC=4.33*x+(x>0?.25*x*x:0);
+    const bg=bg0,tO=3.5*amp*orb,Tb=14+tS+tC+tM+tO;
+    let I=.03,Tq=Tb;
+    if(snow){I=1;Tq=Tb-38.8}else for(let k=0;k<6;k++){I=.03+.2*Math.pow(clamp((14-Tq)/12,0,1),1.5);Tq=Tb-40*(I-.03)}
+    Object.assign(st,{S,hum,Ct,tS,tC,tM,tO,tI:-40*(I-.03),I,T:Tq,Tb,bg,Cn});
+    return st;
+  }
+  for(let i=0;i<N;i++){
+    const A1=M.A[i],span=(prevA-A1)/1e6,n=Math.max(1,Math.ceil(span/.02)),h=span/n;
+    for(let s=1;s<=n;s++){
+      const A=prevA-(span*s/n)*1e6;
+      const c=climate(A,C,O2);
+      if(!snow&&c.T<5&&A<4.3e9)snow=true;else if(snow&&c.Tb>30)snow=false;
+      const V=FORCE.volc(A),W=FORCE.weath(A),Bio=FORCE.bio(A);
+      const Fw=W*Bio*Math.pow(c.Ct/280,.3)*Math.exp((c.bg-14)/13)*(snow?.03:1);
+      C=Math.max(150,C+700*(V-Fw)*h);
+      const B=FORCE.burial(A),R=FORCE.reduct(A),target=B>R?Math.max((B-R)/2.65,.01):1e-6*(1+B);// once O2 wins, an ozone layer shields it and it jumps
+      O2+=(target-O2)*(1-Math.exp(-h/(target>O2?1:8)));
+      T+=(c.T-T)*(1-Math.exp(-h/3e-5));Tsm+=(c.bg-Tsm)*(1-Math.exp(-h/.3));
+      if(D===0&&A<6.4e8&&O2>.3)D=5;
+      if(D>0){
+        const K=KC(A)*clamp(1-Math.max(0,T-25)/10,.25,1)*clamp(O2/.4,0,1)*clamp(1-4*(c.I-.03),.3,1);
+        const rate=Math.min(25,Math.abs(c.bg-Tsm)/.3);
+        const mu=.005+.12*Math.max(0,rate-.8)+(snow?2:0);
+        D=Math.max(1,D+(.08*D*(1-D/Math.max(K,1))-mu*D)*h);
+      }
+      if(A<=6.6e7&&A+h*1e6>6.6e7&&D>0)D*=.6;// the impact itself
+    }
+    prevA=A1;
+    const c=climate(A1,C,O2);
+    M.T[i]=T;M.C[i]=c.Ct;M.O2[i]=O2;M.I[i]=c.I;M.D[i]=D;M.tS[i]=c.tS;M.tC[i]=c.tC;M.tM[i]=c.tM;M.tI[i]=c.tI;M.tO[i]=c.tO;
+    M.V[i]=FORCE.volc(A1);M.W[i]=FORCE.weath(A1);M.Bio[i]=FORCE.bio(A1);M.hum[i]=c.hum;M.snow[i]=snow?1:0;
+  }
+  return M;
+}
+let MODEL=null;
+{const t0=performance.now();MODEL=runModel();MODEL.ms=Math.round(performance.now()-t0)}
+function modelAt(k,A){// sample the model at any age
+  const M=MODEL,a=M.A;let lo=0,hi=M.N-1;
+  if(A>=a[0])return M[k][0];if(A<=a[hi])return M[k][hi];
+  while(hi-lo>1){const m=(lo+hi)>>1;if(a[m]>=A)lo=m;else hi=m}
+  const f=(a[lo]-A)/(a[lo]-a[hi]);return lerp(M[k][lo],M[k][hi],f);
+}
+
+/* human footprint over time (0..1) */
+const farm=A=>A>7000?0:A>2000?.25*sstep(7000,2000,A):A>120?.25+.35*sstep(2000,120,A):.6+.3*sstep(120,0,A);
+const urb=A=>A>125?0:Math.pow(sstep(125,0,A),1.6);
+const roadAmt=A=>A>110?0:sstep(110,60,A);
+const railAmt=A=>A>125?0:1;
+
+/* ------------------------------------------------------------------ renderer + scene */
+const cv=$('gl');
+const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x000000,0);
+const camera=new THREE.PerspectiveCamera(40,1,1,5000);
+const SUNDIR=new THREE.Vector3(.62,.6,-.5).normalize();// moved by the time of day
+const MOONDIR=new THREE.Vector3(-.55,.2,-.8).normalize();
+const sun=new THREE.DirectionalLight(0xffffff,1);
+sun.position.copy(SUNDIR).multiplyScalar(320);
+sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-150,right:150,top:150,bottom:-150,near:20,far:800});
+sun.shadow.bias=-.0006;
+scene.add(sun,sun.target);
+const hemi=new THREE.HemisphereLight(0xffffff,0x333333,.5);
+scene.add(hemi);
+const moonLight=new THREE.DirectionalLight(0x8fa6d8,0);moonLight.position.copy(MOONDIR).multiplyScalar(300);scene.add(moonLight);
+const U={time:{value:0}};
+
+/* sky dome */
+const skyMat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,
+ uniforms:{uTop:{value:new THREE.Color()},uHor:{value:new THREE.Color()},uBot:{value:new THREE.Color()},uSunDir:{value:SUNDIR},uSunC:{value:new THREE.Color()},uSunSize:{value:900},uStars:{value:1},uMoonDir:{value:MOONDIR},uMoonR:{value:.03},uMoonA:{value:0},uTime:U.time},
+ vertexShader:`varying vec3 vD;void main(){vD=position;vec4 p=projectionMatrix*modelViewMatrix*vec4(position,1.);gl_Position=p.xyww;}`,
+ fragmentShader:`uniform vec3 uTop,uHor,uBot,uSunDir,uSunC,uMoonDir;uniform float uSunSize,uStars,uMoonR,uMoonA,uTime;varying vec3 vD;
+ float h3(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}
+ void main(){vec3 d=normalize(vD);float y=d.y;
+  vec3 c=y>0.?mix(uHor,uTop,pow(y,.55)):mix(uHor,uBot,pow(min(-y*3.,1.),.5));
+  vec3 q=floor(d*900.);float s=h3(q);c+=uStars*step(.99965,s)*vec3(.9,.94,1.)*(.4+.6*h3(q+1.3));
+  float sd=max(dot(d,uSunDir),0.);c+=uSunC*(pow(sd,uSunSize)*1.4+pow(sd,10.)*.22+pow(sd,2.5)*.06);
+  float md=dot(d,uMoonDir);float sr=sin(uMoonR);
+  if(uMoonA>0.&&md>cos(uMoonR)){vec3 k=(d-uMoonDir*md)/sr;float kk=min(dot(k,k),1.);vec3 n=k-uMoonDir*sqrt(1.-kk);
+   float li=max(dot(n,uSunDir),0.);float edge=smoothstep(1.,.92,kk);c=mix(c,vec3(.78,.76,.72)*(.06+.94*li),uMoonA*edge);}
+  gl_FragColor=vec4(c,1.);}`});
+const sky=new THREE.Mesh(new THREE.SphereGeometry(2000,32,18),skyMat);
+sky.renderOrder=-1;scene.add(sky);
+
+/* ------------------------------------------------------------------ terrain */
+const SZ=200,HALF=100,N=160,ST=SZ/N,NV=(N+1)*(N+1);
+const world=new THREE.Group();scene.add(world);
+const LX=new Float32Array(NV),LZ=new Float32Array(NV),N1=new Float32Array(NV),N2=new Float32Array(NV),N3=new Float32Array(NV),
+      CO=new Float32Array(NV),RF=new Float32Array(NV),VO=new Float32Array(NV),CR=new Float32Array(NV),
+      DROAD=new Float32Array(NV),DRAIL=new Float32Array(NV),DCITY=new Float32Array(NV),PLOT=new Float32Array(NV),PLOTC=new Uint8Array(NV),
+      H=new Float32Array(NV),HW=new Float32Array(NV);
+const VOLC=[[30,-40,45],[-50,35,38],[62,55,30]];
+const CITY={x:14,z:6};
+const ROADS=[[[100,-8],[60,-4],[30,2],[14,6],[2,10],[-2,30],[-1,60],[-6,100]],[[14,6],[16,-30],[22,-70],[28,-100]]];
+const RAIL=[[100,42],[72,36],[44,27],[24,20],[6,16]];
+function distPoly(x,z,pl){let best=1e9;for(let i=1;i<pl.length;i++){const ax=pl[i-1][0],az=pl[i-1][1],bx=pl[i][0],bz=pl[i][1],dx=bx-ax,dz=bz-az;const t=clamp(((x-ax)*dx+(z-az)*dz)/(dx*dx+dz*dz),0,1);const ex=ax+dx*t-x,ez=az+dz*t-z;best=Math.min(best,ex*ex+ez*ez)}return Math.sqrt(best)}
+const riftX=(z,n1)=>-40+9*Math.sin(z*.025)+4*n1;
+for(let iz=0,i=0;iz<=N;iz++)for(let ix=0;ix<=N;ix++,i++){
+  const x=-HALF+ix*ST,z=-HALF+iz*ST;LX[i]=x;LZ[i]=z;
+  const n1=fbm(x*.011+3.1,z*.011-7.7,5),n2=fbm(x*.045,z*.045,3),n3=fbm(x*.13+5,z*.13-2,2);
+  N1[i]=n1;N2[i]=n2;N3[i]=n3;
+  CO[i]=(x*.92+z*.38)/100+.3*n1;
+  const dx=x-riftX(z,n1);
+  RF[i]=-32*Math.exp(-((dx/20)**2))+9*Math.exp(-(((Math.abs(dx)-34)/14)**2))+3*n2;
+  let v=0;for(const [vx,vz,r] of VOLC){const d=Math.hypot(x-vx,z-vz);v+=Math.pow(Math.max(0,1-d/r),1.6)-.45*Math.max(0,1-d/(r*.16))}
+  VO[i]=v;
+  DROAD[i]=Math.min(...ROADS.map(p=>distPoly(x,z,p)));
+  DRAIL[i]=distPoly(x,z,RAIL);
+  DCITY[i]=Math.hypot(x-CITY.x,z-CITY.z);
+  const px=Math.floor((x+n2*4)/9),pz=Math.floor((z-n2*4)/7);PLOT[i]=hash2(px+500,pz+900);PLOTC[i]=Math.floor(hash2(px,pz+77)*4);
+}
+// craters of the heavy bombardment, each switched on at its own age
+const CRATERS=[];
+for(let k=0;k<46;k++){
+  const cx=rr(-95,95),cz=rr(-95,95),r=rr(4,15),t=lerp(4.38e9,3.75e9,Math.pow(rnd(),.8)),dep=r*.42;
+  const idx=[],val=[];
+  for(let i=0;i<NV;i++){const d=Math.hypot(LX[i]-cx,LZ[i]-cz)/r;if(d>1.6)continue;idx.push(i);val.push((d<1?-dep*(1-d*d):0)+dep*.38*Math.exp(-(((d-1)/.2)**2)))}
+  CRATERS.push({t,idx,val});
+}
+const tGeo=new THREE.PlaneGeometry(SZ,SZ,N,N);tGeo.rotateX(-PI/2);
+const tPos=tGeo.attributes.position,tCol=new THREE.BufferAttribute(new Float32Array(NV*3),3),tGlow=new THREE.BufferAttribute(new Float32Array(NV),1);
+tGeo.setAttribute('color',tCol);tGeo.setAttribute('glow',tGlow);
+const terrMat=new THREE.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:.95,metalness:0});
+terrMat.onBeforeCompile=sh=>{
+  sh.uniforms.uTime=U.time;
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute float glow;varying float vGlow;').replace('#include <begin_vertex>','#include <begin_vertex>\nvGlow=glow;');
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying float vGlow;uniform float uTime;')
+   .replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\ntotalEmissiveRadiance+=vec3(1.,.36,.08)*vGlow*(.85+.15*sin(uTime*2.3+vViewPosition.x*.21+vViewPosition.y*.17));');
+};
+const terrain=new THREE.Mesh(tGeo,terrMat);terrain.receiveShadow=true;terrain.castShadow=true;terrain.frustumCulled=false;world.add(terrain);
+
+/* diorama sides with strata */
+const SK_ROWS=9,SK_BOT=-38;
+const skirtEdges=[];// each: list of terrain vertex indices along the edge
+{const a=[],b=[],c=[],d=[];for(let k=0;k<=N;k++){a.push(k);b.push(N*(N+1)+(N-k));c.push(k*(N+1)+N);d.push((N-k)*(N+1))}
+ // order so faces point outwards
+ skirtEdges.push(a.slice().reverse(),b.slice().reverse(),c,d);}
+const skGeo=new THREE.BufferGeometry();
+const skCount=skirtEdges.length*(N+1)*(SK_ROWS+1);
+const skPos=new Float32Array(skCount*3),skCol=new Float32Array(skCount*3),skIdx=[];
+{let base=0;const pal=[0x6b4f3a,0x8a6a4a,0x5a4636,0x9a7a56,0x4e3e30,0x7a5a42,0x6a5a48,0x3e322a,0x2a241f];const c=new THREE.Color();
+ for(const e of skirtEdges){for(let k=0;k<=N;k++)for(let r=0;r<=SK_ROWS;r++){const j=base+k*(SK_ROWS+1)+r;skPos[j*3]=LX[e[k]];skPos[j*3+2]=LZ[e[k]];c.set(pal[r%pal.length]).multiplyScalar(.85+.15*hash2(k>>3,r));skCol.set([c.r,c.g,c.b],j*3)}
+  for(let k=0;k<N;k++)for(let r=0;r<SK_ROWS;r++){const a=base+k*(SK_ROWS+1)+r,b=a+SK_ROWS+1;skIdx.push(a,b,a+1,b,b+1,a+1)}
+  base+=(N+1)*(SK_ROWS+1);}}
+skGeo.setAttribute('position',new THREE.BufferAttribute(skPos,3));skGeo.setAttribute('color',new THREE.BufferAttribute(skCol,3));skGeo.setIndex(skIdx);
+const skirt=new THREE.Mesh(skGeo,new THREE.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:1}));skirt.frustumCulled=false;world.add(skirt);
+const baseMesh=new THREE.Mesh(new THREE.BoxGeometry(SZ,2,SZ),new THREE.MeshStandardMaterial({color:0x1d1814,roughness:1}));baseMesh.position.y=SK_BOT-1;world.add(baseMesh);
+
+/* water */
+const WM=100,WNV=(WM+1)*(WM+1);
+const wGeo=new THREE.PlaneGeometry(SZ,SZ,WM,WM);wGeo.rotateX(-PI/2);
+const wDepth=new THREE.BufferAttribute(new Float32Array(WNV),1);wGeo.setAttribute('depth',wDepth);
+const waterMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,fog:true,
+ uniforms:THREE.UniformsUtils.merge([THREE.UniformsLib.fog,{uDeep:{value:new THREE.Color()},uShal:{value:new THREE.Color()},uSunDir:{value:SUNDIR},uSunC:{value:new THREE.Color()},uLight:{value:1},uIce:{value:0},uWave:{value:.4},uTime:{value:0}}]),
+ vertexShader:`attribute float depth;uniform float uTime,uWave;varying float vDepth;varying vec3 vW;
+ #include <fog_pars_vertex>
+ void main(){vec3 p=position;float w=sin(p.x*.18+uTime*1.3)*.5+sin(p.z*.23-uTime*1.1)*.5+sin((p.x+p.z)*.41+uTime*2.)*.25;
+  p.y+=w*uWave*clamp(depth*.4,0.,1.);vDepth=depth;vec4 wp=modelMatrix*vec4(p,1.);vW=wp.xyz;vec4 mvPosition=viewMatrix*wp;gl_Position=projectionMatrix*mvPosition;
+ #include <fog_vertex>
+ }`,
+ fragmentShader:`uniform vec3 uDeep,uShal,uSunDir,uSunC;uniform float uLight,uIce,uTime;varying float vDepth;varying vec3 vW;
+ #include <fog_pars_fragment>
+ void main(){float d=vDepth;if(d<-.3)discard;
+  vec3 col=mix(uShal,uDeep,smoothstep(0.,16.,d));float a=mix(.38,.93,smoothstep(0.,10.,d));
+  vec3 n=normalize(vec3(sin(vW.x*.7+uTime*1.7)*.07+sin(vW.z*1.3-uTime)*.05,1.,cos(vW.z*.8+uTime*1.4)*.07+cos(vW.x*1.1+uTime*.9)*.05));
+  vec3 v=normalize(cameraPosition-vW);vec3 h=normalize(uSunDir+v);
+  float spec=pow(max(dot(n,h),0.),110.)*1.3;float fres=pow(1.-max(dot(n,v),0.),3.);
+  col=col*uLight+uSunC*spec*(1.-uIce)+fres*.12*uSunC;
+  float foam=(1.-smoothstep(0.,.6,d))*(.6+.4*sin(uTime*2.+vW.x*.5+vW.z*.3));col=mix(col,vec3(.9),foam*.5*(1.-uIce));a=max(a,foam*.6);
+  float cr=abs(fract(vW.x*.06+sin(vW.z*.05)*.8)-.5)*abs(fract(vW.z*.07+sin(vW.x*.04))-.5);
+  float sn=sin(vW.x*.13+sin(vW.z*.09)*2.)*sin(vW.z*.11+sin(vW.x*.07)*2.);vec3 ice=vec3(.86,.92,.95)*uLight*(.95+.05*sn-.06*smoothstep(.004,0.,cr));
+  col=mix(col,ice,uIce);a=mix(a,1.,uIce);
+  gl_FragColor=vec4(col,a);
+ #include <fog_fragment>
+ }`});
+const water=new THREE.Mesh(wGeo,waterMat);water.frustumCulled=false;water.renderOrder=2;world.add(water);
+// water side walls
+const wsGeo=new THREE.BufferGeometry();
+const wsPos=new Float32Array(4*(N+1)*2*3),wsIdx=[];
+for(let e=0;e<4;e++){const ed=skirtEdges[e];for(let k=0;k<=N;k++){const j=(e*(N+1)+k)*2;wsPos[j*3]=LX[ed[k]];wsPos[j*3+2]=LZ[ed[k]];wsPos[j*3+3]=LX[ed[k]];wsPos[j*3+5]=LZ[ed[k]];}
+ for(let k=0;k<N;k++){const a=(e*(N+1)+k)*2;wsIdx.push(a,a+2,a+1,a+2,a+3,a+1)}}
+wsGeo.setAttribute('position',new THREE.BufferAttribute(wsPos,3));wsGeo.setIndex(wsIdx);
+const wsMat=new THREE.MeshBasicMaterial({color:0x224455,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false});
+const waterSide=new THREE.Mesh(wsGeo,wsMat);waterSide.frustumCulled=false;world.add(waterSide);
+
+let W=0;// water level
+function Hat(x,z){
+  const fx=clamp((x+HALF)/ST,0,N-.001),fz=clamp((z+HALF)/ST,0,N-.001),ix=fx|0,iz=fz|0,tx=fx-ix,tz=fz-iz,i=iz*(N+1)+ix;
+  return lerp(lerp(H[i],H[i+1],tx),lerp(H[i+N+1],H[i+N+2],tx),tz);
+}
+
+/* ------------------------------------------------------------------ terrain update */
+const C_=new THREE.Color(),C2=new THREE.Color();
+const PAL={grass:new THREE.Color(0xb3a45a),dry:new THREE.Color(0xb8794a),ice:new THREE.Color(0xeef4f7),crust:new THREE.Color(0x1c120e),mat:new THREE.Color(0x4c6a3a),
+  urban:new THREE.Color(0x8b8984),road:new THREE.Color(0x4a4744),rail:new THREE.Color(0x3a3430),dead:new THREE.Color(0x5e4a36),ash:new THREE.Color(0x4a4646),
+  farm:[0x9a8a40,0x6f8a3a,0x8a6a40,0xa89a58].map(h=>new THREE.Color(h))};
+let FX={dead:0,ash:0,haze:0};
+function updateTerrain(A){
+  const e=E,crat=e.crat;
+  if(crat>.01){CR.fill(0);for(const c of CRATERS){if(A>c.t)continue;for(let j=0;j<c.idx.length;j++)CR[c.idx[j]]+=c.val[j]}}
+  const fa=farm(A),ub=urb(A),rd=roadAmt(A),rl=railAmt(A),urbR=6+42*Math.pow(ub,.8);
+  for(let i=0;i<NV;i++){
+    let h=e.relief*(e.coastW*CO[i]*28+N1[i]*16+N2[i]*4)+N3[i]*.6+e.shift+e.vol*VO[i]*28+e.rift*RF[i];
+    if(crat>.01)h+=crat*CR[i];
+    H[i]=h;
+  }
+  const col=tCol.array,glow=tGlow.array,P=tPos.array;
+  for(let iz=0,i=0;iz<=N;iz++)for(let ix=0;ix<=N;ix++,i++){
+    const h=H[i],hw=h-W;P[i*3+1]=h;HW[i]=hw;
+    const hx=H[ix<N?i+1:i]-H[ix>0?i-1:i],hz=H[iz<N?i+N+1:i]-H[iz>0?i-N-1:i];
+    const slope=clamp(Math.hypot(hx,hz)/(2*ST)*.7,0,1);
+    const n2=N2[i];
+    C_.copy(e.rockC).multiplyScalar(1-slope*.25+n2*.12);
+    if(hw<0){
+      C2.copy(e.bedC).lerp(e.rockC,sstep(0,25,-hw)*.5);C_.copy(C2);
+      if(e.mats>0&&hw>-8)C_.lerp(PAL.mat,e.mats*(1+hw/8)*.8);
+    }else{
+      if(hw<1.6&&e.sea>.5)C_.lerp(e.sandC,(1-hw/1.6)*(1-slope));
+      const v=clamp(e.veg*1.3*clamp(1.3-hw/(2+60*e.reach),0,1)*clamp(1-slope*.8,0,1)*(.8+.5*n2),0,1);
+      if(v>0){C2.copy(e.vegC);if(FX.dead>0)C2.lerp(PAL.dead,FX.dead);C_.lerp(C2,clamp(v,0,1))}
+      if(e.grass>0)C_.lerp(PAL.grass,e.grass*sstep(1,8,hw)*clamp(.55+.6*n2,0,1)*.85);
+      if(e.dry>0)C_.lerp(PAL.dry,e.dry*sstep(2,20,hw)*.75);
+      if(fa>0&&hw>1&&slope<.5&&DCITY[i]>urbR+1&&DCITY[i]<80&&PLOT[i]<fa)C_.lerp(PAL.farm[PLOTC[i]],.85);
+      if(ub>0){const m=sstep(urbR,urbR-6,DCITY[i]+N2[i]*10);if(m>0)C_.lerp(PAL.urban,m*.9)}
+      if(rd>0&&DROAD[i]<2)C_.lerp(PAL.road,rd*sstep(2,1,DROAD[i]));
+      if(rl>0&&DRAIL[i]<1.3)C_.lerp(PAL.rail,sstep(1.3,.6,DRAIL[i]));
+    }
+    if(e.ice>0){const im=clamp((e.ice*1.7-.65)+h/45+n2*.35,0,1);if(im>0)C_.lerp(PAL.ice,im)}
+    if(FX.ash>0)C_.lerp(PAL.ash,FX.ash*.6);
+    let g=0;
+    if(e.lava>0){C_.lerp(PAL.crust,clamp(e.lava*1.4,0,1));const crk=1-sstep(0,.09,Math.abs(N3[i]));g=e.lava*(.22+.9*crk)}
+    if(e.vent>0&&e.vol>0){g=Math.max(g,e.vent*e.vol*sstep(.72,.95,VO[i]+.3*Math.max(0,-CO[i]*0))*1.2)}
+    glow[i]=g;
+    col[i*3]=C_.r;col[i*3+1]=C_.g;col[i*3+2]=C_.b;
+  }
+  tPos.needsUpdate=true;tCol.needsUpdate=true;tGlow.needsUpdate=true;
+  // strata sides follow the surface
+  let base=0;
+  for(const ed of skirtEdges){for(let k=0;k<=N;k++){const top=H[ed[k]];for(let r=0;r<=SK_ROWS;r++){const j=base+k*(SK_ROWS+1)+r;skPos[j*3+1]=lerp(top,SK_BOT,Math.pow(r/SK_ROWS,1.25))}}base+=(N+1)*(SK_ROWS+1)}
+  skGeo.attributes.position.needsUpdate=true;
+  // water depth & side walls
+  const wp=wGeo.attributes.position.array,wd=wDepth.array;
+  for(let i=0;i<WNV;i++)wd[i]=W-Hat(wp[i*3],wp[i*3+2]);
+  wDepth.needsUpdate=true;
+  for(let ei=0;ei<4;ei++){const ed=skirtEdges[ei];for(let k=0;k<=N;k++){const j=(ei*(N+1)+k)*2;const hb=H[ed[k]];wsPos[j*3+1]=W;wsPos[j*3+4]=Math.min(hb,W)}}
+  wsGeo.attributes.position.needsUpdate=true;
+}
+
+/* ------------------------------------------------------------------ geometry kit for creatures and plants */
+const _m=new THREE.Matrix4(),_q=new THREE.Quaternion(),_e=new THREE.Euler(0,0,0,'YXZ'),_v=new THREE.Vector3(),_s=new THREE.Vector3();
+const P=(geo,col,pos,rot,scl)=>({geo,col,pos:pos||[0,0,0],rot:rot||[0,0,0],scl:scl||[1,1,1]});
+const B=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
+const Cy=(a,b,h,s=6)=>new THREE.CylinderGeometry(a,b,h,s);
+const Co=(r,h,s=6)=>new THREE.ConeGeometry(r,h,s);
+const Sp=(r=.5,w=7,h=5)=>new THREE.SphereGeometry(r,w,h);
+const Ic=(r,d=0)=>new THREE.IcosahedronGeometry(r,d);
+function shade(c,k){const o=new THREE.Color(c);if(k>0)o.lerp(new THREE.Color(0xffffff),k);else o.multiplyScalar(1+k);return o.getHex()}
+function merge(parts){
+  const pos=[],nor=[],cl=[],c=new THREE.Color();
+  for(const p of parts){
+    const g=(p.geo.index?p.geo.toNonIndexed():p.geo.clone());
+    _e.set(p.rot[0],p.rot[1],p.rot[2],'YXZ');_q.setFromEuler(_e);_m.compose(_v.set(...p.pos),_q,_s.set(...p.scl));
+    g.applyMatrix4(_m);g.computeVertexNormals();
+    c.set(p.col);const a=g.attributes.position.array,n=g.attributes.normal.array;
+    for(let i=0;i<a.length;i++){pos.push(a[i]);nor.push(n[i])}
+    for(let i=0;i<a.length/3;i++)cl.push(c.r,c.g,c.b);
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));g.setAttribute('color',new THREE.Float32BufferAttribute(cl,3));
+  g.computeBoundingSphere();return g;
+}
+function quad(o){
+  const c=o.c,d=shade(c,-.3),l=shade(c,.2),p=[];
+  const bl=o.bl||1,bw=o.bw||.4,bh=o.bh||.35,leg=o.leg||.35,lr=o.lr||.06,by=leg+bh*.42;
+  p.push(P(Sp(.5,8,6),c,[0,by,0],0,[bw,bh,bl]));
+  if(o.belly)p.push(P(Sp(.5,7,5),l,[0,by-bh*.14,0],0,[bw*.86,bh*.78,bl*.9]));
+  for(const sx of[-1,1])for(const sz of[-1,1]){
+    if(o.spr)p.push(P(Cy(lr,lr*.8,leg*1.6+.05,5),d,[sx*(bw*.5+leg*.3),leg*.45,sz*bl*.28],[0,0,sx*.95]));
+    else p.push(P(Cy(lr,lr*.8,leg+bh*.3,5),d,[sx*bw*.28,(leg+bh*.3)/2,sz*bl*.32]));
+  }
+  const na=o.na??.5,nl=o.nl||0;let hz=bl*.42,hy=by+bh*.1;
+  if(nl){const nr=o.nr||bw*.25;p.push(P(Cy(nr*.7,nr,nl,6),c,[0,hy+Math.sin(na)*nl/2,hz+Math.cos(na)*nl/2],[PI/2-na,0,0]));hz+=Math.cos(na)*nl;hy+=Math.sin(na)*nl}
+  const hl=o.hl||bl*.3,hw=o.hw||bw*.5,hh=o.hh||bh*.55;
+  p.push(P(Sp(.5,7,5),o.hc||c,[0,hy,hz+hl*.3],[o.hp||0,0,0],[hw,hh,hl]));
+  if(o.tl){const ta=o.ta??.25;p.push(P(Co(o.tr||bw*.18,o.tl,5),c,[0,by-bh*.05-Math.sin(ta)*o.tl/2,-bl*.45-Math.cos(ta)*o.tl/2],[-(PI/2+ta),0,0]))}
+  if(o.x)o.x(p,{by,hz,hy,hl,bl,bw,bh,c,d,l});
+  return p;
+}
+function biped(o){
+  const c=o.c,d=shade(c,-.3),p=[];
+  const leg=o.leg||.6,bl=o.bl||1,bw=o.bw||.35,bh=o.bh||.4,by=leg+bh*.3;
+  p.push(P(Sp(.5,8,6),c,[0,by,0],[o.tilt||0,0,0],[bw,bh,bl]));
+  for(const sx of[-1,1]){p.push(P(Cy(leg*.1,leg*.06,leg+bh*.2,5),d,[sx*bw*.25,(leg+bh*.2)/2,-bl*.05]));p.push(P(B(leg*.14,leg*.05,leg*.32),d,[sx*bw*.25,leg*.03,bl*.06]))}
+  const na=o.na??.8,nl=o.nl||.2;let hz=bl*.42,hy=by+bh*.15;
+  p.push(P(Cy(bw*.18,bw*.26,nl,5),c,[0,hy+Math.sin(na)*nl/2,hz+Math.cos(na)*nl/2],[PI/2-na,0,0]));hz+=Math.cos(na)*nl;hy+=Math.sin(na)*nl;
+  const hl=o.hl||.25;p.push(P(Sp(.5,7,5),c,[0,hy,hz+hl*.3],0,[o.hw||hl*.6,o.hh||hl*.6,hl]));
+  if(o.arms)for(const sx of[-1,1])p.push(P(Cy(.025,.02,o.arms,4),d,[sx*bw*.35,by-.02,bl*.38],[.9,0,0]));
+  if(o.tl)p.push(P(Co(bw*.25,o.tl,5),c,[0,by-.02,-bl*.45-o.tl/2],[-(PI/2+.12),0,0]));
+  if(o.x)o.x(p,{by,hz,hy,c,d});
+  return p;
+}
+function human(o){// height ≈ 1
+  const skin=o.c,fur=o.fur||skin,d=shade(fur,-.3),p=[],lean=o.lean||0,legL=o.legL||.48,tl=.36;
+  for(const sx of[-1,1])p.push(P(Cy(.05,.038,legL,5),o.legC||d,[sx*.065,legL/2,0]));
+  p.push(P(Sp(.5,7,5),fur,[0,legL+tl/2,Math.sin(lean)*tl*.5],[lean,0,0],[.27,tl,.18]));
+  const hz=Math.sin(lean)*tl+.02,hy=legL+tl+.07;
+  p.push(P(Sp(o.head||.1,7,5),skin,[0,hy,hz]));
+  if(o.snout)p.push(P(Sp(.055,6,4),skin,[0,hy-.035,hz+.085]));
+  const al=o.arm||.4;for(const sx of[-1,1])p.push(P(Cy(.032,.026,al,5),fur,[sx*.16,legL+tl*.92-al/2,Math.sin(lean)*tl*.55],[lean*.6,0,sx*.08]));
+  return p;
+}
+function flyer(o){
+  const c=o.c,d=shade(c,-.25),p=[],bl=o.bl||.6;
+  p.push(P(Sp(.5,7,5),c,[0,0,0],0,[o.bw||.18,o.bh||.16,bl]));
+  p.push(P(B(o.ws||2,.025,o.wc||.35),o.wcol||d,[0,0,o.wz||0]));
+  if(o.head)p.push(P(Sp(.5,6,4),c,[0,.03,bl*.5+o.head*.3],0,[o.head*.45,o.head*.45,o.head]));
+  if(o.tail)p.push(P(B(o.tail[0],.02,o.tail[1]),d,[0,0,-bl*.55]));
+  if(o.x)o.x(p,{c,d});
+  return p;
+}
+function swim(o){
+  const c=o.c,d=shade(c,-.3),l=shade(c,.25),p=[],bw=o.bw||.28,bh=o.bh||.4,bl=o.bl||1;
+  p.push(P(Sp(.5,8,6),c,[0,0,0],0,[bw,bh,bl]));
+  if(o.belly!==false)p.push(P(Sp(.5,7,5),l,[0,-bh*.13,0],0,[bw*.9,bh*.75,bl*.92]));
+  const tf=o.tf||.35;p.push(P(Co(tf*.6,tf,4),d,[0,0,-bl*.5-tf*.3],[PI/2,0,0],o.flukes?[1,1,.15]:[.15,1,1]));
+  if(o.df)p.push(P(Co(o.df*.5,o.df,4),d,[0,bh*.45,-bl*.05],[-.35,0,0],[.15,1,1]));
+  if(o.pf)for(const sx of[-1,1])p.push(P(Sp(.5,5,4),d,[sx*bw*.55,-bh*.15,bl*.15],[0,0,sx*.4],[o.pf,.035,o.pf*.5]));
+  if(o.snout)p.push(P(Co(bw*.22,o.snout,5),c,[0,0,bl*.5+o.snout*.42],[PI/2,0,0]));
+  if(o.x)o.x(p,{c,d,l});
+  return p;
+}
+const radial=(n,f)=>{const a=[];for(let i=0;i<n;i++)a.push(f(i,i*TAU/n));return a};
+const SHAPES={
+ strom:c=>[P(Sp(.5,9,5),c,0,0,[1.3,.75,1.3]),P(Sp(.5,8,5),shade(c,.15),[.75,0,.35],0,[.85,.55,.85]),P(Sp(.5,8,5),shade(c,-.15),[-.55,0,-.5],0,[.75,.5,.75])],
+ algae:c=>radial(4,(i,a)=>P(Cy(.03,.08,1.4,4),i%2?c:shade(c,.2),[Math.cos(a)*.25,.7,Math.sin(a)*.25],[Math.sin(a)*.25,0,Math.cos(a)*.25])),
+ frond:c=>[P(Cy(.03,.05,.5,4),shade(c,-.2),[0,.25,0]),P(Sp(.5,6,6),c,[0,.95,0],0,[.14,1.0,.42]),P(Sp(.5,6,3),shade(c,-.2),[0,.02,0],0,[.3,.06,.3])],
+ disc:c=>[P(Sp(.5,10,4),c,[0,.04,0],0,[.7,.1,1]),P(Sp(.5,6,4),shade(c,-.25),[0,.08,0],0,[.07,.08,.92])],
+ trilobite:c=>[P(Sp(.5,8,5),c,[0,.08,-.05],0,[.55,.2,.8]),P(Sp(.5,8,4),shade(c,.12),[0,.08,.32],0,[.72,.18,.36]),P(Sp(.5,6,4),shade(c,-.25),[0,.12,0],0,[.18,.2,.88]),P(Sp(.06,5,4),0x222018,[.16,.18,.36]),P(Sp(.06,5,4),0x222018,[-.16,.18,.36])],
+ anomalo:c=>{const p=[P(Sp(.5,8,5),c,0,0,[.4,.2,1.2])];for(let i=0;i<5;i++)p.push(P(B(1.0-i*.1,.03,.18),shade(c,.15),[0,-.02,.35-i*.2]));p.push(P(B(.5,.03,.25),shade(c,-.2),[0,0,-.7]));
+   for(const sx of[-1,1]){p.push(P(Sp(.07,5,4),0x1a1a1a,[sx*.2,.12,.55]));p.push(P(Cy(.04,.06,.45,4),shade(c,-.15),[sx*.08,-.12,.75],[.9,0,0]))}return p},
+ eel:c=>swim({c,bw:.12,bh:.16,bl:1,tf:.18,belly:false,x:p=>p.push(P(B(.02,.1,.8),shade(c,-.2),[0,.09,-.05]))}),
+ agnathan:c=>swim({c,bw:.26,bh:.24,bl:1,tf:.3,x:p=>p.push(P(Sp(.5,7,5),shade(c,-.25),[0,.02,.3],0,[.36,.26,.45]))}),
+ fish:c=>swim({c,bw:.22,bh:.38,bl:1,tf:.32,df:.22,pf:.2}),
+ shark:c=>swim({c,bw:.28,bh:.3,bl:1.2,tf:.5,df:.4,pf:.45,snout:.2}),
+ placoderm:c=>swim({c,bw:.36,bh:.36,bl:1.1,tf:.42,df:.25,pf:.3,x:p=>{p.push(P(Sp(.5,8,5),shade(c,-.3),[0,.04,.36],0,[.44,.4,.46]));p.push(P(B(.3,.04,.1),0xd8d0c0,[0,-.08,.6]))}}),
+ orthocone:c=>[P(Co(.17,1.7,7),c,[0,0,-.75],[-PI/2,0,0]),P(Sp(.2,6,5),shade(c,-.25),[0,0,.15]),...radial(5,(i,a)=>P(Cy(.02,.03,.4,3),shade(c,-.3),[Math.cos(a)*.1,Math.sin(a)*.1,.4],[PI/2,0,0]))],
+ ammonite:c=>[P(new THREE.TorusGeometry(.3,.17,6,10),c,[0,0,-.05],[0,PI/2,0]),P(Sp(.3,7,5),shade(c,-.15),[0,0,-.05],0,[.7,1,1]),...radial(4,(i)=>P(Cy(.02,.03,.35,3),shade(c,-.3),[(i-1.5)*.05,-.15,.33],[PI/2+.3,0,0]))],
+ eurypterid:c=>{const p=[P(Sp(.5,7,4),c,[0,.08,.3],0,[.45,.14,.45]),P(Sp(.5,7,4),shade(c,.1),[0,.08,-.25],0,[.32,.12,.8]),P(Co(.05,.45,4),shade(c,-.25),[0,.08,-.85],[-PI/2,0,0])];
+   for(const sx of[-1,1]){p.push(P(Sp(.5,5,4),shade(c,-.15),[sx*.33,.06,.05],[0,sx*.4,0],[.35,.03,.14]));for(const z of[.2,.35,.45])p.push(P(Cy(.015,.015,.3,3),shade(c,-.3),[sx*.25,.03,z],[0,0,sx*1.1]))}return p},
+ lobefin:c=>swim({c,bw:.3,bh:.3,bl:1,tf:.3,df:.15,x:p=>{for(const sx of[-1,1])for(const z of[.2,-.2])p.push(P(Sp(.5,6,4),shade(c,-.2),[sx*.2,-.1,z],[0,sx*.6,sx*.3],[.3,.07,.14]))}}),
+ tiktaalik:c=>quad({c,bl:1.1,bw:.36,bh:.18,leg:.06,lr:.05,spr:1,hl:.4,hw:.34,hh:.14,tl:.7,tr:.12,ta:0}),
+ tetrapod:c=>quad({c,bl:1,bw:.34,bh:.2,leg:.12,lr:.05,spr:1,hl:.32,hw:.32,hh:.14,tl:.8,tr:.1,ta:.05}),
+ amphib:c=>quad({c,bl:1,bw:.42,bh:.22,leg:.14,lr:.06,spr:1,hl:.35,hw:.42,hh:.15,tl:.5,tr:.1,ta:.05}),
+ millipede:c=>radial(8,i=>P(Sp(.09,5,4),i%2?c:shade(c,-.2),[0,.09,.42-i*.12])),
+ dragonfly:c=>flyer({c,bw:.06,bh:.06,bl:1,ws:1.5,wc:.14,wcol:0xc8e0e8,x:p=>{p.push(P(B(1.3,.012,.12),0xc8e0e8,[0,0,-.12]));p.push(P(Sp(.08,6,4),shade(c,-.2),[0,0,.5]))}}),
+ lizard:c=>quad({c,bl:.9,bw:.26,bh:.18,leg:.12,lr:.04,spr:1,hl:.26,hw:.2,hh:.13,tl:.8,tr:.07,ta:.05}),
+ dimetrodon:c=>quad({c,bl:1,bw:.32,bh:.26,leg:.16,lr:.06,spr:1,hl:.34,hw:.22,hh:.2,tl:.8,tr:.09,ta:.08,x:(p,k)=>p.push(P(Sp(.5,10,6),shade(c,.12),[0,k.by+k.bh*.45,-.02],0,[.03,.8,.7]))}),
+ gorgon:c=>quad({c,bl:1,bw:.32,bh:.3,leg:.28,lr:.06,hl:.42,hw:.24,hh:.24,tl:.45,tr:.08,ta:.2}),
+ lystro:c=>quad({c,bl:.8,bw:.42,bh:.36,leg:.18,lr:.08,hl:.3,hw:.28,hh:.26,tl:.15,tr:.08,ta:.3,belly:1}),
+ cynodont:c=>quad({c,bl:.8,bw:.26,bh:.24,leg:.2,lr:.04,hl:.3,hw:.18,hh:.16,tl:.4,tr:.05,ta:.2}),
+ shrew:c=>quad({c,bl:.6,bw:.26,bh:.24,leg:.08,lr:.03,hl:.25,hw:.16,hh:.14,tl:.5,tr:.03,ta:.1}),
+ smalltheropod:c=>biped({c,leg:.45,bl:.7,bw:.2,bh:.22,nl:.3,na:.9,hl:.22,tl:.8,arms:.15}),
+ bigtheropod:c=>biped({c,leg:.45,bl:.8,bw:.34,bh:.4,nl:.15,na:.6,hl:.42,hh:.26,hw:.26,tl:.9,arms:.1}),
+ ornithopod:c=>biped({c,leg:.4,bl:.9,bw:.36,bh:.4,nl:.25,na:.7,hl:.28,tl:.8,arms:.3}),
+ sauropod:c=>quad({c,bl:.6,bw:.3,bh:.3,leg:.3,lr:.07,nl:.9,na:.85,nr:.07,hl:.12,hw:.08,hh:.07,tl:.95,tr:.08,ta:.15,belly:1}),
+ stego:c=>quad({c,bl:1,bw:.36,bh:.36,leg:.26,lr:.07,hl:.2,hw:.12,hh:.1,na:-.2,nl:.15,tl:.7,tr:.1,ta:.1,x:(p,k)=>{for(let i=0;i<6;i++)p.push(P(Co(.07,.28-Math.abs(i-2.5)*.03,4),shade(c,-.25),[0,k.by+k.bh*.42,.35-i*.17],0,[.35,1,1]));for(const sx of[-1,1])p.push(P(Co(.03,.3,4),0xd8d0b8,[sx*.07,k.by,-1.0],[-PI/2-.4,0,sx*.5]))}}),
+ pterosaur:c=>flyer({c,bw:.14,bh:.14,bl:.5,ws:2.6,wc:.4,wcol:shade(c,-.15),head:.4,x:p=>p.push(P(Co(.05,.35,4),shade(c,-.3),[0,.12,.15],[-.9,0,0]))}),
+ bird:c=>flyer({c,bw:.16,bh:.14,bl:.5,ws:1.3,wc:.25,head:.18,tail:[.2,.2]}),
+ gastornis:c=>biped({c,leg:.55,bl:.6,bw:.4,bh:.5,nl:.3,na:1.2,hl:.3,hh:.24,hw:.2,tl:.15,tilt:-.3}),
+ ichthyo:c=>swim({c,bw:.3,bh:.36,bl:1.2,tf:.5,df:.3,pf:.3,snout:.4}),
+ plesio:c=>{const p=swim({c,bw:.45,bh:.26,bl:.8,tf:.15});p.push(P(Cy(.05,.09,1.0,5),c,[0,.15,.88],[PI/2-.3,0,0]));p.push(P(Sp(.5,6,4),c,[0,.3,1.4],0,[.12,.1,.2]));
+   for(const sx of[-1,1])for(const z of[.2,-.25])p.push(P(Sp(.5,6,4),shade(c,-.2),[sx*.35,-.05,z],[0,sx*.4,0],[.55,.04,.16]));return p},
+ mosasaur:c=>swim({c,bw:.3,bh:.28,bl:1.6,tf:.35,pf:.3,snout:.25,df:.1}),
+ whale:c=>swim({c,bw:.3,bh:.3,bl:2,tf:.4,pf:.25,snout:.2,flukes:1}),
+ primate:c=>quad({c,bl:.6,bw:.24,bh:.24,leg:.2,lr:.04,hl:.22,hw:.18,hh:.18,tl:.6,tr:.03,ta:-.6}),
+ ape:c=>quad({c,bl:.6,bw:.36,bh:.42,leg:.32,lr:.06,hl:.24,hw:.22,hh:.22,na:.3}),
+ elephant:c=>quad({c,bl:1,bw:.6,bh:.6,leg:.5,lr:.12,hl:.4,hw:.42,hh:.42,tl:.3,tr:.03,ta:.9,x:(p,k)=>{p.push(P(Cy(.05,.09,.7,5),c,[0,k.hy-.35,k.hz+.42]));
+   for(const sx of[-1,1]){p.push(P(Sp(.5,6,4),shade(c,-.1),[sx*.22,k.hy+.02,k.hz+.05],[0,sx*.3,0],[.06,.42,.36]));p.push(P(Co(.03,.35,4),0xe8e0cc,[sx*.1,k.hy-.2,k.hz+.45],[1.9,0,0]))}}}),
+ antelope:c=>quad({c,bl:.8,bw:.24,bh:.28,leg:.5,lr:.03,nl:.3,na:1.0,nr:.06,hl:.22,hw:.12,hh:.12,tl:.12,tr:.03,ta:.4,belly:1,x:(p,k)=>{for(const sx of[-1,1])p.push(P(Co(.02,.32,3),0x2a2620,[sx*.04,k.hy+.18,k.hz+.02],[-.4,0,sx*.15]))}}),
+ giraffe:c=>quad({c,bl:.8,bw:.28,bh:.34,leg:.8,lr:.04,nl:1.0,na:1.25,nr:.07,hl:.22,hw:.1,hh:.1,tl:.2,tr:.02,ta:.5,belly:1}),
+ hippo:c=>quad({c,bl:1,bw:.6,bh:.5,leg:.18,lr:.1,hl:.45,hw:.42,hh:.32,tl:.1,tr:.05,ta:.5,belly:1}),
+ croc:c=>quad({c,bl:1,bw:.32,bh:.16,leg:.06,lr:.05,spr:1,hl:.6,hw:.2,hh:.1,tl:1.1,tr:.12,ta:0}),
+ lion:c=>quad({c,bl:.9,bw:.3,bh:.32,leg:.36,lr:.05,nl:.1,na:.5,hl:.26,hw:.24,hh:.24,tl:.55,tr:.03,ta:.6,belly:1}),
+ cattle:c=>quad({c,bl:.9,bw:.38,bh:.4,leg:.38,lr:.06,hl:.3,hw:.2,hh:.2,na:.2,nl:.15,tl:.4,tr:.03,ta:1.2,belly:1,x:(p,k)=>{for(const sx of[-1,1])p.push(P(Co(.025,.3,3),0xe0d8c4,[sx*.14,k.hy+.1,k.hz+.05],[0,0,-sx*1.0]))}}),
+ hom_early:()=>human({c:0x5a4436,fur:0x3a2e26,lean:.25,legL:.38,arm:.5,head:.11,snout:1}),
+ australo:()=>human({c:0x5a4436,fur:0x4e3a2c,lean:.12,legL:.4,arm:.46,head:.11,snout:1}),
+ paranthropus:()=>human({c:0x4a3a2e,fur:0x34291f,lean:.12,legL:.4,arm:.46,head:.12,snout:1}),
+ habilis:()=>human({c:0x5e4434,fur:0x5e4434,lean:.06,legL:.44,arm:.42,head:.11}),
+ erectus:()=>human({c:0x6a4a36,fur:0x6a4a36,legL:.5,arm:.4,head:.1}),
+ heidel:()=>human({c:0x6e4c36,fur:0x6e4c36,legL:.5,arm:.4,head:.105}),
+ sapiens:()=>human({c:0x7a5038,fur:0x9a7a56,legL:.5,arm:.4,head:.1}),
+ person:()=>human({c:0x8a6048,fur:0xffffff,legC:0x3a4050,legL:.5,arm:.4,head:.1}),
+ canoe:c=>[P(Sp(.5,8,4),c,[0,.05,0],0,[.32,.18,1.8]),P(Sp(.5,6,4),0x5a3e2a,[0,.2,.2],0,[.13,.32,.13])],
+ hut:c=>[P(Cy(.5,.55,.5,8),shade(c,-.15),[0,.25,0]),P(Co(.72,.65,8),c,[0,.82,0])],
+ building:c=>[P(B(1,1,1),c,[0,.5,0]),P(B(1.04,.04,1.04),shade(c,-.35),[0,1,0])],
+ car:c=>[P(B(.7,.28,1.5),c,[0,.24,0]),P(B(.6,.24,.75),0x2a3440,[0,.5,-.05])],
+ train:c=>{const p=[P(B(.9,.9,2.2),0x2a2a2a,[0,.6,1.6]),P(Cy(.08,.1,.5,6),0x222222,[0,1.2,2.2])];for(let i=0;i<4;i++)p.push(P(B(.9,.85,2),c,[0,.55,-.8-i*2.3]));return p},
+ plane:c=>[P(Cy(.18,.15,3,6),c,0,[PI/2,0,0]),P(B(3.6,.06,.6),c,[0,0,.1]),P(B(1.2,.05,.35),c,[0,0,-1.3]),P(B(.05,.5,.4),c,[0,.25,-1.3])],
+ fire:()=>[P(B(.5,.08,.08),0x3a2a1a,[0,.04,0],[0,.6,0]),P(B(.5,.08,.08),0x3a2a1a,[0,.04,0],[0,-.6,0])],
+ moss:c=>[P(Sp(.5,6,4),c,0,0,[1,.35,1]),P(Sp(.5,6,4),shade(c,.15),[.5,0,.2],0,[.6,.3,.6]),P(Sp(.5,6,4),shade(c,-.15),[-.4,0,-.3],0,[.7,.3,.6])],
+ cooksonia:c=>{const p=[];for(let i=0;i<6;i++){const a=i*1.05,r=.15+.1*(i%2),h=.5+.15*(i%3);p.push(P(Cy(.02,.025,h,3),c,[Math.cos(a)*r,h/2,Math.sin(a)*r]));p.push(P(Sp(.05,5,3),0x8a7a3a,[Math.cos(a)*r,h,Math.sin(a)*r]))}return p},
+ fern:c=>radial(7,(i,a)=>P(Sp(.5,5,3),i%2?c:shade(c,.12),[Math.sin(a)*.35,.18,Math.cos(a)*.35],[-.5,a,0],[.16,.04,.75])),
+ treefern:c=>[P(Cy(.1,.15,2.4,5),0x4a3a2a,[0,1.2,0]),...radial(8,(i,a)=>P(Sp(.5,5,3),i%2?c:shade(c,.12),[Math.sin(a)*.5,2.45,Math.cos(a)*.5],[.25,a,0],[.2,.05,1.1]))],
+ archaeopteris:c=>[P(Cy(.12,.22,3,5),0x4a3828,[0,1.5,0]),P(Co(1.3,2.8,7),c,[0,3.4,0]),P(Co(1.0,2,7),shade(c,.1),[0,4.4,0])],
+ lepido:c=>{const p=[P(Cy(.16,.26,5.5,6),0x5a5a3a,[0,2.75,0])];for(const s of[-1,1]){p.push(P(Cy(.08,.11,1.4,5),0x5a5a3a,[s*.45,5.9,0],[0,0,-s*.6]));p.push(P(Sp(.5,6,4),c,[s*.85,6.5,0],0,[.7,.9,.7]))}p.push(P(Sp(.5,6,4),shade(c,.1),[0,6.3,.3],0,[.6,.8,.6]));return p},
+ conifer:c=>[P(Cy(.1,.16,1.2,5),0x4a3626,[0,.6,0]),P(Co(1.1,1.8,7),c,[0,1.7,0]),P(Co(.85,1.6,7),shade(c,.08),[0,2.5,0]),P(Co(.55,1.3,7),shade(c,.16),[0,3.25,0])],
+ cycad:c=>[P(Cy(.22,.28,.8,7),0x5a4a30,[0,.4,0]),...radial(9,(i,a)=>P(Sp(.5,5,3),i%2?c:shade(c,.15),[Math.sin(a)*.45,.95,Math.cos(a)*.45],[-.45,a,0],[.16,.05,1.0]))],
+ broadleaf:c=>[P(Cy(.13,.2,1.8,5),0x4a3828,[0,.9,0]),P(Ic(1.1,1),c,[0,2.5,0],0,[1,.85,1]),P(Ic(.8,1),shade(c,.12),[.6,2.9,.3]),P(Ic(.75,1),shade(c,-.1),[-.5,2.3,-.4])],
+ palm:c=>[P(Cy(.09,.14,3.6,5),0x6a5638,[.2,1.8,0],[0,0,-.1]),...radial(8,(i,a)=>P(Sp(.5,5,3),i%2?c:shade(c,.12),[.4+Math.sin(a)*.55,3.55,Math.cos(a)*.55],[.35,a,0],[.18,.04,1.3]))],
+ acacia:c=>[P(Cy(.08,.13,2.0,5),0x4a3a2a,[0,1,0]),P(Cy(.05,.07,.9,4),0x4a3a2a,[.3,2.1,0],[0,0,-.6]),P(Cy(.05,.07,.9,4),0x4a3a2a,[-.3,2.1,0],[0,0,.6]),P(Sp(.5,9,4),c,[0,2.6,0],0,[2.8,.42,2.6])],
+ grass:c=>radial(6,(i,a)=>P(Co(.06,.6,3),i%2?c:shade(c,.15),[Math.sin(a)*.12,.3,Math.cos(a)*.12],[Math.cos(a)*.25,0,-Math.sin(a)*.25])),
+};
+
+/* ------------------------------------------------------------------ species
+   hab  : sea / bed / shore / land / wet / air / town / surf (moving)   shallow / seabed / coast / swamp / forest / beach / dry (fixed)
+   mv   : st (fixed) / walk / swim / fly / crawl
+*/
+const SPECIES=[];
+function S(k,name,from,to,hab,n,size,col,mv,o={}){SPECIES.push(Object.assign({k,name,from,to,hab,n,size,col,mv,spd:1,grp:1,shape:k},o))}
+// sea and seabed
+S('strom','ストロマトライト',3.48e9,0,'shallow',70,2.4,0x857a64,'st',{ab:[[3.4e9,1],[1.0e9,1],[5.4e8,.45],[4.5e8,.12],[0,.06]],fi:.004});
+S('algae','藻類',1.0e9,0,'shallow',60,1.5,0x6f8f3a,'st');
+S('charnia','カルニア',5.75e8,5.39e8,'seabed',40,2.4,0xc9a58a,'st',{shape:'frond',fo:.002});
+S('dickinsonia','ディッキンソニア',5.6e8,5.45e8,'bed',24,1.8,0xb58a6e,'crawl',{shape:'disc',spd:.15});
+S('trilobite','三葉虫',5.21e8,2.52e8,'bed',50,1.3,0x6b5240,'crawl',{spd:.5,grp:6,ab:[[5.2e8,1],[4.2e8,.6],[3.6e8,.25],[2.6e8,.15]]});
+S('anomalo','アノマロカリス',5.2e8,4.8e8,'sea',6,3.2,0xb0583e,'swim',{spd:3});
+S('chordate','初期の脊椎動物（ハイコウイクティスなど）',5.3e8,4.6e8,'sea',18,1.1,0xd9cbb0,'swim',{shape:'eel',spd:2.5,grp:3});
+S('agnathan','無顎類（甲冑魚）',4.8e8,3.6e8,'sea',22,1.4,0x8a7a5a,'swim',{spd:2.2,grp:4});
+S('nautiloid','直角貝（オウムガイのなかま）',4.85e8,2.0e8,'sea',12,2.6,0xd8c4a0,'swim',{shape:'orthocone',spd:1.5,ab:[[4.8e8,1],[4.2e8,.5],[3e8,.2]]});
+S('eurypterid','ウミサソリ',4.67e8,2.52e8,'bed',10,2.6,0x7a5a48,'crawl',{spd:1.2,ab:[[4.4e8,1],[3.6e8,.3]]});
+S('placoderm','板皮類（ダンクルオステウスなど）',4.3e8,3.59e8,'sea',5,4.2,0x5e6a6e,'swim',{spd:2.6,fo:.002});
+S('shark','サメ',4.2e8,0,'sea',5,3.4,0x7a8790,'swim',{spd:4,marine:1});
+S('fish','魚',4.2e8,0,'sea',46,1.0,0x9fb0a8,'swim',{spd:3.4,grp:5});
+S('lobefin','肉鰭類（ひれに骨のある魚）',4.15e8,3.0e8,'sea',10,1.8,0x7a7f4e,'swim',{spd:1.6,ab:[[4e8,1],[3.6e8,.4]]});
+S('ammonite','アンモナイト',4.09e8,6.6e7,'sea',24,1.6,0xc9a77a,'swim',{spd:1.2,grp:4,fo:.0015,marine:1});
+S('ichthyo','魚竜',2.48e8,9.4e7,'sea',5,4.2,0x5a6c7a,'swim',{spd:5,marine:1});
+S('plesio','首長竜',2.03e8,6.6e7,'sea',4,5,0x4e5e58,'swim',{spd:3,fo:.0015,marine:1});
+S('mosasaur','モササウルス',9.8e7,6.6e7,'sea',3,6.5,0x56604a,'swim',{spd:4,fo:.0015,marine:1});
+S('whale','初期のクジラ（バシロサウルスなど）',4.5e7,0,'sea',2,8,0x5a6670,'swim',{spd:3,marine:1});
+// land animals
+S('millipede','陸の節足動物（ヤスデなど）',4.28e8,0,'wet',14,1.0,0x5a3a2a,'crawl',{spd:.4,ab:[[4.2e8,1],[3e8,.5],[2e8,.2],[0,.1]]});
+S('tiktaalik','ティクターリク',3.8e8,3.65e8,'shore',6,2.2,0x6f6a44,'crawl',{spd:.8});
+S('tetrapod','初期の四肢動物（イクチオステガなど）',3.7e8,3.0e8,'shore',8,2.2,0x5c6a48,'crawl',{spd:.9});
+S('meganeura','メガネウラ（巨大トンボ）',3.2e8,2.5e8,'air',8,2.2,0x3f8a8a,'fly',{shape:'dragonfly',spd:7,alt:[5,14]});
+S('amphib','両生類（エリオプスなど）',3.0e8,2.0e8,'shore',8,2.4,0x4e5a3a,'crawl',{spd:.8,ab:[[3e8,1],[2.5e8,.4]]});
+S('synapsid','初期の単弓類',3.12e8,2.7e8,'land',8,1.5,0x6b5a3a,'walk',{shape:'lizard',spd:1.6,grp:2});
+S('dimetrodon','ディメトロドン',2.95e8,2.72e8,'land',6,3.4,0x8a4a32,'walk',{spd:1.4});
+S('gorgon','ゴルゴノプス類',2.65e8,2.52e8,'land',4,3.4,0x7a6a4e,'walk',{spd:2.4,fo:.0015});
+S('lystro','リストロサウルス',2.6e8,2.01e8,'land',14,2.0,0x8a7a5e,'walk',{spd:1.2,grp:2,ab:[[2.6e8,.3],[2.52e8,1],[2.45e8,1],[2.3e8,.2]]});
+S('cynodont','キノドン類',2.6e8,1.9e8,'land',8,1.4,0x6e5a48,'walk',{spd:2.2,grp:2});
+S('smalltheropod','小型の獣脚類',2.3e8,6.6e7,'land',8,2.4,0x7a6a3a,'walk',{spd:4,grp:2,fo:.0015});
+S('sauropod','竜脚類',2.0e8,6.6e7,'land',6,6,0x7b7462,'walk',{spd:1.2,fo:.0015});
+S('bigtheropod','大型の獣脚類',1.6e8,6.6e7,'land',2,8,0x6a5038,'walk',{spd:2.2,fo:.0015});
+S('stego','ケントロサウルス（剣竜）',1.6e8,1.0e8,'land',4,4.5,0x6e7a4a,'walk',{spd:1});
+S('ornithopod','鳥脚類（イグアノドンなど）',1.5e8,6.6e7,'land',10,5,0x7a8058,'walk',{spd:1.6,grp:2,fo:.0015});
+S('pterosaur','翼竜',2.2e8,6.6e7,'air',6,3.6,0xb0906a,'fly',{spd:8,fo:.0015,alt:[18,40]});
+S('mammaliaform','初期の哺乳類',2.05e8,6.6e7,'land',8,1.0,0x6a5444,'walk',{shape:'shrew',spd:2.5,grp:2});
+S('bird','鳥',1.5e8,0,'air',10,1.2,0x9aa0a6,'fly',{spd:9,grp:2,alt:[15,45]});
+S('mammal','小型の哺乳類',6.6e7,0,'land',12,1.0,0x7a6450,'walk',{shape:'shrew',spd:2.5,grp:3,ab:[[6.6e7,.5],[6.5e7,1],[3e7,.6],[0,.4]]});
+S('gastornis','ガストルニス',5.6e7,4.5e7,'land',3,3.2,0x5a5048,'walk',{spd:2});
+S('primate','初期の霊長類',5.5e7,2.5e7,'wet',8,1.2,0x7a5a3a,'walk',{spd:2,grp:2});
+S('ape','プロコンスル（初期の類人猿）',2.3e7,1.0e7,'wet',8,1.7,0x4a3a2e,'walk',{spd:1.6,grp:2});
+S('elephant','ゾウのなかま',2.0e7,0,'land',7,5.5,0x7a756e,'walk',{spd:1.4,ab:[[2e7,.5],[5e6,1],[0,.6]]});
+S('antelope','レイヨウ',1.8e7,0,'land',24,2.0,0xb08a5a,'walk',{spd:3,grp:3,ab:[[1.5e7,.3],[5e6,1],[0,.6]]});
+S('giraffe','キリン',8e6,0,'land',5,5,0xc89a5a,'walk',{spd:1.6});
+S('hippo','カバ',6e6,0,'shore',6,3.2,0x6a5c5e,'walk',{spd:.8,grp:1});
+S('croc','ワニ',9.5e7,0,'shore',6,3.6,0x4a5838,'crawl',{spd:.6});
+S('lion','ライオンのなかま',3.5e6,0,'land',4,2.6,0xc0975a,'walk',{spd:2.2,ab:[[3e6,1],[0,.4]]});
+// people
+S('hom_early','初期の人類（サヘラントロプス、アルディピテクス）',7e6,4.2e6,'wet',8,2.0,0x5a4436,'walk',{spd:1.2,human:1});
+S('australo','アウストラロピテクス',4.2e6,2.0e6,'wet',10,2.0,0x5a4436,'walk',{spd:1.2,human:1});
+S('paranthropus','パラントロプス',2.7e6,1.2e6,'wet',6,2.1,0x4a3a2e,'walk',{spd:1.1,human:1});
+S('habilis','ホモ・ハビリス',2.8e6,1.5e6,'wet',8,2.2,0x5e4434,'walk',{spd:1.4,human:1});
+S('erectus','ホモ・エレクトス',1.9e6,1.1e5,'wet',10,2.6,0x6a4a36,'walk',{spd:1.8,human:1,fire:1});
+S('heidel','ホモ・ハイデルベルゲンシス',7e5,2e5,'wet',8,2.6,0x6e4c36,'walk',{spd:1.6,human:1,fire:1});
+S('sapiens','ホモ・サピエンス',3e5,0,'wet',14,2.5,0x7a5038,'walk',{spd:1.6,human:1,fire:1,grp:2,ab:[[3e5,.6],[1e4,1],[120,1],[0,.35]]});
+S('person','現代の人々',110,0,'town',40,2.5,0xffffff,'walk',{spd:1.4,grp:4,ab:[[110,.2],[0,1]],tint:[0xd84a3a,0x3a6ad8,0xe8c040,0xeeeeee,0x2a2a2a,0x4aa060]});
+S('cattle','ウシ（牧畜）',5000,0,'pasture',16,2.0,0xffffff,'walk',{spd:1,grp:2,tint:[0xf2ede4,0x7a4a2a,0x2a2420,0xb08050]});
+S('canoe','丸木舟',1e4,0,'surf',4,2.2,0x6a4a30,'swim',{spd:1.5});
+S('plane','飛行機',70,0,'air',2,2.4,0xe8ecf0,'fly',{spd:34,alt:[85,95],straight:1});
+// plants
+S('moss','コケのなかま',4.7e8,0,'coast',260,1.3,0x5f7d34,'st',{ab:[[4.7e8,1],[3.8e8,.5],[0,.15]],fi:.01});
+S('cooksonia','クックソニア',4.33e8,3.93e8,'coast',240,1.3,0x5f8a3a,'st');
+S('fern','シダ',3.9e8,0,'forest',260,1.6,0x4f8a3a,'st',{ab:[[3.6e8,1],[2e7,.4],[0,.2]],fern:1});
+S('archaeopteris','アルカエオプテリス',3.85e8,3.59e8,'forest',220,2.2,0x3f6e2e,'st',{fo:.003,tree:1});
+S('lepido','リンボク（鱗木）',3.6e8,2.9e8,'swamp',260,2.0,0x3f6a2a,'st',{tree:1});
+S('treefern','木生シダ',3.6e8,0,'forest',120,1.8,0x4a7a34,'st',{ab:[[3.6e8,1],[1.0e8,.5],[2e7,.12]],tree:1});
+S('conifer','針葉樹',3.1e8,0,'forest',300,2.2,0x2f5a32,'st',{ab:[[3e8,.6],[2.5e8,1],[1.0e8,.7],[5e7,.3],[0,.1]],tree:1});
+S('cycad','ソテツのなかま',2.8e8,0,'forest',160,1.8,0x5a7a30,'st',{ab:[[2e8,1],[6.6e7,.35],[0,.05]],tree:1});
+S('broadleaf','広葉樹（花を咲かせる木）',1.25e8,0,'forest',360,2.0,0x3d7a32,'st',{ab:[[1.25e8,.15],[9e7,.6],[6e7,1],[0,1]],tree:1});
+S('palm','ヤシ',8.5e7,0,'beach',80,2.0,0x4f8a34,'st',{tree:1});
+S('grass','イネ科の草',3e7,0,'dry',600,1.3,0xa8a050,'st',{grassy:1});
+S('acacia','アカシア',1.5e7,0,'dry',160,2.3,0x5f7a34,'st',{acacia:1,tree:1});
+// villages and towns (placed by their own rules)
+S('hut','小屋（村）',9000,0,'village',36,2.4,0xa08858,'st',{special:1});
+S('fire','たき火',1e6,0,'camp',4,2.4,0x3a2a1a,'st',{special:1});
+S('building','建物',125,0,'city',260,1,0xc8c4bc,'st',{special:1,tint:[0xd8d4cc,0xb8c0c8,0xe0d0b8,0x9aa4ae,0xc8b8a8]});
+S('car','自動車',95,0,'road',30,1.6,0xffffff,'st',{special:1,tint:[0xd03a30,0xe8e8e8,0x2a2a2a,0x3a6ad0,0xd8c040]});
+S('train','鉄道',125,0,'rail',1,2.0,0x6a3a2a,'st',{special:1});
+const SPK={};for(const s of SPECIES){SPK[s.k]=s;s.wild=!s.human&&(s.hab==='land'||s.hab==='wet'||s.hab==='shore')}
+
+/* materials shared by plants so a whole flora can be tinted (fire, die-off) */
+const plantMat=new THREE.MeshLambertMaterial({vertexColors:true});
+const animalMat=new THREE.MeshLambertMaterial({vertexColors:true});
+const uNight={value:0};
+const bldMat=new THREE.MeshLambertMaterial({vertexColors:true});
+bldMat.onBeforeCompile=sh=>{sh.uniforms.uNight=uNight;
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWP;varying vec3 vON;').replace('#include <begin_vertex>','#include <begin_vertex>\nvON=normal;vec4 _wp=vec4(transformed,1.);\n#ifdef USE_INSTANCING\n_wp=instanceMatrix*_wp;\n#endif\nvWP=(modelMatrix*_wp).xyz;');
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWP;varying vec3 vON;uniform float uNight;').replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\nif(uNight>0.&&abs(vON.y)<.5){float fy=vWP.y/.55,fx=(vWP.x+vWP.z)/.5;vec2 c=vec2(floor(fy),floor(fx));float lit=step(.42,fract(sin(dot(c,vec2(12.9898,78.233)))*43758.5453));float win=step(.35,fract(fy))*step(.35,fract(fx))*step(.4,vWP.y);totalEmissiveRadiance+=vec3(1.,.8,.5)*lit*win*uNight;}');};
+const flameMat=new THREE.MeshBasicMaterial({color:0xffa040,transparent:true,opacity:.95});
+const pickables=[];
+const tmpO=new THREE.Object3D(),tmpC=new THREE.Color();
+for(const s of SPECIES){
+  const parts=SHAPES[s.shape](s.col);
+  const geo=merge(parts);
+  const mat=s.mv==='st'&&s.hab!=='village'&&s.hab!=='city'&&s.hab!=='road'&&s.hab!=='rail'&&s.hab!=='camp'?plantMat:animalMat;
+  if(s.mv!=='st'&&!s.special&&s.k!=='plane')s.size*=1.6;else if(s.mv==='st'&&!s.special&&s.hab!=='shallow'&&s.hab!=='seabed')s.size*=1.25;
+  const mesh=new THREE.InstancedMesh(geo,s.k==='building'?bldMat:mat,s.n);
+  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  mesh.castShadow=true;mesh.receiveShadow=s.mv==='st';mesh.frustumCulled=false;
+  s.colors=[];
+  for(let i=0;i<s.n;i++){
+    if(s.tint)tmpC.set(s.tint[i%s.tint.length]);else{const k=.86+.24*rnd();tmpC.setRGB(k,k,k)}
+    s.colors.push(tmpC.clone());mesh.setColorAt(i,tmpC);
+  }
+  mesh.count=0;mesh.userData.sp=s;world.add(mesh);s.mesh=mesh;pickables.push(mesh);
+  s.vis=[];// instance index -> agent/candidate
+  if(s.mv==='st'){
+    s.cand=[];
+    for(let i=0;i<s.n;i++){const x=rr(-97,97),z=rr(-97,97);s.cand.push({x,z,q:.65*rnd()+.35*(fbm(x*.03+9,z*.03,2)+.6),r:rnd()*TAU,s:rr(.7,1.3)})}
+  }else{
+    s.ag=[];s.gc=[];
+    const g=s.grp||1;for(let j=0;j<g;j++)s.gc.push({x:0,z:0,h:rnd()*TAU,ok:false});
+    for(let i=0;i<s.n;i++)s.ag.push({x:0,z:0,h:rnd()*TAU,dh:0,t:0,act:false,g:i%g,ph:rnd()*TAU,s:rr(.85,1.15),df:rr(.25,.75),alt:s.alt?rr(s.alt[0],s.alt[1]):0});
+  }
+}
+// flames sit on top of the camp fire logs
+const flameGeo=merge([P(Co(.28,.75,6),0xffffff,[0,.4,0]),P(Co(.16,.5,5),0xfff0b0,[0,.32,0])]);
+const flames=new THREE.InstancedMesh(flameGeo,flameMat,4);flames.count=0;flames.frustumCulled=false;world.add(flames);
+
+/* special placements */
+const HUTS=[];{const vc=[[2,-24],[34,40],[48,-30]];for(let i=0;i<36;i++){const c=vc[i%3],a=rnd()*TAU,r=rr(3,13);HUTS.push({x:c[0]+Math.cos(a)*r,z:c[1]+Math.sin(a)*r,q:rnd(),r:rnd()*TAU,s:rr(.8,1.2)})}}
+const BLD=[];for(let i=0;i<260;i++){const a=rnd()*TAU,r=Math.sqrt(rnd())*50,x=CITY.x+Math.cos(a)*r,z=CITY.z+Math.sin(a)*r;
+  BLD.push({x,z,d:r,q:rnd(),r:Math.round(rnd()*4)*PI/2+.38,w:rr(2,4.5),dd:rr(2,4.5),h:rr(1.2,3.2),tall:rnd(),road:Math.min(...ROADS.map(p=>distPoly(x,z,p)),distPoly(x,z,RAIL))})}
+BLD.sort((a,b)=>a.d-b.d);
+function polyLen(pl){let L=0;for(let i=1;i<pl.length;i++)L+=Math.hypot(pl[i][0]-pl[i-1][0],pl[i][1]-pl[i-1][1]);return L}
+function polyAt(pl,s){for(let i=1;i<pl.length;i++){const dx=pl[i][0]-pl[i-1][0],dz=pl[i][1]-pl[i-1][1],l=Math.hypot(dx,dz);if(s<=l){const t=s/l;return [pl[i-1][0]+dx*t,pl[i-1][1]+dz*t,Math.atan2(dx,dz)]}s-=l}const n=pl.length;return [pl[n-1][0],pl[n-1][1],Math.atan2(pl[n-1][0]-pl[n-2][0],pl[n-1][1]-pl[n-2][1])]}
+const CARS=[];for(let i=0;i<30;i++){const r=i%2,L=polyLen(ROADS[r]);CARS.push({r,s:rnd()*L,L,dir:rnd()<.5?1:-1,v:rr(5,9),side:0})}
+const TRAIN={s:0,dir:1,L:polyLen(RAIL)};
+
+/* ------------------------------------------------------------------ presence of each species at age A */
+function abund(s,L){if(!s.ab)return 1;const t=s.ab;if(L>=lg(t[0][0]))return t[0][1];for(let i=1;i<t.length;i++){const l1=lg(t[i][0]);if(L>=l1){const l0=lg(t[i-1][0]);return lerp(t[i-1][1],t[i][1],(l0-L)/(l0-l1))}}return t[t.length-1][1]}
+function presence(s,A){
+  const L=lg(A),fin=sm((lg(s.from)-L)/(s.fi||.012)),fout=s.to>0?sm((L-lg(s.to))/(s.fo||.004)):1;
+  let p=fin*fout*abund(s,L);
+  if(s.marine)p*=sstep(1.2e7,1.6e7,A);
+  return p;
+}
+const urbRadius=A=>6+42*Math.pow(urb(A),.8);
+// wild animals keep away from the town and its fields; in the present the far shore is their refuge
+const wildR=A=>A>7000?0:A>150?22*farm(A):urbRadius(A)+8+15*sstep(150,0,A);
+
+/* habitat checks against the current terrain */
+function valid(hab,x,z,A,wild){
+  if(x<-96||x>96||z<-96||z>96)return false;
+  const h=Hat(x,z),hw=h-W;
+  if(wild&&A<7000&&Math.hypot(x-CITY.x,z-CITY.z)<wildR(A))return false;
+  switch(hab){
+    case 'sea':return W-h>2.5;
+    case 'bed':case 'surf':return W-h>1.2;
+    case 'shore':return hw>-1.5&&hw<2.5;
+    case 'land':return hw>.5;
+    case 'pasture':{const d=Math.hypot(x-CITY.x,z-CITY.z);return hw>.5&&d>urbRadius(A)+2&&d<80}
+    case 'wet':return hw>.5&&hw<16;
+    case 'air':return true;
+    case 'town':return hw>.4&&Math.hypot(x-CITY.x,z-CITY.z)<urbRadius(A)-2;
+  }
+  return false;
+}
+function staticSuit(s,c,A){
+  const h=Hat(c.x,c.z),hw=h-W,e=E;
+  let v=0;
+  switch(s.hab){
+    case 'shallow':v=(W-h>.6&&W-h<10)?1-(W-h)/12:0;break;
+    case 'seabed':v=(W-h>1.5&&W-h<26)?1:0;break;
+    case 'coast':{const r=1.5+25*e.reach;v=hw>.3&&hw<r?1-hw/r:0;break}
+    case 'swamp':v=hw>.3&&hw<18?(1-hw/22)*clamp(e.veg*1.3,0,1):0;break;
+    case 'forest':v=hw>.4&&hw<2+55*e.reach?e.veg*(1-sstep(30,60,hw))*(1-.75*e.grass)*(1-e.dry*.75):0;break;
+    case 'beach':v=hw>.2&&hw<5?.9*clamp(e.veg*1.2,0,1):0;break;
+    case 'dry':v=hw>1.5?(s.grassy?e.grass:(.25+e.grass*.8))*(.4+.6*sstep(2,15,hw)):0;break;
+  }
+  if(v<=0)return 0;
+  if(hw>0){
+    if(e.ice>0)v*=1-clamp((e.ice*1.7-.65)+h/45,0,1);
+    const ub=urb(A);if(ub>0&&Math.hypot(c.x-CITY.x,c.z-CITY.z)<urbRadius(A))v*=.15;
+    const fa=farm(A);if(fa>0){const d=Math.hypot(c.x-CITY.x,c.z-CITY.z);if(d<80)v*=1-fa*.6}
+    if(s.tree)v*=1-.85*FX.dead;
+    if(s.fern)v*=1+2.5*FX.dead;
+  }
+  return v;
+}
+function setInst(mesh,j,x,y,z,ry,sc,sy,col,rx=0,rz=0){
+  tmpO.position.set(x,y,z);tmpO.rotation.set(rx,ry,rz,'YXZ');tmpO.scale.set(sc,sy===undefined?sc:sy,sc);tmpO.updateMatrix();mesh.setMatrixAt(j,tmpO.matrix);if(col)mesh.setColorAt(j,col);
+}
+function updateStatics(A){
+  for(const s of SPECIES){
+    if(s.mv!=='st'||s.special)continue;
+    const pr=presence(s,A),m=s.mesh;let k=0;s.vis.length=0;s.pres=pr;
+    if(pr>.003)for(let i=0;i<s.n;i++){
+      const c=s.cand[i],v=pr*staticSuit(s,c,A);
+      if(v<=c.q)continue;
+      const g=.55+.45*clamp((v-c.q)*4,0,1);
+      setInst(m,k,c.x,Hat(c.x,c.z),c.z,c.r,s.size*c.s*g,undefined,s.colors[i]);s.vis.push(c);k++;
+    }
+    m.count=k;m.instanceMatrix.needsUpdate=true;if(m.instanceColor)m.instanceColor.needsUpdate=true;
+  }
+  // huts
+  {const s=SPK.hut,m=s.mesh;let k=0;s.vis.length=0;const amt=A>9000?0:A>500?lerp(.15,1,sstep(9000,500,A)):1,R=urbRadius(A),ub=urb(A);s.pres=amt;
+   for(let i=0;i<HUTS.length;i++){const c=HUTS[i];if(c.q>amt)continue;if(ub>0&&Math.hypot(c.x-CITY.x,c.z-CITY.z)<R+2)continue;if(ub>.3&&c.q>1.3-ub)continue;const h=Hat(c.x,c.z);if(h-W<.6)continue;
+     setInst(m,k,c.x,h,c.z,c.r,s.size*c.s,undefined,s.colors[i]);s.vis.push(c);k++}
+   m.count=k;m.instanceMatrix.needsUpdate=true}
+  // buildings
+  {const s=SPK.building,m=s.mesh;let k=0;s.vis.length=0;const ub=urb(A),R=urbRadius(A),tall=sstep(60,0,A);s.pres=ub;
+   if(ub>0)for(let i=0;i<BLD.length;i++){const b=BLD[i];if(b.d>R-1)break;if(b.road<3)continue;if(b.q>.35+ub)continue;const h=Hat(b.x,b.z);if(h-W<.5)continue;
+     const ht=b.h*(1+tall*b.tall*b.tall*9*Math.exp(-b.d/14));
+     tmpO.position.set(b.x,h-.2,b.z);tmpO.rotation.set(0,b.r,0);tmpO.scale.set(b.w,ht,b.dd);tmpO.updateMatrix();m.setMatrixAt(k,tmpO.matrix);m.setColorAt(k,s.colors[i]);s.vis.push(b);k++}
+   m.count=k;m.instanceMatrix.needsUpdate=true;if(m.instanceColor)m.instanceColor.needsUpdate=true}
+}
+
+/* moving species */
+function spawn(s,a,A){
+  const gc=s.gc[a.g];
+  if(!gc.ok||!valid(s.hab,gc.x,gc.z,A,s.wild)){
+    gc.ok=false;
+    for(let t=0;t<60;t++){const x=rr(-92,92),z=rr(-92,92);if(valid(s.hab,x,z,A,s.wild)){gc.x=x;gc.z=z;gc.ok=true;break}}
+    if(!gc.ok)return false;
+  }
+  const R=s.mv==='fly'?40:8+s.size*2;
+  for(let t=0;t<20;t++){const x=gc.x+rr(-R,R),z=gc.z+rr(-R,R);if(valid(s.hab,x,z,A,s.wild)){a.x=x;a.z=z;a.act=true;return true}}
+  a.x=gc.x;a.z=gc.z;a.act=true;return true;
+}
+function updateCounts(A){
+  for(const s of SPECIES){
+    if(s.mv==='st')continue;
+    let pr=presence(s,A);
+    if(s.hab==='land'||s.hab==='wet'||s.hab==='shore')pr*=1-sstep(.5,.85,E.ice);
+    if(s.hab==='sea'||s.hab==='bed')pr*=1-sstep(.7,.95,E.ice);
+    s.pres=pr;s.want=Math.round(s.n*pr);
+    if(pr>0&&pr<.5&&s.want===0)s.want=1;
+    if(pr<.004)s.want=0;
+  }
+}
+const turnTo=(h,t,k)=>{let d=((t-h+PI)%TAU+TAU)%TAU-PI;return h+clamp(d,-k,k)};
+function stepAgents(dt,A,time){
+  for(const s of SPECIES){
+    if(s.mv==='st')continue;
+    const m=s.mesh;let k=0;s.vis.length=0;
+    const fly=s.mv==='fly',sw=s.mv==='swim',spd=s.spd*(s.mv==='crawl'?.8:1);
+    for(const g of s.gc){// group centres drift
+      if(!g.ok)continue;g.h+=(rnd()-.5)*dt*.8;const nx=g.x+Math.sin(g.h)*spd*.35*dt,nz=g.z+Math.cos(g.h)*spd*.35*dt;
+      if(fly||valid(s.hab,nx,nz,A,s.wild)){g.x=clamp(nx,-90,90);g.z=clamp(nz,-90,90);if(Math.abs(nx)>=90||Math.abs(nz)>=90)g.h+=PI}else g.h+=PI*(.5+rnd());
+    }
+    for(let i=0;i<s.n;i++){
+      const a=s.ag[i];
+      if(i>=s.want){a.act=false;continue}
+      if(!a.act||(!fly&&!valid(s.hab,a.x,a.z,A,s.wild))){if(!spawn(s,a,A))continue}
+      a.t-=dt;if(a.t<0){a.t=rr(1,4);a.dh=(rnd()-.5)*(fly?.9:1.6);if(s.straight)a.dh=0}
+      a.h+=a.dh*dt;
+      const g=s.gc[a.g],dx=g.x-a.x,dz=g.z-a.z,d=Math.hypot(dx,dz),R=fly?45:6+s.size*2.2;
+      if(!s.straight&&d>R)a.h=turnTo(a.h,Math.atan2(dx,dz),dt*1.5);
+      const v=spd*(s.mv==='walk'||s.mv==='crawl'?(.6+.4*Math.sin(time*.3+a.ph)):1);
+      const nx=a.x+Math.sin(a.h)*v*dt,nz=a.z+Math.cos(a.h)*v*dt;
+      if(fly){a.x=nx;a.z=nz;if(Math.abs(a.x)>115||Math.abs(a.z)>115){if(s.straight){a.h=rnd()*TAU;a.x=-Math.sin(a.h)*110;a.z=-Math.cos(a.h)*110}else a.h=turnTo(a.h,Math.atan2(-a.x,-a.z),dt*3)}}
+      else if(valid(s.hab,nx,nz,A,s.wild)){a.x=nx;a.z=nz}else{a.h+=PI*(.6+.8*rnd())}
+      a.ph+=dt*(2+v*1.5);
+      const hb=Hat(a.x,a.z);let y,rx=0,rz=0,ry=a.h;
+      if(fly){y=Math.max(hb,W)+a.alt+Math.sin(a.ph*.3)*1.5;rz=-a.dh*.6}
+      else if(sw){y=s.hab==='surf'?W+.05:Math.min(hb+(W-hb)*a.df,W-.8);ry+=Math.sin(a.ph)*.12}
+      else if(s.hab==='shore'){y=Math.max(hb,W-.22*s.size)+Math.abs(Math.sin(a.ph))*.02*s.size}
+      else y=hb+Math.abs(Math.sin(a.ph))*.03*s.size;
+      setInst(m,k,a.x,y,a.z,ry,s.size*a.s,undefined,s.colors[i],rx,rz);a.y=y;s.vis.push(a);k++;
+    }
+    m.count=k;m.instanceMatrix.needsUpdate=true;if(m.instanceColor)m.instanceColor.needsUpdate=true;
+  }
+  // fires at the camps of the fire-using people
+  fireLights.begin();
+  {const s=SPK.fire,m=s.mesh;let k=0,f=0;s.vis.length=0;s.pres=0;
+   if(A<1e6){for(const hs of[SPK.erectus,SPK.heidel,SPK.sapiens]){if(!hs.want)continue;for(const g of hs.gc){if(!g.ok||k>=4)continue;const y=Hat(g.x,g.z);if(y-W<.3)continue;
+     setInst(m,k,g.x,y,g.z,0,s.size,undefined,null);const fl=1+.18*Math.sin(time*9+k*2)+.1*Math.sin(time*23+k);setInst(flames,f,g.x,y+.05,g.z,time*.5,s.size*fl,s.size*fl*1.15,null);s.vis.push({x:g.x,z:g.z,y});fireLights.push(g.x,y+1.4,g.z,LC.fire);k++;f++}}}
+   fireLights.end();
+   s.pres=k?1:0;m.count=k;flames.count=f;m.instanceMatrix.needsUpdate=true;flames.instanceMatrix.needsUpdate=true}
+  // cars and the train
+  movingLights.begin();
+  {const s=SPK.car,m=s.mesh;let k=0;s.vis.length=0;const amt=A>95?0:Math.pow(sstep(95,0,A),1.3);s.pres=amt;const want=Math.round(CARS.length*amt);
+   for(let i=0;i<want;i++){const c=CARS[i];c.s+=c.dir*c.v*dt;if(c.s>c.L)c.s-=c.L;if(c.s<0)c.s+=c.L;const [x,z,h]=polyAt(ROADS[c.r],c.s);const ox=Math.cos(h)*.7*c.dir,oz=-Math.sin(h)*.7*c.dir;
+     const hy=Hat(x+ox,z+oz);if(hy-W<.2)continue;const hh=h+(c.dir<0?PI:0),fx=Math.sin(hh)*1.3,fz=Math.cos(hh)*1.3;setInst(m,k,x+ox,hy,z+oz,hh,s.size,undefined,s.colors[i]);movingLights.push(x+ox+fx,hy+.45,z+oz+fz,LC.head);movingLights.push(x+ox-fx,hy+.45,z+oz-fz,LC.tail);s.vis.push({x,z});k++}
+   m.count=k;m.instanceMatrix.needsUpdate=true;if(m.instanceColor)m.instanceColor.needsUpdate=true}
+  for(const a of SPK.plane.vis)if((time*1.3+a.ph)%1<.18)movingLights.push(a.x,a.y,a.z,LC.blink);
+  movingLights.end();
+  {const s=SPK.train,m=s.mesh;s.vis.length=0;s.pres=A<125?1:0;
+   if(A<125){TRAIN.s+=TRAIN.dir*6*dt;if(TRAIN.s>TRAIN.L-8){TRAIN.s=TRAIN.L-8;TRAIN.dir=-1}if(TRAIN.s<10){TRAIN.s=10;TRAIN.dir=1}
+     const [x,z,h]=polyAt(RAIL,TRAIN.s);setInst(m,0,x,Hat(x,z),z,h+(TRAIN.dir<0?PI:0),s.size,undefined,null);s.vis.push({x,z});m.count=1}else m.count=0;
+   m.instanceMatrix.needsUpdate=true}
+}
+
+/* ------------------------------------------------------------------ clouds, meteors (surface) */
+// clouds
+const cloudGeo=merge([P(Ic(1,1),0xffffff,[0,0,0],0,[1.6,.7,1.2]),P(Ic(1,1),0xffffff,[1.4,-.1,.3],0,[1.1,.6,1]),P(Ic(1,1),0xffffff,[-1.3,-.15,-.2],0,[1.2,.55,.9]),P(Ic(1,1),0xffffff,[.3,.35,-.4],0,[.9,.6,.8])]);
+const cloudMat=new THREE.MeshLambertMaterial({color:0xffffff,transparent:true,opacity:.8,depthWrite:false});
+const CLN=10,clouds=new THREE.InstancedMesh(cloudGeo,cloudMat,CLN);clouds.frustumCulled=false;clouds.renderOrder=3;world.add(clouds);
+const clD=[];for(let i=0;i<CLN;i++)clD.push({x:rr(-120,120),z:rr(-110,110),y:rr(62,80),s:rr(3.5,6.5),r:rnd()*TAU});
+let showClouds=false;
+// meteors
+const glowTex=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');const gr=g.createRadialGradient(32,32,0,32,32,32);gr.addColorStop(0,'rgba(255,255,240,1)');gr.addColorStop(.25,'rgba(255,200,120,.8)');gr.addColorStop(1,'rgba(255,120,40,0)');g.fillStyle=gr;g.fillRect(0,0,64,64);return new THREE.CanvasTexture(c)})();
+const MET=[];
+for(let i=0;i<24;i++){
+  const head=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));
+  const tail=new THREE.Mesh(Cy(.0,.9,1,6),new THREE.MeshBasicMaterial({color:0xffb070,transparent:true,opacity:.7,blending:THREE.AdditiveBlending,depthWrite:false}));
+  const boom=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));
+  head.visible=tail.visible=boom.visible=false;world.add(head,tail,boom);
+  MET.push({head,tail,boom,t:-1,dur:1,bt:-1,from:new THREE.Vector3(),to:new THREE.Vector3()});
+}
+function meteorRate(A){
+  if(A>4.567e9||E.tile<.5)return 0;
+  if(A>4.45e9)return 6;
+  if(A>4.12e9)return 1.2;
+  if(A>3.8e9)return 3;
+  if(A>3.2e9)return .25;
+  return 0;
+}
+let metAcc=0;
+function stepMeteors(dt,A){
+  metAcc+=meteorRate(A)*dt;
+  while(metAcc>=1){metAcc-=1;const m=MET.find(m=>m.t<0&&m.bt<0);if(!m)break;
+    m.to.set(rr(-90,90),0,rr(-90,90));m.to.y=Hat(m.to.x,m.to.z);const dir=new THREE.Vector3(rr(-.6,.6),1,rr(-.6,.6)).normalize();m.from.copy(m.to).addScaledVector(dir,rr(160,240));m.t=0;m.dur=rr(.6,1.1);m.sz=rr(3,8)}
+  const v=new THREE.Vector3();
+  for(const m of MET){
+    if(m.t>=0){m.t+=dt/m.dur;
+      if(m.t>=1){m.t=-1;m.bt=0;m.head.visible=m.tail.visible=false;m.boom.visible=true;m.boom.position.copy(m.to)}
+      else{v.lerpVectors(m.from,m.to,m.t);m.head.position.copy(v);m.head.scale.setScalar(m.sz*1.4);m.head.visible=true;
+        const back=new THREE.Vector3().subVectors(m.from,m.to).normalize();const len=m.sz*7;m.tail.position.copy(v).addScaledVector(back,len/2);m.tail.scale.set(m.sz*.35,len,m.sz*.35);m.tail.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),back);m.tail.visible=true}}
+    if(m.bt>=0){m.bt+=dt/1.1;if(m.bt>=1){m.bt=-1;m.boom.visible=false}else{m.boom.scale.setScalar(m.sz*(3+9*m.bt));m.boom.material.opacity=1-m.bt}}
+  }
+}
+
+/* ------------------------------------------------------------------ night lights (surface) */
+const lightTex=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');const gr=g.createRadialGradient(32,32,0,32,32,32);gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(.2,'rgba(255,255,255,.7)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,64,64);return new THREE.CanvasTexture(c)})();
+function lightPoints(n,size){
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(n*3),3));g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(n*3),3));g.setDrawRange(0,0);
+  const m=new THREE.PointsMaterial({size,map:lightTex,vertexColors:true,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0});
+  const p=new THREE.Points(g,m);p.frustumCulled=false;p.renderOrder=4;world.add(p);
+  let k=0;
+  return {p,m,begin(){k=0},push(x,y,z,c){if(k>=n)return;g.attributes.position.array.set([x,y,z],k*3);g.attributes.color.array.set([c.r,c.g,c.b],k*3);k++},
+    end(){g.setDrawRange(0,k);g.attributes.position.needsUpdate=true;g.attributes.color.needsUpdate=true}};
+}
+const LC={street:new THREE.Color(1,.82,.55),city:new THREE.Color(1,.7,.4),hut:new THREE.Color(1,.55,.2),head:new THREE.Color(1,1,.9),tail:new THREE.Color(1,.15,.1),fire:new THREE.Color(1,.5,.15),blink:new THREE.Color(1,.2,.2)};
+const fixedLights=lightPoints(900,2.4),movingLights=lightPoints(160,1.8),fireLights=lightPoints(20,9);
+const CITYDOTS=[];for(let i=0;i<320;i++){const a=rnd()*TAU,r=Math.sqrt(rnd())*50;CITYDOTS.push({x:CITY.x+Math.cos(a)*r,z:CITY.z+Math.sin(a)*r,d:r,q:rnd()})}
+function updateFixedLights(A){
+  const L=fixedLights;L.begin();
+  const rd=roadAmt(A),ub=urb(A),R=urbRadius(A);
+  if(rd>0)for(const pl of ROADS){const len=polyLen(pl);for(let s=2;s<len;s+=4.5){const [x,z,h]=polyAt(pl,s);const d=Math.hypot(x-CITY.x,z-CITY.z);if(d>R+12&&hash2(Math.round(s),pl.length)>rd*.45)continue;const ox=Math.cos(h)*1.6,oz=-Math.sin(h)*1.6,y=Hat(x+ox,z+oz);if(y-W<.3)continue;L.push(x+ox,y+1.4,z+oz,LC.street)}}
+  if(ub>0)for(const c of CITYDOTS){if(c.d>R-1||c.q>ub+.2)continue;const y=Hat(c.x,c.z);if(y-W<.3)continue;L.push(c.x,y+.8,c.z,LC.city)}
+  for(const c of SPK.hut.vis)L.push(c.x+1,Hat(c.x,c.z)+.7,c.z+.6,LC.hut);
+  if(A<125)for(let s=4;s<TRAIN.L;s+=10){const [x,z]=polyAt(RAIL,s);L.push(x,Hat(x,z)+1.2,z,LC.street)}
+  L.end();
+}
+
+/* ------------------------------------------------------------------ globe: the whole planet */
+const gScene=new THREE.Scene();
+const gCamera=new THREE.PerspectiveCamera(40,1,.1,9000);
+const GSUN=new THREE.Vector3(1,0,0),SUN_DIST=420;
+const gSunLight=new THREE.DirectionalLight(0xffffff,1.25);gSunLight.position.copy(GSUN).multiplyScalar(100);gScene.add(gSunLight,new THREE.AmbientLight(0x40465a,.18));
+{const n=2600,p=new Float32Array(n*3);for(let i=0;i<n;i++){const v=new THREE.Vector3(rnd()*2-1,rnd()*2-1,rnd()*2-1).normalize().multiplyScalar(4000);p.set([v.x,v.y,v.z],i*3)}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));gScene.add(new THREE.Points(g,new THREE.PointsMaterial({color:0xdfe6ff,size:1.5,sizeAttenuation:false,transparent:true,opacity:.75})))}
+const gSunSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xfff2d8,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));
+gSunSpr.position.copy(GSUN).multiplyScalar(SUN_DIST);gScene.add(gSunSpr);
+const NOISE3=`float hs(vec3 p){p=fract(p*.3183099+.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
+float vn(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);
+ return mix(mix(mix(hs(i),hs(i+vec3(1,0,0)),f.x),mix(hs(i+vec3(0,1,0)),hs(i+vec3(1,1,0)),f.x),f.y),mix(mix(hs(i+vec3(0,0,1)),hs(i+vec3(1,0,1)),f.x),mix(hs(i+vec3(0,1,1)),hs(i+vec3(1,1,1)),f.x),f.y),f.z);}
+const mat3 RM=mat3(.00,.80,.60,-.80,.36,-.48,-.60,-.48,.64);
+float fb(vec3 p){float s=0.,a=.5;for(int i=0;i<5;i++){s+=a*vn(p);p=RM*p*2.03;a*=.5;}return s/.97;}`;
+const MARK=new THREE.Vector3(Math.cos(.05),Math.sin(.05),0);// the observed field, in the planet's own frame
+const earthU={uSun:{value:GSUN},uSea:{value:new THREE.Color()},uSeaS:{value:new THREE.Color()},uRock:{value:new THREE.Color()},uVegC:{value:new THREE.Color()},
+  uLand:{value:.6},uVeg:{value:0},uDry:{value:0},uIce:{value:0},uLava:{value:1},uLights:{value:0},uDrift:{value:0},uMark:{value:MARK},uMarkW:{value:.2},uAsh:{value:0},uTime:U.time};
+const earthMat=new THREE.ShaderMaterial({uniforms:earthU,
+  vertexShader:`varying vec3 vP;varying vec3 vN;varying vec3 vW;void main(){vP=normalize(position);vN=normalize(mat3(modelMatrix)*normal);vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}`,
+  fragmentShader:`${NOISE3}
+  uniform vec3 uSun,uSea,uSeaS,uRock,uVegC,uMark;uniform float uLand,uVeg,uDry,uIce,uLava,uLights,uDrift,uMarkW,uAsh,uTime;varying vec3 vP;varying vec3 vN;varying vec3 vW;
+  void main(){vec3 p=vP;vec3 q=p*1.6+vec3(uDrift,uDrift*.37,-uDrift*.61);
+   float c=fb(q+.6*vec3(fb(q*1.7+3.1),fb(q*1.7-1.7),0.));
+   c+=uMarkW*smoothstep(.45,0.,distance(p,uMark));
+   float land=smoothstep(uLand-.01,uLand+.01,c);
+   float lat=abs(p.y);float n2=fb(p*7.);
+   vec3 sea=mix(uSeaS,uSea,smoothstep(0.,.07,uLand-c));
+   vec3 ground=uRock*(.75+.5*n2);
+   float desert=uDry*smoothstep(.12,.28,lat)*(1.-smoothstep(.4,.55,lat));
+   float veg=uVeg*(1.-smoothstep(.6,.85,lat))*(1.-desert)*smoothstep(.35,.6,n2+.15);
+   ground=mix(ground,uVegC,clamp(veg*1.3,0.,1.));
+   ground=mix(ground,vec3(.74,.6,.4),desert*.8);
+   vec3 col=mix(sea,ground,land);
+   float ice=smoothstep(1.-uIce-.04,1.-uIce+.04,lat+(n2-.5)*.15);
+   col=mix(col,vec3(.9,.94,.97),ice);
+   col=mix(col,vec3(.22,.21,.2),uAsh*.6);
+   vec3 N=normalize(vN);float d=dot(N,uSun);float dif=max(d,0.);float tw=smoothstep(-.1,.15,d);
+   vec3 V=normalize(cameraPosition-vW);vec3 H=normalize(uSun+V);float spec=pow(max(dot(N,H),0.),60.)*(1.-land)*(1.-ice)*.55;
+   vec3 lit=col*(dif*1.1+.025)+spec*vec3(1.,.95,.85)*tw;
+   float crk=1.-smoothstep(0.,.07,abs(fb(p*5.+vec3(uTime*.02))-.5));
+   vec3 lava=mix(vec3(.11,.05,.03)*(dif+.25),vec3(1.,.38,.08)*(.5+1.3*crk),.2+.8*crk);
+   lit=mix(lit,lava,uLava);
+   float city=smoothstep(.6,.78,fb(p*24.))*land*(1.-ice)*(1.-smoothstep(.3,.8,lat));
+   lit+=(1.-tw)*uLights*city*vec3(1.,.72,.38)*1.6;
+   gl_FragColor=vec4(lit,1.);}`});
+const earthG=new THREE.Group();gScene.add(earthG);
+const EARTH_R=10;
+const earth=new THREE.Mesh(new THREE.SphereGeometry(EARTH_R,96,64),earthMat);earthG.add(earth);
+const cloudU={uSun:{value:GSUN},uC:{value:new THREE.Color()},uAmt:{value:.5},uTime:U.time};
+const gClouds=new THREE.Mesh(new THREE.SphereGeometry(EARTH_R*1.012,72,48),new THREE.ShaderMaterial({uniforms:cloudU,transparent:true,depthWrite:false,
+  vertexShader:`varying vec3 vP;varying vec3 vN;void main(){vP=normalize(position);vN=normalize(mat3(modelMatrix)*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`${NOISE3}uniform vec3 uSun,uC;uniform float uAmt,uTime;varying vec3 vP;varying vec3 vN;
+  void main(){float n=fb(vP*3.+vec3(uTime*.012,0.,0.))+.18*fb(vP*11.);float a=smoothstep(.78-uAmt*.35,.95-uAmt*.35,n);
+   float dif=max(dot(normalize(vN),uSun),0.);gl_FragColor=vec4(uC*(dif*1.05+.03),a*.92);}`}));
+earthG.add(gClouds);
+const atmoU={uSun:{value:GSUN},uC:{value:new THREE.Color(0x8ab4ff)},uK:{value:1}};
+const atmo=new THREE.Mesh(new THREE.SphereGeometry(EARTH_R*1.06,64,40),new THREE.ShaderMaterial({uniforms:atmoU,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
+  vertexShader:`varying vec3 vN;varying vec3 vW;void main(){vN=normalize(mat3(modelMatrix)*normal);vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}`,
+  fragmentShader:`uniform vec3 uSun,uC;uniform float uK;varying vec3 vN;varying vec3 vW;
+  void main(){vec3 N=normalize(vN),V=normalize(cameraPosition-vW);float f=pow(1.-max(dot(N,V),0.),2.6);float l=smoothstep(-.35,.4,dot(N,uSun));gl_FragColor=vec4(uC*f*l*uK,1.);}`}));
+gScene.add(atmo);
+const gMarker=new THREE.Mesh(new THREE.TorusGeometry(.42,.07,6,28),new THREE.MeshBasicMaterial({color:0xf2b45c}));
+gMarker.position.copy(MARK).multiplyScalar(EARTH_R*1.004);gMarker.lookAt(MARK.clone().multiplyScalar(20));earthG.add(gMarker);
+const moon=new THREE.Mesh(new THREE.SphereGeometry(EARTH_R*.273,48,32),new THREE.MeshStandardMaterial({color:0xa8a49c,roughness:1}));gScene.add(moon);
+const theia=new THREE.Mesh(new THREE.SphereGeometry(EARTH_R*.53,48,32),new THREE.MeshStandardMaterial({color:0x5a3a2a,roughness:1,emissive:0x401006}));gScene.add(theia);
+const THEIA_DIR=new THREE.Vector3(-.85,.18,.2).normalize();
+// debris ring after the giant impact
+const DEBN=2600,debG=new THREE.BufferGeometry();{const p=new Float32Array(DEBN*3);for(let i=0;i<DEBN;i++){const a=rnd()*TAU,r=EARTH_R*(1.3+Math.pow(rnd(),.6)*2.2);p.set([Math.cos(a)*r,(rnd()-.5)*.8,Math.sin(a)*r],i*3)}debG.setAttribute('position',new THREE.BufferAttribute(p,3))}
+const debris=new THREE.Points(debG,new THREE.PointsMaterial({color:0xffa060,size:.35,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));debris.rotation.x=.12;gScene.add(debris);
+// protoplanetary disk around the young Sun, seen from where the Earth will form
+const GDN=7000,gdPos=new Float32Array(GDN*3),gdCol=new Float32Array(GDN*3),gdR=new Float32Array(GDN),gdA=new Float32Array(GDN),gdY=new Float32Array(GDN);
+for(let i=0;i<GDN;i++){const near=i<GDN*.7;const r=near?SUN_DIST+rr(-90,90):rr(60,900);gdR[i]=r;gdA[i]=near?PI+rr(-.45,.45):rnd()*TAU;gdY[i]=(rnd()-.5)*r*.035;
+  const t=clamp(1-r/900,0,1);tmpC.setHSL(.07+.05*rnd(),.55,.2+.4*t*rnd()+.1);gdCol.set([tmpC.r,tmpC.g,tmpC.b],i*3)}
+const gdGeo=new THREE.BufferGeometry();gdGeo.setAttribute('position',new THREE.BufferAttribute(gdPos,3));gdGeo.setAttribute('color',new THREE.BufferAttribute(gdCol,3));
+const gdMat=new THREE.PointsMaterial({size:1.6,map:lightTex,vertexColors:true,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
+const gDisk=new THREE.Points(gdGeo,gdMat);gDisk.frustumCulled=false;gScene.add(gDisk);
+const PLN=80,pln=new THREE.InstancedMesh(Ic(1,0),new THREE.MeshStandardMaterial({color:0x6a5a4a,roughness:1}),PLN);pln.frustumCulled=false;gScene.add(pln);
+const plnD=[];for(let i=0;i<PLN;i++)plnD.push({r:SUN_DIST+rr(-60,60),a:PI+rr(-.25,.25),s:rr(.3,1.6),y:rr(-2,2)});
+const omega=r=>.06*Math.pow(SUN_DIST/r,1.5);
+const gcam={th:.35,ph:1.25,r:42};
+function placeGCam(){gCamera.position.set(gcam.r*Math.sin(gcam.ph)*Math.sin(gcam.th),gcam.r*Math.cos(gcam.ph),gcam.r*Math.sin(gcam.ph)*Math.cos(gcam.th));gCamera.lookAt(0,0,0)}
+const moonUnits=km=>EARTH_R*Math.pow(km/6371,.45);
+let moonAng=2.2;
+function landThr(f){const t=[[.02,2.05],[.05,1.64],[.1,1.28],[.2,.84],[.3,.52],[.4,.25]];let z=t[0][1];for(let i=1;i<t.length;i++)if(f<=t[i][0]){z=lerp(t[i-1][1],t[i][1],(f-t[i-1][0])/(t[i][0]-t[i-1][0]));break}else z=t[i][1];return .5+.115*z}
+function updateGlobeTime(A,temp){
+  const u=earthU;
+  u.uSea.value.copy(E.seaC);u.uSeaS.value.copy(E.seaS);u.uRock.value.copy(E.rockC);u.uVegC.value.copy(E.vegC);
+  u.uLand.value=lerp(0,landThr(rt('land',A)),sm(E.sea));
+  u.uVeg.value=E.veg*(1-FX.dead*.8);u.uDry.value=E.dry;
+  const snowball=(A<7.25e8&&A>6.3e8)||(A<2.45e9&&A>2.05e9);
+  u.uIce.value=snowball?E.ice:Math.max(clamp((24-temp)/60,0,.35),E.ice*.4);
+  u.uLava.value=clamp(E.lava*1.15,0,1);u.uAsh.value=FX.ash;
+  u.uLights.value=A<12000?sstep(200,0,A)*Math.sqrt(rt('pop',A)/8.2e9)+.05*sstep(8000,200,A):0;
+  u.uDrift.value=(AMAX-A)/4e8;u.uMarkW.value=A<4e9?.14:.05;
+  cloudU.uC.value.copy(E.cloudC).lerp(new THREE.Color(0x2a2626),FX.ash*.8);
+  cloudU.uAmt.value=E.lava>.5?.2:clamp(.45+E.cloud*.45+FX.ash,0,1);
+  atmoU.uC.value.copy(E.skyH).lerp(E.skyT,.4);atmoU.uK.value=E.lava>.5?.6:1+E.fogD*120;
+  // the planet grows out of the disk
+  earthG.scale.setScalar(A>4.567e9?.05:lerp(.05,1,sm((4.567e9-A)/2.7e7)));
+  atmo.scale.copy(earthG.scale);
+  gDisk.visible=pln.visible=E.disk>.01;gdMat.opacity=Math.min(1,E.disk*1.3);
+  gSunSpr.scale.setScalar(A>4.5e9?320:200);gSunSpr.material.color.copy(E.sunC);
+  // the Moon after the giant impact, receding over time
+  const md=A>4.51e9?0:rt('moon',A);
+  moon.visible=md>0;moon.userData.d=md?moonUnits(md):0;moon.scale.setScalar(md?sstep(4.51e9,4.495e9,A):0);
+  const f=(A-4.51e9)/2.5e7;theia.visible=f>0&&f<1;theia.position.copy(THEIA_DIR).multiplyScalar(EARTH_R*1.5+f*60);
+  debris.visible=A<=4.51e9&&A>4.49e9;debris.material.opacity=sstep(4.49e9,4.51e9,A);
+}
+function stepGlobe(dt,A,dayT){
+  earthG.rotation.y=TAU*(dayT-.5);
+  gClouds.rotation.y+=dt*.01;
+  if(moon.visible){moonAng+=dt*.05;const d=moon.userData.d;moon.position.set(Math.cos(moonAng)*d,Math.sin(moonAng)*d*.09,Math.sin(moonAng)*d)}
+  debris.rotation.y+=dt*.25;
+  if(gDisk.visible){const w0=omega(SUN_DIST);for(let i=0;i<GDN;i++){gdA[i]+=dt*(omega(gdR[i])-w0);const r=gdR[i];gdPos[i*3]=SUN_DIST+Math.cos(gdA[i])*r;gdPos[i*3+1]=gdY[i];gdPos[i*3+2]=Math.sin(gdA[i])*r}gdGeo.attributes.position.needsUpdate=true;
+    for(let i=0;i<PLN;i++){const p=plnD[i];p.a+=dt*(omega(p.r)-w0)*3;setInst(pln,i,SUN_DIST+Math.cos(p.a)*p.r,p.y,Math.sin(p.a)*p.r,p.a,p.s*E.disk,undefined,null)}pln.instanceMatrix.needsUpdate=true}
+}
+
+/* ancestor marker */
+const ring=new THREE.Mesh(new THREE.TorusGeometry(1,.07,6,40),new THREE.MeshBasicMaterial({color:0xf2b45c,transparent:true,depthTest:false}));
+ring.rotation.x=-PI/2;ring.renderOrder=10;ring.visible=false;world.add(ring);
+
+/* ------------------------------------------------------------------ cinematic moments (time-based, triggered on crossing) */
+let seq=null;// {type,t}
+const flashEl=$('flash');
+const REDUCED=matchMedia('(prefers-reduced-motion:reduce)').matches;
+function startSeq(type){seq={type,t:0}}
+function seqState(dt){
+  const o={flash:0,dark:0,col:'255,240,220',heat:0};
+  if(!seq)return o;
+  seq.t+=dt;const t=seq.t;
+  if(seq.type==='theia'){o.flash=t<.4?t/.4:Math.exp(-(t-.4)/.9);o.col='255,190,120';if(t>5)seq=null}
+  if(seq.type==='kpg'){o.flash=t<1.3?0:t<1.5?(t-1.3)/.2:Math.exp(-(t-1.5)/.7);o.heat=t<1.3?0:sstep(1.3,2,t)*(1-sstep(3,4.5,t));o.dark=t<2.5?0:sstep(2.5,3.5,t)*(1-sstep(6,9,t));o.col='255,220,170';if(t>9)seq=null}
+  return o;
+}
+const bigMet={head:new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}))};
+bigMet.head.visible=false;scene.add(bigMet.head);
+
+/* ------------------------------------------------------------------ apply a time */
+let A=4.6e9,Uu=0,lastA=-1,prevA=4.6e9;
+const fogC=new THREE.Color(),skyBot=new THREE.Color();
+function applyTime(){
+  envAt(A);
+  // die-offs and ash after the great extinctions
+  const dk=(A-6.6e7)/1e6,dp=(A-2.519e8)/1e6;
+  const kpgDead=dk<=0?Math.exp(dk/.35):0,kpgAsh=dk<=0?Math.exp(dk/.12):0;
+  const ptDead=dp<=0?Math.exp(dp/2.5)*.85:Math.exp(-dp*dp/.5)*.6;
+  FX.dead=Math.max(kpgDead,ptDead);FX.ash=kpgAsh;FX.haze=Math.max(ptDead*.8,kpgAsh);
+  // lake level swings with glacial / humid cycles once the rift lake exists
+  let w=-40+40*sm(E.sea);
+  if(E.rift>.5){const g=glacial(A);w+=(g-.5)*6*sstep(3e6,2.5e6,A);if(A<14500&&A>5500)w+=2.5*sm((14500-A)/2000)*sm((A-5500)/2000)}
+  W=w;
+  updateTerrain(A);
+  world.scale.setScalar(Math.max(.001,sm(E.tile)));
+  water.position.y=W;water.visible=E.sea>.02&&E.tile>.5;waterSide.visible=water.visible;
+  const wu=waterMat.uniforms;wu.uDeep.value.copy(E.seaC);wu.uShal.value.copy(E.seaS);wu.uIce.value=sstep(.55,.9,E.ice);wu.uWave.value=E.wave;
+  // light & sky
+  const lum=solarLum(A);
+  DAY.top.copy(E.skyT);DAY.hor.copy(E.skyH);DAY.fog.copy(E.fogC);
+  if(FX.haze>0){const hz=new THREE.Color(0x8a6a50);DAY.top.lerp(hz,FX.haze*.6);DAY.hor.lerp(hz,FX.haze*.7);DAY.fog.lerp(hz,FX.haze*.7)}
+  DAY.stars=E.stars;
+  skyMat.uniforms.uSunC.value.copy(E.sunC).multiplyScalar(lum);
+  skyMat.uniforms.uSunSize.value=E.disk>.2?120:900;
+  const md=A>4.51e9?0:rt('moon',A);
+  skyMat.uniforms.uMoonA.value=md?sstep(4.51e9,4.49e9,A)*(1-.7*E.cloud*0):0;
+  skyMat.uniforms.uMoonR.value=md?Math.min(.3,.035*384400/md):.03;
+  DAY.fogD=E.fogD*(1+FX.haze*1.5);DAY.moon=md>0;
+  baseLights={sun:E.sunI*(.5+.5*lum)*(1-FX.ash*.5)*(1-FX.haze*.3),amb:E.amb+.25};
+  sun.color.copy(E.sunC);
+  plantMat.color.setRGB(1,1,1);
+  cloudMat.color.copy(E.cloudC);
+  wu.uSunC.value.copy(E.sunC);
+  updateStatics(A);
+  updateCounts(A);
+  updateFixedLights(A);
+  updateGlobeTime(A,tempAt(A));
+  // the K-Pg and Moon-forming impacts play out in real time when you pass them going forward
+  if(prevA>6.6e7&&A<=6.6e7&&prevA-A<3e7)startSeq('kpg');
+  if(prevA>4.51e9&&A<=4.51e9&&prevA-A<6e7)startSeq('theia');
+  prevA=A;
+  updateHUD();
+}
+let baseLights={sun:1,amb:.5};
+const DAY={top:new THREE.Color(),hor:new THREE.Color(),fog:new THREE.Color(),stars:0,fogD:0,moon:false};
+function tempAt(A){let tp=rt('temp',A);if(A<2.6e6&&A>11700)tp-=(1-glacial(A))*(A<8e5?5:3);return tp}
+
+/* ------------------------------------------------------------------ time of day */
+let dayMode='day',dayT=.42;
+const DAY_SECONDS=36;// one 24-hour day in auto mode; shorter in eras when the day was shorter
+const NIGHT={top:new THREE.Color(0x03050c),hor:new THREE.Color(0x0e1424),fog:new THREE.Color(0x0a0f1a),dawn:new THREE.Color(0xe8874a)};
+function stepDay(dt){
+  if(dayMode==='auto'){const hrs=A>4.51e9?6:rt('day',A);dayT=(dayT+dt*24/(DAY_SECONDS*hrs))%1}
+  else{const target=dayMode==='day'?.42:0;const d=((target-dayT)%1+1)%1;dayT=(dayT+Math.min(d,dt*.3))%1}
+  const th=TAU*(dayT-.25);SUNDIR.set(Math.cos(th)*.8,Math.sin(th)*.85,-.5).normalize();
+  sun.position.copy(SUNDIR).multiplyScalar(320);
+  return sstep(-.12,.1,SUNDIR.y);
+}
+function applyDaylight(dl){
+  const nt=1-dl,su=skyMat.uniforms;
+  su.uTop.value.copy(NIGHT.top).lerp(DAY.top,dl);su.uHor.value.copy(NIGHT.hor).lerp(DAY.hor,dl);
+  const dawn=Math.exp(-(((SUNDIR.y-.02)/.12)**2));if(dawn>.01)su.uHor.value.lerp(NIGHT.dawn,dawn*.55);
+  fogC.copy(NIGHT.fog).lerp(DAY.fog,dl);if(dawn>.01)fogC.lerp(NIGHT.dawn,dawn*.25);
+  skyBot.copy(fogC).multiplyScalar(.45);su.uBot.value.copy(skyBot);
+  su.uStars.value=Math.max(DAY.stars,nt*.9);
+  scene.fog.color.copy(fogC);scene.fog.density=DAY.fogD;
+  hemi.color.copy(su.uHor.value);hemi.groundColor.copy(fogC).multiplyScalar(.5);
+  moonLight.intensity=DAY.moon?.4*nt:0;
+  waterMat.uniforms.uLight.value=.25+.75*dl;
+  uNight.value=sstep(.3,.9,nt);
+  const lightsOn=sstep(.2,.8,nt);
+  fixedLights.m.opacity=lightsOn;movingLights.m.opacity=lightsOn;fireLights.m.opacity=.35+.65*lightsOn;
+  return nt;
+}
+function setDayMode(m){dayMode=m;$('bDay').textContent='時刻：'+{day:'昼',night:'夜',auto:'自動'}[m]}
+$('bDay').onclick=()=>setDayMode({day:'night',night:'auto',auto:'day'}[dayMode]);
+
+/* ------------------------------------------------------------------ HUD */
+const MONTHS=[31,28,31,30,31,30,31,31,30,31,30,31];
+function jaNum(n){n=Math.round(n);const oku=Math.floor(n/1e8),man=Math.floor(n%1e8/1e4),rest=n%1e4;let s='';if(oku)s+=oku+'億';if(man)s+=man+'万';if(rest)s+=rest;return s||'0'}
+function fmtAge(A){
+  if(A<.5)return '現在';
+  if(A<12000){const y=Math.round(2026-A);return y>0?'西暦'+y+'年':'紀元前'+(1-y)+'年'}
+  if(A>=1e9)return (Math.round(A/1e7)/10).toFixed(1).replace(/\.0$/,'')+'億年前';
+  const r=A>=1e8?1e6:A>=1e7?1e5:A>=1e6?1e4:A>=1e5?1e3:100;
+  return jaNum(Math.round(A/r)*r)+'年前';
+}
+function fmtShort(A){if(A<1)return '現在';if(A<12000)return fmtAge(A);const r=A>=1e8?1e7:A>=1e6?1e5:A>=1e4?1e3:100;return jaNum(Math.round(A/r)*r)+'年前'}
+function calendar(A){
+  const f=clamp(1-A/AMAX,0,1);let sec=f*365*86400;if(f>=1)return '12月31日 24:00:00';
+  let d=Math.floor(sec/86400),rem=sec-d*86400,mo=0;while(d>=MONTHS[mo]){d-=MONTHS[mo];mo++}
+  const p=n=>String(Math.floor(n)).padStart(2,'0');
+  return `${mo+1}月${d+1}日 ${p(rem/3600)}:${p(rem%3600/60)}:${p(rem%60)}`;
+}
+function geoAt(A,level){for(const g of GEO)if(g[0]===level&&A<=g[2]&&A>g[3])return g;if(A<=0)for(const g of GEO)if(g[0]===level&&g[3]===0)return g;return null}
+const fmtNum=(v,d=0)=>v.toLocaleString('ja-JP',{maximumFractionDigits:d,minimumFractionDigits:d});
+let lastEvIdx=-2,lastAnc=-2;
+function updateHUD(){
+  $('age').innerHTML=A<.5?'現在<small>（2026年）</small>':(A<12000?fmtAge(A):'約 '+fmtAge(A).replace('年前','<small>年前</small>'));
+  const chips=[];
+  if(A>4.567e9)chips.push(['太陽系の誕生前','#555']);
+  for(const lv of[0,1,2,3]){const g=geoAt(A,lv);if(g)chips.push([g[1],g[4]])}
+  $('chips').innerHTML=chips.map(c=>`<span><i style="background:${c[1]}"></i>${c[0]}</span>`).join('');
+  $('cal').innerHTML=`地球の歴史を1年にすると <b class="mono">${calendar(A)}</b>`;
+  // most recent event at or before A
+  let ei=0;for(let i=0;i<EVENTS.length;i++)if(EVENTS[i][0]>=A-1e-9)ei=i;
+  if(ei!==lastEvIdx){lastEvIdx=ei;const ev=EVENTS[ei],k=KIND[ev[1]];
+    $('evKind').textContent=k[0];$('evKind').style.color=k[1];$('evTitle').textContent=ev[2];$('evDesc').textContent=ev[3];$('evWhen').textContent=fmtShort(ev[0])}
+  // readouts
+  const rows=[];
+  const o2=rt('o2',A);rows.push(['酸素',A>4.45e9?'—':o2<.05?'ほぼ 0%':fmtNum(o2,o2<3?1:0)+'%']);
+  let co2=A>4.45e9?null:rt('co2',A);const g=glacial(A);if(co2&&A<8e5&&A>11700)co2=185+95*g;
+  rows.push(['二酸化炭素',co2==null?'—':co2>=10000?'約'+fmtNum(co2/1e4,co2<1e5?1:0)+'%':'約'+fmtNum(co2)+' ppm']);
+  let tp=rt('temp',A);if(A<2.6e6&&A>11700)tp-=(1-g)*(A<8e5?5:3);
+  rows.push(['平均気温',E.lava>.5?'1000℃以上':(A>4.4e9?'数百℃':'約'+fmtNum(tp)+'℃')]);
+  rows.push(['1日の長さ',A>4.51e9?'—':'約'+fmtNum(rt('day',A),A<1e8?1:0)+'時間']);
+  rows.push(['太陽の明るさ',A>4.567e9?'原始星':fmtNum(solarLum(A)*100)+'%']);
+  rows.push(['月までの距離',A>4.51e9?'まだない':'約'+fmtNum(Math.round(rt('moon',A)/1000)*1000)+' km']);
+  if(A<12000)rows.push(['世界の人口',(()=>{const p=rt('pop',A);return p>=1e8?'約'+fmtNum(p/1e8,1)+'億人':'約'+fmtNum(Math.round(p/1e5)*10)+'万人'})()]);
+  $('envList').innerHTML=rows.map(r=>`<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('');
+  let ai=0;for(let i=0;i<ANCESTORS.length;i++)if(ANCESTORS[i][0]>=A)ai=i;
+  if(ai!==lastAnc){lastAnc=ai;const an=ANCESTORS[ai];$('ancName').textContent=an[1];$('ancDesc').textContent=an[2]}
+  // timeline + list
+  $('tl').setAttribute('aria-valuenow',String(Math.round(Uu*100)));$('tl').setAttribute('aria-valuetext',fmtAge(A));
+  drawTL();
+  refreshSeen();
+  updateMech();
+}
+
+/* visible species list */
+const labelSet=new Set();let showNames=false;
+function visibleSpecies(){return SPECIES.filter(s=>s.mesh.count>0&&(s.pres||0)>.003)}
+let seenKey='';
+function refreshSeen(){
+  const vs=visibleSpecies();$('seenN').textContent=vs.length?String(vs.length):'';
+  const key=vs.map(s=>s.k).join(',')+[...labelSet].join(',');if(key===seenKey)return;seenKey=key;
+  $('seenList').innerHTML=vs.length?vs.map(s=>`<li><button data-k="${s.k}" aria-pressed="${labelSet.has(s.k)}"><i style="background:#${new THREE.Color(s.col).getHexString()}"></i><span>${s.name}</span><small>${s.to>0?fmtShort(s.from).replace('年前','')+'〜'+fmtShort(s.to):fmtShort(s.from)+'〜'}</small></button></li>`).join(''):'<li style="font-size:12px;color:var(--dim)">目に見える生き物はまだいない。</li>';
+}
+$('seenList').addEventListener('click',e=>{const b=e.target.closest('button[data-k]');if(!b)return;const k=b.dataset.k;if(labelSet.has(k))labelSet.delete(k);else labelSet.add(k);seenKey='';refreshSeen()});
+
+/* ------------------------------------------------------------------ timeline */
+const tlc=$('tlc'),tctx=tlc.getContext('2d');
+const TL={top:14,eon:12,era:12,per:18};
+function drawTL(){
+  const r=tlc.getBoundingClientRect(),dpr=Math.min(devicePixelRatio,2);
+  if(tlc.width!==Math.round(r.width*dpr)||tlc.height!==Math.round(r.height*dpr)){tlc.width=Math.round(r.width*dpr);tlc.height=Math.round(r.height*dpr)}
+  const w=r.width,c=tctx;c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,r.height);
+  const X=A=>A2u(A)*w;
+  const rows=[[0,TL.top,TL.eon],[1,TL.top+TL.eon+1,TL.era],[2,TL.top+TL.eon+TL.era+2,TL.per]];
+  c.font='500 10px "Zen Kaku Gothic New", sans-serif';c.textBaseline='middle';
+  for(const [lv,y,h] of rows){
+    c.fillStyle='rgba(255,255,255,.05)';c.fillRect(0,y,w,h);
+    for(const g of GEO){if(g[0]!==lv)continue;const x0=X(Math.min(g[2],AMAX)),x1=X(g[3]);if(x1-x0<.5)continue;
+      c.globalAlpha=.8;c.fillStyle=g[4];c.fillRect(x0,y,x1-x0-.5,h);c.globalAlpha=1;
+      const label=g[1];const tw=c.measureText(label).width;if(tw+6<x1-x0){c.fillStyle='rgba(10,12,14,.85)';c.fillText(label,x0+(x1-x0-tw)/2,y+h/2+.5)}}
+  }
+  // events
+  for(const ev of EVENTS){const x=X(ev[0]);c.fillStyle=KIND[ev[1]][2];
+    c.beginPath();c.moveTo(x-3.5,2);c.lineTo(x+3.5,2);c.lineTo(x,9);c.closePath();c.fill()}
+  // humans bracket in linear mode
+  if(scaleMode==='lin'){const x=X(2.8e6);c.fillStyle='rgba(242,180,92,.9)';c.fillRect(x,TL.top-3,Math.max(1.5,w-x),2)}
+  // thumb
+  const x=Uu*w,bottom=TL.top+TL.eon+TL.era+TL.per+3;
+  c.fillStyle='#f2b45c';c.fillRect(x-1,TL.top-4,2,bottom-TL.top+4);
+  c.beginPath();c.arc(x,bottom+5,5,0,TAU);c.fill();
+}
+function setU(u){Uu=clamp(u,0,1);A=u2A(Uu);dirty=true}
+let dirty=true,tween=null,playing=true,speed=1;
+const tlEl=$('tl'),tip=$('tip');
+let tlDrag=false;
+function tlU(e){const r=tlEl.getBoundingClientRect();return clamp((e.clientX-r.left)/r.width,0,1)}
+function nearEvent(e){const r=tlEl.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;if(y>TL.top+2)return null;let best=null,bd=7;for(const ev of EVENTS){const d=Math.abs(A2u(ev[0])*r.width-x);if(d<bd){bd=d;best=ev}}return best}
+tlEl.addEventListener('pointerdown',e=>{const ev=nearEvent(e);if(ev){goTo(ev[0]);return}tlDrag=true;tween=null;tlEl.setPointerCapture(e.pointerId);setU(tlU(e))});
+tlEl.addEventListener('pointermove',e=>{if(tlDrag){setU(tlU(e));return}const ev=nearEvent(e);if(ev){tip.hidden=false;tip.style.left=(A2u(ev[0])*tlEl.clientWidth)+'px';tip.innerHTML=`${ev[2]}<small>${fmtShort(ev[0])}</small>`}else tip.hidden=true});
+tlEl.addEventListener('pointerup',()=>{tlDrag=false});
+tlEl.addEventListener('pointerleave',()=>{tip.hidden=true});
+tlEl.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();setU(Uu+(e.key==='ArrowRight'?1:-1)*(e.shiftKey?.01:.002))}});
+function goTo(Ae){tween={from:Uu,to:A2u(Ae),t:0}}
+function stepEvent(dir){
+  if(dir>0){for(const ev of EVENTS)if(ev[0]<A-Math.max(1e-6,A*1e-6)){goTo(ev[0]);return}}
+  else{for(let i=EVENTS.length-1;i>=0;i--)if(EVENTS[i][0]>A+Math.max(.5,A*1e-6)){goTo(EVENTS[i][0]);return}}
+}
+$('bPrev').onclick=()=>stepEvent(-1);$('bNext').onclick=()=>stepEvent(1);
+function setPlaying(p){playing=p;$('playIco').innerHTML=p?'<path d="M3 2h4v12H3zM9 2h4v12H9z"/>':'<path d="M4 2l10 6-10 6z"/>';$('bPlay').setAttribute('aria-label',p?'停止':'再生');if(p&&Uu>=1)setU(0)}
+$('bPlay').onclick=()=>setPlaying(!playing);
+$('speed').onchange=e=>{speed=+e.target.value};
+function setScale(m){const a=A;scaleMode=m;$('sEv').setAttribute('aria-pressed',m==='ev');$('sLin').setAttribute('aria-pressed',m==='lin');Uu=A2u(a);
+  $('scaleNote').textContent=m==='lin'?'この目盛りでは、ホモ属（280万年前〜）は右端の 0.06%':'';dirty=true}
+$('sEv').onclick=()=>setScale('ev');$('sLin').onclick=()=>setScale('lin');
+$('bSeen').onclick=()=>{const s=$('seen');s.hidden=!s.hidden;$('bSeen').setAttribute('aria-pressed',String(!s.hidden))};
+$('bNames').onclick=()=>{showNames=!showNames;$('bNames').setAttribute('aria-pressed',String(showNames))};
+$('bClouds').onclick=()=>{showClouds=!showClouds;$('bClouds').setAttribute('aria-pressed',String(showClouds))};
+$('sideToggle').onclick=()=>{const s=$('side');s.classList.toggle('open');$('sideToggle').setAttribute('aria-expanded',String(s.classList.contains('open')))};
+addEventListener('keydown',e=>{
+  if(e.target.tagName==='SELECT')return;
+  if(e.code==='Space'){e.preventDefault();setPlaying(!playing)}
+  else if(e.key===']')stepEvent(1);else if(e.key==='[')stepEvent(-1);
+  else if(e.key==='g'||e.key==='G')setView(viewMode==='globe'?'surface':'globe');
+  else if(e.key==='n'||e.key==='N')$('bDay').click();
+  else if(e.key==='m'||e.key==='M')setMech(!mechOpen);
+});
+
+/* ------------------------------------------------------------------ mechanism panel: model vs record, and why things changed */
+const mc=$('mechC'),mctx=mc.getContext('2d');
+let mechOpen=false;
+function recordAt(k,A){
+  if(k==='T')return A>4.4e9?NaN:tempAt(A);
+  if(k==='C'){if(A>4.4e9)return NaN;return A<8e5&&A>11700?185+95*glacial(A):rt('co2',A)}
+  if(k==='O2')return A>4.45e9?NaN:rt('o2',A);
+  if(k==='D')return A>5.39e8?NaN:rt('div',A);
+}
+const mVal=(k,A)=>k==='O2'?modelAt('O2',A)*21:k==='T'&&A>4.4e9?NaN:modelAt(k,A);
+const MROWS=[
+  {k:'T',name:'気温',unit:'℃',lo:-45,hi:45,ticks:[-40,0,40],lab:v=>v+'℃'},
+  {k:'C',name:'CO2',unit:'ppm',lo:Math.log10(150),hi:Math.log10(1e6),log:1,ticks:[280,1e4,3e5],lab:v=>v>=1e4?v/1e4+'%':v+''},
+  {k:'O2',name:'酸素',unit:'%',lo:0,hi:35,ticks:[0,21],lab:v=>v+'%'},
+  {k:'D',name:'海の動物',unit:'属の数',lo:0,hi:3600,ticks:[0,3000],lab:v=>v+''},
+];
+function drawMech(){
+  if(!mechOpen)return;
+  const r=mc.getBoundingClientRect(),dpr=Math.min(devicePixelRatio,2);
+  if(mc.width!==Math.round(r.width*dpr)||mc.height!==Math.round(r.height*dpr)){mc.width=Math.round(r.width*dpr);mc.height=Math.round(r.height*dpr)}
+  const c=mctx;c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,r.width,r.height);
+  const L=74,w=r.width-L-2,rowH=(r.height-4)/MROWS.length,step=2;
+  // the model's snowball episodes
+  c.fillStyle='rgba(190,220,255,.13)';
+  for(let px=0;px<w;px+=step)if(modelAt('snow',u2A(px/w))>.5)c.fillRect(L+px,0,step,r.height);
+  c.font='500 11px "Zen Kaku Gothic New", sans-serif';c.textBaseline='middle';
+  MROWS.forEach((row,ri)=>{
+    const y0=2+ri*rowH,h=rowH-6;
+    const Y=v=>{let t=row.log?(Math.log10(v)-row.lo)/(row.hi-row.lo):(v-row.lo)/(row.hi-row.lo);return y0+h*(1-clamp(t,0,1))};
+    c.fillStyle='#eef0e8';c.textAlign='left';c.fillText(row.name,0,y0+h/2);
+    c.fillStyle='#727b70';c.font='400 10px "IBM Plex Mono", monospace';
+    c.textAlign='right';
+    for(const t of row.ticks){const y=Y(t);c.fillText(row.lab(t),L-6,y);c.fillStyle='rgba(228,238,222,.07)';c.fillRect(L,Math.round(y),w,1);c.fillStyle='#727b70'}
+    c.font='500 11px "Zen Kaku Gothic New", sans-serif';
+    for(const [kind,col,dash,lw] of [['rec','#aab3a7',[4,3],1.2],['mod','#f2b45c',[],1.6]]){
+      c.beginPath();c.setLineDash(dash);c.strokeStyle=col;c.lineWidth=lw;let pen=false;
+      for(let px=0;px<=w;px+=step){const A=u2A(px/w),v=kind==='rec'?recordAt(row.k,A):mVal(row.k,A);
+        if(!isFinite(v)||(row.k==='D'&&kind==='mod'&&A>6.4e8)){pen=false;continue}
+        const y=Y(row.log?Math.max(v,150):v);if(pen)c.lineTo(L+px,y);else{c.moveTo(L+px,y);pen=true}}
+      c.stroke();
+    }
+    c.setLineDash([]);
+  });
+  const x=L+Uu*w;c.fillStyle='#f2b45c';c.fillRect(x-.5,0,1.5,r.height);
+}
+const TERMS=[['tS','太陽'],['tC','CO2（自然）'],['tH','CO2（人間）'],['tM','メタン'],['tI','氷の反射'],['tO','軌道のゆらぎ']];
+function termsAt(A){
+  const C=modelAt('C',A),hum=modelAt('hum',A),tC=modelAt('tC',A),xn=Math.log(Math.max(C-hum,1)/280),tCn=4.33*xn+(xn>0?.25*xn*xn:0);
+  return {tS:modelAt('tS',A),tC:hum>.5?tCn:tC,tH:hum>.5?tC-tCn:0,tM:modelAt('tM',A),tI:modelAt('tI',A),tO:modelAt('tO',A),T:modelAt('T',A),C,O2:modelAt('O2',A)*21,D:modelAt('D',A),
+    V:modelAt('V',A),W:modelAt('W',A),Bio:modelAt('Bio',A),hum,snow:modelAt('snow',A)>.5};
+}
+function lipNear(A0,A1){for(const l of LIPS)if(l[0]<=A0+2*l[1]&&l[0]>=A1-2*l[1])return l[3];return null}
+function co2Reason(a,b,A0,A1){
+  if(b.snow&&!a.snow)return null;
+  if(a.snow&&!b.snow)return '全球凍結のあいだ岩石の風化が止まり、火山の CO2 がたまり続けた';
+  const c=[];
+  if(b.hum-a.hum>5)c.push([10,'人間が化石燃料を燃やし、森を切りひらいた']);
+  // eruptions act through the CO2 they leave behind, which lingers for a few million years
+  for(const l of LIPS)if(l[0]<=A0&&l[0]>=A1){const inj=l[2]*(l[1]/1e6)*1.77*700,eff=Math.log(1+inj/a.C)*Math.exp(-(l[0]-A1)/3e6);if(eff>.05)c.push([eff,l[3]+'の巨大噴火で CO2 が大量に出た'])}
+  const dV=Math.log(b.V/a.V);if(Math.abs(dV)>.05&&!lipNear(A1,A1)&&!lipNear(A0,A0))c.push([dV,dV>0?'火山の CO2 が増えた':'火山活動が落ち着き、出てくる CO2 が減った']);
+  const dW=-Math.log(b.W/a.W);if(Math.abs(dW)>.05)c.push([dW,dW<0?'大陸の配置や山脈の隆起で岩石が風化しやすくなり、CO2 が吸い取られた':'大陸が風化しにくい配置になり、CO2 がたまった']);
+  const dB=-Math.log(b.Bio/a.Bio);if(Math.abs(dB)>.05)c.push([dB,'陸の植物が根で岩を砕き、風化を速めて CO2 を減らした']);
+  const dS=-(b.tS-a.tS)/13;if(Math.abs(dS)>.05)c.push([dS,'太陽が明るくなった分、風化が速まって CO2 が減った（天然のサーモスタット）']);
+  const dC=Math.log(b.C/a.C);
+  const same=c.filter(x=>Math.sign(x[0])===Math.sign(dC)||x[0]===10).sort((p,q)=>Math.abs(q[0])-Math.abs(p[0]));
+  return same.length?same[0][1]:null;
+}
+function termReason(k,d,a,b,A0,A1){
+  switch(k){
+    case 'tS':return '太陽が明るくなった';
+    case 'tC':return co2Reason(a,b,A0,A1)||(d>0?'CO2 が増えた':'CO2 が減った');
+    case 'tH':return '人間の排出した CO2 の温室効果';
+    case 'tM':return d<0?'酸素が増えてメタン（強い温室効果ガス）が壊された':'メタンをつくる微生物が増えた';
+    case 'tI':return d<0?(b.snow&&!a.snow?'氷が日光を反射してさらに冷える連鎖が止まらなくなり、全球凍結した':'氷が広がって日光を反射した'):(a.snow&&!b.snow?'氷がとけ、地面と海が日光を吸うようになった':'氷が減って日光を吸うようになった');
+    case 'tO':return '地球の軌道のゆらぎで氷床が増減した（氷期と間氷期）';
+  }
+}
+const sgn=(v,d=1)=>(v>0?'+':v<0?'−':'±')+Math.abs(v).toFixed(d);
+function updateMech(){
+  if(!mechOpen)return;
+  drawMech();
+  const t=termsAt(A);
+  // breakdown bars
+  if(A>4.4e9)$('mBars').innerHTML='<span style="grid-column:1/-1;color:var(--dim)">マグマの海の時代はモデルの対象外。</span>';
+  else $('mBars').innerHTML=TERMS.filter(([k])=>k!=='tH'||t.tH>.05).filter(([k])=>k!=='tO'||Math.abs(t.tO)>.05).map(([k,n])=>{const v=t[k],f=clamp(Math.abs(v)/40,0,1)*50;
+    return `<span>${n}</span><span class="bar"><span style="${v>=0?'left:50%':'right:50%'};width:${f}%;background:${v>=0?'#e9976a':'#7fb4e6'}"></span></span><span class="v">${sgn(v)}</span>`}).join('')+
+    `<span style="color:var(--muted)">合計</span><span></span><span class="v">${Math.round(t.T)}℃</span>`;
+  // what changed since the previous event, and why
+  let ei=Math.max(0,lastEvIdx);const prev=ei>0?EVENTS[ei-1]:null;
+  if(!prev||A>4.4e9||prev[0]>4.4e9){$('mWhy').textContent='マグマの海が冷えて海ができるまでは、このモデルでは扱っていない。'}
+  else{
+    const a=termsAt(prev[0]),b=t,dT=b.T-a.T;
+    const parts=TERMS.map(([k])=>[k,b[k]-a[k]]).filter(p=>Math.abs(p[1])>.3).sort((p,q)=>Math.abs(q[1])-Math.abs(p[1])).slice(0,2);
+    let s=`「${prev[2]}」（${fmtShort(prev[0])}）からいままでに、気温 <b>${sgn(dT)}℃</b>`;
+    const rc=b.C/a.C;if(rc>1.15||rc<.87)s+=`、CO2 <b>×${rc>=10?Math.round(rc):rc.toFixed(1)}</b>`;
+    const dO=b.O2-a.O2;if(Math.abs(dO)>.8)s+=`、酸素 <b>${sgn(dO)}%</b>`;
+    let ext='';if(a.D>50&&b.D>0){const dd=(b.D/a.D-1)*100;if(Math.abs(dd)>12)s+=`、海の動物の多様さ <b>${sgn(dd,0)}%</b>`;if(dd<-20)ext=prev[0]>6.6e7&&A<=6.6e7?'小天体の衝突と、その後の急な気候変化':(b.snow||a.snow)?'全球凍結':modelAt('I',A)>.045?'寒冷化と、氷床の拡大で浅い海が干上がったこと':'急な気温の変化（生き物が適応できる速さを超えた）'}
+    s+='。';
+    if(parts.length)s+='<br>おもな原因: '+parts.map(([k,d])=>`${termReason(k,d,a,b,prev[0],A)}（${sgn(d)}℃）`).join('。');
+    else if(Math.abs(dT)<.6)s+='気温はほとんど変わっていない。';
+    if(ext)s+=`<br>多様さが減った原因: ${ext}。`;
+    if(Math.abs(dO)>.8)s+=`<br>酸素: ${dO>0?'光合成でできた有機物が地層に埋もれる量が、火山ガスや鉄が酸素を使う量を上回った':'有機物の埋没が減り、酸素の消費が上回った'}。`;
+    $('mWhy').innerHTML=s;
+  }
+  const rT=recordAt('T',A),rC=recordAt('C',A);
+  $('mFit').innerHTML=(isFinite(rT)?`この時点 ── 気温 モデル ${Math.round(t.T)}℃ / 記録 ${Math.round(rT)}℃、CO2 モデル ${fmtPPM(t.C)} / 記録 ${fmtPPM(rC)}<br>`:'')+MODEL_FIT;
+}
+const fmtPPM=v=>v>=1e4?(v/1e4).toFixed(v<1e5?1:0)+'%':Math.round(v)+'ppm';
+let MODEL_FIT='';
+function computeFit(){
+  let nT=0,eT=0,nC=0,eC=0,nO=0,eO=0,nD=0,eD=0;
+  for(let i=0;i<=600;i++){const A=u2A_ev(.08+i/600*.92);
+    const rT=recordAt('T',A);if(isFinite(rT)){eT+=Math.abs(modelAt('T',A)-rT);nT++}
+    const rC=recordAt('C',A);if(isFinite(rC)){eC+=Math.abs(Math.log(modelAt('C',A)/rC));nC++}
+    const rO=recordAt('O2',A);if(isFinite(rO)){eO+=Math.abs(modelAt('O2',A)*21-rO);nO++}
+    const rD=recordAt('D',A);if(isFinite(rD)&&rD>100){eD+=Math.abs(modelAt('D',A)/rD-1);nD++}}
+  MODEL_FIT=`記録とのずれ（全期間の平均）: 気温 ±${(eT/nT).toFixed(1)}℃、CO2 ×${Math.exp(eC/nC).toFixed(1)}、酸素 ±${(eO/nO).toFixed(1)}%、海の動物 ±${Math.round(eD/nD*100)}%`;
+}
+computeFit();
+function setMech(open){mechOpen=open;$('mech').hidden=!open;document.body.classList.toggle('mech-open',open);$('bMech').setAttribute('aria-pressed',String(open));if(open)updateMech()}
+$('bMech').onclick=()=>setMech(!mechOpen);$('mechClose').onclick=()=>setMech(false);
+addEventListener('resize',()=>drawMech());
+
+/* ------------------------------------------------------------------ camera */
+const cam={th:.75,ph:.92,r:250,tx:0,ty:0,tz:0};
+function placeCam(){camera.position.set(cam.tx+cam.r*Math.sin(cam.ph)*Math.sin(cam.th),cam.ty+cam.r*Math.cos(cam.ph),cam.tz+cam.r*Math.sin(cam.ph)*Math.cos(cam.th));camera.lookAt(cam.tx,cam.ty,cam.tz)}
+const ptrs=new Map();let drag=null,moved=0,pinch0=0;
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});moved=0;drag={pan:e.button===2||e.shiftKey};if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch0=Math.hypot(a.x-b.x,a.y-b.y)}$('hint').style.opacity=0});
+cv.addEventListener('pointermove',e=>{
+  const p=ptrs.get(e.pointerId);if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;moved+=Math.abs(dx)+Math.abs(dy);
+  const globe=effView()==='globe';
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);if(pinch0)zoomBy(pinch0/d);pinch0=d;if(!globe)panBy(dx*.5,dy*.5);return}
+  if(globe){gcam.th-=dx*.005;gcam.ph=clamp(gcam.ph-dy*.005,.15,2.99);return}
+  if(drag&&drag.pan)panBy(dx,dy);else{cam.th-=dx*.006;cam.ph=clamp(cam.ph-dy*.005,.12,1.42)}
+});
+/* two scales: the field (surface) and the whole planet (globe). Zooming past either end crosses over. */
+let viewMode='surface',zoomPush=0,camTargetR=null,gTargetR=null;
+const SMAX=700,GMIN=13.5,GMAX=900;
+const defaultGR=()=>42*Math.pow(Math.max(1,1.3/(innerWidth/innerHeight)),.85);
+const effView=()=>A>4.545e9?'globe':viewMode;
+function setView(m,fromWheel){
+  if(m===viewMode)return;
+  const fade=$('fade');fade.style.opacity=1;
+  setTimeout(()=>{viewMode=m;
+    if(m==='globe'){gcam.r=fromWheel?GMIN+1:30;gTargetR=defaultGR()}
+    else{cam.r=fromWheel?SMAX:400;camTargetR=userZoomed?260:250*Math.pow(Math.max(1,1.3/camera.aspect),.85)}
+    updateViewUI();fade.style.opacity=0},REDUCED?0:280);
+}
+function updateViewUI(){const g=effView()==='globe';$('bView').textContent=viewMode==='globe'?'地表を見る':'地球を見る';$('bView').setAttribute('aria-pressed',String(viewMode==='globe'));
+  $('mini').hidden=!(g&&A<=4.545e9);$('preEarth').hidden=!(A>4.545e9)}
+function zoomBy(f){// f>1 zooms out
+  if(effView()==='globe'){gTargetR=null;const nr=gcam.r*f;
+    if(nr<GMIN&&f<1){gcam.r=GMIN;if(A<=4.545e9){zoomPush+=Math.log(1/f);if(zoomPush>.28){zoomPush=0;setView('surface',true)}}}
+    else{zoomPush=0;gcam.r=Math.min(nr,GMAX)}}
+  else{userZoomed=true;camTargetR=null;const nr=cam.r*f;
+    if(nr>SMAX&&f>1){cam.r=SMAX;zoomPush+=Math.log(f);if(zoomPush>.28){zoomPush=0;setView('globe',true)}}
+    else{zoomPush=0;cam.r=Math.max(nr,25)}}
+}
+$('bView').onclick=()=>setView(viewMode==='globe'?'surface':'globe');
+$('mini').onclick=()=>setView('surface');
+function panBy(dx,dy){const k=cam.r*.0016;const fx=Math.cos(cam.th),fz=-Math.sin(cam.th);cam.tx-=dx*k*fx+dy*k*Math.sin(cam.th);cam.tz-=dx*k*fz+dy*k*Math.cos(cam.th);cam.tx=clamp(cam.tx,-110,110);cam.tz=clamp(cam.tz,-110,110)}
+cv.addEventListener('pointerup',e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch0=0;if(moved<5&&e.button===0)pickAt(e)});
+cv.addEventListener('pointercancel',e=>{ptrs.delete(e.pointerId)});
+cv.addEventListener('wheel',e=>{e.preventDefault();zoomBy(Math.exp(clamp(e.deltaY,-120,120)*.0011))},{passive:false});
+const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
+function pickAt(e){
+  if(effView()==='globe')return;
+  ndc.set(e.clientX/innerWidth*2-1,-e.clientY/innerHeight*2+1);ray.setFromCamera(ndc,camera);
+  const hits=ray.intersectObjects(pickables.filter(m=>m.count>0),false);const pk=$('pick');
+  if(!hits.length){pk.hidden=true;return}
+  const s=hits[0].object.userData.sp;
+  pk.innerHTML=`<b>${s.name}</b><small>${s.to>0?fmtShort(s.from)+' 〜 '+fmtShort(s.to):fmtShort(s.from)+' 〜 現在'}</small>`;
+  pk.style.left=Math.min(e.clientX+14,innerWidth-250)+'px';pk.style.top=Math.max(e.clientY-20,10)+'px';pk.hidden=false;
+  clearTimeout(pickAt.t);pickAt.t=setTimeout(()=>pk.hidden=true,3500);
+}
+
+/* ------------------------------------------------------------------ labels */
+const labRoot=$('labels'),labPool=[];
+function labelAt(i,text,cls,x,y,z,cm){let el=labPool[i];if(!el){el=document.createElement('div');labRoot.appendChild(el);labPool[i]=el}
+  _v.set(x,y,z);if(!cm)_v.applyMatrix4(world.matrixWorld);_v.project(cm||camera);if(_v.z>1){el.hidden=true;return}
+  el.hidden=false;el.className='lab '+cls;el.textContent=text;el.style.transform=`translate(${(_v.x*.5+.5)*innerWidth}px,${(-_v.y*.5+.5)*innerHeight}px) translate(-50%,-100%) translateY(-12px)`}
+function firstPos(s){const v=s.vis[0];if(!v)return null;return [v.x,(v.y!==undefined?v.y:Hat(v.x,v.z)),v.z]}
+const _mw=new THREE.Vector3();
+function updateLabels(time){
+  let n=0;
+  if(effView()==='globe'){
+    if(A<=4.545e9){gMarker.getWorldPosition(_mw);const facing=_mw.clone().normalize().dot(gCamera.position.clone().sub(_mw).normalize())>.15;
+      if(facing)labelAt(n++,'観測地点','anc',_mw.x*1.02,_mw.y*1.02,_mw.z*1.02,gCamera)}
+    for(let i=n;i<labPool.length;i++)labPool[i].hidden=true;
+    if($('ancSeen').textContent!=='地表のながめで見られる。')$('ancSeen').textContent='地表のながめで見られる。';
+    return;
+  }
+  const an=ANCESTORS[Math.max(0,lastAnc)],ak=an&&an[3],as=ak&&SPK[ak];
+  ring.visible=false;
+  let seenTxt='この画面では見えない大きさ。';
+  if(as&&as.vis.length){const v=as.vis[0],y=(v.y!==undefined?v.y:Hat(v.x,v.z));const s=as.size*(1.1+.08*Math.sin(time*3));ring.position.set(v.x,y+.15,v.z);ring.scale.setScalar(s);ring.visible=true;
+    labelAt(n++,'祖先 · '+as.name.replace(/（.*/,''),'anc',v.x,y+as.size*1.1,v.z);seenTxt='画面の黄色い輪が祖先（に近いなかま）。'}
+  else if(as)seenTxt='いまは画面の外にいる。';
+  if($('ancSeen').textContent!==seenTxt)$('ancSeen').textContent=seenTxt;
+  for(const s of SPECIES){if(!(showNames||labelSet.has(s.k))||s===as)continue;const p=firstPos(s);if(!p)continue;labelAt(n++,s.name.replace(/（.*/,''),'',p[0],p[1]+s.size*1.2,p[2])}
+  for(let i=n;i<labPool.length;i++)labPool[i].hidden=true;
+}
+
+/* ------------------------------------------------------------------ loop */
+let userZoomed=false;
+const miniCam=new THREE.PerspectiveCamera(40,4/3,1,5000);
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();gCamera.aspect=w/h;gCamera.updateProjectionMatrix();gcam.r=defaultGR();if(!userZoomed)cam.r=250*Math.pow(Math.max(1,1.3/camera.aspect),.85);drawTL()}
+addEventListener('resize',resize);resize();
+let last=performance.now(),time=0;
+const PLAY_SECONDS=180;
+const SPECIAL_U=[[4.51e9],[6.6e7],[2.52e8],[7e6],[3e5]];
+function frame(now){
+  try{
+  const dt=Math.min(.05,(now-last)/1000);last=now;time+=dt;U.time.value=time;waterMat.uniforms.uTime.value=time;
+  if(tween){tween.t+=dt/1.1;const k=sm(tween.t);setU(lerp(tween.from,tween.to,k));if(tween.t>=1)tween=null}
+  else if(playing&&!tlDrag){
+    let slow=1;if(scaleMode==='ev')for(const [a] of SPECIAL_U){const d=(Uu-A2u_ev(a))/.006;slow=Math.min(slow,1-.75*Math.exp(-d*d))}
+    let nu=Uu+dt*speed/PLAY_SECONDS*slow;if(nu>=1){nu=1;setPlaying(false)}setU(nu);
+  }
+  if(dirty){applyTime();dirty=false}
+  stepAgents(dt,A,time);
+  stepMeteors(dt,A);
+  // time of day drives the field's sun and the planet's spin together
+  const dl=stepDay(dt);applyDaylight(dl);
+  stepGlobe(dt,A,dayT);
+  const ev=effView();
+  if(ev!==frame.lastView){frame.lastView=ev;updateViewUI()}
+  if(camTargetR!==null){cam.r+=(camTargetR-cam.r)*Math.min(1,dt*3);if(Math.abs(camTargetR-cam.r)<1)camTargetR=null}
+  if(gTargetR!==null){gcam.r+=(gTargetR-gcam.r)*Math.min(1,dt*3);if(Math.abs(gTargetR-gcam.r)<.2)gTargetR=null}
+  // clouds
+  const nc=showClouds?Math.round(CLN*E.cloud*(E.tile>.5?1:0)):0;clouds.count=nc;cloudMat.opacity=.35+.3*E.cloud;
+  for(let i=0;i<nc;i++){const c=clD[i];c.x+=dt*2.2;if(c.x>125)c.x=-125;setInst(clouds,i,c.x,c.y,c.z,c.r,c.s*1.4,c.s*.35,null)}clouds.instanceMatrix.needsUpdate=true;
+  // cinematic overlays
+  const sq=seqState(dt);
+  const fl=REDUCED?sq.flash*.3:sq.flash;
+  flashEl.style.opacity=String(Math.max(fl,sq.heat*.45));
+  flashEl.style.background=sq.heat>fl?`radial-gradient(ellipse at 20% 0%,rgba(255,120,40,.9),rgba(140,30,10,.5) 70%)`:`radial-gradient(circle at 25% 15%,rgba(${sq.col},1),rgba(${sq.col},.6) 60%)`;
+  if(seq&&seq.type==='kpg'&&seq.t<1.4){const t=seq.t/1.4;bigMet.head.visible=true;const d=new THREE.Vector3(-.75,.55-.5*t,-.6).normalize();bigMet.head.position.copy(d).multiplyScalar(700);bigMet.head.scale.setScalar(30+160*t)}else bigMet.head.visible=false;
+  sun.intensity=baseLights.sun*dl*(1-sq.dark*.85);hemi.intensity=baseLights.amb*(.16+.84*dl)*(1-sq.dark*.7);
+  if(sq.dark>0){scene.fog.density=Math.max(scene.fog.density,.006*sq.dark)}
+  const shake=seq&&seq.type==='theia'&&!REDUCED&&seq.t<2?(1-seq.t/2):0;
+  placeCam();placeGCam();
+  if(shake){camera.position.x+=(rnd()-.5)*shake*2;camera.position.y+=(rnd()-.5)*shake*2;gCamera.position.x+=(rnd()-.5)*shake*.6;gCamera.position.y+=(rnd()-.5)*shake*.6}
+  sun.target.position.set(0,0,0);
+  updateLabels(time);
+  const w=innerWidth,h=innerHeight;
+  renderer.setScissorTest(false);renderer.setViewport(0,0,w,h);
+  if(ev==='surface')renderer.render(scene,camera);
+  else{
+    renderer.render(gScene,gCamera);
+    if(!$('mini').hidden){
+      const r=$('mini').getBoundingClientRect(),y=h-r.bottom;
+      miniCam.aspect=r.width/r.height;miniCam.updateProjectionMatrix();
+      const mr=Math.min(cam.r,300);miniCam.position.set(cam.tx+mr*Math.sin(cam.ph)*Math.sin(cam.th),cam.ty+mr*Math.cos(cam.ph),cam.tz+mr*Math.sin(cam.ph)*Math.cos(cam.th));miniCam.lookAt(cam.tx,cam.ty,cam.tz);
+      renderer.setScissorTest(true);renderer.setScissor(r.left,y,r.width,r.height);renderer.setViewport(r.left,y,r.width,r.height);
+      renderer.render(scene,miniCam);renderer.setScissorTest(false);renderer.setViewport(0,0,w,h);
+    }
+  }
+  }catch(err){window.__evErr.push(String(err&&err.stack||err))}
+}
+function loop(now){frame(now);if(window.__evErr.length<=20)requestAnimationFrame(loop)}
+setU(0);setPlaying(true);
+requestAnimationFrame(loop);
+setTimeout(()=>{$('hint').style.opacity=0},12000);
+
+/* debug handle */
+window.__ev={setAge:a=>{tween=null;setPlaying(false);setU(A2u(a))},get A(){return A},get W(){return W},E,SPECIES,SPK,frame:(n=1,dt=1/30)=>{for(let i=0;i<n;i++){last=performance.now()-dt*1000;frame(performance.now())}},cam,gcam,get MODEL(){return MODEL},runModel,modelAt,FORCE,setPlaying,setView,setDayMode,get dayT(){return dayT},set dayT(v){dayT=v},visible:()=>visibleSpecies().map(s=>s.k+':'+s.mesh.count)};
+</script>

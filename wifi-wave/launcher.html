@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>電波の見える部屋 ランチャー</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: single column version list; turning points as cards, other backups as a compact table */
+:root{--bg:#0b1322;--ink:#e8eefb;--muted:#a3b3cf;--dim:#7083a3;--line:rgba(170,200,255,.16);--panel:#101b30;--acc:#ffc95a;
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+main{max-width:760px;margin:0 auto;padding:48px 16px 64px;display:flex;flex-direction:column;gap:28px}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:400;font-size:44px;margin:6px 0 0;letter-spacing:.04em}
+h2{font-size:12px;letter-spacing:.18em;color:var(--dim);font-weight:500;margin:0 0 10px}
+.cards{display:flex;flex-direction:column;gap:12px}
+.card{display:grid;grid-template-columns:auto 1fr auto;gap:6px 18px;align-items:start;padding:16px 18px;background:var(--panel);border:1px solid var(--line);border-radius:6px;text-decoration:none;color:inherit}
+.card:hover,.latest{border-color:var(--acc)}
+.card:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.ver{font-family:var(--f-mono);font-size:13px;color:var(--acc);padding-top:3px}
+.card b{font-size:17px}
+.card p{margin:4px 0 0;font-size:13px;line-height:1.75;color:var(--muted)}
+.date{font-family:var(--f-mono);font-size:11px;color:var(--dim);white-space:nowrap;padding-top:4px}
+.tag{display:inline-block;font-size:10px;letter-spacing:.12em;border:1px solid var(--acc);color:var(--acc);padding:1px 6px;margin-left:8px;vertical-align:2px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td{padding:8px 6px;border-top:1px solid var(--line);vertical-align:top}
+td:first-child{font-family:var(--f-mono);color:var(--muted);white-space:nowrap}
+td a{color:var(--ink)}
+@media (max-width:520px){.card{grid-template-columns:1fr}.date{padding:0}h1{font-size:34px}}
+</style>
+</head>
+<body>
+<main>
+  <header><div class="eyebrow">WIFI WAVES · VERSIONS</div><h1>電波の見える部屋</h1></header>
+  <section>
+    <h2>ターニングポイント</h2>
+    <div class="cards">
+      <a class="card latest" href="index.html"><span class="ver">最新</span><div><b>作業中の最新版<span class="tag">LATEST</span></b><p>いま作業フォルダにある index.html。</p></div><span class="date">—</span></a>
+      <a class="card" href="versions/v001-first/index.html"><span class="ver">v1</span><div><b>最初の版</b>
+        <p>2次元の電場の波動方程式をGPUで実寸計算（1マス0.75cm・12.5ps）。波の動き／電波の強さ（dBm）の表示、2.4GHz・5GHz、2LDKマンション・木造の一戸建て・壁の比べっこ・すき間の実験・まっさら。壁を描く（石こうボード・木・ガラス・レンガ・コンクリート・金属・人）、スマホの受信表示。</p></div><span class="date">2026-10-04</span></a>
+    </div>
+  </section>
+  <section>
+    <h2>すべてのバックアップ</h2>
+    <table><tr><td>v001-first</td><td><a href="versions/v001-first/index.html">v1 完成時点</a></td></tr><tr><td>v002-mobile</td><td><a href="versions/v002-mobile/index.html">受信の数字に「目安」の注記、縦長スマホで地図を上に固定・ラベルを小さく</a></td></tr><tr><td>v003-viewport</td><td><a href="versions/v003-viewport/index.html">viewport メタを追加（ローカルでもスマホ幅で表示）</a></td></tr><tr><td>v003b-before-landscape</td><td><a href="versions/v003b-before-landscape/index.html">横向きスマホ対応の直前</a></td></tr><tr><td>v004-landscape</td><td><a href="versions/v004-landscape/index.html">横向きスマホでPCと同じ左右2列（地図が見切れない）</a></td></tr></table>
+  </section>
+</main>
+</body>
+</html>

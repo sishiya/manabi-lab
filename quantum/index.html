@@ -1,0 +1,855 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>量子の実験室</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Shippori+Mincho+B1:wght@700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* 暗室の実験台: 上にタブ、各実験は「装置（広い）＋操作と解説（右）」の2段組。狭い画面では縦に積む。
+   暗い背景は検出スクリーンの光点を見るための意図的な単一テーマ。 */
+:root{
+  --bg:#0c1016; --panel:#131922; --raise:#1a222e; --line:#2a3441; --fg:#e8ecf2; --mute:#929cad; --dim:#64707f;
+  --wave:#6db8ff; --hit:#ffd27a; --classic:#ff907f; --good:#7fe0b2;
+  --f-display:'Shippori Mincho B1','Hiragino Mincho ProN','Yu Mincho',serif;
+  --f-body:'Zen Kaku Gothic New','Hiragino Sans','Yu Gothic',system-ui,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.75}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:22px 48px;display:flex;flex-direction:column;gap:18px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 24px}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;color:var(--mute);text-transform:uppercase}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(30px,5vw,44px);line-height:1.2;margin:4px 0 0;letter-spacing:.05em}
+h1 .h{font-family:var(--f-mono);font-weight:400;font-size:.42em;color:var(--wave);letter-spacing:0;vertical-align:.5em;margin-left:.4em}
+.top p{margin:0;color:var(--mute);font-size:13px;max-width:34em}
+.tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);scrollbar-width:thin}
+.tabs button{flex:0 0 auto;font:inherit;font-size:14px;color:var(--mute);background:none;border:0;border-bottom:2px solid transparent;padding:10px 14px 9px;cursor:pointer;display:flex;gap:8px;align-items:baseline}
+.tabs button .n{font-family:var(--f-mono);font-size:11px;color:var(--dim)}
+.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--hit)}
+.tabs button[aria-selected="true"] .n{color:var(--hit)}
+.tabs button:hover{color:var(--fg)}
+/* スマホ: 横スクロールだと4・5番目が見切れるので、5つ全部が見える格子に並べる */
+@media (max-width:600px){
+  .tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;overflow:visible;border-bottom:0}
+  .tabs button{font-size:13px;padding:8px 9px;border:1px solid var(--line);border-radius:4px;background:var(--panel);gap:6px;white-space:nowrap}
+  .tabs button[aria-selected="true"]{border-color:var(--hit);background:var(--raise)}
+}
+@media (max-width:359px){.tabs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--wave);outline-offset:2px}
+.exp{display:flex;flex-direction:column;gap:16px}
+.exp[hidden]{display:none}
+.exp-head h2{font-family:var(--f-display);font-weight:700;font-size:clamp(24px,3.4vw,32px);margin:2px 0 4px;letter-spacing:.04em;text-wrap:balance}
+.lede{margin:0;max-width:46em;color:var(--fg)}
+.exp-body{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+@media (max-width:900px){.exp-body{grid-template-columns:minmax(0,1fr)}}
+.stage{display:flex;flex-direction:column;gap:10px;min-width:0}
+.cv{display:block;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:4px}
+.cap{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--mute);flex-wrap:wrap}
+.cap b{color:var(--fg);font-weight:500}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{font:inherit;font-size:13px;color:var(--fg);background:var(--raise);border:1px solid var(--line);border-radius:4px;padding:6px 12px;cursor:pointer;line-height:1.4}
+.btn:hover{border-color:var(--mute)}
+.btn.primary{background:var(--hit);color:#1b1404;border-color:var(--hit);font-weight:700}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn[aria-pressed="true"]{border-color:var(--wave);color:var(--wave)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{font:inherit;font-size:13px;background:var(--raise);color:var(--mute);border:0;padding:6px 11px;cursor:pointer;line-height:1.4}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+aside.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.box h3{margin:0;font-size:12px;letter-spacing:.14em;color:var(--mute);font-weight:500}
+.ctl{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;font-size:13px}
+.ctl label{color:var(--fg)}
+.ctl output{font-family:var(--f-mono);font-size:12px;color:var(--hit);font-variant-numeric:tabular-nums}
+.ctl input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--hit)}
+.check{display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer}
+.check input{accent-color:var(--wave);width:16px;height:16px}
+.read{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:13px}
+.read dt{color:var(--mute)}
+.read dd{margin:0;font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+.read dd.big{font-size:20px;color:var(--hit)}
+ol.try{margin:0;padding-left:1.3em;font-size:13.5px;display:flex;flex-direction:column;gap:6px}
+ol.try li::marker{font-family:var(--f-mono);color:var(--hit);font-size:12px}
+.why p{margin:0;font-size:13.5px;color:var(--fg)}
+.why p+p{margin-top:8px}
+.why .note{color:var(--mute);font-size:12.5px}
+.key{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--mute)}
+.key i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.pairs{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:center;font-size:12px;color:var(--mute)}
+.pairs .row{display:flex;gap:3px;flex-wrap:nowrap;overflow:hidden;min-height:14px}
+.pairs .row span{flex:0 0 12px;height:12px;border-radius:2px}
+.p{background:var(--hit)} .m{background:var(--wave)}
+.chsh{display:flex;flex-direction:column;gap:8px}
+.meter{position:relative;height:22px;background:var(--raise);border-radius:3px;overflow:visible}
+.meter .fill{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+.meter .lim{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--fg)}
+.meter .val{position:absolute;right:6px;top:0;line-height:22px;font-family:var(--f-mono);font-size:12px;color:var(--fg)}
+.mrow{display:grid;grid-template-columns:7.5em 1fr;gap:10px;align-items:center;font-size:12.5px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:620px){.two{grid-template-columns:1fr}}
+.verdict{font-size:13px;color:var(--good);min-height:1.4em}
+.mono{font-family:var(--f-mono)}
+footer{font-size:12px;color:var(--dim);border-top:1px solid var(--line);padding-top:12px}
+@media (max-width:520px){.btn,.seg button{padding:6px 9px}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Quantum bench · 5 experiments</div>
+      <h1>量子の実験室<span class="h">ħ = 1</span></h1>
+    </div>
+    <p>ミクロの粒子は、ふだんの物とはちがうふるまいをする。5つの実験を、自分の手で動かして確かめよう。</p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="実験">
+    <button role="tab" data-tab="slit" aria-selected="true"><span class="n">1</span>二重スリット</button>
+    <button role="tab" data-tab="tunnel" aria-selected="false"><span class="n">2</span>トンネル効果</button>
+    <button role="tab" data-tab="polar" aria-selected="false"><span class="n">3</span>3枚の偏光板</button>
+    <button role="tab" data-tab="bell" aria-selected="false"><span class="n">4</span>量子もつれ</button>
+    <button role="tab" data-tab="uncert" aria-selected="false"><span class="n">5</span>不確定性原理</button>
+  </nav>
+
+  <!-- ===================== 1 二重スリット ===================== -->
+  <section class="exp" id="exp-slit" data-exp="slit">
+    <div class="exp-head">
+      <div class="eyebrow">実験 1 · 波と粒子</div>
+      <h2>二重スリット</h2>
+      <p class="lede">粒子を1個ずつ、2本のすき間（スリット）に向けて飛ばす。1個ずつ点で当たるのに、たくさん集めるとしま模様ができる。どちらを通ったか調べると、しま模様は消える。</p>
+    </div>
+    <div class="exp-body">
+      <div class="stage">
+        <canvas class="cv" id="slitApp" style="height:290px" aria-label="二重スリットの装置を横から見た図"></canvas>
+        <div class="cap"><span>装置を横から見たところ。青い明暗は「粒子が見つかる確率」の広がり。</span></div>
+        <canvas class="cv" id="slitScreen" style="height:250px" aria-label="スクリーンに当たった点と分布"></canvas>
+        <div class="cap"><span>上: スクリーンを正面から見たところ（1点＝粒子1個）。下: 当たった数のグラフ。</span><span>当たった数 <b class="mono" id="slitCount">0</b></span></div>
+        <div class="bar">
+          <button class="btn primary" id="slitRun">一時停止</button>
+          <button class="btn" id="slitOne">1個だけ</button>
+          <button class="btn" id="slitMany">1000個まとめて</button>
+          <button class="btn" id="slitClear">スクリーンを消す</button>
+        </div>
+      </div>
+      <aside class="side">
+        <div class="box">
+          <h3>装置</h3>
+          <div class="bar">
+            <span style="font-size:13px">スリット</span>
+            <div class="seg" id="slitMode">
+              <button data-v="both" aria-pressed="true">2本</button>
+              <button data-v="top" aria-pressed="false">上だけ</button>
+              <button data-v="bottom" aria-pressed="false">下だけ</button>
+            </div>
+          </div>
+          <label class="check"><input type="checkbox" id="slitObs">通り道を調べる（検出器をつける）</label>
+          <div class="ctl"><label for="slitLam">粒子の波長</label><output id="slitLamO"></output><input type="range" id="slitLam" min="0.6" max="2" step="0.05" value="1"></div>
+          <div class="ctl"><label for="slitD">スリットの間隔</label><output id="slitDO"></output><input type="range" id="slitD" min="3" max="12" step="0.5" value="6"></div>
+          <div class="ctl"><label for="slitRate">1秒に飛ばす数</label><output id="slitRateO"></output><input type="range" id="slitRate" min="1" max="300" step="1" value="12"></div>
+          <label class="check"><input type="checkbox" id="slitField" checked>確率の波を表示</label>
+          <label class="check"><input type="checkbox" id="slitCurve">理論の曲線を重ねる</label>
+          <div class="key" id="slitKey"><span><i style="background:var(--wave)"></i>干渉あり</span><span><i style="background:var(--classic)"></i>干渉なし（2本を足しただけ）</span></div>
+        </div>
+        <div class="box">
+          <h3>やってみよう</h3>
+          <ol class="try">
+            <li>そのまま待つ。点はばらばらに当たるが、数百個たまるとしま模様が見えてくる。急ぐなら「1000個まとめて」。</li>
+            <li>「通り道を調べる」をオンにする。スクリーンが消えて、今度はしまのない2つの山になる。</li>
+            <li>スリットを片方だけにする。しまは出ない。2本あいていて、しかも通り道が分からないときだけ、しまが出る。</li>
+            <li>波長を長くする、間隔をせまくする。しまの間隔が広がる。</li>
+          </ol>
+        </div>
+        <div class="box why">
+          <h3>なにが起きている？</h3>
+          <p>粒子がどこで見つかるかは、波（確率の波）で決まる。この波は2本のスリットを同時に通り、向こう側で重なる。山と山が重なる所には当たりやすく、山と谷が打ち消し合う所にはほとんど当たらない。</p>
+          <p>検出器でどちらを通ったか確かめると、波は片方のスリットから出たものだけになり、打ち消し合いが起きない。見るだけで結果が変わる。</p>
+          <p>それでも当たるときはいつも1点。波のように広がり、粒のように見つかる。これが量子のいちばん基本の性質。</p>
+          <p class="note">電子を1個ずつ飛ばして、しまが育っていく様子を撮影した実験がある（1989年、日立製作所の外村彰らのグループ）。</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===================== 2 トンネル効果 ===================== -->
+  <section class="exp" id="exp-tunnel" data-exp="tunnel" hidden>
+    <div class="exp-head">
+      <div class="eyebrow">実験 2 · 壁のすり抜け</div>
+      <h2>トンネル効果</h2>
+      <p class="lede">エネルギーが足りず、越えられないはずの壁。ボールなら必ずはね返るが、粒子の波は壁にしみこみ、薄い壁なら向こう側にも残る。そこで粒子が見つかることがある。</p>
+    </div>
+    <div class="exp-body">
+      <div class="stage">
+        <canvas class="cv" id="tunCv" style="height:320px" aria-label="壁に向かう波束の図"></canvas>
+        <div class="cap"><span>山の高さ＝そこで粒子が見つかる確率。色は波の位相（山と谷の進み具合）。シュレーディンガー方程式をその場で解いている。</span></div>
+        <div class="bar">
+          <button class="btn primary" id="tunFire">もう一度発射</button>
+          <button class="btn" id="tunPause">一時停止</button>
+          <button class="btn" id="tunMeasure">いま測る（粒子を見つける）</button>
+          <label class="check"><input type="checkbox" id="tunPhase" checked>位相を色で表示</label>
+        </div>
+      </div>
+      <aside class="side">
+        <div class="box">
+          <h3>設定</h3>
+          <div class="ctl"><label for="tunE">粒子のエネルギー（壁の高さ＝1）</label><output id="tunEO"></output><input type="range" id="tunE" min="0.3" max="1.6" step="0.05" value="0.6"></div>
+          <div class="ctl"><label for="tunW">壁の厚さ</label><output id="tunWO"></output><input type="range" id="tunW" min="0.5" max="5" step="0.25" value="1.25"></div>
+        </div>
+        <div class="box">
+          <h3>結果</h3>
+          <dl class="read">
+            <dt>はね返った</dt><dd id="tunR">—</dd>
+            <dt>壁の中</dt><dd id="tunIn">—</dd>
+            <dt>通り抜けた</dt><dd class="big" id="tunT">—</dd>
+            <dt>理論値（通り抜け）</dt><dd id="tunTth">—</dd>
+            <dt>ボールなら</dt><dd id="tunCl">—</dd>
+            <dt>あなたが測った結果</dt><dd id="tunTally">—</dd>
+          </dl>
+        </div>
+        <div class="box">
+          <h3>やってみよう</h3>
+          <ol class="try">
+            <li>エネルギー 0.6、厚さ 1.25 で発射。壁より低いのに、一部が向こう側へ抜ける。</li>
+            <li>壁を厚くする。抜ける割合が急に（指数関数的に）減る。</li>
+            <li>エネルギーを1より上にする。ボールなら全部越えるが、粒子は一部はね返る。</li>
+            <li>波が2つに分かれた後で「いま測る」。粒子は2つに割れず、どちらか一方で見つかる。何度もくり返すと、回数の割合が確率に近づく。</li>
+          </ol>
+        </div>
+        <div class="box why">
+          <h3>なにが起きている？</h3>
+          <p>壁の中では波は進めないが、ぷつりと消えずに、急に弱まりながらしみこむ。壁が薄ければ、弱まりきる前に向こう側へ出て、また進む波になる。</p>
+          <p>測るまでは「手前にいる」と「向こうにいる」が重なった状態。測った瞬間に、どちらか一方に決まる。</p>
+          <p class="note">身近な例: 太陽の中で水素がくっつく核融合、USBメモリの書き込み、原子を1個ずつ見る走査トンネル顕微鏡、ウランなどのα崩壊。</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===================== 3 偏光板 ===================== -->
+  <section class="exp" id="exp-polar" data-exp="polar" hidden>
+    <div class="exp-head">
+      <div class="eyebrow">実験 3 · 測ると状態が変わる</div>
+      <h2>3枚の偏光板</h2>
+      <p class="lede">向きを直角にした2枚の偏光板は、光をまったく通さない。ところがその間に、斜めの偏光板をもう1枚入れると、光が通るようになる。じゃまを増やしたのに通る。</p>
+    </div>
+    <div class="exp-body">
+      <div class="stage">
+        <canvas class="cv" id="polCv" style="height:270px" aria-label="光子が偏光板を通る図"></canvas>
+        <div class="cap"><span>光子1個ごとの短い線が、偏光の向き。偏光板の線が、通す向き。</span></div>
+        <div class="bar">
+          <button class="btn primary" id="polRun">一時停止</button>
+          <button class="btn" id="polPreA">直交の2枚（0° と 90°）</button>
+          <button class="btn" id="polPreB">間に 45° を入れる</button>
+          <button class="btn" id="polReset">数え直す</button>
+        </div>
+      </div>
+      <aside class="side">
+        <div class="box">
+          <h3>偏光板</h3>
+          <label class="check"><input type="checkbox" id="polOn0" checked>A を入れる</label>
+          <div class="ctl"><label for="polA0">A の向き</label><output id="polA0O"></output><input type="range" id="polA0" min="0" max="180" step="5" value="0"></div>
+          <label class="check"><input type="checkbox" id="polOn1">B を入れる</label>
+          <div class="ctl"><label for="polA1">B の向き</label><output id="polA1O"></output><input type="range" id="polA1" min="0" max="180" step="5" value="45"></div>
+          <label class="check"><input type="checkbox" id="polOn2" checked>C を入れる</label>
+          <div class="ctl"><label for="polA2">C の向き</label><output id="polA2O"></output><input type="range" id="polA2" min="0" max="180" step="5" value="90"></div>
+          <div class="ctl"><label for="polRate">1秒に飛ばす数</label><output id="polRateO"></output><input type="range" id="polRate" min="1" max="80" step="1" value="14"></div>
+        </div>
+        <div class="box">
+          <h3>数</h3>
+          <dl class="read">
+            <dt>送った光子</dt><dd id="polSent">0</dd>
+            <dt>届いた光子</dt><dd id="polGot">0</dd>
+            <dt>届いた割合</dt><dd class="big" id="polPct">—</dd>
+            <dt>理論値</dt><dd id="polTh">—</dd>
+          </dl>
+        </div>
+        <div class="box">
+          <h3>やってみよう</h3>
+          <ol class="try">
+            <li>A と C が直交（0° と 90°）。届く光子は 0。</li>
+            <li>B を入れる（45°）。届くようになる。理論では 1/8 = 12.5%。</li>
+            <li>B を 0° や 90° にすると、また 0 になる。</li>
+            <li>A だけにすると 50%。最初の光の偏光はばらばらなので、半分が通る。</li>
+          </ol>
+        </div>
+        <div class="box why">
+          <h3>なにが起きている？</h3>
+          <p>光子1個が偏光板を通るかどうかは確率で決まる。偏光の向きと板の向きの差が θ なら、通る確率は cos²θ。光子は割れないので、通るか消えるかのどちらか。</p>
+          <p>大事なのは、通り抜けた光子の偏光が板の向きに作り直されること。45° の板を通った光子は、もう 0° の記憶をもっていない。だから 90° の板も半分の確率で通れる。1/2 × 1/2 × 1/2 = 1/8。</p>
+          <p class="note">偏光板を通すことは、偏光の「測定」にあたる。測ると状態が変わる、という量子の性質がそのまま見える。</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===================== 4 量子もつれ ===================== -->
+  <section class="exp" id="exp-bell" data-exp="bell" hidden>
+    <div class="exp-head">
+      <div class="eyebrow">実験 4 · 離れていてもつながる</div>
+      <h2>量子もつれとベルテスト</h2>
+      <p class="lede">ペアで生まれた2個の光子を、アリスとボブが遠く離れた場所で測る。2人の結果は不思議にそろう。しかも、そのそろい方は「生まれたときに答えを決めておいた」という仕組みでは説明できない。</p>
+    </div>
+    <div class="exp-body">
+      <div class="stage">
+        <canvas class="cv" id="bellCv" style="height:230px" aria-label="光子のペアがアリスとボブに届く図"></canvas>
+        <div class="pairs" aria-label="最近の結果">
+          <span>アリス</span><div class="row" id="bellRowA"></div>
+          <span>ボブ</span><div class="row" id="bellRowB"></div>
+        </div>
+        <div class="cap"><span><span class="mono" style="color:var(--hit)">■ ＋</span>（通過）　<span class="mono" style="color:var(--wave)">■ −</span>（反射）　右が新しい</span><span>このペアの角度での一致率 <b class="mono" id="bellNow">—</b></span></div>
+        <canvas class="cv" id="bellChart" style="height:250px" aria-label="角度の差と一致率のグラフ"></canvas>
+        <div class="key"><span><i style="background:var(--wave)"></i>量子力学の予言 cos²(角度差)</span><span><i style="background:var(--classic)"></i>答えを前もって決めておく仕組みの一例（隠れた変数）</span><span><i style="background:var(--fg);height:8px;width:8px;border-radius:50%"></i>測った値</span></div>
+        <div class="bar">
+          <button class="btn primary" id="bellRun">一時停止</button>
+          <button class="btn" id="bellMany">500組まとめて</button>
+          <button class="btn" id="bellClear">グラフを消す</button>
+        </div>
+      </div>
+      <aside class="side">
+        <div class="box">
+          <h3>測定の向き</h3>
+          <div class="ctl"><label for="bellA">アリスの偏光板</label><output id="bellAO"></output><input type="range" id="bellA" min="0" max="180" step="2.5" value="0"></div>
+          <div class="ctl"><label for="bellB">ボブの偏光板</label><output id="bellBO"></output><input type="range" id="bellB" min="0" max="180" step="2.5" value="30"></div>
+          <div class="ctl"><label for="bellRate">1秒に作るペア</label><output id="bellRateO"></output><input type="range" id="bellRate" min="1" max="60" step="1" value="6"></div>
+          <div class="bar">
+            <span style="font-size:13px">しくみ</span>
+            <div class="seg" id="bellModel">
+              <button data-v="q" aria-pressed="true">量子もつれ</button>
+              <button data-v="h" aria-pressed="false">隠れた変数</button>
+            </div>
+          </div>
+        </div>
+        <div class="box chsh">
+          <h3>ベルテスト（CHSH）</h3>
+          <p style="margin:0;font-size:13px">アリスは 0° と 45°、ボブは 22.5° と 67.5°。4通りの組み合わせで各2000組を測り、相関の強さ S を出す。前もって答えを決めておく仕組みなら、2人の間で合図をやりとりしない限り、どう作っても S は 2 を超えない。</p>
+          <button class="btn primary" id="bellTest" style="align-self:flex-start">ベルテストを実行</button>
+          <div class="mrow"><span>量子もつれ</span><div class="meter"><div class="fill" id="chshQ" style="width:0;background:var(--wave)"></div><div class="lim" style="left:calc(2/3*100%)"></div><span class="val" id="chshQv">—</span></div></div>
+          <div class="mrow"><span>隠れた変数</span><div class="meter"><div class="fill" id="chshH" style="width:0;background:var(--classic)"></div><div class="lim" style="left:calc(2/3*100%)"></div><span class="val" id="chshHv">—</span></div></div>
+          <div class="cap"><span>白い線が S = 2（古典の上限）。目盛りの右端は 3。量子の上限は 2√2 ≈ 2.83。</span></div>
+          <div class="verdict" id="chshVerdict"></div>
+        </div>
+        <div class="box">
+          <h3>やってみよう</h3>
+          <ol class="try">
+            <li>2人の角度を同じにする。結果は毎回そろう。でも＋か−かは毎回ばらばら。</li>
+            <li>角度の差を 22.5°、45°、67.5°、90° と変えて、グラフに点を集める。</li>
+            <li>しくみを「隠れた変数」にして同じことをする。差 0° と 45° と 90° では量子と同じ割合になるが、その間では青い線から外れる。</li>
+            <li>ベルテストを実行。S が 2 を超えるかどうかで、2つのしくみを見分けられる。</li>
+          </ol>
+        </div>
+        <div class="box why">
+          <h3>なにが起きている？</h3>
+          <p>もつれた2個の光子は、それぞれの偏光が決まっていない。アリスが測った瞬間に、ボブの光子の状態もそれに合わせて決まる。角度の差が θ なら、結果がそろう確率は cos²θ。</p>
+          <p>「生まれたときに、どの角度ならどう答えるかを決めて持っていく」仕組みでも、角度が同じなら必ずそろう。違いが出るのは角度をずらしたとき。このアプリの「隠れた変数」はその仕組みの一例で、そろい方は直線になる。決め方を工夫すれば別の形にもできるが、どう工夫しても量子の曲線を全部は再現できないことが証明されている。ベルの不等式（S ≤ 2）は、その限界を1つの数字で表したもの。</p>
+          <p>ただし、アリスの結果だけを見るといつも半々でランダム。ボブの角度を変えてもアリスの側は何も変わらないので、もつれを使って光より速く合図を送ることはできない。</p>
+          <p class="note">実際の実験で S ＞ 2 を確かめたアスペ、クラウザー、ツァイリンガーは 2022年のノーベル物理学賞を受けた。</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===================== 5 不確定性原理 ===================== -->
+  <section class="exp" id="exp-uncert" data-exp="uncert" hidden>
+    <div class="exp-head">
+      <div class="eyebrow">実験 5 · 両方は決まらない</div>
+      <h2>不確定性原理</h2>
+      <p class="lede">粒子の位置をきっちり決めるほど、運動量（どちら向きにどれだけの勢いで進むか）がぼやける。逆も同じ。測り方が下手だからではなく、波であることから来る性質。</p>
+    </div>
+    <div class="exp-body">
+      <div class="stage">
+        <div class="two">
+          <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+            <canvas class="cv" id="unX" style="height:240px" aria-label="位置の確率分布"></canvas>
+            <div class="cap"><span>位置 x　（線は波の実部、面は見つかる確率）</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+            <canvas class="cv" id="unP" style="height:240px" aria-label="運動量の確率分布"></canvas>
+            <div class="cap"><span>運動量 p　（見つかる確率）</span></div>
+          </div>
+        </div>
+        <div class="bar">
+          <button class="btn primary" id="unMx">位置を測る</button>
+          <button class="btn primary" id="unMp">運動量を測る</button>
+          <button class="btn" id="unReset">最初に戻す</button>
+        </div>
+        <div class="box">
+          <dl class="read">
+            <dt>位置のぼやけ Δx</dt><dd id="unDx">—</dd>
+            <dt>運動量のぼやけ Δp</dt><dd id="unDp">—</dd>
+            <dt>かけ算 Δx·Δp</dt><dd class="big" id="unProd">—</dd>
+            <dt>下限 ħ/2</dt><dd>0.500</dd>
+          </dl>
+          <div class="meter" aria-hidden="true"><div class="fill" id="unBar" style="width:0;background:var(--hit)"></div><div class="lim" style="left:25%"></div></div>
+          <div class="cap"><span>白い線が ħ/2。どう動かしても、この線より左には行けない。</span></div>
+        </div>
+      </div>
+      <aside class="side">
+        <div class="box">
+          <h3>波の形</h3>
+          <div class="ctl"><label for="unS">位置の広がり</label><output id="unSO"></output><input type="range" id="unS" min="0.3" max="3.5" step="0.05" value="1.2"></div>
+          <div class="ctl"><label for="unC">形のくずれ（チャープ）</label><output id="unCO"></output><input type="range" id="unC" min="0" max="3" step="0.1" value="0"></div>
+          <div class="ctl"><label for="unP0">平均の運動量</label><output id="unP0O"></output><input type="range" id="unP0" min="-3" max="3" step="0.1" value="1.5"></div>
+        </div>
+        <div class="box">
+          <h3>やってみよう</h3>
+          <ol class="try">
+            <li>「位置の広がり」を小さくする。左はとがるが、右の運動量は横に広がる。</li>
+            <li>逆に大きくする。右がとがり、左が広がる。かけ算 Δx·Δp は 0.5 のまま。</li>
+            <li>「形のくずれ」を上げる。かけ算は 0.5 より大きくなる。小さくする方向には動かせない。</li>
+            <li>「位置を測る」。位置は1点に決まり、その代わり運動量の分布が一気に広がる。続けて「運動量を測る」と、今度は位置が広がる。</li>
+          </ol>
+        </div>
+        <div class="box why">
+          <h3>なにが起きている？</h3>
+          <p>運動量は波の細かさ（波長）で決まる。1か所にぎゅっと集まった波を作るには、いろいろな波長の波をたくさん重ねる必要がある。だから位置をしぼるほど、運動量はいろいろな値が混ざる。</p>
+          <p>1種類の波長だけの波は、どこまでも同じ形で続く。運動量はきっちり決まるが、位置はまったく決まらない。</p>
+          <p>この関係は Δx·Δp ≥ ħ/2（ħ はプランク定数を 2π で割ったもの）。この画面では ħ = 1 の単位で描いている。</p>
+          <p class="note">二重スリットでスリットを細くすると、通り抜けた後の広がりが大きくなるのも同じ理由。</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <footer>計算はすべてこのページの中で行っている。数値は ħ = 1、質量 = 1 の単位。</footer>
+</div>
+
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+const tok=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const COL={};['bg','panel','raise','line','fg','mute','dim','wave','hit','classic','good'].forEach(k=>COL[k]=tok('--'+k));
+function rgba(hex,a){const n=parseInt(hex.replace('#',''),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`;}
+function fit(c){
+  const r=c.getBoundingClientRect(),d=Math.min(2,window.devicePixelRatio||1);
+  const w=Math.max(1,Math.round(r.width*d)),h=Math.max(1,Math.round(r.height*d));
+  if(c.width!==w||c.height!==h){c.width=w;c.height=h;}
+  const ctx=c.getContext('2d');ctx.setTransform(d,0,0,d,0,0);
+  return {ctx,w:r.width,h:r.height,d};
+}
+function gauss(){let u=0;while(!u)u=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*Math.random());}
+function makeCdf(a){const c=new Float64Array(a.length);let s=0;for(let i=0;i<a.length;i++){s+=a[i];c[i]=s;}return c;}
+function sampleCdf(c){const r=Math.random()*c[c.length-1];let lo=0,hi=c.length-1;while(lo<hi){const m=(lo+hi)>>1;if(c[m]<r)lo=m+1;else hi=m;}return lo;}
+function seg(id,cb){const el=$(id);el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));cb(b.dataset.v);});}
+function range(id,fmt,cb){const el=$(id),o=$(id+'O');const up=()=>{o.textContent=fmt(+el.value);cb&&cb(+el.value);};el.addEventListener('input',up);o.textContent=fmt(+el.value);return el;}
+function setRange(id,v,fmt){const el=$(id);el.value=v;$(id+'O').textContent=fmt(+el.value);}
+const pct=(v,dg=1)=>(v*100).toFixed(dg)+'%';
+function txt(ctx,s,x,y,col,size=11,align='left',font='mono'){ctx.fillStyle=col;ctx.font=`${size}px ${font==='mono'?tok('--f-mono'):tok('--f-body')}`;ctx.textAlign=align;ctx.fillText(s,x,y);}
+function dashLine(ctx,pts,col,w=1.5,dash=[5,4]){ctx.save();ctx.setLineDash(dash);ctx.strokeStyle=col;ctx.lineWidth=w;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke();ctx.restore();}
+
+const EXPS={};
+
+/* ================= 1 二重スリット ================= */
+EXPS.slit=(()=>{
+  const S={mode:'both',observe:false,lam:1,d:6,a:1.5,L:60,Y:30,rate:12,running:true,field:true,curve:false,
+    nb:240,hits:[],counts:new Uint32Array(240),flights:[],acc:0,flash:[0,0],spark:[]};
+  const cvA=$('#slitApp'),cvB=$('#slitScreen');
+  let fieldImg=null,buf=null,bufKey='';
+  const slitList=()=>{const L=[];if(S.mode!=='bottom')L.push(S.d/2);if(S.mode!=='top')L.push(-S.d/2);return L;};
+  function amp(c,x,y,k,M){let re=0,im=0;for(let m=0;m<M;m++){const s=c-S.a/2+(m+.5)*S.a/M;const r=Math.max(.6,Math.hypot(x,y-s));const w=1/Math.sqrt(r);re+=w*Math.cos(k*r);im+=w*Math.sin(k*r);}return [re/M,im/M];}
+  function compute(){
+    const k=2*Math.PI/S.lam;S.slits=slitList();
+    const per=S.slits.map(()=>new Float64Array(S.nb)),coh=new Float64Array(S.nb),inc=new Float64Array(S.nb);
+    for(let b=0;b<S.nb;b++){const y=-S.Y+(b+.5)*2*S.Y/S.nb;let R=0,I=0;
+      S.slits.forEach((c,j)=>{const [re,im]=amp(c,S.L,y,k,24);per[j][b]=re*re+im*im;R+=re;I+=im;inc[b]+=re*re+im*im;});coh[b]=R*R+I*I;}
+    S.per=per;S.coh=coh;S.inc=inc;S.cdfCoh=makeCdf(coh);S.cdfPer=per.map(makeCdf);S.wPer=per.map(p=>p.reduce((a,b)=>a+b,0));
+    buildField();clear();
+  }
+  function buildField(){
+    const gw=150,gh=100,k=2*Math.PI/S.lam,coh=!S.observe,vals=new Float32Array(gw*gh);
+    for(let i=0;i<gw;i++){const x=(i+.5)/gw*S.L;let mx=1e-12;
+      for(let j=0;j<gh;j++){const y=S.Y-(j+.5)/gh*2*S.Y;let R=0,I=0,P=0;
+        for(const c of S.slits){const [re,im]=amp(c,x,y,k,10);R+=re;I+=im;P+=re*re+im*im;}
+        const v=coh?R*R+I*I:P;vals[j*gw+i]=v;if(v>mx)mx=v;}
+      for(let j=0;j<gh;j++)vals[j*gw+i]/=mx;}
+    const c=document.createElement('canvas');c.width=gw;c.height=gh;const g=c.getContext('2d'),im=g.createImageData(gw,gh);
+    const n=parseInt(COL.wave.slice(1),16),r=n>>16&255,gg=n>>8&255,b=n&255;
+    for(let p=0;p<gw*gh;p++){im.data[p*4]=r;im.data[p*4+1]=gg;im.data[p*4+2]=b;im.data[p*4+3]=Math.round(Math.pow(vals[p],.7)*150);}
+    g.putImageData(im,0,0);fieldImg=c;
+  }
+  function clear(){S.hits=[];S.counts=new Uint32Array(S.nb);S.flights=[];buf=null;$('#slitCount').textContent='0';}
+  function addHit(y){
+    const h={y,v:Math.random()};S.hits.push(h);const b=Math.min(S.nb-1,Math.max(0,Math.floor((y+S.Y)/(2*S.Y)*S.nb)));S.counts[b]++;
+    if(buf)plotHit(buf.getContext('2d'),h,buf.width,buf.height*.6);
+    if(S.hits.length>=60000)setRun(false);
+  }
+  function plotHit(g,h,W,H){const x=(h.y+S.Y)/(2*S.Y)*W,y=(.06+h.v*.88)*H;g.fillRect(x-.8*devicePixelRatio,y-.8*devicePixelRatio,1.6*devicePixelRatio,1.6*devicePixelRatio);}
+  function fire(animate){
+    let j=-1,b;
+    if(S.slits.length===2&&S.observe){j=Math.random()*(S.wPer[0]+S.wPer[1])<S.wPer[0]?0:1;b=sampleCdf(S.cdfPer[j]);}
+    else if(S.slits.length===1){j=S.observe?0:-1;b=sampleCdf(S.cdfPer[0]);}
+    else b=sampleCdf(S.cdfCoh);
+    const y=-S.Y+(b+Math.random())*2*S.Y/S.nb;
+    if(animate)S.flights.push({t:0,y,j,dur:1.1,lit:false});else addHit(y);
+  }
+  function setRun(on){S.running=on;$('#slitRun').textContent=on?'一時停止':'発射';}
+  function step(dt){
+    if(S.running){S.acc+=dt*S.rate;while(S.acc>=1){S.acc--;fire(S.flights.length<40);}}
+    for(const f of S.flights){f.t+=dt;if(!f.lit&&f.j>=0&&f.t/f.dur>.4){f.lit=true;S.flash[S.mode==='bottom'?1:f.j]=.35;}}
+    S.flights=S.flights.filter(f=>{if(f.t>=f.dur){addHit(f.y);S.spark.push({y:f.y,t:.35});return false;}return true;});
+    S.flash=S.flash.map(v=>Math.max(0,v-dt));S.spark=S.spark.filter(s=>(s.t-=dt)>0);
+  }
+  function draw(){
+    const {ctx,w,h}=fit(cvA);ctx.clearRect(0,0,w,h);
+    const srcX=30,wallX=Math.round(w*.36),scrX=w-50;
+    const yp=y=>h/2-y/S.Y*(h/2-16);
+    // incoming beam (plane wave before the wall)
+    if(S.field){const g=ctx.createLinearGradient(srcX,0,wallX,0);g.addColorStop(0,rgba(COL.wave,.05));g.addColorStop(1,rgba(COL.wave,.18));ctx.fillStyle=g;ctx.fillRect(srcX+14,yp(S.d/2+S.a+3),wallX-srcX-14,yp(-S.d/2-S.a-3)-yp(S.d/2+S.a+3));
+      if(fieldImg){ctx.imageSmoothingEnabled=true;ctx.drawImage(fieldImg,wallX,yp(S.Y),scrX-wallX,yp(-S.Y)-yp(S.Y));}}
+    // source
+    ctx.fillStyle=COL.raise;ctx.strokeStyle=COL.mute;ctx.lineWidth=1;ctx.fillRect(srcX-18,h/2-12,30,24);ctx.strokeRect(srcX-18,h/2-12,30,24);
+    txt(ctx,'粒子源',6,h/2+30,COL.mute,11,'left','body');
+    // wall with openings
+    const open=S.slits.map(c=>[c-S.a/2,c+S.a/2]).sort((a,b)=>b[0]-a[0]);
+    ctx.fillStyle=COL.mute;let topY=S.Y;
+    for(const [lo,hi] of open){ctx.fillRect(wallX-3,yp(topY),6,yp(hi)-yp(topY));topY=lo;}
+    ctx.fillRect(wallX-3,yp(topY),6,yp(-S.Y)-yp(topY));
+    txt(ctx,'スリット',wallX,12,COL.mute,11,'center','body');
+    // detectors
+    if(S.observe){[S.d/2,-S.d/2].forEach((c,i)=>{if(!S.slits.includes(c))return;const x=wallX+8,y=yp(c)+(c>0?-22:8);
+      ctx.fillStyle=COL.raise;ctx.strokeStyle=COL.line;ctx.fillRect(x,y,26,14);ctx.strokeRect(x,y,26,14);
+      const f=S.flash[i]/.35;ctx.fillStyle=f>0?rgba(COL.good,.35+.65*f):COL.dim;ctx.beginPath();ctx.arc(x+20,y+7,3.5,0,7);ctx.fill();
+      if(f>0){ctx.fillStyle=rgba(COL.good,.25*f);ctx.beginPath();ctx.arc(x+20,y+7,11,0,7);ctx.fill();}});
+      txt(ctx,'検出器',wallX+21,h-6,COL.good,11,'center','body');}
+    // screen + density strip
+    ctx.fillStyle=COL.line;ctx.fillRect(scrX-2,yp(S.Y),4,yp(-S.Y)-yp(S.Y));
+    let mx=1;for(const c of S.counts)if(c>mx)mx=c;
+    const bh=(yp(-S.Y)-yp(S.Y))/S.nb;
+    for(let b=0;b<S.nb;b++){if(!S.counts[b])continue;const y=yp(-S.Y+(b+1)*2*S.Y/S.nb);ctx.fillStyle=rgba(COL.hit,Math.min(1,.15+.85*S.counts[b]/mx));ctx.fillRect(scrX+6,y,30,Math.max(1,bh));}
+    txt(ctx,'スクリーン',w-6,12,COL.mute,11,'right','body');
+    // flights
+    const fewWaves=S.flights.length<=6;
+    for(const f of S.flights){const p=f.t/f.dur;
+      if(p<.4){const q=p/.4,ty=f.j>=0?yp(S.slits[S.mode==='both'?f.j:0]):h/2;const x=srcX+12+(wallX-srcX-12)*q,y=h/2+(ty-h/2)*q;
+        const blur=f.j<0?Math.max(0,(q-.55)/.45):0;ctx.fillStyle=rgba(COL.hit,1-.7*blur);ctx.beginPath();ctx.arc(x,y,2.6+blur*7,0,7);ctx.fill();}
+      else{const q=(p-.4)/.6;
+        if(f.j>=0){const sy=yp(S.slits[S.mode==='both'?f.j:0]),x=wallX+(scrX-wallX)*q,y=sy+(yp(f.y)-sy)*q;ctx.fillStyle=COL.hit;ctx.beginPath();ctx.arc(x,y,2.6,0,7);ctx.fill();}
+        else if(fewWaves){const R=q*(scrX-wallX)*1.02;ctx.lineWidth=1.4;
+          for(const c of S.slits){ctx.strokeStyle=rgba(COL.wave,.6*(1-q));ctx.beginPath();ctx.arc(wallX,yp(c),R,-1.2,1.2);ctx.stroke();}}}}
+    for(const s of S.spark){const a=s.t/.35;ctx.fillStyle=rgba(COL.hit,a);ctx.beginPath();ctx.arc(scrX,yp(s.y),2+6*(1-a),0,7);ctx.fill();}
+    if(!S.observe&&S.slits.length===2&&S.flights.length&&fewWaves)txt(ctx,'通り道は分からない',(wallX+scrX)/2,h-6,COL.mute,11,'center','body');
+    drawScreen();
+  }
+  function drawScreen(){
+    const {ctx,w,h,d}=fit(cvB);ctx.clearRect(0,0,w,h);
+    const top=h*.6;
+    const key=cvB.width+'x'+cvB.height;
+    if(!buf||bufKey!==key){buf=document.createElement('canvas');buf.width=cvB.width;buf.height=cvB.height;bufKey=key;const g=buf.getContext('2d');g.fillStyle=COL.hit;for(const hh of S.hits)plotHit(g,hh,buf.width,buf.height*.6);}
+    else buf.getContext('2d').fillStyle=COL.hit;
+    ctx.fillStyle='#07090c';ctx.fillRect(0,0,w,top);
+    ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(buf,0,0);ctx.restore();
+    // histogram
+    const B=120,f=S.nb/B,cnt=new Float64Array(B);for(let b=0;b<S.nb;b++)cnt[Math.floor(b/f)]+=S.counts[b];
+    const base=h-14,hh=base-top-12;
+    const n=S.hits.length;
+    const curves=[];
+    if(S.curve&&n>0){const both=S.slits.length===2;
+      const mk=(arr)=>{const s=arr.reduce((a,b)=>a+b,0),o=new Float64Array(B);for(let b=0;b<S.nb;b++)o[Math.floor(b/f)]+=arr[b]/s*n;return o;};
+      curves.push([mk(S.coh),COL.wave]);if(both)curves.push([mk(S.inc),COL.classic]);}
+    let mx=1;for(const c of cnt)mx=Math.max(mx,c);for(const [o] of curves)for(const c of o)mx=Math.max(mx,c);
+    const bw=w/B;ctx.fillStyle=rgba(COL.hit,.75);
+    for(let b=0;b<B;b++){const v=cnt[b]/mx*hh;if(v>0)ctx.fillRect(b*bw+.5,base-v,Math.max(1,bw-1),v);}
+    for(const [o,col] of curves){ctx.strokeStyle=col;ctx.lineWidth=1.8;ctx.beginPath();for(let b=0;b<B;b++){const x=(b+.5)*bw,y=base-o[b]/mx*hh;b?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();}
+    ctx.fillStyle=COL.line;ctx.fillRect(0,base,w,1);
+    txt(ctx,'↑ 上',w-6,base+12,COL.dim,10,'right','body');txt(ctx,'下 ↓',6,base+12,COL.dim,10,'left','body');
+    $('#slitCount').textContent=n.toLocaleString();
+  }
+  // controls
+  let pending=0;const recompute=()=>{cancelAnimationFrame(pending);pending=requestAnimationFrame(compute);};
+  seg('#slitMode',v=>{S.mode=v;recompute();});
+  $('#slitObs').addEventListener('change',e=>{S.observe=e.target.checked;recompute();});
+  range('#slitLam',v=>v.toFixed(2),v=>{S.lam=v;recompute();});
+  range('#slitD',v=>v.toFixed(1),v=>{S.d=v;recompute();});
+  range('#slitRate',v=>v+' 個',v=>{S.rate=v;});
+  $('#slitField').addEventListener('change',e=>S.field=e.target.checked);
+  $('#slitCurve').addEventListener('change',e=>S.curve=e.target.checked);
+  $('#slitRun').addEventListener('click',()=>setRun(!S.running));
+  $('#slitOne').addEventListener('click',()=>fire(true));
+  $('#slitMany').addEventListener('click',()=>{for(let i=0;i<1000;i++)fire(false);});
+  $('#slitClear').addEventListener('click',clear);
+  compute();for(let i=0;i<250;i++)fire(false);
+  return {S,step,draw,fire,compute};
+})();
+
+/* ================= 2 トンネル効果 ================= */
+EXPS.tunnel=(()=>{
+  const N=2000,dx=.25,dt=.02,SPF=80,BC=250,ABS=160,X0=105,SIG=10;
+  const T={E:.6,w:1.25,V0:1,R:new Float64Array(N),I:new Float64Array(N),V:new Float64Array(N),t:0,absL:0,absR:0,running:true,meas:null,tally:{thru:0,back:0},phase:true,done:false};
+  const cv=$('#tunCv');
+  function fireNew(){
+    const k0=Math.sqrt(2*T.E*T.V0);let s=0;
+    for(let i=0;i<N;i++){const x=i*dx,g=Math.exp(-((x-X0)**2)/(4*SIG*SIG));T.R[i]=g*Math.cos(k0*x);T.I[i]=g*Math.sin(k0*x);s+=g*g*dx;
+      // 壁の端のマスは重なった分だけの高さにして、厚さを格子の幅に丸めない
+      const ov=Math.max(0,Math.min(x+dx/2,BC+T.w/2)-Math.max(x-dx/2,BC-T.w/2));T.V[i]=T.V0*ov/dx;}
+    const nn=1/Math.sqrt(s);for(let i=0;i<N;i++){T.R[i]*=nn;T.I[i]*=nn;}
+    T.t=0;T.absL=0;T.absR=0;T.meas=null;T.done=false;setRun(true);
+    updateTheory();
+  }
+  function setRun(on){T.running=on;$('#tunPause').textContent=on?'一時停止':'再開';}
+  function updateTheory(){
+    const E=T.E,V=T.V0,a=T.w;let Tt;
+    if(Math.abs(E-V)<1e-6)Tt=1/(1+V*a*a/2);
+    else if(E<V){const k=Math.sqrt(2*(V-E));Tt=1/(1+V*V*Math.sinh(k*a)**2/(4*E*(V-E)));}
+    else{const k=Math.sqrt(2*(E-V));Tt=1/(1+V*V*Math.sin(k*a)**2/(4*E*(E-V)));}
+    $('#tunTth').textContent=pct(Tt);$('#tunCl').textContent=E<V?'0%（必ずはね返る）':'100%（必ず越える）';
+  }
+  function sim(){
+    const R=T.R,I=T.I,V=T.V,c=.5/(dx*dx);
+    for(let s=0;s<SPF;s++){
+      for(let i=1;i<N-1;i++)R[i]+=dt*(-c*(I[i+1]-2*I[i]+I[i-1])+V[i]*I[i]);
+      for(let i=1;i<N-1;i++)I[i]-=dt*(-c*(R[i+1]-2*R[i]+R[i-1])+V[i]*R[i]);
+      for(let j=0;j<ABS;j++){const f=1-.006*((ABS-j)/ABS)**2;
+        for(const i of [j,N-1-j]){const p=R[i]*R[i]+I[i]*I[i];R[i]*=f;I[i]*=f;const lost=p*(1-f*f)*dx;if(i<N/2)T.absL+=lost;else T.absR+=lost;}}
+    }
+    T.t+=SPF*dt;
+  }
+  function parts(){let L=T.absL,M=0,Rr=T.absR;const a=BC-T.w/2,b=BC+T.w/2;
+    for(let i=0;i<N;i++){const x=i*dx,p=(T.R[i]**2+T.I[i]**2)*dx;if(x<a)L+=p;else if(x>b)Rr+=p;else M+=p;}
+    const s=L+M+Rr;return [L/s,M/s,Rr/s];}
+  function step(){
+    if(!T.running)return;sim();
+    const [L,M,Rr]=parts();
+    // 波がほぼ出そろったら止める（残りがすべて吸収されたか、十分時間がたった）
+    if(T.t>420){setRun(false);T.done=true;}
+  }
+  function measure(){
+    const [L,M,Rr]=parts();const r=Math.random();let x,side;
+    if(r<L){side='back';}else if(r<L+M){side='in';}else side='thru';
+    // 具体的な位置を分布から選ぶ（吸収済みの部分は画面の端に置く）
+    const a=BC-T.w/2,b=BC+T.w/2,w=new Float64Array(N);
+    for(let i=0;i<N;i++){const xx=i*dx;const inSide=side==='back'?xx<a:side==='thru'?xx>b:(xx>=a&&xx<=b);w[i]=inSide?T.R[i]**2+T.I[i]**2:0;}
+    const tot=w.reduce((p,q)=>p+q,0);
+    if(tot>1e-9)x=sampleCdf(makeCdf(w))*dx;else x=side==='back'?ABS*dx:side==='thru'?(N-ABS)*dx:BC;
+    T.meas={x,side};if(side==='thru')T.tally.thru++;else T.tally.back++;
+    setRun(false);
+  }
+  function draw(){
+    const {ctx,w,h}=fit(cv);ctx.clearRect(0,0,w,h);
+    const xa=ABS*dx-5,xb=(N-ABS)*dx+5,l=10,r=w-10,bot=h-28,H=bot-24;
+    const px=x=>l+(x-xa)/(xb-xa)*(r-l);
+    const vy=v=>bot-v/T.V0*.45*H, ry=p=>bot-p/0.042*.5*H;
+    // barrier
+    const bx0=px(BC-T.w/2),bx1=px(BC+T.w/2);
+    ctx.fillStyle=rgba(COL.classic,.22);ctx.fillRect(bx0,vy(T.V0),Math.max(2,bx1-bx0),bot-vy(T.V0));
+    ctx.fillStyle=COL.classic;ctx.fillRect(bx0,vy(T.V0),Math.max(2,bx1-bx0),2);
+    txt(ctx,'壁（高さ 1）',bx1+6,vy(T.V0)+4,COL.classic,11,'left','body');
+    // energy
+    dashLine(ctx,[[l,vy(T.E)],[r,vy(T.E)]],rgba(COL.hit,.7),1.2);
+    txt(ctx,'粒子のエネルギー '+T.E.toFixed(2),l+4,vy(T.E)-5,COL.hit,11,'left','body');
+    // density
+    const dim=T.meas?.35:1;
+    const i0=Math.floor(xa/dx),i1=Math.ceil(xb/dx);const cw=(r-l)/((xb-xa)/dx)+.6;
+    if(T.phase){for(let i=i0;i<i1;i++){const p=T.R[i]**2+T.I[i]**2;if(p<1e-7)continue;const y=ry(p);const hue=(Math.atan2(T.I[i],T.R[i])*180/Math.PI+360)%360;
+        ctx.fillStyle=`hsla(${hue},75%,62%,${.85*dim})`;ctx.fillRect(px(i*dx),y,cw,bot-y);}}
+    else{ctx.fillStyle=rgba(COL.wave,.5*dim);ctx.beginPath();ctx.moveTo(px(i0*dx),bot);for(let i=i0;i<i1;i++)ctx.lineTo(px(i*dx),ry(T.R[i]**2+T.I[i]**2));ctx.lineTo(px(i1*dx),bot);ctx.fill();}
+    ctx.strokeStyle=rgba(COL.fg,.85*dim);ctx.lineWidth=1.2;ctx.beginPath();for(let i=i0;i<i1;i++){const y=ry(T.R[i]**2+T.I[i]**2);i===i0?ctx.moveTo(px(i*dx),y):ctx.lineTo(px(i*dx),y);}ctx.stroke();
+    ctx.fillStyle=COL.line;ctx.fillRect(l,bot,r-l,1);
+    txt(ctx,'← はね返り',l+4,bot+16,COL.mute,11,'left','body');txt(ctx,'通り抜け →',r-4,bot+16,COL.mute,11,'right','body');
+    // measurement
+    if(T.meas){const x=px(Math.min(xb-1,Math.max(xa+1,T.meas.x)));ctx.strokeStyle=COL.hit;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,bot);ctx.lineTo(x,30);ctx.stroke();
+      ctx.fillStyle=COL.hit;ctx.beginPath();ctx.arc(x,30,6,0,7);ctx.fill();
+      const lab=T.meas.side==='thru'?'ここで見つかった（通り抜けた）':T.meas.side==='back'?'ここで見つかった（はね返った）':'ここで見つかった（壁の中）';
+      txt(ctx,lab,x+(x>w*.6?-10:10),20,COL.hit,12,x>w*.6?'right':'left','body');}
+    // readouts
+    const [L,M,Rr]=parts();
+    $('#tunR').textContent=pct(L);$('#tunIn').textContent=pct(M);$('#tunT').textContent=pct(Rr);
+    $('#tunTally').textContent=(T.tally.thru+T.tally.back)?`通過 ${T.tally.thru} / はね返り ${T.tally.back}`:'—';
+  }
+  range('#tunE',v=>v.toFixed(2),v=>{T.E=v;fireNew();});
+  range('#tunW',v=>v.toFixed(2),v=>{T.w=v;fireNew();});
+  $('#tunFire').addEventListener('click',fireNew);
+  $('#tunPause').addEventListener('click',()=>{if(T.meas||T.done){fireNew();return;}setRun(!T.running);});
+  $('#tunMeasure').addEventListener('click',measure);
+  $('#tunPhase').addEventListener('change',e=>T.phase=e.target.checked);
+  fireNew();
+  return {T,step,draw,fireNew,measure,parts};
+})();
+
+/* ================= 3 偏光板 ================= */
+EXPS.polar=(()=>{
+  const P={on:[true,false,true],ang:[0,45,90],rate:14,running:true,ph:[],acc:0,sent:0,got:0,puffs:[],flash:0};
+  const POS=[.32,.52,.72],SRC=.06,DET=.92,SPEED=.32;
+  const cv=$('#polCv');
+  function reset(){P.ph=[];P.sent=0;P.got=0;P.acc=0;}
+  function theory(){let t=.5,prev=null;let any=false;for(let i=0;i<3;i++){if(!P.on[i])continue;if(prev!==null){t*=Math.cos((P.ang[i]-prev)*Math.PI/180)**2;}prev=P.ang[i];any=true;}return any?t:1;}
+  function setRun(on){P.running=on;$('#polRun').textContent=on?'一時停止':'発射';}
+  function step(dt){
+    if(P.running){P.acc+=dt*P.rate;while(P.acc>=1){P.acc--;P.ph.push({x:SRC,th:Math.random()*180,next:0});P.sent++;}}
+    for(const p of P.ph){const nx=p.x+SPEED*dt;
+      while(p.next<3&&nx>=POS[p.next]){const i=p.next++;if(!P.on[i])continue;
+        const pass=Math.random()<Math.cos((p.th-P.ang[i])*Math.PI/180)**2;
+        if(pass)p.th=P.ang[i];else{p.dead=true;P.puffs.push({i,t:.3,th:p.th});break;}}
+      p.x=nx;if(!p.dead&&p.x>=DET){p.dead=true;P.got++;P.flash=.25;}}
+    P.ph=P.ph.filter(p=>!p.dead);P.puffs=P.puffs.filter(f=>(f.t-=dt)>0);P.flash=Math.max(0,P.flash-dt);
+  }
+  function bar(ctx,x,y,th,len,col,w){const a=th*Math.PI/180;ctx.strokeStyle=col;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x-Math.sin(a)*len*.45,y+Math.cos(a)*len);ctx.lineTo(x+Math.sin(a)*len*.45,y-Math.cos(a)*len);ctx.stroke();}
+  function draw(){
+    const {ctx,w,h}=fit(cv);ctx.clearRect(0,0,w,h);const cy=h/2-6;
+    ctx.fillStyle=COL.line;ctx.fillRect(w*SRC,cy-.5,w*(DET-SRC),1);
+    // source
+    ctx.fillStyle=COL.raise;ctx.strokeStyle=COL.mute;ctx.beginPath();ctx.arc(w*SRC,cy,12,0,7);ctx.fill();ctx.stroke();
+    txt(ctx,'光源',w*SRC,cy+34,COL.mute,11,'center','body');txt(ctx,'偏光はばらばら',w*SRC,cy+48,COL.dim,10,'center','body');
+    // filters
+    ['A','B','C'].forEach((n,i)=>{const x=w*POS[i];
+      ctx.save();ctx.globalAlpha=P.on[i]?1:.22;
+      ctx.fillStyle=rgba(COL.wave,.08);ctx.strokeStyle=COL.mute;ctx.lineWidth=1.2;ctx.beginPath();ctx.ellipse(x,cy,16,58,0,0,7);ctx.fill();ctx.stroke();
+      // transmission axis lines (grid)
+      const a=P.ang[i]*Math.PI/180;
+      for(let k=-2;k<=2;k++){const ox=Math.cos(a)*k*6*.45,oy=Math.sin(a)*k*6;ctx.strokeStyle=rgba(COL.wave,k?.35:.95);ctx.lineWidth=k?1:2;
+        ctx.beginPath();ctx.moveTo(x+ox-Math.sin(a)*15*.45*.9,cy+oy+Math.cos(a)*44);ctx.lineTo(x+ox+Math.sin(a)*15*.45*.9,cy+oy-Math.cos(a)*44);ctx.stroke();}
+      ctx.restore();
+      txt(ctx,n,x,cy-70,P.on[i]?COL.fg:COL.dim,13,'center');
+      txt(ctx,P.on[i]?P.ang[i]+'°':'外した',x,cy+78,P.on[i]?COL.wave:COL.dim,11,'center');
+    });
+    for(const f of P.puffs){const a=f.t/.3;ctx.fillStyle=rgba(COL.classic,.7*a);ctx.beginPath();ctx.arc(w*POS[f.i]-4,cy,3+8*(1-a),0,7);ctx.fill();}
+    // photons
+    for(const p of P.ph){const x=w*p.x;ctx.fillStyle=COL.hit;ctx.beginPath();ctx.arc(x,cy,2.4,0,7);ctx.fill();bar(ctx,x,cy,p.th,9,rgba(COL.hit,.8),1.3);}
+    // detector
+    const dx=w*DET;ctx.fillStyle=P.flash>0?rgba(COL.hit,.3+P.flash*2.4):COL.raise;ctx.strokeStyle=COL.mute;ctx.fillRect(dx,cy-22,14,44);ctx.strokeRect(dx,cy-22,14,44);
+    txt(ctx,'検出器',dx+7,cy+40,COL.mute,11,'center','body');
+    $('#polSent').textContent=P.sent;$('#polGot').textContent=P.got;
+    $('#polPct').textContent=P.sent>0?pct(P.got/Math.max(1,P.sent-P.ph.length)):'—';
+    $('#polTh').textContent=pct(theory());
+  }
+  const fmt=v=>v+'°';
+  [0,1,2].forEach(i=>{range('#polA'+i,fmt,v=>{P.ang[i]=v;reset();});$('#polOn'+i).addEventListener('change',e=>{P.on[i]=e.target.checked;reset();});});
+  range('#polRate',v=>v+' 個',v=>P.rate=v);
+  function preset(on,ang){on.forEach((v,i)=>{P.on[i]=v;$('#polOn'+i).checked=v;});ang.forEach((v,i)=>{P.ang[i]=v;setRange('#polA'+i,v,fmt);});reset();setRun(true);}
+  $('#polPreA').addEventListener('click',()=>preset([true,false,true],[0,45,90]));
+  $('#polPreB').addEventListener('click',()=>preset([true,true,true],[0,45,90]));
+  $('#polReset').addEventListener('click',reset);
+  $('#polRun').addEventListener('click',()=>setRun(!P.running));
+  return {P,step,draw,theory};
+})();
+
+/* ================= 4 量子もつれ ================= */
+EXPS.bell=(()=>{
+  const B={a:0,b:30,rate:6,model:'q',running:true,acc:0,fly:[],stats:{},recent:[],lamp:{A:null,B:null,t:0},chsh:{}};
+  const cv=$('#bellCv'),ch=$('#bellChart');
+  const rad=d=>d*Math.PI/180;
+  function pair(a,b,model){
+    if(model==='q'){const A=Math.random()<.5?1:-1;const same=Math.random()<Math.cos(rad(a-b))**2;return [A,same?A:-A];}
+    const l=Math.random()*180;return [Math.cos(2*rad(a-l))>=0?1:-1,Math.cos(2*rad(b-l))>=0?1:-1];
+  }
+  const fold=d=>{d=Math.abs(d)%180;return d>90?180-d:d;};
+  function record(A,Bv){const k=(Math.round(fold(B.a-B.b)/2.5)*2.5).toFixed(1);const s=B.stats[k]||(B.stats[k]={n:0,same:0});s.n++;if(A===Bv)s.same++;}
+  function push(A,Bv){B.recent.push([A,Bv]);if(B.recent.length>40)B.recent.shift();renderRecent();}
+  function renderRecent(){const f=(i)=>B.recent.map(r=>`<span class="${r[i]>0?'p':'m'}"></span>`).join('');$('#bellRowA').innerHTML=f(0);$('#bellRowB').innerHTML=f(1);
+    const row=$('#bellRowA');row.style.justifyContent='flex-end';$('#bellRowB').style.justifyContent='flex-end';}
+  function emit(animate){const [A,Bv]=pair(B.a,B.b,B.model);
+    if(animate)B.fly.push({t:0,A,B:Bv});else{record(A,Bv);}}
+  function setRun(on){B.running=on;$('#bellRun').textContent=on?'一時停止':'再開';}
+  function step(dt){
+    if(B.running){B.acc+=dt*B.rate;while(B.acc>=1){B.acc--;emit(true);}}
+    B.fly=B.fly.filter(f=>{f.t+=dt;if(f.t>=.7){record(f.A,f.B);push(f.A,f.B);B.lamp={A:f.A,B:f.B,t:.3};return false;}return true;});
+    B.lamp.t=Math.max(0,B.lamp.t-dt);
+  }
+  function station(ctx,x,cy,ang,res,name,side){
+    ctx.fillStyle=COL.raise;ctx.strokeStyle=COL.mute;ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(x,cy,22,0,7);ctx.fill();ctx.stroke();
+    const a=rad(ang);ctx.strokeStyle=COL.wave;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(x-Math.sin(a)*18,cy+Math.cos(a)*18);ctx.lineTo(x+Math.sin(a)*18,cy-Math.cos(a)*18);ctx.stroke();
+    txt(ctx,name,x,cy-58,COL.fg,13,'center','body');txt(ctx,ang+'°',x,cy+40,COL.wave,12,'center');
+    const lx=x+side*44;const on=B.lamp.t>0?B.lamp.t/.3:0;
+    [[1,COL.hit,'＋',-24],[-1,COL.wave,'−',24]].forEach(([v,col,lab,dy])=>{const lit=on>0&&res===v;
+      ctx.fillStyle=lit?col:COL.raise;ctx.strokeStyle=col;ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(lx,cy+dy,10,0,7);ctx.fill();ctx.stroke();
+      if(lit){ctx.fillStyle=rgba(col,.25*on);ctx.beginPath();ctx.arc(lx,cy+dy,20,0,7);ctx.fill();}
+      txt(ctx,lab,lx,cy+dy+4,lit?COL.bg:col,12,'center');});
+  }
+  function draw(){
+    {const {ctx,w,h}=fit(cv);ctx.clearRect(0,0,w,h);const cy=h/2+4;const xA=Math.max(60,w*.14),xB=w-xA,xs=w/2;
+      dashLine(ctx,[[xA+24,cy],[xB-24,cy]],COL.line,1,[3,4]);
+      ctx.fillStyle=COL.raise;ctx.strokeStyle=COL.mute;ctx.beginPath();ctx.arc(xs,cy,14,0,7);ctx.fill();ctx.stroke();
+      txt(ctx,'もつれたペアの源',xs,cy+34,COL.mute,11,'center','body');
+      for(const f of B.fly){const q=Math.min(1,f.t/.7);[xs-(xs-xA-22)*q,xs+(xB-22-xs)*q].forEach(x=>{ctx.fillStyle=COL.fg;ctx.beginPath();ctx.arc(x,cy,3,0,7);ctx.fill();});
+        ctx.strokeStyle=rgba(COL.fg,.25);ctx.setLineDash([2,3]);ctx.beginPath();ctx.moveTo(xs-(xs-xA-22)*q,cy-8);ctx.quadraticCurveTo(xs,cy-24,xs+(xB-22-xs)*q,cy-8);ctx.stroke();ctx.setLineDash([]);}
+      station(ctx,xA,cy,B.a,B.lamp.A,'アリス',-1);station(ctx,xB,cy,B.b,B.lamp.B,'ボブ',1);}
+    {const {ctx,w,h}=fit(ch);ctx.clearRect(0,0,w,h);const l=44,r=w-14,t=14,b=h-34;
+      const X=d=>l+d/90*(r-l),Y=p=>b-p*(b-t);
+      ctx.strokeStyle=COL.line;ctx.lineWidth=1;
+      for(const p of [0,.25,.5,.75,1]){ctx.beginPath();ctx.moveTo(l,Y(p));ctx.lineTo(r,Y(p));ctx.stroke();txt(ctx,(p*100)+'%',l-6,Y(p)+4,COL.mute,10,'right');}
+      for(const d of [0,22.5,45,67.5,90]){txt(ctx,d+'°',X(d),b+14,COL.mute,10,'center');}
+      txt(ctx,'2人の角度の差',(l+r)/2,b+28,COL.mute,11,'center','body');
+      ctx.save();ctx.translate(12,(t+b)/2);ctx.rotate(-Math.PI/2);txt(ctx,'結果がそろう割合',0,0,COL.mute,11,'center','body');ctx.restore();
+      ctx.strokeStyle=COL.wave;ctx.lineWidth=2;ctx.beginPath();for(let d=0;d<=90;d+=1){const y=Y(Math.cos(rad(d))**2);d?ctx.lineTo(X(d),y):ctx.moveTo(X(d),y);}ctx.stroke();
+      dashLine(ctx,[[X(0),Y(1)],[X(90),Y(0)]],COL.classic,2,[6,4]);
+      const cur=fold(B.a-B.b);ctx.fillStyle=rgba(COL.hit,.12);ctx.fillRect(X(cur)-5,t,10,b-t);
+      for(const k in B.stats){const s=B.stats[k];const d=+k;const r0=Math.min(7,2.5+Math.log10(s.n+1)*1.6);ctx.fillStyle=COL.fg;ctx.beginPath();ctx.arc(X(d),Y(s.same/s.n),r0,0,7);ctx.fill();}
+    }
+    const s=B.stats[(Math.round(fold(B.a-B.b)/2.5)*2.5).toFixed(1)];
+    $('#bellNow').textContent=s?`${pct(s.same/s.n,0)}（${s.n}組）`:'—';
+  }
+  function runTest(){
+    const set=[[0,22.5,1],[0,67.5,-1],[45,22.5,1],[45,67.5,1]];const res={};
+    for(const m of ['q','h']){let S=0;for(const [a,b,sg] of set){let c=0;for(let i=0;i<2000;i++){const [A,Bv]=pair(a,b,m);c+=A*Bv;}S+=sg*c/2000;}res[m]=S;}
+    B.chsh=res;
+    const show=(id,v)=>{$(id).style.width=Math.max(0,Math.min(1,v/3))*100+'%';$(id+'v').textContent='S = '+v.toFixed(2);};
+    show('#chshQ',res.q);show('#chshH',res.h);
+    $('#chshVerdict').textContent=res.q>2?`量子もつれは S = ${res.q.toFixed(2)} で 2 を超えた。前もって答えを決めておく仕組みでは出せない値。`:'';
+    return res;
+  }
+  range('#bellA',v=>v+'°',v=>B.a=v);range('#bellB',v=>v+'°',v=>B.b=v);range('#bellRate',v=>v+' 組',v=>B.rate=v);
+  seg('#bellModel',v=>{B.model=v;B.stats={};B.recent=[];renderRecent();});
+  $('#bellRun').addEventListener('click',()=>setRun(!B.running));
+  $('#bellMany').addEventListener('click',()=>{for(let i=0;i<500;i++){const [A,Bv]=pair(B.a,B.b,B.model);record(A,Bv);if(i>=460)push(A,Bv);}});
+  $('#bellClear').addEventListener('click',()=>{B.stats={};B.recent=[];renderRecent();});
+  $('#bellTest').addEventListener('click',runTest);
+  return {B,step,draw,runTest,pair};
+})();
+
+/* ================= 5 不確定性原理 ================= */
+EXPS.uncert=(()=>{
+  const U={sig:1.2,c:0,p0:1.5,x0:0,tsig:null,mark:null};
+  const cx=$('#unX'),cp=$('#unP');const fmtS=v=>v.toFixed(2);
+  const dp=()=>Math.sqrt(1+U.c*U.c)/(2*U.sig);
+  function plot(cv,range,f,line,mark,col){
+    const {ctx,w,h}=fit(cv);ctx.clearRect(0,0,w,h);const l=10,r=w-10,t=16,b=h-24;
+    const X=v=>l+(v+range)/(2*range)*(r-l);
+    const n=400;let mx=0;const ys=[];for(let i=0;i<=n;i++){const v=-range+2*range*i/n;const y=f(v);ys.push(y);mx=Math.max(mx,y);}
+    const top=Math.max(mx,.8);const Y=y=>b-y/top*(b-t);
+    ctx.fillStyle=COL.line;ctx.fillRect(l,b,r-l,1);ctx.fillRect(X(0),t,1,b-t);
+    for(let k=-range;k<=range;k+=range/4)txt(ctx,(+k.toFixed(1))+'',X(k),b+14,COL.mute,10,'center');
+    ctx.fillStyle=rgba(col,.35);ctx.beginPath();ctx.moveTo(l,b);ys.forEach((y,i)=>ctx.lineTo(l+(r-l)*i/n,Y(y)));ctx.lineTo(r,b);ctx.fill();
+    ctx.strokeStyle=col;ctx.lineWidth=1.6;ctx.beginPath();ys.forEach((y,i)=>i?ctx.lineTo(l+(r-l)*i/n,Y(y)):ctx.moveTo(l,Y(y)));ctx.stroke();
+    if(line){const mid=b-(b-t)*.0;ctx.strokeStyle=rgba(COL.fg,.7);ctx.lineWidth=1;ctx.beginPath();const sc=(b-t)*.45/Math.sqrt(top);
+      for(let i=0;i<=n*2;i++){const v=-range+range*i/n;const y=(b+t)/2-line(v)*sc;i?ctx.lineTo(X(v),y):ctx.moveTo(X(v),y);}ctx.stroke();}
+    if(mark&&mark.t>0){const x=X(mark.v);ctx.strokeStyle=rgba(COL.hit,Math.min(1,mark.t));ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,t);ctx.lineTo(x,b);ctx.stroke();
+      txt(ctx,'測った値 '+mark.v.toFixed(2),x+(x>w*.6?-6:6),t+10,COL.hit,11,x>w*.6?'right':'left','body');}
+  }
+  function draw(){
+    const s=U.sig,c=U.c;
+    plot(cx,10,x=>Math.exp(-((x-U.x0)**2)/(2*s*s))/(Math.sqrt(2*Math.PI)*s),
+      x=>{const env=Math.exp(-((x-U.x0)**2)/(4*s*s))/Math.pow(2*Math.PI*s*s,.25);return env*Math.cos(U.p0*x+c*(x-U.x0)**2/(4*s*s));},
+      U.mark&&U.mark.k==='x'?U.mark:null,COL.wave);
+    const sp=dp();
+    plot(cp,6,p=>Math.exp(-((p-U.p0)**2)/(2*sp*sp))/(Math.sqrt(2*Math.PI)*sp),null,U.mark&&U.mark.k==='p'?U.mark:null,COL.hit);
+    $('#unDx').textContent=s.toFixed(3);$('#unDp').textContent=sp.toFixed(3);const pr=s*sp;$('#unProd').textContent=pr.toFixed(3);
+    $('#unBar').style.width=Math.min(100,pr/2*100)+'%';
+  }
+  function step(dt){
+    if(U.tsig){const k=Math.min(1,dt*5);U.sig+=(U.tsig-U.sig)*k;if(Math.abs(U.tsig-U.sig)<.003){U.sig=U.tsig;U.tsig=null;}setRange('#unS',U.sig,fmtS);}
+    if(U.mark)U.mark.t-=dt*.35;
+  }
+  range('#unS',fmtS,v=>{U.sig=v;U.tsig=null;});range('#unC',v=>v.toFixed(1),v=>U.c=v);range('#unP0',v=>v.toFixed(1),v=>U.p0=v);
+  $('#unMx').addEventListener('click',()=>{const x=Math.max(-8,Math.min(8,U.x0+U.sig*gauss()));U.x0=x;U.c=0;setRange('#unC',0,v=>v.toFixed(1));U.tsig=.3;U.mark={k:'x',v:x,t:1.6};});
+  $('#unMp').addEventListener('click',()=>{const p=Math.max(-3,Math.min(3,U.p0+dp()*gauss()));U.p0=p;U.c=0;setRange('#unC',0,v=>v.toFixed(1));setRange('#unP0',p,v=>v.toFixed(1));U.p0=p;U.tsig=3.2;U.mark={k:'p',v:p,t:1.6};});
+  $('#unReset').addEventListener('click',()=>{U.x0=0;U.c=0;U.p0=1.5;U.sig=1.2;U.tsig=null;U.mark=null;setRange('#unS',1.2,fmtS);setRange('#unC',0,v=>v.toFixed(1));setRange('#unP0',1.5,v=>v.toFixed(1));});
+  return {U,step,draw};
+})();
+
+/* ================= タブとループ ================= */
+let active='slit';
+function show(name){
+  if(!EXPS[name])name='slit';active=name;
+  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===name?'true':'false'));
+  document.querySelectorAll('.exp').forEach(s=>s.hidden=s.dataset.exp!==name);
+  try{localStorage.setItem('qlab-tab',name);}catch(e){}
+  EXPS[name].draw();
+}
+document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b){show(b.dataset.tab);try{history.replaceState(null,'','#'+b.dataset.tab);}catch(e){}}});
+let first=(location.hash||'').slice(1);if(!EXPS[first]){try{first=localStorage.getItem('qlab-tab')||'slit';}catch(e){first='slit';}}
+show(first);
+window.__qx={EXPS,show,get active(){return active;},err:[]};
+let last=performance.now();
+function loop(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+  try{EXPS[active].step(dt);EXPS[active].draw();}catch(e){window.__qx.err.push(String(e&&e.stack||e));}
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+window.addEventListener('resize',()=>EXPS[active].draw());
+</script>

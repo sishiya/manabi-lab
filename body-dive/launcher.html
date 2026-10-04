@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>体内ダイブ ランチャー</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Shippori+Mincho+B1:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: single column version list; turning points as large cards, other backups as a compact table */
+:root{--bg:#0c0305;--ink:#f6e9e4;--muted:#c2a49e;--dim:#8c6f6a;--line:rgba(255,222,212,.16);--panel:#1a080b;--gut:#ffb48c;--air:#9ad4f5;
+  --f-display:'Shippori Mincho B1','Yu Mincho',serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+main{max-width:760px;margin:0 auto;padding:48px 16px 64px;display:flex;flex-direction:column;gap:28px}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;color:var(--muted)}
+h1{font-family:var(--f-display);font-size:48px;margin:6px 0 0;letter-spacing:.06em}
+h2{font-size:12px;letter-spacing:.18em;color:var(--dim);font-weight:500;margin:0 0 10px}
+.cards{display:flex;flex-direction:column;gap:12px}
+.card{display:grid;grid-template-columns:auto 1fr auto;gap:6px 18px;align-items:start;padding:16px 18px;background:var(--panel);border:1px solid var(--line);border-radius:3px;text-decoration:none;color:inherit}
+.card:hover{border-color:var(--gut)}
+.card:focus-visible{outline:2px solid var(--gut);outline-offset:2px}
+.ver{font-family:var(--f-mono);font-size:13px;color:var(--gut);padding-top:3px}
+.card b{font-size:17px}
+.card p{margin:4px 0 0;font-size:13px;line-height:1.75;color:var(--muted)}
+.card .date{font-family:var(--f-mono);font-size:11px;color:var(--dim);white-space:nowrap;padding-top:4px}
+.latest{border-color:var(--gut)}
+.tag{display:inline-block;font-size:10px;letter-spacing:.12em;border:1px solid var(--gut);color:var(--gut);padding:1px 6px;margin-left:8px;vertical-align:2px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td{padding:8px 6px;border-top:1px solid var(--line);vertical-align:top}
+td:first-child{font-family:var(--f-mono);color:var(--muted);white-space:nowrap}
+td a{color:var(--ink)}
+.note{font-size:12px;color:var(--dim);line-height:1.8}
+@media (max-width:520px){.card{grid-template-columns:1fr}.card .date{padding:0}h1{font-size:36px}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">BODY DIVE · VERSIONS</div>
+    <h1>体内ダイブ</h1>
+  </header>
+
+  <section>
+    <h2>ターニングポイント</h2>
+    <div class="cards">
+      <a class="card latest" href="index.html">
+        <span class="ver">最新</span>
+        <div><b>作業中の最新版<span class="tag">LATEST</span></b><p>いま作業フォルダにある index.html。</p></div>
+        <span class="date">—</span>
+      </a>
+      <a class="card" href="versions/release-1.0/index.html">
+        <span class="ver">1.0</span>
+        <div><b>初期リリース<span class="tag">RELEASE</span></b>
+          <p>v3c と同じ内容。口・鼻・肛門から入り、素材ごとの消化・吸収・排出、括約筋とS状結腸、血中アルコールと危険度、順路モード、三人称視点、外観ビューまで。</p></div>
+        <span class="date">2026-10-03</span>
+      </a>
+      <a class="card" href="versions/v003-tps/index.html">
+        <span class="ver">v3</span>
+        <div><b>三人称視点とS状結腸</b>
+          <p>入っているモノの姿を後ろから見る三人称視点（かたまり→かゆ状→液状→便の形・色・質感の変化）。順路モードが最初からオン（肛門から入ると「口へ」）。カプセルは関門を押し広げて逆走できる。S状結腸で便がためられ、大蠕動で直腸へ。食事ボタン（胃結腸反射）。</p></div>
+        <span class="date">2026-10-03</span>
+      </a>
+      <a class="card" href="versions/v002-digestion/index.html">
+        <span class="ver">v2</span>
+        <div><b>消化シミュレーション</b>
+          <p>素材（肉・ごはん・キャベツ・金属球・カプセル内視鏡・日本酒・ボタン電池・ツキヨタケ）を選んで、口・鼻・肛門から入る。胃液・胆汁・大腸での変化、便の色と形（ブリストル）、括約筋の開閉、空腹と満腹、血中アルコール濃度と危険度、嘔吐と咳の反射。順路モードと逆向きモード、分岐の道しるべ、体の外から見る外観ビュー。</p></div>
+        <span class="date">2026-10-03</span>
+      </a>
+      <a class="card" href="versions/v001-explore/index.html">
+        <span class="ver">v1</span>
+        <div><b>管の中を探検</b>
+          <p>口と鼻から入り、気道と消化管の3D空間を自由に飛ぶ最初の版。部位ごとの壁のひだ、内視鏡風のライト、正面図の地図、自動航行。</p></div>
+        <span class="date">2026-10-03</span>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <h2>すべてのバックアップ</h2>
+    <table>
+      <tr><td>v003i-defaults</td><td><a href="versions/v003i-defaults/index.html">初期値を変更（カプセル内視鏡・一人称・早送り×10）、開始ボタンを大きく中央に、検証用 simRun を追加（v003h-pre-defaults はその直前）</a></td></tr>
+      <tr><td>v003g-viewport</td><td><a href="versions/v003g-viewport/index.html">スマホ用 viewport を追加（v003f-pre-viewport はその直前）</a></td></tr>
+      <tr><td>v003e-caution</td><td><a href="versions/v003e-caution/index.html">注意書き・対象年齢・危険な素材への警告を追加（v003d-pre-caution はその直前）</a></td></tr>
+      <tr><td>release-1.0</td><td><a href="versions/release-1.0/index.html">初期リリース（v3c と同一）</a></td></tr>
+      <tr><td>v003c-throat-fix</td><td><a href="versions/v003c-throat-fix/index.html">v3 修正（v3bで喉から先に進めなくなった問題を修正）</a></td></tr>
+      <tr><td>v003b-tps-camfix</td><td><a href="versions/v003b-tps-camfix/index.html">v3 修正（三人称カメラが壁際で本体に寄ってちらつく問題を修正）</a></td></tr>
+      <tr><td>v003-tps</td><td><a href="versions/v003-tps/index.html">v3 完成時点</a></td></tr>
+      <tr><td>v002-digestion</td><td><a href="versions/v002-digestion/index.html">v2 完成時点</a></td></tr>
+      <tr><td>v002a-digestion-wip</td><td><a href="versions/v002a-digestion-wip/index.html">v2 途中（素材・括約筋・順路モード・外観ビュー・道しるべまで。アルコールや電池はまだない）</a></td></tr>
+      <tr><td>v001-explore</td><td><a href="versions/v001-explore/index.html">v1 完成時点</a></td></tr>
+    </table>
+  </section>
+
+  <p class="note">各版は versions/ フォルダに丸ごと保存している。ブラウザでこのファイルを開けば、どの版でも起動できる（インターネット接続が必要）。</p>
+</main>
+</body>
+</html>
