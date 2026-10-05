@@ -15,6 +15,7 @@
 | `god-view/` | 神の視点マップ — 本物の地形・写真・地図の3D地球（GitHub Pages で公開: https://sishiya.github.io/manabi-lab/god-view/ ） |
 
 - **公開中**: https://sishiya.github.io/manabi-lab/ （入口のページから全アプリを開けます。GitHub Pages）
+- 入口（ルートの `index.html`）のサムネイルは `thumbs/`（`tools/make-thumbs.ps1` で撮り直し）。各アプリにはファビコン（SVG を埋め込み）。
 - 各アプリの `index.html` が最新版、`launcher.html` から過去の版を開けます（`versions/`）。
 - 仕組みや確認のしかたは各フォルダの `DEVNOTES.md`、進め方の共通ルールは `RULES.md`。
 

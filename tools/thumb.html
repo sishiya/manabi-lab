@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>サムネイル撮影用</title>
+<style>html,body{margin:0;overflow:hidden;background:#000}iframe{display:block;width:1280px;height:720px;border:0}</style>
+</head>
+<body>
+<!--
+  まなびラボのサムネイルを撮るためのページ（ローカル用）。tools/make-thumbs.ps1 がヘッドレスの Chrome で開いて撮る。
+  ?app=<フォルダ名> のアプリを 1280×720 で開き、下の SETUP の手順（開始ボタンを押す・カメラを動かすなど）をしてから待つ。
+-->
+<iframe id="f"></iframe>
+<script>
+const app = new URLSearchParams(location.search).get('app');
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const click = (w, sel) => { const e = w.document.querySelector(sel); if (e) e.click(); };
+
+// アプリごとの準備（w = アプリの window）
+const SETUP = {
+  'body-dive': async w => { click(w, '#go'); await wait(6000); },
+  'urinary-dive': async w => { click(w, '#go'); await wait(6000); },
+  'blood-dive': async w => { click(w, '#go'); await wait(6000); },
+  // 恐竜の時代（約6800万年前）。生き物が多く見える
+  'evolution': async w => { click(w, '#aboutStart'); await wait(1500); w.__ev.setAge(68e6); await wait(6000); },
+  'god-view': async w => {
+    await wait(1500);
+    const C = w.Cesium, gv = w.__gv;
+    gv.viewer.camera.setView({
+      destination: C.Cartesian3.fromDegrees(139.7615, 35.6800, 120),
+      orientation: { heading: C.Math.toRadians(70), pitch: C.Math.toRadians(-18), roll: 0 },
+    });
+    w.document.body.classList.remove('layers-open');
+    w.GV.applyBuildings();
+    await gv.run(50, 200);
+  },
+};
+
+const f = document.getElementById('f');
+f.onload = async () => {
+  await wait(1500);
+  const s = SETUP[app];
+  if (s) { try { await s(f.contentWindow); } catch (e) { console.error(e); } }
+  else await wait(5000);
+  document.title = 'ready';
+};
+f.src = '../' + app + '/';
+</script>
+</body>
+</html>

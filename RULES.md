@@ -72,6 +72,7 @@ Artifact の公開・再公開、git の commit／push の**前に毎回**行う
    ```
    powershell -NoProfile -ExecutionPolicy Bypass -File tools/check-public.ps1 -Path <app>
    ```
+   画像（jpg・png など）は撮影情報（Exif・GPS）や埋め込みの文字がないかを調べる（あれば止まる）。
    メールアドレス、PCのユーザーフォルダのパス、APIキー・トークン・秘密鍵、パスワードの書き込み、電話番号、住所、`.env` などのファイル、`.private-words.txt` に書いた自分の語（名前・メールなど）を探す。「問題なし」でなければ公開しない。
 2. **目で確かめる**（スクリプトでは分からないこと）:
    - 実在の個人の名前・写真・声、身近な人や場所が分かる情報が入っていないか
@@ -96,6 +97,9 @@ Artifact の公開・再公開、git の commit／push の**前に毎回**行う
 - Pages 専用のアプリの `index.html` は普通の HTML（`<!doctype html>` から書く）。
 - Artifact 用（doctype なし）のアプリも、push すれば Pages で互換モード（quirks）で開ける。2026-10-05 に8本すべてで、標準モードと全要素の位置・大きさを比べて同じ（evolution の左上の箱だけ 7〜8px 低い）ことを確かめ、入口（ルートの `index.html`「まなびラボ」）に載せた。**新しいアプリを入口に足すとき**は、同じ比べ方（DEVNOTES の確認に加えて、Pages の URL で互換モードと doctype つきの標準モードを比べる）をする。
 - 外のデータ（地図タイル・API）は、ブラウザから直接読めるもの（CORS）で、キー不要のものだけ。キーをファイルに書かない（7章）。
+- **入口に載せるもの**: アプリごとに**ファビコン**（`index.html` と `launcher.html` の `<title>` の直後に、SVG を埋め込んだ `<link rel="icon" href="data:image/svg+xml,…">`。テーマ色の角丸の四角＋中身を表す図形。外のファイルにしないのは Artifact 版でも効くように）と、**サムネイル** `thumbs/<app>.jpg`（640×360）。
+- サムネイルの撮り直し: サーバー `apps` を起動して `powershell -NoProfile -ExecutionPolicy Bypass -File tools/make-thumbs.ps1 [-Apps a,b]`。ヘッドレスの Chrome を DevTools プロトコルで動かし、`tools/thumb.html` が各アプリの準備（開始ボタン・カメラ移動など。アプリごとの手順は thumb.html の `SETUP`）を終えてから撮る。新しいアプリは `SETUP` と make-thumbs の一覧に足す。
+- 紹介動画は将来（まだ作らない）。
 - 公開を確かめるとき: push のあと1〜2分待って、Pages の URL を Browser ペインで開き、DEVNOTES の「確認のしかた」を通す。
 
 ### 8.2 Artifact（1ファイルで完結し、外のデータを読まないアプリ）

@@ -4,7 +4,7 @@
 
 ## 別セッションで続けるとき（まずここ）
 
-- **いまの状態**: v002（段階B の1「PLATEAU の建物」）。日本全体から家1軒まで寄れる 3D の地球＋全国 447 区・市の建物の立体。**公開先は GitHub Pages**: https://sishiya.github.io/manabi-lab/god-view/ （push すると更新。RULES 8.1）。
+- **いまの状態**: v002b（段階B の1「PLATEAU の建物」）。日本全体から家1軒まで寄れる 3D の地球＋全国 447 区・市の建物の立体。**公開先は GitHub Pages**: https://sishiya.github.io/manabi-lab/god-view/ （push すると更新。RULES 8.1）。
 - **次にやること**: 段階B の続き — (2) PLATEAU のない所（日本の外・地方）の建物を OSM の高さ情報から（OpenFreeMap のベクトルタイル）、(3) 地下を見る視点（地面を半透明に）。候補: PLATEAU の建物属性にある**洪水・高潮の想定浸水深**で建物を色分けする「災害の想定」層。PLAN.md 8章。
 - **読む順**: `../RULES.md` → このメモ → `PLAN.md`（全体の構想と段階）→ 下の「ファイル構成」で関係するファイルだけ。
 - **動かし方**: ユーザーは `god-view/start.bat` をダブルクリック（サーバーがなければ起動して http://localhost:8765/god-view/ を開く）。Claude は `.claude/launch.json` の `apps`。**file:// では動かない**（Cesium の Worker が CDN から読めない。開くと案内だけ出す）。
@@ -21,6 +21,7 @@
 - 2026-10-05 v001c-licenses: 権利と利用条件の見直し（下の章）。出典を地図の上に常に表示（タイルごとの追加出典も）、検索と住所を Nominatim に一本化（間隔とキャッシュ）、EOX を CC BY-NC-SA 表記に、「このアプリについて」に非営利・ほかの地図サービスと無関係・出典の詳細。
 - 2026-10-05 **GitHub Pages で公開**（リポジトリを Public に）。本番の URL で「確認のしかた」1〜6 を通して問題なし。操作説明の「住所（世界）」を修正。
 - 2026-10-05 v002-plateau: 段階B の1。PLATEAU の建物（447 区・市、LOD1／LOD2、写真）、ジオイド補正、建物の属性、建物のワイヤフレーム、カメラからの光。索引は tools/build-plateau-index.ps1 で生成。
+- 2026-10-05 v002b-favicon: ファビコン（地球の SVG を埋め込み）。まなびラボ用のサムネイルは thumbs/god-view.jpg（RULES 8.1）。
 
 ## ファイル構成
 

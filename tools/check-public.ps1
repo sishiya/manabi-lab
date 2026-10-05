@@ -14,7 +14,8 @@ $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
 $textExt = '.html','.htm','.js','.mjs','.css','.md','.txt','.json','.ps1','.sh','.bat','.cmd','.yml','.yaml','.xml','.svg','.csv','.ini','.cfg','.toml',''
-$badNames = '^\.env', '\.pem$', '\.key$', '\.pfx$', '\.p12$', '^id_(rsa|ed25519|ecdsa)', '^credentials', '\.kdbx$'
+$imageExt = '.jpg','.jpeg','.png','.gif','.webp'
+$badNames ='^\.env', '\.pem$', '\.key$', '\.pfx$', '\.p12$', '^id_(rsa|ed25519|ecdsa)', '^credentials', '\.kdbx$'
 $skipDirs = '\\\.git\\', '\\node_modules\\'
 
 $rules = @(
@@ -63,6 +64,13 @@ foreach ($f in $files) {
   if ($len -gt 10MB) { [void]$hits.Add("$rel : 10MB を超える大きなファイル") }
   $ext = [IO.Path]::GetExtension($f).ToLower()
   if ($ext -eq $name.ToLower()) { $ext = '' }   # dotfiles such as .gitignore
+  if ($imageExt -contains $ext) {
+    # 画像: 撮影情報（Exif・GPS）や文字の埋め込み（PNG の tEXt など）がないか。写っている中身は目で確かめる（RULES 7章）
+    $bytes = [IO.File]::ReadAllBytes($f)
+    $ascii = [Text.Encoding]::ASCII.GetString($bytes)
+    if ($ascii -match 'Exif\x00|GPSInfo|<x:xmpmeta|tEXt|iTXt|zTXt|eXIf') { [void]$hits.Add("$rel : 画像に撮影情報・メタデータがある（消してから公開）") }
+    continue
+  }
   if ($textExt -notcontains $ext) { [void]$hits.Add("$rel : テキスト以外のファイル（画像なら撮影情報・写り込みを目で確認）"); continue }
   $lines = [IO.File]::ReadAllLines($f, [Text.Encoding]::UTF8)
   for ($i = 0; $i -lt $lines.Length; $i++) {

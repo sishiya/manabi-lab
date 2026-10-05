@@ -6,6 +6,7 @@
 
 ## 別セッションで続けるとき（まずここ）
 - **いまの状態**: 最新は v5b（`versions/v005b-credits`、使っているものの表記だけ追加。2026-10-04 に再公開済み）。**リリース 1.0**（`versions/release-1.0` ＝ v5 と同じ内容、2026-10-04）。v5（`versions/v005-memory-vaccine`）＝段階D（2回目の感染・ワクチンのしくみ）＋抗生物質のしくみの図＋仕上げ（段階E）。Artifact に公開済み（タイトル「免疫のたたかい」、URL は `../PUBLISH.local.md`、共有はまだ自分だけ）。更新は同じ URL へ再公開。
+- 2026-10-05 `versions/v005c-favicon`: ファビコン（タブのアイコン、SVG を埋め込み）を追加。GitHub Pages（まなびラボ）用。Artifact へはまだ再公開していない。
 - **次にやること**: ユーザーの感想しだい。案は `PLAN.md` の C2（異物・二次感染・尿の旅とつなぐ）。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。
 - **動かし方**: 分割版なので `.claude/launch.json` の `apps`（8765）か `apps-2`（8766）で `http://localhost:<port>/immune-battle/index.html`。

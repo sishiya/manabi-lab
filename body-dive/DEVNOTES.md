@@ -25,6 +25,7 @@
 - 手を入れる前と、ひと区切りついた後に `versions/` へコピーする。
 - 節目の版は `launcher.html` のカードに追加し、全バックアップは表に追加する。
 - 既存の版: `v001-explore`, `v002a-digestion-wip`, `v002-digestion`, `v003-tps`, `v003b-tps-camfix`, `v003c-throat-fix`, `release-1.0`
+- 2026-10-05 `versions/v003k-favicon`: ファビコン（タブのアイコン、SVG を埋め込み）を追加。GitHub Pages（まなびラボ）用。Artifact へはまだ再公開していない。
 
 ---
 
