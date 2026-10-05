@@ -1,0 +1,81 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>さなぎの中で</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23142019'/><path d='M32 10c-8 6-11 16-10 26 1 9 5 16 10 20 5-4 9-11 10-20 1-10-2-20-10-26z' fill='%2350b87a'/><path d='M32 16v36' stroke='%23d8f0a0' stroke-width='3' stroke-linecap='round'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="viewWrap">
+      <canvas id="view" aria-label="アゲハの体を横から透かして見た図。器官をタップすると説明が出る"></canvas>
+      <div id="stageName" aria-live="polite"></div>
+      <div id="viewCtl" role="group" aria-label="見かた">
+        <button id="modeIn" aria-pressed="true">透かして見る</button>
+        <button id="modeOut" aria-pressed="false">外から見る</button>
+      </div>
+      <div id="hoverTip" hidden></div>
+      <div id="card" hidden></div>
+      <div id="timebar">
+        <button id="play" aria-label="再生">▶</button>
+        <div class="seg" id="speeds" role="group" aria-label="再生の速さ"></div>
+        <input id="time" type="range" min="0" max="1000" step="1" value="0" aria-label="時間">
+        <span id="clock" class="mono"></span>
+      </div>
+    </div>
+    <div id="chartWrap">
+      <canvas id="chart" aria-label="ホルモンの量の目安とスイッチの遺伝子のグラフ。押すとその時間へ移る"></canvas>
+    </div>
+  </main>
+
+  <aside id="panel">
+    <header>
+      <div class="eyebrow">INSIDE THE CHRYSALIS</div>
+      <h1>さなぎの中で</h1>
+      <p class="lead">アゲハのイモムシがさなぎになって、チョウになるまでの約2週間。外からはほとんど変わらないさなぎの中で、体はどう作りかえられているのか。時間を動かして、横から透かして見る。</p>
+    </header>
+
+    <section class="box" id="nowBox">
+      <h2>いま起きていること</h2>
+      <div id="now"></div>
+    </section>
+
+    <section class="box">
+      <h2>色の意味（押すと表示を切りかえ）</h2>
+      <div id="cats"></div>
+      <label class="row"><input type="checkbox" id="labels" checked> 名前を表示</label>
+    </section>
+
+    <section class="box">
+      <h2>器官の一覧（押すと説明）</h2>
+      <div id="organList"></div>
+    </section>
+
+    <section class="box">
+      <h2>よくある誤解</h2>
+      <div id="myths"></div>
+    </section>
+
+    <section class="box">
+      <h2>まだ分かっていないこと</h2>
+      <ul class="plain" id="unknowns"></ul>
+    </section>
+
+    <section class="box about">
+      <h2>このアプリについて</h2>
+      <p>学習用に簡単にした模式図です。左右一対の器官は片側だけ、細い管や神経は少なめに描いています。大きさと位置はおおよそです。</p>
+      <p>時間の割りふりは、ナミアゲハ（夏、25℃くらいで蛹は約10日）に、タバコスズメガ・カイコ・ヒメアカタテハ・ショウジョウバエなどの研究をあてはめた<b>目安</b>です。種や温度で変わります。ホルモンのグラフは量の形の目安で、測った値ではありません。</p>
+      <p>説明の札: <span class="tag sure">確か</span> 研究で確かめられている　<span class="tag est">推定</span> ほかの虫の結果からのあてはめ・おおよその時期　<span class="tag art">演出</span> 見やすくするための描き方</p>
+      <p>使っているもの: 文字に Zen Maru Gothic・Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）。</p>
+    </section>
+  </aside>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/text.js"></script>
+<script src="js/body.js"></script>
+<script src="js/organs.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/main.js"></script>
