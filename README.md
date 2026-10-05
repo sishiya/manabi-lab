@@ -10,6 +10,9 @@
 | `evolution/` | ヒトへの46億年 — 地球と生命と人類の歴史を定点観測する3D |
 | `quantum/` | 量子の実験室 |
 | `wifi-wave/` | 電波の見える部屋 |
+| `animal-senses/` | いきものの感じる世界 |
+| `immune-battle/` | 免疫のたたかい |
+| `god-view/` | 神の視点マップ — 本物の地形・写真・地図の3D地球（GitHub Pages で公開: https://sishiya.github.io/manabi-lab/god-view/ ） |
 
 - 各アプリの `index.html` が最新版、`launcher.html` から過去の版を開けます（`versions/`）。
 - 仕組みや確認のしかたは各フォルダの `DEVNOTES.md`、進め方の共通ルールは `RULES.md`。
@@ -35,4 +38,4 @@ git config core.quotepath false
 
 ## ライセンス
 
-MIT（`LICENSE`）。実行時に読み込む Three.js（MIT）と Google Fonts の書体（SIL Open Font License）は、それぞれのライセンスに従います。
+MIT（`LICENSE`）。実行時に読み込む Three.js（MIT）・CesiumJS（Apache-2.0）と Google Fonts の書体（SIL Open Font License）は、それぞれのライセンスに従います。地図・写真・標高などのデータは各提供元の条件に従います（`god-view/DEVNOTES.md` の「データ源」）。

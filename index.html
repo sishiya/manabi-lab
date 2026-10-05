@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>まなびラボ</title>
+<style>
+:root{--bg:#f6f4ee;--ink:#1d2129;--muted:#5d6472;--line:#d9d5ca;--card:#fff;--accent:#2b6cb0;color-scheme:light dark}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1218;--ink:#e8ecf2;--muted:#9aa4b2;--line:#273041;--card:#151b24;--accent:#6cb4ff}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;line-height:1.75}
+main{max-width:720px;margin:0 auto;padding:48px 16px 64px}
+h1{margin:0 0 4px;font-size:32px}
+.lead{color:var(--muted);margin:0 0 28px}
+a.card{display:block;padding:16px 18px;margin-bottom:12px;background:var(--card);border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none}
+a.card:hover{border-color:var(--accent)}
+a.card b{font-size:18px;color:var(--accent)}
+a.card p{margin:4px 0 0;color:var(--muted);font-size:14px}
+.note{font-size:13px;color:var(--muted);margin-top:28px}
+.note a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+  <h1>まなびラボ</h1>
+  <p class="lead">ブラウザで動く学習用アプリのシリーズ。Claude（Claude Code）と一緒に作っています。</p>
+  <a class="card" href="god-view/"><b>神の視点マップ</b><p>本物の地形・航空写真・地図で、日本全体から家1軒まで寄れる3Dの地球。いずれは宇宙から素粒子まで。</p></a>
+  <p class="note">ソースコードと開発メモ: <a href="https://github.com/sishiya/manabi-lab">github.com/sishiya/manabi-lab</a></p>
+</main>
+</body>
+</html>

@@ -4,7 +4,7 @@
 
 ## 別セッションで続けるとき（まずここ）
 
-- **いまの状態**: v001（段階A「地球の地図」）。日本全体から家1軒まで寄れる 3D の地球。公開はまだ（Artifact にこだわらない方針。公開先は後で決める）。
+- **いまの状態**: v001b（段階A「地球の地図」）。日本全体から家1軒まで寄れる 3D の地球。**公開先は GitHub Pages**: https://sishiya.github.io/manabi-lab/god-view/ （push すると更新。RULES 8.1）。
 - **次にやること**: 段階B「立体の街」（PLATEAU の建物 3D Tiles、日本の外は OSM の建物の高さ、ワイヤフレーム、地下を見る視点）。PLAN.md 8章。
 - **読む順**: `../RULES.md` → このメモ → `PLAN.md`（全体の構想と段階）→ 下の「ファイル構成」で関係するファイルだけ。
 - **動かし方**: ユーザーは `god-view/start.bat` をダブルクリック（サーバーがなければ起動して http://localhost:8765/god-view/ を開く）。Claude は `.claude/launch.json` の `apps`。**file:// では動かない**（Cesium の Worker が CDN から読めない。開くと案内だけ出す）。

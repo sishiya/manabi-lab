@@ -87,6 +87,18 @@ Artifact の公開・再公開、git の commit／push の**前に毎回**行う
 
 ## 8. 公開
 
+公開先は2通り。アプリの DEVNOTES にどちらかを書く。
+
+### 8.1 GitHub Pages（外のデータを読むアプリ。例: 神の視点マップ）
+
+- `main` ブランチのルートをそのまま配信する（`.nojekyll` あり、ルートの `index.html` が入口）。URL は `https://sishiya.github.io/manabi-lab/<app>/`。Pages の URL は公開情報なので DEVNOTES に書いてよい。
+- **push した時点で公開される**。だから push の前の公開前チェック（7章）がそのまま公開前チェックになる。
+- Pages で出すアプリの `index.html` は普通の HTML（`<!doctype html>` から書く）。doctype なしの Artifact 用のファイルは、ブラウザの互換モードで表示が崩れることがあるので、Pages の入口からはリンクしない。
+- 外のデータ（地図タイル・API）は、ブラウザから直接読めるもの（CORS）で、キー不要のものだけ。キーをファイルに書かない（7章）。
+- 公開を確かめるとき: push のあと1〜2分待って、Pages の URL を Browser ペインで開き、DEVNOTES の「確認のしかた」を通す。
+
+### 8.2 Artifact（1ファイルで完結し、外のデータを読まないアプリ）
+
 - 公開は**既存の Artifact URL へ同じファイルを再公開**する（新しい URL を作らない）。
 - Artifact の URL は Git に入れない。ルートの `PUBLISH.local.md`（この PC だけ、`.gitignore` 済み）に書き、DEVNOTES には Artifact の**タイトル**だけ書く。`PUBLISH.local.md` がない PC では、Artifact の一覧（`action: "list"`）でタイトルを探して URL を確かめ、`PUBLISH.local.md` を作り直す。新しく公開したら必ず足す。
 - 公開する `index.html` には doctype や html/head/body タグを書かない（公開時に包まれる）。ランチャーはローカル用なので書く。
@@ -106,7 +118,7 @@ Artifact の公開・再公開、git の commit／push の**前に毎回**行う
 
 ## 10. 複数の PC で作業する（Git）
 
-- このフォルダは GitHub のリポジトリ（`sishiya/manabi-lab`、いまは Private）で管理する。作業の始めに pull、区切りで commit と push（その前に 7 の公開前チェック）。2台で同時に作業しない。
+- このフォルダは GitHub のリポジトリ（`sishiya/manabi-lab`、**Public**。2026-10-05 に Private から変更）で管理する。push した内容は誰でも読める。作業の始めに pull、区切りで commit と push（その前に 7 の公開前チェック）。2台で同時に作業しない。
 - **役割分担**: Claude は区切りごとに公開前チェックとコミットまで行い、何をコミットしたかとチェックの結果を報告する。**push はユーザーが行う**（GitHub Desktop の「Push origin」。Claude は push しない）。pull もユーザーに頼む。
 - コミットの作者は `sishiya <85350751+sishiya@users.noreply.github.com>`（GitHub の代わりのアドレス。本当のメールアドレスは使わない）。新しい PC でも `git config user.name` と `user.email` をこの値にする。
 - コミットメッセージは日本語で、何をしたか1行（例: 「evolution v009: 想像の生き物」）。push 前のコミットは作り直してよいが、push 後は作り直さない。
