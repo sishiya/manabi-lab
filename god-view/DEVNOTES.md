@@ -4,8 +4,8 @@
 
 ## 別セッションで続けるとき（まずここ）
 
-- **いまの状態**: v004（段階B の3「地下を見る」。段階B はこれで一通り）。3D の地球＋PLATEAU の建物（447 区・市）＋OSM の建物＋地下（地下街・長岡市の地下の管）。**公開先は GitHub Pages**: https://sishiya.github.io/manabi-lab/god-view/ （push すると更新。RULES 8.1）。
-- **次にやること**: 候補 (1) 「災害の想定」層（PLATEAU の建物属性の洪水・高潮の想定浸水深で建物を色分け。浸水想定区域モデル fld/htd/tnm も 3D Tiles である）、(2) 段階C「生きている地球」（昼夜・雲・地震・ISS）、(3) 段階D「動く街」（電車・バス・人）。ユーザーに選んでもらう。PLAN.md 8章。
+- **いまの状態**: v005（段階C「生きている地球」＋軽量化）。3D の地球＋建物（PLATEAU・OSM）＋地下＋時刻・夜の明かり・きのうの衛星写真・地震・人工衛星・天気。**公開先は GitHub Pages**: https://sishiya.github.io/manabi-lab/god-view/ （push すると更新。RULES 8.1）。
+- **次にやること**: 段階D「動く街」（キーなしの公開データで電車・バス、道路に沿って動く車・人の演出）→ 段階F「宇宙へ」。ユーザーは C→D→（E は B の3で済み）→F の順で進めてよいと了承済み。軽量化を続けること（ユーザーの要望: 重くなってきた）。
 - **読む順**: `../RULES.md` → このメモ → `PLAN.md`（全体の構想と段階）→ 下の「ファイル構成」で関係するファイルだけ。
 - **動かし方**: ユーザーは `god-view/start.bat` をダブルクリック（サーバーがなければ起動して http://localhost:8765/god-view/ を開く）。Claude は `.claude/launch.json` の `apps`。**file:// では動かない**（Cesium の Worker が CDN から読めない。開くと案内だけ出す）。
 - **デバッグ用**: `window.__gv`（`width()` 画面の幅 m、`state()`、`terrain()` 標高タイルの読み込み数、`goto(lon,lat,h)`、`home()`、`run(n,dt)` 描画を n 回進める）。例外は `window.__gvErr`。
@@ -24,6 +24,7 @@
 - 2026-10-05 v002b-favicon: ファビコン（地球の SVG を埋め込み）。まなびラボ用のサムネイルは thumbs/god-view.jpg（RULES 8.1）。
 - 2026-10-05 v003-osm-buildings: 段階B の2。PLATEAU のない所の建物（OpenFreeMap のベクトルタイル、`js/mvt.js` の自作解読器、`js/osmbuildings.js`）。パリ・函館・ニューヨークで確認。
 - 2026-10-05 v004-underground: 段階B の3。地面の半透明化と地下へのカメラ、PLATEAU の地下街（7か所）・長岡市の下水道管とマンホール（3D）・水道管など（平面の線を推定の深さで）、見どころボタン、地下のものの名前と設置年。
+- 2026-10-05 v005-living-earth: 段階C。時刻（スライダー ±24 時間・早送り）、夜の明かり（Black Marble、夜の側だけ）、背景「きのうの地球」（NASA の毎日の衛星写真）、地震（USGS）、人工衛星（CelesTrak＋satellite.js）、天気（Open-Meteo）。軽量化（下の「軽量化」）。
 
 ## ファイル構成
 
@@ -40,6 +41,7 @@
 | `js/mvt.js` | ベクトルタイル（Mapbox Vector Tile）の小さな解読器（外部ライブラリなし） | `GV.decodeMVT(buf, [層の名前])` |
 | `data/plateau-under.js` | PLATEAU の地下データの一覧（手で作成。地下街7・長岡市の下水道管とマンホール・管のベクトルタイル3種） | `GV.PLATEAU_UNDER` `GV.PLATEAU_PIPES` |
 | `js/underground.js` | 地下を見る: 地面の半透明・地下へのカメラ、地下の 3D Tiles、管の線、見どころへ飛ぶ | `GV.applyUnderground()` `GV.initUnderground()` `GV.gotoUnder(key)` `GV.UNDER_SPOTS` `GV.underStatus` |
+| `js/life.js` | 段階C: 時刻の操作、夜の明かり、地震、人工衛星（satellite.js は使うときに CDN から読み込む） | `GV.applyLife()` `GV.initLife()` `GV.setTimeOffset(h)` `GV.setTimeSpeed(x)` `GV.lifeStatus` |
 | `js/osmbuildings.js` | PLATEAU のない所の建物（OSM）。z14 のタイルごとに屋根と壁を組み立てて1つの Primitive。クリックした建物の高さ | `GV.applyOsmBuildings()` `GV.initOsmBuildings()` `GV.pickOsmBuilding()` `GV.osmStatus` |
 | `js/buildings.js` | 建物の立体（PLATEAU 3D Tiles）。見ている範囲の区・市だけ読む、ジオイド補正、クリックした建物の属性 | `GV.applyBuildings()` `GV.initBuildings()` `GV.pickBuilding()` `GV.bldgStatus` |
 | `tools/build-plateau-index.ps1` | 上の索引を作るスクリプト（PowerShell 5.1 用に **BOM つき UTF-8** で保存） | |
@@ -97,6 +99,23 @@
 - 見どころ（`GV.UNDER_SPOTS`）: 見たい地点の地面の高さを標高タイルで取り、`flyToBoundingSphere` ＋ `HeadingPitchRange` で斜め上から。丘の上でも街なかでも同じ見え方になる。
 - 読み込みは「地下を見る」がオンで、範囲から約 800m 以内・高さ 8km 未満のときだけ。
 - クリック: 地下の 3D Tiles の地物は `f.tileset.underItem` で種類（地下街・下水道・マンホール）、属性 `uro:year` を「設置の年」として出す。管の線は Primitive の id `{pipe, name}`。
+
+### 生きている地球（life.js、v005）
+- 時刻: Cesium の `clock`。スライダーは「いま」から ±24 時間（`setTimeOffset`）、早送りは `clock.multiplier`（600＝1秒が10分、3600＝1秒が1時間）。昼と夜（`enableLighting`）・夜の明かり・衛星の位置がこの時刻で動く。
+- 夜の明かり: GIBS の VIIRS Black Marble 2016 を `ImageryLayer({ dayAlpha: 0, nightAlpha: 1 })` で一番上に。昼と夜がオフだと夜の側が分からないので、オンにすると昼と夜も自動でオン。
+- きのうの地球: GIBS の VIIRS_SNPP_CorrectedReflectance_TrueColor（きのうの UTC の日付、ズーム9まで）。背景の1つ（日本の地理院の層は重ねない）。
+- 地震: USGS の 2.5_week.geojson を `PointPrimitiveCollection` で。色は深さ（30km 未満 赤・100 未満 橙・300 未満 黄・それより深い 青）、大きさは M。`disableDepthTestDistance` で地球の裏に隠れない…ではなく、地表の点なので常に見える。
+- 人工衛星: CelesTrak の stations と visual（重なりを除いて 173 機）の TLE を、satellite.js（`twoline2satrec`→`propagate`→`eciToGeodetic`）で 1 秒ごとに計算。ISS は黄色＋ラベル＋1周分（93分）の通り道（5分ごとに描き直し）。CelesTrak は同じグループの取得を2時間に1回までにしてほしいとのことなので、ページを開いてオンにしたときに1回だけ取る。
+  - **ハマった**: 衛星の点を作り終える前に `clock.onTick` が位置を更新しようとして、Cesium の描画が止まった（「An error occurred while rendering」）→ 点のない衛星は飛ばす、onTick の中は try で包む。
+- 天気: クリックした地点の Open-Meteo の current（気温・湿度・天気コード・風）。数値予報モデルの値なので「推定」の印。WMO の天気コードは日本語の表 `WMO` で。
+
+### 軽量化（v005。ユーザーから「重くなってきた」）
+- 画面の幅（`GV.viewWidth`、地表への pick）を毎フレーム測っていた → カメラが動いたとき・タイル読み込みが終わったときだけ、0.25 秒に1回まで。
+- 地形の細かさ `maximumScreenSpaceError` 1.5 → 2（Cesium の初期値）、`tileCacheSize` 300 → 150。
+- PLATEAU の建物: 同時に表示 6 → 4 区・市、覚えておく 10 → 6、`maximumScreenSpaceError` 12 → 16、`cacheBytes` 96MB（初期値は tileset ごとに 512MB）。地下の tileset も 64MB。
+- OSM の建物: 覚えておく区画 30 → 14。
+- 止まっているときは描き直さない: 実時間の昼夜は `maximumRenderTimeChange`（60 秒）に任せ、衛星は位置を更新した 1 秒ごとだけ `requestRender`。
+- まだできること: OSM の建物の組み立てを Web Worker に、PLATEAU の写真なし（LOD2 テクスチャなし）を初期値にする、など。
 
 ### スケール
 - 画面の幅 = 画面中央の地表までの距離 × 2·tan(横の画角/2)。地表に当たらないときは地球の中心までの距離 − 6371km。
@@ -174,6 +193,8 @@
 13. 地下: パネルの「東京駅・八重洲の地下街へ」→ 半透明の地面の下に八重洲の地下街、建物は薄く。パネルに「表示中: 東京駅・八重洲…」。地下（139.7712, 35.6775、高さ −12m、方位 330°）に潜っても表示が壊れない。
 14. 「長岡市の地下の管へ」→ 青（水道）・紫（その他）・黄（ガス）の線、パネルに「水道管・ガス管など 5328 本」。138.74611, 37.42658 の近く（画面の幅 70m）で灰色のマンホールと茶色の下水道管。クリックで「汚水マンホール／設置の年 1997」、管は「深さ 約1.2m（推定）」。
 15. 「地下を見る」をオフ → 地面が不透明に戻り、建物の半透明も戻る。
+16. 生きている地球: 地震・人工衛星・夜の明かりをオン、引いて地球全体 → 地震の点（300件ほど）、衛星（170機ほど）、黄色の ISS と通り道。時刻を +9 時間にすると日本が夜になり街の明かり。背景「きのうの地球」で雲の写った写真。
+17. 東京駅あたりをクリック → 住所・標高に加えて「いまの天気: 晴れ・○℃…（推定）」。地震の点をクリック →「マグニチュード／深さ／時刻」。
 
 ## 残っている課題
 
