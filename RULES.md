@@ -99,7 +99,7 @@ Artifact の公開・再公開、git の commit／push の**前に毎回**行う
 - 外のデータ（地図タイル・API）は、ブラウザから直接読めるもの（CORS）で、キー不要のものだけ。キーをファイルに書かない（7章）。
 - **入口に載せるもの**: アプリごとに**ファビコン**（`index.html` と `launcher.html` の `<title>` の直後に、SVG を埋め込んだ `<link rel="icon" href="data:image/svg+xml,…">`。テーマ色の角丸の四角＋中身を表す図形。外のファイルにしないのは Artifact 版でも効くように）と、**サムネイル** `thumbs/<app>.jpg`（640×360）。
 - サムネイルの撮り直し: サーバー `apps` を起動して `powershell -NoProfile -ExecutionPolicy Bypass -File tools/make-thumbs.ps1 [-Apps a,b]`。ヘッドレスの Chrome を DevTools プロトコルで動かし、`tools/thumb.html` が各アプリの準備（開始ボタン・カメラ移動など。アプリごとの手順は thumb.html の `SETUP`）を終えてから撮る。新しいアプリは `SETUP` と make-thumbs の一覧に足す。
-- 入口のカードには**作成日と更新日**（`<p class="dates">作成 YYYY-MM-DD ・ 更新 YYYY-MM-DD</p>`）。作成日は開発メモ・ランチャーのいちばん古い日付（Git の記録は 2026-10-04 から）、**更新日はそのアプリを直してコミットした日**。アプリを直したら、同じコミットで入口の更新日も書き換える（`git log -1 --format=%ad --date=short -- <app>` で確かめられる）。
+- 入口のカードには**作成日と更新日**（`<p class="dates">作成 YYYY-MM-DD ・ 更新 YYYY-MM-DD</p>`）。作成日は開発メモ・ランチャーのいちばん古い日付（Git の記録は 2026-10-04 から）、**更新日はそのアプリの中身（機能・内容・画面の説明）が変わった日**。ファビコン・入口のページのための変更など、中身が変わらない一括の変更は数えない（2026-10-05 のファビコン追加は数えていない）。アプリの中身を直したら、同じコミットで入口の更新日も書き換える。
 - 紹介動画は将来（まだ作らない）。
 - 公開を確かめるとき: push のあと1〜2分待って、Pages の URL を Browser ペインで開き、DEVNOTES の「確認のしかた」を通す。
 
