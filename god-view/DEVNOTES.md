@@ -4,8 +4,8 @@
 
 ## 別セッションで続けるとき（まずここ）
 
-- **いまの状態**: v002b（段階B の1「PLATEAU の建物」）。日本全体から家1軒まで寄れる 3D の地球＋全国 447 区・市の建物の立体。**公開先は GitHub Pages**: https://sishiya.github.io/manabi-lab/god-view/ （push すると更新。RULES 8.1）。
-- **次にやること**: 段階B の続き — (2) PLATEAU のない所（日本の外・地方）の建物を OSM の高さ情報から（OpenFreeMap のベクトルタイル）、(3) 地下を見る視点（地面を半透明に）。候補: PLATEAU の建物属性にある**洪水・高潮の想定浸水深**で建物を色分けする「災害の想定」層。PLAN.md 8章。
+- **いまの状態**: v003（段階B の2「世界の建物」）。日本全体から家1軒まで寄れる 3D の地球＋PLATEAU の建物（447 区・市）＋それ以外の建物（OSM）。**公開先は GitHub Pages**: https://sishiya.github.io/manabi-lab/god-view/ （push すると更新。RULES 8.1）。
+- **次にやること**: 段階B の3「地下を見る」（地面を半透明にして地下へ。PLATEAU の地下街・地下埋設物＝長岡市の水道管など）。候補: PLATEAU の建物属性の**洪水・高潮の想定浸水深**で建物を色分けする「災害の想定」層。PLAN.md 8章。
 - **読む順**: `../RULES.md` → このメモ → `PLAN.md`（全体の構想と段階）→ 下の「ファイル構成」で関係するファイルだけ。
 - **動かし方**: ユーザーは `god-view/start.bat` をダブルクリック（サーバーがなければ起動して http://localhost:8765/god-view/ を開く）。Claude は `.claude/launch.json` の `apps`。**file:// では動かない**（Cesium の Worker が CDN から読めない。開くと案内だけ出す）。
 - **デバッグ用**: `window.__gv`（`width()` 画面の幅 m、`state()`、`terrain()` 標高タイルの読み込み数、`goto(lon,lat,h)`、`home()`、`run(n,dt)` 描画を n 回進める）。例外は `window.__gvErr`。
@@ -22,6 +22,7 @@
 - 2026-10-05 **GitHub Pages で公開**（リポジトリを Public に）。本番の URL で「確認のしかた」1〜6 を通して問題なし。操作説明の「住所（世界）」を修正。
 - 2026-10-05 v002-plateau: 段階B の1。PLATEAU の建物（447 区・市、LOD1／LOD2、写真）、ジオイド補正、建物の属性、建物のワイヤフレーム、カメラからの光。索引は tools/build-plateau-index.ps1 で生成。
 - 2026-10-05 v002b-favicon: ファビコン（地球の SVG を埋め込み）。まなびラボ用のサムネイルは thumbs/god-view.jpg（RULES 8.1）。
+- 2026-10-05 v003-osm-buildings: 段階B の2。PLATEAU のない所の建物（OpenFreeMap のベクトルタイル、`js/mvt.js` の自作解読器、`js/osmbuildings.js`）。パリ・函館・ニューヨークで確認。
 
 ## ファイル構成
 
@@ -35,6 +36,8 @@
 | `js/terrain.js` | 標高タイル → Cesium の地形 | `GV.makeTerrain()` `heightsFor()` `getHeights()` `decodeGsi()` `decodeTerrarium()` `GV.terrainStats` |
 | `js/earth.js` | Viewer の作成、層・地形・表示の切り替え、カメラ移動 | `GV.state` `GV.initEarth()` `GV.applyBase/Overlays/Terrain/View()` `GV.home()` `GV.flyToLonLat()` |
 | `data/plateau-bldg.js` | **自動生成**（手で直さない）。PLATEAU 建物の索引: 区・市ごとの範囲・ジオイド高・LOD1／LOD2 の URL。作り直しは `tools/build-plateau-index.ps1`（数分。カタログ API と国土地理院のジオイド高計算を使う） | `GV.PLATEAU_BLDG` `GV.PLATEAU_PREFIX` |
+| `js/mvt.js` | ベクトルタイル（Mapbox Vector Tile）の小さな解読器（外部ライブラリなし） | `GV.decodeMVT(buf, [層の名前])` |
+| `js/osmbuildings.js` | PLATEAU のない所の建物（OSM）。z14 のタイルごとに屋根と壁を組み立てて1つの Primitive。クリックした建物の高さ | `GV.applyOsmBuildings()` `GV.initOsmBuildings()` `GV.pickOsmBuilding()` `GV.osmStatus` |
 | `js/buildings.js` | 建物の立体（PLATEAU 3D Tiles）。見ている範囲の区・市だけ読む、ジオイド補正、クリックした建物の属性 | `GV.applyBuildings()` `GV.initBuildings()` `GV.pickBuilding()` `GV.bldgStatus` |
 | `tools/build-plateau-index.ps1` | 上の索引を作るスクリプト（PowerShell 5.1 用に **BOM つき UTF-8** で保存） | |
 | `js/scale.js` | 画面の幅（m）、身近なものさし、宇宙〜素粒子の帯 | `GV.viewWidth()` `GV.RULERS` `GV.BANDS` `GV.nearestRuler()` `GV.fmtLen()` |
@@ -72,6 +75,16 @@
 - クリック: `scene.pick` が `Cesium3DTileFeature` なら属性（gml:name・bldg:usage・bldg:measuredHeight・bldg:storeysAboveGround／BelowGround）を地点の情報の上に出す。属性には洪水・高潮の想定浸水深（「…_浸水深」）もある。
 - 出典は表示中だけ `creditDisplay.addStaticCredit` で出す。
 
+### OSM の建物（osmbuildings.js、v003）
+- OpenFreeMap の TileJSON（`GV.OSMB.tilejson`）からタイルの URL を取る（URL に版の日付が入っていて変わるため、毎回 TileJSON から）。ズーム14、`building` 層。
+- OpenFreeMap は**同じ高さの建物をまとめて1つの地物（多角形がたくさん）**にしている。輪の符号付き面積で「外側＋穴」に分ける（最初の輪の符号が外側）。高さは `render_height`／`render_min_height`（OSM の height・building:levels から。タグがなければ既定の推定値）、`hide_3d` は出さない。
+- 形はタイル中心の ENU 座標（m）で組み立てる: 屋根は `Cesium.PolygonPipeline.triangulate`（earcut）、壁は辺ごとの四角を両面で。法線は外側の輪の回り方から外向きに。1タイル1つの `Primitive`（`asynchronous: false`、位置は DOUBLE、`modelMatrix` に ENU）。
+- 地面の高さ: 同じ z14 の標高タイル（`GV.demTile`。地形と同じデータ）で、外側の輪の頂点の一番低い値。地形とずれない。
+- 表示: カメラの高さ 6km 未満で、真下のまわりのタイル（1.5km 未満なら3×3、それ以上は5×5のうち近い9枚）。覚えるのは30枚。PLATEAU の区・市の範囲の中のタイルは出さない（建物「なし」のときは出す）。
+- クリック: Primitive の id `{osmTile}` に当たったら、pickPosition の点がどの建物の輪の中かを調べて高さを出す。
+- 重さ: 1タイルの組み立てで最大 0.25 秒ほど画面が止まる（パリ・ニューヨークで 3〜4万棟/9枚）。気になるなら Web Worker に移す。
+- ワイヤフレームは OSM の建物には効かない（Primitive に仕組みがない）。
+
 ### スケール
 - 画面の幅 = 画面中央の地表までの距離 × 2·tan(横の画角/2)。地表に当たらないときは地球の中心までの距離 − 6371km。
 - `GV.BANDS` は PLAN.md 4章の帯。`ready: true` の帯だけ明るく表示。
@@ -89,7 +102,7 @@
 | EOxCloudless（Sentinel-2 cloudless 2016） | tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857 | ○ | 不要 | **全年 CC BY-NC-SA 4.0**（EOX のライセンス表、2026-10 確認。「2016年は CC BY」は古い情報）。非営利なら可、商用は有料 |
 | OpenStreetMap タイル | tile.openstreetmap.org | ○ | 不要 | 大量利用は禁止（利用規約）。公開して人が増えたら別の配信元を検討 |
 | Nominatim（OSM 検索） | nominatim.openstreetmap.org | ○ | 不要 | 1秒1回まで、入力中の自動検索は禁止 → 送信時だけ |
-| OpenFreeMap（ベクトルタイル、建物の高さ入り） | tiles.openfreemap.org/planet | ○ | 不要 | 段階B 候補（日本の外の建物） |
+| OpenFreeMap（ベクトルタイル、建物の高さ入り） | tiles.openfreemap.org/planet | ○ | 不要 | v003 で建物に使用。登録・キーなし、回数制限なし、商用可。出典「OpenFreeMap © OpenMapTiles Data from OpenStreetMap」が必要 |
 | PLATEAU カタログ | api.plateau.reearth.io/datacatalog/plateau-datasets | ○ | 不要 | 7776件。建物 1065、**地下埋設物 10（長岡市の水道・下水・ガス管など）**、地下街 13、道路・鉄道・植生など |
 | PLATEAU 3D Tiles 本体 | assets.cms.plateau.reearth.io | ○ | 不要 | v002 で建物に使用。Range 要求にも対応（索引作りで先頭だけ読む） |
 | 国土地理院 ジオイド高計算 | vldb.gsi.go.jp/sokuchi/surveycalc/geoid/calcgh | ×（アプリからは使わない） | 不要 | 索引作成のときだけ。続けて送ると 0 を返すことがある → 間隔をあけて再試行 |
@@ -118,6 +131,7 @@
 | EOxCloudless | CC BY-NC-SA 4.0（非営利のみ）。出典を見える所に（指定の文言）| 非営利の学習用として利用。**商用にするならこの層を差し替える** |
 | Terrain Tiles | Mapzen と各データの出典（USGS・NOAA・Copernicus ほか） | 地図の上に要約、「このアプリについて」に一覧 |
 | CesiumJS | Apache-2.0。CDN から読み込むだけ（改変・再配布なし） | 「このアプリについて」に表記 |
+| OpenFreeMap（OSM の建物） | 回数制限なし・登録なし・商用可。出典が必要。元データは OSM（ODbL） | 表示中は地図の下に出典。「このアプリについて」にも |
 | PLATEAU（3D都市モデル） | 政府標準利用規約・CC BY 4.0 相当。出典の表示で、複製・加工・商用も可 | 表示中は地図の下に「3D都市モデル（Project PLATEAU）国土交通省」と高さの補正をしたこと |
 
 - ブラウザは User-Agent を変えられないので、OSM／Nominatim には Referer（GitHub Pages の URL）でアプリを識別してもらう。`Referrer-Policy` を厳しくしない。
@@ -142,6 +156,8 @@
 8. 建物の高さ: 駅前広場（139.7615, 35.6800、高さ 120m、方位 70°、下向き 18°）で、丸の内駅舎と広場が地面に接している（浮いていない・埋まっていない）。
 9. 建物をクリック（東京駅の北東のサピアタワー）→「サピアタワー／業務施設／167.2 m／地上34階・地下3階」。
 10. 那覇（127.676, 26.205、600m）で LOD1＋ワイヤフレーム → 箱の建物が線で出る。建物「なし」で消える。
+11. OSM の建物: パリ（2.2945, 48.85、450m、方位 20°、下向き 25°）・函館（140.72, 41.757、500m）→ 白っぽい建物が並ぶ（パネルに「9 区画・3万棟」ほど）。地図の下に OpenFreeMap の出典。建物をクリックすると「高さ 約 ○ m」。
+12. 東京駅（PLATEAU の区）では OSM の建物が 0 棟（二重にならない）。
 
 ## 残っている課題
 
