@@ -93,7 +93,8 @@ Artifact の公開・再公開、git の commit／push の**前に毎回**行う
 
 - `main` ブランチのルートをそのまま配信する（`.nojekyll` あり、ルートの `index.html` が入口）。URL は `https://sishiya.github.io/manabi-lab/<app>/`。Pages の URL は公開情報なので DEVNOTES に書いてよい。
 - **push した時点で公開される**。だから push の前の公開前チェック（7章）がそのまま公開前チェックになる。
-- Pages で出すアプリの `index.html` は普通の HTML（`<!doctype html>` から書く）。doctype なしの Artifact 用のファイルは、ブラウザの互換モードで表示が崩れることがあるので、Pages の入口からはリンクしない。
+- Pages 専用のアプリの `index.html` は普通の HTML（`<!doctype html>` から書く）。
+- Artifact 用（doctype なし）のアプリも、push すれば Pages で互換モード（quirks）で開ける。2026-10-05 に8本すべてで、標準モードと全要素の位置・大きさを比べて同じ（evolution の左上の箱だけ 7〜8px 低い）ことを確かめ、入口（ルートの `index.html`「まなびラボ」）に載せた。**新しいアプリを入口に足すとき**は、同じ比べ方（DEVNOTES の確認に加えて、Pages の URL で互換モードと doctype つきの標準モードを比べる）をする。
 - 外のデータ（地図タイル・API）は、ブラウザから直接読めるもの（CORS）で、キー不要のものだけ。キーをファイルに書かない（7章）。
 - 公開を確かめるとき: push のあと1〜2分待って、Pages の URL を Browser ペインで開き、DEVNOTES の「確認のしかた」を通す。
 

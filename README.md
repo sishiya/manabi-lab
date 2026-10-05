@@ -14,6 +14,7 @@
 | `immune-battle/` | 免疫のたたかい |
 | `god-view/` | 神の視点マップ — 本物の地形・写真・地図の3D地球（GitHub Pages で公開: https://sishiya.github.io/manabi-lab/god-view/ ） |
 
+- **公開中**: https://sishiya.github.io/manabi-lab/ （入口のページから全アプリを開けます。GitHub Pages）
 - 各アプリの `index.html` が最新版、`launcher.html` から過去の版を開けます（`versions/`）。
 - 仕組みや確認のしかたは各フォルダの `DEVNOTES.md`、進め方の共通ルールは `RULES.md`。
 
