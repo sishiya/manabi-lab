@@ -4,8 +4,8 @@
 
 ## 別セッションで続けるとき（まずここ）
 
-- **いまの状態**: v003（段階B の2「世界の建物」）。日本全体から家1軒まで寄れる 3D の地球＋PLATEAU の建物（447 区・市）＋それ以外の建物（OSM）。**公開先は GitHub Pages**: https://sishiya.github.io/manabi-lab/god-view/ （push すると更新。RULES 8.1）。
-- **次にやること**: 段階B の3「地下を見る」（地面を半透明にして地下へ。PLATEAU の地下街・地下埋設物＝長岡市の水道管など）。候補: PLATEAU の建物属性の**洪水・高潮の想定浸水深**で建物を色分けする「災害の想定」層。PLAN.md 8章。
+- **いまの状態**: v004（段階B の3「地下を見る」。段階B はこれで一通り）。3D の地球＋PLATEAU の建物（447 区・市）＋OSM の建物＋地下（地下街・長岡市の地下の管）。**公開先は GitHub Pages**: https://sishiya.github.io/manabi-lab/god-view/ （push すると更新。RULES 8.1）。
+- **次にやること**: 候補 (1) 「災害の想定」層（PLATEAU の建物属性の洪水・高潮の想定浸水深で建物を色分け。浸水想定区域モデル fld/htd/tnm も 3D Tiles である）、(2) 段階C「生きている地球」（昼夜・雲・地震・ISS）、(3) 段階D「動く街」（電車・バス・人）。ユーザーに選んでもらう。PLAN.md 8章。
 - **読む順**: `../RULES.md` → このメモ → `PLAN.md`（全体の構想と段階）→ 下の「ファイル構成」で関係するファイルだけ。
 - **動かし方**: ユーザーは `god-view/start.bat` をダブルクリック（サーバーがなければ起動して http://localhost:8765/god-view/ を開く）。Claude は `.claude/launch.json` の `apps`。**file:// では動かない**（Cesium の Worker が CDN から読めない。開くと案内だけ出す）。
 - **デバッグ用**: `window.__gv`（`width()` 画面の幅 m、`state()`、`terrain()` 標高タイルの読み込み数、`goto(lon,lat,h)`、`home()`、`run(n,dt)` 描画を n 回進める）。例外は `window.__gvErr`。
@@ -23,6 +23,7 @@
 - 2026-10-05 v002-plateau: 段階B の1。PLATEAU の建物（447 区・市、LOD1／LOD2、写真）、ジオイド補正、建物の属性、建物のワイヤフレーム、カメラからの光。索引は tools/build-plateau-index.ps1 で生成。
 - 2026-10-05 v002b-favicon: ファビコン（地球の SVG を埋め込み）。まなびラボ用のサムネイルは thumbs/god-view.jpg（RULES 8.1）。
 - 2026-10-05 v003-osm-buildings: 段階B の2。PLATEAU のない所の建物（OpenFreeMap のベクトルタイル、`js/mvt.js` の自作解読器、`js/osmbuildings.js`）。パリ・函館・ニューヨークで確認。
+- 2026-10-05 v004-underground: 段階B の3。地面の半透明化と地下へのカメラ、PLATEAU の地下街（7か所）・長岡市の下水道管とマンホール（3D）・水道管など（平面の線を推定の深さで）、見どころボタン、地下のものの名前と設置年。
 
 ## ファイル構成
 
@@ -37,6 +38,8 @@
 | `js/earth.js` | Viewer の作成、層・地形・表示の切り替え、カメラ移動 | `GV.state` `GV.initEarth()` `GV.applyBase/Overlays/Terrain/View()` `GV.home()` `GV.flyToLonLat()` |
 | `data/plateau-bldg.js` | **自動生成**（手で直さない）。PLATEAU 建物の索引: 区・市ごとの範囲・ジオイド高・LOD1／LOD2 の URL。作り直しは `tools/build-plateau-index.ps1`（数分。カタログ API と国土地理院のジオイド高計算を使う） | `GV.PLATEAU_BLDG` `GV.PLATEAU_PREFIX` |
 | `js/mvt.js` | ベクトルタイル（Mapbox Vector Tile）の小さな解読器（外部ライブラリなし） | `GV.decodeMVT(buf, [層の名前])` |
+| `data/plateau-under.js` | PLATEAU の地下データの一覧（手で作成。地下街7・長岡市の下水道管とマンホール・管のベクトルタイル3種） | `GV.PLATEAU_UNDER` `GV.PLATEAU_PIPES` |
+| `js/underground.js` | 地下を見る: 地面の半透明・地下へのカメラ、地下の 3D Tiles、管の線、見どころへ飛ぶ | `GV.applyUnderground()` `GV.initUnderground()` `GV.gotoUnder(key)` `GV.UNDER_SPOTS` `GV.underStatus` |
 | `js/osmbuildings.js` | PLATEAU のない所の建物（OSM）。z14 のタイルごとに屋根と壁を組み立てて1つの Primitive。クリックした建物の高さ | `GV.applyOsmBuildings()` `GV.initOsmBuildings()` `GV.pickOsmBuilding()` `GV.osmStatus` |
 | `js/buildings.js` | 建物の立体（PLATEAU 3D Tiles）。見ている範囲の区・市だけ読む、ジオイド補正、クリックした建物の属性 | `GV.applyBuildings()` `GV.initBuildings()` `GV.pickBuilding()` `GV.bldgStatus` |
 | `tools/build-plateau-index.ps1` | 上の索引を作るスクリプト（PowerShell 5.1 用に **BOM つき UTF-8** で保存） | |
@@ -84,6 +87,16 @@
 - クリック: Primitive の id `{osmTile}` に当たったら、pickPosition の点がどの建物の輪の中かを調べて高さを出す。
 - 重さ: 1タイルの組み立てで最大 0.25 秒ほど画面が止まる（パリ・ニューヨークで 3〜4万棟/9枚）。気になるなら Web Worker に移す。
 - ワイヤフレームは OSM の建物には効かない（Primitive に仕組みがない）。
+
+### 地下（underground.js、v004）
+- 「地下を見る」: `globe.translucency`（表の濃さ＝「地面の濃さ」、裏は＋0.25）、`undergroundColor` は暗い茶色、`enableCollisionDetection = false` でカメラが地下へ。建物は PLATEAU を半透明のスタイル（`ghostStyle`、色 #cfe3ff・不透明度 0.18）に、OSM の建物は隠す（隠さないと地下街が見えない）。
+- PLATEAU の地下データは少ない（2026-10 時点）: **地下街**（LOD4、写真つき）＝札幌・千代田・中央・新宿・台東・渋谷・豊島（千代田と中央は同じ範囲＝八重洲。両方読んでも重なりの不具合は見えなかった）。**地下埋設物**は長岡市だけ: 下水道管とマンホールは 3D Tiles（LOD3、本当の深さ）、水道管・ガス管・その他の管路・ハンドホールは**平面の線（ベクトルタイル、ズーム8〜18。深さ・太さのデータなし）**。
+- 高さ: 地下の 3D Tiles も建物と同じくジオイド高だけ下げる（長岡 39.82m）。補正後、マンホールの上端が地面とほぼ一致することを確認。
+- 水道管などは地面（標高タイル z14）から **1.2m 下に推定**して `PolylineGeometry`（幅4px、色: 水道 #3fa9ff・ガス #ffd23f・その他 #c58bff）。画面とクリックの表示で「推定」と明記。1.2m は道路法施行令の水道管の土かぶりの標準（現在は浅くできる規定もある）。
+- 長岡市の管は**長岡駅前ではなく市の西部の丘（親沢町あたり、標高約110m）**の一角だけ。水道管が多いのは東経138.746°・北緯37.427°付近 → 見どころ「長岡市の地下の管」はそこ。下水道管・マンホールは細いので、近づかないと見えない（画面の幅 100m くらい）。
+- 見どころ（`GV.UNDER_SPOTS`）: 見たい地点の地面の高さを標高タイルで取り、`flyToBoundingSphere` ＋ `HeadingPitchRange` で斜め上から。丘の上でも街なかでも同じ見え方になる。
+- 読み込みは「地下を見る」がオンで、範囲から約 800m 以内・高さ 8km 未満のときだけ。
+- クリック: 地下の 3D Tiles の地物は `f.tileset.underItem` で種類（地下街・下水道・マンホール）、属性 `uro:year` を「設置の年」として出す。管の線は Primitive の id `{pipe, name}`。
 
 ### スケール
 - 画面の幅 = 画面中央の地表までの距離 × 2·tan(横の画角/2)。地表に当たらないときは地球の中心までの距離 − 6371km。
@@ -158,6 +171,9 @@
 10. 那覇（127.676, 26.205、600m）で LOD1＋ワイヤフレーム → 箱の建物が線で出る。建物「なし」で消える。
 11. OSM の建物: パリ（2.2945, 48.85、450m、方位 20°、下向き 25°）・函館（140.72, 41.757、500m）→ 白っぽい建物が並ぶ（パネルに「9 区画・3万棟」ほど）。地図の下に OpenFreeMap の出典。建物をクリックすると「高さ 約 ○ m」。
 12. 東京駅（PLATEAU の区）では OSM の建物が 0 棟（二重にならない）。
+13. 地下: パネルの「東京駅・八重洲の地下街へ」→ 半透明の地面の下に八重洲の地下街、建物は薄く。パネルに「表示中: 東京駅・八重洲…」。地下（139.7712, 35.6775、高さ −12m、方位 330°）に潜っても表示が壊れない。
+14. 「長岡市の地下の管へ」→ 青（水道）・紫（その他）・黄（ガス）の線、パネルに「水道管・ガス管など 5328 本」。138.74611, 37.42658 の近く（画面の幅 70m）で灰色のマンホールと茶色の下水道管。クリックで「汚水マンホール／設置の年 1997」、管は「深さ 約1.2m（推定）」。
+15. 「地下を見る」をオフ → 地面が不透明に戻り、建物の半透明も戻る。
 
 ## 残っている課題
 
