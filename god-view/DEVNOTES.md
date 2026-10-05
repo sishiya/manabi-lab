@@ -4,8 +4,8 @@
 
 ## 別セッションで続けるとき（まずここ）
 
-- **いまの状態**: v005（段階C「生きている地球」＋軽量化）。3D の地球＋建物（PLATEAU・OSM）＋地下＋時刻・夜の明かり・きのうの衛星写真・地震・人工衛星・天気。**公開先は GitHub Pages**: https://sishiya.github.io/manabi-lab/god-view/ （push すると更新。RULES 8.1）。
-- **次にやること**: 段階D「動く街」（キーなしの公開データで電車・バス、道路に沿って動く車・人の演出）→ 段階F「宇宙へ」。ユーザーは C→D→（E は B の3で済み）→F の順で進めてよいと了承済み。軽量化を続けること（ユーザーの要望: 重くなってきた）。
+- **いまの状態**: v006（段階D「動く街」）。3D の地球＋建物（PLATEAU・OSM）＋地下＋生きている地球（時刻・夜の明かり・衛星写真・地震・人工衛星・天気）＋都営の電車・バスのいまの位置＋車・人・鳥の演出。**公開先は GitHub Pages**: https://sishiya.github.io/manabi-lab/god-view/ （push すると更新。RULES 8.1）。
+- **次にやること**: 段階F「宇宙へ」（地球から引いて月・太陽系・恒星・銀河・宇宙の大規模構造へ。Three.js で別の世界を作り、スケール値 L で切り替える）。その後 G「ミクロへ」。E（地下）は段階B の3で済み。軽量化を続けること。
 - **読む順**: `../RULES.md` → このメモ → `PLAN.md`（全体の構想と段階）→ 下の「ファイル構成」で関係するファイルだけ。
 - **動かし方**: ユーザーは `god-view/start.bat` をダブルクリック（サーバーがなければ起動して http://localhost:8765/god-view/ を開く）。Claude は `.claude/launch.json` の `apps`。**file:// では動かない**（Cesium の Worker が CDN から読めない。開くと案内だけ出す）。
 - **デバッグ用**: `window.__gv`（`width()` 画面の幅 m、`state()`、`terrain()` 標高タイルの読み込み数、`goto(lon,lat,h)`、`home()`、`run(n,dt)` 描画を n 回進める）。例外は `window.__gvErr`。
@@ -25,6 +25,7 @@
 - 2026-10-05 v003-osm-buildings: 段階B の2。PLATEAU のない所の建物（OpenFreeMap のベクトルタイル、`js/mvt.js` の自作解読器、`js/osmbuildings.js`）。パリ・函館・ニューヨークで確認。
 - 2026-10-05 v004-underground: 段階B の3。地面の半透明化と地下へのカメラ、PLATEAU の地下街（7か所）・長岡市の下水道管とマンホール（3D）・水道管など（平面の線を推定の深さで）、見どころボタン、地下のものの名前と設置年。
 - 2026-10-05 v005-living-earth: 段階C。時刻（スライダー ±24 時間・早送り）、夜の明かり（Black Marble、夜の側だけ）、背景「きのうの地球」（NASA の毎日の衛星写真）、地震（USGS）、人工衛星（CelesTrak＋satellite.js）、天気（Open-Meteo）。軽量化（下の「軽量化」）。
+- 2026-10-05 v006-moving-city: 段階D。都営の電車・バスのいまの位置（`js/transit.js`、`data/toei.js` は `tools/build-toei-index.ps1` で生成）、車・人・鳥の演出（`js/agents.js`）。
 
 ## ファイル構成
 
@@ -42,6 +43,9 @@
 | `data/plateau-under.js` | PLATEAU の地下データの一覧（手で作成。地下街7・長岡市の下水道管とマンホール・管のベクトルタイル3種） | `GV.PLATEAU_UNDER` `GV.PLATEAU_PIPES` |
 | `js/underground.js` | 地下を見る: 地面の半透明・地下へのカメラ、地下の 3D Tiles、管の線、見どころへ飛ぶ | `GV.applyUnderground()` `GV.initUnderground()` `GV.gotoUnder(key)` `GV.UNDER_SPOTS` `GV.underStatus` |
 | `js/life.js` | 段階C: 時刻の操作、夜の明かり、地震、人工衛星（satellite.js は使うときに CDN から読み込む） | `GV.applyLife()` `GV.initLife()` `GV.setTimeOffset(h)` `GV.setTimeSpeed(x)` `GV.lifeStatus` |
+| `js/transit.js` | 都営の電車・バスのいまの位置（30秒ごと）。路線は駅を直線で結ぶ。`data/toei.js` は使うときに読み込む | `GV.applyTransit()` `GV.initTransit()` `GV.transitInfo(id)` `GV.transitStatus` |
+| `data/toei.js` | **自動生成**（257KB）。都営バスのバス停 3690・都営の駅 149・路線 6 の座標。作り直しは `tools/build-toei-index.ps1` | `GV.TOEI` |
+| `js/agents.js` | 車・人・鳥の演出。画面の中心 700m の OSM の道路・緑地から | `GV.applyAgents()` `GV.initAgents()` `GV.agentStatus` |
 | `js/osmbuildings.js` | PLATEAU のない所の建物（OSM）。z14 のタイルごとに屋根と壁を組み立てて1つの Primitive。クリックした建物の高さ | `GV.applyOsmBuildings()` `GV.initOsmBuildings()` `GV.pickOsmBuilding()` `GV.osmStatus` |
 | `js/buildings.js` | 建物の立体（PLATEAU 3D Tiles）。見ている範囲の区・市だけ読む、ジオイド補正、クリックした建物の属性 | `GV.applyBuildings()` `GV.initBuildings()` `GV.pickBuilding()` `GV.bldgStatus` |
 | `tools/build-plateau-index.ps1` | 上の索引を作るスクリプト（PowerShell 5.1 用に **BOM つき UTF-8** で保存） | |
@@ -116,6 +120,19 @@
 - OSM の建物: 覚えておく区画 30 → 14。
 - 止まっているときは描き直さない: 実時間の昼夜は `maximumRenderTimeChange`（60 秒）に任せ、衛星は位置を更新した 1 秒ごとだけ `requestRender`。
 - まだできること: OSM の建物の組み立てを Web Worker に、PLATEAU の写真なし（LOD2 テクスチャなし）を初期値にする、など。
+
+### 動く街（transit.js・agents.js、v006）
+- 電車・バス: 公共交通オープンデータセンターの**キー不要の公開 API**（`api-public.odpt.org/api/v4/`）。東京都交通局のデータは CC BY 4.0（CKAN のデータカタログで確認）。キーが要る `api.odpt.org` は使わない。JR・東京メトロ・私鉄はキーが要るので出していない。
+  - `odpt:Bus`（都営バス、約490台、約30秒ごと更新、約450KB）: 位置は**緯度経度ではなく** `fromBusstopPole`／`toBusstopPole`＋`fromBusstopPoleTime` → バス停の座標（`data/toei.js`）の間を、出発からの経過時間 × 5m/秒（信号・渋滞をならした目安）で進める（最大 95%）。
+  - `odpt:Train`（都営地下鉄・日暮里舎人ライナー・都電、約90本）: `fromStation`／`toStation`（`toStation` が空なら停車中）→ 駅の間を `dc:date` からの経過 ÷ 110 秒で進める。路線の色はデータの `odpt:color`、ないもの（都電荒川線・日暮里舎人ライナー）は見やすさのための色。
+  - 路線の線は駅を直線で結んだもの（`GroundPolylinePrimitive`、地面に沿わせる）。線路の正確な形ではない。
+  - 取得は「電車・バス」がオンで、東京都のあたり（高さ 150km 未満）を見ているときだけ。30秒ごと。
+  - 地下鉄も地上の高さに点で出している（地下の深さのデータはない）。
+- 車・人・鳥（演出）: OpenFreeMap のタイルの `transportation`（道路の種類 class／subclass、brunnel）・`park`・`landcover`（grass／wood）。トンネルは除く、橋は 8m 上げる。
+  - **画面の中心（地面）から 700m** の道路だけ。最初はまわり 9 区画に散らしたら画面にほとんど入らなかった → 中心に集め、250m 動いたら作り直す。高さ 1.2km 未満、地下を見るときは出さない。
+  - 数: 道路の長さ（km）× 種類の重み × 時間帯（日本時間の時刻ごとの表 `busy()`。朝夕の通勤時間が多く深夜は少ない）。車は ×20、人は ×40、上限 車600・人1200・鳥40。速さは道路の種類ごと（高速 22m/秒〜生活道路 6m/秒）、人は 1.0〜1.6m/秒。端まで来たら引き返す（交差点で曲がる処理はまだ）。車線・歩道の分だけ横にずらす。
+  - 鳥は緑地の中心のまわりを高さ 25〜65m で回る。
+  - 点（`PointPrimitiveCollection`）で、毎フレーム位置を更新（このときだけ描き直し続ける）。早送りしても 10 倍まで。地面の面とのずれで埋まらないよう 2.5m 上げる。
 
 ### スケール
 - 画面の幅 = 画面中央の地表までの距離 × 2·tan(横の画角/2)。地表に当たらないときは地球の中心までの距離 − 6371km。
@@ -195,6 +212,8 @@
 15. 「地下を見る」をオフ → 地面が不透明に戻り、建物の半透明も戻る。
 16. 生きている地球: 地震・人工衛星・夜の明かりをオン、引いて地球全体 → 地震の点（300件ほど）、衛星（170機ほど）、黄色の ISS と通り道。時刻を +9 時間にすると日本が夜になり街の明かり。背景「きのうの地球」で雲の写った写真。
 17. 東京駅あたりをクリック → 住所・標高に加えて「いまの天気: 晴れ・○℃…（推定）」。地震の点をクリック →「マグニチュード／深さ／時刻」。
+18. 動く街: 「都営の電車・バス」をオン、東京（139.73, 35.62、高さ 22km）→ 緑のバス約490台、路線の色の電車約90本と路線の線。パネルに取得時刻。バス・電車をクリック →「都営バス 都07 …／次は …」「大江戸線（… 行き）○○ → ○○」。
+19. 「車・人・鳥」をオン、新宿駅西口（139.6995, 35.6915 を 300m から）→ 車 600・人 1200・鳥 40 ほどが道路に沿って動く。クリックで「架空の人です」。
 
 ## 残っている課題
 
