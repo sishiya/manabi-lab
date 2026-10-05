@@ -13,7 +13,7 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
-$textExt = '.html','.htm','.js','.mjs','.css','.md','.txt','.json','.ps1','.sh','.yml','.yaml','.xml','.svg','.csv','.ini','.cfg','.toml',''
+$textExt = '.html','.htm','.js','.mjs','.css','.md','.txt','.json','.ps1','.sh','.bat','.cmd','.yml','.yaml','.xml','.svg','.csv','.ini','.cfg','.toml',''
 $badNames = '^\.env', '\.pem$', '\.key$', '\.pfx$', '\.p12$', '^id_(rsa|ed25519|ecdsa)', '^credentials', '\.kdbx$'
 $skipDirs = '\\\.git\\', '\\node_modules\\'
 

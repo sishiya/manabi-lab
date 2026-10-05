@@ -7,7 +7,7 @@
 - **いまの状態**: v001（段階A「地球の地図」）。日本全体から家1軒まで寄れる 3D の地球。公開はまだ（Artifact にこだわらない方針。公開先は後で決める）。
 - **次にやること**: 段階B「立体の街」（PLATEAU の建物 3D Tiles、日本の外は OSM の建物の高さ、ワイヤフレーム、地下を見る視点）。PLAN.md 8章。
 - **読む順**: `../RULES.md` → このメモ → `PLAN.md`（全体の構想と段階）→ 下の「ファイル構成」で関係するファイルだけ。
-- **動かし方**: `.claude/launch.json` の `apps` → http://localhost:8765/god-view/ 。file:// では動かない（分割版）。
+- **動かし方**: ユーザーは `god-view/start.bat` をダブルクリック（サーバーがなければ起動して http://localhost:8765/god-view/ を開く）。Claude は `.claude/launch.json` の `apps`。**file:// では動かない**（Cesium の Worker が CDN から読めない。開くと案内だけ出す）。
 - **デバッグ用**: `window.__gv`（`width()` 画面の幅 m、`state()`、`terrain()` 標高タイルの読み込み数、`goto(lon,lat,h)`、`home()`、`run(n,dt)` 描画を n 回進める）。例外は `window.__gvErr`。
   - **Browser ペインが非表示だと描画ループが止まる** → `await __gv.run(60,120)` で進めてからスクリーンショット。スクリーンショットが「timed out」になったら、もう一度撮ると撮れることが多い。
 - **区切りごとの手順**: `versions/<番号-名前>/` に index.html・css・js を丸ごとコピー → `launcher.html` にカード → このメモの「状態」 → 「確認のしかた」を通しで → 公開前チェック（RULES 7章）→ コミット（push はユーザー）。
@@ -17,6 +17,7 @@
 
 - 2026-10-05 企画（PLAN.md）。段階0: データ源の CORS と利用条件を確認し、CesiumJS に決定。
 - 2026-10-05 v001-earth-map: 段階A。CesiumJS 1.146、背景4種・陰影・立体の地形・高さの強調・ワイヤフレーム・昼と夜・大気、地名検索、地点の住所と標高、スケール表示。
+- 2026-10-05 v001b-start-bat: file:// で開くと地球が出ない問題 → `start.bat`（サーバー起動＋ブラウザ）と file:// のときの案内。
 
 ## ファイル構成
 
@@ -84,6 +85,7 @@
 - Browser ペインが非表示 → Cesium の描画ループが止まり、地球が黒いまま・タイルも読まれない。`__gv.run()` で手動描画。
 - 非表示のペインでは読み込み時の `innerWidth` が 0 になることがある → 層のパネルの初期表示は「幅が 0 より大きく 800 未満のときだけ閉じる」。
 - 地理院の地名検索は住所専用で「東京タワー」→「…東」のような結果になる → Nominatim を併用。
+- index.html をダブルクリック（file://）すると「Refused to cross-origin redirects of the top-level worker script」で地球が出ない → start.bat から開く。
 
 ## 確認のしかた（変更のたびに通しで）
 
