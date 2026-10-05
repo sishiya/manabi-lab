@@ -129,7 +129,7 @@ Artifact の公開・再公開、git の commit／push の**前に毎回**行う
 - コミットメッセージは日本語で、何をしたか1行（例: 「evolution v009: 想像の生き物」）。push 前のコミットは作り直してよいが、push 後は作り直さない。
 - 新しい PC では: Git と Claude デスクトップを入れてクローン → `git config core.hooksPath .githooks` と `git config core.quotepath false` → `.private-words.txt` と `PUBLISH.local.md` を作る（8章）。
 - Claude のメモリと会話の履歴は PC ごと（移らない）。だから大事なことは必ずこのフォルダのメモ（RULES・各 DEVNOTES）に書く。
-- ローカル確認のサーバーは `.claude/launch.json` の `apps`（8765）。別の会話が使っていたら `apps-2`（8766）。
+- ローカル確認のサーバーは `.claude/launch.json` の `apps`（8765）。別の会話が使っていたら、または「Windows が予約しているポート」と言われて起動できないとき（2026-10-05 に発生）は `apps-2`（8766）。
 
 ## 11. セッションの使い方
 
