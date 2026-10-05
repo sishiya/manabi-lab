@@ -4,8 +4,8 @@
 
 ## 別セッションで続けるとき（まずここ）
 
-- **いまの状態**: v001c（段階A「地球の地図」＋権利と利用条件の見直し）。日本全体から家1軒まで寄れる 3D の地球。**公開先は GitHub Pages**: https://sishiya.github.io/manabi-lab/god-view/ （push すると更新。RULES 8.1）。
-- **次にやること**: 段階B「立体の街」（PLATEAU の建物 3D Tiles、日本の外は OSM の建物の高さ、ワイヤフレーム、地下を見る視点）。PLAN.md 8章。
+- **いまの状態**: v002（段階B の1「PLATEAU の建物」）。日本全体から家1軒まで寄れる 3D の地球＋全国 447 区・市の建物の立体。**公開先は GitHub Pages**: https://sishiya.github.io/manabi-lab/god-view/ （push すると更新。RULES 8.1）。
+- **次にやること**: 段階B の続き — (2) PLATEAU のない所（日本の外・地方）の建物を OSM の高さ情報から（OpenFreeMap のベクトルタイル）、(3) 地下を見る視点（地面を半透明に）。候補: PLATEAU の建物属性にある**洪水・高潮の想定浸水深**で建物を色分けする「災害の想定」層。PLAN.md 8章。
 - **読む順**: `../RULES.md` → このメモ → `PLAN.md`（全体の構想と段階）→ 下の「ファイル構成」で関係するファイルだけ。
 - **動かし方**: ユーザーは `god-view/start.bat` をダブルクリック（サーバーがなければ起動して http://localhost:8765/god-view/ を開く）。Claude は `.claude/launch.json` の `apps`。**file:// では動かない**（Cesium の Worker が CDN から読めない。開くと案内だけ出す）。
 - **デバッグ用**: `window.__gv`（`width()` 画面の幅 m、`state()`、`terrain()` 標高タイルの読み込み数、`goto(lon,lat,h)`、`home()`、`run(n,dt)` 描画を n 回進める）。例外は `window.__gvErr`。
@@ -20,10 +20,11 @@
 - 2026-10-05 v001b-start-bat: file:// で開くと地球が出ない問題 → `start.bat`（サーバー起動＋ブラウザ）と file:// のときの案内。
 - 2026-10-05 v001c-licenses: 権利と利用条件の見直し（下の章）。出典を地図の上に常に表示（タイルごとの追加出典も）、検索と住所を Nominatim に一本化（間隔とキャッシュ）、EOX を CC BY-NC-SA 表記に、「このアプリについて」に非営利・ほかの地図サービスと無関係・出典の詳細。
 - 2026-10-05 **GitHub Pages で公開**（リポジトリを Public に）。本番の URL で「確認のしかた」1〜6 を通して問題なし。操作説明の「住所（世界）」を修正。
+- 2026-10-05 v002-plateau: 段階B の1。PLATEAU の建物（447 区・市、LOD1／LOD2、写真）、ジオイド補正、建物の属性、建物のワイヤフレーム、カメラからの光。索引は tools/build-plateau-index.ps1 で生成。
 
 ## ファイル構成
 
-読み込み順は index.html の `<script>` の順（Cesium → sources → terrain → earth → scale → ui → main）。すべて `window.GV` に載せる。
+読み込み順は index.html の `<script>` の順（Cesium → sources → terrain → earth → data/plateau-bldg → buildings → scale → ui → main）。すべて `window.GV` に載せる。
 
 | ファイル | 中身 | 主な名前 |
 |---|---|---|
@@ -32,6 +33,9 @@
 | `js/sources.js` | **データ源の一覧**（URL・出典・範囲・ズーム）。新しいデータはまずここに足す | `GV.JAPAN` `GV.CREDIT` `GV.BASES` `GV.OVERLAYS` `GV.TERRAIN` `GV.API` `GV.TAGS` |
 | `js/terrain.js` | 標高タイル → Cesium の地形 | `GV.makeTerrain()` `heightsFor()` `getHeights()` `decodeGsi()` `decodeTerrarium()` `GV.terrainStats` |
 | `js/earth.js` | Viewer の作成、層・地形・表示の切り替え、カメラ移動 | `GV.state` `GV.initEarth()` `GV.applyBase/Overlays/Terrain/View()` `GV.home()` `GV.flyToLonLat()` |
+| `data/plateau-bldg.js` | **自動生成**（手で直さない）。PLATEAU 建物の索引: 区・市ごとの範囲・ジオイド高・LOD1／LOD2 の URL。作り直しは `tools/build-plateau-index.ps1`（数分。カタログ API と国土地理院のジオイド高計算を使う） | `GV.PLATEAU_BLDG` `GV.PLATEAU_PREFIX` |
+| `js/buildings.js` | 建物の立体（PLATEAU 3D Tiles）。見ている範囲の区・市だけ読む、ジオイド補正、クリックした建物の属性 | `GV.applyBuildings()` `GV.initBuildings()` `GV.pickBuilding()` `GV.bldgStatus` |
+| `tools/build-plateau-index.ps1` | 上の索引を作るスクリプト（PowerShell 5.1 用に **BOM つき UTF-8** で保存） | |
 | `js/scale.js` | 画面の幅（m）、身近なものさし、宇宙〜素粒子の帯 | `GV.viewWidth()` `GV.RULERS` `GV.BANDS` `GV.nearestRuler()` `GV.fmtLen()` |
 | `js/ui.js` | 層のパネル、検索、クリックした地点、スケール表示、パネル開閉 | `GV.initUI()` `GV.showPoint()` `updateScale()` |
 | `js/main.js` | 起動、デバッグ窓口 | `window.__gv` `window.__gvErr` |
@@ -57,6 +61,16 @@
 - 検索: Nominatim だけ（施設名も住所も引ける）。**Nominatim へはすべて `nominatim()` を通す**: 1.1秒以上の間隔、同じ URL はキャッシュ（利用規約）。入力中の自動検索はしない。
 - 地理院の地名検索・逆ジオコーダー・muni.js は v001c でやめた（「権利と利用条件」）。
 
+### 建物（buildings.js、v002）
+- 索引 `GV.PLATEAU_BLDG`（区・市ごと。政令市は区ごと）。カメラの高さ 25km 未満で、見えている範囲（＋カメラの真下）に重なる区・市を**カメラに近い順に6つ**表示。読み込んだものは10個まで覚え、それ以上は古い順に捨てる。
+  - 近い順を「見える範囲の中心」から測ると、地平線近くまで見たときに中心がずっと遠くなり、自分のいる区が外れた（v002 作業中に発生）→ カメラの真下から測る。
+- LOD は区・市ごとに LOD1（全建物、箱）か LOD2（屋根の形・壁の写真。LOD2 のデータがある所だけ。LOD2 のデータには LOD2 になっている建物だけが入るので、範囲の端で建物が抜けることがある）。LOD2 がない区・市は LOD1。
+- **高さの補正**: PLATEAU の 3D Tiles の形は楕円体高、地形（地理院の標高）は標高 → 区・市の中心の**ジオイド高**（27.8〜47.1m、国土地理院のジオイド高計算で索引作成時に取得）だけ、その場所の鉛直方向に下げる（`modelMatrix`）。補正なしだと東京で約37m 浮く（確認済み）。区・市の中でのジオイド高の変化（数十cm）は無視。属性 `_zmin` は標高（補正の確認に使える）。
+- 高さの強調（×2 以上）にすると、建物も Cesium が強調するが、ジオイド補正は強調前の値なので少しずれる。
+- 光: 「昼と夜」オフのときは `DirectionalLight` をカメラの向き＋少し下向きに毎フレーム向ける（本当の太陽だと夕方・夜に建物が真っ暗になるため）。
+- クリック: `scene.pick` が `Cesium3DTileFeature` なら属性（gml:name・bldg:usage・bldg:measuredHeight・bldg:storeysAboveGround／BelowGround）を地点の情報の上に出す。属性には洪水・高潮の想定浸水深（「…_浸水深」）もある。
+- 出典は表示中だけ `creditDisplay.addStaticCredit` で出す。
+
 ### スケール
 - 画面の幅 = 画面中央の地表までの距離 × 2·tan(横の画角/2)。地表に当たらないときは地球の中心までの距離 − 6371km。
 - `GV.BANDS` は PLAN.md 4章の帯。`ready: true` の帯だけ明るく表示。
@@ -76,7 +90,8 @@
 | Nominatim（OSM 検索） | nominatim.openstreetmap.org | ○ | 不要 | 1秒1回まで、入力中の自動検索は禁止 → 送信時だけ |
 | OpenFreeMap（ベクトルタイル、建物の高さ入り） | tiles.openfreemap.org/planet | ○ | 不要 | 段階B 候補（日本の外の建物） |
 | PLATEAU カタログ | api.plateau.reearth.io/datacatalog/plateau-datasets | ○ | 不要 | 7776件。建物 1065、**地下埋設物 10（長岡市の水道・下水・ガス管など）**、地下街 13、道路・鉄道・植生など |
-| PLATEAU 3D Tiles 本体 | assets.cms.plateau.reearth.io | ○ | 不要 | 段階B・E |
+| PLATEAU 3D Tiles 本体 | assets.cms.plateau.reearth.io | ○ | 不要 | v002 で建物に使用。Range 要求にも対応（索引作りで先頭だけ読む） |
+| 国土地理院 ジオイド高計算 | vldb.gsi.go.jp/sokuchi/surveycalc/geoid/calcgh | ×（アプリからは使わない） | 不要 | 索引作成のときだけ。続けて送ると 0 を返すことがある → 間隔をあけて再試行 |
 | NASA GIBS | gibs.earthdata.nasa.gov | ○ | 不要 | 段階C（雲・夜の光など） |
 | USGS 地震 | earthquake.usgs.gov/…/all_day.geojson | ○ | 不要 | 段階C |
 | CelesTrak（衛星の軌道） | celestrak.org | ○ | 不要 | 段階C |
@@ -102,6 +117,7 @@
 | EOxCloudless | CC BY-NC-SA 4.0（非営利のみ）。出典を見える所に（指定の文言）| 非営利の学習用として利用。**商用にするならこの層を差し替える** |
 | Terrain Tiles | Mapzen と各データの出典（USGS・NOAA・Copernicus ほか） | 地図の上に要約、「このアプリについて」に一覧 |
 | CesiumJS | Apache-2.0。CDN から読み込むだけ（改変・再配布なし） | 「このアプリについて」に表記 |
+| PLATEAU（3D都市モデル） | 政府標準利用規約・CC BY 4.0 相当。出典の表示で、複製・加工・商用も可 | 表示中は地図の下に「3D都市モデル（Project PLATEAU）国土交通省」と高さの補正をしたこと |
 
 - ブラウザは User-Agent を変えられないので、OSM／Nominatim には Referer（GitHub Pages の URL）でアプリを識別してもらう。`Referrer-Policy` を厳しくしない。
 - 人がたくさん使うようになったら（OSM の「重い利用」に当たりそうなら）、地図タイルと検索の配信元を見直す。
@@ -121,6 +137,10 @@
 4. 背景を「地図」、ワイヤフレーム、高さ×3 → 表示が変わる。
 5. スマホ幅（mobile）で、上のバー・地点の情報・スケールが重ならず、横スクロールなし。
 6. 下のスケール表示: 寄ると「画面の幅」と「≒ ものさし」と 10^L が変わり、目盛りの黄色い線が動く。
+7. 建物: 東京駅（139.7671, 35.6745、高さ 700m、下向き 35°）→ 屋根の形と写真つきのビル。パネルに「表示中: 東京都千代田区…」。地図の下に PLATEAU の出典。
+8. 建物の高さ: 駅前広場（139.7615, 35.6800、高さ 120m、方位 70°、下向き 18°）で、丸の内駅舎と広場が地面に接している（浮いていない・埋まっていない）。
+9. 建物をクリック（東京駅の北東のサピアタワー）→「サピアタワー／業務施設／167.2 m／地上34階・地下3階」。
+10. 那覇（127.676, 26.205、600m）で LOD1＋ワイヤフレーム → 箱の建物が線で出る。建物「なし」で消える。
 
 ## 残っている課題
 
