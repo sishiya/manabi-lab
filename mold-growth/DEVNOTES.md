@@ -5,26 +5,27 @@
 浴室の壁の一部（横10cm × 縦6cm。タイル・目地・ゴムパッキン・浴そうのふち）を拡大した「カビの箱庭」。空気から胞子が落ち、水とえさのある所で発芽し、菌糸の先（数千本）が1本ずつのび、胞子を作って増える。道具（水・ふく・乾かす・汚す・こする・塩素系・アルコール・防カビ剤・くん煙剤）を指でなぞって試し、毎日の習慣で8週間を比べる。企画は `PLAN.md`（v2）。v1（数のモデル＋グラフ）は合わなかったので試作として `versions/v001-first`・`PLAN-v1.md` に残す。Canvas 2D、外部ライブラリなし。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: 最新は v2b（`versions/v002b-status-zoom`、段階A＋状況の表示・拡大・スマホの道具）。入口「まなびラボ」にはまだ載せていない（載せるときは RULES 8.1：`APPS`・サムネイル・互換モードの比べ・アクセス解析の1行をルートの index.html から写す）。Artifact にも公開していない。
-- **次にやること**: ユーザーの感想しだい。次は `PLAN.md` の段階B（冬の窓の結露・北の壁と家具の裏）。
+- **いまの状態**: 最新は v3（`versions/v003-zukan`、段階A＋状況の表示・拡大＋段階Cの図鑑）。**入口「まなびラボ」に載せた**（2026-10-07。`APPS`・`thumbs/mold-growth.jpg`・アクセス解析の1行。互換モードと標準モードで全要素の位置が同じことを 1400×860・1024×700・375×812 で確認）。Artifact には公開していない。中身を変えたら入口の `updated` も書きかえる。
+- **次にやること**: 段階Cの残り「食べもの（パン）」の場面（ユーザーは段階Bより先に段階Cを選んだ。2026-10-07）。図鑑の感想しだいで直す。段階B（冬の結露）はそのあと。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。育ち方の速さを変えたいときは `js/world.js` の `SPECIES`（`vmax`・`awMin`）と `germHour()`・`colonyHour()` の係数。
 - **動かし方**: ユーザーはルートの `start.bat`。Claude は `.claude/launch.json` の `apps`〜`apps-4` のどれかで `http://localhost:<port>/mold-growth/`。
 - **デバッグ用**: `window.__mk` — `W`（世界の状態。`W.t` 時間、`W.stats`、`W.habits`、`W.hist` 1時間ごとの記録）、`run(h)`（h 時間進めて描く）、`frame(n, dt)`（Browser ペインが裏にあると rAF が止まるので、これで画面の1コマを進める）、`restart()`、`useTool(id, x, y)`、`useSmoke()`、`LENS`（ルーペの位置 mm）、`VIEW`（`hidden` `moist` `fast` `zoom` `cx` `cy`）、`DECK`（発見カード）、`UI`（`records` `rec` `speed` `playing`）、`err`。
 - **区切りごとに**: ① `versions/v0NN-名前/` に index.html・css・js を丸ごとコピー ② `launcher.html` にカード・表 ③ 下の「状態」 ④ 「確認のしかた」を通す ⑤ 公開前チェック → コミット（push はユーザー）。
-- **公開**: Artifact にするなら `file_path` = `mold-growth/index.html`、`files` = css/style.css と js/ の7つ（world・tools・render・lens・cards・status・main）。
+- **公開**: Artifact にするなら `file_path` = `mold-growth/index.html`、`files` = css/style.css と js/ の8つ（world・tools・render・lens・cards・status・zukan・main）。
 - **ユーザーの好み**: 眺めるだけでなく**さわって試せる**こと（v1 の「時間を動かしてグラフを見る」は合わなかった）。説明は短く、起きたときに出す。ゲームの要素（点数・手間の計算）は入れない（2026-10-06）。正確さ重視で、確か／推定を札で分ける。
 
 ## ファイル構成
 
 | ファイル | 中身 | 主な名前 |
 |---|---|---|
-| `index.html` | 骨組み（doctype なし）。読み込み順: world → tools → render → lens → cards → status → main | `#tools` `#brush` `#smoke` `#world` `#modes` `#moistLegend` `#side`（`#status` `#hud` `#lens` `#lensCap` `#toast`）`#zoomReset``#timebar`（`#speeds` `#restart` `#record`）`#habits` `#records` `#cards` |
+| `index.html` | 骨組み（doctype なし）。読み込み順: world → tools → render → lens → cards → status → zukan → main | `#tools` `#brush` `#smoke` `#world` `#modes` `#moistLegend` `#side`（`#status` `#hud` `#lens` `#lensCap` `#toast`）`#zoomReset` `#zkOpen2`（上の段）`#zkOpen`（パネル）`#zukan`（図鑑のダイアログ: `#zkList` `#zkDetail`）`#timebar`（`#speeds` `#restart` `#record`）`#habits` `#records` `#cards` |
 | `css/style.css` | PC: 左に道具（154px）、まん中に箱庭、その右に数値とルーペの列（`#side` 236px、絵の上に重ねる）、右にパネル 320px。縦長スマホ: `#stage` `#work` `#viewWrap` を `display:contents` にして order で並べる。箱庭 → 時間 → 道具（全部見えるタイル並び）→ 状況・数値・ルーペ → パネル | |
 | `js/world.js` | 世界: 大きさ `BOX_W` `BOX_H` `CELL`（0.5mm）`GW` `GH`、材料 `MATS` `matAt()`、カビの種類 `SPECIES`、季節 `SEASONS`、習慣 `HABITS`、育ちやすさ `growF()`、状態 `W`、`resetWorld()`、空気 `envHour()`、湿り気 `awAt()` `awOf()`、水 `bath()` `afterBath()` `runoff()` `dryHour()`、胞子が落ちる `landHour()` `addSpore()`、発芽 `germHour()`、菌糸の先 `addTip()` `killTip()` `tipsHour()`、胞子づくり・放出・再生・空気の胞子 `colonyHour()`、掃除 `weeklyClean()`、**1時間 `stepHour()`**、いまの量 `measure()`（`W.hist` に1時間ごと） | `cellOf()` `mulberry()` `BATH_HOUR`（21時）`RECORD_WEEKS`（8） |
 | `js/tools.js` | 道具 `TOOLS`、指の大きさ `BRUSH`、`useTool(id, x, y, amt)`、くん煙剤 `useSmoke()` | `forCells()` `killTipsIn()` |
 | `js/render.js` | 描画: 全体の枠 `layoutFrame()`、拡大 `zoomedBox()` `zoomAt()` `panBy()` `clampView()`（`ZOOM_MAX` 8）、カビの粒 `buildGrain()`（カビの色だけ別の層 `R.mould` を粒の形で切りぬく）、換気扇の絵 `drawFan()`、背景 `buildBg()`、菌糸のキャンバス（10px/mm）`drainSegments()` `trailsTool()` `trailsClean()` `trailsReset()`、マスごとの色 `buildOverlay()` `moistColor()`、胞子が飛ぶ演出 `spawnPuffs()` `drawPuffs()`、**`drawWorld()`** | `VIEW` `R` `wView()` `mmX()` `mmY()` |
 | `js/lens.js` | ルーペ（0.3mm、約1px/µm）`drawLens()`、マス1つの顕微鏡の絵 `drawCellMicro()`、胞子の柄の頭 `head()`（種類で形）、説明 `lensCaption()` | `LENS` |
 | `js/cards.js` | 発見カード `CARDS`（21枚）、`processEvents(onCard)` | `DECK` |
+| `js/zukan.js` | 図鑑 `ZUKAN`（8種類: クロカビ・アオカビ・コウジカビ・カワキコウジカビ・クモノスカビ・ススカビ・アカカビ・ピンクのぬめり＝酵母）、横から見た形 `zkDrawStructure()`、コロニー `zkDrawColony()`、`zkRender()` `openZukan()` `buildZukan()`、箱庭で見つけた印 `zkNoteFound()`（`W.stats.foundSp`） | `ZK` |
 | `js/status.js` | いまの状況 `status()`（いまと約3日前の「生きているカビ」「目に見えるカビ」をくらべて、悪化／横ばい／よくなっている、心配があれば「心配が残る」）、心配と良い点 `concerns()`、さっきの対策 `actionStart()` `actionEnd()` `actionText()` | `ACT` |
 | `js/main.js` | 道具・指の操作、習慣、記録（`startRecord()` `finishRecord()` `showRecords()`）、カード、数値 `updateHud()`、時間の帯、ループ `frame()`→`tick()`、状況の表示 `updateStatus()`、拡大（ホイール・2本指・右ドラッグ／Shift＋ドラッグで移動）、`window.__mk` | `UI` `SPEEDS` |
 
@@ -89,5 +90,6 @@
 
 ## 状態
 - 2026-10-06 v1（`versions/v001-first`）: 数のモデル（VTT）＋3つの図＋グラフ。ユーザーに合わなかった（眺めるだけ、カビが生き物に見えない、広げすぎ）→ 企画を練り直し。
+- 2026-10-07 v3（`versions/v003-zukan`）: 段階Cの図鑑（8種類、顕微鏡で横から見た形・コロニー・育つ条件・いる所・豆知識、箱庭で見つけた印）。上の段とパネルから開く。入口「まなびラボ」に追加（サムネイル・アクセス解析）。
 - 2026-10-07 v2b（`versions/v002b-status-zoom`）: ユーザーの指摘で、入浴のときの湯気・水を0.35秒かけて表示（毎日のフラッシュ）、空気の帯と換気扇で変わる胞子の動きをやめて換気扇の絵に、数値の幅を固定（「入浴中」をやめた）、スマホで道具を全部見せる、ホイール・2本指で拡大、「いまの状況」と「さっきの対策」の表示（効いているか・よくなっているか・心配）。
 - 2026-10-06 v2（`versions/v002-hakoniwa`）: 段階A「カビの箱庭」。浴室の壁 10×6cm、菌糸の先を1本ずつ動かす、道具10＋くん煙剤、ルーペ、湿り気の地図、見えないものの表示、毎日の習慣、8週間の記録、発見カード21枚。
