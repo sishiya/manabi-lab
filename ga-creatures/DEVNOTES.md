@@ -5,8 +5,8 @@
 関節と筋肉でできた2次元の生きものを、遺伝的アルゴリズム（GA）で進化させるアプリ。企画は `PLAN.md`（`../IDEAS.md` のストック4から）。Canvas 2D、css/js に分割。外のデータは読まない。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: v1（`versions/v001-first`）= 段階A の最初の版。入口「まなびラボ」・アーカイブにはまだ載せていない。Artifact にも公開していない（どちらにするかユーザーに確認中）。
-- **次にやること**: ユーザーの感想しだい。次の段階は `PLAN.md` の段階B（人が選んで育てる＝アストロノーカ風、系統樹、2つの環境の比較）。入口に載せるなら RULES 8.1（ファビコンは済み、サムネイル `thumbs/ga-creatures.jpg` と `tools/thumb.html` の `SETUP`、互換モードの比較、カードの日付）。
+- **いまの状態**: v1b（`versions/v001b-entrance`）。段階A。2026-10-06 に入口「まなびラボ」の「いきもの」に載せた（サムネイル `thumbs/ga-creatures.jpg`、`tools/thumb.html` の `SETUP` は40世代進めて撮る）。GitHub Pages には push で公開される（push はユーザー）。Artifact には公開していない。
+- **次にやること**: ユーザーの感想しだい。次の段階は `PLAN.md` の段階B（人が選んで育てる＝アストロノーカ風、系統樹、2つの環境の比較）。中身を変えたら入口 `../index.html` のカードの更新日も。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。
 - **動かし方**: ユーザーはルートの `start.bat`。Claude は `.claude/launch.json` の `apps`〜`apps-4`（8765〜8768）の空いているもので `http://localhost:<port>/ga-creatures/`。
 - **デバッグ用**: `window.__ga` — `POP`（集団・記録）、`RUN`、`VIEW`（見ている1匹）、`gens(n)`（n 世代を一気に）、`simRun(秒)`（見ている1匹を進める）、`setEnv(key)`、`restart(seed)`、`watchMember(i)`、`watchHistory(gen)`、`render()`、`err`（例外。`window.__gaErr`）。Browser ペインが裏だと rAF が止まるので、世代は `gens()`、見る方は `simRun()` で進める。`setEnv()` のあとは `evaluatePending(0); afterGeneration(); RUN.reeval=false` で評価し直す。
@@ -57,6 +57,7 @@
 ## ハマったところ
 - `setEnv()` で `RUN.reeval` を立てると、評価し直しが終わったときに予定の世代を減らさない。集団の数を減らしただけ（評価し直しがない）ときに立てると、次の世代の分が数えられず1世代多く進んだ → 評価が必要なときだけ立てる。
 - 水の中・月で、体が画面の上へ出ていった → カメラの高さ `camY` も追う（水は重心、陸は 1.6m より高く跳んだとき）。
+- 互換モード（Artifact・Pages の doctype なし）では input の box-sizing が border-box になり、標準モードとシードの欄の幅がちがって設定欄がはみ出した → `.set` の select・input を border-box に、ラベルは折り返さない。
 - 第0世代は世代が1つだけなので、グラフの横軸の目盛りが小数になった → 整数に。
 
 ## 確認のしかた（変更のたびに）
@@ -70,6 +71,7 @@
 
 ## 状態
 - 2026-10-06 v1（`versions/v001-first`）: 段階A。5つの環境、GA の設定（集団の数・選び方・突然変異・交叉・シード）、走るようす、世代の一覧、距離と種のグラフ、遺伝子の図、歴代の1位、解説6つ。
+- 2026-10-06 v1b（`versions/v001b-entrance`）: 入口に追加。互換モード（doctype なし）と標準モードで全要素の位置を比べ、設定欄の幅がずれていた（ラベルの折り返し、数字の入力欄の box-sizing）のを直して、1360×820・375×812 とも差 0。
 
 ## 今後の案
 - 段階B・C は `PLAN.md`。

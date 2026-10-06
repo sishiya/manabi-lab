@@ -26,6 +26,7 @@ const SETUP = {
   // 風船をエベレストの山頂へ（今にも割れそう）
   'extreme': async w => { await wait(800); w.__ex.setThing('balloon'); w.__ex.go(8849, true); await wait(1500); },
   // 蛹の1日目、透かして見る（幼虫の部品が壊れ、血球が集まるところ）
+  'ga-creatures': async w => { await wait(800); w.__ga.gens(40); await wait(5000); },
   'metamorphosis': async w => { await wait(800); w.__mm.setT(1.0); await wait(1500); w.__mm.setT(1.0); },
   // 恐竜の時代（約6800万年前）。生き物が多く見える
   'evolution': async w => { click(w, '#aboutStart'); await wait(1500); w.__ev.setAge(68e6); await wait(6000); },
