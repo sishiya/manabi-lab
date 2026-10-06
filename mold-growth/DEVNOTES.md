@@ -5,27 +5,28 @@
 浴室の壁の一部（横10cm × 縦6cm。タイル・目地・ゴムパッキン・浴そうのふち）を拡大した「カビの箱庭」。空気から胞子が落ち、水とえさのある所で発芽し、菌糸の先（数千本）が1本ずつのび、胞子を作って増える。道具（水・ふく・乾かす・汚す・こする・塩素系・アルコール・防カビ剤・くん煙剤）を指でなぞって試し、毎日の習慣で8週間を比べる。企画は `PLAN.md`（v2）。v1（数のモデル＋グラフ）は合わなかったので試作として `versions/v001-first`・`PLAN-v1.md` に残す。Canvas 2D、外部ライブラリなし。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: 最新は v2（`versions/v002-hakoniwa`、段階A）。入口「まなびラボ」にはまだ載せていない（載せるときは RULES 8.1：`APPS`・サムネイル・互換モードの比べ・アクセス解析の1行をルートの index.html から写す）。Artifact にも公開していない。
+- **いまの状態**: 最新は v2b（`versions/v002b-status-zoom`、段階A＋状況の表示・拡大・スマホの道具）。入口「まなびラボ」にはまだ載せていない（載せるときは RULES 8.1：`APPS`・サムネイル・互換モードの比べ・アクセス解析の1行をルートの index.html から写す）。Artifact にも公開していない。
 - **次にやること**: ユーザーの感想しだい。次は `PLAN.md` の段階B（冬の窓の結露・北の壁と家具の裏）。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。育ち方の速さを変えたいときは `js/world.js` の `SPECIES`（`vmax`・`awMin`）と `germHour()`・`colonyHour()` の係数。
 - **動かし方**: ユーザーはルートの `start.bat`。Claude は `.claude/launch.json` の `apps`〜`apps-4` のどれかで `http://localhost:<port>/mold-growth/`。
-- **デバッグ用**: `window.__mk` — `W`（世界の状態。`W.t` 時間、`W.stats`、`W.habits`）、`run(h)`（h 時間進めて描く）、`frame(n, dt)`（Browser ペインが裏にあると rAF が止まるので、これで画面の1コマを進める）、`restart()`、`useTool(id, x, y)`、`useSmoke()`、`LENS`（ルーペの位置 mm）、`VIEW`（`hidden` `moist` `fast`）、`DECK`（発見カード）、`UI`（`records` `rec` `speed` `playing`）、`err`。
+- **デバッグ用**: `window.__mk` — `W`（世界の状態。`W.t` 時間、`W.stats`、`W.habits`、`W.hist` 1時間ごとの記録）、`run(h)`（h 時間進めて描く）、`frame(n, dt)`（Browser ペインが裏にあると rAF が止まるので、これで画面の1コマを進める）、`restart()`、`useTool(id, x, y)`、`useSmoke()`、`LENS`（ルーペの位置 mm）、`VIEW`（`hidden` `moist` `fast` `zoom` `cx` `cy`）、`DECK`（発見カード）、`UI`（`records` `rec` `speed` `playing`）、`err`。
 - **区切りごとに**: ① `versions/v0NN-名前/` に index.html・css・js を丸ごとコピー ② `launcher.html` にカード・表 ③ 下の「状態」 ④ 「確認のしかた」を通す ⑤ 公開前チェック → コミット（push はユーザー）。
-- **公開**: Artifact にするなら `file_path` = `mold-growth/index.html`、`files` = css/style.css と js/ の6つ（world・tools・render・lens・cards・main）。
+- **公開**: Artifact にするなら `file_path` = `mold-growth/index.html`、`files` = css/style.css と js/ の7つ（world・tools・render・lens・cards・status・main）。
 - **ユーザーの好み**: 眺めるだけでなく**さわって試せる**こと（v1 の「時間を動かしてグラフを見る」は合わなかった）。説明は短く、起きたときに出す。ゲームの要素（点数・手間の計算）は入れない（2026-10-06）。正確さ重視で、確か／推定を札で分ける。
 
 ## ファイル構成
 
 | ファイル | 中身 | 主な名前 |
 |---|---|---|
-| `index.html` | 骨組み（doctype なし）。読み込み順: world → tools → render → lens → cards → main | `#tools` `#brush` `#smoke` `#world` `#modes` `#moistLegend` `#side`（`#hud` `#lens` `#lensCap` `#toast`）`#timebar`（`#speeds` `#restart` `#record`）`#habits` `#records` `#cards` |
-| `css/style.css` | PC: 左に道具（154px）、まん中に箱庭、その右に数値とルーペの列（`#side` 236px、絵の上に重ねる）、右にパネル 320px。縦長スマホ: 箱庭 → ルーペと数値 → 道具（横にスクロール）→ 時間 → パネル | |
-| `js/world.js` | 世界: 大きさ `BOX_W` `BOX_H` `CELL`（0.5mm）`GW` `GH`、材料 `MATS` `matAt()`、カビの種類 `SPECIES`、季節 `SEASONS`、習慣 `HABITS`、育ちやすさ `growF()`、状態 `W`、`resetWorld()`、空気 `envHour()`、湿り気 `awAt()` `awOf()`、水 `bath()` `afterBath()` `runoff()` `dryHour()`、胞子が落ちる `landHour()` `addSpore()`、発芽 `germHour()`、菌糸の先 `addTip()` `killTip()` `tipsHour()`、胞子づくり・放出・再生・空気の胞子 `colonyHour()`、掃除 `weeklyClean()`、**1時間 `stepHour()`** | `cellOf()` `mulberry()` `BATH_HOUR`（21時）`RECORD_WEEKS`（8） |
+| `index.html` | 骨組み（doctype なし）。読み込み順: world → tools → render → lens → cards → status → main | `#tools` `#brush` `#smoke` `#world` `#modes` `#moistLegend` `#side`（`#status` `#hud` `#lens` `#lensCap` `#toast`）`#zoomReset``#timebar`（`#speeds` `#restart` `#record`）`#habits` `#records` `#cards` |
+| `css/style.css` | PC: 左に道具（154px）、まん中に箱庭、その右に数値とルーペの列（`#side` 236px、絵の上に重ねる）、右にパネル 320px。縦長スマホ: `#stage` `#work` `#viewWrap` を `display:contents` にして order で並べる。箱庭 → 時間 → 道具（全部見えるタイル並び）→ 状況・数値・ルーペ → パネル | |
+| `js/world.js` | 世界: 大きさ `BOX_W` `BOX_H` `CELL`（0.5mm）`GW` `GH`、材料 `MATS` `matAt()`、カビの種類 `SPECIES`、季節 `SEASONS`、習慣 `HABITS`、育ちやすさ `growF()`、状態 `W`、`resetWorld()`、空気 `envHour()`、湿り気 `awAt()` `awOf()`、水 `bath()` `afterBath()` `runoff()` `dryHour()`、胞子が落ちる `landHour()` `addSpore()`、発芽 `germHour()`、菌糸の先 `addTip()` `killTip()` `tipsHour()`、胞子づくり・放出・再生・空気の胞子 `colonyHour()`、掃除 `weeklyClean()`、**1時間 `stepHour()`**、いまの量 `measure()`（`W.hist` に1時間ごと） | `cellOf()` `mulberry()` `BATH_HOUR`（21時）`RECORD_WEEKS`（8） |
 | `js/tools.js` | 道具 `TOOLS`、指の大きさ `BRUSH`、`useTool(id, x, y, amt)`、くん煙剤 `useSmoke()` | `forCells()` `killTipsIn()` |
-| `js/render.js` | 描画: 箱の位置 `layoutBox()`（上の帯は「浴室の空気」）、背景 `buildBg()`、菌糸のキャンバス（10px/mm）`drainSegments()` `trailsTool()` `trailsClean()` `trailsReset()`、マスごとの色 `buildOverlay()` `moistColor()`、空気の胞子 `drawAir()`、胞子が飛ぶ演出 `spawnPuffs()` `drawPuffs()`、**`drawWorld()`** | `VIEW` `R` `wView()` `mmX()` `mmY()` |
+| `js/render.js` | 描画: 全体の枠 `layoutFrame()`、拡大 `zoomedBox()` `zoomAt()` `panBy()` `clampView()`（`ZOOM_MAX` 8）、カビの粒 `buildGrain()`（カビの色だけ別の層 `R.mould` を粒の形で切りぬく）、換気扇の絵 `drawFan()`、背景 `buildBg()`、菌糸のキャンバス（10px/mm）`drainSegments()` `trailsTool()` `trailsClean()` `trailsReset()`、マスごとの色 `buildOverlay()` `moistColor()`、胞子が飛ぶ演出 `spawnPuffs()` `drawPuffs()`、**`drawWorld()`** | `VIEW` `R` `wView()` `mmX()` `mmY()` |
 | `js/lens.js` | ルーペ（0.3mm、約1px/µm）`drawLens()`、マス1つの顕微鏡の絵 `drawCellMicro()`、胞子の柄の頭 `head()`（種類で形）、説明 `lensCaption()` | `LENS` |
 | `js/cards.js` | 発見カード `CARDS`（21枚）、`processEvents(onCard)` | `DECK` |
-| `js/main.js` | 道具・指の操作、習慣、記録（`startRecord()` `finishRecord()` `showRecords()`）、カード、数値 `updateHud()`、時間の帯、ループ `frame()`→`tick()`、`window.__mk` | `UI` `SPEEDS` |
+| `js/status.js` | いまの状況 `status()`（いまと約3日前の「生きているカビ」「目に見えるカビ」をくらべて、悪化／横ばい／よくなっている、心配があれば「心配が残る」）、心配と良い点 `concerns()`、さっきの対策 `actionStart()` `actionEnd()` `actionText()` | `ACT` |
+| `js/main.js` | 道具・指の操作、習慣、記録（`startRecord()` `finishRecord()` `showRecords()`）、カード、数値 `updateHud()`、時間の帯、ループ `frame()`→`tick()`、状況の表示 `updateStatus()`、拡大（ホイール・2本指・右ドラッグ／Shift＋ドラッグで移動）、`window.__mk` | `UI` `SPEEDS` |
 
 ## しくみ
 1時間ごとに `stepHour()`。速さは「1秒あたり 1時間／6時間／1日／1週」。記録のはやおくりは1秒に2週。
@@ -69,7 +70,9 @@
 3. 記録: 習慣を変えて「8週間をはやおくりして記録」を押す（ペインが裏なら `while(__mk.UI.rec)__mk.frame(1,0.1)`）。上の表と大きく変わっていない（変えたときは表を書きかえる）。
 4. 画面: 20日目ごろ、ゴムパッキンと目地に色の点、ルーペを点に当てると胞子の柄（クロカビ＝枝分かれの鎖、アオカビ＝ほうき）、「湿り気を見る」で目地とパッキンだけ青、「見えないものも見る」で乾いたタイルにも胞子の点。
 5. 塩素系の道具でパッキンをなぞる → 色が消え、ルーペに「奥に残った黒ずみ」、カード「塩素系カビ取り剤を使った」（一時停止中でも出る）、進めると「同じ場所からまた生えてきた」。
-6. スマホ（375×812）: 箱庭 → ルーペと数値 → 道具（横スクロール）の順、横にはみ出さない（`document.documentElement.scrollWidth` が 375）。
+6. スマホ（375×812）: 箱庭 → 時間 → 道具（10個とくん煙剤が全部見える）→ 状況・数値・ルーペの順、横にはみ出さない（`document.documentElement.scrollWidth` が 375）。
+6b. 状況の表示: 30日目にパッキンを塩素系でなぞる（`actionStart('chlorine')`…`actionEnd()`）→ すぐに「よくなっているが、心配が残る」、心配に「奥に生き残った菌糸（約○mm²）」、「さっきの対策」に使った直後の増減。5日進めると「それから5日: 生きているカビ +○%」。
+6c. 拡大: ホイールで最大 ×8、「全体を見る」で戻る。拡大してもカビは粒の集まりに見える（四角くならない）。浴室の空気の温度・湿度の数字は幅が変わらない（入浴のときにずれない）。
 7. **点滅**: 1週/秒・2週/秒で、湯気・水・湿り気の地図が毎秒何回も入れかわらないこと（速いときは `VIEW.fast` で1日の平均を描く）。測り方: 32px 四方ごとの相対輝度を1コマずつ比べ、0.1 をこえる変化が毎秒3回をこえる区画の割合を数える（v2 で 1日・1週・2週/秒とも 0%）。
 
 ## ハマったところ
@@ -77,9 +80,14 @@
 - Browser ペインが裏にあると rAF が止まり、「記録」が進まない。`__mk.frame(n, dt)` で進める。
 - 1週/秒では入浴が1秒に7回あり、湯気・水・湿り気の地図が点滅した。速いときは1日平均（`wAvg` `rhAvg`）で描き、湯気は出さない。
 - 一時停止中に道具を使ってもカードが出なかった（`processEvents` を再生中だけ呼んでいた）。
+- 「1日/秒」でも、21時の入浴の湯気と水が1コマで出て、1秒に1回フラッシュに見えた。表示は世界の値に0.35秒かけて近づける（`easeDisplay()`）。
+- 状況の判定を1時間ごとの記録（`W.hist`）だけで行うと、一時停止中に道具を使っても「悪化している」のままだった。いまの値は `measure()` で測り直す。
+- 拡大すると 0.5mm のマスがぼやけた四角に見えた。カビの色は別の層にして、固定の粒の模様（`buildGrain()`）で切りぬく。
+- Bash の sed で行番号を指定して書きかえると、前の削除で行がずれて別の行を上書きした。行番号ではなく文字列で探して直す。
 - PDF の論文が WebFetch で読めないときは、scratchpad の PowerShell（FlateDecode を展開して Tj/TJ を拾う）で本文を取り出せた。ただし図の中の数値（Sedlbauer の等発育線）は画像なので取れなかった。
 - Bash のヒアドキュメントの中でも `\\` が `\` になった（RULES 6章）。正規表現を含むファイルは Write ツールで書く。
 
 ## 状態
 - 2026-10-06 v1（`versions/v001-first`）: 数のモデル（VTT）＋3つの図＋グラフ。ユーザーに合わなかった（眺めるだけ、カビが生き物に見えない、広げすぎ）→ 企画を練り直し。
+- 2026-10-07 v2b（`versions/v002b-status-zoom`）: ユーザーの指摘で、入浴のときの湯気・水を0.35秒かけて表示（毎日のフラッシュ）、空気の帯と換気扇で変わる胞子の動きをやめて換気扇の絵に、数値の幅を固定（「入浴中」をやめた）、スマホで道具を全部見せる、ホイール・2本指で拡大、「いまの状況」と「さっきの対策」の表示（効いているか・よくなっているか・心配）。
 - 2026-10-06 v2（`versions/v002-hakoniwa`）: 段階A「カビの箱庭」。浴室の壁 10×6cm、菌糸の先を1本ずつ動かす、道具10＋くん煙剤、ルーペ、湿り気の地図、見えないものの表示、毎日の習慣、8週間の記録、発見カード21枚。
