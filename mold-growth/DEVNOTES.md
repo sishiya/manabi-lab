@@ -6,7 +6,7 @@
 
 ## 別セッションで続けるとき（まずここ）
 - **いまの状態**: 最新は v1（`versions/v001-first`、段階A）。入口「まなびラボ」にはまだ載せていない（載せるときは RULES 8.1：`APPS`・サムネイル・互換モードの比べ・アクセス解析の1行をルートの index.html から写す）。Artifact にも公開していない。
-- **次にやること**: ユーザーの感想しだい。次の段階は `PLAN.md` の段階B（食べもの、エアコンの中、カビの種類の比べ）。
+- **次にやること**: 2026-10-06 に企画を練り直した（`PLAN.md`＝v2「カビの箱庭」。v1 は合わなかったので試作として残す。ふり返りは PLAN.md の冒頭）。段階Aを作る前に、発芽の時間・菌糸ののびる速さなどの数値を調べ直す。v2 はエンジンを作り直すので、v1 の js はほぼ使わない。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。数値を変えたいときは `js/model.js` の `SEASONS`・`PLACES`・`climate()` の係数・`simulate()` の対策の部分だけ見ればよい。
 - **動かし方**: ユーザーはルートの `start.bat`。Claude は `.claude/launch.json` の `apps`〜`apps-4` のどれかで `http://localhost:<port>/mold-growth/`。
 - **デバッグ用**: `window.__mo` — `setT(h)`（はじめからの時間。12週の終わりは `T_END` = 2016）、`t()`、`setCond({...}, keepGhost)`、`setPlace('bath'|'window'|'wall'|'closet')`、`setRange('day'|'week'|'all')`、`setViewMode('room'|'surface'|'micro')`、`R`（いまの計算結果。配列は時間ごと）、`VIEW`（`labels` `hidden`）、`frame(n)`、`err`。モデルだけなら `simulate({...condFor(place), ...})` と `summarize(R)` がそのまま呼べる。
