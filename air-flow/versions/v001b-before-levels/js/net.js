@@ -50,7 +50,7 @@ function netItems(st, wind) {
         items.push({ el: o, type: 'open', aa: CD * wOpen * o.h, area: wOpen * o.h, p, cells });
       }
     } else if (o.kind === 'vent' && s > 0) {
-      items.push({ el: o, type: 'vent', aa: VENT_AA * VENT_OPEN[s], p, cells: o.inner });
+      items.push({ el: o, type: 'vent', aa: VENT_AA, p, cells: o.inner });
     }
   }
   for (const f of FANS) {

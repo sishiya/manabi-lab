@@ -3,7 +3,7 @@
 const $ = id => document.getElementById(id);
 const SPEEDS = [[1, '実際'], [10, '10倍'], [60, '1分/秒'], [600, '10分/秒'], [3600, '1時間/秒']];
 const STATE_NAMES = {
-  window: ['閉', '少し', '開ける'], door: ['閉', '開'], vent: ['閉', '少し', '半分', '全開'], idoor: ['閉', '開'], ac: ['切', '弱', '強'],
+  window: ['閉', '少し', '開ける'], door: ['閉', '開'], vent: ['閉', '開'], idoor: ['閉', '開'], ac: ['切', '弱', '強'],
 };
 function setSeg(el, v) { el.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === String(v)))); }
 
@@ -176,7 +176,7 @@ const inR = (p, r, pad) => p[0] >= r[0] - pad && p[0] <= r[2] + pad && p[1] >= r
 function hitElement(p, pad) {
   for (const f of FANS) if (inR(p, f.hood ? [f.rect[0], f.rect[1], f.rect[2], f.rect[1] + .32] : f.rect, pad)) return [f.key, 3];
   for (const a of ACS) { const r = [a.x - a.w / 2, a.y - .2, a.x + a.w / 2, a.y + .2]; if (inR(p, r, pad * .5)) return [a.key, 3]; }
-  for (const o of OPENINGS) if (inR(p, o.rect, o.kind === 'vent' ? pad + .06 : pad)) return [o.key, o.kind === 'window' ? 3 : o.kind === 'vent' ? 4 : 2];
+  for (const o of OPENINGS) if (inR(p, o.rect, o.kind === 'vent' ? pad + .06 : pad)) return [o.key, o.kind === 'window' ? 3 : 2];
   for (const d of DOORS) if (inR(p, d.rect, pad)) return [d.key, 2];
   return null;
 }

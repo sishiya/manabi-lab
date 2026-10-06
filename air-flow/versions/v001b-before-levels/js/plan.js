@@ -73,8 +73,7 @@ const CIRC_SPEED = [0, 2.5, 4.0];     // circulator outlet velocity (m/s), off /
 const CIRC_D = 0.25;                  // circulator diameter (m)
 
 const LEAK_C = 2.0;                   // C value: equivalent leakage area per floor area (cm²/m²)
-const VENT_AA = 0.004;                // effective area of one fully open supply vent (m²), φ100 with filter
-const VENT_OPEN = [0, .25, .5, 1];     // the dial on the vent: 閉 / 少し / 半分 / 全開 (share of the full area)
+const VENT_AA = 0.004;                // effective area of one supply vent (m²), φ100 with filter
 const CD = 0.6;                       // discharge coefficient of a window / door
 
 function buildPlan() {
@@ -109,22 +108,22 @@ function buildPlan() {
 }
 
 // ================= scenes (presets) =================
-// st: element states. windows 0 閉 / 1 少し / 2 開ける, doors 0 閉 / 1 開, vents 0 閉 … 3 全開 (VENT_OPEN), fans 0/1/2, ac 0/1/2
+// st: element states. windows 0 閉 / 1 少し / 2 開ける, doors 0 閉 / 1 開, vents 0/1, fans 0/1/2, ac 0/1/2
 const SCENES = [
   { key: '24h', name: '24時間換気だけ', sub: '窓を閉めた冬の夜',
-    st: { v1: 3, v2: 3, v3: 3, fb: 1 }, wind: [270, 0],
+    st: { v1: 1, v2: 1, v3: 1, fb: 1 }, wind: [270, 0],
     hint: '窓を閉めて、浴室の<b>24時間換気</b>だけで空気を入れかえている状態。各部屋の給気口から入った空気が、ドアの下のすき間を通って浴室へ流れます。<b>ドアや給気口を押して</b>、空気の古さの変化を見てみよう。',
     now: '<b>24時間換気だけ。</b>浴室の換気扇（弱）が家じゅうの空気を少しずつ引き出し、給気口から外の空気が入ります。ドアは閉めていて、下のすき間（約1cm）だけが通り道です。外は無風（風を吹かせると、風下の給気口から空気が出ていくこともあります）。' },
   { key: 'cross', name: '窓を2か所あける', sub: '風の通り道を作る',
-    st: { w1: 2, w4: 2, d1: 1, dl: 1, v1: 3, v2: 3, v3: 3, fb: 1 }, wind: [270, 3],
+    st: { w1: 2, w4: 2, d1: 1, dl: 1, v1: 1, v2: 1, v3: 1, fb: 1 }, wind: [270, 3],
     hint: '向かい合う2つの窓をあけると、風上の窓から入った空気が家を通りぬけて風下の窓から出ます。<b>風の向きを変えたり</b>、途中の<b>ドアを閉めたり</b>してみよう。',
     now: '<b>窓を2か所あける。</b>洋室1の窓（西）とLDKの窓（東）をあけ、間のドアも開けました。西から 3 m/s の風。' },
   { key: 'single', name: '窓を1か所だけ', sub: '通り道がないと？',
-    st: { w4: 2, d1: 1, d2: 1, dl: 1, v1: 3, v2: 3, v3: 3, fb: 1 }, wind: [270, 3],
+    st: { w4: 2, d1: 1, d2: 1, dl: 1, v1: 1, v2: 1, v3: 1, fb: 1 }, wind: [270, 3],
     hint: '窓を1つだけあけても、空気の出口がないと風は通りぬけません（風の乱れで窓の近くが少し入れかわるだけ）。<b>もう1つ窓をあける</b>と、どう変わる？',
     now: '<b>窓を1か所だけ。</b>LDKの窓（南）だけをあけました。風は西から 3 m/s。' },
   { key: 'door', name: '玄関と窓をあける', sub: 'マンションの通風',
-    st: { fd: 1, w3: 2, dl: 1, v1: 3, v2: 3, v3: 3, fb: 1 }, wind: [90, 3],
+    st: { fd: 1, w3: 2, dl: 1, v1: 1, v2: 1, v3: 1, fb: 1 }, wind: [90, 3],
     hint: 'マンションでは、玄関とバルコニーの窓が家の両側にある通り道。今は東（バルコニー側）からの風。<b>LDKのドアを閉める</b>と、通り道はどうなる？',
     now: '<b>玄関と窓をあける。</b>玄関ドアと LDK の窓（北）をあけ、LDKのドアも開けました。東から 3 m/s の風。' },
   { key: 'hood', name: 'キッチンの換気扇', sub: '強で回すと？',
@@ -132,7 +131,7 @@ const SCENES = [
     hint: '給気口を閉めたままキッチンの換気扇を強で回すと、入口がすき間しかないので<b>室内の気圧が大きく下がり</b>、思ったほど空気を引けません（玄関ドアが重くなるのもこのため）。力の弱い浴室の換気扇は気圧の差に負けて、空気を出せなくなります。<b>給気口をあけたり、窓を少しあけたり</b>してみよう。',
     now: '<b>キッチンの換気扇（強）。</b>給気口は3つとも閉め、窓も閉めています。外は無風。' },
   { key: 'circ', name: 'サーキュレーター', sub: 'よどんだ部屋に風を送る',
-    st: { w1: 2, w4: 2, d1: 1, d2: 1, dl: 1, v1: 3, v2: 3, v3: 3, fb: 1 }, wind: [270, 3],
+    st: { w1: 2, w4: 2, d1: 1, d2: 1, dl: 1, v1: 1, v2: 1, v3: 1, fb: 1 }, wind: [270, 3],
     circs: [{ x: 3.0, y: 3.0, ang: 110, lv: 2 }],
     hint: '窓を2か所あけても、風の通り道からはずれた部屋の空気はなかなか入れかわりません。洋室2の入口に置いた<b>サーキュレーターを押して止めたり</b>、ドラッグで動かしたりして、洋室2の空気の古さを比べてみよう。先の黄色い丸をドラッグすると向きが変わります。',
     now: '<b>サーキュレーター。</b>洋室1とLDKの窓をあけて西風を通した状態で、廊下から洋室2へ向けてサーキュレーター（強）で風を送っています。' },

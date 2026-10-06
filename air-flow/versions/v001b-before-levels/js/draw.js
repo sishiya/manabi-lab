@@ -218,11 +218,9 @@ function drawElements(now) {
       c.fillStyle = st ? '#0d1a22' : '#8d99a6'; c.fillRect(x0, y0, x1 - x0, y1 - y0);
       if (st) { c.strokeStyle = '#8d99a6'; c.lineWidth = Math.max(2, s * .035); c.beginPath(); c.moveTo(x0, y0); c.lineTo(x0 - 0.75 * s, y0 + .1 * s); c.stroke(); }
     } else {
-      // the dial: the filled share of the circle = how far the vent is open
-      const cy = (y0 + y1) / 2, r = Math.max(4.5, s * .08), f = VENT_OPEN[st];
-      c.beginPath(); c.arc(mx, cy, r, 0, 6.3); c.fillStyle = '#26343e'; c.fill();
-      if (f > 0) { c.beginPath(); c.moveTo(mx, cy); c.arc(mx, cy, r, -Math.PI / 2, -Math.PI / 2 + f * 2 * Math.PI); c.closePath(); c.fillStyle = '#7ee0c8'; c.fill(); }
-      c.beginPath(); c.arc(mx, cy, r, 0, 6.3); c.lineWidth = 1.5; c.strokeStyle = st ? '#7ee0c8' : '#7d8b96'; c.stroke();
+      const cy = (y0 + y1) / 2, r = Math.max(3.5, s * .07);
+      c.beginPath(); c.arc(mx, cy, r, 0, 6.3);
+      c.fillStyle = st ? '#7ee0c8' : '#26343e'; c.fill(); c.lineWidth = 1.5; c.strokeStyle = st ? '#0b2a24' : '#7d8b96'; c.stroke();
     }
   }
   // fans
@@ -232,62 +230,33 @@ function drawElements(now) {
       rr(c, x0 - .05 * s, y0, x1 - x0 + .1 * s, .32 * s, 3); c.fillStyle = st ? 'rgba(126,224,200,.25)' : 'rgba(150,165,180,.18)'; c.fill();
       c.lineWidth = 1.5; c.strokeStyle = st ? '#7ee0c8' : '#8a98a4'; c.stroke();
     }
-    const r = Math.max(6, s * .11), fy = f.hood ? y0 + .16 * s : cy;
-    fanIcon(c, cx, fy, r, st, now, '#7ee0c8');
-    levelBadge(c, f.hood ? x1 + .05 * s + 11 : cx + r + (W * DX * s < 560 ? 7 : 11), fy, st, '#7ee0c8');
+    const r = Math.max(6, s * .11), rot = st && !reduceMotion ? now / 1000 * (st === 2 ? 9 : 4) : 0;
+    const fy = f.hood ? y0 + .16 * s : cy;
+    c.beginPath(); c.arc(cx, fy, r, 0, 6.3); c.fillStyle = '#16232b'; c.fill(); c.lineWidth = 1.5; c.strokeStyle = st ? '#7ee0c8' : '#8a98a4'; c.stroke();
+    c.fillStyle = st ? '#7ee0c8' : '#8a98a4';
+    for (let b = 0; b < 3; b++) { const a = rot + b * 2.094; c.beginPath(); c.ellipse(cx + Math.cos(a) * r * .45, fy + Math.sin(a) * r * .45, r * .42, r * .2, a, 0, 6.3); c.fill(); }
   }
-  // air conditioners: louvre colour, and wind arcs in front (弱 2, 強 3) like the fans' speed
+  // air conditioners
   for (const a of ACS) {
     const st = S.st[a.key] | 0, ang = a.ang * Math.PI / 180, x = a.x * s, y = a.y * s, w = a.w * s, d = .22 * s;
     c.save(); c.translate(x, y); c.rotate(ang - Math.PI / 2);
     rr(c, -w / 2, -d * .1, w, d, 4); c.fillStyle = '#e9eef2'; c.fill(); c.lineWidth = 1.5; c.strokeStyle = st ? '#7ee0c8' : '#6f7d88'; c.stroke();
     c.fillStyle = st ? '#7ee0c8' : '#9aa6b0'; c.fillRect(-w * .38, d * .62, w * .76, Math.max(1.5, d * .14));
     c.restore();
-    windArcs(c, x + Math.cos(ang) * d * .9, y + Math.sin(ang) * d * .9, ang, st, w * .55, s, '#7ee0c8');
-    levelBadge(c, x + Math.cos(ang - Math.PI / 2) * (w / 2 + .14 * s), y + Math.sin(ang - Math.PI / 2) * (w / 2 + .14 * s) + Math.sin(ang) * d * .4, st, '#7ee0c8');
+    if (st) { c.strokeStyle = 'rgba(126,224,200,.8)'; c.fillStyle = 'rgba(126,224,200,.8)'; c.lineWidth = 2; const ux = Math.cos(ang), uy = Math.sin(ang); arrow(c, x + ux * .3 * s, y + uy * .3 * s, x + ux * .65 * s, y + uy * .65 * s, 6); }
   }
-  // circulators: a turning fan face, wind arcs in front and a 弱/強 badge (the same language as the exhaust fans)
+  // circulators
   for (const q of S.circs) {
     const ang = q.ang * Math.PI / 180, x = q.x * s, y = q.y * s, r = CIRC_D / 2 * s + 3;
     c.save(); c.translate(x, y); c.rotate(ang);
-    rr(c, -r * 1.05, -r * 1.05, r * 1.6, r * 2.1, r * .45); c.fillStyle = '#e8eef2'; c.fill(); c.lineWidth = 2; c.strokeStyle = q.lv ? '#ffc95a' : '#7d8b96'; c.stroke();
+    rr(c, -r * 1.1, -r, r * 1.5, r * 2, r * .5); c.fillStyle = '#e8eef2'; c.fill(); c.lineWidth = 2; c.strokeStyle = q.lv ? '#ffc95a' : '#7d8b96'; c.stroke();
+    c.beginPath(); c.moveTo(r * .4, -r * .85); c.lineTo(r * .4, r * .85); c.lineWidth = 3; c.stroke();
     c.restore();
-    fanIcon(c, x + Math.cos(ang) * r * .1, y + Math.sin(ang) * r * .1, r * .82, q.lv, now, '#ffc95a');
-    windArcs(c, x + Math.cos(ang) * r * .6, y + Math.sin(ang) * r * .6, ang, q.lv, r * 1.6, s, '#ffc95a');
-    levelBadge(c, x - Math.cos(ang) * (r + 10), y - Math.sin(ang) * (r + 10), q.lv, '#ffc95a');
     // direction handle
-    const hx = x + Math.cos(ang) * .6 * s, hy = y + Math.sin(ang) * .6 * s;
+    const hx = x + Math.cos(ang) * .55 * s, hy = y + Math.sin(ang) * .55 * s;
+    c.strokeStyle = 'rgba(255,201,90,.7)'; c.lineWidth = 1.5; c.setLineDash([3, 3]); c.beginPath(); c.moveTo(x + Math.cos(ang) * r, y + Math.sin(ang) * r); c.lineTo(hx, hy); c.stroke(); c.setLineDash([]);
     c.beginPath(); c.arc(hx, hy, Math.max(5, s * .06), 0, 6.3); c.fillStyle = '#ffc95a'; c.fill(); c.strokeStyle = '#1a1406'; c.lineWidth = 1.5; c.stroke();
   }
-}
-// a round fan face whose three blades turn faster at a higher level (still when off or with reduced motion)
-function fanIcon(c, cx, cy, r, lv, now, col) {
-  const rot = lv && !reduceMotion ? now / 1000 * (lv === 2 ? 9 : 4) : 0;
-  c.beginPath(); c.arc(cx, cy, r, 0, 6.3); c.fillStyle = '#16232b'; c.fill(); c.lineWidth = 1.5; c.strokeStyle = lv ? col : '#8a98a4'; c.stroke();
-  c.fillStyle = lv ? col : '#8a98a4';
-  for (let b = 0; b < 3; b++) { const a = rot + b * 2.094; c.beginPath(); c.ellipse(cx + Math.cos(a) * r * .45, cy + Math.sin(a) * r * .45, r * .42, r * .2, a, 0, 6.3); c.fill(); }
-}
-// arcs in front of a blower: 弱 = 2, 強 = 3 (nothing when off)
-function windArcs(c, x, y, ang, lv, width, s, col) {
-  if (!lv) return;
-  const n = lv + 1, gap = Math.max(5, s * .09), spread = Math.atan2(width / 2, gap * 2.2);
-  c.strokeStyle = col; c.lineCap = 'round';
-  for (let k = 0; k < n; k++) {
-    const rad = gap * (1.2 + k);
-    c.globalAlpha = .9 - k * .22; c.lineWidth = Math.max(1.5, s * .022);
-    c.beginPath(); c.arc(x - Math.cos(ang) * gap * .9, y - Math.sin(ang) * gap * .9, rad + gap * .9, ang - spread, ang + spread); c.stroke();
-  }
-  c.globalAlpha = 1;
-}
-// small 弱 / 強 tag
-function levelBadge(c, x, y, lv, col) {
-  if (!lv) return;
-  const t = lv === 2 ? '強' : '弱';
-  const small = W * DX * scale < 560, R = small ? 6 : 8;
-  c.font = `700 ${small ? 8 : 10}px 'Zen Kaku Gothic New',sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
-  c.fillStyle = lv === 2 ? col : 'rgba(6,12,16,.85)'; c.beginPath(); c.arc(x, y, R, 0, 6.3); c.fill();
-  c.lineWidth = 1.2; c.strokeStyle = col; c.stroke();
-  c.fillStyle = lv === 2 ? '#0b1a16' : col; c.fillText(t, x, y + .5);
 }
 
 // flows through the outer wall, as small tags
@@ -375,7 +344,6 @@ function drawHover() {
 }
 
 function drawFrame(now, dtVis) {
-  if (!cv.width || !cv.height) return;   // not laid out yet (hidden or resizing)
   if (planDirty) drawPlan();
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

@@ -5,7 +5,7 @@
 家の中の空気がどこから入り、どう流れ、どこが古いまま残るかを、真上から見た 2LDK で見るアプリ。企画は `PLAN.md`（`../IDEAS.md` のストック1から）。「電波の見える部屋」（`wifi-wave/`）の姉妹だが、エンジンは別（Canvas 2D と CPU の計算。WebGL は使わない）。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: 最新は v1（`versions/v001-first`、段階A）。入口「まなびラボ」の「物理」に載せた（サムネイル `thumbs/air-flow.jpg`）。GitHub Pages には push で公開される（push はユーザー）。Artifact には公開していない。
+- **いまの状態**: 最新は v2（`versions/v002-levels`、強さの表示と給気口の開け具合）。v1（`versions/v001-first`）が段階A。入口「まなびラボ」の「物理」に載せた（サムネイル `thumbs/air-flow.jpg`）。GitHub Pages には push で公開される（push はユーザー）。Artifact には公開していない。
 - **次にやること**: ユーザーの感想しだい。次の段階は `PLAN.md` の段階B（自分の家の間取りを描く・一戸建て・すき間の量を選ぶ・2つの場面を並べて比べる）。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。場面や間取りを変えるなら `js/plan.js` だけ。
 - **動かし方**: ユーザーはルートの `start.bat`（まなびラボから開く）。Claude は `.claude/launch.json` の `apps`（8765）・`apps-2`（8766）・`apps-3`（8767）のどれか空いているもので `http://localhost:<port>/air-flow/`。
@@ -23,7 +23,7 @@
 | `js/plan.js` | 格子 `DX`（0.1m）`W×H`（96×60）`HCEIL`（2.4m）、セルの種類 `FLUID/WALL/OUT/FURN`、間取り `buildPlan()`、部屋 `ROOMS`、室内のドア `DOORS`（`beta` 閉めたときの通しやすさ）、外壁の開口 `OPENINGS`（窓・玄関・給気口）、換気扇 `FANS`（`levels` の q・p）、エアコン `ACS`、風速 `AC_SPEED` `CIRC_SPEED`、すき間 `LEAK_C`、給気口 `VENT_AA`、`CD`、**場面 `SCENES`** | `fillRect()` `cellsIn()` |
 | `js/net.js` | 換気回路網: 風圧係数 `cpWall()`（Swami & Chandra）、`facadeP()`、`orifice()`、`fanOut()`、`netItems()`（開口・すき間・換気扇の一覧）、`solveNet()`（ゾーンごとに気圧を二分法で。Warren の入れかわり `qx` も） | |
 | `js/fluid.js` | 流れ（MAC 格子）: `u` `v`、面の通しやすさ `bu` `bv`、`buildFaces()`（ドア・ゾーン分け）、`applyNet()`（湧き出し `src`・入れかわり `exch`）、`force()`（噴流）、`flowStep()`（移流・粘性・抵抗・投影）、`project()`（SOR）、`maxDiv()`。空気の古さと煙: `buildCoef()` `transport()`（陰解法・BiCGSTAB） | `NU` `FRIC` `DIFF` `DT` `SOR_IT` `age` `smoke` `zoneOf` |
-| `js/draw.js` | 色 `ageCol()`（対数）`spdCol()` `smokeBg()`、`fit()`、間取りの下絵 `drawPlan()`、場 `drawField()`、粒 `moveParticles()` `drawParticles()`、外の風 `drawWind()`、要素 `drawElements()`、出入りの札 `drawFlowTags()`、部屋の札 `drawRoomLabels()`、方位 `drawCompass()`、`drawHover()`、`drawFrame()`、`fmtAge()` | `scale`（px/m）`planDirty` |
+| `js/draw.js` | 色 `ageCol()`（対数）`spdCol()` `smokeBg()`、`fit()`、間取りの下絵 `drawPlan()`、場 `drawField()`、粒 `moveParticles()` `drawParticles()`、外の風 `drawWind()`、要素 `drawElements()`（強さの表し方 `fanIcon()` `windArcs()` `levelBadge()`）、出入りの札 `drawFlowTags()`、部屋の札 `drawRoomLabels()`、方位 `drawCompass()`、`drawHover()`、`drawFrame()`、`fmtAge()` | `scale`（px/m）`planDirty` |
 | `js/ui.js` | パネルを作る `buildUI()`、`syncUI()`、凡例 `updateLegend()`、数字のカード `houseStats()` `updateReadout()`、煙のグラフ `fillSmoke()` `drawChart()`、図の上の操作（押して開け閉め・煙を出す・サーキュレーターを置く・動かす・向き） | `SPEEDS` |
 | `js/main.js` | 状態 `S`、`setState()` `netChanged()`、噴流の一覧 `jets()`、`loadScene()` `prewarm()`、1コマ `step()`、ループ、`window.__af` | `AGE_CAP`（48時間） |
 
@@ -33,7 +33,7 @@
 - 家（つながった空気の空間＝ゾーン。閉めたドアも下のすき間でつながるので、ふつうは家全体で1つ）の気圧 p を、入る量＝出る量になるよう二分法で求める。
 - 窓・玄関・給気口・すき間: オリフィスの式 `Q = αA·sign(Δp)·√(2|Δp|/ρ)`、Δp = 外壁の風圧 − p。
   - 窓（引き違い）: 「少し」= 10cm、「開ける」= 片側の戸（幅の半分）。αA = 0.6 × 開いた幅 × 高さ（腰窓1.1m、掃き出し窓2.0m）。玄関は 0.8×2.0m。
-  - 給気口: αA = 0.004 m²（φ100・フィルターつきの目安）。
+  - 給気口: 全開で αA = 0.004 m²（φ100・フィルターつきの目安）。開け具合は 閉・少し・半分・全開 = 0・¼・½・1 倍（`VENT_OPEN`。図の丸の塗りの割合）。場面では全開＝3。
   - すき間: 相当すき間面積 `LEAK_C` = 2 cm²/m² × 床面積を、窓と玄関に幅で配分（閉めていても常にある）。
 - 換気扇: P-Q 特性を直線に `Q = q·(1 − Δp/p)`（Δp = 外 − 内。これが p を超えると止まる）。浴室 弱55/強100 m³/h（p 45/90 Pa）、トイレ 30/60（40/70）、キッチン 250/450（110/230）。一般的な製品の目安。
 - 風圧: `Cp(θ) = 0.6·ln(…)`（Swami & Chandra 1987、低層建物、辺の比 G = 0）。θ = 外壁の向きと風上の向きの角度。θ=0 で +0.6、90° で −0.44、180° で −0.36。× ½ρU²。図の上が北、左（西）が共用廊下、右（東）がバルコニー。上下はとなりの家（開口なし）。
@@ -75,13 +75,14 @@
    - サーキュレーター: 洋室2 約1分（サーキュレーターを切ると約7分）。
 4. 煙: 「窓を2か所あける」で満たして `__af.advance(60, 10)` → 残り約51%（点線の「すぐ混ざる場合」は38%）。
 5. 速さ: `S.speed` 1・60・3600 で `step(S.speed/60)` が 15ms 以下（2026-10-06 の PC で 2〜15ms）。
-6. 図の上で窓・ドア・給気口・換気扇・エアコンを押すと状態が変わる（パネルの表示も変わる）。サーキュレーターを置く・動かす・向きを変える・押して 弱→強→切。煙を出すで図をなぞると煙が出る。
+6. 図の上で窓・ドア・給気口・換気扇・エアコンを押すと状態が変わる（パネルの表示も変わる。給気口は 全開→閉→少し→半分、量はおよそ 12→0→3→7 m³/時）。換気扇・エアコン・サーキュレーターに「弱」「強」の印、エアコンとサーキュレーターの前に風の線（弱2本・強3本）、換気扇とサーキュレーターの羽根が強さで速く回る。サーキュレーターを置く・動かす・向きを変える・押して 弱→強→切。煙を出すで図をなぞると煙が出る。
 7. 幅 375px（縦長）で図が上に貼りつき、部屋の札が重ならない（スマホでは2行の札）。横向き 780×360 でページがスクロールしない（scrollHeight = 360）。横スクロールなし。
 8. 点滅なし（色はゆっくり変わるだけ。換気扇の羽根の回転は小さく、`prefers-reduced-motion` では止める）。
 9. 入口に載せる変更をしたら、doctype なし（互換モード）と doctype あり（標準モード）で全要素の位置を比べる（2026-10-06: 図は同じ、パネルの文字が最大 1.6px ずれるだけ）。
 
 ## 状態
 - 2026-10-06 v1（`versions/v001-first`）: 段階A。2LDK、場面6つ（24時間換気だけ・窓を2か所・窓1か所だけ・玄関と窓・キッチンの換気扇・サーキュレーター）、表示3つ、煙のグラフ、入口に追加。
+- 2026-10-06 v2（`versions/v002-levels`）: ユーザーの希望で、サーキュレーター・エアコンの強さを換気扇と同じく見て分かるように（回る羽根 `fanIcon()`、風の線 `windArcs()`、弱強の印 `levelBadge()`）。給気口の開け具合を4段階に。パネルに「入12」などの意味の説明。
 
 ## 今後の案
 - 段階B・C は `PLAN.md`。
