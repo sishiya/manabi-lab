@@ -25,7 +25,7 @@ const wrap1 = v => v - Math.floor(v);
 const G = {
   NODE_MIN: 3, NODE_MAX: 8,
   BOX: 1.0,                    // 生まれたときの関節は 1m 四方の中
-  FRIC_MIN: 0.2, FRIC_MAX: 1.2,  // 足の裏の摩擦係数（つるつるの殻〜ゴム。すべりにくい足ほど地面をつかむ力 GRIP も強い）
+  FRIC_MIN: 0.05, FRIC_MAX: 1.0, // 足の裏の摩擦係数（氷の上の金属〜ゴム）
   LEN_MIN: 0.15, LEN_MAX: 1.6,   // 筋肉の長さ
   K_MIN: 150, K_MAX: 600,        // 筋肉の強さ（ばね定数 N/m）
   T_MIN: 0.4, T_MAX: 2.0,        // 体のリズム（1周の秒数）

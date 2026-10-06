@@ -24,7 +24,7 @@ function watchMember(i, keepMode) {
   const m = POP.members[i];
   if (!m) return;
   if (!keepMode) VIEW.mode = 'pick';
-  VIEW.idx = i; VIEW.later = false;
+  VIEW.idx = i;
   watch(m.g, `第${POP.gen}世代 ${i + 1}位`, m.dist);
 }
 function watchHistory(gen) {
@@ -54,14 +54,8 @@ function restart(seed) {
 function afterGeneration() {
   const h = recordGeneration();
   assignSlots(h.species);
-  if (!VIEW.g) watchMember(0, true);
-  else if (VIEW.mode === 'top') {
-    // 自動・まとめて進めているあいだは、いま走っている1匹を最後まで見せてから、そのときの1位に切りかえる
-    const running = VIEW.sim && VIEW.sim.t < TRIAL && VIEW.env === POP.env;
-    if (POP.members[0].g === VIEW.g) { VIEW.label = `第${POP.gen}世代 1位`; VIEW.dist = POP.members[0].dist; VIEW.best = h.best; VIEW.later = false; }
-    else if (running && (RUN.auto || RUN.queue > 1)) VIEW.later = true;
-    else watchMember(0, true);
-  } else if (VIEW.mode === 'pick') {
+  if (VIEW.mode === 'top' || !VIEW.g) watchMember(0, true);
+  else if (VIEW.mode === 'pick') {
     const i = POP.members.findIndex(m => m.g === VIEW.g);     // 生き残っていれば順位を更新
     if (i >= 0) { VIEW.idx = i; VIEW.label = `第${POP.gen}世代 ${i + 1}位`; VIEW.dist = POP.members[i].dist; VIEW.best = h.best; VIEW.color = spColor(speciesKey(VIEW.g)); }
     else { VIEW.label = `#${VIEW.g.id}（もういない）`; VIEW.best = h.best; }
@@ -94,11 +88,7 @@ function workGenerations() {
 function stepView(dt) {
   const S = VIEW.sim;
   if (!S) return;
-  if (S.t >= TRIAL) {
-    VIEW.hold += dt;
-    if (VIEW.hold > HOLD) { if (VIEW.later && VIEW.mode === 'top') watchMember(0, true); else restartView(); }
-    return;
-  }
+  if (S.t >= TRIAL) { VIEW.hold += dt; if (VIEW.hold > HOLD) restartView(); return; }
   VIEW.acc += dt * VIEW.speed;
   while (VIEW.acc >= DT && S.t < TRIAL) {
     VIEW.acc -= DT; stepSim(S);
@@ -121,7 +111,7 @@ function render() {
     const v = fitCanvas($('view'));
     drawScene(v.ctx, v.w, v.h, VIEW);
     const S = VIEW.sim;
-    $('wLabel').textContent = VIEW.label + '・' + spName(speciesKey(VIEW.g)) + (VIEW.later ? `（いまは第${POP.gen}世代。走り終えたら最新の1位へ）` : '');
+    $('wLabel').textContent = VIEW.label + '・' + spName(speciesKey(VIEW.g));
     $('wTime').textContent = `${Math.min(TRIAL, S.t).toFixed(1)} / ${TRIAL} 秒　${fm(centerX(S) - S.x0)}`;
     const gq = fitCanvas($('genome'));
     drawGenome(gq.ctx, gq.w, gq.h, VIEW.g, wrap1(S.t / VIEW.g.period), S.contract, VIEW.color);
