@@ -5,7 +5,7 @@
 家の中の空気がどこから入り、どう流れ、どこが古いまま残るかを、真上から見た 2LDK で見るアプリ。企画は `PLAN.md`（`../IDEAS.md` のストック1から）。「電波の見える部屋」（`wifi-wave/`）の姉妹だが、エンジンは別（Canvas 2D と CPU の計算。WebGL は使わない）。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: 最新は v2（`versions/v002-levels`、強さの表示と給気口の開け具合）。v1（`versions/v001-first`）が段階A。入口「まなびラボ」の「物理」に載せた（サムネイル `thumbs/air-flow.jpg`）。GitHub Pages には push で公開される（push はユーザー）。Artifact には公開していない。
+- **いまの状態**: 最新は v2b（`versions/v002b-start-cross`、開いたときの場面を「窓を2か所あける」に）。v2（`versions/v002-levels`）で強さの表示と給気口の開け具合。v1（`versions/v001-first`）が段階A。入口「まなびラボ」の「物理」に載せた（サムネイル `thumbs/air-flow.jpg`）。GitHub Pages には push で公開される（push はユーザー）。Artifact には公開していない。
 - **次にやること**: ユーザーの感想しだい。次の段階は `PLAN.md` の段階B（自分の家の間取りを描く・一戸建て・すき間の量を選ぶ・2つの場面を並べて比べる）。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。場面や間取りを変えるなら `js/plan.js` だけ。
 - **動かし方**: ユーザーはルートの `start.bat`（まなびラボから開く）。Claude は `.claude/launch.json` の `apps`（8765）・`apps-2`（8766）・`apps-3`（8767）のどれか空いているもので `http://localhost:<port>/air-flow/`。
@@ -66,7 +66,7 @@
 - 流れの粒は rAF で動く。Browser ペインが裏だと止まるので、確認は `__af.advance()`。
 
 ## 確認のしかた（変更のたびに）
-1. 読み込み直後にエラーなし（`__af.err` が undefined）。
+1. 読み込み直後にエラーなし（`__af.err` が undefined）。開いたときの場面は「窓を2か所あける」（58 回/時）。
 2. 全場面で検算: `for (const s of SCENES) { __af.loadScene(s.key); const st = __af.houseStats(); console.log(s.key, st.exitAge / st.tau, maxDiv()); }` → 比が 0.99〜1.00、`maxDiv` が 1e-5 未満。
 3. 場面ごとの目安（変えていなければ）:
    - 24時間換気だけ: 0.67 回/時、気圧 −0.4 Pa、洋室 約48分、トイレ 約2時間、効率 59%。
@@ -83,6 +83,7 @@
 ## 状態
 - 2026-10-06 v1（`versions/v001-first`）: 段階A。2LDK、場面6つ（24時間換気だけ・窓を2か所・窓1か所だけ・玄関と窓・キッチンの換気扇・サーキュレーター）、表示3つ、煙のグラフ、入口に追加。
 - 2026-10-06 v2（`versions/v002-levels`）: ユーザーの希望で、サーキュレーター・エアコンの強さを換気扇と同じく見て分かるように（回る羽根 `fanIcon()`、風の線 `windArcs()`、弱強の印 `levelBadge()`）。給気口の開け具合を4段階に。パネルに「入12」などの意味の説明。
+- 2026-10-06 v2b（`versions/v002b-start-cross`）: ユーザーの希望で、開いたときの場面を「24時間換気だけ」から見栄えのする「窓を2か所あける」に（`main.js` の最後の `loadScene`）。
 
 ## 今後の案
 - 段階B・C は `PLAN.md`。

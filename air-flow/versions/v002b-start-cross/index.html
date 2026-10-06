@@ -1,0 +1,151 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>空気の流れの見える部屋</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230b2026'/><g fill='none' stroke='%237ee0c8' stroke-width='4.5' stroke-linecap='round'><path d='M10 24h28a7 7 0 1 0-7-7'/><path d='M10 34h38a7 7 0 1 1-7 7'/><path d='M10 44h16'/></g></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="frame">
+      <canvas id="view" aria-label="2LDKの間取り図。空気の古さ・風・煙を色で表示。窓・ドア・給気口・換気扇を押すと開け閉めできます"></canvas>
+    </div>
+    <div id="toolbar" role="group" aria-label="図の上でできること">
+      <div class="seg" id="segTool">
+        <button data-v="touch" aria-pressed="true">押して開け閉め</button>
+        <button data-v="smoke" aria-pressed="false">煙を出す</button>
+        <button data-v="circ" aria-pressed="false">サーキュレーターを置く</button>
+      </div>
+      <p id="probe" class="mono-ish"></p>
+    </div>
+    <p id="hint"></p>
+  </main>
+
+  <aside id="panel">
+    <header class="brand">
+      <h1>空気の流れの見える部屋</h1>
+      <p>外の空気はどこから入り、家の中をどう流れ、どこから出ていくのか。どこの空気が古いまま残るのか。真上から見た空気の流れのシミュレーションです。</p>
+    </header>
+
+    <section class="card" id="readout">
+      <div class="ro-top"><span class="lbl">家全体の換気</span><span class="ro-tag" id="roTag"></span></div>
+      <div class="ro-num"><b id="roVal">—</b><small>回/時</small></div>
+      <div id="roVerdict"></div>
+      <div class="ro-grid" id="roGrid"></div>
+      <p class="ro-note">※ 目安です。床から約1mの高さで見た2次元の計算で、温度差による流れ・家具・人の動きは入れていません。</p>
+    </section>
+
+    <section>
+      <h2>場面</h2>
+      <div class="presets" id="scenes"></div>
+    </section>
+
+    <section>
+      <h2>表示</h2>
+      <div class="seg" id="segMode">
+        <button data-v="age" aria-pressed="true">空気の古さ</button>
+        <button data-v="speed" aria-pressed="false">風の速さ</button>
+        <button data-v="smoke" aria-pressed="false">煙</button>
+      </div>
+      <div class="legend" id="legend"></div>
+      <label class="chk"><input type="checkbox" id="optPart" checked> 流れの粒を出す</label>
+      <div class="seg small" id="segPSpeed">
+        <button data-v="1" aria-pressed="true">粒は実際の速さ</button>
+        <button data-v="10" aria-pressed="false">粒を10倍速に</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>時間</h2>
+      <div class="row">
+        <button class="btn" id="btnPlay">一時停止</button>
+        <span class="cap mono" id="timeCap"></span>
+      </div>
+      <div class="seg small" id="segSpeed"></div>
+      <p class="cap" id="speedCap"></p>
+    </section>
+
+    <section>
+      <h2>煙で入れかわりを見る</h2>
+      <div class="row">
+        <button class="btn" id="btnFill">部屋じゅうを煙で満たす</button>
+        <button class="btn" id="btnClear">煙を消す</button>
+      </div>
+      <canvas id="chart" width="300" height="120" aria-label="家に残っている煙の割合のグラフ"></canvas>
+      <p class="cap" id="chartCap">煙で満たすと、家に残っている煙の割合をグラフにします。点線は、空気がすぐに全体へ混ざる場合。</p>
+    </section>
+
+    <section>
+      <h2>外の風</h2>
+      <div class="windrow">
+        <div class="compass" id="compass" role="group" aria-label="風が吹いてくる向き"></div>
+        <div class="windspd">
+          <input type="range" id="windU" min="0" max="8" step="1" value="2" aria-label="風の強さ">
+          <p class="cap mono" id="windCap"></p>
+          <p class="cap">家の図の上が北。左が共用廊下側（西）、右がバルコニー側（東）。上下はとなりの家です。</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>窓・ドア・換気扇</h2>
+      <p class="cap">図のふちの「入12」「出55」は、そこを通る空気の量（m³/時）。「すき間」は閉めた窓や玄関のすき間から。給気口は丸の塗りが開け具合、換気扇とサーキュレーターは羽根の回る速さ、エアコンとサーキュレーターは前に出る風の線（弱2本・強3本）、どれも「弱」「強」の印で強さを表します。</p>
+      <div id="els"></div>
+    </section>
+
+    <section>
+      <h2>サーキュレーター</h2>
+      <div class="row">
+        <button class="btn" id="btnCirc">置く</button>
+        <button class="btn" id="btnCircClear">全部片づける</button>
+      </div>
+      <p class="cap">「置く」を押してから図をクリック。ドラッグで動かし、先の黄色い丸をドラッグで向きを変える。本体を押すと 弱→強→切。</p>
+    </section>
+
+    <section class="explain">
+      <h2>解説</h2>
+      <div class="now" id="nowText"></div>
+      <details open>
+        <summary>空気の古さ（空気の年齢）とは</summary>
+        <p>外から入ってきた空気が、家の中で<b>何分たったか</b>を「空気の年齢（空気齢）」といいます。換気の研究や設計で、空気がよどむ場所を探すのに使う本物の指標です。</p>
+        <p>年齢が若い所は新しい空気が届いている所、年をとっている所は空気が入れかわらずに<b>よどんでいる</b>所。人の吐く息やにおい、ほこりも、こういう所にたまりやすくなります。</p>
+      </details>
+      <details>
+        <summary>24時間換気と換気回数</summary>
+        <p>2003年から、新しく建てる住まいには<b>24時間換気</b>が義務になりました（建築基準法。シックハウス対策）。1時間に家の空気の半分以上（<b>0.5回/時</b>）を入れかえる換気扇を、ずっと回しておくしくみです。</p>
+        <p>換気回数 0.5回/時 は、家じゅうの空気が<b>約2時間で1回</b>入れかわる量。ただし空気はまんべんなく入れかわるわけではありません。給気口を閉めたり、ドアの下のすき間をふさいだりすると、行き届かない部屋ができます。</p>
+      </details>
+      <details>
+        <summary>窓は2か所あけると風が通る</summary>
+        <p>風が家に当たると、風上の壁は押されて気圧が上がり、風下や横の壁は吸われて気圧が下がります。窓を<b>風上と風下の2か所</b>あけると、この気圧の差で空気が通りぬけます。</p>
+        <p>窓が1か所だけだと出口がないので、風の乱れで窓の近くが入れかわるくらい。向かい合う窓がないときは、<b>換気扇を回して反対側の窓をあける</b>と、通り道が作れます。</p>
+      </details>
+      <details>
+        <summary>換気扇と給気口</summary>
+        <p>換気扇は、家の中の空気を外へ押し出すぶん、どこかから空気が入らないと回りません。入口（給気口・窓）が少ないと<b>家の中の気圧が下がり</b>、すき間から無理に空気を引きこみます。換気扇の力は気圧の差が大きいほど弱まるので、思ったほど換気できなくなります。</p>
+        <p>キッチンの換気扇を強にすると玄関ドアが重くなるのはこのため。給気口を開けるか、窓を少しあけると楽に回ります。</p>
+      </details>
+      <details>
+        <summary>サーキュレーターの使い方</summary>
+        <p>換気は「家に入る空気の量」を決めますが、部屋の奥まで届くかは<b>家の中の流れ</b>しだい。サーキュレーターで空気をかきまぜると、よどんだ所の空気も、入ってきた新しい空気と混ざります。</p>
+        <p>窓をあけて換気するときは、窓の近くで<b>外に向けて</b>回すと、部屋の空気を押し出す力になります。</p>
+      </details>
+      <details>
+        <summary>このシミュレーションのしくみ</summary>
+        <p><b>入れかわる量</b>は、換気の設計で使う「換気回路網」の計算です。窓・給気口・すき間は「オリフィスの式」、換気扇は「強く引くほど量が落ちる」特性、風は壁にかかる圧力（風圧係数。低い建物の Swami と Chandra の式）で表し、入る量と出る量がつり合う家の中の気圧を求めます。窓1か所の風の乱れによる入れかわりは Warren の式（0.025×面積×風速）です。</p>
+        <p><b>家の中の流れ</b>は、床から約1mの高さの水平な面での2次元の流れの計算（1マス10cm、空気は縮まないとする）です。乱れは、ねばりけと混ざりやすさを大きめにして表しています。サーキュレーターとエアコンの風は、その場所で風を吹き出させて表しています。</p>
+        <p><b>空気の古さ</b>は、流れに運ばれながら1秒ごとに1秒ずつ年をとる量として計算しています。出口（換気扇や風下の窓）から出ていく空気の平均の年齢は、どんな流れでも「家の容積 ÷ 換気量」に等しくなる、という性質で計算を確かめています。</p>
+        <p><b>簡単にしたところ</b>: 高さ方向の流れ、温度の差（暖かい空気が上へ行く・すき間風の温度差換気）、家具・人の動き、ドア下のすき間の抵抗は入れていません。すき間の量は鉄筋コンクリートのマンションの目安（相当すき間面積 2 cm²/m²）、換気扇の風量は一般的な製品の目安です。実際の家の換気量を測るものではありません。健康の判断には使えません。</p>
+        <p>使っているもの: 文字に Dela Gothic One・Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）。</p>
+      </details>
+    </section>
+  </aside>
+</div>
+
+<script src="js/plan.js"></script>
+<script src="js/net.js"></script>
+<script src="js/fluid.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
