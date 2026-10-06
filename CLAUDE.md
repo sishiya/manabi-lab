@@ -11,6 +11,7 @@
 - `immune-battle/` — 別シリーズ「免疫のたたかい」（ウイルス・細菌が入って増え、免疫に片づけられるまで。数のモデルに合わせて動くミクロの断面＋人体の小窓＋グラフと予測）。css/js に分割、Canvas 2D。企画は `immune-battle/PLAN.md`、仕組み・モデルの数値・確認手順は `immune-battle/DEVNOTES.md`。
 - `god-view/` — 別シリーズ「神の視点マップ」（宇宙から地球・街・人・原子までホイールで寄れる。地球は実データの地図・地形・建物。CesiumJS、API キーなしのデータから）。css/js に分割。企画は `god-view/PLAN.md`、仕組み・データ源・確認手順は `god-view/DEVNOTES.md`。確認は `apps`（http://localhost:8765/god-view/）で。**公開は GitHub Pages**（push で更新、RULES 8.1）。
 - `metamorphosis/` — 別シリーズ「さなぎの中で」（タバコスズメガのイモムシが蛹になりガになるまで。時間は研究の日付、体の中で壊れる・残る・新しく作られる器官を、横から透かした模式図で時間を追って見る。ホルモンとスイッチの遺伝子のグラフつき。Canvas 2D）。css/js に分割。企画は `metamorphosis/PLAN.md`、仕組み・確認手順は `metamorphosis/DEVNOTES.md`。確認は `apps`（http://localhost:8765/metamorphosis/）で。
+- `air-flow/` — 単独アプリ「空気の流れの見える部屋」（2LDK で、窓・給気口・換気扇・風・サーキュレーターによって空気がどう入れかわり、どこがよどむかを空気齢の色で見る。換気回路網＋2次元の流れ＋空気齢の計算。Canvas 2D）。css/js に分割。企画は `air-flow/PLAN.md`、仕組み・確認手順は `air-flow/DEVNOTES.md`。確認は `apps`（http://localhost:8765/air-flow/）で。
 - `quantum/` — 別シリーズ「量子の実験室」（二重スリット・トンネル効果・偏光板・量子もつれ・不確定性原理）。1ファイル完結。仕組みと確認手順・公開 URL は `quantum/DEVNOTES.md`。
 
 ## 進め方の約束（詳しくは `RULES.md`。どのアプリでも最初に読む）

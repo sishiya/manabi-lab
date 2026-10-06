@@ -21,6 +21,8 @@ const SETUP = {
   'body-dive': async w => { click(w, '#go'); await wait(6000); },
   'urinary-dive': async w => { click(w, '#go'); await wait(6000); },
   'blood-dive': async w => { click(w, '#go'); await wait(6000); },
+  // 窓を2か所あけて風を通したところ（空気の古さの色と流れの粒）
+  'air-flow': async w => { await wait(800); w.__af.loadScene('cross'); await wait(4000); },
   // 蛹の1日目、透かして見る（幼虫の部品が壊れ、血球が集まるところ）
   'metamorphosis': async w => { await wait(800); w.__mm.setT(1.0); await wait(1500); w.__mm.setT(1.0); },
   // 恐竜の時代（約6800万年前）。生き物が多く見える
