@@ -10,9 +10,13 @@
 - `animal-senses/` — 別シリーズ「いきものの感じる世界」（同じ庭を人間・カラス・マムシなどの感覚で一人称で見る。紫外線・熱などを置き換えて表示）。css/js に分割。企画は `animal-senses/PLAN.md`、仕組みと確認手順は `animal-senses/DEVNOTES.md`。
 - `immune-battle/` — 別シリーズ「免疫のたたかい」（ウイルス・細菌が入って増え、免疫に片づけられるまで。数のモデルに合わせて動くミクロの断面＋人体の小窓＋グラフと予測）。css/js に分割、Canvas 2D。企画は `immune-battle/PLAN.md`、仕組み・モデルの数値・確認手順は `immune-battle/DEVNOTES.md`。
 - `god-view/` — 別シリーズ「神の視点マップ」（宇宙から地球・街・人・原子までホイールで寄れる。地球は実データの地図・地形・建物。CesiumJS、API キーなしのデータから）。css/js に分割。企画は `god-view/PLAN.md`、仕組み・データ源・確認手順は `god-view/DEVNOTES.md`。確認は `apps`（http://localhost:8765/god-view/）で。**公開は GitHub Pages**（push で更新、RULES 8.1）。
+- `illusions/` — 別シリーズ「錯覚の美術館」（世界の錯視・錯聴を見て、測って、しくみを知る。Canvas 2D）。css/js に分割。企画は `illusions/PLAN.md`、展示の書き方・確認手順は `illusions/DEVNOTES.md`。確認は `apps`（http://localhost:8765/illusions/）で。
 - `metamorphosis/` — 別シリーズ「さなぎの中で」（タバコスズメガのイモムシが蛹になりガになるまで。時間は研究の日付、体の中で壊れる・残る・新しく作られる器官を、横から透かした模式図で時間を追って見る。ホルモンとスイッチの遺伝子のグラフつき。Canvas 2D）。css/js に分割。企画は `metamorphosis/PLAN.md`、仕組み・確認手順は `metamorphosis/DEVNOTES.md`。確認は `apps`（http://localhost:8765/metamorphosis/）で。
 - `air-flow/` — 単独アプリ「空気の流れの見える部屋」（2LDK で、窓・給気口・換気扇・風・サーキュレーターによって空気がどう入れかわり、どこがよどむかを空気齢の色で見る。換気回路網＋2次元の流れ＋空気齢の計算。Canvas 2D）。css/js に分割。企画は `air-flow/PLAN.md`、仕組み・確認手順は `air-flow/DEVNOTES.md`。確認は `apps`（http://localhost:8765/air-flow/）で。
+- `extreme/` — 単独アプリ「極限の世界に置いてみたら」（宇宙 400km からマリアナ海溝の底まで1本のものさしで、人・風船・ポテトチップスの袋・マシュマロ・魚・クマムシなどを運び、気圧・水圧で縮む・ふくらむ・沸く・生きられるかを見る。Canvas 2D）。css/js に分割。企画は `extreme/PLAN.md`、仕組み・確認手順は `extreme/DEVNOTES.md`。確認は `apps`（http://localhost:8765/extreme/）で。
 - `quantum/` — 別シリーズ「量子の実験室」（二重スリット・トンネル効果・偏光板・量子もつれ・不確定性原理）。1ファイル完結。仕組みと確認手順・公開 URL は `quantum/DEVNOTES.md`。
+- `archive.html` — 隠しアーカイブ（入口からリンクしない。試作・作りかけのアプリ。いまは extreme と illusions）。入口とアーカイブの出し入れは `RULES.md` 8.1。
+- `IDEAS.md` — まだ作っていないテーマのストックと、ユーザーの好みの傾向。新しいアプリを考えるときに読む。
 
 ## 進め方の約束（詳しくは `RULES.md`。どのアプリでも最初に読む）
 - 企画書（`PLAN.md`）を先に作り、段階に分けて進める。

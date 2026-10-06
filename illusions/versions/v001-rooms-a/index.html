@@ -1,0 +1,51 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>錯覚の美術館</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%231f2a2b'/><path d='M14 24h36M14 40h36M14 24l6-6M14 24l6 6M50 24l-6-6M50 24l-6 6M14 40l-6-6M14 40l-6 6M50 40l6-6M50 40l6 6' fill='none' stroke='%23d8c79a' stroke-width='3.5' stroke-linecap='round'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Old+Mincho:wght@600;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <header id="top">
+    <a id="logo" href="#">錯覚の美術館<span>ILLUSION MUSEUM</span></a>
+    <nav>
+      <a href="#" id="toHome">入口</a>
+      <button id="aboutBtn" type="button">このアプリについて</button>
+    </nav>
+  </header>
+
+  <main id="home"></main>
+
+  <main id="room" hidden>
+    <div id="stageWrap">
+      <div id="stageFrame"><canvas id="stage"></canvas></div>
+      <div id="stageNote" role="status" aria-live="polite" hidden></div>
+    </div>
+    <aside id="panel"></aside>
+  </main>
+
+  <dialog id="about">
+    <form method="dialog">
+      <h2>このアプリについて</h2>
+      <p>目や耳が「だまされる」ふしぎを、自分で見て、確かめて、しくみを知るための展示です。どの図も、このアプリがその場でプログラムで描いています（有名な作品の画像は使っていません。原理を見つけた人の名前は各展示に書いています）。</p>
+      <h3>注意</h3>
+      <ul>
+        <li>見え方・聞こえ方には個人差があります。錯覚が起きなくても、起きすぎても、ふつうのことです。</li>
+        <li>学習用に簡単にしています。目や耳の病気・視力の判断には使えません。気になることがあれば眼科・耳鼻科へ。</li>
+        <li>ちらつく展示（ライラック・チェイサーなど）は、ボタンを押したときだけ動き、点滅は小さい範囲・ゆっくりにしています。気分が悪くなったらすぐにやめてください。</li>
+        <li>「なぜ？」の説明は、<b class="tag t-sure">確か</b> 実験で確かめられていること、<b class="tag t-theory">説</b> 有力な説明（ほかの説もある）、<b class="tag t-open">未解明</b> まだよく分かっていないこと、に分けています。</li>
+      </ul>
+      <h3>使っているもの</h3>
+      <p>フォント: Zen Old Mincho・Zen Kaku Gothic New・IBM Plex Mono（Google Fonts、SIL Open Font License）。外部のライブラリは使っていません。記録や設定はどこにも送りません。</p>
+      <button value="close" class="btn">閉じる</button>
+    </form>
+  </dialog>
+</div>
+
+<script src="js/core.js"></script>
+<script src="js/ex-size.js"></script>
+<script src="js/ex-vanish.js"></script>
+<script src="js/ex-light.js"></script>
+<script src="js/ex-form.js"></script>
+<script src="js/app.js"></script>
