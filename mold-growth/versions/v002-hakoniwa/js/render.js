@@ -2,10 +2,20 @@
 // (kept on their own canvas, 10 px per mm), spores, floating spores in the air, steam.
 
 const VIEW = { hidden: false, moist: false, labels: true, box: null, fast: false };   // fast: draw day averages (no flashing)
-const wView = c => VIEW.fast ? W.wAvg[c] : W.water[c];
+// what is drawn eases toward the world over ~0.35 s, so a bath (water, steam) never pops in within one frame
+const wView = c => R.wDisp[c];
+function easeDisplay(dt) {
+  const f = 1 - Math.exp(-dt / 0.35), src = VIEW.fast ? W.wAvg : W.water, d = R.wDisp;
+  for (let c = 0; c < NC; c++) d[c] += (src[c] - d[c]) * f;
+  R.rhDisp += ((VIEW.fast ? W.rhAvg : W.air.RH) - R.rhDisp) * f;
+  const since = (Math.floor(W.t) % 24 - BATH_HOUR + 24) % 24;
+  const steam = !VIEW.fast && W.air.RH > 92 && since < 4 ? 0.3 * (W.air.RH - 92) / 8 : 0;
+  R.steam += (steam - R.steam) * f;
+}
 const TRAIL_PX = 10;   // px per mm on the hyphae canvas
 const R = {
   bg: null, bgKey: '', overlay: document.createElement('canvas'), trails: document.createElement('canvas'),
+  wDisp: new Float32Array(NC), rhDisp: 70, steam: 0,
   air: [], puffs: [],
 };
 R.overlay.width = GW; R.overlay.height = GH;
@@ -100,7 +110,7 @@ function buildOverlay() {
       const na = ca + a * (1 - ca);
       r = (cr * ca + r * a * (1 - ca)) / na; gg = (cg * ca + gg * a * (1 - ca)) / na; b = (cb * ca + b * a * (1 - ca)) / na; a = na;
     };
-    if (VIEW.moist) { const m = moistColor(VIEW.fast ? awOf(W.wAvg[c], W.rhAvg) : awAt(c)); add(m[0], m[1], m[2], m[3] / 255); }
+    if (VIEW.moist) { const m = moistColor(awOf(R.wDisp[c], R.rhDisp)); add(m[0], m[1], m[2], m[3] / 255); }
     else {
       const w = wView(c);
       if (w > 0.003) add(150, 205, 240, Math.min(0.32, w * 2.5));
@@ -163,6 +173,7 @@ function drawWorld(cv, clock, dt) {
   g.fillStyle = '#0d1110'; g.fillRect(0, 0, W_, H_);
   g.save(); rr(g, b.x, b.y, b.w, b.h, 6); g.clip();
   g.drawImage(R.bg, b.x, b.y, b.w, b.h);
+  easeDisplay(Math.max(dt, 0.001));
   drainSegments();
   g.globalAlpha = VIEW.hidden ? 1 : 0.35;
   g.drawImage(R.trails, b.x, b.y, b.w, b.h);
@@ -190,7 +201,7 @@ function drawWorld(cv, clock, dt) {
   }
   // steam after the bath
   const since = (Math.floor(W.t) % 24 - BATH_HOUR + 24) % 24;
-  if (!VIEW.fast && W.air.RH > 92 && since < 4) { g.fillStyle = `rgba(240,244,246,${0.35 * (W.air.RH - 92) / 8})`; g.fillRect(b.x, b.y, b.w, b.h); }
+  if (R.steam > 0.005) { g.fillStyle = `rgba(240,244,246,${R.steam})`; g.fillRect(b.x, b.y, b.w, b.h); }
   if (Math.random() < dt * 3 && W.air.RH < 95) spawnPuffs();
   drawPuffs(g, dt);
   g.restore();
