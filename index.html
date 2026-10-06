@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>まなびラボ</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%232b6cb0'/><path d='M26 14h12M28 14v14L17 47a4 4 0 0 0 3.5 6h23a4 4 0 0 0 3.5-6L36 28V14' fill='none' stroke='%23fff' stroke-width='3.5' stroke-linejoin='round'/><path d='M22 42h20l3 6H19z' fill='%23fff'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
 <style>
 :root{--bg:#f6f4ee;--ink:#1d2129;--muted:#5d6472;--line:#d9d5ca;--card:#fff;--accent:#2b6cb0;--accent-ink:#fff;--thumb:#d9d5ca;--field:#fff;
   --c-earth:#4a8494;--c-body:#b8694f;--c-life:#62874a;--c-phys:#7d6db0;--new:#b45309;--new-ink:#fff;color-scheme:light dark}
@@ -64,6 +65,7 @@ h2+.grid{margin-top:0}
 .card a.ver{position:relative;z-index:1;color:var(--muted)}
 .note{font-size:13px;color:var(--muted);margin:64px 0 0;padding-top:24px;border-top:1px solid var(--line)}
 .note a{color:var(--accent)}
+.note.sub{margin-top:16px;padding-top:0;border-top:0;font-size:12px}
 .c-earth{--c:var(--c-earth)}.c-body{--c:var(--c-body)}.c-life{--c:var(--c-life)}.c-phys{--c:var(--c-phys)}
 @media (max-width:719px){main{padding-top:32px}}
 
@@ -111,6 +113,7 @@ h2+.grid{margin-top:0}
 
   <p class="note">ソースコードと開発メモ: <a href="https://github.com/sishiya/manabi-lab">github.com/sishiya/manabi-lab</a><br>
   不具合やご意見は <a href="https://github.com/sishiya/manabi-lab/issues">GitHub の Issues</a> へ（GitHub のアカウントが必要です）</p>
+  <p class="note sub" id="analytics">アクセス解析について: どのページがどれくらい見られているかを知るために、このサイトでは Google アナリティクスを使っています。Cookie を使って閲覧の記録を集めますが、名前などの個人を特定する情報は集めず、広告にも使いません。集めた情報は Google のプライバシーポリシー（<a href="https://policies.google.com/technologies/partner-sites?hl=ja">Google のサービスを使うサイトでのデータの使われ方</a>）に沿って扱われます。記録されたくないときは <a href="https://tools.google.com/dlpage/gaoptout?hl=ja">オプトアウト アドオン</a> を使うか、ブラウザで Cookie を止めてください。</p>
 </main>
 <script>
 // アプリの一覧。並びは公開した順（同じ日のものの前後もこの順で決める）。

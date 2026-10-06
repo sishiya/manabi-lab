@@ -1,0 +1,103 @@
+/* Layout: the scale + scene canvas fills the left; the panel column sits on the right (stacks below on portrait phones). Same frame as air-flow */
+:root{
+  --bg:#0b1219; --stage:#060c12; --panel:#0e1820; --raise:#14222c;
+  --line:rgba(170,205,225,.14); --line2:rgba(170,205,225,.28);
+  --ink:#e8f0f4; --muted:#a4b6c0; --dim:#6f8794;
+  --accent:#ffc95a; --sea:#6cc4ff;
+  --l0:#7fdc8a; --l1:#ffc95a; --l2:#ff9d57; --l3:#ff6b6b;
+  --f-display:'Dela Gothic One','Hiragino Sans','Yu Gothic',sans-serif;
+  --f-body:'Zen Kaku Gothic New','Hiragino Sans','Yu Gothic','Meiryo',system-ui,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 var(--f-body)}
+button,input{font:inherit;color:inherit}
+#app{display:grid;grid-template-columns:minmax(0,1fr) 360px;height:100%}
+#stage{min-width:0;display:flex;flex-direction:column;gap:8px;padding:16px;background:var(--stage)}
+#frame{position:relative;flex:1;min-height:0}
+#frame canvas{position:absolute;display:block;border-radius:6px;touch-action:none;cursor:pointer}
+#toolbar{display:flex;gap:10px;align-items:center}
+.zlab{font-size:12px;color:var(--muted);white-space:nowrap}
+#zRange{flex:1;min-width:0;accent-color:var(--accent)}
+.chk{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap}
+#hint{margin:0;color:var(--muted);font-size:12.5px;max-width:84ch}
+
+#panel{min-width:0;overflow-y:auto;background:var(--panel);border-left:1px solid var(--line);padding:18px 16px 28px;display:flex;flex-direction:column;gap:18px}
+.brand h1{font:400 23px/1.3 var(--f-display);margin:0 0 6px;letter-spacing:.02em;text-wrap:balance}
+.brand p{margin:0;color:var(--muted);font-size:13px}
+h2{font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.12em;margin:0}
+section{display:flex;flex-direction:column;gap:8px}
+.cap{margin:0;color:var(--muted);font-size:12px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+.things{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.thing{display:flex;flex-direction:column;align-items:center;gap:1px;border:1px solid var(--line);background:var(--raise);border-radius:8px;padding:4px 2px 5px;cursor:pointer;font-size:11px;line-height:1.25;color:var(--muted);text-align:center}
+.thing canvas{width:56px;height:42px}
+.thing[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);color:var(--ink)}
+
+.card{background:var(--raise);border:1px solid var(--line);border-radius:10px;padding:12px 14px;gap:4px}
+.ro-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ro-top .lbl{font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.08em}
+.ro-tag{font-size:12px;font-weight:700;white-space:nowrap}
+#roVerdict{font-size:15px;font-weight:700;line-height:1.45}
+.ro-num{display:flex;align-items:baseline;gap:6px;font-family:var(--f-mono);font-variant-numeric:tabular-nums;margin-top:2px}
+.ro-num b{font-size:32px;font-weight:500;line-height:1.1}
+.ro-num small{color:var(--muted);font-size:13px;font-family:var(--f-body)}
+.ro-cap{color:var(--dim);font-size:11.5px;margin-top:-2px}
+.ro-grid{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12px;margin-top:6px;align-items:baseline}
+.ro-grid span{color:var(--muted)}
+.ro-grid b{font-weight:500;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+#place .ro-grid{margin-top:2px}
+#readout .row{margin-top:8px}
+
+.notes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+.notes li{font-size:13px;color:var(--muted);line-height:1.6;padding-left:0}
+.tag{display:inline-block;font-size:10.5px;font-weight:700;border-radius:4px;padding:0 5px;margin-right:6px;vertical-align:1px;line-height:1.6}
+.tag.rec{background:rgba(127,220,138,.16);color:#9fe8a8}
+.tag.calc{background:rgba(108,196,255,.16);color:#9fd6ff}
+.tag.est{background:rgba(255,201,90,.16);color:#ffd27a}
+.legend-tags .tag{margin-left:6px}
+.legend-tags .tag:first-child{margin-left:0}
+
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line2);background:var(--raise);border-radius:8px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+.btn.small{padding:4px 10px;font-size:12px}
+.btn:hover,.thing:hover,.place:hover{filter:brightness(1.18)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.places{display:flex;flex-direction:column;gap:8px}
+.places h3{font-size:11.5px;font-weight:700;color:var(--muted);margin:0}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.place{text-align:left;border:1px solid var(--line);background:var(--raise);border-radius:8px;padding:5px 8px;cursor:pointer;line-height:1.3;font-size:12.5px}
+.place small{display:block;color:var(--dim);font-size:11px;font-family:var(--f-mono)}
+.place[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+
+.explain{gap:6px}
+details{border-top:1px solid var(--line);padding-top:8px}
+summary{cursor:pointer;font-weight:700;font-size:13px;padding:2px 0}
+details p{color:var(--muted);font-size:13px;margin:6px 0 0}
+details b{color:var(--ink);font-weight:500}
+
+/* portrait phones: one column, the scene stays pinned at the top while the panel scrolls under it */
+@media (max-width:860px) and (orientation:portrait){
+  #app{grid-template-columns:1fr;height:auto}
+  #stage{padding:10px 16px 8px;gap:6px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;box-shadow:0 8px 18px rgba(0,0,0,.4)}
+  #frame{flex:none;width:100%;height:min(58svh,520px)}
+  #toolbar{flex-wrap:wrap;gap:6px 10px}
+  .zlab{display:none}
+  #zRange{flex:1 1 100%}
+  #hint{display:none}
+  #panel{border-left:0;border-top:1px solid var(--line);overflow:visible;padding-top:14px}
+}
+/* landscape phones: same side-by-side layout as desktop with a narrower panel */
+@media (orientation:landscape) and (max-height:560px){
+  #app{grid-template-columns:minmax(0,1fr) 300px}
+  #stage{padding:8px 8px 6px max(12px,env(safe-area-inset-left,0px));gap:4px}
+  #hint{display:none}
+  #panel{padding:12px max(12px,env(safe-area-inset-right,0px)) 20px 12px;gap:14px}
+  .brand h1{font-size:19px}
+  .things{grid-template-columns:repeat(3,1fr)}
+}
+@media (prefers-reduced-motion:reduce){ .thing,.place,.btn{transition:none} }
