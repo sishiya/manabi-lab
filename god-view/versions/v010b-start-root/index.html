@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>神の視点マップ</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230b1a2e'/><g fill='none' stroke='%236cc3ff' stroke-width='3.5'><circle cx='32' cy='32' r='20'/><ellipse cx='32' cy='32' rx='9' ry='20'/><path d='M12 32h40M15 22h34M15 42h34'/></g></svg>">
+<script>window.CESIUM_BASE_URL = 'https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/';</script>
+<script src="https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/Cesium.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/Widgets/widgets.css">
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+<div id="globe"></div>
+<canvas id="space"></canvas>
+<canvas id="micro"></canvas>
+<div id="micro-info"></div>
+<div id="space-labels"></div>
+<div id="space-credit">宇宙: 惑星・月の位置は <a href="https://github.com/cosinekitty/astronomy" target="_blank" rel="noopener">astronomy-engine</a> で計算（推定）、恒星は <a href="https://github.com/astronexus/HYG-Database" target="_blank" rel="noopener">HYG Database</a>（CC BY-SA 4.0、実データ）、地球の写真は NASA Blue Marble（<a href="https://www.earthdata.nasa.gov/data/tools/gibs" target="_blank" rel="noopener">GIBS</a>）。<b>天の川銀河・ほかの銀河の形・宇宙の大規模構造・月の表面は演出</b>（位置と大きさは観測にもとづく）。惑星の大きさは本当の半径で、小さいときは光の点で示しています。</div>
+<div id="space-hint">ホイール（ピンチ）で引くと宇宙の果てまで、寄ると地球の地図に戻ります。ドラッグで向きを変えます。下の目盛りを押すと、その大きさへ。</div>
+
+<header id="top">
+  <button id="btn-layers" class="icon" title="層のパネル" aria-label="層のパネル">☰</button>
+  <div class="title">神の視点マップ</div>
+  <form id="search" autocomplete="off">
+    <input id="search-q" type="search" placeholder="地名・住所でさがす（例: 富士山）">
+    <ul id="search-list" hidden></ul>
+  </form>
+  <button id="btn-home" class="icon" title="日本全体へ" aria-label="日本全体へ">⌂</button>
+  <button id="btn-about" class="icon" title="このアプリについて" aria-label="このアプリについて">?</button>
+</header>
+
+<aside id="layers"><div id="layers-body"></div></aside>
+
+<div id="point" hidden></div>
+
+<footer id="scale">
+  <div class="scale-now">
+    <span>画面の幅</span> <b id="scale-w">–</b>
+    <span class="what">≒ <span id="scale-what">–</span></span>
+    <span id="scale-pow" class="pow"></span>
+  </div>
+  <div id="ruler-bar"></div>
+</footer>
+
+<div id="about" class="modal" hidden>
+  <div class="card">
+    <button id="about-close" class="x" aria-label="閉じる">×</button>
+    <h2>神の視点マップ</h2>
+    <p>本物の地形・航空写真・地図を読み込んで、地球全体から家1軒までを見わたすアプリです。さらに引けば宇宙の果て（約 10^27 m）まで、寄れば素粒子とプランク長（約 10^-35 m）まで、ホイールひとつで行き来できます。</p>
+    <h3>操作</h3>
+    <ul>
+      <li>ホイール／ピンチ: 寄る・引く</li>
+      <li>左ドラッグ: 動かす　右ドラッグ・Ctrl＋ドラッグ／2本指: 傾ける・回す</li>
+      <li>クリック: その地点の住所（世界）と標高（日本のみ）。建物なら名前・用途・高さ・階数も（PLATEAU のある都市）</li>
+      <li>生きている地球: 時刻をずらす・早送りする（昼と夜が動く）、夜の街の明かり、きのうの衛星写真（雲）、地震、人工衛星・ISS。地点をクリックすると、いまの天気（予報モデルの値）も</li>
+      <li>ミクロへ: 地面すれすれまで寄ってからさらにホイールで寄ると、その場所の地面に合わせて「岩・砂」（街・山）・「水」（海・川・湖）・「植物」（森・草地・公園）の道に分かれ、原子 → 原子核 → 陽子とクォーク → プランク長まで。形は演出、大きさは本物</li>
+      <li>宇宙へ: いちばん引いた所からさらにホイールで引くと宇宙へ。月・太陽系（本当の位置）、近くの恒星、天の川銀河、局所銀河群、宇宙の大規模構造、観測できる宇宙の果てまで。下の目盛りの帯を押すとその大きさへ</li>
+      <li>動く街: 都営の電車・バス（いまの位置。駅・バス停の間は推定）、車・人・鳥（道路に合わせた架空の動き＝演出）</li>
+      <li>地下を見る: 地面が半透明になり、ホイールやドラッグで地面の下にも潜れます。見どころのボタンで東京駅の地下街・長岡市の地下の管へ</li>
+    </ul>
+    <h3>印の意味</h3>
+    <p><span class="tag tag-real">実データ</span> 公開されているデータをそのまま表示　<span class="tag tag-est">推定</span> データから計算したもの　<span class="tag tag-fx">演出</span> それらしく作ったもの（本物ではない）</p>
+    <h3>注意</h3>
+    <p>非営利の学習用アプリです。Google などの地図サービスとは関係がなく、そのデータも使っていません。<br>地図・写真・標高は公開データで、撮影や測量の時期によって今の様子と違うことがあります。日本の外の地形は粗く、海の深さは表示していません（海面を 0m にしています）。測量や防災・登山などの判断には使わないでください。<br>地図や写真の画像、検索・住所・標高は、それぞれの提供元のサーバーから直接読み込みます（見ている場所の座標や検索した言葉が提供元に送られます）。このアプリ自体は何も記録・送信しません。</p>
+    <h3>使っているもの・出典</h3>
+    <ul class="small">
+      <li>CesiumJS（Apache License 2.0）</li>
+      <li>建物: <a href="https://www.mlit.go.jp/plateau/" target="_blank" rel="noopener">3D都市モデル（Project PLATEAU）</a>（国土交通省、政府標準利用規約）。地下街（東京・札幌）と地下埋設物（長岡市の下水道管・マンホール・水道管・ガス管など）も。地形に合わせるため、国土地理院のジオイド高で高さを補正して表示。水道管・ガス管などは平面のデータしかないため、深さ約1.2mは推定</li>
+      <li>生きている地球: NASA EOSDIS GIBS（きのうの衛星写真 VIIRS、夜の明かり VIIRS Black Marble 2016）、USGS 地震情報（過去7日・M2.5以上）、CelesTrak の軌道要素と satellite.js（MIT）で計算した人工衛星の位置、Open-Meteo の天気（CC BY 4.0、数値予報モデルの値）</li>
+      <li>宇宙: Three.js（MIT）、astronomy-engine（MIT、惑星・月の位置の計算）、HYG Database v4.1（David Nash、CC BY-SA 4.0。明るさ6等まで・20パーセク以内の 6641 個を選んだもの）、NASA Blue Marble（GIBS）。天の川銀河・ほかの銀河の形・宇宙の大規模構造は観測にもとづく演出</li>
+      <li>電車・バス: <a href="https://ckan.odpt.org/organization/toei" target="_blank" rel="noopener">東京都交通局・公共交通オープンデータセンター</a>（CC BY 4.0。キー不要の公開 API）。車・人・鳥は OSM の道路・緑地（OpenFreeMap）から作った演出で、実在の人や車ではありません</li>
+      <li>PLATEAU のない所の建物: <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © OpenMapTiles Data from OpenStreetMap（ODbL）。高さは OSM の高さ・階数のタグから計算した値で、タグがない建物は推定値</li>
+      <li><a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>（国土地理院。標準地図・淡色地図・全国最新写真（シームレス）・色別標高図・陰影起伏図・標高タイル）と<a href="https://maps.gsi.go.jp/development/elevation_s.html" target="_blank" rel="noopener">標高 API</a>。<a href="https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html" target="_blank" rel="noopener">国土地理院コンテンツ利用規約</a>に従って利用。タイルごとの追加の出典（GEBCO・VMAP0・海上保安庁・NASA LP DAAC／USGS EROS・GRUS画像 © Axelspace）は地図の下に表示</li>
+      <li><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>（地図は ODbL。世界の地図タイル、検索と住所は Nominatim。いずれも <a href="https://osmfoundation.org/wiki/Terms_of_Use" target="_blank" rel="noopener">OSMF の利用規約</a>に従い、ふつうの閲覧の範囲で利用）</li>
+      <li><a href="https://cloudless.eox.at" target="_blank" rel="noopener">EOxCloudless</a> by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2016)。CC BY-NC-SA 4.0（非営利の利用）</li>
+      <li><a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Terrain Tiles</a>（Mapzen、AWS Open Data）。<a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noopener">出典一覧</a>: SRTM・3DEP・GMTED2010 courtesy of the U.S. Geological Survey、ETOPO1 U.S. NOAA、EU-DEM（Copernicus）、ArcticDEM、Geoscience Australia、Kartverket、LINZ、INEGI、Environment Agency、Open Government Licence – Canada、Österreich DGM</li>
+    </ul>
+  </div>
+</div>
+
+<div id="fatal" hidden>地球を表示できませんでした。WebGL が使えるブラウザで開いてください。</div>
+
+<script src="js/sources.js"></script>
+<script src="js/terrain.js"></script>
+<script src="js/earth.js"></script>
+<script src="data/plateau-bldg.js"></script>
+<script src="js/buildings.js"></script>
+<script src="js/mvt.js"></script>
+<script src="js/osmbuildings.js"></script>
+<script src="data/plateau-under.js"></script>
+<script src="js/underground.js"></script>
+<script src="js/life.js"></script>
+<script src="js/transit.js"></script>
+<script src="js/agents.js"></script>
+<script src="js/space.js"></script>
+<script src="js/micro.js"></script>
+<script src="js/scale.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

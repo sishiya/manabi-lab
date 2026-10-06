@@ -7,7 +7,7 @@
 - **いまの状態**: v010（ミクロを地面の種類で 3 本の道に）。宇宙の果て（約 10^27 m）→ 地図（地球・建物・地下・生きている地球・動く街）→ ミクロ（岩・砂／水／植物 → 原子 → 原子核 → クォーク → プランク長 約 10^-35 m）を 1 本のホイールで。**公開先は GitHub Pages**: https://sishiya.github.io/manabi-lab/god-view/ （push すると更新。RULES 8.1）。
 - **次にやること**: ユーザーと相談。候補:「災害の想定」層（PLATEAU の浸水想定）、地図 ⇔ ミクロの入れかえで地面と手のひらをつなぐ演出、OSM の建物の組み立てを Web Worker に（軽量化）、交差点で曲がる車、ミクロの層を増やす（ウイルス・脳の神経など）。
 - **読む順**: `../RULES.md` → このメモ → `PLAN.md`（全体の構想と段階）→ 下の「ファイル構成」で関係するファイルだけ。
-- **動かし方**: ユーザーは `god-view/start.bat` をダブルクリック（サーバーがなければ起動して http://localhost:8765/god-view/ を開く）。Claude は `.claude/launch.json` の `apps`。**file:// では動かない**（Cesium の Worker が CDN から読めない。開くと案内だけ出す）。
+- **動かし方**: ユーザーはいちばん上のフォルダの `start.bat` をダブルクリック（サーバーがなければ空いているポートで起動して、まなびラボを開く。`start.bat god-view` ならこのアプリを直接）。2026-10-06 に god-view/start.bat から移した（v010b）。Claude は `.claude/launch.json` の `apps`。**file:// では動かない**（Cesium の Worker が CDN から読めない。開くと案内だけ出す）。
 - **デバッグ用**: `window.__gv`（`width()` 画面の幅 m、`state()`、`terrain()` 標高タイルの読み込み数、`goto(lon,lat,h)`、`home()`、`run(n,dt)` 描画を n 回進める）。例外は `window.__gvErr`。
   - **Browser ペインが非表示だと描画ループが止まる** → `await __gv.run(60,120)` で進めてからスクリーンショット。スクリーンショットが「timed out」になったら、もう一度撮ると撮れることが多い。
 - **区切りごとの手順**: `versions/<番号-名前>/` に index.html・css・js を丸ごとコピー → `launcher.html` にカード → このメモの「状態」 → 「確認のしかた」を通しで → 公開前チェック（RULES 7章）→ コミット（push はユーザー）。
@@ -30,6 +30,7 @@
 - 2026-10-05 v008-smooth: 地図⇔宇宙を重ねて入れかえ（大きさ・画角・明るさを合わせる、transitionend で終わりを判断、先読み）。地震の裏側を隠す（EllipsoidalOccluder）。地下で車・人・鳥が残る、宇宙で⌂が効かない、を修正。
 - 2026-10-05 v009-micro: 段階G。`js/micro.js`（Three.js、14 の層）、目盛りの「人・細胞・分子・原子核・素粒子」も押せるように、長さの書き方（mm・µm・nm・pm・fm・10 の何乗）。画面の幅の更新が 1 nm 未満で止まる不具合を修正。
 - 2026-10-05 v010-ground-paths: ユーザーから「無機質なスケールの中でヒトと細胞が混ざるのが違和感」→ ヒトの道をやめ、寄った場所の地面（OpenFreeMap の水面・土地の種類・公園）で岩・砂／水／植物の道に。「素粒子の区域が長すぎる」→ 目盛りの何もない区間を縮め、ホイールも 5 倍速。
+- 2026-10-06 v010b-start-root: 起動バッチをルートの `start.bat`（＋`tools/start.ps1`）に一本化。文字化け（UTF-8 の日本語コメントを cmd が ANSI で読む）をなくすため英語だけで書いた。8765 が使えないときは別のポートで起動。file:// のときの案内を合わせた。中身は v010 と同じ。
 
 ## ファイル構成
 
@@ -239,7 +240,7 @@
 - Browser ペインが非表示 → Cesium の描画ループが止まり、地球が黒いまま・タイルも読まれない。`__gv.run()` で手動描画。
 - 非表示のペインでは読み込み時の `innerWidth` が 0 になることがある → 層のパネルの初期表示は「幅が 0 より大きく 800 未満のときだけ閉じる」。
 - 地理院の地名検索は住所専用で「東京タワー」→「…東」のような結果になる → Nominatim を併用。
-- index.html をダブルクリック（file://）すると「Refused to cross-origin redirects of the top-level worker script」で地球が出ない → start.bat から開く。
+- index.html をダブルクリック（file://）すると「Refused to cross-origin redirects of the top-level worker script」で地球が出ない → ルートの start.bat から開く。
 
 ## 確認のしかた（変更のたびに通しで）
 

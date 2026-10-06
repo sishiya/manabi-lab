@@ -12,6 +12,7 @@
 | `wifi-wave/` | 電波の見える部屋 |
 | `animal-senses/` | いきものの感じる世界 |
 | `immune-battle/` | 免疫のたたかい |
+| `metamorphosis/` | さなぎの中で — イモムシがさなぎになりガになるまでの体の中（タバコスズメガ） |
 | `god-view/` | 神の視点マップ — 本物の地形・写真・地図の3D地球（GitHub Pages で公開: https://sishiya.github.io/manabi-lab/god-view/ ） |
 
 - **公開中**: https://sishiya.github.io/manabi-lab/ （入口のページから全アプリを開けます。GitHub Pages）
@@ -22,6 +23,8 @@
 ## ローカルで動かす（Windows）
 
 分割ファイルのアプリは file:// では動かないので、小さなサーバーを使います。
+
+いちばん簡単なのは、このフォルダの **`start.bat` をダブルクリック**すること（サーバーを起動して、入口のページをブラウザで開きます。8765 が使えないときは別のポートを使います。`start.bat god-view` のようにフォルダ名を付けると、そのアプリを直接開きます）。手で起動するなら:
 
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File .claude/serve.ps1 -Port 8765
