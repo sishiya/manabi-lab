@@ -6,64 +6,235 @@
 <title>まなびラボ</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%232b6cb0'/><path d='M26 14h12M28 14v14L17 47a4 4 0 0 0 3.5 6h23a4 4 0 0 0 3.5-6L36 28V14' fill='none' stroke='%23fff' stroke-width='3.5' stroke-linejoin='round'/><path d='M22 42h20l3 6H19z' fill='%23fff'/></svg>">
 <style>
-:root{--bg:#f6f4ee;--ink:#1d2129;--muted:#5d6472;--line:#d9d5ca;--card:#fff;--accent:#2b6cb0;--thumb:#d9d5ca;color-scheme:light dark}
-@media (prefers-color-scheme:dark){:root{--bg:#0e1218;--ink:#e8ecf2;--muted:#9aa4b2;--line:#273041;--card:#151b24;--accent:#6cb4ff;--thumb:#273041}}
+:root{--bg:#f6f4ee;--ink:#1d2129;--muted:#5d6472;--line:#d9d5ca;--card:#fff;--accent:#2b6cb0;--accent-ink:#fff;--thumb:#d9d5ca;--field:#fff;
+  --c-earth:#4a8494;--c-body:#b8694f;--c-life:#62874a;--c-phys:#7d6db0;--new:#b45309;--new-ink:#fff;color-scheme:light dark}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1218;--ink:#e8ecf2;--muted:#9aa4b2;--line:#273041;--card:#151b24;--accent:#6cb4ff;--accent-ink:#0e1218;--thumb:#273041;--field:#151b24;
+  --c-earth:#86b6c2;--c-body:#d39e8a;--c-life:#a0bf8c;--c-phys:#aea3d4;--new:#f0b44c;--new-ink:#1d1505}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;line-height:1.75}
+/* 日本語を文節の切れ目で折り返す（Chrome・Edge。ほかのブラウザはふつうの折り返し） */
+p,.cat,.status{word-break:auto-phrase;text-wrap:pretty}
 main{max-width:1000px;margin:0 auto;padding:48px 16px 64px}
-h1{margin:0 0 4px;font-size:32px}
-h2{font-size:13px;letter-spacing:.12em;color:var(--muted);font-weight:600;margin:32px 0 12px}
-.lead{color:var(--muted);margin:0 0 8px;max-width:720px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+h1{margin:0 0 8px;font-size:32px;line-height:1.3}
+.lead{color:var(--muted);margin:0 0 24px;max-width:720px}
+
+/* 操作欄: 1段目 さがす、2段目 分野（左）と並び順（右）。狭いと並び順は分野の下へ（しぼってから並べかえる順） */
+.tools{display:flex;flex-direction:column;gap:12px;padding:16px 0;border-bottom:1px solid var(--line);background:var(--bg)}
+@media (min-width:720px){.tools{position:sticky;top:0;z-index:5}}
+.search{position:relative;max-width:440px}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted);pointer-events:none}
+.search input{width:100%;font:inherit;font-size:15px;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:10px;padding:8px 12px 8px 36px}
+.search input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.search input::placeholder{color:var(--muted)}
+.sort{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);white-space:nowrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--field)}
+.seg button{font:inherit;font-size:13px;color:var(--ink);background:none;border:0;padding:6px 14px;cursor:pointer;white-space:nowrap}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-size:14px;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:999px;padding:4px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.chip .n{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.chip[aria-pressed=true]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.chip[aria-pressed=true] .n{color:inherit;opacity:.75}
+.chip:disabled{opacity:.45;cursor:default}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
+.row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px 16px}
+/* 件数は分野のボタンに出ているので、画面には出さず読み上げだけ */
+.status{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;margin:0}
+
+/* 一覧 */
+h2{font-size:16px;font-weight:700;margin:48px 0 16px;display:flex;align-items:center;gap:8px}
+h2 .dot{width:10px;height:10px}
+h2 .n{font-size:13px;font-weight:400;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;margin-top:20px}
+h2+.grid{margin-top:0}
+#list>h2:first-child{margin-top:20px} /* 分野の区切りは広く、最初の見出しは操作欄の近くに */
 .card{position:relative;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .card:hover{border-color:var(--accent)}
 .card:hover .thumb{filter:brightness(1.08)}
+.pic{position:relative}
 .thumb{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;background:var(--thumb)}
-.body{padding:12px 16px 14px;display:flex;flex-direction:column;flex:1}
-.card a.open{color:var(--accent);font-size:18px;font-weight:700;text-decoration:none}
+.badge{position:absolute;top:10px;left:10px;font-size:12px;font-weight:700;line-height:1;padding:5px 8px;border-radius:6px;background:var(--new);color:var(--new-ink)}
+.body{padding:14px 16px 16px;display:flex;flex-direction:column;flex:1}
+.cat{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.card a.open{color:var(--accent);font-size:18px;font-weight:700;line-height:1.45;text-decoration:none}
 .card a.open::after{content:"";position:absolute;inset:0}
 .card a.open:focus-visible{outline:none}
 .card:has(a.open:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
-.card p{margin:2px 0 8px;color:var(--muted);font-size:14px;flex:1}
-.card p.dates{margin:0 0 6px;font-size:12px;color:var(--muted);flex:none;font-variant-numeric:tabular-nums}
-.card a.ver{position:relative;z-index:1;font-size:12px;color:var(--muted);align-self:flex-start}
-.note{font-size:13px;color:var(--muted);margin-top:32px}
+.card p{margin:6px 0 16px;color:var(--muted);font-size:14px;line-height:1.7;flex:1}
+.foot{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 12px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.dates{font-variant-numeric:tabular-nums}
+.dates .fresh{color:var(--ink);font-weight:700}
+.card a.ver{position:relative;z-index:1;color:var(--muted)}
+.empty{padding:40px 0;text-align:center;color:var(--muted)}
+.empty button{font:inherit;color:var(--accent);background:none;border:0;text-decoration:underline;cursor:pointer}
+.note{font-size:13px;color:var(--muted);margin:64px 0 0;padding-top:24px;border-top:1px solid var(--line)}
 .note a{color:var(--accent)}
+.c-earth{--c:var(--c-earth)}.c-body{--c:var(--c-body)}.c-life{--c:var(--c-life)}.c-phys{--c:var(--c-phys)}
+@media (max-width:719px){main{padding-top:32px}}
 </style>
 </head>
 <body>
 <main>
   <h1>まなびラボ</h1>
-  <p class="lead">ブラウザで動く学習用アプリのシリーズ。Claude（Claude Code）と一緒に作っています。学習用に簡単にしているところがあります。医療・健康の判断には使えません。</p>
-
-  <h2>地球と宇宙</h2>
-  <div class="grid">
-    <div class="card"><img class="thumb" src="thumbs/evolution.jpg" alt="" width="640" height="360" loading="lazy"><div class="body"><a class="open" href="evolution/">ヒトへの46億年</a><p>同じ場所を空から見つづけて、地球と生命と人類の46億年をたどる3D。</p><p class="dates">作成 2026-10-03 ・ 更新 2026-10-04</p><a class="ver" href="evolution/launcher.html">過去の版</a></div></div>
-    <div class="card"><img class="thumb" src="thumbs/god-view.jpg" alt="" width="640" height="360" loading="lazy"><div class="body"><a class="open" href="god-view/">神の視点マップ</a><p>本物の地形・航空写真・建物・電車やバスの動きで見る3Dの地球。引けば宇宙の果てまで、寄れば原子や素粒子まで、ホイールひとつで。</p><p class="dates">作成 2026-10-05 ・ 更新 2026-10-05</p><a class="ver" href="god-view/launcher.html">過去の版</a></div></div>
+  <p class="lead">ブラウザで動く学習用アプリのシリーズ。Claude と一緒に作っています。学習用に簡単にしているところがあります。医療・健康の判断には使えません。</p>
+  <div class="tools" id="tools" hidden>
+    <label class="search"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg><span hidden>アプリをさがす</span><input id="q" type="search" placeholder="名前やことばでさがす（例: けっかん、宇宙）" autocomplete="off"></label>
+    <div class="row">
+      <div class="chips" id="cats" role="group" aria-label="分野でしぼる"></div>
+      <div class="sort"><span id="sort-label">並び順</span><div class="seg" id="sort" role="group" aria-labelledby="sort-label">
+        <button type="button" data-sort="cat">分野ごと</button><button type="button" data-sort="new" title="公開が新しい順">新着順</button><button type="button" data-sort="upd" title="更新が新しい順">更新順</button>
+      </div></div>
+    </div>
+    <p class="status" id="status" aria-live="polite"></p>
   </div>
+  <div id="list"></div>
+  <noscript><p>アプリの一覧を出すには JavaScript が必要です。</p></noscript>
 
-  <h2>からだ</h2>
-  <div class="grid">
-    <div class="card"><img class="thumb" src="thumbs/body-dive.jpg" alt="" width="640" height="360" loading="lazy"><div class="body"><a class="open" href="body-dive/">体内ダイブ</a><p>口・鼻・肛門から入って、消化管と気道の中を3Dで進む。</p><p class="dates">作成 2026-10-03 ・ 更新 2026-10-04</p><a class="ver" href="body-dive/launcher.html">過去の版</a></div></div>
-    <div class="card"><img class="thumb" src="thumbs/urinary-dive.jpg" alt="" width="640" height="360" loading="lazy"><div class="body"><a class="open" href="urinary-dive/">尿の旅</a><p>腎臓から膀胱、尿道まで、尿のしずくになって進む。</p><p class="dates">作成 2026-10-03 ・ 更新 2026-10-04</p><a class="ver" href="urinary-dive/launcher.html">過去の版</a></div></div>
-    <div class="card"><img class="thumb" src="thumbs/blood-dive.jpg" alt="" width="640" height="360" loading="lazy"><div class="body"><a class="open" href="blood-dive/">血管の旅</a><p>赤血球になって心臓・肺・全身の血管をめぐる。</p><p class="dates">作成 2026-10-03 ・ 更新 2026-10-04</p><a class="ver" href="blood-dive/launcher.html">過去の版</a></div></div>
-    <div class="card"><img class="thumb" src="thumbs/immune-battle.jpg" alt="" width="640" height="360" loading="lazy"><div class="body"><a class="open" href="immune-battle/">免疫のたたかい</a><p>ウイルスや細菌が入って増え、免疫に片づけられるまでを、ミクロの断面とグラフで見る。</p><p class="dates">作成 2026-10-04 ・ 更新 2026-10-04</p><a class="ver" href="immune-battle/launcher.html">過去の版</a></div></div>
-  </div>
-
-  <h2>いきもの</h2>
-  <div class="grid">
-    <div class="card"><img class="thumb" src="thumbs/animal-senses.jpg" alt="" width="640" height="360" loading="lazy"><div class="body"><a class="open" href="animal-senses/">いきものの感じる世界</a><p>同じ庭を、人間・カラス・マムシなどの感覚で見る。紫外線や熱も見えるように置き換えて表示。</p><p class="dates">作成 2026-10-04 ・ 更新 2026-10-04</p><a class="ver" href="animal-senses/launcher.html">過去の版</a></div></div>
-    <div class="card"><img class="thumb" src="thumbs/metamorphosis.jpg" alt="" width="640" height="360" loading="lazy"><div class="body"><a class="open" href="metamorphosis/">さなぎの中で</a><p>イモムシがさなぎになり、ガになるまでの体の中。壊れる・残る・新しく作られる器官を、タバコスズメガの研究の日付で追う。</p><p class="dates">作成 2026-10-06 ・ 更新 2026-10-06</p><a class="ver" href="metamorphosis/launcher.html">過去の版</a></div></div>
-    <div class="card"><img class="thumb" src="thumbs/ga-creatures.jpg" alt="" width="640" height="360" loading="lazy"><div class="body"><a class="open" href="ga-creatures/">進化の箱庭</a><p>関節と筋肉でできた生きものを、遺伝的アルゴリズムで進化させる。平地・坂・氷・月・水の中で、ちがう体と動き方が生まれる。</p><p class="dates">作成 2026-10-06 ・ 更新 2026-10-06</p><a class="ver" href="ga-creatures/launcher.html">過去の版</a></div></div>
-  </div>
-
-  <h2>物理</h2>
-  <div class="grid">
-    <div class="card"><img class="thumb" src="thumbs/wifi-wave.jpg" alt="" width="640" height="360" loading="lazy"><div class="body"><a class="open" href="wifi-wave/">電波の見える部屋</a><p>WiFi の電波が家の中をどう伝わるかを、電磁波のシミュレーションで見る。</p><p class="dates">作成 2026-10-04 ・ 更新 2026-10-04</p><a class="ver" href="wifi-wave/launcher.html">過去の版</a></div></div>
-    <div class="card"><img class="thumb" src="thumbs/air-flow.jpg" alt="" width="640" height="360" loading="lazy"><div class="body"><a class="open" href="air-flow/">空気の流れの見える部屋</a><p>窓・給気口・換気扇・外の風で、家の空気がどう入れかわり、どこがよどむのかを「空気の年齢」の色で見る。</p><p class="dates">作成 2026-10-06 ・ 更新 2026-10-06</p><a class="ver" href="air-flow/launcher.html">過去の版</a></div></div>
-    <div class="card"><img class="thumb" src="thumbs/quantum.jpg" alt="" width="640" height="360" loading="lazy"><div class="body"><a class="open" href="quantum/">量子の実験室</a><p>二重スリット・トンネル効果・偏光板・量子もつれ・不確定性原理。</p><p class="dates">作成 2026-10-04 ・ 更新 2026-10-04</p><a class="ver" href="quantum/launcher.html">過去の版</a></div></div>
-  </div>
-
-  <p class="note">サムネイルは各アプリの画面です（<code>tools/make-thumbs.ps1</code> で撮り直せます）。ソースコードと開発メモ: <a href="https://github.com/sishiya/manabi-lab">github.com/sishiya/manabi-lab</a></p>
+  <p class="note">ソースコードと開発メモ: <a href="https://github.com/sishiya/manabi-lab">github.com/sishiya/manabi-lab</a><br>
+  不具合やご意見は <a href="https://github.com/sishiya/manabi-lab/issues">GitHub の Issues</a> へ（GitHub のアカウントが必要です）</p>
 </main>
+<script>
+// アプリの一覧。並びは公開した順（同じ日のものの前後もこの順で決める）。
+// 新しいアプリはいちばん下に足す。created は作成日、updated は中身が変わった日（RULES 8.1）。
+// yomi と words は検索用（ひらがな・カタカナはどちらでも当たる）。
+const APPS = [
+  {id:'body-dive', title:'体内ダイブ', yomi:'たいないだいぶ', cat:'body', created:'2026-10-03', updated:'2026-10-04',
+   desc:'口・鼻・肛門から入って、消化管と気道の中を3Dで進む。', words:'胃 腸 食道 肺 気管 消化'},
+  {id:'urinary-dive', title:'尿の旅', yomi:'にょうのたび', cat:'body', created:'2026-10-03', updated:'2026-10-04',
+   desc:'腎臓から膀胱、尿道まで、尿のしずくになって進む。', words:'じんぞう ぼうこう おしっこ 結石'},
+  {id:'blood-dive', title:'血管の旅', yomi:'けっかんのたび', cat:'body', created:'2026-10-03', updated:'2026-10-04',
+   desc:'赤血球になって心臓・肺・全身の血管をめぐる。', words:'しんぞう 血液 けつえき 動脈 静脈'},
+  {id:'evolution', title:'ヒトへの46億年', yomi:'ひとへのよんじゅうろくおくねん', cat:'earth', created:'2026-10-03', updated:'2026-10-04',
+   desc:'同じ場所を空から見つづけて、地球と生命と人類の46億年をたどる3D。', words:'進化 しんか 恐竜 きょうりゅう 歴史 化石'},
+  {id:'quantum', title:'量子の実験室', yomi:'りょうしのじっけんしつ', cat:'phys', created:'2026-10-04', updated:'2026-10-04',
+   desc:'二重スリット・トンネル効果・偏光板・量子もつれ・不確定性原理。', words:'光 ひかり 電子'},
+  {id:'wifi-wave', title:'電波の見える部屋', yomi:'でんぱのみえるへや', cat:'phys', created:'2026-10-04', updated:'2026-10-04',
+   desc:'WiFi の電波が家の中をどう伝わるかを、電磁波のシミュレーションで見る。', words:'わいふぁい 無線 電磁波 家'},
+  {id:'animal-senses', title:'いきものの感じる世界', yomi:'いきもののかんじるせかい', cat:'life', created:'2026-10-04', updated:'2026-10-04',
+   desc:'同じ庭を、人間・カラス・マムシなどの感覚で見る。紫外線や熱も見えるように置き換えて表示。', words:'目 色 視覚 動物 どうぶつ 紫外線 赤外線'},
+  {id:'immune-battle', title:'免疫のたたかい', yomi:'めんえきのたたかい', cat:'body', created:'2026-10-04', updated:'2026-10-04',
+   desc:'ウイルスや細菌が入って増え、免疫に片づけられるまでを、ミクロの断面とグラフで見る。', words:'ういるす 細菌 さいきん 病気 ワクチン 抗生物質 かぜ'},
+  {id:'god-view', title:'神の視点マップ', yomi:'かみのしてんまっぷ', cat:'earth', created:'2026-10-05', updated:'2026-10-05',
+   desc:'本物の地形・航空写真・建物・電車やバスの動きで見る3Dの地球。引けば宇宙の果てまで、寄れば原子や素粒子まで、ホイールひとつで。', words:'地図 ちず 宇宙 うちゅう 原子 街 まち'},
+  {id:'metamorphosis', title:'さなぎの中で', yomi:'さなぎのなかで', cat:'life', created:'2026-10-06', updated:'2026-10-06',
+   desc:'イモムシがさなぎになり、ガになるまでの体の中。壊れる・残る・新しく作られる器官を、タバコスズメガの研究の日付で追う。', words:'変態 へんたい 昆虫 こんちゅう 虫 むし 蛹'},
+  {id:'air-flow', title:'空気の流れの見える部屋', yomi:'くうきのながれのみえるへや', cat:'phys', created:'2026-10-06', updated:'2026-10-06',
+   desc:'窓・給気口・換気扇・外の風で、家の空気がどう入れかわり、どこがよどむのかを「空気の年齢」の色で見る。', words:'換気 かんき 風 かぜ エアコン サーキュレーター 家'},
+  {id:'ga-creatures', title:'進化の箱庭', yomi:'しんかのはこにわ', cat:'life', created:'2026-10-06', updated:'2026-10-06',
+   desc:'関節と筋肉でできた生きものを、遺伝的アルゴリズムで進化させる。平地・坂・氷・月・水の中で、ちがう体と動き方が生まれる。', words:'遺伝 いでん アルゴリズム 生き物'},
+];
+const CATS = [
+  {id:'earth', name:'地球と宇宙'},
+  {id:'body', name:'からだ'},
+  {id:'life', name:'いきもの'},
+  {id:'phys', name:'物理'},
+];
+const SORTS = ['cat','new','upd'];
+const FRESH_DAYS = 2; // きょう・きのうの公開・更新に印をつける
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// 全角半角・大文字小文字・カタカナとひらがなの違いを無視して比べる
+const norm = s => s.normalize('NFKC').toLowerCase().replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
+const catOf = id => CATS.find(c => c.id === id);
+
+const today = new Date(); today.setHours(0, 0, 0, 0);
+const toDate = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const daysAgo = s => Math.round((today - toDate(s)) / 864e5);
+const shortDate = s => { const d = toDate(s); return (d.getFullYear() === today.getFullYear() ? '' : d.getFullYear() + '年') + (d.getMonth() + 1) + '月' + d.getDate() + '日'; };
+const relDate = s => { const n = daysAgo(s); return n <= 0 ? 'きょう' : n === 1 ? 'きのう' : n < 7 ? n + '日前' : shortDate(s); };
+const isFresh = s => daysAgo(s) < FRESH_DAYS;
+
+APPS.forEach((a, i) => { a.order = i; a.hay = norm([a.title, a.yomi, catOf(a.cat).name, a.desc, a.words].join(' ')); });
+
+// 状態は URL に残す（再読み込み・戻る・共有で同じ表示になる）
+const params = new URLSearchParams(location.search);
+const state = {
+  q: params.get('q') || '',
+  cat: CATS.some(c => c.id === params.get('cat')) ? params.get('cat') : 'all',
+  sort: SORTS.includes(params.get('sort')) ? params.get('sort') : 'cat',
+};
+
+function saveState() {
+  const p = new URLSearchParams();
+  if (state.q) p.set('q', state.q);
+  if (state.cat !== 'all') p.set('cat', state.cat);
+  if (state.sort !== 'cat') p.set('sort', state.sort);
+  const s = p.toString();
+  history.replaceState(null, '', s ? '?' + s : location.pathname);
+}
+
+function matchesQuery(a) {
+  const terms = norm(state.q).split(/\s+/).filter(Boolean);
+  return terms.every(t => a.hay.includes(t));
+}
+
+function card(a, showCat) {
+  const c = catOf(a.cat);
+  const updatedLater = a.updated !== a.created;
+  const badge = isFresh(a.created) ? '新作' : updatedLater && isFresh(a.updated) ? '更新' : '';
+  const dateHtml = (label, s) => `${label} <time datetime="${s}" title="${s}"${isFresh(s) ? ' class="fresh"' : ''}>${relDate(s)}</time>`;
+  return `<div class="card c-${a.cat}">
+    <div class="pic"><img class="thumb" src="thumbs/${a.id}.jpg" alt="" width="640" height="360" loading="lazy">${badge ? `<span class="badge">${badge}</span>` : ''}</div>
+    <div class="body">
+      ${showCat ? `<span class="cat"><span class="dot"></span>${esc(c.name)}</span>` : ''}
+      <a class="open" href="${a.id}/">${esc(a.title)}</a>
+      <p>${esc(a.desc)}</p>
+      <div class="foot"><span class="dates">${dateHtml('公開', a.created)}${updatedLater ? ' ・ ' + dateHtml('更新', a.updated) : ''}</span><a class="ver" href="${a.id}/launcher.html">過去の版</a></div>
+    </div></div>`;
+}
+
+function render() {
+  const hits = APPS.filter(matchesQuery);
+  const shown = hits.filter(a => state.cat === 'all' || a.cat === state.cat);
+
+  // 分野のボタン（数は検索の結果に合わせる）
+  $('cats').innerHTML = [{id:'all', name:'すべて'}, ...CATS].map(c => {
+    const n = c.id === 'all' ? hits.length : hits.filter(a => a.cat === c.id).length;
+    const on = state.cat === c.id;
+    return `<button type="button" class="chip c-${c.id}" data-cat="${c.id}" aria-pressed="${on}"${n || on ? '' : ' disabled'}>${c.id === 'all' ? '' : '<span class="dot"></span>'}${esc(c.name)}<span class="n">${n}</span></button>`;
+  }).join('');
+  document.querySelectorAll('#sort button').forEach(b => b.setAttribute('aria-pressed', b.dataset.sort === state.sort));
+
+  // いまの表示の説明
+  const parts = [];
+  if (state.q.trim()) parts.push(`「${esc(state.q.trim())}」`);
+  if (state.cat !== 'all') parts.push(esc(catOf(state.cat).name));
+  $('status').innerHTML = (parts.length ? `${parts.join('・')}で ${shown.length}本` : `${shown.length}本すべて`);
+
+  if (!shown.length) {
+    $('list').innerHTML = `<div class="empty">合うアプリがありません。<button type="button" id="reset">条件をはずす</button></div>`;
+    $('reset').onclick = () => { state.q = ''; state.cat = 'all'; $('q').value = ''; update(); };
+    return;
+  }
+
+  if (state.sort === 'cat') {
+    $('list').innerHTML = CATS.map(c => {
+      const items = shown.filter(a => a.cat === c.id);
+      if (!items.length) return '';
+      return `<h2 class="c-${c.id}"><span class="dot"></span>${esc(c.name)}<span class="n">${items.length}本</span></h2><div class="grid">${items.map(a => card(a, false)).join('')}</div>`;
+    }).join('');
+  } else {
+    const key = state.sort === 'new' ? a => [a.created, a.order] : a => [a.updated, a.created, a.order];
+    const sorted = [...shown].sort((x, y) => { const kx = key(x), ky = key(y); for (let i = 0; i < kx.length; i++) { if (kx[i] !== ky[i]) return kx[i] < ky[i] ? 1 : -1; } return 0; });
+    $('list').innerHTML = `<div class="grid">${sorted.map(a => card(a, true)).join('')}</div>`;
+  }
+}
+
+function update() { saveState(); render(); }
+
+$('tools').hidden = false;
+$('q').value = state.q;
+$('q').addEventListener('input', e => { state.q = e.target.value; update(); });
+$('cats').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { state.cat = b.dataset.cat; update(); } });
+$('sort').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { state.sort = b.dataset.sort; update(); } });
+// 「/」でさがす欄へ
+document.addEventListener('keydown', e => { if (e.key === '/' && document.activeElement !== $('q')) { e.preventDefault(); $('q').focus(); } });
+
+render();
+</script>
 </body>
 </html>
