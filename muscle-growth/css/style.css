@@ -1,0 +1,103 @@
+/* Layout: the muscle fiber view (with the time bar on top of it) and the chart on the left, panel on the right.
+   Portrait phones: everything stacks and the page scrolls. */
+:root{
+  --bg:#120d0e;--panel:#18110f;--box:#1f1614;--ink:#f4ece9;--muted:#c1aeaa;--dim:#8f7f7b;--line:rgba(243,201,191,.14);
+  --acc:#ff8a5c;
+  --sure:#7fd3a0;--est:#ffcf6b;--art:#c9a2ff;
+  --f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-head:'Zen Maru Gothic','Yu Gothic',sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+#app{display:flex;height:100%;overflow:hidden}
+#stage{flex:1;min-width:0;display:flex;flex-direction:column}
+#viewWrap{position:relative;flex:1;min-height:0;user-select:none;-webkit-user-select:none}
+#view{display:block;width:100%;height:100%}
+#chartWrap{position:relative;height:230px;flex:none;border-top:1px solid var(--line);padding:18px 8px 4px;background:#0f0b0b}
+#chart{width:100%;height:100%;display:block;cursor:pointer;touch-action:none}
+#rangeCtl{position:absolute;right:10px;top:4px;display:flex;gap:3px;z-index:1}
+#rangeCtl button{padding:2px 8px;font-size:11.5px}
+.mono{font-family:var(--f-mono)}
+
+#stageName{position:absolute;left:14px;top:10px;pointer-events:none;max-width:62%}
+#stageName b{display:block;font-family:var(--f-head);font-size:21px;letter-spacing:.04em}
+#stageName span{font-size:12.5px;color:var(--muted)}
+#viewCtl{position:absolute;right:12px;top:12px;display:flex;gap:4px}
+#viewCtl button,#timebar button,.seg button{background:#261b19;border:1px solid var(--line);color:var(--ink);font:inherit;font-size:13px;padding:5px 10px;border-radius:6px;cursor:pointer}
+#viewCtl button[aria-pressed=true],.seg button[aria-pressed=true]{border-color:var(--acc);color:var(--acc)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+
+#timebar{position:absolute;left:10px;right:10px;bottom:10px;display:flex;align-items:center;gap:8px;background:rgba(18,13,14,.86);border:1px solid var(--line);border-radius:8px;padding:6px 8px;backdrop-filter:blur(4px)}
+#timebar #play{width:38px;font-size:14px}
+#speeds{display:flex;gap:3px}
+#speeds button{padding:4px 7px;font-size:12px}
+#nextSess{font-size:12px!important;padding:4px 8px!important;white-space:nowrap}
+#time{flex:1;min-width:80px;accent-color:var(--acc)}
+#clock{font-size:12px;color:var(--muted);min-width:8.5em;text-align:right;white-space:nowrap}
+
+#panel{width:370px;flex:none;height:100%;overflow-y:auto;background:var(--panel);border-left:1px solid var(--line);padding:18px 16px 28px;display:flex;flex-direction:column;gap:12px}
+header .eyebrow{font-family:var(--f-mono);font-size:10px;letter-spacing:.22em;color:var(--dim)}
+h1{font-family:var(--f-head);font-size:24px;margin:4px 0 6px;letter-spacing:.04em}
+.lead{font-size:13px;line-height:1.75;color:var(--muted);margin:0}
+h2{font-size:12px;letter-spacing:.14em;color:var(--dim);margin:0 0 8px;font-weight:500}
+.box{background:var(--box);border:1px solid var(--line);border-radius:8px;padding:12px}
+.row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+input[type=checkbox]{accent-color:var(--acc)}
+
+.tag{display:inline-block;font-size:10.5px;padding:0 6px;border-radius:9px;border:1px solid;line-height:1.6;vertical-align:1px;white-space:nowrap}
+.tag.sure{color:var(--sure);border-color:var(--sure)}
+.tag.est{color:var(--est);border-color:var(--est)}
+.tag.art{color:var(--art);border-color:var(--art)}
+
+#now .ev{font-size:13px;line-height:1.8;color:var(--muted);border-left:2px solid var(--acc);padding-left:9px;margin-top:10px}
+#now .ev:first-child{margin-top:0}
+#now .ev b{color:var(--ink);font-size:14px;margin-right:6px}
+
+.cond{margin-top:10px}
+.cond:first-child{margin-top:0}
+.cond .name{font-size:12px;color:var(--dim);margin-bottom:4px}
+.cond .seg{display:flex;flex-wrap:wrap;gap:4px}
+.cond .seg button{font-size:12.5px;padding:4px 9px}
+.cond .sub{font-size:11.5px;color:var(--dim);margin-top:4px;line-height:1.6}
+
+#result table{width:100%;border-collapse:collapse;font-size:13px}
+#result td{padding:5px 2px;border-top:1px solid var(--line)}
+#result tr:first-child td{border-top:none}
+#result td.v{font-family:var(--f-mono);text-align:right;white-space:nowrap}
+#result td.p{font-family:var(--f-mono);text-align:right;color:var(--dim);font-size:12px;white-space:nowrap}
+#result .note{font-size:11.5px;color:var(--dim);line-height:1.6;margin:8px 0 0}
+
+#tries{display:flex;flex-direction:column;gap:5px}
+#tries button{text-align:left;background:#261b19;border:1px solid var(--line);border-radius:7px;color:var(--ink);font:inherit;font-size:13px;padding:7px 10px;cursor:pointer}
+#tries button small{display:block;color:var(--dim);font-size:11.5px;line-height:1.55;margin-top:1px}
+#tries button:hover{border-color:var(--acc)}
+
+#myths details{border-top:1px solid var(--line);padding:8px 0}
+#myths details:first-child{border-top:none;padding-top:0}
+summary{cursor:pointer;font-size:13.5px;line-height:1.6}
+#myths p{font-size:12.5px;line-height:1.8;color:var(--muted);margin:6px 0 0}
+ul.plain{margin:0;padding-left:1.1em;font-size:12.5px;line-height:1.8;color:var(--muted)}
+ul.plain li+li{margin-top:4px}
+.about p{font-size:12px;line-height:1.75;color:var(--muted);margin:0 0 6px}
+.about details{margin:4px 0 8px}
+.about summary{font-size:12.5px;color:var(--muted)}
+.about details ul{font-size:11.5px;margin-top:6px}
+
+@media (max-width:900px){
+  #panel{width:310px}
+}
+@media (max-width:700px), (max-aspect-ratio:3/4){
+  html,body{height:auto}
+  #app{flex-direction:column;height:auto;overflow:visible}
+  #stage{height:auto}
+  #viewWrap{height:72vh;min-height:520px;flex:none}
+  #chartWrap{height:230px}
+  #panel{width:auto;height:auto;border-left:none;border-top:1px solid var(--line)}
+  #stageName b{font-size:17px}
+  #stageName{max-width:56%}
+  #viewCtl{flex-direction:column;align-items:flex-end}
+  #viewCtl button{padding:4px 8px;font-size:12px}
+  #timebar{flex-wrap:wrap;gap:6px}
+  #time{order:5;flex-basis:100%}
+  #clock{min-width:0;flex-basis:100%;order:6;text-align:left}
+}

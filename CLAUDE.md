@@ -15,6 +15,7 @@
 - `air-flow/` — 単独アプリ「空気の流れの見える部屋」（2LDK で、窓・給気口・換気扇・風・サーキュレーターによって空気がどう入れかわり、どこがよどむかを空気齢の色で見る。換気回路網＋2次元の流れ＋空気齢の計算。Canvas 2D）。css/js に分割。企画は `air-flow/PLAN.md`、仕組み・確認手順は `air-flow/DEVNOTES.md`。確認は `apps`（http://localhost:8765/air-flow/）で。
 - `extreme/` — 単独アプリ「極限の世界に置いてみたら」（宇宙 400km からマリアナ海溝の底まで1本のものさしで、人・風船・ポテトチップスの袋・マシュマロ・魚・クマムシなどを運び、気圧・水圧で縮む・ふくらむ・沸く・生きられるかを見る。Canvas 2D）。css/js に分割。企画は `extreme/PLAN.md`、仕組み・確認手順は `extreme/DEVNOTES.md`。確認は `apps`（http://localhost:8765/extreme/）で。
 - `ga-creatures/` — 単独アプリ「進化の箱庭」（関節と筋肉でできた2次元の生きものを遺伝的アルゴリズムで進化させる。平地・坂・氷・月・水の中。Canvas 2D）。css/js に分割。企画は `ga-creatures/PLAN.md`、仕組み・確認手順は `ga-creatures/DEVNOTES.md`。確認は `apps`（http://localhost:8765/ga-creatures/）で。
+- `muscle-growth/` — 単独アプリ「筋肉が育つまで」（筋トレで筋肉がどう傷つき・治り・太くなるか。力こぶの筋線維1本の縦と横の断面＋1時間きざみの数のモデルのグラフ。やり方・セット数・週の回数・経験・年齢・たんぱく質・睡眠を選んで比べる。Canvas 2D）。css/js に分割。企画は `muscle-growth/PLAN.md`、仕組み・モデルの数値・確認手順は `muscle-growth/DEVNOTES.md`。確認は `apps`（http://localhost:8765/muscle-growth/）で。
 - `quantum/` — 別シリーズ「量子の実験室」（二重スリット・トンネル効果・偏光板・量子もつれ・不確定性原理）。1ファイル完結。仕組みと確認手順・公開 URL は `quantum/DEVNOTES.md`。
 - `archive.html` — 隠しアーカイブ（入口からリンクしない。試作・作りかけのアプリ。いまは extreme と illusions）。入口とアーカイブの出し入れは `RULES.md` 8.1。
 - `IDEAS.md` — まだ作っていないテーマのストックと、ユーザーの好みの傾向。新しいアプリを考えるときに読む。

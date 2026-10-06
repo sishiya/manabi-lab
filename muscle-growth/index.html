@@ -1,0 +1,93 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>筋肉が育つまで</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23221215'/><rect x='8' y='21' width='48' height='22' rx='11' fill='%23c75560'/><path d='M20 21v22M32 21v22M44 21v22' stroke='%23f3c9bf' stroke-width='3'/><circle cx='26' cy='18' r='4' fill='%232fc495'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="viewWrap">
+      <canvas id="view" aria-label="筋線維1本の中を拡大した模式図。縦の断面と横の断面"></canvas>
+      <div id="stageName" aria-live="polite"></div>
+      <div id="viewCtl" role="group" aria-label="太さの見せかた">
+        <button data-ex="1" aria-pressed="true" title="太さの変化を実際の割合で">実際の太さ</button>
+        <button data-ex="5" aria-pressed="false" title="太さの変化を5倍にして見やすく">変化を5倍に</button>
+      </div>
+      <div id="timebar">
+        <button id="play" aria-label="再生">▶</button>
+        <div class="seg" id="speeds" role="group" aria-label="再生の速さ（1秒あたり）"></div>
+        <button id="nextSess" title="次の筋トレの直前へ">次の筋トレへ</button>
+        <input id="time" type="range" min="0" max="3024" step="1" value="0" aria-label="時間">
+        <span id="clock" class="mono"></span>
+      </div>
+    </div>
+    <div id="chartWrap">
+      <div id="rangeCtl" class="seg" role="group" aria-label="グラフの範囲">
+        <button data-range="week" aria-pressed="true">1週間</button>
+        <button data-range="all" aria-pressed="false">全期間</button>
+      </div>
+      <canvas id="chart" aria-label="筋たんぱく質の合成と分解、筋肉痛、傷、筋肉の量、力のグラフ。押すとその時間へ移る"></canvas>
+    </div>
+  </main>
+
+  <aside id="panel">
+    <header>
+      <div class="eyebrow">INSIDE A GROWING MUSCLE</div>
+      <h1>筋肉が育つまで</h1>
+      <p class="lead">筋トレをすると、筋肉の中では何が起きているのか。力こぶの筋肉（上腕二頭筋）の筋線維1本を拡大して、<b>12週間の筋トレ</b>と、そのあと<b>6週間休んだ</b>ときの変化を、時間を動かして見る。条件を変えると、結果がどう変わるかも比べられる。</p>
+    </header>
+
+    <section class="box" id="nowBox">
+      <h2>いま起きていること</h2>
+      <div id="now"></div>
+    </section>
+
+    <section class="box">
+      <h2>条件（変えると最初から計算しなおす）</h2>
+      <div id="conds"></div>
+    </section>
+
+    <section class="box">
+      <h2>結果（12週間の筋トレのあと）</h2>
+      <div id="result"></div>
+    </section>
+
+    <section class="box">
+      <h2>ためしてみよう</h2>
+      <div id="tries"></div>
+    </section>
+
+    <section class="box">
+      <h2>表示</h2>
+      <label class="row"><input type="checkbox" id="labels" checked> 名前を表示</label>
+    </section>
+
+    <section class="box">
+      <h2>よくある誤解</h2>
+      <div id="myths"></div>
+    </section>
+
+    <section class="box">
+      <h2>まだ分かっていないこと</h2>
+      <ul class="plain" id="unknowns"></ul>
+    </section>
+
+    <section class="box about">
+      <h2>このアプリについて</h2>
+      <p><b>学習用に簡単にしたモデルです。運動や健康・医療の判断には使えません。</b>体の具合が気になるときや、持病があって運動を始めるときは、医師に相談してください。</p>
+      <p>数のモデルは、研究で分かっているおおよその値（初心者が週3回・12週の筋トレで筋肉の断面積が約8〜10%、力が約25〜35%増える、筋肉痛は1〜3日後に最大になる、など）に合うように作った目安です。人による差はとても大きく、同じ条件でも結果は半分から倍くらいまで変わります。条件ごとの差（たんぱく質・睡眠・年齢・回数など）の大きさは<b>推定</b>です。</p>
+      <p>図は模式図です。筋原線維は実物よりずっと少なく描き、しま模様の幅・細胞の大きさは見やすくしています（<span class="tag art">演出</span>）。太さの変化は「実際の太さ」では本当の割合です。</p>
+      <p>説明の札: <span class="tag sure">確か</span> 研究で確かめられている　<span class="tag est">推定</span> 目安・議論が続いている</p>
+      <details><summary>おもな出どころ</summary><ul class="plain" id="sources"></ul></details>
+      <p>使っているもの: 文字に Zen Maru Gothic・Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）。</p>
+    </section>
+  </aside>
+</div>
+
+<script src="js/model.js"></script>
+<script src="js/text.js"></script>
+<script src="js/micro.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/main.js"></script>
