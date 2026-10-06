@@ -19,14 +19,9 @@ main{max-width:1000px;margin:0 auto;padding:48px 16px 64px}
 h1{margin:0 0 8px;font-size:32px;line-height:1.3}
 .lead{color:var(--muted);margin:0 0 24px;max-width:720px}
 
-/* 操作欄: 1段目 さがす、2段目 分野（左）と並び順（右）。狭いと並び順は分野の下へ（しぼってから並べかえる順） */
+/* 操作欄: 分野（左）と並び順（右）。狭いと並び順は分野の下へ（しぼってから並べかえる順） */
 .tools{display:flex;flex-direction:column;gap:12px;padding:16px 0;border-bottom:1px solid var(--line);background:var(--bg)}
 @media (min-width:720px){.tools{position:sticky;top:0;z-index:5}}
-.search{position:relative;max-width:440px}
-.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted);pointer-events:none}
-.search input{width:100%;font:inherit;font-size:15px;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:10px;padding:8px 12px 8px 36px}
-.search input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
-.search input::placeholder{color:var(--muted)}
 .sort{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);white-space:nowrap}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--field)}
 .seg button{font:inherit;font-size:13px;color:var(--ink);background:none;border:0;padding:6px 14px;cursor:pointer;white-space:nowrap}
@@ -37,7 +32,6 @@ h1{margin:0 0 8px;font-size:32px;line-height:1.3}
 .chip .n{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
 .chip[aria-pressed=true]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
 .chip[aria-pressed=true] .n{color:inherit;opacity:.75}
-.chip:disabled{opacity:.45;cursor:default}
 button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
 .row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px 16px}
@@ -68,12 +62,35 @@ h2+.grid{margin-top:0}
 .dates{font-variant-numeric:tabular-nums}
 .dates .fresh{color:var(--ink);font-weight:700}
 .card a.ver{position:relative;z-index:1;color:var(--muted)}
-.empty{padding:40px 0;text-align:center;color:var(--muted)}
-.empty button{font:inherit;color:var(--accent);background:none;border:0;text-decoration:underline;cursor:pointer}
 .note{font-size:13px;color:var(--muted);margin:64px 0 0;padding-top:24px;border-top:1px solid var(--line)}
 .note a{color:var(--accent)}
 .c-earth{--c:var(--c-earth)}.c-body{--c:var(--c-body)}.c-life{--c:var(--c-life)}.c-phys{--c:var(--c-phys)}
 @media (max-width:719px){main{padding-top:32px}}
+
+/* スマホ: 一覧は横長のリスト、分野は横にスクロールする1行、押す所は高さ44px */
+@media (max-width:639px){
+  .lead{font-size:14px;margin-bottom:16px}
+  .tools{gap:12px;padding:12px 0}
+  .chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-right:-16px;padding-right:16px;
+    -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 24px),transparent)} /* 右端をぼかして、続きがあるとわかるように */
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:none;min-height:44px;padding:4px 14px;font-size:15px}
+  .seg button{min-height:44px;padding:6px 16px;font-size:14px}
+
+  h2{margin:32px 0 12px}
+  #list>h2:first-child{margin-top:16px}
+  .grid,h2+.grid{grid-template-columns:1fr;gap:12px;margin-top:16px}
+  h2+.grid{margin-top:0}
+  .card{flex-direction:row;border-radius:10px}
+  .pic{flex:none;width:112px;align-self:flex-start;margin:10px 0 10px 10px} /* 高さは説明文に合わせて伸ばさず、形を決めて上にそろえる */
+  .thumb{aspect-ratio:4/3;border-radius:6px}
+  .badge{top:4px;left:4px;font-size:11px;padding:3px 6px}
+  .body{padding:10px 12px;min-width:0}
+  .cat{margin-bottom:0}
+  .card a.open{font-size:16px}
+  .card p{font-size:13px;line-height:1.6;margin:2px 0 6px}
+  .foot{padding-top:0;border-top:0;font-size:11px}
+}
 </style>
 </head>
 <body>
@@ -81,7 +98,6 @@ h2+.grid{margin-top:0}
   <h1>まなびラボ</h1>
   <p class="lead">ブラウザで動く学習用アプリのシリーズ。Claude と一緒に作っています。学習用に簡単にしているところがあります。医療・健康の判断には使えません。</p>
   <div class="tools" id="tools" hidden>
-    <label class="search"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg><span hidden>アプリをさがす</span><input id="q" type="search" placeholder="名前やことばでさがす（例: けっかん、宇宙）" autocomplete="off"></label>
     <div class="row">
       <div class="chips" id="cats" role="group" aria-label="分野でしぼる"></div>
       <div class="sort"><span id="sort-label">並び順</span><div class="seg" id="sort" role="group" aria-labelledby="sort-label">
@@ -99,32 +115,31 @@ h2+.grid{margin-top:0}
 <script>
 // アプリの一覧。並びは公開した順（同じ日のものの前後もこの順で決める）。
 // 新しいアプリはいちばん下に足す。created は作成日、updated は中身が変わった日（RULES 8.1）。
-// yomi と words は検索用（ひらがな・カタカナはどちらでも当たる）。
 const APPS = [
-  {id:'body-dive', title:'体内ダイブ', yomi:'たいないだいぶ', cat:'body', created:'2026-10-03', updated:'2026-10-04',
-   desc:'口・鼻・肛門から入って、消化管と気道の中を3Dで進む。', words:'胃 腸 食道 肺 気管 消化'},
-  {id:'urinary-dive', title:'尿の旅', yomi:'にょうのたび', cat:'body', created:'2026-10-03', updated:'2026-10-04',
-   desc:'腎臓から膀胱、尿道まで、尿のしずくになって進む。', words:'じんぞう ぼうこう おしっこ 結石'},
-  {id:'blood-dive', title:'血管の旅', yomi:'けっかんのたび', cat:'body', created:'2026-10-03', updated:'2026-10-04',
-   desc:'赤血球になって心臓・肺・全身の血管をめぐる。', words:'しんぞう 血液 けつえき 動脈 静脈'},
-  {id:'evolution', title:'ヒトへの46億年', yomi:'ひとへのよんじゅうろくおくねん', cat:'earth', created:'2026-10-03', updated:'2026-10-04',
-   desc:'同じ場所を空から見つづけて、地球と生命と人類の46億年をたどる3D。', words:'進化 しんか 恐竜 きょうりゅう 歴史 化石'},
-  {id:'quantum', title:'量子の実験室', yomi:'りょうしのじっけんしつ', cat:'phys', created:'2026-10-04', updated:'2026-10-04',
-   desc:'二重スリット・トンネル効果・偏光板・量子もつれ・不確定性原理。', words:'光 ひかり 電子'},
-  {id:'wifi-wave', title:'電波の見える部屋', yomi:'でんぱのみえるへや', cat:'phys', created:'2026-10-04', updated:'2026-10-04',
-   desc:'WiFi の電波が家の中をどう伝わるかを、電磁波のシミュレーションで見る。', words:'わいふぁい 無線 電磁波 家'},
-  {id:'animal-senses', title:'いきものの感じる世界', yomi:'いきもののかんじるせかい', cat:'life', created:'2026-10-04', updated:'2026-10-04',
-   desc:'同じ庭を、人間・カラス・マムシなどの感覚で見る。紫外線や熱も見えるように置き換えて表示。', words:'目 色 視覚 動物 どうぶつ 紫外線 赤外線'},
-  {id:'immune-battle', title:'免疫のたたかい', yomi:'めんえきのたたかい', cat:'body', created:'2026-10-04', updated:'2026-10-04',
-   desc:'ウイルスや細菌が入って増え、免疫に片づけられるまでを、ミクロの断面とグラフで見る。', words:'ういるす 細菌 さいきん 病気 ワクチン 抗生物質 かぜ'},
-  {id:'god-view', title:'神の視点マップ', yomi:'かみのしてんまっぷ', cat:'earth', created:'2026-10-05', updated:'2026-10-05',
-   desc:'本物の地形・航空写真・建物・電車やバスの動きで見る3Dの地球。引けば宇宙の果てまで、寄れば原子や素粒子まで、ホイールひとつで。', words:'地図 ちず 宇宙 うちゅう 原子 街 まち'},
-  {id:'metamorphosis', title:'さなぎの中で', yomi:'さなぎのなかで', cat:'life', created:'2026-10-06', updated:'2026-10-06',
-   desc:'イモムシがさなぎになり、ガになるまでの体の中。壊れる・残る・新しく作られる器官を、タバコスズメガの研究の日付で追う。', words:'変態 へんたい 昆虫 こんちゅう 虫 むし 蛹'},
-  {id:'air-flow', title:'空気の流れの見える部屋', yomi:'くうきのながれのみえるへや', cat:'phys', created:'2026-10-06', updated:'2026-10-06',
-   desc:'窓・給気口・換気扇・外の風で、家の空気がどう入れかわり、どこがよどむのかを「空気の年齢」の色で見る。', words:'換気 かんき 風 かぜ エアコン サーキュレーター 家'},
-  {id:'ga-creatures', title:'進化の箱庭', yomi:'しんかのはこにわ', cat:'life', created:'2026-10-06', updated:'2026-10-06',
-   desc:'関節と筋肉でできた生きものを、遺伝的アルゴリズムで進化させる。平地・坂・氷・月・水の中で、ちがう体と動き方が生まれる。', words:'遺伝 いでん アルゴリズム 生き物'},
+  {id:'body-dive', title:'体内ダイブ', cat:'body', created:'2026-10-03', updated:'2026-10-04',
+   desc:'口・鼻・肛門から入って、消化管と気道の中を3Dで進む。'},
+  {id:'urinary-dive', title:'尿の旅', cat:'body', created:'2026-10-03', updated:'2026-10-04',
+   desc:'腎臓から膀胱、尿道まで、尿のしずくになって進む。'},
+  {id:'blood-dive', title:'血管の旅', cat:'body', created:'2026-10-03', updated:'2026-10-04',
+   desc:'赤血球になって心臓・肺・全身の血管をめぐる。'},
+  {id:'evolution', title:'ヒトへの46億年', cat:'earth', created:'2026-10-03', updated:'2026-10-04',
+   desc:'同じ場所を空から見つづけて、地球と生命と人類の46億年をたどる3D。'},
+  {id:'quantum', title:'量子の実験室', cat:'phys', created:'2026-10-04', updated:'2026-10-04',
+   desc:'二重スリット・トンネル効果・偏光板・量子もつれ・不確定性原理。'},
+  {id:'wifi-wave', title:'電波の見える部屋', cat:'phys', created:'2026-10-04', updated:'2026-10-04',
+   desc:'WiFi の電波が家の中をどう伝わるかを、電磁波のシミュレーションで見る。'},
+  {id:'animal-senses', title:'いきものの感じる世界', cat:'life', created:'2026-10-04', updated:'2026-10-04',
+   desc:'同じ庭を、人間・カラス・マムシなどの感覚で見る。紫外線や熱も見えるように置き換えて表示。'},
+  {id:'immune-battle', title:'免疫のたたかい', cat:'body', created:'2026-10-04', updated:'2026-10-04',
+   desc:'ウイルスや細菌が入って増え、免疫に片づけられるまでを、ミクロの断面とグラフで見る。'},
+  {id:'god-view', title:'神の視点マップ', cat:'earth', created:'2026-10-05', updated:'2026-10-05',
+   desc:'本物の地形・航空写真・建物・電車やバスの動きで見る3Dの地球。引けば宇宙の果てまで、寄れば原子や素粒子まで、ホイールひとつで。'},
+  {id:'metamorphosis', title:'さなぎの中で', cat:'life', created:'2026-10-06', updated:'2026-10-06',
+   desc:'イモムシがさなぎになり、ガになるまでの体の中。壊れる・残る・新しく作られる器官を、タバコスズメガの研究の日付で追う。'},
+  {id:'air-flow', title:'空気の流れの見える部屋', cat:'phys', created:'2026-10-06', updated:'2026-10-06',
+   desc:'窓・給気口・換気扇・外の風で、家の空気がどう入れかわり、どこがよどむのかを「空気の年齢」の色で見る。'},
+  {id:'ga-creatures', title:'進化の箱庭', cat:'life', created:'2026-10-06', updated:'2026-10-06',
+   desc:'関節と筋肉でできた生きものを、遺伝的アルゴリズムで進化させる。平地・坂・氷・月・水の中で、ちがう体と動き方が生まれる。'},
 ];
 const CATS = [
   {id:'earth', name:'地球と宇宙'},
@@ -137,8 +152,6 @@ const FRESH_DAYS = 2; // きょう・きのうの公開・更新に印をつけ�
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-// 全角半角・大文字小文字・カタカナとひらがなの違いを無視して比べる
-const norm = s => s.normalize('NFKC').toLowerCase().replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
 const catOf = id => CATS.find(c => c.id === id);
 
 const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -148,28 +161,21 @@ const shortDate = s => { const d = toDate(s); return (d.getFullYear() === today.
 const relDate = s => { const n = daysAgo(s); return n <= 0 ? 'きょう' : n === 1 ? 'きのう' : n < 7 ? n + '日前' : shortDate(s); };
 const isFresh = s => daysAgo(s) < FRESH_DAYS;
 
-APPS.forEach((a, i) => { a.order = i; a.hay = norm([a.title, a.yomi, catOf(a.cat).name, a.desc, a.words].join(' ')); });
+APPS.forEach((a, i) => { a.order = i; });
 
 // 状態は URL に残す（再読み込み・戻る・共有で同じ表示になる）
 const params = new URLSearchParams(location.search);
 const state = {
-  q: params.get('q') || '',
   cat: CATS.some(c => c.id === params.get('cat')) ? params.get('cat') : 'all',
   sort: SORTS.includes(params.get('sort')) ? params.get('sort') : 'cat',
 };
 
 function saveState() {
   const p = new URLSearchParams();
-  if (state.q) p.set('q', state.q);
   if (state.cat !== 'all') p.set('cat', state.cat);
   if (state.sort !== 'cat') p.set('sort', state.sort);
   const s = p.toString();
   history.replaceState(null, '', s ? '?' + s : location.pathname);
-}
-
-function matchesQuery(a) {
-  const terms = norm(state.q).split(/\s+/).filter(Boolean);
-  return terms.every(t => a.hay.includes(t));
 }
 
 function card(a, showCat) {
@@ -188,28 +194,19 @@ function card(a, showCat) {
 }
 
 function render() {
-  const hits = APPS.filter(matchesQuery);
-  const shown = hits.filter(a => state.cat === 'all' || a.cat === state.cat);
+  const shown = APPS.filter(a => state.cat === 'all' || a.cat === state.cat);
 
-  // 分野のボタン（数は検索の結果に合わせる）
+  // 分野のボタン（件数つき）。スマホの横スクロールの位置は保つ
+  const scrollX = $('cats').scrollLeft;
   $('cats').innerHTML = [{id:'all', name:'すべて'}, ...CATS].map(c => {
-    const n = c.id === 'all' ? hits.length : hits.filter(a => a.cat === c.id).length;
-    const on = state.cat === c.id;
-    return `<button type="button" class="chip c-${c.id}" data-cat="${c.id}" aria-pressed="${on}"${n || on ? '' : ' disabled'}>${c.id === 'all' ? '' : '<span class="dot"></span>'}${esc(c.name)}<span class="n">${n}</span></button>`;
+    const n = c.id === 'all' ? APPS.length : APPS.filter(a => a.cat === c.id).length;
+    return `<button type="button" class="chip c-${c.id}" data-cat="${c.id}" aria-pressed="${state.cat === c.id}">${c.id === 'all' ? '' : '<span class="dot"></span>'}${esc(c.name)}<span class="n">${n}</span></button>`;
   }).join('');
+  $('cats').scrollLeft = scrollX;
   document.querySelectorAll('#sort button').forEach(b => b.setAttribute('aria-pressed', b.dataset.sort === state.sort));
 
-  // いまの表示の説明
-  const parts = [];
-  if (state.q.trim()) parts.push(`「${esc(state.q.trim())}」`);
-  if (state.cat !== 'all') parts.push(esc(catOf(state.cat).name));
-  $('status').innerHTML = (parts.length ? `${parts.join('・')}で ${shown.length}本` : `${shown.length}本すべて`);
-
-  if (!shown.length) {
-    $('list').innerHTML = `<div class="empty">合うアプリがありません。<button type="button" id="reset">条件をはずす</button></div>`;
-    $('reset').onclick = () => { state.q = ''; state.cat = 'all'; $('q').value = ''; update(); };
-    return;
-  }
+  // いまの表示の説明（読み上げ用）
+  $('status').textContent = state.cat === 'all' ? `${shown.length}本すべて` : `${catOf(state.cat).name}で ${shown.length}本`;
 
   if (state.sort === 'cat') {
     $('list').innerHTML = CATS.map(c => {
@@ -227,14 +224,14 @@ function render() {
 function update() { saveState(); render(); }
 
 $('tools').hidden = false;
-$('q').value = state.q;
-$('q').addEventListener('input', e => { state.q = e.target.value; update(); });
-$('cats').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { state.cat = b.dataset.cat; update(); } });
+
+// 選んだ分野がスマホの横スクロールの端に隠れないように寄せる
+const showChosenCat = () => { const c = $('cats'), b = c.querySelector('[aria-pressed=true]'); if (c.scrollWidth > c.clientWidth) c.scrollTo({left: b.offsetLeft - (c.clientWidth - b.offsetWidth) / 2, behavior: 'smooth'}); };
+$('cats').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { state.cat = b.dataset.cat; update(); showChosenCat(); } });
 $('sort').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { state.sort = b.dataset.sort; update(); } });
-// 「/」でさがす欄へ
-document.addEventListener('keydown', e => { if (e.key === '/' && document.activeElement !== $('q')) { e.preventDefault(); $('q').focus(); } });
 
 render();
+showChosenCat();
 </script>
 </body>
 </html>
