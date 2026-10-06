@@ -131,7 +131,7 @@ Artifact の公開・再公開、git の commit／push の**前に毎回**行う
 - 新しい PC では: Git と Claude デスクトップを入れてクローン → `git config core.hooksPath .githooks` と `git config core.quotepath false` → `.private-words.txt` と `PUBLISH.local.md` を作る（8章）。
 - Claude のメモリと会話の履歴は PC ごと（移らない）。だから大事なことは必ずこのフォルダのメモ（RULES・各 DEVNOTES）に書く。
 - **ユーザーがローカルで開くとき**は、ルートの `start.bat` をダブルクリック（`tools/start.ps1` が、このフォルダのサーバーが動いていればそれを使い、なければ 8765・8766・8767… の空いているポートで起動して、まなびラボを開く。`start.bat <フォルダ名>` でアプリを直接）。**.bat と start.ps1 は英語（ASCII）だけで書く**（cmd は .bat を、PowerShell 5.1 は BOM なしの .ps1 を ANSI として読むので、UTF-8 の日本語は文字化けする）。
-- ローカル確認のサーバーは `.claude/launch.json` の `apps`（8765）。別の会話が使っていたら、または「Windows が予約しているポート」と言われて起動できないとき（2026-10-05 に発生）は `apps-2`（8766）、それも使われていたら `apps-3`（8767。2026-10-06 に追加）。
+- ローカル確認のサーバーは `.claude/launch.json` の `apps`（8765）。別の会話が使っていたら、または「Windows が予約しているポート」と言われて起動できないとき（2026-10-05 に発生）は `apps-2`（8766）、それも使われていたら `apps-3`（8767。2026-10-06 に追加）、さらに `apps-4`（8768。2026-10-06 に追加）。
 
 ## 11. セッションの使い方
 

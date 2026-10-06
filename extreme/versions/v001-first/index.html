@@ -1,0 +1,101 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>極限の世界に置いてみたら</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23050a1a'/><stop offset='.5' stop-color='%233d8fd6'/><stop offset='.5' stop-color='%232f9ad6'/><stop offset='1' stop-color='%23020812'/></linearGradient></defs><rect width='64' height='64' rx='14' fill='url(%23g)'/><circle cx='14' cy='12' r='1.6' fill='%23fff'/><circle cx='50' cy='9' r='1.2' fill='%23fff'/><path d='M32 6v52' stroke='%23ffc95a' stroke-width='3' stroke-linecap='round'/><circle cx='32' cy='44' r='7' fill='%23ffc95a'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="frame">
+      <canvas id="view" aria-label="左は宇宙から海の底までのものさし。右はその場所の景色と、置いたモノ・生き物"></canvas>
+    </div>
+    <div id="toolbar">
+      <label class="zlab" for="zRange">高さ・深さ</label>
+      <input type="range" id="zRange" min="0" max="1000" step="1" aria-describedby="hint">
+      <button class="btn" id="btnHome">地上にもどす</button>
+    </div>
+    <p id="hint">左のものさしをクリック・ドラッグするか、目印の名前を押すと、そこへ運びます。点線は地上での大きさ、まわりの矢印は押してくる力（気圧・水圧）の大きさです。</p>
+  </main>
+
+  <aside id="panel">
+    <header class="brand">
+      <h1>極限の世界に置いてみたら</h1>
+      <p>宇宙からマリアナ海溝の底まで。モノや生き物を運んでいくと、どうなるでしょう。</p>
+    </header>
+
+    <section>
+      <h2>何を置く？</h2>
+      <div class="things" id="things"></div>
+    </section>
+
+    <section class="card" id="readout">
+      <div class="ro-top"><span class="lbl" id="roName"></span><span class="ro-tag" id="roTag"></span></div>
+      <div id="roVerdict"></div>
+      <div class="ro-num"><b id="roVal">—</b><small id="roUnit"></small></div>
+      <div class="ro-cap" id="roLabel"></div>
+      <div class="ro-grid" id="roGrid"></div>
+      <div class="row"><button class="btn small" id="btnNew">新しいものにとりかえる</button><span class="cap" id="roTrip"></span></div>
+    </section>
+
+    <section>
+      <h2>どうしてこうなる？</h2>
+      <ul class="notes" id="notes"></ul>
+      <p class="cap legend-tags"><span class="tag rec">記録</span>測定・実験・記録 <span class="tag calc">計算</span>式で出した値 <span class="tag est">推定</span>このアプリで置いた仮定</p>
+    </section>
+
+    <section class="card" id="place">
+      <div class="ro-top"><span class="lbl">この場所</span><span class="ro-tag mono" id="plZ"></span></div>
+      <div class="ro-grid" id="plGrid"></div>
+    </section>
+
+    <section>
+      <h2>行き先</h2>
+      <div class="places" id="places"></div>
+    </section>
+
+    <section class="explain">
+      <h2>解説</h2>
+      <details open>
+        <summary>圧力（気圧・水圧）とは</summary>
+        <p>空気にも重さがあります。地上の私たちは、上に積み重なった空気の重さで、1cm²あたり約1kg の力で押されています。これが<b>1気圧</b>。高く登るほど上の空気が減るので、気圧は下がります。エベレストの山頂では約3分の1、宇宙ではほぼ0です。</p>
+        <p>水は空気よりずっと重いので、<b>10m 潜るごとに約1気圧</b>ずつ増えます。マリアナ海溝の底では約1,100気圧。1cm²に約1トンの力です。</p>
+      </details>
+      <details>
+        <summary>気体は押されると縮む</summary>
+        <p>閉じこめた気体の体積は、まわりの圧力に反比例します（<b>ボイルの法則</b>）。2気圧なら半分、10気圧なら10分の1。風船・ポテトチップスの袋・マシュマロの泡・人の肺・魚のうきぶくろは、中に気体があるので、深い海では縮み、高い空ではふくらみます。</p>
+        <p>水や体の大部分のように<b>気体が入っていないもの</b>は、圧力が1,000倍になっても、ほとんど形が変わりません。深海の生き物がぺしゃんこにならないのはこのためです。</p>
+      </details>
+      <details>
+        <summary>高い所で水が早く沸くわけ</summary>
+        <p>水の表面からは、いつも水の粒が飛び出そうとしています（蒸気圧）。この力がまわりの気圧に勝つと、水の中からも泡ができて沸きます。気圧が低いと、低い温度で勝てるので、早く沸きます。富士山頂では約87℃、エベレストでは約71℃。</p>
+        <p>高さ約19km では体温の37℃で沸きます（アームストロング限界）。宇宙では、水は沸きながら熱をうばわれて凍ります。反対に深い海では、300℃をこえても沸きません。</p>
+      </details>
+      <details>
+        <summary>宇宙で人はどうなる？</summary>
+        <p>映画のように体が破裂したり、一瞬で凍ったりはしません。でも空気がないので、10秒ほどで意識を失います。体の水分が沸いて体がふくらみ、息を止めていると肺が破れます。早く空気のある所へ戻せば、助かった例もあります。</p>
+        <p>宇宙服は、体のまわりに空気の圧力をつくって、体を押してくれる「小さな宇宙船」です。</p>
+      </details>
+      <details>
+        <summary>深海の生き物</summary>
+        <p>深海魚の多くは、うきぶくろを持たないか、中を油などで満たしています。体の中に気体がなければ、高い圧力でもつぶれません。それでも、圧力は体の中のたんぱく質の形をゆがめます。深海魚は TMAO という物質を体にためて、たんぱく質を守っています。</p>
+        <p>うきぶくろのある魚を深い所から急に引き上げると、気体がふくらんで、胃が口から押し出されることがあります。</p>
+      </details>
+      <details>
+        <summary>このアプリのしくみと簡単にしたところ</summary>
+        <p><b>空の気圧と気温</b>は「標準大気」（U.S. Standard Atmosphere 1976。平均的な空のモデル）。86km より上は表の値です。実際の気温は季節や場所で大きく変わります。<b>海の圧力</b>は、海水の重さ（密度 1.025g/cm³ で一定）から。<b>水温</b>はマリアナ海溝の近くの外洋の目安です。</p>
+        <p><b>水が沸く温度</b>は、水の蒸気圧の式（Wagner と Pruss の式）から求めています。<b>気体の体積</b>はボイル・シャルルの法則で、深海の高い圧力では窒素の測定値で直しています（1,000気圧近くでは、計算の約2倍の体積になる）。</p>
+        <p><b>簡単にしたところ</b>: 運ぶあいだに温度は変わらないとしています（気体の体積だけ、その場所の温度を使う）。風船が割れる・袋が破れる・カップの縮み方・マシュマロの泡は、実例に合わせた<b>推定</b>の値です。その場所に置いた瞬間のようすで、長い時間がたったときのこと（減圧症、高い山に体を慣らすことなど）は文章で書いています。</p>
+        <p>学習用の目安です。登山・潜水・健康の判断には使えません。</p>
+        <p>使っているもの: 文字に Dela Gothic One・Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）。</p>
+      </details>
+    </section>
+  </aside>
+</div>
+
+<script src="js/world.js"></script>
+<script src="js/things.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
