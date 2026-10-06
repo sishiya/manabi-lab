@@ -1,0 +1,129 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>カビが育つまで</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23121815'/><path d='M32 52V30M32 30l-9-9M32 30l9-9M32 38l-12 4M32 40l12 3' stroke='%23dfe8d8' stroke-width='2.5' stroke-linecap='round'/><circle cx='22' cy='19' r='5' fill='%239ccf5b'/><circle cx='42' cy='19' r='5' fill='%235fa58a'/><circle cx='32' cy='14' r='5' fill='%23c2c25a'/><rect x='8' y='50' width='48' height='5' rx='2' fill='%237a8378'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="viewWrap">
+      <canvas id="view" aria-label="カビが育つ場所の図。部屋・表面・顕微鏡の断面を切りかえられる"></canvas>
+      <div id="stageName" aria-live="polite"></div>
+      <div id="viewCtl" role="group" aria-label="見る大きさ">
+        <button data-view="room" aria-pressed="true" title="場所全体">部屋</button>
+        <button data-view="surface" aria-pressed="false" title="2cm 四方の表面">表面 2cm</button>
+        <button data-view="micro" aria-pressed="false" title="顕微鏡で見た断面（約0.4mm）">顕微鏡の断面</button>
+      </div>
+      <div id="timebar">
+        <button id="play" aria-label="再生">▶</button>
+        <div class="seg" id="speeds" role="group" aria-label="再生の速さ（1秒あたり）"></div>
+        <input id="time" type="range" min="0" max="2016" step="1" value="0" aria-label="時間">
+        <span id="clock" class="mono"></span>
+      </div>
+    </div>
+    <div id="chartWrap">
+      <div id="rangeCtl" class="seg" role="group" aria-label="グラフの範囲">
+        <button data-range="day" aria-pressed="false">1日</button>
+        <button data-range="week" aria-pressed="true">1週間</button>
+        <button data-range="all" aria-pressed="false">12週間</button>
+      </div>
+      <canvas id="chart" aria-label="表面の湿度・温度・カビ指数のグラフ。押すとその時間へ移る"></canvas>
+    </div>
+  </main>
+
+  <aside id="panel">
+    <header>
+      <div class="eyebrow">HOW MOLD GROWS AT HOME</div>
+      <h1>カビが育つまで</h1>
+      <p class="lead">家のカビは、どこから来て、何を食べ、どれだけの時間でどう育ち、どう増えるのか。場所とくらし方を選んで<b>12週間</b>の時間を動かし、部屋・表面・顕微鏡の3つの大きさで見る。途中でカビ取り剤や防カビ剤を<b>使ってみる</b>こともできる。</p>
+    </header>
+
+    <section class="box" id="nowBox">
+      <h2>いま起きていること</h2>
+      <div id="now"></div>
+    </section>
+
+    <section class="box">
+      <h2>場所</h2>
+      <div id="places"></div>
+    </section>
+
+    <section class="box">
+      <h2>くらし方（変えると最初から計算しなおす）</h2>
+      <div id="conds"></div>
+      <p class="mat" id="matName"></p>
+    </section>
+
+    <section class="box">
+      <h2>対策をためす</h2>
+      <p class="hint" id="treatNow"></p>
+      <div id="treatBtns"></div>
+      <ul id="treatList"></ul>
+      <button id="treatClear" class="link" hidden>使った対策をぜんぶ消す</button>
+      <p class="hint">時間を動かして、色・生きているカビ・また生えてくるかを見る。グラフの▼が使った時刻。</p>
+      <div id="treatInfo"></div>
+    </section>
+
+    <section class="box">
+      <h2>結果（12週間のあと）</h2>
+      <div id="result"></div>
+    </section>
+
+    <section class="box">
+      <h2>ためしてみよう</h2>
+      <div id="tries"></div>
+    </section>
+
+    <section class="box">
+      <h2>表示</h2>
+      <label class="row"><input type="checkbox" id="labels" checked> 名前を表示</label>
+      <label class="row"><input type="checkbox" id="hidden"> 目に見えないものも表示（落ちた胞子・小さな菌糸）</label>
+    </section>
+
+    <section class="box">
+      <h2>数字で見る（空気と胞子）</h2>
+      <div id="numbers"></div>
+    </section>
+
+    <section class="box">
+      <h2>カビ対策のまとめ</h2>
+      <ol class="tips" id="tips"></ol>
+    </section>
+
+    <section class="box">
+      <h2>家によくいるカビ</h2>
+      <ul class="plain sp" id="species"></ul>
+    </section>
+
+    <section class="box">
+      <h2>よくある誤解</h2>
+      <div id="myths"></div>
+    </section>
+
+    <section class="box">
+      <h2>まだ分かっていないこと</h2>
+      <ul class="plain" id="unknowns"></ul>
+    </section>
+
+    <section class="box about">
+      <h2>このアプリについて</h2>
+      <p><b>学習用に簡単にしたモデルです。健康・医療の判断や、建物の診断には使えません。</b>カビで体の具合が気になるときは医師に、広い範囲のカビや壁の中のカビは専門の業者に相談してください。薬剤は製品の説明書に従って使ってください。</p>
+      <p>カビの育つ速さは、建物のカビの研究で使われている <b>VTT カビ成長モデル</b>（温度・表面の湿度・材料からカビ指数 0〜6 の変化を計算する）を使っています。汚れ（えさ）で材料のクラスが変わること、対策の効き方、空気中の胞子の数、カビの種類の割合は、研究のおおよその値をもとにした<b>推定</b>です。実際の家では、場所ごとの差がとても大きく、同じ条件でも数倍ちがうことがあります。</p>
+      <p>図は模式図です。部屋の図の胞子は、本当は見えないものを大きく描いています。顕微鏡の図は、1個の胞子から育つようすを横から見た形にまとめています（<span class="tag art">演出</span>）。大きさ（胞子 約4µm・菌糸 約3µm・髪の毛 約80µm）は実際の比率です。</p>
+      <p>説明の札: <span class="tag sure">確か</span> 研究で確かめられている・製品の表示　<span class="tag est">推定</span> 目安・幅が大きい　<span class="tag art">演出</span> 見やすくするための絵</p>
+      <details><summary>おもな出どころ</summary><ul class="plain" id="sources"></ul></details>
+      <p>使っているもの: 文字に Zen Maru Gothic・Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）。</p>
+    </section>
+  </aside>
+</div>
+
+<script src="js/model.js"></script>
+<script src="js/text.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/room.js"></script>
+<script src="js/surface.js"></script>
+<script src="js/micro.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/main.js"></script>

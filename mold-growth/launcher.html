@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>カビが育つまで ランチャー</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23121815'/><path d='M32 52V30M32 30l-9-9M32 30l9-9M32 38l-12 4M32 40l12 3' stroke='%23dfe8d8' stroke-width='2.5' stroke-linecap='round'/><circle cx='22' cy='19' r='5' fill='%239ccf5b'/><circle cx='42' cy='19' r='5' fill='%235fa58a'/><circle cx='32' cy='14' r='5' fill='%23c2c25a'/><rect x='8' y='50' width='48' height='5' rx='2' fill='%237a8378'/></svg>">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@700&display=swap">
+<style>
+/* Layout: single column version list; turning points as cards, other backups as a compact table */
+:root{--bg:#0d1110;--ink:#eef2ea;--muted:#b6c1b4;--dim:#869385;--line:rgba(200,230,200,.15);--panel:#18201c;--acc:#b8d66a;
+  --f-display:'Zen Maru Gothic','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+main{max-width:760px;margin:0 auto;padding:48px 16px 64px;display:flex;flex-direction:column;gap:28px}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:700;font-size:40px;margin:6px 0 0;letter-spacing:.04em}
+h2{font-size:12px;letter-spacing:.18em;color:var(--dim);font-weight:500;margin:0 0 10px}
+.cards{display:flex;flex-direction:column;gap:12px}
+.card{display:grid;grid-template-columns:auto 1fr auto;gap:6px 18px;align-items:start;padding:16px 18px;background:var(--panel);border:1px solid var(--line);border-radius:6px;text-decoration:none;color:inherit}
+.card:hover,.latest{border-color:var(--acc)}
+.card:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.ver{font-family:var(--f-mono);font-size:13px;color:var(--acc);padding-top:3px}
+.card b{font-size:17px}
+.card p{margin:4px 0 0;font-size:13px;line-height:1.75;color:var(--muted)}
+.date{font-family:var(--f-mono);font-size:11px;color:var(--dim);white-space:nowrap;padding-top:4px}
+.tag{display:inline-block;font-size:10px;letter-spacing:.12em;border:1px solid var(--acc);color:var(--acc);padding:1px 6px;margin-left:8px;vertical-align:2px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td{padding:8px 6px;border-top:1px solid var(--line);vertical-align:top}
+td:first-child{font-family:var(--f-mono);color:var(--muted);white-space:nowrap}
+td a{color:var(--ink)}
+@media (max-width:520px){.card{grid-template-columns:1fr}.date{padding:0}h1{font-size:32px}}
+</style>
+</head>
+<body>
+<main>
+  <header><div class="eyebrow">HOW MOLD GROWS AT HOME · VERSIONS</div><h1>カビが育つまで</h1></header>
+  <section>
+    <h2>ターニングポイント</h2>
+    <div class="cards">
+      <a class="card latest" href="index.html"><span class="ver">最新</span><div><b>作業中の最新版<span class="tag">LATEST</span></b><p>いま作業フォルダにある index.html。</p></div><span class="date">—</span></a>
+      <a class="card" href="versions/v001-first/index.html"><span class="ver">v1</span><div><b>最初の版（段階A）</b>
+        <p>浴室のゴムパッキン・窓のゴムパッキン・北側の壁・押し入れで、12週間のカビの育ち方を見る。表面の温度と湿度（結露）から VTT カビ成長モデルでカビ指数を計算し、汚れ（えさ）・対策・空気中の胞子・カビの種類を推定で足した。部屋・表面 2cm・顕微鏡の断面の3つの図、グラフ、くらし方の条件、対策5つ（塩素系・アルコール・こすり洗い・銀イオンのくん煙剤・防カビ剤スプレー）、数字で見る、対策のまとめ、よくある誤解。</p></div><span class="date">2026-10-06</span></a>
+    </div>
+  </section>
+  <section>
+    <h2>すべてのバックアップ</h2>
+    <table><tr><td>v001-first</td><td><a href="versions/v001-first/index.html">段階A 完成時点</a></td></tr></table>
+  </section>
+</main>
+</body>
+</html>
