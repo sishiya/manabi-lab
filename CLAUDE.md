@@ -14,6 +14,7 @@
 - `metamorphosis/` — 別シリーズ「さなぎの中で」（タバコスズメガのイモムシが蛹になりガになるまで。時間は研究の日付、体の中で壊れる・残る・新しく作られる器官を、横から透かした模式図で時間を追って見る。ホルモンとスイッチの遺伝子のグラフつき。Canvas 2D）。css/js に分割。企画は `metamorphosis/PLAN.md`、仕組み・確認手順は `metamorphosis/DEVNOTES.md`。確認は `apps`（http://localhost:8765/metamorphosis/）で。
 - `air-flow/` — 単独アプリ「空気の流れの見える部屋」（2LDK で、窓・給気口・換気扇・風・サーキュレーターによって空気がどう入れかわり、どこがよどむかを空気齢の色で見る。換気回路網＋2次元の流れ＋空気齢の計算。Canvas 2D）。css/js に分割。企画は `air-flow/PLAN.md`、仕組み・確認手順は `air-flow/DEVNOTES.md`。確認は `apps`（http://localhost:8765/air-flow/）で。
 - `extreme/` — 単独アプリ「極限の世界に置いてみたら」（宇宙 400km からマリアナ海溝の底まで1本のものさしで、人・風船・ポテトチップスの袋・マシュマロ・魚・クマムシなどを運び、気圧・水圧で縮む・ふくらむ・沸く・生きられるかを見る。Canvas 2D）。css/js に分割。企画は `extreme/PLAN.md`、仕組み・確認手順は `extreme/DEVNOTES.md`。確認は `apps`（http://localhost:8765/extreme/）で。
+- `ga-creatures/` — 単独アプリ「進化の箱庭」（関節と筋肉でできた2次元の生きものを遺伝的アルゴリズムで進化させる。平地・坂・氷・月・水の中。Canvas 2D）。css/js に分割。企画は `ga-creatures/PLAN.md`、仕組み・確認手順は `ga-creatures/DEVNOTES.md`。確認は `apps`（http://localhost:8765/ga-creatures/）で。
 - `quantum/` — 別シリーズ「量子の実験室」（二重スリット・トンネル効果・偏光板・量子もつれ・不確定性原理）。1ファイル完結。仕組みと確認手順・公開 URL は `quantum/DEVNOTES.md`。
 - `archive.html` — 隠しアーカイブ（入口からリンクしない。試作・作りかけのアプリ。いまは extreme と illusions）。入口とアーカイブの出し入れは `RULES.md` 8.1。
 - `IDEAS.md` — まだ作っていないテーマのストックと、ユーザーの好みの傾向。新しいアプリを考えるときに読む。

@@ -1,0 +1,140 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>進化の箱庭</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2314323a'/><path d='M8 50h48' stroke='%235b4a39' stroke-width='4'/><path d='M14 46L26 22L44 26L52 46M26 22L52 46M14 46L44 26' stroke='%23199e70' stroke-width='4' stroke-linecap='round' fill='none'/><circle cx='14' cy='46' r='5' fill='%23ece8dc'/><circle cx='26' cy='22' r='5' fill='%238a8478'/><circle cx='44' cy='26' r='5' fill='%238a8478'/><circle cx='52' cy='46' r='5' fill='%232a2520' stroke='%23ece8dc' stroke-width='1.5'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="frame"><canvas id="view" aria-label="選んだ1匹が15秒間走るようす"></canvas></div>
+    <div id="watchbar">
+      <span id="wLabel" class="wlabel"></span>
+      <span id="wTime" class="mono wtime"></span>
+      <div class="seg" role="group" aria-label="再生の速さ">
+        <button class="btn small" data-speed="0.5">×½</button><button class="btn small" data-speed="1" aria-pressed="true">×1</button><button class="btn small" data-speed="3">×3</button>
+      </div>
+      <button class="btn small" id="btnReplay">はじめから</button>
+      <button class="btn small" id="btnTop">いまの1位を見る</button>
+      <button class="btn small mobile-only" id="btnAutoM" aria-pressed="false">自動で進める</button>
+    </div>
+    <div id="lower">
+      <section class="gridbox">
+        <h2 id="gridTitle">世代の一覧</h2>
+        <div class="cvwrap"><canvas id="grid" aria-label="この世代の全員。進んだ距離の順。押すとその1匹を見る"></canvas></div>
+      </section>
+      <section class="chartbox">
+        <h2>進んだ距離（m）</h2>
+        <div class="cvwrap"><canvas id="prog" aria-label="世代ごとの、いちばん・まんなか・下から1割の進んだ距離"></canvas></div>
+        <h2>種の割合 <small>（種 = 関節と筋肉の数の組み合わせ）</small></h2>
+        <div class="cvwrap short"><canvas id="spec" aria-label="世代ごとの種の割合"></canvas></div>
+      </section>
+    </div>
+    <div id="tip" role="tooltip" hidden></div>
+  </main>
+
+  <aside id="panel">
+    <header class="brand">
+      <h1>進化の箱庭</h1>
+      <p>関節と筋肉でできた生きものを、遺伝的アルゴリズムで進化させます。15秒でより遠くへ進んだものが子を残します。</p>
+    </header>
+
+    <section>
+      <div class="genrow"><span class="lbl">世代</span><b class="mono" id="genNo">0</b><span class="cap" id="runState"></span></div>
+      <div class="row">
+        <button class="btn primary" id="btnStep">1世代すすめる</button>
+        <button class="btn" id="btnStep10">10世代</button>
+        <button class="btn" id="btnAuto" aria-pressed="false">自動で進める</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>環境</h2>
+      <div class="envs" id="envs"></div>
+      <p class="cap" id="envNote"></p>
+    </section>
+
+    <section class="card" id="stats">
+      <div class="ro-grid" id="statGrid"></div>
+    </section>
+
+    <section class="card" id="pick">
+      <div class="ro-top"><span class="lbl">見ている1匹</span><span class="ro-tag mono" id="pickTag"></span></div>
+      <div class="cvwrap genome"><canvas id="genome" aria-label="見ている1匹の体と、筋肉ごとの縮む時間帯"></canvas></div>
+      <p class="cap">上: 体と筋肉の番号（足の裏が暗いほどすべりにくい）。下: 1周のうち各筋肉が縮んでいる時間帯。白い線がいま。</p>
+      <div class="ro-grid" id="pickGrid"></div>
+    </section>
+
+    <section>
+      <h2>歴代の1位を見る</h2>
+      <input type="range" id="histRange" min="0" max="0" value="0" aria-label="世代">
+      <p class="cap" id="histCap">スライダーで世代を選ぶと、その世代の1位が走ります。</p>
+    </section>
+
+    <section>
+      <h2>進化のしかた</h2>
+      <div class="set">
+        <label for="selPop">集団の数</label>
+        <select id="selPop"><option value="50">50匹</option><option value="100" selected>100匹</option><option value="200">200匹</option></select>
+        <label for="selSel">選び方</label>
+        <select id="selSel"><option value="top" selected>上位半分が残る</option><option value="tour">トーナメント</option></select>
+        <label for="rngRate">突然変異</label>
+        <div class="rate"><input type="range" id="rngRate" min="0" max="2" step="0.1" value="1"><span class="mono" id="rateVal">1.0</span></div>
+        <label for="chkCross">交叉</label>
+        <label class="chk"><input type="checkbox" id="chkCross" checked> 2匹の遺伝子をまぜる</label>
+        <label for="inSeed">シード</label>
+        <div class="rate"><input type="number" id="inSeed" min="1" max="999999" value="1" class="mono"><button class="btn small" id="btnReset">最初から</button><button class="btn small" id="btnRand">べつの種で</button></div>
+      </div>
+      <p class="cap">同じシード・同じ設定なら、同じ進化をたどります。設定は次の世代から効きます（集団の数はすぐ）。</p>
+    </section>
+
+    <section class="explain">
+      <h2>解説</h2>
+      <details open>
+        <summary>遺伝的アルゴリズムとは</summary>
+        <p>生きものの進化をまねて、答えを探す方法です。1970年代に<b>ジョン・ホランド</b>が形にしました。くり返すのは4つだけです。</p>
+        <p><b>① 評価</b> 全員を同じ条件でためして、点数（<b>適応度</b>）をつける。ここでは15秒で進んだ距離。<br><b>② 選択</b> 点数の高いものが親になる。<br><b>③ 交叉</b> 2匹の親の遺伝子をまぜて子を作る。<br><b>④ 突然変異</b> 子の遺伝子を少しだけ、でたらめに変える。</p>
+        <p>だれも「こう歩け」とは教えていません。でたらめな体から始めても、残るものと消えるものがあるだけで、世代をかさねると歩き方が「見つかって」いきます。</p>
+      </details>
+      <details>
+        <summary>この生きものの遺伝子</summary>
+        <p>体は<b>関節</b>（丸）と<b>筋肉</b>（帯）でできています。遺伝子に書いてあるのは:</p>
+        <p>・関節の数（3〜8）と、生まれたときの位置<br>・<b>足の裏のすべりにくさ</b>（摩擦係数 0.05〜1.0。暗い丸ほどすべりにくい）<br>・筋肉がどの関節をつなぐか、縮んだ長さと伸びた長さ、強さ（太さで表示）<br>・<b>体のリズム</b>（1周の秒数）と、筋肉ごとに1周のどこで縮むか</p>
+        <p>筋肉は時計に合わせて縮んだり伸びたりするだけで、まわりを見てはいません。それでも、すべりにくい足で地面をつかみ、すべりやすい足を前に出すと、体が前へ進みます。ミミズやシャクトリムシも、体の毛や吸盤で「すべりにくさ」を切りかえて進みます。</p>
+        <p>関節や筋肉の数が変わる突然変異もあります。関節と筋肉の数の組み合わせを<b>種</b>と呼んで色を分けています（多い8種まで。ほかは灰色）。</p>
+      </details>
+      <details>
+        <summary>環境がちがうと、ちがう体に</summary>
+        <p>同じシードで環境だけを変えて、何十世代か進めてみてください。<b>上り坂</b>では、すべり落ちないよう、すべりにくい足が増えます。<b>氷の上</b>では、地面をけっても力が伝わりにくく、体全体をはずませるような動きが出てきます。<b>月面</b>では跳ねて長く飛ぶ動きが得になります。<b>水の中</b>には地面がないので、筋肉の棒で水をかく、まったく別の泳ぎ方になります。</p>
+        <p>進化のとちゅうで環境を変えると、それまでの1位が急に進めなくなり、また何世代かかけて適応していくようすが見えます（グラフの黄色の線）。</p>
+      </details>
+      <details>
+        <summary>本物の進化とのちがい</summary>
+        <p><b>目的がない</b>: 本物の進化には「15秒で遠くへ」のような決められた点数はありません。その場所で生きのびて、子を多く残したものの性質が、結果として広がります。</p>
+        <p><b>偶然</b>: 本物では、強くても運が悪くて子を残せないことがあります。集団が小さいほど偶然の影響が大きくなります（遺伝的浮動）。このアプリの「トーナメント」は、くじ引きで対戦相手が決まるので、少し偶然が入ります。</p>
+        <p><b>遺伝子の量</b>: ヒトの DNA は約30億文字。この生きものの遺伝子は数十個の数字です。また、ここでは体の形が遺伝子にそのまま書いてありますが、本物の体は遺伝子が細胞の増え方を調節して、発生の中で作られます。</p>
+      </details>
+      <details>
+        <summary>歴史</summary>
+        <p>1975年、ホランドが本『Adaptation in Natural and Artificial Systems』で遺伝的アルゴリズムをまとめました。1994年、<b>カール・シムズ</b>は、ブロックと関節でできた仮想の生きものを3次元の物理の中で進化させ、泳ぐ・歩く・跳ぶものが生まれる映像（Evolving Virtual Creatures）を発表しました。</p>
+        <p>ゲームでは、1998年の『アストロノーカ』で、畑をあらす生きもの「バブー」が、わなをくぐりぬけたものから子を残して、だんだん手ごわくなりました。このアプリの関節と筋肉の体と、種の色分けの見せ方は、carykh さん（Cary Huang）の進化シミュレーターを参考にしています。</p>
+      </details>
+      <details>
+        <summary>このアプリのしくみと簡単にしたところ</summary>
+        <p><b>物理</b>: 関節は 2kg の点、筋肉は減衰のあるばね（強さ 150〜600N/m）。縮む時間帯は「縮んだ長さ」、それ以外は「伸びた長さ」に近づこうとします。地面に当たった関節は、下向きの勢いを止めた分に摩擦係数をかけた分だけ、横の勢いも止まります（クーロン摩擦）。重力は地球 9.8m/s²、月 1.62m/s²。1/120 秒ずつ計算します。</p>
+        <p><b>水の中</b>: 体は水と同じ重さとしました（魚のうきぶくろのように、浮きも沈みもしない）。筋肉を太さ 8cm の棒とみなし、棒に垂直に動くと速さの2乗に比例する抵抗（抵抗係数 1.0）、棒に沿って動くと小さな抵抗を受けます。</p>
+        <p><b>簡単にしたところ</b>: 2次元（前後と上下だけ）。関節と筋肉はおたがいにすり抜けます。筋肉はばねで、本物の筋肉のように「縮む力しか出せない」性質はありません（伸ばす力も出す）。関節に質量があり、筋肉には質量がありません。水の流れそのものは計算していません。氷の上は、摩擦係数を 0.1 倍にしただけです。</p>
+        <p><b>点数</b>: 15秒後の重心の位置（スタートからの前向きの距離、坂では坂に沿った距離）。うしろへ進むとマイナスです。計算がこわれるほど速く動いたものは 0 点にしています。</p>
+        <p>使っているもの: 文字に Dela Gothic One・Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）。</p>
+      </details>
+    </section>
+  </aside>
+</div>
+
+<script src="js/genome.js"></script>
+<script src="js/physics.js"></script>
+<script src="js/ga.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
