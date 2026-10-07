@@ -1,0 +1,150 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ブラックホールの見え方</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2307080c'/><ellipse cx='32' cy='36' rx='27' ry='5' fill='%23ffb35c'/><path d='M14 31a18 18 0 0 1 36 0' fill='none' stroke='%23ffd9a0' stroke-width='5'/><circle cx='32' cy='33' r='11' fill='%23000'/><path d='M21 37h22' stroke='%23ffe2b8' stroke-width='3'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="frame">
+      <canvas id="view" aria-label="ブラックホールと、そのまわりを回るガスの円盤。ドラッグでまわりを回り、クリックするとその点に届いた光の道すじを横の図に出します"></canvas>
+      <canvas id="mark" aria-hidden="true"></canvas>
+      <div id="toast" hidden></div>
+      <div id="busy" hidden>光をたどっています…</div>
+      <div id="fail" hidden></div>
+    </div>
+    <div id="toolbar" role="group" aria-label="見る位置と時間">
+      <div class="seg" id="segPreset">
+        <button data-v="movie" aria-pressed="true">映画の角度</button>
+        <button data-v="side" aria-pressed="false">真横</button>
+        <button data-v="tilt" aria-pressed="false">ななめ上</button>
+        <button data-v="top" aria-pressed="false">真上</button>
+      </div>
+      <button class="btn" id="btnPause" aria-pressed="false">円盤を止める</button>
+      <p id="probe"></p>
+    </div>
+    <p id="hint">画面を<b>ドラッグ</b>するとまわりを回り、<b>ホイール</b>（スマホは2本指）で近づきます。<b>クリック</b>（タップ）すると、その点に届いた光が通ってきた道すじを、右の図に出します。</p>
+  </main>
+
+  <aside id="panel">
+    <header class="brand">
+      <h1>ブラックホールの見え方</h1>
+      <p>映画「インターステラー」のブラックホールは、円盤が穴の上と下にも回り込んで見えます。なぜあの形なのか。曲がった時空の中を進む光を、画面の1点ずつ本当に計算して確かめます。</p>
+    </header>
+
+    <section class="card" id="readout">
+      <div class="ro-top"><span class="lbl">この光の道すじ</span><span class="ro-tag" id="rayTag"></span></div>
+      <canvas id="rayCv" width="640" height="400" aria-label="クリックした点に届いた光の道すじの図"></canvas>
+      <div class="rayctl">
+        <div class="seg tiny" id="segRayView"><button data-v="side" aria-pressed="true">横から</button><button data-v="top" aria-pressed="false">上から</button></div>
+        <div class="seg tiny" id="segRayZoom"><button data-v="all" aria-pressed="true">全体</button><button data-v="near" aria-pressed="false">穴の近く</button></div>
+      </div>
+      <div id="rayText"><p>画面の好きな所をクリックしてみよう。円盤の上に見える光の帯や、黒い影のふちの細い輪が、どこから来た光なのかが分かります。</p></div>
+    </section>
+
+    <section>
+      <h2>見え方</h2>
+      <div class="seg" id="segReal">
+        <button data-v="film" aria-pressed="true">映画版</button>
+        <button data-v="real" aria-pressed="false">本当の見え方</button>
+      </div>
+      <p class="cap" id="realCap"></p>
+    </section>
+
+    <section>
+      <h2>ブラックホールの回転の速さ</h2>
+      <div class="seg small" id="segSpin">
+        <button data-v="0">止まっている<br>0</button>
+        <button data-v="0.6" aria-pressed="true">映画<br>0.6</button>
+        <button data-v="0.99">とても速い<br>0.99</button>
+      </div>
+      <input type="range" id="spin" min="0" max="0.998" step="0.002" value="0.6" aria-label="回転の速さ（いちばん速いときを 1 とした値）">
+      <p class="cap" id="spinCap"></p>
+    </section>
+
+    <section>
+      <h2>カメラの距離</h2>
+      <input type="range" id="dist" min="0" max="1000" step="1" value="500" aria-label="ブラックホールからカメラまでの距離">
+      <div class="ro-grid" id="camGrid"></div>
+    </section>
+
+    <section>
+      <h2>まわりのもの</h2>
+      <h3>うしろの空</h3>
+      <div class="seg small" id="segSky">
+        <button data-v="stars" aria-pressed="true">星空</button>
+        <button data-v="grid" aria-pressed="false">方眼</button>
+        <button data-v="none" aria-pressed="false">まっ暗</button>
+      </div>
+      <h3>ガスの円盤</h3>
+      <div class="seg small" id="segDisk">
+        <button data-v="on" aria-pressed="true">あり</button>
+        <button data-v="off" aria-pressed="false">なし</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>見つけてみよう</h2>
+      <ul class="quests" id="quests"></ul>
+    </section>
+
+    <section class="explain">
+      <h2>解説</h2>
+      <details open>
+        <summary>なぜ円盤が穴の上と下にも見える？</summary>
+        <p>ガスの円盤は、本当は穴のまわりの<b>平らな輪</b>です。真横に近い所から見ると、手前の円盤は穴の前を横切る細い帯に見えます。</p>
+        <p>穴の<b>上</b>に見える光の帯は、<b>穴の向こう側にある円盤</b>です。向こう側の円盤から出た光が、穴の重力で曲げられ、穴の上を回り込んでカメラに届きます。<b>下</b>に見える帯も向こう側の円盤で、こちらは穴の下をくぐってきた光、つまり<b>円盤の下の面</b>の光です。上から見ているのに、下の面が見えるのです。</p>
+        <p>画面の帯をクリックして、右の図で光の道すじを確かめてみましょう。</p>
+      </details>
+      <details>
+        <summary>黒い影と、ふちの細い光の輪</summary>
+        <p>真ん中の黒い所は、穴そのもの（事象の地平面）より<b>ずっと大きく</b>見えます。この向きから来る光をたどると、どれも穴に落ちる道になっているからです。これを<b>ブラックホールの影</b>といいます。回っていないブラックホールでは、影の半径は地平面の約2.6倍です。</p>
+        <p>影のふちには細い光の輪があります。穴のまわりには、光が円を描いて回れる所（回っていないブラックホールでは地平面の1.5倍の半径）があり、その近くを通った光は、穴のまわりを1周・2周してから出てきます。輪の中には、円盤や空がもう一度、さらにもう一度、細く縮んで写っています（光子リング）。</p>
+      </details>
+      <details>
+        <summary>映画版と本当の見え方</summary>
+        <p>円盤のガスは、光の速さの何割もの速さで回っています。こちらへ向かってくる側は光がつまって<b>明るく、青っぽく</b>、遠ざかる側は<b>暗く、赤っぽく</b>見えます（ドップラー効果）。さらに穴の近くから出た光は、重力をのぼってくる間に赤くなります（重力赤方偏移）。</p>
+        <p>映画を作った人たちの論文によると、これを全部入れた本当の見え方は、片側だけがとても明るく、影もほとんど見えなくなって分かりにくいので、映画では使いませんでした。映画の絵は、色と明るさのずれを入れない円盤に、カメラのレンズのにじみを足したものです。「本当の見え方」では、明るさを振動数のずれ g の4乗、色を g 倍の温度の色にしています。</p>
+      </details>
+      <details>
+        <summary>回るブラックホール</summary>
+        <p>回っているブラックホールは、まわりの空間ごと引きずって回します。回転と同じ向きに進む光は穴の近くまで寄れて、逆向きの光は遠くで落ちてしまいます。だから真横から見ると、影は<b>片側がつぶれて平らに</b>なり、もう片側へずれます。回転を「とても速い」にして、真横から見てみましょう。</p>
+        <p>映画の話では、ブラックホールはもっとずっと速く回っている設定です。でも、影の片側がつぶれた絵は観客に分かりにくいので、映画の絵は回転の速さ 0.6（いちばん速いときを 1 とした値）で描かれました。</p>
+        <p>回転が速いほど、円盤のガスは穴の近くまで安定して回れます（円盤のいちばん内側＝いちばん内側の安定な円軌道）。</p>
+      </details>
+      <details>
+        <summary>時計の進み方</summary>
+        <p>ブラックホールの近くでは、遠くと比べて時計がゆっくり進みます。カメラを近づけると、「カメラの距離」の下に、ここの1時間が遠くの何時間にあたるかを出します（その場所に、回らずにとどまっている人の時計。とどまるにはロケットで支え続ける必要があります）。</p>
+        <p>映画のミラーの星では、1時間が地球の約7年でした。この計算をしたキップ・ソーンの本によると、そのためには、ブラックホールがいちばん速い回転にとても近い速さで回っていて、星が地平面のすぐそばを回っている必要があります。</p>
+      </details>
+      <details>
+        <summary>このシミュレーションのしくみ</summary>
+        <p><b>光の道すじ</b>: 画面の1ピクセルごとに、カメラに届いた光を逆向きにたどります。回るブラックホールのまわりの時空（カー時空）の中の光の通り道（測地線）の式を、ルンゲ・クッタ法で少しずつ進めます（穴に近いほど歩幅を小さく）。穴に落ちたら黒、赤道面の円盤に当たったら円盤の色、遠くへ抜けたら空の色です。計算はパソコンのグラフィックス（GPU）で行い、カメラを止めると細かく描き直します。長さは<b>ブラックホールの質量 M</b> を単位にしています（M は質量を長さにしたもので、地平面の半径は回らない穴で 2M）。</p>
+        <p><b>カメラ</b>は、その場所に浮かび、空間の引きずりと一緒に回る観測者（ゼロ角運動量の観測者）の向きです。カメラ自身が動く速さによるゆがみ（光行差）は入れていません。</p>
+        <p><b>円盤</b>: 厚みのない円盤を、回転と同じ向きのケプラー回転で回しています。内側の端は、いちばん内側の安定な円軌道です。外側の端は、映画を作った人たちの論文の図と同じ 18.7M にしました。円盤の模様は作りもの（演出）で、映画の円盤もアーティストが作った模様でした。本当の見え方の温度の形は、薄い円盤の基本のモデル（シャクラ・スニヤエフ）の形を使い、いちばん熱い所を 5200 K としたのは見やすさのための目安です。円盤の回る速さは、見やすいように実際よりずっと速くしています（Gargantua の大きさなら、実際の約4000倍）。</p>
+        <p><b>うしろの空</b>の星と天の川は作りものです。<b>簡単にしたところ</b>: 円盤は光を通さない板として扱い、円盤の厚み・ガスの流れ・円盤の光が円盤自身を照らすことは入れていません。穴のごく近くの、何周も回ってくる光の細い輪は、画面の細かさより細いので一部しか描けません。</p>
+      </details>
+      <details>
+        <summary>おもな出どころ</summary>
+        <ul class="src">
+          <li>James, von Tunzelmann, Franklin, Thorne（2015）「Gravitational lensing by spinning black holes in astrophysics, and in the movie Interstellar」Classical and Quantum Gravity 32 巻 065001（<a href="https://arxiv.org/abs/1502.03808" target="_blank" rel="noopener">arXiv 1502.03808</a>）: 映画の絵の回転の速さ 0.6 とその理由、映画では色と明るさのずれを入れなかったこととその理由、論文の図の円盤の大きさ（9.26M〜18.70M）、影の片側が平らになること、光の通り道の計算のしかた</li>
+          <li>Thorne（2014）『The Science of Interstellar』W. W. Norton: Gargantua は太陽の約1億倍の重さ（映画の設定）、ミラーの星の1時間が約7年になるしくみ</li>
+          <li>Carter（1968）「Global structure of the Kerr family of gravitational fields」Physical Review 174 巻: 光の通り道の保存量（カーターの定数）</li>
+          <li>Bardeen, Press, Teukolsky（1972）「Rotating black holes: locally nonrotating frames, energy extraction, and scalar synchrotron radiation」Astrophysical Journal 178 巻: カメラの観測者（ゼロ角運動量の観測者）、円軌道の速さ、いちばん内側の安定な円軌道、光の円軌道</li>
+          <li>Shakura と Sunyaev（1973）「Black holes in binary systems. Observational appearance」Astronomy and Astrophysics 24 巻: 薄い円盤の温度の形</li>
+          <li>Luminet（1979）「Image of a spherical black hole with thin accretion disk」Astronomy and Astrophysics 75 巻: 円盤のあるブラックホールの見え方を初めて計算した研究（片側が明るくなること）</li>
+        </ul>
+        <p>使っているもの: 描画は WebGL2（ライブラリなし）。文字に Dela Gothic One・Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）。</p>
+        <p class="note">学習用に簡単にしたシミュレーションです。画面の明るさ・色は見やすさのために調整しています。</p>
+      </details>
+    </section>
+  </aside>
+</div>
+
+<script src="js/kerr.js"></script>
+<script src="js/sky.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>

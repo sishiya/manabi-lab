@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ブラックホールの見え方 ランチャー</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2307080c'/><ellipse cx='32' cy='36' rx='27' ry='5' fill='%23ffb35c'/><path d='M14 31a18 18 0 0 1 36 0' fill='none' stroke='%23ffd9a0' stroke-width='5'/><circle cx='32' cy='33' r='11' fill='%23000'/><path d='M21 37h22' stroke='%23ffe2b8' stroke-width='3'/></svg>">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: single column version list; turning points as cards, other backups as a compact table */
+:root{--bg:#090b10;--ink:#f1ede6;--muted:#b3ada4;--dim:#7f7a73;--line:rgba(255,200,150,.14);--panel:#0d1017;--acc:#ffb46b;
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+main{max-width:760px;margin:0 auto;padding:48px 16px 64px;display:flex;flex-direction:column;gap:28px}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:400;font-size:40px;margin:6px 0 0;letter-spacing:.04em}
+h2{font-size:12px;letter-spacing:.18em;color:var(--dim);font-weight:500;margin:0 0 10px}
+.cards{display:flex;flex-direction:column;gap:12px}
+.card{display:grid;grid-template-columns:auto 1fr auto;gap:6px 18px;align-items:start;padding:16px 18px;background:var(--panel);border:1px solid var(--line);border-radius:6px;text-decoration:none;color:inherit}
+.card:hover,.latest{border-color:var(--acc)}
+.card:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.ver{font-family:var(--f-mono);font-size:13px;color:var(--acc);padding-top:3px}
+.card b{font-size:17px}
+.card p{margin:4px 0 0;font-size:13px;line-height:1.75;color:var(--muted)}
+.date{font-family:var(--f-mono);font-size:11px;color:var(--dim);white-space:nowrap;padding-top:4px}
+.tag{display:inline-block;font-size:10px;letter-spacing:.12em;border:1px solid var(--acc);color:var(--acc);padding:1px 6px;margin-left:8px;vertical-align:2px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td{padding:8px 6px;border-top:1px solid var(--line);vertical-align:top}
+td:first-child{font-family:var(--f-mono);color:var(--muted);white-space:nowrap}
+td a{color:var(--ink)}
+@media (max-width:520px){.card{grid-template-columns:1fr}.date{padding:0}h1{font-size:30px}}
+</style>
+</head>
+<body>
+<main>
+  <header><div class="eyebrow">BLACK HOLE · VERSIONS</div><h1>ブラックホールの見え方</h1></header>
+  <section>
+    <h2>ターニングポイント</h2>
+    <div class="cards">
+      <a class="card latest" href="index.html"><span class="ver">最新</span><div><b>作業中の最新版<span class="tag">LATEST</span></b><p>いま作業フォルダにある index.html。</p></div><span class="date">—</span></a>
+      <a class="card" href="versions/v001-first/index.html"><span class="ver">v1</span><div><b>最初の版（段階A）</b>
+        <p>回るブラックホール（カー時空）のまわりの光を、画面の1ピクセルずつ GPU で逆向きにたどって描く。映画の角度・真横・ななめ上・真上、ドラッグで回る・近づく、クリックした点の光の道すじの図（横から・上から）。映画版／本当の見え方（ドップラー効果と重力赤方偏移）、回転の速さ 0〜0.998、星空・方眼・まっ暗、円盤あり・なし、見つけてみよう8つ。</p></div><span class="date">2026-10-08</span></a>
+    </div>
+  </section>
+  <section>
+    <h2>すべてのバックアップ</h2>
+    <table><tr><td>v001-first</td><td><a href="versions/v001-first/index.html">v1 完成時点（段階A）</a></td></tr></table>
+  </section>
+</main>
+</body>
+</html>

@@ -18,6 +18,7 @@
 - `muscle-growth/` — 単独アプリ「筋肉が育つまで」（筋トレで筋肉がどう傷つき・治り・太くなるか。力こぶの筋線維1本の縦と横の断面＋1時間きざみの数のモデルのグラフ。やり方・セット数・週の回数・経験・年齢・たんぱく質・睡眠を選んで比べる。Canvas 2D）。css/js に分割。企画は `muscle-growth/PLAN.md`、仕組み・モデルの数値・確認手順は `muscle-growth/DEVNOTES.md`。確認は `apps`（http://localhost:8765/muscle-growth/）で。
 - `mold-growth/` — 単独アプリ「カビが育つまで」（浴室の壁の一部を拡大した「カビの箱庭」。空気から落ちた胞子が発芽し、菌糸の先が1本ずつのびて胞子を作って増える。水・汚れ・塩素系・アルコール・防カビ剤などを指で試し、毎日の習慣で8週間を比べる。ルーペ・湿り気の地図・発見カード・いまの状況・カビの図鑑（8種類）。Canvas 2D。入口に掲載。v1 の数のモデル版は試作として versions に残す）。css/js に分割。企画は `mold-growth/PLAN.md`、仕組み・モデルの数値・確認手順は `mold-growth/DEVNOTES.md`。確認は `apps`（http://localhost:8765/mold-growth/）で。
 - `ferrofluid/` — 単独アプリ「磁性流体の実験皿」（ガラスの皿の磁性流体の下で磁石を動かし、トゲ＝ローゼンスヴァイク不安定がなぜ・どこに・どのくらいの高さで立つかを見る。研究の液 APG512a の実測値に合わせた液の山＋スウィフト・ホーエンベルグ方程式。Three.js）。css/js に分割。企画は `ferrofluid/PLAN.md`、仕組み・合わせた係数・確認手順は `ferrofluid/DEVNOTES.md`。確認は `apps`〜`apps-6`（http://localhost:8770/ferrofluid/ など）で。隠しアーカイブ（`archive.html`）に掲載。
+- `black-hole/` — 単独アプリ「ブラックホールの見え方」（映画「インターステラー」のブラックホールを、回るブラックホールのまわりの光の道すじを GPU で1ピクセルずつ計算して描く。クリックした点の光が通ってきた道すじの図、映画版／本当の見え方、回転の速さ。WebGL2 直書き）。css/js に分割。企画は `black-hole/PLAN.md`、式・確認手順は `black-hole/DEVNOTES.md`。確認は `apps`〜`apps-6`（http://localhost:8770/black-hole/ など）で。まだ入口・アーカイブに載せていない。
 - `quantum/` — 別シリーズ「量子の実験室」（二重スリット・トンネル効果・偏光板・量子もつれ・不確定性原理）。1ファイル完結。仕組みと確認手順・公開 URL は `quantum/DEVNOTES.md`。
 - `archive.html` — 隠しアーカイブ（入口からリンクしない。試作・作りかけのアプリ。いまは extreme・illusions・muscle-growth・ferrofluid）。入口とアーカイブの出し入れは `RULES.md` 8.1。
 - `IDEAS.md` — まだ作っていないテーマのストックと、ユーザーの好みの傾向。新しいアプリを考えるときに読む。
