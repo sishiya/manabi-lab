@@ -1,13 +1,15 @@
 # 量子の実験室 開発メモ
 
-最終更新: 2026-10-04
+最終更新: 2026-10-07
 
 量子の性質を、手で動かして確かめる5つの実験。1ファイル完結（`index.html`、ライブラリなし、Canvas 2D）。
 
 ## 別セッションで続けるとき（まずここ）
-- いまの状態: 最新は v1f（`versions/v001f-notes`。2026-10-04 に公開済み）。公開 URL は下記で「リンクを知っている全員」に共有中。リリース版はまだ決めていない。PLAN.md はない（ルールより前に作ったため）。
+- いまの状態: 最新は v1i（`versions/v001i-sources`、おもな出どころ。Artifact に公開済みなのは v1f まで）。公開 URL は下記で「リンクを知っている全員」に共有中。リリース版はまだ決めていない。PLAN.md はない（ルールより前に作ったため）。
 - 2026-10-05 `versions/v001g-favicon`: ファビコン（タブのアイコン、SVG を埋め込み）を追加。GitHub Pages（まなびラボ）用。Artifact へはまだ再公開していない。
-- 次にやること: 未定（下の「これからの案」から選ぶ）。
+- 2026-10-06 `versions/v001h-analytics`: アクセス解析の1行（Pages のときだけ）。中身は同じ。
+- **2026-10-07 `versions/v001i-sources`（最新）**: 画面の下（footer の上）に「おもな出どころ」（`<details class="src">`、実験ごとに見出し）。Artifact への再公開はユーザーに内容を見せてから。
+- 次にやること: 未定（下の「これからの案」から選ぶ）。新しい実験・数値・人物を足したら、同じ変更で「おもな出どころ」にも足す（RULES 9）。
 - 読む順: `../RULES.md` → このファイル → `index.html`（約800行。Grep で `EXPS.<タブ名>` を探して該当部分だけ読む）。
 - 動かし方: Browser ペインで file:// のまま開ける（1ファイルなのでサーバ不要）。`window.__qx` で状態を見る・進める。
 - 区切りの手順: バックアップ（`versions/v00x-名前`）→ ランチャー → このメモの「状態」 → 確認 → 同じ URL へ再公開。
@@ -18,6 +20,15 @@
 - v1b タブ切り替えの修正。v1c 量子もつれの言い回し。v1d viewport の meta 追加（スマホ幅 375px で全タブはみ出しなしを確認）。
 - v1e スマホではタブを格子に並べる（600px 以下は3列、360px 未満は2列）。320・375・1200px でタブの文字の見切れなし、横はみ出しなしを確認。
 - v1f（`versions/v001f-notes`）下の注記に「理想的な条件に簡単にした模型」と、使っているもの（フォント＝SIL OFL）を追加。同じ日に再公開。
+- v1i（2026-10-07、`versions/v001i-sources`）RULES 9 に合わせて「おもな出どころ」を画面に。2026-10-07 にウェブで書誌を確かめたもの:
+  - 全体: Feynman Lectures 第3巻（1965）1章、Griffiths と Schroeter『Introduction to Quantum Mechanics』第3版（2018）。
+  - 二重スリット: Tonomura ほか 1989 Am. J. Phys. 57, 117（日立。2本のスリットではなく電子線バイプリズム → 画面の注記に追記）。
+  - トンネル: Visscher 1991 Computers in Physics 5, 596（計算法）、Gamow 1928 Z. Phys. 51, 204／Gurney と Condon 1928 Nature 122, 439（α崩壊）、Atkinson と Houtermans 1929 Z. Phys. 54, 656（星の核融合）、Fowler と Nordheim 1928 Proc. R. Soc. A 119, 173（フラッシュメモリの書き込みのしくみ）、Binnig ほか 1982 PRL 49, 57（STM）。
+  - 偏光板: Dirac『The Principles of Quantum Mechanics』1930（光子の偏光と cos² の確率）。
+  - もつれ: Bell 1964 Physics 1, 195、CHSH 1969 PRL 23, 880、Cirel'son 1980 Lett. Math. Phys. 4, 93（2√2）、Freedman と Clauser 1972 PRL 28, 938、Aspect・Grangier・Roger 1982 PRL 49, 91、Weihs ほか 1998 PRL 81, 5039（S = 2.73）、nobelprize.org 2022。
+  - 不確定性: Heisenberg 1927 Z. Phys. 43, 172、Kennard 1927 Z. Phys. 44, 326（Δx·Δp ≥ ħ/2 の証明）。
+  - 「目安」と書き直したところ: トンネルの「理論値」は単一エネルギーの式（波束とは少しずれる）、不確定性の「測る」のあとの広がり（σ→0.3・3.2）はアプリで決めた値、「隠れた変数」はアプリで作った一例、装置の寸法などは ħ = 1 の単位で見やすく選んだ値。
+  - Visscher の論文の題名は確かめきれなかったので、画面には雑誌・巻だけ書いた。
 
 - 公開先: タイトル「量子の実験室」（URL は `../PUBLISH.local.md`）
 - 単位は ħ = 1、質量 = 1。
