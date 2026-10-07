@@ -1,0 +1,143 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>磁性流体の実験皿</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2314191c'/><path d='M8 48h48' stroke='%23c9d6dc' stroke-width='3' stroke-linecap='round'/><path d='M12 47L20 26L26 47M24 47L32 14L40 47M38 47L44 26L52 47' fill='%23e8eef0'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="frame">
+      <canvas id="view" aria-label="ガラスの皿に入った磁性流体と、その下の磁石の3D。皿の上をドラッグすると磁石が動きます"></canvas>
+      <div id="views" class="seg tiny" role="group" aria-label="見る向き">
+        <button data-v="tilt" aria-pressed="true">ななめ</button>
+        <button data-v="top" aria-pressed="false">真上</button>
+        <button data-v="side" aria-pressed="false">横</button>
+      </div>
+      <div id="toast" hidden></div>
+    </div>
+    <div id="toolbar" role="group" aria-label="皿の上でできること">
+      <div class="seg" id="segTool">
+        <button data-v="move" aria-pressed="true">磁石を動かす</button>
+        <button data-v="poke" aria-pressed="false">指でつつく</button>
+      </div>
+      <button class="btn" id="btnFast" aria-pressed="false">早送り ×10</button>
+      <p id="probe"></p>
+    </div>
+    <p id="hint"></p>
+  </main>
+
+  <aside id="panel">
+    <header class="brand">
+      <h1>磁性流体の実験皿</h1>
+      <p>磁石を近づけると、黒い液体からトゲが立ちます。トゲはなぜ立つのか、どこに・どのくらいの高さで・どんな並び方で立つのか。研究で測られた本物の液の数値で計算しています。</p>
+    </header>
+
+    <section class="card" id="readout">
+      <div class="ro-top"><span class="lbl">トゲ</span><span class="ro-tag" id="roTag"></span></div>
+      <div class="ro-num"><b id="roVal">0</b><small>本</small></div>
+      <div id="roVerdict"></div>
+      <div class="ro-grid" id="roGrid"></div>
+    </section>
+
+    <section>
+      <h2>磁石</h2>
+      <div class="seg small" id="segSrc">
+        <button data-v="small" aria-pressed="true">小さい<br>ネオジム磁石</button>
+        <button data-v="large" aria-pressed="false">大きい<br>ネオジム磁石</button>
+        <button data-v="coil" aria-pressed="false">コイル<br>（電磁石）</button>
+      </div>
+      <p class="cap" id="srcCap"></p>
+      <div id="gapBox">
+        <h3>皿の底から磁石までの距離</h3>
+        <div class="seg small" id="segGap">
+          <button data-v="0">くっつける</button><button data-v="5">5 mm</button><button data-v="10">10 mm</button><button data-v="20">20 mm</button><button data-v="40">40 mm</button>
+        </div>
+      </div>
+      <div id="coilBox" hidden>
+        <h3>コイルの磁場（皿のどこでも同じ強さの、縦の磁場）</h3>
+        <div class="coilrow">
+          <button class="btn sm" data-d="-1">−1</button>
+          <button class="btn sm" data-d="-0.1">−0.1</button>
+          <b class="mono" id="coilVal">0.0 mT</b>
+          <button class="btn sm" data-d="0.1">+0.1</button>
+          <button class="btn sm" data-d="1">+1</button>
+        </div>
+        <input type="range" id="coilB" min="0" max="30" step="0.1" value="0" aria-label="コイルの磁場の強さ（ミリテスラ）">
+        <canvas id="chart" width="320" height="170" aria-label="磁場とトゲの高さのグラフ。自分が動かした道のりを点で描きます"></canvas>
+        <p class="cap" id="chartCap">線は研究で測られたトゲの高さ（点線は、ここには止まれない不安定なところ）。白い点が、あなたの皿のいまの値。磁場を上げたり下げたりして、点の通る道を見てみよう。</p>
+        <button class="btn sm" id="btnClearPath">点の道のりを消す</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>液</h2>
+      <div class="seg small" id="segFluid">
+        <button data-v="apg" aria-pressed="true">磁性流体</button>
+        <button data-v="thin" aria-pressed="false">薄い磁性流体</button>
+        <button data-v="water" aria-pressed="false">水</button>
+      </div>
+      <p class="cap" id="fluidCap"></p>
+      <h3>液の量（たいらなときの深さ）</h3>
+      <div class="seg small" id="segDepth">
+        <button data-v="2">2 mm</button><button data-v="4">4 mm</button><button data-v="8">8 mm</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>見つけてみよう</h2>
+      <ul class="quests" id="quests"></ul>
+    </section>
+
+    <section class="explain">
+      <h2>解説</h2>
+      <details open>
+        <summary>磁性流体とは</summary>
+        <p>油などの液に、<b>直径10ナノメートル</b>（髪の毛の太さの1万分の1）くらいの磁石の粒（磁鉄鉱など）をまぜた液です。粒は小さすぎて沈まず、まわりを薄い膜でおおっているので、くっついて固まりもしません。だから液のまま、まるごと磁石に引きつけられます。</p>
+        <p>1960年代に NASA の技術者<b>パペル</b>が、無重力の宇宙でロケットの燃料をエンジンへ引き寄せる方法として考えました（1965年に米国特許）。ロケットには使われませんでしたが、いまはスピーカーや、回る軸のすき間をふさぐシールなどに使われています。</p>
+      </details>
+      <details>
+        <summary>トゲはなぜ立つ？</summary>
+        <p>磁場の中の磁性流体の面が少しでももり上がると、もり上がった所に磁力線が集まり、そこがさらに強く引っぱられます。逆に、<b>重さ</b>（もり上がりを下げる）と<b>表面張力</b>（面をたいらに戻す）は、もとに戻そうとします。</p>
+        <p>磁場が弱いうちは戻す力が勝って面はたいら。ある強さ（この液では<b>16.75 mT</b>）を超えたとたん、引っぱる力が勝ってトゲが一斉に立ちます。この現象は 1967年に Cowley と Rosensweig が見つけ、「ローゼンスヴァイク不安定」と呼ばれています。</p>
+      </details>
+      <details>
+        <summary>トゲの間隔はなぜ約1 cm？</summary>
+        <p>トゲの間隔は、磁石の強さではなく、<b>重さと表面張力のつり合い</b>で決まります（2π√(表面張力 ÷ (密度 × 重力加速度))）。間隔が広すぎると重さで、狭すぎると表面張力で、もり上がりが戻されやすいので、そのちょうど間の長さのトゲがいちばん育ちます。研究の液では <b>9.98 mm</b>。トゲは六角形（ハチの巣の形）に並びます。</p>
+      </details>
+      <details>
+        <summary>トゲはなかなか消えない（ヒステリシス）</summary>
+        <p>コイルで磁場を少しずつ上げると、16.75 mT でいきなり高さ約1.5 mm のトゲが立ちます。そこから磁場を下げても、トゲは境目より<b>少し弱い所まで残ります</b>（研究では 0.17 mT の幅。このシミュレーションでは約 0.2 mT）。立ったトゲが自分で磁力線を集めて、自分を支えるからです。上げるときと下げるときで道がちがうことを「ヒステリシス」といいます。</p>
+        <p>境目のすぐ上では、トゲが育つのにとても時間がかかります（境目に近いほど、もり上がりを押し上げる力の差が小さいため）。実際の実験でも、磁場を変えてから少し待って測ります。</p>
+      </details>
+      <details>
+        <summary>このシミュレーションのしくみ</summary>
+        <p><b>磁石の磁場</b>は、円柱の磁石（ネオジム磁石、残留磁束密度 1.26 T）を、側面を流れる電流の輪の重ね合わせとして計算しています。コイルは皿のどこでも同じ強さの縦の磁場です。</p>
+        <p><b>液の山</b>: 液は磁場の強い所に集まります。各点で「液の重さの圧力」と「磁気の圧力（磁化をランジュバンの式で表して計算）」がつり合い、液の量が変わらない形を求めています。高い所ほど磁場が弱いことも入れています。</p>
+        <p><b>トゲ</b>: 模様ができるしくみのモデル（スウィフト・ホーエンベルグ方程式。六角形が出る形）で、その場所の磁場から決まる「境目をどれだけ超えたか」(ε = (B² − Bc²)/Bc²) によって、トゲが育つ・消えるを計算しています。式の係数は研究で測られたトゲの高さの式（振幅方程式）に合わせてあり、ヒステリシスの幅も研究と同じになります。トゲの高さはこの式で決め、トゲは磁場の向きに傾けています。</p>
+        <p><b>簡単にしたところ</b>: 液の流れ（波・はね返り）は計算していません。トゲが育つ速さは、粘りの強い液の目安の式（2ηk/(ρg)、この液で約 0.01 秒）から決めた推定、液が山に集まる速さは目安です。境目より十分強い所では、六角形の並びが早く決まるように式を少し変えています（境目の近くは研究に合わせたまま）。強い磁場では本当はトゲの間隔が少しせまくなり、高さも研究で測った範囲（20 mT まで）を超えるので、高さは 12 mm で頭打ちにしています。トゲの先のとがり方は見た目の演出です。「薄い磁性流体」の値は、研究の液を油で 7 割に薄めたと考えた推定です（半分まで薄めると、式ではどんなに強い磁場でもトゲが立たなくなります。磁石の粒が少なくて、液が磁石になりきれない＝飽和磁化が足りないため）。</p>
+      </details>
+      <details>
+        <summary>おもな出どころ</summary>
+        <ul class="src">
+          <li>Gollwitzer, Matthies, Richter, Rehberg, Tobiska（2007）「The surface topography of a magnetic fluid: a quantitative comparison between experiment and numerical simulation」Journal of Fluid Mechanics 571 巻（<a href="https://arxiv.org/abs/nlin/0604009" target="_blank" rel="noopener">arXiv nlin/0604009</a>）: 液 APG512a の性質（密度 1236 kg/m³・表面張力 30.57 mN/m・粘度 120 mPa·s・はじめの磁化率 1.172・飽和磁化 14.59 kA/m）、トゲが出る境目 16.75 mT、間隔 9.98 mm、高さの式と係数、ヒステリシスの幅</li>
+          <li>Cowley と Rosensweig（1967）「The interfacial stability of a ferromagnetic fluid」Journal of Fluid Mechanics 30 巻: トゲが出る境目の式</li>
+          <li>Rosensweig（1985）『Ferrohydrodynamics』Cambridge University Press: 磁性流体の力学（磁気の圧力・磁化の式）</li>
+          <li>Gollwitzer ほか（2008）「Surface instabilities and magnetic soft matter」（<a href="https://arxiv.org/abs/0811.1526" target="_blank" rel="noopener">arXiv 0811.1526</a>）: 境目の式の形（rc の定義）</li>
+          <li>Swift と Hohenberg（1977）Physical Review A 15 巻: 模様のできかたのモデル</li>
+          <li>NASA「<a href="https://www.nasa.gov/history/novel-rocket-fuel-spawned-ferrofluid-industry/" target="_blank" rel="noopener">Novel Rocket Fuel Spawned Ferrofluid Industry</a>」、米国特許 3,215,572（Papell, 1965）: 発明の話</li>
+          <li>ネオジム磁石の残留磁束密度 1.26 T は、一般的な製品（N40 くらい）の<b>目安</b>です</li>
+        </ul>
+        <p>使っているもの: 3D の表示に Three.js（MIT License）。文字に Dela Gothic One・Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）。</p>
+      </details>
+    </section>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="js/phys.js"></script>
+<script src="js/pattern.js"></script>
+<script src="js/view.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
