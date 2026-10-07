@@ -52,6 +52,7 @@ h2+.grid{margin-top:0}
 .pic{position:relative}
 .thumb{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;background:var(--thumb)}
 .badge{position:absolute;top:10px;left:10px;font-size:12px;font-weight:700;line-height:1;padding:5px 8px;border-radius:6px;background:var(--new);color:var(--new-ink)}
+.badge.upd{font-weight:500;background:rgba(14,18,24,.62);color:#fff}
 .body{padding:14px 16px 16px;display:flex;flex-direction:column;flex:1}
 .cat{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-bottom:4px}
 .card a.open{color:var(--accent);font-size:18px;font-weight:700;line-height:1.45;text-decoration:none}
@@ -189,7 +190,7 @@ function card(a, showCat) {
   const badge = isFresh(a.created) ? '新作' : updatedLater && isFresh(a.updated) ? '更新' : ''; // 公開から2日は更新しても「新作」を優先
   const dateHtml = (label, s) => `${label} <time datetime="${s}" title="${s}"${isFresh(s) ? ' class="fresh"' : ''}>${relDate(s)}</time>`;
   return `<div class="card c-${a.cat}">
-    <div class="pic"><img class="thumb" src="thumbs/${a.id}.jpg" alt="" width="640" height="360" loading="lazy">${badge ? `<span class="badge">${badge}</span>` : ''}</div>
+    <div class="pic"><img class="thumb" src="thumbs/${a.id}.jpg" alt="" width="640" height="360" loading="lazy">${badge ? `<span class="badge${badge === '更新' ? ' upd' : ''}">${badge}</span>` : ''}</div>
     <div class="body">
       ${showCat ? `<span class="cat"><span class="dot"></span>${esc(c.name)}</span>` : ''}
       <a class="open" href="${a.id}/">${esc(a.title)}</a>
