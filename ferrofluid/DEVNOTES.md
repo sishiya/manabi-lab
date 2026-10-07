@@ -5,8 +5,8 @@
 ガラスの皿の磁性流体の下で磁石を動かし、トゲ（ローゼンスヴァイク不安定）がなぜ・どこに・どのくらいの高さで立つかを確かめる 3D アプリ。企画は `PLAN.md`。Three.js r128（cdnjs）＋ CPU の計算（FFT を使うスウィフト・ホーエンベルグ方程式）。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: v1（`versions/v001-first`、段階A）。入口「まなびラボ」には**まだ載せていない**（ユーザーの確認待ち）。Artifact にも公開していない。
-- **次にやること**: ユーザーの感想しだい。入口に載せるなら RULES 8.1（GA の1行・サムネイル・`APPS`・互換モードの確認）。次の段階は `PLAN.md` の段階B（2枚のガラスのあいだの迷路模様）・C（発明の話・無重力）。
+- **いまの状態**: v1b（`versions/v001b-archive`。中身は v1＝段階A と同じで、GA の1行を足した）。**隠しアーカイブ `archive.html` に掲載**（2026-10-07、サムネイル `thumbs/ferrofluid.jpg`）。入口「まなびラボ」には載せていない。Artifact にも公開していない。GitHub Pages には push で出る（push はユーザー）。
+- **次にやること**: ユーザーの感想しだい。入口に移すなら RULES 8.1（アーカイブのカードを外して `APPS` に足す・互換モードの確認。GA の1行とサムネイルはもうある）。次の段階は `PLAN.md` の段階B（2枚のガラスのあいだの迷路模様）・C（発明の話・無重力）。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。
 - **動かし方**: `.claude/launch.json` の空いているサーバー（`apps`〜`apps-6`。2026-10-07 に 8770 の `apps-6` を追加）で `http://localhost:<port>/ferrofluid/`。
 - **デバッグ用**: `window.__ff` — `S`（状態）、`F`（格子の量）、`advance(秒, dt)`（Browser ペインが裏だと rAF が止まるので、これで進める。トゲの数などを返す）、`setSrc('small'|'large'|'coil')`、`setCoil(mT)`、`setFluid('apg'|'thin'|'water')`、`bcFormula(f)`、`bcUsed(f)`、`lambdaC(f)`、`ampPhys(ε, f)`、`err`（例外。`window.__ffErr`）。グローバルの `V`（3D）、`SH`（模様の定数）も触れる。
@@ -78,11 +78,12 @@
 7. 境目の式: `__ff.bcFormula(__ff.FLUIDS.apg)` が 0.01722。`__ff.ampPhys(0, __ff.FLUIDS.apg)` が 1.56。
 
 ## 公開
-- まだ。Artifact にするなら `file_path` = `ferrofluid/index.html`、`files` = `css/style.css`、`js/` の5つ（phys・pattern・view・ui・main）。外のデータは読まない（three.js は cdnjs）。
-- 入口に載せるなら RULES 8.1（GA の1行・ファビコンはあり・サムネイル `thumbs/ferrofluid.jpg`・`tools/thumb.html` の `SETUP`・`APPS`）。
+- 隠しアーカイブ（GitHub Pages、push で公開）。Artifact にするなら `file_path` = `ferrofluid/index.html`、`files` = `css/style.css`、`js/` の5つ（phys・pattern・view・ui・main）。外のデータは読まない（three.js は cdnjs）。
+- 入口に載せるなら RULES 8.1（GA の1行・ファビコン・サムネイル `thumbs/ferrofluid.jpg`・`tools/thumb.html` の `SETUP` はあり。`APPS` と互換モードの確認が残り）。
 
 ## 状態
 - 2026-10-07 v1（`versions/v001-first`）: 段階A。皿と磁石（小・大・コイル）、液3種、液の量3つ、ドラッグ・つつく、見つけてみよう6つ、コイルのヒステリシスのグラフ、解説と出どころ。
+- 2026-10-07 v1b（`versions/v001b-archive`）: 隠しアーカイブに掲載。GA の1行、サムネイル。
 
 ## 残っている課題
 - 波・はね返りなど液の流れ（慣性）は計算していない。磁石をすばやく動かしたときの液のついてき方は目安。

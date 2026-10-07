@@ -31,6 +31,8 @@ const SETUP = {
   'muscle-growth': async w => { await wait(800); w.__mg.setCond({ mode: 'ecc' }); w.__mg.setT(62); await wait(1500); w.__mg.setT(62); },
   // 梅雨の浴室の約4週間後（ゴムパッキンと目地にカビ）
   'mold-growth': async w => { await wait(800); w.__mk.UI.playing = false; w.__mk.run(27 * 24 + 14); w.__mk.frame(3, 0.03); await wait(1500); },
+  // 大きい磁石の上のトゲの山（開いたときのまま、少し進める）
+  'ferrofluid': async w => { await wait(800); w.__ff.advance(2, 1 / 30); await wait(1500); },
   'metamorphosis': async w => { await wait(800); w.__mm.setT(1.0); await wait(1500); w.__mm.setT(1.0); },
   // 恐竜の時代（約6800万年前）。生き物が多く見える
   'evolution': async w => { click(w, '#aboutStart'); await wait(1500); w.__ev.setAge(68e6); await wait(6000); },
