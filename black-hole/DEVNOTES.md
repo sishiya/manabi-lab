@@ -5,8 +5,8 @@
 映画「インターステラー」のブラックホール（円盤が穴の上と下にも回り込んで見える姿）を、回るブラックホール（カー時空）のまわりの光の道すじを本当に計算して描き、なぜあの形に見えるのかを、クリックした点の光の道すじの図で確かめるアプリ。企画は `PLAN.md`。WebGL2 直書き（ライブラリなし）。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: v1（`versions/v001-first`）＝段階A。入口「まなびラボ」・隠しアーカイブには**まだ載せていない**。Artifact にも公開していない（GA の1行・サムネイルもまだ）。
-- **次にやること**: ユーザーの感想しだい。入口かアーカイブに載せるなら RULES 8.1（GA の1行・サムネイル `thumbs/black-hole.jpg`・`tools/thumb.html` の `SETUP`・`APPS` か `archive.html` のカード・互換モードの確認）。次の段階は `PLAN.md` の段階B（円軌道を回るカメラ・落ちていくカメラ・探査機・ミラーの星）、C（EHT の写真と比べる）。
+- **いまの状態**: v1b（`versions/v001b-entrance`。中身は v1＝段階A と同じで、GA の1行を足した）。**入口「まなびラボ」に掲載**（2026-10-08、分野「地球と宇宙」、サムネイル `thumbs/black-hole.jpg`）。公開は GitHub Pages（push はユーザー）。URL は `https://sishiya.github.io/manabi-lab/black-hole/`。Artifact には公開していない。
+- **次にやること**: ユーザーの感想しだい。次の段階は `PLAN.md` の段階B（円軌道を回るカメラ・落ちていくカメラ・探査機・ミラーの星）、C（EHT の写真と比べる）。中身を直したら入口の `APPS` の `updated` も同じコミットで書き換える（RULES 8.1）。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。
 - **動かし方**: `.claude/launch.json` の空いているサーバーで `http://localhost:<port>/black-hole/`（2026-10-08 は 8765 が Windows の予約で使えず、`apps-6`＝8770 を使った）。
 - **デバッグ用**: `window.__bh` — `S`（状態）、`R`（WebGL の段 `R.levels.low/high`）、`renderNow(時刻?)`（Browser ペインが裏だと rAF が止まるので、これで細かい段まで描き切る。`true` が返れば完了）、`pickAt(nx, ny)`（画面の点 −1〜1 の光をたどって図と説明を出す）、`traceRay(cam, N, a, disk)`、`camDir(nx, ny, aspect, tanF, look)`、`readGeo(nx, ny, 'high'|'low')`（GPU の結果 `[種類, r, φ, g]`。種類 0 = 穴、1 = 円盤の上の面、1.5 = 下の面、2 = 空で残りは方向）、`set({...})`（状態を変えて描き直し）、`applyPreset('movie'|'side'|'tilt'|'top')`、`setSpin(a)`、`err`（例外。`window.__bhErr`）。
@@ -78,11 +78,14 @@
    ```
 
 ## 公開
-- まだどこにも載せていない。Artifact にするなら `file_path` = `black-hole/index.html`、`files` = `css/style.css`、`js/` の5つ（kerr・sky・render・ui・main）。外のデータは読まない（フォントだけ Google Fonts）。
-- 入口・アーカイブに載せるなら RULES 8.1（GA の1行、サムネイル、`tools/thumb.html` の `SETUP`）。
+- 入口「まなびラボ」（GitHub Pages、push で公開）。GA の1行（ファビコンの次の行）、サムネイル `thumbs/black-hole.jpg`（`tools/make-thumbs.ps1 -Apps black-hole -Port <port>`、`tools/thumb.html` の `SETUP` は開いたときのまま `renderNow`。ヘッドレスのソフトウェア描画でも 8 秒で撮れた）。
+- 互換モードの確認（2026-10-08）: `document.write` で doctype なし（BackCompat）と doctype つき（CSS1Compat）を書き、1200×740・375×812 の両方で全 192 要素の位置と大きさが同じ、エラーなし。**`iframe.srcdoc` は doctype がなくても標準モードになるので比べられない**。
+- push のあと Pages の URL で「確認のしかた」を通す。
+- Artifact にするなら `file_path` = `black-hole/index.html`、`files` = `css/style.css`、`js/` の5つ（kerr・sky・render・ui・main）。外のデータは読まない（フォントだけ Google Fonts）。
 
 ## 状態
 - 2026-10-08 v1（`versions/v001-first`）: 段階A。カー時空の光の追跡（GPU・2段）、映画版／本当の見え方、回転 0〜0.998、プリセット4つ、ドラッグ・ホイール・2本指、クリックで光の道すじの図と説明、星空・方眼・まっ暗、円盤あり・なし、見つけてみよう8つ、解説と出どころ。
+- 2026-10-08 v1b（`versions/v001b-entrance`）: 入口「まなびラボ」に掲載。GA の1行、サムネイル、互換モードの確認。
 
 ## 残っている課題
 - 影のふちの細い輪（2 番目以降の像）は 1〜3 ピクセルしかなく、点々に見えることがある。

@@ -95,7 +95,7 @@ Artifact の公開・再公開、git の commit／push の**前に毎回**行う
 - `main` ブランチのルートをそのまま配信する（`.nojekyll` あり、ルートの `index.html` が入口）。URL は `https://sishiya.github.io/manabi-lab/<app>/`。Pages の URL は公開情報なので DEVNOTES に書いてよい。
 - **push した時点で公開される**。だから push の前の公開前チェック（7章）がそのまま公開前チェックになる。
 - Pages 専用のアプリの `index.html` は普通の HTML（`<!doctype html>` から書く）。
-- Artifact 用（doctype なし）のアプリも、push すれば Pages で互換モード（quirks）で開ける。2026-10-05 に8本すべてで、標準モードと全要素の位置・大きさを比べて同じ（evolution の左上の箱だけ 7〜8px 低い）ことを確かめ、入口（ルートの `index.html`「まなびラボ」）に載せた。**新しいアプリを入口に足すとき**は、同じ比べ方（DEVNOTES の確認に加えて、Pages の URL で互換モードと doctype つきの標準モードを比べる）をする。
+- Artifact 用（doctype なし）のアプリも、push すれば Pages で互換モード（quirks）で開ける。2026-10-05 に8本すべてで、標準モードと全要素の位置・大きさを比べて同じ（evolution の左上の箱だけ 7〜8px 低い）ことを確かめ、入口（ルートの `index.html`「まなびラボ」）に載せた。**新しいアプリを入口に足すとき**は、同じ比べ方（DEVNOTES の確認に加えて、Pages の URL で互換モードと doctype つきの標準モードを比べる）をする。push 前にローカルで比べるときは、空の iframe に `document.write` で doctype なし・ありを書いて全要素の `getBoundingClientRect` を比べる（`iframe.srcdoc` は doctype がなくても標準モードになるので使えない。手順の例は `black-hole/DEVNOTES.md` の「公開」）。
 - 外のデータ（地図タイル・API）は、ブラウザから直接読めるもの（CORS）で、キー不要のものだけ。キーをファイルに書かない（7章）。
 - **入口に載せるもの**: アプリごとに**ファビコン**（`index.html` と `launcher.html` の `<title>` の直後に、SVG を埋め込んだ `<link rel="icon" href="data:image/svg+xml,…">`。テーマ色の角丸の四角＋中身を表す図形。外のファイルにしないのは Artifact 版でも効くように）と、**サムネイル** `thumbs/<app>.jpg`（640×360）。
 - **隠しアーカイブ** `archive.html`（2026-10-06〜）: 入口からはリンクしない（`noindex`）、試作・作りかけのアプリを置くページ。カードは HTML に直接書く（入口の `APPS` のような一覧は使わない）。入口から移した日付の書き方は `<p class="dates">作成 YYYY-MM-DD ・ 更新 YYYY-MM-DD</p>`。状態の一言（`<p class="state">`）を足す。入口から外すときはカードをこちらへ移し、入口に戻すときは逆。URL を知っていれば誰でも開ける（Public リポジトリなので本当の秘密ではない）。
