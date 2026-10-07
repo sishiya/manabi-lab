@@ -49,6 +49,6 @@
 ## 主な出どころ
 - 建築基準法施行令 第20条の8（シックハウス対策の 24 時間換気、0.5 回/h、2003 年 7 月施行）
 - 空気齢・空気交換効率: Sandberg (1981)、Etheridge & Sandberg "Building Ventilation: Theory and Measurement" (1996)。出口の空気齢は名目換気時間に等しい（流れの形によらない）
-- 風圧係数: Swami & Chandra (1987)（ASHRAE Handbook – Fundamentals の低層建物の式）
+- 風圧係数: Swami & Chandra (1988, ASHRAE Transactions 94。1987 は FSEC の報告書)（ASHRAE Handbook – Fundamentals の低層建物の式）
 - 窓 1 か所の換気: Warren & Parkins (1985) Q = 0.025·A·U
 - 換気扇の風量・静圧は一般的な製品の値の目安（浴室 24 時間換気 約 50〜100 m³/h、レンジフード 強 約 400〜500 m³/h）

@@ -5,7 +5,7 @@
 家の中の空気がどこから入り、どう流れ、どこが古いまま残るかを、真上から見た 2LDK で見るアプリ。企画は `PLAN.md`（`../IDEAS.md` のストック1から）。「電波の見える部屋」（`wifi-wave/`）の姉妹だが、エンジンは別（Canvas 2D と CPU の計算。WebGL は使わない）。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: 最新は v2b（`versions/v002b-start-cross`、開いたときの場面を「窓を2か所あける」に）。v2（`versions/v002-levels`）で強さの表示と給気口の開け具合。v1（`versions/v001-first`）が段階A。入口「まなびラボ」の「物理」に載せた（サムネイル `thumbs/air-flow.jpg`）。GitHub Pages には push で公開される（push はユーザー）。Artifact には公開していない。
+- **いまの状態**: 最新は v2d（`versions/v002d-sources`、「このアプリについて」に**おもな出どころ**を追加。v2c は GA の1行だけ）。その前は v2b（`versions/v002b-start-cross`、開いたときの場面を「窓を2か所あける」に）。v2（`versions/v002-levels`）で強さの表示と給気口の開け具合。v1（`versions/v001-first`）が段階A。入口「まなびラボ」の「物理」に載せた（サムネイル `thumbs/air-flow.jpg`）。GitHub Pages には push で公開される（push はユーザー）。Artifact には公開していない。
 - **次にやること**: ユーザーの感想しだい。次の段階は `PLAN.md` の段階B（自分の家の間取りを描く・一戸建て・すき間の量を選ぶ・2つの場面を並べて比べる）。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。場面や間取りを変えるなら `js/plan.js` だけ。
 - **動かし方**: ユーザーはルートの `start.bat`（まなびラボから開く）。Claude は `.claude/launch.json` の `apps`（8765）・`apps-2`（8766）・`apps-3`（8767）のどれか空いているもので `http://localhost:<port>/air-flow/`。
@@ -84,6 +84,7 @@
 - 2026-10-06 v1（`versions/v001-first`）: 段階A。2LDK、場面6つ（24時間換気だけ・窓を2か所・窓1か所だけ・玄関と窓・キッチンの換気扇・サーキュレーター）、表示3つ、煙のグラフ、入口に追加。
 - 2026-10-06 v2（`versions/v002-levels`）: ユーザーの希望で、サーキュレーター・エアコンの強さを換気扇と同じく見て分かるように（回る羽根 `fanIcon()`、風の線 `windArcs()`、弱強の印 `levelBadge()`）。給気口の開け具合を4段階に。パネルに「入12」などの意味の説明。
 - 2026-10-06 v2b（`versions/v002b-start-cross`）: ユーザーの希望で、開いたときの場面を「24時間換気だけ」から見栄えのする「窓を2か所あける」に（`main.js` の最後の `loadScene`）。
+- 2026-10-07 v2d（`versions/v002d-sources`）: ユーザーの「出典を必ず画面に」（RULES 9）を受けて、「おもな出どころ」を画面に（建築基準法施行令、Sandberg 1981、Etheridge と Sandberg 1996、Swami と Chandra 1988、Warren と Parkins 1985。PLAN.md にあったものを確かめ直した。Swami と Chandra は ASHRAE Transactions 1988）。CSS `details ul.src`。
 
 ## 今後の案
 - 段階B・C は `PLAN.md`。
