@@ -1,0 +1,127 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>刺激が脳に届くまで</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%231a1218'/><path d='M30 14C18 13 9 21 10 33c1 9 8 15 20 15z' fill='%237a5a62'/><path d='M34 14c12-1 21 7 20 19-1 9-8 15-20 15z' fill='%237a5a62'/><path d='M32 58V44' stroke='%23ffd27a' stroke-width='3' stroke-linecap='round'/><circle cx='47' cy='28' r='6' fill='%23ffc35a'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="toolbar">
+      <div class="seg" id="segSp" role="group" aria-label="種">
+        <button data-v="human" aria-pressed="true">ヒト</button>
+        <button data-v="macaque" aria-pressed="false">サル</button>
+        <button data-v="rat" aria-pressed="false">ラット</button>
+      </div>
+      <div class="seg stims" id="segStim" role="group" aria-label="刺激">
+        <button data-v="light" aria-pressed="true">光</button>
+        <button data-v="face" aria-pressed="false">顔</button>
+        <button data-v="sound" aria-pressed="false">音</button>
+        <button data-v="touch" aria-pressed="false">触る</button>
+        <button data-v="pain" aria-pressed="false">熱い痛み</button>
+        <button data-v="click" aria-pressed="false">カチッ2回</button>
+      </div>
+    </div>
+    <div id="frame">
+      <canvas id="view" aria-label="左右の脳を本のように開いた図。刺激の信号が道すじを進み、反応した場所が光ります"></canvas>
+      <div id="toast" hidden></div>
+    </div>
+    <div id="playbar">
+      <button class="btn" id="btnPlay">再生</button>
+      <div class="seg small" id="segSpeed" role="group" aria-label="再生の速さ">
+        <button data-v="7" aria-pressed="true">ゆっくり</button>
+        <button data-v="16" aria-pressed="false">とてもゆっくり</button>
+      </div>
+      <span class="clock">刺激から <b id="clock">0 ms</b></span>
+      <span class="legend-ev"><i class="ev ev-m">研究の値</i><i class="ev ev-r">研究の幅</i><i class="ev ev-o">順番だけ</i><i class="ev ev-p">場所だけ</i></span>
+    </div>
+    <canvas id="timeline" aria-label="部位ごとの反応の時刻。横軸は刺激からの時間（対数の目盛り）。ドラッグで時刻を動かせます"></canvas>
+    <p id="hint">右の「刺激の場所」をクリックすると、その刺激の信号が脳に届くまでを、研究で測られた時刻に合わせて<b>ゆっくり</b>再生します。下の帯は部位ごとの反応で、ドラッグすると時刻を動かせます（横軸は 1 ms と 1000 ms が両方見える目盛り）。図は頭の<b>後ろから</b>見た向きで、左右の脳を本のように開いています。</p>
+  </main>
+
+  <aside id="panel">
+    <header class="brand">
+      <h1>刺激が脳に届くまで</h1>
+      <p>目・耳・皮膚に刺激があると、脳の<b>どこが・何ミリ秒後に</b>反応するのか。ヒト・サル・ラットの研究で測られた時刻と場所だけで再生します。測られていないところは、そう書いてあります。</p>
+    </header>
+
+    <section>
+      <h2>刺激の場所</h2>
+      <canvas id="chooser" aria-label="刺激の場所をえらぶ図"></canvas>
+      <div class="row" id="pitchRow" hidden><span class="cap">低い</span><input type="range" id="pitch" min="0" max="1" step="0.05" value="0.5" aria-label="音の高さ"><span class="cap">高い</span></div>
+      <p class="cap" id="chooseCap"></p>
+    </section>
+
+    <section class="notes" id="notes"></section>
+
+    <section>
+      <h2>病気・特性で変わること</h2>
+      <p class="cap">研究で<b>違いが測られているもの</b>だけを入れています。選ぶと、典型の反応を点線で重ねて比べます。</p>
+      <div class="presets one" id="conds"></div>
+      <div class="row" id="msRow" hidden><span class="cap">遅れ</span><input type="range" id="msDelay" min="0" max="50" step="1" value="30" aria-label="多発性硬化症の遅れ"><b class="mono" id="msVal">30 ms</b></div>
+    </section>
+
+    <section>
+      <h2>反応した場所（早い順）</h2>
+      <p class="cap">項目を押すと説明と出どころ。印は根拠の強さです。</p>
+      <ul class="stlist" id="stList"></ul>
+    </section>
+
+    <section>
+      <h2>頭の表面で測る波（誘発電位）</h2>
+      <canvas id="wave" aria-label="頭の表面で測る波の模式図。山の名前と時刻は研究の値"></canvas>
+      <p class="cap" id="waveNote"></p>
+      <p class="cap">波の形は模式で、<b>山の名前と時刻</b>が研究の値です。上が＋。</p>
+    </section>
+
+    <section>
+      <h2>見つけてみよう</h2>
+      <ul class="quests" id="quests"></ul>
+    </section>
+
+    <section class="explain">
+      <h2>しくみと本当の話</h2>
+      <details open>
+        <summary>反対側の脳が受け取る</summary>
+        <p>体の左側の感覚（左手・左足・左の視野）は、途中で交差して<b>右の脳</b>へ届きます。目は少し特別で、左右の目それぞれの「左の視野」の部分が右の脳へ行きます（視交叉で、鼻側の網膜からの線維だけが交差する）。音は脳幹で左右両方へ分かれます。痛みは、両側の弁蓋・島と前帯状皮質が受け取ります。</p>
+      </details>
+      <details>
+        <summary>脳の中の地図</summary>
+        <p>感覚の場所は、脳の中でも並び方を保っています。<b>体の地図</b>（中心溝のうしろ。足がいちばん上、手と顔は広い）、<b>視野の地図</b>（V1。視野の中心ほど後頭葉の後ろで、広い面積を使う）、<b>音の高さの地図</b>（聴覚野）。ラットでは、ひげ1本ごとに脳の「たる」が1つあります。</p>
+      </details>
+      <details>
+        <summary>なぜ時刻がちがうのか</summary>
+        <p>道の長さと、途中で乗りかえる細胞の数・電線（神経線維）の太さで決まります。耳は脳幹までが近く、太い線維なので数ミリ秒。目は網膜の中で何段も処理するので、大脳までに 50〜60 ms かかります。熱い痛みには、細い有髄の Aδ 線維（速い）と、髄鞘のない C 線維（遅い）の2種類があり、2回にわけて届きます。ラットはサル・ヒトより脳が小さく、道が短いので速い。</p>
+      </details>
+      <details>
+        <summary>根拠の印について</summary>
+        <p><span class="ev ev-m">研究の値</span> 論文に書かれた数値そのもの。<span class="ev ev-r">研究の幅</span> 論文が範囲で示したもの。<span class="ev ev-o">順番だけ</span> どの順に反応するかは研究のとおりで、時刻は前後の値のあいだに置いたおよその値。<span class="ev ev-p">場所だけ</span> 反応する場所はわかっているが、時刻を確かめられなかったもの（再生では道すじの順に光らせている）。</p>
+        <p>ヒトは頭の表面の波（脳波・脳磁図）と、手術の前に脳に入れた電極の記録。サルとラットは、脳に入れた電極で1つ1つの神経細胞を記録したもの（多くは麻酔の下）。測り方がちがうので、種どうしの時刻は目安として比べてください。</p>
+      </details>
+      <details>
+        <summary>簡単にしたところ</summary>
+        <p>脳の形と部位の場所は模式図です（3つの種の脳は、同じ大きさに描いています）。光り方の強さ・長さは模式で、研究の値は<b>反応のはじまりの時刻と場所</b>です。刺激の強さ、注意、眠気、年齢で時刻は変わりますが、ここでは研究の平均的な値を使っています。光は短いフラッシュ（ヒトの V1 は 56 ms のはじまり、P100 はパターン反転の検査の値）として扱い、測り方のちがいはまとめています。</p>
+      </details>
+      <details>
+        <summary>入れていないもの</summary>
+        <p>確かめた数値がないものは作っていません: サル・ラットの痛み、ラットの顔、サルの音と触覚の時刻（場所だけ）、においと味（道すじは知られているが、時刻を確かめていない）。病気・特性も、ヒトで違いが測られた5つと、ラットの恐怖条件づけだけです。</p>
+      </details>
+      <details>
+        <summary>おもな出どころ</summary>
+        <ul class="src" id="srcList"></ul>
+      </details>
+      <details>
+        <summary>このアプリについて</summary>
+        <p>学習用に簡単にしたモデルです。<b>病気の診断や医療・健康の判断には使えません。</b>病気・特性の違いは、研究に参加した人たちの平均で、一人ひとりにあてはまるとは限りません。</p>
+        <p>使っているもの: フォント Dela Gothic One・Zen Kaku Gothic New・IBM Plex Mono（Google Fonts、SIL Open Font License）。ライブラリは使っていません（Canvas 2D）。</p>
+      </details>
+    </section>
+  </aside>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/model.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
