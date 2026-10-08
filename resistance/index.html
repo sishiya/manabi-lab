@@ -1,0 +1,166 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>退治するほど手ごわくなる</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%232a2118'/><path d='M12 48 C22 30 34 44 52 16' fill='none' stroke='%23ff6f61' stroke-width='5' stroke-linecap='round'/><ellipse cx='22' cy='22' rx='8' ry='6' fill='%23c08b5c'/><circle cx='26' cy='20' r='1.8' fill='%23fff'/><ellipse cx='44' cy='44' rx='8' ry='6' fill='%23c08b5c'/><circle cx='48' cy='42' r='1.8' fill='%23fff'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="toolbar" role="group" aria-label="道具">
+      <div class="seg tools" id="segTool">
+        <button data-v="swat" aria-pressed="true">叩く<kbd>1</kbd></button>
+        <button data-v="spray" aria-pressed="false">スプレー<kbd>2</kbd></button>
+        <button data-v="bait" aria-pressed="false">毒エサ<kbd>3</kbd></button>
+      </div>
+      <div class="meter" title="この夜に使えるスプレーの残り"><span>スプレー</span><i><b id="sprayBar"></b></i></div>
+      <div class="meter night" title="夜の残り"><span id="nightLbl">夜</span><i><b id="nightBar"></b></i></div>
+      <button class="btn small" id="btnEnd">この夜を終える</button>
+    </div>
+    <div id="frame">
+      <canvas id="view" aria-label="台所の床を上から見た図。夜になると、すき間から虫が出てきて食べこぼしを食べに行きます"></canvas>
+      <div id="toast" hidden></div>
+
+      <div class="ov" id="startOv">
+        <div class="ovbox">
+          <h2 class="ovh">虫の見た目をえらんでください</h2>
+          <p>このアプリはチャバネゴキブリをもとにしています。<b>虫が苦手な人は「まる」</b>がおすすめです。退治したときは、ふわっと消えるだけで、つぶれた絵は出ません。音も出ません。見た目はあとからいつでも変えられます。</p>
+          <div class="styles" id="styleChoice">
+            <button data-v="dot"><canvas width="120" height="88"></canvas><b>まる</b><small>記号だけ</small></button>
+            <button data-v="cute" aria-pressed="true"><canvas width="120" height="88"></canvas><b>デフォルメ</b><small>まるい虫</small></button>
+            <button data-v="real"><canvas width="120" height="88"></canvas><b>リアル寄り</b><small>ゴキブリの形</small></button>
+          </div>
+          <button class="btn go" id="btnStart">1世代目の夜をはじめる</button>
+        </div>
+      </div>
+
+      <div class="ov" id="resultOv" hidden>
+        <div class="ovbox wide">
+          <h2 class="ovh" id="resTitle"></h2>
+          <div id="resBody"></div>
+          <div class="row center">
+            <button class="btn go" id="btnNext">次の世代の夜へ</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p id="hint"><b>叩く</b>: 虫をクリック（タップ）。スリッパの影が落ちてから当たるまでに気づいた虫は逃げます。<b>スプレー</b>: 押している間、霧が出ます。<b>毒エサ</b>: 床に置く（もう一度押すと片づける）。夜が終わると、生き残った虫だけが子を残します。</p>
+  </main>
+
+  <aside id="panel">
+    <header class="brand">
+      <h1>退治するほど手ごわくなる</h1>
+      <p>台所の虫を叩く・スプレーする・毒エサを置く。生き残ったものだけが子を残すと、何世代かで相手はどう変わるのか。<b>進化</b>を、自分の手ごたえで確かめます。</p>
+    </header>
+
+    <section class="card" id="genCard">
+      <div class="ro-top"><span class="lbl">いまの世代</span><span class="ro-tag" id="genTime"></span></div>
+      <div class="ro-num"><b id="genNo">1</b><small>世代目</small><b id="popNo" class="pop">50</b><small>匹</small></div>
+      <div class="ro-grid" id="nightStats"></div>
+    </section>
+
+    <section>
+      <h2>性質の分布（いまの世代）</h2>
+      <p class="cap">色のついた棒が生きている虫、<span class="gray">灰色</span>がこの夜に退治された虫。点線は1世代目の形です。</p>
+      <div id="hists"></div>
+    </section>
+
+    <section>
+      <h2>虫を性質で色分け</h2>
+      <div class="seg small" id="segColor">
+        <button data-v="none" aria-pressed="true">なし</button>
+        <button data-v="wary" aria-pressed="false">警戒心</button>
+        <button data-v="sense" aria-pressed="false">察知</button>
+        <button data-v="kdr" aria-pressed="false">殺虫剤</button>
+        <button data-v="gav" aria-pressed="false">糖ぎらい</button>
+      </div>
+      <p class="cap" id="colorCap"></p>
+    </section>
+
+    <section>
+      <h2>世代ごとの変化</h2>
+      <canvas id="chart" width="640" height="300" aria-label="世代ごとの虫の数と4つの性質の変化のグラフ"></canvas>
+      <div class="legend-row" id="chartLegend"></div>
+    </section>
+
+    <section>
+      <h2>まかせて世代を進める</h2>
+      <p class="cap">同じやり方を続けると、どうなるか。自分で叩くかわりに、決まったやり方で退治します。</p>
+      <div class="presets" id="policies"></div>
+      <div class="row">
+        <button class="btn" id="btnWatch">1世代を見る</button>
+        <button class="btn" id="btnFast">10世代を早送り</button>
+      </div>
+      <p class="cap" id="policyCap"></p>
+    </section>
+
+    <section>
+      <h2>見つけてみよう</h2>
+      <ul class="quests" id="quests"></ul>
+    </section>
+
+    <section>
+      <h2>見た目</h2>
+      <div class="seg small" id="segStyle">
+        <button data-v="dot" aria-pressed="false">まる</button>
+        <button data-v="cute" aria-pressed="true">デフォルメ</button>
+        <button data-v="real" aria-pressed="false">リアル寄り</button>
+      </div>
+      <div class="row"><button class="btn small" id="btnReset">はじめからやり直す</button></div>
+    </section>
+
+    <section class="explain">
+      <h2>しくみと本当の話</h2>
+      <details open>
+        <summary>虫が「慣れて強くなる」のではない</summary>
+        <p>スプレーをかけられた虫が、だんだん薬に慣れていくわけではありません。はじめから、<b>まれに</b>薬が効きにくい遺伝子を持つ虫がまじっています。薬が効く虫ばかりが死ぬと、残った虫の子には、その遺伝子を持つものが多くなります。これを何世代もくり返すと、ほとんどが効きにくい虫になります。これが<b>自然選択</b>による進化です。ここでは、あなたのやり方が「選ぶ側（環境）」になっています。</p>
+        <p>はじめの1世代目にも、殺虫剤に強い遺伝子・糖ぎらいの遺伝子を持つ虫が、それぞれ数匹だけいます（「虫を性質で色分け」で探せます）。</p>
+      </details>
+      <details>
+        <summary>4つの性質</summary>
+        <p><b>警戒心</b>: 強いほど、すき間から出てくるのがまれで、外にいる時間も短い。叩かれにくいかわりに、食べる量が減って子が少なくなります。</p>
+        <p><b>危険の察知</b>: 鋭いほど、遠くのスリッパの動きや霧に気づき、すぐ逃げます。かわりに、何もないのにびくっと逃げ帰ることも増えます。本物のゴキブリは、おしりの先の2本の突起（尾角）の毛で空気の動きを感じて逃げます。</p>
+        <p><b>殺虫剤に強い</b>: 神経のスイッチ（ナトリウムチャネル）の形が少しちがうと、ピレスロイドという種類の殺虫剤が効きにくくなります（kdr と呼ばれる）。この遺伝子は2本そろうと大きく効きます（1本では少しだけ）。</p>
+        <p><b>糖ぎらい</b>: 毒エサの甘み（ブドウ糖）を、苦いと感じて食べない。1本でもかなり効きます。かわりに育ちが遅く、交尾がうまくいかないことがあります。</p>
+        <p>強い性質には、それぞれ<b>代わりの損</b>があります。道具を使わない世代が続くと、損のぶんだけ、少しずつ減っていきます。ただし、全部の虫が持つようになってしまうと、比べる相手がいないので、やめてもなかなか戻りません。</p>
+      </details>
+      <details>
+        <summary>本当にあったこと</summary>
+        <p><b>毒エサを食べないゴキブリ</b>: 1980年代、ブドウ糖で虫を引きよせる毒エサが広く使われました。1993年、アメリカで、ブドウ糖を食べないチャバネゴキブリの集団が見つかりました。ほかの糖（果糖など）は食べます。親から子へ伝わる性質で、主に1つの遺伝子で決まります。2013年の研究で、この虫ではブドウ糖が<b>苦味を感じる神経</b>を刺激することが分かりました。2022年の研究では、糖ぎらいのメスが、交尾の前にオスがくれる甘い贈りもの（唾液でブドウ糖に変わる）をいやがって、交尾がうまくいかないことがあると分かりました。</p>
+        <p><b>殺虫剤が効かないゴキブリ</b>: ピレスロイドが効きにくいチャバネゴキブリは世界じゅうで見つかっています。2019年の研究では、実際のアパートで薬の使い方を変えて数世代を追い、効きにくさが短い間に強まることや、1つの薬で強くなると別の薬も効きにくくなる（交差抵抗性）ことを報告しています。</p>
+        <p><b>すばやく逃げる</b>: ワモンゴキブリは、ヒキガエルの舌がとどく前の空気の動きを感じて逃げはじめます（1978年の研究）。</p>
+      </details>
+      <details>
+        <summary>簡単にしたところ</summary>
+        <p>1回の夜（40秒）を、<b>1世代（約3か月）</b>の間の退治をまとめたものとしています。本物のチャバネゴキブリは、1年に3〜4世代、1匹のメスが卵のさやを4〜8個（1つに30〜40個）産みます。ここでは子の数を「食べた量」から決め、台所に住める数を80匹までにしています。</p>
+        <p>警戒心と察知の強さ・効き目の数字、代わりの損の大きさは、このアプリのための<b>仮定</b>です。本物の殺虫剤への強さには、kdr のほかに、薬を分解する力などたくさんのしくみがあります。毒エサは本物では数時間〜数日かけて効きますが、ここでは数秒です。虫は見やすいように大きく描いています。スリッパが落ちるまでの時間や、虫の反応の時間も、遊べるようにゆっくりにしています。</p>
+      </details>
+      <details>
+        <summary>おもな出どころ</summary>
+        <ul class="src">
+          <li>Silverman, J. &amp; Bieman, D. N. (1993) Glucose aversion in the German cockroach, <i>Blattella germanica</i>. Journal of Insect Physiology 39.</li>
+          <li>Wada-Katsumata, A., Silverman, J. &amp; Schal, C. (2013) Changes in taste neurons support the emergence of an adaptive behavior in cockroaches. Science 340: 972–975.</li>
+          <li>Wada-Katsumata, A., Hatano, E., McPherson, S., Silverman, J. &amp; Schal, C. (2022) Rapid evolution of an adaptive taste polymorphism disrupts courtship behavior. Communications Biology 5.</li>
+          <li>Schal 研究室（ノースカロライナ州立大学）「<a href="https://schal-lab.cals.ncsu.edu/research-projects/glucose-aversion-in-cockroaches" target="_blank" rel="noopener">Glucose-aversion in cockroaches</a>」（糖ぎらいのものは育ちが遅く、生き残りが少ない）</li>
+          <li>Dong, K. (1997) A single amino acid change in the para sodium channel protein is associated with knockdown-resistance (kdr) to pyrethroid insecticides in German cockroach. Insect Biochemistry and Molecular Biology 27.</li>
+          <li>Fardisi, M., Gondhalekar, A. D., Ashbrook, A. R. &amp; Scharf, M. E. (2019) Rapid evolutionary responses to insecticide resistance management interventions by the German cockroach (<i>Blattella germanica</i> L.). Scientific Reports 9.</li>
+          <li>Camhi, J. M., Tom, W. &amp; Volman, S. (1978) The escape behavior of the cockroach <i>Periplaneta americana</i> II. Detection of natural predators by air displacement. Journal of Comparative Physiology 128: 203–212.</li>
+          <li>フロリダ大学 IFAS（Koehler, P. G. ほか）「<a href="https://entnemdept.ufl.edu/projex/gallery/dl/cockroaches/text/german_cockroach.htm" target="_blank" rel="noopener">German cockroach</a>」（卵のさやの数、1年の世代の数、成虫の寿命）</li>
+        </ul>
+        <p class="note">警戒心・察知・代わりの損の数字と、遺伝子の数（量的な性質は6か所）は、このアプリのための仮定です。</p>
+      </details>
+      <details>
+        <summary>このアプリについて</summary>
+        <p>学習用に、とても簡単にしたモデルです。家での虫の退治のしかたの助言ではありません。殺虫剤や毒エサは、製品の表示に従って使ってください。</p>
+        <p>使っているもの: フォント Dela Gothic One・Zen Kaku Gothic New・IBM Plex Mono（Google Fonts、SIL Open Font License）。ライブラリは使っていません（Canvas 2D）。</p>
+      </details>
+    </section>
+  </aside>
+</div>
+
+<script src="js/genes.js"></script>
+<script src="js/world.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
