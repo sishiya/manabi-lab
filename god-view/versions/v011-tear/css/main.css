@@ -149,4 +149,3 @@ body.in-tear #top { z-index: 5; }
   #tear-info { left: 8px; right: 8px; width: auto; top: 54px; font-size: 12px; }
   #tear-credit { left: 8px; right: 8px; bottom: 8px; font-size: 10px; max-height: 4.4em; overflow: auto; }
 }
-#tear-info .tw { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line); font-size: 12px; }

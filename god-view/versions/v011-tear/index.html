@@ -24,7 +24,7 @@
 <aside id="tear-panel"></aside>
 <div id="tear-info"></div>
 <div id="tear-pop">ぶちっ！</div>
-<div id="tear-credit">計算（<span class="tag tag-est">推定</span>）: 地球を約 1.6 万個の粒にして、重力・圧力・粘りを SPH（粒子法）で計算。粒 1 個 ≒ 400 km なので、地殻や山は見えません。海は別の軽い粒（水色）、湯気は白（高さは 5 倍に強調）。簡単にしたこと: 岩の固さ、相転移、自転、空気。くわしくは「?」の「地球をちぎる」へ。</div>
+<div id="tear-credit">計算（<span class="tag tag-est">推定</span>）: 地球を約 1.6 万個の粒にして、重力・圧力・粘りを SPH（粒子法）で計算。粒 1 個 ≒ 400 km なので、それより小さいもの（地殻・海・山）は見えません。簡単にしたこと: 岩の固さ、相転移、自転、海と空気（次の版で）。くわしくは「?」の「地球をちぎる」へ。</div>
 
 <header id="top">
   <button id="btn-layers" class="icon" title="層のパネル" aria-label="層のパネル">☰</button>
@@ -75,11 +75,10 @@
     <p class="small">地球を約 1.6 万個の粒（1 個 ≒ 400 km）にして、重力・圧力・粘りを SPH（粒子法の流体の計算）で 1 歩 約 10 秒ずつ進めています。<span class="tag tag-est">推定</span></p>
     <ul class="small">
       <li>層の境目（内核 1221 km・核とマントルの境目 3480 km）は PREM。密度は、選んだ状態方程式（Murnaghan）で重力と圧力をつり合わせて求めたもので、PREM の密度に近い（マントルの底 約 4.9、外核 9.7〜11.9、中心 13.0 g/cm³）が同じではありません。</li>
-      <li>はじめの温度: 地表 15℃ → 深さ 100 km で 1600 K、その下は断熱（Katsura ほか 2010 にもとづく）、核とマントルの境目のすぐ上 約 3800 K（核の側は 約 4000 K。Lay ほか 2008）、内核 約 5400 K（研究によって幅があります）。圧力が抜けると断熱で冷え、くずれ込んで落ちた分のエネルギーは熱になります。</li>
+      <li>はじめの温度: 地表 15℃ → 深さ 100 km で 1600 K、その下は断熱（Katsura ほか 2010 にもとづく）、核とマントルの境目 約 4000 K（Lay ほか 2008）、内核 約 5400 K（研究によって幅があります）。圧力が抜けると断熱で冷え、くずれ込んで落ちた分のエネルギーは熱になります。</li>
       <li>溶け: マントルの溶けはじめる温度（ソリダス）を Hirschmann 2000（低い圧力）と Fiquet ほか 2010（高い圧力）からつないだ近似と比べ、溶けるのに使う熱も入れて「一部溶けた割合」を出しています。</li>
-      <li>海と湯気: 海は平均 3.7 km と粒よりずっと薄いので、岩とは別の軽い粒（約 3600 個、1 個 ≒ 37 万 km³）で表し、岩の上に乗せています。地面の上を流れる速さは、深さ 3.7 km の水の波の速さ √(g×深さ) ≒ 秒速 0.19 km まで（崖から落ちるときは上限なし）。表に出た熱い岩に触れた水は沸騰して湯気になり、その量は沸騰でいちばん熱が伝わるときの値（限界熱流束 約 1 MW/m²）で数えた多めの見積もりです。湯気の分子の速さは秒速 1 km ほどで、地球から逃げる速さ（秒速 11 km）に届かないので、空にとどまってやがて雨になります（雨は計算していません）。かけらの上の水は、真空で表面が沸きながら凍ります（凍るまでに約 14% が蒸発する: 温度を下げる熱と凍る熱を、蒸発の熱で割った値）。出た水蒸気は秒速 0.3〜0.7 km で、かけらの重力で落ちてきます。湯気の高さは見やすいように 5 倍に強調して描いています。</li>
-      <li>簡単にしたこと: 岩の固さ（地球の大きさでは重力の力が岩の強さの 100 倍以上なので流体として扱えるが、小さなかけらは本当は形が残りやすい）、鉱物の相転移、地球の自転、空気、水の重さ（海は地球の重さの 0.02%）。重力は「地球」と「かけら」それぞれの中心からの距離で、球対称として計算しています。「遠くへ運ぶ」は、地球の重力が届かないくらい遠くへ運んだことにして、画面では近くに置いています。表に出た所の黒い皮は、溶岩の表面が冷えて固まることからの推定です。</li>
-      <li>出どころ: Dziewonski & Anderson (1981) Preliminary reference Earth model. <i>Phys. Earth Planet. Inter.</i> 25 ／ Katsura et al. (2010) Adiabatic temperature profile in the mantle. <i>Phys. Earth Planet. Inter.</i> 183 ／ Lay, Hernlund & Buffett (2008) Core–mantle boundary heat flow. <i>Nature Geoscience</i> 1 ／ Hirschmann (2000) Mantle solidus: Experimental constraints and the effects of peridotite composition. <i>Geochem. Geophys. Geosyst.</i> 1 ／ Fiquet et al. (2010) Melting of peridotite to 140 gigapascals. <i>Science</i> 329 ／ Monaghan (1992) Smoothed particle hydrodynamics. <i>Annu. Rev. Astron. Astrophys.</i> 30 ／ 海の水の量 13.35 億 km³・平均の深さ: Eakins & Sharman (2010) Volumes of the World's Oceans from ETOPO1. NOAA National Geophysical Data Center ／ 沸騰の限界熱流束: Lienhard & Lienhard, <i>A Heat Transfer Textbook</i>（Phlogiston Press）</li>
+      <li>簡単にしたこと: 岩の固さ（地球の大きさでは重力の力が岩の強さの 100 倍以上なので流体として扱えるが、小さなかけらは本当は形が残りやすい）、鉱物の相転移、地球の自転、海と空気（次の版で）。重力は「地球」と「かけら」それぞれの中心からの距離で、球対称として計算しています。「遠くへ運ぶ」は、地球の重力が届かないくらい遠くへ運んだことにして、画面では近くに置いています。表に出た所の黒い皮は、溶岩の表面が冷えて固まることからの推定です。</li>
+      <li>出どころ: Dziewonski & Anderson (1981) Preliminary reference Earth model. <i>Phys. Earth Planet. Inter.</i> 25 ／ Katsura et al. (2010) Adiabatic temperature profile in the mantle. <i>Phys. Earth Planet. Inter.</i> 183 ／ Lay, Hernlund & Buffett (2008) Core–mantle boundary heat flow. <i>Nature Geoscience</i> 1 ／ Hirschmann (2000) Mantle solidus: Experimental constraints and the effects of peridotite composition. <i>Geochem. Geophys. Geosyst.</i> 1 ／ Fiquet et al. (2010) Melting of peridotite to 140 gigapascals. <i>Science</i> 329 ／ Monaghan (1992) Smoothed particle hydrodynamics. <i>Annu. Rev. Astron. Astrophys.</i> 30</li>
     </ul>
     <h3>使っているもの・出典</h3>
     <ul class="small">
