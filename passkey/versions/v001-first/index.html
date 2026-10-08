@@ -1,0 +1,127 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>パスキーのしくみ</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23101a26'/><circle cx='22' cy='32' r='10' fill='none' stroke='%23ffc95a' stroke-width='5'/><path d='M32 32h22M46 32v8M53 32v6' stroke='%23ffc95a' stroke-width='5' stroke-linecap='round'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="toolbar">
+      <div class="seg" id="segMode" role="group" aria-label="ログインのしかた">
+        <button data-v="password" aria-pressed="false">パスワード</button>
+        <button data-v="passkey" aria-pressed="true">パスキー</button>
+      </div>
+      <div class="seg small" id="segSpeed" role="group" aria-label="小包の速さ">
+        <button data-v="1" aria-pressed="true">ふつう</button>
+        <button data-v="2.2" aria-pressed="false">ゆっくり</button>
+      </div>
+      <button class="btn ghost" id="btnReset" title="スマホの鍵・サーバーのデータ・わるものを、はじめの状態にもどす">はじめから</button>
+    </div>
+
+    <div id="world">
+      <svg id="wires" aria-hidden="true"></svg>
+
+      <section class="actor" id="aPhone">
+        <header><span class="who">あなたのスマホ</span><span class="role">認証器</span></header>
+        <div class="phone">
+          <div class="screen" id="phoneScreen"></div>
+          <button class="finger" id="finger" aria-label="指紋センサー（長押し）"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M12 30c-2-4-2-9 0-13m4 16c-2-5-2-11 1-15 2-3 7-3 9 0 2 3 2 7 1 11m-7 6c-2-5-2-9 0-12m4 1c1 3 1 6 0 9m-11-18c4-5 13-5 17 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><i id="fingerRing"></i></button>
+        </div>
+        <div class="vault" id="vault"></div>
+      </section>
+
+      <section class="actor" id="aBrowser">
+        <header><span class="who" id="browserWho">あなたのパソコン</span><span class="role">ブラウザ</span></header>
+        <button class="addr" id="addr" aria-haspopup="listbox"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><span id="addrText"></span><b>▾</b></button>
+        <ul class="addrMenu" id="addrMenu" role="listbox" hidden></ul>
+        <div class="page" id="page"></div>
+      </section>
+
+      <section class="actor" id="aServer">
+        <header><span class="who" id="serverWho"></span><span class="role">サーバー</span></header>
+        <div class="db" id="db"></div>
+        <ul class="checks" id="checks"></ul>
+      </section>
+
+      <section class="actor thief" id="aThief">
+        <header><span class="who">わるもの</span><span class="role" id="thiefRole">見ているだけ</span></header>
+        <div class="loot" id="loot"></div>
+      </section>
+
+      <div id="packets"></div>
+    </div>
+
+    <div id="narr" aria-live="polite"><p id="narrText"></p><div id="narrBtns"></div></div>
+    <div id="logWrap"><span class="cap">やりとりの記録（押すと中身）</span><ol id="log"></ol></div>
+    <section id="inspWrap">
+      <h2>中身を見る</h2>
+      <div id="insp"><p class="cap">飛んでいる小包や、上の「やりとりの記録」、スマホの金庫の鍵を押すと、ここに中身（本物のバイト列）が出ます。</p></div>
+    </section>
+  </main>
+
+  <aside id="panel">
+    <header class="brand">
+      <h1>パスキーのしくみ</h1>
+      <p>パスワードの代わりに<b>指紋・顔・PIN</b>でログインする「パスキー」。スマホとサイトのあいだで何が行き来して、なぜ<b>偽サイトやデータの流出に強い</b>のかを、自分で操作して確かめます。鍵・署名・ハッシュの計算は<b>本物</b>（ブラウザの暗号の機能）です。</p>
+    </header>
+
+    <section>
+      <h2>試す</h2>
+      <p class="cap">上の「パスワード／パスキー」を切りかえて、同じことを両方で試せます。</p>
+      <ol class="exps" id="exps"></ol>
+    </section>
+
+    <section>
+      <h2>見つけてみよう</h2>
+      <ul class="quests" id="quests"></ul>
+    </section>
+
+    <section class="explain">
+      <h2>しくみと本当の話</h2>
+      <details open>
+        <summary>2つで1組の鍵</summary>
+        <p>パスキーは、サイトごとに作る<b>秘密鍵</b>と<b>公開鍵</b>の1組です。秘密鍵はスマホの中にしまわれ、外に出ません。公開鍵はサイトに渡します。秘密鍵でしか作れない「署名」を、公開鍵で<b>正しいかどうか確かめる</b>ことはだれでもできますが、公開鍵から秘密鍵を計算で求めることは、いまのコンピューターでは事実上できません（楕円曲線 P-256 の離散対数問題）。</p>
+        <p>たとえるなら、秘密鍵は<b>あなただけが持つ印鑑</b>、公開鍵は<b>印影を確かめる台帳</b>。ただし本物の印鑑とちがって、署名は毎回ちがう文書（チャレンジ）の上に作るので、前の署名を写して使い回すことができません。</p>
+      </details>
+      <details>
+        <summary>ログインで行き来するもの</summary>
+        <p>① サイトが、毎回ちがうでたらめな数（<b>チャレンジ</b>。16バイト以上が望ましい）を送る。② ブラウザが、チャレンジと<b>いま開いているページの住所（origin）</b>を書いた紙（clientDataJSON）を作る。③ スマホが、指紋・顔・PIN で本人を確かめてから、「どのサイトの鍵か（rpIdHash）・確かめたか（フラグ）・回数（カウンター）」と紙のハッシュに、秘密鍵で<b>署名</b>する。④ サイトが、保存しておいた公開鍵で署名を確かめ、チャレンジ・住所・サイト名も確かめる。</p>
+      </details>
+      <details>
+        <summary>なぜ偽サイトに強いのか</summary>
+        <p>パスワードは、偽サイトに<b>自分で打ちこんでしまう</b>と、そのまま盗まれます。パスキーでは、ブラウザが「いま開いているページの住所」を見て、そのサイトの名前の鍵しか使わせません。偽サイト（donguri-bamk.example）は本物（donguri-bank.example）の鍵を頼めず、署名の紙にも偽サイトの住所が書きこまれます。人が見分けなくても、しくみで止まります（NIST はこれを「検証者の名前に結びつける」フィッシング耐性と呼んでいます）。</p>
+      </details>
+      <details>
+        <summary>指紋や顔はどこへ行く？</summary>
+        <p>指紋・顔・PIN は、<b>スマホの中で</b>秘密鍵の使用を許すためだけに使われ、サイトには送られません。サイトに届くのは「確かめた（UV）」という1ビットの印だけです。</p>
+      </details>
+      <details>
+        <summary>スマホをなくしたら</summary>
+        <p>多くのパスキーは、iPhone・Android・パスワード管理アプリなどの<b>同期</b>で、同じ人のほかの端末にも入ります（端末どうしで暗号化して送る）。新しいスマホでも使えます。フラグの BE（同期できる）・BS（同期済み）がその印です。セキュリティキーのように<b>1台から出ない</b>パスキーもあり、なくすと使えなくなるので、予備を登録しておきます。</p>
+      </details>
+      <details>
+        <summary>簡単にしたところ</summary>
+        <p>鍵の作成・署名・検証・ハッシュ（SHA-256）・パスワードのハッシュ（PBKDF2）は、ブラウザの Web Crypto API で本当に計算しています。秘密鍵は「取り出せない」設定で作っていて、このアプリ自身も中身を読めません。</p>
+        <p>簡単にしたところ: 署名は本物では DER という形式ですが、ここでは r と s を並べた 64 バイトで見せます。登録のときの機種の証明（attestation）は「なし」。ユーザー名は tanuki に決めています。本物の通信は TLS（https）で暗号化されていて、ふつうは途中で読めません。「記録して使い回す」実験は、読めてしまったと仮定したものです。パスワードのハッシュの回数は、すぐ終わるように少なくしています（本物はもっと多い）。カウンターは使うたびに1ずつ増やしていますが、同期するパスキーでは 0 のままのことも多く、そのときサーバーはこの確認を飛ばします。サイトはすべて架空です（.example は例のための名前）。</p>
+      </details>
+      <details>
+        <summary>おもな出どころ</summary>
+        <ul class="src" id="srcList"></ul>
+      </details>
+      <details>
+        <summary>このアプリについて</summary>
+        <p>学習用に簡単にしたモデルです。ここで入れるパスワードは決まった例だけで、どこにも送りません（計算はすべてこのページの中）。本物のパスワードや個人の情報は入れないでください。</p>
+        <p>使っているもの: フォント Dela Gothic One・Zen Kaku Gothic New・IBM Plex Mono（Google Fonts、SIL Open Font License）。ライブラリは使っていません（ブラウザの Web Crypto API）。</p>
+      </details>
+    </section>
+  </aside>
+</div>
+
+<script src="js/crypto.js"></script>
+<script src="js/model.js"></script>
+<script src="js/stage.js"></script>
+<script src="js/flows.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
