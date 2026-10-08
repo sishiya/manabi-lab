@@ -8,13 +8,14 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%235d6472'/><path d='M14 22h36v8H14zM18 30h28v20H18z' fill='none' stroke='%23fff' stroke-width='3.5' stroke-linejoin='round'/><path d='M27 38h10' stroke='%23fff' stroke-width='3.5' stroke-linecap='round'/></svg>">
 <script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
 <style>
-/* Same look as the main まなびラボ page; this page is not linked from it */
+/* Same look as the main まなびラボ page; linked only from its small footer note */
 :root{--bg:#f6f4ee;--ink:#1d2129;--muted:#5d6472;--line:#d9d5ca;--card:#fff;--accent:#2b6cb0;--thumb:#d9d5ca;color-scheme:light dark}
 @media (prefers-color-scheme:dark){:root{--bg:#0e1218;--ink:#e8ecf2;--muted:#9aa4b2;--line:#273041;--card:#151b24;--accent:#6cb4ff;--thumb:#273041}}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;line-height:1.75}
 main{max-width:1000px;margin:0 auto;padding:48px 16px 64px}
 h1{margin:0 0 4px;font-size:32px}
 .lead{color:var(--muted);margin:0 0 8px;max-width:720px}
+.lead a{color:var(--accent)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-top:24px}
 .card{position:relative;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .card:hover{border-color:var(--accent)}
@@ -36,7 +37,8 @@ h1{margin:0 0 4px;font-size:32px}
 <body>
 <main>
   <h1>アーカイブ</h1>
-  <p class="lead">まなびラボの入口には並べていない、試作や作りかけのアプリ。動きますが、内容や見た目はまだ途中です。学習用に簡単にしているところがあります。医療・健康の判断には使えません。</p>
+  <p class="lead">ここは、まなびラボの物置きです。作りかけのアプリや、作ってはみたものの出来がいまひとつで入口に並べるのをやめたアプリを、しまってあります。いちおう動きますが、内容や見た目は途中のままで、これから直すとは限りません。ふだん遊ぶなら<a href="./">入口のアプリ</a>をどうぞ。</p>
+  <p class="lead">学習用に簡単にしているところがあります。医療・健康の判断には使えません。</p>
 
   <div class="grid">
     <div class="card"><img class="thumb" src="thumbs/urinary-dive.jpg" alt="" width="640" height="360" loading="lazy"><div class="body"><a class="open" href="urinary-dive/">尿の旅</a><p>腎臓から膀胱、尿道まで、尿のしずくになって進む。</p><p class="state">体内ダイブの亜種（同じしくみで別の管を進む）</p><p class="dates">作成 2026-10-03 ・ 更新 2026-10-07</p><a class="ver" href="urinary-dive/launcher.html">過去の版</a></div></div>

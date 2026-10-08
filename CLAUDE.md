@@ -22,7 +22,7 @@
 - `resistance/` — 単独アプリ「退治するほど手ごわくなる」（台所の虫＝チャバネゴキブリがモデルを、叩く・スプレー・毒エサで退治すると、生き残りが子を残して警戒心・危険の察知・殺虫剤に強い・糖ぎらいの遺伝子が世代ごとに変わる。進化を自分の手ごたえで見る。虫の見た目を選べる（まる・デフォルメ・リアル寄り）。Canvas 2D）。css/js に分割。企画は `resistance/PLAN.md`、仕組み・数値・確認手順は `resistance/DEVNOTES.md`。確認は `apps`〜`apps-6`（http://localhost:8769/resistance/ など）で。隠しアーカイブ（`archive.html`）に掲載。
 - `brain-response/` — 単独アプリ「刺激が脳に届くまで」（光・顔・音・触る・熱い痛み・カチッ2回の刺激が、脳のどこに何ミリ秒後に届くかを、研究で測られた時刻と場所だけで再生。ヒト・サル・ラットの切り替え、根拠の印（研究の値・幅・順番だけ・場所だけ）、ヒトで違いが測られた病気・特性5つ。想像で埋めないのが約束。Canvas 2D）。css/js に分割。企画と確かめた出どころは `brain-response/PLAN.md`、仕組み・確認手順は `brain-response/DEVNOTES.md`。確認は `apps`〜`apps-6`（http://localhost:8769/brain-response/ など）で。隠しアーカイブ（`archive.html`）に掲載。
 - `quantum/` — 別シリーズ「量子の実験室」（二重スリット・トンネル効果・偏光板・量子もつれ・不確定性原理）。1ファイル完結。仕組みと確認手順・公開 URL は `quantum/DEVNOTES.md`。
-- `archive.html` — 隠しアーカイブ（入口からリンクしない。試作・作りかけのアプリ。いまは urinary-dive・blood-dive・extreme・illusions・muscle-growth・ferrofluid・resistance・brain-response）。入口とアーカイブの出し入れは `RULES.md` 8.1。
+- `archive.html` — 隠しアーカイブ（入口の下の小さい注記からだけリンク。作りかけ・出来がいまひとつのアプリ。いまは urinary-dive・blood-dive・extreme・illusions・muscle-growth・ferrofluid・resistance・brain-response）。入口とアーカイブの出し入れは `RULES.md` 8.1。
 - `IDEAS.md` — まだ作っていないテーマのストックと、ユーザーの好みの傾向。新しいアプリを考えるときに読む。
 
 ## 進め方の約束（詳しくは `RULES.md`。どのアプリでも最初に読む）
