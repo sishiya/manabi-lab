@@ -31,6 +31,8 @@ const SETUP = {
   'muscle-growth': async w => { await wait(800); w.__mg.setCond({ mode: 'ecc' }); w.__mg.setT(62); await wait(1500); w.__mg.setT(62); },
   // 梅雨の浴室の約4週間後（ゴムパッキンと目地にカビ）
   'mold-growth': async w => { await wait(800); w.__mk.UI.playing = false; w.__mk.run(27 * 24 + 14); w.__mk.frame(3, 0.03); await wait(1500); },
+  // 1世代目の夜、毒エサを置いて少したったところ（デフォルメの虫）
+  'resistance': async w => { await wait(800); w.__rz.S.style = 'cute'; w.document.getElementById('btnStart').click(); w.__rz.step(10); await wait(400); },
   // 大きい磁石の上のトゲの山（開いたときのまま、少し進める）
   'ferrofluid': async w => { await wait(800); w.__ff.advance(2, 1 / 30); await wait(1500); },
   // 映画の角度（開いたときのまま）。細かい段まで描き切る
