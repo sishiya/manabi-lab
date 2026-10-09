@@ -5,7 +5,7 @@
 イモムシがさなぎになり成虫になるまでの体の中を、横から見た模式図で時間を追って見る。モデルの虫は**タバコスズメガ（*Manduca sexta*）**（v2 から。v1 はナミアゲハ）。企画は `PLAN.md`。ほかのアプリとはエンジンが別（Canvas 2D、外部ライブラリなし）。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: 最新は v3d（`versions/v003d-sources`、「このアプリについて」に**おもな出どころ**（15件）を追加、翅を広げる時間を推定に。v3c は GA の1行だけ）。その前は v3b（`versions/v003b-heart-wave`、心臓の拍動を波に）。v3（`versions/v003-emerge-cut`）。タバコスズメガ、見かた3つ（透かして・割って＝人の目で見た様子・外から）、羽化は殻から前へはい出る動きでつなぐ。入口「まなびラボ」の「いきもの」に載せた（サムネイル `thumbs/metamorphosis.jpg`）。GitHub Pages には push で公開される（push はユーザー）。Artifact には公開していない。
+- **いまの状態**: 最新は v3d（`versions/v003d-sources`、「このアプリについて」に**おもな出どころ**（15件）を追加、翅を広げる時間を推定に。v3c は GA の1行だけ）。その前は v3b（`versions/v003b-heart-wave`、心臓の拍動を波に）。v3（`versions/v003-emerge-cut`）。タバコスズメガ、見かた3つ（透かして・割って＝人の目で見た様子・外から）、羽化は殻から前へはい出る動きでつなぐ。入口「まなびラボ」の「いきもの」に載せた（サムネイル `assets/thumbs/metamorphosis.jpg`）。GitHub Pages には push で公開される（push はユーザー）。Artifact には公開していない。
 - **次にやること**: ユーザーの感想しだい。次の段階は `PLAN.md` の段階B（ミクロの小窓）。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。時間を変えたいときは `js/data.js` の `TL` だけ見ればよい。
 - **動かし方**: ユーザーはルートの `start.bat`（まなびラボから開く）。Claude は `.claude/launch.json` の `apps`（8765）か `apps-2`（8766）で `http://localhost:<port>/metamorphosis/`。

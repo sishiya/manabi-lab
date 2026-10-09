@@ -16,9 +16,10 @@
 | `god-view/` | 神の視点マップ — 本物の地形・写真・地図の3D地球（GitHub Pages で公開: https://sishiya.github.io/manabi-lab/god-view/ ） |
 
 - **公開中**: https://sishiya.github.io/manabi-lab/ （入口のページから全アプリを開けます。GitHub Pages）
-- 入口（ルートの `index.html`）のサムネイルは `thumbs/`（`tools/make-thumbs.ps1` で撮り直し）。各アプリにはファビコン（SVG を埋め込み）。
+- 入口（ルートの `index.html`）のサムネイルは `assets/thumbs/`（`_dev/tools/make-thumbs.ps1` で撮り直し）。各アプリにはファビコン（SVG を埋め込み）。
 - 各アプリの `index.html` が最新版、`launcher.html` から過去の版を開けます（`versions/`）。
 - 仕組みや確認のしかたは各フォルダの `DEVNOTES.md`、進め方の共通ルールは `RULES.md`。
+- アプリ以外の道具は `_dev/` にまとめています: `_dev/tools/`（公開前チェック・サムネイル撮影・起動）、`_dev/promo/`（紹介動画づくり）、`_dev/sns-icon/`（SNS のアイコン案）。
 
 ## ローカルで動かす（Windows）
 
@@ -39,7 +40,7 @@ git config core.hooksPath .githooks
 git config core.quotepath false
 ```
 
-1行目で、コミットの前に公開前チェック（`tools/check-public.ps1`）が自動で走ります。
+1行目で、コミットの前に公開前チェック（`_dev/tools/check-public.ps1`）が自動で走ります。
 
 ## ライセンス
 

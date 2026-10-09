@@ -154,7 +154,7 @@ function promoStart(cfg) {
 <iframe id="app" src="${cfg.src}" style="position:fixed;left:0;top:0;width:${cfg.iw}px;height:${cfg.ih}px;border:0;opacity:0;pointer-events:none;z-index:-1"></iframe>
 <main>
   <h1>紹介動画づくり: ${cfg.name}</h1>
-  <p>アプリを裏で開いて1コマずつ描き、字幕と音を重ねて mp4（1920×1080・30コマ/秒・${cfg.dur}秒）にします。できたら下で再生でき、<code>promo/out/${cfg.out}.mp4</code> にも保存します（Git に入れません）。</p>
+  <p>アプリを裏で開いて1コマずつ描き、字幕と音を重ねて mp4（1920×1080・30コマ/秒・${cfg.dur}秒）にします。できたら下で再生でき、<code>_dev/promo/out/${cfg.out}.mp4</code> にも保存します（Git に入れません）。</p>
   <button id="go" disabled>準備中…</button> <a id="dl" hidden download="${cfg.out}.mp4">ダウンロード</a>
   <div id="log"></div>
   <canvas id="out" width="${PW}" height="${PH}"></canvas>
@@ -220,10 +220,10 @@ function promoStart(cfg) {
     const blob = new Blob([bytes], { type: 'video/mp4' }), url = URL.createObjectURL(blob);
     const vid = document.getElementById('vid'); vid.src = url; vid.hidden = false;
     const dl = document.getElementById('dl'); dl.href = url; dl.hidden = false;
-    // 開発用サーバー（.claude/serve.ps1）なら promo/out/ に保存する
+    // 開発用サーバー（.claude/serve.ps1）なら _dev/promo/out/ に保存する
     try {
       const r = await fetch(`out/${cfg.out}.mp4`, { method: 'PUT', body: blob });
-      log(r.ok ? `保存した: promo/out/${cfg.out}.mp4` : '保存できなかった（' + r.status + '）。ダウンロードから保存してください');
+      log(r.ok ? `保存した: _dev/promo/out/${cfg.out}.mp4` : '保存できなかった（' + r.status + '）。ダウンロードから保存してください');
     } catch (e) { log('保存できなかった。ダウンロードから保存してください'); }
     window.__promo = { done: true, mb: bytes.byteLength / 1e6 };
   }

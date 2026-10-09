@@ -7,7 +7,7 @@
 </head>
 <body>
 <!--
-  まなびラボのサムネイルを撮るためのページ（ローカル用）。tools/make-thumbs.ps1 がヘッドレスの Chrome で開いて撮る。
+  まなびラボのサムネイルを撮るためのページ（ローカル用）。_dev/tools/make-thumbs.ps1 がヘッドレスの Chrome で開いて撮る。
   ?app=<フォルダ名> のアプリを 1280×720 で開き、下の SETUP の手順（開始ボタンを押す・カメラを動かすなど）をしてから待つ。
 -->
 <iframe id="f"></iframe>
@@ -65,7 +65,7 @@ f.onload = async () => {
   else await wait(5000);
   document.title = 'ready';
 };
-f.src = '../' + app + '/';
+f.src = '../../' + app + '/';
 </script>
 </body>
 </html>

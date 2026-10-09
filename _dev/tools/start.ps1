@@ -3,7 +3,7 @@
 # Ports 8765/8766 can be reserved by Windows (excluded port ranges), so try a list and use the first that works.
 # Keep this file ASCII only: Windows PowerShell 5.1 reads BOM-less scripts in the ANSI code page.
 param([string]$App = '')
-$root = Split-Path -Parent $PSScriptRoot
+$root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)   # _dev/tools の2つ上
 $ports = 8765, 8766, 8767, 8780, 8790, 18765, 28765
 
 # a server of this project answers /index.html with the entrance page (it links to the manabi-lab repository)

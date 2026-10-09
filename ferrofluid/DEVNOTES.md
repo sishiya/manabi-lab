@@ -5,7 +5,7 @@
 ガラスの皿の磁性流体の下で磁石を動かし、トゲ（ローゼンスヴァイク不安定）がなぜ・どこに・どのくらいの高さで立つかを確かめる 3D アプリ。企画は `PLAN.md`。Three.js r128（cdnjs）＋ CPU の計算（FFT を使うスウィフト・ホーエンベルグ方程式）。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: v1b（`versions/v001b-archive`。中身は v1＝段階A と同じで、GA の1行を足した）。**隠しアーカイブ `archive.html` に掲載**（2026-10-07、サムネイル `thumbs/ferrofluid.jpg`）。入口「まなびラボ」には載せていない。Artifact にも公開していない。GitHub Pages には push で出る（push はユーザー）。
+- **いまの状態**: v1b（`versions/v001b-archive`。中身は v1＝段階A と同じで、GA の1行を足した）。**隠しアーカイブ `archive.html` に掲載**（2026-10-07、サムネイル `assets/thumbs/ferrofluid.jpg`）。入口「まなびラボ」には載せていない。Artifact にも公開していない。GitHub Pages には push で出る（push はユーザー）。
 - **次にやること**: ユーザーの感想しだい。入口に移すなら RULES 8.1（アーカイブのカードを外して `APPS` に足す・互換モードの確認。GA の1行とサムネイルはもうある）。次の段階は `PLAN.md` の段階B（2枚のガラスのあいだの迷路模様）・C（発明の話・無重力）。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。
 - **動かし方**: `.claude/launch.json` の空いているサーバー（`apps`〜`apps-6`。2026-10-07 に 8770 の `apps-6` を追加）で `http://localhost:<port>/ferrofluid/`。
@@ -79,7 +79,7 @@
 
 ## 公開
 - 隠しアーカイブ（GitHub Pages、push で公開）。Artifact にするなら `file_path` = `ferrofluid/index.html`、`files` = `css/style.css`、`js/` の5つ（phys・pattern・view・ui・main）。外のデータは読まない（three.js は cdnjs）。
-- 入口に載せるなら RULES 8.1（GA の1行・ファビコン・サムネイル `thumbs/ferrofluid.jpg`・`tools/thumb.html` の `SETUP` はあり。`APPS` と互換モードの確認が残り）。
+- 入口に載せるなら RULES 8.1（GA の1行・ファビコン・サムネイル `assets/thumbs/ferrofluid.jpg`・`_dev/tools/thumb.html` の `SETUP` はあり。`APPS` と互換モードの確認が残り）。
 
 ## 状態
 - 2026-10-07 v1（`versions/v001-first`）: 段階A。皿と磁石（小・大・コイル）、液3種、液の量3つ、ドラッグ・つつく、見つけてみよう6つ、コイルのヒステリシスのグラフ、解説と出どころ。

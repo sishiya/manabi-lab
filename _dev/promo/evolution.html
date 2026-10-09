@@ -65,7 +65,7 @@ function drawLabels(g, t, w) {
   g.globalAlpha = 1;
 }
 promoStart({
-  name: 'ヒトへの46億年', out: 'evolution', src: '../evolution/index.html', iw: 1920, ih: 1080, dur: 46, peek: 22,
+  name: 'ヒトへの46億年', out: 'evolution', src: '../../evolution/index.html', iw: 1920, ih: 1080, dur: 46, peek: 22,
   // 明るい和音の旅。衝突の光（またいでから 1.3 秒後）で「ドン」、そのあと哺乳類の時代の手前まで暗く
   music: { style: 'journey', root: 130.81, cues: [{ t: KPG_T + 1.3, type: 'boom' }], quiet: [[KPG_T + 1.3, 33]] },
   ready: w => w.__ev && w.setAbout && w.document.getElementById('gl'),

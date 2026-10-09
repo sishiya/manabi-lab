@@ -1,8 +1,8 @@
-﻿# まなびラボ（ルートの index.html）のサムネイルを作る → thumbs/<app>.jpg（640×360）
+﻿# まなびラボ（ルートの index.html）のサムネイルを作る → assets/thumbs/<app>.jpg（640×360）
 # 使い方（ローカルのサーバー apps を起動しておく。リポジトリのルートで）:
-#   powershell -NoProfile -ExecutionPolicy Bypass -File tools/make-thumbs.ps1                 # 全部
-#   powershell -NoProfile -ExecutionPolicy Bypass -File tools/make-thumbs.ps1 -Apps god-view  # 一部（カンマ区切り）
-# しくみ: ヘッドレスの Chrome を DevTools プロトコルで操作し、tools/thumb.html?app=<app> を開く。
+#   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/make-thumbs.ps1                 # 全部
+#   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/make-thumbs.ps1 -Apps god-view  # 一部（カンマ区切り）
+# しくみ: ヘッドレスの Chrome を DevTools プロトコルで操作し、_dev/tools/thumb.html?app=<app> を開く。
 # thumb.html が各アプリの準備（開始ボタン・カメラ移動など）を終えて document.title を 'ready' にしたら撮る。
 # （--screenshot だけだと読み込み直後に撮ってしまい、地図などの読み込みを待てないため）
 param(
@@ -14,8 +14,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $Apps = $Apps | ForEach-Object { $_ -split ',' } | Where-Object { $_ }
 Add-Type -AssemblyName System.Drawing
-$root = Split-Path -Parent $PSScriptRoot
-$out = Join-Path $root 'thumbs'
+$root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)   # _dev/tools の2つ上
+$out = Join-Path $root 'assets/thumbs'
 [IO.Directory]::CreateDirectory($out) | Out-Null
 $chrome = @("$env:ProgramFiles\Google\Chrome\Application\chrome.exe", "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $chrome) { throw 'Chrome か Edge が見つかりません' }
@@ -54,7 +54,7 @@ try {
   $ep.Param[0] = New-Object Drawing.Imaging.EncoderParameter([Drawing.Imaging.Encoder]::Quality, [long]82)
 
   foreach ($a in $Apps) {
-    $url = "http://localhost:$Port/tools/thumb.html?app=$a"
+    $url = "http://localhost:$Port/_dev/tools/thumb.html?app=$a"
     $tab = Invoke-RestMethod -Method Put "http://127.0.0.1:$DebugPort/json/new?$url"
     $ws = New-Object Net.WebSockets.ClientWebSocket
     $ws.ConnectAsync([Uri]$tab.webSocketDebuggerUrl, [Threading.CancellationToken]::None).Wait()
@@ -78,7 +78,7 @@ try {
     $g.DrawImage($src, 0, 0, 640, 360)
     $g.Dispose(); $src.Dispose()
     $dst.Save((Join-Path $out "$a.jpg"), $jpeg, $ep); $dst.Dispose()
-    Write-Host "作成: thumbs/$a.jpg（$([int]((Get-Date) - $t0).TotalSeconds) 秒）"
+    Write-Host "作成: assets/thumbs/$a.jpg（$([int]((Get-Date) - $t0).TotalSeconds) 秒）"
   }
 } finally {
   # 撮影用に起動した Chrome（専用のプロフィール）だけを終了する

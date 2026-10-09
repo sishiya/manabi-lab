@@ -5,7 +5,7 @@
 映画「インターステラー」のブラックホール（円盤が穴の上と下にも回り込んで見える姿）を、回るブラックホール（カー時空）のまわりの光の道すじを本当に計算して描き、なぜあの形に見えるのかを、クリックした点の光の道すじの図で確かめるアプリ。企画は `PLAN.md`。WebGL2 直書き（ライブラリなし）。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: v1b（`versions/v001b-entrance`。中身は v1＝段階A と同じで、GA の1行を足した）。**入口「まなびラボ」に掲載**（2026-10-08、分野「地球と宇宙」、サムネイル `thumbs/black-hole.jpg`）。公開は GitHub Pages（push はユーザー）。URL は `https://sishiya.github.io/manabi-lab/black-hole/`。Artifact には公開していない。
+- **いまの状態**: v1b（`versions/v001b-entrance`。中身は v1＝段階A と同じで、GA の1行を足した）。**入口「まなびラボ」に掲載**（2026-10-08、分野「地球と宇宙」、サムネイル `assets/thumbs/black-hole.jpg`）。公開は GitHub Pages（push はユーザー）。URL は `https://sishiya.github.io/manabi-lab/black-hole/`。Artifact には公開していない。
 - **次にやること**: ユーザーの感想しだい。次の段階は `PLAN.md` の段階B（円軌道を回るカメラ・落ちていくカメラ・探査機・ミラーの星）、C（EHT の写真と比べる）。中身を直したら入口の `APPS` の `updated` も同じコミットで書き換える（RULES 8.1）。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。
 - **動かし方**: `.claude/launch.json` の空いているサーバーで `http://localhost:<port>/black-hole/`（2026-10-08 は 8765 が Windows の予約で使えず、`apps-6`＝8770 を使った）。
@@ -78,7 +78,7 @@
    ```
 
 ## 公開
-- 入口「まなびラボ」（GitHub Pages、push で公開）。GA の1行（ファビコンの次の行）、サムネイル `thumbs/black-hole.jpg`（`tools/make-thumbs.ps1 -Apps black-hole -Port <port>`、`tools/thumb.html` の `SETUP` は開いたときのまま `renderNow`。ヘッドレスのソフトウェア描画でも 8 秒で撮れた）。
+- 入口「まなびラボ」（GitHub Pages、push で公開）。GA の1行（ファビコンの次の行）、サムネイル `assets/thumbs/black-hole.jpg`（`_dev/tools/make-thumbs.ps1 -Apps black-hole -Port <port>`、`_dev/tools/thumb.html` の `SETUP` は開いたときのまま `renderNow`。ヘッドレスのソフトウェア描画でも 8 秒で撮れた）。
 - 互換モードの確認（2026-10-08）: `document.write` で doctype なし（BackCompat）と doctype つき（CSS1Compat）を書き、1200×740・375×812 の両方で全 192 要素の位置と大きさが同じ、エラーなし。**`iframe.srcdoc` は doctype がなくても標準モードになるので比べられない**。
 - push のあと Pages の URL で「確認のしかた」を通す。
 - Artifact にするなら `file_path` = `black-hole/index.html`、`files` = `css/style.css`、`js/` の5つ（kerr・sky・render・ui・main）。外のデータは読まない（フォントだけ Google Fonts）。

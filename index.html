@@ -189,7 +189,7 @@ function card(a, showCat) {
   const badge = isFresh(a.created) ? '新作' : updatedLater && isFresh(a.updated) ? '更新' : ''; // 公開から2日は更新しても「新作」を優先
   const dateHtml = (label, s) => `${label} <time datetime="${s}" title="${s}"${isFresh(s) ? ' class="fresh"' : ''}>${relDate(s)}</time>`;
   return `<div class="card c-${a.cat}">
-    <div class="pic"><img class="thumb" src="thumbs/${a.id}.jpg" alt="" width="640" height="360" loading="lazy">${badge ? `<span class="badge${badge === '更新' ? ' upd' : ''}">${badge}</span>` : ''}</div>
+    <div class="pic"><img class="thumb" src="assets/thumbs/${a.id}.jpg" alt="" width="640" height="360" loading="lazy">${badge ? `<span class="badge${badge === '更新' ? ' upd' : ''}">${badge}</span>` : ''}</div>
     <div class="body">
       ${showCat ? `<span class="cat"><span class="dot"></span>${esc(c.name)}</span>` : ''}
       <a class="open" href="${a.id}/">${esc(a.title)}</a>

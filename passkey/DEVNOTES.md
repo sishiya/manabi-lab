@@ -5,8 +5,8 @@
 パスワードの代わりの「パスキー」が、なぜ盗まれにくいのかを、**絵の舞台**（スマホの金庫・門番＝ブラウザ・家＝サイト・わるもの）で試してくらべるアプリ。同じ実験を「🗝 合言葉（パスワード）」と「🔑 パスキー」でやって、表に ◯✕ がたまる。**鍵の作成・サイン・確かめ・ハッシュは本物**（Web Crypto API）。企画は `PLAN.md`。DOM と CSS、ライブラリなし。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: v3b（`versions/v003b-archive`。中身は v3 と同じで、GA の1行と表の行の高さの直し）。**隠しアーカイブ（`../archive.html`、保管庫）に掲載**（2026-10-08、サムネイル `thumbs/passkey.jpg`）。入口「まなびラボ」には載せていない。公開は GitHub Pages（push はユーザー）。URL は `https://sishiya.github.io/manabi-lab/passkey/`。Artifact には公開していない。
-- **次にやること**: ユーザーの感想しだい。入口に移すときは RULES 8.1（入口の `APPS` に足す。サムネイルは `tools/thumb.html` の `SETUP` に、にせものサイトで止めた場面がある）。段階B の案は `PLAN.md`。
+- **いまの状態**: v3b（`versions/v003b-archive`。中身は v3 と同じで、GA の1行と表の行の高さの直し）。**隠しアーカイブ（`../archive.html`、保管庫）に掲載**（2026-10-08、サムネイル `assets/thumbs/passkey.jpg`）。入口「まなびラボ」には載せていない。公開は GitHub Pages（push はユーザー）。URL は `https://sishiya.github.io/manabi-lab/passkey/`。Artifact には公開していない。
+- **次にやること**: ユーザーの感想しだい。入口に移すときは RULES 8.1（入口の `APPS` に足す。サムネイルは `_dev/tools/thumb.html` の `SETUP` に、にせものサイトで止めた場面がある）。段階B の案は `PLAN.md`。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。
 - **動かし方**: `.claude/launch.json` の空いているサーバーで `http://localhost:<port>/passkey/`（2026-10-08 は `apps-4`＝8768）。**https か localhost でないと動かない**（`crypto.subtle` が secure context だけ）。
 - **デバッグ用**: `window.__pk` — `W`（世界）、`ST`（表示）、`RES`（表の結果）、`EXP`（実験。戻り値 'done'・'safe'・'hit'）、`run(fn)`、`startExp(id, mode)`、`resetAll()`、`auto(true)`（待ち・アニメーションを全部すぐ通す）。例外は `window.__pkErr`。

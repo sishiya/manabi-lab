@@ -5,7 +5,7 @@
 宇宙（400km）からマリアナ海溝の底（10,920m）までを1本のものさしにして、モノ・生き物を運び、どうなるかを見るアプリ。企画は `PLAN.md`（`../IDEAS.md` のストック2から）。Canvas 2D、css/js に分割。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: 最新は v2c（`versions/v002c-sources`、「このアプリについて」に**おもな出どころ**を追加、気体の縮み方を NIST の値に。v2b は GA の1行だけ）。その前は v2（`versions/v002-real`、リアルな見た目と事実の見直し）。v1（`versions/v001-first`）が段階Aの最初の版。ユーザーの判断で入口「まなびラボ」から外し、**隠しアーカイブ `../archive.html`** に置いた（2026-10-06。サムネイル `thumbs/extreme.jpg`）。GitHub Pages には push で公開される（push はユーザー）。Artifact には公開していない。
+- **いまの状態**: 最新は v2c（`versions/v002c-sources`、「このアプリについて」に**おもな出どころ**を追加、気体の縮み方を NIST の値に。v2b は GA の1行だけ）。その前は v2（`versions/v002-real`、リアルな見た目と事実の見直し）。v1（`versions/v001-first`）が段階Aの最初の版。ユーザーの判断で入口「まなびラボ」から外し、**隠しアーカイブ `../archive.html`** に置いた（2026-10-06。サムネイル `assets/thumbs/extreme.jpg`）。GitHub Pages には push で公開される（push はユーザー）。Artifact には公開していない。
 - **次にやること**: ユーザーの感想しだい。次の段階は `PLAN.md` の段階B（時間をかけて置く: 減圧症・高所順応、砂漠と寒さ、宇宙に長くいるとき）。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。モノの中身（数値・文章）は `js/things.js`、絵は `js/draw.js` の `drawThing()` の表と各 `drawXxx()`。
 - **動かし方**: ユーザーはルートの `start.bat`。Claude は `.claude/launch.json` の `apps`〜`apps-4`（8765〜8768）のどれか空いているもので `http://localhost:<port>/extreme/`。

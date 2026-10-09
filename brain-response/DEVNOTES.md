@@ -5,8 +5,8 @@
 目・耳・皮膚に刺激があると、脳のどこが・何ミリ秒後に反応するかを、研究で測られた時刻と場所に合わせて再生するアプリ。ヒト・サル（マカク）・ラットを切り替えられる。病気・特性は、ヒトで違いが測られたものだけ。企画は `PLAN.md`（ユーザーの依頼と、確かめた出どころの一覧）。Canvas 2D、ライブラリなし。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: v1b（`versions/v001b-archive`。中身は v1＝段階A と同じで、GA の1行を足した）。**隠しアーカイブ（`../archive.html`）に掲載**（2026-10-08、サムネイル `thumbs/brain-response.jpg`）。入口「まなびラボ」には載せていない。公開は GitHub Pages（push はユーザー）。URL は `https://sishiya.github.io/manabi-lab/brain-response/`。Artifact には公開していない。
-- **次にやること**: ユーザーの感想しだい。段階B（におい・味、刺激の強さ、MMN）は `PLAN.md`。入口に移すときは RULES 8.1（入口の `APPS` に足す。サムネイルは `tools/thumb.html` の `SETUP` に顔の 185 ms がある）。
+- **いまの状態**: v1b（`versions/v001b-archive`。中身は v1＝段階A と同じで、GA の1行を足した）。**隠しアーカイブ（`../archive.html`）に掲載**（2026-10-08、サムネイル `assets/thumbs/brain-response.jpg`）。入口「まなびラボ」には載せていない。公開は GitHub Pages（push はユーザー）。URL は `https://sishiya.github.io/manabi-lab/brain-response/`。Artifact には公開していない。
+- **次にやること**: ユーザーの感想しだい。段階B（におい・味、刺激の強さ、MMN）は `PLAN.md`。入口に移すときは RULES 8.1（入口の `APPS` に足す。サムネイルは `_dev/tools/thumb.html` の `SETUP` に顔の 185 ms がある）。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。
 - **動かし方**: `.claude/launch.json` の空いているサーバーで `http://localhost:<port>/brain-response/`（2026-10-08 は `apps-5`＝8769 を使った）。
 - **デバッグ用**: `window.__br` — `S`（状態）、`fire(autoplay?)`（いまの種・刺激・場所・病気で作り直す）、`step(秒)`（Browser ペインが裏で rAF が止まっていても進める）、`seek(ms)`（その時刻の絵にする）、`set({sp, stim, cond})`、`render()`。例外は `window.__brErr`。全部の組み合わせを回す確かめ方は下の「確認のしかた」1。
@@ -77,7 +77,7 @@
 
 ## 状態
 - 2026-10-08 v1（`versions/v001-first`）: 段階A。ヒト・サル・ラット、刺激6つ（光・顔・音・触る・熱い痛み・カチッ2回）、根拠の印4つ、病気・特性5つ＋ラットの恐怖条件づけ、時間の帯、頭の表面の波、見つけてみよう9つ、解説・おもな出どころ。
-- 2026-10-08 v1b（`versions/v001b-archive`）: 隠しアーカイブに掲載。GA の1行、サムネイル（`tools/thumb.html` の `SETUP` に顔の 185 ms を足した）、`__br.seek` で再生ボタンの表示もそろえる。互換モードの確認（1200×740・375×812 で全 244 要素の位置と大きさが標準モードと同じ、エラーなし）。
+- 2026-10-08 v1b（`versions/v001b-archive`）: 隠しアーカイブに掲載。GA の1行、サムネイル（`_dev/tools/thumb.html` の `SETUP` に顔の 185 ms を足した）、`__br.seek` で再生ボタンの表示もそろえる。互換モードの確認（1200×740・375×812 で全 244 要素の位置と大きさが標準モードと同じ、エラーなし）。
 
 ## 残っている課題
 - サルの音・触覚の時刻、ラットの音・足の時刻は確かめていない（場所と順番だけ）。原典で確かめられたら `ev` を上げる。

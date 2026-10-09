@@ -5,7 +5,7 @@
 関節と筋肉でできた2次元の生きものを、遺伝的アルゴリズム（GA）で進化させるアプリ。企画は `PLAN.md`（`../IDEAS.md` のストック4から）。Canvas 2D、css/js に分割。外のデータは読まない。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: 最新は v3c（`versions/v003c-sources`、「このアプリについて」に**おもな出どころ**を追加。v3b は GA の1行だけ）。その前は v3（`versions/v003-collision`。体どうしの当たり判定）。段階A。2026-10-06 に入口「まなびラボ」の「いきもの」に載せた（サムネイル `thumbs/ga-creatures.jpg`、`tools/thumb.html` の `SETUP` は40世代進めて撮る）。GitHub Pages には push で公開される（push はユーザー）。Artifact には公開していない。
+- **いまの状態**: 最新は v3c（`versions/v003c-sources`、「このアプリについて」に**おもな出どころ**を追加。v3b は GA の1行だけ）。その前は v3（`versions/v003-collision`。体どうしの当たり判定）。段階A。2026-10-06 に入口「まなびラボ」の「いきもの」に載せた（サムネイル `assets/thumbs/ga-creatures.jpg`、`_dev/tools/thumb.html` の `SETUP` は40世代進めて撮る）。GitHub Pages には push で公開される（push はユーザー）。Artifact には公開していない。
 - **次にやること**: ユーザーの感想しだい。次の段階は `PLAN.md` の段階B（人が選んで育てる＝アストロノーカ風、系統樹、2つの環境の比較）。中身を変えたら入口 `../index.html` のカードの更新日も。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。
 - **動かし方**: ユーザーはルートの `start.bat`。Claude は `.claude/launch.json` の `apps`〜`apps-4`（8765〜8768）の空いているもので `http://localhost:<port>/ga-creatures/`。

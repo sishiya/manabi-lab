@@ -24,6 +24,7 @@
 - `passkey/` — 単独アプリ「パスキーのしくみ」（スマホの金庫・門番（ブラウザ）・家（サイト）・わるものの絵の舞台で、パスキーの登録とログインを本物の暗号の計算（ECDSA P-256・SHA-256・PBKDF2、Web Crypto API）で動かす。にせものサイト・台帳の流出・のぞき見・書きかえ・スマホをなくした・2つめのサイトを、合言葉（パスワード）とくらべて表に ◯✕。**本物のログイン画面に似せない・文字は少なく**（v2 でユーザーの感想から作り直し）。DOM と CSS、ライブラリなし）。css/js に分割。企画は `passkey/PLAN.md`、仕組み・確認手順は `passkey/DEVNOTES.md`。確認は `apps`〜`apps-6`（http://localhost:8768/passkey/ など。https か localhost でないと動かない）。保管庫（`archive.html`）に掲載。
 - `quantum/` — 別シリーズ「量子の実験室」（二重スリット・トンネル効果・偏光板・量子もつれ・不確定性原理）。1ファイル完結。仕組みと確認手順・公開 URL は `quantum/DEVNOTES.md`。
 - `archive.html` — 保管庫（入口の下の小さい注記からだけリンク。作りかけ・出来がいまひとつのアプリ。いまは urinary-dive・blood-dive・extreme・illusions・muscle-growth・ferrofluid・resistance・brain-response・passkey）。入口と保管庫の出し入れは `RULES.md` 8.1。
+- `_dev/` — アプリ以外の道具: `tools/`（公開前チェック `check-public.ps1`・サムネイル撮影・起動）、`promo/`（紹介動画づくり。`promo.js` が共通、`<app>.html` は台本だけ。できた動画は `promo/out/`、Git に入れない）、`sns-icon/`。入口が読む画像（サムネイル）は `assets/thumbs/`（公開するサイトの素材は `assets/`。紹介動画をサイトに載せるならここへ）。
 - `IDEAS.md` — まだ作っていないテーマのストックと、ユーザーの好みの傾向。新しいアプリを考えるときに読む。
 
 ## 進め方の約束（詳しくは `RULES.md`。どのアプリでも最初に読む）
@@ -35,5 +36,5 @@
 - 3アプリはエンジンを複製しているので、共通部分の不具合を直すときは他のアプリにも同じ問題がないか見る。
 - **新しいアプリはまず保管庫（`archive.html`）に置く**。入口（`index.html` の `APPS`）へ移すのはユーザーが指示したときだけ（`RULES.md` 8.1）。
 - 公開は既存の Artifact URL へ同じファイルを再公開する（外のデータを読む god-view だけは GitHub Pages。push で公開されるので push 前のチェックが公開前チェック）。URL はルートの `PUBLISH.local.md`（Git に入れない）。ない PC では Artifact の一覧でタイトルから探す（`RULES.md` 8章）。
-- **Artifact の公開と git の commit／push の前には毎回、公開前チェック（`RULES.md` 7章）を行う**: `tools/check-public.ps1` で個人情報・秘密情報を探し、目でも確かめ、結果をユーザーに伝える。見つかったら公開しない。このフォルダは Public リポジトリにしても困らない状態を保つ。
+- **Artifact の公開と git の commit／push の前には毎回、公開前チェック（`RULES.md` 7章）を行う**: `_dev/tools/check-public.ps1` で個人情報・秘密情報を探し、目でも確かめ、結果をユーザーに伝える。見つかったら公開しない。このフォルダは Public リポジトリにしても困らない状態を保つ。
 - 返事は日本語で。

@@ -30,7 +30,7 @@ function stateAt(t) {
   return s;
 }
 promoStart({
-  name: 'ブラックホールの見え方', out: 'black-hole', src: '../black-hole/index.html', iw: 2270, ih: 1080, dur: 40, music: { style: 'drone', root: 55 },
+  name: 'ブラックホールの見え方', out: 'black-hole', src: '../../black-hole/index.html', iw: 2270, ih: 1080, dur: 40, music: { style: 'drone', root: 55 },
   ready: w => w.__bh && w.__bh.R && w.__bh.R.levels && w.__bh.R.levels.low,
   setup: w => w.document.getElementById('view'),
   renderAt(t, w) {

@@ -5,7 +5,7 @@
 世界の錯視・錯聴を、見て → 確かめて（測る・条件を変える）→ しくみを知る、美術館の形のアプリ。企画は `PLAN.md`。Canvas 2D、外部ライブラリなし。css/js に分割。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: 最新は v001（`versions/v001-rooms-a`、段階A）。入口「まなびラボ」には載せず、**隠しアーカイブ `../archive.html`** に置いた（2026-10-06。サムネイル `thumbs/illusions.jpg`。push すると GitHub Pages で開ける）。Artifact には公開していない。
+- **いまの状態**: 最新は v001（`versions/v001-rooms-a`、段階A）。入口「まなびラボ」には載せず、**隠しアーカイブ `../archive.html`** に置いた（2026-10-06。サムネイル `assets/thumbs/illusions.jpg`。push すると GitHub Pages で開ける）。Artifact には公開していない。
 - **次にやること**: 段階B「音の部屋」。その前に、ノイズの中のことばの**元の声をどう作るか**をユーザーと決める（PLAN の「音声の出どころ」。この PC には Windows の日本語音声 Haruka・Ayumi・Ichiro・Sayaka がある。Python・Node・ffmpeg はない）。
 - **読む順**: このファイル → `js/core.js`（展示の形）→ 直したい部屋の `js/ex-*.js`。
 - **動かし方**: サーバー `apps`（http://localhost:8765/illusions/）。`#<展示id>` で直接その展示へ（例 `#checker`）。

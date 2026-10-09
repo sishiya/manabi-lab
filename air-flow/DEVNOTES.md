@@ -5,7 +5,7 @@
 家の中の空気がどこから入り、どう流れ、どこが古いまま残るかを、真上から見た 2LDK で見るアプリ。企画は `PLAN.md`（`../IDEAS.md` のストック1から）。「電波の見える部屋」（`wifi-wave/`）の姉妹だが、エンジンは別（Canvas 2D と CPU の計算。WebGL は使わない）。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: 最新は v2d（`versions/v002d-sources`、「このアプリについて」に**おもな出どころ**を追加。v2c は GA の1行だけ）。その前は v2b（`versions/v002b-start-cross`、開いたときの場面を「窓を2か所あける」に）。v2（`versions/v002-levels`）で強さの表示と給気口の開け具合。v1（`versions/v001-first`）が段階A。入口「まなびラボ」の「物理」に載せた（サムネイル `thumbs/air-flow.jpg`）。GitHub Pages には push で公開される（push はユーザー）。Artifact には公開していない。
+- **いまの状態**: 最新は v2d（`versions/v002d-sources`、「このアプリについて」に**おもな出どころ**を追加。v2c は GA の1行だけ）。その前は v2b（`versions/v002b-start-cross`、開いたときの場面を「窓を2か所あける」に）。v2（`versions/v002-levels`）で強さの表示と給気口の開け具合。v1（`versions/v001-first`）が段階A。入口「まなびラボ」の「物理」に載せた（サムネイル `assets/thumbs/air-flow.jpg`）。GitHub Pages には push で公開される（push はユーザー）。Artifact には公開していない。
 - **次にやること**: ユーザーの感想しだい。次の段階は `PLAN.md` の段階B（自分の家の間取りを描く・一戸建て・すき間の量を選ぶ・2つの場面を並べて比べる）。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。場面や間取りを変えるなら `js/plan.js` だけ。
 - **動かし方**: ユーザーはルートの `start.bat`（まなびラボから開く）。Claude は `.claude/launch.json` の `apps`（8765）・`apps-2`（8766）・`apps-3`（8767）のどれか空いているもので `http://localhost:<port>/air-flow/`。

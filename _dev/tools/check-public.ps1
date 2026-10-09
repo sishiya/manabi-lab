@@ -1,8 +1,8 @@
 ﻿# Pre-publish check: finds personal info and secrets before a git commit/push or an Artifact publish.
 # Usage:
-#   powershell -NoProfile -ExecutionPolicy Bypass -File tools/check-public.ps1              # whole folder
-#   powershell -NoProfile -ExecutionPolicy Bypass -File tools/check-public.ps1 -Path evolution
-#   powershell -NoProfile -ExecutionPolicy Bypass -File tools/check-public.ps1 -Staged      # files staged for commit (pre-commit hook)
+#   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/check-public.ps1              # whole folder
+#   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/check-public.ps1 -Path evolution
+#   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/check-public.ps1 -Staged      # files staged for commit (pre-commit hook)
 # Exit code 0 = nothing found, 1 = something to look at (the commit is stopped).
 # Your own words to block (name, e-mail, address...) go in .private-words.txt at the repo root,
 # one regex per line. That file is in .gitignore and is never committed.
@@ -10,13 +10,13 @@ param([string[]]$Path = @('.'), [switch]$Staged)
 
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
-$root = Split-Path -Parent $PSScriptRoot
+$root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)   # _dev/tools の2つ上
 Set-Location $root
 
 $textExt = '.html','.htm','.js','.mjs','.css','.md','.txt','.json','.ps1','.sh','.bat','.cmd','.yml','.yaml','.xml','.svg','.csv','.ini','.cfg','.toml',''
 $imageExt = '.jpg','.jpeg','.png','.gif','.webp'
 $badNames ='^\.env', '\.pem$', '\.key$', '\.pfx$', '\.p12$', '^id_(rsa|ed25519|ecdsa)', '^credentials', '\.kdbx$'
-$skipDirs = '\\\.git\\', '\\node_modules\\'
+$skipDirs = '\\\.git\\', '\\node_modules\\', '\\_dev\\promo\\out\\'   # 最後は紹介動画（Git に入れない）
 
 $rules = @(
   @{ n = 'メールアドレス';           r = '[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}' },
@@ -91,7 +91,7 @@ foreach ($f in $files) {
 if ($hits.Count) {
   Write-Host "公開前チェック: 要確認 $($hits.Count) 件（$($files.Count) ファイルを調べました）" -ForegroundColor Yellow
   $hits | ForEach-Object { Write-Host "  $_" }
-  Write-Host "問題がなければ内容を直すか、tools/check-public.ps1 の allow に加えてから、もう一度実行してください。"
+  Write-Host "問題がなければ内容を直すか、_dev/tools/check-public.ps1 の allow に加えてから、もう一度実行してください。"
   exit 1
 }
 Write-Host "公開前チェック: 問題なし（$($files.Count) ファイル）" -ForegroundColor Green
