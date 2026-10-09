@@ -180,6 +180,135 @@ function drawInset(g, src, x, y, w, h, title, f) {
   g.globalAlpha = 1;
 }
 
+// ---- しし屋の目印（毎回同じ絵と音）----
+// はじまり: drawIdentMini(g, t, a) … a 秒から IDENT_MINI 秒。左上に小さくアイコンと名前が出て、すぐはける（音なし。本編が主役）
+// 締め    : drawIdent(g, t, a)     … a 秒から IDENT_CLOSE 秒。本編が輪の中へ閉じ、アイコンが組み上がって名前と URL
+//           音は music: { stopAt: a（ここで BGM を消す）, cues: [{ t: a, type: 'jingle' }] }
+const IDENT_MINI = 3.2, IDENT_CLOSE = 5;
+const ID_C = { bg: '#FFF1DC', dot: '#F1D7B3', mane: '#D9682B', navy: '#2B3A55', cream: '#FFF6E8' };
+const backOut = x => { x = clamp(x, 0, 1); const c = 1.7; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+// アイコン（_dev/sns-icon/a-lion-glasses.svg と同じ形・色）。(x, y) は顔の中心、d は たてがみの外の直径
+// p = { mane: 秒, face: 0〜1, glasses: 0〜1 }。mane は組み立ての時刻（丸が1つずつ出る）。省くとできあがりの絵
+function drawShishiIcon(g, x, y, d, p = {}) {
+  const k = d / 352;   // SVG のたてがみの外の直径（(130+46)×2）
+  const mane = p.mane ?? 9, face = p.face ?? 1, gl = p.glasses ?? 1;
+  g.save(); g.shadowBlur = 0; g.translate(x, y); g.scale(k, k); g.translate(-200, -210);
+  const circ = (cx, cy, r, c) => { if (r <= 0) return; g.fillStyle = c; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill(); };
+  for (let i = 0; i < 12; i++) {
+    const s = backOut((mane - i * 0.033) / 0.2); if (s <= 0) continue;
+    const a = i * Math.PI / 6; circ(200 + 130 * Math.sin(a), 210 - 130 * Math.cos(a), 46 * s, '#D9682B');
+  }
+  const fc = backOut(face);
+  if (fc > 0) {
+    g.translate(200, 212); g.scale(fc, fc); g.translate(-200, -212);
+    circ(200, 210, 128, '#D9682B');
+    circ(122, 128, 26, '#F7C67E'); circ(278, 128, 26, '#F7C67E'); circ(122, 128, 13, '#E9A160'); circ(278, 128, 13, '#E9A160');
+    circ(200, 215, 102, '#F7C67E');
+    g.fillStyle = 'rgba(242,154,134,0.7)';
+    for (const cx of [140, 260]) { g.beginPath(); g.ellipse(cx, 240, 16, 10, 0, 0, Math.PI * 2); g.fill(); }
+    for (const cx of [163, 237]) { circ(cx, 196, 9, '#3A2416'); circ(cx + 3, 193, 3, '#fff'); }
+    g.fillStyle = '#FFF8EC'; g.beginPath(); g.ellipse(183, 258, 24, 19, 0, 0, Math.PI * 2); g.ellipse(217, 258, 24, 19, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#5A2E1A'; g.beginPath(); g.moveTo(186, 236); g.lineTo(214, 236); g.quadraticCurveTo(218, 236, 215, 241); g.lineTo(204, 253); g.quadraticCurveTo(200, 257, 196, 253); g.lineTo(185, 241); g.quadraticCurveTo(182, 236, 186, 236); g.fill();
+    g.strokeStyle = '#5A2E1A'; g.lineWidth = 4; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(200, 255); g.lineTo(200, 263); g.moveTo(188, 272); g.quadraticCurveTo(200, 282, 212, 272); g.stroke();
+  }
+  // メガネ（線で描かれていく）
+  const e = ease(gl);
+  if (e > 0 && fc > 0.5) {
+    g.strokeStyle = '#2B3A55'; g.lineWidth = 7; g.lineCap = 'round';
+    g.beginPath(); g.arc(163, 196, 29, Math.PI, Math.PI + e * Math.PI * 2); g.stroke();
+    g.beginPath(); g.arc(237, 196, 29, 0, -e * Math.PI * 2, true); g.stroke();
+    g.globalAlpha = clamp((e - 0.5) * 2, 0, 1);
+    g.beginPath(); g.moveTo(192, 192); g.quadraticCurveTo(200, 185, 208, 192); g.moveTo(134, 190); g.lineTo(108, 182); g.moveTo(266, 190); g.lineTo(292, 182); g.stroke();
+  }
+  g.restore();
+}
+// 名前「しし屋 まなびラボ」（x は左はし、y は「まなびラボ」の中心、h は「まなびラボ」の字の大きさ）
+function drawShishiName(g, x, y, h, f, align = 'left') {
+  if (f <= 0) return;
+  g.save(); g.shadowBlur = 0; g.globalAlpha = f; g.textBaseline = 'middle';
+  setFont(g, h * 0.3, true); const pw = g.measureText('しし屋').width + h * 0.34;
+  setFont(g, h, true); const tw = g.measureText('まなびラボ').width;
+  const px = align === 'center' ? x - pw / 2 : x, mx = align === 'center' ? x - tw / 2 : x;
+  g.fillStyle = ID_C.mane; g.beginPath(); g.roundRect(px, y - h * 0.98, pw, h * 0.44, h * 0.22); g.fill();
+  setFont(g, h * 0.3, true); g.fillStyle = ID_C.cream; g.textAlign = 'center'; g.fillText('しし屋', px + pw / 2, y - h * 0.76);
+  setFont(g, h, true); g.fillStyle = ID_C.navy; g.textAlign = 'left'; g.fillText('まなびラボ', mx, y + h * 0.04);
+  g.restore();
+}
+function drawIdentMini(g, t, a) {
+  const u = t - a; if (u < 0 || u > IDENT_MINI) return;
+  const out = ease((u - 2.6) / 0.5);   // はける
+  const d = 116, x = 40 + d / 2, y = 34 + d / 2;
+  // 名前は、白っぽい札の上に（どんな絵の上でも読める）
+  const fn = ease((u - 0.55) / 0.4) * (1 - ease((u - 2.3) / 0.35));
+  if (fn > 0) {
+    g.save(); g.globalAlpha = fn * 0.92; g.fillStyle = ID_C.bg;
+    const w = 300 * fn;
+    g.beginPath(); g.roundRect(x, y - 44, d / 2 + 20 + w, 88, 44); g.fill(); g.restore();
+    g.save(); g.beginPath(); g.rect(x + d / 2, 0, 20 + w, PH); g.clip();
+    drawShishiName(g, x + d / 2 + 20 - 40 * (1 - fn), y + 12, 50, fn);
+    g.restore();
+  }
+  if (out < 1) {
+    g.save(); g.globalAlpha = 1 - out;
+    g.translate(x, y); g.scale(1 - 0.4 * out, 1 - 0.4 * out); g.translate(-x, -y);
+    drawShishiIcon(g, x, y, d, { mane: u * 1.4, face: (u - 0.28) / 0.25, glasses: (u - 0.45) / 0.3 });
+    g.restore();
+  }
+}
+function drawIdent(g, t, a) {
+  const u = t - a; if (u < 0 || u > IDENT_CLOSE) return;
+  const K = Math.min(PW, PH) / 1080, V = isVert();
+  const off = 0.7, b = u - off;   // 本編が閉じてから組み立てる
+  const D = 460 * K, NH = 150 * K;
+  setFont(MEAS, NH, true); const TW = MEAS.measureText('まなびラボ').width, GAP = 40 * K;
+  const slide = ease((b - 0.95) / 0.45);
+  const cx0 = PW / 2, cy0 = V ? PH * 0.42 : PH / 2 - 20 * K;
+  const ecx = V ? cx0 : cx0 - (GAP + TW) / 2 * slide, ecy = V ? cy0 - 120 * K * slide : cy0;
+  const far = Math.hypot(PW / 2, PH / 2) + 20, hole = u < off ? Math.pow(1 - ease(u / off), 1.3) * far : 0;   // 画面のすみから閉じはじめる
+  g.save(); g.shadowBlur = 0; g.globalAlpha = 1;
+  g.beginPath(); g.rect(0, 0, PW, PH);
+  if (hole > 0) g.arc(ecx, ecy, hole, 0, Math.PI * 2, true);
+  g.clip('evenodd');
+  g.fillStyle = ID_C.bg; g.fillRect(0, 0, PW, PH);
+  g.fillStyle = ID_C.dot;
+  for (let y = 14; y < PH; y += 28) for (let x = 14; x < PW; x += 28) { g.beginPath(); g.arc(x, y, 2, 0, Math.PI * 2); g.fill(); }
+  // アイコン（たてがみ → 顔 → メガネ）。音の「ぽろろろ」でたてがみ、「んっ」で顔
+  const sway = b > 1.5 ? 0.03 * Math.sin((b - 1.5) * 1.4) : 0;
+  g.translate(ecx, ecy); g.rotate(sway); g.translate(-ecx, -ecy);
+  drawShishiIcon(g, ecx, ecy, D, { mane: b, face: (b - 0.4) / 0.28, glasses: (b - 0.62) / 0.35 });
+  g.setTransform(RES, 0, 0, RES, 0, 0);
+  const ft = ease((b - 1.05) / 0.4);
+  if (V) drawShishiName(g, cx0, cy0 + 300 * K + 20 * K * (1 - ft), NH, ft, 'center');
+  else drawShishiName(g, ecx + D / 2 + GAP + 30 * K * (1 - ft), cy0 + 20 * K, NH, ft);
+  const fu = ease((b - 1.6) / 0.4);
+  if (fu > 0) {
+    g.globalAlpha = fu; setFont(g, 34 * K, false); g.fillStyle = '#7A5A3A'; g.textBaseline = 'middle';
+    g.textAlign = V ? 'center' : 'left';
+    g.fillText('sishiya.github.io/manabi-lab', V ? cx0 : ecx + D / 2 + GAP + 4 * K, V ? cy0 + 410 * K : cy0 + 130 * K);
+  }
+  g.restore();
+}
+// 音の目印「ぽろろろんっ」: ハープ／カリンバのような音で、ド・ミ・ソ・ド と速く上がり（ぽろろろ）、ソ＋ドで止まる（んっ）
+// 心地よさのために: 音の高さは 260〜800 Hz（高いほど耳ざわりになる）、倍音は短く（長い倍音は耳ざわり）、
+// 2.5 kHz より上は切る（2〜4 kHz は耳がいちばん敏感で、耳ざわりのもと）。立ち上がりは 8 ミリ秒でやわらかく
+function identJingle(ctx, out, t0) {
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2500; lp.Q.value = 0.5; lp.connect(out);
+  const C4 = 261.63, hz = s => C4 * Math.pow(2, s / 12);
+  const pluck = (t, s, v, len, pan) => {
+    const p = ctx.createStereoPanner(); p.pan.value = pan; p.connect(lp);
+    for (const [m, gv, dl] of [[1, 1, len], [2, 0.35, 0.12], [3, 0.12, 0.06]]) {   // 倍音ほど早く消える
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = hz(s) * m;
+      const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v * gv, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0005, t + dl);
+      o.connect(g); g.connect(p); o.start(t); o.stop(t + dl + 0.05);
+    }
+  };
+  const s0 = t0 + 0.7;   // 本編が閉じてから
+  [[0, 0], [4, 0.07], [7, 0.14], [12, 0.21]].forEach(([s, dt], i) => pluck(s0 + 0.05 + dt, s, 0.32, 0.9, -0.3 + i * 0.2));   // ぽろろろ
+  pluck(s0 + 0.42, 7, 0.36, 1.8, -0.1); pluck(s0 + 0.43, 12, 0.3, 1.8, 0.15); pluck(s0 + 0.44, -12, 0.25, 1.6, 0);          // んっ
+}
+
 // ---- 音（ブラウザで合成。著作権の心配なし）----
 // music = { style, root, cues, quiet }
 //   style 'drone'   : 低い持続音（暗い・宇宙。root は低い音の Hz、既定 55）
@@ -191,8 +320,9 @@ async function makeAudio(dur, music = {}) {
   const master = ctx.createGain(); master.connect(ctx.destination);
   master.gain.setValueAtTime(0, 0);
   master.gain.linearRampToValueAtTime(0.22, 3);
-  master.gain.setValueAtTime(0.22, dur - 4);
-  master.gain.linearRampToValueAtTime(0, dur - 0.2);
+  const stop = music.stopAt ?? dur;   // stopAt: 本編の終わり。ここで BGM を消す（締めの画面は目印の音だけ）
+  master.gain.setValueAtTime(0.22, Math.max(3, stop - (music.stopAt ? 1 : 4)));
+  master.gain.linearRampToValueAtTime(0, music.stopAt ? stop + 0.3 : dur - 0.2);
   // 残響（減衰する雑音をたたみこむ）
   const ir = ctx.createBuffer(2, SR * 2.5, SR);
   for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3); }
@@ -203,7 +333,14 @@ async function makeAudio(dur, music = {}) {
   for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
   const quiet = music.quiet || [], isQuiet = t => quiet.some(([a, b]) => t >= a && t < b);
 
-  if ((music.style || 'drone') === 'drone') {
+  // しし屋の音の目印（cues の type: 'jingle'）。BGM の音量の山とは別に鳴らす（下の identJingle）
+  const jbus = ctx.createGain(); jbus.gain.value = 0.35; jbus.connect(ctx.destination);
+  const jverb = ctx.createConvolver(); jverb.buffer = ir; const jwet = ctx.createGain(); jwet.gain.value = 0.35;   // BGM を消しても響きは残す
+  jbus.connect(jverb); jverb.connect(jwet); jwet.connect(ctx.destination);
+  for (const c of music.cues || []) if (c.type === 'jingle') identJingle(ctx, jbus, c.t, c.kind);
+  if (music.style === 'none') {
+    // BGM なし（目印の音だけ）
+  } else if ((music.style || 'drone') === 'drone') {
     const root = music.root || 55;
     const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.Q.value = 0.7; lp.connect(bus);
     const lfo = ctx.createOscillator(); lfo.frequency.value = 0.05;

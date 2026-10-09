@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script>
+'use strict';
+// 保留（2026-10-10）: ライオンの絵とふきだしはこのページの中だけに置く
+// ---- 案内役のライオン（しし屋のアイコン _dev/sns-icon/a-lion-glasses.svg を描きなおしたもの）----
+// (x, y) が顔の中心、s は顔の直径（px）。o = { talk: 0〜1 口の開き, blink: 0〜1, tilt: ラジアン, alpha }
+function drawLion(g, x, y, s, o = {}) {
+  const k = s / 256;   // SVG の顔（半径 128）を基準に
+  g.save(); g.globalAlpha = o.alpha ?? 1; g.shadowBlur = 0;
+  g.translate(x, y); g.rotate(o.tilt || 0); g.scale(k, k); g.translate(-200, -210);
+  const circ = (cx, cy, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill(); };
+  g.shadowColor = 'rgba(0,0,0,0.35)'; g.shadowBlur = 18 * RES; g.shadowOffsetY = 4;
+  for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; circ(200 + 130 * Math.sin(a), 210 - 130 * Math.cos(a), 46, '#D9682B'); }
+  g.shadowBlur = 0; g.shadowOffsetY = 0;
+  circ(200, 210, 128, '#D9682B');
+  circ(122, 128, 26, '#F7C67E'); circ(278, 128, 26, '#F7C67E'); circ(122, 128, 13, '#E9A160'); circ(278, 128, 13, '#E9A160');
+  circ(200, 215, 102, '#F7C67E');
+  g.globalAlpha *= 0.7; g.fillStyle = '#F29A86';
+  for (const cx of [140, 260]) { g.beginPath(); g.ellipse(cx, 240, 16, 10, 0, 0, Math.PI * 2); g.fill(); }
+  g.globalAlpha /= 0.7;
+  // 目（まばたきは縦につぶす）
+  const bl = 1 - 0.9 * (o.blink || 0);
+  for (const cx of [163, 237]) {
+    g.fillStyle = '#3A2416'; g.beginPath(); g.ellipse(cx, 196, 9, 9 * bl, 0, 0, Math.PI * 2); g.fill();
+    if (bl > 0.5) circ(cx + 3, 193, 3, '#fff');
+  }
+  g.strokeStyle = '#2B3A55'; g.lineWidth = 7; g.lineCap = 'round';
+  for (const cx of [163, 237]) { g.beginPath(); g.arc(cx, 196, 29, 0, Math.PI * 2); g.stroke(); }
+  g.beginPath(); g.moveTo(192, 192); g.quadraticCurveTo(200, 185, 208, 192); g.moveTo(134, 190); g.lineTo(108, 182); g.moveTo(266, 190); g.lineTo(292, 182); g.stroke();
+  // 口（話すと開く）
+  const m = o.talk || 0;
+  if (m > 0.05) { g.fillStyle = '#7A2E22'; g.beginPath(); g.ellipse(200, 276 + 4 * m, 11, 3 + 13 * m, 0, 0, Math.PI * 2); g.fill(); }
+  g.fillStyle = '#FFF8EC'; g.beginPath(); g.ellipse(183, 258, 24, 19, 0, 0, Math.PI * 2); g.ellipse(217, 258, 24, 19, 0, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#5A2E1A'; g.beginPath(); g.moveTo(186, 236); g.lineTo(214, 236); g.quadraticCurveTo(218, 236, 215, 241); g.lineTo(204, 253); g.quadraticCurveTo(200, 257, 196, 253); g.lineTo(185, 241); g.quadraticCurveTo(182, 236, 186, 236); g.fill();
+  if (m <= 0.05) { g.strokeStyle = '#5A2E1A'; g.lineWidth = 4; g.beginPath(); g.moveTo(200, 255); g.lineTo(200, 263); g.moveTo(188, 272); g.quadraticCurveTo(200, 282, 212, 272); g.stroke(); }
+  g.restore();
+}
+// ふきだし。(x, y) は左上、しっぽは左（tx, ty へ向ける）。shown = 0〜1 で文字を1字ずつ出す
+function drawBubble(g, x, y, lines, shown, f, tx, ty) {
+  if (f <= 0) return;
+  g.save(); g.globalAlpha = f; g.shadowBlur = 0;
+  setFont(MEAS, 44, true);
+  const w = Math.max(...lines.map(s => MEAS.measureText(s).width)) + 64, h = 40 + lines.length * 60;
+  g.shadowColor = 'rgba(0,0,0,0.35)'; g.shadowBlur = 16 * RES; g.shadowOffsetY = 4;
+  g.fillStyle = '#FFF6E8';
+  g.beginPath(); g.roundRect(x, y, w, h, 28); g.fill();
+  g.beginPath(); g.moveTo(x + 4, y + h * 0.35); g.lineTo(tx, ty); g.lineTo(x + 4, y + h * 0.65); g.fill();
+  g.shadowBlur = 0; g.shadowOffsetY = 0;
+  g.strokeStyle = '#D9682B'; g.lineWidth = 4; g.beginPath(); g.roundRect(x, y, w, h, 28); g.stroke();
+  // 文字（1字ずつ）
+  const total = lines.join('').length; let left = Math.floor(total * clamp(shown, 0, 1));
+  g.textAlign = 'left'; g.textBaseline = 'middle'; setFont(g, 44, true); g.fillStyle = '#2B3A55';
+  lines.forEach((s, i) => { const n = Math.min(s.length, left); left -= n; g.fillText(s.slice(0, n), x + 32, y + 50 + i * 60); });
+  g.restore();
+}
+
+// 試し: 案内役のライオン（しし屋のアイコン）が、ふきだしで説明する（12秒、横長）。アプリはブラックホールの見え方
+const deg = Math.PI / 180, DUR = 12;
+// ライオンのせりふ: [出す, 消す, 行]。字は 1 秒に 9 字ずつ出て、出ている間は口が動く
+const TALK = [
+  [0.8, 5.6, ['やあ、しし屋のライオンだよ。', 'これはブラックホールのまわりの光を、', '1ピクセルずつ計算した絵なんだ。']],
+  [6.0, 11.2, ['上の光の帯は、円盤の「向こう側」。', '光が曲がって、こっちに届いているよ。']],
+];
+const CPS = 9;
+const LX = 150, LY = 150, LS = 210;   // ライオンの位置（左上）と顔の大きさ
+function lionState(t) {
+  const pop = clamp(t / 0.5, 0, 1), bounce = pop < 1 ? Math.sin(pop * Math.PI) * 0.15 : 0;
+  const out = clamp((t - 11.4) / 0.4, 0, 1);
+  let talk = 0;
+  for (const [a, b, lines] of TALK) {
+    const n = lines.join('').length, end = a + n / CPS;
+    if (t >= a && t < end) talk = 0.5 + 0.5 * Math.sin((t - a) * 22);
+  }
+  const bl = t % 3.2, blink = bl < 0.12 ? Math.sin(bl / 0.12 * Math.PI) : 0;
+  return { scale: (ease(pop) + bounce) * (1 - out), talk, blink, tilt: 0.05 * Math.sin(t * 1.6), bob: 6 * Math.sin(t * 2.4) };
+}
+promoStart({
+  name: 'ライオンの案内（試し）', out: 'lion-test', src: '../../black-hole/index.html', iw: 2073, ih: 1080, dur: DUR, peek: 4,
+  music: { style: 'drone', root: 55 },
+  ready: w => w.__bh && w.__bh.R && w.__bh.R.gl && (w.__bh.R.levels.low || (w.__bh.renderNow(), w.__bh.R.levels.low)),
+  setup: w => w.document.getElementById('view'),
+  renderAt(t, w) {
+    const BH = w.__bh, S = BH.S;
+    const st = { a: 0.6, r: 28, th: 85 * deg, ph: -0.012 * t, real: false, disk: true, sky: 'stars' };
+    const geo = st.r !== S.r || st.th !== S.th || st.a !== S.a || st.disk !== S.disk || !BH.R.levels.high.ready;
+    Object.assign(S, st, { paused: true, pick: null });
+    if (geo) S.geoDirty = true;
+    BH.renderNow(t * 8 + 40);
+  },
+  overlay(g, t) {
+    const L = lionState(t);
+    if (L.scale > 0.01) drawLion(g, LX, LY + L.bob, LS * L.scale, { talk: L.talk, blink: L.blink, tilt: L.tilt });
+    for (const [a, b, lines] of TALK) {
+      const f = fade(t, a, b, 0.25);
+      drawBubble(g, LX + LS * 0.62, 60, lines, (t - a) * CPS / lines.join('').length, f, LX + LS * 0.45, LY + 10);
+    }
+  },
+  errors: w => w.__bh.err,
+  hires(w, W, H) { w.resizeRender(W, H, Math.min(0.5, Math.sqrt(1.6e5 / (W * H))), 1); w.__bh.S.geoDirty = true; },
+});
+</script>
+</body>
+</html>

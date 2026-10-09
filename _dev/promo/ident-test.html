@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script>
+'use strict';
+// 試し: しし屋の目印（最初は左上に小さく・最後は締めの画面）。間はブラックホールの見え方を少しだけ。?short で縦長
+const deg = Math.PI / 180, DUR = 12, END = DUR - IDENT_CLOSE;
+promoStart({
+  name: 'しし屋の目印（試し）', out: 'ident-test', src: '../../black-hole/index.html', iw: 2073, ih: 1080, dur: DUR, peek: 1.2,
+  music: { style: 'drone', root: 55, stopAt: END, cues: [{ t: END, type: 'jingle' }] },
+  ready: w => w.__bh && w.__bh.R && w.__bh.R.gl && (w.__bh.R.levels.low || (w.__bh.renderNow(), w.__bh.R.levels.low)),
+  setup: w => w.document.getElementById('view'),
+  renderAt(t, w) {
+    const BH = w.__bh, S = BH.S, K = isVert() ? 1.7 : 1;
+    const st = { a: 0.6, r: 28 * K, th: 85 * deg, ph: -0.012 * t, real: false, disk: true, sky: 'stars' };
+    const geo = st.r !== S.r || st.th !== S.th || st.a !== S.a || st.disk !== S.disk || !BH.R.levels.high.ready;
+    Object.assign(S, st, { paused: true, pick: null });
+    if (geo) S.geoDirty = true;
+    BH.renderNow(t * 8 + 40);
+  },
+  overlay(g, t) {
+    drawCaps(g, t, [{ a: 0.5, b: END, main: '（ここに動画の本編）', sub: 'ブラックホールの見え方' }], !isVert());
+    drawIdentMini(g, t, 0.3);
+    drawIdent(g, t, END);
+  },
+  errors: w => w.__bh.err,
+  short: { iw: 1430, ih: 1920 },
+  hires(w, W, H) { w.resizeRender(W, H, Math.min(0.5, Math.sqrt(1.6e5 / (W * H))), 1); w.__bh.S.geoDirty = true; },
+});
+</script>
+</body>
+</html>
