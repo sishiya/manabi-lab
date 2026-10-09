@@ -57,7 +57,7 @@ promoStart({
     drawCaps(g, t, CAPS);
     drawEnd(g, t, 35.2, 'ブラックホールの見え方', 'ブラウザで動かせます。クリックした点の光の道すじも見られます',
       '計算の式: James, von Tunzelmann, Franklin, Thorne (2015) Classical and Quantum Gravity 32, 065001');
-    drawIdentMini(g, t, 0.3, isVert() ? 1.4 : 1);   // しし屋の目印: はじまりは左上に（縦長は大きめ）、締めは 40 秒から
+    drawIdentMini(g, t, 0.3);   // しし屋の目印: はじまりは左上に小さく（主役は題名）、締めは 40 秒から
     drawIdent(g, t, 40);
   },
   errors: w => w.__bh.err,

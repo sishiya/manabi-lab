@@ -235,7 +235,7 @@ function drawShishiName(g, x, y, h, f, align = 'left') {
   setFont(g, h, true); g.fillStyle = ID_C.navy; g.textAlign = 'left'; g.fillText('まなびラボ', mx, y + h * 0.04);
   g.restore();
 }
-function drawIdentMini(g, t, a, s = 1) {   // s: 大きさ（ショートは縦長で小さく見えるので 1.4）
+function drawIdentMini(g, t, a, s = 1) {   // s: 大きさ（ふだんは 1。主役は題名なので、隅に色が残る程度に）
   const u = t - a; if (u < 0 || u > IDENT_MINI) return;
   g.save(); g.scale(s, s);
   const out = ease((u - 2.6) / 0.5);   // はける

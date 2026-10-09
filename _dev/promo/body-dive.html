@@ -95,7 +95,7 @@ promoStart({
     if (t > AUTO_AT + 0.3 && t < 55) drawCaps(g, t, [{ a: placeAt, b: 55, main: DESC[place] || '' }]);
     drawEnd(g, t, 55.2, '体内ダイブ', '口から肛門まで、消化管の中を3Dで進めます。食べ物も選べます',
       'おもな出どころ: Betts ほか（2022）OpenStax『Anatomy and Physiology 2e』ほか（アプリのスタート画面）');
-    drawIdentMini(g, t, 0.3, isVert() ? 1.4 : 1);   // しし屋の目印: はじまりは左上に（縦長は大きめ）、締めは 59 秒から
+    drawIdentMini(g, t, 0.3);   // しし屋の目印: はじまりは左上に小さく（主役は題名）、締めは 59 秒から
     drawIdent(g, t, 59);
   },
   subs: () => [TITLE_SUB, ...SUBS, END_SUB], subsAfterRecord: true,
