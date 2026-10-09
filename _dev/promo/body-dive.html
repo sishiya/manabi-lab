@@ -56,12 +56,12 @@ function addSub(t, n) {
 }
 let place = '口腔', placeEn = 'Cavitas oris', placeAt = 0, frameN = 0, autoOn = false;
 promoStart({
-  name: '体内ダイブ', out: 'body-dive', src: '../../body-dive/index.html', iw: 2560, ih: 1440, dur: 59, peek: 3,
+  name: '体内ダイブ', out: 'body-dive', src: '../../body-dive/index.html', iw: 2560, ih: 1440, dur: 59 + IDENT_CLOSE, peek: 3,
   // アプリは devicePixelRatio を 1.5 までにしているので、iframe を 2560×1440 にして 3840×2160 で描かせる
   inject: { dpr: 2, raf: true },
   short: { iw: 1440, ih: 2560 },
   // 体の中の旅: 少し低めの明るい和音
-  music: { style: 'journey', root: 110 },
+  music: { style: 'journey', root: 110, stopAt: 59, cues: [{ t: 59, type: 'jingle' }] },   // 59 秒で本編を終え、しし屋の締め
   ready: w => w.__bd && w.__rafQ && w.__rafQ.length,
   setup(w) {
     appStep(w, 2);
@@ -95,6 +95,7 @@ promoStart({
     if (t > AUTO_AT + 0.3 && t < 55) drawCaps(g, t, [{ a: placeAt, b: 55, main: DESC[place] || '' }]);
     drawEnd(g, t, 55.2, '体内ダイブ', '口から肛門まで、消化管の中を3Dで進めます。食べ物も選べます',
       'おもな出どころ: Betts ほか（2022）OpenStax『Anatomy and Physiology 2e』ほか（アプリのスタート画面）');
+    drawIdent(g, t, 59);   // しし屋の締め
   },
   subs: () => [TITLE_SUB, ...SUBS, END_SUB], subsAfterRecord: true,
   errors: w => [w.__bdErr].filter(Boolean),

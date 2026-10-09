@@ -14,7 +14,7 @@
 // 台本: ヒトへの46億年 ― 使い方と見どころ（横長の説明動画、165秒）
 // 日本語の字幕は画面の上に焼きこみ、下は YouTube の字幕（CC。英語）にあける。英語は SRT にして上げる
 // アプリの絵は画面いっぱい。ボタンは「札」（drawChip）で、アプリと同じ言葉・同じ側（下のボタンの列の左・右）に描く
-const DUR = 165;
+const END = 165, DUR = END + IDENT_CLOSE;   // END: 本編の終わり（このあと しし屋の締め）
 
 // ---- 状態の移り変わり: [時刻, 変える値, かける秒（なめらかに）] ----
 // age は何年前（未来は負）。アプリのタイムラインの位置（A2u）で動かすので、出来事ごとの目盛りと同じ速さになる
@@ -180,7 +180,7 @@ function makeCaps(w) {
 }
 const SUBS_EXTRA = [
   { a: 0.6, b: 6.6, ja: 'ヒトへの46億年\n使い方と見どころ', en: '4.6 Billion Years to Us\nHow to use the app and what to look for' },
-  { a: 158.6, b: DUR, ja: 'ヒトへの46億年\nブラウザで動かせます（パソコン・スマホ）', en: '4.6 Billion Years to Us\nRuns in your browser (PC or phone). The on-screen text is in Japanese for now' },
+  { a: 158.6, b: END, ja: 'ヒトへの46億年\nブラウザで動かせます（パソコン・スマホ）', en: '4.6 Billion Years to Us\nRuns in your browser (PC or phone). The on-screen text is in Japanese for now' },
 ];
 
 // アプリの名前札（HTML）を読んで、同じ場所に描く。重なるもの・字幕や年代・札にかかるものは省く
@@ -218,7 +218,7 @@ function drawNote(g, x, y, w, title, body, f, color) {
 }
 
 let cur = {}, kpgT = null, lastA = Infinity;
-const MUSIC = { style: 'journey', root: 130.81, cues: [], quiet: [] };   // 明るい和音の旅。衝突の「ドン」は setup で足す
+const MUSIC = { style: 'journey', root: 130.81, stopAt: END, cues: [], quiet: [] };   // 明るい和音の旅。衝突の「ドン」は setup で足す
 promoStart({
   name: 'ヒトへの46億年（使い方）', out: 'evolution-guide', src: '../../evolution/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 54,
   music: MUSIC,
@@ -232,7 +232,7 @@ promoStart({
     makeCaps(w);
     // 衝突の時刻（6600万年前をまたぐ時刻）。光（またいでから 1.3 秒後）で「ドン」、そのあと哺乳類の景色まで暗く
     let kt = 72; for (let t = 71; t < 80; t += 1 / FPS) if (stateAt(t).age <= 6.6e7) { kt = t; break; }
-    MUSIC.cues = [{ t: kt + 1.3, type: 'boom' }]; MUSIC.quiet = [[kt + 1.3, 82.5]];
+    MUSIC.cues = [{ t: kt + 1.3, type: 'boom' }, { t: END, type: 'jingle' }]; MUSIC.quiet = [[kt + 1.3, 82.5]];
     return w.document.getElementById('gl');
   },
   subs: () => [SUBS_EXTRA[0], ...capSubs(CAPS), SUBS_EXTRA[1]],
@@ -297,6 +297,8 @@ promoStart({
     if (fc > 0) { prep(g); g.globalAlpha = fc; g.textAlign = 'right'; txt(g, 'CC: English subtitles', PW - 50, PH - 40, 30, '#ddd', true); g.globalAlpha = 1; g.shadowBlur = 0; }
     drawEnd(g, t, 158.6, 'ヒトへの46億年', 'ブラウザで動かせます（パソコン・スマホ）',
       '年代: 国際年代層序表（2023年版）。未来の気候: IPCC 第6次評価報告書 ほか（アプリの「このアプリについて」に一覧）');
+    drawIdentMini(g, t, 0.3);   // しし屋の目印: はじまりは左上に小さく、締めは END から
+    drawIdent(g, t, END);
   },
   errors: w => w.__evErr,
   // 4K で描かせる（renderer は terrain.js の const なので eval で触る）

@@ -14,7 +14,7 @@
 // 台本: ブラックホールの見え方 ― 使い方と見どころ（横長の説明動画、150秒）
 // 日本語の字幕は画面の上に焼きこみ、下は YouTube の字幕（CC。英語）にあける。英語は SRT にして上げる
 // アプリの絵は画面いっぱい。ボタンは「札」（drawChip）で、アプリと同じ言葉・同じ側（見る位置は下、ほかは右のパネル）に描く
-const deg = Math.PI / 180, DUR = 150;
+const deg = Math.PI / 180, END = 150, DUR = END + IDENT_CLOSE;   // END: 本編の終わり（このあと しし屋の締め）
 // アプリの画面の点（-1〜1）→ 動画の座標。iframe の大きさを、絵の枠がちょうど 16:9 になるようにしてある
 const SX = nx => (nx * 0.5 + 0.5) * PW, SY = ny => (0.5 - ny * 0.5) * PH;
 
@@ -136,13 +136,13 @@ function makeCaps(BH) {
 }
 const SUBS_EXTRA = [
   { a: 0.6, b: 6.6, ja: 'ブラックホールの見え方\n使い方と見どころ', en: 'How a Black Hole Looks\nHow to use the app and what to look for' },
-  { a: 142.2, b: DUR, ja: 'ブラックホールの見え方\nブラウザで動かせます（パソコン・スマホ）', en: 'How a Black Hole Looks\nRuns in your browser (PC or phone). The on-screen text is in Japanese for now' },
+  { a: 142.2, b: END, ja: 'ブラックホールの見え方\nブラウザで動かせます（パソコン・スマホ）', en: 'How a Black Hole Looks\nRuns in your browser (PC or phone). The on-screen text is in Japanese for now' },
 ];
 
 let lastPick = null;
 promoStart({
   name: 'ブラックホールの見え方（使い方）', out: 'black-hole-guide', src: '../../black-hole/index.html', iw: 2073, ih: 1080, dur: DUR, peek: 40,
-  music: { style: 'drone', root: 55 },
+  music: { style: 'drone', root: 55, stopAt: END, cues: [{ t: END, type: 'jingle' }] },
   ready: w => w.__bh && w.__bh.R && w.__bh.R.gl && (w.__bh.R.levels.low || (w.__bh.renderNow(), w.__bh.R.levels.low)),
   setup(w) { makeCaps(w.__bh); return w.document.getElementById('view'); },
   subs: () => [SUBS_EXTRA[0], ...capSubs(CAPS), SUBS_EXTRA[1]],
@@ -187,6 +187,8 @@ promoStart({
     if (fc > 0) { prep(g); g.globalAlpha = fc; g.textAlign = 'right'; txt(g, 'CC: English subtitles', PW - 50, PH - 40, 30, '#ddd', true); g.globalAlpha = 1; g.shadowBlur = 0; }
     drawEnd(g, t, 142.2, 'ブラックホールの見え方', 'ブラウザで動かせます（パソコン・スマホ）',
       '計算の式: James, von Tunzelmann, Franklin, Thorne (2015) Classical and Quantum Gravity 32, 065001');
+    drawIdentMini(g, t, 0.3);   // しし屋の目印: はじまりは左上に小さく、締めは END から
+    drawIdent(g, t, END);
   },
   errors: w => w.__bh.err,
   hires(w, W, H) { w.resizeRender(W, H, Math.min(0.5, Math.sqrt(1.6e5 / (W * H))), 1); w.__bh.S.geoDirty = true; },

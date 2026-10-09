@@ -74,9 +74,9 @@ function drawLabels(g, t, w) {
   g.globalAlpha = 1;
 }
 promoStart({
-  name: 'ヒトへの46億年', out: 'evolution', src: '../../evolution/index.html', iw: 1920, ih: 1080, dur: 46, peek: 22, subs: SUBS,
+  name: 'ヒトへの46億年', out: 'evolution', src: '../../evolution/index.html', iw: 1920, ih: 1080, dur: 46 + IDENT_CLOSE, peek: 22, subs: SUBS,
   // 明るい和音の旅。衝突の光（またいでから 1.3 秒後）で「ドン」、そのあと哺乳類の時代の手前まで暗く
-  music: { style: 'journey', root: 130.81, cues: [{ t: KPG_T + 1.3, type: 'boom' }], quiet: [[KPG_T + 1.3, 33]] },
+  music: { style: 'journey', root: 130.81, stopAt: 46, cues: [{ t: KPG_T + 1.3, type: 'boom' }, { t: 46, type: 'jingle' }], quiet: [[KPG_T + 1.3, 33]] },   // 46 秒で本編を終え、しし屋の締め
   ready: w => w.__ev && w.setAbout && w.document.getElementById('gl'),
   setup(w) {
     w.setAbout(false); w.setDayMode('day');
@@ -119,6 +119,7 @@ promoStart({
     drawCaps(g, t, CAPS);
     drawEnd(g, t, 40.6, 'ヒトへの46億年', '46億年を、スライダーで行き来できます。未来の予測も',
       '年代: 国際年代層序表（2023年版）ほか（アプリの「このアプリについて」に一覧）');
+    drawIdent(g, t, 46);   // しし屋の締め
   },
   errors: w => w.__evErr,
   short: { iw: 1080, ih: 1920 },

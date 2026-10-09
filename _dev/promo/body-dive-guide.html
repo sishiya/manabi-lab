@@ -14,7 +14,7 @@
 // 台本: 体内ダイブ ― 使い方と見どころ（横長の説明動画、150秒）
 // 日本語の字幕は画面の上に焼きこみ、下は YouTube の字幕（CC。英語）にあける。英語は SRT にして上げる
 // 場面（SC）ごとにアプリを始めからやり直し、__bd.simRun（描かずに進める）でその場面の始めまで進めてから、1コマずつ動かす
-const DUR = 150;
+const END = 150, DUR = END + IDENT_CLOSE;   // END: 本編の終わり（このあと しし屋の締め）
 
 // ---- 場面: [始め, 終わり, 素材, 入口, 先に進める秒（アプリの時間）, ボタン] ----
 // ボタン: auto＝自動航行、tps＝三人称、orbit＝外観、w＝W を押しつづける（順路モード）。{ at: 場面の中の秒 } で途中から
@@ -93,7 +93,7 @@ const CAPS = [
 const SUBS = [
   { a: 0.6, b: 6.6, ja: '体内ダイブ\n使い方と見どころ', en: 'Body Dive\nHow to use the app and what to look for' },
   ...capSubs(CAPS),
-  { a: 142.2, b: DUR, ja: '体内ダイブ\nブラウザで動かせます（パソコン・スマホ）', en: 'Body Dive\nRuns in your browser (PC or phone). The on-screen text is in Japanese for now' },
+  { a: 142.2, b: END, ja: '体内ダイブ\nブラウザで動かせます（パソコン・スマホ）', en: 'Body Dive\nRuns in your browser (PC or phone). The on-screen text is in Japanese for now' },
 ];
 
 // 枠と見出しのついた短い文（アプリのパネルの中身を写す）。lines は複数行
@@ -142,7 +142,7 @@ promoStart({
   name: '体内ダイブ（使い方）', out: 'body-dive-guide', src: '../../body-dive/index.html', iw: 2560, ih: 1440, dur: DUR, peek: 64,
   // アプリは devicePixelRatio を 1.5 までにしているので、iframe を 2560×1440 にして 3840×2160 で描かせる
   inject: { dpr: 2, raf: true },
-  music: { style: 'journey', root: 110 },   // 体の中の旅: 少し低めの明るい和音（ショートと同じ）
+  music: { style: 'journey', root: 110, stopAt: END, cues: [{ t: END, type: 'jingle' }] },   // 体の中の旅: 少し低めの明るい和音（ショートと同じ）
   ready: w => w.__bd && w.__rafQ && w.__rafQ.length,
   setup(w) { appStep(w, 2); return w.document.querySelector('canvas'); },
   subs: SUBS,
@@ -204,6 +204,8 @@ promoStart({
     if (fc > 0) { prep(g); g.globalAlpha = fc; g.textAlign = 'right'; txt(g, 'CC: English subtitles', PW - 50, PH - 40, 30, '#ddd', true); g.globalAlpha = 1; g.shadowBlur = 0; }
     drawEnd(g, t, 142.2, '体内ダイブ', 'ブラウザで動かせます（パソコン・スマホ）',
       'おもな出どころ: Betts ほか（2022）OpenStax『Anatomy and Physiology 2e』ほか18件（アプリのスタート画面「このアプリについて」）');
+    drawIdentMini(g, t, 0.3);   // しし屋の目印: はじまりは左上に小さく、締めは END から
+    drawIdent(g, t, END);
   },
   errors: w => [w.__bdErr].filter(Boolean),
 });

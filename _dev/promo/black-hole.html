@@ -40,7 +40,8 @@ function stateAt(t) {
   return s;
 }
 promoStart({
-  name: 'ブラックホールの見え方', out: 'black-hole', src: '../../black-hole/index.html', iw: 2270, ih: 1080, dur: 40, music: { style: 'drone', root: 55 }, subs: SUBS,
+  name: 'ブラックホールの見え方', out: 'black-hole', src: '../../black-hole/index.html', iw: 2270, ih: 1080, dur: 40 + IDENT_CLOSE, subs: SUBS,
+  music: { style: 'drone', root: 55, stopAt: 40, cues: [{ t: 40, type: 'jingle' }] },   // 40 秒で本編を終え、しし屋の締め
   // ペインが裏だとアプリの rAF が止まって最初の描画が始まらないので、こちらから1コマ描かせる
   ready: w => w.__bh && w.__bh.R && w.__bh.R.gl && (w.__bh.R.levels.low || (w.__bh.renderNow(), w.__bh.R.levels.low)),
   setup: w => w.document.getElementById('view'),
@@ -56,6 +57,7 @@ promoStart({
     drawCaps(g, t, CAPS);
     drawEnd(g, t, 35.2, 'ブラックホールの見え方', 'ブラウザで動かせます。クリックした点の光の道すじも見られます',
       '計算の式: James, von Tunzelmann, Franklin, Thorne (2015) Classical and Quantum Gravity 32, 065001');
+    drawIdent(g, t, 40);   // しし屋の締め
   },
   errors: w => w.__bh.err,
   short: { iw: 1430, ih: 1920 },   // 右のパネル 350px を除いた絵が 1080×1920
