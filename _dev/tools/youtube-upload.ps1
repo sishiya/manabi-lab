@@ -48,7 +48,8 @@ function Get-Client {
 function Get-ErrText($e) {
   try {
     $r = $e.Exception.Response; if (-not $r) { return $e.Exception.Message }
-    $sr = New-Object IO.StreamReader($r.GetResponseStream()); $t = $sr.ReadToEnd()
+    # 中身は ErrorDetails に入っていることが多い（そのときはもう読めない）
+    $t = if ($e.ErrorDetails -and $e.ErrorDetails.Message) { $e.ErrorDetails.Message } else { (New-Object IO.StreamReader($r.GetResponseStream())).ReadToEnd() }
     $o = $t | ConvertFrom-Json
     if ($o.error.message) { return "$([int]$r.StatusCode) $($o.error.message)" }
     if ($o.error_description) { return "$([int]$r.StatusCode) $($o.error) $($o.error_description)" }
