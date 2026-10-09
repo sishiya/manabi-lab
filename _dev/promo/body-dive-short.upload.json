@@ -1,0 +1,14 @@
+{
+  "file": "_dev/promo/out/body-dive-short.mp4",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/body-dive-short.en.srt" },
+  "title": "カプセル内視鏡になって、口から肛門まで旅してみた #Shorts",
+  "description": "口・鼻・肛門から人体の管に入って3Dで進むブラウザのアプリ「体内ダイブ」から。カプセル内視鏡になって、口から胃・小腸・大腸をぬけて肛門まで。\n\nアプリ: https://sishiya.github.io/manabi-lab/body-dive/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ: Betts ほか（2022）OpenStax『Anatomy and Physiology 2e』ほか（アプリのスタート画面「このアプリについて・おもな出どころ」）\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#人体 #消化 #まなびラボ",
+  "tags": ["人体", "消化", "消化管", "カプセル内視鏡", "Shorts", "まなびラボ", "しし屋", "human body", "digestion", "capsule endoscopy"],
+  "localizations": {
+    "en": {
+      "title": "I Became a Capsule Endoscope and Traveled from Mouth to Anus #Shorts",
+      "description": "From \"Body Dive\", a browser app where you enter the tubes of the human body through the mouth, nose or anus and travel through them in 3D. As a capsule endoscope, from the mouth through the stomach and intestines to the anus.\n\nApp (on-screen text in Japanese for now): https://sishiya.github.io/manabi-lab/body-dive/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMain source: Betts et al. (2022) OpenStax, Anatomy and Physiology 2e, and others (listed in the app's start screen, in Japanese)\n\nMusic: original sounds synthesized by code.\n\n#HumanBody #Digestion"
+    }
+  }
+}

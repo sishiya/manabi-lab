@@ -383,7 +383,18 @@ function promoStart(cfg) {
       const r = await fetch(`out/${cfg.out}.mp4`, { method: 'PUT', body: blob });
       log(r.ok ? `保存した: _dev/promo/out/${cfg.out}.mp4` : '保存できなかった（' + r.status + '）。ダウンロードから保存してください');
     } catch (e) { log('保存できなかった。ダウンロードから保存してください'); }
+    // 字幕が録画中に決まる台本（cfg.subsAfterRecord）は、録り終えてから保存しなおす
+    if (cfg.subsAfterRecord) await saveSubs();
     window.__promo = { done: true, mb: bytes.byteLength / 1e6 };
+  }
+  // 字幕データ（cfg.subs は setup のあとに決まってもよいので、関数でもよい）
+  async function saveSubs() {
+    const subs = typeof cfg.subs === 'function' ? cfg.subs(w) : cfg.subs;
+    if (subs) for (const lang of ['ja', 'en']) {
+      const s = makeSrt(subs, lang); if (!s) continue;
+      try { const r = await fetch(`out/${cfg.out}.${lang}.srt`, { method: 'PUT', body: s }); log(r.ok ? `字幕データを保存した: _dev/promo/out/${cfg.out}.${lang}.srt` : '字幕データを保存できなかった'); }
+      catch (e) { log('字幕データを保存できなかった'); }
+    }
   }
 
   // 見本のコマ（確かめる用）: __promoPeek(秒)
@@ -400,13 +411,7 @@ function promoStart(cfg) {
       if (cfg.hires) cfg.hires(w, PW * RES, PH * RES);   // アプリに出力と同じ大きさで描かせる
       if (src) log(`アプリの絵: ${src.width}×${src.height}`);
       await renderAt(cfg.peek || 8);
-      // 字幕データ（cfg.subs は setup のあとに決まってもよいので、関数でもよい）
-      const subs = typeof cfg.subs === 'function' ? cfg.subs(w) : cfg.subs;
-      if (subs) for (const lang of ['ja', 'en']) {
-        const s = makeSrt(subs, lang); if (!s) continue;
-        try { const r = await fetch(`out/${cfg.out}.${lang}.srt`, { method: 'PUT', body: s }); log(r.ok ? `字幕データを保存した: _dev/promo/out/${cfg.out}.${lang}.srt` : '字幕データを保存できなかった'); }
-        catch (e) { log('字幕データを保存できなかった'); }
-      }
+      await saveSubs();
       go.disabled = false; go.textContent = '録画する（数分かかります）';
       go.onclick = async () => {
         go.disabled = true;

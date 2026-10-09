@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script>
+'use strict';
+// 台本: 体内ダイブ ― 使い方と見どころ（横長の説明動画、150秒）
+// 日本語の字幕は画面の上に焼きこみ、下は YouTube の字幕（CC。英語）にあける。英語は SRT にして上げる
+// 場面（SC）ごとにアプリを始めからやり直し、__bd.simRun（描かずに進める）でその場面の始めまで進めてから、1コマずつ動かす
+const DUR = 150;
+
+// ---- 場面: [始め, 終わり, 素材, 入口, 先に進める秒（アプリの時間）, ボタン] ----
+// ボタン: auto＝自動航行、tps＝三人称、orbit＝外観、w＝W を押しつづける（順路モード）。{ at: 場面の中の秒 } で途中から
+const SC = [
+  { a: 0, b: 19, mat: 'capsule', entry: 'mouth', pre: 0, still: true },
+  { a: 19, b: 40, mat: 'capsule', entry: 'mouth', pre: 0, w: [0, 9], auto: 9 },
+  { a: 40, b: 51, mat: 'capsule', entry: 'mouth', pre: 24, auto: 0, orbit: 1.5 },
+  { a: 51, b: 60, mat: 'meat', entry: 'mouth', pre: 3, auto: 0, tps: 1 },
+  { a: 60, b: 69, mat: 'meat', entry: 'mouth', pre: 10.5, auto: 0, tps: 0 },
+  { a: 69, b: 78, mat: 'meat', entry: 'mouth', pre: 27, auto: 0, tps: 0 },
+  { a: 78, b: 87, mat: 'meat', entry: 'mouth', pre: 44, auto: 0, tps: 0 },
+  { a: 87, b: 95, mat: 'meat', entry: 'mouth', pre: 61.5, auto: 0, tps: 0, look: true },   // 外に出たら「外から体を見る」（通った道すじが見える）
+  { a: 95, b: 108, mat: 'capsule', entry: 'nose', pre: 1, auto: 0 },
+  { a: 108, b: 122, mat: 'sake4', entry: 'mouth', pre: 14, auto: 0 },
+  { a: 122, b: DUR, mat: 'battery', entry: 'mouth', pre: 4, auto: 0, tps: 0 },
+];
+const scAt = t => SC.find(s => t < s.b) || SC[SC.length - 1];
+
+// ---- ボタンの札（アプリと同じ側: 下のボタンの列。スタート画面は真ん中）----
+const START = {
+  mat: { x: 330, y: 300, title: '1  あなたは何になる？（スタート画面）', btns: ['カプセル内視鏡', '牛肉', 'ごはん', 'キャベツ', 'ステンレス球', '日本酒 1合', '日本酒 4合', 'ボタン電池', 'ツキヨタケ'], cols: 3 },
+  entry: { x: 330, y: 610, title: '2  どこから入る？', btns: ['口', '鼻', '肛門'] },
+  belly: { x: 900, y: 610, title: '3  おなかの状態', btns: ['空腹', '満腹（食後）'] },
+  go: { x: 1390, y: 610, title: '', btns: ['ダイブ開始'] },
+};
+const CH = {
+  move: { x: 640, y: 820, title: '下のボタン', btns: ['順路モード', '自動航行', '三人称', '外観'] },
+};
+const SHOW = [
+  ['move', 26.5, 31, t => t >= 28 ? 1 : 0],
+  ['move', 40, 44, t => t >= 41.5 ? 3 : -1],
+  ['move', 50.5, 54.5, t => t >= 52 ? 2 : -1],
+];
+const B = (p, i) => btnRect(p, i);
+const CUR = [
+  { t: 9, ...B(START.mat, 0) }, { t: 10, ...B(START.mat, 0), click: true },
+  { t: 12, ...B(START.entry, 0), click: true },
+  { t: 14, ...B(START.belly, 0), click: true },
+  { t: 16.5, ...B(START.go, 0), click: true },
+  { t: 18, ...B(START.go, 0), hide: true },
+  { t: 27, ...B(CH.move, 1) }, { t: 28, ...B(CH.move, 1), click: true },
+  { t: 29.5, ...B(CH.move, 1), hide: true },
+  { t: 40.5, ...B(CH.move, 3) }, { t: 41.5, ...B(CH.move, 3), click: true },
+  { t: 43, ...B(CH.move, 3), hide: true },
+  { t: 51, ...B(CH.move, 2) }, { t: 52, ...B(CH.move, 2), click: true },
+  { t: 53.5, ...B(CH.move, 2), hide: true },
+];
+
+// ---- 字幕（日本語は上に焼きこむ・英語は SRT）----
+const CAPS = [
+  { a: 7.5, b: 18.3, main: 'はじめに3つ選ぶ', sub: '何になるか（食べ物・カプセル・電池…）、どこから入るか、おなかの状態',
+    en: ['First, choose three things', 'What you become (a food, a capsule, a battery…), where you enter, and how full the stomach is'] },
+  { a: 19.5, b: 27.5, main: 'W を押しつづけると、順路にそって進む', sub: 'ドラッグで見回す。G で向きの切りかえ・自由移動。スマホは画面のスティック',
+    en: ['Hold W to move along the route', 'Drag to look around. G switches direction or free movement. On a phone, use the on-screen stick'] },
+  { a: 28.5, b: 39.5, main: '「自動航行」なら、手をはなして見ていられる', sub: '左上に、いまいる場所の名前',
+    en: ['"Autopilot" (自動航行) lets you sit back and watch', 'The name of the place is shown at the top left'] },
+  { a: 42, b: 50.5, main: '「外観」で、体の外から自分の位置を見る', sub: '光る点がいまの位置。左下の地図をクリックすると、その場所へ移る',
+    en: ['"Outside view" (外観) shows where you are in the body', 'The glowing dot is you. Click the map at the bottom left to jump there'] },
+  { a: 52.5, b: 59.5, main: '牛肉になって「三人称」で見ると、自分の姿が見える', sub: 'ひと口20g。口でかみ砕かれて、食道へ',
+    en: ['Become a bite of beef and switch to third person to see yourself', '20 g. Chewed up in the mouth, then down the esophagus'] },
+  { a: 60.5, b: 68.5, main: '胃: 胃液でほぐれ、色が変わる', sub: '時間は場所ごとに早回し（胃・小腸は×60）',
+    en: ['Stomach: gastric juice breaks you down and changes your color', 'Time runs faster in each part (×60 in the stomach and small intestine)'] },
+  { a: 69.5, b: 77.5, main: '小腸: 胆汁で黄色く、栄養が吸収されていく', sub: 'タンパク質と脂質が体に取りこまれる',
+    en: ['Small intestine: bile turns you yellow as nutrients are absorbed', 'Proteins and fats are taken into the body'] },
+  { a: 78.5, b: 86.5, main: '大腸: 水分が抜かれ、茶色くなる', sub: '腸内細菌のはたらき。大腸はさらに速く（×240）',
+    en: ['Large intestine: water is removed and you turn brown', 'This is the work of gut bacteria. Time runs even faster here (×240)'] },
+  { a: 87.5, b: 94.5, main: '外に出ると、旅のまとめ', sub: 'かかった時間、便の形（ブリストルの何型か）。「外から体を見る」で通った道すじも',
+    en: ['When you come out, you get a summary of the trip', 'The time it took and the stool shape (Bristol scale). "View from outside" (外から体を見る) shows your path'] },
+  { a: 95.5, b: 107.5, main: '鼻から入ると、気道へ', sub: '鼻のひだ（鼻甲介）→ のど → 声帯 → 軟骨の輪が並ぶ気管 → 肺',
+    en: ['Enter through the nose to reach the airway', 'The folds in the nose → the throat → the vocal cords → the ringed trachea → the lungs'] },
+  { a: 108.5, b: 121.5, main: '日本酒 4合: 血中アルコールのグラフ', sub: '一気に飲むと急性アルコール中毒の危険（20歳未満の飲酒は法律で禁止）',
+    en: ['Four cups of sake: a graph of blood alcohol', 'Drinking it all at once risks alcohol poisoning (drinking under 20 is illegal in Japan)'] },
+  { a: 122.5, b: 141.5, main: 'ボタン電池は、食道に引っかかる', sub: '約2時間で粘膜が深く傷つく。飲みこんだかもしれないときは、すぐに病院へ',
+    en: ['A button battery gets stuck in the esophagus', 'It can badly burn the lining in about 2 hours. If it might have been swallowed, go to a hospital at once'] },
+];
+const SUBS = [
+  { a: 0.6, b: 6.6, ja: '体内ダイブ\n使い方と見どころ', en: 'Body Dive\nHow to use the app and what to look for' },
+  ...capSubs(CAPS),
+  { a: 142.2, b: DUR, ja: '体内ダイブ\nブラウザで動かせます（パソコン・スマホ）', en: 'Body Dive\nRuns in your browser (PC or phone). The on-screen text is in Japanese for now' },
+];
+
+// 枠と見出しのついた短い文（アプリのパネルの中身を写す）。lines は複数行
+function drawNote(g, x, y, w, title, lines, f, color) {
+  if (f <= 0 || !lines.length) return;
+  const h = 62 + lines.length * 46;
+  g.shadowBlur = 0; g.globalAlpha = f;
+  g.fillStyle = 'rgba(14,16,24,0.9)'; g.strokeStyle = 'rgba(255,255,255,0.22)'; g.lineWidth = 2;
+  g.beginPath(); g.roundRect(x, y, w, h, 16); g.fill(); g.stroke();
+  g.textAlign = 'left'; g.textBaseline = 'middle';
+  setFont(g, 26, true); g.fillStyle = '#b9bfcc'; g.fillText(title, x + 22, y + 30);
+  lines.forEach((s, i) => { setFont(g, 32, true); g.fillStyle = color || '#fff'; g.fillText(s, x + 22, y + 82 + i * 46, w - 44); });
+  g.globalAlpha = 1;
+}
+
+let curSc = null, lastT = -1, frameN = 0, place = '', placeEn = '', res = null;
+// 結果の画面（HTML）が出たら中身を写しとって、「外から体を見る」を押す
+function checkResult(w, s) {
+  const d = w.document;
+  if (!s.look || res || d.getElementById('result').hidden) return;
+  res = { title: d.getElementById('resTitle').textContent, kv: [...d.querySelectorAll('#resKv dt')].map(dt => dt.textContent + '  ' + dt.nextElementSibling.textContent) };
+  d.getElementById('resLook').click();
+}
+async function startScene(w, s, lt) {
+  const B = w.__bd, d = w.document;
+  B.begin(s.mat, s.entry, 'hungry');
+  B.SIM.mmc = 0;   // 空腹期の収縮の始まりを決めておく（毎回同じ道のりになる）
+  res = null;
+  appStep(w, 2);
+  if (s.auto === 0) d.getElementById('btnAuto').click();
+  if (s.pre) { B.simRun(s.pre); appT += s.pre * 1000; }
+  appStep(w, 1);
+  // 途中から見る（確かめ用のコマ）ときは、その時刻まで描かずに進める
+  if (lt > 0.05 && !s.still) { applyBtns(w, s, -1, lt); B.simRun(lt, wDown(s, lt) ? ['KeyW'] : []); appT += lt * 1000; appStep(w, 1); }
+  else applyBtns(w, s, -1, 0);
+  await sleep(300);
+}
+const wDown = (s, lt) => s.w && lt >= s.w[0] && lt < s.w[1];
+// 場面の中の時刻 lt0 → lt にまたいだボタンを押す
+function applyBtns(w, s, lt0, lt) {
+  const d = w.document;
+  for (const [k, id] of [['auto', 'btnAuto'], ['tps', 'btnTps'], ['orbit', 'btnOrbit']])
+    if (s[k] !== undefined && s[k] > lt0 && s[k] <= lt && !(k === 'auto' && s.auto === 0)) d.getElementById(id).click();
+}
+promoStart({
+  name: '体内ダイブ（使い方）', out: 'body-dive-guide', src: '../../body-dive/index.html', iw: 2560, ih: 1440, dur: DUR, peek: 64,
+  // アプリは devicePixelRatio を 1.5 までにしているので、iframe を 2560×1440 にして 3840×2160 で描かせる
+  inject: { dpr: 2, raf: true },
+  music: { style: 'journey', root: 110 },   // 体の中の旅: 少し低めの明るい和音（ショートと同じ）
+  ready: w => w.__bd && w.__rafQ && w.__rafQ.length,
+  setup(w) { appStep(w, 2); return w.document.querySelector('canvas'); },
+  subs: SUBS,
+  async renderAt(t, w) {
+    const s = scAt(t), lt = t - s.a, d = w.document;
+    if (s !== curSc || t < lastT || t - lastT > 0.5) { await startScene(w, s, lt); curSc = s; frameN = 0; place = ''; }
+    else if (!s.still) {
+      applyBtns(w, s, lastT - s.a, lt);
+      const kd = wDown(s, lt);
+      w.dispatchEvent(new w.KeyboardEvent(kd ? 'keydown' : 'keyup', { code: 'KeyW' }));
+      appStep(w, 1);
+    } else appStep(w, 1);
+    checkResult(w, s);
+    lastT = t;
+    // 場所の名前は 0.22 秒の演出のあとで書きかわるので、10コマごとに実際に少し待って読む
+    if (++frameN % 10 === 1) { await sleep(240); place = d.getElementById('locName').textContent; placeEn = d.getElementById('locEn').textContent; }
+  },
+  overlay(g, t, w) {
+    const d = w.document, s = scAt(t);
+    // 場所の名前（左上、字幕の下）
+    const fp = clamp((t - 19) / 0.5, 0, 1) * (1 - clamp((t - 141.5) / 0.5, 0, 1));
+    if (fp > 0 && place) {
+      prep(g); g.textAlign = 'left'; g.globalAlpha = fp;
+      txt(g, place, 60, 250, 60, '#fff', true);
+      txt(g, placeEn, 62, 302, 28, '#f2c79a');
+      g.globalAlpha = 1; g.shadowBlur = 0;
+    }
+    // スタート画面の3つ（札）
+    const fs = fade(t, 8, 18.3, 0.4);
+    if (fs > 0) {
+      g.globalAlpha = fs * 0.55; g.fillStyle = '#000'; g.fillRect(0, 0, PW, PH); g.globalAlpha = 1;
+      drawChip(g, START.mat, t >= 10 ? 0 : -1, fs);
+      drawChip(g, START.entry, t >= 12 ? 0 : -1, fs);
+      drawChip(g, START.belly, t >= 14 ? 0 : -1, fs);
+      drawChip(g, START.go, t >= 16.5 ? 0 : -1, fs);
+    }
+    // 地図（左下）
+    drawInset(g, d.getElementById('map'), 40, 380, 230, 560, '地図（左下）', fade(t, 43.5, 50.8, 0.4));
+    // あなた（右のパネル）: 牛肉の状態
+    const fm = fade(t, 60.5, 86.8, 0.4);
+    if (fm > 0) drawNote(g, 1300, 360, 580, 'あなた（右のパネル）', [d.getElementById('meState').textContent, '体内時間 ' + d.getElementById('bTime').textContent + '（' + d.getElementById('bScale').textContent + '）'], fm);
+    // 旅のまとめ（結果の画面）
+    const fr = fade(t, 87.5, 94.8, 0.4);
+    if (fr > 0 && res) drawNote(g, 1180, 330, 700, res.title + '（結果の画面）', res.kv.slice(0, 6), fr);
+    // 血中アルコール（右のパネルのグラフ）
+    const fa = fade(t, 109, 121.8, 0.4);
+    if (fa > 0) {
+      drawInset(g, d.getElementById('spark'), 1300, 470, 580, 120, '血中アルコール（右のパネル）', fa);
+      drawNote(g, 1300, 360, 580, '', [d.getElementById('bBac').textContent + '  ' + d.getElementById('bRisk').textContent], fa, '#ffd27a');
+    }
+    // 電池の危険度
+    const fb = fade(t, 124, 141.8, 0.4);
+    if (fb > 0) drawNote(g, 1300, 360, 580, '危険度（右のパネル）', [d.getElementById('bRisk').textContent, '体内時間 ' + d.getElementById('bTime').textContent], fb, '#ff8a6a');
+    for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawTitle(g, t, 0.6, 6.6, '体内ダイブ', '使い方と見どころ');
+    const fc = fade(t, 1.5, 6.6, 0.6);
+    if (fc > 0) { prep(g); g.globalAlpha = fc; g.textAlign = 'right'; txt(g, 'CC: English subtitles', PW - 50, PH - 40, 30, '#ddd', true); g.globalAlpha = 1; g.shadowBlur = 0; }
+    drawEnd(g, t, 142.2, '体内ダイブ', 'ブラウザで動かせます（パソコン・スマホ）',
+      'おもな出どころ: Betts ほか（2022）OpenStax『Anatomy and Physiology 2e』ほか18件（アプリのスタート画面「このアプリについて」）');
+  },
+  errors: w => [w.__bdErr].filter(Boolean),
+});
+</script>
+</body>
+</html>
