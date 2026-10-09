@@ -1,11 +1,11 @@
 # 空気の流れの見える部屋 開発メモ
 
-最終更新: 2026-10-06
+最終更新: 2026-10-10
 
 家の中の空気がどこから入り、どう流れ、どこが古いまま残るかを、真上から見た 2LDK で見るアプリ。企画は `PLAN.md`（`../IDEAS.md` のストック1から）。「電波の見える部屋」（`wifi-wave/`）の姉妹だが、エンジンは別（Canvas 2D と CPU の計算。WebGL は使わない）。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: 最新は v2d（`versions/v002d-sources`、「このアプリについて」に**おもな出どころ**を追加。v2c は GA の1行だけ）。その前は v2b（`versions/v002b-start-cross`、開いたときの場面を「窓を2か所あける」に）。v2（`versions/v002-levels`）で強さの表示と給気口の開け具合。v1（`versions/v001-first`）が段階A。入口「まなびラボ」の「物理」に載せた（サムネイル `assets/thumbs/air-flow.jpg`）。GitHub Pages には push で公開される（push はユーザー）。Artifact には公開していない。
+- **いまの状態**: 最新は v2e（`versions/v002e-english`、**英語対応**。その前の v2d は「このアプリについて」に**おもな出どころ**を追加。v2c は GA の1行だけ）。その前は v2b（`versions/v002b-start-cross`、開いたときの場面を「窓を2か所あける」に）。v2（`versions/v002-levels`）で強さの表示と給気口の開け具合。v1（`versions/v001-first`）が段階A。入口「まなびラボ」の「物理」に載せた（サムネイル `assets/thumbs/air-flow.jpg`）。GitHub Pages には push で公開される（push はユーザー）。Artifact には公開していない。
 - **次にやること**: ユーザーの感想しだい。次の段階は `PLAN.md` の段階B（自分の家の間取りを描く・一戸建て・すき間の量を選ぶ・2つの場面を並べて比べる）。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。場面や間取りを変えるなら `js/plan.js` だけ。
 - **動かし方**: ユーザーはルートの `start.bat`（まなびラボから開く）。Claude は `.claude/launch.json` の `apps`（8765）・`apps-2`（8766）・`apps-3`（8767）のどれか空いているもので `http://localhost:<port>/air-flow/`。
@@ -79,12 +79,14 @@
 7. 幅 375px（縦長）で図が上に貼りつき、部屋の札が重ならない（スマホでは2行の札）。横向き 780×360 でページがスクロールしない（scrollHeight = 360）。横スクロールなし。
 8. 点滅なし（色はゆっくり変わるだけ。換気扇の羽根の回転は小さく、`prefers-reduced-motion` では止める）。
 9. 入口に載せる変更をしたら、doctype なし（互換モード）と doctype あり（標準モード）で全要素の位置を比べる（2026-10-06: 図は同じ、パネルの文字が最大 1.6px ずれるだけ）。
+10. 英語（`?lang=en`）: `../I18N.md` 2.4 のコンソールで、6場面・3つの表示・煙で満たす・速さを通して、画面とキャンバスに日本語が残っていない。数値は日本語のときと同じ。右上の JP／EN で読み直せる。
 
 ## 状態
 - 2026-10-06 v1（`versions/v001-first`）: 段階A。2LDK、場面6つ（24時間換気だけ・窓を2か所・窓1か所だけ・玄関と窓・キッチンの換気扇・サーキュレーター）、表示3つ、煙のグラフ、入口に追加。
 - 2026-10-06 v2（`versions/v002-levels`）: ユーザーの希望で、サーキュレーター・エアコンの強さを換気扇と同じく見て分かるように（回る羽根 `fanIcon()`、風の線 `windArcs()`、弱強の印 `levelBadge()`）。給気口の開け具合を4段階に。パネルに「入12」などの意味の説明。
 - 2026-10-06 v2b（`versions/v002b-start-cross`）: ユーザーの希望で、開いたときの場面を「24時間換気だけ」から見栄えのする「窓を2か所あける」に（`main.js` の最後の `loadScene`）。
 - 2026-10-07 v2d（`versions/v002d-sources`）: ユーザーの「出典を必ず画面に」（RULES 9）を受けて、「おもな出どころ」を画面に（建築基準法施行令、Sandberg 1981、Etheridge と Sandberg 1996、Swami と Chandra 1988、Warren と Parkins 1985。PLAN.md にあったものを確かめ直した。Swami と Chandra は ASHRAE Transactions 1988）。CSS `details ul.src`。
+- 2026-10-10 v2e（`versions/v002e-english`）: **英語対応**（`../I18N.md`）。`index.html` の先頭で `LANG`・`L()`・`setLang()`、HTML の文は `lang="ja"`／`lang="en"` を並べる。JS の文（部屋・窓・換気扇の名前は `plan.js`、場面は `SCENES`、パネル・凡例・グラフは `ui.js`、図の札・風の向き・「ここの空気」は `draw.js`）は `L()`。英語の強さの印は L／H、開け具合は Shut・Ajar・Open・¼・½・Full。`drawChart()` の左の余白の変数 `L` は `PL` に改名（`L()` が隠れるため）。日本語の表示と数値は v2d と同じ（3場面で照合）。右上の JP／EN でページを読み直す。
 
 ## 今後の案
 - 段階B・C は `PLAN.md`。
