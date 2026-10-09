@@ -9,6 +9,7 @@
 #       … 上げた動画の ID・公開の状態・翻訳・タイトルを出す（ID は Meta の JSON の videoId に書いておく）
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Update -Meta _dev/promo/black-hole.upload.json
 #       … 上げたあとの動画（videoId）に、字幕（captions）と、翻訳したタイトルと説明（localizations）・tags を足す。日本語のタイトル・説明・予約はそのまま
+#         -Full を付けると、日本語のタイトル・説明・分類（教育）・言語・サムネイルも JSON から入れる（Studio で手動で上げた動画を、ここで仕上げるとき）
 #         captions: { "en": "_dev/promo/out/<名前>.en.srt" } … 字幕（CC）。台本ページ（_dev/promo/*.html）を開くと out に保存される。日本語は動画に焼きこんであるので、ふつうは英語だけ
 #
 # 秘密の扱い（必ず守る）:
@@ -21,6 +22,7 @@ param(
   [switch]$Auth,
   [switch]$List,
   [switch]$Update,
+  [switch]$Full,
   [string]$Meta,
   [string]$SecretDir
 )
@@ -213,6 +215,15 @@ function Invoke-Update {
   foreach ($t in @($sn.tags) + @($m.tags)) { if ($t -and -not $tags.Contains($t)) { $tags.Add($t) } }
   $snippet = @{ title = $sn.title; description = $sn.description; categoryId = $sn.categoryId; tags = $tags.ToArray(); defaultLanguage = 'ja' }
   if ($sn.defaultAudioLanguage) { $snippet.defaultAudioLanguage = $sn.defaultAudioLanguage }
+  # -Full: 手動で上げた動画に、日本語のタイトル・説明・分類（教育）・言語・サムネイルも JSON から入れる
+  if ($Full) {
+    $snippet.title = $m.title; $snippet.description = $m.description; $snippet.categoryId = '27'; $snippet.defaultAudioLanguage = 'ja'
+    if ($m.thumbnail) {
+      $tf = Join-Path $root $m.thumbnail; $ct = if ($tf -match '\.png$') { 'image/png' } else { 'image/jpeg' }
+      try { Invoke-RestMethod -Method Post -Uri "https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=$($m.videoId)" -Headers $h -ContentType $ct -InFile $tf | Out-Null; Write-Host "サムネイルを付けました: $($m.thumbnail)" }
+      catch { Write-Host "サムネイルは付けられませんでした: $(Get-ErrText $_)" }
+    }
+  }
   $locs = @{}
   if ($v.localizations) { foreach ($p in $v.localizations.PSObject.Properties) { $locs[$p.Name] = $p.Value } }
   foreach ($p in $m.localizations.PSObject.Properties) { $locs[$p.Name] = $p.Value }
