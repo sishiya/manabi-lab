@@ -23,3 +23,6 @@ desktop.ini
 ~$*
 .vscode/
 node_modules/
+
+# promo videos made by promo/*.html (large binaries)
+promo/out/

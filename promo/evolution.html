@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script>
+'use strict';
+// 台本: ヒトへの46億年（46秒）。字幕の文はアプリの出来事の表（evolution/js/data.js の EVENTS）から
+// [始め, 終わり, 始めの年代, 終わりの年代, 見え方]。年代は対数で動かす
+const SEGS = [
+  [0, 6, 6.8e7, 6.8e7, 'surface'],      // 入口のサムネイルと同じ場面（6800万年前の地表）で題名
+  [6, 6.5, 4.45e9, 4.45e9, 'globe'],
+  [6.5, 11.5, 4.45e9, 6.8e8, 'globe'],
+  [11.5, 13, 6.8e8, 6.8e8, 'globe'],
+  [13, 20, 6.0e8, 3.85e8, 'surface'],
+  [20, 26, 2.3e8, 6.75e7, 'surface'],
+  [26, 29, 6.75e7, 6.5e7, 'surface'],    // ゆっくり 6600万年前をまたぐ（衝突の演出が始まる）
+  [29, 33, 6.5e7, 2.3e7, 'surface'],
+  [33, 40, 7e6, 0, 'surface'],
+  [40, 46, 0, 0, 'surface'],
+];
+const CAPS = [
+  { a: 10.2, b: 13, main: 'スノーボールアース', sub: '約7.2億〜6.35億年前。赤道まで氷におおわれた' },
+  { a: 14, b: 19.5, main: '生き物が海から陸へ', sub: 'カンブリア爆発（5.39億年前）→ 最初の森（3.85億年前）' },
+  { a: 20.5, b: 25.8, main: '恐竜の時代', sub: '2.3億年前に現れた' },
+  { a: 26.5, b: 31.5, main: '小天体の衝突', sub: '6600万年前。恐竜の時代が終わる' },
+  { a: 34, b: 39.8, main: 'そして人類へ', sub: '700万年前 → いま' },
+];
+const ageAt = t => {
+  const s = SEGS.find(s => t < s[1]) || SEGS[SEGS.length - 1];
+  const k = s[1] > s[0] ? ease((t - s[0]) / (s[1] - s[0])) : 1;
+  const a = Math.exp(lerp(Math.log(s[2] + 1), Math.log(s[3] + 1), k)) - 1;
+  return [a, s[4]];
+};
+let kpgT = null, lastA = Infinity, curView = 'surface';
+// 6600万年前をまたぐ時刻（衝突の演出が始まる）
+const KPG_T = (() => { for (let t = 0; t < 46; t += 1 / FPS) if (ageAt(t)[0] <= 6.6e7) return t; return 27; })();
+// アプリの名前札（HTML）を読んで、同じ場所に描く。重なるもの・字幕や年代にかかるものは省く
+function drawLabels(g, t, w) {
+  const f = (t < 5.6 ? 1 - clamp((t - 5.2) / 0.4, 0, 1) : clamp((t - 13.6) / 0.5, 0, 1)) * (1 - clamp((t - 40) / 0.6, 0, 1));
+  if (f <= 0) return;
+  const k = PW / w.innerWidth, boxes = [];
+  g.font = 'bold 30px ' + FONT; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+  const labs = [...w.document.querySelectorAll('#labels .lab')].filter(el => !el.hidden && el.textContent);
+  labs.sort((a, b) => b.classList.contains('anc') - a.classList.contains('anc'));   // 祖先を先に
+  for (const el of labs) {
+    const m = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(el.style.transform); if (!m) continue;
+    const x = +m[1] * k, y = +m[2] * k - 22, s = el.textContent, bw = g.measureText(s).width + 28, bh = 44;
+    const b = [x - bw / 2, y - bh, x + bw / 2, y];
+    if (b[0] < 10 || b[2] > PW - 10 || b[1] < 150 || b[3] > PH - 230) continue;
+    if (boxes.some(o => b[0] < o[2] + 8 && b[2] > o[0] - 8 && b[1] < o[3] + 6 && b[3] > o[1] - 6)) continue;
+    boxes.push(b);
+    const anc = el.classList.contains('anc');
+    g.globalAlpha = f * 0.85; g.fillStyle = 'rgba(10,14,20,0.8)'; g.fillRect(b[0], b[1], bw, bh);
+    g.globalAlpha = f; g.strokeStyle = anc ? '#f2c14e' : 'rgba(255,255,255,0.5)'; g.lineWidth = 2; g.strokeRect(b[0], b[1], bw, bh);
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 18); g.stroke();
+    g.fillStyle = anc ? '#f2c14e' : '#fff'; g.fillText(s, x, y - 12);
+  }
+  g.globalAlpha = 1;
+}
+promoStart({
+  name: 'ヒトへの46億年', out: 'evolution', src: '../evolution/index.html', iw: 1920, ih: 1080, dur: 46, peek: 22,
+  // 明るい和音の旅。衝突の光（またいでから 1.3 秒後）で「ドン」、そのあと哺乳類の時代の手前まで暗く
+  music: { style: 'journey', root: 130.81, cues: [{ t: KPG_T + 1.3, type: 'boom' }], quiet: [[KPG_T + 1.3, 33]] },
+  ready: w => w.__ev && w.setAbout && w.document.getElementById('gl'),
+  setup(w) {
+    w.setAbout(false); w.setDayMode('day');
+    w.document.getElementById('mini').style.display = 'none';   // 地球のながめの右下の小窓は映さない
+    w.document.getElementById('bNames').click();                // 生き物の名前札を出す（下で動画に描き写す）
+    w.requestAnimationFrame = () => 0;   // アプリ自身の描画ループを止める（割りこむと消えたコマが写る）
+    return w.document.getElementById('gl');
+  },
+  async renderAt(t, w) {
+    const E = w.__ev, [a, view] = ageAt(t);
+    if (t === 0) { kpgT = null; lastA = Infinity; }
+    if (curView !== view) { w.setView(view); curView = view; await sleep(400); }
+    if (lastA > 6.6e7 && a <= 6.6e7) kpgT = t;
+    lastA = a;
+    E.setAge(a);
+    E.cam.th = 0.75 + 0.012 * t;          // 地表はゆっくり回りこむ
+    if (t < 6) E.cam.r = 200;
+    E.frame(1, 1 / FPS);
+  },
+  overlay(g, t, w) {
+    // 衝突の光（アプリでは HTML の重ね絵なので、同じ式でここに描く。evolution/js/world.js の seqState）
+    if (kpgT !== null && t >= kpgT) {
+      const s = t - kpgT;
+      const flash = s < 1.3 ? 0 : s < 1.5 ? (s - 1.3) / 0.2 : Math.exp(-(s - 1.5) / 0.7);
+      const heat = s < 1.3 ? 0 : sstep(1.3, 2, s) * (1 - sstep(3, 4.5, s));
+      if (heat > flash) { g.globalAlpha = heat * 0.45; g.fillStyle = 'rgb(200,70,25)'; }
+      else { g.globalAlpha = flash; g.fillStyle = 'rgb(255,220,170)'; }
+      if (g.globalAlpha > 0.001) g.fillRect(0, 0, PW, PH);
+      g.globalAlpha = 1;
+    }
+    drawLabels(g, t, w);
+    // 年代（左上）
+    const f = clamp(t / 0.8, 0, 1) * (1 - clamp((t - 40) / 0.8, 0, 1));
+    if (f > 0) {
+      prep(g); g.textAlign = 'left'; g.globalAlpha = f;
+      txt(g, w.fmtShort(w.__ev.A), 70, 90, 72, '#fff', true);
+      g.globalAlpha = 1; g.shadowBlur = 0;
+    }
+    drawTitle(g, t, 0.6, 5.6, 'ヒトへの46億年', '同じ場所に立ちつづけて、地球と生命と人類の歴史を見る');
+    drawCaps(g, t, CAPS);
+    drawEnd(g, t, 40.6, 'ヒトへの46億年', '46億年を、スライダーで行き来できます。未来の予測も');
+  },
+  errors: w => w.__evErr,
+});
+function sstep(a, b, x) { const k = clamp((x - a) / (b - a), 0, 1); return k * k * (3 - 2 * k); }
+</script>
+</body>
+</html>
