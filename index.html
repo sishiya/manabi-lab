@@ -153,7 +153,7 @@ const CATS = [
   {id:'phys', name:'物理'},
 ];
 const SORTS = ['cat','new','upd'];
-const FRESH_DAYS = 2; // きょう・きのうの公開・更新に印をつける
+const FRESH_DAYS = 3; // きょう・きのう・おとといの公開・更新に印をつける
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -186,7 +186,7 @@ function saveState() {
 function card(a, showCat) {
   const c = catOf(a.cat);
   const updatedLater = a.updated !== a.created;
-  const badge = isFresh(a.created) ? '新作' : updatedLater && isFresh(a.updated) ? '更新' : ''; // 公開から2日は更新しても「新作」を優先
+  const badge = isFresh(a.created) ? '新作' : updatedLater && isFresh(a.updated) ? '更新' : ''; // 公開から3日は更新しても「新作」を優先
   const dateHtml = (label, s) => `${label} <time datetime="${s}" title="${s}"${isFresh(s) ? ' class="fresh"' : ''}>${relDate(s)}</time>`;
   return `<div class="card c-${a.cat}">
     <div class="pic"><img class="thumb" src="assets/thumbs/${a.id}.jpg" alt="" width="640" height="360" loading="lazy">${badge ? `<span class="badge${badge === '更新' ? ' upd' : ''}">${badge}</span>` : ''}</div>
