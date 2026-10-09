@@ -4,12 +4,12 @@
   "privacy": "private",
   "captions": { "en": "_dev/promo/out/black-hole-short.en.srt" },
   "title": "映画のブラックホールを、光の道すじから計算してみた #Shorts",
-  "description": "映画『インターステラー』のブラックホールを、まわりで光がどう曲がるかを1ピクセルずつ計算して描くブラウザのアプリ「ブラックホールの見え方」から。\n\nアプリ: https://sishiya.github.io/manabi-lab/black-hole/\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ: James, von Tunzelmann, Franklin, Thorne (2015) Classical and Quantum Gravity 32, 065001\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#ブラックホール #インターステラー #まなびラボ",
+  "description": "映画『インターステラー』のブラックホールを、まわりで光がどう曲がるかを1ピクセルずつ計算して描くブラウザのアプリ「ブラックホールの見え方」から。\n\nアプリ: https://sishiya.github.io/manabi-lab/black-hole/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ: James, von Tunzelmann, Franklin, Thorne (2015) Classical and Quantum Gravity 32, 065001\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#ブラックホール #インターステラー #まなびラボ",
   "tags": ["ブラックホール", "インターステラー", "相対性理論", "Shorts", "まなびラボ", "しし屋", "black hole", "Interstellar", "general relativity"],
   "localizations": {
     "en": {
       "title": "I Calculated the Interstellar Black Hole from the Paths of Light #Shorts",
-      "description": "From \"How a Black Hole Looks\", a browser app that draws the black hole from the movie Interstellar by calculating, pixel by pixel, how light bends around it.\n\nApp (on-screen text in Japanese for now): https://sishiya.github.io/manabi-lab/black-hole/\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMain source: James, von Tunzelmann, Franklin, Thorne (2015) Classical and Quantum Gravity 32, 065001\n\nMusic: original sounds synthesized by code.\n\n#BlackHole #Interstellar"
+      "description": "From \"How a Black Hole Looks\", a browser app that draws the black hole from the movie Interstellar by calculating, pixel by pixel, how light bends around it.\n\nApp (on-screen text in Japanese for now): https://sishiya.github.io/manabi-lab/black-hole/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMain source: James, von Tunzelmann, Franklin, Thorne (2015) Classical and Quantum Gravity 32, 065001\n\nMusic: original sounds synthesized by code.\n\n#BlackHole #Interstellar"
     }
   }
 }
