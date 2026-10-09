@@ -109,7 +109,7 @@ promoStart({
     }
     drawLabels(g, t, w);
     // 年代（左上）
-    const f = clamp(t / 0.8, 0, 1) * (1 - clamp((t - 40) / 0.8, 0, 1));
+    const f = clamp((t - IDENT_MINI - 0.3) / 0.8, 0, 1) * (1 - clamp((t - 40) / 0.8, 0, 1));   // しし屋の目印（左上）がはけてから
     if (f > 0) {
       prep(g); g.textAlign = 'left'; g.globalAlpha = f;
       txt(g, w.fmtShort(w.__ev.A), 70, 90, 72, '#fff', true);
@@ -119,7 +119,8 @@ promoStart({
     drawCaps(g, t, CAPS);
     drawEnd(g, t, 40.6, 'ヒトへの46億年', '46億年を、スライダーで行き来できます。未来の予測も',
       '年代: 国際年代層序表（2023年版）ほか（アプリの「このアプリについて」に一覧）');
-    drawIdent(g, t, 46);   // しし屋の締め
+    drawIdentMini(g, t, 0.3, isVert() ? 1.4 : 1);   // しし屋の目印: はじまりは左上に（縦長は大きめ）、締めは 46 秒から
+    drawIdent(g, t, 46);
   },
   errors: w => w.__evErr,
   short: { iw: 1080, ih: 1920 },

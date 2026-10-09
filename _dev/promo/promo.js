@@ -235,8 +235,9 @@ function drawShishiName(g, x, y, h, f, align = 'left') {
   setFont(g, h, true); g.fillStyle = ID_C.navy; g.textAlign = 'left'; g.fillText('まなびラボ', mx, y + h * 0.04);
   g.restore();
 }
-function drawIdentMini(g, t, a) {
+function drawIdentMini(g, t, a, s = 1) {   // s: 大きさ（ショートは縦長で小さく見えるので 1.4）
   const u = t - a; if (u < 0 || u > IDENT_MINI) return;
+  g.save(); g.scale(s, s);
   const out = ease((u - 2.6) / 0.5);   // はける
   const d = 116, x = 40 + d / 2, y = 34 + d / 2;
   // 名前は、白っぽい札の上に（どんな絵の上でも読める）
@@ -255,6 +256,7 @@ function drawIdentMini(g, t, a) {
     drawShishiIcon(g, x, y, d, { mane: u * 1.4, face: (u - 0.28) / 0.25, glasses: (u - 0.45) / 0.3 });
     g.restore();
   }
+  g.restore();
 }
 function drawIdent(g, t, a) {
   const u = t - a; if (u < 0 || u > IDENT_CLOSE) return;
