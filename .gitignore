@@ -26,3 +26,6 @@ node_modules/
 
 # promo videos made by _dev/promo/*.html (large binaries)
 _dev/promo/out/
+
+# per-machine settings for scripts (e.g. where the YouTube secret folder is)
+*.local.txt

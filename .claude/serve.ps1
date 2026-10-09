@@ -14,7 +14,7 @@ while ($l.IsListening) {
     $rel = [Uri]::UnescapeDataString($c.Request.Url.AbsolutePath.TrimStart('/'))
     # _dev/promo/*.html saves the finished video here (only this folder, only video files)
     if ($c.Request.HttpMethod -eq 'PUT') {
-      if ($rel -match '^_dev/promo/out/[A-Za-z0-9_.-]+\.(mp4|webm)$') {
+      if ($rel -match '^_dev/promo/out/[A-Za-z0-9_.-]+\.(mp4|webm|srt|jpg)$') {
         $dir = Join-Path $root '_dev/promo/out'
         if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Force $dir | Out-Null }
         $fs = [IO.File]::Create((Join-Path $root $rel)); $c.Request.InputStream.CopyTo($fs); $fs.Close()

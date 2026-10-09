@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script>
+'use strict';
+// 台本: ブラックホールの見え方 ― 使い方と見どころ（横長の説明動画、150秒）
+// 日本語の字幕は画面の上に焼きこみ、下は YouTube の字幕（CC。英語）にあける。英語は SRT にして上げる
+// アプリの絵は画面いっぱい。ボタンは「札」（drawChip）で、アプリと同じ言葉・同じ側（見る位置は下、ほかは右のパネル）に描く
+const deg = Math.PI / 180, DUR = 150;
+// アプリの画面の点（-1〜1）→ 動画の座標。iframe の大きさを、絵の枠がちょうど 16:9 になるようにしてある
+const SX = nx => (nx * 0.5 + 0.5) * PW, SY = ny => (0.5 - ny * 0.5) * PH;
+
+// ---- 状態の移り変わり: [時刻, 変える値, かける秒（なめらかに）] ----
+const EV = [
+  [0, { a: 0.6, r: 28, th: 85, real: false, disk: true, sky: 'stars' }],
+  [15.5, { th: 62, ph: -0.9 }, 4.5],          // ドラッグ
+  [22.5, { r: 38, th: 8 }, 1.2],              // 真上（アプリは 4°。極の継ぎ目が見えにくいよう少し傾ける）
+  [29.5, { r: 28, th: 85, ph: 0 }, 1.2],      // 映画の角度
+  [77, { real: true }],
+  [91.5, { real: false }],
+  [95, { th: 90 }, 0.8],                      // 真横
+  [98, { a: 0.99 }, 1.0],                     // とても速い
+  [101, { disk: false }],
+  [107, { sky: 'grid' }],
+  [116, { a: 0.6, disk: true, sky: 'stars', th: 85 }],
+  [118, { r: 7, th: 75 }, 8],                 // ホイールで近づく
+  [135, { r: 28 }, 6],
+];
+function stateAt(t) {
+  const s = {};
+  for (const [t0, set, d] of EV) {
+    if (t < t0) break;
+    const k = d ? ease((t - t0) / d) : 1;
+    for (const key in set) {
+      const v = set[key];
+      if (typeof v !== 'number' || s[key] === undefined) s[key] = v;
+      else if (key === 'r') s[key] = Math.exp(lerp(Math.log(s[key]), Math.log(v), k));   // 距離は比で動かす
+      else s[key] = lerp(s[key], v, k);
+    }
+  }
+  return { a: s.a, r: s.r, th: s.th * deg, ph: s.ph || 0, real: s.real, disk: s.disk, sky: s.sky };
+}
+
+// ---- クリックした点（光の道すじの図を出す）: [時刻, nx, ny]。null で図を消す ----
+const PK = [[36.5, 0, 0.5], [49, 0, -0.5], [59, 0, 0.38], [68, 0.08, 0.12], [74, null]];
+const pickAt = t => { let p = null; for (const q of PK) if (t >= q[0]) p = q; return p && p[1] !== null ? p : null; };
+
+// ---- ボタンの札 ----
+const CH = {
+  preset: { x: 40, y: 800, title: '見る位置（絵の下）', btns: ['映画の角度', '真横', 'ななめ上', '真上'] },
+  real: { x: 1400, y: 300, title: '見え方（右のパネル）', btns: ['映画版', '本当の見え方'] },
+  spin: { x: 1480, y: 200, title: '回転の速さ（右のパネル）', btns: ['止まっている 0', '映画 0.6', 'とても速い 0.99'], cols: 1 },
+  disk: { x: 1480, y: 540, title: 'ガスの円盤', btns: ['あり', 'なし'] },
+  sky: { x: 1480, y: 740, title: 'うしろの空', btns: ['星空', '方眼', 'まっ暗'] },
+};
+// 札を出す時間 [札, 出す, 消す, その時刻に押されているボタン(t) ]
+const SHOW = [
+  ['preset', 20, 32, t => t < 22.5 ? 0 : t < 29.5 ? 3 : 0],
+  ['real', 75, 93, t => t >= 77 && t < 91.5 ? 1 : 0],
+  ['preset', 93.5, 99, t => t < 95 ? 0 : 1],
+  ['spin', 96.5, 115, t => t < 98 ? 1 : 2],
+  ['disk', 99.5, 115, t => t < 101 ? 0 : 1],
+  ['sky', 105.5, 115, t => t < 107 ? 0 : 1],
+];
+const B = (k, i) => btnRect(CH[k], i);
+
+// ---- マウスの矢印 ----
+const CUR = [
+  { t: 14.3, x: SX(-0.3), y: SY(-0.3) },
+  { t: 15.5, x: SX(-0.3), y: SY(-0.3), drag: true },
+  { t: 20, x: SX(-0.1), y: SY(0.15) },
+  { t: 21, ...B('preset', 3) }, { t: 22.5, ...B('preset', 3), click: true },
+  { t: 28.3, ...B('preset', 0) }, { t: 29.5, ...B('preset', 0), click: true },
+  { t: 35, x: SX(0), y: SY(0.5) }, { t: 36.5, x: SX(0), y: SY(0.5), click: true },
+  { t: 47.6, x: SX(0), y: SY(-0.5) }, { t: 49, x: SX(0), y: SY(-0.5), click: true },
+  { t: 57.6, x: SX(0), y: SY(0.38) }, { t: 59, x: SX(0), y: SY(0.38), click: true },
+  { t: 66.6, x: SX(0.08), y: SY(0.12) }, { t: 68, x: SX(0.08), y: SY(0.12), click: true },
+  { t: 75.6, ...B('real', 1) }, { t: 77, ...B('real', 1), click: true },
+  { t: 90.3, ...B('real', 0) }, { t: 91.5, ...B('real', 0), click: true },
+  { t: 94, ...B('preset', 1) }, { t: 95, ...B('preset', 1), click: true },
+  { t: 97, ...B('spin', 2) }, { t: 98, ...B('spin', 2), click: true },
+  { t: 100, ...B('disk', 1) }, { t: 101, ...B('disk', 1), click: true },
+  { t: 106, ...B('sky', 1) }, { t: 107, ...B('sky', 1), click: true },
+  { t: 116.8, x: SX(0.35), y: SY(0.1) }, { t: 118, x: SX(0.35), y: SY(0.1), wheel: true },
+  { t: 126, x: SX(0.35), y: SY(0.1), hide: true },
+];
+
+// ---- 字幕（日本語は上に焼きこむ・英語は SRT）。数はアプリで計算してから入れる（setup で決める）----
+let CAPS = [];
+function makeCaps(BH) {
+  const S = BH.S;
+  Object.assign(S, { a: 0.6, r: 28, th: 85 * deg, disk: true }); S.rin = BH.iscoR(0.6);
+  const ring = BH.pickAt(0, 0.38), bend = Math.round(ring.bend / deg);
+  const z = BH.zamo(7, 75 * deg, 0.6), slow = (1 / z.alpha).toFixed(2);
+  BH.S.pick = null;
+  CAPS = [
+    { a: 7, b: 13.5, main: '画面の1ピクセルごとに、光の道すじを計算している', sub: '映画『インターステラー』のブラックホールと、まわりを回るガスの円盤',
+      en: ['Every pixel is drawn by tracing the path of light', 'The black hole from the movie Interstellar, with its disk of glowing gas'] },
+    { a: 14.5, b: 21, main: 'ドラッグで、まわりを回る', sub: '上下に動かすと、見下ろす角度が変わる',
+      en: ['Drag to move around it', 'Drag up or down to change the viewing angle'] },
+    { a: 22.8, b: 28.8, main: '真上から見ると、ドーナツの形', sub: '円盤の内側は、光が曲げられて大きく見える',
+      en: ['From directly above, the disk is a doughnut', 'Its inner part looks bigger because the light is bent'] },
+    { a: 33, b: 38.8, main: 'クリックすると、その点に届いた光の道すじが出る', sub: 'アプリでは右のパネルに、横から見た図で出る',
+      en: ['Click a point to see the path its light took', 'In the app it appears in the right panel, seen from the side'] },
+    { a: 39.3, b: 47, main: '穴の上の帯は、円盤の「向こう側」', sub: '光が、穴の上を回りこんで届いた',
+      en: ['The band above the hole is the far side of the disk', 'Its light curved over the top of the hole to reach us'] },
+    { a: 49.5, b: 57, main: '下の細い帯は、円盤の「下の面」', sub: '上から見ているのに、穴の下をくぐった光が見える',
+      en: ['The thin band below is the underside of the disk', 'We look from above, yet light passing under the hole reaches us'] },
+    { a: 59.5, b: 66.4, main: '影のふちの細い光の輪', sub: `この光は ${bend}° も曲がって、穴のまわりを回ってきた`,
+      en: ['The thin ring of light at the edge of the shadow', `This light bent ${bend}° and circled the hole`] },
+    { a: 68.5, b: 74, main: '黒い影は、穴そのものよりずっと大きい', sub: 'この向きの光は、たどるとどれも穴に落ちる',
+      en: ['The black shadow is much bigger than the hole itself', 'Every light path in this direction falls into the hole'] },
+    { a: 77.5, b: 84.5, main: '本当の見え方：左が明るく青っぽい', sub: 'こちらへ回ってくるガスの光は強く、遠ざかる側は暗く赤い',
+      en: ['Realistic view: the left side is bright and bluish', 'Gas moving toward us looks brighter; gas moving away looks dim and red'] },
+    { a: 85, b: 91, main: '映画では、わかりにくいので入れなかった', sub: '映画を作った人たちの論文（2015年）より',
+      en: ['The movie left this out because it was hard to read', 'From the paper by the people who made the movie (2015)'] },
+    { a: 98.5, b: 106, main: '回転をとても速くして、真横から', sub: '影の左側が平らにつぶれる（回る向きに進む光は、穴の近くまで寄れる）',
+      en: ['Spin it very fast and look from the side', 'The left edge of the shadow flattens: light moving with the spin can get closer'] },
+    { a: 107.5, b: 115, main: '空を方眼にすると、ゆがみが見える', sub: '影を囲む輪は、穴の真うしろの空（アインシュタインリング）',
+      en: ['Switch the sky to a grid to see the distortion', 'The ring around the shadow is the sky right behind the hole (Einstein ring)'] },
+    { a: 118.5, b: 126, main: 'ホイールで近づく', sub: 'スマホは2本指。アプリでは右のパネルのつまみでも',
+      en: ['Scroll the mouse wheel to get closer', 'Use two fingers on a phone, or the slider in the right panel'] },
+    { a: 126.5, b: 134, main: '穴の近くでは、時計がゆっくり進む', sub: `ここ（7M）の1時間は、遠くの ${slow} 時間`,
+      en: ['Near the hole, clocks run slow', `One hour here (7M) is ${slow} hours far away`] },
+    { a: 135, b: 141.5, main: '「見つけてみよう」に、8つのお題', sub: '右のパネルの下。見つけると、しくみの説明が出る',
+      en: ['8 challenges in "Find it" (見つけてみよう)', 'At the bottom of the right panel; each one explains what you found'] },
+  ];
+}
+const SUBS_EXTRA = [
+  { a: 0.6, b: 6.6, ja: 'ブラックホールの見え方\n使い方と見どころ', en: 'How a Black Hole Looks\nHow to use the app and what to look for' },
+  { a: 142.2, b: DUR, ja: 'ブラックホールの見え方\nブラウザで動かせます（パソコン・スマホ）', en: 'How a Black Hole Looks\nRuns in your browser (PC or phone). The on-screen text is in Japanese for now' },
+];
+
+let lastPick = null;
+promoStart({
+  name: 'ブラックホールの見え方（使い方）', out: 'black-hole-guide', src: '../../black-hole/index.html', iw: 2073, ih: 1080, dur: DUR, peek: 40,
+  music: { style: 'drone', root: 55 },
+  ready: w => w.__bh && w.__bh.R && w.__bh.R.gl && (w.__bh.R.levels.low || (w.__bh.renderNow(), w.__bh.R.levels.low)),
+  setup(w) { makeCaps(w.__bh); return w.document.getElementById('view'); },
+  subs: () => [SUBS_EXTRA[0], ...capSubs(CAPS), SUBS_EXTRA[1]],
+  renderAt(t, w) {
+    const BH = w.__bh, st = stateAt(t), S = BH.S;
+    st.ph += -0.01 * t;
+    const geo = st.r !== S.r || st.th !== S.th || st.a !== S.a || st.disk !== S.disk || !BH.R.levels.high.ready;
+    Object.assign(S, st, { paused: true }); S.rin = BH.iscoR(st.a);
+    if (geo) S.geoDirty = true;
+    // クリックした点の光（状態が決まってから、点が変わったときだけたどる）
+    const p = pickAt(t), key = p && p.join(',');
+    if (key !== lastPick) { if (p) BH.pickAt(p[1], p[2]); else S.pick = null; lastPick = key; }
+    BH.renderNow(t * 8 + 40);
+  },
+  overlay(g, t, w) {
+    // クリックした点の印と、光の道すじの図
+    const p = pickAt(t);
+    if (p) {
+      const x = SX(p[1]), y = SY(p[2]);
+      g.shadowBlur = 0; g.globalAlpha = 1; g.strokeStyle = '#fff'; g.lineWidth = 3;
+      g.beginPath(); g.arc(x, y, 16, 0, Math.PI * 2); g.stroke();
+      g.beginPath(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { g.moveTo(x + dx * 9, y + dy * 9); g.lineTo(x + dx * 26, y + dy * 26); } g.stroke();
+      const f = clamp((t - PK[0][0]) / 0.5, 0, 1) * (1 - clamp((t - 73.5) / 0.5, 0, 1));
+      drawInset(g, w.document.getElementById('rayCv'), 1240, 560, 640, 400, 'この光の道すじ（横から見た図）', f);
+    }
+    for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
+    // 時計の読み（近づいたとき）
+    const fz = fade(t, 121, 134, 0.6);
+    if (fz > 0) {
+      const S = w.__bh.S, z = w.__bh.zamo(S.r, S.th, S.a);
+      const P = { x: 1400, y: 760, title: 'カメラの距離（右のパネル）', btns: [`${S.r.toFixed(1)} M`] };
+      drawChip(g, P, -1, fz);
+      prep(g); g.globalAlpha = fz; g.textAlign = 'left';
+      txt(g, `ここの1時間は遠くの ${(1 / z.alpha).toFixed(2)} 時間`, 1400, 920, 36, '#ffd27a', true);
+      g.globalAlpha = 1; g.shadowBlur = 0;
+    }
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawTitle(g, t, 0.6, 6.6, 'ブラックホールの見え方', '使い方と見どころ');
+    // 英語の字幕があることの案内（最初だけ。右下）
+    const fc = fade(t, 1.5, 6.6, 0.6);
+    if (fc > 0) { prep(g); g.globalAlpha = fc; g.textAlign = 'right'; txt(g, 'CC: English subtitles', PW - 50, PH - 40, 30, '#ddd', true); g.globalAlpha = 1; g.shadowBlur = 0; }
+    drawEnd(g, t, 142.2, 'ブラックホールの見え方', 'ブラウザで動かせます（パソコン・スマホ）',
+      '計算の式: James, von Tunzelmann, Franklin, Thorne (2015) Classical and Quantum Gravity 32, 065001');
+  },
+  errors: w => w.__bh.err,
+  hires(w, W, H) { w.resizeRender(W, H, Math.min(0.5, Math.sqrt(1.6e5 / (W * H))), 1); w.__bh.S.geoDirty = true; },
+});
+</script>
+</body>
+</html>

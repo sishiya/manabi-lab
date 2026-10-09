@@ -37,7 +37,7 @@
 - 入口（ルートの `index.html`）のサムネイルは `assets/thumbs/`（`_dev/tools/make-thumbs.ps1` で撮り直し）。各アプリにはファビコン（SVG を埋め込み）。
 - 各アプリの `index.html` が最新版、`launcher.html` から過去の版を開けます（`versions/`）。
 - 仕組みや確認のしかたは各フォルダの `DEVNOTES.md`、進め方の共通ルールは `RULES.md`。
-- アプリ以外の道具は `_dev/` にまとめています: `_dev/tools/`（公開前チェック・サムネイル撮影・起動）、`_dev/promo/`（紹介動画づくり）。公開する素材（入口のサムネイルなど）は `assets/`。
+- アプリ以外の道具は `_dev/` にまとめています: `_dev/tools/`（公開前チェック・サムネイル撮影・起動・YouTube へのアップロード `youtube-upload.ps1`）、`_dev/promo/`（紹介動画づくり。ショート＝紹介、横長＝使い方の説明（`<app>-guide.html`）。英語の字幕データ（SRT）も作る）。公開する素材（入口のサムネイルなど）は `assets/`。
 
 ## ローカルで動かす（Windows）
 

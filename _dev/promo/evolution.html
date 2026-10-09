@@ -26,11 +26,19 @@ const SEGS = [
   [40, 46, 0, 0, 'surface'],
 ];
 const CAPS = [
-  { a: 10.2, b: 13, main: 'スノーボールアース', sub: '約7.2億〜6.35億年前。赤道まで氷におおわれた' },
-  { a: 14, b: 19.5, main: '生き物が海から陸へ', sub: 'カンブリア爆発（5.39億年前）→ 最初の森（3.85億年前）' },
-  { a: 20.5, b: 25.8, main: '恐竜の時代', sub: '2.3億年前に現れた' },
-  { a: 26.5, b: 31.5, main: '小天体の衝突', sub: '6600万年前。恐竜の時代が終わる' },
-  { a: 34, b: 39.8, main: 'そして人類へ', sub: '700万年前 → いま' },
+  { a: 10.2, b: 13, main: 'スノーボールアース', sub: '約7.2億〜6.35億年前。赤道まで氷におおわれた',
+    en: ['Snowball Earth', 'About 720 to 635 million years ago. Ice reached the equator'] },
+  { a: 14, b: 19.5, main: '生き物が海から陸へ', sub: 'カンブリア爆発（5.39億年前）→ 最初の森（3.85億年前）',
+    en: ['Life moves from the sea to land', 'The Cambrian explosion (539 million years ago) → the first forests (385 million years ago)'] },
+  { a: 20.5, b: 25.8, main: '恐竜の時代', sub: '2.3億年前に現れた', en: ['The age of dinosaurs', 'They appeared 230 million years ago'] },
+  { a: 26.5, b: 31.5, main: '小天体の衝突', sub: '6600万年前。恐竜の時代が終わる', en: ['An asteroid impact', '66 million years ago. The age of dinosaurs ends'] },
+  { a: 34, b: 39.8, main: 'そして人類へ', sub: '700万年前 → いま', en: ['And then, humans', '7 million years ago → today'] },
+];
+// 字幕データ（英語は YouTube の字幕（CC）に）
+const SUBS = [
+  { a: 0.6, b: 5.6, ja: 'ヒトへの46億年\n同じ場所に立ちつづけて、地球と生命と人類の歴史を見る', en: '4.6 Billion Years to Us\nWatching the history of Earth, life and humans from one spot' },
+  ...capSubs(CAPS),
+  { a: 40.6, b: 46, ja: 'ヒトへの46億年\n46億年を、スライダーで行き来できます。未来の予測も', en: '4.6 Billion Years to Us\nMove through 4.6 billion years with a slider, and see predictions of the future (on-screen text in Japanese)' },
 ];
 const ageAt = t => {
   const s = SEGS.find(s => t < s[1]) || SEGS[SEGS.length - 1];
@@ -53,7 +61,8 @@ function drawLabels(g, t, w) {
     const m = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(el.style.transform); if (!m) continue;
     const x = +m[1] * k, y = +m[2] * k - 22, s = el.textContent, bw = g.measureText(s).width + 28, bh = 44;
     const b = [x - bw / 2, y - bh, x + bw / 2, y];
-    if (b[0] < 10 || b[2] > PW - 10 || b[1] < 150 || b[3] > PH - 230) continue;
+    const bottom = isVert() ? PH * 0.58 : PH - 230, right = isVert() ? PW - 150 : PW - 10;   // 字幕・ショートのボタンを避ける
+    if (b[0] < 10 || b[2] > right || b[1] < 150 || b[3] > bottom) continue;
     if (boxes.some(o => b[0] < o[2] + 8 && b[2] > o[0] - 8 && b[1] < o[3] + 6 && b[3] > o[1] - 6)) continue;
     boxes.push(b);
     const anc = el.classList.contains('anc');
@@ -65,7 +74,7 @@ function drawLabels(g, t, w) {
   g.globalAlpha = 1;
 }
 promoStart({
-  name: 'ヒトへの46億年', out: 'evolution', src: '../../evolution/index.html', iw: 1920, ih: 1080, dur: 46, peek: 22,
+  name: 'ヒトへの46億年', out: 'evolution', src: '../../evolution/index.html', iw: 1920, ih: 1080, dur: 46, peek: 22, subs: SUBS,
   // 明るい和音の旅。衝突の光（またいでから 1.3 秒後）で「ドン」、そのあと哺乳類の時代の手前まで暗く
   music: { style: 'journey', root: 130.81, cues: [{ t: KPG_T + 1.3, type: 'boom' }], quiet: [[KPG_T + 1.3, 33]] },
   ready: w => w.__ev && w.setAbout && w.document.getElementById('gl'),
@@ -84,7 +93,7 @@ promoStart({
     lastA = a;
     E.setAge(a);
     E.cam.th = 0.75 + 0.012 * t;          // 地表はゆっくり回りこむ
-    if (t < 6) E.cam.r = 200;
+    if (t < 6) E.cam.r = isVert() ? 400 : 200;   // 縦長は左右が狭いので引く
     E.frame(1, 1 / FPS);
   },
   overlay(g, t, w) {
@@ -111,6 +120,9 @@ promoStart({
     drawEnd(g, t, 40.6, 'ヒトへの46億年', '46億年を、スライダーで行き来できます。未来の予測も');
   },
   errors: w => w.__evErr,
+  short: { iw: 1080, ih: 1920 },
+  // 4K で描かせる（renderer は terrain.js の const なので eval で触る）
+  hires(w, W) { w.eval('renderer.setPixelRatio(' + (W / w.innerWidth) + ')'); },
 });
 function sstep(a, b, x) { const k = clamp((x - a) / (b - a), 0, 1); return k * k * (3 - 2 * k); }
 </script>

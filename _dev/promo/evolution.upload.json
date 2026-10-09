@@ -1,0 +1,15 @@
+{
+  "videoId": "rNMkVJ3GubQ",
+  "file": "_dev/promo/out/evolution.mp4",
+  "thumbnail": "assets/thumbs/evolution.jpg",
+  "privacy": "private",
+  "title": "ヒトへの46億年 ― 同じ場所に立ちつづけて、地球と生命と人類の歴史を見る",
+  "description": "生まれたばかりの溶けた地球から、いまの街まで。同じ場所を定点観測しながら、46億年を早送りで見るブラウザのアプリです。\n\n・スノーボールアース（約7.2億〜6.35億年前）\n・生き物が海から陸へ（カンブリア爆発 → 最初の森）\n・恐竜の時代と、6600万年前の小天体の衝突\n・そして人類へ\n\nアプリ（ブラウザで動きます。スライダーで46億年を行き来でき、未来の予測も見られます）:\nhttps://sishiya.github.io/manabi-lab/evolution/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出典は、アプリの中の「このアプリについて」→「おもな出典」にまとめています。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#地球の歴史 #進化 #恐竜 #まなびラボ",
+  "tags": ["地球の歴史", "進化", "恐竜", "スノーボールアース", "人類", "まなびラボ", "しし屋", "history of Earth", "evolution", "dinosaurs", "Snowball Earth", "human evolution"],
+  "localizations": {
+    "en": {
+      "title": "4.6 Billion Years to Us ― Watching the History of Earth, Life and Humans from One Spot",
+      "description": "From a newborn, molten Earth to a modern city. A browser app that fast-forwards through 4.6 billion years while watching the same spot.\n\n• Snowball Earth (about 720 to 635 million years ago)\n• Life moves from the sea to land (the Cambrian explosion → the first forests)\n• The age of dinosaurs, and the asteroid impact 66 million years ago\n• And then, humans\n\nTry the app (runs in your browser; move the slider through 4.6 billion years and see predictions of the future). The on-screen text is in Japanese for now:\nhttps://sishiya.github.io/manabi-lab/evolution/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nThe main sources are listed inside the app (in Japanese), under 「このアプリについて」 (About) → 「おもな出典」 (Main sources).\n\nMusic: original sounds synthesized by code.\n\n#HistoryOfEarth #Evolution #Dinosaurs"
+    }
+  }
+}

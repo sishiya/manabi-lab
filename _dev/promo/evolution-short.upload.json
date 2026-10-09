@@ -1,0 +1,15 @@
+{
+  "videoId": "XWzhmclD5bM",
+  "file": "_dev/promo/out/evolution-short.mp4",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/evolution-short.en.srt" },
+  "title": "46億年を40秒で ― 溶けた地球から恐竜、そして人類へ #Shorts",
+  "description": "同じ場所に立ちつづけて、地球と生命と人類の歴史を早送りで見るブラウザのアプリ「ヒトへの46億年」から。\n\nアプリ: https://sishiya.github.io/manabi-lab/evolution/\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#地球の歴史 #恐竜 #まなびラボ",
+  "tags": ["地球の歴史", "進化", "恐竜", "Shorts", "まなびラボ", "しし屋", "history of Earth", "evolution", "dinosaurs"],
+  "localizations": {
+    "en": {
+      "title": "4.6 Billion Years in 40 Seconds ― From Molten Earth to Dinosaurs to Humans #Shorts",
+      "description": "From \"4.6 Billion Years to Us\", a browser app that fast-forwards through the history of Earth, life and humans while standing in the same spot.\n\nApp (on-screen text in Japanese for now): https://sishiya.github.io/manabi-lab/evolution/\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMusic: original sounds synthesized by code.\n\n#HistoryOfEarth #Dinosaurs"
+    }
+  }
+}

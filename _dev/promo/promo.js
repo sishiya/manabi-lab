@@ -2,7 +2,9 @@
 // cfg = { name, out, src, iw, ih, dur, music, ready(w) → bool, setup(w) → canvas, renderAt(t, w) [async 可], overlay(g, t, w) }
 // アプリを iframe で開き、1コマずつ描いて字幕を重ね、BGM を合成して mp4（H.264＋AAC）にする。
 'use strict';
-const PW = 1920, PH = 1080, FPS = 30, SR = 48000;
+let PW = 1920, PH = 1080;   // 字幕などを描く座標の大きさ。?short を付けて開くと縦長 1080×1920（YouTube ショート）
+const RES = 2;              // 実際の出力はこの倍（4K: 3840×2160、ショートは 2160×3840）。アプリにもこの大きさで描かせる（cfg.hires）
+const FPS = 30, SR = 48000;
 const FONT = '"Yu Gothic UI", "Meiryo", sans-serif';
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const ease = x => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
@@ -12,26 +14,68 @@ const fade = (t, a, b, f = 0.6) => clamp(Math.min((t - a) / f, (b - t) / f), 0, 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // ---- 文字 ----
-function txt(g, s, x, y, size, color, bold) {
-  g.font = (bold ? 'bold ' : '') + size + 'px ' + FONT; g.fillStyle = color; g.fillText(s, x, y);
+// 縦長（ショート）は下の約25%と右はしに YouTube の表示が重なるので、文字はその上・内側に置く
+const isVert = () => PH > PW;
+const maxW = () => PW - (isVert() ? 160 : 200);
+function setFont(g, size, bold) { g.font = (bold ? 'bold ' : '') + Math.round(size) + 'px ' + FONT; }
+// 幅に入らなければ、区切りのよい所（、」→ など）で2行に折る。それでも入らなければ字を小さくする
+function wrap(g, s, size, bold) {
+  setFont(g, size, bold);
+  if (g.measureText(s).width <= maxW()) return { lines: [s], size };
+  let best = null;
+  for (let i = 1; i < s.length; i++) {
+    const brk = '、。」）』→・ '.includes(s[i - 1]) || '（「『'.includes(s[i]);
+    if (!brk) continue;
+    const d = Math.abs(i - s.length / 2);
+    if (!best || d < best.d) best = { i, d };
+  }
+  const lines = best ? [s.slice(0, best.i).trim(), s.slice(best.i).trim()] : [s];
+  const w = Math.max(...lines.map(l => g.measureText(l).width));
+  return { lines, size: w > maxW() ? size * maxW() / w : size };
 }
-function prep(g) { g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowColor = 'rgba(0,0,0,0.9)'; g.shadowBlur = 18; }
+// 行のかたまりを描く。items = [{ s, size, color, bold, gap }]、anchor = 'bottom' | 'center'
+function drawBlock(g, items, y, anchor) {
+  const rows = [];
+  for (const it of items) {
+    if (!it.s) continue;
+    const { lines, size } = wrap(g, it.s, it.size, it.bold);
+    lines.forEach((l, k) => rows.push({ l, size, color: it.color, bold: it.bold, h: size * 1.25, gap: k === 0 ? (it.gap || 0) : 0 }));
+  }
+  const H = rows.reduce((a, r) => a + r.h + r.gap, 0);
+  let cy = anchor === 'bottom' ? y - H : anchor === 'top' ? y : y - H / 2;
+  for (const r of rows) { cy += r.gap; txt(g, r.l, PW / 2, cy + r.h / 2, r.size, r.color, r.bold); cy += r.h; }
+}
+// 文字は大きくぼかした影で見せる（標準。2026-10-10 に見くらべて、ユーザーがこちらを選んだ）
+// ?outline を付けて開くと、黒いふちどり＋うすい影で描く（見くらべ用。出力は <out>-outline.mp4）
+const GLOW = !new URLSearchParams(location.search).has('outline');
+function txt(g, s, x, y, size, color, bold) {
+  setFont(g, size, bold);
+  if (GLOW) { g.fillStyle = color; g.fillText(s, x, y); return; }
+  g.lineJoin = 'round'; g.lineWidth = Math.max(3, size * 0.14); g.strokeStyle = 'rgba(0,0,0,0.85)';
+  g.strokeText(s, x, y);
+  const sb = g.shadowBlur; g.shadowBlur = 0; g.fillStyle = color; g.fillText(s, x, y); g.shadowBlur = sb;
+}
+function prep(g) {   // ぼかしは拡大されないので RES 倍
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  if (GLOW) { g.shadowColor = 'rgba(0,0,0,0.9)'; g.shadowBlur = 18 * RES; }
+  else { g.shadowColor = 'rgba(0,0,0,0.6)'; g.shadowBlur = 6 * RES; }   // 影はふちどりの外だけ
+}
 // 題名（最初）
 function drawTitle(g, t, a, b, title, sub) {
   const f = fade(t, a, b, 0.8); if (f <= 0) return;
   prep(g); g.globalAlpha = f;
-  txt(g, title, PW / 2, PH * 0.80, 96, '#fff', true);
-  if (sub) txt(g, sub, PW / 2, PH * 0.80 + 86, 40, '#f2c79a');
+  drawBlock(g, [{ s: title, size: 96, color: '#fff', bold: true }, { s: sub, size: 40, color: '#f2c79a', gap: 14 }],
+    isVert() ? PH * 0.74 : PH * 0.90, 'bottom');
   g.globalAlpha = 1; g.shadowBlur = 0;
 }
-// 字幕（下）。caps = [{ a, b, main, sub }]
-function drawCaps(g, t, caps) {
+// 字幕（下）。caps = [{ a, b, main, sub }]。top = true なら上に置く（下は YouTube の字幕（CC）にあける）
+function drawCaps(g, t, caps, top) {
   prep(g);
   for (const c of caps) {
     const f = fade(t, c.a, c.b); if (f <= 0) continue;
     g.globalAlpha = f;
-    txt(g, c.main, PW / 2, PH - (c.sub ? 170 : 120), 64, '#fff', true);
-    if (c.sub) txt(g, c.sub, PW / 2, PH - 92, 38, '#f2c79a');
+    drawBlock(g, [{ s: c.main, size: 64, color: '#fff', bold: true }, { s: c.sub, size: 38, color: '#f2c79a', gap: 10 }],
+      top ? 44 : isVert() ? PH * 0.74 : PH - 72, top ? 'top' : 'bottom');
   }
   g.globalAlpha = 1; g.shadowBlur = 0;
 }
@@ -40,10 +84,100 @@ function drawEnd(g, t, a, title, line, credit) {
   const f = clamp((t - a) / 0.8, 0, 1); if (f <= 0) return;
   g.shadowBlur = 0; g.globalAlpha = f * 0.75; g.fillStyle = '#000'; g.fillRect(0, 0, PW, PH);
   prep(g); g.globalAlpha = f;
-  txt(g, title, PW / 2, PH * 0.40, 88, '#fff', true);
-  txt(g, line, PW / 2, PH * 0.40 + 100, 42, '#f2c79a');
-  if (credit) txt(g, credit, PW / 2, PH * 0.40 + 190, 28, '#aaa');
+  drawBlock(g, [{ s: title, size: 88, color: '#fff', bold: true }, { s: line, size: 42, color: '#f2c79a', gap: 26 },
+    { s: credit, size: 28, color: '#aaa', gap: 40 }], isVert() ? PH * 0.42 : PH * 0.48, 'center');
   g.globalAlpha = 1; g.shadowBlur = 0;
+}
+
+// ---- 字幕データ（SRT）: YouTube の字幕（CC）として上げる。英語で見ている人には英語が出る ----
+// cfg.subs = [{ a, b, ja, en }]（改行は \n）。準備ができたら _dev/promo/out/<out>.<言語>.srt に保存する
+function srtTime(t) {
+  const ms = Math.round(t * 1000), p = (n, k = 2) => String(n).padStart(k, '0');
+  return `${p(Math.floor(ms / 3600000))}:${p(Math.floor(ms / 60000) % 60)}:${p(Math.floor(ms / 1000) % 60)},${p(ms % 1000, 3)}`;
+}
+const makeSrt = (subs, lang) => subs.filter(s => s[lang]).map((s, i) => `${i + 1}\n${srtTime(s.a)} --> ${srtTime(s.b)}\n${s[lang]}\n`).join('\n');
+// 字幕の表から: [{ a, b, main, sub, en: [main, sub] }] → subs
+const capSubs = caps => caps.map(c => ({ a: c.a, b: c.b, ja: [c.main, c.sub].filter(Boolean).join('\n'), en: c.en && c.en.filter(Boolean).join('\n') }));
+
+// ---- 使い方の動画: マウスの矢印・クリックの輪・ボタンの札 ----
+// 矢印の道すじ keys = [{ t, x, y, click, drag, wheel, hide }]（PW×PH の座標）。キーの間はなめらかに動く
+//   click: その時刻にクリックの輪、drag: 次のキーまで押したまま、wheel: 次のキーまでホイールの印、hide: ここで消える
+function drawCursor(g, keys, t) {
+  let i = keys.findIndex(k => k.t > t); if (i < 0) i = keys.length; i--;
+  if (i < 0) return;
+  const k0 = keys[i], k1 = keys[i + 1];
+  const m = k1 ? Math.min(k1.t - k0.t, 0.9) : 1, u = k1 ? ease((t - (k1.t - m)) / m) : 1;   // 次のキーの 0.9 秒前から動く
+  const x = k1 ? lerp(k0.x, k1.x, k0.drag ? clamp((t - k0.t) / (k1.t - k0.t), 0, 1) : u) : k0.x;
+  const y = k1 ? lerp(k0.y, k1.y, k0.drag ? clamp((t - k0.t) / (k1.t - k0.t), 0, 1) : u) : k0.y;
+  const first = keys[0], f = clamp((t - first.t) / 0.4, 0, 1) * (k0.hide ? 1 - clamp((t - k0.t) / 0.4, 0, 1) : 1);
+  if (f <= 0) return;
+  g.shadowBlur = 0; g.globalAlpha = f;
+  // クリックの輪（押してから 0.7 秒）
+  for (const k of keys) {
+    if (!k.click || t < k.t || t > k.t + 0.7) continue;
+    const s = (t - k.t) / 0.7;
+    g.globalAlpha = f * (1 - s); g.strokeStyle = '#ffd27a'; g.lineWidth = 5;
+    g.beginPath(); g.arc(k.x, k.y, 12 + 46 * s, 0, Math.PI * 2); g.stroke();
+  }
+  g.globalAlpha = f;
+  if (k0.drag && k1) { g.fillStyle = 'rgba(255,210,122,0.35)'; g.beginPath(); g.arc(x, y, 26, 0, Math.PI * 2); g.fill(); }
+  if (k0.wheel && k1) {   // ホイールの印（上下の山形が流れる）
+    const ph = (t * 2) % 1;
+    g.strokeStyle = '#ffd27a'; g.lineWidth = 4; g.lineCap = 'round';
+    for (const d of [-1, 1]) for (let j = 0; j < 2; j++) {
+      const yy = y + d * (34 + 12 * ((ph + j * 0.5) % 1)); g.globalAlpha = f * (1 - ((ph + j * 0.5) % 1));
+      g.beginPath(); g.moveTo(x + 44, yy + d * 8); g.lineTo(x + 54, yy); g.lineTo(x + 64, yy + d * 8); g.stroke();
+    }
+    g.globalAlpha = f;
+  }
+  // 矢印（白、黒いふち）
+  const S = 1.5;
+  g.save(); g.translate(x, y); g.scale(S, S);
+  g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 26); g.lineTo(6.5, 20); g.lineTo(11, 30); g.lineTo(15, 28.3); g.lineTo(10.6, 18.6); g.lineTo(19, 18.6); g.closePath();
+  g.fillStyle = '#fff'; g.strokeStyle = '#111'; g.lineWidth = 2; g.lineJoin = 'round';
+  g.shadowColor = 'rgba(0,0,0,0.6)'; g.shadowBlur = 8; g.fill(); g.shadowBlur = 0; g.stroke();
+  g.restore(); g.globalAlpha = 1;
+}
+// ボタンの札: アプリのボタンと同じ言葉で、どこを押すかを絵で示す（アプリの画面そのものではない）
+// p = { x, y, title, btns: ['…'], cols }（cols を省くと1行）。btnRect(p, i) でボタンの位置（矢印の行き先）
+const MEAS = document.createElement('canvas').getContext('2d');
+function chipLayout(p) {
+  setFont(MEAS, 30, true);
+  const pad = 22, gap = 10, bh = 58, top = p.title ? 52 : pad;
+  const bw = Math.max(...p.btns.map(s => MEAS.measureText(s).width)) + 44;
+  const cols = p.cols || p.btns.length, rows = Math.ceil(p.btns.length / cols);
+  setFont(MEAS, 26, true);
+  const w = Math.max(pad * 2 + cols * bw + (cols - 1) * gap, p.title ? MEAS.measureText(p.title).width + 44 : 0), h = top + rows * bh + (rows - 1) * gap + pad;
+  const rects = p.btns.map((_, i) => [p.x + pad + (i % cols) * (bw + gap), p.y + top + Math.floor(i / cols) * (bh + gap), bw, bh]);
+  return { w, h, rects };
+}
+function btnRect(p, i) { const r = chipLayout(p).rects[i]; return { x: r[0] + r[2] * 0.6, y: r[1] + r[3] * 0.6 }; }
+function drawChip(g, p, on, f) {
+  if (f <= 0) return;
+  const L = chipLayout(p);
+  g.shadowBlur = 0; g.globalAlpha = f;
+  g.fillStyle = 'rgba(14,16,24,0.9)'; g.strokeStyle = 'rgba(255,255,255,0.22)'; g.lineWidth = 2;
+  g.beginPath(); g.roundRect(p.x, p.y, L.w, L.h, 16); g.fill(); g.stroke();
+  g.textAlign = 'left'; g.textBaseline = 'middle';
+  if (p.title) { setFont(g, 26, true); g.fillStyle = '#b9bfcc'; g.fillText(p.title, p.x + 22, p.y + 30); }
+  g.textAlign = 'center';
+  p.btns.forEach((s, i) => {
+    const [x, y, w, h] = L.rects[i], sel = i === on;
+    g.fillStyle = sel ? '#ffb35c' : 'rgba(255,255,255,0.06)'; g.strokeStyle = sel ? '#ffb35c' : 'rgba(255,255,255,0.3)';
+    g.beginPath(); g.roundRect(x, y, w, h, 10); g.fill(); g.stroke();
+    setFont(g, 30, true); g.fillStyle = sel ? '#1a1206' : '#e8e8ee'; g.fillText(s, x + w / 2, y + h / 2 + 1);
+  });
+  g.globalAlpha = 1;
+}
+// アプリの中の図（canvas）を、枠と見出しをつけて重ねる
+function drawInset(g, src, x, y, w, h, title, f) {
+  if (f <= 0) return;
+  g.shadowBlur = 0; g.globalAlpha = f;
+  g.fillStyle = 'rgba(14,16,24,0.92)'; g.strokeStyle = 'rgba(255,255,255,0.22)'; g.lineWidth = 2;
+  g.beginPath(); g.roundRect(x, y, w, h + 50, 16); g.fill(); g.stroke();
+  setFont(g, 26, true); g.fillStyle = '#b9bfcc'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(title, x + 20, y + 28);
+  g.drawImage(src, x + 10, y + 50, w - 20, h - 10);
+  g.globalAlpha = 1;
 }
 
 // ---- 音（ブラウザで合成。著作権の心配なし）----
@@ -134,11 +268,11 @@ async function makeAudio(dur, music = {}) {
 }
 
 async function pickVideoCodec() {
-  for (const codec of ['avc1.640028', 'avc1.4d0028', 'avc1.42e028']) {
-    const c = { codec, width: PW, height: PH, bitrate: 10e6, framerate: FPS };
+  for (const codec of ['avc1.640033', 'avc1.4d0033']) {   // H.264 レベル 5.1（4K）
+    const c = { codec, width: PW * RES, height: PH * RES, bitrate: 40e6, framerate: FPS };   // YouTube のおすすめは 4K30 で 35〜45 Mbps
     if ((await VideoEncoder.isConfigSupported(c)).supported) return c;
   }
-  throw new Error('このブラウザでは H.264 で書き出せません');
+  throw new Error('このブラウザでは 4K の H.264 で書き出せません');
 }
 async function pickAudioCodec() {
   for (const [codec, mux] of [['mp4a.40.2', 'aac'], ['opus', 'opus']]) {
@@ -149,15 +283,21 @@ async function pickAudioCodec() {
 }
 
 function promoStart(cfg) {
+  // ?short: 縦長のショート版。cfg.short（iw・ih など）で上書きし、出力は <out>-short.mp4
+  if (new URLSearchParams(location.search).has('short')) {
+    PW = 1080; PH = 1920;
+    cfg = Object.assign({}, cfg, cfg.short || {}, { out: cfg.out + '-short', name: cfg.name + '（ショート）' });
+  }
+  if (!GLOW) cfg = Object.assign({}, cfg, { out: cfg.out + '-outline', name: cfg.name + '（ふちどり）' });
   document.title = '紹介動画づくり: ' + cfg.name;
   document.body.innerHTML = `
-<iframe id="app" src="${cfg.src}" style="position:fixed;left:0;top:0;width:${cfg.iw}px;height:${cfg.ih}px;border:0;opacity:0;pointer-events:none;z-index:-1"></iframe>
+<iframe id="app" ${cfg.inject ? '' : `src="${cfg.src}"`} style="position:fixed;left:0;top:0;width:${cfg.iw}px;height:${cfg.ih}px;border:0;opacity:0;pointer-events:none;z-index:-1"></iframe>
 <main>
   <h1>紹介動画づくり: ${cfg.name}</h1>
-  <p>アプリを裏で開いて1コマずつ描き、字幕と音を重ねて mp4（1920×1080・30コマ/秒・${cfg.dur}秒）にします。できたら下で再生でき、<code>_dev/promo/out/${cfg.out}.mp4</code> にも保存します（Git に入れません）。</p>
+  <p>アプリを裏で開いて1コマずつ描き、字幕と音を重ねて mp4（${PW * RES}×${PH * RES}・30コマ/秒・${cfg.dur}秒）にします。できたら下で再生でき、<code>_dev/promo/out/${cfg.out}.mp4</code> にも保存します（Git に入れません）。</p>
   <button id="go" disabled>準備中…</button> <a id="dl" hidden download="${cfg.out}.mp4">ダウンロード</a>
   <div id="log"></div>
-  <canvas id="out" width="${PW}" height="${PH}"></canvas>
+  <canvas id="out" width="${PW * RES}" height="${PH * RES}"></canvas>
   <video id="vid" controls hidden></video>
 </main>`;
   const out = document.getElementById('out'), g = out.getContext('2d');
@@ -165,14 +305,32 @@ function promoStart(cfg) {
   const log = s => { logEl.textContent += s + '\n'; };
   const iframe = document.getElementById('app');
   let w, src;
+  // cfg.inject = { dpr, raf }: アプリを読み込む前に差しかえる（アプリのファイルは変えない）。HTML を取ってきて srcdoc で開く
+  //   dpr: devicePixelRatio をこの値にする（canvas を細かく描かせる）
+  //   raf: requestAnimationFrame を止めて、こちらの appStep(w) で1コマずつ進める
+  if (cfg.inject) (async () => {
+    const base = new URL(cfg.src, location.href);
+    let html = await (await fetch(base)).text();
+    let pre = '';
+    if (cfg.inject.dpr) pre += `Object.defineProperty(window, 'devicePixelRatio', { get: () => ${cfg.inject.dpr} });`;
+    if (cfg.inject.raf) pre += 'window.__rafQ = []; window.requestAnimationFrame = cb => window.__rafQ.push(cb); window.cancelAnimationFrame = () => {};'
+      + 'window.__rafStep = ts => { const q = window.__rafQ; window.__rafQ = []; q.forEach(cb => cb(ts)); };';
+    const head = `<base href="${base.href.replace(/[^/]*$/, '')}"><script>${pre}</` + 'script>';
+    iframe.srcdoc = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, m => m + head) : head + html;   // <head> のないファイルもある
+  })();
 
-  // アプリの絵を画面いっぱいに切り取って置く
+  // アプリの絵を画面いっぱいに切り取って置く（cfg.drawSource があれば、いくつもの図をそれで並べ直す）
   function drawSrc() {
-    const sw = src.width, sh = src.height, k = Math.max(PW / sw, PH / sh), dw = sw * k, dh = sh * k;
-    g.drawImage(src, (PW - dw) / 2, (PH - dh) / 2, dw, dh);
+    const OW = PW * RES, OH = PH * RES;
+    if (cfg.drawSource) { g.setTransform(1, 0, 0, 1, 0, 0); cfg.drawSource(g, w, OW, OH); g.setTransform(RES, 0, 0, RES, 0, 0); return; }
+    const sw = src.width, sh = src.height, k = Math.max(OW / sw, OH / sh), dw = sw * k, dh = sh * k;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.drawImage(src, (OW - dw) / 2, (OH - dh) / 2, dw, dh);
+    g.setTransform(RES, 0, 0, RES, 0, 0);   // ここから先（字幕など）は PW×PH の座標で描く
   }
   async function renderAt(t) {
     await cfg.renderAt(t, w);
+    g.setTransform(RES, 0, 0, RES, 0, 0);
     g.globalAlpha = 1; g.fillStyle = '#000'; g.fillRect(0, 0, PW, PH);
     drawSrc(); cfg.overlay(g, t, w);
   }
@@ -183,7 +341,7 @@ function promoStart(cfg) {
     log(`映像 ${vcfg.codec}、音 ${acfg.codec}`);
     const muxer = new Mp4Muxer.Muxer({
       target: new Mp4Muxer.ArrayBufferTarget(),
-      video: { codec: 'avc', width: PW, height: PH, frameRate: FPS },
+      video: { codec: 'avc', width: PW * RES, height: PH * RES, frameRate: FPS },
       audio: { codec: amux, numberOfChannels: 2, sampleRate: SR },
       fastStart: 'in-memory',
     });
@@ -239,8 +397,16 @@ function promoStart(cfg) {
       }
       if (!cfg.ready(w)) throw new Error('アプリが開けませんでした');
       src = await cfg.setup(w);
-      log(`アプリの絵: ${src.width}×${src.height}`);
+      if (cfg.hires) cfg.hires(w, PW * RES, PH * RES);   // アプリに出力と同じ大きさで描かせる
+      if (src) log(`アプリの絵: ${src.width}×${src.height}`);
       await renderAt(cfg.peek || 8);
+      // 字幕データ（cfg.subs は setup のあとに決まってもよいので、関数でもよい）
+      const subs = typeof cfg.subs === 'function' ? cfg.subs(w) : cfg.subs;
+      if (subs) for (const lang of ['ja', 'en']) {
+        const s = makeSrt(subs, lang); if (!s) continue;
+        try { const r = await fetch(`out/${cfg.out}.${lang}.srt`, { method: 'PUT', body: s }); log(r.ok ? `字幕データを保存した: _dev/promo/out/${cfg.out}.${lang}.srt` : '字幕データを保存できなかった'); }
+        catch (e) { log('字幕データを保存できなかった'); }
+      }
       go.disabled = false; go.textContent = '録画する（数分かかります）';
       go.onclick = async () => {
         go.disabled = true;
@@ -251,3 +417,7 @@ function promoStart(cfg) {
     } catch (e) { log('失敗: ' + e.message); }
   })();
 }
+
+// cfg.inject.raf のとき: アプリを n コマ（1コマ = 1/FPS 秒）進める。時刻はこちらで数えるので、録画の速さに左右されない
+let appT = null;   // アプリの performance.now() から数え始める（ずれると時間の差が負になり、体内ダイブでカメラが NaN になった）
+function appStep(w, n = 1) { if (appT === null) appT = w.performance.now(); for (let i = 0; i < n; i++) { appT += 1000 / FPS; w.__rafStep(appT); } }

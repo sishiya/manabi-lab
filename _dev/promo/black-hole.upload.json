@@ -1,0 +1,15 @@
+{
+  "videoId": "1AhbbN7NZTM",
+  "file": "_dev/promo/out/black-hole.mp4",
+  "thumbnail": "assets/thumbs/black-hole.jpg",
+  "privacy": "private",
+  "title": "ブラックホールの見え方 ― 映画のブラックホールを、光の道すじから1ピクセルずつ計算する",
+  "description": "映画『インターステラー』に出てくるブラックホールを、回るブラックホールのまわりで光がどう曲がるかを1ピクセルずつ計算して描いたブラウザのアプリです。\n\n・穴の上の光の帯は、じつは円盤の「向こう側」\n・見る角度を変えると、形が変わる\n・本当の見え方では、こちらへ回ってくる左側が明るい（映画では入れなかった）\n\nアプリ（ブラウザで動きます。クリックした点の光の道すじも見られます）:\nhttps://sishiya.github.io/manabi-lab/black-hole/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nJames, von Tunzelmann, Franklin, Thorne (2015) Gravitational lensing by spinning black holes in astrophysics, and in the movie Interstellar. Classical and Quantum Gravity 32, 065001. https://arxiv.org/abs/1502.03808\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#ブラックホール #インターステラー #相対性理論 #まなびラボ",
+  "tags": ["ブラックホール", "インターステラー", "相対性理論", "重力レンズ", "シミュレーション", "まなびラボ", "しし屋", "black hole", "Interstellar", "general relativity", "gravitational lensing", "ray tracing"],
+  "localizations": {
+    "en": {
+      "title": "How a Black Hole Looks ― Ray-Tracing the Interstellar Black Hole, Pixel by Pixel",
+      "description": "A browser app that draws the black hole from the movie Interstellar by calculating, pixel by pixel, how light bends around a spinning black hole.\n\n• The bright band above the hole is actually the far side of the disk\n• Change the viewing angle and the shape changes\n• In the realistic view, the left side, rotating toward you, is brighter (the movie left this out)\n\nTry the app (runs in your browser; click any point to see the path its light took). The on-screen text is in Japanese for now:\nhttps://sishiya.github.io/manabi-lab/black-hole/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nMain source:\nJames, von Tunzelmann, Franklin, Thorne (2015) Gravitational lensing by spinning black holes in astrophysics, and in the movie Interstellar. Classical and Quantum Gravity 32, 065001. https://arxiv.org/abs/1502.03808\n\nMusic: original sounds synthesized by code.\n\n#BlackHole #Interstellar #Relativity"
+    }
+  }
+}

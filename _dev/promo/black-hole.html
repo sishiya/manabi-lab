@@ -14,24 +14,35 @@
 // 台本: ブラックホールの見え方（40秒）
 const deg = Math.PI / 180;
 const CAPS = [
-  { a: 6.0, b: 13.0, main: '穴の上の光の帯は、円盤の「向こう側」', sub: '光が重力で曲がって、こちらへ届いている' },
-  { a: 13.5, b: 21.0, main: '見る角度を変えると、形が変わる', sub: '1ピクセルごとに、光の道すじを計算し直している' },
-  { a: 21.5, b: 28.0, main: '本当の見え方：左が明るい', sub: 'こちらへ回ってくる側の光は、明るく見える（映画では入れなかった）' },
-  { a: 28.5, b: 35.0, main: '近づいてみる', sub: '' },
+  { a: 6.0, b: 13.0, main: '穴の上の光の帯は、円盤の「向こう側」', sub: '光が重力で曲がって、こちらへ届いている',
+    en: ['The band of light above the hole is the far side of the disk', 'Gravity bends its light toward us'] },
+  { a: 13.5, b: 21.0, main: '見る角度を変えると、形が変わる', sub: '1ピクセルごとに、光の道すじを計算し直している',
+    en: ['Change the viewing angle and the shape changes', 'The path of light is recalculated for every pixel'] },
+  { a: 21.5, b: 28.0, main: '本当の見え方：左が明るい', sub: 'こちらへ回ってくる側の光は、明るく見える（映画では入れなかった）',
+    en: ['Realistic view: the left side is brighter', 'Gas moving toward us looks brighter (the movie left this out)'] },
+  { a: 28.5, b: 35.0, main: '近づいてみる', sub: '', en: ['Moving closer'] },
+];
+// 字幕データ（英語は YouTube の字幕（CC）に）
+const SUBS = [
+  { a: 0.6, b: 5.6, ja: 'ブラックホールの見え方\n映画『インターステラー』のブラックホールを、光の道すじから計算する', en: 'How a Black Hole Looks\nThe Interstellar black hole, calculated from the paths of light' },
+  ...capSubs(CAPS),
+  { a: 35.2, b: 40, ja: 'ブラックホールの見え方\nブラウザで動かせます。クリックした点の光の道すじも見られます', en: 'How a Black Hole Looks\nRuns in your browser (on-screen text in Japanese). Click any point to see the path of its light' },
 ];
 function stateAt(t) {
-  const s = { a: 0.6, r: 28, th: 85 * deg, ph: -0.012 * t, real: false, disk: true, sky: 'stars' };
+  const K = isVert() ? 1.7 : 1;   // 縦長は左右が狭いので、カメラを引いて円盤を収める
+  const s = { a: 0.6, r: 28 * K, th: 85 * deg, ph: -0.012 * t, real: false, disk: true, sky: 'stars' };
   if (t >= 13) s.th = lerp(85, 60, ease((t - 13.5) / 6)) * deg;
   if (t >= 21 && t < 28) s.real = true;
   if (t >= 28) {
     const k = ease((t - 28.5) / 6.5);
-    s.th = lerp(60, 84, k) * deg; s.r = 28 * Math.exp(Math.log(11 / 28) * k);
+    s.th = lerp(60, 84, k) * deg; s.r = 28 * K * Math.exp(Math.log(11 / 28) * k);
   }
   return s;
 }
 promoStart({
-  name: 'ブラックホールの見え方', out: 'black-hole', src: '../../black-hole/index.html', iw: 2270, ih: 1080, dur: 40, music: { style: 'drone', root: 55 },
-  ready: w => w.__bh && w.__bh.R && w.__bh.R.levels && w.__bh.R.levels.low,
+  name: 'ブラックホールの見え方', out: 'black-hole', src: '../../black-hole/index.html', iw: 2270, ih: 1080, dur: 40, music: { style: 'drone', root: 55 }, subs: SUBS,
+  // ペインが裏だとアプリの rAF が止まって最初の描画が始まらないので、こちらから1コマ描かせる
+  ready: w => w.__bh && w.__bh.R && w.__bh.R.gl && (w.__bh.R.levels.low || (w.__bh.renderNow(), w.__bh.R.levels.low)),
   setup: w => w.document.getElementById('view'),
   renderAt(t, w) {
     const BH = w.__bh, st = stateAt(t), S = BH.S;
@@ -47,6 +58,9 @@ promoStart({
       '計算の式: James, von Tunzelmann, Franklin, Thorne (2015) Classical and Quantum Gravity 32, 065001');
   },
   errors: w => w.__bh.err,
+  short: { iw: 1430, ih: 1920 },   // 右のパネル 350px を除いた絵が 1080×1920
+  // 4K で描かせる（アプリの上限 2.6e6 ピクセルは録画のときだけ外す。光は1ピクセルずつたどり直す）
+  hires(w, W, H) { w.resizeRender(W, H, Math.min(0.5, Math.sqrt(1.6e5 / (W * H))), 1); w.__bh.S.geoDirty = true; },
 });
 </script>
 </body>

@@ -1,0 +1,15 @@
+{
+  "file": "_dev/promo/out/black-hole-guide.mp4",
+  "thumbnail": "assets/thumbs/black-hole.jpg",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/black-hole-guide.en.srt" },
+  "title": "ブラックホールの見え方 ― 使い方と見どころ（光の道すじ・本当の見え方・回転・時計の遅れ）",
+  "description": "映画『インターステラー』のブラックホールを、回るブラックホールのまわりで光がどう曲がるかを1ピクセルずつ計算して描くブラウザのアプリ「ブラックホールの見え方」の、使い方と見どころです。\n\n0:00 はじめに\n0:14 見る角度を変える（ドラッグ・真上から）\n0:33 クリックで光の道すじ（穴の上の帯・円盤の下の面・光の輪・影）\n1:14 映画版と本当の見え方\n1:33 回転の速さと空のゆがみ\n1:56 近づくと時計がゆっくり進む\n2:15 見つけてみよう\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/black-hole/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nJames, von Tunzelmann, Franklin, Thorne (2015) Gravitational lensing by spinning black holes in astrophysics, and in the movie Interstellar. Classical and Quantum Gravity 32, 065001. https://arxiv.org/abs/1502.03808\nThorne (2014) The Science of Interstellar. W. W. Norton\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#ブラックホール #インターステラー #相対性理論 #まなびラボ",
+  "tags": ["ブラックホール", "インターステラー", "相対性理論", "重力レンズ", "シミュレーション", "使い方", "まなびラボ", "しし屋", "black hole", "Interstellar", "general relativity", "gravitational lensing", "ray tracing"],
+  "localizations": {
+    "en": {
+      "title": "How a Black Hole Looks ― App Guide: Light Paths, the Realistic View, Spin and Slow Clocks",
+      "description": "A guide to \"How a Black Hole Looks\", a browser app that draws the black hole from the movie Interstellar by calculating, pixel by pixel, how light bends around a spinning black hole. Turn on English subtitles (CC).\n\n0:00 Intro\n0:14 Changing the viewing angle (drag, view from above)\n0:33 Click to see the path of light (the band above the hole, the underside of the disk, the ring of light, the shadow)\n1:14 The movie version vs. the realistic view\n1:33 Spin and the distorted sky\n1:56 Near the hole, clocks run slow\n2:15 Find it (challenges)\n\nTry the app (runs in your browser, PC or phone). The on-screen text is in Japanese for now:\nhttps://sishiya.github.io/manabi-lab/black-hole/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nMain sources:\nJames, von Tunzelmann, Franklin, Thorne (2015) Gravitational lensing by spinning black holes in astrophysics, and in the movie Interstellar. Classical and Quantum Gravity 32, 065001. https://arxiv.org/abs/1502.03808\nThorne (2014) The Science of Interstellar. W. W. Norton\n\nMusic: original sounds synthesized by code.\n\n#BlackHole #Interstellar #Relativity"
+    }
+  }
+}
