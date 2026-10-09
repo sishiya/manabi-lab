@@ -6,6 +6,18 @@
 <title>まなびラボ</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%232b6cb0'/><path d='M26 14h12M28 14v14L17 47a4 4 0 0 0 3.5 6h23a4 4 0 0 0 3.5-6L36 28V14' fill='none' stroke='%23fff' stroke-width='3.5' stroke-linejoin='round'/><path d='M22 42h20l3 6H19z' fill='%23fff'/></svg>">
 <script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<script>
+// 言語（ja／en）。URL の ?lang= → 前に選んだもの（localStorage 'manabi-lang'。アプリと共通）→ ブラウザの言語、の順で決める（I18N.md）。
+// 文字がちらつかないよう、本文より先に <html lang> を決める（CSS が [lang] で片方を隠す）
+var LANG = (function () {
+  var q = new URLSearchParams(location.search).get('lang'), s = null;
+  try { s = localStorage.getItem('manabi-lang'); } catch (e) {}
+  if (q === 'ja' || q === 'en') return q;
+  if (s === 'ja' || s === 'en') return s;
+  return /^ja\b/i.test(navigator.language || 'ja') ? 'ja' : 'en';
+})();
+document.documentElement.lang = LANG;
+</script>
 <style>
 :root{--bg:#f6f4ee;--ink:#1d2129;--muted:#5d6472;--line:#d9d5ca;--card:#fff;--accent:#2b6cb0;--accent-ink:#fff;--thumb:#d9d5ca;--field:#fff;
   --c-earth:#4a8494;--c-body:#b8694f;--c-life:#62874a;--c-phys:#7d6db0;--new:#b45309;--new-ink:#fff;color-scheme:light dark}
@@ -13,11 +25,17 @@
   --c-earth:#86b6c2;--c-body:#d39e8a;--c-life:#a0bf8c;--c-phys:#aea3d4;--new:#f0b44c;--new-ink:#1d1505}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
+/* 日本語と英語の文を並べて書き、選んでいないほうを隠す */
+:root[lang=en] [lang=ja],:root:not([lang=en]) [lang=en]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;line-height:1.75}
 /* 日本語を文節の切れ目で折り返す（Chrome・Edge。ほかのブラウザはふつうの折り返し） */
 p,.cat,.status{word-break:auto-phrase;text-wrap:pretty}
 main{max-width:1000px;margin:0 auto;padding:48px 16px 64px}
-h1{margin:0 0 8px;font-size:32px;line-height:1.3}
+h1{margin:0;font-size:32px;line-height:1.3}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:0 0 8px}
+.lang button{padding:4px 12px;font-weight:600;letter-spacing:.04em}
+.lang button[aria-pressed=false]{color:var(--muted)}
+.jponly{position:absolute;right:10px;bottom:10px;font-size:11px;line-height:1;padding:4px 6px;border-radius:5px;background:rgba(14,18,24,.62);color:#fff;white-space:nowrap}
 .lead{color:var(--muted);margin:0 0 24px;max-width:720px}
 
 /* 操作欄: 分野（左）と並び順（右）。狭いと並び順は分野の下へ（しぼってから並べかえる順） */
@@ -88,6 +106,7 @@ h2+.grid{margin-top:0}
   .pic{flex:none;width:112px;align-self:flex-start;margin:10px 0 10px 10px} /* 高さは説明文に合わせて伸ばさず、形を決めて上にそろえる */
   .thumb{aspect-ratio:4/3;border-radius:6px}
   .badge{top:4px;left:4px;font-size:11px;padding:3px 6px}
+  .jponly{right:4px;bottom:4px;font-size:10px;padding:3px 4px}
   .body{padding:10px 12px;min-width:0}
   .cat{margin-bottom:0}
   .card a.open{font-size:16px}
@@ -98,62 +117,91 @@ h2+.grid{margin-top:0}
 </head>
 <body>
 <main>
-  <h1>まなびラボ</h1>
-  <p class="lead">ブラウザで動く学習用アプリのシリーズ。Claude と一緒に作っています。学習用に簡単にしているところがあります。医療・健康の判断には使えません。</p>
+  <div class="head">
+    <h1><span lang="ja">まなびラボ</span><span lang="en">Manabi Lab</span></h1>
+    <div class="seg lang" id="lang" role="group" aria-label="言語 / Language" hidden>
+      <button type="button" data-lang="ja" title="日本語">JP</button><button type="button" data-lang="en" title="English">EN</button>
+    </div>
+  </div>
+  <p class="lead"><span lang="ja">ブラウザで動く学習用アプリのシリーズ。Claude と一緒に作っています。学習用に簡単にしているところがあります。医療・健康の判断には使えません。</span><span lang="en">A series of learning apps that run in your browser, made together with Claude. Some things are simplified for learning. Not for medical or health decisions.</span></p>
   <div class="tools" id="tools" hidden>
     <div class="row">
-      <div class="chips" id="cats" role="group" aria-label="分野でしぼる"></div>
-      <div class="sort"><span id="sort-label">並び順</span><div class="seg" id="sort" role="group" aria-labelledby="sort-label">
-        <button type="button" data-sort="cat">分野ごと</button><button type="button" data-sort="new" title="公開が新しい順">新着順</button><button type="button" data-sort="upd" title="更新が新しい順">更新順</button>
+      <div class="chips" id="cats" role="group"></div>
+      <div class="sort"><span id="sort-label"></span><div class="seg" id="sort" role="group" aria-labelledby="sort-label">
+        <button type="button" data-sort="cat"></button><button type="button" data-sort="new"></button><button type="button" data-sort="upd"></button>
       </div></div>
     </div>
     <p class="status" id="status" aria-live="polite"></p>
   </div>
   <div id="list"></div>
-  <noscript><p>アプリの一覧を出すには JavaScript が必要です。</p></noscript>
+  <noscript><p>アプリの一覧を出すには JavaScript が必要です。 / JavaScript is required to show the list of apps.</p></noscript>
 
-  <p class="note">ソースコードと開発メモ: <a href="https://github.com/sishiya/manabi-lab">github.com/sishiya/manabi-lab</a><br>
+  <p class="note" lang="ja">ソースコードと開発メモ: <a href="https://github.com/sishiya/manabi-lab">github.com/sishiya/manabi-lab</a><br>
   不具合やご意見は <a href="https://github.com/sishiya/manabi-lab/issues">GitHub の Issues</a> へ（GitHub のアカウントが必要です）<br>
   作りかけや、入口に並べるのをやめたアプリは <a href="archive.html">保管庫</a> にしまってあります</p>
-  <p class="note sub" id="analytics">アクセス解析について: どのページがどれくらい見られているかを知るために、このサイトでは Google アナリティクスを使っています。Cookie を使って閲覧の記録を集めますが、名前などの個人を特定する情報は集めず、広告にも使いません。集めた情報は Google のプライバシーポリシー（<a href="https://policies.google.com/technologies/partner-sites?hl=ja">Google のサービスを使うサイトでのデータの使われ方</a>）に沿って扱われます。記録されたくないときは <a href="https://tools.google.com/dlpage/gaoptout?hl=ja">オプトアウト アドオン</a> を使うか、ブラウザで Cookie を止めてください。</p>
+  <p class="note" lang="en">Source code and development notes (in Japanese): <a href="https://github.com/sishiya/manabi-lab">github.com/sishiya/manabi-lab</a><br>
+  Found a bug or have feedback? Please use <a href="https://github.com/sishiya/manabi-lab/issues">GitHub Issues</a> (a GitHub account is required).<br>
+  Unfinished and retired apps are kept in the <a href="archive.html">archive</a> (Japanese only).</p>
+  <div id="analytics">
+  <p class="note sub" lang="ja">アクセス解析について: どのページがどれくらい見られているかを知るために、このサイトでは Google アナリティクスを使っています。Cookie を使って閲覧の記録を集めますが、名前などの個人を特定する情報は集めず、広告にも使いません。集めた情報は Google のプライバシーポリシー（<a href="https://policies.google.com/technologies/partner-sites?hl=ja">Google のサービスを使うサイトでのデータの使われ方</a>）に沿って扱われます。記録されたくないときは <a href="https://tools.google.com/dlpage/gaoptout?hl=ja">オプトアウト アドオン</a> を使うか、ブラウザで Cookie を止めてください。</p>
+  <p class="note sub" lang="en">About analytics: This site uses Google Analytics to learn which pages are viewed and how often. It collects browsing records using cookies, but it does not collect information that identifies you, such as your name, and it is not used for advertising. The data is handled under Google's privacy policy (<a href="https://policies.google.com/technologies/partner-sites?hl=en">How Google uses information from sites or apps that use its services</a>). If you do not want to be tracked, use the <a href="https://tools.google.com/dlpage/gaoptout?hl=en">opt-out browser add-on</a> or turn off cookies in your browser.</p>
+  </div>
 </main>
 <script>
 // アプリの一覧。並びは公開した順（同じ日のものの前後もこの順で決める）。
 // 新しいアプリはいちばん下に足す。created は作成日、updated は中身が変わった日（RULES 8.1）。
+// title_en・desc_en は英語の入口での名前と説明。en:true は、アプリの中も英語に切り替えられるもの（I18N.md。ないものは「Japanese only」と出す）。
 const APPS = [
   {id:'body-dive', title:'体内ダイブ', cat:'body', created:'2026-10-03', updated:'2026-10-07',
-   desc:'口・鼻・肛門から入って、消化管と気道の中を3Dで進む。'},
+   desc:'口・鼻・肛門から入って、消化管と気道の中を3Dで進む。',
+   title_en:'Body Dive', desc_en:'Go in through the mouth, nose or anus and travel through the digestive tract and airways in 3D.'},
   {id:'evolution', title:'ヒトへの46億年', cat:'earth', created:'2026-10-03', updated:'2026-10-04',
-   desc:'同じ場所を空から見つづけて、地球と生命と人類の46億年をたどる3D。'},
+   desc:'同じ場所を空から見つづけて、地球と生命と人類の46億年をたどる3D。',
+   title_en:'4.6 Billion Years to Us', desc_en:'Watch one place from the sky and follow 4.6 billion years of Earth, life and humankind in 3D.'},
   {id:'quantum', title:'量子の実験室', cat:'phys', created:'2026-10-04', updated:'2026-10-07',
-   desc:'二重スリット・トンネル効果・偏光板・量子もつれ・不確定性原理。'},
-  {id:'wifi-wave', title:'電波の見える部屋', cat:'phys', created:'2026-10-04', updated:'2026-10-07',
-   desc:'WiFi の電波が家の中をどう伝わるかを、電磁波のシミュレーションで見る。'},
+   desc:'二重スリット・トンネル効果・偏光板・量子もつれ・不確定性原理。',
+   title_en:'Quantum Lab', desc_en:'The double slit, tunneling, polarizers, entanglement and the uncertainty principle.'},
+  {id:'wifi-wave', title:'電波の見える部屋', cat:'phys', created:'2026-10-04', updated:'2026-10-10', en:true,
+   desc:'WiFi の電波が家の中をどう伝わるかを、電磁波のシミュレーションで見る。',
+   title_en:'Seeing WiFi at Home', desc_en:'See how WiFi signals travel through a home, with an electromagnetic wave simulation.'},
   {id:'animal-senses', title:'いきものの感じる世界', cat:'life', created:'2026-10-04', updated:'2026-10-07',
-   desc:'同じ庭を、人間・カラス・マムシなどの感覚で見る。紫外線や熱も見えるように置き換えて表示。'},
+   desc:'同じ庭を、人間・カラス・マムシなどの感覚で見る。紫外線や熱も見えるように置き換えて表示。',
+   title_en:'How Animals Sense the World', desc_en:'See the same garden through the senses of a human, a crow, a pit viper and more. Ultraviolet light and heat are turned into colors you can see.'},
   {id:'immune-battle', title:'免疫のたたかい', cat:'body', created:'2026-10-04', updated:'2026-10-04',
-   desc:'ウイルスや細菌が入って増え、免疫に片づけられるまでを、ミクロの断面とグラフで見る。'},
+   desc:'ウイルスや細菌が入って増え、免疫に片づけられるまでを、ミクロの断面とグラフで見る。',
+   title_en:'The Immune Battle', desc_en:'Viruses and bacteria get in, multiply and are cleared by the immune system. Watch it in a microscopic cross-section and graphs.'},
   {id:'god-view', title:'神の視点マップ', cat:'earth', created:'2026-10-05', updated:'2026-10-08',
-   desc:'本物の地形・航空写真・建物・電車やバスの動きで見る3Dの地球。引けば宇宙の果てまで、寄れば原子や素粒子まで、ホイールひとつで。'},
+   desc:'本物の地形・航空写真・建物・電車やバスの動きで見る3Dの地球。引けば宇宙の果てまで、寄れば原子や素粒子まで、ホイールひとつで。',
+   title_en:'God’s-Eye Map', desc_en:'A 3D Earth with real terrain, aerial photos, buildings and moving trains and buses. Zoom out to the edge of the universe or in to atoms and particles, all with one wheel.'},
   {id:'metamorphosis', title:'さなぎの中で', cat:'life', created:'2026-10-06', updated:'2026-10-07',
-   desc:'イモムシがさなぎになり、ガになるまでの体の中。壊れる・残る・新しく作られる器官を、タバコスズメガの研究の日付で追う。'},
+   desc:'イモムシがさなぎになり、ガになるまでの体の中。壊れる・残る・新しく作られる器官を、タバコスズメガの研究の日付で追う。',
+   title_en:'Inside the Pupa', desc_en:'Inside the body as a caterpillar becomes a pupa and then a moth. Follow which organs break down, stay or are newly built, day by day from tobacco hornworm research.'},
   {id:'air-flow', title:'空気の流れの見える部屋', cat:'phys', created:'2026-10-06', updated:'2026-10-07',
-   desc:'窓・給気口・換気扇・外の風で、家の空気がどう入れかわり、どこがよどむのかを「空気の年齢」の色で見る。'},
+   desc:'窓・給気口・換気扇・外の風で、家の空気がどう入れかわり、どこがよどむのかを「空気の年齢」の色で見る。',
+   title_en:'Seeing Airflow at Home', desc_en:'See how windows, vents, fans and the wind outside change the air in a home, and where it gets stale, colored by the “age of air”.'},
   {id:'ga-creatures', title:'進化の箱庭', cat:'life', created:'2026-10-06', updated:'2026-10-07',
-   desc:'関節と筋肉でできた生きものを、遺伝的アルゴリズムで進化させる。平地・坂・氷・月・水の中で、ちがう体と動き方が生まれる。'},
+   desc:'関節と筋肉でできた生きものを、遺伝的アルゴリズムで進化させる。平地・坂・氷・月・水の中で、ちがう体と動き方が生まれる。',
+   title_en:'Evolution Sandbox', desc_en:'Evolve creatures made of joints and muscles with a genetic algorithm. Flat ground, slopes, ice, the Moon and water each give rise to different bodies and ways of moving.'},
   {id:'mold-growth', title:'カビが育つまで', cat:'life', created:'2026-10-06', updated:'2026-10-07',
-   desc:'浴室の壁を拡大した「カビの箱庭」。胞子が芽を出し、菌糸をのばして増えていく。水・汚れ・カビ取り剤・防カビ剤を指で試して、どうすれば生えないかを探す。'},
+   desc:'浴室の壁を拡大した「カビの箱庭」。胞子が芽を出し、菌糸をのばして増えていく。水・汚れ・カビ取り剤・防カビ剤を指で試して、どうすれば生えないかを探す。',
+   title_en:'How Mold Grows', desc_en:'A “mold garden” on a magnified bathroom wall. Spores sprout and spread by growing threads called hyphae. Try water, grime, mold remover and anti-mold agents with your finger to find out how to keep it away.'},
   {id:'black-hole', title:'ブラックホールの見え方', cat:'earth', created:'2026-10-08', updated:'2026-10-08',
-   desc:'映画「インターステラー」のブラックホールを、曲がった時空を進む光を1点ずつ計算して描く。クリックすると、その光がどこから来たのかが分かる。'},
+   desc:'映画「インターステラー」のブラックホールを、曲がった時空を進む光を1点ずつ計算して描く。クリックすると、その光がどこから来たのかが分かる。',
+   title_en:'What a Black Hole Looks Like', desc_en:'The black hole from the movie “Interstellar”, drawn by tracing light through curved spacetime point by point. Click to see where that light came from.'},
 ];
 const CATS = [
-  {id:'earth', name:'地球と宇宙'},
-  {id:'body', name:'からだ'},
-  {id:'life', name:'いきもの'},
-  {id:'phys', name:'物理'},
+  {id:'earth', name:'地球と宇宙', name_en:'Earth & Space'},
+  {id:'body', name:'からだ', name_en:'Human Body'},
+  {id:'life', name:'いきもの', name_en:'Living Things'},
+  {id:'phys', name:'物理', name_en:'Physics'},
 ];
 const SORTS = ['cat','new','upd'];
 const FRESH_DAYS = 3; // きょう・きのう・おとといの公開・更新に印をつける
+
+// 画面の言葉（日本語と英語）。L(ja, en) は選んでいる言語のほうを返す
+const L = (ja, en) => LANG === 'en' ? en : ja;
+const nameOf = x => L(x.name, x.name_en);
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -162,21 +210,29 @@ const catOf = id => CATS.find(c => c.id === id);
 const today = new Date(); today.setHours(0, 0, 0, 0);
 const toDate = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
 const daysAgo = s => Math.round((today - toDate(s)) / 864e5);
-const shortDate = s => { const d = toDate(s); return (d.getFullYear() === today.getFullYear() ? '' : d.getFullYear() + '年') + (d.getMonth() + 1) + '月' + d.getDate() + '日'; };
-const relDate = s => { const n = daysAgo(s); return n <= 0 ? 'きょう' : n === 1 ? 'きのう' : n < 7 ? n + '日前' : shortDate(s); };
+const shortDate = s => { const d = toDate(s), sameYear = d.getFullYear() === today.getFullYear();
+  return L((sameYear ? '' : d.getFullYear() + '年') + (d.getMonth() + 1) + '月' + d.getDate() + '日',
+           MON[d.getMonth()] + ' ' + d.getDate() + (sameYear ? '' : ', ' + d.getFullYear())); };
+const relDate = s => { const n = daysAgo(s); return n <= 0 ? L('きょう', 'today') : n === 1 ? L('きのう', 'yesterday') : n < 7 ? L(n + '日前', n + ' days ago') : shortDate(s); };
 const isFresh = s => daysAgo(s) < FRESH_DAYS;
+const nApps = n => L(n + '本', n === 1 ? '1 app' : n + ' apps');
 
 APPS.forEach((a, i) => { a.order = i; });
 
-// 状態は URL に残す（再読み込み・戻る・共有で同じ表示になる）
+// 状態は URL に残す（再読み込み・戻る・共有で同じ表示になる）。
+// 言語と並び順は、選んだものをこのブラウザにも覚えておき、次に来たときも同じにする（URL にあれば URL が先）。
+// 分野のしぼりこみは覚えない（次に来たとき一部のアプリしか並ばず、減ったように見えるため）。
 const params = new URLSearchParams(location.search);
+const stored = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const store = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 const state = {
   cat: CATS.some(c => c.id === params.get('cat')) ? params.get('cat') : 'all',
-  sort: SORTS.includes(params.get('sort')) ? params.get('sort') : 'cat',
+  sort: SORTS.includes(params.get('sort')) ? params.get('sort') : SORTS.includes(stored('manabi-sort')) ? stored('manabi-sort') : 'cat',
 };
 
 function saveState() {
   const p = new URLSearchParams();
+  if (LANG === 'en') p.set('lang', 'en');
   if (state.cat !== 'all') p.set('cat', state.cat);
   if (state.sort !== 'cat') p.set('sort', state.sort);
   const s = p.toString();
@@ -186,16 +242,29 @@ function saveState() {
 function card(a, showCat) {
   const c = catOf(a.cat);
   const updatedLater = a.updated !== a.created;
-  const badge = isFresh(a.created) ? '新作' : updatedLater && isFresh(a.updated) ? '更新' : ''; // 公開から3日は更新しても「新作」を優先
+  const badge = isFresh(a.created) ? 'new' : updatedLater && isFresh(a.updated) ? 'upd' : ''; // 公開から3日は更新しても「新作」を優先
   const dateHtml = (label, s) => `${label} <time datetime="${s}" title="${s}"${isFresh(s) ? ' class="fresh"' : ''}>${relDate(s)}</time>`;
+  const href = a.id + '/' + (LANG === 'en' ? '?lang=en' : ''); // アプリも同じ言語で開く
+  const jpOnly = LANG === 'en' && !a.en;
   return `<div class="card c-${a.cat}">
-    <div class="pic"><img class="thumb" src="assets/thumbs/${a.id}.jpg" alt="" width="640" height="360" loading="lazy">${badge ? `<span class="badge${badge === '更新' ? ' upd' : ''}">${badge}</span>` : ''}</div>
+    <div class="pic"><img class="thumb" src="assets/thumbs/${a.id}.jpg" alt="" width="640" height="360" loading="lazy">${badge ? `<span class="badge${badge === 'upd' ? ' upd' : ''}">${badge === 'new' ? L('新作', 'New') : L('更新', 'Updated')}</span>` : ''}${jpOnly ? '<span class="jponly" title="The app itself is in Japanese for now">Japanese only</span>' : ''}</div>
     <div class="body">
-      ${showCat ? `<span class="cat"><span class="dot"></span>${esc(c.name)}</span>` : ''}
-      <a class="open" href="${a.id}/">${esc(a.title)}</a>
-      <p>${esc(a.desc)}</p>
-      <div class="foot"><span class="dates">${dateHtml('公開', a.created)}${updatedLater ? ' ・ ' + dateHtml('更新', a.updated) : ''}</span><a class="ver" href="${a.id}/launcher.html">過去の版</a></div>
+      ${showCat ? `<span class="cat"><span class="dot"></span>${esc(nameOf(c))}</span>` : ''}
+      <a class="open" href="${href}"${jpOnly ? ' hreflang="ja"' : ''}>${esc(L(a.title, a.title_en))}</a>
+      <p>${esc(L(a.desc, a.desc_en))}</p>
+      <div class="foot"><span class="dates">${dateHtml(L('公開', 'Published'), a.created)}${updatedLater ? L(' ・ ', ' · ') + dateHtml(L('更新', 'Updated'), a.updated) : ''}</span><a class="ver" href="${a.id}/launcher.html">${L('過去の版', 'Past versions')}</a></div>
     </div></div>`;
+}
+
+// 言語で変わる、一覧の外の言葉
+function renderTexts() {
+  document.documentElement.lang = LANG;
+  document.title = L('まなびラボ', 'Manabi Lab');
+  $('cats').setAttribute('aria-label', L('分野でしぼる', 'Filter by subject'));
+  $('sort-label').textContent = L('並び順', 'Sort');
+  const sortText = {cat: [L('分野ごと', 'By subject')], new: [L('新着順', 'Newest'), L('公開が新しい順', 'Most recently published first')], upd: [L('更新順', 'Updated'), L('更新が新しい順', 'Most recently updated first')]};
+  document.querySelectorAll('#sort button').forEach(b => { const [t, tip] = sortText[b.dataset.sort]; b.textContent = t; if (tip) b.title = tip; });
+  document.querySelectorAll('#lang button').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === LANG));
 }
 
 function render() {
@@ -203,21 +272,21 @@ function render() {
 
   // 分野のボタン（件数つき）。スマホの横スクロールの位置は保つ
   const scrollX = $('cats').scrollLeft;
-  $('cats').innerHTML = [{id:'all', name:'すべて'}, ...CATS].map(c => {
+  $('cats').innerHTML = [{id:'all', name:'すべて', name_en:'All'}, ...CATS].map(c => {
     const n = c.id === 'all' ? APPS.length : APPS.filter(a => a.cat === c.id).length;
-    return `<button type="button" class="chip c-${c.id}" data-cat="${c.id}" aria-pressed="${state.cat === c.id}">${c.id === 'all' ? '' : '<span class="dot"></span>'}${esc(c.name)}<span class="n">${n}</span></button>`;
+    return `<button type="button" class="chip c-${c.id}" data-cat="${c.id}" aria-pressed="${state.cat === c.id}">${c.id === 'all' ? '' : '<span class="dot"></span>'}${esc(nameOf(c))}<span class="n">${n}</span></button>`;
   }).join('');
   $('cats').scrollLeft = scrollX;
   document.querySelectorAll('#sort button').forEach(b => b.setAttribute('aria-pressed', b.dataset.sort === state.sort));
 
   // いまの表示の説明（読み上げ用）
-  $('status').textContent = state.cat === 'all' ? `${shown.length}本すべて` : `${catOf(state.cat).name}で ${shown.length}本`;
+  $('status').textContent = state.cat === 'all' ? L(`${shown.length}本すべて`, `All ${nApps(shown.length)}`) : L(`${nameOf(catOf(state.cat))}で ${shown.length}本`, `${nameOf(catOf(state.cat))}: ${nApps(shown.length)}`);
 
   if (state.sort === 'cat') {
     $('list').innerHTML = CATS.map(c => {
       const items = shown.filter(a => a.cat === c.id);
       if (!items.length) return '';
-      return `<h2 class="c-${c.id}"><span class="dot"></span>${esc(c.name)}<span class="n">${items.length}本</span></h2><div class="grid">${items.map(a => card(a, false)).join('')}</div>`;
+      return `<h2 class="c-${c.id}"><span class="dot"></span>${esc(nameOf(c))}<span class="n">${nApps(items.length)}</span></h2><div class="grid">${items.map(a => card(a, false)).join('')}</div>`;
     }).join('');
   } else {
     const key = state.sort === 'new' ? a => [a.created, a.order] : a => [a.updated, a.created, a.order];
@@ -229,12 +298,16 @@ function render() {
 function update() { saveState(); render(); }
 
 $('tools').hidden = false;
+$('lang').hidden = false;
 
 // 選んだ分野がスマホの横スクロールの端に隠れないように寄せる
 const showChosenCat = () => { const c = $('cats'), b = c.querySelector('[aria-pressed=true]'); if (c.scrollWidth > c.clientWidth) c.scrollTo({left: b.offsetLeft - (c.clientWidth - b.offsetWidth) / 2, behavior: 'smooth'}); };
 $('cats').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { state.cat = b.dataset.cat; update(); showChosenCat(); } });
-$('sort').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { state.sort = b.dataset.sort; update(); } });
+$('sort').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { state.sort = b.dataset.sort; store('manabi-sort', state.sort); update(); } });
+$('lang').addEventListener('click', e => { const b = e.target.closest('button'); if (b && b.dataset.lang !== LANG) { LANG = b.dataset.lang; store('manabi-lang', LANG); renderTexts(); update(); } });
 
+renderTexts();
+saveState();
 render();
 showChosenCat();
 </script>

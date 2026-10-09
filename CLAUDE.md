@@ -26,6 +26,7 @@
 - `archive.html` — 保管庫（入口の下の小さい注記からだけリンク。作りかけ・出来がいまひとつのアプリ。いまは urinary-dive・blood-dive・extreme・illusions・muscle-growth・ferrofluid・resistance・brain-response・passkey）。入口と保管庫の出し入れは `RULES.md` 8.1。
 - `_dev/` — アプリ以外の道具: `tools/`（公開前チェック `check-public.ps1`・サムネイル撮影・起動）、`promo/`（紹介動画づくり。**作り方・英語の字幕・YouTube へのアップロードは `_dev/promo/README.md`**。ショート＝`<app>.html?short`、横長＝使い方の説明 `<app>-guide.html`。できた動画は `promo/out/`、Git に入れない）、`sns-icon/`。入口が読む画像（サムネイル）は `assets/thumbs/`（公開するサイトの素材は `assets/`。紹介動画をサイトに載せるならここへ）。
 - `IDEAS.md` — まだ作っていないテーマのストックと、ユーザーの好みの傾向。新しいアプリを考えるときに読む。
+- `I18N.md` — 英語対応（JP／EN）の企画・作り方・段階。入口と入口のアプリが対象。アプリを英語にするとき・英語対応ずみのアプリに文を足すときに読む。
 
 ## 進め方の約束（詳しくは `RULES.md`。どのアプリでも最初に読む）
 - 企画書（`PLAN.md`）を先に作り、段階に分けて進める。
