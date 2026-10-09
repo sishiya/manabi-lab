@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script>
+'use strict';
+// 台本: ヒトへの46億年 ― 使い方と見どころ（横長の説明動画、165秒）
+// 日本語の字幕は画面の上に焼きこみ、下は YouTube の字幕（CC。英語）にあける。英語は SRT にして上げる
+// アプリの絵は画面いっぱい。ボタンは「札」（drawChip）で、アプリと同じ言葉・同じ側（下のボタンの列の左・右）に描く
+const DUR = 165;
+
+// ---- 状態の移り変わり: [時刻, 変える値, かける秒（なめらかに）] ----
+// age は何年前（未来は負）。アプリのタイムラインの位置（A2u）で動かすので、出来事ごとの目盛りと同じ速さになる
+const EV = [
+  [0, { age: 6.8e7, th: 0.75, ph: 0.92, r: 200, gth: 0.5, view: 'surface', names: true, day: 'day', mech: false, ifw: false, scen: 'mid' }],
+  // 1 タイムライン
+  [7, { age: 5.75e8, r: 250, names: false, th: 0.85 }],
+  [15, { age: 5.385e8 }, 1.1], [18, { age: 4.695e8 }, 1.1], [21, { age: 3.845e8 }, 1.1],   // 出来事のすぐあと（HUD の出来事がその出来事になる）
+  [24.5, { age: 2.29e8 }, 7],
+  // 2 見る向き・地球全体
+  [33, { th: 2.1, ph: 0.75 }, 4.5],
+  [39.5, { r: 700 }, 1.4],
+  [41, { view: 'globe' }],
+  [41.5, { gth: 1.1 }, 10],
+  [45.5, { age: 6.8e8 }, 4],
+  [52.5, { view: 'surface', r: 250, th: 0.75, ph: 0.92 }],
+  // 3 生き物と祖先
+  [53, { age: 3.75e8 }],
+  [61, { age: 1.49e8 }],
+  [62.5, { names: true }],
+  [71, { age: 6.75e7, th: 0.9 }], [72, { age: 6.5e7 }, 4], [76, { age: 6.2e7 }, 6],
+  // 4 人類・昼夜
+  [83, { age: 1.9e6, th: 0.75 }],
+  [90, { age: 0 }],
+  [94, { day: 'night' }],
+  [100.5, { day: 'day' }],
+  // 5 未来
+  [101, { age: -74 }],
+  [104.5, { scen: 'low' }], [107.5, { scen: 'high' }], [111, { scen: 'mid' }],
+  [111.5, { age: -2.5e8 }],
+  [118, { age: -4.9e9 }],
+  // 6 しくみ
+  [125, { age: 6.6e8, mech: true }],
+  [126, { age: 2.52e8 }, 6],
+  [138.5, { mech: false }],
+  // 7 もしも
+  [139, { age: 6.7e7 }],
+  [145, { ifw: true, age: 1e6 }],
+  [158, { ifw: false }],
+];
+let W = null;   // アプリの window（年代 ↔ タイムラインの位置の換算に使う）
+function stateAt(t) {
+  const s = {};
+  for (const [t0, set, d] of EV) {
+    if (t < t0) break;
+    const k = d ? ease((t - t0) / d) : 1;
+    for (const key in set) {
+      const v = set[key];
+      if (typeof v !== 'number' || s[key] === undefined) s[key] = v;
+      else if (key === 'age') s[key] = W.u2A_ev(lerp(W.A2u_ev(s[key]), W.A2u_ev(v), k));
+      else if (key === 'r') s[key] = Math.exp(lerp(Math.log(s[key]), Math.log(v), k));
+      else s[key] = lerp(s[key], v, k);
+    }
+  }
+  return s;
+}
+
+// ---- ボタンの札（アプリの下のボタンの列。左は再生、右はほかのボタン）----
+const CH = {
+  play: { x: 40, y: 690, title: '下のボタン（左）', btns: ['前の出来事', '再生／停止', '次の出来事'] },
+  view: { x: 1440, y: 690, title: '下のボタン（右）', btns: ['地球を見る'] },
+  back: { x: 1440, y: 690, title: '下のボタン（右）', btns: ['地表を見る'] },
+  names: { x: 1440, y: 690, title: '下のボタン（右）', btns: ['名前'] },
+  day: { x: 1440, y: 690, title: '下のボタン（右）', btns: ['時刻：昼', '時刻：夜'] },
+  scen: { x: 40, y: 560, title: '排出シナリオ（下のメニュー）', btns: ['低排出', '中間', '高排出', 'いますぐゼロ'], cols: 2 },
+  mech: { x: 1440, y: 690, title: '下のボタン（右）', btns: ['しくみ'] },
+  ifb: { x: 1440, y: 690, title: '下のボタン（右）', btns: ['もしも'] },
+  ifp: { x: 1060, y: 330, title: 'もしも（パネル）', btns: ['小天体が地球をそれる', 'この世界を計算して見る'], cols: 1 },
+};
+// 札を出す時間 [札, 出す, 消す, その時刻に押されているボタン(t)]
+const SHOW = [
+  ['play', 13.5, 31.5, t => t >= 24.5 ? 1 : -1],
+  ['view', 37.5, 41.2, () => -1],
+  ['back', 49.5, 53, () => -1],
+  ['names', 60.5, 69, t => t >= 62.5 ? 0 : -1],
+  ['day', 92, 100.5, t => t >= 94 ? 1 : 0],
+  ['scen', 102.5, 111.3, t => t < 104.5 ? 1 : t < 107.5 ? 0 : 2],
+  ['mech', 123, 127, t => t >= 125 ? 0 : -1],
+  ['ifb', 139.5, 142.5, t => t >= 141.5 ? 0 : -1],
+  ['ifp', 142, 147, t => t >= 143.6 ? 0 : -1],
+];
+const B = (k, i) => btnRect(CH[k], i);
+const SX = x => x * PW, SY = y => y * PH;
+
+// ---- マウスの矢印 ----
+const CUR = [
+  { t: 14, ...B('play', 2) }, { t: 15, ...B('play', 2), click: true },
+  { t: 18, ...B('play', 2), click: true }, { t: 21, ...B('play', 2), click: true },
+  { t: 23.5, ...B('play', 1) }, { t: 24.5, ...B('play', 1), click: true },
+  { t: 32, x: SX(0.62), y: SY(0.45) }, { t: 33, x: SX(0.62), y: SY(0.45), drag: true },
+  { t: 37.5, x: SX(0.35), y: SY(0.52) },
+  { t: 38.6, x: SX(0.5), y: SY(0.5) }, { t: 39.5, x: SX(0.5), y: SY(0.5), wheel: true },
+  { t: 41, x: SX(0.5), y: SY(0.5), hide: true },
+  { t: 51.3, ...B('back', 0) }, { t: 52.3, ...B('back', 0), click: true },
+  { t: 54, ...B('back', 0), hide: true },
+  { t: 61.5, ...B('names', 0) }, { t: 62.5, ...B('names', 0), click: true },
+  { t: 64, ...B('names', 0), hide: true },
+  { t: 93, ...B('day', 0) }, { t: 94, ...B('day', 0), click: true },
+  { t: 103.5, ...B('scen', 0) }, { t: 104.5, ...B('scen', 0), click: true },
+  { t: 107.5, ...B('scen', 2), click: true },
+  { t: 110, ...B('scen', 2), hide: true },
+  { t: 124, ...B('mech', 0) }, { t: 125, ...B('mech', 0), click: true },
+  { t: 126.5, ...B('mech', 0), hide: true },
+  { t: 140.5, ...B('ifb', 0) }, { t: 141.5, ...B('ifb', 0), click: true },
+  { t: 143, ...B('ifp', 0) }, { t: 143.6, ...B('ifp', 0), click: true },
+  { t: 144.4, ...B('ifp', 1), click: true },
+  { t: 146, ...B('ifp', 1), hide: true },
+];
+
+// ---- 字幕（日本語は上に焼きこむ・英語は SRT）。数はアプリのモデルで計算してから入れる（setup で決める）----
+let CAPS = [], TEMP = {};
+function makeCaps(w) {
+  // 2100年の気温の上がり方（1850年ごろから）をシナリオごとに。アプリの「しくみ」の文献の点と同じ基準
+  for (const sc of ['low', 'mid', 'high']) {
+    w.eval(`SCENARIO='${sc}';rebuildModel()`);
+    TEMP[sc] = (w.__ev.modelAt('T', -74) - w.__ev.modelAt('T', 176)).toFixed(1);
+  }
+  w.eval(`SCENARIO='mid';rebuildModel();computeFit()`);
+  CAPS = [
+    { a: 7.5, b: 13, main: 'ひとつの場所を、空から見つづける', sub: 'いまのアフリカ東部、人類の化石が多く見つかる湖のほとり',
+      en: ['Watch one spot from the sky, without ever moving', 'Today it is a lakeside in East Africa, where many human fossils have been found'] },
+    { a: 14, b: 23.3, main: '「次の出来事」で、時代を進める', sub: 'カンブリア爆発 → 植物の上陸 → 最初の森。空・海・陸・生き物が変わる',
+      en: ['"Next event" (次の出来事) moves you forward in time', 'The Cambrian explosion → plants reach land → the first forests'] },
+    { a: 24, b: 31.3, main: '「再生」で、流れるように', sub: '下のタイムラインを直接ドラッグしても。スペースキーでも再生',
+      en: ['"Play" (再生) runs time forward smoothly', 'You can also drag the timeline at the bottom, or press the space bar'] },
+    { a: 32, b: 38.6, main: 'ドラッグで回す・ホイールで近づく', sub: 'スマホは指で。右ドラッグで動かす',
+      en: ['Drag to turn the view, scroll to zoom', 'Use your fingers on a phone; right-drag to move'] },
+    { a: 39.5, b: 45.2, main: '引き切ると、地球全体のながめ', sub: '「地球を見る」ボタンでも。黄色い印が、見ている場所',
+      en: ['Zoom all the way out to see the whole planet', 'Or press "View Earth" (地球を見る). The yellow mark is our spot'] },
+    { a: 45.7, b: 52.3, main: '時代を戻すと、真っ白な地球', sub: '約7億年前の全球凍結。赤道まで氷におおわれた',
+      en: ['Go back in time and the planet turns white', 'Snowball Earth, about 700 million years ago. Ice reached the equator'] },
+    { a: 53.5, b: 60.3, main: '黄色い輪が、あなたの祖先', sub: '3億7500万年前は、ひれに腕のような骨をもつ魚のなかま',
+      en: ['The yellow ring marks your ancestor', '375 million years ago: a fish with arm-like bones in its fins'] },
+    { a: 61.2, b: 70.3, main: '「名前」で、生き物の名前を出す', sub: '生き物をクリックしても名前が出る（見やすいように大きく描いている）',
+      en: ['"Names" (名前) labels the living things', 'Or click a creature. They are drawn much bigger than life so you can see them'] },
+    { a: 71.2, b: 76.5, main: '6600万年前、小天体の衝突', sub: '空が光り、恐竜の時代が終わる',
+      en: ['66 million years ago, an asteroid hits', 'The sky flashes, and the age of dinosaurs ends'] },
+    { a: 77, b: 82.5, main: 'そのあとは、枯れた森とシダの景色', sub: '生き残った小さな哺乳類が、ここから増えていく',
+      en: ['Afterward: dead forests and ferns', 'The small mammals that survived spread from here'] },
+    { a: 83.5, b: 89.5, main: '190万年前、ホモ・エレクトス', sub: '湖と草原のまわりで、人類のなかまが暮らす',
+      en: ['1.9 million years ago: Homo erectus', 'Early humans live around the lake and the grassland'] },
+    { a: 90.3, b: 93.5, main: 'そして、いまの街', sub: '鉄道・車・飛行機',
+      en: ['And the city of today', 'Trains, cars and planes'] },
+    { a: 94, b: 100.3, main: '「時刻」で、昼・夜・自動', sub: '夜は窓・街灯・車のライトがともる',
+      en: ['"Time" (時刻) switches day, night and auto', 'At night, windows, street lights and car lights come on'] },
+    { a: 101.3, b: 111, main: 'いまから先は、予測', sub: `排出シナリオで2100年が変わる（このモデルで +${TEMP.low}〜+${TEMP.high}℃）`,
+      en: ['From today on, it is a forecast', `The emission scenario changes 2100 (+${TEMP.low} to +${TEMP.high} °C in this model)`] },
+    { a: 112, b: 117.6, main: '2億5000万年後、次の超大陸', sub: '大陸が集まり、内陸は乾いた高い大地になる',
+      en: ['250 million years from now: the next supercontinent', 'The continents merge, and the interior becomes high, dry land'] },
+    { a: 118.5, b: 124.5, main: '50億年後、赤く大きくなった太陽', sub: '遠い未来ほど不確か。数千年より先の人と街は描かない',
+      en: ['5 billion years from now: a big red Sun', 'The farther ahead, the less certain. People and cities are not drawn beyond a few thousand years'] },
+    { a: 125.5, b: 131.8, main: '「しくみ」で、計算と記録をくらべる', sub: '点線が記録、実線が計算。火山・風化・氷・光合成から気温や CO2 を計算する',
+      en: ['"Mechanism" (しくみ) compares the model with the record', 'Dotted lines: the record. Solid lines: a model of volcanoes, weathering, ice and photosynthesis'] },
+    { a: 132.3, b: 138.5, main: '全球凍結や大量絶滅も、計算から出てくる', sub: '合わないところ（オルドビス紀末の大量絶滅）も、そのまま見せている',
+      en: ['Snowball Earths and mass extinctions come out of the model too', 'Where it does not match (the end-Ordovician extinction), it shows that as well'] },
+    { a: 139.5, b: 145, main: '「もしも」で、歴史に手を入れる', sub: '7つの中から選ぶと、そこから先を計算し直す',
+      en: ['"What if" (もしも) lets you change history', 'Pick from 7 changes, and the app recalculates everything after it'] },
+    { a: 145.5, b: 151.5, main: '小天体がそれたら：100万年前にも恐竜', sub: '「生き残り」と名前に出る',
+      en: ['If the asteroid had missed: dinosaurs 1 million years ago', 'Their names say "survivor" (生き残り)'] },
+    { a: 152, b: 158, main: 'そして、人類は現れない', sub: '計算で決められない部分は、画面に「想像」と書いてある',
+      en: ['And humans never appear', 'Parts the model cannot decide are marked "imagined" (想像) on screen'] },
+  ];
+}
+const SUBS_EXTRA = [
+  { a: 0.6, b: 6.6, ja: 'ヒトへの46億年\n使い方と見どころ', en: '4.6 Billion Years to Us\nHow to use the app and what to look for' },
+  { a: 158.6, b: DUR, ja: 'ヒトへの46億年\nブラウザで動かせます（パソコン・スマホ）', en: '4.6 Billion Years to Us\nRuns in your browser (PC or phone). The on-screen text is in Japanese for now' },
+];
+
+// アプリの名前札（HTML）を読んで、同じ場所に描く。重なるもの・字幕や年代・札にかかるものは省く
+function drawLabels(g, t, w, f) {
+  if (f <= 0) return;
+  const k = PW / w.innerWidth, boxes = [];
+  g.font = 'bold 30px ' + FONT; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+  const labs = [...w.document.querySelectorAll('#labels .lab')].filter(el => !el.hidden && el.textContent);
+  labs.sort((a, b) => b.classList.contains('anc') - a.classList.contains('anc'));   // 祖先を先に
+  for (const el of labs) {
+    const m = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(el.style.transform); if (!m) continue;
+    const x = +m[1] * k, y = +m[2] * k - 22, s = el.textContent, bw = g.measureText(s).width + 28, bh = 44;
+    const b = [x - bw / 2, y - bh, x + bw / 2, y];
+    if (b[0] < 10 || b[2] > PW - 10 || b[1] < 340 || b[3] > PH - 120) continue;
+    if (boxes.some(o => b[0] < o[2] + 8 && b[2] > o[0] - 8 && b[1] < o[3] + 6 && b[3] > o[1] - 6)) continue;
+    boxes.push(b);
+    const anc = el.classList.contains('anc');
+    g.globalAlpha = f * 0.85; g.fillStyle = 'rgba(10,14,20,0.8)'; g.fillRect(b[0], b[1], bw, bh);
+    g.globalAlpha = f; g.strokeStyle = anc ? '#f2c14e' : 'rgba(255,255,255,0.5)'; g.lineWidth = 2; g.strokeRect(b[0], b[1], bw, bh);
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 18); g.stroke();
+    g.fillStyle = anc ? '#f2c14e' : '#fff'; g.fillText(s, x, y - 12);
+  }
+  g.globalAlpha = 1;
+}
+// 枠と見出しのついた短い文（アプリのパネルの中身を写す）
+function drawNote(g, x, y, w, title, body, f, color) {
+  if (f <= 0 || !body) return;
+  g.shadowBlur = 0; g.globalAlpha = f;
+  g.fillStyle = 'rgba(14,16,24,0.9)'; g.strokeStyle = 'rgba(255,255,255,0.22)'; g.lineWidth = 2;
+  g.beginPath(); g.roundRect(x, y, w, 112, 16); g.fill(); g.stroke();
+  g.textAlign = 'left'; g.textBaseline = 'middle';
+  setFont(g, 26, true); g.fillStyle = '#b9bfcc'; g.fillText(title, x + 22, y + 30);
+  setFont(g, 34, true); g.fillStyle = color || '#fff'; g.fillText(body, x + 22, y + 76, w - 44);
+  g.globalAlpha = 1;
+}
+
+let cur = {}, kpgT = null, lastA = Infinity;
+const MUSIC = { style: 'journey', root: 130.81, cues: [], quiet: [] };   // 明るい和音の旅。衝突の「ドン」は setup で足す
+promoStart({
+  name: 'ヒトへの46億年（使い方）', out: 'evolution-guide', src: '../../evolution/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 54,
+  music: MUSIC,
+  ready: w => w.__ev && w.setAbout && w.document.getElementById('gl'),
+  setup(w) {
+    W = w;
+    Object.defineProperty(w, 'devicePixelRatio', { get: () => 2 });   // タイムラインと「しくみ」の図を細かく描かせる
+    w.setAbout(false); w.setDayMode('day');
+    w.document.getElementById('mini').style.display = 'none';   // 地球のながめの右下の小窓は映さない
+    w.requestAnimationFrame = () => 0;   // アプリ自身の描画ループを止める（割りこむと消えたコマが写る）
+    makeCaps(w);
+    // 衝突の時刻（6600万年前をまたぐ時刻）。光（またいでから 1.3 秒後）で「ドン」、そのあと哺乳類の景色まで暗く
+    let kt = 72; for (let t = 71; t < 80; t += 1 / FPS) if (stateAt(t).age <= 6.6e7) { kt = t; break; }
+    MUSIC.cues = [{ t: kt + 1.3, type: 'boom' }]; MUSIC.quiet = [[kt + 1.3, 82.5]];
+    return w.document.getElementById('gl');
+  },
+  subs: () => [SUBS_EXTRA[0], ...capSubs(CAPS), SUBS_EXTRA[1]],
+  async renderAt(t, w) {
+    const E = w.__ev, s = stateAt(t), d = w.document;
+    if (t === 0) { kpgT = null; lastA = Infinity; }
+    if (cur.view !== s.view) { w.setView(s.view); cur.view = s.view; await sleep(400); }
+    if (cur.names !== s.names) { if (w.eval('showNames') !== s.names) d.getElementById('bNames').click(); cur.names = s.names; }
+    if (cur.day !== s.day) { w.setDayMode(s.day); cur.day = s.day; }
+    if (cur.scen !== s.scen) { const sel = d.getElementById('scen'); sel.value = s.scen; sel.onchange(); cur.scen = s.scen; }
+    if (cur.ifw !== s.ifw) {
+      w.eval(s.ifw ? 'IF_PENDING={...IF_DEF,noImpact:true};applyIf()' : 'IF_PENDING={...IF_DEF};applyIf()');
+      cur.ifw = s.ifw;
+    }
+    if (cur.mech !== s.mech) { w.setMech(s.mech); cur.mech = s.mech; }
+    if (lastA > 6.6e7 && s.age <= 6.6e7 && lastA - s.age < 3e7 && !s.ifw) kpgT = t;
+    lastA = s.age;
+    E.setAge(s.age);
+    Object.assign(E.cam, { th: s.th, ph: s.ph, r: s.r });
+    E.gcam.th = s.gth;
+    E.frame(1, 1 / FPS);
+  },
+  overlay(g, t, w) {
+    const d = w.document;
+    // 衝突の光（アプリでは HTML の重ね絵なので、同じ式でここに描く。evolution/js/world.js の seqState）
+    if (kpgT !== null && t >= kpgT && t < kpgT + 8) {
+      const s = t - kpgT;
+      const flash = s < 1.3 ? 0 : s < 1.5 ? (s - 1.3) / 0.2 : Math.exp(-(s - 1.5) / 0.7);
+      const heat = s < 1.3 ? 0 : sstep(1.3, 2, s) * (1 - sstep(3, 4.5, s));
+      if (heat > flash) { g.globalAlpha = heat * 0.45; g.fillStyle = 'rgb(200,70,25)'; }
+      else { g.globalAlpha = flash; g.fillStyle = 'rgb(255,220,170)'; }
+      if (g.globalAlpha > 0.001) g.fillRect(0, 0, PW, PH);
+      g.globalAlpha = 1;
+    }
+    drawLabels(g, t, w, (t < 5.6 ? 1 - clamp((t - 5.2) / 0.4, 0, 1) : 1) * (1 - clamp((t - 158) / 0.6, 0, 1)) * (t >= 125 && t < 138.5 ? 0 : 1));
+    // 年代と出来事（左上、字幕の下）
+    const fa = clamp((t - 7) / 0.6, 0, 1) * (1 - clamp((t - 158) / 0.6, 0, 1));
+    if (fa > 0) {
+      prep(g); g.textAlign = 'left'; g.globalAlpha = fa;
+      txt(g, w.fmtShort(w.__ev.A), 60, 250, 60, '#fff', true);
+      txt(g, d.getElementById('evTitle').textContent, 60, 310, 34, '#f2c79a', true);
+      g.globalAlpha = 1; g.shadowBlur = 0;
+    }
+    // タイムライン（アプリの下の帯を写す）
+    drawInset(g, d.getElementById('tlc'), 40, 840, 1840, 70, 'タイムライン（画面の下）', fade(t, 13.5, 31.5, 0.4));
+    // あなたの祖先（右のパネル）
+    drawNote(g, 1180, 360, 700, 'あなたの祖先（右のパネル）', d.getElementById('ancName').textContent, fade(t, 53.5, 60.5, 0.4), '#f2c14e');
+    // 2100年の気温（シナリオを切り替えたとき）
+    const ft = fade(t, 102.5, 111.3, 0.4);
+    if (ft > 0) {
+      const T = (w.__ev.modelAt('T', -74) - w.__ev.modelAt('T', 176)).toFixed(1);
+      drawNote(g, 40, 420, 640, '2100年の気温（1850年ごろから。モデル）', `+${T}℃`, ft, '#ffd27a');
+    }
+    // しくみ（アプリの図）
+    drawInset(g, d.getElementById('mechC'), 140, 380, 1640, 300, 'しくみ: 気温・CO2・酸素・海の動物（点線＝記録、実線＝計算、青い帯＝計算の全球凍結）', fade(t, 125.6, 138.5, 0.5));
+    for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawTitle(g, t, 0.6, 6.6, 'ヒトへの46億年', '使い方と見どころ');
+    // 英語の字幕があることの案内（最初だけ。右下）
+    const fc = fade(t, 1.5, 6.6, 0.6);
+    if (fc > 0) { prep(g); g.globalAlpha = fc; g.textAlign = 'right'; txt(g, 'CC: English subtitles', PW - 50, PH - 40, 30, '#ddd', true); g.globalAlpha = 1; g.shadowBlur = 0; }
+    drawEnd(g, t, 158.6, 'ヒトへの46億年', 'ブラウザで動かせます（パソコン・スマホ）',
+      '年代: 国際年代層序表（2023年版）。未来の気候: IPCC 第6次評価報告書 ほか（アプリの「このアプリについて」に一覧）');
+  },
+  errors: w => w.__evErr,
+  // 4K で描かせる（renderer は terrain.js の const なので eval で触る）
+  hires(w, W) { w.eval('renderer.setPixelRatio(' + (W / w.innerWidth) + ')'); },
+});
+function sstep(a, b, x) { const k = clamp((x - a) / (b - a), 0, 1); return k * k * (3 - 2 * k); }
+</script>
+</body>
+</html>

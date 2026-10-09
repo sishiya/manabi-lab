@@ -14,7 +14,7 @@
 `<app>.html` は横長（`?short` なし）でも録れるが、横長は説明動画に置きかえる方針。
 
 ## 作り方
-1. 手本を写す: ショートは `black-hole.html`、説明動画は `black-hole-guide.html`。
+1. 手本を写す: ショートは `black-hole.html`、説明動画は `black-hole-guide.html`（3D の場面を切りかえていくアプリは `evolution-guide.html`。年代・視点・ボタンの状態を時刻の表 `EV` に書き、変わったときだけアプリに入れる。アプリの帯や図は `drawInset` で写す）。
 2. 台本の字幕 `CAPS` に英語を並べて書く: `{ a, b, main, sub, en: [main, sub] }`。題名・終わりの画面ぶんも足して `subs: [...]` を `promoStart` にわたす（`capSubs(CAPS)` で変換）。数をアプリで計算して入れるときは `subs` を関数にして `setup` で決める（guide を見る）。
 3. 説明動画の道具（`promo.js`）: `drawCursor`（矢印・クリックの輪・ドラッグ・ホイール）、`drawChip`／`btnRect`（アプリと同じ言葉のボタンの「札」。アプリと同じ側に置く。アプリの画面そのものに似せすぎない）、`drawInset`（アプリの中の図の canvas を重ねる）。
 4. 確認用サーバー（`.claude/launch.json` の `apps`〜`apps-6`。使えないポートがあるので空いているものを）で `http://localhost:<port>/_dev/promo/<台本>.html` を開く。準備ができると字幕データ `out/<out>.ja.srt`・`.en.srt` が保存される。

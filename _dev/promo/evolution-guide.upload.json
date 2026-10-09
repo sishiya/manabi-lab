@@ -1,0 +1,15 @@
+{
+  "file": "_dev/promo/out/evolution-guide.mp4",
+  "thumbnail": "assets/thumbs/evolution.jpg",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/evolution-guide.en.srt" },
+  "title": "ヒトへの46億年 ― 使い方と見どころ（タイムライン・地球全体・祖先・未来の予測・しくみ・もしも）",
+  "description": "ひとつの場所を空から見つづけて、地球と生命と人類の歴史を46億年前から50億年後までたどるブラウザのアプリ「ヒトへの46億年」の、使い方と見どころです。\n\n0:00 はじめに\n0:07 タイムラインで時代を動かす（次の出来事・再生）\n0:32 見る向きと地球全体（ドラッグ・ホイール・全球凍結）\n0:53 生き物と祖先（黄色い輪・名前・小天体の衝突）\n1:23 人類と、いまの街の昼と夜\n1:41 未来の予測（排出シナリオ・次の超大陸・赤い太陽）\n2:05 しくみ（計算と記録をくらべる）\n2:19 もしも（小天体がそれたら）\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/evolution/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\n国際層序委員会「国際年代層序表」2023年版\nIPCC 第6次評価報告書 第1作業部会（2021年）: 2100年の気温と海面のシナリオ\nJoos ほか（2013）、Gough（1981）、Caldeira と Kasting（1992）、Ganopolski ほか（2016）、Farnsworth ほか（2023）、Ozaki と Reinhard（2021）\n（アプリの「このアプリについて」→「おもな出典」）\n\n動画の中の数値（2100年の気温など）は、アプリの学習用のモデルで計算したもので、研究の成果や公式の予測ではありません。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#地球の歴史 #進化 #恐竜 #まなびラボ",
+  "tags": ["地球の歴史", "進化", "恐竜", "スノーボールアース", "人類", "シミュレーション", "使い方", "まなびラボ", "しし屋", "history of Earth", "evolution", "dinosaurs", "Snowball Earth", "human evolution", "simulation"],
+  "localizations": {
+    "en": {
+      "title": "4.6 Billion Years to Us ― App Guide: Timeline, Whole Planet, Ancestors, Future, Model and What If",
+      "description": "A guide to \"4.6 Billion Years to Us\", a browser app that watches one spot from the sky and follows the history of Earth, life and humans from 4.6 billion years ago to 5 billion years in the future. Turn on English subtitles (CC).\n\n0:00 Intro\n0:07 Moving through time with the timeline (next event, play)\n0:32 Turning the view and seeing the whole planet (drag, scroll, Snowball Earth)\n0:53 Living things and your ancestors (the yellow ring, names, the asteroid impact)\n1:23 Humans, and today's city by day and night\n1:41 The forecast (emission scenarios, the next supercontinent, the red Sun)\n2:05 Mechanism: comparing the model with the record\n2:19 What if (the asteroid had missed)\n\nTry the app (runs in your browser, PC or phone). The on-screen text is in Japanese for now:\nhttps://sishiya.github.io/manabi-lab/evolution/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nMain sources:\nInternational Commission on Stratigraphy, International Chronostratigraphic Chart (2023)\nIPCC AR6 Working Group I (2021): temperature and sea level scenarios for 2100\nJoos et al. (2013), Gough (1981), Caldeira & Kasting (1992), Ganopolski et al. (2016), Farnsworth et al. (2023), Ozaki & Reinhard (2021)\n(listed in the app under 「このアプリについて」 (About) → 「おもな出典」 (Main sources))\n\nThe numbers in the video (such as the temperature in 2100) come from the app's simplified learning model. They are not research results or official forecasts.\n\nMusic: original sounds synthesized by code.\n\n#HistoryOfEarth #Evolution #Dinosaurs"
+    }
+  }
+}
