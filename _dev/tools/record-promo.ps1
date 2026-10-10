@@ -38,7 +38,7 @@ try { Invoke-WebRequest -UseBasicParsing $url -TimeoutSec 10 | Out-Null } catch 
 
 $cdp = Start-CdpChrome -Name 'manabi-record' -Port $DebugPort -Visible:$Visible -Gpu:(-not $Soft) -Size '1400,900'
 $t0 = Get-Date
-function Elapsed { '{0:mm\:ss}' -f ((Get-Date) - $t0) }
+function Elapsed { $d = (Get-Date) - $t0; '{0}:{1:mm\:ss}' -f [int][Math]::Floor($d.TotalHours), $d }   # 1時間をこえても時の桁を出す
 function Show-Log($ws) { $l = Invoke-CdpEval $ws "document.getElementById('log') ? document.getElementById('log').textContent : ''"; if ($l) { Write-Host ($l.TrimEnd()) } }
 try {
   $ws = Open-CdpTab $cdp
