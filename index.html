@@ -82,6 +82,12 @@ h2+.grid{margin-top:0}
 .dates{font-variant-numeric:tabular-nums}
 .dates .fresh{color:var(--ink);font-weight:700}
 .card a.ver{position:relative;z-index:1;color:var(--muted)}
+/* 使い方の動画: YouTube のアイコンは使わず（チャンネル以外へのリンクに使えないため）、自分の ▶ の印＋言葉にする */
+/* 説明文の最後で改行して、少しあけて置く。押せる範囲は ::after で上下に広げる（見た目の間は変わらない） */
+.card a.vid{position:relative;z-index:1;display:inline-block;margin-top:8px;font-size:12px;line-height:1.4;white-space:nowrap;color:var(--accent);font-weight:700;text-decoration:none}
+.card a.vid::after{content:"";position:absolute;inset:-6px 0}
+.card a.vid:hover{text-decoration:underline}
+.vid svg{width:15px;height:15px;vertical-align:-4px;margin-right:5px}
 .note{font-size:13px;color:var(--muted);margin:64px 0 0;padding-top:24px;border-top:1px solid var(--line)}
 .note a{color:var(--accent)}
 .note.sub{margin-top:16px;padding-top:0;border-top:0;font-size:12px}
@@ -112,6 +118,8 @@ h2+.grid{margin-top:0}
   .card a.open{font-size:16px}
   .card p{font-size:13px;line-height:1.6;margin:2px 0 6px}
   .foot{padding-top:0;border-top:0;font-size:11px}
+  .card a.vid{margin-top:6px}
+  .card a.vid::after{inset:-8px 0} /* スマホは押す所を高さ 24px 以上に */
 }
 </style>
 </head>
@@ -136,10 +144,12 @@ h2+.grid{margin-top:0}
   <div id="list"></div>
   <noscript><p>アプリの一覧を出すには JavaScript が必要です。 / JavaScript is required to show the list of apps.</p></noscript>
 
-  <p class="note" lang="ja">ソースコードと開発メモ: <a href="https://github.com/sishiya/manabi-lab">github.com/sishiya/manabi-lab</a><br>
+  <p class="note" lang="ja">アプリの紹介動画: <a href="https://www.youtube.com/@sishiya22">YouTube「しし屋」（@sishiya22）</a><br>
+  ソースコードと開発メモ: <a href="https://github.com/sishiya/manabi-lab">github.com/sishiya/manabi-lab</a><br>
   不具合やご意見は <a href="https://github.com/sishiya/manabi-lab/issues">GitHub の Issues</a> へ（GitHub のアカウントが必要です）<br>
   作りかけや、入口に並べるのをやめたアプリは <a href="archive.html">保管庫</a> にしまってあります</p>
-  <p class="note" lang="en">Source code and development notes (in Japanese): <a href="https://github.com/sishiya/manabi-lab">github.com/sishiya/manabi-lab</a><br>
+  <p class="note" lang="en">Videos of the apps: <a href="https://www.youtube.com/@sishiya22">YouTube channel “Shishiya” (@sishiya22)</a><br>
+  Source code and development notes (in Japanese): <a href="https://github.com/sishiya/manabi-lab">github.com/sishiya/manabi-lab</a><br>
   Found a bug or have feedback? Please use <a href="https://github.com/sishiya/manabi-lab/issues">GitHub Issues</a> (a GitHub account is required).<br>
   Unfinished and retired apps are kept in the <a href="archive.html">archive</a> (Japanese only).</p>
   <div id="analytics">
@@ -151,6 +161,7 @@ h2+.grid{margin-top:0}
 // アプリの一覧。並びは公開した順（同じ日のものの前後もこの順で決める）。
 // 新しいアプリはいちばん下に足す。created は作成日、updated は中身が変わった日（RULES 8.1）。
 // title_en・desc_en は英語の入口での名前と説明。en:true は、アプリの中も英語に切り替えられるもの（I18N.md。ないものは「Japanese only」と出す）。
+// video は使い方の動画 {id: YouTube の動画 ID, at: 公開日時}。at を過ぎるとカードに「▶ 使い方の動画」が出る。
 const APPS = [
   {id:'body-dive', title:'体内ダイブ', cat:'body', created:'2026-10-03', updated:'2026-10-10', en:true,
    desc:'口・鼻・肛門から入って、消化管と気道の中を3Dで進む。',
@@ -239,6 +250,16 @@ function saveState() {
   history.replaceState(null, '', s ? '?' + s : location.pathname);
 }
 
+// 使い方の動画（YouTube）。video.at（予約投稿の日時、upload.json の publishAt と同じ）を過ぎてから出す。
+// 英語の入口からは英語の字幕つきで開く。入口から外のサイトなので別タブ
+const VIDEO_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6.4 5.1v5.8L11 8z" fill="currentColor"/></svg>';
+function videoLink(a) {
+  const v = a.video;
+  if (!v || Date.now() < Date.parse(v.at)) return '';
+  const url = 'https://www.youtube.com/watch?v=' + v.id + (LANG === 'en' ? '&cc_lang_pref=en&cc_load_policy=1' : '');
+  return `<br><a class="vid" href="${url}" target="_blank" rel="noopener" title="${L('YouTube で開きます', 'Opens on YouTube')}">${VIDEO_ICON}${L('使い方の動画', 'How-to video')}</a>`;
+}
+
 function card(a, showCat) {
   const c = catOf(a.cat);
   const updatedLater = a.updated !== a.created;
@@ -251,7 +272,7 @@ function card(a, showCat) {
     <div class="body">
       ${showCat ? `<span class="cat"><span class="dot"></span>${esc(nameOf(c))}</span>` : ''}
       <a class="open" href="${href}"${jpOnly ? ' hreflang="ja"' : ''}>${esc(L(a.title, a.title_en))}</a>
-      <p>${esc(L(a.desc, a.desc_en))}</p>
+      <p>${esc(L(a.desc, a.desc_en))}${videoLink(a)}</p>
       <div class="foot"><span class="dates">${dateHtml(L('公開', 'Published'), a.created)}${updatedLater ? L(' ・ ', ' · ') + dateHtml(L('更新', 'Updated'), a.updated) : ''}</span><a class="ver" href="${a.id}/launcher.html">${L('過去の版', 'Past versions')}</a></div>
     </div></div>`;
 }
