@@ -61,6 +61,7 @@
       <label class="chk"><input type="checkbox" id="optNoteNums" checked> ノーツに指の番号</label>
       <label class="chk"><input type="checkbox" id="optFingerNums"> 指先に指の番号</label>
       <label class="chk"><input type="checkbox" id="optTargets"> 指先の目標点（IK でねらう場所）</label>
+      <label class="chk"><input type="checkbox" id="optBones"> 骨だけ（円柱と球。検証用）</label>
       <label class="chk"><input type="checkbox" id="optGhost"> 手を半透明に</label>
       <label class="chk"><input type="checkbox" id="optFollow" checked> カメラが手について行く</label>
     </section>
@@ -75,6 +76,7 @@
         <li><b>指</b>: 指先の目標から関節の角度を逆算（IK）。関節は人の範囲で止め、先の2つの関節は連動させます。</li>
         <li><b>検査</b>: 1/120 秒ごとに、届かなさ・関節の限界・指どうしのめりこみ・鍵へのめりこみ・速さを測ります。</li>
       </ol>
+      <p class="cap">手の見た目: 骨に合わせて丸い円すいと板をなめらかにつないだ形を、起動時に網にして、関節といっしょに曲げています。爪・関節のしわ・手の甲の腱と静脈・肌の細かい凹凸と色むらは、計算で作った模様です（本物の手を測った形や写真ではありません）。</p>
       <p class="cap">簡単にしたところ: 骨の長さと関節の範囲は大人の手の目安（1人分）。手首は水平に回るだけで、手のひらを傾けたり前腕をひねったりはしません。鍵は押した分だけ平行に沈みます。</p>
     </details>
 
@@ -95,6 +97,8 @@
 <script src="js/songs.js"></script>
 <script src="js/fingering.js"></script>
 <script src="js/hand.js"></script>
+<script src="js/skin.js"></script>
 <script src="js/check.js"></script>
 <script src="js/view.js"></script>
+<script src="js/skinview.js"></script>
 <script src="js/main.js"></script>
