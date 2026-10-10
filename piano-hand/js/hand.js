@@ -71,9 +71,12 @@ const TIP_N = [null];
 for (let f = 1; f <= 5; f++) { const F = FINGERS[f]; TIP_N.push(fingerFK(F, F.yaw0, F.n[0], F.n[1])[3]); }
 const WRIST_Y = PAD - 7 - (TIP_N[2][1] + TIP_N[3][1] + TIP_N[4][1]) / 3; // 力を抜いた指先が、白鍵を7mm 押しこんだ高さ（押す・浮かすの両方に余裕）
 
-// 手首の姿勢（いまは向きを変えない。段階Aで回転を入れる）
-function toWorld(W, p) { return [W[0] + p[0], W[1] + p[1], W[2] + p[2]]; }
-function toLocal(W, p) { return [p[0] - W[0], p[1] - W[1], p[2] - W[2]]; }
+// 手首の姿勢 W = [x, y, z, ψ]。ψ は手首から先を水平に回す角度（真上から見て反時計回りが +、指先が親指の側へ向く）。
+// 手首の横の曲がりの範囲（目安）: 親指の側へ 20 度、小指の側へ 30 度
+const YAW_MIN = -30 * D2R, YAW_MAX = 20 * D2R;
+function rotY(a, p) { const c = Math.cos(a), s = Math.sin(a); return [p[0] * c + p[2] * s, p[1], -p[0] * s + p[2] * c]; }
+function toWorld(W, p) { const q = rotY(W[3] || 0, p); return [W[0] + q[0], W[1] + q[1], W[2] + q[2]]; }
+function toLocal(W, p) { return rotY(-(W[3] || 0), [p[0] - W[0], p[1] - W[1], p[2] - W[2]]); }
 
 const smooth = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
 const lerp3 = (a, b, s) => [a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s, a[2] + (b[2] - a[2]) * s];
@@ -101,9 +104,7 @@ function buildPlan(song) {
       if (notes[j].m === n.m) { n.t1 = Math.min(n.t1, notes[j].t0 - 0.06); break; }
     }
     n.t1 = Math.max(n.t1, n.t0 + 0.03);
-    // 手首の目安: この指が力を抜いた形のまま、この鍵の押す場所に届く手首の位置
-    n.ax = keyX(n.m) - TIP_N[n.f][0];
-    n.az = pressZ(n.m, n.f) - TIP_N[n.f][2];
+    n.P = pressPoint(n.m, n.f);
   }
   const byF = [null, [], [], [], [], []];
   for (const n of notes) byF[n.f].push(n);
@@ -118,7 +119,18 @@ function buildPlan(song) {
 // 親指は横へ大きく動けるので重みを軽くする → 親指くぐりのあいだ、手は他の指の側に残る
 const W_HZ = 60, W_TAU = 0.12, W_FINGER = [0, 0.3, 1, 1, 1, 1];
 // 解いたあと、押している指が届かないコマはその音の重みを増やして解き直す（W_ITER 回。反復重みづけ最小二乗）
-const W_ITER = 5, W_MULMAX = 6;
+const W_ITER = 5, W_MULMAX = 12, W_PRE = 0.5, W_LEAD = 0.25;
+// 手首の回転: 位置を解いたあと、コマごとに「押している指がいちばん届く ψ」を探し（回さないほうへ少し罰）、
+// なめらかにしてから位置を解き直す（交互に W_ITER 回）
+const YAW_REG = 0.03, YAW_TAU = 0.1;
+// 手首の姿勢 W のとき、音 n を押し下げた指先がどれだけ届かないか（mm）
+function reachErr(W, n) {
+  const T = toLocal(W, [n.P[0], n.P[1] - KB.DEPTH, n.P[2]]);
+  const F = FINGERS[n.f], ik = fingerIK(F, T), tip = fingerFK(F, ik.yaw, ik.a1, ik.a2)[3];
+  return Math.hypot(tip[0] - T[0], tip[1] - T[1], tip[2] - T[2]);
+}
+// 向き ψ のとき、指 f が力を抜いた形のまま押す場所に届く手首の位置（x, z）
+function anchorAt(n, psi) { const q = rotY(psi, TIP_N[n.f]); return [n.P[0] - q[0], n.P[2] - q[2]]; }
 function solveWrist(plan) {
   const ns = plan.notes;
   const ta = (ns.length ? ns[0].t0 : 0) - 1, tb = plan.end + 1;
@@ -128,8 +140,8 @@ function solveWrist(plan) {
     const t = ta + i / W_HZ, list = [];
     let best = null, bd = Infinity;
     for (const n of ns) {
-      // 押す 0.15 秒前から少し、押したら強く、離すと軽くなる
-      const k = W_FINGER[n.f] * (0.3 * smooth((t - n.t0 + 0.15) / 0.13) + 0.7 * smooth((t - n.t0) / 0.02)) * (1 - smooth((t - n.t1) / 0.05));
+      // 押す W_LEAD 秒前から W_PRE まで、押したら強く、離すと軽くなる
+      const k = W_FINGER[n.f] * (W_PRE * smooth((t - n.t0 + W_LEAD) / (W_LEAD - 0.02)) + (1 - W_PRE) * smooth((t - n.t0) / 0.02)) * (1 - smooth((t - n.t1) / 0.05));
       if (k > 0) list.push({ n, k, mul: 1 });
       const d = Math.abs(t - n.t0);
       if (d < bd) { bd = d; best = n; }
@@ -137,23 +149,52 @@ function solveWrist(plan) {
     ent.push(list); near.push(best);
   }
   const lam = Math.pow(W_TAU * W_HZ, 4); // なめらかさの罰（W_TAU 秒くらいより速い動きをおさえる）
+  const lamY = Math.pow(YAW_TAU * W_HZ, 4);
   const w = new Float64Array(N), bx = new Float64Array(N), bz = new Float64Array(N);
+  const yw = new Float64Array(N), yb = new Float64Array(N);
+  plan.wt0 = ta; plan.wy = new Float64Array(N);
+  const downAt = (e, t) => t >= e.n.t0 - 0.02 && t <= e.n.t1;
   for (let it = 0; it < W_ITER; it++) {
+    // 位置（いまの向きでの目安へ）
     for (let i = 0; i < N; i++) {
-      const k0 = 1e-3; // 何も押していないときは近い音の位置へゆるく
-      w[i] = k0; bx[i] = k0 * near[i].ax; bz[i] = k0 * near[i].az;
-      for (const e of ent[i]) { const k = e.k * e.mul; w[i] += k; bx[i] += k * e.n.ax; bz[i] += k * e.n.az; }
+      const psi = plan.wy[i], k0 = 1e-3; // 何も押していないときは近い音の位置へゆるく
+      const a0 = anchorAt(near[i], psi);
+      w[i] = k0; bx[i] = k0 * a0[0]; bz[i] = k0 * a0[1];
+      for (const e of ent[i]) { const k = e.k * e.mul, a = anchorAt(e.n, psi); w[i] += k; bx[i] += k * a[0]; bz[i] += k * a[1]; }
     }
-    plan.wt0 = ta; plan.wx = cgSmooth(w, bx, lam); plan.wz = cgSmooth(w, bz, lam);
+    plan.wx = cgSmooth(w, bx, lam); plan.wz = cgSmooth(w, bz, lam);
     if (it === W_ITER - 1) break;
+    // 向き（粗く 5 度きざみ → まわりを 1 度きざみ）。向きを変えたら手首の位置もその向きの目安の平均へ動かして比べる
+    // （手を回しながら横へずらす = 親指くぐりの姿勢）。もうすぐ押す指も重みのぶんだけ数える
     for (let i = 0; i < N; i++) {
-      const t = ta + i / W_HZ, W = [plan.wx[i], WRIST_Y, plan.wz[i]];
+      const t = ta + i / W_HZ, act = ent[i];
+      if (!act.some(e => downAt(e, t))) { yw[i] = 0.05; yb[i] = 0; continue; }
+      const poseFor = psi => {
+        let sx = 0, sz = 0, sw = 0;
+        for (const e of act) { const k = e.k * e.mul, a = anchorAt(e.n, psi); sx += k * a[0]; sz += k * a[1]; sw += k; }
+        return [sx / sw, WRIST_Y, sz / sw, psi];
+      };
+      const cost = psi => {
+        const W = psi === 0 && it === 0 ? [plan.wx[i], WRIST_Y, plan.wz[i], 0] : poseFor(psi);
+        let c = YAW_REG * (psi / D2R) ** 2;
+        for (const e of act) c += e.k * e.mul * reachErr(W, e.n) ** 2;
+        return c;
+      };
+      if (act.every(e => reachErr([plan.wx[i], WRIST_Y, plan.wz[i], plan.wy[i]], e.n) < 0.5)) { yw[i] = 0.3; yb[i] = 0.3 * plan.wy[i]; continue; }
+      let best = 0, bc = cost(0);
+      for (let d = -30; d <= 20; d += 5) { const c = cost(d * D2R); if (c < bc) { bc = c; best = d * D2R; } }
+      const b0 = best;
+      for (let d = -4; d <= 4; d++) { const p = b0 + d * D2R; if (p < YAW_MIN || p > YAW_MAX) continue; const c = cost(p); if (c < bc) { bc = c; best = p; } }
+      yw[i] = 1; yb[i] = best;
+    }
+    const ys = cgSmooth(yw, yb, lamY);
+    for (let i = 0; i < N; i++) plan.wy[i] = Math.min(YAW_MAX, Math.max(YAW_MIN, ys[i]));
+    // 届かないコマは重みを増やす
+    for (let i = 0; i < N; i++) {
+      const t = ta + i / W_HZ, W = [plan.wx[i], WRIST_Y, plan.wz[i], plan.wy[i]];
       for (const e of ent[i]) {
-        const n = e.n;
-        if (t < n.t0 - 0.02 || t > n.t1) continue;
-        const P = pressPoint(n.m, n.f), T = toLocal(W, [P[0], P[1] - KB.DEPTH, P[2]]);
-        const F = FINGERS[n.f], ik = fingerIK(F, T), tip = fingerFK(F, ik.yaw, ik.a1, ik.a2)[3];
-        const err = Math.hypot(tip[0] - T[0], tip[1] - T[1], tip[2] - T[2]);
+        if (!downAt(e, t)) continue;
+        const err = reachErr(W, e.n);
         if (err > 0.5) e.mul = Math.min(W_MULMAX, e.mul * (1 + err / 2));
       }
     }
@@ -189,7 +230,8 @@ function cgSmooth(w, b, lam) {
 function wristAt(plan, t) {
   const u = Math.min(plan.wx.length - 1.001, Math.max(0, (t - plan.wt0) * W_HZ));
   const i = Math.floor(u), s = u - i;
-  return [plan.wx[i] + (plan.wx[i + 1] - plan.wx[i]) * s, WRIST_Y, plan.wz[i] + (plan.wz[i + 1] - plan.wz[i]) * s];
+  const at = a => a[i] + (a[i + 1] - a[i]) * s;
+  return [at(plan.wx), WRIST_Y, at(plan.wz), at(plan.wy)];
 }
 
 // 鍵を押す指先の位置（世界の座標）
@@ -234,7 +276,9 @@ function fingerTarget(plan, f, t, W) {
 // 時刻 t の手の姿勢
 // ④ 人さし指〜小指は横の並びを入れかえられない。押していない指を横へよけて、指先どうしを FGAP 以上はなす
 const FGAP = 18;
-function keepOrder(tg) {
+function keepOrder(tg, W) {
+  // 横の並びは手の座標で見る（手が回っていても）
+  for (let f = 1; f <= 5; f++) tg[f].T = toLocal(W, tg[f].T);
   for (let pass = 0; pass < 6; pass++) {
     let moved = false;
     for (let f = 2; f <= 4; f++) {
@@ -253,6 +297,7 @@ function keepOrder(tg) {
     const gap = Math.min(B.T[0] - A.T[0], C.T[0] - B.T[0]);
     if (gap < FGAP) { B.T[0] = (A.T[0] + C.T[0]) / 2; B.T[1] += (FGAP - gap) * 1.5; }
   }
+  for (let f = 1; f <= 5; f++) tg[f].T = toWorld(W, tg[f].T);
   // よけた指が黒鍵の上に来たら、その分だけ上げる（指先の球が鍵にめりこまないように）
   for (let f = 1; f <= 5; f++) {
     const T = tg[f].T;
@@ -268,7 +313,7 @@ function poseAt(plan, t) {
   const fingers = [null];
   const tgs = [null];
   for (let f = 1; f <= 5; f++) tgs.push(fingerTarget(plan, f, t, W));
-  keepOrder(tgs);
+  keepOrder(tgs, W);
   for (let f = 1; f <= 5; f++) {
     const F = FINGERS[f];
     const tg = tgs[f];

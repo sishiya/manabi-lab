@@ -8,6 +8,7 @@ const CHECKS = [
   { id: 'clash', name: '指どうしのめりこみ', unit: 'mm', ok: 2, warn: 5, tip: '別の指の骨（円柱）どうしが重なった深さの最大。肌がやわらかい分 2mm までは許す' },
   { id: 'sink', name: '押さない鍵へのめりこみ', unit: 'mm', ok: 1, warn: 4, tip: '押していない指先が、鍵の上面より下に入った深さの最大' },
   { id: 'wrist', name: '手首の速さ', unit: 'mm/秒', ok: 500, warn: 900, tip: '手首が動くいちばん速い速さ' },
+  { id: 'yawv', name: '手首の回転の速さ', unit: '度/秒', ok: 150, warn: 300, tip: '手首から先を水平に回す速さのいちばん速いところ' },
   { id: 'tipv', name: '指先の速さ', unit: 'mm/秒', ok: 1500, warn: 2500, tip: '指先が動くいちばん速い速さ（手首の動きもふくむ）' },
 ];
 
@@ -75,6 +76,8 @@ function runChecks(plan) {
     if (prev) {
       const v = Math.hypot(pose.W[0] - prev.W[0], pose.W[2] - prev.W[2]) / dt;
       if (v > R.wrist.v) R.wrist = { v, at: t, who: '' };
+      const yv = Math.abs(pose.W[3] - prev.W[3]) / D2R / dt;
+      if (yv > R.yawv.v) R.yawv = { v: yv, at: t, who: '' };
     }
     prev = pose;
   }

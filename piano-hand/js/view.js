@@ -52,7 +52,9 @@ function initView(canvas) {
   pg.rotateX(-Math.PI / 2); pg.translate(0, -2, 0);
   const palm = new THREE.Mesh(pg, skin); palm.castShadow = true; V.hand.add(palm);
   const arm = new THREE.Mesh(new THREE.CylinderGeometry(24, 28, 260, 20), skin);
-  arm.rotation.x = Math.PI / 2 - 0.08; arm.position.set(1, 2, 130); arm.castShadow = true; V.hand.add(arm);
+  arm.rotation.x = Math.PI / 2 - 0.08; arm.position.set(1, 2, 130); arm.castShadow = true;
+  V.arm = new THREE.Group(); V.arm.add(arm); sc.add(V.arm); // 前腕は手首といっしょに動くが、回らない
+  const wj = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), skin); wj.scale.set(27, 15, 22); wj.position.set(1, 3, 2); wj.castShadow = true; V.arm.add(wj); // 手首のつなぎ目
   V.cyl = new THREE.CylinderGeometry(1, 1, 1, 14);
   V.sph = new THREE.SphereGeometry(1, 16, 12);
   V.seg = []; V.joint = [];
@@ -117,6 +119,8 @@ function placeSeg(mesh, a, b, r) {
 function renderPose(plan, pose, opt) {
   const t = pose.t;
   V.hand.position.set(pose.W[0], pose.W[1], pose.W[2]);
+  V.hand.rotation.y = pose.W[3];
+  V.arm.position.copy(V.hand.position);
   V.skin.opacity = opt.ghost ? 0.45 : 1;
   V.skin.depthWrite = !opt.ghost;
   for (let f = 1; f <= 5; f++) {
@@ -164,7 +168,7 @@ function renderPose(plan, pose, opt) {
 // カメラ（ドラッグで回す・ホイールで寄る）
 const CAMS = {
   tilt: { th: 0.85, ph: 0.9, d: 560, tg: [0, 10, -80] },
-  top: { th: 0, ph: 0.02, d: 820, tg: [0, 0, -200] },
+  top: { th: 0, ph: 0.02, d: 760, tg: [0, 0, -95] },
   side: { th: 1.35, ph: 1.25, d: 520, tg: [0, 20, -70] },
   front: { th: Math.PI, ph: 1.0, d: 480, tg: [0, 20, -60] },
 };
