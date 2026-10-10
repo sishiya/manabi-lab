@@ -36,6 +36,7 @@ param(
   [switch]$Schedule,
   [switch]$Stats,
   [switch]$Ga,
+  [switch]$Quota,
   [int]$Days = 7,
   [string]$Out,
   [string]$Meta,
@@ -59,6 +60,59 @@ $scope = 'https://www.googleapis.com/auth/youtube.force-ssl https://www.googleap
 if ($Ga) {
   $tokenFile = Join-Path $SecretDir 'ga-token.dat'
   $scope = 'https://www.googleapis.com/auth/analytics.readonly'
+}
+
+# ---- API の使用量の記録（_dev/tools/out/yt-quota.csv。-Quota で今日の合計）----
+# YouTube Data API は1日 10,000 ポイント（太平洋時間の0時＝日本時間 16時・冬は17時に戻る）。下の点数は Google の表の値（videos.insert は
+# 表では 1600 だが、2026-10-11（太平洋時間 10/10 の日）に API で 8本＋字幕・サムネイル・仕上げ3本・予約6本、表の値で合わせて約 19,000 ポイント
+# になっても止まらなかったので、実際は videos.insert がずっと少ない。同じ日に Studio でも3本、チャンネルとして 11本上げて本数の上限にも当たらなかった）。
+# アップロードの本数には、ポイントとは別にチャンネルの1日の上限がある（「exceeded the number of videos」。Studio で上げた分も数に入る）。
+$quotaLog = Join-Path $root '_dev/tools/out/yt-quota.csv'
+function Get-QuotaCost([string]$method, [string]$uri) {
+  if ($uri -match 'upload_id=') { return $null }   # 動画の中身を送る部分（videos.insert に含まれる）
+  if ($uri -notmatch 'googleapis\.com/(upload/)?youtube/v3/(\w+)') { return $null }   # トークン・分析（別の上限）は数えない
+  $res = $Matches[2]; $m = if ($method) { $method.ToUpper() } else { 'GET' }
+  switch ($res) {
+    'videos' { if ($m -eq 'POST') { return @(1600, 'videos.insert') } elseif ($m -eq 'PUT') { return @(50, 'videos.update') } else { return @(1, 'videos.list') } }
+    'captions' { if ($m -eq 'POST') { return @(400, 'captions.insert') } elseif ($m -eq 'PUT') { return @(450, 'captions.update') } else { return @(50, 'captions.list') } }
+    'thumbnails' { return @(50, 'thumbnails.set') }
+    default { return @(1, "$res.list") }
+  }
+}
+function Write-QuotaLog($method, $uri, [bool]$ok, [string]$err) {
+  $c = Get-QuotaCost $method $uri; if (-not $c) { return }
+  $pt = [TimeZoneInfo]::ConvertTime([DateTimeOffset]::Now, [TimeZoneInfo]::FindSystemTimeZoneById('Pacific Standard Time')).ToString('yyyy-MM-dd')
+  try {
+    [IO.Directory]::CreateDirectory((Split-Path -Parent $quotaLog)) | Out-Null
+    if (-not (Test-Path $quotaLog)) { 'time_jst,pt_day,units,api,ok,error' | Set-Content -Encoding UTF8 $quotaLog }
+    $e = ($err -replace '[\r\n,]', ' '); if ($e.Length -gt 80) { $e = $e.Substring(0, 80) }
+    "$((Get-Date).ToString('yyyy-MM-dd HH:mm:ss')),$pt,$($c[0]),$($c[1]),$([int]$ok),$e" | Add-Content -Encoding UTF8 $quotaLog
+  } catch {}
+}
+function Get-ArgValue($a, [string]$name) { for ($i = 0; $i -lt $a.Count - 1; $i++) { if ("$($a[$i])" -ieq "-$name") { return [string]$a[$i + 1] } }; return $null }
+# YouTube に問い合わせる2つの命令を横取りして、点数を記録してから本物を呼ぶ
+function Invoke-RestMethod {
+  $u = Get-ArgValue $args 'Uri'; $mt = Get-ArgValue $args 'Method'
+  try { $r = Microsoft.PowerShell.Utility\Invoke-RestMethod @args; Write-QuotaLog $mt $u $true ''; return $r }
+  catch { Write-QuotaLog $mt $u $false "$($_.Exception.Message)"; throw }
+}
+function Invoke-WebRequest {
+  $u = Get-ArgValue $args 'Uri'; $mt = Get-ArgValue $args 'Method'
+  try { $r = Microsoft.PowerShell.Utility\Invoke-WebRequest @args; Write-QuotaLog $mt $u $true ''; return $r }
+  catch { Write-QuotaLog $mt $u $false "$($_.Exception.Message)"; throw }
+}
+function Show-Quota {
+  if (-not (Test-Path $quotaLog)) { Write-Host 'まだ記録がない'; return }
+  $rows = Import-Csv -Encoding UTF8 $quotaLog
+  $days = $rows | Group-Object pt_day | Sort-Object Name | Select-Object -Last 7
+  foreach ($d in $days) {
+    $u = ($d.Group | Measure-Object -Property units -Sum).Sum
+    $up = @($d.Group | Where-Object { $_.api -eq 'videos.insert' -and $_.ok -eq '1' }).Count
+    $fail = @($d.Group | Where-Object { $_.ok -eq '0' }).Count
+    Write-Host ("{0}（太平洋時間の日）: {1} ポイント（表の値で）、API で上げた動画 {2} 本、失敗 {3} 回" -f $d.Name, $u, $up, $fail)
+  }
+  $last = $rows | Where-Object { $_.ok -eq '0' } | Select-Object -Last 3
+  foreach ($r in $last) { Write-Host "  失敗: $($r.time_jst) $($r.api) $($r.error)" }
 }
 
 function Get-Client {
@@ -350,5 +404,5 @@ function Invoke-Update {
   Write-Host "更新しました: https://youtu.be/$($r.id)  翻訳: $(($r.localizations.PSObject.Properties.Name) -join ',')  tags: $(@($r.snippet.tags).Count)個"
 }
 
-try { if ($Auth) { Invoke-Auth } elseif ($List) { Invoke-List } elseif ($Stats -and $Ga) { Invoke-GaStats } elseif ($Stats) { Invoke-Stats } elseif ($Schedule) { Invoke-Schedule } elseif ($Update) { Invoke-Update } else { Invoke-Upload } }
+try { if ($Quota) { Show-Quota } elseif ($Auth) { Invoke-Auth } elseif ($List) { Invoke-List } elseif ($Stats -and $Ga) { Invoke-GaStats } elseif ($Stats) { Invoke-Stats } elseif ($Schedule) { Invoke-Schedule } elseif ($Update) { Invoke-Update } else { Invoke-Upload } }
 catch { Write-Host "失敗: $($_.Exception.Message)"; exit 1 }

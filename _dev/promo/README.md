@@ -45,7 +45,8 @@ YouTube に出す順番（ジャンル・サムネイルの色味が連日で重
 - 上げたあとに英語・字幕を足す・直す: `-Update -Meta …`。チャンネルの動画の一覧: `-List`。
 - **API の本数の上限で上げられないとき**: ユーザーが Studio で動画ファイルだけ上げる（「子ども向けではない」を選ぶ・非公開・予約はそこで）→ `-List` で ID を調べて JSON の `videoId` に書く → `-Update -Full -Meta …` で日本語と英語のタイトル・説明・タグ・字幕・サムネイルを入れる（上げたあとの更新は本数の上限に数えられない）。
 - **上げる・予約投稿はユーザーの GO のあとで**。予約は `publishAt`（日本時間 `+09:00`、19〜22時ごろ）。差し替えは新しく上げて、古い方はユーザーが Studio で消す（Claude は消さない）。
-- YouTube には1日に上げられる本数の上限がある（`exceeded the number of videos` が出たら日を改める）。
+- YouTube には1日に上げられる本数の上限がある（`exceeded the number of videos` が出たら日を改める）。2026-10-11 は API で8本＋Studio で3本（合わせて11本）上げても当たらなかった。API の使用量は `youtube-upload.ps1 -Quota`（記録は `_dev/tools/out/yt-quota.csv`。1日は太平洋時間の0時＝日本時間16時に切りかわる）。
+- 大きい動画（600MB ほど）で「The underlying connection was closed」が出ても、実は上がっていることがある。すぐ上げなおさず、`-List` で確かめる（上がっていたら ID を書いて `-Update -Full` で字幕・サムネイルを付ける）。
 - 秘密（クライアントの秘密・トークン）はプロジェクトの外。スクリプトだけが読む。中身を読んだり画面に出したりしない。
 
 ## X（@sishiya22）に出す（`_dev/tools/x-post.ps1`、半自動）
