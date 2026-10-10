@@ -1,18 +1,18 @@
 # ヒトへの46億年 開発メモ
 
-最終更新: 2026-10-04
+最終更新: 2026-10-10
 
 企画は `PLAN.md`（v1）と `PLAN-future.md`（モデル・未来・IF）。
 
 ## 別セッションで続けるとき（まずここ）
 
-- **いまの状態**: 最新は v008b（`versions/v008b-credits`。2026-10-04 に公開済み）。公開済み（タイトル「ヒトへの46億年」、URL は `../PUBLISH.local.md`、共有は「リンクを知っている全員」）。初期リリース 1.0 は `versions/release-1.0`（v003 と同じ）、リリース 1.1 は `versions/release-1.1`（v007 と同じ）。
+- **いまの状態**: 最新は v008e（`versions/v008e-english`。英語対応、下の「英語対応」。Artifact へはまだ再公開していない）。その前の公開は v008b（`versions/v008b-credits`。2026-10-04 に公開済み）。公開済み（タイトル「ヒトへの46億年」、URL は `../PUBLISH.local.md`、共有は「リンクを知っている全員」）。初期リリース 1.0 は `versions/release-1.0`（v003 と同じ）、リリース 1.1 は `versions/release-1.1`（v007 と同じ）。
 - **企画の段階**: `PLAN-future.md` の A（モデル）・B（未来）・C（もしも）は完了。**次は D（ゲーム化）**。下の「次にやること」に D の進め方の案。
 - **読む順**: このファイルの「ファイル構成」→ 直すファイルだけ読む。モデルの式は「地球システムの箱モデル」と「未来」の項（いまの値で書いてある）。
 - **動かす**: `preview_start` で `apps`（`.claude/launch.json`）→ `http://localhost:8765/evolution/index.html`。コンソールで `__evErr`（空ならOK）、`__ev.setAge(年前)`（未来は負）、`__ev.frame(n)`、`__ev.visible()`、`__ev.MODEL`。
 - **区切りごとに**: ① `versions/v0NN-名前/` に index.html・css・js を丸ごとコピー ② `launcher.html` にカードを足す ③ このファイルの「状態」に1項目 ④ 「確認のしかた」を通す ⑤ 公開（下の `files` をそのまま使う）。
 - **公開のコマンド**（Artifact の publish）: `file_path` = `evolution/index.html`、`files` =
-  `{"css/app.css":"evolution/css/app.css","js/core.js":"evolution/js/core.js","js/data.js":"evolution/js/data.js","js/model.js":"evolution/js/model.js","js/future.js":"evolution/js/future.js","js/ifworld.js":"evolution/js/ifworld.js","js/terrain.js":"evolution/js/terrain.js","js/life.js":"evolution/js/life.js","js/effects.js":"evolution/js/effects.js","js/globe.js":"evolution/js/globe.js","js/world.js":"evolution/js/world.js","js/ui.js":"evolution/js/ui.js","js/main.js":"evolution/js/main.js","js/about.js":"evolution/js/about.js"}`
+  `{"css/app.css":"evolution/css/app.css","js/core.js":"evolution/js/core.js","js/data.js":"evolution/js/data.js","js/text-en.js":"evolution/js/text-en.js","js/model.js":"evolution/js/model.js","js/future.js":"evolution/js/future.js","js/ifworld.js":"evolution/js/ifworld.js","js/terrain.js":"evolution/js/terrain.js","js/life.js":"evolution/js/life.js","js/effects.js":"evolution/js/effects.js","js/globe.js":"evolution/js/globe.js","js/world.js":"evolution/js/world.js","js/ui.js":"evolution/js/ui.js","js/main.js":"evolution/js/main.js","js/about.js":"evolution/js/about.js"}`
   （JS を足したら、ここと index.html の `<script>` の両方に追加）。
 - **ユーザーの好み**: 企画書を先に作ってから進める。開発メモをこまめに残す。版ごとのバックアップ。文章は日本語で、推定・想像はそう明記する。
 
@@ -24,6 +24,7 @@
 |---|---|---|
 | `css/app.css` | 見た目すべて | 色は `:root` のトークン |
 | `js/core.js` | 共通の道具、ノイズ、目盛り（スライダー位置 ↔ 年代。未来は負の年代） | `clamp` `sstep` `fbm` `u2A` `A2u` `u2A_ev` `UP` `FMAX` |
+| `js/text-en.js` | 英語の文（data.js の直後に読む）。`GEO_EN` `EVENTS_EN` `ANCESTORS_EN`（data.js と同じ順。`LANG==='en'` のときだけ上書き）と生き物の名前 `SP_EN`（life.js の `S()` が読む） | `GEO_EN` `EVENTS_EN` `ANCESTORS_EN` `SP_EN` |
 | `js/data.js` | 記録: 地質年代、出来事、祖先、環境のキーフレーム、数値の表 | `GEO` `EVENTS` `ANCESTORS` `KEYS` `envAt` `RT` `rt` `glacial` `solarLum` |
 | `js/model.js` | 地球システムの箱モデル（記録を読まない）、排出シナリオ、文献の予測 | `FORCE` `runModel` `rebuildModel` `modelAt` `SCENARIOS` `SCENARIO` `LIT` `farm` `urb` |
 | `js/future.js` | 未来の出来事・景色・生き物の残り方・数値・シナリオ選択 | `futureEnv` `futureFactor` `futureRows` `RT_FUTURE` `humanFade` `litMarks` |
@@ -107,6 +108,18 @@
 - v008-about-pause（2026-10-04）: 「このアプリについて」を開いている間はタイムラインを進めない（`frame()` の再生の条件に `$('about').hidden`）。`playing` は変えないので、保存・復帰はいらない。昼夜・生き物の動き・雲はそのまま動く。
 - v008b-credits（2026-10-04）: 「このアプリについて」に「使っているもの」（Three.js＝MIT、フォント＝SIL OFL）を追加。同じ日に再公開。
 - 2026-10-05 `versions/v008c-favicon`: ファビコン（タブのアイコン、SVG を埋め込み）を追加。GitHub Pages（まなびラボ）用。Artifact へはまだ再公開していない。
+- 2026-10-10 `versions/v008e-english`: 英語対応（上の「英語対応」）。日本語の表示は v008d と同じ。「実際の長さ」ボタンの不具合も直した。（v008d はアクセス解析の1行を足しただけの版）
+
+## 英語対応（v008e、2026-10-10。`../I18N.md`）
+- 言語は開いたときに決まる（`?lang=` → `localStorage['manabi-lang']` → ブラウザ）。`index.html` の先頭の `var LANG=` の行と `L(ja, en)`。JP／EN ボタンは下のボタン列の右端（スマホ幅では隠す。列が1行ふえるため）と「このアプリについて」の見出しの右。
+- **data.js の年表・祖先の文を足す・直すときは、`js/text-en.js` の同じ位置も直す**（順番で対応。数がずれると英語が1つずつずれる）。生き物を足したら `SP_EN` にも名前を足す（ないと英語でも日本語の名前が出る）。
+- 未来の出来事（future.js）・もしも（ifworld.js）・しくみの説明（ui.js）・巨大噴火と排出シナリオ（model.js）は、その場で `L('日本語','English')`。
+- 年代の書き方は `fmtAge` `fmtShort`（ui.js）と `fmtFuture`（future.js）。英語は `enNum()`（4.6 billion・66 million・11,700）。「約 46億年前」の `<small>` の付け方も英語は別（`updateHUD` の `smU`）。
+- 生き物の名前のかっこ: 日本語は「（…）」、英語は「 (…)」。ラベルでかっこを落とす正規表現は両方に合わせてある（main.js `updateLabels`、future.js `futureName`、ifworld.js `displayName`）。
+- 「もしも: 〜」の出来事は日本語の文字で見分けていた（`startsWith('もしも: ')`）→ 出来事の6番目に `'pick'` の印を付けて見分ける。シベリア・トラップも名前でなく年代（`l[0]===2.52e8`）で見分ける。
+- しくみの図 `drawMech()` の中の `const L=74`（左の余白）を `PL` にした（`L()` が隠れるため）。
+- 英語はパネルの文字が長いので、`#side` を英語のときだけ 310px に。
+- ついでに直した不具合: 「実際の長さ」ボタンで、HTML にない `#scaleNote` に書こうとして止まっていた（v008d まで）。`if(sn)` にした。
 
 ## 確認のしかた（変更のたびに）
 - もしも: パネルで介入を1つずつ選んで「この世界を計算して見る」→ エラーなし、要約に出来事が出る、I キーで本来の世界と切り替わる、「しくみ」に2本の線と差の行。小天体がそれる→100万年前に恐竜（生き残り）がいて人がいない。酸素なし→3億年前が荒れ地で「あなたはいない」。
@@ -118,6 +131,7 @@
 - いつも: `__evErr` が空。スマホ幅。
 - スマホ幅: index.html の先頭に viewport の meta を入れてある（2026-10-04 追加。それまでは公開時に Artifact が足すものだけで、ローカルでは Chrome のデバイス表示でも PC 表示になっていた）。Browser ペインのモバイル表示（375px）で 760px 以下の CSS が効くことを確かめる。過去の版（versions/）には入っていないので、ローカルでは PC 表示になる。
 - Browser ペインが非表示だと rAF が止まる。`__ev.frame(n)` で強制的に進められる。
+- 英語（`?lang=en`）: 上の年代を全部・シナリオ4つ・もしも9通り（それぞれ数か所の年代）・しくみ・見えているもの・名前・昼夜・地球を見る、で画面に日本語が残らない（`../I18N.md` 2.4 の式。キャンバスの文字も）。JP／EN ボタンで読み直し、`localStorage['manabi-lang']` が変わる。日本語（`?lang=ja`）は前の版と同じ表示（v008e では、同じ操作の 149 場面の `innerText`・`aria-label`・`title` を v008d と比べて一致。ちがいは計算時間のミリ秒だけ）。
 
 ## 全体の流れ（どのファイルが何をするか）
 1. 時間: `A`＝何年前（未来は負）。`u2A`/`A2u`（core.js）がスライダー位置と年代を変換。`scaleMode` 'ev'（出来事ごと、`ANCH`・`FANCH`）／'lin'（実際の長さ）。
