@@ -37,6 +37,8 @@ const SETUP = {
   'brain-response': async w => { await wait(800); w.__br.set({ sp: 'human', stim: 'face', cond: 'none' }); w.__br.seek(185); await wait(600); w.__br.seek(185); },
   // にせものサイトで、ブラウザがパスキーを止めたところ（先に銀行でパスキーを作ってログインしておく）
   'passkey': async w => { await wait(1200); const P = w.__pk; P.auto(true); await P.run(() => P.EXP.basic()); P.auto(false); P.startExp('phish', 'passkey'); await wait(400); w.document.getElementById('gLogin').click(); await wait(9000); },
+  // ハ長調の音階を弾いているところ（ななめから。ノーツが降ってくる）
+  'piano-hand': async w => { await wait(1200); w.document.getElementById('chkSound').checked = false; w.setCam('tilt'); w.__ph.setTime(1.9); w.__ph.simRun(0); await wait(1500); },
   // 大きい磁石の上のトゲの山（開いたときのまま、少し進める）
   'ferrofluid': async w => { await wait(800); w.__ff.advance(2, 1 / 30); await wait(1500); },
   // 映画の角度（開いたときのまま）。細かい段まで描き切る
