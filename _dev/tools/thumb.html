@@ -13,6 +13,7 @@
 <iframe id="f"></iframe>
 <script>
 const app = new URLSearchParams(location.search).get('app');
+const lang = new URLSearchParams(location.search).get('lang');   // smoke.ps1 が ?lang=ja|en を渡す（なければアプリの決め方のまま）
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const click = (w, sel) => { const e = w.document.querySelector(sel); if (e) e.click(); };
 
@@ -67,7 +68,7 @@ f.onload = async () => {
   else await wait(5000);
   document.title = 'ready';
 };
-f.src = '../../' + app + '/';
+f.src = '../../' + (app === '_root' ? '' : app + '/') + (lang ? '?lang=' + lang : '');
 </script>
 </body>
 </html>

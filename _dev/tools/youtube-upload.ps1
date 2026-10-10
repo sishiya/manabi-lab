@@ -11,6 +11,8 @@
 #       … 上げたあとの動画（videoId）に、字幕（captions）と、翻訳したタイトルと説明（localizations）・tags を足す。日本語のタイトル・説明はそのまま
 #         publishAt があれば予約投稿の日時も入れる（Studio で上げた動画を予約するとき。例 "2026-10-11T20:00:00+09:00"）
 #         -Full を付けると、日本語のタイトル・説明・分類（教育）・言語・サムネイルも JSON から入れる（Studio で手動で上げた動画を、ここで仕上げるとき）
+#   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Stats [-Out _dev/tools/out/yt-stats.json]
+#       … 上げた動画の再生数・高評価・コメント数とチャンネルの登録者数（読むだけ。weekly-report.ps1 が使う）
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Schedule -Meta _dev/promo/black-hole-guide.upload.json
 #       … 予約投稿の日時（publishAt）だけを入れる。JSON に publishAt がなければ予約を外して非公開のままにする（字幕を送らないので API の使用量が少ない）
 #         captions: { "en": "_dev/promo/out/<名前>.en.srt" } … 字幕（CC）。台本ページ（_dev/promo/*.html）を開くと out に保存される。日本語は動画に焼きこんであるので、ふつうは英語だけ
@@ -27,6 +29,8 @@ param(
   [switch]$Update,
   [switch]$Full,
   [switch]$Schedule,
+  [switch]$Stats,
+  [string]$Out,
   [string]$Meta,
   [string]$SecretDir
 )
@@ -202,6 +206,32 @@ function Invoke-List {
   }
 }
 
+# ---- -Stats: 上げた動画の再生数・高評価・コメント数（読むだけ。いまの許可のまま。weekly-report.ps1 が使う）----
+# -Out <path> に JSON で書く（なければ画面に出す）。数は YouTube が数えたその時点の合計
+function Invoke-Stats {
+  $at = Get-AccessToken; $h = @{ Authorization = "Bearer $at" }
+  try {
+    $ch = Invoke-RestMethod -Headers $h -Uri 'https://www.googleapis.com/youtube/v3/channels?part=contentDetails,statistics&mine=true'
+    $pl = $ch.items[0].contentDetails.relatedPlaylists.uploads
+    $items = (Invoke-RestMethod -Headers $h -Uri "https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&maxResults=50&playlistId=$pl").items
+    $vs = @()
+    if ($items) {
+      $ids = ($items | ForEach-Object { $_.contentDetails.videoId }) -join ','
+      $vs = (Invoke-RestMethod -Headers $h -Uri "https://www.googleapis.com/youtube/v3/videos?part=snippet,status,statistics,contentDetails&id=$ids").items
+    }
+  } catch { throw "数を取れませんでした: $(Get-ErrText $_)" }
+  $res = [ordered]@{
+    at = (Get-Date).ToString('yyyy-MM-ddTHH:mm:sszzz')
+    channel = [ordered]@{ subscribers = [int]$ch.items[0].statistics.subscriberCount; views = [long]$ch.items[0].statistics.viewCount; videos = [int]$ch.items[0].statistics.videoCount }
+    videos = @($vs | ForEach-Object { [ordered]@{
+          id = $_.id; title = $_.snippet.title; status = $_.status.privacyStatus; publishAt = $_.status.publishAt; publishedAt = $_.snippet.publishedAt
+          duration = $_.contentDetails.duration
+          views = [long]$_.statistics.viewCount; likes = [long]$_.statistics.likeCount; comments = [long]$_.statistics.commentCount } })
+  }
+  $json = $res | ConvertTo-Json -Depth 5
+  if ($Out) { [IO.File]::WriteAllText($Out, $json, (New-Object Text.UTF8Encoding $false)); Write-Host "書いた: $Out（動画 $(@($vs).Count) 本）" } else { $json }
+}
+
 # ---- 予約投稿の日時を入れる／外す（status だけを書きかえる。字幕は送らないので API の使用量が少ない）----
 # $publishAt が空なら予約を外して非公開のままにする
 function Set-Schedule($id, $publishAt, $h) {
@@ -264,5 +294,5 @@ function Invoke-Update {
   Write-Host "更新しました: https://youtu.be/$($r.id)  翻訳: $(($r.localizations.PSObject.Properties.Name) -join ',')  tags: $(@($r.snippet.tags).Count)個"
 }
 
-try { if ($Auth) { Invoke-Auth } elseif ($List) { Invoke-List } elseif ($Schedule) { Invoke-Schedule } elseif ($Update) { Invoke-Update } else { Invoke-Upload } }
+try { if ($Auth) { Invoke-Auth } elseif ($List) { Invoke-List } elseif ($Stats) { Invoke-Stats } elseif ($Schedule) { Invoke-Schedule } elseif ($Update) { Invoke-Update } else { Invoke-Upload } }
 catch { Write-Host "失敗: $($_.Exception.Message)"; exit 1 }

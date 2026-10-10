@@ -21,6 +21,7 @@ YouTube に出す順番（ジャンル・サムネイルの色味が連日で重
 4. 確認用サーバー（`.claude/launch.json` の `apps`〜`apps-6`。使えないポートがあるので空いているものを）で `http://localhost:<port>/_dev/promo/<台本>.html` を開く。準備ができると字幕データ `out/<out>.ja.srt`・`.en.srt` が保存される。
 5. コマを確かめる: `__promoPeek(秒)` のあと `out` の canvas を縮めて `fetch('out/peek-<秒>.jpg', { method: 'PUT', body })` で保存して見る（ペインのスクリーンショットは失敗しやすい）。見るのは要所の数枚でよい（トークンの節約）。見終わったら消す。
 6. 録画: ボタン（または `__promoRecord()`）。150秒の 4K で1分ほど。できた mp4 から数コマ取り出して確かめる（`video` のシーク後は少し待ってから描く。すぐだと前のコマが写る）。
+   - 4〜6 を一度に: `_dev/tools/record-promo.ps1 -Script <台本> [-Short] [-Peek 3,30,60]`（ヘッドレスの Chrome で、確かめ用のコマ → 録画 → できた mp4 のコマを `out/check-<out>.jpg` に1枚 → 台本ページのログ。2026-10-10〜）。
 
 ### 台本の共通の道具（`promo.js`、2026-10-10 に足した）
 - 決まった部分: 説明動画は `drawGuideChrome(g, t, END, 名前, 出どころ)`＋`guideSubs(END, 日, 英, CAPS)`、ショートは `drawShortChrome(g, t, 名前, 一言, 終わりの一言, 出どころ)`＋`shortSubs(…)`（`SHORT_END` = 40）。題名・CC の案内・終わりの画面・しし屋の目印（はじまりと締め）がまとめて入る。
@@ -38,6 +39,8 @@ YouTube に出す順番（ジャンル・サムネイルの色味が連日で重
 
 ## YouTube に上げる（`_dev/tools/youtube-upload.ps1`）
 - `<out>.upload.json` を作る: 説明欄は「アプリ: URL」の行と「しし屋 まなびラボ（ほかのアプリ）: URL」の行の間を1行あける（ショートも横長も。英語も同じ）。`file`・`thumbnail`・`privacy: private`・`title`・`description`（横長はチャプター `0:00 …`）・`tags`（日本語＋英語）・`localizations.en`（英語のタイトルと説明。「アプリの文字はいまは日本語」と書く）・`captions: { "en": "_dev/promo/out/<out>.en.srt" }`。日本語は焼きこんであるので CC は英語だけ。
+  - 下書きは `_dev/tools/make-upload.ps1 -App <app>`（入口の APPS とアプリの出どころから。TODO を埋める）。上げる前に `make-upload.ps1 -Check` で、説明欄の形・チャプター（0:00 から、**1つ10秒以上**。短いと YouTube がチャプターを出さない）・字数・< >・予約の時刻を確かめる。
+  - 予約日時は `_dev/tools/schedule-videos.ps1 -Start <日付>`（`SCHEDULE.md` の順に、説明動画 20:00・ショート 20:05）。`-Apply` で書き、GO のあと `-Upload` で YouTube の予約まで。
 - 上げる: `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Meta _dev/promo/<out>.upload.json`。表示された ID を JSON の `videoId` に書く。
 - 上げたあとに英語・字幕を足す・直す: `-Update -Meta …`。チャンネルの動画の一覧: `-List`。
 - **API の本数の上限で上げられないとき**: ユーザーが Studio で動画ファイルだけ上げる（「子ども向けではない」を選ぶ・非公開・予約はそこで）→ `-List` で ID を調べて JSON の `videoId` に書く → `-Update -Full -Meta …` で日本語と英語のタイトル・説明・タグ・字幕・サムネイルを入れる（上げたあとの更新は本数の上限に数えられない）。

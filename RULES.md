@@ -19,7 +19,7 @@
   versions/<番号-名前>/   各版の丸ごとバックアップ
 ```
 
-- 新しいアプリはこの形で始める。始めたら `CLAUDE.md` の一覧に1行足す。
+- 新しいアプリはこの形で始める。始めたら `CLAUDE.md` の一覧に1行足す。`_dev/tools/new-app.ps1` がこの形と、保管庫のカード・サムネイルの準備・CLAUDE.md と README の一覧への追加をまとめて作る（2026-10-10〜）。
 
 ## 2. ファイル分割（トークンを使いすぎない）
 
@@ -57,6 +57,7 @@
 - 各アプリの DEVNOTES に **「確認のしかた（変更のたびに）」** の短いチェックリストを持つ。変更のたびに**通しで**確認する（一部だけ直したつもりで別の所が壊れることがある）。
 - コードに**デバッグ用の窓口**を用意する: 例外を入れる `window.__xxErr`、状態を見たり時間を進めたりする `window.__xx`。Browser ペインが非表示だと requestAnimationFrame が止まるので、強制的に進める関数（`simRun` など）があると検証できる。
 - 見た目の変更はスクリーンショットで確かめてからユーザーに伝える。
+- **全アプリの共通の確認**（2026-10-10〜）: `_dev/tools/smoke.ps1`（`-Apps <app>` で一部）。例外・読み込みの失敗・許可していない外への通信・ローカルの GA・英語に残った日本語を調べる。各アプリの「確認のしかた」の代わりではなく、そのあとに通す。push のあとは `-Base https://sishiya.github.io/manabi-lab` で公開版も。道具の一覧は `_dev/tools/README.md`。
 
 ## 6. 編集のしかた
 
@@ -137,6 +138,7 @@ Artifact の公開・再公開、git の commit／push の**前に毎回**行う
 
 - このフォルダは GitHub のリポジトリ（`sishiya/manabi-lab`、**Public**。2026-10-05 に Private から変更）で管理する。push した内容は誰でも読める。作業の始めに pull、区切りで commit と push（その前に 7 の公開前チェック）。2台で同時に作業しない。
 - **役割分担**: Claude は区切りごとに公開前チェックとコミットまで行い、何をコミットしたかとチェックの結果を報告する。**push はユーザーが行う**（GitHub Desktop の「Push origin」。Claude は push しない）。pull もユーザーに頼む。
+- この約束と「YouTube の秘密を読まない」は、`.claude/settings.json` のフック（`.claude/hooks/guard.pl`）でも止めている（2026-10-10〜。`_dev/tools/README.md`）。
 - コミットの作者は `sishiya <85350751+sishiya@users.noreply.github.com>`（GitHub の代わりのアドレス。本当のメールアドレスは使わない）。新しい PC でも `git config user.name` と `user.email` をこの値にする。
 - コミットメッセージは日本語で、何をしたか1行（例: 「evolution v009: 想像の生き物」）。push 前のコミットは作り直してよいが、push 後は作り直さない。
 - 新しい PC では: Git と Claude デスクトップを入れてクローン → `git config core.hooksPath .githooks` と `git config core.quotepath false` → `.private-words.txt` と `PUBLISH.local.md` を作る（8章）。

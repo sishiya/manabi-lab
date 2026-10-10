@@ -29,3 +29,6 @@ _dev/promo/out/
 
 # per-machine settings for scripts (e.g. where the YouTube secret folder is)
 *.local.txt
+
+# smoke test results (_dev/tools/smoke.ps1)
+_dev/tools/out/
