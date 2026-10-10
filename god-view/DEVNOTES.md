@@ -1,10 +1,10 @@
 # 神の視点マップ 開発メモ
 
-最終更新: 2026-10-08
+最終更新: 2026-10-10
 
 ## 別セッションで続けるとき（まずここ）
 
-- **いまの状態**: v012（段階H「地球をちぎる」: 岩の SPH ＋ 海と湯気）。宇宙で地球が見えているときの「✋ 地球をちぎる」から。宇宙の果て（約 10^27 m）→ 地図（地球・建物・地下・生きている地球・動く街）→ ミクロ（岩・砂／水／植物 → 原子 → 原子核 → クォーク → プランク長 約 10^-35 m）を 1 本のホイールで。**公開先は GitHub Pages**: https://sishiya.github.io/manabi-lab/god-view/ （push すると更新。RULES 8.1）。
+- **いまの状態**: v012b（2026-10-10、非営利だけ可のデータ（EOX・Open-Meteo）をやめた。下の履歴）。その前は v012（段階H「地球をちぎる」: 岩の SPH ＋ 海と湯気）。宇宙で地球が見えているときの「✋ 地球をちぎる」から。宇宙の果て（約 10^27 m）→ 地図（地球・建物・地下・生きている地球・動く街）→ ミクロ（岩・砂／水／植物 → 原子 → 原子核 → クォーク → プランク長 約 10^-35 m）を 1 本のホイールで。**公開先は GitHub Pages**: https://sishiya.github.io/manabi-lab/god-view/ （push すると更新。RULES 8.1）。
 - **次にやること**: ユーザーと相談（v011・v012 はまだ push していない。push で公開）。ちぎるの候補: 空気の流れこみ、湯気が冷えて雨になる（数時間〜）、粒を増やす（GPU）、岩の固さ（小さなかけら）、何度もちぎる。地図の候補:「災害の想定」層（PLATEAU の浸水想定）、地図 ⇔ ミクロの入れかえで地面と手のひらをつなぐ演出、OSM の建物の組み立てを Web Worker に（軽量化）、交差点で曲がる車、ミクロの層を増やす（ウイルス・脳の神経など）。
 - **読む順**: `../RULES.md` → このメモ → `PLAN.md`（全体の構想と段階）→ 下の「ファイル構成」で関係するファイルだけ。
 - **動かし方**: ユーザーはいちばん上のフォルダの `start.bat` をダブルクリック（サーバーがなければ空いているポートで起動して、まなびラボを開く。`start.bat god-view` ならこのアプリを直接）。2026-10-06 に god-view/start.bat から移した（v010b）。Claude は `.claude/launch.json` の `apps`。**file:// では動かない**（Cesium の Worker が CDN から読めない。開くと案内だけ出す）。
@@ -33,6 +33,7 @@
 - 2026-10-06 v010b-start-root: 起動バッチをルートの `start.bat`（＋`_dev/tools/start.ps1`）に一本化。文字化け（UTF-8 の日本語コメントを cmd が ANSI で読む）をなくすため英語だけで書いた。8765 が使えないときは別のポートで起動。file:// のときの案内を合わせた。中身は v010 と同じ。
 - 2026-10-08 v011-tear: 段階H1「地球をちぎる」（ユーザーの希望:「地球をぶち！とちぎって中のマントルを見たい。水やマントルはどう動く？」。作り方は 3D の粒の計算をユーザーが選んだ）。`js/tear.js`（画面）・`js/tear-sim.js`（SPH）・`js/tear-worker.js`（裏で計算）。ちぎる大きさ 1000／2000／3000 km、遠くへ運ぶ／その場で落とす、見た目・温度・層・溶け、断面、時間の早さ。
 - 2026-10-08 v012-tear-water: 段階H2「海と湯気」。`js/tear-water.js`。海を岩とは別の軽い粒に、熱い岩の上で沸騰して湯気、かけらの上で凍る。割れた地表の判定を、となりの粒との間隔に変えた（地球全体の揺れで「割れた」になっていた）。
+- 2026-10-10 v012b-license: **非営利の利用だけが許されているデータをやめた**（ユーザーの希望。紹介動画の収益化などに備えて）。日本の外の「航空写真」「色別標高図」の下地を EOX（CC BY-NC-SA）から NASA GIBS の Blue Marble Next Generation／Shaded Relief and Bathymetry（自由に使える。レベル8＝500m ほどまで）に。地点をクリックしたときの天気（Open-Meteo の無料 API は非営利だけ）をやめた。日本の中（地理院）・地図／淡色地図（OSM）・PLATEAU・宇宙は変わらない。**影響**: 日本の外の街に寄ると写真がぼやける（建物は OSM で出る。くっきり見たいときは「地図」）。
 
 ## ファイル構成
 
@@ -125,7 +126,7 @@
 - 地震: USGS の 2.5_week.geojson を `PointPrimitiveCollection` で。色は深さ（30km 未満 赤・100 未満 橙・300 未満 黄・それより深い 青）、大きさは M。山に隠れないよう `disableDepthTestDistance` で奥行きの判定を切っているので、**地球の裏側の点は `EllipsoidalOccluder` で自分で隠す**（v008。描画の前にカメラが動いていれば計算。camera.changed は 20% 動かないと来ないので使わない）。
 - 人工衛星: CelesTrak の stations と visual（重なりを除いて 173 機）の TLE を、satellite.js（`twoline2satrec`→`propagate`→`eciToGeodetic`）で 1 秒ごとに計算。ISS は黄色＋ラベル＋1周分（93分）の通り道（5分ごとに描き直し）。CelesTrak は同じグループの取得を2時間に1回までにしてほしいとのことなので、ページを開いてオンにしたときに1回だけ取る。
   - **ハマった**: 衛星の点を作り終える前に `clock.onTick` が位置を更新しようとして、Cesium の描画が止まった（「An error occurred while rendering」）→ 点のない衛星は飛ばす、onTick の中は try で包む。
-- 天気: クリックした地点の Open-Meteo の current（気温・湿度・天気コード・風）。数値予報モデルの値なので「推定」の印。WMO の天気コードは日本語の表 `WMO` で。
+- （2026-10-10 にやめた。Open-Meteo の無料 API は非営利の利用だけのため）天気: クリックした地点の Open-Meteo の current（気温・湿度・天気コード・風）。数値予報モデルの値なので「推定」の印。WMO の天気コードは日本語の表 `WMO` で。
 
 ### 軽量化（v005。ユーザーから「重くなってきた」）
 - 画面の幅（`GV.viewWidth`、地表への pick）を毎フレーム測っていた → カメラが動いたとき・タイル読み込みが終わったときだけ、0.25 秒に1回まで。
@@ -225,7 +226,8 @@
 | 地理院 標高 API | cyberjapandata2.gsi.go.jp | ○ | 不要 | 「独自の地図表示サイトからアクセスしてよい」と明記。過度な負担は禁止 → クリック時だけ |
 | 地理院 地名検索・逆ジオコーダー・muni.js | msearch / mreversegeocoder / maps.gsi.go.jp | ○ | 不要 | **使わない**（「主に地理院地図からの利用を想定」「予告なく変更」） |
 | AWS Terrain Tiles（Terrarium） | s3.amazonaws.com/elevation-tiles-prod | ○ | 不要 | 世界の標高。出典を表示 |
-| EOxCloudless（Sentinel-2 cloudless 2016） | tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857 | ○ | 不要 | **全年 CC BY-NC-SA 4.0**（EOX のライセンス表、2026-10 確認。「2016年は CC BY」は古い情報）。非営利なら可、商用は有料 |
+| ~~EOxCloudless~~（**2026-10-10 にやめた**。非営利だけ可のため。世界の写真は NASA Blue Marble に）（Sentinel-2 cloudless 2016） | tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857 | ○ | 不要 | **全年 CC BY-NC-SA 4.0**（EOX のライセンス表、2026-10 確認。「2016年は CC BY」は古い情報）。非営利なら可、商用は有料 |
+| NASA Blue Marble（GIBS の BlueMarble_NextGeneration・BlueMarble_ShadedRelief_Bathymetry） | gibs.earthdata.nasa.gov/wmts/epsg3857/best/…/GoogleMapsCompatible_Level8 | ○ | 不要 | 2026-10-10 から日本の外の「航空写真」「色別標高図」。NASA のデータで自由に使える。細かさは 500m ほど（レベル8）まで |
 | OpenStreetMap タイル | tile.openstreetmap.org | ○ | 不要 | 大量利用は禁止（利用規約）。公開して人が増えたら別の配信元を検討 |
 | Nominatim（OSM 検索） | nominatim.openstreetmap.org | ○ | 不要 | 1秒1回まで、入力中の自動検索は禁止 → 送信時だけ |
 | OpenFreeMap（ベクトルタイル、建物の高さ入り） | tiles.openfreemap.org/planet | ○ | 不要 | v003 で建物に使用。登録・キーなし、回数制限なし、商用可。出典「OpenFreeMap © OpenMapTiles Data from OpenStreetMap」が必要 |
