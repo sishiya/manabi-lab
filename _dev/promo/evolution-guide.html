@@ -11,7 +11,8 @@
 <script src="promo.js"></script>
 <script>
 'use strict';
-// 台本: ヒトへの46億年 ― 使い方と見どころ（横長の説明動画、165秒）
+// 台本: ヒトへの46億年 ― 使い方と見どころ（横長の説明動画、165秒）。案内役のライオン（_dev/vtuber）が右下に出て、字幕に合わせて「もごもご」しゃべり、出来事に反応する
+// ライオンの場所（右下）をあけるため、右の札を左へ寄せ（CH の x）、タイムラインと「しくみ」の図を短くしている
 // 日本語の字幕は画面の上に焼きこみ、下は YouTube の字幕（CC。英語）にあける。英語は SRT にして上げる
 // アプリの絵は画面いっぱい。ボタンは「札」（drawChip）で、アプリと同じ言葉・同じ側（下のボタンの列の左・右）に描く
 const END = 165, DUR = END + IDENT_CLOSE;   // END: 本編の終わり（このあと しし屋の締め）
@@ -75,13 +76,13 @@ function stateAt(t) {
 // ---- ボタンの札（アプリの下のボタンの列。左は再生、右はほかのボタン）----
 const CH = {
   play: { x: 40, y: 690, title: '下のボタン（左）', btns: ['前の出来事', '再生／停止', '次の出来事'] },
-  view: { x: 1440, y: 690, title: '下のボタン（右）', btns: ['地球を見る'] },
-  back: { x: 1440, y: 690, title: '下のボタン（右）', btns: ['地表を見る'] },
-  names: { x: 1440, y: 690, title: '下のボタン（右）', btns: ['名前'] },
-  day: { x: 1440, y: 690, title: '下のボタン（右）', btns: ['時刻：昼', '時刻：夜'] },
+  view: { x: 1060, y: 690, title: '下のボタン（右）', btns: ['地球を見る'] },
+  back: { x: 1060, y: 690, title: '下のボタン（右）', btns: ['地表を見る'] },
+  names: { x: 1060, y: 690, title: '下のボタン（右）', btns: ['名前'] },
+  day: { x: 1060, y: 690, title: '下のボタン（右）', btns: ['時刻：昼', '時刻：夜'] },
   scen: { x: 40, y: 560, title: '排出シナリオ（下のメニュー）', btns: ['低排出', '中間', '高排出', 'いますぐゼロ'], cols: 2 },
-  mech: { x: 1440, y: 690, title: '下のボタン（右）', btns: ['しくみ'] },
-  ifb: { x: 1440, y: 690, title: '下のボタン（右）', btns: ['もしも'] },
+  mech: { x: 1060, y: 690, title: '下のボタン（右）', btns: ['しくみ'] },
+  ifb: { x: 1060, y: 690, title: '下のボタン（右）', btns: ['もしも'] },
   ifp: { x: 1060, y: 330, title: 'もしも（パネル）', btns: ['小天体が地球をそれる', 'この世界を計算して見る'], cols: 1 },
 };
 // 札を出す時間 [札, 出す, 消す, その時刻に押されているボタン(t)]
@@ -195,6 +196,7 @@ function drawLabels(g, t, w, f) {
     const x = +m[1] * k, y = +m[2] * k - 22, s = el.textContent, bw = g.measureText(s).width + 28, bh = 44;
     const b = [x - bw / 2, y - bh, x + bw / 2, y];
     if (b[0] < 10 || b[2] > PW - 10 || b[1] < 340 || b[3] > PH - 120) continue;
+    if (b[2] > 1540 && b[3] > 620) continue;   // ライオンにかかる
     if (boxes.some(o => b[0] < o[2] + 8 && b[2] > o[0] - 8 && b[1] < o[3] + 6 && b[3] > o[1] - 6)) continue;
     boxes.push(b);
     const anc = el.classList.contains('anc');
@@ -217,13 +219,23 @@ function drawNote(g, x, y, w, title, body, f, color) {
   g.globalAlpha = 1;
 }
 
+// ==== LION: 案内役のライオン（共通の部品は promo.js の lionSetup・drawLion）。ここは表情の時刻だけ ====
+function makeExp(kt) {   // [時刻, 表情（promo.js の LION_XP）]。kt は衝突をまたぐ時刻
+  return [[0, 'calm'], [6.9, 'smile'], [9.5, 'calm'],
+    [39.8, 'wow'], [43.5, 'calm'], [45.9, 'cold'], [52, 'calm'], [53.7, 'smile'], [57.5, 'calm'],
+    [kt + 1.25, 'shock'], [kt + 3.8, 'sad'], [83, 'calm'], [90.4, 'smile'], [93, 'calm'], [94.2, 'sleepy'], [100.4, 'calm'],
+    [101.5, 'think'], [105, 'calm'], [107.6, 'sad'], [111, 'calm'], [118.6, 'wow'], [121.5, 'sad'], [124.6, 'calm'],
+    [125.3, 'proud'], [130.5, 'calm'], [145.6, 'wow'], [148.2, 'smile'], [152.2, 'shock'], [154.3, 'sad'], [158.6, 'smile']];
+}
+// ==== LION ここまで ====
+
 let cur = {}, kpgT = null, lastA = Infinity;
 const MUSIC = { style: 'journey', root: 130.81, stopAt: END, cues: [], quiet: [] };   // 明るい和音の旅。衝突の「ドン」は setup で足す
 promoStart({
   name: 'ヒトへの46億年（使い方）', out: 'evolution-guide', src: '../../evolution/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 54,
   music: MUSIC,
   ready: w => w.__ev && w.setAbout && w.document.getElementById('gl'),
-  setup(w) {
+  async setup(w) {
     W = w;
     Object.defineProperty(w, 'devicePixelRatio', { get: () => 2 });   // タイムラインと「しくみ」の図を細かく描かせる
     w.setAbout(false); w.setDayMode('day');
@@ -233,6 +245,8 @@ promoStart({
     // 衝突の時刻（6600万年前をまたぐ時刻）。光（またいでから 1.3 秒後）で「ドン」、そのあと哺乳類の景色まで暗く
     let kt = 72; for (let t = 71; t < 80; t += 1 / FPS) if (stateAt(t).age <= 6.6e7) { kt = t; break; }
     MUSIC.cues = [{ t: kt + 1.3, type: 'boom' }, { t: END, type: 'jingle' }]; MUSIC.quiet = [[kt + 1.3, 82.5]];
+    MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: CUR, exp: makeExp(kt), shine: 125.7, end: END, bye: 159.2 }));   // ライオンの表情としゃべり（声は標準の もごもご）
+    await lionOpen();
     return w.document.getElementById('gl');
   },
   subs: () => [SUBS_EXTRA[0], ...capSubs(CAPS), SUBS_EXTRA[1]],
@@ -277,7 +291,7 @@ promoStart({
       g.globalAlpha = 1; g.shadowBlur = 0;
     }
     // タイムライン（アプリの下の帯を写す）
-    drawInset(g, d.getElementById('tlc'), 40, 840, 1840, 70, 'タイムライン（画面の下）', fade(t, 13.5, 31.5, 0.4));
+    drawInset(g, d.getElementById('tlc'), 40, 840, 1480, 70, 'タイムライン（画面の下）', fade(t, 13.5, 31.5, 0.4));
     // あなたの祖先（右のパネル）
     drawNote(g, 1180, 360, 700, 'あなたの祖先（右のパネル）', d.getElementById('ancName').textContent, fade(t, 53.5, 60.5, 0.4), '#f2c14e');
     // 2100年の気温（シナリオを切り替えたとき）
@@ -287,7 +301,7 @@ promoStart({
       drawNote(g, 40, 420, 640, '2100年の気温（1850年ごろから。モデル）', `+${T}℃`, ft, '#ffd27a');
     }
     // しくみ（アプリの図）
-    drawInset(g, d.getElementById('mechC'), 140, 380, 1640, 300, 'しくみ: 気温・CO2・酸素・海の動物（点線＝記録、実線＝計算、青い帯＝計算の全球凍結）', fade(t, 125.6, 138.5, 0.5));
+    drawInset(g, d.getElementById('mechC'), 60, 380, 1440, 300, 'しくみ: 気温・CO2・酸素・海の動物（点線＝記録、実線＝計算、青い帯＝計算の全球凍結）', fade(t, 125.6, 138.5, 0.5));
     for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
     drawCursor(g, CUR, t);
     drawCaps(g, t, CAPS, true);
@@ -297,6 +311,7 @@ promoStart({
     if (fc > 0) { prep(g); g.globalAlpha = fc; g.textAlign = 'right'; txt(g, 'CC: English subtitles', PW - 50, PH - 40, 30, '#ddd', true); g.globalAlpha = 1; g.shadowBlur = 0; }
     drawEnd(g, t, 158.6, 'ヒトへの46億年', 'ブラウザで動かせます（パソコン・スマホ）',
       '年代: 国際年代層序表（2023年版）。未来の気候: IPCC 第6次評価報告書 ほか（アプリの「このアプリについて」に一覧）');
+    drawLion(g, t);   // 案内役のライオン（終わりの画面の上にも出す）
     drawIdentMini(g, t, 0.3);   // しし屋の目印: はじまりは左上に小さく、締めは END から
     drawIdent(g, t, END);
   },

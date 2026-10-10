@@ -31,7 +31,7 @@
 - **神の視点マップだけは `inject` を使わない**: srcdoc で開くと Cesium の Worker（地形）が動かず、地図が出ない。普通に開いてから `requestAnimationFrame` を差しかえる（`gvInstallRaf`）。地図は1コマごとに読みこみを待つので、録画は通信が安定しているときに・時間がかかる（150秒で数十分の見込み）。「地球をちぎる」の描画ループは差しかえた requestAnimationFrame に乗らないことがあるので、1コマごとに `GV._tear.render()` で描かせる。粒の計算（Worker）は実時間で進むので、1コマのあいだだけ動かして止める。
 
 ### ライオン版（案内役のしし屋のライオンが右下に出る。説明動画の標準、2026-10-10）
-- 見本は `evolution-guide-vt.html`（`evolution-guide.html` を写して、ライオンの部分を足した）。部品は `promo.js` の `lionSetup`（表情・しゃべり・出入りの時刻）・`lionOpen`・`drawLion`。ライオンは `_dev/vtuber/index.html?ext&clean&bg=clear` を裏の iframe で開き、`__lion.frame(t, dt, 姿勢と表情の値)` で1コマずつ描かせて重ねる（値は MediaPipe の表情の名前。`_dev/vtuber/README.md`）。
+- 見本は `evolution-guide.html`（46億年の説明動画。2026-10-10 にライオン版を正にした）。部品は `promo.js` の `lionSetup`（表情・しゃべり・出入りの時刻）・`lionOpen`・`drawLion`。ライオンは `_dev/vtuber/index.html?ext&clean&bg=clear` を裏の iframe で開き、`__lion.frame(t, dt, 姿勢と表情の値)` で1コマずつ描かせて重ねる（値は MediaPipe の表情の名前。`_dev/vtuber/README.md`）。
 - しゃべり: 字幕ごとに cue `{ t, type: 'babble', n, seed, voice }` を `music.cues` に足すと（`lionSetup` が作る）、声の代わりの合成音が鳴り（`babbleSound`）、口は `babbleMouth(cues, t)` で同じ音の並びに合う。合成音なので権利の心配なし。
 - 表情は台本ごとの時刻の表 `exp: [[秒, 名前], …]`（名前は `LION_XP`: calm・smile・wow・shock・sad・cold・think・sleepy・proud）。見る向きはマウスの矢印、しゃべるときはこちら。クリックでうなずく。右下をあけるため、右の札とタイムライン・図を左へ寄せる。
 
@@ -53,7 +53,7 @@
 - 出すのはユーザーの GO のあとで。時間は YouTube と同じく夜（19〜22時）がよい。
 
 ## 毎回まもること
-- **説明動画（横長）は、案内役のライオンつきで作る**（2026-10-10 にユーザーが決めた。「これから作る動画はこの形に」）。見本は `evolution-guide-vt.html`、部品は `promo.js` の `lionSetup`・`lionOpen`・`drawLion`（上の「ライオン版」）。右下（x 1530〜、y 620〜）はライオンの場所なので、札・図・名前札はそこにかけない。表情の時刻 `exp` は出来事に合わせて台本ごとに書く。声は C もごもご が標準（`lionSetup` で `voice` を省くとこれ。2026-10-10 にユーザーが5種類から選んだ。見くらべは `babble-test.html`）。しゃべっている間は表情の口の形より口パクを優先（目と眉の表情は残す）。ショートに入れるかは未定。
+- **説明動画（横長）は、案内役のライオンつきで作る**（2026-10-10 にユーザーが決めた。「これから作る動画はこの形に」）。見本は `evolution-guide.html`、部品は `promo.js` の `lionSetup`・`lionOpen`・`drawLion`（上の「ライオン版」）。右下（x 1530〜、y 620〜）はライオンの場所なので、札・図・名前札はそこにかけない。表情の時刻 `exp` は出来事に合わせて台本ごとに書く。声は C もごもご が標準（`lionSetup` で `voice` を省くとこれ。2026-10-10 にユーザーが5種類から選んだ。見くらべは `babble-test.html`）。しゃべっている間は表情の口の形より口パクを優先（目と眉の表情は残す）。ショートに入れるかは未定。
 - **しし屋の目印を入れる**（2026-10-10 にユーザーが決めた。見本は `ident-test.html`）:
   - はじまり: 本編が主役。左上に小さくアイコン＋名前が出て約3秒ではける（`drawIdentMini(g, t, 0.3)`、音なし）。**ショートにも入れる**（最後まで見ない人にも覚えてもらうため。2026-10-10 ユーザー）。大きさは横長と同じ（1.4 倍にしたら「主役は題名。隅に見えて色の残像が残ればいい」と言われて戻した）。左上にアプリの文字（年代・場所の名前など）を出す台本は、目印がはけてから（`IDENT_MINI + 0.3` 秒から）出す。
   - 締め: `END = DUR - IDENT_CLOSE`。本編の終わりで BGM を消し（`music.stopAt: END`）、締めの画面（`drawIdent(g, t, END)`）と音の目印（`cues: [{ t: END, type: 'jingle' }]`）。ショートにも入れる。本編の字幕と終わりの画面（`drawEnd`）は END までに終える。

@@ -447,7 +447,7 @@ function babbleSound(ctx, out, c) {
   for (let k = 0; k < c.n; k++) { const s = babbleSyl(c, k); if (s.on) v.sound(ctx, lp, c.t + k / v.rate, s, k, c); }
 }
 
-// ---- 案内役のライオン（説明動画の標準。2026-10-10 にユーザーが決めた。見本は evolution-guide-vt.html）----
+// ---- 案内役のライオン（説明動画の標準。2026-10-10 にユーザーが決めた。見本は evolution-guide.html）----
 // _dev/vtuber/index.html?ext を裏の iframe で開き、1コマずつ描かせて右下に重ねる。
 // 台本で: setup の中で MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: CUR, exp: [[秒, '表情'], …], end: END, … })); await lionOpen();
 //         overlay の終わり近く（drawEnd のあと、drawIdentMini の前）で drawLion(g, t)

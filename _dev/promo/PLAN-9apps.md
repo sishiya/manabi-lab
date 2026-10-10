@@ -25,7 +25,7 @@
 4. `__promoRecord()`（またはボタン）。終わると `out/<out>.mp4` に保存される。mp4 から数コマ取り出して確かめる（README の「作り方」6）。
 5. 録れたら upload.json は用意してあるので、上げるのはユーザーの GO のあと（1日1本、`publishAt` で夜に予約）。上げたら `videoId` を書く。
 
-**説明動画は録る前にライオンを足す**（2026-10-10 から説明動画はライオンつきが標準。README の「毎回まもること」）: 台本の setup で `MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: CUR, exp: [...], end: END, bye: … }))`・`await lionOpen()`、overlay で `drawLion(g, t)`。右下にかかる札・図は左へ寄せる（`evolution-guide-vt.html` を見る）。
+**説明動画は録る前にライオンを足す**（2026-10-10 から説明動画はライオンつきが標準。README の「毎回まもること」）: 台本の setup で `MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: CUR, exp: [...], end: END, bye: … }))`・`await lionOpen()`、overlay で `drawLion(g, t)`。右下にかかる札・図は左へ寄せる（`evolution-guide.html` を見る）。
 
 録画で気をつけること:
 - **神の視点マップ**は外のデータを読む。1コマごとに地図の読みこみを待つので（最大6秒）、155秒の説明動画は数十分〜1時間ほどかかる見込み。通信が安定しているときに。録ったあと、地図がぼやけたまま・建物が抜けたコマがないかを特に確かめる（確かめ用のコマは、とびとびに描くので読みこみ途中のことが多い。続けて描けばきれいになるのは東京駅の場面で確かめた）。地震・人工衛星・電車とバスは録った日のデータなので、`god-view-guide.upload.json` の説明欄の「2026年◯月◯日」を録った日に書きかえる。
