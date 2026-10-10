@@ -46,6 +46,33 @@ const SONGS = [
   { id: 'elise', name: 'エリーゼのために 冒頭（右手だけ）', why: '速い往復・黒鍵・跳躍', bpm: 66, src: ELISE_R },
 ];
 
+// ---- 答え合わせ用（val: true）: 著作権の切れた教本の運指 ----
+// ハノン『60の練習曲によるヴィルトゥオーゾ・ピアニスト』（1873）。第1番は 1-2-3-4-5-4-3-2（左手 5-4-3-2-1-2-3-4）、
+// 第39番は全調の音階（ここでは長調12。1オクターブ上がって下がる。下りは上りの指を逆に）
+const MIDI_NAME = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const midiName = m => MIDI_NAME[m % 12] + (Math.floor(m / 12) - 1);
+function scaleSong(key, tonic, fr, fl) {
+  const steps = [0, 2, 4, 5, 7, 9, 11, 12];
+  const line = t => steps.concat(steps.slice(0, 7).reverse()).map((s, i) => midiName(t + s) + (i === 7 || i === 14 ? '/1' : '/.5')).join(' ');
+  const down = f => f + f.slice(0, 7).split('').reverse().join('');
+  return { id: 'sc-' + key, val: true, name: key + ' 長調の音階（ハノン第39番）', why: '教本の運指との答え合わせ', bpm: 80,
+    src: line(tonic), srcL: line(tonic - 12), refR: down(fr), refL: down(fl) };
+}
+function hanon1() {
+  const W = [0, 2, 4, 5, 7, 9, 11]; // ハ長調の白鍵（ド4 から何半音か、7 で次のオクターブ）
+  const wm = i => 60 + Math.floor(i / 7) * 12 + W[((i % 7) + 7) % 7];
+  const pat = [0, 2, 3, 4, 5, 4, 3, 2];
+  const notesR = [], notesL = [];
+  for (let g = 0; g < 4; g++) for (const p of pat) { notesR.push(midiName(wm(g + p)) + '/.25'); notesL.push(midiName(wm(g + p) - 24) + '/.25'); }
+  return { id: 'hanon1', val: true, name: 'ハノン第1番 はじめの4小節', why: '教本の運指との答え合わせ', bpm: 72,
+    src: notesR.join(' '), srcL: notesL.join(' '), refR: '12345432'.repeat(4), refL: '54321234'.repeat(4) };
+}
+SONGS.push(hanon1(),
+  scaleSong('C', 60, '12312345', '54321321'), scaleSong('G', 67, '12312345', '54321321'), scaleSong('D', 62, '12312345', '54321321'),
+  scaleSong('A', 69, '12312345', '54321321'), scaleSong('E', 64, '12312345', '54321321'), scaleSong('B', 71, '12312345', '43214321'),
+  scaleSong('F', 65, '12341234', '54321321'), scaleSong('B♭', 70, '41231234', '32143213'), scaleSong('E♭', 63, '31234123', '32143213'),
+  scaleSong('A♭', 68, '34123123', '32143213'), scaleSong('D♭', 61, '23123412', '32143213'), scaleSong('F♯', 66, '23412312', '43213214'));
+
 const NOTE_BASE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 // 曲 → [{m, t0, t1, hand}]（秒）
 function parseSong(song) {

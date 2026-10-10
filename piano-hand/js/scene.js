@@ -11,10 +11,10 @@ const SCENES = {
     lane: 0x07080b, base: 0x0b0b0e, fog: [0x050407, 0.00045], dust: 1, shaft: 0.03 },
   dusk: { name: '夕暮れの部屋', fx: 1, bg: 0x1a1220, exposure: 1.0, env: 0.45,
     hemi: [0x8a7fb8, 0x2a1810, 0.35], sun: [0xff9a50, 2.1, [-700, 260, -200]], fill: [0x6a78c8, 0.25], spot: 0,
-    lane: 0x15101a, base: 0x1a1214, fog: [0x2a1a26, 0.00035], dust: 0.5, shaft: 0 },
+    lane: 0x15101a, base: 0x1a1214, fog: [0x2a1a26, 0.00035], dust: 0.6, dustCol: 0xffc890, shaft: 0 },
   moon: { name: '月あかり', fx: 2, bg: 0x040814, exposure: 1.05, env: 0.25,
     hemi: [0x4a68c0, 0x04060c, 0.3], sun: [0x7fa2ff, 1.25, [300, 600, -300]], fill: [0x2a3c78, 0.18], spot: 0,
-    lane: 0x070a12, base: 0x0a0c14, fog: [0x070a14, 0.0004], dust: 0.4, shaft: 0 },
+    lane: 0x070a12, base: 0x0a0c14, fog: [0x070a14, 0.0004], dust: 0.5, dustCol: 0xb8ccff, shaft: 0 },
   bright: { name: '明るい部屋', fx: 1, bg: 0xd9d4ca, exposure: 0.72, env: 0.8,
     hemi: [0xffffff, 0xb8b0a4, 0.6], sun: [0xfff6ea, 1.05, [-260, 620, 120]], fill: [0xffffff, 0.3], spot: 0,
     lane: 0x4a4e57, base: 0x3a3330, fog: null, dust: 0, shaft: 0 },
@@ -60,12 +60,14 @@ function makeShaft() {
   });
   return new THREE.Mesh(g, m);
 }
-// 光の中を舞うほこり（ゆっくり漂う小さな光。時計の時刻で動く）
-const DUST_N = 420;
+// 光の中をただようほこり（時計の時刻で、ゆっくり動く）。星のようにくっきり光らないよう、大きくぼんやり・うすく、
+// 現れるときと消えるときはなめらかに。光のにじみ（ブルーム）がかからない明るさにおさえる
+const DUST_N = 160;
 function makeDust() {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(DUST_N * 3), 3));
-  const p = new THREE.Points(g, new THREE.PointsMaterial({ size: 1.6, map: V.glowTex, color: 0xffe6c8, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+  g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(DUST_N * 3), 3));
+  const p = new THREE.Points(g, new THREE.PointsMaterial({ size: 4.2, map: V.glowTex, vertexColors: true, transparent: true, opacity: 1, depthWrite: false, blending: THREE.AdditiveBlending }));
   p.frustumCulled = false;
   return p;
 }
@@ -98,7 +100,7 @@ function applyScene(id) {
   V.laneMat.color.copy(linCol(S.lane)); V.baseMat.color.copy(linCol(S.base));
   V.scene.fog = S.fog ? new THREE.FogExp2(linCol(S.fog[0]), S.fog[1]) : null;
   V.shaft.material.uniforms.amount.value = S.shaft; V.shaft.visible = S.shaft > 0;
-  V.dust.visible = S.dust > 0; V.dust.material.opacity = 0.9 * S.dust;
+  V.dust.visible = S.dust > 0; V.dustAmt = S.dust; V.dustCol = linCol(S.dustCol || 0xffe2c4);
   // 部屋の映りこみの強さ（材質ごと）
   V.scene.traverse(o => { if (o.material && 'envMapIntensity' in o.material) o.material.envMapIntensity = S.env * (o.userData.envK || 1); });
   for (const VH of V.hands) VH.skin.mat.envMapIntensity = 0.7 * S.env / 0.7;
@@ -119,13 +121,19 @@ function renderScene(t) {
   V.spot.position.set(cx + 40, 760, 120); V.spot.target.position.set(cx, 0, -70);
   V.shaft.position.set(cx + 40, 760, 120); V.shaft.lookAt(cx, 0, -70); V.shaft.rotateX(-Math.PI / 2);
   if (V.dust.visible) {
-    const a = V.dust.geometry.attributes.position.array, now = performance.now() / 1000;
+    const a = V.dust.geometry.attributes.position.array, col = V.dust.geometry.attributes.color.array, now = performance.now() / 1000;
+    const inShaft = V.shaft.visible, k = 0.16 * V.dustAmt;
     for (let i = 0; i < DUST_N; i++) {
       const [r1, r2, r3, r4] = V.dustSeed[i];
-      const ang = r1 * 6.283 + now * (0.05 + 0.08 * r4), rad = 40 + 300 * r2;
-      a[i * 3] = cx + Math.cos(ang) * rad; a[i * 3 + 1] = 20 + ((r3 * 700 + now * (6 + 10 * r4)) % 700); a[i * 3 + 2] = -70 + Math.sin(ang) * rad * 0.6;
+      const life = (r3 + now * (0.012 + 0.02 * r4)) % 1;           // 0→1 でゆっくり上へ。下と上の端ではうすく
+      const h = 30 + life * 520, rr = (inShaft ? 30 + 0.22 * (560 - h) : 60 + 260) * Math.sqrt(r2); // ステージでは光の筋の中だけ
+      const ang = r1 * 6.283 + now * (0.03 + 0.04 * r4);
+      a[i * 3] = cx + 40 * (1 - h / 760) + Math.cos(ang) * rr + Math.sin(now * 0.3 + i) * 3;
+      a[i * 3 + 1] = h; a[i * 3 + 2] = -70 + Math.sin(ang) * rr * 0.7;
+      const fade = Math.sin(Math.PI * life) * (0.6 + 0.4 * Math.sin(now * (0.7 + r4) + i));
+      col[i * 3] = V.dustCol.r * k * fade; col[i * 3 + 1] = V.dustCol.g * k * fade; col[i * 3 + 2] = V.dustCol.b * k * fade;
     }
-    V.dust.geometry.attributes.position.needsUpdate = true;
+    V.dust.geometry.attributes.position.needsUpdate = true; V.dust.geometry.attributes.color.needsUpdate = true;
   }
   const fx = FX_LEVELS[V.fxLevel || 0];
   if (V.fxLevel > 0) {

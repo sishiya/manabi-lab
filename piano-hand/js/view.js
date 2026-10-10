@@ -54,7 +54,7 @@ function initView(canvas) {
   for (const side of [1, -1]) V.hands.push({ side, skin: makeSkinHand(sc, side), bones: makeBoneHand(sc, side), marks: makeMarks(sc) });
   initFx(sc);
   initScene();
-  applyScene('studio'); applyFx(1);
+  applyScene('moon'); applyFx(SCENES.moon.fx); // 最初は月あかり（ユーザーの希望）
   initCamera(canvas);
 }
 
@@ -124,7 +124,7 @@ function makeLabel(text, fg, bg, depth) {
     const c = document.createElement('canvas'); c.width = 128; c.height = bg ? 128 : 64;
     const g = c.getContext('2d');
     if (bg) { g.fillStyle = '#' + bg.toString(16).padStart(6, '0'); g.beginPath(); g.arc(64, 64, 60, 0, 7); g.fill(); }
-    g.fillStyle = fg; g.font = (bg ? '700 80px' : '500 40px') + ' sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = fg; g.font = (bg ? (text.length > 2 ? '700 52px' : '700 80px') : '500 40px') + ' sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText(text, 64, bg ? 68 : 34);
     const tx = new THREE.CanvasTexture(c); tx.encoding = THREE.sRGBEncoding;
     LABEL_CACHE[key] = new THREE.SpriteMaterial({ map: tx, depthTest: !!depth, transparent: true });
@@ -173,8 +173,10 @@ function setViewPlan(score) {
     const c = linCol(n.f ? FCOL[n.f] : 0x8892a6);
     const mat = new THREE.MeshPhysicalMaterial({ color: c.clone().multiplyScalar(0.55), emissive: c, emissiveIntensity: 0.35, roughness: 0.35, clearcoat: 1, clearcoatRoughness: 0.2, clippingPlanes: CLIP, transparent: !n.f, opacity: n.f ? 1 : 0.45 });
     const box = new THREE.Mesh(roundRect(w, L, 3.5), mat);
-    const lab = makeLabel(n.f ? String(n.f) : '·', '#fff', 0x1d2230);
-    lab.scale.set(10, 10, 1);
+    // お手本の運指とちがう音は「推定/お手本」を赤い丸で
+    const miss = n.f && n.ref && n.ref !== n.f;
+    const lab = makeLabel(n.f ? (miss ? n.f + '/' + n.ref : String(n.f)) : '·', '#fff', miss ? 0xc0392b : 0x1d2230);
+    lab.scale.set(miss ? 13 : 10, miss ? 13 : 10, 1);
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: V.glowTex, color: c, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
     V.scene.add(box); V.scene.add(lab); V.scene.add(halo);
     V.notes.push({ n, idx, box, lab, halo, c });

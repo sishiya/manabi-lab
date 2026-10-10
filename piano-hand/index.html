@@ -35,7 +35,7 @@
   <aside id="panel">
     <header class="brand">
       <h1>ピアノを弾く手 <small>技術検証</small></h1>
-      <p>譜面から「どの指で押すか」を決め、人の手として無理のない動きにできるかを確かめる試作です。両手・和音（片手で5音まで）。MIDI や MusicXML の楽譜も開けます。</p>
+      <p>譜面から「どの指で押すか」を決め、人の手として無理のない動きにできるかを確かめる<b>検証用の試作</b>です。運指はコンピュータの推定で、演奏の手本ではありません。教本や楽譜の運指とくらべて、ちがいを見るための画面です。両手・和音（片手で5音まで）。MIDI や MusicXML の楽譜も開けます。</p>
     </header>
 
     <section>
@@ -59,6 +59,8 @@
       <h2>決まった運指</h2>
       <p class="cap">運指の罰点の合計 <b id="fgCost" class="mono"></b>（小さいほど楽）</p>
       <p class="cap" id="fgRef"></p>
+      <button class="btn" id="btnVal">教本の運指との答え合わせをまとめて</button>
+      <div id="valOut"></div>
       <div id="fgList"></div>
     </section>
 
@@ -109,6 +111,7 @@
         <li>Zhu, Ramakrishnan, Hamann, Neff (2013) A system for automatic animation of piano performances. <i>Computer Animation and Virtual Worlds</i> 24(5). <a href="https://doi.org/10.1002/cav.1477" target="_blank" rel="noopener">DOI</a>（運指 → 先回り → 手の形、の流れ）</li>
         <li>Boyle, Boyle, Booker (2015) ピアニストの手の開きの調査（473人。Australasian Piano Pedagogy Conference 2015 の発表集）。<a href="https://paskpiano.org/pianists-hand-spans-australian-study/" target="_blank" rel="noopener">解説</a></li>
         <li>W3C Music Notation Community Group: MusicXML 4.0（譜表・運指 fingering の書き方）。<a href="https://www.w3.org/2021/06/musicxml40/" target="_blank" rel="noopener">仕様</a>／MIDI は Standard MIDI File の形式</li>
+        <li>C.-L. Hanon (1873)『60の練習曲によるヴィルトゥオーゾ・ピアニスト』第1番・第39番の運指（著作権切れ。答え合わせのお手本）。音階・アルペジオ・三和音の運指は多くの教本で共通のもの。歓喜の歌は「ドの位置」の入門の運指</li>
         <li>Nakamura, Saito, Yoshii (2020) Statistical learning and estimation of piano fingering. <i>Information Sciences</i>. <a href="https://arxiv.org/abs/1904.10237" target="_blank" rel="noopener">arXiv</a>（運指の推定の比べ方）</li>
       </ul>
       <p class="cap">曲はどれも著作権の切れたもの（音階・アルペジオ・フランス民謡・ベートーヴェン）。サンプルの楽譜ファイル（samples/）はこのアプリで作ったもので、歓喜の歌の左手の和音はこのアプリでつけた伴奏です。使っているもの: Three.js（MIT ライセンス。光のにじみは Three.js に付いている EffectComposer・UnrealBloomPass）、Google Fonts（SIL Open Font License）。</p>

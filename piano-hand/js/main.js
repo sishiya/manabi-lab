@@ -31,7 +31,8 @@ function loadSong(id) {
 }
 function setSong(song) {
   S.song = song;
-  if (!$('optGiven').checked && song.notes) song = Object.assign({}, song, { notes: song.notes.map(n => Object.assign({}, n, { given: 0 })) });
+  // 「楽譜の運指を使う」を外すと、楽譜の運指はお手本（ref）にして、コンピュータの推定とくらべる
+  if (!$('optGiven').checked && song.notes) song = Object.assign({}, song, { notes: song.notes.map(n => Object.assign({}, n, { given: 0, ref: n.given || n.ref })) });
   S.plan = buildPlan(song);
   const nx = S.plan.notes.filter(n => n.hand === 'X').length;
   S.checks = runChecks(S.plan);
@@ -42,10 +43,30 @@ function setSong(song) {
   $('fgList').innerHTML = S.plan.hands.map(h => '<p class="fg-hand">' + HAND_NAME(h.side) + '</p>' + h.notes.map(n =>
     `<span data-t="${n.t0}" style="border-color:#${FCOL[n.f].toString(16)}">${noteName(n.m)}<b>${n.f}</b>${n.given ? '<i>譜</i>' : ''}</span>`).join('')).join('');
   const fm = fingeringMatch(S.plan);
-  $('fgRef').innerHTML = fm.length ? '教本の運指との一致: ' + fm.map(r => HAND_NAME(r.side) + ' <b>' + r.same + '/' + r.total + '</b>' +
-    (r.diff.length ? '（ちがう所: ' + r.diff.slice(0, 6).map(i => noteName(S.plan.hands.find(h => h.side === r.side).notes[i].m) + ' 教本' + r.ref[i] + '→' + r.got[i]).join('、') + (r.diff.length > 6 ? ' ほか' : '') + '）' : '')).join('／') : '';
+  const src = song.refR || song.refL ? '教本の運指' : '楽譜の運指';
+  const hasGiven = (S.song.notes || []).some(n => n.given);
+  $('fgRef').innerHTML = fm.length ? src + 'とくらべると: ' + fm.map(r => HAND_NAME(r.side) + ' <b>' + r.same + '/' + r.total + '</b> 一致' +
+    (r.diff.length ? '<br>ちがう所（推定 → お手本）: ' + r.diff.slice(0, 12).map(n => '<span class="dif" data-t="' + n.t0 + '">' + noteName(n.m) + ' ' + n.f + '→' + n.ref + '</span>').join(' ') + (r.diff.length > 12 ? ' ほか ' + (r.diff.length - 12) : '') : '')).join('<br>') +
+    '<br><small>ノーツの上の赤い丸「推定/お手本」がちがう音です。</small>'
+    : hasGiven ? '楽譜の運指を使っています（外すと、コンピュータの推定とくらべられます）。' : 'この曲にはお手本の運指がありません（教本の運指つきの曲や、運指の書かれた MusicXML でくらべられます）。';
   renderChecks();
   setTime(tStart());
+}
+
+// 答え合わせをまとめて: 教本の運指のある曲ぜんぶで、推定の運指がどれだけ同じか
+function runValidation() {
+  let tot = 0, ok = 0;
+  const rows = SONGS.filter(s => s.refR || s.refL).map(s => {
+    const r = fingeringOnlyMatch(s);
+    return '<tr><td>' + s.name + '</td>' + [1, -1].map(side => {
+      const m = r.find(x => x.side === side);
+      if (!m) return '<td>—</td>';
+      tot += m.total; ok += m.same;
+      const p = m.same / m.total;
+      return '<td class="' + (p === 1 ? 'ok' : p >= 0.7 ? 'warn' : 'ng') + '">' + m.same + '/' + m.total + '</td>';
+    }).join('') + '</tr>';
+  });
+  $('valOut').innerHTML = '<p class="cap">ぜんぶで <b>' + ok + '/' + tot + '</b>（' + Math.round(100 * ok / tot) + '%）が教本の運指と同じ。</p><table class="val"><tr><th>曲</th><th>右手</th><th>左手</th></tr>' + rows.join('') + '</table>';
 }
 
 function showHandInfo() {
@@ -158,10 +179,13 @@ function setPlaying(on) {
 }
 
 function initUI() {
-  $('song').innerHTML = '<optgroup label="検証用の曲">' + SONGS.map(s => `<option value="${s.id}">${s.name}</option>`).join('') + '</optgroup>' +
+  const opt = s => `<option value="${s.id}">${s.name}</option>`;
+  $('song').innerHTML = '<optgroup label="検証用の曲">' + SONGS.filter(s => !s.val).map(opt).join('') + '</optgroup>' +
+    '<optgroup label="教本の運指との答え合わせ（ハノン）">' + SONGS.filter(s => s.val).map(opt).join('') + '</optgroup>' +
     '<optgroup label="サンプルの楽譜ファイル（samples/）">' + SAMPLES.map(s => `<option value="sample:${s.file}">${s.name}</option>`).join('') + '</optgroup>';
   $('song').addEventListener('change', e => { setPlaying(false); const v = e.target.value; if (v.startsWith('sample:')) loadSample(v.slice(7)); else loadSong(v); });
   $('sceneSel').innerHTML = Object.entries(SCENES).map(([k, s]) => `<option value="${k}">${s.name}</option>`).join('');
+  $('sceneSel').value = V.sceneId;
   $('fxSel').innerHTML = FX_LEVELS.map((f, i) => `<option value="${i}">エフェクト: ${f.name}</option>`).join('');
   $('fxSel').value = String(V.fxLevel);
   $('sceneSel').addEventListener('change', e => { applyScene(e.target.value); applyFx(SCENES[e.target.value].fx); $('fxSel').value = String(V.fxLevel); });
@@ -192,6 +216,8 @@ function initUI() {
     const r = S.checks[tr.dataset.id];
     if (r.at !== null) { setPlaying(false); setTime(r.at); }
   });
+  $('fgRef').addEventListener('click', e => { const d = e.target.closest('.dif'); if (d) { setPlaying(false); setTime(+d.dataset.t - 0.05); } });
+  $('btnVal').addEventListener('click', runValidation);
   $('fgList').addEventListener('click', e => {
     const sp = e.target.closest('span'); if (!sp) return;
     setPlaying(false); setTime(+sp.dataset.t - 0.05);

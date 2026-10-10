@@ -12,7 +12,7 @@ const LOOK = 0.7;       // 次の音へ先回りを始める早さ（秒）
 const THUMB_PITCH = 10, THUMB_TW = 45, THUMB_N = [0, 35];
 const FINGERS = [
   null,
-  { name: '親指', base: [-24, -12, -25], L: [46, 32, 26], b: 0, c: 0.8, pitch: THUMB_PITCH, tw: THUMB_TW, yaw0: -50, yaw: [-75, 50], a1: [-25, 60], a2: [0, 80], n: THUMB_N, r: [11, 9.5, 8.5] },
+  { name: '親指', base: [-24, -12, -25], L: [46, 32, 26], b: 0, c: 0.8, pitch: THUMB_PITCH, tw: THUMB_TW, yaw0: -50, yaw: [-75, 50], a1: [-20, 60], a2: [0, 80], n: THUMB_N, r: [11, 9.5, 8.5] },
   { name: '人さし指', base: [-24, 8, -92], L: [43, 25, 19], b: 0, c: 0.5, yaw0: -5, yaw: [-25, 15], a1: [-25, 90], a2: [0, 105], n: [25, 45], r: [8.5, 8, 7.5] },
   { name: '中指', base: [-4, 10, -96], L: [47, 28, 20], b: 0, c: 0.5, yaw0: 0, yaw: [-18, 18], a1: [-25, 90], a2: [0, 105], n: [25, 45], r: [8.8, 8.2, 7.6] },
   { name: '薬指', base: [14, 5, -91], L: [44, 27, 20], b: 0, c: 0.5, yaw0: 5, yaw: [-15, 22], a1: [-25, 90], a2: [0, 105], n: [25, 45], r: [8.3, 7.8, 7.3] },
@@ -153,6 +153,11 @@ function buildPlan(song) {
   for (const side of [1, -1]) {
     const hn = notes.filter(n => (n.hand || 'R') === (side > 0 ? 'R' : 'L'));
     if (hn.length) hands.push(buildHandPlan(hn, side));
+  }
+  // お手本の運指（n.ref）: 曲の refR・refL（教本の運指）を、手ごとに音の順に
+  for (const h of hands) {
+    const ref = h.side > 0 ? song.refR : song.refL;
+    if (ref) h.notes.forEach((n, i) => { if (ref[i]) n.ref = +ref[i]; });
   }
   const end = Math.max(0, ...notes.map(n => n.t1));
   return { song, notes, hands, end, cost: hands.reduce((s, h) => s + h.cost, 0) };

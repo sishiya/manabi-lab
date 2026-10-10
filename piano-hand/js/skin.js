@@ -7,7 +7,8 @@ const FLAT = 1.12;    // 指の断面の縦横比（横が広い）
 // 網を作るときの姿勢（度）: [付け根の横, 付け根の曲げ, 2つめの曲げ]。指を少し開いて、となりの指とくっつかないように
 const REST_DEG = [null, [-30, 8, 20], [-10, 12, 14], [-2, 12, 14], [7, 12, 14], [16, 12, 14]];
 // 指の太さ（半径 mm）: 付け根・関節2つ・指先。指先は鍵に当たる球（PAD）とほぼ同じ
-const RADII = [null, [13.5, 11.2, 9.6, 8.0], [9.6, 8.9, 7.7, 6.6], [10.0, 9.3, 8.0, 6.8], [9.4, 8.7, 7.5, 6.5], [8.4, 7.6, 6.8, 6.0]];
+// 親指の中手骨は細め（太いと、親指を開いたときに手の甲から飛び出してこぶになった）
+const RADII = [null, [10, 10.5, 9.6, 8.0], [9.6, 8.9, 7.7, 6.6], [10.0, 9.3, 8.0, 6.8], [9.4, 8.7, 7.5, 6.5], [8.4, 7.6, 6.8, 6.0]];
 // 骨の番号: 0 前腕、1 手のひら、2 + (指-1)*3 + 節
 const BONE_ARM = 0, BONE_PALM = 1, boneOf = (f, j) => 2 + (f - 1) * 3 + j, N_BONES = 17;
 
@@ -80,7 +81,7 @@ function buildPrims() {
   }
   P.palm.push(mkCone(sub3(FINGERS_U[2].base, [0, 2, -3]), sub3(FINGERS_U[5].base, [0, 2, -3]), 10.5, 9, BONE_PALM));
   P.palm.push(mkCone([21, -8, -22], [28, -6, -66], 12, 10, BONE_PALM));
-  P.palm.push(mkCone([-12, -12, -26], [-24, -12, -50], 13.5, 10, BONE_PALM));
+  P.palm.push(mkCone([-10, -15, -24], [-24, -15, -48], 14, 10, BONE_PALM)); // 母指球（手のひらの側のふくらみ。親指の付け根の太さはここで出す）
   // 親指の中手骨は手のひらと同じ組で溶けあわせる（骨は親指）
   const t0 = rest[1][0];
   P.palm.push(mkCone(t0.o, rest[1][1].o, RADII[1][0], RADII[1][1], boneOf(1, 0)));
@@ -271,7 +272,7 @@ function buildSkin() {
     let dmin = Infinity;
     for (let b = 0; b < N_BONES; b++) dmin = Math.min(dmin, comp[b]);
     const sc = [];
-    for (let b = 0; b < N_BONES; b++) { const s = Math.exp(-(comp[b] - dmin) / (b <= BONE_PALM ? 5 : 2.6)); if (s > 0.01) sc.push([s, b]); }
+    for (let b = 0; b < N_BONES; b++) { const s = Math.exp(-(comp[b] - dmin) / (b <= BONE_PALM || b === boneOf(1, 0) ? 5 : 2.6)); if (s > 0.01) sc.push([s, b]); }
     sc.sort((a, b) => b[0] - a[0]);
     const top = sc.slice(0, 4), sum = top.reduce((s, e) => s + e[0], 0);
     for (let k = 0; k < 4; k++) {
