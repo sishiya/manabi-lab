@@ -1,11 +1,11 @@
 # いきものの感じる世界 開発メモ
 
-最終更新: 2026-10-07
+最終更新: 2026-10-10
 
 同じ庭を、生き物（と道具）を切り替えて一人称で見る。人に感じられない感覚（紫外線・熱・こだま・速い時間・偏光・近赤外線）を「置き換えて」見せる。企画は `PLAN.md`。体内ダイブ系・電波の見える部屋とはエンジンが別（Three.js r128 を cdnjs から、シェーダは自前）。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: 最新は v5e（`versions/v005e-sources`、おもな出どころ。Artifact は未反映）。その前は v5b（`versions/v005b-notes`。v4 から、灯りのちらつきの安全対策（v5）と、「見え方は推定・診断には使えない」注記・使っているものの表記（v5b）だけ。Artifact も v5b を公開済み（2026-10-04））。14種をカテゴリ別に並べる（`ANIMAL_GROUPS`）: くらべる基準（人間）／動物（カラス・マムシ・コウモリ・イヌ・ネコ・シャコ）／虫（ハエ・ミツバチ）／道具（サーモ・近赤外線）／ヒトの見え方のいろいろ（弱視・近視遠視など・色覚）。主題は生き物なので、ヒトの見え方は一番後ろ（ユーザーの希望）。公開済み（2026-10-04、v4。タイトル「いきものの感じる世界」、URL は `../PUBLISH.local.md`。共有はまだ自分だけ）。更新は同じ URL へ再公開。
+- **いまの状態**: 最新は v5f（`versions/v005f-english`、英語対応。下の「英語対応」）。その前は v5e（`versions/v005e-sources`、おもな出どころ。Artifact は未反映）。その前は v5b（`versions/v005b-notes`。v4 から、灯りのちらつきの安全対策（v5）と、「見え方は推定・診断には使えない」注記・使っているものの表記（v5b）だけ。Artifact も v5b を公開済み（2026-10-04））。14種をカテゴリ別に並べる（`ANIMAL_GROUPS`）: くらべる基準（人間）／動物（カラス・マムシ・コウモリ・イヌ・ネコ・シャコ）／虫（ハエ・ミツバチ）／道具（サーモ・近赤外線）／ヒトの見え方のいろいろ（弱視・近視遠視など・色覚）。主題は生き物なので、ヒトの見え方は一番後ろ（ユーザーの希望）。公開済み（2026-10-04、v4。タイトル「いきものの感じる世界」、URL は `../PUBLISH.local.md`。共有はまだ自分だけ）。更新は同じ URL へ再公開。
 - 2026-10-05 `versions/v005c-favicon`: ファビコン（タブのアイコン、SVG を埋め込み）を追加。GitHub Pages（まなびラボ）用。Artifact へはまだ再公開していない。
 - 2026-10-07 `versions/v005e-sources`: 「このアプリについて」の下に**おもな出どころ**（`.src`、生き物ごとに12行・約35件）。説明文の数値を確かめ直した（下の「状態」）。Artifact へは、ユーザーに内容を見せてから再公開する。
 - **次にやること**: 段階D の残り（スマホ実機の確認）。その先の案は `PLAN.md`。
@@ -13,16 +13,17 @@
 - **動かし方**: 分割版なので `.claude/launch.json` の `apps`（8765）か `apps-2`（8766）で `http://localhost:<port>/animal-senses/index.html`。
 - **デバッグ用**: `window.__as` — `setAnimal(k, keepPlace)`（`false` で開始位置へ）、`setTime('day'|'dusk'|'night')`、`goto(ANIMALS.crow.pois[0])`、`frame(n)`（n コマ進めて描く）、`info()`、`err`、`S`（状態。`S.paused=true` で時間だけ止まる＝スクリーンショット用）、`SX`（ハエたたき・コウモリの鳴き声・捕まえた数）。
 - **区切りごとに**: ① `versions/v0NN-名前/` に index.html・css・js を丸ごとコピー ② `launcher.html` にカード・表 ③ 下の「状態」 ④ 「確認のしかた」を通す ⑤（公開済みなら）同じ URL へ再公開。
-- **公開のコマンド**（Artifact の publish）: `file_path` = `animal-senses/index.html`、`files` = `{"css/style.css":"animal-senses/css/style.css","js/data.js":"animal-senses/js/data.js","js/shaders.js":"animal-senses/js/shaders.js","js/world.js":"animal-senses/js/world.js","js/render.js":"animal-senses/js/render.js","js/senses.js":"animal-senses/js/senses.js","js/main.js":"animal-senses/js/main.js"}`。JS を足したら index.html の `<script>` とこの一覧の両方に足す。
+- **公開のコマンド**（Artifact の publish）: `file_path` = `animal-senses/index.html`、`files` = `{"css/style.css":"animal-senses/css/style.css","js/data.js":"animal-senses/js/data.js","js/text-en.js":"animal-senses/js/text-en.js","js/shaders.js":"animal-senses/js/shaders.js","js/world.js":"animal-senses/js/world.js","js/render.js":"animal-senses/js/render.js","js/senses.js":"animal-senses/js/senses.js","js/main.js":"animal-senses/js/main.js"}`。JS を足したら index.html の `<script>` とこの一覧の両方に足す。
 - **ユーザーの好み**: 正確さ・本物らしさ重視。説明は 確か／推定／演出 を分ける。子どもにも読める日本語。視覚的に分かりやすい題材が好き。ドラッグは「見たい方へ」（右へドラッグ → 右を向く。v1 は左右が逆だった）。
 
 ## ファイル構成
 
 | ファイル | 中身 | 主な名前 |
 |---|---|---|
-| `index.html` | 画面の骨組み（doctype なし）。読み込み順: three → data → shaders → world → render → senses → main | `#gl` `#panel` `#pad` `#legend` `#toast` |
+| `index.html` | 画面の骨組み（doctype なし）。読み込み順: three → data → text-en → shaders → world → render → senses → main | `#gl` `#panel` `#pad` `#legend` `#toast` |
 | `css/style.css` | レイアウト（PC は右パネル350px、縦長スマホは上56vhが3D・下がパネルで生き物ボタン4列、横長スマホは右290px） | |
 | `js/data.js` | 時刻 `TIMES`（太陽・空・紫外線 `uv`・近赤外線 `nir`・灯り `lamp`・カメラの赤外線ライト `ir`・温度の昼夜 `tmix`・露出 `exp`・夜らしさ `night`）、生き物 `ANIMALS`（目の高さ・視野・速さ・飛べるか・`view:'cube'`・個眼 `hex`・時間の選択肢 `clocks`・開始位置・説明 `facts`・見どころ `pois`）、`ANIMAL_ORDER` | |
+| `js/text-en.js` | 英語の文（`LANG === 'en'` のときだけ data.js の同じ鍵を上書き）。生き物ごとに `name` `title`（「〜の感覚」の英語）`sub` `lead` `facts`（同じ順の文だけ。確か／推定／演出の札は data.js のまま）`pois`（同じ順の名前）`types` `clocks`、`NIGHTS` の名前と説明、`ANIMAL_GROUPS` の見出し | `EN` |
 | `js/shaders.js` | GLSL すべて `SH.*`。場面のパス `SCENE_FS`／空 `SKY_FS`（`uMode` 0〜5）、共通 `COMMON`、遠近の合成 `COMP_FS`（`uSense` 0〜11）、全周の合成 `CUBE_FS`（ハエ0・ミツバチ1） | |
 | `js/world.js` | 庭の組み立て。頂点属性を塗る `paint()`、`merge()`、`mk()`、材料 `M`、`person()` `flower()` `bag()` `moth()`、`buildWorld()`、動かない物を1つにまとめる `bakeStatic()`、動き `updateWorld(t)` `mothPos()` | `W.dyn`（動く物）`W.echoObjs` `W.moths` `W.swatter` `W.mouse` `W.lamp` |
 | `js/render.js` | 描画の流れ。`initRender()` `resizeRender()` `setTimeUniforms()` `renderFrame(opts)`、`SENSE_ID` `CUBE_SENSES` | `R.U`（全物体で共有の uniform）、`R.rtVis/rtX/rtY/rtTh`、`R.cubeVis/cubeUV` |
@@ -69,6 +70,13 @@
 9. 色覚: 2型で赤いボールが芝生に近い色、1色覚は白黒で昼の空が白飛び。夜の明かり: 星明かりの人間は星と物の形がうっすら、まっくらの人間はほぼ黒、比べる表示でネコ（右）はうっすら見え、マムシの熱・コウモリのこだま・サーモは暗さに関係なく見える。凡例に「目が慣れても〜」が出る。
 10. スマホ幅（375×812）: 上が3D、下がパネル（カテゴリごとに生き物ボタン4列）、横スクロールなし、移動ボタンが出る。ハエは全周が画面の幅に入る。
 11. 「このアプリについて」の下の「おもな出どころ」を開くと12行（生き物・ヒトの見え方ごと）。スマホ幅でも横にはみ出さない。説明の数値を変えたら出典も足す（RULES 9）。
+12. 英語（`?lang=en`）: 3つの時刻 × 夜の明かり × 14種で、操作のボタン・チェックを全部押しても画面に日本語が残らない（`../I18N.md` 2.4 のコンソールの式）。ハエたたき・ガの知らせも英語。JP／EN ボタンで読み直し、`localStorage['manabi-lang']` が変わる。日本語（`?lang=ja`）は前の版と同じ表示（v5f では 528 場面の `innerText` を v5e と比べて一致）。
+
+## 英語対応（v5f、2026-10-10。`../I18N.md`）
+- 言語は開いたときに決まる（`?lang=` → `localStorage['manabi-lang']` → ブラウザ）。`index.html` の先頭の `var LANG=` の行と `L(ja, en)`。JP／EN ボタンはパネルの上（`.htop` の右。スマホでは題名を隠して JP／EN だけ出す）。
+- HTML の文は `<span lang="ja">…</span><span lang="en">…</span>`（出どころ・注意書き・札の説明は段落ごと）。`aria-label` と左半分の「人間」は `initLang()`（main.js）で入れる。
+- 生き物のデータの英語は `js/text-en.js`。**data.js の文を足す・直すときは、ここの同じ所も直す**（`facts` と `pois` は順番で対応するので、足すときは同じ位置に）。凡例・操作の文は main.js の `L()`、ハエたたきなどの知らせは senses.js の `L()`。
+- `updateLegend()` の中の `const L = $('legend')` を `lg` にした（`L()` が隠れるため）。
 
 ## ハマったところ
 - 一時停止（ループで `step` を呼ばない）にすると Browser ペインのスクリーンショットが真っ黒・タイムアウトになる。`S.paused` は「時間 dt を 0 にして描画は続ける」にした。
@@ -85,6 +93,7 @@
 - v5（2026-10-04）灯りのちらつきは選んだときだけ、ゆれも小さく（光過敏性発作への配慮。`prefers-reduced-motion` では出さない）。
 - v5b（2026-10-04）「このアプリについて」の下に、見え方は推定で診断には使えないこと、使っているもの（Three.js＝MIT、フォント＝SIL OFL）を追加（`.fine`）。
 - v5e（2026-10-07）おもな出どころを画面に（RULES 9。`index.html` の `details.src`）。確かめ直して直したところ: ネコの暗い所の見え方「人の6〜7倍（推定）」→ Kang ほか（2009）の同じ方法での比較で「約5倍（確か）、差はおもに瞳とタペタム」。満月の夜「約0.2ルクス」→ Kyba ほか（2017）で「約0.05〜0.3ルクス」、星明かり・まっくらのルクスは「目安」。ロービジョンの人数は「2007年時点の推計（日本眼科医会 2009）」。イエバエの個眼「数千個」→「約3000個」（Beersma ほか 1975）、ミツバチ「約5000個」→「5000個あまり」（Seidl と Kaiser 1981）。ピットの感度に Bullock と Diecke（1956）の約0.003℃。ハエのちらつき 200〜300回・ネコの視力・ミツバチの細かさは出典を確かめきれず「目安」と書いた。**黄色いゴミ袋の効き目は論文が見つからず、メーカーの説明のまま（推定）**。ジーンズ（インディゴ）が近赤外線で白い件も論文を載せていない（推定のまま）。
+- v5f（2026-10-10）英語対応（JP／EN の切り替え。英語の文は `js/text-en.js`・main.js・senses.js の `L()`、HTML は `lang` 属性）。日本語の表示は v5e と同じ。
 
 ## 残っている課題・案
 - 当たり判定なし（物や壁を通り抜ける）。ハエはテーブルの中にも入れる。
