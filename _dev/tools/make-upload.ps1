@@ -90,7 +90,7 @@ function Test-Upload([string]$path) {
 }
 
 if ($Check) {
-  $list = if ($Meta) { $Meta | ForEach-Object { if ([IO.Path]::IsPathRooted($_)) { $_ } else { Join-Path $root $_ } } } else { Get-ChildItem $promo -Filter '*.upload.json' | ForEach-Object { $_.FullName } }
+  $list = if ($Meta) { $Meta | ForEach-Object { $_ -split ',' } | Where-Object { $_ } | ForEach-Object { if ([IO.Path]::IsPathRooted($_)) { $_ } else { Join-Path $root $_ } } } else { Get-ChildItem $promo -Filter '*.upload.json' | ForEach-Object { $_.FullName } }
   $bad = 0
   foreach ($p in $list) { if (-not (Test-Upload $p)) { $bad++ } }
   Write-Host ''
