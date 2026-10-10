@@ -13,7 +13,7 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)   # _dev/tools の2つ上
 Set-Location $root
 
-$textExt = '.html','.htm','.js','.mjs','.css','.md','.txt','.json','.ps1','.sh','.bat','.cmd','.yml','.yaml','.xml','.svg','.csv','.ini','.cfg','.toml',''
+$textExt = '.html','.htm','.js','.mjs','.css','.md','.txt','.json','.ps1','.pl','.sh','.bat','.cmd','.yml','.yaml','.xml','.svg','.csv','.ini','.cfg','.toml',''
 $imageExt = '.jpg','.jpeg','.png','.gif','.webp'
 $badNames ='^\.env', '\.pem$', '\.key$', '\.pfx$', '\.p12$', '^id_(rsa|ed25519|ecdsa)', '^credentials', '\.kdbx$'
 $skipDirs = '\\\.git\\', '\\node_modules\\', '\\_dev\\promo\\out\\'   # 最後は紹介動画（Git に入れない）

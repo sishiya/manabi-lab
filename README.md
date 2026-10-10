@@ -34,11 +34,11 @@
 | `urinary-dive/` | 尿の旅 |
 
 - **公開中**: https://sishiya.github.io/manabi-lab/ （入口のページから全アプリを開けます。GitHub Pages）
-- 入口は日本語と英語を切り替えられます（右上の JP／EN。選んだ言語と並び順はブラウザに覚えます）。アプリの中の英語対応は順に進めています（いまは `wifi-wave`。企画と作り方は `I18N.md`）。
+- 入口は日本語と英語を切り替えられます（右上の JP／EN。選んだ言語と並び順はブラウザに覚えます）。アプリの中の英語対応は順に進めています（入口の12本のうち8本。残りは animal-senses・evolution・immune-battle・god-view。企画と作り方・引き継ぎは `I18N.md`）。
 - 入口（ルートの `index.html`）のサムネイルは `assets/thumbs/`（`_dev/tools/make-thumbs.ps1` で撮り直し）。各アプリにはファビコン（SVG を埋め込み）。
 - 各アプリの `index.html` が最新版、`launcher.html` から過去の版を開けます（`versions/`）。
 - 仕組みや確認のしかたは各フォルダの `DEVNOTES.md`、進め方の共通ルールは `RULES.md`。
-- アプリ以外の道具は `_dev/` にまとめています: `_dev/tools/`（公開前チェック・サムネイル撮影・起動・YouTube へのアップロード `youtube-upload.ps1`・X への投稿の下ごしらえ `x-post.ps1`）、`_dev/promo/`（紹介動画づくり。ショート＝紹介、横長＝使い方の説明（`<app>-guide.html`）。英語の字幕データ（SRT）も作る）。公開する素材（入口のサムネイルなど）は `assets/`。
+- アプリ以外の道具は `_dev/` にまとめています: `_dev/tools/`（公開前チェック・サムネイル撮影・起動・文字列の置きかえ `rep.pl`・YouTube へのアップロード `youtube-upload.ps1`・X への投稿の下ごしらえ `x-post.ps1`）、`_dev/promo/`（紹介動画づくり。ショート＝紹介、横長＝使い方の説明（`<app>-guide.html`）。英語の字幕データ（SRT）も作る）。公開する素材（入口のサムネイルなど）は `assets/`。
 
 ## ローカルで動かす（Windows）
 
