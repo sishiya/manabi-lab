@@ -171,6 +171,12 @@ function surfaceNets(P) {
 // 手の甲の腱（[x0, z0, x1, z1]: 手首の側 → 指の付け根）と静脈（折れ線）。手の座標（mm）、目安
 const TENDONS = [[-10, -14, -24, -88], [-3, -14, -4, -92], [6, -14, 14, -86], [14, -14, 29, -76]];
 const VEINS = [[[-20, 4], [-16, -20], [-6, -38], [4, -52], [8, -70]], [[18, 2], [16, -24], [6, -40], [4, -52]], [[-6, -38], [-14, -58], [-16, -72]]];
+// 手のひらのしわ（手の座標の x, z の折れ線。目安）: 感情線・知能線・生命線
+const PALM_LINES = [
+  [[37, -66], [24, -73], [10, -77], [-4, -80], [-12, -84]],
+  [[-33, -60], [-18, -60], [0, -57], [16, -52], [27, -46]],
+  [[-33, -60], [-26, -48], [-21, -34], [-17, -20], [-12, -8]],
+];
 const smoothF = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
 function segDist2(x, z, T) {
   const dx = T[2] - T[0], dz = T[3] - T[1], l = dx * dx + dz * dz;
@@ -241,10 +247,14 @@ function buildSkin() {
   const restB = restBoneFrames(P.rest);
   // 重み: 骨ごとの距離の近さから。上位4つ
   const bi = new Uint8Array(NV * 4), bw = new Float32Array(NV * 4);
-  const lp = new Float32Array(NV * 12), ln = new Float32Array(NV * 12);
   const col = new Float32Array(NV * 3), aWrk = new Float32Array(NV), aAlong = new Float32Array(NV);
+  // 関節の内側のふくらみ（曲げるほど手のひらの側を押し出して、線形ブレンドのへこみを補う）: どの関節か・どれだけ近いか
+  const aJ = new Float32Array(NV * 2);
+  // 指先のはら（指紋の中心からの座標と、はらの目印）・手のひらと関節の手のひらの側のしわ
+  const aPad = new Float32Array(NV * 3), aCrease = new Float32Array(NV);
   const comp = new Float64Array(N_BONES);
   const VEINC = lin3(0.62, 0.62, 0.72);
+  const PADC = lin3(0.90, 0.58, 0.52);
   const SKIN = lin3(0.86, 0.62, 0.50), DORSAL = lin3(0.83, 0.59, 0.46), PALMC = lin3(0.89, 0.59, 0.51), TIP = lin3(0.87, 0.50, 0.44), KNK = lin3(0.77, 0.50, 0.42);
   for (let v = 0; v < NV; v++) {
     const p = [pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]], n = [nrm[v * 3], nrm[v * 3 + 1], nrm[v * 3 + 2]];
@@ -258,9 +268,19 @@ function buildSkin() {
     for (let k = 0; k < 4; k++) {
       const e = top[k] || [0, top[0][1]], B = restB[e[1]];
       bi[v * 4 + k] = e[1]; bw[v * 4 + k] = e[0] / sum;
-      const q = sub3(p, B.o);
-      lp.set([dot3(q, B.x), dot3(q, B.y), dot3(q, B.z)], v * 12 + k * 3);
-      ln.set([dot3(n, B.x), dot3(n, B.y), dot3(n, B.z)], v * 12 + k * 3);
+    }
+    // 近い指の関節（骨の付け根）。手のひらの側ほど強く
+    let jb = 0, jw = 0;
+    for (let b = 2; b < N_BONES; b++) {
+      const B = restB[b], q = sub3(p, B.o), d = Math.hypot(...q);
+      const w = Math.exp(-((d / 9) ** 2)) * Math.max(0, -dot3(n, B.y));
+      if (w > jw) { jw = w; jb = b; }
+    }
+    aJ[v * 2] = jb; aJ[v * 2 + 1] = jw;
+    // 手のひらのしわ（感情線・知能線・生命線。手の座標、手のひらの側だけ）
+    if (n[1] < -0.3) for (const L of PALM_LINES) for (let i = 0; i < L.length - 1; i++) {
+      const d = segDist2(p[0], p[2], [L[i][0], L[i][1], L[i + 1][0], L[i + 1][1]]);
+      aCrease[v] = Math.max(aCrease[v], Math.exp(-((d / 0.9) ** 2)) * Math.min(1, (-n[1] - 0.3) * 3));
     }
     // 色: 甲は少し日焼け、手のひらの側は赤み、指先と関節の甲は赤み
     const main = top[0][1];
@@ -272,6 +292,17 @@ function buildSkin() {
       const q = sub3(p, B.o), u = dot3(q, B.z), up = dot3(n, B.y);
       along = u;
       if (j === 2) c = mix3(c, TIP, Math.min(1, Math.max(0, u / B.len)) * 0.55);
+      // 指先のはら: 末節の手のひらの側。指紋の渦の中心（はらのふくらみ）からの座標
+      if (j === 2 && up < -0.2) {
+        const cu = u - B.len * 0.62, cx = dot3(q, B.x);
+        aPad[v * 3] = cx; aPad[v * 3 + 1] = cu; aPad[v * 3 + 2] = Math.min(1, (-up - 0.2) * 2.5) * Math.exp(-((cu / 11) ** 2));
+        c = mix3(c, PADC, aPad[v * 3 + 2] * 0.4);
+      }
+      // 関節の手のひらの側のしわ（2本の細い線）
+      if (up < -0.3 && (j >= 1 || true)) {
+        const cr = Math.max(Math.exp(-(((u - 1.2) / 0.7) ** 2)), Math.exp(-(((u + 1.0) / 0.7) ** 2))) * Math.min(1, (-up - 0.3) * 3);
+        aCrease[v] = Math.max(aCrease[v], cr);
+      }
       // 関節（この骨の付け根）の甲のしわ
       if (j >= 1 || f > 1) {
         const near = Math.exp(-(((u - 1) / 5.5) ** 2)) * Math.min(1, Math.max(0, up * 1.6));
@@ -282,7 +313,7 @@ function buildSkin() {
   }
   const nails = buildNails(P);
   const ms = performance.now() - t0;
-  return { NV, pos0: pos, nrm0: nrm, idx, bi, bw, lp, ln, col, aWrk, aAlong, nails, ms, P };
+  return { NV, pos0: pos, nrm0: nrm, idx, bi, bw, col, aWrk, aAlong, aJ, aPad, aCrease, nails, ms, P, restB };
 }
 
 function restBoneFrames(rest) {
@@ -337,9 +368,9 @@ function buildNails(P) {
 
 // 姿勢から、骨ごとの世界の座標軸
 function poseBones(pose) {
-  const W = pose.W, psi = W[3] || 0;
-  const R = v => rotY(psi, v);
-  const out = [{ o: [W[0], W[1], W[2]], x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] }, { o: [W[0], W[1], W[2]], x: R([1, 0, 0]), y: [0, 1, 0], z: R([0, 0, 1]) }];
+  const W = pose.W, psi = W[3] || 0, sd = W[4] || 1;
+  const R = v => rotY(psi, [v[0] * sd, v[1], v[2]]); // 左手は鏡に映してから回す
+  const out = [{ o: [W[0], W[1], W[2]], x: [sd, 0, 0], y: [0, 1, 0], z: [0, 0, 1] }, { o: [W[0], W[1], W[2]], x: R([1, 0, 0]), y: [0, 1, 0], z: R([0, 0, 1]) }];
   for (let f = 1; f <= 5; f++) {
     const a = pose.fingers[f].ang;
     for (const B of boneFrames(FINGERS[f], a.yaw, a.a1, a.a2)) out.push({ o: toWorld(W, B.o), x: R(B.x), y: R(B.y), z: R(B.z) });
@@ -347,25 +378,23 @@ function poseBones(pose) {
   return out;
 }
 
-// CPU スキニング: 位置と法線を書きかえる
-function skinTo(S, bones, posOut, nrmOut) {
-  const { NV, bi, bw, lp, ln } = S;
-  for (let v = 0; v < NV; v++) {
-    let px = 0, py = 0, pz = 0, nx = 0, ny = 0, nz = 0;
-    for (let k = 0; k < 4; k++) {
-      const w = bw[v * 4 + k];
-      if (w === 0) continue;
-      const B = bones[bi[v * 4 + k]], o = v * 12 + k * 3;
-      const a = lp[o], b = lp[o + 1], c = lp[o + 2], d = ln[o], e = ln[o + 1], g = ln[o + 2];
-      px += w * (B.o[0] + B.x[0] * a + B.y[0] * b + B.z[0] * c);
-      py += w * (B.o[1] + B.x[1] * a + B.y[1] * b + B.z[1] * c);
-      pz += w * (B.o[2] + B.x[2] * a + B.y[2] * b + B.z[2] * c);
-      nx += w * (B.x[0] * d + B.y[0] * e + B.z[0] * g);
-      ny += w * (B.x[1] * d + B.y[1] * e + B.z[1] * g);
-      nz += w * (B.x[2] * d + B.y[2] * e + B.z[2] * g);
-    }
-    const nl = Math.hypot(nx, ny, nz) || 1;
-    posOut[v * 3] = px; posOut[v * 3 + 1] = py; posOut[v * 3 + 2] = pz;
-    nrmOut[v * 3] = nx / nl; nrmOut[v * 3 + 1] = ny / nl; nrmOut[v * 3 + 2] = nz / nl;
+// 骨ごとのスキニング行列（GPU へ渡す）: 世界の骨の座標軸 × 網を作った姿勢の骨の座標軸の逆
+function frameMat(B, out) {
+  out.makeBasis(new THREE.Vector3(...B.x), new THREE.Vector3(...B.y), new THREE.Vector3(...B.z)).setPosition(...B.o);
+  return out;
+}
+function skinMatrices(S, bones, outArr) {
+  if (!S.restInv) S.restInv = S.restB.map(B => frameMat(B, new THREE.Matrix4()).invert());
+  const m = new THREE.Matrix4();
+  for (let b = 0; b < N_BONES; b++) { frameMat(bones[b], m).multiply(S.restInv[b]); m.toArray(outArr, b * 16); }
+}
+// 関節ごとの曲げの角度（ふくらみの補正用）
+function jointFlex(pose, out) {
+  out.fill(0);
+  for (let f = 1; f <= 5; f++) {
+    const a = pose.fingers[f].ang, F = FINGERS[f], d = REST_DEG[f];
+    out[boneOf(f, 0)] = Math.max(0, a.a1 - d[1] * D2R);
+    out[boneOf(f, 1)] = Math.max(0, a.a2 - d[2] * D2R);
+    out[boneOf(f, 2)] = Math.max(0, F.c * (a.a2 - d[2] * D2R));
   }
 }

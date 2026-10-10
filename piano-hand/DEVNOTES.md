@@ -4,12 +4,12 @@
 
 ## 別セッションで続けるとき（まずここ）
 
-- **いまの状態**: 段階0「技術検証」の `v002-skin`（手をリアルな皮ふの網にした版。v001-yaw で手首の回転）。2026-10-10 に保管庫（`archive.html`）に載せた（サムネイル `assets/thumbs/piano-hand.jpg`、撮る準備は `_dev/tools/thumb.html` の SETUP）。GitHub Pages で公開（push で）。Artifact にはしていない。
-- **次にやること**: 見た目は下の「リアルな手（v002）」の課題（皮ふの計算を GPU へ・実写に近づける道）。動きは下の「検証の結果」の課題から。残っているのは親指くぐり・指またぎの「受けわたしの一瞬」（下の v001 の結果）。次の候補は、手のひらを傾ける（前腕のひねり）か、くぐる瞬間だけ前の音を少し早く離す。そのあと和音・両手（段階A、`PLAN.md`）。
+- **いまの状態**: 段階0「技術検証」の `v003-hands`（両手・楽譜の読みこみ・皮ふを GPU で・ノーツの見た目）。v002-skin でリアルな皮ふ、v001-yaw で手首の回転。2026-10-10 に保管庫（`archive.html`）に載せた（サムネイル `assets/thumbs/piano-hand.jpg`、撮る準備は `_dev/tools/thumb.html` の SETUP）。GitHub Pages で公開（push で）。Artifact にはしていない（samples/ を fetch するので Pages 向き）。
+- **次にやること**: (1) 和音（片手で同時に押す音。いまは上／下の1音だけ弾き、ほかは灰色）。(2) 運指の答え合わせを増やす（研究の運指データ PIG などの使用条件を確かめてから）。(3) 親指くぐりの「受けわたしの一瞬」（前腕のひねり・前の音を少し早く離す）。(4) 実写に近づける（下の「手のスキャン素材」）。
 - **読む順**: `PLAN.md` → このファイルの「しくみ」「検証の結果」→ `js/hand.js`（中心）。
 - **動かし方**: `.claude/launch.json` の `apps`〜`apps-6`（例 http://localhost:8765/piano-hand/）。ほかの会話がサーバーを使い切っていても、同じフォルダを配っているので URL を開けば見られる。
-- **デバッグ用の窓口**: `window.__ph`（`S` 状態、`poseAt(t)`、`setTime(t)`、`simRun(秒)`、`loadSong(id)`、`checksAll()` 全曲の検査）。例外は `window.__phErr`。
-- **ブラウザなしで検査**: js の keys・songs・fingering・hand・check は DOM も Three.js も使わないので、Node の `vm` で読みこめる（`const`→`var` に置きかえて同じ文脈で実行し、`buildPlan(SONGS[i])` と `runChecks(plan)`）。調整はこれで数を見ながらやった。
+- **デバッグ用の窓口**: `window.__ph`（`S` 状態、`poseAt(t, 手の番号)`、`setSong(曲)`、`setTime(t)`、`simRun(秒)`、`loadSong(id)`、`checksAll()` 全曲の検査）。例外は `window.__phErr`。
+- **ブラウザなしで検査**: js の keys・songs・fingering・hand・check は DOM も Three.js も使わないので、Node の `vm` で読みこめる（`const`→`var` に置きかえて同じ文脈で実行し、`buildPlan(SONGS[i])` と `runChecks(score)`・`fingeringMatch(score)`）。調整はこれで数を見ながらやった。ただし vm の中は大域変数が遅く、時間はブラウザの数分の1にならない（時間はブラウザで測る）。
 - **区切りごとの手順**: `versions/<番号-名前>/` へ丸ごとコピー → `launcher.html` に足す → このファイルの「状態」→ 確認 → 公開前チェック（RULES 7章）。
 
 ## ファイル構成
@@ -19,16 +19,19 @@
 | `index.html` | 画面の骨組み（Artifact 用、doctype なし）。出どころの欄もここ | |
 | `css/style.css` | 見た目。820px 以下・縦長は上下に重ねる | |
 | `js/keys.js` | 鍵盤の寸法（mm）と位置 | `KB`, `keyX(m)`, `keyTop(m)`, `pressZ(m,f)`, `surfaceAt(x,z,depress)`, `noteName(m)` |
-| `js/songs.js` | 検証用の曲（著作権の切れたもの）と読みこみ | `SONGS`, `parseSong(song)` |
-| `js/fingering.js` | ① 運指 | `SPAN`, `noteCost`, `pairCost`, `tripleCost`, `planFingering(notes)` |
-| `js/hand.js` | ②③④ 手の骨・FK・IK・手首・指先の目標 | `FINGERS`, `fingerFK`, `fingerIK`, `TIP_N`, `WRIST_Y`, `rotY`, `toWorld`/`toLocal`（手首の姿勢 W=[x,y,z,ψ]）, `buildPlan`, `solveWrist`, `reachErr`, `anchorAt`, `wristAt`, `fingerTarget`, `keepOrder`, `poseAt`, `depressAt` |
-| `js/skin.js` | ⑥ リアルな手の形（陰関数→サーフェスネッツ）・骨の重み・爪・CPU スキニング。DOM なし | `REST_DEG`, `RADII`, `FLAT`, `TENDONS`, `VEINS`, `buildPrims`, `handSDF`, `surfaceNets`, `buildSkin`, `buildNails`, `boneFrames`, `poseBones`, `skinTo` |
-| `js/check.js` | ⑤ 破綻の検査 | `CHECKS`（目安の境目）, `segDist`, `clashOf(pose)`, `runChecks(plan)` |
-| `js/view.js` | Three.js r128 の描画とカメラ | `initView`, `setViewPlan`, `renderPose`, `CAMS`, `setCam`, `updateCam` |
-| `js/skinview.js` | 皮ふと爪の Three.js の網・肌のシェーダー（毛穴・しわ・色むら・赤みの散乱）・部屋の映りこみ | `makeEnv`, `makeSkinMaterial`, `SKIN_GLSL_HEAD`, `initSkinMesh`, `updateSkinMesh` |
-| `js/main.js` | 画面の操作・毎フレーム・音・`window.__ph` | `loadSong`, `step`, `renderChecks` |
+| `js/songs.js` | 検証用の曲（著作権の切れたもの）・教本の運指 `refR`/`refL` | `SONGS`, `SCALE_C`, `ELISE_R`, `parseSong`, `parseLine` |
+| `js/import.js` | 楽譜ファイルの読みこみ（MIDI・MusicXML・.mxl の zip）、手の分け方、和音をへらす | `parseMidi`, `songFromMidi`, `songFromMusicXml`, `unzipMxl`, `finishSong`, `songFromFile` |
+| `samples/` | サンプルの楽譜ファイル（`tools/make-samples.js` で作る） | elise-opening.mid（2トラック）・c-major-scale-fingered.musicxml（2段・運指つき）・ode-to-joy-with-chords.mid（1トラック・和音） |
+| `tools/make-samples.js` | サンプルを作る Node のスクリプト（`node piano-hand/tools/make-samples.js`） | |
+| `js/fingering.js` | ① 運指（左手は鏡） | `SPAN`, `CROSS`, `noteCost`, `pairCost`, `tripleCost`, `planFingering(notes, side)` |
+| `js/hand.js` | ②③④ 手の骨・FK・IK・手首・指先の目標 | `FINGERS`, `fingerFK`, `fingerIK`, `TIP_N`, `WRIST_Y`, `rotY`, `toWorld`/`toLocal`（手首の姿勢 W=[x,y,z,ψ,side]）, `yawRange`, `HAND_NAME`, `buildPlan`（曲全体）, `buildHandPlan`（片手）, `solveWrist`, `reachErr`, `anchorAt`, `wristAt`, `fingerTarget`, `keepOrder`, `poseAt`, `depressAt` |
+| `js/skin.js` | ⑥ リアルな手の形（陰関数→サーフェスネッツ）・骨の重み・爪・指先のはら・しわの目印・GPU へ渡す骨の行列 | `REST_DEG`, `RADII`, `FLAT`, `TENDONS`, `VEINS`, `PALM_LINES`, `buildPrims`, `handSDF`, `surfaceNets`, `buildSkin`, `buildNails`, `boneFrames`, `poseBones`, `skinMatrices`, `jointFlex` |
+| `js/check.js` | ⑤ 破綻の検査（両手）・教本の運指との一致 | `CHECKS`（目安の境目）, `segDist`, `clashOf(pose)`, `handsClash`, `runChecks(score)`, `fingeringMatch(score)` |
+| `js/view.js` | Three.js r128 の描画（88鍵・ノーツ・打鍵の光・両手）とカメラ | `initView`, `initLane`, `makeBoneHand`, `initFx`, `roundRect`, `setViewPlan`, `renderPose(score, poses)`, `CAMS`, `setCam`, `updateCam(poses)` |
+| `js/skinview.js` | GPU スキニング（骨の行列の uniform）・肌のシェーダー（毛穴・しわ・指紋・手のひらのしわ・色むら・赤みの散乱）・影用の材質・爪・部屋の映りこみ | `makeEnv`, `SKIN_VERT_HEAD`, `SKIN_GLSL_HEAD`, `makeSkinMaterials`, `makeSkinHand(sc, side)`, `updateSkinHand` |
+| `js/main.js` | 画面の操作・毎フレーム・音・楽譜を開く・`window.__ph` | `SAMPLES`, `loadSong`, `setSong`, `openFile`, `loadSample`, `addSong`, `step`, `renderChecks` |
 
-読みこみ順: three → keys → songs → fingering → hand → skin → check → view → skinview → main。公開するときの `files` は css/style.css と js の9つ。
+読みこみ順: three → keys → songs → fingering → hand → skin → check → view → skinview → import → main（skinview は view の初期化で呼ばれるので main より前ならよい）。
 
 ## しくみ
 
@@ -103,18 +106,32 @@
   - 指先のはら・指紋、手のひらのしわ、うぶ毛、本物の皮ふの下の散乱（いまは近似）。
   - **実写と見間違えるほど**にするには、本物の手を 3D スキャンした形と肌の写真の模様（テクスチャ）がいちばん効く。使える素材（CC0 など）のライセンスを確かめてから。MANO は研究用の条件があるので慎重に。
 
+## 両手・楽譜・GPU・ノーツ（2026-10-10、v003-hands）
+
+- **左手**: 手の座標を x で鏡に映してから手首の回転 ψ をかける（W[4]=side）。骨・IK・指の並びの規則は右手のまま。手首の横の曲がりの範囲は ψ の向きが逆（`yawRange`）。運指は 124−m（レ4=62 を中心に反転。黒鍵の並びが保たれる）にして右手の規則で決める。皮ふの網は右手と同じものを使い、三角形の向きだけ逆にする。
+- **曲全体と片手**: `buildPlan(song)` が `{ notes（全部）, hands:[右手, 左手], end }`。音の hand は 'R'・'L'・'X'（和音をへらして手で弾かない音。灰色のノーツ・音だけ・鍵は沈めない）。検査に「左右の手のぶつかり」。
+- **運指の答え合わせ**（ユーザーの希望「実際とかけ離れていないか」）: 曲に教本の運指 `refR`・`refL` を持たせ、`fingeringMatch` で一致した数を画面に出す。最初の規則では左手の音階が 29 音中 8 音しか合わず、1-2-1-2 と細かくまたいでいた（Parncutt の「狭すぎ」の罰点をまたぐときにも当てると、2 でまたぐほうが 3・4 より安くなるため）。**またぐときは、またぐ指ごとの罰点 `CROSS`（2:9・3:5・4:6・5:20）＋全音より遠い分 1.5/半音** に変えて、145 音中 121 音（右手の音階・アルペジオ・ニ長調は全部一致、左手の音階 13/29、歓喜の歌 22/30）。値を変えても 121 で頭打ち。残りの差は「どこで手の位置を変えるか」の違いで、弾けない運指ではない（左手の音階は 4 でまたぐ位置が教本と1つずれる、歓喜の歌はミを 3 でなく 2 で始める）。くらべる曲が少ないので、合わせすぎに注意。
+- **楽譜の読みこみ**: MIDI（Standard MIDI File、テンポの変化をたどる、打楽器のチャンネルは除く）と MusicXML（divisions・backup・forward・chord・tie・staff・fingering・テンポ。score-partwise だけ）。.mxl は zip の中央ディレクトリを読み、`DecompressionStream('deflate-raw')` で展開。手の分け方は、MusicXML は譜表、MIDI は音のあるトラックが2つ以上なら平均の高さ（高いほうが右手）、1つならド4（60）で分ける。和音は右手は上・左手は下の1音だけ弾く。同じ手で前の音がのびて次と重なるときは前の音を切る。楽譜の運指（`given`）は「楽譜の運指を使う」で固定できる（動的計画法で、その指以外を選ばせない）。ファイルはブラウザの中だけで読み、送らない。
+- **GPU スキニング**: 骨 17 本の行列（世界の骨の座標軸 × 網を作った姿勢の骨の座標軸の逆）を uniform で渡し、頂点シェーダーで4本の重みつき和。影も同じ計算の深度の材質（customDepthMaterial）で落とす。爪は末節骨の座標軸をそのまま物体の行列に。1コマの計算はこの PC で両手 1.6ms（CPU のときは片手で 16ms）。
+- **関節の内側のへこみ**: 頂点ごとに近い指の関節と「手のひらの側の近さ」（aJ）を持たせ、曲げた角度（`jointFlex`、網を作った姿勢からの増え）× 2.6mm だけ法線の向きに押し出してからスキニング。
+- **細部**: 指先のはら（末節の手のひらの側。色を少し赤く、指紋の渦を 0.45mm 間隔の凹凸で。近づいたときだけ見える）、手のひらのしわ（感情線・知能線・生命線の折れ線 `PALM_LINES`、目安）、指の関節の手のひらの側のしわ（2本）。
+- **骨格の見直し**: 指をのばして親指と小指をいっぱいに開いた幅（指先の外側どうし）を計算すると約 23.0cm。Boyle・Boyle・Booker（2015、473人のピアニスト）の平均は男性 22.6cm・女性 20.1cm なので、男性の平均くらいの手。手首〜中指の先は約 19.7cm。骨の長さは変えていない。
+- **ノーツの見た目**: 角の丸い板（ExtrudeGeometry）を光る材質で。鍵盤の奥の端（Z0）で切りとる（clippingPlanes）ので鍵に吸いこまれる。着く直前に明るく、押している間はいちばん明るく、奥の端に指の色の光（加算のスプライト）。打鍵から 0.7 秒、光の粒が 18 個はじける（時刻と音の番号から決まるので、巻き戻しても同じ絵）。通り道にドとファのうすい線。鍵は押すと指の色で少し光る。88 鍵（ラ0〜ド8）。影の光は見ているあたりへ動かす。
+- **手のスキャン素材の調べ**（2026-10-10）: CC0 で本物の手のスキャンで骨入り、のものは見つからなかった。スキャンの手は CC-BY（作者の表示が要る）や CC-BY-NC（非商用）で、決まった形のまま骨がない（動かすには作り直しが要る）。骨入りで CC0 なのは手で作ったモデル（BlendSwap「Hands Rigged」Blender 2.7x・模様なし）。MakeHuman の素材（基本の網・肌の模様）は CC0（MakeHuman のリポジトリの LICENSE.md で確認）。WebXR の generic-hand（left.glb・right.glb、W3C Software and Document License）は骨入りだが簡素。使うならダウンロードの前にユーザーに確認する。
+
 ## 確認のしかた（変更のたびに）
 
 1. 開いて `window.__phErr` が undefined、コンソールにエラーがない。
-2. 6曲すべてで `__ph.checksAll()` を実行し、上の表より悪くなっていない（運指の並びも見る）。
+2. すべての曲で `__ph.checksAll()` を実行し、上の表より悪くなっていない（運指の並びと、教本の運指との一致 `match` も見る。121/145 より下がらない）。
 3. 再生して鍵が光り、音が鳴る。時刻のつまみ・矢印キーで1コマずつ動く。検査の表の行を押すとその時刻へ跳ぶ。
 4. 視点4つ（ななめ・真上・正面・横）で手が見える。真上から見て、親指くぐりで手が回る（音階 2.24 秒あたり）。
 5. 375px 幅で横にはみ出さない。
-6. 皮ふの手: `V.S.ms`（網を作った時間）が 2 秒以内。親指くぐり・指を深く曲げた所で、皮ふが破れたり、指どうしがくっついたりしない。「骨だけ」に切りかえると円柱の手。
+6. 皮ふの手: `SKIN_DATA.ms`（網を作った時間）が 2 秒以内。両手で、左手が鏡（親指が右）。サンプルの楽譜3つ（曲の選択の「サンプルの楽譜ファイル」）が開け、MusicXML の運指が「譜」の印つきで使われる。親指くぐり・指を深く曲げた所で、皮ふが破れたり、指どうしがくっついたりしない。「骨だけ」に切りかえると円柱の手。
 
 ## 状態
 
 - 2026-10-10 v000-poc: 技術検証の最初の版。6曲・検査の表。
 - 2026-10-10 保管庫に掲載（中身は v000-poc のまま）。
+- 2026-10-10 v003-hands: 左手（鏡）・両手の検査、楽譜の読みこみ（MIDI・MusicXML・.mxl）とサンプル3つ、運指の答え合わせ（またぐ罰点を変えて 121/145）、皮ふを GPU で（両手 1.6ms）、関節の内側のふくらみ、指先のはら・指紋・手のひらのしわ、ノーツの見た目（光る丸い板・打鍵の光の粒）、88 鍵。
 - 2026-10-10 v002-skin: リアルな手（陰関数の網・スキニング・爪・腱と静脈・肌のシェーダー・部屋の映りこみ）。「骨だけ」の切りかえ。
 - 2026-10-10 v001-yaw: 手首の回転（位置と交互に最適化）。検査に「手首の回転の速さ」。真上の視点を手の側へ。

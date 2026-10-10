@@ -8,6 +8,9 @@ const SPAN = {
   34: [1, 1, 1, 2, 2, 4], 35: [1, 1, 3, 4, 5, 7], 45: [1, 1, 1, 2, 3, 5],
 };
 
+// 親指の上を（下を）またぐ指ごとの罰点（この検証で決めた値。教本の運指とくらべて調整）
+const CROSS = [0, 0, 9, 5, 6, 20];
+
 // 1つの音と指の罰点
 function noteCost(m, f) {
   let c = 0;
@@ -26,15 +29,20 @@ function pairCost(m1, f1, m2, f2, gap) {
     if (a > b) { [a, b] = [b, a]; iv = -iv; }
     const [mnP, mnC, mnR, mxR, mxC, mxP] = SPAN[a * 10 + b];
     const th = a === 1;
-    if (iv > mxC) c += 2 * (iv - mxC);                 // 開きすぎ（楽な範囲の外）
-    if (iv < mnC) c += 2 * (mnC - iv);
-    if (iv < mnR) c += (th ? 2 : 1) * (mnR - iv);       // 狭すぎ（親指の組は2倍）
-    if (iv > mxR) c += (th ? 1 : 2) * (iv - mxR);       // 広すぎ（親指以外の組は2倍）
-    if (iv > mxP || iv < mnP) c += 3 * Math.max(iv - mxP, mnP - iv); // できる範囲の外（この検証で足した規則）
+    const pass = (f1 !== 1 && f2 === 1 && m2 > m1) || (f1 === 1 && f2 !== 1 && m2 < m1);
+    if (pass) {
+      // 親指くぐり・指またぎ（この検証で変えた規則）: Parncutt の「狭すぎ」をそのまま当てると、2 でまたぐほうが 3・4 より
+      // 安くなり、1-2-1-2 と細かくまたぐ運指になる（教本と合わない）。またぐ指ごとの罰点と、全音より遠い分の罰点にする
+      c += CROSS[b] + 1.5 * Math.max(0, -iv - 2);
+    } else {
+      if (iv > mxC) c += 2 * (iv - mxC);                 // 開きすぎ（楽な範囲の外）
+      if (iv < mnC) c += 2 * (mnC - iv);
+      if (iv < mnR) c += (th ? 2 : 1) * (mnR - iv);       // 狭すぎ（親指の組は2倍）
+      if (iv > mxR) c += (th ? 1 : 2) * (iv - mxR);       // 広すぎ（親指以外の組は2倍）
+      if (iv > mxP || iv < mnP) c += 3 * Math.max(iv - mxP, mnP - iv); // できる範囲の外（この検証で足した規則）
+    }
     if ((f1 === 3 && f2 === 4) || (f1 === 4 && f2 === 3)) c += 1; // 3と4の続き
     if (f1 === 3 && f2 === 4 && !isBlack(m1) && isBlack(m2)) c += 1;
-    // 親指くぐり・指またぎ
-    const pass = (f1 !== 1 && f2 === 1 && m2 > m1) || (f1 === 1 && f2 !== 1 && m2 < m1);
     if (pass) {
       const thumbM = f2 === 1 ? m2 : m1, otherM = f2 === 1 ? m1 : m2;
       if (isBlack(thumbM) === isBlack(otherM)) c += 1;
@@ -70,20 +78,30 @@ function tripleCost(m1, f1, m2, f2, m3, f3, gap) {
 
 // notes: [{m,t0,t1}] → 各音に f（1〜5）を入れ、合計の罰点を返す。
 // 3音の規則があるので、状態を「前の指・いまの指」の組にした動的計画法
-function planFingering(notes) {
+// side: 右手 1・左手 -1。左手は鍵盤をレ（D4=62）を中心に左右反転して右手の表で計算する（黒鍵の並びが保たれる）。
+// 楽譜に運指が書いてある音（n.given）は、その指に固定する
+function planFingering(notes, side) {
+  if (side < 0) {
+    const mir = notes.map(n => ({ m: 124 - n.m, t0: n.t0, t1: n.t1, given: n.given }));
+    const c = planFingering(mir, 1);
+    mir.forEach((n, i) => { notes[i].f = n.f; });
+    return c;
+  }
   const N = notes.length;
   if (!N) return 0;
-  if (N === 1) { notes[0].f = 1; return noteCost(notes[0].m, 1); }
+  const ok = (i, f) => !notes[i].given || notes[i].given === f;
+  if (N === 1) { notes[0].f = notes[0].given || 1; return noteCost(notes[0].m, notes[0].f); }
   const idx = (p, q) => p * 6 + q;
   const cost = [], from = [];
   for (let i = 0; i < N; i++) { cost.push(new Array(36).fill(Infinity)); from.push(new Array(36).fill(0)); }
   const g01 = notes[1].t0 - notes[0].t1;
-  for (let p = 1; p <= 5; p++) for (let q = 1; q <= 5; q++)
+  for (let p = 1; p <= 5; p++) for (let q = 1; q <= 5; q++) if (ok(0, p) && ok(1, q))
     cost[1][idx(p, q)] = noteCost(notes[0].m, p) + noteCost(notes[1].m, q) + pairCost(notes[0].m, p, notes[1].m, q, g01);
   for (let i = 2; i < N; i++) {
     const a = notes[i - 2], b = notes[i - 1], n = notes[i];
     const gap = n.t0 - b.t1, gap3 = Math.max(gap, b.t0 - a.t1);
     for (let p = 1; p <= 5; p++) for (let q = 1; q <= 5; q++) {
+      if (!ok(i, q)) continue;
       const base = pairCost(b.m, p, n.m, q, gap) + noteCost(n.m, q);
       for (let o = 1; o <= 5; o++) {
         const prev = cost[i - 1][idx(o, p)];

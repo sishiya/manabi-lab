@@ -71,12 +71,15 @@ const TIP_N = [null];
 for (let f = 1; f <= 5; f++) { const F = FINGERS[f]; TIP_N.push(fingerFK(F, F.yaw0, F.n[0], F.n[1])[3]); }
 const WRIST_Y = PAD - 7 - (TIP_N[2][1] + TIP_N[3][1] + TIP_N[4][1]) / 3; // 力を抜いた指先が、白鍵を7mm 押しこんだ高さ（押す・浮かすの両方に余裕）
 
-// 手首の姿勢 W = [x, y, z, ψ]。ψ は手首から先を水平に回す角度（真上から見て反時計回りが +、指先が親指の側へ向く）。
-// 手首の横の曲がりの範囲（目安）: 親指の側へ 20 度、小指の側へ 30 度
+// 手首の姿勢 W = [x, y, z, ψ, side]。ψ は手首から先を水平に回す角度（真上から見て反時計回りが +）。
+// side は右手 1・左手 -1。左手は右手の手の座標を x で鏡に映してから回す（骨・IK・運指の表は右手のものをそのまま使う）。
+// 手首の横の曲がりの範囲（目安）: 親指の側へ 20 度、小指の側へ 30 度（右手で ψ>0 が親指の側、左手は逆）
 const YAW_MIN = -30 * D2R, YAW_MAX = 20 * D2R;
+const yawRange = side => side > 0 ? [YAW_MIN, YAW_MAX] : [-YAW_MAX, -YAW_MIN];
 function rotY(a, p) { const c = Math.cos(a), s = Math.sin(a); return [p[0] * c + p[2] * s, p[1], -p[0] * s + p[2] * c]; }
-function toWorld(W, p) { const q = rotY(W[3] || 0, p); return [W[0] + q[0], W[1] + q[1], W[2] + q[2]]; }
-function toLocal(W, p) { return rotY(-(W[3] || 0), [p[0] - W[0], p[1] - W[1], p[2] - W[2]]); }
+function toWorld(W, p) { const q = rotY(W[3] || 0, [p[0] * (W[4] || 1), p[1], p[2]]); return [W[0] + q[0], W[1] + q[1], W[2] + q[2]]; }
+function toLocal(W, p) { const q = rotY(-(W[3] || 0), [p[0] - W[0], p[1] - W[1], p[2] - W[2]]); q[0] *= W[4] || 1; return q; }
+const HAND_NAME = side => side > 0 ? '右手' : '左手';
 
 const smooth = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
 const lerp3 = (a, b, s) => [a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s, a[2] + (b[2] - a[2]) * s];
@@ -89,10 +92,22 @@ function pressDepth(n, t) {
   return KB.DEPTH * (1 - smooth((t - n.t1) / 0.03));
 }
 
-// 曲の運指から、手を動かす計画を作る
+// 曲全体: 右手・左手の計画と、すべての音
 function buildPlan(song) {
-  const notes = parseSong(song);
-  const cost = planFingering(notes);
+  const notes = song.notes ? song.notes.map(n => Object.assign({}, n)) : parseSong(song);
+  notes.sort((a, b) => a.t0 - b.t0 || a.m - b.m);
+  const hands = [];
+  for (const side of [1, -1]) {
+    const hn = notes.filter(n => (n.hand || 'R') === (side > 0 ? 'R' : 'L'));
+    if (hn.length) hands.push(buildHandPlan(hn, side));
+  }
+  const end = Math.max(0, ...notes.map(n => n.t1));
+  return { song, notes, hands, end, cost: hands.reduce((s, h) => s + h.cost, 0) };
+}
+
+// 片手の運指から、手を動かす計画を作る
+function buildHandPlan(notes, side) {
+  const cost = planFingering(notes, side);
   // 同じ指・同じ鍵で続けて押すときは、前の音を早めに離す（指を上げる時間）
   for (let i = 0; i < notes.length; i++) {
     const n = notes[i];
@@ -109,7 +124,7 @@ function buildPlan(song) {
   const byF = [null, [], [], [], [], []];
   for (const n of notes) byF[n.f].push(n);
   const end = notes.length ? notes[notes.length - 1].t1 : 0;
-  const plan = { song, notes, byF, cost, end };
+  const plan = { side, notes, byF, cost, end };
   solveWrist(plan);
   return plan;
 }
@@ -130,9 +145,9 @@ function reachErr(W, n) {
   return Math.hypot(tip[0] - T[0], tip[1] - T[1], tip[2] - T[2]);
 }
 // 向き ψ のとき、指 f が力を抜いた形のまま押す場所に届く手首の位置（x, z）
-function anchorAt(n, psi) { const q = rotY(psi, TIP_N[n.f]); return [n.P[0] - q[0], n.P[2] - q[2]]; }
+function anchorAt(n, psi, side) { const q = toWorld([0, 0, 0, psi, side], TIP_N[n.f]); return [n.P[0] - q[0], n.P[2] - q[2]]; }
 function solveWrist(plan) {
-  const ns = plan.notes;
+  const ns = plan.notes, sd = plan.side, [ymin, ymax] = yawRange(sd);
   const ta = (ns.length ? ns[0].t0 : 0) - 1, tb = plan.end + 1;
   const N = Math.max(4, Math.ceil((tb - ta) * W_HZ) + 1);
   const ent = [], near = [];
@@ -158,9 +173,9 @@ function solveWrist(plan) {
     // 位置（いまの向きでの目安へ）
     for (let i = 0; i < N; i++) {
       const psi = plan.wy[i], k0 = 1e-3; // 何も押していないときは近い音の位置へゆるく
-      const a0 = anchorAt(near[i], psi);
+      const a0 = anchorAt(near[i], psi, sd);
       w[i] = k0; bx[i] = k0 * a0[0]; bz[i] = k0 * a0[1];
-      for (const e of ent[i]) { const k = e.k * e.mul, a = anchorAt(e.n, psi); w[i] += k; bx[i] += k * a[0]; bz[i] += k * a[1]; }
+      for (const e of ent[i]) { const k = e.k * e.mul, a = anchorAt(e.n, psi, sd); w[i] += k; bx[i] += k * a[0]; bz[i] += k * a[1]; }
     }
     plan.wx = cgSmooth(w, bx, lam); plan.wz = cgSmooth(w, bz, lam);
     if (it === W_ITER - 1) break;
@@ -171,27 +186,27 @@ function solveWrist(plan) {
       if (!act.some(e => downAt(e, t))) { yw[i] = 0.05; yb[i] = 0; continue; }
       const poseFor = psi => {
         let sx = 0, sz = 0, sw = 0;
-        for (const e of act) { const k = e.k * e.mul, a = anchorAt(e.n, psi); sx += k * a[0]; sz += k * a[1]; sw += k; }
-        return [sx / sw, WRIST_Y, sz / sw, psi];
+        for (const e of act) { const k = e.k * e.mul, a = anchorAt(e.n, psi, sd); sx += k * a[0]; sz += k * a[1]; sw += k; }
+        return [sx / sw, WRIST_Y, sz / sw, psi, sd];
       };
       const cost = psi => {
-        const W = psi === 0 && it === 0 ? [plan.wx[i], WRIST_Y, plan.wz[i], 0] : poseFor(psi);
+        const W = psi === 0 && it === 0 ? [plan.wx[i], WRIST_Y, plan.wz[i], 0, sd] : poseFor(psi);
         let c = YAW_REG * (psi / D2R) ** 2;
         for (const e of act) c += e.k * e.mul * reachErr(W, e.n) ** 2;
         return c;
       };
-      if (act.every(e => reachErr([plan.wx[i], WRIST_Y, plan.wz[i], plan.wy[i]], e.n) < 0.5)) { yw[i] = 0.3; yb[i] = 0.3 * plan.wy[i]; continue; }
+      if (act.every(e => reachErr([plan.wx[i], WRIST_Y, plan.wz[i], plan.wy[i], sd], e.n) < 0.5)) { yw[i] = 0.3; yb[i] = 0.3 * plan.wy[i]; continue; }
       let best = 0, bc = cost(0);
-      for (let d = -30; d <= 20; d += 5) { const c = cost(d * D2R); if (c < bc) { bc = c; best = d * D2R; } }
+      for (let d = -30; d <= 20; d += 5) { const c = cost(d * sd * D2R); if (c < bc) { bc = c; best = d * sd * D2R; } }
       const b0 = best;
-      for (let d = -4; d <= 4; d++) { const p = b0 + d * D2R; if (p < YAW_MIN || p > YAW_MAX) continue; const c = cost(p); if (c < bc) { bc = c; best = p; } }
+      for (let d = -4; d <= 4; d++) { const p = b0 + d * D2R; if (p < ymin || p > ymax) continue; const c = cost(p); if (c < bc) { bc = c; best = p; } }
       yw[i] = 1; yb[i] = best;
     }
     const ys = cgSmooth(yw, yb, lamY);
-    for (let i = 0; i < N; i++) plan.wy[i] = Math.min(YAW_MAX, Math.max(YAW_MIN, ys[i]));
+    for (let i = 0; i < N; i++) plan.wy[i] = Math.min(ymax, Math.max(ymin, ys[i]));
     // 届かないコマは重みを増やす
     for (let i = 0; i < N; i++) {
-      const t = ta + i / W_HZ, W = [plan.wx[i], WRIST_Y, plan.wz[i], plan.wy[i]];
+      const t = ta + i / W_HZ, W = [plan.wx[i], WRIST_Y, plan.wz[i], plan.wy[i], sd];
       for (const e of ent[i]) {
         if (!downAt(e, t)) continue;
         const err = reachErr(W, e.n);
@@ -231,7 +246,7 @@ function wristAt(plan, t) {
   const u = Math.min(plan.wx.length - 1.001, Math.max(0, (t - plan.wt0) * W_HZ));
   const i = Math.floor(u), s = u - i;
   const at = a => a[i] + (a[i + 1] - a[i]) * s;
-  return [at(plan.wx), WRIST_Y, at(plan.wz), at(plan.wy)];
+  return [at(plan.wx), WRIST_Y, at(plan.wz), at(plan.wy), plan.side];
 }
 
 // 鍵を押す指先の位置（世界の座標）
@@ -330,6 +345,7 @@ function poseAt(plan, t) {
 function depressAt(plan, t) {
   const d = {};
   for (const n of plan.notes) {
+    if (n.hand === 'X') continue; // 手で弾かない音（和音をへらした分）は鍵を沈めない
     const v = pressDepth(n, t);
     if (v > 0) d[n.m] = Math.max(d[n.m] || 0, v);
   }

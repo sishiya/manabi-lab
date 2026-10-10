@@ -13,8 +13,9 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)   # _dev/tools の2つ上
 Set-Location $root
 
-$textExt = '.html','.htm','.js','.mjs','.css','.md','.txt','.json','.ps1','.pl','.sh','.bat','.cmd','.yml','.yaml','.xml','.svg','.csv','.ini','.cfg','.toml',''
+$textExt = '.html','.htm','.js','.mjs','.css','.md','.txt','.json','.ps1','.pl','.sh','.bat','.cmd','.yml','.yaml','.xml','.musicxml','.svg','.csv','.ini','.cfg','.toml',''
 $imageExt = '.jpg','.jpeg','.png','.gif','.webp'
+$midiExt = '.mid','.midi'   # 楽譜の MIDI: 中に入っている文字（曲名・トラック名・歌詞など）を取り出して、テキストと同じように調べる
 $badNames ='^\.env', '\.pem$', '\.key$', '\.pfx$', '\.p12$', '^id_(rsa|ed25519|ecdsa)', '^credentials', '\.kdbx$'
 $skipDirs = '\\\.git\\', '\\node_modules\\', '\\_dev\\promo\\out\\'   # 最後は紹介動画（Git に入れない）
 
@@ -71,8 +72,11 @@ foreach ($f in $files) {
     if ($ascii -match 'Exif\x00|GPSInfo|<x:xmpmeta|tEXt|iTXt|zTXt|eXIf') { [void]$hits.Add("$rel : 画像に撮影情報・メタデータがある（消してから公開）") }
     continue
   }
-  if ($textExt -notcontains $ext) { [void]$hits.Add("$rel : テキスト以外のファイル（画像なら撮影情報・写り込みを目で確認）"); continue }
-  $lines = [IO.File]::ReadAllLines($f, [Text.Encoding]::UTF8)
+  if ($midiExt -contains $ext) {
+    $txt = [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($f))
+    $lines = @([regex]::Matches($txt, '[\x20-\x7e　-鿿＀-￯]{3,}') | ForEach-Object { $_.Value })
+  } elseif ($textExt -notcontains $ext) { [void]$hits.Add("$rel : テキスト以外のファイル（画像なら撮影情報・写り込みを目で確認）"); continue }
+  else { $lines = [IO.File]::ReadAllLines($f, [Text.Encoding]::UTF8) }
   for ($i = 0; $i -lt $lines.Length; $i++) {
     $line = $lines[$i]
     foreach ($ru in $rules) {

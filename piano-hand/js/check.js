@@ -9,6 +9,7 @@ const CHECKS = [
   { id: 'sink', name: '押さない鍵へのめりこみ', unit: 'mm', ok: 1, warn: 4, tip: '押していない指先が、鍵の上面より下に入った深さの最大' },
   { id: 'wrist', name: '手首の速さ', unit: 'mm/秒', ok: 500, warn: 900, tip: '手首が動くいちばん速い速さ' },
   { id: 'yawv', name: '手首の回転の速さ', unit: '度/秒', ok: 150, warn: 300, tip: '手首から先を水平に回す速さのいちばん速いところ' },
+  { id: 'hands', name: '左右の手のぶつかり', unit: 'mm', ok: 2, warn: 6, tip: '右手と左手の指の骨どうし（と手首どうし）が重なった深さの最大' },
   { id: 'tipv', name: '指先の速さ', unit: 'mm/秒', ok: 1500, warn: 2500, tip: '指先が動くいちばん速い速さ（手首の動きもふくむ）' },
 ];
 
@@ -43,43 +44,64 @@ function clashOf(pose) {
   return { pen: worst, who };
 }
 
-function runChecks(plan) {
-  const t0 = (plan.notes[0] ? plan.notes[0].t0 : 0) - 0.3, t1 = plan.end + 0.3;
+// 左右の手のぶつかり（指の骨どうし・手首どうし）
+function handsClash(pa, pb) {
+  let worst = Math.max(0, 70 - Math.hypot(pa.W[0] - pb.W[0], pa.W[2] - pb.W[2])); // 手首（手のひらの幅）どうし
+  for (let f = 1; f <= 5; f++) for (let g = 1; g <= 5; g++) {
+    const A = pa.fingers[f], B = pb.fingers[g];
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+      const pen = FINGERS[f].r[i] + FINGERS[g].r[j] - segDist(A.pts[i], A.pts[i + 1], B.pts[j], B.pts[j + 1]);
+      if (pen > worst) worst = pen;
+    }
+  }
+  return worst;
+}
+
+// 曲全体（両手）の検査。who には「右手の中指」のように手の名前も入れる
+function runChecks(score) {
+  const t0 = (score.notes[0] ? score.notes[0].t0 : 0) - 0.3, t1 = score.end + 0.3;
   const dt = 1 / CHECK_HZ;
   const R = {};
   for (const c of CHECKS) R[c.id] = { v: 0, at: null, who: '' };
   let limT = 0, pressT = 0, prev = null;
   for (let t = t0; t <= t1; t += dt) {
-    const pose = poseAt(plan, t);
-    const dep = depressAt(plan, t);
+    const dep = depressAt(score, t);
     const depress = m => dep[m] || 0;
-    for (let f = 1; f <= 5; f++) {
-      const fp = pose.fingers[f];
-      if (fp.down) { // 鍵を押し下げている間（離して戻る間は、指が先に離れてよい）
-        pressT += dt;
-        if (fp.lim) { limT += dt; if (R.limit.at === null) { R.limit.at = t; R.limit.who = FINGERS[f].name; } }
-        if (fp.err > R.reach.v) R.reach = { v: fp.err, at: t, who: FINGERS[f].name };
-      } else if (!fp.press) {
-        const tip = fp.pts[3];
-        const s = surfaceAt(tip[0], tip[2], depress);
-        const sink = s - (tip[1] - PAD);
-        if (sink > R.sink.v) R.sink = { v: sink, at: t, who: FINGERS[f].name };
+    const poses = score.hands.map(h => poseAt(h, t));
+    poses.forEach((pose, hi) => {
+      const hn = HAND_NAME(score.hands[hi].side) + 'の';
+      for (let f = 1; f <= 5; f++) {
+        const fp = pose.fingers[f], nm = hn + FINGERS[f].name;
+        if (fp.down) { // 鍵を押し下げている間（離して戻る間は、指が先に離れてよい）
+          pressT += dt;
+          if (fp.lim) { limT += dt; if (R.limit.at === null) { R.limit.at = t; R.limit.who = nm; } }
+          if (fp.err > R.reach.v) R.reach = { v: fp.err, at: t, who: nm };
+        } else if (!fp.press) {
+          const tip = fp.pts[3];
+          const sink = surfaceAt(tip[0], tip[2], depress) - (tip[1] - PAD);
+          if (sink > R.sink.v) R.sink = { v: sink, at: t, who: nm };
+        }
+        if (prev) {
+          const a = prev[hi].fingers[f].pts[3], b = fp.pts[3];
+          const v = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / dt;
+          if (v > R.tipv.v) R.tipv = { v, at: t, who: nm };
+        }
       }
+      const cl = clashOf(pose);
+      if (cl.pen > R.clash.v) R.clash = { v: cl.pen, at: t, who: hn + cl.who };
       if (prev) {
-        const a = prev.fingers[f].pts[3], b = fp.pts[3];
-        const v = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / dt;
-        if (v > R.tipv.v) R.tipv = { v, at: t, who: FINGERS[f].name };
+        const pw = prev[hi].W;
+        const v = Math.hypot(pose.W[0] - pw[0], pose.W[2] - pw[2]) / dt;
+        if (v > R.wrist.v) R.wrist = { v, at: t, who: HAND_NAME(score.hands[hi].side) };
+        const yv = Math.abs(pose.W[3] - pw[3]) / D2R / dt;
+        if (yv > R.yawv.v) R.yawv = { v: yv, at: t, who: HAND_NAME(score.hands[hi].side) };
       }
+    });
+    if (poses.length === 2) {
+      const hc = handsClash(poses[0], poses[1]);
+      if (hc > R.hands.v) R.hands = { v: hc, at: t, who: '' };
     }
-    const cl = clashOf(pose);
-    if (cl.pen > R.clash.v) R.clash = { v: cl.pen, at: t, who: cl.who };
-    if (prev) {
-      const v = Math.hypot(pose.W[0] - prev.W[0], pose.W[2] - prev.W[2]) / dt;
-      if (v > R.wrist.v) R.wrist = { v, at: t, who: '' };
-      const yv = Math.abs(pose.W[3] - prev.W[3]) / D2R / dt;
-      if (yv > R.yawv.v) R.yawv = { v: yv, at: t, who: '' };
-    }
-    prev = pose;
+    prev = poses;
   }
   R.limit.v = pressT > 0 ? 100 * limT / pressT : 0;
   for (const c of CHECKS) {
@@ -87,4 +109,22 @@ function runChecks(plan) {
     r.grade = r.v <= c.ok ? 'ok' : r.v <= c.warn ? 'warn' : 'ng';
   }
   return R;
+}
+
+// 決まった運指と、教本の運指（曲の refR・refL）がどれだけ同じか
+function fingeringMatch(score) {
+  const out = [];
+  for (const h of score.hands) {
+    const ref = h.side > 0 ? score.song.refR : score.song.refL;
+    if (!ref) continue;
+    const got = h.notes.map(n => n.f).join('');
+    let same = 0;
+    const diff = [];
+    for (let i = 0; i < Math.min(ref.length, got.length); i++) {
+      if (ref[i] === got[i]) same++;
+      else diff.push(i);
+    }
+    out.push({ side: h.side, same, total: ref.length, ref, got, diff });
+  }
+  return out;
 }

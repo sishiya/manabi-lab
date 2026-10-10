@@ -74,7 +74,7 @@ Artifact の公開・再公開、git の commit／push の**前に毎回**行う
    ```
    powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/check-public.ps1 -Path <app>
    ```
-   画像（jpg・png など）は撮影情報（Exif・GPS）や埋め込みの文字がないかを調べる（あれば止まる）。
+   画像（jpg・png など）は撮影情報（Exif・GPS）や埋め込みの文字がないかを調べる（あれば止まる）。楽譜の MIDI（.mid）は中に入っている文字（曲名・トラック名など）を取り出して、MusicXML（.musicxml）はテキストとして調べる。
    メールアドレス、PCのユーザーフォルダのパス、APIキー・トークン・秘密鍵、パスワードの書き込み、電話番号、住所、`.env` などのファイル、`.private-words.txt` に書いた自分の語（名前・メールなど）を探す。「問題なし」でなければ公開しない。
 2. **目で確かめる**（スクリプトでは分からないこと）:
    - 実在の個人の名前・写真・声、身近な人や場所が分かる情報が入っていないか

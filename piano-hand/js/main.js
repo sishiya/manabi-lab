@@ -1,7 +1,7 @@
 // 画面の操作と、毎フレームの更新。デバッグ用の窓口は window.__ph（例外は window.__phErr）
 'use strict';
 const $ = id => document.getElementById(id);
-const S = { plan: null, checks: null, t: -1, playing: false, speed: 1, lastNow: 0, prevT: -1 };
+const S = { plan: null, checks: null, t: -1, playing: false, speed: 1, lastNow: 0, prevT: -1, extra: [] };
 const OPT = { noteNums: true, fingerNums: false, targets: false, ghost: false, bones: false };
 
 // 音（とても簡単な合成。鍵を押した瞬間に鳴らす）
@@ -26,16 +26,56 @@ function tStart() { return -0.8; }
 function tEnd() { return S.plan.end + 0.8; }
 
 function loadSong(id) {
-  const song = SONGS.find(s => s.id === id) || SONGS[0];
+  const song = SONGS.find(s => s.id === id) || S.extra.find(s => s.id === id) || SONGS[0];
+  setSong(song);
+}
+function setSong(song) {
+  S.song = song;
+  if (!$('optGiven').checked && song.notes) song = Object.assign({}, song, { notes: song.notes.map(n => Object.assign({}, n, { given: 0 })) });
   S.plan = buildPlan(song);
   S.checks = runChecks(S.plan);
   setViewPlan(S.plan);
-  $('songWhy').textContent = '確かめたいこと: ' + song.why + '（' + S.plan.notes.length + '音・' + song.bpm + ' bpm）';
+  const hs = S.plan.hands.map(h => HAND_NAME(h.side) + ' ' + h.notes.length + '音').join('・');
+  $('songWhy').textContent = (song.why ? '確かめたいこと: ' + song.why + '（' : '（') + hs + (song.bpm ? '・' + song.bpm + ' bpm' : '') + '）' + (song.note ? ' ' + song.note : '');
   $('fgCost').textContent = S.plan.cost.toFixed(1);
-  $('fgList').innerHTML = S.plan.notes.map((n, i) =>
-    `<span data-i="${i}" style="border-color:#${FCOL[n.f].toString(16)}">${noteName(n.m)}<b>${n.f}</b></span>`).join('');
+  $('fgList').innerHTML = S.plan.hands.map(h => '<p class="fg-hand">' + HAND_NAME(h.side) + '</p>' + h.notes.map(n =>
+    `<span data-t="${n.t0}" style="border-color:#${FCOL[n.f].toString(16)}">${noteName(n.m)}<b>${n.f}</b>${n.given ? '<i>譜</i>' : ''}</span>`).join('')).join('');
+  const fm = fingeringMatch(S.plan);
+  $('fgRef').innerHTML = fm.length ? '教本の運指との一致: ' + fm.map(r => HAND_NAME(r.side) + ' <b>' + r.same + '/' + r.total + '</b>' +
+    (r.diff.length ? '（ちがう所: ' + r.diff.slice(0, 6).map(i => noteName(S.plan.hands.find(h => h.side === r.side).notes[i].m) + ' 教本' + r.ref[i] + '→' + r.got[i]).join('、') + (r.diff.length > 6 ? ' ほか' : '') + '）' : '')).join('／') : '';
   renderChecks();
   setTime(tStart());
+}
+
+// 楽譜ファイル
+const SAMPLES = [
+  { file: 'elise-opening.mid', name: 'エリーゼのために 冒頭（MIDI・両手のトラック）' },
+  { file: 'c-major-scale-fingered.musicxml', name: 'ハ長調の音階（MusicXML・両手・運指つき）' },
+  { file: 'ode-to-joy-with-chords.mid', name: '歓喜の歌＋左手の和音（MIDI・トラック1つ）' },
+];
+async function openFile(file) {
+  setPlaying(false);
+  try { addSong(await songFromFile(file)); }
+  catch (e) { alert('読めませんでした: ' + e.message); }
+}
+async function loadSample(fn) {
+  try {
+    const r = await fetch('samples/' + fn);
+    if (!r.ok) throw new Error(r.status);
+    const blob = await r.blob();
+    addSong(await songFromFile(new File([blob], fn)), 'sample:' + fn);
+  } catch (e) { alert('サンプルを読めませんでした（ファイルとして開いたときは、サーバー経由で開いてください）: ' + e.message); }
+}
+function addSong(song, value) {
+  if (!song.notes.some(n => n.hand === 'R' || n.hand === 'L')) throw new Error('弾ける音がありません');
+  if (!value) {
+    S.extra = S.extra.filter(s => s.id !== song.id); S.extra.push(song);
+    let og = $('song').querySelector('optgroup[data-files]');
+    if (!og) { og = document.createElement('optgroup'); og.label = '開いたファイル'; og.dataset.files = '1'; $('song').appendChild(og); }
+    if (![...og.children].some(o => o.value === song.id)) { const o = document.createElement('option'); o.value = song.id; o.textContent = song.name; og.appendChild(o); }
+    $('song').value = song.id;
+  }
+  setSong(song);
 }
 
 function fmt(c, r) {
@@ -77,29 +117,29 @@ function step() {
   const plan = S.plan, t = S.t;
   if (S.playing) for (const n of plan.notes) if (n.t0 > S.prevT && n.t0 <= t) playTone(n.m);
   S.prevT = t;
-  const pose = poseAt(plan, t);
+  const poses = plan.hands.map(h => poseAt(h, t));
   resizeView();
   CAM.follow = $('optFollow').checked;
-  updateCam(pose.W);
-  renderPose(plan, pose, OPT);
+  updateCam(poses);
+  renderPose(plan, poses, OPT);
   // 表示
   const span = tEnd() - tStart();
   if (document.activeElement !== $('time')) $('time').value = Math.round(1000 * (t - tStart()) / span);
   $('clock').textContent = t.toFixed(2) + ' 秒';
-  let cur = -1;
-  plan.notes.forEach((n, i) => { if (n.t0 <= t + 0.001) cur = i; });
-  document.querySelectorAll('#fgList span').forEach((el, i) => el.classList.toggle('now', i === cur));
-  const lims = [], far = [];
-  for (let f = 1; f <= 5; f++) {
-    const fp = pose.fingers[f];
-    if (fp.press && fp.lim) lims.push(FINGERS[f].name);
-    if (fp.press && fp.err > 2) far.push(FINGERS[f].name + ' ' + fp.err.toFixed(1) + 'mm');
-  }
-  const cl = clashOf(pose);
-  const msgs = [];
-  if (far.length) msgs.push('届かない: <b>' + far.join('、') + '</b>');
+  document.querySelectorAll('#fgList span').forEach(el => { const t0 = +el.dataset.t; el.classList.toggle('now', t0 <= t + 0.001 && t0 > t - 0.25); });
+  const lims = [], far = [], msgs = [];
+  poses.forEach((pose, hi) => {
+    const hn = HAND_NAME(plan.hands[hi].side) + 'の';
+    for (let f = 1; f <= 5; f++) {
+      const fp = pose.fingers[f];
+      if (fp.down && fp.lim) lims.push(hn + FINGERS[f].name);
+      if (fp.down && fp.err > 2) far.push(hn + FINGERS[f].name + ' ' + fp.err.toFixed(1) + 'mm');
+    }
+    const cl = clashOf(pose);
+    if (cl.pen > 2) msgs.push('めりこみ: <b>' + hn + cl.who + ' ' + cl.pen.toFixed(1) + 'mm</b>');
+  });
+  if (far.length) msgs.unshift('届かない: <b>' + far.join('、') + '</b>');
   if (lims.length) msgs.push('関節の限界: <b>' + lims.join('、') + '</b>');
-  if (cl.pen > 2) msgs.push('めりこみ: <b>' + cl.who + ' ' + cl.pen.toFixed(1) + 'mm</b>');
   $('hint').innerHTML = msgs.length ? 'この瞬間 — ' + msgs.join(' ／ ') : 'ドラッグで向きを変え、ホイールで寄れます。時刻のつまみで1コマずつ見られます。';
 }
 
@@ -111,8 +151,15 @@ function setPlaying(on) {
 }
 
 function initUI() {
-  $('song').innerHTML = SONGS.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-  $('song').addEventListener('change', e => { setPlaying(false); loadSong(e.target.value); });
+  $('song').innerHTML = '<optgroup label="検証用の曲">' + SONGS.map(s => `<option value="${s.id}">${s.name}</option>`).join('') + '</optgroup>' +
+    '<optgroup label="サンプルの楽譜ファイル（samples/）">' + SAMPLES.map(s => `<option value="sample:${s.file}">${s.name}</option>`).join('') + '</optgroup>';
+  $('song').addEventListener('change', e => { setPlaying(false); const v = e.target.value; if (v.startsWith('sample:')) loadSample(v.slice(7)); else loadSong(v); });
+  $('fileIn').addEventListener('change', e => { if (e.target.files[0]) openFile(e.target.files[0]); e.target.value = ''; });
+  $('optGiven').addEventListener('change', () => { if (S.song) setSong(S.song); });
+  const fr = $('frame');
+  fr.addEventListener('dragover', e => { e.preventDefault(); fr.classList.add('drop'); });
+  fr.addEventListener('dragleave', () => fr.classList.remove('drop'));
+  fr.addEventListener('drop', e => { e.preventDefault(); fr.classList.remove('drop'); if (e.dataTransfer.files[0]) openFile(e.dataTransfer.files[0]); });
   $('btnPlay').addEventListener('click', () => setPlaying(!S.playing));
   $('time').addEventListener('input', e => setTime(tStart() + (tEnd() - tStart()) * e.target.value / 1000));
   document.querySelectorAll('#segSpeed button').forEach(b => b.addEventListener('click', () => {
@@ -132,7 +179,7 @@ function initUI() {
   });
   $('fgList').addEventListener('click', e => {
     const sp = e.target.closest('span'); if (!sp) return;
-    setPlaying(false); setTime(S.plan.notes[+sp.dataset.i].t0 - 0.05);
+    setPlaying(false); setTime(+sp.dataset.t - 0.05);
   });
   document.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT' && e.target.type !== 'checkbox' && e.target.type !== 'range') return;
@@ -143,11 +190,11 @@ function initUI() {
 }
 
 window.__ph = {
-  S, OPT, poseAt: t => poseAt(S.plan, t), setTime, loadSong,
+  S, OPT, poseAt: (t, hi) => poseAt(S.plan.hands[hi || 0], t), setTime, loadSong, setSong,
   simRun(sec) { setTime(S.t + sec); step(); return S.t; },
   checksAll() { // すべての曲の検査の結果
     const out = {};
-    for (const s of SONGS) { const p = buildPlan(s), r = runChecks(p); out[s.id] = { cost: +p.cost.toFixed(1), fingers: p.notes.map(n => n.f).join(''), ...Object.fromEntries(CHECKS.map(c => [c.id, +r[c.id].v.toFixed(1) + (r[c.id].at !== null ? '@' + r[c.id].at.toFixed(2) : '')])) }; }
+    for (const s of SONGS) { const p = buildPlan(s), r = runChecks(p); out[s.id] = { cost: +p.cost.toFixed(1), fingers: p.hands.map(h => h.notes.map(n => n.f).join('')).join(' / '), match: fingeringMatch(p).map(m => m.same + '/' + m.total).join(' '), ...Object.fromEntries(CHECKS.map(c => [c.id, +r[c.id].v.toFixed(1) + (r[c.id].at !== null ? '@' + r[c.id].at.toFixed(2) : '')])) }; }
     return out;
   },
 };
