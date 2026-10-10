@@ -1,11 +1,11 @@
 # 免疫のたたかい 開発メモ
 
-最終更新: 2026-10-04
+最終更新: 2026-10-10
 
 病原体（インフルエンザ・新型コロナ・ノロの3つのウイルスと、黄色ブドウ球菌・肺炎球菌・大腸菌の3つの細菌）がからだに入ってから、増えて、免疫に片づけられるまでを、ミクロの断面（大きな画面）・人体の小窓・日ごとのグラフで見る。企画は `PLAN.md`。ほかのアプリとはエンジンが別（Canvas 2D、外部ライブラリなし）。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: 最新は v5b（`versions/v005b-credits`、使っているものの表記だけ追加。2026-10-04 に再公開済み）。**リリース 1.0**（`versions/release-1.0` ＝ v5 と同じ内容、2026-10-04）。v5（`versions/v005-memory-vaccine`）＝段階D（2回目の感染・ワクチンのしくみ）＋抗生物質のしくみの図＋仕上げ（段階E）。Artifact に公開済み（タイトル「免疫のたたかい」、URL は `../PUBLISH.local.md`、共有はまだ自分だけ）。更新は同じ URL へ再公開。
+- **いまの状態**: 最新は v5e（`versions/v005e-english`、英語対応。下の「英語対応」。Artifact へはまだ再公開していない）。その前の公開は v5b（`versions/v005b-credits`、使っているものの表記だけ追加。2026-10-04 に再公開済み）。**リリース 1.0**（`versions/release-1.0` ＝ v5 と同じ内容、2026-10-04）。v5（`versions/v005-memory-vaccine`）＝段階D（2回目の感染・ワクチンのしくみ）＋抗生物質のしくみの図＋仕上げ（段階E）。Artifact に公開済み（タイトル「免疫のたたかい」、URL は `../PUBLISH.local.md`、共有はまだ自分だけ）。更新は同じ URL へ再公開。
 - 2026-10-05 `versions/v005c-favicon`: ファビコン（タブのアイコン、SVG を埋め込み）を追加。GitHub Pages（まなびラボ）用。Artifact へはまだ再公開していない。
 - **次にやること**: ユーザーの感想しだい。案は `PLAN.md` の C2（異物・二次感染・尿の旅とつなぐ）。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。
@@ -13,7 +13,7 @@
 - **デバッグ用**: `window.__ib` — `set({pk, body, mem, dose, inn, adp, speed, resist})`（変えて最初から）、`run(日数)`（絵を描かずに進める）、`frame(n)`（1/30秒のコマを n 回。`UI.speed` と `UI.playing` に従う。Browser ペインでは rAF が遅いのでこれで進める）、`counts()`（画面の粒の数と細胞の状態）、`err`、`SIM`（状態 `y`・観測 `o`・履歴 `hist`・予測 `fc`・消えた道の合計 `tally`）、`MI`（ミクロの画面）。
 - **モデルの調整用**: `dev/tune.js`（公開しない）。コンソールで読み込んで `tuneRun('flu','adult',5,'none',true)`、`tuneTable('staph')`。モデルだけを開く `dev/model.html` でも使える（アプリが壊れていても調整できる）。
 - **区切りごとに**: ① `versions/v0NN-名前/` に index.html・css・js を丸ごとコピー ② `launcher.html` にカード・表 ③ 下の「状態」 ④ 「確認のしかた」を通す ⑤（公開済みなら）同じ URL へ再公開。
-- **公開のコマンド**（Artifact の publish）: `file_path` = `immune-battle/index.html`、`files` = `{"css/style.css":"immune-battle/css/style.css","js/model.js":"immune-battle/js/model.js","js/text.js":"immune-battle/js/text.js","js/sim.js":"immune-battle/js/sim.js","js/micro.js":"immune-battle/js/micro.js","js/draw.js":"immune-battle/js/draw.js","js/scales.js":"immune-battle/js/scales.js","js/zoom.js":"immune-battle/js/zoom.js","js/body.js":"immune-battle/js/body.js","js/chart.js":"immune-battle/js/chart.js","js/main.js":"immune-battle/js/main.js"}`。JS を足したら index.html の `<script>` とこの一覧の両方に足す。`dev/` は送らない。
+- **公開のコマンド**（Artifact の publish）: `file_path` = `immune-battle/index.html`、`files` = `{"css/style.css":"immune-battle/css/style.css","js/model.js":"immune-battle/js/model.js","js/text.js":"immune-battle/js/text.js","js/text-en.js":"immune-battle/js/text-en.js","js/sim.js":"immune-battle/js/sim.js","js/micro.js":"immune-battle/js/micro.js","js/draw.js":"immune-battle/js/draw.js","js/scales.js":"immune-battle/js/scales.js","js/zoom.js":"immune-battle/js/zoom.js","js/body.js":"immune-battle/js/body.js","js/chart.js":"immune-battle/js/chart.js","js/main.js":"immune-battle/js/main.js"}`。JS を足したら index.html の `<script>` とこの一覧の両方に足す。`dev/` は送らない。
 - **ユーザーの好み**: 正確さ・本物らしさ重視。説明は 確か／推定／演出 を分ける。子どもにも読める日本語。ミクロの大きさで見せつつ、小窓で人体の様子が分かるように（ユーザーの希望）。
 
 ## ファイル構成
@@ -23,6 +23,7 @@
 | `index.html` | 骨組み（doctype なし）。読み込み順: model → text → sim → micro → draw → scales → zoom → body → chart → main | `#micro` `#bodyWin` `#timebar` `#chart` `#panel` |
 | `css/style.css` | レイアウト（PC は右パネル360px・下にグラフ210px。縦長スマホは縦に積んでページをスクロール） | |
 | `js/model.js` | 数のモデル。くすり `DRUGS`（抗ウイルス薬は `eff` と `mode`: release＝離れられない／make＝作れない、抗生物質は `kill.s`・`kill.r`）・`drugLevel()`・`apyLevel()`・`lowerFever()`、からだの例 `BODIES`、獲得免疫の共通部分 `adaptive()` `memInit()`、ウイルスの型 `makeVirus(def)`（`VIRUS_K`）、細菌の型 `makeBact(def)`（`BACT_K`、`capsule`）、病原体 `PATHOGENS.flu / covid / noro / staph / pneumo / ecoli`（ecoli は尿に浮く菌と細胞についた菌の2つに分けた別の式）、`PATHOGEN_ORDER`、積分 `rk4()`、`forecast()`、`DT`（5分） | 病原体の表示用の項目: `scene`（場面）`look`（敵の姿）`bodySite`（小窓）`drugs`（ボタン）`resistName`（耐性菌の切りかえ） |
+| `js/text-en.js` | 英語の文（text.js の直後に読む。`LANG === 'en'` のときだけ、同じ鍵で上書き）。model.js の `BODIES` `DRUGS` `VACCINES` `PATHOGENS`（名前・場所・入り方・記憶の選択肢）と、text.js の `CELLS` `TEAMS`、できごと `EVENTS[pk]`・`MODE_EVENTS`（`id` で対応） | `EV_EN` `MODE_EN` |
 | `js/text.js` | 画面の物の説明 `CELLS`（後半に新しい病原体の分）、敵の姿→説明 `LOOK_KEY`（`team`: enemy・ally・self・drug）、チーム `TEAMS`、できごと `EVENTS[pk]`（`when(y,o,S)` で1回だけ） | |
 | `js/sim.js` | 進行中の経過 `SIM`。いまの状況 `simStatus()`（判定・6時間の増え方・1日に生まれる数と消える数・消え方の内訳）、`simReset()` `simAdvance(days)` `simForecast()` `simSetParams()` `simAddDose()`、くすり `simStartDrug()` `simStopDrug()` `simAntipyretic()` `simDrain()` `drugActive()`、消えた道の合計 `tally` `cellTally`、`fmtCount()`（万・億・兆）`fmtTime()` | `HIST_EVERY`（30分） |
 | `js/micro.js` | ミクロの画面の動き。場面 `MI.scene`＝airway（鼻・のど）／gut（小腸）／skin（皮膚）／alveolus（肺胞）／bladder（膀胱）。配置 `LF`（空気・粘液 GEL・水の層 PCL・上皮・基底膜・血管。腸も同じ行）`LS`（皮膚）`LA`（肺胞）`LB`（膀胱）、`EPI()` `CAPY()` `TISSUE_TOP()` `FLOWDIR()`（腸は右へ流れる）、粘液の流れ `FLOW`、粒 `spawn()`、モデルに合わせる `reconcile()`→`reconcileVirus()`（上皮の中で増えるウイルス）`reconcileBact()`（細菌。膀胱は浮いている菌と細胞についた菌の2組、傘細胞がはがれる `shedUmbrella()`、おしっこで流れる）、くすりの点 `syncDrugSpecks()`、排膿 `microDrain()`、動き `updateMicro()` `carried()`（粘液に運ばれる）`transcytosis()`（IgA）`moveDoomed()`、タップ `pickAt()` | `MI`、`vis()`（量→粒の数）、`wantCells()` |
@@ -133,6 +134,16 @@
    ```
    - 敵（赤〜オレンジ・赤い光）／味方（青〜水色）／からだ（肌色）／くすり（黄緑）の色が守られている。マウスを乗せると【敵】【味方】の札。
 7. スマホ幅（375×812）: 上がミクロ（小窓は小さく症状は省略）、下にグラフ、その下にパネル。横スクロールなし。
+8. 英語（`?lang=en`）: 6つの病原体 × からだ4つ × 記憶の選択肢で進め、くすり・カード・ズーム全段・2回目・ワクチンも通して、画面とキャンバスに日本語が残らない（`../I18N.md` 2.4 の式）。コンソールで `EVENTS`・`MODE_EVENTS`・`CELLS`・`DRUGS`・`PATHOGENS` の文に日本語が残っていないかも見る。日本語（`?lang=ja`）は前の版と同じ表示（v5e では、同じ操作の 479 場面のパネル・状況・小窓の `innerText` と `aria-label` を v5d と比べて一致）。
+
+## 英語対応（v5e、2026-10-10。`../I18N.md`）
+- 言語は開いたときに決まる（`?lang=` → `localStorage['manabi-lang']` → ブラウザ）。`index.html` の先頭の `var LANG=` の行と `L(ja, en)`。JP／EN ボタンはパネルの右上（`.htop`）。読み込み順: model → text → **text-en** → sim → …
+- **text.js・model.js の説明やできごとを足す・直すときは、`js/text-en.js` の同じ鍵も直す**（ないと英語の画面に日本語が出る。確かめ方は下の「確認のしかた」8）。症状（model.js の `sym.push`）・状況（sim.js）・パネル（main.js）・グラフ（chart.js）・吹き出し（micro.js）・断面図の文字（scales.js・draw.js）は、その場で `L('日本語', 'English')`。
+- 症状の文字で判定している所（嘔吐・下痢・脱水・肺へ／敗血症／菌血症・解熱剤／水分／副反応）は、正規表現に英語の言葉も足した（text.js・body.js・sim.js・main.js）。症状の英語を変えるときは、この正規表現も見る。
+- 数の書き方 `fmtCount()` は英語だと thousand・million・billion・trillion、時刻 `fmtTime()` は `Day 2 14h`。
+- 英語の吹き出しは長いので、`drawCallouts()` で英語のときだけ空白で折り返す（画面の 86% か 300px まで）。
+- `L` という名前の変数を変えた: chart.js `drawChart` の左の余白 `L` → `PL`、draw.js `drawLabels` のラベル表 `L` → `rows`、main.js `updateMeds` の効き目 `L` → `lv`。
+- 抗生物質の図の説明の一覧と「このアプリについて」は日本語と英語で2つ（`.abxList`、`#about`・`#aboutEn`）。CSS は `.abxList` と `#about,#aboutEn` で両方に効く。
 
 ## ハマったところ
 - 抗体の中和が速い（〜1000/日）と RK4 が発散して数が 10¹³ に飛んだ → `rk4()` で、いちばん速い減り方 × 刻み < 0.8 になるよう自動で細かく刻む。
@@ -152,3 +163,4 @@
 - v5（2026-10-04）段階D・E: 2回目の感染（1か月後・1年後・型が変わったもの）、ワクチンのしくみ（インフル・コロナ・肺炎球菌、副反応、2回目の接種）、グラフに比較の線、抗生物質のしくみの図、最初の2日の判定を「潜伏期」に、このアプリについて・出典・ふしぎに答えるを更新。Artifact に公開。
 - リリース 1.0（2026-10-04）: v5 を `versions/release-1.0` として残し、同じ URL へ再公開。
 - v5b（2026-10-04、`versions/v005b-credits`）: 「このアプリについて」の最後に「使っているもの」（フォント＝SIL OFL）を追加。同じ日に再公開。
+- v5e（2026-10-10、`versions/v005e-english`）: 英語対応（上の「英語対応」）。日本語の表示は v5d と同じ。（v5c はファビコン、v5d はアクセス解析の1行）
