@@ -1,4 +1,4 @@
-// 検証用の曲。どれも著作権の切れた曲。「音名/拍」を空白で区切る。r は休み。src は右手、srcL は左手。
+// 検証用の曲。どれも著作権の切れた曲。「音名/拍」を空白で区切る。r は休み。和音は「C4+E4+G4/1」。src は右手、srcL は左手。
 // refR・refL は教本でよく使われる運指（くらべる用。音の順に指番号。check.js の fingeringMatch）
 'use strict';
 
@@ -15,6 +15,12 @@ const ELISE_R = 'E5/.25 D#5/.25 E5/.25 D#5/.25 E5/.25 B4/.25 D5/.25 C5/.25 A4/.5
   'C4/.25 E4/.25 A4/.25 B4/.5 r/.25 E4/.25 C5/.25 B4/.25 A4/1';
 
 const SONGS = [
+  { id: 'chords', name: '和音（ハ長調の I・IV・V・I）', why: '和音の指の並び・和音から和音へ', bpm: 72,
+    src: 'C4+E4+G4/2 C4+F4+A4/2 B3+D4+G4/2 C4+E4+G4/2', srcL: 'C3+E3+G3/2 F2+A2+C3/2 G2+B2+D3/2 C3+E3+G3/2',
+    refR: '135' + '135' + '125' + '135', refL: '531' + '531' + '531' + '531' }, // 右手は基本形・第2転回形 1-3-5、第1転回形 1-2-5
+  { id: 'chords2', name: 'メロディと和音（歓喜の歌・左手の和音）', why: '片手はメロディ、片手は和音', bpm: 116,
+    src: 'E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 E4/1.5 D4/.5 D4/2',
+    srcL: 'C3+E3+G3/4 C3+E3+G3/4 G2+B2+D3/4 C3+E3+G3/2 G2+B2+D3/2' },
   { id: 'scale2', name: 'ハ長調の音階（両手・2オクターブ）', why: '左手の親指くぐり・両手', bpm: 84,
     src: SCALE_C(4), srcL: SCALE_C(3),
     refR: '123123412312345' + '43213214321321', refL: '543213214321321' + '23123412312345' },
@@ -51,9 +57,9 @@ function parseLine(src, bpm, hand) {
   const beat = 60 / bpm, out = [];
   let t = 0;
   for (const tok of src.trim().split(/\s+/)) {
-    const [nm, ds] = tok.split('/');
+    const [nms, ds] = tok.split('/');
     const d = (ds ? parseFloat(ds) : 1) * beat;
-    if (nm !== 'r') {
+    if (nms !== 'r') for (const nm of nms.split('+')) {
       const mt = /^([A-G])([#b]?)(-?\d)$/.exec(nm);
       if (!mt) throw new Error('音名が読めない: ' + tok);
       const m = 12 * (+mt[3] + 1) + NOTE_BASE[mt[1]] + (mt[2] === '#' ? 1 : mt[2] === 'b' ? -1 : 0);

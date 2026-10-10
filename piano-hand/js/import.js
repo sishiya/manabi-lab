@@ -162,27 +162,26 @@ async function unzipMxl(buf) {
   return read(root ? root[1] : Object.keys(files).find(n => /\.(xml|musicxml)$/.test(n) && !n.startsWith('META-INF')));
 }
 
-// 片手の和音を1音にへらす（右手は上、左手は下）。へらした音は hand:'X'（音と灰色のノーツだけ）
+// 片手で同時に押す音（和音）は5つまで。同じ鍵の重なりは1つに。多すぎる分は hand:'X'（音と灰色のノーツだけ）
+// （届かない和音の外し方は fingering.js の planChords）
 function finishSong(song) {
-  const ns = song.notes.filter(n => n.t1 > n.t0).sort((a, b) => a.t0 - b.t0 || a.m - b.m);
+  let ns = song.notes.filter(n => n.t1 > n.t0).sort((a, b) => a.t0 - b.t0 || a.m - b.m);
+  ns = ns.filter((n, i) => !ns.some((o, j) => j < i && o.m === n.m && o.hand === n.hand && Math.abs(o.t0 - n.t0) < 0.03));
   let reduced = 0;
   for (const h of ['R', 'L']) {
     const hn = ns.filter(n => n.hand === h);
     for (let i = 0; i < hn.length; i++) {
       const grp = [hn[i]];
       while (i + 1 < hn.length && hn[i + 1].t0 - hn[i].t0 < 0.03) grp.push(hn[++i]);
-      if (grp.length < 2) continue;
-      const keep = h === 'R' ? grp[grp.length - 1] : grp[0];
-      for (const n of grp) if (n !== keep) { n.hand = 'X'; reduced++; }
+      if (grp.length <= 5) continue;
+      const keep = h === 'R' ? grp.slice(-5) : grp.slice(0, 5);
+      for (const n of grp) if (!keep.includes(n)) { n.hand = 'X'; reduced++; }
     }
-    // 前の音をのばしたまま次を弾く（重なる）ときは、前の音を次の手前で切る（いまは1音ずつしか押せない）
-    const kept = ns.filter(n => n.hand === h);
-    for (let i = 0; i + 1 < kept.length; i++) if (kept[i].t1 > kept[i + 1].t0 - 0.02) kept[i].t1 = Math.max(kept[i].t0 + 0.04, kept[i + 1].t0 - 0.02);
   }
   const t0 = ns.length ? ns[0].t0 : 0;
   for (const n of ns) { n.t0 -= t0; n.t1 -= t0; }
   song.notes = ns;
-  if (reduced) song.note = (song.note || '') + '（和音の ' + reduced + ' 音は弾かずに灰色で表示）';
+  if (reduced) song.note = (song.note || '') + '（片手で6音以上の和音の ' + reduced + ' 音は弾かずに灰色で表示）';
   return song;
 }
 

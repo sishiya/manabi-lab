@@ -77,16 +77,117 @@ function tripleCost(m1, f1, m2, f2, m3, f3, gap) {
 }
 
 // notes: [{m,t0,t1}] → 各音に f（1〜5）を入れ、合計の罰点を返す。
-// 3音の規則があるので、状態を「前の指・いまの指」の組にした動的計画法
 // side: 右手 1・左手 -1。左手は鍵盤をレ（D4=62）を中心に左右反転して右手の表で計算する（黒鍵の並びが保たれる）。
-// 楽譜に運指が書いてある音（n.given）は、その指に固定する
+// 楽譜に運指が書いてある音（n.given）は、その指に固定する。
+// 同時に押す音（30ms 以内に始まる音）は和音として1つの「イベント」にまとめる。和音がなければ、これまでのメロディの計算（planMelody）。
+// 届かない和音は内側の音から外し、外した音に n.drop = true をつける（手で弾かない音になる）
 function planFingering(notes, side) {
-  if (side < 0) {
-    const mir = notes.map(n => ({ m: 124 - n.m, t0: n.t0, t1: n.t1, given: n.given }));
-    const c = planFingering(mir, 1);
-    mir.forEach((n, i) => { notes[i].f = n.f; });
-    return c;
+  const mir = notes.map(n => ({ m: side < 0 ? 124 - n.m : n.m, t0: n.t0, t1: n.t1, given: n.given, src: n }));
+  mir.sort((a, b) => a.t0 - b.t0 || a.m - b.m);
+  const ev = [];
+  for (const n of mir) {
+    const last = ev[ev.length - 1];
+    if (last && n.t0 - last.t0 < 0.03) last.ns.push(n); else ev.push({ t0: n.t0, ns: [n] });
   }
+  let cost;
+  if (ev.every(e => e.ns.length === 1)) cost = planMelody(mir);
+  else cost = planChords(ev);
+  for (const n of mir) { n.src.f = n.f; if (n.drop) n.src.drop = true; }
+  return cost;
+}
+
+// ---- 和音 ----
+// 和音の中の指の並び（低い音ほど小さい番号）。開きが「できる最大」を1半音より超える組は除く
+function chordAssigns(ms, given) {
+  const k = ms.length, out = [];
+  const rec = (start, acc) => {
+    if (acc.length === k) { out.push(acc.slice()); return; }
+    for (let f = start; f <= 5 - (k - acc.length - 1); f++) { acc.push(f); rec(f + 1, acc); acc.pop(); }
+  };
+  rec(1, []);
+  const fits = (m1, f1, m2, f2) => m2 - m1 <= SPAN[f1 * 10 + f2][5] + 1;
+  return out.filter(fs => fs.every((f, i) => !given[i] || given[i] === f) &&
+    fs.every((f, i) => i === 0 || fits(ms[i - 1], fs[i - 1], ms[i], f)) && (k < 2 || fits(ms[0], fs[0], ms[k - 1], fs[k - 1])));
+}
+// 和音そのものの罰点: 弱い指・黒鍵の親指など（noteCost）と、となりあう指の開き。
+// 開きは「指1本に白鍵1つずつ置いた形」（指の番号の差 × 白鍵の幅）からのずれ（白鍵1つ分で2点）。親指をふくむ組はよく開くので半分。
+// （メロディの表 SPAN をそのまま使うと C-E-G で 1-2-4 と 1-3-5 が同じ点になり、教本の 1-3-5 にならなかった。この検証で決めた規則）
+function chordCost(ms, fs) {
+  let c = 0;
+  for (let i = 0; i < ms.length; i++) {
+    c += noteCost(ms[i], fs[i]);
+    if (!i) continue;
+    const dx = Math.abs(keyX(ms[i]) - keyX(ms[i - 1])), nat = (fs[i] - fs[i - 1]) * KB.W;
+    c += 2 * Math.abs(dx - nat) / KB.W * (fs[i - 1] === 1 ? 0.5 : 1);
+  }
+  return c;
+}
+// イベント A（指 fa）→ B（指 fb）の罰点。どちらも単音なら pairCost と同じ。
+// 和音がからむときは「手の位置」（いちばん低い音の 鍵の位置 −（指の番号−1）× 白鍵の幅 = 親指のあたりの位置）の動き
+// （白鍵1つで1点）と、同じ指が別の鍵へ動く回数（1回 0.2 点）。休みがあれば 0.3 倍（この検証で決めた規則）
+function handPos(E, fs) { return keyX(E.ns[0].m) - (fs[0] - 1) * KB.W; } // いちばん低い音（右手なら親指の側）の指から決まる位置
+function eventTrans(A, fa, B, fb) {
+  const gap = B.t0 - Math.max(...A.ns.map(n => n.t1));
+  if (A.ns.length === 1 && B.ns.length === 1) return pairCost(A.ns[0].m, fa[0], B.ns[0].m, fb[0], gap);
+  let same = 0;
+  for (let i = 0; i < A.ns.length; i++) for (let j = 0; j < B.ns.length; j++) if (fa[i] === fb[j] && A.ns[i].m !== B.ns[j].m) same++;
+  const c = Math.abs(handPos(B, fb) - handPos(A, fa)) / KB.W + 0.2 * same; // 和音では同じ形のまま指が新しい鍵へ移るのはふつうなので軽く
+  return c * (gap > 0.35 ? 0.3 : 1);
+}
+function planChords(ev) {
+  // 指の並びの候補。届かない和音は内側の音から外す（2音でも届かなければ、メロディの側の1音だけ残す）
+  for (const e of ev) {
+    e.ns.sort((a, b) => a.m - b.m);
+    while (e.ns.length > 5) { const d = e.ns.splice(Math.floor(e.ns.length / 2), 1)[0]; d.drop = true; }
+    for (;;) {
+      e.A = chordAssigns(e.ns.map(n => n.m), e.ns.map(n => n.given || 0));
+      if (e.A.length || e.ns.length === 1) break;
+      const d = e.ns.length > 2 ? e.ns.splice(Math.floor(e.ns.length / 2), 1)[0] : e.ns.shift();
+      d.drop = true;
+    }
+    if (!e.A.length) e.A = [1, 2, 3, 4, 5].map(f => [f]); // 楽譜の運指が届かないとき
+    e.cc = e.A.map(fs => chordCost(e.ns.map(n => n.m), fs));
+  }
+  const E = ev.length;
+  if (E === 1) { let b = 0; ev[0].cc.forEach((c, i) => { if (c < ev[0].cc[b]) b = i; }); ev[0].A[b].forEach((f, i) => { ev[0].ns[i].f = f; }); return ev[0].cc[b]; }
+  // 状態 = (前のイベントの並び, いまのイベントの並び)。3つとも単音のときだけ 3音の規則
+  const cost = [], from = [];
+  const tr = [];
+  for (let e = 1; e < E; e++) tr[e] = ev[e - 1].A.map(fa => ev[e].A.map(fb => eventTrans(ev[e - 1], fa, ev[e], fb)));
+  cost[1] = ev[0].A.map((_, p) => ev[1].A.map((_, c) => ev[0].cc[p] + ev[1].cc[c] + tr[1][p][c]));
+  for (let e = 2; e < E; e++) {
+    const a = ev[e - 2], b = ev[e - 1], n = ev[e];
+    const single3 = a.ns.length === 1 && b.ns.length === 1 && n.ns.length === 1;
+    const gap3 = single3 ? Math.max(n.t0 - b.ns[0].t1, b.t0 - a.ns[0].t1) : 0;
+    cost[e] = []; from[e] = [];
+    for (let p = 0; p < b.A.length; p++) {
+      cost[e][p] = []; from[e][p] = [];
+      for (let c = 0; c < n.A.length; c++) {
+        let best = Infinity, bo = 0;
+        for (let o = 0; o < a.A.length; o++) {
+          let v = cost[e - 1][o][p];
+          if (v === Infinity) continue;
+          if (single3) v += tripleCost(a.ns[0].m, a.A[o][0], b.ns[0].m, b.A[p][0], n.ns[0].m, n.A[c][0], gap3);
+          if (v < best) { best = v; bo = o; }
+        }
+        cost[e][p][c] = best + n.cc[c] + tr[e][p][c];
+        from[e][p][c] = bo;
+      }
+    }
+  }
+  let bp = 0, bc = 0;
+  cost[E - 1].forEach((row, p) => row.forEach((v, c) => { if (v < cost[E - 1][bp][bc]) { bp = p; bc = c; } }));
+  const total = cost[E - 1][bp][bc];
+  for (let e = E - 1; e >= 1; e--) {
+    ev[e].A[bc].forEach((f, i) => { ev[e].ns[i].f = f; });
+    ev[e - 1].A[bp].forEach((f, i) => { ev[e - 1].ns[i].f = f; });
+    if (e >= 2) { const o = from[e][bp][bc]; bc = bp; bp = o; }
+  }
+  return total;
+}
+
+// ---- メロディ（単音だけ）: 3音の規則があるので、状態を「前の指・いまの指」の組にした動的計画法 ----
+function planMelody(notes) {
   const N = notes.length;
   if (!N) return 0;
   const ok = (i, f) => !notes[i].given || notes[i].given === f;

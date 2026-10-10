@@ -33,10 +33,11 @@ function setSong(song) {
   S.song = song;
   if (!$('optGiven').checked && song.notes) song = Object.assign({}, song, { notes: song.notes.map(n => Object.assign({}, n, { given: 0 })) });
   S.plan = buildPlan(song);
+  const nx = S.plan.notes.filter(n => n.hand === 'X').length;
   S.checks = runChecks(S.plan);
   setViewPlan(S.plan);
   const hs = S.plan.hands.map(h => HAND_NAME(h.side) + ' ' + h.notes.length + '音').join('・');
-  $('songWhy').textContent = (song.why ? '確かめたいこと: ' + song.why + '（' : '（') + hs + (song.bpm ? '・' + song.bpm + ' bpm' : '') + '）' + (song.note ? ' ' + song.note : '');
+  $('songWhy').textContent = (song.why ? '確かめたいこと: ' + song.why + '（' : '（') + hs + (song.bpm ? '・' + song.bpm + ' bpm' : '') + '）' + (song.note ? ' ' + song.note : '') + (nx ? '（手で弾かない音 ' + nx + '・灰色）' : '');
   $('fgCost').textContent = S.plan.cost.toFixed(1);
   $('fgList').innerHTML = S.plan.hands.map(h => '<p class="fg-hand">' + HAND_NAME(h.side) + '</p>' + h.notes.map(n =>
     `<span data-t="${n.t0}" style="border-color:#${FCOL[n.f].toString(16)}">${noteName(n.m)}<b>${n.f}</b>${n.given ? '<i>譜</i>' : ''}</span>`).join('')).join('');

@@ -108,9 +108,18 @@ function buildPlan(song) {
 // 片手の運指から、手を動かす計画を作る
 function buildHandPlan(notes, side) {
   const cost = planFingering(notes, side);
+  // 届かない和音から外した音は、手で弾かない音（hand 'X'）にする
+  for (const n of notes) if (n.drop) n.hand = 'X';
+  notes = notes.filter(n => !n.drop);
   // 同じ指・同じ鍵で続けて押すときは、前の音を早めに離す（指を上げる時間）
   for (let i = 0; i < notes.length; i++) {
     const n = notes[i];
+    // のばしている音は押さえたままにするが、手が届かないほど遠く（1オクターブ＋全音より遠く）へ次の音が来たら離す
+    for (let j = i + 1; j < notes.length; j++) {
+      const o = notes[j];
+      if (o.t0 >= n.t1) break;
+      if (o.t0 > n.t0 + 0.03 && Math.abs(o.m - n.m) > 14) { n.t1 = Math.min(n.t1, o.t0 - 0.02); break; }
+    }
     for (let j = i + 1; j < notes.length; j++) {
       const o = notes[j];
       if (o.f === n.f) { n.t1 = Math.min(n.t1, o.t0 - 0.09); break; }
@@ -121,9 +130,21 @@ function buildHandPlan(notes, side) {
     n.t1 = Math.max(n.t1, n.t0 + 0.03);
     n.P = pressPoint(n.m, n.f);
   }
+  // 次の音で手が大きく動くときは、間に合うように早めに離す（本物の演奏でも、跳ぶ前の音は少し短くなる）。
+  // 動く時間の目安 = 0.08 秒 + 手の位置の動き ÷ 600mm/秒（この検証で決めた値）
+  const anchorX = n => n.P[0] - TIP_N[n.f][0] * side;
+  for (const n of notes) {
+    const nxt = notes.filter(o => o.t0 > n.t0 + 0.03);
+    if (!nxt.length) continue;
+    const t2 = Math.min(...nxt.map(o => o.t0)), ev2 = nxt.filter(o => o.t0 - t2 < 0.03);
+    if (n.t1 < t2 - 0.3) continue;
+    const shift = Math.abs(ev2.reduce((s, o) => s + anchorX(o), 0) / ev2.length - anchorX(n));
+    const need = 0.08 + shift / 600;
+    if (shift > KB.W * 1.5 && n.t1 > t2 - need) n.t1 = Math.max(n.t0 + Math.min(0.12, (t2 - n.t0) * 0.5), t2 - need);
+  }
   const byF = [null, [], [], [], [], []];
   for (const n of notes) byF[n.f].push(n);
-  const end = notes.length ? notes[notes.length - 1].t1 : 0;
+  const end = Math.max(0, ...notes.map(n => n.t1));
   const plan = { side, notes, byF, cost, end };
   solveWrist(plan);
   return plan;
