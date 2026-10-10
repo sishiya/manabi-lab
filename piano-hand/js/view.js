@@ -74,7 +74,7 @@ function initLane(sc) {
 // 骨だけの手（円柱と球。検証用）。左手は鏡
 function makeBoneHand(sc, side) {
   const skin = new THREE.MeshStandardMaterial({ color: linCol(0xe9b796), roughness: 0.65, transparent: true, opacity: 1 });
-  const H = { skin, objs: [], seg: [], joint: [] };
+  const H = { side, skin, objs: [], seg: [], joint: [] };
   H.hand = new THREE.Group(); H.hand.scale.x = side; sc.add(H.hand);
   const sh = new THREE.Shape(); // 手のひら（手の座標の x と、前への距離）
   [[-30, -5], [-36, 28], [-31, 90], [-4, 100], [16, 95], [36, 82], [32, -5]].forEach((p, i) => i ? sh.lineTo(p[0], p[1]) : sh.moveTo(p[0], p[1]));
@@ -90,6 +90,16 @@ function makeBoneHand(sc, side) {
     for (let j = 0; j < 4; j++) { const m = new THREE.Mesh(V.sph, skin); m.castShadow = true; sc.add(m); H.joint[f].push(m); H.objs.push(m); }
   }
   return H;
+}
+// 手のモデルを変えたら、皮ふの網を作り直す
+function rebuildSkins() {
+  SKIN_DATA = null;
+  for (const VH of V.hands) {
+    const old = VH.skin;
+    V.scene.remove(old.mesh); old.mesh.geometry.dispose(); old.mat.dispose();
+    for (const n of old.nails) { V.scene.remove(n.mesh); n.mesh.geometry.dispose(); }
+    VH.skin = makeSkinHand(V.scene, VH.side);
+  }
 }
 // 指先の目標点と指の番号
 function makeMarks(sc) {
@@ -182,8 +192,10 @@ function renderBoneHand(H, pose, opt) {
   for (const o of H.objs) o.visible = show;
   if (!show) return;
   H.hand.position.set(pose.W[0], pose.W[1], pose.W[2]);
-  H.hand.rotation.y = pose.W[3];
+  H.hand.scale.set(H.side * HAND.s, HAND.s, HAND.s); H.arm.scale.setScalar(HAND.s);
+  H.hand.rotation.order = 'YXZ'; H.hand.rotation.set(0, pose.W[3], -(pose.W[4] || 1) * (pose.W[6] || 0));
   H.arm.position.copy(H.hand.position);
+  H.arm.rotation.y = pose.W[5] || 0;
   H.skin.opacity = opt.ghost ? 0.45 : 1; H.skin.depthWrite = !opt.ghost;
   for (let f = 1; f <= 5; f++) {
     const F = FINGERS[f], fp = pose.fingers[f];

@@ -48,6 +48,12 @@ function setSong(song) {
   setTime(tStart());
 }
 
+function showHandInfo() {
+  const mid = fingerFK(FINGERS[3], 0, 0, 0)[3];
+  $('handInfo').innerHTML = '親指〜小指をいっぱいに開いた幅 <b>約 ' + (handSpan() / 10).toFixed(1) + 'cm</b>・手首〜中指の先 約 ' + ((-mid[2] + PAD) / 10).toFixed(1) +
+    'cm。くらべる目安: ピアニストの平均は男性 22.6cm・女性 20.1cm（Boyle ほか 2015）。子どもと指の長さのちがいは目安です。運指の表（Parncutt ほか）は大人の手のものなので、小さい手では「届かない」が増えます。';
+}
+
 // 楽譜ファイル
 const SAMPLES = [
   { file: 'elise-opening.mid', name: 'エリーゼのために 冒頭（MIDI・両手のトラック）' },
@@ -155,6 +161,9 @@ function initUI() {
   $('song').innerHTML = '<optgroup label="検証用の曲">' + SONGS.map(s => `<option value="${s.id}">${s.name}</option>`).join('') + '</optgroup>' +
     '<optgroup label="サンプルの楽譜ファイル（samples/）">' + SAMPLES.map(s => `<option value="sample:${s.file}">${s.name}</option>`).join('') + '</optgroup>';
   $('song').addEventListener('change', e => { setPlaying(false); const v = e.target.value; if (v.startsWith('sample:')) loadSample(v.slice(7)); else loadSong(v); });
+  $('handModel').innerHTML = Object.entries(HAND_MODELS).map(([k, m]) => `<option value="${k}">${m.name}</option>`).join('');
+  $('handModel').addEventListener('change', e => { setPlaying(false); setHandModel(e.target.value); rebuildSkins(); showHandInfo(); if (S.song) setSong(S.song); });
+  showHandInfo();
   $('fileIn').addEventListener('change', e => { if (e.target.files[0]) openFile(e.target.files[0]); e.target.value = ''; });
   $('optGiven').addEventListener('change', () => { if (S.song) setSong(S.song); });
   const fr = $('frame');
@@ -193,6 +202,23 @@ function initUI() {
 window.__ph = {
   S, OPT, poseAt: (t, hi) => poseAt(S.plan.hands[hi || 0], t), setTime, loadSong, setSong,
   simRun(sec) { setTime(S.t + sec); step(); return S.t; },
+  // 見た目の確認用: 決まった時刻のコマを並べた一覧を画面の上に出す（クリックで消える）
+  sheet(id, times, cam, cols) {
+    if (id) loadSong(id);
+    if (cam) setCam(cam);
+    const cv = V.r.domElement, cw = cv.width / 2, ch = cv.height / 2;
+    cols = cols || 2;
+    const out = document.createElement('canvas'); out.width = cw * cols; out.height = ch * Math.ceil(times.length / cols);
+    const g = out.getContext('2d');
+    times.forEach((t, i) => {
+      setTime(t); step();
+      const x = (i % cols) * cw, y = Math.floor(i / cols) * ch;
+      g.drawImage(cv, x, y, cw, ch); g.fillStyle = '#ff0'; g.font = '20px sans-serif'; g.fillText(t.toFixed(2) + 's', x + 8, y + 24);
+    });
+    let el = document.getElementById('sheet');
+    if (!el) { el = document.createElement('img'); el.id = 'sheet'; el.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;object-fit:contain;background:#000;z-index:99'; el.onclick = () => el.remove(); document.body.appendChild(el); }
+    el.src = out.toDataURL('image/jpeg', 0.85);
+  },
   checksAll() { // すべての曲の検査の結果
     const out = {};
     for (const s of SONGS) { const p = buildPlan(s), r = runChecks(p); out[s.id] = { cost: +p.cost.toFixed(1), fingers: p.hands.map(h => h.notes.map(n => n.f).join('')).join(' / '), match: fingeringMatch(p).map(m => m.same + '/' + m.total).join(' '), ...Object.fromEntries(CHECKS.map(c => [c.id, +r[c.id].v.toFixed(1) + (r[c.id].at !== null ? '@' + r[c.id].at.toFixed(2) : '')])) }; }

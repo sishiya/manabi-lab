@@ -19,10 +19,11 @@ function smin(a, b, k) { const h = Math.max(k - Math.abs(a - b), 0) / k; return 
 // 指の3つの骨の座標軸（手の座標）。x: 横、y: 指の甲の側、z: 指先の向き
 function boneFrames(F, yaw, a1, a2) {
   const pts = fingerFK(F, yaw, a1, a2);
-  const x = [Math.cos(yaw), 0, Math.sin(yaw)];
+  const { d, nb, x } = fingerBasis(F, yaw);
   const angs = [F.b + a1, F.b + a1 + a2, F.b + a1 + a2 + F.c * a2];
   return angs.map((a, j) => {
-    const z = [Math.sin(yaw) * Math.cos(a), -Math.sin(a), -Math.cos(yaw) * Math.cos(a)];
+    const c = Math.cos(a), s = Math.sin(a);
+    const z = [d[0] * c + nb[0] * s, d[1] * c + nb[1] * s, d[2] * c + nb[2] * s];
     return { o: pts[j], x, y: cross3(x, z), z, len: F.L[j] };
   });
 }
@@ -46,7 +47,7 @@ function coneD(P, x, y, z, cull) {
   return (Math.sqrt(x2 * P.a2 * P.il2) + yy * P.rr) * P.il2 - P.ra;
 }
 // 手のひらの板（手首の側ほど細い、角の丸い箱）
-const PALM = { c: [4, -1, -50], h: [33, 5.5, 38], r: 8.5 };
+const PALM = { c: [4, -1, -50], h: [28.5, 1, 33.5], r: 13 }; // 角を大きく丸めて、人さし指・小指の付け根が角ばらないように
 function palmD(x, y, z) {
   const s = 0.8 + 0.2 * Math.min(1, Math.max(0, (-z - 12) / 80));
   const qx = Math.abs(x - PALM.c[0]) / s - PALM.h[0], qy = Math.abs(y - PALM.c[1]) - PALM.h[1], qz = Math.abs(z - PALM.c[2]) - PALM.h[2];
@@ -59,28 +60,28 @@ function buildPrims() {
   const P = { palm: [], arm: null, fing: [null, [], [], [], [], []] };
   const rest = [null];
   for (let f = 1; f <= 5; f++) {
-    const F = FINGERS[f], d = REST_DEG[f];
+    const F = FINGERS_U[f], d = REST_DEG[f];
     rest.push(boneFrames(F, d[0] * D2R, d[1] * D2R, d[2] * D2R));
   }
   // 手のひら: 手首の横棒・中手骨（甲の盛り上がり）・指の付け根の横棒・小指球・母指球
-  P.palm.push(mkCone([-22, -3, -6], [25, -3, -6], 16, 15, BONE_PALM));
+  P.palm.push(mkCone([-20, -3, -3], [23, -3, -3], 13, 12, BONE_PALM)); // 手首の横棒（細めにして、手首と手のひらの境目がでっぱらないように）
   const wx = [0, 0, -12, 0, 11, 21];
   for (let f = 2; f <= 5; f++) {
-    const b = FINGERS[f].base, s = [wx[f], 1, -8], d = sub3(b, s), n = Math.hypot(...d);
+    const b = FINGERS_U[f].base, s = [wx[f], 1, -8], d = sub3(b, s), n = Math.hypot(...d);
     const end = [b[0] - d[0] * 4 / n, b[1] - 1, b[2] - d[2] * 4 / n]; // 付け根の関節の 4mm 手前まで
     P.palm.push(mkCone(s, end, 9, RADII[f][0] + 0.5, BONE_PALM));
   }
-  P.palm.push(mkCone(sub3(FINGERS[2].base, [0, 2, -3]), sub3(FINGERS[5].base, [0, 2, -3]), 10.5, 9, BONE_PALM));
+  P.palm.push(mkCone(sub3(FINGERS_U[2].base, [0, 2, -3]), sub3(FINGERS_U[5].base, [0, 2, -3]), 10.5, 9, BONE_PALM));
   P.palm.push(mkCone([21, -8, -22], [28, -6, -66], 12, 10, BONE_PALM));
   P.palm.push(mkCone([-12, -12, -26], [-24, -12, -50], 13.5, 10, BONE_PALM));
   // 親指の中手骨は手のひらと同じ組で溶けあわせる（骨は親指）
   const t0 = rest[1][0];
   P.palm.push(mkCone(t0.o, rest[1][1].o, RADII[1][0], RADII[1][1], boneOf(1, 0)));
-  P.arm = mkCone([2, -2, 2], [3, -12, 175], 25, 30, BONE_ARM);
+  P.arm = mkCone([2, -2, 4], [3, -12, 175], 21, 30, BONE_ARM); // 前腕（手首の側は細い）
   for (let f = 1; f <= 5; f++) {
     const R = rest[f];
     for (let j = f === 1 ? 1 : 0; j < 3; j++) {
-      const a = R[j].o, b = j < 2 ? R[j + 1].o : fingerFK(FINGERS[f], REST_DEG[f][0] * D2R, REST_DEG[f][1] * D2R, REST_DEG[f][2] * D2R)[3];
+      const a = R[j].o, b = j < 2 ? R[j + 1].o : fingerFK(FINGERS_U[f], REST_DEG[f][0] * D2R, REST_DEG[f][1] * D2R, REST_DEG[f][2] * D2R)[3];
       const c = mkCone(a, b, RADII[f][j], RADII[f][j + 1], boneOf(f, j));
       c.fr = R[j]; // 指は縦に少しうすい: 骨の y（甲の向き）を FLAT 倍に伸ばした点で測る
       P.fing[f].push(c);
@@ -101,12 +102,12 @@ function handSDF(P, x, y, z, comp) {
   if (comp) { comp.fill(1e9); comp[BONE_PALM] = pal; }
   for (const c of P.palm) {
     const d = coneD(c, x, y, z, cull);
-    pal = smin(pal, d, 10);
+    pal = smin(pal, d, 14);
     if (comp) comp[c.bone] = Math.min(comp[c.bone], d);
   }
   const arm = coneD(P.arm, x, (y - P.arm.a[1]) * 1.3 + P.arm.a[1], z, cull); // 前腕は縦にうすい（楕円）
   if (comp) comp[BONE_ARM] = arm;
-  let d = smin(pal, arm, 18);
+  let d = smin(pal, arm, 16);
   for (let f = 1; f <= 5; f++) {
     let fd = 1e9;
     for (const c of P.fing[f]) {
@@ -118,7 +119,7 @@ function handSDF(P, x, y, z, comp) {
       fd = smin(fd, e, 2.5);
       if (comp) comp[c.bone] = Math.min(comp[c.bone], e);
     }
-    d = smin(d, fd, f === 1 ? 7 : 5);
+    d = smin(d, fd, f === 1 ? 9 : 7);
   }
   return d;
 }
@@ -227,7 +228,8 @@ function buildSkin() {
     let hgt = 0, vn = 0;
     for (const T of TENDONS) { const d = segDist2(x, z, T); const fade = smoothF((T[1] - z) / 10) * smoothF((z - T[3]) / 14); hgt += 0.75 * Math.exp(-((d / 2.4) ** 2)) * fade; }
     for (const L of VEINS) for (let i = 0; i < L.length - 1; i++) { const d = segDist2(x, z, [L[i][0], L[i][1], L[i + 1][0], L[i + 1][1]]); const e = Math.exp(-((d / 1.6) ** 2)); hgt += 0.55 * e; vn = Math.max(vn, e); }
-    hgt *= dors; vein[v] = vn * dors;
+    const vk = HAND.veins === undefined ? 1 : HAND.veins; // 手のモデルごとの静脈・腱の目立ち方
+    hgt *= dors * vk; vein[v] = vn * dors * vk;
     pos[v * 3] += nrm[v * 3] * hgt; pos[v * 3 + 1] += ny * hgt; pos[v * 3 + 2] += nrm[v * 3 + 2] * hgt;
   }
   // 盛り上げた分の法線をつけ直す（三角形から）
@@ -306,12 +308,19 @@ function buildSkin() {
       // 関節（この骨の付け根）の甲のしわ
       if (j >= 1 || f > 1) {
         const near = Math.exp(-(((u - 1) / 5.5) ** 2)) * Math.min(1, Math.max(0, up * 1.6));
-        wrk = near; c = mix3(c, KNK, near * 0.35);
+        wrk = near * (HAND.wrinkles === undefined ? 1 : HAND.wrinkles); c = mix3(c, KNK, wrk * 0.35);
       }
     }
     col.set(c, v * 3); aWrk[v] = wrk; aAlong[v] = along;
   }
   const nails = buildNails(P);
+  // 手のモデルの大きさ（HAND.s）で縮める: 網の位置・骨の付け根・爪（骨の座標の中の位置）
+  const sc = HAND.s;
+  if (sc !== 1) {
+    for (let i = 0; i < pos.length; i++) pos[i] *= sc;
+    for (const B of restB.slice(2)) B.o = B.o.map(v => v * sc);
+    for (const N of nails) for (let i = 0; i < N.pos.length; i++) N.pos[i] *= sc;
+  }
   const ms = performance.now() - t0;
   return { NV, pos0: pos, nrm0: nrm, idx, bi, bw, col, aWrk, aAlong, aJ, aPad, aCrease, nails, ms, P, restB };
 }
@@ -330,7 +339,7 @@ function buildNails(P) {
   for (let f = 1; f <= 5; f++) {
     const B = P.rest[f][2];
     const r = RADII[f][3], L = B.len;
-    const th0 = f === 1 ? -40 * D2R : 0;
+    const th0 = 0; // 親指の向きは骨の座標軸（ねじれ）に入っている
     const pos = [], col = [], uvs = [];
     for (let iu = 0; iu <= NU; iu++) {
       const u = iu / NU; // 0 = 根元（甘皮）、1 = 先（指先より少し出る）
@@ -369,8 +378,9 @@ function buildNails(P) {
 // 姿勢から、骨ごとの世界の座標軸
 function poseBones(pose) {
   const W = pose.W, psi = W[3] || 0, sd = W[4] || 1;
-  const R = v => rotY(psi, [v[0] * sd, v[1], v[2]]); // 左手は鏡に映してから回す
-  const out = [{ o: [W[0], W[1], W[2]], x: [sd, 0, 0], y: [0, 1, 0], z: [0, 0, 1] }, { o: [W[0], W[1], W[2]], x: R([1, 0, 0]), y: [0, 1, 0], z: R([0, 0, 1]) }];
+  const R = v => { const r = W[6] ? rollZ(W[6], v) : v; return rotY(psi, [r[0] * sd, r[1], r[2]]); }; // 傾けて、左手は鏡に映してから回す
+  const A = v => rotY(W[5] || 0, [v[0] * sd, v[1], v[2]]); // 前腕は腕の向きに回す
+  const out = [{ o: [W[0], W[1], W[2]], x: A([1, 0, 0]), y: [0, 1, 0], z: A([0, 0, 1]) }, { o: [W[0], W[1], W[2]], x: R([1, 0, 0]), y: R([0, 1, 0]), z: R([0, 0, 1]) }];
   for (let f = 1; f <= 5; f++) {
     const a = pose.fingers[f].ang;
     for (const B of boneFrames(FINGERS[f], a.yaw, a.a1, a.a2)) out.push({ o: toWorld(W, B.o), x: R(B.x), y: R(B.y), z: R(B.z) });

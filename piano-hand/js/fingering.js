@@ -42,6 +42,8 @@ function pairCost(m1, f1, m2, f2, gap) {
       if (iv > mxP || iv < mnP) c += 3 * Math.max(iv - mxP, mnP - iv); // できる範囲の外（この検証で足した規則）
     }
     if ((f1 === 3 && f2 === 4) || (f1 === 4 && f2 === 3)) c += 1; // 3と4の続き
+    // 親指以外で指を飛ばして、となりの鍵（全音以内）へ行くと、飛ばした指がはさまれる（この検証で足した規則）
+    if (!th && Math.abs(m2 - m1) <= 2 && b - a > 1) c += 3 * (b - a - 1);
     if (f1 === 3 && f2 === 4 && !isBlack(m1) && isBlack(m2)) c += 1;
     if (pass) {
       const thumbM = f2 === 1 ? m2 : m1, otherM = f2 === 1 ? m1 : m2;
