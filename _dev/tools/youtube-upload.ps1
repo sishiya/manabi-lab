@@ -13,6 +13,11 @@
 #         -Full を付けると、日本語のタイトル・説明・分類（教育）・言語・サムネイルも JSON から入れる（Studio で手動で上げた動画を、ここで仕上げるとき）
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Stats [-Out _dev/tools/out/yt-stats.json]
 #       … 上げた動画の再生数・高評価・コメント数とチャンネルの登録者数（読むだけ。weekly-report.ps1 が使う）
+#         分析を読む許可（yt-analytics.readonly）があれば、-Days 日の視聴時間・どこから来たかも
+#   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Ga -Auth
+#       … サイトのアクセス（GA4）を読む許可。GA を持っている Google アカウントで。トークンは $SecretDir\ga-token.dat（暗号化）
+#   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Ga -Stats [-Days 7] [-Out …]
+#       … GA4 のページごとの表示・人数・どこから来たか・国・言語、前の期間との比べ（プロパティ ID は analytics.local.txt）
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Schedule -Meta _dev/promo/black-hole-guide.upload.json
 #       … 予約投稿の日時（publishAt）だけを入れる。JSON に publishAt がなければ予約を外して非公開のままにする（字幕を送らないので API の使用量が少ない）
 #         captions: { "en": "_dev/promo/out/<名前>.en.srt" } … 字幕（CC）。台本ページ（_dev/promo/*.html）を開くと out に保存される。日本語は動画に焼きこんであるので、ふつうは英語だけ
@@ -30,6 +35,8 @@ param(
   [switch]$Full,
   [switch]$Schedule,
   [switch]$Stats,
+  [switch]$Ga,
+  [int]$Days = 7,
   [string]$Out,
   [string]$Meta,
   [string]$SecretDir
@@ -45,7 +52,14 @@ if (-not $SecretDir) {
 $secretFile = Join-Path $SecretDir 'client_secret.json'
 $tokenFile = Join-Path $SecretDir 'youtube-token.dat'
 # youtube.force-ssl: 上げる・あとから翻訳を足す・一覧を見る（2026-10-10 に youtube.upload から広げた。前の許可のままなら -Auth をやり直す）
-$scope = 'https://www.googleapis.com/auth/youtube.force-ssl'
+# yt-analytics.readonly: 視聴時間・どこから来たかを読む（2026-10-10 に足した。読むだけ。前の許可のままなら -Stats の分析だけ出ない）
+$scope = 'https://www.googleapis.com/auth/youtube.force-ssl https://www.googleapis.com/auth/yt-analytics.readonly'
+# -Ga: サイトのアクセス（Google アナリティクス 4）を読む。YouTube とは別の許可（GA を持っている Google アカウントで -Ga -Auth）
+#   プロパティ ID（数字）は _dev/tools/analytics.local.txt に1行（Git に入れない）。許可は読むだけ（analytics.readonly）
+if ($Ga) {
+  $tokenFile = Join-Path $SecretDir 'ga-token.dat'
+  $scope = 'https://www.googleapis.com/auth/analytics.readonly'
+}
 
 function Get-Client {
   if (-not (Test-Path $secretFile)) { throw "client_secret.json が見つかりません（$SecretDir）" }
@@ -88,7 +102,8 @@ function Invoke-Auth {
   $q = @{ client_id = $c.client_id; redirect_uri = $redirect; response_type = 'code'; scope = $scope; access_type = 'offline';
     prompt = 'consent select_account'; code_challenge = $challenge; code_challenge_method = 'S256'; state = $state }
   $url = 'https://accounts.google.com/o/oauth2/v2/auth?' + (($q.GetEnumerator() | ForEach-Object { "$($_.Key)=$(UrlEnc $_.Value)" }) -join '&')
-  Write-Host 'ブラウザで Google の許可の画面を開きます。ログインして、チャンネル「しし屋」を選び、許可してください（5分待ちます）。'
+  if ($Ga) { Write-Host 'ブラウザで Google の許可の画面を開きます。Google アナリティクスを持っている Google アカウントを選び、「アナリティクスのデータの表示」を許可してください（5分待ちます）。' }
+  else { Write-Host 'ブラウザで Google の許可の画面を開きます。ログインして、チャンネル「しし屋」を選び、許可してください（5分待ちます）。' }
   Start-Process $url
   $task = $hl.GetContextAsync()
   if (-not $task.Wait(300000)) { $hl.Stop(); throw '5分たっても許可されませんでした' }
@@ -228,8 +243,49 @@ function Invoke-Stats {
           duration = $_.contentDetails.duration
           views = [long]$_.statistics.viewCount; likes = [long]$_.statistics.likeCount; comments = [long]$_.statistics.commentCount } })
   }
-  $json = $res | ConvertTo-Json -Depth 5
+  # 視聴時間・どこから来たか（YouTube Analytics。yt-analytics.readonly の許可があるときだけ。数は2〜3日おくれて入る）
+  $end = (Get-Date).ToString('yyyy-MM-dd'); $start = (Get-Date).AddDays(-$Days).ToString('yyyy-MM-dd')
+  $base = "https://youtubeanalytics.googleapis.com/v2/reports?ids=channel%3D%3DMINE&startDate=$start&endDate=$end"
+  try {
+    $byVideo = Invoke-RestMethod -Headers $h -Uri "$base&metrics=views,estimatedMinutesWatched,averageViewDuration,subscribersGained&dimensions=video&sort=-views&maxResults=50"
+    $bySource = Invoke-RestMethod -Headers $h -Uri "$base&metrics=views,estimatedMinutesWatched&dimensions=insightTrafficSourceType&sort=-views"
+    $rows = { param($r) @($r.rows | ForEach-Object { $row = $_; $o = [ordered]@{}; for ($i = 0; $i -lt $r.columnHeaders.Count; $i++) { $o[$r.columnHeaders[$i].name] = $row[$i] }; $o }) }
+    $res.analytics = [ordered]@{ start = $start; end = $end; videos = (& $rows $byVideo); sources = (& $rows $bySource) }
+  } catch { $res.analytics = [ordered]@{ error = "$(Get-ErrText $_)（403 なら -Auth をやり直して、分析を読む許可を足す）" } }
+  $json = $res | ConvertTo-Json -Depth 6
   if ($Out) { [IO.File]::WriteAllText($Out, $json, (New-Object Text.UTF8Encoding $false)); Write-Host "書いた: $Out（動画 $(@($vs).Count) 本）" } else { $json }
+}
+
+# ---- -Ga -Stats: サイトのアクセス（GA4 Data API。読むだけ）。ページごとの表示・人数、どこから来たか、前の期間との比べ ----
+function Invoke-GaStats {
+  $lf = Join-Path $PSScriptRoot 'analytics.local.txt'
+  if (-not (Test-Path $lf)) { throw "GA4 のプロパティ ID（数字）を $lf に1行で書いてください（Git に入れません）" }
+  $pid_ = (Get-Content -Encoding UTF8 $lf | Where-Object { $_.Trim() -and -not $_.StartsWith('#') } | Select-Object -First 1).Trim() -replace '^properties/', ''
+  if ($pid_ -notmatch '^\d+$') { throw 'プロパティ ID は数字だけ（G- で始まる測定 ID ではない。GA の 管理 → プロパティの詳細）' }
+  $at = Get-AccessToken; $h = @{ Authorization = "Bearer $at" }
+  $url = "https://analyticsdata.googleapis.com/v1beta/properties/${pid_}:runReport"
+  $cur = @{ startDate = "$($Days)daysAgo"; endDate = 'today'; name = 'cur' }
+  $prev = @{ startDate = "$(2 * $Days)daysAgo"; endDate = "$($Days + 1)daysAgo"; name = 'prev' }
+  function Run($body) {
+    $b = [Text.Encoding]::UTF8.GetBytes(($body | ConvertTo-Json -Depth 8))
+    try { $r = Invoke-RestMethod -Method Post -Headers $h -ContentType 'application/json; charset=UTF-8' -Body $b -Uri $url }
+    catch { throw "GA4 を読めませんでした（403 なら、GA のプロパティにこのアカウントの閲覧の権限があるか、Google Analytics Data API を有効にしたか）: $(Get-ErrText $_)" }
+    $dn = @($r.dimensionHeaders | ForEach-Object { $_.name }); $mn = @($r.metricHeaders | ForEach-Object { $_.name })
+    @($r.rows | ForEach-Object { $row = $_; $o = [ordered]@{}
+        for ($i = 0; $i -lt $dn.Count; $i++) { $o[$dn[$i]] = $row.dimensionValues[$i].value }
+        for ($i = 0; $i -lt $mn.Count; $i++) { $o[$mn[$i]] = [double]$row.metricValues[$i].value }; $o })
+  }
+  $res = [ordered]@{
+    at = (Get-Date).ToString('yyyy-MM-ddTHH:mm:sszzz'); days = $Days
+    # 合計（今の期間と前の期間。dateRange の列で分かれる）
+    totals = Run @{ dateRanges = @($cur, $prev); metrics = @(@{ name = 'activeUsers' }, @{ name = 'sessions' }, @{ name = 'screenPageViews' }) }
+    pages = Run @{ dateRanges = @($cur); dimensions = @(@{ name = 'pagePath' }); metrics = @(@{ name = 'screenPageViews' }, @{ name = 'activeUsers' }); orderBys = @(@{ metric = @{ metricName = 'screenPageViews' }; desc = $true }); limit = 40 }
+    sources = Run @{ dateRanges = @($cur); dimensions = @(@{ name = 'sessionSource' }); metrics = @(@{ name = 'sessions' }); orderBys = @(@{ metric = @{ metricName = 'sessions' }; desc = $true }); limit = 10 }
+    countries = Run @{ dateRanges = @($cur); dimensions = @(@{ name = 'country' }); metrics = @(@{ name = 'activeUsers' }); orderBys = @(@{ metric = @{ metricName = 'activeUsers' }; desc = $true }); limit = 8 }
+    languages = Run @{ dateRanges = @($cur); dimensions = @(@{ name = 'language' }); metrics = @(@{ name = 'activeUsers' }); orderBys = @(@{ metric = @{ metricName = 'activeUsers' }; desc = $true }); limit = 8 }
+  }
+  $json = $res | ConvertTo-Json -Depth 6
+  if ($Out) { [IO.File]::WriteAllText($Out, $json, (New-Object Text.UTF8Encoding $false)); Write-Host "書いた: $Out" } else { $json }
 }
 
 # ---- 予約投稿の日時を入れる／外す（status だけを書きかえる。字幕は送らないので API の使用量が少ない）----
@@ -294,5 +350,5 @@ function Invoke-Update {
   Write-Host "更新しました: https://youtu.be/$($r.id)  翻訳: $(($r.localizations.PSObject.Properties.Name) -join ',')  tags: $(@($r.snippet.tags).Count)個"
 }
 
-try { if ($Auth) { Invoke-Auth } elseif ($List) { Invoke-List } elseif ($Stats) { Invoke-Stats } elseif ($Schedule) { Invoke-Schedule } elseif ($Update) { Invoke-Update } else { Invoke-Upload } }
+try { if ($Auth) { Invoke-Auth } elseif ($List) { Invoke-List } elseif ($Stats -and $Ga) { Invoke-GaStats } elseif ($Stats) { Invoke-Stats } elseif ($Schedule) { Invoke-Schedule } elseif ($Update) { Invoke-Update } else { Invoke-Upload } }
 catch { Write-Host "失敗: $($_.Exception.Message)"; exit 1 }

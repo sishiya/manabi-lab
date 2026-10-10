@@ -15,12 +15,13 @@
 | `schedule-videos.ps1` | `_dev/promo/SCHEDULE.md` の順に予約日時（publishAt）を割りふる。`-Apply` で upload.json と SCHEDULE.md、`-Entrance` で入口の `video`、`-Upload` で YouTube の予約まで | 公開を始める日が決まったとき（`-Upload` はユーザーの GO のあと） |
 | `youtube-upload.ps1` | YouTube へ上げる・英語・字幕・予約・一覧・`-Stats`（数を読むだけ） | ユーザーの GO のあと（`-Stats`・`-List` は読むだけ） |
 | `x-post.ps1` | X の投稿の下ごしらえ（投稿ボタンはユーザー） | ショートを出すとき |
-| `weekly-report.ps1` | 週のふり返り（Git で作ったもの・動作確認・動画の数）→ `out/weekly-<日付>.md` | 週に1回 |
+| `weekly-report.ps1` | 週のふり返り（Git で作ったもの・動作確認・動画の数・視聴時間と流入元・サイトのアクセス）→ `out/weekly-<日付>.md` | 週に1回 |
 | `rep.pl` | 文字列の置きかえ（I18N.md） | 英語対応 |
 | `start.ps1` | ローカルでまなびラボを開く（`start.bat` から） | ユーザーが開くとき |
 | `cdp.ps1` | Chrome を DevTools プロトコルで動かす共通の部品（smoke・record-promo が読みこむ） | — |
 
 - 結果のファイルは `_dev/tools/out/`（Git に入れない。動画の数などは公開しない）。
+- 数を読む許可（どれも読むだけ）: YouTube の視聴時間・流入元は `youtube-upload.ps1 -Auth`（yt-analytics.readonly を含む）。サイトのアクセスは GA4 のプロパティ ID（数字。GA の 管理 → プロパティの詳細）を `_dev/tools/analytics.local.txt`（Git に入れない）に1行書き、`youtube-upload.ps1 -Ga -Auth`（GA を持っている Google アカウントで。トークンは秘密のフォルダの `ga-token.dat` に暗号化）。Google Cloud のプロジェクトで「YouTube Analytics API」と「Google Analytics Data API」を有効にしておく。
 - 日本語を書くスクリプト（.ps1）は **UTF-8 の BOM つき**で保存する（PowerShell 5.1 は BOM がないと日本語を化けさせる）。`start.ps1` だけは英語（ASCII）だけ。
 - Bash ツールのコマンドの中で `\\` や `\s` を書くと `\` が消える。正規表現を含む書きかえは Edit ツールで（RULES 6章）。
 

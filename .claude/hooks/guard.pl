@@ -28,7 +28,7 @@ if ($tool =~ /^(Bash|PowerShell)$/) {
 }
 
 # (2) the secret folder and files
-my @needles = ('client_secret', 'youtube-token');
+my @needles = ('client_secret', 'youtube-token', 'ga-token');
 my $root = $in->{cwd} // '.';
 for my $f ("$root/_dev/tools/youtube-upload.local.txt", '_dev/tools/youtube-upload.local.txt') {
   next unless -f $f;
