@@ -1,0 +1,15 @@
+{
+  "file": "_dev/promo/out/animal-senses-guide.mp4",
+  "thumbnail": "assets/thumbs/animal-senses.jpg",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/animal-senses-guide.en.srt" },
+  "title": "いきものの感じる世界 ― 使い方と見どころ（紫外線・熱・こだま・複眼・偏光・ヒトの見え方）",
+  "description": "同じ庭を、人間・カラス・マムシ・コウモリなどの感覚で一人称で見るブラウザのアプリ「いきものの感じる世界」の、使い方と見どころです。人に見えない紫外線や熱は、見える色に置き換えて表示しています。\n\n0:00 はじめに\n0:07 動き方と見どころ\n0:25 カラス: 紫外線\n0:45 マムシ: 熱（ピット器官）\n1:03 コウモリ: こだま\n1:20 ハエとミツバチ: 複眼・偏光\n1:40 イヌ・ネコ・シャコ\n2:00 ヒトの見え方と道具（老眼・サーモカメラ）\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/animal-senses/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nÖdeen と Håstad（2003）Mol Biol Evol、Hart（2001）: 鳥の紫外線の見え方\nGracheva ほか（2010）Nature、Bullock と Diecke（1956）: マムシのピット器官\nGriffin・Webster・Michael（1960）Animal Behaviour: コウモリのこだま\nBeersma ほか（1975）、Seidl と Kaiser（1981）、Labhart と Meyer（1999）: 複眼・偏光\nNeitz ほか（1989）、Kang ほか（2009）: イヌ・ネコ\nCronin と Marshall（1989）Nature: シャコ\nHofstetter（1950）、Machado ほか（2009）: ヒトの見え方\n（アプリの「このアプリについて」→「おもな出どころ」）\n\n見え方は研究をもとに置き換えたもので、動物が本当にこう感じているかは分かりません。ヒトの見え方は推定で、診断には使えません。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#動物の見え方 #紫外線 #エコーロケーション #まなびラボ",
+  "tags": ["動物の見え方", "紫外線", "ピット器官", "エコーロケーション", "複眼", "偏光", "色覚", "老眼", "使い方", "まなびラボ", "しし屋", "animal vision", "ultraviolet", "pit viper", "echolocation", "compound eye", "polarized light"],
+  "localizations": {
+    "en": {
+      "title": "How Animals Sense the World ― App Guide: UV, Heat, Echoes, Compound Eyes and Human Vision",
+      "description": "A guide to \"How Animals Sense the World\", a browser app that shows the same garden through the senses of humans, crows, pit vipers, bats and more. Ultraviolet and heat are shown as visible colors. Turn on English subtitles (CC).\n\n0:00 Intro\n0:07 Moving around and highlights\n0:25 Crow: ultraviolet\n0:45 Pit viper: heat (pit organs)\n1:03 Bat: echoes\n1:20 Fly and honeybee: compound eyes and polarization\n1:40 Dog, cat and mantis shrimp\n2:00 Human vision and tools (age-related farsight, thermal camera)\n\nTry the app (runs in your browser, PC or phone; switch to English with the EN button):\nhttps://sishiya.github.io/manabi-lab/animal-senses/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nMain sources:\nÖdeen & Håstad (2003); Hart (2001): UV vision in birds\nGracheva et al. (2010) Nature; Bullock & Diecke (1956): pit organs\nGriffin, Webster & Michael (1960) Animal Behaviour: bat echolocation\nBeersma et al. (1975); Seidl & Kaiser (1981); Labhart & Meyer (1999): compound eyes and polarization\nNeitz et al. (1989); Kang et al. (2009): dogs and cats\nCronin & Marshall (1989) Nature: mantis shrimp\nHofstetter (1950); Machado et al. (2009): human vision\n\nThese views are translated from research; we can't know exactly what animals feel. The human vision views are estimates and can't be used for diagnosis.\n\nMusic: original sounds synthesized by code.\n\n#AnimalVision #Echolocation"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "file": "_dev/promo/out/ga-creatures-guide.mp4",
+  "thumbnail": "assets/thumbs/ga-creatures.jpg",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/ga-creatures-guide.en.srt" },
+  "title": "進化の箱庭 ― 使い方と見どころ（世代を進める・遺伝子と種・月面・水の中・進化のしかた）",
+  "description": "関節と筋肉でできた2次元の生きものを、遺伝的アルゴリズムで進化させるブラウザのアプリ「進化の箱庭」の、使い方と見どころです。\n\n0:00 はじめに\n0:07 画面の見かた\n0:28 世代を進める\n0:52 遺伝子と種\n1:15 環境（月面・水の中）\n1:40 進化のしかた\n2:00 歴代の1位\n2:12 本物の進化とのちがい\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/ga-creatures/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nJ. H. Holland（1975）『Adaptation in Natural and Artificial Systems』: 遺伝的アルゴリズム\nK. Sims（1994）「Evolving Virtual Creatures」SIGGRAPH 94\ncarykh（Cary Huang）さんの進化シミュレーター: 関節と筋肉の体、種の色分けの見せ方\n『アストロノーカ』（1998年、PlayStation 用のゲーム）\n重力: 地球 9.8 m/s²、月 1.62 m/s²\n（アプリの「解説」→「おもな出どころ」）\n\n筋肉の強さ・摩擦係数・地面をつかむ力・水の抵抗は、動きが見やすくなるように決めたモデルの値で、本物の生きものを測った値ではありません。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#遺伝的アルゴリズム #進化 #人工生命 #まなびラボ",
+  "tags": ["遺伝的アルゴリズム", "進化", "人工生命", "自然選択", "突然変異", "シミュレーション", "使い方", "まなびラボ", "しし屋", "genetic algorithm", "evolution simulator", "artificial life", "evolving creatures", "natural selection"],
+  "localizations": {
+    "en": {
+      "title": "Evolution Sandbox ― App Guide: Generations, Genes, Species, the Moon and Underwater",
+      "description": "A guide to \"Evolution Sandbox\", a browser app that evolves 2D creatures made of joints and muscles with a genetic algorithm. Turn on English subtitles (CC).\n\n0:00 Intro\n0:07 Reading the screen\n0:28 Advancing generations\n0:52 Genes and species\n1:15 Environments (the Moon, underwater)\n1:40 How evolution works (settings)\n2:00 Past champions\n2:12 How this differs from real evolution\n\nTry the app (runs in your browser, PC or phone; switch to English with the EN button):\nhttps://sishiya.github.io/manabi-lab/ga-creatures/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nMain sources:\nJ. H. Holland (1975) Adaptation in Natural and Artificial Systems\nK. Sims (1994) Evolving Virtual Creatures, SIGGRAPH 94\ncarykh (Cary Huang)'s evolution simulator\nAstronōka (1998, PlayStation)\nGravity: Earth 9.8 m/s², Moon 1.62 m/s²\n\nMuscle strength, friction, grip and water drag are model values chosen to make the motion easy to see, not measurements of real animals.\n\nMusic: original sounds synthesized by code.\n\n#GeneticAlgorithm #Evolution"
+    }
+  }
+}

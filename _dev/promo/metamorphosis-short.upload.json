@@ -1,0 +1,14 @@
+{
+  "file": "_dev/promo/out/metamorphosis-short.mp4",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/metamorphosis-short.en.srt" },
+  "title": "さなぎの中で、イモムシの体はどうなる？ ― 18日でガになるまで #Shorts",
+  "description": "イモムシがさなぎになり、ガになるまでの体の中を、タバコスズメガの研究の日付で追うブラウザのアプリ「さなぎの中で」から。模式図です。\n\nアプリ: https://sishiya.github.io/manabi-lab/metamorphosis/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ: Truman と Riddiford（1999）Nature、Tolbert・Matsumoto・Hildebrand（1983）J Neurosci、Schwartz と Truman（1982）Science ほか15件（アプリの「このアプリについて」→「おもな出どころ」）。翅を広げる時間などは推定です。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#変態 #さなぎ #まなびラボ",
+  "tags": ["変態", "さなぎ", "イモムシ", "昆虫", "タバコスズメガ", "Shorts", "まなびラボ", "しし屋", "metamorphosis", "pupa", "caterpillar", "Manduca sexta"],
+  "localizations": {
+    "en": {
+      "title": "What Happens Inside a Pupa? ― From Caterpillar to Moth in 18 Days #Shorts",
+      "description": "From \"Inside the Pupa\", a browser app that follows the inside of a caterpillar becoming a moth, using research timelines for the tobacco hornworm (Manduca sexta). It is a diagram.\n\nApp (switch to English with the EN button): https://sishiya.github.io/manabi-lab/metamorphosis/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMain sources: Truman & Riddiford (1999) Nature; Tolbert, Matsumoto & Hildebrand (1983) J Neurosci; Schwartz & Truman (1982) Science; and 12 others. Some timings, such as wing expansion, are estimates.\n\nMusic: original sounds synthesized by code.\n\n#Metamorphosis #Insects"
+    }
+  }
+}

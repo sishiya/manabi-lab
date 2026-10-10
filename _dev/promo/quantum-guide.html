@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="quantum-common.js"></script>
+<script>
+'use strict';
+// 台本: 量子の実験室 ― 使い方と見どころ（横長の説明動画、150秒）
+// 日本語の字幕は画面の上に焼きこみ、下は YouTube の字幕（CC。英語）にあける
+// アプリの図（canvas）を左に並べ直し、ボタンは右に「札」（アプリでも右のパネル）で見せる
+const END = 150, DUR = END + IDENT_CLOSE;
+
+// ---- 図の置き場所（PW×PH の座標）----
+const LAY = {
+  slit: [['#slitApp', 40, 215, 1240, 470], ['#slitScreen', 40, 700, 1240, 350]],
+  tunnel: [['#tunCv', 40, 300, 1240, 480]],
+  polar: [['#polCv', 40, 260, 1240, 560]],
+  bell: [['#bellCv', 40, 215, 1240, 400], ['#bellChart', 40, 635, 1240, 410]],
+  uncert: [['#unX', 40, 215, 1240, 405], ['#unP', 40, 640, 1240, 405]],
+};
+
+// ---- できごと（その時刻にボタンを押す）----
+const EV = [
+  { t: 0.01, run: w => qxScene(w, 'slit') },
+  { t: 12, run: w => clickEl(w, '#slitMany') },
+  { t: 15.5, run: w => clickEl(w, '#slitMode [data-v=top]') },
+  { t: 16.5, run: w => clickEl(w, '#slitMany') },
+  { t: 19.5, run: w => clickEl(w, '#slitMode [data-v=both]') },
+  { t: 20.5, run: w => clickEl(w, '#slitMany') },
+  { t: 24, run: w => setInput(w, '#slitObs', true) },
+  { t: 25, run: w => clickEl(w, '#slitMany') },
+  { t: 32.5, run: w => clickEl(w, '#slitWide') },
+  { t: 33.5, run: w => clickEl(w, '#slitMany') },
+  { t: 42, run: w => { qxScene(w, 'tunnel'); setInput(w, '#tunW', 1.25); setInput(w, '#tunE', 0.6); } },
+  { t: 51.6, run: w => setInput(w, '#tunW', 2.5) },
+  { t: 60.2, run: w => setInput(w, '#tunW', 1.25) },
+  { t: 65, run: w => clickEl(w, '#tunMeasure') },
+  { t: 67, run: w => qxScene(w, 'polar') },
+  { t: 68.5, run: w => { setInput(w, '#polRate', 60); clickEl(w, '#polPreA'); } },   // 割合が早く落ちつくように、1秒に飛ばす数を多く
+  { t: 77, run: w => clickEl(w, '#polPreB') },
+  { t: 87, run: w => qxScene(w, 'bell') },
+  { t: 89, run: w => clickEl(w, '#bellMany') },
+  { t: 98.5, run: w => clickEl(w, '#bellTest') },
+  { t: 115, run: w => qxScene(w, 'uncert') },
+  { t: 117.5, run: w => clickEl(w, '#unMx') },
+  { t: 126, run: w => clickEl(w, '#unMp') },
+];
+
+// ---- ボタンの札（アプリと同じ言葉。アプリでも右のパネル）----
+const X = 1320;
+const CH = {
+  tabs: { x: X, y: 230, title: '上のタブ', btns: ['二重スリット', 'トンネル効果', '3枚の偏光板', '量子もつれ', '不確定性原理'], cols: 1 },
+  many: { x: X, y: 640, title: '', btns: ['1000個まとめて'] },
+  mode: { x: X, y: 230, title: '装置（右のパネル）', btns: ['2本', '上だけ', '下だけ'] },
+  obs: { x: X, y: 230, title: '右のパネル', btns: ['通り道を調べる（検出器をつける）'] },
+  wide: { x: X, y: 230, title: '右のパネル', btns: ['スリットを広く・離す'] },
+  tun: { x: X, y: 230, title: '右のパネル', btns: ['もう一度発射', 'いま測る（粒子を見つける）'], cols: 1 },
+  tunE: { x: X, y: 230, title: '設定（右のパネル）', btns: ['壁の厚さ 1.25', '2.50'] },
+  pol: { x: X, y: 230, title: '右のパネル', btns: ['直交の2枚（0° と 90°）', '間に 45° を入れる'], cols: 1 },
+  bell: { x: X, y: 230, title: '右のパネル', btns: ['500組まとめて', 'ベルテストを実行'], cols: 1 },
+  un: { x: X, y: 230, title: '右のパネル', btns: ['位置を測る', '運動量を測る'], cols: 1 },
+};
+// [札, 出る, 消える, その時刻に選ばれているボタン]
+const SHOW = [
+  ['tabs', 7.3, 11.8, () => 0],
+  ['many', 10, 14.2, t => t >= 12 ? 0 : -1],
+  ['mode', 14.6, 22.4, t => t >= 19.5 ? 0 : t >= 15.5 ? 1 : 0],
+  ['many', 14.6, 22.4, () => -1],
+  ['obs', 23, 31, t => t >= 24 ? 0 : -1],
+  ['wide', 31.6, 41.6, t => t >= 32.5 ? 0 : -1],
+  ['tabs', 42, 44.5, () => 1],
+  ['tunE', 51, 59.5, t => t >= 51.6 ? 1 : 0],
+  ['tun', 60, 66.8, t => t >= 65 ? 1 : -1],
+  ['tabs', 67, 69.5, () => 2],
+  ['pol', 68, 86.6, t => t >= 77 ? 1 : t >= 68.5 ? 0 : -1],
+  ['tabs', 87, 89.5, () => 3],
+  ['bell', 88, 114.6, t => t >= 98.5 ? 1 : t >= 89 ? 0 : -1],
+  ['tabs', 115, 117.3, () => 4],
+  ['un', 116.5, 133.6, t => t >= 126 ? 1 : t >= 117.5 ? 0 : -1],
+];
+const B = (k, i) => btnRect(CH[k], i);
+const CUR = [
+  { t: 7.5, ...B('tabs', 0) }, { t: 8.5, ...B('tabs', 0), click: true },
+  { t: 12, ...B('many', 0), click: true }, { t: 13.5, ...B('many', 0), hide: true },
+  { t: 15.5, ...B('mode', 1), click: true }, { t: 16.5, ...B('many', 0), click: true },
+  { t: 19.5, ...B('mode', 0), click: true }, { t: 20.5, ...B('many', 0), click: true }, { t: 22, ...B('many', 0), hide: true },
+  { t: 24, ...B('obs', 0), click: true }, { t: 25.5, ...B('obs', 0), hide: true },
+  { t: 32.5, ...B('wide', 0), click: true }, { t: 34, ...B('wide', 0), hide: true },
+  { t: 51.6, ...B('tunE', 1), click: true }, { t: 53, ...B('tunE', 1), hide: true },
+  { t: 65, ...B('tun', 1), click: true }, { t: 66.5, ...B('tun', 1), hide: true },
+  { t: 68.5, ...B('pol', 0), click: true }, { t: 77, ...B('pol', 1), click: true }, { t: 78.5, ...B('pol', 1), hide: true },
+  { t: 89, ...B('bell', 0), click: true }, { t: 98.5, ...B('bell', 1), click: true }, { t: 100, ...B('bell', 1), hide: true },
+  { t: 117.5, ...B('un', 0), click: true }, { t: 126, ...B('un', 1), click: true }, { t: 127.5, ...B('un', 1), hide: true },
+];
+
+// ---- 字幕 ----
+const CAPS = [
+  { a: 7.3, b: 14, main: '上のタブで5つの実験を切りかえる', sub: 'まずは二重スリット。「1000個まとめて」でしまが育つ',
+    en: ['Switch between five experiments with the tabs', 'First, the double slit. "1000 at once" grows the stripes'] },
+  { a: 14.6, b: 22.4, main: 'スリットを片方だけにすると、しまは出ない', sub: '2本あけたときだけ、2つの波が重なって強め合い・打ち消し合う',
+    en: ['With only one slit open, there are no stripes', 'Only with both slits open do the two waves overlap, adding up and canceling out'] },
+  { a: 23, b: 31, main: '検出器で通り道を調べると、しまが消える', sub: 'なだらかな山が1つになる。見るだけで結果が変わる',
+    en: ['Check which slit each one goes through, and the stripes vanish', 'You get one smooth hump. Just looking changes the result'] },
+  { a: 31.6, b: 41.6, main: 'スリットを広く離すと、2本の帯に分かれる', sub: 'よく見る「しま」と「2本の帯」の図は、2つの場合を1枚にまとめた説明用の絵',
+    en: ['Make the slits wide and far apart, and you get two bands', 'The familiar "stripes vs two bands" picture combines two different setups'] },
+  { a: 42.5, b: 51, main: 'トンネル効果: 壁より低いエネルギーでも、一部が通り抜ける', sub: '波の一部ははね返り、一部は壁の向こうへ',
+    en: ['Tunneling: even with less energy than the wall, part gets through', 'Part of the wave bounces back, and part goes beyond the wall'] },
+  { a: 51.6, b: 59.6, main: '壁を厚くすると、通り抜ける割合はぐっと減る', sub: '右に、通り抜けた割合と理論値',
+    en: ['Make the wall thicker and the share getting through drops sharply', 'The share that got through and the theory value are on the right'] },
+  { a: 60.3, b: 66.8, main: '測ると、粒子はどちらか一方で見つかる', sub: '星の中の核融合や、フラッシュメモリにも関わるしくみ',
+    en: ['Measure, and the particle is found on just one side', 'The same effect matters for fusion inside stars and for flash memory'] },
+  { a: 67.6, b: 76.6, main: '向きが直角の2枚の偏光板は、光をほぼ通さない', sub: '光子1個ずつが、板の向きに応じた確率で通る',
+    en: ['Two polarizers at right angles block almost all light', 'Each photon passes with a chance set by the angle'] },
+  { a: 77.2, b: 86.6, main: '間に45°の板を入れると、約12.5%が通るようになる', sub: '板を増やしたのに、通る光が増える',
+    en: ['Add one at 45° in between, and about 12.5% gets through', 'More filters, yet more light gets through'] },
+  { a: 87.6, b: 98, main: '量子もつれ: 2つの光子の測定結果が、離れていてもそろう', sub: 'アリスとボブが、それぞれの偏光板で測る',
+    en: ['Entanglement: two photons give matching results even far apart', 'Alice and Bob each measure with their own polarizer'] },
+  { a: 98.7, b: 106.5, main: 'ベルテスト: 量子もつれは S ≈ 2.83', sub: '前もって答えを決めておく「隠れた変数」では、2 をこえない',
+    en: ['Bell test: entanglement gives S ≈ 2.83', 'With "hidden variables" that fix the answers in advance, S cannot go above 2'] },
+  { a: 107, b: 114.6, main: '実際の実験でも 2 をこえた', sub: '2022年のノーベル物理学賞',
+    en: ['Real experiments went above 2 as well', 'The 2022 Nobel Prize in Physics'] },
+  { a: 115.6, b: 125.4, main: '位置を測ると波がせまくなり、運動量の広がりが大きくなる', sub: '運動量を測ると、その逆',
+    en: ['Measure position and the wave narrows, but momentum spreads out', 'Measure momentum and the opposite happens'] },
+  { a: 126.2, b: 133.6, main: '位置と運動量の広がりを、両方同時に小さくはできない', sub: 'Δx·Δp は 0.5（ħ/2）より小さくならない（不確定性原理）',
+    en: ['You can\'t make the spread in position and momentum both small', 'Δx·Δp never goes below 0.5 (ħ/2): the uncertainty principle'] },
+  { a: 134.2, b: 141.6, main: 'どの実験にも「やってみよう」と「なにが起きている？」', sub: '画面の下に、もとにした論文と教科書',
+    en: ['Each experiment has "Try this" and "What\'s happening?"', 'The papers and textbooks behind it are listed at the bottom'] },
+];
+
+let lastT = -1;
+promoStart({
+  name: '量子の実験室（使い方）', out: 'quantum-guide', src: '../../quantum/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 30,
+  inject: { dpr: 3, raf: true, pre: QX_PRE },
+  music: { style: 'drone', root: 65, stopAt: END, cues: [{ t: END, type: 'jingle' }] },
+  ready: w => w.__qx && w.__rafQ && w.__rafQ.length,
+  setup(w) { qxSize(w, LAY); appStep(w, 2); return null; },
+  subs: guideSubs(END, '量子の実験室', 'Quantum Lab', CAPS, 'Runs in your browser (PC or phone). Switch the app to English with the EN button'),
+  async renderAt(t, w) { lastT = qxAdvance(w, EV, lastT, t); },
+  drawSource(g, w, OW, OH) { qxDraw(g, w, LAY); },
+  overlay(g, t, w) {
+    const v = s => (qs(w, s) || {}).textContent || '';
+    drawPanel(g, X, 520, 560, '結果（右のパネル）', ['通り抜けた ' + v('#tunT'), '理論値 ' + v('#tunTth'), 'はね返った ' + v('#tunR')], fade(t, 46, 66.8, 0.4));
+    drawPanel(g, X, 470, 560, '数（右のパネル）', ['届いた割合 ' + v('#polPct'), '理論値 ' + v('#polTh')], fade(t, 70, 86.6, 0.4));
+    drawPanel(g, X, 420, 560, 'ベルテスト（右のパネル）', ['量子もつれ ' + v('#chshQv'), '隠れた変数 ' + v('#chshHv')], fade(t, 99.5, 114.6, 0.4), '#ffd27a');
+    drawPanel(g, X, 420, 560, '右のパネル', ['位置の広がり Δx ' + v('#unDx'), '運動量の広がり Δp ' + v('#unDp'), 'Δx·Δp ' + v('#unProd')], fade(t, 118, 133.6, 0.4));
+    const tryList = [...w.document.querySelectorAll('.exp[data-exp=uncert] ol.try li[lang=ja]')].slice(0, 3).map(li => li.textContent.slice(0, 15) + (li.textContent.length > 15 ? '…' : ''));
+    drawPanel(g, X, 300, 560, 'やってみよう（右のパネル）', tryList, fade(t, 134.4, 141.6, 0.4));
+    for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawGuideChrome(g, t, END, '量子の実験室',
+      'おもな出どころ: Feynman ほか（1965）『The Feynman Lectures on Physics』第3巻、Tonomura ほか（1989）Am. J. Phys. 57 ほか');
+  },
+  errors: w => w.__qx.err,
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="god-view-common.js"></script>
+<script>
+'use strict';
+// 台本: 神の視点マップ ― 使い方と見どころ（横長の説明動画、150秒）
+// 地図・宇宙・ミクロ・地球をちぎるの画面をいっぱいに。日本語の字幕は上、層の札は右（アプリでも右の「層」のパネル）、地図の出典は下
+// 外のデータを読む: 地震・人工衛星・電車とバスは「録った日」のもの（説明欄に日付を書く）。録画は通信が安定しているときに
+const END = 150, DUR = END + IDENT_CLOSE;
+const ST = { lon: 139.7615, lat: 35.6800 }, PARK = { lon: 139.7570, lat: 35.6810 }, FUJI = { lon: 138.7274, lat: 35.3606 };
+const OFF = { underground: false, nightLights: false, quakes: false, sats: false, transit: false, lighting: false };
+// 層を切りかえる（アプリのチェックボックスを押したのと同じ）
+const IDS = { underground: '#opt-under', nightLights: '#opt-night', quakes: '#opt-quake', sats: '#opt-sats', transit: '#opt-transit', lighting: '#opt-light' };
+async function layers(w, on) {
+  const st = Object.assign({}, OFF, on);
+  for (const [k, sel] of Object.entries(IDS)) if (!!w.GV.state[k] !== st[k]) { const e = qs(w, sel); if (e) setInput(w, sel, st[k]); else { w.GV.state[k] = st[k]; } }
+  await sleep(300);
+}
+// 日本の夜（22時ごろ）になるように時刻をずらす
+function nightInJapan(w) { const h = (new Date().getUTCHours() + 9) % 24; let d = 22 - h; if (d > 12) d -= 24; if (d < -12) d += 24; w.GV.setTimeOffset(d); }
+const SC = [
+  { a: 0, b: 7, kind: 'map', enter: w => layers(w, {}), cam: u => ({ ...ST, h: 120, heading: 70 + u * 1.5, pitch: -18 }) },
+  { a: 7, b: 17, kind: 'map', cam: u => ({ ...ST, h: gvLog(u, 0, 9, 130, 900), heading: lerp(80, 115, ease(u / 9)), pitch: lerp(-18, -35, ease(u / 9)) }) },
+  { a: 17, b: 27, kind: 'map', cut: true, cam: u => ({ ...FUJI, alt: 2500, range: lerp(16000, 12000, ease(u / 10)), heading: lerp(-20, 10, u / 10), pitch: -12 }) },
+  { a: 27, b: 38, kind: 'map', cut: true, cam: u => ({ lon: 139.7640, lat: 35.6810, alt: 40, range: 520, heading: lerp(250, 290, u / 11), pitch: -28 }) },
+  { a: 38, b: 50, kind: 'map', cut: true, enter: w => layers(w, { underground: true }), cam: u => ({ lon: 139.76965, lat: 35.68062, alt: -5, range: lerp(480, 380, ease(u / 12)), heading: 320 + u * 2, pitch: -45 }) },
+  { a: 50, b: 61, kind: 'map', cut: true, enter: async w => { nightInJapan(w); await layers(w, { nightLights: true, quakes: true, sats: true, lighting: true }); await sleep(3000); },
+    cam: u => ({ lon: 137.5, lat: 36, h: gvLog(u, 0, 11, 4.5e6, 9e6), heading: 0, pitch: -90 }) },
+  { a: 61, b: 72, kind: 'map', cut: true, enter: async w => { w.GV.setTimeOffset(0); await layers(w, { transit: true }); await sleep(4000); },
+    cam: u => ({ lon: 139.765, lat: 35.685, alt: 0, range: lerp(5200, 4200, u / 11), heading: 10 + u, pitch: -48 }) },
+  { a: 72, b: 90, kind: 'space', enter: w => layers(w, {}), cam: () => ({ ...ST, h: 2.2e7, heading: 0, pitch: -90 }), L: u => lerp(7.7, 27, ease(u / 17)) },
+  { a: 90, b: 110, kind: 'micro', cut: true, cam: () => ({ ...PARK, h: 25, heading: 0, pitch: -90 }), L: u => lerp(0.55, -34.8, ease((u - 0.5) / 18.5)) },
+  { a: 110, b: 134, kind: 'tear', cut: true, cam: () => ({ ...ST, h: 2.2e7, heading: 0, pitch: -90 }), ev: [
+    { t: 4, run: w => tearPtr(w, 'pointerdown', 0) },
+    ...Array.from({ length: 24 }, (_, i) => ({ t: 4.1 + i * 0.1, run: w => tearPtr(w, 'pointermove', (i + 1) / 24) })),
+    { t: 10.5, run: w => tearPtr(w, 'pointerup', 1) }] },   // ちぎれるまでつまんだまま（はなすと、ちぎれたかけらは遠くへ運ばれる）
+  { a: 134, b: END, kind: 'map', cut: true, enter: w => layers(w, {}), cam: u => ({ ...ST, h: 120, heading: 75 + u * 1.5, pitch: -18 }) },
+];
+// 地球をつまんで引く（画面のまん中の少し上をつまみ、上へ 260px 引く）
+function tearPtr(w, type, k) {
+  const cv = qs(w, '#tear'), r = cv.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height * 0.42 - 260 * k;
+  cv.dispatchEvent(new w.PointerEvent(type, { bubbles: true, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons: type === 'pointerup' ? 0 : 1, clientX: x, clientY: y }));
+}
+const X = 1380;
+const CH = {
+  layers: { x: X, y: 240, title: '層（右のパネル）', btns: ['地下を見る', '夜の街の明かり', '地震（過去7日）', '人工衛星・ISS', '都営の電車・バス'], cols: 1 },
+  tear: { x: X, y: 240, title: '宇宙で地球が近いとき（右下）', btns: ['✋ 地球をちぎる'] },
+};
+const SHOW = [
+  ['layers', 38.4, 49.6, () => 0],
+  ['layers', 50.4, 60.6, () => 1],
+  ['layers', 61.4, 71.6, () => 4],
+  ['tear', 110.4, 116, () => 0],
+];
+const B = (k, i) => btnRect(CH[k], i);
+const CUR = [
+  { t: 7.4, x: 700, y: 600 }, { t: 7.8, x: 700, y: 600, drag: true }, { t: 10.5, x: 980, y: 560 }, { t: 11.2, x: 980, y: 560, wheel: true }, { t: 15, x: 980, y: 560 }, { t: 15.6, x: 980, y: 560, hide: true },
+  { t: 113.2, ...B('tear', 0) }, { t: 113.8, ...B('tear', 0), click: true },
+  { t: 114, x: 960, y: 1080 * 0.42 }, { t: 114.1, x: 960, y: 1080 * 0.42, drag: true }, { t: 116.6, x: 960, y: 1080 * 0.42 - 260 }, { t: 117.4, x: 960, y: 1080 * 0.42 - 260, hide: true },
+];
+const CAPS = [
+  { a: 7.3, b: 16.6, main: 'ドラッグで動かし、ホイールで寄る・引く', sub: '右ドラッグ（Ctrl＋ドラッグ）で傾ける',
+    en: ['Drag to move, scroll to zoom in and out', 'Right-drag (or Ctrl + drag) to tilt'] },
+  { a: 17.4, b: 26.6, main: '地名で探して、その場所へ飛べる。地形は立体', sub: '富士山。標高のデータから形を作っている',
+    en: ['Search a place name to fly there. The terrain is 3D', 'Mount Fuji, built from elevation data'] },
+  { a: 27.4, b: 37.6, main: '建物は国の3D都市モデル（PLATEAU）', sub: '東京駅のまわり。壁と屋根の写真つきの建物も',
+    en: ['Buildings come from Japan\'s national 3D city models (PLATEAU)', 'Around Tokyo Station, some with photos of the walls and roofs'] },
+  { a: 38.4, b: 49.6, main: '「地下を見る」で地面を半透明に', sub: '東京駅・八重洲の地下街が見える',
+    en: ['"See underground" makes the ground see-through', 'Revealing the underground mall at Tokyo Station (Yaesu)'] },
+  { a: 50.4, b: 60.6, main: '生きている地球: 夜の明かり・地震・人工衛星', sub: '地震は過去7日、人工衛星はいまの位置を軌道から計算',
+    en: ['The living Earth: city lights, earthquakes, satellites', 'Earthquakes from the past week; satellites calculated from their orbits'] },
+  { a: 61.4, b: 71.6, main: '都営の電車とバスの、いまの位置', sub: '東京都交通局の公開データ（30秒ごと）',
+    en: ['Where Toei trains and buses are right now', 'Open data from the Tokyo Metropolitan Bureau of Transportation (every 30 s)'] },
+  { a: 72.4, b: 81, main: '引いていくと、そのまま宇宙へ', sub: '惑星の位置は計算、銀河の形は観測にもとづく演出',
+    en: ['Keep pulling back, straight into space', 'Planet positions are calculated; galaxy shapes are based on observations'] },
+  { a: 81.4, b: 89.6, main: '観測できる宇宙の果て、約 10²⁷ m まで', sub: '右下の目盛りを押しても移れる',
+    en: ['Out to the edge of the observable universe, about 10²⁷ m', 'You can also jump using the scale bar'] },
+  { a: 90.4, b: 99.6, main: '地面に寄ると、その場所の地面からミクロの世界へ', sub: '芝生なら植物、海なら水、街なら岩や砂の道',
+    en: ['Zoom into the ground and you enter the micro world of that spot', 'Grass leads to plants, the sea to water, the city to rock and sand'] },
+  { a: 100, b: 109.6, main: '原子、原子核、クォーク、プランク長まで', sub: '形は演出、大きさは本物',
+    en: ['Atoms, nuclei, quarks, down to the Planck length', 'The shapes are for show; the sizes are real'] },
+  { a: 110.4, b: 121.6, main: '「地球をちぎる」: 地球を約1.6万個の粒にして計算', sub: 'つまんで引くと、ちぎれる',
+    en: ['"Tear the Earth": the planet is simulated as about 16,000 particles', 'Grab and pull, and a piece tears away'] },
+  { a: 122, b: 133.6, main: '穴はくずれて埋まり、圧力が抜けた岩が溶ける', sub: '海が流れこみ、熱い岩の上で湯気になる',
+    en: ['The hole collapses and fills, and rock melts as the pressure drops', 'The ocean pours in and turns to steam on the hot rock'] },
+  { a: 134.4, b: 141.6, main: '実データ・推定・演出は、札で分けてある', sub: '地図と建物は公開データ。出典は画面の下と「このアプリについて」',
+    en: ['Labels show what\'s real data, estimate or effect', 'Maps and buildings are open data. Sources are at the bottom and in "About"'] },
+];
+let cfgT = 0;   // drawSource には時刻が来ないので、renderAt の時刻を覚えておく
+promoStart({
+  name: '神の視点マップ（使い方）', out: 'god-view-guide', src: '../../god-view/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 3,
+  music: { style: 'drone', root: 55, stopAt: END, cues: [{ t: END, type: 'jingle' }] },
+  ready: w => w.GV && w.GV.viewer && w.__gv,
+  setup(w) { gvSetup(w); return null; },
+  subs: guideSubs(END, '神の視点マップ', 'God\'s-Eye Map', CAPS, 'Runs in your browser (best on a PC). The on-screen text is in Japanese for now'),
+  async renderAt(t, w) { cfgT = t; await gvRender(w, SC, t); },
+  drawSource(g, w) { gvDraw(g, w, cfgT, SC); },
+  overlay(g, t, w) {
+    const s = gvScAt(SC, t);
+    drawPanel(g, 40, 200, 420, '画面の幅', [gvWidth(w)], s.kind === 'tear' ? 0 : fade(t, 7.3, 141.6, 0.4), '#ffd27a');   // ちぎるの画面には目盛りがない
+    gvSpaceLabels(g, w, s.kind === 'space' ? fade(t, s.a + 0.8, s.b, 0.4) : 0);
+    if (s.kind === 'micro') drawPanel(g, 40, 330, 1000, '', gvMicroInfo(w, 36), fade(t, s.a + 0.6, s.b, 0.4));
+    if (s.kind === 'tear') drawPanel(g, 40, 930, 1100, '', [gvText(w, '#tear-info').slice(0, 38)], fade(t, s.a + 0.6, s.b, 0.4));   // 地球に重ならないよう左下に
+    gvSmall(g, s.kind === 'map' ? '地図: ' + gvCredits(w) : s.kind === 'space' ? gvText(w, '#space-credit') : s.kind === 'tear' ? gvText(w, '#tear-credit') : '', 30, PH - 24, 0.9);
+    for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawGuideChrome(g, t, END, '神の視点マップ',
+      '地図: 地理院タイル（写真）・3D都市モデル PLATEAU（国土交通省）・NASA・USGS・CelesTrak・東京都交通局・© OpenStreetMap contributors ほか');
+  },
+  errors: w => w.__gvErr,
+});
+</script>
+</body>
+</html>

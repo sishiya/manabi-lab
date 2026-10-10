@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="wifi-common.js"></script>
+<script>
+'use strict';
+// 台本: 電波の見える部屋 ― 使い方と見どころ（横長の説明動画、150秒）
+// 日本語の字幕は上に焼きこみ、下は英語の CC にあける。図は左、ボタンの札と数字は右（アプリでも右のパネル）
+const END = 150, DUR = END + IDENT_CLOSE;
+const MAP = [40, 215, 1270, 794];   // 図の置き場所（1280×800 マス＝16:10）
+const ENT = [1.0, 2.85], MID = [5.0, 3.05];   // ルーター: 玄関 → 家の真ん中（廊下の奥、LDK のドアの前）
+
+// ---- 場面 ----
+const SC = [
+  { a: 0, b: 30, preset: 'flat', mode: 'wave', pre: 0, ev: [{ t: 18, run: w => wwSeg(w, 'segMode', 'heat') }] },
+  { a: 30, b: 52, preset: 'flat', mode: 'heat', pre: 5000, drag: [{ a: 3.5, b: 6.5, from: ENT, to: MID }, { a: 12, b: 14.5, who: 'phone', from: [8.2, 4.5], to: [2.0, 1.4] }] },
+  { a: 52, b: 61, preset: 'flat', mode: 'heat', pre: 5000 },
+  { a: 61, b: 70, preset: 'flat', freq: '5', mode: 'heat', pre: 5000 },
+  { a: 70, b: 92, preset: 'compare', mode: 'wave', pre: 4500 },
+  { a: 92, b: 112, preset: 'gaps', mode: 'wave', pre: 4500 },
+  { a: 112, b: 130, preset: 'flat', mode: 'heat', pre: 5000, ev: [{ t: 4.5, run: w => wwDraw(w, 'conc', [2.0, 2.6], [2.0, 3.5]) }, { t: 13.5, run: w => clickEl(w, '#btnUndo') }] },
+  { a: 130, b: END, preset: 'house', mode: 'wave', pre: 3000 },
+];
+
+// ---- ボタンの札（アプリと同じ言葉。右のパネル）----
+const X = 1345;
+const CH = {
+  mode: { x: X, y: 230, title: '表示', btns: ['波の動き', '電波の強さ'] },
+  freq: { x: X, y: 230, title: '周波数', btns: ['2.4 GHz', '5 GHz'] },
+  preset: { x: X, y: 230, title: '間取り・実験', btns: ['2LDKマンション', '木造の一戸建て', '壁の比べっこ', 'すき間の実験'], cols: 2 },
+  tools: { x: X, y: 230, title: '壁を描く', btns: ['動かす', 'コンクリート', '金属', 'ガラス'], cols: 2 },
+  undo: { x: X, y: 448, title: '', btns: ['元に戻す'] },
+};
+const SHOW = [
+  ['mode', 16, 22, t => t >= 18 ? 1 : 0],
+  ['freq', 55, 69.6, t => t >= 61 ? 1 : 0],
+  ['preset', 70, 75, () => 2],
+  ['preset', 92, 97, () => 3],
+  ['tools', 113, 129.6, t => t >= 115.5 && t < 117 ? 1 : 0],
+  ['undo', 124, 129.6, t => t >= 125.5 ? 0 : -1],
+  ['preset', 130, 134, () => 1],
+];
+const B = (k, i) => btnRect(CH[k], i);
+// 図の上の点（m）→ 動画の座標
+const MP = (xm, ym) => ({ x: MAP[0] + xm / 9.6 * MAP[2], y: MAP[1] + ym / 6.0 * MAP[3] });
+const CUR = [
+  { t: 17, ...B('mode', 1) }, { t: 18, ...B('mode', 1), click: true }, { t: 19.5, ...B('mode', 1), hide: true },
+  { t: 32.8, ...MP(...ENT) }, { t: 33.5, ...MP(...ENT), drag: true }, { t: 36.5, ...MP(...MID) }, { t: 37.5, ...MP(...MID), hide: true },
+  { t: 41.3, ...MP(8.2, 4.5) }, { t: 42, ...MP(8.2, 4.5), drag: true }, { t: 44.5, ...MP(2.0, 1.4) }, { t: 45.5, ...MP(2.0, 1.4), hide: true },
+  { t: 60, ...B('freq', 1) }, { t: 60.8, ...B('freq', 1), click: true }, { t: 62, ...B('freq', 1), hide: true },
+  { t: 114.5, ...B('tools', 1) }, { t: 115.5, ...B('tools', 1), click: true },
+  { t: 116, ...MP(2.0, 2.6) }, { t: 116.2, ...MP(2.0, 2.6), drag: true }, { t: 116.5, ...MP(2.0, 3.5) }, { t: 117.5, ...MP(2.0, 3.5), hide: true },
+  { t: 124.8, ...B('undo', 0) }, { t: 125.5, ...B('undo', 0), click: true }, { t: 127, ...B('undo', 0), hide: true },
+];
+
+// ---- 字幕 ----
+const CAPS = [
+  { a: 7.3, b: 17.4, main: '真上から見た 2LDK。玄関のルーターから電波の波が広がる', sub: '電磁波の式を、0.75cm のマス目で1歩ずつ計算している',
+    en: ['A 2-bedroom flat from above. Waves spread from the router by the entrance', 'The equations of electromagnetism are solved step by step on a 0.75 cm grid'] },
+  { a: 18, b: 29.6, main: '「電波の強さ」に切りかえると、届き方が色で分かる', sub: '線はスマホのアンテナの本数の目安。壁を通るたびに弱まる',
+    en: ['Switch to "Signal strength" to see coverage as color', 'The lines roughly match the bars on a phone. Each wall weakens the signal'] },
+  { a: 30.5, b: 40.8, main: 'ルーターはドラッグで動かせる', sub: '玄関から家の真ん中へ動かすと、奥の部屋まで届く',
+    en: ['Drag the router to move it', 'Move it from the entrance to the middle of the home and it reaches the far rooms'] },
+  { a: 41.3, b: 51.6, main: 'スマホも動かせる。右に、その場所の強さ', sub: '「壁がなければ」の値とくらべると、壁でどれだけ弱まったかが分かる',
+    en: ['You can move the phone too. Its signal is shown on the right', 'Compare it with the "without walls" value to see how much the walls cost'] },
+  { a: 52.5, b: 60.6, main: 'WiFi には 2.4 GHz と 5 GHz がある', sub: '2.4 GHz の波長は約12cm',
+    en: ['WiFi uses 2.4 GHz and 5 GHz', 'The wavelength of 2.4 GHz is about 12 cm'] },
+  { a: 61.3, b: 69.6, main: '5 GHz（波長 約6cm）は、壁の向こうで弱まりやすい', sub: '速いが、届く範囲はせまい',
+    en: ['5 GHz (about 6 cm) fades more behind walls', 'Faster, but with a shorter reach'] },
+  { a: 70.5, b: 91.6, main: '「壁の比べっこ」: 7つの通路に1種類ずつ壁を置いた', sub: 'コンクリートは大きく弱め、金属はほとんど通さない。数字は通路ごとの弱まり',
+    en: ['"Wall test": seven lanes, each with one kind of wall', 'Concrete weakens it a lot and metal blocks it. The numbers are the loss in each lane'] },
+  { a: 92.5, b: 101.6, main: '「すき間の実験」: 金属の板のすき間から、電波は回りこむ', sub: '回りこみ（回折）。すき間の幅は上から 20・8・4・2cm',
+    en: ['"Gap experiment": waves bend through gaps in a metal plate', 'This is diffraction. The gaps are 20, 8, 4 and 2 cm wide, from the top'] },
+  { a: 102.2, b: 111.6, main: 'すき間が半波長より細いと、ほとんど通らない', sub: '2.4 GHz の半波長は約6cm。2cm のすき間は通れない',
+    en: ['Gaps narrower than half a wavelength let almost nothing through', 'Half a wavelength at 2.4 GHz is about 6 cm, so a 2 cm gap blocks it'] },
+  { a: 112.5, b: 123.8, main: '材料を選んでドラッグすると、壁が描ける', sub: '廊下にコンクリートの壁を足すと、LDK に届きにくくなる',
+    en: ['Pick a material and drag to draw a wall', 'Add a concrete wall in the hallway and the living room gets less signal'] },
+  { a: 124.3, b: 129.6, main: '「元に戻す」で消せる', sub: '自分の家に近い間取りでも試せる',
+    en: ['"Undo" removes it', 'Try a layout like your own home'] },
+  { a: 130.5, b: 141.6, main: '木造の一戸建ても。材料の値は ITU-R の勧告から', sub: '受信の強さの境目などは目安。体への影響を示すものではない',
+    en: ['A wooden house too. Material values come from ITU-R recommendations', 'Signal thresholds are rough guides, and nothing here is about health effects'] },
+];
+
+promoStart({
+  name: '電波の見える部屋（使い方）', out: 'wifi-wave-guide', src: '../../wifi-wave/index.html', iw: 1680, ih: 1000, dur: DUR, peek: 40,
+  inject: { dpr: 2 },
+  music: { style: 'drone', root: 73, stopAt: END, cues: [{ t: END, type: 'jingle' }] },
+  ready: w => w.__ww && w.__ww.CAL && w.__ww.CAL['2.4'],
+  setup(w) { w.__ww.S.paused = true; const gl = qs(w, '#gl'); log2(`図: ${gl.width}×${gl.height}`); return null; },
+  subs: guideSubs(END, '電波の見える部屋', 'Seeing WiFi at Home', CAPS, 'Runs in your browser (PC or phone). Switch the app to English with the EN button'),
+  renderAt(t, w) { wwRender(w, SC, t); },
+  drawSource(g, w) { wwDraw2(g, w, MAP); },
+  overlay(g, t, w) {
+    // 数字のカード（右のパネルの上）: 2LDK の場面だけ
+    const s = wwScAt(SC, t);
+    const fr = s.preset === 'flat' && t >= 30 ? fade(t, 30.6, s.b - 0.3, 0.4) : 0;
+    drawPanel(g, X, 575, 540, 'スマホの場所（右のパネル）', [wwText(w, '#roVal') + ' ' + wwText(w, '#roUnit') + '  ' + wwText(w, '#roVerdict'), wwText(w, '#roDetail').slice(0, 26)], fr);
+    for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawGuideChrome(g, t, END, '電波の見える部屋',
+      'おもな出どころ: ITU-R 勧告 P.2040-3（2023）、ITU-R P.525、IEEE 802.11、Taflove と Hagness（2005）ほか');
+  },
+  errors: w => [w.__wwErr].filter(Boolean).map(String),
+});
+function log2(s) { const el = document.getElementById('log'); if (el) el.textContent += s + '\n'; }
+</script>
+</body>
+</html>

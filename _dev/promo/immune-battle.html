@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="immune-common.js"></script>
+<script>
+'use strict';
+// 台本: 免疫のたたかい（ショート、40秒＋締め）。?short で縦長に録る
+// インフルエンザ（健康な大人・10万個）が鼻に入ってから治るまで。日数はアプリのモデルの結果
+const V = new URLSearchParams(location.search).has('short');
+const MIC = V ? [0, 150, 1080, 1050] : [0, 0, 1920, 1080];   // ミクロの断面の置き場所
+const SC = [
+  { a: 0, b: 6, speed: 1, pre: 0.25 },
+  { a: 6, b: 13.2, speed: 1, pre: 0.7 },
+  { a: 13.2, b: 21.2, speed: 2, pre: 2.0 },
+  { a: 21.2, b: 28.2, speed: 2, pre: 4.0 },
+  { a: 28.2, b: SHORT_END + IDENT_CLOSE, speed: 2, pre: 5.6 },
+];
+const CAPS = [
+  { a: 6.3, b: 13, main: 'ウイルスは細胞に入り、自分のコピーを作らせる', sub: '1つの細胞から、何千個も出てくる',
+    en: ['Viruses enter cells and make them copy the virus', 'Thousands come out of a single cell'] },
+  { a: 13.5, b: 21, main: '2日目に熱、3日目には数十億個に', sub: '熱は、からだが戦っている合図',
+    en: ['Fever on day 2, billions of viruses by day 3', 'Fever is a sign your body is fighting'] },
+  { a: 21.5, b: 28, main: '数日おくれて、抗体とキラーT細胞が来る', sub: 'ウイルスをつかまえ、乗っ取られた細胞を片づける',
+    en: ['A few days later, antibodies and killer T cells arrive', 'They catch the viruses and clear out hijacked cells'] },
+  { a: 28.5, b: 35, main: '6日目に熱が下がり、8日目ごろウイルスが消える', sub: '2回目は記憶があるので、軽くすむ',
+    en: ['Fever breaks on day 6; the virus is gone around day 8', 'Next time, memory makes it milder'] },
+];
+promoStart({
+  name: '免疫のたたかい', out: 'immune-battle', src: '../../immune-battle/index.html', iw: 1920, ih: 1080, dur: SHORT_END + IDENT_CLOSE, peek: 18,
+  inject: { dpr: 2, raf: true },
+  music: { style: 'drone', root: 62, stopAt: SHORT_END, cues: [{ t: SHORT_END, type: 'jingle' }] },
+  ready: w => w.__ib && w.__ib.SIM && w.__ib.SIM.o && w.__rafQ && w.__rafQ.length,
+  setup(w) { ibSize(w, { '#micro': [MIC[2], MIC[3]], '#chart': [1000, 300], '#body': [240, 336] }); w.__ib.frame(1); return null; },
+  subs: shortSubs('免疫のたたかい', 'The Immune Battle', 'インフルエンザウイルスが、鼻に入ったら', 'When flu viruses land in your nose', CAPS,
+    'ブラウザで動かせます。ウイルス3つ・細菌3つ', 'Runs in your browser. Three viruses and three bacteria'),
+  renderAt(t, w) { ibRender(w, SC, t); },
+  drawSource(g, w) {
+    g.fillStyle = '#0e1116'; g.fillRect(0, 0, PW * RES, PH * RES);
+    g.drawImage(qs(w, '#micro'), MIC[0] * RES, MIC[1] * RES, MIC[2] * RES, MIC[3] * RES);
+  },
+  overlay(g, t, w) {
+    const d = w.document;
+    // 日にちと体温（左上、目印がはけてから）
+    const fs = fade(t, IDENT_MINI + 0.3, 35, 0.4);
+    if (fs > 0) drawPanel(g, 30, MIC[1] + 20, V ? 640 : 760, (d.getElementById('clock').textContent || '').trim(), ibStatus(w).slice(1), fs);
+    drawInset(g, d.getElementById('body'), PW - 250, MIC[1] + 230, 220, 300, '体の小窓', fade(t, 13.4, 28, 0.4));
+    drawInset(g, d.getElementById('chart'), 40, MIC[1] + MIC[3] - 400, PW - 80, 300, 'グラフ', fade(t, 28.4, 35, 0.4));
+    drawCaps(g, t, CAPS);
+    drawShortChrome(g, t, '免疫のたたかい', 'インフルエンザウイルスが、鼻に入ったら', 'ブラウザで動かせます。ウイルス3つ・細菌3つ',
+      '学習用のモデル（健康な大人・10万個）。参考: Baccam ほか（2006）J Virol ほか');
+  },
+  errors: w => w.__ib.err,
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "file": "_dev/promo/out/wifi-wave-guide.mp4",
+  "thumbnail": "assets/thumbs/wifi-wave.jpg",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/wifi-wave-guide.en.srt" },
+  "title": "電波の見える部屋 ― 使い方と見どころ（ルーターの場所・2.4GHz と 5GHz・壁の比べっこ・すき間・壁を描く）",
+  "description": "WiFi の電波が家の中をどう伝わり、壁でどう弱まるかを、電磁波の式で計算して見るブラウザのアプリ「電波の見える部屋」の、使い方と見どころです。\n\n0:00 はじめに\n0:07 波の動きと電波の強さ\n0:30 ルーターとスマホを動かす\n0:52 2.4 GHz と 5 GHz\n1:10 壁の比べっこ\n1:32 すき間の実験（回折）\n1:52 壁を描く\n2:10 解説\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/wifi-wave/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nITU-R 勧告 P.2040-3（2023）: 建材の誘電率・導電率\nITU-R 勧告 P.525: 自由空間で電波が弱まる式\nIEEE Std 802.11: チャンネルと周波数\nTaflove と Hagness（2005）『Computational Electrodynamics: The FDTD Method』第3版\nGabriel（1996）: 体の組織の電気の性質\n（アプリの「解説」→「おもな出どころ」）\n\n人の体・お湯の値、受信の強さの境目、ルーターの出力、壁の厚さは目安・推定です。体への影響を示すものではありません。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#WiFi #電波 #電磁波 #まなびラボ",
+  "tags": ["WiFi", "電波", "電磁波", "ルーター", "2.4GHz", "5GHz", "回折", "干渉", "シミュレーション", "使い方", "まなびラボ", "しし屋", "WiFi signal", "router placement", "electromagnetic waves", "FDTD", "diffraction"],
+  "localizations": {
+    "en": {
+      "title": "Seeing WiFi at Home ― App Guide: Router Placement, 2.4 vs 5 GHz, Walls, Gaps and Drawing Your Own",
+      "description": "A guide to \"Seeing WiFi at Home\", a browser app that calculates how WiFi travels through a home and weakens at walls. Turn on English subtitles (CC).\n\n0:00 Intro\n0:07 Waves and signal strength\n0:30 Moving the router and the phone\n0:52 2.4 GHz and 5 GHz\n1:10 Wall test\n1:32 Gap experiment (diffraction)\n1:52 Drawing walls\n2:10 Explanations\n\nTry the app (runs in your browser, PC or phone; switch to English with the EN button):\nhttps://sishiya.github.io/manabi-lab/wifi-wave/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nMain sources:\nITU-R P.2040-3 (2023): permittivity and conductivity of building materials\nITU-R P.525: free-space attenuation\nIEEE Std 802.11: channels and frequencies\nTaflove & Hagness (2005) Computational Electrodynamics: The FDTD Method, 3rd ed.\nGabriel (1996): dielectric properties of body tissues\n\nValues for the human body and bath water, signal thresholds, router power and wall thicknesses are rough estimates. Nothing here is about health effects.\n\nMusic: original sounds synthesized by code.\n\n#WiFi #Physics #Simulation"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "file": "_dev/promo/out/air-flow-guide.mp4",
+  "thumbnail": "assets/thumbs/air-flow.jpg",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/air-flow-guide.en.srt" },
+  "title": "空気の流れの見える部屋 ― 使い方と見どころ（空気の年齢・窓の開け方・外の風・換気扇・煙・サーキュレーター）",
+  "description": "窓・給気口・換気扇・外の風で、家の空気がどう入れかわり、どこがよどむのかを「空気の年齢」の色で見るブラウザのアプリ「空気の流れの見える部屋」の、使い方と見どころです。\n\n0:00 はじめに\n0:07 空気の年齢と空気の流れ\n0:27 24時間換気だけ\n0:39 窓を1か所・2か所（押して開け閉め）\n1:00 外の風の向き\n1:15 換気扇と給気口\n1:30 煙で入れかわりを見る\n1:50 サーキュレーター\n2:10 解説\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/air-flow/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\n建築基準法施行令 第20条の8（シックハウス対策の24時間換気、住宅は換気回数 0.5回/時）\nSandberg（1981）Building and Environment 16: 空気齢と換気効率\nEtheridge と Sandberg（1996）『Building Ventilation: Theory and Measurement』\nSwami と Chandra（1988）ASHRAE Transactions 94: 壁にかかる風圧係数\nWarren と Parkins（1985）: 窓1か所の換気\n（アプリの「解説」→「おもな出どころ」）\n\n学習用の簡単なモデルです。すき間の量（相当すき間面積 2 cm²/m²）と換気扇の風量は、一般的な値の目安です。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#換気 #空気の流れ #24時間換気 #まなびラボ",
+  "tags": ["換気", "空気の流れ", "24時間換気", "換気回数", "空気齢", "窓", "換気扇", "サーキュレーター", "使い方", "まなびラボ", "しし屋", "ventilation", "airflow", "air age", "circulator fan", "simulation"],
+  "localizations": {
+    "en": {
+      "title": "Seeing Airflow at Home ― App Guide: Air Age, Opening Windows, Wind, Fans, Smoke and Circulators",
+      "description": "A guide to \"Seeing Airflow at Home\", a browser app that shows how windows, vents, fans and outside wind replace the air in a home, and where it goes stale, using \"air age\" colors. Turn on English subtitles (CC).\n\n0:00 Intro\n0:07 Air age and air flow\n0:27 24-hour ventilation only\n0:39 One window or two (tap to open and close)\n1:00 Wind direction\n1:15 Fans and vents\n1:30 Watching the air change with smoke\n1:50 Circulator fans\n2:10 Explanations\n\nTry the app (runs in your browser, PC or phone; switch to English with the EN button):\nhttps://sishiya.github.io/manabi-lab/air-flow/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nMain sources:\nJapan's Building Standards Act Enforcement Order, Article 20-8 (24-hour ventilation, 0.5 air changes per hour)\nSandberg (1981) Building and Environment 16\nEtheridge & Sandberg (1996) Building Ventilation: Theory and Measurement\nSwami & Chandra (1988) ASHRAE Transactions 94\nWarren & Parkins (1985): single-sided ventilation\n\nA simplified learning model. Gap sizes and fan flow are typical values used as rough guides.\n\nMusic: original sounds synthesized by code.\n\n#Ventilation #Airflow"
+    }
+  }
+}

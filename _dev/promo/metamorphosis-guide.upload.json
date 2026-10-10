@@ -1,0 +1,15 @@
+{
+  "file": "_dev/promo/out/metamorphosis-guide.mp4",
+  "thumbnail": "assets/thumbs/metamorphosis.jpg",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/metamorphosis-guide.en.srt" },
+  "title": "さなぎの中で ― 使い方と見どころ（壊れる・残る・新しく作られる器官、ホルモン、3つの見かた、羽化）",
+  "description": "イモムシがさなぎになり、ガになるまでの体の中を、タバコスズメガの研究の日付で追うブラウザのアプリ「さなぎの中で」の、使い方と見どころです。\n\n0:00 はじめに\n0:07 時間を動かす\n0:17 幼虫と前蛹\n0:27 壊れる・残る・新しく作られる器官\n0:50 ホルモンとスイッチの遺伝子\n1:12 3つの見かた（透かして・割って・外から）\n1:35 羽化と翅を広げる\n2:14 よくある誤解と、まだ分かっていないこと\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/metamorphosis/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nTruman と Riddiford（1999）Nature: 完全変態のホルモンと、幼虫の起源の説\nJindra・Palli・Riddiford（2013）Annual Review of Entomology: スイッチの遺伝子 Kr-h1・broad・E93\nBollenbacher ほか（1981）、Fain と Riddiford（1975）: ホルモンの量\nTolbert・Matsumoto・Hildebrand（1983）J Neurosci: 18日を1日ずつの段階に\nSchwartz と Truman（1982）Science: 羽化のあとに死ぬ筋肉\nBlackiston・Silva Casey・Weiss（2008）PLOS ONE: 幼虫で覚えたことが成虫に残る\nほか（アプリの「このアプリについて」→「おもな出どころ」15件）\n\n模式図です。色・形の一部と、翅を広げる時間などは目安・推定です。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#変態 #さなぎ #昆虫 #まなびラボ",
+  "tags": ["変態", "完全変態", "さなぎ", "イモムシ", "昆虫", "タバコスズメガ", "羽化", "ホルモン", "使い方", "まなびラボ", "しし屋", "metamorphosis", "pupa", "caterpillar", "Manduca sexta", "insect", "ecdysone"],
+  "localizations": {
+    "en": {
+      "title": "Inside the Pupa ― App Guide: Organs That Break Down or Form, Hormones, Three Views, Emergence",
+      "description": "A guide to \"Inside the Pupa\", a browser app that follows the inside of a caterpillar becoming a moth, using research timelines for the tobacco hornworm (Manduca sexta). Turn on English subtitles (CC).\n\n0:00 Intro\n0:07 Moving through time\n0:17 Caterpillar and prepupa\n0:27 Organs that break down, stay or are newly built\n0:50 Hormones and switch genes\n1:12 Three views (see-through, cut open, outside)\n1:35 Emergence and spreading the wings\n2:14 Common myths and what we still don't know\n\nTry the app (runs in your browser, PC or phone; switch to English with the EN button):\nhttps://sishiya.github.io/manabi-lab/metamorphosis/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nMain sources:\nTruman & Riddiford (1999) Nature\nJindra, Palli & Riddiford (2013) Annual Review of Entomology\nBollenbacher et al. (1981); Fain & Riddiford (1975)\nTolbert, Matsumoto & Hildebrand (1983) J Neurosci\nSchwartz & Truman (1982) Science\nBlackiston, Silva Casey & Weiss (2008) PLOS ONE\nand others (15 in the app)\n\nThis is a diagram. Some colors and shapes, and timings such as wing expansion, are estimates.\n\nMusic: original sounds synthesized by code.\n\n#Metamorphosis #Insects"
+    }
+  }
+}

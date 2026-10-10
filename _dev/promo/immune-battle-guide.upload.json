@@ -1,0 +1,15 @@
+{
+  "file": "_dev/promo/out/immune-battle-guide.mp4",
+  "thumbnail": "assets/thumbs/immune-battle.jpg",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/immune-battle-guide.en.srt" },
+  "title": "免疫のたたかい ― 使い方と見どころ（ミクロの断面・ズーム・くすり・抗生物質・2回目の感染）",
+  "description": "ウイルスや細菌がからだに入って増え、免疫に片づけられるまでを、ミクロの断面とグラフで見るブラウザのアプリ「免疫のたたかい」の、使い方と見どころです。\n\n0:00 はじめに\n0:07 画面の見かた（ミクロの断面・いまの状況・グラフ・体の小窓）\n0:28 入ってくるもの・からだ（細菌・肺炎球菌）\n0:48 ズーム（細胞の中から全身まで）\n1:10 くすり（オセルタミビル）\n1:30 細菌と抗生物質・耐性菌（MRSA）\n1:52 2回目の感染・ワクチン\n2:14 ふしぎに答える\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/immune-battle/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nモデルの形と数値の参考:\nBaccam ほか（2006）J Virol: 標的細胞が限られるウイルスのモデル\nElek（1957）Ann N Y Acad Sci: 皮膚に化膿を起こす黄色ブドウ球菌の数\nTeunis ほか（2008）J Med Virol: ノロウイルスがうつる数\n免疫学の教科書（『Janeway's Immunobiology』など）\n\n動画の中の日数・数値は、よく知られた経過に近くなるよう調整した学習用のモデルの結果です。病気の診断や治療の判断には使えません。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#免疫 #インフルエンザ #抗生物質 #ワクチン #まなびラボ",
+  "tags": ["免疫", "インフルエンザ", "ウイルス", "細菌", "抗体", "ワクチン", "抗生物質", "耐性菌", "MRSA", "使い方", "まなびラボ", "しし屋", "immune system", "influenza", "antibodies", "vaccine", "antibiotics", "MRSA"],
+  "localizations": {
+    "en": {
+      "title": "The Immune Battle ― App Guide: Microscopic View, Zoom, Medicines, Antibiotics and Second Infections",
+      "description": "A guide to \"The Immune Battle\", a browser app that shows viruses and bacteria entering the body, multiplying and being cleared by the immune system. Turn on English subtitles (CC).\n\n0:00 Intro\n0:07 Reading the screen (microscopic view, current status, graph, body window)\n0:28 Choosing the pathogen and the body (bacteria, pneumococcus)\n0:48 Zoom (from inside a cell to the whole body)\n1:10 Medicine (oseltamivir)\n1:30 Bacteria, antibiotics and resistant MRSA\n1:52 Second infection and vaccines\n2:14 Questions answered\n\nTry the app (runs in your browser, PC or phone). The on-screen text is in Japanese for now:\nhttps://sishiya.github.io/manabi-lab/immune-battle/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nModel references:\nBaccam et al. (2006) J Virol: target-cell-limited virus model\nElek (1957) Ann N Y Acad Sci: Staphylococcus numbers that cause skin infection\nTeunis et al. (2008) J Med Virol: norovirus infectious dose\nImmunology textbooks (Janeway's Immunobiology and others)\n\nDays and numbers in the video come from a learning model tuned to match well-known courses of illness. Don't use it to diagnose or treat illness.\n\nMusic: original sounds synthesized by code.\n\n#ImmuneSystem #Influenza #Antibiotics"
+    }
+  }
+}

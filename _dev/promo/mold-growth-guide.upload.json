@@ -1,0 +1,15 @@
+{
+  "file": "_dev/promo/out/mold-growth-guide.mp4",
+  "thumbnail": "assets/thumbs/mold-growth.jpg",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/mold-growth-guide.en.srt" },
+  "title": "カビが育つまで ― 使い方と見どころ（カビの箱庭・顕微鏡の見え方・道具・毎日の習慣・カビの図鑑）",
+  "description": "浴室の壁を拡大した「カビの箱庭」で、胞子が芽を出し菌糸をのばして増えていく様子を見て、水・汚れ・カビ取り剤・防カビ剤を指で試すブラウザのアプリ「カビが育つまで」の、使い方と見どころです。\n\n0:00 はじめに\n0:07 カビの箱庭\n0:28 見えないものを見る・湿り気を見る\n0:48 寄って見る（顕微鏡の見え方）\n1:08 道具を試す（カビ取り剤・乾かす）\n1:32 いまの状況と発見カード\n1:50 毎日の習慣で8週間をくらべる\n2:10 カビの図鑑\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/mold-growth/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nGrant ほか（1989）International Biodeterioration: 育つ最低の湿り気\nSedlbauer（2001）: 発芽までの時間を足し合わせる考え方\nHukka と Viitanen（1999）: 目に見えるまでの時間の目安\nTrinci（1969）J Gen Microbiol 57: 菌糸の先ののびる速さ\nRosso ほか（1993）: 温度と育つ速さの式\nWHO（2009）Guidelines for indoor air quality: dampness and mould\nカビ取り剤・防カビ剤の成分と効き目の期間: 製品の表示\n（アプリの「このアプリについて」→「おもな出どころ」）\n\n学習用の簡単なシミュレーションです。育つ速さ・量は推定で、実際の浴室では何倍もちがうことがあります。健康・医療の判断や、建物の診断には使えません。塩素系のカビ取り剤は酸性のものと混ぜず、製品の説明書に従ってください。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#カビ #お風呂掃除 #カビ対策 #まなびラボ",
+  "tags": ["カビ", "お風呂", "掃除", "カビ取り", "カビ対策", "菌糸", "胞子", "換気扇", "使い方", "まなびラボ", "しし屋", "mold", "bathroom mold", "fungi", "hyphae", "spores"],
+  "localizations": {
+    "en": {
+      "title": "How Mold Grows ― App Guide: The Mold Garden, Microscope View, Tools, Daily Habits and the Mold Guide",
+      "description": "A guide to \"How Mold Grows\", a browser app with a magnified \"mold garden\" of bathroom wall where spores sprout and spread, and you can try water, grime, cleaners and anti-mold sprays with your finger. Turn on English subtitles (CC).\n\n0:00 Intro\n0:07 The mold garden\n0:28 Showing the invisible and the damp\n0:48 Zooming in (microscope view)\n1:08 Trying tools (bleach, drying)\n1:32 Current status and discovery cards\n1:50 Comparing 8 weeks of daily habits\n2:10 The mold guide\n\nTry the app (runs in your browser, PC or phone; switch to English with the EN button):\nhttps://sishiya.github.io/manabi-lab/mold-growth/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nMain sources:\nGrant et al. (1989) International Biodeterioration\nSedlbauer (2001)\nHukka & Viitanen (1999)\nTrinci (1969) J Gen Microbiol 57\nRosso et al. (1993)\nWHO (2009) Guidelines for indoor air quality: dampness and mould\nProduct labels for cleaners and anti-mold agents\n\nA simplified learning simulation. Growth speeds and amounts are estimates and can differ greatly in a real bathroom. Not for health, medical or building decisions. Never mix chlorine cleaners with acidic products, and follow the product instructions.\n\nMusic: original sounds synthesized by code.\n\n#Mold #Cleaning"
+    }
+  }
+}

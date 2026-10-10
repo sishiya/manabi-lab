@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="air-flow-common.js"></script>
+<script>
+'use strict';
+// 台本: 空気の流れの見える部屋 ― 使い方と見どころ（横長の説明動画、150秒）
+// 図は左（9.6m × 6m の 2LDK）、右にボタンの札と数字（アプリでも右のパネル）。日本語の字幕は上
+const END = 150, DUR = END + IDENT_CLOSE;
+const MAP = [40, 215, 1270, 794];
+const MP = (xm, ym) => ({ x: MAP[0] + xm / 9.6 * MAP[2], y: MAP[1] + ym / 6.0 * MAP[3] });
+const SC = [
+  { a: 0, b: 27, scene: 'cross', speed: 10 },
+  { a: 27, b: 39, scene: '24h', speed: 600 },
+  { a: 39, b: 60, scene: 'single', speed: 60, ev: [{ t: 12, run: w => w.setState('w1', 2) }] },
+  { a: 60, b: 75, scene: 'door', speed: 60, ev: [{ t: 7, run: w => afWind(w, 270, 3) }] },
+  { a: 75, b: 90, scene: 'hood', speed: 60, ev: [{ t: 8, run: w => { for (const k of ['v1', 'v2', 'v3']) w.setState(k, 3); } }] },
+  { a: 90, b: 110, scene: 'single', speed: 60, ev: [{ t: 1.5, run: w => w.fillSmoke() }] },
+  { a: 110, b: 130, scene: 'circ', speed: 60, ev: [{ t: 10, run: w => { w.__af.S.circs[0].lv = 0; } }] },
+  { a: 130, b: END, scene: 'cross', speed: 10 },
+];
+const X = 1345;
+const CH = {
+  scenes: { x: X, y: 230, title: '場面（右のパネル）', btns: ['24時間換気だけ', '窓を2か所あける', '窓を1か所だけ', '玄関と窓をあける', 'キッチンの換気扇', 'サーキュレーター'], cols: 2 },
+  wind: { x: X, y: 230, title: '外の風（右のパネル）', btns: ['北西', '北', '北東', '西', '', '東'], cols: 3 },
+  smoke: { x: X, y: 230, title: '煙で入れかわりを見る', btns: ['部屋じゅうを煙で満たす'] },
+};
+const SHOW = [
+  ['scenes', 27, 32, () => 0],
+  ['scenes', 39, 44, () => 2],
+  ['scenes', 60, 64.5, () => 3],
+  ['wind', 65, 74.6, t => t >= 67 ? 3 : 5],
+  ['scenes', 75, 79.5, () => 4],
+  ['smoke', 90.2, 96, t => t >= 91.5 ? 0 : -1],
+  ['scenes', 110, 114.5, () => 5],
+];
+const B = (k, i) => btnRect(CH[k], i);
+const CUR = [
+  { t: 50.3, ...MP(0.6, 1.7) }, { t: 51, ...MP(0.6, 1.7), click: true }, { t: 52.5, ...MP(0.6, 1.7), hide: true },
+  { t: 66.3, ...B('wind', 3) }, { t: 67, ...B('wind', 3), click: true }, { t: 68.5, ...B('wind', 3), hide: true },
+  { t: 82.3, ...MP(0.6, 0.85) }, { t: 83, ...MP(0.6, 0.85), click: true }, { t: 83.6, ...MP(0.6, 5.15), click: true }, { t: 84.2, ...MP(9.0, 0.85), click: true }, { t: 85.5, ...MP(9.0, 0.85), hide: true },
+  { t: 90.8, ...B('smoke', 0) }, { t: 91.5, ...B('smoke', 0), click: true }, { t: 93, ...B('smoke', 0), hide: true },
+  { t: 119.3, ...MP(3.0, 3.0) }, { t: 120, ...MP(3.0, 3.0), click: true }, { t: 121.5, ...MP(3.0, 3.0), hide: true },
+];
+const CAPS = [
+  { a: 7.3, b: 17, main: '色は「空気の年齢」: 外から入って何分たったか', sub: '青は新しい空気、赤はよどんだ空気',
+    en: ['Color shows "air age": how long since the air came in from outside', 'Blue is fresh air; red is stale'] },
+  { a: 17.5, b: 26.6, main: '流れる粒は、空気の動き', sub: '窓を2か所あけると、西の窓から入って東の窓から出る',
+    en: ['The moving dots show the air flow', 'With two windows open, air comes in the west window and leaves by the east'] },
+  { a: 27.4, b: 38.6, main: '窓を閉めた「24時間換気だけ」', sub: '法律の目安は1時間に0.5回。右上の数字は家全体の換気回数',
+    en: ['"24-hour ventilation only", with the windows shut', 'The legal guideline is 0.5 air changes per hour. The number at the top right is for the whole home'] },
+  { a: 39.4, b: 49.8, main: '窓を1か所あけても、風は通りぬけない', sub: '空気の出口がないと、窓の近くが少し入れかわるだけ',
+    en: ['Opening one window doesn\'t let the wind through', 'With no way out, only the air near the window changes a little'] },
+  { a: 50.3, b: 59.6, main: '窓・ドアは、押して開け閉めできる', sub: 'もう1つ窓をあけると、風の通り道ができる',
+    en: ['Tap windows and doors to open or close them', 'Open a second window and the wind finds a path'] },
+  { a: 60.4, b: 74.6, main: '外の風の向きで、入る窓と出る窓が変わる', sub: '風上の壁は押され、風下の壁は引かれる（風圧）',
+    en: ['Wind direction changes which opening air enters and leaves', 'The windward wall is pushed and the leeward wall pulled (wind pressure)'] },
+  { a: 75.4, b: 82, main: '給気口を閉めて、キッチンの換気扇を強で回すと', sub: '入口がすき間しかないので、家の気圧が下がり、空気を引けない',
+    en: ['Close the vents and run the kitchen hood on high', 'With only gaps to come in through, the pressure drops and little air moves'] },
+  { a: 82.5, b: 89.6, main: '給気口を開けると、外の空気が入ってくる', sub: '換気扇は、入口とセットで考える',
+    en: ['Open the vents and outside air comes in', 'A fan needs an inlet to work'] },
+  { a: 90.4, b: 99.6, main: '「部屋じゅうを煙で満たす」で、入れかわりを見る', sub: '煙が消えるまでの時間を、グラフで',
+    en: ['"Fill the home with smoke" to watch the air change', 'The graph shows how long the smoke takes to clear'] },
+  { a: 100, b: 109.6, main: '窓が1か所だけだと、煙がなかなか抜けない', sub: '',
+    en: ['With only one window open, the smoke is slow to clear', ''] },
+  { a: 110.4, b: 119.6, main: 'サーキュレーターは、よどんだ部屋に風を送る', sub: '置く場所と向きは、ドラッグで変えられる',
+    en: ['A circulator fan blows air into a stale room', 'Drag it to change where it sits and where it points'] },
+  { a: 120.2, b: 129.6, main: '止めると、洋室2の空気が古くなっていく', sub: '',
+    en: ['Turn it off, and the air in bedroom 2 gets older', ''] },
+  { a: 130.4, b: 141.6, main: '「解説」に、空気の年齢・換気回数・しくみ', sub: '学習用の簡単なモデル。すき間の量や換気扇の風量は目安',
+    en: ['"Explanation" covers air age, air changes and how it works', 'A simplified learning model. Gap sizes and fan flow are rough guides'] },
+];
+const CHART = [X, 560, 540, 260];
+promoStart({
+  name: '空気の流れの見える部屋（使い方）', out: 'air-flow-guide', src: '../../air-flow/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 20,
+  inject: { dpr: 2, raf: true },
+  music: { style: 'journey', root: 146.83, stopAt: END, cues: [{ t: END, type: 'jingle' }] },
+  ready: w => w.__af && w.__af.S && w.__af.S.scene && w.fit,
+  setup(w) {
+    afSize(w, MAP[2], MAP[3]);
+    const st = w.document.createElement('style'); st.textContent = `#chart{position:fixed!important;left:0!important;top:0!important;width:${CHART[2]}px!important;height:${CHART[3]}px!important}`; w.document.head.append(st);
+    return null;
+  },
+  subs: guideSubs(END, '空気の流れの見える部屋', 'Seeing Airflow at Home', CAPS, 'Runs in your browser (PC or phone). Switch the app to English with the EN button'),
+  renderAt(t, w) { afRender(w, SC, t); if (t >= 90 && t < 110) w.drawChart(); },
+  drawSource(g, w) {
+    g.fillStyle = '#0b0e14'; g.fillRect(0, 0, PW * RES, PH * RES);
+    g.drawImage(qs(w, '#view'), MAP[0] * RES, MAP[1] * RES, MAP[2] * RES, MAP[3] * RES);
+  },
+  overlay(g, t, w) {
+    const ft = fade(t, 27.4, 38.6, 0.4) + fade(t, 50.3, 89.6, 0.4) + fade(t, 110.4, 141.6, 0.4);   // 窓1か所の場面は、窓の近くの入れかわりも数に入るので出さない
+    drawPanel(g, X, 600, 540, '家全体の換気回数（右のパネル）', [afText(w, '#roVal') + ' 回/時  ' + afText(w, '#roTag')], ft);
+    drawInset(g, qs(w, '#chart'), CHART[0], CHART[1], CHART[2], CHART[3], '煙の量（右のパネル）', fade(t, 92, 109.6, 0.4));
+    for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawGuideChrome(g, t, END, '空気の流れの見える部屋',
+      'おもな出どころ: 建築基準法施行令 第20条の8、Sandberg（1981）、Etheridge と Sandberg（1996）、Swami と Chandra（1988）ほか');
+  },
+  errors: w => [w.__af.err].filter(Boolean).map(String),
+});
+</script>
+</body>
+</html>

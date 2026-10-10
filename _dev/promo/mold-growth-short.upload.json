@@ -1,0 +1,14 @@
+{
+  "file": "_dev/promo/out/mold-growth-short.mp4",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/mold-growth-short.en.srt" },
+  "title": "お風呂のカビは、こうして広がる ― 胞子が落ちてから8週間 #Shorts",
+  "description": "浴室の壁を拡大した「カビの箱庭」で、胞子が芽を出し菌糸をのばして増えていく様子を見て、水・汚れ・カビ取り剤・防カビ剤を指で試すブラウザのアプリ「カビが育つまで」から。\n\nアプリ: https://sishiya.github.io/manabi-lab/mold-growth/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ: Grant ほか（1989）、Sedlbauer（2001）、Hukka と Viitanen（1999）、Trinci（1969）、WHO（2009）ほか（アプリの「このアプリについて」→「おもな出どころ」）。学習用の簡単なシミュレーションで、育つ速さは推定です。塩素系のカビ取り剤は酸性のものと混ぜず、製品の説明書に従ってください。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#カビ #お風呂掃除 #まなびラボ",
+  "tags": ["カビ", "お風呂", "掃除", "カビ取り", "菌糸", "Shorts", "まなびラボ", "しし屋", "mold", "bathroom mold", "fungi"],
+  "localizations": {
+    "en": {
+      "title": "How Bathroom Mold Spreads ― From a Fallen Spore to Eight Weeks Later #Shorts",
+      "description": "From \"How Mold Grows\", a browser app with a magnified \"mold garden\" of bathroom wall where spores sprout and spread, and you can try water, grime, cleaners and anti-mold sprays with your finger.\n\nApp (switch to English with the EN button): https://sishiya.github.io/manabi-lab/mold-growth/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMain sources: Grant et al. (1989); Sedlbauer (2001); Hukka & Viitanen (1999); Trinci (1969); WHO (2009); and others. A simplified learning simulation; growth speeds are estimates. Never mix chlorine cleaners with acidic products, and follow the product instructions.\n\nMusic: original sounds synthesized by code.\n\n#Mold #Cleaning"
+    }
+  }
+}

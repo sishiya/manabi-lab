@@ -21,6 +21,15 @@
 5. コマを確かめる: `__promoPeek(秒)` のあと `out` の canvas を縮めて `fetch('out/peek-<秒>.jpg', { method: 'PUT', body })` で保存して見る（ペインのスクリーンショットは失敗しやすい）。見るのは要所の数枚でよい（トークンの節約）。見終わったら消す。
 6. 録画: ボタン（または `__promoRecord()`）。150秒の 4K で1分ほど。できた mp4 から数コマ取り出して確かめる（`video` のシーク後は少し待ってから描く。すぐだと前のコマが写る）。
 
+### 台本の共通の道具（`promo.js`、2026-10-10 に足した）
+- 決まった部分: 説明動画は `drawGuideChrome(g, t, END, 名前, 出どころ)`＋`guideSubs(END, 日, 英, CAPS)`、ショートは `drawShortChrome(g, t, 名前, 一言, 終わりの一言, 出どころ)`＋`shortSubs(…)`（`SHORT_END` = 40）。題名・CC の案内・終わりの画面・しし屋の目印（はじまりと締め）がまとめて入る。
+- 札と文字: `drawPanel(g, x, y, w, 見出し, [行…], 濃さ, 色)`（アプリのパネルの中身を写す）、`drawName(g, t, a, b, 名前, 一言)`（生き物などの名前）。
+- アプリを外から動かす: `clickEl(w, sel)`、`setInput(w, sel, 値)`（スライダー・チェックボックスに input と change を送る）、`runEvents(w, 表, t0, t)`。
+- 日本語で録る: アプリは `?lang=ja`（`langJa`）で開く。`inject` で開くときは、言語の記憶 `manabi-lang` をその iframe の中だけ `ja` に見せる。`inject.pre` で台本ごとの差しかえ（アプリより先に動く）。
+- 確かめ用のコマ: `__peekSheet([秒…], 'peek-名前')` で何コマかを縮めて1枚に並べ、`out/peek-名前.jpg` に保存する（見終わったら消す）。
+- アプリごとの部品は `<app>-common.js`（`quantum-common.js`・`wifi-common.js`・`animal-common.js`・`immune-common.js`・`metamorphosis-common.js`・`air-flow-common.js`・`ga-common.js`・`mold-common.js`・`god-view-common.js`）。場面の表 `SC` と、とびとびの時刻（確かめ用のコマ）でも同じ絵になる進め方が入っている。
+- **神の視点マップだけは `inject` を使わない**: srcdoc で開くと Cesium の Worker（地形）が動かず、地図が出ない。普通に開いてから `requestAnimationFrame` を差しかえる（`gvInstallRaf`）。地図は1コマごとに読みこみを待つので、録画は通信が安定しているときに・時間がかかる（150秒で数十分の見込み）。「地球をちぎる」の描画ループは差しかえた requestAnimationFrame に乗らないことがあるので、1コマごとに `GV._tear.render()` で描かせる。粒の計算（Worker）は実時間で進むので、1コマのあいだだけ動かして止める。
+
 ## YouTube に上げる（`_dev/tools/youtube-upload.ps1`）
 - `<out>.upload.json` を作る: 説明欄は「アプリ: URL」の行と「しし屋 まなびラボ（ほかのアプリ）: URL」の行の間を1行あける（ショートも横長も。英語も同じ）。`file`・`thumbnail`・`privacy: private`・`title`・`description`（横長はチャプター `0:00 …`）・`tags`（日本語＋英語）・`localizations.en`（英語のタイトルと説明。「アプリの文字はいまは日本語」と書く）・`captions: { "en": "_dev/promo/out/<out>.en.srt" }`。日本語は焼きこんであるので CC は英語だけ。
 - 上げる: `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Meta _dev/promo/<out>.upload.json`。表示された ID を JSON の `videoId` に書く。

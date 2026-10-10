@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="metamorphosis-common.js"></script>
+<script>
+'use strict';
+// 台本: さなぎの中で（ショート、40秒＋締め）。?short で縦長に録る
+// 最初は入口のサムネイルと同じ蛹の1日目 → 幼虫 → 壊れる器官 → 翅に色 → 羽化して翅を広げる
+const V = new URLSearchParams(location.search).has('short');
+const VIEW = V ? [0, 200, 1080, 1040] : [0, 0, 1920, 1080];
+const KEYS = [[0, 1.0], [5.8, 1.0], [6, -5], [13, -2], [13.3, -0.3], [21, 3], [21.3, 9], [28, 16.5], [28.3, 17.98], [35, 18.06]];
+const MODES = [[0, 'in'], [28.3, 'out']];
+const CAPS = [
+  { a: 6.3, b: 13, main: 'タバコスズメガのイモムシ', sub: '土にもぐり、さなぎになる準備',
+    en: ['A tobacco hornworm caterpillar', 'It burrows into the soil to get ready to pupate'] },
+  { a: 13.5, b: 21, main: 'さなぎの中で、幼虫だけの器官は壊れる', sub: '「全部どろどろ」は半分だけ正しい。神経や心臓は残って作りかえられる',
+    en: ['Inside the pupa, organs only the caterpillar needs break down', '"It all turns to soup" is only half true. Nerves and the heart stay and are rebuilt'] },
+  { a: 21.5, b: 28, main: '飛ぶ筋肉が育ち、翅に色がつく', sub: '18日かけて、ガの体が組み上がる',
+    en: ['Flight muscles grow and the wings get their color', 'Over 18 days, the moth\'s body is assembled'] },
+  { a: 28.5, b: 35, main: '18日目の夜、殻を割って出てくる', sub: '1時間あまりで翅を広げきる（推定）',
+    en: ['On the night of day 18, it breaks out of the case', 'It spreads its wings in a little over an hour (estimate)'] },
+];
+promoStart({
+  name: 'さなぎの中で', out: 'metamorphosis', src: '../../metamorphosis/index.html', iw: 1920, ih: 1080, dur: SHORT_END + IDENT_CLOSE, peek: 18,
+  inject: { dpr: 2, raf: true },
+  music: { style: 'journey', root: 98, stopAt: SHORT_END, cues: [{ t: SHORT_END, type: 'jingle' }] },
+  ready: w => w.__mm && w.render && w.tToU,
+  setup(w) { mmSize(w, { '#view': [VIEW[2], VIEW[3]] }); w.render(0); return null; },
+  subs: shortSubs('さなぎの中で', 'Inside the Pupa', 'イモムシがガになるまで、体の中で何が起きる？', 'What happens inside as a caterpillar becomes a moth?', CAPS,
+    'ブラウザで動かせます。研究の日付で時間を追えます', 'Runs in your browser. Follow the changes day by day, based on research'),
+  renderAt(t, w) { mmRender(w, KEYS, MODES, t); },
+  drawSource(g, w) {
+    g.fillStyle = '#0e1110'; g.fillRect(0, 0, PW * RES, PH * RES);
+    g.drawImage(qs(w, '#view'), VIEW[0] * RES, VIEW[1] * RES, VIEW[2] * RES, VIEW[3] * RES);
+  },
+  overlay(g, t, w) {
+    drawPanel(g, 30, VIEW[1] + 10, V ? 700 : 760, '', mmStage(w).slice(0, 1), fade(t, IDENT_MINI + 0.3, 35, 0.4));
+    drawCaps(g, t, CAPS);
+    drawShortChrome(g, t, 'さなぎの中で', 'イモムシがガになるまで、体の中で何が起きる？', 'ブラウザで動かせます。研究の日付で時間を追えます',
+      'おもな出どころ: Truman と Riddiford（1999）Nature、Tolbert ほか（1983）ほか。模式図です');
+  },
+  errors: w => [w.__mm.err].filter(Boolean).map(String),
+});
+</script>
+</body>
+</html>

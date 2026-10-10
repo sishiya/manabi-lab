@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="god-view-common.js"></script>
+<script>
+'use strict';
+// 台本: 神の視点マップ（ショート、40秒＋締め）。?short で縦長に録る
+// 東京駅のあたり（入口のサムネイルと同じ）→ 引いて日本・地球 → 宇宙の果て → 皇居外苑の芝生から寄って原子・クォーク・プランク長
+// 外のデータ（地図・建物・宇宙のライブラリ）を読むので、録画は通信が安定しているときに。1コマごとに読みこみを待つので、ほかの台本より時間がかかる
+const V = new URLSearchParams(location.search).has('short');
+const ST = { lon: 139.7615, lat: 35.6800 };            // 東京駅のあたり
+const PARK = { lon: 139.7570, lat: 35.6810 };          // 皇居外苑の芝生（ミクロの入口。地面が植物の道になる）
+const SC = [
+  { a: 0, b: 6, kind: 'map', cam: u => ({ ...ST, h: 120, heading: 70 + u * 2.5, pitch: -18 }) },
+  { a: 6, b: 14, kind: 'map', cam: u => ({ ...ST, h: gvLog(u, 0, 8, 160, 2.2e7), heading: lerp(85, 0, ease(u / 4)), pitch: lerp(-18, -90, ease(u / 3.5)) }) },
+  { a: 14, b: 21.2, kind: 'space', cam: () => ({ ...ST, h: 2.2e7, heading: 0, pitch: -90 }), L: u => lerp(7.7, 26.8, ease(u / 6.6)) },
+  { a: 21.2, b: SHORT_END + IDENT_CLOSE, kind: 'micro', cut: true, cam: () => ({ ...PARK, h: 25, heading: 0, pitch: -90 }), L: u => lerp(0.55, -34.8, ease((u - 0.4) / 12.5)) },
+];
+const CAPS = [
+  { a: 6.3, b: 13.8, main: '本物の地形・航空写真・建物の地図', sub: '引いていくと、日本、そして地球',
+    en: ['A real map with terrain, aerial photos and buildings', 'Pull back to Japan, then the whole Earth'] },
+  { a: 14.3, b: 21, main: 'さらに引くと、太陽系、天の川銀河', sub: '観測できる宇宙の果ては、約 10²⁷ m',
+    en: ['Further out: the solar system, the Milky Way', 'The edge of the observable universe, about 10²⁷ m'] },
+  { a: 21.6, b: 27.8, main: 'こんどは地面に寄っていく', sub: '芝生の葉から、細胞、分子、原子へ',
+    en: ['Now zoom into the ground', 'From a blade of grass to cells, molecules and atoms'] },
+  { a: 28.2, b: 35, main: '原子核、クォーク、そして', sub: '約 10⁻³⁵ m のプランク長まで',
+    en: ['Nuclei, quarks, and then', 'down to the Planck length, about 10⁻³⁵ m'] },
+];
+let cfgT = 0;   // drawSource には時刻が来ないので、renderAt の時刻を覚えておく
+promoStart({
+  name: '神の視点マップ', out: 'god-view', src: '../../god-view/index.html', iw: V ? 1080 : 1920, ih: V ? 1920 : 1080, dur: SHORT_END + IDENT_CLOSE, peek: 3,
+
+  music: { style: 'drone', root: 55, stopAt: SHORT_END, cues: [{ t: SHORT_END, type: 'jingle' }] },
+  ready: w => w.GV && w.GV.viewer && w.__gv,
+  setup(w) { gvSetup(w); return null; },
+  subs: shortSubs('神の視点マップ', 'God\'s-Eye Map', 'ホイールひとつで、宇宙の果てから素粒子まで', 'One scroll wheel, from the edge of the universe to subatomic particles', CAPS,
+    'ブラウザで動かせます。地球をちぎる実験も', 'Runs in your browser. You can even tear a chunk out of the Earth'),
+  async renderAt(t, w) { cfgT = t; await gvRender(w, SC, t); },
+  drawSource(g, w) { gvDraw(g, w, cfgT, SC); },
+  overlay(g, t, w) {
+    const s = gvScAt(SC, t);
+    // 画面の幅（目印がはけてから）
+    const fw = fade(t, IDENT_MINI + 0.3, 35, 0.4);
+    if (fw > 0) drawPanel(g, 30, V ? 200 : 40, 520, '画面の幅', [gvWidth(w)], fw, '#ffd27a');
+    gvSpaceLabels(g, w, s.kind === 'space' ? fade(t, s.a + 0.8, s.b, 0.4) : 0);
+    if (s.kind === 'micro') drawPanel(g, 30, V ? 330 : 170, V ? 1020 : 900, '', gvMicroInfo(w, V ? 26 : 34), fade(t, s.a + 0.6, 35, 0.4));
+    gvSmall(g, s.kind === 'map' ? '地図: ' + gvCredits(w) : s.kind === 'space' ? gvText(w, '#space-credit') : '', 30, V ? 300 : PH - 30, fade(t, IDENT_MINI + 0.3, 35, 0.4) * 0.9);
+    drawCaps(g, t, CAPS);
+    drawShortChrome(g, t, '神の視点マップ', 'ホイールひとつで、宇宙の果てから素粒子まで', 'ブラウザで動かせます。地球をちぎる実験も',
+      '地図: 地理院タイル（写真）・3D都市モデル PLATEAU（国土交通省）・NASA Blue Marble ほか（説明欄に全部）');
+  },
+  errors: w => w.__gvErr,
+});
+</script>
+</body>
+</html>

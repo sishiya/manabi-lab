@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="immune-common.js"></script>
+<script>
+'use strict';
+// 台本: 免疫のたたかい ― 使い方と見どころ（横長の説明動画、150秒）
+// ミクロの断面を画面いっぱいに。グラフ（アプリでは下）と人体の小窓（アプリでは右上）は枠をつけて重ねる
+// 数値はアプリの学習用のモデルの結果（健康な大人・10万個のインフルエンザなど）。医療の判断には使えない
+const END = 150, DUR = END + IDENT_CLOSE;
+const SC = [
+  { a: 0, b: 28, ui: { pk: 'flu' }, speed: 1, pre: 0.6 },
+  { a: 28, b: 38, ui: { pk: 'staph', dose: 7 }, speed: 1, pre: 1.2 },
+  { a: 38, b: 48, ui: { pk: 'pneumo' }, speed: 1, pre: 2.5 },
+  { a: 48, b: 70, ui: { pk: 'flu' }, speed: 1, pre: 2.6, ev: [
+    { t: 3, run: w => w.setLevel(0) }, { t: 8, run: w => w.setLevel(1) }, { t: 10.5, run: w => w.setLevel(2) },
+    { t: 13.5, run: w => w.setLevel(3) }, { t: 17, run: w => w.setLevel(4) }, { t: 21, run: w => w.setLevel(1) }] },
+  { a: 70, b: 90, ui: { pk: 'flu' }, speed: 2, pre: 1.6, ev: [{ t: 2, run: w => ibMedClick(w, 'ose') }] },
+  { a: 90, b: 101, ui: { pk: 'staph', dose: 7 }, speed: 2, pre: 1.3, ev: [{ t: 1.5, run: w => ibMedClick(w, 'ceph') }] },
+  { a: 101, b: 112, ui: { pk: 'staph', dose: 7, resist: true }, speed: 2, pre: 1.3, ev: [{ t: 1.5, run: w => ibMedClick(w, 'ceph') }] },
+  { a: 112, b: 134, ui: { pk: 'flu' }, speed: 2, prep: w => { w.__ib.run(16); w.restart({ gap: 365 }); }, pre: 0.5 },   // 「1年後に、同じものがまた入ってくる」と同じ
+  { a: 134, b: END, ui: { pk: 'flu' }, speed: 1, pre: 3 },
+];
+// ボタンの札（右のパネル）
+const X = 1360;
+const CH = {
+  pk: { x: X, y: 240, title: '入ってくるもの', btns: ['インフルエンザ', '新型コロナ', 'ノロ', '黄色ブドウ球菌', '肺炎球菌', '大腸菌'], cols: 2 },
+  body: { x: X, y: 520, title: 'からだ', btns: ['健康な大人', '子ども', '高齢者', '免疫が弱い'], cols: 2 },
+  zoom: { x: X, y: 240, title: 'ズーム（ホイール・ボタン）', btns: ['細胞の中', '組織', '粘膜', '頭', '全身'], cols: 1 },
+  ose: { x: X, y: 240, title: 'くすり・治療', btns: ['オセルタミビル  始める'] },
+  ceph: { x: X, y: 240, title: 'くすり・治療', btns: ['セファレキシン  始める'] },
+  strain: { x: X, y: 360, title: '菌の種類', btns: ['ふつうの菌', 'MRSA'] },
+  mem: { x: X - 120, y: 240, title: '2回目の感染・ワクチン', btns: ['1年後に、同じものがまた入ってくる'] },
+};
+const SHOW = [
+  ['pk', 28, 47.6, t => t >= 38 ? 4 : 3],
+  ['body', 28, 47.6, () => 0],
+  ['zoom', 50, 69.6, t => t >= 69 ? 1 : t >= 65 ? 4 : t >= 61.5 ? 3 : t >= 58.5 ? 2 : t >= 56 ? 1 : t >= 51 ? 0 : 1],
+  ['ose', 70.5, 78, t => t >= 72 ? 0 : -1],
+  ['ceph', 90.5, 111.6, t => t >= 102.5 || (t >= 91.5 && t < 101) ? 0 : -1],
+  ['strain', 90.5, 111.6, t => t >= 101 ? 1 : 0],
+  ['mem', 112.3, 117, t => t >= 113 ? 0 : -1],
+];
+const B = (k, i) => btnRect(CH[k], i);
+const CUR = [
+  { t: 37.2, ...B('pk', 4) }, { t: 38, ...B('pk', 4), click: true }, { t: 39.5, ...B('pk', 4), hide: true },
+  { t: 71.2, ...B('ose', 0) }, { t: 72, ...B('ose', 0), click: true }, { t: 73.5, ...B('ose', 0), hide: true },
+  { t: 100.3, ...B('strain', 1) }, { t: 101, ...B('strain', 1), click: true }, { t: 102.5, ...B('ceph', 0), click: true }, { t: 104, ...B('ceph', 0), hide: true },
+  { t: 112.4, ...B('mem', 0) }, { t: 113, ...B('mem', 0), click: true }, { t: 114.5, ...B('mem', 0), hide: true },
+];
+const CAPS = [
+  { a: 7.3, b: 17.5, main: '大きな画面は、鼻とのどの粘膜のミクロの断面', sub: 'インフルエンザウイルスが細胞に入り、自分のコピーを作らせる',
+    en: ['The big view is a microscopic cross-section of the nose and throat lining', 'Flu viruses enter cells and make them copy the virus'] },
+  { a: 18, b: 27.6, main: '上に「いまの状況」、下に数のグラフ、右上に体の小窓', sub: '起きたことは、その場で吹き出しの説明が出る',
+    en: ['"Current status" on top, a graph of the numbers below, the body in the top-right window', 'Short notes pop up right where things happen'] },
+  { a: 28.4, b: 37.6, main: 'ウイルス3つ・細菌3つから選べる', sub: '黄色ブドウ球菌は皮膚の傷。好中球（青）が集まり、うみになる',
+    en: ['Choose from three viruses and three bacteria', 'Staph in a skin wound: neutrophils (blue) gather and form pus'] },
+  { a: 38.4, b: 47.6, main: '肺炎球菌は肺の奥（肺胞）。からだの例もえらべる', sub: '子ども・高齢者・免疫が弱い人でくらべられる',
+    en: ['Pneumococcus in the air sacs of the lungs. You can choose the body too', 'Compare children, older people and weakened immunity'] },
+  { a: 48.4, b: 58, main: 'ホイールで、段階ごとに寄る・引く', sub: '細胞の中では、ウイルスの部品が作られて運ばれる',
+    en: ['Scroll to zoom in steps', 'Inside a cell, virus parts are built and carried along'] },
+  { a: 58.5, b: 69.6, main: '粘膜の断面、頭の断面、全身まで', sub: '熱の合図は、体温の中枢（脳）へ届く',
+    en: ['Out to the lining, a cross-section of the head, and the whole body', 'The fever signal reaches the temperature center in the brain'] },
+  { a: 70.4, b: 79.6, main: 'くすり: オセルタミビル', sub: '新しいウイルスが細胞から離れられなくなる（黄緑の点がくすり）',
+    en: ['Medicine: oseltamivir', 'New viruses can\'t leave the cell (the yellow-green dots are the drug)'] },
+  { a: 80, b: 89.6, main: '熱が出てすぐ始めると、熱の期間が約1日短くなる', sub: 'モデルの計算。臨床試験の結果と同じくらい',
+    en: ['Started soon after the fever, it shortens the fever by about a day', 'This is the model\'s result, similar to clinical trials'] },
+  { a: 90.4, b: 100.6, main: '細菌には抗生物質。菌がふくらんで壁が破れる', sub: 'うみの中には届きにくい',
+    en: ['Antibiotics for bacteria: they swell and burst', 'They have trouble reaching inside pus'] },
+  { a: 101.2, b: 111.6, main: '耐性菌（MRSA）には、同じくすりが効かない', sub: 'グラフの菌の数が、なかなか減らない',
+    en: ['The same drug doesn\'t work on resistant MRSA', 'The number of bacteria in the graph barely falls'] },
+  { a: 112.4, b: 122.6, main: '2回目の感染: 1年後に、同じウイルスが入ってくる', sub: '記憶の細胞がすぐ動き、抗体が早く増える',
+    en: ['Second infection: the same virus arrives a year later', 'Memory cells react quickly and antibodies rise fast'] },
+  { a: 123, b: 133.6, main: 'グラフのうすい線が1回目。2回目は軽くすむ', sub: 'ワクチンは、本物が来る前に練習しておくしくみ',
+    en: ['The faint line in the graph is the first time. The second is milder', 'A vaccine is practice before the real thing'] },
+  { a: 134.4, b: 141.6, main: '「ふしぎに答える」に、よくある疑問の答え', sub: '学習用のモデル。病気の診断や治療の判断には使えない',
+    en: ['"Questions answered" covers common questions', 'This is a learning model. Don\'t use it to diagnose or treat illness'] },
+];
+const CHART = [100, 760, 1100, 230];   // グラフの置き場所
+promoStart({
+  name: '免疫のたたかい（使い方）', out: 'immune-battle-guide', src: '../../immune-battle/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 20,
+  inject: { dpr: 2, raf: true },
+  music: { style: 'drone', root: 62, stopAt: END, cues: [{ t: END, type: 'jingle' }] },
+  ready: w => w.__ib && w.__ib.SIM && w.__ib.SIM.o && w.__rafQ && w.__rafQ.length,
+  setup(w) { ibSize(w, { '#micro': [1920, 1080], '#chart': [CHART[2], CHART[3]], '#body': [240, 336] }); w.__ib.frame(1); return qs(w, '#micro'); },
+  subs: guideSubs(END, '免疫のたたかい', 'The Immune Battle', CAPS),
+  renderAt(t, w) { ibRender(w, SC, t); },
+  overlay(g, t, w) {
+    const d = w.document, zoomed = t >= 50 && t < 69.5;
+    // いまの状況（画面の上、字幕の下）
+    drawPanel(g, 40, 200, 760, 'いまの状況（' + (d.getElementById('clock').textContent || '').trim() + '）', ibStatus(w), fade(t, 18, 47.6, 0.4) * 1 + fade(t, 70, 141.6, 0.4));
+    // 体の小窓（右上）
+    if (!zoomed) drawInset(g, d.getElementById('body'), X + 300, 600, 200, 280, '体の小窓', fade(t, 18, 27.6, 0.4) + fade(t, 70, 89.6, 0.4));
+    // グラフ
+    const fc = fade(t, 18, 47.6, 0.4) + fade(t, 70, 141.6, 0.4);
+    drawInset(g, d.getElementById('chart'), CHART[0], CHART[1] - 50, CHART[2], CHART[3], 'グラフ（下）', Math.min(1, fc));
+    for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawGuideChrome(g, t, END, '免疫のたたかい',
+      'モデルの参考: Baccam ほか（2006）J Virol、Elek（1957）、Teunis ほか（2008）J Med Virol、『Janeway\'s Immunobiology』ほか。学習用のモデルです');
+  },
+  errors: w => w.__ib.err,
+});
+</script>
+</body>
+</html>

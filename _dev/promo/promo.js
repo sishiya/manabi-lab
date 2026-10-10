@@ -180,6 +180,71 @@ function drawInset(g, src, x, y, w, h, title, f) {
   g.globalAlpha = 1;
 }
 
+// 枠と見出しのついた短い文（アプリのパネルの中身を写す）。lines は複数行
+function drawPanel(g, x, y, w, title, lines, f, color) {
+  lines = lines.filter(Boolean);
+  if (f <= 0 || !lines.length) return;
+  const top = title ? 62 : 22, h = top + lines.length * 46;
+  g.shadowBlur = 0; g.globalAlpha = f;
+  g.fillStyle = 'rgba(14,16,24,0.9)'; g.strokeStyle = 'rgba(255,255,255,0.22)'; g.lineWidth = 2;
+  g.beginPath(); g.roundRect(x, y, w, h, 16); g.fill(); g.stroke();
+  g.textAlign = 'left'; g.textBaseline = 'middle';
+  if (title) { setFont(g, 26, true); g.fillStyle = '#b9bfcc'; g.fillText(title, x + 22, y + 30); }
+  lines.forEach((s, i) => { setFont(g, 32, true); g.fillStyle = color || '#fff'; g.fillText(s, x + 22, y + top + 20 + i * 46, w - 44); });
+  g.globalAlpha = 1;
+}
+// 名前の札（生き物・場所の名前を左上などに大きく）
+function drawName(g, t, a, b, name, sub, x = 60, y = 250) {
+  const f = fade(t, a, b, 0.5); if (f <= 0) return;
+  prep(g); g.textAlign = 'left'; g.globalAlpha = f;
+  txt(g, name, x, y, 60, '#fff', true);
+  if (sub) txt(g, sub, x + 2, y + 52, 28, '#f2c79a');
+  g.globalAlpha = 1; g.shadowBlur = 0;
+}
+
+// ---- 台本の決まった部分（9本ぶんを同じ形に）----
+// 説明動画: 題名 0.6〜6.6、CC の案内、終わりの画面 END−7.8、しし屋の目印
+function drawGuideChrome(g, t, END, name, credit) {
+  drawTitle(g, t, 0.6, 6.6, name, '使い方と見どころ');
+  const fc = fade(t, 1.5, 6.6, 0.6);
+  if (fc > 0) { prep(g); g.globalAlpha = fc; g.textAlign = 'right'; txt(g, 'CC: English subtitles', PW - 50, PH - 40, 30, '#ddd', true); g.globalAlpha = 1; g.shadowBlur = 0; }
+  drawEnd(g, t, END - 7.8, name, 'ブラウザで動かせます（パソコン・スマホ）', credit);
+  drawIdentMini(g, t, 0.3);
+  drawIdent(g, t, END);
+}
+const guideSubs = (END, ja, en, caps, endEn = 'Runs in your browser (PC or phone). The on-screen text is in Japanese for now') => [
+  { a: 0.6, b: 6.6, ja: ja + '\n使い方と見どころ', en: en + '\nHow to use the app and what to look for' },
+  ...capSubs(caps),
+  { a: END - 7.8, b: END, ja: ja + '\nブラウザで動かせます（パソコン・スマホ）', en: en + '\n' + endEn },
+];
+// ショート: 題名 0.6〜5.6、終わりの画面 35.2、締め 40
+const SHORT_END = 40;
+function drawShortChrome(g, t, name, sub, endLine, credit) {
+  drawTitle(g, t, 0.6, 5.6, name, sub);
+  drawIdentMini(g, t, 0.3);
+  drawEnd(g, t, 35.2, name, endLine, credit);
+  drawIdent(g, t, SHORT_END);
+}
+const shortSubs = (ja, en, subJa, subEn, caps, endJa, endEn) => [
+  { a: 0.6, b: 5.6, ja: ja + '\n' + subJa, en: en + '\n' + subEn },
+  ...capSubs(caps),
+  { a: 35.2, b: SHORT_END, ja: ja + '\n' + endJa, en: en + '\n' + endEn },
+];
+
+// アプリは日本語で開く（英語対応のアプリは ?lang= で言語が決まる。I18N.md）
+const langJa = s => s + (s.includes('?') ? '&' : '?') + 'lang=ja';
+
+// ---- アプリを操作する（アプリのファイルは変えず、ボタンやスライダーを外から動かす）----
+const qs = (w, sel) => w.document.querySelector(sel);
+function clickEl(w, sel) { const e = qs(w, sel); if (e) e.click(); return e; }
+function setInput(w, sel, v) {   // スライダー・チェックボックス（input と change の両方を送る）
+  const e = qs(w, sel); if (!e) return;
+  if (e.type === 'checkbox') e.checked = !!v; else e.value = v;
+  e.dispatchEvent(new w.Event('input', { bubbles: true })); e.dispatchEvent(new w.Event('change', { bubbles: true }));
+}
+// 時刻の表 [{ t, run(w) }] を、前のコマの時刻 t0 から t までにまたいだぶんだけ実行する
+function runEvents(w, evs, t0, t) { for (const e of evs) if (e.t > t0 && e.t <= t) e.run(w); }
+
 // ---- しし屋の目印（毎回同じ絵と音）----
 // はじまり: drawIdentMini(g, t, a) … a 秒から IDENT_MINI 秒。左上に小さくアイコンと名前が出て、すぐはける（音なし。本編が主役）
 // 締め    : drawIdent(g, t, a)     … a 秒から IDENT_CLOSE 秒。本編が輪の中へ閉じ、アイコンが組み上がって名前と URL
@@ -430,7 +495,7 @@ function promoStart(cfg) {
   if (!GLOW) cfg = Object.assign({}, cfg, { out: cfg.out + '-outline', name: cfg.name + '（ふちどり）' });
   document.title = '紹介動画づくり: ' + cfg.name;
   document.body.innerHTML = `
-<iframe id="app" ${cfg.inject ? '' : `src="${cfg.src}"`} style="position:fixed;left:0;top:0;width:${cfg.iw}px;height:${cfg.ih}px;border:0;opacity:0;pointer-events:none;z-index:-1"></iframe>
+<iframe id="app" ${cfg.inject ? '' : `src="${langJa(cfg.src)}"`} style="position:fixed;left:0;top:0;width:${cfg.iw}px;height:${cfg.ih}px;border:0;opacity:0;pointer-events:none;z-index:-1"></iframe>
 <main>
   <h1>紹介動画づくり: ${cfg.name}</h1>
   <p>アプリを裏で開いて1コマずつ描き、字幕と音を重ねて mp4（${PW * RES}×${PH * RES}・30コマ/秒・${cfg.dur}秒）にします。できたら下で再生でき、<code>_dev/promo/out/${cfg.out}.mp4</code> にも保存します（Git に入れません）。</p>
@@ -450,7 +515,9 @@ function promoStart(cfg) {
   if (cfg.inject) (async () => {
     const base = new URL(cfg.src, location.href);
     let html = await (await fetch(base)).text();
-    let pre = '';
+    // 動画は日本語の画面で録る（I18N.md）。srcdoc では ?lang= が読めないので、言語の記憶だけをこの iframe の中で「ja」に見せる
+    let pre = "{ const gi = Storage.prototype.getItem; Storage.prototype.getItem = function (k) { return k === 'manabi-lang' ? 'ja' : gi.call(this, k); }; }";
+    if (cfg.inject.pre) pre += cfg.inject.pre;   // 台本ごとの差しかえ（アプリより先に動く）
     if (cfg.inject.dpr) pre += `Object.defineProperty(window, 'devicePixelRatio', { get: () => ${cfg.inject.dpr} });`;
     if (cfg.inject.raf) pre += 'window.__rafQ = []; window.requestAnimationFrame = cb => window.__rafQ.push(cb); window.cancelAnimationFrame = () => {};'
       + 'window.__rafStep = ts => { const q = window.__rafQ; window.__rafQ = []; q.forEach(cb => cb(ts)); };';
@@ -538,6 +605,16 @@ function promoStart(cfg) {
 
   // 見本のコマ（確かめる用）: __promoPeek(秒)
   window.__promoPeek = async t => { await renderAt(t); return 'ok'; };
+  // 何コマかを縮めて1枚に並べ、out/<name>.jpg に保存する（確かめ用。見終わったら消す）
+  window.__peekSheet = async (ts, name) => {
+    const n = ts.length, cols = n > 1 ? (isVert() ? 4 : 2) : 1, rows = Math.ceil(n / cols);
+    const sw = isVert() ? 480 : 960, sh = Math.round(sw * out.height / out.width);
+    const c = document.createElement('canvas'); c.width = sw * cols; c.height = sh * rows;
+    const cg = c.getContext('2d');
+    for (let i = 0; i < n; i++) { await renderAt(ts[i]); cg.drawImage(out, (i % cols) * sw, Math.floor(i / cols) * sh, sw, sh); }
+    const b = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85));
+    return (await fetch(`out/${name}.jpg`, { method: 'PUT', body: b })).status;
+  };
   (async () => {
     try {
       for (let i = 0; i < 300; i++) {

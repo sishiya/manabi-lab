@@ -1,0 +1,14 @@
+{
+  "file": "_dev/promo/out/wifi-wave-short.mp4",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/wifi-wave-short.en.srt" },
+  "title": "WiFi の電波は、家の中をこう伝わる ― 電磁波のシミュレーション #Shorts",
+  "description": "WiFi の電波が家の中をどう伝わり、壁でどう弱まるかを、電磁波の式で計算して見るブラウザのアプリ「電波の見える部屋」から。\n\nアプリ: https://sishiya.github.io/manabi-lab/wifi-wave/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ: ITU-R 勧告 P.2040-3（2023）、ITU-R P.525、IEEE 802.11、Taflove と Hagness（2005）ほか（アプリの「解説」→「おもな出どころ」）。受信の強さの境目などは目安で、体への影響を示すものではありません。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#WiFi #電波 #まなびラボ",
+  "tags": ["WiFi", "電波", "電磁波", "ルーター", "シミュレーション", "Shorts", "まなびラボ", "しし屋", "WiFi signal", "router placement", "electromagnetic waves"],
+  "localizations": {
+    "en": {
+      "title": "This Is How WiFi Travels Through Your Home ― An Electromagnetic Wave Simulation #Shorts",
+      "description": "From \"Seeing WiFi at Home\", a browser app that calculates how WiFi travels through a home and weakens at walls.\n\nApp (switch to English with the EN button): https://sishiya.github.io/manabi-lab/wifi-wave/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMain sources: ITU-R P.2040-3 (2023), ITU-R P.525, IEEE 802.11, Taflove & Hagness (2005), and others. Signal thresholds are rough guides, and nothing here is about health effects.\n\nMusic: original sounds synthesized by code.\n\n#WiFi #Physics"
+    }
+  }
+}

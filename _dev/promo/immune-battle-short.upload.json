@@ -1,0 +1,14 @@
+{
+  "file": "_dev/promo/out/immune-battle-short.mp4",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/immune-battle-short.en.srt" },
+  "title": "インフルエンザが鼻に入ってから治るまで、からだの中で起きること #Shorts",
+  "description": "ウイルスや細菌がからだに入って増え、免疫に片づけられるまでを、ミクロの断面とグラフで見るブラウザのアプリ「免疫のたたかい」から。日数はアプリの学習用のモデル（健康な大人・10万個）の結果です。\n\nアプリ: https://sishiya.github.io/manabi-lab/immune-battle/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nモデルの参考: Baccam ほか（2006）J Virol、Elek（1957）、Teunis ほか（2008）J Med Virol、『Janeway's Immunobiology』ほか。学習用のモデルで、病気の診断や治療の判断には使えません。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#免疫 #インフルエンザ #まなびラボ",
+  "tags": ["免疫", "インフルエンザ", "ウイルス", "抗体", "Shorts", "まなびラボ", "しし屋", "immune system", "influenza", "antibodies"],
+  "localizations": {
+    "en": {
+      "title": "What Happens Inside You From Catching the Flu to Getting Better #Shorts",
+      "description": "From \"The Immune Battle\", a browser app that shows viruses and bacteria entering the body, multiplying and being cleared by the immune system. The days shown come from the app's learning model (a healthy adult, 100,000 viruses).\n\nApp (on-screen text in Japanese for now): https://sishiya.github.io/manabi-lab/immune-battle/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nModel references: Baccam et al. (2006) J Virol; Elek (1957); Teunis et al. (2008) J Med Virol; Janeway's Immunobiology; and others. This is a learning model. Don't use it to diagnose or treat illness.\n\nMusic: original sounds synthesized by code.\n\n#ImmuneSystem #Influenza"
+    }
+  }
+}

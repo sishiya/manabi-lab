@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="animal-common.js"></script>
+<script>
+'use strict';
+// 台本: いきものの感じる世界 ― 使い方と見どころ（横長の説明動画、150秒）
+// 3D の画面をいっぱいに。日本語の字幕は上、生き物の名前は左上、ボタンの札は右（アプリでも右のパネル）
+// 「灯りのちらつきを見る」は切のまま（光過敏性発作への配慮。DEVNOTES）
+const END = 150, DUR = END + IDENT_CLOSE;
+const SC = [
+  { a: 0, b: 16, animal: 'human', time: 'day', keys: [{ a: 9, b: 13.5, k: 'KeyW' }], turn: [{ a: 7.5, b: 9.5, yaw: 0.6 }, { a: 13.5, b: 15.5, yaw: -0.9, pitch: -0.1 }] },
+  { a: 16, b: 25, animal: 'human', time: 'day', poi: '花壇', turn: [{ a: 1, b: 8, yaw: 0.3 }] },
+  { a: 25, b: 35, animal: 'crow', time: 'day', poi: 'ヒマワリ', turn: [{ a: 1, b: 9, yaw: 0.15 }] },
+  { a: 35, b: 45, animal: 'crow', time: 'day', poi: 'ゴミ袋', ev: [{ t: 3.5, run: w => { w.__as.S.uvOnly = true; } }] },
+  { a: 45, b: 54, animal: 'snake', time: 'night', poi: 'ネズミ', t0: 0 },
+  { a: 54, b: 63, animal: 'snake', time: 'night', poi: '窓の中の人' },
+  { a: 63, b: 71.8, animal: 'bat', time: 'night', poi: '庭の上', turn: [{ a: 1, b: 8, yaw: 0.5 }] },
+  { a: 71.8, b: 80, animal: 'bat', time: 'night', poi: '玄関の灯りのガ', keys: [{ a: 2.5, b: 3.1, k: 'KeyW' }] },
+  { a: 80, b: 93, animal: 'fly', time: 'day' },
+  { a: 93, b: 100, animal: 'bee', time: 'day', poi: '空を見上げる' },
+  { a: 100, b: 107, animal: 'dog', time: 'day', poi: 'ボール' },
+  { a: 107, b: 114, animal: 'cat', time: 'night', poi: 'ネズミ', split: true },
+  { a: 114, b: 120, animal: 'shrimp', time: 'day', poi: '池の水面' },
+  { a: 120, b: 131, animal: 'refr', time: 'day', poi: 'テーブル', split: true, set: S => { S.rf.type = 3; S.rf.age = 60; } },
+  { a: 131, b: END, animal: 'thermo', time: 'night', poi: '庭の人' },
+];
+// 名前の札（左上）: [始め, 終わり, 名前, 一言]
+const NAMES = [
+  [3.8, 24.6, '人間', 'くらべる基準'],
+  [25.3, 44.6, 'カラス', '紫外線が見える'],
+  [45.3, 62.6, 'マムシ', 'ピット器官で熱を感じる'],
+  [63.3, 79.6, 'コウモリ', 'こだまで見る'],
+  [80.3, 92.6, 'ハエ', 'ほぼ全周が見える複眼'],
+  [93.3, 99.6, 'ミツバチ', '紫外線と偏光が見える'],
+  [100.3, 106.6, 'イヌ', '2色型の色覚'],
+  [107.3, 113.6, 'ネコ', '左半分は人間の目'],
+  [114.3, 119.6, 'シャコ', '偏光が見える'],
+  [120.3, 130.6, '老眼（60歳）', '左半分はふつうの目'],
+  [131.3, 141.6, 'サーモカメラ', '熱を色で表す'],
+];
+// ボタンの札（右のパネル）
+const X = 1430;
+const CH = {
+  move: { x: X, y: 250, title: '動き方', btns: ['ドラッグ: 見回す', 'W・↑: 進む'], cols: 1 },
+  poi: { x: X, y: 250, title: '見どころ（右のパネル）', btns: ['花壇', '窓', '玄関の灯り', 'ゴミ置き場'], cols: 2 },
+  time: { x: X, y: 440, title: '時刻', btns: ['昼', '夕方', '夜'] },
+  uv: { x: X, y: 250, title: 'カラス（右のパネル）', btns: ['紫で重ねる', '紫外線だけ'], cols: 1 },
+  split: { x: X - 60, y: 250, title: '右のパネル', btns: ['左半分を人間の目にして比べる'] },
+};
+const SHOW = [
+  ['move', 7.3, 15.6, t => t >= 9 && t < 13.5 ? 1 : t < 9.6 ? 0 : -1],
+  ['poi', 15.5, 24.6, t => t >= 16 ? 0 : -1],
+  ['time', 15.5, 24.6, () => 0],
+  ['uv', 35.3, 44.6, t => t >= 38.5 ? 1 : 0],
+  ['split', 107.2, 113.6, () => 0],
+  ['split', 120.2, 130.6, () => 0],
+];
+const B = (k, i) => btnRect(CH[k], i);
+const CUR = [
+  { t: 7.3, x: 700, y: 620 }, { t: 7.5, x: 700, y: 620, drag: true }, { t: 9.5, x: 950, y: 620 }, { t: 10.2, x: 950, y: 620, hide: true },
+  { t: 15.2, ...B('poi', 0) }, { t: 16, ...B('poi', 0), click: true }, { t: 17.5, ...B('poi', 0), hide: true },
+  { t: 37.7, ...B('uv', 1) }, { t: 38.5, ...B('uv', 1), click: true }, { t: 40, ...B('uv', 1), hide: true },
+];
+const CAPS = [
+  { a: 7.3, b: 15.6, main: 'ドラッグで見たい方を向き、W・矢印で歩く', sub: 'スマホは画面のボタンで動く',
+    en: ['Drag to look around; W or the arrow keys to walk', 'On a phone, use the on-screen buttons'] },
+  { a: 16.2, b: 24.6, main: '右の「見どころ」を押すと、その場所へ', sub: '時刻は昼・夕方・夜から選べる',
+    en: ['Tap a spot under "Highlights" to jump there', 'Choose day, dusk or night'] },
+  { a: 25.4, b: 34.6, main: 'カラスは紫外線が見える（人には見えない光）', sub: '紫外線を紫で重ねて表示。ヒマワリの花びらの先が光る',
+    en: ['Crows see ultraviolet, light we can\'t see', 'UV is shown as purple. The sunflower petal tips glow'] },
+  { a: 35.3, b: 44.6, main: '「紫外線だけ」にすると、ゴミ袋の中身が見える', sub: '黄色い袋は紫外線で暗く、中身が見えにくい（効き目はメーカーの説明。推定）',
+    en: ['Switch to "UV only" and you can see inside the garbage bags', 'The yellow bag looks dark in UV and hides what\'s inside (the maker\'s claim; an estimate)'] },
+  { a: 45.4, b: 53.6, main: 'マムシは、まっくらでも熱が見える', sub: '鼻のくぼみ（ピット器官）で、ネズミの体温をとらえる',
+    en: ['A pit viper sees heat even in total darkness', 'Its pit organs pick up a mouse\'s body heat'] },
+  { a: 54.3, b: 62.6, main: '熱はガラスを通らないので、窓の中の人は光らない', sub: '熱の像はぼやけるが、目の像と重ねて見ている',
+    en: ['Heat doesn\'t pass through glass, so the person inside doesn\'t glow', 'The heat image is blurry, but it\'s overlaid on what the eyes see'] },
+  { a: 63.4, b: 71.6, main: 'コウモリは、声のこだまで見る', sub: 'こだまが返ってきた所だけが浮かび上がる。青い線は声の波',
+    en: ['A bat sees with the echoes of its calls', 'Only what echoes back shows up. The blue line is the sound wave'] },
+  { a: 72, b: 79.6, main: 'ガに近づくと、鳴く間隔がどんどん短くなる', sub: '近づいて捕まえると、捕まえた数が増える',
+    en: ['Get close to a moth and the calls come faster and faster', 'Catch it and your count goes up'] },
+  { a: 80.4, b: 92.6, main: 'ハエは、ほぼ全周が見え、時間がゆっくり流れる', sub: '六角形の1つ1つが小さな目（個眼）。じっとしていると、ハエたたきが来る',
+    en: ['A fly sees almost all around, and time runs slowly', 'Each hexagon is one tiny eye. Sit still and the swatter comes'] },
+  { a: 93.3, b: 99.6, main: 'ミツバチは、空の偏光（光のゆれの向き）が見える', sub: '太陽が見えなくても、方角が分かる',
+    en: ['Bees see the polarization of skylight', 'They can find direction even when the Sun is hidden'] },
+  { a: 100.4, b: 106.6, main: 'イヌには、赤いボールが芝生と同じような色に見える', sub: '色を2種類のセンサーで見ている（2色型）',
+    en: ['To a dog, a red ball looks much like the grass', 'Dogs see color with two kinds of sensors (dichromats)'] },
+  { a: 107.3, b: 113.6, main: 'ネコは、暗い所で人の約5倍見える', sub: '「比べる表示」で、左半分を人間の目に',
+    en: ['Cats see about five times better than us in the dark', '"Compare" shows the human view on the left half'] },
+  { a: 114.3, b: 119.6, main: 'シャコは、偏光が見える', sub: '水面や空に、緑のしまで表示',
+    en: ['Mantis shrimp see polarized light', 'It shows as green stripes on the water and the sky'] },
+  { a: 120.4, b: 130.6, main: 'ヒトの見え方のいろいろも。老眼（60歳）', sub: '近視・遠視・乱視・弱視・色覚。手もとの本がぼやける',
+    en: ['Also different kinds of human vision. Here, age-related farsight at 60', 'Nearsight, farsight, astigmatism, low vision, color vision. The book in hand blurs'] },
+  { a: 131.3, b: 141.6, main: '道具の見え方も。サーモカメラは熱を色で表す', sub: '見え方は研究をもとに置き換えたもの。動物が本当にこう感じているかは分からない',
+    en: ['Tools too: a thermal camera shows heat as color', 'These views are translated from research. We can\'t know exactly what animals feel'] },
+];
+promoStart({
+  name: 'いきものの感じる世界（使い方）', out: 'animal-senses-guide', src: '../../animal-senses/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 40,
+  inject: { dpr: 2, raf: true },
+  music: { style: 'journey', root: 130.81, stopAt: END, cues: [{ t: END, type: 'jingle' }] },
+  ready: w => w.__as && w.__as.R && w.__as.R.size,
+  setup(w) { asSize(w, 2560, 1440); w.__as.frame(1); return qs(w, '#gl'); },
+  subs: guideSubs(END, 'いきものの感じる世界', 'How Animals Sense the World', CAPS, 'Runs in your browser (PC or phone). Switch the app to English with the EN button'),
+  renderAt(t, w) { asRender(w, SC, t); },
+  overlay(g, t, w) {
+    for (const [a, b, n, sub] of NAMES) drawName(g, t, a, b, n, sub, 60, 260);
+    for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawGuideChrome(g, t, END, 'いきものの感じる世界',
+      'おもな出どころ: Ödeen と Håstad（2003）、Gracheva ほか（2010）Nature、Griffin ほか（1960）ほか（アプリの「おもな出どころ」）');
+  },
+  errors: w => w.__as.err,
+});
+</script>
+</body>
+</html>

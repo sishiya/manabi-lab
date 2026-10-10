@@ -1,0 +1,14 @@
+{
+  "file": "_dev/promo/out/air-flow-short.mp4",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/air-flow-short.en.srt" },
+  "title": "窓を1か所と2か所、空気の入れかわりはこんなにちがう ― 換気のシミュレーション #Shorts",
+  "description": "窓・給気口・換気扇・外の風で、家の空気がどう入れかわり、どこがよどむのかを「空気の年齢」の色で見るブラウザのアプリ「空気の流れの見える部屋」から。\n\nアプリ: https://sishiya.github.io/manabi-lab/air-flow/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ: 建築基準法施行令 第20条の8、Sandberg（1981）、Etheridge と Sandberg（1996）、Swami と Chandra（1988）、Warren と Parkins（1985）（アプリの「解説」→「おもな出どころ」）。学習用の簡単なモデルで、すき間の量や換気扇の風量は目安です。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#換気 #空気の流れ #まなびラボ",
+  "tags": ["換気", "空気の流れ", "24時間換気", "サーキュレーター", "窓", "Shorts", "まなびラボ", "しし屋", "ventilation", "airflow", "air age"],
+  "localizations": {
+    "en": {
+      "title": "One Open Window vs Two ― How Differently the Air Changes (Ventilation Simulation) #Shorts",
+      "description": "From \"Seeing Airflow at Home\", a browser app that shows how windows, vents, fans and outside wind replace the air in a home, and where it goes stale, using \"air age\" colors.\n\nApp (switch to English with the EN button): https://sishiya.github.io/manabi-lab/air-flow/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMain sources: Japan's Building Standards Act Enforcement Order, Article 20-8; Sandberg (1981); Etheridge & Sandberg (1996); Swami & Chandra (1988); Warren & Parkins (1985). A simplified learning model; gap sizes and fan flow are rough guides.\n\nMusic: original sounds synthesized by code.\n\n#Ventilation #Airflow"
+    }
+  }
+}

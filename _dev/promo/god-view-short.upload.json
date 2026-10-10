@@ -1,0 +1,14 @@
+{
+  "file": "_dev/promo/out/god-view-short.mp4",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/god-view-short.en.srt" },
+  "title": "ホイールひとつで、宇宙の果てからクォークまで ― 本物の地図の3D地球 #Shorts",
+  "description": "本物の地形・航空写真・建物・電車やバスの動きで見る3Dの地球。引けば宇宙の果てまで、寄れば原子や素粒子まで、ホイールひとつで動けるブラウザのアプリ「神の視点マップ」から。\n\nアプリ: https://sishiya.github.io/manabi-lab/god-view/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n地図・データの出典: 地理院タイル（国土地理院、全国最新写真）、3D都市モデル（Project PLATEAU、国土交通省）、NASA Blue Marble（NASA GIBS）、Terrain Tiles（Mapzen、AWS Open Data）、HYG Database（CC BY-SA 4.0）、astronomy-engine、CesiumJS ほか（アプリの「このアプリについて」→「使っているもの・出典」）。宇宙とミクロの形の一部は観測・研究にもとづく演出です。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#3D地図 #宇宙 #まなびラボ",
+  "tags": ["3D地図", "地球", "宇宙", "原子", "スケール", "PLATEAU", "Shorts", "まなびラボ", "しし屋", "3D map", "Powers of Ten", "scale of the universe"],
+  "localizations": {
+    "en": {
+      "title": "From the Edge of the Universe to Quarks With One Scroll Wheel ― A Real-Data 3D Earth #Shorts",
+      "description": "From \"God's-Eye Map\", a browser app with a 3D Earth built from real terrain, aerial photos, buildings and live trains and buses. One scroll wheel takes you out to the edge of the universe or in to atoms and subatomic particles.\n\nApp (on-screen text in Japanese for now): https://sishiya.github.io/manabi-lab/god-view/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMap and data sources: GSI Tiles (Geospatial Information Authority of Japan, aerial photos), PLATEAU 3D city models (MLIT, Japan), NASA Blue Marble (NASA GIBS), Terrain Tiles (Mapzen, AWS Open Data), HYG Database (CC BY-SA 4.0), astronomy-engine, CesiumJS, and others. Some shapes in space and the micro world are effects based on observations and research.\n\nMusic: original sounds synthesized by code.\n\n#PowersOfTen #Space"
+    }
+  }
+}

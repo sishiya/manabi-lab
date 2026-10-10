@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="metamorphosis-common.js"></script>
+<script>
+'use strict';
+// 台本: さなぎの中で ― 使い方と見どころ（横長の説明動画、150秒）
+// 大きな画面（模式図）をいっぱいに。グラフ（アプリでは下）は枠をつけて重ねる。時期の日付はアプリの TL（研究の日付と目安）
+const END = 150, DUR = END + IDENT_CLOSE;
+const KEYS = [[0, -5], [7, -5], [27, -1.6], [50, 3], [72, 10], [95, 17.2], [101, 18.0], [120, 18.06], [125, 18.5], [142, 19.3]];
+const MODES = [[0, 'in'], [80, 'cut'], [88, 'out'], [118, 'in']];
+const X = 1380;
+const CH = {
+  play: { x: 60, y: 870, title: '時間の帯（下）', btns: ['▶', '½', '1', '2', '4'] },
+  view: { x: X, y: 240, title: '見かた（画面の上）', btns: ['透かして見る', '割って見る', '外から見る'], cols: 1 },
+  panel: { x: X, y: 240, title: '右のパネル', btns: ['よくある誤解', 'まだ分かっていないこと'], cols: 1 },
+};
+const SHOW = [
+  ['play', 7.3, 16.6, t => t >= 8 ? 0 : -1],
+  ['view', 72.5, 94.6, t => t >= 88 ? 2 : t >= 80 ? 1 : 0],
+  ['panel', 134.5, 141.6, () => -1],
+];
+const B = (k, i) => btnRect(CH[k], i);
+const CUR = [
+  { t: 7.3, ...B('play', 0) }, { t: 8, ...B('play', 0), click: true }, { t: 9.5, ...B('play', 0), hide: true },
+  { t: 79.2, ...B('view', 1) }, { t: 80, ...B('view', 1), click: true }, { t: 87.2, ...B('view', 2) }, { t: 88, ...B('view', 2), click: true }, { t: 89.5, ...B('view', 2), hide: true },
+];
+const CAPS = [
+  { a: 7.3, b: 16.6, main: '下の帯で時間を動かす。▶ で自動再生', sub: '時間は、さなぎになった日からの日数（タバコスズメガの研究の日付）',
+    en: ['Move through time with the bar below, or press ▶', 'Time is counted in days from pupation (research dates for the tobacco hornworm)'] },
+  { a: 17.2, b: 26.6, main: '幼虫の胸には、もう翅のもと（翅原基）がある', sub: '食べるのをやめると、土にもぐって前蛹になる',
+    en: ['The caterpillar already has wing buds in its chest', 'When it stops eating, it burrows into the soil and becomes a prepupa'] },
+  { a: 27.4, b: 38.6, main: '色で、壊れる器官・残る器官・新しく作る器官', sub: '幼虫だけの部品は細胞が自分で死に、血球（ピンク）が片づける',
+    en: ['Colors mark organs that break down, stay or are newly built', 'Parts only the larva needs die off, and blood cells (pink) clear them away'] },
+  { a: 39, b: 49.6, main: '神経・気管・心臓は、残って作りかえられる', sub: '器官を押すと説明（確か・推定の札つき）',
+    en: ['Nerves, air tubes and the heart stay and are rebuilt', 'Tap an organ for an explanation, labeled "certain" or "estimate"'] },
+  { a: 50.4, b: 60.6, main: '下のグラフは、ホルモンとスイッチの遺伝子', sub: 'エクジソンと幼若ホルモンの量が、変身の合図',
+    en: ['The graph below shows hormones and switch genes', 'Levels of ecdysone and juvenile hormone signal the change'] },
+  { a: 61, b: 71.6, main: '小さな芽から、飛ぶ筋肉や成虫の体が育つ', sub: 'スイッチの遺伝子 Kr-h1・broad・E93 が、時期ごとに入れかわる',
+    en: ['Flight muscles and the adult body grow from small buds', 'The switch genes Kr-h1, broad and E93 take turns'] },
+  { a: 72.5, b: 79.6, main: '見かたは3つ。「透かして見る」は模式図', sub: '翅に鱗粉の色がつきはじめる',
+    en: ['There are three views. "See-through" is a diagram', 'The wing scales begin to get their color'] },
+  { a: 80.2, b: 87.6, main: '「割って見る」は、人の目で見た様子', sub: '色は本物に近く（確か・目安）、質感は演出',
+    en: ['"Cut open" shows it as your eyes would see it', 'Colors are close to real (certain or estimated); the texture is an effect'] },
+  { a: 88.2, b: 94.6, main: '「外から見る」では、蛹のどこが翅になるかが分かる', sub: '',
+    en: ['"Outside" shows which part of the pupa becomes a wing', ''] },
+  { a: 95.4, b: 107.6, main: '18日目の夜、殻のふたが開き、成虫がはい出す', sub: '土の中から地上へ',
+    en: ['On the night of day 18, the front of the case opens and the adult crawls out', 'Up from the soil to the surface'] },
+  { a: 108, b: 120.6, main: '縮んでいた翅を、1時間あまりで広げる（推定）', sub: '体液を送りこんで、翅をのばす',
+    en: ['It spreads its crumpled wings in a little over an hour (estimate)', 'It pumps body fluid in to stretch them'] },
+  { a: 121, b: 133.6, main: '広げた翅は、屋根の形にたたむ', sub: 'たまっていた蛹便を出す。羽化のあと、腹の節の間の筋肉が消える',
+    en: ['Then it folds the wings like a roof', 'It passes the waste stored in the pupa. After emerging, some abdominal muscles disappear'] },
+  { a: 134.4, b: 141.6, main: '「よくある誤解」と「まだ分かっていないこと」も', sub: '幼虫で覚えたことが成虫に残る、という研究も',
+    en: ['Also: "common myths" and "what we still don\'t know"', 'Research suggests some caterpillar memories survive into the moth'] },
+];
+const CHART = [60, 790, 1240, 240];
+promoStart({
+  name: 'さなぎの中で（使い方）', out: 'metamorphosis-guide', src: '../../metamorphosis/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 30,
+  inject: { dpr: 2, raf: true },
+  music: { style: 'journey', root: 98, stopAt: END, cues: [{ t: END, type: 'jingle' }] },
+  ready: w => w.__mm && w.render && w.tToU,
+  setup(w) { mmSize(w, { '#view': [1920, 1080], '#chart': [CHART[2], CHART[3]] }); w.render(0); return qs(w, '#view'); },
+  subs: guideSubs(END, 'さなぎの中で', 'Inside the Pupa', CAPS, 'Runs in your browser (PC or phone). Switch the app to English with the EN button'),
+  renderAt(t, w) { mmRender(w, KEYS, MODES, t); },
+  overlay(g, t, w) {
+    drawPanel(g, 40, 200, 700, '', mmStage(w), fade(t, 7.3, 141.6, 0.4));
+    mmLegend(g, w, X, 300, fade(t, 27.4, 49.6, 0.4));
+    drawInset(g, qs(w, '#chart'), CHART[0], CHART[1] - 50, CHART[2], CHART[3], 'ホルモンとスイッチの遺伝子（下のグラフ）', fade(t, 50.4, 71.6, 0.4));
+    for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawGuideChrome(g, t, END, 'さなぎの中で',
+      'おもな出どころ: Truman と Riddiford（1999）Nature、Jindra ほか（2013）、Tolbert ほか（1983）ほか15件（アプリの「おもな出どころ」）。模式図です');
+  },
+  errors: w => [w.__mm.err].filter(Boolean).map(String),
+});
+</script>
+</body>
+</html>

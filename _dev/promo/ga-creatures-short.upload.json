@@ -1,0 +1,14 @@
+{
+  "file": "_dev/promo/out/ga-creatures-short.mp4",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/ga-creatures-short.en.srt" },
+  "title": "でたらめな生きものが、40世代で走り方を身につけるまで ― 遺伝的アルゴリズム #Shorts",
+  "description": "関節と筋肉でできた2次元の生きものを、遺伝的アルゴリズムで進化させるブラウザのアプリ「進化の箱庭」から。\n\nアプリ: https://sishiya.github.io/manabi-lab/ga-creatures/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ: Holland（1975）『Adaptation in Natural and Artificial Systems』、Sims（1994）「Evolving Virtual Creatures」SIGGRAPH 94、carykh さんの進化シミュレーター、『アストロノーカ』（1998）（アプリの「解説」→「おもな出どころ」）。筋肉の強さや摩擦は、見やすく決めたモデルの値です。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#遺伝的アルゴリズム #進化 #まなびラボ",
+  "tags": ["遺伝的アルゴリズム", "進化", "人工生命", "シミュレーション", "Shorts", "まなびラボ", "しし屋", "genetic algorithm", "evolution simulator", "artificial life"],
+  "localizations": {
+    "en": {
+      "title": "Random Creatures Learn to Run in 40 Generations ― A Genetic Algorithm #Shorts",
+      "description": "From \"Evolution Sandbox\", a browser app that evolves 2D creatures made of joints and muscles with a genetic algorithm.\n\nApp (switch to English with the EN button): https://sishiya.github.io/manabi-lab/ga-creatures/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMain sources: Holland (1975) Adaptation in Natural and Artificial Systems; Sims (1994) Evolving Virtual Creatures, SIGGRAPH 94; carykh's evolution simulator; Astronōka (1998). Muscle strength and friction are model values chosen for clarity.\n\nMusic: original sounds synthesized by code.\n\n#GeneticAlgorithm #Evolution"
+    }
+  }
+}

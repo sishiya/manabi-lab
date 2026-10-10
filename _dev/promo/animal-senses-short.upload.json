@@ -1,0 +1,14 @@
+{
+  "file": "_dev/promo/out/animal-senses-short.mp4",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/animal-senses-short.en.srt" },
+  "title": "同じ庭を、カラス・マムシ・コウモリ・ネコの感覚で見ると #Shorts",
+  "description": "同じ庭を、人間・カラス・マムシ・コウモリなどの感覚で一人称で見るブラウザのアプリ「いきものの感じる世界」から。人に見えない紫外線や熱は、見える色に置き換えて表示しています。\n\nアプリ: https://sishiya.github.io/manabi-lab/animal-senses/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ: Ödeen と Håstad（2003）Mol Biol Evol、Gracheva ほか（2010）Nature、Griffin・Webster・Michael（1960）Animal Behaviour、Kang ほか（2009）ほか（アプリの「おもな出どころ」）。見え方は研究をもとに置き換えたもので、動物が本当にこう感じているかは分かりません。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#動物の見え方 #紫外線 #まなびラボ",
+  "tags": ["動物の見え方", "紫外線", "ピット器官", "エコーロケーション", "ネコ", "Shorts", "まなびラボ", "しし屋", "animal vision", "ultraviolet", "pit viper", "echolocation"],
+  "localizations": {
+    "en": {
+      "title": "The Same Garden Through the Senses of a Crow, a Pit Viper, a Bat and a Cat #Shorts",
+      "description": "From \"How Animals Sense the World\", a browser app that shows the same garden through the senses of humans, crows, pit vipers, bats and more. Ultraviolet and heat are shown as visible colors.\n\nApp (switch to English with the EN button): https://sishiya.github.io/manabi-lab/animal-senses/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMain sources: Ödeen & Håstad (2003) Mol Biol Evol; Gracheva et al. (2010) Nature; Griffin, Webster & Michael (1960) Animal Behaviour; Kang et al. (2009); and others. These views are translated from research; we can't know exactly what animals feel.\n\nMusic: original sounds synthesized by code.\n\n#AnimalVision #Nature"
+    }
+  }
+}

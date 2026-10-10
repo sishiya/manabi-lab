@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="mold-common.js"></script>
+<script>
+'use strict';
+// 台本: カビが育つまで（ショート、40秒＋締め）。?short で縦長に録る
+// 最初は入口のサムネイルと同じ4週目 → 1日目から早送り → 顕微鏡の見え方 → カビ取り剤 → 習慣で8週間をくらべる
+const V = new URLSearchParams(location.search).has('short');
+const BOXR = V ? [0, 380, 1080, 680] : [180, 60, 1560, 980];
+const SC = [
+  { a: 0, b: 6, pre: 27 * 24 + 14, speed: 1 },
+  { a: 6, b: 13.2, pre: 2 * 24, speed: 48 },
+  { a: 13.2, b: 21.2, pre: 22 * 24, speed: 1, ev: [0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => ({ t: 0.3 + i * 0.4, run: w => mkZoomTo(w, 40, 49.5, 1.32) })) },
+  { a: 21.2, b: 28.2, pre: 27 * 24, speed: 1, brush: [{ a: 0.8, b: 5, tool: 'chlorine', from: [5, 49.5], to: [95, 49.5] }] },
+  { a: 28.2, b: SHORT_END + IDENT_CLOSE, pre: 0, speed: 24, ev: [{ t: 0.1, run: w => { w.startRecord(); w.__mk.UI.speed = 1008; } },   // 8週間を約1.3秒で（アプリのはやおくりの3倍）
+    { t: 2.5, run: w => { Object.assign(w.__mk.W.habits, { fan: 'h24', after: 'squeegee' }); w.startRecord(); w.__mk.UI.speed = 1008; } }] },
+];
+const CAPS = [
+  { a: 6.3, b: 13, main: '空気から胞子が落ち、湿った所で芽を出す', sub: '目地やゴムパッキンは、水と汚れがたまりやすい',
+    en: ['Spores fall from the air and sprout where it\'s damp', 'Grout and rubber seals hold water and grime'] },
+  { a: 13.5, b: 21, main: '菌糸の先が1本ずつのびて、枝分かれする', sub: '胞子を作って、さらに広がる',
+    en: ['Hyphae grow tip by tip and branch out', 'Then they make spores and spread further'] },
+  { a: 21.5, b: 28, main: 'カビ取り剤で、黒い色はすぐ消える', sub: 'でも乾かさないと、また生えてくる',
+    en: ['Bleach clears the black color right away', 'But if it stays damp, mold grows back'] },
+  { a: 28.5, b: 35, main: '入浴後に水を切り、換気扇を回すと', sub: '同じ8週間でも、カビの広がりがこんなにちがう',
+    en: ['Squeegee after a bath and run the fan', 'and eight weeks later, the mold looks very different'] },
+];
+promoStart({
+  name: 'カビが育つまで', out: 'mold-growth', src: '../../mold-growth/index.html', iw: 1920, ih: 1080, dur: SHORT_END + IDENT_CLOSE, peek: 18,
+  inject: { dpr: 2, raf: true },
+  music: { style: 'journey', root: 110, stopAt: SHORT_END, cues: [{ t: SHORT_END, type: 'jingle' }] },
+  ready: w => w.__mk && w.__mk.W && w.tick,
+  setup(w) { mkSize(w, BOXR[2], BOXR[3]); w.tick(0, 0); return null; },
+  subs: shortSubs('カビが育つまで', 'How Mold Grows', 'お風呂の壁を、拡大して見ると', 'A close-up of a bathroom wall', CAPS,
+    'ブラウザで動かせます。道具を指で試せます', 'Runs in your browser. Try the tools with your finger'),
+  renderAt(t, w) { mkRender(w, SC, t); },
+  drawSource(g, w) {
+    g.fillStyle = '#121214'; g.fillRect(0, 0, PW * RES, PH * RES);
+    g.drawImage(qs(w, '#world'), BOXR[0] * RES, BOXR[1] * RES, BOXR[2] * RES, BOXR[3] * RES);
+  },
+  overlay(g, t, w) {
+    const f = fade(t, IDENT_MINI + 0.3, 35, 0.4);
+    drawPanel(g, 30, BOXR[1] - 120, 700, '', [mkText(w, '#hud .big')], f);
+    drawPanel(g, 30, BOXR[1] + BOXR[3] + 10, 1020, '', mkRecords(w).map(s => s.slice(0, 26)), fade(t, 32.2, 35, 0.3));
+    drawCaps(g, t, CAPS);
+    drawShortChrome(g, t, 'カビが育つまで', 'お風呂の壁を、拡大して見ると', 'ブラウザで動かせます。道具を指で試せます',
+      'おもな出どころ: Grant ほか（1989）、Sedlbauer（2001）ほか。塩素系は酸性のものと混ぜない');
+  },
+  errors: w => [w.__mk.err].filter(Boolean).map(String),
+});
+</script>
+</body>
+</html>

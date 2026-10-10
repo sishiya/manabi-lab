@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="ga-common.js"></script>
+<script>
+'use strict';
+// 台本: 進化の箱庭 ― 使い方と見どころ（横長の説明動画、150秒）
+// アプリと同じ並び: 左上に走るようす、その下に世代の一覧（左）と進んだ距離のグラフ（右）。ボタンの札は右（アプリでも右のパネル）
+const END = 150, DUR = END + IDENT_CLOSE;
+const VIEWR = [40, 215, 1240, 520], GRID = [40, 765, 600, 290], PROG = [680, 765, 600, 290];
+const SC = [
+  { a: 0, b: 28, seed: 1, gens: 40 },
+  { a: 28, b: 52, seed: 1, gens: 0, fresh: true, ev: [...gaAuto(33, 36, 0.3).map(e => ({ ...e, t: e.t - 28 })), { t: 13, run: w => w.__ga.watchMember(4) }, { t: 16, run: w => { w.__ga.VIEW.mode = 'top'; w.__ga.watchMember(0, true); } }, ...gaAuto(16, 24, 0.4)] },
+  { a: 52, b: 75, seed: 1, gens: 40 },
+  { a: 75, b: 87, seed: 2, env: 'moon', gens: 40 },
+  { a: 87, b: 100, seed: 3, env: 'water', gens: 40 },
+  { a: 100, b: 120, seed: 4, gens: 5, ev: gaAuto(1, 19, 0.35) },
+  { a: 120, b: 126, seed: 1, gens: 40, watch: ['hist', 3] },
+  { a: 126, b: 132, seed: 1, gens: 40, watch: ['hist', 15] },
+  { a: 132, b: END, seed: 1, gens: 40, watch: ['hist', 40] },
+];
+const X = 1330;
+const CH = {
+  run: { x: X, y: 230, title: '右のパネル', btns: ['1世代すすめる', '10世代', '自動で進める'], cols: 1 },
+  env: { x: X, y: 230, title: '環境', btns: ['平地', '上り坂', '氷の上', '月面', '水の中'], cols: 2 },
+  how: { x: X, y: 230, title: '進化のしかた', btns: ['集団の数', '選び方', '突然変異', '交叉'], cols: 2 },
+  hist: { x: X, y: 230, title: '右のパネル', btns: ['歴代の1位を見る'] },
+};
+const SHOW = [
+  ['run', 28.5, 51.6, t => t >= 44 ? 2 : t >= 33 ? 1 : -1],
+  ['env', 75, 99.6, t => t >= 87 ? 4 : 3],
+  ['how', 100.4, 119.6, () => -1],
+  ['hist', 120.4, 141.6, () => 0],
+];
+const B = (k, i) => btnRect(CH[k], i);
+const CUR = [
+  { t: 32.2, ...B('run', 1) }, { t: 33, ...B('run', 1), click: true },
+  { t: 40.3, x: GRID[0] + 300, y: GRID[1] + 60 }, { t: 41, x: GRID[0] + 300, y: GRID[1] + 60, click: true },
+  { t: 43.3, ...B('run', 2) }, { t: 44, ...B('run', 2), click: true }, { t: 45.5, ...B('run', 2), hide: true },
+  { t: 74.5, ...B('env', 3) }, { t: 75.2, ...B('env', 3), click: true }, { t: 86.3, ...B('env', 4) }, { t: 87, ...B('env', 4), click: true }, { t: 88.5, ...B('env', 4), hide: true },
+];
+const CAPS = [
+  { a: 7.3, b: 17, main: '関節と筋肉でできた生きものが、15秒でどこまで進めるか', sub: '左上は、いまの1位の走り（第40世代）',
+    en: ['Creatures made of joints and muscles: how far can they go in 15 seconds?', 'Top left: the current champion running (generation 40)'] },
+  { a: 17.5, b: 27.6, main: '下に、その世代の全員。右のグラフは進んだ距離', sub: '色は「種」（関節と筋肉の数が同じなかま）',
+    en: ['Below: the whole generation. The graph shows the distance covered', 'Colors are "species" (the same number of joints and muscles)'] },
+  { a: 28.4, b: 40, main: '最初の世代は、でたらめな体。ほとんど進めない', sub: '進んだ距離の長いものが子を残し、子は少しだけ変わる（突然変異）',
+    en: ['The first generation has random bodies and barely moves', 'Those that go farthest have offspring, which change a little (mutation)'] },
+  { a: 40.4, b: 51.6, main: '一覧を押すと、その1匹の走りを見られる', sub: '「自動で進める」で、どんどん進化する',
+    en: ['Click any creature in the list to watch it run', '"Auto" keeps evolution going'] },
+  { a: 52.4, b: 63, main: '遺伝子は、関節の場所と、筋肉がいつ縮むか', sub: '右のパネルに、見ている1匹の遺伝子の図',
+    en: ['The genes set where the joints are and when each muscle contracts', 'The panel on the right shows the genes of the one you\'re watching'] },
+  { a: 63.4, b: 74.6, main: '誰も歩き方を教えていない', sub: 'よく進んだものが残る、をくり返すだけ（遺伝的アルゴリズム）',
+    en: ['Nobody taught them how to walk', 'Just keep the ones that went farthest, over and over (a genetic algorithm)'] },
+  { a: 75.4, b: 86.6, main: '環境を変えると、ちがう体と動き方が勝つ', sub: '月面は重力が地球の約6分の1。大きく跳ねて進む',
+    en: ['Change the environment and different bodies win', 'On the Moon, gravity is about one sixth of Earth\'s. They bound along'] },
+  { a: 87.4, b: 99.6, main: '水の中では、泳ぐような動きに', sub: '平地・上り坂・氷の上・月面・水の中',
+    en: ['Underwater, they move as if swimming', 'Flat ground, uphill, ice, the Moon, underwater'] },
+  { a: 100.4, b: 109.6, main: '「進化のしかた」で、集団の数や選び方を変えられる', sub: '突然変異の多さ、交叉（2匹の遺伝子をまぜる）も',
+    en: ['"How evolution works" lets you change the population and selection', 'Also the mutation rate and crossover (mixing two parents\' genes)'] },
+  { a: 110, b: 119.6, main: '突然変異が多すぎると、良い形がこわれる', sub: '同じシードなら、同じ進化をもう一度見られる',
+    en: ['Too much mutation breaks good designs', 'The same seed replays the same evolution'] },
+  { a: 120.4, b: 131.6, main: '「歴代の1位」で、進化の道のりをふり返る', sub: '第3世代 → 第15世代 → 第40世代',
+    en: ['"Past champions" lets you look back along the way', 'Generation 3 → 15 → 40'] },
+  { a: 132.4, b: 141.6, main: '筋肉の強さや摩擦は、見やすく決めたモデルの値', sub: '「本物の進化とのちがい」も解説に',
+    en: ['Muscle strength and friction are model values chosen for clarity', 'See "How this differs from real evolution" in the explanations'] },
+];
+promoStart({
+  name: '進化の箱庭（使い方）', out: 'ga-creatures-guide', src: '../../ga-creatures/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 20,
+  inject: { dpr: 2, raf: true },
+  music: { style: 'journey', root: 130.81, stopAt: END, cues: [{ t: END, type: 'jingle' }] },
+  ready: w => w.__ga && w.__ga.VIEW && w.__ga.VIEW.sim,
+  setup(w) { gaSize(w, { '#view': [VIEWR[2], VIEWR[3]], '#grid': [GRID[2], GRID[3]], '#prog': [PROG[2], PROG[3]], '#genome': [520, 300] }); w.render(); return null; },
+  subs: guideSubs(END, '進化の箱庭', 'Evolution Sandbox', CAPS, 'Runs in your browser (PC or phone). Switch the app to English with the EN button'),
+  renderAt(t, w) { gaRender(w, SC, t); },
+  drawSource(g, w) {
+    g.fillStyle = '#0d1012'; g.fillRect(0, 0, PW * RES, PH * RES);
+    for (const [sel, R] of [['#view', VIEWR], ['#grid', GRID], ['#prog', PROG]]) g.drawImage(qs(w, sel), R[0] * RES, R[1] * RES, R[2] * RES, R[3] * RES);
+  },
+  overlay(g, t, w) {
+    drawPanel(g, VIEWR[0] + 10, VIEWR[1] + 10, 820, '', [gaText(w, '#wLabel'), gaText(w, '#wTime')], fade(t, 7.3, 141.6, 0.4));
+    drawInset(g, qs(w, '#genome'), X, 540, 540, 300, 'この生きものの遺伝子（右のパネル）', fade(t, 52.4, 74.6, 0.4));
+    for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawGuideChrome(g, t, END, '進化の箱庭',
+      'おもな出どころ: Holland（1975）、Sims（1994）SIGGRAPH 94、carykh さんの進化シミュレーター、『アストロノーカ』（1998）');
+  },
+  errors: w => [w.__ga.err].filter(Boolean).map(String),
+});
+</script>
+</body>
+</html>

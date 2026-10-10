@@ -1,0 +1,15 @@
+{
+  "file": "_dev/promo/out/quantum-guide.mp4",
+  "thumbnail": "assets/thumbs/quantum.jpg",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/quantum-guide.en.srt" },
+  "title": "量子の実験室 ― 使い方と見どころ（二重スリット・トンネル効果・偏光板・量子もつれ・不確定性原理）",
+  "description": "量子のふしぎな性質を、5つの実験を手で動かして確かめるブラウザのアプリ「量子の実験室」の、使い方と見どころです。\n\n0:00 はじめに\n0:07 二重スリット（1個ずつ・検出器・広いスリット）\n0:42 トンネル効果（壁の厚さ・測る）\n1:07 3枚の偏光板\n1:27 量子もつれとベルテスト\n1:55 不確定性原理\n2:14 やってみよう・なにが起きている？\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/quantum/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nFeynman・Leighton・Sands（1965）『The Feynman Lectures on Physics』第3巻\nGriffiths と Schroeter（2018）『Introduction to Quantum Mechanics』第3版\nTonomura ほか（1989）American Journal of Physics 57（電子1個ずつでしまが育つ実験）\nBell（1964）、Clauser・Horne・Shimony・Holt（1969）、Aspect・Grangier・Roger（1982）、ノーベル財団「The Nobel Prize in Physics 2022」\nHeisenberg（1927）、Kennard（1927）\n（アプリの画面の下「おもな出どころ」）\n\nスリットの幅・間隔、壁の高さと厚さ、波束の大きさなどは、見やすいように選んだ値です（ħ = 1 の単位）。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#量子力学 #二重スリット #量子もつれ #まなびラボ",
+  "tags": ["量子力学", "二重スリット", "トンネル効果", "偏光板", "量子もつれ", "ベルテスト", "不確定性原理", "物理", "使い方", "まなびラボ", "しし屋", "quantum mechanics", "double slit experiment", "quantum tunneling", "entanglement", "Bell test", "uncertainty principle"],
+  "localizations": {
+    "en": {
+      "title": "Quantum Lab ― App Guide: Double Slit, Tunneling, Polarizers, Entanglement and Uncertainty",
+      "description": "A guide to \"Quantum Lab\", a browser app where you test the strange behavior of quantum particles with five hands-on experiments. Turn on English subtitles (CC).\n\n0:00 Intro\n0:07 Double slit (one at a time, detectors, wide slits)\n0:42 Tunneling (wall thickness, measuring)\n1:07 Three polarizers\n1:27 Entanglement and the Bell test\n1:55 The uncertainty principle\n2:14 \"Try this\" and \"What's happening?\"\n\nTry the app (runs in your browser, PC or phone; switch to English with the EN button):\nhttps://sishiya.github.io/manabi-lab/quantum/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nMain sources:\nFeynman, Leighton & Sands (1965) The Feynman Lectures on Physics, Vol. 3\nGriffiths & Schroeter (2018) Introduction to Quantum Mechanics, 3rd ed.\nTonomura et al. (1989) American Journal of Physics 57\nBell (1964); Clauser, Horne, Shimony & Holt (1969); Aspect, Grangier & Roger (1982); The Nobel Prize in Physics 2022\nHeisenberg (1927); Kennard (1927)\n(listed at the bottom of the app)\n\nSlit sizes, wall heights and wave packet sizes are values chosen for clarity (units with ħ = 1).\n\nMusic: original sounds synthesized by code.\n\n#QuantumPhysics #DoubleSlit #Entanglement"
+    }
+  }
+}
