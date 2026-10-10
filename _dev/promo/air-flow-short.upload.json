@@ -1,6 +1,7 @@
 {
   "file": "_dev/promo/out/air-flow-short.mp4",
   "privacy": "private",
+  "publishAt": "2026-10-18T20:05:00+09:00",
   "captions": { "en": "_dev/promo/out/air-flow-short.en.srt" },
   "title": "窓を1か所と2か所、空気の入れかわりはこんなにちがう ― 換気のシミュレーション #Shorts",
   "description": "窓・給気口・換気扇・外の風で、家の空気がどう入れかわり、どこがよどむのかを「空気の年齢」の色で見るブラウザのアプリ「空気の流れの見える部屋」から。\n\nアプリ: https://sishiya.github.io/manabi-lab/air-flow/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ: 建築基準法施行令 第20条の8、Sandberg（1981）、Etheridge と Sandberg（1996）、Swami と Chandra（1988）、Warren と Parkins（1985）（アプリの「解説」→「おもな出どころ」）。学習用の簡単なモデルで、すき間の量や換気扇の風量は目安です。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#換気 #空気の流れ #まなびラボ",

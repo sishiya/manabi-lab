@@ -2,6 +2,7 @@
   "file": "_dev/promo/out/wifi-wave-guide.mp4",
   "thumbnail": "assets/thumbs/wifi-wave.jpg",
   "privacy": "private",
+  "publishAt": "2026-10-21T20:00:00+09:00",
   "captions": { "en": "_dev/promo/out/wifi-wave-guide.en.srt" },
   "title": "電波の見える部屋 ― 使い方と見どころ（ルーターの場所・2.4GHz と 5GHz・壁の比べっこ・すき間・壁を描く）",
   "description": "WiFi の電波が家の中をどう伝わり、壁でどう弱まるかを、電磁波の式で計算して見るブラウザのアプリ「電波の見える部屋」の、使い方と見どころです。\n\n0:00 はじめに\n0:10 波の動きと電波の強さ\n0:30 ルーターとスマホを動かす\n0:52 2.4 GHz と 5 GHz\n1:10 壁の比べっこ\n1:32 すき間の実験（回折）\n1:52 壁を描く\n2:10 解説\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/wifi-wave/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nITU-R 勧告 P.2040-3（2023）: 建材の誘電率・導電率\nITU-R 勧告 P.525: 自由空間で電波が弱まる式\nIEEE Std 802.11: チャンネルと周波数\nTaflove と Hagness（2005）『Computational Electrodynamics: The FDTD Method』第3版\nGabriel（1996）: 体の組織の電気の性質\n（アプリの「解説」→「おもな出どころ」）\n\n人の体・お湯の値、受信の強さの境目、ルーターの出力、壁の厚さは目安・推定です。体への影響を示すものではありません。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#WiFi #電波 #電磁波 #まなびラボ",
