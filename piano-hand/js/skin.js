@@ -48,11 +48,18 @@ function coneD(P, x, y, z, cull) {
 }
 // 手のひらの板（手首の側ほど細い、角の丸い箱）
 const PALM = { c: [4, -1, -50], h: [28.5, 1, 33.5], r: 13 }; // 角を大きく丸めて、人さし指・小指の付け根が角ばらないように
+// 手のひら: 角の丸い箱とだ円体のあいだの形（PALM_ROUND の割合だけだ円体に寄せる）。箱だけだと四角く、
+// 人さし指・小指の付け根が角ばって見えた。手首の側ほど細い
+const PALM_ROUND = 0.6, PALM_E = [42, 14, 50];
 function palmD(x, y, z) {
   const s = 0.8 + 0.2 * Math.min(1, Math.max(0, (-z - 12) / 80));
-  const qx = Math.abs(x - PALM.c[0]) / s - PALM.h[0], qy = Math.abs(y - PALM.c[1]) - PALM.h[1], qz = Math.abs(z - PALM.c[2]) - PALM.h[2];
-  const ox = Math.max(qx, 0), oy = Math.max(qy, 0), oz = Math.max(qz, 0);
-  return Math.hypot(ox, oy, oz) + Math.min(Math.max(qx, qy, qz), 0) - PALM.r;
+  const px = (x - PALM.c[0]) / s, py = y - PALM.c[1], pz = z - PALM.c[2];
+  const qx = Math.abs(px) - PALM.h[0], qy = Math.abs(py) - PALM.h[1], qz = Math.abs(pz) - PALM.h[2];
+  const box = Math.hypot(Math.max(qx, 0), Math.max(qy, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qy, qz), 0) - PALM.r;
+  const [rx, ry, rz] = PALM_E; // だ円体のおよその距離（Inigo Quilez）
+  const k0 = Math.hypot(px / rx, py / ry, pz / rz), k1 = Math.hypot(px / (rx * rx), py / (ry * ry), pz / (rz * rz));
+  const ell = k1 > 1e-9 ? k0 * (k0 - 1) / k1 : -Math.min(rx, ry, rz);
+  return box + (ell - box) * PALM_ROUND;
 }
 
 // 網を作る姿勢での、陰関数の部品

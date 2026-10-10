@@ -20,23 +20,24 @@ function initView(canvas) {
   sc.background = linCol(0x0b0d12);
   V.cam = new THREE.PerspectiveCamera(36, 1, 5, 8000);
   sc.environment = makeEnv(r);
-  sc.add(new THREE.HemisphereLight(0xfff4ea, 0x1a1a1e, 0.25));
+  V.hemi = new THREE.HemisphereLight(0xfff4ea, 0x1a1a1e, 0.25); sc.add(V.hemi);
   const sun = new THREE.DirectionalLight(0xfff1e2, 1.6); // 左上奥の窓のような主光（手について動く）
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.6;
   Object.assign(sun.shadow.camera, { left: -460, right: 460, top: 340, bottom: -340, near: 200, far: 1600 });
   sc.add(sun); sc.add(sun.target); V.sun = sun;
-  const fill = new THREE.DirectionalLight(0xdfe8ff, 0.35); fill.position.set(400, 200, 500); sc.add(fill);
+  const fill = new THREE.DirectionalLight(0xdfe8ff, 0.35); fill.position.set(400, 200, 500); sc.add(fill); V.fill = fill;
 
   // 台・ノーツの通り道・鍵盤
-  const base = new THREE.Mesh(new THREE.BoxGeometry(KB_WIDTH + 60, 30, 200), new THREE.MeshStandardMaterial({ color: linCol(0x15171c), roughness: 0.6 }));
+  V.baseMat = new THREE.MeshStandardMaterial({ color: linCol(0x15171c), roughness: 0.6 });
+  const base = new THREE.Mesh(new THREE.BoxGeometry(KB_WIDTH + 60, 30, 200), V.baseMat);
   base.position.set(0, -36, -70); base.receiveShadow = true; sc.add(base);
   initLane(sc);
   for (let m = KB.lo; m <= KB.hi; m++) {
     const b = isBlack(m);
     const g = b ? new THREE.BoxGeometry(KB.BW, 22, KB.BL) : new THREE.BoxGeometry(KB.W - 1, 20, KB.WL);
-    const mat = new THREE.MeshPhysicalMaterial({ color: linCol(b ? 0x161619 : 0xf4f1e8), roughness: b ? 0.3 : 0.42, clearcoat: b ? 0.8 : 0.5, clearcoatRoughness: 0.25, emissive: 0x000000 });
+    const mat = new THREE.MeshPhysicalMaterial({ color: linCol(b ? 0x161619 : 0xf4f1e8), roughness: b ? 0.3 : 0.42, clearcoat: b ? 0.8 : 0.3, clearcoatRoughness: 0.3, emissive: 0x000000 });
     const k = new THREE.Mesh(g, mat);
     k.position.set(keyX(m), b ? KB.BH - 11 : -10, b ? -KB.WL + KB.BL / 2 : -KB.WL / 2);
     k.castShadow = b; k.receiveShadow = true;
@@ -52,13 +53,16 @@ function initView(canvas) {
   V.sph = new THREE.SphereGeometry(1, 16, 12);
   for (const side of [1, -1]) V.hands.push({ side, skin: makeSkinHand(sc, side), bones: makeBoneHand(sc, side), marks: makeMarks(sc) });
   initFx(sc);
+  initScene();
+  applyScene('studio'); applyFx(1);
   initCamera(canvas);
 }
 
 // ノーツの通り道: 暗い面と、ドの位置のうすい線
 function initLane(sc) {
   const len = 620;
-  const lane = new THREE.Mesh(new THREE.PlaneGeometry(KB_WIDTH, len), new THREE.MeshStandardMaterial({ color: linCol(0x0f1219), roughness: 0.9, metalness: 0 }));
+  V.laneMat = new THREE.MeshStandardMaterial({ color: linCol(0x0f1219), roughness: 0.9, metalness: 0 });
+  const lane = new THREE.Mesh(new THREE.PlaneGeometry(KB_WIDTH, len), V.laneMat);
   lane.rotation.x = -Math.PI / 2; lane.position.set(0, -2, Z0 - len / 2); lane.receiveShadow = true; sc.add(lane);
   const lm = new THREE.MeshBasicMaterial({ color: linCol(0x1c2230) });
   for (let m = KB.lo; m <= KB.hi; m++) {
@@ -210,6 +214,7 @@ function renderBoneHand(H, pose, opt) {
 // poses: score.hands と同じ順の姿勢
 function renderPose(score, poses, opt) {
   const t = poses.length ? poses[0].t : 0;
+  const FXL = FX_LEVELS[V.fxLevel || 0], nSpark = Math.round(FX_PER * FXL.spark);
   for (const VH of V.hands) {
     const hi = score.hands.findIndex(h => h.side === VH.side), pose = hi >= 0 ? poses[hi] : null;
     updateSkinHand(VH.skin, pose, opt);
@@ -230,7 +235,7 @@ function renderPose(score, poses, opt) {
   for (let m = KB.lo; m <= KB.hi; m++) {
     const k = V.keys[m], d = dep[m] || 0, f = who[m];
     k.position.y = k.userData.y0 - d;
-    if (d > 0) { const c = linCol(f ? FCOL[f] : 0x8892a6); k.material.color.copy(c).lerp(k.userData.col, 0.45); k.material.emissive.copy(c).multiplyScalar(0.25 * d / KB.DEPTH); }
+    if (d > 0) { const c = linCol(f ? FCOL[f] : 0x8892a6); k.material.color.copy(c).lerp(k.userData.col, 0.8); k.material.emissive.copy(c).multiplyScalar(0.08 * d / KB.DEPTH); } // 押した鍵はほんのり色づく（強いと手の下で白い箱のように見えた）
     else { k.material.color.copy(k.userData.col); k.material.emissive.setRGB(0, 0, 0); }
   }
   // ノーツ
@@ -246,35 +251,33 @@ function renderPose(score, poses, opt) {
       o.box.position.set(keyX(n.m), isBlack(n.m) ? 4 : 1.5, zf);
       o.lab.position.set(keyX(n.m), 11, Math.min(zf, Z0) - 7);
       const near = Math.max(0, 1 - (zf < Z0 ? (Z0 - zf) / 60 : 0)); // 着く直前に明るく
-      o.box.material.emissiveIntensity = on ? 1.4 : 0.3 + 0.5 * near;
+      o.box.material.emissiveIntensity = (on ? 1.4 : 0.3 + 0.5 * near) * FXL.glow;
     }
     if (o.halo.visible) {
       const fade = on ? 1 : 1 - (t - n.t1) / 0.25, pulse = on ? 0.85 + 0.15 * Math.sin((t - n.t0) * 18) * Math.exp(-(t - n.t0) * 3) : 1;
       o.halo.position.set(keyX(n.m), 6, Z0 + 2);
       o.halo.scale.set(46 * pulse, 30 * pulse, 1);
-      o.halo.material.opacity = 0.75 * fade;
+      o.halo.material.opacity = 0.75 * fade; o.halo.material.color.copy(o.c).multiplyScalar(FXL.glow);
     }
     // 光の粒: 打鍵から FX_LIFE 秒
     const age = t - n.t0;
-    if (age >= 0 && age < FX_LIFE && np + FX_PER <= FX_MAX) {
-      for (let k = 0; k < FX_PER; k++) {
+    if (age >= 0 && age < FX_LIFE && np + nSpark <= FX_MAX) {
+      for (let k = 0; k < nSpark; k++) {
         const r1 = hash1(o.idx, k), r2 = hash1(k, o.idx + 7), r3 = hash1(o.idx * 3 + k, 11);
         const ang = r1 * Math.PI * 2, sp = 25 + 55 * r2, up = 40 + 80 * r3;
         const x = keyX(n.m) + Math.cos(ang) * sp * age, z = Z0 + Math.sin(ang) * sp * age * 0.6 - 4;
         const y = 4 + up * age - 160 * age * age;
         const life = 1 - age / FX_LIFE;
         V.fxPos[np * 3] = x; V.fxPos[np * 3 + 1] = Math.max(1, y); V.fxPos[np * 3 + 2] = z;
-        V.fxCol[np * 3] = o.c.r * 2.2 * life; V.fxCol[np * 3 + 1] = o.c.g * 2.2 * life; V.fxCol[np * 3 + 2] = o.c.b * 2.2 * life;
+        const br = 2.2 * life * FXL.glow;
+        V.fxCol[np * 3] = o.c.r * br; V.fxCol[np * 3 + 1] = o.c.g * br; V.fxCol[np * 3 + 2] = o.c.b * br;
         np++;
       }
     }
   }
   for (let i = np; i < FX_MAX; i++) { V.fxPos[i * 3 + 1] = -9999; }
   V.fx.geometry.attributes.position.needsUpdate = true; V.fx.geometry.attributes.color.needsUpdate = true;
-  // 影の光は見ているあたりへ
-  const cx = V.camX || 0;
-  V.sun.position.set(cx - 260, 620, 120); V.sun.target.position.set(cx, 0, -60);
-  V.r.render(V.scene, V.cam);
+  renderScene(t);
 }
 
 // カメラ（ドラッグで回す・ホイールで寄る）。follow のときは両手のまん中を見る

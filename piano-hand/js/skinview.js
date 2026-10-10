@@ -11,7 +11,7 @@ function makeEnv(renderer) {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide }));
     m.position.set(x, y, z); m.rotation.set(rx || 0, ry || 0, 0); es.add(m);
   };
-  panel(4, 2.4, -2.5, 3.4, -1, new THREE.Color(2.6, 2.4, 2.2), 0.6, Math.PI / 2.4); // 左上の窓
+  panel(4, 2.4, -2.5, 3.4, -1, new THREE.Color(1.5, 1.4, 1.3), 0.6, Math.PI / 2.4); // 左上の窓（明るすぎると白鍵に映りこんで、光のにじみで白くかすむ）
   panel(3, 1.5, 3.5, 2.2, 2, new THREE.Color(0.9, 0.95, 1.1), -1.2);               // 右の柔らかい光
   panel(6, 1, 0, -0.9, 0, new THREE.Color(0.25, 0.2, 0.17), 0, -Math.PI / 2);       // 床の照り返し
   const pm = new THREE.PMREMGenerator(renderer);

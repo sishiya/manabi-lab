@@ -42,3 +42,27 @@ function surfaceAt(x, z, depress) {
   for (let k = KB.lo; k <= KB.hi; k++) if (!isBlack(k) && whiteCount(k) - KB_WHITE0 === wi) { m = k; break; }
   return -(depress ? depress(m) : 0);
 }
+
+// 鍵の上面のなめらかな高さ（指を浮かせる床に使う）。黒鍵は横と手前の端の 6mm 手前から、なめらかに BH まで上がる
+// （surfaceAt のように端で急に 12mm 変わると、指先がその上を通るたびに押し上げられてぶるぶるした）
+function surfaceSoft(x, z) {
+  if (z > 0 || z < -KB.WL || x < -KB_WIDTH / 2 || x > KB_WIDTH / 2) return 0;
+  const ss = v => v <= 0 ? 0 : v >= 1 ? 1 : v * v * (3 - 2 * v);
+  const fz = ss((KB.BFRONT + 6 - z) / 6);
+  if (fz <= 0) return 0;
+  let h = 0;
+  for (let m = KB.lo; m <= KB.hi; m++) {
+    if (!isBlack(m)) continue;
+    const dx = Math.abs(x - keyX(m));
+    if (dx > KB.BW / 2 + 6) continue;
+    h = Math.max(h, KB.BH * ss((KB.BW / 2 + 6 - dx) / 6));
+  }
+  return h * fz;
+}
+
+// 指を浮かせる床の高さ（奥行きだけで決める）。黒鍵のある奥のほうは黒鍵の上面、手前は白鍵の上面。
+// 横の位置で変えないので、手が横へ動いても指が鍵の凸凹をなぞって上下しない
+function surfaceZ(z) {
+  const v = (KB.BFRONT + 6 - z) / 6, ss = v <= 0 ? 0 : v >= 1 ? 1 : v * v * (3 - 2 * v);
+  return KB.BH * ss;
+}

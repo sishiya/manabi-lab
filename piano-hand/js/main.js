@@ -161,6 +161,11 @@ function initUI() {
   $('song').innerHTML = '<optgroup label="検証用の曲">' + SONGS.map(s => `<option value="${s.id}">${s.name}</option>`).join('') + '</optgroup>' +
     '<optgroup label="サンプルの楽譜ファイル（samples/）">' + SAMPLES.map(s => `<option value="sample:${s.file}">${s.name}</option>`).join('') + '</optgroup>';
   $('song').addEventListener('change', e => { setPlaying(false); const v = e.target.value; if (v.startsWith('sample:')) loadSample(v.slice(7)); else loadSong(v); });
+  $('sceneSel').innerHTML = Object.entries(SCENES).map(([k, s]) => `<option value="${k}">${s.name}</option>`).join('');
+  $('fxSel').innerHTML = FX_LEVELS.map((f, i) => `<option value="${i}">エフェクト: ${f.name}</option>`).join('');
+  $('fxSel').value = String(V.fxLevel);
+  $('sceneSel').addEventListener('change', e => { applyScene(e.target.value); applyFx(SCENES[e.target.value].fx); $('fxSel').value = String(V.fxLevel); });
+  $('fxSel').addEventListener('change', e => applyFx(+e.target.value));
   $('handModel').innerHTML = Object.entries(HAND_MODELS).map(([k, m]) => `<option value="${k}">${m.name}</option>`).join('');
   $('handModel').addEventListener('change', e => { setPlaying(false); setHandModel(e.target.value); rebuildSkins(); showHandInfo(); if (S.song) setSong(S.song); });
   showHandInfo();

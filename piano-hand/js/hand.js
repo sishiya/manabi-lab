@@ -363,76 +363,74 @@ function fingerTarget(plan, f, t, W) {
   let i = -1;
   for (let k = 0; k < L.length; k++) { if (L[k].t0 <= t) i = k; else break; }
   const p = i >= 0 ? L[i] : null, n = L[i + 1] || null;
-  // 力を抜いた形（手といっしょに動く）。下の鍵より少し浮かせる
+  // 力を抜いた形（手といっしょに動く）。下の鍵より少し浮かせる（高さは奥行きだけで決める。黒鍵の凸凹をなぞって上下しないように）
   const nt = toWorld(W, TIP_N[f]);
-  const surf = Math.max(surfaceAt(nt[0], nt[2]), surfaceAt(nt[0], nt[2] - 8), 0);
-  const rest = [nt[0], Math.max(nt[1], surf + PAD) + LIFT * 0.35, nt[2]];
+  const rest = [nt[0], Math.max(nt[1], Math.max(surfaceZ(nt[2]), surfaceZ(nt[2] - 8)) + PAD) + LIFT * 0.35, nt[2]];
 
   if (p && t <= p.t1 + 0.03) { // 押している
     const P = pressPoint(p.m, f);
-    return { T: [P[0], P[1] - pressDepth(p, t), P[2]], press: p, down: t <= p.t1, lock: true };
+    return { T: [P[0], P[1] - pressDepth(p, t), P[2]], press: p, down: t <= p.t1, mob: 0 };
   }
-  let S = rest, sT = -Infinity;
-  if (p) { // 離したあと: 浮かせて、しばらくしたら力を抜いた形へ
+  let S = rest, sT = -Infinity, mob0 = 1;
+  if (p) { // 離したあと: 浮かせて、すぐ力を抜いた形へ（前の鍵の上に残ると、手が動いたときに置いていかれる）
     const P = pressPoint(p.m, f);
     const up = [P[0], P[1] + LIFT * smooth((t - p.t1 - 0.03) / 0.09), P[2]];
-    S = lerp3(up, rest, smooth((t - p.t1 - 0.04) / 0.15)); // 離した指はすぐ手といっしょに動く（前の鍵の上に残ると、手が動いたときに置いていかれる）
+    S = lerp3(up, rest, smooth((t - p.t1 - 0.04) / 0.15));
     sT = p.t1 + 0.03;
+    mob0 = smooth((t - sT) / 0.12); // 離したあとも、なめらかに動かせるようになる
   }
   if (n) {
     const ta = Math.max(sT, n.t0 - LOOK);
-    if (t >= ta) { // ③ 先回り: 次に押す鍵の上へ
+    if (t >= ta) { // ③ 先回り: 次に押す鍵の上へ。移動にはかならず時間をとる（次までが短くても一瞬で飛ばない）
       const P = pressPoint(n.m, f);
       const H = [P[0], P[1] + LIFT, P[2]];
-      const tb = Math.max(ta + 0.001, n.t0 - 0.05);
+      const span = Math.max(1e-3, n.t0 - ta), tb = ta + Math.max(span - 0.05, span * 0.6);
       const Q = lerp3(S, H, smooth((t - ta) / (tb - ta)));
-      Q[1] += (P[1] - H[1]) * smooth((t - tb) / (n.t0 - tb));
-      return { T: Q, next: n, lock: t > tb };
+      Q[1] += (P[1] - H[1]) * smooth((t - tb) / Math.max(1e-3, n.t0 - tb));
+      // よけにくさ（0 = 動かせない）。下ろしはじめる少し前から、なめらかに動かせなくなる
+      return { T: Q, next: n, mob: Math.min(mob0, 1 - smooth((t - (tb - 0.12)) / 0.12)) };
     }
   }
-  return { T: S };
+  return { T: S, mob: mob0 };
 }
 
-// 時刻 t の手の姿勢
-// ④ 人さし指〜小指は横の並びを入れかえられない。押していない指を横へよけて、指先どうしを FGAP 以上はなす
+// ④ 人さし指〜小指は横の並びを入れかえられない。動かしやすい指（mob が大きい）ほど多くよけて、指先どうしを FGAP 以上はなす。
+// どの規則も、しきい値で急に切りかわらないように連続にしている（切りかわると指が一瞬で飛んで、手がぶるぶるして見えた）
 const FGAP = 18;
 function keepOrder(tg, W) {
+  const gap0 = FGAP * HAND.s;
   // 横の並びは手の座標で見る（手が回っていても）
   for (let f = 1; f <= 5; f++) tg[f].T = toLocal(W, tg[f].T);
   for (let pass = 0; pass < 6; pass++) {
     let moved = false;
     for (let f = 2; f <= 4; f++) {
-      const A = tg[f], B = tg[f + 1], need = FGAP * HAND.s - (B.T[0] - A.T[0]);
-      if (need <= 0.01 || (A.lock && B.lock)) continue;
-      if (A.lock) B.T[0] += need; else if (B.lock) A.T[0] -= need;
-      else { A.T[0] -= need / 2; B.T[0] += need / 2; }
+      const A = tg[f], B = tg[f + 1], need = gap0 - (B.T[0] - A.T[0]), m = A.mob + B.mob;
+      if (need <= 0.01 || m < 1e-3) continue;
+      const k = 1 / Math.max(1, m); // 動かせる度合いが小さいときは少ししかよけない（全部を押しつけると、度合いが 0 になる瞬間に飛ぶ）
+      A.T[0] -= need * A.mob * k; B.T[0] += need * B.mob * k;
       moved = true;
     }
     if (!moved) break;
   }
-  // 両どなりが押していてはさまれた指は、上へ逃がす
+  // 両どなりにはさまれた指は、はさまれた分だけ上へ逃がし、まん中へ寄せる
   for (let f = 3; f <= 4; f++) {
     const A = tg[f - 1], B = tg[f], C = tg[f + 1];
-    if (B.lock) continue;
-    const gap = Math.min(B.T[0] - A.T[0], C.T[0] - B.T[0]);
-    if (gap < FGAP * HAND.s) { B.T[0] = (A.T[0] + C.T[0]) / 2; B.T[1] += (FGAP * HAND.s - gap) * 1.5; }
+    const sq = Math.max(0, gap0 - Math.min(B.T[0] - A.T[0], C.T[0] - B.T[0])) * B.mob;
+    if (sq <= 0) continue;
+    B.T[0] += ((A.T[0] + C.T[0]) / 2 - B.T[0]) * smooth(sq / 6);
+    B.T[1] += sq * 1.5;
   }
-  // 親指が手のひらの下へくぐるときは、上の指（押していない人さし指・中指）を少し持ち上げてアーチにする
+  // 親指が手のひらの下へくぐるときは、上の指（人さし指・中指）を少し持ち上げてアーチにする
   const th = tg[1].T;
   for (let f = 2; f <= 3; f++) {
-    const B = tg[f];
-    if (B.lock) continue;
-    const under = th[0] - (B.T[0] - 22);
-    if (under > 0) B.T[1] += Math.min(14, under * 0.6) * (f === 2 ? 1 : 0.6);
+    const B = tg[f], under = th[0] - (B.T[0] - 22 * HAND.s);
+    if (under > 0) B.T[1] += Math.min(14, under * 0.6) * (f === 2 ? 1 : 0.6) * B.mob;
   }
   for (let f = 1; f <= 5; f++) tg[f].T = toWorld(W, tg[f].T);
-  // よけた指が黒鍵の上に来たら、その分だけ上げる（指先の球が鍵にめりこまないように）
+  // 指先の球が鍵にめりこまないように、鍵のなめらかな面より上へ（動かせる指だけ、動かせる分だけ）
   for (let f = 1; f <= 5; f++) {
-    const T = tg[f].T;
-    if (tg[f].lock) continue;
-    let s = -Infinity;
-    for (const [dx, dz] of [[0, 0], [PAD, 0], [-PAD, 0], [0, PAD], [0, -PAD]]) s = Math.max(s, surfaceAt(T[0] + dx, T[2] + dz));
-    T[1] = Math.max(T[1], s + PAD + 1);
+    const T = tg[f].T, floor = surfaceZ(T[2]) + PAD + 1;
+    if (T[1] < floor) T[1] += (floor - T[1]) * tg[f].mob;
   }
 }
 

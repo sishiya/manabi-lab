@@ -63,6 +63,12 @@
     </section>
 
     <section>
+      <h2>シーンとエフェクト</h2>
+      <div class="row"><select id="sceneSel" aria-label="シーン"></select><select id="fxSel" aria-label="エフェクトの強さ"></select></div>
+      <p class="cap">エフェクト: 光のにじみ・画面の周りの暗さ・フィルムの粒・光の粒。シーンを選ぶと、そのシーンに合う強さになります（あとから変えられます）。重いときは「なし」に。</p>
+    </section>
+
+    <section>
       <h2>手のモデル</h2>
       <select id="handModel" aria-label="手のモデル"></select>
       <p class="cap" id="handInfo"></p>
@@ -105,12 +111,19 @@
         <li>W3C Music Notation Community Group: MusicXML 4.0（譜表・運指 fingering の書き方）。<a href="https://www.w3.org/2021/06/musicxml40/" target="_blank" rel="noopener">仕様</a>／MIDI は Standard MIDI File の形式</li>
         <li>Nakamura, Saito, Yoshii (2020) Statistical learning and estimation of piano fingering. <i>Information Sciences</i>. <a href="https://arxiv.org/abs/1904.10237" target="_blank" rel="noopener">arXiv</a>（運指の推定の比べ方）</li>
       </ul>
-      <p class="cap">曲はどれも著作権の切れたもの（音階・アルペジオ・フランス民謡・ベートーヴェン）。サンプルの楽譜ファイル（samples/）はこのアプリで作ったもので、歓喜の歌の左手の和音はこのアプリでつけた伴奏です。使っているもの: Three.js（MIT ライセンス）、Google Fonts（SIL Open Font License）。</p>
+      <p class="cap">曲はどれも著作権の切れたもの（音階・アルペジオ・フランス民謡・ベートーヴェン）。サンプルの楽譜ファイル（samples/）はこのアプリで作ったもので、歓喜の歌の左手の和音はこのアプリでつけた伴奏です。使っているもの: Three.js（MIT ライセンス。光のにじみは Three.js に付いている EffectComposer・UnrealBloomPass）、Google Fonts（SIL Open Font License）。</p>
     </details>
   </aside>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- 光のにじみ（ブルーム）: Three.js r128 のおまけ（MIT）。同じ版を jsDelivr から -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
 <script src="js/keys.js"></script>
 <script src="js/songs.js"></script>
 <script src="js/fingering.js"></script>
@@ -119,5 +132,6 @@
 <script src="js/check.js"></script>
 <script src="js/view.js"></script>
 <script src="js/skinview.js"></script>
+<script src="js/scene.js"></script>
 <script src="js/import.js"></script>
 <script src="js/main.js"></script>
