@@ -8,8 +8,11 @@
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -List
 #       … 上げた動画の ID・公開の状態・翻訳・タイトルを出す（ID は Meta の JSON の videoId に書いておく）
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Update -Meta _dev/promo/black-hole.upload.json
-#       … 上げたあとの動画（videoId）に、字幕（captions）と、翻訳したタイトルと説明（localizations）・tags を足す。日本語のタイトル・説明・予約はそのまま
+#       … 上げたあとの動画（videoId）に、字幕（captions）と、翻訳したタイトルと説明（localizations）・tags を足す。日本語のタイトル・説明はそのまま
+#         publishAt があれば予約投稿の日時も入れる（Studio で上げた動画を予約するとき。例 "2026-10-11T20:00:00+09:00"）
 #         -Full を付けると、日本語のタイトル・説明・分類（教育）・言語・サムネイルも JSON から入れる（Studio で手動で上げた動画を、ここで仕上げるとき）
+#   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Schedule -Meta _dev/promo/black-hole-guide.upload.json
+#       … 予約投稿の日時（publishAt）だけを入れる。JSON に publishAt がなければ予約を外して非公開のままにする（字幕を送らないので API の使用量が少ない）
 #         captions: { "en": "_dev/promo/out/<名前>.en.srt" } … 字幕（CC）。台本ページ（_dev/promo/*.html）を開くと out に保存される。日本語は動画に焼きこんであるので、ふつうは英語だけ
 #
 # 秘密の扱い（必ず守る）:
@@ -23,6 +26,7 @@ param(
   [switch]$List,
   [switch]$Update,
   [switch]$Full,
+  [switch]$Schedule,
   [string]$Meta,
   [string]$SecretDir
 )
@@ -198,6 +202,31 @@ function Invoke-List {
   }
 }
 
+# ---- 予約投稿の日時を入れる／外す（status だけを書きかえる。字幕は送らないので API の使用量が少ない）----
+# $publishAt が空なら予約を外して非公開のままにする
+function Set-Schedule($id, $publishAt, $h) {
+  try {
+    $cur = (Invoke-RestMethod -Headers $h -Uri "https://www.googleapis.com/youtube/v3/videos?part=status&id=$id").items | Select-Object -First 1
+    if (-not $cur) { Write-Host "動画が見つかりません: $id"; return }
+    $st = @{ privacyStatus = 'private'; selfDeclaredMadeForKids = $false;
+             embeddable = $cur.status.embeddable; license = $cur.status.license; publicStatsViewable = $cur.status.publicStatsViewable }
+    if ($publishAt) { $st.publishAt = $publishAt }   # 書かなければ予約は消える（status は丸ごと置きかわる）
+    $body = [Text.Encoding]::UTF8.GetBytes((@{ id = $id; status = $st } | ConvertTo-Json -Depth 4))
+    $r = Invoke-RestMethod -Method Put -Headers $h -ContentType 'application/json; charset=UTF-8' -Body $body -Uri 'https://www.googleapis.com/youtube/v3/videos?part=status'
+    if ($publishAt) { Write-Host "予約しました: https://youtu.be/$id  $($r.status.publishAt)（$publishAt）" }
+    elseif ($r.status.publishAt) { Write-Host "予約が外れていません: https://youtu.be/$id  $($r.status.publishAt)" }
+    else { Write-Host "予約を外しました（$($r.status.privacyStatus)）: https://youtu.be/$id" }
+  } catch { Write-Host "予約を$(if ($publishAt) { '入れられ' } else { '外せ' })ませんでした: $(Get-ErrText $_)" }
+}
+# -Schedule: Meta の publishAt だけを入れる（publishAt がなければ予約を外す）
+function Invoke-Schedule {
+  if (-not $Meta) { throw '-Meta で動画の情報の JSON を指定してください' }
+  $m = Get-Content -Raw -Encoding UTF8 (Join-Path $root $Meta) | ConvertFrom-Json
+  if (-not $m.videoId) { throw "$Meta に videoId がありません" }
+  $at = Get-AccessToken
+  Set-Schedule $m.videoId $m.publishAt @{ Authorization = "Bearer $at" }
+}
+
 # ---- 上げたあとの動画に、翻訳したタイトルと説明・tags を足す ----
 function Invoke-Update {
   if (-not $Meta) { throw '-Meta で動画の情報の JSON を指定してください' }
@@ -205,6 +234,8 @@ function Invoke-Update {
   if (-not $m.videoId) { throw "$Meta に videoId がありません（-List で調べて書いてください）" }
   $at = Get-AccessToken; $h = @{ Authorization = "Bearer $at" }
   Set-Captions $m.videoId $m $at
+  # 予約投稿: publishAt があれば、上げたあとの動画にも入れる（非公開のままで、その時刻に公開される。一度も公開していない動画だけ）
+  if ($m.publishAt) { Set-Schedule $m.videoId $m.publishAt $h }
   if (-not $m.localizations) { return }
   try { $v = (Invoke-RestMethod -Headers $h -Uri "https://www.googleapis.com/youtube/v3/videos?part=snippet,localizations&id=$($m.videoId)").items | Select-Object -First 1 }
   catch { throw "動画を読めませんでした（403 なら -Auth をやり直してください）: $(Get-ErrText $_)" }
@@ -233,5 +264,5 @@ function Invoke-Update {
   Write-Host "更新しました: https://youtu.be/$($r.id)  翻訳: $(($r.localizations.PSObject.Properties.Name) -join ',')  tags: $(@($r.snippet.tags).Count)個"
 }
 
-try { if ($Auth) { Invoke-Auth } elseif ($List) { Invoke-List } elseif ($Update) { Invoke-Update } else { Invoke-Upload } }
+try { if ($Auth) { Invoke-Auth } elseif ($List) { Invoke-List } elseif ($Schedule) { Invoke-Schedule } elseif ($Update) { Invoke-Update } else { Invoke-Upload } }
 catch { Write-Host "失敗: $($_.Exception.Message)"; exit 1 }
