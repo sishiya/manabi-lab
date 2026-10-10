@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>しし屋 VTuber 試作</title>
+<style>
+  :root { --bg: #FFF1DC; --navy: #2B3A55; --mane: #D9682B; --cream: #FFF8EC; }
+  html, body { margin: 0; height: 100%; overflow: hidden; font-family: system-ui, "Hiragino Sans", "Yu Gothic UI", sans-serif; }
+  body { background: var(--bg); }
+  body.bg-green { background: #00B140; }
+  body.bg-clear { background: transparent; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
+  #ui { position: fixed; left: 12px; top: 12px; background: rgba(255,248,236,.94); color: var(--navy); border-radius: 14px;
+        padding: 10px 12px; font-size: 13px; line-height: 1.5; box-shadow: 0 2px 10px rgba(0,0,0,.12); max-width: 300px; }
+  #ui.hide { display: none; }
+  #ui h1 { font-size: 14px; margin: 0 0 6px; }
+  #ui .row { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; align-items: center; }
+  #ui button { font: inherit; border: 1.5px solid var(--navy); background: #fff; color: var(--navy); border-radius: 999px; padding: 2px 10px; cursor: pointer; }
+  #ui button.on { background: var(--navy); color: #fff; }
+  #ui small { display: block; opacity: .75; margin-top: 4px; }
+  #msg:empty { display: none; }
+  #microw[hidden] { display: none; }
+  #meterbox { display: inline-block; width: 90px; height: 10px; border-radius: 5px; background: #E8DCC8; overflow: hidden; }
+  #meter { display: block; height: 100%; width: 0; background: var(--mane); }
+  #sens { width: 80px; }
+  #msg { color: var(--mane); font-weight: bold; }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="ui">
+  <h1>しし屋 VTuber 試作</h1>
+  <div class="row">動かし方:
+    <button data-mode="demo" class="on">おまかせ</button>
+    <button data-mode="cam">カメラ</button>
+    <button data-mode="mic">マイク</button>
+    <button data-mode="real">リアル</button>
+  </div>
+  <div class="row">表情:
+    <button data-ex="0" class="on">1 ふつう</button>
+    <button data-ex="1">2 にっこり</button>
+    <button data-ex="2">3 びっくり</button>
+    <button data-ex="3">4 ねむい</button>
+    <button data-ex="shine">5 キラーン</button>
+  </div>
+  <div class="row">背景:
+    <button data-bg="" class="on">クリーム</button>
+    <button data-bg="bg-green">グリーン</button>
+    <button data-bg="bg-clear">透明</button>
+  </div>
+  <div class="row">
+    <button id="body" class="on">白衣</button>
+    <button id="calib">いまの顔を正面にする</button>
+    <button id="pts" class="on" hidden>顔の点</button>
+  </div>
+  <div class="row" id="microw" hidden>声: <span id="meterbox"><span id="meter"></span></span>
+    感度 <input id="sens" type="range" min="1" max="10" value="5"></div>
+  <div id="msg"></div>
+  <small>H でこの札を隠す／出す。カメラ・マイクはこのパソコンの中だけで使い、映像も音もどこにも送りません（顔の点を読む部品と型は初回だけネットから読みます）。</small>
+</div>
+<script type="module">
+// ---- しし屋のアイコン（_dev/sns-icon/a-lion-glasses.svg）をパーツに分けて動かす ----
+// 座標は SVG と同じ（400×400、顔の中心 200,210）。奥のパーツほど動きを小さく、手前ほど大きくして立体っぽく見せる。
+const cv = document.getElementById('cv'), g = cv.getContext('2d');
+const C = { mane: '#D9682B', face: '#F7C67E', ear: '#E9A160', eye: '#3A2416', navy: '#2B3A55', muzzle: '#FFF8EC',
+            nose: '#5A2E1A', cheek: '242,154,134', coat: '#FBF8F2', coatLine: '#DDD2C0', tongue: '#E8837A' };
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+
+// いまの値（なめらかに追う）と目標
+const S = { yaw: 0, pitch: 0, roll: 0, blinkL: 0, blinkR: 0, mouth: 0, smile: 0, x: 0, y: 0 };
+const T = { ...S };
+let mode = 'demo', expr = 0, showBody = true, shineT = -9;
+const msg = t => document.getElementById('msg').textContent = t;
+
+// ---- 描く ----
+let W = 0, H = 0, DPR = 1;
+function resize() {
+  DPR = window.devicePixelRatio || 1; W = innerWidth; H = innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR;
+}
+addEventListener('resize', resize); resize();
+
+const circ = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, Math.max(0, r), 0, Math.PI * 2); g.fill(); };
+const ell = (x, y, rx, ry, c) => { g.fillStyle = c; g.beginPath(); g.ellipse(x, y, Math.max(0, rx), Math.max(0, ry), 0, 0, Math.PI * 2); g.fill(); };
+
+// たてがみのゆれ（頭の動きに遅れてついてくるばね）
+const spring = { x: 0, y: 0, vx: 0, vy: 0, px: 0, py: 0 };
+// 耳のぴくっ
+const ear = { l: 0, r: 0, next: 2 };
+
+function drawBody(t, sway) {
+  g.save(); g.translate(sway * 0.35, 0);
+  g.fillStyle = C.coat; g.strokeStyle = C.coatLine; g.lineWidth = 3;
+  g.beginPath(); g.moveTo(58, 600); g.bezierCurveTo(60, 405, 118, 342, 200, 336); g.bezierCurveTo(282, 342, 340, 405, 342, 600); g.closePath(); g.fill(); g.stroke();
+  // 中のシャツ（メガネと同じ紺）とえり
+  g.fillStyle = C.navy; g.beginPath(); g.moveTo(166, 340); g.lineTo(200, 420); g.lineTo(234, 340); g.closePath(); g.fill();
+  g.fillStyle = C.coat; g.strokeStyle = C.coatLine;
+  for (const s of [-1, 1]) {
+    g.beginPath(); g.moveTo(200 + s * 34, 338); g.lineTo(200 + s * 6, 424); g.lineTo(200 + s * 30, 470); g.lineTo(200 + s * 62, 352); g.closePath(); g.fill(); g.stroke();
+  }
+  // むねポケットとペン
+  g.beginPath(); g.moveTo(244, 452); g.lineTo(292, 452); g.stroke();
+  g.fillStyle = C.mane; g.beginPath(); g.roundRect(256, 430, 7, 26, 3); g.fill();
+  g.fillStyle = C.navy; g.beginPath(); g.roundRect(270, 436, 6, 20, 3); g.fill();
+  g.restore();
+}
+
+function drawEye(cx, cy, open, ex, t) {
+  g.save();
+  if (ex === 1) {            // にっこり ^ ^
+    g.strokeStyle = C.eye; g.lineWidth = 5; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(cx - 10, cy + 4); g.quadraticCurveTo(cx, cy - 10, cx + 10, cy + 4); g.stroke();
+  } else if (open < 0.22) {  // 閉じた目
+    g.strokeStyle = C.eye; g.lineWidth = 4.5; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(cx - 10, cy); g.quadraticCurveTo(cx, cy + 7, cx + 10, cy); g.stroke();
+  } else {
+    const r = ex === 2 ? 11 : 9;
+    ell(cx, cy, r, r * open, C.eye);
+    if (open > 0.5) circ(cx + 3, cy - 3 * open, ex === 2 ? 2.2 : 3, '#fff');
+  }
+  g.restore();
+}
+
+function drawGlasses(t, lift) {
+  g.save(); g.translate(0, -lift);
+  g.strokeStyle = C.navy; g.lineWidth = 7; g.lineCap = 'round'; g.fillStyle = 'rgba(255,255,255,0.12)';
+  for (const cx of [163, 237]) { g.beginPath(); g.arc(cx, 196, 29, 0, Math.PI * 2); g.fill(); g.stroke(); }
+  g.beginPath(); g.moveTo(192, 192); g.quadraticCurveTo(200, 185, 208, 192);
+  g.moveTo(134, 190); g.lineTo(108, 182); g.moveTo(266, 190); g.lineTo(292, 182); g.stroke();
+  // キラーン（レンズを光が横切る）
+  const u = (t - shineT) / 0.55;
+  if (u > 0 && u < 1) {
+    for (const cx of [163, 237]) {
+      g.save(); g.beginPath(); g.arc(cx, 196, 25.5, 0, Math.PI * 2); g.clip();
+      const x = cx - 45 + 90 * u;
+      g.strokeStyle = 'rgba(255,255,255,0.9)'; g.lineWidth = 9;
+      g.beginPath(); g.moveTo(x - 10, 230); g.lineTo(x + 20, 162); g.stroke();
+      g.lineWidth = 4; g.beginPath(); g.moveTo(x + 8, 230); g.lineTo(x + 38, 162); g.stroke();
+      g.restore();
+    }
+  }
+  if (u > 0.4 && u < 1.6) {  // 小さな星
+    const k = Math.sin(clamp((u - 0.4) / 1.2, 0, 1) * Math.PI);
+    g.fillStyle = '#FFF'; g.strokeStyle = '#F2B84B'; g.lineWidth = 2;
+    star(286, 160, 12 * k); star(304, 186, 7 * k);
+  }
+  g.restore();
+}
+function star(x, y, r) {
+  if (r <= 0.5) return;
+  g.beginPath();
+  for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, rr = i % 2 ? r * 0.32 : r; g.lineTo(x + rr * Math.sin(a), y - rr * Math.cos(a)); }
+  g.closePath(); g.fill(); g.stroke();
+}
+
+function drawMouth(m, smile, ex) {
+  // 鼻から下へ短い線、その下に口
+  g.strokeStyle = C.nose; g.lineWidth = 4; g.lineCap = 'round'; g.lineJoin = 'round';
+  const y0 = 263 + m * 2, w = 12 + smile * 3, up = smile * 5;
+  if (m < 0.07) {
+    g.beginPath(); g.moveTo(200, 255); g.lineTo(200, 263);
+    g.moveTo(200 - w, 272 - up); g.quadraticCurveTo(200, 282 + smile * 3, 200 + w, 272 - up); g.stroke();
+    return;
+  }
+  const h = 6 + m * 20, rx = 10 + m * 5 + smile * 3;
+  g.beginPath(); g.moveTo(200, 255); g.lineTo(200, y0); g.stroke();
+  g.save();
+  g.beginPath();
+  g.moveTo(200 - rx, y0 + 2 - up);
+  g.quadraticCurveTo(200, y0 - 2, 200 + rx, y0 + 2 - up);
+  g.bezierCurveTo(200 + rx, y0 + h, 200 - rx, y0 + h, 200 - rx, y0 + 2 - up);
+  g.closePath();
+  g.fillStyle = '#4A2216'; g.fill();
+  g.clip();
+  ell(200, y0 + h * 0.95, rx * 0.8, h * 0.45, C.tongue);
+  g.restore();
+  g.beginPath();
+  g.moveTo(200 - rx, y0 + 2 - up); g.quadraticCurveTo(200, y0 - 2, 200 + rx, y0 + 2 - up);
+  g.bezierCurveTo(200 + rx, y0 + h, 200 - rx, y0 + h, 200 - rx, y0 + 2 - up);
+  g.closePath(); g.stroke();
+}
+
+// たてがみのばね: 頭が動いた向きと逆へ遅れる
+function updSpring(hx, hy, roll, dt) {
+  const vx = (hx - spring.px) / Math.max(dt, 1e-3), vy = (hy - spring.py) / Math.max(dt, 1e-3);
+  spring.px = hx; spring.py = hy;
+  spring.vx += (-spring.x * 90 - spring.vx * 9 - vx * 0.9 - roll * 30) * dt;
+  spring.vy += (-spring.y * 90 - spring.vy * 9 - vy * 0.9) * dt;
+  spring.x += spring.vx * dt; spring.y += spring.vy * dt;
+  spring.x = clamp(spring.x, -14, 14); spring.y = clamp(spring.y, -14, 14);
+}
+function beginFrame() {
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  g.clearRect(0, 0, W, H);
+  const k = Math.min(H / 560, W / 440);
+  g.translate(W / 2, H - 520 * k); g.scale(k, k); g.translate(-200, 0);
+}
+function earTwitch(dt) {
+  ear.next -= dt;
+  if (ear.next < 0) { (Math.random() < 0.5 ? (ear.l = 1) : (ear.r = 1)); ear.next = 2.5 + Math.random() * 4; }
+  ear.l = Math.max(0, ear.l - dt * 4); ear.r = Math.max(0, ear.r - dt * 4);
+}
+
+function draw(t, dt) {
+  beginFrame();
+
+  const yaw = S.yaw, pitch = S.pitch, roll = S.roll;
+  const breath = Math.sin(t * 2.1) * 2.2;
+  const hx = yaw * 10 + S.x * 40, hy = pitch * 6 + breath + S.y * 25;
+
+  updSpring(hx, hy, roll, dt);
+  if (showBody) drawBody(t, hx);
+
+  g.save();
+  g.translate(200 + hx, 210 + hy); g.rotate(roll); g.translate(-200, -210);
+  const P = (d) => g.translate(yaw * d, pitch * d * 0.6);   // 奥行き d のずれ
+
+  // たてがみ（いちばん奥）
+  g.save(); P(-7);
+  for (let i = 0; i < 12; i++) {
+    const a = i * Math.PI / 6, w = 0.55 + 0.45 * Math.cos(a - Math.PI);   // 下のほうがよくゆれる
+    const r = 46 + Math.sin(t * 2.1 + i * 0.9) * 1.2;
+    circ(200 + 130 * Math.sin(a) + spring.x * w, 210 - 130 * Math.cos(a) + spring.y * w, r, C.mane);
+  }
+  circ(200, 210, 128, C.mane);
+  g.restore();
+
+  // 耳（ときどきぴくっ）
+  earTwitch(dt);
+  g.save(); P(-2);
+  for (const [cx, e, s] of [[122, ear.l, -1], [278, ear.r, 1]]) {
+    g.save(); g.translate(cx, 128); g.rotate(s * Math.sin(e * Math.PI) * 0.25 + (expr === 3 ? s * -0.12 : 0));
+    circ(0, 0, 26, C.face); circ(0, 0, 13, C.ear); g.restore();
+  }
+  g.restore();
+
+  // 顔
+  g.save(); P(5); circ(200, 215, 102, C.face); g.restore();
+
+  // ほっぺ
+  g.save(); P(11);
+  const ch = expr === 1 ? 1 : 0.7 + S.smile * 0.3;
+  g.fillStyle = `rgba(${C.cheek},${ch})`;
+  for (const cx of [140, 260]) { g.beginPath(); g.ellipse(cx, 240, 16 + (expr === 1) * 3, 10 + (expr === 1) * 2, 0, 0, Math.PI * 2); g.fill(); }
+  g.restore();
+
+  // 目
+  g.save(); P(14);
+  const sleepy = expr === 3 ? 0.35 : 1;
+  const oL = Math.min(1 - S.blinkL, sleepy), oR = Math.min(1 - S.blinkR, sleepy);   // blinkL＝画面の左の目（鏡のように本人の左目）
+  const gx = yaw * 2.5, gy = pitch * 1.5;
+  drawEye(163 + gx, 196 + gy, oL, expr, t);
+  drawEye(237 + gx, 196 + gy, oR, expr, t);
+  g.restore();
+
+  // 鼻まわり・口
+  g.save(); P(17);
+  ell(183, 258, 24, 19, C.muzzle); ell(217, 258, 24, 19, C.muzzle);
+  const m = expr === 2 ? Math.max(S.mouth, 0.7) : S.mouth;
+  drawMouth(m, expr === 1 ? 1 : S.smile, expr);
+  g.fillStyle = C.nose; g.beginPath(); g.moveTo(186, 236); g.lineTo(214, 236); g.quadraticCurveTo(218, 236, 215, 241); g.lineTo(204, 253); g.quadraticCurveTo(200, 257, 196, 253); g.lineTo(185, 241); g.quadraticCurveTo(182, 236, 186, 236); g.fill();
+  g.restore();
+
+  // メガネ（いちばん手前）
+  g.save(); P(16); drawGlasses(t, expr === 2 ? 7 : 0); g.restore();
+
+  // ねむい: zzz
+  if (expr === 3) {
+    g.fillStyle = C.navy; g.font = 'bold 26px system-ui'; g.globalAlpha = 0.7;
+    for (let i = 0; i < 3; i++) { const u = (t * 0.5 + i / 3) % 1; g.globalAlpha = Math.sin(u * Math.PI) * 0.7; g.fillText('z', 300 + u * 40 + i * 4, 120 - u * 60); }
+    g.globalAlpha = 1;
+  }
+  g.restore();
+}
+
+// ---- リアル: 表情の値 52 種類（blendshapes）をそのまま細かく使う ----
+// 名前は MediaPipe のまま（eyeBlinkLeft など）。BS が目標、SB がなめらかにした値。
+const BS = {}, SB = {};
+const b = n => SB[n] || 0;
+// 鏡のように動かす（画面の左＝本人の左）。値の「Left」が本人の左か画面の左かは、実際の目の開きと見くらべて決める（swapLR）
+let swapLR = false, swapVote = 0;
+const sL = n => b(n + (swapLR ? 'Right' : 'Left')), sR = n => b(n + (swapLR ? 'Left' : 'Right'));
+let lastL = null, showPts = true;
+
+function drawReal(t, dt) {
+  beginFrame();
+  const yawA = S.yaw * 0.75, pitA = S.pitch * 0.45, roll = S.roll;
+  const sy = Math.sin(yawA), cY = Math.cos(yawA), sp = Math.sin(pitA), cP = Math.cos(pitA);
+  const breath = Math.sin(t * 2.1) * 1.5;
+  const hx = sy * 14 + S.x * 60, hy = sp * 8 + breath + S.y * 35;
+  updSpring(hx, hy, roll, dt);
+  if (showBody) drawBody(t, hx);
+
+  // 表情の値
+  const wide = (sL('eyeWide') + sR('eyeWide')) / 2, innerUp = b('browInnerUp'), puff = b('cheekPuff');
+  const sneer = (sL('noseSneer') + sR('noseSneer')) / 2, down = (sL('browDown') + sR('browDown')) / 2;
+  const smL = sL('mouthSmile'), smR = sR('mouthSmile'), frL = sL('mouthFrown'), frR = sR('mouthFrown');
+  const smile = (smL + smR) / 2, frown = (frL + frR) / 2;
+
+  g.save();
+  g.translate(200 + hx, 210 + hy); g.rotate(roll); g.translate(-200, -210);
+  const Z = z => g.translate(sy * z, sp * z);                      // 奥行き z のずれ
+  const Flat = (x, y) => { g.translate(x, y); g.scale(cY, cP); g.translate(-x, -y); };   // 顔に貼りついた平らなもの（ななめから見ると細くなる）
+
+  // たてがみ（おどろくと少し逆立つ）
+  g.save(); Z(-40);
+  const bristle = (wide + innerUp) * 4;
+  for (let i = 0; i < 12; i++) {
+    const a = i * Math.PI / 6, w = 0.55 + 0.45 * Math.cos(a - Math.PI);
+    const r = 46 + bristle + Math.sin(t * 2.1 + i * 0.9) * 1.2;
+    const R = 130 + bristle * 1.5;
+    circ(200 + R * Math.sin(a) + spring.x * w, 210 - R * Math.cos(a) + spring.y * w, r, C.mane);
+  }
+  circ(200, 210, 128 + bristle, C.mane);
+  g.restore();
+
+  // 耳: 眉を上げると立ち、しかめると後ろへ
+  earTwitch(dt);
+  g.save(); Z(-15);
+  for (const [cx, e, s, br] of [[122, ear.l, -1, sL('browDown')], [278, ear.r, 1, sR('browDown')]]) {
+    g.save(); g.translate(cx, 128 - innerUp * 6);
+    g.rotate(s * (Math.sin(e * Math.PI) * 0.25 - innerUp * 0.25 - wide * 0.15 + br * 0.45));
+    circ(0, 0, 26, C.face); circ(0, 0, 13, C.ear); g.restore();
+  }
+  g.restore();
+
+  // 顔（ほおをふくらませると大きく）
+  g.save(); Z(20); g.translate(200, 215); g.scale(0.9 + 0.1 * cY + puff * 0.05, 1 + puff * 0.02); g.translate(-200, -215);
+  circ(200, 215, 102, C.face); g.restore();
+
+  // ほっぺ
+  g.save(); Z(45); Flat(200, 215);
+  g.fillStyle = `rgba(${C.cheek},${clamp(0.55 + smile * 0.45 + puff * 0.3, 0, 1)})`;
+  for (const [cx, sm] of [[140 - puff * 8, smL], [260 + puff * 8, smR]]) {
+    g.beginPath(); g.ellipse(cx, 240 - sm * 4, 16 + puff * 8 + sm * 3, 10 + puff * 4 + sm * 2, 0, 0, Math.PI * 2); g.fill();
+  }
+  g.restore();
+
+  // 眉（アイコンにはないが、リアルではこれがいちばん効く）
+  g.save(); Z(58); Flat(200, 196);
+  g.strokeStyle = '#B8541F'; g.lineWidth = 6; g.lineCap = 'round';
+  for (const [cx, s, dn, ou] of [[163, -1, sL('browDown'), sL('browOuterUp')], [237, 1, sR('browDown'), sR('browOuterUp')]]) {
+    const ix = cx - s * 13, ox = cx + s * 15;
+    const iy = 151 - innerUp * 13 + dn * 10, oy = 150 - ou * 11 - innerUp * 3 + dn * 2;
+    g.beginPath(); g.moveTo(ix, iy); g.quadraticCurveTo(cx, Math.min(iy, oy) - 6 + dn * 3, ox, oy); g.stroke();
+  }
+  g.restore();
+
+  // 目（まばたき・目を細める・見ひらく・視線）
+  g.save(); Z(62); Flat(200, 196);
+  const gx = -((sL('eyeLookOut') - sL('eyeLookIn')) + (sR('eyeLookIn') - sR('eyeLookOut'))) / 2 * 8;
+  const gy = ((b('eyeLookDownLeft') + b('eyeLookDownRight')) - (b('eyeLookUpLeft') + b('eyeLookUpRight'))) / 2 * 7;
+  for (const [cx, side] of [[163, sL], [237, sR]]) {
+    const open = 1 - clamp((side('eyeBlink') - 0.2) / 0.45, 0, 1), sq = side('eyeSquint'), wd = side('eyeWide');
+    const r = 9 * (1 + wd * 0.45), ry = r * open * (1 - sq * 0.45);
+    const x = cx + gx, y = 196 + gy;
+    if (ry < 2.2) {
+      g.strokeStyle = C.eye; g.lineWidth = 4.5; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(x - 10, y); g.quadraticCurveTo(x, y + 7 - smile * 12, x + 10, y); g.stroke();
+    } else {
+      ell(x, y, r, ry, C.eye);
+      if (ry > 5) circ(x + 3, y - 3 * ry / r, 3 * (1 - wd * 0.25), '#fff');
+    }
+  }
+  g.restore();
+
+  // 鼻まわり・口
+  const mShift = (sR('mouth') - sL('mouth')) * 12 + (sR('jaw') - sL('jaw')) * 8;
+  const jaw = b('jawOpen');
+  g.save(); Z(75); Flat(200, 250);
+  const mr = 24 + puff * 5 + smile * 2;
+  ell(183 + mShift * 0.4 - smile, 258 + jaw * 3, mr, 19 + jaw * 2, C.muzzle);
+  ell(217 + mShift * 0.4 + smile, 258 + jaw * 3, mr, 19 + jaw * 2, C.muzzle);
+  drawMouthReal(mShift, jaw, smL, smR, frL, frR);
+  g.restore();
+  g.save(); Z(88); Flat(200, 245); g.translate(0, -sneer * 4);
+  g.fillStyle = C.nose; g.beginPath(); g.moveTo(186, 236); g.lineTo(214, 236); g.quadraticCurveTo(218, 236, 215, 241); g.lineTo(204, 253); g.quadraticCurveTo(200, 257, 196, 253); g.lineTo(185, 241); g.quadraticCurveTo(182, 236, 186, 236); g.fill();
+  if (sneer > 0.2) {   // 鼻のしわ
+    g.strokeStyle = C.nose; g.globalAlpha = clamp((sneer - 0.2) * 2, 0, 0.7); g.lineWidth = 2.5; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(192, 228); g.quadraticCurveTo(200, 224, 208, 228); g.moveTo(194, 222); g.quadraticCurveTo(200, 219, 206, 222); g.stroke();
+  }
+  g.restore();
+
+  // メガネ（眉を上げる・鼻にしわを寄せると、つられて上がる）
+  const lift = innerUp * 4 + (sL('browOuterUp') + sR('browOuterUp')) * 1.5 + sneer * 4;
+  g.save(); Z(72); Flat(200, 196); drawGlasses(t, lift); g.restore();
+  g.restore();
+
+  if (showPts && lastL) drawPoints();
+}
+
+function drawMouthReal(shift, jaw, smL, smR, frL, frR) {
+  const stretch = (sL('mouthStretch') + sR('mouthStretch')) / 2, press = (sL('mouthPress') + sR('mouthPress')) / 2;
+  const funnel = b('mouthFunnel'), pucker = b('mouthPucker'), close = b('mouthClose');
+  const upperUp = (sL('mouthUpperUp') + sR('mouthUpperUp')) / 2, lowerDown = (sL('mouthLowerDown') + sR('mouthLowerDown')) / 2;
+  const rollL = b('mouthRollLower');
+  const h = clamp(jaw - close, 0, 1) * 28 + lowerDown * 6 + funnel * 9 * clamp(jaw * 4, 0, 1);
+  const hw = Math.max(5, 13 + stretch * 8 + (smL + smR) * 3 - pucker * 8 - funnel * 6);
+  const cx = 200 + shift, y0 = 265 - upperUp * 3;
+  const upL = (smL - frL) * 10, upR = (smR - frR) * 10;
+  const Lx = cx - hw, Rx = cx + hw, Ly = y0 + 5 - upL, Ry = y0 + 5 - upR;
+  g.strokeStyle = C.nose; g.lineWidth = 4; g.lineCap = 'round'; g.lineJoin = 'round';
+  g.beginPath(); g.moveTo(200, 255); g.lineTo((200 + cx) / 2, y0 + 1); g.stroke();
+  if (h < 3) {
+    const mid = y0 + 10 + ((smL + smR) - (frL + frR)) * 3 - press * 4 - rollL * 3;
+    const pk = clamp((pucker - 0.3) / 0.4, 0, 1);
+    if (pk > 0) {   // すぼめた口（チュー）: 小さな丸
+      g.globalAlpha = pk; g.fillStyle = '#C46A5A';
+      g.beginPath(); g.ellipse(cx, y0 + 8, 5 + pk * 2, 4 + pk * 2, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+      g.globalAlpha = 1 - pk;
+    }
+    g.beginPath(); g.moveTo(Lx, Ly); g.quadraticCurveTo(cx, mid, Rx, Ry); g.stroke();
+    g.globalAlpha = 1;
+    return;
+  }
+  const path = () => {
+    g.beginPath(); g.moveTo(Lx, Ly); g.quadraticCurveTo(cx, y0 + 1 - upperUp * 2, Rx, Ry);
+    g.bezierCurveTo(Rx, y0 + 5 + h * 1.35, Lx, y0 + 5 + h * 1.35, Lx, Ly); g.closePath();
+  };
+  g.save(); path(); g.fillStyle = '#4A2216'; g.fill(); g.clip();
+  ell(cx, y0 + 5 + h * 1.0, hw * 0.75, h * 0.45, C.tongue);
+  if (h > 10) { g.fillStyle = '#FFFDF8'; g.beginPath(); g.roundRect(cx - hw * 0.55, y0 - 2, hw * 1.1, 5, 2); g.fill(); }   // 上の歯
+  g.restore();
+  path(); g.stroke();
+}
+
+// 顔の点（478 点）を右下に小さく。映像そのものは出さない
+function drawPoints() {
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const s = Math.min(170, W * 0.3), x0 = W - s - 12, y0 = H - s - 12;
+  g.fillStyle = 'rgba(43,58,85,0.75)'; g.beginPath(); g.roundRect(x0, y0, s, s, 12); g.fill();
+  g.fillStyle = '#9FE3FF';
+  for (const p of lastL) g.fillRect(x0 + (1 - p.x) * s - 0.75, y0 + p.y * s * 0.75 + s * 0.125 - 0.75, 1.5, 1.5);
+}
+
+// ---- 動かし方 ----
+// おまかせ: ゆらゆら＋まばたき＋ときどきしゃべる
+let blinkT = 0, nextBlink = 2, talk = 0, talkNext = 1.5;
+function autoBlink(dt) {
+  nextBlink -= dt;
+  if (nextBlink < 0) { blinkT = 0.16; nextBlink = 2 + Math.random() * 4; if (Math.random() < 0.2) nextBlink = 0.25; }
+  blinkT = Math.max(0, blinkT - dt);
+  const b = blinkT > 0 ? Math.sin((1 - blinkT / 0.16) * Math.PI) : 0;
+  T.blinkL = T.blinkR = b;
+}
+function demo(t, dt) {
+  T.yaw = Math.sin(t * 0.7) * 0.55 + Math.sin(t * 1.9) * 0.1;
+  T.pitch = Math.sin(t * 0.53 + 1) * 0.35;
+  T.roll = Math.sin(t * 0.61) * 0.12;
+  T.x = Math.sin(t * 0.37) * 0.15; T.y = 0;
+  autoBlink(dt);
+  talkNext -= dt;
+  if (talkNext < 0) { talk = talk ? 0 : 1; talkNext = talk ? 1.5 + Math.random() * 2.5 : 0.8 + Math.random() * 1.5; }
+  T.mouth = talk ? clamp(0.5 + 0.5 * Math.sin(t * 17) * Math.sin(t * 5.3) + Math.sin(t * 11) * 0.2, 0, 1) : 0;
+  T.smile = 0.3 + 0.3 * Math.sin(t * 0.4);
+}
+
+// マイク: 声の大きさで口、まばたきは自動、頭は少しだけゆらす
+let analyser = null, abuf = null, actx = null;
+async function startMic() {
+  if (analyser) { actx.resume(); return true; }
+  try {
+    const st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    actx = new AudioContext(); await actx.resume();
+    const src = actx.createMediaStreamSource(st);
+    analyser = actx.createAnalyser(); analyser.fftSize = 1024; src.connect(analyser); abuf = new Float32Array(analyser.fftSize);
+    document.getElementById('microw').hidden = false;
+    return true;
+  } catch (e) { msg('マイクが使えませんでした: ' + e.message); return false; }
+}
+// 声の大きさは人やマイクで何十倍もちがうので、静かなときの音（床）と最近の大きな声（山）を覚えて 0〜1 に合わせる
+const mic = { floor: 0.005, peak: 0.05, lv: 0 };
+function micLevel(dt) {
+  if (!analyser) return 0;
+  analyser.getFloatTimeDomainData(abuf);
+  let s = 0; for (const v of abuf) s += v * v;
+  const rms = Math.sqrt(s / abuf.length);
+  mic.floor = rms < mic.floor ? lerp(mic.floor, rms, 0.2) : lerp(mic.floor, rms, dt * 0.05);
+  mic.peak = Math.max(rms, mic.floor * 4, lerp(mic.peak, mic.floor * 4, dt * 0.15));
+  const sens = +document.getElementById('sens').value;   // 1〜10
+  const lv = clamp((rms - mic.floor * 1.6) / (mic.peak - mic.floor * 1.6) * (0.6 + sens * 0.12), 0, 1);
+  mic.lv = lv;
+  document.getElementById('meter').style.width = (lv * 100) + '%';
+  return lv;
+}
+let micTalk = 0;
+function micMode(t, dt) {
+  const lv = micLevel(dt);
+  micTalk = lerp(micTalk, lv > 0.15 ? 1 : 0, dt * 3);   // しゃべっている感じ（うなずき・笑顔）
+  T.mouth = lv < 0.08 ? 0 : clamp(0.15 + lv * 1.1, 0, 1);
+  T.yaw = Math.sin(t * 0.5) * 0.15 + Math.sin(t * 2.3) * 0.08 * micTalk;
+  T.pitch = Math.sin(t * 0.4) * 0.1 + Math.sin(t * 5.1) * 0.12 * lv * micTalk;
+  T.roll = Math.sin(t * 0.45) * 0.05 + Math.sin(t * 1.7) * 0.05 * micTalk;
+  T.x = T.y = 0; T.smile = 0.3 + 0.3 * micTalk;
+  autoBlink(dt);
+}
+
+// カメラ: MediaPipe の顔の点（478 点）と表情の値（blendshapes）から
+let landmarker = null, video = null, base = null, calibAsk = true;
+async function startCam() {
+  if (landmarker) return true;
+  try {
+    msg('顔を読む部品を読みこみ中…');
+    const V = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs');
+    const files = await V.FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
+    landmarker = await V.FaceLandmarker.createFromOptions(files, {
+      baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task', delegate: 'GPU' },
+      runningMode: 'VIDEO', numFaces: 1, outputFaceBlendshapes: true,
+    });
+    msg('カメラを起動中…');
+    video = document.createElement('video'); video.playsInline = true; video.muted = true;
+    video.srcObject = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } });
+    await video.play();
+    msg('カメラで動かしています。まっすぐ見て「いまの顔を正面にする」を押すと合います。');
+    calibAsk = true;
+    return true;
+  } catch (e) { landmarker = null; msg('カメラが使えませんでした: ' + e.message); return false; }
+}
+let lastVT = -1, camLost = 0;
+function camMode(t, dt) {
+  if (!landmarker || !video || video.readyState < 2) { autoBlink(dt); return; }
+  if (video.currentTime === lastVT) return;
+  lastVT = video.currentTime;
+  const r = landmarker.detectForVideo(video, performance.now());
+  const L = r.faceLandmarks && r.faceLandmarks[0];
+  if (!L) { camLost += dt; if (camLost > 0.5) { T.yaw *= 0.9; T.pitch *= 0.9; autoBlink(dt); } return; }
+  camLost = 0;
+  // カメラの映像そのままの向き（鏡にしない）で、見ている人から見て本人と同じ側へ動く
+  const nose = L[1], l = L[234], rr = L[454], top = L[10], chin = L[152], e1 = L[33], e2 = L[263];
+  const raw = {
+    yaw: ((nose.x - l.x) / (rr.x - l.x) - 0.5) * 2,
+    pitch: ((nose.y - top.y) / (chin.y - top.y) - 0.5) * 2,
+    roll: Math.atan2(e2.y - e1.y, e2.x - e1.x),
+    x: ((l.x + rr.x) / 2 - 0.5), y: ((top.y + chin.y) / 2 - 0.5),
+  };
+  if (calibAsk || !base) { base = raw; calibAsk = false; }
+  T.yaw = clamp((raw.yaw - base.yaw) * -2.2, -1, 1);
+  T.pitch = clamp((raw.pitch - base.pitch) * 3, -1, 1);
+  T.roll = clamp(raw.roll - base.roll, -0.5, 0.5);
+  T.x = clamp((raw.x - base.x) * -1.5, -0.6, 0.6); T.y = clamp((raw.y - base.y) * 1.2, -0.5, 0.5);
+  const bs = BS; for (const c of (r.faceBlendshapes?.[0]?.categories || [])) bs[c.categoryName] = c.score;
+  lastL = L;
+  // 値の「Left」がどちらの目か: 片目だけ閉じたとき、映像の点で見て閉じているほうと見くらべる（正面を向いているときだけ）
+  const ear_ = (u, d, a, c) => Math.hypot(L[u].x - L[d].x, L[u].y - L[d].y) / Math.hypot(L[a].x - L[c].x, L[a].y - L[c].y);
+  const imgLeft = ear_(159, 145, 33, 133), imgRight = ear_(386, 374, 263, 362);   // 映像の左の目（本人の右目）、右の目
+  const dBs = (bs.eyeBlinkLeft ?? 0) - (bs.eyeBlinkRight ?? 0), dImg = imgRight - imgLeft;   // + なら映像の左の目が閉じぎみ
+  if (Math.abs(raw.yaw - base.yaw) < 0.15 && Math.abs(dBs) > 0.3 && Math.abs(dImg) > 0.25 * (imgLeft + imgRight) / 2) {
+    swapVote = clamp(swapVote + (Math.sign(dBs) === Math.sign(dImg) ? 1 : -1), -10, 10);
+    swapLR = swapVote > 2 ? true : swapVote < -2 ? false : swapLR;
+  }
+  const bl = v => clamp(((v ?? 0) - 0.25) / 0.4, 0, 1);
+  T.blinkL = bl(bs[swapLR ? 'eyeBlinkRight' : 'eyeBlinkLeft']); T.blinkR = bl(bs[swapLR ? 'eyeBlinkLeft' : 'eyeBlinkRight']);
+  T.mouth = clamp(((bs.jawOpen ?? 0) - 0.04) * 2.2, 0, 1);
+  T.smile = clamp(((bs.mouthSmileLeft ?? 0) + (bs.mouthSmileRight ?? 0)) * 0.8, 0, 1);
+}
+
+// ---- ループ ----
+let prev = performance.now() / 1000;
+function loop() {
+  const t = performance.now() / 1000, dt = Math.min(0.05, t - prev); prev = t;
+  if (mode === 'demo') demo(t, dt); else if (mode === 'mic') micMode(t, dt); else camMode(t, dt);
+  const real = mode === 'real';
+  const f = 1 - Math.exp(-dt * (real ? 24 : 14)), fe = 1 - Math.exp(-dt * (real ? 40 : 30));   // まばたきと口は速く追う。リアルはほぼそのまま
+  for (const key of ['yaw', 'pitch', 'roll', 'x', 'y', 'smile']) S[key] = lerp(S[key], T[key], f);
+  for (const key of ['blinkL', 'blinkR', 'mouth']) S[key] = lerp(S[key], T[key], fe);
+  if (real) { for (const key in BS) SB[key] = lerp(SB[key] ?? 0, BS[key], fe); drawReal(t, dt); }
+  else draw(t, dt);
+  requestAnimationFrame(loop);
+}
+// ?ext: 紹介動画の台本などから1コマずつ描かせる（自分のループは回さない）。
+// window.__lion.frame(t, dt, { yaw, pitch, roll, x, y, bs: { 表情の値（MediaPipe の名前）}, shine: キラーンの時刻, body })
+// 値はなめらかにせずそのまま使う（同じ t なら同じ絵。なめらかさは台本の側で）
+const EXT = new URLSearchParams(location.search).has('ext');
+if (EXT) {
+  window.__lion = {
+    frame(t, dt, P) {
+      mode = 'real'; showPts = false; showBody = P.body ?? true;
+      for (const k of ['yaw', 'pitch', 'roll', 'x', 'y']) S[k] = T[k] = P[k] ?? 0;
+      for (const k in SB) SB[k] = 0;
+      Object.assign(SB, P.bs || {});
+      if (P.shine != null) shineT = P.shine;
+      drawReal(t, dt);
+    },
+    canvas: cv,
+  };
+} else requestAnimationFrame(loop);
+
+// ---- 操作 ----
+const ui = document.getElementById('ui');
+const pick = (sel, el) => { document.querySelectorAll(sel).forEach(b => b.classList.toggle('on', b === el)); };
+document.querySelectorAll('[data-mode]').forEach(b => b.onclick = async () => {
+  const m = b.dataset.mode;
+  if ((m === 'cam' || m === 'real') && !(await startCam())) return;
+  if (m === 'real') msg('リアル: 眉・視線・口の形・ほお・鼻まで追います。右下は読みとった顔の点（映像は出しません）。');
+  document.getElementById('pts').hidden = m !== 'real';
+  if (m === 'mic') { if (!(await startMic())) return; msg('マイクで口を動かしています。'); }
+  if (m === 'demo') msg('');
+  mode = m; pick('[data-mode]', b);
+});
+function setExpr(v) {
+  if (v === 'shine') { shineT = performance.now() / 1000; return; }
+  expr = +v; pick('[data-ex]:not([data-ex="shine"])', document.querySelector(`[data-ex="${v}"]`));
+}
+document.querySelectorAll('[data-ex]').forEach(b => b.onclick = () => setExpr(b.dataset.ex));
+document.querySelectorAll('[data-bg]').forEach(b => b.onclick = () => {
+  document.body.className = b.dataset.bg; pick('[data-bg]', b);
+});
+document.getElementById('body').onclick = e => { showBody = !showBody; e.target.classList.toggle('on', showBody); };
+document.getElementById('calib').onclick = () => { calibAsk = true; };
+document.getElementById('pts').onclick = e => { showPts = !showPts; e.target.classList.toggle('on', showPts); };
+addEventListener('keydown', e => {
+  if (e.key === 'h' || e.key === 'H') ui.classList.toggle('hide');
+  if ('1234'.includes(e.key)) setExpr(+e.key - 1);
+  if (e.key === '5') setExpr('shine');
+});
+// ?clean で札なし（OBS のブラウザソース用）、?bg=green / ?bg=clear で背景
+const q = new URLSearchParams(location.search);
+if (q.has('clean')) ui.classList.add('hide');
+if (q.get('bg') === 'green') document.querySelector('[data-bg="bg-green"]').click();
+if (q.has('ex')) setExpr(q.get('ex'));
+// ?pose=1〜4: カメラなしでリアルの描き方を確かめる（決まった表情の値を入れる）
+const POSES = {
+  1: { yaw: 0.3, mouthSmileLeft: 0.9, mouthSmileRight: 0.9, eyeSquintLeft: 0.6, eyeSquintRight: 0.6, eyeBlinkLeft: 0.9, cheekSquintLeft: 0.5 },
+  2: { pitch: -0.3, jawOpen: 0.7, eyeWideLeft: 0.9, eyeWideRight: 0.9, browInnerUp: 0.9, browOuterUpLeft: 0.8, browOuterUpRight: 0.8 },
+  3: { yaw: -0.8, mouthPucker: 0.9, mouthLeft: 0.6, cheekPuff: 0.7, eyeLookOutLeft: 0.8, eyeLookInRight: 0.8 },
+  4: { roll: 0.15, browDownLeft: 0.9, browDownRight: 0.9, noseSneerLeft: 0.8, noseSneerRight: 0.8, mouthFrownLeft: 0.7, mouthFrownRight: 0.7, mouthStretchLeft: 0.5, mouthStretchRight: 0.5 },
+};
+if (POSES[q.get('pose')]) {
+  const p = POSES[q.get('pose')];
+  for (const k in p) if (!['yaw', 'pitch', 'roll'].includes(k)) BS[k] = p[k];
+  mode = 'real'; camMode = () => { T.yaw = p.yaw || 0; T.pitch = p.pitch || 0; T.roll = p.roll || 0; T.x = T.y = 0; };
+}
+if (q.get('bg') === 'clear') document.querySelector('[data-bg="bg-clear"]').click();
+</script>
+</body>
+</html>

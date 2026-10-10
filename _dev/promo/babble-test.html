@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script>
+'use strict';
+// 見くらべ用（公開しない）: 案内役のライオンの「しゃべり」の声 5種類（promo.js の BABBLE_VOICES）
+// 同じせりふ（字幕）で、声だけを変えて順に聞く。ライオンはこのページの「アプリ」として開く（_dev/vtuber/index.html?ext）
+const ORDER = ['poko', 'piyo', 'mogo', 'pon', 'pipi'];
+const NOTE = {
+  poko: 'いまの声。やわらかい三角波が少し下がる',
+  piyo: '高めの短い音が上へ跳ねる。小鳥のよう',
+  mogo: '「あいうえお」の響きを通した音。ことばっぽいけれど意味はない',
+  pon: '木琴のような音。ドレミソラだけなので調子はずれにならない',
+  pipi: '文字が1字ずつ出るときの、昔のゲームのような電子音',
+};
+const LINES = [['「次の出来事」で、時代を進める', 'カンブリア爆発 → 植物の上陸 → 最初の森'], ['6600万年前、小天体の衝突', '空が光り、恐竜の時代が終わる']];
+const SEG = 7, T0 = 3, DUR = T0 + ORDER.length * SEG + 1;
+const CUES = [], CAPS = [];
+ORDER.forEach((v, i) => {
+  const a = T0 + i * SEG, rate = BABBLE_VOICES[v].rate;
+  CUES.push({ t: a + 0.9, type: 'babble', n: Math.floor(2.2 * rate), seed: i * 2 + 1, voice: v });
+  CUES.push({ t: a + 4.0, type: 'babble', n: Math.floor(2.2 * rate), seed: i * 2 + 2, voice: v });
+  CAPS.push({ a: a + 0.7, b: a + 3.5, main: LINES[0][0], sub: LINES[0][1] }, { a: a + 3.8, b: a + 6.8, main: LINES[1][0], sub: LINES[1][1] });
+});
+// 表情: 1つ目のせりふはにっこり、2つ目はおどろく
+const EXPS = [[0, 'smile']];
+ORDER.forEach((v, i) => { const a = T0 + i * SEG; EXPS.push([a + 0.5, 'smile'], [a + 3.9, 'shock'], [a + 5.2, 'sad'], [a + 6.6, 'calm']); });
+
+let bg = null;
+promoStart({
+  name: 'ライオンの声くらべ（見くらべ用）', out: 'babble-test', src: '../vtuber/index.html?ext&clean&bg=clear', iw: 800, ih: 1000, dur: DUR, peek: 4.5,
+  music: { style: 'none', cues: CUES },
+  ready: w => w.__lion,
+  setup(w) {
+    LION.api = w.__lion; LION.talk = CUES; LION.exp = EXPS; LION.cur = [];
+    bg = document.createElement('canvas'); bg.width = 1920; bg.height = 1080;
+    const b = bg.getContext('2d'); b.fillStyle = '#FFF1DC'; b.fillRect(0, 0, 1920, 1080);
+    return bg;
+  },
+  renderAt() {},
+  overlay(g, t) {
+    // ライオン（左寄りに大きく）
+    const P = lionPose(t); P.yaw += 0.25;   // 右の文字のほうではなく、こちらを見る
+    LION.api.frame(t, 1 / FPS, P);
+    g.save(); g.shadowColor = 'rgba(0,0,0,0.25)'; g.shadowBlur = 20 * RES;
+    g.drawImage(LION.api.canvas, 120, 160, 736, 920); g.restore();
+    // いまの声の名前
+    const i = Math.floor((t - T0) / SEG), v = ORDER[i];
+    g.textAlign = 'left'; g.textBaseline = 'middle'; g.shadowBlur = 0;
+    if (t < T0) {
+      setFont(g, 84, true); g.fillStyle = '#2B3A55'; g.fillText('ライオンの声くらべ', 900, 480);
+      setFont(g, 40, false); g.fillStyle = '#7a5a3a'; g.fillText('同じせりふで、しゃべりの音を5種類', 900, 580);
+    } else if (v) {
+      const f = fade(t, T0 + i * SEG, T0 + (i + 1) * SEG, 0.3);
+      g.globalAlpha = f;
+      setFont(g, 150, true); g.fillStyle = '#D9682B'; g.fillText('ABCDE'[i], 900, 440);
+      setFont(g, 96, true); g.fillStyle = '#2B3A55'; g.fillText(BABBLE_VOICES[v].name, 1040, 440);
+      setFont(g, 34, false); g.fillStyle = '#7a5a3a'; g.fillText(NOTE[v], 900, 560, 960);
+      g.globalAlpha = 1;
+    }
+    // せりふ（動画と同じ字幕。上）
+    const fb = Math.max(0, ...CAPS.map(c => fade(t, c.a, c.b)));   // 明るい背景なので、字幕の後ろに紺の帯
+    if (fb > 0) { g.globalAlpha = fb * 0.9; g.fillStyle = '#2B3A55'; g.fillRect(0, 0, PW, 150); g.globalAlpha = 1; }
+    g.save(); drawCaps(g, t, CAPS, true); g.restore();
+  },
+});
+</script>
+</body>
+</html>

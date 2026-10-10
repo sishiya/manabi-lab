@@ -376,11 +376,187 @@ function identJingle(ctx, out, t0) {
   pluck(s0 + 0.42, 7, 0.36, 1.8, -0.1); pluck(s0 + 0.43, 12, 0.3, 1.8, 0.15); pluck(s0 + 0.44, -12, 0.25, 1.6, 0);          // んっ
 }
 
+// 案内役のライオンの「しゃべり」（声の代わりの合成音）。cue = { t, type: 'babble', n: 音の数, seed, voice }
+// 1音ずつの有り無し・大きさ・高さを決まった乱数で決めるので、口の動き（babbleMouth）と音がぴったり合う
+// 声の種類 BABBLE_VOICES（2026-10-10 に見くらべ用に5つ。_dev/promo/babble-test.html）。どれもここで合成した音で、録音した声は使わない
+// 心地よさのために: 音の高さはだいたい 200〜900 Hz、2.2 kHz より上は切る、立ち上がりはやわらかく（目印の音と同じ考え）
+const BABBLE_RATE = 7.5;   // ぽこぽこ の 1秒あたりの音の数（声ごとの速さは BABBLE_VOICES の rate）
+const hash01 = (s, i) => { const x = Math.sin(s * 12.9898 + i * 78.233) * 43758.5453; return x - Math.floor(x); };
+const env = (ctx, t, a, peak, d) => { const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0005, t + a + d); return g; };
+const BABBLE_VOICES = {
+  // A ぽこぽこ: やわらかい三角波が少し下がる（最初の版）
+  poko: { name: 'ぽこぽこ', rate: 7.5, gap: 0.13, sound(ctx, out, t, s) {
+    const f = 330 * Math.pow(2, s.semi / 12), o = ctx.createOscillator(); o.type = 'triangle';
+    o.frequency.setValueAtTime(f * 1.06, t); o.frequency.exponentialRampToValueAtTime(f * 0.94, t + 0.09);
+    const g = env(ctx, t, 0.012, 0.16 * s.amp, 0.1); o.connect(g); g.connect(out); o.start(t); o.stop(t + 0.13);
+  } },
+  // B ぴよぴよ: 高めの短い音が上へ跳ねる（小鳥のよう）
+  piyo: { name: 'ぴよぴよ', rate: 9, gap: 0.15, sound(ctx, out, t, s) {
+    const f = 600 * Math.pow(2, s.semi / 12), o = ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 1.3, t + 0.05);
+    const g = env(ctx, t, 0.008, 0.15 * s.amp, 0.07); o.connect(g); g.connect(out); o.start(t); o.stop(t + 0.1);
+  } },
+  // C もごもご（標準。2026-10-10 にユーザーが選んだ）: のこぎり波を「あ・い・う・え・お」の響き（2つの山）に通す。ことばっぽいけれど意味はない
+  mogo: { name: 'もごもご', rate: 8.5, gap: 0.12, sound(ctx, out, t, s, k, c) {
+    const V = [[800, 1200], [320, 2000], [350, 900], [500, 1750], [450, 800]][Math.floor(hash01(c.seed + 11, k) * 5)];
+    const f = 200 * Math.pow(2, s.semi / 24), o = ctx.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(f * 1.04, t); o.frequency.linearRampToValueAtTime(f * 0.97, t + 0.1);
+    const g = env(ctx, t, 0.015, 0.5 * s.amp, 0.1);
+    for (const [fq, q, v] of [[V[0], 5, 1], [V[1], 7, 0.5]]) {
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = fq; bp.Q.value = q;
+      const gv = ctx.createGain(); gv.gain.value = v; o.connect(bp); bp.connect(gv); gv.connect(g);
+    }
+    g.connect(out); o.start(t); o.stop(t + 0.14);
+  } },
+  // D ぽんぽん: 木琴のような音。ド・レ・ミ・ソ・ラ（五音）だけなので、何を言っても調子はずれにならない
+  pon: { name: 'ぽんぽん', rate: 6.5, gap: 0.1, sound(ctx, out, t, s, k, c) {
+    const f = 294 * Math.pow(2, [0, 2, 4, 7, 9, 12, 14][Math.floor(hash01(c.seed + 5, k) * 7)] / 12);
+    for (const [m, v, d] of [[1, 0.14, 0.25], [3.9, 0.03, 0.03]]) {
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f * m;
+      const g = env(ctx, t, 0.005, v * s.amp, d); o.connect(g); g.connect(out); o.start(t); o.stop(t + d + 0.05);
+    }
+  } },
+  // E ピピピ: 文字が1字ずつ出るときの昔のゲームのような短い電子音（高さは一定）
+  pipi: { name: 'ピピピ', rate: 13, gap: 0.05, sound(ctx, out, t, s, k, c) {
+    const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = 440 * Math.pow(2, ((c.seed % 3) - 1) / 12);
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1600;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.045, t + 0.004);
+    g.gain.setValueAtTime(0.045, t + 0.035); g.gain.linearRampToValueAtTime(0, t + 0.045);
+    o.connect(lp); lp.connect(g); g.connect(out); o.start(t); o.stop(t + 0.06);
+  } },
+};
+const babbleVoice = c => BABBLE_VOICES[c.voice] || BABBLE_VOICES.mogo;   // 省くと標準の もごもご
+function babbleSyl(c, k) {
+  const r = hash01(c.seed || 1, k), v = babbleVoice(c);
+  return { on: r > v.gap && (k + 1) % 9 !== 0, amp: 0.55 + 0.45 * hash01(c.seed + 7, k), semi: Math.round(hash01(c.seed + 3, k) * 7) - 2 };
+}
+// その時刻の口の開き（0〜1）
+function babbleMouth(cues, t) {
+  for (const c of cues) {
+    if (c.type !== 'babble' || t < c.t) continue;
+    const rate = babbleVoice(c).rate, u = (t - c.t) * rate, k = Math.floor(u);
+    if (k >= c.n) continue;
+    const s = babbleSyl(c, k); if (!s.on) return 0;
+    return Math.pow(Math.sin(Math.PI * (u - k)), 0.6) * s.amp * (rate > 11 ? 0.6 : 1);
+  }
+  return 0;
+}
+function babbleSound(ctx, out, c) {
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200; lp.connect(out);
+  const v = babbleVoice(c);
+  for (let k = 0; k < c.n; k++) { const s = babbleSyl(c, k); if (s.on) v.sound(ctx, lp, c.t + k / v.rate, s, k, c); }
+}
+
+// ---- 案内役のライオン（説明動画の標準。2026-10-10 にユーザーが決めた。見本は evolution-guide-vt.html）----
+// _dev/vtuber/index.html?ext を裏の iframe で開き、1コマずつ描かせて右下に重ねる。
+// 台本で: setup の中で MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: CUR, exp: [[秒, '表情'], …], end: END, … })); await lionOpen();
+//         overlay の終わり近く（drawEnd のあと、drawIdentMini の前）で drawLion(g, t)
+// 右下（x 1530〜、y 620〜）はライオンの場所。札・図・名前札はそこにかけない。
+const LION_XP = {   // 表情（MediaPipe の表情の値の名前で）
+  calm: { mouthSmileLeft: 0.25, mouthSmileRight: 0.25 },
+  smile: { mouthSmileLeft: 0.85, mouthSmileRight: 0.85, eyeSquintLeft: 0.35, eyeSquintRight: 0.35 },
+  wow: { eyeWideLeft: 0.9, eyeWideRight: 0.9, browInnerUp: 0.8, browOuterUpLeft: 0.6, browOuterUpRight: 0.6, jawOpen: 0.3, mouthFunnel: 0.5 },
+  shock: { eyeWideLeft: 1, eyeWideRight: 1, browInnerUp: 1, browOuterUpLeft: 0.9, browOuterUpRight: 0.9, jawOpen: 0.85 },
+  sad: { browInnerUp: 0.75, mouthFrownLeft: 0.65, mouthFrownRight: 0.65, eyeSquintLeft: 0.2, eyeSquintRight: 0.2 },
+  cold: { mouthStretchLeft: 0.8, mouthStretchRight: 0.8, mouthPressLeft: 0.5, mouthPressRight: 0.5, eyeSquintLeft: 0.75, eyeSquintRight: 0.75, browDownLeft: 0.4, browDownRight: 0.4 },
+  think: { browDownLeft: 0.5, browOuterUpRight: 0.6, mouthPucker: 0.55, mouthRight: 0.4, eyeLookUpLeft: 0.7, eyeLookUpRight: 0.7 },
+  sleepy: { eyeBlinkLeft: 0.45, eyeBlinkRight: 0.45, mouthSmileLeft: 0.2, mouthSmileRight: 0.2 },
+  proud: { mouthSmileLeft: 0.55, mouthSmileRight: 0.95, browOuterUpRight: 0.55, eyeSquintLeft: 0.35 },
+};
+// X, Y: 顔の中心（見る向きの計算用）。W, H: 重ねる大きさ（vtuber の canvas 800×1000 を縮める）
+const LION = { X: 1740, Y: 829, W: 420, H: 525, api: null, exp: [[0, 'calm']], talk: [], cur: [], shine: null, enter: 6.7, end: 0, wink: null, prevT: 0 };
+// 表情・しゃべり・出入りの時刻を決めて、しゃべりの音の cue を返す（music.cues に足す）
+//   caps: 字幕（字幕ごとに少ししゃべる）、cur: マウスの矢印の表（目で追う・クリックでうなずく）、exp: [[秒, LION_XP の名前], …]
+//   shine: メガネがキラーンとする時刻、enter: 出てくる時刻（題名のあと）、end: 本編の終わり（その前に引っこむ）、hello／bye: あいさつの時刻
+//   voice: 声の種類（BABBLE_VOICES の名前。省くと標準の もごもご）
+function lionSetup(o) {
+  Object.assign(LION, { exp: o.exp || [[0, 'calm']], cur: o.cur || [], shine: o.shine ?? null, enter: o.enter ?? 6.7, end: o.end });
+  const voice = o.voice || 'mogo', rate = BABBLE_VOICES[voice].rate, N = sec => Math.floor(sec * rate);
+  const T = [{ t: o.hello ?? LION.enter + 0.3, type: 'babble', n: N(0.93), seed: 101, voice }];
+  (o.caps || []).forEach((c, i) => {   // 字数に合わせた長さ（1字 0.12 秒、字幕が消える1秒前まで）
+    const n = N(Math.min((c.main.length + (c.sub || '').length * 0.5) * 0.12, c.b - c.a - 1));
+    if (n > 2) T.push({ t: c.a + 0.3, type: 'babble', n, seed: i + 1, voice });
+  });
+  if (o.bye != null) { T.push({ t: o.bye, type: 'babble', n: N(1.87), seed: 202, voice }); LION.wink = o.bye + 1.8; }
+  LION.talk = T;
+  return T;
+}
+async function lionOpen() {
+  const f = document.createElement('iframe');
+  f.src = '../vtuber/index.html?ext&clean&bg=clear';
+  f.style.cssText = 'position:fixed;left:-2000px;top:0;width:800px;height:1000px;border:0;pointer-events:none';
+  document.body.appendChild(f);
+  for (let i = 0; i < 100 && !(f.contentWindow && f.contentWindow.__lion); i++) await sleep(100);
+  if (!f.contentWindow.__lion) throw new Error('ライオンが開けませんでした');
+  LION.api = f.contentWindow.__lion;
+}
+const lionBump = (t, a, len) => t > a && t < a + len ? Math.sin(Math.PI * (t - a) / len) : 0;
+function lionExp(t) {
+  const E = LION.exp; let i = 0; while (i + 1 < E.length && E[i + 1][0] <= t) i++;
+  const cur = LION_XP[E[i][1]], prev = i ? LION_XP[E[i - 1][1]] : cur, k = ease((t - E[i][0]) / 0.35);
+  const out = {};
+  for (const key of new Set([...Object.keys(cur), ...Object.keys(prev)])) out[key] = lerp(prev[key] || 0, cur[key] || 0, k);
+  return { bs: out, name: E[i][1], w: k };
+}
+function lionTalkness(t) { let m = 0; for (const c of LION.talk) m = Math.max(m, fade(t, c.t - 0.2, c.t + c.n / babbleVoice(c).rate + 0.3, 0.4)); return m; }
+function lionCursor(t) {   // マウスの矢印の位置（drawCursor の表をなぞる。見えていなければ null）
+  const C = LION.cur; if (!C.length) return null;
+  let i = -1; while (i + 1 < C.length && C[i + 1].t <= t) i++;
+  if (i < 0) return t > C[0].t - 1 ? { x: C[0].x, y: C[0].y } : null;
+  const a = C[i], b = C[i + 1];
+  if (a.hide) return b && t > b.t - 1 ? { x: b.x, y: b.y } : null;
+  if (!b || b.hide) return { x: a.x, y: a.y };
+  const k = ease((t - a.t) / Math.max(0.01, b.t - a.t));
+  return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k) };
+}
+function lionPose(t) {
+  const E = lionExp(t), bs = { ...E.bs }, talk = lionTalkness(t);
+  // 見る向き: ふだんは画面（アプリの絵）のほう、しゃべるときはこちら、矢印が出ていれば矢印
+  let lx = -0.35, ly = 0.05;
+  const c = lionCursor(t);
+  if (c) { lx = clamp((c.x - LION.X) / 900, -1, 0.3); ly = clamp((c.y - LION.Y) / 900, -0.6, 0.5); }
+  lx = lerp(lx, -0.08, talk * (c ? 0.35 : 0.7)); ly = lerp(ly, 0, talk * 0.5);
+  let yaw = lx * 0.9 + Math.sin(t * 0.7) * 0.05, pitch = ly * 0.8 + Math.sin(t * 0.53) * 0.04, roll = Math.sin(t * 0.61) * 0.04, y = 0;
+  const gl = clamp(-lx * 1.2, 0, 1), gr = clamp(lx * 1.2, 0, 1);   // 目も同じ向きへ
+  bs.eyeLookOutLeft = gl; bs.eyeLookInRight = gl; bs.eyeLookInLeft = gr; bs.eyeLookOutRight = gr;
+  bs.eyeLookUpLeft = Math.max(bs.eyeLookUpLeft || 0, clamp(-ly, 0, 1)); bs.eyeLookUpRight = Math.max(bs.eyeLookUpRight || 0, clamp(-ly, 0, 1));
+  bs.eyeLookDownLeft = bs.eyeLookDownRight = clamp(ly, 0, 1);
+  // しゃべり: しゃべっている間は、表情の口の形（驚きの開いた口・すぼめた口など）より口パクを優先する。目と眉の表情は残す
+  for (const key of ['jawOpen', 'mouthFunnel', 'mouthPucker', 'mouthStretchLeft', 'mouthStretchRight', 'mouthPressLeft', 'mouthPressRight', 'mouthLeft', 'mouthRight'])
+    if (bs[key]) bs[key] *= 1 - talk;
+  bs.jawOpen = Math.max(bs.jawOpen || 0, babbleMouth(LION.talk, t) * 0.7);
+  pitch += Math.sin(t * 4.2) * 0.05 * talk;
+  for (const k of LION.cur) if (k.click) pitch += lionBump(t, k.t, 0.4) * 0.25;   // クリックでうなずく
+  const w = name => E.name === name ? E.w : 0;
+  roll += Math.sin(t * 38) * 0.035 * w('cold') + 0.12 * w('think');           // ぶるぶる・首をかしげる
+  for (const [te, n] of LION.exp) if (n === 'shock') y -= 0.1 * lionBump(t, te, 0.5);   // とび上がる
+  let bl = 0;   // まばたき（決まった間隔）
+  for (let k = 0, tb = 2; tb < t + 1; k++, tb += 2.4 + 2.2 * hash01(5, k)) bl = Math.max(bl, lionBump(t, tb, 0.18));
+  const wk = LION.wink != null ? lionBump(t, LION.wink, 0.6) : 0;   // 終わりのウインク（片目だけ）
+  bs.eyeBlinkLeft = Math.max(bs.eyeBlinkLeft || 0, bl, wk);
+  bs.eyeBlinkRight = Math.max(bs.eyeBlinkRight || 0, wk > 0 ? 0 : bl);
+  return { yaw, pitch, roll, x: 0, y, bs, shine: LION.shine };
+}
+function drawLion(g, t) {
+  if (!LION.api) return;
+  const backOut = x => { x = clamp(x, 0, 1); const c = 1.7; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+  const s = Math.min(backOut((t - LION.enter) / 0.45), 1 - ease((t - (LION.end - 0.5)) / 0.4)); if (s <= 0.01) return;
+  const dt = t > LION.prevT && t - LION.prevT < 0.2 ? t - LION.prevT : 1 / FPS; LION.prevT = t;
+  LION.api.frame(t, dt, lionPose(t));
+  const x = PW - LION.W + 30, y = PH - LION.H + 40;
+  g.save(); g.globalAlpha = 1;
+  g.translate(x + LION.W / 2, PH); g.scale(s, s); g.translate(-(x + LION.W / 2), -PH);
+  g.shadowColor = 'rgba(0,0,0,0.45)'; g.shadowBlur = 22 * RES; g.shadowOffsetY = 4 * RES;
+  g.drawImage(LION.api.canvas, x, y, LION.W, LION.H);
+  g.restore();
+}
+
 // ---- 音（ブラウザで合成。著作権の心配なし）----
 // music = { style, root, cues, quiet }
 //   style 'drone'   : 低い持続音（暗い・宇宙。root は低い音の Hz、既定 55）
 //   style 'journey' : 明るい和音＋アルペジオ（旅・歴史。root は和音のいちばん下の Hz、既定 130.8 = ド）
 //   cues  [{ t, type: 'boom' }] : その時刻に低い「ドン」
+//         [{ t, type: 'babble', n, seed }] : 案内役のライオンのしゃべり（babbleSound）
 //   quiet [[a, b]]             : その間はアルペジオを止め、和音を暗くする
 async function makeAudio(dur, music = {}) {
   const ctx = new OfflineAudioContext(2, SR * dur, SR);
@@ -405,6 +581,7 @@ async function makeAudio(dur, music = {}) {
   const jverb = ctx.createConvolver(); jverb.buffer = ir; const jwet = ctx.createGain(); jwet.gain.value = 0.35;   // BGM を消しても響きは残す
   jbus.connect(jverb); jverb.connect(jwet); jwet.connect(ctx.destination);
   for (const c of music.cues || []) if (c.type === 'jingle') identJingle(ctx, jbus, c.t, c.kind);
+  for (const c of music.cues || []) if (c.type === 'babble') babbleSound(ctx, jbus, c);   // 案内役のしゃべり（BGM の音量とは別）
   if (music.style === 'none') {
     // BGM なし（目印の音だけ）
   } else if ((music.style || 'drone') === 'drone') {
