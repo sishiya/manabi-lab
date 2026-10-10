@@ -2,12 +2,12 @@
 # 使い方:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Auth
 #       … 最初の1回。ブラウザで Google にログインして許可する（チャンネル「しし屋」を選ぶ）
-#   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Meta _dev/promo/black-hole.upload.json
+#   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Meta _dev/promo/black-hole-guide.upload.json
 #       … 動画を上げる。Meta の JSON: { file, title, description, tags[], privacy, thumbnail, publishAt, localizations }（file・thumbnail はルートからの道すじ。publishAt は予約投稿の日時）
 #         localizations: { "en": { "title": "...", "description": "..." } } … 翻訳したタイトルと説明（英語で見ている人には英語が出る）
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -List
 #       … 上げた動画の ID・公開の状態・翻訳・タイトルを出す（ID は Meta の JSON の videoId に書いておく）
-#   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Update -Meta _dev/promo/black-hole.upload.json
+#   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Update -Meta _dev/promo/black-hole-guide.upload.json
 #       … 上げたあとの動画（videoId）に、字幕（captions）と、翻訳したタイトルと説明（localizations）・tags を足す。日本語のタイトル・説明はそのまま
 #         publishAt があれば予約投稿の日時も入れる（Studio で上げた動画を予約するとき。例 "2026-10-11T20:00:00+09:00"）
 #         -Full を付けると、日本語のタイトル・説明・分類（教育）・言語・サムネイルも JSON から入れる（Studio で手動で上げた動画を、ここで仕上げるとき）
