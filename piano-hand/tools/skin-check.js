@@ -5,6 +5,7 @@
 //   __boneFit()     … 骨格の頂点の、皮ふの陰関数の最大（− なら皮ふの内側。−1 より大きいと骨が皮ふに近すぎる）
 //   __tissueFit(m)  … 筋肉・腱・脂肪の部品の表面の、皮ふの陰関数の最大が −m より大きいもの（+ は皮ふの外へはみ出し）
 //   __snapMany(__V4) … 手以外を消して、右手を4方向から撮って全画面に出す（#sheet。消すときは document.getElementById('sheet').remove()）
+//   __snapBig(eye, tgt) … 1方向から画面いっぱいに。__xsec([z…]) … 輪切り。__webProfile()・__radialTable() … 水かきと人さし指の中手骨の親指側の厚さ。__tissueVol(/正規表現/) … 模型の体積
 'use strict';
 // 皮ふの陰関数の部品は測るたびに作り直す（__P() は網を作ったあと大きさをかけるときに骨の原点が書きかわるので、大きさが 1 でない手では指がずれる）
 const __P = () => buildPrims();
@@ -123,3 +124,56 @@ window.__poseSheet = (side = 1, eye = [-80, 150, 140], tgt = [-15, 0, -60]) => {
   img.src = out.toDataURL('image/jpeg', 0.9);
   return M;
 };
+
+// ---- v033〜: 人さし指〜手首の親指側の肉を「骨 → 筋肉・脂肪 → 皮ふ」の順で確かめる道具 ----
+// __look('skin' | 'xraymus' | 'muscles' …) … 手の見え方を切りかえる（#handLook）
+window.__look = v => { const s = document.getElementById('handLook'); s.value = v; s.dispatchEvent(new Event('change')); };
+// __snapBig(eye, tgt, side) … いまの時刻の手を1方向から画面いっぱいに撮る（eye はカメラの位置の手首からの差 mm、tgt は見る点の手の座標）
+window.__snapBig = (eye, tgt = [-20, 0, -50], side = 1) => {
+  const hi = __ph.S.plan.hands.findIndex(h => h.side === side); step();
+  const W = __ph.poseAt(__ph.S.t, hi).W, s = HAND.s, cv = V.r.domElement;
+  __iso(true); const bg = V.scene.background; V.scene.background = new THREE.Color(0x30343c);
+  const tg = [W[0] + tgt[0] * s * side, W[1] + tgt[1] * s, W[2] + tgt[2] * s];
+  V.cam.position.set(tg[0] + eye[0] * side, tg[1] + eye[1], tg[2] + eye[2]); V.cam.up.set(0, 1, 0); V.cam.lookAt(...tg); V.cam.updateMatrixWorld();
+  renderScene(__ph.S.t); const url = cv.toDataURL('image/jpeg', 0.92);
+  __iso(false); V.scene.background = bg; __sheet(url); return 'ok';
+};
+window.__sheet = url => {
+  let img = document.getElementById('sheet');
+  if (!img) { img = document.createElement('img'); img.id = 'sheet'; img.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;object-fit:contain;background:#000;z-index:9999'; document.body.appendChild(img); }
+  img.src = url;
+};
+// 模型の部品の「中にあるか」の関数（網の姿勢）と体積（mL）
+window.__tissueImplicit = () => { const R = tissueRestFrames(); return tissueParts().map(T => { const a = endAt(R[T.a.bone], endLocal(T.a, R), 1), b = endAt(R[T.b.bone], endLocal(T.b, R), 1);
+  const z = sub3(b, a), L = Math.hypot(...z), zn = z.map(v => v / L); let y = R[T.a.bone].y.slice(); const d = dot3(y, zn); y = y.map((v, i) => v - zn[i] * d); const yl = Math.hypot(...y); y = y.map(v => v / yl); const x = cross3(y, zn);
+  const rad = u => { const cap = Math.sqrt(Math.max(0, Math.sin(Math.PI * Math.min(1, Math.min(u, 1 - u) * 8) / 2))); return (T.ra + (T.rb - T.ra) * u + T.bulge * Math.sin(Math.PI * u)) * (0.35 + 0.65 * cap); };
+  let vol = 0; for (let i = 0; i < 64; i++) { const r = rad((i + 0.5) / 64); vol += Math.PI * r * r * T.flat * L / 64; }
+  return { T, a, b, L, vol: vol / 1000, inside: p => { const q = sub3(p, a), u = dot3(q, zn) / L; if (u < 0 || u > 1) return false; const r = rad(u), cx = dot3(q, x), cy = dot3(q, y) / T.flat; return cx * cx + cy * cy < r * r; } }; }); };
+window.__tissueVol = re => __tissueImplicit().filter(t => !re || re.test(t.T.ja)).map(t => t.T.ja + ' 長さ ' + t.L.toFixed(1) + 'mm 体積 ' + t.vol.toFixed(2) + 'mL').join('\n');
+// __xsec([z, …]) … 網の姿勢の手を z（手首からの距離、− が指の側）で輪切りにして並べる。肌色 = 皮ふの中、赤 = 筋肉、青 = 腱、黄 = 脂肪、白 = 中手骨（断面はだ円で近似）
+window.__xsec = (zs, P) => { P = P || __P(); const TI = __tissueImplicit(); const sc = 4, X0 = -75, X1 = 45, Y0 = -55, Y1 = 30, W = (X1 - X0) * sc, H = (Y1 - Y0) * sc;
+  const cols = 2, out = document.createElement('canvas'); out.width = W * cols; out.height = H * Math.ceil(zs.length / cols); const g = out.getContext('2d'); g.fillStyle = '#222'; g.fillRect(0, 0, out.width, out.height);
+  const t0 = P.rest[1][0], t1 = P.rest[1][1].o, bones = [];
+  for (let f = 2; f <= 5; f++) { const { s, h } = mcEnds(f); bones.push({ s, h, r: MC_R[f], ap: MC_AP[f] }); } bones.push({ s: t0.o, h: t1, r: MC_R[1], ap: MC_AP[1] });
+  zs.forEach((zz, k) => { const ox = (k % cols) * W, oy = Math.floor(k / cols) * H, img = g.createImageData(W, H);
+    for (let j = 0; j < H; j += 2) for (let i = 0; i < W; i += 2) { const x = X0 + i / sc, y = Y1 - j / sc, p = [x, y, zz]; let c = [34, 34, 34];
+      if (handSDF(P, x, y, zz) < 0) c = [226, 190, 170];
+      for (const t of TI) if (t.inside(p)) c = t.T.kind === 'muscle' ? [170, 60, 55] : t.T.kind === 'fat' ? [230, 200, 100] : [150, 170, 200];
+      for (const B of bones) { const u = (zz - B.s[2]) / (B.h[2] - B.s[2]); if (u < -0.02 || u > 1.02) continue; const cx = B.s[0] + (B.h[0] - B.s[0]) * u, cy = B.s[1] + (B.h[1] - B.s[1]) * u, ki = u < 0.15 ? 0 : u > 0.85 ? 2 : 1;
+        if (((x - cx) / B.r[ki]) ** 2 + ((y - cy) / B.ap[ki]) ** 2 < 1) c = [240, 240, 225]; }
+      for (let a = 0; a < 2; a++) for (let b = 0; b < 2; b++) { const o = ((j + b) * W + i + a) * 4; img.data[o] = c[0]; img.data[o + 1] = c[1]; img.data[o + 2] = c[2]; img.data[o + 3] = 255; } }
+    g.putImageData(img, ox, oy); g.fillStyle = '#ff0'; g.font = '20px sans-serif'; g.fillText('手首から ' + (-zz) + 'mm（左が親指の側・上が甲）', ox + 6, oy + 22); });
+  __sheet(out.toDataURL('image/png')); return 'ok'; };
+// __webProfile() … 親指と人さし指のあいだ（水かき）の厚さ。2本の中手骨のなす面に垂直に、ふちから 5〜30mm の所で測る
+// （くらべる値: 親指と人さし指の角をつまんだ厚さ 男性 12.5±2.8・女性 10.5±2.3mm。Lameu ほか 2004、421 人、キャリパーで 10 g/mm² 押した値）
+window.__webProfile = P => { P = P || __P(); const t0 = P.rest[1][0], t1 = P.rest[1][1].o, { s, h } = mcEnds(2), nrm = v => { const l = Math.hypot(...v); return v.map(x => x / l); };
+  const d1 = nrm(sub3(t1, t0.o)), d2 = nrm(sub3(h, s)), n = nrm(cross3(d1, d2)), bis = nrm(add3(d1, d2)), A = lerp3(t0.o, s, 0.5), out = [];
+  let edge = 0; for (let t = 0; t < 120; t += 0.5) { if (handSDF(P, ...A.map((v, i) => v + bis[i] * t)) > 0) { edge = t; break; } }
+  for (const back of [5, 10, 15, 20, 25, 30]) { const p = A.map((v, i) => v + bis[i] * (edge - back)); out.push('ふちから ' + back + 'mm: ' + (__march(P, p, n) + __march(P, p, n.map(v => -v))).toFixed(1)); }
+  return out.join('  '); };
+// __radialTable() … 人さし指の中手骨の中心から、親指の側（外・外上・外下）と甲へ、皮ふまでの距離（mm）
+window.__radialTable = P => { P = P || __P(); const { s, h } = mcEnds(2), out = [];
+  for (const u of [0, 0.2, 0.4, 0.6, 0.8, 1.0]) { const p = s.map((v, i) => v + (h[i] - v) * u), r = [];
+    for (const [nm, d] of [['外', [-1, 0, 0]], ['外上', [-0.707, 0.707, 0]], ['甲', [0, 1, 0]]]) r.push(nm + ' ' + __march(P, p, d).toFixed(1));
+    out.push('u=' + u + ' ' + r.join(' ')); }
+  return out.join('\n'); };

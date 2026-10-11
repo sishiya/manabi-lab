@@ -144,6 +144,16 @@ function buildPrims() {
   // ほぼ全長に付く）と短母指外転筋、甲の側に長母指外転筋・短母指伸筋の腱が乗り、輪郭はなだらか。太さは両端に合わせた目安
   { const c = mkCone(lerp3(t0.o, rest[1][1].o, 0.12), lerp3(t0.o, rest[1][1].o, 0.85), THUMB_MID_R, THUMB_MID_R, boneOf(1, 0)); c.k = 5; c.thumb = true; P.palm.push(c); }
   { const c = mkCone([-17, 3, -60], lerp3(t0.o, rest[1][1].o, 0.9), 10, 7.5, BONE_PALM); c.k = 14; c.thumb = true; P.palm.push(c); } // 親指と人さし指のあいだの水かき（甲の側の筋肉）。甲の側に寄せて厚く（うすいと、親指と手の甲のあいだが谷になった）
+  // 第1背側骨間筋（人さし指の中手骨の頭）の上の皮ふ（v033〜、ユーザーの指摘: 人さし指から手首にかけて親指の側の肉がうすい）。
+  // 筋肉の模型（tissue.js）の筋腹の外側＋皮ふと皮下の厚さ（P.tdH）。前は手の甲の屋根（中手骨 II〜V だけから作る）が親指の側で放物線に下がり、
+  // 人さし指の中手骨の親指側に縦の溝ができていた（本物はこの筋肉で丸くふくらむ）。屋根で切らない組。人さし指の付け根の関節の手前（0.85）まで。
+  // 重みは変えない（noW。人さし指の基節骨に付く端まで手のひらの重みにすると、指を曲げたときに付け根の皮ふが残る）
+  if (typeof tissueParts === 'function') {
+    const T = tissueParts().find(t => t.en === 'First dorsal interosseous (index head)'), R = restBoneFrames(rest);
+    const a = endAt(R[T.a.bone], endLocal(T.a, R), 1), b = endAt(R[T.b.bone], endLocal(T.b, R), 1), r = u => T.ra + (T.rb - T.ra) * u + T.bulge * Math.sin(Math.PI * u) + P.tdH;
+    const us = [0.06, 0.3, 0.55, 0.85];
+    for (let i = 0; i < 3; i++) { const c = mkCone(lerp3(a, b, us[i]), lerp3(a, b, us[i + 1]), r(us[i]), r(us[i + 1]), BONE_PALM); c.k = 8; c.thumb = true; c.noW = true; P.palm.push(c); }
+  }
   P.arm = mkCone([2, -5, -42], [3, -16, 240], ARM_R[0], ARM_R[1], BONE_ARM); // 形: 手のひらの中から細く始めて、手首で自然に太くなる（手首で丸く始めると、境目に段ができた）。一人称で切れ目が見えないよう、肘の近くまで
   P.armW = mkCone([2, -6, -4], [3, -16, 240], ARM_R[0] + 3.4, ARM_R[1], BONE_ARM); // 重み用: 手首から先だけ（手のひらの皮ふが前腕といっしょに動かないように）
   // 指の皮ふの筒の中心を、手のひら側へずらす量（関節ごと: 付け根・2つめ・3つめ・指先）。甲の側の肉が TD_FINGER になるように。
@@ -205,7 +215,7 @@ function handSDF(P, x, y, z, comp) {
     if (!c.thumb) continue;
     const d = coneD(c, x, y, z, cull);
     pal = smin(pal, d, c.k || 14);
-    if (comp) comp[c.bone] = Math.min(comp[c.bone], d);
+    if (comp && !c.noW) comp[c.bone] = Math.min(comp[c.bone], d);
   }
   // 前腕は縦にうすい（だ円）。手のひらの中に入りこんだ部分（z < -10）だけ屋根で切る（手首では前腕の形そのまま）
   const arm = smax(coneD(P.arm, x, (y - P.arm.a[1]) * ARM_FLAT + P.arm.a[1], z, cull), y - rf - 60 * smoothF((z + 30) / 20), 3);
