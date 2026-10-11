@@ -3,29 +3,29 @@
 'use strict';
 
 const SCENES = {
-  studio: { name: L('スタジオ', 'Studio'), fx: 1, bg: 0x0b0d12, exposure: 0.95, env: 0.7,
+  // bloom: エフェクトありのときの光のにじみ [強さの倍率, しきい値の倍率]（v034〜。明るい2つの部屋は、暗い部屋向けのしきい値だと白鍵がにじんで白とびした）
+  studio: { name: L('スタジオ', 'Studio'), bloom: [0.5, 2.2], bg: 0x0b0d12, exposure: 0.95, env: 0.7,
     hemi: [0xfff4ea, 0x1a1a1e, 0.25], sun: [0xfff1e2, 1.6, [-260, 620, 120]], fill: [0xdfe8ff, 0.35], spot: 0,
     lane: 0x0f1219, base: 0x15171c, fog: null, dust: 0, shaft: 0 },
-  stage: { name: L('夜のステージ', 'Night stage'), fx: 2, bg: 0x030304, exposure: 1.05, env: 0.18,
+  stage: { name: L('夜のステージ', 'Night stage'), bg: 0x030304, exposure: 1.05, env: 0.18,
     hemi: [0x8090b0, 0x050505, 0.04], sun: [0xffe2c0, 0.0, [-260, 620, 120]], fill: [0x6070a0, 0.08], spot: [0xffd8a8, 1.8],
     lane: 0x07080b, base: 0x0b0b0e, fog: [0x050407, 0.00045], dust: 1, shaft: 0.03 },
-  dusk: { name: L('夕暮れの部屋', 'Room at dusk'), fx: 1, bg: 0x1a1220, exposure: 1.0, env: 0.45,
+  dusk: { name: L('夕暮れの部屋', 'Room at dusk'), bg: 0x1a1220, exposure: 1.0, env: 0.45,
     hemi: [0x8a7fb8, 0x2a1810, 0.35], sun: [0xff9a50, 2.1, [-700, 260, -200]], fill: [0x6a78c8, 0.25], spot: 0,
     lane: 0x15101a, base: 0x1a1214, fog: [0x2a1a26, 0.00035], dust: 0.6, dustCol: 0xffc890, shaft: 0 },
-  moon: { name: L('月あかり', 'Moonlight'), fx: 2, bg: 0x040814, exposure: 1.05, env: 0.25,
+  moon: { name: L('月あかり', 'Moonlight'), bg: 0x040814, exposure: 1.05, env: 0.25,
     hemi: [0x4a68c0, 0x04060c, 0.3], sun: [0x7fa2ff, 1.25, [300, 600, -300]], fill: [0x2a3c78, 0.18], spot: 0,
     lane: 0x070a12, base: 0x0a0c14, fog: [0x070a14, 0.0004], dust: 0.5, dustCol: 0xb8ccff, shaft: 0 },
-  bright: { name: L('明るい部屋', 'Bright room'), fx: 1, bg: 0xd9d4ca, exposure: 0.72, env: 0.8,
+  bright: { name: L('明るい部屋', 'Bright room'), bloom: [0.5, 2.2], bg: 0xd9d4ca, exposure: 0.72, env: 0.8,
     hemi: [0xffffff, 0xb8b0a4, 0.6], sun: [0xfff6ea, 1.05, [-260, 620, 120]], fill: [0xffffff, 0.3], spot: 0,
     lane: 0x4a4e57, base: 0x3a3330, fog: null, dust: 0, shaft: 0 },
 };
 // エフェクトの強さ: 光のにじみ（強さ・広がり・しきい値）、周辺の暗さ、フィルムの粒、光の粒とノーツの光の倍率
 const FX_LEVELS = [
-  // v028〜（ユーザーの希望）: なし・ひかえめ・はなやかの3つ。ひかえめは前の「なし」の出方。「なし」は打鍵の半円の光（halo）・光の粒・もや・
-  // ほこり・光の筋（atmos）も出さない（前の「なし」でもポワンと光が出ていた）。ノーツそのものの有無は「見え方と音」のチェック（OPT.notes）
+  // v034〜（ユーザーの希望）: なし・ありの2つ（チェックボックス「エフェクト」）。ありは前の「はなやか」。「なし」は打鍵の半円の光（halo）・光の粒・もや・
+  // ほこり・光の筋（atmos）も出さない。シーンを選んでも変わらない。ノーツそのものの有無は「見え方と音」のチェック（OPT.notes）
   { name: L('なし', 'None'), bloom: 0, vig: 0, grain: 0, spark: 0, glow: 1, halo: 0, atmos: 0 },
-  { name: L('ひかえめ', 'Subtle'), bloom: 0, vig: 0, grain: 0, spark: 0.5, glow: 1, halo: 1, atmos: 1 },
-  { name: L('はなやか', 'Rich'), bloom: 1.25, radius: 0.45, thr: 1.3, vig: 0.6, grain: 0.02, spark: 1.6, glow: 2.6, halo: 1, atmos: 1 },
+  { name: L('あり', 'On'), bloom: 1.25, radius: 0.45, thr: 1.3, vig: 0.6, grain: 0.02, spark: 1.6, glow: 2.6, halo: 1, atmos: 1 },
 ];
 
 const FINAL_SHADER = {
@@ -113,11 +113,14 @@ function applyScene(id) {
   V.scene.traverse(o => { if (o.material && 'envMapIntensity' in o.material) o.material.envMapIntensity = S.env * (o.userData.envK || 1); });
   for (const VH of V.hands) for (const m of [VH.skin.mat, VH.skin.matF]) if (m) m.envMapIntensity = 0.7 * S.env / 0.7;
   V.exposure = S.exposure;
+  if (typeof SKIN_DARK !== 'undefined') SKIN_DARK.uDark.value.copy(linCol(S.bg)); // 腕の肘の側が溶ける色（背景の色）
+  if (V.fxLevel !== undefined) applyFx(V.fxLevel); // シーンごとの光のにじみの強さを入れ直す（エフェクトのあり・なしはそのまま）
 }
 function applyFx(level) {
   V.fxLevel = level;
   const L = FX_LEVELS[level];
-  V.bloom.strength = L.bloom; if (L.bloom) { V.bloom.radius = L.radius; V.bloom.threshold = L.thr; }
+  const B = (V.sceneDef && V.sceneDef.bloom) || [1, 1];
+  V.bloom.strength = L.bloom * B[0]; if (L.bloom) { V.bloom.radius = L.radius; V.bloom.threshold = L.thr * B[1]; }
   const S = V.sceneDef; if (S) { V.shaft.visible = S.shaft > 0 && !!L.atmos; V.dust.visible = S.dust > 0 && !!L.atmos; }
   V.final.uniforms.vig.value = L.vig; V.final.uniforms.grain.value = L.grain;
 }

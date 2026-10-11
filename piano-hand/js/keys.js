@@ -35,8 +35,17 @@ function pressZ(m, f, deep, p) {
   if (!p) return isBlack(m) ? (f === 1 ? -66 : -82) : f === 1 && deep ? -40 : PRESS_Z_WHITE[f];
   // 指の構え p（0 立てる 〜 2 寝かせる、hand.js の POSTURES）: あいだはなめらかに
   const z = Q => isBlack(m) ? (f === 1 ? Q.thumbBlack : Q.black) : f === 1 && deep ? Q.thumbDeep : Q.white[f];
-  const i = Math.min(1, Math.floor(p)), s = p - i;
-  return z(POSTURES[i]) + (z(POSTURES[i + 1]) - z(POSTURES[i])) * s;
+  const i = Math.min(1, Math.floor(p)), s = p - i, zz = z(POSTURES[i]) + (z(POSTURES[i + 1]) - z(POSTURES[i])) * s;
+  return isBlack(m) ? zz : Math.max(zz, whiteDeepest(m));
+}
+// 白鍵を押せるいちばん奥（v034〜）: 指の腹（半径 PAD の球）が、となりの黒鍵の手前の面（高さ BH）に当たらない所まで。押す点の横は鍵の幅のまん中（keyX）なので、
+// 黒鍵との横のすきま c が PAD より小さければ、球の中心は黒鍵の手前の端から √(PAD² − c²) 手前まで。「中間」「寝かせる」の構えの押す点（奥 50〜72mm）は
+// 黒鍵の手前の端（55mm）の近くかその奥で、指の腹が黒鍵に当たる所だった（手首を上げてよけようとして、押している指が鍵から浮いた）。
+// 本物は指の腹がつぶれる・指を黒鍵のあいだへ横にずらすので、もう少し奥まで押せる（入れていない）
+function whiteDeepest(m) {
+  let c = Infinity;
+  for (const b of [m - 1, m + 1]) if (b >= KB.lo && b <= KB.hi && isBlack(b)) c = Math.min(c, Math.abs(keyX(m) - keyX(b)) - KB.BW / 2);
+  return c >= PAD ? -Infinity : KB.BFRONT + Math.sqrt(PAD * PAD - Math.max(0, c) ** 2);
 }
 const NOTE_EN = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
 function noteName(m) { return (LANG === 'en' ? NOTE_EN : NOTE_JA)[m % 12] + (Math.floor(m / 12) - 1); }
@@ -77,4 +86,11 @@ function surfaceSoft(x, z) {
 function surfaceZ(z) {
   const v = (KB.BFRONT + 6 - z) / 6, ss = v <= 0 ? 0 : v >= 1 ? 1 : v * v * (3 - 2 * v);
   return KB.BH * ss;
+}
+// 手首を上げる量を決める床（v034〜、keepAbove）: 黒鍵の真上の近く（左右 3mm）だけ、黒鍵の手前の端の 6mm 手前からなめらかに黒鍵の高さへ上がる。
+// 黒鍵のあいだの白鍵の奥は白鍵の高さ（奥行きだけの床 surfaceZ だと、白鍵を奥で押す構えで指が黒鍵にもぐると数えられた）
+function surfaceFloor(x, z) {
+  if (z > 0 || z < -KB.WL || x < -KB_WIDTH / 2 || x > KB_WIDTH / 2) return -Infinity;
+  for (let m = KB.lo; m <= KB.hi; m++) if (isBlack(m) && Math.abs(x - keyX(m)) < KB.BW / 2 + 3) return surfaceZ(z);
+  return 0;
 }

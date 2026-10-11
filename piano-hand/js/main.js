@@ -289,7 +289,7 @@ function initUI() {
   $('speedSel').setAttribute('aria-label', L('速さ', 'Speed')); $('speedSel').title = L('速さ（キーの [ と ] でも変えられます）', 'Speed (you can also use the [ and ] keys)');
   $('time').setAttribute('aria-label', L('時刻', 'Time'));
   $('vol').setAttribute('aria-label', L('音量', 'Volume')); $('vol').title = L('音量', 'Volume');
-  [['song', '曲', 'Piece'], ['sceneSel', 'シーン', 'Scene'], ['fxSel', 'エフェクトの強さ', 'Effect strength'], ['handModel', '手のモデル', 'Hand model']].forEach(([id, ja, en]) => $(id).setAttribute('aria-label', L(ja, en)));
+  [['song', '曲', 'Piece'], ['sceneSel', 'シーン', 'Scene'], ['handModel', '手のモデル', 'Hand model']].forEach(([id, ja, en]) => $(id).setAttribute('aria-label', L(ja, en)));
   setPlaying(false);
   const opt = s => `<option value="${s.id}">${s.name}</option>`;
   // 曲の分け方（v028〜、ユーザーの希望で整理）。ここにない曲は「そのほか」へ
@@ -302,10 +302,10 @@ function initUI() {
   $('song').addEventListener('change', e => { setPlaying(false); const v = e.target.value; busy(L('運指と手の動きを計算しています…', 'Working out fingering and hand motion…'), () => v.startsWith('sample:') ? loadSample(v.slice(7)) : loadSong(v)); });
   $('sceneSel').innerHTML = Object.entries(SCENES).map(([k, s]) => `<option value="${k}">${s.name}</option>`).join('');
   $('sceneSel').value = V.sceneId;
-  $('fxSel').innerHTML = FX_LEVELS.map((f, i) => `<option value="${i}">${L('エフェクト: ', 'Effects: ')}${f.name}</option>`).join('');
-  $('fxSel').value = String(V.fxLevel);
-  $('sceneSel').addEventListener('change', e => { applyScene(e.target.value); applyFx(SCENES[e.target.value].fx); $('fxSel').value = String(V.fxLevel); });
-  $('fxSel').addEventListener('change', e => applyFx(+e.target.value));
+  $('sceneSel').addEventListener('change', e => applyScene(e.target.value));
+  // エフェクト（v034〜、ユーザーの希望: なしとはなやかだけでよいので、選択をやめてチェックボックスに）
+  $('optFx').checked = V.fxLevel > 0;
+  $('optFx').addEventListener('change', e => applyFx(e.target.checked ? 1 : 0));
   // 音色（v028〜）
   $('voiceSel').innerHTML = [['piano', L('音色: ピアノ', 'Sound: piano')], ['epiano', L('音色: エレクトリックピアノ', 'Sound: electric piano')], ['organ', L('音色: 電子オルガン', 'Sound: electronic organ')], ['harpsi', L('音色: チェンバロ', 'Sound: harpsichord')]].map(([k, t]) => `<option value="${k}">${t}</option>`).join('');
   $('voiceSel').value = VOICE; $('voiceSel').setAttribute('aria-label', L('音色', 'Sound'));
@@ -351,30 +351,8 @@ function initUI() {
     $('lookLegend').hidden = !f.muscles;
   });
   const opts = { optNotes: 'notes', optNoteNums: 'noteNums', optKeyLabels: 'keyLabels', optFingerNums: 'fingerNums', optTargets: 'targets' };
-  for (const id in opts) $(id).addEventListener('change', e => { OPT[opts[id]] = e.target.checked; markCustom(); });
-  // 見せ方のねらい（v029〜、ユーザーの希望: ノーツで確かめたい・ゲームのようにはなやかに見せたい・リアルなシミュレーションを観察したい、で選べるように）。
-  // 選ぶと、ノーツ・番号・鍵盤の音の名前・エフェクト・シーンがまとめて切りかわる。下の項目を個別に変えると「自分で選ぶ」になる
-  const MODES = {
-    check: { name: L('ねらい: ノーツで確かめる', 'Purpose: check against the notes'), set: { optNotes: 1, optNoteNums: 1, optKeyLabels: 1 }, fx: 1 },
-    game: { name: L('ねらい: ゲームのようにはなやかに', 'Purpose: flashy, like a game'), set: { optNotes: 1, optNoteNums: 0, optKeyLabels: 0, optFingerNums: 0, optTargets: 0 }, fx: 2, scene: 'stage' },
-    real: { name: L('ねらい: リアルな動きを観察する', 'Purpose: watch a realistic simulation'), set: { optNotes: 0, optNoteNums: 0, optKeyLabels: 0, optFingerNums: 0, optTargets: 0 }, fx: 0, scene: 'bright' },
-    custom: { name: L('ねらい: 自分で選ぶ', 'Purpose: choose for yourself') },
-  };
-  let applying = false;
-  function markCustom() { if (!applying) $('viewMode').value = 'custom'; }
-  function applyMode(k) {
-    const M = MODES[k]; if (!M || !M.set) return;
-    applying = true;
-    for (const id in M.set) { $(id).checked = !!M.set[id]; OPT[opts[id]] = !!M.set[id]; }
-    if (M.scene) { applyScene(M.scene); $('sceneSel').value = M.scene; }
-    applyFx(M.fx); $('fxSel').value = String(M.fx);
-    applying = false;
-  }
-  $('viewMode').innerHTML = Object.entries(MODES).map(([k, m]) => `<option value="${k}">${m.name}</option>`).join('');
-  $('viewMode').setAttribute('aria-label', L('見せ方のねらい', 'Viewing purpose'));
-  $('viewMode').addEventListener('change', e => applyMode(e.target.value));
-  for (const id of ['sceneSel', 'fxSel']) $(id).addEventListener('change', markCustom);
-  $('viewMode').value = 'check'; applyMode('check'); // 最初はノーツで確かめる（シーンは月あかりのまま）
+  for (const id in opts) { OPT[opts[id]] = $(id).checked; $(id).addEventListener('change', e => { OPT[opts[id]] = e.target.checked; }); }
+  // v029〜v033 にあった「見せ方のねらい」（ノーツで確かめる・ゲーム風・リアル）は v034 でやめた（ユーザーの希望）。項目を1つずつ選ぶ
   $('chkTable').addEventListener('click', e => {
     const tr = e.target.closest('tr'); if (!tr) return;
     const r = S.checks[tr.dataset.id];

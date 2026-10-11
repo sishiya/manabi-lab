@@ -476,6 +476,9 @@ function restBoneFrames(rest) {
 // 爪: 末節骨の甲の側に、表面へ沿わせた曲面。骨に固定して動かす
 // 爪半月の見えやすさ（親指〜小指、目安。親指ではっきり、小指ではほとんど見えない）
 const LUNULA = [0, 1.0, 0.6, 0.5, 0.3, 0.1];
+// 爪の長さ（v034〜、ユーザーの希望「ピアニストだし、もうちょっと切って」）: ピアニストは鍵に爪が当たらないよう短く切る。
+// 爪の先は末節の長さの NAIL_END 倍まで、先の白いはみ出し（自由縁）は NAIL_FREE（0〜1 の割合）だけ。前は 1.12 倍＋白いふちを 0.8mm ほど前へ出していた（目安）
+const NAIL_END = 1.07, NAIL_FREE = 0.06;
 function buildNails(P) {
   const nails = [];
   const NU = 10, NT = 9;
@@ -485,8 +488,8 @@ function buildNails(P) {
     const th0 = 0; // 親指の向きは骨の座標軸（ねじれ）に入っている
     const pos = [], col = [], uvs = [];
     for (let iu = 0; iu <= NU; iu++) {
-      const u = iu / NU; // 0 = 根元（甘皮）、1 = 先（指先より少し出る）
-      const s = L * (0.38 + 0.74 * u);
+      const u = iu / NU; // 0 = 根元（甘皮）、1 = 先
+      const s = L * (0.38 + (NAIL_END - 0.38) * u);
       const wide = 50 * D2R * Math.min(1, 0.45 + 2.6 * u) * (u > 0.9 ? 1 - (u - 0.9) * 2.5 : 1);
       for (let it = 0; it <= NT; it++) {
         const th = th0 + (it / NT * 2 - 1) * wide;
@@ -495,16 +498,16 @@ function buildNails(P) {
         // 表面へ寄せる（外から内へ）
         for (let k = 0; k < 6; k++) { const d = handSDF(P, ...p), g = sdfGrad(P, ...p); p = [p[0] - g[0] * d, p[1] - g[1] * d, p[2] - g[2] * d]; }
         // 浮かせる量: まん中は少し盛り上がり、両わきは低く、根もとは皮ふのひだ（甘皮）の下へもぐる。ふちは材質でなめらかに透明にする（v031〜。前は全体が浮いた板で、ふちが線に見えた）
-        const g = sdfGrad(P, ...p), mid = Math.sin(Math.PI * it / NT), lift = 0.18 + 0.4 * Math.pow(mid, 0.6) - Math.max(0, 0.1 - u) * 4; // 皮ふの網は 1.5mm の三角形で、丸い所は本当の表面より少し外にあるので、もぐらせすぎると爪が網の下に隠れた
+        const g = sdfGrad(P, ...p), mid = Math.sin(Math.PI * it / NT), lift = 0.18 + 0.4 * Math.pow(mid, 0.6) - Math.max(0, 0.1 - u) * 4 + 0.3 * smoothF((u - 0.75) / 0.25); // 先は指先の丸みにかかるので少し多く浮かせる（短く切ると、皮ふの網が爪を突き抜けてふちがギザギザに見えた） // 皮ふの網は 1.5mm の三角形で、丸い所は本当の表面より少し外にあるので、もぐらせすぎると爪が網の下に隠れた
         p = [p[0] + g[0] * lift, p[1] + g[1] * lift, p[2] + g[2] * lift];
-        if (u > 0.86) { const o = (u - 0.86) * 9; p = [p[0] + B.z[0] * o * 0.6 - g[0] * o * 0.15, p[1] + B.z[1] * o * 0.6 - g[1] * o * 0.15, p[2] + B.z[2] * o * 0.6 - g[2] * o * 0.15]; }
+        if (u > 1 - NAIL_FREE) { const o = (u - 1 + NAIL_FREE) * 6; p = [p[0] + B.z[0] * o * 0.6 - g[0] * o * 0.15, p[1] + B.z[1] * o * 0.6 - g[1] * o * 0.15, p[2] + B.z[2] * o * 0.6 - g[2] * o * 0.15]; }
         const q = sub3(p, B.o);
         pos.push(dot3(q, B.x), dot3(q, B.y), dot3(q, B.z));
         // 色: 根元は白っぽい爪半月（指ごとの見えやすさ LUNULA、目安）、なかほどは爪床の桃色（先へ行くほど少し赤く）、先のはみ出し（自由縁）は白
         const side = Math.abs(it / NT * 2 - 1), lun = LUNULA[f];
         let c = mix3(lin3(0.97, 0.80, 0.77), lin3(0.95, 0.70, 0.66), Math.min(1, u / 0.8)); // 爪の板ごしの爪床（まわりの肌より明るい桃色。近い色だと爪が見分けられなかった）
         if (u < 0.26 && side < 0.75) { const k = Math.max(0, 1 - (u / 0.26) ** 2 - (side / 0.75) ** 2); c = mix3(c, lin3(0.97, 0.90, 0.86), Math.min(1, k * 1.6) * lun); }
-        if (u > 0.82) c = mix3(c, lin3(0.98, 0.96, 0.91), smoothF((u - 0.82) / 0.08));
+        if (u > 1 - NAIL_FREE - 0.03) c = mix3(c, lin3(0.98, 0.96, 0.91), smoothF((u - 1 + NAIL_FREE + 0.03) / 0.06));
         c = mix3(c, lin3(0.86, 0.64, 0.58), side ** 4 * 0.5);
         col.push(...c); uvs.push(u, it / NT);
       }

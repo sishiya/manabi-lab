@@ -45,7 +45,7 @@ function initView(canvas) {
   for (const side of [1, -1]) V.hands.push({ side, skin: makeSkinHand(sc, side), bones: makeSkeletonHand(sc, side), tissue: makeTissueHand(sc, side), marks: makeMarks(sc) });
   initFx(sc);
   initScene();
-  applyScene('moon'); applyFx(SCENES.moon.fx); // 最初は月あかり（ユーザーの希望）
+  applyScene('moon'); applyFx(1); // 最初は月あかり・エフェクトあり（ユーザーの希望）
   initCamera(canvas);
 }
 
@@ -262,12 +262,14 @@ function renderPose(score, poses, opt) {
 
 // カメラ（ドラッグで回す・ホイールで寄る）。follow のときは両手のまん中を見る
 const CAMS = {
-  tilt: { th: 0.85, ph: 0.9, d: 620, tg: [0, 10, -80] },
+  // ななめ（最初の見た目）: v034〜、ユーザーの希望「見栄えがして、ノーツと手が見やすい角度に」。前（th 0.85・ph 0.9・d 620）は鍵盤が画面を斜めに横切り、
+  // 手が右下に寄って、ノーツは右上の遠くに小さく見えた。正面寄りから見下ろして、両手をまん中に、ノーツが奥から手へ降りてくる向きに
+  tilt: { th: 0.55, ph: 0.8, d: 760, tg: [0, 0, -75] },
   top: { th: 0, ph: 0.02, d: 820, tg: [0, 0, -110] },
   side: { th: 1.35, ph: 1.25, d: 560, tg: [0, 20, -70] },
   front: { th: Math.PI, ph: 1.0, d: 560, tg: [0, 20, -60] },
 };
-const CAM = { th: 0.85, ph: 0.9, d: 620, tg: [0, 10, -80], follow: true };
+const CAM = { th: 0.55, ph: 0.8, d: 760, tg: [0, 0, -75], follow: true }; // 最初は「ななめ」と同じ
 function setCam(name) {
   if (name === 'pov') { CAM.pov = true; CAM.look = [0, 0]; V.cam.fov = 52; V.cam.updateProjectionMatrix(); return; }
   CAM.pov = false; if (V.cam.fov !== 36) { V.cam.fov = 36; V.cam.updateProjectionMatrix(); }

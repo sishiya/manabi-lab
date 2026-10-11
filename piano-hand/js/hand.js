@@ -166,7 +166,7 @@ const POSTURES = [
   { id: 'mid', n: [18, 32], white: [0, -18, -50, -58, -53, -42], black: -90, thumbBlack: -72, thumbDeep: -46 },
   { id: 'flat', n: [10, 20], white: [0, -22, -62, -72, -66, -54], black: -100, thumbBlack: -80, thumbDeep: -52 },
 ];
-let POSTURE = 'curved'; // 最初は立てる（押せなかった音がいちばん少なく、v025 までと同じ動き）
+let POSTURE = 'mid'; // 最初は中間（v034〜、ユーザーの希望。v033 までは立てる）
 const POST_TIPS = [[], [], []], POST_WY = [0, 0, 0];
 function computePostures() {
   for (let k = 0; k < 3; k++) {
@@ -520,7 +520,10 @@ function keepAbove(plan) {
       for (let f = 1; f <= 5; f++) {
         const fp = P.fingers[f]; if (fp.press) continue;
         const tip = fp.pts[3]; if (tip[2] > 4 || tip[2] < -150) continue;
-        const s = surfaceZ(tip[2]) + PAD + 1 - tip[1];
+        // 床は鍵の横の位置も見る（v034〜、surfaceFloor）。前は奥行きだけの床（黒鍵の手前の端より奥はどこも黒鍵の高さ）で、白鍵を奥で押す
+        // 「中間」の構えだと、黒鍵のあいだの白鍵へ下ろす指が黒鍵にもぐると数えられ、手首を 16mm 上げて、押している指が鍵から離れた
+        const sf = surfaceFloor(tip[0], tip[2]); if (!(sf > -1e9)) continue;
+        const s = sf + PAD + 1 - tip[1];
         if (s > need[i]) need[i] = s;
       }
       if (need[i] > mx) mx = need[i];

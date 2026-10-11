@@ -135,7 +135,7 @@ window.__snapBig = (eye, tgt = [-20, 0, -50], side = 1) => {
   __iso(true); const bg = V.scene.background; V.scene.background = new THREE.Color(0x30343c);
   const tg = [W[0] + tgt[0] * s * side, W[1] + tgt[1] * s, W[2] + tgt[2] * s];
   V.cam.position.set(tg[0] + eye[0] * side, tg[1] + eye[1], tg[2] + eye[2]); V.cam.up.set(0, 1, 0); V.cam.lookAt(...tg); V.cam.updateMatrixWorld();
-  renderScene(__ph.S.t); const url = cv.toDataURL('image/jpeg', 0.92);
+  renderScene(__ph.S.t); renderScene(__ph.S.t); const url = cv.toDataURL('image/jpeg', 0.92); // 読みこんだ直後の1回目は空になることがあるので2回描く
   __iso(false); V.scene.background = bg; __sheet(url); return 'ok';
 };
 window.__sheet = url => {

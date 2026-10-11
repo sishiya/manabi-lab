@@ -62,10 +62,14 @@ vec3 skinBump(vec3 surf_pos, vec3 surf_norm, vec2 dHdxy, float fd){
 `;
 
 
-// 前腕の肘の側は、手首から ARM_FADE の範囲でなめらかに透けて消える（その範囲の三角形だけ半透明の材質で、不透明な部分のあとに描く。影はディザで消す）。
-// 前腕を太くしたら、肘の側の端が網を作る範囲からはみ出して切り口が開き、体の側から覗くと角ばった穴が見えた（v029〜、ユーザーの指摘）
-const ARM_FADE = [150, 215];
-const FADE_GLSL = 'uniform vec2 uArmFade; varying float vRestZ;\n';
+// 前腕の肘の側（v034〜、ユーザーの希望「暗い部屋で照明が肘の先までしか当たっていないように。腕の決まった場所ではなく、場所で『ここから先は映らない』」）:
+// 部屋の座標で、鍵盤の手前の端から体の側へ DARK_Z の範囲で、皮ふの色をなめらかにシーンの背景の色へ溶かす（暗い部屋では暗がりに沈んで見える。
+// 明るい部屋では背景の明るい色へ溶ける）。腕のどこで消えるかは手首の位置で変わる。
+// そのうえで、網の肘の側の端（切り口）が見えないよう、手首から ARM_FADE の範囲を透けさせる（v030〜。v034 からは網の端の近くだけ、安全のため）
+const DARK_Z = [150, 250];
+const SKIN_DARK = { uDarkZ: { value: new THREE.Vector2(DARK_Z[0], DARK_Z[1]) }, uDark: { value: new THREE.Color(0, 0, 0) } };
+const ARM_FADE = [235, 272];
+const FADE_GLSL = 'uniform vec2 uArmFade; varying float vRestZ; uniform vec2 uDarkZ; uniform vec3 uDark; varying float vWorldZ;\n';
 const FADE_FRAG = '  { float fz = smoothstep(uArmFade.x, uArmFade.y, vRestZ); if (fz > 0.0 && fz >= fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))))) discard; }\n';
 function makeSkinMaterials(U, fade) {
   const m = new THREE.MeshPhysicalMaterial({
@@ -74,16 +78,17 @@ function makeSkinMaterials(U, fade) {
     envMapIntensity: 0.7,
   });
   m.onBeforeCompile = sh => {
-    sh.uniforms.uBones = U.uBones; sh.uniforms.uFlex = U.uFlex; sh.uniforms.uArmFade = U.uArmFade;
+    sh.uniforms.uBones = U.uBones; sh.uniforms.uFlex = U.uFlex; sh.uniforms.uArmFade = U.uArmFade; sh.uniforms.uDarkZ = SKIN_DARK.uDarkZ; sh.uniforms.uDark = SKIN_DARK.uDark;
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\n' + FADE_GLSL + SKIN_VERT_HEAD + 'attribute float aWrk; attribute float aAlong; attribute vec3 aPad; attribute float aCrease;\nvarying vec3 vRest; varying float vWrk; varying float vAlong; varying vec3 vPad; varying float vCrease;')
       .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\n' + SKIN_VERT_MAT + '  objectNormal = normalize(mat3(skM) * objectNormal);')
-      .replace('#include <begin_vertex>', 'vec3 transformed = (skM * vec4(position + normal * skInf, 1.0)).xyz;\nvRest = position; vRestZ = position.z; vWrk = aWrk; vAlong = aAlong; vPad = aPad; vCrease = aCrease;');
+      .replace('#include <begin_vertex>', 'vec3 transformed = (skM * vec4(position + normal * skInf, 1.0)).xyz;\nvRest = position; vRestZ = position.z; vWorldZ = (modelMatrix * vec4(transformed, 1.0)).z; vWrk = aWrk; vAlong = aAlong; vPad = aPad; vCrease = aCrease;');
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\n' + FADE_GLSL + SKIN_GLSL_HEAD)
       .replace('#include <color_fragment>', '#include <color_fragment>\n' + (fade ? '  diffuseColor.a *= 1.0 - smoothstep(uArmFade.x, uArmFade.y, vRestZ);\n' : '') + '  diffuseColor.rgb *= (0.94 + 0.12 * vn(vRest * 0.12) + 0.04 * vn(vRest * 0.6)) * (1.0 - 0.18 * vCrease);')
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n  roughnessFactor *= 0.85 + 0.3 * vn(vRest * 0.4 + 3.0);')
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n  { float hh = skinH(); normal = skinBump(-vViewPosition, normal, vec2(dFdx(hh), dFdy(hh)), gl_FrontFacing ? 1.0 : -1.0); }')
+      .replace('gl_FragColor = vec4( outgoingLight, diffuseColor.a );', 'outgoingLight = mix(outgoingLight, uDark, smoothstep(uDarkZ.x, uDarkZ.y, vWorldZ));\n  gl_FragColor = vec4( outgoingLight, diffuseColor.a );') // three.js r128 には output_fragment がない
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  { float rim = pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 2.5);\n    totalEmissiveRadiance += diffuseColor.rgb * (vec3(0.05, 0.012, 0.006) + rim * vec3(0.10, 0.025, 0.012)); }'); // 皮ふの下で散った赤い光（近似）。ふちほど光が皮ふを通って赤く透ける
   };
   if (fade) { m.transparent = true; m.depthWrite = false; }
@@ -139,7 +144,7 @@ function makeSkinHand(sc, side) {
   nailMat.onBeforeCompile = sh => {
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec2 aNail; varying vec2 vNail;').replace('#include <begin_vertex>', '#include <begin_vertex>\n  vNail = aNail;');
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vNail;')
-      .replace('#include <color_fragment>', '#include <color_fragment>\n  { float sd = abs(vNail.y * 2.0 - 1.0); diffuseColor.a *= (1.0 - smoothstep(0.7, 1.0, sd)) * smoothstep(0.0, 0.12, vNail.x) * (vNail.x > 0.84 ? 1.25 : 1.0); }')
+      .replace('#include <color_fragment>', '#include <color_fragment>\n  { float sd = abs(vNail.y * 2.0 - 1.0); diffuseColor.a *= (1.0 - smoothstep(0.7, 1.0, sd)) * smoothstep(0.0, 0.12, vNail.x) * (vNail.x > 0.9 ? 1.25 : 1.0); }')
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n  { float h = 0.012 * sin(vNail.y * 75.0 + sin(vNail.x * 7.0) * 0.8) * smoothstep(0.1, 0.4, vNail.x); vec3 sx = dFdx(-vViewPosition), sy = dFdy(-vViewPosition); vec3 nr1 = cross(sy, normal), nr2 = cross(normal, sx); float det = dot(sx, nr1); normal = normalize(abs(det) * normal - sign(det) * (dFdx(h) * nr1 + dFdy(h) * nr2)); }');
   };
   nailMat.customProgramCacheKey = () => 'nail'; // 変数名に r1・r2 を使わない（three.js の中に #define r1 0.8 があり、数字に化けてシェーダーが壊れた）
