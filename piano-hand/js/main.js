@@ -4,29 +4,90 @@ const $ = id => document.getElementById(id);
 const S = { plan: null, checks: null, t: -1, playing: false, speed: 1, lastNow: 0, prevT: -1, extra: [] };
 const OPT = { noteNums: true, fingerNums: false, targets: false, ghost: false, bones: false, xray: false, muscles: false };
 
-// 音（とても簡単な合成。鍵を押した瞬間に鳴らす）
-let AC = null, MASTER = null;
+// 音（v028〜: 音色を選べる。鍵を押した瞬間に鳴らす）。外の音の素材は読まず、ブラウザの中で合成する
+let AC = null, MASTER = null, NOISE = null;
 // 音量のつまみ（0〜1。聞こえ方に合わせて2乗）
 const VOL = () => { const v = +($("vol") ? $("vol").value : 70) / 100; return v * v * 1.6; };
-// len は音が止まるまでの秒（鍵を離すか、ペダルを上げるまで）。ピアノの音のように自然に弱まり、止まるときは 0.1 秒ほどで消える
-function playTone(m, len) {
+let VOICE = 'piano';
+const VOICES = {
+  // ピアノ: 弦の物理をもとにした合成（数値はどれも目安）。倍音は弦の硬さで整数倍から少しずれ（f_k = k·f0·√(1+B·k²)、B は中音で 1e-4 前後・
+  // 高音ほど大きい、Fletcher 1964）、高い倍音ほど早く消え、ハンマーが弦の 1/8 ほどの所を打つので 8 倍音あたりが弱く、1 音を 2〜3 本の弦で
+  // 鳴らすので少しずれてうなる。強く弾くほど明るい。ハンマーの打つ音（短い雑音）。いちばん高い音域（ファ6 から上）はダンパーがなく、離しても鳴る
+  piano(m, f0, now, L, v, amp, out) {
+    const B = Math.min(2e-3, Math.max(5e-5, 7e-5 * Math.pow(2, (m - 48) / 18)));
+    const tau0 = 0.6 + Math.max(0, 108 - m) / 60 * 2.0; // 低い音ほど長くのびる
+    const N = Math.max(3, Math.min(10, Math.floor(9000 / f0))), bright = 2.0 - 0.9 * v;
+    const amps = []; for (let k = 1; k <= N; k++) amps.push(Math.abs(Math.sin(Math.PI * k * 0.12)) / Math.pow(k, bright));
+    const tot = amps.reduce((a, b) => a + b, 0), undamped = m >= 89;
+    // 止める時刻: ダンパーのない高い音は十分に小さくなってから（音量が残ったまま止めると「プツッ」と鳴った）
+    const end = undamped ? now + Math.min(8, tau0 * 5) : now + L + 0.6;
+    amps.forEach((a, i) => {
+      const k = i + 1, fk = f0 * k * Math.sqrt(1 + B * k * k), tau = tau0 / (1 + 0.35 * (k - 1));
+      const g = AC.createGain(); g.connect(out);
+      g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(Math.max(1e-4, amp * a / tot * 1.4), now + 0.006); // 立ち上がり 6ms（4ms では打つたびにカチッと聞こえた）
+      g.gain.setTargetAtTime(0, now + 0.006, tau);
+      if (!undamped) g.gain.setTargetAtTime(0, now + L, 0.05 + 0.08 * Math.max(0, (60 - m) / 36)); // ダンパー（低い音ほど少しゆっくり止まる）
+      else g.gain.setTargetAtTime(0, end - 0.3, 0.05); // 止める前に消す
+      for (const c of k <= 3 ? [-0.7, 0.7] : [0]) { // 2本の弦のずれ（セント）でうなり
+        const o = AC.createOscillator(), og = AC.createGain(); o.frequency.value = fk * Math.pow(2, c / 1200); og.gain.value = k <= 3 ? 0.5 : 1;
+        o.connect(og); og.connect(g); o.start(now); o.stop(end);
+      }
+    });
+    if (!NOISE) { NOISE = AC.createBuffer(1, Math.round(AC.sampleRate * 0.05), AC.sampleRate); const d = NOISE.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    // ハンマーの打つ音: 低い帯域だけを小さく（前は 1.2〜5kHz の雑音が音の 10〜13% の大きさで、毎回カチッと聞こえた）
+    const ns = AC.createBufferSource(), bp = AC.createBiquadFilter(), ng = AC.createGain();
+    ns.buffer = NOISE; bp.type = 'lowpass'; bp.frequency.value = Math.min(2500, 3 * f0 + 400); bp.Q.value = 0.5;
+    ng.gain.setValueAtTime(0.0001, now); ng.gain.exponentialRampToValueAtTime(Math.max(1e-4, amp * 0.12 * v), now + 0.002); ng.gain.setTargetAtTime(0, now + 0.002, 0.008);
+    ns.connect(bp); bp.connect(ng); ng.connect(out); ns.start(now); ns.stop(now + 0.05);
+  },
+  // エレクトリックピアノ: FM 合成（金属の棒をたたいた音。打った瞬間ほど倍音が多く、すぐやわらかくなる）
+  epiano(m, f0, now, L, v, amp, out) {
+    const tau = 0.8 + Math.max(0, 100 - m) / 50 * 1.6, end = now + L + 0.5;
+    const g = AC.createGain(); g.connect(out);
+    g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(amp * 0.66, now + 0.005); // 大きさはピアノの mf にそろえる
+    g.gain.setTargetAtTime(0, now + 0.01, tau); g.gain.setTargetAtTime(0, now + L, 0.12);
+    const car = AC.createOscillator(), mod = AC.createOscillator(), mg = AC.createGain();
+    car.frequency.value = f0; mod.frequency.value = f0;
+    mg.gain.setValueAtTime(f0 * (0.6 + 2.4 * v), now); mg.gain.setTargetAtTime(f0 * 0.15, now, 0.25);
+    mod.connect(mg); mg.connect(car.frequency); car.connect(g);
+    const bell = AC.createOscillator(), bg = AC.createGain(); bell.frequency.value = f0 * 7.1; // 打った瞬間の金属の高い音
+    bg.gain.setValueAtTime(amp * 0.12 * v, now); bg.gain.setTargetAtTime(0, now, 0.05); bell.connect(bg); bg.connect(out);
+    for (const o of [car, mod, bell]) { o.start(now); o.stop(end); }
+  },
+  // 電子オルガン: ドローバーのように足音（16'・8'・4'・2⅔'・2'）を重ね、押している間は弱まらない。強さで音量は変わらない。ゆっくりしたビブラート
+  organ(m, f0, now, L, v, amp, out) {
+    const end = now + L + 0.2, g = AC.createGain(); g.connect(out);
+    g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.14, now + 0.012);
+    g.gain.setValueAtTime(0.14, now + L); g.gain.setTargetAtTime(0, now + L, 0.04);
+    const lfo = AC.createOscillator(), lg = AC.createGain(); lfo.frequency.value = 6; lg.gain.value = f0 * 0.003; lfo.connect(lg);
+    [[0.5, 0.5], [1, 1], [2, 0.6], [3, 0.35], [4, 0.3]].forEach(([r, a]) => {
+      const o = AC.createOscillator(), og = AC.createGain(); o.frequency.value = f0 * r; og.gain.value = a / 2.75;
+      lg.connect(o.frequency); o.connect(og); og.connect(g); o.start(now); o.stop(end);
+    });
+    lfo.start(now); lfo.stop(end);
+  },
+  // チェンバロ: 弦をはじく音（明るいのこぎり波を、はじいた直後ほど高い音まで通す）。強さで音量はほとんど変わらない。離すとダンパーの布で止まる
+  harpsi(m, f0, now, L, v, amp, out) {
+    const tau = 0.5 + Math.max(0, 100 - m) / 50 * 1.2, end = now + L + 0.3;
+    const g = AC.createGain(); g.connect(out);
+    g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.12, now + 0.002);
+    g.gain.setTargetAtTime(0, now + 0.004, tau); g.gain.setTargetAtTime(0, now + L, 0.03);
+    const o = AC.createOscillator(), lp = AC.createBiquadFilter(); o.type = 'sawtooth'; o.frequency.value = f0;
+    lp.type = 'lowpass'; lp.Q.value = 0.7; lp.frequency.setValueAtTime(Math.min(16000, f0 * 18), now); lp.frequency.setTargetAtTime(Math.min(8000, f0 * 5), now, 0.15);
+    o.connect(lp); lp.connect(g); o.start(now); o.stop(end);
+  },
+};
+// len は音が止まるまでの秒（鍵を離すか、ペダルを上げるまで）。vel は強さ（MIDI の velocity、なければ mf = 80）
+function playTone(m, len, vel) {
   if (!$('chkSound').checked) return;
   try {
     AC = AC || new (window.AudioContext || window.webkitAudioContext)();
     const f0 = 440 * Math.pow(2, (m - 69) / 12), now = AC.currentTime;
-    const decay = 0.6 + Math.max(0, 108 - m) / 60 * 2.0; // 低い音ほど長くのびる（目安）
-    const L = Math.max(0.08, Math.min(len || 1, 8));
+    const L = Math.max(0.08, Math.min(len || 1, 8)), v = Math.min(1, Math.max(0.05, (vel || VEL_MF) / 127));
     if (!MASTER) { MASTER = AC.createGain(); MASTER.connect(AC.destination); } // 全体の音量（つまみ）
     MASTER.gain.value = VOL();
-    const g = AC.createGain(); g.connect(MASTER);
-    g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.14, now + 0.008);
-    g.gain.setTargetAtTime(0, now + 0.01, decay);
-    g.gain.setTargetAtTime(0, now + L, 0.06);
-    [[1, 1], [2, 0.35], [3, 0.12]].forEach(([k, a]) => {
-      const o = AC.createOscillator(), og = AC.createGain();
-      o.type = 'sine'; o.frequency.value = f0 * k; og.gain.value = a;
-      o.connect(og); og.connect(g); o.start(now); o.stop(now + L + 0.5);
-    });
+    const amp = 0.14 * Math.pow((vel || VEL_MF) / VEL_MF, 1.5); // mf のときに前と同じくらいの大きさ
+    (VOICES[VOICE] || VOICES.piano)(m, f0, now, L, v, amp, MASTER);
   } catch (e) { /* 音が出せなくても続ける */ }
 }
 
@@ -93,6 +154,12 @@ function showHandInfo() {
 }
 
 // 楽譜ファイル
+// 曲の選択の分け方と並び（最初の曲を起動時に開く）
+const SONG_GROUPS = [
+  ['曲', 'Pieces', ['elise2', 'chords2', 'twinkle', 'ode', 'elise']],
+  ['基本の動き（音階・アルペジオ・和音）', 'Basics (scales, arpeggios, chords)', ['scale', 'scale2', 'dmaj', 'arp', 'chords']],
+  ['超絶技巧', 'Virtuoso', ['chopin', 'bravura']],
+];
 const SAMPLES = [
   { file: 'elise-opening.mid', name: L('エリーゼのために 冒頭（MIDI・両手のトラック）', 'Für Elise, opening (MIDI, a track per hand)') },
   { file: 'c-major-scale-fingered.musicxml', name: L('ハ長調の音階（MusicXML・両手・運指つき）', 'C major scale (MusicXML, both hands, with fingering)') },
@@ -173,7 +240,7 @@ function frame(now) {
 
 function step() {
   const plan = S.plan, t = S.t;
-  if (S.playing) for (const n of plan.notes) if (n.t0 > S.prevT && n.t0 <= t && !n.miss) playTone(n.m, ((n.ts || n.t1) - n.t0) / S.speed);
+  if (S.playing) for (const n of plan.notes) if (n.t0 > S.prevT && n.t0 <= t && !n.miss) playTone(n.m, ((n.ts || n.t1) - n.t0) / S.speed, n.vel);
   const pd = (plan.pedal || []).some(([a, c]) => t >= a && t < c);
   if (pd !== S.pedalOn) { S.pedalOn = pd; $('pedalInd').classList.toggle('on', pd); }
   $('pedalInd').hidden = !(plan.pedal && plan.pedal.length);
@@ -225,8 +292,12 @@ function initUI() {
   [['song', '曲', 'Piece'], ['sceneSel', 'シーン', 'Scene'], ['fxSel', 'エフェクトの強さ', 'Effect strength'], ['handModel', '手のモデル', 'Hand model']].forEach(([id, ja, en]) => $(id).setAttribute('aria-label', L(ja, en)));
   setPlaying(false);
   const opt = s => `<option value="${s.id}">${s.name}</option>`;
-  $('song').innerHTML = '<optgroup label="' + L('検証用の曲', 'Test pieces') + '">' + SONGS.filter(s => !s.val).map(opt).join('') + '</optgroup>' +
-    '<optgroup label="' + L('教本の運指との答え合わせ（ハノン）', 'Check against textbook fingering (Hanon)') + '">' + SONGS.filter(s => s.val).map(opt).join('') + '</optgroup>' +
+  // 曲の分け方（v028〜、ユーザーの希望で整理）。ここにない曲は「そのほか」へ
+  const seen = new Set(), group = (ja, en, list) => { list.forEach(s => seen.add(s.id)); return list.length ? '<optgroup label="' + L(ja, en) + '">' + list.map(opt).join('') + '</optgroup>' : ''; };
+  const pick = ids => ids.map(id => SONGS.find(s => s.id === id)).filter(Boolean);
+  $('song').innerHTML = SONG_GROUPS.map(([ja, en, ids]) => group(ja, en, pick(ids))).join('') +
+    group('教本の運指との答え合わせ（ハノン）', 'Check against textbook fingering (Hanon)', SONGS.filter(s => s.val && !seen.has(s.id))) +
+    group('そのほか', 'Others', SONGS.filter(s => !seen.has(s.id))) +
     '<optgroup label="' + L('サンプルの楽譜ファイル（samples/）', 'Sample score files (samples/)') + '">' + SAMPLES.map(s => `<option value="sample:${s.file}">${s.name}</option>`).join('') + '</optgroup>';
   $('song').addEventListener('change', e => { setPlaying(false); const v = e.target.value; busy(L('運指と手の動きを計算しています…', 'Working out fingering and hand motion…'), () => v.startsWith('sample:') ? loadSample(v.slice(7)) : loadSong(v)); });
   $('sceneSel').innerHTML = Object.entries(SCENES).map(([k, s]) => `<option value="${k}">${s.name}</option>`).join('');
@@ -235,13 +306,17 @@ function initUI() {
   $('fxSel').value = String(V.fxLevel);
   $('sceneSel').addEventListener('change', e => { applyScene(e.target.value); applyFx(SCENES[e.target.value].fx); $('fxSel').value = String(V.fxLevel); });
   $('fxSel').addEventListener('change', e => applyFx(+e.target.value));
+  // 音色（v028〜）
+  $('voiceSel').innerHTML = [['piano', L('音色: ピアノ', 'Sound: piano')], ['epiano', L('音色: エレクトリックピアノ', 'Sound: electric piano')], ['organ', L('音色: 電子オルガン', 'Sound: electronic organ')], ['harpsi', L('音色: チェンバロ', 'Sound: harpsichord')]].map(([k, t]) => `<option value="${k}">${t}</option>`).join('');
+  $('voiceSel').value = VOICE; $('voiceSel').setAttribute('aria-label', L('音色', 'Sound'));
+  $('voiceSel').addEventListener('change', e => { VOICE = e.target.value; playTone(60, 0.6); });
   $('handModel').innerHTML = Object.entries(HAND_MODELS).map(([k, m]) => `<option value="${k}">${m.name}</option>`).join('');
   $('handModel').value = HAND.id;
   $('handModel').addEventListener('change', e => { setPlaying(false); busy(L('手を作りなおしています…', 'Rebuilding the hands…'), () => { setHandModel(e.target.value); rebuildSkins(); showHandInfo(); if (S.song) setSong(S.song); }); });
   showHandInfo();
   $('fileIn').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) busy(L('楽譜を読んで計算しています…', 'Reading the score and calculating…'), () => openFile(f)); });
   $('vol').addEventListener('input', () => { if (MASTER) MASTER.gain.value = VOL(); });
-  $('strokeSel').innerHTML = [['wrist', L('打鍵: 和音・オクターブは手首で', 'Strike: chords and octaves from the wrist')], ['finger', L('打鍵: ぜんぶ指だけで', 'Strike: fingers only')]].map(([k, t]) => `<option value="${k}">${t}</option>`).join('');
+  $('strokeSel').innerHTML = [['wrist', L('打鍵: 和音・オクターブは手首で', 'Strike: chords and octaves from the wrist')], ['finger', L('打鍵: ぜんぶ指だけで', 'Strike: fingers only')], ['arm', L('打鍵: 腕ごと大きく（肘から上げて落とす）', 'Strike: with the whole arm (lift from the elbow and drop)')]].map(([k, t]) => `<option value="${k}">${t}</option>`).join('');
   $('strokeSel').value = STROKE; $('strokeSel').setAttribute('aria-label', L('打鍵のしかた', 'How keys are struck'));
   // 指の構え（v026〜）
   $('postureSel').innerHTML = [['curved', L('指の構え: 立てる', 'Finger posture: curved')], ['mid', L('指の構え: 中間', 'Finger posture: in between')], ['flat', L('指の構え: 寝かせる', 'Finger posture: flat')]].map(([k, t]) => `<option value="${k}">${t}</option>`).join('');
@@ -339,7 +414,7 @@ async function boot() {
     initUI();
     setCam('tilt');
     await showLoading(L('運指と手の動きを計算しています…', 'Working out fingering and hand motion…'));
-    loadSong(SONGS[0].id);
+    loadSong(SONG_GROUPS[0][2][0]);
     hideLoading();
     requestAnimationFrame(frame);
   } catch (e) { window.__phErr = e; console.error(e); $('loadMsg').textContent = L('読みこめませんでした: ', 'Could not load: ') + e.message; }

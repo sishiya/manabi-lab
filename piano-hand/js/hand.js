@@ -14,6 +14,13 @@ const strikeShare = rate => rate <= 1 ? 0 : rate <= 2 ? 0.5 * (rate - 1) : rate 
 // 上から打つときの、打つ前のいちばん高い所（鍵の上面から mm）。Dalla Bella & Palmer (2011) の持ち上げの振れ幅 21.7〜26.1mm（押しこむ
 // 深さ 10mm を含むとみて引いた）と「速いほど高い」から、1秒に 2 音で 12mm・8 音で 18mm（目安）
 const liftPeak = rate => 12 + 6 * Math.min(1, Math.max(0, (rate - 2) / 6));
+// 音の強さ（MIDI の velocity、強弱のない曲は mf = 80）: 強いほど高く持ち上げ、上から打つ割合も増やす（v028〜）。Dalla Bella & Palmer (2011) で
+// 打つ前の指の高さと鍵の速さ（音の強さ）に相関 r=.73、古屋ほか (2010) で触れたまま押すと音がやわらかく聞こえる。倍率は目安（80 で 1、pp 33 で 0.6、ff 112 で 1.27）
+const VEL_MF = 80;
+const velLift = v => Math.min(1.45, Math.max(0.5, v <= VEL_MF ? 0.6 + 0.4 * (v - 33) / (VEL_MF - 33) : 1 + 0.4 * (v - VEL_MF) / 47));
+// つなげる・切る（v028〜）: 離すまでの時間（TR）と、離したあとはね上がる高さ（目安）。つなげる音はゆっくり離して鍵の上に残り、
+// 切る音（スタッカート）はすばやく離して、持ち上げの半分ほどはね上がってから休む
+const REL_T = { legato: 0.16, normal: 0.12, staccato: 0.06 }; // normal は TR と同じ
 const LOOK = 0.7;       // 次の音へ先回りを始める早さ（秒）
 
 // 骨の長さ（mm）は大人の手の目安。関節の範囲（度）も目安。
@@ -224,7 +231,7 @@ function keyDown(n, t) { // 押しこんでいる深さ（鍵に着いてから�
 // 離すとき: 指先の、鍵の上面からの高さ（負は鍵を押しこんだまま）。底から LIFT の高さまで TR 秒でなめらかに上がり、鍵もいっしょに上がる
 function releaseY(n, t) {
   const d0 = keyDown(n, n.t1);
-  return -d0 + (d0 + REST_OFF) * ease5((t - n.t1) / TR); // 離したら鍵といっしょに上がり、鍵の上に休む（v027〜。前は LIFT まで持ち上げた）
+  return -d0 + (d0 + (n.relH || REST_OFF)) * ease5((t - n.t1) / (REL_T[n.art] || TR)); // 離したら鍵といっしょに上がり、鍵の上に休む（v027〜）。切る音ははね上がる（v028〜）
 }
 function pressDepth(n, t) {
   if (t < n.t0) return 0;
@@ -319,15 +326,26 @@ function planWithPosture(notes, side, cost) {
   }
   // 打鍵のしかた（STROKE）: 'wrist' なら、片手で同時に押す音（和音・オクターブ）は手首から打つ。指の形を保ったまま手ごと上げ下げし、
   // 指自身の上げ下げは小さく（lift）。'finger' ならすべて指で打つ
-  for (const n of notes) { n.wrist = STROKE === 'wrist' && notes.some(o => o !== n && Math.abs(o.t0 - n.t0) < 0.03); }
+  // 'arm'（v028〜、ユーザーの希望: 肘から腕ごと上げて弾く人もいる）: 和音に加えて、前の音を離してから ARM_GAP 秒以上あく音と、
+  // 前の音の打鍵から ARM_SLOW 秒以上あくゆっくりの音も、腕ごと上げて重さを落とすように打つ
+  for (const n of notes) {
+    const chord = notes.some(o => o !== n && Math.abs(o.t0 - n.t0) < 0.03), prev = notes.filter(o => o.t0 < n.t0 - 0.03);
+    const gap = n.t0 - Math.max(-Infinity, ...prev.map(o => o.t1)), ioi = n.t0 - Math.max(-Infinity, ...prev.map(o => o.t0));
+    n.wrist = (STROKE === 'wrist' && chord) || (STROKE === 'arm' && (chord || gap >= ARM_GAP || ioi >= ARM_SLOW));
+  }
   // 曲の速さ（この手の音の間隔）から、持ち上げの高さと始める時刻。いちばん高い所は約1音前（Dalla Bella & Palmer 2011: 音の間隔の 100〜123% 前）
   const onsets = [...new Set(notes.map(n => Math.round(n.t0 * 100) / 100))].sort((a, b) => a - b);
   for (const n of notes) {
     const k = onsets.findIndex(o => Math.abs(o - n.t0) < 0.015);
     const ioi = Math.min(2, Math.max(0.06, k > 0 ? n.t0 - onsets[k - 1] : k + 1 < onsets.length ? onsets[k + 1] - n.t0 : 0.5));
-    const rate = 1 / ioi;
-    n.lift = n.wrist ? 2 : Math.max(REST_OFF, strikeShare(rate) * liftPeak(rate) * HAND.s);
+    const rate = 1 / ioi, v = n.vel || VEL_MF;
+    const share = Math.min(1, Math.max(0, strikeShare(rate) + (v - VEL_MF) / 160));
+    n.lift = n.wrist ? 2 : Math.max(REST_OFF, share * liftPeak(rate) * velLift(v) * HAND.s);
     n.antic = Math.min(0.4, Math.max(0.1, ioi * 1.1));
+    // つなげる・切る: 楽譜の上の長さ（t1n）と、この手の次の音までの間隔から
+    const nxt = k >= 0 && k + 1 < onsets.length ? onsets[k + 1] : null, len = (n.t1n || n.t1) - n.t0;
+    n.art = nxt === null ? 'normal' : (n.t1n || n.t1) >= nxt - 0.03 ? 'legato' : len < 0.5 * (nxt - n.t0) && nxt - (n.t1n || n.t1) > 0.08 ? 'staccato' : 'normal';
+    n.relH = n.art === 'staccato' && !n.wrist ? Math.max(REST_OFF, 0.5 * liftPeak(rate) * velLift(v) * HAND.s) : REST_OFF;
   }
   const byF = [null, [], [], [], [], []];
   for (const n of notes) byF[n.f].push(n);
@@ -336,6 +354,7 @@ function planWithPosture(notes, side, cost) {
   solveWrist(plan);
   wristStrokes(plan);
   keepAbove(plan);
+  reachFix(plan);
   bakeAngles(plan);
   return plan;
 }
@@ -465,7 +484,8 @@ function handLife(plan, ent, ta, N) {
 // 手首で打つ: 手首で打つ音の前に、手首を WRIST_LIFT まで上げ、打つ時刻に向かって下ろす（指の形はそのまま）。
 // 前の音を離してから（最大 0.35 秒前から）の時間で上げ下げし、時間が短いほど小さく。値はこのアプリの目安
 let STROKE = 'wrist';
-const WRIST_LIFT = 12;
+// 手首で打つときの上げる高さ（mm）と、上げはじめる早さの上限（秒）。'arm' は腕ごと大きく（肘から上げる）。どれも目安
+const WRIST_LIFT = 12, ARM_LIFT = 30, ARM_GAP = 0.25, ARM_SLOW = 0.45;
 function wristStrokes(plan) {
   const N = plan.wh.length, ta = plan.wt0;
   plan.wk = new Float64Array(N);
@@ -473,9 +493,9 @@ function wristStrokes(plan) {
   for (const t0 of evs) {
     let tp = -Infinity;
     for (const n of plan.notes) if (n.t0 < t0 - 0.03) tp = Math.max(tp, Math.min(n.t1, t0 - 0.04));
-    const start = Math.max(tp, t0 - 0.35), dur = t0 - start;
+    const arm = STROKE === 'arm', start = Math.max(tp, t0 - (arm ? 0.5 : 0.35)), dur = t0 - start;
     if (dur < 0.04) continue;
-    const A = Math.min(WRIST_LIFT, 80 * dur);
+    const A = arm ? Math.min(ARM_LIFT, 100 * dur) : Math.min(WRIST_LIFT, 80 * dur);
     for (let i = Math.max(0, Math.floor((start - ta) * W_HZ)); i < N; i++) {
       const t = ta + i / W_HZ; if (t > t0) break;
       const s = (t - start) / dur; if (s < 0) continue;
@@ -511,6 +531,49 @@ function keepAbove(plan) {
     for (let i = 0; i < N; i++) { let m = 0; for (let j = Math.max(0, i - K); j <= Math.min(N - 1, i + K); j++) m = Math.max(m, need[j]); env[i] = m; }
     const x = cgSmooth(one, env, lam);
     for (let i = 0; i < N; i++) plan.wh[i] += Math.max(0, x[i]) * 1.1;
+  }
+}
+
+// 届かない音の直し（v028〜）: 手首の計算は、親指を軽く数えるなどで、まわりの音との折りあいの位置になる。その結果、手首を自由に置けば
+// 届く音が届かないことがあった（ショパン風の最初の音・練習曲のオクターブなど。どれも手首の置き方しだいで届く）。押す瞬間に届かない音があれば、
+// そのとき押さえているすべての音が届く手首の位置・高さ・向きを近くで探し（ずらしは小さいほどよい）、その時刻のまわりだけなめらかにずらす。
+// 手首の速さが人の範囲（検査の △ 900mm/秒）をこえるか、押せない音が増えるなら、そのずらしはやめる
+function reachFix(plan) {
+  const N = plan.wx.length, ta = plan.wt0, sd = plan.side;
+  const missAt = n => poseAt(plan, Math.min(n.t1, n.t0 + TK)).fingers[n.f].err;
+  const count = () => plan.notes.filter(n => missAt(n) > MISS_MM).length;
+  const bad = plan.notes.filter(n => missAt(n) > MISS_MM * 0.6);
+  for (const n of bad) {
+    if (missAt(n) <= MISS_MM * 0.6) continue; // 前のずらしで直った
+    const tc = Math.min(n.t1, n.t0 + TK), W0 = wristAt(plan, tc);
+    const held = plan.notes.filter(o => o.t0 <= tc + 0.01 && o.t1 >= tc - 0.01);
+    // 押していない指（力を抜いた形の指先）が鍵にもぐらないことも条件に（もぐる深さを罰に。あとで手首を上げると、また届かなくなるため）
+    const free = [1, 2, 3, 4, 5].filter(f => !held.some(o => o.f === f)), pp = postAt(plan, tc);
+    const cost = (dx, dy, dz, dyaw) => { const W = [W0[0] + dx, W0[1] + dy, W0[2] + dz, W0[3] + dyaw, sd, W0[5], W0[6]]; let c = 0, sk = 0;
+      for (const o of held) c = Math.max(c, reachErr(W, o));
+      for (const f of free) { // 押していない指は鍵の上まで持ち上げようとする（間の指を上げてオクターブを弾くように）。関節の範囲で上がりきらない分がもぐる
+        const q = toWorld(W, tipN(f, pp)), top = Math.max(surfaceAt(q[0], q[2]), surfaceZ(q[2])) + PAD, T = [q[0], Math.max(q[1], top), q[2]];
+        const ik = fingerIK(FINGERS[f], toLocal(W, T)), tip = toWorld(W, fingerFK(FINGERS[f], ik.yaw, ik.a1, ik.a2)[3]);
+        sk = Math.max(sk, top - tip[1]); }
+      return c + Math.max(0, sk) + 0.02 * Math.hypot(dx, dy, dz) + 0.05 * Math.abs(dyaw / D2R); };
+    let b = [0, 0, 0, 0], bc = cost(0, 0, 0, 0);
+    for (const step of [8, 3, 1]) { // 粗く → 細かく
+      const c0 = b.slice();
+      for (let i = -4; i <= 4; i++) for (let k = -4; k <= 4; k++) for (const j of [-1, 0, 1]) for (const y of [-2, -1, 0, 1, 2]) {
+        const c = [c0[0] + i * step, c0[1] + j * step, c0[2] + k * step, c0[3] + y * step * D2R], v = cost(...c);
+        if (v < bc) { bc = v; b = c; }
+      }
+    }
+    if (b.every(v => Math.abs(v) < 1e-9)) continue;
+    // まわりの音までの時間でずらしの幅を決める（となりの打鍵をじゃましない）
+    const near = plan.notes.filter(o => Math.abs(o.t0 - n.t0) > 0.03).map(o => Math.abs(o.t0 - n.t0));
+    const sig = Math.min(0.2, Math.max(0.05, 0.5 * Math.min(0.4, ...near)));
+    let v0 = 0; for (let i = 1; i < N; i++) v0 = Math.max(v0, Math.hypot(plan.wx[i] - plan.wx[i - 1], plan.wh[i] - plan.wh[i - 1], plan.wz[i] - plan.wz[i - 1]) * W_HZ); // ずらす前の手首のいちばん速い速さ
+    const save = [plan.wx.slice(), plan.wh.slice(), plan.wz.slice(), plan.wy.slice()], before = count();
+    const first = !plan.notes.some(o => o.t0 < n.t0 - 0.03); // この手のはじめの音なら、その前からずっとその位置で構えておく（一瞬で動かさない）
+    for (let i = 0; i < N; i++) { const tt = ta + i / W_HZ, g = first && tt <= tc ? 1 : Math.exp(-(((tt - tc) / sig) ** 2)); if (g < 1e-3) continue; plan.wx[i] += b[0] * g; plan.wh[i] += b[1] * g; plan.wz[i] += b[2] * g; plan.wy[i] += b[3] * g; }
+    const vmax = () => { let v = 0; for (let i = 1; i < N; i++) v = Math.max(v, Math.hypot(plan.wx[i] - plan.wx[i - 1], plan.wh[i] - plan.wh[i - 1], plan.wz[i] - plan.wz[i - 1]) * W_HZ); return v; };
+    if (count() > before || vmax() > Math.max(900, v0)) [plan.wx, plan.wh, plan.wz, plan.wy] = save;
   }
 }
 

@@ -70,22 +70,24 @@ function songFromMidi(buf, name) {
   if (trs.length >= 2) {
     const avg = t => t.notes.reduce((s, n) => s + n.m, 0) / t.notes.length;
     const sorted = trs.slice().sort((a, b) => avg(b) - avg(a));
-    sorted.forEach((t, i) => t.notes.forEach(n => n.ch !== 9 && notes.push({ m: n.m, t0: n.t0, t1: n.t1, hand: i === 0 ? 'R' : i === 1 ? 'L' : 'X' })));
+    sorted.forEach((t, i) => t.notes.forEach(n => n.ch !== 9 && notes.push({ m: n.m, t0: n.t0, t1: n.t1, vel: n.vel, hand: i === 0 ? 'R' : i === 1 ? 'L' : 'X' })));
   } else if (trs.length === 1) {
-    for (const n of trs[0].notes) if (n.ch !== 9) notes.push({ m: n.m, t0: n.t0, t1: n.t1, hand: n.m >= 60 ? 'R' : 'L' });
+    for (const n of trs[0].notes) if (n.ch !== 9) notes.push({ m: n.m, t0: n.t0, t1: n.t1, vel: n.vel, hand: n.m >= 60 ? 'R' : 'L' });
   }
   return finishSong({ id: 'file:' + name, name, notes, pedalSec: mid.pedal, bpm: mid.bpm, note: trs.length >= 2 ? L('（トラックで右手・左手を分けた）', '(right and left hands split by track)') : L('（トラックが1つなので、ド4から上を右手にした）', '(only one track, so notes from C4 up go to the right hand)') });
 }
 
 // ---- MusicXML ----
 const STEP = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+// 強弱記号 → MIDI の強さ（velocity）。MuseScore の既定値を目安に（v028〜）
+const DYN_VEL = { pppp: 8, ppp: 16, pp: 33, p: 49, mp: 64, mf: 80, f: 96, ff: 112, fff: 126, ffff: 127, sf: 112, sfz: 112, fz: 112, sffz: 120, fp: 96, rf: 104, rfz: 104 };
 function songFromMusicXml(text, name) {
   const doc = new DOMParser().parseFromString(text, 'application/xml');
   if (doc.querySelector('parsererror')) throw new Error(L('MusicXML を読めませんでした', 'Could not read the MusicXML'));
   const part = doc.querySelector('part');
   if (!part) throw new Error(L('パート（part）がありません（score-timewise は未対応）', 'No part found (score-timewise is not supported)'));
   const title = (doc.querySelector('work-title') || doc.querySelector('movement-title') || {}).textContent;
-  let divs = 1, tempo = 0, pos = 0, lastStart = 0;
+  let divs = 1, tempo = 0, pos = 0, lastStart = 0, vel = 80; // vel: いまの強さ（強弱記号や <sound dynamics> で変わる）
   const notes = [], ties = {}, pedEv = [];
   const tempos = []; // [div の位置, bpm]
   for (const meas of part.querySelectorAll(':scope > measure')) {
@@ -97,6 +99,12 @@ function songFromMusicXml(text, name) {
         const q = (pos + (el.querySelector('offset') ? +el.querySelector('offset').textContent : 0)) / divs;
         if (pe) { const ty = pe.getAttribute('type'); if (ty === 'start' || ty === 'resume') pedEv.push([q, 1]); else if (ty === 'stop' || ty === 'discontinue') pedEv.push([q, 0]); else if (ty === 'change') { pedEv.push([q, 0]); pedEv.push([q + 1e-3, 1]); } }
         else if (sd && sd.getAttribute('damper-pedal')) pedEv.push([q, sd.getAttribute('damper-pedal') === 'no' ? 0 : 1]);
+      }
+      if (tag === 'direction' || tag === 'sound') {
+        // 強弱: <sound dynamics="…">（MusicXML では forte = MIDI 90 に対する %）か、<dynamics> の記号
+        const sd2 = tag === 'sound' ? el : el.querySelector('sound'), dy = tag === 'direction' ? el.querySelector('direction-type > dynamics') : null;
+        if (sd2 && sd2.getAttribute('dynamics')) vel = Math.max(1, Math.min(127, Math.round(+sd2.getAttribute('dynamics') * 0.9)));
+        else if (dy && dy.firstElementChild && DYN_VEL[dy.firstElementChild.tagName] !== undefined) vel = DYN_VEL[dy.firstElementChild.tagName];
       }
       if (tag === 'direction' || tag === 'sound') {
         const snd = tag === 'sound' ? el : el.querySelector('sound');
@@ -123,7 +131,8 @@ function songFromMusicXml(text, name) {
           if (!tieS.includes('start')) delete ties[key];
           continue;
         }
-        const n = { m, a: start / divs, b: (start + dur) / divs, hand: staff >= 2 ? 'L' : 'R' };
+        const nd = el.getAttribute('dynamics'); // 音符ごとの強さ（あれば）
+        const n = { m, a: start / divs, b: (start + dur) / divs, hand: staff >= 2 ? 'L' : 'R', vel: nd ? Math.max(1, Math.min(127, Math.round(+nd * 0.9))) : vel };
         if (fg && /^[1-5]/.test(fg.textContent.trim())) n.given = +fg.textContent.trim()[0];
         notes.push(n);
         if (tieS.includes('start')) ties[key] = n;

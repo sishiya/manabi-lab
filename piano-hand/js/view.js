@@ -201,7 +201,7 @@ function renderPose(score, poses, opt) {
     o.lab.visible = vis && opt.noteNums && zf < Z0 - 2;
     const tE = n.t1n || n.t1, HF = 0.4; // 半円の光は、音の終わりから HF 秒で上へほどけて消える（ノーツの棒が通りすぎても切らない）
     const ring = n.ts && n.ts > tE + 0.05 && t > tE && t < n.ts + HF; // ペダルで音がのびている
-    o.halo.visible = !n.miss && t >= n.t0 && (on || ring || t < tE + HF);
+    o.halo.visible = !!FXL.halo && !n.miss && t >= n.t0 && (on || ring || t < tE + HF);
     if (vis) {
       o.box.position.set(keyX(n.m), isBlack(n.m) ? 4 : 1.5, zf);
       o.lab.position.set(keyX(n.m), 11, Math.min(zf, Z0) - 7);
