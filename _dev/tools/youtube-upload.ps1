@@ -356,7 +356,7 @@ function Set-Schedule($id, $publishAt, $h) {
     if (-not $cur) { Write-Host "動画が見つかりません: $id"; return }
     $st = @{ privacyStatus = 'private'; selfDeclaredMadeForKids = $false;
              embeddable = $cur.status.embeddable; license = $cur.status.license; publicStatsViewable = $cur.status.publicStatsViewable }
-    if ($publishAt) { $st.publishAt = $publishAt }   # 書かなければ予約は消える（status は丸ごと置きかわる）
+    $st.publishAt = if ($publishAt) { $publishAt } else { $null }   # 予約を外すときは null を送る（省くだけだと YouTube は予約を残す。2026-10-11）
     $body = [Text.Encoding]::UTF8.GetBytes((@{ id = $id; status = $st } | ConvertTo-Json -Depth 4))
     $r = Invoke-RestMethod -Method Put -Headers $h -ContentType 'application/json; charset=UTF-8' -Body $body -Uri 'https://www.googleapis.com/youtube/v3/videos?part=status'
     if ($publishAt) { Write-Host "予約しました: https://youtu.be/$id  $($r.status.publishAt)（$publishAt）" }

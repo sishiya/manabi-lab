@@ -22,4 +22,4 @@ upload-batch.ps1 が書く。1日の区切りは太平洋時間の0時（日本�
 | 日付 | 動画 | 結果 | 直したこと |
 |---|---|---|---|
 | 2026-10-11 | evolution-guide（h1r0MqMrNAY） | OK（-Verify・コマ・公開中のアプリ） | なし |
-| 2026-10-11 | evolution-short（QWAG8kMWAn8） | **NG**: 31〜38秒（4290万〜15万年前）で地面が白い霧に埋まる | アプリの衝突の冬を直した（evolution v008f）→ 録りなおし（古いのは `evolution-short.before-winter.mp4`）。差しかえはユーザーの GO 待ち |
+| 2026-10-11 | evolution-short（QWAG8kMWAn8） | **NG**: 31〜38秒（4290万〜15万年前）で地面が白い霧に埋まる | アプリの衝突の冬を直した（evolution v008f）→ 録りなおし（古いのは `evolution-short.before-winter.mp4`）。10/11 17:50 に差しかえ: 新しい cY1n0dAu948 を 20:05 で予約、古い QWAG8kMWAn8 は予約を外した（非公開のまま。消すのはユーザーが Studio で） |
