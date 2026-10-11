@@ -5,15 +5,15 @@
 同じ庭を、生き物（と道具）を切り替えて一人称で見る。人に感じられない感覚（紫外線・熱・こだま・速い時間・偏光・近赤外線）を「置き換えて」見せる。企画は `PLAN.md`。体内ダイブ系・電波の見える部屋とはエンジンが別（Three.js r128 を cdnjs から、シェーダは自前）。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: 最新は v5f（`versions/v005f-english`、英語対応。下の「英語対応」）。その前は v5e（`versions/v005e-sources`、おもな出どころ。Artifact は未反映）。その前は v5b（`versions/v005b-notes`。v4 から、灯りのちらつきの安全対策（v5）と、「見え方は推定・診断には使えない」注記・使っているものの表記（v5b）だけ。Artifact も v5b を公開済み（2026-10-04））。14種をカテゴリ別に並べる（`ANIMAL_GROUPS`）: くらべる基準（人間）／動物（カラス・マムシ・コウモリ・イヌ・ネコ・シャコ）／虫（ハエ・ミツバチ）／道具（サーモ・近赤外線）／ヒトの見え方のいろいろ（弱視・近視遠視など・色覚）。主題は生き物なので、ヒトの見え方は一番後ろ（ユーザーの希望）。公開済み（2026-10-04、v4。タイトル「いきものの感じる世界」、URL は `../PUBLISH.local.md`。共有はまだ自分だけ）。更新は同じ URL へ再公開。
-- 2026-10-05 `versions/v005c-favicon`: ファビコン（タブのアイコン、SVG を埋め込み）を追加。GitHub Pages（まなびラボ）用。Artifact へはまだ再公開していない。
-- 2026-10-07 `versions/v005e-sources`: 「このアプリについて」の下に**おもな出どころ**（`.src`、生き物ごとに12行・約35件）。説明文の数値を確かめ直した（下の「状態」）。Artifact へは、ユーザーに内容を見せてから再公開する。
+- **いまの状態**: 最新は v5f（`versions/v005f-english`、英語対応。下の「英語対応」）。その前は v5e（`versions/v005e-sources`、おもな出どころ。Artifact は未反映）。その前は v5b（`versions/v005b-notes`。v4 から、灯りのちらつきの安全対策（v5）と、「見え方は推定・診断には使えない」注記・使っているものの表記（v5b）だけ。Artifact も v5b を公開済み（2026-10-04））。14種をカテゴリ別に並べる（`ANIMAL_GROUPS`）: くらべる基準（人間）／動物（カラス・マムシ・コウモリ・イヌ・ネコ・シャコ）／虫（ハエ・ミツバチ）／道具（サーモ・近赤外線）／ヒトの見え方のいろいろ（弱視・近視遠視など・色覚）。主題は生き物なので、ヒトの見え方は一番後ろ（ユーザーの希望）。Artifact（タイトル「いきものの感じる世界」）にも公開していた（2026-10-04、v4〜v5b）。いまは GitHub Pages で公開（Artifact へは再公開しない。`../RULES.md` 8.2）。
+- 2026-10-05 `versions/v005c-favicon`: ファビコン（タブのアイコン、SVG を埋め込み）を追加。GitHub Pages（まなびラボ）用。Artifact へは再公開していない（いまは Pages だけ。`../RULES.md` 8.2）。
+- 2026-10-07 `versions/v005e-sources`: 「このアプリについて」の下に**おもな出どころ**（`.src`、生き物ごとに12行・約35件）。説明文の数値を確かめ直した（下の「状態」）。Artifact へは再公開しない（いまは Pages だけ）。
 - **次にやること**: 段階D の残り（スマホ実機の確認）。その先の案は `PLAN.md`。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。
 - **動かし方**: 分割版なので `.claude/launch.json` の `apps`（8765）か `apps-2`（8766）で `http://localhost:<port>/animal-senses/index.html`。
 - **デバッグ用**: `window.__as` — `setAnimal(k, keepPlace)`（`false` で開始位置へ）、`setTime('day'|'dusk'|'night')`、`goto(ANIMALS.crow.pois[0])`、`frame(n)`（n コマ進めて描く）、`info()`、`err`、`S`（状態。`S.paused=true` で時間だけ止まる＝スクリーンショット用）、`SX`（ハエたたき・コウモリの鳴き声・捕まえた数）。
-- **区切りごとに**: ① `versions/v0NN-名前/` に index.html・css・js を丸ごとコピー ② `launcher.html` にカード・表 ③ 下の「状態」 ④ 「確認のしかた」を通す ⑤（公開済みなら）同じ URL へ再公開。
-- **公開のコマンド**（Artifact の publish）: `file_path` = `animal-senses/index.html`、`files` = `{"css/style.css":"animal-senses/css/style.css","js/data.js":"animal-senses/js/data.js","js/text-en.js":"animal-senses/js/text-en.js","js/shaders.js":"animal-senses/js/shaders.js","js/world.js":"animal-senses/js/world.js","js/render.js":"animal-senses/js/render.js","js/senses.js":"animal-senses/js/senses.js","js/main.js":"animal-senses/js/main.js"}`。JS を足したら index.html の `<script>` とこの一覧の両方に足す。
+- **区切りごとに**: ① `versions/v0NN-名前/` に index.html・css・js を丸ごとコピー ② `launcher.html` にカード・表 ③ 下の「状態」 ④ 「確認のしかた」を通す ⑤ commit・push（＝Pages に公開。公開前チェックのあと）。
+- **公開**: GitHub Pages（push で。`https://sishiya.github.io/manabi-lab/animal-senses/`）。JS を足したら index.html の `<script>` に足す。
 - **ユーザーの好み**: 正確さ・本物らしさ重視。説明は 確か／推定／演出 を分ける。子どもにも読める日本語。視覚的に分かりやすい題材が好き。ドラッグは「見たい方へ」（右へドラッグ → 右を向く。v1 は左右が逆だった）。
 
 ## ファイル構成

@@ -78,7 +78,7 @@
 7. 境目の式: `__ff.bcFormula(__ff.FLUIDS.apg)` が 0.01722。`__ff.ampPhys(0, __ff.FLUIDS.apg)` が 1.56。
 
 ## 公開
-- 隠しアーカイブ（GitHub Pages、push で公開）。Artifact にするなら `file_path` = `ferrofluid/index.html`、`files` = `css/style.css`、`js/` の5つ（phys・pattern・view・ui・main）。外のデータは読まない（three.js は cdnjs）。
+- 隠しアーカイブ（GitHub Pages、push で公開）。
 - 入口に載せるなら RULES 8.1（GA の1行・ファビコン・サムネイル `assets/thumbs/ferrofluid.jpg`・`_dev/tools/thumb.html` の `SETUP` はあり。`APPS` と互換モードの確認が残り）。
 
 ## 状態

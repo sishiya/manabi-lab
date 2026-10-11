@@ -11,7 +11,7 @@
 - **動かし方**: ユーザーはルートの `start.bat`（まなびラボから開く）。Claude は `.claude/launch.json` の `apps`（8765）・`apps-2`（8766）・`apps-3`（8767）のどれか空いているもので `http://localhost:<port>/air-flow/`。
 - **デバッグ用**: `window.__af` — `S`（状態: `st` 各要素の状態、`wind` [吹いてくる向き°, m/s]、`circs`、`net` 換気回路網の結果、`stats`、`t`）、`loadScene(key)`、`setState(key, v)`、`houseStats()`（`n` 換気回数、`tau` 名目換気時間 s、`p` 室内の気圧 Pa、`meanAge`、`exitAge` 出ていく空気の平均の年齢）、`maxDiv()`、`advance(秒, 速さ)`（Browser ペインが裏にあると rAF が止まるので、これで進める）、`frame()`（描くだけ）、`err`（例外。`window.__afErr`）。グローバルの `ROOMS` の `meanAge` に部屋ごとの値。
 - **区切りごとに**: ① `versions/v0NN-名前/` に index.html・css・js を丸ごとコピー ② `launcher.html` にカード・表 ③ 下の「状態」 ④ 「確認のしかた」を通す ⑤ 公開前チェック → コミット（push はユーザー）。中身を変えたら入口 `../index.html` のカードの更新日も。
-- **公開**: GitHub Pages（入口に載せたので push で公開）。Artifact にするなら `file_path` = `air-flow/index.html`、`files` = `css/style.css` と `js/` の6つ（plan・net・fluid・draw・ui・main）。
+- **公開**: GitHub Pages（入口に載せたので push で公開）。
 - **ユーザーの好み**: 正確さ重視（数値の出どころ、簡単にしたところを書く）。実用寄り（自分の家の空気をよくしたい）。子どもにも読める日本語。
 
 ## ファイル構成

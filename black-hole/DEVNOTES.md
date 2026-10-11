@@ -82,7 +82,6 @@
 - 入口「まなびラボ」（GitHub Pages、push で公開）。GA の1行（ファビコンの次の行）、サムネイル `assets/thumbs/black-hole.jpg`（`_dev/tools/make-thumbs.ps1 -Apps black-hole -Port <port>`、`_dev/tools/thumb.html` の `SETUP` は開いたときのまま `renderNow`。ヘッドレスのソフトウェア描画でも 8 秒で撮れた）。
 - 互換モードの確認（2026-10-08）: `document.write` で doctype なし（BackCompat）と doctype つき（CSS1Compat）を書き、1200×740・375×812 の両方で全 192 要素の位置と大きさが同じ、エラーなし。**`iframe.srcdoc` は doctype がなくても標準モードになるので比べられない**。
 - push のあと Pages の URL で「確認のしかた」を通す。
-- Artifact にするなら `file_path` = `black-hole/index.html`、`files` = `css/style.css`、`js/` の5つ（kerr・sky・render・ui・main）。外のデータは読まない（フォントだけ Google Fonts）。
 
 ## 状態
 - 2026-10-08 v1（`versions/v001-first`）: 段階A。カー時空の光の追跡（GPU・2段）、映画版／本当の見え方、回転 0〜0.998、プリセット4つ、ドラッグ・ホイール・2本指、クリックで光の道すじの図と説明、星空・方眼・まっ暗、円盤あり・なし、見つけてみよう8つ、解説と出どころ。

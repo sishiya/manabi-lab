@@ -11,7 +11,7 @@
 - **動かし方**: ユーザーはルートの `start.bat`。Claude は `.claude/launch.json` の `apps`〜`apps-4` のどれかで `http://localhost:<port>/mold-growth/`。
 - **デバッグ用**: `window.__mk` — `W`（世界の状態。`W.t` 時間、`W.stats`、`W.habits`、`W.hist` 1時間ごとの記録）、`run(h)`（h 時間進めて描く）、`frame(n, dt)`（Browser ペインが裏にあると rAF が止まるので、これで画面の1コマを進める）、`restart()`、`useTool(id, x, y)`、`useSmoke()`、`LENS`（ルーペの位置 mm）、`VIEW`（`hidden` `moist` `fast` `zoom` `cx` `cy`）、`DECK`（発見カード）、`UI`（`records` `rec` `speed` `playing`）、`err`。
 - **区切りごとに**: ① `versions/v0NN-名前/` に index.html・css・js を丸ごとコピー ② `launcher.html` にカード・表 ③ 下の「状態」 ④ 「確認のしかた」を通す ⑤ 公開前チェック → コミット（push はユーザー）。
-- **公開**: Artifact にするなら `file_path` = `mold-growth/index.html`、`files` = css/style.css と js/ の9つ（world・tools・render・micro・fx・cards・status・zukan・main）。
+- **公開**: GitHub Pages（push で。`https://sishiya.github.io/manabi-lab/mold-growth/`）。
 - **ユーザーの好み**: 眺めるだけでなく**さわって試せる**こと（v1 の「時間を動かしてグラフを見る」は合わなかった）。説明は短く、起きたときに出す。ゲームの要素（点数・手間の計算）は入れない（2026-10-06）。正確さ重視で、確か／推定を札で分ける。
 
 ## ファイル構成

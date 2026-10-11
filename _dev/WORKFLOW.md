@@ -17,7 +17,6 @@ flowchart LR
     THUMB["assets/thumbs/<br/>サムネイル"]
     PROMO["_dev/promo/ 台本 → out/<br/>mp4・ja/en.srt（Git に入れない）"]
     META["*.upload.json<br/>タイトル・説明・予約日時"]
-    PUB["PUBLISH.local.md<br/>Artifact の URL（Git に入れない）"]
     MEM["Claude のメモリ<br/>（PC ごと・移らない）"]
   end
 
@@ -42,7 +41,6 @@ flowchart LR
     WEB["論文・資料・データ源<br/>（出どころ）"]
     GIT["GitHub sishiya/manabi-lab<br/>Public"]
     PAGES["GitHub Pages<br/>入口・保管庫・各アプリ"]
-    ART["Claude Artifact<br/>（以前からの公開先）"]
     YT["YouTube「しし屋」"]
     X["X @sishiya22"]
     GA["Google アナリティクス 4"]
@@ -60,8 +58,6 @@ flowchart LR
   SERVE --> MKT --> THUMB
   SRC & DOCS & THUMB --> CHECK -- "問題なし" --> GITL["ローカルの commit<br/>（Claude）"]
   GITL -- "push（ユーザー。指示があれば Claude）" --> GIT --> PAGES --> VIS
-  C -- "再公開" --> ART
-  PUB --> C
   PAGES -- "sishiya.github.io のときだけ" --> GA -- "集計（ユーザーだけ見られる）" --> U
 
   SRC --> PROMO

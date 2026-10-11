@@ -12,7 +12,7 @@
 - **デバッグ用**: `window.__mg` — `setT(h)`（h は始めからの時間（時間）。最初の筋トレは 18、12週の終わりは 2016、全体は `T_END` = 3024）、`t()`、`setCond({...})`、`setRange('week'|'all')`、`R`（いまの計算結果。配列は時間ごと）、`VIEW`（`ex` 1／5、`labels`）、`frame(n)`、`err`。モデルだけなら `simulate(cond)` と `summarize(R)` がそのまま呼べる。
   - Browser ペインのスクリーンショットが1つ前の絵のことがある → `setT` を2回（間に 0.3 秒）してから撮る。
 - **区切りごとに**: ① `versions/v0NN-名前/` に index.html・css・js を丸ごとコピー ② `launcher.html` にカード・表 ③ 下の「状態」 ④ 「確認のしかた」を通す ⑤ 公開前チェック → コミット（push はユーザー）。
-- **公開**: Artifact にするなら `file_path` = `muscle-growth/index.html`、`files` = css/style.css と js/ の5つ（model・text・micro・chart・main）。入口に載せるなら GitHub Pages（push で公開）。
+- **公開**: GitHub Pages（push で公開。いまは保管庫）。
 - **ユーザーの好み**: 正確さ重視。確か／推定を札で分ける。画面がごちゃごちゃするのは苦手（免疫のたたかいで「わちゃわちゃ」と言われた）。味方の細胞＝青、子どもにも読める日本語。
 
 ## ファイル構成

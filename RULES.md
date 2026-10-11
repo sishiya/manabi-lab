@@ -27,7 +27,7 @@
 - 分ける単位は**役割ごと**（データ／モデル・計算／描画／UI／メインループ など）。1ファイルの目安は 200〜800行。
 - `DEVNOTES.md` に**ファイル構成の表**（ファイル名・中身・主な関数や変数名）を置く。直すときはまずこの表を見て、**関係するファイルだけ読む**。
 - 大きなファイルは丸ごと読まず、Grep で場所を探してから範囲を指定して読む。
-- 分割したら、読み込み順の注意、公開時に送るファイルの一覧（Artifact の `files`）も DEVNOTES に書く。JS を足したら `index.html` の `<script>` と公開コマンドの両方に追加する。
+- 分割したら、読み込み順の注意も DEVNOTES に書く。JS を足したら `index.html` の `<script>` に追加する（Pages は push したファイルをそのまま配信するので、送るファイルの一覧はいらない）。
 - 分割版は file:// では Browser ペインで正しく動かないので、`.claude/launch.json` の `apps`（http://localhost:8765/）で確認する。
 
 ## 3. バックアップとランチャー
@@ -68,7 +68,7 @@
 
 ## 7. 公開前チェック（必ず。省略しない）
 
-Artifact の公開・再公開、git の commit／push の**前に毎回**行う。このリポジトリは Public にしても困らない状態を保つ。
+git の commit／push（push＝GitHub Pages への公開）の**前に毎回**行う。このリポジトリは Public にしても困らない状態を保つ。
 
 1. **スクリプトで調べる**: 公開するフォルダ（push ならフォルダ全体）に対して
    ```
@@ -92,35 +92,33 @@ Artifact の公開・再公開、git の commit／push の**前に毎回**行う
 
 ## 8. 公開
 
-公開先は2通り。アプリの DEVNOTES にどちらかを書く。
+公開は**すべて GitHub Pages**（8.1）。以前は Artifact でも公開していたが、いまは使わない（8.2）。
 
-### 8.1 GitHub Pages（外のデータを読むアプリ。例: 神の視点マップ）
+### 8.1 GitHub Pages（すべてのアプリ）
 
 - `main` ブランチのルートをそのまま配信する（`.nojekyll` あり、ルートの `index.html` が入口）。URL は `https://sishiya.github.io/manabi-lab/<app>/`。Pages の URL は公開情報なので DEVNOTES に書いてよい。
 - **push した時点で公開される**。だから push の前の公開前チェック（7章）がそのまま公開前チェックになる。
-- Pages 専用のアプリの `index.html` は普通の HTML（`<!doctype html>` から書く）。
-- Artifact 用（doctype なし）のアプリも、push すれば Pages で互換モード（quirks）で開ける。2026-10-05 に8本すべてで、標準モードと全要素の位置・大きさを比べて同じ（evolution の左上の箱だけ 7〜8px 低い）ことを確かめ、入口（ルートの `index.html`「まなびラボ」）に載せた。**アプリを入口に移すとき**は、同じ比べ方（DEVNOTES の確認に加えて、Pages の URL で互換モードと doctype つきの標準モードを比べる）をする。push 前にローカルで比べるときは、空の iframe に `document.write` で doctype なし・ありを書いて全要素の `getBoundingClientRect` を比べる（`iframe.srcdoc` は doctype がなくても標準モードになるので使えない。手順の例は `black-hole/DEVNOTES.md` の「公開」）。
+- はじめから Pages 用に作ったアプリ（例: 外のデータを読む神の視点マップ）の `index.html` は普通の HTML（`<!doctype html>` から書く）。
+- doctype なしで書いたアプリ（Artifact で公開していたころの形。8.2）も、push すれば Pages で互換モード（quirks）で開ける。2026-10-05 に8本すべてで、標準モードと全要素の位置・大きさを比べて同じ（evolution の左上の箱だけ 7〜8px 低い）ことを確かめ、入口（ルートの `index.html`「まなびラボ」）に載せた。**アプリを入口に移すとき**は、同じ比べ方（DEVNOTES の確認に加えて、Pages の URL で互換モードと doctype つきの標準モードを比べる）をする。push 前にローカルで比べるときは、空の iframe に `document.write` で doctype なし・ありを書いて全要素の `getBoundingClientRect` を比べる（`iframe.srcdoc` は doctype がなくても標準モードになるので使えない。手順の例は `black-hole/DEVNOTES.md` の「公開」）。
+- 外部ライブラリは cdnjs などの許可された CDN から読む。
 - 外のデータ（地図タイル・API）は、ブラウザから直接読めるもの（CORS）で、キー不要のものだけ。キーをファイルに書かない（7章）。
-- **入口に載せるもの**: アプリごとに**ファビコン**（`index.html` と `launcher.html` の `<title>` の直後に、SVG を埋め込んだ `<link rel="icon" href="data:image/svg+xml,…">`。テーマ色の角丸の四角＋中身を表す図形。外のファイルにしないのは Artifact 版でも効くように）と、**サムネイル** `assets/thumbs/<app>.jpg`（640×360）。
+- **入口に載せるもの**: アプリごとに**ファビコン**（`index.html` と `launcher.html` の `<title>` の直後に、SVG を埋め込んだ `<link rel="icon" href="data:image/svg+xml,…">`。テーマ色の角丸の四角＋中身を表す図形。外のファイルにしないのは、以前の Artifact 版でも効くようにしたため）と、**サムネイル** `assets/thumbs/<app>.jpg`（640×360）。
 - **保管庫**「まなびラボ 保管庫」 `archive.html`（2026-10-06〜。2026-10-08 に「隠しアーカイブ」から改名。ファイル名はそのまま。各アプリの DEVNOTES の「隠しアーカイブ」も同じもの）: 入口の下の小さい注記（ソースコード・Issues の欄）からだけリンクする（2026-10-08〜。`noindex`）、作りかけ・作ってみたが出来がいまひとつのアプリをしまっておくページ（レギュラーではないと分かる説明文にしている）。カードは HTML に直接書く（入口の `APPS` のような一覧は使わない）。見た目（カード・スマホの横長リスト）は入口に合わせ、入口との違いとして分野でしぼる・並べかえは付けない（2026-10-08 ユーザーが決めた）。**並びは新着順（作成日の新しい順）で、新しいカードはいちばん上に足す**。カードの形はすでにあるカードをコピーする（`.pic` の画像、`.body` に名前・説明・状態の一言 `<p class="state">`・`.foot` に `<span class="dates">作成 YYYY-MM-DD ・ 更新 YYYY-MM-DD</span>` と過去の版）。入口から外すときはカードをこちらへ移し、入口に戻すときは逆。URL を知っていれば誰でも開ける（Public リポジトリなので本当の秘密ではない）。
 - **新しいアプリはまず保管庫に置く**（2026-10-08〜。ユーザーが決めた）: 新しく作ったアプリのカードは `archive.html` に足し、入口の `APPS` には足さない（サムネイル・ファビコン・アクセス解析の1行はこの時点で用意する）。**入口へ移すのはユーザーが指示したときだけ**。Claude から勝手に入口へ載せない（「入口に載せますか」と聞くのはよい）。移すときは、まず**ゲームかどうかを判定**し（8.3。ゲーム・境界ならユーザーに相談して、入口ではなくあそびラボへ移すことがある）、保管庫のカードを消して `APPS` のいちばん下に足し、上の互換モードの比べ方をする。日付は入口の決まり（下）にそろえる。
 - サムネイルの撮り直し: サーバー `apps` を起動して `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/make-thumbs.ps1 [-Apps a,b]`。ヘッドレスの Chrome を DevTools プロトコルで動かし、`_dev/tools/thumb.html` が各アプリの準備（開始ボタン・カメラ移動など。アプリごとの手順は thumb.html の `SETUP`）を終えてから撮る。新しいアプリは `SETUP` と make-thumbs の一覧に足す。
 - 入口のカードは、`index.html` の `<script>` にある一覧 `APPS` から作る（2026-10-06〜。分野でしぼる・公開順／更新順の並べかえ・「新作／更新」の印もこの一覧から）。**入口へ移すアプリは `APPS` のいちばん下に足す**（並びが入口に載せた順になる。画面では「分野ごと」の分野の中も「新着順」も、公開が新しいものが先＝左。同じ日なら下に書いたほうが先）。分野を増やすときは `CATS` と、CSS の色（`--c-<分野>` を明るい・暗いの両方、`.c-<分野>`）を足す。
 - **使い方の動画のリンク**（2026-10-10〜）: 説明動画を YouTube に予約・公開したら、`APPS` のそのアプリに `video:{id:'<videoId>', at:'<publishAt>'}` を書く（値は `_dev/promo/<app>-guide.upload.json` と同じ）。`at` を過ぎると、カードの説明文の下の行（左寄せ）に「▶ 使い方の動画」が出る（別タブ、英語の入口では英語の字幕つき）。先に push しておけば公開の時刻に出る。YouTube のアイコンは使わない（ブランドのきまりで、アイコンのリンク先はチャンネルだけ）。印は自分で描いた丸に ▶。
 - 入口のカードには**作成日と更新日**（`APPS` の `created` と `updated`。画面では「公開」「更新」）。作成日は開発メモ・ランチャーのいちばん古い日付（Git の記録は 2026-10-04 から）、**更新日はそのアプリの中身（機能・内容・画面の説明）が変わった日**。ファビコン・入口のページのための変更など、中身が変わらない一括の変更は数えない（2026-10-05 のファビコン追加は数えていない）。アプリの中身を直したら、同じコミットで入口の更新日も書き換える。 印はきょう・きのう・おとといの公開に「新作」、きょう・きのう・おとといの更新に「更新」（`FRESH_DAYS = 3`。2026-10-10 に2日から3日へ）。両方に当たるときは「新作」を優先（公開から3日は新作として見せる。2026-10-07 にユーザーが決めた）。
-- **アクセス解析**（2026-10-06〜）: Google アナリティクス 4（測定 ID `G-E2VPYKV2Y9`。公開してよい値で、集計を見られるのはユーザーの Google アカウントだけ）。入口の `index.html`・`archive.html`・各アプリの `index.html` の、ファビコンの `<link rel="icon">` の次の行に、`<script>/* アクセス解析 Google Analytics 4 …` で始まる1行を置く（どれも同じ1行。いちばん確かなのは入口の `index.html` からコピーすること）。`location.hostname` が `sishiya.github.io` のときだけ gtag.js を読むので、ローカル・Artifact では何もしない（Artifact は外のスクリプトを読めない）。Google シグナルと広告用の個人に合わせた設定はオフにしている。`versions/` とランチャーには入れない。**新しいアプリを作ったとき**（保管庫に置く時点で）は、この1行も足す。GA の規約で、使っていることを入口の下（`#analytics`「アクセス解析について」）に書いている。保管庫からもそこへリンクしている。確かめ方: ローカルでは `window.gtag` が `undefined` で、googletagmanager へのリクエストがないこと。push のあとは、GA の「リアルタイム」に Pages で開いた自分のアクセスが出ること。
+- **アクセス解析**（2026-10-06〜）: Google アナリティクス 4（測定 ID `G-E2VPYKV2Y9`。公開してよい値で、集計を見られるのはユーザーの Google アカウントだけ）。入口の `index.html`・`archive.html`・各アプリの `index.html` の、ファビコンの `<link rel="icon">` の次の行に、`<script>/* アクセス解析 Google Analytics 4 …` で始まる1行を置く（どれも同じ1行。いちばん確かなのは入口の `index.html` からコピーすること）。`location.hostname` が `sishiya.github.io` のときだけ gtag.js を読むので、ローカルでは何もしない。Google シグナルと広告用の個人に合わせた設定はオフにしている。`versions/` とランチャーには入れない。**新しいアプリを作ったとき**（保管庫に置く時点で）は、この1行も足す。GA の規約で、使っていることを入口の下（`#analytics`「アクセス解析について」）に書いている。保管庫からもそこへリンクしている。確かめ方: ローカルでは `window.gtag` が `undefined` で、googletagmanager へのリクエストがないこと。push のあとは、GA の「リアルタイム」に Pages で開いた自分のアクセスが出ること。
 - 紹介動画は将来（まだ作らない）。
 - 公開を確かめるとき: push のあと1〜2分待って、Pages の URL を Browser ペインで開き、DEVNOTES の「確認のしかた」を通す。
 
-### 8.2 Artifact（1ファイルで完結し、外のデータを読まないアプリ）
+### 8.2 Artifact（以前の公開先。いまは使わない）
 
-- 公開は**既存の Artifact URL へ同じファイルを再公開**する（新しい URL を作らない）。
-- Artifact の URL は Git に入れない。ルートの `PUBLISH.local.md`（この PC だけ、`.gitignore` 済み）に書き、DEVNOTES には Artifact の**タイトル**だけ書く。`PUBLISH.local.md` がない PC では、Artifact の一覧（`action: "list"`）でタイトルを探して URL を確かめ、`PUBLISH.local.md` を作り直す。新しく公開したら必ず足す。
-- 公開する `index.html` には doctype や html/head/body タグを書かない（公開時に包まれる）。ランチャーはローカル用なので書く。
-- 外部ライブラリは cdnjs などの許可された CDN から読む。
-- ただし `<meta name="viewport" content="width=device-width,initial-scale=1">` は index.html の先頭に**書いておく**。公開版は Artifact が足してくれるが、ローカルではこれがないとスマホ表示（Chrome のデバイス表示・Browser ペインのモバイル表示）でも PC のレイアウトになる。公開版で重複しても問題ない。
-
-- 再公開が「読んでいないファイルがある」と止められたら、公開中のファイルのハッシュを `versions/` の直前の版と比べ、同じなら上書きしてよい。
+- 以前は、1ファイルで完結し外のデータを読まないアプリ（体内ダイブ・尿の旅・血管の旅・ヒトへの46億年・量子の実験室・電波の見える部屋・いきものの感じる世界・免疫のたたかい）を Claude の Artifact でも公開していた。**いまはすべて GitHub Pages で公開し、Artifact へは公開・再公開しない**（2026-10-11 ユーザーの指摘で文書を直した）。
+- 各アプリの DEVNOTES にある「Artifact に公開済み」「Artifact へは再公開していない」などは当時の記録。古い Artifact の URL はルートの `PUBLISH.local.md`（この PC だけ、Git に入れない）に残っている。
+- その名残で、多くのアプリの `index.html` は doctype や html/head/body タグを書かない形（Pages では互換モードで開く。8.1 の比べ方で確かめてある）。ランチャーはローカル用なので書く。
+- `<meta name="viewport" content="width=device-width,initial-scale=1">` は index.html の先頭に**書いておく**（ないとスマホ表示でも PC のレイアウトになる）。
 
 ### 8.3 ゲームかどうかの判定と、あそびラボへの移植（2026-10-10〜）
 
@@ -201,7 +199,7 @@ YouTube に予約した動画は、**公開の前日に、翌日公開の分を�
 - この約束と「YouTube の秘密を読まない」は、`.claude/settings.json` のフック（`.claude/hooks/guard.pl`）でも守っている（2026-10-10〜。`_dev/tools/README.md`）。フックは、コマンドの先頭に `MANABI_PUSH_OK=1` がついた `git push` だけを通す（Claude はユーザーの指示があったときだけこれをつける）。force push はいつも止める。
 - コミットの作者は `sishiya <85350751+sishiya@users.noreply.github.com>`（GitHub の代わりのアドレス。本当のメールアドレスは使わない）。新しい PC でも `git config user.name` と `user.email` をこの値にする。
 - コミットメッセージは日本語で、何をしたか1行（例: 「evolution v009: 想像の生き物」）。push 前のコミットは作り直してよいが、push 後は作り直さない。
-- 新しい PC では: Git と Claude デスクトップを入れてクローン → `git config core.hooksPath .githooks` と `git config core.quotepath false` → `.private-words.txt` と `PUBLISH.local.md` を作る（8章）。
+- 新しい PC では: Git と Claude デスクトップを入れてクローン → `git config core.hooksPath .githooks` と `git config core.quotepath false` → `.private-words.txt` を作る（7章）。
 - Claude のメモリと会話の履歴は PC ごと（移らない）。だから大事なことは必ずこのフォルダのメモ（RULES・各 DEVNOTES）に書く。
 - **ユーザーがローカルで開くとき**は、ルートの `start.bat` をダブルクリック（`_dev/tools/start.ps1` が、このフォルダのサーバーが動いていればそれを使い、なければ 8765・8766・8767… の空いているポートで起動して、まなびラボを開く。`start.bat <フォルダ名>` でアプリを直接）。**.bat と start.ps1 は英語（ASCII）だけで書く**（cmd は .bat を、PowerShell 5.1 は BOM なしの .ps1 を ANSI として読むので、UTF-8 の日本語は文字化けする）。
 - ローカル確認のサーバーは `.claude/launch.json` の `apps`（8765）。別の会話が使っていたら、または「Windows が予約しているポート」と言われて起動できないとき（2026-10-05 に発生）は `apps-2`（8766）、それも使われていたら `apps-3`（8767。2026-10-06 に追加）、さらに `apps-4`（8768。2026-10-06 に追加）。

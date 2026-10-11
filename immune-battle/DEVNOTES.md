@@ -5,15 +5,15 @@
 病原体（インフルエンザ・新型コロナ・ノロの3つのウイルスと、黄色ブドウ球菌・肺炎球菌・大腸菌の3つの細菌）がからだに入ってから、増えて、免疫に片づけられるまでを、ミクロの断面（大きな画面）・人体の小窓・日ごとのグラフで見る。企画は `PLAN.md`。ほかのアプリとはエンジンが別（Canvas 2D、外部ライブラリなし）。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: 最新は v5e（`versions/v005e-english`、英語対応。下の「英語対応」。Artifact へはまだ再公開していない）。その前の公開は v5b（`versions/v005b-credits`、使っているものの表記だけ追加。2026-10-04 に再公開済み）。**リリース 1.0**（`versions/release-1.0` ＝ v5 と同じ内容、2026-10-04）。v5（`versions/v005-memory-vaccine`）＝段階D（2回目の感染・ワクチンのしくみ）＋抗生物質のしくみの図＋仕上げ（段階E）。Artifact に公開済み（タイトル「免疫のたたかい」、URL は `../PUBLISH.local.md`、共有はまだ自分だけ）。更新は同じ URL へ再公開。
-- 2026-10-05 `versions/v005c-favicon`: ファビコン（タブのアイコン、SVG を埋め込み）を追加。GitHub Pages（まなびラボ）用。Artifact へはまだ再公開していない。
+- **いまの状態**: 最新は v5e（`versions/v005e-english`、英語対応。下の「英語対応」。Artifact へは再公開していない（いまは Pages だけ。`../RULES.md` 8.2））。その前の公開は v5b（`versions/v005b-credits`、使っているものの表記だけ追加。2026-10-04 に再公開済み）。**リリース 1.0**（`versions/release-1.0` ＝ v5 と同じ内容、2026-10-04）。v5（`versions/v005-memory-vaccine`）＝段階D（2回目の感染・ワクチンのしくみ）＋抗生物質のしくみの図＋仕上げ（段階E）。Artifact（タイトル「免疫のたたかい」）にも公開していた。いまは GitHub Pages で公開（Artifact へは再公開しない。`../RULES.md` 8.2）。
+- 2026-10-05 `versions/v005c-favicon`: ファビコン（タブのアイコン、SVG を埋め込み）を追加。GitHub Pages（まなびラボ）用。Artifact へは再公開していない（いまは Pages だけ。`../RULES.md` 8.2）。
 - **次にやること**: ユーザーの感想しだい。案は `PLAN.md` の C2（異物・二次感染・尿の旅とつなぐ）。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。
 - **動かし方**: 分割版なので `.claude/launch.json` の `apps`（8765）か `apps-2`（8766）で `http://localhost:<port>/immune-battle/index.html`。
 - **デバッグ用**: `window.__ib` — `set({pk, body, mem, dose, inn, adp, speed, resist})`（変えて最初から）、`run(日数)`（絵を描かずに進める）、`frame(n)`（1/30秒のコマを n 回。`UI.speed` と `UI.playing` に従う。Browser ペインでは rAF が遅いのでこれで進める）、`counts()`（画面の粒の数と細胞の状態）、`err`、`SIM`（状態 `y`・観測 `o`・履歴 `hist`・予測 `fc`・消えた道の合計 `tally`）、`MI`（ミクロの画面）。
 - **モデルの調整用**: `dev/tune.js`（公開しない）。コンソールで読み込んで `tuneRun('flu','adult',5,'none',true)`、`tuneTable('staph')`。モデルだけを開く `dev/model.html` でも使える（アプリが壊れていても調整できる）。
-- **区切りごとに**: ① `versions/v0NN-名前/` に index.html・css・js を丸ごとコピー ② `launcher.html` にカード・表 ③ 下の「状態」 ④ 「確認のしかた」を通す ⑤（公開済みなら）同じ URL へ再公開。
-- **公開のコマンド**（Artifact の publish）: `file_path` = `immune-battle/index.html`、`files` = `{"css/style.css":"immune-battle/css/style.css","js/model.js":"immune-battle/js/model.js","js/text.js":"immune-battle/js/text.js","js/text-en.js":"immune-battle/js/text-en.js","js/sim.js":"immune-battle/js/sim.js","js/micro.js":"immune-battle/js/micro.js","js/draw.js":"immune-battle/js/draw.js","js/scales.js":"immune-battle/js/scales.js","js/zoom.js":"immune-battle/js/zoom.js","js/body.js":"immune-battle/js/body.js","js/chart.js":"immune-battle/js/chart.js","js/main.js":"immune-battle/js/main.js"}`。JS を足したら index.html の `<script>` とこの一覧の両方に足す。`dev/` は送らない。
+- **区切りごとに**: ① `versions/v0NN-名前/` に index.html・css・js を丸ごとコピー ② `launcher.html` にカード・表 ③ 下の「状態」 ④ 「確認のしかた」を通す ⑤ commit・push（＝Pages に公開。公開前チェックのあと）。
+- **公開**: GitHub Pages（push で。`https://sishiya.github.io/manabi-lab/immune-battle/`）。JS を足したら index.html の `<script>` に足す。
 - **ユーザーの好み**: 正確さ・本物らしさ重視。説明は 確か／推定／演出 を分ける。子どもにも読める日本語。ミクロの大きさで見せつつ、小窓で人体の様子が分かるように（ユーザーの希望）。
 
 ## ファイル構成

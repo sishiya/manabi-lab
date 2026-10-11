@@ -6,14 +6,12 @@
 
 ## 別セッションで続けるとき（まずここ）
 
-- **いまの状態**: 最新は v008f（`versions/v008f-impact-winter`。衝突の冬の霧の直し。その前が v008e＝英語対応、下の「英語対応」。Artifact へはまだ再公開していない）。その前の公開は v008b（`versions/v008b-credits`。2026-10-04 に公開済み）。公開済み（タイトル「ヒトへの46億年」、URL は `../PUBLISH.local.md`、共有は「リンクを知っている全員」）。初期リリース 1.0 は `versions/release-1.0`（v003 と同じ）、リリース 1.1 は `versions/release-1.1`（v007 と同じ）。
+- **いまの状態**: 最新は v008f（`versions/v008f-impact-winter`。衝突の冬の霧の直し。その前が v008e＝英語対応、下の「英語対応」。Artifact へは再公開していない（いまは Pages だけ。`../RULES.md` 8.2））。その前の公開は v008b（`versions/v008b-credits`。2026-10-04 に公開済み）。Artifact（タイトル「ヒトへの46億年」）にも公開していた。いまは GitHub Pages で公開（`../RULES.md` 8.2）。初期リリース 1.0 は `versions/release-1.0`（v003 と同じ）、リリース 1.1 は `versions/release-1.1`（v007 と同じ）。
 - **企画の段階**: `PLAN-future.md` の A（モデル）・B（未来）・C（もしも）は完了。**次は D（ゲーム化）**。下の「次にやること」に D の進め方の案。
 - **読む順**: このファイルの「ファイル構成」→ 直すファイルだけ読む。モデルの式は「地球システムの箱モデル」と「未来」の項（いまの値で書いてある）。
 - **動かす**: `preview_start` で `apps`（`.claude/launch.json`）→ `http://localhost:8765/evolution/index.html`。コンソールで `__evErr`（空ならOK）、`__ev.setAge(年前)`（未来は負）、`__ev.frame(n)`、`__ev.visible()`、`__ev.MODEL`。
-- **区切りごとに**: ① `versions/v0NN-名前/` に index.html・css・js を丸ごとコピー ② `launcher.html` にカードを足す ③ このファイルの「状態」に1項目 ④ 「確認のしかた」を通す ⑤ 公開（下の `files` をそのまま使う）。
-- **公開のコマンド**（Artifact の publish）: `file_path` = `evolution/index.html`、`files` =
-  `{"css/app.css":"evolution/css/app.css","js/core.js":"evolution/js/core.js","js/data.js":"evolution/js/data.js","js/text-en.js":"evolution/js/text-en.js","js/model.js":"evolution/js/model.js","js/future.js":"evolution/js/future.js","js/ifworld.js":"evolution/js/ifworld.js","js/terrain.js":"evolution/js/terrain.js","js/life.js":"evolution/js/life.js","js/effects.js":"evolution/js/effects.js","js/globe.js":"evolution/js/globe.js","js/world.js":"evolution/js/world.js","js/ui.js":"evolution/js/ui.js","js/main.js":"evolution/js/main.js","js/about.js":"evolution/js/about.js"}`
-  （JS を足したら、ここと index.html の `<script>` の両方に追加）。
+- **区切りごとに**: ① `versions/v0NN-名前/` に index.html・css・js を丸ごとコピー ② `launcher.html` にカードを足す ③ このファイルの「状態」に1項目 ④ 「確認のしかた」を通す ⑤ commit・push（＝Pages に公開。公開前チェックのあと）。
+- **公開**: GitHub Pages（push で。`https://sishiya.github.io/manabi-lab/evolution/`）。JS を足したら index.html の `<script>` に追加。
 - **ユーザーの好み**: 企画書を先に作ってから進める。開発メモをこまめに残す。版ごとのバックアップ。文章は日本語で、推定・想像はそう明記する。
 
 ## ファイル構成（v005〜。直すときは関係するファイルだけ読む）
@@ -39,7 +37,7 @@
 | `js/main.js` | カメラ、縮尺の切り替え、ラベル、ループ、デバッグ用 `__ev` | `frame` `setView` `zoomBy` |
 
 - **ローカルで確かめるとき**は http で開く（file:// だと Browser ペインが静的なスナップショットにして別ファイルを読めない）。`.claude/launch.json` の `apps`（PowerShell の小さなサーバー `.claude/serve.ps1`、ポート 8765）を `preview_start` で起動し、`http://localhost:8765/evolution/index.html`。
-- **公開**は Artifact の `files` で css/js も一緒に送る（`{"css/app.css":"evolution/css/app.css","js/core.js":…}`）。
+- **公開**は GitHub Pages（push すれば css/js もそのまま出る）。
 - **バックアップ**は `versions/<番号-名前>/` に index.html・css・js を丸ごとコピー（v004 までは1ファイル版）。
 - 一括置換で PowerShell を使うときの注意（3回ハマった）:
   1. 置換の組が1つだけのとき `@( @("a","b") )` は平たくなって1文字ずつ置換される（model.js が壊れた）。`@(,@("a","b"))` と書く。
@@ -48,7 +46,7 @@
   - 対策として、置換用の関数に「組は2要素の配列でなければ止める」チェックを入れている。複数行やテンプレート文字列を含む変更は Edit ツールで行うほうが安全。
 
 ## 状態
-- 公開先: タイトル「ヒトへの46億年」（URL は `../PUBLISH.local.md`。同じファイルを再公開して更新）
+- 公開先: GitHub Pages（`https://sishiya.github.io/manabi-lab/evolution/`）。以前の Artifact「ヒトへの46億年」は更新しない（`../RULES.md` 8.2）
 - **2026-10-03 ユーザーが v003 を初期リリース 1.0 とした（`versions/release-1.0`）。**
 - **2026-10-04 ユーザーが v007 をリリース 1.1 とした（`versions/release-1.1`）。段階D に着手。**
 - v001-first-draft: 初稿。`-(x)**2` の構文エラーで起動しない（記録用）。
@@ -107,7 +105,7 @@
 - v007b-viewport（2026-10-04）: index.html に viewport の meta を追加（ローカルでもスマホ幅の CSS が効く）。
 - v008-about-pause（2026-10-04）: 「このアプリについて」を開いている間はタイムラインを進めない（`frame()` の再生の条件に `$('about').hidden`）。`playing` は変えないので、保存・復帰はいらない。昼夜・生き物の動き・雲はそのまま動く。
 - v008b-credits（2026-10-04）: 「このアプリについて」に「使っているもの」（Three.js＝MIT、フォント＝SIL OFL）を追加。同じ日に再公開。
-- 2026-10-05 `versions/v008c-favicon`: ファビコン（タブのアイコン、SVG を埋め込み）を追加。GitHub Pages（まなびラボ）用。Artifact へはまだ再公開していない。
+- 2026-10-05 `versions/v008c-favicon`: ファビコン（タブのアイコン、SVG を埋め込み）を追加。GitHub Pages（まなびラボ）用。Artifact へは再公開していない（いまは Pages だけ。`../RULES.md` 8.2）。
 - 2026-10-10 `versions/v008e-english`: 英語対応（上の「英語対応」）。日本語の表示は v008d と同じ。「実際の長さ」ボタンの不具合も直した。（v008d はアクセス解析の1行を足しただけの版）
 - 2026-10-11 `versions/v008f-impact-winter`: 小天体の衝突のあとの「冬」（`seqState` の `dark`）が、白っぽい霧で地面を埋めていたのを直した（紹介動画の公開前の確認で、ショートの 31〜38秒が真っ白になっていて見つけた）。① 霧を濃くするだけで色は昼の水色のままだった → `dark` に合わせて霧の色を暗いすすの色 `WINTER_FOG` へ（`main.js`）。② 演出は時間（9秒）で進むので、時代が先へ進んでも続き、5000万年前ごろまで冬になっていた → `dark` に `sstep(6.2e7, 6.55e7, A)` を掛け、6600万年前から離れたら消す。確認: 6.63e7 から再生 → 65.6〜65.5 Ma で暗くなり、61 Ma で元の空。
 

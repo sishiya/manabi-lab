@@ -5,14 +5,14 @@
 WiFiの電波が家の中をどう伝わり、壁でどう弱まるかを真上から見るアプリ。体内ダイブ系とはエンジンが別（Three.js なし、WebGL2 を直接使う）。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: 最新は v4f（`versions/v004f-english`、**英語対応**。右上の JP／EN、`?lang=en`。作り方はルートの `../I18N.md`）。入口「まなびラボ」の「物理」に載せている（push で Pages に公開、push はユーザー）。Artifact への再公開は、ユーザーに内容を見せてから（v4f の時点で、最後に Artifact へ公開したのは v4b）。
+- **いまの状態**: 最新は v4f（`versions/v004f-english`、**英語対応**。右上の JP／EN、`?lang=en`。作り方はルートの `../I18N.md`）。入口「まなびラボ」の「物理」に載せている（push で Pages に公開、push はユーザー）。Artifact へは再公開しない（最後に Artifact へ公開したのは v4b。`../RULES.md` 8.2）。
 - **読む順**: `../RULES.md` → このファイル → `index.html`（1ファイル。材料は `MATS`、文章は `<section class="explain">`。日本語と英語の文を並べて書いている。下の「英語対応」）。
 - **出典の記録**（2026-10-07 に確かめたもの）: 材料の `er,c,d` は ITU-R P.2040-3（2023）表3と一致（MathWorks の `buildingMaterialPermittivity` の表で照合。P.2040-1 から同じ値。最新は P.2040-4（2025-09）だが表は未照合）。周波数は IEEE 802.11 のチャンネル6（2437MHz）と40（5200MHz）。自由空間損失は ITU-R P.525。計算法は FDTD（Taflove と Hagness 2005）。人の体・お湯（`water`）は**推定**: σ 1.7（2.4GHz）は Gabriel（1996）の筋肉の約1.74 S/m に近いが、5.2GHz の 4.3 は筋肉の約5 S/m より小さく、εr 20 は本当（筋肉約50・水約78）よりかなり小さい（格子のため）。受信の境目（−55/−67/−75/−85）とルーター出力 20dBm、壁の厚さは**目安**（規格の値ではない）。新しい数値を足したら「おもな出どころ」も足す（RULES 9）。
 
 ## 概要
-- 公開先: タイトル「電波の見える部屋」（URL は `../PUBLISH.local.md`）
+- 公開先: GitHub Pages（`https://sishiya.github.io/manabi-lab/wifi-wave/`）。以前は Artifact「電波の見える部屋」（更新しない）
 - 状態: v4b（`versions/v004b-notes/`。2026-10-04 に公開済み）。v4b で「体への影響を示すものではない」注記と、使っているもの（フォント＝SIL OFL）を追加。v2 で受信カードに「目安」の注記、スマホ対応（下記）。v3 で viewport メタを追加。v4 で横向きスマホをPCと同じ左右2列に。
-- 2026-10-05 `versions/v004c-favicon`: ファビコン（タブのアイコン、SVG を埋め込み）を追加。GitHub Pages（まなびラボ）用。Artifact へはまだ再公開していない。
+- 2026-10-05 `versions/v004c-favicon`: ファビコン（タブのアイコン、SVG を埋め込み）を追加。GitHub Pages（まなびラボ）用。Artifact へは再公開していない（いまは Pages だけ。`../RULES.md` 8.2）。
 - 2026-10-07 `versions/v004e-sources`: ユーザーの「出典を必ず画面に」（RULES 9）を受けて、「解説」に「おもな出どころ」（ITU-R P.2040-3、ITU-R P.525、IEEE 802.11、Taflove と Hagness 2005、Gabriel 1996）を追加。「しくみ」を書き直し、人の体・お湯の値を「簡略化した推定」、受信の強さの境目・ルーター出力を「目安」と明記。格子の補正と簡単にしたところ（床・天井・家具・鉄筋なし、偏波は1通り、周波数は1つ）も画面に。コンクリートの説明を「鉄筋コンクリート」から「厚さ18cm（中の鉄筋は省略）」に（鉄筋は計算に入っていないため）。電子レンジの「WiFiと同じ2.45GHz」を「WiFiの2.4GHz帯と同じ」に。CSS `details ul.src`。
 - 2026-10-10 `versions/v004f-english`: **英語対応**（`../I18N.md` の形の試しの1本）。先頭の `<script>` で `LANG` と `L(ja,en)`・`setLang()` を決め、HTML の文は `lang="ja"`／`lang="en"` を並べて CSS で片方を隠す。JS の文（材料・間取り・ヒント・受信の判定・キャンバスの部屋名・通路の値・時間の表示）は `L()`。億・兆は英語では billion・trillion（`fmtOku`）。英語の「玄関」ラベルだけ、ルーターの名札と重ならないよう右にずらした（`L(1.35,2.05)`）。日本語の見た目・計算は変えていない（確認のしかた2〜4の値が同じ）。
 - 1ファイル完結（`index.html`）。`<!doctype>` なし（公開時に付く）。ローカル確認は `.claude/launch.json` の `apps`（8765）または `apps-2`（8766）で `http://localhost:<port>/wifi-wave/index.html`。

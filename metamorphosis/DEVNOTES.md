@@ -12,7 +12,7 @@
 - **デバッグ用**: `window.__mm` — `setT(t)`（その時間へ移して描く。t は蛹になった日 P0 からの日数、羽化＝18）、`t()`、`frame(n)`（1/30秒のコマを n 回。Browser ペインが裏にあると rAF が止まるのでこれで進める）、`S`（最後に描いた状態: `hits` `anchors` `debris` `cam`）、`VIEW`（`mode` 'in'／'cut'／'out'、`cats`、`sel`）、`open(id)`、`err`。
   - Browser ペインのスクリーンショットが1つ前の絵のことがある → `setT` を2回（間に 0.5 秒）してから撮る。
 - **区切りごとに**: ① `versions/v0NN-名前/` に index.html・css・js を丸ごとコピー ② `launcher.html` にカード・表 ③ 下の「状態」 ④ 「確認のしかた」を通す ⑤ 公開前チェック → コミット（push はユーザー）。中身を変えたら入口 `../index.html` のカードの更新日も。
-- **公開**: GitHub Pages（入口に載せたので push で公開）。Artifact にするなら `file_path` = `metamorphosis/index.html`、`files` = css/style.css と js/ の7つ（data・text・body・organs・draw・chart・main）。
+- **公開**: GitHub Pages（入口に載せたので push で公開）。
 - **ユーザーの好み**: 正確さ重視。不確かなことは注釈（推定の札）を入れる。研究が進んでいる虫をベースにしてよい。写真のような「割った断面」は記録が足りなければ作らない（色だけ本物に近づけた「割って見る」にした）。子どもにも読める日本語。 「割って見る」は外から見るの仲間＝人の目にどう見えるか（どろっとした体液、質感あり）。蛹から羽化への切りかえは唐突にしない（アニメーションでつなぐ）。
 
 ## ファイル構成
