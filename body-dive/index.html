@@ -74,6 +74,10 @@ body.orbit #reticle,body.tps #reticle{display:none}
 #legend b{width:7px;height:7px;flex:none;border-radius:1px}
 #legend span.g{margin-left:auto;color:var(--hot);font-family:var(--f-mono)}
 #bRisk.risk1{color:#ffd27a}#bRisk.risk2{color:#ffa060}#bRisk.risk3{color:var(--shut);font-weight:700}
+#side .more{display:none}
+#side.open .more{display:block}
+#side .kv .alc,#side .kv .risk{display:none}
+#side.alc .kv .alc,#side.risk .kv .risk{display:block}
 #spark{display:block;width:100%;height:46px;margin-top:8px}
 #gates{list-style:none;margin:8px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;font-size:11px}
 #gates li{display:flex;align-items:center;gap:6px;color:var(--muted)}
@@ -142,8 +146,6 @@ legend b{font-family:var(--f-mono);color:var(--gut);margin-right:8px}
   #toast{top:33%;font-size:13px;padding:6px 12px}
   .langsw+.eyebrow{padding-right:96px}
   .sign{font-size:10.5px;padding:3px 6px}.sign b{font-size:11.5px}.sign span{font-size:10px}.sign.big b{font-size:12.5px}
-  #side .more{display:none}
-  #side.open .more{display:block}
   #legend{grid-template-columns:1fr}
   #map{width:64px;height:166px}
   .card h2{font-size:42px}
@@ -173,24 +175,26 @@ legend b{font-family:var(--f-mono);color:var(--gut);margin-right:8px}
 
 <aside id="side" class="hud" hidden>
   <section class="panel" id="sMe">
-    <h3><span><span lang="ja">あなた</span><span lang="en">YOU</span></span><button id="sideToggle" type="button" style="padding:2px 8px;font-size:10px"><span lang="ja">詳細</span><span lang="en">More</span></button></h3>
+    <h3><span><span lang="ja">あなた</span><span lang="en">YOU</span></span><button id="sideToggle" type="button" aria-expanded="false" style="padding:2px 8px;font-size:10px"><span lang="ja">詳細</span><span lang="en">More</span></button></h3>
     <div class="me">
       <div id="swatchBox"><div id="swatch"></div></div>
       <div><b id="meName">—</b><div id="meState">—</div><div id="meMass" class="mono">—</div></div>
     </div>
     <div class="more"><div id="bar"></div><ul id="legend"></ul></div>
+    <!-- いつも見せるのは、時間と、いまの素材で意味のある行だけ（2026-10-11 UX: 情報をしぼる）。ほかは「詳細」 -->
+    <dl class="kv mono" style="margin-top:10px">
+      <dt><span lang="ja">体内時間</span><span lang="en">Body time</span></dt><dd><span id="bTime">—</span> <span id="bScale" style="color:var(--dim)">×1</span></dd>
+      <dt class="alc"><span lang="ja">血中アルコール</span><span lang="en">Blood alcohol</span></dt><dd class="alc" id="bBac">0.000%</dd>
+      <dt class="risk"><span lang="ja">危険度</span><span lang="en">Danger</span></dt><dd class="risk"><span id="bRisk">—</span></dd>
+    </dl>
+    <canvas id="spark" hidden></canvas>
   </section>
   <section class="panel more">
     <h3><span lang="ja">からだ</span><span lang="en">BODY</span></h3>
     <dl class="kv mono">
-      <dt><span lang="ja">体内時間</span><span lang="en">Body time</span></dt><dd id="bTime">—</dd>
-      <dt><span lang="ja">時間の速さ</span><span lang="en">Time speed</span></dt><dd id="bScale">×1</dd>
       <dt><span lang="ja">胃の内容</span><span lang="en">In stomach</span></dt><dd id="bStom">—</dd>
       <dt><span lang="ja">胃腸の動き</span><span lang="en">Gut activity</span></dt><dd id="bPhase">—</dd>
-      <dt><span lang="ja">血中アルコール</span><span lang="en">Blood alcohol</span></dt><dd id="bBac">0.000%</dd>
-      <dt><span lang="ja">危険度</span><span lang="en">Danger</span></dt><dd id="bRisk" class="risk0">—</dd>
     </dl>
-    <canvas id="spark" hidden></canvas>
     <ul id="gates"></ul>
   </section>
   <section class="panel more">
@@ -199,7 +203,6 @@ legend b{font-family:var(--f-mono);color:var(--gut);margin-right:8px}
       <dt><span lang="ja">内径</span><span lang="en">Inner width</span></dt><dd id="rDia">–</dd>
       <dt><span lang="ja">入口から</span><span lang="en">From entrance</span></dt><dd id="rDist">–</dd>
       <dt><span lang="ja">速度</span><span lang="en">Speed</span></dt><dd id="rSpd">–</dd>
-      <dt><span lang="ja">操縦</span><span lang="en">Control</span></dt><dd id="rMode">–</dd>
     </dl>
   </section>
 </aside>
@@ -219,11 +222,10 @@ legend b{font-family:var(--f-mono);color:var(--gut);margin-right:8px}
     <button id="btnRemove" type="button" hidden><span lang="ja">内視鏡で取り出す</span><span lang="en">Remove by endoscope</span></button>
     <button id="btnMeal" type="button"><span lang="ja">食事をする</span><span lang="en">Eat a meal</span><kbd>M</kbd></button>
     <button id="btnFF" type="button"><span lang="ja">早送り ×10</span><span lang="en">Fast ×10</span><kbd>F</kbd></button>
-    <button id="btnSpeed" type="button"></button>
     <button id="btnOrbit" type="button"><span lang="ja">外観</span><span lang="en">Outside</span><kbd>V</kbd></button>
     <button id="btnMenu" type="button"><span lang="ja">やり直す</span><span lang="en">Restart</span></button>
   </div>
-  <div id="keys"><span lang="ja">W/S 前後 · A/D 横 · Q/E 上下 · Shift 加速 · ドラッグ 視点<br>順路モード中は W だけで順路を進む · G 向き切りかえ / 自由移動</span><span lang="en">W/S forward/back · A/D sideways · Q/E up/down · Shift faster · drag to look<br>In route mode, W alone follows the route · G switches direction / free movement</span></div>
+  <div id="keys"><span lang="ja">W/S 前後 · Shift 速く · ドラッグ 視点（自由移動では A/D 横 · Q/E 上下）</span><span lang="en">W/S forward/back · Shift faster · drag to look (free movement: A/D sideways · Q/E up/down)</span></div>
 </div>
 
 <div id="stick"><div id="knob"></div></div>
@@ -978,8 +980,7 @@ const MATS={
  rice:{n:'ごはん',d:'ひと口20g。主にでんぷん。唾液で分解が始まり、胃を早く出る。',comp:{water:12,protein:.5,fat:.06,carb:7.1,fiber:.3,ash:.02},size:12,color:[.95,.94,.9],dig:true,rate:1/100,acidC:[.86,.83,.72],entries:['mouth']},
  veg:{n:'キャベツ',d:'ひと口20g。ほとんど水と食物繊維。緑は胃酸で黄緑〜オリーブ色に。',comp:{water:18.5,protein:.26,fat:.04,carb:.7,fiber:.36,ash:.1},size:25,color:[.55,.78,.38],dig:true,rate:1/120,acidC:[.55,.56,.27],entries:['mouth']},
  metal:{n:'ステンレス球',d:'直径8mm・2.1g。溶けず吸収もされない。胃を出るには空腹期の強い収縮が必要。',comp:{metal:2.1},size:8,color:[.74,.76,.8],dig:false},
- sake1:{n:'日本酒 1合',d:'180mL・アルコール約22g。液体なのですぐ胃を出て、小腸で一気に吸収される。20歳未満の飲酒は法律で禁止。',comp:{water:148,ethanol:22,carb:8.8},size:0,liquid:true,color:[.93,.9,.78],dig:true,rate:1/12,acidC:[.9,.86,.7]},
- sake4:{n:'日本酒 4合',d:'720mL・アルコール約88g。一気に飲むと急性アルコール中毒の危険。直腸から入れると血中濃度が急上昇し命にかかわる（実際に死亡事故がある）。絶対にまねしないこと。',comp:{water:593,ethanol:88,carb:35},size:0,liquid:true,color:[.93,.9,.78],dig:true,rate:1/20,acidC:[.9,.86,.7]},
+ sake4:{n:'日本酒 4合',d:'720mL・アルコール約88g。液体なのですぐ胃を出て、小腸で一気に吸収される。一気に飲むと急性アルコール中毒の危険。お尻から入れると命にかかわる（死亡例あり）。20歳未満の飲酒は法律で禁止。',comp:{water:593,ethanol:88,carb:35},size:0,liquid:true,color:[.93,.9,.78],dig:true,rate:1/20,acidC:[.9,.86,.7]},
  battery:{n:'ボタン電池',d:'リチウム電池CR2032（直径20mm）。食道に引っかかると約2時間で粘膜が深く傷つく。飲み込んだかもしれないときは、すぐ医療機関へ。',comp:{device:2.9},size:20,color:[.8,.82,.86],dig:false,battery:true},
  mushroom:{n:'ツキヨタケ',d:'シイタケと間違えやすい毒きのこ（20g）。食べて30分〜1時間で嘔吐、その後に下痢。野生のきのこは自分で判断して食べないこと。',comp:{water:18,protein:.6,carb:1,fiber:.4,toxin:.01},size:22,color:[.72,.6,.42],dig:true,rate:1/90,acidC:[.62,.55,.4],toxic:true}
 };
@@ -990,8 +991,7 @@ if(LANG==='en')Object.entries({
   rice:['Rice','One 20 g bite. Mostly starch. Saliva starts breaking it down, and it leaves the stomach quickly.'],
   veg:['Cabbage','One 20 g bite. Almost all water and fiber. Stomach acid turns the green to yellow-green or olive.'],
   metal:['Stainless steel ball','8 mm across, 2.1 g. It doesn’t dissolve and isn’t absorbed. To leave the stomach it needs a strong fasting contraction.'],
-  sake1:['Sake, 1 gō','180 mL, about 22 g of alcohol. Being a liquid, it leaves the stomach quickly and is absorbed all at once in the small intestine. Drinking under age 20 is against the law in Japan.'],
-  sake4:['Sake, 4 gō','720 mL, about 88 g of alcohol. Drinking it all at once risks acute alcohol poisoning. Putting it into the rectum makes the blood level shoot up and can kill (people have actually died). Never try this.'],
+  sake4:['Sake, 4 gō','720 mL, about 88 g of alcohol. Being a liquid, it leaves the stomach quickly and is absorbed all at once in the small intestine. Drinking it all at once risks acute alcohol poisoning. Putting it in through the anus can kill (people have died). Drinking under age 20 is against the law in Japan.'],
   battery:['Button battery','A CR2032 lithium battery (20 mm across). If it gets stuck in the esophagus, it damages the lining deeply in about 2 hours. If someone might have swallowed one, get medical help right away.'],
   mushroom:['Tsukiyotake mushroom','A poisonous mushroom easily mistaken for shiitake (20 g). Vomiting starts 30 minutes to 1 hour after eating, then diarrhea. Never decide for yourself that a wild mushroom is safe to eat.'],
 }).forEach(([k,[n,d]])=>{MATS[k].n=n;MATS[k].d=d;});
@@ -1134,7 +1134,7 @@ function paintSwatch(el,big){
 let mode='demo';          // demo | play | result
 let control='free';       // free | guide
 let guideDir=1,autoOn=false,orbitOn=false,inBody=true;
-let speedMul=1,lastLook=-1e9;
+let lastLook=-1e9;
 const guide={R:ROUTES[0],s:0};
 const vel=V3(0,0,0),keys={};
 let lookDX=0,lookDY=0,wheel=0;
@@ -1195,7 +1195,7 @@ buildOpts($('optBelly'),'belly',BELLY,'hungry');
 document.querySelectorAll('#langsw button').forEach(b=>{b.setAttribute('aria-pressed',String(b.dataset.l===LANG));b.onclick=()=>{if(b.dataset.l!==LANG)setLang(b.dataset.l);};});
 document.title=L('体内ダイブ','Body Dive');
 $('map').setAttribute('aria-label',L('体の正面図。クリックでその場所へ移動','Front view of the body. Click to move there'));
-$('btnSpeed').textContent=L('速さ ×1','Speed ×1');updateButtons();
+updateButtons();
 function syncEntries(){}
 $('optMat').addEventListener('change',syncEntries);syncEntries();
 $('startForm').addEventListener('submit',e=>{e.preventDefault();
@@ -1221,19 +1221,18 @@ function begin(matKey,entry,belly){
   loc=locate(camera.position);
   tps=false;tpsPos.copy(camera.position); // 最初は一人称（T で三人称）
   setControl('guide',defaultDir());
-  toast(L(`${m.n}として${ENTRIES[entry][0]}から入った。`+(entry==='mouth'&&m.dig&&!m.liquid?'口にいる間はかまれて細かくなる。':'')+`順路モード（${dirName()}）: W を押し続けると進む · G で向き切りかえ・自由移動 · 体内時間は早送り ×10 で進む（F で通常の速さ）`,
-  `You are “${m.n}”, in through the ${ENTRIES[entry][0].toLowerCase()}. `+(entry==='mouth'&&m.dig&&!m.liquid?'In the mouth you get chewed into small pieces. ':'')+`Route mode (${dirName()}): hold W to move · G to switch direction / free movement · body time runs at fast-forward ×10 (F for normal speed)`));
+  toast(L(`${m.n}として${ENTRIES[entry][0]}から入った。`+(entry==='mouth'&&m.dig&&!m.liquid?'口にいる間はかまれて細かくなる。':'')+`W を押し続けると${dirName()}進む（G で向きを変える）`,
+  `You are “${m.n}”, in through the ${ENTRIES[entry][0].toLowerCase()}. `+(entry==='mouth'&&m.dig&&!m.liquid?'In the mouth you get chewed into small pieces. ':'')+`Hold W to move (${dirName()}) · G to change direction`));
 }
 function mass0(m){let s=0;for(const k in m.comp)s+=m.comp[k];return s;}
 function showStart(){mode='demo';$('start').hidden=false;$('result').hidden=true;$('side').hidden=true;SIM.on=false;P=null;orbitOn=false;
   guide.R=ROUTES[0];guide.s=0;control='guide';guideDir=1;autoOn=true;teleportTo(TUB.oral,0);updateButtons();}
 $('btnMenu').onclick=showStart;
-$('btnSpeed').onclick=()=>{speedMul=speedMul===1?3:1;$('btnSpeed').textContent=L('速さ ×','Speed ×')+speedMul;};
 $('btnAuto').onclick=()=>toggleAuto();
 $('btnGuide').onclick=()=>cycleGuide();
 $('btnFF').onclick=()=>toggleFF();
 $('btnOrbit').onclick=()=>toggleOrbit();
-$('sideToggle').onclick=()=>$('side').classList.toggle('open');
+$('sideToggle').onclick=()=>$('sideToggle').setAttribute('aria-expanded',String($('side').classList.toggle('open')));
 $('resAgain').onclick=showStart;
 $('btnMeal').onclick=()=>eatMeal();
 $('btnTps').onclick=()=>toggleTps();
@@ -1484,18 +1483,19 @@ const signBox=$('signs');
 [...SIGNS,...ORBIT_LABELS].forEach(o=>{const el=document.createElement('div');el.className='sign '+(o.orbit?'big':o.k);el.innerHTML=`<b>${o.t}</b>`+(o.s?`<span>${o.s}</span>`:'');el.hidden=true;signBox.appendChild(el);o.el=el;});
 const _pv=V3(0,0,0);
 function updateSigns(rc){
+  rc.updateMatrixWorld(); // この描画のカメラで位置を出す（前の描画の行列のままだと、回すと名前札がふるえた）
   const W=innerWidth,H=innerHeight,c=camera.position,show=mode!=='demo';
   for(const o of SIGNS){
     let vis=false;
     if(show&&!orbitOn&&inBody){const d=o.v.distanceTo(c);
       if(d<6.5&&o.tube===undefined){const L=locate(o.v);o.tube=L.score<.5?L.tube:null;}
       if(d<6.5&&d>.25&&(d<2.5||!loc||o.tube===loc.tube)){_pv.copy(o.v).project(rc);if(_pv.z<1&&Math.abs(_pv.x)<1.1&&Math.abs(_pv.y)<1.1){vis=true;
-        o.el.style.transform=`translate(${(_pv.x*.5+.5)*W}px,${(-_pv.y*.5+.5)*H}px) translate(-50%,-100%)`;o.el.style.opacity=clamp((6.5-d)/2.5,0,1);}}}
+        o.el.style.transform=`translate(${Math.round((_pv.x*.5+.5)*W)}px,${Math.round((-_pv.y*.5+.5)*H)}px) translate(-50%,-100%)`;o.el.style.opacity=clamp((6.5-d)/2.5,0,1);}}}
     o.el.hidden=!vis;
   }
   for(const o of ORBIT_LABELS){
     let vis=false;
-    if(orbitOn){_pv.copy(o.v).project(rc);if(_pv.z<1){vis=true;o.el.style.transform=`translate(${(_pv.x*.5+.5)*W}px,${(-_pv.y*.5+.5)*H}px) translate(-50%,-100%)`;}}
+    if(orbitOn){_pv.copy(o.v).project(rc);if(_pv.z<1){vis=true;o.el.style.transform=`translate(${Math.round((_pv.x*.5+.5)*W)}px,${Math.round((-_pv.y*.5+.5)*H)}px) translate(-50%,-100%)`;}}
     o.el.hidden=!vis;
   }
 }
@@ -1545,7 +1545,6 @@ function updateHUD(dt,now){
   const n=control==='guide'?{R:guide.R,s:guide.s,d:0}:(inBody?nearestOnRoutes(camera.position,P&&P.entry):null);
   $('rDist').textContent=!n||n.d>=3?'—':P&&P.entry==='anus'&&n.R.entry==='mouth'?L('肛門から ','from anus ')+Math.round(n.R.L-n.s)+' cm':n.R.label+' '+Math.round(n.s)+' cm';
   $('rSpd').textContent=spd.toFixed(1)+' cm/s';
-  $('rMode').textContent=autoOn?(guideDir>0?L('自動 · 奥へ','auto · inward'):L('自動 · 入口へ','auto · to entrance')):control==='guide'?(guideDir>0?L('順路 · 奥へ','route · inward'):L('順路 · 入口へ','route · to entrance')):(inBody?L('手動','manual'):L('手動 · 体外','manual · outside'));
   GATES.forEach(g=>$('gate-'+g.id).classList.toggle('open',g.open>.5));
   if(!P)return;
   $('bTime').textContent=fmtT(SIM.bodyT);
@@ -1553,7 +1552,7 @@ function updateHUD(dt,now){
   $('bStom').textContent=Math.round(SIM.content)+' mL';
   $('bPhase').textContent=SIM.phase===0?L('食後期','after a meal'):(LANG==='en'?['','fasting phase I (quiet)','fasting phase II','fasting phase III (strong contractions)']:['','空腹期 第1相（静か）','空腹期 第2相','空腹期 第3相（強い収縮）'])[SIM.phase];
   const bac=bacOf(SIM.blood);$('bBac').textContent=`${bac.toFixed(3)}% · ${stageOf(bac)[1]}`;
-  const hz=hazard();$('bRisk').textContent=hz[0]?`${(LANG==='en'?['','caution','warning','danger']:['','注意','警告','危険'])[hz[0]]} · ${hz[1]}`:L('なし','none');$('bRisk').className='risk'+hz[0];
+  const hz=hazard();$('side').classList.toggle('alc',SIM.bacPeak>=.001);$('side').classList.toggle('risk',hz[0]>0);$('bRisk').textContent=hz[0]?`${(LANG==='en'?['','caution','warning','danger']:['','注意','警告','危険'])[hz[0]]} · ${hz[1]}`:L('なし','none');$('bRisk').className='risk'+hz[0];
   drawSpark();
   $('meState').textContent=formOf();
   const m=mass();$('meMass').textContent=`${m.toFixed(1)} g`+(P.mat.dig?L(` · 水分 ${Math.round(waterFrac()*100)}%`,` · water ${Math.round(waterFrac()*100)}%`):'');
@@ -1658,7 +1657,7 @@ function stepFree(dt){
   inp.z+=stick.y;inp.x+=stick.x;
   if(inp.lengthSq()>1)inp.normalize();
   const r=inBody&&loc&&loc.seg?loc.seg.r:8;
-  const top=3.2*clamp(r/1.1,.3,inBody?2.4:12)*(keys.ShiftLeft||keys.ShiftRight?3:1)*speedMul;
+  const top=3.2*clamp(r/1.1,.3,inBody?2.4:12)*(keys.ShiftLeft||keys.ShiftRight?3:1);
   inp.applyQuaternion(camera.quaternion);
   vel.addScaledVector(inp,top*4*dt);
   if(wheel){vel.addScaledVector(V3(0,0,-1).applyQuaternion(camera.quaternion),wheel*top*.35);wheel=0;}
@@ -1677,7 +1676,7 @@ function stepGuide(dt,now){
   const R=guide.R,cur=routeAt(R,guide.s);
   let w=(keys.KeyW?1:0)-(keys.KeyS?1:0)-stick.y+(wheel*.6);wheel=0;
   if(autoOn)w=1;
-  const base=(mode==='demo'?2.2:4.5)*clamp(cur.r/1.1,.5,2.5)*(keys.ShiftLeft||keys.ShiftRight?3:1)*(mode==='demo'?1:speedMul);
+  const base=(mode==='demo'?2.2:4.5)*clamp(cur.r/1.1,.5,2.5)*(keys.ShiftLeft||keys.ShiftRight?3:1);
   let ds=guideDir*w*base*dt;
   if(R.entry==='mouth'&&guideDir>0){const fl=flowAt();if(fl)ds+=fl*dt;}
   const prevS=guide.s;
@@ -1789,7 +1788,7 @@ addEventListener('resize',onResize);
 let skipRender=false;
 // 検証用: 画面が非表示でも sec 秒ぶんシミュレーションを進める
 function simRun(sec,keysDown){(keysDown||[]).forEach(k=>keys[k]=true);skipRender=true;let t=prevT;for(let i=0;i<sec*60;i++){t+=1000/60;frameBody(t);}skipRender=false;(keysDown||[]).forEach(k=>keys[k]=false);}
-window.__bd={simRun,tpsCam,avatar,locate,SIM,G,get P(){return P;},begin,showResult,get loc(){return loc;},camera,guide,setControl};
+window.__bd={simRun,frameBody,orbitCam,tpsCam,avatar,locate,SIM,G,get P(){return P;},begin,showResult,get loc(){return loc;},camera,guide,setControl};
 if(innerWidth<760)$('side').classList.remove('open');
 showStart();
 mapSetup();
