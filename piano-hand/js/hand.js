@@ -665,10 +665,15 @@ function cgSmooth(w, b, lam) {
 // 弾き終えたあと（v045〜）: 最後の音を離したら手首はその場に（なめらかさの計算の続きで横へ 30mm すべっていた。超絶技巧の練習曲の最後）。
 // 演奏会の所作（余韻が消えるまで手を鍵盤から離さず、消えたら手をひざへ）にならって手をひざのほうへ戻す動きを試したが、
 // 肘が曲がらない腕なので腕ごと後ろへ平行に動いて宙に浮き、機械のように見えたのでやめた（2026-10-11、ユーザーの了承）。
-// 手は鍵の上で力を抜いた形のまま、音と光が消えおえるまで再生を続ける（tFin）
+// 手は鍵の上で力を抜いた形のまま、音と光が消えおえるまで再生を続ける（tFin）。
+// 止めるときは、離した瞬間の速さから END_TAU 秒くらいでなめらかに止まる（その場でぴたりと止めると、速い曲で 220mm/秒 から急に止まってかくついた）
+const END_TAU = 0.08;
 function wristAt(plan, t) {
-  if (plan.tHold != null && t > plan.tHold) t = plan.tHold;
-  return wristAt0(plan, t);
+  if (plan.tHold == null || t <= plan.tHold) return wristAt0(plan, t);
+  const W = wristAt0(plan, plan.tHold), Wp = wristAt0(plan, plan.tHold - 1 / W_HZ);
+  const k = END_TAU * (1 - Math.exp(-(t - plan.tHold) / END_TAU)) * W_HZ; // 速さ（1コマあたり）× 進む時間
+  for (const i of [0, 1, 2, 3, 5, 6]) W[i] += (W[i] - Wp[i]) * k;
+  return W;
 }
 function wristAt0(plan, t) {
   const u = Math.min(plan.wx.length - 1.001, Math.max(0, (t - plan.wt0) * W_HZ));
@@ -832,8 +837,8 @@ function poseAt(plan, t) {
   }
   avoidBones(fingers, tgs, W);
   // 関節の速さの上限をかけた角度（bakeAngles）があれば、その角度で指を置く。目標に届かなければ err に出る（間に合わない＝押せない）
-  if (plan.ac && t >= plan.ac.t0 && t <= plan.ac.t1) {
-    const u = (t - plan.ac.t0) * ANG_HZ, i = Math.min(plan.ac.n - 2, Math.floor(u)), s = u - i;
+  if (plan.ac && t >= plan.ac.t0) { // 表より後は、表の最後の角度のまま（手首も止まっている）
+    const u = Math.min(t - plan.ac.t0, plan.ac.t1 - plan.ac.t0) * ANG_HZ, i = Math.min(plan.ac.n - 2, Math.floor(u)), s = u - i;
     for (let f = 1; f <= 5; f++) {
       const A = plan.ac[f], at = a => a[i] + (a[i + 1] - a[i]) * s, F = FINGERS[f], fp = fingers[f];
       const ang = { yaw: at(A.yaw), a1: at(A.a1), a2: at(A.a2) };
@@ -853,7 +858,9 @@ function poseAt(plan, t) {
 const ANG_HZ = 240, JOINT_VMAX = 1500 * D2R;
 function bakeAngles(plan) {
   plan.ac = null;
-  const t0 = plan.wt0, t1 = plan.end + 0.5, n = Math.max(2, Math.ceil((t1 - t0) * ANG_HZ) + 1);
+  // 表は弾き終えたあとの余韻（光ともやが消えおえるまで）までとる。前は最後の音 ＋0.5 秒までで、そこで表のない角度に切りかわって
+  // 指が 3〜4mm 跳んでいた（v045 で余韻をのばしたら見えるようになった、ユーザーの指摘）。ペダルでのびた分も入るよう ＋4 秒
+  const t0 = plan.wt0, t1 = plan.end + 4, n = Math.max(2, Math.ceil((t1 - t0) * ANG_HZ) + 1);
   const ac = { t0, t1: t0 + (n - 1) / ANG_HZ, n };
   for (let f = 1; f <= 5; f++) ac[f] = { yaw: new Float32Array(n), a1: new Float32Array(n), a2: new Float32Array(n) };
   for (let i = 0; i < n; i++) {
