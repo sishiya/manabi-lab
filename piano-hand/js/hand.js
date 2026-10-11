@@ -631,7 +631,10 @@ function fingerTarget(plan, f, t, W) {
   const nt = toWorld(W, tipN(f, postAt(plan, t)));
   // 休むときは鍵の表面に軽く触れる（力を抜いた形の指先が鍵より REST_DROOP 以内の高さなら、重さで垂れて触れる。それより高ければ垂れきった所）
   const key = Math.max(surfaceZ(nt[2]), surfaceZ(nt[2] - 8)) + PAD + REST_OFF;
-  const rest = [nt[0], Math.max(key, nt[1] - REST_DROOP), nt[2]];
+  // 腕ごと・手首で持ち上げているあいだは、鍵の上で休む指の床（鍵の面）も持ち上げた分だけ上げる（v038〜、ユーザーの指摘「腕は上がるのに指先が
+  // 空中に残り、指がのびて見える」）。中間の構えでは手が低く、休む指は鍵に押されて曲がっていた（小指の第2関節 49°）。床が鍵のままだと、
+  // 手が上がると指が力を抜いた形（28°）までのびながら指先が鍵の近くに残った。本物は腕を持ち上げると、指は鍵の上の形のまま手と一緒に上がる
+  const wkr = wkAt(plan, t), rest = [nt[0], Math.max(key, Math.max(PAD + REST_OFF, nt[1] - wkr - REST_DROOP) + wkr), nt[2]]; // 持ち上げる前の高さ（白鍵の床）で形を決めて持ち上げた分を足す（指の形が保たれる）。黒鍵の床はそのまま
 
   if (p && t <= p.t1) { // 押している
     const P = pressPoint(p.m, f, p);
