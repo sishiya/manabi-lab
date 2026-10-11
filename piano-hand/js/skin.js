@@ -525,7 +525,7 @@ function buildNails(P) {
 // 姿勢から、骨ごとの世界の座標軸
 function poseBones(pose) {
   const W = pose.W, psi = W[3] || 0, sd = W[4] || 1;
-  const R = v => { const r = W[6] ? rollZ(W[6], v) : v; return rotY(psi, [r[0] * sd, r[1], r[2]]); }; // 傾けて、左手は鏡に映してから回す
+  const R = v => { const bv = W[7] ? pitchX(W[7], v) : v, r = W[6] ? rollZ(W[6], bv) : bv; return rotY(psi, [r[0] * sd, r[1], r[2]]); }; // 手首で曲げ・傾けて、左手は鏡に映してから回す（前腕は手首で曲げない）
   // 前腕は腕の向きに回し、手のひらと同じだけひねる（ひねりは前腕でおきる。手首だけひねると、手首の皮ふがねじれてこぶになった）
   const A = v => { const r = W[6] ? rollZ(W[6], v) : v; return rotY(W[5] || 0, [r[0] * sd, r[1], r[2]]); };
   const out = [{ o: [W[0], W[1], W[2]], x: A([1, 0, 0]), y: A([0, 1, 0]), z: A([0, 0, 1]) }, { o: [W[0], W[1], W[2]], x: R([1, 0, 0]), y: R([0, 1, 0]), z: R([0, 0, 1]) }];

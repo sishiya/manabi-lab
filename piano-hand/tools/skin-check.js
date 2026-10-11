@@ -194,3 +194,11 @@ window.__creases = (t, box = { x1: -5, z0: -95, z1: -10 }, hi = 0) => { const S 
     for (const [p, q] of [[a, b], [b, c], [c, a]]) { const k = p < q ? p + '_' + q : q + '_' + p, e = edges.get(k); if (e) e.push([n0, n1]); else edges.set(k, [[n0, n1]]); } }
   const res = []; for (const [k, e] of edges) { if (e.length < 2) continue; const p = +k.split('_')[0]; res.push([Math.acos(Math.min(1, dot3(e[0][1], e[1][1]))) * 57.3, Math.acos(Math.min(1, dot3(e[0][0], e[1][0]))) * 57.3, [P0[p * 3], P0[p * 3 + 1], P0[p * 3 + 2]]]); }
   return res.sort((x, y) => y[0] - x[0]); };
+// __timeSheet(hi, [t…], eyeOff) … 手 hi を、いくつかの時刻で同じ向きから撮って並べる（カメラは最初の時刻の手首 − 60mm を見る。eyeOff はそこからのカメラの位置）。
+// 左上に時刻と手首の曲げ W[7]
+window.__timeSheet = (hi, times, eyeOff) => { const cv = V.r.domElement; if (!cv.width) { V.r.setSize(1110, 742, false); V.cam.aspect = 1110 / 742; V.cam.updateProjectionMatrix(); }
+  const cw = cv.width / 2, ch = cv.height / 2, out = document.createElement('canvas'); out.width = cw * 3; out.height = ch * Math.ceil(times.length / 3); const g = out.getContext('2d');
+  __iso(true); const bg = V.scene.background; V.scene.background = new THREE.Color(0x30343c); const W0 = __ph.poseAt(times[0], hi).W;
+  times.forEach((t, i) => { __ph.setTime(t); step(); const tg = [W0[0], W0[1] - 10, W0[2] - 60]; V.cam.position.set(tg[0] + eyeOff[0], tg[1] + eyeOff[1], tg[2] + eyeOff[2]); V.cam.up.set(0, 1, 0); V.cam.lookAt(...tg); V.cam.updateMatrixWorld();
+    renderScene(t); renderScene(t); g.drawImage(cv, (i % 3) * cw, Math.floor(i / 3) * ch, cw, ch); const P = __ph.poseAt(t, hi); g.fillStyle = '#ff0'; g.font = '22px sans-serif'; g.fillText(t.toFixed(2) + 's 手首の曲げ ' + ((P.W[7] || 0) * 57.3).toFixed(1) + '°', (i % 3) * cw + 8, Math.floor(i / 3) * ch + 26); });
+  __iso(false); V.scene.background = bg; __sheet(out.toDataURL('image/jpeg', 0.9)); return 'ok'; };

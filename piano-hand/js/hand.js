@@ -209,8 +209,10 @@ const yawRange = side => side > 0 ? [YAW_MIN, YAW_MAX] : [-YAW_MAX, -YAW_MIN];
 function rotY(a, p) { const c = Math.cos(a), s = Math.sin(a); return [p[0] * c + p[2] * s, p[1], -p[0] * s + p[2] * c]; }
 // W[6] は手のひらの傾き（前腕のひねり。手の座標の前後の軸のまわり、+ で小指の側が下がる）
 function rollZ(a, p) { const c = Math.cos(a), s = Math.sin(a); return [p[0] * c + p[1] * s, -p[0] * s + p[1] * c, p[2]]; }
-function toWorld(W, p) { const r = W[6] ? rollZ(W[6], p) : p; const q = rotY(W[3] || 0, [r[0] * (W[4] || 1), r[1], r[2]]); return [W[0] + q[0], W[1] + q[1], W[2] + q[2]]; }
-function toLocal(W, p) { const q = rotY(-(W[3] || 0), [p[0] - W[0], p[1] - W[1], p[2] - W[2]]); q[0] *= W[4] || 1; return W[6] ? rollZ(-W[6], q) : q; }
+// W[7] は手首の曲げ（v036〜。手の座標の横の軸のまわり、+ で指先の側が下がる＝手首が上がって手のひらが指先の側へ傾く）
+function pitchX(a, p) { const c = Math.cos(a), s = Math.sin(a); return [p[0], p[1] * c + p[2] * s, -p[1] * s + p[2] * c]; }
+function toWorld(W, p) { const b = W[7] ? pitchX(W[7], p) : p, r = W[6] ? rollZ(W[6], b) : b; const q = rotY(W[3] || 0, [r[0] * (W[4] || 1), r[1], r[2]]); return [W[0] + q[0], W[1] + q[1], W[2] + q[2]]; }
+function toLocal(W, p) { const q = rotY(-(W[3] || 0), [p[0] - W[0], p[1] - W[1], p[2] - W[2]]); q[0] *= W[4] || 1; const r = W[6] ? rollZ(-W[6], q) : q; return W[7] ? pitchX(-W[7], r) : r; }
 const HAND_NAME = side => side > 0 ? L('右手', 'Right hand') : L('左手', 'Left hand');
 const HAND_OF = side => side > 0 ? L('右手の', 'right ') : L('左手の', 'left '); // 「右手の中指」
 
@@ -247,7 +249,7 @@ function buildPlan(song) {
   const hands = [];
   for (const side of [1, -1]) {
     const hn = notes.filter(n => (n.hand || 'R') === (side > 0 ? 'R' : 'L'));
-    if (hn.length) hands.push(buildHandPlan(hn, side));
+    if (hn.length) { CUR_PEDAL = song.pedalSec || parsePedal(song); hands.push(buildHandPlan(hn, side)); } // ペダルは手首の予備動作で使う（v036〜）
   }
   // お手本の運指（n.ref）: 曲の refR・refL（教本の運指）を、手ごとに音の順に
   for (const h of hands) {
@@ -481,28 +483,66 @@ function handLife(plan, ent, ta, N) {
     for (let i = Math.max(0, i0 - 2); i < Math.min(N, i0 + 8); i++) plan.wh[i] -= DIP * Math.exp(-((((ta + i / W_HZ) - n.t0 - 0.03) / 0.05) ** 2));
   }
 }
-// 手首で打つ: 手首で打つ音の前に、手首を WRIST_LIFT まで上げ、打つ時刻に向かって下ろす（指の形はそのまま）。
+// 手首で打つ: 手首で打つ音の前に、手首を WRIST_LIFT まで上げ、打つ時刻に向かって下ろす（v036〜、前の和音を押さえているあいだに上げはじめたら、指先は鍵に残って手首が曲がる: 下の PRE_LIFT）。
 // 前の音を離してから（最大 0.35 秒前から）の時間で上げ下げし、時間が短いほど小さく。値はこのアプリの目安
-let STROKE = 'wrist';
+let STROKE = 'arm'; // 最初は腕ごと大きく（v036〜、ユーザーの希望。v035 までは手首で）
 // 手首で打つときの上げる高さ（mm）と、上げはじめる早さの上限（秒）。'arm' は腕ごと大きく（肘から上げる）。どれも目安
 const WRIST_LIFT = 12, ARM_LIFT = 30, ARM_GAP = 0.25, ARM_SLOW = 0.45;
+// 予備動作と手首の曲げ（v036〜、ユーザーの指摘「同じ和音などで、手首や指の角度を変えずに上下に平行移動していて機械っぽい」
+// 「常に指が遅れるのではなく、和音を押さえて音を鳴らし続けているあいだに次の予備動作（持ち上げ）が始まると、鍵を押さえたまま手首だけ
+// 上がるはず。そういうときだけ指を残す」）: 持ち上げは、前の和音を離す時刻より前（PRE_LIFT 秒まで。ただし打ってから HOLD_MIN 秒は
+// 待つ）から始めてよい。鍵を押さえているあいだは、指先は鍵に残り（押している指は鍵の上、ほかの指も同じ高さ）、手首だけが上がるので、
+// その分だけ手首を曲げる（W[7] = atan(持ち上げ / PITCH_L)、手首を中心に手のひらを指先の側へ傾ける）。離したら指先は鍵と一緒に
+// TIP_REL 秒で手についていく。押さえているあいだに持ち上げが始まらないとき（離してから持ち上げる）は、これまでどおり手全体が上がる。
+// 数値は目安（予備動作をいつ始めるか・手首の曲げの大きさを測った研究は見つからなかった）
+// ペダル（v036〜、ユーザーの指摘「ペダルを押す押さないも関係する」）: 予備動作を始める時刻にペダルを踏んでいて、打つまで踏みつづけていれば、
+// 音はペダルでのびるので、前の和音はそこで離してよい（指を鍵に残さず、手全体が上がる）。ペダルがなければ音を保つために鍵を押さえたまま。
+// 押さえたまま上げるのは指が届く範囲まで（HOLD_LIFT まで、届く分だけ。目安。30mm 上げると押さえている指先が鍵から 10mm 浮いた）
+const PITCH_L = 140, PRE_LIFT = 0.25, HOLD_MIN = 0.15, TIP_REL = 0.1, HOLD_LIFT = 12, HOLD_TOL = 1.5;
+let CUR_PEDAL = [];
+const pedalHolds = (a, b) => CUR_PEDAL.some(([p0, p1]) => p0 <= a + 1e-3 && p1 >= b - 1e-3);
 function wristStrokes(plan) {
   const N = plan.wh.length, ta = plan.wt0;
-  plan.wk = new Float64Array(N);
+  plan.wk = new Float64Array(N); plan.wkT = new Float64Array(N); plan.wp = new Float64Array(N);
+  const base = plan.wh.slice();
   const evs = [...new Set(plan.notes.filter(n => n.wrist).map(n => Math.round(n.t0 * 1000)))].map(x => x / 1000).sort((a, b) => a - b);
   for (const t0 of evs) {
-    let tp = -Infinity;
-    for (const n of plan.notes) if (n.t0 < t0 - 0.03) tp = Math.max(tp, Math.min(n.t1, t0 - 0.04));
-    const arm = STROKE === 'arm', start = Math.max(tp, t0 - (arm ? 0.5 : 0.35)), dur = t0 - start;
+    let tp = -Infinity, ton = -Infinity; // 前の音を離す時刻（いちばん遅いもの）・前に打った時刻
+    for (const n of plan.notes) if (n.t0 < t0 - 0.03) { tp = Math.max(tp, Math.min(n.t1, t0 - 0.04)); ton = Math.max(ton, n.t0); }
+    const arm = STROKE === 'arm', start = Math.max(ton + HOLD_MIN, tp - PRE_LIFT, t0 - (arm ? 0.5 : 0.35)), dur = t0 - start;
     if (dur < 0.04) continue;
-    const A = arm ? Math.min(ARM_LIFT, 100 * dur) : Math.min(WRIST_LIFT, 80 * dur);
-    for (let i = Math.max(0, Math.floor((start - ta) * W_HZ)); i < N; i++) {
-      const t = ta + i / W_HZ; if (t > t0) break;
-      const s = (t - start) / dur; if (s < 0) continue;
-      plan.wk[i] = Math.max(plan.wk[i], A * Math.sin(Math.PI * s) * ease5(Math.min(1, s * 2.5)));
+    if (start < tp && pedalHolds(start, t0)) { // ペダルで音がのびるので、予備動作の始めに前の和音を離す
+      for (const n of plan.notes) if (n.t0 < t0 - 0.03 && n.t1 > start) n.t1 = Math.max(n.t0 + 0.05, start);
+      tp = start;
     }
+    const A = arm ? Math.min(ARM_LIFT, 100 * dur) : Math.min(WRIST_LIFT, 80 * dur);
+    const i0 = Math.max(0, Math.floor((start - ta) * W_HZ)), i1 = Math.min(N - 1, Math.floor((t0 - ta) * W_HZ));
+    const apply = cap => { // cap: 押さえているあいだに上げてよい高さ（mm）
+      for (let i = i0; i <= i1; i++) {
+        const t = ta + i / W_HZ, s = (t - start) / dur; if (s < 0) continue;
+        const k = A * Math.sin(Math.PI * s) * ease5(Math.min(1, s * 2.5));
+        // 鍵を押さえているあいだ（t < tp）は指先が残る。離したら TIP_REL 秒で手についていく
+        const c = t < tp ? 1 : 1 - ease5((t - tp) / TIP_REL), kk = Math.min(k, cap) * c + k * (1 - c);
+        plan.wk[i] = kk; plan.wkT[i] = kk * (1 - c); plan.wp[i] = Math.atan2(kk * c, PITCH_L * HAND.s); plan.wh[i] = base[i] + kk;
+      }
+    };
+    // 押さえたまま上げる高さは、押さえている指がすべて鍵に届く分だけ（HOLD_LIFT から小さくして、ずれが上げないときより HOLD_TOL をこえない最大）。
+    // 決まった高さだと、手首からの距離が短い親指が関節の限界に当たって鍵から 12mm 浮いた
+    if (start < tp) {
+      const held = plan.notes.filter(n => n.t0 < t0 - 0.03 && n.t1 > start);
+      const worst = () => { let e = 0; for (let t = start; t < tp; t += 1 / W_HZ) { const P = poseAt(plan, t); for (const n of held) if (t >= n.t0 + TK && t <= n.t1) e = Math.max(e, P.fingers[n.f].err); } return e; };
+      apply(0); const e0 = worst();
+      let cap = 0;
+      for (const h of [HOLD_LIFT, 9, 6, 3]) { apply(h * HAND.s); if (worst() <= e0 + HOLD_TOL) { cap = h * HAND.s; break; } }
+      apply(cap);
+    } else apply(0);
   }
-  for (let i = 0; i < N; i++) plan.wh[i] += plan.wk[i];
+}
+// 指先の持ち上げ（手首の持ち上げより遅れる）
+function wkTAt(plan, t) {
+  if (!plan.wkT) return 0;
+  const u = Math.min(plan.wkT.length - 1.001, Math.max(0, (t - plan.wt0) * W_HZ)), i = Math.floor(u), s = u - i;
+  return plan.wkT[i] + (plan.wkT[i + 1] - plan.wkT[i]) * s;
 }
 function wkAt(plan, t) {
   if (!plan.wk) return 0;
@@ -612,7 +652,7 @@ function wristAt(plan, t) {
   const i = Math.floor(u), s = u - i;
   const at = a => a[i] + (a[i + 1] - a[i]) * s;
   const x = at(plan.wx);
-  return [x, (plan.pp ? wyOf(at(plan.pp)) : WRIST_Y) + at(plan.wh), at(plan.wz), at(plan.wy) + at(plan.wb), plan.side, armYaw(x, plan.side), at(plan.wr)]; // W[5] は前腕の向き、W[6] は手のひらの傾き
+  return [x, (plan.pp ? wyOf(at(plan.pp)) : WRIST_Y) + at(plan.wh), at(plan.wz), at(plan.wy) + at(plan.wb), plan.side, armYaw(x, plan.side), at(plan.wr), plan.wp ? at(plan.wp) : 0]; // W[5] は前腕の向き、W[6] は手のひらの傾き、W[7] は手首の曲げ
 }
 
 // 鍵を押す指先の位置（世界の座標）
@@ -649,7 +689,7 @@ function fingerTarget(plan, f, t, W) {
       const lift = n.lift || LIFT, span = Math.max(1e-3, n.t0 - ta), Td = Math.min(0.08, span * 0.4), tb = n.t0 - Td;
       // 鍵の上へは低く（触れる高さで）移り、持ち上げるのは約1音前から（n.antic）。ゆっくりの所は持ち上げがほぼ 0 で、触れたまま押す
       const tl = Math.max(ta, n.t0 - (n.antic || 0.3)), up = n.wrist ? 1 : ease5((t - tl) / Math.max(1e-3, tb - tl));
-      const H = [P[0], P[1] + REST_OFF + (lift - REST_OFF) * up + (n.wrist ? wkAt(plan, t) : 0), P[2]];
+      const H = [P[0], P[1] + REST_OFF + (lift - REST_OFF) * up + (n.wrist ? wkTAt(plan, t) : 0), P[2]]; // 指先は手首より遅れて上がる（v036〜）
       // 横の移動は、下ろしはじめてからも少し続く（動きを順番に1つずつ終わらせると機械のように見えた）
       const Q = lerp3(S, H, ease5((t - ta) / Math.max(1e-3, tb + 0.5 * Td - ta)));
       if (t > tb) { // 下ろす: 鍵に着く時刻 t0 に速さ VC で着き、そのまま押しこむ（keyDown）
