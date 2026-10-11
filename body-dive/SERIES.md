@@ -13,9 +13,9 @@
 | | 体内ダイブ | 尿の旅 | 血管の旅 |
 |---|---|---|---|
 | フォルダ | `body-dive/` | `urinary-dive/` | `blood-dive/` |
-| 最新版 | v003q-ux（入口・英語対応。履歴は `DEVNOTES.md`） | v001i-sources（保管庫） | v001i-sources（保管庫） |
+| 最新版 | v003r-split（入口・英語対応。履歴は `DEVNOTES.md`） | v001j-split（保管庫） | v001j-split（保管庫） |
 | 経路 | 口・鼻・肛門 → 気道（気管支まで）／消化管（口→肛門） | 腎杯 → 腎盂 → 尿管 → 膀胱 → 尿道（男女） | 右心房 → 肺 → 左心室 → 大動脈 → 脳／腎臓／腸と肝臓／脚 → 静脈 → 右心房（ループ） |
-| あなたは何？ | 肉・ごはん・キャベツ・ステンレス球・カプセル内視鏡・日本酒（1合／4合）・ボタン電池・ツキヨタケ | 尿のしずく・結石3mm／7mm・大腸菌・膀胱鏡 | 赤血球・血栓・カテーテル |
+| あなたは何？ | 肉・ごはん・キャベツ・ステンレス球・カプセル内視鏡・日本酒（4合。1合は v003q でけずった）・ボタン電池・ツキヨタケ | 尿のしずく・結石3mm／7mm・大腸菌・膀胱鏡 | 赤血球・血栓・カテーテル |
 | 入口 | 口・鼻・肛門 | 腎臓・尿道口 | 脚の静脈・右心房・脚の動脈 |
 | 体の条件 | 空腹／満腹 | 男性／女性、水分（たっぷり・ふつう・脱水） | 安静／運動中 |
 | 関門 | 上部食道・下部食道・幽門・回盲弁・S状→直腸・肛門・声門 | 左右の尿管口・内尿道括約筋・外尿道括約筋 | 三尖弁・肺動脈弁・僧帽弁・大動脈弁・脚の静脈弁 |
@@ -26,16 +26,20 @@
 各フォルダの構成は共通:
 
 ```
-<app>/index.html          作業中の最新版（1ファイル完結。Three.js r128 を cdnjs から）
+<app>/index.html          画面の骨組み（HTML、doctype なし。Three.js r128 を cdnjs から）
+<app>/css/style.css       見た目
+<app>/js/*.js             本体7本（下の読みこみ順）
 <app>/launcher.html       版を選んで起動するランチャー（ローカル用、doctype あり）
 <app>/versions/<名前>/    各版の丸ごとバックアップ
 ```
+
+2026-10-12 に3本とも1ファイルから css と js 7本に分けた（体内ダイブ v003r・尿の旅と血管の旅 v001j。中身は同じで、`_dev/tools/split-single.pl` で切り出しただけ。分ける前の版と同じ手順で同じ場所を通ることを確かめた）。js は3本とも同じ名前・同じ区切り: `anatomy.js`（小道具・部位・管・ひだ・サンプリング・関門・合流部）→ `render.js`（描画の準備・三人称）→ `physics.js`（当たり判定・順路。血管の旅は毛細血管のつなぎ目も）→ `body.js`（素材と体の状態）→ `ui.js`（操作の状態・開始画面・入力・地図）→ `gates.js`（関門と反射・道しるべ。血管の旅は毛細血管を通るも）→ `main.js`（HUD・ループ・`window.__xx`・起動）。名前はファイルをまたいで共有する（もとは1つの `(function(){…})()`）。**後ろのファイルの関数を、前のファイルのいちばん外側から呼ばない**。いちばん外側で `return` は書けない。
 
 ---
 
 ## 2. 共通エンジン
 
-3アプリとも、`index.html` の中身はほぼ同じ順番で並んでいる。
+3アプリとも、js の中身はほぼ同じ順番で並んでいる（下の番号の順が、ほぼ上の js の順）。
 
 1. **部位 `REG`** — 名前・説明・色・壁のひだ `fold`・当たり判定の係数 `cf`・時間区分 `z`。アプリ固有の重み（胃・膀胱・心室など）もここに持たせる。
 2. **管 `TUBES`** — 中心線の点 `[x, y, z, 半径, 部位]` と開口部 `open:[始端, 終端]`。座標は cm、x = 体の左、y = 上、z = 前。
@@ -117,13 +121,13 @@ __vd.simRun(20, ['KeyW']);                // 20秒ぶん W を押しっぱなし
 [__vd.P.laps, __vd.loc.tube.id, __vd.P.capLog]
 ```
 
-**simRun でも動かないとき**（2026-10-07、体内ダイブで発生）: ページを開いてから requestAnimationFrame が一度も動いていないと、`simRun` の時刻の起点（`prevT`）が決まらず、カメラの位置が NaN になって「体の外」と出る。ペインを前に出して読み込み直すか、テストのときだけ `document.open(); document.write('<script>window.requestAnimationFrame=cb=>setTimeout(()=>cb(performance.now()),16);<\/script>'+元のHTML); document.close();` で開き直す（file:// で開くとペインは data: URL になるので、元の HTML は `decodeURIComponent(location.href.slice(location.href.indexOf(',')+1))`）。体内ダイブは `begin()` が既定の向きの順路モードにするので、そのまま `__bd.simRun(4,['KeyW'])` をくり返せばよい（`begin()` のあとに引数なしで `setControl('guide')` を呼んだら進まなかった）。
+**simRun でも動かないとき**（2026-10-07、体内ダイブで発生）: ページを開いてから requestAnimationFrame が一度も動いていないと、`simRun` の時刻の起点（`prevT`）が決まらず、カメラの位置が NaN になって「体の外」と出る。ペインを前に出して読み込み直すか、テストのときだけ `document.open(); document.write('<script>window.requestAnimationFrame=cb=>setTimeout(()=>cb(performance.now()),16);<\/script>'+元のHTML); document.close();` で開き直す（元の HTML は `await (await fetch(location.href)).text()`。css・js に分けたので file:// ではなくサーバーで開いておく）。体内ダイブは `begin()` が既定の向きの順路モードにするので、そのまま `__bd.simRun(4,['KeyW'])` をくり返せばよい（`begin()` のあとに引数なしで `setControl('guide')` を呼んだら進まなかった）。
 
 ---
 
 ## 6. 運用
 
-- バックアップ・ランチャー・公開は `../RULES.md` 3章・8章のとおり。`index.html` は doctype なしの1ファイル完結（8.2 の名残）。
+- バックアップ・ランチャー・公開は `../RULES.md` 3章・8章のとおり。`index.html` は doctype なし（8.2 の名残）。css・js に分けたので、ローカルでは `.claude/launch.json` のサーバーで開く。
 
 ---
 

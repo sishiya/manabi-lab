@@ -1,0 +1,188 @@
+<title>電波の見える部屋</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2306212a'/><g fill='none' stroke='%234fd6e8' stroke-width='4.5' stroke-linecap='round'><path d='M14 28a26 26 0 0 1 36 0'/><path d='M20 35a17 17 0 0 1 24 0'/><path d='M26 42a8 8 0 0 1 12 0'/></g><circle cx='32' cy='49' r='3.5' fill='%234fd6e8'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="frame">
+      <canvas id="gl"></canvas>
+      <canvas id="ov"></canvas>
+      <div id="glerr" hidden></div>
+    </div>
+    <p id="hint"></p>
+  </main>
+
+  <aside id="panel">
+    <header class="brand">
+      <div class="brand-top">
+        <h1><span lang="ja">電波の見える部屋</span><span lang="en">Seeing WiFi at Home</span></h1>
+        <div class="langsw" id="langsw" role="group" aria-label="言語 / Language"><button data-l="ja" title="日本語">JP</button><button data-l="en" title="English">EN</button></div>
+      </div>
+      <p lang="ja">WiFiの電波が家の中をどう広がり、壁でどう弱まるのか。真上から見た電波のシミュレーションです。</p>
+      <p lang="en">How does WiFi spread through a home, and how much do walls weaken it? A simulation of radio waves, seen from above.</p>
+    </header>
+
+    <section class="card" id="readout">
+      <div class="ro-top"><span class="lbl"><span lang="ja">スマホの受信</span><span lang="en">PHONE SIGNAL</span></span><span class="bars" id="roBars"><i></i><i></i><i></i><i></i></span></div>
+      <div class="ro-num"><b id="roVal">—</b><small id="roUnit">dBm</small></div>
+      <div id="roVerdict"></div>
+      <div class="ro-detail" id="roDetail"></div>
+      <p class="ro-note" lang="ja">※ 数字は目安です。家具・床・天井を省いた計算なので、実際の家ではもう少し弱くなることがよくあります。</p>
+      <p class="ro-note" lang="en">* The numbers are a rough guide. Furniture, floors and ceilings are left out, so in a real home the signal is often a little weaker.</p>
+    </section>
+
+    <section>
+      <h2><span lang="ja">表示</span><span lang="en">VIEW</span></h2>
+      <div class="seg" id="segMode">
+        <button data-v="wave" aria-pressed="true"><span lang="ja">波の動き</span><span lang="en">Waves</span></button>
+        <button data-v="heat" aria-pressed="false"><span lang="ja">電波の強さ</span><span lang="en">Signal strength</span></button>
+      </div>
+      <div class="legend" id="legend"></div>
+      <label class="chk" id="chkComp"><input type="checkbox" id="optComp" checked> <span lang="ja">遠くの波も見えるよう明るさを補正</span><span lang="en">Brighten distant waves so you can see them</span></label>
+      <label class="chk" id="chkSmooth" hidden><input type="checkbox" id="optSmooth" checked> <span lang="ja">干渉のまだらをならす（実際のWiFiに近い）</span><span lang="en">Smooth out the interference spots (closer to real WiFi)</span></label>
+    </section>
+
+    <section>
+      <h2><span lang="ja">周波数</span><span lang="en">FREQUENCY</span></h2>
+      <div class="seg" id="segFreq">
+        <button data-v="2.4" aria-pressed="true">2.4 GHz</button>
+        <button data-v="5" aria-pressed="false">5 GHz</button>
+      </div>
+      <p class="cap" id="freqCap"></p>
+    </section>
+
+    <section>
+      <h2><span lang="ja">時間</span><span lang="en">TIME</span></h2>
+      <div class="row">
+        <button class="btn" id="btnPlay"></button>
+        <button class="btn" id="btnReset"><span lang="ja">波を消す</span><span lang="en">Clear waves</span></button>
+      </div>
+      <input type="range" id="speed" min="0" max="11" value="3">
+      <p class="cap mono" id="timeCap"></p>
+    </section>
+
+    <section>
+      <h2><span lang="ja">間取り・実験</span><span lang="en">FLOOR PLANS &amp; EXPERIMENTS</span></h2>
+      <div class="presets" id="presets"></div>
+    </section>
+
+    <section>
+      <h2><span lang="ja">壁を描く</span><span lang="en">DRAW WALLS</span></h2>
+      <div class="tools" id="tools"></div>
+      <div class="row"><button class="btn" id="btnUndo"><span lang="ja">元に戻す</span><span lang="en">Undo</span></button></div>
+      <p class="cap" id="toolCap"></p>
+    </section>
+
+    <section class="explain">
+      <h2><span lang="ja">解説</span><span lang="en">EXPLANATION</span></h2>
+      <div class="now" id="nowText"></div>
+      <div lang="ja"><details open>
+        <summary>電波は壁を通り抜けるの？</summary>
+        <p>電波は光の仲間（電磁波）です。壁に当たると、<b>一部は跳ね返り（反射）</b>、<b>一部は壁の中で熱に変わり（吸収）</b>、<b>残りが向こう側へ抜けます（透過）</b>。</p>
+        <ul>
+          <li><b>木・石こうボード・ガラス</b>はほとんど通す。弱まりは数dB。</li>
+          <li><b>コンクリート</b>は中の水分で電波を吸収し、厚いので大きく弱める（2.4GHzで十数dB）。</li>
+          <li><b>金属</b>は電気をよく通すので、電波をほぼ全部はね返す。冷蔵庫や玄関ドアの裏は影になる。</li>
+          <li><b>水と人の体</b>は電波をよく吸収する。お風呂のお湯や、人が集まった部屋は電波が弱まる。</li>
+        </ul>
+        <p>dBは10ごとに強さが1/10になる目盛りです。−10dBで1/10、−20dBで1/100。</p>
+      </details>
+      <details>
+        <summary>すき間から回り込む（回折）</summary>
+        <p>波は、すき間やドアの縁で向きを変えて裏側へ回り込みます。音がドアのすき間から聞こえるのと同じです。電波の波長は12.5cm（2.4GHz）と大きいので、開いたドアや廊下を伝って、壁の陰にも届きます。</p>
+        <p>ただし<b>波長の半分より狭いすき間はほとんど通れません</b>。電子レンジの扉の網は穴が数mmなので、中の電波（WiFiの2.4GHz帯と同じ2.45GHz）は外へ出ません。「すき間の実験」で確かめられます。</p>
+      </details>
+      <details>
+        <summary>2.4GHzと5GHzのちがい</summary>
+        <p><b>2.4GHz</b>は波長が長く、壁を通りやすく遠くまで届きます。ただ電子レンジやBluetoothと同じ周波数なので混み合いがち。</p>
+        <p><b>5GHz</b>は速く通信できますが、壁での吸収が大きく、回り込みも小さいので、部屋をまたぐと急に弱くなります。周波数を切り替えて比べてみましょう。</p>
+      </details>
+      <details>
+        <summary>まだら模様（干渉）</summary>
+        <p>直接届いた波と、壁ではね返った波が重なると、山と山が重なる所は強く、山と谷が重なる所は弱くなります。「電波の強さ」で「ならす」を外すと、半波長（約6cm）ごとのまだらが見えます。</p>
+        <p>実際のWiFiは少しずつ違う周波数をまとめて使うので、まだらは平均されます。それでも、スマホを数cm動かすだけで速度が変わることがあるのはこのためです。</p>
+      </details>
+      <details>
+        <summary>このシミュレーションのしくみ</summary>
+        <p>床から上を見た2次元の世界で、電場の波の方程式（マクスウェル方程式）をそのまま解いています。1マス0.75cm、1280×800マス（9.6m×6m）、1ステップは12.5ピコ秒。計算はGPUで行います。</p>
+        <p><b>材料</b>（石こうボード・木・ガラス・レンガ・コンクリート）の電気の性質（誘電率と導電率）は、国際電気通信連合の勧告 ITU-R P.2040 の表の値です。ツールの「壁1枚で −X dB」は、同じ勧告にある板を通る電波の式で計算しています。マス目が粗いと板の中の波がうまく表せず弱まりが大きく出すぎる（5GHzのコンクリートで −59dB）ので、材料ごとに、計算でも壁1枚の弱まりがこの式の値と同じになるよう、計算用の値を合わせ直しています。<b>金属</b>は電波を通さないものとして扱っています。</p>
+        <p><b>人の体とお風呂のお湯</b>は<b>簡略化した推定の値</b>です。吸収のしやすさ（導電率）は体の組織の測定値（筋肉。2.4GHzで約1.7）を目安にし、誘電率はマス目に合わせて本当（約50〜80）より小さくしています。</p>
+        <p><b>受信の強さ</b>（dBm）は、ルーターの出力を20dBm（100mW）とした<b>目安</b>です。2次元の計算での広がり方を、3次元の空間で広がるときの弱まり方（自由空間の式）に置き換え、壁・反射・干渉の分だけを計算から取っています。アンテナの本数と「動画も快適」などの境目（−55・−67・−75・−85dBm）も、よく使われる<b>目安</b>で、決まった規格ではありません。</p>
+        <p><b>簡単にしたところ</b>: 床と天井、家具の大半、コンクリートの中の鉄筋は入れていません。電波の向き（偏波）は、電場が床に垂直な1通りだけです。周波数は1つだけ（2.4GHz帯は 2.437GHz＝チャンネル6、5GHz帯は 5.2GHz＝チャンネル40）で、実際の WiFi のように幅のある周波数は使っていません。</p>
+        <p>電波の届き方を知るためのものです。実際の家での強さは、ルーターの機種や置き方、家具、人の動きで大きく変わります。体への影響を示すものではありません。</p>
+      </details>
+      <details>
+        <summary>おもな出どころ</summary>
+        <ul class="src">
+          <li>ITU-R 勧告 P.2040-3（2023）「Effects of building materials and structures on radiowave propagation above about 100 MHz」: 表3の建材の誘電率・導電率の式（コンクリート・レンガ・石こうボード・木・ガラス）と、板を通る電波の式</li>
+          <li>ITU-R 勧告 P.525「Calculation of free-space attenuation」: 自由空間で電波が広がって弱まる式（受信の強さの換算）</li>
+          <li>IEEE Std 802.11（無線 LAN の規格）: チャンネルと周波数（チャンネル6＝2437MHz、チャンネル40＝5200MHz）</li>
+          <li>Taflove と Hagness（2005）『Computational Electrodynamics: The Finite-Difference Time-Domain Method』第3版, Artech House: マクスウェル方程式をマス目と時間のきざみで解く方法（FDTD 法）</li>
+          <li>Gabriel（1996）「Compilation of the Dielectric Properties of Body Tissues at RF and Microwave Frequencies」米空軍の報告書 AL/OE-TR-1996-0037: 体の組織の電気の性質（人の体の値の目安）</li>
+          <li>人の体・お湯の値、受信の強さの境目（−55〜−85dBm）、ルーターの出力（20dBm）、壁の厚さは<b>目安・推定</b>です</li>
+        </ul>
+        <p>使っているもの: 文字に Dela Gothic One・Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）。</p>
+      </details></div>
+      <div lang="en"><details open>
+        <summary>Do radio waves go through walls?</summary>
+        <p>Radio waves are a kind of light (electromagnetic waves). When they hit a wall, <b>some bounce back (reflection)</b>, <b>some turn into heat inside the wall (absorption)</b>, and <b>the rest passes through to the other side (transmission)</b>.</p>
+        <ul>
+          <li><b>Wood, gypsum board and glass</b> let almost everything through. They weaken the signal by only a few dB.</li>
+          <li><b>Concrete</b> absorbs radio waves because of the water inside it, and it is thick, so it weakens them a lot (more than 10 dB at 2.4 GHz).</li>
+          <li><b>Metal</b> conducts electricity well, so it reflects almost all radio waves. The space behind a fridge or a metal front door is in a shadow.</li>
+          <li><b>Water and the human body</b> absorb radio waves well. A bathtub full of water or a room full of people weakens the signal.</li>
+        </ul>
+        <p>dB is a scale where every 10 means 10 times weaker: −10 dB is 1/10, and −20 dB is 1/100.</p>
+      </details>
+      <details>
+        <summary>Bending around gaps (diffraction)</summary>
+        <p>Waves change direction at gaps and the edges of doors, and spread into the space behind. It is the same reason you can hear sounds through a gap in a door. WiFi waves are long (12.5 cm at 2.4 GHz), so they travel through open doors and along hallways and reach places hidden behind walls.</p>
+        <p>But <b>gaps narrower than half a wavelength let almost nothing through</b>. The holes in the mesh on a microwave oven door are only a few mm wide, so the waves inside (2.45 GHz, the same band as 2.4 GHz WiFi) cannot get out. Try it in “Gap experiment”.</p>
+      </details>
+      <details>
+        <summary>2.4 GHz vs 5 GHz</summary>
+        <p><b>2.4 GHz</b> has a longer wavelength. It passes through walls more easily and reaches farther. But microwave ovens and Bluetooth use the same frequencies, so it often gets crowded.</p>
+        <p><b>5 GHz</b> is faster, but walls absorb more of it and it bends around corners less, so the signal drops quickly once you go into another room. Switch the frequency and compare.</p>
+      </details>
+      <details>
+        <summary>Patchy patterns (interference)</summary>
+        <p>When a wave that arrives directly overlaps with a wave reflected off a wall, the signal is stronger where crest meets crest and weaker where crest meets trough. In “Signal strength”, untick “Smooth out” to see spots about every half wavelength (about 6 cm).</p>
+        <p>Real WiFi uses many slightly different frequencies at once, so the spots average out. Still, this is why your speed can change when you move your phone just a few centimeters.</p>
+      </details>
+      <details>
+        <summary>How this simulation works</summary>
+        <p>In a 2D world seen from above, it solves the wave equation for the electric field (Maxwell’s equations) as it is. Each cell is 0.75 cm, the grid is 1280 × 800 cells (9.6 m × 6 m), and each time step is 12.5 picoseconds. The calculation runs on the GPU.</p>
+        <p>The electrical properties (permittivity and conductivity) of the <b>materials</b> (gypsum board, wood, glass, brick and concrete) come from the tables in ITU-R Recommendation P.2040 of the International Telecommunication Union. The “−X dB per wall” numbers on the tools are calculated with the formula for waves passing through a slab from the same recommendation. A coarse grid cannot show the waves inside a slab well and makes the loss far too large (−59 dB for concrete at 5 GHz), so for each material we re-tuned the values used in the calculation so that one wall loses the same amount as this formula. <b>Metal</b> is treated as letting no radio waves through.</p>
+        <p>The values for <b>the human body and bath water</b> are <b>simplified estimates</b>. How easily they absorb (conductivity) is based on measurements of body tissue (muscle, about 1.7 S/m at 2.4 GHz), and the permittivity is set lower than the real value (about 50–80) to suit the grid.</p>
+        <p><b>Signal strength</b> (dBm) is a <b>rough guide</b> that assumes the router puts out 20 dBm (100 mW). The way waves spread in the 2D calculation is replaced with the way they weaken when spreading in 3D space (the free-space formula), and only the effects of walls, reflections and interference are taken from the calculation. The number of signal bars and the lines between labels like “Video plays smoothly” (−55, −67, −75 and −85 dBm) are also common <b>rough guides</b>, not a fixed standard.</p>
+        <p><b>What is simplified</b>: there are no floors or ceilings, most furniture is left out, and there is no steel inside the concrete. The waves have only one direction (polarization), with the electric field standing straight up from the floor. Only one frequency is used for each band (2.437 GHz = channel 6 for 2.4 GHz, and 5.2 GHz = channel 40 for 5 GHz), not the range of frequencies real WiFi uses.</p>
+        <p>This is for learning how radio waves travel. The strength in a real home changes a lot with the router model, where it is placed, furniture and people moving around. It does not show any effects on the body.</p>
+      </details>
+      <details>
+        <summary>Main sources</summary>
+        <ul class="src">
+          <li>ITU-R Recommendation P.2040-3 (2023), “Effects of building materials and structures on radiowave propagation above about 100 MHz”: the formulas in Table 3 for the permittivity and conductivity of building materials (concrete, brick, gypsum board, wood, glass), and the formula for waves passing through a slab</li>
+          <li>ITU-R Recommendation P.525, “Calculation of free-space attenuation”: how radio waves weaken as they spread out in free space (used to convert signal strength)</li>
+          <li>IEEE Std 802.11 (the wireless LAN standard): channels and frequencies (channel 6 = 2437 MHz, channel 40 = 5200 MHz)</li>
+          <li>Taflove and Hagness (2005), <i>Computational Electrodynamics: The Finite-Difference Time-Domain Method</i>, 3rd ed., Artech House: how to solve Maxwell’s equations step by step on a grid (the FDTD method)</li>
+          <li>Gabriel (1996), “Compilation of the Dielectric Properties of Body Tissues at RF and Microwave Frequencies”, US Air Force report AL/OE-TR-1996-0037: electrical properties of body tissues (used as a guide for the human body)</li>
+          <li>The values for the human body and water, the signal strength lines (−55 to −85 dBm), the router output (20 dBm) and the wall thicknesses are <b>rough guides and estimates</b></li>
+        </ul>
+        <p>Fonts: Dela Gothic One, Zen Kaku Gothic New and IBM Plex Mono (SIL Open Font License).</p>
+      </details></div>
+    </section>
+  </aside>
+</div>
+
+<script src="js/model.js"></script>
+<script src="js/gl.js"></script>
+<script src="js/state.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/main.js"></script>

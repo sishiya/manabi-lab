@@ -13,10 +13,10 @@
 | フォルダ | 名前 | 掲載 | 一言・注意 |
 |---|---|---|---|
 | `body-dive/` | 体内ダイブ | 入口 | 消化管・気道を3Dで進む。1ファイル。尿の旅・血管の旅とエンジンを複製（3本のまとめは `body-dive/SERIES.md`） |
-| `urinary-dive/` | 尿の旅 | 保管庫 | 体内ダイブの亜種。1ファイル。DEVNOTES なし → `body-dive/SERIES.md` |
+| `urinary-dive/` | 尿の旅 | 保管庫 | 体内ダイブの亜種。DEVNOTES なし → `body-dive/SERIES.md` |
 | `blood-dive/` | 血管の旅 | 保管庫 | 同上 |
 | `evolution/` | ヒトへの46億年 | 入口 | 地球と生命の歴史の定点観測3D |
-| `quantum/` | 量子の実験室 | 入口 | 5つの実験。1ファイル |
+| `quantum/` | 量子の実験室 | 入口 | 5つの実験 |
 | `wifi-wave/` | 電波の見える部屋 | 入口 | WiFi の電磁波シミュレーション。WebGL2 |
 | `animal-senses/` | いきものの感じる世界 | 入口 | 同じ庭を動物の感覚で |
 | `immune-battle/` | 免疫のたたかい | 入口 | 数のモデル＋ミクロの断面。Canvas 2D |

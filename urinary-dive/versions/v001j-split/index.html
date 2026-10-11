@@ -1,0 +1,149 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>尿の旅</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%232a2408'/><path d='M32 12c8 12 14 19 14 27a14 14 0 0 1-28 0c0-8 6-15 14-27z' fill='%23f5d34a'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Shippori+Mincho+B1:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<canvas id="gl"></canvas>
+<div id="tint"></div>
+<div id="lens"></div>
+<div id="reticle"></div>
+
+<div id="loc" class="hud">
+  <span id="locSys">尿路</span>
+  <h1 id="locName">腎杯</h1>
+  <div id="locEn">Calyx renalis</div>
+  <p id="locDesc"></p>
+  <div id="ahead" class="panel"></div>
+</div>
+<div id="signs"></div>
+
+<aside id="side" class="hud" hidden>
+  <section class="panel" id="sMe">
+    <h3><span>あなた</span><button id="sideToggle" type="button" style="padding:2px 8px;font-size:10px">詳細</button></h3>
+    <div class="me">
+      <div id="swatchBox"><div id="swatch"></div></div>
+      <div><b id="meName">—</b><div id="meState">—</div><div id="meMass" class="mono">—</div></div>
+    </div>
+    <div class="more"><div id="bar"></div><ul id="legend"></ul></div>
+  </section>
+  <section class="panel more">
+    <h3>からだ</h3>
+    <dl class="kv mono">
+      <dt>体内時間</dt><dd id="bTime">0分</dd>
+      <dt>時間の速さ</dt><dd id="bScale">×1</dd>
+      <dt>膀胱の尿</dt><dd id="bVol">—</dd>
+      <dt>尿意</dt><dd id="bUrge">—</dd>
+      <dt>作られる尿</dt><dd id="bFlow">—</dd>
+      <dt>尿の濃さ</dt><dd id="bOsm">—</dd>
+      <dt>危険度</dt><dd id="bRisk">なし</dd>
+    </dl>
+    <div id="urge"><div id="urgeFill"></div></div>
+    <canvas id="spark"></canvas>
+    <ul id="gates"></ul>
+  </section>
+  <section class="panel more">
+    <h3>現在地</h3>
+    <dl class="kv mono">
+      <dt>内径</dt><dd id="rDia">–</dd>
+      <dt>入口から</dt><dd id="rDist">–</dd>
+      <dt>速度</dt><dd id="rSpd">–</dd>
+      <dt>操縦</dt><dd id="rMode">手動</dd>
+    </dl>
+  </section>
+</aside>
+
+<div id="mapWrap" class="hud panel">
+  <canvas id="map" aria-label="尿路の正面図。膀胱鏡のときはクリックで移動"></canvas>
+  <div class="cap">正面図</div>
+</div>
+
+<div id="dock" class="hud">
+  <div class="row">
+    <button id="btnGuide" type="button">順路: オフ<kbd>G</kbd></button>
+    <button id="btnAuto" type="button">自動航行<kbd>Space</kbd></button>
+    <button id="btnTps" type="button">三人称<kbd>T</kbd></button>
+  </div>
+  <div class="row">
+    <button id="btnESWL" type="button" class="call" hidden>衝撃波で砕く</button>
+    <button id="btnCling" type="button" hidden>しがみつく<kbd>C</kbd></button>
+    <button id="btnDrink" type="button">水を飲む<kbd>M</kbd></button>
+    <button id="btnToilet" type="button">トイレ<kbd>U</kbd></button>
+  </div>
+  <div class="row">
+    <button id="btnFF" type="button">早送り ×10<kbd>F</kbd></button>
+    <button id="btnSpeed" type="button">速さ ×1</button>
+    <button id="btnOrbit" type="button">外観<kbd>V</kbd></button>
+    <button id="btnMenu" type="button">やり直す</button>
+  </div>
+  <div id="keys">W/S 前後 · A/D 横 · Q/E 上下 · Shift 加速 · ドラッグ 視点<br>順路モード中は W だけで進む · G 向き切りかえ / 自由移動</div>
+</div>
+
+<div id="stick"><div id="knob"></div></div>
+<div id="toast" class="panel"></div>
+
+<div id="start" class="overlay">
+  <form class="card" id="startForm">
+    <div class="eyebrow">URINARY TOUR · 腎臓から外尿道口まで</div>
+    <h2>尿の旅</h2>
+    <p>腎臓でしみ出した尿は、尿管の波に運ばれて膀胱にたまり、尿道から外へ出る。尿のしずく・結石・細菌・膀胱鏡になって、その道を進む。</p>
+    <fieldset><legend><b>1</b>あなたは何になる？</legend><div class="opts" id="optMat"></div></fieldset>
+    <fieldset><legend><b>2</b>どこから入る？</legend><div class="opts" id="optEntry"></div></fieldset>
+    <fieldset><legend><b>3</b>体</legend><div class="opts" id="optSex"></div></fieldset>
+    <fieldset><legend><b>4</b>水分の状態</legend><div class="opts" id="optHyd"></div></fieldset>
+    <p class="caution"><b>ご注意</b>学習用に簡略化したシミュレーションです。数値は目安で、診断や治療の判断には使えません。体の不調は医療機関に相談してください。<br><b>対象</b>中学生以上（小学生は保護者と一緒に）。排尿や生殖器の解剖、結石や感染症も扱います。<br><b>使っているもの</b>3D表示に Three.js（MIT ライセンス）、文字に Shippori Mincho B1・Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）</p>
+    <details class="about"><summary>このアプリについて・おもな出どころ</summary>
+      <p>腎臓・尿管・膀胱・尿道の長さと太さ、尿の量と濃さ、尿意を感じる量、結石や細菌のふるまいは、下の資料で確かめた値をもとにしています。次のものは確かめた値ではなく、このアプリの<b>目安</b>です: 水分の状態ごとの作られる尿の量（毎分 約2.5・1・0.35mL）、飲んだ水が吸収されて尿に出るまでの時間、結石が詰まる太さ（5・4.5・3.5mm）と詰まっていたあとに抜ける確率、膀胱以外での細菌の増え方、600mL で限界・650mL でもれること、排尿の速さ（毎秒 22mL）、尿の比重と成分の計算、痛みの強さ。尿の濃さは「作られる尿の量に反比例する」と簡単にしています。時間は場所ごとに早回しです。</p>
+      <ul>
+        <li>Lescay・Jiang・Leslie・Tuma（StatPearls, 2024）Anatomy, Abdomen and Pelvis: Ureter: 尿管の長さ・太さ、石が詰まりやすい3か所、膀胱の壁の中の約2cm と逆流を防ぐしくみ</li>
+        <li>Hill（2015）Clinical Journal of the American Society of Nephrology: 尿管の蠕動（1分に2〜6回）と排尿のしくみ</li>
+        <li>Bertram ほか（2011）Pediatric Nephrology: ネフロンの数</li>
+        <li>Kaufman・Basit・Knohl（StatPearls, 2023）Physiology, Glomerular Filtration Rate: 原尿は1日約180L、尿は約1.5L</li>
+        <li>Sands と Layton（2009）Seminars in Nephrology: 尿の濃さの幅（約50〜1200 mOsm/kg）</li>
+        <li>Cuzzo・Padala・Lappin（StatPearls, 2023）Physiology, Vasopressin: 抗利尿ホルモンのはたらき</li>
+        <li>Rose ほか（2015）Critical Reviews in Environmental Science and Technology: 1日の尿の量（約1.4L）と尿素・クレアチニンの量</li>
+        <li>Hall ほか（2024）Nature Microbiology: 尿の黄色はウロビリン</li>
+        <li>Shermadou・Rahman・Leslie（StatPearls, 2023）Anatomy, Abdomen and Pelvis: Bladder、Lanzotti・Tariq・Bolla（StatPearls, 2023）Physiology, Bladder: 膀胱の大きさ、膀胱三角、排尿のときの筋肉</li>
+        <li>De Wachter と Wyndaele（2003）国際禁制学会の学会抄録: 尿意を感じる量（健康な若い女性15人の測定）</li>
+        <li>Stoddard と Leslie（StatPearls, 2023）Histology, Male Urethra: 男性の尿道の長さ（平均約20cm）と各部分の長さ</li>
+        <li>Manski「Urology Textbook」（ウェブ版の泌尿器科の教科書）: 精丘に射精管と前立腺の管が開く</li>
+        <li>Knipe ほか「Female urethra」（Radiopaedia）: 女性の尿道の長さ（約4cm）</li>
+        <li>Ng・Leslie・Baradhi（StatPearls, 2024）Benign Prostatic Hyperplasia: 前立腺肥大で尿道が狭くなる</li>
+        <li>Leslie・Sajjad・Murphy（StatPearls, 2024）Renal Calculi, Nephrolithiasis: 結石の種類（シュウ酸カルシウムがいちばん多い）、腎疝痛、水を飲む予防</li>
+        <li>Coll・Varanelli・Smith（2002）American Journal of Roentgenology: 結石の大きさと自然に出る割合</li>
+        <li>Manzoor・Leslie・Saikali（StatPearls, 2024）Extracorporeal Shockwave Lithotripsy: 体の外から衝撃波で石を砕く治療</li>
+        <li>Flores-Mireles ほか（2015）Nature Reviews Microbiology: 大腸菌の線毛と鞭毛、膀胱から腎臓へのぼる感染</li>
+        <li>Forsyth ほか（2018）mBio: 尿の中の大腸菌が倍になる時間（約22〜36分）</li>
+        <li>Gill・Leslie・Minter（StatPearls, 2025）Acute Cystitis: 尿1mLあたり10万個の目安、女性に多い理由</li>
+        <li>Belyayeva ほか（StatPearls, 2024）Acute Pyelonephritis: 腎盂腎炎の症状</li>
+      </ul>
+    </details>
+    <button id="go" type="submit">ダイブ開始</button>
+    <p class="note">太さはおおよそ実寸（尿管だけ少し太め）。時間は場所ごとに早回し（膀胱 ×60）している。</p>
+  </form>
+</div>
+
+<div id="result" class="overlay" hidden>
+  <div class="card">
+    <div class="eyebrow" id="resEyebrow">EXIT</div>
+    <h2 id="resTitle">外に出た</h2>
+    <div id="resBody">
+      <div id="resSwatchBox"><div id="resSwatch"></div></div>
+      <div id="resList"><dl class="kv mono" id="resKv"></dl></div>
+    </div>
+    <p id="resNote"></p>
+    <div class="btns"><button id="resAgain" type="button">もう一度</button><button id="resLook" type="button">外から体を見る</button></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="js/anatomy.js"></script>
+<script src="js/render.js"></script>
+<script src="js/physics.js"></script>
+<script src="js/body.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/gates.js"></script>
+<script src="js/main.js"></script>

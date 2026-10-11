@@ -1,0 +1,501 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>量子の実験室</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230c1430'/><g fill='none' stroke='%238fb3ff' stroke-width='3'><ellipse cx='32' cy='32' rx='21' ry='8'/><ellipse cx='32' cy='32' rx='21' ry='8' transform='rotate(60 32 32)'/><ellipse cx='32' cy='32' rx='21' ry='8' transform='rotate(-60 32 32)'/></g><circle cx='32' cy='32' r='4' fill='%23ffd25e'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Shippori+Mincho+B1:wght@700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Quantum bench · 5 experiments</div>
+      <h1><span lang="ja">量子の実験室</span><span lang="en">Quantum Lab</span><span class="h">ħ = 1</span></h1>
+    </div>
+    <div class="topr">
+      <div class="langsw" id="langsw" role="group" aria-label="言語 / Language"><button data-l="ja" title="日本語">JP</button><button data-l="en" title="English">EN</button></div>
+      <p lang="ja">ミクロの粒子は、ふだんの物とはちがうふるまいをする。5つの実験を、自分の手で動かして確かめよう。</p>
+      <p lang="en">Tiny particles behave differently from everyday things. Try five experiments with your own hands and see for yourself.</p>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-tab="slit" aria-selected="true"><span class="n">1</span><span lang="ja">二重スリット</span><span lang="en">Double slit</span></button>
+    <button role="tab" data-tab="tunnel" aria-selected="false"><span class="n">2</span><span lang="ja">トンネル効果</span><span lang="en">Tunneling</span></button>
+    <button role="tab" data-tab="polar" aria-selected="false"><span class="n">3</span><span lang="ja">3枚の偏光板</span><span lang="en">3 polarizers</span></button>
+    <button role="tab" data-tab="bell" aria-selected="false"><span class="n">4</span><span lang="ja">量子もつれ</span><span lang="en">Entanglement</span></button>
+    <button role="tab" data-tab="uncert" aria-selected="false"><span class="n">5</span><span lang="ja">不確定性原理</span><span lang="en">Uncertainty</span></button>
+  </nav>
+
+  <!-- ===================== 1 二重スリット ===================== -->
+  <section class="exp" id="exp-slit" data-exp="slit">
+    <div class="exp-head">
+      <div class="eyebrow"><span lang="ja">実験 1 · 波と粒子</span><span lang="en">Experiment 1 · Waves and particles</span></div>
+      <h2><span lang="ja">二重スリット</span><span lang="en">The double slit</span></h2>
+      <p class="lede" lang="ja">粒子を1個ずつ、2本のすき間（スリット）に向けて飛ばす。1個ずつ点で当たるのに、たくさん集めるとしま模様ができる。どちらを通ったか調べると、しま模様は消える。</p>
+      <p class="lede" lang="en">Particles are fired one at a time at two narrow gaps (slits). Each one lands as a single dot, yet when many pile up, a striped pattern appears. If you check which slit each one went through, the stripes disappear.</p>
+    </div>
+    <div class="exp-body">
+      <div class="stage">
+        <canvas class="cv" id="slitApp" style="height:290px"></canvas>
+        <div class="cap"><span lang="ja">装置を横から見たところ。青い明暗は「粒子が見つかる確率」の広がり。</span><span lang="en">The setup seen from the side. The blue shading shows how the “chance of finding the particle” spreads out.</span></div>
+        <canvas class="cv" id="slitScreen" style="height:250px"></canvas>
+        <div class="cap"><span lang="ja">上: スクリーンを正面から見たところ（1点＝粒子1個）。下: 当たった数のグラフ。</span><span lang="en">Top: the screen seen from the front (1 dot = 1 particle). Bottom: a graph of the hits.</span><span><span lang="ja">当たった数</span><span lang="en">Hits</span> <b class="mono" id="slitCount">0</b></span></div>
+        <div class="bar">
+          <button class="btn primary" id="slitRun"></button>
+          <button class="btn" id="slitOne"><span lang="ja">1個だけ</span><span lang="en">Just one</span></button>
+          <button class="btn" id="slitMany"><span lang="ja">1000個まとめて</span><span lang="en">1000 at once</span></button>
+          <button class="btn" id="slitClear"><span lang="ja">スクリーンを消す</span><span lang="en">Clear screen</span></button>
+        </div>
+      </div>
+      <aside class="side">
+        <div class="box">
+          <h3><span lang="ja">装置</span><span lang="en">SETUP</span></h3>
+          <div class="bar">
+            <span style="font-size:13px"><span lang="ja">スリット</span><span lang="en">Slits</span></span>
+            <div class="seg" id="slitMode">
+              <button data-v="both" aria-pressed="true"><span lang="ja">2本</span><span lang="en">Both</span></button>
+              <button data-v="top" aria-pressed="false"><span lang="ja">上だけ</span><span lang="en">Top only</span></button>
+              <button data-v="bottom" aria-pressed="false"><span lang="ja">下だけ</span><span lang="en">Bottom only</span></button>
+            </div>
+          </div>
+          <label class="check"><input type="checkbox" id="slitObs"><span lang="ja">通り道を調べる（検出器をつける）</span><span lang="en">Check the path (add detectors)</span></label>
+          <div class="ctl"><label for="slitLam"><span lang="ja">粒子の波長</span><span lang="en">Wavelength of the particle</span></label><output id="slitLamO"></output><input type="range" id="slitLam" min="0.6" max="2" step="0.05" value="1"></div>
+          <div class="ctl"><label for="slitD"><span lang="ja">スリットの間隔</span><span lang="en">Distance between slits</span></label><output id="slitDO"></output><input type="range" id="slitD" min="3" max="24" step="0.5" value="10"></div>
+          <div class="ctl"><label for="slitA"><span lang="ja">スリットの幅</span><span lang="en">Slit width</span></label><output id="slitAO"></output><input type="range" id="slitA" min="0.8" max="6" step="0.1" value="1.5"></div>
+          <button class="btn" id="slitWide" style="align-self:flex-start"><span lang="ja">スリットを広く・離す（幅 5・間隔 22）</span><span lang="en">Make slits wide and far apart (width 5, distance 22)</span></button>
+          <button class="btn" id="slitStd" style="align-self:flex-start"><span lang="ja">最初の設定に戻す</span><span lang="en">Back to the start settings</span></button>
+          <div class="ctl"><label for="slitRate"><span lang="ja">1秒に飛ばす数</span><span lang="en">Particles per second</span></label><output id="slitRateO"></output><input type="range" id="slitRate" min="1" max="300" step="1" value="12"></div>
+          <label class="check"><input type="checkbox" id="slitField" checked><span lang="ja">確率の波を表示</span><span lang="en">Show the probability wave</span></label>
+          <label class="check"><input type="checkbox" id="slitCurve"><span lang="ja">理論の曲線を重ねる</span><span lang="en">Overlay the theory curves</span></label>
+          <div class="key" id="slitKey"><span><i style="background:var(--wave)"></i><span lang="ja">干渉あり</span><span lang="en">with interference</span></span><span><i style="background:var(--classic)"></i><span lang="ja">干渉なし（2本を足しただけ）</span><span lang="en">no interference (the two slits simply added)</span></span></div>
+        </div>
+        <div class="box">
+          <h3><span lang="ja">やってみよう</span><span lang="en">TRY THIS</span></h3>
+          <ol class="try">
+            <li lang="ja">そのまま待つ。点はばらばらに当たるが、数百個たまるとしま模様が見えてくる。急ぐなら「1000個まとめて」。</li>
+            <li lang="en">Just wait. The dots land all over the place, but after a few hundred, stripes start to show. In a hurry? Press “1000 at once”.</li>
+            <li lang="ja">「通り道を調べる」をオンにする。スクリーンが消えて、今度はしまのない、なだらかな1つの山になる。スリットが細いと、それぞれのスリットを出た波が大きく広がって重なるため。</li>
+            <li lang="en">Turn on “Check the path”. The screen clears, and this time you get one smooth hill with no stripes. With narrow slits, the wave leaving each slit spreads out widely and the two overlap.</li>
+            <li lang="ja">「スリットを広く・離す」を押す。検出器ありでは、スリットの後ろに2本の帯ができる。ところが検出器を外しても、しまはごく細く、うっすらとしか出ない。2本の波がほとんど重ならないため。</li>
+            <li lang="en">Press “Make slits wide and far apart”. With detectors, you get two bands behind the slits. But even without detectors, the stripes are very thin and faint, because the two waves hardly overlap.</li>
+            <li lang="ja">スリットを片方だけにする。しまは出ない。2本あいていて、しかも通り道が分からないときだけ、しまが出る。</li>
+            <li lang="en">Open only one slit. No stripes. Stripes appear only when both slits are open and nobody knows which way the particle went.</li>
+            <li lang="ja">波長を長くする、間隔をせまくする。しまの間隔が広がる。</li>
+            <li lang="en">Make the wavelength longer or the slits closer together. The stripes spread apart.</li>
+          </ol>
+        </div>
+        <div class="box why">
+          <h3><span lang="ja">なにが起きている？</span><span lang="en">WHAT’S GOING ON?</span></h3>
+          <div lang="ja">
+          <p>粒子がどこで見つかるかは、波（確率の波）で決まる。この波は2本のスリットを同時に通り、向こう側で重なる。山と山が重なる所には当たりやすく、山と谷が打ち消し合う所にはほとんど当たらない。</p>
+          <p>検出器でどちらを通ったか確かめると、波は片方のスリットから出たものだけになり、打ち消し合いが起きない。見るだけで結果が変わる。</p>
+          <p>このとき「2本の帯」になるか「1つの山」になるかは、スリットの幅で決まる。細いスリットを通った波は横に大きく広がる（回折）ので、2本ぶんが重なって1つの山になる。幅が波長よりずっと広いと広がりが小さく、スリットの影のような2本の帯になる。</p>
+          <p>よく見る「検出器なしではたくさんのしま、検出器ありでは2本の帯」という図は、2つの場合を1枚にまとめた説明用の絵。しまがはっきり出るのは2本の波が大きく重なるとき、2本の帯に分かれるのは重ならないときなので、同じ装置で両方をくっきり出すことはできない。実際の実験（細いスリット）で検出器をつけると、この画面の最初の設定のように、なだらかな山になる。</p>
+          <p>それでも当たるときはいつも1点。波のように広がり、粒のように見つかる。これが量子のいちばん基本の性質。</p>
+          <p class="note">電子を1個ずつ飛ばして、しまが育っていく様子を撮影した実験がある（1989年、日立製作所の外村彰らのグループ）。この実験では2本のスリットのかわりに、細い線に電圧をかけて電子の波を2つに分ける「電子線バイプリズム」を使っている。</p>
+          </div>
+          <div lang="en">
+          <p>Where a particle is found is decided by a wave (a probability wave). This wave goes through both slits at once and overlaps on the other side. Particles often land where crest meets crest, and hardly ever where a crest and a trough cancel out.</p>
+          <p>If a detector checks which slit the particle went through, only the wave from that one slit is left, and the canceling stops. Just looking changes the result.</p>
+          <p>Whether you then get “two bands” or “one hill” depends on the slit width. A wave through a narrow slit spreads out sideways a lot (diffraction), so the two overlap into one hill. If the slits are much wider than the wavelength, the waves spread only a little, and you get two bands like shadows of the slits.</p>
+          <p>The familiar picture of “many stripes without detectors, two bands with detectors” combines two different situations into one picture for explanation. Stripes are clear when the two waves overlap a lot, and two separate bands appear when they do not overlap, so one setup cannot show both sharply. In real experiments (narrow slits), adding detectors gives a smooth hill, like the start settings here.</p>
+          <p>Even so, each particle always lands as a single dot. It spreads like a wave and is found like a grain. This is the most basic property of the quantum world.</p>
+          <p class="note">There is a famous experiment that filmed stripes building up as electrons were sent one at a time (1989, Akira Tonomura’s group at Hitachi). Instead of two slits, it used an “electron biprism”, a thin wire with a voltage that splits the electron wave in two.</p>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===================== 2 トンネル効果 ===================== -->
+  <section class="exp" id="exp-tunnel" data-exp="tunnel" hidden>
+    <div class="exp-head">
+      <div class="eyebrow"><span lang="ja">実験 2 · 壁のすり抜け</span><span lang="en">Experiment 2 · Passing through walls</span></div>
+      <h2><span lang="ja">トンネル効果</span><span lang="en">Quantum tunneling</span></h2>
+      <p class="lede" lang="ja">エネルギーが足りず、越えられないはずの壁。ボールなら必ずはね返るが、粒子の波は壁にしみこみ、薄い壁なら向こう側にも残る。そこで粒子が見つかることがある。</p>
+      <p class="lede" lang="en">A wall the particle should not be able to cross, because it does not have enough energy. A ball would always bounce back, but a particle’s wave seeps into the wall, and if the wall is thin, some of it remains on the other side. The particle can be found there.</p>
+    </div>
+    <div class="exp-body">
+      <div class="stage">
+        <canvas class="cv" id="tunCv" style="height:320px"></canvas>
+        <div class="cap"><span lang="ja">山の高さ＝そこで粒子が見つかる確率。色は波の位相（山と谷の進み具合）。シュレーディンガー方程式をその場で解いている。</span><span lang="en">Height of the hill = chance of finding the particle there. The color shows the phase of the wave (where it is between crest and trough). The Schrödinger equation is being solved live.</span></div>
+        <div class="bar">
+          <button class="btn primary" id="tunFire"><span lang="ja">もう一度発射</span><span lang="en">Fire again</span></button>
+          <button class="btn" id="tunPause"></button>
+          <button class="btn" id="tunMeasure"><span lang="ja">いま測る（粒子を見つける）</span><span lang="en">Measure now (find the particle)</span></button>
+          <label class="check"><input type="checkbox" id="tunPhase" checked><span lang="ja">位相を色で表示</span><span lang="en">Show phase as color</span></label>
+        </div>
+      </div>
+      <aside class="side">
+        <div class="box">
+          <h3><span lang="ja">設定</span><span lang="en">SETTINGS</span></h3>
+          <div class="ctl"><label for="tunE"><span lang="ja">粒子のエネルギー（壁の高さ＝1）</span><span lang="en">Particle energy (wall height = 1)</span></label><output id="tunEO"></output><input type="range" id="tunE" min="0.3" max="1.6" step="0.05" value="0.6"></div>
+          <div class="ctl"><label for="tunW"><span lang="ja">壁の厚さ</span><span lang="en">Wall thickness</span></label><output id="tunWO"></output><input type="range" id="tunW" min="0.5" max="5" step="0.25" value="1.25"></div>
+        </div>
+        <div class="box">
+          <h3><span lang="ja">結果</span><span lang="en">RESULTS</span></h3>
+          <dl class="read">
+            <dt><span lang="ja">はね返った</span><span lang="en">Bounced back</span></dt><dd id="tunR">—</dd>
+            <dt><span lang="ja">壁の中</span><span lang="en">Inside the wall</span></dt><dd id="tunIn">—</dd>
+            <dt><span lang="ja">通り抜けた</span><span lang="en">Got through</span></dt><dd class="big" id="tunT">—</dd>
+            <dt><span lang="ja">理論値（通り抜け）</span><span lang="en">Theory (getting through)</span></dt><dd id="tunTth">—</dd>
+            <dt><span lang="ja">ボールなら</span><span lang="en">If it were a ball</span></dt><dd id="tunCl">—</dd>
+            <dt><span lang="ja">あなたが測った結果</span><span lang="en">Your measurements</span></dt><dd id="tunTally">—</dd>
+          </dl>
+        </div>
+        <div class="box">
+          <h3><span lang="ja">やってみよう</span><span lang="en">TRY THIS</span></h3>
+          <ol class="try">
+            <li lang="ja">エネルギー 0.6、厚さ 1.25 で発射。壁より低いのに、一部が向こう側へ抜ける。</li>
+            <li lang="en">Fire with energy 0.6 and thickness 1.25. Even though the energy is lower than the wall, part of the wave gets through.</li>
+            <li lang="ja">壁を厚くする。抜ける割合が急に（指数関数的に）減る。</li>
+            <li lang="en">Make the wall thicker. The share that gets through drops sharply (exponentially).</li>
+            <li lang="ja">エネルギーを1より上にする。ボールなら全部越えるが、粒子は一部はね返る。</li>
+            <li lang="en">Raise the energy above 1. A ball would always get over, but some of the particle’s wave bounces back.</li>
+            <li lang="ja">波が2つに分かれた後で「いま測る」。粒子は2つに割れず、どちらか一方で見つかる。何度もくり返すと、回数の割合が確率に近づく。</li>
+            <li lang="en">After the wave splits in two, press “Measure now”. The particle does not split; it is found on one side only. Repeat many times and the counts approach the probabilities.</li>
+          </ol>
+        </div>
+        <div class="box why">
+          <h3><span lang="ja">なにが起きている？</span><span lang="en">WHAT’S GOING ON?</span></h3>
+          <div lang="ja">
+          <p>壁の中では波は進めないが、ぷつりと消えずに、急に弱まりながらしみこむ。壁が薄ければ、弱まりきる前に向こう側へ出て、また進む波になる。</p>
+          <p>測るまでは「手前にいる」と「向こうにいる」が重なった状態。測った瞬間に、どちらか一方に決まる。</p>
+          <p class="note">「理論値」は、エネルギーがぴったり1つの値に決まった波で計算した式の値。発射した波（波束）はエネルギーに少し幅があるので、計算の結果とは少しずれる。</p>
+          <p class="note">身近な例: 太陽の中で水素がくっつく核融合、USBメモリ（フラッシュメモリ）の書き込み、原子を1個ずつ見る走査トンネル顕微鏡、ウランなどのα崩壊。</p>
+          </div>
+          <div lang="en">
+          <p>Inside the wall the wave cannot travel, but it does not stop dead. It seeps in while fading quickly. If the wall is thin, it comes out the other side before fading away and travels on as a wave again.</p>
+          <p>Until it is measured, “on this side” and “on the far side” are overlapped. At the moment of measurement, it becomes one or the other.</p>
+          <p class="note">The “theory” value is from a formula for a wave with exactly one energy. The wave that was fired (a wave packet) has a small spread of energies, so the simulation is a little different.</p>
+          <p class="note">Everyday examples: hydrogen fusing in the Sun, writing data to USB sticks (flash memory), scanning tunneling microscopes that see single atoms, and alpha decay of uranium and other elements.</p>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===================== 3 偏光板 ===================== -->
+  <section class="exp" id="exp-polar" data-exp="polar" hidden>
+    <div class="exp-head">
+      <div class="eyebrow"><span lang="ja">実験 3 · 測ると状態が変わる</span><span lang="en">Experiment 3 · Measuring changes the state</span></div>
+      <h2><span lang="ja">3枚の偏光板</span><span lang="en">Three polarizers</span></h2>
+      <p class="lede" lang="ja">向きを直角にした2枚の偏光板は、光をまったく通さない。ところがその間に、斜めの偏光板をもう1枚入れると、光が通るようになる。じゃまを増やしたのに通る。</p>
+      <p class="lede" lang="en">Two polarizers set at right angles block all light. But put a third polarizer at a slant between them, and light gets through. You added another obstacle, yet more gets through.</p>
+    </div>
+    <div class="exp-body">
+      <div class="stage">
+        <canvas class="cv" id="polCv" style="height:270px"></canvas>
+        <div class="cap"><span lang="ja">光子1個ごとの短い線が、偏光の向き。偏光板の線が、通す向き。</span><span lang="en">The short line on each photon is its polarization direction. The lines on the polarizers are the direction they let through.</span></div>
+        <div class="bar">
+          <button class="btn primary" id="polRun"></button>
+          <button class="btn" id="polPreA"><span lang="ja">直交の2枚（0° と 90°）</span><span lang="en">Two crossed (0° and 90°)</span></button>
+          <button class="btn" id="polPreB"><span lang="ja">間に 45° を入れる</span><span lang="en">Add 45° in between</span></button>
+          <button class="btn" id="polReset"><span lang="ja">数え直す</span><span lang="en">Recount</span></button>
+        </div>
+      </div>
+      <aside class="side">
+        <div class="box">
+          <h3><span lang="ja">偏光板</span><span lang="en">POLARIZERS</span></h3>
+          <label class="check"><input type="checkbox" id="polOn0" checked><span lang="ja">A を入れる</span><span lang="en">Use A</span></label>
+          <div class="ctl"><label for="polA0"><span lang="ja">A の向き</span><span lang="en">Angle of A</span></label><output id="polA0O"></output><input type="range" id="polA0" min="0" max="180" step="5" value="0"></div>
+          <label class="check"><input type="checkbox" id="polOn1"><span lang="ja">B を入れる</span><span lang="en">Use B</span></label>
+          <div class="ctl"><label for="polA1"><span lang="ja">B の向き</span><span lang="en">Angle of B</span></label><output id="polA1O"></output><input type="range" id="polA1" min="0" max="180" step="5" value="45"></div>
+          <label class="check"><input type="checkbox" id="polOn2" checked><span lang="ja">C を入れる</span><span lang="en">Use C</span></label>
+          <div class="ctl"><label for="polA2"><span lang="ja">C の向き</span><span lang="en">Angle of C</span></label><output id="polA2O"></output><input type="range" id="polA2" min="0" max="180" step="5" value="90"></div>
+          <div class="ctl"><label for="polRate"><span lang="ja">1秒に飛ばす数</span><span lang="en">Photons per second</span></label><output id="polRateO"></output><input type="range" id="polRate" min="1" max="80" step="1" value="14"></div>
+        </div>
+        <div class="box">
+          <h3><span lang="ja">数</span><span lang="en">COUNTS</span></h3>
+          <dl class="read">
+            <dt><span lang="ja">送った光子</span><span lang="en">Photons sent</span></dt><dd id="polSent">0</dd>
+            <dt><span lang="ja">届いた光子</span><span lang="en">Photons arrived</span></dt><dd id="polGot">0</dd>
+            <dt><span lang="ja">届いた割合</span><span lang="en">Share arrived</span></dt><dd class="big" id="polPct">—</dd>
+            <dt><span lang="ja">理論値</span><span lang="en">Theory</span></dt><dd id="polTh">—</dd>
+          </dl>
+        </div>
+        <div class="box">
+          <h3><span lang="ja">やってみよう</span><span lang="en">TRY THIS</span></h3>
+          <ol class="try">
+            <li lang="ja">A と C が直交（0° と 90°）。届く光子は 0。</li>
+            <li lang="en">A and C are crossed (0° and 90°). No photons arrive.</li>
+            <li lang="ja">B を入れる（45°）。届くようになる。理論では 1/8 = 12.5%。</li>
+            <li lang="en">Put in B (45°). Now photons arrive. In theory, 1/8 = 12.5%.</li>
+            <li lang="ja">B を 0° や 90° にすると、また 0 になる。</li>
+            <li lang="en">Set B to 0° or 90°, and it drops back to 0.</li>
+            <li lang="ja">A だけにすると 50%。最初の光の偏光はばらばらなので、半分が通る。</li>
+            <li lang="en">With A alone, 50% get through. The light starts with random polarization, so half pass.</li>
+          </ol>
+        </div>
+        <div class="box why">
+          <h3><span lang="ja">なにが起きている？</span><span lang="en">WHAT’S GOING ON?</span></h3>
+          <div lang="ja">
+          <p>光子1個が偏光板を通るかどうかは確率で決まる。偏光の向きと板の向きの差が θ なら、通る確率は cos²θ。光子は割れないので、通るか消えるかのどちらか。</p>
+          <p>大事なのは、通り抜けた光子の偏光が板の向きに作り直されること。45° の板を通った光子は、もう 0° の記憶をもっていない。だから 90° の板も半分の確率で通れる。1/2 × 1/2 × 1/2 = 1/8。</p>
+          <p class="note">偏光板を通すことは、偏光の「測定」にあたる。測ると状態が変わる、という量子の性質がそのまま見える。</p>
+          </div>
+          <div lang="en">
+          <p>Whether a single photon gets through a polarizer is decided by chance. If the difference between the photon’s polarization and the polarizer’s direction is θ, the chance of passing is cos²θ. A photon cannot split, so it either passes or disappears.</p>
+          <p>The key point is that a photon that gets through has its polarization reset to the polarizer’s direction. A photon that passed the 45° polarizer no longer “remembers” 0°. So it has a half chance of passing the 90° polarizer too. 1/2 × 1/2 × 1/2 = 1/8.</p>
+          <p class="note">Passing through a polarizer is a “measurement” of polarization. You can see directly the quantum rule that measuring changes the state.</p>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===================== 4 量子もつれ ===================== -->
+  <section class="exp" id="exp-bell" data-exp="bell" hidden>
+    <div class="exp-head">
+      <div class="eyebrow"><span lang="ja">実験 4 · 離れていてもつながる</span><span lang="en">Experiment 4 · Linked even when far apart</span></div>
+      <h2><span lang="ja">量子もつれとベルテスト</span><span lang="en">Entanglement and the Bell test</span></h2>
+      <p class="lede" lang="ja">ペアで生まれた2個の光子を、アリスとボブが遠く離れた場所で測る。2人の結果は不思議にそろう。しかも、そのそろい方は「生まれたときに答えを決めておいた」という仕組みでは説明できない。</p>
+      <p class="lede" lang="en">Two photons born as a pair are measured by Alice and Bob, far apart. Their results match in a strange way. And the way they match cannot be explained by “the answers were decided when the photons were born”.</p>
+    </div>
+    <div class="exp-body">
+      <div class="stage">
+        <canvas class="cv" id="bellCv" style="height:230px"></canvas>
+        <div class="pairs" id="bellPairs">
+          <span><span lang="ja">アリス</span><span lang="en">Alice</span></span><div class="row" id="bellRowA"></div>
+          <span><span lang="ja">ボブ</span><span lang="en">Bob</span></span><div class="row" id="bellRowB"></div>
+        </div>
+        <div class="cap"><span><span class="mono" style="color:var(--hit)">■ ＋</span><span lang="ja">（通過）　</span><span lang="en"> (passed) &nbsp;</span><span class="mono" style="color:var(--wave)">■ −</span><span lang="ja">（反射）　右が新しい</span><span lang="en"> (reflected) &nbsp; newest on the right</span></span><span><span lang="ja">このペアの角度での一致率</span><span lang="en">Match rate at these angles</span> <b class="mono" id="bellNow">—</b></span></div>
+        <canvas class="cv" id="bellChart" style="height:250px"></canvas>
+        <div class="key"><span><i style="background:var(--wave)"></i><span lang="ja">量子力学の予言 cos²(角度差)</span><span lang="en">Quantum prediction cos²(angle difference)</span></span><span><i style="background:var(--classic)"></i><span lang="ja">答えを前もって決めておく仕組みの一例（隠れた変数）</span><span lang="en">One example of answers decided in advance (hidden variables)</span></span><span><i style="background:var(--fg);height:8px;width:8px;border-radius:50%"></i><span lang="ja">測った値</span><span lang="en">Measured</span></span></div>
+        <div class="bar">
+          <button class="btn primary" id="bellRun"></button>
+          <button class="btn" id="bellMany"><span lang="ja">500組まとめて</span><span lang="en">500 pairs at once</span></button>
+          <button class="btn" id="bellClear"><span lang="ja">グラフを消す</span><span lang="en">Clear graph</span></button>
+        </div>
+      </div>
+      <aside class="side">
+        <div class="box">
+          <h3><span lang="ja">測定の向き</span><span lang="en">MEASUREMENT ANGLES</span></h3>
+          <div class="ctl"><label for="bellA"><span lang="ja">アリスの偏光板</span><span lang="en">Alice’s polarizer</span></label><output id="bellAO"></output><input type="range" id="bellA" min="0" max="180" step="2.5" value="0"></div>
+          <div class="ctl"><label for="bellB"><span lang="ja">ボブの偏光板</span><span lang="en">Bob’s polarizer</span></label><output id="bellBO"></output><input type="range" id="bellB" min="0" max="180" step="2.5" value="30"></div>
+          <div class="ctl"><label for="bellRate"><span lang="ja">1秒に作るペア</span><span lang="en">Pairs per second</span></label><output id="bellRateO"></output><input type="range" id="bellRate" min="1" max="60" step="1" value="6"></div>
+          <div class="bar">
+            <span style="font-size:13px"><span lang="ja">しくみ</span><span lang="en">Model</span></span>
+            <div class="seg" id="bellModel">
+              <button data-v="q" aria-pressed="true"><span lang="ja">量子もつれ</span><span lang="en">Entanglement</span></button>
+              <button data-v="h" aria-pressed="false"><span lang="ja">隠れた変数</span><span lang="en">Hidden variables</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="box chsh">
+          <h3><span lang="ja">ベルテスト（CHSH）</span><span lang="en">BELL TEST (CHSH)</span></h3>
+          <p style="margin:0;font-size:13px" lang="ja">アリスは 0° と 45°、ボブは 22.5° と 67.5°。4通りの組み合わせで各2万組を測り、相関の強さ S を出す。前もって答えを決めておく仕組みなら、2人の間で合図をやりとりしない限り、どう作っても S は 2 を超えない。</p>
+          <p style="margin:0;font-size:13px" lang="en">Alice uses 0° and 45°, Bob uses 22.5° and 67.5°. 20,000 pairs are measured for each of the 4 combinations, giving the strength of correlation S. If the answers are decided in advance, S can never go above 2, however the scheme is built, unless the two send signals to each other.</p>
+          <button class="btn primary" id="bellTest" style="align-self:flex-start"><span lang="ja">ベルテストを実行</span><span lang="en">Run the Bell test</span></button>
+          <div class="mrow"><span><span lang="ja">量子もつれ</span><span lang="en">Entanglement</span></span><div class="meter"><div class="fill" id="chshQ" style="width:0;background:var(--wave)"></div><div class="lim" style="left:calc(2/3*100%)"></div><span class="val" id="chshQv">—</span></div></div>
+          <div class="mrow"><span><span lang="ja">隠れた変数</span><span lang="en">Hidden variables</span></span><div class="meter"><div class="fill" id="chshH" style="width:0;background:var(--classic)"></div><div class="lim" style="left:calc(2/3*100%)"></div><span class="val" id="chshHv">—</span></div></div>
+          <div class="cap"><span lang="ja">白い線が S = 2（古典の上限）。目盛りの右端は 3。量子の上限は 2√2 ≈ 2.83。</span><span lang="en">The white line is S = 2 (the classical limit). The right end of the scale is 3. The quantum limit is 2√2 ≈ 2.83.</span></div>
+          <div class="verdict" id="chshVerdict"></div>
+        </div>
+        <div class="box">
+          <h3><span lang="ja">やってみよう</span><span lang="en">TRY THIS</span></h3>
+          <ol class="try">
+            <li lang="ja">2人の角度を同じにする。結果は毎回そろう。でも＋か−かは毎回ばらばら。</li>
+            <li lang="en">Set both angles the same. The results match every time, but whether they are + or − is random each time.</li>
+            <li lang="ja">角度の差を 22.5°、45°、67.5°、90° と変えて、グラフに点を集める。</li>
+            <li lang="en">Change the angle difference to 22.5°, 45°, 67.5° and 90°, and collect points on the graph.</li>
+            <li lang="ja">しくみを「隠れた変数」にして同じことをする。差 0° と 45° と 90° では量子と同じ割合になるが、その間では青い線から外れる。</li>
+            <li lang="en">Switch the model to “Hidden variables” and do the same. At 0°, 45° and 90° the match rate is the same as quantum, but in between it moves off the blue line.</li>
+            <li lang="ja">ベルテストを実行。S が 2 を超えるかどうかで、2つのしくみを見分けられる。</li>
+            <li lang="en">Run the Bell test. Whether S goes above 2 tells the two models apart.</li>
+          </ol>
+        </div>
+        <div class="box why">
+          <h3><span lang="ja">なにが起きている？</span><span lang="en">WHAT’S GOING ON?</span></h3>
+          <div lang="ja">
+          <p>もつれた2個の光子は、それぞれの偏光が決まっていない。アリスが測った瞬間に、ボブの光子の状態もそれに合わせて決まる。角度の差が θ なら、結果がそろう確率は cos²θ。</p>
+          <p>「生まれたときに、どの角度ならどう答えるかを決めて持っていく」仕組みでも、角度が同じなら必ずそろう。違いが出るのは角度をずらしたとき。このアプリの「隠れた変数」はその仕組みの一例で、そろい方は直線になる。決め方を工夫すれば別の形にもできるが、どう工夫しても量子の曲線を全部は再現できないことが証明されている。ベルの不等式（S ≤ 2）は、その限界を1つの数字で表したもの。</p>
+          <p>ただし、アリスの結果だけを見るといつも半々でランダム。ボブの角度を変えてもアリスの側は何も変わらないので、もつれを使って光より速く合図を送ることはできない。</p>
+          <p class="note">実際の実験で S ＞ 2 を確かめたクラウザー（1972年）、アスペ（1982年）、ツァイリンガー（1998年）は 2022年のノーベル物理学賞を受けた。量子の上限 2√2 は、1980年にツィレルソンが示した。</p>
+          </div>
+          <div lang="en">
+          <p>Each of two entangled photons has no fixed polarization of its own. The moment Alice measures, the state of Bob’s photon is set to match. If the angle difference is θ, the chance the results match is cos²θ.</p>
+          <p>A scheme where each photon “carries answers for every angle, decided when it was born” also always matches when the angles are the same. The difference shows up when the angles are shifted. This app’s “Hidden variables” is one example of such a scheme, and its match rate falls on a straight line. Other schemes give other shapes, but it has been proven that no scheme of this kind can reproduce the whole quantum curve. Bell’s inequality (S ≤ 2) expresses that limit in a single number.</p>
+          <p>However, Alice’s results on their own are always random, half and half. Changing Bob’s angle changes nothing on Alice’s side, so entanglement cannot be used to send signals faster than light.</p>
+          <p class="note">Clauser (1972), Aspect (1982) and Zeilinger (1998), who confirmed S &gt; 2 in real experiments, received the 2022 Nobel Prize in Physics. The quantum limit 2√2 was shown by Tsirelson in 1980.</p>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===================== 5 不確定性原理 ===================== -->
+  <section class="exp" id="exp-uncert" data-exp="uncert" hidden>
+    <div class="exp-head">
+      <div class="eyebrow"><span lang="ja">実験 5 · 両方は決まらない</span><span lang="en">Experiment 5 · You can’t pin down both</span></div>
+      <h2><span lang="ja">不確定性原理</span><span lang="en">The uncertainty principle</span></h2>
+      <p class="lede" lang="ja">粒子の位置をきっちり決めるほど、運動量（どちら向きにどれだけの勢いで進むか）がぼやける。逆も同じ。測り方が下手だからではなく、波であることから来る性質。</p>
+      <p class="lede" lang="en">The more precisely a particle’s position is pinned down, the blurrier its momentum (which way and how hard it is moving) becomes, and the other way around. This is not because of clumsy measuring; it comes from the particle being a wave.</p>
+    </div>
+    <div class="exp-body">
+      <div class="stage">
+        <div class="two">
+          <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+            <canvas class="cv" id="unX" style="height:240px"></canvas>
+            <div class="cap"><span lang="ja">位置 x　（線は波の実部、面は見つかる確率）</span><span lang="en">Position x (line: real part of the wave; area: chance of finding it)</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+            <canvas class="cv" id="unP" style="height:240px"></canvas>
+            <div class="cap"><span lang="ja">運動量 p　（見つかる確率）</span><span lang="en">Momentum p (chance of finding it)</span></div>
+          </div>
+        </div>
+        <div class="bar">
+          <button class="btn primary" id="unMx"><span lang="ja">位置を測る</span><span lang="en">Measure position</span></button>
+          <button class="btn primary" id="unMp"><span lang="ja">運動量を測る</span><span lang="en">Measure momentum</span></button>
+          <button class="btn" id="unReset"><span lang="ja">最初に戻す</span><span lang="en">Reset</span></button>
+        </div>
+        <div class="box">
+          <dl class="read">
+            <dt><span lang="ja">位置のぼやけ Δx</span><span lang="en">Position blur Δx</span></dt><dd id="unDx">—</dd>
+            <dt><span lang="ja">運動量のぼやけ Δp</span><span lang="en">Momentum blur Δp</span></dt><dd id="unDp">—</dd>
+            <dt><span lang="ja">かけ算 Δx·Δp</span><span lang="en">Product Δx·Δp</span></dt><dd class="big" id="unProd">—</dd>
+            <dt><span lang="ja">下限 ħ/2</span><span lang="en">Lower limit ħ/2</span></dt><dd>0.500</dd>
+          </dl>
+          <div class="meter" aria-hidden="true"><div class="fill" id="unBar" style="width:0;background:var(--hit)"></div><div class="lim" style="left:25%"></div></div>
+          <div class="cap"><span lang="ja">白い線が ħ/2。どう動かしても、この線より左には行けない。</span><span lang="en">The white line is ħ/2. Whatever you do, the bar can never go left of it.</span></div>
+        </div>
+      </div>
+      <aside class="side">
+        <div class="box">
+          <h3><span lang="ja">波の形</span><span lang="en">WAVE SHAPE</span></h3>
+          <div class="ctl"><label for="unS"><span lang="ja">位置の広がり</span><span lang="en">Spread in position</span></label><output id="unSO"></output><input type="range" id="unS" min="0.3" max="3.5" step="0.05" value="1.2"></div>
+          <div class="ctl"><label for="unC"><span lang="ja">形のくずれ（チャープ）</span><span lang="en">Distortion (chirp)</span></label><output id="unCO"></output><input type="range" id="unC" min="0" max="3" step="0.1" value="0"></div>
+          <div class="ctl"><label for="unP0"><span lang="ja">平均の運動量</span><span lang="en">Average momentum</span></label><output id="unP0O"></output><input type="range" id="unP0" min="-3" max="3" step="0.1" value="1.5"></div>
+        </div>
+        <div class="box">
+          <h3><span lang="ja">やってみよう</span><span lang="en">TRY THIS</span></h3>
+          <ol class="try">
+            <li lang="ja">「位置の広がり」を小さくする。左はとがるが、右の運動量は横に広がる。</li>
+            <li lang="en">Make “Spread in position” smaller. The left graph gets sharper, but the momentum on the right spreads out.</li>
+            <li lang="ja">逆に大きくする。右がとがり、左が広がる。かけ算 Δx·Δp は 0.5 のまま。</li>
+            <li lang="en">Make it larger. The right gets sharper and the left spreads out. The product Δx·Δp stays at 0.5.</li>
+            <li lang="ja">「形のくずれ」を上げる。かけ算は 0.5 より大きくなる。小さくする方向には動かせない。</li>
+            <li lang="en">Raise “Distortion”. The product grows above 0.5. It can never go below.</li>
+            <li lang="ja">「位置を測る」。位置は1点に決まり、その代わり運動量の分布が一気に広がる。続けて「運動量を測る」と、今度は位置が広がる。</li>
+            <li lang="en">Press “Measure position”. The position is fixed to one spot, and in exchange the momentum spreads out all at once. Then press “Measure momentum”, and now the position spreads out.</li>
+          </ol>
+        </div>
+        <div class="box why">
+          <h3><span lang="ja">なにが起きている？</span><span lang="en">WHAT’S GOING ON?</span></h3>
+          <div lang="ja">
+          <p>運動量は波の細かさ（波長）で決まる。1か所にぎゅっと集まった波を作るには、いろいろな波長の波をたくさん重ねる必要がある。だから位置をしぼるほど、運動量はいろいろな値が混ざる。</p>
+          <p>1種類の波長だけの波は、どこまでも同じ形で続く。運動量はきっちり決まるが、位置はまったく決まらない。</p>
+          <p>この関係は Δx·Δp ≥ ħ/2（ħ はプランク定数を 2π で割ったもの）。1927年にハイゼンベルクが考え、同じ年にケナードがこの形の式で証明した。この画面では ħ = 1 の単位で描いている。</p>
+          <p class="note">「測る」のあとの広がりの大きさは、見やすさのためにこのアプリで決めた<b>目安</b>。実際には、測る道具の細かさで決まる。</p>
+          <p class="note">二重スリットでスリットを細くすると、通り抜けた後の広がりが大きくなるのも同じ理由。</p>
+          </div>
+          <div lang="en">
+          <p>Momentum is set by how fine the wave is (its wavelength). To make a wave bunched up in one place, you have to stack up many waves with many different wavelengths. So the more you narrow down the position, the more different momentum values get mixed in.</p>
+          <p>A wave with just one wavelength goes on forever with the same shape. Its momentum is exact, but its position is not fixed at all.</p>
+          <p>The relation is Δx·Δp ≥ ħ/2 (ħ is Planck’s constant divided by 2π). Heisenberg came up with the idea in 1927, and Kennard proved it in this form the same year. This screen uses units where ħ = 1.</p>
+          <p class="note">The size of the spread after “Measure” is a <b>rough value</b> chosen by this app so it is easy to see. In reality it depends on how fine the measuring device is.</p>
+          <p class="note">This is also why the wave spreads out more after a narrower slit in the double-slit experiment.</p>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <details class="src" lang="ja">
+    <summary>おもな出どころ</summary>
+    <h4>全体</h4>
+    <ul>
+      <li>Feynman・Leighton・Sands（1965）『The Feynman Lectures on Physics』第3巻 Addison-Wesley: 1章 電子の二重スリットと、通り道を見るとしまが消えること</li>
+      <li>Griffiths と Schroeter（2018）『Introduction to Quantum Mechanics』第3版 Cambridge University Press: シュレーディンガー方程式、四角い壁を通り抜ける割合の式、ガウス波束</li>
+    </ul>
+    <h4>1 二重スリット</h4>
+    <ul>
+      <li>Tonomura（外村彰）ほか（1989）「Demonstration of single-electron buildup of an interference pattern」American Journal of Physics 57 巻: 電子1個ずつでしまが育つ実験</li>
+    </ul>
+    <h4>2 トンネル効果</h4>
+    <ul>
+      <li>Visscher（1991）Computers in Physics 5 巻: 波の実部と虚部を交互に進める計算のしかた</li>
+      <li>Gamow（1928）Zeitschrift für Physik 51 巻、Gurney と Condon（1928）Nature 122 巻: α崩壊をトンネル効果で説明</li>
+      <li>Atkinson と Houtermans（1929）Zeitschrift für Physik 54 巻: 星の中の核融合とトンネル効果</li>
+      <li>Fowler と Nordheim（1928）Proceedings of the Royal Society A 119 巻: 強い電場で電子が壁を抜けるしくみ（フラッシュメモリの書き込みに使われる）</li>
+      <li>Binnig・Rohrer・Gerber・Weibel（1982）Physical Review Letters 49 巻: 走査トンネル顕微鏡</li>
+    </ul>
+    <h4>3 偏光板</h4>
+    <ul>
+      <li>Dirac（1930）『The Principles of Quantum Mechanics』Oxford: 光子1個が、偏光の向きの差に応じた確率で偏光板を通ること</li>
+    </ul>
+    <h4>4 量子もつれ</h4>
+    <ul>
+      <li>Bell（1964）「On the Einstein Podolsky Rosen paradox」Physics 1 巻: ベルの不等式</li>
+      <li>Clauser・Horne・Shimony・Holt（1969）Physical Review Letters 23 巻: CHSH の式（S ≤ 2）と、光子のペアで確かめる方法</li>
+      <li>Cirel'son（ツィレルソン）（1980）Letters in Mathematical Physics 4 巻: 量子の上限 2√2</li>
+      <li>Freedman と Clauser（1972）Physical Review Letters 28 巻、Aspect・Grangier・Roger（1982）Physical Review Letters 49 巻、Weihs ほか（1998）Physical Review Letters 81 巻（S = 2.73）: 実際の実験</li>
+      <li>ノーベル財団「The Nobel Prize in Physics 2022」nobelprize.org</li>
+    </ul>
+    <h4>5 不確定性原理</h4>
+    <ul>
+      <li>Heisenberg（1927）Zeitschrift für Physik 43 巻: 不確定性の考え</li>
+      <li>Kennard（1927）Zeitschrift für Physik 44 巻: Δx·Δp ≥ ħ/2 の証明</li>
+    </ul>
+    <h4>このアプリで決めたこと（目安）</h4>
+    <ul>
+      <li>スリットの幅・間隔、波長、壁の高さと厚さ、波束の大きさなどは、ħ = 1、質量 = 1 の単位で見やすいように選んだ値です</li>
+      <li>「隠れた変数」のしくみ（角度を1つ共有して答えを決める）は、このアプリで作った<i>一例</i>です</li>
+      <li>不確定性原理で「測る」のあとの広がりの大きさは<i>目安</i>です</li>
+    </ul>
+  </details>
+  <details class="src" lang="en">
+    <summary>Main sources</summary>
+    <h4>General</h4>
+    <ul>
+      <li>Feynman, Leighton and Sands (1965), <i>The Feynman Lectures on Physics</i>, Vol. 3, Addison-Wesley: Chapter 1, the double slit with electrons and how watching the path makes the stripes disappear</li>
+      <li>Griffiths and Schroeter (2018), <i>Introduction to Quantum Mechanics</i>, 3rd ed., Cambridge University Press: the Schrödinger equation, the formula for passing through a square barrier, Gaussian wave packets</li>
+    </ul>
+    <h4>1 Double slit</h4>
+    <ul>
+      <li>Tonomura et al. (1989), “Demonstration of single-electron buildup of an interference pattern”, <i>American Journal of Physics</i> 57: stripes building up one electron at a time</li>
+    </ul>
+    <h4>2 Tunneling</h4>
+    <ul>
+      <li>Visscher (1991), <i>Computers in Physics</i> 5: the method of stepping the real and imaginary parts of the wave in turn</li>
+      <li>Gamow (1928), <i>Zeitschrift für Physik</i> 51; Gurney and Condon (1928), <i>Nature</i> 122: explaining alpha decay by tunneling</li>
+      <li>Atkinson and Houtermans (1929), <i>Zeitschrift für Physik</i> 54: fusion inside stars and tunneling</li>
+      <li>Fowler and Nordheim (1928), <i>Proceedings of the Royal Society A</i> 119: electrons passing through a barrier in a strong electric field (used to write flash memory)</li>
+      <li>Binnig, Rohrer, Gerber and Weibel (1982), <i>Physical Review Letters</i> 49: the scanning tunneling microscope</li>
+    </ul>
+    <h4>3 Polarizers</h4>
+    <ul>
+      <li>Dirac (1930), <i>The Principles of Quantum Mechanics</i>, Oxford: a single photon passes a polarizer with a chance set by the angle difference</li>
+    </ul>
+    <h4>4 Entanglement</h4>
+    <ul>
+      <li>Bell (1964), “On the Einstein Podolsky Rosen paradox”, <i>Physics</i> 1: Bell’s inequality</li>
+      <li>Clauser, Horne, Shimony and Holt (1969), <i>Physical Review Letters</i> 23: the CHSH formula (S ≤ 2) and how to test it with photon pairs</li>
+      <li>Cirel’son (Tsirelson) (1980), <i>Letters in Mathematical Physics</i> 4: the quantum limit 2√2</li>
+      <li>Freedman and Clauser (1972), <i>Physical Review Letters</i> 28; Aspect, Grangier and Roger (1982), <i>Physical Review Letters</i> 49; Weihs et al. (1998), <i>Physical Review Letters</i> 81 (S = 2.73): real experiments</li>
+      <li>Nobel Foundation, “The Nobel Prize in Physics 2022”, nobelprize.org</li>
+    </ul>
+    <h4>5 Uncertainty principle</h4>
+    <ul>
+      <li>Heisenberg (1927), <i>Zeitschrift für Physik</i> 43: the idea of uncertainty</li>
+      <li>Kennard (1927), <i>Zeitschrift für Physik</i> 44: proof of Δx·Δp ≥ ħ/2</li>
+    </ul>
+    <h4>Choices made by this app (rough values)</h4>
+    <ul>
+      <li>Slit width and spacing, wavelength, wall height and thickness, wave packet size and so on are values chosen to be easy to see, in units where ħ = 1 and mass = 1</li>
+      <li>The “hidden variables” scheme (sharing one angle to decide the answers) is <i>one example</i> made for this app</li>
+      <li>The size of the spread after “Measure” in the uncertainty principle is a <i>rough value</i></li>
+    </ul>
+  </details>
+  <footer lang="ja">計算はすべてこのページの中で行っている。数値は ħ = 1、質量 = 1 の単位。しくみを見やすくするために、実験は理想的な条件に簡単にした模型で、実際の装置の大きさや雑音は入れていない。<br>使っているもの: 文字に Shippori Mincho B1・Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）。</footer>
+  <footer lang="en">All calculations run inside this page. Numbers are in units where ħ = 1 and mass = 1. To make the ideas easy to see, the experiments are simplified models under ideal conditions; real equipment sizes and noise are left out.<br>Fonts: Shippori Mincho B1, Zen Kaku Gothic New and IBM Plex Mono (SIL Open Font License).</footer>
+</div>
+
+<script src="js/common.js"></script>
+<script src="js/slit.js"></script>
+<script src="js/tunnel.js"></script>
+<script src="js/polar.js"></script>
+<script src="js/bell.js"></script>
+<script src="js/uncert.js"></script>
+<script src="js/main.js"></script>
