@@ -485,7 +485,7 @@ function handLife(plan, ent, ta, N) {
 // 前の音を離してから（最大 0.35 秒前から）の時間で上げ下げし、時間が短いほど小さく。値はこのアプリの目安
 let STROKE = 'arm'; // 最初は腕ごと大きく（v036〜、ユーザーの希望。v035 までは手首で）
 // 手首で打つときの上げる高さ（mm）と、上げはじめる早さの上限（秒）。'arm' は腕ごと大きく（肘から上げる）。どれも目安
-const WRIST_LIFT = 12, ARM_LIFT = 30, ARM_GAP = 0.25, ARM_SLOW = 0.45;
+const WRIST_LIFT = 12, ARM_LIFT = 30, ARM_GAP = 0.25, ARM_SLOW = 0.45, ARM_RATE = 50; // ARM_RATE: 腕ごとの持ち上げの高さ（mm）÷ 使える時間（秒）、目安
 function wristStrokes(plan) {
   const N = plan.wh.length, ta = plan.wt0;
   plan.wk = new Float64Array(N);
@@ -495,7 +495,10 @@ function wristStrokes(plan) {
     for (const n of plan.notes) if (n.t0 < t0 - 0.03) tp = Math.max(tp, Math.min(n.t1, t0 - 0.04));
     const arm = STROKE === 'arm', start = Math.max(tp, t0 - (arm ? 0.5 : 0.35)), dur = t0 - start;
     if (dur < 0.04) continue;
-    const A = arm ? Math.min(ARM_LIFT, 100 * dur) : Math.min(WRIST_LIFT, 80 * dur);
+    // 腕ごとの高さ（v038〜、ユーザーの指摘「押さえた形から急に跳ね上がる」）: 前は 100mm/秒×時間（0.22 秒で 25mm、上がる速さ 440mm/秒）で、
+    // エリーゼの休符のあとの親指のたびに手全体が跳ね上がった。使える時間あたり ARM_RATE にし、打つ音の強さで変える（弱いほど小さく、velLift）
+    const vel = Math.max(...plan.notes.filter(n => Math.abs(n.t0 - t0) < 0.03).map(n => n.vel || VEL_MF));
+    const A = arm ? Math.min(ARM_LIFT, ARM_RATE * dur) * Math.min(1, velLift(vel)) : Math.min(WRIST_LIFT, 80 * dur);
     for (let i = Math.max(0, Math.floor((start - ta) * W_HZ)); i < N; i++) {
       const t = ta + i / W_HZ; if (t > t0) break;
       const s = (t - start) / dur; if (s < 0) continue;
