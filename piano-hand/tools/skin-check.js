@@ -242,3 +242,14 @@ window.__jointDims = P => { P = P || __P(); const out = [];
     const pip = sec(R[1].o, R[1]), dip = sec(R[2].o, R[2]), L2 = Math.hypot(...sub3(tip, R[2].o)), nm = sec(R[2].o.map((v, i) => v + R[2].z[i] * L2 * 0.75), R[2]);
     out.push('指' + f + ' 第二関節 ' + pip.join('/') + '  第一関節 ' + dip.join('/') + '  爪の中央 ' + nm[0]); }
   return out.join('\n'); };
+// __blend(f) … 指 f の第二関節・第一関節の前後（関節から −10〜+10mm、骨にそって）で、皮ふが「先の骨」についていく重みの平均（甲・腹）。v042〜。
+// 0 → 1 に変わる幅が広いほど、関節で折れずに弧を描いて曲がる
+window.__blend = (f = 2) => { const S = SKIN_DATA, R = S.restB, out = [];
+  for (const j of [1, 2]) { const B = R[boneOf(f, j)], bp = boneOf(f, j - 1), bd = boneOf(f, j), rows = {};
+    for (let v = 0; v < S.NV; v++) { const q = [S.pos0[v * 3] - B.o[0], S.pos0[v * 3 + 1] - B.o[1], S.pos0[v * 3 + 2] - B.o[2]], s = dot3(q, B.z), y = dot3(q, B.y), x = dot3(q, B.x);
+      if (Math.abs(s) > 11 || Math.hypot(x, y) > 14) continue; let wp = 0, wd = 0;
+      for (let k = 0; k < 4; k++) { const b = S.bi[v * 4 + k], w = S.bw[v * 4 + k]; if (b === bp) wp += w; if (b === bd) wd += w; }
+      if (wp + wd < 0.8) continue; const side = y > Math.abs(x) ? '甲' : -y > Math.abs(x) ? '腹' : null; if (!side) continue;
+      const k = side + Math.round(s / 2) * 2; (rows[k] = rows[k] || []).push(wd / (wp + wd)); }
+    out.push('関節' + j + ': ' + ['甲', '腹'].map(sd => sd + ' ' + [-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10].map(t => { const a = rows[sd + t]; return a ? (a.reduce((p, c) => p + c, 0) / a.length).toFixed(2) : '-'; }).join(' ')).join(' | ')); }
+  return out.join('\n'); };

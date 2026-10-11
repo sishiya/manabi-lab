@@ -9,6 +9,10 @@ const FLAT = 1.12;    // 指の断面の縦横比（横が広い）。付け根�
 // 前はどこも 1.12 で、第一関節が厚すぎ、第二関節が少しうすかった
 const FLAT_J = [FLAT, 1.06, 1.18, FLAT];
 const flatOf = (f, k) => f === 1 ? FLAT : FLAT_J[k];
+// v042〜（下の buildPrims・skinWeights で使う）
+// 骨の細さを皮ふに写す割合（目安）。1 だと骨幹で皮ふも同じだけ細くなるが、皮下脂肪は骨幹のくぼみを少し埋めるので弱める（ユーザー: 極端にならないように）
+const WAIST_K = 0.6;
+const JOINT_H = 0.65; // 関節でまぜる幅（関節の太さの半径に対する割合、目安。人さし指の第二関節で ±5.8mm。0.5 では角が少し立った）
 // 網を作るときの姿勢（度）: [付け根の横, 付け根の曲げ, 2つめの曲げ]。指を少し開いて、となりの指とくっつかないように
 // 親指は弾いているときの中央値（v040〜。内蔵の8曲・両手の 0.4 秒ごと 329 の姿勢: 横 −50〜−19・中央 −41°、付け根 −27〜5・中央 −17°、
 // 第1関節 中央 32°）。前の [-30, 8, 20] は弾いているときより 10〜17° 閉じていて、押すたびに親指の中手骨が網の形より外へ開き、
@@ -174,6 +178,11 @@ function buildPrims() {
   };
   // v041〜: 関節のふくらみの球（太さの 7%）はやめた。RADII の関節の太さは関節のいちばん太い所の測定値なので、球を足すと二重になり、
   // 部品のつなぎの太りも重なって、人さし指の第一関節が幅 18.4・厚み 16.1mm（測定値 15.6・13.0）と、指先より 1.3 倍太い「ひょうたん」に見えた
+  // v042〜: 基節・中節の皮ふは骨の形にそって節のまん中で細く（関節は骨の頭で太く、骨幹は細い。皮ふと皮下の厚さを骨のまわりで同じとして、
+  // 関節の太さ（測定値）から骨の太さの差だけ引く）。関節どうしをまっすぐつなぐだけだと、指が節のないなめらかな管になり、軟体動物のように見えた。
+  // 骨の太さ BONE_R は目安。末節は指先のはらの肉が骨の細さを埋めるのでくびれさせない（くびれさせると指先がまた玉に見える）
+  // くびれは円すいの距離に足す（handSDF）。節にそった位置 u のくびれ: J0・J1 は両端の関節の骨の半幅、S は骨幹
+  const boneW = (f, k) => k === 0 ? BONE_R[f][0][0] : Math.max(BONE_R[f][k - 1][2], BONE_R[f][k][0]); // 関節 k の骨の半幅
   for (let f = 1; f <= 5; f++) {
     const R = rest[f], off = offN(f);
     for (let j = f === 1 ? 1 : 0; j < 3; j++) {
@@ -182,6 +191,8 @@ function buildPrims() {
       c.fr = R[j]; // 指は縦に少しうすい: 骨の y（甲の向き）を縦横の比の倍に伸ばした点で測る
       c.off0 = off[j]; c.off1 = off[j + 1]; c.il = 1 / Math.hypot(...sub3(b, a));
       c.fl0 = flatOf(f, j); c.fl1 = flatOf(f, j + 1);
+      // 末節はくびれ 0（全部の円すいに同じ値の組を持たせる）
+      if (j < 2) { c.wJ0 = boneW(f, j); c.wJ1 = boneW(f, j + 1); c.wS = BONE_R[f][j][1]; } else { c.wJ0 = c.wJ1 = c.wS = 0; }
       P.fing[f].push(c);
     }
   }
@@ -236,7 +247,10 @@ function handSDF(P, x, y, z, comp) {
       // 甲の向きの座標を、中心を手のひら側へ off ずらしてから縦横の比の倍（off と比は節にそって関節の値をつなぐ）
       const yy = qx * F.y[0] + qy * F.y[1] + qz * F.y[2], u = Math.max(0, Math.min(1, (qx * F.z[0] + qy * F.z[1] + qz * F.z[2]) * c.il));
       const t = (yy + c.off0 + (c.off1 - c.off0) * u) * (c.fl0 + (c.fl1 - c.fl0) * u) - yy;
-      const e = coneD(c, x + F.y[0] * t, y + F.y[1] * t, z + F.y[2] * t, cull);
+      const e0 = coneD(c, x + F.y[0] * t, y + F.y[1] * t, z + F.y[2] * t, cull);
+      // 骨の形にそったくびれ（v042〜）: 関節どうしをまっすぐつないだ太さから、骨幹の細さの WAIST_K 倍だけ引く
+      const h = u < 0.5 ? u * 2 : u * 2 - 1, sh = h * h * (3 - 2 * h); // なめらかな 0→1（smoothF と同じ）
+      const e = e0 + (c.wJ0 + (c.wJ1 - c.wJ0) * u - (u < 0.5 ? c.wJ0 + (c.wS - c.wJ0) * sh : c.wS + (c.wJ1 - c.wS) * sh)) * WAIST_K;
       // 同じ指の節どうしは、ふつうの和で（関節で同じ太さの球を共有するので、つなぎ目はなめらか。なめらかにつなぐ式 smin だと、
       // 関節で2つの円すいが重なる所が k/4 = 0.6mm 太った）
       fd = Math.min(fd, e);
@@ -342,6 +356,17 @@ function skinWeights(P, restB, p, comp) {
       sc.sort((a, b) => b[0] - a[0]);
     }
   }
+  // 指の第二関節・第一関節（親指は第1関節だけ）: 前後の骨の重みの分け方を、関節からの骨にそった位置で決め、関節の前後 ±JOINT_H×太さ だけでまぜる（v042〜）。
+  // 骨までの距離の近さだけで決めると、関節の前後 ±10mm（中節 22mm・末節 13mm のほとんど）にわたってまざり、指が関節で折れずに弧を描いて
+  // 曲がって軟体動物のように見えた。本物の指の皮ふは靭帯（クレランド靭帯・グレイソン靭帯）で節ごとの骨につながり、関節の近くだけがのび縮みする
+  for (let f = 1; f <= 5; f++) for (const j of (f === 1 ? [2] : [1, 2])) {
+    const bp = boneOf(f, j - 1), bd = boneOf(f, j), ip = sc.findIndex(e => e[1] === bp), id = sc.findIndex(e => e[1] === bd);
+    if (ip < 0 || id < 0) continue;
+    const tot = sc[ip][0] + sc[id][0], A = restB[bp], B = restB[bd], ax = add3(A.z, B.z), s = dot3(sub3(p, B.o), ax) / Math.hypot(...ax), H = JOINT_H * RADII[f][j];
+    const w = smoothF((s + H) / (2 * H));
+    sc[ip][0] = tot * (1 - w); sc[id][0] = tot * w;
+  }
+  sc.sort((a, b) => b[0] - a[0]);
   return sc.slice(0, 4);
 }
 
