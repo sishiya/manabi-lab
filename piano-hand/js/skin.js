@@ -14,6 +14,9 @@ const flatOf = (f, k) => f === 1 ? (k === 2 ? THUMB_IP_FLAT : FLAT) : FLAT_J[k];
 // v042〜（下の buildPrims・skinWeights で使う）
 // 骨の細さを皮ふに写す割合（目安）。1 だと骨幹で皮ふも同じだけ細くなるが、皮下脂肪は骨幹のくぼみを少し埋めるので弱める（ユーザー: 極端にならないように）
 const WAIST_K = 0.6;
+// 指と手のひらのつなぎの幅（smin の k、mm）。指ごと。v048 で人さし指・小指を 11 にして付け根の段をならす試しをしたが、見た目はほぼ変わらず
+// （付け根の幅 0.5〜1mm）、中手骨 II の頭の手の厚みが 29.5 → 30.3mm と測定値（27.6）から遠ざかったので 7 のまま
+let FING_K = [null, 7, 7, 7, 7, 7];
 const JOINT_H = 0.65; // 関節でまぜる幅（関節の太さの半径に対する割合、目安。人さし指の第二関節で ±5.8mm。0.5 では角が少し立った）
 // 網を作るときの姿勢（度）: [付け根の横, 付け根の曲げ, 2つめの曲げ]。指を少し開いて、となりの指とくっつかないように
 // 親指は弾いているときの中央値（v040〜。内蔵の8曲・両手の 0.4 秒ごと 329 の姿勢: 横 −50〜−19・中央 −41°、付け根 −27〜5・中央 −17°、
@@ -269,7 +272,7 @@ function handSDF(P, x, y, z, comp) {
       fd = Math.min(fd, e);
       if (comp) comp[c.bone] = Math.min(comp[c.bone], e);
     }
-    d = smin(d, fd, 7); // 親指も指と同じつなぎの幅（9 では付け根の関節に肉が足されてこぶに見えた）
+    d = smin(d, fd, FING_K[f]); // 親指も指と同じつなぎの幅（9 では付け根の関節に肉が足されてこぶに見えた）
   }
   return d;
 }
@@ -508,8 +511,10 @@ function buildSkin() {
     for (const B of restB.slice(2)) B.o = B.o.map(v => v * sc);
     for (const N of nails) for (let i = 0; i < N.pos.length; i++) N.pos[i] *= sc;
   }
-  const ms = performance.now() - t0;
-  return { NV, pos0: pos, nrm0: nrm, idx, bi, bw, col, aWrk, aAlong, aJ, aPad, aCrease, nails, ms, P, restB };
+  const S = { NV, pos0: pos, nrm0: nrm, idx, bi, bw, col, aWrk, aAlong, aJ, aPad, aCrease, nails, P, restB };
+  S.aT = fitThumbFix(S);
+  S.ms = performance.now() - t0;
+  return S;
 }
 
 function restBoneFrames(rest) {
@@ -592,6 +597,85 @@ function skinMatrices(S, bones, outArr) {
   const m = new THREE.Matrix4();
   for (let b = 0; b < N_BONES; b++) { frameMat(bones[b], m).multiply(S.restInv[b]); m.toArray(outArr, b * 16); }
 }
+// ---- 親指の付け根の、姿勢による補正（v048〜）----
+// 親指の付け根の皮ふは手のひらと親指の中手骨の重みを半分ずつ持つので、親指が網の形から動くと半分しかついていかず、
+// 本来の形（その姿勢で陰関数を作り直した形）より最大 6mm 外へふくらみ・13mm 内へへこんでいた（ユーザーの指摘「親指の皮ふが盛り上がる」。
+// 弾いている 43 の姿勢、tools/skin-check.js の __lbsEvalAt）。網を作るときに、親指の角度を格子状に変えた姿勢（TFIX_GRID）で
+// 「本来の形の陰関数の値」を頂点ごとに測り、親指の角度（網の形からの差、+ と − を別に、30° で 1）の一次式で近似する（リッジ回帰）。
+// 動かすときはその分だけ法線の向きに戻す（関節の内側のふくらみ aJ と同じ所で）。形は本来の形に寄せるだけで、骨や動きは変えない
+// TFIX_MAX: 補正の上限 mm（測ったふくらみの最悪 6.4mm）。8 では格子の外（横 +54°）で上限に届き、となりの補正しない所との間に折れ目が出た
+let TFIX_UP = 0.15;
+const TFIX_K = 6, TFIX_MAX = 6, TFIX_LAMBDA = 0.05, TFIX_SMOOTH = 4;
+const TFIX_GRID = { yaw: [-38, -15, 0, 25, 58], a1: [-16, 0, 15, 34], a2: [-36, 0, 22] }; // 網の形からの差（度）。弾いているときの範囲（横 −33〜+54・付け根 −13〜+31・第1関節 −32〜+20）より少し広く
+const TFIX_CLAMP = [[-38, 58], [-16, 34], [-36, 22]]; // 格子の外へは延ばさない（一次式の外挿で大きくなりすぎる）
+function thumbFeat(ang, out) {
+  const cl = (v, i) => Math.max(TFIX_CLAMP[i][0], Math.min(TFIX_CLAMP[i][1], v));
+  const y = cl(ang.yaw / D2R - REST_DEG[1][0], 0), a = cl(ang.a1 / D2R - REST_DEG[1][1], 1), b = cl(ang.a2 / D2R - REST_DEG[1][2], 2);
+  out[0] = Math.max(0, y) / 30; out[1] = Math.max(0, -y) / 30; out[2] = Math.max(0, a) / 30; out[3] = Math.max(0, -a) / 30; out[4] = Math.max(0, b) / 30; out[5] = Math.max(0, -b) / 30;
+  return out;
+}
+function fitThumbFix(S) {
+  const NV = S.NV, pos = S.pos0, nrm = S.nrm0, aT = new Float32Array(NV * TFIX_K), sc = HAND.s;
+  // 補正する頂点: 親指の付け根のまわり（手首〜指の付け根、親指の側）。親指の骨の重みが少ない所と、人さし指の重みがある所へはなめらかに弱める
+  const sel = [], fall = [];
+  for (let v = 0; v < NV; v++) {
+    if (!(pos[v * 3] < -5 * sc && pos[v * 3 + 2] > -100 * sc && pos[v * 3 + 2] < 10 * sc)) continue;
+    let wt = 0, wo = 0;
+    for (let k = 0; k < 4; k++) { const b = S.bi[v * 4 + k], w = S.bw[v * 4 + k]; if (b >= 2 && b <= 4) wt += w; else if (b >= 5) wo += w; }
+    // 手の甲の側（法線が上を向く）は弱める: 親指を手のひらの下へくぐらせたとき、甲の皮ふを本来の形へ引きこむと親指の皮ふの下へもぐり、
+    // 切れ目のような線が見えた（左手の音階 7.63 秒）。ふくらみが気になるのは手のひらの側と親指の外側
+    const f = smoothF((wt - 0.02) / 0.1) * (1 - smoothF(wo / 0.2)) * (1 - smoothF((nrm[v * 3 + 1] - TFIX_UP) / 0.35)); // 人さし指の重みのある所（水かき）へは 0.2 までかけてゆっくり弱める（0.05 では急で折れ目が出た）
+    if (f > 0) { sel.push(v); fall.push(f); }
+  }
+  if (!sel.length) return aT;
+  const rest = REST_DEG.map(d => d && d.slice()), fl = new Float32Array(N_BONES), M = new Float32Array(N_BONES * 16), x = new Float64Array(TFIX_K);
+  const A = Array.from({ length: TFIX_K }, () => new Float64Array(TFIX_K)), XE = new Float64Array(sel.length * TFIX_K);
+  let n = 0;
+  for (const dy of TFIX_GRID.yaw) for (const d1 of TFIX_GRID.a1) for (const d2 of TFIX_GRID.a2) {
+    const fingers = [null];
+    for (let f = 1; f <= 5; f++) { const d = f === 1 ? [rest[1][0] + dy, rest[1][1] + d1, rest[1][2] + d2] : rest[f]; fingers.push({ ang: { yaw: d[0] * D2R, a1: d[1] * D2R, a2: d[2] * D2R } }); }
+    const pose = { W: [0, 0, 0, 0, 1], fingers };
+    skinMatrices(S, poseBones(pose), M); jointFlex(pose, fl);
+    REST_DEG[1] = [rest[1][0] + dy, rest[1][1] + d1, rest[1][2] + d2];
+    const Pt = buildPrims(); // その姿勢の本来の形（網を作る前の大きさ。点を sc で割って測り、sc をかける）
+    REST_DEG[1] = rest[1];
+    thumbFeat(fingers[1].ang, x);
+    for (let a = 0; a < TFIX_K; a++) for (let b = 0; b < TFIX_K; b++) A[a][b] += x[a] * x[b];
+    sel.forEach((v, i) => {
+      const inf = S.aJ[v * 2 + 1] * fl[S.aJ[v * 2]] * 2.6, px = pos[v * 3] + nrm[v * 3] * inf, py = pos[v * 3 + 1] + nrm[v * 3 + 1] * inf, pz = pos[v * 3 + 2] + nrm[v * 3 + 2] * inf;
+      let p0 = 0, p1 = 0, p2 = 0;
+      for (let k = 0; k < 4; k++) { const b = S.bi[v * 4 + k], w = S.bw[v * 4 + k]; if (!w) continue; const e = M.subarray(b * 16, b * 16 + 16); p0 += w * (e[0] * px + e[4] * py + e[8] * pz + e[12]); p1 += w * (e[1] * px + e[5] * py + e[9] * pz + e[13]); p2 += w * (e[2] * px + e[6] * py + e[10] * pz + e[14]); }
+      const err = sc * handSDF(Pt, p0 / sc, p1 / sc, p2 / sc); // + は本来の形より外へふくらむ
+      for (let a = 0; a < TFIX_K; a++) XE[i * TFIX_K + a] += x[a] * err;
+    });
+    n++;
+  }
+  for (let a = 0; a < TFIX_K; a++) A[a][a] += TFIX_LAMBDA * n;
+  const Ai = invSmall(A);
+  sel.forEach((v, i) => { for (let a = 0; a < TFIX_K; a++) { let c = 0; for (let b = 0; b < TFIX_K; b++) c += Ai[a][b] * XE[i * TFIX_K + b]; aT[v * TFIX_K + a] = -c * fall[i]; } }); // 戻す向き（−）
+  // となりの頂点とならす（TFIX_SMOOTH 回）。頂点ごとの近似のばらつきで、となりどうしの補正が 2〜3mm ちがう所が折れ目に見えた
+  const nb = Array.from({ length: NV }, () => []), idx = S.idx;
+  for (let i = 0; i < idx.length; i += 3) for (let k = 0; k < 3; k++) { const a = idx[i + k], b = idx[i + (k + 1) % 3]; nb[a].push(b); nb[b].push(a); }
+  const act = new Uint8Array(NV); sel.forEach(v => { act[v] = 1; for (const u of nb[v]) act[u] = 1; for (const u of nb[v]) for (const w of nb[u]) act[w] = 1; });
+  for (let it = 0; it < TFIX_SMOOTH; it++) { const nx = aT.slice();
+    for (let v = 0; v < NV; v++) { if (!act[v] || !nb[v].length) continue; for (let a = 0; a < TFIX_K; a++) { let s = 0; for (const u of nb[v]) s += aT[u * TFIX_K + a]; nx[v * TFIX_K + a] = 0.5 * aT[v * TFIX_K + a] + 0.5 * s / nb[v].length; } }
+    aT.set(nx); }
+  S.restInv = null; // skinMatrices が作った逆行列は、のちの大きさの変化に合わせて作り直す
+  return aT;
+}
+function invSmall(M) {
+  const n = M.length, a = M.map((r, i) => [...r, ...Array.from({ length: n }, (_, j) => i === j ? 1 : 0)]);
+  for (let i = 0; i < n; i++) {
+    let p = i; for (let r = i + 1; r < n; r++) if (Math.abs(a[r][i]) > Math.abs(a[p][i])) p = r;
+    [a[i], a[p]] = [a[p], a[i]]; const d = a[i][i];
+    for (let j = 0; j < 2 * n; j++) a[i][j] /= d;
+    for (let r = 0; r < n; r++) if (r !== i) { const f = a[r][i]; for (let j = 0; j < 2 * n; j++) a[r][j] -= f * a[i][j]; }
+  }
+  return a.map(r => r.slice(n));
+}
+// 補正の量（mm、法線の向き）: 頂点 v、親指の角度の特徴 x
+function thumbFixAt(S, v, x) { let c = 0; for (let a = 0; a < TFIX_K; a++) c += S.aT[v * TFIX_K + a] * x[a]; return Math.max(-TFIX_MAX, Math.min(TFIX_MAX, c)); }
+
 // 関節ごとの曲げの角度（ふくらみの補正用）
 function jointFlex(pose, out) {
   out.fill(0);

@@ -24,11 +24,13 @@ function makeEnv(renderer) {
 const SKIN_VERT_HEAD = `
 uniform mat4 uBones[${N_BONES}];
 uniform float uFlex[${N_BONES}];
-attribute vec4 aBi; attribute vec4 aBw; attribute vec2 aJ;
+uniform vec3 uT0; uniform vec3 uT1;
+attribute vec4 aBi; attribute vec4 aBw; attribute vec2 aJ; attribute vec3 aT0; attribute vec3 aT1;
 `;
 const SKIN_VERT_MAT = `
   mat4 skM = uBones[int(aBi.x)] * aBw.x + uBones[int(aBi.y)] * aBw.y + uBones[int(aBi.z)] * aBw.z + uBones[int(aBi.w)] * aBw.w;
   float skInf = aJ.y * uFlex[int(aJ.x)] * 2.6; // 関節の内側のふくらみ（mm）
+  skInf += clamp(dot(aT0, uT0) + dot(aT1, uT1), -${TFIX_MAX.toFixed(1)}, ${TFIX_MAX.toFixed(1)}); // 親指の付け根の、姿勢による補正（v048〜、fitThumbFix）
 `;
 
 // 肌のシェーダーに足すもの: 3次元のノイズ（網を作った姿勢の座標で）による毛穴と小じわ、関節のしわ、指紋、手のひらのしわ、色むら
@@ -78,7 +80,7 @@ function makeSkinMaterials(U, fade) {
     envMapIntensity: 0.7,
   });
   m.onBeforeCompile = sh => {
-    sh.uniforms.uBones = U.uBones; sh.uniforms.uFlex = U.uFlex; sh.uniforms.uArmFade = U.uArmFade; sh.uniforms.uDarkZ = SKIN_DARK.uDarkZ; sh.uniforms.uDark = SKIN_DARK.uDark;
+    sh.uniforms.uBones = U.uBones; sh.uniforms.uFlex = U.uFlex; sh.uniforms.uT0 = U.uT0; sh.uniforms.uT1 = U.uT1; sh.uniforms.uArmFade = U.uArmFade; sh.uniforms.uDarkZ = SKIN_DARK.uDarkZ; sh.uniforms.uDark = SKIN_DARK.uDark;
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\n' + FADE_GLSL + SKIN_VERT_HEAD + 'attribute float aWrk; attribute float aAlong; attribute vec3 aPad; attribute float aCrease;\nvarying vec3 vRest; varying float vWrk; varying float vAlong; varying vec3 vPad; varying float vCrease;')
       .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\n' + SKIN_VERT_MAT + '  objectNormal = normalize(mat3(skM) * objectNormal);')
@@ -96,7 +98,7 @@ function makeSkinMaterials(U, fade) {
   // 影も同じ形で落とす
   const d = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
   d.onBeforeCompile = sh => {
-    sh.uniforms.uBones = U.uBones; sh.uniforms.uFlex = U.uFlex; sh.uniforms.uArmFade = U.uArmFade;
+    sh.uniforms.uBones = U.uBones; sh.uniforms.uFlex = U.uFlex; sh.uniforms.uT0 = U.uT0; sh.uniforms.uT1 = U.uT1; sh.uniforms.uArmFade = U.uArmFade;
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\n' + FADE_GLSL + SKIN_VERT_HEAD)
       .replace('#include <begin_vertex>', SKIN_VERT_MAT + 'vec3 transformed = (skM * vec4(position + normal * skInf, 1.0)).xyz; vRestZ = position.z;');
@@ -108,10 +110,11 @@ function makeSkinMaterials(U, fade) {
 }
 
 let SKIN_DATA = null;
+const TFIX_X = new Float64Array(6);
 // 片手分の皮ふと爪を作る（side: 右手 1・左手 -1）
 function makeSkinHand(sc, side) {
   const S = SKIN_DATA || (SKIN_DATA = buildSkin());
-  const U = { uBones: { value: new Float32Array(N_BONES * 16) }, uFlex: { value: new Float32Array(N_BONES) }, uArmFade: { value: new THREE.Vector2(ARM_FADE[0] * HAND.s, ARM_FADE[1] * HAND.s) } };
+  const U = { uBones: { value: new Float32Array(N_BONES * 16) }, uFlex: { value: new Float32Array(N_BONES) }, uT0: { value: new THREE.Vector3() }, uT1: { value: new THREE.Vector3() }, uArmFade: { value: new THREE.Vector2(ARM_FADE[0] * HAND.s, ARM_FADE[1] * HAND.s) } };
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(S.pos0, 3));
   g.setAttribute('normal', new THREE.BufferAttribute(S.nrm0, 3));
@@ -119,6 +122,8 @@ function makeSkinHand(sc, side) {
   g.setAttribute('aBi', new THREE.BufferAttribute(Float32Array.from(S.bi), 4));
   g.setAttribute('aBw', new THREE.BufferAttribute(S.bw, 4));
   g.setAttribute('aJ', new THREE.BufferAttribute(S.aJ, 2));
+  { const t0 = new Float32Array(S.NV * 3), t1 = new Float32Array(S.NV * 3); for (let v = 0; v < S.NV; v++) for (let k = 0; k < 3; k++) { t0[v * 3 + k] = S.aT[v * TFIX_K + k]; t1[v * 3 + k] = S.aT[v * TFIX_K + 3 + k]; }
+    g.setAttribute('aT0', new THREE.BufferAttribute(t0, 3)); g.setAttribute('aT1', new THREE.BufferAttribute(t1, 3)); }
   g.setAttribute('aWrk', new THREE.BufferAttribute(S.aWrk, 1));
   g.setAttribute('aAlong', new THREE.BufferAttribute(S.aAlong, 1));
   g.setAttribute('aPad', new THREE.BufferAttribute(S.aPad, 3));
@@ -179,5 +184,6 @@ function updateSkinHand(H, pose, opt) {
   const bones = poseBones(pose);
   skinMatrices(H.S, bones, H.U.uBones.value);
   jointFlex(pose, H.U.uFlex.value);
+  { const x = thumbFeat(pose.fingers[1].ang, TFIX_X); H.U.uT0.value.set(x[0], x[1], x[2]); H.U.uT1.value.set(x[3], x[4], x[5]); }
   for (const n of H.nails) { frameMat(bones[boneOf(n.f, 2)], n.mesh.matrix); n.mesh.matrixWorldNeedsUpdate = true; }
 }

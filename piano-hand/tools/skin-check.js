@@ -214,7 +214,8 @@ window.__lbsErrOne = (fs, sel) => { const S = SKIN_DATA, pos = S.pos0, bi = S.bi
   for (let f = 1; f <= 5; f++) fingers.push({ ang: fs[f] });
   const pose = { W: [0, 0, 0, 0, 1], fingers }, B = poseBones(pose), M = new Float32Array(N_BONES * 16); skinMatrices(S, B, M); const fl = new Float32Array(N_BONES); jointFlex(pose, fl);
   const keep = REST_DEG.map(d => d && d.slice()); for (let f = 1; f <= 5; f++) REST_DEG[f] = [fs[f].yaw / D2R, fs[f].a1 / D2R, fs[f].a2 / D2R]; const Pt = buildPrims(); for (let f = 1; f <= 5; f++) REST_DEG[f] = keep[f];
-  return sel.map(v => { const x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2], inf = aJ[v * 2 + 1] * fl[aJ[v * 2]] * 2.6, px = x + nrm[v * 3] * inf, py = y + nrm[v * 3 + 1] * inf, pz = z + nrm[v * 3 + 2] * inf; let a = 0, b = 0, c = 0;
+  const tx = thumbFeat(fs[1], new Float64Array(6)); // v048〜: 親指の付け根の補正（fitThumbFix）も入れて測る（window.__noTfix で外す）
+  return sel.map(v => { const x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2], inf = aJ[v * 2 + 1] * fl[aJ[v * 2]] * 2.6 + (S.aT && !window.__noTfix ? thumbFixAt(S, v, tx) : 0), px = x + nrm[v * 3] * inf, py = y + nrm[v * 3 + 1] * inf, pz = z + nrm[v * 3 + 2] * inf; let a = 0, b = 0, c = 0;
     for (let k = 0; k < 4; k++) { const bb = bi[v * 4 + k], w = bw[v * 4 + k]; if (!w) continue; const e = M.subarray(bb * 16, bb * 16 + 16); a += w * (e[0] * px + e[4] * py + e[8] * pz + e[12]); b += w * (e[1] * px + e[5] * py + e[9] * pz + e[13]); c += w * (e[2] * px + e[6] * py + e[10] * pz + e[14]); }
     return handSDF(Pt, a, b, c); }); };
 // __thumbVerts() … 親指の付け根のまわりの頂点（網の姿勢で x < −5・手首〜指の付け根、親指の骨の重みがあって人さし指〜小指の重みがない）
