@@ -48,16 +48,18 @@ function coneD(P, x, y, z, cull) {
   return (Math.sqrt(x2 * P.a2 * P.il2) + yy * P.rr) * P.il2 - P.ra;
 }
 // 手のひらの板（手首の側ほど細い、角の丸い箱）
-const PALM = { c: [4, -1, -50], h: [25, 1, 33.5], r: 13 }; // 角を大きく丸めて、人さし指・小指の付け根が角ばらないように
+// 手首の皮ふのつなぎ目は、手首の回転の中心（z=0）より 8mm 指の側（本物の手と同じく、親指の根もとが手首のすぐ先に見えるように。
+// 前は手首のつなぎ目が回転の中心より肘の側にあり、手の甲が長く、親指が手の甲の途中から生えているように見えた）
+const PALM = { c: [4, -1, -54], h: [25, 1, 29.5], r: 13 }; // 角を大きく丸めて、人さし指・小指の付け根が角ばらないように
 // 手のひら: 角の丸い箱とだ円体のあいだの形（PALM_ROUND の割合だけだ円体に寄せる）。箱だけだと四角く、
 // 人さし指・小指の付け根が角ばって見えた。手首の側ほど細い
-const PALM_ROUND = 0.4, PALM_E = [42, 12, 50];
+const PALM_ROUND = 0.4, PALM_E = [42, 12, 46];
 // 手首・前腕: 横に広く縦にうすいだ円（大人の手首はおよそ幅 55〜60mm・厚み 35〜40mm）。前は丸に近く、真上から見ると手首だけ細くくびれていた
 const ARM_FLAT = 1.45;
 function palmD(x, y, z) {
-  const s = 0.74 + 0.26 * Math.min(1, Math.max(0, (-z - 12) / 75)); // 指の付け根から手首へ台形にすぼめる
+  const s = 0.74 + 0.26 * Math.min(1, Math.max(0, (-z - 20) / 67)); // 指の付け根から手首へ台形にすぼめる
   // 手首に近いほどうすく（同じ厚みのまま細い前腕につなぐと、手の甲と前腕の境目がこぶのように盛り上がった）
-  const thin = 1 + 0.6 * Math.min(1, Math.max(0, (z + 30) / 30));
+  const thin = 1 + 0.6 * Math.min(1, Math.max(0, (z + 38) / 30));
   // 先の端は指の付け根の弧に合わせる（小指の付け根は中指より 16mm 手前。まっすぐだと手のひらが小指の付け根にかぶさって見えた）
   const arc = (Math.max(0, x - 12) * 0.6 + Math.max(0, -18 - x) * 0.4) * Math.min(1, Math.max(0, (-z - 40) / 40));
   const px = (x - PALM.c[0]) / s, py = (y - PALM.c[1]) * thin, pz = z + arc - PALM.c[2];
@@ -78,24 +80,24 @@ function buildPrims() {
     rest.push(boneFrames(F, d[0] * D2R, d[1] * D2R, d[2] * D2R));
   }
   // 手のひら: 手首の横棒・中手骨（甲の盛り上がり）・指の付け根の横棒・小指球・母指球
-  P.palm.push(mkCone([-15, -3, -3], [19, -3, -3], 10, 10, BONE_PALM)); // 手首の横棒（細めにして、手首と手のひらの境目がでっぱらないように）
+  P.palm.push(mkCone([-15, -3, -11], [19, -3, -11], 10, 10, BONE_PALM)); // 手首の横棒（細めにして、手首と手のひらの境目がでっぱらないように）
   const wx = [0, 0, -12, 0, 11, 21];
   for (let f = 2; f <= 5; f++) {
-    const b = FINGERS_U[f].base, s = [wx[f], 1, -8], d = sub3(b, s), n = Math.hypot(...d);
+    const b = FINGERS_U[f].base, s = [wx[f], 1, -14], d = sub3(b, s), n = Math.hypot(...d);
     const end = [b[0] - d[0] * 4 / n, b[1] - 1, b[2] - d[2] * 4 / n]; // 付け根の関節の 4mm 手前まで
     P.palm.push(mkCone(s, end, 9, RADII[f][0] + 0.5, BONE_PALM));
   }
   P.palm.push(mkCone(sub3(FINGERS_U[2].base, [0, 2, -3]), sub3(FINGERS_U[5].base, [0, 2, -3]), 10.5, 9, BONE_PALM));
-  P.palm.push(mkCone([21, -8, -22], [28, -6, -66], 12, 10, BONE_PALM));
+  P.palm.push(mkCone([21, -8, -28], [28, -6, -66], 12, 10, BONE_PALM));
   { const c = mkCone([-6, -14, -26], [-18, -14, -50], 10, 8, BONE_PALM); c.k = 12; P.palm.push(c); } // 母指球（手のひらの側のふくらみ。手のひらの内側寄り。つなぎ目の幅 k が大きいと肉が足されて玉のようにふくらんだ）
   // 親指の中手骨は手のひらと同じ組で溶けあわせる（骨は親指）
   const t0 = rest[1][0];
   // 親指の中手骨は根もとから太さを保ち、手首の親指側から途切れずにつなぐ（少し先から細く始めると、手首から MP 関節までが手の甲の側でへこんで見えた）
-  { const c = mkCone([-16, -3, -6], t0.o, 9, RADII[1][0], BONE_PALM); c.k = 12; P.palm.push(c); } // 手首の親指側 → 親指の根もと（CMC）
+  { const c = mkCone([-16, -3, -14], t0.o, 9, RADII[1][0], BONE_PALM); c.k = 12; P.palm.push(c); } // 手首の親指側 → 親指の根もと（CMC）
   { const c = mkCone(t0.o, rest[1][1].o, RADII[1][0], RADII[1][1], boneOf(1, 0)); c.k = 12; P.palm.push(c); } // 親指の中手骨
   { const c = mkCone([-17, 3, -60], lerp3(t0.o, rest[1][1].o, 0.9), 10, 7.5, BONE_PALM); c.k = 14; P.palm.push(c); } // 親指と人さし指のあいだの水かき（甲の側の筋肉）。甲の側に寄せて厚く（うすいと、親指と手の甲のあいだが谷になった）
-  P.arm = mkCone([2, -5, -34], [3, -16, 240], 26, 36, BONE_ARM); // 形: 手のひらの中から細く始めて、手首で自然に太くなる（手首で丸く始めると、境目に段ができた）。一人称で切れ目が見えないよう、肘の近くまで
-  P.armW = mkCone([2, -6, 4], [3, -16, 240], 27, 36, BONE_ARM); // 重み用: 手首から先だけ（手のひらの皮ふが前腕といっしょに動かないように）
+  P.arm = mkCone([2, -5, -42], [3, -16, 240], 26, 36, BONE_ARM); // 形: 手のひらの中から細く始めて、手首で自然に太くなる（手首で丸く始めると、境目に段ができた）。一人称で切れ目が見えないよう、肘の近くまで
+  P.armW = mkCone([2, -6, -4], [3, -16, 240], 27, 36, BONE_ARM); // 重み用: 手首から先だけ（手のひらの皮ふが前腕といっしょに動かないように）
   for (let f = 1; f <= 5; f++) {
     const R = rest[f];
     for (let j = f === 1 ? 1 : 0; j < 3; j++) {
@@ -189,12 +191,12 @@ function surfaceNets(P) {
 
 // 手の甲の腱（[x0, z0, x1, z1]: 手首の側 → 指の付け根）と静脈（折れ線）。手の座標（mm）、目安
 const TENDONS = [[-10, -14, -24, -88], [-3, -14, -4, -92], [6, -14, 14, -86], [14, -14, 29, -76]];
-const VEINS = [[[-20, 4], [-16, -20], [-6, -38], [4, -52], [8, -70]], [[18, 2], [16, -24], [6, -40], [4, -52]], [[-6, -38], [-14, -58], [-16, -72]]];
+const VEINS = [[[-20, -6], [-16, -24], [-6, -40], [4, -52], [8, -70]], [[18, -6], [16, -26], [6, -42], [4, -52]], [[-6, -38], [-14, -58], [-16, -72]]];
 // 手のひらのしわ（手の座標の x, z の折れ線。目安）: 感情線・知能線・生命線
 const PALM_LINES = [
   [[37, -66], [24, -73], [10, -77], [-4, -80], [-12, -84]],
   [[-33, -60], [-18, -60], [0, -57], [16, -52], [27, -46]],
-  [[-33, -60], [-26, -48], [-21, -34], [-17, -20], [-12, -8]],
+  [[-33, -60], [-26, -48], [-21, -34], [-17, -22], [-12, -14]],
 ];
 const smoothF = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
 function segDist2(x, z, T) {
@@ -245,7 +247,7 @@ function buildSkin() {
     const dors = Math.min(1, (ny - 0.35) * 2.5);
     let hgt = 0, vn = 0;
     for (const T of TENDONS) { const d = segDist2(x, z, T); const fade = smoothF((T[1] - z) / 10) * smoothF((z - T[3]) / 14); hgt += 0.75 * Math.exp(-((d / 2.4) ** 2)) * fade; }
-    for (const L of VEINS) for (let i = 0; i < L.length - 1; i++) { const d = segDist2(x, z, [L[i][0], L[i][1], L[i + 1][0], L[i + 1][1]]); const e = Math.exp(-((d / 2.3) ** 2)); hgt += 0.42 * e; vn = Math.max(vn, e); } // 静脈は太さ 3〜4mm で低く盛り上がる（細く高いと光って白い線に見えた）
+    for (const L of VEINS) for (let i = 0; i < L.length - 1; i++) { const d = segDist2(x, z, [L[i][0], L[i][1], L[i + 1][0], L[i + 1][1]]); const e = Math.exp(-((d / 2.3) ** 2)); hgt += 0.22 * e; vn = Math.max(vn, e); } // 静脈は太さ 3〜4mm で低く盛り上がる（細く高いと光って白い線に見えた）
     const vk = HAND.veins === undefined ? 1 : HAND.veins; // 手のモデルごとの静脈・腱の目立ち方
     hgt *= dors * vk; vein[v] = vn * dors * vk;
     pos[v * 3] += nrm[v * 3] * hgt; pos[v * 3 + 1] += ny * hgt; pos[v * 3 + 2] += nrm[v * 3 + 2] * hgt;
@@ -319,7 +321,7 @@ function buildSkin() {
     // 色: 甲は少し日焼け、手のひらの側は赤み、指先と関節の甲は赤み
     const main = top[0][1];
     let c = mix3(SKIN, n[1] > 0 ? DORSAL : PALMC, Math.min(1, Math.abs(n[1]) * 1.2));
-    c = mix3(c, VEINC, vein[v] * 0.32); // 皮ふごしの静脈の青み
+    c = mix3(c, VEINC, vein[v] * 0.14); // 皮ふごしの静脈の青み（ひかえめに。強いと青白い線を描いたように見えた）
     let wrk = 0, along = 0;
     if (main >= 2) {
       const f = Math.floor((main - 2) / 3) + 1, j = (main - 2) % 3, B = restB[main];
