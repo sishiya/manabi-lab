@@ -88,3 +88,20 @@ table.val{border-collapse:collapse;font-size:12px;width:100%}
 table.val td,table.val th{padding:3px 4px;border-top:1px solid var(--line);text-align:left}
 table.val th{color:var(--dim);font-weight:700}
 table.val td:nth-child(n+2){font-family:var(--f-mono);text-align:right;white-space:nowrap}
+
+/* 読みこみ中の表示 */
+#loading{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(6,8,12,.72);border-radius:6px;color:var(--muted);font-size:13px}
+#loading[hidden]{display:none}
+#loading p{margin:0}
+#loading .spin{width:28px;height:28px;border-radius:50%;border:3px solid rgba(255,255,255,.15);border-top-color:var(--accent);animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#loading .spin{animation:none;border-top-color:rgba(255,255,255,.15);border-color:var(--accent)}}
+
+/* ペダルの表示（踏んでいる間は光る） */
+#pedalInd{position:absolute;left:12px;bottom:12px;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);background:rgba(8,10,13,.6);padding:4px 10px 4px 6px;border-radius:999px;transition:color .15s}
+#pedalInd[hidden]{display:none}
+#pedalInd .ped{width:20px;height:9px;border-radius:3px 3px 6px 6px;background:#5a5040;transition:background .15s, transform .15s;transform:translateY(-2px)}
+#pedalInd.on{color:var(--accent)}
+#pedalInd.on .ped{background:#e8b85a;transform:translateY(1px);box-shadow:0 0 10px rgba(232,184,90,.7)}
+#vol{width:90px;accent-color:var(--accent)}
+#speedSel{padding:5px 6px;font-size:13px}

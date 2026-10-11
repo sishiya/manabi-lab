@@ -129,9 +129,9 @@ function fingeringOnlyMatch(song) {
     if (!ref) continue;
     const hn = ns.filter(n => n.hand === h).sort((a, b) => a.t0 - b.t0 || a.m - b.m);
     planFingering(hn, side);
-    let same = 0;
-    hn.forEach((n, i) => { if (+ref[i] === n.f) same++; });
-    out.push({ side, same, total: ref.length, got: hn.map(n => n.f).join(''), ref });
+    let same = 0, total = 0;
+    hn.forEach((n, i) => { if (!+ref[i]) return; total++; if (+ref[i] === n.f) same++; }); // 0 はお手本なし
+    out.push({ side, same, total, got: hn.map(n => n.f).join(''), ref });
   }
   return out;
 }

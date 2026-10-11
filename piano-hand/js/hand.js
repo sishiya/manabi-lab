@@ -120,7 +120,7 @@ function handSpan() {
   const t = fingerFK(FINGERS[1], FINGERS[1].yaw[0], 0, 0)[3], p = fingerFK(FINGERS[5], FINGERS[5].yaw[1], 0, 0)[3];
   return Math.hypot(t[0] - p[0], t[2] - p[2]) + FINGERS[1].r[2] + FINGERS[5].r[2];
 }
-setHandModel('adult-l');
+setHandModel('adult-l'); // 最初は大人（大きめ）（ユーザーの希望。一度「小さめ」にしてから戻した）
 
 // 手首の姿勢 W = [x, y, z, ψ, side]。ψ は手首から先を水平に回す角度（真上から見て反時計回りが +）。
 // side は右手 1・左手 -1。左手は右手の手の座標を x で鏡に映してから回す（骨・IK・運指の表は右手のものをそのまま使う）。
@@ -149,6 +149,7 @@ function pressDepth(n, t) {
 function buildPlan(song) {
   const notes = song.notes ? song.notes.map(n => Object.assign({}, n)) : parseSong(song);
   notes.sort((a, b) => a.t0 - b.t0 || a.m - b.m);
+  for (const n of notes) n.t1n = n.t1; // 楽譜の上での音の終わり（指を早く離しても、音はここまで）
   const hands = [];
   for (const side of [1, -1]) {
     const hn = notes.filter(n => (n.hand || 'R') === (side > 0 ? 'R' : 'L'));
@@ -159,8 +160,21 @@ function buildPlan(song) {
     const ref = h.side > 0 ? song.refR : song.refL;
     if (ref) h.notes.forEach((n, i) => { if (ref[i]) n.ref = +ref[i]; });
   }
+  // ペダル（秒）: 曲の文字列の拍（parsePedal）か、楽譜ファイルから読んだ秒（song.pedalSec）。
+  // 踏んでいる間に離した音は、ペダルを上げるまで鳴りつづける（n.ts = 音が止まる時刻）。同じ鍵をまた押したらそこで止まる
+  const pedal = song.pedalSec || parsePedal(song);
+  for (const n of notes) {
+    let ts = Math.max(n.t1, n.t1n || n.t1);
+    for (const [a, c] of pedal) if (a <= n.t1 + 1e-3 && c > n.t1) ts = Math.max(ts, c);
+    const again = notes.find(o => o !== n && o.m === n.m && o.t0 > n.t0 + 1e-3);
+    if (again) ts = Math.min(ts, Math.max(n.t1, again.t0));
+    // つなげて弾く（次の音がすぐ続く）音は、次の音が鳴るまで音を切らない（指を上げ下げするすき間で音がとぎれないように）
+    const nx = notes.find(o => o.hand === n.hand && o.t0 > n.t0 + 1e-3 && o.m !== n.m);
+    if (nx && nx.t0 - (n.t1n || n.t1) < 0.08 && nx.t0 > ts) ts = Math.min(nx.t0 + 0.02, again ? again.t0 : Infinity);
+    n.ts = ts;
+  }
   const end = Math.max(0, ...notes.map(n => n.t1));
-  return { song, notes, hands, end, cost: hands.reduce((s, h) => s + h.cost, 0) };
+  return { song, notes, hands, end, pedal, cost: hands.reduce((s, h) => s + h.cost, 0) };
 }
 
 // 片手の運指から、手を動かす計画を作る
@@ -198,6 +212,7 @@ function buildHandPlan(notes, side) {
     if (n.t1 < t2 - 0.3) continue;
     const shift = Math.abs(ev2.reduce((s, o) => s + anchorX(o), 0) / ev2.length - anchorX(n));
     const need = 0.08 + shift / 600;
+    // 指は早めに離しても、音は楽譜どおりつなげる（n.t1n と n.ts。早めに離した分で音を切ると、音階がぶつ切れに聞こえた）
     if (shift > KB.W * 1.5 && n.t1 > t2 - need) n.t1 = Math.max(n.t0 + Math.min(0.12, (t2 - n.t0) * 0.5), t2 - need);
   }
   const byF = [null, [], [], [], [], []];

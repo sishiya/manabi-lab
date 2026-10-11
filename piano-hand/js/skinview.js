@@ -43,7 +43,9 @@ float skinH(){
   float px = length(fwidth(vRest));
   float fine = 1.0 - smoothstep(0.12, 0.3, px), mid = 1.0 - smoothstep(0.3, 0.8, px);
   float pores = (vn(vRest * 2.2) - 0.5) * 0.035 * fine + (vn(vRest * 0.9 + 7.0) - 0.5) * 0.05 * mid;
-  float wr = vWrk * pow(abs(sin(vAlong * 1.7 + vn(vRest * 0.5) * 2.5)), 4.0) * -0.18 * (1.0 - smoothstep(0.35, 0.9, px));
+  // 関節の甲のしわ: 浅く、ところどころ途切れる（規則正しく深いと、じゃばらのように見えた）
+  float brk = smoothstep(0.3, 0.75, vn(vRest * 0.28 + vec3(0.0, 0.0, vAlong * 0.15)));
+  float wr = vWrk * brk * pow(abs(sin(vAlong * 1.5 + vn(vRest * 0.5) * 3.0)), 6.0) * -0.10 * (1.0 - smoothstep(0.35, 0.9, px));
   // 指紋: はらの中心からの楕円の渦（0.45mm 間隔）。少しゆがませる
   float r = length(vPad.xy * vec2(1.0, 0.8)) + (vn(vRest * 0.35) - 0.5) * 1.2;
   float print = vPad.z * (0.5 + 0.5 * sin(r * 13.9)) * -0.05 * fine;
@@ -76,7 +78,7 @@ function makeSkinMaterials(U) {
       .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb *= (0.94 + 0.12 * vn(vRest * 0.12) + 0.04 * vn(vRest * 0.6)) * (1.0 - 0.18 * vCrease);')
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n  roughnessFactor *= 0.85 + 0.3 * vn(vRest * 0.4 + 3.0);')
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n  { float hh = skinH(); normal = skinBump(-vViewPosition, normal, vec2(dFdx(hh), dFdy(hh)), gl_FrontFacing ? 1.0 : -1.0); }')
-      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += diffuseColor.rgb * vec3(0.05, 0.012, 0.006);'); // 皮ふの下で散った赤い光（近似）
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  { float rim = pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 2.5);\n    totalEmissiveRadiance += diffuseColor.rgb * (vec3(0.05, 0.012, 0.006) + rim * vec3(0.10, 0.025, 0.012)); }'); // 皮ふの下で散った赤い光（近似）。ふちほど光が皮ふを通って赤く透ける
   };
   // 影も同じ形で落とす
   const d = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
@@ -115,7 +117,8 @@ function makeSkinHand(sc, side) {
   mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false;
   sc.add(mesh);
   // 爪: 末節骨の座標軸をそのまま物体の行列にする（網は骨の座標で持っている）
-  const nailMat = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.28, clearcoat: 0.9, clearcoatRoughness: 0.12, envMapIntensity: 0.9, side: THREE.DoubleSide });
+  // 爪は半透明（下の爪床の桃色と、先の白いふちが透けて見える）。つやは強く
+  const nailMat = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.22, clearcoat: 1.0, clearcoatRoughness: 0.06, envMapIntensity: 1.0, side: THREE.DoubleSide, transparent: true, opacity: 0.78, emissive: new THREE.Color(0.05, 0.015, 0.012) });
   const nails = S.nails.map(N => {
     const ng = new THREE.BufferGeometry();
     ng.setAttribute('position', new THREE.BufferAttribute(N.pos, 3)); ng.setAttribute('color', new THREE.BufferAttribute(N.col, 3)); ng.setIndex(N.idx);

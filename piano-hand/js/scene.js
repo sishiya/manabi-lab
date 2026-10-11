@@ -22,8 +22,8 @@ const SCENES = {
 // エフェクトの強さ: 光のにじみ（強さ・広がり・しきい値）、周辺の暗さ、フィルムの粒、光の粒とノーツの光の倍率
 const FX_LEVELS = [
   { name: 'なし', bloom: 0, vig: 0, grain: 0, spark: 0.5, glow: 1 },
-  { name: 'ひかえめ', bloom: 0.75, radius: 0.55, thr: 1.6, vig: 0.35, grain: 0.012, spark: 1, glow: 1.8 },
-  { name: 'はなやか', bloom: 1.25, radius: 0.75, thr: 1.3, vig: 0.6, grain: 0.02, spark: 1.6, glow: 2.6 },
+  { name: 'ひかえめ', bloom: 0.75, radius: 0.35, thr: 1.6, vig: 0.35, grain: 0.012, spark: 1, glow: 1.8 },
+  { name: 'はなやか', bloom: 1.25, radius: 0.45, thr: 1.3, vig: 0.6, grain: 0.02, spark: 1.6, glow: 2.6 },
 ];
 
 const FINAL_SHADER = {
@@ -77,6 +77,12 @@ function initScene() {
   V.rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType });
   V.composer = new THREE.EffectComposer(r, V.rt);
   V.composer.addPass(new THREE.RenderPass(V.scene, V.cam));
+  // 光のにじみの前に、計算できない値（NaN）や極端に明るい画素を取りのぞく（1画素でもあると、にじみで四角く暗い所ができた）
+  V.composer.addPass(new THREE.ShaderPass({
+    uniforms: { tDiffuse: { value: null } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: 'uniform sampler2D tDiffuse; varying vec2 vUv; void main(){ vec3 c = texture2D(tDiffuse, vUv).rgb; if (!(c.r == c.r && c.g == c.g && c.b == c.b)) c = vec3(0.0); gl_FragColor = vec4(clamp(c, 0.0, 40.0), 1.0); }',
+  }));
   V.bloom = new THREE.UnrealBloomPass(new THREE.Vector2(256, 256), 0.6, 0.5, 0.8);
   V.composer.addPass(V.bloom);
   V.final = new THREE.ShaderPass(FINAL_SHADER);

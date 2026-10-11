@@ -10,24 +10,24 @@
 <div id="app">
   <main id="stage">
     <div id="frame">
+      <div id="loading" role="status" aria-live="polite"><div class="spin" aria-hidden="true"></div><p id="loadMsg">準備しています…</p></div>
       <canvas id="view" aria-label="鍵盤と、弾いている右手の3D。ドラッグで向きを変え、ホイールで寄れます"></canvas>
       <div id="views" class="seg tiny" role="group" aria-label="見る向き">
         <button data-v="tilt" aria-pressed="true">ななめ</button>
         <button data-v="top" aria-pressed="false">真上</button>
         <button data-v="front" aria-pressed="false">正面</button>
         <button data-v="side" aria-pressed="false">横</button>
+        <button data-v="pov" aria-pressed="false">一人称</button>
       </div>
       <p id="clock" class="mono"></p>
+      <div id="pedalInd" hidden title="音をのばすペダル（ダンパーペダル）を踏んでいる間は光る"><span class="ped"></span>ペダル</div>
     </div>
     <div id="toolbar">
       <button class="btn primary" id="btnPlay">▶ 再生</button>
-      <div class="seg small" id="segSpeed" role="group" aria-label="速さ">
-        <button data-v="0.25" aria-pressed="false">×¼</button>
-        <button data-v="0.5" aria-pressed="false">×½</button>
-        <button data-v="1" aria-pressed="true">×1</button>
-      </div>
+      <select id="speedSel" aria-label="速さ" title="速さ（キーの [ と ] でも変えられます）"></select>
       <input type="range" id="time" min="0" max="1000" value="0" aria-label="時刻">
       <label class="chk"><input type="checkbox" id="chkSound" checked> 音</label>
+      <input type="range" id="vol" min="0" max="100" value="70" aria-label="音量" title="音量">
     </div>
     <p id="hint"></p>
   </main>

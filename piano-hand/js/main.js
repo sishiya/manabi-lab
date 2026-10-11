@@ -5,23 +5,32 @@ const S = { plan: null, checks: null, t: -1, playing: false, speed: 1, lastNow: 
 const OPT = { noteNums: true, fingerNums: false, targets: false, ghost: false, bones: false };
 
 // 音（とても簡単な合成。鍵を押した瞬間に鳴らす）
-let AC = null;
-function playTone(m) {
+let AC = null, MASTER = null;
+// 音量のつまみ（0〜1。聞こえ方に合わせて2乗）
+const VOL = () => { const v = +($("vol") ? $("vol").value : 70) / 100; return v * v * 1.6; };
+// len は音が止まるまでの秒（鍵を離すか、ペダルを上げるまで）。ピアノの音のように自然に弱まり、止まるときは 0.1 秒ほどで消える
+function playTone(m, len) {
   if (!$('chkSound').checked) return;
   try {
     AC = AC || new (window.AudioContext || window.webkitAudioContext)();
     const f0 = 440 * Math.pow(2, (m - 69) / 12), now = AC.currentTime;
-    const g = AC.createGain(); g.connect(AC.destination);
-    g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.16, now + 0.008);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + 1.6);
+    const decay = 0.6 + Math.max(0, 108 - m) / 60 * 2.0; // 低い音ほど長くのびる（目安）
+    const L = Math.max(0.08, Math.min(len || 1, 8));
+    if (!MASTER) { MASTER = AC.createGain(); MASTER.connect(AC.destination); } // 全体の音量（つまみ）
+    MASTER.gain.value = VOL();
+    const g = AC.createGain(); g.connect(MASTER);
+    g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.14, now + 0.008);
+    g.gain.setTargetAtTime(0, now + 0.01, decay);
+    g.gain.setTargetAtTime(0, now + L, 0.06);
     [[1, 1], [2, 0.35], [3, 0.12]].forEach(([k, a]) => {
       const o = AC.createOscillator(), og = AC.createGain();
       o.type = 'sine'; o.frequency.value = f0 * k; og.gain.value = a;
-      o.connect(og); og.connect(g); o.start(now); o.stop(now + 1.7);
+      o.connect(og); og.connect(g); o.start(now); o.stop(now + L + 0.5);
     });
   } catch (e) { /* 音が出せなくても続ける */ }
 }
 
+const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
 function tStart() { return -0.8; }
 function tEnd() { return S.plan.end + 0.8; }
 
@@ -143,7 +152,10 @@ function frame(now) {
 
 function step() {
   const plan = S.plan, t = S.t;
-  if (S.playing) for (const n of plan.notes) if (n.t0 > S.prevT && n.t0 <= t) playTone(n.m);
+  if (S.playing) for (const n of plan.notes) if (n.t0 > S.prevT && n.t0 <= t) playTone(n.m, ((n.ts || n.t1) - n.t0) / S.speed);
+  const pd = (plan.pedal || []).some(([a, c]) => t >= a && t < c);
+  if (pd !== S.pedalOn) { S.pedalOn = pd; $('pedalInd').classList.toggle('on', pd); }
+  $('pedalInd').hidden = !(plan.pedal && plan.pedal.length);
   S.prevT = t;
   const poses = plan.hands.map(h => poseAt(h, t));
   resizeView();
@@ -168,7 +180,7 @@ function step() {
   });
   if (far.length) msgs.unshift('届かない: <b>' + far.join('、') + '</b>');
   if (lims.length) msgs.push('関節の限界: <b>' + lims.join('、') + '</b>');
-  $('hint').innerHTML = msgs.length ? 'この瞬間 — ' + msgs.join(' ／ ') : 'ドラッグで向きを変え、ホイールで寄れます。時刻のつまみで1コマずつ見られます。';
+  $('hint').innerHTML = msgs.length ? 'この瞬間 — ' + msgs.join(' ／ ') : 'ドラッグで向きを変え、ホイールで寄れます（一人称では体を前後に）。時刻のつまみ・矢印キーで1コマずつ、[ ] キーで速さを変えられます。';
 }
 
 function setPlaying(on) {
@@ -183,7 +195,7 @@ function initUI() {
   $('song').innerHTML = '<optgroup label="検証用の曲">' + SONGS.filter(s => !s.val).map(opt).join('') + '</optgroup>' +
     '<optgroup label="教本の運指との答え合わせ（ハノン）">' + SONGS.filter(s => s.val).map(opt).join('') + '</optgroup>' +
     '<optgroup label="サンプルの楽譜ファイル（samples/）">' + SAMPLES.map(s => `<option value="sample:${s.file}">${s.name}</option>`).join('') + '</optgroup>';
-  $('song').addEventListener('change', e => { setPlaying(false); const v = e.target.value; if (v.startsWith('sample:')) loadSample(v.slice(7)); else loadSong(v); });
+  $('song').addEventListener('change', e => { setPlaying(false); const v = e.target.value; busy('運指と手の動きを計算しています…', () => v.startsWith('sample:') ? loadSample(v.slice(7)) : loadSong(v)); });
   $('sceneSel').innerHTML = Object.entries(SCENES).map(([k, s]) => `<option value="${k}">${s.name}</option>`).join('');
   $('sceneSel').value = V.sceneId;
   $('fxSel').innerHTML = FX_LEVELS.map((f, i) => `<option value="${i}">エフェクト: ${f.name}</option>`).join('');
@@ -191,20 +203,21 @@ function initUI() {
   $('sceneSel').addEventListener('change', e => { applyScene(e.target.value); applyFx(SCENES[e.target.value].fx); $('fxSel').value = String(V.fxLevel); });
   $('fxSel').addEventListener('change', e => applyFx(+e.target.value));
   $('handModel').innerHTML = Object.entries(HAND_MODELS).map(([k, m]) => `<option value="${k}">${m.name}</option>`).join('');
-  $('handModel').addEventListener('change', e => { setPlaying(false); setHandModel(e.target.value); rebuildSkins(); showHandInfo(); if (S.song) setSong(S.song); });
+  $('handModel').value = HAND.id;
+  $('handModel').addEventListener('change', e => { setPlaying(false); busy('手を作りなおしています…', () => { setHandModel(e.target.value); rebuildSkins(); showHandInfo(); if (S.song) setSong(S.song); }); });
   showHandInfo();
-  $('fileIn').addEventListener('change', e => { if (e.target.files[0]) openFile(e.target.files[0]); e.target.value = ''; });
-  $('optGiven').addEventListener('change', () => { if (S.song) setSong(S.song); });
+  $('fileIn').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) busy('楽譜を読んで計算しています…', () => openFile(f)); });
+  $('vol').addEventListener('input', () => { if (MASTER) MASTER.gain.value = VOL(); });
+  $('optGiven').addEventListener('change', () => { if (S.song) busy('運指を計算しています…', () => setSong(S.song)); });
   const fr = $('frame');
   fr.addEventListener('dragover', e => { e.preventDefault(); fr.classList.add('drop'); });
   fr.addEventListener('dragleave', () => fr.classList.remove('drop'));
-  fr.addEventListener('drop', e => { e.preventDefault(); fr.classList.remove('drop'); if (e.dataTransfer.files[0]) openFile(e.dataTransfer.files[0]); });
+  fr.addEventListener('drop', e => { e.preventDefault(); fr.classList.remove('drop'); const f = e.dataTransfer.files[0]; if (f) busy('楽譜を読んで計算しています…', () => openFile(f)); });
   $('btnPlay').addEventListener('click', () => setPlaying(!S.playing));
   $('time').addEventListener('input', e => setTime(tStart() + (tEnd() - tStart()) * e.target.value / 1000));
-  document.querySelectorAll('#segSpeed button').forEach(b => b.addEventListener('click', () => {
-    S.speed = +b.dataset.v;
-    document.querySelectorAll('#segSpeed button').forEach(x => x.setAttribute('aria-pressed', x === b));
-  }));
+  // 速さ: 選択欄と、キーの [ ] で1段ずつ
+  $('speedSel').innerHTML = SPEEDS.map(v => '<option value="' + v + '"' + (v === 1 ? ' selected' : '') + '>速さ ×' + v + '</option>').join('');
+  $('speedSel').addEventListener('change', e => { S.speed = +e.target.value; });
   document.querySelectorAll('#views button').forEach(b => b.addEventListener('click', () => {
     setCam(b.dataset.v);
     document.querySelectorAll('#views button').forEach(x => x.setAttribute('aria-pressed', x === b));
@@ -227,6 +240,7 @@ function initUI() {
     if (e.code === 'Space') { e.preventDefault(); setPlaying(!S.playing); }
     if (e.code === 'ArrowRight') setTime(S.t + 1 / 30);
     if (e.code === 'ArrowLeft') setTime(S.t - 1 / 30);
+    if (e.key === '[' || e.key === ']') { const i = SPEEDS.indexOf(S.speed), j = Math.max(0, Math.min(SPEEDS.length - 1, i + (e.key === ']' ? 1 : -1))); S.speed = SPEEDS[j]; $('speedSel').value = String(S.speed); }
   });
 }
 
@@ -257,10 +271,24 @@ window.__ph = {
   },
 };
 
-try {
-  initView($('view'));
-  initUI();
-  setCam('tilt');
-  loadSong(SONGS[0].id);
-  requestAnimationFrame(frame);
-} catch (e) { window.__phErr = e; console.error(e); }
+// 読みこみ中の表示: 重い計算の前に文言を変えて、画面に出てから計算する
+// （タブが隠れていると requestAnimationFrame が止まるので、0.1 秒で先へ進む）
+const paint = () => new Promise(r => { const t = setTimeout(r, 100); requestAnimationFrame(() => setTimeout(() => { clearTimeout(t); r(); }, 0)); });
+async function showLoading(msg) { $('loading').hidden = false; $('loadMsg').textContent = msg; await paint(); }
+function hideLoading() { $('loading').hidden = true; }
+// 画面の操作から重い計算をするとき（曲・手のモデル・楽譜を変える）は、表示を出してから
+async function busy(msg, fn) { await showLoading(msg); try { await fn(); } finally { hideLoading(); } }
+
+async function boot() {
+  try {
+    await showLoading('手の皮ふを作っています…');
+    initView($('view'));
+    initUI();
+    setCam('tilt');
+    await showLoading('運指と手の動きを計算しています…');
+    loadSong(SONGS[0].id);
+    hideLoading();
+    requestAnimationFrame(frame);
+  } catch (e) { window.__phErr = e; console.error(e); $('loadMsg').textContent = '読みこめませんでした: ' + e.message; }
+}
+boot();

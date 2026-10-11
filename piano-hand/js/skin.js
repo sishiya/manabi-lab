@@ -8,7 +8,7 @@ const FLAT = 1.12;    // 指の断面の縦横比（横が広い）
 const REST_DEG = [null, [-30, 8, 20], [-10, 12, 14], [-2, 12, 14], [7, 12, 14], [16, 12, 14]];
 // 指の太さ（半径 mm）: 付け根・関節2つ・指先。指先は鍵に当たる球（PAD）とほぼ同じ
 // 親指の中手骨は細め（太いと、親指を開いたときに手の甲から飛び出してこぶになった）
-const RADII = [null, [10, 10.5, 9.6, 8.0], [9.6, 8.9, 7.7, 6.6], [10.0, 9.3, 8.0, 6.8], [9.4, 8.7, 7.5, 6.5], [8.4, 7.6, 6.8, 6.0]];
+const RADII = [null, [8.5, 9.5, 9.2, 8.0], [9.6, 8.9, 7.7, 6.6], [10.0, 9.3, 8.0, 6.8], [9.4, 8.7, 7.5, 6.5], [8.4, 7.6, 6.8, 6.0]];
 // 骨の番号: 0 前腕、1 手のひら、2 + (指-1)*3 + 節
 const BONE_ARM = 0, BONE_PALM = 1, boneOf = (f, j) => 2 + (f - 1) * 3 + j, N_BONES = 17;
 
@@ -48,13 +48,19 @@ function coneD(P, x, y, z, cull) {
   return (Math.sqrt(x2 * P.a2 * P.il2) + yy * P.rr) * P.il2 - P.ra;
 }
 // 手のひらの板（手首の側ほど細い、角の丸い箱）
-const PALM = { c: [4, -1, -50], h: [28.5, 1, 33.5], r: 13 }; // 角を大きく丸めて、人さし指・小指の付け根が角ばらないように
+const PALM = { c: [4, -1, -50], h: [25, 1, 33.5], r: 13 }; // 角を大きく丸めて、人さし指・小指の付け根が角ばらないように
 // 手のひら: 角の丸い箱とだ円体のあいだの形（PALM_ROUND の割合だけだ円体に寄せる）。箱だけだと四角く、
 // 人さし指・小指の付け根が角ばって見えた。手首の側ほど細い
-const PALM_ROUND = 0.6, PALM_E = [42, 14, 50];
+const PALM_ROUND = 0.4, PALM_E = [42, 12, 50];
+// 手首・前腕: 横に広く縦にうすいだ円（大人の手首はおよそ幅 55〜60mm・厚み 35〜40mm）。前は丸に近く、真上から見ると手首だけ細くくびれていた
+const ARM_FLAT = 1.45;
 function palmD(x, y, z) {
-  const s = 0.8 + 0.2 * Math.min(1, Math.max(0, (-z - 12) / 80));
-  const px = (x - PALM.c[0]) / s, py = y - PALM.c[1], pz = z - PALM.c[2];
+  const s = 0.74 + 0.26 * Math.min(1, Math.max(0, (-z - 12) / 75)); // 指の付け根から手首へ台形にすぼめる
+  // 手首に近いほどうすく（同じ厚みのまま細い前腕につなぐと、手の甲と前腕の境目がこぶのように盛り上がった）
+  const thin = 1 + 0.6 * Math.min(1, Math.max(0, (z + 30) / 30));
+  // 先の端は指の付け根の弧に合わせる（小指の付け根は中指より 16mm 手前。まっすぐだと手のひらが小指の付け根にかぶさって見えた）
+  const arc = (Math.max(0, x - 12) * 0.6 + Math.max(0, -18 - x) * 0.4) * Math.min(1, Math.max(0, (-z - 40) / 40));
+  const px = (x - PALM.c[0]) / s, py = (y - PALM.c[1]) * thin, pz = z + arc - PALM.c[2];
   const qx = Math.abs(px) - PALM.h[0], qy = Math.abs(py) - PALM.h[1], qz = Math.abs(pz) - PALM.h[2];
   const box = Math.hypot(Math.max(qx, 0), Math.max(qy, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qy, qz), 0) - PALM.r;
   const [rx, ry, rz] = PALM_E; // だ円体のおよその距離（Inigo Quilez）
@@ -72,7 +78,7 @@ function buildPrims() {
     rest.push(boneFrames(F, d[0] * D2R, d[1] * D2R, d[2] * D2R));
   }
   // 手のひら: 手首の横棒・中手骨（甲の盛り上がり）・指の付け根の横棒・小指球・母指球
-  P.palm.push(mkCone([-20, -3, -3], [23, -3, -3], 13, 12, BONE_PALM)); // 手首の横棒（細めにして、手首と手のひらの境目がでっぱらないように）
+  P.palm.push(mkCone([-15, -3, -3], [19, -3, -3], 10, 10, BONE_PALM)); // 手首の横棒（細めにして、手首と手のひらの境目がでっぱらないように）
   const wx = [0, 0, -12, 0, 11, 21];
   for (let f = 2; f <= 5; f++) {
     const b = FINGERS_U[f].base, s = [wx[f], 1, -8], d = sub3(b, s), n = Math.hypot(...d);
@@ -81,11 +87,13 @@ function buildPrims() {
   }
   P.palm.push(mkCone(sub3(FINGERS_U[2].base, [0, 2, -3]), sub3(FINGERS_U[5].base, [0, 2, -3]), 10.5, 9, BONE_PALM));
   P.palm.push(mkCone([21, -8, -22], [28, -6, -66], 12, 10, BONE_PALM));
-  P.palm.push(mkCone([-10, -15, -24], [-24, -15, -48], 14, 10, BONE_PALM)); // 母指球（手のひらの側のふくらみ。親指の付け根の太さはここで出す）
+  { const c = mkCone([-6, -14, -26], [-18, -14, -50], 10, 8, BONE_PALM); c.k = 12; P.palm.push(c); } // 母指球（手のひらの側のふくらみ。手のひらの内側寄り。つなぎ目の幅 k が大きいと肉が足されて玉のようにふくらんだ）
   // 親指の中手骨は手のひらと同じ組で溶けあわせる（骨は親指）
   const t0 = rest[1][0];
-  P.palm.push(mkCone(t0.o, rest[1][1].o, RADII[1][0], RADII[1][1], boneOf(1, 0)));
-  P.arm = mkCone([2, -2, 4], [3, -12, 175], 21, 30, BONE_ARM); // 前腕（手首の側は細い）
+  { const c = mkCone(lerp3(t0.o, rest[1][1].o, 0.22), rest[1][1].o, RADII[1][0] * 0.85, RADII[1][1], boneOf(1, 0)); c.k = 12; P.palm.push(c); } // 親指の中手骨（根もとは母指球の中に隠れるので、少し先から細く始める。根もとの丸い端が手首の手のひら側にこぶのように出ていた）
+  { const c = mkCone([-20, 0, -52], lerp3(t0.o, rest[1][1].o, 0.8), 8, 6, BONE_PALM); c.k = 10; P.palm.push(c); } // 親指と人さし指のあいだの水かき（甲の側の筋肉）。ないと真上から見て親指が手のひらから離れた別の棒に見えた
+  P.arm = mkCone([2, -5, -34], [3, -16, 240], 26, 36, BONE_ARM); // 形: 手のひらの中から細く始めて、手首で自然に太くなる（手首で丸く始めると、境目に段ができた）。一人称で切れ目が見えないよう、肘の近くまで
+  P.armW = mkCone([2, -6, 4], [3, -16, 240], 27, 36, BONE_ARM); // 重み用: 手首から先だけ（手のひらの皮ふが前腕といっしょに動かないように）
   for (let f = 1; f <= 5; f++) {
     const R = rest[f];
     for (let j = f === 1 ? 1 : 0; j < 3; j++) {
@@ -110,12 +118,12 @@ function handSDF(P, x, y, z, comp) {
   if (comp) { comp.fill(1e9); comp[BONE_PALM] = pal; }
   for (const c of P.palm) {
     const d = coneD(c, x, y, z, cull);
-    pal = smin(pal, d, 14);
+    pal = smin(pal, d, c.k || 14);
     if (comp) comp[c.bone] = Math.min(comp[c.bone], d);
   }
-  const arm = coneD(P.arm, x, (y - P.arm.a[1]) * 1.3 + P.arm.a[1], z, cull); // 前腕は縦にうすい（楕円）
-  if (comp) comp[BONE_ARM] = arm;
-  let d = smin(pal, arm, 16);
+  const arm = coneD(P.arm, x, (y - P.arm.a[1]) * ARM_FLAT + P.arm.a[1], z, cull); // 前腕は縦にうすい（だ円）
+  if (comp) comp[BONE_ARM] = coneD(P.armW, x, (y - P.armW.a[1]) * ARM_FLAT + P.armW.a[1], z, false);
+  let d = smin(pal, arm, 9); // つなぎ目の幅。大きいと手首に肉が足されて、手の甲と前腕の境目がこぶのように盛り上がった
   for (let f = 1; f <= 5; f++) {
     let fd = 1e9;
     for (const c of P.fing[f]) {
@@ -134,7 +142,7 @@ function handSDF(P, x, y, z, comp) {
 
 // サーフェスネッツ。dims の格子で陰関数の値を取り、符号が変わるセルに頂点を1つ置いて、四角形でつなぐ
 function surfaceNets(P) {
-  const lo = [-125, -62, -212], hi = [80, 38, 168], h = SKIN_RES;
+  const lo = [-125, -62, -212], hi = [80, 40, 280], h = SKIN_RES;
   const nx = Math.ceil((hi[0] - lo[0]) / h) + 1, ny = Math.ceil((hi[1] - lo[1]) / h) + 1, nz = Math.ceil((hi[2] - lo[2]) / h) + 1;
   const val = new Float32Array(nx * ny * nz);
   const id = (i, j, k) => i + nx * (j + ny * k);
@@ -235,7 +243,7 @@ function buildSkin() {
     const dors = Math.min(1, (ny - 0.35) * 2.5);
     let hgt = 0, vn = 0;
     for (const T of TENDONS) { const d = segDist2(x, z, T); const fade = smoothF((T[1] - z) / 10) * smoothF((z - T[3]) / 14); hgt += 0.75 * Math.exp(-((d / 2.4) ** 2)) * fade; }
-    for (const L of VEINS) for (let i = 0; i < L.length - 1; i++) { const d = segDist2(x, z, [L[i][0], L[i][1], L[i + 1][0], L[i + 1][1]]); const e = Math.exp(-((d / 1.6) ** 2)); hgt += 0.55 * e; vn = Math.max(vn, e); }
+    for (const L of VEINS) for (let i = 0; i < L.length - 1; i++) { const d = segDist2(x, z, [L[i][0], L[i][1], L[i + 1][0], L[i + 1][1]]); const e = Math.exp(-((d / 2.3) ** 2)); hgt += 0.42 * e; vn = Math.max(vn, e); } // 静脈は太さ 3〜4mm で低く盛り上がる（細く高いと光って白い線に見えた）
     const vk = HAND.veins === undefined ? 1 : HAND.veins; // 手のモデルごとの静脈・腱の目立ち方
     hgt *= dors * vk; vein[v] = vn * dors * vk;
     pos[v * 3] += nrm[v * 3] * hgt; pos[v * 3 + 1] += ny * hgt; pos[v * 3 + 2] += nrm[v * 3 + 2] * hgt;
@@ -263,7 +271,7 @@ function buildSkin() {
   // 指先のはら（指紋の中心からの座標と、はらの目印）・手のひらと関節の手のひらの側のしわ
   const aPad = new Float32Array(NV * 3), aCrease = new Float32Array(NV);
   const comp = new Float64Array(N_BONES);
-  const VEINC = lin3(0.62, 0.62, 0.72);
+  const VEINC = lin3(0.66, 0.58, 0.58); // 皮ふごしの静脈（肌の赤みが少し抜けて、くすんだ青緑がかる。青紫にすると線を描いたように見えた）
   const PADC = lin3(0.90, 0.58, 0.52);
   const SKIN = lin3(0.86, 0.62, 0.50), DORSAL = lin3(0.83, 0.59, 0.46), PALMC = lin3(0.89, 0.59, 0.51), TIP = lin3(0.87, 0.50, 0.44), KNK = lin3(0.77, 0.50, 0.42);
   for (let v = 0; v < NV; v++) {
@@ -274,6 +282,20 @@ function buildSkin() {
     const sc = [];
     for (let b = 0; b < N_BONES; b++) { const s = Math.exp(-(comp[b] - dmin) / (b <= BONE_PALM || b === boneOf(1, 0) ? 5 : 2.6)); if (s > 0.01) sc.push([s, b]); }
     sc.sort((a, b) => b[0] - a[0]);
+    // 親指の中手骨は手のひらの中に深く埋まっていて、付け根に近い皮ふはほとんど手のひらと一緒に動く。
+    // 付け根からの位置 u（0 = 付け根、1 = MP 関節）で、親指の骨の重みを手のひらへなめらかに移す
+    // （そのままだと、親指を動かすたびに手首の親指側の皮ふが引っぱられて、こぶのように出っぱった）
+    {
+      const tb = boneOf(1, 0), ti = sc.findIndex(e => e[1] === tb);
+      if (ti >= 0) {
+        const B = restB[tb], u = dot3(sub3(p, B.o), B.z) / B.len, f = smoothF((u + 0.05) / 1.0);
+        const move = sc[ti][0] * (1 - f);
+        sc[ti][0] *= f;
+        const pi = sc.findIndex(e => e[1] === BONE_PALM);
+        if (pi >= 0) sc[pi][0] += move; else sc.push([move, BONE_PALM]);
+        sc.sort((a, b) => b[0] - a[0]);
+      }
+    }
     const top = sc.slice(0, 4), sum = top.reduce((s, e) => s + e[0], 0);
     for (let k = 0; k < 4; k++) {
       const e = top[k] || [0, top[0][1]], B = restB[e[1]];
@@ -295,7 +317,7 @@ function buildSkin() {
     // 色: 甲は少し日焼け、手のひらの側は赤み、指先と関節の甲は赤み
     const main = top[0][1];
     let c = mix3(SKIN, n[1] > 0 ? DORSAL : PALMC, Math.min(1, Math.abs(n[1]) * 1.2));
-    c = mix3(c, VEINC, vein[v] * 0.18); // 皮ふごしの静脈の青み
+    c = mix3(c, VEINC, vein[v] * 0.32); // 皮ふごしの静脈の青み
     let wrk = 0, along = 0;
     if (main >= 2) {
       const f = Math.floor((main - 2) / 3) + 1, j = (main - 2) % 3, B = restB[main];
@@ -387,8 +409,9 @@ function buildNails(P) {
 function poseBones(pose) {
   const W = pose.W, psi = W[3] || 0, sd = W[4] || 1;
   const R = v => { const r = W[6] ? rollZ(W[6], v) : v; return rotY(psi, [r[0] * sd, r[1], r[2]]); }; // 傾けて、左手は鏡に映してから回す
-  const A = v => rotY(W[5] || 0, [v[0] * sd, v[1], v[2]]); // 前腕は腕の向きに回す
-  const out = [{ o: [W[0], W[1], W[2]], x: A([1, 0, 0]), y: [0, 1, 0], z: A([0, 0, 1]) }, { o: [W[0], W[1], W[2]], x: R([1, 0, 0]), y: R([0, 1, 0]), z: R([0, 0, 1]) }];
+  // 前腕は腕の向きに回し、手のひらと同じだけひねる（ひねりは前腕でおきる。手首だけひねると、手首の皮ふがねじれてこぶになった）
+  const A = v => { const r = W[6] ? rollZ(W[6], v) : v; return rotY(W[5] || 0, [r[0] * sd, r[1], r[2]]); };
+  const out = [{ o: [W[0], W[1], W[2]], x: A([1, 0, 0]), y: A([0, 1, 0]), z: A([0, 0, 1]) }, { o: [W[0], W[1], W[2]], x: R([1, 0, 0]), y: R([0, 1, 0]), z: R([0, 0, 1]) }];
   for (let f = 1; f <= 5; f++) {
     const a = pose.fingers[f].ang;
     for (const B of boneFrames(FINGERS[f], a.yaw, a.a1, a.a2)) out.push({ o: toWorld(W, B.o), x: R(B.x), y: R(B.y), z: R(B.z) });

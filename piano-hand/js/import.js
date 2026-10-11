@@ -18,7 +18,7 @@ function parseMidi(buf) {
     if (str(4) !== 'MTrk') break;
     const len = u32(), end = p + len;
     let tick = 0, run = 0, name = '';
-    const on = {}, notes = [];
+    const on = {}, notes = [], ped = []; // ped: ペダル（コントロールチェンジ 64 番）の [刻み, 踏んだか]
     while (p < end) {
       tick += vlq();
       let st = d.getUint8(p);
@@ -34,6 +34,7 @@ function parseMidi(buf) {
         const ty = st & 0xf0, ch = st & 0x0f;
         const a = d.getUint8(p++), b = (ty === 0xc0 || ty === 0xd0) ? 0 : d.getUint8(p++);
         const key = ch * 128 + a;
+        if (ty === 0xb0 && a === 64) ped.push([tick, b >= 64]);
         if (ty === 0x90 && b > 0) { (on[key] = on[key] || []).push({ tick, vel: b }); }
         else if (ty === 0x80 || (ty === 0x90 && b === 0)) {
           const s = on[key] && on[key].shift();
@@ -42,7 +43,7 @@ function parseMidi(buf) {
       }
     }
     p = end;
-    tracks.push({ name, notes });
+    tracks.push({ name, notes, ped });
   }
   // 拍の刻み → 秒（テンポの変化をたどる）
   tempos.sort((x, y) => x.tick - y.tick);
@@ -54,7 +55,12 @@ function parseMidi(buf) {
   for (const tr of tracks) for (const n of tr.notes) { n.t0 = sec(n.a); n.t1 = sec(n.b); }
   const first = tempos.filter(e => e.tick === 0).pop();
   const bpm = Math.round(60e6 / first.us);
-  return { tracks: tracks.filter(t => t.notes.length), bpm };
+  // ペダル: どのトラックでも、踏んでいる間をつなげて [秒, 秒] に
+  const pev = [].concat(...tracks.map(t => t.ped)).sort((x, y) => x[0] - y[0]);
+  const pedal = []; let down = null;
+  for (const [tk, on] of pev) { if (on && down === null) down = sec(tk); else if (!on && down !== null) { pedal.push([down, sec(tk)]); down = null; } }
+  if (down !== null) pedal.push([down, down + 4]);
+  return { tracks: tracks.filter(t => t.notes.length), bpm, pedal };
 }
 
 function songFromMidi(buf, name) {
@@ -68,7 +74,7 @@ function songFromMidi(buf, name) {
   } else if (trs.length === 1) {
     for (const n of trs[0].notes) if (n.ch !== 9) notes.push({ m: n.m, t0: n.t0, t1: n.t1, hand: n.m >= 60 ? 'R' : 'L' });
   }
-  return finishSong({ id: 'file:' + name, name, notes, bpm: mid.bpm, note: trs.length >= 2 ? '（トラックで右手・左手を分けた）' : '（トラックが1つなので、ド4から上を右手にした）' });
+  return finishSong({ id: 'file:' + name, name, notes, pedalSec: mid.pedal, bpm: mid.bpm, note: trs.length >= 2 ? '（トラックで右手・左手を分けた）' : '（トラックが1つなので、ド4から上を右手にした）' });
 }
 
 // ---- MusicXML ----
@@ -80,13 +86,19 @@ function songFromMusicXml(text, name) {
   if (!part) throw new Error('パート（part）がありません（score-timewise は未対応）');
   const title = (doc.querySelector('work-title') || doc.querySelector('movement-title') || {}).textContent;
   let divs = 1, tempo = 0, pos = 0, lastStart = 0;
-  const notes = [], ties = {};
+  const notes = [], ties = {}, pedEv = [];
   const tempos = []; // [div の位置, bpm]
   for (const meas of part.querySelectorAll(':scope > measure')) {
     for (const el of meas.children) {
       const tag = el.tagName;
       if (tag === 'attributes') { const dv = el.querySelector('divisions'); if (dv) divs = +dv.textContent; }
-      else if (tag === 'direction' || tag === 'sound') {
+      if (tag === 'direction' || tag === 'sound') { // ペダル: <pedal type="start|stop|change"> と <sound damper-pedal="yes|no">
+        const pe = tag === 'direction' ? el.querySelector('direction-type > pedal') : null, sd = tag === 'sound' ? el : el.querySelector('sound');
+        const q = (pos + (el.querySelector('offset') ? +el.querySelector('offset').textContent : 0)) / divs;
+        if (pe) { const ty = pe.getAttribute('type'); if (ty === 'start' || ty === 'resume') pedEv.push([q, 1]); else if (ty === 'stop' || ty === 'discontinue') pedEv.push([q, 0]); else if (ty === 'change') { pedEv.push([q, 0]); pedEv.push([q + 1e-3, 1]); } }
+        else if (sd && sd.getAttribute('damper-pedal')) pedEv.push([q, sd.getAttribute('damper-pedal') === 'no' ? 0 : 1]);
+      }
+      if (tag === 'direction' || tag === 'sound') {
         const snd = tag === 'sound' ? el : el.querySelector('sound');
         const pm = el.querySelector('per-minute');
         const bpm = snd && snd.getAttribute('tempo') ? +snd.getAttribute('tempo') : pm ? +pm.textContent : 0;
@@ -127,8 +139,11 @@ function songFromMusicXml(text, name) {
     return t + (q - last) * 60 / bpm;
   };
   for (const n of notes) { n.t0 = sec(n.a); n.t1 = sec(n.b); delete n.a; delete n.b; }
+  const pedalSec = []; let pdown = null;
+  for (const [q, on] of pedEv.sort((x, y) => x[0] - y[0])) { if (on && pdown === null) pdown = sec(q); else if (!on && pdown !== null) { pedalSec.push([pdown, sec(q) - 0.02]); pdown = null; } }
+  if (pdown !== null) pedalSec.push([pdown, pdown + 4]);
   const hasF = notes.some(n => n.given);
-  return finishSong({ id: 'file:' + name, name: title ? title + '（' + name + '）' : name, notes, bpm: tempo || 100, note: hasF ? '（楽譜の運指あり）' : '' });
+  return finishSong({ id: 'file:' + name, name: title ? title + '（' + name + '）' : name, notes, pedalSec, bpm: tempo || 100, note: hasF ? '（楽譜の運指あり）' : '' });
 }
 
 // ---- .mxl（zip に入った MusicXML） ----
@@ -180,6 +195,7 @@ function finishSong(song) {
   }
   const t0 = ns.length ? ns[0].t0 : 0;
   for (const n of ns) { n.t0 -= t0; n.t1 -= t0; }
+  if (song.pedalSec) song.pedalSec = song.pedalSec.map(([a, c]) => [a - t0, c - t0]).filter(([, c]) => c > 0);
   song.notes = ns;
   if (reduced) song.note = (song.note || '') + '（片手で6音以上の和音の ' + reduced + ' 音は弾かずに灰色で表示）';
   return song;

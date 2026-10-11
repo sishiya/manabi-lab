@@ -51,8 +51,10 @@ function midi(bpm, tracks) {
 
 // 1) エリーゼのために 冒頭（右手・左手を別のトラック）
 const elise = SONGS.find(s => s.id === 'elise2');
+const pedEv = [];
+for (const [a, c] of elise.pedal || []) pedEv.push({ tick: Math.round(a * PPQ), ord: 0, bytes: [0xb1, 64, 127] }, { tick: Math.round(c * PPQ), ord: 0, bytes: [0xb1, 64, 0] });
 fs.writeFileSync(path.join(dir, 'samples/elise-opening.mid'), midi(elise.bpm, [
-  track(noteEvents(beats(elise.src), 0), 'Right hand'), track(noteEvents(beats(elise.srcL), 1), 'Left hand')]));
+  track(noteEvents(beats(elise.src), 0), 'Right hand'), track(noteEvents(beats(elise.srcL), 1).concat(pedEv), 'Left hand')]));
 
 // 2) 歓喜の歌＋左手の和音（トラック1つ。和音と、高さで手を分けるのを試す）
 const ode = SONGS.find(s => s.id === 'ode');

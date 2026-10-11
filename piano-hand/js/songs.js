@@ -27,7 +27,9 @@ const SONGS = [
   { id: 'elise2', name: 'エリーゼのために 冒頭（両手）', why: '右手と左手の受けわたし・左手の分散和音', bpm: 66,
     src: ELISE_R,
     srcL: 'r/2 A2/.25 E3/.25 A3/.25 r/.75 E2/.25 E3/.25 G#3/.25 r/.75 A2/.25 E3/.25 A3/.25 r/.75 r/1.5 ' +
-          'A2/.25 E3/.25 A3/.25 r/.75 E2/.25 E3/.25 G#3/.25 r/.75 A2/.25 E3/.25 A3/1' },
+          'A2/.25 E3/.25 A3/.25 r/.75 E2/.25 E3/.25 G#3/.25 r/.75 A2/.25 E3/.25 A3/1',
+    pedal: [[2, 3.45], [3.5, 4.95], [5, 6.45], [8, 9.45], [9.5, 10.95], [11, 12.6]], // 左手の分散和音ごと（このアプリでつけた目安）
+    note: '（ペダルはこのアプリでつけた目安）' },
   { id: 'scale', name: 'ハ長調の音階（右手・2オクターブ）', why: '親指くぐり・指またぎ', bpm: 92, src: SCALE_C(4),
     refR: '123123412312345' + '43213214321321' },
   { id: 'dmaj', name: 'ニ長調の音階', why: '黒鍵（ファ♯・ド♯）', bpm: 92,
@@ -67,6 +69,52 @@ function hanon1() {
   return { id: 'hanon1', val: true, name: 'ハノン第1番 はじめの4小節', why: '教本の運指との答え合わせ', bpm: 72,
     src: notesR.join(' '), srcL: notesL.join(' '), refR: '12345432'.repeat(4), refL: '54321234'.repeat(4) };
 }
+// ---- 超絶技巧系 ----
+// ショパン 練習曲 Op.10-1 の冒頭の音型（ハ長調の分散和音 C-G-C-E を 1-2-4-5 の指で。ピティナ・ピアノ曲事典の解説）。
+// テンポは作曲者の指示 ♩=176（Wikipedia）。音域・左手・ペダルはこのアプリで決めた（楽譜そのものではない）
+function chopinLike() {
+  const up = [], down = [], refUp = [];
+  for (let g = 0; g < 4; g++) for (const [d, f] of [[0, 1], [7, 2], [12, 4], [16, 5]]) { up.push(midiName(48 + 12 * g + d) + '/.25'); refUp.push(f); }
+  for (let g = 3; g >= 0; g--) for (const d of [16, 12, 7, 0]) down.push(midiName(48 + 12 * g + d) + '/.25');
+  return { id: 'chopin', name: 'ショパン Op.10-1 の冒頭の音型にならった分散和音', why: '超絶技巧: 速い大きな分散和音（♩=176）', bpm: 176,
+    src: up.concat(down).join(' '), srcL: 'C1+C2/4 C1+C2/4', refR: refUp.join('') + '0'.repeat(16), pedal: [[0, 3.9], [4, 7.9]],
+    note: '（音型と運指 1-2-4-5 はピティナ・ピアノ曲事典の解説、テンポは作曲者の指示。音域・左手・ペダルはこのアプリで決めたもので、楽譜そのものではありません）' };
+}
+// このアプリで作った超絶技巧の練習曲: 半音階（32分音符）→ 両手の分散和音（反行）→ オクターブ → 跳躍（ストライド）→ 終わりの和音
+function bravura() {
+  const R = [], L = [], ped = [];
+  let b = 0;
+  // 1) 半音階 2オクターブ上がって下がる（右手 ド4〜ド6、左手は2オクターブ下で同じ向き）
+  const chrom = []; for (let m = 60; m <= 84; m++) chrom.push(m); for (let m = 83; m >= 60; m--) chrom.push(m);
+  for (const m of chrom) { R.push(midiName(m) + '/.125'); L.push(midiName(m - 24) + '/.125'); }
+  b += chrom.length * 0.125;
+  const gap = () => { R.push('r/.5'); L.push('r/.5'); b += 0.5; }; // 部分と部分のあいだに 8 分休符（手を大きく動かす時間）
+  gap();
+  // 2) 分散和音（右手はド4から上へ、左手はミ3から下へ。16分音符。どちらも鍵盤の中＝ラ0〜ド8 におさめる）
+  const ra = [60, 64, 67, 72, 76, 79, 84, 88], la = [52, 48, 43, 40, 36, 31, 28, 24];
+  for (let i = 0; i < ra.length; i++) { R.push(midiName(ra[i]) + '/.25'); L.push(midiName(la[i]) + '/.25'); }
+  ped.push([b, b + ra.length * 0.25 - 0.05]); b += ra.length * 0.25;
+  gap();
+  // 3) オクターブ（右手 1-5 でハ長調の音階を上へ。左手は低いオクターブの連打）
+  const sc = [72, 74, 76, 77, 79, 81, 83, 84];
+  for (const m of sc) { R.push(midiName(m) + '+' + midiName(m + 12) + '/.5'); L.push('C2+C3/.5'); }
+  b += sc.length * 0.5;
+  gap();
+  // 4) 跳躍（ストライド）: 左手は低いバス音と真ん中の和音を4分音符で交互に（2オクターブ近く跳ぶ）、右手は高い音の旋律
+  const bass = [36, 43, 41, 43], mel = [88, 86, 84, 83, 81, 83, 84, 86];
+  for (let i = 0; i < 8; i++) {
+    L.push(i % 2 ? 'C4+E4+G4/1' : midiName(bass[Math.floor(i / 2)]) + '/1');
+    R.push(midiName(mel[i]) + '/1');
+    if (i % 2 === 0) ped.push([b + i, b + i + 1.95]);
+  }
+  b += 8;
+  // 5) 終わりの和音（両手で広く）
+  R.push('C5+E5+G5+C6/2'); L.push('C2+G2+C3/2');
+  ped.push([b, b + 2.2]);
+  return { id: 'bravura', name: '超絶技巧の練習曲（このアプリで作曲）', why: '超絶技巧: 半音階・分散和音・オクターブ・跳躍', bpm: 120,
+    src: R.join(' '), srcL: L.join(' '), pedal: ped, note: '（このアプリで作った練習用の曲です）' };
+}
+SONGS.splice(2, 0, chopinLike(), bravura());
 SONGS.push(hanon1(),
   scaleSong('C', 60, '12312345', '54321321'), scaleSong('G', 67, '12312345', '54321321'), scaleSong('D', 62, '12312345', '54321321'),
   scaleSong('A', 69, '12312345', '54321321'), scaleSong('E', 64, '12312345', '54321321'), scaleSong('B', 71, '12312345', '43214321'),
@@ -75,6 +123,8 @@ SONGS.push(hanon1(),
 
 const NOTE_BASE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 // 曲 → [{m, t0, t1, hand}]（秒）
+// ペダル（音をのばすダンパーペダル）: 曲の pedal は [始まりの拍, 終わりの拍] の並び → 秒
+function parsePedal(song) { const b = 60 / song.bpm; return (song.pedal || []).map(([a, c]) => [a * b, c * b]); }
 function parseSong(song) {
   const out = parseLine(song.src, song.bpm, 'R');
   if (song.srcL) out.push(...parseLine(song.srcL, song.bpm, 'L'));
