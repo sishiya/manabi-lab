@@ -1,0 +1,7 @@
+# Claude Code の Grep・Glob（ripgrep）が読まないもの（トークンの節約。Git には関係しない）。2026-10-12
+# 中を探したいときは、Grep の path にそのフォルダやファイルを直接わたす（ファイルを直接わたせば読む）、または Bash の grep で。
+# 各版の丸ごとの写し（同じ行が何十回も当たる）
+**/versions/
+# 生成したデータ（1行がとても長い。作り方は各 DEVNOTES）
+god-view/data/
+vocal-folds/js/table.js
