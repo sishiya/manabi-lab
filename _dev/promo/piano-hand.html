@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="piano-common.js"></script>
+<script>
+'use strict';
+// 台本: ピアノを弾く手（ショート、40秒＋締め）。?short で縦長に録る
+// エリーゼ（両手）→ 指の番号（歓喜の歌）→ 皮ふを透かして骨（音階の親指くぐり）→ 筋肉・腱・脂肪 → 超絶技巧の練習曲（一人称は縦長だと手が画面の外に出たのでやめた）
+// 音は BGM ではなく、アプリと同じピアノの合成で、画面の手が押す音を鳴らす
+const V = new URLSearchParams(location.search).has('short');
+// カメラは縦長（ショート）と横長で別に（縦長は左右が狭いので、上から引いて見る）
+const CV = V ? [
+  [{ th: 0.35, ph: 0.62, d: 1900, tg: [0, 0, -20] }, { th: 0.25, ph: 0.58, d: 1750, tg: [0, 0, -20] }],
+  [{ th: 0.2, ph: 0.55, d: 900, tg: [0, 0, -20] }, { th: 0.1, ph: 0.5, d: 850, tg: [0, 0, -20] }],
+  [{ th: -0.3, ph: 0.6, d: 800, tg: [0, 10, -20] }, { th: -0.45, ph: 0.65, d: 760, tg: [0, 10, -20] }],
+  [{ th: 0.5, ph: 0.68, d: 1250, tg: [0, 10, -20] }, { th: 0.4, ph: 0.64, d: 1180, tg: [0, 10, -20] }],
+  [{ th: -0.2, ph: 0.55, d: 1900, tg: [0, 0, -20] }, { th: 0.15, ph: 0.6, d: 1700, tg: [0, 0, -20] }],
+] : [
+  [{ th: 0.62, ph: 0.82, d: 700, tg: [0, 0, -75] }, { th: 0.5, ph: 0.78, d: 640, tg: [0, 0, -75] }],
+  [{ th: 0.3, ph: 0.7, d: 520, tg: [0, 0, -80] }, { th: 0.15, ph: 0.62, d: 480, tg: [0, 0, -80] }],
+  [{ th: -0.35, ph: 0.75, d: 430, tg: [0, 10, -70] }, { th: -0.6, ph: 0.85, d: 400, tg: [0, 10, -70] }],
+  [{ th: 0.9, ph: 0.95, d: 520, tg: [0, 10, -70] }, { th: 0.7, ph: 0.9, d: 480, tg: [0, 10, -70] }],
+  [{ th: 0.2, ph: 0.75, d: 820, tg: [0, 0, -75] }, { th: 0.5, ph: 0.8, d: 760, tg: [0, 0, -75] }],
+];
+const SC = [
+  { a: 0, b: 6.3, song: 'elise2', s0: 0.2, cam: camLerp(...CV[0], 6.3) },
+  { a: 6.3, b: 13.4, song: 'ode', s0: 0.6, opt: { fingerNums: true }, cam: camLerp(...CV[1], 7) },
+  { a: 13.4, b: 21.3, song: 'scale', s0: 0.9, speed: 0.75, look: 'xray', cam: camLerp(...CV[2], 7.9) },
+  { a: 21.3, b: 28.3, song: 'chords2', s0: 0.4, look: 'muscles', cam: camLerp(...CV[3], 7) },
+  { a: 28.3, b: SHORT_END + IDENT_CLOSE, song: 'bravura', s0: 0, cam: camLerp(...CV[4], 11.7) },
+];
+const CAPS = [
+  { a: 6.6, b: 13.1, main: 'どの指で弾くかは、コンピュータが決める', sub: '教本の運指と 97% 同じ（609音で答え合わせ）',
+    en: ['The computer decides which finger plays each note', 'It matches textbook fingering 97% of the time (609 notes checked)'] },
+  { a: 13.7, b: 21, main: '皮ふの下に骨。長さは測った研究の値', sub: '音階の「親指くぐり」：親指が手のひらの下を通る',
+    en: ['Bones under the skin, with lengths from measurements', 'In a scale, the thumb passes under the palm'] },
+  { a: 21.6, b: 28, main: '筋肉・腱・脂肪も入っていて、のび縮みする', sub: '皮ふは、骨と筋肉の模型から作っている',
+    en: ['Muscles, tendons and fat are inside, and they stretch', 'The skin is built from the bones and muscles'] },
+  { a: 28.6, b: 35, main: '超絶技巧の練習曲も弾く', sub: '届かない音は「押せなかった」と正直に出す',
+    en: ['It can play a virtuoso study too', 'Notes the hand can\'t reach are honestly marked as missed'] },
+];
+promoStart({
+  name: 'ピアノを弾く手', out: 'piano-hand', src: '../../piano-hand/index.html', iw: 1920, ih: 1080, dur: SHORT_END + IDENT_CLOSE, peek: 16,
+  inject: PH_INJECT,
+  music: { style: 'none', cues: [{ t: SHORT_END, type: 'jingle' }] },   // ここで music.extra を足す（setup で計画ができてから）
+  ready: phReady,
+  setup(w) { phSetup(w, SC); this.music.extra = phAudio(w, SC); return w.document.getElementById('view'); },
+  subs: shortSubs('ピアノを弾く手', 'Hands at the Piano', '楽譜から、両手の動きを計算する', 'Hand motion worked out from the score', CAPS,
+    'ブラウザで動かせます。好きな楽譜ファイルも開けます', 'Runs in your browser. You can open your own score files too'),
+  renderAt(t, w) { phRender(w, SC, t); },
+  overlay(g, t) {
+    drawCaps(g, t, CAPS);
+    drawShortChrome(g, t, 'ピアノを弾く手', '楽譜から、両手の動きを計算する', 'ブラウザで動かせます。好きな楽譜ファイルも開けます',
+      'おもな出どころ: Parncutt ほか（1997）運指、Buryanov・Kotiuk（2010）骨の長さ、産総研 日本人の手の寸法データ（2012）ほか');
+  },
+  errors: w => [w.__phErr].filter(Boolean).map(String),
+  short: { iw: 1080, ih: 1920 },
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="piano-common.js"></script>
+<script>
+'use strict';
+// 台本: ピアノを弾く手 ― 使い方と見どころ（横長の説明動画、ライオンつき）
+// 日本語の字幕は上に焼きこみ、下は YouTube の字幕（CC。英語）にあける。アプリの 3D を画面いっぱいに、ボタンは「札」でアプリと同じ側に
+// 音は BGM ではなく、アプリと同じピアノの合成（画面の手が押す音）と、ライオンのしゃべり
+const END = 148, DUR = END + IDENT_CLOSE;
+const TILT = { th: 0.55, ph: 0.8, d: 760, tg: [0, 0, -75] }, SIDE = { th: 1.35, ph: 1.25, d: 560, tg: [0, 20, -70] };
+const SC = [
+  { a: 0, b: 16.5, song: 'elise2', s0: -0.4, speed: 0.75, cam: camLerp({ th: 0.7, ph: 0.85, d: 820, tg: [0, 0, -75] }, TILT, 16) },
+  { a: 16.5, b: 30, song: 'ode', s0: -0.2, cam: camLerp(TILT, { th: 0.4, ph: 0.75, d: 700, tg: [0, 0, -75] }, 13.5) },
+  { a: 30, b: 32, song: 'twinkle', s0: 0, cam: camFix(TILT) },
+  { a: 32, b: 38.5, song: 'twinkle', s0: 2, cam: camLerp(SIDE, { th: 1.2, ph: 1.15, d: 480, tg: [0, 20, -70] }, 6.5) },
+  { a: 38.5, b: 46, song: 'twinkle', s0: 8.5, cam: 'pov' },
+  { a: 46, b: 66, song: 'scale', s0: -0.4, speed: 0.6, opt: { fingerNums: true }, cam: camLerp({ th: 0.3, ph: 0.6, d: 560, tg: [0, 0, -70] }, { th: 0.15, ph: 0.55, d: 520, tg: [0, 0, -70] }, 20) },
+  { a: 66, b: 68.5, song: 'elise', s0: -0.6, speed: 0.5, cam: camFix({ th: 0.75, ph: 0.85, d: 430, tg: [0, 10, -55] }) },
+  { a: 68.5, b: 77, song: 'elise', s0: 0.65, speed: 0.5, look: 'xray', cam: camLerp({ th: 0.75, ph: 0.85, d: 430, tg: [0, 10, -55] }, { th: 0.55, ph: 0.8, d: 400, tg: [0, 10, -55] }, 8.5) },
+  { a: 77, b: 84.5, song: 'elise', s0: 4.9, speed: 0.5, look: 'muscles', cam: camLerp({ th: 0.55, ph: 0.8, d: 400, tg: [0, 10, -55] }, { th: 0.35, ph: 0.75, d: 380, tg: [0, 10, -55] }, 7.5) },
+  { a: 84.5, b: 90, song: 'elise', s0: 8.65, speed: 0.5, look: 'bones', cam: camFix({ th: 0.35, ph: 0.75, d: 380, tg: [0, 10, -55] }) },
+  { a: 90, b: 99, song: 'arp', s0: -0.3, speed: 0.75, posture: 'curved', cam: camLerp(SIDE, { th: 1.3, ph: 1.2, d: 500, tg: [0, 20, -70] }, 9) },
+  { a: 99, b: 108, song: 'arp', s0: -0.3, speed: 0.75, posture: 'flat', cam: camLerp(SIDE, { th: 1.3, ph: 1.2, d: 500, tg: [0, 20, -70] }, 9) },
+  { a: 108, b: 126, song: 'bravura', s0: -0.3, speed: 0.7, cam: camLerp(TILT, { th: 0.35, ph: 0.72, d: 820, tg: [0, 0, -75] }, 18) },
+  { a: 126, b: 133.5, song: 'elise2', s0: -0.3, scene: 'stage', cam: camLerp({ th: 0.3, ph: 0.75, d: 700, tg: [0, 0, -75] }, { th: 0.5, ph: 0.8, d: 680, tg: [0, 0, -75] }, 7.5) },
+  { a: 133.5, b: DUR, song: 'elise2', s0: 7.2, scene: 'dusk', cam: camLerp({ th: 0.5, ph: 0.8, d: 680, tg: [0, 0, -75] }, { th: 0.65, ph: 0.85, d: 760, tg: [0, 0, -75] }, 14) },
+];
+
+// ---- ボタンの札（アプリと同じ言葉・同じ側。見る向きは絵の左上、再生は下、ほかは右のパネル）。右下はライオンの場所 ----
+const CH = {
+  song: { x: 1240, y: 240, title: '曲（右のパネル）', btns: ['エリーゼのために 冒頭（両手）', '歓喜の歌（ベートーヴェン）', '超絶技巧の練習曲'], cols: 1 },
+  play: { x: 40, y: 820, title: '', btns: ['▶ 再生', '速さ ×1'] },
+  file: { x: 1240, y: 240, title: '曲（右のパネル）', btns: ['楽譜を開く…'] },
+  view: { x: 40, y: 240, title: '見る向き（絵の左上）', btns: ['ななめ', '真上', '正面', '横', '一人称'] },
+  fnum: { x: 1240, y: 240, title: '見え方と音（右のパネル）', btns: ['ノーツに指の番号'] },
+  look: { x: 1240, y: 240, title: '見え方と音（右のパネル）', btns: ['手: 皮ふ', '手: 皮ふを透かして骨', '手: 骨と筋肉・腱・脂肪', '手: 骨だけ（骸骨が弾く）'], cols: 1 },
+  posture: { x: 1240, y: 240, title: '手と弾き方（右のパネル）', btns: ['指の構え: 立てる', '指の構え: 中間', '指の構え: 寝かせる'], cols: 1 },
+  scene: { x: 1240, y: 240, title: 'シーン（右のパネル）', btns: ['スタジオ', '夜のステージ', '夕暮れの部屋', '月あかり'], cols: 2 },
+};
+const SHOW = [
+  ['song', 14.8, 22, t => t < 16.5 ? 0 : 1],
+  ['play', 17.5, 22, t => t < 18.5 ? -1 : 0],
+  ['file', 22.8, 29.5, t => -1],
+  ['view', 30, 45.5, t => t < 32 ? 0 : t < 38.5 ? 3 : 4],
+  ['fnum', 46.3, 53, t => t < 47.5 ? -1 : 0],
+  ['look', 66.3, 90, t => t < 68.5 ? 0 : t < 77 ? 1 : t < 84.5 ? 2 : 3],
+  ['posture', 90, 107.5, t => t < 99 ? 0 : 2],
+  ['scene', 126, 140, t => t < 127 ? 0 : t < 133.5 ? 1 : 2],
+];
+const B = (k, i) => btnRect(CH[k], i);
+const CUR = [
+  { t: 15.2, x: 1000, y: 500 },
+  { t: 16.5, ...B('song', 1), click: true },
+  { t: 18.5, ...B('play', 0), click: true },
+  { t: 24.5, ...B('file', 0) }, { t: 25.5, ...B('file', 0), click: true },
+  { t: 30.8, ...B('view', 3) }, { t: 32, ...B('view', 3), click: true },
+  { t: 33.5, x: 900, y: 600 }, { t: 34, x: 900, y: 600, drag: true }, { t: 36, x: 760, y: 560 },
+  { t: 37.5, ...B('view', 4) }, { t: 38.5, ...B('view', 4), click: true },
+  { t: 46.8, ...B('fnum', 0) }, { t: 47.5, ...B('fnum', 0), click: true },
+  { t: 52.5, x: 1000, y: 700, hide: true },
+  { t: 67.3, ...B('look', 1) }, { t: 68.5, ...B('look', 1), click: true },
+  { t: 76, ...B('look', 2) }, { t: 77, ...B('look', 2), click: true },
+  { t: 83.5, ...B('look', 3) }, { t: 84.5, ...B('look', 3), click: true },
+  { t: 89.5, ...B('posture', 0) }, { t: 90.5, ...B('posture', 0), click: true },
+  { t: 98, ...B('posture', 2) }, { t: 99, ...B('posture', 2), click: true },
+  { t: 104, x: 1000, y: 700, hide: true },
+  { t: 126.3, ...B('scene', 1) }, { t: 127, ...B('scene', 1), click: true },
+  { t: 132.5, ...B('scene', 2) }, { t: 133.5, ...B('scene', 2), click: true },
+  { t: 138, x: 1000, y: 700, hide: true },
+];
+
+// ---- 字幕（日本語は上に焼きこむ・英語は SRT） ----
+const CAPS = [
+  { a: 7, b: 14.2, main: '楽譜から、両手の動きをコンピュータが計算する', sub: '降ってくるノーツを3Dの手が弾く。音もブラウザの中で合成している',
+    en: ['A computer works out how both hands move, from the score', 'Two 3D hands play the falling notes; the sound is synthesized in the browser too'] },
+  { a: 15, b: 22, main: '右のパネルで曲を選んで、▶ 再生', sub: 'ふつうの曲・音階・超絶技巧の組。速さは ×0.25〜×2',
+    en: ['Pick a piece in the right panel and press ▶ Play', 'Everyday pieces, scales and virtuoso studies; speed from ×0.25 to ×2'] },
+  { a: 22.8, b: 29.5, main: '自分の楽譜ファイルも開ける', sub: 'MIDI・MusicXML。画面にドラッグして落としてもよい',
+    en: ['You can open your own score files', 'MIDI or MusicXML; you can also drag and drop them'] },
+  { a: 30.3, b: 37.8, main: '見る向きは5つ。ドラッグで回して、ホイールで寄る', sub: '横から見ると、指の曲がり方と鍵の沈み方がよくわかる',
+    en: ['Five views; drag to turn and scroll to zoom', 'From the side you can see how the fingers bend and the keys go down'] },
+  { a: 38.8, b: 45.6, main: '一人称：ピアニストの目の高さから', sub: '体は、弾いている方へゆっくり寄る',
+    en: ['POV: from the pianist\'s eye level', 'The body leans slowly toward where the hands are playing'] },
+  { a: 46.5, b: 53, main: '指の番号：1 が親指、5 が小指', sub: 'どの指で弾くかは、楽な並びをコンピュータがさがして決める',
+    en: ['Finger numbers: 1 is the thumb, 5 the little finger', 'The computer searches for the most comfortable order of fingers'] },
+  { a: 53.5, b: 59.5, main: '音階では、親指が手のひらの下をくぐる', sub: '指の開きの研究（Parncutt ほか 1997）の表をもとにしている',
+    en: ['In a scale, the thumb passes under the palm', 'Based on a table of finger spans (Parncutt et al. 1997)'] },
+  { a: 60, b: 65.8, main: '教本の運指と 609 音中 590 音が同じ（97%）', sub: '右のパネルの「答え合わせ」で、ちがう所も見られる',
+    en: ['It matches textbook fingering on 590 of 609 notes (97%)', 'The "compare" button in the right panel shows where it differs'] },
+  { a: 68.8, b: 76.5, main: '皮ふを透かして、骨', sub: '骨の長さは、大人66人の X 線写真の研究の値',
+    en: ['Bones, seen through the skin', 'Bone lengths come from X-ray measurements of 66 adults'] },
+  { a: 77.3, b: 84, main: '骨と筋肉・腱・脂肪', sub: '筋肉は体積を保ったまま、のび縮みする',
+    en: ['Bones, muscles, tendons and fat', 'Muscles stretch and shorten while keeping their volume'] },
+  { a: 84.8, b: 89.8, main: '骨だけ：骸骨が弾く', sub: '皮ふは、この骨と筋肉の模型から作っている',
+    en: ['Skeleton only: a skeleton plays', 'The skin is built from this model of bones and muscles'] },
+  { a: 91, b: 98.5, main: '指の構え：立てる', sub: '横から見ると、指の関節の曲がり方がわかる',
+    en: ['Finger posture: curved', 'From the side you can see how each joint bends'] },
+  { a: 99.3, b: 107.5, main: '指の構え：寝かせる', sub: '指のはらで弾く。打鍵のしかた（腕ごと・手首・指だけ）も選べる',
+    en: ['Finger posture: flat', 'Playing with the pads of the fingers; you can also choose how keys are struck'] },
+  { a: 108.5, b: 116, main: '超絶技巧の練習曲（このアプリで作曲）', sub: '半音階・分散和音・オクターブ・跳躍',
+    en: ['A virtuoso study composed for this app', 'Chromatic runs, broken chords, octaves and leaps'] },
+  { a: 116.5, b: 125.5, main: '検査の結果：届かない・めりこみ・速さを数で出す', sub: 'ぎりぎりの所は △ や ✕。物理を曲げて帳尻を合わせない',
+    en: ['Checks: reach, overlaps and speeds, as numbers', 'Close calls get △ or ✕; physics is never bent to make it work'] },
+  { a: 127.3, b: 133.2, main: 'シーン：夜のステージ・夕暮れの部屋・月あかり', sub: '音色もピアノ・チェンバロ・オルガンなどに変えられる',
+    en: ['Scenes: night stage, room at dusk, moonlight', 'You can also switch the sound to harpsichord, organ and more'] },
+  { a: 133.8, b: 140, main: '本物と見まちがえる手を目ざして、作っている途中', sub: '手の大きさ（大人・子ども・指が長いなど）も選べる',
+    en: ['Still in progress, aiming for hands that look real', 'You can also choose the hand size (adult, child, long fingers and more)'] },
+];
+
+// 検査の結果（超絶技巧の練習曲。アプリの右のパネルの表と同じ計算）
+let CHK = [];
+function makeChecks(w) {
+  const X = w.eval('({ CHECKS, runChecks, fmt })'), plan = PH_PLANS[phKey(SC.find(s => s.song === 'bravura'))];
+  const R = X.runChecks(plan), mark = { ok: '◯', warn: '△', ng: '✕' };
+  CHK = X.CHECKS.slice(0, 6).map(c => `${mark[R[c.id].grade]}  ${c.name}  ${X.fmt(c, R[c.id])} ${c.unit}`);
+}
+
+const MUSIC = { style: 'none', cues: [{ t: END, type: 'jingle' }] };
+const EXP = [[0, 'calm'], [7, 'smile'], [10.5, 'calm'], [15.2, 'smile'], [18, 'calm'], [23, 'wow'], [26, 'calm'], [30.5, 'think'], [34, 'calm'], [39, 'wow'], [42, 'smile'], [45.5, 'calm'],
+  [46.7, 'think'], [50, 'calm'], [53.7, 'wow'], [57, 'calm'], [60.2, 'proud'], [64, 'calm'], [69, 'wow'], [72, 'calm'], [77.5, 'think'], [81, 'calm'], [85, 'shock'], [87.5, 'smile'], [90, 'calm'],
+  [91.2, 'think'], [95, 'calm'], [99.5, 'smile'], [103, 'calm'], [108.7, 'wow'], [112, 'calm'], [116.7, 'think'], [121, 'proud'], [125, 'calm'], [127.5, 'smile'], [131, 'calm'], [134, 'proud'], [138, 'calm'], [END - 7.6, 'smile']];
+MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: CUR, exp: EXP, end: END, bye: END - 5.8 }));
+promoStart({
+  name: 'ピアノを弾く手（使い方）', out: 'piano-hand-guide', src: '../../piano-hand/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 70,
+  inject: PH_INJECT,
+  music: MUSIC,
+  ready: w => !!LION.api && phReady(w),
+  setup(w) { phSetup(w, SC); makeChecks(w); MUSIC.extra = phAudio(w, SC, 0.6); return w.document.getElementById('view'); },
+  subs: guideSubs(END, 'ピアノを弾く手', 'Hands at the Piano', CAPS),
+  renderAt(t, w) { phRender(w, SC, t); },
+  overlay(g, t) {
+    for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
+    drawPanel(g, 40, 240, 760, '検査の結果（右のパネル）', CHK, fade(t, 116.5, 125.5, 0.5));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawGuideChrome(g, t, END, 'ピアノを弾く手',
+      'おもな出どころ: Parncutt ほか（1997）運指、Buryanov・Kotiuk（2010）骨の長さ、産総研 日本人の手の寸法データ（2012）ほか');
+    drawLion(g, t);
+  },
+  errors: w => [w.__phErr].filter(Boolean).map(String),
+});
+lionOpen();
+</script>
+</body>
+</html>
