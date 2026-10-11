@@ -10,6 +10,7 @@ const CHECKS = [
   { id: 'wrist', name: L('手首の速さ', 'Wrist speed'), unit: L('mm/秒', 'mm/s'), ok: 500, warn: 900, tip: L('手首が動くいちばん速い速さ', 'Fastest wrist movement') },
   { id: 'yawv', name: L('手首の回転の速さ', 'Wrist turning speed'), unit: L('度/秒', '°/s'), ok: 150, warn: 300, tip: L('手首から先を水平に回す速さのいちばん速いところ', 'Fastest sideways turn of the hand at the wrist') },
   { id: 'hands', name: L('左右の手のぶつかり', 'Hands bumping'), unit: 'mm', ok: 2, warn: 6, tip: L('右手と左手の指の骨どうし（と手首どうし）が重なった深さの最大', 'Deepest overlap between right-hand and left-hand finger bones (and wrists)') },
+  { id: 'jointv', name: L('指の関節の速さ', 'Finger joint speed'), unit: L('度/秒', '°/s'), ok: 1500, warn: 2500, tip: L('人さし指〜小指の、付け根と第2関節が曲がる・のびる速さ（足したもの）のいちばん速いところ。手首で打つと小さくなる。境目は目安', 'Fastest bending speed of the base and middle joints (added) of the index to little fingers. Smaller when striking from the wrist. Limits are rough guides') },
   { id: 'tipv', name: L('指先の速さ', 'Fingertip speed'), unit: L('mm/秒', 'mm/s'), ok: 1500, warn: 2500, tip: L('指先が動くいちばん速い速さ（手首の動きもふくむ）', 'Fastest fingertip movement (including wrist movement)') },
 ];
 
@@ -85,6 +86,7 @@ function runChecks(score) {
           const a = prev[hi].fingers[f].pts[3], b = fp.pts[3];
           const v = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / dt;
           if (v > R.tipv.v) R.tipv = { v, at: t, who: nm };
+          if (f > 1) { const pa = prev[hi].fingers[f].ang, ja = (Math.abs(fp.ang.a1 - pa.a1) + Math.abs(fp.ang.a2 - pa.a2)) / D2R / dt; if (ja > R.jointv.v) R.jointv = { v: ja, at: t, who: nm }; }
         }
       }
       const cl = clashOf(pose);

@@ -241,6 +241,9 @@ function initUI() {
   showHandInfo();
   $('fileIn').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) busy(L('楽譜を読んで計算しています…', 'Reading the score and calculating…'), () => openFile(f)); });
   $('vol').addEventListener('input', () => { if (MASTER) MASTER.gain.value = VOL(); });
+  $('strokeSel').innerHTML = [['wrist', L('打鍵: 和音・オクターブは手首で', 'Strike: chords and octaves from the wrist')], ['finger', L('打鍵: ぜんぶ指だけで', 'Strike: fingers only')]].map(([k, t]) => `<option value="${k}">${t}</option>`).join('');
+  $('strokeSel').value = STROKE; $('strokeSel').setAttribute('aria-label', L('打鍵のしかた', 'How keys are struck'));
+  $('strokeSel').addEventListener('change', e => { setPlaying(false); STROKE = e.target.value; if (S.song) busy(L('運指と手の動きを計算しています…', 'Working out fingering and hand motion…'), () => setSong(S.song)); });
   $('optFlex').addEventListener('change', e => { applyFlex(e.target.checked); if (S.song) busy(L('運指と手の動きを計算しています…', 'Working out fingering and hand motion…'), () => setSong(S.song)); });
   $('missOut').addEventListener('click', e => { const s = e.target.closest('[data-t]'); if (s) { setPlaying(false); setTime(+s.dataset.t); } });
   $('optGiven').addEventListener('change', () => { if (S.song) busy(L('運指を計算しています…', 'Working out fingering…'), () => setSong(S.song)); });

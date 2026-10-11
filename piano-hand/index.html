@@ -82,7 +82,8 @@
     <section>
       <h2><span lang="ja">手のモデル</span><span lang="en">Hand model</span></h2>
       <select id="handModel"></select>
-      <label class="chk"><input type="checkbox" id="optFlex"> <span lang="ja">関節をやわらかく（ストレッチした手の目安）</span><span lang="en">Flexible joints (a rough guide for a stretched hand)</span></label>
+      <select id="strokeSel"></select>
+      <label class="chk"><input type="checkbox" id="optFlex" checked> <span lang="ja">関節をやわらかく（ストレッチした手の目安）</span><span lang="en">Flexible joints (a rough guide for a stretched hand)</span></label>
       <p class="cap" id="handInfo"></p>
     </section>
 
@@ -107,6 +108,7 @@
         <li><b>指</b>: 指先の目標から関節の角度を逆算（IK）。関節は人の範囲で止め、先の2つの関節は連動させます。</li>
         <li><b>打鍵</b>: 指は下りてくる勢いのまま鍵を押し下げ、底で止まります（鍵の上でいったん止まらない）。動きは、速さも加速度も 0 から始まって 0 で終わるなめらかな曲線（最小ジャーク）です。</li>
         <li><b>指のつながり</b>: 腱と筋肉を共有しているので、1本を動かすと、となりの指が少しついてきます（薬指がいちばん、親指はほとんど。研究の値をもとにした目安）。空中で止めている指は、ゆっくり小さくゆれます（0.5mm ほど。このアプリの目安）。</li>
+        <li><b>手首の上げ下げ</b>: 和音とオクターブは、指の形を保ったまま手首から打ちます（「打鍵」で「ぜんぶ指だけで」にもできます。検査の「指の関節の速さ」でくらべられます）。押していない指先が鍵にもぐりそうなときは（親指くぐりなど）、手首を上げます。上げる高さはこのアプリの目安です。</li>
         <li><b>届かない音</b>: 骨の長さと関節の範囲で届かなければ、押せなかった音になります（鍵が沈まず、音も鳴らず、ノーツに ✕）。届くように数値を合わせることはしません。「関節をやわらかく」（ストレッチした手の目安）で届くかも試せます。</li>
         <li><b>検査</b>: 1/120 秒ごとに、届かなさ・関節の限界・指どうしのめりこみ・鍵へのめりこみ・左右の手のぶつかり・速さを測ります。</li>
         <li><b>左手</b>: 右手を鏡に映した手です。運指は、鍵盤をレを中心に左右反転して（黒鍵の並びが同じになる）右手の規則で決めます。</li>
@@ -129,6 +131,7 @@
         <li><b>Fingers</b>: joint angles are worked back from the fingertip target (IK, inverse kinematics). Joints stop at human limits, and the two outer joints bend together.</li>
         <li><b>Striking a key</b>: the finger keeps its downward speed into the key and stops at the bottom (it does not pause on top of the key). Movements follow a smooth curve where both speed and acceleration start and end at zero (minimum jerk).</li>
         <li><b>Linked fingers</b>: fingers share tendons and muscles, so when one moves, its neighbors follow a little (the ring finger most, the thumb hardly at all; a rough guide based on research). Fingers held in the air sway slowly and slightly (about 0.5 mm; a rough guide made for this app).</li>
+        <li><b>Raising and lowering the wrist</b>: chords and octaves are struck from the wrist, keeping the finger shape (choose "fingers only" under "Strike" to compare; see "Finger joint speed" in the checks). When a finger that is not pressing would sink into the keys (for example when the thumb passes under), the wrist rises. How high it rises is a rough guide made for this app.</li>
         <li><b>Out-of-reach notes</b>: if the bone lengths and joint ranges cannot reach a key, the note is not pressed (the key stays up, no sound, and the note shows ✕). Numbers are never adjusted just to make it reach. You can also test "Flexible joints" (a rough guide for a stretched hand).</li>
         <li><b>Checks</b>: every 1/120 s it measures: too far to reach, joint limits, fingers sinking into each other, fingers sinking into keys, the two hands bumping, and speed.</li>
         <li><b>Left hand</b>: a mirror image of the right hand. Its fingering uses the right-hand rules on a keyboard flipped around D (so the black keys line up the same way).</li>

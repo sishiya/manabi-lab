@@ -113,7 +113,7 @@ const FINGERS_BASE = FINGERS.map(F => F && JSON.parse(JSON.stringify(F)));
 // 関節をやわらかく（ストレッチした手）: 指を横に開く範囲を両側に FLEX_YAW 度、付け根の関節をそらす限界を FLEX_EXT 度ふやす。
 // 値はこのアプリの目安（研究の値で確かめていない）。届かなかった音が、やわらかい手なら届くかを試すためのもの
 const FLEX_YAW = 10 * D2R, FLEX_EXT = 10 * D2R;
-let FLEX = false;
+let FLEX = false; // 最初はオン（下の applyFlex(true)。ユーザーの希望）
 function applyFlex(on) {
   FLEX = !!on;
   for (let f = 1; f <= 5; f++) {
@@ -122,6 +122,7 @@ function applyFlex(on) {
     F.a1 = [B.a1[0] - k * FLEX_EXT, B.a1[1]];
   }
 }
+applyFlex(true);
 const FINGERS_U = FINGERS.map(F => F && Object.assign({}, F)); // 大きさをかける前（皮ふの網はこの大きさで作ってから縮める）
 let HAND = null;
 function setHandModel(id) {
@@ -173,7 +174,7 @@ function keyDown(n, t) { // 押しこんでいる深さ（鍵に着いてから�
 // 離すとき: 指先の、鍵の上面からの高さ（負は鍵を押しこんだまま）。底から LIFT の高さまで TR 秒でなめらかに上がり、鍵もいっしょに上がる
 function releaseY(n, t) {
   const d0 = keyDown(n, n.t1);
-  return -d0 + (d0 + LIFT) * ease5((t - n.t1) / TR);
+  return -d0 + (d0 + (n.lift || LIFT)) * ease5((t - n.t1) / TR);
 }
 function pressDepth(n, t) {
   if (t < n.t0) return 0;
@@ -259,11 +260,16 @@ function buildHandPlan(notes, side) {
     // 指は早めに離しても、音は楽譜どおりつなげる（n.t1n と n.ts。早めに離した分で音を切ると、音階がぶつ切れに聞こえた）
     if (shift > KB.W * 1.5 && n.t1 > t2 - need) n.t1 = Math.max(n.t0 + Math.min(0.12, (t2 - n.t0) * 0.5), t2 - need);
   }
+  // 打鍵のしかた（STROKE）: 'wrist' なら、片手で同時に押す音（和音・オクターブ）は手首から打つ。指の形を保ったまま手ごと上げ下げし、
+  // 指自身の上げ下げは小さく（lift）。'finger' ならすべて指で打つ
+  for (const n of notes) { n.wrist = STROKE === 'wrist' && notes.some(o => o !== n && Math.abs(o.t0 - n.t0) < 0.03); n.lift = n.wrist ? 2 : LIFT; }
   const byF = [null, [], [], [], [], []];
   for (const n of notes) byF[n.f].push(n);
   const end = Math.max(0, ...notes.map(n => n.t1));
   const plan = { side, notes, byF, cost, end };
   solveWrist(plan);
+  wristStrokes(plan);
+  keepAbove(plan);
   return plan;
 }
 
@@ -383,6 +389,58 @@ function handLife(plan, ent, ta, N) {
     for (let i = Math.max(0, i0 - 2); i < Math.min(N, i0 + 8); i++) plan.wh[i] -= DIP * Math.exp(-((((ta + i / W_HZ) - n.t0 - 0.03) / 0.05) ** 2));
   }
 }
+// 手首で打つ: 手首で打つ音の前に、手首を WRIST_LIFT まで上げ、打つ時刻に向かって下ろす（指の形はそのまま）。
+// 前の音を離してから（最大 0.35 秒前から）の時間で上げ下げし、時間が短いほど小さく。値はこのアプリの目安
+let STROKE = 'wrist';
+const WRIST_LIFT = 12;
+function wristStrokes(plan) {
+  const N = plan.wh.length, ta = plan.wt0;
+  plan.wk = new Float64Array(N);
+  const evs = [...new Set(plan.notes.filter(n => n.wrist).map(n => Math.round(n.t0 * 1000)))].map(x => x / 1000).sort((a, b) => a - b);
+  for (const t0 of evs) {
+    let tp = -Infinity;
+    for (const n of plan.notes) if (n.t0 < t0 - 0.03) tp = Math.max(tp, Math.min(n.t1, t0 - 0.04));
+    const start = Math.max(tp, t0 - 0.35), dur = t0 - start;
+    if (dur < 0.04) continue;
+    const A = Math.min(WRIST_LIFT, 80 * dur);
+    for (let i = Math.max(0, Math.floor((start - ta) * W_HZ)); i < N; i++) {
+      const t = ta + i / W_HZ; if (t > t0) break;
+      const s = (t - start) / dur; if (s < 0) continue;
+      plan.wk[i] = Math.max(plan.wk[i], A * Math.sin(Math.PI * s) * ease5(Math.min(1, s * 2.5)));
+    }
+  }
+  for (let i = 0; i < N; i++) plan.wh[i] += plan.wk[i];
+}
+function wkAt(plan, t) {
+  if (!plan.wk) return 0;
+  const u = Math.min(plan.wk.length - 1.001, Math.max(0, (t - plan.wt0) * W_HZ)), i = Math.floor(u), s = u - i;
+  return plan.wk[i] + (plan.wk[i + 1] - plan.wk[i]) * s;
+}
+// 指を鍵にもぐらせない: 押していない指先が鍵の上面より下に入るコマを探し、その深さだけ手首をなめらかに上げる（本物の手は、
+// 親指をくぐらせるときなどに手首を上げる）。上げたせいで届かなくなった音は、押せなかった音になる（数値は合わせない）
+function keepAbove(plan) {
+  const N = plan.wh.length, ta = plan.wt0, lam = Math.pow(0.08 * W_HZ, 4), one = new Float64Array(N).fill(1);
+  for (let it = 0; it < 2; it++) {
+    const need = new Float64Array(N); let mx = 0;
+    for (let i = 0; i < N; i++) {
+      const P = poseAt(plan, ta + i / W_HZ);
+      for (let f = 1; f <= 5; f++) {
+        const fp = P.fingers[f]; if (fp.press) continue;
+        const tip = fp.pts[3]; if (tip[2] > 4 || tip[2] < -150) continue;
+        const s = surfaceZ(tip[2]) + PAD + 1 - tip[1];
+        if (s > need[i]) need[i] = s;
+      }
+      if (need[i] > mx) mx = need[i];
+    }
+    if (mx < 0.5) break;
+    const env = new Float64Array(N); // 前後 0.12 秒の最大（上げはじめを早めに）
+    const K = Math.round(0.12 * W_HZ);
+    for (let i = 0; i < N; i++) { let m = 0; for (let j = Math.max(0, i - K); j <= Math.min(N - 1, i + K); j++) m = Math.max(m, need[j]); env[i] = m; }
+    const x = cgSmooth(one, env, lam);
+    for (let i = 0; i < N; i++) plan.wh[i] += Math.max(0, x[i]) * 1.1;
+  }
+}
+
 // (diag(w) + lam·D2ᵀD2) x = b を解く
 function cgSmooth(w, b, lam) {
   const N = w.length;
@@ -447,13 +505,13 @@ function fingerTarget(plan, f, t, W) {
     const ta = Math.max(sT, n.t0 - LOOK);
     if (t >= ta) { // ③ 先回り: 次に押す鍵の上へ。移動にはかならず時間をとる（次までが短くても一瞬で飛ばない）
       const P = pressPoint(n.m, f, n);
-      const H = [P[0], P[1] + LIFT, P[2]];
+      const lift = n.lift || LIFT, H = [P[0], P[1] + lift + (n.wrist ? wkAt(plan, t) : 0), P[2]];
       const span = Math.max(1e-3, n.t0 - ta), Td = Math.min(0.08, span * 0.4), tb = n.t0 - Td;
       // 横の移動は、下ろしはじめてからも少し続く（動きを順番に1つずつ終わらせると機械のように見えた）
       const Q = lerp3(S, H, ease5((t - ta) / Math.max(1e-3, tb + 0.5 * Td - ta)));
       if (t > tb) { // 下ろす: 鍵に着く時刻 t0 に速さ VC で着き、そのまま押しこむ（keyDown）
-        const s = (t - tb) / Td, w = Math.min(3.8, Math.max(0.3, VC * Td / LIFT));
-        Q[1] -= LIFT * ((4 - w) * s * s * s + (w - 3) * s * s * s * s);
+        const s = (t - tb) / Td, w = Math.min(3.8, Math.max(0.3, VC * Td / lift));
+        Q[1] -= lift * ((4 - w) * s * s * s + (w - 3) * s * s * s * s);
       }
       // よけにくさ（0 = 動かせない）。下ろしはじめる少し前から、なめらかに動かせなくなる
       return { T: Q, R: rest, next: n, press: rel, mob: Math.min(mob0, 1 - ease5((t - (tb - 0.12)) / 0.12)) };
