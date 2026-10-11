@@ -243,7 +243,7 @@ $card = "    <div class=`"card`"><div class=`"pic`"><img class=`"thumb`" src=`"a
 Edit-Text 'archive.html' { param($s) $i = $s.IndexOf('    <div class="card">'); if ($i -lt 0) { $s } else { $s.Insert($i, $card + "`n") } } '保管庫のカード（いちばん上）'
 Edit-Text '_dev/tools/thumb.html' { param($s) $s.Replace("const SETUP = {`n", "const SETUP = {`n  // $Title（画面ができたら、いちばん映える場面にする）`n  '$Id': async w => { await wait(1500); },`n") } 'SETUP'
 Edit-Text '_dev/tools/make-thumbs.ps1' { param($s) $s -replace "('quantum'\),)", "'$Id',`$1" } '撮影の一覧'
-Edit-Text 'CLAUDE.md' { param($s) $i = $s.IndexOf('- `archive.html`'); if ($i -lt 0) { $s } else { $s.Insert($i, "- ``$Id/`` — $Kind「$Title」（$Desc）。css/js に分割。企画は ``$Id/PLAN.md``、仕組み・確認手順は ``$Id/DEVNOTES.md``。確認は ``apps``（http://localhost:8765/$Id/）で。保管庫（``archive.html``）に掲載。`n") } } '一覧の1行'
+Edit-Text 'CLAUDE.md' { param($s) $i = $s.IndexOf("`n`n新しいアプリを足したら"); if ($i -lt 0) { $s } else { $s.Insert($i, "`n| ``$Id/`` | $Title | 保管庫 | $Desc |") } } '一覧の表の1行'
 Edit-Text 'README.md' { param($s) $m = [regex]::Match($s, '### 保管庫[^\n]*\n\n\| フォルダ \| アプリ \|\r?\n\|---\|---\|\r?\n'); if (-not $m.Success) { $s } else { $s.Insert($m.Index + $m.Length, "| ``$Id/`` | $Title |`n") } } '保管庫の表'
 
 Write-Host ''

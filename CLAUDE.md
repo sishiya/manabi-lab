@@ -1,49 +1,58 @@
-# アプリ開発 フォルダ
+# アプリ開発 フォルダ（しし屋 まなびラボ）
 
-人体の管を3Dで進むアプリのシリーズ。**最初に `DEVNOTES.md`（3アプリのまとめ）を読むこと。**
+ブラウザで動く学習用アプリのシリーズ。公開は GitHub Pages（`https://sishiya.github.io/manabi-lab/<app>/`）。
 
-- `body-dive/` — 体内ダイブ（消化管・気道）。詳しい仕組みは `body-dive/DEVNOTES.md`。
-- `urinary-dive/` — 亜種「尿の旅」。保管庫（`archive.html`）に掲載。
-- `blood-dive/` — 亜種「血管の旅」。保管庫（`archive.html`）に掲載。
-- `wifi-wave/` — 単独アプリ「電波の見える部屋」（WiFi の電波が家の中をどう伝わるかを2次元の電磁波シミュレーションで見る。WebGL2 直書き）。仕組み・確認手順・公開 URL は `wifi-wave/DEVNOTES.md`。
-- `evolution/` — 別シリーズ「ヒトへの46億年」（地球と生命と人類の歴史を定点観測する3D）。企画は `evolution/PLAN.md`・`PLAN-future.md`、仕組みと確認手順は `evolution/DEVNOTES.md`（公開 URL もそこ）。**v005 から css/js に分割**: 直すときは DEVNOTES の「ファイル構成」を見て関係するファイルだけ読む。確認は `.claude/launch.json` の `apps`（http://localhost:8765/）で。
-- `animal-senses/` — 別シリーズ「いきものの感じる世界」（同じ庭を人間・カラス・マムシなどの感覚で一人称で見る。紫外線・熱などを置き換えて表示）。css/js に分割。企画は `animal-senses/PLAN.md`、仕組みと確認手順は `animal-senses/DEVNOTES.md`。
-- `immune-battle/` — 別シリーズ「免疫のたたかい」（ウイルス・細菌が入って増え、免疫に片づけられるまで。数のモデルに合わせて動くミクロの断面＋人体の小窓＋グラフと予測）。css/js に分割、Canvas 2D。企画は `immune-battle/PLAN.md`、仕組み・モデルの数値・確認手順は `immune-battle/DEVNOTES.md`。
-- `god-view/` — 別シリーズ「神の視点マップ」（宇宙から地球・街・人・原子までホイールで寄れる。地球は実データの地図・地形・建物。CesiumJS、API キーなしのデータから。宇宙の場面から「地球をちぎる」: 地球を粒にして SPH で計算し、穴が埋まる・溶ける・海が流れこみ湯気になる様子を見る。計算は Worker）。css/js に分割。企画は `god-view/PLAN.md`、仕組み・データ源・確認手順は `god-view/DEVNOTES.md`。確認は `apps`（http://localhost:8765/god-view/）で。**公開は GitHub Pages**（push で更新、RULES 8.1）。
-- `illusions/` — 別シリーズ「錯覚の美術館」（世界の錯視・錯聴を見て、測って、しくみを知る。Canvas 2D）。css/js に分割。企画は `illusions/PLAN.md`、展示の書き方・確認手順は `illusions/DEVNOTES.md`。確認は `apps`（http://localhost:8765/illusions/）で。
-- `metamorphosis/` — 別シリーズ「さなぎの中で」（タバコスズメガのイモムシが蛹になりガになるまで。時間は研究の日付、体の中で壊れる・残る・新しく作られる器官を、横から透かした模式図で時間を追って見る。ホルモンとスイッチの遺伝子のグラフつき。Canvas 2D）。css/js に分割。企画は `metamorphosis/PLAN.md`、仕組み・確認手順は `metamorphosis/DEVNOTES.md`。確認は `apps`（http://localhost:8765/metamorphosis/）で。
-- `air-flow/` — 単独アプリ「空気の流れの見える部屋」（2LDK で、窓・給気口・換気扇・風・サーキュレーターによって空気がどう入れかわり、どこがよどむかを空気齢の色で見る。換気回路網＋2次元の流れ＋空気齢の計算。Canvas 2D）。css/js に分割。企画は `air-flow/PLAN.md`、仕組み・確認手順は `air-flow/DEVNOTES.md`。確認は `apps`（http://localhost:8765/air-flow/）で。
-- `extreme/` — 単独アプリ「極限の世界に置いてみたら」（宇宙 400km からマリアナ海溝の底まで1本のものさしで、人・風船・ポテトチップスの袋・マシュマロ・魚・クマムシなどを運び、気圧・水圧で縮む・ふくらむ・沸く・生きられるかを見る。Canvas 2D）。css/js に分割。企画は `extreme/PLAN.md`、仕組み・確認手順は `extreme/DEVNOTES.md`。確認は `apps`（http://localhost:8765/extreme/）で。
-- `ga-creatures/` — 単独アプリ「進化の箱庭」（関節と筋肉でできた2次元の生きものを遺伝的アルゴリズムで進化させる。平地・坂・氷・月・水の中。Canvas 2D）。css/js に分割。企画は `ga-creatures/PLAN.md`、仕組み・確認手順は `ga-creatures/DEVNOTES.md`。確認は `apps`（http://localhost:8765/ga-creatures/）で。
-- `muscle-growth/` — 単独アプリ「筋肉が育つまで」（筋トレで筋肉がどう傷つき・治り・太くなるか。力こぶの筋線維1本の縦と横の断面＋1時間きざみの数のモデルのグラフ。やり方・セット数・週の回数・経験・年齢・たんぱく質・睡眠を選んで比べる。Canvas 2D）。css/js に分割。企画は `muscle-growth/PLAN.md`、仕組み・モデルの数値・確認手順は `muscle-growth/DEVNOTES.md`。確認は `apps`（http://localhost:8765/muscle-growth/）で。
-- `mold-growth/` — 単独アプリ「カビが育つまで」（浴室の壁の一部を拡大した「カビの箱庭」。空気から落ちた胞子が発芽し、菌糸の先が1本ずつのびて胞子を作って増える。水・汚れ・塩素系・アルコール・防カビ剤などを指で試し、毎日の習慣で8週間を比べる。ルーペ・湿り気の地図・発見カード・いまの状況・カビの図鑑（8種類）。Canvas 2D。入口に掲載。v1 の数のモデル版は試作として versions に残す）。css/js に分割。企画は `mold-growth/PLAN.md`、仕組み・モデルの数値・確認手順は `mold-growth/DEVNOTES.md`。確認は `apps`（http://localhost:8765/mold-growth/）で。
-- `ferrofluid/` — 単独アプリ「磁性流体の実験皿」（ガラスの皿の磁性流体の下で磁石を動かし、トゲ＝ローゼンスヴァイク不安定がなぜ・どこに・どのくらいの高さで立つかを見る。研究の液 APG512a の実測値に合わせた液の山＋スウィフト・ホーエンベルグ方程式。Three.js）。css/js に分割。企画は `ferrofluid/PLAN.md`、仕組み・合わせた係数・確認手順は `ferrofluid/DEVNOTES.md`。確認は `apps`〜`apps-6`（http://localhost:8770/ferrofluid/ など）で。保管庫（`archive.html`）に掲載。
-- `black-hole/` — 単独アプリ「ブラックホールの見え方」（映画「インターステラー」のブラックホールを、回るブラックホールのまわりの光の道すじを GPU で1ピクセルずつ計算して描く。クリックした点の光が通ってきた道すじの図、映画版／本当の見え方、回転の速さ。WebGL2 直書き）。css/js に分割。企画は `black-hole/PLAN.md`、式・確認手順は `black-hole/DEVNOTES.md`。確認は `apps`〜`apps-6`（http://localhost:8770/black-hole/ など）で。入口に掲載。
-- `resistance/` — 単独アプリ「退治するほど手ごわくなる」（台所の虫＝チャバネゴキブリがモデルを、叩く・スプレー・毒エサで退治すると、生き残りが子を残して警戒心・危険の察知・殺虫剤に強い・糖ぎらいの遺伝子が世代ごとに変わる。進化を自分の手ごたえで見る。虫の見た目を選べる（まる・デフォルメ・リアル寄り）。Canvas 2D）。css/js に分割。企画は `resistance/PLAN.md`、仕組み・数値・確認手順は `resistance/DEVNOTES.md`。確認は `apps`〜`apps-6`（http://localhost:8769/resistance/ など）で。保管庫（`archive.html`）に掲載。
-- `brain-response/` — 単独アプリ「刺激が脳に届くまで」（光・顔・音・触る・熱い痛み・カチッ2回の刺激が、脳のどこに何ミリ秒後に届くかを、研究で測られた時刻と場所だけで再生。ヒト・サル・ラットの切り替え、根拠の印（研究の値・幅・順番だけ・場所だけ）、ヒトで違いが測られた病気・特性5つ。想像で埋めないのが約束。Canvas 2D）。css/js に分割。企画と確かめた出どころは `brain-response/PLAN.md`、仕組み・確認手順は `brain-response/DEVNOTES.md`。確認は `apps`〜`apps-6`（http://localhost:8769/brain-response/ など）で。保管庫（`archive.html`）に掲載。
-- `passkey/` — 単独アプリ「パスキーのしくみ」（スマホの金庫・門番（ブラウザ）・家（サイト）・わるものの絵の舞台で、パスキーの登録とログインを本物の暗号の計算（ECDSA P-256・SHA-256・PBKDF2、Web Crypto API）で動かす。にせものサイト・台帳の流出・のぞき見・書きかえ・スマホをなくした・2つめのサイトを、合言葉（パスワード）とくらべて表に ◯✕。**本物のログイン画面に似せない・文字は少なく**（v2 でユーザーの感想から作り直し）。DOM と CSS、ライブラリなし）。css/js に分割。企画は `passkey/PLAN.md`、仕組み・確認手順は `passkey/DEVNOTES.md`。確認は `apps`〜`apps-6`（http://localhost:8768/passkey/ など。https か localhost でないと動かない）。保管庫（`archive.html`）に掲載。
-- `piano-hand/` — 単独アプリ「ピアノを弾く手」（降ってくるノーツを弾く両手の3D（和音も）。譜面から運指を動的計画法で決め、手首の最小二乗・指の IK で破綻のない動きにできるかの**技術検証**中。検査の結果の表・教本の運指との答え合わせ。MIDI・MusicXML を開ける（サンプルは samples/）。皮ふは陰関数の網を GPU でスキニング。Three.js）。css/js に分割。企画は `piano-hand/PLAN.md`、仕組み・検証の結果・確認手順は `piano-hand/DEVNOTES.md`。確認は `apps`〜`apps-6`（http://localhost:8765/piano-hand/ など）で。入口に掲載（2026-10-11〜、英語対応）。骨格（論文の骨の長さ）・骨と皮ふの重ね表示・筋肉・腱・脂肪の模型（のび縮み）・皮ふは骨と模型から作る（v024〜）・届かずに押せなかった音も。**続けるときは DEVNOTES の「別セッションで続けるとき」から（方針: 物理を曲げて帳尻を合わせない、正しい骨 → 正しい皮ふ → 調整の順）**。
-- `quantum/` — 別シリーズ「量子の実験室」（二重スリット・トンネル効果・偏光板・量子もつれ・不確定性原理）。1ファイル完結。仕組みと確認手順・公開 URL は `quantum/DEVNOTES.md`。
-- `phage/` — 単独アプリ「細菌にとりつくウイルス」（T4 ファージが大腸菌に降りて DNA を入れ、細菌の中で増えて破れて出るまでを、タイムスライダー1本で見る。細菌全体（約2µm）からたんぱく質が見える大きさまでどこでも寄れ、寄るほど細かく描く（リボソーム・DNA の二重らせん・コピーの機械・頭の殻・しっぽの23段など）。マウスを乗せると解説、見どころ、もしも4つ。Canvas 2D）。css/js に分割。企画は `phage/PLAN.md`、仕組み・確認手順は `phage/DEVNOTES.md`。確認は `apps`（http://localhost:8765/phage/）で。保管庫（`archive.html`）に掲載。
-- `vocal-folds/` — 単独アプリ「声帯のしくみ」（声帯の3つのおもりの模型＝LeTalker の書き直しを、マイク・サンプルの声（模型で作った12種類）・スライダーで動かし、声から推定できることを確かさと答え合わせつきで見せる実験室。**技術検証中**）。css/js に分割。企画は `vocal-folds/PLAN.md`、仕組み・検証の結果・確認手順は `vocal-folds/DEVNOTES.md`。確認は `apps`（http://localhost:8765/vocal-folds/）で。**入口にも保管庫にも載せていない**（2026-10-11 ユーザーの指示で保管庫から外した）。
-- `archive.html` — 保管庫（入口の下の小さい注記からだけリンク。作りかけ・出来がいまひとつのアプリ。いまは urinary-dive・blood-dive・extreme・illusions・muscle-growth・ferrofluid・resistance・brain-response・passkey）。入口と保管庫の出し入れは `RULES.md` 8.1。
-- `_dev/` — アプリ以外の道具: `tools/`（公開前チェック `check-public.ps1`・サムネイル撮影・起動）、`promo/`（紹介動画づくり。**作り方・英語の字幕・YouTube へのアップロードは `_dev/promo/README.md`**。ショート＝`<app>.html?short`、横長＝使い方の説明 `<app>-guide.html`。できた動画は `promo/out/`、Git に入れない）、`sns-icon/`。入口が読む画像（サムネイル）は `assets/thumbs/`（公開するサイトの素材は `assets/`。紹介動画をサイトに載せるならここへ）。
-- `IDEAS.md` — まだ作っていないテーマのストックと、ユーザーの好みの傾向。新しいアプリを考えるときに読む。
-- `I18N.md` — 英語対応（JP／EN）の企画・作り方・段階。入口と入口のアプリが対象。アプリを英語にするとき・英語対応ずみのアプリに文を足すときに読む。
+## 読む順（トークンを使いすぎない）
+1. **`RULES.md`**（進め方の共通ルール。どのアプリでも最初に）
+2. 対象アプリの `<app>/DEVNOTES.md` の「別セッションで続けるとき」→ ファイル構成の表 → 関係するファイルだけ。大きいファイルは Grep で場所を探して範囲を読む。
+3. ほかの文書は、その作業のときだけ読む（下の「文書の地図」）。
 
-## 進め方の約束（詳しくは `RULES.md`。どのアプリでも最初に読む）
-- 企画書（`PLAN.md`）を先に作り、段階に分けて進める。
-- 大きくなったら役割ごとにファイル分割し、DEVNOTES のファイル構成表を見て関係するファイルだけ読む。
-- 手を入れる前と区切りごとに、`<app>/versions/<番号-名前>/` へ丸ごとバックアップを残す。節目の版は `<app>/launcher.html` に追加する。
-- 区切りごとに `<app>/DEVNOTES.md` の「別セッションで続けるとき」と「状態」を更新する。
-- **ルートの `README.md` も適宜更新する**: アプリの追加・入口と保管庫の出し入れ・名前やフォルダ構成・道具・動かし方・ライセンスが変わったら、同じコミットで直す（`RULES.md` 4章）。
-- 変更のたびに、`DEVNOTES.md` の「確認のしかた」の項目を通しで確認する（当たり判定の変更で合流部が塞がったことがある）。
-- 3アプリはエンジンを複製しているので、共通部分の不具合を直すときは他のアプリにも同じ問題がないか見る。
-- **新しいアプリはまず保管庫（`archive.html`）に置く**。入口（`index.html` の `APPS`）へ移すのはユーザーが指示したときだけ（`RULES.md` 8.1）。
-- 公開は**すべて GitHub Pages**（`https://sishiya.github.io/manabi-lab/<app>/`）。push した時点で公開されるので、push 前のチェックが公開前チェック。Artifact へは公開・再公開しない（以前の公開先。DEVNOTES にある Artifact の記録は当時のもの。`RULES.md` 8章）。
-- **git の commit／push の前には毎回、公開前チェック（`RULES.md` 7章）を行う**: `_dev/tools/check-public.ps1` で個人情報・秘密情報を探し、目でも確かめ、結果をユーザーに伝える。見つかったら公開しない。このフォルダは Public リポジトリにしても困らない状態を保つ。
-- **紹介動画は公開の前日に、翌日公開の分を最終確認・デバッグする**（`RULES.md` 8.4）: `youtube-upload.ps1 -Verify` で YouTube 側、mp4 のコマを並べて動画そのもの、公開中のアプリを smoke と DEVNOTES の確認で。直したら録りなおし、上げなおし・予約の変更・push はユーザーの GO のあと。結果は `_dev/promo/upload-log.md`。
-- **紹介動画の公開の前々日に、そのアプリの UI/UX をシンプルにする**（`RULES.md` 8.5）: 画面の要素を全部書き出し「なくしたら何がわからなくなるか」で いつも出す／そのときだけ出す／詳細にしまう／けずる に分ける。効いていない操作は測ってけずる。注意書き・出どころなど 9章の必要なものは落とさない。変わったところはユーザーに伝える（録りなおしはユーザーが決める）。
-- **ゲームかどうかを判定する**（`RULES.md` 8.3）: 保管庫から入口へ移すときと公開前チェックのときに、一般的なゲームの定義（ルール・目標と結果・腕前で変わる・よい結果を目ざす）とまなびラボ独自の基準で判定し、ルートの `GAMES.md`（全アプリの判定の一覧）に残す。ゲーム・境界ならユーザーに伝え、姉妹サイト「あそびラボ」へ移すか相談する（勝手に移さない）。
-- **性的な内容・R18 をまぜない**（基本ルール、`RULES.md` 9章）: アプリ・入口・保管庫・紹介動画・SNS・サムネイル、外から読む素材やリンク先も含めて。人体の器官は教科書程度の模式図と言葉まで。迷ったら入れずに相談する。
+## アプリ一覧（掲載先: 入口＝`index.html` の `APPS`／保管庫＝`archive.html`）
+くわしい中身は各 `<app>/DEVNOTES.md`・`PLAN.md`。ことわりがなければ css/js に分割、確認は `.claude/launch.json` の `apps`〜`apps-6`（http://localhost:8765/<app>/ など）。
+
+| フォルダ | 名前 | 掲載 | 一言・注意 |
+|---|---|---|---|
+| `body-dive/` | 体内ダイブ | 入口 | 消化管・気道を3Dで進む。1ファイル。尿の旅・血管の旅とエンジンを複製（3本のまとめは `body-dive/SERIES.md`） |
+| `urinary-dive/` | 尿の旅 | 保管庫 | 体内ダイブの亜種。1ファイル。DEVNOTES なし → `body-dive/SERIES.md` |
+| `blood-dive/` | 血管の旅 | 保管庫 | 同上 |
+| `evolution/` | ヒトへの46億年 | 入口 | 地球と生命の歴史の定点観測3D |
+| `quantum/` | 量子の実験室 | 入口 | 5つの実験。1ファイル |
+| `wifi-wave/` | 電波の見える部屋 | 入口 | WiFi の電磁波シミュレーション。WebGL2 |
+| `animal-senses/` | いきものの感じる世界 | 入口 | 同じ庭を動物の感覚で |
+| `immune-battle/` | 免疫のたたかい | 入口 | 数のモデル＋ミクロの断面。Canvas 2D |
+| `god-view/` | 神の視点マップ | 入口 | CesiumJS・キー不要の実データ。地球をちぎる SPH（Worker） |
+| `metamorphosis/` | さなぎの中で | 入口 | タバコスズメガの変態 |
+| `air-flow/` | 空気の流れの見える部屋 | 入口 | 換気と空気齢 |
+| `ga-creatures/` | 進化の箱庭 | 入口 | 遺伝的アルゴリズムの生きもの |
+| `mold-growth/` | カビが育つまで | 入口 | カビの箱庭（v1 の数のモデル版は versions に） |
+| `black-hole/` | ブラックホールの見え方 | 入口 | GPU で光の道すじ。WebGL2 |
+| `piano-hand/` | ピアノを弾く手 | 入口 | 技術検証。**方針: 物理を曲げない、骨 → 皮ふ → 調整の順**。DEVNOTES の版ごとの記録は `HISTORY.md` |
+| `extreme/` | 極限の世界に置いてみたら | 保管庫 | 気圧・水圧 |
+| `illusions/` | 錯覚の美術館 | 保管庫 | 錯視・錯聴 |
+| `muscle-growth/` | 筋肉が育つまで | 保管庫 | 筋線維＋数のモデル |
+| `ferrofluid/` | 磁性流体の実験皿 | 保管庫 | Three.js。実測値に合わせた係数 |
+| `resistance/` | 退治するほど手ごわくなる | 保管庫 | 退治で進化する虫 |
+| `brain-response/` | 刺激が脳に届くまで | 保管庫 | 測られた値だけ（想像で埋めない） |
+| `passkey/` | パスキーのしくみ | 保管庫 | 本物のログイン画面に似せない・文字は少なく。https か localhost でないと動かない |
+| `phage/` | 細菌にとりつくウイルス | 保管庫 | タイムスライダー1本＋どこでも寄れる |
+| `vocal-folds/` | 声帯のしくみ | **どこにも載せない** | 技術検証（2026-10-11 ユーザーの指示で保管庫から外した） |
+
+新しいアプリを足したら、この表と README の一覧に1行足す（`_dev/tools/new-app.ps1` がまとめて行う）。
+
+## 文書の地図（必要なときだけ読む）
+- `README.md` — GitHub で見えるページ。アプリの追加・掲載の出し入れ・構成・ライセンスが変わったら同じコミットで直す（RULES 4章）。
+- `GAMES.md` — 全アプリのゲーム判定（RULES 8.3）。
+- `I18N.md` — 英語対応。入口のアプリに文を足すときに。
+- `IDEAS.md` — 作っていないテーマとユーザーの好み。新しいアプリを考えるときに。
+- `_dev/tools/README.md` — 道具（公開前チェック・smoke・サムネイル・起動）。
+- `_dev/promo/README.md` — 紹介動画の作り方・英語の字幕・YouTube。`_dev/promo/SCHEDULE.md`（公開の予定）、`_dev/TODO.md`（残りの作業）。
+- `PUBLISH.local.md` — 古い Artifact の URL（この PC だけ。いまは使わない）。
+
+## かならず守ること（詳しくは RULES.md）
 - 返事は日本語で。
+- 企画書（PLAN.md）を先に、段階に分けて進める。手を入れる前と区切りごとに `versions/` へ丸ごとバックアップ、節目は `launcher.html` に。区切りごとに DEVNOTES の「別セッションで続けるとき」と「状態」を更新。
+- 変更のたびに DEVNOTES の「確認のしかた」を通しで確認する。
+- **commit の前に毎回、公開前チェック**（RULES 7章: `_dev/tools/check-public.ps1` ＋目で確かめ、結果をユーザーに伝える）。**push はユーザーがチャットで頼んだときだけ**（RULES 10章）。Artifact へは公開しない（8.2）。
+- 新しいアプリはまず保管庫へ。入口へ移すのはユーザーが指示したときだけ、移す前にゲーム判定（8.1・8.3）。
+- 性的な内容・R18 をまぜない（9章）。出どころは画面に（9章）。
+- 紹介動画の前々日に UI/UX のブラッシュアップ、前日に最終確認（8.5・8.4。手順は `_dev/promo/RULES-video.md`）。
