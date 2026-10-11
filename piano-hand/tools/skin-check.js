@@ -5,6 +5,7 @@
 //   __boneFit()     … 骨格の頂点の、皮ふの陰関数の最大（− なら皮ふの内側。−1 より大きいと骨が皮ふに近すぎる）
 //   __tissueFit(m)  … 筋肉・腱・脂肪の部品の表面の、皮ふの陰関数の最大が −m より大きいもの（+ は皮ふの外へはみ出し）
 //   __snapMany(__V4) … 手以外を消して、右手を4方向から撮って全画面に出す（#sheet。消すときは document.getElementById('sheet').remove()）
+//   __jointDims() … 指の関節の幅と厚み（産総研の測定値とくらべる）
 //   __lbsSamples() → __lbsEval() … 骨の重みで動かした皮ふと、その姿勢で作り直した本来の形のずれ（親指の付け根のまわり）。__errMap(t, hi) … ずれを色に
 //   __snapBig(eye, tgt) … 1方向から画面いっぱいに。__xsec([z…]) … 輪切り。__webProfile()・__radialTable() … 水かきと人さし指の中手骨の親指側の厚さ。__tissueVol(/正規表現/) … 模型の体積
 'use strict';
@@ -233,3 +234,11 @@ window.__errMap = (t, hi) => { const S = SKIN_DATA, P0 = __ph.poseAt(t, hi), all
   all.forEach((v, i) => { const k = Math.min(1, Math.abs(e[i]) / 4), c = e[i] < 0 ? [0.05, 0.15, 1] : [1, 0.1, 0.05]; for (let j = 0; j < 3; j++) S.col[v * 3 + j] = S.col0[v * 3 + j] * (1 - k) + c[j] * k; });
   for (const VH of V.hands) VH.skin.mesh.geometry.attributes.color.needsUpdate = true; return 'ok'; };
 window.__errOff = () => { const S = SKIN_DATA; if (S.col0) S.col.set(S.col0); for (const VH of V.hands) VH.skin.mesh.geometry.attributes.color.needsUpdate = true; };
+// __jointDims() … 人さし指〜小指の第二関節・第一関節の幅/厚みと、爪の中央の指の幅（網の姿勢、骨に垂直な断面）。v041〜。
+// くらべる値（産総研「AIST日本人の手の寸法データ」男性の平均）: 人さし指 18.0/16.8・15.6/13.0・13.9、中指 18.1/17.3・15.9/13.6・15.1、薬指 17.0/16.1・14.9/12.7・14.5、小指 15.0/14.3・13.4/11.5・12.0mm
+window.__jointDims = P => { P = P || __P(); const out = [];
+  for (let f = 2; f <= 5; f++) { const R = P.rest[f], tip = fingerFK(FINGERS_U[f], REST_DEG[f][0] * D2R, REST_DEG[f][1] * D2R, REST_DEG[f][2] * D2R)[3];
+    const sec = (o, F) => { let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (let a = -14; a <= 14; a += 0.25) for (let b = -14; b <= 14; b += 0.25) { const p = [0, 1, 2].map(i => o[i] + F.x[i] * a + F.y[i] * b); if (handSDF(P, ...p) < 0) { x0 = Math.min(x0, a); x1 = Math.max(x1, a); y0 = Math.min(y0, b); y1 = Math.max(y1, b); } } return [(x1 - x0).toFixed(1), (y1 - y0).toFixed(1)]; };
+    const pip = sec(R[1].o, R[1]), dip = sec(R[2].o, R[2]), L2 = Math.hypot(...sub3(tip, R[2].o)), nm = sec(R[2].o.map((v, i) => v + R[2].z[i] * L2 * 0.75), R[2]);
+    out.push('指' + f + ' 第二関節 ' + pip.join('/') + '  第一関節 ' + dip.join('/') + '  爪の中央 ' + nm[0]); }
+  return out.join('\n'); };

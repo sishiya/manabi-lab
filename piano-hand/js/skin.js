@@ -3,7 +3,12 @@
 // 爪は末節骨に固定した薄い面。肌の細かい凹凸（毛穴・関節のしわ）と色むらはシェーダーで足す。
 'use strict';
 const SKIN_RES = 1.5; // 網の細かさ（mm）
-const FLAT = 1.12;    // 指の断面の縦横比（横が広い）
+const FLAT = 1.12;    // 指の断面の縦横比（横が広い）。付け根・指先と親指
+// 人さし指〜小指の第二関節・第一関節の幅÷厚み（v041〜）。産総研「AIST日本人の手の寸法データ」（河内まき子 2012、男性 327 人）の平均:
+// 第二関節 幅 18.0・18.1・17.0・15.0／厚み 16.8・17.3・16.1・14.3mm（比 1.06）、第一関節 幅 15.6・15.9・14.9・13.4／厚み 13.0・13.6・12.7・11.5mm（比 1.18）。
+// 前はどこも 1.12 で、第一関節が厚すぎ、第二関節が少しうすかった
+const FLAT_J = [FLAT, 1.06, 1.18, FLAT];
+const flatOf = (f, k) => f === 1 ? FLAT : FLAT_J[k];
 // 網を作るときの姿勢（度）: [付け根の横, 付け根の曲げ, 2つめの曲げ]。指を少し開いて、となりの指とくっつかないように
 // 親指は弾いているときの中央値（v040〜。内蔵の8曲・両手の 0.4 秒ごと 329 の姿勢: 横 −50〜−19・中央 −41°、付け根 −27〜5・中央 −17°、
 // 第1関節 中央 32°）。前の [-30, 8, 20] は弾いているときより 10〜17° 閉じていて、押すたびに親指の中手骨が網の形より外へ開き、
@@ -165,22 +170,19 @@ function buildPrims() {
   // 指先は鍵に当たるはらの中心（動きの計算の指先の点）なので 0
   const offN = f => {
     const B = BONE_R[f], ry = k => f === 1 && k === 1 ? Math.max(MC_AP[1][2], B[1][0] * 0.78) : (k === 0 ? (f === 1 ? B[0][2] : B[0][0]) : Math.max(B[k - 1][2], B[k][0])) * 0.78; // 親指の MP 関節は中手骨の頭の厚み（CT）
-    return [0, 1, 2].map(k => Math.max(0, RADII[f][k] / FLAT - ry(k) - TD_FINGER - fat)).concat([0]);
+    return [0, 1, 2].map(k => Math.max(0, RADII[f][k] / flatOf(f, k) - ry(k) - TD_FINGER - fat)).concat([0]);
   };
+  // v041〜: 関節のふくらみの球（太さの 7%）はやめた。RADII の関節の太さは関節のいちばん太い所の測定値なので、球を足すと二重になり、
+  // 部品のつなぎの太りも重なって、人さし指の第一関節が幅 18.4・厚み 16.1mm（測定値 15.6・13.0）と、指先より 1.3 倍太い「ひょうたん」に見えた
   for (let f = 1; f <= 5; f++) {
     const R = rest[f], off = offN(f);
     for (let j = f === 1 ? 1 : 0; j < 3; j++) {
       const a = R[j].o, b = j < 2 ? R[j + 1].o : fingerFK(FINGERS_U[f], REST_DEG[f][0] * D2R, REST_DEG[f][1] * D2R, REST_DEG[f][2] * D2R)[3];
       const c = mkCone(a, b, RADII[f][j], RADII[f][j + 1], boneOf(f, j));
-      c.fr = R[j]; // 指は縦に少しうすい: 骨の y（甲の向き）を FLAT 倍に伸ばした点で測る
+      c.fr = R[j]; // 指は縦に少しうすい: 骨の y（甲の向き）を縦横の比の倍に伸ばした点で測る
       c.off0 = off[j]; c.off1 = off[j + 1]; c.il = 1 / Math.hypot(...sub3(b, a));
+      c.fl0 = flatOf(f, j); c.fl1 = flatOf(f, j + 1);
       P.fing[f].push(c);
-      if (j >= 1) { // 関節の少しのふくらみ
-        // 親指の付け根の関節（f=1, j=1）は、まわりの部品（中手骨・母指球・水かき）をつなぐ太りで肉が 7mm ほどになり、こぶに見えたので、ふくらみを足さない（v032〜）
-        const kr = RADII[f][j] * (1 + (f === 1 && j === 1 ? 0 : HAND.knuckle === undefined ? 0.07 : HAND.knuckle));
-        const k = mkCone(a, a, kr, kr, boneOf(f, j)); k.fr = R[j]; k.knuckle = true; k.off0 = k.off1 = off[j]; k.il = 0;
-        P.fing[f].push(k);
-      }
     }
   }
   P.rest = rest;
@@ -231,13 +233,13 @@ function handSDF(P, x, y, z, comp) {
     for (const c of P.fing[f]) {
       if (cull && (x < c.lo[0] || y < c.lo[1] || z < c.lo[2] || x > c.hi[0] || y > c.hi[1] || z > c.hi[2])) continue;
       const F = c.fr, qx = x - F.o[0], qy = y - F.o[1], qz = z - F.o[2];
-      // 甲の向きの座標を、中心を手のひら側へ off ずらしてから FLAT 倍（off は節にそって関節の値をつなぐ）
+      // 甲の向きの座標を、中心を手のひら側へ off ずらしてから縦横の比の倍（off と比は節にそって関節の値をつなぐ）
       const yy = qx * F.y[0] + qy * F.y[1] + qz * F.y[2], u = Math.max(0, Math.min(1, (qx * F.z[0] + qy * F.z[1] + qz * F.z[2]) * c.il));
-      const t = (yy + c.off0 + (c.off1 - c.off0) * u) * FLAT - yy;
-      const kx = x + F.y[0] * t - c.a[0], ky = y + F.y[1] * t - c.a[1], kz = z + F.y[2] * t - c.a[2];
-      const e = c.knuckle && c.l2 === 0 ? Math.sqrt(kx * kx + ky * ky + kz * kz) - c.ra
-        : coneD(c, x + F.y[0] * t, y + F.y[1] * t, z + F.y[2] * t, cull);
-      fd = smin(fd, e, 2.5);
+      const t = (yy + c.off0 + (c.off1 - c.off0) * u) * (c.fl0 + (c.fl1 - c.fl0) * u) - yy;
+      const e = coneD(c, x + F.y[0] * t, y + F.y[1] * t, z + F.y[2] * t, cull);
+      // 同じ指の節どうしは、ふつうの和で（関節で同じ太さの球を共有するので、つなぎ目はなめらか。なめらかにつなぐ式 smin だと、
+      // 関節で2つの円すいが重なる所が k/4 = 0.6mm 太った）
+      fd = Math.min(fd, e);
       if (comp) comp[c.bone] = Math.min(comp[c.bone], e);
     }
     d = smin(d, fd, 7); // 親指も指と同じつなぎの幅（9 では付け根の関節に肉が足されてこぶに見えた）
