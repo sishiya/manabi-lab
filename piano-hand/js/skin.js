@@ -5,7 +5,10 @@
 const SKIN_RES = 1.5; // 網の細かさ（mm）
 const FLAT = 1.12;    // 指の断面の縦横比（横が広い）
 // 網を作るときの姿勢（度）: [付け根の横, 付け根の曲げ, 2つめの曲げ]。指を少し開いて、となりの指とくっつかないように
-const REST_DEG = [null, [-30, 8, 20], [-10, 12, 14], [-2, 12, 14], [7, 12, 14], [16, 12, 14]];
+// 親指は弾いているときの中央値（v040〜。内蔵の8曲・両手の 0.4 秒ごと 329 の姿勢: 横 −50〜−19・中央 −41°、付け根 −27〜5・中央 −17°、
+// 第1関節 中央 32°）。前の [-30, 8, 20] は弾いているときより 10〜17° 閉じていて、押すたびに親指の中手骨が網の形より外へ開き、
+// 手のひらについて動く付け根の皮ふが骨に置いていかれて、親指の根もとの外側が本来の形より 8mm ほど（中央値）へこんだ
+const REST_DEG = [null, [-41, -17, 32], [-10, 12, 14], [-2, 12, 14], [7, 12, 14], [16, 12, 14]];
 // 指の太さ（半径 mm）: 付け根・関節2つ・指先。指先は鍵に当たる球（PAD）とほぼ同じ
 // 親指は、生きた手で測った周囲（男性 IP 関節 6.8cm・爪の幅 1.8cm。"Investigating Normative Measurements of the Thumb and Index Finger to Aid in Reconstructive Surgery"、PMC12309929。成人 162 人）から、IP 関節の半径 10.8mm、指先 8.8mm
 const RADII = [null, [10.0, 11.0, 10.8, 8.8], [9.6, 8.9, 7.7, 6.6], [10.0, 9.3, 8.0, 6.8], [9.4, 8.7, 7.5, 6.5], [8.4, 7.6, 6.8, 6.0]];
@@ -152,7 +155,9 @@ function buildPrims() {
     const T = tissueParts().find(t => t.en === 'First dorsal interosseous (index head)'), R = restBoneFrames(rest);
     const a = endAt(R[T.a.bone], endLocal(T.a, R), 1), b = endAt(R[T.b.bone], endLocal(T.b, R), 1), r = u => T.ra + (T.rb - T.ra) * u + T.bulge * Math.sin(Math.PI * u) + P.tdH;
     const us = [0.06, 0.3, 0.55, 0.85];
-    for (let i = 0; i < 3; i++) { const c = mkCone(lerp3(a, b, us[i]), lerp3(a, b, us[i + 1]), r(us[i]), r(us[i + 1]), BONE_PALM); c.k = 8; c.thumb = true; c.noW = true; P.palm.push(c); }
+    // 根もとの側（0.06〜0.3）だけつなぎの幅 16（v040〜。8 では親指の中手骨の根もととのあいだに溝が残った。皮ふと皮下脂肪は筋肉のあいだの
+    // 細い溝へは入りこまない）。3つとも 16 にすると、人さし指の中手骨の甲まで 3mm 太った（根もとだけなら 1.5mm）
+    for (let i = 0; i < 3; i++) { const c = mkCone(lerp3(a, b, us[i]), lerp3(a, b, us[i + 1]), r(us[i]), r(us[i + 1]), BONE_PALM); c.k = i === 0 ? 16 : 8; c.thumb = true; c.noW = true; P.palm.push(c); }
   }
   P.arm = mkCone([2, -5, -42], [3, -16, 240], ARM_R[0], ARM_R[1], BONE_ARM); // 形: 手のひらの中から細く始めて、手首で自然に太くなる（手首で丸く始めると、境目に段ができた）。一人称で切れ目が見えないよう、肘の近くまで
   P.armW = mkCone([2, -6, -4], [3, -16, 240], ARM_R[0] + 3.4, ARM_R[1], BONE_ARM); // 重み用: 手首から先だけ（手のひらの皮ふが前腕といっしょに動かないように）
@@ -442,7 +447,8 @@ function buildSkin() {
         c = mix3(c, PADC, aPad[v * 3 + 2] * 0.4);
       }
       // 関節の手のひらの側のしわ（2本の細い線）
-      if (up < -0.3 && (j >= 1 || true)) {
+      // 親指の中手骨の付け根（CM 関節）には描かない（v040〜。手首の近くで受け持つ骨が手のひらと入れかわり、点線のしわが見えた。本物はここに横じわはない）
+      if (up < -0.3 && !(f === 1 && j === 0)) {
         const cr = Math.max(Math.exp(-(((u - 1.2) / 0.7) ** 2)), Math.exp(-(((u + 1.0) / 0.7) ** 2))) * Math.min(1, (-up - 0.3) * 3);
         aCrease[v] = Math.max(aCrease[v], cr);
       }

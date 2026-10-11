@@ -5,6 +5,7 @@
 //   __boneFit()     … 骨格の頂点の、皮ふの陰関数の最大（− なら皮ふの内側。−1 より大きいと骨が皮ふに近すぎる）
 //   __tissueFit(m)  … 筋肉・腱・脂肪の部品の表面の、皮ふの陰関数の最大が −m より大きいもの（+ は皮ふの外へはみ出し）
 //   __snapMany(__V4) … 手以外を消して、右手を4方向から撮って全画面に出す（#sheet。消すときは document.getElementById('sheet').remove()）
+//   __lbsSamples() → __lbsEval() … 骨の重みで動かした皮ふと、その姿勢で作り直した本来の形のずれ（親指の付け根のまわり）。__errMap(t, hi) … ずれを色に
 //   __snapBig(eye, tgt) … 1方向から画面いっぱいに。__xsec([z…]) … 輪切り。__webProfile()・__radialTable() … 水かきと人さし指の中手骨の親指側の厚さ。__tissueVol(/正規表現/) … 模型の体積
 'use strict';
 // 皮ふの陰関数の部品は測るたびに作り直す（__P() は網を作ったあと大きさをかけるときに骨の原点が書きかわるので、大きさが 1 でない手では指がずれる）
@@ -202,3 +203,33 @@ window.__timeSheet = (hi, times, eyeOff) => { const cv = V.r.domElement; if (!cv
   times.forEach((t, i) => { __ph.setTime(t); step(); const tg = [W0[0], W0[1] - 10, W0[2] - 60]; V.cam.position.set(tg[0] + eyeOff[0], tg[1] + eyeOff[1], tg[2] + eyeOff[2]); V.cam.up.set(0, 1, 0); V.cam.lookAt(...tg); V.cam.updateMatrixWorld();
     renderScene(t); renderScene(t); g.drawImage(cv, (i % 3) * cw, Math.floor(i / 3) * ch, cw, ch); const P = __ph.poseAt(t, hi); g.fillStyle = '#ff0'; g.font = '22px sans-serif'; g.fillText(t.toFixed(2) + 's 手首の曲げ ' + ((P.W[7] || 0) * 57.3).toFixed(1) + '°', (i % 3) * cw + 8, Math.floor(i / 3) * ch + 26); });
   __iso(false); V.scene.background = bg; __sheet(out.toDataURL('image/jpeg', 0.9)); return 'ok'; };
+// ---- v040〜: 骨の重みで動かした皮ふが、その姿勢で作り直した陰関数（本来の形）からどれだけずれるか ----
+// __lbsSamples(ids) … 曲（ids）の両手から 0.4 秒ごとに指の角度を集める（手の座標なので左手も同じに扱える）
+window.__lbsSamples = async (ids = ['elise2', 'scale', 'chords', 'chopin', 'arp', 'twinkle', 'bravura', 'scale2']) => { const out = [];
+  for (const id of ids) { __ph.loadSong(id); await new Promise(r => setTimeout(r, 200)); __ph.S.plan.hands.forEach((h, hi) => { for (let t = h.notes[0].t0; t < h.notes[h.notes.length - 1].t1; t += 0.4) out.push(__ph.poseAt(t, hi).fingers.map(f => f && { yaw: f.ang.yaw, a1: f.ang.a1, a2: f.ang.a2 })); }); }
+  return (window.__samples = out); };
+// __lbsErrOne(fs, sel) … 指の角度 fs のときの、頂点 sel の「本来の形の陰関数の値」（− は本来の形より内側へへこむ、+ は外へふくらむ）
+window.__lbsErrOne = (fs, sel) => { const S = SKIN_DATA, pos = S.pos0, bi = S.bi, bw = S.bw, aJ = S.aJ, nrm = S.nrm0, fingers = [null];
+  for (let f = 1; f <= 5; f++) fingers.push({ ang: fs[f] });
+  const pose = { W: [0, 0, 0, 0, 1], fingers }, B = poseBones(pose), M = new Float32Array(N_BONES * 16); skinMatrices(S, B, M); const fl = new Float32Array(N_BONES); jointFlex(pose, fl);
+  const keep = REST_DEG.map(d => d && d.slice()); for (let f = 1; f <= 5; f++) REST_DEG[f] = [fs[f].yaw / D2R, fs[f].a1 / D2R, fs[f].a2 / D2R]; const Pt = buildPrims(); for (let f = 1; f <= 5; f++) REST_DEG[f] = keep[f];
+  return sel.map(v => { const x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2], inf = aJ[v * 2 + 1] * fl[aJ[v * 2]] * 2.6, px = x + nrm[v * 3] * inf, py = y + nrm[v * 3 + 1] * inf, pz = z + nrm[v * 3 + 2] * inf; let a = 0, b = 0, c = 0;
+    for (let k = 0; k < 4; k++) { const bb = bi[v * 4 + k], w = bw[v * 4 + k]; if (!w) continue; const e = M.subarray(bb * 16, bb * 16 + 16); a += w * (e[0] * px + e[4] * py + e[8] * pz + e[12]); b += w * (e[1] * px + e[5] * py + e[9] * pz + e[13]); c += w * (e[2] * px + e[6] * py + e[10] * pz + e[14]); }
+    return handSDF(Pt, a, b, c); }); };
+// __thumbVerts() … 親指の付け根のまわりの頂点（網の姿勢で x < −5・手首〜指の付け根、親指の骨の重みがあって人さし指〜小指の重みがない）
+window.__thumbVerts = () => { const S = SKIN_DATA, pos = S.pos0, sel = [];
+  for (let v = 0; v < S.NV; v++) { if (!(pos[v * 3] < -5 && pos[v * 3 + 2] > -100 && pos[v * 3 + 2] < 10)) continue; let wt = 0, wo = 0;
+    for (let k = 0; k < 4; k++) { const b = S.bi[v * 4 + k], w = S.bw[v * 4 + k]; if (b >= 2 && b <= 4) wt += w; else if (b >= 5) wo += w; }
+    if (wo < 0.05 && wt > 0.02) sel.push(v); }
+  return sel; };
+// __lbsEval(n) … __samples から n 個の姿勢で、親指の付け根のまわりのずれ（mm）: 平均・へこみ（中央値・下から 10%・最悪）・ふくらみ
+window.__lbsEval = (n = 110) => { const sel = __thumbVerts(), step = Math.max(1, Math.floor(__samples.length / n)), dn = [], bu = [], mn = [];
+  for (let i = 0; i < __samples.length; i += step) { const e = __lbsErrOne(__samples[i], sel); dn.push(Math.min(0, ...e)); bu.push(Math.max(0, ...e)); mn.push(e.reduce((s, d) => s + Math.abs(d), 0) / e.length); }
+  const q = (a, p) => { a = [...a].sort((x, y) => x - y); return +a[Math.floor(p * (a.length - 1))].toFixed(1); };
+  return { 姿勢: dn.length, 平均: +(mn.reduce((s, v) => s + v, 0) / mn.length).toFixed(2), へこみ中央: q(dn, 0.5), へこみ10: q(dn, 0.1), へこみ最悪: q(dn, 0), ふくらみ中央: q(bu, 0.5), ふくらみ90: q(bu, 0.9) }; };
+// __errMap(t, hi) / __errOff() … 時刻 t のずれを皮ふの色に（青 = 本来の形より内側、赤 = 外側、4mm で真っ青・真っ赤）
+window.__errMap = (t, hi) => { const S = SKIN_DATA, P0 = __ph.poseAt(t, hi), all = [...Array(S.NV).keys()].filter(v => S.pos0[v * 3 + 2] < 20);
+  const e = __lbsErrOne(P0.fingers.map(f => f && f.ang), all); if (!S.col0) S.col0 = S.col.slice();
+  all.forEach((v, i) => { const k = Math.min(1, Math.abs(e[i]) / 4), c = e[i] < 0 ? [0.05, 0.15, 1] : [1, 0.1, 0.05]; for (let j = 0; j < 3; j++) S.col[v * 3 + j] = S.col0[v * 3 + j] * (1 - k) + c[j] * k; });
+  for (const VH of V.hands) VH.skin.mesh.geometry.attributes.color.needsUpdate = true; return 'ok'; };
+window.__errOff = () => { const S = SKIN_DATA; if (S.col0) S.col.set(S.col0); for (const VH of V.hands) VH.skin.mesh.geometry.attributes.color.needsUpdate = true; };
