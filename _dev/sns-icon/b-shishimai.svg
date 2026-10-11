@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <pattern id="k" width="100" height="100" patternUnits="userSpaceOnUse">
+      <path d="M50 50 a6 6 0 1 1 12 0 a12 12 0 1 1 -24 0 a18 18 0 1 1 36 0 a24 24 0 1 1 -48 0" fill="none" stroke="#E8F2EA" stroke-width="5" stroke-linecap="round"/>
+      <path d="M0 0 a6 6 0 1 1 12 0 a12 12 0 1 1 -24 0 a18 18 0 1 1 36 0 M100 100 a6 6 0 1 1 12 0 a12 12 0 1 1 -24 0 a18 18 0 1 1 36 0 M100 0 a6 6 0 1 1 12 0 a12 12 0 1 1 -24 0 a18 18 0 1 1 36 0 M0 100 a6 6 0 1 1 12 0 a12 12 0 1 1 -24 0 a18 18 0 1 1 36 0" fill="none" stroke="#E8F2EA" stroke-width="5" stroke-linecap="round"/>
+    </pattern>
+  </defs>
+  <rect width="400" height="400" fill="#2F7A55"/>
+  <rect width="400" height="400" fill="url(#k)" opacity=".55"/>
+  <!-- 下あご -->
+  <rect x="108" y="268" width="184" height="66" rx="30" fill="#C62828"/>
+  <rect x="118" y="250" width="164" height="40" rx="14" fill="#4A0D0D"/>
+  <g fill="#fff"><rect x="128" y="270" width="22" height="18" rx="4"/><rect x="156" y="272" width="22" height="16" rx="4"/><rect x="222" y="272" width="22" height="16" rx="4"/><rect x="250" y="270" width="22" height="18" rx="4"/></g>
+  <!-- 上の頭 -->
+  <path d="M80 150 q0 -82 120 -82 q120 0 120 82 v62 q0 46 -46 46 h-148 q-46 0 -46 -46z" fill="#D32F2F"/>
+  <g fill="#fff"><rect x="122" y="252" width="24" height="22" rx="5"/><rect x="152" y="254" width="24" height="20" rx="5"/><rect x="182" y="254" width="36" height="18" rx="5"/><rect x="224" y="254" width="24" height="20" rx="5"/><rect x="254" y="252" width="24" height="22" rx="5"/></g>
+  <circle cx="78" cy="118" r="22" fill="#F5C02E"/><circle cx="322" cy="118" r="22" fill="#F5C02E"/>
+  <path d="M104 132 q40 -38 80 -4 M216 128 q40 -34 80 4" fill="none" stroke="#1A1A1A" stroke-width="16" stroke-linecap="round"/>
+  <path d="M110 128 q34 -28 68 -2 M222 126 q34 -26 68 2" fill="none" stroke="#F5C02E" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="145" cy="172" r="32" fill="#F5C02E" stroke="#1A1A1A" stroke-width="6"/><circle cx="255" cy="172" r="32" fill="#F5C02E" stroke="#1A1A1A" stroke-width="6"/>
+  <circle cx="150" cy="175" r="14" fill="#1A1A1A"/><circle cx="250" cy="175" r="14" fill="#1A1A1A"/>
+  <circle cx="155" cy="170" r="4" fill="#fff"/><circle cx="255" cy="170" r="4" fill="#fff"/>
+  <ellipse cx="200" cy="222" rx="42" ry="26" fill="#8E1B1B"/>
+  <ellipse cx="184" cy="226" rx="9" ry="7" fill="#2A0707"/><ellipse cx="216" cy="226" rx="9" ry="7" fill="#2A0707"/>
+  <ellipse cx="190" cy="211" rx="14" ry="6" fill="#B23A3A"/>
+</svg>
