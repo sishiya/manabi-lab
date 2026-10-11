@@ -96,7 +96,7 @@ const T4D = {
 };
 
 Zoom.add({
-  id: 'form', name: '形', sub: '部品と数',
+  id: 'form', hint: '〈欄〉の「ばらす」を押すか、部品をさわってみよう', name: '形', sub: '部品と数',
   box: { x0: -200, x1: 200, y0: -95, y1: 300 }, bar: 50,
   lead: 'T4 ファージをたんぱく質が見えるくらいまで拡大。<b>ばらす</b>と部品ごとに分かれる。部品をさわると、名前（遺伝子の番号 gp）・数・役目が出る。',
   init(Z) {
@@ -113,7 +113,8 @@ Zoom.add({
       <tr><td>長い脚</td><td>6本（4種類）</td></tr><tr><td>中の DNA</td><td>約171,000塩基対</td></tr>
       <tr><td>内部たんぱく</td><td>約1000</td></tr></table>`, 'sure');
   },
-  step(Z, dt) { this.e += (this.et - this.e) * Math.min(1, dt * 3); },
+  step(Z, dt) { this.e += (this.et - this.e) * Math.min(1, dt * 3); if (this.e > 0.9) this.seen = true; },
+  done() { return this.seen || this.picked > 2; },
   pos() { // ばらしたときの位置のずれ
     const e = this.e;
     return { head: [0, 60 * e], neck: [0, 34 * e], sheath: [62 * e, 10 * e], tube: [-56 * e, 10 * e], plate: [0, -18 * e], needle: [0, -48 * e], ltf: [30 * e, -18 * e] };
@@ -154,6 +155,7 @@ Zoom.add({
     if (this.e > 0.5) Z.text('長い脚（gp34〜37）', 150, P.plate[1] + 50, { size: 11 });
   },
   click(Z, x, y) {
+    this.picked = (this.picked || 0) + 1;
     const P = this.pos(), T = T4D.PLATE_TOP, top = T + T4.sheathLen, py = P.plate[1] + T;
     const dseg = (p, a, b) => { const vx = b[0] - a[0], vy = b[1] - a[1], t = Math.max(0, Math.min(1, ((p[0] - a[0]) * vx + (p[1] - a[1]) * vy) / (vx * vx + vy * vy))); return Math.hypot(p[0] - a[0] - vx * t, p[1] - a[1] - vy * t); };
     // 針

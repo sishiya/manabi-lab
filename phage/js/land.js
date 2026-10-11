@@ -29,7 +29,7 @@ const Land = (() => {
     S.fill = 1; S.holeR = 0; S.dnaF = 0; S.shortF = 0; S.imBulge = 0;
     S.noRecT = 0; S.saidNoRec = false; S.firstBind = false; S.maxBound = 0; S.th0 = 0; S.y0 = 0;
     S.done = false;
-    document.getElementById('toInside').hidden = true; document.getElementById('toZoomAttach').hidden = true;
+    document.getElementById('toInside').hidden = true; document.getElementById('toZoomAttach').hidden = true; UI.next('land', null); document.getElementById('landHint').classList.remove('off');
     makeDnaPath();
     UI.clearLog('land');
     UI.log('land', `${S.host.name} の表面。画面をおさえると、光ピンセットがファージを引きよせる。`);
@@ -37,13 +37,13 @@ const Land = (() => {
   }
 
   function makeDnaPath() {
-    // 管の先から下へ。細菌の中（管の先から 12〜75nm 下）にたまっていく
+    // 管の先から細菌の奥へ。くねくねしながら下へ進み、画面の外まで続く（本当は全部で約57µm あり、この画面には入りきらない）
     dnaPath = [[0, -12]]; let x = 0, y = -12, a = -Math.PI / 2;
-    for (let i = 0; i < 900; i++) {
-      a += (Math.random() - 0.5) * 1.4;
-      x += Math.cos(a) * 4; y += Math.sin(a) * 4;
-      if (Math.abs(x) > 40 + i * 0.35) { x = Math.sign(x) * (40 + i * 0.35); a = Math.PI - a; }
-      if (y > -12) { y = -12; a = -a; } if (y < -75) { y = -75; a = -a; }
+    for (let i = 0; i < 1100; i++) {
+      a += (Math.random() - 0.5) * 1.5 + (-Math.PI / 2 - a) * 0.06;
+      x += Math.cos(a) * 3; y += Math.sin(a) * 3;
+      if (Math.abs(x) > 90) { x = Math.sign(x) * 90; a = Math.PI - a; }
+      if (y > -12) { y = -12; a = -Math.abs(a); }
       dnaPath.push([x, y]);
     }
   }
@@ -158,7 +158,7 @@ const Land = (() => {
   }
 
   function trigger() {
-    S.phase = 'settle'; S.pt = 0; S.grab = false; S.th0 = S.th; S.y0 = S.B.y;
+    S.phase = 'settle'; S.pt = 0; S.grab = false; UI.hideHint('land'); S.th0 = S.th; S.y0 = S.B.y;
     UI.log('land', '3本の脚が同時にくっついた → <b>基盤が六角形から星形へ</b>。ここから後戻りしない。', 'sure');
     UI.toast('land', '3本そろった！');
   }
@@ -299,6 +299,15 @@ const Land = (() => {
       g.beginPath(); g.moveTo(X(S.B.x), Y(tipY));
       for (let i = 0; i < n; i++) { const [px, py] = dnaPath[i]; g.lineTo(X(S.B.x + px), Y(tipY + py)); }
       g.stroke();
+      // 画面の外へ続くことを書く
+      if (S.dnaF > 0.12) {
+        const ratio = Math.round(T4.genomeBp * T4.bpNm / viewW);
+        g.font = '13px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+        const msg = `↓ 細菌の奥へ、画面の外まで続く（DNA は全部のばすと約57µm＝この画面の横はばの約${ratio}倍）`;
+        const tx = Math.min(Wpx - 180, Math.max(180, X(S.B.x))), ty = Hpx - 34, w = g.measureText(msg).width;
+        g.fillStyle = 'rgba(11,26,34,.8)'; g.fillRect(tx - w / 2 - 6, ty - 18, w + 12, 22);
+        g.fillStyle = '#ffc29a'; g.fillText(msg, tx, ty); g.textAlign = 'left';
+      }
     }
     if (S.fib[0].H == null) computeFibers();
     for (const f of S.fib) drawFiber(f, false);

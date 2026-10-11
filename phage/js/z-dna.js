@@ -5,7 +5,7 @@
 const BASEC = { A: '#7fd37f', T: '#ff7a7a', G: '#ffd86b', C: '#6ea9ff', H: '#7fe8e0' };
 
 Zoom.add({
-  id: 'cut', name: 'こわす', sub: '細菌の DNA だけ切る',
+  id: 'cut', hint: '2本の DNA をそれぞれさわって、酵素を当ててみよう（酵素は〈欄〉で選ぶ）', name: 'こわす', sub: '細菌の DNA だけ切る',
   box: { x0: -75, x1: 75, y0: -60, y1: 52 }, bar: 10,
   lead: '細菌の中に2種類の DNA。上が<b>細菌の DNA</b>、下が<b>T4 の DNA</b>。酵素を選んで、DNA をさわって当ててみよう。どちらが切れる？',
   init(Z) {
@@ -33,6 +33,7 @@ Zoom.add({
       <tr><td>EndoIV</td><td>${cell('endo4host')}</td><td>${cell('endo4t4')}</td></tr>
       <tr><td>制限酵素</td><td>${cell('restrhost')}</td><td>${cell('restrt4')}</td></tr></table>`);
   },
+  done() { const r = this.res; return Object.keys(r).some(k => k.endsWith('host') && r[k]) && Object.keys(r).some(k => k.endsWith('t4')); },
   baseAt(which, i) { const b = this.seq[i]; if (which === 't4' && (b === 'C')) return 'H'; return b; },
   xAt(i) { return -70 + i * this.space; },
   // 酵素がこの DNA を切れるか。切る場所の番号の列を返す（なければ空）
@@ -141,7 +142,7 @@ Zoom.add({
 });
 
 Zoom.add({
-  id: 'read', name: '読みかえ', sub: '工場の切りかえ',
+  id: 'read', hint: '〈欄〉の「時間の順にやってみる」を押すか、たんぱくを付けかえよう', name: '読みかえ', sub: '工場の切りかえ',
   box: { x0: -112, x1: 118, y0: -36, y1: 30 }, bar: 10,
   lead: '細菌の <b>RNA ポリメラーゼ</b>（DNA を読む機械）に、T4 のたんぱくを付けたり外したりしてみよう。どの遺伝子が読まれるかが変わる。',
   init(Z) {
@@ -155,6 +156,7 @@ Zoom.add({
     Z.steps(['0分: Alt が DNA といっしょに入る → 早期の遺伝子', '数分: AsiA と MotA → 中期の遺伝子（細菌の遺伝子は読まれなくなる）', 'DNA のコピーが始まると: gp55・gp33・gp45 → 後期の遺伝子（頭・しっぽ・脚）']);
     this.retarget(Z); this.say(Z);
   },
+  done() { return this.made.late > 0; },
   auto(Z) {
     const seq = [{ alt: true }, { alt: true, asia: true, mota: true }, { alt: true, asia: true, mota: true, gp55: true, gp45: true }];
     let i = 0; const self = this;

@@ -2,7 +2,7 @@
 'use strict';
 
 Zoom.add({
-  id: 'attach', name: '刺さる', sub: '基盤のしかけ',
+  id: 'attach', hint: '脚の先（黄色）をさわる（〈欄〉の「脚を1本くっつける」でもよい）', name: '刺さる', sub: '基盤のしかけ',
   box: { x0: -125, x1: 125, y0: -70, y1: 150 }, bar: 20,
   lead: '大腸菌 K-12 の表面に降りたところ。<b>長い脚の先（黄色）をさわる</b>と、外膜の OmpC にくっつく。何本くっつけると動きだすかな？',
   init(Z) {
@@ -16,6 +16,7 @@ Zoom.add({
     Z.at(0);
     Z.say('くっついた脚: 0 / 6');
   },
+  done() { return this.t >= 18; },
   nBound() { return this.legs.filter(l => l.bound).length; },
   bindNext(Z) { const l = this.legs.find(l => !l.bound); if (l) this.bind(Z, l); },
   bind(Z, l) {
@@ -132,7 +133,6 @@ Zoom.add({
     this._legs = legs; this._G = G;
     // 長さの目印
     if (S.ring(0) > 0) Z.text(`さや ${G.L.toFixed(1)}nm`, 18, G.Hb + G.L / 2, { size: 11, align: 'left', mono: true, bg: 'rgba(11,26,34,.75)' });
-    if (this.t < 0) Z.text('脚の先（黄色）をさわってみよう', 0, 128, { size: 13, bg: 'rgba(11,26,34,.75)' });
   },
   click(Z, x, y) {
     const G = this._G; if (!G) return null;

@@ -107,7 +107,7 @@ const Zoom = (() => {
     $('zList').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.id === cur.id)));
     $('zTitle').textContent = cur.name; $('zLead').innerHTML = cur.lead || '';
     $('zCtrl').innerHTML = ''; $('zSay').innerHTML = ''; $('zPick').innerHTML = '<p class="hint2">図の中の部品をさわると、ここに説明が出る。</p>';
-    Z._steps = null; renderSteps();
+    Z._steps = null; renderSteps(); UI.next('z', null);
     for (const k in holding) holding[k] = false;
     fit();
     cur.init(Z);
@@ -128,6 +128,21 @@ const Zoom = (() => {
     g.fillStyle = '#0b1a22'; g.fillRect(0, 0, Wpx, Hpx);
     if (!cur) return;
     g.save(); cur.draw(Z); g.restore();
+    // まだ終わっていない場面では、何をすればよいかを図の下に書く（右の欄・スマホでは下の欄のボタン）
+    const fin = cur.done && cur.done();
+    if (!fin && cur.hint) {
+      const side = window.innerWidth <= 860 ? '下' : '右';
+      const msg = cur.hint.replace('〈欄〉', side + 'の欄');
+      g.font = '14px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      const w = g.measureText(msg).width, y = Hpx - 46;
+      g.fillStyle = 'rgba(11,26,34,.88)'; g.strokeStyle = 'rgba(127,224,196,.7)'; g.lineWidth = 1;
+      g.beginPath(); g.roundRect(Wpx / 2 - w / 2 - 12, y - 15, w + 24, 30, 15); g.fill(); g.stroke();
+      g.fillStyle = '#e8f0f4'; g.fillText(msg, Wpx / 2, y);
+    }
+    if (fin) {
+      const i = chs.indexOf(cur), nx = chs[i + 1];
+      UI.next('z', nx ? [[`つぎの場面へ: ${i + 2}. ${nx.name} →`, () => open(nx.id), true], ['この場面をもう一度', () => open(cur.id)]] : [['おわり！ ① 着陸させるにもどる', () => UI.setTab('land'), true], ['この場面をもう一度', () => open(cur.id)]], cur.id);
+    }
     if (pickHl && performance.now() - pickHl.at < 1500) { g.strokeStyle = '#ffe066'; g.lineWidth = 2; g.beginPath(); g.arc(Z.X(pickHl.x), Z.Y(pickHl.y), Math.max(10, pickHl.r * s), 0, Math.PI * 2); g.stroke(); }
     // ものさし
     const bar = cur.bar || 10, len = bar * s, x0 = Wpx - len - 14, y0 = Hpx - 14;

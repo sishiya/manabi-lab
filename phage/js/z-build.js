@@ -4,7 +4,7 @@
 const HEADFUL_BP = Math.round(T4.genomeBp * 1.02); // ゲノムの1.02倍（Rao と Black 2010）
 
 Zoom.add({
-  id: 'head', name: '頭をつくる', sub: '殻と DNA のつめこみ',
+  id: 'head', hint: '〈欄〉のボタンを ① から順に押そう', name: '頭をつくる', sub: '殻と DNA のつめこみ',
   box: { x0: -95, x1: 95, y0: -80, y1: 85 }, bar: 20,
   lead: '頭は<b>入口の輪</b>から作りはじめる。上から順にボタンを押して組み立て、最後は<b>「押しこむ」を押しつづけて</b> DNA をつめよう。',
   STAGES: ['portal', 'scaffold', 'shell', 'protease', 'expand', 'pack', 'done'],
@@ -27,6 +27,7 @@ Zoom.add({
     Z.steps(['入口の輪（gp20、12個）', '足場の芯（gp22 576・gp21 72）と内部たんぱく', '殻（gp23 約930〜960・頂点 gp24）。たたむのを GroEL と gp31 が手伝う', 'はさみ（gp21）が足場と殻のたんぱくの端を切る → 足場が出ていく', 'ふくらむ（約15%、中は約2倍）', 'モーター gp17 で DNA をつめる', 'いっぱい（1.02倍）で切る → 首でふた、外に飾り']);
     Z.say('');
   },
+  done() { return this.stage === 6 && this.k >= 1; },
   step(Z, dt) {
     if (this.k < 1) this.k = Math.min(1, this.k + dt / (this.stage === 2 ? 2.4 : this.stage === 3 ? 2.2 : 1.2));
     // つめこみ（押しているあいだだけ）
@@ -91,7 +92,6 @@ Zoom.add({
     }
     if (st >= 6) Z.rect(0, bottom - 2, 16, 4, ZC.neck, 1.5); // 首（ふた）
     if (st === 5 && !Z.holding.pack) Z.text('「⑥ 押しこむ」を押しつづけて！', 0, 78, { size: 13, bg: 'rgba(11,26,34,.8)' });
-    if (st < 0) Z.text('① から順に押してみよう', 0, 20, { size: 13, color: 'rgba(232,240,244,.7)' });
   },
   click(Z, x, y) {
     const st = this.stage;
@@ -103,7 +103,7 @@ Zoom.add({
 });
 
 Zoom.add({
-  id: 'tail', name: 'しっぽをつくる', sub: '順番どおりに組む',
+  id: 'tail', hint: '〈欄〉のくさびの部品を、正しい順に押そう', name: 'しっぽをつくる', sub: '順番どおりに組む',
   box: { x0: -150, x1: 150, y0: -60, y1: 250 }, bar: 50,
   lead: 'しっぽは<b>基盤のくさび</b>から。くさびは7種類のたんぱくが<b>決まった順番</b>でしか付かない。正しい順を探してみよう。',
   ORDER: ['gp10', 'gp7', 'gp8', 'gp6', 'gp53', 'gp25'],
@@ -134,6 +134,7 @@ Zoom.add({
     Z.steps(['くさび: gp10 → gp7 → gp8 → gp6 → gp53 → gp25（gp11 はいつでも）', '6つのくさびが輪に → 中心（gp5・gp27・gp29）、ふちに gp9・gp12', '管: 台（gp48・gp54）の上に gp19 を積む', 'さや: gp18 を1段ずつ（23段）', 'ふた: gp3（管）と gp15（さや）', '頭と合体', '長い脚（gp34・gp35・gp36・gp37）が最後に付く']);
     Z.at(0); Z.say('部品のボタンを、正しい順に押してみよう。');
   },
+  done() { return !!this.doneSaid; },
   checkWedge(Z) {
     if (this.placed.length === 6 && this.has11) { Z.toast('くさびの完成！'); Z.say('くさびができた。gp53 が付いたくさびは、ひとりでに6つ集まって輪になる（Leiman ら 2010）。', 'sure'); Z.pick(ZINFO.wedge); this.wedgeDone = true; }
   },

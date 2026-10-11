@@ -36,6 +36,19 @@ const UI = (() => {
   }
   function hideHint(sc) { $(sc === 'land' ? 'landHint' : 'inHint').classList.add('off'); }
 
+  // 「つぎへ」: 図の上に大きなボタンを出す。items = [[文字, 押したとき, 目立たせるか], …]。null で消す
+  const nextKey = {};
+  function next(sc, items, key) {
+    const el = $(sc === 'land' ? 'landNext' : sc === 'in' ? 'inNext' : 'zNext');
+    const tabNext = { land: 'inside', in: 'zoom' }[sc];
+    if (!items) { el.hidden = true; el.innerHTML = ''; nextKey[sc] = null; if (tabNext) document.querySelector(`#tabs button[data-tab="${tabNext}"]`).classList.remove('pulse'); return; }
+    if (nextKey[sc] === key) return;
+    nextKey[sc] = key; el.innerHTML = '';
+    for (const [label, fn, primary] of items) { const b = document.createElement('button'); b.textContent = label; if (primary) b.className = 'primary'; b.addEventListener('click', fn); el.appendChild(b); }
+    el.hidden = false;
+    if (tabNext) document.querySelector(`#tabs button[data-tab="${tabNext}"]`).classList.add('pulse');
+  }
+
   // ① 着陸
   const hostSel = $('hostSel');
   for (const [id, h] of Object.entries(HOSTS)) {
@@ -63,6 +76,7 @@ const UI = (() => {
     const b = $('toInside'); b.hidden = false;
     b.onclick = () => { Inside.reset({ host: hostId === 'b' ? 'b' : 'k12', variant: 'wt' }); markIn(); setTab('inside'); };
     const z = $('toZoomAttach'); z.hidden = false; z.onclick = () => goZoom('attach');
+    next('land', [['つぎへ: ② 細菌の中で増える →', b.onclick, true], ['③ 刺さるところを分子で見る', () => goZoom('attach')]], 'done');
     toast('land', 'DNA が入った！');
   }
 
@@ -97,6 +111,8 @@ const UI = (() => {
     $('inHud').textContent = `感染から ${S.t.toFixed(1)} 分`;
     $('inPlay').textContent = S.playing ? '⏸' : '▶';
     $('superBtn').disabled = S.failed || S.burstAt != null;
+    if ((S.burstAt != null && S.burst > 2.5) || S.failed) next('in', [['つぎへ: ③ 分子の大きさで寄って見る →', () => goZoom('form'), true], ['条件を変えてもう一度', () => { Inside.reset(); markIn(); }]], 'end');
+    else next('in', null);
   }
   function loupe(info) {
     if (!info) return;
@@ -105,5 +121,5 @@ const UI = (() => {
     if (info.z) { const b = document.createElement('button'); b.className = 'zgo'; b.textContent = '寄って見る →'; b.addEventListener('click', () => goZoom(info.z)); $('loupe').appendChild(b); }
   }
 
-  return { goZoom, setTab, get tab() { return tab; }, onTab: f => listeners.push(f), clearLog, log, toast, hideHint, landStatus, landDone, inStatus, loupe, markHost, markIn };
+  return { next, goZoom, setTab, get tab() { return tab; }, onTab: f => listeners.push(f), clearLog, log, toast, hideHint, landStatus, landDone, inStatus, loupe, markHost, markIn };
 })();

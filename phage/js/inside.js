@@ -94,6 +94,7 @@ const Inside = (() => {
     S.burst += dt;
     for (const f of S.flies) { f.x += f.vx * dt; f.y += f.vy * dt; f.vx *= 0.985; f.vy *= 0.985; f.ang += f.va * dt; }
     if (S.burst > 6) S.playing = false;
+    UI.inStatus(S);
   }
 
   // あとからもう1つファージが来る

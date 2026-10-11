@@ -3,7 +3,7 @@
 'use strict';
 
 Zoom.add({
-  id: 'copy', name: 'コピー', sub: '分かれ目の機械',
+  id: 'copy', hint: '〈欄〉で部品を1つずつ入れてみよう（「ぜんぶ入れる」でもよい）', name: 'コピー', sub: '分かれ目の機械',
   box: { x0: -90, x1: 90, y0: -62, y1: 40 }, bar: 10,
   lead: 'T4 の DNA をコピーする分かれ目（フォーク）。<b>部品を1つずつ入れて</b>、どれがそろうと速く進むかを見よう。',
   F: 20,
@@ -17,6 +17,7 @@ Zoom.add({
     Z.btn('コピーがつながる（組みかえ）', () => { self.concat = 0; Z.pick(ZINFO.concat); });
     this.say(Z);
   },
+  done() { return this.rate() >= 0.99 && this.nt > 3000; },
   // 速さ（体の中の約450塩基/秒を1とした割合）
   rate() {
     const o = this.on;

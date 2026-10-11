@@ -3,7 +3,7 @@
 'use strict';
 
 Zoom.add({
-  id: 'lysis', name: '破って出る', sub: 'ホリンとリゾチーム',
+  id: 'lysis', hint: '〈欄〉の「▶ 時間を進める」を押そう', name: '破って出る', sub: 'ホリンとリゾチーム',
   box: { x0: -110, x1: 110, y0: -70, y1: 62 }, bar: 20,
   lead: '細菌のふちを拡大。<b>ホリン</b>（ピンク）が内膜にたまり、<b>リゾチーム</b>（緑）が中で待っている。時間を進めてみよう。外にまたファージが来たら？',
   init(Z) {
@@ -18,6 +18,7 @@ Zoom.add({
     Z.at(0); this.say(Z);
   },
   say(Z) { Z.say(`感染から <b>${this.t.toFixed(1)} 分</b>${this.lin ? '（溶菌阻止: rI がホリンをおさえている）' : ''}<br>ホリン: ${this.nHolin()} 個（模式の数）`, this.lin ? 'art' : 'est'); },
+  done() { return this.burst > 4.5; },
   nHolin() { return Math.floor(Math.min(1, (this.t - 12) / Math.max(1, this.trig - 12 - (this.lin ? 0 : 0))) * (this.lin ? 70 : 60) + 6); },
   step(Z, dt) {
     if (this.play && this.burst < 0) { this.t += dt * 1.2; if (this.t >= this.trig) { this.burst = 0; this.play = false; Z.at(1); Z.toast('穴が開いた！'); Z.pick(ZINFO.holin); } this.say(Z); }
