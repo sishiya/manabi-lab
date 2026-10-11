@@ -3,14 +3,14 @@
 const CHECK_HZ = 120;
 // 目安（◯ の上限, △ の上限）。根拠のある値ではなく、この検証のための目安
 const CHECKS = [
-  { id: 'reach', name: '押す指が届かない', unit: 'mm', ok: 2, warn: 6, tip: '押している指の先と、押す場所との距離の最大' },
-  { id: 'limit', name: '関節の限界で止まった', unit: '%', ok: 0.5, warn: 5, tip: '押している指が、関節の範囲の端で止められた時間の割合' },
-  { id: 'clash', name: '指どうしのめりこみ', unit: 'mm', ok: 2, warn: 5, tip: '別の指の骨（円柱）どうしが重なった深さの最大。肌がやわらかい分 2mm までは許す' },
-  { id: 'sink', name: '押さない鍵へのめりこみ', unit: 'mm', ok: 1, warn: 4, tip: '押していない指先が、鍵の上面より下に入った深さの最大' },
-  { id: 'wrist', name: '手首の速さ', unit: 'mm/秒', ok: 500, warn: 900, tip: '手首が動くいちばん速い速さ' },
-  { id: 'yawv', name: '手首の回転の速さ', unit: '度/秒', ok: 150, warn: 300, tip: '手首から先を水平に回す速さのいちばん速いところ' },
-  { id: 'hands', name: '左右の手のぶつかり', unit: 'mm', ok: 2, warn: 6, tip: '右手と左手の指の骨どうし（と手首どうし）が重なった深さの最大' },
-  { id: 'tipv', name: '指先の速さ', unit: 'mm/秒', ok: 1500, warn: 2500, tip: '指先が動くいちばん速い速さ（手首の動きもふくむ）' },
+  { id: 'reach', name: L('押す指が届かない', "Finger can't reach"), unit: 'mm', ok: 2, warn: 6, tip: L('押している指の先と、押す場所との距離の最大', 'Largest gap between a pressing fingertip and the spot it should press') },
+  { id: 'limit', name: L('関節の限界で止まった', 'Stopped at a joint limit'), unit: '%', ok: 0.5, warn: 5, tip: L('押している指が、関節の範囲の端で止められた時間の割合', 'Share of time a pressing finger was held at the end of its joint range') },
+  { id: 'clash', name: L('指どうしのめりこみ', 'Fingers overlapping'), unit: 'mm', ok: 2, warn: 5, tip: L('別の指の骨（円柱）どうしが重なった深さの最大。肌がやわらかい分 2mm までは許す', 'Deepest overlap between bones (cylinders) of different fingers. Up to 2 mm is allowed because skin is soft') },
+  { id: 'sink', name: L('押さない鍵へのめりこみ', 'Sinking into other keys'), unit: 'mm', ok: 1, warn: 4, tip: L('押していない指先が、鍵の上面より下に入った深さの最大', 'Deepest a non-pressing fingertip went below the top of a key') },
+  { id: 'wrist', name: L('手首の速さ', 'Wrist speed'), unit: L('mm/秒', 'mm/s'), ok: 500, warn: 900, tip: L('手首が動くいちばん速い速さ', 'Fastest wrist movement') },
+  { id: 'yawv', name: L('手首の回転の速さ', 'Wrist turning speed'), unit: L('度/秒', '°/s'), ok: 150, warn: 300, tip: L('手首から先を水平に回す速さのいちばん速いところ', 'Fastest sideways turn of the hand at the wrist') },
+  { id: 'hands', name: L('左右の手のぶつかり', 'Hands bumping'), unit: 'mm', ok: 2, warn: 6, tip: L('右手と左手の指の骨どうし（と手首どうし）が重なった深さの最大', 'Deepest overlap between right-hand and left-hand finger bones (and wrists)') },
+  { id: 'tipv', name: L('指先の速さ', 'Fingertip speed'), unit: L('mm/秒', 'mm/s'), ok: 1500, warn: 2500, tip: L('指先が動くいちばん速い速さ（手首の動きもふくむ）', 'Fastest fingertip movement (including wrist movement)') },
 ];
 
 // 線分 p1-q1 と p2-q2 の最短距離
@@ -38,7 +38,7 @@ function clashOf(pose) {
     for (let i = f === 1 ? 1 : 0; i < 3; i++) for (let j = 0; j < 3; j++) { // 親指の中手骨は手のひらの中なので除く
       const d = segDist(A.pts[i], A.pts[i + 1], B.pts[j], B.pts[j + 1]);
       const pen = FINGERS[f].r[i] + FINGERS[g].r[j] - d;
-      if (pen > worst) { worst = pen; who = FINGERS[f].name + 'と' + FINGERS[g].name; }
+      if (pen > worst) { worst = pen; who = L(FINGERS[f].name + 'と' + FINGERS[g].name, FINGERS[f].name + ' and ' + FINGERS[g].name); }
     }
   }
   return { pen: worst, who };
@@ -69,7 +69,7 @@ function runChecks(score) {
     const depress = m => dep[m] || 0;
     const poses = score.hands.map(h => poseAt(h, t));
     poses.forEach((pose, hi) => {
-      const hn = HAND_NAME(score.hands[hi].side) + 'の';
+      const hn = HAND_OF(score.hands[hi].side);
       for (let f = 1; f <= 5; f++) {
         const fp = pose.fingers[f], nm = hn + FINGERS[f].name;
         if (fp.down) { // 鍵を押し下げている間（離して戻る間は、指が先に離れてよい）

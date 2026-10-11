@@ -12,11 +12,11 @@ const LOOK = 0.7;       // 次の音へ先回りを始める早さ（秒）
 const THUMB_PITCH = 10, THUMB_TW = 45, THUMB_N = [0, 35];
 const FINGERS = [
   null,
-  { name: '親指', base: [-24, -12, -25], L: [46, 32, 26], b: 0, c: 0.8, pitch: THUMB_PITCH, tw: THUMB_TW, yaw0: -50, yaw: [-75, 50], a1: [-20, 60], a2: [0, 80], n: THUMB_N, r: [11, 9.5, 8.5] },
-  { name: '人さし指', base: [-24, 8, -92], L: [43, 25, 19], b: 0, c: 0.5, yaw0: -5, yaw: [-25, 15], a1: [-25, 90], a2: [0, 105], n: [25, 45], r: [8.5, 8, 7.5] },
-  { name: '中指', base: [-4, 10, -96], L: [47, 28, 20], b: 0, c: 0.5, yaw0: 0, yaw: [-18, 18], a1: [-25, 90], a2: [0, 105], n: [25, 45], r: [8.8, 8.2, 7.6] },
-  { name: '薬指', base: [14, 5, -91], L: [44, 27, 20], b: 0, c: 0.5, yaw0: 5, yaw: [-15, 22], a1: [-25, 90], a2: [0, 105], n: [25, 45], r: [8.3, 7.8, 7.3] },
-  { name: '小指', base: [30, -5, -80], L: [35, 20, 18], b: 0, c: 0.5, yaw0: 12, yaw: [-15, 35], a1: [-25, 90], a2: [0, 100], n: [25, 45], r: [7.5, 7, 6.6] },
+  { name: L('親指', 'thumb'), base: [-24, -12, -25], L: [46, 32, 26], b: 0, c: 0.8, pitch: THUMB_PITCH, tw: THUMB_TW, yaw0: -50, yaw: [-75, 50], a1: [-20, 60], a2: [0, 80], n: THUMB_N, r: [11, 9.5, 8.5] },
+  { name: L('人さし指', 'index finger'), base: [-24, 8, -92], L: [43, 25, 19], b: 0, c: 0.5, yaw0: -5, yaw: [-25, 15], a1: [-25, 90], a2: [0, 105], n: [25, 45], r: [8.5, 8, 7.5] },
+  { name: L('中指', 'middle finger'), base: [-4, 10, -96], L: [47, 28, 20], b: 0, c: 0.5, yaw0: 0, yaw: [-18, 18], a1: [-25, 90], a2: [0, 105], n: [25, 45], r: [8.8, 8.2, 7.6] },
+  { name: L('薬指', 'ring finger'), base: [14, 5, -91], L: [44, 27, 20], b: 0, c: 0.5, yaw0: 5, yaw: [-15, 22], a1: [-25, 90], a2: [0, 105], n: [25, 45], r: [8.3, 7.8, 7.3] },
+  { name: L('小指', 'little finger'), base: [30, -5, -80], L: [35, 20, 18], b: 0, c: 0.5, yaw0: 12, yaw: [-15, 35], a1: [-25, 90], a2: [0, 100], n: [25, 45], r: [7.5, 7, 6.6] },
 ];
 for (let f = 1; f <= 5; f++) {
   const F = FINGERS[f];
@@ -94,11 +94,11 @@ let WRIST_Y = 0; // 力を抜いた指先が、白鍵を7mm 押しこんだ高�
 // s は手全体の大きさ（大人の大きめ = 1。親指〜小指をいっぱいに開いた幅が約 23cm）、fingers・thumb は指の長さの倍率（手のひらはそのまま）。
 // 大人の値は Boyle ほか 2015 のピアニストの平均（男性 22.6cm・女性 20.1cm）に合わせた目安。子どもと指の長さのちがいは目安（測った研究の値ではない）
 const HAND_MODELS = {
-  'adult-l': { name: '大人（大きめ）', s: 1.0, fingers: 1.0, thumb: 1.0 },
-  'adult-s': { name: '大人（小さめ）', s: 0.88, fingers: 1.0, thumb: 1.0 },
-  'child': { name: '子ども（小学生くらい）', s: 0.74, fingers: 1.0, thumb: 1.0, veins: 0.15, wrinkles: 0.4 }, // 子どもの手の甲は静脈・腱・しわが目立たない
-  'long': { name: '指が長い手', s: 0.97, fingers: 1.12, thumb: 1.06 },
-  'short': { name: '指が短い手', s: 1.0, fingers: 0.88, thumb: 0.94 },
+  'adult-l': { name: L('大人（大きめ）', 'Adult (large)'), s: 1.0, fingers: 1.0, thumb: 1.0 },
+  'adult-s': { name: L('大人（小さめ）', 'Adult (small)'), s: 0.88, fingers: 1.0, thumb: 1.0 },
+  'child': { name: L('子ども（小学生くらい）', 'Child (about 6 to 12)'), s: 0.74, fingers: 1.0, thumb: 1.0, veins: 0.15, wrinkles: 0.4 }, // 子どもの手の甲は静脈・腱・しわが目立たない
+  'long': { name: L('指が長い手', 'Long fingers'), s: 0.97, fingers: 1.12, thumb: 1.06 },
+  'short': { name: L('指が短い手', 'Short fingers'), s: 1.0, fingers: 0.88, thumb: 0.94 },
 };
 const FINGERS_BASE = FINGERS.map(F => F && JSON.parse(JSON.stringify(F)));
 const FINGERS_U = FINGERS.map(F => F && Object.assign({}, F)); // 大きさをかける前（皮ふの網はこの大きさで作ってから縮める）
@@ -132,7 +132,8 @@ function rotY(a, p) { const c = Math.cos(a), s = Math.sin(a); return [p[0] * c +
 function rollZ(a, p) { const c = Math.cos(a), s = Math.sin(a); return [p[0] * c + p[1] * s, -p[0] * s + p[1] * c, p[2]]; }
 function toWorld(W, p) { const r = W[6] ? rollZ(W[6], p) : p; const q = rotY(W[3] || 0, [r[0] * (W[4] || 1), r[1], r[2]]); return [W[0] + q[0], W[1] + q[1], W[2] + q[2]]; }
 function toLocal(W, p) { const q = rotY(-(W[3] || 0), [p[0] - W[0], p[1] - W[1], p[2] - W[2]]); q[0] *= W[4] || 1; return W[6] ? rollZ(-W[6], q) : q; }
-const HAND_NAME = side => side > 0 ? '右手' : '左手';
+const HAND_NAME = side => side > 0 ? L('右手', 'Right hand') : L('左手', 'Left hand');
+const HAND_OF = side => side > 0 ? L('右手の', 'right ') : L('左手の', 'left '); // 「右手の中指」
 
 const smooth = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
 const lerp3 = (a, b, s) => [a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s, a[2] + (b[2] - a[2]) * s];

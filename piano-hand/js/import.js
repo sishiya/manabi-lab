@@ -10,9 +10,9 @@ function parseMidi(buf) {
   const str = n => { let s = ''; for (let i = 0; i < n; i++) s += String.fromCharCode(d.getUint8(p + i)); p += n; return s; };
   const u32 = () => { const v = d.getUint32(p); p += 4; return v; }, u16 = () => { const v = d.getUint16(p); p += 2; return v; };
   const vlq = () => { let v = 0, b; do { b = d.getUint8(p++); v = (v << 7) | (b & 0x7f); } while (b & 0x80); return v; };
-  if (str(4) !== 'MThd') throw new Error('MIDI ファイルではありません');
+  if (str(4) !== 'MThd') throw new Error(L('MIDI ファイルではありません', 'This is not a MIDI file'));
   const hl = u32(); u16(); const ntr = u16(), div = u16(); p += hl - 6;
-  if (div & 0x8000) throw new Error('SMPTE の時間の MIDI には未対応です');
+  if (div & 0x8000) throw new Error(L('SMPTE の時間の MIDI には未対応です', 'MIDI files with SMPTE timing are not supported'));
   const tempos = [{ tick: 0, us: 500000 }], tracks = [];
   for (let k = 0; k < ntr && p < d.byteLength; k++) {
     if (str(4) !== 'MTrk') break;
@@ -74,16 +74,16 @@ function songFromMidi(buf, name) {
   } else if (trs.length === 1) {
     for (const n of trs[0].notes) if (n.ch !== 9) notes.push({ m: n.m, t0: n.t0, t1: n.t1, hand: n.m >= 60 ? 'R' : 'L' });
   }
-  return finishSong({ id: 'file:' + name, name, notes, pedalSec: mid.pedal, bpm: mid.bpm, note: trs.length >= 2 ? '（トラックで右手・左手を分けた）' : '（トラックが1つなので、ド4から上を右手にした）' });
+  return finishSong({ id: 'file:' + name, name, notes, pedalSec: mid.pedal, bpm: mid.bpm, note: trs.length >= 2 ? L('（トラックで右手・左手を分けた）', '(right and left hands split by track)') : L('（トラックが1つなので、ド4から上を右手にした）', '(only one track, so notes from C4 up go to the right hand)') });
 }
 
 // ---- MusicXML ----
 const STEP = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 function songFromMusicXml(text, name) {
   const doc = new DOMParser().parseFromString(text, 'application/xml');
-  if (doc.querySelector('parsererror')) throw new Error('MusicXML を読めませんでした');
+  if (doc.querySelector('parsererror')) throw new Error(L('MusicXML を読めませんでした', 'Could not read the MusicXML'));
   const part = doc.querySelector('part');
-  if (!part) throw new Error('パート（part）がありません（score-timewise は未対応）');
+  if (!part) throw new Error(L('パート（part）がありません（score-timewise は未対応）', 'No part found (score-timewise is not supported)'));
   const title = (doc.querySelector('work-title') || doc.querySelector('movement-title') || {}).textContent;
   let divs = 1, tempo = 0, pos = 0, lastStart = 0;
   const notes = [], ties = {}, pedEv = [];
@@ -143,7 +143,7 @@ function songFromMusicXml(text, name) {
   for (const [q, on] of pedEv.sort((x, y) => x[0] - y[0])) { if (on && pdown === null) pdown = sec(q); else if (!on && pdown !== null) { pedalSec.push([pdown, sec(q) - 0.02]); pdown = null; } }
   if (pdown !== null) pedalSec.push([pdown, pdown + 4]);
   const hasF = notes.some(n => n.given);
-  return finishSong({ id: 'file:' + name, name: title ? title + '（' + name + '）' : name, notes, pedalSec, bpm: tempo || 100, note: hasF ? '（楽譜の運指あり）' : '' });
+  return finishSong({ id: 'file:' + name, name: title ? title + L('（' + name + '）', ' (' + name + ')') : name, notes, pedalSec, bpm: tempo || 100, note: hasF ? L('（楽譜の運指あり）', '(with fingering in the score)') : '' });
 }
 
 // ---- .mxl（zip に入った MusicXML） ----
@@ -151,7 +151,7 @@ async function unzipMxl(buf) {
   const d = new DataView(buf), u8 = new Uint8Array(buf);
   let e = buf.byteLength - 22;
   while (e >= 0 && d.getUint32(e, true) !== 0x06054b50) e--;
-  if (e < 0) throw new Error('zip ではありません');
+  if (e < 0) throw new Error(L('zip ではありません', 'This is not a zip file'));
   const cnt = d.getUint16(e + 10, true);
   let p = d.getUint32(e + 16, true);
   const files = {};
@@ -164,11 +164,11 @@ async function unzipMxl(buf) {
   }
   const read = async name => {
     const f = files[name];
-    if (!f) throw new Error('zip の中に ' + name + ' がありません');
+    if (!f) throw new Error(L('zip の中に ' + name + ' がありません', name + ' is missing from the zip'));
     const lh = f.off, start = lh + 30 + d.getUint16(lh + 26, true) + d.getUint16(lh + 28, true);
     const raw = u8.subarray(start, start + f.csize);
     if (f.method === 0) return new TextDecoder().decode(raw);
-    if (typeof DecompressionStream === 'undefined') throw new Error('このブラウザは .mxl を開けません（.musicxml にしてください）');
+    if (typeof DecompressionStream === 'undefined') throw new Error(L('このブラウザは .mxl を開けません（.musicxml にしてください）', 'This browser cannot open .mxl (please use .musicxml)'));
     const ds = new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
     return await new Response(ds).text();
   };
@@ -197,7 +197,7 @@ function finishSong(song) {
   for (const n of ns) { n.t0 -= t0; n.t1 -= t0; }
   if (song.pedalSec) song.pedalSec = song.pedalSec.map(([a, c]) => [a - t0, c - t0]).filter(([, c]) => c > 0);
   song.notes = ns;
-  if (reduced) song.note = (song.note || '') + '（片手で6音以上の和音の ' + reduced + ' 音は弾かずに灰色で表示）';
+  if (reduced) song.note = (song.note || '') + L('（片手で6音以上の和音の ' + reduced + ' 音は弾かずに灰色で表示）', ' (' + reduced + ' notes of chords with 6 or more notes in one hand are not played and shown in gray)');
   return song;
 }
 
@@ -206,5 +206,5 @@ async function songFromFile(file) {
   if (/\.(mid|midi)$/.test(low)) return songFromMidi(await file.arrayBuffer(), name);
   if (low.endsWith('.mxl')) return songFromMusicXml(await unzipMxl(await file.arrayBuffer()), name);
   if (/\.(musicxml|xml)$/.test(low)) return songFromMusicXml(await file.text(), name);
-  throw new Error('.mid・.musicxml・.xml・.mxl のどれかを選んでください');
+  throw new Error(L('.mid・.musicxml・.xml・.mxl のどれかを選んでください', 'Please choose a .mid, .musicxml, .xml or .mxl file'));
 }

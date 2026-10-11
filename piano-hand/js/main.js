@@ -46,18 +46,18 @@ function setSong(song) {
   const nx = S.plan.notes.filter(n => n.hand === 'X').length;
   S.checks = runChecks(S.plan);
   setViewPlan(S.plan);
-  const hs = S.plan.hands.map(h => HAND_NAME(h.side) + ' ' + h.notes.length + '音').join('・');
-  $('songWhy').textContent = (song.why ? '確かめたいこと: ' + song.why + '（' : '（') + hs + (song.bpm ? '・' + song.bpm + ' bpm' : '') + '）' + (song.note ? ' ' + song.note : '') + (nx ? '（手で弾かない音 ' + nx + '・灰色）' : '');
+  const hs = S.plan.hands.map(h => HAND_NAME(h.side) + ' ' + h.notes.length + L('音', ' notes')).join(L('・', ', '));
+  $('songWhy').textContent = (song.why ? L('確かめたいこと: ', 'What it tests: ') + song.why + L('（', ' (') : L('（', '(')) + hs + (song.bpm ? L('・', ', ') + song.bpm + ' bpm' : '') + L('）', ')') + (song.note ? ' ' + song.note : '') + (nx ? L('（手で弾かない音 ' + nx + '・灰色）', ' (' + nx + ' notes not played by hand, in gray)') : '');
   $('fgCost').textContent = S.plan.cost.toFixed(1);
   $('fgList').innerHTML = S.plan.hands.map(h => '<p class="fg-hand">' + HAND_NAME(h.side) + '</p>' + h.notes.map(n =>
-    `<span data-t="${n.t0}" style="border-color:#${FCOL[n.f].toString(16)}">${noteName(n.m)}<b>${n.f}</b>${n.given ? '<i>譜</i>' : ''}</span>`).join('')).join('');
+    `<span data-t="${n.t0}" style="border-color:#${FCOL[n.f].toString(16)}">${noteName(n.m)}<b>${n.f}</b>${n.given ? L('<i>譜</i>', '<i title="from the score">S</i>') : ''}</span>`).join('')).join('');
   const fm = fingeringMatch(S.plan);
-  const src = song.refR || song.refL ? '教本の運指' : '楽譜の運指';
+  const src = song.refR || song.refL ? L('教本の運指', 'the textbook fingering') : L('楽譜の運指', "the score's fingering");
   const hasGiven = (S.song.notes || []).some(n => n.given);
-  $('fgRef').innerHTML = fm.length ? src + 'とくらべると: ' + fm.map(r => HAND_NAME(r.side) + ' <b>' + r.same + '/' + r.total + '</b> 一致' +
-    (r.diff.length ? '<br>ちがう所（推定 → お手本）: ' + r.diff.slice(0, 12).map(n => '<span class="dif" data-t="' + n.t0 + '">' + noteName(n.m) + ' ' + n.f + '→' + n.ref + '</span>').join(' ') + (r.diff.length > 12 ? ' ほか ' + (r.diff.length - 12) : '') : '')).join('<br>') +
-    '<br><small>ノーツの上の赤い丸「推定/お手本」がちがう音です。</small>'
-    : hasGiven ? '楽譜の運指を使っています（外すと、コンピュータの推定とくらべられます）。' : 'この曲にはお手本の運指がありません（教本の運指つきの曲や、運指の書かれた MusicXML でくらべられます）。';
+  $('fgRef').innerHTML = fm.length ? L(src + 'とくらべると: ', 'Compared with ' + src + ': ') + fm.map(r => HAND_NAME(r.side) + ' <b>' + r.same + '/' + r.total + '</b>' + L(' 一致', ' match') +
+    (r.diff.length ? L('<br>ちがう所（推定 → お手本）: ', '<br>Differences (estimate → answer): ') + r.diff.slice(0, 12).map(n => '<span class="dif" data-t="' + n.t0 + '">' + noteName(n.m) + ' ' + n.f + '→' + n.ref + '</span>').join(' ') + (r.diff.length > 12 ? L(' ほか ', ' and ') + (r.diff.length - 12) + L('', ' more') : '') : '')).join('<br>') +
+    L('<br><small>ノーツの上の赤い丸「推定/お手本」がちがう音です。</small>', '<br><small>A red circle "estimate/answer" on a note marks a difference.</small>')
+    : hasGiven ? L('楽譜の運指を使っています（外すと、コンピュータの推定とくらべられます）。', "Using the score's fingering (turn it off to compare with the computer's estimate).") : L('この曲にはお手本の運指がありません（教本の運指つきの曲や、運指の書かれた MusicXML でくらべられます）。', 'This piece has no answer-key fingering (you can compare with the textbook pieces, or a MusicXML score that has fingering).');
   renderChecks();
   setTime(tStart());
 }
@@ -75,25 +75,28 @@ function runValidation() {
       return '<td class="' + (p === 1 ? 'ok' : p >= 0.7 ? 'warn' : 'ng') + '">' + m.same + '/' + m.total + '</td>';
     }).join('') + '</tr>';
   });
-  $('valOut').innerHTML = '<p class="cap">ぜんぶで <b>' + ok + '/' + tot + '</b>（' + Math.round(100 * ok / tot) + '%）が教本の運指と同じ。</p><table class="val"><tr><th>曲</th><th>右手</th><th>左手</th></tr>' + rows.join('') + '</table>';
+  $('valOut').innerHTML = L('<p class="cap">ぜんぶで <b>' + ok + '/' + tot + '</b>（' + Math.round(100 * ok / tot) + '%）が教本の運指と同じ。</p>', '<p class="cap">In total <b>' + ok + '/' + tot + '</b> (' + Math.round(100 * ok / tot) + '%) match the textbook fingering.</p>') + '<table class="val"><tr><th>' + L('曲', 'Piece') + '</th><th>' + L('右手', 'Right') + '</th><th>' + L('左手', 'Left') + '</th></tr>' + rows.join('') + '</table>';
 }
 
 function showHandInfo() {
   const mid = fingerFK(FINGERS[3], 0, 0, 0)[3];
-  $('handInfo').innerHTML = '親指〜小指をいっぱいに開いた幅 <b>約 ' + (handSpan() / 10).toFixed(1) + 'cm</b>・手首〜中指の先 約 ' + ((-mid[2] + PAD) / 10).toFixed(1) +
-    'cm。くらべる目安: ピアニストの平均は男性 22.6cm・女性 20.1cm（Boyle ほか 2015）。子どもと指の長さのちがいは目安です。運指の表（Parncutt ほか）は大人の手のものなので、小さい手では「届かない」が増えます。';
+  const sp = (handSpan() / 10).toFixed(1), ln = ((-mid[2] + PAD) / 10).toFixed(1);
+  $('handInfo').innerHTML = L('親指〜小指をいっぱいに開いた幅 <b>約 ' + sp + 'cm</b>・手首〜中指の先 約 ' + ln +
+    'cm。くらべる目安: ピアニストの平均は男性 22.6cm・女性 20.1cm（Boyle ほか 2015）。子どもと指の長さのちがいは目安です。運指の表（Parncutt ほか）は大人の手のものなので、小さい手では「届かない」が増えます。',
+    'Full spread from thumb to little finger <b>about ' + sp + ' cm</b>, wrist to middle fingertip about ' + ln +
+    ' cm. For comparison: pianists average 22.6 cm (men) and 20.1 cm (women) (Boyle et al. 2015). The child and finger-length models are rough guides. The fingering table (Parncutt et al.) is for adult hands, so smaller hands get more "can\'t reach".');
 }
 
 // 楽譜ファイル
 const SAMPLES = [
-  { file: 'elise-opening.mid', name: 'エリーゼのために 冒頭（MIDI・両手のトラック）' },
-  { file: 'c-major-scale-fingered.musicxml', name: 'ハ長調の音階（MusicXML・両手・運指つき）' },
-  { file: 'ode-to-joy-with-chords.mid', name: '歓喜の歌＋左手の和音（MIDI・トラック1つ）' },
+  { file: 'elise-opening.mid', name: L('エリーゼのために 冒頭（MIDI・両手のトラック）', 'Für Elise, opening (MIDI, a track per hand)') },
+  { file: 'c-major-scale-fingered.musicxml', name: L('ハ長調の音階（MusicXML・両手・運指つき）', 'C major scale (MusicXML, both hands, with fingering)') },
+  { file: 'ode-to-joy-with-chords.mid', name: L('歓喜の歌＋左手の和音（MIDI・トラック1つ）', 'Ode to Joy + left-hand chords (MIDI, one track)') },
 ];
 async function openFile(file) {
   setPlaying(false);
   try { addSong(await songFromFile(file)); }
-  catch (e) { alert('読めませんでした: ' + e.message); }
+  catch (e) { alert(L('読めませんでした: ', 'Could not read it: ') + e.message); }
 }
 async function loadSample(fn) {
   try {
@@ -101,14 +104,14 @@ async function loadSample(fn) {
     if (!r.ok) throw new Error(r.status);
     const blob = await r.blob();
     addSong(await songFromFile(new File([blob], fn)), 'sample:' + fn);
-  } catch (e) { alert('サンプルを読めませんでした（ファイルとして開いたときは、サーバー経由で開いてください）: ' + e.message); }
+  } catch (e) { alert(L('サンプルを読めませんでした（ファイルとして開いたときは、サーバー経由で開いてください）: ', 'Could not read the sample (if you opened this page as a file, open it through a server): ') + e.message); }
 }
 function addSong(song, value) {
-  if (!song.notes.some(n => n.hand === 'R' || n.hand === 'L')) throw new Error('弾ける音がありません');
+  if (!song.notes.some(n => n.hand === 'R' || n.hand === 'L')) throw new Error(L('弾ける音がありません', 'No playable notes'));
   if (!value) {
     S.extra = S.extra.filter(s => s.id !== song.id); S.extra.push(song);
     let og = $('song').querySelector('optgroup[data-files]');
-    if (!og) { og = document.createElement('optgroup'); og.label = '開いたファイル'; og.dataset.files = '1'; $('song').appendChild(og); }
+    if (!og) { og = document.createElement('optgroup'); og.label = L('開いたファイル', 'Opened files'); og.dataset.files = '1'; $('song').appendChild(og); }
     if (![...og.children].some(o => o.value === song.id)) { const o = document.createElement('option'); o.value = song.id; o.textContent = song.name; og.appendChild(o); }
     $('song').value = song.id;
   }
@@ -125,10 +128,10 @@ function renderChecks() {
   $('chkTable').innerHTML = CHECKS.map(c => {
     const r = R[c.id];
     if (r.grade === 'ng' || (r.grade === 'warn' && worst === 'ok')) worst = r.grade;
-    const where = r.at !== null && r.grade !== 'ok' ? `<small>${r.at.toFixed(2)} 秒${r.who ? '・' + r.who : ''}</small>` : '';
+    const where = r.at !== null && r.grade !== 'ok' ? `<small>${r.at.toFixed(2)} ${L('秒', 's')}${r.who ? L('・', ', ') + r.who : ''}</small>` : '';
     return `<tr data-id="${c.id}" title="${c.tip}"><td class="g ${r.grade}">${mark[r.grade]}</td><td class="n">${c.name}${where}</td><td class="v">${fmt(c, r)} ${c.unit}</td></tr>`;
   }).join('');
-  const sum = { ok: ['破綻なし', 'ok'], warn: ['ぎりぎりの所あり', 'warn'], ng: ['破綻あり', 'ng'] }[worst];
+  const sum = { ok: [L('破綻なし', 'No breakdowns'), 'ok'], warn: [L('ぎりぎりの所あり', 'Some close calls'), 'warn'], ng: [L('破綻あり', 'Breakdowns found'), 'ng'] }[worst];
   $('chkSum').textContent = sum[0]; $('chkSum').className = 'ro-tag ' + sum[1];
 }
 
@@ -165,58 +168,70 @@ function step() {
   // 表示
   const span = tEnd() - tStart();
   if (document.activeElement !== $('time')) $('time').value = Math.round(1000 * (t - tStart()) / span);
-  $('clock').textContent = t.toFixed(2) + ' 秒';
+  $('clock').textContent = t.toFixed(2) + L(' 秒', ' s');
   document.querySelectorAll('#fgList span').forEach(el => { const t0 = +el.dataset.t; el.classList.toggle('now', t0 <= t + 0.001 && t0 > t - 0.25); });
   const lims = [], far = [], msgs = [];
   poses.forEach((pose, hi) => {
-    const hn = HAND_NAME(plan.hands[hi].side) + 'の';
+    const hn = HAND_OF(plan.hands[hi].side);
     for (let f = 1; f <= 5; f++) {
       const fp = pose.fingers[f];
       if (fp.down && fp.lim) lims.push(hn + FINGERS[f].name);
       if (fp.down && fp.err > 2) far.push(hn + FINGERS[f].name + ' ' + fp.err.toFixed(1) + 'mm');
     }
     const cl = clashOf(pose);
-    if (cl.pen > 2) msgs.push('めりこみ: <b>' + hn + cl.who + ' ' + cl.pen.toFixed(1) + 'mm</b>');
+    if (cl.pen > 2) msgs.push(L('めりこみ: ', 'Overlap: ') + '<b>' + hn + cl.who + ' ' + cl.pen.toFixed(1) + 'mm</b>');
   });
-  if (far.length) msgs.unshift('届かない: <b>' + far.join('、') + '</b>');
-  if (lims.length) msgs.push('関節の限界: <b>' + lims.join('、') + '</b>');
-  $('hint').innerHTML = msgs.length ? 'この瞬間 — ' + msgs.join(' ／ ') : 'ドラッグで向きを変え、ホイールで寄れます（一人称では体を前後に）。時刻のつまみ・矢印キーで1コマずつ、[ ] キーで速さを変えられます。';
+  if (far.length) msgs.unshift(L('届かない: ', "Can't reach: ") + '<b>' + far.join(L('、', ', ')) + '</b>');
+  if (lims.length) msgs.push(L('関節の限界: ', 'Joint limit: ') + '<b>' + lims.join(L('、', ', ')) + '</b>');
+  // 再生中は「この瞬間」の知らせを出さない（一瞬で切りかわって読めず、行数が変わって画面ががたついた）。止めたとき・1コマずつのときに出す
+  $('hint').innerHTML = msgs.length && !S.playing ? L('この瞬間 — ', 'Right now — ') + msgs.join(L(' ／ ', ' / ')) : L('ドラッグで向きを変え、ホイールで寄れます（一人称では体を前後に）。時刻のつまみ・矢印キーで1コマずつ、[ ] キーで速さを変えられます。', "Drag to turn the view, use the wheel to zoom (in POV, the pianist's view, it leans you forward and back). Step frame by frame with the time slider or arrow keys, and change the speed with the [ and ] keys.");
 }
 
 function setPlaying(on) {
   S.playing = on;
-  $('btnPlay').textContent = on ? '⏸ 止める' : '▶ 再生';
+  $('btnPlay').textContent = on ? L('⏸ 止める', '⏸ Pause') : L('▶ 再生', '▶ Play');
   if (on && S.t >= tEnd() - 0.01) setTime(tStart());
   if (on && AC && AC.state === 'suspended') AC.resume();
 }
 
 function initUI() {
+  // 言語・題名・読み上げ用の名前（I18N.md）
+  document.title = L('ピアノを弾く手', 'Hands at the Piano');
+  $('langsw').querySelectorAll('button').forEach(b => { b.setAttribute('aria-pressed', b.dataset.l === LANG); b.onclick = () => { if (b.dataset.l !== LANG) setLang(b.dataset.l); }; });
+  $('view').setAttribute('aria-label', L('鍵盤と、弾いている両手の3D。ドラッグで向きを変え、ホイールで寄れます', 'A 3D keyboard and two hands playing. Drag to turn the view, use the wheel to zoom'));
+  $('views').setAttribute('aria-label', L('見る向き', 'View'));
+  $('pedalInd').title = L('音をのばすペダル（ダンパーペダル）を踏んでいる間は光る', 'Lights up while the sustain (damper) pedal is down');
+  $('speedSel').setAttribute('aria-label', L('速さ', 'Speed')); $('speedSel').title = L('速さ（キーの [ と ] でも変えられます）', 'Speed (you can also use the [ and ] keys)');
+  $('time').setAttribute('aria-label', L('時刻', 'Time'));
+  $('vol').setAttribute('aria-label', L('音量', 'Volume')); $('vol').title = L('音量', 'Volume');
+  [['song', '曲', 'Piece'], ['sceneSel', 'シーン', 'Scene'], ['fxSel', 'エフェクトの強さ', 'Effect strength'], ['handModel', '手のモデル', 'Hand model']].forEach(([id, ja, en]) => $(id).setAttribute('aria-label', L(ja, en)));
+  setPlaying(false);
   const opt = s => `<option value="${s.id}">${s.name}</option>`;
-  $('song').innerHTML = '<optgroup label="検証用の曲">' + SONGS.filter(s => !s.val).map(opt).join('') + '</optgroup>' +
-    '<optgroup label="教本の運指との答え合わせ（ハノン）">' + SONGS.filter(s => s.val).map(opt).join('') + '</optgroup>' +
-    '<optgroup label="サンプルの楽譜ファイル（samples/）">' + SAMPLES.map(s => `<option value="sample:${s.file}">${s.name}</option>`).join('') + '</optgroup>';
-  $('song').addEventListener('change', e => { setPlaying(false); const v = e.target.value; busy('運指と手の動きを計算しています…', () => v.startsWith('sample:') ? loadSample(v.slice(7)) : loadSong(v)); });
+  $('song').innerHTML = '<optgroup label="' + L('検証用の曲', 'Test pieces') + '">' + SONGS.filter(s => !s.val).map(opt).join('') + '</optgroup>' +
+    '<optgroup label="' + L('教本の運指との答え合わせ（ハノン）', 'Check against textbook fingering (Hanon)') + '">' + SONGS.filter(s => s.val).map(opt).join('') + '</optgroup>' +
+    '<optgroup label="' + L('サンプルの楽譜ファイル（samples/）', 'Sample score files (samples/)') + '">' + SAMPLES.map(s => `<option value="sample:${s.file}">${s.name}</option>`).join('') + '</optgroup>';
+  $('song').addEventListener('change', e => { setPlaying(false); const v = e.target.value; busy(L('運指と手の動きを計算しています…', 'Working out fingering and hand motion…'), () => v.startsWith('sample:') ? loadSample(v.slice(7)) : loadSong(v)); });
   $('sceneSel').innerHTML = Object.entries(SCENES).map(([k, s]) => `<option value="${k}">${s.name}</option>`).join('');
   $('sceneSel').value = V.sceneId;
-  $('fxSel').innerHTML = FX_LEVELS.map((f, i) => `<option value="${i}">エフェクト: ${f.name}</option>`).join('');
+  $('fxSel').innerHTML = FX_LEVELS.map((f, i) => `<option value="${i}">${L('エフェクト: ', 'Effects: ')}${f.name}</option>`).join('');
   $('fxSel').value = String(V.fxLevel);
   $('sceneSel').addEventListener('change', e => { applyScene(e.target.value); applyFx(SCENES[e.target.value].fx); $('fxSel').value = String(V.fxLevel); });
   $('fxSel').addEventListener('change', e => applyFx(+e.target.value));
   $('handModel').innerHTML = Object.entries(HAND_MODELS).map(([k, m]) => `<option value="${k}">${m.name}</option>`).join('');
   $('handModel').value = HAND.id;
-  $('handModel').addEventListener('change', e => { setPlaying(false); busy('手を作りなおしています…', () => { setHandModel(e.target.value); rebuildSkins(); showHandInfo(); if (S.song) setSong(S.song); }); });
+  $('handModel').addEventListener('change', e => { setPlaying(false); busy(L('手を作りなおしています…', 'Rebuilding the hands…'), () => { setHandModel(e.target.value); rebuildSkins(); showHandInfo(); if (S.song) setSong(S.song); }); });
   showHandInfo();
-  $('fileIn').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) busy('楽譜を読んで計算しています…', () => openFile(f)); });
+  $('fileIn').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) busy(L('楽譜を読んで計算しています…', 'Reading the score and calculating…'), () => openFile(f)); });
   $('vol').addEventListener('input', () => { if (MASTER) MASTER.gain.value = VOL(); });
-  $('optGiven').addEventListener('change', () => { if (S.song) busy('運指を計算しています…', () => setSong(S.song)); });
+  $('optGiven').addEventListener('change', () => { if (S.song) busy(L('運指を計算しています…', 'Working out fingering…'), () => setSong(S.song)); });
   const fr = $('frame');
   fr.addEventListener('dragover', e => { e.preventDefault(); fr.classList.add('drop'); });
   fr.addEventListener('dragleave', () => fr.classList.remove('drop'));
-  fr.addEventListener('drop', e => { e.preventDefault(); fr.classList.remove('drop'); const f = e.dataTransfer.files[0]; if (f) busy('楽譜を読んで計算しています…', () => openFile(f)); });
+  fr.addEventListener('drop', e => { e.preventDefault(); fr.classList.remove('drop'); const f = e.dataTransfer.files[0]; if (f) busy(L('楽譜を読んで計算しています…', 'Reading the score and calculating…'), () => openFile(f)); });
   $('btnPlay').addEventListener('click', () => setPlaying(!S.playing));
   $('time').addEventListener('input', e => setTime(tStart() + (tEnd() - tStart()) * e.target.value / 1000));
   // 速さ: 選択欄と、キーの [ ] で1段ずつ
-  $('speedSel').innerHTML = SPEEDS.map(v => '<option value="' + v + '"' + (v === 1 ? ' selected' : '') + '>速さ ×' + v + '</option>').join('');
+  $('speedSel').innerHTML = SPEEDS.map(v => '<option value="' + v + '"' + (v === 1 ? ' selected' : '') + '>' + L('速さ ×', 'Speed ×') + v + '</option>').join('');
   $('speedSel').addEventListener('change', e => { S.speed = +e.target.value; });
   document.querySelectorAll('#views button').forEach(b => b.addEventListener('click', () => {
     setCam(b.dataset.v);
@@ -281,14 +296,14 @@ async function busy(msg, fn) { await showLoading(msg); try { await fn(); } final
 
 async function boot() {
   try {
-    await showLoading('手の皮ふを作っています…');
+    await showLoading(L('手の皮ふを作っています…', 'Building the skin of the hands…'));
     initView($('view'));
     initUI();
     setCam('tilt');
-    await showLoading('運指と手の動きを計算しています…');
+    await showLoading(L('運指と手の動きを計算しています…', 'Working out fingering and hand motion…'));
     loadSong(SONGS[0].id);
     hideLoading();
     requestAnimationFrame(frame);
-  } catch (e) { window.__phErr = e; console.error(e); $('loadMsg').textContent = '読みこめませんでした: ' + e.message; }
+  } catch (e) { window.__phErr = e; console.error(e); $('loadMsg').textContent = L('読みこめませんでした: ', 'Could not load: ') + e.message; }
 }
 boot();

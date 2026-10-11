@@ -27,7 +27,8 @@ function keyTop(m) { return isBlack(m) ? KB.BH : 0; }
 // 指ごとに鍵のどこを押すか（z）。白鍵は手前、黒鍵は奥。長い指ほど奥（目安）
 const PRESS_Z_WHITE = [0, -8, -38, -45, -40, -30]; // 親指は白鍵の手前の端の近く
 function pressZ(m, f) { return isBlack(m) ? (f === 1 ? -66 : -82) : PRESS_Z_WHITE[f]; }
-function noteName(m) { return NOTE_JA[m % 12] + (Math.floor(m / 12) - 1); }
+const NOTE_EN = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+function noteName(m) { return (LANG === 'en' ? NOTE_EN : NOTE_JA)[m % 12] + (Math.floor(m / 12) - 1); }
 
 // (x,z) の真下の鍵の上面の高さ（押しこまれた分 depress(m) を引く）。鍵盤の外は -Infinity
 function surfaceAt(x, z, depress) {
