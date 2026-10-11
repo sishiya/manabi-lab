@@ -57,6 +57,7 @@ const PALM = { c: [4, -1, -54], h: [25, 1, 29.5], r: 13 }; // 角を大きく丸
 const PALM_ROUND = 0.4, PALM_E = [42, 12, 46];
 // 手首・前腕: 横に広く縦にうすいだ円（大人の手首はおよそ幅 55〜60mm・厚み 35〜40mm）。前は丸に近く、真上から見ると手首だけ細くくびれていた
 const ARM_FLAT = 1.45;
+const THUMB_MID_R = 11.8; // 親指の中手骨のまん中を埋める肉の太さ（下の buildPrims、目安）
 // 前腕の太さ（横の半径、手のひらの中の始まり z=-42 と肘の側 z=240）。v025〜: 周囲の測定値に合わせる。
 // 米陸軍の身体計測 ANSUR II（2012、男性 4,082 人）: 手首の周囲（茎状突起の所）17.59cm、前腕の周囲（肘のしわ、こぶしを握って力を入れて）31.01cm。
 // このモデルの手（大人・大きめ）は手の幅・手の周囲が男性平均の約 95% なので、手首 16.8cm、肘の側は力を抜いた分を見込んで 27.5cm（目安）。
@@ -138,6 +139,10 @@ function buildPrims() {
   // 親指の中手骨は根もとから太さを保ち、手首の親指側から途切れずにつなぐ（少し先から細く始めると、手首から MP 関節までが手の甲の側でへこんで見えた）
   { const c = mkCone([-16, -3, -14], t0.o, 9, RADII[1][0], BONE_PALM); c.k = 12; c.thumb = true; P.palm.push(c); } // 手首の親指側 → 親指の根もと（CMC）
   { const c = mkCone(t0.o, rest[1][1].o, RADII[1][0], RADII[1][1], boneOf(1, 0)); c.k = 12; c.thumb = true; P.palm.push(c); } // 親指の中手骨
+  // 親指の中手骨のまん中の肉（v032〜、ユーザーの指摘: 親指の付け根の関節がふくらんで見える）。皮ふの太さ（骨の中心から）が手首の側 14〜15・
+  // まん中 11.2〜11.9・関節 13.7〜14.7mm と、まん中が 2.5〜3mm くびれて、関節が出っぱって見えた。本物は骨幹の外側に母指対立筋（外側のふちの
+  // ほぼ全長に付く）と短母指外転筋、甲の側に長母指外転筋・短母指伸筋の腱が乗り、輪郭はなだらか。太さは両端に合わせた目安
+  { const c = mkCone(lerp3(t0.o, rest[1][1].o, 0.12), lerp3(t0.o, rest[1][1].o, 0.85), THUMB_MID_R, THUMB_MID_R, boneOf(1, 0)); c.k = 5; c.thumb = true; P.palm.push(c); }
   { const c = mkCone([-17, 3, -60], lerp3(t0.o, rest[1][1].o, 0.9), 10, 7.5, BONE_PALM); c.k = 14; c.thumb = true; P.palm.push(c); } // 親指と人さし指のあいだの水かき（甲の側の筋肉）。甲の側に寄せて厚く（うすいと、親指と手の甲のあいだが谷になった）
   P.arm = mkCone([2, -5, -42], [3, -16, 240], ARM_R[0], ARM_R[1], BONE_ARM); // 形: 手のひらの中から細く始めて、手首で自然に太くなる（手首で丸く始めると、境目に段ができた）。一人称で切れ目が見えないよう、肘の近くまで
   P.armW = mkCone([2, -6, -4], [3, -16, 240], ARM_R[0] + 3.4, ARM_R[1], BONE_ARM); // 重み用: 手首から先だけ（手のひらの皮ふが前腕といっしょに動かないように）
@@ -156,7 +161,8 @@ function buildPrims() {
       c.off0 = off[j]; c.off1 = off[j + 1]; c.il = 1 / Math.hypot(...sub3(b, a));
       P.fing[f].push(c);
       if (j >= 1) { // 関節の少しのふくらみ
-        const kr = RADII[f][j] * (1 + (HAND.knuckle === undefined ? 0.07 : HAND.knuckle));
+        // 親指の付け根の関節（f=1, j=1）は、まわりの部品（中手骨・母指球・水かき）をつなぐ太りで肉が 7mm ほどになり、こぶに見えたので、ふくらみを足さない（v032〜）
+        const kr = RADII[f][j] * (1 + (f === 1 && j === 1 ? 0 : HAND.knuckle === undefined ? 0.07 : HAND.knuckle));
         const k = mkCone(a, a, kr, kr, boneOf(f, j)); k.fr = R[j]; k.knuckle = true; k.off0 = k.off1 = off[j]; k.il = 0;
         P.fing[f].push(k);
       }
@@ -219,7 +225,7 @@ function handSDF(P, x, y, z, comp) {
       fd = smin(fd, e, 2.5);
       if (comp) comp[c.bone] = Math.min(comp[c.bone], e);
     }
-    d = smin(d, fd, f === 1 ? 9 : 7);
+    d = smin(d, fd, 7); // 親指も指と同じつなぎの幅（9 では付け根の関節に肉が足されてこぶに見えた）
   }
   return d;
 }
