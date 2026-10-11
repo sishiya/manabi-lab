@@ -56,6 +56,8 @@ const PALM = { c: [4, -1, -54], h: [25, 1, 29.5], r: 13 }; // 角を大きく丸
 const PALM_ROUND = 0.4, PALM_E = [42, 12, 46];
 // 手首・前腕: 横に広く縦にうすいだ円（大人の手首はおよそ幅 55〜60mm・厚み 35〜40mm）。前は丸に近く、真上から見ると手首だけ細くくびれていた
 const ARM_FLAT = 1.45;
+// 手の甲の中手骨の盛り上がりの半径。骨の表面から皮ふまでが本物の目安（皮ふ・皮下・腱で 4mm ほど）に近くなる太さ（9 では 7.5mm あった）
+const DORSAL_R = 6.5;
 function palmD(x, y, z) {
   const s = 0.74 + 0.26 * Math.min(1, Math.max(0, (-z - 20) / 67)); // 指の付け根から手首へ台形にすぼめる
   // 手首に近いほどうすく（同じ厚みのまま細い前腕につなぐと、手の甲と前腕の境目がこぶのように盛り上がった）
@@ -85,7 +87,7 @@ function buildPrims() {
   for (let f = 2; f <= 5; f++) {
     const b = FINGERS_U[f].base, s = [wx[f], 1, -14], d = sub3(b, s), n = Math.hypot(...d);
     const end = [b[0] - d[0] * 4 / n, b[1] - 1, b[2] - d[2] * 4 / n]; // 付け根の関節の 4mm 手前まで
-    P.palm.push(mkCone(s, end, 9, RADII[f][0] + 0.5, BONE_PALM));
+    P.palm.push(mkCone(s, end, DORSAL_R, RADII[f][0] + 0.5, BONE_PALM)); // 手の甲の中手骨の盛り上がり（太いと手の甲の肉が厚くふっくらしすぎた）
   }
   P.palm.push(mkCone(sub3(FINGERS_U[2].base, [0, 2, -3]), sub3(FINGERS_U[5].base, [0, 2, -3]), 10.5, 9, BONE_PALM));
   P.palm.push(mkCone([21, -8, -28], [28, -6, -66], 12, 10, BONE_PALM));
