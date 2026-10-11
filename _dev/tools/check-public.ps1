@@ -72,6 +72,14 @@ foreach ($f in $files) {
     if ($ascii -match 'Exif\x00|GPSInfo|<x:xmpmeta|tEXt|iTXt|zTXt|eXIf') { [void]$hits.Add("$rel : 画像に撮影情報・メタデータがある（消してから公開）") }
     continue
   }
+  if ($ext -eq '.wav') {
+    # 音（WAV）: 作者名・録音機器などの付加情報の塊（LIST/INFO・id3・bext・iXML）がないか。声の中身（実在の人の声か）は目と耳で確かめる（RULES 7章）
+    $bytes = [IO.File]::ReadAllBytes($f)
+    $ascii = [Text.Encoding]::ASCII.GetString($bytes, 0, [Math]::Min($bytes.Length, 65536)) + [Text.Encoding]::ASCII.GetString($bytes, [Math]::Max(0, $bytes.Length - 65536), [Math]::Min($bytes.Length, 65536))
+    if ($ascii -notmatch '^RIFF') { [void]$hits.Add("$rel : WAV の形ではない（中身を確認）") }
+    elseif ($ascii -match 'LIST|INFO|id3 |ID3|bext|iXML|_PMX') { [void]$hits.Add("$rel : WAV に付加情報（作者・機器など）がある（消してから公開）") }
+    continue
+  }
   if ($midiExt -contains $ext) {
     $txt = [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($f))
     $lines = @([regex]::Matches($txt, '[\x20-\x7e　-鿿＀-￯]{3,}') | ForEach-Object { $_.Value })
