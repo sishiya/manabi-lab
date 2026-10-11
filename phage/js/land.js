@@ -7,6 +7,7 @@ const Land = (() => {
   const g = cv.getContext('2d');
   let Wpx = 1, Hpx = 1, s = 1, ox = 0, oy = 0, viewW = 1000, viewTop = 600, viewBot = -120;
   const CONTACT = 3;          // 脚の先がふれる高さ（外膜の外側の糖の鎖の先。nm）
+  const TILT = 0.78;           // かたむきの上限（rad、約45°）。ひっくり返らないようにする
   const KON = 2.5, KOFF = 0.7; // 1秒あたりにくっつく・はなれる見こみ（演出。画面の時間）
   const S = {};
   let dnaPath = [];
@@ -16,24 +17,25 @@ const Land = (() => {
   function reset(hostId) {
     S.hostId = hostId || S.hostId || 'k12';
     S.host = HOSTS[S.hostId];
-    S.B = { x: (Math.random() - 0.5) * 120, y: 330 };
+    S.A = { x: -1300, y: 650 };                   // 細菌全体の大きさで運ぶときの位置（基盤。細菌の上面が y=0、中心が x=0）
+    S.B = { x: 0, y: 200 };
     S.th = (Math.random() - 0.5) * 0.7;
+    S.landX = 0; S.zk = 0;
     S.fib = [];
     for (let k = 0; k < 6; k++) {
       const phi = (k * 60 + 30) * Math.PI / 180;
       S.fib.push({ c: Math.cos(phi), sn: Math.sin(phi), wob: (Math.random() - 0.5) * 0.4, bound: false, pin: null, touching: false, H: null, K: null, T: null });
     }
-    S.phase = 'free'; S.pt = 0; S.simMs = 0;
+    S.phase = 'approach'; S.pt = 0; S.simMs = 0;
     S.grab = false; S.ptr = { x: 0, y: 0 };
     S.sheath = T4.sheathLen; S.sheathW = T4.sheathW; S.plateW = T4.plateW; S.tubeOut = 0;
     S.fill = 1; S.holeR = 0; S.dnaF = 0; S.shortF = 0; S.imBulge = 0;
     S.noRecT = 0; S.saidNoRec = false; S.firstBind = false; S.maxBound = 0; S.th0 = 0; S.y0 = 0;
     S.done = false; S.touched = false;
-    S.intro = S.introSeen ? 0.55 : 0; S.introSeen = true;
-    document.getElementById('toInside').hidden = true; document.getElementById('toZoomAttach').hidden = true; UI.next('land', null); document.getElementById('landHint').classList.add('off'); // 寄りおわってから出す
+    document.getElementById('toInside').hidden = true; document.getElementById('toZoomAttach').hidden = true; UI.next('land', null); document.getElementById('landHint').classList.remove('off');
     makeDnaPath();
     UI.clearLog('land');
-    UI.log('land', `${S.host.name} の表面。画面をおさえると、光ピンセットがファージを引きよせる。`);
+    UI.log('land', `${S.host.name}（細菌）1つ。画面をおさえると、光ピンセットがファージを引きよせる。まず細菌の表面まで運ぼう。`);
     UI.landStatus(S);
   }
 
@@ -98,7 +100,8 @@ const Land = (() => {
   // ---- 進める（dt は画面の秒） ----
   function step(dt) {
     if (!(dt > 0)) return;
-    if (S.intro < 1) { S.intro = Math.min(1, S.intro + dt / 3.6); if (S.intro >= 1) document.getElementById('landHint').classList.remove('off'); UI.landStatus(S); return; }
+    if (S.phase === 'approach') { stepApproach(dt); UI.landStatus(S); return; }
+    if (S.phase === 'zoomin') { S.zk = Math.min(1, S.zk + dt / 1.6); if (S.zk >= 1) { S.phase = 'free'; UI.log('land', `${S.host.name}の表面に近づいた（拡大）。脚の先が表面にふれるまで、もう少し近づけよう。`); } UI.landStatus(S); return; }
     if (S.phase === 'free') stepFree(dt); else stepAnim(dt);
     if (S.phase === 'free' || S.phase === 'settle') S.simMs += dt * BROWN.slow * 1000;
     computeFibers();
@@ -114,14 +117,13 @@ const Land = (() => {
       let vx = (S.ptr.x - hc.x) * 3, vy = (S.ptr.y - hc.y) * 3; const v = Math.hypot(vx, vy), vmax = 320;
       if (v > vmax) { vx *= vmax / v; vy *= vmax / v; }
       dx += vx * dt; dy += vy * dt;
-      const tgt = Math.abs(S.th) < Math.PI / 2 ? 0 : Math.sign(S.th) * Math.PI;
-      dth += (tgt - S.th) * 1.6 * dt;
+      dth += (0 - S.th) * 1.6 * dt;
       // つながった脚より強く引くと、脚がはなれる
       if (Math.hypot(S.ptr.x - hc.x, S.ptr.y - hc.y) > 140) for (const f of S.fib) if (f.bound && Math.random() < 2.5 * dt) { f.bound = false; UI.log('land', '強く引いたので、脚が1本はなれた。'); }
     }
     const old = { x: S.B.x, y: S.B.y, th: S.th };
     S.B.x += dx; S.B.y += dy; S.th += dth;
-    if (S.th > Math.PI) S.th -= 2 * Math.PI; if (S.th < -Math.PI) S.th += 2 * Math.PI;
+    S.th = Math.max(-TILT, Math.min(TILT, S.th)); // ひっくり返らない（かたむきは ±約45° まで）
     for (const f of S.fib) f.wob = Math.max(-0.5, Math.min(0.5, f.wob + 0.35 * Math.sqrt(dt) * gauss() - f.wob * 0.6 * dt));
     // くっついた脚より遠くへは行けない（脚の長さで引きもどす）
     for (let it = 0; it < 6; it++) {
@@ -207,7 +209,7 @@ const Land = (() => {
     cv.width = Math.round(Wpx * dpr); cv.height = Math.round(Hpx * dpr);
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     viewW = Math.max(520, Math.min(1100, Wpx));
-    s = Wpx / viewW; ox = Wpx / 2; oy = Hpx * 0.74;
+    s = Wpx / viewW; ox = Wpx / 2; oy = Hpx * (Wpx < 520 ? 0.6 : 0.74); // スマホは細菌の側を広く
     viewTop = oy / s; viewBot = -(Hpx - oy) / s;
   }
   const X = x => ox + x * s, Y = y => oy - y * s;
@@ -274,15 +276,14 @@ const Land = (() => {
     if (h.gram === '-') {
       tag('外膜', -3.5, Y(0) - 16); tag('細胞壁', -13, Y(-40) + 4); tag('内膜', -31.5, Y(-40) + 20);
     } else { tag('厚い細胞壁', -17, Y(0) - 16); tag('膜', -41.5, Y(-45) + 14); }
-    g.fillStyle = 'rgba(232,240,244,.55)'; g.fillText('細菌の中', lx, Y(-40) + 40);
+    if (Wpx >= 520) { g.fillStyle = 'rgba(232,240,244,.55)'; g.fillText('細菌の中', lx, Y(-40) + 40); }
     // 大きな名前（ここから下が細菌、上は水）
     g.textAlign = 'center';
-    g.font = '700 16px "Zen Kaku Gothic New", sans-serif'; g.fillStyle = 'rgba(232,240,244,.75)';
+    g.font = `700 ${Wpx < 520 ? 12 : 16}px "Zen Kaku Gothic New", sans-serif`; g.fillStyle = 'rgba(232,240,244,.75)';
     const cyY = Math.min(Hpx - 70, (Y(env.im[1]) + Hpx) / 2 - 10);
-    g.fillText(`▼ ここから下は ${h.name}（細菌）の体の中`, Wpx / 2, cyY);
-    g.font = '14px "Zen Kaku Gothic New", sans-serif'; g.fillStyle = 'rgba(170,210,235,.6)';
-    g.fillText('水の中', Wpx * 0.22, Y(0) - 26);
-    g.fillText(`▼ ${h.name}の表面`, Wpx * 0.78, Y(0) - 26);
+    g.fillText(Wpx < 520 ? '▼ ここから下は細菌の体の中' : `▼ ここから下は ${h.name}（細菌）の体の中`, Wpx / 2, cyY);
+    g.font = `${Wpx < 520 ? 11 : 14}px "Zen Kaku Gothic New", sans-serif`; g.fillStyle = 'rgba(170,210,235,.6)';
+    if (Wpx >= 520) { g.fillText('水の中', Wpx * 0.22, Y(0) - 26); g.fillText(`▼ ${h.name}の表面`, Wpx * 0.75, Y(0) - 26); }
     g.textAlign = 'left';
   }
 
@@ -297,35 +298,71 @@ const Land = (() => {
     if (f.bound) { g.strokeStyle = 'rgba(255,224,102,.5)'; g.lineWidth = 2; g.beginPath(); g.arc(X(f.T.x), Y(f.T.y), Math.max(5, 7 * s), 0, Math.PI * 2); g.stroke(); }
   }
 
-  // はじめに: 大腸菌1つ全体から表面へ寄っていく（地面が細菌だと分かるように）
-  function drawIntro() {
-    const t = S.intro, k = ease((t - 0.3) / 0.7);
-    const sc = Math.min(Wpx / 2700, Hpx / 1500), sd = sc * Math.pow(s / sc, k);
-    const gram = S.host.gram === '-', R = gram ? 450 : 400;
-    const fy0 = Hpx * 0.62 - R * sc, fx = ox, fy = fy0 + (oy - fy0) * k; // 細菌の上のファージが札にかくれないよう少し下に
-    const XX = x => fx + x * sd, YY = y => fy - y * sd;
+  // ---- はじめ: 細菌1つ全体（約2µm）の大きさで、ファージを表面まで運ぶ ----
+  function cellView() { const sc = Math.min(Wpx / 3000, (Hpx - 110) / 1800); return { sc, fx: Wpx / 2, fy: 70 + 820 * sc }; }
+  function cellR() { return S.host.gram === '-' ? 450 : 400; }
+  function stepApproach(dt) {
+    if (S.grab) {
+      // 頭（基盤から約170nm 上）を指の点へ引きよせる。細菌全体の大きさでは速めに動かす
+      const hx = S.A.x - Math.sin(S.th) * 170, hy = S.A.y + Math.cos(S.th) * 170;
+      let vx = (S.ptr.x - hx) * 3, vy = (S.ptr.y - hy) * 3; const v = Math.hypot(vx, vy), vmax = 900;
+      if (v > vmax) { vx *= vmax / v; vy *= vmax / v; }
+      S.A.x += vx * dt; S.A.y += vy * dt;
+      S.th += (0 - S.th) * 1.6 * dt;
+    }
+    // 細菌の体には入れない（上面より上にとどめる。横からは押し出す）
+    const R = cellR();
+    if (Math.abs(S.A.x) < 1000 && S.A.y < 40 && S.A.y > -2 * R - 40) { if (S.A.y > -R) S.A.y = 40; else S.A.y = -2 * R - 40; }
+    S.A.x = Math.max(-1500, Math.min(1500, S.A.x)); S.A.y = Math.max(-2 * R - 200, Math.min(820, S.A.y));
+    // 上面の近くまで来たら、表面へ寄る
+    if (S.A.y < 230 && S.A.y >= 40 && Math.abs(S.A.x) < 1000 - R * 0.4) {
+      S.phase = 'zoomin'; S.zk = 0; S.landX = S.A.x; S.B.x = 0; S.B.y = Math.max(140, S.A.y + 60); S.grab = false;
+      UI.toast('land', '表面へ寄る');
+    }
+  }
+  function drawCell() {
+    const V = cellView(), R = cellR(), gram = S.host.gram === '-';
+    const zoom = S.phase === 'zoomin', k = zoom ? ease(S.zk) : 0;
+    const sd = V.sc * Math.pow(s / V.sc, k);
+    const fx0 = V.fx + S.landX * V.sc, fx = fx0 + (ox - fx0) * k, fy = V.fy + (oy - V.fy) * k;
+    const cx = zoom ? S.landX : 0, XX = x => (zoom ? fx : V.fx) + (x - cx) * sd, YY = y => fy - y * sd;
     g.fillStyle = '#0b1a22'; g.fillRect(0, 0, Wpx, Hpx);
-    g.fillStyle = '#1d2b2a'; g.strokeStyle = gram ? '#46617a' : '#6b7a44'; g.lineWidth = Math.max(2, 7 * sd);
+    // 細菌
+    g.fillStyle = '#1d2b2a'; g.strokeStyle = gram ? '#46617a' : '#6b7a44'; g.lineWidth = Math.max(3, 7 * sd);
     g.beginPath(); g.roundRect(XX(-1000), YY(0), 2000 * sd, 2 * R * sd, R * sd); g.fill(); g.stroke();
-    g.save(); g.translate(XX(S.B.x), YY(S.B.y)); g.rotate(-S.th); g.scale(sd, sd); drawPhageSmall(g, { fill: 1 }); g.restore();
+    if (!zoom) { // 上面の「降りるところ」
+      g.strokeStyle = 'rgba(255,224,102,.55)'; g.setLineDash([6, 6]); g.lineWidth = 2;
+      g.beginPath(); g.moveTo(XX(-1000 + R * 0.4), YY(0) - 10); g.lineTo(XX(1000 - R * 0.4), YY(0) - 10); g.stroke(); g.setLineDash([]);
+    }
+    // ファージ
+    const px = zoom ? S.landX + S.B.x : S.A.x, py = zoom ? S.A.y + (S.B.y - S.A.y) * k : S.A.y;
+    g.save(); g.translate(XX(px), YY(py)); g.rotate(-S.th); g.scale(sd, sd); drawPhageSmall(g, { fill: 1 }); g.restore();
+    // 光ピンセット
+    if (S.grab && !zoom) {
+      const hx = S.A.x - Math.sin(S.th) * 170, hy = S.A.y + Math.cos(S.th) * 170;
+      g.strokeStyle = 'rgba(255,120,120,.85)'; g.lineWidth = 1.5; g.beginPath(); g.arc(XX(hx), YY(hy), Math.max(10, 60 * sd), 0, Math.PI * 2); g.stroke();
+      g.setLineDash([3, 4]); g.beginPath(); g.moveTo(XX(hx), YY(hy)); g.lineTo(XX(S.ptr.x), YY(S.ptr.y)); g.stroke(); g.setLineDash([]);
+    }
+    // 名前
+    const sm = Wpx < 520;
     g.textAlign = 'center'; g.textBaseline = 'middle';
-    const a = Math.max(0, 1 - k * 2.2);
+    const a = zoom ? Math.max(0, 1 - k * 2.5) : 1;
     if (a > 0) {
       g.globalAlpha = a;
-      g.font = '700 20px "Zen Kaku Gothic New", sans-serif'; g.fillStyle = '#e8f0f4';
+      g.font = `700 ${sm ? 15 : 20}px "Zen Kaku Gothic New", sans-serif`; g.fillStyle = '#e8f0f4';
       g.fillText(`${S.host.name}（細菌）1つ`, XX(0), YY(-R) - 12);
-      g.font = '14px "Zen Kaku Gothic New", sans-serif'; g.fillStyle = '#a9bcc4';
-      g.fillText('長さ 約2µm（髪の毛の太さの約40分の1）', XX(0), YY(-R) + 16);
-      g.fillStyle = '#7fe0c4'; g.textAlign = 'left'; g.fillText('← T4 ファージ（約0.2µm）', XX(S.B.x) + 40, YY(S.B.y - 60)); g.textAlign = 'center';
+      g.font = `${sm ? 11 : 14}px "Zen Kaku Gothic New", sans-serif`; g.fillStyle = '#a9bcc4';
+      g.fillText('長さ 約2µm（髪の毛の太さの約40分の1）', XX(0), YY(-R) + 14);
+      g.fillStyle = 'rgba(255,224,102,.8)'; g.fillText('▼ ここ（細菌の表面）まで運ぼう', XX(0), YY(0) - 26);
+      g.fillStyle = '#7fe0c4'; g.textAlign = 'left'; g.fillText('← T4 ファージ（約0.2µm）', XX(px) + 30, YY(py + 90));
       g.globalAlpha = 1;
     }
-    if (k > 0.15) { g.font = '700 16px "Zen Kaku Gothic New", sans-serif'; g.fillStyle = 'rgba(232,240,244,.9)'; g.fillText('大腸菌の表面へ寄っていく…', Wpx / 2, Hpx - 60); }
-    g.font = '12px "Zen Kaku Gothic New", sans-serif'; g.fillStyle = 'rgba(232,240,244,.55)'; g.fillText('（さわると飛ばせる）', Wpx / 2, Hpx - 38);
+    if (zoom) { g.textAlign = 'center'; g.font = '700 16px "Zen Kaku Gothic New", sans-serif'; g.fillStyle = 'rgba(232,240,244,.9)'; g.fillText('細菌の表面へ寄っていく…', Wpx / 2, Hpx - 60); }
     g.textAlign = 'left';
   }
 
   function draw() {
-    if (S.intro < 1) { drawIntro(); return; }
+    if (S.phase === 'approach' || S.phase === 'zoomin') { drawCell(); return; }
     g.clearRect(0, 0, Wpx, Hpx);
     const bg = g.createLinearGradient(0, 0, 0, Hpx); bg.addColorStop(0, '#0b1a22'); bg.addColorStop(1, '#10262c');
     g.fillStyle = bg; g.fillRect(0, 0, Wpx, Hpx);
@@ -343,8 +380,8 @@ const Land = (() => {
       if (S.dnaF > 0.12) {
         const ratio = Math.round(T4.genomeBp * T4.bpNm / viewW);
         g.font = '13px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
-        const msg = `↓ 細菌の奥へ、画面の外まで続く（DNA は全部のばすと約57µm＝この画面の横はばの約${ratio}倍）`;
-        const tx = Math.min(Wpx - 180, Math.max(180, X(S.B.x))), ty = Hpx - 40, w = g.measureText(msg).width;
+        const msg = Wpx < 520 ? `↓ 画面の外まで続く（全部で約57µm＝画面の約${ratio}倍）` : `↓ 細菌の奥へ、画面の外まで続く（DNA は全部のばすと約57µm＝この画面の横はばの約${ratio}倍）`;
+        const tx = Wpx < 520 ? Wpx / 2 : Math.min(Wpx - 180, Math.max(180, X(S.B.x))), ty = Wpx < 520 ? Math.min(Hpx - 40, Y(-35) + 70) : Hpx - 40, w = g.measureText(msg).width;
         g.fillStyle = 'rgba(11,26,34,.8)'; g.fillRect(tx - w / 2 - 6, ty - 18, w + 12, 22);
         g.fillStyle = '#ffc29a'; g.fillText(msg, tx, ty); g.textAlign = 'left';
       }
@@ -381,6 +418,7 @@ const Land = (() => {
     g.fillStyle = '#e8f0f4'; g.font = '11px "IBM Plex Mono", monospace'; g.textBaseline = 'bottom'; g.fillText('100 nm', x0, y0 - 6);
   }
   function drawInset() {
+    if (Wpx < 520) return;
     // 細菌の全体（約2µm×1µm）といまの場所
     const w = Wpx < 500 ? 104 : 132, h = Wpx < 500 ? 60 : 72, x0 = Wpx - w - 10, y0 = Wpx < 760 ? Hpx - h - 50 : 10; // 狭い画面では目的の札と重ならないよう右下へ
     g.fillStyle = 'rgba(10,20,26,.82)'; g.strokeStyle = 'rgba(170,210,235,.25)'; g.lineWidth = 1;
@@ -388,7 +426,7 @@ const Land = (() => {
     const k = (w - 30) / 2000, cx = x0 + w / 2, cy = y0 + h / 2 + 6;
     g.fillStyle = S.host.gram === '-' ? '#2c4a4a' : '#4b5634'; g.strokeStyle = '#7fa3a8';
     g.beginPath(); g.roundRect(cx - 1000 * k, cy - (S.host.gram === '-' ? 450 : 400) * k, 2000 * k, (S.host.gram === '-' ? 900 : 800) * k, 450 * k); g.fill(); g.stroke();
-    const vx = cx - 300 * k, vy = cy - 450 * k;
+    const vx = cx + S.landX * k, vy = cy - 450 * k;
     g.strokeStyle = '#ff8a8a'; g.strokeRect(vx - viewW / 2 * k, vy - 4, viewW * k, 6);
     g.fillStyle = '#ffe9e9'; g.font = '10px "Zen Kaku Gothic New", sans-serif'; g.textBaseline = 'top';
     g.fillText(`${S.host.short}（約2µm）の全体`, x0 + 6, y0 + 4);
@@ -396,8 +434,12 @@ const Land = (() => {
   }
 
   // ---- 指 ----
-  function toWorld(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left - ox) / s, y: (oy - (e.clientY - r.top)) / s }; }
-  cv.addEventListener('pointerdown', e => { if (S.intro < 1) { S.intro = 1; document.getElementById('landHint').classList.remove('off'); return; } if (S.phase !== 'free') return; cv.setPointerCapture(e.pointerId); S.grab = true; S.ptr = toWorld(e); UI.hideHint('land'); });
+  function toWorld(e) {
+    const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+    if (S.phase === 'approach') { const V = cellView(); return { x: (px - V.fx) / V.sc, y: (V.fy - py) / V.sc }; }
+    return { x: (px - ox) / s, y: (oy - py) / s };
+  }
+  cv.addEventListener('pointerdown', e => { if (S.phase !== 'free' && S.phase !== 'approach') return; cv.setPointerCapture(e.pointerId); S.grab = true; S.ptr = toWorld(e); UI.hideHint('land'); });
   cv.addEventListener('pointermove', e => { if (S.grab) S.ptr = toWorld(e); });
   const up = () => { S.grab = false; };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);

@@ -138,3 +138,35 @@ button:disabled{opacity:.45;cursor:default}
 .toast{top:84px}
 .nextbar{top:82px}
 .hud{top:auto;bottom:10px}
+
+/* スマホ（狭い画面）: 札は「いまの段階」だけ、文字を小さく */
+@media (max-width:600px){
+  .brand span{display:none}
+  .brand b{font-size:16px}
+  #tabs button{padding:4px 6px}
+  #tabs button b{font-size:12px}
+  .goal{padding:4px 10px 5px;top:6px}
+  .goal b{font-size:12.5px}
+  .goal .chips{margin-top:3px}
+  .goal .chips i,.goal .chips span:not(.now):not(.warn){display:none}
+  .goal .chips span{font-size:11px}
+  .hud{font-size:10.5px;padding:3px 7px}
+  .hint{font-size:12.5px;padding:8px 12px;top:46%}
+  .toast{top:64px;font-size:14px}
+  .nextbar{top:64px}
+  .nextbar button{font-size:13px;padding:7px 12px}
+  .nextbar button.primary{font-size:14px}
+  .bar .small{display:none}
+  .stage{height:58vh}
+}
+.goal .chips span.done:last-child{display:inline-block}
+/* タブの文字が長くても横にはみ出さない */
+#tabs button{min-width:0;flex:1 1 0;overflow-wrap:anywhere}
+#landHint{top:26%}
+@media (max-width:600px){
+  .hud{display:none}
+  #landHint{top:auto;bottom:36px}
+}
+@media (max-width:860px){
+  .page[data-page=zoom] .zlist{order:5}   /* スマホでは、場面の一覧を操作のボタンより下に */
+}

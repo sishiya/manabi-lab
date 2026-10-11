@@ -74,16 +74,19 @@ const UI = (() => {
   function landStatus(S) {
     const n = S.fib.filter(f => f.bound).length;
     const legs = S.fib.map(f => `<i class="${f.bound ? 'on' : ''}"></i>`).join('');
-    const gap = Math.max(0, Math.round(S.B.y - 3));
-    const stage = { free: S.grab ? '光ピンセットで運んでいる' : 'ふらふらゆれている', settle: '基盤が星形に', short: '短い脚がくいこむ', contract: 'さやが縮む', lyso: '細胞壁に穴', dna: 'DNA が入っていく', done: '注入おわり' }[S.phase];
+    const gap = Math.max(0, Math.round((S.phase === 'approach' ? S.A.y : S.B.y) - 3));
+    const stage = { approach: S.grab ? '細菌へ運んでいる' : '細菌から離れている', zoomin: '表面へ寄っている', free: S.grab ? '光ピンセットで運んでいる' : 'ふらふらゆれている', settle: '基盤が星形に', short: '短い脚がくいこむ', contract: 'さやが縮む', lyso: '細胞壁に穴', dna: 'DNA が入っていく', done: '注入おわり' }[S.phase];
     const bp = S.phase === 'dna' || S.phase === 'done' ? Math.round(T4.genomeBp * S.dnaF).toLocaleString() + ' 塩基対' : '—';
-    const html = `<dl class="stat"><dt>様子</dt><dd>${stage}</dd><dt>くっついた脚</dt><dd><span class="legs">${legs}</span> ${n}/6</dd><dt>表面までの高さ</dt><dd>${S.phase === 'free' ? gap + ' nm' : '—'}</dd><dt>入った DNA</dt><dd>${bp}</dd><dt>本当の時間</dt><dd>${S.simMs.toFixed(2)} ミリ秒</dd></dl>`;
+    const html = `<dl class="stat"><dt>様子</dt><dd>${stage}</dd><dt>くっついた脚</dt><dd><span class="legs">${legs}</span> ${n}/6</dd><dt>表面までの高さ</dt><dd>${S.phase === 'free' || S.phase === 'approach' ? gap + ' nm' : '—'}</dd><dt>入った DNA</dt><dd>${bp}</dd><dt>本当の時間</dt><dd>${S.simMs.toFixed(2)} ミリ秒</dd></dl>`;
     if (html !== lastLand) { $('landStatus').innerHTML = html; lastLand = html; }
     $('landHud').textContent = `1万分の1の速さ ${S.simMs.toFixed(2)}ms`;
-    const d1 = S.touched || S.phase !== 'free', d2 = S.phase !== 'free', d3 = S.done;
+    const pre = S.phase === 'approach' || S.phase === 'zoomin', free = S.phase === 'free';
+    const d1 = !pre, d2 = !pre && !free, d3 = S.done;
     const st = (d, prev) => d ? 'done' : prev ? 'now' : '';
-    const c2 = S.saidNoRec && !d2 ? ['この細菌には脚がくっつかない → 右の欄でほかの細菌を', 'warn'] : ['脚を3本くっつける', st(d2, d1)];
-    goal('land', 'ファージを大腸菌に突き刺して、DNA を注入しよう！', [['つまんで表面に近づける', st(d1, true)], c2, ['刺さって DNA が入る', st(d3, d2)]]);
+    let c2 = ['脚を3本くっつける', st(d2, d1)];
+    if (S.saidNoRec && !d2) c2 = ['この細菌には脚がくっつかない → ほかの細菌を', 'warn'];
+    const c1 = ['細菌の表面まで運ぶ', st(d1, true)];
+    goal('land', 'ファージを大腸菌に突き刺して、DNA を注入しよう！', [c1, c2, ['刺さって DNA が入る', st(d3, d2)]]);
   }
   function landDone(hostId) {
     const b = $('toInside'); b.hidden = false;

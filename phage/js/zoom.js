@@ -134,11 +134,15 @@ const Zoom = (() => {
     if (!fin && cur.hint) {
       const side = window.innerWidth <= 860 ? '下' : '右';
       const msg = cur.hint.replace('〈欄〉', side + 'の欄');
-      g.font = '14px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-      const w = g.measureText(msg).width, y = Hpx - 60;
+      const fs = Wpx < 520 ? 12 : 14;
+      g.font = `${fs}px "Zen Kaku Gothic New", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      // はみ出すなら2行に分ける（「（」の前か、まん中で）
+      let lines = [msg];
+      if (g.measureText(msg).width > Wpx - 40) { let cut = msg.indexOf('（'); if (cut < 4) cut = Math.ceil(msg.length / 2); lines = [msg.slice(0, cut), msg.slice(cut)]; }
+      const w = Math.max(...lines.map(l => g.measureText(l).width)), lh = fs + 6, hh = lines.length * lh + 10, y = Hpx - 46 - hh / 2;
       g.fillStyle = 'rgba(11,26,34,.88)'; g.strokeStyle = 'rgba(127,224,196,.7)'; g.lineWidth = 1;
-      g.beginPath(); g.roundRect(Wpx / 2 - w / 2 - 12, y - 15, w + 24, 30, 15); g.fill(); g.stroke();
-      g.fillStyle = '#e8f0f4'; g.fillText(msg, Wpx / 2, y);
+      g.beginPath(); g.roundRect(Wpx / 2 - w / 2 - 12, y - hh / 2, w + 24, hh, 14); g.fill(); g.stroke();
+      g.fillStyle = '#e8f0f4'; lines.forEach((l, i) => g.fillText(l, Wpx / 2, y - (lines.length - 1) * lh / 2 + i * lh));
     }
     UI.goal('z', cur.goal || cur.name, fin ? [['できた！', 'done']] : null);
     if (fin) {
