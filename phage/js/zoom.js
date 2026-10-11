@@ -107,7 +107,7 @@ const Zoom = (() => {
     $('zList').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.id === cur.id)));
     $('zTitle').textContent = cur.name; $('zLead').innerHTML = cur.lead || '';
     $('zCtrl').innerHTML = ''; $('zSay').innerHTML = ''; $('zPick').innerHTML = '<p class="hint2">図の中の部品をさわると、ここに説明が出る。</p>';
-    Z._steps = null; renderSteps(); UI.next('z', null);
+    Z._steps = null; renderSteps(); UI.next('z', null); UI.goal('z', cur.goal || cur.name, null);
     for (const k in holding) holding[k] = false;
     fit();
     cur.init(Z);
@@ -119,8 +119,9 @@ const Zoom = (() => {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (!cur) return;
     const b = cur.box, pad = 18;
-    s = Math.max(0.01, Math.min((Wpx - 2 * pad) / (b.x1 - b.x0), (Hpx - 2 * pad - 20) / (b.y1 - b.y0)));
-    ox = Wpx / 2 - (b.x0 + b.x1) / 2 * s; oy = (Hpx - 20) / 2 + (b.y0 + b.y1) / 2 * s;
+    const top = 66, bot = 44; // 上は目的の札、下は案内とものさしのぶん空ける
+    s = Math.max(0.01, Math.min((Wpx - 2 * pad) / (b.x1 - b.x0), (Hpx - top - bot) / (b.y1 - b.y0)));
+    ox = Wpx / 2 - (b.x0 + b.x1) / 2 * s; oy = top + (Hpx - top - bot) / 2 + (b.y0 + b.y1) / 2 * s;
   }
   function step(dt) { if (cur && cur.step) cur.step(Z, dt); }
   function draw() {
@@ -134,11 +135,12 @@ const Zoom = (() => {
       const side = window.innerWidth <= 860 ? '下' : '右';
       const msg = cur.hint.replace('〈欄〉', side + 'の欄');
       g.font = '14px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-      const w = g.measureText(msg).width, y = Hpx - 46;
+      const w = g.measureText(msg).width, y = Hpx - 60;
       g.fillStyle = 'rgba(11,26,34,.88)'; g.strokeStyle = 'rgba(127,224,196,.7)'; g.lineWidth = 1;
       g.beginPath(); g.roundRect(Wpx / 2 - w / 2 - 12, y - 15, w + 24, 30, 15); g.fill(); g.stroke();
       g.fillStyle = '#e8f0f4'; g.fillText(msg, Wpx / 2, y);
     }
+    UI.goal('z', cur.goal || cur.name, fin ? [['できた！', 'done']] : null);
     if (fin) {
       const i = chs.indexOf(cur), nx = chs[i + 1];
       UI.next('z', nx ? [[`つぎの場面へ: ${i + 2}. ${nx.name} →`, () => open(nx.id), true], ['この場面をもう一度', () => open(cur.id)]] : [['おわり！ ① 着陸させるにもどる', () => UI.setTab('land'), true], ['この場面をもう一度', () => open(cur.id)]], cur.id);

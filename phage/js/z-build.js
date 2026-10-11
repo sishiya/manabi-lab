@@ -4,7 +4,7 @@
 const HEADFUL_BP = Math.round(T4.genomeBp * 1.02); // ゲノムの1.02倍（Rao と Black 2010）
 
 Zoom.add({
-  id: 'head', hint: '〈欄〉のボタンを ① から順に押そう', name: '頭をつくる', sub: '殻と DNA のつめこみ',
+  id: 'head', goal: '頭を作って、DNA をいっぱいまでつめこもう', hint: '〈欄〉のボタンを ① から順に押そう', name: '頭をつくる', sub: '殻と DNA のつめこみ',
   box: { x0: -95, x1: 95, y0: -80, y1: 85 }, bar: 20,
   lead: '頭は<b>入口の輪</b>から作りはじめる。上から順にボタンを押して組み立て、最後は<b>「押しこむ」を押しつづけて</b> DNA をつめよう。',
   STAGES: ['portal', 'scaffold', 'shell', 'protease', 'expand', 'pack', 'done'],
@@ -103,7 +103,7 @@ Zoom.add({
 });
 
 Zoom.add({
-  id: 'tail', hint: '〈欄〉のくさびの部品を、正しい順に押そう', name: 'しっぽをつくる', sub: '順番どおりに組む',
+  id: 'tail', goal: 'しっぽを正しい順に組み立てて、T4 を完成させよう', hint: '〈欄〉のくさびの部品を、正しい順に押そう', name: 'しっぽをつくる', sub: '順番どおりに組む',
   box: { x0: -150, x1: 150, y0: -60, y1: 250 }, bar: 50,
   lead: 'しっぽは<b>基盤のくさび</b>から。くさびは7種類のたんぱくが<b>決まった順番</b>でしか付かない。正しい順を探してみよう。',
   ORDER: ['gp10', 'gp7', 'gp8', 'gp6', 'gp53', 'gp25'],

@@ -123,3 +123,18 @@ button:disabled{opacity:.45;cursor:default}
 #tabs button.pulse{animation:nextPulse 1.6s ease-in-out infinite;border-color:var(--acc)}
 @keyframes nextPulse{0%,100%{box-shadow:0 0 0 0 rgba(127,224,196,.65)}50%{box-shadow:0 0 0 9px rgba(127,224,196,0)}}
 @media (prefers-reduced-motion:reduce){.nextbar button.primary,#tabs button.pulse{animation:none}}
+
+/* 目的の札（図の上のまん中） */
+.goal{position:absolute;left:50%;top:10px;transform:translateX(-50%);background:rgba(10,22,27,.9);border:1px solid var(--acc);border-radius:12px;padding:6px 14px 7px;text-align:center;z-index:2;width:max-content;max-width:calc(100% - 24px);pointer-events:none}
+.goal:empty{display:none}
+.goal b{color:var(--acc);font-size:15px;letter-spacing:.02em}
+.goal .chips{display:flex;gap:4px 6px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:5px}
+.goal .chips span{font-size:12px;border:1px solid var(--line);border-radius:10px;padding:1px 9px;color:var(--dim)}
+.goal .chips i{font-style:normal;color:var(--dim);font-size:11px}
+.goal .chips span.done{color:#0e1c22;background:var(--sure);border-color:var(--sure)}
+.goal .chips span.now{color:var(--ink);border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+.goal .chips span.warn{color:#0e1c22;background:#ffb36b;border-color:#ffb36b}
+/* 札があるので、トースト・つぎへ・左上の表示をずらす */
+.toast{top:84px}
+.nextbar{top:82px}
+.hud{top:auto;bottom:10px}
