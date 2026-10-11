@@ -10,13 +10,17 @@ const LOOK = 0.7;       // 次の音へ先回りを始める早さ（秒）
 // base: 付け根の関節（親指は CM 関節、ほかは MP 関節）の位置。b: 付け根の下向きの傾き。c: 2つめの曲げに3つめが連動する割合
 // pitch: 指の向きそのものの前下がり、tw: 曲がる面のねじれ（+ で手のひらの側へ）。親指は手のひらの側へ斜めに曲がり、指の腹が人さし指の方を向く
 const THUMB_PITCH = 10, THUMB_TW = 45, THUMB_N = [0, 35];
+// 骨の長さ L（mm）: [中手骨（親指だけ）または基節, 中節または基節, 末節の関節 → 指の腹の中心]。Buryanov & Kotiuk (2010, Int J Morphol 28(3))
+// の成人 66 人の X 線写真の、関節から関節までの長さの平均。最後の L[2] は、末節骨＋指先の肉（親指 21.7+5.7、人さし指 15.8+3.8、中指 17.4+4.0、
+// 薬指 17.3+4.0、小指 16.0+3.7）から、皮ふの指先の太さ（RADII の最後）を引いた長さ（皮ふは指の腹の中心からその太さだけ先まである。
+// 引かないと、皮ふの指先が 6〜8mm 長くなった）
 const FINGERS = [
   null,
-  { name: L('親指', 'thumb'), base: [-20, -13, -28], L: [46, 30, 25], b: 0, c: 0.8, pitch: THUMB_PITCH, tw: THUMB_TW, yaw0: -50, yaw: [-75, 50], a1: [-20, 60], a2: [0, 80], n: THUMB_N, r: [11, 9.5, 8.5] },
-  { name: L('人さし指', 'index finger'), base: [-24, 8, -92], L: [43, 25, 19], b: 0, c: 0.5, yaw0: -5, yaw: [-25, 15], a1: [-25, 90], a2: [0, 105], n: [25, 45], r: [8.5, 8, 7.5] },
-  { name: L('中指', 'middle finger'), base: [-4, 10, -96], L: [47, 28, 20], b: 0, c: 0.5, yaw0: 0, yaw: [-18, 18], a1: [-25, 90], a2: [0, 105], n: [25, 45], r: [8.8, 8.2, 7.6] },
-  { name: L('薬指', 'ring finger'), base: [14, 5, -91], L: [44, 27, 20], b: 0, c: 0.5, yaw0: 5, yaw: [-15, 22], a1: [-25, 90], a2: [0, 105], n: [25, 45], r: [8.3, 7.8, 7.3] },
-  { name: L('小指', 'little finger'), base: [30, -5, -80], L: [35, 20, 18], b: 0, c: 0.5, yaw0: 12, yaw: [-15, 35], a1: [-25, 90], a2: [0, 100], n: [25, 45], r: [7.5, 7, 6.6] },
+  { name: L('親指', 'thumb'), base: [-20, -13, -28], L: [46.2, 31.6, 19.3], b: 0, c: 0.8, pitch: THUMB_PITCH, tw: THUMB_TW, yaw0: -50, yaw: [-75, 50], a1: [-20, 60], a2: [0, 80], n: THUMB_N, r: [11, 9.5, 8.5] },
+  { name: L('人さし指', 'index finger'), base: [-24, 8, -92], L: [39.8, 22.4, 13.1], b: 0, c: 0.5, yaw0: -5, yaw: [-25, 15], a1: [-25, 90], a2: [0, 105], n: [25, 45], r: [8.5, 8, 7.5] },
+  { name: L('中指', 'middle finger'), base: [-4, 10, -96], L: [44.6, 26.3, 14.6], b: 0, c: 0.5, yaw0: 0, yaw: [-18, 18], a1: [-25, 90], a2: [0, 105], n: [25, 45], r: [8.8, 8.2, 7.6] },
+  { name: L('薬指', 'ring finger'), base: [14, 5, -91], L: [41.4, 25.7, 14.8], b: 0, c: 0.5, yaw0: 5, yaw: [-15, 22], a1: [-25, 90], a2: [0, 105], n: [25, 45], r: [8.3, 7.8, 7.3] },
+  { name: L('小指', 'little finger'), base: [30, -5, -80], L: [32.7, 18.1, 13.7], b: 0, c: 0.5, yaw0: 12, yaw: [-15, 35], a1: [-25, 90], a2: [0, 100], n: [25, 45], r: [7.5, 7, 6.6] },
 ];
 for (let f = 1; f <= 5; f++) {
   const F = FINGERS[f];
@@ -106,6 +110,18 @@ const HAND_MODELS = {
   'short': { name: L('指が短い手', 'Short fingers'), s: 1.0, fingers: 0.88, thumb: 0.94 },
 };
 const FINGERS_BASE = FINGERS.map(F => F && JSON.parse(JSON.stringify(F)));
+// 関節をやわらかく（ストレッチした手）: 指を横に開く範囲を両側に FLEX_YAW 度、付け根の関節をそらす限界を FLEX_EXT 度ふやす。
+// 値はこのアプリの目安（研究の値で確かめていない）。届かなかった音が、やわらかい手なら届くかを試すためのもの
+const FLEX_YAW = 10 * D2R, FLEX_EXT = 10 * D2R;
+let FLEX = false;
+function applyFlex(on) {
+  FLEX = !!on;
+  for (let f = 1; f <= 5; f++) {
+    const B = FINGERS_BASE[f], F = FINGERS[f], k = FLEX ? 1 : 0;
+    F.yaw = [B.yaw[0] - k * FLEX_YAW, B.yaw[1] + k * FLEX_YAW];
+    F.a1 = [B.a1[0] - k * FLEX_EXT, B.a1[1]];
+  }
+}
 const FINGERS_U = FINGERS.map(F => F && Object.assign({}, F)); // 大きさをかける前（皮ふの網はこの大きさで作ってから縮める）
 let HAND = null;
 function setHandModel(id) {
@@ -148,6 +164,8 @@ const lerp3 = (a, b, s) => [a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s, 
 const ease5 = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * x * (10 + x * (6 * x - 15));
 // 打鍵: 指は鍵に着いたときの速さ VC のまま押し下げ、TK 秒で底に着いて止まる（前は鍵の上でいったん止まってから押していた）
 const TK = 0.035, VC = 1.5 * KB.DEPTH / TK, TR = 0.12;
+// 押せたとみなす指先のずれ（mm）。指の腹の半径（約 6.5mm）の 3/4: これより離れると、指の腹が鍵の上面にしっかり当たらない（目安）
+const MISS_MM = 5;
 function keyDown(n, t) { // 押しこんでいる深さ（鍵に着いてから）
   const s = Math.min(1, (t - n.t0) / TK), w = 1.5;
   return t <= n.t0 ? 0 : KB.DEPTH * (w * s + (3 - 2 * w) * s * s + (w - 2) * s * s * s);
@@ -191,6 +209,12 @@ function buildPlan(song) {
     if (nx && nx.t0 - (n.t1n || n.t1) < 0.08 && nx.t0 > ts) ts = Math.min(nx.t0 + 0.02, again ? again.t0 : Infinity);
     n.ts = ts;
   }
+  // 届かずに押せなかった音: 鍵を押しこみおえる時刻に、指先（指の腹の中心）が押す場所から MISS_MM より離れていた音。
+  // 届くように数値を合わせることはしない（骨の長さ・関節の範囲で届かなければ、押せなかったという結果にする）
+  for (const h of hands) for (const n of h.notes) {
+    const P = poseAt(h, Math.min(n.t1, n.t0 + TK));
+    n.short = P.fingers[n.f].err; n.miss = n.short > MISS_MM;
+  }
   const end = Math.max(0, ...notes.map(n => n.t1));
   return { song, notes, hands, end, pedal, cost: hands.reduce((s, h) => s + h.cost, 0) };
 }
@@ -218,7 +242,9 @@ function buildHandPlan(notes, side) {
       if (notes[j].m === n.m) { n.t1 = Math.min(n.t1, notes[j].t0 - 0.06); break; }
     }
     n.t1 = Math.max(n.t1, n.t0 + 0.03);
-    n.P = pressPoint(n.m, n.f);
+    const pv = notes[i - 1], nx = notes[i + 1];
+    n.deep = n.f === 1 && !isBlack(n.m) && ((pv && isBlack(pv.m)) || (nx && isBlack(nx.m)));
+    n.P = pressPoint(n.m, n.f, n);
   }
   // 次の音で手が大きく動くときは、間に合うように早めに離す（本物の演奏でも、跳ぶ前の音は少し短くなる）。
   // 動く時間の目安 = 0.08 秒 + 手の位置の動き ÷ 600mm/秒（この検証で決めた値）
@@ -393,7 +419,7 @@ function wristAt(plan, t) {
 }
 
 // 鍵を押す指先の位置（世界の座標）
-function pressPoint(m, f) { return [keyX(m), keyTop(m) + PAD, pressZ(m, f)]; }
+function pressPoint(m, f, n) { return [keyX(m), keyTop(m) + PAD, pressZ(m, f, n && n.deep)]; }
 
 // ④ 指先の目標（世界の座標）。押す・離して浮かす・次の音へ先回り・力を抜いた形に戻る
 function fingerTarget(plan, f, t, W) {
@@ -406,12 +432,12 @@ function fingerTarget(plan, f, t, W) {
   const rest = [nt[0], Math.max(nt[1], Math.max(surfaceZ(nt[2]), surfaceZ(nt[2] - 8)) + PAD) + LIFT * 0.35, nt[2]];
 
   if (p && t <= p.t1) { // 押している
-    const P = pressPoint(p.m, f);
+    const P = pressPoint(p.m, f, p);
     return { T: [P[0], P[1] - pressDepth(p, t), P[2]], R: rest, press: p, down: true, mob: 0 };
   }
   let S = rest, sT = -Infinity, mob0 = 1, rel = null;
   if (p) { // 離したあと: 鍵といっしょに上がり、とちゅうから力を抜いた形へ（前の鍵の上に残ると、手が動いたときに置いていかれる）
-    const P = pressPoint(p.m, f), y = releaseY(p, t);
+    const P = pressPoint(p.m, f, p), y = releaseY(p, t);
     S = lerp3([P[0], P[1] + y, P[2]], rest, ease5((t - p.t1 - 0.03) / 0.16));
     if (y < 0) rel = p; // まだ鍵を押しこんでいる
     sT = p.t1;
@@ -420,7 +446,7 @@ function fingerTarget(plan, f, t, W) {
   if (n) {
     const ta = Math.max(sT, n.t0 - LOOK);
     if (t >= ta) { // ③ 先回り: 次に押す鍵の上へ。移動にはかならず時間をとる（次までが短くても一瞬で飛ばない）
-      const P = pressPoint(n.m, f);
+      const P = pressPoint(n.m, f, n);
       const H = [P[0], P[1] + LIFT, P[2]];
       const span = Math.max(1e-3, n.t0 - ta), Td = Math.min(0.08, span * 0.4), tb = n.t0 - Td;
       // 横の移動は、下ろしはじめてからも少し続く（動きを順番に1つずつ終わらせると機械のように見えた）
@@ -523,7 +549,7 @@ function poseAt(plan, t) {
 function depressAt(plan, t) {
   const d = {};
   for (const n of plan.notes) {
-    if (n.hand === 'X') continue; // 手で弾かない音（和音をへらした分）は鍵を沈めない
+    if (n.hand === 'X' || n.miss) continue; // 手で弾かない音（和音をへらした分）と、届かずに押せなかった音は鍵を沈めない
     const v = pressDepth(n, t);
     if (v > 0) d[n.m] = Math.max(d[n.m] || 0, v);
   }

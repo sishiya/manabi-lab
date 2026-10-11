@@ -49,9 +49,7 @@ function initView(canvas) {
     }
   }
   // 両手
-  V.cyl = new THREE.CylinderGeometry(1, 1, 1, 14);
-  V.sph = new THREE.SphereGeometry(1, 16, 12);
-  for (const side of [1, -1]) V.hands.push({ side, skin: makeSkinHand(sc, side), bones: makeBoneHand(sc, side), marks: makeMarks(sc) });
+  for (const side of [1, -1]) V.hands.push({ side, skin: makeSkinHand(sc, side), bones: makeSkeletonHand(sc, side), marks: makeMarks(sc) });
   initFx(sc);
   initScene();
   applyScene('moon'); applyFx(SCENES.moon.fx); // 最初は月あかり（ユーザーの希望）
@@ -76,25 +74,6 @@ function initLane(sc) {
 }
 
 // 骨だけの手（円柱と球。検証用）。左手は鏡
-function makeBoneHand(sc, side) {
-  const skin = new THREE.MeshStandardMaterial({ color: linCol(0xe9b796), roughness: 0.65, transparent: true, opacity: 1 });
-  const H = { side, skin, objs: [], seg: [], joint: [] };
-  H.hand = new THREE.Group(); H.hand.scale.x = side; sc.add(H.hand);
-  const sh = new THREE.Shape(); // 手のひら（手の座標の x と、前への距離）
-  [[-30, -5], [-36, 28], [-31, 90], [-4, 100], [16, 95], [36, 82], [32, -5]].forEach((p, i) => i ? sh.lineTo(p[0], p[1]) : sh.moveTo(p[0], p[1]));
-  const pg = new THREE.ExtrudeGeometry(sh, { depth: 12, bevelEnabled: true, bevelThickness: 6, bevelSize: 6, bevelSegments: 3 });
-  pg.rotateX(-Math.PI / 2); pg.translate(0, -2, 0);
-  const palm = new THREE.Mesh(pg, skin); palm.castShadow = true; H.hand.add(palm); H.objs.push(H.hand);
-  const arm = new THREE.Mesh(new THREE.CylinderGeometry(24, 28, 260, 20), skin);
-  arm.rotation.x = Math.PI / 2 - 0.08; arm.position.set(1, 2, 130); arm.castShadow = true;
-  H.arm = new THREE.Group(); H.arm.add(arm); sc.add(H.arm); H.objs.push(H.arm);
-  for (let f = 1; f <= 5; f++) {
-    H.seg[f] = []; H.joint[f] = [];
-    for (let j = 0; j < 3; j++) { const m = new THREE.Mesh(V.cyl, skin); m.castShadow = true; sc.add(m); H.seg[f].push(m); H.objs.push(m); }
-    for (let j = 0; j < 4; j++) { const m = new THREE.Mesh(V.sph, skin); m.castShadow = true; sc.add(m); H.joint[f].push(m); H.objs.push(m); }
-  }
-  return H;
-}
 // 手のモデルを変えたら、皮ふの網を作り直す
 function rebuildSkins() {
   SKIN_DATA = null;
@@ -183,8 +162,10 @@ function setViewPlan(score) {
     const box = new THREE.Mesh(roundRect(w, L, 3.5), mat);
     // お手本の運指とちがう音は「推定/お手本」を赤い丸で
     const miss = n.f && n.ref && n.ref !== n.f;
-    const lab = makeLabel(n.f ? (miss ? n.f + '/' + n.ref : String(n.f)) : '·', '#fff', miss ? 0xc0392b : 0x1d2230);
-    lab.scale.set(miss ? 13 : 10, miss ? 13 : 10, 1);
+    // 届かずに押せなかった音は、灰色にして「指✕」
+    if (n.miss) { mat.color.setRGB(0.18, 0.19, 0.21); mat.emissive.setRGB(0.12, 0.12, 0.13); mat.transparent = true; mat.opacity = 0.55; }
+    const lab = makeLabel(n.miss ? n.f + '✕' : n.f ? (miss ? n.f + '/' + n.ref : String(n.f)) : '·', '#fff', n.miss ? 0x5f636b : miss ? 0xc0392b : 0x1d2230);
+    lab.scale.set(miss || n.miss ? 13 : 10, miss || n.miss ? 13 : 10, 1);
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: V.glowTex, color: c, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
     V.scene.add(box); V.scene.add(lab); V.scene.add(halo);
     V.notes.push({ n, idx, box, lab, halo, c });
@@ -192,35 +173,6 @@ function setViewPlan(score) {
 }
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _UP = new THREE.Vector3(0, 1, 0);
-function placeSeg(mesh, a, b, r) {
-  _a.set(a[0], a[1], a[2]); _b.set(b[0], b[1], b[2]);
-  const len = _a.distanceTo(_b);
-  mesh.position.copy(_a).add(_b).multiplyScalar(0.5);
-  _b.sub(_a).normalize();
-  mesh.quaternion.setFromUnitVectors(_UP, _b);
-  mesh.scale.set(r, len, r);
-}
-
-function renderBoneHand(H, pose, opt) {
-  const show = !!pose && opt.bones;
-  for (const o of H.objs) o.visible = show;
-  if (!show) return;
-  H.hand.position.set(pose.W[0], pose.W[1], pose.W[2]);
-  H.hand.scale.set(H.side * HAND.s, HAND.s, HAND.s); H.arm.scale.setScalar(HAND.s);
-  H.hand.rotation.order = 'YXZ'; H.hand.rotation.set(0, pose.W[3], -(pose.W[4] || 1) * (pose.W[6] || 0));
-  H.arm.position.copy(H.hand.position);
-  H.arm.rotation.y = pose.W[5] || 0;
-  H.skin.opacity = opt.ghost ? 0.45 : 1; H.skin.depthWrite = !opt.ghost;
-  for (let f = 1; f <= 5; f++) {
-    const F = FINGERS[f], fp = pose.fingers[f];
-    for (let j = 0; j < 3; j++) placeSeg(H.seg[f][j], fp.pts[j], fp.pts[j + 1], F.r[j]);
-    for (let j = 0; j < 4; j++) {
-      const r = j === 3 ? F.r[2] : F.r[Math.max(0, j - 1)] * (j === 0 ? 1.05 : 1);
-      H.joint[f][j].position.set(...fp.pts[j]); H.joint[f][j].scale.setScalar(r);
-    }
-  }
-}
-
 // poses: score.hands と同じ順の姿勢
 function renderPose(score, poses, opt) {
   const t = poses.length ? poses[0].t : 0;
@@ -228,7 +180,7 @@ function renderPose(score, poses, opt) {
   for (const VH of V.hands) {
     const hi = score.hands.findIndex(h => h.side === VH.side), pose = hi >= 0 ? poses[hi] : null;
     updateSkinHand(VH.skin, pose, opt);
-    renderBoneHand(VH.bones, pose, opt);
+    renderSkeletonHand(VH.bones, pose, opt);
     for (let f = 1; f <= 5; f++) {
       VH.marks.tgt[f].visible = !!pose && opt.targets;
       VH.marks.lab[f].visible = !!pose && opt.fingerNums;
@@ -258,7 +210,7 @@ function renderPose(score, poses, opt) {
     o.lab.visible = vis && opt.noteNums && zf < Z0 - 2;
     const tE = n.t1n || n.t1, HF = 0.4; // 半円の光は、音の終わりから HF 秒で上へほどけて消える（ノーツの棒が通りすぎても切らない）
     const ring = n.ts && n.ts > tE + 0.05 && t > tE && t < n.ts + HF; // ペダルで音がのびている
-    o.halo.visible = t >= n.t0 && (on || ring || t < tE + HF);
+    o.halo.visible = !n.miss && t >= n.t0 && (on || ring || t < tE + HF);
     if (vis) {
       o.box.position.set(keyX(n.m), isBlack(n.m) ? 4 : 1.5, zf);
       o.lab.position.set(keyX(n.m), 11, Math.min(zf, Z0) - 7);
@@ -276,7 +228,7 @@ function renderPose(score, poses, opt) {
     }
     // 光の粒: 打鍵から FX_LIFE 秒
     const age = t - n.t0;
-    if (age >= 0 && age < FX_LIFE && np + nSpark <= FX_MAX) {
+    if (!n.miss && age >= 0 && age < FX_LIFE && np + nSpark <= FX_MAX) {
       for (let k = 0; k < nSpark; k++) {
         const r1 = hash1(o.idx, k), r2 = hash1(k, o.idx + 7), r3 = hash1(o.idx * 3 + k, 11);
         const ang = r1 * Math.PI * 2, sp = 25 + 55 * r2, up = 40 + 80 * r3;
@@ -293,7 +245,7 @@ function renderPose(score, poses, opt) {
   let nw = 0;
   if (FXL.spark > 0) for (const o of V.notes) {
     const n = o.n, tE = n.t1n || n.t1, tR = n.ts && n.ts > tE + 0.05 ? n.ts : tE, a = t - tR; // 半円と同じ時刻からほどける
-    if (a < 0 || a >= WS_LIFE || nw + WS_PER > WS_MAX || t < n.t0) continue;
+    if (n.miss || a < 0 || a >= WS_LIFE || nw + WS_PER > WS_MAX || t < n.t0) continue;
     const u = a / WS_LIFE, life = (1 - u) * (1 - u) * Math.min(1, a / 0.06);
     for (let k = 0; k < WS_PER; k++) {
       const r1 = hash1(o.idx + 3, k * 5.1), r2 = hash1(k + 1.7, o.idx), r3 = hash1(o.idx * 7 + k, 2.3);

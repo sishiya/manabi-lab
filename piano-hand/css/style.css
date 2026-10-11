@@ -93,7 +93,7 @@ details.about a{color:var(--accent)}
 #fgRef{line-height:1.6}
 .btn.file{display:inline-flex;align-items:center;font-size:13px}
 #frame.drop canvas{outline:2px dashed var(--accent);outline-offset:-6px}
-#fgRef .dif{display:inline-block;margin:2px 4px 0 0;padding:0 5px;border-radius:4px;background:rgba(192,57,43,.25);border:1px solid rgba(192,57,43,.6);cursor:pointer;font-family:var(--f-mono);font-size:11.5px}
+#fgRef .dif,#missOut .dif{display:inline-block;margin:2px 4px 0 0;padding:0 5px;border-radius:4px;background:rgba(192,57,43,.25);border:1px solid rgba(192,57,43,.6);cursor:pointer;font-family:var(--f-mono);font-size:11.5px}
 #fgRef small{color:var(--dim)}
 table.val{border-collapse:collapse;font-size:12px;width:100%}
 table.val td,table.val th{padding:3px 4px;border-top:1px solid var(--line);text-align:left}
@@ -116,3 +116,10 @@ table.val td:nth-child(n+2){font-family:var(--f-mono);text-align:right;white-spa
 #pedalInd.on .ped{background:#e8b85a;transform:translateY(1px);box-shadow:0 0 10px rgba(232,184,90,.7)}
 #vol{width:90px;accent-color:var(--accent)}
 #speedSel{padding:5px 6px;font-size:13px}
+
+/* 届かずに押せなかった音 */
+#missOut .miss{margin:8px 0 0;font-size:12.5px;color:var(--muted);line-height:1.7}
+#missOut .miss b{color:#ff8a80}
+#missOut .miss.ok{color:var(--dim)}
+#missOut .miss.adv{color:var(--ink)}
+#missOut .dif{cursor:pointer}

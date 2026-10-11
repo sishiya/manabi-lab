@@ -133,13 +133,15 @@ function makeSkinHand(sc, side) {
 
 const _fm = new THREE.Matrix4();
 function updateSkinHand(H, pose, opt) {
-  const show = !!pose && !opt.bones;
+  // 骨と重ねる（xray）ときは、皮ふをうすく透かして骨格もいっしょに見せる
+  const show = !!pose && (!opt.bones || opt.xray);
   H.mesh.visible = show;
-  for (const n of H.nails) n.mesh.visible = show;
+  for (const n of H.nails) n.mesh.visible = show && !opt.xray;
   if (!show) return;
-  if (H.mat.userData.ghost !== opt.ghost) {
-    H.mat.userData.ghost = opt.ghost;
-    H.mat.transparent = opt.ghost; H.mat.opacity = opt.ghost ? 0.45 : 1; H.mat.depthWrite = !opt.ghost;
+  const mode = opt.xray ? 'x' : opt.ghost ? 'g' : '';
+  if (H.mat.userData.mode !== mode) {
+    H.mat.userData.mode = mode;
+    H.mat.transparent = !!mode; H.mat.opacity = mode === 'x' ? 0.3 : mode === 'g' ? 0.45 : 1; H.mat.depthWrite = !mode;
     H.mat.needsUpdate = true;
   }
   const bones = poseBones(pose);

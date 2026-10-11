@@ -2,7 +2,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const S = { plan: null, checks: null, t: -1, playing: false, speed: 1, lastNow: 0, prevT: -1, extra: [] };
-const OPT = { noteNums: true, fingerNums: false, targets: false, ghost: false, bones: false };
+const OPT = { noteNums: true, fingerNums: false, targets: false, ghost: false, bones: false, xray: false };
 
 // 音（とても簡単な合成。鍵を押した瞬間に鳴らす）
 let AC = null, MASTER = null;
@@ -45,6 +45,11 @@ function setSong(song) {
   S.plan = buildPlan(song);
   const nx = S.plan.notes.filter(n => n.hand === 'X').length;
   S.checks = runChecks(S.plan);
+  // 届かずに押せなかった音。やわらかい手にしていなければ、やわらかい手ならいくつになるかも計算して伝える
+  S.miss = S.plan.notes.filter(n => n.miss);
+  S.missFlex = null;
+  if (S.miss.length && !FLEX) { applyFlex(true); S.missFlex = buildPlan(song).notes.filter(n => n.miss).length; applyFlex(false); }
+  renderMiss();
   setViewPlan(S.plan);
   const hs = S.plan.hands.map(h => HAND_NAME(h.side) + ' ' + h.notes.length + L('音', ' notes')).join(L('・', ', '));
   $('songWhy').textContent = (song.why ? L('確かめたいこと: ', 'What it tests: ') + song.why + L('（', ' (') : L('（', '(')) + hs + (song.bpm ? L('・', ', ') + song.bpm + ' bpm' : '') + L('）', ')') + (song.note ? ' ' + song.note : '') + (nx ? L('（手で弾かない音 ' + nx + '・灰色）', ' (' + nx + ' notes not played by hand, in gray)') : '');
@@ -118,6 +123,19 @@ function addSong(song, value) {
   setSong(song);
 }
 
+function renderMiss() {
+  const M = S.miss || [];
+  if (!M.length) { $('missOut').innerHTML = '<p class="miss ok">' + L('ぜんぶの音を押せました（届かない音なし）。', 'Every note could be pressed (none out of reach).') + '</p>'; return; }
+  const byHand = S.plan.hands.map(h => [h.side, M.filter(n => h.notes.includes(n)).length]).filter(x => x[1]);
+  const chips = M.slice(0, 10).map(n => '<span class="dif" data-t="' + n.t0 + '">' + noteName(n.m) + ' ' + FINGERS[n.f].name + ' ' + n.short.toFixed(1) + 'mm</span>').join(' ') + (M.length > 10 ? L(' ほか ', ' and ') + (M.length - 10) + L('', ' more') : '');
+  let advice;
+  if (!FLEX) advice = S.missFlex === 0
+    ? L('→ 「関節をやわらかく」（ストレッチした手の目安）にすると、ぜんぶ届きます。', '→ With "Flexible joints" (a rough guide for a stretched hand), every note can be reached.')
+    : L('→ 「関節をやわらかく」（ストレッチした手の目安）にしても ' + S.missFlex + ' 音は届きません。この手とこの運指では、この曲は弾くのがむずかしい結果です（運指を大きく変えるか、もっと大きい手が必要そうです）。', '→ Even with "Flexible joints" (a rough guide for a stretched hand), ' + S.missFlex + ' notes stay out of reach. With this hand and this fingering, the piece is hard to play (it may need very different fingering or a bigger hand).');
+  else advice = L('→ 関節をやわらかくしても届きません。この手とこの運指では、この曲は弾くのがむずかしい結果です（運指を大きく変えるか、もっと大きい手が必要そうです）。', '→ Still out of reach with flexible joints. With this hand and this fingering, the piece is hard to play (it may need very different fingering or a bigger hand).');
+  $('missOut').innerHTML = '<p class="miss">' + L('届かずに押せなかった音 <b>' + M.length + '</b>（', '<b>' + M.length + '</b> notes could not be pressed, out of reach (') + byHand.map(([s, c]) => HAND_NAME(s) + ' ' + c).join(L('・', ', ')) + L('）', ')') + '<br>' + chips + '</p><p class="miss adv">' + advice + '</p>';
+}
+
 function fmt(c, r) {
   const v = r.v;
   return c.unit === '%' ? v.toFixed(1) : v >= 100 ? Math.round(v) : v.toFixed(1);
@@ -155,7 +173,7 @@ function frame(now) {
 
 function step() {
   const plan = S.plan, t = S.t;
-  if (S.playing) for (const n of plan.notes) if (n.t0 > S.prevT && n.t0 <= t) playTone(n.m, ((n.ts || n.t1) - n.t0) / S.speed);
+  if (S.playing) for (const n of plan.notes) if (n.t0 > S.prevT && n.t0 <= t && !n.miss) playTone(n.m, ((n.ts || n.t1) - n.t0) / S.speed);
   const pd = (plan.pedal || []).some(([a, c]) => t >= a && t < c);
   if (pd !== S.pedalOn) { S.pedalOn = pd; $('pedalInd').classList.toggle('on', pd); }
   $('pedalInd').hidden = !(plan.pedal && plan.pedal.length);
@@ -223,6 +241,8 @@ function initUI() {
   showHandInfo();
   $('fileIn').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) busy(L('楽譜を読んで計算しています…', 'Reading the score and calculating…'), () => openFile(f)); });
   $('vol').addEventListener('input', () => { if (MASTER) MASTER.gain.value = VOL(); });
+  $('optFlex').addEventListener('change', e => { applyFlex(e.target.checked); if (S.song) busy(L('運指と手の動きを計算しています…', 'Working out fingering and hand motion…'), () => setSong(S.song)); });
+  $('missOut').addEventListener('click', e => { const s = e.target.closest('[data-t]'); if (s) { setPlaying(false); setTime(+s.dataset.t); } });
   $('optGiven').addEventListener('change', () => { if (S.song) busy(L('運指を計算しています…', 'Working out fingering…'), () => setSong(S.song)); });
   const fr = $('frame');
   fr.addEventListener('dragover', e => { e.preventDefault(); fr.classList.add('drop'); });
@@ -237,7 +257,7 @@ function initUI() {
     setCam(b.dataset.v);
     document.querySelectorAll('#views button').forEach(x => x.setAttribute('aria-pressed', x === b));
   }));
-  const opts = { optNoteNums: 'noteNums', optFingerNums: 'fingerNums', optTargets: 'targets', optGhost: 'ghost', optBones: 'bones' };
+  const opts = { optNoteNums: 'noteNums', optFingerNums: 'fingerNums', optTargets: 'targets', optGhost: 'ghost', optBones: 'bones', optXray: 'xray' };
   for (const id in opts) $(id).addEventListener('change', e => { OPT[opts[id]] = e.target.checked; });
   $('chkTable').addEventListener('click', e => {
     const tr = e.target.closest('tr'); if (!tr) return;
