@@ -3,6 +3,7 @@
 // 手前の木の縁（拍子木）・奥のフェルト・両端の木の部品。寸法は keys.js の KB（目安の値は下のコメント）
 'use strict';
 
+const KEY_ROUND = 1.0; // 鍵の角の丸め（mm）。本物の鍵もほんのり角が丸い
 const KEYTOP_T = 2.4, KEYFRONT_H = 11, KEY_GAP = 1.0, BLACK_TOP_W = 9.6, BLACK_TOP_INSET = 7; // 白鍵の樹脂の厚さ・前の面の高さ・すき間、黒鍵の上面の幅・手前の傾きの長さ（mm、目安）
 
 function whiteKeyShape(m) {
@@ -10,7 +11,7 @@ function whiteKeyShape(m) {
   const hw = (KB.W - KEY_GAP) / 2, cx = keyX(m), cut = -KB.BFRONT + 1.2; // 切り欠きは黒鍵の手前の端の 1.2mm 手前から
   const left = isBlack(m - 1) && m - 1 >= KB.lo ? keyX(m - 1) + KB.BW / 2 + KEY_GAP * 0.8 - cx : -hw;
   const right = isBlack(m + 1) && m + 1 <= KB.hi ? keyX(m + 1) - KB.BW / 2 - KEY_GAP * 0.8 - cx : hw;
-  const s = new THREE.Shape(), b = 0.6; // 角の丸め（bevel）の分だけ内側に
+  const s = new THREE.Shape(), b = KEY_ROUND; // 角の丸め（bevel）の分だけ内側に
   s.moveTo(-hw + b, b); s.lineTo(hw - b, b);
   if (right < hw) { s.lineTo(hw - b, cut); s.lineTo(right - b, cut); }
   s.lineTo(right - b, KB.WL - b); s.lineTo(left + b, KB.WL - b);
@@ -19,18 +20,21 @@ function whiteKeyShape(m) {
   return { s, left, right, hw };
 }
 
-// 黒鍵: 下は幅 BW・長さ BL の箱、白鍵の上面より上は上が細い台形（手前の面は斜め）
+// 黒鍵: 断面は下が幅 BW・上が BLACK_TOP_W の台形（角を丸める）。手前から奥へ押し出し、上の手前 BLACK_TOP_INSET を斜めに削る
 function blackKeyGeometry() {
-  const hb = KB.BW / 2, ht = BLACK_TOP_W / 2, z0 = KB.BFRONT, z1 = -KB.WL, H = KB.BH;
-  const v = [ // 下の4点（y=-10）・白鍵の上面の高さの4点（y=0）・上の4点（y=H）
-    [-hb, -10, z0], [hb, -10, z0], [hb, -10, z1], [-hb, -10, z1],
-    [-hb, 0, z0], [hb, 0, z0], [hb, 0, z1], [-hb, 0, z1],
-    [-ht, H, z0 - BLACK_TOP_INSET], [ht, H, z0 - BLACK_TOP_INSET], [ht, H, z1], [-ht, H, z1]];
-  const quads = [[0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7], [4, 5, 9, 8], [5, 6, 10, 9], [6, 7, 11, 10], [7, 4, 8, 11], [8, 9, 10, 11]];
-  const pos = [];
-  for (const [a, b, c, d] of quads) for (const i of [a, b, c, a, c, d]) pos.push(...v[i]);
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  const hb = KB.BW / 2 - KEY_ROUND, ht = BLACK_TOP_W / 2 - KEY_ROUND, H = KB.BH - KEY_ROUND, y0 = -10;
+  const sh = new THREE.Shape();
+  sh.moveTo(-hb, y0); sh.lineTo(hb, y0); sh.lineTo(hb, 0); sh.lineTo(ht, H); sh.lineTo(-ht, H); sh.lineTo(-hb, 0); sh.closePath();
+  const L = KB.BL - 2 * KEY_ROUND;
+  const g = new THREE.ExtrudeGeometry(sh, { depth: L, bevelEnabled: true, bevelThickness: KEY_ROUND, bevelSize: KEY_ROUND, bevelSegments: 3, curveSegments: 4 });
+  // 押し出しの向き（+z）を、黒鍵の手前の端（z = BFRONT）から奥（-z）へ
+  const pos = g.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i); // z: -ROUND（手前）〜 L + ROUND（奥）
+    let zz = KB.BFRONT - KEY_ROUND - z;
+    if (z <= 1e-3) zz -= BLACK_TOP_INSET * (y + 10) / (KB.BH + 10); // 手前の面（とその丸め）を下から上まで1枚の斜面に（途中で角度を変えると面が折れて、とがって見えた）
+    pos.setXYZ(i, -x, y, zz); // z を反転したので x も反転して、面の向き（表裏）を保つ（断面は左右対称）
+  }
   g.computeVertexNormals();
   return g;
 }
@@ -50,10 +54,14 @@ function makeKeyboard(sc) {
     if (b) add(blackG, ebony);
     else {
       const { s, left, right, hw } = whiteKeyShape(m);
-      const top = new THREE.ExtrudeGeometry(s, { depth: KEYTOP_T - 1.2, bevelEnabled: true, bevelThickness: 0.6, bevelSize: 0.6, bevelSegments: 2, curveSegments: 4 });
-      top.rotateX(-Math.PI / 2); top.translate(-keyX(m) * 0, -KEYTOP_T + 0.6, 0);
+      const top = new THREE.ExtrudeGeometry(s, { depth: KEYTOP_T - 2 * KEY_ROUND * 0.8, bevelEnabled: true, bevelThickness: KEY_ROUND * 0.8, bevelSize: KEY_ROUND, bevelSegments: 3, curveSegments: 4 });
+      top.rotateX(-Math.PI / 2); top.translate(0, -KEYTOP_T + KEY_ROUND * 0.8, 0);
       add(top, ivory);
-      const front = new THREE.BoxGeometry(hw * 2 - 0.4, KEYFRONT_H, 2.2); front.translate(0, -KEYFRONT_H / 2 - 0.4, -1.1);
+      // 前の面: 角の丸い板（横 × 高さの長方形を、手前から奥へ 2.2mm 押し出す）
+      const fr = new THREE.Shape(), fw = hw - 0.2 - KEY_ROUND * 0.6, fh = KEYFRONT_H - KEY_ROUND * 0.6;
+      fr.moveTo(-fw, -fh); fr.lineTo(fw, -fh); fr.lineTo(fw, 0); fr.lineTo(-fw, 0); fr.closePath();
+      const front = new THREE.ExtrudeGeometry(fr, { depth: 2.2 - KEY_ROUND, bevelEnabled: true, bevelThickness: KEY_ROUND * 0.5, bevelSize: KEY_ROUND * 0.6, bevelSegments: 2 });
+      front.translate(0, -0.6, -2.2 + KEY_ROUND * 0.5);
       add(front, ivory);
       const body = new THREE.BoxGeometry(Math.max(8, right - left - 1.5), 8.6, KB.WL - 3); body.translate((left + right) / 2, -KEYTOP_T - 4.3, -KB.WL / 2 - 1.5); // 木の本体（前の面の後ろに隠れる高さ）
       add(body, wood);

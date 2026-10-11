@@ -600,7 +600,38 @@ function poseAt(plan, t) {
     const err = Math.hypot(tip[0] - tg.T[0], tip[1] - tg.T[1], tip[2] - tg.T[2]);
     fingers.push({ pts, target: tg.T, press: tg.press || null, down: !!tg.down, err, lim: ik.lim, ang: ik });
   }
+  avoidBones(fingers, tgs, W);
   return { t, W, fingers };
+}
+
+// 指どうしの骨が近づきすぎたら（骨＋押しつぶしきった肉より近い。皮ふと肉が押し合うのはかまわない）、動かせる指（mob が大きい方）を
+// ぶつかる所から離れる横向きによける。本物の指も押し合うと横へ逃げる。よけるのは付け根の関節の横の動き（FINGERS の yaw の範囲＝人の範囲）。
+// どちらも押していて動かせなければ、そのまま（検査の「指どうしのめりこみ」に出る）
+function avoidBones(fingers, tgs, W) {
+  for (let it = 0; it < 3; it++) {
+    let moved = false;
+    for (let f = 1; f <= 5; f++) for (let g = f + 1; g <= 5; g++) {
+      const A = fingers[f], B = fingers[g];
+      let worst = 0, cA = null, cB = null, segA = 0, segB = 0;
+      for (let i = f === 1 ? 1 : 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+        const d = segDist(A.pts[i], A.pts[i + 1], B.pts[j], B.pts[j + 1]), pen = boneR(f, i) + boneR(g, j) - d;
+        if (pen > worst) { worst = pen; cA = segDist.c1; cB = segDist.c2; segA = i; segB = j; }
+      }
+      if (worst < 0.2) continue;
+      const k = tgs[f].mob >= tgs[g].mob ? f : g;
+      if (tgs[k].mob < 0.05) continue;
+      const me = k === f ? cA : cB, other = k === f ? cB : cA, fp = fingers[k];
+      let dx = me[0] - other[0], dz = me[2] - other[2]; const n = Math.hypot(dx, dz) || 1; dx /= n; dz /= n;
+      // 付け根から当たった所までと、付け根から指先までの長さの比で、指先を動かす量を決める（てこ）
+      const lever = Math.max(8, Math.hypot(me[0] - fp.pts[0][0], me[2] - fp.pts[0][2])), arm = Math.hypot(fp.pts[3][0] - fp.pts[0][0], fp.pts[3][2] - fp.pts[0][2]);
+      const push = Math.min(15, worst * 1.15 * arm / lever) * tgs[k].mob;
+      const T = tgs[k].T = [tgs[k].T[0] + dx * push, tgs[k].T[1], tgs[k].T[2] + dz * push];
+      const F = FINGERS[k], ik = fingerIK(F, toLocal(W, T)), pts = fingerFK(F, ik.yaw, ik.a1, ik.a2).map(p => toWorld(W, p));
+      Object.assign(fingers[k], { pts, target: T, err: fingers[k].press ? Math.hypot(pts[3][0] - T[0], pts[3][1] - T[1], pts[3][2] - T[2]) : 0, lim: ik.lim, ang: ik });
+      moved = true;
+    }
+    if (!moved) break;
+  }
 }
 
 // 鍵ごとの押しこみ（描画と検査で使う）

@@ -89,9 +89,15 @@ function buildPrims() {
   }
   P.palm.push(mkCone(sub3(FINGERS_U[2].base, [0, 2, -3]), sub3(FINGERS_U[5].base, [0, 2, -3]), 10.5, 9, BONE_PALM));
   P.palm.push(mkCone([21, -8, -28], [28, -6, -66], 12, 10, BONE_PALM));
-  { const c = mkCone([-6, -14, -26], [-18, -14, -50], 10, 8, BONE_PALM); c.k = 12; P.palm.push(c); } // 母指球（手のひらの側のふくらみ。手のひらの内側寄り。つなぎ目の幅 k が大きいと肉が足されて玉のようにふくらんだ）
+  { const c = mkCone([-6, -15, -24], [-14, -15, -40], 8, 7, BONE_PALM); c.k = 12; P.palm.push(c); } // 母指球の根もと（手根骨の手のひら側から始まる部分。手のひらに固定）
   // 親指の中手骨は手のひらと同じ組で溶けあわせる（骨は親指）
   const t0 = rest[1][0];
+  // 母指球（親指の付け根の手のひら側の筋肉: 短母指外転筋・短母指屈筋・母指対立筋）。親指の中手骨の手のひら側に付いて、親指といっしょに動く。
+  // 中手骨の手のひら側 5mm・手のひらの中心寄り 3mm に、根もとから MP 関節の手前まで（太さ 11 → 8mm は目安）。親指を開くと、
+  // 手のひらに固定した根もとの部分とのあいだが伸びて、うすくなる（重みのなめらかな移りで）
+  { const pc = [-4, -12, -48], m1 = rest[1][1].o, off = (p, u) => { const q = lerp3(t0.o, m1, u), d = sub3(pc, q), n = Math.hypot(...d) || 1;
+      return [q[0] - t0.y[0] * 5 + d[0] / n * 3, q[1] - t0.y[1] * 5 + d[1] / n * 3, q[2] - t0.y[2] * 5 + d[2] / n * 3]; };
+    const c = mkCone(off(null, 0.1), off(null, 0.8), 11, 8, boneOf(1, 0)); c.k = 12; P.palm.push(c); }
   // 親指の中手骨は根もとから太さを保ち、手首の親指側から途切れずにつなぐ（少し先から細く始めると、手首から MP 関節までが手の甲の側でへこんで見えた）
   { const c = mkCone([-16, -3, -14], t0.o, 9, RADII[1][0], BONE_PALM); c.k = 12; P.palm.push(c); } // 手首の親指側 → 親指の根もと（CMC）
   { const c = mkCone(t0.o, rest[1][1].o, RADII[1][0], RADII[1][1], boneOf(1, 0)); c.k = 12; P.palm.push(c); } // 親指の中手骨
