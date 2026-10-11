@@ -8,7 +8,9 @@ const FLAT = 1.12;    // 指の断面の縦横比（横が広い）。付け根�
 // 第二関節 幅 18.0・18.1・17.0・15.0／厚み 16.8・17.3・16.1・14.3mm（比 1.06）、第一関節 幅 15.6・15.9・14.9・13.4／厚み 13.0・13.6・12.7・11.5mm（比 1.18）。
 // 前はどこも 1.12 で、第一関節が厚すぎ、第二関節が少しうすかった
 const FLAT_J = [FLAT, 1.06, 1.18, FLAT];
-const flatOf = (f, k) => f === 1 ? FLAT : FLAT_J[k];
+// 親指の IP 関節（k=2）: AIST の第1指関節幅 20.1・厚み 17.3mm（男性の平均）の比 1.16（v047〜。前は 1.12 で厚み 19.8mm と厚すぎた）
+const THUMB_IP_FLAT = 20.1 / 17.3;
+const flatOf = (f, k) => f === 1 ? (k === 2 ? THUMB_IP_FLAT : FLAT) : FLAT_J[k];
 // v042〜（下の buildPrims・skinWeights で使う）
 // 骨の細さを皮ふに写す割合（目安）。1 だと骨幹で皮ふも同じだけ細くなるが、皮下脂肪は骨幹のくぼみを少し埋めるので弱める（ユーザー: 極端にならないように）
 const WAIST_K = 0.6;
@@ -19,8 +21,10 @@ const JOINT_H = 0.65; // 関節でまぜる幅（関節の太さの半径に対�
 // 手のひらについて動く付け根の皮ふが骨に置いていかれて、親指の根もとの外側が本来の形より 8mm ほど（中央値）へこんだ
 const REST_DEG = [null, [-41, -17, 32], [-10, 12, 14], [-2, 12, 14], [7, 12, 14], [16, 12, 14]];
 // 指の太さ（半径 mm）: 付け根・関節2つ・指先。指先は鍵に当たる球（PAD）とほぼ同じ
-// 親指は、生きた手で測った周囲（男性 IP 関節 6.8cm・爪の幅 1.8cm。"Investigating Normative Measurements of the Thumb and Index Finger to Aid in Reconstructive Surgery"、PMC12309929。成人 162 人）から、IP 関節の半径 10.8mm、指先 8.8mm
-const RADII = [null, [10.0, 11.0, 10.8, 8.8], [9.6, 8.9, 7.7, 6.6], [10.0, 9.3, 8.0, 6.8], [9.4, 8.7, 7.5, 6.5], [8.4, 7.6, 6.8, 6.0]];
+// 親指は、生きた手で測った周囲（男性 IP 関節 6.8cm・爪の幅 1.8cm。"Investigating Normative Measurements of the Thumb and Index Finger to Aid in Reconstructive Surgery"、PMC12309929。成人 162 人）から、IP 関節の半径 10.8mm、指先 8.8mm。
+// v047〜: IP 関節はノギスで測った幅と厚み（AIST 日本人の手の寸法データ、男性 327 人: 幅 20.1・厚み 17.3mm）に合わせて半径 10.05mm（前は幅 21.5・厚み 19.8mm、
+// ユーザーの指摘「親指の皮ふが極端に盛り上がっている」）。周囲から出した半径はだ円より実際の関節が角ばっている分だけ大きく出る。指先（AIST 17.4mm）は 8.8 のまま
+const RADII = [null, [10.0, 11.0, 10.05, 8.8], [9.6, 8.9, 7.7, 6.6], [10.0, 9.3, 8.0, 6.8], [9.4, 8.7, 7.5, 6.5], [8.4, 7.6, 6.8, 6.0]];
 // 骨の番号: 0 前腕、1 手のひら、2 + (指-1)*3 + 節
 const BONE_ARM = 0, BONE_PALM = 1, boneOf = (f, j) => 2 + (f - 1) * 3 + j, N_BONES = 17;
 
@@ -75,6 +79,15 @@ const THUMB_MID_R = 11.8; // 親指の中手骨のまん中を埋める肉の太
 // このモデルの手（大人・大きめ）は手の幅・手の周囲が男性平均の約 95% なので、手首 16.8cm、肘の側は力を抜いた分を見込んで 27.5cm（目安）。
 // 前は 26・36 で、手首 15.0cm・肘の近く 19.1cm と細すぎた（手首の幅と厚みは近かったが、太さが足りなかった）
 const ARM_R = [26.8, 52.2];
+// v047〜: 手首は AIST 日本人の手の寸法データ（男性 327 人。このモデルの手の長さ 188mm は AIST の 189.6mm とほぼ同じ）の手首の幅 58.1・
+// 厚み 40.6mm（茎状突起の所）に合わせる（前は幅 61.5・厚み 43.3mm。ユーザーの指摘「手首の左右の肉づきに差」と合わせて直した）。
+// 前腕の円すいの太さ（ARM_R）を変えると手のひらの中の始まりも細くなり、小指の中手骨の根もとの手の厚みが 34.8 → 32.3mm（AIST 37.5）と
+// 遠ざかったので、手首のまわり（z ≈ 3 を中心に ±25mm ほど）だけ WRIST_WAIST mm 細くする（陰関数の距離に足す）
+const WRIST_WAIST = 1.7, WRIST_Z = 3, WRIST_S = 25;
+const waistAt = z => { const u = (z - WRIST_Z) / WRIST_S; return WRIST_WAIST * Math.exp(-u * u); };
+// 前腕の皮ふの中心（手のひらの中の始まりの x）。v047〜: 手首で橈骨と尺骨の幅のまん中（x ≈ 0.5）に。前は 2 で、
+// 手首の小指側の肉が親指側より 3mm 厚かった（z=10 で親指側 9.6・小指側 12.8mm）
+const ARM_X0 = 0;
 // 骨の表面から皮ふまでの肉の厚さ（v024〜。皮ふを骨から作る）
 // 手の甲: 皮ふ・皮下・伸筋腱。手の甲の肉の厚さ 3.20mm（超音波、20 人。IMCAS 2023 の要旨）に、伸筋腱の上の分を少し足した目安
 const TD_HAND = 3.5;
@@ -168,8 +181,8 @@ function buildPrims() {
     // 細い溝へは入りこまない）。3つとも 16 にすると、人さし指の中手骨の甲まで 3mm 太った（根もとだけなら 1.5mm）
     for (let i = 0; i < 3; i++) { const c = mkCone(lerp3(a, b, us[i]), lerp3(a, b, us[i + 1]), r(us[i]), r(us[i + 1]), BONE_PALM); c.k = i === 0 ? 16 : 8; c.thumb = true; c.noW = true; P.palm.push(c); }
   }
-  P.arm = mkCone([2, -5, -42], [3, -16, 240], ARM_R[0], ARM_R[1], BONE_ARM); // 形: 手のひらの中から細く始めて、手首で自然に太くなる（手首で丸く始めると、境目に段ができた）。一人称で切れ目が見えないよう、肘の近くまで
-  P.armW = mkCone([2, -6, -4], [3, -16, 240], ARM_R[0] + 3.4, ARM_R[1], BONE_ARM); // 重み用: 手首から先だけ（手のひらの皮ふが前腕といっしょに動かないように）
+  P.arm = mkCone([ARM_X0, -5, -42], [3, -16, 240], ARM_R[0], ARM_R[1], BONE_ARM); // 形: 手のひらの中から細く始めて、手首で自然に太くなる（手首で丸く始めると、境目に段ができた）。一人称で切れ目が見えないよう、肘の近くまで
+  P.armW = mkCone([ARM_X0 + 0.3, -6, -4], [3, -16, 240], ARM_R[0] + 3.4, ARM_R[1], BONE_ARM); // 重み用: 手首から先だけ（手のひらの皮ふが前腕といっしょに動かないように）
   // 指の皮ふの筒の中心を、手のひら側へずらす量（関節ごと: 付け根・2つめ・3つめ・指先）。甲の側の肉が TD_FINGER になるように。
   // 指先は鍵に当たるはらの中心（動きの計算の指先の点）なので 0
   const offN = f => {
@@ -204,7 +217,7 @@ function buildPrims() {
 function handSDF(P, x, y, z, comp) {
   const cull = !comp;
   // 手首より 40mm 以上肘の側は前腕の形だけ（手の部品は届かない。前腕を太くして網が広がったので、そこで手の計算をとばして速く）
-  if (cull && z > 40) return coneD(P.arm, x, (y - P.arm.a[1]) * ARM_FLAT + P.arm.a[1], z, false);
+  if (cull && z > 40) return coneD(P.arm, x, (y - P.arm.a[1]) * ARM_FLAT + P.arm.a[1], z, false) + waistAt(z);
   // 手のひらの板は上へのばしてから、手の甲の屋根で切る（甲の面は中手骨から決まる）。手のひらの部品をつないだあとで切る
   // （先に切ると、部品をなめらかにつなぐときの太りが積み重なって、また甲がふくらんだ）。親指の部品は切らずにあとからつなぐ
   let rf = mcRoof(P, x, z);
@@ -236,7 +249,7 @@ function handSDF(P, x, y, z, comp) {
     if (comp && !c.noW) comp[c.bone] = Math.min(comp[c.bone], d);
   }
   // 前腕は縦にうすい（だ円）。手のひらの中に入りこんだ部分（z < -10）だけ屋根で切る（手首では前腕の形そのまま）
-  const arm = smax(coneD(P.arm, x, (y - P.arm.a[1]) * ARM_FLAT + P.arm.a[1], z, cull), y - rf - 60 * smoothF((z + 30) / 20), 3);
+  const arm = smax(coneD(P.arm, x, (y - P.arm.a[1]) * ARM_FLAT + P.arm.a[1], z, cull) + waistAt(z), y - rf - 60 * smoothF((z + 30) / 20), 3);
   if (comp) comp[BONE_ARM] = coneD(P.armW, x, (y - P.armW.a[1]) * ARM_FLAT + P.armW.a[1], z, false);
   let d = smin(pal, arm, 9); // つなぎ目の幅。大きいと手首に肉が足されて、手の甲と前腕の境目がこぶのように盛り上がった（13 でも手首の小指側の尾根が高くなった）
   for (let f = 1; f <= 5; f++) {

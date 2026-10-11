@@ -253,3 +253,37 @@ window.__blend = (f = 2) => { const S = SKIN_DATA, R = S.restB, out = [];
       const k = side + Math.round(s / 2) * 2; (rows[k] = rows[k] || []).push(wd / (wp + wd)); }
     out.push('関節' + j + ': ' + ['甲', '腹'].map(sd => sd + ' ' + [-10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10].map(t => { const a = rows[sd + t]; return a ? (a.reduce((p, c) => p + c, 0) / a.length).toFixed(2) : '-'; }).join(' ')).join(' | ')); }
   return out.join('\n'); };
+// __rows(P, zs) … 真上から見た皮ふの輪郭の、z ごとの左右の端（x の区間と幅、mm）。網の姿勢。v047〜（手首の幅・左右の差、指の付け根の段を見る）
+window.__rows = (P, zs) => { P = P || __P(); const out = {};
+  for (const z of zs) { const segs = []; let inS = null;
+    for (let x = -120; x <= 80; x += 0.5) { let y = 40, hit = false;
+      for (let k = 0; k < 140; k++) { const d = handSDF(P, x, y, z); if (d < 0) { hit = true; break; } y -= Math.min(Math.max(d * 0.5, 0.5), 1.5); if (y < -60) break; }
+      if (hit && inS === null) inS = x; if (!hit && inS !== null) { segs.push([inS, x - 0.5]); inS = null; } }
+    if (inS !== null) segs.push([inS, 80]);
+    out['z' + z] = segs.map(s => s[0].toFixed(1) + '〜' + s[1].toFixed(1) + ' (' + (s[1] - s[0]).toFixed(1) + ')').join('  '); }
+  return out; };
+// __handDims(P) … AIST 日本人の手の寸法データ（男性 327 人の平均）とくらべる: 親指の IP 関節の幅/厚み（20.1/17.3）、手の厚み（中手骨 1 頭 26.9・2 頭 27.6・
+// 3 頭 32.1・5 頭 26.0・5 底 37.5、手首 40.6）、手首の幅 58.1。網の姿勢（AIST は手をのばして測る）。v047〜
+window.__handDims = P => { P = P || __P(); const R = P.rest[1], out = {};
+  const sec = (o, F, ext = 22) => { let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (let a = -ext; a <= ext; a += 0.25) for (let b = -ext; b <= ext; b += 0.25) { const p = [0, 1, 2].map(i => o[i] + F.x[i] * a + F.y[i] * b); if (handSDF(P, ...p) < 0) { x0 = Math.min(x0, a); x1 = Math.max(x1, a); y0 = Math.min(y0, b); y1 = Math.max(y1, b); } } return (x1 - x0).toFixed(1) + '/' + (y1 - y0).toFixed(1); };
+  const col = (x, z) => { let y0 = null, y1 = null; for (let y = -60; y <= 40; y += 0.25) { const ins = handSDF(P, x, y, z) < 0; if (ins && y0 === null) y0 = y; if (ins) y1 = y; } return y0 === null ? 0 : y1 - y0; };
+  out['親指 IP 幅/厚み（20.1/17.3）'] = sec(R[2].o, R[2]);
+  out['手の厚み 中手骨1頭（26.9）'] = col(R[1].o[0], R[1].o[2]).toFixed(1);
+  for (const [k, nm, v] of [[2, 'h', 27.6], [3, 'h', 32.1], [5, 'h', 26.0], [5, 's', 37.5]]) { const e = mcEnds(k)[nm]; out['手の厚み 中手骨' + k + (nm === 'h' ? '頭' : '底') + '（' + v + '）'] = col(e[0], e[2]).toFixed(1); }
+  let wt = 0; for (let x = -25; x <= 25; x += 1) wt = Math.max(wt, col(x, 3)); out['手首の厚み（40.6）'] = wt.toFixed(1);
+  out['手首の幅 z=3（58.1）'] = __rows(P, [3]).z3;
+  return out; };
+// __regionVerts(name) … 網の姿勢で、ある場所のまわりの頂点（v047〜）。'thumb' 親指の付け根（__thumbVerts）、'index' 人さし指の付け根の親指側
+// （中手骨 II の頭から ±20mm・骨より外側）、'pinky' 小指の付け根の小指側、'wrist' 手首（z −15〜20）
+window.__regionVerts = name => { if (name === 'thumb') return __thumbVerts(); const S = SKIN_DATA, pos = S.pos0, sel = [];
+  const h2 = mcEnds(2).h, h5 = mcEnds(5).h;
+  for (let v = 0; v < S.NV; v++) { const x = pos[v * 3], z = pos[v * 3 + 2];
+    if (name === 'index' && x < h2[0] - 3 && Math.abs(z - h2[2]) < 20) { let wt = 0; for (let k = 0; k < 4; k++) { const b = S.bi[v * 4 + k]; if (b >= 2 && b <= 4) wt += S.bw[v * 4 + k]; } if (wt < 0.05) sel.push(v); }
+    if (name === 'pinky' && x > h5[0] + 3 && Math.abs(z - h5[2]) < 20) sel.push(v);
+    if (name === 'wrist' && z > -15 && z < 20) sel.push(v); }
+  return sel; };
+// __lbsEvalAt(name, n) … __lbsEval と同じずれを場所ごとに
+window.__lbsEvalAt = (name, n = 110) => { const sel = __regionVerts(name), step = Math.max(1, Math.floor(__samples.length / n)), dn = [], bu = [], mn = [];
+  for (let i = 0; i < __samples.length; i += step) { const e = __lbsErrOne(__samples[i], sel); dn.push(Math.min(0, ...e)); bu.push(Math.max(0, ...e)); mn.push(e.reduce((s, d) => s + Math.abs(d), 0) / e.length); }
+  const q = (a, p) => { a = [...a].sort((x, y) => x - y); return +a[Math.floor(p * (a.length - 1))].toFixed(1); };
+  return { 頂点: sel.length, 姿勢: dn.length, 平均: +(mn.reduce((s, v) => s + v, 0) / mn.length).toFixed(2), へこみ中央: q(dn, 0.5), へこみ10: q(dn, 0.1), ふくらみ中央: q(bu, 0.5), ふくらみ90: q(bu, 0.9), ふくらみ最悪: q(bu, 1) }; };
