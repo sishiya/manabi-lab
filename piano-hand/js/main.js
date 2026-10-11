@@ -243,6 +243,10 @@ function initUI() {
   $('vol').addEventListener('input', () => { if (MASTER) MASTER.gain.value = VOL(); });
   $('strokeSel').innerHTML = [['wrist', L('打鍵: 和音・オクターブは手首で', 'Strike: chords and octaves from the wrist')], ['finger', L('打鍵: ぜんぶ指だけで', 'Strike: fingers only')]].map(([k, t]) => `<option value="${k}">${t}</option>`).join('');
   $('strokeSel').value = STROKE; $('strokeSel').setAttribute('aria-label', L('打鍵のしかた', 'How keys are struck'));
+  // 指の構え（v026〜）
+  $('postureSel').innerHTML = [['curved', L('指の構え: 立てる', 'Finger posture: curved')], ['mid', L('指の構え: 中間', 'Finger posture: in between')], ['flat', L('指の構え: 寝かせる', 'Finger posture: flat')]].map(([k, t]) => `<option value="${k}">${t}</option>`).join('');
+  $('postureSel').value = POSTURE; $('postureSel').setAttribute('aria-label', L('指の構え', 'Finger posture'));
+  $('postureSel').addEventListener('change', e => { setPlaying(false); POSTURE = e.target.value; if (S.song) busy(L('運指と手の動きを計算しています…', 'Working out fingering and hand motion…'), () => setSong(S.song)); });
   $('strokeSel').addEventListener('change', e => { setPlaying(false); STROKE = e.target.value; if (S.song) busy(L('運指と手の動きを計算しています…', 'Working out fingering and hand motion…'), () => setSong(S.song)); });
   $('optFlex').addEventListener('change', e => { applyFlex(e.target.checked); if (S.song) busy(L('運指と手の動きを計算しています…', 'Working out fingering and hand motion…'), () => setSong(S.song)); });
   $('missOut').addEventListener('click', e => { const s = e.target.closest('[data-t]'); if (s) { setPlaying(false); setTime(+s.dataset.t); } });

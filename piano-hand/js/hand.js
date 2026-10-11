@@ -138,6 +138,44 @@ function setHandModel(id) {
   PAD = 6.5 * M.s;
   for (let f = 1; f <= 5; f++) { const F = FINGERS[f]; TIP_N[f] = fingerFK(F, F.yaw0, F.n[0], F.n[1])[3]; }
   WRIST_Y = PAD - 7 * M.s - (TIP_N[2][1] + TIP_N[3][1] + TIP_N[4][1]) / 3;
+  computePostures();
+}
+// ---- 指の構え（v026〜）: 立てる（0）・中間（1）・寝かせる（2）。値はあいだをなめらかにつなぐ（1.4 なら中間と寝かせるのあいだ）。
+// n: 力を抜いた形（付け根・第2関節の曲げ、度）、white: 白鍵を押す位置（手前の端から奥へ mm、親指〜小指）、black: 黒鍵（指・親指）、
+// thumbDeep: 黒鍵のとなりで親指が白鍵を押す位置。値はこのアプリの目安（2026-10-11 の「指の構え3種類の試し」と同じ）。
+// 指を寝かせるほど、指先は鍵の奥を押し、手首は低くなる
+const POSTURES = [
+  { id: 'curved', n: [25, 45], white: [0, -14, -38, -45, -40, -30], black: -82, thumbBlack: -66, thumbDeep: -40 },
+  { id: 'mid', n: [18, 32], white: [0, -18, -50, -58, -53, -42], black: -90, thumbBlack: -72, thumbDeep: -46 },
+  { id: 'flat', n: [10, 20], white: [0, -22, -62, -72, -66, -54], black: -100, thumbBlack: -80, thumbDeep: -52 },
+];
+let POSTURE = 'curved'; // 最初は立てる（押せなかった音がいちばん少なく、v025 までと同じ動き）
+const POST_TIPS = [[], [], []], POST_WY = [0, 0, 0];
+function computePostures() {
+  for (let k = 0; k < 3; k++) {
+    const Q = POSTURES[k], T = POST_TIPS[k];
+    for (let f = 2; f <= 5; f++) { const F = FINGERS[f]; T[f] = fingerFK(F, F.yaw0, Q.n[0] * D2R, Q.n[1] * D2R)[3]; }
+    const avgY = (T[2][1] + T[3][1] + T[4][1]) / 3;
+    POST_WY[k] = PAD - 7 * HAND.s - avgY;
+    // 親指: 立てる構えは THUMB_N のまま。ほかの構えは、親指の先とほかの指先の高さの差が立てる構えと同じになる角度を、THUMB_N に近いものから
+    const F = FINGERS[1];
+    if (k === 0) { T[1] = TIP_N[1]; continue; }
+    const want = TIP_N[1][1] - (POST_TIPS[0][2][1] + POST_TIPS[0][3][1] + POST_TIPS[0][4][1]) / 3 + avgY;
+    let best = null, bc = Infinity;
+    for (let a1 = -20; a1 <= 60; a1 += 1) for (let a2 = 0; a2 <= 80; a2 += 1) {
+      const tip = fingerFK(F, F.yaw0, a1 * D2R, a2 * D2R)[3], c = Math.abs(tip[1] - want) + 0.002 * ((a1 - THUMB_N[0]) ** 2 + (a2 - THUMB_N[1]) ** 2);
+      if (c < bc) { bc = c; best = tip; }
+    }
+    T[1] = best;
+  }
+}
+// 構え p（0〜2）のときの、力を抜いた指先（手の座標）と手首の高さ
+function tipN(f, p) { if (!p) return TIP_N[f]; const i = Math.min(1, Math.floor(p)), s = p - i; return lerp3(POST_TIPS[i][f], POST_TIPS[i + 1][f], s); }
+function wyOf(p) { if (!p) return WRIST_Y; const i = Math.min(1, Math.floor(p)), s = p - i; return POST_WY[i] + (POST_WY[i + 1] - POST_WY[i]) * s; }
+function postAt(plan, t) {
+  if (!plan.pp) return 0;
+  const u = Math.min(plan.pp.length - 1.001, Math.max(0, (t - plan.wt0) * W_HZ)), i = Math.floor(u), s = u - i;
+  return plan.pp[i] + (plan.pp[i + 1] - plan.pp[i]) * s;
 }
 // 親指〜小指をいっぱいに開いた幅（指先の外側どうし、mm）
 function handSpan() {
@@ -228,6 +266,13 @@ function buildHandPlan(notes, side) {
   // 届かない和音から外した音は、手で弾かない音（hand 'X'）にする
   for (const n of notes) if (n.drop) n.hand = 'X';
   notes = notes.filter(n => !n.drop);
+  // 指の構えは選んだもの1つ（v026〜）。曲に合わせて自動で切りかえる方式は試したが、重く（1曲 最大 21 秒）結果もまちまちだったので外した
+  // （DEVNOTES「指の構え」。ユーザーの本当の気がかりは「押していない指先に力が入りすぎて見える」ことで、リラックスの要素を先に入れる）
+  const k = Math.max(0, POSTURES.findIndex(q => q.id === POSTURE));
+  for (const n of notes) n.post = k;
+  return planWithPosture(notes, side, cost);
+}
+function planWithPosture(notes, side, cost) {
   // 同じ指・同じ鍵で続けて押すときは、前の音を早めに離す（指を上げる時間）
   for (let i = 0; i < notes.length; i++) {
     const n = notes[i];
@@ -251,7 +296,7 @@ function buildHandPlan(notes, side) {
   }
   // 次の音で手が大きく動くときは、間に合うように早めに離す（本物の演奏でも、跳ぶ前の音は少し短くなる）。
   // 動く時間の目安 = 0.08 秒 + 手の位置の動き ÷ 600mm/秒（この検証で決めた値）
-  const anchorX = n => n.P[0] - TIP_N[n.f][0] * side;
+  const anchorX = n => n.P[0] - tipN(n.f, n.post)[0] * side;
   for (const n of notes) {
     const nxt = notes.filter(o => o.t0 > n.t0 + 0.03);
     if (!nxt.length) continue;
@@ -298,7 +343,7 @@ function reachErr(W, n) {
 const ELBOW_OFF = 110, ELBOW_K = 0.6, FOREARM = 250, ARM_FOLLOW = 0.4;
 function armYaw(x, side) { const dx = side * ELBOW_OFF + ELBOW_K * x - x; return Math.asin(Math.max(-0.8, Math.min(0.8, dx / FOREARM))); }
 const baseYaw = (x, side) => ARM_FOLLOW * armYaw(x, side);
-function anchorAt(n, psi, side) { const q = toWorld([0, 0, 0, psi, side], TIP_N[n.f]); return [n.P[0] - q[0], n.P[2] - q[2]]; }
+function anchorAt(n, psi, side) { const q = toWorld([0, 0, 0, psi, side], tipN(n.f, n.post)); return [n.P[0] - q[0], n.P[2] - q[2]]; }
 function solveWrist(plan) {
   const ns = plan.notes, sd = plan.side, [ymin, ymax] = yawRange(sd);
   const ta = (ns.length ? ns[0].t0 : 0) - 1, tb = plan.end + 1;
@@ -316,6 +361,10 @@ function solveWrist(plan) {
     }
     ent.push(list); near.push(best);
   }
+  // 構え（コマごと）: 押している・もうすぐ押す音の構えの重みつき平均（なければ近い音）を、0.25 秒くらいでなめらかに
+  { const pw = new Float64Array(N), pb = new Float64Array(N);
+    for (let i = 0; i < N; i++) { let k = 0, v = 0; for (const e of ent[i]) { k += e.k; v += e.k * (e.n.post || 0); } if (k > 0) { pw[i] = 1; pb[i] = v / k; } else { pw[i] = 0.05; pb[i] = 0.05 * ((near[i] && near[i].post) || 0); } }
+    plan.pp = cgSmooth(pw, pb, Math.pow(0.25 * W_HZ, 4)); for (let i = 0; i < N; i++) plan.pp[i] = Math.min(2, Math.max(0, plan.pp[i])); }
   const lam = Math.pow(W_TAU * W_HZ, 4); // なめらかさの罰（W_TAU 秒くらいより速い動きをおさえる）
   const lamY = Math.pow(YAW_TAU * W_HZ, 4);
   const w = new Float64Array(N), bx = new Float64Array(N), bz = new Float64Array(N);
@@ -344,15 +393,15 @@ function solveWrist(plan) {
       const poseFor = psi => {
         let sx = 0, sz = 0, sw = 0;
         for (const e of act) { const k = e.k * e.mul, a = anchorAt(e.n, psi + B[i], sd); sx += k * a[0]; sz += k * a[1]; sw += k; }
-        return [sx / sw, WRIST_Y, sz / sw, psi + B[i], sd];
+        return [sx / sw, wyOf(plan.pp[i]), sz / sw, psi + B[i], sd];
       };
       const cost = psi => {
-        const W = psi === 0 && it === 0 ? [plan.wx[i], WRIST_Y, plan.wz[i], B[i], sd] : poseFor(psi);
+        const W = psi === 0 && it === 0 ? [plan.wx[i], wyOf(plan.pp[i]), plan.wz[i], B[i], sd] : poseFor(psi);
         let c = YAW_REG * (psi / D2R) ** 2;
         for (const e of act) c += e.k * e.mul * reachErr(W, e.n) ** 2;
         return c;
       };
-      if (act.every(e => reachErr([plan.wx[i], WRIST_Y, plan.wz[i], plan.wy[i] + B[i], sd], e.n) < 0.5)) { yw[i] = 0.3; yb[i] = 0.3 * plan.wy[i]; continue; }
+      if (act.every(e => reachErr([plan.wx[i], wyOf(plan.pp[i]), plan.wz[i], plan.wy[i] + B[i], sd], e.n) < 0.5)) { yw[i] = 0.3; yb[i] = 0.3 * plan.wy[i]; continue; }
       let best = 0, bc = cost(0);
       for (let d = -30; d <= 20; d += 5) { const c = cost(d * sd * D2R); if (c < bc) { bc = c; best = d * sd * D2R; } }
       const b0 = best;
@@ -364,7 +413,7 @@ function solveWrist(plan) {
     // 届かないコマと、押さえている指が関節の限界まで引っぱられたコマ（手首が次の位置へ動きだして、押さえたままの指がのびきる）は、
     // 重みを増やして計算し直す（本物の手は、押さえている指を限界まで引っぱらない）
     for (let i = 0; i < N; i++) {
-      const t = ta + i / W_HZ, W = [plan.wx[i], WRIST_Y, plan.wz[i], plan.wy[i] + B[i], sd];
+      const t = ta + i / W_HZ, W = [plan.wx[i], wyOf(plan.pp[i]), plan.wz[i], plan.wy[i] + B[i], sd];
       for (const e of ent[i]) {
         if (!downAt(e, t)) continue;
         const err = reachErr(W, e.n) + (reachErr.lim ? 2 : 0);
@@ -382,7 +431,7 @@ function handLife(plan, ent, ta, N) {
   const rw = new Float64Array(N), rb = new Float64Array(N), hb = new Float64Array(N);
   for (let i = 0; i < N; i++) {
     let sx = 0, sw = 0, bl = 0;
-    for (const e of ent[i]) { const k = e.k * (e.n.f === 1 ? 0.3 : 1); sx += k * (TIP_N[e.n.f][0] + 4); sw += k; if (isBlack(e.n.m)) bl += k; } // 親指の音は傾きにあまり効かせない（親指くぐりで人さし指が下がってぶつかる）
+    for (const e of ent[i]) { const k = e.k * (e.n.f === 1 ? 0.3 : 1); sx += k * (tipN(e.n.f, e.n.post)[0] + 4); sw += k; if (isBlack(e.n.m)) bl += k; } // 親指の音は傾きにあまり効かせない（親指くぐりで人さし指が下がってぶつかる）
     if (sw > 0) { rw[i] = 1; rb[i] = Math.max(-1, Math.min(1, sx / sw / 45)) * ROLL_MAX; hb[i] = BLACK_UP * bl / sw; }
     else { rw[i] = 0.05; }
   }
@@ -478,11 +527,11 @@ function wristAt(plan, t) {
   const i = Math.floor(u), s = u - i;
   const at = a => a[i] + (a[i + 1] - a[i]) * s;
   const x = at(plan.wx);
-  return [x, WRIST_Y + at(plan.wh), at(plan.wz), at(plan.wy) + at(plan.wb), plan.side, armYaw(x, plan.side), at(plan.wr)]; // W[5] は前腕の向き、W[6] は手のひらの傾き
+  return [x, (plan.pp ? wyOf(at(plan.pp)) : WRIST_Y) + at(plan.wh), at(plan.wz), at(plan.wy) + at(plan.wb), plan.side, armYaw(x, plan.side), at(plan.wr)]; // W[5] は前腕の向き、W[6] は手のひらの傾き
 }
 
 // 鍵を押す指先の位置（世界の座標）
-function pressPoint(m, f, n) { return [keyX(m), keyTop(m) + PAD, pressZ(m, f, n && n.deep)]; }
+function pressPoint(m, f, n) { return [keyX(m), keyTop(m) + PAD, pressZ(m, f, n && n.deep, n ? n.post : 0)]; }
 
 // ④ 指先の目標（世界の座標）。押す・離して浮かす・次の音へ先回り・力を抜いた形に戻る
 function fingerTarget(plan, f, t, W) {
@@ -491,7 +540,7 @@ function fingerTarget(plan, f, t, W) {
   for (let k = 0; k < L.length; k++) { if (L[k].t0 <= t) i = k; else break; }
   const p = i >= 0 ? L[i] : null, n = L[i + 1] || null;
   // 力を抜いた形（手といっしょに動く）。下の鍵より少し浮かせる（高さは奥行きだけで決める。黒鍵の凸凹をなぞって上下しないように）
-  const nt = toWorld(W, TIP_N[f]);
+  const nt = toWorld(W, tipN(f, postAt(plan, t)));
   const rest = [nt[0], Math.max(nt[1], Math.max(surfaceZ(nt[2]), surfaceZ(nt[2] - 8)) + PAD) + LIFT * 0.35, nt[2]];
 
   if (p && t <= p.t1) { // 押している

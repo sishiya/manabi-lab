@@ -31,7 +31,13 @@ function keyTop(m) { return isBlack(m) ? KB.BH : 0; }
 // 指ごとに鍵のどこを押すか（z）。白鍵は手前、黒鍵は奥。長い指ほど奥（目安）
 const PRESS_Z_WHITE = [0, -14, -38, -45, -40, -30]; // 親指は白鍵の手前の端の少し奥（指の骨の長さを論文の値にしたら、-8 では親指が伸びきった）
 // deep: 親指が、黒鍵の音のあいだの白鍵を押すとき（前後の音に黒鍵がある）。手が黒鍵の奥へ入っているので、親指も白鍵の少し奥を押す
-function pressZ(m, f, deep) { return isBlack(m) ? (f === 1 ? -66 : -82) : f === 1 && deep ? -40 : PRESS_Z_WHITE[f]; }
+function pressZ(m, f, deep, p) {
+  if (!p) return isBlack(m) ? (f === 1 ? -66 : -82) : f === 1 && deep ? -40 : PRESS_Z_WHITE[f];
+  // 指の構え p（0 立てる 〜 2 寝かせる、hand.js の POSTURES）: あいだはなめらかに
+  const z = Q => isBlack(m) ? (f === 1 ? Q.thumbBlack : Q.black) : f === 1 && deep ? Q.thumbDeep : Q.white[f];
+  const i = Math.min(1, Math.floor(p)), s = p - i;
+  return z(POSTURES[i]) + (z(POSTURES[i + 1]) - z(POSTURES[i])) * s;
+}
 const NOTE_EN = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
 function noteName(m) { return (LANG === 'en' ? NOTE_EN : NOTE_JA)[m % 12] + (Math.floor(m / 12) - 1); }
 
