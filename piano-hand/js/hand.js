@@ -270,6 +270,7 @@ function buildHandPlan(notes, side) {
   solveWrist(plan);
   wristStrokes(plan);
   keepAbove(plan);
+  bakeAngles(plan);
   return plan;
 }
 
@@ -286,6 +287,7 @@ const YAW_REG = 0.03, YAW_TAU = 0.1;
 function reachErr(W, n) {
   const T = toLocal(W, [n.P[0], n.P[1] - KB.DEPTH, n.P[2]]);
   const F = FINGERS[n.f], ik = fingerIK(F, T), tip = fingerFK(F, ik.yaw, ik.a1, ik.a2)[3];
+  reachErr.lim = ik.lim; // 関節の限界で止まったか
   return Math.hypot(tip[0] - T[0], tip[1] - T[1], tip[2] - T[2]);
 }
 // 向き ψ のとき、指 f が力を抜いた形のまま押す場所に届く手首の位置（x, z）
@@ -357,12 +359,13 @@ function solveWrist(plan) {
     }
     const ys = cgSmooth(yw, yb, lamY);
     for (let i = 0; i < N; i++) plan.wy[i] = Math.min(ymax, Math.max(ymin, ys[i]));
-    // 届かないコマは重みを増やす
+    // 届かないコマと、押さえている指が関節の限界まで引っぱられたコマ（手首が次の位置へ動きだして、押さえたままの指がのびきる）は、
+    // 重みを増やして計算し直す（本物の手は、押さえている指を限界まで引っぱらない）
     for (let i = 0; i < N; i++) {
       const t = ta + i / W_HZ, W = [plan.wx[i], WRIST_Y, plan.wz[i], plan.wy[i] + B[i], sd];
       for (const e of ent[i]) {
         if (!downAt(e, t)) continue;
-        const err = reachErr(W, e.n);
+        const err = reachErr(W, e.n) + (reachErr.lim ? 2 : 0);
         if (err > 0.5) e.mul = Math.min(W_MULMAX, e.mul * (1 + err / 2));
       }
     }
@@ -601,7 +604,45 @@ function poseAt(plan, t) {
     fingers.push({ pts, target: tg.T, press: tg.press || null, down: !!tg.down, err, lim: ik.lim, ang: ik });
   }
   avoidBones(fingers, tgs, W);
+  // 関節の速さの上限をかけた角度（bakeAngles）があれば、その角度で指を置く。目標に届かなければ err に出る（間に合わない＝押せない）
+  if (plan.ac && t >= plan.ac.t0 && t <= plan.ac.t1) {
+    const u = (t - plan.ac.t0) * ANG_HZ, i = Math.min(plan.ac.n - 2, Math.floor(u)), s = u - i;
+    for (let f = 1; f <= 5; f++) {
+      const A = plan.ac[f], at = a => a[i] + (a[i + 1] - a[i]) * s, F = FINGERS[f], fp = fingers[f];
+      const ang = { yaw: at(A.yaw), a1: at(A.a1), a2: at(A.a2) };
+      ang.lim = fp.ang.lim;
+      fp.pts = fingerFK(F, ang.yaw, ang.a1, ang.a2).map(p => toWorld(W, p));
+      fp.ang = ang;
+      fp.err = Math.hypot(fp.pts[3][0] - fp.target[0], fp.pts[3][1] - fp.target[1], fp.pts[3][2] - fp.target[2]);
+    }
+  }
   return { t, W, fingers };
+}
+
+// 関節の速さの上限: 筋肉で出せる速さには限りがある。プロのピアニストの速い音階で、指の付け根の関節の最大はおよそ 1160 度/秒
+// （Frontiers in Neurorobotics 2026）。少し余裕を見て JOINT_VMAX = 1500 度/秒（目安）。曲全体の指の角度を 1/240 秒ごとに
+// 先に計算し（IK・よける動きまで）、ごく短い（4ms ほど）なめらかさをかけてから、前から・後ろからの両方で速さを上限までにおさえて平均する
+// （前からだけだと遅れ、後ろからだけだと先走る。両方の平均は、先を見こして動きはじめる人の動きに近い）
+const ANG_HZ = 240, JOINT_VMAX = 1500 * D2R;
+function bakeAngles(plan) {
+  plan.ac = null;
+  const t0 = plan.wt0, t1 = plan.end + 0.5, n = Math.max(2, Math.ceil((t1 - t0) * ANG_HZ) + 1);
+  const ac = { t0, t1: t0 + (n - 1) / ANG_HZ, n };
+  for (let f = 1; f <= 5; f++) ac[f] = { yaw: new Float32Array(n), a1: new Float32Array(n), a2: new Float32Array(n) };
+  for (let i = 0; i < n; i++) {
+    const P = poseAt(plan, t0 + i / ANG_HZ);
+    for (let f = 1; f <= 5; f++) { const a = P.fingers[f].ang; ac[f].yaw[i] = a.yaw; ac[f].a1[i] = a.a1; ac[f].a2[i] = a.a2; }
+  }
+  const dv = JOINT_VMAX / ANG_HZ, g = [0.12, 0.23, 0.30, 0.23, 0.12]; // σ ≈ 1 コマ（4ms）のガウス
+  for (let f = 1; f <= 5; f++) for (const k of ['yaw', 'a1', 'a2']) {
+    const x = ac[f][k], sm = new Float32Array(n);
+    for (let i = 0; i < n; i++) { let s = 0, w = 0; for (let j = -2; j <= 2; j++) { const q = i + j; if (q < 0 || q >= n) continue; s += g[j + 2] * x[q]; w += g[j + 2]; } sm[i] = s / w; }
+    const fw = Float32Array.from(sm), bw = Float32Array.from(sm);
+    for (let i = 1; i < n; i++) fw[i] = Math.min(fw[i - 1] + dv, Math.max(fw[i - 1] - dv, fw[i]));
+    for (let i = n - 2; i >= 0; i--) bw[i] = Math.min(bw[i + 1] + dv, Math.max(bw[i + 1] - dv, bw[i]));
+    for (let i = 0; i < n; i++) x[i] = (fw[i] + bw[i]) / 2;
+  }
+  plan.ac = ac;
 }
 
 // 指どうしの骨が近づきすぎたら（骨＋押しつぶしきった肉より近い。皮ふと肉が押し合うのはかまわない）、動かせる指（mob が大きい方）を
