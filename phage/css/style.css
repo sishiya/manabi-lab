@@ -180,3 +180,13 @@ button:disabled{opacity:.45;cursor:default}
 @media (max-width:600px){ .lcard{left:8px;right:8px;bottom:8px;max-width:none;font-size:12px} }
 #landLoupe h3{margin:0 0 4px;font-size:14px}
 #landLoupe p{margin:0;font-size:12.5px;line-height:1.75;color:var(--muted)}
+/* ② 増えるしくみの流れ */
+.flow{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:5px;font-size:12.5px;line-height:1.6;color:var(--dim)}
+.flow li{position:relative;padding-left:18px}
+.flow li.on{color:var(--ink)}
+.flow li i{position:absolute;left:2px;top:6px;width:9px;height:9px;border-radius:50%;opacity:.35}
+.flow li.on i{opacity:1}
+.flow li small{color:var(--dim);font-size:11px}
+.flow li:not(:last-child)::after{content:'↓';position:absolute;left:3px;bottom:-12px;font-size:10px;color:var(--dim)}
+.small2{font-size:11px;color:var(--dim);margin:6px 0 0}
+#inHint{top:auto;bottom:56px}

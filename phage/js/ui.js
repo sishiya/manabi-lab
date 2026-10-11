@@ -108,7 +108,7 @@ const UI = (() => {
   }
 
   // ② 細菌の中
-  const SPEEDS = [[0.25, '1秒＝15秒'], [1, '1秒＝1分'], [2, '1秒＝2分']];
+  const SPEEDS = [[0.25, '1秒＝15秒'], [0.5, '1秒＝30秒'], [1, '1秒＝1分']];
   for (const [v, lab] of SPEEDS) {
     const b = document.createElement('button'); b.textContent = lab; b.dataset.v = v;
     b.addEventListener('click', () => { Inside.setSpeed(v); markIn(); });
@@ -133,7 +133,15 @@ const UI = (() => {
   let lastIn = '';
   function inStatus(S) {
     const st = S.failed ? '失敗（DNA が切られた）' : S.burstAt != null ? '破裂した' : S.lin ? '破裂がおくれている' : '増えている';
-    const html = `<dl class="stat"><dt>感染から</dt><dd>${S.t.toFixed(1)} 分</dd><dt>様子</dt><dd>${st}</dd><dt>完成したファージ</dt><dd>${S.done} 個</dd><dt>DNA をつめている頭</dt><dd>${S.burstAt != null ? '—' : (S.packing || 0) + ' 個'}</dd><dt>細菌の DNA</dt><dd>${Math.round((S.hostLeft ?? 1) * 100)}%（目安）</dd></dl>`;
+    const n = v => Math.round(v || 0).toLocaleString(), t = S.t, on = c => c ? ' on' : '';
+    const flow = S.failed ? '' : `<ol class="flow">
+      <li class="${on(t >= TL.hostDnaFrom)}"><i style="background:#6ea9ff"></i><b>材料</b>: 細菌の DNA をこわして使う（残り ${Math.round((S.hostLeft ?? 1) * 100)}%・目安）</li>
+      <li class="${on(true)}"><i style="background:#ff9f6b"></i><b>設計図</b>: T4 の DNA をコピー → 約${n(S.genomes || 1)}本ぶん<small>（目安）</small></li>
+      <li class="${on(t >= TL.hostStop)}"><i style="background:#dcc8aa"></i><b>工場</b>: 細菌のリボソームが、設計図の写し（mRNA）のとおりに T4 の部品だけを作る</li>
+      <li class="${on(t >= TL.late)}"><i style="background:#5fe0c4"></i><b>部品</b>: 頭の殻 gp23 約${n(S.gp23)}個・さや gp18 約${n(S.gp18)}個<small>（1つに960個・138個 × 作った数）</small></li>
+      <li class="${on((S.packing || 0) + (S.done || 0) > 0)}"><i style="background:#c39bff"></i><b>組み立て</b>: 頭 ${S.building || 0}・DNA をつめている ${S.packing || 0}（しっぽが寄ってくる）</li>
+      <li class="${on(S.done > 0)}"><i style="background:#f2f7f9"></i><b>完成</b>: ${S.done} 個</li></ol>`;
+    const html = `<dl class="stat"><dt>感染から</dt><dd>${t.toFixed(1)} 分</dd><dt>様子</dt><dd>${st}</dd></dl>${flow}`;
     if (html !== lastIn) { $('inStatus').innerHTML = html; lastIn = html; }
     $('inHud').textContent = `感染から ${S.t.toFixed(1)} 分`;
     if (S.failed) goal('in', '細菌の中で T4 が増えて、破って出るまでを見届けよう', [['DNA が切られて失敗（細菌の勝ち）', 'warn']]);

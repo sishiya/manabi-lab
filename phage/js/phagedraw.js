@@ -19,13 +19,14 @@ const PCOL = {
   plate: '#c7a6ff', fiber: '#e9f3f6', dna: '#ff9f6b',
 };
 
-// o: { sheath, sheathW, plateW, tubeOut, fill (0..1 頭の DNA), alpha, ghost }
+// o: { sheath, sheathW, plateW, tubeOut, fill (0..1 頭の DNA), alpha, ghost, headOnly, tailOnly }
 function drawPhageBody(g, o) {
   const L = o.sheath ?? T4.sheathLen, sw = o.sheathW ?? T4.sheathW, pw = o.plateW ?? T4.plateW;
   const fill = o.fill ?? 1, a = o.alpha ?? 1;
   g.save(); g.globalAlpha *= a;
   g.lineJoin = 'round';
   const headC = -(L + T4.neck + T4.headLen / 2), hw = T4.headW / 2, hh = T4.headLen / 2;
+  if (!o.tailOnly) { // tailOnly: しっぽだけ（頭と別に組み立て中のもの）
   // 頭（細長い正二十面体を横から見た六角形）
   const hex = [[0, -hh], [hw, -hh + 26], [hw, hh - 26], [0, hh], [-hw, hh - 26], [-hw, -hh + 26]];
   g.beginPath(); hex.forEach(([x, y], i) => i ? g.lineTo(x, headC + y) : g.moveTo(x, headC + y)); g.closePath();
@@ -49,6 +50,7 @@ function drawPhageBody(g, o) {
   g.moveTo(0, headC - hh + 52); g.lineTo(0, headC + hh - 52);
   g.moveTo(-hw, headC + hh - 26); g.lineTo(0, headC + hh - 52); g.lineTo(hw, headC + hh - 26);
   g.stroke();
+  }
   if (o.headOnly) { g.restore(); return; }
   // 首（えり）とひげ
   g.fillStyle = PCOL.sheathEdge;
