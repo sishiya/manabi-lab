@@ -111,7 +111,7 @@ function applyScene(id) {
   V.dust.visible = S.dust > 0; V.dustAmt = S.dust; V.dustCol = linCol(S.dustCol || 0xffe2c4);
   // 部屋の映りこみの強さ（材質ごと）
   V.scene.traverse(o => { if (o.material && 'envMapIntensity' in o.material) o.material.envMapIntensity = S.env * (o.userData.envK || 1); });
-  for (const VH of V.hands) VH.skin.mat.envMapIntensity = 0.7 * S.env / 0.7;
+  for (const VH of V.hands) for (const m of [VH.skin.mat, VH.skin.matF]) if (m) m.envMapIntensity = 0.7 * S.env / 0.7;
   V.exposure = S.exposure;
 }
 function applyFx(level) {

@@ -61,32 +61,43 @@ vec3 skinBump(vec3 surf_pos, vec3 surf_norm, vec2 dHdxy, float fd){
 }
 `;
 
-function makeSkinMaterials(U) {
+
+// 前腕の肘の側は、手首から ARM_FADE の範囲でなめらかに透けて消える（その範囲の三角形だけ半透明の材質で、不透明な部分のあとに描く。影はディザで消す）。
+// 前腕を太くしたら、肘の側の端が網を作る範囲からはみ出して切り口が開き、体の側から覗くと角ばった穴が見えた（v029〜、ユーザーの指摘）
+const ARM_FADE = [150, 215];
+const FADE_GLSL = 'uniform vec2 uArmFade; varying float vRestZ;\n';
+const FADE_FRAG = '  { float fz = smoothstep(uArmFade.x, uArmFade.y, vRestZ); if (fz > 0.0 && fz >= fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))))) discard; }\n';
+function makeSkinMaterials(U, fade) {
   const m = new THREE.MeshPhysicalMaterial({
     vertexColors: true, color: 0xffffff, roughness: 0.5, metalness: 0,
     clearcoat: 0.12, clearcoatRoughness: 0.42, sheen: new THREE.Color(0.32, 0.12, 0.08),
     envMapIntensity: 0.7,
   });
   m.onBeforeCompile = sh => {
-    sh.uniforms.uBones = U.uBones; sh.uniforms.uFlex = U.uFlex;
+    sh.uniforms.uBones = U.uBones; sh.uniforms.uFlex = U.uFlex; sh.uniforms.uArmFade = U.uArmFade;
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\n' + SKIN_VERT_HEAD + 'attribute float aWrk; attribute float aAlong; attribute vec3 aPad; attribute float aCrease;\nvarying vec3 vRest; varying float vWrk; varying float vAlong; varying vec3 vPad; varying float vCrease;')
+      .replace('#include <common>', '#include <common>\n' + FADE_GLSL + SKIN_VERT_HEAD + 'attribute float aWrk; attribute float aAlong; attribute vec3 aPad; attribute float aCrease;\nvarying vec3 vRest; varying float vWrk; varying float vAlong; varying vec3 vPad; varying float vCrease;')
       .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\n' + SKIN_VERT_MAT + '  objectNormal = normalize(mat3(skM) * objectNormal);')
-      .replace('#include <begin_vertex>', 'vec3 transformed = (skM * vec4(position + normal * skInf, 1.0)).xyz;\nvRest = position; vWrk = aWrk; vAlong = aAlong; vPad = aPad; vCrease = aCrease;');
+      .replace('#include <begin_vertex>', 'vec3 transformed = (skM * vec4(position + normal * skInf, 1.0)).xyz;\nvRest = position; vRestZ = position.z; vWrk = aWrk; vAlong = aAlong; vPad = aPad; vCrease = aCrease;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\n' + SKIN_GLSL_HEAD)
-      .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb *= (0.94 + 0.12 * vn(vRest * 0.12) + 0.04 * vn(vRest * 0.6)) * (1.0 - 0.18 * vCrease);')
+      .replace('#include <common>', '#include <common>\n' + FADE_GLSL + SKIN_GLSL_HEAD)
+      .replace('#include <color_fragment>', '#include <color_fragment>\n' + (fade ? '  diffuseColor.a *= 1.0 - smoothstep(uArmFade.x, uArmFade.y, vRestZ);\n' : '') + '  diffuseColor.rgb *= (0.94 + 0.12 * vn(vRest * 0.12) + 0.04 * vn(vRest * 0.6)) * (1.0 - 0.18 * vCrease);')
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n  roughnessFactor *= 0.85 + 0.3 * vn(vRest * 0.4 + 3.0);')
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n  { float hh = skinH(); normal = skinBump(-vViewPosition, normal, vec2(dFdx(hh), dFdy(hh)), gl_FrontFacing ? 1.0 : -1.0); }')
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  { float rim = pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 2.5);\n    totalEmissiveRadiance += diffuseColor.rgb * (vec3(0.05, 0.012, 0.006) + rim * vec3(0.10, 0.025, 0.012)); }'); // 皮ふの下で散った赤い光（近似）。ふちほど光が皮ふを通って赤く透ける
   };
+  if (fade) { m.transparent = true; m.depthWrite = false; }
+  m.customProgramCacheKey = () => fade ? 'skin-fade' : 'skin'; // シェーダーの作り方の文字列が同じなので、区別しないと同じプログラムが使い回された
   // 影も同じ形で落とす
   const d = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
   d.onBeforeCompile = sh => {
-    sh.uniforms.uBones = U.uBones; sh.uniforms.uFlex = U.uFlex;
+    sh.uniforms.uBones = U.uBones; sh.uniforms.uFlex = U.uFlex; sh.uniforms.uArmFade = U.uArmFade;
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\n' + SKIN_VERT_HEAD)
-      .replace('#include <begin_vertex>', SKIN_VERT_MAT + 'vec3 transformed = (skM * vec4(position + normal * skInf, 1.0)).xyz;');
+      .replace('#include <common>', '#include <common>\n' + FADE_GLSL + SKIN_VERT_HEAD)
+      .replace('#include <begin_vertex>', SKIN_VERT_MAT + 'vec3 transformed = (skM * vec4(position + normal * skInf, 1.0)).xyz; vRestZ = position.z;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\n' + FADE_GLSL)
+      .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\n' + FADE_FRAG);
   };
   return { m, d };
 }
@@ -95,7 +106,7 @@ let SKIN_DATA = null;
 // 片手分の皮ふと爪を作る（side: 右手 1・左手 -1）
 function makeSkinHand(sc, side) {
   const S = SKIN_DATA || (SKIN_DATA = buildSkin());
-  const U = { uBones: { value: new Float32Array(N_BONES * 16) }, uFlex: { value: new Float32Array(N_BONES) } };
+  const U = { uBones: { value: new Float32Array(N_BONES * 16) }, uFlex: { value: new Float32Array(N_BONES) }, uArmFade: { value: new THREE.Vector2(ARM_FADE[0] * HAND.s, ARM_FADE[1] * HAND.s) } };
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(S.pos0, 3));
   g.setAttribute('normal', new THREE.BufferAttribute(S.nrm0, 3));
@@ -110,9 +121,14 @@ function makeSkinHand(sc, side) {
   // 左手は鏡に映すので三角形の向きを逆に
   const idx = side > 0 ? S.idx : S.idx.slice();
   if (side < 0) for (let i = 0; i < idx.length; i += 3) { const t = idx[i + 1]; idx[i + 1] = idx[i + 2]; idx[i + 2] = t; }
-  g.setIndex(S.NV > 65535 ? new THREE.Uint32BufferAttribute(idx, 1) : new THREE.Uint16BufferAttribute(idx, 1));
-  const mats = makeSkinMaterials(U);
-  const mesh = new THREE.Mesh(g, mats.m);
+  // 前腕の肘の側（透けて消える所）の三角形を後ろへまとめ、半透明の材質で描く
+  const z0 = ARM_FADE[0] * HAND.s - 2, op = [], fd = [];
+  for (let i = 0; i < idx.length; i += 3) (Math.max(S.pos0[idx[i] * 3 + 2], S.pos0[idx[i + 1] * 3 + 2], S.pos0[idx[i + 2] * 3 + 2]) > z0 ? fd : op).push(idx[i], idx[i + 1], idx[i + 2]);
+  const idx2 = op.concat(fd);
+  g.setIndex(S.NV > 65535 ? new THREE.Uint32BufferAttribute(idx2, 1) : new THREE.Uint16BufferAttribute(idx2, 1));
+  g.addGroup(0, op.length, 0); g.addGroup(op.length, fd.length, 1);
+  const mats = makeSkinMaterials(U), matsF = makeSkinMaterials(U, true);
+  const mesh = new THREE.Mesh(g, [mats.m, matsF.m]);
   mesh.customDepthMaterial = mats.d;
   mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false;
   sc.add(mesh);
@@ -128,7 +144,7 @@ function makeSkinHand(sc, side) {
     sc.add(nm);
     return { f: N.f, mesh: nm };
   });
-  return { side, S, U, mesh, mat: mats.m, nails };
+  return { side, S, U, mesh, mat: mats.m, matF: matsF.m, nails };
 }
 
 const _fm = new THREE.Matrix4();
@@ -143,6 +159,7 @@ function updateSkinHand(H, pose, opt) {
     H.mat.userData.mode = mode;
     H.mat.transparent = !!mode; H.mat.opacity = mode === 'x' ? 0.3 : mode === 'g' ? 0.45 : 1; H.mat.depthWrite = !mode;
     H.mat.needsUpdate = true;
+    if (H.matF) { H.matF.opacity = H.mat.opacity; H.matF.needsUpdate = true; } // 肘の側の透けて消える所も同じ濃さから
   }
   const bones = poseBones(pose);
   skinMatrices(H.S, bones, H.U.uBones.value);
