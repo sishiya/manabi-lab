@@ -3,7 +3,17 @@
 'use strict';
 const D2R = Math.PI / 180;
 let PAD = 6.5;          // 指先のはら（球）の半径。指先の点は鍵の上面から PAD 上にある（手のモデルの大きさで変わる）
-const LIFT = 10;        // 次の音へ先回りするとき・離したときに鍵から浮かせる高さ（上げすぎるとかぎ爪のように見える）
+const LIFT = 10;        // 持ち上げの高さの決まりがないとき（手首で打つ音など）の目安
+// ---- リラックス（v027〜。ユーザーの気づき: 押していない指先に力が入りすぎて見えた。本物のピアニストは打つ前はもっと力を抜いている。
+// 浮かせて構えるか鍵に預けるかは曲調で変わるので、決め打ちせず曲の速さで連続に変える）----
+// 休んでいる指は鍵の表面に軽く触れる（REST_OFF 上）。力を抜いた形より下に鍵があれば、重さで REST_DROOP まで垂れて触れる（目安）
+const REST_OFF = 1, REST_DROOP = 6;
+// 上から打つ割合（0 = 鍵に触れたまま押す、1 = 上から打つ）。Goebl & Palmer (2008) 1秒に 2 音で打鍵の約半分が触れたまま押す、
+// 7 音以上ではすべて上から打つ。1 音以下は 0 とした（目安）。あいだはまっすぐつなぐ
+const strikeShare = rate => rate <= 1 ? 0 : rate <= 2 ? 0.5 * (rate - 1) : rate < 7 ? 0.5 + 0.5 * (rate - 2) / 5 : 1;
+// 上から打つときの、打つ前のいちばん高い所（鍵の上面から mm）。Dalla Bella & Palmer (2011) の持ち上げの振れ幅 21.7〜26.1mm（押しこむ
+// 深さ 10mm を含むとみて引いた）と「速いほど高い」から、1秒に 2 音で 12mm・8 音で 18mm（目安）
+const liftPeak = rate => 12 + 6 * Math.min(1, Math.max(0, (rate - 2) / 6));
 const LOOK = 0.7;       // 次の音へ先回りを始める早さ（秒）
 
 // 骨の長さ（mm）は大人の手の目安。関節の範囲（度）も目安。
@@ -214,7 +224,7 @@ function keyDown(n, t) { // 押しこんでいる深さ（鍵に着いてから�
 // 離すとき: 指先の、鍵の上面からの高さ（負は鍵を押しこんだまま）。底から LIFT の高さまで TR 秒でなめらかに上がり、鍵もいっしょに上がる
 function releaseY(n, t) {
   const d0 = keyDown(n, n.t1);
-  return -d0 + (d0 + (n.lift || LIFT)) * ease5((t - n.t1) / TR);
+  return -d0 + (d0 + REST_OFF) * ease5((t - n.t1) / TR); // 離したら鍵といっしょに上がり、鍵の上に休む（v027〜。前は LIFT まで持ち上げた）
 }
 function pressDepth(n, t) {
   if (t < n.t0) return 0;
@@ -309,7 +319,16 @@ function planWithPosture(notes, side, cost) {
   }
   // 打鍵のしかた（STROKE）: 'wrist' なら、片手で同時に押す音（和音・オクターブ）は手首から打つ。指の形を保ったまま手ごと上げ下げし、
   // 指自身の上げ下げは小さく（lift）。'finger' ならすべて指で打つ
-  for (const n of notes) { n.wrist = STROKE === 'wrist' && notes.some(o => o !== n && Math.abs(o.t0 - n.t0) < 0.03); n.lift = n.wrist ? 2 : LIFT; }
+  for (const n of notes) { n.wrist = STROKE === 'wrist' && notes.some(o => o !== n && Math.abs(o.t0 - n.t0) < 0.03); }
+  // 曲の速さ（この手の音の間隔）から、持ち上げの高さと始める時刻。いちばん高い所は約1音前（Dalla Bella & Palmer 2011: 音の間隔の 100〜123% 前）
+  const onsets = [...new Set(notes.map(n => Math.round(n.t0 * 100) / 100))].sort((a, b) => a - b);
+  for (const n of notes) {
+    const k = onsets.findIndex(o => Math.abs(o - n.t0) < 0.015);
+    const ioi = Math.min(2, Math.max(0.06, k > 0 ? n.t0 - onsets[k - 1] : k + 1 < onsets.length ? onsets[k + 1] - n.t0 : 0.5));
+    const rate = 1 / ioi;
+    n.lift = n.wrist ? 2 : Math.max(REST_OFF, strikeShare(rate) * liftPeak(rate) * HAND.s);
+    n.antic = Math.min(0.4, Math.max(0.1, ioi * 1.1));
+  }
   const byF = [null, [], [], [], [], []];
   for (const n of notes) byF[n.f].push(n);
   const end = Math.max(0, ...notes.map(n => n.t1));
@@ -541,7 +560,9 @@ function fingerTarget(plan, f, t, W) {
   const p = i >= 0 ? L[i] : null, n = L[i + 1] || null;
   // 力を抜いた形（手といっしょに動く）。下の鍵より少し浮かせる（高さは奥行きだけで決める。黒鍵の凸凹をなぞって上下しないように）
   const nt = toWorld(W, tipN(f, postAt(plan, t)));
-  const rest = [nt[0], Math.max(nt[1], Math.max(surfaceZ(nt[2]), surfaceZ(nt[2] - 8)) + PAD) + LIFT * 0.35, nt[2]];
+  // 休むときは鍵の表面に軽く触れる（力を抜いた形の指先が鍵より REST_DROOP 以内の高さなら、重さで垂れて触れる。それより高ければ垂れきった所）
+  const key = Math.max(surfaceZ(nt[2]), surfaceZ(nt[2] - 8)) + PAD + REST_OFF;
+  const rest = [nt[0], Math.max(key, nt[1] - REST_DROOP), nt[2]];
 
   if (p && t <= p.t1) { // 押している
     const P = pressPoint(p.m, f, p);
@@ -559,8 +580,10 @@ function fingerTarget(plan, f, t, W) {
     const ta = Math.max(sT, n.t0 - LOOK);
     if (t >= ta) { // ③ 先回り: 次に押す鍵の上へ。移動にはかならず時間をとる（次までが短くても一瞬で飛ばない）
       const P = pressPoint(n.m, f, n);
-      const lift = n.lift || LIFT, H = [P[0], P[1] + lift + (n.wrist ? wkAt(plan, t) : 0), P[2]];
-      const span = Math.max(1e-3, n.t0 - ta), Td = Math.min(0.08, span * 0.4), tb = n.t0 - Td;
+      const lift = n.lift || LIFT, span = Math.max(1e-3, n.t0 - ta), Td = Math.min(0.08, span * 0.4), tb = n.t0 - Td;
+      // 鍵の上へは低く（触れる高さで）移り、持ち上げるのは約1音前から（n.antic）。ゆっくりの所は持ち上げがほぼ 0 で、触れたまま押す
+      const tl = Math.max(ta, n.t0 - (n.antic || 0.3)), up = n.wrist ? 1 : ease5((t - tl) / Math.max(1e-3, tb - tl));
+      const H = [P[0], P[1] + REST_OFF + (lift - REST_OFF) * up + (n.wrist ? wkAt(plan, t) : 0), P[2]];
       // 横の移動は、下ろしはじめてからも少し続く（動きを順番に1つずつ終わらせると機械のように見えた）
       const Q = lerp3(S, H, ease5((t - ta) / Math.max(1e-3, tb + 0.5 * Td - ta)));
       if (t > tb) { // 下ろす: 鍵に着く時刻 t0 に速さ VC で着き、そのまま押しこむ（keyDown）
@@ -645,11 +668,25 @@ function poseAt(plan, t) {
   for (let f = 1; f <= 5; f++) tgs.push(fingerTarget(plan, f, t, W));
   coupleAndSway(tgs, W, t);
   keepOrder(tgs, W);
+  // 鍵が指を支える（v027〜）: 押していない指の目標は、鍵の上面（左右 3mm の鍵も見る。黒鍵のふちをこすらないように）より下に入れない。
+  // 休んでいる指を鍵の表面に触れさせたので、となりの指へのつられやゆらぎ、低く横へ移る道すじで、鍵にもぐるようになったため
+  for (let f = 1; f <= 5; f++) {
+    const tg = tgs[f]; if (tg.down || tg.press) continue;
+    const T = tg.T, sf = Math.max(surfaceAt(T[0], T[2]), surfaceAt(T[0] - 3, T[2]), surfaceAt(T[0] + 3, T[2]));
+    if (sf > -1e9) T[1] = Math.max(T[1], sf + PAD);
+  }
   for (let f = 1; f <= 5; f++) {
     const F = FINGERS[f];
     const tg = tgs[f];
-    const ik = fingerIK(F, toLocal(W, tg.T));
-    const pts = fingerFK(F, ik.yaw, ik.a1, ik.a2).map(p => toWorld(W, p));
+    let ik = fingerIK(F, toLocal(W, tg.T));
+    let pts = fingerFK(F, ik.yaw, ik.a1, ik.a2).map(p => toWorld(W, p));
+    // 押していない指が目標に届かず（関節の限界など）、ずれた先で鍵の中に入ったら、その場所の鍵の上面に乗せて解き直す（鍵が指を支える）
+    if (!tg.down && !tg.press) for (let it = 0; it < 2; it++) {
+      const q = pts[3], sf = surfaceAt(q[0], q[2]), sink = sf + PAD - q[1];
+      if (!(sink > 0.2)) break;
+      tg.T = [tg.T[0], tg.T[1] + sink, tg.T[2]];
+      ik = fingerIK(F, toLocal(W, tg.T)); pts = fingerFK(F, ik.yaw, ik.a1, ik.a2).map(p => toWorld(W, p));
+    }
     const tip = pts[3];
     const err = Math.hypot(tip[0] - tg.T[0], tip[1] - tg.T[1], tip[2] - tg.T[2]);
     fingers.push({ pts, target: tg.T, press: tg.press || null, down: !!tg.down, err, lim: ik.lim, ang: ik });
