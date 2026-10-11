@@ -14,6 +14,11 @@ const BONE_R = [null,
   [[4.6, 3.0, 3.8], [3.6, 2.5, 3.2], [3.2, 1.8, 2.6]]];
 const MC_R = [null, null, [6.0, 4.2, 7.0], [6.5, 4.2, 7.2], [5.5, 3.6, 6.0], [5.5, 3.6, 6.0]];
 const JOINT_GAP = 1.2; // 関節の軟骨のすきま（片側、mm）
+// 末節骨は指先のはらの中心（動きの計算の指先の点）より甲の側にある: 爪の下の骨の先（粗面）から爪の表面まで 約 2mm
+// （爪床 約 1.5mm・爪の板 0.3〜0.65mm。指の超音波の総説、QIMS）。指先の点で骨の中心が甲の側へ distalTilt(f) mm 上がるように、
+// 末節骨を第1関節のまわりに傾けて置く（v024〜。前は骨がはらの真ん中を通り、はらの肉が甲の側と同じうすさだった）
+const NAIL_TO_BONE = 2.0;
+const distalTilt = f => Math.max(0, RADII[f][3] / FLAT - BONE_R[f][2][2] * 0.78 - NAIL_TO_BONE);
 
 // 長い骨（中手骨・基節骨・中節骨）の縦の形: z = 0（根もと）〜 len（頭）。[半径, 位置] の列
 function longProfile(len, [rb, rs, rh]) {
@@ -79,7 +84,7 @@ function buildSkeletonParts(H) {
     for (let j = 0; j < 3; j++) {
       const len = j === 2 ? PD_LEN[f] * (U[f].L[1] / FINGERS_BASE[f].L[1]) : U[f].L[j]; // 手のモデルの指の長さの倍率も
       const prof = j === 2 ? distalProfile(len, BONE_R[f][2]) : longProfile(len, BONE_R[f][j]);
-      add(new THREE.Mesh(latheBone(prof, 0.78), H.mat), boneOf(f, j));
+      add(new THREE.Mesh(latheBone(prof, 0.78), H.mat), boneOf(f, j), j === 2 ? new THREE.Matrix4().makeRotationX(-Math.atan2(distalTilt(f), U[f].L[2])) : null);
     }
   }
   // 中手骨 II〜V: 指の付け根（MP 関節）から、近くの手首の方へ論文の長さだけ。向きは手首の少し先の1点へ集まる

@@ -104,8 +104,10 @@ let WRIST_Y = 0; // 力を抜いた指先が、白鍵を7mm 押しこんだ高�
 // 大人の値は Boyle ほか 2015 のピアニストの平均（男性 22.6cm・女性 20.1cm）に合わせた目安。子どもと指の長さのちがいは目安（測った研究の値ではない）
 const HAND_MODELS = {
   'adult-l': { name: L('大人（大きめ）', 'Adult (large)'), s: 1.0, fingers: 1.0, thumb: 1.0 },
-  'adult-s': { name: L('大人（小さめ）', 'Adult (small)'), s: 0.88, fingers: 1.0, thumb: 1.0 },
-  'child': { name: L('子ども（小学生くらい）', 'Child (about 6 to 12)'), s: 0.74, fingers: 1.0, thumb: 1.0, veins: 0.15, wrinkles: 0.4 }, // 子どもの手の甲は静脈・腱・しわが目立たない
+  // knuckle: 指の関節のふくらみ（太さの割合、ふつう 0.07）、fat: 皮下脂肪の上乗せ（mm）。どちらも目安。
+  // 子どもや小さめの手は関節の節を控えめに（ユーザーの希望、2026-10-11。子どもの手は皮下脂肪が多く、関節が目立たない）
+  'adult-s': { name: L('大人（小さめ）', 'Adult (small)'), s: 0.88, fingers: 1.0, thumb: 1.0, knuckle: 0.045, wrinkles: 0.7, fat: 0.5 },
+  'child': { name: L('子ども（小学生くらい）', 'Child (about 6 to 12)'), s: 0.74, fingers: 1.0, thumb: 1.0, veins: 0.15, wrinkles: 0.4, knuckle: 0.02, fat: 1.0 }, // 子どもの手の甲は静脈・腱・しわが目立たない
   'long': { name: L('指が長い手', 'Long fingers'), s: 0.97, fingers: 1.12, thumb: 1.06 },
   'short': { name: L('指が短い手', 'Short fingers'), s: 1.0, fingers: 0.88, thumb: 0.94 },
 };

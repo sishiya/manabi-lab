@@ -1,9 +1,10 @@
 // 骨と皮ふのあいだ（v023〜）: 筋肉・腱・脂肪の模型。「筋肉・腱・脂肪」の表示で骨の上に見せる。
-// 部品は両端をそれぞれ骨に付ける。両端が別の骨なら、関節が動くとのび縮みする。筋肉は体積がほぼ変わらない
-// （水が主な、ほぼ縮まない組織）ので、のびると細く・縮むと太くなるように、太さを √(元の長さ / いまの長さ) 倍にする。腱と脂肪は太さを変えない。
+// 部品は両端をそれぞれ骨に付けて置き、網の頂点は皮ふと同じ重みで骨について動く（v024〜）。両端が別の骨なら、関節が動くとのび縮みする。
+// 筋肉は体積がほぼ変わらない（水が主な、ほぼ縮まない組織）ので、のびると細く・縮むと太くなるように、軸からの太さを √(元の長さ / いまの長さ) 倍にする。
+// 腱と脂肪は太さを変えない。
 // 位置と太さは解剖学の図をもとにしたこのアプリの目安（測った値ではない）。測った値があるのは、指先の肉（Buryanov & Kotiuk 2010）と
 // 手首の手のひら側の肉（PubMed 16844164）だけで、それに合うかは DEVNOTES の「筋肉・腱・脂肪の模型」に。
-// 次の段階で、皮ふはこの模型（と骨）の外側に作りなおす。
+// 皮ふは v024 から、骨とこの模型の外側＋皮ふの厚さに合わせて作っている（skin.js の TD_HAND・TD_FINGER）。
 'use strict';
 
 // 色（種類ごと）
@@ -23,7 +24,7 @@ const tM = (f, u, dx, dy) => { const { s, h } = mcEnds(f); return { bone: BONE_P
 const tP = p => ({ bone: BONE_PALM, p }); // 手のひら（手根骨のあたり）に固定した点
 const tA = p => ({ bone: BONE_ARM, p });  // 前腕に固定した点
 // 指の骨（f, j）に付く点: 骨にそって u（0 = 関節、1 = 次の関節）、骨の座標で横 dx・甲の側 dy。local は骨の座標
-const tF = (f, j, u, dx, dy) => ({ bone: boneOf(f, j), local: [dx, dy, u * FINGERS_U[f].L[j]] });
+const tF = (f, j, u, dx, dy) => ({ bone: boneOf(f, j), local: [dx, dy + (j === 2 ? distalTilt(f) * u : 0), u * FINGERS_U[f].L[j]] }); // 末節骨は甲の側へ傾く（skeleton.js）
 const mcR = (f, k) => MC_R[f][k] * 0.85;     // 中手骨の縦の半径（骨は縦に 0.85 倍うすい）
 const pdR = (f, j, k) => BONE_R[f][j][k] * 0.78; // 指骨の縦の半径（0.78 倍）
 
@@ -117,51 +118,98 @@ function tissueGeom(T) {
   return g;
 }
 
-let TISSUE_GEOM_KEY = '';
 function makeTissueHand(sc, side) {
   const mats = {};
   for (const k in TISSUE_KIND) mats[k] = new THREE.MeshStandardMaterial({ color: linCol(TISSUE_KIND[k].col), roughness: TISSUE_KIND[k].rough, metalness: 0, transparent: true, opacity: 1 });
-  const H = { side, mats, parts: [], group: new THREE.Group() };
+  const H = { side, mats, meshes: {}, parts: [], group: new THREE.Group(), built: false };
   sc.add(H.group);
-  buildTissueParts(H);
   return H;
 }
+// 模型の網を作る（はじめて見せるときと、手のモデルを変えたとき）。v024〜: 頂点は皮ふと同じ重み（skinWeights）で骨について動く。
+// 前は両端を骨に付けたまっすぐな棒だったので、親指をくぐらせると、関節のまわりで曲がってついてくる皮ふとちがう動きをして、
+// 母指球などが皮ふの外へはみ出した。網の姿勢で皮ふの内側にあれば、どの姿勢でもほぼ内側に残る
 function buildTissueParts(H) {
-  for (const p of H.parts) { H.group.remove(p.mesh); p.mesh.geometry.dispose(); }
-  H.parts = [];
-  const R = tissueRestFrames();
+  for (const k in H.meshes) { H.group.remove(H.meshes[k]); H.meshes[k].geometry.dispose(); }
+  H.meshes = {}; H.parts = [];
+  const P = buildPrims(), R = restBoneFrames(P.rest), comp = new Float64Array(N_BONES);
+  const wOf = p => { const t = skinWeights(P, R, p, comp), sum = t.reduce((a, e) => a + e[0], 0); return t.map(e => [e[1], e[0] / sum]); };
+  const acc = {};
+  for (const k in TISSUE_KIND) acc[k] = { pos: [], bi: [], bw: [], u: [], part: [], idx: [] };
   for (const T of tissueParts()) {
-    const la = endLocal(T.a, R), lb = endLocal(T.b, R);
-    const L0 = Math.hypot(...sub3(endAt(R[T.a.bone], la, 1), endAt(R[T.b.bone], lb, 1)));
-    const mesh = new THREE.Mesh(tissueGeom(T), H.mats[T.kind]);
-    mesh.castShadow = true; mesh.receiveShadow = true; mesh.matrixAutoUpdate = false; mesh.frustumCulled = false;
-    H.group.add(mesh);
-    H.parts.push({ T, mesh, la, lb, L0 });
+    const a = endAt(R[T.a.bone], endLocal(T.a, R), 1), b = endAt(R[T.b.bone], endLocal(T.b, R), 1);
+    const z = sub3(b, a), L0 = Math.hypot(...z), zn = z.map(v => v / L0);
+    let y = R[T.a.bone].y.slice(); const d = dot3(y, zn); y = y.map((v, i) => v - zn[i] * d);
+    const yl = Math.hypot(...y) || 1; y = y.map(v => v / yl);
+    const x = cross3(y, zn), g = tissueGeom(T), gp = g.attributes.position, A = acc[T.kind], v0 = A.pos.length / 3, pi = H.parts.length;
+    for (let i = 0; i < gp.count; i++) {
+      const gx = gp.getX(i), gy = gp.getY(i), gz = gp.getZ(i);
+      const q = [a[0] + x[0] * gx + y[0] * gy + zn[0] * gz * L0, a[1] + x[1] * gx + y[1] * gy + zn[1] * gz * L0, a[2] + x[2] * gx + y[2] * gy + zn[2] * gz * L0];
+      A.pos.push(...q); A.u.push(gz); A.part.push(pi);
+      const w = wOf(q);
+      for (let k = 0; k < 4; k++) { A.bi.push(w[k] ? w[k][0] : 0); A.bw.push(w[k] ? w[k][1] : 0); }
+    }
+    // 左手は鏡に映すので三角形の向きが裏返る。網を作るときに逆にしておく（法線が内向きになって暗く見えないように）
+    for (let i = 0; i < g.index.count; i += 3) { const t = [g.index.getX(i), g.index.getX(i + 1), g.index.getX(i + 2)]; if (H.side < 0) t.reverse(); A.idx.push(v0 + t[0], v0 + t[1], v0 + t[2]); }
+    g.dispose();
+    H.parts.push({ T, a, b, wa: wOf(a), wb: wOf(b), L0 });
   }
-  TISSUE_GEOM_KEY = HAND.id;
+  for (const k in acc) {
+    const A = acc[k], geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(A.pos), 3));
+    geo.setIndex(A.idx);
+    const mesh = new THREE.Mesh(geo, H.mats[k]);
+    mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false;
+    mesh.userData = { rest: new Float32Array(A.pos), bi: new Uint8Array(A.bi), bw: new Float32Array(A.bw), u: new Float32Array(A.u), part: new Uint16Array(A.part) };
+    H.group.add(mesh); H.meshes[k] = mesh;
+  }
+  H.built = HAND.id;
 }
 
-const _tm = new THREE.Matrix4(), _tx = new THREE.Vector3(), _ty = new THREE.Vector3(), _tz = new THREE.Vector3();
-// 部品ごとの、いまの長さ ÷ 網の姿勢での長さ（のび縮み）。検査・表示用に H.stretch に入れる
+// 骨ごとの行列（網の姿勢で大きさ HAND.s をかけた点 → いまの姿勢の世界の点）。皮ふの skinMatrices と同じ考え方
+const _tA = new THREE.Matrix4(), _tB = new THREE.Matrix4();
+function tissueBoneMats(bones, s) {
+  if (!tissueBoneMats.rest || tissueBoneMats.key !== HAND.id) {
+    const R = restBoneFrames(buildPrims().rest);
+    tissueBoneMats.rest = R.map(B => frameMat({ o: B.o.map(v => v * s), x: B.x, y: B.y, z: B.z }, new THREE.Matrix4()).invert());
+    tissueBoneMats.key = HAND.id;
+  }
+  return bones.map((B, i) => frameMat(B, new THREE.Matrix4()).multiply(tissueBoneMats.rest[i]).elements);
+}
+const skinPt = (M, w, x, y, z, out) => {
+  out[0] = out[1] = out[2] = 0;
+  for (const [b, k] of w) { const e = M[b]; out[0] += k * (e[0] * x + e[4] * y + e[8] * z + e[12]); out[1] += k * (e[1] * x + e[5] * y + e[9] * z + e[13]); out[2] += k * (e[2] * x + e[6] * y + e[10] * z + e[14]); }
+  return out;
+};
+
+// 部品ごとの、いまの長さ ÷ 網の姿勢での長さ（のび縮み）は P.ratio に入れる（検査・表示用）
 function renderTissueHand(H, pose, opt) {
   const show = !!pose && !!opt.muscles;
   H.group.visible = show;
   if (!show) return;
-  if (TISSUE_GEOM_KEY !== HAND.id) for (const VH of V.hands) buildTissueParts(VH.tissue);
+  if (H.built !== HAND.id) buildTissueParts(H);
   const ghost = !!opt.xray;
   for (const k in H.mats) { const m = H.mats[k]; m.opacity = ghost ? 0.75 : 1; m.depthWrite = !ghost; }
-  const bones = poseBones(pose), s = HAND.s;
-  for (const P of H.parts) {
-    const A = bones[P.T.a.bone], a = endAt(A, P.la, s), b = endAt(bones[P.T.b.bone], P.lb, s);
-    const d = sub3(b, a), L = Math.hypot(...d) || 1e-6, ratio = L / (P.L0 * s);
-    P.ratio = ratio;
-    // 筋肉は体積を保つ: 太さ √(元 / いま)。腱・脂肪はそのまま
-    const k = s * (P.T.kind === 'muscle' ? Math.min(1.5, Math.max(0.65, Math.sqrt(1 / ratio))) : 1);
-    _tz.set(d[0] / L, d[1] / L, d[2] / L);
-    _ty.set(...A.y); _ty.addScaledVector(_tz, -_ty.dot(_tz));
-    if (_ty.lengthSq() < 1e-6) _ty.set(0, 1, 0).addScaledVector(_tz, -_tz.y);
-    _ty.normalize(); _tx.crossVectors(_ty, _tz);
-    _tm.makeBasis(_tx.multiplyScalar(k), _ty.multiplyScalar(k), _tz.multiplyScalar(L)).setPosition(a[0], a[1], a[2]);
-    P.mesh.matrix.copy(_tm); P.mesh.matrixWorldNeedsUpdate = true;
+  const s = HAND.s, M = tissueBoneMats(poseBones(pose), s);
+  // 部品の両端（皮ふと同じ重みで動かす）から、のびの割合と、筋肉の太さの倍率（体積を保つ: √(元 / いま)）
+  const ends = H.parts.map(P => {
+    const a = skinPt(M, P.wa, P.a[0] * s, P.a[1] * s, P.a[2] * s, [0, 0, 0]), b = skinPt(M, P.wb, P.b[0] * s, P.b[1] * s, P.b[2] * s, [0, 0, 0]);
+    P.ratio = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / (P.L0 * s);
+    return { a, b, k: P.T.kind === 'muscle' ? Math.min(1.5, Math.max(0.65, Math.sqrt(1 / P.ratio))) : 1 };
+  });
+  const q = [0, 0, 0], w4 = [[0, 0], [0, 0], [0, 0], [0, 0]];
+  for (const kind in H.meshes) {
+    const mesh = H.meshes[kind], D = mesh.userData, pos = mesh.geometry.attributes.position, arr = pos.array, n = arr.length / 3;
+    for (let i = 0; i < n; i++) {
+      for (let k = 0; k < 4; k++) { w4[k][0] = D.bi[i * 4 + k]; w4[k][1] = D.bw[i * 4 + k]; }
+      skinPt(M, w4, D.rest[i * 3] * s, D.rest[i * 3 + 1] * s, D.rest[i * 3 + 2] * s, q);
+      const E = ends[D.part[i]];
+      if (E.k !== 1) { // 軸（両端を結ぶ線）からの距離を k 倍
+        const u = D.u[i], ax = E.a[0] + (E.b[0] - E.a[0]) * u, ay = E.a[1] + (E.b[1] - E.a[1]) * u, az = E.a[2] + (E.b[2] - E.a[2]) * u;
+        q[0] = ax + (q[0] - ax) * E.k; q[1] = ay + (q[1] - ay) * E.k; q[2] = az + (q[2] - az) * E.k;
+      }
+      arr[i * 3] = q[0]; arr[i * 3 + 1] = q[1]; arr[i * 3 + 2] = q[2];
+    }
+    pos.needsUpdate = true;
+    mesh.geometry.computeVertexNormals();
   }
 }

@@ -13,6 +13,7 @@ const RADII = [null, [10.0, 11.0, 10.8, 8.8], [9.6, 8.9, 7.7, 6.6], [10.0, 9.3, 
 const BONE_ARM = 0, BONE_PALM = 1, boneOf = (f, j) => 2 + (f - 1) * 3 + j, N_BONES = 17;
 
 const sub3 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const add3 = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 function smin(a, b, k) { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25; }
@@ -56,8 +57,33 @@ const PALM = { c: [4, -1, -54], h: [25, 1, 29.5], r: 13 }; // 角を大きく丸
 const PALM_ROUND = 0.4, PALM_E = [42, 12, 46];
 // 手首・前腕: 横に広く縦にうすいだ円（大人の手首はおよそ幅 55〜60mm・厚み 35〜40mm）。前は丸に近く、真上から見ると手首だけ細くくびれていた
 const ARM_FLAT = 1.45;
-// 手の甲の中手骨の盛り上がりの半径。骨の表面から皮ふまでが本物の目安（皮ふ・皮下・腱で 4mm ほど）に近くなる太さ（9 では 7.5mm あった）
-const DORSAL_R = 6.5;
+// 骨の表面から皮ふまでの肉の厚さ（v024〜。皮ふを骨から作る）
+// 手の甲: 皮ふ・皮下・伸筋腱。手の甲の肉の厚さ 3.20mm（超音波、20 人。IMCAS 2023 の要旨）に、伸筋腱の上の分を少し足した目安
+const TD_HAND = 3.5;
+// 指の甲の側: 皮ふ・うすい皮下・伸筋腱の膜。目安（指の手のひら側は、太さ（周囲・幅は測定値）の残りがすべて手のひら側＝屈筋腱・腱鞘・脂肪になる）
+const TD_FINGER = 2.5;
+// 手の甲の屋根: 中手骨 II〜V の甲の面＋TD_HAND の尾根を、横へは放物線（曲率の半径 MC_ROOF_RC）で下げ、なめらかな最大でつなぐ。
+// 本物の手の甲は中手骨の横のアーチ（中指が高く、小指が低い）に沿って丸い。前は平らな板で、小指の側で骨の上に 15mm の肉があった
+const MC_ROOF_RC = 13, MC_ROOF_K = 5;
+function mcRoof(P, x, z) {
+  let m = -1e9;
+  for (const M of P.mc) {
+    // 手首の側（u < 0）は根もとの高さのまま前腕へ続ける（横の距離は線からの距離だけ）。指の側（u > 1）は先の点からの距離で下げる
+    const dx = x - M.s[0], dz = z - M.s[2], u0 = (dx * M.d[0] + dz * M.d[2]) / M.l2, u = Math.max(0, Math.min(1.08, u0));
+    const ua = u0 < 0 ? u0 : u; // 横の距離を測る点（手首の側は線の上）
+    const ax = M.s[0] + M.d[0] * ua, ay = M.s[1] + M.d[1] * u, az = M.s[2] + M.d[2] * ua;
+    // 甲の面は根もとと頭の太さをまっすぐつなぐ（伸筋腱が骨幹の細い所をまたいで張っているので、皮ふは骨幹でへこまない）
+    const ry = M.r[0] + (M.r[2] - M.r[0]) * Math.min(1, u);
+    const lx = x - ax, lz = z - az;
+    const h = ay + ry + P.tdH - (lx * lx + lz * lz) / (2 * MC_ROOF_RC);
+    m = m < -1e8 ? h : -smin(-m, -h, MC_ROOF_K);
+  }
+  return m;
+}
+// 手首から肘の側では屋根をゆっくり外して、前腕の形にまかせる（急に外すと手首に段が、外しはじめが遅いと手首の甲に 3mm のくぼみができた）
+const roofFade = z => smoothF((z + 12) / 36);
+const smax = (a, b, k) => -smin(-a, -b, k);
+const PALM_UP = 0.75; // 手のひらの板の上半分を縦にのばす割合の逆数（板の上面が手の甲の屋根より上へ出るように）
 function palmD(x, y, z) {
   const s = 0.74 + 0.26 * Math.min(1, Math.max(0, (-z - 20) / 67)); // 指の付け根から手首へ台形にすぼめる
   // 手首に近いほどうすく（同じ厚みのまま細い前腕につなぐと、手の甲と前腕の境目がこぶのように盛り上がった）
@@ -66,9 +92,11 @@ function palmD(x, y, z) {
   const arc = (Math.max(0, x - 12) * 0.6 + Math.max(0, -18 - x) * 0.4) * Math.min(1, Math.max(0, (-z - 40) / 40));
   const px = (x - PALM.c[0]) / s, py = (y - PALM.c[1]) * thin, pz = z + arc - PALM.c[2];
   const qx = Math.abs(px) - PALM.h[0], qy = Math.abs(py) - PALM.h[1], qz = Math.abs(pz) - PALM.h[2];
-  const box = Math.hypot(Math.max(qx, 0), Math.max(qy, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qy, qz), 0) - PALM.r;
+  const mx = Math.max(qx, 0), my = Math.max(qy, 0), mz = Math.max(qz, 0); // Math.hypot は遅いので平方根で（毎回よばれる）
+  const box = Math.sqrt(mx * mx + my * my + mz * mz) + Math.min(Math.max(qx, qy, qz), 0) - PALM.r;
   const [rx, ry, rz] = PALM_E; // だ円体のおよその距離（Inigo Quilez）
-  const k0 = Math.hypot(px / rx, py / ry, pz / rz), k1 = Math.hypot(px / (rx * rx), py / (ry * ry), pz / (rz * rz));
+  const ax = px / rx, ay = py / ry, az = pz / rz, bx = ax / rx, by = ay / ry, bz = az / rz;
+  const k0 = Math.sqrt(ax * ax + ay * ay + az * az), k1 = Math.sqrt(bx * bx + by * by + bz * bz);
   const ell = k1 > 1e-9 ? k0 * (k0 - 1) / k1 : -Math.min(rx, ry, rz);
   return box + (ell - box) * PALM_ROUND;
 }
@@ -83,12 +111,14 @@ function buildPrims() {
   }
   // 手のひら: 手首の横棒・中手骨（甲の盛り上がり）・指の付け根の横棒・小指球・母指球
   P.palm.push(mkCone([-15, -3, -11], [19, -3, -11], 10, 10, BONE_PALM)); // 手首の横棒（細めにして、手首と手のひらの境目がでっぱらないように）
-  const wx = [0, 0, -12, 0, 11, 21];
-  for (let f = 2; f <= 5; f++) {
-    const b = FINGERS_U[f].base, s = [wx[f], 1, -14], d = sub3(b, s), n = Math.hypot(...d);
-    const end = [b[0] - d[0] * 4 / n, b[1] - 1, b[2] - d[2] * 4 / n]; // 付け根の関節の 4mm 手前まで
-    P.palm.push(mkCone(s, end, DORSAL_R, RADII[f][0] + 0.5, BONE_PALM)); // 手の甲の中手骨の盛り上がり（太いと手の甲の肉が厚くふっくらしすぎた）
-  }
+  // 中手骨 II〜V（骨格と同じ位置）: 手の甲の屋根に使う。r は甲の向きの半径 [根もと, 骨幹, 頭]（骨は縦に 0.85 倍）
+  // 手のモデルごとの皮下脂肪の上乗せ（HAND.fat、mm、目安）。子どもの手は皮下脂肪が多く、こぶしや関節が目立たない
+  const fat = HAND.fat || 0; P.tdH = TD_HAND + fat;
+  P.mc = [];
+  for (let f = 2; f <= 5; f++) { const { s, h } = mcEnds(f), d = sub3(h, s); P.mc.push({ s, d, l2: d[0] * d[0] + d[2] * d[2], r: MC_R[f].map(v => v * 0.85) }); }
+  // 中手骨の上の肉（骨の太さ＋TD_HAND の円すい、骨格と同じ位置）。こぶし（中手骨の頭）の上の皮ふもこれで決まる
+  // 根もとで丸く終わらせると手首の手前に縁が見えたので、手根骨の上まで（中手骨の長さの 35%）手首の側へのばす
+  for (const M of P.mc) { const c = mkCone(add3(M.s, M.d.map(v => -v * 0.35)), add3(M.s, M.d), M.r[0] + P.tdH, M.r[2] + P.tdH, BONE_PALM); c.k = 6; c.noW = true; P.palm.push(c); }
   P.palm.push(mkCone(sub3(FINGERS_U[2].base, [0, 2, -3]), sub3(FINGERS_U[5].base, [0, 2, -3]), 10.5, 9, BONE_PALM));
   P.palm.push(mkCone([21, -8, -28], [28, -6, -66], 12, 10, BONE_PALM));
   { const c = mkCone([-6, -15, -24], [-14, -15, -40], 8, 7, BONE_PALM); c.k = 12; P.palm.push(c); } // 母指球の根もと（手根骨の手のひら側から始まる部分。手のひらに固定）
@@ -99,22 +129,30 @@ function buildPrims() {
   // 手のひらに固定した根もとの部分とのあいだが伸びて、うすくなる（重みのなめらかな移りで）
   { const pc = [-4, -12, -48], m1 = rest[1][1].o, off = (p, u) => { const q = lerp3(t0.o, m1, u), d = sub3(pc, q), n = Math.hypot(...d) || 1;
       return [q[0] - t0.y[0] * 5 + d[0] / n * 3, q[1] - t0.y[1] * 5 + d[1] / n * 3, q[2] - t0.y[2] * 5 + d[2] / n * 3]; };
-    const c = mkCone(off(null, 0.1), off(null, 0.8), 11, 8, boneOf(1, 0)); c.k = 12; P.palm.push(c); }
+    const c = mkCone(off(null, 0.1), off(null, 0.8), 11, 8, boneOf(1, 0)); c.k = 12; c.thumb = true; P.palm.push(c); }
   // 親指の中手骨は根もとから太さを保ち、手首の親指側から途切れずにつなぐ（少し先から細く始めると、手首から MP 関節までが手の甲の側でへこんで見えた）
-  { const c = mkCone([-16, -3, -14], t0.o, 9, RADII[1][0], BONE_PALM); c.k = 12; P.palm.push(c); } // 手首の親指側 → 親指の根もと（CMC）
-  { const c = mkCone(t0.o, rest[1][1].o, RADII[1][0], RADII[1][1], boneOf(1, 0)); c.k = 12; P.palm.push(c); } // 親指の中手骨
-  { const c = mkCone([-17, 3, -60], lerp3(t0.o, rest[1][1].o, 0.9), 10, 7.5, BONE_PALM); c.k = 14; P.palm.push(c); } // 親指と人さし指のあいだの水かき（甲の側の筋肉）。甲の側に寄せて厚く（うすいと、親指と手の甲のあいだが谷になった）
+  { const c = mkCone([-16, -3, -14], t0.o, 9, RADII[1][0], BONE_PALM); c.k = 12; c.thumb = true; P.palm.push(c); } // 手首の親指側 → 親指の根もと（CMC）
+  { const c = mkCone(t0.o, rest[1][1].o, RADII[1][0], RADII[1][1], boneOf(1, 0)); c.k = 12; c.thumb = true; P.palm.push(c); } // 親指の中手骨
+  { const c = mkCone([-17, 3, -60], lerp3(t0.o, rest[1][1].o, 0.9), 10, 7.5, BONE_PALM); c.k = 14; c.thumb = true; P.palm.push(c); } // 親指と人さし指のあいだの水かき（甲の側の筋肉）。甲の側に寄せて厚く（うすいと、親指と手の甲のあいだが谷になった）
   P.arm = mkCone([2, -5, -42], [3, -16, 240], 26, 36, BONE_ARM); // 形: 手のひらの中から細く始めて、手首で自然に太くなる（手首で丸く始めると、境目に段ができた）。一人称で切れ目が見えないよう、肘の近くまで
   P.armW = mkCone([2, -6, -4], [3, -16, 240], 27, 36, BONE_ARM); // 重み用: 手首から先だけ（手のひらの皮ふが前腕といっしょに動かないように）
+  // 指の皮ふの筒の中心を、手のひら側へずらす量（関節ごと: 付け根・2つめ・3つめ・指先）。甲の側の肉が TD_FINGER になるように。
+  // 指先は鍵に当たるはらの中心（動きの計算の指先の点）なので 0
+  const offN = f => {
+    const B = BONE_R[f], ry = k => (k === 0 ? (f === 1 ? B[0][2] : B[0][0]) : Math.max(B[k - 1][2], B[k][0])) * 0.78;
+    return [0, 1, 2].map(k => Math.max(0, RADII[f][k] / FLAT - ry(k) - TD_FINGER - fat)).concat([0]);
+  };
   for (let f = 1; f <= 5; f++) {
-    const R = rest[f];
+    const R = rest[f], off = offN(f);
     for (let j = f === 1 ? 1 : 0; j < 3; j++) {
       const a = R[j].o, b = j < 2 ? R[j + 1].o : fingerFK(FINGERS_U[f], REST_DEG[f][0] * D2R, REST_DEG[f][1] * D2R, REST_DEG[f][2] * D2R)[3];
       const c = mkCone(a, b, RADII[f][j], RADII[f][j + 1], boneOf(f, j));
       c.fr = R[j]; // 指は縦に少しうすい: 骨の y（甲の向き）を FLAT 倍に伸ばした点で測る
+      c.off0 = off[j]; c.off1 = off[j + 1]; c.il = 1 / Math.hypot(...sub3(b, a));
       P.fing[f].push(c);
       if (j >= 1) { // 関節の少しのふくらみ
-        const k = mkCone(a, a, RADII[f][j] * 1.07, RADII[f][j] * 1.07, boneOf(f, j)); k.fr = R[j]; k.knuckle = true;
+        const kr = RADII[f][j] * (1 + (HAND.knuckle === undefined ? 0.07 : HAND.knuckle));
+        const k = mkCone(a, a, kr, kr, boneOf(f, j)); k.fr = R[j]; k.knuckle = true; k.off0 = k.off1 = off[j]; k.il = 0;
         P.fing[f].push(k);
       }
     }
@@ -126,23 +164,50 @@ function buildPrims() {
 // 全体の距離。comp を渡すと骨ごとの距離も入れる（重みづけ用）
 function handSDF(P, x, y, z, comp) {
   const cull = !comp;
-  let pal = palmD(x, y, z);
-  if (comp) { comp.fill(1e9); comp[BONE_PALM] = pal; }
+  // 手のひらの板は上へのばしてから、手の甲の屋根で切る（甲の面は中手骨から決まる）。手のひらの部品をつないだあとで切る
+  // （先に切ると、部品をなめらかにつなぐときの太りが積み重なって、また甲がふくらんだ）。親指の部品は切らずにあとからつなぐ
+  let rf = mcRoof(P, x, z);
+  // 手首の手前 30mm から、屋根を前腕の甲の高さへなめらかに下ろす（最大 3mm）。手の甲が前腕より 2〜3mm 高いままだと、
+  // つなぎ目が手首を横切る折れ目に見えた（本物の手首の甲は、中手骨の根もと・手根骨・橈骨の端までほぼ平らにつながる）
+  const wf = smoothF((z + 32) / 20);
+  if (wf > 0) { const A = P.arm, t = (z - A.a[2]) / A.ba[2], cx = A.a[0] + A.ba[0] * t, cy = A.a[1] + A.ba[1] * t, r = A.ra + (A.rb - A.ra) * t, q = r * r - (x - cx) * (x - cx);
+    const top = A.a[1] + (cy + Math.sqrt(Math.max(0, q)) - A.a[1]) / ARM_FLAT + 0.5; // 前腕の甲の高さ（縦は ARM_FLAT 分の1）
+    const side = smoothF((0.8 - Math.abs(x - cx) / r) / 0.3); // 前腕の断面のふちでは高さの式が急に変わる（細い溝ができた）ので、ふちに近いほど弱める
+    rf -= Math.min(3, Math.max(0, rf - top)) * wf * side; }
+  const roof = y - rf - 60 * roofFade(z);
+  // 上へのばすのは上半分を縦に 1/PALM_UP 倍にして（まっすぐ引きのばすと、手首の側の端が丸みのない壁になり、前腕とのあいだに段ができた）。
+  // 手首の近く（z > -40 から）はのばさない（のばした板の端が前腕より 3〜4mm 高く出て、手首を横切る尾根になった）
+  const yc = PALM.c[1], up = PALM_UP + (1 - PALM_UP) * smoothF((z + 40) / 20);
+  let pal = palmD(x, y > yc ? yc + (y - yc) * up : y, z);
+  // 重み（どの骨について動くか）は、形を変える前の手のひらの板からの距離で（のばした板で測ると、手首で手のひらと前腕の重みの境目が急になり、手首を曲げると折れ目が出た）
+  if (comp) { comp.fill(1e9); comp[BONE_PALM] = palmD(x, y, z); }
   for (const c of P.palm) {
+    if (c.thumb) continue;
+    const d = coneD(c, x, y, z, cull);
+    pal = smin(pal, d, c.k || 14);
+    if (comp && !c.noW) comp[c.bone] = Math.min(comp[c.bone], d);
+  }
+  pal = smax(pal, roof, 3);
+  for (const c of P.palm) {
+    if (!c.thumb) continue;
     const d = coneD(c, x, y, z, cull);
     pal = smin(pal, d, c.k || 14);
     if (comp) comp[c.bone] = Math.min(comp[c.bone], d);
   }
-  const arm = coneD(P.arm, x, (y - P.arm.a[1]) * ARM_FLAT + P.arm.a[1], z, cull); // 前腕は縦にうすい（だ円）
+  // 前腕は縦にうすい（だ円）。手のひらの中に入りこんだ部分（z < -10）だけ屋根で切る（手首では前腕の形そのまま）
+  const arm = smax(coneD(P.arm, x, (y - P.arm.a[1]) * ARM_FLAT + P.arm.a[1], z, cull), y - rf - 60 * smoothF((z + 30) / 20), 3);
   if (comp) comp[BONE_ARM] = coneD(P.armW, x, (y - P.armW.a[1]) * ARM_FLAT + P.armW.a[1], z, false);
-  let d = smin(pal, arm, 9); // つなぎ目の幅。大きいと手首に肉が足されて、手の甲と前腕の境目がこぶのように盛り上がった
+  let d = smin(pal, arm, 9); // つなぎ目の幅。大きいと手首に肉が足されて、手の甲と前腕の境目がこぶのように盛り上がった（13 でも手首の小指側の尾根が高くなった）
   for (let f = 1; f <= 5; f++) {
     let fd = 1e9;
     for (const c of P.fing[f]) {
       if (cull && (x < c.lo[0] || y < c.lo[1] || z < c.lo[2] || x > c.hi[0] || y > c.hi[1] || z > c.hi[2])) continue;
       const F = c.fr, qx = x - F.o[0], qy = y - F.o[1], qz = z - F.o[2];
-      const t = (qx * F.y[0] + qy * F.y[1] + qz * F.y[2]) * (FLAT - 1);
-      const e = c.knuckle && c.l2 === 0 ? Math.hypot(x + F.y[0] * t - c.a[0], y + F.y[1] * t - c.a[1], z + F.y[2] * t - c.a[2]) - c.ra
+      // 甲の向きの座標を、中心を手のひら側へ off ずらしてから FLAT 倍（off は節にそって関節の値をつなぐ）
+      const yy = qx * F.y[0] + qy * F.y[1] + qz * F.y[2], u = Math.max(0, Math.min(1, (qx * F.z[0] + qy * F.z[1] + qz * F.z[2]) * c.il));
+      const t = (yy + c.off0 + (c.off1 - c.off0) * u) * FLAT - yy;
+      const kx = x + F.y[0] * t - c.a[0], ky = y + F.y[1] * t - c.a[1], kz = z + F.y[2] * t - c.a[2];
+      const e = c.knuckle && c.l2 === 0 ? Math.sqrt(kx * kx + ky * ky + kz * kz) - c.ra
         : coneD(c, x + F.y[0] * t, y + F.y[1] * t, z + F.y[2] * t, cull);
       fd = smin(fd, e, 2.5);
       if (comp) comp[c.bone] = Math.min(comp[c.bone], e);
@@ -224,6 +289,31 @@ const srgbLin = c => c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.
 const lin3 = (r, g, b) => [srgbLin(r), srgbLin(g), srgbLin(b)];
 const mix3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 
+// 網の姿勢の点 p の、骨の重みの上位4つ [[重み, 骨], ...]（合計で割る前）。皮ふと、筋肉・腱・脂肪の模型（tissue.js）で同じものを使う
+function skinWeights(P, restB, p, comp) {
+  handSDF(P, p[0], p[1], p[2], comp);
+  let dmin = Infinity;
+  for (let b = 0; b < N_BONES; b++) dmin = Math.min(dmin, comp[b]);
+  const sc = [];
+  for (let b = 0; b < N_BONES; b++) { const s = Math.exp(-(comp[b] - dmin) / (b <= BONE_PALM || b === boneOf(1, 0) ? 5 : 2.6)); if (s > 0.01) sc.push([s, b]); }
+  sc.sort((a, b) => b[0] - a[0]);
+  // 親指の中手骨は手のひらの中に深く埋まっていて、付け根に近い皮ふはほとんど手のひらと一緒に動く。
+  // 付け根からの位置 u（0 = 付け根、1 = MP 関節）で、親指の骨の重みを手のひらへなめらかに移す
+  // （そのままだと、親指を動かすたびに手首の親指側の皮ふが引っぱられて、こぶのように出っぱった）
+  {
+    const tb = boneOf(1, 0), ti = sc.findIndex(e => e[1] === tb);
+    if (ti >= 0) {
+      const B = restB[tb], u = dot3(sub3(p, B.o), B.z) / B.len, f = smoothF((u + 0.05) / 1.0);
+      const move = sc[ti][0] * (1 - f);
+      sc[ti][0] *= f;
+      const pi = sc.findIndex(e => e[1] === BONE_PALM);
+      if (pi >= 0) sc[pi][0] += move; else sc.push([move, BONE_PALM]);
+      sc.sort((a, b) => b[0] - a[0]);
+    }
+  }
+  return sc.slice(0, 4);
+}
+
 // 手の網・骨の重み・色・しわの目印を作る（起動時に一度）
 function buildSkin() {
   const t0 = performance.now();
@@ -248,7 +338,7 @@ function buildSkin() {
   }
   // 骨の座標軸（網を作った姿勢）
   // 手の甲の腱と静脈: 表面を法線の向きに少し盛り上げる（網を作った姿勢で一度だけ）
-  const vein = new Float32Array(NV);
+  const vein = new Float32Array(NV), raise = new Float32Array(NV);
   for (let v = 0; v < NV; v++) {
     const x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2], ny = nrm[v * 3 + 1];
     if (ny < 0.35 || z > 30 || z < -100) continue;
@@ -257,7 +347,7 @@ function buildSkin() {
     for (const T of TENDONS) { const d = segDist2(x, z, T); const fade = smoothF((T[1] - z) / 10) * smoothF((z - T[3]) / 14); hgt += 0.75 * Math.exp(-((d / 2.4) ** 2)) * fade; }
     for (const L of VEINS) for (let i = 0; i < L.length - 1; i++) { const d = segDist2(x, z, [L[i][0], L[i][1], L[i + 1][0], L[i + 1][1]]); const e = Math.exp(-((d / 2.3) ** 2)); hgt += 0.22 * e; vn = Math.max(vn, e); } // 静脈は太さ 3〜4mm で低く盛り上がる（細く高いと光って白い線に見えた）
     const vk = HAND.veins === undefined ? 1 : HAND.veins; // 手のモデルごとの静脈・腱の目立ち方
-    hgt *= dors * vk; vein[v] = vn * dors * vk;
+    hgt *= dors * vk; vein[v] = vn * dors * vk; raise[v] = hgt;
     pos[v * 3] += nrm[v * 3] * hgt; pos[v * 3 + 1] += ny * hgt; pos[v * 3 + 2] += nrm[v * 3 + 2] * hgt;
   }
   // 盛り上げた分の法線をつけ直す（三角形から）
@@ -268,10 +358,15 @@ function buildSkin() {
       const fn = cross3(sub3([pos[b], pos[b + 1], pos[b + 2]], [pos[a], pos[a + 1], pos[a + 2]]), sub3([pos[c], pos[c + 1], pos[c + 2]], [pos[a], pos[a + 1], pos[a + 2]]));
       for (const o of [a, b, c]) { acc[o] += fn[0]; acc[o + 1] += fn[1]; acc[o + 2] += fn[2]; }
     }
+    // 三角形からの法線は、盛り上げた量に合わせて陰関数の法線となめらかにまぜる（ある範囲だけ切りかえると、
+    // 三角形の法線のこまかい角が出る所と出ない所の境目が、手首の甲に角の丸い四角の輪郭として見えた）
     for (let v = 0; v < NV; v++) {
-      if (vein[v] === 0 && nrm[v * 3 + 1] < 0.35) continue;
+      const w = Math.min(1, raise[v] / 0.25);
+      if (w <= 0) continue;
       const l = Math.hypot(acc[v * 3], acc[v * 3 + 1], acc[v * 3 + 2]) || 1;
-      nrm[v * 3] = acc[v * 3] / l; nrm[v * 3 + 1] = acc[v * 3 + 1] / l; nrm[v * 3 + 2] = acc[v * 3 + 2] / l;
+      const nx = nrm[v * 3] + (acc[v * 3] / l - nrm[v * 3]) * w, ny = nrm[v * 3 + 1] + (acc[v * 3 + 1] / l - nrm[v * 3 + 1]) * w, nz = nrm[v * 3 + 2] + (acc[v * 3 + 2] / l - nrm[v * 3 + 2]) * w;
+      const m = Math.hypot(nx, ny, nz) || 1;
+      nrm[v * 3] = nx / m; nrm[v * 3 + 1] = ny / m; nrm[v * 3 + 2] = nz / m;
     }
   }
   const restB = restBoneFrames(P.rest);
@@ -288,27 +383,7 @@ function buildSkin() {
   const SKIN = lin3(0.86, 0.62, 0.50), DORSAL = lin3(0.83, 0.59, 0.46), PALMC = lin3(0.89, 0.59, 0.51), TIP = lin3(0.87, 0.50, 0.44), KNK = lin3(0.77, 0.50, 0.42);
   for (let v = 0; v < NV; v++) {
     const p = [pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]], n = [nrm[v * 3], nrm[v * 3 + 1], nrm[v * 3 + 2]];
-    handSDF(P, p[0], p[1], p[2], comp);
-    let dmin = Infinity;
-    for (let b = 0; b < N_BONES; b++) dmin = Math.min(dmin, comp[b]);
-    const sc = [];
-    for (let b = 0; b < N_BONES; b++) { const s = Math.exp(-(comp[b] - dmin) / (b <= BONE_PALM || b === boneOf(1, 0) ? 5 : 2.6)); if (s > 0.01) sc.push([s, b]); }
-    sc.sort((a, b) => b[0] - a[0]);
-    // 親指の中手骨は手のひらの中に深く埋まっていて、付け根に近い皮ふはほとんど手のひらと一緒に動く。
-    // 付け根からの位置 u（0 = 付け根、1 = MP 関節）で、親指の骨の重みを手のひらへなめらかに移す
-    // （そのままだと、親指を動かすたびに手首の親指側の皮ふが引っぱられて、こぶのように出っぱった）
-    {
-      const tb = boneOf(1, 0), ti = sc.findIndex(e => e[1] === tb);
-      if (ti >= 0) {
-        const B = restB[tb], u = dot3(sub3(p, B.o), B.z) / B.len, f = smoothF((u + 0.05) / 1.0);
-        const move = sc[ti][0] * (1 - f);
-        sc[ti][0] *= f;
-        const pi = sc.findIndex(e => e[1] === BONE_PALM);
-        if (pi >= 0) sc[pi][0] += move; else sc.push([move, BONE_PALM]);
-        sc.sort((a, b) => b[0] - a[0]);
-      }
-    }
-    const top = sc.slice(0, 4), sum = top.reduce((s, e) => s + e[0], 0);
+    const top = skinWeights(P, restB, p, comp), sum = top.reduce((s, e) => s + e[0], 0);
     for (let k = 0; k < 4; k++) {
       const e = top[k] || [0, top[0][1]], B = restB[e[1]];
       bi[v * 4 + k] = e[1]; bw[v * 4 + k] = e[0] / sum;
