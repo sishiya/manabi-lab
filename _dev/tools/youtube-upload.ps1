@@ -11,6 +11,10 @@
 #       … 上げたあとの動画（videoId）に、字幕（captions）と、翻訳したタイトルと説明（localizations）・tags を足す。日本語のタイトル・説明はそのまま
 #         publishAt があれば予約投稿の日時も入れる（Studio で上げた動画を予約するとき。例 "2026-10-11T20:00:00+09:00"）
 #         -Full を付けると、日本語のタイトル・説明・分類（教育）・言語・サムネイルも JSON から入れる（Studio で手動で上げた動画を、ここで仕上げるとき）
+#   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Verify [-Date 2026-10-12 | -Meta …]
+#       … 公開前の最終確認（読むだけ、RULES 8.4）。その日に予約した動画（_dev/promo/*.upload.json の publishAt。-Date を省くと今日）の
+#         YouTube 側の状態（処理ずみ・非公開の予約・日時・子ども向けでない）・タイトル・説明・タグ・英語・字幕・サムネイルを JSON と突き合わせ、
+#         説明欄の URL が開けるかも見る。NG があれば終了コード 1
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Stats [-Out _dev/tools/out/yt-stats.json]
 #       … 上げた動画の再生数・高評価・コメント数とチャンネルの登録者数（読むだけ。weekly-report.ps1 が使う）
 #         分析を読む許可（yt-analytics.readonly）があれば、-Days 日の視聴時間・どこから来たかも
@@ -37,6 +41,8 @@ param(
   [switch]$Stats,
   [switch]$Ga,
   [switch]$Quota,
+  [switch]$Verify,
+  [string]$Date,
   [int]$Days = 7,
   [string]$Out,
   [string]$Meta,
@@ -404,5 +410,84 @@ function Invoke-Update {
   Write-Host "更新しました: https://youtu.be/$($r.id)  翻訳: $(($r.localizations.PSObject.Properties.Name) -join ',')  tags: $(@($r.snippet.tags).Count)個"
 }
 
-try { if ($Quota) { Show-Quota } elseif ($Auth) { Invoke-Auth } elseif ($List) { Invoke-List } elseif ($Stats -and $Ga) { Invoke-GaStats } elseif ($Stats) { Invoke-Stats } elseif ($Schedule) { Invoke-Schedule } elseif ($Update) { Invoke-Update } else { Invoke-Upload } }
+# ---- -Verify: 公開前の最終確認（読むだけ。videos.list 1 ＋ captions.list 50 ポイント／本）----
+function Invoke-Verify {
+  $metas = @()
+  if ($Meta) { $metas = @($Meta) }
+  else {
+    $day = if ($Date) { [DateTime]::Parse($Date).ToString('yyyy-MM-dd') } else { (Get-Date).ToString('yyyy-MM-dd') }
+    foreach ($f in Get-ChildItem (Join-Path $root '_dev/promo') -Filter '*.upload.json') {
+      $j = Get-Content -Raw -Encoding UTF8 $f.FullName | ConvertFrom-Json
+      if ($j.publishAt -and $j.publishAt.StartsWith($day)) { $metas += "_dev/promo/$($f.Name)" }
+    }
+    if (-not $metas) { Write-Host "$day に予約した動画は upload.json にありません"; return }
+    Write-Host "$day に公開する動画: $($metas.Count)本"
+  }
+  $at = Get-AccessToken; $h = @{ Authorization = "Bearer $at" }
+  $nl = { param($s) ("$s" -replace "`r`n", "`n").Trim() }
+  $ng = 0
+  foreach ($mp in $metas) {
+    $m = Get-Content -Raw -Encoding UTF8 (Join-Path $root $mp) | ConvertFrom-Json
+    Write-Host ""; Write-Host "== $mp（https://youtu.be/$($m.videoId)）"
+    $bad = New-Object 'Collections.Generic.List[string]'; $note = New-Object 'Collections.Generic.List[string]'
+    if (-not $m.videoId) { Write-Host "  NG: videoId がありません"; $ng++; continue }
+    try { $v = (Invoke-RestMethod -Headers $h -Uri "https://www.googleapis.com/youtube/v3/videos?part=snippet,status,localizations,contentDetails&id=$($m.videoId)").items | Select-Object -First 1 }
+    catch { Write-Host "  NG: 動画を読めませんでした: $(Get-ErrText $_)"; $ng++; continue }
+    if (-not $v) { Write-Host "  NG: YouTube に動画が見つかりません"; $ng++; continue }
+    $st = $v.status; $sn = $v.snippet
+    if ($st.uploadStatus -ne 'processed') { $bad.Add("処理が終わっていない（$($st.uploadStatus)）") }
+    if ($st.privacyStatus -ne 'private') { $bad.Add("公開の状態が $($st.privacyStatus)（予約は private のはず）") }
+    if ($m.publishAt) {
+      $want = [DateTimeOffset]::Parse($m.publishAt, [Globalization.CultureInfo]::InvariantCulture)
+      if (-not $st.publishAt) { $bad.Add('予約が入っていない') }
+      elseif ([DateTimeOffset]::Parse($st.publishAt, [Globalization.CultureInfo]::InvariantCulture) -ne $want) { $bad.Add("予約の日時がちがう（YouTube $($st.publishAt)、JSON $($m.publishAt)）") }
+      else { $note.Add("予約 $($want.ToOffset([TimeSpan]::FromHours(9)).ToString('M/d HH:mm'))") }
+    }
+    if ($st.madeForKids) { $bad.Add('子ども向けになっている') }
+    if ($st.embeddable -eq $false) { $bad.Add('埋めこみ不可') }
+    if ((& $nl $sn.title) -ne (& $nl $m.title)) { $bad.Add("タイトルが JSON とちがう: $($sn.title)") }
+    if ((& $nl $sn.description) -ne (& $nl $m.description)) { $bad.Add('説明（日本語）が JSON とちがう') }
+    $miss = @($m.tags | Where-Object { $_ -notin @($sn.tags) })
+    if ($miss) { $bad.Add("タグがない: $($miss -join ', ')") }
+    if ($sn.categoryId -ne '27') { $bad.Add("分類が教育（27）でない: $($sn.categoryId)") }
+    if ($sn.defaultLanguage -ne 'ja') { $bad.Add("言語が ja でない: $($sn.defaultLanguage)") }
+    if ($m.localizations) {
+      foreach ($p in $m.localizations.PSObject.Properties) {
+        $r = $v.localizations.($p.Name)
+        if (-not $r) { $bad.Add("翻訳（$($p.Name)）がない"); continue }
+        if ((& $nl $r.title) -ne (& $nl $p.Value.title)) { $bad.Add("翻訳（$($p.Name)）のタイトルが JSON とちがう") }
+        if ((& $nl $r.description) -ne (& $nl $p.Value.description)) { $bad.Add("翻訳（$($p.Name)）の説明が JSON とちがう") }
+      }
+    }
+    if ($m.captions) {
+      try {
+        $caps = @((Invoke-RestMethod -Headers $h -Uri "https://www.googleapis.com/youtube/v3/captions?part=snippet&videoId=$($m.videoId)").items | Where-Object { $_.snippet.trackKind -ne 'asr' })
+        foreach ($p in $m.captions.PSObject.Properties) {
+          $c = $caps | Where-Object { $_.snippet.language -eq $p.Name } | Select-Object -First 1
+          if (-not $c) { $bad.Add("字幕（$($p.Name)）がない") }
+          elseif ($c.snippet.isDraft) { $bad.Add("字幕（$($p.Name)）が下書きのまま") }
+          elseif ($c.snippet.status -and $c.snippet.status -ne 'serving') { $bad.Add("字幕（$($p.Name)）の状態が $($c.snippet.status)") }
+          else { $note.Add("字幕 $($p.Name)") }
+        }
+      } catch { $bad.Add("字幕の一覧を取れなかった: $(Get-ErrText $_)") }
+    }
+    # 4K の動画の自動のサムネイルには maxres（1280）ができる。自分で付けた 640×360 のサムネイルだと standard（640）まで（2026-10-11 に確かめた）
+    if ($m.thumbnail -and $sn.thumbnails.maxres) {
+      Add-Type -AssemblyName System.Drawing; $img = [Drawing.Image]::FromFile((Join-Path $root $m.thumbnail)); $tw = $img.Width; $img.Dispose()
+      if ($tw -lt 1280) { $bad.Add("サムネイルが自動のままかも（maxres があるが、付けた画像は幅 $tw）") }
+    }
+    $note.Add("サムネイル $(($sn.thumbnails.PSObject.Properties | ForEach-Object { "$($_.Name)=$($_.Value.width)" }) -join ',')")
+    $note.Add("長さ $($v.contentDetails.duration -replace '^PT', '')")
+    foreach ($u in @([regex]::Matches("$($m.description)", 'https?://[^\s）)]+') | ForEach-Object { $_.Value } | Select-Object -Unique)) {
+      try { $code = [int](Microsoft.PowerShell.Utility\Invoke-WebRequest -UseBasicParsing -Method Head -Uri $u -TimeoutSec 20).StatusCode; if ($code -ne 200) { $bad.Add("リンク $u → $code") } }
+      catch { $bad.Add("リンク $u が開けない: $($_.Exception.Message)") }
+    }
+    Write-Host "  $($note -join ' / ')"
+    if ($bad.Count) { $ng++; foreach ($b in $bad) { Write-Host "  NG: $b" } } else { Write-Host '  OK' }
+  }
+  Write-Host ""
+  if ($ng) { Write-Host "NG のある動画: $ng 本"; exit 1 } else { Write-Host "すべて OK（動画そのもの・アプリの動作は別に見る。RULES 8.4）" }
+}
+
+try { if ($Quota) { Show-Quota } elseif ($Verify) { Invoke-Verify } elseif ($Auth) { Invoke-Auth } elseif ($List) { Invoke-List } elseif ($Stats -and $Ga) { Invoke-GaStats } elseif ($Stats) { Invoke-Stats } elseif ($Schedule) { Invoke-Schedule } elseif ($Update) { Invoke-Update } else { Invoke-Upload } }
 catch { Write-Host "失敗: $($_.Exception.Message)"; exit 1 }

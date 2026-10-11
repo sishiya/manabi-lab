@@ -16,3 +16,10 @@ upload-batch.ps1 が書く。1日の区切りは太平洋時間の0時（日本�
 - API の使用量の上限には 09:26（日本時間）に当たった。Google の表の値で数えて約 22,800 ポイントの時点（videos.insert を表どおり 1600 と数えると上限 10,000 を超えるので、実際の insert はもっと安い）。
 - 上限に当たったあとも videos.insert（動画を上げる）は通り、字幕（captions）だけが 403 quota で断られた。だから、上限の近くで上げると字幕のない動画ができる。
 - 600MB くらいの大きい動画は、送り終わったところで「The underlying connection was closed」が出ることがある（3回。どれも実は上がっていた）。
+
+## 公開前の確認（RULES 8.4。公開の日に、その日の分）
+
+| 日付 | 動画 | 結果 | 直したこと |
+|---|---|---|---|
+| 2026-10-11 | evolution-guide（h1r0MqMrNAY） | OK（-Verify・コマ・公開中のアプリ） | なし |
+| 2026-10-11 | evolution-short（QWAG8kMWAn8） | **NG**: 31〜38秒（4290万〜15万年前）で地面が白い霧に埋まる | アプリの衝突の冬を直した（evolution v008f）→ 録りなおし（古いのは `evolution-short.before-winter.mp4`）。差しかえはユーザーの GO 待ち |

@@ -116,12 +116,13 @@ function frame(now){
   for(let i=0;i<nc;i++){const c=clD[i];c.x+=dt*2.2;if(c.x>125)c.x=-125;setInst(clouds,i,c.x,c.y,c.z,c.r,c.s*1.4,c.s*.35,null)}clouds.instanceMatrix.needsUpdate=true;
   // cinematic overlays
   const sq=seqState(dt);
+  if(seq&&seq.type==='kpg')sq.dark*=sstep(6.2e7,6.55e7,A);  // the impact winter belongs to 66 Ma: it fades if time moves on (it lasted years, not tens of millions)
   const fl=REDUCED?sq.flash*.3:sq.flash;
   flashEl.style.opacity=String(Math.max(fl,sq.heat*.45));
   flashEl.style.background=sq.heat>fl?`radial-gradient(ellipse at 20% 0%,rgba(255,120,40,.9),rgba(140,30,10,.5) 70%)`:`radial-gradient(circle at 25% 15%,rgba(${sq.col},1),rgba(${sq.col},.6) 60%)`;
   if(seq&&seq.type==='kpg'&&seq.t<1.4){const t=seq.t/1.4;bigMet.head.visible=true;const d=new THREE.Vector3(-.75,.55-.5*t,-.6).normalize();bigMet.head.position.copy(d).multiplyScalar(700);bigMet.head.scale.setScalar(30+160*t)}else bigMet.head.visible=false;
   sun.intensity=baseLights.sun*dl*(1-sq.dark*.85);hemi.intensity=baseLights.amb*(.16+.84*dl)*(1-sq.dark*.7);
-  if(sq.dark>0){scene.fog.density=Math.max(scene.fog.density,.006*sq.dark)}
+  if(sq.dark>0){scene.fog.density=Math.max(scene.fog.density,.006*sq.dark);scene.fog.color.lerp(WINTER_FOG,sq.dark*.85)}  // impact winter: dark soot, not pale haze (once A has moved past the impact, the day fog is light blue)
   const shake=seq&&seq.type==='theia'&&!REDUCED&&seq.t<2?(1-seq.t/2):0;
   placeCam();placeGCam();
   if(shake){camera.position.x+=(rnd()-.5)*shake*2;camera.position.y+=(rnd()-.5)*shake*2;gCamera.position.x+=(rnd()-.5)*shake*.6;gCamera.position.y+=(rnd()-.5)*shake*.6}

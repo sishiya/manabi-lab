@@ -22,7 +22,7 @@ bigMet.head.visible=false;scene.add(bigMet.head);
 
 /* ------------------------------------------------------------------ apply a time */
 let A=4.6e9,Uu=0,lastA=-1,prevA=4.6e9;
-const fogC=new THREE.Color(),skyBot=new THREE.Color();
+const fogC=new THREE.Color(),skyBot=new THREE.Color(),WINTER_FOG=new THREE.Color(0x1c1814);
 function applyTime(){
   envAt(A);ifAdjustEnv(A);
   // die-offs and ash after the great extinctions
