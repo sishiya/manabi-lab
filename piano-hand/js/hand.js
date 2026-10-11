@@ -302,6 +302,8 @@ function buildPlanWith(song, free) {
     if (nx && nx.t0 - (n.t1n || n.t1) < 0.08 && nx.t0 > ts) ts = Math.min(nx.t0 + 0.02, again ? again.t0 : Infinity);
     n.ts = ts;
   }
+  // 弾き終えたあと: 手首を止める時刻（最後に離した時刻）
+  for (const h of hands) h.tHold = h.end;
   // 届かずに押せなかった音: 鍵を押しこみおえる時刻に、指先（指の腹の中心）が押す場所から MISS_MM より離れていた音。
   // 届くように数値を合わせることはしない（骨の長さ・関節の範囲で届かなければ、押せなかったという結果にする）
   for (const h of hands) for (const n of h.notes) {
@@ -309,7 +311,9 @@ function buildPlanWith(song, free) {
     n.short = P.fingers[n.f].err; n.miss = n.short > MISS_MM;
   }
   const end = Math.max(0, ...notes.map(n => n.t1));
-  return { song, notes, hands, end, pedal, free: free ? [...free] : [], cost: hands.reduce((s, h) => s + h.cost, 0) };
+  // 再生の終わり（v045〜）: 光の粒ともや（離してから約 1.1 秒）・ペダルでのびた音の光（＋0.4 秒）が消えおえ、少し余韻をおくまで
+  const tFin = Math.max(end, ...notes.map(n => Math.max((n.t1n || n.t1) + 1.2, (n.ts || n.t1) + 0.5))) + 0.6;
+  return { song, notes, hands, end, tFin, pedal, free: free ? [...free] : [], cost: hands.reduce((s, h) => s + h.cost, 0) };
 }
 
 // 片手の運指から、手を動かす計画を作る
@@ -658,7 +662,15 @@ function cgSmooth(w, b, lam) {
   }
   return x;
 }
+// 弾き終えたあと（v045〜）: 最後の音を離したら手首はその場に（なめらかさの計算の続きで横へ 30mm すべっていた。超絶技巧の練習曲の最後）。
+// 演奏会の所作（余韻が消えるまで手を鍵盤から離さず、消えたら手をひざへ）にならって手をひざのほうへ戻す動きを試したが、
+// 肘が曲がらない腕なので腕ごと後ろへ平行に動いて宙に浮き、機械のように見えたのでやめた（2026-10-11、ユーザーの了承）。
+// 手は鍵の上で力を抜いた形のまま、音と光が消えおえるまで再生を続ける（tFin）
 function wristAt(plan, t) {
+  if (plan.tHold != null && t > plan.tHold) t = plan.tHold;
+  return wristAt0(plan, t);
+}
+function wristAt0(plan, t) {
   const u = Math.min(plan.wx.length - 1.001, Math.max(0, (t - plan.wt0) * W_HZ));
   const i = Math.floor(u), s = u - i;
   const at = a => a[i] + (a[i + 1] - a[i]) * s;

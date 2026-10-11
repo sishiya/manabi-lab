@@ -93,7 +93,7 @@ function playTone(m, len, vel) {
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
 function tStart() { return -0.8; }
-function tEnd() { return S.plan.end + 0.8; }
+function tEnd() { return (S.plan.tFin || S.plan.end) + 0.3; } // 弾き終えたあとの余韻（手を戻す・エフェクトが消えおえる）まで
 
 function loadSong(id) {
   const song = SONGS.find(s => s.id === id) || S.extra.find(s => s.id === id) || SONGS[0];
