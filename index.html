@@ -306,15 +306,19 @@ function render() {
   // いまの表示の説明（読み上げ用）
   $('status').textContent = state.cat === 'all' ? L(`${shown.length}本すべて`, `All ${nApps(shown.length)}`) : L(`${nameOf(catOf(state.cat))}で ${shown.length}本`, `${nameOf(catOf(state.cat))}: ${nApps(shown.length)}`);
 
+  // 新しいほうが先。日付が同じなら一覧であとに書いたほうが先
+  const byKey = key => (x, y) => { const kx = key(x), ky = key(y); for (let i = 0; i < kx.length; i++) { if (kx[i] !== ky[i]) return kx[i] < ky[i] ? 1 : -1; } return 0; };
+  const byCreated = byKey(a => [a.created, a.order]);
+
   if (state.sort === 'cat') {
+    // 分野の中も公開が新しい順（更新日だと直すたびに並びが動くので使わない）
     $('list').innerHTML = CATS.map(c => {
-      const items = shown.filter(a => a.cat === c.id);
+      const items = shown.filter(a => a.cat === c.id).sort(byCreated);
       if (!items.length) return '';
       return `<h2 class="c-${c.id}"><span class="dot"></span>${esc(nameOf(c))}<span class="n">${nApps(items.length)}</span></h2><div class="grid">${items.map(a => card(a, false)).join('')}</div>`;
     }).join('');
   } else {
-    const key = state.sort === 'new' ? a => [a.created, a.order] : a => [a.updated, a.created, a.order];
-    const sorted = [...shown].sort((x, y) => { const kx = key(x), ky = key(y); for (let i = 0; i < kx.length; i++) { if (kx[i] !== ky[i]) return kx[i] < ky[i] ? 1 : -1; } return 0; });
+    const sorted = [...shown].sort(state.sort === 'new' ? byCreated : byKey(a => [a.updated, a.created, a.order]));
     $('list').innerHTML = `<div class="grid">${sorted.map(a => card(a, true)).join('')}</div>`;
   }
 }
