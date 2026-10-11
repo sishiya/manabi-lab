@@ -1,0 +1,116 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>声帯のしくみ</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%232a1620'/><path d='M20 14 Q30 32 20 50 M44 14 Q34 32 44 50' fill='none' stroke='%23ff8fa3' stroke-width='6' stroke-linecap='round'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <header id="top">
+    <h1>声帯のしくみ <small>実験室（技術検証）</small></h1>
+  </header>
+
+  <div id="cols">
+    <!-- 左: 声を選ぶ -->
+    <section id="left" class="panel">
+      <h2>1. 体</h2>
+      <div class="seg" id="sexSeg">
+        <button data-sex="male" aria-pressed="true">男性</button>
+        <button data-sex="female">女性</button>
+        <button data-sex="child">子ども</button>
+      </div>
+      <p class="hint" id="sexNote"></p>
+
+      <h2>2. 声</h2>
+      <div class="seg" id="srcSeg">
+        <button data-src="sample" aria-pressed="true">サンプル</button>
+        <button data-src="mic">マイク</button>
+        <button data-src="model">模型を動かす</button>
+      </div>
+
+      <div id="srcSample" class="src">
+        <p class="hint">どれも<b>模型で作った声</b>（本物の人の声ではない）。作ったときの設定を「答え」として見られる。</p>
+        <div id="sampleList"></div>
+      </div>
+
+      <div id="srcMic" class="src" hidden>
+        <p class="hint">「あー」と同じ高さで3秒のばす。録音は分析に使うだけで、どこにも保存・送信しない。</p>
+        <button id="micBtn" class="big">● 3秒 録音する</button>
+        <p class="hint" id="micMsg"></p>
+      </div>
+
+      <div id="srcModel" class="src" hidden>
+        <p class="hint">筋肉の働きと肺の圧を決めて、模型に声を出させる。その声を同じように分析・推定して、答え合わせできる。</p>
+        <label class="sl">輪状甲状筋 CT（声帯を引きのばす）<output id="o_act"></output><input id="s_act" type="range" min="0" max="1" step="0.05" value="0.2"></label>
+        <label class="sl">甲状披裂筋 TA（声帯の中の筋肉）<output id="o_ata"></output><input id="s_ata" type="range" min="0" max="1" step="0.05" value="0.2"></label>
+        <label class="sl">肺の圧<output id="o_PL"></output><input id="s_PL" type="range" min="2000" max="20000" step="500" value="7840"></label>
+        <label class="sl">2枚のすき間（下のはし）<output id="o_x01"></output><input id="s_x01" type="range" min="-0.01" max="0.15" step="0.001" value="0.011"></label>
+        <label class="sl">母音（声道の形）
+          <select id="s_vowel"><option value="aa">あ /ɑ/</option><option value="ii">い /i/</option><option value="uu">う /u/</option><option value="eh">え /ɛ/</option><option value="oo">お /o/</option></select>
+        </label>
+        <label class="chk"><input id="s_noise" type="checkbox"> 息の乱れの雑音を入れる</label>
+        <button id="modelBtn" class="big">▶ 声を出させる</button>
+      </div>
+      <button id="playBtn" class="sub" disabled>♪ もう一度きく</button>
+    </section>
+
+    <!-- 中央: 模型の動き -->
+    <main id="stage">
+      <canvas id="cv"></canvas>
+      <div id="stageTop">
+        <div class="seg small" id="showSeg">
+          <button data-show="truth" aria-pressed="true">答えの模型</button>
+          <button data-show="est">推定した模型</button>
+        </div>
+        <span id="stageNote"></span>
+      </div>
+      <div id="slowBar">
+        <span>ゆっくり</span>
+        <div class="seg small" id="slowSeg">
+          <button data-slow="400">1/400</button>
+          <button data-slow="100" aria-pressed="true">1/100</button>
+          <button data-slow="25">1/25</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- 右: 分析・推定・答え -->
+    <section id="right" class="panel">
+      <h2>3. 声から分かったこと</h2>
+      <table id="featTbl" class="tbl"></table>
+      <h2>4. 声から推定した模型の設定 <span class="tag est">推定</span></h2>
+      <div id="estBox"><p class="hint">声を選ぶと、ここに出る。</p></div>
+      <h2>5. 答え <span class="tag truth">作ったときの設定</span></h2>
+      <div id="truthBox"><p class="hint">サンプルと「模型を動かす」のときだけ。マイクの声には答えがない。</p></div>
+      <p class="hint warn">推定は、この模型の中で特徴がいちばん近い設定をさがしたもの。本物の声帯の形を測ったものではない。病気の判断には使えない。</p>
+    </section>
+  </div>
+
+  <details id="about">
+    <summary>このアプリについて（技術検証）</summary>
+    <p>声帯を、表層の2つのおもりと体部の1つのおもりで表した模型（3つのおもりの模型）で動かしています。筋肉の働きから、声帯の長さ・厚み・かたさ・重さを決める決まりも、研究のものをそのまま使っています。</p>
+    <p>簡単にしているところ: 左右は同じ動き。前後（長さの方向）はどこも同じ形（上から見ると長方形のすき間）。声帯の後ろの軟骨の部分のすき間はない（そのため、閉じきらずに震える息もれ声は作れない）。声道は大人の男性の MRI の形を、女性・子どもにもそのまま使っている。子どもの声帯の大きさは推定。</p>
+    <p>推定のしかた: 体ごとに、筋肉と肺の圧とすき間の組み合わせ 1815 通りを模型で計算して、声の特徴（高さ・CPP・H1−H2・HNR）の表を作った。声の特徴がいちばん近い 10 通りの平均を「推定」、10 通りのちらばりを「確かさ」にしている。声の大きさはマイクで変わるので使っていない。</p>
+    <h3>おもな出どころ</h3>
+    <ul>
+      <li>Story, B. H., &amp; Titze, I. R. (1995). Voice simulation with a body-cover model of the vocal folds. J. Acoust. Soc. Am. 97, 1249–1260.</li>
+      <li>Titze, I. R., &amp; Story, B. H. (2002). Rules for controlling low-dimensional vocal fold models with muscle activation. J. Acoust. Soc. Am. 112, 1064–1076.</li>
+      <li>Titze, I. R. (2002). Regulating glottal airflow in phonation: application of the maximum power transfer theorem to a low dimensional phonation model. J. Acoust. Soc. Am. 111, 367–376.</li>
+      <li>Story, B. H., Titze, I. R., &amp; Hoffman, E. A. (1996). Vocal tract area functions from magnetic resonance imaging. J. Acoust. Soc. Am. 100, 537–554.（声道の形）</li>
+      <li>Story, B. H. LeTalker 1.22（MATLAB のコード。University of Arizona）— この模型・決まり・流れ・声道の計算を JavaScript に書き直して使用。<a href="https://sites.arizona.edu/sapl/research/le-talker" target="_blank" rel="noopener">LeTalker のページ</a></li>
+      <li>Zhang, Z. (2021). Contribution of laryngeal size to differences between male and female voice production. J. Acoust. Soc. Am. 150, 4511–4521.（子どもの大きさの推定に使った比）</li>
+      <li>Boersma, P. (1993). Accurate short-term analysis of the fundamental frequency and the harmonics-to-noise ratio of a sampled sound. Proceedings of the Institute of Phonetic Sciences 17, 97–110.（高さと HNR の求め方）</li>
+      <li>Hillenbrand, J., Cleveland, R. A., &amp; Erickson, R. L. (1994). Acoustic correlates of breathy vocal quality. J. Speech Hear. Res. 37, 769–778.（CPP）</li>
+    </ul>
+    <h3>使っているもの</h3>
+    <p>フォント: Google Fonts（SIL Open Font License）。ライブラリは使っていません。</p>
+  </details>
+</div>
+
+<script src="js/letalker.js"></script>
+<script src="js/analyze.js"></script>
+<script src="js/table.js"></script>
+<script src="js/estimate.js"></script>
+<script src="js/main.js"></script>

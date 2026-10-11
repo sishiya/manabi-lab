@@ -1,0 +1,285 @@
+{
+ "made": "2026-10-11",
+ "by": "lab/make-samples.js（js/letalker.js = LeTalker 1.22 の書き直し）",
+ "fs": 44100,
+ "gain": 0.0002164121721984328,
+ "about": "模型で作った声（本物の人の声ではない）。truth は作ったときの設定（答え合わせ用）。PL は dyn/cm²（10 で割ると Pa）、x01・x02 は cm。",
+ "samples": [
+  {
+   "id": "male-normal",
+   "file": "male-normal.wav",
+   "ja": "男性・ふつうの声",
+   "en": "Male, normal",
+   "note": "LeTalker の説明書の標準の設定",
+   "truth": {
+    "sex": "male",
+    "act": 0.2,
+    "ata": 0.2,
+    "alc": 0.5,
+    "PL": 7840,
+    "x01": 0.011,
+    "x02": 0.01,
+    "vowel": "aa",
+    "noise": 0
+   },
+   "result": {
+    "f0": 112.6,
+    "closedFrac": 0.45,
+    "vibrating": true
+   }
+  },
+  {
+   "id": "male-soft",
+   "file": "male-soft.wav",
+   "ja": "男性・小さな声",
+   "en": "Male, soft",
+   "note": "肺の圧を下げた",
+   "truth": {
+    "sex": "male",
+    "act": 0.2,
+    "ata": 0.2,
+    "alc": 0.5,
+    "PL": 4000,
+    "x01": 0.011,
+    "x02": 0.01,
+    "vowel": "aa",
+    "noise": 0
+   },
+   "result": {
+    "f0": 112.8,
+    "closedFrac": 0.43,
+    "vibrating": true
+   }
+  },
+  {
+   "id": "male-loud",
+   "file": "male-loud.wav",
+   "ja": "男性・大きな声",
+   "en": "Male, loud",
+   "note": "肺の圧を上げた",
+   "truth": {
+    "sex": "male",
+    "act": 0.2,
+    "ata": 0.2,
+    "alc": 0.5,
+    "PL": 15000,
+    "x01": 0.011,
+    "x02": 0.01,
+    "vowel": "aa",
+    "noise": 0
+   },
+   "result": {
+    "f0": 112.4,
+    "closedFrac": 0.46,
+    "vibrating": true
+   }
+  },
+  {
+   "id": "male-high",
+   "file": "male-high.wav",
+   "ja": "男性・高めの声",
+   "en": "Male, higher",
+   "note": "輪状甲状筋（CT）を強めた",
+   "truth": {
+    "sex": "male",
+    "act": 0.6,
+    "ata": 0.2,
+    "alc": 0.5,
+    "PL": 7840,
+    "x01": 0.011,
+    "x02": 0.01,
+    "vowel": "aa",
+    "noise": 0
+   },
+   "result": {
+    "f0": 143.9,
+    "closedFrac": 0.41,
+    "vibrating": true
+   }
+  },
+  {
+   "id": "male-low",
+   "file": "male-low.wav",
+   "ja": "男性・低めの声",
+   "en": "Male, lower",
+   "note": "CT を休め、甲状披裂筋（TA）を強めた",
+   "truth": {
+    "sex": "male",
+    "act": 0,
+    "ata": 0.4,
+    "alc": 0.5,
+    "PL": 7840,
+    "x01": 0.011,
+    "x02": 0.01,
+    "vowel": "aa",
+    "noise": 0
+   },
+   "result": {
+    "f0": 97.9,
+    "closedFrac": 0.53,
+    "vibrating": true
+   }
+  },
+  {
+   "id": "male-falsetto",
+   "file": "male-falsetto.wav",
+   "ja": "男性・裏声に近い設定",
+   "en": "Male, falsetto-like",
+   "note": "CT を強く、TA を 0。模型の上での裏声に近い条件",
+   "truth": {
+    "sex": "male",
+    "act": 0.8,
+    "ata": 0,
+    "alc": 0.5,
+    "PL": 10000,
+    "x01": 0.011,
+    "x02": 0.01,
+    "vowel": "aa",
+    "noise": 0
+   },
+   "result": {
+    "f0": 319.8,
+    "closedFrac": 0.41,
+    "vibrating": true
+   }
+  },
+  {
+   "id": "male-gap",
+   "file": "male-gap.wav",
+   "ja": "男性・すき間を広げた声",
+   "en": "Male, wider gap",
+   "note": "震えがぎりぎり続くすき間。この模型では「閉じきらずに震える」声は作れない",
+   "truth": {
+    "sex": "male",
+    "act": 0.2,
+    "ata": 0.2,
+    "alc": 0.5,
+    "PL": 7840,
+    "x01": 0.042,
+    "x02": 0.041,
+    "vowel": "aa",
+    "noise": 1
+   },
+   "result": {
+    "f0": 109.5,
+    "closedFrac": 0.35,
+    "vibrating": true
+   }
+  },
+  {
+   "id": "male-whisper",
+   "file": "male-whisper.wav",
+   "ja": "男性・ささやき",
+   "en": "Male, whisper",
+   "note": "LeTalker の説明書の雑音の例。声帯は震えない",
+   "truth": {
+    "sex": "male",
+    "act": 0.2,
+    "ata": 0.2,
+    "alc": 0.5,
+    "PL": 12000,
+    "x01": 0.14,
+    "x02": 0.13,
+    "vowel": "aa",
+    "noise": 1
+   },
+   "result": {
+    "f0": 0,
+    "closedFrac": 0,
+    "vibrating": false
+   }
+  },
+  {
+   "id": "male-ii",
+   "file": "male-ii.wav",
+   "ja": "男性・「いー」",
+   "en": "Male, /i/",
+   "note": "声帯は同じ。声道の形だけ /i/",
+   "truth": {
+    "sex": "male",
+    "act": 0.2,
+    "ata": 0.2,
+    "alc": 0.5,
+    "PL": 7840,
+    "x01": 0.011,
+    "x02": 0.01,
+    "vowel": "ii",
+    "noise": 0
+   },
+   "result": {
+    "f0": 109.2,
+    "closedFrac": 0.42,
+    "vibrating": true
+   }
+  },
+  {
+   "id": "male-uu",
+   "file": "male-uu.wav",
+   "ja": "男性・「うー」",
+   "en": "Male, /u/",
+   "note": "声帯は同じ。声道の形だけ /u/",
+   "truth": {
+    "sex": "male",
+    "act": 0.2,
+    "ata": 0.2,
+    "alc": 0.5,
+    "PL": 7840,
+    "x01": 0.011,
+    "x02": 0.01,
+    "vowel": "uu",
+    "noise": 0
+   },
+   "result": {
+    "f0": 111.6,
+    "closedFrac": 0.44,
+    "vibrating": true
+   }
+  },
+  {
+   "id": "female-normal",
+   "file": "female-normal.wav",
+   "ja": "女性・ふつうの声",
+   "en": "Female, normal",
+   "note": "声帯の長さだけ女性の値（LeTalker のコメント）。声道は男性の形のまま",
+   "truth": {
+    "sex": "female",
+    "act": 0.2,
+    "ata": 0.2,
+    "alc": 0.5,
+    "PL": 7840,
+    "x01": 0.011,
+    "x02": 0.01,
+    "vowel": "aa",
+    "noise": 0
+   },
+   "result": {
+    "f0": 175.8,
+    "closedFrac": 0.44,
+    "vibrating": true
+   }
+  },
+  {
+   "id": "child-normal",
+   "file": "child-normal.wav",
+   "ja": "子ども・ふつうの声",
+   "en": "Child, normal",
+   "note": "声帯の大きさは推定（Zhang 2021 の比）。声道は男性の形のまま",
+   "truth": {
+    "sex": "child",
+    "act": 0.2,
+    "ata": 0.2,
+    "alc": 0.5,
+    "PL": 7840,
+    "x01": 0.011,
+    "x02": 0.01,
+    "vowel": "aa",
+    "noise": 0
+   },
+   "result": {
+    "f0": 277.8,
+    "closedFrac": 0.38,
+    "vibrating": true
+   }
+  }
+ ]
+}
