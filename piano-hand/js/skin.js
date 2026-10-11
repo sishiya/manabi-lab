@@ -57,6 +57,11 @@ const PALM = { c: [4, -1, -54], h: [25, 1, 29.5], r: 13 }; // 角を大きく丸
 const PALM_ROUND = 0.4, PALM_E = [42, 12, 46];
 // 手首・前腕: 横に広く縦にうすいだ円（大人の手首はおよそ幅 55〜60mm・厚み 35〜40mm）。前は丸に近く、真上から見ると手首だけ細くくびれていた
 const ARM_FLAT = 1.45;
+// 前腕の太さ（横の半径、手のひらの中の始まり z=-42 と肘の側 z=240）。v025〜: 周囲の測定値に合わせる。
+// 米陸軍の身体計測 ANSUR II（2012、男性 4,082 人）: 手首の周囲（茎状突起の所）17.59cm、前腕の周囲（肘のしわ、こぶしを握って力を入れて）31.01cm。
+// このモデルの手（大人・大きめ）は手の幅・手の周囲が男性平均の約 95% なので、手首 16.8cm、肘の側は力を抜いた分を見込んで 27.5cm（目安）。
+// 前は 26・36 で、手首 15.0cm・肘の近く 19.1cm と細すぎた（手首の幅と厚みは近かったが、太さが足りなかった）
+const ARM_R = [26.8, 52.2];
 // 骨の表面から皮ふまでの肉の厚さ（v024〜。皮ふを骨から作る）
 // 手の甲: 皮ふ・皮下・伸筋腱。手の甲の肉の厚さ 3.20mm（超音波、20 人。IMCAS 2023 の要旨）に、伸筋腱の上の分を少し足した目安
 const TD_HAND = 3.5;
@@ -115,7 +120,7 @@ function buildPrims() {
   // 手のモデルごとの皮下脂肪の上乗せ（HAND.fat、mm、目安）。子どもの手は皮下脂肪が多く、こぶしや関節が目立たない
   const fat = HAND.fat || 0; P.tdH = TD_HAND + fat;
   P.mc = [];
-  for (let f = 2; f <= 5; f++) { const { s, h } = mcEnds(f), d = sub3(h, s); P.mc.push({ s, d, l2: d[0] * d[0] + d[2] * d[2], r: MC_R[f].map(v => v * 0.85) }); }
+  for (let f = 2; f <= 5; f++) { const { s, h } = mcEnds(f), d = sub3(h, s); P.mc.push({ s, d, l2: d[0] * d[0] + d[2] * d[2], r: MC_AP[f].slice() }); } // r は縦の半径（厚みの半分、CT の測定値）
   // 中手骨の上の肉（骨の太さ＋TD_HAND の円すい、骨格と同じ位置）。こぶし（中手骨の頭）の上の皮ふもこれで決まる
   // 根もとで丸く終わらせると手首の手前に縁が見えたので、手根骨の上まで（中手骨の長さの 35%）手首の側へのばす
   for (const M of P.mc) { const c = mkCone(add3(M.s, M.d.map(v => -v * 0.35)), add3(M.s, M.d), M.r[0] + P.tdH, M.r[2] + P.tdH, BONE_PALM); c.k = 6; c.noW = true; P.palm.push(c); }
@@ -134,12 +139,12 @@ function buildPrims() {
   { const c = mkCone([-16, -3, -14], t0.o, 9, RADII[1][0], BONE_PALM); c.k = 12; c.thumb = true; P.palm.push(c); } // 手首の親指側 → 親指の根もと（CMC）
   { const c = mkCone(t0.o, rest[1][1].o, RADII[1][0], RADII[1][1], boneOf(1, 0)); c.k = 12; c.thumb = true; P.palm.push(c); } // 親指の中手骨
   { const c = mkCone([-17, 3, -60], lerp3(t0.o, rest[1][1].o, 0.9), 10, 7.5, BONE_PALM); c.k = 14; c.thumb = true; P.palm.push(c); } // 親指と人さし指のあいだの水かき（甲の側の筋肉）。甲の側に寄せて厚く（うすいと、親指と手の甲のあいだが谷になった）
-  P.arm = mkCone([2, -5, -42], [3, -16, 240], 26, 36, BONE_ARM); // 形: 手のひらの中から細く始めて、手首で自然に太くなる（手首で丸く始めると、境目に段ができた）。一人称で切れ目が見えないよう、肘の近くまで
-  P.armW = mkCone([2, -6, -4], [3, -16, 240], 27, 36, BONE_ARM); // 重み用: 手首から先だけ（手のひらの皮ふが前腕といっしょに動かないように）
+  P.arm = mkCone([2, -5, -42], [3, -16, 240], ARM_R[0], ARM_R[1], BONE_ARM); // 形: 手のひらの中から細く始めて、手首で自然に太くなる（手首で丸く始めると、境目に段ができた）。一人称で切れ目が見えないよう、肘の近くまで
+  P.armW = mkCone([2, -6, -4], [3, -16, 240], ARM_R[0] + 3.4, ARM_R[1], BONE_ARM); // 重み用: 手首から先だけ（手のひらの皮ふが前腕といっしょに動かないように）
   // 指の皮ふの筒の中心を、手のひら側へずらす量（関節ごと: 付け根・2つめ・3つめ・指先）。甲の側の肉が TD_FINGER になるように。
   // 指先は鍵に当たるはらの中心（動きの計算の指先の点）なので 0
   const offN = f => {
-    const B = BONE_R[f], ry = k => (k === 0 ? (f === 1 ? B[0][2] : B[0][0]) : Math.max(B[k - 1][2], B[k][0])) * 0.78;
+    const B = BONE_R[f], ry = k => f === 1 && k === 1 ? Math.max(MC_AP[1][2], B[1][0] * 0.78) : (k === 0 ? (f === 1 ? B[0][2] : B[0][0]) : Math.max(B[k - 1][2], B[k][0])) * 0.78; // 親指の MP 関節は中手骨の頭の厚み（CT）
     return [0, 1, 2].map(k => Math.max(0, RADII[f][k] / FLAT - ry(k) - TD_FINGER - fat)).concat([0]);
   };
   for (let f = 1; f <= 5; f++) {
@@ -164,6 +169,8 @@ function buildPrims() {
 // 全体の距離。comp を渡すと骨ごとの距離も入れる（重みづけ用）
 function handSDF(P, x, y, z, comp) {
   const cull = !comp;
+  // 手首より 40mm 以上肘の側は前腕の形だけ（手の部品は届かない。前腕を太くして網が広がったので、そこで手の計算をとばして速く）
+  if (cull && z > 40) return coneD(P.arm, x, (y - P.arm.a[1]) * ARM_FLAT + P.arm.a[1], z, false);
   // 手のひらの板は上へのばしてから、手の甲の屋根で切る（甲の面は中手骨から決まる）。手のひらの部品をつないだあとで切る
   // （先に切ると、部品をなめらかにつなぐときの太りが積み重なって、また甲がふくらんだ）。親指の部品は切らずにあとからつなぐ
   let rf = mcRoof(P, x, z);
@@ -291,6 +298,7 @@ const mix3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a
 
 // 網の姿勢の点 p の、骨の重みの上位4つ [[重み, 骨], ...]（合計で割る前）。皮ふと、筋肉・腱・脂肪の模型（tissue.js）で同じものを使う
 function skinWeights(P, restB, p, comp) {
+  if (p[2] > 60) return [[1, BONE_ARM]]; // 手首より 60mm 以上肘の側は前腕の骨だけ（手のひらまでの距離が遠く、ほかの重みは 0 になる）
   handSDF(P, p[0], p[1], p[2], comp);
   let dmin = Infinity;
   for (let b = 0; b < N_BONES; b++) dmin = Math.min(dmin, comp[b]);

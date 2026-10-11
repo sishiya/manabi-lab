@@ -25,7 +25,7 @@ const tP = p => ({ bone: BONE_PALM, p }); // 手のひら（手根骨のあた�
 const tA = p => ({ bone: BONE_ARM, p });  // 前腕に固定した点
 // 指の骨（f, j）に付く点: 骨にそって u（0 = 関節、1 = 次の関節）、骨の座標で横 dx・甲の側 dy。local は骨の座標
 const tF = (f, j, u, dx, dy) => ({ bone: boneOf(f, j), local: [dx, dy + (j === 2 ? distalTilt(f) * u : 0), u * FINGERS_U[f].L[j]] }); // 末節骨は甲の側へ傾く（skeleton.js）
-const mcR = (f, k) => MC_R[f][k] * 0.85;     // 中手骨の縦の半径（骨は縦に 0.85 倍うすい）
+const mcR = (f, k) => MC_AP[f][k];     // 中手骨の縦の半径（厚みの半分、CT の測定値）
 const pdR = (f, j, k) => BONE_R[f][j][k] * 0.78; // 指骨の縦の半径（0.78 倍）
 
 // 部品の一覧: [名前（日本語, 英語）, 種類, 端 a, 端 b, 太さ a, 太さ b, 中ほどのふくらみ, 縦の比（y / x）]
