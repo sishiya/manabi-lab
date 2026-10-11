@@ -93,6 +93,7 @@
       <label class="chk"><input type="checkbox" id="optFingerNums"> <span lang="ja">指先に指の番号</span><span lang="en">Finger numbers on fingertips</span></label>
       <label class="chk"><input type="checkbox" id="optTargets"> <span lang="ja">指先の目標点（IK でねらう場所）</span><span lang="en">Fingertip targets (where IK aims)</span></label>
       <label class="chk"><input type="checkbox" id="optBones"> <span lang="ja">骨格だけ（骸骨が弾く）</span><span lang="en">Skeleton only (a skeleton plays)</span></label>
+      <label class="chk"><input type="checkbox" id="optMuscles"> <span lang="ja">筋肉・腱・脂肪（骨の上に。<span style="color:#c0574e">■</span>筋肉 <span style="color:#a9bdd0">■</span>腱 <span style="color:#d9b14a">■</span>脂肪）</span><span lang="en">Muscles, tendons and fat (over the bones. <span style="color:#c0574e">■</span>muscle <span style="color:#a9bdd0">■</span>tendon <span style="color:#d9b14a">■</span>fat)</span></label>
       <label class="chk"><input type="checkbox" id="optXray"> <span lang="ja">骨と皮ふを重ねる（透かして見る）</span><span lang="en">Skin and skeleton together (see-through)</span></label>
       <label class="chk"><input type="checkbox" id="optGhost"> <span lang="ja">手を半透明に</span><span lang="en">See-through hands</span></label>
       <label class="chk"><input type="checkbox" id="optFollow" checked> <span lang="ja">カメラが手について行く</span><span lang="en">Camera follows the hands</span></label>
@@ -118,6 +119,7 @@
         <li><b>運指の答え合わせ</b>: 音階・アルペジオなど、教本でよく使われる運指がある曲は、決まった運指とくらべて一致した数を出します。</li>
       </ol>
       <p class="cap">骨格: 指の骨と中手骨の長さは、成人 66 人の X 線写真の平均（Buryanov・Kotiuk 2010）。手根骨 8 個・橈骨・尺骨の形と位置、骨の太さは、解剖学の図をもとにした目安です。前腕の2本の骨は、本当はピアノを弾くとき（手のひらを下に向けるとき）に交差しますが、ここでは平行に置いています。</p>
+      <p class="cap">筋肉・腱・脂肪: おもな筋肉（母指球・小指球・母指内転筋・骨間筋・虫様筋など）と、指を曲げる腱・のばす腱、指のはらと付け根の脂肪を、骨に付けた模型にしています。両端が別の骨に付いた部品は、関節が動くとのび縮みし、筋肉は体積を保つので、のびると細く、縮むと太くなります。位置と太さは解剖学の図をもとにした目安で、指を曲げる腱の厚さ（約 3mm）・手の甲の肉の厚さ（約 3mm）は研究の要旨の値と近いことだけ確かめています。いまの皮ふは、まだこの模型から作っていません（次の段階）。</p>
       <p class="cap">手の見た目: 骨に合わせて丸い円すいと板をなめらかにつないだ形を、起動時に網にして、関節といっしょに曲げています。爪・関節のしわ・手の甲の腱と静脈・肌の細かい凹凸と色むらは、計算で作った模様です（本物の手を測った形や写真ではありません）。</p>
       <p class="cap">手の大きさ: 「大人（大きめ）」は、親指から小指までいっぱいに開いた幅が約 21cm になる大きさです（ピアニストの男性の平均 22.6cm・女性 20.1cm、Boyle ほか 2015）。</p>
       <p class="cap">簡単にしたところ: 骨の長さと関節の範囲は大人の手の目安（1人分を、手のモデルごとに大きさと指の長さだけ変えたもの）。手首は水平に回り、手のひらは少しだけ傾きます。鍵はシーソーのように奥の支点（手前の端から約 24cm、目安）で回って、手前ほど深く沈みます。鍵の形（白鍵の切り欠き・黒鍵の台形）は本物に似せた目安の寸法です。</p>
@@ -142,6 +144,7 @@
         <li><b>Fingering check</b>: for pieces with standard textbook fingering (scales, arpeggios and so on), it counts how many notes match the chosen fingering.</li>
       </ol>
       <p class="cap">Skeleton: finger bone and metacarpal lengths are averages from X-rays of 66 adults (Buryanov and Kotiuk 2010). The shapes and positions of the 8 carpal bones, the radius and ulna, and bone thickness are rough guides based on anatomy drawings. The two forearm bones really cross when the palm faces down (as when playing the piano), but here they are placed side by side.</p>
+      <p class="cap">Muscles, tendons and fat: the main muscles (thenar and hypothenar groups, adductor pollicis, interossei, lumbricals and so on), the finger flexor and extensor tendons, and the fat pads of the finger pads and finger bases are modeled as parts attached to the bones. A part whose two ends sit on different bones stretches or shortens as the joints move, and since muscle keeps its volume, it gets thinner when stretched and thicker when shortened. Positions and thicknesses are rough guides based on anatomy drawings; we have only checked that the flexor tendon thickness (about 3 mm) and the soft tissue over the back of the hand (about 3 mm) are close to values in study abstracts. The skin is not yet built from this model (that is the next step).</p>
       <p class="cap">How the hand looks: round cones and plates placed along the bones are blended smoothly, turned into a mesh at start-up, and bent with the joints. Nails, knuckle wrinkles, tendons and veins on the back of the hand, and fine bumps and color changes in the skin are patterns made by calculation (not a scan or photo of a real hand).</p>
       <p class="cap">Hand size: "Adult (large)" spans about 21 cm from thumb to little finger when fully spread (average for pianists: men 22.6 cm, women 20.1 cm; Boyle et al. 2015).</p>
       <p class="cap">What is simplified: bone lengths and joint ranges are a rough guide for one adult hand (each hand model only changes the size and finger length). The wrist turns sideways and the palm tilts only a little. Keys tip like a seesaw around a pivot at the back (about 24 cm from the front edge, a rough guide), so they sink deeper toward the front. Key shapes (cut-outs of the white keys, sloped black keys) use rough-guide sizes modeled on real ones.</p>
@@ -195,6 +198,7 @@
 <script src="js/keyboard.js"></script>
 <script src="js/skinview.js"></script>
 <script src="js/skeleton.js"></script>
+<script src="js/tissue.js"></script>
 <script src="js/scene.js"></script>
 <script src="js/import.js"></script>
 <script src="js/main.js"></script>

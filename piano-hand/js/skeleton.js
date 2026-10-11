@@ -103,7 +103,7 @@ function buildSkeletonParts(H) {
 
 const _sm = new THREE.Matrix4(), _ss = new THREE.Matrix4();
 function renderSkeletonHand(H, pose, opt) {
-  const show = !!pose && (opt.bones || opt.xray);
+  const show = !!pose && (opt.bones || opt.xray || opt.muscles);
   H.group.visible = show;
   if (!show) return;
   if (SKEL_GEOM_KEY !== HAND.id) for (const VH of V.hands) buildSkeletonParts(VH.bones);

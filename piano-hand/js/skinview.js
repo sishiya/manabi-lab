@@ -134,7 +134,7 @@ function makeSkinHand(sc, side) {
 const _fm = new THREE.Matrix4();
 function updateSkinHand(H, pose, opt) {
   // 骨と重ねる（xray）ときは、皮ふをうすく透かして骨格もいっしょに見せる
-  const show = !!pose && (!opt.bones || opt.xray);
+  const show = !!pose && (opt.xray || (!opt.bones && !opt.muscles)); // 筋肉を見せるときは皮ふを消す（重ねるときは透かす）
   H.mesh.visible = show;
   for (const n of H.nails) n.mesh.visible = show && !opt.xray;
   if (!show) return;

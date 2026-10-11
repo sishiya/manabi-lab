@@ -1,0 +1,204 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ピアノを弾く手</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2314171c'/><path d='M8 40h48v16H8z' fill='%23f3f1ea'/><path d='M18 40h6v9h-6zM30 40h6v9h-6zM42 40h6v9h-6z' fill='%2314171c'/><path d='M20 14v20M28 10v22M36 12v22M44 18v16' stroke='%23e9b796' stroke-width='6' stroke-linecap='round'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="frame">
+      <div id="loading" role="status" aria-live="polite"><div class="spin" aria-hidden="true"></div><p id="loadMsg"><span lang="ja">準備しています…</span><span lang="en">Getting ready…</span></p></div>
+      <canvas id="view"></canvas>
+      <div id="views" class="seg tiny" role="group">
+        <button data-v="tilt" aria-pressed="true"><span lang="ja">ななめ</span><span lang="en">Angled</span></button>
+        <button data-v="top" aria-pressed="false"><span lang="ja">真上</span><span lang="en">Top</span></button>
+        <button data-v="front" aria-pressed="false"><span lang="ja">正面</span><span lang="en">Front</span></button>
+        <button data-v="side" aria-pressed="false"><span lang="ja">横</span><span lang="en">Side</span></button>
+        <button data-v="pov" aria-pressed="false"><span lang="ja">一人称</span><span lang="en">POV</span></button>
+      </div>
+      <p id="clock" class="mono"></p>
+      <div id="pedalInd" hidden><span class="ped"></span><span lang="ja">ペダル</span><span lang="en">Pedal</span></div>
+    </div>
+    <div id="toolbar">
+      <button class="btn primary" id="btnPlay"></button>
+      <select id="speedSel"></select>
+      <input type="range" id="time" min="0" max="1000" value="0">
+      <label class="chk"><input type="checkbox" id="chkSound" checked> <span lang="ja">音</span><span lang="en">Sound</span></label>
+      <input type="range" id="vol" min="0" max="100" value="70">
+    </div>
+    <p id="hint"></p>
+  </main>
+
+  <aside id="panel">
+    <header class="brand">
+      <div class="brand-top">
+        <h1><span lang="ja">ピアノを弾く手</span><span lang="en">Hands at the Piano</span> <small><span lang="ja">技術検証</span><span lang="en">Tech test</span></small></h1>
+        <div class="langsw" id="langsw" role="group" aria-label="言語 / Language"><button data-l="ja" title="日本語">JP</button><button data-l="en" title="English">EN</button></div>
+      </div>
+      <p lang="ja">譜面から「どの指で押すか」を決め、人の手として無理のない動きにできるかを確かめる<b>検証用の試作</b>です。運指はコンピュータの推定で、演奏の手本ではありません。教本や楽譜の運指とくらべて、ちがいを見るための画面です。両手・和音（片手で5音まで）。MIDI や MusicXML の楽譜も開けます。</p>
+      <p lang="en">From the music, the computer decides which finger presses each key, then checks whether a human hand could really move that way. This is a <b>test prototype</b>. The fingering is the computer's estimate, not a model for how to play. Use it to compare with the fingering in exercise books and scores, and see where they differ. Both hands, chords (up to 5 notes per hand). You can also open MIDI and MusicXML scores.</p>
+    </header>
+
+    <section>
+      <h2><span lang="ja">曲</span><span lang="en">Piece</span></h2>
+      <select id="song"></select>
+      <div class="row">
+        <label class="btn file"><span lang="ja">楽譜を開く…</span><span lang="en">Open a score…</span><input type="file" id="fileIn" accept=".mid,.midi,.musicxml,.xml,.mxl" hidden></label>
+        <label class="chk"><input type="checkbox" id="optGiven" checked> <span lang="ja">楽譜の運指を使う</span><span lang="en">Use the score's fingering</span></label>
+      </div>
+      <p class="cap" lang="ja">MIDI（.mid）と MusicXML（.musicxml・.mxl）。ファイルはこの画面の中だけで読み、どこにも送りません。画面にドロップしても開けます。届かない和音は内側の音から外して、灰色のノーツ（音だけ）にします。</p>
+      <p class="cap" lang="en">MIDI (.mid) and MusicXML (.musicxml, .mxl). The file is read only on this page and is not sent anywhere. You can also drop it on the screen. If a chord is too wide to reach, inner notes are left out and shown as gray notes (sound only).</p>
+      <p class="cap" id="songWhy"></p>
+    </section>
+
+    <section class="card" id="checks">
+      <div class="ro-top"><span class="lbl"><span lang="ja">検査の結果</span><span lang="en">Check results</span></span><span class="ro-tag" id="chkSum"></span></div>
+      <table id="chkTable"></table>
+      <div id="missOut"></div>
+      <p class="ro-note" lang="ja">行を押すと、いちばん悪かった時刻へ跳びます。◯△✕ の境目はこの検証のための目安です。</p>
+      <p class="ro-note" lang="en">Click a row to jump to the worst moment. The ◯ △ ✕ limits are rough guides made for this test.</p>
+    </section>
+
+    <section>
+      <h2><span lang="ja">決まった運指</span><span lang="en">Chosen fingering</span></h2>
+      <p class="cap"><span lang="ja">運指の罰点の合計</span><span lang="en">Total fingering penalty</span> <b id="fgCost" class="mono"></b><span lang="ja">（小さいほど楽）</span><span lang="en"> (lower is easier)</span></p>
+      <p class="cap" id="fgRef"></p>
+      <button class="btn" id="btnVal"><span lang="ja">教本の運指との答え合わせをまとめて</span><span lang="en">Compare with textbook fingering (all)</span></button>
+      <div id="valOut"></div>
+      <div id="fgList"></div>
+    </section>
+
+    <section>
+      <h2><span lang="ja">シーンとエフェクト</span><span lang="en">Scene and effects</span></h2>
+      <div class="row"><select id="sceneSel"></select><select id="fxSel"></select></div>
+      <p class="cap" lang="ja">エフェクト: 光のにじみ・画面の周りの暗さ・フィルムの粒・光の粒。シーンを選ぶと、そのシーンに合う強さになります（あとから変えられます）。重いときは「なし」に。</p>
+      <p class="cap" lang="en">Effects: soft glow, darker edges, film grain, and sparkles. Choosing a scene sets a matching strength (you can change it after). If it runs slowly, choose "None".</p>
+    </section>
+
+    <section>
+      <h2><span lang="ja">手のモデル</span><span lang="en">Hand model</span></h2>
+      <select id="handModel"></select>
+      <select id="strokeSel"></select>
+      <label class="chk"><input type="checkbox" id="optFlex" checked> <span lang="ja">関節をやわらかく（ストレッチした手の目安）</span><span lang="en">Flexible joints (a rough guide for a stretched hand)</span></label>
+      <p class="cap" id="handInfo"></p>
+    </section>
+
+    <section>
+      <h2><span lang="ja">見せ方</span><span lang="en">Display</span></h2>
+      <label class="chk"><input type="checkbox" id="optNoteNums" checked> <span lang="ja">ノーツに指の番号</span><span lang="en">Finger numbers on notes</span></label>
+      <label class="chk"><input type="checkbox" id="optFingerNums"> <span lang="ja">指先に指の番号</span><span lang="en">Finger numbers on fingertips</span></label>
+      <label class="chk"><input type="checkbox" id="optTargets"> <span lang="ja">指先の目標点（IK でねらう場所）</span><span lang="en">Fingertip targets (where IK aims)</span></label>
+      <label class="chk"><input type="checkbox" id="optBones"> <span lang="ja">骨格だけ（骸骨が弾く）</span><span lang="en">Skeleton only (a skeleton plays)</span></label>
+      <label class="chk"><input type="checkbox" id="optMuscles"> <span lang="ja">筋肉・腱・脂肪（骨の上に。<span style="color:#c0574e">■</span>筋肉 <span style="color:#a9bdd0">■</span>腱 <span style="color:#d9b14a">■</span>脂肪）</span><span lang="en">Muscles, tendons and fat (over the bones. <span style="color:#c0574e">■</span>muscle <span style="color:#a9bdd0">■</span>tendon <span style="color:#d9b14a">■</span>fat)</span></label>
+      <label class="chk"><input type="checkbox" id="optXray"> <span lang="ja">骨と皮ふを重ねる（透かして見る）</span><span lang="en">Skin and skeleton together (see-through)</span></label>
+      <label class="chk"><input type="checkbox" id="optGhost"> <span lang="ja">手を半透明に</span><span lang="en">See-through hands</span></label>
+      <label class="chk"><input type="checkbox" id="optFollow" checked> <span lang="ja">カメラが手について行く</span><span lang="en">Camera follows the hands</span></label>
+    </section>
+
+    <details class="about" lang="ja">
+      <summary>しくみ</summary>
+      <ol>
+        <li><b>運指</b>: 隣りあう2音を弾く指の組ごとに「楽な開き」の表があり、外れると罰点。親指くぐり・弱い指（4・5）・親指で黒鍵にも罰点。合計がいちばん小さい並びを、動的計画法で選びます。</li>
+        <li><b>手首</b>: 押している指（と、もうすぐ押す指）が届く位置へ近づけながら、急に動かないようになめらかにつなぎます。届かない瞬間があれば、そこを重くして計算し直します。</li>
+        <li><b>手首の回転</b>: 手首から先を水平に回す向きも一緒に決めます（親指の側へ 20 度・小指の側へ 30 度まで）。親指くぐりでは、手を回しながら横へずらすと、親指が遠くまで届きます。</li>
+        <li><b>先回り</b>: 押していない指は、次に押す鍵の上へ早めに動いておきます。離した指は浮かせ、しばらくしたら力を抜いた形へ。</li>
+        <li><b>指</b>: 指先の目標から関節の角度を逆算（IK）。関節は人の範囲で止め、先の2つの関節は連動させます。</li>
+        <li><b>打鍵</b>: 指は下りてくる勢いのまま鍵を押し下げ、底で止まります（鍵の上でいったん止まらない）。動きは、速さも加速度も 0 から始まって 0 で終わるなめらかな曲線（最小ジャーク）です。</li>
+        <li><b>指のつながり</b>: 腱と筋肉を共有しているので、1本を動かすと、となりの指が少しついてきます（薬指がいちばん、親指はほとんど。研究の値をもとにした目安）。空中で止めている指は、ゆっくり小さくゆれます（0.5mm ほど。このアプリの目安）。</li>
+        <li><b>手首の上げ下げ</b>: 和音とオクターブは、指の形を保ったまま手首から打ちます（「打鍵」で「ぜんぶ指だけで」にもできます。検査の「指の関節の速さ」でくらべられます）。押していない指先が鍵にもぐりそうなときは（親指くぐりなど）、手首を上げます。上げる高さはこのアプリの目安です。</li>
+        <li><b>関節の速さ</b>: 筋肉で出せる速さには限りがあるので、指の関節は 1 秒に 1500 度より速くは動きません（プロのピアニストの速い音階で、指の付け根の関節の最大がおよそ 1160 度/秒という測定から、少し余裕を見た目安）。指どうしは、皮ふと肉が押し合うのはかまいませんが、骨が近づきすぎるときは動かせる指が横によけます。</li>
+        <li><b>届かない音</b>: 骨の長さと関節の範囲で届かなければ、押せなかった音になります（鍵が沈まず、音も鳴らず、ノーツに ✕）。届くように数値を合わせることはしません。「関節をやわらかく」（ストレッチした手の目安）で届くかも試せます。</li>
+        <li><b>検査</b>: 1/120 秒ごとに、届かなさ・関節の限界・指どうしのめりこみ・鍵へのめりこみ・左右の手のぶつかり・速さを測ります。</li>
+        <li><b>左手</b>: 右手を鏡に映した手です。運指は、鍵盤をレを中心に左右反転して（黒鍵の並びが同じになる）右手の規則で決めます。</li>
+        <li><b>和音</b>: 同時に押す音は、低い音ほど小さい番号の指（左手は逆）。「指1本に白鍵1つずつ置いた形」からのずれが小さい並びを選び、和音から和音へは手の位置の動きが小さいように決めます。跳ぶ前の音は、間に合うように少し早く離します（音は楽譜の長さまで鳴らします）。</li>
+        <li><b>ペダル</b>: 音をのばすペダルを踏んでいる間に離した音は、ペダルを上げるまで鳴ります。</li>
+        <li><b>運指の答え合わせ</b>: 音階・アルペジオなど、教本でよく使われる運指がある曲は、決まった運指とくらべて一致した数を出します。</li>
+      </ol>
+      <p class="cap">骨格: 指の骨と中手骨の長さは、成人 66 人の X 線写真の平均（Buryanov・Kotiuk 2010）。手根骨 8 個・橈骨・尺骨の形と位置、骨の太さは、解剖学の図をもとにした目安です。前腕の2本の骨は、本当はピアノを弾くとき（手のひらを下に向けるとき）に交差しますが、ここでは平行に置いています。</p>
+      <p class="cap">筋肉・腱・脂肪: おもな筋肉（母指球・小指球・母指内転筋・骨間筋・虫様筋など）と、指を曲げる腱・のばす腱、指のはらと付け根の脂肪を、骨に付けた模型にしています。両端が別の骨に付いた部品は、関節が動くとのび縮みし、筋肉は体積を保つので、のびると細く、縮むと太くなります。位置と太さは解剖学の図をもとにした目安で、指を曲げる腱の厚さ（約 3mm）・手の甲の肉の厚さ（約 3mm）は研究の要旨の値と近いことだけ確かめています。いまの皮ふは、まだこの模型から作っていません（次の段階）。</p>
+      <p class="cap">手の見た目: 骨に合わせて丸い円すいと板をなめらかにつないだ形を、起動時に網にして、関節といっしょに曲げています。爪・関節のしわ・手の甲の腱と静脈・肌の細かい凹凸と色むらは、計算で作った模様です（本物の手を測った形や写真ではありません）。</p>
+      <p class="cap">手の大きさ: 「大人（大きめ）」は、親指から小指までいっぱいに開いた幅が約 21cm になる大きさです（ピアニストの男性の平均 22.6cm・女性 20.1cm、Boyle ほか 2015）。</p>
+      <p class="cap">簡単にしたところ: 骨の長さと関節の範囲は大人の手の目安（1人分を、手のモデルごとに大きさと指の長さだけ変えたもの）。手首は水平に回り、手のひらは少しだけ傾きます。鍵はシーソーのように奥の支点（手前の端から約 24cm、目安）で回って、手前ほど深く沈みます。鍵の形（白鍵の切り欠き・黒鍵の台形）は本物に似せた目安の寸法です。</p>
+    </details>
+    <details class="about" lang="en">
+      <summary>How it works</summary>
+      <ol>
+        <li><b>Fingering</b>: for each pair of fingers that play two neighboring notes, there is a table of "comfortable spreads". Going outside it adds penalty points. Passing the thumb under, using the weak fingers (4 and 5), and putting the thumb on a black key also add points. Dynamic programming picks the order with the smallest total.</li>
+        <li><b>Wrist</b>: the wrist moves toward where the pressing fingers (and the fingers about to press) can reach, joined smoothly so it never jerks. If some moment is out of reach, that moment gets more weight and it is solved again.</li>
+        <li><b>Wrist turn</b>: it also decides how much the hand turns sideways at the wrist (up to 20° toward the thumb and 30° toward the little finger). When the thumb passes under, turning the hand while sliding sideways lets the thumb reach farther.</li>
+        <li><b>Getting ready early</b>: fingers that are not pressing move over their next key early. A finger that lets go lifts a little, then relaxes after a while.</li>
+        <li><b>Fingers</b>: joint angles are worked back from the fingertip target (IK, inverse kinematics). Joints stop at human limits, and the two outer joints bend together.</li>
+        <li><b>Striking a key</b>: the finger keeps its downward speed into the key and stops at the bottom (it does not pause on top of the key). Movements follow a smooth curve where both speed and acceleration start and end at zero (minimum jerk).</li>
+        <li><b>Linked fingers</b>: fingers share tendons and muscles, so when one moves, its neighbors follow a little (the ring finger most, the thumb hardly at all; a rough guide based on research). Fingers held in the air sway slowly and slightly (about 0.5 mm; a rough guide made for this app).</li>
+        <li><b>Raising and lowering the wrist</b>: chords and octaves are struck from the wrist, keeping the finger shape (choose "fingers only" under "Strike" to compare; see "Finger joint speed" in the checks). When a finger that is not pressing would sink into the keys (for example when the thumb passes under), the wrist rises. How high it rises is a rough guide made for this app.</li>
+        <li><b>Joint speed</b>: muscles can only move so fast, so finger joints never turn faster than 1500° per second (a rough guide with some margin, based on a measured peak of about 1160°/s at a finger base joint in fast scales by a professional pianist). Skin and flesh of neighboring fingers may press together, but when bones would come too close, a free finger moves aside.</li>
+        <li><b>Out-of-reach notes</b>: if the bone lengths and joint ranges cannot reach a key, the note is not pressed (the key stays up, no sound, and the note shows ✕). Numbers are never adjusted just to make it reach. You can also test "Flexible joints" (a rough guide for a stretched hand).</li>
+        <li><b>Checks</b>: every 1/120 s it measures: too far to reach, joint limits, fingers sinking into each other, fingers sinking into keys, the two hands bumping, and speed.</li>
+        <li><b>Left hand</b>: a mirror image of the right hand. Its fingering uses the right-hand rules on a keyboard flipped around D (so the black keys line up the same way).</li>
+        <li><b>Chords</b>: in notes pressed together, lower notes get lower finger numbers (the other way for the left hand). It picks the order closest to "one finger on each white key", and from chord to chord it keeps the hand's movement small. Before a jump, the note is let go a little early to get there in time (the sound still lasts as long as written).</li>
+        <li><b>Pedal</b>: while the sustain pedal is down, released notes keep sounding until the pedal comes up.</li>
+        <li><b>Fingering check</b>: for pieces with standard textbook fingering (scales, arpeggios and so on), it counts how many notes match the chosen fingering.</li>
+      </ol>
+      <p class="cap">Skeleton: finger bone and metacarpal lengths are averages from X-rays of 66 adults (Buryanov and Kotiuk 2010). The shapes and positions of the 8 carpal bones, the radius and ulna, and bone thickness are rough guides based on anatomy drawings. The two forearm bones really cross when the palm faces down (as when playing the piano), but here they are placed side by side.</p>
+      <p class="cap">Muscles, tendons and fat: the main muscles (thenar and hypothenar groups, adductor pollicis, interossei, lumbricals and so on), the finger flexor and extensor tendons, and the fat pads of the finger pads and finger bases are modeled as parts attached to the bones. A part whose two ends sit on different bones stretches or shortens as the joints move, and since muscle keeps its volume, it gets thinner when stretched and thicker when shortened. Positions and thicknesses are rough guides based on anatomy drawings; we have only checked that the flexor tendon thickness (about 3 mm) and the soft tissue over the back of the hand (about 3 mm) are close to values in study abstracts. The skin is not yet built from this model (that is the next step).</p>
+      <p class="cap">How the hand looks: round cones and plates placed along the bones are blended smoothly, turned into a mesh at start-up, and bent with the joints. Nails, knuckle wrinkles, tendons and veins on the back of the hand, and fine bumps and color changes in the skin are patterns made by calculation (not a scan or photo of a real hand).</p>
+      <p class="cap">Hand size: "Adult (large)" spans about 21 cm from thumb to little finger when fully spread (average for pianists: men 22.6 cm, women 20.1 cm; Boyle et al. 2015).</p>
+      <p class="cap">What is simplified: bone lengths and joint ranges are a rough guide for one adult hand (each hand model only changes the size and finger length). The wrist turns sideways and the palm tilts only a little. Keys tip like a seesaw around a pivot at the back (about 24 cm from the front edge, a rough guide), so they sink deeper toward the front. Key shapes (cut-outs of the white keys, sloped black keys) use rough-guide sizes modeled on real ones.</p>
+    </details>
+
+    <details class="about">
+      <summary><span lang="ja">このアプリについて・おもな出どころ</span><span lang="en">About this app and main sources</span></summary>
+      <ul class="src" lang="ja">
+        <li>Parncutt, Sloboda, Clarke, Raekallio, Desain (1997) An ergonomic model of keyboard fingering for melodic fragments. <i>Music Perception</i> 14(4)（運指の罰点の表と規則。ここでは一部を簡略にして使用。表の数値は原典での確認がまだ）</li>
+        <li>Zhu, Ramakrishnan, Hamann, Neff (2013) A system for automatic animation of piano performances. <i>Computer Animation and Virtual Worlds</i> 24(5). <a href="https://doi.org/10.1002/cav.1477" target="_blank" rel="noopener">DOI</a>（運指 → 先回り → 手の形、の流れ）</li>
+        <li>Boyle, Boyle, Booker (2015) ピアニストの手の開きの調査（473人。Australasian Piano Pedagogy Conference 2015 の発表集）。<a href="https://paskpiano.org/pianists-hand-spans-australian-study/" target="_blank" rel="noopener">解説</a></li>
+        <li>W3C Music Notation Community Group: MusicXML 4.0（譜表・運指 fingering の書き方）。<a href="https://www.w3.org/2021/06/musicxml40/" target="_blank" rel="noopener">仕様</a>／MIDI は Standard MIDI File の形式</li>
+        <li>C.-L. Hanon (1873)『60の練習曲によるヴィルトゥオーゾ・ピアニスト』第1番・第39番の運指（著作権切れ。答え合わせのお手本）。音階・アルペジオ・三和音の運指は多くの教本で共通のもの。歓喜の歌は「ドの位置」の入門の運指</li>
+        <li>Nakamura, Saito, Yoshii (2020) Statistical learning and estimation of piano fingering. <i>Information Sciences</i>. <a href="https://arxiv.org/abs/1904.10237" target="_blank" rel="noopener">arXiv</a>（運指の推定の比べ方）</li>
+        <li>Frontiers in Neurorobotics (2026): a professional pianist's finger joint motion measured with a sensor glove. <a href="https://www.frontiersin.org/journals/neurorobotics/articles/10.3389/fnbot.2026.1775834/full" target="_blank" rel="noopener">Article</a>（指の関節の速さ。速い音階で付け根の関節の最大 20.3 ラジアン/秒）</li>
+        <li>Buryanov, Kotiuk (2010) Proportions of hand segments. <i>International Journal of Morphology</i> 28(3). <a href="https://scielo.conicyt.cl/pdf/ijmorphol/v28n3/art15.pdf" target="_blank" rel="noopener">PDF</a>（指の骨・中手骨・指先の肉の長さ。成人 66 人の X 線写真）</li>
+        <li>Häger-Ross, Schieber (2000) Quantifying the independence of human finger movements. <i>Journal of Neuroscience</i> 20(22). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC6773164/" target="_blank" rel="noopener">PMC</a>（1本だけ動かしたときに、ほかの指がつられる割合。となりの指ごとの割りふりはこのアプリの目安）</li>
+      </ul>
+      <ul class="src" lang="en">
+        <li>Parncutt, Sloboda, Clarke, Raekallio, Desain (1997) An ergonomic model of keyboard fingering for melodic fragments. <i>Music Perception</i> 14(4) (the penalty table and rules for fingering, used here in a simplified form; the table values are not yet checked against the original)</li>
+        <li>Zhu, Ramakrishnan, Hamann, Neff (2013) A system for automatic animation of piano performances. <i>Computer Animation and Virtual Worlds</i> 24(5). <a href="https://doi.org/10.1002/cav.1477" target="_blank" rel="noopener">DOI</a> (the flow: fingering, then getting ready early, then hand shape)</li>
+        <li>Boyle, Boyle, Booker (2015) A survey of pianists' hand spans (473 people; Australasian Piano Pedagogy Conference 2015 proceedings). <a href="https://paskpiano.org/pianists-hand-spans-australian-study/" target="_blank" rel="noopener">Summary</a></li>
+        <li>W3C Music Notation Community Group: MusicXML 4.0 (how staves and fingering are written). <a href="https://www.w3.org/2021/06/musicxml40/" target="_blank" rel="noopener">Specification</a>. MIDI uses the Standard MIDI File format</li>
+        <li>C.-L. Hanon (1873) <i>The Virtuoso Pianist in Sixty Exercises</i>, fingering of No. 1 and No. 39 (public domain; used as the answer key). Fingering for scales, arpeggios and triads is the same in many exercise books. Ode to Joy uses the beginner "C position" fingering</li>
+        <li>Nakamura, Saito, Yoshii (2020) Statistical learning and estimation of piano fingering. <i>Information Sciences</i>. <a href="https://arxiv.org/abs/1904.10237" target="_blank" rel="noopener">arXiv</a> (how to compare fingering estimates)</li>
+        <li>Frontiers in Neurorobotics (2026): a professional pianist's finger joint motion measured with a sensor glove. <a href="https://www.frontiersin.org/journals/neurorobotics/articles/10.3389/fnbot.2026.1775834/full" target="_blank" rel="noopener">Article</a> (finger joint speed; base joint peak 20.3 rad/s in fast scales)</li>
+        <li>Buryanov, Kotiuk (2010) Proportions of hand segments. <i>International Journal of Morphology</i> 28(3). <a href="https://scielo.conicyt.cl/pdf/ijmorphol/v28n3/art15.pdf" target="_blank" rel="noopener">PDF</a> (lengths of finger bones, metacarpals and fingertip soft tissue; X-rays of 66 adults)</li>
+        <li>Häger-Ross, Schieber (2000) Quantifying the independence of human finger movements. <i>Journal of Neuroscience</i> 20(22). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC6773164/" target="_blank" rel="noopener">PMC</a> (how much other fingers follow when one finger moves; how it is shared between neighbors is a rough guide made for this app)</li>
+      </ul>
+      <p class="cap" lang="ja">曲はどれも著作権の切れたもの（音階・アルペジオ・フランス民謡・ベートーヴェン・ショパンの音型）か、このアプリで作ったものです。サンプルの楽譜ファイル（samples/）はこのアプリで作ったもので、歓喜の歌の左手の和音はこのアプリでつけた伴奏です。使っているもの: Three.js（MIT ライセンス。光のにじみは Three.js に付いている EffectComposer・UnrealBloomPass）、Google Fonts（SIL Open Font License）。</p>
+      <p class="cap" lang="en">All pieces are public domain (scales, arpeggios, a French folk song, Beethoven, a Chopin figure) or were made for this app. The sample score files (samples/) were made for this app, and the left-hand chords in Ode to Joy are an accompaniment added by this app. Uses: Three.js (MIT License; the glow uses EffectComposer and UnrealBloomPass that come with Three.js) and Google Fonts (SIL Open Font License).</p>
+    </details>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- 光のにじみ（ブルーム）: Three.js r128 のおまけ（MIT）。同じ版を jsDelivr から -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script src="js/keys.js"></script>
+<script src="js/songs.js"></script>
+<script src="js/fingering.js"></script>
+<script src="js/hand.js"></script>
+<script src="js/skin.js"></script>
+<script src="js/check.js"></script>
+<script src="js/view.js"></script>
+<script src="js/keyboard.js"></script>
+<script src="js/skinview.js"></script>
+<script src="js/skeleton.js"></script>
+<script src="js/tissue.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/import.js"></script>
+<script src="js/main.js"></script>

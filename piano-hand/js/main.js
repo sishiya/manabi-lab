@@ -2,7 +2,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const S = { plan: null, checks: null, t: -1, playing: false, speed: 1, lastNow: 0, prevT: -1, extra: [] };
-const OPT = { noteNums: true, fingerNums: false, targets: false, ghost: false, bones: false, xray: false };
+const OPT = { noteNums: true, fingerNums: false, targets: false, ghost: false, bones: false, xray: false, muscles: false };
 
 // 音（とても簡単な合成。鍵を押した瞬間に鳴らす）
 let AC = null, MASTER = null;
@@ -260,7 +260,7 @@ function initUI() {
     setCam(b.dataset.v);
     document.querySelectorAll('#views button').forEach(x => x.setAttribute('aria-pressed', x === b));
   }));
-  const opts = { optNoteNums: 'noteNums', optFingerNums: 'fingerNums', optTargets: 'targets', optGhost: 'ghost', optBones: 'bones', optXray: 'xray' };
+  const opts = { optNoteNums: 'noteNums', optFingerNums: 'fingerNums', optTargets: 'targets', optGhost: 'ghost', optBones: 'bones', optXray: 'xray', optMuscles: 'muscles' };
   for (const id in opts) $(id).addEventListener('change', e => { OPT[opts[id]] = e.target.checked; });
   $('chkTable').addEventListener('click', e => {
     const tr = e.target.closest('tr'); if (!tr) return;

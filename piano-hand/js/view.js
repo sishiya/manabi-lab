@@ -42,7 +42,7 @@ function initView(canvas) {
     }
   }
   // 両手
-  for (const side of [1, -1]) V.hands.push({ side, skin: makeSkinHand(sc, side), bones: makeSkeletonHand(sc, side), marks: makeMarks(sc) });
+  for (const side of [1, -1]) V.hands.push({ side, skin: makeSkinHand(sc, side), bones: makeSkeletonHand(sc, side), tissue: makeTissueHand(sc, side), marks: makeMarks(sc) });
   initFx(sc);
   initScene();
   applyScene('moon'); applyFx(SCENES.moon.fx); // 最初は月あかり（ユーザーの希望）
@@ -174,6 +174,7 @@ function renderPose(score, poses, opt) {
     const hi = score.hands.findIndex(h => h.side === VH.side), pose = hi >= 0 ? poses[hi] : null;
     updateSkinHand(VH.skin, pose, opt);
     renderSkeletonHand(VH.bones, pose, opt);
+    renderTissueHand(VH.tissue, pose, opt);
     for (let f = 1; f <= 5; f++) {
       VH.marks.tgt[f].visible = !!pose && opt.targets;
       VH.marks.lab[f].visible = !!pose && opt.fingerNums;
