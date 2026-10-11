@@ -39,7 +39,7 @@ const Inside = (() => {
       t4paths.push({ pts, at: c === 0 ? 0 : TL.repl + (c / 26) * 9 + rnd(-0.5, 0.5) });
     }
     UI.clearLog('in');
-    UI.log('in', `T4 の DNA が ${S.host === 'k12' ? '大腸菌 K-12' : '大腸菌 B'} の中に入った（感染 0分）。`, 'sure', 0);
+    UI.log('in', `T4 の DNA が ${S.host === 'k12' ? '大腸菌 K-12' : '大腸菌 B'} の中に入った（感染 0分）。`, 'sure', 0, 'attach');
     if (S.variant === 'gt') S.cutT = 0.4;
     UI.inStatus(S);
   }
@@ -51,17 +51,17 @@ const Inside = (() => {
     if (!S.playing) return;
     if (S.burstAt != null) { stepBurst(dt); return; }
     const dm = dt * S.speed, t0 = S.t; S.t += dm; const t = S.t;
-    const once = (key, cond, msg, kind) => { if (!S.said[key] && cond) { S.said[key] = 1; UI.log('in', msg, kind, t); } };
+    const once = (key, cond, msg, kind, z) => { if (!S.said[key] && cond) { S.said[key] = 1; UI.log('in', msg, kind, t, z); } };
     if (S.failed) { S.t = Math.min(S.t, 3); return; }
     if (S.cutT != null && t >= S.cutT) {
       S.failed = true; S.playing = false;
-      UI.log('in', 'DNA にブドウ糖の目印がないので、細菌の<b>制限酵素</b>に切られた。T4 は増えられず、細菌は生き残る。', 'sure', t);
+      UI.log('in', 'DNA にブドウ糖の目印がないので、細菌の<b>制限酵素</b>に切られた。T4 は増えられず、細菌は生き残る。', 'sure', t, 'cut');
       UI.toast('in', '切られた！'); UI.inStatus(S); return;
     }
-    once('stop', t >= TL.hostStop, '細菌自身のたんぱく質が作られなくなる。工場（リボソーム）は T4 の物を作りはじめる。', 'sure');
-    once('hdna', t >= TL.hostDnaFrom, '細菌の DNA をこわしはじめる（T4 の DNA の材料になる）。', 'est');
-    once('repl', t >= TL.repl, 'T4 の DNA のコピーが始まる。', 'sure');
-    once('late', t >= TL.late, '後期の遺伝子: 頭の殻・しっぽ・脚の部品が作られはじめる。', 'sure');
+    once('stop', t >= TL.hostStop, '細菌自身のたんぱく質が作られなくなる。工場（リボソーム）は T4 の物を作りはじめる。', 'sure', 'read');
+    once('hdna', t >= TL.hostDnaFrom, '細菌の DNA をこわしはじめる（T4 の DNA の材料になる）。', 'est', 'cut');
+    once('repl', t >= TL.repl, 'T4 の DNA のコピーが始まる。', 'sure', 'copy');
+    once('late', t >= TL.late, '後期の遺伝子: 頭の殻・しっぽ・脚の部品が作られはじめる。', 'sure', 'read');
     // 頭を作りはじめる
     S.nextHead += headRate(t) * dm;
     while (S.nextHead >= 1 && S.heads.length < 600) {
@@ -73,16 +73,16 @@ const Inside = (() => {
     let done = 0, packing = 0;
     for (const h of S.heads) { if (t >= h.fe + 0.6) done++; else if (t >= h.fs) packing++; }
     S.done = done; S.packing = packing;
-    once('pack', packing > 0, `頭の殻に DNA をつめはじめる。モーターが毎秒約${TL.packBp}塩基対で押しこむ（1つ約${(HEADFUL / TL.packBp / 60).toFixed(0)}分）。`, 'sure');
-    if (!S.firstDone && done > 0) { S.firstDone = true; UI.log('in', '最初のファージが完成（頭＋しっぽ＋脚）。', 'sure', t); }
-    once('holin', t >= 12, '内膜に穴あけのたんぱく（ホリン）がたまっていく。', 'sure');
+    once('pack', packing > 0, `頭の殻に DNA をつめはじめる。モーターが毎秒約${TL.packBp}塩基対で押しこむ（1つ約${(HEADFUL / TL.packBp / 60).toFixed(0)}分）。`, 'sure', 'head');
+    if (!S.firstDone && done > 0) { S.firstDone = true; UI.log('in', '最初のファージが完成（頭＋しっぽ＋脚）。', 'sure', t, 'tail'); }
+    once('holin', t >= 12, '内膜に穴あけのたんぱく（ホリン）がたまっていく。', 'sure', 'lysis');
     if (t >= S.lysisT) startBurst();
     UI.inStatus(S);
   }
 
   function startBurst() {
     S.burstAt = S.t; S.burst = 0;
-    UI.log('in', `ホリンがいっせいに穴をあけ、溶菌酵素が細胞壁をとかす → <b>破裂</b>。出てきたファージ: <b>${S.done}個</b>。`, 'sure', S.t);
+    UI.log('in', `ホリンがいっせいに穴をあけ、溶菌酵素が細胞壁をとかす → <b>破裂</b>。出てきたファージ: <b>${S.done}個</b>。`, 'sure', S.t, 'lysis');
     UI.toast('in', `破裂！ ${S.done}個`);
     S.flies = S.heads.map(h => {
       const ok = S.t >= h.fe + 0.6, a = Math.atan2(h.y, h.x) + rnd(-0.6, 0.6), v = rnd(300, 900);
@@ -106,7 +106,7 @@ const Inside = (() => {
     else UI.log('in', '2つめのファージは付いたが、DNA は中に入れず、<b>外膜と内膜のあいだに捨てられた</b>（重感染排除）。', 'sure', t);
     if (t >= TL.lin && !S.lin) {
       S.lin = true; S.lysisT = Math.max(S.lysisT, TL.linLysis);
-      UI.log('in', '外にファージがまだいる合図で、<b>破裂がおくれる</b>（溶菌阻止）。そのあいだもファージは作られつづける。', 'sure', t);
+      UI.log('in', '外にファージがまだいる合図で、<b>破裂がおくれる</b>（溶菌阻止）。そのあいだもファージは作られつづける。', 'sure', t, 'lysis');
       UI.toast('in', '破裂がおくれる');
     }
   }
@@ -249,7 +249,7 @@ const Inside = (() => {
     const r = cv.getBoundingClientRect(), x = (e.clientX - r.left - ox) / s, y = (oy - (e.clientY - r.top)) / s;
     const k = pick(x, y); if (!k) return;
     S.hl = { x, y, at: performance.now() };
-    UI.loupe(k === 'ghost' ? { t: '最初のファージのぬけがら', k: 'sure', b: 'DNA を入れたあとの空っぽの頭としっぽ。外に残る（ゴースト）。' } : INFO[k]);
+    UI.loupe(k === 'ghost' ? { t: '最初のファージのぬけがら', k: 'sure', b: 'DNA を入れたあとの空っぽの頭としっぽ。外に残る（ゴースト）。', z: 'attach' } : INFO[k]);
   });
 
   return { S, reset, step, draw, resize, superinfect, setSpeed(v) { S.speed = v; }, toggle() { if (S.failed || S.burst > 6) return; S.playing = !S.playing; UI.inStatus(S); } };

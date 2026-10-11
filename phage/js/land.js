@@ -29,7 +29,7 @@ const Land = (() => {
     S.fill = 1; S.holeR = 0; S.dnaF = 0; S.shortF = 0; S.imBulge = 0;
     S.noRecT = 0; S.saidNoRec = false; S.firstBind = false; S.maxBound = 0; S.th0 = 0; S.y0 = 0;
     S.done = false;
-    document.getElementById('toInside').hidden = true;
+    document.getElementById('toInside').hidden = true; document.getElementById('toZoomAttach').hidden = true;
     makeDnaPath();
     UI.clearLog('land');
     UI.log('land', `${S.host.name} の表面。画面をおさえると、光ピンセットがファージを引きよせる。`);

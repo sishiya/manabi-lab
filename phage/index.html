@@ -13,6 +13,7 @@
     <nav id="tabs" role="tablist">
       <button role="tab" data-tab="land" aria-selected="true"><b>① 着陸させる</b><small>運んで、刺して、DNA を入れる</small></button>
       <button role="tab" data-tab="inside" aria-selected="false"><b>② 細菌の中</b><small>約25分で100個以上に</small></button>
+      <button role="tab" data-tab="zoom" aria-selected="false"><b>③ 寄って見る</b><small>分子で見る8つの場面</small></button>
       <button role="tab" data-tab="about" aria-selected="false"><b>このアプリについて</b><small>しくみ・出どころ</small></button>
     </nav>
   </header>
@@ -45,6 +46,7 @@
         <div id="landStatus"></div>
       </section>
       <button id="toInside" class="acc big" hidden>② 細菌の中へ →</button>
+      <button id="toZoomAttach" class="big" hidden>③ 刺さるところを分子で見る</button>
       <section class="box">
         <h2>起きたこと</h2>
         <ol class="log" id="landLog"></ol>
@@ -91,6 +93,31 @@
     </aside>
   </div>
 
+  <!-- ③ 寄って見る -->
+  <div class="page" data-page="zoom" hidden>
+    <main class="stage">
+      <div class="viewWrap">
+        <canvas id="cvZoom" aria-label="T4 ファージと細菌の部品を、たんぱく質が見える大きさで描いた図"></canvas>
+        <div class="hud mono" id="zHud"></div>
+        <div class="toast" id="zToast" role="status" aria-live="polite"></div>
+      </div>
+    </main>
+    <aside class="panel">
+      <div class="zlist" id="zList"></div>
+      <section class="box">
+        <h2 id="zTitle"></h2>
+        <p class="lead" id="zLead"></p>
+        <div class="zctrl" id="zCtrl"></div>
+        <ol class="zsteps" id="zSteps"></ol>
+        <div class="zsay" id="zSay"></div>
+      </section>
+      <section class="box">
+        <h2>ルーペ</h2>
+        <div id="zPick"></div>
+      </section>
+    </aside>
+  </div>
+
   <!-- このアプリについて -->
   <div class="page" data-page="about" hidden>
     <article id="about">
@@ -102,7 +129,7 @@
       <ul>
         <li>6本の長い脚（長い尾繊維、約145nm）の先が、細菌の表面の決まった印（受け手）にくっつく。大腸菌 K-12 では外膜のたんぱく質 OmpC、OmpC を持たない大腸菌 B では LPS（外膜の表面の糖の鎖）のブドウ糖。<span class="kind sure">研究の値</span></li>
         <li><b>3本以上</b>の脚がくっつくと、基盤が六角形から星形に変わり、短い脚が LPS の内側の糖にしっかりくっつく。<span class="kind sure">研究の値</span></li>
-        <li>しっぽのさやが 98.4nm から 36nm に縮み、中の管が外膜を突きぬける。管の先の酵素が細胞壁に穴をあけ、DNA が入る。<span class="kind sure">研究の値</span></li>
+        <li>しっぽのさやが 92.5nm から 42nm に縮み（23段の輪が基盤の側から順に縮む）、中の管が外膜を突きぬける。管の先の酵素が細胞壁に穴をあけ、DNA が入る。<span class="kind sure">研究の値</span></li>
         <li>受け手をなくした変異の大腸菌（OmpC がなく、LPS の糖の鎖も短い）や、外膜のない枯草菌には付けない。<span class="kind sure">研究の値</span></li>
       </ul>
       <h3>② 細菌の中（37℃・栄養のある液での目安）</h3>
@@ -115,6 +142,18 @@
         <li>T4 の DNA は、シトシンのかわりにブドウ糖のついたヒドロキシメチルシトシンを使い、細菌の多くの制限酵素に切られない。ブドウ糖のない変異の T4 は、大腸菌の制限酵素（K-12 では McrBC）に切られる。<span class="kind sure">研究の値</span></li>
       </ul>
 
+      <h3>③ 寄って見る（たんぱく質が見える大きさ）</h3>
+      <ul>
+        <li><b>形</b>: 頭の殻 gp23 約930〜960個・頂点 gp24（12の頂点のうち11）・入口 gp20（12個）・飾り Hoc 155個／Soc 870個、さや gp18 138個（6個×23段）、管 gp19 約140個、短い脚 gp12 18個、長い脚 6本、中に DNA（ゲノムの1.02倍）と内部たんぱく約1000個。<span class="kind sure">研究の値</span></li>
+        <li><b>刺さる</b>: 基盤は直径約52nm の六角形から約61nm の星形に。さやは基盤の側から縮み、1段のねじれは 17.2°、管は約345°回りながら押し出される。<span class="kind sure">研究の値</span></li>
+        <li><b>こわす</b>: T4 の EndoII は CCGC を、EndoIV はシトシンを含む DNA を切り、hmC の T4 の DNA は切らない。遺伝子56の酵素が C の材料をこわし、遺伝子42の酵素が hmC の材料を作る。<span class="kind sure">研究の値</span></li>
+        <li><b>読みかえ</b>: T4 は細菌の RNA ポリメラーゼを最後まで使い、Alt・AsiA・MotA・gp55・gp33・gp45 を付けかえて、早期 → 中期 → 後期の遺伝子を読ませる。<span class="kind sure">研究の値</span></li>
+        <li><b>コピー</b>: gp43・gp45・gp44/62・gp41・gp61・gp32 などの7つのたんぱくで分かれ目が進む。体の中では毎秒約400〜500塩基。組みかえでつながった長い DNA（コンカテマー）になる。<span class="kind sure">研究の値</span></li>
+        <li><b>頭</b>: 入口 → 足場（gp22・gp21 が 576:72）→ 殻 → はさみ gp21 → ふくらむ（約15%）→ モーター gp17（最大 毎秒約2000塩基対・約60pN、1つ約5分）→ 1.02倍で切る。<span class="kind sure">研究の値</span></li>
+        <li><b>しっぽ</b>: くさびは gp10 → gp7 → gp8 → gp6 → gp53 → gp25 の順（gp11 はいつでも）。管 → さや → ふた gp3・gp15 → 頭と合体 → 長い脚が最後。<span class="kind sure">研究の値</span></li>
+        <li><b>破って出る</b>: ホリン（t）の穴でリゾチーム（e）が細胞壁に届く。rI がホリンをおさえると破裂がおくれる。<span class="kind sure">研究の値</span></li>
+      </ul>
+
       <h3>簡単にしているところ</h3>
       <ul>
         <li>立体を横から見た平面の図にしている。ファージは画面の面の中でだけ回る。6本の脚は奥行きを色の濃さで表す。</li>
@@ -124,6 +163,10 @@
         <li>DNA が入るのにかかる時間は、T4 でははっきり測られていないので、早回しで見せる。管がどこまで入るか、内膜がどう引きよせられるかも模式。<span class="kind art">模式</span></li>
         <li>細菌の中の部品の数・置き場所・色は模式。頭が作られる速さは「最初の完成が約12〜15分・破裂までに100〜150個」に合うように決めた。<span class="kind art">模式</span></li>
         <li>溶菌阻止で破裂がどれだけおくれるかは条件で大きく変わる（数十分〜数時間）。アプリでは約60分で破裂させ、作る速さも少しずつ落とした。<span class="kind art">模式</span></li>
+        <li>③ の絵の形・色・置き場所は模式。たんぱく質は丸や四角で描き、本当の原子の形ではない。DNA の文字の間は見やすく広げている（本当は1文字 0.34nm）。<span class="kind art">模式</span></li>
+        <li>③「読みかえ」の読まれやすさ・RNA の数、「コピー」で部品が欠けたときの速さ、「破って出る」のホリンの数は模式（そろったときの毎秒400〜500塩基だけが測られた値）。<span class="kind art">模式</span></li>
+        <li>③「こわす」の細菌の制限酵素は、何種類かあるものを1つにまとめている。<span class="kind art">模式</span></li>
+        <li>③ の時間（DNA のつめこみ・コピー・さやが縮む速さ）は早回し・ゆっくりにしている。<span class="kind art">模式</span></li>
         <li>学習用に簡単にしています。医療や実験の判断には使えません。</li>
       </ul>
 
@@ -136,6 +179,10 @@
         <li>Hu B, Margolin W, Molineux IJ, Liu J (2015) <a href="https://doi.org/10.1073/pnas.1501064112" target="_blank" rel="noopener">Structural remodeling of bacteriophage T4 and host membranes during infection initiation</a>. PNAS 112:E4919–E4928（K-12 の OmpC・B の LPS、基盤の形の変化）</li>
         <li>Yu F, Mizushima S (1982) Roles of lipopolysaccharide and outer membrane protein OmpC of <i>Escherichia coli</i> K-12 in the receptor function for bacteriophage T4. Journal of Bacteriology 151:718–722／Washizaki A ほか (2016) MicrobiologyOpen 5:1003–1015（OmpC がないときの LPS の糖）</li>
         <li>Fuller DN ほか (2007) <a href="https://doi.org/10.1073/pnas.0704008104" target="_blank" rel="noopener">Single phage T4 DNA packaging motors exhibit large force generation, high velocity, and dynamic variability</a>. PNAS 104:16868–16873</li>
+        <li>Leiman PG, Arisaka F, van Raaij MJ ほか (2010) <a href="https://doi.org/10.1186/1743-422X-7-355" target="_blank" rel="noopener">Morphogenesis of the T4 tail and tail fibers</a>. Virology Journal 7:355（くさびの順番、さや・管・基盤の数と大きさ、さやの縮み方、針、長い脚と短い脚、ふた）</li>
+        <li>Rao VB, Black LW (2010) <a href="https://doi.org/10.1186/1743-422X-7-356" target="_blank" rel="noopener">Structure and assembly of bacteriophage T4 head</a>. Virology Journal 7:356（殻のたんぱくの数、入口、つめこみモーター、ヘッドフル、Hoc・Soc、内部たんぱく）</li>
+        <li>Sinha NK, Morris CF, Alberts BM (1980) Efficient in vitro replication of double-stranded DNA templates by a purified T4 bacteriophage replication system. Journal of Biological Chemistry 255:4290–4293（体の中の分かれ目は毎秒約500塩基）</li>
+        <li>Dong F, Weitzel SE, von Hippel PH (1996) <a href="https://doi.org/10.1073/pnas.93.25.14456" target="_blank" rel="noopener">A coupled complex of T4 DNA replication helicase (gp41) and polymerase (gp43) can perform rapid and processive DNA strand-displacement synthesis</a>. PNAS 93:14456–14461</li>
         <li>Revel HR (1967) Restriction of nonglucosylated T-even bacteriophage. Virology 31:688–701</li>
         <li>Matias VRF, Al-Amoudi A, Dubochet J, Beveridge TJ (2003) Cryo-transmission electron microscopy of frozen-hydrated sections of <i>Escherichia coli</i> and <i>Pseudomonas aeruginosa</i>. Journal of Bacteriology 185:6112–6118（外膜・細胞壁の厚さ）</li>
       </ul>
@@ -150,4 +197,12 @@
 <script src="js/ui.js"></script>
 <script src="js/land.js"></script>
 <script src="js/inside.js"></script>
+<script src="js/zoom-data.js"></script>
+<script src="js/zoom.js"></script>
+<script src="js/z-form.js"></script>
+<script src="js/z-attach.js"></script>
+<script src="js/z-dna.js"></script>
+<script src="js/z-copy.js"></script>
+<script src="js/z-build.js"></script>
+<script src="js/z-lysis.js"></script>
 <script src="js/main.js"></script>

@@ -18,13 +18,15 @@ const UI = (() => {
 
   // 記録
   function clearLog(sc) { $(sc === 'land' ? 'landLog' : 'inLog').innerHTML = ''; }
-  function log(sc, html, kind, tMin) {
+  function goZoom(id) { setTab('zoom'); Zoom.open(id); }
+  function log(sc, html, kind, tMin, zid) {
     const ol = $(sc === 'land' ? 'landLog' : 'inLog'), li = document.createElement('li');
     if (kind) li.className = kind;
     let tm = '';
     if (sc === 'land') tm = `${Land.S.simMs.toFixed(2)}ms`;
     else if (tMin != null) tm = `${tMin.toFixed(1)}分`;
     li.innerHTML = `<span class="tm">${tm}</span>${html}${kind ? ` <span class="kind ${kind}">${KIND[kind]}</span>` : ''}`;
+    if (zid) { const b = document.createElement('button'); b.className = 'zgo'; b.textContent = '寄って見る →'; b.addEventListener('click', () => goZoom(zid)); li.appendChild(b); }
     ol.prepend(li);
   }
   const toastT = {};
@@ -60,6 +62,7 @@ const UI = (() => {
   function landDone(hostId) {
     const b = $('toInside'); b.hidden = false;
     b.onclick = () => { Inside.reset({ host: hostId === 'b' ? 'b' : 'k12', variant: 'wt' }); markIn(); setTab('inside'); };
+    const z = $('toZoomAttach'); z.hidden = false; z.onclick = () => goZoom('attach');
     toast('land', 'DNA が入った！');
   }
 
@@ -99,7 +102,8 @@ const UI = (() => {
     if (!info) return;
     hideHint('in');
     $('loupe').innerHTML = `<h3>${info.t} <span class="kind ${info.k}">${KIND[info.k]}</span></h3><p>${info.b}</p>`;
+    if (info.z) { const b = document.createElement('button'); b.className = 'zgo'; b.textContent = '寄って見る →'; b.addEventListener('click', () => goZoom(info.z)); $('loupe').appendChild(b); }
   }
 
-  return { setTab, get tab() { return tab; }, onTab: f => listeners.push(f), clearLog, log, toast, hideHint, landStatus, landDone, inStatus, loupe, markHost, markIn };
+  return { goZoom, setTab, get tab() { return tab; }, onTab: f => listeners.push(f), clearLog, log, toast, hideHint, landStatus, landDone, inStatus, loupe, markHost, markIn };
 })();
