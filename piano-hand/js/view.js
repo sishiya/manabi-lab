@@ -150,7 +150,15 @@ function initFx(sc) {
   g.setAttribute('color', new THREE.BufferAttribute(V.fxCol, 3));
   V.fx = new THREE.Points(g, new THREE.PointsMaterial({ size: 3.2, map: V.glowTex, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
   V.fx.frustumCulled = false; sc.add(V.fx);
+  // もや: 指を離したあと、光が立ちのぼりながらほどけて消える（大きくやわらかい点）
+  const g2 = new THREE.BufferGeometry();
+  V.wsPos = new Float32Array(WS_MAX * 3); V.wsCol = new Float32Array(WS_MAX * 3);
+  g2.setAttribute('position', new THREE.BufferAttribute(V.wsPos, 3));
+  g2.setAttribute('color', new THREE.BufferAttribute(V.wsCol, 3));
+  V.ws = new THREE.Points(g2, new THREE.PointsMaterial({ size: 15, map: V.glowTex, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+  V.ws.frustumCulled = false; sc.add(V.ws);
 }
+const WS_MAX = 900, WS_PER = 9, WS_LIFE = 1.1;
 const hash1 = (a, b) => { const x = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return x - Math.floor(x); };
 
 // ノーツ: 角の丸い光る板（長さは音の長さ）。鍵盤の奥の端より手前は切りとる（鍵に吸いこまれる）
@@ -248,7 +256,7 @@ function renderPose(score, poses, opt) {
     o.box.visible = vis;
     const on = t >= n.t0 && t <= (n.t1n || n.t1);
     o.lab.visible = vis && opt.noteNums && zf < Z0 - 2;
-    const tE = n.t1n || n.t1, HF = 0.45; // 半円の光は、音の終わりから HF 秒でフェードアウト（ノーツの棒が通りすぎても切らない）
+    const tE = n.t1n || n.t1, HF = 0.4; // 半円の光は、音の終わりから HF 秒で上へほどけて消える（ノーツの棒が通りすぎても切らない）
     const ring = n.ts && n.ts > tE + 0.05 && t > tE && t < n.ts + HF; // ペダルで音がのびている
     o.halo.visible = t >= n.t0 && (on || ring || t < tE + HF);
     if (vis) {
@@ -258,10 +266,12 @@ function renderPose(score, poses, opt) {
       o.box.material.emissiveIntensity = (on ? 1.4 : 0.3 + 0.5 * near) * FXL.glow;
     }
     if (o.halo.visible) {
-      const out = x => { x = Math.min(1, Math.max(0, x)); return 1 - x * x * (3 - 2 * x); }; // なめらかに 1 → 0
-      const fade = on ? 1 : ring ? (0.35 * Math.exp(-(t - tE) / 1.5) + 0.08) * (t < n.ts ? 1 : out((t - n.ts) / HF)) + (1 - 0.43) * out((t - tE) / HF) : out((t - tE) / HF), pulse = on ? 0.85 + 0.15 * Math.sin((t - n.t0) * 18) * Math.exp(-(t - n.t0) * 3) : 1;
-      o.halo.position.set(keyX(n.m), 6, Z0 + 2);
-      o.halo.scale.set(46 * pulse, 30 * pulse, 1);
+      const out = x => { x = Math.min(1, Math.max(0, x)); return (1 - x) * (1 - x); }; // 最初に速く、あとはゆっくり消える
+      const tD = ring && t >= n.ts ? n.ts : tE; // ほどけはじめる時刻（ペダルなら上げたとき）
+      const dsv = on || (ring && t < n.ts) ? 0 : Math.min(1, (t - tD) / HF), rise = 1 - (1 - dsv) * (1 - dsv);
+      const fade = on ? 1 : ring ? (0.35 * Math.exp(-(t - tE) / 1.5) + 0.08) * out(dsv) + 0.57 * out((t - tE) / HF) : out(dsv), pulse = on ? 0.85 + 0.15 * Math.sin((t - n.t0) * 18) * Math.exp(-(t - n.t0) * 3) : 1;
+      o.halo.position.set(keyX(n.m), 6 + 5 * rise, Z0 + 2 - 2 * rise);
+      o.halo.scale.set(46 * pulse * (1 + 0.2 * rise), 30 * pulse * (1 + 0.25 * rise), 1);
       o.halo.material.opacity = 0.75 * fade; o.halo.material.color.copy(o.c).multiplyScalar(FXL.glow);
     }
     // 光の粒: 打鍵から FX_LIFE 秒
@@ -280,6 +290,24 @@ function renderPose(score, poses, opt) {
       }
     }
   }
+  let nw = 0;
+  if (FXL.spark > 0) for (const o of V.notes) {
+    const n = o.n, tE = n.t1n || n.t1, tR = n.ts && n.ts > tE + 0.05 ? n.ts : tE, a = t - tR; // 半円と同じ時刻からほどける
+    if (a < 0 || a >= WS_LIFE || nw + WS_PER > WS_MAX || t < n.t0) continue;
+    const u = a / WS_LIFE, life = (1 - u) * (1 - u) * Math.min(1, a / 0.06);
+    for (let k = 0; k < WS_PER; k++) {
+      const r1 = hash1(o.idx + 3, k * 5.1), r2 = hash1(k + 1.7, o.idx), r3 = hash1(o.idx * 7 + k, 2.3);
+      const up = 22 + 30 * r2, sway = Math.sin(a * (3 + 2 * r3) + r1 * 6.3) * (2 + 6 * u);
+      V.wsPos[nw * 3] = keyX(n.m) + (r1 - 0.5) * 20 * (1 + 1.5 * u) + sway;
+      V.wsPos[nw * 3 + 1] = 5 + up * (1 - Math.exp(-a * 2.2)) / 2.2 + 4 * r3;
+      V.wsPos[nw * 3 + 2] = Z0 + 1 - (r3 - 0.3) * 10 * u;
+      const br = 0.32 * life * FXL.glow * (0.6 + 0.4 * r2);
+      V.wsCol[nw * 3] = (o.c.r * 0.8 + 0.2) * br; V.wsCol[nw * 3 + 1] = (o.c.g * 0.8 + 0.2) * br; V.wsCol[nw * 3 + 2] = (o.c.b * 0.8 + 0.2) * br;
+      nw++;
+    }
+  }
+  for (let i = nw; i < WS_MAX; i++) V.wsPos[i * 3 + 1] = -9999;
+  V.ws.geometry.attributes.position.needsUpdate = true; V.ws.geometry.attributes.color.needsUpdate = true;
   for (let i = np; i < FX_MAX; i++) { V.fxPos[i * 3 + 1] = -9999; }
   V.fx.geometry.attributes.position.needsUpdate = true; V.fx.geometry.attributes.color.needsUpdate = true;
   renderScene(t);
