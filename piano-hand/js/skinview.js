@@ -134,10 +134,18 @@ function makeSkinHand(sc, side) {
   sc.add(mesh);
   // 爪: 末節骨の座標軸をそのまま物体の行列にする（網は骨の座標で持っている）
   // 爪は半透明（下の爪床の桃色と、先の白いふちが透けて見える）。つやは強く
-  const nailMat = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.22, clearcoat: 1.0, clearcoatRoughness: 0.06, envMapIntensity: 1.0, side: THREE.DoubleSide, transparent: true, opacity: 0.78, emissive: new THREE.Color(0.05, 0.015, 0.012) });
+  // v031〜: ふち（両わき・根もと）はなめらかに透明にして皮ふへ溶かし（境目が線に見えないように）、表面には縦の細いすじ。先の白いはみ出しは少しにごる
+  const nailMat = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.18, clearcoat: 1.0, clearcoatRoughness: 0.05, envMapIntensity: 1.0, side: THREE.DoubleSide, transparent: true, opacity: 0.88, depthWrite: false, emissive: new THREE.Color(0.05, 0.015, 0.012) });
+  nailMat.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec2 aNail; varying vec2 vNail;').replace('#include <begin_vertex>', '#include <begin_vertex>\n  vNail = aNail;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vNail;')
+      .replace('#include <color_fragment>', '#include <color_fragment>\n  { float sd = abs(vNail.y * 2.0 - 1.0); diffuseColor.a *= (1.0 - smoothstep(0.7, 1.0, sd)) * smoothstep(0.0, 0.12, vNail.x) * (vNail.x > 0.84 ? 1.25 : 1.0); }')
+      .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n  { float h = 0.012 * sin(vNail.y * 75.0 + sin(vNail.x * 7.0) * 0.8) * smoothstep(0.1, 0.4, vNail.x); vec3 sx = dFdx(-vViewPosition), sy = dFdy(-vViewPosition); vec3 nr1 = cross(sy, normal), nr2 = cross(normal, sx); float det = dot(sx, nr1); normal = normalize(abs(det) * normal - sign(det) * (dFdx(h) * nr1 + dFdy(h) * nr2)); }');
+  };
+  nailMat.customProgramCacheKey = () => 'nail'; // 変数名に r1・r2 を使わない（three.js の中に #define r1 0.8 があり、数字に化けてシェーダーが壊れた）
   const nails = S.nails.map(N => {
     const ng = new THREE.BufferGeometry();
-    ng.setAttribute('position', new THREE.BufferAttribute(N.pos, 3)); ng.setAttribute('color', new THREE.BufferAttribute(N.col, 3)); ng.setIndex(N.idx);
+    ng.setAttribute('position', new THREE.BufferAttribute(N.pos, 3)); ng.setAttribute('color', new THREE.BufferAttribute(N.col, 3)); ng.setAttribute('aNail', new THREE.BufferAttribute(N.uv, 2)); ng.setIndex(N.idx);
     ng.computeVertexNormals();
     const nm = new THREE.Mesh(ng, nailMat); nm.castShadow = true; nm.receiveShadow = true; nm.frustumCulled = false;
     nm.matrixAutoUpdate = false;

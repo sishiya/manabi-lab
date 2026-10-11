@@ -57,6 +57,7 @@
 
     <section>
       <h2><span lang="ja">見え方と音</span><span lang="en">Look and sound</span></h2>
+      <select id="viewMode"></select>
       <select id="handLook"></select>
       <p class="cap" id="lookLegend" hidden><span lang="ja"><span style="color:#c0574e">■</span>筋肉 <span style="color:#a9bdd0">■</span>腱 <span style="color:#d9b14a">■</span>脂肪 <span style="color:#e6dcc6">■</span>骨</span><span lang="en"><span style="color:#c0574e">■</span>muscle <span style="color:#a9bdd0">■</span>tendon <span style="color:#d9b14a">■</span>fat <span style="color:#e6dcc6">■</span>bone</span></p>
       <div class="row"><select id="sceneSel"></select><select id="fxSel"></select></div>
@@ -64,6 +65,7 @@
       <p class="cap" lang="ja">シーンを選ぶと、合うエフェクトになります。動きが重いときはエフェクトを「なし」に。</p>
       <p class="cap" lang="en">Choosing a scene sets matching effects. If it runs slowly, set effects to "None".</p>
       <label class="chk"><input type="checkbox" id="optNotes" checked> <span lang="ja">ノーツ（降ってくる光の帯）を見せる</span><span lang="en">Show the notes (falling bars of light)</span></label>
+      <label class="chk"><input type="checkbox" id="optKeyLabels" checked> <span lang="ja">鍵盤に音の名前（ド4 など）</span><span lang="en">Note names on the keyboard (C4 and so on)</span></label>
       <label class="chk"><input type="checkbox" id="optNoteNums" checked> <span lang="ja">ノーツに指の番号</span><span lang="en">Finger numbers on notes</span></label>
       <label class="chk"><input type="checkbox" id="optFingerNums"> <span lang="ja">指先に指の番号</span><span lang="en">Finger numbers on fingertips</span></label>
       <label class="chk"><input type="checkbox" id="optFollow" checked> <span lang="ja">カメラが手について行く</span><span lang="en">Camera follows the hands</span></label>

@@ -458,6 +458,8 @@ function restBoneFrames(rest) {
 }
 
 // 爪: 末節骨の甲の側に、表面へ沿わせた曲面。骨に固定して動かす
+// 爪半月の見えやすさ（親指〜小指、目安。親指ではっきり、小指ではほとんど見えない）
+const LUNULA = [0, 1.0, 0.6, 0.5, 0.3, 0.1];
 function buildNails(P) {
   const nails = [];
   const NU = 10, NT = 9;
@@ -476,17 +478,18 @@ function buildNails(P) {
         let p = [B.o[0] + B.z[0] * s + dir[0] * (r + 3), B.o[1] + B.z[1] * s + dir[1] * (r + 3), B.o[2] + B.z[2] * s + dir[2] * (r + 3)];
         // 表面へ寄せる（外から内へ）
         for (let k = 0; k < 6; k++) { const d = handSDF(P, ...p), g = sdfGrad(P, ...p); p = [p[0] - g[0] * d, p[1] - g[1] * d, p[2] - g[2] * d]; }
-        const g = sdfGrad(P, ...p), lift = 0.35 + 0.25 * Math.sin(Math.PI * it / NT);
+        // 浮かせる量: まん中は少し盛り上がり、両わきは低く、根もとは皮ふのひだ（甘皮）の下へもぐる。ふちは材質でなめらかに透明にする（v031〜。前は全体が浮いた板で、ふちが線に見えた）
+        const g = sdfGrad(P, ...p), mid = Math.sin(Math.PI * it / NT), lift = 0.18 + 0.4 * Math.pow(mid, 0.6) - Math.max(0, 0.1 - u) * 4; // 皮ふの網は 1.5mm の三角形で、丸い所は本当の表面より少し外にあるので、もぐらせすぎると爪が網の下に隠れた
         p = [p[0] + g[0] * lift, p[1] + g[1] * lift, p[2] + g[2] * lift];
         if (u > 0.86) { const o = (u - 0.86) * 9; p = [p[0] + B.z[0] * o * 0.6 - g[0] * o * 0.15, p[1] + B.z[1] * o * 0.6 - g[1] * o * 0.15, p[2] + B.z[2] * o * 0.6 - g[2] * o * 0.15]; }
         const q = sub3(p, B.o);
         pos.push(dot3(q, B.x), dot3(q, B.y), dot3(q, B.z));
-        // 色: 根元は白っぽい爪半月、なかほどは爪床の桃色、先は白
-        const side = Math.abs(it / NT * 2 - 1);
-        let c = lin3(0.93, 0.70, 0.66);
-        if (u < 0.2 && side < 0.6) c = mix3(c, lin3(0.95, 0.86, 0.82), (1 - u / 0.2) * (1 - side / 0.6));
-        if (u > 0.84) c = mix3(c, lin3(0.97, 0.94, 0.88), Math.min(1, (u - 0.84) / 0.06));
-        c = mix3(c, lin3(0.85, 0.66, 0.58), side ** 4 * 0.6);
+        // 色: 根元は白っぽい爪半月（指ごとの見えやすさ LUNULA、目安）、なかほどは爪床の桃色（先へ行くほど少し赤く）、先のはみ出し（自由縁）は白
+        const side = Math.abs(it / NT * 2 - 1), lun = LUNULA[f];
+        let c = mix3(lin3(0.97, 0.80, 0.77), lin3(0.95, 0.70, 0.66), Math.min(1, u / 0.8)); // 爪の板ごしの爪床（まわりの肌より明るい桃色。近い色だと爪が見分けられなかった）
+        if (u < 0.26 && side < 0.75) { const k = Math.max(0, 1 - (u / 0.26) ** 2 - (side / 0.75) ** 2); c = mix3(c, lin3(0.97, 0.90, 0.86), Math.min(1, k * 1.6) * lun); }
+        if (u > 0.82) c = mix3(c, lin3(0.98, 0.96, 0.91), smoothF((u - 0.82) / 0.08));
+        c = mix3(c, lin3(0.86, 0.64, 0.58), side ** 4 * 0.5);
         col.push(...c); uvs.push(u, it / NT);
       }
     }
@@ -495,7 +498,7 @@ function buildNails(P) {
       const a = iu * (NT + 1) + it, b = a + 1, c = a + NT + 1, d = c + 1;
       idx.push(a, c, b, b, c, d);
     }
-    nails.push({ f, pos: new Float32Array(pos), col: new Float32Array(col), idx });
+    nails.push({ f, pos: new Float32Array(pos), col: new Float32Array(col), uv: new Float32Array(uvs), idx });
   }
   return nails;
 }

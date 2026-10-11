@@ -2,7 +2,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const S = { plan: null, checks: null, t: -1, playing: false, speed: 1, lastNow: 0, prevT: -1, extra: [] };
-const OPT = { notes: true, noteNums: true, fingerNums: false, targets: false, ghost: false, bones: false, xray: false, muscles: false };
+const OPT = { notes: true, keyLabels: true, noteNums: true, fingerNums: false, targets: false, ghost: false, bones: false, xray: false, muscles: false };
 
 // 音（v028〜: 音色を選べる。鍵を押した瞬間に鳴らす）。外の音の素材は読まず、ブラウザの中で合成する
 let AC = null, MASTER = null, NOISE = null;
@@ -350,8 +350,31 @@ function initUI() {
     for (const k of ['ghost', 'xray', 'muscles', 'bones']) OPT[k] = !!f[k];
     $('lookLegend').hidden = !f.muscles;
   });
-  const opts = { optNotes: 'notes', optNoteNums: 'noteNums', optFingerNums: 'fingerNums', optTargets: 'targets' };
-  for (const id in opts) $(id).addEventListener('change', e => { OPT[opts[id]] = e.target.checked; });
+  const opts = { optNotes: 'notes', optNoteNums: 'noteNums', optKeyLabels: 'keyLabels', optFingerNums: 'fingerNums', optTargets: 'targets' };
+  for (const id in opts) $(id).addEventListener('change', e => { OPT[opts[id]] = e.target.checked; markCustom(); });
+  // 見せ方のねらい（v029〜、ユーザーの希望: ノーツで確かめたい・ゲームのようにはなやかに見せたい・リアルなシミュレーションを観察したい、で選べるように）。
+  // 選ぶと、ノーツ・番号・鍵盤の音の名前・エフェクト・シーンがまとめて切りかわる。下の項目を個別に変えると「自分で選ぶ」になる
+  const MODES = {
+    check: { name: L('ねらい: ノーツで確かめる', 'Purpose: check against the notes'), set: { optNotes: 1, optNoteNums: 1, optKeyLabels: 1 }, fx: 1 },
+    game: { name: L('ねらい: ゲームのようにはなやかに', 'Purpose: flashy, like a game'), set: { optNotes: 1, optNoteNums: 0, optKeyLabels: 0, optFingerNums: 0, optTargets: 0 }, fx: 2, scene: 'stage' },
+    real: { name: L('ねらい: リアルな動きを観察する', 'Purpose: watch a realistic simulation'), set: { optNotes: 0, optNoteNums: 0, optKeyLabels: 0, optFingerNums: 0, optTargets: 0 }, fx: 0, scene: 'bright' },
+    custom: { name: L('ねらい: 自分で選ぶ', 'Purpose: choose for yourself') },
+  };
+  let applying = false;
+  function markCustom() { if (!applying) $('viewMode').value = 'custom'; }
+  function applyMode(k) {
+    const M = MODES[k]; if (!M || !M.set) return;
+    applying = true;
+    for (const id in M.set) { $(id).checked = !!M.set[id]; OPT[opts[id]] = !!M.set[id]; }
+    if (M.scene) { applyScene(M.scene); $('sceneSel').value = M.scene; }
+    applyFx(M.fx); $('fxSel').value = String(M.fx);
+    applying = false;
+  }
+  $('viewMode').innerHTML = Object.entries(MODES).map(([k, m]) => `<option value="${k}">${m.name}</option>`).join('');
+  $('viewMode').setAttribute('aria-label', L('見せ方のねらい', 'Viewing purpose'));
+  $('viewMode').addEventListener('change', e => applyMode(e.target.value));
+  for (const id of ['sceneSel', 'fxSel']) $(id).addEventListener('change', markCustom);
+  $('viewMode').value = 'check'; applyMode('check'); // 最初はノーツで確かめる（シーンは月あかりのまま）
   $('chkTable').addEventListener('click', e => {
     const tr = e.target.closest('tr'); if (!tr) return;
     const r = S.checks[tr.dataset.id];

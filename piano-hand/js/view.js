@@ -38,7 +38,7 @@ function initView(canvas) {
   for (let m = KB.lo; m <= KB.hi; m++) {
     if (m % 12 === 0) { // ドの位置に小さな印
       const lab = makeLabel(noteName(m), '#7c8796', 0, true);
-      lab.position.set(keyX(m), 0.6, -8); lab.scale.set(18, 9, 1); sc.add(lab);
+      lab.position.set(keyX(m), 0.6, -8); lab.scale.set(18, 9, 1); sc.add(lab); (V.keyLabels = V.keyLabels || []).push(lab); // 「見え方」で消せる（v029〜）
     }
   }
   // 両手
@@ -173,6 +173,7 @@ function renderPose(score, poses, opt) {
   // ノーツを見せるか（v028〜、ユーザーの希望: ノーツすら見せない選択肢）。消すと番号・打鍵の光・光の粒・もや・通り道の線も消える
   const showNotes = opt.notes !== false;
   if (V.laneMarks) for (const l of V.laneMarks) l.visible = showNotes;
+  if (V.keyLabels) for (const l of V.keyLabels) l.visible = opt.keyLabels !== false;
   for (const VH of V.hands) {
     const hi = score.hands.findIndex(h => h.side === VH.side), pose = hi >= 0 ? poses[hi] : null;
     updateSkinHand(VH.skin, pose, opt);
