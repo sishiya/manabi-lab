@@ -9,6 +9,10 @@ const KB = {
   DEPTH: 10,               // 押しこむ深さ
 };
 KB.BFRONT = -KB.WL + KB.BL; // 黒鍵の手前の端 z=-55
+// 鍵はシーソーのように奥の支点で回る。グランドピアノの鍵は全長およそ 48cm で、支点（バランスピン）は手前からおよそ 24cm（目安）。
+// 押しこみの深さ DEPTH は手前の端での深さで、奥ほど浅く沈む
+const KEY_PIVOT = 240;
+function keyDrop(d, z) { return d * (KEY_PIVOT + z) / KEY_PIVOT; }
 
 const WHITE_IN_OCT = [0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6];
 const BLACK_OFF = { 1: -2.6, 3: 2.6, 6: -3.2, 8: 0, 10: 3.2 }; // 白鍵の境目からのずれ（目安）
@@ -36,13 +40,13 @@ function surfaceAt(x, z, depress) {
   if (z > 0 || z < -KB.WL || x < -KB_WIDTH / 2 || x > KB_WIDTH / 2) return -Infinity;
   if (z < KB.BFRONT) {
     for (let m = KB.lo; m <= KB.hi; m++) {
-      if (isBlack(m) && Math.abs(x - keyX(m)) < KB.BW / 2) return KB.BH - (depress ? depress(m) : 0);
+      if (isBlack(m) && Math.abs(x - keyX(m)) < KB.BW / 2) return KB.BH - (depress ? keyDrop(depress(m), z) : 0);
     }
   }
   const wi = Math.floor((x + KB_WIDTH / 2) / KB.W);
   let m = KB.lo;
   for (let k = KB.lo; k <= KB.hi; k++) if (!isBlack(k) && whiteCount(k) - KB_WHITE0 === wi) { m = k; break; }
-  return -(depress ? depress(m) : 0);
+  return -(depress ? keyDrop(depress(m), z) : 0);
 }
 
 // 鍵の上面のなめらかな高さ（指を浮かせる床に使う）。黒鍵は横と手前の端の 6mm 手前から、なめらかに BH まで上がる

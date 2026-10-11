@@ -491,13 +491,13 @@ function fingerTarget(plan, f, t, W) {
 
   if (p && t <= p.t1) { // 押している
     const P = pressPoint(p.m, f, p);
-    return { T: [P[0], P[1] - pressDepth(p, t), P[2]], R: rest, press: p, down: true, mob: 0 };
+    return { T: [P[0], P[1] - keyDrop(pressDepth(p, t), P[2]), P[2]], R: rest, press: p, down: true, mob: 0 };
   }
   let S = rest, sT = -Infinity, mob0 = 1, rel = null;
   if (p) { // 離したあと: 鍵といっしょに上がり、とちゅうから力を抜いた形へ（前の鍵の上に残ると、手が動いたときに置いていかれる）
-    const P = pressPoint(p.m, f, p), y = releaseY(p, t);
+    const P = pressPoint(p.m, f, p), y0 = releaseY(p, t), y = y0 >= 0 ? y0 : -keyDrop(-y0, P[2]); // 鍵を押しこんでいる間は、その場所の鍵の沈み
     S = lerp3([P[0], P[1] + y, P[2]], rest, ease5((t - p.t1 - 0.03) / 0.16));
-    if (y < 0) rel = p; // まだ鍵を押しこんでいる
+    if (y0 < 0) rel = p; // まだ鍵を押しこんでいる
     sT = p.t1;
     mob0 = ease5((t - sT - 0.02) / 0.12); // 離したあとも、なめらかに動かせるようになる
   }

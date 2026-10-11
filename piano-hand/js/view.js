@@ -34,15 +34,8 @@ function initView(canvas) {
   const base = new THREE.Mesh(new THREE.BoxGeometry(KB_WIDTH + 60, 30, 200), V.baseMat);
   base.position.set(0, -36, -70); base.receiveShadow = true; sc.add(base);
   initLane(sc);
+  makeKeyboard(sc);
   for (let m = KB.lo; m <= KB.hi; m++) {
-    const b = isBlack(m);
-    const g = b ? new THREE.BoxGeometry(KB.BW, 22, KB.BL) : new THREE.BoxGeometry(KB.W - 1, 20, KB.WL);
-    const mat = new THREE.MeshPhysicalMaterial({ color: linCol(b ? 0x161619 : 0xf4f1e8), roughness: b ? 0.3 : 0.42, clearcoat: b ? 0.8 : 0.3, clearcoatRoughness: 0.3, emissive: 0x000000 });
-    const k = new THREE.Mesh(g, mat);
-    k.position.set(keyX(m), b ? KB.BH - 11 : -10, b ? -KB.WL + KB.BL / 2 : -KB.WL / 2);
-    k.castShadow = b; k.receiveShadow = true;
-    k.userData = { y0: k.position.y, col: mat.color.clone() };
-    sc.add(k); V.keys[m] = k;
     if (m % 12 === 0) { // ドの位置に小さな印
       const lab = makeLabel(noteName(m), '#7c8796', 0, true);
       lab.position.set(keyX(m), 0.6, -8); lab.scale.set(18, 9, 1); sc.add(lab);
@@ -195,10 +188,7 @@ function renderPose(score, poses, opt) {
   const who = {};
   poses.forEach(p => { for (let f = 1; f <= 5; f++) if (p.fingers[f].press) who[p.fingers[f].press.m] = f; });
   for (let m = KB.lo; m <= KB.hi; m++) {
-    const k = V.keys[m], d = dep[m] || 0, f = who[m];
-    k.position.y = k.userData.y0 - d;
-    if (d > 0) { const c = linCol(f ? FCOL[f] : 0x8892a6); k.material.color.copy(c).lerp(k.userData.col, 0.8); k.material.emissive.copy(c).multiplyScalar(0.08 * d / KB.DEPTH); } // 押した鍵はほんのり色づく（強いと手の下で白い箱のように見えた）
-    else { k.material.color.copy(k.userData.col); k.material.emissive.setRGB(0, 0, 0); }
+    setKeyState(m, dep[m] || 0, who[m]); // 押した鍵は奥の支点で回って沈み、ほんのり色づく（強いと手の下で白い箱のように見えた）
   }
   // ノーツ
   let np = 0;
