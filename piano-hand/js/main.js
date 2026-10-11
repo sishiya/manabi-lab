@@ -101,8 +101,8 @@ function loadSong(id) {
 }
 function setSong(song) {
   S.song = song;
-  // 「楽譜の運指を使う」を外すと、楽譜の運指はお手本（ref）にして、コンピュータの推定とくらべる
-  if (!$('optGiven').checked && song.notes) song = Object.assign({}, song, { notes: song.notes.map(n => Object.assign({}, n, { given: 0, ref: n.given || n.ref })) });
+  // 運指を「コンピュータの推定」にすると、楽譜の運指はお手本（ref）にして、推定とくらべる（一般的な運指のときは buildPlan が楽譜の指に固定）
+  if (!FG_STD && song.notes) song = Object.assign({}, song, { notes: song.notes.map(n => Object.assign({}, n, { given: 0, ref: n.given || n.ref })) });
   S.plan = buildPlan(song);
   const nx = S.plan.notes.filter(n => n.hand === 'X').length;
   S.checks = runChecks(S.plan);
@@ -114,21 +114,35 @@ function setSong(song) {
   setViewPlan(S.plan);
   const hs = S.plan.hands.map(h => HAND_NAME(h.side) + ' ' + h.notes.length + L('音', ' notes')).join(L('・', ', '));
   $('songWhy').textContent = (song.why ? L('確かめたいこと: ', 'What it tests: ') + song.why + L('（', ' (') : L('（', '(')) + hs + (song.bpm ? L('・', ', ') + song.bpm + ' bpm' : '') + L('）', ')') + (song.note ? ' ' + song.note : '') + (nx ? L('（手で弾かない音 ' + nx + '・灰色）', ' (' + nx + ' notes not played by hand, in gray)') : '');
+  renderFgNow(song);
   $('fgCost').textContent = S.plan.cost.toFixed(1);
   $('fgList').innerHTML = S.plan.hands.map(h => '<p class="fg-hand">' + HAND_NAME(h.side) + '</p>' + h.notes.map(n =>
-    `<span data-t="${n.t0}" style="border-color:#${FCOL[n.f].toString(16)}">${noteName(n.m)}<b>${n.f}</b>${n.given ? L('<i>譜</i>', '<i title="from the score">S</i>') : ''}</span>`).join('')).join('');
+    `<span data-t="${n.t0}" style="border-color:#${FCOL[n.f].toString(16)}">${noteName(n.m)}<b>${n.f}</b>${n.alt ? L('<i>変</i>', '<i title="changed for this hand size">C</i>') : n.std || !FG_STD ? '' : L('<i>推</i>', '<i title="chosen by the computer">E</i>')}</span>`).join('')).join('');
   const fm = fingeringMatch(S.plan);
-  const src = song.refR || song.refL ? L('教本の運指', 'the textbook fingering') : L('楽譜の運指', "the score's fingering");
-  const hasGiven = (S.song.notes || []).some(n => n.given);
-  $('fgRef').innerHTML = fm.length ? L(src + 'とくらべると: ', 'Compared with ' + src + ': ') + fm.map(r => HAND_NAME(r.side) + ' <b>' + r.same + '/' + r.total + '</b>' + L(' 一致', ' match') +
-    (r.diff.length ? L('<br>ちがう所（推定 → お手本）: ', '<br>Differences (estimate → answer): ') + r.diff.slice(0, 12).map(n => '<span class="dif" data-t="' + n.t0 + '">' + noteName(n.m) + ' ' + n.f + '→' + n.ref + '</span>').join(' ') + (r.diff.length > 12 ? L(' ほか ', ' and ') + (r.diff.length - 12) + L('', ' more') : '') : '')).join('<br>') +
-    L('<br><small>ノーツの上の赤い丸「推定/お手本」がちがう音です。</small>', '<br><small>A red circle "estimate/answer" on a note marks a difference.</small>')
-    : hasGiven ? L('楽譜の運指を使っています（外すと、コンピュータの推定とくらべられます）。', "Using the score's fingering (turn it off to compare with the computer's estimate).") : L('この曲にはお手本の運指がありません（教本の運指つきの曲や、運指の書かれた MusicXML でくらべられます）。', 'This piece has no answer-key fingering (you can compare with the textbook pieces, or a MusicXML score that has fingering).');
+  const alt = S.plan.notes.filter(n => n.alt);
+  const difList = ns => ns.slice(0, 12).map(n => '<span class="dif" data-t="' + n.t0 + '">' + noteName(n.m) + ' ' + n.f + '→' + n.ref + '</span>').join(' ') + (ns.length > 12 ? L(' ほか ', ' and ') + (ns.length - 12) + L('', ' more') : '');
+  $('fgRef').innerHTML = !fm.length ? L('この曲には一般的な運指のデータがないので、コンピュータの推定で弾いています。', "This piece has no standard fingering data, so it is played with the computer's estimate.")
+    : FG_STD ? L('一般的な運指で弾いています。', 'Playing with the standard fingering.') + (alt.length
+      ? L('<br>この手の大きさでは届かないので、コンピュータが選び直した音（いまの指 → 一般的な運指）: ', '<br>Notes the computer re-chose because this hand cannot reach (now → standard): ') + difList(alt) + L('<br><small>ノーツの上の赤い丸「いま/一般的」が選び直した音です（推定）。</small>', '<br><small>A red circle "now/standard" on a note marks a re-chosen note (an estimate).</small>')
+      : '') + L('<br><small>一覧の「推」は運指が書かれていない音（コンピュータが選んだ指）、「変」は選び直した音。</small>', '<br><small>In the list, "E" marks notes with no printed finger (chosen by the computer), "C" re-chosen notes.</small>')
+    : L('一般的な運指とくらべると: ', 'Compared with the standard fingering: ') + fm.map(r => HAND_NAME(r.side) + ' <b>' + r.same + '/' + r.total + '</b>' + L(' 一致', ' match') +
+      (r.diff.length ? L('<br>ちがう所（推定 → 一般的）: ', '<br>Differences (estimate → standard): ') + difList(r.diff) : '')).join('<br>') +
+      L('<br><small>ノーツの上の赤い丸「推定/一般的」がちがう音です。</small>', '<br><small>A red circle "estimate/standard" on a note marks a difference.</small>');
   renderChecks();
   setTime(tStart());
 }
 
-// 答え合わせをまとめて: 教本の運指のある曲ぜんぶで、推定の運指がどれだけ同じか
+// いまの運指の選び方と出どころ（曲の欄の下）
+function renderFgNow(song) {
+  const has = !!(song.refR || song.refL || (song.notes || []).some(n => n.given || n.ref));
+  const src = song.fsrc || (song.notes ? L('楽譜ファイルに書かれた指', 'the fingers written in the score file') : '');
+  $('fgNow').innerHTML = !has ? L('運指: <b>コンピュータの推定</b>（この曲には一般的な運指のデータがありません' + (song.notes ? '' : '。このアプリで作った曲') + '）', "Fingering: <b>the computer's estimate</b> (no standard fingering data for this piece" + (song.notes ? '' : '; a piece made for this app') + ')')
+    : FG_STD ? L('運指: <b>一般的な運指</b>（出どころ: ' + src + '）', 'Fingering: <b>standard</b> (source: ' + src + ')') +
+      (S.plan.notes.some(n => n.hand !== 'X' && !n.std && !n.alt) ? L('。書かれていない音はコンピュータが選んでいます', '. Notes with no printed finger are chosen by the computer') : '')
+      : L('運指: <b>コンピュータの推定</b>（くらべる相手: ' + src + '）', "Fingering: <b>the computer's estimate</b> (compared with: " + src + ')');
+}
+
+// 答え合わせをまとめて: 一般的な運指のある曲ぜんぶで、コンピュータの推定の運指がどれだけ同じか（いつか 100% に）
 function runValidation() {
   let tot = 0, ok = 0;
   const rows = SONGS.filter(s => s.refR || s.refL).map(s => {
@@ -141,16 +155,16 @@ function runValidation() {
       return '<td class="' + (p === 1 ? 'ok' : p >= 0.7 ? 'warn' : 'ng') + '">' + m.same + '/' + m.total + '</td>';
     }).join('') + '</tr>';
   });
-  $('valOut').innerHTML = L('<p class="cap">ぜんぶで <b>' + ok + '/' + tot + '</b>（' + Math.round(100 * ok / tot) + '%）が教本の運指と同じ。</p>', '<p class="cap">In total <b>' + ok + '/' + tot + '</b> (' + Math.round(100 * ok / tot) + '%) match the textbook fingering.</p>') + '<table class="val"><tr><th>' + L('曲', 'Piece') + '</th><th>' + L('右手', 'Right') + '</th><th>' + L('左手', 'Left') + '</th></tr>' + rows.join('') + '</table>';
+  $('valOut').innerHTML = L('<p class="cap">コンピュータの推定のうち、ぜんぶで <b>' + ok + '/' + tot + '</b>（' + Math.round(100 * ok / tot) + '%）が一般的な運指と同じ（いまの手の大きさで）。</p>', "<p class=\"cap\">Of the computer's estimate, <b>" + ok + '/' + tot + '</b> (' + Math.round(100 * ok / tot) + '%) in total match the standard fingering (for the current hand size).</p>') + '<table class="val"><tr><th>' + L('曲', 'Piece') + '</th><th>' + L('右手', 'Right') + '</th><th>' + L('左手', 'Left') + '</th></tr>' + rows.join('') + '</table>';
 }
 
 function showHandInfo() {
   const mid = fingerFK(FINGERS[3], 0, 0, 0)[3];
   const sp = (handSpan() / 10).toFixed(1), ln = ((-mid[2] + PAD) / 10).toFixed(1);
   $('handInfo').innerHTML = L('親指〜小指をいっぱいに開いた幅 <b>約 ' + sp + 'cm</b>・手首〜中指の先 約 ' + ln +
-    'cm（ピアニストの平均は男性 22.6cm・女性 20.1cm、Boyle ほか 2015）。運指の表は大人の手のものなので、小さい手では届かない音が増えます。',
+    'cm（ピアニストの平均は男性 22.6cm・女性 20.1cm、Boyle ほか 2015）。運指を選ぶときの指の開きの目安（大人の手の表）は、この手の幅に合わせて ×' + SPAN_K.toFixed(2) + ' にしています（目安）。一般的な運指で届かない所は、コンピュータが選び直します。',
     'Full spread from thumb to little finger <b>about ' + sp + ' cm</b>, wrist to middle fingertip about ' + ln +
-    ' cm (pianists average 22.6 cm for men and 20.1 cm for women, Boyle et al. 2015). The fingering table is for adult hands, so smaller hands miss more notes.');
+    ' cm (pianists average 22.6 cm for men and 20.1 cm for women, Boyle et al. 2015). The finger-spread limits used to choose fingering (a table for adult hands) are scaled ×' + SPAN_K.toFixed(2) + ' to this hand (a rough guide). Where the standard fingering cannot be reached, the computer re-chooses.');
 }
 
 // 楽譜ファイル
@@ -325,7 +339,10 @@ function initUI() {
   $('strokeSel').addEventListener('change', e => { setPlaying(false); STROKE = e.target.value; if (S.song) busy(L('運指と手の動きを計算しています…', 'Working out fingering and hand motion…'), () => setSong(S.song)); });
   $('optFlex').addEventListener('change', e => { applyFlex(e.target.checked); if (S.song) busy(L('運指と手の動きを計算しています…', 'Working out fingering and hand motion…'), () => setSong(S.song)); });
   $('missOut').addEventListener('click', e => { const s = e.target.closest('[data-t]'); if (s) { setPlaying(false); setTime(+s.dataset.t); } });
-  $('optGiven').addEventListener('change', () => { if (S.song) busy(L('運指を計算しています…', 'Working out fingering…'), () => setSong(S.song)); });
+  // 運指の選び方（v043〜）: 一般的な運指（最初）／コンピュータの推定
+  $('fgMode').innerHTML = [['std', L('運指: 一般的な運指', 'Fingering: standard')], ['est', L('運指: コンピュータの推定', "Fingering: computer's estimate")]].map(([k, t]) => `<option value="${k}">${t}</option>`).join('');
+  $('fgMode').value = FG_STD ? 'std' : 'est'; $('fgMode').setAttribute('aria-label', L('運指', 'Fingering'));
+  $('fgMode').addEventListener('change', e => { setPlaying(false); FG_STD = e.target.value === 'std'; if (S.song) busy(L('運指と手の動きを計算しています…', 'Working out fingering and hand motion…'), () => setSong(S.song)); });
   const fr = $('frame');
   fr.addEventListener('dragover', e => { e.preventDefault(); fr.classList.add('drop'); });
   fr.addEventListener('dragleave', () => fr.classList.remove('drop'));

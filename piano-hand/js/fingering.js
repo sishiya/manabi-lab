@@ -7,6 +7,19 @@ const SPAN = {
   23: [1, 1, 1, 2, 3, 5], 24: [1, 1, 3, 4, 5, 7], 25: [2, 2, 5, 6, 8, 10],
   34: [1, 1, 1, 2, 2, 4], 35: [1, 1, 3, 4, 5, 7], 45: [1, 1, 1, 2, 3, 5],
 };
+// 手の大きさに合わせる（v043〜）: 上の表は大人の手のもの。手の幅（親指〜小指をいっぱいに開いた幅）の比 k で、
+// 「指1本に鍵1つずつ（5本指の位置、指の組 a・b で 2×(b−a) 半音）」より広い開きと、親指くぐりの届く範囲（負の値）だけを縮める。
+// 5本指の位置は小さい手でも楽なので変えない（表ぜんぶに k をかけると、子どもの手でハ長調の音階まで 3-2-1 のくり返しになった）。
+// 開きを実際の距離で考えるのは Jacobs 2001 の考え方（arXiv 2108.09058 の紹介による。原典は未確認）。この縮め方はこのアプリの目安。大人（大きめ）が k = 1 で表はもとのまま。setHandModel から呼ぶ
+const SPAN0 = JSON.parse(JSON.stringify(SPAN));
+let SPAN_K = 1;
+function setSpanScale(k) {
+  SPAN_K = k;
+  for (const key in SPAN0) {
+    const nat = 2 * (key % 10 - Math.floor(key / 10));
+    SPAN[key] = SPAN0[key].map(v => v < 0 ? v * k : v > nat ? nat + (v - nat) * k : v);
+  }
+}
 
 // 親指で黒鍵を押す罰点。Parncutt の 1 点では、黒鍵から始まる音階（E♭・A♭ など）を親指で始めてしまい、ハノン第39番の運指と合わなかった
 let THUMB_BLACK = 6, WEAK = 0.5; // 教本（ハノン第1番・第39番など）との答え合わせで決めた値（Parncutt はどちらも 1）
@@ -31,6 +44,9 @@ function pairCost(m1, f1, m2, f2, gap) {
   let c = 0;
   if (f1 === f2) {
     c = m1 === m2 ? 0 : 30 + Math.abs(m2 - m1); // 同じ指で別の鍵は、音が切れて手ごと動かす（なめらかに弾けない）
+    // ただし休符などで前の音を 0.1 秒以上前に離しているなら、つなげなくてよいので軽く（v043、この検証で足した規則。
+    // エリーゼの「ラ（1）・休み・ド（1）」が 39 点になり、書かれていない音の指がおかしくなっていた）
+    if (m1 !== m2 && gap > 0.1) c = 2 + 0.5 * Math.abs(m2 - m1);
   } else {
     let a = f1, b = f2, iv = m2 - m1;
     if (a > b) { [a, b] = [b, a]; iv = -iv; }
@@ -82,6 +98,9 @@ function tripleCost(m1, f1, m2, f2, m3, f3, gap) {
     }
   }
   if (f1 !== f2 && f2 !== f3 && f1 !== f3 && [f1, f2, f3].every(f => f >= 3)) c += 1; // 3・4・5の続き
+  // 親指をくぐらせて半音・全音上へ行き、すぐ同じ側へ戻る（親指が両どなりより高い。エリーゼのミ・レ♯・ミを 3-1-3）。
+  // 黒鍵からの親指くぐりは PASS_FROM_BLACK で安いので、行って戻るのが 0 点になっていた（v043、この検証で足した規則）
+  if (f2 === 1 && f1 !== 1 && f3 !== 1 && m2 > m1 && m2 > m3 && m2 - m1 <= 2 && m2 - m3 <= 2) c += 3;
   if (gap > 0.35) c *= 0.3;
   return c;
 }
@@ -149,6 +168,10 @@ function planChords(ev) {
   for (const e of ev) {
     e.ns.sort((a, b) => a.m - b.m);
     while (e.ns.length > 5) { const d = e.ns.splice(Math.floor(e.ns.length / 2), 1)[0]; d.drop = true; }
+    // 一般的な運指（n.std）の和音が、この手の大きさでは開ききれないとき: その和音の指はコンピュータが選び直す（n.alt。子どもの手など）
+    if (e.ns.some(n => n.given) && !chordAssigns(e.ns.map(n => n.m), e.ns.map(n => n.given || 0)).length &&
+        chordAssigns(e.ns.map(n => n.m), e.ns.map(n => n.src.std ? 0 : n.given || 0)).length)
+      for (const n of e.ns) if (n.src.std) { n.given = 0; n.src.given = 0; n.src.std = false; n.src.alt = true; }
     for (;;) {
       e.A = chordAssigns(e.ns.map(n => n.m), e.ns.map(n => n.given || 0));
       if (e.A.length || e.ns.length === 1) break;

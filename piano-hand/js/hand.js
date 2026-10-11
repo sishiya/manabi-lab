@@ -153,6 +153,10 @@ function setHandModel(id) {
     F.L = U.L.map(v => v * M.s); F.base = B.base.map(v => v * M.s); F.r = B.r.map(v => v * M.s);
   }
   PAD = 6.5 * M.s;
+  // 運指の表（指の開き）を手の幅に合わせる（v043〜）。最初に作る大人（大きめ）の手の幅を基準に
+  const sp = handSpan(true);
+  if (!SPAN_REF) SPAN_REF = sp;
+  setSpanScale(sp / SPAN_REF);
   for (let f = 1; f <= 5; f++) { const F = FINGERS[f]; TIP_N[f] = fingerFK(F, F.yaw0, F.n[0], F.n[1])[3]; }
   WRIST_Y = PAD - 7 * M.s - (TIP_N[2][1] + TIP_N[3][1] + TIP_N[4][1]) / 3;
   computePostures();
@@ -194,9 +198,11 @@ function postAt(plan, t) {
   const u = Math.min(plan.pp.length - 1.001, Math.max(0, (t - plan.wt0) * W_HZ)), i = Math.floor(u), s = u - i;
   return plan.pp[i] + (plan.pp[i + 1] - plan.pp[i]) * s;
 }
-// 親指〜小指をいっぱいに開いた幅（指先の外側どうし、mm）
-function handSpan() {
-  const t = fingerFK(FINGERS[1], FINGERS[1].yaw[0], 0, 0)[3], p = fingerFK(FINGERS[5], FINGERS[5].yaw[1], 0, 0)[3];
+// 親指〜小指をいっぱいに開いた幅（指先の外側どうし、mm）。base なら「関節をやわらかく」を入れない関節の範囲で
+let SPAN_REF = 0; // 大人（大きめ）の手の幅（運指の表の基準）
+function handSpan(base) {
+  const B = base ? FINGERS_BASE : FINGERS;
+  const t = fingerFK(FINGERS[1], B[1].yaw[0], 0, 0)[3], p = fingerFK(FINGERS[5], B[5].yaw[1], 0, 0)[3];
   return Math.hypot(t[0] - p[0], t[2] - p[2]) + FINGERS[1].r[2] + FINGERS[5].r[2];
 }
 setHandModel('adult-l'); // 最初は大人（大きめ）（ユーザーの希望。一度「小さめ」にしてから戻した）
@@ -239,20 +245,45 @@ function pressDepth(n, t) {
   return Math.max(0, -releaseY(n, t));
 }
 
-// 曲全体: 右手・左手の計画と、すべての音
+// 運指の選び方（v043〜、ユーザーの方針）: true = 一般的な運指（曲の refR・refL ＝教本や定番の版に書かれた指、または楽譜ファイルに書かれた指）で弾く。
+// 書かれていない音はコンピュータが選ぶ。false = コンピュータの推定で弾き、一般的な運指はくらべる用（n.ref）
+let FG_STD = true;
+// 曲全体: 右手・左手の計画と、すべての音。
+// 一般的な運指で弾いて、この手の大きさでは届かずに押せなかった音があれば、その音と前後2音の指だけコンピュータに選び直させる
+// （n.alt。子どもの手などで運指が変わる所）。押せなかった音が減るときだけ採る（2回まで）
 function buildPlan(song) {
+  let plan = buildPlanWith(song, null);
+  const nMiss = p => p.notes.filter(n => n.miss).length;
+  for (let k = 0; FG_STD && k < 2; k++) {
+    if (!plan.notes.some(n => n.miss && n.std)) break;
+    const free = new Set(plan.free);
+    for (const h of plan.hands) h.notes.forEach((n, i) => {
+      if (n.miss && n.std) for (let j = Math.max(0, i - 2); j <= i + 2 && j < h.notes.length; j++) free.add(h.notes[j].key);
+    });
+    const p2 = buildPlanWith(song, free);
+    if (nMiss(p2) < nMiss(plan)) plan = p2; else break;
+  }
+  for (const n of plan.notes) if (n.alt && n.f === n.ref) { n.alt = false; n.std = true; } // 選び直しても同じ指になった音は「変えた」にしない
+  return plan;
+}
+function buildPlanWith(song, free) {
   const notes = song.notes ? song.notes.map(n => Object.assign({}, n)) : parseSong(song);
   notes.sort((a, b) => a.t0 - b.t0 || a.m - b.m);
   for (const n of notes) n.t1n = n.t1; // 楽譜の上での音の終わり（指を早く離しても、音はここまで）
   const hands = [];
   for (const side of [1, -1]) {
     const hn = notes.filter(n => (n.hand || 'R') === (side > 0 ? 'R' : 'L'));
+    // 一般的な運指（n.ref）: 曲の refR・refL を手ごとに音の順に（0 は書かれていない音）。楽譜ファイルに書かれた指（n.given）もそう
+    const ref = side > 0 ? song.refR : song.refL;
+    hn.forEach((n, i) => {
+      n.key = (side > 0 ? 'R' : 'L') + i;
+      if (ref && +ref[i]) n.ref = +ref[i];
+      const want = n.given || n.ref;
+      if (!FG_STD || !want) return;
+      n.ref = want;
+      if (free && free.has(n.key)) { n.given = 0; n.alt = true; } else { n.given = want; n.std = true; }
+    });
     if (hn.length) hands.push(buildHandPlan(hn, side));
-  }
-  // お手本の運指（n.ref）: 曲の refR・refL（教本の運指）を、手ごとに音の順に
-  for (const h of hands) {
-    const ref = h.side > 0 ? song.refR : song.refL;
-    if (ref) h.notes.forEach((n, i) => { if (ref[i]) n.ref = +ref[i]; });
   }
   // ペダル（秒）: 曲の文字列の拍（parsePedal）か、楽譜ファイルから読んだ秒（song.pedalSec）。
   // 踏んでいる間に離した音は、ペダルを上げるまで鳴りつづける（n.ts = 音が止まる時刻）。同じ鍵をまた押したらそこで止まる
@@ -274,7 +305,7 @@ function buildPlan(song) {
     n.short = P.fingers[n.f].err; n.miss = n.short > MISS_MM;
   }
   const end = Math.max(0, ...notes.map(n => n.t1));
-  return { song, notes, hands, end, pedal, cost: hands.reduce((s, h) => s + h.cost, 0) };
+  return { song, notes, hands, end, pedal, free: free ? [...free] : [], cost: hands.reduce((s, h) => s + h.cost, 0) };
 }
 
 // 片手の運指から、手を動かす計画を作る
