@@ -50,9 +50,33 @@
         <label class="btn file"><span lang="ja">楽譜を開く…</span><span lang="en">Open a score…</span><input type="file" id="fileIn" accept=".mid,.midi,.musicxml,.xml,.mxl" hidden></label>
         <label class="chk"><input type="checkbox" id="optGiven" checked> <span lang="ja">楽譜の運指を使う</span><span lang="en">Use the score's fingering</span></label>
       </div>
-      <p class="cap" lang="ja">MIDI（.mid）と MusicXML（.musicxml・.mxl）。ファイルはこの画面の中だけで読み、どこにも送りません。画面にドロップしても開けます。届かない和音は内側の音から外して、灰色のノーツ（音だけ）にします。</p>
-      <p class="cap" lang="en">MIDI (.mid) and MusicXML (.musicxml, .mxl). The file is read only on this page and is not sent anywhere. You can also drop it on the screen. If a chord is too wide to reach, inner notes are left out and shown as gray notes (sound only).</p>
+      <p class="cap" lang="ja">MIDI と MusicXML（.mxl も）。ファイルはこの画面の中だけで読み、どこにも送りません。画面にドロップしても開けます。</p>
+      <p class="cap" lang="en">MIDI and MusicXML (.mxl too). The file is read only on this page and is not sent anywhere. You can also drop it on the screen.</p>
       <p class="cap" id="songWhy"></p>
+    </section>
+
+    <section>
+      <h2><span lang="ja">見え方と音</span><span lang="en">Look and sound</span></h2>
+      <select id="handLook"></select>
+      <p class="cap" id="lookLegend" hidden><span lang="ja"><span style="color:#c0574e">■</span>筋肉 <span style="color:#a9bdd0">■</span>腱 <span style="color:#d9b14a">■</span>脂肪 <span style="color:#e6dcc6">■</span>骨</span><span lang="en"><span style="color:#c0574e">■</span>muscle <span style="color:#a9bdd0">■</span>tendon <span style="color:#d9b14a">■</span>fat <span style="color:#e6dcc6">■</span>bone</span></p>
+      <div class="row"><select id="sceneSel"></select><select id="fxSel"></select></div>
+      <div class="row"><select id="voiceSel"></select></div>
+      <p class="cap" lang="ja">シーンを選ぶと、合うエフェクトになります。動きが重いときはエフェクトを「なし」に。</p>
+      <p class="cap" lang="en">Choosing a scene sets matching effects. If it runs slowly, set effects to "None".</p>
+      <label class="chk"><input type="checkbox" id="optNotes" checked> <span lang="ja">ノーツ（降ってくる光の帯）を見せる</span><span lang="en">Show the notes (falling bars of light)</span></label>
+      <label class="chk"><input type="checkbox" id="optNoteNums" checked> <span lang="ja">ノーツに指の番号</span><span lang="en">Finger numbers on notes</span></label>
+      <label class="chk"><input type="checkbox" id="optFingerNums"> <span lang="ja">指先に指の番号</span><span lang="en">Finger numbers on fingertips</span></label>
+      <label class="chk"><input type="checkbox" id="optFollow" checked> <span lang="ja">カメラが手について行く</span><span lang="en">Camera follows the hands</span></label>
+      <label class="chk"><input type="checkbox" id="optTargets"> <span lang="ja">指先の目標点（IK でねらう場所）</span><span lang="en">Fingertip targets (where IK aims)</span></label>
+    </section>
+
+    <section>
+      <h2><span lang="ja">手と弾き方</span><span lang="en">Hand and playing</span></h2>
+      <select id="handModel"></select>
+      <select id="strokeSel"></select>
+      <select id="postureSel"></select>
+      <label class="chk"><input type="checkbox" id="optFlex" checked> <span lang="ja">関節をやわらかく（ストレッチした手の目安）</span><span lang="en">Flexible joints (a rough guide for a stretched hand)</span></label>
+      <p class="cap" id="handInfo"></p>
     </section>
 
     <section class="card" id="checks">
@@ -72,46 +96,19 @@
       <div id="fgList"></div>
     </section>
 
-    <section>
-      <h2><span lang="ja">シーンとエフェクト</span><span lang="en">Scene and effects</span></h2>
-      <div class="row"><select id="sceneSel"></select><select id="fxSel"></select></div>
-      <div class="row"><select id="voiceSel"></select></div>
-      <p class="cap" lang="ja">エフェクト: 光のにじみ・画面の周りの暗さ・フィルムの粒・光の粒。シーンを選ぶと、そのシーンに合う強さになります（あとから変えられます）。重いときは「なし」に。</p>
-      <p class="cap" lang="en">Effects: soft glow, darker edges, film grain, and sparkles. Choosing a scene sets a matching strength (you can change it after). If it runs slowly, choose "None".</p>
-    </section>
-
-    <section>
-      <h2><span lang="ja">手のモデル</span><span lang="en">Hand model</span></h2>
-      <select id="handModel"></select>
-      <select id="strokeSel"></select>
-      <select id="postureSel"></select>
-      <label class="chk"><input type="checkbox" id="optFlex" checked> <span lang="ja">関節をやわらかく（ストレッチした手の目安）</span><span lang="en">Flexible joints (a rough guide for a stretched hand)</span></label>
-      <p class="cap" id="handInfo"></p>
-    </section>
-
-    <section>
-      <h2><span lang="ja">見せ方</span><span lang="en">Display</span></h2>
-      <select id="handLook"></select>
-      <p class="cap" id="lookLegend" hidden><span lang="ja"><span style="color:#c0574e">■</span>筋肉 <span style="color:#a9bdd0">■</span>腱 <span style="color:#d9b14a">■</span>脂肪 <span style="color:#e6dcc6">■</span>骨</span><span lang="en"><span style="color:#c0574e">■</span>muscle <span style="color:#a9bdd0">■</span>tendon <span style="color:#d9b14a">■</span>fat <span style="color:#e6dcc6">■</span>bone</span></p>
-      <label class="chk"><input type="checkbox" id="optNoteNums" checked> <span lang="ja">ノーツに指の番号</span><span lang="en">Finger numbers on notes</span></label>
-      <label class="chk"><input type="checkbox" id="optFingerNums"> <span lang="ja">指先に指の番号</span><span lang="en">Finger numbers on fingertips</span></label>
-      <label class="chk"><input type="checkbox" id="optTargets"> <span lang="ja">指先の目標点（IK でねらう場所）</span><span lang="en">Fingertip targets (where IK aims)</span></label>
-      <label class="chk"><input type="checkbox" id="optFollow" checked> <span lang="ja">カメラが手について行く</span><span lang="en">Camera follows the hands</span></label>
-    </section>
-
     <details class="about" lang="ja">
       <summary>しくみ</summary>
       <ol>
         <li><b>運指</b>: 隣りあう2音を弾く指の組ごとに「楽な開き」の表があり、外れると罰点。親指くぐり・弱い指（4・5）・親指で黒鍵にも罰点。合計がいちばん小さい並びを、動的計画法で選びます。</li>
         <li><b>手首</b>: 押している指（と、もうすぐ押す指）が届く位置へ近づけながら、急に動かないようになめらかにつなぎます。届かない瞬間があれば、そこを重くして計算し直します。</li>
         <li><b>手首の回転</b>: 手首から先を水平に回す向きも一緒に決めます（親指の側へ 20 度・小指の側へ 30 度まで）。親指くぐりでは、手を回しながら横へずらすと、親指が遠くまで届きます。</li>
-        <li><b>先回り</b>: 押していない指は、次に押す鍵の上へ早めに動いておきます。離した指は浮かせ、しばらくしたら力を抜いた形へ。</li>
+        <li><b>先回り・力の抜け方</b>: 押していない指は鍵の表面に軽く触れて休み、次に押す鍵の上へ低く移ります。持ち上げるのは約1音前からで、高さは曲の速さと音の強さで変わります（ゆっくり・弱い所は触れたまま押す）。</li>
         <li><b>指</b>: 指先の目標から関節の角度を逆算（IK）。関節は人の範囲で止め、先の2つの関節は連動させます。</li>
         <li><b>打鍵</b>: 指は下りてくる勢いのまま鍵を押し下げ、底で止まります（鍵の上でいったん止まらない）。動きは、速さも加速度も 0 から始まって 0 で終わるなめらかな曲線（最小ジャーク）です。</li>
         <li><b>指のつながり</b>: 腱と筋肉を共有しているので、1本を動かすと、となりの指が少しついてきます（薬指がいちばん、親指はほとんど。研究の値をもとにした目安）。空中で止めている指は、ゆっくり小さくゆれます（0.5mm ほど。このアプリの目安）。</li>
-        <li><b>手首の上げ下げ</b>: 和音とオクターブは、指の形を保ったまま手首から打ちます（「打鍵」で「ぜんぶ指だけで」にもできます。検査の「指の関節の速さ」でくらべられます）。押していない指先が鍵にもぐりそうなときは（親指くぐりなど）、手首を上げます。上げる高さはこのアプリの目安です。</li>
+        <li><b>手首の上げ下げ</b>: 和音とオクターブは、指の形を保ったまま手首から打ちます（「打鍵」で「ぜんぶ指だけで」「腕ごと大きく」にもできます）。押していない指先が鍵にもぐりそうなときは（親指くぐりなど）、手首を上げます。上げる高さはこのアプリの目安です。</li>
         <li><b>関節の速さ</b>: 筋肉で出せる速さには限りがあるので、指の関節は 1 秒に 1500 度より速くは動きません（プロのピアニストの速い音階で、指の付け根の関節の最大がおよそ 1160 度/秒という測定から、少し余裕を見た目安）。指どうしは、皮ふと肉が押し合うのはかまいませんが、骨が近づきすぎるときは動かせる指が横によけます。</li>
-        <li><b>届かない音</b>: 骨の長さと関節の範囲で届かなければ、押せなかった音になります（鍵が沈まず、音も鳴らず、ノーツに ✕）。届くように数値を合わせることはしません。「関節をやわらかく」（ストレッチした手の目安）で届くかも試せます。</li>
+        <li><b>届かない音</b>: 骨の長さと関節の範囲で届かなければ、押せなかった音になります（鍵が沈まず、音も鳴らず、ノーツに ✕）。届くように数値を合わせることはしません。「関節をやわらかく」（ストレッチした手の目安）で届くかも試せます。 楽譜を開いたとき、片手で届かない和音は内側の音から外し、灰色のノーツ（音だけ）にします。</li>
         <li><b>検査</b>: 1/120 秒ごとに、届かなさ・関節の限界・指どうしのめりこみ・鍵へのめりこみ・左右の手のぶつかり・速さを測ります。</li>
         <li><b>左手</b>: 右手を鏡に映した手です。運指は、鍵盤をレを中心に左右反転して（黒鍵の並びが同じになる）右手の規則で決めます。</li>
         <li><b>和音</b>: 同時に押す音は、低い音ほど小さい番号の指（左手は逆）。「指1本に白鍵1つずつ置いた形」からのずれが小さい並びを選び、和音から和音へは手の位置の動きが小さいように決めます。跳ぶ前の音は、間に合うように少し早く離します（音は楽譜の長さまで鳴らします）。</li>
@@ -135,13 +132,13 @@
         <li><b>Fingering</b>: for each pair of fingers that play two neighboring notes, there is a table of "comfortable spreads". Going outside it adds penalty points. Passing the thumb under, using the weak fingers (4 and 5), and putting the thumb on a black key also add points. Dynamic programming picks the order with the smallest total.</li>
         <li><b>Wrist</b>: the wrist moves toward where the pressing fingers (and the fingers about to press) can reach, joined smoothly so it never jerks. If some moment is out of reach, that moment gets more weight and it is solved again.</li>
         <li><b>Wrist turn</b>: it also decides how much the hand turns sideways at the wrist (up to 20° toward the thumb and 30° toward the little finger). When the thumb passes under, turning the hand while sliding sideways lets the thumb reach farther.</li>
-        <li><b>Getting ready early</b>: fingers that are not pressing move over their next key early. A finger that lets go lifts a little, then relaxes after a while.</li>
+        <li><b>Getting ready and relaxing</b>: fingers that are not pressing rest lightly on the keys and move low over their next key. A finger lifts only about one note before it plays, by an amount set by tempo and loudness (slow or soft notes are pressed from the key).</li>
         <li><b>Fingers</b>: joint angles are worked back from the fingertip target (IK, inverse kinematics). Joints stop at human limits, and the two outer joints bend together.</li>
         <li><b>Striking a key</b>: the finger keeps its downward speed into the key and stops at the bottom (it does not pause on top of the key). Movements follow a smooth curve where both speed and acceleration start and end at zero (minimum jerk).</li>
         <li><b>Linked fingers</b>: fingers share tendons and muscles, so when one moves, its neighbors follow a little (the ring finger most, the thumb hardly at all; a rough guide based on research). Fingers held in the air sway slowly and slightly (about 0.5 mm; a rough guide made for this app).</li>
-        <li><b>Raising and lowering the wrist</b>: chords and octaves are struck from the wrist, keeping the finger shape (choose "fingers only" under "Strike" to compare; see "Finger joint speed" in the checks). When a finger that is not pressing would sink into the keys (for example when the thumb passes under), the wrist rises. How high it rises is a rough guide made for this app.</li>
+        <li><b>Raising and lowering the wrist</b>: chords and octaves are struck from the wrist, keeping the finger shape (under "Strike" you can choose fingers only, or the whole arm). When a free fingertip would sink into the keys (as in thumb-under), the wrist rises. The heights are rough guides made for this app.</li>
         <li><b>Joint speed</b>: muscles can only move so fast, so finger joints never turn faster than 1500° per second (a rough guide with some margin, based on a measured peak of about 1160°/s at a finger base joint in fast scales by a professional pianist). Skin and flesh of neighboring fingers may press together, but when bones would come too close, a free finger moves aside.</li>
-        <li><b>Out-of-reach notes</b>: if the bone lengths and joint ranges cannot reach a key, the note is not pressed (the key stays up, no sound, and the note shows ✕). Numbers are never adjusted just to make it reach. You can also test "Flexible joints" (a rough guide for a stretched hand).</li>
+        <li><b>Out-of-reach notes</b>: if the bone lengths and joint ranges cannot reach a key, the note is not pressed (the key stays up, no sound, and the note shows ✕). Numbers are never adjusted just to make it reach. You can also test "Flexible joints" (a rough guide for a stretched hand). When you open a score, chords too wide for one hand have their inner notes left out and shown as gray notes (sound only).</li>
         <li><b>Checks</b>: every 1/120 s it measures: too far to reach, joint limits, fingers sinking into each other, fingers sinking into keys, the two hands bumping, and speed.</li>
         <li><b>Left hand</b>: a mirror image of the right hand. Its fingering uses the right-hand rules on a keyboard flipped around D (so the black keys line up the same way).</li>
         <li><b>Chords</b>: in notes pressed together, lower notes get lower finger numbers (the other way for the left hand). It picks the order closest to "one finger on each white key", and from chord to chord it keeps the hand's movement small. Before a jump, the note is let go a little early to get there in time (the sound still lasts as long as written).</li>

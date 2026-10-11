@@ -2,7 +2,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const S = { plan: null, checks: null, t: -1, playing: false, speed: 1, lastNow: 0, prevT: -1, extra: [] };
-const OPT = { noteNums: true, fingerNums: false, targets: false, ghost: false, bones: false, xray: false, muscles: false };
+const OPT = { notes: true, noteNums: true, fingerNums: false, targets: false, ghost: false, bones: false, xray: false, muscles: false };
 
 // 音（v028〜: 音色を選べる。鍵を押した瞬間に鳴らす）。外の音の素材は読まず、ブラウザの中で合成する
 let AC = null, MASTER = null, NOISE = null;
@@ -148,9 +148,9 @@ function showHandInfo() {
   const mid = fingerFK(FINGERS[3], 0, 0, 0)[3];
   const sp = (handSpan() / 10).toFixed(1), ln = ((-mid[2] + PAD) / 10).toFixed(1);
   $('handInfo').innerHTML = L('親指〜小指をいっぱいに開いた幅 <b>約 ' + sp + 'cm</b>・手首〜中指の先 約 ' + ln +
-    'cm。くらべる目安: ピアニストの平均は男性 22.6cm・女性 20.1cm（Boyle ほか 2015）。子どもと指の長さのちがいは目安です。運指の表（Parncutt ほか）は大人の手のものなので、小さい手では「届かない」が増えます。',
+    'cm（ピアニストの平均は男性 22.6cm・女性 20.1cm、Boyle ほか 2015）。運指の表は大人の手のものなので、小さい手では届かない音が増えます。',
     'Full spread from thumb to little finger <b>about ' + sp + ' cm</b>, wrist to middle fingertip about ' + ln +
-    ' cm. For comparison: pianists average 22.6 cm (men) and 20.1 cm (women) (Boyle et al. 2015). The child and finger-length models are rough guides. The fingering table (Parncutt et al.) is for adult hands, so smaller hands get more "can\'t reach".');
+    ' cm (pianists average 22.6 cm for men and 20.1 cm for women, Boyle et al. 2015). The fingering table is for adult hands, so smaller hands miss more notes.');
 }
 
 // 楽譜ファイル
@@ -350,7 +350,7 @@ function initUI() {
     for (const k of ['ghost', 'xray', 'muscles', 'bones']) OPT[k] = !!f[k];
     $('lookLegend').hidden = !f.muscles;
   });
-  const opts = { optNoteNums: 'noteNums', optFingerNums: 'fingerNums', optTargets: 'targets' };
+  const opts = { optNotes: 'notes', optNoteNums: 'noteNums', optFingerNums: 'fingerNums', optTargets: 'targets' };
   for (const id in opts) $(id).addEventListener('change', e => { OPT[opts[id]] = e.target.checked; });
   $('chkTable').addEventListener('click', e => {
     const tr = e.target.closest('tr'); if (!tr) return;

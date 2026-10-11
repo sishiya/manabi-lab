@@ -59,11 +59,11 @@ function initLane(sc) {
   for (let m = KB.lo; m <= KB.hi; m++) {
     if (m % 12 !== 0 && m % 12 !== 5) continue;
     const l = new THREE.Mesh(new THREE.PlaneGeometry(m % 12 === 0 ? 1.2 : 0.6, len), lm);
-    l.rotation.x = -Math.PI / 2; l.position.set(keyX(m) - KB.W / 2, -1.9, Z0 - len / 2); sc.add(l);
+    l.rotation.x = -Math.PI / 2; l.position.set(keyX(m) - KB.W / 2, -1.9, Z0 - len / 2); sc.add(l); (V.laneMarks = V.laneMarks || []).push(l);
   }
   // 鍵盤の奥の端の光る線
   const edge = new THREE.Mesh(new THREE.PlaneGeometry(KB_WIDTH, 2.2), new THREE.MeshBasicMaterial({ color: linCol(0x2a3550) }));
-  edge.rotation.x = -Math.PI / 2; edge.position.set(0, 1, Z0 + 1); sc.add(edge);
+  edge.rotation.x = -Math.PI / 2; edge.position.set(0, 1, Z0 + 1); sc.add(edge); V.laneMarks.push(edge); // ノーツを見せないときは、通り道の線と光る線も消す
 }
 
 // 骨だけの手（円柱と球。検証用）。左手は鏡
@@ -170,6 +170,9 @@ const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _UP = new THREE.Vector
 function renderPose(score, poses, opt) {
   const t = poses.length ? poses[0].t : 0;
   const FXL = FX_LEVELS[V.fxLevel || 0], nSpark = Math.round(FX_PER * FXL.spark);
+  // ノーツを見せるか（v028〜、ユーザーの希望: ノーツすら見せない選択肢）。消すと番号・打鍵の光・光の粒・もや・通り道の線も消える
+  const showNotes = opt.notes !== false;
+  if (V.laneMarks) for (const l of V.laneMarks) l.visible = showNotes;
   for (const VH of V.hands) {
     const hi = score.hands.findIndex(h => h.side === VH.side), pose = hi >= 0 ? poses[hi] : null;
     updateSkinHand(VH.skin, pose, opt);
@@ -196,12 +199,12 @@ function renderPose(score, poses, opt) {
   for (const o of V.notes) {
     const n = o.n, zf = Z0 - (n.t0 - t) * FALL, L = ((n.t1n || n.t1) - n.t0) * FALL; // ノーツは楽譜の長さで（指を早く離しても）
     const vis = zf - L < Z0 - 0.5 && zf > Z0 - 640 - L && zf - L > Z0 - 700;
-    o.box.visible = vis;
+    o.box.visible = vis && showNotes;
     const on = t >= n.t0 && t <= (n.t1n || n.t1);
-    o.lab.visible = vis && opt.noteNums && zf < Z0 - 2;
+    o.lab.visible = vis && showNotes && opt.noteNums && zf < Z0 - 2;
     const tE = n.t1n || n.t1, HF = 0.4; // 半円の光は、音の終わりから HF 秒で上へほどけて消える（ノーツの棒が通りすぎても切らない）
     const ring = n.ts && n.ts > tE + 0.05 && t > tE && t < n.ts + HF; // ペダルで音がのびている
-    o.halo.visible = !!FXL.halo && !n.miss && t >= n.t0 && (on || ring || t < tE + HF);
+    o.halo.visible = showNotes && !!FXL.halo && !n.miss && t >= n.t0 && (on || ring || t < tE + HF);
     if (vis) {
       o.box.position.set(keyX(n.m), isBlack(n.m) ? 4 : 1.5, zf);
       o.lab.position.set(keyX(n.m), 11, Math.min(zf, Z0) - 7);
@@ -219,7 +222,7 @@ function renderPose(score, poses, opt) {
     }
     // 光の粒: 打鍵から FX_LIFE 秒
     const age = t - n.t0;
-    if (!n.miss && age >= 0 && age < FX_LIFE && np + nSpark <= FX_MAX) {
+    if (showNotes && !n.miss && age >= 0 && age < FX_LIFE && np + nSpark <= FX_MAX) {
       for (let k = 0; k < nSpark; k++) {
         const r1 = hash1(o.idx, k), r2 = hash1(k, o.idx + 7), r3 = hash1(o.idx * 3 + k, 11);
         const ang = r1 * Math.PI * 2, sp = 25 + 55 * r2, up = 40 + 80 * r3;
@@ -234,7 +237,7 @@ function renderPose(score, poses, opt) {
     }
   }
   let nw = 0;
-  if (FXL.spark > 0) for (const o of V.notes) {
+  if (showNotes && FXL.spark > 0) for (const o of V.notes) {
     const n = o.n, tE = n.t1n || n.t1, tR = n.ts && n.ts > tE + 0.05 ? n.ts : tE, a = t - tR; // 半円と同じ時刻からほどける
     if (n.miss || a < 0 || a >= WS_LIFE || nw + WS_PER > WS_MAX || t < n.t0) continue;
     const u = a / WS_LIFE, life = (1 - u) * (1 - u) * Math.min(1, a / 0.06);
