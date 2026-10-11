@@ -35,10 +35,11 @@
 | `urinary-dive/` | 尿の旅 |
 
 - **公開中**: https://sishiya.github.io/manabi-lab/ （入口のページから全アプリを開けます。GitHub Pages）
+- **紹介動画**: YouTube「しし屋」 https://www.youtube.com/@sishiya22 （入口のページの下からもリンク）
 - 入口は日本語と英語を切り替えられます（右上の JP／EN。選んだ言語と並び順はブラウザに覚えます）。入口の13本のアプリは、中も英語に対応しています（2026-10-10〜。企画と作り方・英語の文を足すときの約束は `I18N.md`）。
 - 入口（ルートの `index.html`）のサムネイルは `assets/thumbs/`（`_dev/tools/make-thumbs.ps1` で撮り直し）。各アプリにはファビコン（SVG を埋め込み）。
 - 各アプリの `index.html` が最新版、`launcher.html` から過去の版を開けます（`versions/`）。
-- 仕組みや確認のしかたは各フォルダの `DEVNOTES.md`、進め方の共通ルールは `RULES.md`。
+- 仕組みや確認のしかたは各フォルダの `DEVNOTES.md`、進め方の共通ルールは `RULES.md`。ゲームに当たるアプリは姉妹サイト「あそびラボ」へ移す方針で、全アプリの判定は `GAMES.md`。
 - アプリ以外の道具は `_dev/` にまとめています: `_dev/tools/`（公開前チェック・サムネイル撮影・起動・文字列の置きかえ `rep.pl`・YouTube へのアップロード `youtube-upload.ps1`・X への投稿の下ごしらえ `x-post.ps1`）、`_dev/promo/`（紹介動画づくり。ショート＝紹介、横長＝使い方の説明（`<app>-guide.html`）。英語の字幕データ（SRT）も作る）、`_dev/vtuber/`（しし屋のアイコンをカメラ・マイクで動かす VTuber の試作。`_dev/vtuber/README.md`）。公開する素材（入口のサムネイルなど）は `assets/`。
 
 ## ローカルで動かす（Windows）
