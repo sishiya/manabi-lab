@@ -260,7 +260,18 @@ function initUI() {
     setCam(b.dataset.v);
     document.querySelectorAll('#views button').forEach(x => x.setAttribute('aria-pressed', x === b));
   }));
-  const opts = { optNoteNums: 'noteNums', optFingerNums: 'fingerNums', optTargets: 'targets', optGhost: 'ghost', optBones: 'bones', optXray: 'xray', optMuscles: 'muscles' };
+  // 手の見え方（v024 で7つのチェックボックスを、見え方の選択1つと印の表示3つに整理。ユーザーの希望）
+  const LOOKS = [['skin', L('手: 皮ふ', 'Hands: skin'), {}], ['ghost', L('手: 半透明', 'Hands: see-through'), { ghost: true }],
+    ['xray', L('手: 皮ふを透かして骨', 'Hands: bones through the skin'), { xray: true }], ['xraymus', L('手: 皮ふを透かして骨と筋肉', 'Hands: bones and muscles through the skin'), { xray: true, muscles: true }],
+    ['muscles', L('手: 骨と筋肉・腱・脂肪', 'Hands: bones, muscles, tendons and fat'), { muscles: true }], ['bones', L('手: 骨だけ（骸骨が弾く）', 'Hands: skeleton only (a skeleton plays)'), { bones: true }]];
+  $('handLook').innerHTML = LOOKS.map(([k, t]) => `<option value="${k}">${t}</option>`).join('');
+  $('handLook').setAttribute('aria-label', L('手の見え方', 'How the hands look'));
+  $('handLook').addEventListener('change', e => {
+    const f = LOOKS.find(l => l[0] === e.target.value)[2];
+    for (const k of ['ghost', 'xray', 'muscles', 'bones']) OPT[k] = !!f[k];
+    $('lookLegend').hidden = !f.muscles;
+  });
+  const opts = { optNoteNums: 'noteNums', optFingerNums: 'fingerNums', optTargets: 'targets' };
   for (const id in opts) $(id).addEventListener('change', e => { OPT[opts[id]] = e.target.checked; });
   $('chkTable').addEventListener('click', e => {
     const tr = e.target.closest('tr'); if (!tr) return;
