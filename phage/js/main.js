@@ -27,6 +27,18 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 window.addEventListener('resize', resizeAll);
+// 隠れているタブの絵は大きさ0になるので、見えて大きさが変わったときに測り直す（タブの切りかえ・画面の回転・欄の高さの変化）
+if (window.ResizeObserver) {
+  const ro = new ResizeObserver(es => {
+    for (const e of es) {
+      const id = e.target.id, w = e.contentRect.width;
+      if (w < 2) continue;
+      if (id === 'cvLand') Land.resize(); else if (id === 'cvIn') Inside.resize(); else if (id === 'cvZoom') Zoom.fit();
+    }
+    try { frame(0); } catch (err) { window.__phErr.push(String(err && err.stack || err)); }
+  });
+  ['cvLand', 'cvIn', 'cvZoom'].forEach(id => ro.observe(document.getElementById(id)));
+}
 resizeAll(); requestAnimationFrame(loop);
 
 // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）

@@ -2,6 +2,17 @@
 // 呼ぶ前に g を translate・rotate・scale しておく。長い脚は着陸の場面で別に描く（立体の計算があるため）
 'use strict';
 
+// 古いブラウザ（Safari 15 以前など）には roundRect がないので、ないときだけ足す（ないと絵がまったく出ない）
+if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+    r = Math.max(0, Math.min(typeof r === 'number' ? r : 0, Math.abs(w) / 2, Math.abs(h) / 2));
+    this.moveTo(x + r, y); this.lineTo(x + w - r, y); this.arcTo(x + w, y, x + w, y + r, r);
+    this.lineTo(x + w, y + h - r); this.arcTo(x + w, y + h, x + w - r, y + h, r);
+    this.lineTo(x + r, y + h); this.arcTo(x, y + h, x, y + h - r, r);
+    this.lineTo(x, y + r); this.arcTo(x, y, x + r, y, r); this.closePath();
+  };
+}
+
 const PCOL = {
   head: '#8fd6c4', headEdge: '#d8fff4', headIn: '#18323a',
   sheath: '#6fb9d8', sheathEdge: '#bfe8ff', tube: '#ffd27a',
