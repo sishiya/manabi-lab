@@ -73,11 +73,15 @@ const CAPS = [
   { a: 132.4, b: 141.6, main: '筋肉の強さや摩擦は、見やすく決めたモデルの値', sub: '「本物の進化とのちがい」も解説に',
     en: ['Muscle strength and friction are model values chosen for clarity', 'See "How this differs from real evolution" in the explanations'] },
 ];
+// ---- 案内役のライオン（promo.js の lionSetup・drawLion）。右下（x 1530〜、y 620〜）はライオンの場所 ----
+const MUSIC = { style: 'journey', root: 130.81, stopAt: END, cues: [{ t: END, type: 'jingle' }] };
+const EXP = [[0, 'calm'], [7.3, 'smile'], [10, 'calm'], [17.7, 'think'], [21, 'calm'], [28.6, 'sad'], [31, 'smile'], [35, 'calm'], [40.6, 'think'], [44, 'calm'], [52.6, 'think'], [56, 'calm'], [63.6, 'wow'], [67, 'proud'], [71, 'calm'], [75.6, 'think'], [79, 'wow'], [83, 'calm'], [87.6, 'smile'], [91, 'calm'], [100.6, 'think'], [104, 'calm'], [110.2, 'sad'], [114, 'calm'], [120.6, 'proud'], [124, 'calm'], [132.6, 'think'], [136, 'calm'], [END - 7.6, 'smile']];   // 表情の時刻 [秒, LION_XP の名前]
+MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: typeof CUR === "undefined" ? [] : CUR, exp: EXP, end: END, bye: END - 5.8 }));   // しゃべり（声は標準の もごもご）
 promoStart({
   name: '進化の箱庭（使い方）', out: 'ga-creatures-guide', src: '../../ga-creatures/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 20,
   inject: { dpr: 2, raf: true },
-  music: { style: 'journey', root: 130.81, stopAt: END, cues: [{ t: END, type: 'jingle' }] },
-  ready: w => w.__ga && w.__ga.VIEW && w.__ga.VIEW.sim,
+  music: MUSIC,
+  ready: w => !!LION.api && (w.__ga && w.__ga.VIEW && w.__ga.VIEW.sim),
   setup(w) { gaSize(w, { '#view': [VIEWR[2], VIEWR[3]], '#grid': [GRID[2], GRID[3]], '#prog': [PROG[2], PROG[3]], '#genome': [520, 300] }); w.render(); return null; },
   subs: guideSubs(END, '進化の箱庭', 'Evolution Sandbox', CAPS, 'Runs in your browser (PC or phone). Switch the app to English with the EN button'),
   renderAt(t, w) { gaRender(w, SC, t); },
@@ -87,15 +91,17 @@ promoStart({
   },
   overlay(g, t, w) {
     drawPanel(g, VIEWR[0] + 10, VIEWR[1] + 10, 820, '', [gaText(w, '#wLabel'), gaText(w, '#wTime')], fade(t, 7.3, 141.6, 0.4));
-    drawInset(g, qs(w, '#genome'), X, 540, 540, 300, 'この生きものの遺伝子（右のパネル）', fade(t, 52.4, 74.6, 0.4));
+    drawInset(g, qs(w, '#genome'), X, 320, 540, 300, 'この生きものの遺伝子（右のパネル）', fade(t, 52.4, 74.6, 0.4));
     for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
     drawCursor(g, CUR, t);
     drawCaps(g, t, CAPS, true);
     drawGuideChrome(g, t, END, '進化の箱庭',
       'おもな出どころ: Holland（1975）、Sims（1994）SIGGRAPH 94、carykh さんの進化シミュレーター、『アストロノーカ』（1998）');
+    drawLion(g, t);   // 案内役のライオン（終わりの画面の上にも出す）
   },
   errors: w => [w.__ga.err].filter(Boolean).map(String),
 });
+lionOpen();   // 裏の iframe でライオンを開く（promoStart がページを組み立てたあと。ready で待つ）
 </script>
 </body>
 </html>

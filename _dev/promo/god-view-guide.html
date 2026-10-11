@@ -52,7 +52,7 @@ function tearPtr(w, type, k) {
 }
 const X = 1380;
 const CH = {
-  layers: { x: X, y: 240, title: '層（右のパネル）', btns: ['地下を見る', '夜の街の明かり', '地震（過去7日）', '人工衛星・ISS', '都営の電車・バス'], cols: 1 },
+  layers: { x: X, y: 215, title: '層（右のパネル）', btns: ['地下を見る', '夜の街の明かり', '地震（過去7日）', '人工衛星・ISS', '都営の電車・バス'], cols: 1 },
   tear: { x: X, y: 240, title: '宇宙で地球が近いとき（右下）', btns: ['✋ 地球をちぎる'] },
 };
 const SHOW = [
@@ -96,10 +96,14 @@ const CAPS = [
     en: ['Labels show what\'s real data, estimate or effect', 'Maps and buildings are open data. Sources are at the bottom and in "About"'] },
 ];
 let cfgT = 0;   // drawSource には時刻が来ないので、renderAt の時刻を覚えておく
+// ---- 案内役のライオン（promo.js の lionSetup・drawLion）。右下（x 1530〜、y 620〜）はライオンの場所 ----
+const MUSIC = { style: 'drone', root: 55, stopAt: END, cues: [{ t: END, type: 'jingle' }] };
+const EXP = [[0, 'calm'], [7.3, 'smile'], [10, 'calm'], [17.6, 'think'], [21, 'calm'], [27.6, 'wow'], [31, 'calm'], [38.6, 'wow'], [42, 'calm'], [50.6, 'smile'], [54, 'calm'], [61.6, 'think'], [65, 'calm'], [72.6, 'wow'], [76, 'calm'], [81.6, 'shock'], [84, 'wow'], [88, 'calm'], [90.6, 'think'], [94, 'calm'], [100.2, 'wow'], [104, 'calm'], [110.6, 'proud'], [114, 'shock'], [117, 'sad'], [121, 'calm'], [122.2, 'think'], [126, 'calm'], [134.6, 'smile'], [138, 'calm'], [END - 7.6, 'smile']];   // 表情の時刻 [秒, LION_XP の名前]
+MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: CUR, exp: EXP, end: END, bye: END - 5.8 }));   // しゃべり（声は標準の もごもご）
 promoStart({
   name: '神の視点マップ（使い方）', out: 'god-view-guide', src: '../../god-view/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 3,
-  music: { style: 'drone', root: 55, stopAt: END, cues: [{ t: END, type: 'jingle' }] },
-  ready: w => w.GV && w.GV.viewer && w.__gv,
+  music: MUSIC,
+  ready: w => !!LION.api && (w.GV && w.GV.viewer && w.__gv),
   setup(w) { gvSetup(w); return null; },
   subs: guideSubs(END, '神の視点マップ', 'God\'s-Eye Map', CAPS, 'Runs in your browser (best on a PC). The on-screen text is in Japanese for now'),
   async renderAt(t, w) { cfgT = t; await gvRender(w, SC, t); },
@@ -116,9 +120,11 @@ promoStart({
     drawCaps(g, t, CAPS, true);
     drawGuideChrome(g, t, END, '神の視点マップ',
       '地図: 地理院タイル（写真）・3D都市モデル PLATEAU（国土交通省）・NASA・USGS・CelesTrak・東京都交通局・© OpenStreetMap contributors ほか');
+    drawLion(g, t);   // 案内役のライオン（終わりの画面の上にも出す）
   },
   errors: w => w.__gvErr,
 });
+lionOpen();   // 裏の iframe でライオンを開く（promoStart がページを組み立てたあと。ready で待つ）
 </script>
 </body>
 </html>

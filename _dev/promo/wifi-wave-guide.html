@@ -37,14 +37,14 @@ const CH = {
   freq: { x: X, y: 230, title: '周波数', btns: ['2.4 GHz', '5 GHz'] },
   preset: { x: X, y: 230, title: '間取り・実験', btns: ['2LDKマンション', '木造の一戸建て', '壁の比べっこ', 'すき間の実験'], cols: 2 },
   tools: { x: X, y: 230, title: '壁を描く', btns: ['動かす', 'コンクリート', '金属', 'ガラス'], cols: 2 },
-  undo: { x: X, y: 448, title: '', btns: ['元に戻す'] },
+  undo: { x: X, y: 230, title: '壁を描く', btns: ['元に戻す'] },   // 「壁を描く」の札と入れかわりに出す（下はスマホの数字の札）
 };
 const SHOW = [
   ['mode', 16, 22, t => t >= 18 ? 1 : 0],
   ['freq', 55, 69.6, t => t >= 61 ? 1 : 0],
   ['preset', 70, 75, () => 2],
   ['preset', 92, 97, () => 3],
-  ['tools', 113, 129.6, t => t >= 115.5 && t < 117 ? 1 : 0],
+  ['tools', 113, 124, t => t >= 115.5 && t < 117 ? 1 : 0],
   ['undo', 124, 129.6, t => t >= 125.5 ? 0 : -1],
   ['preset', 130, 134, () => 1],
 ];
@@ -89,12 +89,24 @@ const CAPS = [
     en: ['A wooden house too. Material values come from ITU-R recommendations', 'Signal thresholds are rough guides, and nothing here is about health effects'] },
 ];
 
+const MUSIC = { style: 'drone', root: 73, stopAt: END, cues: [{ t: END, type: 'jingle' }] };
+// ---- 案内役のライオン（promo.js の lionSetup・drawLion）。表情の時刻 [秒, LION_XP の名前] ----
+const EXP = [[0, 'calm'], [7.3, 'smile'], [10, 'calm'], [18.5, 'wow'], [22, 'calm'], [33, 'think'], [37, 'smile'], [40, 'calm'],
+  [42, 'think'], [46, 'calm'], [53, 'smile'], [56, 'calm'], [61.6, 'sad'], [65, 'calm'], [71, 'think'], [76, 'calm'], [82, 'wow'], [85, 'calm'],
+  [93, 'wow'], [97, 'calm'], [102.6, 'sad'], [106, 'calm'], [116.4, 'think'], [120, 'sad'], [123.5, 'calm'], [125.6, 'smile'], [129, 'calm'],
+  [131, 'proud'], [135, 'calm'], [END - 7.6, 'smile']];
+
 promoStart({
   name: '電波の見える部屋（使い方）', out: 'wifi-wave-guide', src: '../../wifi-wave/index.html', iw: 1680, ih: 1000, dur: DUR, peek: 40,
   inject: { dpr: 2 },
-  music: { style: 'drone', root: 73, stopAt: END, cues: [{ t: END, type: 'jingle' }] },
+  music: MUSIC,
   ready: w => w.__ww && w.__ww.CAL && w.__ww.CAL['2.4'],
-  setup(w) { w.__ww.S.paused = true; const gl = qs(w, '#gl'); log2(`図: ${gl.width}×${gl.height}`); return null; },
+  async setup(w) {
+    w.__ww.S.paused = true; const gl = qs(w, '#gl'); log2(`図: ${gl.width}×${gl.height}`);
+    MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: CUR, exp: EXP, end: END, bye: END - 5.8 }));   // ライオンの表情としゃべり（声は標準の もごもご）
+    await lionOpen();
+    return null;
+  },
   subs: guideSubs(END, '電波の見える部屋', 'Seeing WiFi at Home', CAPS, 'Runs in your browser (PC or phone). Switch the app to English with the EN button'),
   renderAt(t, w) { wwRender(w, SC, t); },
   drawSource(g, w) { wwDraw2(g, w, MAP); },
@@ -102,12 +114,13 @@ promoStart({
     // 数字のカード（右のパネルの上）: 2LDK の場面だけ
     const s = wwScAt(SC, t);
     const fr = s.preset === 'flat' && t >= 30 ? fade(t, 30.6, s.b - 0.3, 0.4) : 0;
-    drawPanel(g, X, 575, 540, 'スマホの場所（右のパネル）', [wwText(w, '#roVal') + ' ' + wwText(w, '#roUnit') + '  ' + wwText(w, '#roVerdict'), wwText(w, '#roDetail').slice(0, 26)], fr);
+    drawPanel(g, X, 445, 540, 'スマホの場所（右のパネル）', [wwText(w, '#roVal') + ' ' + wwText(w, '#roUnit') + '  ' + wwText(w, '#roVerdict'), wwText(w, '#roDetail').slice(0, 26)], fr);
     for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
     drawCursor(g, CUR, t);
     drawCaps(g, t, CAPS, true);
     drawGuideChrome(g, t, END, '電波の見える部屋',
       'おもな出どころ: ITU-R 勧告 P.2040-3（2023）、ITU-R P.525、IEEE 802.11、Taflove と Hagness（2005）ほか');
+    drawLion(g, t);   // 案内役のライオン（終わりの画面の上にも出す）
   },
   errors: w => [w.__wwErr].filter(Boolean).map(String),
 });

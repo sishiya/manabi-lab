@@ -29,7 +29,8 @@ YouTube に出す順番（ジャンル・サムネイルの色味が連日で重
 - アプリを外から動かす: `clickEl(w, sel)`、`setInput(w, sel, 値)`（スライダー・チェックボックスに input と change を送る）、`runEvents(w, 表, t0, t)`。
 - 日本語で録る: アプリは `?lang=ja`（`langJa`）で開く。`inject` で開くときは、言語の記憶 `manabi-lang` をその iframe の中だけ `ja` に見せる。`inject.pre` で台本ごとの差しかえ（アプリより先に動く）。
 - 確かめ用のコマ: `__peekSheet([秒…], 'peek-名前')` で何コマかを縮めて1枚に並べ、`out/peek-名前.jpg` に保存する（見終わったら消す）。
-- アプリごとの部品は `<app>-common.js`（`quantum-common.js`・`wifi-common.js`・`animal-common.js`・`immune-common.js`・`metamorphosis-common.js`・`air-flow-common.js`・`ga-common.js`・`mold-common.js`・`god-view-common.js`）。場面の表 `SC` と、とびとびの時刻（確かめ用のコマ）でも同じ絵になる進め方が入っている。
+- アプリごとの部品は `<app>-common.js`（`quantum-common.js`・`wifi-common.js`・`animal-common.js`・`immune-common.js`・`metamorphosis-common.js`・`air-flow-common.js`・`ga-common.js`・`mold-common.js`・`god-view-common.js`・`piano-common.js`）。場面の表 `SC` と、とびとびの時刻（確かめ用のコマ）でも同じ絵になる進め方が入っている。
+- **ピアノを弾く手は BGM のかわりにピアノの音**（`piano-common.js`、2026-10-11）: アプリと同じ合成（`VOICES.piano`）で、画面の手が押す音を録画の音に入れる（`music.extra(ctx, 出口)` は台本ごとの音を足す口。`style: 'none'`）。3D の canvas だけを全画面にして開き、アプリの時計（performance.now）をこちらの時刻にする。縦長の一人称は手が画面の外に出るので使わない。
 - **神の視点マップだけは `inject` を使わない**: srcdoc で開くと Cesium の Worker（地形）が動かず、地図が出ない。普通に開いてから `requestAnimationFrame` を差しかえる（`gvInstallRaf`）。地図は1コマごとに読みこみを待つので、録画は通信が安定しているときに・時間がかかる（150秒で数十分の見込み）。「地球をちぎる」の描画ループは差しかえた requestAnimationFrame に乗らないことがあるので、1コマごとに `GV._tear.render()` で描かせる。粒の計算（Worker）は実時間で進むので、1コマのあいだだけ動かして止める。
 
 ### ライオン版（案内役のしし屋のライオンが右下に出る。説明動画の標準、2026-10-10）
@@ -42,7 +43,7 @@ YouTube に出す順番（ジャンル・サムネイルの色味が連日で重
   - 下書きは `_dev/tools/make-upload.ps1 -App <app>`（入口の APPS とアプリの出どころから。TODO を埋める）。上げる前に `make-upload.ps1 -Check` で、説明欄の形・チャプター（0:00 から、**1つ10秒以上**。短いと YouTube がチャプターを出さない）・字数・< >・予約の時刻を確かめる。
   - 予約日時は `_dev/tools/schedule-videos.ps1 -Start <日付>`（`SCHEDULE.md` の順に、説明動画 20:00・ショート 20:05）。`-Apply` で書き、GO のあと `-Upload` で YouTube の予約まで。
 - 上げる: `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Meta _dev/promo/<out>.upload.json`。表示された ID を JSON の `videoId` に書く。
-- 上げたあとに英語・字幕を足す・直す: `-Update -Meta …`。チャンネルの動画の一覧: `-List`。
+- 上げたあとに英語・字幕を足す・直す: `-Update -Meta …`。チャンネルの動画の一覧: `-List`。公開前の最終確認（読むだけ）: `-Verify [-Date 日付]`（RULES 8.4）。
 - **API の本数の上限で上げられないとき**: ユーザーが Studio で動画ファイルだけ上げる（「子ども向けではない」を選ぶ・非公開・予約はそこで）→ `-List` で ID を調べて JSON の `videoId` に書く → `-Update -Full -Meta …` で日本語と英語のタイトル・説明・タグ・字幕・サムネイルを入れる（上げたあとの更新は本数の上限に数えられない）。
 - **上げる・予約投稿はユーザーの GO のあとで**。予約は `publishAt`（日本時間 `+09:00`、19〜22時ごろ）。差し替えは新しく上げて、古い方はユーザーが Studio で消す（Claude は消さない）。
 - YouTube には1日に上げられる本数の上限がある（`exceeded the number of videos` が出たら日を改める）。2026-10-11 は API で8本＋Studio で3本（合わせて11本）上げても当たらなかった。API の使用量は `youtube-upload.ps1 -Quota`（記録は `_dev/tools/out/yt-quota.csv`。1日は太平洋時間の0時＝日本時間16時に切りかわる）。
@@ -66,4 +67,5 @@ YouTube に出す順番（ジャンル・サムネイルの色味が連日で重
 - BGM はコードで合成した音だけ。作るたびに、権利上問題ないかを確かめてユーザーに伝える。
 - 最初のカットは入口のサムネイル（`assets/thumbs/<app>.jpg`）に近い見た目にする。生き物などの名前を画面に出すと好評。
 - 性的な内容・R18 をまぜない（RULES 9章）。出どころは説明文と終わりの画面に書く。
+- **公開の前日に、翌日公開の分を最終確認・デバッグする**（RULES 8.4。`youtube-upload.ps1 -Verify`・mp4 のコマ・公開中のアプリ。結果は `upload-log.md` の「公開前の確認」）。
 - commit の前に公開前チェック（`_dev/tools/check-public.ps1`）。`out/` は Git に入れない。

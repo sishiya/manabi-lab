@@ -582,6 +582,7 @@ async function makeAudio(dur, music = {}) {
   jbus.connect(jverb); jverb.connect(jwet); jwet.connect(ctx.destination);
   for (const c of music.cues || []) if (c.type === 'jingle') identJingle(ctx, jbus, c.t, c.kind);
   for (const c of music.cues || []) if (c.type === 'babble') babbleSound(ctx, jbus, c);   // 案内役のしゃべり（BGM の音量とは別）
+  if (music.extra) await music.extra(ctx, ctx.destination);   // 台本ごとの音（ピアノを弾く手のピアノの音など。BGM の音量とは別）
   if (music.style === 'none') {
     // BGM なし（目印の音だけ）
   } else if ((music.style || 'drone') === 'drone') {
@@ -729,8 +730,9 @@ function promoStart(cfg) {
       fastStart: 'in-memory',
     });
     let encErr = null;
-    const venc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: e => encErr = e });
-    venc.configure(vcfg);
+    // 書き出し器。ペインが隠れているとき、1コマの計算が長い（体内ダイブの simRun など）と Chrome が「使われていない」として閉じる（reclaim）。閉じられたら作り直して続ける
+    const makeVenc = () => { const v = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: e => encErr = e }); v.configure(vcfg); return v; };
+    let venc = makeVenc();
     const aenc = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: e => encErr = e });
     aenc.configure(acfg);
 
@@ -742,18 +744,24 @@ function promoStart(cfg) {
       const ad = new AudioData({ format: 'f32-planar', sampleRate: SR, numberOfFrames: n, numberOfChannels: 2, timestamp: Math.round(i / SR * 1e6), data });
       aenc.encode(ad); ad.close();
     }
+    await aenc.flush();   // 音は先に書き終える（録画の終わりまで待つと、閉じられていることがある）
 
     // 1コマずつ。時間がかかっても動画の時刻はずれない
     const N = DUR * FPS;
     for (let i = 0; i < N; i++) {
-      if (encErr) throw encErr;
+      if (encErr && !/reclaim/i.test(String(encErr))) throw encErr;
       await renderAt(i / FPS);
+      let key = i % (FPS * 2) === 0;
+      if (venc.state === 'closed' || (encErr && /reclaim/i.test(String(encErr)))) {   // 閉じられていたら作り直す（最初のコマはキーフレームに）
+        if (encErr && !/reclaim/i.test(String(encErr))) throw encErr;
+        encErr = null; venc = makeVenc(); key = true; log(`書き出し器を作り直した（${(i / FPS).toFixed(1)} 秒）`);
+      }
       const vf = new VideoFrame(out, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
-      venc.encode(vf, { keyFrame: i % (FPS * 2) === 0 }); vf.close();
+      venc.encode(vf, { keyFrame: key }); vf.close();
       while (venc.encodeQueueSize > 4) await sleep(5);
       if (i % 30 === 0) { go.textContent = `録画中 ${Math.round(i / N * 100)}%`; await sleep(0); }
     }
-    await venc.flush(); await aenc.flush();
+    await venc.flush();
     muxer.finalize();
     const bytes = muxer.target.buffer;
     log(`できた: ${(bytes.byteLength / 1e6).toFixed(1)} MB、${((performance.now() - t0) / 1000).toFixed(0)} 秒かかった`);

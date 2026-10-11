@@ -58,8 +58,8 @@ const CH = {
   preset: { x: 40, y: 800, title: '見る位置（絵の下）', btns: ['映画の角度', '真横', 'ななめ上', '真上'] },
   real: { x: 1400, y: 300, title: '見え方（右のパネル）', btns: ['映画版', '本当の見え方'] },
   spin: { x: 1480, y: 200, title: '回転の速さ（右のパネル）', btns: ['止まっている 0', '映画 0.6', 'とても速い 0.99'], cols: 1 },
-  disk: { x: 1480, y: 540, title: 'ガスの円盤', btns: ['あり', 'なし'] },
-  sky: { x: 1480, y: 740, title: 'うしろの空', btns: ['星空', '方眼', 'まっ暗'] },
+  disk: { x: 1480, y: 480, title: 'ガスの円盤', btns: ['あり', 'なし'] },
+  sky: { x: 40, y: 230, title: 'うしろの空（右のパネル）', btns: ['星空', '方眼', 'まっ暗'] },
 };
 // 札を出す時間 [札, 出す, 消す, その時刻に押されているボタン(t) ]
 const SHOW = [
@@ -140,10 +140,14 @@ const SUBS_EXTRA = [
 ];
 
 let lastPick = null;
+// ---- 案内役のライオン（promo.js の lionSetup・drawLion）。右下（x 1530〜、y 620〜）はライオンの場所 ----
+const MUSIC = { style: 'drone', root: 55, stopAt: END, cues: [{ t: END, type: 'jingle' }] };
+const EXP = [[0, 'calm'], [7, 'smile'], [10, 'calm'], [14.7, 'smile'], [18, 'calm'], [23, 'wow'], [26, 'calm'], [33.2, 'think'], [37, 'calm'], [39.5, 'wow'], [43, 'calm'], [49.7, 'think'], [53, 'calm'], [59.7, 'wow'], [63, 'calm'], [68.7, 'shock'], [71, 'sad'], [74, 'calm'], [77.7, 'wow'], [81, 'calm'], [85.2, 'sad'], [88, 'calm'], [98.7, 'wow'], [102, 'calm'], [107.7, 'think'], [111, 'calm'], [118.7, 'smile'], [122, 'calm'], [126.7, 'sleepy'], [131, 'calm'], [135.2, 'smile'], [139, 'calm'], [END - 7.6, 'smile']];   // 表情の時刻 [秒, LION_XP の名前]
+MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: CUR, exp: EXP, end: END, bye: END - 5.8 }));   // しゃべり（声は標準の もごもご）
 promoStart({
   name: 'ブラックホールの見え方（使い方）', out: 'black-hole-guide', src: '../../black-hole/index.html', iw: 2073, ih: 1080, dur: DUR, peek: 40,
-  music: { style: 'drone', root: 55, stopAt: END, cues: [{ t: END, type: 'jingle' }] },
-  ready: w => w.__bh && w.__bh.R && w.__bh.R.gl && (w.__bh.R.levels.low || (w.__bh.renderNow(), w.__bh.R.levels.low)),
+  music: MUSIC,
+  ready: w => !!LION.api && (w.__bh && w.__bh.R && w.__bh.R.gl && (w.__bh.R.levels.low || (w.__bh.renderNow(), w.__bh.R.levels.low))),
   setup(w) { makeCaps(w.__bh); return w.document.getElementById('view'); },
   subs: () => [SUBS_EXTRA[0], ...capSubs(CAPS), SUBS_EXTRA[1]],
   renderAt(t, w) {
@@ -166,17 +170,17 @@ promoStart({
       g.beginPath(); g.arc(x, y, 16, 0, Math.PI * 2); g.stroke();
       g.beginPath(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { g.moveTo(x + dx * 9, y + dy * 9); g.lineTo(x + dx * 26, y + dy * 26); } g.stroke();
       const f = clamp((t - PK[0][0]) / 0.5, 0, 1) * (1 - clamp((t - 73.5) / 0.5, 0, 1));
-      drawInset(g, w.document.getElementById('rayCv'), 1240, 560, 640, 400, 'この光の道すじ（横から見た図）', f);
+      drawInset(g, w.document.getElementById('rayCv'), 1240, 215, 640, 400, 'この光の道すじ（横から見た図）', f);
     }
     for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
     // 時計の読み（近づいたとき）
     const fz = fade(t, 121, 134, 0.6);
     if (fz > 0) {
       const S = w.__bh.S, z = w.__bh.zamo(S.r, S.th, S.a);
-      const P = { x: 1400, y: 760, title: 'カメラの距離（右のパネル）', btns: [`${S.r.toFixed(1)} M`] };
+      const P = { x: 1240, y: 420, title: 'カメラの距離（右のパネル）', btns: [`${S.r.toFixed(1)} M`] };
       drawChip(g, P, -1, fz);
       prep(g); g.globalAlpha = fz; g.textAlign = 'left';
-      txt(g, `ここの1時間は遠くの ${(1 / z.alpha).toFixed(2)} 時間`, 1400, 920, 36, '#ffd27a', true);
+      txt(g, `ここの1時間は遠くの ${(1 / z.alpha).toFixed(2)} 時間`, 1240, 600, 36, '#ffd27a', true);
       g.globalAlpha = 1; g.shadowBlur = 0;
     }
     drawCursor(g, CUR, t);
@@ -189,10 +193,12 @@ promoStart({
       '計算の式: James, von Tunzelmann, Franklin, Thorne (2015) Classical and Quantum Gravity 32, 065001');
     drawIdentMini(g, t, 0.3);   // しし屋の目印: はじまりは左上に小さく、締めは END から
     drawIdent(g, t, END);
+    drawLion(g, t);   // 案内役のライオン（右下。右の札・図は上へ寄せた）
   },
   errors: w => w.__bh.err,
   hires(w, W, H) { w.resizeRender(W, H, Math.min(0.5, Math.sqrt(1.6e5 / (W * H))), 1); w.__bh.S.geoDirty = true; },
 });
+lionOpen();   // 裏の iframe でライオンを開く（promoStart がページを組み立てたあと。ready で待つ）
 </script>
 </body>
 </html>

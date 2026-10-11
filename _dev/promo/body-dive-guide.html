@@ -38,7 +38,7 @@ const START = {
   mat: { x: 330, y: 300, title: '1  あなたは何になる？（スタート画面）', btns: ['カプセル内視鏡', '牛肉', 'ごはん', 'キャベツ', 'ステンレス球', '日本酒 1合', '日本酒 4合', 'ボタン電池', 'ツキヨタケ'], cols: 3 },
   entry: { x: 330, y: 610, title: '2  どこから入る？', btns: ['口', '鼻', '肛門'] },
   belly: { x: 900, y: 610, title: '3  おなかの状態', btns: ['空腹', '満腹（食後）'] },
-  go: { x: 1390, y: 610, title: '', btns: ['ダイブ開始'] },
+  go: { x: 1300, y: 470, title: '', btns: ['ダイブ開始'] },   // 右下はライオンなので、3の札の右上に
 };
 const CH = {
   move: { x: 640, y: 820, title: '下のボタン', btns: ['順路モード', '自動航行', '三人称', '外観'] },
@@ -138,12 +138,16 @@ function applyBtns(w, s, lt0, lt) {
   for (const [k, id] of [['auto', 'btnAuto'], ['tps', 'btnTps'], ['orbit', 'btnOrbit']])
     if (s[k] !== undefined && s[k] > lt0 && s[k] <= lt && !(k === 'auto' && s.auto === 0)) d.getElementById(id).click();
 }
+// ---- 案内役のライオン（promo.js の lionSetup・drawLion）。右下（x 1530〜、y 620〜）はライオンの場所 ----
+const MUSIC = { style: 'journey', root: 110, stopAt: END, cues: [{ t: END, type: 'jingle' }] };
+const EXP = [[0, 'calm'], [7.5, 'smile'], [10, 'think'], [16.5, 'proud'], [19, 'calm'], [19.7, 'smile'], [23, 'calm'], [28.7, 'sleepy'], [32, 'calm'], [42.2, 'wow'], [46, 'calm'], [52.7, 'smile'], [56, 'calm'], [60.7, 'shock'], [63, 'sad'], [67, 'calm'], [69.7, 'think'], [73, 'calm'], [78.7, 'cold'], [82, 'calm'], [87.7, 'proud'], [91, 'calm'], [95.7, 'wow'], [99, 'calm'], [108.7, 'sleepy'], [113, 'shock'], [116, 'calm'], [122.7, 'shock'], [125, 'sad'], [131, 'calm'], [END - 7.6, 'smile']];   // 表情の時刻 [秒, LION_XP の名前]
+MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: CUR, exp: EXP, end: END, bye: END - 5.8 }));   // しゃべり（声は標準の もごもご）
 promoStart({
   name: '体内ダイブ（使い方）', out: 'body-dive-guide', src: '../../body-dive/index.html', iw: 2560, ih: 1440, dur: DUR, peek: 64,
   // アプリは devicePixelRatio を 1.5 までにしているので、iframe を 2560×1440 にして 3840×2160 で描かせる
   inject: { dpr: 2, raf: true },
-  music: { style: 'journey', root: 110, stopAt: END, cues: [{ t: END, type: 'jingle' }] },   // 体の中の旅: 少し低めの明るい和音（ショートと同じ）
-  ready: w => w.__bd && w.__rafQ && w.__rafQ.length,
+  music: MUSIC,
+  ready: w => !!LION.api && (w.__bd && w.__rafQ && w.__rafQ.length),
   setup(w) { appStep(w, 2); return w.document.querySelector('canvas'); },
   subs: SUBS,
   async renderAt(t, w) {
@@ -186,7 +190,7 @@ promoStart({
     if (fm > 0) drawNote(g, 1300, 360, 580, 'あなた（右のパネル）', [d.getElementById('meState').textContent, '体内時間 ' + d.getElementById('bTime').textContent + '（' + d.getElementById('bScale').textContent + '）'], fm);
     // 旅のまとめ（結果の画面）
     const fr = fade(t, 87.5, 94.8, 0.4);
-    if (fr > 0 && res) drawNote(g, 1180, 330, 700, res.title + '（結果の画面）', res.kv.slice(0, 6), fr);
+    if (fr > 0 && res) drawNote(g, 1180, 230, 700, res.title + '（結果の画面）', res.kv.slice(0, 6), fr);
     // 血中アルコール（右のパネルのグラフ）
     const fa = fade(t, 109, 121.8, 0.4);
     if (fa > 0) {
@@ -206,9 +210,11 @@ promoStart({
       'おもな出どころ: Betts ほか（2022）OpenStax『Anatomy and Physiology 2e』ほか18件（アプリのスタート画面「このアプリについて」）');
     drawIdentMini(g, t, 0.3);   // しし屋の目印: はじまりは左上に小さく、締めは END から
     drawIdent(g, t, END);
+    drawLion(g, t);   // 案内役のライオン（右下。右の札は上・左へ寄せた）
   },
   errors: w => [w.__bdErr].filter(Boolean),
 });
+lionOpen();   // 裏の iframe でライオンを開く（promoStart がページを組み立てたあと。ready で待つ）
 </script>
 </body>
 </html>

@@ -78,12 +78,16 @@ const CAPS = [
   { a: 130.4, b: 141.6, main: '「解説」に、空気の年齢・換気回数・しくみ', sub: '学習用の簡単なモデル。すき間の量や換気扇の風量は目安',
     en: ['"Explanation" covers air age, air changes and how it works', 'A simplified learning model. Gap sizes and fan flow are rough guides'] },
 ];
-const CHART = [X, 560, 540, 260];
+const CHART = [X, 360, 540, 260];   // 右下はライオンの場所なので上に
+// ---- 案内役のライオン（promo.js の lionSetup・drawLion）。右下（x 1530〜、y 620〜）はライオンの場所 ----
+const MUSIC = { style: 'journey', root: 146.83, stopAt: END, cues: [{ t: END, type: 'jingle' }] };
+const EXP = [[0, 'calm'], [7.3, 'smile'], [10, 'calm'], [17.7, 'think'], [21, 'calm'], [27.6, 'sleepy'], [31, 'calm'], [39.6, 'think'], [43, 'sad'], [46, 'calm'], [50.5, 'smile'], [54, 'calm'], [60.6, 'wow'], [64, 'calm'], [75.6, 'think'], [79, 'calm'], [82.7, 'smile'], [86, 'calm'], [90.6, 'wow'], [94, 'calm'], [100.2, 'sad'], [104, 'calm'], [110.6, 'proud'], [114, 'calm'], [120.4, 'sleepy'], [124, 'calm'], [130.6, 'smile'], [134, 'calm'], [END - 7.6, 'smile']];   // 表情の時刻 [秒, LION_XP の名前]
+MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: typeof CUR === "undefined" ? [] : CUR, exp: EXP, end: END, bye: END - 5.8 }));   // しゃべり（声は標準の もごもご）
 promoStart({
   name: '空気の流れの見える部屋（使い方）', out: 'air-flow-guide', src: '../../air-flow/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 20,
   inject: { dpr: 2, raf: true },
-  music: { style: 'journey', root: 146.83, stopAt: END, cues: [{ t: END, type: 'jingle' }] },
-  ready: w => w.__af && w.__af.S && w.__af.S.scene && w.fit,
+  music: MUSIC,
+  ready: w => !!LION.api && (w.__af && w.__af.S && w.__af.S.scene && w.fit),
   setup(w) {
     afSize(w, MAP[2], MAP[3]);
     const st = w.document.createElement('style'); st.textContent = `#chart{position:fixed!important;left:0!important;top:0!important;width:${CHART[2]}px!important;height:${CHART[3]}px!important}`; w.document.head.append(st);
@@ -97,16 +101,18 @@ promoStart({
   },
   overlay(g, t, w) {
     const ft = fade(t, 27.4, 38.6, 0.4) + fade(t, 50.3, 89.6, 0.4) + fade(t, 110.4, 141.6, 0.4);   // 窓1か所の場面は、窓の近くの入れかわりも数に入るので出さない
-    drawPanel(g, X, 600, 540, '家全体の換気回数（右のパネル）', [afText(w, '#roVal') + ' 回/時  ' + afText(w, '#roTag')], ft);
+    drawPanel(g, X, 510, 540, '家全体の換気回数（右のパネル）', [afText(w, '#roVal') + ' 回/時  ' + afText(w, '#roTag')], ft);
     drawInset(g, qs(w, '#chart'), CHART[0], CHART[1], CHART[2], CHART[3], '煙の量（右のパネル）', fade(t, 92, 109.6, 0.4));
     for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
     drawCursor(g, CUR, t);
     drawCaps(g, t, CAPS, true);
     drawGuideChrome(g, t, END, '空気の流れの見える部屋',
       'おもな出どころ: 建築基準法施行令 第20条の8、Sandberg（1981）、Etheridge と Sandberg（1996）、Swami と Chandra（1988）ほか');
+    drawLion(g, t);   // 案内役のライオン（終わりの画面の上にも出す）
   },
   errors: w => [w.__af.err].filter(Boolean).map(String),
 });
+lionOpen();   // 裏の iframe でライオンを開く（promoStart がページを組み立てたあと。ready で待つ）
 </script>
 </body>
 </html>

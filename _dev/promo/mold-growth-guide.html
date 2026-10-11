@@ -76,20 +76,24 @@ const CAPS = [
   { a: 130.4, b: 141.6, main: '「カビの図鑑」に、クロカビ・アオカビなど8種類', sub: '学習用の簡単なシミュレーション。育つ速さは推定',
     en: ['The "Mold Guide" has 8 kinds, like black mold and blue mold', 'A simplified learning simulation. Growth speeds are estimates'] },
 ];
+// ---- 案内役のライオン（promo.js の lionSetup・drawLion）。右下（x 1530〜、y 620〜）はライオンの場所 ----
+const MUSIC = { style: 'journey', root: 110, stopAt: END, cues: [{ t: END, type: 'jingle' }] };
+const EXP = [[0, 'calm'], [7.3, 'smile'], [10, 'calm'], [18, 'think'], [21, 'calm'], [28.6, 'wow'], [32, 'calm'], [38.4, 'cold'], [42, 'calm'], [48.6, 'wow'], [52, 'calm'], [58.2, 'sad'], [62, 'calm'], [70, 'smile'], [74.6, 'proud'], [78, 'calm'], [80.4, 'smile'], [84, 'calm'], [92.6, 'think'], [96.5, 'wow'], [100, 'calm'], [110.6, 'think'], [114, 'calm'], [120.2, 'wow'], [124, 'proud'], [128, 'calm'], [130.6, 'smile'], [134, 'calm'], [END - 7.6, 'smile']];   // 表情の時刻 [秒, LION_XP の名前]
+MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: typeof CUR === "undefined" ? [] : CUR, exp: EXP, end: END, bye: END - 5.8 }));   // しゃべり（声は標準の もごもご）
 promoStart({
   name: 'カビが育つまで（使い方）', out: 'mold-growth-guide', src: '../../mold-growth/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 20,
   inject: { dpr: 2, raf: true },
-  music: { style: 'journey', root: 110, stopAt: END, cues: [{ t: END, type: 'jingle' }] },
-  ready: w => w.__mk && w.__mk.W && w.tick,
+  music: MUSIC,
+  ready: w => !!LION.api && (w.__mk && w.__mk.W && w.tick),
   setup(w) { mkSize(w, BOXR[2], BOXR[3]); w.tick(0, 0); return null; },
   subs: guideSubs(END, 'カビが育つまで', 'How Mold Grows', CAPS, 'Runs in your browser (PC or phone). Switch the app to English with the EN button'),
   renderAt(t, w) { mkRender(w, SC, t); },
   drawSource(g, w) {
     g.fillStyle = '#121214'; g.fillRect(0, 0, PW * RES, PH * RES);
     if (w.__mk.UI.page === 'zukan') {   // 図鑑: 横から見た形とコロニーの絵
-      const a = qs(w, '#zkStruct'), b = qs(w, '#zkColony');
-      if (a && a.width) { const h = 760, k = h / a.height; g.drawImage(a, 60 * RES, 230 * RES, a.width * k * RES, h * RES); }
-      if (b && b.width) g.drawImage(b, 1250 * RES, 300 * RES, 560 * RES, 560 * b.height / b.width * RES);
+      const a = qs(w, '#zkStruct'), b = qs(w, '#zkColony');   // 横から見た形は、右下（ライオンの場所）にかからない高さに
+      if (a && a.width) { const h = 620, k = h / a.height; g.drawImage(a, 60 * RES, 230 * RES, a.width * k * RES, h * RES); }
+      if (b && b.width) g.drawImage(b, 1150 * RES, 360 * RES, 360 * RES, 360 * b.height / b.width * RES);
       return;
     }
     g.drawImage(qs(w, '#world'), BOXR[0] * RES, BOXR[1] * RES, BOXR[2] * RES, BOXR[3] * RES);
@@ -98,19 +102,21 @@ promoStart({
     const M = w.__mk, st = w.document.querySelector('#status');
     if (M.UI.page === 'sim') drawPanel(g, BOXR[0] + 10, BOXR[1] + 10, 520, '', [mkText(w, '#hud .big')], fade(t, 7.3, 129.6, 0.4));
     const lines = st ? [...st.children].map(e => e.textContent.trim()).filter(Boolean).slice(0, 3) : [];
-    drawPanel(g, X, 420, 540, 'いまの状況（右）', lines.map(s => s.slice(0, 15)), fade(t, 92.4, 109.6, 0.4));
+    drawPanel(g, X, 230, 540, 'いまの状況（右）', lines.map(s => s.slice(0, 15)), fade(t, 92.4, 109.6, 0.4));
     const card = M.DECK.list.length ? M.DECK.list[M.DECK.list.length - 1].t : '';
-    drawPanel(g, X, 680, 540, '発見カード', [card.slice(0, 15)], fade(t, 96, 109.6, 0.4), '#ffd27a');
-    drawPanel(g, X, 520, 560, 'ためした記録（8週間）', mkRecords(w).map(s => s.slice(0, 16)), fade(t, 114.5, 129.6, 0.4));
+    drawPanel(g, X, 450, 540, '発見カード', [card.slice(0, 15)], fade(t, 96, 109.6, 0.4), '#ffd27a');
+    drawPanel(g, X, 505, 560, 'ためした記録（8週間）', mkRecords(w).map(s => s.slice(0, 16)), fade(t, 114.5, 129.6, 0.4));
     if (M.UI.page === 'zukan') drawPanel(g, X, 230, 540, 'カビの図鑑（上のタブ）', [mkText(w, '#zkDetail h3') + '　' + mkText(w, '#zkDetail .zsci')], fade(t, 130.4, 141.6, 0.4));
     for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
     drawCursor(g, CUR, t);
     drawCaps(g, t, CAPS, true);
     drawGuideChrome(g, t, END, 'カビが育つまで',
       'おもな出どころ: Grant ほか（1989）、Sedlbauer（2001）、Hukka と Viitanen（1999）ほか。塩素系は酸性のものと混ぜない');
+    drawLion(g, t);   // 案内役のライオン（終わりの画面の上にも出す）
   },
   errors: w => [w.__mk.err].filter(Boolean).map(String),
 });
+lionOpen();   // 裏の iframe でライオンを開く（promoStart がページを組み立てたあと。ready で待つ）
 </script>
 </body>
 </html>

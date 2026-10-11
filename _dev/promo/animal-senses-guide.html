@@ -102,11 +102,15 @@ const CAPS = [
   { a: 131.3, b: 141.6, main: '道具の見え方も。サーモカメラは熱を色で表す', sub: '見え方は研究をもとに置き換えたもの。動物が本当にこう感じているかは分からない',
     en: ['Tools too: a thermal camera shows heat as color', 'These views are translated from research. We can\'t know exactly what animals feel'] },
 ];
+// ---- 案内役のライオン（promo.js の lionSetup・drawLion）。右下（x 1530〜、y 620〜）はライオンの場所 ----
+const MUSIC = { style: 'journey', root: 130.81, stopAt: END, cues: [{ t: END, type: 'jingle' }] };
+const EXP = [[0, 'calm'], [7.3, 'smile'], [10, 'calm'], [16.5, 'smile'], [20, 'calm'], [25.6, 'wow'], [29, 'calm'], [35.6, 'think'], [39, 'calm'], [45.6, 'cold'], [49, 'calm'], [54.5, 'think'], [58, 'calm'], [63.6, 'wow'], [67, 'calm'], [72.2, 'smile'], [76, 'calm'], [80.6, 'shock'], [83, 'wow'], [86, 'calm'], [93.5, 'think'], [97, 'calm'], [100.6, 'sad'], [104, 'calm'], [107.5, 'wow'], [111, 'calm'], [114.5, 'smile'], [118, 'calm'], [120.6, 'sleepy'], [124, 'calm'], [131.5, 'think'], [135, 'calm'], [END - 7.6, 'smile']];   // 表情の時刻 [秒, LION_XP の名前]
+MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: typeof CUR === "undefined" ? [] : CUR, exp: EXP, end: END, bye: END - 5.8 }));   // しゃべり（声は標準の もごもご）
 promoStart({
   name: 'いきものの感じる世界（使い方）', out: 'animal-senses-guide', src: '../../animal-senses/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 40,
   inject: { dpr: 2, raf: true },
-  music: { style: 'journey', root: 130.81, stopAt: END, cues: [{ t: END, type: 'jingle' }] },
-  ready: w => w.__as && w.__as.R && w.__as.R.size,
+  music: MUSIC,
+  ready: w => !!LION.api && (w.__as && w.__as.R && w.__as.R.size),
   setup(w) { asSize(w, 2560, 1440); w.__as.frame(1); return qs(w, '#gl'); },
   subs: guideSubs(END, 'いきものの感じる世界', 'How Animals Sense the World', CAPS, 'Runs in your browser (PC or phone). Switch the app to English with the EN button'),
   renderAt(t, w) { asRender(w, SC, t); },
@@ -117,9 +121,11 @@ promoStart({
     drawCaps(g, t, CAPS, true);
     drawGuideChrome(g, t, END, 'いきものの感じる世界',
       'おもな出どころ: Ödeen と Håstad（2003）、Gracheva ほか（2010）Nature、Griffin ほか（1960）ほか（アプリの「おもな出どころ」）');
+    drawLion(g, t);   // 案内役のライオン（終わりの画面の上にも出す）
   },
   errors: w => w.__as.err,
 });
+lionOpen();   // 裏の iframe でライオンを開く（promoStart がページを組み立てたあと。ready で待つ）
 </script>
 </body>
 </html>

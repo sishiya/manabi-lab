@@ -62,26 +62,32 @@ const CAPS = [
     en: ['Also: "common myths" and "what we still don\'t know"', 'Research suggests some caterpillar memories survive into the moth'] },
 ];
 const CHART = [60, 790, 1240, 240];
+// ---- 案内役のライオン（promo.js の lionSetup・drawLion）。右下（x 1530〜、y 620〜）はライオンの場所 ----
+const MUSIC = { style: 'journey', root: 98, stopAt: END, cues: [{ t: END, type: 'jingle' }] };
+const EXP = [[0, 'calm'], [7.3, 'smile'], [10, 'calm'], [17.5, 'think'], [21, 'calm'], [27.6, 'sad'], [31, 'calm'], [39.2, 'smile'], [43, 'calm'], [50.6, 'think'], [54, 'calm'], [61.2, 'wow'], [65, 'calm'], [72.7, 'smile'], [76, 'calm'], [80.4, 'think'], [84, 'calm'], [88.4, 'wow'], [92, 'calm'], [95.6, 'wow'], [99, 'smile'], [104, 'calm'], [108.2, 'think'], [113, 'smile'], [117, 'calm'], [121.2, 'proud'], [126, 'calm'], [128.5, 'shock'], [131, 'calm'], [134.6, 'think'], [138, 'calm'], [END - 7.6, 'smile']];   // 表情の時刻 [秒, LION_XP の名前]
+MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: typeof CUR === "undefined" ? [] : CUR, exp: EXP, end: END, bye: END - 5.8 }));   // しゃべり（声は標準の もごもご）
 promoStart({
   name: 'さなぎの中で（使い方）', out: 'metamorphosis-guide', src: '../../metamorphosis/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 30,
   inject: { dpr: 2, raf: true },
-  music: { style: 'journey', root: 98, stopAt: END, cues: [{ t: END, type: 'jingle' }] },
-  ready: w => w.__mm && w.render && w.tToU,
+  music: MUSIC,
+  ready: w => !!LION.api && (w.__mm && w.render && w.tToU),
   setup(w) { mmSize(w, { '#view': [1920, 1080], '#chart': [CHART[2], CHART[3]] }); w.render(0); return qs(w, '#view'); },
   subs: guideSubs(END, 'さなぎの中で', 'Inside the Pupa', CAPS, 'Runs in your browser (PC or phone). Switch the app to English with the EN button'),
   renderAt(t, w) { mmRender(w, KEYS, MODES, t); },
   overlay(g, t, w) {
     drawPanel(g, 40, 200, 700, '', mmStage(w), fade(t, 7.3, 141.6, 0.4));
-    mmLegend(g, w, X, 300, fade(t, 27.4, 49.6, 0.4));
+    mmLegend(g, w, X, 215, fade(t, 27.4, 49.6, 0.4));
     drawInset(g, qs(w, '#chart'), CHART[0], CHART[1] - 50, CHART[2], CHART[3], 'ホルモンとスイッチの遺伝子（下のグラフ）', fade(t, 50.4, 71.6, 0.4));
     for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
     drawCursor(g, CUR, t);
     drawCaps(g, t, CAPS, true);
     drawGuideChrome(g, t, END, 'さなぎの中で',
       'おもな出どころ: Truman と Riddiford（1999）Nature、Jindra ほか（2013）、Tolbert ほか（1983）ほか15件（アプリの「おもな出どころ」）。模式図です');
+    drawLion(g, t);   // 案内役のライオン（終わりの画面の上にも出す）
   },
   errors: w => [w.__mm.err].filter(Boolean).map(String),
 });
+lionOpen();   // 裏の iframe でライオンを開く（promoStart がページを組み立てたあと。ready で待つ）
 </script>
 </body>
 </html>
