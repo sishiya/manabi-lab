@@ -12,7 +12,7 @@ const LOOK = 0.7;       // 次の音へ先回りを始める早さ（秒）
 const THUMB_PITCH = 10, THUMB_TW = 45, THUMB_N = [0, 35];
 const FINGERS = [
   null,
-  { name: L('親指', 'thumb'), base: [-24, -12, -25], L: [46, 32, 26], b: 0, c: 0.8, pitch: THUMB_PITCH, tw: THUMB_TW, yaw0: -50, yaw: [-75, 50], a1: [-20, 60], a2: [0, 80], n: THUMB_N, r: [11, 9.5, 8.5] },
+  { name: L('親指', 'thumb'), base: [-20, -13, -28], L: [46, 30, 25], b: 0, c: 0.8, pitch: THUMB_PITCH, tw: THUMB_TW, yaw0: -50, yaw: [-75, 50], a1: [-20, 60], a2: [0, 80], n: THUMB_N, r: [11, 9.5, 8.5] },
   { name: L('人さし指', 'index finger'), base: [-24, 8, -92], L: [43, 25, 19], b: 0, c: 0.5, yaw0: -5, yaw: [-25, 15], a1: [-25, 90], a2: [0, 105], n: [25, 45], r: [8.5, 8, 7.5] },
   { name: L('中指', 'middle finger'), base: [-4, 10, -96], L: [47, 28, 20], b: 0, c: 0.5, yaw0: 0, yaw: [-18, 18], a1: [-25, 90], a2: [0, 105], n: [25, 45], r: [8.8, 8.2, 7.6] },
   { name: L('薬指', 'ring finger'), base: [14, 5, -91], L: [44, 27, 20], b: 0, c: 0.5, yaw0: 5, yaw: [-15, 22], a1: [-25, 90], a2: [0, 105], n: [25, 45], r: [8.3, 7.8, 7.3] },
@@ -62,7 +62,12 @@ function fingerIK(F, T) {
   let yaw = Math.atan2(v[0], -v[2]);
   if (F.tw || F.pitch) { // 指の面が斜めのときは、目標が面に乗る向きをニュートン法で
     const off = y => { const B = fingerBasis(F, y); return v[0] * B.x[0] + v[1] * B.x[1] + v[2] * B.x[2]; };
-    for (let k = 0; k < 6; k++) { const f0 = off(yaw), f1 = off(yaw + 1e-3); if (Math.abs(f1 - f0) < 1e-9) break; yaw -= f0 * 1e-3 / (f1 - f0); }
+    // 1回の歩幅と範囲を制限する（範囲の端の近くで大きく飛ぶと、1コマだけ反対の端へ向くことがあった）
+    const lo = F.yaw[0] - 0.2, hi = F.yaw[1] + 0.2;
+    for (let k = 0; k < 8; k++) {
+      const f0 = off(yaw), f1 = off(yaw + 1e-3); if (Math.abs(f1 - f0) < 1e-9) break;
+      yaw = Math.min(hi, Math.max(lo, yaw - Math.max(-0.35, Math.min(0.35, f0 * 1e-3 / (f1 - f0)))));
+    }
   }
   if (yaw < F.yaw[0]) { yaw = F.yaw[0]; lim = true; }
   if (yaw > F.yaw[1]) { yaw = F.yaw[1]; lim = true; }
@@ -139,11 +144,23 @@ const smooth = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
 const lerp3 = (a, b, s) => [a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s, a[2] + (b[2] - a[2]) * s];
 
 // 鍵の押しこみの深さ（0〜DEPTH）。t0 で触れ、25ms で底へ、t1 から 30ms で戻る
+// 最小ジャークの曲線（速さも加速度も 0 から始まり 0 で終わる。3次の smoothstep は動き出しの加速度がいきなり大きく、機械のように見えた）
+const ease5 = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * x * (10 + x * (6 * x - 15));
+// 打鍵: 指は鍵に着いたときの速さ VC のまま押し下げ、TK 秒で底に着いて止まる（前は鍵の上でいったん止まってから押していた）
+const TK = 0.035, VC = 1.5 * KB.DEPTH / TK, TR = 0.12;
+function keyDown(n, t) { // 押しこんでいる深さ（鍵に着いてから）
+  const s = Math.min(1, (t - n.t0) / TK), w = 1.5;
+  return t <= n.t0 ? 0 : KB.DEPTH * (w * s + (3 - 2 * w) * s * s + (w - 2) * s * s * s);
+}
+// 離すとき: 指先の、鍵の上面からの高さ（負は鍵を押しこんだまま）。底から LIFT の高さまで TR 秒でなめらかに上がり、鍵もいっしょに上がる
+function releaseY(n, t) {
+  const d0 = keyDown(n, n.t1);
+  return -d0 + (d0 + LIFT) * ease5((t - n.t1) / TR);
+}
 function pressDepth(n, t) {
-  if (t < n.t0 || t > n.t1 + 0.03) return 0;
-  if (t < n.t0 + 0.025) return KB.DEPTH * smooth((t - n.t0) / 0.025);
-  if (t <= n.t1) return KB.DEPTH;
-  return KB.DEPTH * (1 - smooth((t - n.t1) / 0.03));
+  if (t < n.t0) return 0;
+  if (t <= n.t1) return keyDown(n, t);
+  return Math.max(0, -releaseY(n, t));
 }
 
 // 曲全体: 右手・左手の計画と、すべての音
@@ -388,31 +405,59 @@ function fingerTarget(plan, f, t, W) {
   const nt = toWorld(W, TIP_N[f]);
   const rest = [nt[0], Math.max(nt[1], Math.max(surfaceZ(nt[2]), surfaceZ(nt[2] - 8)) + PAD) + LIFT * 0.35, nt[2]];
 
-  if (p && t <= p.t1 + 0.03) { // 押している
+  if (p && t <= p.t1) { // 押している
     const P = pressPoint(p.m, f);
-    return { T: [P[0], P[1] - pressDepth(p, t), P[2]], press: p, down: t <= p.t1, mob: 0 };
+    return { T: [P[0], P[1] - pressDepth(p, t), P[2]], R: rest, press: p, down: true, mob: 0 };
   }
-  let S = rest, sT = -Infinity, mob0 = 1;
-  if (p) { // 離したあと: 浮かせて、すぐ力を抜いた形へ（前の鍵の上に残ると、手が動いたときに置いていかれる）
-    const P = pressPoint(p.m, f);
-    const up = [P[0], P[1] + LIFT * smooth((t - p.t1 - 0.03) / 0.09), P[2]];
-    S = lerp3(up, rest, smooth((t - p.t1 - 0.04) / 0.15));
-    sT = p.t1 + 0.03;
-    mob0 = smooth((t - sT) / 0.12); // 離したあとも、なめらかに動かせるようになる
+  let S = rest, sT = -Infinity, mob0 = 1, rel = null;
+  if (p) { // 離したあと: 鍵といっしょに上がり、とちゅうから力を抜いた形へ（前の鍵の上に残ると、手が動いたときに置いていかれる）
+    const P = pressPoint(p.m, f), y = releaseY(p, t);
+    S = lerp3([P[0], P[1] + y, P[2]], rest, ease5((t - p.t1 - 0.03) / 0.16));
+    if (y < 0) rel = p; // まだ鍵を押しこんでいる
+    sT = p.t1;
+    mob0 = ease5((t - sT - 0.02) / 0.12); // 離したあとも、なめらかに動かせるようになる
   }
   if (n) {
     const ta = Math.max(sT, n.t0 - LOOK);
     if (t >= ta) { // ③ 先回り: 次に押す鍵の上へ。移動にはかならず時間をとる（次までが短くても一瞬で飛ばない）
       const P = pressPoint(n.m, f);
       const H = [P[0], P[1] + LIFT, P[2]];
-      const span = Math.max(1e-3, n.t0 - ta), tb = ta + Math.max(span - 0.05, span * 0.6);
-      const Q = lerp3(S, H, smooth((t - ta) / (tb - ta)));
-      Q[1] += (P[1] - H[1]) * smooth((t - tb) / Math.max(1e-3, n.t0 - tb));
+      const span = Math.max(1e-3, n.t0 - ta), Td = Math.min(0.08, span * 0.4), tb = n.t0 - Td;
+      // 横の移動は、下ろしはじめてからも少し続く（動きを順番に1つずつ終わらせると機械のように見えた）
+      const Q = lerp3(S, H, ease5((t - ta) / Math.max(1e-3, tb + 0.5 * Td - ta)));
+      if (t > tb) { // 下ろす: 鍵に着く時刻 t0 に速さ VC で着き、そのまま押しこむ（keyDown）
+        const s = (t - tb) / Td, w = Math.min(3.8, Math.max(0.3, VC * Td / LIFT));
+        Q[1] -= LIFT * ((4 - w) * s * s * s + (w - 3) * s * s * s * s);
+      }
       // よけにくさ（0 = 動かせない）。下ろしはじめる少し前から、なめらかに動かせなくなる
-      return { T: Q, next: n, mob: Math.min(mob0, 1 - smooth((t - (tb - 0.12)) / 0.12)) };
+      return { T: Q, R: rest, next: n, press: rel, mob: Math.min(mob0, 1 - ease5((t - (tb - 0.12)) / 0.12)) };
     }
   }
-  return { T: S, mob: mob0 };
+  return { T: S, R: rest, press: rel, mob: mob0 };
+}
+
+// ④ となりの指へのつられ（腱と筋肉を共有しているので、1本だけ動かしてもほかの指が少しついてくる）と、空中のゆらぎ。
+// COUPLE[f][g]: 指 f が上下した量の何倍だけ、指 g が同じ向きに動くか。Häger-Ross & Schieber (2000) の「1本だけ動かしたときの、
+// ほかの指の動きの割合」（つられにくさ: 親指 0.98・人さし指 0.98・中指 0.94・薬指 0.91・小指 0.94）から、となりの指ほど
+// 大きくなるように割りふった目安（論文は指ごとの組の値を出していない）。親指はほとんどつられない
+const COUPLE = { 2: { 3: 0.07 }, 3: { 2: 0.10, 4: 0.12 }, 4: { 3: 0.15, 5: 0.17 }, 5: { 4: 0.18, 3: 0.04 } };
+// 空中のゆらぎ（mm、このアプリの目安）: 指を浮かせて止めておくときの、ゆっくりした小さなゆれ。8〜12Hz の生理的振戦は
+// 小さすぎて見えないので入れない。時刻から決まるので、巻きもどしても同じ動き
+const SWAY = 0.5;
+function coupleAndSway(tg, W, t) {
+  const loc = [null], dy = [0];
+  for (let f = 1; f <= 5; f++) { loc.push(toLocal(W, tg[f].T)); dy.push(loc[f][1] - toLocal(W, tg[f].R)[1]); }
+  const tau = 2 * Math.PI * t;
+  for (let g = 1; g <= 5; g++) {
+    const m = tg[g].mob;
+    if (m <= 0) continue;
+    let c = 0;
+    for (let f = 2; f <= 5; f++) c += ((COUPLE[f] && COUPLE[f][g]) || 0) * dy[f];
+    const sw = SWAY * (0.6 * Math.sin(tau * (0.31 + 0.07 * g) + 1.7 * g) + 0.4 * Math.sin(tau * (0.83 + 0.05 * g) + 4.1 * g));
+    loc[g][1] += (c + sw) * m;
+    loc[g][0] += SWAY * 0.6 * Math.sin(tau * (0.27 + 0.06 * g) + 2.3 * g) * m;
+    tg[g].T = toWorld(W, loc[g]);
+  }
 }
 
 // ④ 人さし指〜小指は横の並びを入れかえられない。動かしやすい指（mob が大きい）ほど多くよけて、指先どうしを FGAP 以上はなす。
@@ -460,6 +505,7 @@ function poseAt(plan, t) {
   const fingers = [null];
   const tgs = [null];
   for (let f = 1; f <= 5; f++) tgs.push(fingerTarget(plan, f, t, W));
+  coupleAndSway(tgs, W, t);
   keepOrder(tgs, W);
   for (let f = 1; f <= 5; f++) {
     const F = FINGERS[f];

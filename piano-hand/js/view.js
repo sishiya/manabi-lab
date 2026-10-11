@@ -361,9 +361,23 @@ function updateCam(poses) {
   c.lookAt(tx, CAM.tg[1], CAM.tg[2]);
 }
 function initCamera(canvas) {
-  let drag = null;
-  canvas.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); });
+  // 指（マウス）ごとの位置。1本はドラッグで向き、2本はピンチで寄る・引く（一人称では体を前後に）
+  const pts = new Map();
+  let drag = null, pinch = 0;
+  const zoom = k => { // k > 1 で引く
+    if (CAM.pov) CAM.lean = Math.min(1.8, Math.max(0.7, (CAM.lean || 1) * k));
+    else CAM.d = Math.min(2400, Math.max(160, CAM.d * k));
+  };
+  const span = () => { const [p, q] = [...pts.values()]; return Math.hypot(p.x - q.x, p.y - q.y); };
+  canvas.addEventListener('pointerdown', e => {
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* 取れなくても続ける */ }
+    if (pts.size === 1) drag = { x: e.clientX, y: e.clientY };
+    else { drag = null; pinch = span(); }
+  });
   canvas.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size >= 2) { const d = span(); if (pinch > 0 && d > 0) zoom(pinch / d); pinch = d; return; }
     if (!drag) return;
     if (CAM.pov) { // 一人称では、見る向きを少しだけずらせる
       CAM.look[0] = Math.max(-250, Math.min(250, CAM.look[0] - (e.clientX - drag.x) * 0.8));
@@ -374,8 +388,13 @@ function initCamera(canvas) {
     CAM.ph = Math.min(1.5, Math.max(0.02, CAM.ph - (e.clientY - drag.y) * 0.006));
     drag = { x: e.clientX, y: e.clientY };
   });
-  canvas.addEventListener('pointerup', () => { drag = null; });
-  canvas.addEventListener('wheel', e => { e.preventDefault(); if (CAM.pov) { CAM.lean = Math.min(1.8, Math.max(0.7, (CAM.lean || 1) * Math.exp(e.deltaY * 0.001))); return; } CAM.d = Math.min(2400, Math.max(160, CAM.d * Math.exp(e.deltaY * 0.001))); }, { passive: false });
+  const up = e => { // 2本から1本に戻ったら、残った指でドラッグを続ける（飛ばないように位置から取り直す）
+    pts.delete(e.pointerId); pinch = 0;
+    if (pts.size === 1) { const p = [...pts.values()][0]; drag = { x: p.x, y: p.y }; } else if (!pts.size) drag = null;
+  };
+  canvas.addEventListener('pointerup', up);
+  canvas.addEventListener('pointercancel', up);
+  canvas.addEventListener('wheel', e => { e.preventDefault(); zoom(Math.exp(e.deltaY * 0.001)); }, { passive: false });
 }
 function resizeView() {
   const c = V.r.domElement, w = c.clientWidth, h = c.clientHeight;
