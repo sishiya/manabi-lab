@@ -132,6 +132,7 @@ window.__look = v => { const s = document.getElementById('handLook'); s.value = 
 window.__snapBig = (eye, tgt = [-20, 0, -50], side = 1) => {
   const hi = __ph.S.plan.hands.findIndex(h => h.side === side); step();
   const W = __ph.poseAt(__ph.S.t, hi).W, s = HAND.s, cv = V.r.domElement;
+  if (!cv.width) { V.r.setSize(1110, 742, false); V.cam.aspect = 1110 / 742; V.cam.updateProjectionMatrix(); } // 画面が隠れていると描画の大きさが 0 になる
   __iso(true); const bg = V.scene.background; V.scene.background = new THREE.Color(0x30343c);
   const tg = [W[0] + tgt[0] * s * side, W[1] + tgt[1] * s, W[2] + tgt[2] * s];
   V.cam.position.set(tg[0] + eye[0] * side, tg[1] + eye[1], tg[2] + eye[2]); V.cam.up.set(0, 1, 0); V.cam.lookAt(...tg); V.cam.updateMatrixWorld();
@@ -177,3 +178,19 @@ window.__radialTable = P => { P = P || __P(); const { s, h } = mcEnds(2), out = 
     for (const [nm, d] of [['外', [-1, 0, 0]], ['外上', [-0.707, 0.707, 0]], ['甲', [0, 1, 0]]]) r.push(nm + ' ' + __march(P, p, d).toFixed(1));
     out.push('u=' + u + ' ' + r.join(' ')); }
   return out.join('\n'); };
+// __posed(t, hi) … 時刻 t の皮ふの頂点を CPU で動かす（GPU のスキニングと同じ: 4本の骨の重み＋関節の内側のふくらみ）
+window.__posed = (t, hi = 0) => { const S = SKIN_DATA, P = __ph.poseAt(t, hi), B = poseBones(P), M = new Float32Array(N_BONES * 16); skinMatrices(S, B, M); const fl = new Float32Array(N_BONES); jointFlex(P, fl);
+  const out = new Float32Array(S.NV * 3), pos = S.pos0, bi = S.bi, bw = S.bw, aJ = S.aJ, nrm = S.nrm0;
+  for (let v = 0; v < S.NV; v++) { const x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2], inf = aJ[v * 2 + 1] * fl[aJ[v * 2]] * 2.6, px = x + nrm[v * 3] * inf, py = y + nrm[v * 3 + 1] * inf, pz = z + nrm[v * 3 + 2] * inf; let a = 0, b = 0, c = 0;
+    for (let k = 0; k < 4; k++) { const bb = bi[v * 4 + k], w = bw[v * 4 + k]; if (!w) continue; const e = M.subarray(bb * 16, bb * 16 + 16); a += w * (e[0] * px + e[4] * py + e[8] * pz + e[12]); b += w * (e[1] * px + e[5] * py + e[9] * pz + e[13]); c += w * (e[2] * px + e[6] * py + e[10] * pz + e[14]); }
+    out[v * 3] = a; out[v * 3 + 1] = b; out[v * 3 + 2] = c; }
+  return { out, M, B, P }; };
+// __creases(t, box) … 親指と人さし指のあいだ（網の姿勢で x < box.x1 など）の、となりの三角形どうしの折れ角。休みの形と時刻 t の姿勢でくらべる
+window.__creases = (t, box = { x1: -5, z0: -95, z1: -10 }, hi = 0) => { const S = SKIN_DATA, { out } = __posed(t, hi), idx = S.idx, P0 = S.pos0;
+  const fn = (A, a, b, c) => { const u = [A[b * 3] - A[a * 3], A[b * 3 + 1] - A[a * 3 + 1], A[b * 3 + 2] - A[a * 3 + 2]], w = [A[c * 3] - A[a * 3], A[c * 3 + 1] - A[a * 3 + 1], A[c * 3 + 2] - A[a * 3 + 2]]; const n = cross3(u, w), l = Math.hypot(...n) || 1; return n.map(x => x / l); };
+  const edges = new Map();
+  for (let t3 = 0; t3 < idx.length; t3 += 3) { const a = idx[t3], b = idx[t3 + 1], c = idx[t3 + 2], cx = (P0[a * 3] + P0[b * 3] + P0[c * 3]) / 3, cz = (P0[a * 3 + 2] + P0[b * 3 + 2] + P0[c * 3 + 2]) / 3;
+    if (cx > box.x1 || cz > box.z1 || cz < box.z0) continue; const n0 = fn(P0, a, b, c), n1 = fn(out, a, b, c);
+    for (const [p, q] of [[a, b], [b, c], [c, a]]) { const k = p < q ? p + '_' + q : q + '_' + p, e = edges.get(k); if (e) e.push([n0, n1]); else edges.set(k, [[n0, n1]]); } }
+  const res = []; for (const [k, e] of edges) { if (e.length < 2) continue; const p = +k.split('_')[0]; res.push([Math.acos(Math.min(1, dot3(e[0][1], e[1][1]))) * 57.3, Math.acos(Math.min(1, dot3(e[0][0], e[1][0]))) * 57.3, [P0[p * 3], P0[p * 3 + 1], P0[p * 3 + 2]]]); }
+  return res.sort((x, y) => y[0] - x[0]); };

@@ -140,12 +140,14 @@ function makeSkinHand(sc, side) {
   // 爪: 末節骨の座標軸をそのまま物体の行列にする（網は骨の座標で持っている）
   // 爪は半透明（下の爪床の桃色と、先の白いふちが透けて見える）。つやは強く
   // v031〜: ふち（両わき・根もと）はなめらかに透明にして皮ふへ溶かし（境目が線に見えないように）、表面には縦の細いすじ。先の白いはみ出しは少しにごる
-  const nailMat = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.18, clearcoat: 1.0, clearcoatRoughness: 0.05, envMapIntensity: 1.0, side: THREE.DoubleSide, transparent: true, opacity: 0.88, depthWrite: false, emissive: new THREE.Color(0.05, 0.015, 0.012) });
+  // v035〜（ユーザー「テカリをもうすこしマイルドに。人間の爪っぽく」）: つや roughness 0.18 → 0.3・clearcoat 1.0 → 0.5・その荒さ 0.05 → 0.18、映りこみ 1.0 → 0.7。
+  // 皮ふと重なる付け根でちらつかない（どちらを描くかが毎コマ入れかわっていた）よう、爪を少しだけ手前に描く（polygonOffset）
+  const nailMat = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.3, clearcoat: 0.5, clearcoatRoughness: 0.18, envMapIntensity: 0.7, side: THREE.DoubleSide, transparent: true, opacity: 0.8, depthWrite: false, emissive: new THREE.Color(0.05, 0.015, 0.012), polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -8 });
   nailMat.onBeforeCompile = sh => {
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec2 aNail; varying vec2 vNail;').replace('#include <begin_vertex>', '#include <begin_vertex>\n  vNail = aNail;');
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vNail;')
       .replace('#include <color_fragment>', '#include <color_fragment>\n  { float sd = abs(vNail.y * 2.0 - 1.0); diffuseColor.a *= (1.0 - smoothstep(0.7, 1.0, sd)) * smoothstep(0.0, 0.12, vNail.x) * (vNail.x > 0.9 ? 1.25 : 1.0); }')
-      .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n  { float h = 0.012 * sin(vNail.y * 75.0 + sin(vNail.x * 7.0) * 0.8) * smoothstep(0.1, 0.4, vNail.x); vec3 sx = dFdx(-vViewPosition), sy = dFdy(-vViewPosition); vec3 nr1 = cross(sy, normal), nr2 = cross(normal, sx); float det = dot(sx, nr1); normal = normalize(abs(det) * normal - sign(det) * (dFdx(h) * nr1 + dFdy(h) * nr2)); }');
+      .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n  { float h = 0.004 * sin(vNail.y * 75.0 + sin(vNail.x * 7.0) * 0.8) * smoothstep(0.1, 0.4, vNail.x); vec3 sx = dFdx(-vViewPosition), sy = dFdy(-vViewPosition); vec3 nr1 = cross(sy, normal), nr2 = cross(normal, sx); float det = dot(sx, nr1); normal = normalize(abs(det) * normal - sign(det) * (dFdx(h) * nr1 + dFdy(h) * nr2)); }');
   };
   nailMat.customProgramCacheKey = () => 'nail'; // 変数名に r1・r2 を使わない（three.js の中に #define r1 0.8 があり、数字に化けてシェーダーが壊れた）
   const nails = S.nails.map(N => {
