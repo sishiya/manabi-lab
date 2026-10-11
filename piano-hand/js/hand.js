@@ -27,6 +27,13 @@ const LOOK = 0.7;       // 次の音へ先回りを始める早さ（秒）
 // base: 付け根の関節（親指は CM 関節、ほかは MP 関節）の位置。b: 付け根の下向きの傾き。c: 2つめの曲げに3つめが連動する割合
 // pitch: 指の向きそのものの前下がり、tw: 曲がる面のねじれ（+ で手のひらの側へ）。親指は手のひらの側へ斜めに曲がり、指の腹が人さし指の方を向く
 const THUMB_PITCH = 10, THUMB_TW = 45, THUMB_N = [0, 35];
+// 押していない親指の、付け根の関節・第1関節の曲げの下限（度。2つの関節を合わせた a2、第1関節はその 0.8 倍）。v049〜、ユーザーの指摘「親指が反る」。
+// 力を抜いた親指の先は白鍵の上面より約 15mm 下にあり、鍵が指を支える（休む指を鍵の上面に乗せる）とき、計算が親指をまっすぐ（0°）に伸ばして
+// 届かせていたので、反って見えた。本物の休んでいる親指は少し曲がったまま鍵に乗る（第1関節をそらしてつぶすのはピアノの先生が直す癖）。
+// 足りない高さは付け根（CM 関節）の曲げで合わせる。値は目安
+const THUMB_REST_A2 = 20 * Math.PI / 180;
+// 親指の目標（手の座標）が手のひらの外（x < −40mm）なら下限いっぱい、手のひらの下（x > −25mm）なら 0、あいだはなめらかに
+const thumbRestMin = Tl => { const u = Math.max(0, Math.min(1, (-25 - Tl[0]) / 15)); return THUMB_REST_A2 * u * u * (3 - 2 * u); };
 // 骨の長さ L（mm）: [中手骨（親指だけ）または基節, 中節または基節, 末節の関節 → 指の腹の中心]。Buryanov & Kotiuk (2010, Int J Morphol 28(3))
 // の成人 66 人の X 線写真の、関節から関節までの長さの平均。最後の L[2] は、末節骨＋指先の肉（親指 21.7+5.7、人さし指 15.8+3.8、中指 17.4+4.0、
 // 薬指 17.3+4.0、小指 16.0+3.7）から、皮ふの指先の太さ（RADII の最後）を引いた長さ（皮ふは指の腹の中心からその太さだけ先まである。
@@ -77,7 +84,9 @@ function planarQ(F, a2) {
   return [F.L[0] + F.L[1] * Math.cos(p2) + F.L[2] * Math.cos(p3), F.L[1] * Math.sin(p2) + F.L[2] * Math.sin(p3)];
 }
 // 逆運動学: 手の座標の目標 T に指先を合わせる角度。lim は関節の範囲で止められたか
-function fingerIK(F, T) {
+// minA2（v049〜）: 2つめの曲げの下限。押していない親指で使う（THUMB_REST_A2）。目標が遠くて下限より曲げたままでは届かないときは、
+// 付け根の曲げ a1 で指先の高さを目標に合わせる（横は少し手前に残る）
+function fingerIK(F, T, minA2 = 0) {
   const v = [T[0] - F.base[0], T[1] - F.base[1], T[2] - F.base[2]];
   let lim = false;
   let yaw = Math.atan2(v[0], -v[2]);
@@ -109,6 +118,15 @@ function fingerIK(F, T) {
   let a1 = Math.atan2(dn, h) - Math.atan2(q[1], q[0]) - F.b;
   if (a1 < F.a1[0]) { a1 = F.a1[0]; lim = true; }
   if (a1 > F.a1[1]) { a1 = F.a1[1]; lim = true; }
+  if (a2 < minA2) { // 曲げたまま、指先の高さを合わせる（付け根の曲げを探す）
+    a2 = minA2;
+    const ty = T[1], tipY = a => fingerFK(F, yaw, a, a2)[3][1];
+    let best = a1, bc = Infinity;
+    for (let k = 0; k <= 40; k++) { const a = F.a1[0] + (F.a1[1] - F.a1[0]) * k / 40, c = Math.abs(tipY(a) - ty); if (c < bc) { bc = c; best = a; } }
+    const st = (F.a1[1] - F.a1[0]) / 40;
+    for (let k = -10; k <= 10; k++) { const a = Math.max(F.a1[0], Math.min(F.a1[1], best + st * k / 10)), c = Math.abs(tipY(a) - ty); if (c < bc) { bc = c; best = a; } }
+    a1 = best;
+  }
   return { yaw, a1, a2, lim };
 }
 
@@ -822,14 +840,18 @@ function poseAt(plan, t) {
   for (let f = 1; f <= 5; f++) {
     const F = FINGERS[f];
     const tg = tgs[f];
-    let ik = fingerIK(F, toLocal(W, tg.T));
+    // 押していない親指は、第1関節・付け根の関節を THUMB_REST_A2 より伸ばさない（v049〜）。ただし親指が手のひらの下にあるとき（親指くぐり）は
+    // 入れない（練習曲の親指くぐりで、持ち上げた親指が曲がったまま手のひらの下を通り、よける動きで薬指が押していない鍵へ 8.7mm もぐった）
+    // 離すとき（鍵がまだ戻りきらない tg.press）も入れる（離した瞬間に親指がまっすぐに伸びていた。和音の曲で押していない時間の 2 割）
+    const minA2 = f === 1 && !tg.down ? thumbRestMin(toLocal(W, tg.T)) : 0;
+    let ik = fingerIK(F, toLocal(W, tg.T), minA2);
     let pts = fingerFK(F, ik.yaw, ik.a1, ik.a2).map(p => toWorld(W, p));
     // 押していない指が目標に届かず（関節の限界など）、ずれた先で鍵の中に入ったら、その場所の鍵の上面に乗せて解き直す（鍵が指を支える）
     if (!tg.down && !tg.press) for (let it = 0; it < 2; it++) {
       const q = pts[3], sf = surfaceAt(q[0], q[2]), sink = sf + PAD - q[1];
       if (!(sink > 0.2)) break;
       tg.T = [tg.T[0], tg.T[1] + sink, tg.T[2]];
-      ik = fingerIK(F, toLocal(W, tg.T)); pts = fingerFK(F, ik.yaw, ik.a1, ik.a2).map(p => toWorld(W, p));
+      ik = fingerIK(F, toLocal(W, tg.T), minA2); pts = fingerFK(F, ik.yaw, ik.a1, ik.a2).map(p => toWorld(W, p));
     }
     const tip = pts[3];
     const err = Math.hypot(tip[0] - tg.T[0], tip[1] - tg.T[1], tip[2] - tg.T[2]);
@@ -901,7 +923,7 @@ function avoidBones(fingers, tgs, W) {
       const lever = Math.max(8, Math.hypot(me[0] - fp.pts[0][0], me[2] - fp.pts[0][2])), arm = Math.hypot(fp.pts[3][0] - fp.pts[0][0], fp.pts[3][2] - fp.pts[0][2]);
       const push = Math.min(15, worst * 1.15 * arm / lever) * tgs[k].mob;
       const T = tgs[k].T = [tgs[k].T[0] + dx * push, tgs[k].T[1], tgs[k].T[2] + dz * push];
-      const F = FINGERS[k], ik = fingerIK(F, toLocal(W, T)), pts = fingerFK(F, ik.yaw, ik.a1, ik.a2).map(p => toWorld(W, p));
+      const F = FINGERS[k], ik = fingerIK(F, toLocal(W, T), k === 1 && !fingers[k].down ? thumbRestMin(toLocal(W, T)) : 0), pts = fingerFK(F, ik.yaw, ik.a1, ik.a2).map(p => toWorld(W, p));
       Object.assign(fingers[k], { pts, target: T, err: fingers[k].press ? Math.hypot(pts[3][0] - T[0], pts[3][1] - T[1], pts[3][2] - T[2]) : 0, lim: ik.lim, ang: ik });
       moved = true;
     }
