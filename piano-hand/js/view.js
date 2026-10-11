@@ -154,10 +154,10 @@ function setViewPlan(score) {
     const mat = new THREE.MeshPhysicalMaterial({ color: c.clone().multiplyScalar(0.55), emissive: c, emissiveIntensity: 0.35, roughness: 0.35, clearcoat: 1, clearcoatRoughness: 0.2, clippingPlanes: CLIP, transparent: !n.f, opacity: n.f ? 1 : 0.45 });
     const box = new THREE.Mesh(roundRect(w, L, 3.5), mat);
     // お手本の運指とちがう音は「推定/お手本」を赤い丸で
-    const miss = n.f && n.ref && n.ref !== n.f;
+    const miss = n.f && n.ref && !sameFing(n);
     // 届かずに押せなかった音は、灰色にして「指✕」
     if (n.miss) { mat.color.setRGB(0.18, 0.19, 0.21); mat.emissive.setRGB(0.12, 0.12, 0.13); mat.transparent = true; mat.opacity = 0.55; }
-    const lab = makeLabel(n.miss ? n.f + '✕' : n.f ? (miss ? n.f + '/' + n.ref : String(n.f)) : '·', '#fff', n.miss ? 0x5f636b : miss ? 0xc0392b : 0x1d2230);
+    const lab = makeLabel(n.miss ? n.f + '✕' : n.f ? (miss ? fmtFing(n.f, n.fh) + '/' + fmtFing(n.ref, n.refH) : fmtFing(n.f, n.fh)) : '·', '#fff', n.miss ? 0x5f636b : miss ? 0xc0392b : 0x1d2230);
     lab.scale.set(miss || n.miss ? 13 : 10, miss || n.miss ? 13 : 10, 1);
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: V.glowTex, color: c, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
     V.scene.add(box); V.scene.add(lab); V.scene.add(halo);

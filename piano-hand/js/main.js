@@ -117,10 +117,10 @@ function setSong(song) {
   renderFgNow(song);
   $('fgCost').textContent = S.plan.cost.toFixed(1);
   $('fgList').innerHTML = S.plan.hands.map(h => '<p class="fg-hand">' + HAND_NAME(h.side) + '</p>' + h.notes.map(n =>
-    `<span data-t="${n.t0}" style="border-color:#${FCOL[n.f].toString(16)}">${noteName(n.m)}<b>${n.f}</b>${n.alt ? L('<i>変</i>', '<i title="changed for this hand size">C</i>') : n.std || !FG_STD ? '' : L('<i>推</i>', '<i title="chosen by the computer">E</i>')}</span>`).join('')).join('');
+    `<span data-t="${n.t0}" style="border-color:#${FCOL[n.f].toString(16)}">${noteName(n.m)}<b>${fmtFing(n.f, n.fh)}</b>${n.alt ? L('<i>変</i>', '<i title="changed for this hand size">C</i>') : n.std || !FG_STD ? '' : L('<i>推</i>', '<i title="chosen by the computer">E</i>')}</span>`).join('')).join('');
   const fm = fingeringMatch(S.plan);
   const alt = S.plan.notes.filter(n => n.alt);
-  const difList = ns => ns.slice(0, 12).map(n => '<span class="dif" data-t="' + n.t0 + '">' + noteName(n.m) + ' ' + n.f + '→' + n.ref + '</span>').join(' ') + (ns.length > 12 ? L(' ほか ', ' and ') + (ns.length - 12) + L('', ' more') : '');
+  const difList = ns => ns.slice(0, 12).map(n => '<span class="dif" data-t="' + n.t0 + '">' + noteName(n.m) + ' ' + fmtFing(n.f, n.fh) + '→' + fmtFing(n.ref, n.refH) + '</span>').join(' ') + (ns.length > 12 ? L(' ほか ', ' and ') + (ns.length - 12) + L('', ' more') : '');
   $('fgRef').innerHTML = !fm.length ? L('この曲には一般的な運指のデータがないので、コンピュータの推定で弾いています。', "This piece has no standard fingering data, so it is played with the computer's estimate.")
     : FG_STD ? L('一般的な運指で弾いています。', 'Playing with the standard fingering.') + (alt.length
       ? L('<br>この手の大きさでは届かないので、コンピュータが選び直した音（いまの指 → 一般的な運指）: ', '<br>Notes the computer re-chose because this hand cannot reach (now → standard): ') + difList(alt) + L('<br><small>ノーツの上の赤い丸「いま/一般的」が選び直した音です（推定）。</small>', '<br><small>A red circle "now/standard" on a note marks a re-chosen note (an estimate).</small>')

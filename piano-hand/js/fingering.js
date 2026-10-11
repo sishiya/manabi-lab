@@ -111,7 +111,7 @@ function tripleCost(m1, f1, m2, f2, m3, f3, gap) {
 // 同時に押す音（30ms 以内に始まる音）は和音として1つの「イベント」にまとめる。和音がなければ、これまでのメロディの計算（planMelody）。
 // 届かない和音は内側の音から外し、外した音に n.drop = true をつける（手で弾かない音になる）
 function planFingering(notes, side) {
-  const mir = notes.map(n => ({ m: side < 0 ? 124 - n.m : n.m, t0: n.t0, t1: n.t1, given: n.given, src: n }));
+  const mir = notes.map(n => ({ m: side < 0 ? 124 - n.m : n.m, t0: n.t0, t1: n.t1, given: n.given, givenHold: n.givenHold, src: n }));
   mir.sort((a, b) => a.t0 - b.t0 || a.m - b.m);
   const ev = [];
   for (const n of mir) {
@@ -121,7 +121,7 @@ function planFingering(notes, side) {
   let cost;
   if (ev.every(e => e.ns.length === 1)) cost = planMelody(mir);
   else cost = planChords(ev);
-  for (const n of mir) { n.src.f = n.f; if (n.drop) n.src.drop = true; }
+  for (const n of mir) { n.src.f = n.f; n.src.fh = n.fh || 0; if (n.drop) n.src.drop = true; }
   return cost;
 }
 
@@ -219,39 +219,69 @@ function planChords(ev) {
   return total;
 }
 
-// ---- メロディ（単音だけ）: 3音の規則があるので、状態を「前の指・いまの指」の組にした動的計画法 ----
+// ---- 押さえたまま指をかえる（指の置きかえ、v044〜）----
+// 長くのばす音は、押した指（f）から別の指（g）へ、鍵を押さえたままかえられる。次の音へは g から数える。
+// 教本の「4-5」（4 で押して 5 にかえる）。きらきら星のソで使う（Baylor Piano Basics 13.8）。
+// のばす長さ SUB_MIN 秒以上の単音だけ。罰点 SUB_COST はこの検証で決めた値（目安）
+// SUB_COST: 2〜3 だと推定がかえ指を多用して教本と合わなくなった（歓喜の歌 30/30 → 22/30・答え合わせ 664 → 634）。4 以上で前と同じ 664/704。
+// SUB_ADJ: となりの指どうしだけ（楽譜に書かれた置きかえはどの指でも）。2026-10-11 の答え合わせで決めた値
+let SUB_MIN = 0.4, SUB_COST = 6, SUB_ADJ = true;
+// 音ごとの指の選び方: [押す指, かえた先の指]（かえないなら同じ）。楽譜の運指（given・givenHold）があればそれだけ。
+// given だけでかえる指が書かれていなければ、かえない
+function fingerOpts(n) {
+  const out = [];
+  const long = n.t1 - n.t0 >= SUB_MIN;
+  for (let f = 1; f <= 5; f++) {
+    if (n.given && n.given !== f) continue;
+    for (let g = 1; g <= 5; g++) {
+      if (g !== f && (!long || (n.given && !n.givenHold) || (SUB_ADJ && Math.abs(g - f) !== 1 && n.givenHold !== g))) continue;
+      if (n.givenHold && n.givenHold !== g) continue;
+      out.push([f, g]);
+    }
+  }
+  return out;
+}
+
+// ---- メロディ（単音だけ）: 3音の規則があるので、状態を「前の音の指・いまの音の指」の組にした動的計画法 ----
+// 指は fingerOpts の [押す指, かえた先の指]。前の音からは、かえた先の指（g）で数える
 function planMelody(notes) {
   const N = notes.length;
   if (!N) return 0;
-  const ok = (i, f) => !notes[i].given || notes[i].given === f;
-  if (N === 1) { notes[0].f = notes[0].given || 1; return noteCost(notes[0].m, notes[0].f); }
-  const idx = (p, q) => p * 6 + q;
+  const O = notes.map(fingerOpts);
+  const own = (i, o) => noteCost(notes[i].m, o[0]) + (o[0] !== o[1] ? SUB_COST : 0);
+  if (N === 1) { const o = O[0].reduce((a, b) => own(0, b) < own(0, a) ? b : a); notes[0].f = o[0]; notes[0].fh = o[1] !== o[0] ? o[1] : 0; return own(0, o); }
+  // cost[i][p][q]: 音 i-1 の選び方 p・音 i の選び方 q までの最小
   const cost = [], from = [];
-  for (let i = 0; i < N; i++) { cost.push(new Array(36).fill(Infinity)); from.push(new Array(36).fill(0)); }
   const g01 = notes[1].t0 - notes[0].t1;
-  for (let p = 1; p <= 5; p++) for (let q = 1; q <= 5; q++) if (ok(0, p) && ok(1, q))
-    cost[1][idx(p, q)] = noteCost(notes[0].m, p) + noteCost(notes[1].m, q) + pairCost(notes[0].m, p, notes[1].m, q, g01);
+  cost[1] = O[0].map(a => O[1].map(b => own(0, a) + own(1, b) + pairCost(notes[0].m, a[1], notes[1].m, b[0], g01)));
   for (let i = 2; i < N; i++) {
     const a = notes[i - 2], b = notes[i - 1], n = notes[i];
     const gap = n.t0 - b.t1, gap3 = Math.max(gap, b.t0 - a.t1);
-    for (let p = 1; p <= 5; p++) for (let q = 1; q <= 5; q++) {
-      if (!ok(i, q)) continue;
-      const base = pairCost(b.m, p, n.m, q, gap) + noteCost(n.m, q);
-      for (let o = 1; o <= 5; o++) {
-        const prev = cost[i - 1][idx(o, p)];
-        if (prev === Infinity) continue;
-        const c = prev + base + tripleCost(a.m, o, b.m, p, n.m, q, gap3);
-        if (c < cost[i][idx(p, q)]) { cost[i][idx(p, q)] = c; from[i][idx(p, q)] = o; }
+    cost[i] = []; from[i] = [];
+    for (let p = 0; p < O[i - 1].length; p++) {
+      cost[i][p] = []; from[i][p] = [];
+      const bo = O[i - 1][p];
+      for (let q = 0; q < O[i].length; q++) {
+        const no = O[i][q];
+        const base = pairCost(b.m, bo[1], n.m, no[0], gap) + own(i, no);
+        let best = Infinity, bi = 0;
+        for (let o = 0; o < O[i - 2].length; o++) {
+          const prev = cost[i - 1][o][p];
+          if (prev === Infinity) continue;
+          const c = prev + base + tripleCost(a.m, O[i - 2][o][1], b.m, bo[1], n.m, no[0], gap3);
+          if (c < best) { best = c; bi = o; }
+        }
+        cost[i][p][q] = best; from[i][p][q] = bi;
       }
     }
   }
-  let bp = 1, bq = 1;
-  for (let p = 1; p <= 5; p++) for (let q = 1; q <= 5; q++) if (cost[N - 1][idx(p, q)] < cost[N - 1][idx(bp, bq)]) { bp = p; bq = q; }
-  const total = cost[N - 1][idx(bp, bq)];
+  let bp = 0, bq = 0;
+  cost[N - 1].forEach((row, p) => row.forEach((v, q) => { if (v < cost[N - 1][bp][bq]) { bp = p; bq = q; } }));
+  const total = cost[N - 1][bp][bq];
+  const set = (i, o) => { notes[i].f = o[0]; notes[i].fh = o[1] !== o[0] ? o[1] : 0; };
   for (let i = N - 1; i >= 1; i--) {
-    notes[i].f = bq; notes[i - 1].f = bp;
-    const o = from[i][idx(bp, bq)];
-    bq = bp; bp = o;
+    set(i, O[i][bq]); set(i - 1, O[i - 1][bp]);
+    if (i >= 2) { const o = from[i][bp][bq]; bq = bp; bp = o; }
   }
   return total;
 }

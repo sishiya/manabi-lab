@@ -124,7 +124,7 @@ function fingeringMatch(score) {
   for (const h of score.hands) {
     const ns = h.notes.filter(n => n.ref);
     if (!ns.length) continue;
-    const diff = ns.filter(n => n.ref !== n.f);
+    const diff = ns.filter(n => !sameFing(n));
     out.push({ side: h.side, same: ns.length - diff.length, total: ns.length, diff });
   }
   return out;
@@ -132,13 +132,14 @@ function fingeringMatch(score) {
 // 運指だけの答え合わせ（手の動きは計算しないので速い）: 教本の運指のある曲をまとめて
 function fingeringOnlyMatch(song) {
   const ns = parseSong(song), out = [];
-  for (const [side, h, ref] of [[1, 'R', song.refR], [-1, 'L', song.refL]]) {
-    if (!ref) continue;
+  for (const [side, h, refS] of [[1, 'R', song.refR], [-1, 'L', song.refL]]) {
+    if (!refS) continue;
+    const ref = parseRef(refS);
     const hn = ns.filter(n => n.hand === h).sort((a, b) => a.t0 - b.t0 || a.m - b.m);
     planFingering(hn, side);
     let same = 0, total = 0;
-    hn.forEach((n, i) => { if (!+ref[i]) return; total++; if (+ref[i] === n.f) same++; }); // 0 はお手本なし
-    out.push({ side, same, total, got: hn.map(n => n.f).join(''), ref });
+    hn.forEach((n, i) => { if (!ref[i] || !ref[i][0]) return; total++; if (ref[i][0] === n.f && ref[i][1] === (n.fh || n.f)) same++; }); // 0 はお手本なし
+    out.push({ side, same, total, got: hn.map(n => n.fh ? '[' + n.f + n.fh + ']' : n.f).join(''), ref: refS });
   }
   return out;
 }

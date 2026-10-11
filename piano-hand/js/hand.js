@@ -230,7 +230,11 @@ const ease5 = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * x * (10 + x * (6 * x - 15))
 const TK = 0.035, VC = 1.5 * KB.DEPTH / TK, TR = 0.12;
 // 押せたとみなす指先のずれ（mm）。指の腹の半径（約 6.5mm）の 3/4: これより離れると、指の腹が鍵の上面にしっかり当たらない（目安）
 const MISS_MM = 5;
+const SUB_OV = 0.06; // 押さえたまま指をかえるとき、2本の指が同じ鍵に乗っている時間（秒、目安）
+// 運指がお手本と同じか（押す指と、押さえたままかえた先の指の両方）
+const sameFing = n => n.f === n.ref && (n.fh || n.f) === (n.refH || n.ref);
 function keyDown(n, t) { // 押しこんでいる深さ（鍵に着いてから）
+  if (n.ghost) return t <= n.t0 ? 0 : KB.DEPTH; // 押さえたままかえた指: 鍵はもう底
   const s = Math.min(1, (t - n.t0) / TK), w = 1.5;
   return t <= n.t0 ? 0 : KB.DEPTH * (w * s + (3 - 2 * w) * s * s + (w - 2) * s * s * s);
 }
@@ -263,7 +267,7 @@ function buildPlan(song) {
     const p2 = buildPlanWith(song, free);
     if (nMiss(p2) < nMiss(plan)) plan = p2; else break;
   }
-  for (const n of plan.notes) if (n.alt && n.f === n.ref) { n.alt = false; n.std = true; } // 選び直しても同じ指になった音は「変えた」にしない
+  for (const n of plan.notes) if (n.alt && sameFing(n)) { n.alt = false; n.std = true; } // 選び直しても同じ指になった音は「変えた」にしない
   return plan;
 }
 function buildPlanWith(song, free) {
@@ -274,14 +278,14 @@ function buildPlanWith(song, free) {
   for (const side of [1, -1]) {
     const hn = notes.filter(n => (n.hand || 'R') === (side > 0 ? 'R' : 'L'));
     // 一般的な運指（n.ref）: 曲の refR・refL を手ごとに音の順に（0 は書かれていない音）。楽譜ファイルに書かれた指（n.given）もそう
-    const ref = side > 0 ? song.refR : song.refL;
+    const ref = parseRef(side > 0 ? song.refR : song.refL);
     hn.forEach((n, i) => {
       n.key = (side > 0 ? 'R' : 'L') + i;
-      if (ref && +ref[i]) n.ref = +ref[i];
-      const want = n.given || n.ref;
+      if (ref[i] && ref[i][0]) { n.ref = ref[i][0]; if (ref[i][1] !== ref[i][0]) n.refH = ref[i][1]; } // refH: 押さえたままかえた先の指
+      const want = n.given || n.ref, wantH = n.given ? n.givenHold : n.refH;
       if (!FG_STD || !want) return;
-      n.ref = want;
-      if (free && free.has(n.key)) { n.given = 0; n.alt = true; } else { n.given = want; n.std = true; }
+      n.ref = want; n.refH = wantH || 0;
+      if (free && free.has(n.key)) { n.given = 0; n.givenHold = 0; n.alt = true; } else { n.given = want; n.givenHold = wantH || 0; n.std = true; }
     });
     if (hn.length) hands.push(buildHandPlan(hn, side));
   }
@@ -332,7 +336,7 @@ function planWithPosture(notes, side, cost) {
     }
     for (let j = i + 1; j < notes.length; j++) {
       const o = notes[j];
-      if (o.f === n.f) { n.t1 = Math.min(n.t1, o.t0 - 0.09); break; }
+      if (o.f === (n.fh || n.f)) { n.t1 = Math.min(n.t1, o.t0 - 0.09); break; } // 押さえたまま指をかえた音は、かえた先の指
     }
     for (let j = i + 1; j < notes.length; j++) {
       if (notes[j].m === n.m) { n.t1 = Math.min(n.t1, notes[j].t0 - 0.06); break; }
@@ -380,8 +384,21 @@ function planWithPosture(notes, side, cost) {
   }
   const byF = [null, [], [], [], [], []];
   for (const n of notes) byF[n.f].push(n);
+  // 押さえたまま指をかえる（n.fh、v044〜）: 押して tsub 秒後に、かえる指が押さえている鍵に下りて、SUB_OV 秒重ねてから押した指が離れる。
+  // かえる指の分は「鍵が底のまま始まる音」（ghost。音は鳴らさず、鍵も沈めなおさない）として、その指の並びと手首の計算に入れる。時間は目安
+  const ghosts = [];
+  for (const n of notes) {
+    if (!n.fh || n.fh === n.f) continue;
+    n.tsub = n.t0 + Math.min(0.3, Math.max(0.15, 0.35 * (n.t1 - n.t0)));
+    if (n.t1 - n.tsub < 0.1) { n.fh = 0; continue; } // かえる時間がない
+    n.tw1 = n.tsub + SUB_OV; // 手首の計算では、押した指はここまで
+    const g = { m: n.m, t0: n.tsub, t1: n.t1, f: n.fh, ghost: true, src: n, post: n.post, deep: n.deep, art: n.art, relH: n.relH, vel: n.vel, lift: REST_OFF + 3, antic: 0.12 };
+    g.P = pressPoint(n.m, n.fh, g);
+    byF[n.fh].push(g); ghosts.push(g);
+  }
+  for (let f = 1; f <= 5; f++) byF[f].sort((a, b) => a.t0 - b.t0);
   const end = Math.max(0, ...notes.map(n => n.t1));
-  const plan = { side, notes, byF, cost, end };
+  const plan = { side, notes, byF, ghosts, cost, end };
   solveWrist(plan);
   wristStrokes(plan);
   keepAbove(plan);
@@ -421,9 +438,9 @@ function solveWrist(plan) {
   for (let i = 0; i < N; i++) {
     const t = ta + i / W_HZ, list = [];
     let best = null, bd = Infinity;
-    for (const n of ns) {
-      // 押す W_LEAD 秒前から W_PRE まで、押したら強く、離すと軽くなる
-      const k = W_FINGER[n.f] * (W_PRE * smooth((t - n.t0 + W_LEAD) / (W_LEAD - 0.02)) + (1 - W_PRE) * smooth((t - n.t0) / 0.02)) * (1 - smooth((t - n.t1) / 0.05));
+    for (const n of plan.ghosts && plan.ghosts.length ? ns.concat(plan.ghosts) : ns) {
+      // 押す W_LEAD 秒前から W_PRE まで、押したら強く、離すと軽くなる（押さえたまま指をかえた音は、押した指を tw1 まで・かえた指を ghost で）
+      const k = W_FINGER[n.f] * (W_PRE * smooth((t - n.t0 + W_LEAD) / (W_LEAD - 0.02)) + (1 - W_PRE) * smooth((t - n.t0) / 0.02)) * (1 - smooth((t - (n.tw1 || n.t1)) / 0.05));
       if (k > 0) list.push({ n, k, mul: 1 });
       const d = Math.abs(t - n.t0);
       if (d < bd) { bd = d; best = n; }
@@ -667,12 +684,18 @@ function fingerTarget(plan, f, t, W) {
   // 手が上がると指が力を抜いた形（28°）までのびながら指先が鍵の近くに残った。本物は腕を持ち上げると、指は鍵の上の形のまま手と一緒に上がる
   const wkr = wkAt(plan, t), rest = [nt[0], Math.max(key, Math.max(PAD + REST_OFF, nt[1] - wkr - REST_DROOP) + wkr), nt[2]]; // 持ち上げる前の高さ（白鍵の床）で形を決めて持ち上げた分を足す（指の形が保たれる）。黒鍵の床はそのまま
 
-  if (p && t <= p.t1) { // 押している
+  const pEnd = p ? (p.fh && p.tw1 ? Math.min(p.t1, p.tw1) : p.t1) : 0; // 押さえたまま指をかえた音は、押した指が tw1 で離れる
+  if (p && t <= pEnd) { // 押している
     const P = pressPoint(p.m, f, p);
     return { T: [P[0], P[1] - keyDrop(pressDepth(p, t), P[2]), P[2]], R: rest, press: p, down: true, mob: 0 };
   }
   let S = rest, sT = -Infinity, mob0 = 1, rel = null;
-  if (p) { // 離したあと: 鍵といっしょに上がり、とちゅうから力を抜いた形へ（前の鍵の上に残ると、手が動いたときに置いていかれる）
+  if (p && pEnd < p.t1) { // 指をかえて離れた: 鍵は底のまま（かえた指が押さえている）、指だけ上がって力を抜いた形へ
+    const P = pressPoint(p.m, f, p);
+    S = lerp3([P[0], P[1] - keyDrop(KB.DEPTH, P[2]), P[2]], rest, ease5((t - pEnd) / 0.16));
+    sT = pEnd;
+    mob0 = ease5((t - sT - 0.02) / 0.12);
+  } else if (p) { // 離したあと: 鍵といっしょに上がり、とちゅうから力を抜いた形へ（前の鍵の上に残ると、手が動いたときに置いていかれる）
     const P = pressPoint(p.m, f, p), y0 = releaseY(p, t), y = y0 >= 0 ? y0 : -keyDrop(-y0, P[2]); // 鍵を押しこんでいる間は、その場所の鍵の沈み
     S = lerp3([P[0], P[1] + y, P[2]], rest, ease5((t - p.t1 - 0.03) / 0.16));
     if (y0 < 0) rel = p; // まだ鍵を押しこんでいる
@@ -683,6 +706,7 @@ function fingerTarget(plan, f, t, W) {
     const ta = Math.max(sT, n.t0 - LOOK);
     if (t >= ta) { // ③ 先回り: 次に押す鍵の上へ。移動にはかならず時間をとる（次までが短くても一瞬で飛ばない）
       const P = pressPoint(n.m, f, n);
+      if (n.ghost) P[1] -= keyDrop(KB.DEPTH, P[2]); // 押さえたままかえる指は、底にある鍵の上へ下りる
       const lift = n.lift || LIFT, span = Math.max(1e-3, n.t0 - ta), Td = Math.min(0.08, span * 0.4), tb = n.t0 - Td;
       // 鍵の上へは低く（触れる高さで）移り、持ち上げるのは約1音前から（n.antic）。ゆっくりの所は持ち上げがほぼ 0 で、触れたまま押す
       const tl = Math.max(ta, n.t0 - (n.antic || 0.3)), up = n.wrist ? 1 : ease5((t - tl) / Math.max(1e-3, tb - tl));

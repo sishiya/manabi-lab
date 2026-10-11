@@ -9,6 +9,13 @@
 const SRC_HANON = L('ハノン『60の練習曲によるヴィルトゥオーゾ・ピアニスト』（1873）', 'Hanon, "The Virtuoso Pianist in 60 Exercises" (1873)');
 const SRC_BAYLOR = ch => L('Baylor Piano Basics（Michael Clark、ベイラー大学のピアノの教科書、CC BY-NC-SA 4.0）' + ch, 'Baylor Piano Basics (Michael Clark, Baylor University piano textbook, CC BY-NC-SA 4.0), ' + ch);
 const SRC_HENLE = L('Henle 版（1950、オットー・フォン・イルマー編、運指ヴァルター・ランペ）に書かれている指', 'Henle edition (1950, ed. Otto von Irmer, fingering by Walther Lampe), the printed fingers');
+// 運指の文字列 → 音ごとの [押す指, かえた先の指]。「[45]」は 4 で押して、押さえたまま 5 にかえる（v044〜）。0 は書かれていない音
+function parseRef(str) {
+  const out = [];
+  for (const m of (str || '').matchAll(/\[(\d)(\d)\]|\d/g)) out.push(m[1] ? [+m[1], +m[2]] : [+m[0], +m[0]]);
+  return out;
+}
+const fmtFing = (f, g) => g && g !== f ? f + '-' + g : '' + f; // 表示: 「4-5」
 // 音の番号（1〜）→ 指 の表から、音の順の指の文字列（書かれていない音は 0）
 const refAt = (n, at) => Array.from({ length: n }, (_, i) => at[i + 1] || 0).join('');
 
@@ -59,9 +66,9 @@ const SONGS = [
   { id: 'twinkle', name: L('きらきら星', 'Twinkle, Twinkle, Little Star'), why: L('同じ音の連打・5本の指の位置', 'repeated notes, five-finger position'), bpm: 100,
     src: 'C4 C4 G4 G4 A4 A4 G4/2 F4 F4 E4 E4 D4 D4 C4/2 G4 G4 F4 F4 E4 E4 D4/2 G4 G4 F4 F4 E4 E4 D4/2 ' +
          'C4 C4 G4 G4 A4 A4 G4/2 F4 F4 E4 E4 D4 D4 C4/2',
-    // Baylor 13.8: ド1・ソ4・ラ5・ソ「4-5」（押さえたまま指をかえる。ここでは押す指の 4）・ファ4。5〜8小節はソ＝5 の位置（書かれていない指はその位置のまま）
-    refR: '1144554' + '4433221' + '5544332' + '5544332' + '1144554' + '4433221',
-    fsrc: SRC_BAYLOR(L('13.8（きらきら星。ソの「4-5」は押さえたまま指をかえる所で、ここでは押す指の 4 だけ）', '13.8 Twinkle, Twinkle, Little Star (the G marked 4-5 is a finger change while holding; here only the striking finger 4)')) },
+    // Baylor 13.8: ド1・ソ4・ラ5・ソ「4-5」（4 で押して、押さえたまま 5 にかえる。v044 から [45] で）・ファ4。5〜8小節はソ＝5 の位置（書かれていない指はその位置のまま）
+    refR: '114455[45]' + '4433221' + '5544332' + '5544332' + '114455[45]' + '4433221',
+    fsrc: SRC_BAYLOR(L('13.8（きらきら星。ソの「4-5」は押さえたまま指をかえる）', '13.8 Twinkle, Twinkle, Little Star (the G marked 4-5 changes finger while holding)')) },
   { id: 'ode', name: L('歓喜の歌（ベートーヴェン）', 'Ode to Joy (Beethoven)'), why: L('手の位置がほとんど動かない', 'the hand hardly moves'), bpm: 116,
     src: 'E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 E4/1.5 D4/.5 D4/2 ' +
          'E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 D4/1.5 C4/.5 C4/2',
