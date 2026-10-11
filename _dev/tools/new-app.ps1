@@ -109,7 +109,7 @@ function draw() {
   g.beginPath(); g.arc(w / 2, h / 2, 30 + 6 * Math.sin(S.t * 2), 0, Math.PI * 2); g.fill();
 }
 let last = performance.now();
-function loop(now) { step(Math.min(0.05, (now - last) / 1000)); last = now; draw(); requestAnimationFrame(loop); }
+function loop(now) { step(Math.max(0, Math.min(0.05, (now - last) / 1000))); last = now; /* 最初のコマは now が last より前のことがある */ draw(); requestAnimationFrame(loop); }
 window.addEventListener('resize', resize);
 resize(); requestAnimationFrame(loop);
 

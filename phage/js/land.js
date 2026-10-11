@@ -96,6 +96,7 @@ const Land = (() => {
 
   // ---- 進める（dt は画面の秒） ----
   function step(dt) {
+    if (!(dt > 0)) return;
     if (S.phase === 'free') stepFree(dt); else stepAnim(dt);
     if (S.phase === 'free' || S.phase === 'settle') S.simMs += dt * BROWN.slow * 1000;
     computeFibers();
@@ -130,6 +131,7 @@ const Land = (() => {
       if (ok) break;
       if (it === 4) S.th = old.th;
     }
+    if (!Number.isFinite(S.B.x + S.B.y + S.th)) { S.B.x = old.x; S.B.y = old.y; S.th = old.th; } // 念のため（数でない値になったら1歩もどす）
     // 体は表面にめりこまない・画面の外へ出ない
     const m = bodyMinY(); if (m < CONTACT + 0.5) S.B.y += CONTACT + 0.5 - m;
     const lim = viewW / 2 - 90;

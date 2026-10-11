@@ -22,7 +22,8 @@ function frame(dt) {
   else if (UI.tab === 'zoom') { Zoom.step(dt); Zoom.draw(); }
 }
 function loop(now) {
-  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  // 最初のコマは now が last より前のことがあり、dt がマイナスになる（√ が NaN になってファージの位置が壊れた）→ 0〜0.05秒に収める
+  const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
   try { frame(dt); } catch (e) { window.__phErr.push(String(e && e.stack || e)); }
   requestAnimationFrame(loop);
 }
