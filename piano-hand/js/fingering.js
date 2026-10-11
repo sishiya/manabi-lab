@@ -13,6 +13,10 @@ let THUMB_BLACK = 6, WEAK = 0.5; // 教本（ハノン第1番・第39番など�
 
 // 親指の上を（下を）またぐ指ごとの罰点（この検証で決めた値。教本の運指とくらべて調整）
 const CROSS = [0, 0, 9, 5, 8, 20];
+// 黒鍵の指から白鍵の親指へまたぐ（親指くぐり・指またぎ）のは楽（黒鍵は高く奥にあり、親指が下をくぐりやすい）。
+// 教本の「黒鍵のあとの白鍵に親指」に当たる。CROSS からこの分を引く（Parncutt の親指くぐりの規則でも、この向きは罰点なし）。
+// 0 だと黒鍵から始まる音階で 4 の指を避けて白鍵どうしでまたぎ、教本と合わなかった（答え合わせ 499 → 551/569）
+const PASS_FROM_BLACK = 6;
 
 // 1つの音と指の罰点
 function noteCost(m, f) {
@@ -51,6 +55,7 @@ function pairCost(m1, f1, m2, f2, gap) {
     if (pass) {
       const thumbM = f2 === 1 ? m2 : m1, otherM = f2 === 1 ? m1 : m2;
       if (isBlack(thumbM) === isBlack(otherM)) c += 1;
+      else if (!isBlack(thumbM) && isBlack(otherM)) c -= Math.min(PASS_FROM_BLACK, CROSS[f1 === 1 ? f2 : f1]);
       else if (isBlack(thumbM) && !isBlack(otherM) && thumbM > otherM) c += 3;
     }
     if (f2 === 1 && isBlack(m2) && !isBlack(m1)) c += 2; // 白鍵から親指で黒鍵へ
