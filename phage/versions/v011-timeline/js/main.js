@@ -1,0 +1,36 @@
+// 細菌にとりつくウイルス — 始め方・描画ループ・デバッグ用の窓口
+'use strict';
+window.__phErr = window.__phErr || [];
+window.addEventListener('error', e => window.__phErr.push(String(e.message)));
+
+View.resize(); View.fitAll(true);
+UI.init();
+
+let last = performance.now();
+function frame(dt) {
+  if (UI.state.tab !== 'view') return;
+  UI.advance(dt);
+  View.stepCam(dt);
+  const st = Story.at(UI.state.u);
+  Scene.draw(st);
+  UI.update(st);
+}
+function loop(now) {
+  // 最初のコマは now が last より前のことがあるので、0〜0.05秒に収める
+  const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
+  try { frame(dt); } catch (e) { window.__phErr.push(String(e && e.stack || e)); }
+  requestAnimationFrame(loop);
+}
+window.addEventListener('resize', () => View.resize());
+if (window.ResizeObserver) new ResizeObserver(() => { View.resize(); try { frame(0); } catch (e) { window.__phErr.push(String(e && e.stack || e)); } }).observe(document.getElementById('cv'));
+requestAnimationFrame(loop);
+// 少し待ってから再生（はじめは細菌の全体）
+setTimeout(() => { UI.state.playing = true; document.getElementById('play').textContent = '⏸'; }, 900);
+
+// デバッグ用: 時刻を指定して描く・カメラを動かす（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）
+window.__ph = {
+  View, Story, Scene, UI,
+  at(u) { UI.state.u = u; UI.state.playing = false; frame(0); },
+  show(u, x, y, w) { UI.state.u = u; UI.state.playing = false; View.setAuto(false); View.look(x, y, w, true); frame(0); },
+  simRun(sec, dt = 1 / 60) { for (let t = 0; t < sec; t += dt) frame(dt); },
+};

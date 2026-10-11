@@ -1,0 +1,179 @@
+// カメラ（ズーム・移動）と、nm の座標で描く道具、マウスを乗せたときの解説
+// 世界の座標: 大腸菌の中心が原点、X 右・Y 上、単位 nm。細菌は長さ 2000・太さ 900（上面が y=450）
+'use strict';
+
+const View = (() => {
+  const cv = document.getElementById('cv');
+  const g = cv.getContext('2d');
+  let W = 1, H = 1;
+  const cam = { cx: 0, cy: 350, s: 0.3, tcx: 0, tcy: 350, ts: 0.3 };
+  let sFit = 0.3, sMax = 40;
+  const KIND = { sure: '研究の値', est: '目安', art: '模式' };
+  let hot = [];          // 解説の出る場所（描くたびに作り直す）。あとに足したものが上
+  let auto = true;       // おまかせカメラ
+
+  // ---- 描く道具（X・Y を差しかえると、ずらした座標・回した座標でも同じ道具が使える）----
+  function makeApi(X, Y, ox = 0, oy = 0) {
+    const A = {
+      g, X, Y,
+      get s() { return cam.s; }, get W() { return W; }, get H() { return H; },
+      L: nm => nm * cam.s,
+      circle(x, y, r, fill, stroke, lw = 1) { g.beginPath(); g.arc(X(x), Y(y), Math.max(0.4, r * cam.s), 0, Math.PI * 2); if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw; g.stroke(); } },
+      ell(x, y, rx, ry, rot, fill, stroke, lw = 1) { g.beginPath(); g.ellipse(X(x), Y(y), Math.max(0.4, rx * cam.s), Math.max(0.4, ry * cam.s), -(rot || 0), 0, Math.PI * 2); if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw; g.stroke(); } },
+      rect(x, y, w, h, fill, r = 0, stroke) {
+        w = Math.abs(w); h = Math.abs(h); if (w * cam.s < 0.2 || h * cam.s < 0.2) return;
+        g.beginPath(); g.roundRect(X(x - w / 2), Y(y + h / 2), w * cam.s, h * cam.s, Math.min(r * cam.s, w * cam.s / 2, h * cam.s / 2));
+        if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = 1; g.stroke(); }
+      },
+      poly(pts, fill, stroke, lw = 1, close = true) {
+        g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(X(x), Y(y)) : g.moveTo(X(x), Y(y))); if (close) g.closePath();
+        if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw; g.lineJoin = 'round'; g.lineCap = 'round'; g.stroke(); }
+      },
+      line(pts, color, lw = 2) { A.poly(pts, null, color, lw, false); },
+      hex(x, y, r, fill, stroke, rot = 0) { const p = []; for (let i = 0; i < 6; i++) { const a = rot + i * Math.PI / 3; p.push([x + r * Math.cos(a), y + r * Math.sin(a)]); } A.poly(p, fill, stroke); },
+      text(str, x, y, o = {}) {
+        g.font = `${o.bold ? '700 ' : ''}${o.size || 12}px ${o.mono ? '"IBM Plex Mono", monospace' : '"Zen Kaku Gothic New", sans-serif'}`;
+        g.textAlign = o.align || 'center'; g.textBaseline = o.base || 'middle';
+        const px = X(x) + (o.dx || 0), py = Y(y) + (o.dy || 0);
+        if (o.bg) { const w = g.measureText(str).width, al = g.textAlign, lx = al === 'center' ? px - w / 2 : al === 'right' ? px - w : px; g.fillStyle = o.bg; g.fillRect(lx - 4, py - (o.size || 12) * 0.7, w + 8, (o.size || 12) * 1.4); }
+        g.fillStyle = o.color || '#e8f0f4'; g.fillText(str, px, py);
+      },
+      // 二本鎖の DNA（x0,y0 → x1,y1）
+      helix(x0, y0, x1, y1, o = {}) {
+        const len = Math.hypot(x1 - x0, y1 - y0); if (len < 0.01) return;
+        const ux = (x1 - x0) / len, uy = (y1 - y0) / len, nx = -uy, ny = ux;
+        const amp = o.amp ?? 1, pitch = o.pitch ?? 3.4, c1 = o.c1 || '#ff9f6b', c2 = o.c2 || c1, ph = o.phase || 0;
+        const n = Math.max(2, Math.ceil(len / 0.5));
+        for (const strand of [0, 1]) {
+          g.beginPath();
+          for (let i = 0; i <= n; i++) { const d = (i / n) * len, off = amp * Math.sin((d / pitch) * Math.PI * 2 + ph + strand * Math.PI); const px = x0 + ux * d + nx * off, py = y0 + uy * d + ny * off; i ? g.lineTo(X(px), Y(py)) : g.moveTo(X(px), Y(py)); }
+          g.strokeStyle = strand ? c2 : c1; g.lineWidth = Math.max(1, (o.lw ?? 0.5) * cam.s); g.stroke();
+        }
+        if (cam.s > 4) { // 塩基対の段
+          g.strokeStyle = o.rc || 'rgba(255,255,255,.3)'; g.lineWidth = 1; g.beginPath();
+          for (let d = 0; d < len; d += 0.68) { const a = amp * Math.sin((d / pitch) * Math.PI * 2 + ph); g.moveTo(X(x0 + ux * d + nx * a), Y(y0 + uy * d + ny * a)); g.lineTo(X(x0 + ux * d - nx * a), Y(y0 + uy * d - ny * a)); }
+          g.stroke();
+        }
+      },
+      // 解説の出る場所: c=[x,y,r] の円、seg=[[x,y]...] と w の線、box=[x0,y0,x1,y1]
+      hit(h) { const o = { ...h }; if (o.c) o.c = [o.c[0] + ox, o.c[1] + oy, o.c[2]]; if (o.seg) o.seg = o.seg.map(([x, y]) => [x + ox, y + oy]); if (o.box) o.box = [o.box[0] + ox, o.box[1] + oy, o.box[2] + ox, o.box[3] + oy]; hot.push(o); },
+      // ずらした座標の道具（ox, oy を原点に）
+      at(dx, dy) { return makeApi(x => X(x + dx), y => Y(y + dy), ox + dx, oy + dy); },
+    };
+    return A;
+  }
+  const V = makeApi(x => W / 2 + (x - cam.cx) * cam.s, y => H / 2 - (y - cam.cy) * cam.s);
+  V.cam = cam;
+  // 世界の点 (px,py) を原点に、ang だけ回した座標の道具（頭やしっぽを傾けて描くとき）。使い終わったら g.restore()
+  V.local = (px, py, ang) => { g.save(); g.translate(V.X(px), V.Y(py)); g.rotate(-ang); return makeApi(x => x * cam.s, y => -y * cam.s, px, py); };
+  V.visible = (x0, y0, x1, y1, pad = 0) => { const vx0 = cam.cx - W / 2 / cam.s - pad, vx1 = cam.cx + W / 2 / cam.s + pad, vy0 = cam.cy - H / 2 / cam.s - pad, vy1 = cam.cy + H / 2 / cam.s + pad; return x1 >= vx0 && x0 <= vx1 && y1 >= vy0 && y0 <= vy1; };
+  V.viewBox = () => ({ x0: cam.cx - W / 2 / cam.s, x1: cam.cx + W / 2 / cam.s, y0: cam.cy - H / 2 / cam.s, y1: cam.cy + H / 2 / cam.s });
+
+  // ---- 大きさ ----
+  function resize() {
+    const r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (r.width < 2) return;
+    W = r.width; H = r.height;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    sFit = Math.min(W / 2500, H / 1900); sMax = Math.max(20, W / 18);
+  }
+  // カメラの目標（なめらかに近づく）。w は見せたい横はば（nm）
+  function look(cx, cy, w, instant) {
+    const s = Math.max(sFit * 0.7, Math.min(sMax, W / Math.max(10, w)));
+    // 左下の説明カードにかからないよう、見せたい点を少し上に置く
+    cy -= Math.min(70, H * 0.1) / s;
+    cam.tcx = cx; cam.tcy = cy; cam.ts = s;
+    if (instant) { cam.cx = cx; cam.cy = cy; cam.s = s; }
+  }
+  function fitAll(instant) { look(0, 330, 2500 * Math.max(1, (W / H) / (2500 / 1900)), instant); }
+  function stepCam(dt) {
+    const k = 1 - Math.exp(-dt * 3.2);
+    // 拡大率は掛け算でなめらかに
+    cam.s = Math.exp(Math.log(cam.s) + (Math.log(cam.ts) - Math.log(cam.s)) * k);
+    cam.cx += (cam.tcx - cam.cx) * k; cam.cy += (cam.tcy - cam.cy) * k;
+  }
+
+  // ---- 指・マウス ----
+  const tip = document.getElementById('tip');
+  const pointers = new Map(); let drag = null, pinch = null, downAt = null, moved = false;
+  const toWorld = (px, py) => ({ x: cam.cx + (px - W / 2) / cam.s, y: cam.cy - (py - H / 2) / cam.s });
+  function userMoved() { if (auto) { auto = false; View.onAuto && View.onAuto(false); } }
+  function zoomAt(px, py, f) {
+    const w0 = toWorld(px, py);
+    const s = Math.max(sFit * 0.7, Math.min(sMax, cam.ts * f));
+    cam.ts = s;
+    // カーソルの下の点がそのまま残るように中心を動かす
+    cam.tcx = w0.x - (px - W / 2) / s; cam.tcy = w0.y + (py - H / 2) / s;
+    userMoved();
+  }
+  cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
+  cv.addEventListener('dblclick', e => { const r = cv.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, 2.5); });
+  cv.addEventListener('pointerdown', e => {
+    cv.setPointerCapture(e.pointerId); pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    downAt = { x: e.clientX, y: e.clientY, t: performance.now() }; moved = false;
+    if (pointers.size === 1) drag = { x: e.clientX, y: e.clientY, cx: cam.tcx, cy: cam.tcy };
+    else if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), s: cam.ts }; drag = null; }
+  });
+  cv.addEventListener('pointermove', e => {
+    const r = cv.getBoundingClientRect();
+    if (pointers.has(e.pointerId)) {
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 6) moved = true;
+      if (pinch && pointers.size === 2) {
+        const [a, b] = [...pointers.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+        const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top;
+        zoomAt(mx, my, (pinch.s * d / pinch.d) / cam.ts);
+      } else if (drag && moved) {
+        cam.tcx = drag.cx - (e.clientX - drag.x) / cam.s; cam.tcy = drag.cy + (e.clientY - drag.y) / cam.s; cam.cx = cam.tcx; cam.cy = cam.tcy;
+        userMoved();
+      }
+      hideTip();
+    } else if (e.pointerType === 'mouse') showTipAt(e.clientX - r.left, e.clientY - r.top);
+  });
+  const up = e => {
+    const r = cv.getBoundingClientRect();
+    pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null; if (!pointers.size) drag = null;
+    if (downAt && !moved && e.type === 'pointerup' && performance.now() - downAt.t < 400) showTipAt(e.clientX - r.left, e.clientY - r.top, true);
+    downAt = null;
+  };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') hideTip(); });
+
+  // 解説: その点にあるもの（上に描いたものから順に）
+  function find(wx, wy) {
+    for (let i = hot.length - 1; i >= 0; i--) {
+      const h = hot[i];
+      if (h.c) { if (Math.hypot(wx - h.c[0], wy - h.c[1]) <= Math.max(h.c[2], 6 / cam.s)) return h; }
+      else if (h.box) { if (wx >= h.box[0] && wx <= h.box[2] && wy >= h.box[1] && wy <= h.box[3]) return h; }
+      else if (h.seg) {
+        const w = Math.max(h.w || 2, 6 / cam.s);
+        for (let j = 1; j < h.seg.length; j++) { const a = h.seg[j - 1], b = h.seg[j], vx = b[0] - a[0], vy = b[1] - a[1], l2 = vx * vx + vy * vy || 1, t = Math.max(0, Math.min(1, ((wx - a[0]) * vx + (wy - a[1]) * vy) / l2)); if (Math.hypot(wx - a[0] - vx * t, wy - a[1] - vy * t) <= w) return h; }
+      }
+      else if (h.test && h.test(wx, wy)) return h;
+    }
+    return null;
+  }
+  let lastTip = null, pinned = false;
+  function showTipAt(px, py, pin) {
+    const w = toWorld(px, py), h = find(w.x, w.y);
+    if (!h) { hideTip(); return; }
+    const info = h.infoAt ? h.infoAt(w.x, w.y) : typeof h.info === 'function' ? h.info() : h.info;
+    if (!info) { hideTip(); return; }
+    if (lastTip !== info) { tip.innerHTML = `<b>${info.t}</b> <span class="kind ${info.k}">${KIND[info.k]}</span><p>${info.b}</p>`; lastTip = info; }
+    tip.hidden = false; pinned = !!pin;
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let x = px + 16, y = py + 16; if (x + tw > W - 6) x = px - tw - 12; if (y + th > H - 6) y = Math.max(6, py - th - 12);
+    tip.style.left = Math.max(6, x) + 'px'; tip.style.top = y + 'px';
+  }
+  function hideTip() { if (!pinned) { tip.hidden = true; lastTip = null; } }
+  tip.addEventListener('pointerdown', () => { pinned = false; tip.hidden = true; });
+
+  return {
+    V, cam, resize, look, fitAll, stepCam, zoomAt,
+    begin() { hot = []; g.clearRect(0, 0, W, H); },
+    get W() { return W; }, get H() { return H; }, get sFit() { return sFit; }, get sMax() { return sMax; },
+    get auto() { return auto; }, setAuto(v) { auto = v; View.onAuto && View.onAuto(v); },
+    onAuto: null, toWorld, find, hot: () => hot,
+  };
+})();
