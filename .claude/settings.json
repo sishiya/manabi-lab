@@ -19,6 +19,17 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR/_dev/tools/check-video-links.ps1\" -Hook",
+            "timeout": 20
+          }
+        ]
+      }
     ]
   }
 }

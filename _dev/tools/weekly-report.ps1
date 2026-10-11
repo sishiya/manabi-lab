@@ -67,6 +67,12 @@ if (Test-Path $smoke) {
   W ''
 }
 
+# ---------- 入口の「使い方の動画」のつけ忘れ（check-video-links.ps1。YouTube には問い合わせない） ----------
+$vl = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'check-video-links.ps1') 2>&1 | ForEach-Object { "$_" }
+W '## 入口の「使い方の動画」'
+foreach ($x in $vl) { W "- $($x.Trim())" }
+W ''
+
 # ---------- 紹介動画（YouTube） ----------
 if (-not $NoYouTube) {
   $snap = Join-Path $outDir "yt-stats-$today.json"
