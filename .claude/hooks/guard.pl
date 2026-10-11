@@ -1,5 +1,5 @@
 # Claude Code PreToolUse guard (RULES 10, memory: secret-files).
-# Blocks: (1) git push  (the user pushes), (2) any tool call that names the YouTube secret folder
+# Blocks: (1) git push unless marked as asked-for by the user (force push always), (2) any tool call that names the YouTube secret folder
 # or the secret files. The folder is read at run time from _dev/tools/youtube-upload.local.txt
 # (not in Git), so its location is never written in this repository.
 # Exit 2 = block (the message on stderr goes back to Claude). Exit 0 = allow.
@@ -20,10 +20,16 @@ my $text = join("\n", @fields);
 
 sub block { print STDERR "guard: $_[0]\n"; exit 2; }
 
-# (1) git push
+# (1) git push: only when the user asked for it in chat (RULES 10, 2026-10-11). Claude then starts the
+# command with MANABI_PUSH_OK=1 (Bash) or $env:MANABI_PUSH_OK=1; (PowerShell). Force push is always blocked.
 if ($tool =~ /^(Bash|PowerShell)$/) {
   if ($norm =~ /(^|[\s;&|(`])git(\.exe)?\s+(-c\s+\S+\s+|--?[a-z-]+(=\S+)?\s+)*push(\s|$)/) {
-    block('git push is done by the user (GitHub Desktop "Push origin"). Commit only and tell the user.');
+    if ($norm =~ /\spush\b.*(\s--force\b|\s-f\b|\s--force-with-lease\b|\s\+\S)/) {
+      block('force push is never allowed.');
+    }
+    unless ($norm =~ /^\s*(\$env:)?manabi_push_ok\s*=\s*['"]?1['"]?[\s;]/) {
+      block('git push only when the user asked for it in chat: then start the command with MANABI_PUSH_OK=1 (RULES 10). Otherwise commit only and tell the user.');
+    }
   }
 }
 

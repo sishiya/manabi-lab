@@ -59,7 +59,7 @@ flowchart LR
   SRC --> SERVE -- "画面・コンソール・数値" --> C
   SERVE --> MKT --> THUMB
   SRC & DOCS & THUMB --> CHECK -- "問題なし" --> GITL["ローカルの commit<br/>（Claude）"]
-  GITL -- "push（ユーザー）" --> GIT --> PAGES --> VIS
+  GITL -- "push（ユーザー。指示があれば Claude）" --> GIT --> PAGES --> VIS
   C -- "再公開" --> ART
   PUB --> C
   PAGES -- "sishiya.github.io のときだけ" --> GA -- "集計（ユーザーだけ見られる）" --> U
@@ -116,11 +116,11 @@ sequenceDiagram
   K-->>C: 問題なし
   C-->>U: チェック結果を報告
   C->>L: git commit（pre-commit フックがもう一度チェック）
-  U->>G: push（GitHub Desktop）＝ここで公開
+  U->>G: push（GitHub Desktop。ユーザーの指示があれば Claude）＝ここで公開
   C->>G: 1〜2分後に smoke.ps1 -Base（公開版）
   U->>G: 目視・感想
   opt ユーザーが「入口に」と言ったとき
-    C->>L: APPS に移す・互換モードの比べ方 → commit → ユーザーが push
+    C->>L: APPS に移す・互換モードの比べ方 → commit → push（ユーザー、または指示で Claude）
   end
 
   U->>C: 動画を作って

@@ -137,8 +137,8 @@ Artifact の公開・再公開、git の commit／push の**前に毎回**行う
 ## 10. 複数の PC で作業する（Git）
 
 - このフォルダは GitHub のリポジトリ（`sishiya/manabi-lab`、**Public**。2026-10-05 に Private から変更）で管理する。push した内容は誰でも読める。作業の始めに pull、区切りで commit と push（その前に 7 の公開前チェック）。2台で同時に作業しない。
-- **役割分担**: Claude は区切りごとに公開前チェックとコミットまで行い、何をコミットしたかとチェックの結果を報告する。**push はユーザーが行う**（GitHub Desktop の「Push origin」。Claude は push しない）。pull もユーザーに頼む。
-- この約束と「YouTube の秘密を読まない」は、`.claude/settings.json` のフック（`.claude/hooks/guard.pl`）でも止めている（2026-10-10〜。`_dev/tools/README.md`）。
+- **役割分担**: Claude は区切りごとに公開前チェックとコミットまで行い、何をコミットしたかとチェックの結果を報告する。**push はふだんユーザーが行う**（GitHub Desktop の「Push origin」）。**ユーザーがチャットで push を指示したときだけ、Claude が push してよい**（2026-10-11〜。ユーザーが決めた）。そのときも直前に公開前チェック（7章）をして結果を伝え、まだ push していないコミットの数と、別のセッションのコミットがまざっていればそれも伝える。force push はしない。指示がなければ、いままでどおりコミットまでで止めて報告する。pull もユーザーに頼む。
+- この約束と「YouTube の秘密を読まない」は、`.claude/settings.json` のフック（`.claude/hooks/guard.pl`）でも守っている（2026-10-10〜。`_dev/tools/README.md`）。フックは、コマンドの先頭に `MANABI_PUSH_OK=1` がついた `git push` だけを通す（Claude はユーザーの指示があったときだけこれをつける）。force push はいつも止める。
 - コミットの作者は `sishiya <85350751+sishiya@users.noreply.github.com>`（GitHub の代わりのアドレス。本当のメールアドレスは使わない）。新しい PC でも `git config user.name` と `user.email` をこの値にする。
 - コミットメッセージは日本語で、何をしたか1行（例: 「evolution v009: 想像の生き物」）。push 前のコミットは作り直してよいが、push 後は作り直さない。
 - 新しい PC では: Git と Claude デスクトップを入れてクローン → `git config core.hooksPath .githooks` と `git config core.quotepath false` → `.private-words.txt` と `PUBLISH.local.md` を作る（8章）。

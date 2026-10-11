@@ -26,6 +26,6 @@
 - Bash ツールのコマンドの中で `\\` や `\s` を書くと `\` が消える。正規表現を含む書きかえは Edit ツールで（RULES 6章）。
 
 ## Claude Code の守り（`.claude/settings.json`・`.claude/hooks/guard.pl`）
-- `git push` は止める（push はユーザー。RULES 10章）。
+- `git push` は止める。ユーザーがチャットで push を指示したときだけ、Claude はコマンドの先頭に `MANABI_PUSH_OK=1` をつけて push する（フックはそれだけ通す。2026-10-11〜。RULES 10章）。force push（`--force`・`-f`・`+ブランチ`）はいつも止める。
 - YouTube の秘密のフォルダ・ファイル（`client_secret`・`youtube-token`、`youtube-upload.local.txt` に書いたフォルダ）を名指しするツールの呼び出しを止める。フォルダの場所はリポジトリに書かず、フックが実行のたびに `youtube-upload.local.txt` から読む。スクリプト（`youtube-upload.ps1`）が中で読むのは止めない。
 - フックは Git の Bash の `perl` で動く（JSON::PP）。
