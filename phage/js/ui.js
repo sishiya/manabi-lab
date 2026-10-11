@@ -26,7 +26,6 @@ const UI = (() => {
     if (sc === 'land') tm = `${Land.S.simMs.toFixed(2)}ms`;
     else if (tMin != null) tm = `${tMin.toFixed(1)}分`;
     li.innerHTML = `<span class="tm">${tm}</span>${html}${kind ? ` <span class="kind ${kind}">${KIND[kind]}</span>` : ''}`;
-    if (zid) { const b = document.createElement('button'); b.className = 'zgo'; b.textContent = '寄って見る →'; b.addEventListener('click', () => goZoom(zid)); li.appendChild(b); }
     ol.prepend(li);
   }
   const toastT = {};
@@ -49,6 +48,21 @@ const UI = (() => {
     if (tabNext) document.querySelector(`#tabs button[data-tab="${tabNext}"]`).classList.add('pulse');
   }
 
+  // ルーペのカード（図の上の左下に、さわったものの説明。しばらくすると消える）
+  const cardT = {};
+  function card(sc, info) {
+    if (!info) return;
+    const el = $(sc === 'land' ? 'landCard' : sc === 'in' ? 'inCard' : 'zCard');
+    el.innerHTML = `<button class="x" aria-label="閉じる">×</button><b>🔍 ${info.t}</b> <span class="kind ${info.k}">${KIND[info.k]}</span><p>${info.b}</p>`;
+    el.hidden = false; el.querySelector('.x').addEventListener('click', () => { el.hidden = true; });
+    clearTimeout(cardT[sc]); cardT[sc] = setTimeout(() => { el.hidden = true; }, 12000);
+  }
+  function landLoupe(info) {
+    if (!info) return;
+    $('landLoupe').innerHTML = `<h3>${info.t} <span class="kind ${info.k}">${KIND[info.k]}</span></h3><p>${info.b}</p>`;
+    card('land', info);
+  }
+
   // 目的の札（図の上）: title と、進み具合の札 chips = [[文字, 'done'|'now'|'warn'|''], …]
   const goalKey = {};
   function goal(sc, title, chips) {
@@ -62,14 +76,14 @@ const UI = (() => {
   const hostSel = $('hostSel');
   for (const [id, h] of Object.entries(HOSTS)) {
     const b = document.createElement('button'); b.textContent = h.name; b.dataset.id = id;
-    b.addEventListener('click', () => { Land.reset(id); markHost(); $('toInside').hidden = true; });
+    b.addEventListener('click', () => { Land.reset(id); markHost(); });
     hostSel.appendChild(b);
   }
   function markHost() {
     hostSel.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.id === Land.S.hostId)));
     $('hostDesc').innerHTML = Land.S.host.desc;
   }
-  $('landReset').addEventListener('click', () => { Land.reset(); $('toInside').hidden = true; });
+  $('landReset').addEventListener('click', () => { Land.reset(); });
   let lastLand = '';
   function landStatus(S) {
     const n = S.fib.filter(f => f.bound).length;
@@ -89,10 +103,7 @@ const UI = (() => {
     goal('land', 'ファージを大腸菌に突き刺して、DNA を注入しよう！', [c1, c2, ['刺さって DNA が入る', st(d3, d2)]]);
   }
   function landDone(hostId) {
-    const b = $('toInside'); b.hidden = false;
-    b.onclick = () => { Inside.reset({ host: hostId === 'b' ? 'b' : 'k12', variant: 'wt' }); markIn(); setTab('inside'); };
-    const z = $('toZoomAttach'); z.hidden = false; z.onclick = () => goZoom('attach');
-    next('land', [['つぎへ: ② 細菌の中で増える →', b.onclick, true], ['③ 刺さるところを分子で見る', () => goZoom('attach')]], 'done');
+    next('land', [['つぎへ: ② 細菌の中で増える →', () => { Inside.reset({ host: hostId === 'b' ? 'b' : 'k12', variant: 'wt' }); markIn(); setTab('inside'); }, true]], 'done');
     toast('land', 'DNA が入った！');
   }
 
@@ -133,15 +144,15 @@ const UI = (() => {
     }
     $('inPlay').textContent = S.playing ? '⏸' : '▶';
     $('superBtn').disabled = S.failed || S.burstAt != null;
-    if ((S.burstAt != null && S.burst > 2.5) || S.failed) next('in', [['つぎへ: ③ 分子の大きさで寄って見る →', () => goZoom('form'), true], ['条件を変えてもう一度', () => { Inside.reset(); markIn(); }]], 'end');
+    if ((S.burstAt != null && S.burst > 2.5) || S.failed) next('in', [['つぎへ: ③ 分子の大きさで寄って見る →', () => goZoom('form'), true]], 'end');
     else next('in', null);
   }
   function loupe(info) {
     if (!info) return;
     hideHint('in');
     $('loupe').innerHTML = `<h3>${info.t} <span class="kind ${info.k}">${KIND[info.k]}</span></h3><p>${info.b}</p>`;
-    if (info.z) { const b = document.createElement('button'); b.className = 'zgo'; b.textContent = '寄って見る →'; b.addEventListener('click', () => goZoom(info.z)); $('loupe').appendChild(b); }
+    card('in', info);
   }
 
-  return { goal, next, goZoom, setTab, get tab() { return tab; }, onTab: f => listeners.push(f), clearLog, log, toast, hideHint, landStatus, landDone, inStatus, loupe, markHost, markIn };
+  return { card, landLoupe, goal, next, goZoom, setTab, get tab() { return tab; }, onTab: f => listeners.push(f), clearLog, log, toast, hideHint, landStatus, landDone, inStatus, loupe, markHost, markIn };
 })();

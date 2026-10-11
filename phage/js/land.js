@@ -32,7 +32,7 @@ const Land = (() => {
     S.fill = 1; S.holeR = 0; S.dnaF = 0; S.shortF = 0; S.imBulge = 0;
     S.noRecT = 0; S.saidNoRec = false; S.firstBind = false; S.maxBound = 0; S.th0 = 0; S.y0 = 0;
     S.done = false; S.touched = false;
-    document.getElementById('toInside').hidden = true; document.getElementById('toZoomAttach').hidden = true; UI.next('land', null); document.getElementById('landHint').classList.remove('off');
+    UI.next('land', null); document.getElementById('landCard').hidden = true; S.hl = null; document.getElementById('landHint').classList.remove('off');
     makeDnaPath();
     UI.clearLog('land');
     UI.log('land', `${S.host.name}（細菌）1つ。画面をおさえると、光ピンセットがファージを引きよせる。まず細菌の表面まで運ぼう。`);
@@ -316,7 +316,8 @@ const Land = (() => {
     S.A.x = Math.max(-1500, Math.min(1500, S.A.x)); S.A.y = Math.max(-2 * R - 200, Math.min(820, S.A.y));
     // 上面の近くまで来たら、表面へ寄る
     if (S.A.y < 230 && S.A.y >= 40 && Math.abs(S.A.x) < 1000 - R * 0.4) {
-      S.phase = 'zoomin'; S.zk = 0; S.landX = S.A.x; S.B.x = 0; S.B.y = Math.max(140, S.A.y + 60); S.grab = false;
+      S.phase = 'zoomin'; S.zk = 0; S.landX = S.A.x; S.B.x = 0; S.B.y = Math.max(140, S.A.y + 60);
+      S.ptr = { x: S.ptr.x - S.landX, y: S.ptr.y }; // 指はそのまま。座標だけ表面の画面のものに直す（おさえたままなら寄ったあとも引きよせ続ける）
       UI.toast('land', '表面へ寄る');
     }
   }
@@ -410,6 +411,56 @@ const Land = (() => {
       g.setLineDash([3, 4]); g.beginPath(); g.moveTo(X(hc.x), Y(hc.y)); g.lineTo(X(S.ptr.x), Y(S.ptr.y)); g.stroke(); g.setLineDash([]);
     }
     drawScale(); drawInset();
+    if (S.hl && S.hl.ph !== 'approach' && performance.now() - S.hl.at < 1500) { g.strokeStyle = '#ffe066'; g.lineWidth = 2; g.beginPath(); g.arc(X(S.hl.x), Y(S.hl.y), 16, 0, Math.PI * 2); g.stroke(); }
+  }
+
+  // ルーペ: さわった場所にあるもの
+  const LINFO = {
+    water: { t: '水', k: 'sure', b: 'ファージのまわりの水。水の分子が四方八方からぶつかるので、ファージはふらふらゆれる（ブラウン運動）。ファージは自分では泳げない。' },
+    cyto: { t: '細菌の中（細胞質）', k: 'sure', b: '細菌の体の中。リボソーム（たんぱく質の工場）や細菌の DNA がある。T4 の DNA はここへ入り、工場を乗っとる（② で見られる）。' },
+    lps: { t: 'LPS（外膜の表面の糖の鎖）', k: 'sure', b: '外膜の外側にびっしり並ぶ糖の鎖。大腸菌 B では、T4 の長い脚がこの鎖のブドウ糖を目印にする。短い脚は、刺さるときに鎖の根もと側の糖にくいこむ。' },
+    gpos: { t: '枯草菌の厚い細胞壁', k: 'sure', b: '枯草菌（グラム陽性）には外膜がなく、ペプチドグリカンの厚い壁（20〜80nm）がむき出し。T4 がくっつく印はない。' },
+    cell: { t: '細菌1つの全体', k: 'sure', b: '大腸菌は長さ約2µm、太さ約1µm の棒の形。T4 ファージ（約0.2µm）はその10分の1くらい。上面まで運ぶと、表面へ寄って見られる。' },
+  };
+  function pick(w, ph) {
+    if (ph === 'approach') {
+      const R = cellR();
+      if (Math.hypot(w.x - S.A.x, w.y - (S.A.y + 120)) < 220) return INFO.phage;
+      if (Math.abs(w.x) < 1000 && w.y < 0 && w.y > -2 * R) return LINFO.cell;
+      return LINFO.water;
+    }
+    if (ph === 'zoomin') return null;
+    const env = S.host.gram === '-' ? ENV_NEG : ENV_POS, x = w.x, y = w.y;
+    // ファージの体（基盤からの横 lx・軸 la に直して調べる）
+    const c = Math.cos(S.th), sn = Math.sin(S.th), dx = x - S.B.x, dy = y - S.B.y;
+    const lx = dx * c + dy * sn, la = dx * sn - dy * c;
+    const hc = -(S.sheath + T4.neck + T4.headLen / 2);
+    if (Math.abs(lx) < T4.headW / 2 + 4 && Math.abs(la - hc) < T4.headLen / 2 + 4) return S.fill > 0.3 ? ZINFO.dnaIn : { t: '頭のぬけがら', k: 'sure', b: 'DNA を入れおわった頭は空っぽ。頭としっぽは細菌の外に残る（ゴースト）。' };
+    if (Math.abs(lx) < S.sheathW / 2 + 4 && la > -S.sheath - T4.neck && la < -2) return ZINFO.gp18;
+    if (Math.abs(lx) < S.plateW / 2 + 4 && la >= -4 && la < 12) return ZINFO.plate;
+    if (S.tubeOut > 0 && Math.abs(lx) < 8 && la >= 0 && la < 8 + S.tubeOut) return ZINFO.gp19;
+    if (S.shortF > 0 && Math.abs(lx) < S.plateW / 2 + 10 && la > 6 && y > CONTACT - 2) return ZINFO.gp12;
+    // 脚
+    for (const f of S.fib) if (f.H && f.K && f.T) {
+      const d = (a, b) => { const vx = b.x - a.x, vy = b.y - a.y, t = Math.max(0, Math.min(1, ((x - a.x) * vx + (y - a.y) * vy) / (vx * vx + vy * vy || 1))); return Math.hypot(x - a.x - vx * t, y - a.y - vy * t); };
+      if (Math.min(d(f.H, f.K), d(f.K, f.T)) < 8 / s) return ZINFO.ltf;
+    }
+    // DNA
+    if (S.dnaF > 0 && y < -30) { const tipY = S.B.y - 6 - S.tubeOut, n = Math.floor(dnaPath.length * S.dnaF); for (let i = 0; i < n; i += 3) { const [px, py] = dnaPath[i]; if (Math.hypot(x - (S.B.x + px), y - (tipY + py)) < 8 / s) return INFO.t4Dna; } }
+    // 細菌の外側の層
+    if (S.host.gram === '-') {
+      const v = ((x - 6) % 32 + 32) % 32, nearC = S.host.ompc && Math.min(v, 32 - v) < 7; // OmpC の筒は 32nm ごと（絵と同じ）
+      if (y > env.om[0] && y < env.om[0] + 6) return nearC ? ZINFO.ompc : LINFO.lps;
+      if (y <= env.om[0] && y > env.om[1]) return nearC ? ZINFO.ompc : ZINFO.om;
+      if (y <= env.om[1] && y > env.im[0]) return ZINFO.pg;
+      if (y <= env.im[0] && y > env.im[1] - 1) return ZINFO.im;
+    } else {
+      if (y > -1 && y < 5) return LINFO.gpos;
+      if (y <= 0 && y > env.pg[1]) return LINFO.gpos;
+      if (y <= env.pg[1] && y > env.im[1] - 1) return ZINFO.im;
+    }
+    if (y < env.im[1]) return LINFO.cyto;
+    return LINFO.water;
   }
 
   function drawScale() {
@@ -439,10 +490,19 @@ const Land = (() => {
     if (S.phase === 'approach') { const V = cellView(); return { x: (px - V.fx) / V.sc, y: (V.fy - py) / V.sc }; }
     return { x: (px - ox) / s, y: (oy - py) / s };
   }
-  cv.addEventListener('pointerdown', e => { if (S.phase !== 'free' && S.phase !== 'approach') return; cv.setPointerCapture(e.pointerId); S.grab = true; S.ptr = toWorld(e); UI.hideHint('land'); });
+  let down = null;
+  cv.addEventListener('pointerdown', e => { down = { t: performance.now(), x: e.clientX, y: e.clientY, w: toWorld(e), ph: S.phase }; if (S.phase !== 'free' && S.phase !== 'approach') return; cv.setPointerCapture(e.pointerId); S.grab = true; S.ptr = toWorld(e); UI.hideHint('land'); });
   cv.addEventListener('pointermove', e => { if (S.grab) S.ptr = toWorld(e); });
-  const up = () => { S.grab = false; };
+  const up = e => {
+    S.grab = false;
+    // 軽くタップ（短くて、ほとんど動かさない）ならルーペ
+    if (down && e && e.type === 'pointerup' && performance.now() - down.t < 320 && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 8) {
+      const info = pick(down.w, down.ph);
+      if (info) { UI.landLoupe(info); S.hl = { x: down.w.x, y: down.w.y, ph: down.ph, at: performance.now() }; }
+    }
+    down = null;
+  };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
 
-  return { S, reset, step, draw, resize, nBound, trigger: () => trigger(), get viewW() { return viewW; } };
+  return { S, reset, step, draw, resize, nBound, pick, view: () => ({ Wpx, Hpx, s, ox, oy, cell: cellView() }), trigger: () => trigger(), get viewW() { return viewW; } };
 })();

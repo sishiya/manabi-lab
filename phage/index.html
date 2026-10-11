@@ -24,9 +24,10 @@
       <div class="viewWrap">
         <canvas id="cvLand" aria-label="細菌の表面を横から見た図。ファージを光ピンセットで運ぶ"></canvas>
         <div class="hud mono" id="landHud"></div>
-        <div class="hint" id="landHint">画面をおさえたまま動かすと<br>光ピンセットがファージを引きよせる</div>
+        <div class="hint" id="landHint">おさえたまま動かすと 光ピンセットでファージを引きよせる<br><small>軽くタップすると、そこにあるものの説明（ルーペ）</small></div>
         <div class="toast" id="landToast" role="status" aria-live="polite"></div>
         <div class="nextbar" id="landNext" hidden></div>
+        <div class="lcard" id="landCard" hidden></div>
         <div class="goal" id="landGoal"></div>
       </div>
       <div class="bar">
@@ -47,8 +48,10 @@
         <h2>いまの様子</h2>
         <div id="landStatus"></div>
       </section>
-      <button id="toInside" class="acc big" hidden>② 細菌の中へ →</button>
-      <button id="toZoomAttach" class="big" hidden>③ 刺さるところを分子で見る</button>
+      <section class="box">
+        <h2>ルーペ</h2>
+        <div id="landLoupe"><p class="hint2">図を<b>軽くタップ</b>すると（つまんで動かさない）、そこにあるものの説明が出る。</p></div>
+      </section>
       <section class="box">
         <h2>起きたこと</h2>
         <ol class="log" id="landLog"></ol>
@@ -65,6 +68,7 @@
         <div class="hint" id="inHint">さわったところを<br>ルーペで説明</div>
         <div class="toast" id="inToast" role="status" aria-live="polite"></div>
         <div class="nextbar" id="inNext" hidden></div>
+        <div class="lcard" id="inCard" hidden></div>
         <div class="goal" id="inGoal"></div>
       </div>
       <div class="bar">
@@ -105,6 +109,7 @@
         <div class="hud mono" id="zHud"></div>
         <div class="toast" id="zToast" role="status" aria-live="polite"></div>
         <div class="nextbar" id="zNext" hidden></div>
+        <div class="lcard" id="zCard" hidden></div>
         <div class="goal" id="zGoal"></div>
       </div>
     </main>

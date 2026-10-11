@@ -32,7 +32,7 @@ const Zoom = (() => {
     say(html, kind) { $('zSay').innerHTML = html + (kind ? ` <span class="kind ${kind}">${KIND[kind]}</span>` : ''); },
     steps(list) { Z._steps = list; Z._at = -1; renderSteps(); },
     at(i) { Z._at = i; renderSteps(); },
-    pick(info) { if (!info) return; $('zPick').innerHTML = `<h3>${info.t} <span class="kind ${info.k}">${KIND[info.k]}</span></h3><p>${info.b}</p>`; },
+    pick(info) { if (!info) return; $('zPick').innerHTML = `<h3>${info.t} <span class="kind ${info.k}">${KIND[info.k]}</span></h3><p>${info.b}</p>`; UI.card('z', info); },
     toast(msg) { const el = $('zToast'); el.textContent = msg; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 1800); },
     // ---- 描く道具（座標は nm）----
     circle(x, y, r, fill, stroke, lw = 1) { g.beginPath(); g.arc(Z.X(x), Z.Y(y), Math.max(0.5, r * s), 0, Math.PI * 2); if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw; g.stroke(); } },
@@ -107,7 +107,7 @@ const Zoom = (() => {
     $('zList').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.id === cur.id)));
     $('zTitle').textContent = cur.name; $('zLead').innerHTML = cur.lead || '';
     $('zCtrl').innerHTML = ''; $('zSay').innerHTML = ''; $('zPick').innerHTML = '<p class="hint2">図の中の部品をさわると、ここに説明が出る。</p>';
-    Z._steps = null; renderSteps(); UI.next('z', null); UI.goal('z', cur.goal || cur.name, null);
+    Z._steps = null; renderSteps(); UI.next('z', null); document.getElementById('zCard').hidden = true; UI.goal('z', cur.goal || cur.name, null);
     for (const k in holding) holding[k] = false;
     fit();
     cur.init(Z);
@@ -147,7 +147,7 @@ const Zoom = (() => {
     UI.goal('z', cur.goal || cur.name, fin ? [['できた！', 'done']] : null);
     if (fin) {
       const i = chs.indexOf(cur), nx = chs[i + 1];
-      UI.next('z', nx ? [[`つぎの場面へ: ${i + 2}. ${nx.name} →`, () => open(nx.id), true], ['この場面をもう一度', () => open(cur.id)]] : [['おわり！ ① 着陸させるにもどる', () => UI.setTab('land'), true], ['この場面をもう一度', () => open(cur.id)]], cur.id);
+      UI.next('z', nx ? [[`つぎの場面へ: ${i + 2}. ${nx.name} →`, () => open(nx.id), true]] : [['おわり！ ① 着陸させるにもどる', () => UI.setTab('land'), true]], cur.id);
     }
     if (pickHl && performance.now() - pickHl.at < 1500) { g.strokeStyle = '#ffe066'; g.lineWidth = 2; g.beginPath(); g.arc(Z.X(pickHl.x), Z.Y(pickHl.y), Math.max(10, pickHl.r * s), 0, Math.PI * 2); g.stroke(); }
     // ものさし
