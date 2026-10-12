@@ -106,7 +106,7 @@ i.sw.plain{background:repeating-linear-gradient(90deg,rgba(240,240,230,.9) 0 6px
 .envhead{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px}
 .envhead button{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:4px 10px;font:500 12px var(--f-body);cursor:pointer}
 .envhead button.on{background:#7fd4ff;color:#1a1a1a;border-color:#7fd4ff}
-#envOut{grid-column:1/-1;margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+#envOut,#fineOut{grid-column:1/-1;margin:2px 0 0;font-size:12.5px;color:var(--muted)}
 #windBadge{position:absolute;top:44px;left:8px;font-size:12px;background:rgba(13,24,18,.7);padding:3px 8px;border-radius:8px;pointer-events:none}
 #windBadge:empty{display:none}
 #views:not(.v3d) #windBadge{display:none}

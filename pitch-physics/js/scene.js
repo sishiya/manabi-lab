@@ -106,6 +106,16 @@ function recompute() {
   S.mv = movement(S.res, S.ghostPlain);
   // ふつうの空気（20 ℃・海面・無風）で同じように放したとき
   S.ghostStd = isStdEnv() ? null : simulate(S.P, undefined, STD_ENV);
+  // 段階F: 小さな効果のそれぞれを外したら、ホームでの位置が何 mm 変わるか。揚力の係数の式を変えたら何 cm 変わるか
+  S.fine = {};
+  for (const k of ['decay', 'buoy', 'added', 'coriolis']) {
+    const fx = Object.assign({}, PHY.fx); fx[k] = !fx[k];
+    const r2 = simulate(S.P, { air: true, magnus: true, seam: true, fx });
+    S.fine[k] = Math.hypot(r2.pPlate[0] - S.res.pPlate[0], r2.pPlate[2] - S.res.pPlate[2]) * 1000;
+  }
+  { const keep = PHY.clModel; PHY.clModel = keep === 'nathan' ? 'sawicki' : 'nathan';
+    const r2 = simulate(S.P); PHY.clModel = keep;
+    S.clAlt = { dx: (r2.pPlate[0] - S.res.pPlate[0]) * 100, dz: (r2.pPlate[2] - S.res.pPlate[2]) * 100 }; }
   // 球種を重ねる: その投手のほかの球種も、同じ投げる手・同じ空気で
   S.multi = null;
   if (S.overlay) {
@@ -206,6 +216,8 @@ const TOUR = [
     go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: false }; S.t = 0.2; camTo('batter'); } },
   { text: '<b>決める時刻の球種のちがい</b>: 架空の本格派の4球種を、それぞれ「回転の力がなければまん中に届く向き」に放したとき。下の帯の緑が終わる時刻（振ると決める最後）には、打者の目から見て球種どうしは<b>ボール半分ほど</b>（0.17°）しかはなれていないのに、ホームでは最大 <b>1 m</b> はなれます。時間のつまみを緑の終わりに合わせて、打者の目で見くらべてみよう。',
     go() { S.overlay = true; S.overlayAim = 'center'; setPitcher('power'); S.show = { noAir: false, plain: false, forces: false, std: false }; S.t = batterInfo().tDecide; camTo('batter'); } },
+  { text: '<b>本物に近づける</b>: 回転が少しずつ減ること・空気の浮力・まわりの空気もいっしょに動くこと（付加質量）・地球の自転（コリオリの力）も計算に入れています。どれも、ホームでの位置を 1〜2 mm 動かすだけ。答えをいちばん大きく左右するのは、空気の力の係数（測定から作った式）の不確かさで、揚力の式を別の測定のものに変えると 1 cm ほど変わります（下の「本物に近づける」）。',
+    go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0.2; camTo('ball'); } },
   { text: '自由に試そう。下で投げる手・球種を選び、速さ・回転数・回転の向き（右のボールをドラッグ）・使える回転を変えると、すぐに計算しなおします。',
     go() { setPitch('ff'); S.show = { noAir: true, plain: true, forces: true }; S.t = 0; camTo('ball'); } },
 ];

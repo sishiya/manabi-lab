@@ -50,6 +50,11 @@ function syncC() {
   $('windBadge').textContent = isStdEnv() ? '' : '空気 ' + rho.toFixed(3) + ' kg/m³・' + windName(S.env.ws, S.env.wd);
   $('envOut').innerHTML = '空気の密度 <b>' + rho.toFixed(3) + ' kg/m³</b>（ふつうの ' + (rho / STD_ENV.rho * 100).toFixed(0) + '%）。' +
     '空気の抵抗・マグヌス力・縫い目の力は、どれも密度に比例します。湿った空気は、水蒸気が空気より軽いので少しだけうすくなります。';
+  if (S.fine) {
+    const f = S.fine, mm = v => v < 0.1 ? '0.1 mm 未満' : v.toFixed(1) + ' mm';
+    $('fineOut').innerHTML = 'いまの球で、それぞれを入れる／外すと、ホームでの位置は 回転の減り ' + mm(f.decay) + '・浮力 ' + mm(f.buoy) + '・付加質量 ' + mm(f.added) + '・地球の自転 ' + mm(f.coriolis) + ' 変わります。' +
+      'どれもボールの大きさ（7.4 cm）よりずっと小さい。いちばん大きく答えを変えるのは、係数の不確かさです: 揚力の係数の式をもう一方に変えると、<b>上下 ' + S.clAlt.dz.toFixed(1) + ' cm・左右 ' + S.clAlt.dx.toFixed(1) + ' cm</b> 変わります。';
+  }
   if (S.multi) {
     const lg = $('legend'), want = S.multi.map(m => m.id).join();
     if (lg.dataset.multi !== want) {

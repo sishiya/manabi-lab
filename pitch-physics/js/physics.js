@@ -17,6 +17,18 @@ const PHY = {
   knuckleRefV: 65 * 0.44704,
 };
 PHY.A = Math.PI * PHY.r * PHY.r;
+PHY.Vol = 4 / 3 * Math.PI * Math.pow(PHY.r, 3);
+// 段階F: 小さいけれど本物の効果（入れるかどうかを選べる）
+PHY.fx = { decay: true, buoy: true, added: true, coriolis: true };
+PHY.lamSpin = 3.7e-5;        // 回転の減り: dω/dt = −λ v ω / r（Nathan「The spin decay of a baseball」の見積もり 3.3〜4.1×10⁻⁵ のまん中。100 mph で 1/e まで約 22 秒）
+PHY.lat = 35;                // 緯度（度）。コリオリの力に使う
+PHY.fieldAz = 67.5;          // ホームから投手板・二塁への向き（北から時計まわり。公認野球規則「東北東」）
+PHY.Omega = 7.2921e-5;       // 地球の自転の角速度 rad/s
+// 地球の自転のベクトル（球場の座標: x 捕手から見て右・y 投手の方・z 上）
+function earthOmega() {
+  const A = PHY.fieldAz * Math.PI / 180, f = PHY.lat * Math.PI / 180, W = PHY.Omega;
+  return [-Math.cos(f) * Math.sin(A) * W, Math.cos(f) * Math.cos(A) * W, Math.sin(f) * W];
+}
 
 // 段階D: 2つの縫い目で握ったナックル。Morrissey 2009 の図 3-24（70 mph・毎分 50 回転・風洞）をグラフから読み取った値（10° ごと、ボールの重さを 1 とした力）
 // lift = 回転軸と進む向きの両方に直角な向きの力、lat = 回転軸の向きの力（論文でも「正しくないかもしれない」と書かれている）
@@ -75,7 +87,9 @@ const V = {
 };
 
 const cdOf = rpm => PHY.cd0 + PHY.cdspin * (rpm / 1000);
-const clOf = S => S <= 0 ? 0 : PHY.cl2 * S / (PHY.cl0 + PHY.cl1 * S);
+// 揚力の係数の式: nathan = Nathan の軌道計算機、sawicki = Sawicki・Hubbard・Stronge 2003（Meyer & Bohn arXiv:0712.0380 の引用で確認: S < 0.1 で 1.5S、それより上で 0.09 + 0.6S）
+PHY.clModel = 'nathan';
+const clOf = S => S <= 0 ? 0 : PHY.clModel === 'sawicki' ? (S < 0.1 ? 1.5 * S : 0.09 + 0.6 * S) : PHY.cl2 * S / (PHY.cl0 + PHY.cl1 * S);
 
 // 投げ方 P から、放した瞬間の位置・速度・回転（角速度ベクトル）を作る
 // P: { v0 km/h, vAng 上下の角度°（＋上）, hAng 左右の角度°（＋捕手から見て右）, x0, z0, ext（投手板から前へ m）,
@@ -102,14 +116,20 @@ function launch(P, env = PHY.env) {
     const wG = V.mul(vh, w * Math.sqrt(1 - eff * eff));         // ジャイロ回転（進む向きと同じ向き）
     omega = V.add(wT, wG);
   }
-  return { pos, vel, omega, rpm: P.rpm, knuckle: !!P.knuckle, seam0: (P.seam0 || 0) * Math.PI / 180, rho: env.rho, wind: env.wind.slice(),
+  return { pos, vel, omega, omega0: omega.slice(), v0air: V.len(V.sub(vel, env.wind)), rpm: P.rpm, knuckle: !!P.knuckle, seam0: (P.seam0 || 0) * Math.PI / 180, rho: env.rho, wind: env.wind.slice(),
     grip: P.grip || (P.knuckle ? '4S' : null), eff: P.knuckle ? 1 : Math.max(0, Math.min(1, P.eff)), arm: P.x0 < 0 ? -1 : 1, sswK: P.sswK };
 }
 
 // 力（N）を部分ごとに。opt: { air, magnus, seam } で入れる力を選ぶ（比べる道すじ用）
 function forces(st, t, vel, opt) {
-  const m = PHY.m, out = { grav: [0, 0, -m * PHY.g], drag: [0, 0, 0], magnus: [0, 0, 0], seam: [0, 0, 0], S: 0, cd: 0, cl: 0, ck: 0, theta: 0 };
+  const m = PHY.m, fx = opt.fx || PHY.fx;
+  const out = { grav: [0, 0, -m * PHY.g], drag: [0, 0, 0], magnus: [0, 0, 0], seam: [0, 0, 0], buoy: [0, 0, 0], S: 0, cd: 0, cl: 0, ck: 0, theta: 0, decay: 1 };
   if (!opt.air) return out;
+  // 回転の減り（ナックルのゆっくりした回転にも同じ式）。進んだ道のりは 空気に対する速さ × t で近似（差は 0.1% 以下）
+  const dec = fx.decay ? Math.exp(-PHY.lamSpin * (st.v0air || 40) * t / PHY.r) : 1;
+  out.decay = dec;
+  if (dec !== 1) st = Object.assign({}, st, { omega: V.mul(st.omega0 || st.omega, dec), rpm: st.rpm * dec });
+  if (fx.buoy) out.buoy = [0, 0, (st.rho || PHY.rho) * PHY.Vol * PHY.g];   // 空気の浮力
   // 空気の力は、空気に対する速さ（ボールの速度 − 風）で決まる
   const vr = V.sub(vel, st.wind || [0, 0, 0]);
   const v = V.len(vr), vh = V.mul(vr, 1 / v), q = 0.5 * (st.rho || PHY.rho) * PHY.A * v * v;
@@ -150,9 +170,14 @@ function forces(st, t, vel, opt) {
   return out;
 }
 function accel(st, t, vel, opt) {
-  const f = forces(st, t, vel, opt);
-  const s = V.add(V.add(f.grav, f.drag), V.add(f.magnus, f.seam));
-  return V.mul(s, 1 / PHY.m);
+  const f = forces(st, t, vel, opt), fx = opt.fx || PHY.fx;
+  const s = V.add(V.add(V.add(f.grav, f.drag), V.add(f.magnus, f.seam)), f.buoy);
+  // 付加質量: 加速するボールは、まわりの空気も少し動かす（球では ½ρV ぶん重く見える）
+  const me = PHY.m + (opt.air && fx.added ? 0.5 * (st.rho || PHY.rho) * PHY.Vol : 0);
+  let a = V.mul(s, 1 / me);
+  // 地球の自転（コリオリの力）: −2Ω × v
+  if (opt.air && fx.coriolis) a = V.sub(a, V.mul(V.cross(earthOmega(), vel), 2));
+  return a;
 }
 
 // RK4 でホームベースの前の端まで。返す: { pts: [{t, p, v}], tPlate, pPlate, vPlate }
@@ -220,4 +245,4 @@ function calibSSW() {
 }
 calibSSW();
 
-if (typeof module !== 'undefined') module.exports = { calibSSW, k2sAt, airDensity, STD_ENV, PHY, V, KMH, MPH, RPM, cdOf, clOf, launch, forces, simulate, sampleAt, aim, movement };
+if (typeof module !== 'undefined') module.exports = { earthOmega, calibSSW, k2sAt, airDensity, STD_ENV, PHY, V, KMH, MPH, RPM, cdOf, clOf, launch, forces, simulate, sampleAt, aim, movement };

@@ -75,6 +75,16 @@ function buildControls() {
   g2.appendChild(many);
 
   buildEnvGroup(box);
+  // 段階F: 本物に近づける（小さな効果・係数の式）
+  const gF = document.createElement('div'); gF.className = 'grp env'; box.appendChild(gF);
+  const hF = document.createElement('div'); hF.className = 'envhead'; hF.innerHTML = '<b>本物に近づける（小さな効果）</b>'; gF.appendChild(hF);
+  check(gF, 'fxDecay', '回転の減り（100 mph で約 22 秒で 1/e）', () => PHY.fx.decay, v => PHY.fx.decay = v);
+  check(gF, 'fxBuoy', '空気の浮力', () => PHY.fx.buoy, v => PHY.fx.buoy = v);
+  check(gF, 'fxAdded', '付加質量（まわりの空気もいっしょに動く）', () => PHY.fx.added, v => PHY.fx.added = v);
+  check(gF, 'fxCor', '地球の自転（コリオリの力）', () => PHY.fx.coriolis, v => PHY.fx.coriolis = v);
+  slider(gF, 'lat', '緯度', -60, 60, 1, () => PHY.lat, v => PHY.lat = v, v => (v >= 0 ? '北緯 ' : '南緯 ') + Math.abs(v) + '°（球場の向きは規則どおり、ホームから二塁が東北東）');
+  selectCtl(gF, 'clModel', '揚力の係数の式', [['nathan', 'Nathan の軌道計算機', ''], ['sawicki', 'Sawicki ほか 2003', '']], () => PHY.clModel, v => PHY.clModel = v);
+  const fo = document.createElement('p'); fo.id = 'fineOut'; gF.appendChild(fo);
   const gB = document.createElement('div'); gB.className = 'grp'; box.appendChild(gB);
   selectCtl(gB, 'batSide', '打者', [['R', '右打者（捕手から見て左に立つ）'], ['L', '左打者（捕手から見て右に立つ）']], () => S.batSide, v => S.batSide = v);
   slider(gB, 'swingMs', 'スイングの時間', 130, 280, 5, () => S.swingMs, v => S.swingMs = v, v => v + ' ms（振り始めから当たるまで。研究で 130〜280 ms）');
@@ -99,8 +109,8 @@ function rebuildChips() {
 }
 
 function onChange(viewOnly) {
-  if (!viewOnly) { S.many = null; recompute(); }
-  else recompute();
+  if (!viewOnly) S.many = null;
+  recompute();
   syncAll();
 }
 
