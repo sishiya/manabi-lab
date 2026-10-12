@@ -84,11 +84,11 @@ const View = (() => {
     // 左下の説明カードにかからないよう、見せたい点を少し上に置く
     cy -= Math.min(70, H * 0.1) / s;
     // 目標が変わったら、動き出しを少しゆるやかに（moveAge を 0 から数える）
-    if (Math.abs(Math.log(s / cam.ts)) > 0.05 || Math.hypot(cx - cam.tcx, cy - cam.tcy) * s > 20) moveAge = 0;
+    if (Math.abs(Math.log(s / cam.ts)) > 0.05 || Math.hypot(cx - cam.tcx, cy - cam.tcy) * s > 20) { moveAge = 0; mv = { cx0: cam.cx, cy0: cam.cy, w0: W / cam.s }; }
     cam.tcx = cx; cam.tcy = cy; cam.ts = s;
     if (instant) { cam.cx = cx; cam.cy = cy; cam.s = s; }
   }
-  let moveAge = 99;
+  let moveAge = 99, mv = null;
   function fitAll(instant) { look(0, 330, 2500 * Math.max(1, (W / H) / (2500 / 1900)), instant); }
   // 動ける範囲: 物語の場所（原点）から、見ている横はばの半分＋少しまで（関係のないところへ行きすぎない）
   // 自分で動かせる範囲: いまの見どころの場所のまわりだけ（迷子にならないように）。引けるのは見どころの横はばの3倍まで
@@ -120,6 +120,15 @@ const View = (() => {
     };
     if (lp.on) ease2(lp, 1 - Math.exp(-dt * 1.6));
     ease2(cam, k);
+    // 大きく引くとき（例: 最後の場面 → 人のからだ）は、見ている広さが広がるのに合わせて位置を寄せる。
+    // 画面の上での距離で寄せると、引いているあいだ何もないところを見てしまうため（いまの場所がまん中近くに見えたまま引く）
+    if (auto && mv && cam.s !== cam.ts) {
+      const w = W / cam.s, w1 = W / cam.ts;
+      if (w1 > mv.w0 * 1.5) {
+        const f = Math.max(0, Math.min(1, (w - mv.w0) / (w1 - mv.w0)));
+        cam.cx = mv.cx0 + (cam.tcx - mv.cx0) * f; cam.cy = mv.cy0 + (cam.tcy - mv.cy0) * f;
+      }
+    }
   }
 
   // ---- ルーペ（左上の小窓）: おまかせカメラは引いたまま、細かいところをここで見せる ----
