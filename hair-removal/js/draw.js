@@ -24,7 +24,8 @@ const GEOM = { xs: [], y0: 0, s: 1, s0: 1, ox: 0, oy: 0, stripMM: 10, w: 0, h: 0
 function layout(w, h, N, view) {
   const stripMM = (N - 1) * SIM.gapMM + 2.4;
   const s0 = Math.min((h - 8) / (UP_MM + DOWN_MM), (w - 8) / stripMM);
-  const v = view || { z: 1, cx: stripMM / 2, cy: (DOWN_MM - UP_MM) / 2 };
+  const ok = view && [view.z, view.cx, view.cy].every(Number.isFinite);   // こわれた view は全体表示にもどす
+  const v = ok ? view : { z: 1, cx: stripMM / 2, cy: (DOWN_MM - UP_MM) / 2 };
   const s = s0 * v.z;
   return { stripMM, s0, s, ox: w / 2 - v.cx * s, oy: h / 2 - v.cy * s };
 }

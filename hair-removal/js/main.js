@@ -167,7 +167,7 @@ cv.addEventListener('pointerdown', e => {
   const [x, y] = local(e);
   if (S.tool === 'look') {
     const hh = findHit(x, y); showTip(x, y, hh && hh.key, $('stage'));
-    { pan = { x, y, v: Object.assign({}, S.view) }; cv.setPointerCapture(e.pointerId); }
+    pan = { x, y, v: Object.assign({}, curView()), moved: false }; cv.setPointerCapture(e.pointerId);   // 全体表示（view が null）からでも動かせる
     return;
   }
   if (y > GEOM.y0 + 0.15 * GEOM.s) { toast('肌の表面より上（毛のあるところ）をなぞってください'); return; }
@@ -177,7 +177,12 @@ cv.addEventListener('pointerdown', e => {
 });
 cv.addEventListener('pointermove', e => {
   const [x, y] = local(e);
-  if (pan) { S.view = clampView({ z: pan.v.z, cx: pan.v.cx - (x - pan.x) / GEOM.s, cy: pan.v.cy - (y - pan.y) / GEOM.s }); return; }
+  if (pan) {
+    if (!pan.moved && Math.hypot(x - pan.x, y - pan.y) < 4) return;   // クリックだけなら動かさない
+    pan.moved = true;
+    S.view = clampView({ z: pan.v.z, cx: pan.v.cx - (x - pan.x) / GEOM.s, cy: pan.v.cy - (y - pan.y) / GEOM.s });
+    return;
+  }
   if (S.paint) { const yy = Math.min(y, GEOM.y0 + 0.1 * GEOM.s); S.paint.pts.push([x, yy]); paintHit(S.paint.hit, x, yy); return; }
   if (S.tool === 'look' && e.pointerType === 'mouse') { const hh = findHit(x, y); showTip(x, y, hh && hh.key, $('stage')); }
   S.hover = null;
