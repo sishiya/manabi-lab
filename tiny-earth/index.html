@@ -16,7 +16,7 @@
       <div id="hudX">高さ ×100</div>
     </div>
     <div id="toast" hidden></div>
-    <div id="glitch" hidden><b>SHELL.SYS</b><span>殻のデータを消去しています…</span><i>ERR 0x1F · 空気の境界がなくなりました</i></div>
+    <div id="glitch" hidden><b>NO SIGNAL</b><span>殻の信号がとぎれました…</span><i>SHELL.SYS · 空気の境界がなくなりました</i></div>
     <div id="thermo" hidden>
       <div class="thRow">
         <div class="th"><div class="tube"><div class="fill" id="thSea"></div></div><span>海</span><b id="thSeaV">15℃</b></div>
@@ -41,6 +41,12 @@
         <button data-r="100">100 m</button><button data-r="1000">1 km</button><button data-r="10000">10 km</button>
         <button data-r="1737400">月くらい</button><button data-r="6371000">地球</button>
       </div>
+    </div>
+
+    <div class="ctl">
+      <label>地形</label>
+      <div class="btns" id="terrBtns"><button data-t="earth" class="on">本物の地球</button><button data-t="fake">作りもの</button></div>
+      <p class="note" id="terrNote">本物の地球の地形（ETOPO1）を、同じ割合で小さくしています。</p>
     </div>
 
     <div class="ctl" id="honestCtl">
@@ -153,7 +159,7 @@
         <li>森: 空気がなくなると葉の水が抜けて枯れます。枯れる速さは計算していません（色の変わり方は見た目だけ）。</li>
         <li>風はあなたが決めます（自然の風の計算はしていません）。風は、ある軸のまわりをまわる向きに吹きます。</li>
         <li>流れが勢いを運ぶ効果（移流）は省いています。波が砕ける・しぶきは計算していません。</li>
-        <li>星の中身はかたいものとしています。地形は作りもので、高さの分布だけ地球に近づけています（陸 29%、海の平均の深さ 3682 m）。森は陸の約 31%（FAO 2020）、1 ha に 400 本として数を出し、多すぎるときは間引いて描いています。</li>
+        <li>星の中身はかたいものとしています。地形は「本物の地球」（ETOPO1 を 1°ごと＝約 110 km ごとに間引いたもの。高い山の頂上は間引かれて低くなる）と「作りもの」（高さの分布だけ地球に近づけた。陸 29%、海の平均の深さ 3682 m）から選べます。森は陸の約 31%（FAO 2020）。本物の地球のときの森の場所は、緯度で決めた目安です（熱帯と緯度 45〜60° に多く、砂漠の多い 18〜35° に少なく。本物の森の地図ではありません）。1 ha に 400 本として数を出し、多すぎるときは間引いて描いています。</li>
         <li>底の摩擦係数 0.0025 は、潮や高潮の計算でよく使われる値（推定）です。</li>
         <li>半径 100 m より小さいと、表面張力と水の粘りけが主役になり、この式は合わなくなります。</li>
       </ul>
@@ -172,6 +178,7 @@
         <li>自分の重さで曲がる柱の高さ: Greenhill, A. G. (1881) Determination of the greatest height consistent with stability that a vertical pole or mast can be made, and of the greatest height to which a tree of given proportions can grow. <i>Proc. Camb. Phil. Soc.</i> 4: 65–73。木への当てはめ: McMahon, T. (1973) Size and shape in biology. <i>Science</i> 179: 1201–1204.</li>
         <li>木の高さの限界（水）: Koch, G. W., Sillett, S. C., Jennings, G. M. &amp; Davis, S. D. (2004) The limits to tree height. <i>Nature</i> 428: 851–854.</li>
         <li>雨つぶがちぎれる大きさ: Villermaux, E. &amp; Bossa, B. (2009) Single-drop fragmentation determines size distribution of raindrops. <i>Nature Physics</i> 5: 697–702.</li>
+        <li>本物の地球の地形: NOAA National Geophysical Data Center (2009) ETOPO1 1 Arc-Minute Global Relief Model. NOAA National Centers for Environmental Information（<a href="https://doi.org/10.7289/V5C8276M" target="_blank" rel="noopener">doi:10.7289/V5C8276M</a>、2026-10-12 に取得、1°ごとに間引いて使用）。Amante, C. &amp; Eakins, B. W. (2009) ETOPO1 1 Arc-Minute Global Relief Model: Procedures, Data Sources and Analysis. NOAA Technical Memorandum NESDIS NGDC-24.</li>
         <li>森の割合: FAO (2020) <i>Global Forest Resources Assessment 2020</i>.</li>
       </ul>
       <h3>使っているもの</h3>

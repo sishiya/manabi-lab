@@ -97,6 +97,22 @@ UI.$('lifeReset').addEventListener('click', () => { LIFE.reset(life); UI.life(li
 // 風の向きの初め: 星の軸のまわり（西から東へ）
 ocean.wind.ax = 0; ocean.wind.ay = 1; ocean.wind.az = 0;
 setR(1000, false);
+// 地形: 本物の地球（ETOPO1 を 1°ごと、data/etopo1deg.bin）と作りもの。本物を読みこめたら、それにする
+const terrFake = { elev: Float32Array.from(terrain.elev), forest: Uint8Array.from(terrain.forest) };
+let terrEarth = null, terrKind = 'fake';
+function setTerrain(kind) {
+  if (kind === 'earth' && !terrEarth) return;
+  terrKind = kind;
+  TERRAIN.apply(terrain, kind === 'earth' ? terrEarth : terrFake, mesh);
+  for (const b of UI.$('terrBtns').children) b.classList.toggle('on', b.dataset.t === kind);
+  UI.$('terrNote').textContent = kind === 'earth' ? '本物の地球の地形（ETOPO1、NOAA）を、同じ割合で小さくしています。1°ごと（約 110 km）に間引いているので、高い山の頂上は低くなります。' : '作りものの地形（高さの分布だけ地球に近づけた）。';
+  setR(ocean.R);
+}
+UI.$('terrBtns').addEventListener('click', e => { const t = e.target.dataset && e.target.dataset.t; if (t) setTerrain(t); });
+fetch('data/etopo1deg.bin').then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).then(buf => {
+  terrEarth = TERRAIN.fromGrid(mesh, new Int16Array(buf));
+  setTerrain('earth');
+}).catch(e => { window.__tieaErr.push('地形データ: ' + e); UI.$('terrNote').textContent = '本物の地球の地形を読みこめませんでした（作りものの地形で表示）。'; });
 // 最初は星を少し押した状態から（たっぷん）。最初の一押しでは生きものをおどろかせない
 { const r = VIEW.screenRightInPlanet(), v = ocean.P.c0; OCEAN.shake(ocean, r.x * v, r.y * v, r.z * v); }
 
@@ -133,7 +149,7 @@ requestAnimationFrame(loop);
 
 // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）
 window.__tiea = {
-  S, mesh, terrain, ocean, VIEW, handlers, HUI, life, setTreeH, CLOSE,
+  S, mesh, terrain, ocean, VIEW, handlers, HUI, life, setTreeH, CLOSE, setTerrain,
   simRun(sec) { let n = 0; while (sec > 0 && n < 100000) { const r = OCEAN.advance(ocean, sec, 400); sec -= r.done; n += r.n; } S.lastUI = -1e9; draw(performance.now()); return n; },
   vol() { return OCEAN.volume(ocean) / ocean.vol0 - 1; },
   cam(o) { Object.assign(VIEW.st, o); draw(performance.now()); },

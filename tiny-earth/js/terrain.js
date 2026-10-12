@@ -55,17 +55,46 @@ const TERRAIN = (() => {
     for (let i = 0; i < N; i++) if (elev[i] < 0) { sd += -elev[i] * mesh.area[i]; sa += mesh.area[i]; }
     const k = PHYS.OCEAN_MEAN / (sd / sa);
     for (let i = 0; i < N; i++) if (elev[i] < 0) elev[i] *= k;
-    // 森: 陸のうち、緯度 62° より低く、高すぎない所に、まだらに（森は陸の約 31%: FAO 2020）
+    let land = 0; for (let i = 0; i < N; i++) if (elev[i] > 0) land += mesh.area[i];
+    const forest = forestOf(mesh, elev, seed, false);
+    let fa = 0; for (let i = 0; i < N; i++) if (forest[i]) fa += mesh.area[i];
+    return { elev, forest, landFrac: land / tot, forestArea: fa / tot };
+  }
+  // 本物の地球: ETOPO1（NOAA NCEI、1 分角）を 1°ごとに間引いた高さの表（緯度 −90〜90 の 181 行 × 経度 −180〜179 の 360 列、int16、m）。
+  // マス目の点の緯度・経度で、まわりの4点から補間する（星の北極は +y、経度 0° は +z の向き）。森の場所は作りものと同じ決め方
+  function fromGrid(mesh, grid, seed = 7) {
+    const N = mesh.N, p = mesh.pos, elev = new Float32Array(N);
+    // 緯度 la（整数 −90〜90）・経度 lo（整数、どの範囲でも）の高さ。−180° が 0 列
+    const g = (la, lo) => grid[(la + 90) * 360 + (((lo + 180) % 360) + 360) % 360];
+    for (let i = 0; i < N; i++) {
+      const x = p[i * 3], y = p[i * 3 + 1], z = p[i * 3 + 2];
+      const lat = Math.asin(Math.max(-1, Math.min(1, y))) * 180 / Math.PI, lon = Math.atan2(x, z) * 180 / Math.PI;
+      const la0 = Math.min(179, Math.floor(lat + 90)) - 90, lo0 = Math.floor(lon), fa = lat - la0, fo = lon - lo0;
+      elev[i] = (g(la0, lo0) * (1 - fo) + g(la0, lo0 + 1) * fo) * (1 - fa) + (g(la0 + 1, lo0) * (1 - fo) + g(la0 + 1, lo0 + 1) * fo) * fa;
+    }
+    return { elev, forest: forestOf(mesh, elev, seed, true) };
+  }
+  // 森: 陸のうち、緯度 62° より低く、高すぎない所に、まだらに（森は陸の約 31%: FAO 2020）
+  // climate=true（本物の地球）: 緯度で目安をつける（熱帯と緯度 45〜60° に多く、乾燥帯 18〜35° に少なく。本物の森の地図ではない）
+  const band = lat => { const a = Math.abs(lat); return a < 12 ? 0.6 : a < 18 ? 0.1 : a < 35 ? -0.9 : a < 45 ? 0.1 : 0.5; };
+  function forestOf(mesh, elev, seed, climate) {
+    const n2 = makeNoise(seed * 31 + 5), N = mesh.N, p = mesh.pos;
     const forest = new Uint8Array(N), fv = new Float32Array(N), cand = [];
     for (let i = 0; i < N; i++) {
       const lat = Math.asin(p[i * 3 + 1]) * 180 / Math.PI;
-      if (elev[i] > 0 && Math.abs(lat) < 62 && elev[i] < 3000) { fv[i] = fbm(n2, p[i * 3] * 7, p[i * 3 + 1] * 7, p[i * 3 + 2] * 7, 3); cand.push(i); }
+      if (elev[i] > 0 && Math.abs(lat) < 62 && elev[i] < 3000) { fv[i] = fbm(n2, p[i * 3] * 7, p[i * 3 + 1] * 7, p[i * 3 + 2] * 7, 3) + (climate ? band(lat) : 0); cand.push(i); }
     }
     let land = 0; for (let i = 0; i < N; i++) if (elev[i] > 0) land += mesh.area[i];
     cand.sort((a, b) => fv[b] - fv[a]);
     let fa = 0;
     for (const i of cand) { if (fa > 0.31 * land) break; forest[i] = 1; fa += mesh.area[i]; }
-    return { elev, forest, landFrac: land / tot, forestArea: fa / tot };
+    return forest;
   }
-  return { build };
+  // 地形を入れかえる（elev・forest は、海・描画・生きものが同じ配列を持っているので、中身だけ書きかえる）
+  function apply(TR, src, mesh) {
+    TR.elev.set(src.elev); TR.forest.set(src.forest);
+    let tot = 0, land = 0; for (let i = 0; i < mesh.N; i++) { tot += mesh.area[i]; if (TR.elev[i] > 0) land += mesh.area[i]; }
+    TR.landFrac = land / tot;
+  }
+  return { build, fromGrid, apply };
 })();

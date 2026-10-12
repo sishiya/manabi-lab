@@ -80,6 +80,13 @@ foreach ($f in $files) {
     elseif ($ascii -match 'LIST|INFO|id3 |ID3|bext|iXML|_PMX') { [void]$hits.Add("$rel : WAV に付加情報（作者・機器など）がある（消してから公開）") }
     continue
   }
+  if ($ext -eq '.bin') {
+    # 数値だけのデータ（例: tiny-earth/data/etopo1deg.bin の高さの表）: 長い文字列（作者名・場所などの付加情報）がまざっていないか
+    $bytes = [IO.File]::ReadAllBytes($f)
+    $ascii = [Text.Encoding]::GetEncoding(28591).GetString($bytes)   # Latin-1（ASCII だと 128 以上が「?」になって文字に見える)
+    if ($ascii -match '[\x20-\x7e]{12,}') { [void]$hits.Add("$rel : bin に文字列がまざっている（中身を確認）") }
+    continue
+  }
   if ($midiExt -contains $ext) {
     $txt = [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($f))
     $lines = @([regex]::Matches($txt, '[\x20-\x7e　-鿿＀-￯]{3,}') | ForEach-Object { $_.Value })

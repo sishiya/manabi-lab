@@ -27,40 +27,52 @@ const VIEW = (() => {
     planet.add(landV); planet.add(waterV);
     // 毎コマ全部の頂点から包み球を計算すると重いので、固定の球にして画面外の判定もしない
     for (const m of [landV, waterV]) { m.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 3); m.frustumCulled = false; }
-    // 殻（空気をとじこめる仮定）: 三角形のタイルの集まり。外すと、データが壊れるように（横ずれ・色ずれ）外へはじけて消える
-    //   明るさのチカチカはしない（毎秒3〜30回の点滅は使わない。RULES 9章）。乱れは位置と色のずれだけ
+    // 殻（空気をとじこめる仮定）: うすい網目の球。外すと、電波がとぎれた映像のように「ジジジッ」と3回みだれ（横に裂ける・色ずれ・走査線・砂あらし）、
+    //   最後は古いテレビを消したときのように横一本につぶれて消える（2.5 秒）。
+    //   明るさのチカチカはしない（毎秒3〜30回の点滅は使わない。RULES 9章）: みだれは位置のずれと色で出し、殻のこさは変えない。みだれるのは 1 秒に 1〜2 回
     shell = new THREE.Mesh(shellGeom(), new THREE.ShaderMaterial({
       transparent: true, depthWrite: false, depthTest: false, side: THREE.DoubleSide,
       uniforms: { uProg: { value: 0 }, uTime: { value: 0 } },
       vertexShader: `
         uniform float uProg, uTime;
-        attribute vec3 aCenter; attribute float aSeed; attribute vec3 aBary;
-        varying vec3 vBary; varying float vQ; varying float vSeed; varying vec3 vN; varying vec3 vV;
+        attribute vec3 aBary;
+        varying vec3 vBary; varying vec3 vN; varying vec3 vV; varying float vB; varying float vBand; varying float vSlot; varying float vC;
         float h(float x){ return fract(sin(x) * 43758.5453); }
+        float burst(float t){ return step(0.05, t) * step(t, 0.4) + step(0.9, t) * step(t, 1.25) + step(1.75, t) * step(t, 2.25); }
         void main(){
-          float q = clamp((uProg - aSeed * 0.55) / 0.45, 0., 1.);
-          vec3 p = position;
-          float g = step(0.001, q) * (1. - q);
-          float k = floor(uTime * 6. + aSeed * 37.);
-          p += (vec3(h(k * 12.99 + aSeed * 78.), h(k * 39.35 + aSeed * 11.), h(k * 7.77 + aSeed * 3.1)) - .5) * 0.07 * g;
-          p = aCenter + (p - aCenter) * (1. - q * 0.9);
-          p += normalize(aCenter) * q * q * 1.3;
-          vQ = q; vSeed = aSeed; vBary = aBary;
-          vec4 mv = modelViewMatrix * vec4(p, 1.);
-          vN = normalize(normalMatrix * normalize(aCenter)); vV = normalize(-mv.xyz);
-          gl_Position = projectionMatrix * mv;
+          vec4 mv = modelViewMatrix * vec4(position, 1.);
+          vec4 cp = projectionMatrix * mv;
+          vec4 cc = projectionMatrix * modelViewMatrix * vec4(0., 0., 0., 1.);   // 殻の中心（画面の上）
+          vec2 ndc = cp.xy / cp.w, cen = cc.xy / cc.w;
+          float t = uProg, b = burst(t);
+          float band = floor(ndc.y * 26.), slot = floor(uTime * 18.);
+          // 横に裂ける: 画面の横の帯ごとに、ところどころ左右へずれる（位置が動くだけで明るさは変えない）
+          float tear = (h(band * 7.13 + slot * 1.31) - .5) * step(0.5, h(band * 3.7 + slot * 0.91));
+          ndc.x += tear * 0.16 * b;
+          // 最後: 横一本につぶれて消える
+          float c = clamp((t - 2.25) / 0.25, 0., 1.);
+          ndc.y = cen.y + (ndc.y - cen.y) * (1. - 0.985 * c);
+          ndc.x = cen.x + (ndc.x - cen.x) * (1. + 0.15 * c);
+          cp.xy = ndc * cp.w;
+          gl_Position = cp;
+          vBary = aBary; vB = b; vBand = band; vSlot = slot; vC = c;
+          vN = normalize(normalMatrix * normalize(position)); vV = normalize(-mv.xyz);
         }`,
       fragmentShader: `
-        varying vec3 vBary; varying float vQ; varying float vSeed; varying vec3 vN; varying vec3 vV;
+        varying vec3 vBary; varying vec3 vN; varying vec3 vV; varying float vB; varying float vBand; varying float vSlot; varying float vC;
+        float h(float x){ return fract(sin(x) * 43758.5453); }
         void main(){
           float edge = 1. - smoothstep(0., 0.07, min(min(vBary.x, vBary.y), vBary.z));
           float f = pow(1. - abs(dot(vN, vV)), 3.);
           vec3 col = vec3(0.55, 0.85, 1.0);
-          float on = step(0.001, vQ);
-          col = mix(col, fract(vSeed * 7.13) > .5 ? vec3(1., .35, .9) : vec3(.3, 1., .95), 0.65 * on);
-          float scan = 0.82 + 0.18 * step(0.5, fract(gl_FragCoord.y * 0.25));   // 止まった走査線
-          float a = (0.01 + 0.08 * f + edge * (0.12 * f + 0.35 * on)) * (1. - vQ) * scan;   // 殻は網目だけ（ふちのかさは大気が受け持つ）。ふだんは星のふち（横から見える所）だけうっすら
-          gl_FragColor = vec4(col, a);
+          // 色ずれ: みだれているあいだ、帯ごとにマゼンタかシアンへ寄る
+          float k = h(vBand * 5.31 + vSlot * 2.17);
+          col = mix(col, k > .5 ? vec3(1., .4, .85) : vec3(.35, 1., .9), 0.6 * vB);
+          // 走査線（止まった横じま）と、こまかい砂あらし（1 ピクセルずつ。広い所が同時に明るくならない）
+          float scan = 0.8 + 0.2 * step(0.5, fract(gl_FragCoord.y * 0.25));
+          float snow = h(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233)) + vSlot * 3.7);
+          float a = (0.01 + 0.08 * f + edge * (0.12 * f + 0.2 * vB)) * scan + 0.06 * vB * snow * (0.3 + f);
+          gl_FragColor = vec4(col, a * (1. - vC * 0.6));
         }`,
     }));
     shell.renderOrder = 10; shell.userData = { start: 0, was: false };
@@ -366,6 +378,35 @@ uniform float uTime, uAmp, uS;
   function resize() {
     const w = cv.clientWidth, h = cv.clientHeight;
     renderer.setSize(w, h, false); camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix();
+    if (post) { const v = renderer.getDrawingBufferSize(new THREE.Vector2()); post.rt.setSize(v.x, v.y); }
+  }
+  // 殻を外したときの画面全体のみだれ（電波がとぎれた映像）。みだれる 3 回のあいだだけ、いったん絵を作ってから、ずらして写す
+  //   横の帯ごとに左右へ裂ける・赤と青の色ずれ・走査線・こまかい砂あらし。画面全体の明るさはほとんど変えない（点滅にしない。RULES 9章）
+  let post = null;
+  function makePost() {
+    const v = renderer.getDrawingBufferSize(new THREE.Vector2());
+    const rt = new THREE.WebGLRenderTarget(v.x, v.y);
+    const mat = new THREE.ShaderMaterial({
+      uniforms: { tD: { value: rt.texture }, uB: { value: 0 }, uTime: { value: 0 } },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
+      fragmentShader: `
+        uniform sampler2D tD; uniform float uB, uTime; varying vec2 vUv;
+        float h(float x){ return fract(sin(x) * 43758.5453); }
+        void main(){
+          vec2 uv = vUv;
+          float band = floor(uv.y * 48.), slot = floor(uTime * 18.);
+          uv.x += (h(band * 7.13 + slot * 1.31) - .5) * step(0.55, h(band * 3.7 + slot * 0.91)) * 0.09 * uB;   // 横に裂ける
+          float sp = 0.006 * uB;
+          vec3 c = vec3(texture2D(tD, uv + vec2(sp, 0.)).r, texture2D(tD, uv).g, texture2D(tD, uv - vec2(sp, 0.)).b);   // 色ずれ
+          c *= 1. - 0.18 * uB * step(0.5, fract(gl_FragCoord.y * 0.25));                                        // 走査線
+          float snow = h(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233)) + slot * 3.7);
+          c = mix(c, vec3(snow * 0.6), 0.12 * uB);                                                                  // 砂あらし（1 ピクセルずつ）
+          gl_FragColor = vec4(c, 1.);
+        }`,
+      depthTest: false, depthWrite: false,
+    });
+    const sc = new THREE.Scene(); sc.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat));
+    post = { rt, mat, sc, cam: new THREE.Camera() };
   }
   function updateVapor() {
     const u = vapor.userData, hs = st.honest, now = performance.now() / 1000, dt = Math.min(0.1, u.last ? now - u.last : 0);
@@ -431,9 +472,9 @@ uniform float uTime, uAmp, uS;
     const now = performance.now(), su = shell.userData, removed = !!(hs && hs.removed);
     if (removed && !su.was) { su.start = now; const gl = document.getElementById('glitch'); if (gl) { gl.hidden = false; gl.classList.remove('run'); void gl.offsetWidth; gl.classList.add('run'); setTimeout(() => { gl.hidden = true; }, 2600); } }
     su.was = removed;
-    const prog = removed ? (now - su.start) / 2500 * 1.4 : 0;
+    const prog = removed ? (now - su.start) / 1000 : 0;   // 殻を外してからの本当の時間（秒）
     shell.material.uniforms.uProg.value = prog; shell.material.uniforms.uTime.value = now / 1000;
-    shell.visible = prog < 1.4 && (camera.position.length() > 1.3 || removed);
+    shell.visible = prog < 2.5 && (camera.position.length() > 1.3 || removed);
     // 大気: 殻の中の空気（残っている割合 airM）。外したあとは広がりながらうすれる（大きさ・こさは見た目だけ）
     const am = hs && hs.removed ? Math.max(0, Math.min(1, hs.airM)) : 1;
     halo.visible = am > 0.003 && camera.position.length() > 1.3;
@@ -449,7 +490,14 @@ uniform float uTime, uAmp, uS;
     // 森: 空気がなくなると葉の水が抜けて枯れる（色の変わる速さは見た目だけ）
     const br = hs ? hs.brown : 0;
     treeMesh.material.color.setRGB(1 + 0.7 * br, 1 - 0.3 * br, 1 - 0.6 * br);   // 緑 → 茶色
-    renderer.render(scene, camera);
+    // みだれる 3 回（0.05〜0.4・0.9〜1.25・1.75〜2.25 秒）のあいだだけ、画面全体をみだす
+    const gb = prog > 0 && ((prog > 0.05 && prog < 0.4) || (prog > 0.9 && prog < 1.25) || (prog > 1.75 && prog < 2.25)) ? 1 : 0;
+    if (gb) {
+      if (!post) makePost();
+      post.mat.uniforms.uB.value = gb; post.mat.uniforms.uTime.value = now / 1000;
+      renderer.setRenderTarget(post.rt); renderer.render(scene, camera);
+      renderer.setRenderTarget(null); renderer.render(post.sc, post.cam);
+    } else renderer.render(scene, camera);
   }
   // 描いている地面の高さ（マス c の床。ボクセルなのでマスの中は平ら。向き p は使わない）
   function groundR(c) { return rFloor[c]; }
