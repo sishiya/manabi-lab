@@ -244,7 +244,7 @@ function drawGhost(g, x, y0, s, gh) {
   }
 }
 
-// 道具（tool = {kind, ptr, stroke, sweep, windowMM, razorMM}）
+// 道具（tool = {kind, ptr, stroke, windowMM, razorMM}）
 function drawTool(g, tool, y0, s, w, h) {
   const p = tool.ptr;
   if (tool.kind === 'light' && p) {
@@ -261,7 +261,7 @@ function drawTool(g, tool, y0, s, w, h) {
       const a = Math.min(tool.stroke.a, tool.stroke.b) - tool.razorMM * s, b = Math.max(tool.stroke.a, tool.stroke.b) + tool.razorMM * s;
       g.fillStyle = 'rgba(127,200,255,.35)'; g.fillRect(a, y0 - 4, b - a, 6);
     }
-    const rx = tool.sweep ? tool.sweep.x : tool.stroke ? tool.stroke.b : p && p.x;
+    const rx = tool.stroke ? tool.stroke.b : p && p.x;   // 刃はいつもマウスの所
     if (rx != null) drawRazor(g, rx, y0, s);
   }
   if (tool.kind === 'pluck' && p) {   // 毛抜きの先

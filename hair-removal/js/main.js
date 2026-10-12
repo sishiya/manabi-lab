@@ -12,7 +12,7 @@ const S = {
   age: 30, gray: 'mid',                          // 年齢（0日目）と白髪の出やすさ
   full: null,      // 2年ぶん計算した結果（周期のグラフ・できごと）。手入れや設定を変えたときだけ計算しなおす
   run: null,       // いまの日の毛穴（日を進めるときは続きから）
-  ptr: null, stroke: null, sweep: null, hover: null, key: '',
+  ptr: null, stroke: null, hover: null, key: '',
   view: null,      // 拡大 {z, cx, cy}。null は全体
   ghostSeen: new Map(),   // 抜けていく毛を初めて描いた時刻
 };
@@ -73,21 +73,19 @@ function sceneNow() {
     if (p < 1) ghosts.push({ i: n.i, kind: n.kind, hairs: n.hairs, p });
   }
   // 道具の見え方（マウスの所の刃・照射口・毛抜き、剃ったときの刃の動き）
-  let sweep = null;
-  if (S.sweep) { const p = (now - S.sweep.t0) / 450; if (p >= 1) S.sweep = null; else sweep = { x: S.sweep.a + (S.sweep.b - S.sweep.a) * p }; }
-  const tool = S.tool === 'look' ? null : { kind: S.tool, ptr: S.ptr, stroke: S.stroke, sweep, windowMM: WINDOW_MM, razorMM: RAZOR_MM };
+  const tool = S.tool === 'look' ? null : { kind: S.tool, ptr: S.ptr, stroke: S.stroke, windowMM: WINDOW_MM, razorMM: RAZOR_MM };
   return { fs, flash: fl, since: fl ? S.t - fl.t : Infinity, notes, hover: S.hover, recover, marks, ghosts, tool };
 }
 
 function setTime(t) { S.t = Math.max(0, t); }   // 終わりはない
 
 // --- 手入れ（再生は止めない） ---
-function act(type, idx) {
+function act(type, idx, group) {
   if (!idx.length) return;
   const t = grid(S.t);
   const later = S.events.filter(e => e.t > t + 1e-9);
   if (later.length) S.events = S.events.filter(e => e.t <= t + 1e-9);
-  S.events.push({ t, type, idx: idx.slice().sort((a, b) => a - b) });
+  S.events.push({ t, type, idx: idx.slice().sort((a, b) => a - b), g: group });
   changed(); computeFull();
   if (later.length) toast('この日より後の手入れを消しました');
   if (type === 'pluck') {
@@ -98,7 +96,9 @@ function act(type, idx) {
 }
 function undo() {
   if (!S.events.length) return;
-  const e = S.events.pop(); changed();
+  const e = S.events.pop();
+  if (e.g != null) while (S.events.length && S.events[S.events.length - 1].g === e.g) S.events.pop();   // 1回なぞった分はまとめて
+  changed();
   toast(`${Math.floor(e.t)}日目の${{ shave: 'カミソリ', pluck: '毛抜き', light: '光' }[e.type]}を取り消しました`);
 }
 
@@ -184,6 +184,14 @@ function pickHair(x, y) {
   if (best == null) GEOM.xs.forEach((fx, i) => { const d = Math.abs(fx - x); if (d < Math.min(bd, SIM.gapMM * GEOM.s * 0.5)) { bd = d; best = i; } });
   return best;
 }
+// 刃が px → x を通るあいだに毛穴の出口を通ったら、その場で切る（1回なぞった分は同じ group）
+let strokeId = 0;
+function razorPass(px, x) {
+  const st = S.stroke, idx = underRazor(px, x).filter(i => !st.done.has(i));
+  if (!idx.length) return;
+  idx.forEach(i => st.done.add(i));
+  act('shave', idx, st.g);
+}
 let pan = null;
 cv.addEventListener('pointerdown', e => {
   const [x, y] = local(e);
@@ -193,7 +201,7 @@ cv.addEventListener('pointerdown', e => {
     pan = { x, y, v: Object.assign({}, curView()), moved: false }; cv.setPointerCapture(e.pointerId);   // 全体表示（view が null）からでも動かせる
     return;
   }
-  if (S.tool === 'shave') { S.stroke = { a: x, b: x }; cv.setPointerCapture(e.pointerId); return; }
+  if (S.tool === 'shave') { S.stroke = { a: x, b: x, done: new Set(), g: ++strokeId }; cv.setPointerCapture(e.pointerId); razorPass(x, x); return; }
   if (S.tool === 'light') { const idx = underWindow(x); if (idx.length) act('light', idx); else toast('照射口の下に毛穴がありません'); return; }
   if (S.tool === 'pluck') { const i = pickHair(x, y); if (i != null) act('pluck', [i]); else toast('毛のない所です。抜きたい毛をクリックしてください'); }
 });
@@ -206,17 +214,13 @@ cv.addEventListener('pointermove', e => {
     S.view = clampView({ z: pan.v.z, cx: pan.v.cx - (x - pan.x) / GEOM.s, cy: pan.v.cy - (y - pan.y) / GEOM.s });
     return;
   }
-  if (S.stroke) { S.stroke.b = x; return; }
+  if (S.stroke) { const px = S.stroke.b; S.stroke.b = x; razorPass(px, x); return; }
   if (S.tool === 'look' && e.pointerType === 'mouse') { const hh = findHit(x, y); showTip(x, y, hh && hh.key, $('stage')); }
   S.hover = S.tool === 'pluck' ? pickHair(x, y) : null;
 });
 cv.addEventListener('pointerup', () => {
   pan = null;
-  if (!S.stroke) return;
-  const { a, b } = S.stroke, idx = underRazor(a, b);
   S.stroke = null;
-  S.sweep = { a, b: Math.abs(b - a) < 4 ? a + 1 : b, t0: performance.now() };   // 刃がすべる動き
-  if (idx.length) act('shave', idx);
 });
 cv.addEventListener('pointerleave', () => { if (!S.stroke) { S.ptr = null; S.hover = null; if (S.tool === 'look') showTip(0, 0, null); } });
 
