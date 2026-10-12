@@ -75,7 +75,7 @@ const TOOLS = [
   { id: 'look', name: 'しらべる', icon: '🔍', hint: 'さわると説明。ホイール（＋−）で拡大・縮小、ドラッグで移動。' },
   { id: 'shave', name: 'カミソリ', icon: '🪒', hint: '刃を肌にあてて、横にすべらせた所を剃ります。' },
   { id: 'pluck', name: '毛抜き', icon: '✒', hint: '抜きたい毛をクリック（タップ）。短い毛はつまめません。' },
-  { id: 'light', name: '光', icon: '✦', hint: '照射口（幅 1.5 cm）をあてたい所でクリック。' },
+  { id: 'light', name: '光', icon: '✦', hint: '照射口（幅 1.5 cm）をあてたい所でクリック。学習用の目安で、医療・美容の判断には使えません。' },
 ];
 const TOOL_COLOR = { shave: '#7fc8ff', pluck: '#ffd166', light: '#ff8fb1' };
 

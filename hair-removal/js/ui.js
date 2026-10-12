@@ -19,11 +19,7 @@ function buildControls(S, on) {
     b.onclick = () => on.tool(T.id);
     box.appendChild(b);
   }
-  for (const [id, tbl] of [['skin', SKINS], ['hairc', HAIRS]]) for (const [k, v] of Object.entries(tbl)) { const o = document.createElement('option'); o.value = k; o.textContent = v.name; $(id).appendChild(o); }
-  $('lv').oninput = () => on.light({ level: +$('lv').value });
-  $('skin').onchange = () => on.light({ skin: $('skin').value });
-  $('hairc').onchange = () => on.light({ hair: $('hairc').value });
-  $('cool').onchange = () => on.light({ cool: $('cool').checked });
+  // 光の条件は決めてある（設定はなし。2026-10-12 ユーザー「一般的に光脱毛で何が起こるかを説明できればいい」）
   $('speed').onchange = () => { S.speed = +$('speed').value; };
   if (!FEATURES.gray) { $('siteH').textContent = '部位'; $('age').closest('label').remove(); for (const id of ['grayH', 'grayRow', 'grayNote']) $(id).remove(); }   // 白髪を外しているときは設定ごと取り除く（hidden だけだと .row の display:flex で見えてしまう）
   const ul = $('srcs');
@@ -37,9 +33,6 @@ function syncControls(S) {
   $('siteNote').textContent = SITES[S.site].name + ': ' + SITES[S.site].note;
   for (const T of TOOLS) $('tool-' + T.id).setAttribute('aria-checked', String(S.tool === T.id));
   $('hint').textContent = TOOLS.find(T => T.id === S.tool).hint;
-  const L = S.light;
-  $('lv').value = L.level; $('lvv').textContent = 'Lv' + L.level; $('lvF').textContent = `約 ${(L.level * LIGHT.fPerLevel).toFixed(1)} J/cm²（推定）`;
-  $('skin').value = L.skin; $('hairc').value = L.hair; $('cool').checked = L.cool;
   $('undo').disabled = !S.events.length;
 }
 

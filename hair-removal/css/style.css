@@ -55,6 +55,9 @@ button:disabled{opacity:.4;cursor:default}
 #log li{border-bottom:1px solid var(--line);padding:3px 0;display:flex;gap:8px}
 #log .d{font-family:var(--f-mono);color:var(--muted);min-width:64px}
 #log .n{font-family:var(--f-mono);color:var(--acc);min-width:24px}
+.warn{border:1px solid #ff8fb1;background:rgba(255,143,177,.08);border-radius:8px;padding:8px 12px;font-size:13px;line-height:1.7;margin:4px 0 10px}
+.warn b{color:#ff8fb1}
+.cond{margin:4px 0;padding-left:1.2em}
 #about{color:var(--muted);font-size:14px;line-height:1.8;padding-bottom:28px}
 #about summary{cursor:pointer;color:var(--ink);min-height:36px;display:flex;align-items:center}
 #about a{color:var(--acc)}
