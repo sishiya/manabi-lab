@@ -1,7 +1,7 @@
 {
   "videoId": "vLXOfsPsrq8",
   "file": "_dev/promo/out/wifi-wave-guide.mp4",
-  "thumbnail": "assets/thumbs/wifi-wave.jpg",
+  "thumbnail": "_dev/promo/thumbs/wifi-wave-guide.jpg",
   "privacy": "private",
   "publishAt": "2026-10-21T20:00:00+09:00",
   "captions": { "en": "_dev/promo/out/wifi-wave-guide.en.srt" },

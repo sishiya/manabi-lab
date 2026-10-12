@@ -1,7 +1,7 @@
 {
   "videoId": "BP7FtZfR2Kg",
   "file": "_dev/promo/out/god-view-guide.mp4",
-  "thumbnail": "assets/thumbs/god-view.jpg",
+  "thumbnail": "_dev/promo/thumbs/god-view-guide.jpg",
   "privacy": "private",
   "publishAt": "2026-10-20T20:00:00+09:00",
   "captions": { "en": "_dev/promo/out/god-view-guide.en.srt" },

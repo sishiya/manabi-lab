@@ -1,7 +1,7 @@
 {
   "videoId": "kscSWupNRdI",
   "file": "_dev/promo/out/ga-creatures-guide.mp4",
-  "thumbnail": "assets/thumbs/ga-creatures.jpg",
+  "thumbnail": "_dev/promo/thumbs/ga-creatures-guide.jpg",
   "privacy": "private",
   "publishAt": "2026-10-19T20:00:00+09:00",
   "captions": { "en": "_dev/promo/out/ga-creatures-guide.en.srt" },

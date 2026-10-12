@@ -1,7 +1,7 @@
 {
   "videoId": "QrKfvjFg1ts",
   "file": "_dev/promo/out/black-hole-guide.mp4",
-  "thumbnail": "assets/thumbs/black-hole.jpg",
+  "thumbnail": "_dev/promo/thumbs/black-hole-guide.jpg",
   "privacy": "private",
   "publishAt": "2026-10-13T20:00:00+09:00",
   "captions": { "en": "_dev/promo/out/black-hole-guide.en.srt" },

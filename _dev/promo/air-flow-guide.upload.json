@@ -1,7 +1,7 @@
 {
   "videoId": "UojA-4KWDxY",
   "file": "_dev/promo/out/air-flow-guide.mp4",
-  "thumbnail": "assets/thumbs/air-flow.jpg",
+  "thumbnail": "_dev/promo/thumbs/air-flow-guide.jpg",
   "privacy": "private",
   "publishAt": "2026-10-18T20:00:00+09:00",
   "captions": { "en": "_dev/promo/out/air-flow-guide.en.srt" },

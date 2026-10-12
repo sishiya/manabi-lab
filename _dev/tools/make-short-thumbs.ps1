@@ -1,4 +1,5 @@
-# Make the YouTube Shorts thumbnails (1080x1920 jpg) from the recorded short videos (RULES 8.7).
+# Make the promo video thumbnails from the recorded short videos (RULES 8.7): <app>-short.jpg (1080x1920, Shorts)
+# and <app>-guide.jpg (1280x720, the long guide video), same design and words.
 # Usage: powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/make-short-thumbs.ps1 [-Apps a,b]
 # The content (frame time, crop, words, colors) is in _dev/promo/short-thumbs.js; the design is _dev/promo/short-thumb.html.
 # Steps: ffmpeg takes the frame at t seconds of _dev/promo/out/<app>-short.mp4 -> _dev/promo/out/thumbsrc/<app>.jpg,
@@ -28,13 +29,16 @@ foreach ($e in $list) {
   if (-not (Test-Path $mp4)) { Write-Host "skip $app (no $mp4)"; continue }
   & ffmpeg -v error -y -ss $e.T -i $mp4 -frames:v 1 -q:v 2 (Join-Path $srcDir "$app.jpg")
   if ($LASTEXITCODE -ne 0) { Write-Host "FAILED frame $app"; continue }
-  $png = Join-Path $tmp "$app.png"; if (Test-Path $png) { Remove-Item $png }
-  Start-Process -FilePath $chrome -Wait -WindowStyle Hidden -ArgumentList @('--headless=new', '--hide-scrollbars', '--no-first-run',
-    "--user-data-dir=$tmp\profile", '--allow-file-access-from-files', '--force-device-scale-factor=1', '--window-size=1080,1920',
-    '--virtual-time-budget=3000', "--screenshot=$png", "$($page.AbsoluteUri)?app=$app")
-  if (-not (Test-Path $png)) { Write-Host "FAILED screenshot $app"; continue }
-  $dst = Join-Path $outDir "$app-short.jpg"
-  & ffmpeg -v error -y -i $png -q:v 2 $dst
-  if ($LASTEXITCODE -ne 0) { Write-Host "FAILED jpg $app"; continue }
-  Write-Host ("{0}-short.jpg  {1:N0} KB" -f $app, ((Get-Item $dst).Length / 1KB))
+  # two sizes from the same frame: the short (1080x1920) and the long guide video (1280x720, ?wide)
+  foreach ($k in @(@{ Kind = 'short'; Size = '1080,1920'; Q = '' }, @{ Kind = 'guide'; Size = '1280,720'; Q = '&wide' })) {
+    $png = Join-Path $tmp "$app-$($k.Kind).png"; if (Test-Path $png) { Remove-Item $png }
+    Start-Process -FilePath $chrome -Wait -WindowStyle Hidden -ArgumentList @('--headless=new', '--hide-scrollbars', '--no-first-run',
+      "--user-data-dir=$tmp\profile", '--allow-file-access-from-files', '--force-device-scale-factor=1', "--window-size=$($k.Size)",
+      '--virtual-time-budget=3000', "--screenshot=$png", "$($page.AbsoluteUri)?app=$app$($k.Q)")
+    if (-not (Test-Path $png)) { Write-Host "FAILED screenshot $app $($k.Kind)"; continue }
+    $dst = Join-Path $outDir "$app-$($k.Kind).jpg"
+    & ffmpeg -v error -y -i $png -q:v 2 $dst
+    if ($LASTEXITCODE -ne 0) { Write-Host "FAILED jpg $app $($k.Kind)"; continue }
+    Write-Host ("{0}-{1}.jpg  {2:N0} KB" -f $app, $k.Kind, ((Get-Item $dst).Length / 1KB))
+  }
 }

@@ -1,7 +1,7 @@
 {
   "videoId": "S3gdGhRhGy4",
   "file": "_dev/promo/out/quantum-guide.mp4",
-  "thumbnail": "assets/thumbs/quantum.jpg",
+  "thumbnail": "_dev/promo/thumbs/quantum-guide.jpg",
   "privacy": "private",
   "publishAt": "2026-10-15T20:00:00+09:00",
   "captions": { "en": "_dev/promo/out/quantum-guide.en.srt" },

@@ -1,7 +1,7 @@
 {
   "videoId": "h1r0MqMrNAY",
   "file": "_dev/promo/out/evolution-guide.mp4",
-  "thumbnail": "assets/thumbs/evolution.jpg",
+  "thumbnail": "_dev/promo/thumbs/evolution-guide.jpg",
   "privacy": "private",
   "publishAt": "2026-10-11T20:00:00+09:00",
   "captions": { "en": "_dev/promo/out/evolution-guide.en.srt" },

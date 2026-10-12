@@ -1,7 +1,7 @@
 {
   "videoId": "CmcYXIB0BzU",
   "file": "_dev/promo/out/immune-battle-guide.mp4",
-  "thumbnail": "assets/thumbs/immune-battle.jpg",
+  "thumbnail": "_dev/promo/thumbs/immune-battle-guide.jpg",
   "privacy": "private",
   "publishAt": "2026-10-17T20:00:00+09:00",
   "captions": { "en": "_dev/promo/out/immune-battle-guide.en.srt" },

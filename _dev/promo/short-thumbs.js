@@ -12,7 +12,7 @@ window.SHORT_THUMBS = {
   'immune-battle': { name: '免疫のたたかい', t: 21, focus: [0.5, 0.35], zoom: 1.6, kicker: 'インフルエンザのウイルスは3日目に', big: '数十億個', sub: 'それでも8日目ごろ消える', c1: '#ffe0ea', c2: '#ff5c8a' },
   'air-flow':      { name: '空気の流れの見える部屋', t: 26, focus: [0.5, 0.41], zoom: 1.6, kicker: '窓を2か所あけると、24時間換気の', big: '約87倍', sub: 'の速さで空気が入れかわる', c1: '#e0fbff', c2: '#3fd0ff' },
   'ga-creatures':  { name: '進化の箱庭', t: 26, focus: [0.64, 0.31], zoom: 3.6, kicker: 'でたらめな生きものが', big: '40世代', sub: 'で走り方を身につける', c1: '#e8ffe0', c2: '#5ee35e' },
-  'god-view':      { name: '神の視点マップ', t: 12, focus: [0.5, 0.38], zoom: 1.5, kicker: 'ホイールひとつで', big: '宇宙の果て', sub: 'からクォークまで', c1: '#e3f4ff', c2: '#5bb8ff' },
+  'god-view':      { name: '神の視点マップ', t: 12, focus: [0.5, 0.38], zoom: 1.5, wfocus: [0.5, 0.34], kicker: 'ホイールひとつで', big: '宇宙の果て', sub: 'からクォークまで', c1: '#e3f4ff', c2: '#5bb8ff' },
   'wifi-wave':     { name: '電波の見える部屋', t: 29, focus: [0.3, 0.3], zoom: 1.9, kicker: 'WiFi の電波を見える化', big: '5 GHz', sub: 'は壁の向こうで弱くなる', c1: '#fff0d0', c2: '#ff9a2e' },
   'mold-growth':   { name: 'カビが育つまで', t: 29, focus: [0.5, 0.39], zoom: 1.7, kicker: 'お風呂のカビは', big: '8週間', sub: 'でここまで広がる', c1: '#f0ffd8', c2: '#9be04a' },
   'piano-hand':    { name: 'ピアノを弾く手', t: 21.6, focus: [0.62, 0.62], zoom: 1.35, kicker: '皮ふの下では', big: '骨と筋肉', sub: 'がこう動いている', c1: '#ffe6e0', c2: '#ff6b5c' }

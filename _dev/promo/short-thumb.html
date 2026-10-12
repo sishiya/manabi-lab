@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>ショートのサムネイル</title>
-<!-- ?app=<app> で1枚を 1080×1920 に描く。make-short-thumbs.ps1 がヘッドレスの Chrome でスクリーンショットを撮る（RULES 8.7）。
+<!-- ?app=<app> で1枚を 1080×1920 に描く（ショート）。?app=<app>&wide で 1280×720（横長の説明動画。文字は左、絵は右へ寄せる）。make-short-thumbs.ps1 がヘッドレスの Chrome でスクリーンショットを撮る（RULES 8.7）。
      絵は out/thumbsrc/<app>.jpg（mp4 から取ったコマ、2160×3840）。file:// でも開けるように設定は JS で読む -->
 <script src="short-thumbs.js"></script>
 <style>
@@ -32,17 +32,36 @@
   #big::after { content: ''; display: block; width: 120px; height: 3px; margin: 30px auto 0; background: var(--c2); }
   #sub { margin-top: 30px; font-size: 48px; font-weight: 400; letter-spacing: 0.08em; color: rgba(255,255,255,0.92); text-shadow: 0 2px 14px rgba(0,0,0,0.7); }
   #name { position: absolute; left: 0; right: 0; bottom: 80px; text-align: center; font-size: 30px; font-weight: 400; color: rgba(255,255,255,0.7); letter-spacing: 0.24em; }
+  /* 横長（説明動画）: 左に文字、左から右へぼかしのパネル */
+  body.wide, html.wide { width: 1280px; height: 720px; }
+  body.wide #panel { display: none; }
+  /* 横長: うしろは同じ絵をぼかして暗く、右にくっきりした絵（左のふちはぼかしてなじませる） */
+  #bg2 { display: none; position: absolute; filter: blur(36px) brightness(0.32) saturate(1.2); }
+  body.wide #bg2 { display: block; }
+  /* 左・上・下のふちはぼかす（アプリの上の小さな札や、ショートの字幕の端が見えないように） */
+  body.wide #shade { background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0, transparent 140px); }
+  body.wide #brand { left: 44px; top: 36px; font-size: 22px; gap: 12px; }
+  body.wide #brand img { width: 42px; height: 42px; }
+  body.wide #text { left: 0; right: auto; width: 600px; top: 150px; }
+  body.wide #kicker { font-size: 26px; gap: 16px; }
+  body.wide #kicker::before, body.wide #kicker::after { width: 36px; }
+  body.wide #big { margin-top: 18px; }
+  body.wide #big::after { width: 80px; margin-top: 20px; }
+  body.wide #sub { margin-top: 20px; font-size: 32px; }
+  body.wide #name { left: 0; right: auto; width: 600px; bottom: 44px; font-size: 20px; }
 </style>
 </head>
 <body>
-<img id="bg" alt="">
+<img id="bg2" alt=""><img id="bg" alt="">
 <div id="shade"></div>
 <div id="panel"></div>
 <div id="brand"><img src="../sns-icon/a-lion-glasses.png" alt="">しし屋 まなびラボ</div>
 <div id="text"><div id="kicker"></div><div id="big"></div><div id="sub"></div></div>
 <div id="name"></div>
 <script>
-const app = new URLSearchParams(location.search).get('app') || 'evolution';
+const q = new URLSearchParams(location.search);
+const app = q.get('app') || 'evolution', wide = q.has('wide');
+if (wide) { document.documentElement.classList.add('wide'); document.body.classList.add('wide'); }
 const c = SHORT_THUMBS[app];
 const root = document.documentElement.style;
 root.setProperty('--c1', c.c1); root.setProperty('--c2', c.c2); root.setProperty('--glow', c.c2 + '40');
@@ -50,17 +69,25 @@ document.getElementById('kicker').textContent = c.kicker;
 const big = document.getElementById('big');
 for (const k of ['s', 'f']) { const e = document.createElement('span'); e.className = k; e.textContent = c.big; big.appendChild(e); }
 document.getElementById('sub').textContent = c.sub;
-document.getElementById('name').textContent = c.name;
+document.getElementById('name').textContent = wide ? c.name + '　使い方と見どころ' : c.name;
 // 大きな言葉は横幅に合わせて文字の大きさを決める（最大 260px）
-let fs = 220; big.style.fontSize = fs + 'px';
-while (big.offsetWidth > 940 && fs > 80) { fs -= 4; big.style.fontSize = fs + 'px'; }
+let fs = wide ? 150 : 220; big.style.fontSize = fs + 'px';
+while (big.offsetWidth > (wide ? 540 : 940) && fs > 80) { fs -= 4; big.style.fontSize = fs + 'px'; }
 // 絵: focus の点が上の見せ場（y = 600）に来るように寄せる。すき間ができないように端でとめる
-const W = 1080 * (c.zoom || 1), H = 1920 * (c.zoom || 1);
-const [fx, fy] = c.focus || [0.5, 0.33];
-const x0 = Math.min(0, Math.max(1080 - W, 540 - fx * W)), y0 = Math.min(0, Math.max(1920 - H, 600 - fy * H));
+// 横長: 絵の横はばを 1280×wzoom にして、focus の点を (wx, 360) に。wzoom・wfocus・wx は表で変えられる
+const z = wide ? (c.wzoom || 0.62) : (c.zoom || 1), SW = wide ? 1280 : 1080, SH = wide ? 720 : 1920;
+const W = SW * z, H = W * 16 / 9;
+const [fx, fy] = (wide && c.wfocus) || c.focus || [0.5, 0.33];
+const cx = wide ? (c.wx || 880) : 540, cy = wide ? 360 : 600;
+const x0 = wide ? Math.max(SW - W, cx - fx * W) : Math.min(0, Math.max(SW - W, cx - fx * W)), y0 = Math.min(0, Math.max(SH - H, cy - fy * H));
 const bg = document.getElementById('bg');
 Object.assign(bg.style, { width: W + 'px', height: H + 'px', left: x0 + 'px', top: y0 + 'px' });
 bg.src = 'out/thumbsrc/' + app + '.jpg';
+// 横長: 左・上・下のふちをぼかす（アプリの上の小さな札や、ショートの字幕の端が見えないように）。マスクは絵の箱が基準なので画面の位置に直す
+if (wide) { const t = -y0, m = `linear-gradient(to right, transparent 0, #000 220px), linear-gradient(to bottom, transparent ${t}px, #000 ${t + 110}px, #000 ${t + 620}px, transparent ${t + 720}px)`;
+  bg.style.webkitMaskImage = bg.style.maskImage = m; bg.style.maskComposite = 'intersect'; bg.style.webkitMaskComposite = 'source-in'; }
+if (wide) { const b2 = document.getElementById('bg2'), BH = 1400 * 16 / 9;
+  Object.assign(b2.style, { width: '1400px', height: BH + 'px', left: '-60px', top: Math.min(-40, 360 - fy * BH) + 'px' }); b2.src = bg.src; }
 </script>
 </body>
 </html>

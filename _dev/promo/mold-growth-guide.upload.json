@@ -1,7 +1,7 @@
 {
   "videoId": "q9Hv3NKkYm4",
   "file": "_dev/promo/out/mold-growth-guide.mp4",
-  "thumbnail": "assets/thumbs/mold-growth.jpg",
+  "thumbnail": "_dev/promo/thumbs/mold-growth-guide.jpg",
   "privacy": "private",
   "publishAt": "2026-10-22T20:00:00+09:00",
   "captions": { "en": "_dev/promo/out/mold-growth-guide.en.srt" },

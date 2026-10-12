@@ -67,7 +67,7 @@ YouTube に出す順番（ジャンル・サムネイルの色味が連日で重
   - 絵は元アイコン（`_dev/sns-icon/a-lion-glasses.svg`）と同じ形・色。音は「ぽろろろんっ」（基音 260〜800 Hz、倍音は短く、2.5 kHz より上は切る）。変えるときは全部の動画で同じに。
 - **音量をそろえる**（RULES 8.6、2026-10-12〜）: 音は `promo-audio.js`（`makeAudio`）が BGM を -20 LUFS にそろえてから声・目印を足し、ピークだけ下げる（`LOUD`）。録画のログに「音量: 全体 … LUFS」が出る。録画したら・上げる前に `_dev/tools/check-loudness.ps1`。映像はそのままで音だけ作りなおすときは `record-promo.ps1 -Script <台本> [-Short] -AudioOnly`（古い mp4 は `<out>.before-loud.mp4`）。
 - BGM はコードで合成した音だけ。作るたびに、権利上問題ないかを確かめてユーザーに伝える。
-- **サムネイルを必ず付ける**（RULES 8.7、2026-10-12〜）: 横長は `assets/thumbs/<app>.jpg`、ショートは `thumbs/<app>-short.jpg`（`short-thumbs.js` に1行足して `_dev/tools/make-short-thumbs.ps1 -Apps <app>`）。upload.json の `thumbnail` に書く。あとから付けるのは `youtube-upload.ps1 -Thumb -Meta a.upload.json,b.upload.json`。
+- **サムネイルを必ず付ける**（RULES 8.7、2026-10-12〜）: 横長は `thumbs/<app>-guide.jpg`、ショートは `thumbs/<app>-short.jpg`（同じ道具で両方できる）（`short-thumbs.js` に1行足して `_dev/tools/make-short-thumbs.ps1 -Apps <app>`）。upload.json の `thumbnail` に書く。あとから付けるのは `youtube-upload.ps1 -Thumb -Meta a.upload.json,b.upload.json`。
 - 最初のカットは入口のサムネイル（`assets/thumbs/<app>.jpg`）に近い見た目にする。生き物などの名前を画面に出すと好評。
 - 性的な内容・R18 をまぜない（RULES 9章）。出どころは説明文と終わりの画面に書く。
 - **公開の前日に、翌日公開の分を最終確認・デバッグする**（RULES 8.4。`youtube-upload.ps1 -Verify`・mp4 のコマ・公開中のアプリ。結果は `upload-log.md` の「公開前の確認」）。

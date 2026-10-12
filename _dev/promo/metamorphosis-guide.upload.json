@@ -1,7 +1,7 @@
 {
   "videoId": "_SpVbv1EVAM",
   "file": "_dev/promo/out/metamorphosis-guide.mp4",
-  "thumbnail": "assets/thumbs/metamorphosis.jpg",
+  "thumbnail": "_dev/promo/thumbs/metamorphosis-guide.jpg",
   "privacy": "private",
   "publishAt": "2026-10-16T20:00:00+09:00",
   "captions": { "en": "_dev/promo/out/metamorphosis-guide.en.srt" },
