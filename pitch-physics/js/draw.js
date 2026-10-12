@@ -65,7 +65,7 @@ function polyline(g, res, map, color, width, dash, tMax) {
     const q = map(pts[i].p); if (!q) { first = true; continue; }
     if (first) { g.moveTo(q[0], q[1]); first = false; } else g.lineTo(q[0], q[1]);
   }
-  const lastPt = tMax != null ? sampleAt(res, Math.min(tMax, res.tPlate)) : pts[pts.length - 1];
+  const lastPt = tMax != null ? sampleAt(res, Math.min(tMax, res.tStop || res.tPlate)) : pts[pts.length - 1];
   const q = map(lastPt.p); if (q && !first) g.lineTo(q[0], q[1]);
   g.stroke(); g.setLineDash([]);
 }

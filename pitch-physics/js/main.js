@@ -42,6 +42,7 @@ buildControls(); buildViewTabs(); buildTime(); bindPointer(); bindTourBar();
 document.getElementById('next').addEventListener('click', () => setTour(S.tour === TOUR.length - 1 ? 0 : S.tour + 1));
 window.addEventListener('resize', resize);
 setTour(0);
+S.playing = false; document.getElementById('play').textContent = '▶';   // 開いたときは 0.0 秒で止めておく
 resize(); requestAnimationFrame(loop);
 
 // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）

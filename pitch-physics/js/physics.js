@@ -8,6 +8,7 @@ const PHY = {
   g: 9.80665,
   rho: 1.20,                        // 風洞（ナックルの係数）とふつうの空気の密度 kg/m³（20 ℃・海面くらい）
   plateY: 17 / 12 * 0.3048,         // ホームベースの前の端（y = 17 インチ）
+  stopY: -0.9,                      // 計算を止める所（ホームの後ろ 0.9 m。捕手のミットのあたりの目安）
   rubberY: 60.5 * 0.3048,           // 投手板（18.44 m）
   dt: 0.001,
   // Nathan の軌道計算機の係数（pybbda の移植で式の形を確認）
@@ -185,6 +186,7 @@ function simulate(P, opt = { air: true, magnus: true, seam: true }, env = PHY.en
   const st = launch(P, env);
   let p = st.pos.slice(), v = st.vel.slice(), t = 0;
   const dt = PHY.dt, pts = [{ t, p: p.slice(), v: v.slice() }];
+  let plate = null;
   for (let i = 0; i < 4000; i++) {
     const k1v = accel(st, t, v, opt), k1p = v;
     const v2 = V.add(v, V.mul(k1v, dt / 2)), k2v = accel(st, t + dt / 2, v2, opt), k2p = v2;
@@ -192,25 +194,31 @@ function simulate(P, opt = { air: true, magnus: true, seam: true }, env = PHY.en
     const v4 = V.add(v, V.mul(k3v, dt)), k4v = accel(st, t + dt, v4, opt), k4p = v4;
     const np = V.add(p, V.mul(V.add(V.add(k1p, V.mul(k2p, 2)), V.add(V.mul(k3p, 2), k4p)), dt / 6));
     const nv = V.add(v, V.mul(V.add(V.add(k1v, V.mul(k2v, 2)), V.add(V.mul(k3v, 2), k4v)), dt / 6));
-    if (np[1] <= PHY.plateY) {                                  // ホームの前の端を越えた → 直線で補間して止める
+    if (!plate && np[1] <= PHY.plateY) {                       // ホームの前の端を越えた → 直線で補間して記録（変化量などはここで測る）
       const f = (p[1] - PHY.plateY) / (p[1] - np[1]);
-      const pe = V.add(p, V.mul(V.sub(np, p), f)), ve = V.add(v, V.mul(V.sub(nv, v), f));
-      t += dt * f; pts.push({ t, p: pe, v: ve });
-      return { st, pts, tPlate: t, pPlate: pe, vPlate: ve, opt };
+      plate = { t: t + dt * f, p: V.add(p, V.mul(V.sub(np, p), f)), v: V.add(v, V.mul(V.sub(nv, v), f)) };
+      pts.push({ t: plate.t, p: plate.p, v: plate.v });
     }
-    if (np[2] < 0) { t += dt; pts.push({ t, p: np, v: nv }); return { st, pts, tPlate: t, pPlate: np, vPlate: nv, opt, ground: true }; }
+    if (np[2] < 0 || np[1] <= PHY.stopY) {                     // 地面か、捕手のミットのあたり（ホームの後ろ）で止める
+      t += dt; pts.push({ t, p: np, v: nv });
+      if (!plate) plate = { t, p: np, v: nv, ground: true };
+      return { st, pts, tPlate: plate.t, pPlate: plate.p, vPlate: plate.v, tStop: t, opt, ground: !!plate.ground };
+    }
     p = np; v = nv; t += dt;
     pts.push({ t, p: p.slice(), v: v.slice() });
   }
-  return { st, pts, tPlate: t, pPlate: p, vPlate: v, opt };
+  const last = plate || { t, p, v };
+  return { st, pts, tPlate: last.t, pPlate: last.p, vPlate: last.v, tStop: t, opt };
 }
 
 // 時刻 t の点（線形補間）
 function sampleAt(res, t) {
   const pts = res.pts, n = pts.length;
   if (t <= 0) return pts[0];
-  if (t >= res.tPlate) return pts[n - 1];
-  const i = Math.min(n - 2, Math.floor(t / PHY.dt)), a = pts[i], b = pts[i + 1], f = (t - a.t) / ((b.t - a.t) || 1);
+  if (t >= (res.tStop != null ? res.tStop : res.tPlate)) return pts[n - 1];
+  // 点は 1 ms ごと（ホームの前の端の点だけ間に入る）ので、近くから探す
+  let i = Math.min(n - 2, Math.floor(t / PHY.dt)); while (i > 0 && pts[i].t > t) i--; while (i < n - 2 && pts[i + 1].t < t) i++;
+  const a = pts[i], b = pts[i + 1], f = (t - a.t) / ((b.t - a.t) || 1);
   return { t, p: V.add(a.p, V.mul(V.sub(b.p, a.p), f)), v: V.add(a.v, V.mul(V.sub(b.v, a.v), f)) };
 }
 

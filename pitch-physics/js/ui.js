@@ -240,6 +240,7 @@ function setTour(i) {
   // 案内の段は、平均的な右投げの投手・ふつうの空気・重ねないところから始める
   S.pitcher = 'std'; S.hand = 'R'; S.arm = 45; S.aimMode = 'plain'; S.overlay = false; S.batH = 185; setZoneFor(185); $('tour').classList.remove('full'); S.env = { tC: 20, elev: 0, p: 1013, rh: 50, ws: 0, wd: 0 }; S.envId = 'std'; applyEnv();
   TOUR[S.tour].go();
+  S.t = 0; S.playing = true; $('play').textContent = '❚❚';   // 案内の段は 0.0 秒から再生する
   $('tourNum').textContent = (S.tour + 1) + ' / ' + TOUR.length;
   $('tourText').innerHTML = TOUR[S.tour].text;
   $('next').textContent = S.tour === TOUR.length - 1 ? 'はじめから' : 'つぎへ';

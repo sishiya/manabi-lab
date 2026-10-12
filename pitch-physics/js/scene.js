@@ -138,9 +138,9 @@ function recompute() {
 }
 // 時間のつまみの終わり（重ねた球・10球のうちいちばん遅くホームに着く時刻）
 function tEnd() {
-  let t = S.res.tPlate;
-  for (const m of S.multi || []) t = Math.max(t, m.res.tPlate);
-  for (const r of S.many || []) t = Math.max(t, r.tPlate);
+  let t = S.res.tStop;
+  for (const m of S.multi || []) t = Math.max(t, m.res.tStop);
+  for (const r of S.many || []) t = Math.max(t, r.tStop);
   return t;
 }
 
@@ -191,41 +191,41 @@ function camTo(id) { if (typeof V3 !== 'undefined' && V3.ok) setCam(id); else S.
 // 案内（「つぎへ」ボタン1つで進む）。go は状態を作る関数
 const TOUR = [
   { text: 'ボールに働く力は3つ。<b>重力</b>・<b>空気の抵抗</b>・<b>回転による力</b>。球種の名前で曲がり方を決めず、放す速さ・向き・回転から、この力を 1 ミリ秒ごとに計算して道すじを解いています。下の時間のつまみを動かしてみよう。3D の図はドラッグで回せます。',
-    go() { setPitch('ff'); S.show = { noAir: false, plain: false, forces: true }; S.t = 0.2; camTo('catcher'); } },
+    go() { setPitch('ff'); S.show = { noAir: false, plain: false, forces: true }; S.t = 0; camTo('catcher'); } },
   { text: 'もし空気がなかったら（<span class="k-noair">うすい線</span>）。重力だけなので放物線。151 km/h でも、ホームまでの 0.4 秒で 80 cm ほど落ちます。',
-    go() { setPitch('no'); S.show = { noAir: true, plain: false, forces: true }; S.t = 0.2; } },
+    go() { setPitch('no'); S.show = { noAir: true, plain: false, forces: true }; S.t = 0; } },
   { text: '空気があると、<b>抵抗</b>で遅くなります（ホームで約 1 割減）。でも回転がなければ、左右にも上にも曲がりません。',
-    go() { setPitch('no'); S.show = { noAir: true, plain: false, forces: true }; S.t = S.res.tPlate; } },
+    go() { setPitch('no'); S.show = { noAir: true, plain: false, forces: true }; S.t = 0; } },
   { text: '<b>フォーシーム</b>: 毎分 2300 回の逆回転。手前の面が上へ動く回転は、空気を下へ押しやり、反作用で<b>上向きの力（マグヌス力）</b>を受けます。回転なし（<span class="k-plain">点線</span>）より 45 cm ほど上を通る ＝「ホップするように見える」正体。',
-    go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0.25; camTo('ball'); } },
+    go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0; camTo('ball'); } },
   { text: '<b>ねらった点</b>（十字）: いまは「回転の力がなければまん中に届く向き」に放しています。だから<b>まん中からのずれ ＝ 回転と縫い目による変化</b>。まっすぐは上へ 46 cm、ゾーンの上をこえます。下の「ねらい方」で「まん中へまっすぐ向けて放す」にすると、重力で落ちるぶんもずれに入ります。',
-    go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: true }; S.t = S.res.tPlate; camTo('catcher'); } },
+    go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0; camTo('catcher'); } },
   { text: '<b>空気の流れの断面</b>の図: ボールといっしょに動いて見ると、空気は左から右へ流れていきます。逆回転で上の面は空気といっしょに動くので、空気がボールから<b>はがれる所</b>が上だけ後ろへずれ、後ろの流れ（伴流）が下へ曲がります。空気を下へ押しやった反作用で、ボールは上へ押される。これがマグヌス力です。3D は「ボールの後ろ」から。',
-    go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0.2; camTo('ball'); } },
+    go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0; camTo('ball'); } },
   { text: '<b>スライダー</b>: 回転数はフォーシームより多いのに、曲がりは小さめ。回転軸が進む向きに近く（ジャイロ回転）、曲げるのに使える回転は 3 割ほどだから。下の「使える回転」を 100% にすると…？',
-    go() { setPitch('sl'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0.25; } },
+    go() { setPitch('sl'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0; } },
   { text: '<b>カーブ</b>: 手前の面が下へ動く回転（トップスピン）。マグヌス力が下向きで、重力に足されてよく落ちます。遅いので、ホームまでの時間も長い（0.47 秒）。',
-    go() { setPitch('cu'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0.3; } },
+    go() { setPitch('cu'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0; } },
   { text: '<b>ナックル</b>: ほとんど回らないので、マグヌス力はほぼ 0。かわりに<b>縫い目の向き</b>で、空気がはがれる場所が左右でずれ、横向きの力が生まれます。いまは多くのナックルの投手と同じ<b>2つの縫い目</b>の握りで、力は風洞の測定（Morrissey 2009）の値です。ゆっくり回ると、飛ぶ間に力の向きと大きさが入れかわります。「縫い目の向き」で4つの縫い目（Watts &amp; Sawyer 1975）にも変えられます。',
-    go() { setPitch('kn'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0.3; camTo('pitcher'); } },
+    go() { setPitch('kn'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0; camTo('pitcher'); } },
   { text: '同じねらいで、縫い目の向き・ゆっくりした回転の量と軸だけを、投手がそろえきれない程度にばらつかせた<b>10球</b>。ホームでの行き先がばらばら。でも1球ずつの道すじは<b>なめらか</b>です。試合の測定でも同じ（Nathan 2012）。ナックルが「揺れる」と感じるのは、<b>小さな差で行き先が大きく変わり、だれにも読めない</b>から、と考えられています。',
-    go() { setPitch('kn'); S.show = { noAir: false, plain: false, forces: false }; throwMany(); S.t = S.res.tPlate; camTo('catcher'); } },
+    go() { setPitch('kn'); S.show = { noAir: false, plain: false, forces: false }; throwMany(); S.t = 0; camTo('catcher'); } },
   { text: '<b>ツーシーム</b>: 回転の向きはまっすぐとほぼ同じなのに（MLB の測定。Nathan 2023）、投げる腕の側へ大きく曲がります。2つの縫い目で握ると、少しのジャイロ回転で<b>片側にいつも縫い目が来て</b>、その側だけ空気のはがれ方が変わり、後ろの流れがずれます（縫い目のずれた伴流）。<span style="color:#5ce0a0">緑の矢印</span>がその力です。',
-    go() { setPitch('si'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0.25; camTo('ball'); } },
+    go() { setPitch('si'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0; camTo('ball'); } },
   { text: '<b>腕の角度</b>: 同じ投手でも、腕を横から振ると放す位置が低く外になり、回転の向きも横に寝ます（回転の向きは腕の角度でほぼ決まる。Nathan 2023）。架空のサイドスローの投手。下の「腕の角度」のつまみを動かすと、人形と道すじがいっしょに変わります。',
     go() { setPitcher('side'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0; camTo('pitcher'); } },
   { text: '<b>空気と風</b>: 標高 1600 m の球場では空気が 18% うすく、空気の抵抗もマグヌス力も 18% 小さくなります。フォーシームの変化は上へ 46 → 38 cm。<span class="k-std">水色の線</span>は、ふつうの空気（20 ℃・海面）で同じように放したときです。',
-    go() { setPitch('ff'); setEnv('high'); S.show = { noAir: false, plain: false, forces: true, std: true }; S.t = 0.3; camTo('ball'); } },
+    go() { setPitch('ff'); setEnv('high'); S.show = { noAir: false, plain: false, forces: true, std: true }; S.t = 0; camTo('ball'); } },
   { text: '<b>向かい風</b> 8 m/s: 空気に対する速さが増えるので、抵抗もマグヌス力も大きくなり、よく曲がります（追い風では逆）。力を決めるのは、地面に対する速さではなく<b>空気に対する速さ</b>です。',
-    go() { setPitch('ff'); setEnv('head'); S.show = { noAir: false, plain: true, forces: true, std: true }; S.t = 0.3; camTo('ball'); } },
+    go() { setPitch('ff'); setEnv('head'); S.show = { noAir: false, plain: true, forces: true, std: true }; S.t = 0; camTo('ball'); } },
   { text: '<b>球種を重ねる</b>: 架空の本格派の投手が、4つの球種をまっすぐと<b>同じ向きに</b>放したとき。遅い球ほどホームまでの時間が長く、重力で落ちるぶんが増えるので、カーブは地面まで落ちてしまいます。だから投手は球種ごとに放す向きを変えています（下の「それぞれゾーンのまん中をねらう」に変えてみよう）。',
-    go() { S.overlay = true; S.overlayAim = 'same'; setPitcher('power'); S.show = { noAir: false, plain: false, forces: false, std: false }; S.t = tEnd(); camTo('pitcher'); } },
+    go() { S.overlay = true; S.overlayAim = 'same'; setPitcher('power'); S.show = { noAir: false, plain: false, forces: false, std: false }; S.t = 0; camTo('pitcher'); } },
   { text: '<b>打者の目</b>: スイングに 0.15 秒、決めてから振り始めるまでに 0.15 秒かかるとすると、振ると決める最後の時刻は放してから約 0.1 秒（<span style="color:#7fd68a">緑の輪</span>、ホームの約 12 m 手前）。そのときまっすぐは、回転の力なしの道すじから 4 cm しかずれていません。変化の 9 割以上は、決めたあとに起こります。<b>白の輪</b>から先は、目で滑らかに追えない速さ（70°/秒）になります。',
-    go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: false }; S.t = 0.2; camTo('batter'); } },
+    go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: false }; S.t = 0; camTo('batter'); } },
   { text: '<b>決める時刻の球種のちがい</b>: 架空の本格派の4球種を、それぞれ「回転の力がなければまん中に届く向き」に放したとき。下の帯の緑が終わる時刻（振ると決める最後）には、打者の目から見て球種どうしは<b>ボール半分ほど</b>（0.17°）しかはなれていないのに、ホームでは最大 <b>1 m</b> はなれます。時間のつまみを緑の終わりに合わせて、打者の目で見くらべてみよう。',
-    go() { S.overlay = true; S.overlayAim = 'center'; setPitcher('power'); S.show = { noAir: false, plain: false, forces: false, std: false }; S.t = batterInfo().tDecide; camTo('batter'); } },
+    go() { S.overlay = true; S.overlayAim = 'center'; setPitcher('power'); S.show = { noAir: false, plain: false, forces: false, std: false }; S.t = 0; camTo('batter'); } },
   { text: '<b>本物に近づける</b>: 回転が少しずつ減ること・空気の浮力・まわりの空気もいっしょに動くこと（付加質量）・地球の自転（コリオリの力）も計算に入れています。どれも、ホームでの位置を 1〜2 mm 動かすだけ。答えをいちばん大きく左右するのは、空気の力の係数（測定から作った式）の不確かさで、揚力の式を別の測定のものに変えると 1 cm ほど変わります（下の「本物に近づける」）。',
-    go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0.2; camTo('ball'); } },
+    go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0; camTo('ball'); } },
   { text: '自由に試そう。下で投げる手・球種を選び、速さ・回転数・回転の向き（右のボールをドラッグ）・使える回転を変えると、すぐに計算しなおします。',
     go() { setPitch('ff'); S.show = { noAir: true, plain: true, forces: true }; S.t = 0; camTo('catcher'); } },
 ];

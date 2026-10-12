@@ -67,7 +67,7 @@ function placeBall(o, p, r) { o.position.copy(p); o.scale.setScalar(r); }
 // 放す瞬間（t = 0）から投げ終わり（t ≈ 0.35 秒）までの姿勢
 function posePitcher(P, arm, t) {
   const Q = PITCHER.parts;
-  const u0 = Math.max(0, Math.min(1, t / 0.35)), u = u0 * u0 * (3 - 2 * u0);   // なめらかに
+  const u0 = Math.max(0, Math.min(1, t / 0.35)), u = 1 - Math.pow(1 - u0, 3);   // 放した直後がいちばん速く、だんだんゆっくり（腕のブレーキ）
   const sx = P.x0 < 0 ? -1 : 1, a = arm * Math.PI / 180;
   const W = p => new THREE.Vector3(p[0], p[2], -p[1]);   // 世界 (x, y, z) → three
   const yR = PHY.rubberY - P.ext;
@@ -83,7 +83,12 @@ function posePitcher(P, arm, t) {
   const hand1 = W([-sx * 0.45, PHY.rubberY - 1.45, 0.55]);
   const shT1 = W([-sx * 0.08, PHY.rubberY - 1.45, 1.38]), shG1 = W([-sx * 0.45, PHY.rubberY - 1.25, 1.36]);
   const footB1 = W([sx * 0.30, PHY.rubberY - 0.95, 0.50]);
-  const hand = L(hand0, hand1), shT = L(shT0, shT1), shG = L(shG0, shG1), footB = L(footB0, footB1);
+  const shT = L(shT0, shT1), shG = L(shG0, shG1), footB = L(footB0, footB1);
+  // 手は肩のまわりの弧の上を動かす（腕はほぼのばしたまま、前 → 下 → グラブの側へ）。まっすぐ補間すると、ひじがたたまれてまたのびるように見えるため
+  const d0 = hand0.clone().sub(shT0), d1 = hand1.clone().sub(shT1), L0 = d0.length(), L1 = Math.min(0.6, d1.length());
+  const qArc = new THREE.Quaternion().setFromUnitVectors(d0.clone().normalize(), d1.clone().normalize());
+  const qNow = new THREE.Quaternion().slerp(qArc, u);
+  const hand = shT.clone().add(d0.clone().normalize().applyQuaternion(qNow).multiplyScalar(L0 + (L1 - L0) * u));
   const mid = shT.clone().add(shG).multiplyScalar(0.5);
   const lineDir = shG.clone().sub(shT).normalize();
   let up = new THREE.Vector3(-lineDir.y, lineDir.x, 0); if (up.y < 0) up.multiplyScalar(-1);
@@ -102,7 +107,7 @@ function posePitcher(P, arm, t) {
   Q.cap.position.copy(head).addScaledVector(sUp, 0.025); Q.cap.quaternion.copy(Q.torso.quaternion);
   Q.brim.position.copy(head).addScaledVector(sUp, 0.045).addScaledVector(fwd, 0.085); Q.brim.quaternion.copy(Q.torso.quaternion);
   // 腕
-  const elbT = ik2(shT, hand, 0.30, 0.30, new THREE.Vector3(sx, -0.4, 0.5));
+  const elbT = ik2(shT, hand, 0.31, 0.31, new THREE.Vector3(sx, -0.25, -0.35));   // ひじは外・少し後ろ向き（向きを変えない）
   const glove = L(mid.clone().add(new THREE.Vector3(-sx * 0.06, -0.15, 0.22)), mid.clone().add(new THREE.Vector3(-sx * 0.12, -0.25, 0.05)));
   const elbG = ik2(shG, glove, 0.29, 0.28, new THREE.Vector3(-sx, -0.6, -0.3));
   placeLimb(Q.upperT, shT, elbT); placeLimb(Q.sleeveT, shT, shT.clone().lerp(elbT, 0.45));
