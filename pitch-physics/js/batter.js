@@ -48,6 +48,7 @@ function drawTimeStrip(g, w, h) {
   seg(0, I.tDecide, '#7fd68a', '見て決められる');
   seg(I.tDecide, I.tSwing, '#ffd166', '決めた → 振り始め');
   seg(I.tSwing, I.T, '#ff9f7a', 'スイング');
+  seg(I.T, T, 'rgba(255,255,255,.18)', 'ホームを通過後');
   // 目で追えなくなる時刻
   g.strokeStyle = '#ffffff'; g.lineWidth = 2; g.beginPath(); g.moveTo(X(I.tTrack), y0 - 2); g.lineTo(X(I.tTrack), y0 + bh + 2); g.stroke();
   g.fillStyle = '#e8f0f4'; g.font = '11px "Zen Kaku Gothic New", sans-serif';

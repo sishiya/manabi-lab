@@ -77,7 +77,7 @@ function buildControls() {
   s2.appendChild(many);
 
   // ③ ねらい
-  const s3 = section(box, 'aim', '3', 'ねらい', false);
+  const s3 = section(box, 'aim', '3', 'ねらい', true);
   selectCtl(s3, 'aimMode', 'ねらい方', [
     ['plain', '回転の力がなければまん中に届く向き', 'まん中からのずれ ＝ 回転と縫い目による変化'],
     ['line', 'まん中へまっすぐ向ける', '重力・抵抗・回転のぶん、まん中からずれる'],
@@ -92,14 +92,14 @@ function buildControls() {
   slider(s3, 'hAng', '放す角度（左右）', -6, 6, 0.05, () => S.P.hAng, v => { S.P.hAng = v; S.aimMode = 'manual'; }, v => fmt(v, 2) + '°（＋は捕手から見て右へ）');
 
   // ④ 打者
-  const s4 = section(box, 'bat', '4', '打者', false);
+  const s4 = section(box, 'bat', '4', '打者', true);
   selectCtl(s4, 'batSide', '打席', [['R', '右打者（捕手から見て左）'], ['L', '左打者（捕手から見て右）']], () => S.batSide, v => S.batSide = v);
   slider(s4, 'batH', '身長', 150, 205, 1, () => S.batH, v => { S.batH = v; setZoneFor(v); }, v => v + ' cm → ゾーン ' + Math.round(ZONE.zLo * 100) + '〜' + Math.round(ZONE.zHi * 100) + ' cm（目安）');
   slider(s4, 'swingMs', 'スイングの時間', 130, 280, 5, () => S.swingMs, v => S.swingMs = v, v => v + ' ms（研究で 130〜280）');
   slider(s4, 'delayMs', '決めてから振るまで', 150, 250, 5, () => S.delayMs, v => S.delayMs = v, v => v + ' ms（研究で 150〜250）');
 
   // ⑤ くらべる
-  const s5 = section(box, 'cmp', '5', 'くらべる・重ねる', false);
+  const s5 = section(box, 'cmp', '5', 'くらべる・重ねる', true);
   buildOverlayRow(s5);
   check(s5, 'noAir', '<i class="sw noair"></i>空気がないとき', () => S.show.noAir, v => S.show.noAir = v);
   check(s5, 'plain', '<i class="sw plain"></i>回転の力なし（重力と抵抗だけ）', () => S.show.plain, v => S.show.plain = v);
@@ -107,10 +107,10 @@ function buildControls() {
   check(s5, 'forces', '力の矢印', () => S.show.forces, v => S.show.forces = v);
 
   // ⑥ 空気と風
-  buildEnvGroup(section(box, 'env', '6', '空気と風', false));
+  buildEnvGroup(section(box, 'env', '6', '空気と風', true));
 
   // ⑦ くわしい設定（本物に近づける小さな効果・係数の式）
-  const s7 = section(box, 'fine', '7', 'くわしい設定（本物に近づける）', false);
+  const s7 = section(box, 'fine', '7', 'くわしい設定（本物に近づける）', true);
   check(s7, 'fxDecay', '回転の減り', () => PHY.fx.decay, v => PHY.fx.decay = v);
   check(s7, 'fxBuoy', '空気の浮力', () => PHY.fx.buoy, v => PHY.fx.buoy = v);
   check(s7, 'fxAdded', '付加質量（まわりの空気もいっしょに動く）', () => PHY.fx.added, v => PHY.fx.added = v);
@@ -178,7 +178,8 @@ function updateNums() {
   const rows = [
     ['ホームまで', fmt(r.tPlate, 3) + ' 秒'],
     ['速さ', fmt(V.len(r.st.vel) * 3.6, 0) + ' → ' + fmt(V.len(r.vPlate) * 3.6, 0) + ' km/h'],
-    ['変化量', (up >= 0 ? '上へ ' : '下へ ') + fmt(Math.abs(up), 0) + ' cm・' + (rt >= 0 ? '右へ ' : '左へ ') + fmt(Math.abs(rt), 0) + ' cm' + (Math.abs(rt) >= 1 ? '（' + (Math.sign(rt) === armSign() ? '腕の側' : 'グラブの側') + '）' : ''), 'plain'],
+    ['変化量（50 ft から）', mvText(S.mv50), 'mv50'],
+    ['変化量（放してから）', (up >= 0 ? '上へ ' : '下へ ') + fmt(Math.abs(up), 0) + ' cm・' + (rt >= 0 ? '右へ ' : '左へ ') + fmt(Math.abs(rt), 0) + ' cm' + (Math.abs(rt) >= 1 ? '（' + (Math.sign(rt) === armSign() ? '腕の側' : 'グラブの側') + '）' : ''), 'plain'],
     ['ねらった点から', missText(r), 'target'],
     ['空気なしより', (r.pPlate[2] >= S.ghostNoAir.pPlate[2] ? '上に ' : '下に ') + fmt(Math.abs(r.pPlate[2] - S.ghostNoAir.pPlate[2]) / 0.01, 0) + ' cm', 'noAir'],
     ['空気', 'ρ = ' + fmt(r.st.rho, 3) + ' kg/m³（ふつうの ' + fmt(r.st.rho / STD_ENV.rho * 100, 0) + '%）・' + windName(S.env.ws, S.env.wd), 'air'],
@@ -204,6 +205,12 @@ function updateNums() {
   $('nums').innerHTML = html;
 }
 
+// 変化量の文（cm とインチ、腕の側／グラブの側）
+function mvText(m) {
+  const up = m.dz / 0.01, rt = m.dx / 0.01;
+  return (up >= 0 ? '上へ ' : '下へ ') + fmt(Math.abs(up), 0) + ' cm・' + (rt >= 0 ? '右へ ' : '左へ ') + fmt(Math.abs(rt), 0) + ' cm' +
+    (Math.abs(rt) >= 1 ? '（' + (Math.sign(rt) === armSign() ? '腕の側' : 'グラブの側') + '）' : '') + '　' + fmt(Math.abs(m.dz) / 0.0254, 1) + '・' + fmt(Math.abs(m.dx) / 0.0254, 1) + ' in';
+}
 // ねらった点（初めはゾーンのまん中）からのずれ（ホームの前の端で）
 function missText(r) {
   const dz = (r.pPlate[2] - TARGET.z) / 0.01, dx = (r.pPlate[0] - TARGET.x) / 0.01;
@@ -249,6 +256,14 @@ function setTour(i) {
   $('tourText').innerHTML = TOUR[S.tour].text;
   $('next').textContent = S.tour === TOUR.length - 1 ? 'はじめから' : 'つぎへ';
   syncAll();
+}
+
+// スマホでは球種のボタンを画面の下（時間のつまみの上）へ移す。広い画面では ① 投手と球種 の中へ戻す
+function placeChips() {
+  const chips = $('chips'), small = window.matchMedia('(max-width:640px)').matches;
+  const home = $('pnote');
+  if (small && chips.parentNode !== $('dockChips')) $('dockChips').appendChild(chips);
+  if (!small && chips.parentNode === $('dockChips')) home.parentNode.insertBefore(chips, home);
 }
 
 // 案内の帯: 文をタップで全文／2行、× でしまう

@@ -26,8 +26,9 @@
       <canvas id="ball"></canvas><div id="nums"></div>
     </aside>
   </main>
+  <div id="dock"><div id="dockChips"></div>
   <div id="timebar"><button id="play" aria-label="再生">▶</button><input type="range" id="time" min="0" max="0.4" step="0.001" aria-label="時刻"><span id="tlab"></span>
-    <select id="speed" aria-label="再生の速さ"><option value="0.05">1/20 の速さ</option><option value="0.2" selected>1/5 の速さ</option><option value="1">本当の速さ</option></select></div>
+    <select id="speed" aria-label="再生の速さ"><option value="0.05">1/20 の速さ</option><option value="0.2" selected>1/5 の速さ</option><option value="1">本当の速さ</option></select></div></div>
   <div id="stripBox"><canvas id="tstrip"></canvas><p id="batTxt"></p></div>
   <div id="controls"></div>
   <div id="tip" hidden></div>
@@ -41,7 +42,7 @@
       <li><b>縫い目の力（ナックルだけ）</b> ½ρAC<sub>K</sub>(θ)v²。C<sub>K</sub>(θ) = 0.33 sin 4θ（θ は回転軸のまわりの縫い目の向き）。風洞の測定（Watts &amp; Sawyer 1975）の「4つの縫い目の向きで sin 4θ に近い形・65 mph で最大がボールの重さの約半分・速さの2乗に比例」に合わせた大きさです。向きは回転軸と進む向きの両方に直角。</li>
     </ul>
     <p>C<sub>D</sub>・C<sub>L</sub> の式は、Alan Nathan の軌道計算機（ボールの飛び方の測定から作られたもの）と同じです。空気の流れそのものを解いているのではなく、<b>測定から作られた係数</b>で力を計算しています（ボールのまわりの乱れた流れは、ブラウザでは正確に解けないため）。</p>
-    <p>計算の確かめ: 球種の例の値で、フォーシームは上へ約 43 cm・投げる腕の側へ約 24 cm、ツーシームは上へ約 24 cm・腕の側へ約 41 cm ずれ、MLB の平均的な変化量（Statcast）と同じくらいになりました。ナックルは、回転しないときの最大の変化が約 76 cm（30 インチ）で速さによらず、試合の測定（Nathan 2012、最大およそ 30 インチ）と同じくらいです（速さによらないことは Watts &amp; Sawyer の予想どおり）。</p>
+    <p>計算の確かめ: 「変化量（50 ft から）」は、ホームから 50 フィートの点からホームまでのずれで、試合の測定の解析でよく使われる測り方に合わせた目安です。球種の例の値では、まっすぐ 上 15・腕の側 6 インチ、ツーシーム 上 9・腕の側 14、カーブ 下 11・グラブの側 9、チェンジアップ 上 6・腕の側 15、スプリット 上 4・腕の側 10、スイーパー グラブの側 13、カット 上 9・グラブの側 3、スライダー 上 1・グラブの側 4 インチで、MLB の平均的な変化量の目安（まっすぐ 16.8・7.6 など）と同じくらいです。「変化量（放してから）」は手を離れた所からのずれで、2 割ほど大きくなります。ナックルは、回転しないときの最大の変化が約 76 cm（30 インチ）で速さによらず、試合の測定（Nathan 2012、最大およそ 30 インチ）と同じくらいです（速さによらないことは Watts &amp; Sawyer の予想どおり）。</p>
     <h3>縫い目の力（段階D）</h3>
     <ul>
       <li><b>ナックル</b>: 4つの縫い目の握りは Watts &amp; Sawyer 1975 の sin 4θ。2つの縫い目の握り（初めの値）は、Morrissey 2009 の風洞の測定（70 mph・毎分 50 回転のボール1つ）のグラフから 10° ごとに読み取った値で、回転軸と進む向きの両方に直角な向きの力と、回転軸の向きの力（論文でも「正しくないかもしれない」とされている）を使っています。2つの縫い目の値は 4つの縫い目より大きく、回らないときの最大の変化は約 96 cm になります（試合の測定の最大およそ 76 cm より大きい）。</li>

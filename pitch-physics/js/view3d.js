@@ -12,7 +12,7 @@ const V3 = {
 // カメラの決まった位置（右投げのとき。左投げは X を逆に）
 // カメラの位置は見やすさで決めたこのアプリのオリジナル（ゾーン・道すじ・投手が一度に見えるように）
 const CAMS = {
-  catcher: { name: '捕手の目', pos: [0, 0.95, 1.0], tgt: [0, 1.15, -18], fov: 50 },          // しゃがんだ捕手の目（ホームの後ろ 1.0 m・高さ 0.95 m の目安）。投手のほうを見たまま（初期値）
+  catcher: { name: '捕手の目', look: true, pos: [0, 0.95, 1.0], tgt: [0, -0.3, -18], fov: 46 },   // 見る向きは少し下げ、ゾーンが画面のまん中近く・投手も入るように          // しゃがんだ捕手の目（ホームの後ろ 1.0 m・高さ 0.95 m の目安）。投手のほうを見たまま（初期値）
   high:    { name: 'ホームの後ろ（高め）', pos: [0, 2.4, 6.5], tgt: [0, 0.9, -9], fov: 32 },      // 道すじ全体とゾーンを少し上から
   pitcher: { name: '投手の後ろ', pos: [1.1, 2.6, -24.5], tgt: [0, 1.0, -4], fov: 30 },          // 投手の少し後ろ・横から、道すじとゾーンを見通す（左投げは x を逆に）
   ball:    { name: 'ボールの後ろ', follow: true, fov: 50 },
@@ -192,7 +192,10 @@ function setCam(id) {
   const pos = new THREE.Vector3(c.pos[0] * mir, c.pos[1], c.pos[2]), tgt = new THREE.Vector3(c.tgt[0], c.tgt[1], c.tgt[2]);
   V3.target.copy(tgt);
   const d = pos.clone().sub(tgt);
-  V3.orbit = { dist: d.length(), yaw: Math.atan2(d.x, d.z), pitch: Math.asin(Math.max(-1, Math.min(1, d.y / d.length()))) };
+  const o = { dist: d.length(), yaw: Math.atan2(d.x, d.z), pitch: Math.asin(Math.max(-1, Math.min(1, d.y / d.length()))) };
+  V3.orbit = Object.assign({}, o); V3.goal = Object.assign({}, o);       // goal = ドラッグで決めた目標。orbit はそこへなめらかに近づく
+  V3.look = { yaw: 0, pitch: 0 }; V3.lookGoal = { yaw: 0, pitch: 0 };     // 目のカメラ: その場で見る向きだけ変える
+  V3.zoom = 1; V3.zoomGoal = 1;                                            // 目のカメラ: ホイールでズーム（視野の広さの倍率）
   V3.cam.fov = c.fov; V3.cam.up.set(...(c.up || [0, 1, 0])); V3.cam.updateProjectionMatrix();
 }
 function placeCam(ballPos, vel) {
@@ -212,7 +215,21 @@ function placeCam(ballPos, vel) {
     if (V3.cam.fov !== c.fov) { V3.cam.fov = c.fov; V3.cam.updateProjectionMatrix(); }
     return;
   }
-  const o = V3.orbit, cp = Math.cos(o.pitch);
+  // 目標へなめらかに近づける（急に動かない）
+  const o = V3.orbit, gl = V3.goal || o, k = 0.18;
+  o.yaw += (gl.yaw - o.yaw) * k; o.pitch += (gl.pitch - o.pitch) * k; o.dist += (gl.dist - o.dist) * k;
+  if (c.look) {
+    // 目のカメラ: 位置はそのまま、見る向きだけ左右・上下に回す。ズームは視野の広さで
+    const L = V3.look, LG = V3.lookGoal; L.yaw += (LG.yaw - L.yaw) * k; L.pitch += (LG.pitch - L.pitch) * k;
+    V3.zoom += (V3.zoomGoal - V3.zoom) * k;
+    const pos = new THREE.Vector3(c.pos[0], c.pos[1], c.pos[2]), dir = new THREE.Vector3(c.tgt[0], c.tgt[1], c.tgt[2]).sub(pos).normalize();
+    dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), L.yaw);
+    const side = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize(); dir.applyAxisAngle(side, L.pitch);
+    V3.cam.position.copy(pos); V3.cam.up.set(0, 1, 0); V3.cam.lookAt(pos.clone().add(dir));
+    const f = c.fov * V3.zoom; if (Math.abs(V3.cam.fov - f) > 1e-3) { V3.cam.fov = f; V3.cam.updateProjectionMatrix(); }
+    return;
+  }
+  const cp = Math.cos(o.pitch);
   V3.cam.position.set(V3.target.x + o.dist * cp * Math.sin(o.yaw), V3.target.y + o.dist * Math.sin(o.pitch), V3.target.z + o.dist * cp * Math.cos(o.yaw));
   if (S.cam === 'top' && Math.abs(o.pitch) > 1.5) V3.cam.up.set(0, 0, -1); else V3.cam.up.set(0, 1, 0);
   V3.cam.lookAt(V3.target);
@@ -262,12 +279,20 @@ function bind3dPointer(canvas) {
     if (!drag) { canvas.style.cursor = nearPlain(e) ? 'move' : 'grab'; return; }
     if (CAMS[S.cam].follow) return;
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag = { x: e.clientX, y: e.clientY };
-    V3.orbit.yaw -= dx * 0.005; V3.orbit.pitch = Math.max(-0.1, Math.min(1.55, V3.orbit.pitch + dy * 0.005));
+    // 回す量は 1 px で 0.12°（Shift を押すとさらに 1/4）。目のカメラは見る向き、ほかは注目点のまわりを回る
+    const sens = (e.shiftKey ? 0.25 : 1) * 0.0021;
+    if (CAMS[S.cam].look) { const L = V3.lookGoal; L.yaw = Math.max(-1.2, Math.min(1.2, L.yaw + dx * sens)); L.pitch = Math.max(-0.8, Math.min(0.8, L.pitch + dy * sens)); }
+    else { const G = V3.goal; G.yaw -= dx * sens; G.pitch = Math.max(-0.1, Math.min(1.55, G.pitch + dy * sens)); }
   });
   canvas.addEventListener('pointerup', () => { drag = null; tgt = null; });
+  // ダブルクリック（ダブルタップ）で、そのカメラの初めの位置に戻す
+  canvas.addEventListener('dblclick', () => { setCam(S.cam); });
   canvas.addEventListener('wheel', e => {
     if (CAMS[S.cam].follow) return;
-    e.preventDefault(); V3.orbit.dist = Math.max(1.5, Math.min(200, V3.orbit.dist * Math.exp(e.deltaY * 0.001)));
+    e.preventDefault();
+    const step = Math.exp(Math.max(-1, Math.min(1, e.deltaY / 100)) * (e.shiftKey ? 0.02 : 0.06));   // 1 ノッチで 6%（Shift で 2%）
+    if (CAMS[S.cam].look) V3.zoomGoal = Math.max(0.25, Math.min(1.4, V3.zoomGoal * step));
+    else V3.goal.dist = Math.max(1.5, Math.min(200, V3.goal.dist * step));
   }, { passive: false });
 }
 

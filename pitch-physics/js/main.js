@@ -14,7 +14,12 @@ function fit(c, ctx) {
   c.width = Math.max(1, Math.round(r.width * dpr)); c.height = Math.max(1, Math.round(r.height * dpr));
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
-function resize() { fit(cv, g); fit(bc, gb); fit(fc, gf); fit(ts, gt); layout(cv.clientWidth, cv.clientHeight); resize3d(gl.clientWidth, gl.clientHeight); draw(); }
+function alignStrip() {   // 時間割の帯を、時間のつまみの真下に同じ幅で置く
+  const tr = document.getElementById('time').getBoundingClientRect(), br = document.getElementById('stripBox').getBoundingClientRect();
+  if (window.matchMedia('(max-width:640px)').matches) { ts.style.marginLeft = ''; ts.style.width = ''; return; }   // スマホは時間のつまみが下に固定なので、幅いっぱい
+  if (tr.width > 0) { ts.style.marginLeft = (tr.left - br.left - 16) + 'px'; ts.style.width = tr.width + 'px'; }
+}
+function resize() { alignStrip(); fit(cv, g); fit(bc, gb); fit(fc, gf); fit(ts, gt); layout(cv.clientWidth, cv.clientHeight); resize3d(gl.clientWidth, gl.clientHeight); draw(); }
 
 function step(dt) {
   if (!S.playing) return;
@@ -38,7 +43,8 @@ function loop(now) { step(Math.max(0, Math.min(0.05, (now - last) / 1000))); las
 
 setPitch('ff');
 if (!init3d(gl)) S.view = '2d';
-buildControls(); buildViewTabs(); buildTime(); bindPointer(); bindTourBar();
+buildControls(); buildViewTabs(); buildTime(); bindPointer(); bindTourBar(); placeChips();
+window.matchMedia('(max-width:640px)').addEventListener('change', () => { placeChips(); resize(); });
 document.getElementById('next').addEventListener('click', () => setTour(S.tour === TOUR.length - 1 ? 0 : S.tour + 1));
 window.addEventListener('resize', resize);
 setTour(0);

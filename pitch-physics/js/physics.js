@@ -235,6 +235,16 @@ function aim(P, target = { x: 0, z: 0.75 }, opt) {
   return { vAng: Q.vAng, hAng: Q.hAng };
 }
 
+// 変化量（よく使われる測り方の目安）: y = 50 ft の点からホームまでに、回転と縫い目の力で生まれたずれ（その点でのずれと、ずれの速さのぶんを引く）
+function movement50(full, plain) {
+  const y = 50 * 0.3048, i = full.pts.findIndex(q => q.p[1] <= y);
+  if (i < 0) return movement(full, plain);
+  const a = full.pts[i], b = sampleAt(plain, a.t), T = full.tPlate - a.t;
+  const dx = (full.pPlate[0] - plain.pPlate[0]) - (a.p[0] - b.p[0]) - (a.v[0] - b.v[0]) * T;
+  const dz = (full.pPlate[2] - plain.pPlate[2]) - (a.p[2] - b.p[2]) - (a.v[2] - b.v[2]) * T;
+  return { dx, dz };
+}
+
 // 変化量: 回転・縫い目の力なし（重力と抗力だけ）の道すじとの、ホームでの差（Statcast の「変化量」と同じ考え）
 function movement(full, plain) {
   return { dx: full.pPlate[0] - plain.pPlate[0], dz: full.pPlate[2] - plain.pPlate[2] };
@@ -253,4 +263,4 @@ function calibSSW() {
 }
 calibSSW();
 
-if (typeof module !== 'undefined') module.exports = { earthOmega, calibSSW, k2sAt, airDensity, STD_ENV, PHY, V, KMH, MPH, RPM, cdOf, clOf, launch, forces, simulate, sampleAt, aim, movement };
+if (typeof module !== 'undefined') module.exports = { movement50, earthOmega, calibSSW, k2sAt, airDensity, STD_ENV, PHY, V, KMH, MPH, RPM, cdOf, clOf, launch, forces, simulate, sampleAt, aim, movement };

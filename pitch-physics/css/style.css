@@ -157,8 +157,14 @@ i.sw.plain{background:repeating-linear-gradient(90deg,rgba(240,240,230,.9) 0 6px
   #views{order:1;margin:0 8px}
   #views.v3d{height:56vh;min-height:300px}
   #tour{order:2;margin:6px 8px}
-  #timebar{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--bg);padding:8px 12px calc(8px + env(safe-area-inset-bottom));box-shadow:0 -6px 16px rgba(0,0,0,.35)}
-  #app{padding-bottom:64px}
+  /* 投球画面（3D）は上に固定、球種と時間のつまみは下に固定。真ん中だけがスクロールする */
+  #views{position:sticky;top:0;z-index:4}
+  #views.v3d{height:42vh;min-height:250px}
+  #dock{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--bg);padding:6px 10px calc(6px + env(safe-area-inset-bottom));box-shadow:0 -6px 16px rgba(0,0,0,.35)}
+  #dockChips .chips{margin:0 0 4px}
+  #dockChips .chips button{min-height:40px;padding:6px 12px}
+  #timebar{padding:2px 2px 0}
+  #app{padding-bottom:118px}
   #play{width:48px;height:44px}
   #time{height:32px}
   #stripBox{order:4}
@@ -198,4 +204,19 @@ i.sw.plain{background:repeating-linear-gradient(90deg,rgba(240,240,230,.9) 0 6px
   #tourText{flex-basis:100%;order:1}
   #next{order:2}
   #tourClose{order:3;margin-left:auto}
+}
+
+#dockChips:empty{display:none}
+
+/* 力の表: 数字は折り返さない（名前のほうを折り返す） */
+#nums td{white-space:nowrap}
+#nums table.ft th{white-space:normal;font-size:12.5px;line-height:1.35}
+#nums table.ft td{padding-left:6px}
+/* 時間割の帯は、時間のつまみと同じ位置・幅（main.js の resize で合わせる） */
+#stripBox{padding:0 16px 4px}
+#tstrip{width:100%}
+#batTxt{padding:0 0 0 0}
+/* PC: 右の欄は 3D の図と同じ高さまで。はみ出す分は欄の中でスクロール（左に空きができないように） */
+@media (min-width:861px){
+  #aside{max-height:min(68vh,620px);overflow-y:auto;padding-right:4px;scrollbar-width:thin}
 }
