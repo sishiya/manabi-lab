@@ -30,6 +30,13 @@
   <section class="sec" id="ctrl">
     <h2>手入れの予定</h2>
     <div id="lanesCtl"></div>
+    <h2>光（家庭用の光脱毛器）</h2>
+    <label class="row">強さ <input id="lv" type="range" min="1" max="10" step="1" value="10"> <span id="lvv">Lv10</span> <span class="hint" id="lvF"></span></label>
+    <label class="row">肌の色 <select id="skin"></select></label>
+    <label class="row">毛の色 <select id="hairc"></select></label>
+    <label class="row">光の前に <select id="prep"><option value="shave">前の日に剃る</option><option value="none">何もしない</option><option value="pluck">1週間前に抜く</option></select></label>
+    <label class="row"><input id="cool" type="checkbox" checked> 光の前後に冷やす</label>
+    <p class="hint" id="flashInfo"></p>
     <label class="row">はやさ <select id="speed"><option value="7">1秒で1週</option><option value="30" selected>1秒で1か月</option><option value="2">1秒で2日</option></select></label>
     <h2>周期の値</h2>
     <label class="row"><select id="site"></select></label>
@@ -41,7 +48,10 @@
     <p>同じ毛穴の並びを3列に分け、剃る・抜く・光をあてる をそれぞれにした場合を、同じ時間で比べるシミュレーションです。毛穴1つずつが「成長期 → 退行期 → 休止期 → 新しい成長期」をくり返し、毛は毛球（毛の根もと）で作られて下から押し上げられます。</p>
     <p><b>学習用に簡単にしています。</b>医療・美容の判断には使えません。毛穴は1列に60個を計算し、図にはそのうち数個を描いています。毛はまっすぐ・肌は平らとし、毛穴どうしは影響しあわないとしています。周期の長さは出どころによって大きくちがうので、選べるようにしています。</p>
     <p>推定の値: 抜いたあと新しい成長期が始まるまで（平均7日）、毛抜きでつまめる長さ（0.5 mm）、古い毛が落ちるまで（0〜25日）、真皮の厚さ・バルジの深さ、周期のばらつき。</p>
-    <p id="lightNote">光の列: 段階A では「前の日に剃る」だけを計算しています。光の熱の計算は次の段階で入れます。</p>
+    <h3>光の計算</h3>
+    <p>光（600〜1100 nm）が肌の中で散らばりながら弱まる量を波長ごとに計算し（皮ふの散乱・メラニン・血液・水の吸収）、毛と毛母のメラニンが吸った熱が、まわりへ広がる様子を熱の式で解きます。細胞がいたむかどうかは、温度と時間の積み重ね（Arrhenius の式、Henriques 1947 の定数）で決めます。表皮も同じように計算します。</p>
+    <p><b>ケノンの数値は公表されていません</b>（波長・光る長さ・面積あたりの強さ）。ここでは、Lv10 = 35 J ÷ 4.5〜4.9 cm²（ストロング2。販売店・比較サイトの値）≈ 7.4 J/cm²、ほかのレベルは比例、波長 600〜1100 nm、光る長さ 5 ms と<b>推定</b>しています。毛のメラニンの量（黒 10%・茶 5%・うすい色 1.5%）も測った値が見つからない推定で、結果はこの値で大きく変わります。表皮のメラニンの量も測り方で大きくちがい（約1〜43%）、幅の中から選んでいます。</p>
+    <p>実際の製品の効き目や安全性の判断には使えません。使い方は製品の説明書にしたがってください。</p>
     <h3>おもな出どころ</h3>
     <ul id="srcs"></ul>
     <h3>使っているもの</h3>
@@ -51,6 +61,7 @@
 
 <script src="js/data.js"></script>
 <script src="js/model.js"></script>
+<script src="js/light.js"></script>
 <script src="js/draw.js"></script>
 <script src="js/graph.js"></script>
 <script src="js/ui.js"></script>

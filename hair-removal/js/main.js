@@ -8,6 +8,7 @@ const gr = $('gr'), gg = gr.getContext('2d');
 const S = {
   t: SIM.t0, site: 'shin', playing: false, speed: 30, guide: 0,
   pre: { shave: 'once', pluck: 'once', light: 'home' },
+  light: { level: 10, skin: 'light', hair: 'black', prep: 'shave', cool: true },
   series: null,   // グラフ用（予定・周期を変えたときだけ計算しなおす）
   scene: null,    // いまの日の毛穴（日を動かすたびに計算しなおす）
   dirty: true, key: '', runners: null,
@@ -17,9 +18,13 @@ const S = {
 function laneEvents(id) {
   const days = PRESETS[id].find(p => p.id === S.pre[id]).days();
   if (id === 'light') {
-    // 光の前の日に剃る（ケノンの使い方。0日目は同じ日に剃ってから）
-    const ev = [];
-    for (const d of days) { ev.push({ t: Math.max(0, d - 1), type: 'shave' }); ev.push({ t: d, type: 'light' }); }
+    // 光の前の準備: 前の日に剃る（ケノンの使い方。0日目は同じ日に剃ってから）／剃らない／1週間前に抜く
+    const ev = [], prep = S.light.prep;
+    for (const d of days) {
+      if (prep === 'shave') ev.push({ t: Math.max(0, d - 1), type: 'shave' });
+      if (prep === 'pluck') ev.push({ t: Math.max(SIM.t0, d - 7), type: 'pluck' });
+      ev.push({ t: d, type: 'light' });
+    }
     return ev.sort((a, b) => a.t - b.t || (a.type === 'shave' ? -1 : 1));
   }
   return makeEvents(id, days);
@@ -51,13 +56,35 @@ function computeScene() {
     const fs = R.advanceTo(S.t);
     if (!S.runners) { S.runners = []; S.runners.key = S.key; }
     S.runners[i] = R;
-    return { lane, fs, count: countLane(fs), last: lastAction(ev, S.t) };
+    const fl = (R.flashes || []).filter(x => x.t <= S.t + 1e-9).pop();
+    return { lane, fs, count: countLane(fs), last: lastAction(ev, S.t), flash: fl, since: fl ? S.t - fl.t : Infinity };
   });
 }
-const HOOKS = {};   // 段階B: 光の計算（light）をここに入れる
+// 光: 1回ごとに、列の毛穴すべてに light.js の計算を当てはめ、結果を runner に記録する
+const _spec = {};
+const HOOKS = {
+  light(fs, site, e, R) {
+    const L = S.light, sk = SKINS[L.skin];
+    const spec = _spec[L.skin] || (_spec[L.skin] = lightSpectrum(sk.fmel));
+    const opt = { F0: L.level * LIGHT.fPerLevel, spec, fh: HAIRS[L.hair].fh, fmel: sk.fmel };
+    const shade = hairShade(fs, opt);                 // 剃っていない毛が表面で光をさえぎる
+    const unshaved = shade > 0.01;
+    const surf = flashSurface(Object.assign({}, opt), unshaved, L.cool);
+    opt.F0 *= 1 - shade;
+    let nA = 0, hit = 0, Tm = 0;
+    for (const f of fs) {
+      const before = f.hitDay, wasA = f.ph === 'A';
+      const res = flashFollicle(f, opt);
+      if (wasA) { nA++; Tm = Math.max(Tm, res.T.matrix); }
+      applyFlash(f, res, e.t);
+      if (f.hitDay === e.t && before !== e.t) hit++;
+    }
+    (R.flashes || (R.flashes = [])).push({ t: e.t, nA, hit, Tm, shade, ...surf });
+  },
+};
 
 function setTime(t) { S.t = Math.max(SIM.t0, Math.min(SIM.tMax, t)); S.dirty = true; }
-function changed(series) { if (series) { S.series = null; S.key = S.site + JSON.stringify(S.pre); } syncControls(S); S.dirty = true; }
+function changed(series) { if (series) { S.series = null; S.key = S.site + JSON.stringify(S.pre) + JSON.stringify(S.light); } syncControls(S); S.dirty = true; }
 
 // --- 描画 ---
 function fit(c, ctx) {
@@ -84,7 +111,7 @@ function applyGuide(i) {
   S.guide = Math.max(0, Math.min(GUIDE.length - 1, i));
   const st = GUIDE[S.guide];
   S.playing = false;
-  if (S.guide < GUIDE.length - 1) { S.pre = { shave: 'once', pluck: 'once', light: 'home' }; S.site = 'shin'; changed(true); }
+  if (S.guide < GUIDE.length - 3) { S.pre = { shave: 'once', pluck: 'once', light: 'home' }; S.site = 'shin'; S.light = { level: 10, skin: 'light', hair: 'black', prep: 'shave', cool: true }; changed(true); }
   setTime(st.t);
   $('gtext').innerHTML = st.text;
   $('gnum').textContent = (S.guide + 1) + '/' + GUIDE.length;

@@ -46,15 +46,19 @@ function newFollicle(i, site, seed) {
 function advance(f, site, days) { for (let d = 0; d < days; d += SIM.dt) stepF(f, site, SIM.dt); }
 
 function startAnagen(f, site) {
+  if (f.doomed) { f.ph = 'X'; f.t = 0; f.dur = Infinity; f.bulb = GEO.clubDepth; return; }   // 幹細胞がいたんで、もう作れない
   f.ph = 'A'; f.t = 0; f.dur = phaseDur(f, site, 'A'); f.bulb = GEO.clubDepth;
   for (const h of f.hairs) if (h.club && h.shedAt == null) h.shedAt = SIM.shedMax * f.rng();   // 古い棍毛はそのうち落ちる
-  f.hairs.push({ L: 0, club: false });
+  f.hairs.push({ L: 0, club: false, thin: f.thin || 1 });
 }
 
 function stepF(f, site, dt) {
   f.t += dt;
   // 古い棍毛が落ちる
-  for (const h of f.hairs) if (h.shedAt != null) h.shedAt -= dt;
+  for (const h of f.hairs) {
+    if (h.shedAt != null) h.shedAt -= dt;
+    if (h.push) h.clubRoot = Math.max(0.4, h.clubRoot - h.push * dt);   // いたんだ毛は押し出されていく
+  }
   f.hairs = f.hairs.filter(h => !(h.shedAt != null && h.shedAt <= 0));
   const cur = f.hairs.find(h => !h.club);
   if (f.ph === 'A') {
@@ -104,6 +108,22 @@ function startState(siteKey) {
   return _start[siteKey];
 }
 
+// 光で毛穴に起きること（Ω は Arrhenius の積分。いたむ確率 = 1 − e^−Ω）
+function applyFlash(f, res, day) {
+  const rng = f.rng;
+  f.heat = { day, Tm: res.T.matrix, Tb: res.T.bulge };   // 図で熱を光らせる
+  if ((f.ph === 'A' || f.ph === 'C') && rng() < 1 - Math.exp(-res.om.matrix)) {
+    // 毛母がいたむ → 毛を作るのをやめ、いまの毛は 1〜3 週で押し出されて落ちる（推定）。毛穴は退行期へ
+    const cur = f.hairs.find(h => !h.club);
+    if (cur) { cur.club = true; cur.clubRoot = f.bulb; cur.shedAt = 7 + 14 * rng(); cur.burnt = true; cur.push = (f.bulb - 0.4) / cur.shedAt; }
+    if (f.ph === 'A') { f.ph = 'C'; f.t = 0; f.dur = 14; f.bulbStart = f.bulb; }
+    f.hitDay = day;
+    // 毛乳頭もいたむと、次の毛は細くなる（推定 0.6 倍ずつ）。細くなりすぎたら作れなくなる
+    if (rng() < 1 - Math.exp(-res.om.pap)) { f.thin = (f.thin || 1) * 0.6; if (f.thin < 0.3) f.doomed = true; }
+  }
+  if (rng() < 1 - Math.exp(-res.om.bulge)) { f.doomed = true; f.hitDay = day; }
+}
+
 // 1列ぶんの計算。決まったきざみ（SIM.dt）で進めるので、続きから進めても 0日目から計算しても同じになる
 // events: [{t, type:'shave'|'pluck'|'light'}]（t の順）
 function Runner(siteKey, events, hooks) {
@@ -123,8 +143,8 @@ Runner.prototype.applyUpTo = function () {
     for (const f of this.fs) {
       if (e.type === 'shave') shave(f);
       else if (e.type === 'pluck') pluck(f, site);
-      else if (e.type === 'light' && this.hooks.light) this.hooks.light(f, site, e);
     }
+    if (e.type === 'light' && this.hooks.light) this.hooks.light(this.fs, site, e, this);
   }
 };
 // tEnd 以下のいちばん近いきざみまで進める。rec(t, fs) は1日ごと
