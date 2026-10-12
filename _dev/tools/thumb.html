@@ -22,7 +22,7 @@ const SETUP = {
   // 変化球のしくみ（3D・ボールの後ろからカーブ。比べる道すじと空気の流れの断面つき）
   'pitch-physics': async w => { await wait(1500); w.__piph.tour(7); w.__piph.cam('ball'); w.__piph.time(0.3); await wait(800); },
   // 目のなかの光の道（近くの物を見て水晶体がふくらみ、上の端からの光も見せる）
-  'eye-optics': async w => { await wait(800); w.__eyop.set({ age: 8, d: 250, showTop: true }); w.__eyop.simRun(1.5); await wait(300); },
+  'eye-optics': async w => { await wait(800); const e = w.__eyop; e.tour(4); e.S.sched = null; e.set({ showTop: true }); e.simRun(3.6); e.set({ d: 300 }); e.simRun(0.85); await wait(300); },   // 遠く→近くでピントが遅れて合うところ（時間のグラフつき）
   // 声帯のしくみ（画面ができたら、いちばん映える場面にする）
   'vocal-folds': async w => { await wait(1500); },
   // 細菌にとりつくウイルス（画面ができたら、いちばん映える場面にする）
