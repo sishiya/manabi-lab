@@ -45,7 +45,15 @@ const handlers = {
   setWind(U) { S.wind = U; ocean.wind.U = U; UI.facts(ocean, U); UI.forest(ocean, U); VIEW.swayDir(); },
   // 風 = U·(軸×位置)。軸を画面の上向きにすると、画面のまん中で右向きに吹く
   windDir() { const a = VIEW.screenUpInPlanet(); ocean.wind.ax = a.x; ocean.wind.ay = a.y; ocean.wind.az = a.z; VIEW.swayDir(); },
-  shake() { const r = VIEW.screenRightInPlanet(); const v = ocean.P.c0; OCEAN.shake(ocean, r.x * v, r.y * v, r.z * v); LIFE.startle(life, 0, Math.PI * ocean.R * 2); },   // 星がゆれると、陸の生きものはみなおどろいて跳ぶ
+  shake() {
+    const r = VIEW.screenRightInPlanet(), v = ocean.P.c0;
+    VIEW.pushFx(r);   // 押した向きの矢印（矢印が星に当たったところで押す）
+    setTimeout(() => {
+      OCEAN.shake(ocean, r.x * v, r.y * v, r.z * v);
+      LIFE.startle(life, 0, Math.PI * ocean.R * 2);   // 星がゆれると、陸の生きものはみなおどろいて跳ぶ
+      toast(`星を画面の右へ ${UI.speed(v)} で押した（海の水は取り残されて左へ寄る）`);
+    }, 450);
+  },
   dropCenter() { const c = centerCell(); if (c >= 0) dropAt(c); },
   setEx(v) { VIEW.st.ex = v; VIEW.rebuildLand(); exNote(); },
 };

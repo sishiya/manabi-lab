@@ -457,7 +457,34 @@ uniform float uTime, uAmp, uS;
       planet.remove(f.blob); f.blob.geometry.dispose(); f.blob.material.dispose(); fx.splice(k, 1);
     }
   }
+  // 星を押したしるし: 星の外（押す側）から大きな矢印が突っこみ（0.5 秒）、うすれて消える（1.5 秒）。星は押された向きに一瞬ずれてもどる。見た目だけ
+  const pushes = [];
+  function pushFx(dir) {   // dir: 押した向き（星の座標・単位ベクトル）
+    const g = new THREE.Group(), mat = new THREE.MeshBasicMaterial({ color: 0xffc95a, transparent: true, opacity: 0.9, depthTest: false, depthWrite: false });
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.55, 16), mat); shaft.position.y = -0.3;
+    const head = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.25, 20), mat); head.position.y = 0.08;
+    g.add(shaft, head); g.renderOrder = 12; shaft.renderOrder = head.renderOrder = 12;
+    g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+    planet.add(g);
+    pushes.push({ g, mat, dir: dir.clone(), t0: performance.now() });
+  }
+  function updatePush() {
+    const now = performance.now();
+    let jolt = 0, jd = null;
+    for (let k = pushes.length - 1; k >= 0; k--) {
+      const f = pushes[k], t = (now - f.t0) / 1000;
+      if (t > 1.5) { planet.remove(f.g); f.g.children.forEach(m => m.geometry.dispose()); f.mat.dispose(); pushes.splice(k, 1); continue; }
+      // 矢印の先: 星のふちの外から、ふちのすぐ外へ突っこみ、そこで止まってうすれる
+      const e = Math.min(1, t / 0.5), r = 1.5 - 0.42 * (1 - (1 - e) * (1 - e));   // 1.5 → 1.08（星のふちのすぐ外）
+      f.g.position.copy(f.dir).multiplyScalar(-r);
+      f.mat.opacity = t < 0.5 ? 0.9 : 0.9 * (1 - (t - 0.5));
+      // 星のゆれ: 突っこんだ瞬間に押された向きへずれて、0.6 秒でもどる
+      if (t > 0.45 && t < 1.05) { jolt = Math.max(jolt, 0.05 * Math.sin((t - 0.45) / 0.6 * Math.PI) * Math.exp(-(t - 0.45) * 3)); jd = f.dir; }
+    }
+    if (jd) planet.position.copy(jd).applyQuaternion(planet.quaternion).multiplyScalar(jolt); else planet.position.set(0, 0, 0);
+  }
   function render(spin) {
+    updatePush();
     updateVapor(); updateFx();
     planet.rotation.y = spin;
     placeCamera();
@@ -501,6 +528,6 @@ uniform float uTime, uAmp, uS;
   }
   // 描いている地面の高さ（マス c の床。ボクセルなのでマスの中は平ら。向き p は使わない）
   function groundR(c) { return rFloor[c]; }
-  return { swayDir, groundR, get planet() { return planet; }, get rFloor() { return rFloor; }, get rTop() { return rTop; }, get mesh() { return M; }, init, dropFx, rebuildLand, updateWater, render, resize, pick, setAlt, screenUpInPlanet, screenRightInPlanet, st,
+  return { pushFx, swayDir, groundR, get planet() { return planet; }, get rFloor() { return rFloor; }, get rTop() { return rTop; }, get mesh() { return M; }, init, dropFx, rebuildLand, updateWater, render, resize, pick, setAlt, screenUpInPlanet, screenRightInPlanet, st,
     set onTap(f) { onTap = f; }, get camera() { return camera; }, get vapor() { return vapor; } };
 })();
