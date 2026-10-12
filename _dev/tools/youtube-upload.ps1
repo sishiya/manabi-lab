@@ -25,6 +25,10 @@
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Schedule -Meta _dev/promo/black-hole-guide.upload.json
 #       … 予約投稿の日時（publishAt）だけを入れる。JSON に publishAt がなければ予約を外して非公開のままにする（字幕を送らないので API の使用量が少ない）
 #         captions: { "en": "_dev/promo/out/<名前>.en.srt" } … 字幕（CC）。台本ページ（_dev/promo/*.html）を開くと out に保存される。日本語は動画に焼きこんであるので、ふつうは英語だけ
+#   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Playlist [-DryRun]
+#       … 再生リスト（_dev/promo/playlist.json）を作る／名前・説明・英語を合わせ、match に当たる upload.json の動画のうち
+#         **公開ずみ**のものを publishAt の順に足す（予約中・非公開は足さない。もう入っているものは足さない）。何度走らせてもよい。
+#         作ったら playlist.json の playlistId に書く。-DryRun は読むだけ（足すものを出す）
 #
 # 秘密の扱い（必ず守る）:
 #   - クライアントの秘密は $SecretDir\client_secret.json（プロジェクトの外）。このスクリプトだけが読み、中身は画面に出さない。
@@ -42,6 +46,8 @@ param(
   [switch]$Ga,
   [switch]$Quota,
   [switch]$Verify,
+  [switch]$Playlist,
+  [switch]$DryRun,
   [string]$Date,
   [int]$Days = 7,
   [string]$Out,
@@ -82,6 +88,8 @@ function Get-QuotaCost([string]$method, [string]$uri) {
     'videos' { if ($m -eq 'POST') { return @(1600, 'videos.insert') } elseif ($m -eq 'PUT') { return @(50, 'videos.update') } else { return @(1, 'videos.list') } }
     'captions' { if ($m -eq 'POST') { return @(400, 'captions.insert') } elseif ($m -eq 'PUT') { return @(450, 'captions.update') } else { return @(50, 'captions.list') } }
     'thumbnails' { return @(50, 'thumbnails.set') }
+    'playlists' { if ($m -eq 'GET') { return @(1, 'playlists.list') } else { return @(50, "playlists.$($m.ToLower())") } }
+    'playlistItems' { if ($m -eq 'GET') { return @(1, 'playlistItems.list') } else { return @(50, "playlistItems.$($m.ToLower())") } }
     default { return @(1, "$res.list") }
   }
 }
@@ -489,5 +497,71 @@ function Invoke-Verify {
   if ($ng) { Write-Host "NG のある動画: $ng 本"; exit 1 } else { Write-Host "すべて OK（動画そのもの・アプリの動作は別に見る。RULES 8.4）" }
 }
 
-try { if ($Quota) { Show-Quota } elseif ($Verify) { Invoke-Verify } elseif ($Auth) { Invoke-Auth } elseif ($List) { Invoke-List } elseif ($Stats -and $Ga) { Invoke-GaStats } elseif ($Stats) { Invoke-Stats } elseif ($Schedule) { Invoke-Schedule } elseif ($Update) { Invoke-Update } else { Invoke-Upload } }
+# ---- -Playlist: 再生リストを作る／合わせ、公開ずみの動画を公開の順に足す（playlists 50・playlistItems.insert 50 ポイント／本）----
+function Invoke-Playlist {
+  $pf = Join-Path $root '_dev/promo/playlist.json'
+  $p = Get-Content -Raw -Encoding UTF8 $pf | ConvertFrom-Json
+  # 足したい順: match に当たる upload.json を publishAt の順に（videoId のあるものだけ）
+  $want = @(Get-ChildItem (Join-Path $root '_dev/promo') -Filter $p.match | ForEach-Object {
+      $j = Get-Content -Raw -Encoding UTF8 $_.FullName | ConvertFrom-Json
+      if ($j.videoId) { [pscustomobject]@{ name = $_.Name -replace '\.upload\.json$', ''; id = $j.videoId; at = "$($j.publishAt)" } } } | Sort-Object at, name)
+  $at = Get-AccessToken; $h = @{ Authorization = "Bearer $at" }
+  $snippet = @{ title = $p.title; description = $p.description; defaultLanguage = 'ja' }
+  $body = @{ snippet = $snippet; status = @{ privacyStatus = $p.privacy } }
+  if ($p.localizations) { $body.localizations = $p.localizations }
+  $parts = 'snippet,status' + $(if ($p.localizations) { ',localizations' } else { '' })
+  $plId = $p.playlistId
+  if (-not $plId) {
+    if ($DryRun) { Write-Host "（-DryRun）再生リストをまだ作っていない: $($p.title)" }
+    else {
+      try { $r = Invoke-RestMethod -Method Post -Headers $h -ContentType 'application/json; charset=UTF-8' -Body ([Text.Encoding]::UTF8.GetBytes(($body | ConvertTo-Json -Depth 6))) -Uri "https://www.googleapis.com/youtube/v3/playlists?part=$parts" }
+      catch { throw "再生リストを作れませんでした: $(Get-ErrText $_)" }
+      $plId = $r.id
+      $txt = (Get-Content -Raw -Encoding UTF8 $pf) -replace '"playlistId":\s*"[^"]*"', "`"playlistId`": `"$plId`""
+      [IO.File]::WriteAllText($pf, $txt, (New-Object Text.UTF8Encoding $false))
+      Write-Host "再生リストを作りました（$($p.privacy)）: https://www.youtube.com/playlist?list=$plId  ← playlist.json に書いた"
+    }
+  } else {
+    try { $cur = (Invoke-RestMethod -Headers $h -Uri "https://www.googleapis.com/youtube/v3/playlists?part=snippet,status,localizations&id=$plId").items | Select-Object -First 1 }
+    catch { throw "再生リストを読めませんでした: $(Get-ErrText $_)" }
+    if (-not $cur) { throw "再生リストが見つかりません（消した？ playlist.json の playlistId を空にすると作りなおす）: $plId" }
+    $same = $cur.snippet.title -eq $p.title -and ("$($cur.snippet.description)" -replace "`r`n", "`n") -eq ("$($p.description)" -replace "`r`n", "`n") -and $cur.status.privacyStatus -eq $p.privacy
+    if ($p.localizations) { foreach ($l in $p.localizations.PSObject.Properties) { $c = $cur.localizations.($l.Name); if (-not $c -or $c.title -ne $l.Value.title -or $c.description -ne $l.Value.description) { $same = $false } } }
+    if (-not $same) {
+      if ($DryRun) { Write-Host '（-DryRun）再生リストの名前・説明・公開・英語が playlist.json とちがう' }
+      else {
+        $body.id = $plId
+        try { Invoke-RestMethod -Method Put -Headers $h -ContentType 'application/json; charset=UTF-8' -Body ([Text.Encoding]::UTF8.GetBytes(($body | ConvertTo-Json -Depth 6))) -Uri "https://www.googleapis.com/youtube/v3/playlists?part=$parts" | Out-Null; Write-Host '再生リストの名前・説明・英語を playlist.json に合わせました' }
+        catch { Write-Host "再生リストを直せませんでした: $(Get-ErrText $_)" }
+      }
+    }
+  }
+  # 入っている動画と、YouTube 側の公開の状態
+  $have = @()
+  # 作った直後は playlistItems.list が 404 を返す（2026-10-12）。作ったばかりなら中は空なので読まない
+  if ($plId -and $p.playlistId) {
+    try { $have = @((Invoke-RestMethod -Headers $h -Uri "https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&maxResults=50&playlistId=$plId").items | ForEach-Object { $_.contentDetails.videoId }) }
+    catch { throw "再生リストの中を読めませんでした: $(Get-ErrText $_)" }
+  }
+  try { $vs = @((Invoke-RestMethod -Headers $h -Uri "https://www.googleapis.com/youtube/v3/videos?part=status&id=$(($want | ForEach-Object { $_.id }) -join ',')").items) }
+  catch { throw "動画の状態を読めませんでした: $(Get-ErrText $_)" }
+  $pub = @{}; foreach ($v in $vs) { $pub[$v.id] = $v.status.privacyStatus }
+  $added = 0; $wait = @()
+  foreach ($w in $want) {
+    if ($have -contains $w.id) { continue }
+    if ($pub[$w.id] -ne 'public') { $wait += "$($w.name)（$($pub[$w.id])）"; continue }
+    # 公開の順の位置に入れる（前の動画のうち、もう入っている本数）
+    $pos = @($want | Where-Object { $_.at -lt $w.at -and $have -contains $_.id }).Count
+    if ($DryRun) { Write-Host "（-DryRun）足す: $($w.name)  https://youtu.be/$($w.id)  位置 $pos"; continue }
+    $b = @{ snippet = @{ playlistId = $plId; position = $pos; resourceId = @{ kind = 'youtube#video'; videoId = $w.id } } }
+    try {
+      Invoke-RestMethod -Method Post -Headers $h -ContentType 'application/json; charset=UTF-8' -Body ([Text.Encoding]::UTF8.GetBytes(($b | ConvertTo-Json -Depth 5))) -Uri 'https://www.googleapis.com/youtube/v3/playlistItems?part=snippet' | Out-Null
+      $have += $w.id; $added++; Write-Host "足しました: $($w.name)  https://youtu.be/$($w.id)"
+    } catch { Write-Host "足せませんでした: $($w.name): $(Get-ErrText $_)" }
+  }
+  Write-Host "再生リスト: $(@($have).Count) 本（今回 $added 本）。まだ公開されていないので待つ: $(if ($wait) { $wait -join '、' } else { 'なし' })"
+  if ($plId) { Write-Host "通しで見る: https://www.youtube.com/playlist?list=$plId" }
+}
+
+try { if ($Quota) { Show-Quota } elseif ($Playlist) { Invoke-Playlist } elseif ($Verify) { Invoke-Verify } elseif ($Auth) { Invoke-Auth } elseif ($List) { Invoke-List } elseif ($Stats -and $Ga) { Invoke-GaStats } elseif ($Stats) { Invoke-Stats } elseif ($Schedule) { Invoke-Schedule } elseif ($Update) { Invoke-Update } else { Invoke-Upload } }
 catch { Write-Host "失敗: $($_.Exception.Message)"; exit 1 }

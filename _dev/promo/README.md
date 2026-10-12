@@ -44,6 +44,7 @@ YouTube に出す順番（ジャンル・サムネイルの色味が連日で重
   - 予約日時は `_dev/tools/schedule-videos.ps1 -Start <日付>`（`SCHEDULE.md` の順に、説明動画 20:00・ショート 20:05）。`-Apply` で書き、GO のあと `-Upload` で YouTube の予約まで。
 - 上げる: `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Meta _dev/promo/<out>.upload.json`。表示された ID を JSON の `videoId` に書く。
 - 上げたあとに英語・字幕を足す・直す: `-Update -Meta …`。チャンネルの動画の一覧: `-List`。公開前の最終確認（読むだけ）: `-Verify [-Date 日付]`（RULES 8.4）。
+- 再生リスト「まなびラボ ― アプリの使い方と見どころ（通しで見る）」（公開、https://www.youtube.com/playlist?list=PLPr9GEGpKWDg 、2026-10-12 ユーザーの指示で作った）: `-Playlist`。設定は `playlist.json`（名前・説明・英語・どの upload.json を入れるか）。**公開ずみ**の説明動画だけを公開の順に足す（予約中は足さない）ので、**動画が公開された日（20:00 のあと）に毎回走らせる**。何度走らせてもよい。`-DryRun` で足すものだけ見る。
 - **API の本数の上限で上げられないとき**: ユーザーが Studio で動画ファイルだけ上げる（「子ども向けではない」を選ぶ・非公開・予約はそこで）→ `-List` で ID を調べて JSON の `videoId` に書く → `-Update -Full -Meta …` で日本語と英語のタイトル・説明・タグ・字幕・サムネイルを入れる（上げたあとの更新は本数の上限に数えられない）。
 - **上げる・予約投稿はユーザーの GO のあとで**。予約は `publishAt`（日本時間 `+09:00`、19〜22時ごろ）。差し替えは新しく上げて、古い方はユーザーが Studio で消す（Claude は消さない）。
 - YouTube には1日に上げられる本数の上限がある（`exceeded the number of videos` が出たら日を改める）。2026-10-11 は API で8本＋Studio で3本（合わせて11本）上げても当たらなかった。API の使用量は `youtube-upload.ps1 -Quota`（記録は `_dev/tools/out/yt-quota.csv`。1日は太平洋時間の0時＝日本時間16時に切りかわる）。

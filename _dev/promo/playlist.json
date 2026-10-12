@@ -1,0 +1,13 @@
+{
+  "playlistId": "PLPr9GEGpKWDg",
+  "match": "*-guide.upload.json",
+  "privacy": "public",
+  "title": "まなびラボ ― アプリの使い方と見どころ（通しで見る）",
+  "description": "しし屋 まなびラボの、ブラウザで動く学習アプリの説明動画をまとめました。公開した順に1本ずつ足していきます。\n\nアプリはここから（インストール不要・無料）: https://sishiya.github.io/manabi-lab/",
+  "localizations": {
+    "en": {
+      "title": "Manabi Lab ― App Guides (play all)",
+      "description": "Guide videos for Manabi Lab by Sishiya: learning apps that run in your browser. A new one is added each time it is published.\n\nTry the apps here (free, no install): https://sishiya.github.io/manabi-lab/?lang=en"
+    }
+  }
+}
