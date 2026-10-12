@@ -91,3 +91,6 @@ Claude が `IDEAS.md` の 18「眼球のしくみ」を選んだ（17「残像�
 - Zaidi Q, Ennis R, Cao D, Lee B (2012) Neural locus of color afterimages. Current Biology 22(3):220–224. doi:10.1016/j.cub.2011.12.021（PMC3562597 の本文で確認: 神経節細胞の引き算の順応の時定数 4.8〜17.6 s、ほとんど 5〜12 s。はねかえりの反応と最大の反応の傾き −0.42）
 - Kelly DH, Martinez-Uriegas E (1993) Measurements of chromatic and achromatic afterimages. J Opt Soc Am A 10(1):29–37. doi:10.1364/josaa.10.000029（要旨: 残像の濃さは見つめた図の濃さに比例、強まるのも消えるのも指数関数で時定数 4〜8 s）
 - Atchison DA ほか (2005) Shape of the retinal surface in emmetropia and myopia. IOVS 46(8):2698–2707（網膜はやや平たいだ円体 → ここでは球で近似）
+
+## 直し: 暗さの見え方（2026-10-13、ユーザー「夕方と夜道の見え方あってる？」→「全部直して」）
+- 錐体の速い慣れ（いまの光の分は数秒で消え、色素の分解の分だけ残る）、明るさで視力を下げる（Shlaer／Larson の式）、小窓の明るさをその場の明るさから、0.001 cd/m² を「街灯のない夜道」に。晴れ→夜道の時間は Lamb & Pugh の式で確かめた（直さない）。くわしくは DEVNOTES の「しくみ」。

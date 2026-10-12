@@ -26,7 +26,7 @@ const LIGHTS = [   // 明るさ（cd/m²）はおおよその例（推定）
   { key: 'sun', label: L('晴れた屋外', 'Sunny outdoors'), L: 3000 },
   { key: 'room', label: L('部屋の中', 'Indoors'), L: 100 },
   { key: 'dusk', label: L('夕方', 'Dusk'), L: 1 },
-  { key: 'night', label: L('夜道', 'Night street'), L: 0.001 },
+  { key: 'night', label: L('街灯のない夜道', 'Unlit night road'), L: 0.001 },
 ];
 const D_MIN = 70, D_MAX = 6000;   // 物の距離（mm）。D_MAX より先は「遠く」（Infinity）
 const TOP_ANG = 0.12;             // 物の上の端を見る角度（ラジアン、約7°）
@@ -39,6 +39,7 @@ const S = {
   stopR: 1.36, stopRt: 1.36,  // 虹彩のあなの半径（いま・ねらい）
   acc: null, pup: null, seg: null, aEff: 0, pEff: 1.36,   // 遅れの箱（dynamics.js）
   cone: -1.4, rod: -1.4,      // 暗順応: 錐体・桿体のしきい値（log10 cd/m²。dynamics.js の darkStep）
+  coneL: -2, bc: 0, rodS: -1.4, rodL: -3,   // しきい値の内わけ: 錐体のいまの光の分・色素の分解の割合、桿体のゆっくり慣れる分・いまの光の分（dynamics.js）
   speed: 1,                   // 時間の速さ（1＝ふつう）
   P: null, Ps: null, Pw: null, // メガネの度（D）。P は図の断面の度、Ps・Pw は乱視の強い向き・弱い向き。null＝なし
   hl: null,                   // 案内で光らせる部分
@@ -143,14 +144,14 @@ const TOUR = [
   { text: () => L(`凹レンズのメガネ（${fmtDi(farGlasses(1.0, stopRadiusFor(3)))}）で光を少し広げてから入れると、像が網膜まで届いて、くっきり見えます。`,
       `Glasses with a minus lens (${fmtDi(farGlasses(1.0, stopRadiusFor(3)))}) spread the light a little before it enters, so the image reaches the retina and looks sharp.`),
     set: { glasses: 'far' }, hl: 'glasses' },
-  { text: () => L('メガネをはずして、晴れた屋外から急に夜道へ（はやおくり ×4）。ひとみは 20 秒ほどかけて、ゆっくり開いていきます（グラフの「ひとみ」）。開くほど光は多く入りますが、網膜がまだ暗さに慣れていないので、しばらくは何も見えません（暗さに慣れるのは、あとの段で）。',
-      'Glasses off, and suddenly from sunny outdoors to a night street (fast-forward ×4). The pupil slowly opens over about 20 s (see “Pupil” in the graph). More light gets in, but the retina is not used to the dark yet, so for a while you see nothing (getting used to the dark comes in a later step).'),
+  { text: () => L('メガネをはずして、晴れた屋外から急に街灯のない夜道へ（はやおくり ×4）。ひとみは 20 秒ほどかけて、ゆっくり開いていきます（グラフの「ひとみ」）。開くほど光は多く入りますが、網膜がまだ暗さに慣れていないので、しばらくは何も見えません（暗さに慣れるのは、あとの段で）。',
+      'Glasses off, and suddenly from sunny outdoors to an unlit night road (fast-forward ×4). The pupil slowly opens over about 20 s (see “Pupil” in the graph). More light gets in, but the retina is not used to the dark yet, so for a while you see nothing (getting used to the dark comes in a later step).'),
     set: { glasses: 'none', light: 'sun', speed: 4 }, settle: true, win: 30, go: [{ at: 1, light: 'night' }], hl: 'iris' },
   { text: () => L('こんどは明るい部屋へ（スロー 1/4）。ひとみは 0.2 秒ほどの遅れのあと、1 秒ほどですばやく縮みます。開くのはゆっくり、縮むのはすばやい。明るい所で目を細めると見えやすいのも、同じしくみ。',
       'Now into a bright room (1/4 slow motion). After a delay of about 0.2 s, the pupil quickly shrinks in about 1 s. Opening is slow; shrinking is fast. Squinting in bright light helps you see for the same reason.'),
     set: { speed: 0.25 }, win: 6, go: [{ at: 0.4, light: 'room' }], hl: 'iris' },
-  { text: () => L('暗さに慣れる（はやおくり ×60: 1秒で1分）。晴れた屋外から夜道へ。はじめは何も見えません。まず錐体（明るい所の細胞）が数分で慣れて頭打ちになり、7分ごろから桿体（暗い所の細胞）に切りかわって、30分ほどでいちばん敏感になります。グラフの「暗さ慣れ」の折れ目に注目。桿体だけで見るときは、見え方のまん中がぬけます（中心窩には桿体がない）。',
-      'Getting used to the dark (fast-forward ×60: 1 s = 1 min). From sunny outdoors to a night street. At first you see nothing. The cones (bright-light cells) adjust within a few minutes and level off; around 7 min the rods (dim-light cells) take over, and after about 30 min the eye is most sensitive. Look for the kink in “Dark” in the graph. When only rods are seeing, the middle of the view goes missing (the fovea has no rods).'),
+  { text: () => L('暗さに慣れる（はやおくり ×60: 1秒で1分）。晴れた屋外から街灯のない夜道へ。はじめは何も見えません。まず錐体（明るい所の細胞）が数分で慣れて頭打ちになり、7分ごろから桿体（暗い所の細胞）に切りかわって、30分ほどでいちばん敏感になります。グラフの「暗さ慣れ」の折れ目に注目。桿体だけで見るときは、見え方のまん中がぬけます（中心窩には桿体がない）。',
+      'Getting used to the dark (fast-forward ×60: 1 s = 1 min). From sunny outdoors to an unlit night road. At first you see nothing. The cones (bright-light cells) adjust within a few minutes and level off; around 7 min the rods (dim-light cells) take over, and after about 30 min the eye is most sensitive. Look for the kink in “Dark” in the graph. When only rods are seeing, the middle of the view goes missing (the fovea has no rods).'),
     set: { glasses: 'none', len: 'normal', light: 'sun', d: FAR_D, chart: 'acuity', speed: 60, astigP: 0 }, settle: true, win: 2400, go: [{ at: 30, light: 'night' }], hl: 'retina' },
   { text: () => L('残像: 見え方の「残像」の図のまん中の＋を、15秒じっと見つめてください。網膜の神経細胞が慣れて（順応）、図の色が少しずつうすれます。15秒たつと白い面に変わり、見つめていた図の反対の色（赤→青緑、黄→青）が見えて、十数秒で消えていきます。しくみの図（網膜の中の拡大）では、神経節細胞が「入ってくる信号 − 慣れ」を脳へ送るようすが見えます。グラフの「残像」の段が順応の量です。あなたの目にも本物の残像が出るかもしれません。',
       'Afterimages: stare at the + in the middle of the “Afterimage” figure for 15 s. Nerve cells in the retina get used to it (adaptation), and the colors slowly fade. After 15 s it switches to a white surface: you see the opposite colors (red → blue-green, yellow → blue), which fade over a dozen seconds or so. The diagram (a close-up inside the retina) shows the ganglion cell sending “incoming signal − adaptation” to the brain. The “Afterimage” lane in the graph shows the amount of adaptation. Your own eyes may make a real afterimage too.'),

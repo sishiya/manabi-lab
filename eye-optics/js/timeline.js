@@ -26,7 +26,7 @@ function tlRecord() {
   if (S.replay || !S.res) return;
   if (S.t - TL.lastT < Math.max(0.004, TL.win / 3000)) return;   // グラフの長さに合わせて間引く
   TL.lastT = S.t;
-  const r = { t: S.t, d: S.d, A: S.A, At: S.At, stopR: S.stopR, blur: S.res.blurArcmin, cone: S.cone, rod: S.rod, see: S.res.see.who, af: S.afterA };
+  const r = { t: S.t, d: S.d, A: S.A, At: S.At, stopR: S.stopR, blur: S.res.blurArcmin, cone: S.cone, coneL: S.coneL, bc: S.bc, rod: S.rod, rodS: S.rodS, rodL: S.rodL, see: S.res.see.who, af: S.afterA };
   for (const k of COND_KEYS) r[k] = S[k];
   TL.rec.push(r);
   const old = S.t - Math.max(40, TL.win * 1.05);
@@ -35,13 +35,13 @@ function tlRecord() {
 function tlClear() { TL.rec.length = 0; TL.ev.length = 0; TL.lastT = -1; S.ev = null; }
 
 // ふりかえり: 記録の1コマの状態を目にのせる（いまの状態は TL.live にとっておく）
-function snapshot() { const o = { d: S.d, A: S.A, At: S.At, stopR: S.stopR, cone: S.cone, rod: S.rod, af: S.afterA }; for (const k of COND_KEYS) o[k] = S[k]; return o; }
+function snapshot() { const o = { d: S.d, A: S.A, At: S.At, stopR: S.stopR, cone: S.cone, coneL: S.coneL, bc: S.bc, rod: S.rod, rodS: S.rodS, rodL: S.rodL, af: S.afterA }; for (const k of COND_KEYS) o[k] = S[k]; return o; }
 function applySnap(o) {
   let changed = false;
   for (const k of COND_KEYS) if (S[k] !== o[k]) { S[k] = o[k]; changed = true; }
   S.d = o.d;
   if (changed) { recompute(); syncControls(); }
-  S.A = o.A; S.At = o.At; S.stopR = o.stopR; S.cone = o.cone; S.rod = o.rod; S.afterA = o.af;
+  S.A = o.A; S.At = o.At; S.stopR = o.stopR; S.cone = o.cone; S.coneL = o.coneL; S.bc = o.bc; S.rod = o.rod; S.rodS = o.rodS; S.rodL = o.rodL; S.afterA = o.af;
   compute();
 }
 function tlReplayAt(t) {

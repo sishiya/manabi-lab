@@ -91,11 +91,16 @@ function blurXY(src, w, h, sx, sy) {
   }
   return a;
 }
+// 明るさ（cd/m²）での視力（小数視力）: Shlaer 1937 のデータに Larson ほか 1997 があてはめた式（cycles/度）÷ 30
+const acuityAt = Lcd => (17.25 * Math.atan(1.4 * Math.log10(Lcd) + 0.35) + 25.72) / 30;
+// その場の明るさの見かけ（画面の紙の明るさ、0.3〜1）: 明るさの対数で 0.001 cd/m² → 0.3、100 cd/m² 以上 → 1（このアプリの目安）
+const sceneBright = Lcd => Math.max(0.3, Math.min(1, 0.3 + 0.7 * (Math.log10(Lcd) + 3) / 5));
+
 // だ円のぼけで見え方を描く。sL: 長い向き（ang、横から反時計回りの角度）の σ、sS: それと直角の σ（CSS の px）。
-// vis: 明るさ（0＝見えない〜1）、hole: まん中が見えない（桿体だけ）
-function blurChart(sL, sS, ang = 90, vis = 1, hole = false) {
+// vis: 明るさ（0＝見えない〜1）、hole: まん中が見えない（桿体だけ）、dim: うす暗い（色みをつけない灰色に）
+function blurChart(sL, sS, ang = 90, vis = 1, hole = false, dim = false) {
   if (!VIEW.sharp) return;
-  const key = [sL.toFixed(2), sS.toFixed(2), ang, vis.toFixed(2), hole].join(',');
+  const key = [sL.toFixed(2), sS.toFixed(2), ang, vis.toFixed(2), hole, dim].join(',');
   if (key === VIEW.last) return;
   VIEW.last = key;
   const { w, h, dpr } = VIEW, a90 = ((ang % 180) + 180) % 180;
@@ -127,7 +132,7 @@ function blurChart(sL, sS, ang = 90, vis = 1, hole = false) {
     if (hole) { const r = Math.hypot(x - cx, y - cy), f = Math.max(0, Math.min(1, (R + edge - r) / (2 * edge))); v = v * (1 - f) + mean * f; }
     const n = (v - INK) / (PAPER - INK);   // 0＝字、1＝紙
     v = 10 + n * (PAPER - 10) * vis + (1 - vis) * 4;
-    o[i * 4] = v; o[i * 4 + 1] = v; o[i * 4 + 2] = vis < 1 ? v * 1.02 : v * 0.96; o[i * 4 + 3] = 255;
+    o[i * 4] = v; o[i * 4 + 1] = v; o[i * 4 + 2] = dim || hole ? v : v * 0.96; o[i * 4 + 3] = 255;
   }
   document.getElementById('chart').getContext('2d').putImageData(VIEW.out, 0, 0);
 }
@@ -147,13 +152,18 @@ function updateView() {
       : L('白い面: 見つめていた図の反対の色が見え、数秒〜十数秒で消える。', 'White surface: the opposite colors appear, then fade over several seconds. '))
       + L('図形をさわると、しくみの図でその場所の細胞を見られる', 'Tap a shape to see that spot’s cells in the diagram');
   } else {
-  // 暗さ: 明るさがしきい値をどれだけ上回るかで見え方の明るさを決める（1.5 log 上回れば ふつう。このアプリの目安）。
-  // 桿体だけのとき: まん中がぬけ、視力は 0.16 まで（Shlaer 1937）→ すきま 6 分がやっと分かるぼかし（σ 3 分。推定）を足す
-  const see = r.see, vis = see.who === 'none' ? 0 : Math.max(0.12, Math.min(1, see.margin / 1.5)), rod = see.who === 'rod';
-  const nS = rod ? 3 * VIEW.k : 0, add = s => Math.sqrt(s * s + nS * nS);
-  blurChart(add(blurSigma(r.diamS)), add(blurSigma(r.diamW)), r.ang, vis, rod);
+  // 暗さ: 見え方の明るさ ＝ その場の明るさの目安 × しきい値をどれだけ上回るか（1.5 log 上回れば満点。どちらもこのアプリの目安）。
+  // 視力は明るさで決まる（Shlaer 1937 のデータに Larson ほか 1997 があてはめた式）→ すきま 0.5/視力 分がやっと分かるぼかしを足す（推定）。
+  // 桿体だけのとき: まん中がぬけ、視力は 0.16 まで
+  const see = r.see, Lx = lightOf().L, rod = see.who === 'rod';
+  const vis = see.who === 'none' ? 0 : Math.max(0.06, sceneBright(Lx) * Math.min(1, see.margin / 1.5));
+  const va = Math.min(rod ? 0.16 : Infinity, acuityAt(Lx));
+  const nS = 0.5 / va * VIEW.k, add = s => Math.sqrt(s * s + nS * nS);
+  blurChart(add(blurSigma(r.diamS)), add(blurSigma(r.diamW)), r.ang, vis, rod, Lx < 3);
+  const pct = Math.round(va / acuityAt(3000) * 100);
   note.textContent = see.who === 'none' ? L('暗くて見えない（目がまだ暗さに慣れていない）', 'Too dark to see (the eye is not used to the dark yet)') :
-    rod ? L('桿体だけ: まん中（中心窩）には桿体がないので見えない。視力も 0.16 まで', 'Rods only: the middle (fovea) has no rods, so it is not seen. Acuity is at most 0.16') :
+    rod ? L(`桿体だけ: まん中（中心窩）には桿体がないので見えない。色も分からない。視力は明るい所の ${pct}% ほど`, `Rods only: the middle (fovea) has no rods, so it is not seen, and there is no color. Acuity is about ${pct}% of that in bright light`) :
+    Lx < 3 ? L(`うす暗い: 視力は明るい所の ${pct}% ほどに下がる`, `Dim: acuity drops to about ${pct}% of that in bright light`) :
     S.chart === 'fan' ? L('30° ごとの線（太さ 1.5 分）。乱視だと、ある向きの線だけぼやける', 'Lines every 30° (1.5 arcmin thick). With astigmatism, only lines in some directions blur') :
     L('数字は視力の段（目安）。大きさはそろえて表示', 'Numbers are acuity rows (decimal, rough guide). Shown at matching size');
   }

@@ -47,8 +47,8 @@ function dynSettle(st, At, stopRt) {
 const DARK = {
   rodAbs: -4.6,      // 桿体のいちばん低いしきい値（30分後 −4.4 と S3 から。推定）
   conePlateau: -1.4, // 錐体の頭打ちの高さ（切りかわり 7分と S2 から逆算。推定）
-  coneTau: 1.5,      // 錐体が下がる時定数（分）: 5〜10 分で頭打ちに合わせた推定
-  coneWeber: -2.0,   // 明るい所の錐体のしきい値 ＝ 明るさ × 1%（ウェーバーの法則の目安。推定）
+  coneWeber: -2.0,
+  rodWeber: -1.0,    // いまの光による桿体のしきい値 ＝ 明るさ × 10%（桿体のウェーバー比の目安。推定）   // 明るい所の錐体のしきい値 ＝ 明るさ × 1%（ウェーバーの法則の目安。推定）
   S3: 0.05, S3range: 0.6,   // 終わりの 0.6 log はゆっくり S3（推定）
   lightTau: 3,       // 明るくなったときは数秒で合わせる（秒。推定）
   S2: age => Math.max(0.12, 0.23 - 0.001 * Math.max(0, age - 30)),
@@ -56,17 +56,35 @@ const DARK = {
   // 晴れた屋外 3000 cd/m² で約 4.8 → 7分で錐体の頭打ちに追いつく。部屋 100 cd/m² では約 3.3 で、はじめから錐体より低い＝桿体だけ）
   rodLight: L => Math.max(0, 1.2 + 1.03 * Math.log10(L)),
 };
-const coneLight = L => Math.max(DARK.conePlateau, Math.log10(L) + DARK.coneWeber);
-function darkSettle(st, L) { st.cone = coneLight(L); st.rod = DARK.rodAbs + DARK.rodLight(L); }
+// 錐体のしきい値は2つの和（明るさに直して足す）: いまの光そのもの（光がなくなれば数秒以内に消える。Baker 1953 の はじめの速い下がり）と、
+// 色素が光で分解されたあとに残る分（色素がもどるまで続く）。色素の分解の割合 bc は Rushton & Henry 1968:
+// 半分分解される明るさ 4.3 log td（20000 td）、もどる時定数 2 分。網膜の明るさ ＝ 明るさ × ひとみの面積（mm²）
+const CONE = { I0: 20000, tauRegen: 120, eps: 0.05, fallTau: 1 };   // eps: 分解の割合 → しきい値の上がり（推定。強い光のあと約 1.3 log 上、8 分ほどで頭打ち）
+const coneLightPart = L => Math.log10(L) + DARK.coneWeber;
+const coneTd = L => L * Math.PI * (pupilDiameter(L) / 2) ** 2;
+// 桿体も、いまの光そのものの分（明るさ × 10%。推定）を足す。これがないと、明るい所から出た直後の一瞬だけ「桿体だけ」になる
+const rodOf = st => Math.log10(10 ** st.rodS + 10 ** st.rodL);
+const coneOf = st => Math.log10(10 ** st.coneL + 10 ** (DARK.conePlateau + Math.log10(1 + st.bc / CONE.eps)));
+function darkSettle(st, L) {
+  const I = coneTd(L);
+  st.coneL = coneLightPart(L); st.bc = I / (I + CONE.I0); st.cone = coneOf(st);
+  st.rodS = DARK.rodAbs + DARK.rodLight(L); st.rodL = Math.log10(L) + DARK.rodWeber; st.rod = rodOf(st);
+}
 // dt は秒
 function darkStep(st, dt, L, age) {
-  const m = dt / 60, cT = coneLight(L), rT = DARK.rodAbs + DARK.rodLight(L);
-  if (st.cone > cT) st.cone = cT + (st.cone - cT) * Math.exp(-m / DARK.coneTau);
-  else st.cone += (cT - st.cone) * (1 - Math.exp(-dt / DARK.lightTau));
-  if (st.rod > rT) {
-    const above = st.rod - DARK.rodAbs, slope = above > DARK.S3range ? DARK.S2(age) : DARK.S3;
-    st.rod = Math.max(rT, st.rod - slope * m);
-  } else st.rod += (rT - st.rod) * (1 - Math.exp(-dt / DARK.lightTau));
+  const m = dt / 60, cT = coneLightPart(L), rT = DARK.rodAbs + DARK.rodLight(L);
+  st.coneL += (cT - st.coneL) * (1 - Math.exp(-dt / (cT < st.coneL ? CONE.fallTau : DARK.lightTau)));
+  const rate = coneTd(L) / (CONE.I0 * CONE.tauRegen);   // 1 秒あたり、まだ分解されていない色素が分解される割合
+  const k = rate + 1 / CONE.tauRegen, bss = rate / k;    // d bc/dt = (1−bc)·rate − bc/τ を正確に解く
+  st.bc = bss + (st.bc - bss) * Math.exp(-k * dt);
+  st.cone = coneOf(st);
+  const rL = Math.log10(L) + DARK.rodWeber;
+  st.rodL += (rL - st.rodL) * (1 - Math.exp(-dt / (rL < st.rodL ? CONE.fallTau : DARK.lightTau)));
+  if (st.rodS > rT) {
+    const above = st.rodS - DARK.rodAbs, slope = above > DARK.S3range ? DARK.S2(age) : DARK.S3;
+    st.rodS = Math.max(rT, st.rodS - slope * m);
+  } else st.rodS += (rT - st.rodS) * (1 - Math.exp(-dt / DARK.lightTau));
+  st.rod = rodOf(st);
 }
 // いまの明るさ L で、だれが見ているか: 'cone'（錐体）・'rod'（桿体だけ）・'none'（見えない）と、明るさがしきい値をどれだけ上回るか（log）
 function darkSee(st, L) {
