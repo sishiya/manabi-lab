@@ -98,7 +98,7 @@
     <div class="ctl">
       <label>見た目</label>
       <div class="btns" id="styleBtns"><button data-s="voxel" class="on">ボクセル</button><button data-s="smooth">なめらかボクセル</button></div>
-      <div class="btns" id="lightBtns"><span class="lbl">光</span><button data-l="cycle" class="on">めぐる（自転）</button><button data-l="day">いつも昼</button><button data-l="night">いつも夜</button></div>
+      <div class="btns" id="lightBtns"><span class="lbl">光</span><button data-l="cycle">めぐる（自転）</button><button data-l="day" class="on">いつも昼</button><button data-l="night">いつも夜</button></div>
       <p class="note">どれも見た目だけです（光は、正直モードの温度の計算にはかかわりません。温度は一日でならした日光で計算）。なめらかボクセルは、ボクセルの段々を、となりのマスとの坂でつないだもの。地形は段々にしています（陸は 400 m、海の底は 1000 m ごと。地球の大きさのときの高さで）。海と空気の計算は、なめらかな高さのまま。</p>
     </div>
 
@@ -165,6 +165,7 @@
 <script src="js/life.js"></script>
 <script src="js/render.js"></script>
 <script src="js/lifeview.js"></script>
+<script src="js/fx.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/honestui.js"></script>
 <script src="js/main.js"></script>

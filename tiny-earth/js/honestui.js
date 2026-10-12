@@ -89,7 +89,7 @@ const HUI = (() => {
     $('htV').textContent = t <= 0 ? '0 秒（まだ殻がある）' : when(t);
     $('hudT').textContent = t <= 0 ? '殻を外す前' : '殻を外して ' + when(t);
     const air = HONEST.airAt(Mo.A, t);
-    vs.removed = t > 0; vs.airM = air.m;
+    vs.removed = t > 0; vs.airM = air.m; vs.airP = air.p;
     let wl = 0, wi = 0, w0 = 0, Tsum = 0, Tn = 0, Ssum = 0, Sn = 0, Fsum = 0, Bn = 0;
     for (let i = 0; i < m.N; i++) {
       const d = H.h0[i];

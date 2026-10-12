@@ -4,7 +4,7 @@ const VIEW = (() => {
   let hemi, halo, vapor, rTop, wCol, wWet, wVal, lCol, lCls, renderer, scene, camera, planet, landV, waterV, treeMesh, shell, sun, cv;
   let C, rFloor;          // ボクセルのマス目・柱の床（陸の上の面）の半径
   let M, TR, O;           // 網・地形・海
-  const st = { light: 'cycle', honest: null, style: 'voxel', ex: 100, az: 0.6, el: 0.35, alt: 2.2, treeShown: 0, treeReal: 0 };
+  const st = { light: 'day', honest: null, style: 'voxel', ex: 100, az: 0.6, el: 0.35, alt: 2.2, treeShown: 0, treeReal: 0 };
   const tmp = new THREE.Vector3();
 
   function init(canvas, mesh, terrain, ocean) {
@@ -79,6 +79,7 @@ const VIEW = (() => {
         }`,
     }));
     halo.renderOrder = 9; halo.scale.setScalar(1.25); scene.add(halo);
+    FX.initAir(planet, M);   // 空気の粒（殻を外すと流れ出す）
     // 湯気の粒（正直モード）: 沸いている水・氷の面から立ちのぼって散る。数はマスの蒸発の速さに合わせる（動きは見た目だけ）
     const NV = 3000;
     vapor = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: 3, sizeAttenuation: false, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -359,33 +360,23 @@ const VIEW = (() => {
     }
     vapor.geometry.attributes.position.needsUpdate = true; vapor.geometry.attributes.color.needsUpdate = true;
   }
-  // 水を落としたしるし: 上から水のかたまりが落ちてきて（0.7 秒）、着いた所に波の輪が2つ広がる（1.6 秒）。本当の時間で動く見た目だけ
+  // 水を落としたしるし: 上から水のかたまりが落ちてきて（0.7 秒）、着いたところでしぶきがはじける（FX）。本当の時間で動く見た目だけ
   const fx = [];
   function dropFx(c, width) {
     const n = new THREE.Vector3(M.pos[c * 3], M.pos[c * 3 + 1], M.pos[c * 3 + 2]);
     const r0 = Math.max(rTop[c] || 1, rFloor[c] || 1), w = Math.max(0.01, width / O.R);
     const blob = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2), new THREE.MeshPhongMaterial({ color: 0x5ec8ff, transparent: true, opacity: 0.85, shininess: 80 }));
     blob.scale.setScalar(w * 0.45); planet.add(blob);
-    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), n);
-    const rings = [0, 1].map(() => {
-      const m = new THREE.Mesh(new THREE.RingGeometry(0.86, 1, 48), new THREE.MeshBasicMaterial({ color: 0xbff4ff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, depthTest: false }));
-      m.renderOrder = 11;   // 落とした水のふくらみ（高さの強調つき）に隠れないように
-      m.quaternion.copy(q); m.position.copy(n).multiplyScalar(r0 + 2 * O.P.H0 * st.ex / O.R + 0.002); m.visible = false; planet.add(m); return m;
-    });
-    fx.push({ n, r0, w, blob, rings, t0: performance.now() });
+    fx.push({ n, r0, w, blob, t0: performance.now(), hit: false });
   }
   function updateFx() {
     const now = performance.now();
     for (let k = fx.length - 1; k >= 0; k--) {
       const f = fx[k], t = (now - f.t0) / 1000;
-      if (t < 0.7) { const e = t / 0.7; f.blob.position.copy(f.n).multiplyScalar(f.r0 + f.w * 0.45 + 0.35 * (1 - e * e)); f.blob.visible = true; }
-      else f.blob.visible = false;
-      f.rings.forEach((m, i) => {
-        const u = (t - 0.7 - i * 0.35) / 1.6;
-        m.visible = u > 0 && u < 1;
-        if (m.visible) { m.scale.setScalar(f.w * (0.6 + 3.2 * u)); m.material.opacity = 0.75 * (1 - u); }
-      });
-      if (t > 0.7 + 0.35 + 1.6) { [f.blob, ...f.rings].forEach(m => { planet.remove(m); m.geometry.dispose(); m.material.dispose(); }); fx.splice(k, 1); }
+      if (t < 0.7) { const e = t / 0.7; f.blob.position.copy(f.n).multiplyScalar(f.r0 + f.w * 0.45 + 0.35 * (1 - e * e)); continue; }
+      // 着いた: かたまりを消して、しぶき（落とした水のふくらみの上から）
+      FX.splashAt(planet, f.n, f.r0 + 2 * O.P.H0 * st.ex / O.R, f.w);
+      planet.remove(f.blob); f.blob.geometry.dispose(); f.blob.material.dispose(); fx.splice(k, 1);
     }
   }
   function render(spin) {
@@ -409,8 +400,12 @@ const VIEW = (() => {
     // 大気: 殻の中の空気（残っている割合 airM）。外したあとは広がりながらうすれる（大きさ・こさは見た目だけ）
     const am = hs && hs.removed ? Math.max(0, Math.min(1, hs.airM)) : 1;
     halo.visible = am > 0.003 && camera.position.length() > 1.3;
-    halo.scale.setScalar(1.25 * (1 + 2.5 * (1 - am)));
-    halo.material.uniforms.uDen.value = Math.sqrt(am); halo.material.uniforms.uSpread.value = 1 - am;
+    // かさは大きさを変えず、その場でうすれる。広がっていく様子は空気の粒（FX）が流れ出して見せる
+    halo.material.uniforms.uDen.value = Math.sqrt(am); halo.material.uniforms.uSpread.value = 0;
+    // 空気の粒が出ていく割合: 星のまわりから出た空気の割合と、地面の気圧の下がり方（地表から空気が離れていく）の大きい方
+    const loss = hs && hs.removed ? Math.max(1 - am, 1 - Math.pow(Math.max(0, Math.min(1, hs.airP)), 0.25)) : 0;
+    FX.updateAir(loss, camera, planet, renderer.getPixelRatio());
+    FX.updateSplash(planet);
     // 森: 空気がなくなると葉の水が抜けて枯れる（色の変わる速さは見た目だけ）
     const br = hs ? hs.brown : 0;
     treeMesh.material.color.setRGB(1 + 0.7 * br, 1 - 0.3 * br, 1 - 0.6 * br);   // 緑 → 茶色
