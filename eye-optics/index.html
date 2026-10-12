@@ -10,17 +10,24 @@
 <div id="app">
   <header id="top"><h1>目のなかの光の道</h1><span class="sub">光が目の中で曲がって、網膜に像を結ぶまで</span></header>
   <main id="stage">
-    <canvas id="cv"></canvas>
+    <div id="cvwrap"><canvas id="cv"></canvas><button id="swap">近くを見る</button></div>
     <div id="tour"><span id="tourNum"></span><p id="tourText"></p><button id="next">つぎへ</button></div>
     <div id="info"></div>
     <div id="view"><div id="viewHead">見え方</div><div class="chartbox"><canvas id="chart"></canvas><canvas id="chartLab"></canvas></div><div class="vnote">数字は視力の段（目安）。大きさはそろえて表示</div></div>
     <div id="tip" hidden></div>
   </main>
+  <section id="timebar">
+    <div class="tbhead"><b>時間の流れ</b><span class="tbnote">グラフをさわると、その瞬間の目にもどれます</span>
+      <button id="resume" hidden>▶ いまへもどる</button>
+      <span class="tbgrp" id="speeds" aria-label="時間の速さ"><span class="tblab">速さ</span></span><span class="tbgrp" id="wins" aria-label="グラフの長さ"></span></div>
+    <canvas id="tl"></canvas>
+  </section>
   <div id="controls"></div>
   <details id="about">
     <summary>このアプリについて</summary>
     <p>目を横から切った断面で、光線を1本ずつ計算しています。面ごとにスネルの法則（屈折の法則）で曲げ、虹彩（ひとみ）を通った光だけを網膜まで追います。目の寸法と屈折率は、研究で使われる目の模型（Navarro ほか 1985）の値です。近くを見るときの水晶体の形の変化（調節）も、その論文の式で計算しています。</p>
     <p>ピント合わせは「網膜のぼけがいちばん小さくなる調節」を、その年齢でできる範囲（Hofstetter 1950 の平均の式）の中で探しています。ひとみの大きさは明るさから Crawford 1936 の式で決めています（明るさの値はおおよその例）。</p>
+    <p>見る先や明るさを変えると、目はすぐには追いつきません。ピント合わせは約 0.3 秒の遅れのあと、動く量が大きいほど速く動きます（Bharadwaj &amp; Schor 2006 が測った速さの関係）。ひとみは明るくなると約 0.2 秒の遅れのあと 1 秒ほどで縮み、暗くなると 20 秒ほどかけてゆっくり開きます（Mathôt 2018、Gray ほか 2024）。「時間の流れ」のグラフは、そのあいだのぼけ・調節・ひとみの変わり方です。</p>
     <h3>簡単にしているところ</h3>
     <ul>
       <li>断面の上下の1平面だけで光線を追っています。網膜は半径 12 mm の球としています（実際はやや平たいだ円体）。</li>
@@ -28,6 +35,7 @@
       <li>年齢で変わるのは調節できる幅だけです（水晶体の形・ひとみの大きさの年齢による変化は入れていません）。近視・遠視は目の長さだけを変えています。</li>
       <li>光の回折、色によるずれ（色収差）、網膜の細胞の細かさは入れていません。「見え方」は、網膜のぼけの広がりを同じ広がりのぼかしにして近似したものです。「ぼやける」は、ぼけの円が 2 分（1/30 度）より大きいときとしています（このアプリの目安）。</li>
       <li>メガネは角膜の 12 mm 手前のうすいレンズとし、度は 0.25 D きざみ。遠く用は遠くがいちばんくっきりする度、近く用は 40 cm を調節の半分の力で見られる度（このアプリの決め方）です。</li>
+      <li>時間の変化: ピント合わせとひとみは、遅れのあと指数関数で近づくとしています。ピント合わせの速さ（時定数）は、測られたピーク速度の式から「動く量 ÷ ピーク速度」で決めています（遅れは遠くへの切りかえで測られた約 0.3 秒を、近くへにも使用）。ひとみの縮む・開く時定数（0.35 秒・6 秒）は、論文に書かれた経過に合うように決めた推定です。年齢による速さの変化、ピントのわずかなゆれ、近くを見るときにひとみが縮む反応、暗さに目が慣れる（網膜の感度が上がる）ことは入れていません。</li>
       <li>視神経は、場所を示すために断面に描いています（実際は中心窩より鼻の側にあります）。</li>
     </ul>
     <p><b>学習用に簡単にしたものです。目の病気や視力の判断、メガネの度を決めることには使えません。</b>目のことは眼科で相談してください。</p>
@@ -36,6 +44,11 @@
       <li>Navarro R, Santamaría J, Bescós J (1985) Accommodation-dependent model of the human eye with aspherics. <i>Journal of the Optical Society of America A</i> 2(8):1273–1281. <a href="https://doi.org/10.1364/JOSAA.2.001273" target="_blank" rel="noopener">doi:10.1364/JOSAA.2.001273</a>（目の寸法・屈折率・調節の式）</li>
       <li>Hofstetter HW (1950) Useful age-amplitude formula. <i>Optometric World</i> 38:42–45（年齢と調節できる幅の平均: 18.5 − 0.30 × 年齢 D）</li>
       <li>Watson AB, Yellott JI (2012) A unified formula for light-adapted pupil size. <i>Journal of Vision</i> 12(10):12（ひとみの大きさの式のまとめ。ここでは その中の Crawford 1936 の式を使用）</li>
+      <li>Bharadwaj SR, Schor CM (2006) Dynamic control of ocular disaccommodation: first and second-order dynamics. <i>Vision Research</i> 46(6–7):1019–1037. <a href="https://doi.org/10.1016/j.visres.2005.06.005" target="_blank" rel="noopener">doi:10.1016/j.visres.2005.06.005</a>（ピント合わせの遅れ 約 300 ms、ピーク速度の式: 近くへ 1.58 × 動く量 ＋ 3.42 D/s、遠くへ 1.4355 × はじめの調節 ＋ 1.13 D/s）</li>
+      <li>Metlapally S, Tong JL, Tahir HJ, Schor CM (2016) Potential role for microfluctuations as a temporal directional cue to accommodation. <i>Journal of Vision</i> 16(6):19（反応の遅れ 175–375 ms）</li>
+      <li>Mathôt S (2018) Pupillometry: psychology, physiology, and function. <i>Journal of Cognition</i> 1(1):16. <a href="https://doi.org/10.5334/joc.18" target="_blank" rel="noopener">doi:10.5334/joc.18</a>（ひとみ: 光をつけて 0.2 秒まで動かず、1.5 秒までに縮む。消すと 10〜30 秒でゆっくり戻る）</li>
+      <li>Gray NS ほか (2024) Measuring the pupillary light reflex using portable instruments in applied settings. <i>Vision</i> 8(4):60. <a href="https://doi.org/10.3390/vision8040060" target="_blank" rel="noopener">doi:10.3390/vision8040060</a>（ひとみの遅れ 200〜300 ms、最小になるのは 800〜1200 ms）</li>
+      <li>Kovesi P (2010) Fast almost-Gaussian filtering. DICTA 2010（見え方のぼかしの計算のしかた）</li>
       <li>Atchison DA ほか (2005) Shape of the retinal surface in emmetropia and myopia. <i>Investigative Ophthalmology &amp; Visual Science</i> 46(8):2698–2707（網膜の形）</li>
       <li>ISO 8596（ランドルト環による視力表の形）</li>
     </ul>
@@ -45,7 +58,10 @@
 </div>
 
 <script src="js/optics.js"></script>
+<script src="js/dynamics.js"></script>
 <script src="js/scene.js"></script>
 <script src="js/draw.js"></script>
+<script src="js/view.js"></script>
+<script src="js/timeline.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>

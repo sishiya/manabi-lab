@@ -13,10 +13,10 @@ const LAY = {};
 function layout(W, H) {
   const narrow = W < 720;
   const top = narrow ? 8 : 70, bottom = 16;
-  const s = narrow ? Math.min((W * 0.45) / 27, (H - top - bottom) * 0.8 / 27) : Math.min(W * 0.33 / 27, (H - top - bottom) * 0.78 / 27);
+  const s = narrow ? Math.min((W * 0.5) / 27, (H - top - bottom) * 0.9 / 27) : Math.min(W * 0.33 / 27, (H - top - bottom) * 0.78 / 27);
   Object.assign(LAY, { W, H, narrow, s });
   LAY.ox = narrow ? W - 25.5 * s - 8 : W * 0.5;
-  LAY.oy = top + (H - top - bottom) / 2;
+  LAY.oy = narrow ? Math.max(top + 13 * s, H * 0.42) : top + (H - top - bottom) / 2;   // 狭い画面: 目盛りが下の拡大鏡にかからないよう少し上に
   LAY.trackR = LAY.ox + OPT.glassesZ * s - 18;
   LAY.trackL = 16;
   LAY.infX = LAY.trackL + 14;
@@ -173,8 +173,8 @@ function drawBundle(g, b, rgb, fromX, fromY, inf) {
 
 // 網膜のあたりの拡大鏡
 function drawLoupe(g, eye, bundles) {
-  const r = LAY.narrow ? 52 : 74;
-  const cx = LAY.narrow ? r + 12 : LAY.W - r - 20, cy = LAY.narrow ? LAY.H - r - 26 : Math.min(LAY.H - r - 26, LAY.oy + 4 * LAY.s + r);
+  const r = LAY.narrow ? 44 : 74;
+  const cx = LAY.narrow ? r + 10 : LAY.W - r - 20, cy = LAY.narrow ? LAY.H - r - 20 : Math.min(LAY.H - r - 26, LAY.oy + 4 * LAY.s + r);
   if (cy - r < 0) return;
   const zc = eye.L - 0.25, span = 0.9, k = r / span;   // 中心から span mm がふちに来る
   const LX = z => cx + (z - zc) * k, LY = y => cy - y * k;

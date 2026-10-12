@@ -24,15 +24,20 @@ const D_MIN = 70, D_MAX = 6000;   // 物の距離（mm）。D_MAX より先は�
 const TOP_ANG = 0.12;             // 物の上の端を見る角度（ラジアン、約7°）
 
 const S = {
-  t: 0,
+  t: 0,                       // シミュレーションの時刻（秒）。速さの切りかえで実時間とずれる
   d: 3000, age: 25, len: 'normal', glasses: 'none', light: 'room', showTop: false,
-  A: 0, At: 0,               // 調節（いま・ねらい）
+  A: 0, At: 0,               // 調節（いま・ねらい）。いまの値は dynamics.js の遅れと速さで追いかける
   stopR: 1.36, stopRt: 1.36,  // 虹彩のあなの半径（いま・ねらい）
+  acc: null, pup: null, seg: null, aEff: 0, pEff: 1.36,   // 遅れの箱（dynamics.js）
+  speed: 1,                   // 時間の速さ（1＝ふつう）
   P: null,                    // メガネの度（D）。null＝なし
   hl: null,                   // 案内で光らせる部分
   tour: 0, anim: null,        // 案内の番号、案内のときの動き
+  ev: null,                   // いちばん新しい切りかえ { t, label }（「切りかえてから何秒」の表示）
+  replay: null,               // ふりかえり中なら、見ている記録
   res: null,                  // 計算の結果（毎コマ）
 };
+const NEAR_D = 300, FAR_D = 5000;   // 見る先の切りかえ（近く 30 cm ⇄ 遠く 5 m）
 
 const lenOf = () => LENGTHS.find(l => l.key === S.len);
 const lightOf = () => LIGHTS.find(l => l.key === S.light);
@@ -53,6 +58,23 @@ function retarget() {
   S.At = solveAccommodation(lenOf().dL, { d: S.d }, S.P, maxAccommodation(S.age), S.stopRt);
 }
 
+// 条件を変える（ボタン・案内・見る先の切りかえ）。変わったものは「時間の流れ」に印を残す
+const EV_NAMES = {
+  d: v => !isFinite(v) ? '遠くを見る' : fmtD(v) + ' を見る',
+  age: v => v + '歳',
+  len: v => LENGTHS.find(l => l.key === v).label.replace(/（.*）/, ''),
+  glasses: v => v === 'none' ? 'メガネをはずす' : 'メガネ ' + GLASSES.find(l => l.key === v).label.replace(/（.*）/, ''),
+  light: v => LIGHTS.find(l => l.key === v).label,
+};
+function applyCond(o) {
+  if (S.replay) tlResume();
+  const labels = [];
+  for (const k in o) if (S[k] !== o[k] && EV_NAMES[k]) labels.push(EV_NAMES[k](o[k]));
+  Object.assign(S, o);
+  if (labels.length) markEvent(labels.join('・'));
+  recompute(); syncControls();
+}
+
 // 部分の説明（マウスをのせたとき）。関数は いまの値を入れる
 const PARTS = {
   cornea: { name: '角膜', text: () => '目の表面の透明なまく。空気との境目で、光をいちばん大きく曲げる。この模型では前の面の半径 7.72 mm。' },
@@ -69,24 +91,29 @@ const PARTS = {
   object: { name: '物', text: () => `見ている物（${fmtD(S.d)}）。左右にドラッグして、近づけたり遠ざけたりできる。目の外の距離は縮めて描いている。` },
 };
 
-// 案内（画面の上の「つぎへ」ボタン1つで進む）。set で条件をそろえ、anim で物を動かす
+// 案内（画面の上の「つぎへ」ボタン1つで進む）。set で条件をそろえ、anim で物を動かす。
+// settle: 目をすぐに合わせた状態から始める。win: グラフの長さ（秒）。go: [{at: 秒, ...条件}] その時刻（シミュレーションの時刻）に条件を変える
 const TOUR = [
   { text: '目を横から切った図です。左の矢印（物）から出た光が、目の中でどう曲がって網膜に届くかを、本物の目の寸法の模型で1本ずつ計算しています。',
-    set: { d: 3000, age: 25, len: 'normal', glasses: 'none', light: 'room', showTop: false }, hl: null },
+    set: { d: 3000, age: 25, len: 'normal', glasses: 'none', light: 'room', showTop: false, speed: 1 }, settle: true, win: 6, hl: null },
   { text: '光をいちばん大きく曲げるのは、目の表面の「角膜」。空気と角膜の境目で光の進む速さが大きく変わるからです。奥の「水晶体」はピントの細かい調整係。',
     hl: 'cornea' },
   { text: '物の上の端から来た光（水色）は、網膜の下の側に集まります。網膜にうつる像は上下さかさま。それを脳が正しい向きとして受けとっています。',
     set: { showTop: true }, hl: 'retina' },
   { text: '物を近づけると…水晶体がふくらんで、光を強く曲げます（調節）。「調節」の数字を見てください。物は自分でドラッグしても動かせます。',
     set: { showTop: false }, anim: { from: 3000, to: 200, sec: 3 }, hl: 'lens' },
+  { text: 'ピント合わせには時間がかかります。1/4 のスローで、遠く（5 m）から近く（30 cm）へ見る先を変えます。はじめの 0.3 秒ほどは何も起きず（遅れ）、そのあと水晶体がふくらみます。下のグラフで、ねらい（点線）を実際（実線）が遅れて追いかけます。',
+    set: { d: FAR_D, speed: 0.25 }, settle: true, go: [{ at: 0.5, d: NEAR_D }], hl: 'lens' },
   { text: '60歳ごろには水晶体がかたくなり、ほとんどふくらまなくなります。近くの物の像が網膜のうしろにずれて、ぼけます（老眼）。「見え方」の視力表もぼやけました。',
-    set: { age: 60, d: 300, showTop: false }, hl: 'lens' },
+    set: { age: 60, d: 300, speed: 1 }, settle: true, hl: 'lens' },
   { text: () => `こんどは25歳で、目が 1 mm だけ長い目。遠くの物の像が網膜の手前でできて、ぼけます（近視。この模型では ${fmtDi(S.err)} に当たる）。近くの物ならピントが合います。`,
-    set: { age: 25, len: 'myope', d: Infinity }, hl: 'retina' },
+    set: { age: 25, len: 'myope', d: Infinity }, settle: true, hl: 'retina' },
   { text: () => `凹レンズのメガネ（${fmtDi(farGlasses(1.0, stopRadiusFor(3)))}）で光を少し広げてから入れると、像が網膜まで届いて、くっきり見えます。`,
     set: { glasses: 'far' }, hl: 'glasses' },
-  { text: 'メガネをはずして夜道へ。暗いとひとみが大きく開き、ピントのずれによるぼけの円が大きくなります。明るい所で目を細めると少し見えやすくなるのも、同じしくみ。',
-    set: { glasses: 'none', light: 'night' }, hl: 'iris' },
-  { text: 'ここからは自由に。矢印をドラッグしたり、下のボタンで年齢・目の長さ・メガネ・明るさを変えてみてください。部分にマウスをのせると説明が出ます。',
-    set: { light: 'room' }, hl: null },
+  { text: 'メガネをはずして、晴れた屋外から急に夜道へ（はやおくり ×4）。ひとみは 20 秒ほどかけて、ゆっくり開いていきます。開くにつれて、ピントのずれによるぼけの円が大きくなります。',
+    set: { glasses: 'none', light: 'sun', speed: 4 }, settle: true, win: 30, go: [{ at: 1, light: 'night' }], hl: 'iris' },
+  { text: 'こんどは明るい部屋へ（スロー 1/4）。ひとみは 0.2 秒ほどの遅れのあと、1 秒ほどですばやく縮みます。開くのはゆっくり、縮むのはすばやい。明るい所で目を細めると見えやすいのも、同じしくみ。',
+    set: { speed: 0.25 }, win: 6, go: [{ at: 0.4, light: 'room' }], hl: 'iris' },
+  { text: 'ここからは自由に。矢印をドラッグしたり、下のボタンで年齢・目の長さ・メガネ・明るさを変えてみてください。グラフをさわると、その瞬間の目にもどれます。部分にマウスをのせる（スマホはさわる）と説明が出ます。',
+    set: { speed: 1 }, hl: null },
 ];

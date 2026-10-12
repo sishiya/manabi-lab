@@ -1,25 +1,28 @@
 # 目のなかの光の道 開発メモ
 
 ## 別セッションで続けるとき（まずここ）
-- いまの状態: **v002-stageA**（段階A: 目の断面・光線の計算・調節・年齢・近視／遠視・メガネ・ひとみ・見え方・案内9段・説明）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。公開 URL（push 後）: https://sishiya.github.io/manabi-lab/eye-optics/
-- 次にやること: ユーザーに見てもらって感想を聞く → 段階B（網膜の中・盲点をその場で試す）か C（残像。IDEAS 17）。PLAN.md。
+- いまの状態: **v003-time**（段階B: ピント合わせとひとみが測られた遅れと速さで動く・時間の流れのグラフとふりかえり・速さの切りかえ・見る先の切りかえ・スマホの並べ方。案内11段）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。公開 URL（push 後）: https://sishiya.github.io/manabi-lab/eye-optics/
+- 次にやること: 段階C（乱視: 縦と横の断面を別に計算、だ円のぼけ、乱視の表、円柱レンズ）。そのあと PLAN.md の段階D以降。
 - 読む順: PLAN.md → このファイルの「ファイル構成」→ 関係するファイルだけ。
-- 動かし方: サーバー apps〜apps-6（.claude/launch.json）で http://localhost:<port>/eye-optics/ 。デバッグ用の窓口 `window.__eyop`（`simRun(秒)`・`tour(i)`・`set({d, age, len, glasses, light, showTop})`・`S`・`OPT`・`LAY`）、エラーは `window.__eyopErr`。
+- 動かし方: サーバー apps〜apps-6（.claude/launch.json）で http://localhost:<port>/eye-optics/ 。デバッグ用の窓口 `window.__eyop`（`simRun(秒)`＝シミュレーションの秒・`tour(i)`・`set({d, age, len, glasses, light, showTop})`（切りかえの印も残る）・`settle()`（目をすぐ合わせる）・`S`・`OPT`・`LAY`・`TL`（記録と印）・`DYN`（遅れと速さ））、エラーは `window.__eyopErr`。
 - 区切りごとの手順: versions/ にバックアップ → launcher.html → 「状態」に1行 → 「確認のしかた」と smoke.ps1 → 公開前チェック → commit。
 - ユーザーの好み: つぎへボタン1つで進める案内、マウスをのせると説明（RULES・メモリ）。物理を曲げない。
 
 ## ファイル構成
-読み込み順は optics → scene → draw → ui → main（後ろのファイルが前の関数を使う）。
+読み込み順は optics → dynamics → scene → draw → view → timeline → ui → main（後ろのファイルが前の関数を使う。scene の `applyCond` は timeline の `markEvent`・ui の `syncControls` を呼ぶが、呼ばれるのは起動後なので順番は問題ない）。
 
 | ファイル | 中身 | 主な関数・変数 |
 |---|---|---|
-| index.html | 骨組み・このアプリについて（出どころ・簡単にしたところ） | |
-| css/style.css | 見た目。719px 以下は案内・図・数字・見え方を縦に並べる | |
+| index.html | 骨組み（図・案内・数字・見え方・時間の流れ・ボタン）・このアプリについて（出どころ・簡単にしたところ） | |
+| css/style.css | 見た目。719px 以下は 案内 → 図 → 見え方と数字（横に2つ）→ 時間のグラフ → ボタン | |
 | js/optics.js | 目の模型と光線の計算（描画なし、Node でも動く） | `OPT`・`lensParams(A)`・`buildEye(A,dL,stopR)`・`traceRay`・`traceBundle`（扇と網膜のぼけ）・`paraxialFocus`・`solveAccommodation`・`refractiveError`・`farGlasses`・`nearGlasses`・`maxAccommodation`・`pupilDiameter`・`stopRadiusFor`・`retinaScale`・`goldenMin` |
-| js/scene.js | 状態 `S`・選べる条件・`recompute`/`retarget`・部分の説明 `PARTS`・案内 `TOUR` | `AGES`・`LENGTHS`・`GLASSES`・`LIGHTS`・`fmtD`・`fmtDi` |
+| js/dynamics.js | 時間の変化: 調節とひとみの遅れと速さ（Bharadwaj & Schor 2006・Mathôt 2018） | `DYN`・`dynStep(st,t,dt,At,stopRt)`・`dynSettle`・`makeDelay`・`delayFeed` |
+| js/scene.js | 状態 `S`・選べる条件・`recompute`/`retarget`・条件を変える `applyCond`（切りかえの印）・部分の説明 `PARTS`・案内 `TOUR`（`settle`・`go`・`win`） | `AGES`・`LENGTHS`・`GLASSES`・`LIGHTS`・`NEAR_D`/`FAR_D`・`EV_NAMES`・`fmtD`・`fmtDi` |
 | js/draw.js | 断面・光線・物・メガネ・拡大鏡の描画、画面の配置 `LAY` | `layout`・`dToX`/`xToD`・`drawEye`・`drawBundle`・`drawLoupe`・`drawAll` |
-| js/ui.js | ボタン・ドラッグ・説明の吹き出し・案内・数字・見え方（視力表） | `buildControls`・`setTour`・`hitTest`・`drawChart`・`updateView` |
-| js/main.js | ループ（`step`→`compute`→`draw`）とデバッグ用の窓口 | `compute`（S.res を作る） |
+| js/view.js | 見え方（視力表・放射状の線の表）と数字の表示。縦と横で別のぼかし（箱ぼかし3回） | `VIEW`・`drawChart`・`blurChart(sx,sy)`・`blurSigma`・`updateView` |
+| js/timeline.js | 時間の流れ: 毎コマの記録・グラフ・切りかえの印・ふりかえり・速さとグラフの長さ | `TL`・`SPEEDS`・`markEvent`・`tlRecord`・`tlDraw`・`tlReplayAt`・`tlResume`・`pupilShown`・`BLUR_OK` |
+| js/ui.js | ボタン（見る先・距離のスライダー・条件）・ドラッグ・説明の吹き出し・案内 | `buildControls`・`syncControls`・`setTour`・`hitTest`・`slToD`/`dToSl` |
+| js/main.js | ループ（`step`→`dynStep`→`compute`→`tlRecord`→`draw`）とデバッグ用の窓口 | `compute`（S.res を作る） |
 
 ## しくみ
 - 座標は mm、z は角膜の頂点から奥へ、y は上。断面の1平面だけ。面は円すい曲線（sag の式）、交点はニュートン法、屈折はスネルの法則のベクトル形。
@@ -32,19 +35,27 @@
 - メガネ: 角膜の 12 mm 手前のうすいレンズ。遠く用＝遠くのぼけ最小の度、近く用＝40 cm を調節の半分でぼけ最小の度（遠く用より弱くしない）。どちらも 0.25 D きざみ、ひとみ 3 mm で決める。
 - 見え方: 視力表の高さを 100 分（角度）として、ぼけの円の半径/2 を CSS の blur(σ) に。ランドルト環は外径 5/V 分・すきま 1/V 分。「ぼやける」の目安は ぼけの円 2 分。
 - 目の外の距離は対数で縮めて描く（70 mm〜6 m、その先は「遠く」）。目の外の光線は物の印から引いた絵で、目の中だけが計算どおり。
+- 時間（段階B）: `S.At`（調節のねらい）・`S.stopRt`（ひとみのねらい）は条件が変わるとすぐ変わる。いまの値 `S.A`・`S.stopR` は `dynStep` が追う: ねらいの変化を遅れの箱に入れ、遅れ（調節 0.30 s・ひとみ 0.2 s）のあとに効かせる → 指数関数で近づく。調節の時定数 τ ＝ 動く量 ÷ ピーク速度（近くへ 1.58×量＋3.42 D/s、遠くへ 1.4355×はじめの調節＋1.1345 D/s。Bharadwaj & Schor 2006 の PMC1578507 本文で確認）。ねらいが 0.005 D 以上変わるたびに τ を決め直す（ドラッグ中は小さな段の連続）。ひとみは縮む τ 0.35 s・開く τ 6 s（Mathôt 2018 の経過に合わせた推定）。結果: 5 m→30 cm で 0.3 s 動かず、約 1 s でくっきり。夜道へ 2.9→6.4 mm を約 20 s、明るくすると 0.2 s 後に約 1 s で 3 mm。
+- 記録（`TL.rec`）はシミュレーションの時刻で 4 ms ごと・40 秒分。ふりかえりは記録の1コマ（距離・調節・ねらい・ひとみ・条件）を `applySnap` で目にのせ、いまの状態は `TL.live` にとっておく（そのあいだ時間は止まる）。ボタン・ドラッグ・案内の切りかえはふりかえりをぬけてから。
+- 速さ `S.speed`（1/10・1/4・1・4）はシミュレーションの時間だけ変える（`step` で dt × speed）。案内の `go` の時刻もシミュレーションの時刻。
+- 見え方のぼかしは CSS の blur ではなく JS の箱ぼかし3回（縦横別。乱視のため）。σ の値が 0.01 px 変わったときだけ描き直す。
 
 ## ハマったところ
 - Bash の heredoc で `cat > file` の後ろに何も渡さないと止まる（標準入力待ち）。Node での確認は一時ファイルに書いてから `node` で。
 - 近軸の焦点で調節・正視を決めると、球面収差のため遠くでもぼけが 28 µm と大きく出た → 「ぼけ最小」で決めるように直した。
-- 狭い画面で数字・見え方を図の上に重ねると読めない → 719px 以下は縦に並べる（canvas は高さ 300px）。
+- 狭い画面で数字・見え方を図の上に重ねると読めない → 719px 以下は並べる（図 236px、見え方と数字は横に2つ）。図を `#cvwrap` で包んだので、説明の吹き出しの位置は `getBoundingClientRect` の差で出す（offsetLeft は 0 になる）。
+- 「見る先」のボタンが図から遠いとスマホで見比べられない → 図に「⇄ 近く／遠くを見る」ボタン（`#swap`）を重ねた。
 
 ## 確認のしかた（変更のたびに）
 1. `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/smoke.ps1 -Apps eye-optics`（例外・読み込みの失敗・外への通信）
 2. 開いて `__eyopErr` が空。最初の画面: 3 m・25歳・ふつうで「くっきり見える」、ぼけ 4 µm ほど、調節 0.2 D ほど。
-3. 「つぎへ」で9段を通す: 4段目で物が 20 cm へ動き調節が 5 D ほどまで上がる／5段目（60歳・30 cm）で「ぼやける: 水晶体がこれ以上ふくらめず…」と見え方がぼやける／6段目（近視）で「網膜の手前」、目の屈折 −2.75 D／7段目（メガネ −2.75 D）で「くっきり」／8段目（夜道）でひとみ 5.6 mm・ぼやける。
-4. 物をドラッグして動く。部分にマウスをのせて説明が出る（`hitTest` が角膜・房水・虹彩・水晶体・毛様体・硝子体・網膜・中心窩・視神経・強膜・メガネ・物を返す）。
-5. 幅 375px で横にはみ出さない（`document.documentElement.scrollWidth` が 375）、案内・図・数字・見え方が縦に並ぶ。
+3. 時間: 「⇄ 近くを見る」→ `__eyop.simRun(0.1)` を何回か。0.3 秒までは調節 0.24 D のまま（「目がまだ反応していない（遅れ）」）、そのあと上がって 1.4 秒ごろ「くっきり」、3.4 D へ。グラフに「30 cm を見る」の印、ねらい（点線）を実線が追う。
+4. 「つぎへ」で11段を通す: 4段目で物が 20 cm へ／5段目（スロー 1/4）で 0.5 秒後に近くへ切りかわり遅れて合う／6段目（60歳・30 cm）で「水晶体がこれ以上ふくらめず」／7段目（近視）で −2.75 D・「網膜の手前」／8段目（メガネ）で「くっきり」／9段目（×4・グラフ 30秒）でひとみが 20 秒ほどかけて 6.4 mm へ／10段目（1/4）で 0.2 秒後に 1 秒ほどで 3 mm へ。
+5. グラフを押すと「ふりかえり中」・「▶ いまへもどる」が出て、目と見え方がその瞬間になる。もどると続きから動く。
+6. 物をドラッグ・距離のスライダーで動く（印は「物を動かす」1つ）。部分にマウスをのせて説明が出る（`hitTest` が角膜・房水・虹彩・水晶体・毛様体・硝子体・網膜・中心窩・視神経・強膜・メガネ・物を返す）。
+7. 幅 375px で横にはみ出さない（`document.documentElement.scrollWidth` が 375）。案内 → 図（右下に ⇄ ボタン）→ 見え方と数字が横に2つ → 時間の流れ（ボタン1行）→ ボタン。
 
 ## 状態
 - 2026-10-12 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
 - 2026-10-12 v002-stageA: 段階A。IDEAS 18 から Claude が選んで試作（ユーザーの依頼「IDEAS からよさげなアプリを試作して保管庫へ」）。
+- 2026-10-12 v003-time: 段階B。ユーザー「時間で見え方が変わるのがおもしろい。この方向で作り込んで。操作性やスマホでの見え方も」。調節・ひとみを測られた遅れと速さで（dynamics.js）、時間の流れのグラフとふりかえり（timeline.js）、速さ 1/10〜×4、見る先の切りかえ、距離のスライダー、見え方を view.js へ分けて JS のぼかしに、スマホの並べ方。案内 9→11段。

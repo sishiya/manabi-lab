@@ -23,10 +23,24 @@ Claude が `IDEAS.md` の 18「眼球のしくみ」を選んだ（17「残像�
 ## 段階A（この版）
 - 目の模型・光線の計算・ピント合わせ（調節）・年齢・近視／遠視・メガネ・ひとみ・見え方・案内・説明・出どころ。
 
-## 段階B以降（案）
-- B: 網膜の中（錐体・桿体・中心窩）と盲点をその場で試す。斜めから来る光（周辺視）。
-- C: 残像（IDEAS 17）: 色の図を見つめてから白い面へ。陰性・陽性残像。
-- D: 動物の目とくらべる（`animal-senses/` と連携）、乱視、白内障。
+## 段階B: 時間で変わる見え方（2026-10-12 ユーザー「時間で見え方が変わるのがおもしろい。この方向で作り込んで。操作性やスマホでの見え方も」）
+- ピント合わせ（調節）とひとみの動きを、**測られた遅れと速さ**で動かす（段階Aは見た目のための仮の速さだった）。
+  - 調節: 遅れ 約 0.3 秒、そのあと指数関数で近づく。速さは「動く量が大きいほど速い」実測の関係（近くへ: ピーク速度 1.58×量＋3.42 D/s、遠くへ: 1.4355×はじめの調節＋1.13 D/s。Bharadwaj & Schor 2006）。
+  - ひとみ: 明るくなると 約 0.2 秒の遅れのあと 約 1 秒で縮む。暗くなると 20 秒ほどかけてゆっくり開く（Mathôt 2018・Gray ほか 2024）。指数関数の時定数はこの経過に合わせた推定。
+- 「時間の流れ」のグラフ: 網膜のぼけ・調節（ねらいと実際）・ひとみを時間で並べる。グラフをさわると、その瞬間の目と見え方に戻せる（ふりかえり）。
+- 速さ: スロー 1/10・1/4・ふつう・はやおくり ×4。見る先の切りかえボタン（近く 30 cm ⇄ 遠く 5 m）。
+- 案内に「遅れて合うピント」「すぐ縮み、ゆっくり開くひとみ」の段を足す。
+- スマホ: 図・見え方・グラフが近くに並ぶように詰める。距離はスライダーでも動かせる。ボタンは指で押しやすい大きさ。
+
+## 段階C: 乱視
+- 角膜の縦と横で曲がり方がちがう（直乱視 1.5 D: 縦の向きが強い）。縦の断面と横の断面を、それぞれ光線で計算する（どちらも断面の中の光線は面の対称性でその平面に留まる）。
+- 見え方は縦と横で別のぼけ（だ円のぼけ）。乱視の表（放射状の線）を見え方に足す。断面を「縦／横」で切りかえ。
+- メガネ（遠く用・近く用）は縦と横で別の度（円柱レンズ）。
+
+## 段階D以降（案）
+- 網膜の中（錐体・桿体・中心窩）と盲点をその場で試す。斜めから来る光（周辺視）。
+- 残像（IDEAS 17）: 色の図を見つめてから白い面へ。陰性・陽性残像。暗さに慣れる（暗順応、分の単位）。
+- 動物の目とくらべる（`animal-senses/` と連携）、白内障。
 
 ## やらないこと
 - 診断・視力の判定（医療の判断には使えないと画面に書く）。
@@ -43,4 +57,8 @@ Claude が `IDEAS.md` の 18「眼球のしくみ」を選んだ（17「残像�
 - Navarro R, Santamaría J, Bescós J (1985) Accommodation-dependent model of the human eye with aspherics. J Opt Soc Am A 2(8):1273–1281. doi:10.1364/JOSAA.2.001273（表の値・調節の式。値は MathWorks の目の模型の例と、式を引用した論文で照合）
 - Hofstetter HW (1950) Useful age-amplitude formula. Optometric World 38:42–45（平均の調節力 18.5 − 0.30×年齢）
 - Watson AB, Yellott JI (2012) A unified formula for light-adapted pupil size. Journal of Vision 12(10):12（その中の Crawford 1936 の式 D = 5 − 2.2 tanh(0.6115 + 0.447 log10 L)、L は cd/m²）
+- Bharadwaj SR, Schor CM (2006) Dynamic control of ocular disaccommodation: first and second-order dynamics. Vision Research 46(6–7):1019–1037. doi:10.1016/j.visres.2005.06.005（PMC1578507 の本文で確認: 遅れ 約 300 ms、近くへの調節のピーク速度 y = 1.58x + 3.42、遠くへのピーク速度とはじめの位置 y = 1.4355x + 1.1345）
+- Metlapally S ほか (2016) Potential role for microfluctuations as a temporal directional cue to accommodation. Journal of Vision 16(6):19（反応の遅れ 175–375 ms）
+- Mathôt S (2018) Pupillometry: psychology, physiology, and function. Journal of Cognition 1(1):16. doi:10.5334/joc.18（光: 0–0.2 s 遅れ、0.2–1.5 s で縮む。消すと 10–30 s でゆっくり戻る）
+- Gray NS ほか (2024) Measuring the pupillary light reflex using portable instruments in applied settings. Vision 8(4):60. doi:10.3390/vision8040060（遅れ 200–300 ms、縮むのに 400–600 ms、最小は 800–1200 ms）
 - Atchison DA ほか (2005) Shape of the retinal surface in emmetropia and myopia. IOVS 46(8):2698–2707（網膜はやや平たいだ円体 → ここでは球で近似）

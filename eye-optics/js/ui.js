@@ -3,21 +3,35 @@
 
 const $ = id => document.getElementById(id);
 
+// 距離のスライダー（左が遠く・右が近く。目の外の図と同じ向き）。0〜30 は「遠く」
+const SL_INF = 30, SL_MAX = 1000;
+const slToD = v => v < SL_INF ? Infinity : D_MAX * Math.pow(D_MIN / D_MAX, (v - SL_INF) / (SL_MAX - SL_INF));
+const dToSl = d => !isFinite(d) ? 0 : SL_INF + (SL_MAX - SL_INF) * Math.log(D_MAX / d) / Math.log(D_MAX / D_MIN);
+
 // 下の段のボタン
 function buildControls() {
-  const groups = [
-    ['年齢', AGES.map(a => ({ key: a, label: a + '歳' })), () => S.age, v => { S.age = v; }],
-    ['目の長さ', LENGTHS, () => S.len, v => { S.len = v; }],
-    ['メガネ', GLASSES, () => S.glasses, v => { S.glasses = v; }],
-    ['明るさ', LIGHTS, () => S.light, v => { S.light = v; }],
-  ];
   const box = $('controls'); box.innerHTML = '';
-  for (const [name, items, get, set] of groups) {
+  // 見る先（いちばん上）: 近く ⇄ 遠く の切りかえと、距離のスライダー
+  const look = document.createElement('div'); look.className = 'grp look';
+  look.innerHTML = `<span class="gname">見る先</span><button id="lookNear">近く ${fmtD(NEAR_D)}</button><button id="lookFar">遠く ${fmtD(FAR_D)}</button>` +
+    `<input type="range" id="dist" min="0" max="${SL_MAX}" step="1" aria-label="物までの距離">`;
+  box.appendChild(look);
+  $('lookNear').onclick = () => { S.anim = null; applyCond({ d: NEAR_D }); };
+  $('lookFar').onclick = () => { S.anim = null; applyCond({ d: FAR_D }); };
+  $('swap').onclick = () => { S.anim = null; applyCond({ d: S.d === NEAR_D ? FAR_D : NEAR_D }); };
+  $('dist').oninput = e => { if (S.replay) tlResume(); S.anim = null; S.d = slToD(+e.target.value); markEvent('物を動かす', true); retarget(); syncControls(); };
+  const groups = [
+    ['年齢', AGES.map(a => ({ key: a, label: a + '歳' })), () => S.age, 'age'],
+    ['目の長さ', LENGTHS, () => S.len, 'len'],
+    ['メガネ', GLASSES, () => S.glasses, 'glasses'],
+    ['明るさ', LIGHTS, () => S.light, 'light'],
+  ];
+  for (const [name, items, get, key] of groups) {
     const row = document.createElement('div'); row.className = 'grp';
     row.innerHTML = `<span class="gname">${name}</span>`;
     for (const it of items) {
       const b = document.createElement('button'); b.textContent = it.label; b.dataset.k = it.key;
-      b.onclick = () => { set(it.key); S.anim = null; recompute(); syncControls(); };
+      b.onclick = () => { S.anim = null; applyCond({ [key]: it.key }); };
       row.appendChild(b);
     }
     row._get = get; box.appendChild(row);
@@ -33,15 +47,24 @@ function syncControls() {
     for (const b of row.querySelectorAll('button')) b.classList.toggle('on', String(row._get()) === b.dataset.k);
   }
   $('showTop').checked = S.showTop;
+  $('lookNear').classList.toggle('on', S.d === NEAR_D); $('lookFar').classList.toggle('on', S.d === FAR_D);
+  $('swap').textContent = S.d === NEAR_D ? `⇄ 遠くを見る（${fmtD(FAR_D)}）` : `⇄ 近くを見る（${fmtD(NEAR_D)}）`;
+  tlSync();
 }
+function syncSlider() { const el = $('dist'); if (el && document.activeElement !== el) el.value = Math.round(dToSl(S.d)); }
 
 // 案内
 function setTour(i) {
+  if (S.replay) tlResume();
   S.tour = i; const st = TOUR[i];
-  if (st.set) { Object.assign(S, st.set); }
+  S.anim = null; S.sched = null;
+  if (st.set) applyCond(st.set);
+  if (st.win) TL.win = st.win;
   S.hl = st.hl; S.anim = st.anim ? { ...st.anim, t: 0 } : null;
-  if (S.anim) S.d = S.anim.from;
+  if (S.anim) { S.d = S.anim.from; markEvent('物を近づける'); }
   recompute(); syncControls();
+  if (st.settle) { dynSettle(S, S.At, S.stopRt); tlClear(); }   // 新しい場面: 目をすぐ合わせ、グラフも空にしてから始める
+  S.sched = (st.go || []).map(g => { const o = { ...g }; delete o.at; return { t: S.t + g.at, o }; });
   $('tourText').textContent = typeof st.text === 'function' ? st.text() : st.text;
   $('tourNum').textContent = `${i + 1} / ${TOUR.length}`;
   $('next').textContent = i === TOUR.length - 1 ? 'はじめから' : 'つぎへ';
@@ -75,15 +98,16 @@ function initPointer() {
   cv.addEventListener('pointerdown', e => {
     const [x, y] = pos(e);
     if (hitTest(x, y) === 'object' || (Math.abs(y - LAY.oy) < 60 && x < LAY.trackR + 10)) {
+      if (S.replay) tlResume();
       drag = true; cv.setPointerCapture(e.pointerId); S.anim = null;
-      S.d = xToD(Math.min(x, LAY.trackR)); retarget(); hideTip();
+      S.d = xToD(Math.min(x, LAY.trackR)); markEvent('物を動かす', true); retarget(); syncControls(); hideTip();
     } else if (e.pointerType === 'touch') {   // さわった部分の説明（マウスのない画面）
       const h = hitTest(x, y); if (h) { showTip(h, x, y); clearTimeout(tipTimer); tipTimer = setTimeout(hideTip, 4000); } else hideTip();
     }
   });
   cv.addEventListener('pointermove', e => {
     const [x, y] = pos(e);
-    if (drag) { S.d = xToD(Math.min(x, LAY.trackR)); retarget(); return; }
+    if (drag) { S.d = xToD(Math.min(x, LAY.trackR)); markEvent('物を動かす', true); retarget(); syncControls(); return; }
     const h = hitTest(x, y);
     cv.style.cursor = h === 'object' || (Math.abs(y - LAY.oy) < 60 && x < LAY.trackR + 10) ? 'ew-resize' : 'default';
     if (h && e.pointerType !== 'touch') showTip(h, x, y); else hideTip();
@@ -96,56 +120,7 @@ function showTip(key, x, y) {
   const p = PARTS[key], tip = $('tip'); if (!p) return;
   tip.innerHTML = `<b>${p.name}</b><br>${p.text()}`; tip.hidden = false;
   const W = $('stage').clientWidth, w = tip.offsetWidth;
-  const cvb = $('cv'), ox = cvb.offsetLeft, oy = cvb.offsetTop;
+  const cb = $('cv').getBoundingClientRect(), sb = $('stage').getBoundingClientRect(), ox = cb.left - sb.left, oy = cb.top - sb.top;
   tip.style.left = Math.max(8, Math.min(W - w - 8, ox + x + 14)) + 'px'; tip.style.top = (oy + y + 16) + 'px';
 }
 function hideTip() { $('tip').hidden = true; }
-
-// 見え方（視力表）。視力 V の段のランドルト環は、すきま 1/V 分・外の直径 5/V 分（ISO 8596 の形）
-const ROWS = [0.2, 0.4, 0.7, 1.0, 1.5];
-const CHART_FOV = 100;   // 表示する高さ（分＝1/60度）
-let chartPx = 0;
-function drawChart() {
-  const c = $('chart'), lab = $('chartLab'), box = c.parentElement;
-  const Wp = box.clientWidth, Hp = box.clientHeight, dpr = Math.min(2, window.devicePixelRatio || 1);
-  for (const k of [c, lab]) { k.width = Wp * dpr; k.height = Hp * dpr; }
-  const g = c.getContext('2d'), gl = lab.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); gl.setTransform(dpr, 0, 0, dpr, 0, 0);
-  g.fillStyle = '#f4f1ea'; g.fillRect(0, 0, Wp, Hp);
-  const k = Hp / CHART_FOV; chartPx = k;   // 1分あたりの px
-  let y = 6 * k; const dirs = [0, 2, 1, 3, 0, 3, 2, 1, 1, 0, 2, 3, 1, 3, 0, 2, 3, 0, 1, 2];
-  let di = 0;
-  gl.font = '10px ' + getComputedStyle(document.documentElement).getPropertyValue('--f-mono'); gl.fillStyle = '#5b6670'; gl.textAlign = 'left';
-  for (const v of ROWS) {
-    const D = 5 / v * k, gap = D / 5, n = v < 0.3 ? 2 : v < 0.8 ? 3 : 4;
-    const total = n * D + (n - 1) * D * 0.8, x0 = (Wp - total) / 2 + 12;
-    for (let i = 0; i < n; i++) {
-      const cx = x0 + i * D * 1.8 + D / 2, cy = y + D / 2, dir = dirs[di++ % dirs.length];
-      g.save(); g.translate(cx, cy); g.rotate(dir * Math.PI / 2);
-      g.beginPath(); g.arc(0, 0, D / 2, 0, Math.PI * 2); g.arc(0, 0, D / 2 - gap, 0, Math.PI * 2, true); g.fillStyle = '#16181a'; g.fill('evenodd');
-      g.fillStyle = '#f4f1ea'; g.fillRect(0, -gap / 2, D / 2 + 1, gap);
-      g.restore();
-    }
-    gl.fillText(v.toFixed(1), 6, y + D / 2 + 3);
-    y += D + Math.max(D * 0.55, 3.5 * k);
-  }
-}
-let lastBlur = -1;
-function updateView() {
-  const r = S.res; if (!r) return;
-  const diam = r.main.blurD / r.scale;                  // ぼけの円の直径（ラジアン）
-  const radArcmin = diam / 2 * 3437.75;
-  const sigma = radArcmin / 2 * chartPx;                // 円板を同じ広がりのぼかしで近似（σ ≈ 半径/2）
-  if (Math.abs(sigma - lastBlur) > 0.05) { $('chart').style.filter = `blur(${sigma.toFixed(2)}px)`; lastBlur = sigma; }
-  const Amax = maxAccommodation(S.age);
-  const err = S.err, errTxt = Math.abs(err) < 0.2 ? '正視（遠くにピントが合う）' : (err < 0 ? '近視 ' : '遠視 ') + fmtDi(Math.round(err * 4) / 4);
-  $('info').innerHTML =
-    `<div><span>物までの距離</span><b>${fmtD(S.d)}</b></div>` +
-    `<div><span>調節（水晶体のふくらみ）</span><b>${S.A.toFixed(1)} D</b><small> ／ 最大 ${Amax.toFixed(1)} D</small></div>` +
-    `<div><span>目の屈折</span><b>${errTxt}</b></div>` +
-    `<div><span>ひとみ</span><b>${pupilDiameter(lightOf().L).toFixed(1)} mm</b></div>` +
-    `<div><span>網膜のぼけ</span><b>${(r.main.blurD * 1000).toFixed(r.main.blurD < 0.01 ? 1 : 0)} µm</b><small>（${(radArcmin * 2).toFixed(1)} 分）</small></div>` +
-    `<div class="state ${r.state}">${r.stateText}</div>`;
-  $('viewHead').textContent = `見え方（視力表を ${fmtD(S.d)} に置いたら）`;
-}
-
-window.addEventListener('resize', () => { drawChart(); lastBlur = -1; });
