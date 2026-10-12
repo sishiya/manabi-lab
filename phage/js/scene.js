@@ -131,16 +131,23 @@ const Scene = (() => {
     for (let ri = 0; ri < M.ribo.length; ri++) {
       const r = M.ribo[ri];
       if (!inView(r.x, r.y)) continue;
+      // どの拡大率でも本当の大きさ（直径約20nm）で描く（小さな点から急に丸へ切りかえない）。小さすぎるときは同じ大きさの四角
+      const rp = Math.max(1, 9.5 * s), dot = rp < 3;
+      const disc = () => { if (dot) { g.fillStyle = rc; g.fillRect(V.X(r.x) - rp, V.Y(r.y) - rp, 2 * rp, 2 * rp); } else V.circle(r.x, r.y, 9.5, rc); };
       // 奥のもの（約7割）は薄い背景。説明は出さない
-      if (hash(ri, 5) > FRONT) { g.globalAlpha = baseA * BACK_A; if (s < 1.1) { g.fillStyle = rc; g.fillRect(V.X(r.x) - 1, V.Y(r.y) - 1, 2, 2); } else V.circle(r.x, r.y, 9.5, rc); g.globalAlpha = baseA; continue; }
-      if (s < 1.1) { g.fillStyle = rc; g.fillRect(V.X(r.x) - 1.3, V.Y(r.y) - 1.3, 2.6, 2.6); }
-      else {
-        V.circle(r.x, r.y, 9.5, rc); V.circle(r.x + 6 * Math.cos(r.a), r.y + 6 * Math.sin(r.a), 6, 'rgba(255,255,255,.35)');
+      if (hash(ri, 5) > FRONT) { g.globalAlpha = baseA * BACK_A; disc(); g.globalAlpha = baseA; continue; }
+      disc();
+      // 細かい部分（小さいほうの粒・読んでいる mRNA・作っている鎖）は、寄るにつれてだんだん濃く
+      const da = Math.max(0, Math.min(1, (s - 0.9) / 0.7));
+      if (da > 0) {
+        g.globalAlpha = baseA * da;
+        V.circle(r.x + 6 * Math.cos(r.a), r.y + 6 * Math.sin(r.a), 6, 'rgba(255,255,255,.35)');
         if (!pre && m > TL.hostStop && !gt && burst === 0) { // 読んでいる写し（mRNA）と、作られている鎖
           V.line([[r.x - 16 * Math.cos(r.a + 1.57), r.y - 16 * Math.sin(r.a + 1.57)], [r.x + 16 * Math.cos(r.a + 1.57), r.y + 16 * Math.sin(r.a + 1.57)]], 'rgba(255,122,176,.8)', Math.max(1, 0.6 * s));
           const pts = []; for (let i = 0; i < 10; i++) pts.push([r.x + Math.cos(r.a) * (9 + i * 1.6) + Math.sin(i * 1.9 + m * 9) * 1.4, r.y + Math.sin(r.a) * (9 + i * 1.6) + Math.cos(i * 1.7) * 1.4]);
           V.line(pts, prodCol, Math.max(1, 0.8 * s));
         }
+        g.globalAlpha = baseA;
       }
       V.hit({ c: [r.x, r.y, 11], info: !pre && m > TL.hostStop ? RIBO_T4 : INFO.ribo });
     }
@@ -197,7 +204,8 @@ const Scene = (() => {
       // 奥の DNA の輪に付いているものは、薄い点だけ（説明なし）
       if (j > 0 && j % 3 !== 0) { g.globalAlpha = baseA * BACK_A; g.fillStyle = '#9fb4c6'; g.fillRect(V.X(p[0]) - 1.5, V.Y(p[1]) - 1.5, 3, 3); g.globalAlpha = baseA; continue; }
       const per = m < 3.5 ? 'early' : m < TL.late ? 'middle' : 'late';
-      if (s < 1.1) { g.fillStyle = '#9fb4c6'; g.fillRect(V.X(p[0]) - 1.5, V.Y(p[1]) - 1.5, 3, 3); }
+      // 引いて見るときも本当の大きさ（約15nm）で（寄ったときに急に大きくならない）
+      if (s < 1.1) { const q = Math.max(1, 7 * s); g.fillStyle = '#9fb4c6'; g.fillRect(V.X(p[0]) - q, V.Y(p[1] + 4) - q * 0.8, 2 * q, 1.6 * q); }
       else {
         V.ell(p[0], p[1] + 4, 7.5, 6, 0, '#8aa4b8', 'rgba(255,255,255,.4)');
         if (per === 'late') { V.circle(p[0] - 5, p[1] + 7, 2.6, ZC.gp55); V.circle(p[0] + 5, p[1] + 8, 1.6, '#ffb3d6'); V.ell(p[0] - 9, p[1], 1.4, 3.4, 0, null, ZC.gp45, Math.max(1.5, 0.8 * s)); }
@@ -211,7 +219,7 @@ const Scene = (() => {
       const L = M.loops[j], idx = Story.forkIdx(j, m), p = L.pts[idx];
       if (!inView(p[0], p[1])) continue;
       if (j > 0 && j % 3 !== 0) { g.globalAlpha = baseA * BACK_A; g.fillStyle = '#ffcf4a'; g.fillRect(V.X(p[0]) - 1.5, V.Y(p[1]) - 1.5, 3, 3); g.globalAlpha = baseA; continue; }
-      if (s < 1.1) { V.circle(p[0], p[1], 3.5 / s, '#ffcf4a'); }
+      if (s < 1.1) { V.circle(p[0], p[1], Math.max(8, 1.5 / s), '#ffcf4a'); }
       else {
         for (let k = 1; k <= 5; k++) { const q = L.pts[Math.min(L.pts.length - 1, idx + k)]; V.circle(q[0] + 2.5, q[1] + 2.5, 1.2, ZC.gp32); }
         V.ell(p[0], p[1], 3.2, 4.2, 0, null, ZC.gp41, Math.max(2, 1 * s));
@@ -568,9 +576,10 @@ const Scene = (() => {
   function drawCytoLook(pre, m) {
     // 粒の模様（1枚 = 200nm 四方。寄っても引いても世界に貼りつく）
     const pat = crowdPattern(View.real);
-    if (pat && pat.setTransform && typeof DOMMatrix !== 'undefined' && V.s > 0.4 && V.s < 8) {
+    const pa = Math.max(0, Math.min(1, (V.s - 0.4) / 0.3, (8 - V.s) / 3));
+    if (pat && pat.setTransform && typeof DOMMatrix !== 'undefined' && pa > 0) {
       const k = 200 * V.s / 256; pat.setTransform(new DOMMatrix([k, 0, 0, k, V.X(0), V.Y(0)]));
-      g.fillStyle = pat; g.fillRect(0, 0, V.W, V.H);
+      g.save(); g.globalAlpha *= pa; g.fillStyle = pat; g.fillRect(0, 0, V.W, V.H); g.restore();
     }
     // 円柱の陰（上下のふちが暗く、まん中が少し明るい）
     const gr = g.createLinearGradient(0, V.Y(R), 0, V.Y(-R));
