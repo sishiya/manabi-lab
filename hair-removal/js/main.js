@@ -6,7 +6,7 @@ window.addEventListener('error', e => window.__hareErr.push(String(e.message)));
 const cv = $('cv'), g = cv.getContext('2d');
 const gr = $('gr'), gg = gr.getContext('2d');
 const S = {
-  t: 0, site: 'shin', tool: 'look', playing: false, speed: 7, guide: 0,
+  t: 0, site: 'shin', tool: 'shave', playing: false, speed: 7,
   events: [],                                   // 手入れの記録 {t, type, idx}（t の順）
   light: { level: 10, skin: 'light', hair: 'black', cool: true },
   age: 30, gray: 'mid',                          // 年齢（0日目）と白髪の出やすさ
@@ -14,6 +14,7 @@ const S = {
   run: null,       // いまの日の毛穴（日を進めるときは続きから）
   paint: null, hover: null, key: '',
   view: null,      // 拡大 {z, cx, cy}。null は全体
+  ghostSeen: new Map(),   // 抜けていく毛を初めて描いた時刻
 };
 const HOOKS = { light: (fs, site, e, R, idx) => lightEvent(fs, e, R, idx, S.light) };
 const grid = t => Math.floor(t / SIM.dt + 1e-9) * SIM.dt;
@@ -23,10 +24,16 @@ function changed() {
   S.full = null; S.run = null; S.key = [S.site, S.age, S.gray, JSON.stringify(S.events), JSON.stringify(S.light)].join('|'); syncControls(S);
 }
 
-function computeFull() {
-  const R = new Runner(S.site, S.events, HOOKS), rows = Array.from({ length: SIM.N }, () => []);
-  R.advanceTo(SIM.tMax, (t, fs) => fs.forEach((f, i) => { const inf = follicleInfo(f); rows[i].push({ ph: f.ph, vis: inf.visible, white: inf.pig < 0.5 }); }));
-  S.full = { rows, log: R.log, flashes: R.flashes || [], hits: R.log.filter(n => n.kind === 'hit') };
+// 先の計算（周期のグラフ・できごと）。時間に終わりはないので、いまの日の先 1 年を切らさないよう、足りなくなったら続きを計算する
+function computeFull(to) {
+  if (!S.full) {
+    const R = new Runner(S.site, S.events, HOOKS), rows = Array.from({ length: SIM.N }, () => []);
+    S.full = { R, rows, log: R.log, flashes: [], hits: [], horizon: -1 };
+  }
+  const F = S.full, end = Math.max(to || 0, S.t + 400, 730);
+  if (F.horizon >= end) return;
+  F.R.advanceTo(end, (t, fs) => fs.forEach((f, i) => { const inf = follicleInfo(f); F.rows[i].push({ ph: f.ph, vis: inf.visible, white: inf.pig < 0.5 }); }));
+  F.horizon = end; F.flashes = F.R.flashes || []; F.hits = F.log.filter(n => n.kind === 'hit');
 }
 // 光でいたんだ毛穴が、また生えはじめる（成長期に入る）まで何日か。いま回復中でなければ null
 function recovery(i) {
@@ -44,16 +51,31 @@ function sceneNow() {
   const fl = (S.run.flashes || []).filter(x => x.t <= S.t + 1e-9).pop();
   // 毛穴の上の字幕: 3日以内のできごと（毛穴ごとに新しいものだけ）
   const latest = {};
-  for (const n of S.full.log) { if (n.t > S.t + 1e-9) break; if (n.i != null && S.t - n.t < 3 && n.kind !== 'safe') latest[n.i] = n; }
+  const LOG = S.full.log;
+  for (let k = LOG.length - 1; k >= 0; k--) { const n = LOG[k]; if (n.t > S.t + 1e-9) continue; if (S.t - n.t >= 5) break; if (n.i != null && S.t - n.t < 3 && n.kind !== 'safe' && !latest[n.i]) latest[n.i] = n; }
   const notes = Object.values(latest).map(n => Object.assign({ age: S.t - n.t }, n)).sort((a, b) => a.age - b.age);
   // 手入れの印（毛穴ごとに、30日以内の最後の手入れ）
   const marks = {};
   for (const e of S.events) if (e.t <= S.t + 1e-9 && S.t - e.t < 30) for (const i of e.idx) marks[i] = { type: e.type, age: S.t - e.t };
   const recover = fs.map((f, i) => recovery(i));
-  return { fs, flash: fl, since: fl ? S.t - fl.t : Infinity, notes, paint: S.paint, hover: S.hover, recover, marks };
+  // 抜けていく毛: 計算の時間（抜け落ち 5日・毛抜き 2日）か、画面の時間（1.5秒）の進んだ方で動かす（止めていても見える）
+  const ghosts = [], now = performance.now();
+  for (let k = LOG.length - 1; k >= 0; k--) {
+    const n = LOG[k];
+    if (n.t > S.t + 1e-9) continue;
+    if (S.t - n.t >= 5) break;
+    if (!n.hairs) continue;
+    const dur = n.kind === 'pluck' ? 2 : 5, simP = (S.t - n.t) / dur;
+    if (simP >= 1) continue;
+    const key = n.t + '|' + n.i + '|' + n.kind;
+    if (!S.ghostSeen.has(key)) S.ghostSeen.set(key, now);
+    const p = Math.max(simP, (now - S.ghostSeen.get(key)) / 1500);
+    if (p < 1) ghosts.push({ i: n.i, kind: n.kind, hairs: n.hairs, p });
+  }
+  return { fs, flash: fl, since: fl ? S.t - fl.t : Infinity, notes, paint: S.paint, hover: S.hover, recover, marks, ghosts };
 }
 
-function setTime(t) { S.t = Math.max(0, Math.min(SIM.tMax, t)); }
+function setTime(t) { S.t = Math.max(0, t); }   // 終わりはない
 
 // --- 手入れ（再生は止めない） ---
 function act(type, idx) {
@@ -86,7 +108,7 @@ function fit(c, ctx) {
 }
 let _logKey = '';
 function draw() {
-  if (!S.full) computeFull();
+  computeFull();
   const sc = sceneNow();
   const [w, h] = fit(cv, g);
   drawScene(g, w, h, sc, S.view);
@@ -94,30 +116,20 @@ function draw() {
   if (w <= 600) { const want = Math.round((UP_MM + DOWN_MM) * Math.min(40, (w - 8) / ((SIM.N - 1) * SIM.gapMM + 2.4)) + 8); if (Math.abs(h - want) > 2) $('stage').style.height = want + 'px'; }
   else if ($('stage').style.height) $('stage').style.height = '';
   const [gw, gh] = fit(gr, gg);
-  drawCycles(gg, gw, gh, S.full.rows, S.events, S.t, SIM.tMax, S.full.hits);
+  const from = Math.max(0, Math.floor(S.t) - 365), to = from + 730;    // いまの前後の2年を見せる（いまが進むとずれていく）
+  computeFull(to);
+  drawCycles(gg, gw, gh, S.full.rows, S.events, S.t, from, to, S.full.hits);
+  S.gWin = [from, to];
   const c = countLane(sc.fs);
   $('counts').textContent = `出ている毛 ${c.vis}/${SIM.N}`;
   const last = S.full.log.filter(n => n.t <= S.t + 1e-9 && n.kind !== 'safe').pop();
   $('now').textContent = last && S.t - last.t < 5 ? `${Math.floor(last.t)}日目${last.i == null ? '' : ' 毛穴' + (last.i + 1)}: ${last.text}` : '';
-  $('day').textContent = Math.floor(S.t) + '日目';
+  const dd = Math.floor(S.t), yy = Math.floor(dd / 365);
+  $('day').textContent = yy ? yy + '年' + Math.floor((dd % 365) / 30.4) + 'か月' : dd + '日目';
+  $('day').title = dd + '日目・' + (S.age + S.t / 365).toFixed(1) + '歳';
   $('play').textContent = S.playing ? '❚❚' : '▶';
   const lk = S.key + '|' + Math.floor(S.t * 4);
   if (lk !== _logKey) { _logKey = lk; renderLog(S.full.log, S.t); }
-}
-
-// --- 案内 ---
-function applyGuide(i) {
-  S.guide = Math.max(0, Math.min(GUIDE.length - 1, i));
-  const st = GUIDE[S.guide];
-  if (!st.free) { S.site = 'shin'; S.light = { level: 10, skin: 'light', hair: 'black', cool: true }; S.age = st.age || 30; S.gray = 'mid'; }
-  S.events = st.ev.map(e => Object.assign({}, e, { idx: e.idx.slice() }));
-  S.tool = st.tool; S.paint = null; S.hover = null;
-  changed();
-  setTime(st.t); S.playing = !!st.play;
-  $('gtext').innerHTML = st.text;
-  $('gnum').textContent = (S.guide + 1) + '/' + GUIDE.length;
-  $('gprev').disabled = S.guide === 0;
-  $('gnext').textContent = S.guide === GUIDE.length - 1 ? 'はじめから' : 'つぎへ ▶';
 }
 
 // --- 操作 ---
@@ -127,16 +139,15 @@ buildControls(S, {
   tool: id => { S.tool = id; S.paint = null; S.hover = null; showTip(0, 0, null); syncControls(S); },
   light: o => { Object.assign(S.light, o); changed(); },
 });
-$('play').onclick = () => { if (!S.playing && S.t >= SIM.tMax) setTime(0); S.playing = !S.playing; };
+$('play').onclick = () => { S.playing = !S.playing; };
 document.querySelectorAll('.step').forEach(b => { b.onclick = () => setTime(S.t + +b.dataset.d); });
 $('undo').onclick = undo;
-$('gnext').onclick = () => applyGuide(S.guide === GUIDE.length - 1 ? 0 : S.guide + 1);
-$('gprev').onclick = () => applyGuide(S.guide - 1);
 
 function graphPointer(e) {
   if (e.type === 'pointermove' && !(e.buttons & 1)) return;
   const r = gr.getBoundingClientRect();
-  setTime(Math.round(graphDayAt(e.clientX - r.left, r.width, SIM.tMax)));
+  const [a, b] = S.gWin || [0, 730];
+  setTime(Math.round(graphDayAt(e.clientX - r.left, r.width, a, b)));
 }
 gr.addEventListener('pointerdown', graphPointer);
 gr.addEventListener('pointermove', graphPointer);
@@ -200,16 +211,16 @@ cv.addEventListener('pointerleave', () => { if (!S.paint) { S.hover = null; if (
 let last = performance.now();
 function loop(now) {
   const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;   // 最初のコマは now が last より前のことがある
-  if (S.playing) { setTime(S.t + dt * S.speed); if (S.t >= SIM.tMax) S.playing = false; }
+  if (S.playing) setTime(S.t + dt * S.speed);
   draw();
   requestAnimationFrame(loop);
 }
-applyGuide(0);
+changed(); S.playing = true;    // 開いたらすぐ時間が流れる（道具ははじめカミソリ）
 requestAnimationFrame(loop);
 
 // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）
 window.__hare = {
-  S, draw, applyGuide, act, undo, zoomAt,
+  S, draw, act, undo, zoomAt,
   setTime: t => { setTime(t); draw(); },
   simRun(sec) { for (let i = 0; i < sec * 60; i++) if (S.playing) setTime(S.t + S.speed / 60); draw(); },
   set(o) { Object.assign(S, o); changed(); draw(); },

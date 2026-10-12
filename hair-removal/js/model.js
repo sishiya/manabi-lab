@@ -69,9 +69,10 @@ function stepF(f, site, dt) {
   for (const h of f.hairs) {
     if (h.shedAt != null) h.shedAt -= dt;
     if (h.push) h.clubRoot = Math.max(0.4, h.clubRoot - h.push * dt);   // いたんだ毛は押し出されていく
+    else if (h.club && h.shedAt != null && h.shedAt < SIM.loosen) h.clubRoot = Math.max(0.2, h.clubRoot - (h.clubRoot - 0.2) / Math.max(dt, h.shedAt) * dt);   // 抜ける前に根もとがゆるみ、表面へ寄っていく（推定）
   }
   const gone = f.hairs.filter(h => h.shedAt != null && h.shedAt <= 0);
-  if (gone.length) { f.justShed = gone.some(h => h.burnt) ? 'burnt' : 'club'; f.hairs = f.hairs.filter(h => !gone.includes(h)); }
+  if (gone.length) { f.justShed = gone.some(h => h.burnt) ? 'burnt' : 'club'; f.goneHairs = gone.map(h => hairShape(f, h)); f.hairs = f.hairs.filter(h => !gone.includes(h)); }
   const cur = f.hairs.find(h => !h.club);
   if (f.ph === 'A') {
     f.bulb = GEO.clubDepth + (GEO.bulbDeep - GEO.clubDepth) * smooth(f.t / GEO.descend);
@@ -92,18 +93,21 @@ function stepF(f, site, dt) {
 function shave(f) {
   for (const h of f.hairs) { const th = tipH(f, h); if (th > 0) { h.L -= th; h.blunt = true; } }
 }
+// 抜けた毛の形（図で、抜けていく動きを描くため）
+function hairShape(f, h) { return { root: rootDepth(f, h), L: h.L, pig: h.pig == null ? 1 : h.pig, burnt: !!h.burnt, blunt: !!h.blunt, thin: h.thin || 1, club: !!h.club, diam: f.diam }; }
 // 返す: 'none'（つまめる毛がない）、'short'（毛はあるが短くてつまめない）、'club'（古い毛だけ抜けた）、'root'（根もとごと抜けた）
 function pluck(f, site) {
   let gotActive = false, got = false;
   const hasHair = f.hairs.some(h => tipH(f, h) > 0);
   f.hairs = f.hairs.filter(h => {
-    if (tipH(f, h) >= SIM.grip) { got = true; if (!h.club || f.ph === 'T') gotActive = true; return false; }
+    if (tipH(f, h) >= SIM.grip) { got = true; if (!h.club || f.ph === 'T') gotActive = true; (f.goneHairs || (f.goneHairs = [])).push(hairShape(f, h)); return false; }
     return true;
   });
   if (!got) return hasHair ? 'short' : 'none';
   if (gotActive && f.ph !== 'X') {
     // 根もとごと取れた → 毛穴の下の部分が作りなおされるまで待ち、新しい成長期へ（遅れは推定）
     f.hairs = f.hairs.filter(h => h.club);   // 退行中の毛も一緒に取れる
+    for (const g of f.goneHairs || []) if (!g.club) g.sheath = true;   // 成長期の毛は根もとに白いさや（毛根鞘）がついてくる
     f.ph = 'R'; f.t = 0; f.dur = phaseDur(f, site, 'R'); f.bulb = GEO.clubDepth;
     return 'root';
   }
@@ -152,7 +156,9 @@ function Runner(siteKey, events, hooks) {
   this.site = SITES[siteKey]; this.events = events; this.hooks = hooks || {};
   this.fs = startState(siteKey).map(({ f, seed }) => {
     const g = Object.assign({}, f, { hairs: f.hairs.map(h => Object.assign({}, h)) });
-    g.rng = mulberry32(seed); g.justShed = null; return g;
+    g.rng = mulberry32(seed); g.justShed = null; g.goneHairs = null;
+    for (const h of g.hairs) if (h.fresh && tipH(g, h) > SIM.visible) h.fresh = false;   // もう出ている毛は「新しく出た」に数えない
+    return g;
   });
   this.k = 0; this.n = 0;            // n = 進んだきざみの数（t = t0 + n·dt）
   this.log = []; this.prev = this.fs.map(snap);
@@ -169,14 +175,16 @@ Runner.prototype.applyUpTo = function () {
       this.note(t, null, `カミソリで剃った（${idx.length} 個の毛穴の上。表面から出ていた毛 ${n} 本を切った）`, 'shave');
     } else if (e.type === 'pluck') {
       for (const i of idx) {
+        this.fs[i].goneHairs = [];
         const r = pluck(this.fs[i], site);
-        this.note(t, i, { root: '毛抜きで根もとごと抜いた（毛穴は残る）', club: '休んでいた古い毛が抜けた', short: '短くてつまめなかった', none: '抜く毛がなかった' }[r], 'pluck', { root: '抜いた', club: '古い毛が抜けた', short: 'つまめない', none: '毛がない' }[r]);
+        this.note(t, i, { root: '毛抜きで根もとごと抜いた（毛穴は残る）', club: '休んでいた古い毛が抜けた', short: '短くてつまめなかった', none: '抜く毛がなかった' }[r], 'pluck', { root: '抜いた', club: '古い毛が抜けた', short: 'つまめない', none: '毛がない' }[r], this.fs[i].goneHairs);
+        this.fs[i].goneHairs = null;
       }
     } else if (e.type === 'light' && this.hooks.light) this.hooks.light(this.fs, site, e, this, idx);
     this.prev = this.fs.map(snap);
   }
 };
-Runner.prototype.note = function (t, i, text, kind, short) { this.log.push({ t, i, text, kind, short: short || text }); };
+Runner.prototype.note = function (t, i, text, kind, short, hairs) { this.log.push({ t, i, text, kind, short: short || text, hairs: hairs && hairs.length ? hairs : undefined }); };
 // 1きざみごとに、毛穴の中の変化をできごとにする
 // 成長期が始まったときの色のできごと
 function pigNote(f) {
@@ -196,7 +204,7 @@ Runner.prototype.watch = function () {
     if (f.ph === 'A' && f.t >= GEO.descend && f.t - SIM.dt < GEO.descend) this.note(t, i, '毛球ができあがり、新しい毛を作って下から押し上げはじめた', 'phase', '毛を作る');
     if (q.ph !== p.ph && q.ph === 'A') { const pn = pigNote(f); if (pn) this.note(t, i, pn[0], 'gray', pn[1]); }
     for (const h of f.hairs) if (h.fresh && tipH(f, h) > SIM.visible) { h.fresh = false; this.note(t, i, '新しい毛の先が表面に出た', 'emerge', '表面に出た'); }
-    if (f.justShed) { this.note(t, i, f.justShed === 'burnt' ? '光でいたんだ毛が抜け落ちた' : '古い毛（棍毛）が抜け落ちた', 'shed', '抜け落ちた'); f.justShed = null; }
+    if (f.justShed) { this.note(t, i, f.justShed === 'burnt' ? '光でいたんだ毛が抜け落ちた' : '古い毛（棍毛）が抜け落ちた', 'shed', '抜け落ちた', f.goneHairs); f.justShed = null; f.goneHairs = null; }
     this.prev[i] = q;
   });
 };

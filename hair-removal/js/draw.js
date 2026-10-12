@@ -64,6 +64,7 @@ function drawScene(g, w, h, sc, view) {
   for (let i = 0; i < N; i++) { const fx = X(0.8 + i * SIM.gapMM); GEOM.xs.push(fx); }
   g.save(); g.beginPath(); g.rect(xa, 0, xb - xa, h); g.clip();             // 長い毛は断面の外へ出さない
   for (let i = 0; i < N; i++) drawFollicle(g, sc.fs[i], GEOM.xs[i], y0, s, sc, i);
+  for (const gh of sc.ghosts || []) drawGhost(g, GEOM.xs[gh.i], y0, s, gh);
   g.restore();
   // 光った瞬間: あてた所がうすく光る
   if (sc.flash && sc.since < 0.35) {
@@ -191,8 +192,7 @@ function drawFollicle(g, f, x, y0, s, sc, i) {
     if (tip < 0) {
       const above = -tip, n = Math.ceil(above * 6) + 2, ds = above / n;
       let px = x, py = y0, a = 0;
-      const bend = 0.3 + 0.25 * k;                                  // 根もとを出るとすぐ肌にそって寝る（曲がり方は毛ごとに少しちがう）
-      for (let q = 0; q < n; q++) { a += ds; const ang = -Math.PI / 2 + (Math.PI / 2 - 0.035) * (1 - Math.exp(-a / bend)); px += Math.cos(ang) * ds * s; py += Math.sin(ang) * ds * s; pts.push([px, py]); }
+      outsidePts(pts, x, y0, s, above, k, null, i);
       for (let q = 2; q < pts.length; q += 2) GEOM.pick.push({ i, x: pts[q][0], y: pts[q][1] });
     }
     drawHairPath(g, pts, w, tapered, hp, hr.burnt, s);
@@ -203,6 +203,43 @@ function drawFollicle(g, f, x, y0, s, sc, i) {
     if (hr.burnt) hit(x, Y(Math.max(0.2, r - 0.3)), 8, 'burnt');
   }
 }
+// 表面から上の毛の点の列: 根もとを出るとすぐ肌にそって寝る（曲がり方は毛ごとに少しちがう）
+// i = 毛穴の番号: 寝る角度と立ち上がりを毛穴ごとに変えて、毛どうしが重なりすぎないようにする（見た目の演出）
+function outsidePts(pts, x, y0, s, above, k, yStart, i = 0) {
+  const n = Math.ceil(above * 6) + 2, ds = above / n, j = (i * 3) % 5, bend = 0.3 + 0.25 * k + 0.12 * j, rest = 0.04 + 0.05 * j;
+  let px = x, py = yStart == null ? y0 : yStart, a = 0;
+  for (let q = 0; q < n; q++) { a += ds; const ang = -Math.PI / 2 + (Math.PI / 2 - rest) * (1 - Math.exp(-a / bend)); px += Math.cos(ang) * ds * s; py += Math.sin(ang) * ds * s; pts.push([px, py]); }
+}
+
+// 抜けていく毛（gh = {kind, hairs, p}。p = 0→1 の進み）
+//  抜け落ち: 根もとが表面まで出て（〜0.35）、そのあと肌から離れながらうすれる
+//  毛抜き: 根もとごと上へ引き抜かれ（〜0.6）、うすれる。成長期の毛は根もとに白いさや
+function drawGhost(g, x, y0, s, gh) {
+  for (const hr of gh.hairs) {
+    const p = gh.p, w = Math.max(2.5, 0.075 * s * hr.diam) * hr.thin;
+    let root, dx = 0, dy = 0, alpha = 1;
+    if (gh.kind === 'pluck') {
+      const q = smooth(Math.min(1, p / 0.6));
+      root = hr.root - q * (hr.root + 0.8);
+      alpha = p < 0.6 ? 1 : 1 - (p - 0.6) / 0.4;
+    } else {
+      const q = smooth(Math.min(1, p / 0.35));
+      root = hr.root - q * (hr.root + 0.05);
+      if (p > 0.35) { const r = (p - 0.35) / 0.65; dx = r * 0.9 * s; dy = -r * 0.7 * s; alpha = 1 - r; }
+    }
+    const tip = root - hr.L;
+    let pts;
+    if (root >= 0) { pts = [[x, y0 + root * s], [x, y0 + Math.max(0, tip) * s]]; if (tip < 0) outsidePts(pts, x, y0, s, -tip, hr.diam, null, gh.i); }
+    else { pts = [[x, y0 + root * s]]; outsidePts(pts, x, y0, s, hr.L, hr.diam, y0 + root * s, gh.i); }   // 根もとまで表面の上に出た
+    g.save(); g.globalAlpha = Math.max(0, alpha); g.translate(dx, dy);
+    drawHairPath(g, pts, w, !hr.blunt, hr.pig, hr.burnt, s);
+    const [rx, ry] = pts[0];
+    if (hr.sheath) { g.fillStyle = 'rgba(250,245,235,.95)'; g.beginPath(); g.ellipse(rx, ry, w * 1.6, w * 2.6, 0, 0, Math.PI * 2); g.fill(); }
+    else if (hr.club) { g.fillStyle = '#f3ead8'; g.beginPath(); g.ellipse(rx, ry, w * 0.9, w * 1.3, 0, 0, Math.PI * 2); g.fill(); }
+    g.restore();
+  }
+}
+
 // 毛1本（点の列）。先 tapered = とがる（新しく作られた毛）、剃った毛は平ら。ふちが濃く、まん中が明るい
 function drawHairPath(g, pts, w, tapered, pig, burnt, s) {
   let total = 0; const seg = [];
