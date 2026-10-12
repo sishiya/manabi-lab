@@ -19,6 +19,8 @@ const click = (w, sel) => { const e = w.document.querySelector(sel); if (e) e.cl
 
 // アプリごとの準備（w = アプリの window）
 const SETUP = {
+  // 脱毛のしくみ（剃ってから光をあてた直後: 伸びている毛の根もとが熱で光る）
+  'hair-removal': async w => { await wait(1000); const H = w.__hare, d = w.document, all = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; H.S.playing = false; H.setTime(0); H.act('shave', all); H.setTime(1); H.act('light', all); d.getElementById('tool-light').click(); H.S.ptr = null; d.getElementById('toast').hidden = true; H.setTime(1.06); await wait(400); },
   // ちいさな地球（半径 1 km、星を押して 3 時間後の海のゆれ。高さ ×100）
   'tiny-earth': async w => { await wait(1200); const T = w.__tiea; T.S.playing = false; T.cam({ alt: 2.1, el: 0.3, az: 0.6 }); T.simRun(3 * 3600); await wait(400); },
   // 変化球のしくみ（3D・ボールの後ろからカーブ。比べる道すじと空気の流れの断面つき）

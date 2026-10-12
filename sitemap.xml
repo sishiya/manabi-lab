@@ -119,4 +119,11 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/eye-optics/?lang=en"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/eye-optics/"/>
   </url>
+  <url>
+    <loc>https://sishiya.github.io/manabi-lab/hair-removal/</loc>
+    <lastmod>2026-10-12</lastmod>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/hair-removal/?lang=ja"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/hair-removal/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/hair-removal/"/>
+  </url>
 </urlset>
