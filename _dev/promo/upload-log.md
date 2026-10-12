@@ -10,6 +10,8 @@ upload-batch.ps1 が書く。1日の区切りは太平洋時間の0時（日本�
 | 2026-10-11 09:23 | wifi-wave-guide | 8 | （上の続き）実は上がっていた → vLXOfsPsrq8。-Update -Full で仕上げた |
 | 2026-10-11 09:26 | mold-growth-guide | 10 | 動画は上がった（q9Hv3NKkYm4）が、字幕の一覧を取れませんでした: 403 quota exceeded → 英語の字幕なし。上限が戻ってから -Update |
 | 2026-10-11 09:27 | mold-growth-short | 10 | 動画は上がった（FJnDw9MjCL0）が、字幕の一覧を取れませんでした: 403 quota exceeded → 英語の字幕なし。上限が戻ってから -Update |
+| 2026-10-12 | pitch-physics-guide | 13 | 上がった（0bWwLctbsZ4）。10/24 20:00 予約・英語の字幕・サムネイル |
+| 2026-10-12 | pitch-physics-short | 13 | 上がった（Oucc4xIPViY）。10/24 20:05 予約・英語の字幕・サムネイル |
 
 ## わかったこと（2026-10-11、太平洋時間 10/10 の日）
 - チャンネルとしては 21本（API 18本＋Studio 3本）上げても、本数の上限（exceeded the number of videos）には当たらなかった。
