@@ -29,8 +29,9 @@ YouTube に出す順番（ジャンル・サムネイルの色味が連日で重
 - アプリを外から動かす: `clickEl(w, sel)`、`setInput(w, sel, 値)`（スライダー・チェックボックスに input と change を送る）、`runEvents(w, 表, t0, t)`。
 - 日本語で録る: アプリは `?lang=ja`（`langJa`）で開く。`inject` で開くときは、言語の記憶 `manabi-lang` をその iframe の中だけ `ja` に見せる。`inject.pre` で台本ごとの差しかえ（アプリより先に動く）。
 - 確かめ用のコマ: `__peekSheet([秒…], 'peek-名前')` で何コマかを縮めて1枚に並べ、`out/peek-名前.jpg` に保存する（見終わったら消す）。
-- アプリごとの部品は `<app>-common.js`（`quantum-common.js`・`wifi-common.js`・`animal-common.js`・`immune-common.js`・`metamorphosis-common.js`・`air-flow-common.js`・`ga-common.js`・`mold-common.js`・`god-view-common.js`・`piano-common.js`）。場面の表 `SC` と、とびとびの時刻（確かめ用のコマ）でも同じ絵になる進め方が入っている。
+- アプリごとの部品は `<app>-common.js`（`quantum-common.js`・`wifi-common.js`・`animal-common.js`・`immune-common.js`・`metamorphosis-common.js`・`air-flow-common.js`・`ga-common.js`・`mold-common.js`・`god-view-common.js`・`piano-common.js`・`pitch-common.js`）。場面の表 `SC` と、とびとびの時刻（確かめ用のコマ）でも同じ絵になる進め方が入っている。
 - **ピアノを弾く手は BGM のかわりにピアノの音**（`piano-common.js`、2026-10-11）: アプリと同じ合成（`VOICES.piano`）で、画面の手が押す音を録画の音に入れる（`music.extra(ctx, 出口)` は台本ごとの音を足す口。`style: 'none'`）。3D の canvas だけを全画面にして開き、アプリの時計（performance.now）をこちらの時刻にする。縦長の一人称は手が画面の外に出るので使わない。
+- **`inject.top`**（2026-10-12〜）: `<head>` がなく `<header>` があるアプリでは、ふつうの差しかえが `<header>` の後ろ（body の中）に入り、それより前の相対パスの css が読めない。`inject: { top: true }` で先頭に入れる（変化球のしくみ）。録画ずみの台本は見た目を変えないよう、そのまま。
 - **神の視点マップだけは `inject` を使わない**: srcdoc で開くと Cesium の Worker（地形）が動かず、地図が出ない。普通に開いてから `requestAnimationFrame` を差しかえる（`gvInstallRaf`）。地図は1コマごとに読みこみを待つので、録画は通信が安定しているときに・時間がかかる（150秒で数十分の見込み）。「地球をちぎる」の描画ループは差しかえた requestAnimationFrame に乗らないことがあるので、1コマごとに `GV._tear.render()` で描かせる。粒の計算（Worker）は実時間で進むので、1コマのあいだだけ動かして止める。
 
 ### ライオン版（案内役のしし屋のライオンが右下に出る。説明動画の標準、2026-10-10）

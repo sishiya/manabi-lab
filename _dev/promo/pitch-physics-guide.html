@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="pitch-common.js"></script>
+<script>
+'use strict';
+// 台本: 変化球のしくみ ― 使い方と見どころ（横長の説明動画、150秒）。案内役のライオンつき
+// アプリの 3D の図を画面いっぱいに。断面の図・ボールの拡大・時間割の帯・数字は左に重ねる（右下はライオンの場所）
+const END = 150, DUR = END + IDENT_CLOSE;
+let A0 = null;   // カメラを回す場面の、はじめの向き
+const SC = [
+  { a: 0, b: 13.6, tour: 0, cam: 'catcher', delay: 1.0, tag: '捕手の目' },
+  { a: 13.6, b: 20, tour: 0, cam: 'high', delay: 0.4, tag: 'ホームの後ろ（高め）・ドラッグで回す',
+    go: (w, P) => { A0 = Object.assign({}, P.V3.goal); }, orbit: u => ({ yaw: A0.yaw + 0.55 * ease(clamp((u - 1) / 4, 0, 1)), pitch: A0.pitch + 0.12 * ease(clamp((u - 1) / 4, 0, 1)), dist: A0.dist }) },
+  { a: 20, b: 30, tour: 1, cam: 'side', delay: 0.6, tag: '横から・回転なし' },
+  { a: 30, b: 44, tour: 3, cam: 'catcher', delay: 0.6, tag: '捕手の目・フォーシーム' },
+  { a: 44, b: 56, tour: 5, cam: 'ball', delay: 0.5, speed: 0.15, tag: 'ボールの後ろ' },
+  { a: 56, b: 62.5, tour: 6, cam: 'catcher', delay: 0.5, tag: '捕手の目・スライダー' },
+  { a: 62.5, b: 70, tour: 6, cam: 'catcher', delay: 0.3, tag: '使える回転 100%', go: (w, P) => P.set({ eff: 1 }) },
+  { a: 70, b: 77, tour: 8, cam: 'pitcher', delay: 0.5, speed: 0.25, tag: '投手の後ろ・ナックル' },
+  { a: 77, b: 86, tour: 9, cam: 'catcher', delay: 0.5, tag: '捕手の目・ナックル10球' },
+  { a: 86, b: 95, tour: 15, cam: 'batter', labels: false, tag: '打者の目', go: w => w.eval('CAMS.batter.fov = 50') },
+  { a: 95, b: 104, tour: 16, cam: 'batter', labels: false, tag: '打者の目（望遠）・架空の本格派の4球種', go: w => w.eval('CAMS.batter.fov = 14') },
+  { a: 104, b: 111, tour: 12, cam: 'catcher', delay: 0.5, tag: '標高 1600 m' },
+  { a: 111, b: 118, tour: 13, cam: 'catcher', delay: 0.5, tag: '向かい風 8 m/s' },
+  { a: 118, b: END + IDENT_CLOSE, tour: 18, cam: 'catcher', delay: 0.6, tag: '自由に試す',
+    per: (u, w, P) => {   // ボールをドラッグして回転の向きを変える（120〜126 秒）。5° ずつ計算しなおす
+      const k = ease(clamp((u - 2) / 6, 0, 1)), dir = Math.round((330 + 120 * k) / 5) * 5 % 360;
+      if (P.S.P.dir !== dir && u < 14) P.set({ dir });
+    } },
+];
+// 打者の目の場面: 決める時刻まで 1/8 の速さ → 止める → 最後まで
+const freezeAt = (td, hold) => (u, T) => { const s = 0.125, a = 0.6, b = a + td / s, c = b + hold; return u < a ? 0 : u < b ? (u - a) * s : u < c ? td : Math.min(T, td + (u - c) * s); };
+
+// ---- ボタンの札とマウス ----
+const CH = {
+  cam: { x: 40, y: 230, title: 'カメラ（3D の上）', btns: ['捕手の目', 'ホームの後ろ（高め）', '投手の後ろ', 'ボールの後ろ', '横から', '打者の目', '上から'], cols: 4 },
+  eff: { x: 40, y: 560, title: '② 球の速さと回転', btns: ['使える回転 10%', '100%'] },
+  next: { x: 40, y: 230, title: '上の案内（19段）', btns: ['つぎへ'] },
+};
+const SHOW = [
+  ['cam', 13.6, 19.5, t => 1],
+  ['eff', 60, 69.5, t => t < 62.5 ? 0 : 1],
+  ['next', 125, 131.5, t => -1],
+];
+const B = (k, i) => btnRect(CH[k], i);
+const CUR = [
+  { t: 12.4, ...B('cam', 1) }, { t: 13.6, ...B('cam', 1), click: true },
+  { t: 14.4, x: 900, y: 520 }, { t: 14.7, x: 900, y: 520, drag: true }, { t: 18.6, x: 1180, y: 470 },
+  { t: 19.6, x: 1180, y: 470, hide: true },
+  { t: 61, ...B('eff', 1) }, { t: 62.5, ...B('eff', 1), click: true }, { t: 64, ...B('eff', 1), hide: true },
+  { t: 119, x: 230, y: 470 }, { t: 120, x: 230, y: 470, drag: true }, { t: 126, x: 300, y: 410 }, { t: 126.8, x: 300, y: 410, hide: true },
+];
+
+// ---- 字幕（日本語は上に焼きこむ・英語は SRT）。数はアプリで計算してから入れる（setup で決める）----
+let CAPS = [], F = null;
+function makeCaps(w) {
+  F = ppFacts(w);
+  SC[9].time = freezeAt(F.tDecideFF, 2.5);
+  SC[10].time = freezeAt(F.tDecide, 3.0);
+  const balls = F.sepBalls.toFixed(1);
+  CAPS = [
+    { a: 7, b: 13.2, main: '球種の名前ではなく、速さ・向き・回転から計算する', sub: '重力・空気の抵抗・回転による力を、1ミリ秒ごとに足し合わせて道すじを解く',
+      en: ['Not from the pitch name, but from speed, direction and spin', 'Gravity, air drag and the spin force are added up every millisecond'] },
+    { a: 14, b: 19.6, main: 'カメラは7つ。3D の図はドラッグで回せる', sub: 'はじめは1/5の速さで、1球をゆっくり見られる',
+      en: ['Seven cameras. Drag the 3D view to rotate it', 'It starts at 1/5 speed so you can watch a single pitch slowly'] },
+    { a: 20.5, b: 29.5, main: 'もし空気がなかったら（うすい線）', sub: '重力だけの放物線。ホームまでの約 0.4 秒で 80 cm ほど落ちる',
+      en: ['If there were no air (faint line)', 'Gravity alone gives a parabola: about 80 cm of drop in the 0.4 s to the plate'] },
+    { a: 30.5, b: 37, main: 'フォーシーム：逆回転で、上向きの力（マグヌス力）', sub: `回転の力がないとき（白い線）より ${F.ffUp} cm 上を通る ＝「ホップするように見える」正体`,
+      en: ['Four-seam: backspin makes an upward force (the Magnus force)', `It crosses ${F.ffUp} cm above the no-spin path (white line): why it "seems to rise"`] },
+    { a: 37.5, b: 43.6, main: '右の欄に、変化量や働いている力の数字', sub: '「変化量（50 ft から）」は、試合の測定の解析でよく使われる測り方の目安',
+      en: ['The panel shows the break and the forces right now', '"Break (from 50 ft)" matches the way game-tracking data is often analysed'] },
+    { a: 44.5, b: 50, main: '空気の流れの断面：空気がはがれる所が、上だけ後ろへずれる', sub: '逆回転で、上の面は空気といっしょに動く',
+      en: ['Airflow cross-section: the air separates later only on top', 'With backspin the top surface moves along with the air'] },
+    { a: 50.5, b: 55.6, main: '空気を下へ押しやった反作用で、ボールは上へ', sub: 'この図は、計算した力の大きさに合わせた模式図（流れそのものは解いていない）',
+      en: ['Pushing the air down pushes the ball up', 'A schematic sized to the computed force (the flow itself is not simulated)'] },
+    { a: 56.5, b: 62.2, main: 'スライダー：回転数は多いのに、あまり曲がらない', sub: '回転のほとんどがジャイロ回転（軸が進む向きと同じ）で、曲げる力にならない',
+      en: ['Slider: lots of spin, yet little break', 'Most of it is gyro spin (axis along the motion), which makes no breaking force'] },
+    { a: 63, b: 69.6, main: '「使える回転」を 100% にすると', sub: `変化量（放してから）が ${F.sl0} cm → ${F.sl1} cm に`,
+      en: ['Set "useful spin" to 100%', `The break (from release) goes from ${F.sl0} cm to ${F.sl1} cm`] },
+    { a: 70.5, b: 76.6, main: 'ナックル：ほとんど回らない', sub: '縫い目の向きで、空気のはがれ方が左右でずれ、横向きの力（緑の矢印）になる',
+      en: ['Knuckleball: it hardly spins', 'The seams make the air separate differently on each side: a sideways force (green arrow)'] },
+    { a: 77.5, b: 85.6, main: '少しずつちがう10球', sub: `1球ずつの道すじはなめらか。でも行き先は 左右 ${F.knX} cm・上下 ${F.knZ} cm もばらける`,
+      en: ['10 slightly different pitches', `Each path is smooth, yet they spread ${F.knX} cm sideways and ${F.knZ} cm up and down`] },
+    { a: 86.5, b: 94.6, main: '打者の目：時間のつまみの下の帯が、打者の時間割', sub: `振ると決める最後は放してから ${F.tDecideFF.toFixed(2)} 秒。そのとき変化は ${F.pctFF}% しか起きていない`,
+      en: ['Batter\'s eye: the strip under the time slider is the batter\'s timetable', `The last moment to decide is ${F.tDecideFF.toFixed(2)} s after release; only ${F.pctFF}% of the break has happened`] },
+    { a: 95.5, b: 103.6, main: '4つの球種を、決める時刻で止めると', sub: `打者の目には ボール ${balls} 個分しかはなれていない（ホームでは最大 ${F.sepT} cm）`,
+      en: ['Stop four pitch types at the decision moment', `From the batter's eye they are only ${balls} ball widths apart (up to ${F.sepT} cm at the plate)`] },
+    { a: 104.5, b: 110.6, main: '空気と風：標高 1600 m では、空気がうすい', sub: `空気はふつうの ${F.altPct}%。フォーシームの変化は 上へ ${F.ffRel} → ${F.altRel} cm`,
+      en: ['Air and wind: at 1600 m the air is thinner', `The air is ${F.altPct}% of normal; the four-seam's rise goes from ${F.ffRel} to ${F.altRel} cm`] },
+    { a: 111.5, b: 117.6, main: '向かい風 8 m/s では、よく曲がる', sub: `上へ ${F.headRel} cm。力を決めるのは、空気に対する速さ`,
+      en: ['A headwind of 8 m/s makes it break more', `Up ${F.headRel} cm: the forces depend on speed relative to the air`] },
+    { a: 118.5, b: 124.6, main: 'ボールをドラッグすると、回転の向きが変わる', sub: '速さ・回転数・使える回転も、つまみを動かすとすぐ計算しなおす',
+      en: ['Drag the ball to change the spin direction', 'Speed, spin rate and useful spin recompute instantly too'] },
+    { a: 125, b: 131.6, main: '「案内を出す」で、19段の案内', sub: '左投げ・投手の例・球種を重ねる・空気と風も。日本語と英語に対応',
+      en: ['"Show guide" opens a 19-step tour', 'Left-handers, pitcher examples, overlaying pitches, air and wind. Japanese and English'] },
+    { a: 132, b: 141.6, main: 'このアプリは技術検証', sub: '係数は測定から作った式。選手の指導や評価には使えません',
+      en: ['This app is a tech demo', 'The coefficients are formulas from measurements; not for coaching or evaluating players'] },
+  ];
+}
+const NAME = '変化球のしくみ';
+const CREDIT = 'おもな出どころ: Nathan の軌道計算機、Watts & Sawyer (1975)、Nathan (2012)、Morrissey (2009)、Nathan (2023) ほか。投手の例は架空';
+// ---- 案内役のライオン。右下（x 1530〜、y 620〜）はライオンの場所 ----
+const MUSIC = { style: 'journey', root: 130.81, stopAt: END, cues: [{ t: END, type: 'jingle' }] };
+const EXP = [[0, 'calm'], [7.2, 'smile'], [10, 'calm'], [14.2, 'smile'], [17, 'calm'], [20.7, 'think'], [24, 'calm'], [30.7, 'wow'], [34, 'calm'], [37.7, 'smile'], [41, 'calm'],
+  [44.7, 'think'], [48, 'calm'], [50.7, 'proud'], [54, 'calm'], [56.7, 'think'], [60, 'calm'], [63.2, 'wow'], [66, 'calm'], [70.7, 'think'], [74, 'calm'], [77.7, 'shock'], [81, 'calm'],
+  [86.7, 'think'], [90, 'calm'], [95.7, 'wow'], [99, 'calm'], [104.7, 'cold'], [108, 'calm'], [111.7, 'wow'], [114, 'calm'], [118.7, 'smile'], [122, 'calm'], [125.2, 'smile'], [128, 'calm'],
+  [132.2, 'think'], [136, 'calm'], [END - 7.6, 'smile']];
+promoStart({
+  name: NAME + '（使い方）', out: 'pitch-physics-guide', src: '../../pitch-physics/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 40,
+  inject: PP_INJECT,
+  music: MUSIC,
+  ready: w => !!LION.api && ppReady(w),
+  setup(w) {
+    makeCaps(w); ppCur = null;
+    MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: CUR, exp: EXP, end: END, bye: END - 5.8 }));   // 字幕が決まってから、しゃべりの音
+    return w.document.getElementById('gl');
+  },
+  subs: () => guideSubs(END, NAME, 'How Pitches Break', CAPS, 'Runs in your browser (PC or phone). The app has Japanese and English (EN button)'),
+  renderAt(t, w) { ppRender(w, SC, t); },
+  overlay(g, t, w) {
+    const sc = ppScene(SC, t), d = w.document;
+    ppLabels(g, w, t < END - 8 ? 1 : 0);
+    if (sc.tag) ppTag(g, sc.tag, 40, PH - 84, fade(t, Math.max(sc.a, IDENT_MINI + 0.3), Math.min(sc.b, END - 8), 0.3));
+    // 左に重ねるもの（右下はライオン）
+    drawInset(g, d.getElementById('flow'), 40, 300, 640, 640 * d.getElementById('flow').height / d.getElementById('flow').width, '空気の流れの断面（模式図）', fade(t, 44.3, 55.8, 0.4));
+    const fn = fade(t, 37.3, 43.8, 0.4);
+    if (fn > 0) drawPanel(g, 40, 300, 620, '右の欄の数字（フォーシーム）', ['ホームまで ' + ppNum(w, 'ホームまで'), '速さ ' + ppNum(w, '速さ'), '変化量（50 ft から）', '  ' + ppNum(w, '変化量（50 ft から）')], fn);
+    const st = d.getElementById('tstrip');
+    drawInset(g, st, 40, 860, 1440, 1440 * st.height / st.width, '打者の時間割（時間のつまみの下の帯）', fade(t, 86.3, 103.8, 0.4));
+    const bc = d.getElementById('ball');
+    drawInset(g, bc, 40, 300, 440, 440 * bc.height / bc.width, '捕手から見たボール（ドラッグで回転の向き）', fade(t, 118.3, 124.8, 0.4));
+    for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawGuideChrome(g, t, END, NAME, CREDIT);
+    drawLion(g, t);
+  },
+  errors: w => w.__piphErr || [],
+});
+lionOpen();
+</script>
+</body>
+</html>

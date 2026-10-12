@@ -262,7 +262,7 @@ const TOUR = [
     go() { S.overlay = true; S.overlayAim = 'same'; setPitcher('power'); S.show = { noAir: false, plain: false, forces: false, std: false }; S.t = 0; camTo('pitcher'); } },
   { text: '<b>打者の目</b>: スイングに 0.15 秒、決めてから振り始めるまでに 0.15 秒かかるとすると、振ると決める最後の時刻は放してから約 0.1 秒（<span style="color:#7fd68a">緑の輪</span>、ホームの約 12 m 手前）。そのときまっすぐは、回転の力なしの道すじから 4 cm しかずれていません。変化の 9 割以上は、決めたあとに起こります。<b>白の輪</b>から先は、目で滑らかに追えない速さ（70°/秒）になります。',
     go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: false }; S.t = 0; camTo('batter'); } },
-  { text: '<b>決める時刻の球種のちがい</b>: 架空の本格派の4球種を、それぞれ「回転の力がなければまん中に届く向き」に放したとき。下の帯の緑が終わる時刻（振ると決める最後）には、打者の目から見て球種どうしは<b>ボール半分ほど</b>（0.17°）しかはなれていないのに、ホームでは最大 <b>1 m</b> はなれます。時間のつまみを緑の終わりに合わせて、打者の目で見くらべてみよう。',
+  { text: '<b>決める時刻の球種のちがい</b>: 架空の本格派の4球種を、それぞれ「回転の力がなければまん中に届く向き」に放したとき。下の帯の緑が終わる時刻（振ると決める最後）には、打者の目から見て球種どうしは<b>ボール1個分もない</b>（0.25°）しかはなれていないのに、ホームでは最大 <b>80 cm</b> ほどはなれます。時間のつまみを緑の終わりに合わせて、打者の目で見くらべてみよう。',
     go() { S.overlay = true; S.overlayAim = 'center'; setPitcher('power'); S.show = { noAir: false, plain: false, forces: false, std: false }; S.t = 0; camTo('batter'); } },
   { text: '<b>本物に近づける</b>: 回転が少しずつ減ること・空気の浮力・まわりの空気もいっしょに動くこと（付加質量）・地球の自転（コリオリの力）も計算に入れています。どれも、ホームでの位置を 1〜2 mm 動かすだけ。答えをいちばん大きく左右するのは、空気の力の係数（測定から作った式）の不確かさで、揚力の式を別の測定のものに変えると 1 cm ほど変わります（下の「本物に近づける」）。',
     go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0; camTo('ball'); } },

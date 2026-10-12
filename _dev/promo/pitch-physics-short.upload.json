@@ -1,0 +1,36 @@
+{
+  "file": "_dev/promo/out/pitch-physics-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/pitch-physics-short.jpg",
+  "privacy": "private",
+  "publishAt": "2026-10-24T20:05:00+09:00",
+  "captions": {
+    "en": "_dev/promo/out/pitch-physics-short.en.srt"
+  },
+  "title": "まっすぐは浮かない、ナックルは読めない ― 変化球を力で計算 #Shorts",
+  "description": "ボールの速さ・向き・回転から、重力・空気の抵抗・回転の力を1ミリ秒ごとに計算して道すじを解く。フォーシームが「落ちにくい」わけも、ナックルの行き先が読めないわけも、力から見える。ブラウザのアプリ「変化球のしくみ」（技術検証）から。投手の例は架空です。\n\nアプリ: https://sishiya.github.io/manabi-lab/pitch-physics/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ: Nathan の軌道計算機、Watts & Sawyer (1975) American Journal of Physics 43、Nathan (2012) Procedia Engineering 34 ほか\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#変化球 #野球 #物理 #まなびラボ",
+  "tags": [
+    "変化球のしくみ",
+    "変化球",
+    "野球",
+    "物理",
+    "ナックル",
+    "マグヌス力",
+    "Shorts",
+    "まなびラボ",
+    "しし屋",
+    "How Pitches Break",
+    "knuckleball",
+    "baseball physics"
+  ],
+  "localizations": {
+    "en": {
+      "title": "Fastballs don't rise, knuckleballs can't be read ― pitches computed from forces #Shorts",
+      "description": "A pitch's path, solved by computing gravity, air drag and the spin force every millisecond from its speed, direction and spin. See why a four-seam fastball \"drops less\" and why nobody can predict a knuckleball. From \"How Pitches Break\", a browser app (a tech demo). The pitcher examples are fictional.\n\nApp (switch the app to English with the EN button): https://sishiya.github.io/manabi-lab/pitch-physics/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMain sources: Nathan's trajectory calculator, Watts & Sawyer (1975) American Journal of Physics 43, Nathan (2012) Procedia Engineering 34, and others\n\nMusic: original sounds synthesized by code.\n\n#Baseball #Physics #Shorts"
+    }
+  },
+  "x": {
+    "text": "まっすぐは「浮く」のではなく「落ちにくい」。ナックルは同じねらいでも行き先がばらける。\n速さと回転から、ボールにかかる力を1ミリ秒ごとに計算するアプリです。\n#変化球 #野球 #物理 #まなびラボ",
+    "en": "Fastballs don't rise; knuckleballs can't be read. Pitches computed from forces.",
+    "reply": "アプリ（ブラウザで無料・日本語/English）: https://sishiya.github.io/manabi-lab/pitch-physics/"
+  }
+}

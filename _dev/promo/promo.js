@@ -511,7 +511,10 @@ function promoStart(cfg) {
     if (cfg.inject.raf) pre += 'window.__rafQ = []; window.requestAnimationFrame = cb => window.__rafQ.push(cb); window.cancelAnimationFrame = () => {};'
       + 'window.__rafStep = ts => { const q = window.__rafQ; window.__rafQ = []; q.forEach(cb => cb(ts)); };';
     const head = `<base href="${base.href.replace(/[^/]*$/, '')}"><script>${pre}</` + 'script>';
-    iframe.srcdoc = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, m => m + head) : head + html;   // <head> のないファイルもある
+    // <head> のないファイルもある。注意: 下の /<head[^>]*>/ は <header> にも当たる（<head> がなく <header> があるアプリでは、base とこの差しかえが
+    // body の中の <header> の後ろに入り、それより前の相対パスの css が読めない）。録画ずみの台本の見た目を変えないよう、そのままにして、
+    // cfg.inject.top のときだけ先頭に入れる（変化球のしくみ、2026-10-12）
+    iframe.srcdoc = cfg.inject.top ? head + html : /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, m => m + head) : head + html;
   })();
 
   // アプリの絵を画面いっぱいに切り取って置く（cfg.drawSource があれば、いくつもの図をそれで並べ直す）

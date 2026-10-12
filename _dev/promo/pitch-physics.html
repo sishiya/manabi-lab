@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="pitch-common.js"></script>
+<script>
+'use strict';
+// 台本: 変化球のしくみ（ショート、40秒＋締め）。?short で縦長に録る
+// フォーシームと回転なし → 同じ向きに放した4球種 → 打者の目（決める時刻） → ナックル10球。数はアプリで計算してから入れる
+const V = new URLSearchParams(location.search).has('short');
+const SC = [
+  { a: 0, b: 13.2, tour: 3, cam: 'catcher', delay: 0.8, tag: '捕手の目・フォーシーム' },                       // フォーシームと、回転の力がないときの線
+  { a: 13.2, b: 21.2, tour: 14, cam: 'high', speed: 0.25, delay: 0.5, labels: false, tag: 'ホームの後ろから・架空の本格派の4球種' },         // 本格派の4球種を同じ向きに放す
+  { a: 21.2, b: 28.2, tour: 16, cam: 'batter', labels: false, tag: '打者の目（望遠）', go: w => w.eval('CAMS.batter.fov = 14') },   // 望遠（打者の目の位置から、ボールが見やすいように寄せる）                                // 打者の目: 決める時刻で止める
+  { a: 28.2, b: SHORT_END + IDENT_CLOSE, tour: 9, cam: 'catcher', delay: 0.5, labels: false, tag: '捕手の目・ナックル10球' }, // ナックル10球
+];
+let CAPS = [], F = null;
+function makeCaps(w) {
+  F = ppFacts(w);
+  // 打者の目の場面: 決める時刻まで 1/8 の速さ → 2秒止める → 最後まで
+  const td = F.tDecide;
+  SC[2].time = (u, T) => { const s = 0.125, a = 0.6, b = a + td / s, c = b + 2.2; return u < a ? 0 : u < b ? (u - a) * s : u < c ? td : Math.min(T, td + (u - c) * s); };
+  const balls = F.sepBalls.toFixed(1);
+  CAPS = [
+    { a: 6, b: 13, main: 'まっすぐは「浮く」のではなく「落ちにくい」', sub: `逆回転の力で、回転がないとき（白い線）より ${F.ffUp} cm 上を通る`,
+      en: ['A fastball doesn\'t rise: it just drops less', `Backspin lifts it ${F.ffUp} cm above the no-spin path (white line)`] },
+    { a: 13.5, b: 21, main: '同じ向きに放しても、球種でこんなにちがう', sub: '速さと回転から、ボールにかかる力を1ミリ秒ごとに計算',
+      en: ['Same release direction, very different pitches', 'Forces computed every millisecond from speed and spin'] },
+    { a: 21.5, b: 28, main: `打者は約 ${td.toFixed(1)} 秒で、振るかを決める`, sub: `そのとき球種のちがいは、ボール ${balls} 個分しかない`,
+      en: [`The batter must decide in about ${td.toFixed(1)} s`, `At that moment the pitches are only ${balls} ball widths apart`] },
+    { a: 28.5, b: 35, main: 'ナックルは、だれにも読めない', sub: `同じねらいでも、左右 ${F.knX} cm・上下 ${F.knZ} cm ばらける`,
+      en: ['Nobody can predict a knuckleball', `Same aim, yet they spread ${F.knX} cm sideways and ${F.knZ} cm up and down`] },
+  ];
+}
+const NAME = '変化球のしくみ', SUB = '速さと回転から、ボールの道すじを計算', ENDL = 'ブラウザで動かせます。球種や回転を変えて試せます';
+promoStart({
+  name: NAME, out: 'pitch-physics', src: '../../pitch-physics/index.html', iw: 1920, ih: 1080, dur: SHORT_END + IDENT_CLOSE, peek: 18,
+  inject: PP_INJECT,
+  music: { style: 'journey', root: 130.81, stopAt: SHORT_END, cues: [{ t: SHORT_END, type: 'jingle' }] },
+  ready: ppReady,
+  setup(w) { makeCaps(w); ppCur = null; return w.document.getElementById('gl'); },
+  subs: () => shortSubs(NAME, 'How Pitches Break', SUB, 'Computing a ball\'s path from its speed and spin', CAPS,
+    ENDL, 'Runs in your browser (JP/EN). Change the pitch and spin to try it'),
+  renderAt(t, w) { ppRender(w, SC, t); },
+  overlay(g, t, w) {
+    ppLabels(g, w, t < 35 ? 1 : 0);
+    const sc = ppScene(SC, t); if (sc.tag) ppTag(g, sc.tag, 40, 200, fade(t, Math.max(sc.a, IDENT_MINI + 0.3), Math.min(sc.b, 35), 0.3));
+    drawCaps(g, t, CAPS);
+    drawShortChrome(g, t, NAME, SUB, ENDL, 'おもな出どころ: Nathan の軌道計算機、Watts & Sawyer (1975)、Nathan (2012) ほか。投手の例は架空');
+  },
+  errors: w => w.__piphErr || [],
+  short: { iw: 1080, ih: 1920 },
+});
+</script>
+</body>
+</html>
