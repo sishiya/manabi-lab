@@ -18,7 +18,11 @@ const UI = (() => {
 
   // 時間
   const slider = $('time');
-  slider.addEventListener('input', () => { state.u = slider.value / 1000; });
+  // シークバーを動かしたら、おまかせカメラにもどして、その時刻の見どころの場所・ルーペにする（行ったり来たりしても同じ絵）
+  slider.addEventListener('input', () => {
+    state.u = slider.value / 1000;
+    if (!View.auto) { View.setAuto(true); camTo(currentEvent(state.u)); }
+  });
   let sliding = false;
   slider.addEventListener('pointerdown', () => { sliding = true; state.playing = false; markPlay(); });
   window.addEventListener('pointerup', () => { sliding = false; });
@@ -35,7 +39,8 @@ const UI = (() => {
   function advance(dt) {
     if (!state.playing) return;
     sinceEv += dt;
-    const slow = 0.3 + 0.7 * Math.min(1, sinceEv / 3.5);
+    const zi = Story.at(state.u).id === 'zoomin';
+    const slow = zi ? 1 : 0.3 + 0.7 * Math.min(1, sinceEv / 3.5);
     state.u = Math.min(1, state.u + dt * state.speed * slow / Story.total);
     if (state.u >= 1) { state.playing = false; markPlay(); }
     slider.value = Math.round(state.u * 1000);
@@ -77,6 +82,12 @@ const UI = (() => {
     if (c) View.look(c[0], c[1], c[2], instant);
     View.setLoupe(z, e.title);
   }
+  function camOf(e) {
+    if (!e || !e.cam) return null;
+    const z = e.zoom ? (typeof e.zoom === 'function' ? e.zoom() : e.zoom) : null;
+    const c = typeof e.cam === 'function' ? e.cam() : e.cam;
+    return typeof c === 'number' ? (z ? [z[0], z[1], c] : null) : c;
+  }
   function currentEvent(u) { let cur = null; for (const e of events) if (e.u <= u + 1e-6) cur = e; return cur; }
 
   // ぎもん: 「その場面へ」
@@ -117,7 +128,10 @@ const UI = (() => {
       $('nowCard').innerHTML = ev ? `<b>${ev.title}</b> <span class="kind ${ev.kind}">${KIND[ev.kind]}</span><p>${ev.body}</p>` : '';
       $('events').querySelectorAll('li').forEach((li, i) => li.classList.toggle('cur', events[i] === ev));
       if (View.auto && ev) camTo(ev);
+      // 自分で動かせる範囲は、いまの見どころのまわり
+      View.setBounds(camOf(ev));
     }
+    View.camK = sliding ? 4 : st.id === 'zoomin' ? 2.2 : 1.1;
     const inside = st.id === 'inside' || st.id === 'burst';
     let html = '';
     if (st.id === 'spread') { const cc = Story.colonyCounts(st.min - Story.M.tEnd); html = `<dl class="stat"><dt>ファージ</dt><dd>約${cc.phage.toLocaleString()}個 <small>目安</small></dd><dt>破れた細菌</dt><dd>${cc.burst} ／ ${cc.cells}</dd><dt>とりつかれて中で増えている</dt><dd>${cc.inf}</dd></dl>`; }

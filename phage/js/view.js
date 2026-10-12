@@ -88,14 +88,24 @@ const View = (() => {
   }
   function fitAll(instant) { look(0, 330, 2500 * Math.max(1, (W / H) / (2500 / 1900)), instant); }
   // 動ける範囲: 物語の場所（原点）から、見ている横はばの半分＋少しまで（関係のないところへ行きすぎない）
+  // 自分で動かせる範囲: いまの見どころの場所のまわりだけ（迷子にならないように）。引けるのは見どころの横はばの3倍まで
+  let bnd = null;
+  function setBounds(c) { bnd = c ? { x: c[0], y: c[1], w: c[2] } : null; }
+  const minS = () => Math.max(W / 4e9, bnd ? W / (Math.max(bnd.w, 2600) * 3) : 0);
   function clampT(c) {
     const w = W / c.ts, lim = 1600 + 0.55 * w;
     c.tcx = Math.max(-lim, Math.min(lim, c.tcx)); c.tcy = Math.max(-lim - 0.25 * w, Math.min(lim, c.tcy));
+    if (bnd && !auto) {
+      c.ts = Math.max(c.ts, minS());
+      const R = Math.max(bnd.w, 2200) * 0.8;
+      c.tcx = Math.max(bnd.x - R, Math.min(bnd.x + R, c.tcx)); c.tcy = Math.max(bnd.y - R, Math.min(bnd.y + R, c.tcy));
+    }
   }
   function stepCam(dt) {
     clampT(cam);
     // おまかせのときはゆっくり（場面が変わっても目が追いつくように）。自分で動かすときはすぐ
-    const k = 1 - Math.exp(-dt * (auto ? 1.1 : 3.2));
+    // おまかせのときはゆっくり。シークバーを動かしている間・人のからだの区間は速め（View.camK）
+    const k = 1 - Math.exp(-dt * (auto ? View.camK : 3.2));
     // 拡大率は掛け算でなめらかに。位置は「画面の上での距離」で近づける（人のからだ → 分子のように大きく寄るとき、目的の場所が画面の外に残らない）
     const ease2 = (c, q) => { const s0 = c.s; c.s = Math.exp(Math.log(c.s) + (Math.log(c.ts) - Math.log(c.s)) * q); c.cx = c.tcx - (c.tcx - c.cx) * s0 * (1 - q) / c.s; c.cy = c.tcy - (c.tcy - c.cy) * s0 * (1 - q) / c.s; };
     if (lp.on) ease2(lp, 1 - Math.exp(-dt * 1.6));
@@ -105,19 +115,32 @@ const View = (() => {
   // ---- ルーペ（左上の小窓）: おまかせカメラは引いたまま、細かいところをここで見せる ----
   const lp = { on: false, cx: 0, cy: 0, s: 1, tcx: 0, tcy: 0, ts: 1, x: 10, y: 50, size: 0, hot: [], title: '' };
   function setLoupe(z, title) {
-    if (!z) { lp.on = false; return; }
+    if (!z) { lp.on = false; lp.placed = false; return; }
     lp.size = Math.round(Math.max(120, Math.min(250, W * 0.34, H * 0.42)));
     const s = lp.size / Math.max(10, z[2]);
     if (!lp.on) { lp.cx = z[0]; lp.cy = z[1]; lp.s = s; }
     lp.tcx = z[0]; lp.tcy = z[1]; lp.ts = s; lp.on = true; lp.title = title || '';
   }
   function drawLoupe(fn) {
-    if (!lp.on || !auto) return;
-    const n = lp.size, x0 = lp.x, y0 = lp.y;
-    // 本図の上に、ルーペが見ているところの枠と、つなぐ線
+    // 本図ですでに大きく見えている（ルーペが1.8倍より大きくできない）ときは出さない
+    lp.shown = lp.on && auto && lp.s / cam.s >= 1.8;
+    if (!lp.shown) return;
+    const n = lp.size;
+    // 本図の上で、ルーペが見ているところの枠
     const hw = n / 2 / lp.s, a = { x: W / 2 + (lp.cx - hw - cam.cx) * cam.s, y: H / 2 - (lp.cy + hw - cam.cy) * cam.s }, bw = 2 * hw * cam.s;
+    // ルーペは枠のすぐ横（右に入らなければ左）。上の切りかえ・右の拡大ボタン・左下の説明カードは避ける
+    const gap = 18, right = a.x + bw + gap, left = a.x - gap - n;
+    let tx = right + n < W - 62 ? right : left > 8 ? left : Math.max(8, Math.min(W - n - 62, a.x + bw / 2 - n / 2));
+    let ty = Math.max(50, Math.min(H - n - 10, a.y + bw / 2 - n / 2));
+    const card = document.getElementById('nowCard'), ch = card ? card.offsetHeight + 24 : 0, cw = card ? card.offsetWidth + 20 : 0;
+    if (tx < cw && ty + n > H - ch) ty = Math.max(50, H - ch - n);
+    if (!lp.placed) { lp.x = tx; lp.y = ty; lp.placed = true; } else { lp.x += (tx - lp.x) * 0.2; lp.y += (ty - lp.y) * 0.2; }
+    const x0 = lp.x, y0 = lp.y;
     g.save(); g.strokeStyle = 'rgba(255,224,102,.85)'; g.lineWidth = 1.5; g.strokeRect(a.x, a.y, bw, bw);
-    g.setLineDash([4, 4]); g.beginPath(); g.moveTo(x0 + n, y0); g.lineTo(a.x + bw, a.y); g.moveTo(x0 + n, y0 + n); g.lineTo(a.x + bw, a.y + bw); g.moveTo(x0, y0 + n); g.lineTo(a.x, a.y + bw); g.stroke(); g.restore();
+    // つなぐ線（ルーペの近いほうの2つの角から、枠の角へ）
+    const onRight = x0 > a.x; g.setLineDash([4, 4]); g.beginPath();
+    if (onRight) { g.moveTo(x0, y0); g.lineTo(a.x + bw, a.y); g.moveTo(x0, y0 + n); g.lineTo(a.x + bw, a.y + bw); } else { g.moveTo(x0 + n, y0); g.lineTo(a.x, a.y); g.moveTo(x0 + n, y0 + n); g.lineTo(a.x, a.y + bw); }
+    g.stroke(); g.restore();
     // ルーペの中を同じ描き方で描く（カメラと大きさを一時的に差しかえる）
     const keep = { cx: cam.cx, cy: cam.cy, s: cam.s, W, H }, keepHot = hot;
     cam.cx = lp.cx; cam.cy = lp.cy; cam.s = lp.s; W = n; H = n;
@@ -129,7 +152,7 @@ const View = (() => {
     const tw = Math.min(n - 4, g.measureText(t).width + 10); g.fillStyle = 'rgba(10,22,27,.85)'; g.fillRect(x0 + 2, y0 + 2, tw, 18); g.fillStyle = '#ffe066'; g.fillText(t, x0 + 7, y0 + 5, n - 14);
     g.restore();
   }
-  const inLoupe = (px, py) => lp.on && auto && px >= lp.x && px <= lp.x + lp.size && py >= lp.y && py <= lp.y + lp.size;
+  const inLoupe = (px, py) => lp.shown && auto && px >= lp.x && px <= lp.x + lp.size && py >= lp.y && py <= lp.y + lp.size;
 
   // 前のコマと同じ絵になるか（止まっているときは描き直さない）
   const sig = () => [cam.cx, cam.cy, cam.s, W, H, auto, lp.on, lp.cx, lp.cy, lp.s, View.real].join(',');
@@ -141,11 +164,11 @@ const View = (() => {
   function userMoved() { if (auto) { auto = false; View.onAuto && View.onAuto(false); } }
   function zoomAt(px, py, f) {
     const w0 = toWorld(px, py);
-    const s = Math.max(W / 4e9, Math.min(sMax, cam.ts * f));
+    userMoved();
+    const s = Math.max(minS(), Math.min(sMax, cam.ts * f));
     cam.ts = s;
     // カーソルの下の点がそのまま残るように中心を動かす
     cam.tcx = w0.x - (px - W / 2) / s; cam.tcy = w0.y + (py - H / 2) / s;
-    userMoved();
   }
   cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
   cv.addEventListener('dblclick', e => { const r = cv.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, 2.5); });
@@ -212,8 +235,8 @@ const View = (() => {
   tip.addEventListener('pointerdown', () => { pinned = false; tip.hidden = true; });
 
   return {
-    V, cam, resize, look, fitAll, stepCam, zoomAt, setLoupe, drawLoupe, sig, real: false,
-    get loupeRect() { return lp.on && auto ? { x: lp.x, y: lp.y, w: lp.size, h: lp.size } : null; },
+    V, cam, resize, look, fitAll, stepCam, zoomAt, setLoupe, drawLoupe, setBounds, sig, real: false, camK: 1.1,
+    get loupeRect() { return lp.shown && auto ? { x: lp.x, y: lp.y, w: lp.size, h: lp.size } : null; },
     begin() { hot = []; g.clearRect(0, 0, W, H); },
     get W() { return W; }, get H() { return H; }, get sFit() { return sFit; }, get sMax() { return sMax; },
     get auto() { return auto; }, setAuto(v) { auto = v; View.onAuto && View.onAuto(v); },
