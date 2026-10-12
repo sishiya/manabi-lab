@@ -61,6 +61,12 @@
     </div>
 
     <div class="ctl">
+      <label>見た目</label>
+      <div class="btns" id="styleBtns"><button data-s="voxel" class="on">ボクセル</button><button data-s="smooth">なめらか</button></div>
+      <p class="note">ボクセルは見た目だけ段々にしています（陸は 400 m、海の底は 1000 m ごと。地球の大きさのときの高さで）。計算はなめらかな高さのまま。</p>
+    </div>
+
+    <div class="ctl">
       <label for="ex">高さの強調</label>
       <select id="ex">
         <option value="1">×1（本当の高さ）</option><option value="10">×10</option><option value="100" selected>×100</option><option value="1000">×1000</option>
@@ -108,6 +114,7 @@
 <script src="js/phys.js"></script>
 <script src="js/mesh.js"></script>
 <script src="js/terrain.js"></script>
+<script src="js/voxel.js"></script>
 <script src="js/ocean.js"></script>
 <script src="js/render.js"></script>
 <script src="js/ui.js"></script>

@@ -91,6 +91,11 @@ const UI = (() => {
     $('shake').addEventListener('click', () => h.shake());
     $('dropC').addEventListener('click', () => h.dropCenter());
     $('ex').addEventListener('change', () => h.setEx(+$('ex').value));
+    $('styleBtns').addEventListener('click', e => {
+      const v = e.target.dataset && e.target.dataset.s; if (!v) return;
+      for (const b of $('styleBtns').children) b.classList.toggle('on', b === e.target);
+      h.setStyle(v);
+    });
   }
   return { init, nums, live, facts, setSizeLabel, len, speed, dur, sig, $ };
 })();

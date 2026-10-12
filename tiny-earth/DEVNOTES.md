@@ -1,8 +1,8 @@
 # ちいさな地球 開発メモ
 
 ## 別セッションで続けるとき（まずここ）
-- いまの状態: v002-ocean（段階A）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。日本語だけ（入口へ移すときに英語）。
-- 次にやること: PLAN.md の段階B（森: 木の高さの限界が重力でどう変わるか・風でゆれる）か段階C（殻を外す正直モード）。どちらからかはユーザーに聞く。
+- いまの状態: v003-voxel（段階A＋ボクセルふうの見た目）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。日本語だけ（入口へ移すときに英語）。
+- 次にやること: 段階C（殻を外す正直モード。2026-10-12 ユーザーが C から、と指示）。そのあと B（森）。
 - 読む順: PLAN.md → このファイルの「ファイル構成」「しくみ」→ 関係するファイルだけ。
 - 動かし方: サーバー apps-2（8765 は OS に予約されていて使えなかった）で http://localhost:8766/tiny-earth/ 。
   デバッグ用の窓口 `window.__tiea`: `simRun(秒)`（星の時間を描かずに進める）・`vol()`（水の量の誤差）・`cam({alt, el, az})`・`handlers`（setR・shake・windDir・setWind・dropCenter・setEx・resetOcean）・`S.playing`。エラーは `window.__tieaErr`。
@@ -10,7 +10,7 @@
 - ユーザーの好み（2026-10-12）: 海が「たっぷんたっぷん」動くのを見たい。界王星より少し広いくらい。空気は「透明な殻」の仮定＋殻を外す正直モード。大きさはスライダーで自由に。
 
 ## ファイル構成
-読みこみ順: three.min.js（`../lib/three@0.128.0`）→ phys → mesh → terrain → ocean → render → ui → main。
+読みこみ順: three.min.js（`../lib/three@0.128.0`）→ phys → mesh → terrain → voxel → ocean → render → ui → main。
 
 | ファイル | 中身 | 主な関数・変数 |
 |---|---|---|
@@ -19,8 +19,9 @@
 | js/phys.js | 定数と、半径から決まる量 | `PHYS.at(R)`（g・vEsc・tOrbit・H0・c0・jump・horizon・mountain・halfTrip）、`PHYS.setup(R,U)` |
 | js/mesh.js | 正二十面体を割った球の網（半径 1 の単位） | `MESH.build(level)` → pos・tri・辺 A/B・L・W・t（a→b の向き）・m（辺の中点）・area・tdeg/vTri・Lmin/Lavg |
 | js/terrain.js | 作りものの地形（ノイズの順位 → 地球の高度分布）と森 | `TERRAIN.build(mesh)` → elev（地球の大きさのときの m）・forest |
+| js/voxel.js | ボクセルふうの柱（マス目＝ボロノイの六角形・五角形の柱） | `VOXEL.cells(M)`（角・頂点の位置 start・平たい角 cf/cs）・`columns`・`setCol(g,M,C,i,上,下)`・`setColorRGB`・`setColor` |
 | js/ocean.js | 球の上の浅水方程式 | `OCEAN.create/reset/step/advance/maxDt/volume/shake/drop` |
-| js/render.js | three.js の描画・カメラ・指の操作 | `VIEW.init/rebuildLand/updateWater/render/pick/setAlt`、`VIEW.st`（ex・az・el・alt・treeShown・treeReal） |
+| js/render.js | three.js の描画・カメラ・指の操作 | `VIEW.init/rebuildLand/updateWater/render/pick/setAlt`、`VIEW.setStyle`、`VIEW.st`（style・ex・az・el・alt・treeShown・treeReal）。`rFloor`＝ボクセルの床の半径 |
 | js/ui.js | 操作・数字の欄・わかること | `UI.init(handlers)`・`nums`・`live`・`facts`・`len/speed/dur` |
 | js/main.js | 組み立て・時間を進める・デバッグの窓口 | `LEVEL`（網の細かさ 5）・`setR`・`handlers`・`window.__tiea` |
 
@@ -37,6 +38,7 @@
 - 風: 軸 a のまわりをまわる U·(a×位置)。「いまの画面で右へ」で軸＝画面の上向き。最初は星の軸（西から東）。
 - 星を押す: 星が速さ c0（長い波の速さ）で画面の右へ動く → 水は −c0 の流れを持つ。水を落とす: 高さ 2×平均の深さ・幅 3 ます のふくらみを足す（水は増える。vol0 も増やす）。
 - 描画: 半径 1。高さの強調 ex（最初 ×100。HUD に黄色で出す）は地形と海だけ、木はいつも実寸（30 m ×0.7〜1.3）。木は森のますにばらまき、最大 16000 本（多いときは間引き、数字の欄に書く）。半径の 1/5000 より小さい木は描かない。
+- **見た目**（2026-10-12 ユーザー: 木がとげとげ → やわらかく、全体をボクセルふうに）: 最初はボクセル。マス目を柱にし、陸は 400 m ごとに切り上げ・海の底は 1000 m ごとに切り下げ（地球の大きさのときの高さ。見た目だけ、計算はなめらか）。水の柱は床から水面まで。木はボクセル＝箱の幹と葉2段、なめらか＝7角の幹と丸い葉（正二十面体）2つ。1本ずつ色・向きを変える（instanceColor は最初に 16000 本分作る。setColorAt に任せると、そのときの count の大きさで作られて壊れる）。ボクセルの柱は包み球を固定して frustumCulled=false（毎コマの computeBoundingSphere が重い）。
 - 海の色: 高さの変化が主（もとの海面より ±0.5×平均の深さで白／紺いっぱい）、深さはうすく。陸の上の水は平均の深さの 2% より厚いときだけ描く・数える。
 - カメラ: 星と一緒に自転。高さ alt（半径の何倍）が 2→0.03 で、星の中心を見る → 地平線の少し下を見る、へ向きを混ぜる。
 
@@ -58,3 +60,4 @@
 ## 状態
 - 2026-10-12 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
 - 2026-10-12 v002-ocean: 段階A。大きさのスライダー（100 m〜6371 km）、浅水の海（コリオリ・風・底の摩擦・陸にあふれる）、星を押す・風・水を落とす、実寸の木、数字の欄・わかること、高さの強調（最初 ×100）、殻の表示。サムネイル。
+- 2026-10-12 v003-voxel: 見た目をボクセルふうに（六角柱の段々・水の柱・箱の木）。「なめらか」にも切りかえ（木は丸い葉に）。1コマ 計算約2ms＋水の更新 3.4ms＋描画 3.4ms。

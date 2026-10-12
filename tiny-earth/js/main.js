@@ -40,6 +40,7 @@ const handlers = {
   shake() { const r = VIEW.screenRightInPlanet(); const v = ocean.P.c0; OCEAN.shake(ocean, r.x * v, r.y * v, r.z * v); },
   dropCenter() { const c = centerCell(); if (c >= 0) dropAt(c); },
   setEx(v) { VIEW.st.ex = v; VIEW.rebuildLand(); exNote(); },
+  setStyle(v) { VIEW.setStyle(v); VIEW.rebuildLand(); },
 };
 function dropAt(c) { OCEAN.drop(ocean, c, 2 * ocean.P.H0, 3 * mesh.Lavg * ocean.R); }
 function centerCell() {

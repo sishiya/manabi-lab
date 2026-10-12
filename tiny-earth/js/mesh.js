@@ -74,7 +74,7 @@ const MESH = (() => {
     for (let f = 0; f < T; f++) for (let k = 0; k < 3; k++) vTri[tf[F[f][k]]++] = f;
     let Lmin = Infinity, Lsum = 0;
     for (let e = 0; e < E; e++) { Lmin = Math.min(Lmin, L[e]); Lsum += L[e]; }
-    return { N, E, T, pos, tri, A, B, L, W, tx, ty, tz, mx, my, mz, area, triEdge, triSign, triArea, deg, vEdge, tdeg, vTri, Lmin, Lavg: Lsum / E };
+    return { N, E, T, pos, tri, cc, A, B, L, W, tx, ty, tz, mx, my, mz, area, triEdge, triSign, triArea, deg, vEdge, tdeg, vTri, Lmin, Lavg: Lsum / E };
   }
   function sub(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; }
   function dot(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }

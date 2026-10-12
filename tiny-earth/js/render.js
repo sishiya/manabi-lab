@@ -1,9 +1,10 @@
 // ちいさな地球 — 描画（three.js r128）。星の半径を 1 として描く。
 'use strict';
 const VIEW = (() => {
-  let renderer, scene, camera, planet, landMesh, waterMesh, treeMesh, shell, sun, cv;
+  let renderer, scene, camera, planet, landMesh, waterMesh, landV, waterV, treeMesh, shell, sun, cv;
+  let C, rFloor;          // ボクセルのマス目・柱の床（陸の上の面）の半径
   let M, TR, O;           // 網・地形・海
-  const st = { ex: 100, az: 0.6, el: 0.35, alt: 2.2, treeShown: 0, treeReal: 0 };
+  const st = { style: 'voxel', ex: 100, az: 0.6, el: 0.35, alt: 2.2, treeShown: 0, treeReal: 0 };
   const tmp = new THREE.Vector3();
 
   function init(canvas, mesh, terrain, ocean) {
@@ -32,6 +33,13 @@ const VIEW = (() => {
     wg.setIndex(idx);
     waterMesh = new THREE.Mesh(wg, new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 25, specular: 0x1a2630 }));
     planet.add(waterMesh);
+    // ボクセルふうの陸と海（マス目を柱にする）
+    C = VOXEL.cells(M); rFloor = new Float32Array(M.N);
+    landV = new THREE.Mesh(VOXEL.columns(M, C), new THREE.MeshLambertMaterial({ vertexColors: true }));
+    waterV = new THREE.Mesh(VOXEL.columns(M, C), new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 25, specular: 0x1a2630 }));
+    planet.add(landV); planet.add(waterV);
+    // 毎コマ全部の頂点から包み球を計算すると重いので、固定の球にして画面外の判定もしない
+    for (const m of [landV, waterV]) { m.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 3); m.frustumCulled = false; }
     // 殻（空気をとじこめる仮定）
     shell = new THREE.Mesh(new THREE.SphereGeometry(1.25, 64, 32), new THREE.ShaderMaterial({
       transparent: true, depthWrite: false, side: THREE.DoubleSide,
@@ -41,9 +49,11 @@ const VIEW = (() => {
     // logarithmicDepthBuffer の書き込みが ShaderMaterial にはないので、殻は奥行きを見ない
     shell.material.depthTest = false; shell.renderOrder = 10;
     scene.add(shell);
-    // 木（円すい＋幹）
-    treeMesh = new THREE.InstancedMesh(treeGeom(), new THREE.MeshLambertMaterial({ vertexColors: true }), 16000);
+    // 木（ボクセル: 箱の幹と葉 ／ なめらか: 丸い葉）。1本ずつ色を少し変える
+    treeMesh = new THREE.InstancedMesh(treeGeom('voxel'), new THREE.MeshLambertMaterial({ vertexColors: true }), 16000);
+    treeMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(16000 * 3).fill(1), 3);
     treeMesh.count = 0; planet.add(treeMesh);
+    setStyle(st.style);
     controls();
   }
   function stars() {
@@ -57,21 +67,30 @@ const VIEW = (() => {
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3));
     scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0x9fb4c8, size: 1.3, sizeAttenuation: false })));
   }
-  // 高さ 1・根元が原点・+y が上の木
-  function treeGeom() {
-    const pos = [], col = [];
-    const ring = (y, r, k) => [Math.cos(k / 6 * Math.PI * 2) * r, y, Math.sin(k / 6 * Math.PI * 2) * r];
-    const add = (a, b, c, color) => { pos.push(...a, ...b, ...c); for (let i = 0; i < 3; i++) col.push(...color); };
-    for (let k = 0; k < 6; k++) {
-      add(ring(0.25, 0.26, k), [0, 1, 0], ring(0.25, 0.26, k + 1), [0.13, 0.33, 0.16]);   // 葉
-      add(ring(0.25, 0.26, k + 1), [0, 0.25, 0], ring(0.25, 0.26, k), [0.10, 0.25, 0.12]);
-      add(ring(0, 0.04, k), ring(0.3, 0.03, k), ring(0, 0.04, k + 1), [0.35, 0.25, 0.16]);  // 幹
+  // 高さ 1・根元が原点・+y が上の木。部品 [形, 色, 中心の高さ, 横の倍率, 縦の倍率] を1つにまとめる
+  function treeGeom(style) {
+    const trunk = [0.42, 0.30, 0.19], leaf = [0.30, 0.55, 0.28], leaf2 = [0.36, 0.62, 0.30];
+    const parts = style === 'voxel'
+      ? [[new THREE.BoxGeometry(1, 1, 1), trunk, 0.2, 0.14, 0.4], [new THREE.BoxGeometry(1, 1, 1), leaf, 0.56, 0.62, 0.46], [new THREE.BoxGeometry(1, 1, 1), leaf2, 0.88, 0.38, 0.24]]
+      : [[new THREE.CylinderGeometry(0.5, 0.6, 1, 7), trunk, 0.2, 0.12, 0.4], [new THREE.IcosahedronGeometry(0.5, 1), leaf, 0.6, 0.66, 0.72], [new THREE.IcosahedronGeometry(0.5, 1), leaf2, 0.84, 0.4, 0.34]];
+    const pos = [], nor = [], col = [];
+    for (const [g0, c, y, sx, sy] of parts) {
+      const g = g0.toNonIndexed(); g.scale(sx, sy, sx); g.translate(0, y, 0); g.computeVertexNormals();
+      const p = g.attributes.position.array, n = g.attributes.normal.array;
+      for (let i = 0; i < p.length; i++) { pos.push(p[i]); nor.push(n[i]); }
+      for (let i = 0; i < p.length / 3; i++) col.push(...c);
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
     g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-    g.computeVertexNormals();
     return g;
+  }
+  function setStyle(style) {
+    st.style = style;
+    const vox = style === 'voxel';
+    landMesh.visible = waterMesh.visible = !vox; landV.visible = waterV.visible = vox;
+    treeMesh.geometry.dispose(); treeMesh.geometry = treeGeom(style);
   }
 
   // 大きさ・強調を変えたら陸と木を作りなおす
@@ -88,7 +107,13 @@ const VIEW = (() => {
       else c = mix([0.42, 0.52, 0.28], [0.55, 0.50, 0.45], Math.min(1, e / 3000));          // 草地〜岩
       if (Math.abs(p[i * 3 + 1]) > 0.93 && e > 0) c = [0.88, 0.9, 0.93];                      // 極の雪
       ca.set(c, i * 3);
+      // ボクセル: 見た目だけ段々に（陸は 400 m ごとに切り上げ、海の底は 1000 m ごとに切り下げ。地球の大きさのときの高さで。計算はなめらかな高さ）
+      const de = e >= 0 ? 400 * (1 + Math.floor(e / 400)) : 1000 * Math.floor(e / 1000);
+      rFloor[i] = 1 + ex * de / PHYS.RE;
+      VOXEL.setCol(landV.geometry, M, C, i, rFloor[i], 1 - ex * 12000 / PHYS.RE);
+      VOXEL.setColor(landV.geometry, C, i, c, e >= 0 ? mix(c, [0.36, 0.26, 0.17], 0.6) : mix(c, [0.1, 0.1, 0.12], 0.4));
     }
+    const lv = landV.geometry.attributes; lv.position.needsUpdate = true; lv.color.needsUpdate = true;
     landMesh.geometry.attributes.position.needsUpdate = true; landMesh.geometry.attributes.color.needsUpdate = true;
     landMesh.geometry.computeVertexNormals(); landMesh.geometry.computeBoundingSphere();
     placeTrees();
@@ -104,28 +129,33 @@ const VIEW = (() => {
     const want = Math.min(treeMesh.instanceMatrix.count, Math.round(st.treeReal));
     const cells = []; for (let i = 0; i < M.N; i++) if (TR.forest[i]) cells.push(i);
     let s = 11; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
-    const mtx = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), n = new THREE.Vector3(), sc = new THREE.Vector3();
+    const mtx = new THREE.Matrix4(), q = new THREE.Quaternion(), q2 = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), n = new THREE.Vector3(), sc = new THREE.Vector3(), tint = new THREE.Color();
+    const vox = st.style === 'voxel';
     const spread = M.Lavg * 0.6;
     for (let k = 0; k < want; k++) {
       const i = cells[Math.floor(rnd() * cells.length)];
       n.set(M.pos[i * 3] + (rnd() - 0.5) * spread, M.pos[i * 3 + 1] + (rnd() - 0.5) * spread, M.pos[i * 3 + 2] + (rnd() - 0.5) * spread).normalize();
-      q.setFromUnitVectors(up, n);
+      q.setFromUnitVectors(up, n).multiply(q2.setFromAxisAngle(up, rnd() * 6.283));
       const hh = hU * (0.7 + 0.6 * rnd());
       sc.set(hh, hh, hh);
-      mtx.compose(n.clone().multiplyScalar(1 + ex * O.z[i] / R - hh * 0.05), q, sc);
+      const base = vox ? rFloor[i] : 1 + ex * O.z[i] / R;
+      mtx.compose(n.clone().multiplyScalar(base - hh * 0.03), q, sc);
       treeMesh.setMatrixAt(k, mtx);
+      const v = rnd(); tint.setRGB(0.8 + 0.35 * v, 0.85 + 0.3 * rnd(), 0.75 + 0.2 * (1 - v));   // 1本ずつ少しちがう緑
+      treeMesh.setColorAt(k, tint);
     }
     treeMesh.count = want; st.treeShown = want;
     treeMesh.instanceMatrix.needsUpdate = true;
+    if (treeMesh.instanceColor) treeMesh.instanceColor.needsUpdate = true;
   }
 
   // 海の形と色（毎コマ）
   function updateWater() {
-    const R = O.R, ex = st.ex, H0 = O.P.H0, p = M.pos, pa = waterMesh.geometry.attributes.position.array, ca = waterMesh.geometry.attributes.color.array;
+    const R = O.R, ex = st.ex, H0 = O.P.H0, p = M.pos, pa = waterMesh.geometry.attributes.position.array, ca = waterMesh.geometry.attributes.color.array, vox = st.style === 'voxel';
     for (let i = 0; i < M.N; i++) {
       const h = O.h[i], wet = TR.elev[i] >= 0 ? h > 0.02 * H0 : h > O.hdry;   // 陸の上のうすい膜は描かない
       const r = wet ? 1 + ex * (O.z[i] + h) / R : 1 + ex * O.z[i] / R - 3 * Math.max(H0, 0.002 * R) * ex / R;
-      pa[i * 3] = p[i * 3] * r; pa[i * 3 + 1] = p[i * 3 + 1] * r; pa[i * 3 + 2] = p[i * 3 + 2] * r;
+      if (!vox) { pa[i * 3] = p[i * 3] * r; pa[i * 3 + 1] = p[i * 3 + 1] * r; pa[i * 3 + 2] = p[i * 3 + 2] * r; }
       // 色: 深さ（浅い＝明るい）＋ もとの海面からの高さ（高い＝白っぽく、低い＝暗く）
       //   深さはうすく（浅い所だけ少し明るい）、高さの変化を主に（±0.5×平均の深さでいっぱい）
       const d = Math.min(1, h / (0.6 * H0)), a = (O.z[i] + h) / H0;
@@ -134,7 +164,14 @@ const VIEW = (() => {
       if (a > 0) c = mix(c, [0.95, 0.98, 1.0], Math.min(0.9, a * 1.8));
       else c = mix(c, [0.0, 0.04, 0.16], Math.min(0.85, -a * 1.8));
       ca.set(c, i * 3);
+      if (vox) {
+        // 水の柱: 床（段々の地面）から水面まで。乾いている・水面が床より低いときは高さ 0
+        const top = wet ? Math.max(rFloor[i], r) : rFloor[i];
+        VOXEL.setCol(waterV.geometry, M, C, i, top, rFloor[i]);
+        VOXEL.setColorRGB(waterV.geometry, C, i, c[0], c[1], c[2], 0.85);
+      }
     }
+    if (vox) { const wv = waterV.geometry.attributes; wv.position.needsUpdate = true; wv.color.needsUpdate = true; return; }
     waterMesh.geometry.attributes.position.needsUpdate = true; waterMesh.geometry.attributes.color.needsUpdate = true;
     waterMesh.geometry.computeVertexNormals(); waterMesh.geometry.computeBoundingSphere();
   }
@@ -191,7 +228,7 @@ const VIEW = (() => {
   function pick(e) {
     const r = cv.getBoundingClientRect();
     ray.setFromCamera({ x: (e.clientX - r.left) / r.width * 2 - 1, y: -(e.clientY - r.top) / r.height * 2 + 1 }, camera);
-    const hit = ray.intersectObjects([waterMesh, landMesh])[0];
+    const hit = ray.intersectObjects(st.style === 'voxel' ? [waterV, landV] : [waterMesh, landMesh])[0];
     if (!hit) return -1;
     tmp.copy(hit.point).applyQuaternion(planet.quaternion.clone().invert()).normalize();
     return nearest(tmp.x, tmp.y, tmp.z);
@@ -215,6 +252,6 @@ const VIEW = (() => {
     shell.visible = camera.position.length() > 1.3;   // 殻の内がわからは描かない（景色が白っぽくなるので）
     renderer.render(scene, camera);
   }
-  return { init, rebuildLand, updateWater, render, resize, pick, setAlt, screenUpInPlanet, screenRightInPlanet, st,
+  return { init, setStyle, rebuildLand, updateWater, render, resize, pick, setAlt, screenUpInPlanet, screenRightInPlanet, st,
     set onTap(f) { onTap = f; }, get camera() { return camera; } };
 })();
