@@ -19,7 +19,7 @@
 | ファイル | 中身 | 主な名前 |
 |---|---|---|
 | `index.html` | 骨組み（doctype なし）。読み込み順: data → model → draw → ui → main。左＝種・刺激のボタン、脳の図 `#view`、再生 `#btnPlay` `#segSpeed` `#clock`、時間の帯 `#timeline`。右＝刺激の場所 `#chooser` `#pitch`、説明 `#notes`、病気・特性 `#conds` `#msDelay`、反応した場所 `#stList`、頭の表面の波 `#wave` `#waveNote`、見つけてみよう `#quests`、解説・出どころ `#srcList` | |
-| `css/style.css` | resistance と同じ骨組み（PC は右パネル 350px）。末尾に「brain-response additions」（根拠の印 `.ev-m/-r/-o/-p`、一覧 `.stlist`、スマホでは図を固定しない） | |
+| `css/style.css` | resistance（2026-10-12 にあそびラボへ移した）と同じ骨組み（PC は右パネル 350px）。末尾に「brain-response additions」（根拠の印 `.ev-m/-r/-o/-p`、一覧 `.stlist`、スマホでは図を固定しない） | |
 | `js/data.js` | 出どころ `SRC`、根拠の強さ `EV`（measured・range・order・place）、脳の形 `HUMAN_SHAPE` `MACAQUE_SHAPE` `RAT_SHAPE`（大脳・小脳・脳幹・溝）、部位 `HUMAN_REG` `MACAQUE_REG` `RAT_REG`（`deep`＝奥・点線、`stem`＝脳幹、`strip`＝体の地図の帯）、`SPECIES` `STIMS` `MISSING`（ない組み合わせの理由） `CONDS` | `R()` |
 | `js/model.js` | 1回の刺激 `buildTrial(sp, stim, where, cond, opt)` → `{stations, peaks, sensors, notes, tmax}`。刺激ごとに `buildLight` `buildFace` `buildSound` `buildTouch` `buildPain` `buildClick`。地図: `v1HotHuman` `v1HotMacaque` `a1Hot` `stripHot`。時間軸 `tAxis` `tInv`（対数ふう、`TAU` は main が刺激ごとに決める）、`activation`、頭の表面の波 `waveAt` | `WAY` `SENSORS` `both()` `S1_POS` |
 | `js/draw.js` | 脳の図（左右の半球を本のように開く。`hemiXY(u,v,side)`、静止部分は `brainLayer` にとっておく）、感覚器 `drawSensors`、道すじ・光る点・ラベル `drawBrainView`。文字は `fnt()` で表示の大きさに合わせる（`VK`） | `VW=1000` `VH=640` `LAY` |

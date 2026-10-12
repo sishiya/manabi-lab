@@ -40,7 +40,6 @@ const SETUP = {
   // 梅雨の浴室の約4週間後（ゴムパッキンと目地にカビ）
   'mold-growth': async w => { await wait(800); w.__mk.UI.playing = false; w.__mk.run(27 * 24 + 14); w.__mk.frame(3, 0.03); await wait(1500); },
   // 1世代目の夜、毒エサを置いて少したったところ（デフォルメの虫）
-  'resistance': async w => { await wait(800); w.__rz.S.style = 'cute'; w.document.getElementById('btnStart').click(); w.__rz.step(10); await wait(400); },
   // 顔の写真を見せて約 180 ms（両側の視覚野から顔の領域へ。右が強い）
   'brain-response': async w => { await wait(800); w.__br.set({ sp: 'human', stim: 'face', cond: 'none' }); w.__br.seek(185); await wait(600); w.__br.seek(185); },
   // にせものサイトで、ブラウザがパスキーを止めたところ（先に銀行でパスキーを作ってログインしておく）

@@ -28,7 +28,6 @@
 | `eye-optics/` | 目のなかの光の道 |
 | `passkey/` | パスキーのしくみ |
 | `brain-response/` | 刺激が脳に届くまで |
-| `resistance/` | 退治するほど手ごわくなる |
 | `ferrofluid/` | 磁性流体の実験皿 |
 | `muscle-growth/` | 筋肉が育つまで |
 | `illusions/` | 錯覚の美術館 |
