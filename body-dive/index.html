@@ -107,8 +107,8 @@
       <legend><b>3</b><span lang="ja">おなかの状態</span><span lang="en">How full is the stomach?</span></legend>
       <div class="opts" id="optBelly"></div>
     </fieldset>
-    <p class="caution" lang="en"><b>Please note</b>This is a simplified simulation for learning. The numbers are rough guides and cannot be used for diagnosis or treatment decisions. If you feel unwell, talk to a doctor.<br><b>Audience</b>Ages 13 and up (younger children with a parent). It covers bowel movements, the anatomy of the anus, and the results of dangerous acts such as swallowing objects and drinking alcohol. Never copy the dangerous acts shown here.<br><b>Made with</b>Three.js for 3D (MIT License); fonts Shippori Mincho B1, Zen Kaku Gothic New and IBM Plex Mono (SIL Open Font License)</p>
-    <p class="caution" lang="ja"><b>ご注意</b>学習用に簡略化したシミュレーションです。数値は目安で、診断や治療の判断には使えません。体の不調は医療機関に相談してください。<br><b>対象</b>中学生以上（小学生は保護者と一緒に）。排泄や肛門の解剖、誤飲や飲酒などの危険な行為の結果も扱います。ここで見せる危険な行為は、絶対にまねしないでください。<br><b>使っているもの</b>3D表示に Three.js（MIT ライセンス）、文字に Shippori Mincho B1・Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）</p>
+    <p class="caution" lang="en"><b>Please note</b>This is a simplified simulation for learning. The numbers are rough guides, not medical advice, and cannot be used for diagnosis or treatment decisions. If you feel unwell, talk to a doctor. If someone may have swallowed something or been poisoned, don’t use this app to decide: get medical help right away.<br><b>Audience</b>Ages 13 and up (younger children with a parent). It covers bowel movements, the anatomy of the anus, and the results of dangerous acts such as swallowing objects and drinking alcohol. Never copy the dangerous acts shown here. In the app, swallowed objects often come out, but that does not mean it is safe in real life.<br><b>Made with</b>Three.js for 3D (MIT License); fonts Shippori Mincho B1, Zen Kaku Gothic New and IBM Plex Mono (SIL Open Font License)</p>
+    <p class="caution" lang="ja"><b>ご注意</b>学習用に簡略化したシミュレーションです。数値は目安で、医療の助言ではなく、診断や治療の判断には使えません。体の不調は医療機関に相談してください。誤飲や中毒が疑われるときは、このアプリで判断せず、すぐ医療機関へ。<br><b>対象</b>中学生以上（小学生は保護者と一緒に）。排泄や肛門の解剖、誤飲や飲酒などの危険な行為の結果も扱います。ここで見せる危険な行為は、絶対にまねしないでください。アプリでは飲み込んだものが出てくることがありますが、実際に安全という意味ではありません。<br><b>使っているもの</b>3D表示に Three.js（MIT ライセンス）、文字に Shippori Mincho B1・Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）</p>
     <button id="go" type="submit"><span lang="ja">ダイブ開始</span><span lang="en">Start dive</span></button>
     <p class="note" lang="ja">太さはおおよそ実寸。長さは小腸・大腸を中心に大きく縮め、時間は場所ごとに早回し（胃・小腸 ×60、大腸 ×240）している。</p>
     <p class="note" lang="en">Widths are roughly life-size. Lengths are shrunk a lot, mainly the small and large intestines, and time is sped up differently in each place (stomach and small intestine ×60, large intestine ×240).</p>
@@ -140,6 +140,8 @@
         <li>Peterson et al. (2014), <i>Case Reports in Emergency Medicine</i>: a report of death from alcohol given rectally; no first-pass breakdown in the liver</li>
         <li>Litovitz et al. (2010), <i>Pediatrics</i>: a 20 mm lithium battery stuck in the esophagus causes serious damage in 2–2.5 hours</li>
         <li>Consumer Affairs Agency (Japan), “Child Safety Mail Vol. 547” (2021): current from a battery makes an alkaline liquid that damages the gut (in Japanese)</li>
+        <li>Kramer et al. (2015), <i>J Pediatr Gastroenterol Nutr</i> (NASPGHAN clinical report): remove esophageal batteries right away; whether to remove a battery in the stomach is the doctor’s call, leaning to removal for batteries over 20 mm or children under 5</li>
+        <li>National Consumer Affairs Center of Japan, “Swallowed magnets from magnetic puzzles” (2022): cases where 2–3 swallowed magnets made holes in the stomach or intestine wall (in Japanese)</li>
         <li>Ministry of Health, Labour and Welfare (Japan), “Natural toxin risk profile: tsukiyotake”: the toxin (illudin S and others), vomiting, diarrhea and stomach pain 30 min–1 h after eating, confusion with shiitake (in Japanese)</li>
         <li>Medtronic, “PillCam SB 3”: capsule endoscope size (26.2 mm long, 11.4 mm across, 3.0 g)</li>
       </ul>
@@ -172,6 +174,8 @@
         <li>Peterson ほか（2014）Case Reports in Emergency Medicine: お尻から入れたアルコールによる死亡の報告、肝臓での先回りの分解がないこと</li>
         <li>Litovitz ほか（2010）Pediatrics: 直径20mmのリチウム電池が食道に止まると2〜2.5時間で重い損傷になる</li>
         <li>消費者庁「子ども安全メール Vol.547」（2021）: 電池から流れる電流でアルカリ性の液ができ、消化管を傷つける</li>
+        <li>Kramer ほか（2015）J Pediatr Gastroenterol Nutr（北米小児消化器栄養学会の報告）: 食道の電池はすぐ取り出す。胃の電池を取り出すかは医師の判断で、20mm より大きい・5歳未満は取り出す側</li>
+        <li>国民生活センター「マグネットパズルの磁石の誤飲」（2022）: 2〜3個の磁石を飲み込み、胃や腸の壁に穴があいた例</li>
         <li>厚生労働省「自然毒のリスクプロファイル: ツキヨタケ」: 毒（イルジンS など）、食後30分〜1時間で嘔吐・下痢・腹痛、シイタケとの見まちがい</li>
         <li>Medtronic「PillCam SB 3」: カプセル内視鏡の大きさ（長さ26.2mm・直径11.4mm・3.0g）</li>
       </ul>

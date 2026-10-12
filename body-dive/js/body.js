@@ -8,7 +8,7 @@ const MATS={
  meat:{n:'牛肉',d:'ひと口20g（もも・赤身）。タンパク質と脂質。胃酸で灰褐色に変わる。',comp:{water:14.3,protein:4.4,fat:1,ash:.2},size:20,color:[.66,.17,.17],dig:true,rate:1/170,acidC:[.6,.5,.42],entries:['mouth']},
  rice:{n:'ごはん',d:'ひと口20g。主にでんぷん。唾液で分解が始まり、胃を早く出る。',comp:{water:12,protein:.5,fat:.06,carb:7.1,fiber:.3,ash:.02},size:12,color:[.95,.94,.9],dig:true,rate:1/100,acidC:[.86,.83,.72],entries:['mouth']},
  veg:{n:'キャベツ',d:'ひと口20g。ほとんど水と食物繊維。緑は胃酸で黄緑〜オリーブ色に。',comp:{water:18.5,protein:.26,fat:.04,carb:.7,fiber:.36,ash:.1},size:25,color:[.55,.78,.38],dig:true,rate:1/120,acidC:[.55,.56,.27],entries:['mouth']},
- metal:{n:'ステンレス球',d:'直径8mm・2.1g。溶けず吸収もされない。胃を出るには空腹期の強い収縮が必要。',comp:{metal:2.1},size:8,color:[.74,.76,.8],dig:false},
+ metal:{n:'ステンレス球',d:'直径8mm・2.1g。溶けず吸収もされない。胃を出るには空腹期の強い収縮が必要。実際に飲み込むのは危険（まねしない）。磁石は2個以上だと腸の壁をはさんで穴があくことがある。飲み込んだら医療機関へ。',comp:{metal:2.1},size:8,color:[.74,.76,.8],dig:false},
  sake4:{n:'日本酒 4合',d:'720mL・アルコール約88g。液体なのですぐ胃を出て、小腸で一気に吸収される。一気に飲むと急性アルコール中毒の危険。お尻から入れると命にかかわる（死亡例あり）。20歳未満の飲酒は法律で禁止。',comp:{water:593,ethanol:88,carb:35},size:0,liquid:true,color:[.93,.9,.78],dig:true,rate:1/20,acidC:[.9,.86,.7]},
  battery:{n:'ボタン電池',d:'リチウム電池CR2032（直径20mm）。食道に引っかかると約2時間で粘膜が深く傷つく。飲み込んだかもしれないときは、すぐ医療機関へ。',comp:{device:2.9},size:20,color:[.8,.82,.86],dig:false,battery:true},
  mushroom:{n:'ツキヨタケ',d:'シイタケと間違えやすい毒きのこ（20g）。食べて30分〜1時間で嘔吐、その後に下痢。野生のきのこは自分で判断して食べないこと。',comp:{water:18,protein:.6,carb:1,fiber:.4,toxin:.01},size:22,color:[.72,.6,.42],dig:true,rate:1/90,acidC:[.62,.55,.4],toxic:true}
@@ -19,7 +19,7 @@ if(LANG==='en')Object.entries({
   meat:['Beef','One 20 g bite (round, lean). Protein and fat. Stomach acid turns it grayish brown.'],
   rice:['Rice','One 20 g bite. Mostly starch. Saliva starts breaking it down, and it leaves the stomach quickly.'],
   veg:['Cabbage','One 20 g bite. Almost all water and fiber. Stomach acid turns the green to yellow-green or olive.'],
-  metal:['Stainless steel ball','8 mm across, 2.1 g. It doesn’t dissolve and isn’t absorbed. To leave the stomach it needs a strong fasting contraction.'],
+  metal:['Stainless steel ball','8 mm across, 2.1 g. It doesn’t dissolve and isn’t absorbed. To leave the stomach it needs a strong fasting contraction. Really swallowing one is dangerous (never try it). Two or more magnets can pinch the gut wall between them and make a hole. If someone swallows one, get medical help.'],
   sake4:['Sake, 4 gō','720 mL, about 88 g of alcohol. Being a liquid, it leaves the stomach quickly and is absorbed all at once in the small intestine. Drinking it all at once risks acute alcohol poisoning. Putting it in through the anus can kill (people have died). Drinking under age 20 is against the law in Japan.'],
   battery:['Button battery','A CR2032 lithium battery (20 mm across). If it gets stuck in the esophagus, it damages the lining deeply in about 2 hours. If someone might have swallowed one, get medical help right away.'],
   mushroom:['Tsukiyotake mushroom','A poisonous mushroom easily mistaken for shiitake (20 g). Vomiting starts 30 minutes to 1 hour after eating, then diarrhea. Never decide for yourself that a wild mushroom is safe to eat.'],

@@ -35,6 +35,9 @@ function hazard(){
   const st=stageOf(bacOf(SIM.blood));if(SIM.blood>.2)list.push([st[2],L('酔い: ','drunk: ')+st[1]]);
   if(P&&P.mat.battery){if(P.stuck)list.push([1,L('電池が食道に詰まっている','battery stuck in the esophagus')]);
     if(P.burn>.8)list.push([3,L('食道穿孔の危険','risk of esophageal perforation')]);else if(P.burn>.4)list.push([2,L('深い潰瘍','deep ulcer')]);else if(P.burn>.1)list.push([1,L('粘膜のただれ','damaged lining')]);}
+  if(P&&P.mat===MATS.metal)list.push([1,L('異物の誤飲 · 医療機関へ','swallowed object · get medical help')]);
+  if(P&&P.mat.battery&&!P.stuck&&P.burn<=.1)list.push([1,L('電池の誤飲 · すぐ医療機関へ','swallowed battery · get medical help now')]);
+  if(P&&P.mat.toxic)list.push([1,P.entry==='anus'?L('毒の影響は不明（データなし）','effect of the poison unknown (no data)'):L('毒きのこ · 医療機関へ','poisonous mushroom · get medical help')]);
   if(SIM.vomit)list.push([1,L('嘔吐','vomiting')]);
   if(P&&P.diarrhea)list.push([1,L('下痢 · 脱水に注意','diarrhea · watch for dehydration')]);
   return list.reduce((a,b)=>b[0]>=a[0]?b:a);
@@ -60,7 +63,7 @@ function showResult(via){
   $('resEyebrow').textContent=L(`EXIT · ${VIA[via]} · 体内時間 ${fmtT(SIM.bodyT)}`,`EXIT · ${VIA[via]} · time in body ${fmtT(SIM.bodyT)}`);
   $('resTitle').textContent=via==='vomit'?L('吐き出された','Vomited out'):via==='removed'?L('内視鏡で取り出された','Removed with an endoscope')
     :m.liquid?L('液体のまま出てきた','Came out still liquid'):food?(anusIn&&P.tSB===0?L('ほぼそのまま出てきた','Came out almost unchanged'):P.diarrhea?L('下痢便になって出てきた','Came out as diarrhea'):stoolReady()?L('茶色い便になって出てきた','Came out as brown stool'):L('便になって出てきた','Came out as stool'))
-    :m===MATS.capsule?L('カプセルが排出された','The capsule passed out'):m.battery?L('電池が出てきた','The battery came out'):L('金属球が出てきた','The metal ball came out');
+    :m===MATS.capsule?L('カプセルが排出された','The capsule passed out'):m.battery?L('電池が出てきた（実際は危険）','The battery came out (dangerous in real life)'):L('金属球が出てきた（実際は危険）','The metal ball came out (dangerous in real life)');
   paintSwatch($('resSwatch'),true);
   const rows=[[L('体内にいた時間','Time in the body'),fmtT(SIM.bodyT)],[L('胃','Stomach'),fmtT(P.tStom)],[L('小腸','Small intestine'),fmtT(P.tSB)],[L('大腸','Large intestine'),fmtT(P.tColon)],[L('重さ','Weight'),`${P.start.toFixed(1)} g → ${mass().toFixed(1)} g`]];
   const ab=P.absorbed,f=x=>(x||0).toFixed(2)+' g';
@@ -74,13 +77,14 @@ function showResult(via){
   $('resKv').innerHTML=rows.map(([a,b])=>`<dt>${a}</dt><dd>${b}</dd>`).join('');
   let note;
   if(m.liquid)note=anusIn?L('直腸の下のほうの血液は肝臓を通らずに全身へ回る。口から飲んだときのような胃・肝臓での先回りの分解（初回通過効果）がなく、吐いて出すこともできないため、血中濃度が急に上がる。実際に死亡事故が起きている。絶対にまねしないこと。','Blood from the lower rectum goes around the body without passing through the liver. There is none of the early breakdown in the stomach and liver that happens when you drink (the first-pass effect), and you can’t vomit it out, so the blood level shoots up. People have actually died this way. Never try this.')
-    :L('口から飲んだアルコールは、一部が胃や肝臓で先に分解されてから全身に回る（初回通過効果）。食後に飲むと胃にとどまる時間が長く、吸収がゆるやかになる。','Some of the alcohol you drink is broken down in the stomach and liver before it reaches the rest of the body (the first-pass effect). Drinking after a meal keeps it in the stomach longer, so it is absorbed more slowly.');
+    :L('口から飲んだアルコールは、一部が胃や肝臓で先に分解されてから全身に回る（初回通過効果）。食後に飲むと胃にとどまる時間が長く、吸収がゆるやかになる。一気に飲むと急性アルコール中毒の危険があり、20歳未満の飲酒は法律で禁止。','Some of the alcohol you drink is broken down in the stomach and liver before it reaches the rest of the body (the first-pass effect). Drinking after a meal keeps it in the stomach longer, so it is absorbed more slowly. Drinking a lot at once can cause acute alcohol poisoning, and drinking under age 20 is against the law in Japan.');
   else if(m.battery)note=via==='removed'?L('実際も、食道に止まった電池は一刻も早く内視鏡で取り出す。飲み込んだかもしれないときは、すぐ医療機関へ。','In real life too, a battery stuck in the esophagus must be removed with an endoscope as fast as possible. If someone might have swallowed one, get medical help right away.')
-    :L('電池が胃まで落ちれば多くは自然に出るが、食道に止まると約2時間で深い損傷になる。飲み込んだかもしれないときは、すぐ医療機関へ。','If a battery reaches the stomach it usually passes on its own, but if it stops in the esophagus it causes deep damage in about 2 hours. If someone might have swallowed one, get medical help right away.');
-  else if(m.toxic)note=anusIn?L('ツキヨタケの毒を直腸から入れたときのデータはほとんどないため、このアプリでは毒性を再現していない。','There is almost no data on the tsukiyotake poison entering through the rectum, so this app does not simulate its toxicity.')
-    :via==='vomit'?L('嘔吐は、胃に入った毒を外に出す防御反応。ツキヨタケは食後30分〜1時間で嘔吐・下痢・腹痛を起こす。','Vomiting is a defense that gets poison in the stomach out. Tsukiyotake causes vomiting, diarrhea and stomach pain 30 minutes to 1 hour after eating.'):L('吸収された毒で腸が荒れ、大腸で水分が吸収されずに下痢になった。','The absorbed poison upset the intestines; the large intestine couldn’t absorb water, so it became diarrhea.');
+    :L('出てきたから平気、ではない。実際は、胃まで落ちた電池も取り出すかどうかを医師が決める（電池が大きいときや小さい子は取り出すことが多い）。食道に止まると約2時間で深い損傷になる。飲み込んだかもしれないときは、自分で様子を見ずにすぐ医療機関へ。','Coming out does not mean it was safe. In real life, even when a battery reaches the stomach, a doctor decides whether to take it out (often for larger batteries or young children). If it stops in the esophagus it causes deep damage in about 2 hours. If someone might have swallowed one, don’t wait and watch: get medical help right away.');
+  else if(m.toxic)note=anusIn?L('ツキヨタケの毒を直腸から入れたときのデータはほとんどないため、このアプリでは毒性を再現していない。データがないことは、安全という意味ではない。','There is almost no data on the tsukiyotake poison entering through the rectum, so this app does not simulate its toxicity. “No data” does not mean safe.')
+    :via==='vomit'?L('嘔吐は、胃に入った毒を外に出す防御反応。ツキヨタケは食後30分〜1時間で嘔吐・下痢・腹痛を起こす。吐いても毒がすべて出るわけではない。食べてしまったら、残りのきのこを持って医療機関へ。','Vomiting is a defense that gets poison in the stomach out. Tsukiyotake causes vomiting, diarrhea and stomach pain 30 minutes to 1 hour after eating. Vomiting does not get all the poison out. If someone has eaten one, take any leftover mushrooms and get medical help.'):L('吸収された毒で腸が荒れ、大腸で水分が吸収されずに下痢になった。食べてしまったら、残りのきのこを持って医療機関へ。','The absorbed poison upset the intestines; the large intestine couldn’t absorb water, so it became diarrhea. If someone has eaten one, take any leftover mushrooms and get medical help.');
   else if(food&&anusIn&&P.tSB===0)note=L('大腸には消化酵素がほとんどないため、食べ物は消化されない。腸内細菌が糖や繊維を発酵させてガスを出し、水分が吸われるだけ。直腸が伸びるとすぐ便意が来る。','The large intestine has almost no digestive enzymes, so the food is not digested. Gut bacteria ferment sugars and fiber and make gas, and water is absorbed, and that is all. When the rectum stretches, the urge to go comes right away.');
   else if(food)note=L('便の主な中身は、食べ物の残りかすより腸内細菌と水分。茶色は胆汁のビリルビンが腸内細菌でステルコビリンに変わった色。','Stool is mostly gut bacteria and water rather than leftover food. The brown color comes from bile’s bilirubin, which gut bacteria turn into stercobilin.');
+  else if(m===MATS.metal)note=L('出てきたから平気、ではない。実際に飲み込むのは危険で、まねしないこと。のどや食道に詰まることがあり、磁石は2個以上だと腸の壁をはさんで穴があくことがある。飲み込んだら医療機関へ。','Coming out does not mean it was safe. Really swallowing one is dangerous: never try it. It can get stuck in the throat or esophagus, and two or more magnets can pinch the gut wall between them and make a hole. If someone swallows one, get medical help.');
   else note=L('消化されないものも、胃を出る・小腸を進む・大腸にとどまる、それぞれの時間はかかる。','Even things that are not digested take time to leave the stomach, travel the small intestine and sit in the large intestine.');
   $('resNote').textContent=note;
   $('result').hidden=false;
