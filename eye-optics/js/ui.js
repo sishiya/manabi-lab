@@ -13,21 +13,21 @@ function buildControls() {
   const box = $('controls'); box.innerHTML = '';
   // 見る先（いちばん上）: 近く ⇄ 遠く の切りかえと、距離のスライダー
   const look = document.createElement('div'); look.className = 'grp look';
-  look.innerHTML = `<span class="gname">見る先</span><button id="lookNear">近く ${fmtD(NEAR_D)}</button><button id="lookFar">遠く ${fmtD(FAR_D)}</button>` +
-    `<input type="range" id="dist" min="0" max="${SL_MAX}" step="1" aria-label="物までの距離">`;
+  look.innerHTML = `<span class="gname">${L('見る先', 'Look at')}</span><button id="lookNear">${L('近く', 'Near')} ${fmtD(NEAR_D)}</button><button id="lookFar">${L('遠く', 'Far')} ${fmtD(FAR_D)}</button>` +
+    `<input type="range" id="dist" min="0" max="${SL_MAX}" step="1" aria-label="${L('物までの距離', 'Distance to the object')}">`;
   box.appendChild(look);
   $('lookNear').onclick = () => { S.anim = null; applyCond({ d: NEAR_D }); };
   $('lookFar').onclick = () => { S.anim = null; applyCond({ d: FAR_D }); };
   $('swap').onclick = () => { S.anim = null; applyCond({ d: S.d === NEAR_D ? FAR_D : NEAR_D }); };
-  $('dist').oninput = e => { if (S.replay) tlResume(); S.anim = null; S.d = slToD(+e.target.value); markEvent('物を動かす', true); retarget(); syncControls(); };
+  $('dist').oninput = e => { if (S.replay) tlResume(); S.anim = null; S.d = slToD(+e.target.value); markEvent(L('物を動かす', 'Move the object'), true); retarget(); syncControls(); };
   const groups = [
-    ['年齢', AGES.map(a => ({ key: a, label: a + '歳' })), () => S.age, 'age'],
-    ['目の長さ', LENGTHS, () => S.len, 'len'],
-    ['乱視', ASTIG_POWERS, () => S.astigP, 'astigP'],
-    ['強い向き', ASTIG_AXES, () => S.astigAx, 'astigAx'],
-    ['断面', SECS, () => S.sec, 'sec'],
-    ['メガネ', GLASSES, () => S.glasses, 'glasses'],
-    ['明るさ', LIGHTS, () => S.light, 'light'],
+    [L('年齢', 'Age'), AGES.map(a => ({ key: a, label: L(a + '歳', String(a)) })), () => S.age, 'age'],
+    [L('目の長さ', 'Eye length'), LENGTHS, () => S.len, 'len'],
+    [L('乱視', 'Astigmatism'), ASTIG_POWERS, () => S.astigP, 'astigP'],
+    [L('強い向き', 'Stronger direction'), ASTIG_AXES, () => S.astigAx, 'astigAx'],
+    [L('断面', 'Slice'), SECS, () => S.sec, 'sec'],
+    [L('メガネ', 'Glasses'), GLASSES, () => S.glasses, 'glasses'],
+    [L('明るさ', 'Light'), LIGHTS, () => S.light, 'light'],
   ];
   for (const [name, items, get, key] of groups) {
     const row = document.createElement('div'); row.className = 'grp';
@@ -40,7 +40,7 @@ function buildControls() {
     row._get = get; row._key = key; box.appendChild(row);
   }
   const t = document.createElement('label'); t.className = 'grp chk';
-  t.innerHTML = '<input type="checkbox" id="showTop"> 物の上の端からの光も';
+  t.innerHTML = '<input type="checkbox" id="showTop"> ' + L('物の上の端からの光も', 'Also light from the top of the object');
   box.appendChild(t);
   $('showTop').onchange = e => { S.showTop = e.target.checked; };
   for (const b of document.querySelectorAll('.vtabs button')) b.onclick = () => { S.chart = b.dataset.c; syncControls(); };
@@ -54,7 +54,7 @@ function syncControls() {
   for (const b of document.querySelectorAll('.vtabs button')) b.classList.toggle('on', b.dataset.c === S.chart);
   $('showTop').checked = S.showTop;
   $('lookNear').classList.toggle('on', S.d === NEAR_D); $('lookFar').classList.toggle('on', S.d === FAR_D);
-  $('swap').textContent = S.d === NEAR_D ? `⇄ 遠くを見る（${fmtD(FAR_D)}）` : `⇄ 近くを見る（${fmtD(NEAR_D)}）`;
+  $('swap').textContent = S.d === NEAR_D ? L(`⇄ 遠くを見る（${fmtD(FAR_D)}）`, `⇄ Look far (${fmtD(FAR_D)})`) : L(`⇄ 近くを見る（${fmtD(NEAR_D)}）`, `⇄ Look near (${fmtD(NEAR_D)})`);
   tlSync();
 }
 function syncSlider() { const el = $('dist'); if (el && document.activeElement !== el) el.value = Math.round(dToSl(S.d)); }
@@ -67,13 +67,13 @@ function setTour(i) {
   if (st.set) applyCond(st.set);
   if (st.win) TL.win = st.win;
   S.hl = st.hl; S.anim = st.anim ? { ...st.anim, t: 0 } : null;
-  if (S.anim) { S.d = S.anim.from; markEvent('物を近づける'); }
+  if (S.anim) { S.d = S.anim.from; markEvent(L('物を近づける', 'Bring closer')); }
   recompute(); syncControls();
   if (st.settle) { dynSettle(S, S.At, S.stopRt); darkSettle(S, lightOf().L); tlClear(); }   // 新しい場面: 目をすぐ合わせ、グラフも空にしてから始める
   S.sched = (st.go || []).map(g => { const o = { ...g }; delete o.at; return { t: S.t + g.at, o }; });
   $('tourText').textContent = typeof st.text === 'function' ? st.text() : st.text;
   $('tourNum').textContent = `${i + 1} / ${TOUR.length}`;
-  $('next').textContent = i === TOUR.length - 1 ? 'はじめから' : 'つぎへ';
+  $('next').textContent = i === TOUR.length - 1 ? L('はじめから', 'Start over') : L('つぎへ', 'Next');
 }
 
 // ドラッグと説明
@@ -106,14 +106,14 @@ function initPointer() {
     if (hitTest(x, y) === 'object' || (Math.abs(y - LAY.oy) < 60 && x < LAY.trackR + 10)) {
       if (S.replay) tlResume();
       drag = true; cv.setPointerCapture(e.pointerId); S.anim = null;
-      S.d = xToD(Math.min(x, LAY.trackR)); markEvent('物を動かす', true); retarget(); syncControls(); hideTip();
+      S.d = xToD(Math.min(x, LAY.trackR)); markEvent(L('物を動かす', 'Move the object'), true); retarget(); syncControls(); hideTip();
     } else if (e.pointerType === 'touch') {   // さわった部分の説明（マウスのない画面）
       const h = hitTest(x, y); if (h) { showTip(h, x, y); clearTimeout(tipTimer); tipTimer = setTimeout(hideTip, 4000); } else hideTip();
     }
   });
   cv.addEventListener('pointermove', e => {
     const [x, y] = pos(e);
-    if (drag) { S.d = xToD(Math.min(x, LAY.trackR)); markEvent('物を動かす', true); retarget(); syncControls(); return; }
+    if (drag) { S.d = xToD(Math.min(x, LAY.trackR)); markEvent(L('物を動かす', 'Move the object'), true); retarget(); syncControls(); return; }
     const h = hitTest(x, y);
     cv.style.cursor = h === 'object' || (Math.abs(y - LAY.oy) < 60 && x < LAY.trackR + 10) ? 'ew-resize' : 'default';
     if (h && e.pointerType !== 'touch') showTip(h, x, y); else hideTip();

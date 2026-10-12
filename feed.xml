@@ -16,6 +16,14 @@
     <summary>ボールの速さ・向き・回転から、重力・空気の抵抗・回転の力を1ミリ秒ごとに計算して道すじを解く技術検証。フォーシームが「落ちにくい」わけも、ナックルの行き先が読めないわけも、力から見える。</summary>
   </entry>
   <entry>
+    <title>目のなかの光の道</title>
+    <link href="https://sishiya.github.io/manabi-lab/eye-optics/"/>
+    <id>https://sishiya.github.io/manabi-lab/eye-optics/</id>
+    <published>2026-10-12T00:00:00+09:00</published>
+    <updated>2026-10-12T00:00:00+09:00</updated>
+    <summary>光が角膜と水晶体で曲がり、網膜に像を結ぶまでを、本物の目の模型で光線を1本ずつ計算。ピントやひとみが追いつくまでの時間、暗さに慣れていく30分、老眼・近視・乱視とメガネも、測られた値で。</summary>
+  </entry>
+  <entry>
     <title>細菌にとりつくウイルス</title>
     <link href="https://sishiya.github.io/manabi-lab/phage/"/>
     <id>https://sishiya.github.io/manabi-lab/phage/</id>

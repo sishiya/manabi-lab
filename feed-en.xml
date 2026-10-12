@@ -16,6 +16,14 @@
     <summary>A tech demo that solves a pitch's path by computing gravity, air drag and the spin force every millisecond from its speed, direction and spin. See why a four-seam fastball “drops less” and why nobody can predict a knuckleball.</summary>
   </entry>
   <entry>
+    <title>Light’s Path Inside the Eye</title>
+    <link href="https://sishiya.github.io/manabi-lab/eye-optics/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/eye-optics/?lang=en</id>
+    <published>2026-10-12T00:00:00+09:00</published>
+    <updated>2026-10-12T00:00:00+09:00</updated>
+    <summary>Follow light as the cornea and lens bend it into an image on the retina, ray by ray, with a model of a real eye. See how long focusing and the pupil take to catch up, how the eye gets used to the dark over 30 minutes, and presbyopia, nearsightedness, astigmatism and glasses, all from measured values.</summary>
+  </entry>
+  <entry>
     <title>The Virus That Infects Bacteria</title>
     <link href="https://sishiya.github.io/manabi-lab/phage/?lang=en"/>
     <id>https://sishiya.github.io/manabi-lab/phage/?lang=en</id>

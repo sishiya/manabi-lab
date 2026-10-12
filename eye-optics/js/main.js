@@ -41,18 +41,18 @@ function compute() {
   // 強い向き・弱い向きに広がるぼけ（乱視がなければ同じ）
   const diamS = S.sec === 'w' ? dOther : dMain, diamW = S.sec === 'w' ? dMain : dOther;
   const blurArcmin = Math.max(diamS, diamW) * 3437.75;
-  let state = 'ok', stateText = 'くっきり見える';
+  let state = 'ok', stateText = L('くっきり見える', 'Sharp');
   if (blurArcmin > BLUR_OK) {   // ぼけの円が 2 分より大きいとき「ぼやける」（このアプリの目安）
     state = 'blur';
-    stateText = astig && Math.max(diamS, diamW) > 1.6 * Math.min(diamS, diamW) ? `ぼやける: 向きによってピントの合う所がちがう（乱視）。${diamS > diamW ? a.strong : a.weak}の向きに広がるぼけ` :
-      zf < eye.L ? 'ぼやける: 像が網膜の手前にできている' :
-      (S.At >= maxAccommodation(S.age) - 0.01 ? 'ぼやける: 水晶体がこれ以上ふくらめず、像が網膜のうしろ' : 'ぼやける: 像が網膜のうしろにできている');
-    if (Math.abs(S.A - S.At) > 0.3) stateText = Math.abs(S.aEff - S.At) > 0.01 && Math.abs(S.A - S.aEff) < 0.05 && !S.replay ? 'ぼやける: 目がまだ反応していない（遅れ）' : 'ピントを合わせているところ…';
+    stateText = astig && Math.max(diamS, diamW) > 1.6 * Math.min(diamS, diamW) ? L(`ぼやける: 向きによってピントの合う所がちがう（乱視）。${diamS > diamW ? a.strong : a.weak}の向きに広がるぼけ`, `Blurry: focus differs by direction (astigmatism). The blur spreads ${diamS > diamW ? a.strong : a.weak}ly`) :
+      zf < eye.L ? L('ぼやける: 像が網膜の手前にできている', 'Blurry: the image forms in front of the retina') :
+      (S.At >= maxAccommodation(S.age) - 0.01 ? L('ぼやける: 水晶体がこれ以上ふくらめず、像が網膜のうしろ', 'Blurry: the lens can’t round up any more; the image is behind the retina') : L('ぼやける: 像が網膜のうしろにできている', 'Blurry: the image forms behind the retina'));
+    if (Math.abs(S.A - S.At) > 0.3) stateText = Math.abs(S.aEff - S.At) > 0.01 && Math.abs(S.A - S.aEff) < 0.05 && !S.replay ? L('ぼやける: 目がまだ反応していない（遅れ）', 'Blurry: the eye hasn’t reacted yet (delay)') : L('ピントを合わせているところ…', 'Focusing…');
   }
   // 暗さ: しきい値より暗ければ見えない。桿体だけのときは、まん中（中心窩）が見えない
   const see = darkSee(S, lightOf().L);
-  if (see.who === 'none') { state = 'blur'; stateText = '暗くて見えない: 目がまだ暗さに慣れていない'; }
-  else if (see.who === 'rod') { state = 'blur'; stateText = 'うす暗く見える: 桿体だけで見ている（まん中は見えない）'; }
+  if (see.who === 'none') { state = 'blur'; stateText = L('暗くて見えない: 目がまだ暗さに慣れていない', 'Too dark to see: the eye is not used to the dark yet'); }
+  else if (see.who === 'rod') { state = 'blur'; stateText = L('うす暗く見える: 桿体だけで見ている（まん中は見えない）', 'Dim: seeing with rods only (the middle is missing)'); }
   S.res = { eye, main, top: top || main, scale, zf, state, stateText, diamS, diamW, ang: a.ang, blurArcmin, astig, see };
 }
 function draw() { drawAll(g, cv.clientWidth, cv.clientHeight); updateView(); tlDraw(); syncSlider(); }
@@ -66,6 +66,10 @@ function loop(now) {
 }
 
 window.addEventListener('resize', resize);
+document.title = L('目のなかの光の道', 'Light’s Path Inside the Eye');
+document.querySelectorAll('#langsw button').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.l === LANG)); b.onclick = () => { if (b.dataset.l !== LANG) setLang(b.dataset.l); }; });
+document.getElementById('speeds').setAttribute('aria-label', L('時間の速さ', 'Time speed'));
+document.getElementById('wins').setAttribute('aria-label', L('グラフの長さ', 'Graph length'));
 buildControls(); tlInit(); initPointer();
 darkSettle(S, lightOf().L);
 document.getElementById('next').onclick = () => setTour((S.tour + 1) % TOUR.length);

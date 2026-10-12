@@ -1,4 +1,5 @@
 /* 目のなかの光の道 */
+:root[lang=en] [lang=ja],:root:not([lang=en]) [lang=en]{display:none!important}
 :root{--bg:#13202e;--ink:#e8f0f4;--muted:#a3b4bf;--acc:#7fd4ff;--panel:rgba(12,22,32,0.86);--line:rgba(232,240,244,0.16);
   --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
@@ -8,6 +9,9 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
 #top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding:10px 16px 4px}
 #top h1{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0}
 #top .sub{color:var(--muted);font-size:13px}
+.langsw{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;align-self:center;margin-left:auto}
+.langsw button{font:inherit;border:0;background:none;padding:3px 8px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--muted);cursor:pointer}
+.langsw button[aria-pressed="true"]{background:var(--acc);color:#0b1620}
 #stage{flex:1;position:relative;min-height:500px;overflow:hidden}
 #cvwrap{position:absolute;inset:0}
 #cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
@@ -63,10 +67,10 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
 #dist{flex:1;min-width:140px;max-width:420px;accent-color:var(--acc);margin-left:6px}
 #controls .chk{font-size:13px;gap:6px;cursor:pointer}
 
-#about{padding:8px 16px 24px;color:var(--muted);font-size:14px;line-height:1.8;max-width:900px}
-#about summary{cursor:pointer;color:var(--ink)}
-#about a{color:var(--acc)}
-#about h3{color:var(--ink);font-size:15px;margin:14px 0 4px}
+#about,#about-en{padding:8px 16px 24px;color:var(--muted);font-size:14px;line-height:1.8;max-width:900px}
+#about summary,#about-en summary{cursor:pointer;color:var(--ink)}
+#about a,#about-en a{color:var(--acc)}
+#about h3,#about-en h3{color:var(--ink);font-size:15px;margin:14px 0 4px}
 
 @media (max-width:719px){
   /* 狭い画面（基本ルール RULES 9章）: 図と見え方を上に固定（#pin）、案内・数字・時間のグラフ・ボタン・説明はスクロール。
@@ -78,7 +82,8 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
   #pin{display:block;position:sticky;top:0;z-index:4;background:var(--bg);padding:4px 8px 6px;box-shadow:0 8px 12px -8px rgba(0,0,0,.7);border-bottom:1px solid var(--line)}
   #cvwrap{position:relative;inset:auto;height:200px}
   #swap{left:auto;right:4px;bottom:4px;transform:none;font-size:13px;padding:7px 11px}
-  #view{position:static;width:auto;margin-top:4px;padding:6px;display:grid;grid-template-columns:54% 1fr;gap:3px 8px;align-items:start}
+  #view{position:static;width:auto;margin-top:4px;padding:6px;display:grid;grid-template-columns:54% minmax(0,1fr);gap:3px 8px;align-items:start}
+  #viewHead em{white-space:normal;overflow-wrap:anywhere}
   #view .vtop{grid-column:2;grid-row:1;flex-direction:column;gap:3px;margin:0}
   #viewHead{font-size:12px}
   #viewHead small{display:none}

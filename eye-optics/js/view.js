@@ -51,7 +51,7 @@ function drawChart() {
       }
     }
     gl.textAlign = 'center';
-    gl.fillText('縦', cx, 10); gl.fillText('横', Wp - 10, cy + 3);
+    gl.fillText(L('縦', 'V'), cx, 10); gl.fillText(L('横', 'H'), Wp - 10, cy + 3);
   }
   const src = g.getImageData(0, 0, w, h).data, sharp = new Float32Array(w * h);
   for (let i = 0; i < w * h; i++) sharp[i] = src[i * 4];
@@ -145,28 +145,31 @@ function updateView() {
   const nS = rod ? 3 * VIEW.k : 0, add = s => Math.sqrt(s * s + nS * nS);
   blurChart(add(blurSigma(r.diamS)), add(blurSigma(r.diamW)), r.ang, vis, rod);
   const note = document.getElementById('vnote');
-  note.textContent = see.who === 'none' ? '暗くて見えない（目がまだ暗さに慣れていない）' : rod ? '桿体だけ: まん中（中心窩）には桿体がないので見えない。視力も 0.16 まで' :
-    S.chart === 'fan' ? '30° ごとの線（太さ 1.5 分）。乱視だと、ある向きの線だけぼやける' : '数字は視力の段（目安）。大きさはそろえて表示';
+  note.textContent = see.who === 'none' ? L('暗くて見えない（目がまだ暗さに慣れていない）', 'Too dark to see (the eye is not used to the dark yet)') :
+    rod ? L('桿体だけ: まん中（中心窩）には桿体がないので見えない。視力も 0.16 まで', 'Rods only: the middle (fovea) has no rods, so it is not seen. Acuity is at most 0.16') :
+    S.chart === 'fan' ? L('30° ごとの線（太さ 1.5 分）。乱視だと、ある向きの線だけぼやける', 'Lines every 30° (1.5 arcmin thick). With astigmatism, only lines in some directions blur') :
+    L('数字は視力の段（目安）。大きさはそろえて表示', 'Numbers are acuity rows (decimal, rough guide). Shown at matching size');
   const Amax = maxAccommodation(S.age);
   const q = e => fmtDi(Math.round(e * 4) / 4), err = S.err;
   const ao = astigOf();
-  const errTxt = r.astig ? `${ao.strong} ${q(S.err)}・${ao.weak} ${q(S.errW)}` : Math.abs(err) < 0.2 ? '正視' : (err < 0 ? '近視 ' : '遠視 ') + q(err);
+  const errTxt = r.astig ? `${ao.strong} ${q(S.err)}${L('・', ', ')}${ao.weak} ${q(S.errW)}` : Math.abs(err) < 0.2 ? L('正視', 'Normal') : (err < 0 ? L('近視 ', 'Nearsighted ') : L('遠視 ', 'Farsighted ')) + q(err);
   const am = v => (v * 3437.75).toFixed(1);
   const pd = pupilShown(S.stopR);
   document.getElementById('info').innerHTML =
     `<div class="state ${r.state}">${r.stateText}</div>` +
-    `<div><span>物までの距離</span><b>${fmtD(S.d)}</b></div>` +
-    `<div><span>調節</span><b>${S.A.toFixed(1)} D</b><small>／最大 ${Amax.toFixed(1)}</small></div>` +
-    `<div><span>ひとみ</span><b>${pd.toFixed(1)} mm</b></div>` +
-    `<div><span>暗さ慣れ</span><b>${r.see.who === 'cone' ? '錐体' : r.see.who === 'rod' ? '桿体だけ' : '見えない'}</b><small>（${Math.min(S.cone, S.rod).toFixed(1)}）</small></div>` +
-    (r.astig ? `<div><span>ぼけ ${ao.strong}・${ao.weak}</span><b>${am(r.diamS)}・${am(r.diamW)} 分</b></div>`
-      : `<div><span>網膜のぼけ</span><b>${(r.main.blurD * 1000).toFixed(r.main.blurD < 0.01 ? 1 : 0)} µm</b><small>（${r.blurArcmin.toFixed(1)} 分）</small></div>`) +
-    `<div class="wide"><span>目の屈折</span><b>${errTxt}</b></div>`;
+    `<div><span>${L('物までの距離', 'Distance')}</span><b>${fmtD(S.d)}</b></div>` +
+    `<div><span>${L('調節', 'Focusing')}</span><b>${S.A.toFixed(1)} D</b><small>${L('／最大 ', ' / max ')}${Amax.toFixed(1)}</small></div>` +
+    `<div><span>${L('ひとみ', 'Pupil')}</span><b>${pd.toFixed(1)} mm</b></div>` +
+    `<div><span>${L('暗さ慣れ', 'Dark')}</span><b>${r.see.who === 'cone' ? L('錐体', 'Cones') : r.see.who === 'rod' ? L('桿体だけ', 'Rods only') : L('見えない', 'Can’t see')}</b><small>${L('（', ' (')}${Math.min(S.cone, S.rod).toFixed(1)}${L('）', ')')}</small></div>` +
+    (r.astig ? `<div><span>${L(`ぼけ ${ao.strong}・${ao.weak}`, 'Blur (strong / weak)')}</span><b>${am(r.diamS)}${L('・', ' / ')}${am(r.diamW)} ${L('分', '′')}</b></div>`
+      : `<div><span>${L('網膜のぼけ', 'Blur on retina')}</span><b>${(r.main.blurD * 1000).toFixed(r.main.blurD < 0.01 ? 1 : 0)} µm</b><small>${L(`（${r.blurArcmin.toFixed(1)} 分）`, ` (${r.blurArcmin.toFixed(1)}′)`)}</small></div>`) +
+    `<div class="wide"><span>${L('目の屈折', 'Eye’s focus error')}</span><b>${errTxt}</b></div>`;
   const vs = document.getElementById('vstate'); vs.textContent = r.stateText; vs.className = r.state;   // スマホ: 固定部分にも状態の1行
   const since = S.ev ? S.t - S.ev.t : Infinity;
-  const fs = t => t < 10 ? t.toFixed(1) + ' 秒' : t < 60 ? Math.round(t) + ' 秒' : Math.floor(t / 60) + ' 分 ' + Math.round(t % 60) + ' 秒';
-  document.getElementById('viewHead').innerHTML = `見え方 <small>${S.chart === 'fan' ? '線の表' : '視力表'}を ${fmtD(S.d)} に置いたら</small>` +
-    (S.replay ? ' <em>ふりかえり中</em>' : since < 3000 ? ` <em>${S.ev.label} から ${fs(since)}</em>` : '');
+  const fs = t => t < 10 ? t.toFixed(1) + L(' 秒', ' s') : t < 60 ? Math.round(t) + L(' 秒', ' s') : Math.floor(t / 60) + L(' 分 ', ' min ') + Math.round(t % 60) + L(' 秒', ' s');
+  const chartName = S.chart === 'fan' ? L('線の表', 'line chart') : L('視力表', 'eye chart');
+  document.getElementById('viewHead').innerHTML = L('見え方', 'What you see') + ` <small>${L(`${chartName}を ${fmtD(S.d)} に置いたら`, `${chartName} at ${fmtD(S.d)}`)}</small>` +
+    (S.replay ? ` <em>${L('ふりかえり中', 'Replaying')}</em>` : since < 3000 ? ` <em>${L(`${S.ev.label} から ${fs(since)}`, `${fs(since)} after “${S.ev.label}”`)}</em>` : '');
 }
 
 window.addEventListener('resize', () => { drawChart(); });

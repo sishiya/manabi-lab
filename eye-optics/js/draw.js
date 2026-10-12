@@ -115,8 +115,8 @@ function drawLabels(g, eye) {
   g.font = `12px ${getComputedStyle(document.documentElement).getPropertyValue('--f-body')}`;
   g.fillStyle = C.muted; g.textAlign = 'center';
   const R = OPT.retinaR, cz = eye.retinaC;
-  const lab = [['角膜', X(-1.6), Y(6.2)], ['水晶体', X((eye.surfs[2].z + eye.surfs[3].z) / 2), Y(-5.6) + 34], ['虹彩', X(eye.stopZ) + 4, Y(7.6) - 12],
-    ['網膜', X(cz + R * Math.cos(0.55)) + 16, Y(R * Math.sin(0.55)) - 10], ['視神経', X(cz + (R + 4) * Math.cos(-0.30)) + 6, Y((R + 4) * Math.sin(-0.30)) + 16]];
+  const lab = [[L('角膜', 'cornea'), X(-1.6), Y(6.2)], [L('水晶体', 'lens'), X((eye.surfs[2].z + eye.surfs[3].z) / 2), Y(-5.6) + 34], [L('虹彩', 'iris'), X(eye.stopZ) + 4, Y(7.6) - 12],
+    [L('網膜', 'retina'), X(cz + R * Math.cos(0.55)) + 16, Y(R * Math.sin(0.55)) - 10], [L('視神経', 'optic nerve'), X(cz + (R + 4) * Math.cos(-0.30)) + 6, Y((R + 4) * Math.sin(-0.30)) + 16]];
   for (const [t, x, y] of lab) g.fillText(t, x, y);
 }
 
@@ -127,8 +127,8 @@ function drawObject(g) {
   g.beginPath(); g.moveTo(LAY.trackL, y0); g.lineTo(X(OPT.L0 + 3), y0); g.stroke();
   g.font = `11px ${getComputedStyle(document.documentElement).getPropertyValue('--f-mono')}`; g.textAlign = 'center'; g.fillStyle = C.muted;
   for (const d of (LAY.narrow ? [250] : [100, 250, 500, 1000, 3000])) { const xx = dToX(d); g.fillRect(xx - 0.5, y0 + 4, 1, 6); g.fillText(fmtD(d), xx, y0 + 22); }
-  g.fillText('遠く', LAY.infX, y0 + 22);
-  if (!LAY.narrow) g.fillText('（目の外の距離は縮めて描いています）', (LAY.trackL + LAY.trackR) / 2, y0 + 40);
+  g.fillText(L('遠く', 'far'), LAY.infX, y0 + 22);
+  if (!LAY.narrow) g.fillText(L('（目の外の距離は縮めて描いています）', '(distances outside the eye are squeezed)'), (LAY.trackL + LAY.trackR) / 2, y0 + 40);
   // 矢印
   const hpx = 46; glow(g, S.hl === 'object');
   g.strokeStyle = `rgb(${C.ray})`; g.fillStyle = `rgb(${C.ray})`; g.lineWidth = 3;
@@ -152,7 +152,7 @@ function drawGlasses(g) {
   else { g.moveTo(X(z), Y(h)); g.quadraticCurveTo(X(z + w * 2), Y(0), X(z), Y(-h)); g.quadraticCurveTo(X(z - w * 2), Y(0), X(z), Y(h)); }
   g.fillStyle = 'rgba(200,230,255,0.25)'; g.fill(); g.strokeStyle = 'rgba(220,240,255,0.9)'; g.lineWidth = 1.3; g.stroke(); glow(g, false);
   g.fillStyle = C.ink; g.textAlign = 'center'; g.font = `12px ${getComputedStyle(document.documentElement).getPropertyValue('--f-mono')}`;
-  g.fillText(fmtDi(S.P) + (S.Ps !== S.Pw ? `（${S.sec === 'w' ? astigOf().weak : astigOf().strong}）` : ''), X(z), Y(h) - 8);
+  g.fillText(fmtDi(S.P) + (S.Ps !== S.Pw ? L(`（${S.sec === 'w' ? astigOf().weak : astigOf().strong}）`, ` (${S.sec === 'w' ? astigOf().weak : astigOf().strong})`) : ''), X(z), Y(-h) + 16);   // レンズの下（上は物の距離の文字と重なる）
 }
 // 乱視のとき: いま描いている断面の名前
 function drawSection(g) {
@@ -161,11 +161,11 @@ function drawSection(g) {
   g.fillStyle = strong ? '#ffb070' : '#9be59b';
   if (LAY.narrow) {   // 狭い画面: 短く、右上に
     g.font = `12px ${getComputedStyle(document.documentElement).getPropertyValue('--f-body')}`; g.textAlign = 'right';
-    g.fillText(`${dir}の断面・${strong ? '強い向き' : 'ふつうの向き'}`, LAY.W - 6, 13);
+    g.fillText(L(`${dir}の断面・${strong ? '強い向き' : 'ふつうの向き'}`, `${dir} slice · ${strong ? 'stronger' : 'normal'}`), LAY.W - 6, 13);
     return;
   }
   g.font = `13px ${getComputedStyle(document.documentElement).getPropertyValue('--f-body')}`; g.textAlign = 'center';
-  g.fillText(`${dir}の向きに切った断面・角膜${strong ? `が ${a.P} D 強い向き` : 'はふつうの向き'}`, X(OPT.L0 / 2), Y(OPT.retinaR + 1.6));
+  g.fillText(L(`${dir}の向きに切った断面・角膜${strong ? `が ${a.P} D 強い向き` : 'はふつうの向き'}`, `Slice in the ${dir} direction · cornea ${strong ? `${a.P} D stronger here` : 'normal here'}`), X(OPT.L0 / 2), Y(OPT.retinaR + 1.6));
 }
 
 // 光線の束。目の外は物の印から引く（距離を縮めているので向きは絵）。目の中は計算どおり
@@ -218,7 +218,7 @@ function drawLoupe(g, eye, bundles) {
   const ang = Math.atan2(cy - Y(0), cx - X(zc));
   g.beginPath(); g.moveTo(X(zc) + Math.cos(ang) * span * LAY.s, Y(0) + Math.sin(ang) * span * LAY.s); g.lineTo(cx - Math.cos(ang) * r, cy - Math.sin(ang) * r); g.stroke();
   g.fillStyle = C.muted; g.textAlign = 'center'; g.font = `11px ${getComputedStyle(document.documentElement).getPropertyValue('--f-body')}`;
-  g.fillText(`網膜のあたりを ${Math.round(k / LAY.s)} 倍に`, cx, cy + r + 14);
+  g.fillText(L(`網膜のあたりを ${Math.round(k / LAY.s)} 倍に`, `retina area ×${Math.round(k / LAY.s)}`), cx, cy + r + 14);
 }
 
 // 網膜にうつった像（さかさまの矢印）
@@ -229,7 +229,7 @@ function drawRetinalImage(g, main, top) {
   g.beginPath(); g.moveTo(X(a.z) + 6, Y(a.y)); g.lineTo(X(b.z) + 6, Y(b.y)); g.stroke();
   g.fillStyle = `rgb(${C.rayTop})`; g.beginPath(); g.moveTo(X(b.z) + 6, Y(b.y) + 6); g.lineTo(X(b.z) + 1, Y(b.y) - 3); g.lineTo(X(b.z) + 11, Y(b.y) - 3); g.closePath(); g.fill();
   g.fillStyle = C.ink; g.textAlign = 'left'; g.font = `12px ${getComputedStyle(document.documentElement).getPropertyValue('--f-body')}`;
-  if (!LAY.narrow) g.fillText('像はさかさま', X(b.z) + 16, Y(b.y) + 4);
+  if (!LAY.narrow) g.fillText(L('像はさかさま', 'image is upside down'), X(b.z) + 16, Y(b.y) + 4);
 }
 
 function drawAll(g, W, H) {

@@ -2,44 +2,54 @@
 <title>目のなかの光の道</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2313202e'/><ellipse cx='32' cy='32' rx='24' ry='14' fill='none' stroke='%237fd4ff' stroke-width='5'/><circle cx='32' cy='32' r='7' fill='%237fd4ff'/></svg>">
 <script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<!-- seo（検索・リンクカード。_dev/tools/seo.mjs が入口の APPS から作る。手で直さない） -->
+<meta name="description" content="光が角膜と水晶体で曲がり、網膜に像を結ぶまでを、本物の目の模型で光線を1本ずつ計算。ピントやひとみが追いつくまでの時間、暗さに慣れていく30分、老眼・近視・乱視とメガネも、測られた値で。">
+<meta property="og:type" content="website"><meta property="og:site_name" content="まなびラボ"><meta property="og:locale" content="ja_JP"><meta property="og:locale:alternate" content="en_US">
+<meta property="og:title" content="目のなかの光の道｜まなびラボ"><meta property="og:description" content="光が角膜と水晶体で曲がり、網膜に像を結ぶまでを、本物の目の模型で光線を1本ずつ計算。ピントやひとみが追いつくまでの時間、暗さに慣れていく30分、老眼・近視・乱視とメガネも、測られた値で。"><meta property="og:url" content="https://sishiya.github.io/manabi-lab/eye-optics/">
+<meta property="og:image" content="https://sishiya.github.io/manabi-lab/assets/thumbs/eye-optics.jpg"><meta property="og:image:width" content="640"><meta property="og:image:height" content="360">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@sishiya22">
+<link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/eye-optics/?lang=ja"><link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/eye-optics/?lang=en"><link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/eye-optics/">
+<!-- /seo -->
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="css/style.css">
 
 <div id="app">
-  <header id="top"><h1>目のなかの光の道</h1><span class="sub">光が目の中で曲がって、網膜に像を結ぶまで</span></header>
+  <header id="top"><h1><span lang="ja">目のなかの光の道</span><span lang="en">Light’s Path Inside the Eye</span></h1><span class="sub"><span lang="ja">光が目の中で曲がって、網膜に像を結ぶまで</span><span lang="en">How light bends inside the eye to make an image on the retina</span></span>
+    <span class="langsw" id="langsw"><button data-l="ja">JP</button><button data-l="en">EN</button></span></header>
   <main id="stage">
     <div id="pin"><!-- スマホ: 図と見え方を上に固定（パソコンでは display:contents で今までどおり重ねる） -->
-    <div id="cvwrap"><canvas id="cv"></canvas><button id="swap">近くを見る</button></div>
-    <div id="view"><div class="vtop"><div id="viewHead">見え方</div><span class="vtabs"><button data-c="acuity">視力表</button><button data-c="fan">線の表</button></span></div><div class="chartbox"><canvas id="chart"></canvas><canvas id="chartLab"></canvas></div><div id="vstate"></div><div class="vnote" id="vnote">数字は視力の段（目安）。大きさはそろえて表示</div></div>
+    <div id="cvwrap"><canvas id="cv"></canvas><button id="swap"></button></div>
+    <div id="view"><div class="vtop"><div id="viewHead"></div><span class="vtabs"><button data-c="acuity"><span lang="ja">視力表</span><span lang="en">Eye chart</span></button><button data-c="fan"><span lang="ja">線の表</span><span lang="en">Lines</span></button></span></div><div class="chartbox"><canvas id="chart"></canvas><canvas id="chartLab"></canvas></div><div id="vstate"></div><div class="vnote" id="vnote"></div></div>
     </div>
-    <div id="tour"><span id="tourNum"></span><p id="tourText"></p><button id="next">つぎへ</button></div>
+    <div id="tour"><span id="tourNum"></span><p id="tourText"></p><button id="next"></button></div>
     <div id="info"></div>
     <div id="tip" hidden></div>
   </main>
   <section id="timebar">
-    <div class="tbhead"><b>時間の流れ</b><span class="tbnote">グラフをさわると、その瞬間の目にもどれます</span>
-      <button id="resume" hidden>▶ いまへもどる</button>
-      <span class="tbgrp" id="speeds" aria-label="時間の速さ"><span class="tblab">速さ</span></span><span class="tbgrp" id="wins" aria-label="グラフの長さ"></span></div>
+    <div class="tbhead"><b><span lang="ja">時間の流れ</span><span lang="en">Over time</span></b><span class="tbnote"><span lang="ja">グラフをさわると、その瞬間の目にもどれます</span><span lang="en">Touch the graph to go back to that moment</span></span>
+      <button id="resume" hidden><span lang="ja">▶ いまへもどる</span><span lang="en">▶ Back to now</span></button>
+      <span class="tbgrp" id="speeds"><span class="tblab"><span lang="ja">速さ</span><span lang="en">Speed</span></span></span><span class="tbgrp" id="wins"></span></div>
     <canvas id="tl"></canvas>
   </section>
   <div id="controls"></div>
-  <details id="about">
+  <details id="about" lang="ja">
     <summary>このアプリについて</summary>
     <p>目を横から切った断面で、光線を1本ずつ計算しています。面ごとにスネルの法則（屈折の法則）で曲げ、虹彩（ひとみ）を通った光だけを網膜まで追います。目の寸法と屈折率は、研究で使われる目の模型（Navarro ほか 1985）の値です。近くを見るときの水晶体の形の変化（調節）も、その論文の式で計算しています。</p>
     <p>ピント合わせは「網膜のぼけがいちばん小さくなる調節」を、その年齢でできる範囲（Hofstetter 1950 の平均の式）の中で探しています。ひとみの大きさは明るさから Crawford 1936 の式で決めています（明るさの値はおおよその例）。</p>
-    <p>見る先や明るさを変えると、目はすぐには追いつきません。ピント合わせは約 0.3 秒の遅れのあと、動く量が大きいほど速く動きます（Bharadwaj &amp; Schor 2006 が測った速さの関係）。ひとみは明るくなると約 0.2 秒の遅れのあと 1 秒ほどで縮み、暗くなると 20 秒ほどかけてゆっくり開きます（Mathôt 2018、Gray ほか 2024）。「時間の流れ」のグラフは、そのあいだのぼけ・調節・ひとみの変わり方です。</p>
+    <p>見る先や明るさを変えると、目はすぐには追いつきません。ピント合わせは約 0.3 秒の遅れのあと、動く量が大きいほど速く動きます（Bharadwaj &amp; Schor 2006 が測った速さの関係）。ひとみは明るくなると約 0.2 秒の遅れのあと 1 秒ほどで縮み、暗くなると 20 秒ほどかけてゆっくり開きます（Mathôt 2018、Gray ほか 2024）。「時間の流れ」のグラフは、そのあいだのぼけ・調節・ひとみ・暗さ慣れの変わり方です。</p>
     <p>乱視は、角膜の丸みが向きによって少しちがう目です。ここでは角膜の前の面の丸みを、ある向き（縦・横・斜め）だけ 0.75〜3 D 分きつくして、その向き（強い向き）と直角の向き（弱い向き）に切った断面をそれぞれ光線で計算しています。見え方は、向きによって広さのちがうぼかし（だ円のぼけ）です。乱視用のメガネ（円柱レンズ）は、2つの向きで度をそれぞれ決めています。</p>
     <p>暗い所に入ると、目は分の単位でだんだん敏感になります（暗順応）。見える最小の明るさ（しきい値）を、明るい所で働く錐体と暗い所で働く桿体の2つで計算しています。強い光のあとは、錐体が数分で頭打ちになり、7分ごろに桿体へ切りかわって（Patryas ほか 2013 で 約7分）、桿体は 1 分に 0.23 桁ずつ（45歳以上はおそい）敏感になり、30分ほどでいちばん敏感になります。桿体だけで見ているときは、見え方のまん中がぬけます。中心窩には桿体がないためです（直径 1.25°、Curcio ほか 1990）。</p>
     <h3>簡単にしているところ</h3>
     <ul>
       <li>断面の上下の1平面だけで光線を追っています。網膜は半径 12 mm の球としています（実際はやや平たいだ円体）。</li>
       <li>水晶体の屈折率は一様としています（本物は中心ほど高い）。調節で、形をゆがめる度合い（非球面の係数）は変えていません。10 D をこえる調節は、式をそのままのばした推定です。</li>
-      <li>年齢で変わるのは調節できる幅だけです（水晶体の形・ひとみの大きさの年齢による変化は入れていません）。近視・遠視は目の長さだけを変えています。</li>
+      <li>年齢で変わるのは調節できる幅と、暗さに慣れる速さだけです（水晶体の形・ひとみの大きさの年齢による変化は入れていません）。近視・遠視は目の長さだけを変えています。</li>
       <li>光の回折、色によるずれ（色収差）、網膜の細胞の細かさは入れていません。「見え方」は、網膜のぼけの広がりを同じ広がりのぼかしにして近似したものです。「ぼやける」は、ぼけの円が 2 分（1/30 度）より大きいときとしています（このアプリの目安）。</li>
       <li>メガネは角膜の 12 mm 手前のうすいレンズとし、度は 0.25 D きざみ。遠く用は遠くがいちばんくっきりする度、近く用は 40 cm を調節の半分の力で見られる度（このアプリの決め方）です。</li>
-      <li>時間の変化: ピント合わせとひとみは、遅れのあと指数関数で近づくとしています。ピント合わせの速さ（時定数）は、測られたピーク速度の式から「動く量 ÷ ピーク速度」で決めています（遅れは遠くへの切りかえで測られた約 0.3 秒を、近くへにも使用）。ひとみの縮む・開く時定数（0.35 秒・6 秒）は、論文に書かれた経過に合うように決めた推定です。年齢による速さの変化、ピントのわずかなゆれ、近くを見るときにひとみが縮む反応、暗さに目が慣れる（網膜の感度が上がる）ことは入れていません。</li>
+      <li>時間の変化: ピント合わせとひとみは、遅れのあと指数関数で近づくとしています。ピント合わせの速さ（時定数）は、測られたピーク速度の式から「動く量 ÷ ピーク速度」で決めています（遅れは遠くへの切りかえで測られた約 0.3 秒を、近くへにも使用）。ひとみの縮む・開く時定数（0.35 秒・6 秒）は、論文に書かれた経過に合うように決めた推定です。年齢によるピント合わせの速さの変化、ピントのわずかなゆれ、近くを見るときにひとみが縮む反応は入れていません。</li>
       <li>乱視: 角膜の前の面だけを、ある向きで強くしています（水晶体による乱視は入れていません）。光線は強い向きと弱い向きの2つの断面の中だけで追い、見え方のぼけはその2つの広がりを、その向きにそろえただ円のぼかしにしています（2つの断面の外を斜めに進む光線は計算していません）。ピント合わせは、2つのぼけの平均がいちばん小さくなる所をねらうとしています。</li>
       <li>暗順応: 錐体の頭打ちの高さ（−1.4 log cd/m²）・桿体のいちばん低いしきい値（−4.6）・錐体の慣れる速さ（時定数 1.5 分）・終わりのゆっくりした部分・前の明るさから決める桿体のはじめの高さ・明るくなったときの速さ（数秒）は、測られた値（切りかわり約7分、30分後 −4.4、強い光で約5桁感度が下がる、錐体は 5〜10 分で頭打ち）に合うように決めた推定です。しきい値は 1° の光の点が見えるかどうかの値で、視力表の見え方の明るさは「しきい値をどれだけ上回るか」から決めた目安です。桿体だけのときの視力の上限 0.16（Shlaer 1937）は、すきま 6 分がやっと分かるぼかしで表しています（推定）。色の見え方の変化は入れていません。</li>
       <li>視神経は、場所を示すために断面に描いています（実際は中心窩より鼻の側にあります）。</li>
@@ -65,6 +75,47 @@
     </ul>
     <h3>使っているもの</h3>
     <p>フォント: Google Fonts（SIL Open Font License）</p>
+  </details>
+  <details id="about-en" lang="en">
+    <summary>About this app</summary>
+    <p>The eye is cut in half and each ray of light is calculated one by one. At every surface the ray is bent with Snell’s law (the law of refraction), and only light that passes through the pupil is followed to the retina. The eye’s sizes and refractive indices come from an eye model used in research (Navarro et al. 1985). How the lens changes shape to look at near things (accommodation) also uses that paper’s formulas.</p>
+    <p>Focusing searches for the accommodation that makes the blur on the retina smallest, within what is possible at that age (the average formula of Hofstetter 1950). Pupil size comes from the light level using Crawford’s 1936 formula (the light levels are rough examples).</p>
+    <p>When you change where you look or how bright it is, the eye does not catch up at once. Focusing starts after a delay of about 0.3 s and then moves faster for bigger changes (the speed relation measured by Bharadwaj &amp; Schor 2006). The pupil shrinks in about 1 s after a delay of about 0.2 s when it gets bright, and slowly opens over about 20 s when it gets dark (Mathôt 2018; Gray et al. 2024). The “Over time” graph shows how blur, focusing, the pupil and dark adaptation change meanwhile.</p>
+    <p>Astigmatism means the cornea is curved a little differently in different directions. Here the front of the cornea is made 0.75–3 D more curved in one direction (vertical, horizontal or diagonal), and rays are calculated in two slices: along that “stronger” direction and at right angles to it (the “weaker” direction). What you see uses a blur whose size differs by direction (an oval blur). Glasses for astigmatism (a cylinder lens) get a separate power for each of the two directions.</p>
+    <p>In the dark, the eye slowly becomes more sensitive over minutes (dark adaptation). The dimmest light you can see (the threshold) is calculated for two kinds of cells: cones, which work in bright light, and rods, which work in dim light. After bright light, the cones level off within a few minutes; around 7 min the rods take over (about 7 min in Patryas et al. 2013), become 0.23 log units more sensitive per minute (slower over age 45), and reach their best after about 30 min. When only rods are seeing, the middle of the view goes missing, because the fovea has no rods (1.25° across; Curcio et al. 1990).</p>
+    <h3>What is simplified</h3>
+    <ul>
+      <li>Rays are followed only in one up-and-down slice. The retina is treated as a sphere of radius 12 mm (really a slightly flattened ellipsoid).</li>
+      <li>The lens has one refractive index throughout (a real lens is higher in the middle). Accommodation does not change how much the surfaces bend away from a sphere (the asphere constants). Accommodation above 10 D extends the formula as is (an estimate).</li>
+      <li>Age changes only how much the eye can focus and how fast it gets used to the dark (age changes in lens shape and pupil size are not included). Near- and farsightedness change only the eye’s length.</li>
+      <li>Diffraction, color fringes (chromatic aberration) and the fineness of retinal cells are not included. “What you see” approximates the spread of the blur on the retina with a blur of the same spread. “Blurry” means the blur circle is larger than 2 arcmin (1/30°) (this app’s rough guide).</li>
+      <li>Glasses are a thin lens 12 mm in front of the cornea, in 0.25 D steps. “For distance” is the power that makes far things sharpest; “for reading” is the power that lets you see 40 cm with half of your focusing effort (this app’s rule).</li>
+      <li>Over time: focusing and the pupil approach their targets exponentially after a delay. The focusing speed (time constant) is “size of change ÷ peak speed” using the measured peak-speed formulas (the about-0.3 s delay was measured when switching to far; it is also used for near). The pupil’s shrinking and opening time constants (0.35 s and 6 s) are estimates chosen to match the time courses described in the papers. Age changes in focusing speed, tiny focusing wobbles, and the pupil shrinking when looking near are not included.</li>
+      <li>Astigmatism: only the front of the cornea is made stronger in one direction (astigmatism from the lens is not included). Rays are followed only in the two slices (stronger and weaker), and the blur in “What you see” is an oval blur lined up with those directions (rays traveling outside the two slices are not calculated). Focusing aims for the smallest average of the two blurs.</li>
+      <li>Dark adaptation: the cone level-off (−1.4 log cd/m²), the lowest rod threshold (−4.6), the cone time constant (1.5 min), the slow last part, the rods’ starting height set from the earlier light level, and the speed of readjusting to bright light (a few seconds) are estimates chosen to match measured values (switch to rods at about 7 min, −4.4 after 30 min, about 5 log units of sensitivity lost after bright light, cones level off within 5–10 min). The threshold is for seeing a 1° spot of light; how bright the chart looks is a rough guide based on how far the light is above the threshold. The rod-only acuity limit of 0.16 (Shlaer 1937) is shown as a blur that just lets a 6-arcmin gap be seen (an estimate). Changes in color vision are not included.</li>
+      <li>The optic nerve is drawn in this slice only to show it (it really lies toward the nose from the fovea).</li>
+    </ul>
+    <p><b>This is simplified for learning. It cannot be used to judge eye diseases or eyesight, or to choose glasses.</b> Please see an eye doctor about your eyes.</p>
+    <h3>Main sources</h3>
+    <ul>
+      <li>Navarro R, Santamaría J, Bescós J (1985) Accommodation-dependent model of the human eye with aspherics. <i>Journal of the Optical Society of America A</i> 2(8):1273–1281. <a href="https://doi.org/10.1364/JOSAA.2.001273" target="_blank" rel="noopener">doi:10.1364/JOSAA.2.001273</a> (eye sizes, refractive indices, accommodation formulas)</li>
+      <li>Hofstetter HW (1950) Useful age-amplitude formula. <i>Optometric World</i> 38:42–45 (average focusing range by age: 18.5 − 0.30 × age D)</li>
+      <li>Watson AB, Yellott JI (2012) A unified formula for light-adapted pupil size. <i>Journal of Vision</i> 12(10):12 (a review of pupil-size formulas; this app uses Crawford’s 1936 formula from it)</li>
+      <li>Bharadwaj SR, Schor CM (2006) Dynamic control of ocular disaccommodation: first and second-order dynamics. <i>Vision Research</i> 46(6–7):1019–1037. <a href="https://doi.org/10.1016/j.visres.2005.06.005" target="_blank" rel="noopener">doi:10.1016/j.visres.2005.06.005</a> (focusing delay about 300 ms; peak-speed formulas: to near 1.58 × change + 3.42 D/s, to far 1.4355 × starting focus + 1.13 D/s)</li>
+      <li>Metlapally S, Tong JL, Tahir HJ, Schor CM (2016) Potential role for microfluctuations as a temporal directional cue to accommodation. <i>Journal of Vision</i> 16(6):19 (response delay 175–375 ms)</li>
+      <li>Mathôt S (2018) Pupillometry: psychology, physiology, and function. <i>Journal of Cognition</i> 1(1):16. <a href="https://doi.org/10.5334/joc.18" target="_blank" rel="noopener">doi:10.5334/joc.18</a> (pupil: no change for 0.2 s after a light turns on, shrinks by 1.5 s; after it turns off, slowly recovers over 10–30 s)</li>
+      <li>Gray NS et al. (2024) Measuring the pupillary light reflex using portable instruments in applied settings. <i>Vision</i> 8(4):60. <a href="https://doi.org/10.3390/vision8040060" target="_blank" rel="noopener">doi:10.3390/vision8040060</a> (pupil delay 200–300 ms; smallest at 800–1200 ms)</li>
+      <li>Patryas L et al. (2013) Assessment of age changes and repeatability for computer-based rod dark adaptation. <i>Graefe’s Archive for Clinical and Experimental Ophthalmology</i> 251:1821–1827. <a href="https://doi.org/10.1007/s00417-013-2324-5" target="_blank" rel="noopener">doi:10.1007/s00417-013-2324-5</a> (dark adaptation: switch to rods at about 7 min; rod speed 0.23 (0.19 over age 45) and final part 0.05 log units/min; −4.4 log cd/m² after 30 min)</li>
+      <li>Bakdalieh A et al. (2025) Dark adaptometry as a diagnostic tool in retinal diseases. <i>Journal of Clinical Medicine</i> 14(11):3742. <a href="https://doi.org/10.3390/jcm14113742" target="_blank" rel="noopener">doi:10.3390/jcm14113742</a> (cones level off within 5–10 min; rods keep improving up to about 40 min)</li>
+      <li>Hecht S, Haig C, Chase AM (1937) The influence of light adaptation on subsequent dark adaptation of the eye. <i>Journal of General Physiology</i> 20(6):831–850. <a href="https://doi.org/10.1085/jgp.20.6.831" target="_blank" rel="noopener">doi:10.1085/jgp.20.6.831</a> (after dim light only rods adapt; the brighter the earlier light, the later the rods take over)</li>
+      <li>Curcio CA, Sloan KR, Kalina RE, Hendrickson AE (1990) Human photoreceptor topography. <i>Journal of Comparative Neurology</i> 292(4):497–523. <a href="https://doi.org/10.1002/cne.902920402" target="_blank" rel="noopener">doi:10.1002/cne.902920402</a> (the rod-free zone of the fovea is 1.25° across)</li>
+      <li>Shlaer S (1937) The relation between visual acuity and illumination. <i>Journal of General Physiology</i> 21(2):165–188. <a href="https://doi.org/10.1085/jgp.21.2.165" target="_blank" rel="noopener">doi:10.1085/jgp.21.2.165</a> (acuity with rods is at most 0.16)</li>
+      <li>Kovesi P (2010) Fast almost-Gaussian filtering. DICTA 2010 (how the blur in “What you see” is computed)</li>
+      <li>Atchison DA et al. (2005) Shape of the retinal surface in emmetropia and myopia. <i>Investigative Ophthalmology &amp; Visual Science</i> 46(8):2698–2707 (shape of the retina)</li>
+      <li>ISO 8596 (the Landolt-ring eye chart)</li>
+    </ul>
+    <h3>What it uses</h3>
+    <p>Fonts: Google Fonts (SIL Open Font License)</p>
   </details>
 </div>
 

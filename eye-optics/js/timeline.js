@@ -3,9 +3,9 @@
 'use strict';
 
 const TL = { rec: [], ev: [], win: 6, lastT: -1, live: null, drag: false };
-const SPEEDS = [{ v: 0.1, label: '1/10', title: 'スロー 1/10 倍' }, { v: 0.25, label: '1/4', title: 'スロー 1/4 倍' }, { v: 1, label: 'ふつう', title: 'ふつうの速さ' }, { v: 4, label: '×4', title: 'はやおくり 4 倍' }, { v: 60, label: '×60', title: 'はやおくり 60 倍（1秒で1分）' }];
+const SPEEDS = [{ v: 0.1, label: '1/10', title: L('スロー 1/10 倍', 'Slow motion 1/10') }, { v: 0.25, label: '1/4', title: L('スロー 1/4 倍', 'Slow motion 1/4') }, { v: 1, label: L('ふつう', 'Normal'), title: L('ふつうの速さ', 'Normal speed') }, { v: 4, label: '×4', title: L('はやおくり 4 倍', 'Fast-forward ×4') }, { v: 60, label: '×60', title: L('はやおくり 60 倍（1秒で1分）', 'Fast-forward ×60 (1 s = 1 min)') }];
 const WINS = [6, 30, 2400];   // グラフの長さ（秒）。2400 秒＝40 分（暗さに慣れる）
-const winLabel = w => w >= 60 ? w / 60 + '分' : w + '秒';
+const winLabel = w => w >= 60 ? w / 60 + L('分', ' min') : w + L('秒', ' s');
 const COND_KEYS = ['age', 'len', 'glasses', 'light', 'astigP', 'astigAx'];
 const BLUR_OK = 2;   // ぼけの円 2 分（このアプリの「ぼやける」の目安）
 
@@ -67,40 +67,40 @@ function tlLayout() {
 }
 function tlDraw() {
   const c = document.getElementById('tl'); if (!c) return;
-  const dpr = Math.min(2, window.devicePixelRatio || 1), L = tlLayout();
-  if (c.width !== Math.round(L.W * dpr) || c.height !== Math.round(L.H * dpr)) { c.width = Math.round(L.W * dpr); c.height = Math.round(L.H * dpr); }
-  const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, L.W, L.H);
+  const dpr = Math.min(2, window.devicePixelRatio || 1), Ly = tlLayout();
+  if (c.width !== Math.round(Ly.W * dpr) || c.height !== Math.round(Ly.H * dpr)) { c.width = Math.round(Ly.W * dpr); c.height = Math.round(Ly.H * dpr); }
+  const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, Ly.W, Ly.H);
   const tEnd = TL.live ? TL.rec.length ? TL.rec[TL.rec.length - 1].t : S.t : S.t, t0 = tEnd - TL.win;
-  const tx = t => L.lx + (t - t0) / TL.win * (L.rx - L.lx);
+  const tx = t => Ly.lx + (t - t0) / TL.win * (Ly.rx - Ly.lx);
   const font = getComputedStyle(document.documentElement);
   const fb = font.getPropertyValue('--f-body'), fm = font.getPropertyValue('--f-mono');
   // 段の背景と名前
-  const names = [['見え方のぼけ', 'ぼけ'], ['調節（ピント）', '調節'], ['ひとみ', 'ひとみ'], ['暗さ慣れ', '暗さ慣れ']];
+  const names = [[L('見え方のぼけ', 'Blur'), L('ぼけ', 'Blur')], [L('調節（ピント）', 'Focusing'), L('調節', 'Focus')], [L('ひとみ', 'Pupil'), L('ひとみ', 'Pupil')], [L('暗さ慣れ', 'Dark'), L('暗さ慣れ', 'Dark')]];
   g.font = `11px ${fb}`; g.textAlign = 'left'; g.textBaseline = 'middle';
   for (let i = 0; i < 4; i++) {
-    const y = L.lanes[i];
-    g.fillStyle = 'rgba(255,255,255,0.035)'; g.fillRect(L.lx, y, L.rx - L.lx, L.lh);
-    g.fillStyle = '#a3b4bf'; g.fillText(names[i][L.narrow ? 1 : 0], 4, y + L.lh / 2);
+    const y = Ly.lanes[i];
+    g.fillStyle = 'rgba(255,255,255,0.035)'; g.fillRect(Ly.lx, y, Ly.rx - Ly.lx, Ly.lh);
+    g.fillStyle = '#a3b4bf'; g.fillText(names[i][Ly.narrow ? 1 : 0], 4, y + Ly.lh / 2);
   }
   // 時刻の目盛り（いま から何秒前）
   g.font = `10px ${fm}`; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = '#7f919c';
   const step = TL.win <= 6 ? 1 : TL.win <= 30 ? 5 : 600;
-  for (let s = 0; s <= TL.win; s += step) { const x = tx(tEnd - s); g.fillRect(x - 0.5, L.H - L.top + 2 - 14, 1, 3); g.fillText(s === 0 ? 'いま' : `−${s >= 60 ? s / 60 + '分' : s + '秒'}`, Math.min(L.rx - 12, Math.max(L.lx + 12, x)), L.H - 3); }
+  for (let s = 0; s <= TL.win; s += step) { const x = tx(tEnd - s); g.fillRect(x - 0.5, Ly.H - Ly.top + 2 - 14, 1, 3); g.fillText(s === 0 ? L('いま', 'now') : `−${s >= 60 ? s / 60 + L('分', ' min') : s + L('秒', ' s')}`, Math.min(Ly.rx - 12, Math.max(Ly.lx + 12, x)), Ly.H - 3); }
   // 切りかえの印
   g.font = `10px ${fb}`; g.textAlign = 'left';
   let leftEdge = Infinity;   // 新しい印から順に書き、文字が重なる古い印は線だけ
   for (let i = TL.ev.length - 1; i >= 0; i--) {
     const e = TL.ev[i];
     if (e.t < t0 || e.t > tEnd) continue;
-    const x = tx(e.t), w = g.measureText(e.label).width, lx = Math.min(x + 3, L.rx - w);
-    g.strokeStyle = 'rgba(127,212,255,0.55)'; g.setLineDash([2, 3]); g.beginPath(); g.moveTo(x, L.top - 2); g.lineTo(x, L.H - L.top - 2); g.stroke(); g.setLineDash([]);
+    const x = tx(e.t), w = g.measureText(e.label).width, lx = Math.min(x + 3, Ly.rx - w);
+    g.strokeStyle = 'rgba(127,212,255,0.55)'; g.setLineDash([2, 3]); g.beginPath(); g.moveTo(x, Ly.top - 2); g.lineTo(x, Ly.H - Ly.top - 2); g.stroke(); g.setLineDash([]);
     if (lx + w + 6 < leftEdge) { g.fillStyle = '#7fd4ff'; g.fillText(e.label, lx, 10); leftEdge = lx; }
   }
   const rec = TL.rec; let i0 = 0;
   while (i0 < rec.length && rec[i0].t < t0) i0++;
   i0 = Math.max(0, i0 - 1);
   const line = (lane, val, lo, hi, color, dash) => {
-    const y0 = L.lanes[lane], yv = v => y0 + L.lh - Math.max(0, Math.min(1, (v - lo) / (hi - lo))) * L.lh;
+    const y0 = Ly.lanes[lane], yv = v => y0 + Ly.lh - Math.max(0, Math.min(1, (v - lo) / (hi - lo))) * Ly.lh;
     g.strokeStyle = color; g.lineWidth = dash ? 1.2 : 1.8; g.setLineDash(dash ? [4, 3] : []);
     g.beginPath(); let started = false;
     for (let i = i0; i < rec.length; i++) { const x = tx(rec[i].t), y = yv(val(rec[i])); started ? g.lineTo(x, y) : g.moveTo(x, y); started = true; }
@@ -115,9 +115,9 @@ function tlDraw() {
     g.strokeStyle = b.blur > BLUR_OK ? '#ffb070' : '#9be59b'; g.lineWidth = 2;
     g.beginPath(); g.moveTo(tx(a.t), yb(bl(a.blur))); g.lineTo(tx(b.t), yb(bl(b.blur))); g.stroke();
   }
-  g.strokeStyle = 'rgba(255,176,112,0.45)'; g.setLineDash([2, 3]); g.beginPath(); g.moveTo(L.lx, yb(bl(BLUR_OK))); g.lineTo(L.rx, yb(bl(BLUR_OK))); g.stroke(); g.setLineDash([]);
+  g.strokeStyle = 'rgba(255,176,112,0.45)'; g.setLineDash([2, 3]); g.beginPath(); g.moveTo(Ly.lx, yb(bl(BLUR_OK))); g.lineTo(Ly.rx, yb(bl(BLUR_OK))); g.stroke(); g.setLineDash([]);
   g.font = `10px ${fb}`; g.fillStyle = 'rgba(255,176,112,0.85)'; g.textAlign = 'right';
-  if (!L.narrow) g.fillText('ぼやける目安', L.rx - 2, yb(bl(BLUR_OK)) - 3);
+  if (!Ly.narrow) g.fillText(L('ぼやける目安', 'blurry (rough guide)'), Ly.rx - 2, yb(bl(BLUR_OK)) - 3);
   // 調節（D）: ねらい（点線）と実際（実線）
   let amax = 1; for (let i = i0; i < rec.length; i++) amax = Math.max(amax, rec[i].At, rec[i].A);
   amax = Math.ceil(amax);
@@ -126,33 +126,33 @@ function tlDraw() {
   // ひとみ（mm）: 2〜8 mm
   line(2, r => pupilShown(r.stopR), 2, 8, '#7fe0ff', false);
   // 暗さ慣れ: 見える最小の明るさ（しきい値、log cd/m²）。下ほど敏感。錐体は橙、桿体は紫。点線はいまの明るさ（線より上なら見える）
-  const yd = v => L.lanes[3] + Math.max(0, Math.min(1, (v + 5) / 7)) * L.lh;   // +2（上）〜 −5（下）を上下さかさに: 敏感なほど下
-  const ydInv = v => L.lanes[3] + L.lh - (yd(v) - L.lanes[3]);
+  const yd = v => Ly.lanes[3] + Math.max(0, Math.min(1, (v + 5) / 7)) * Ly.lh;   // +2（上）〜 −5（下）を上下さかさに: 敏感なほど下
+  const ydInv = v => Ly.lanes[3] + Ly.lh - (yd(v) - Ly.lanes[3]);
   for (let i = Math.max(i0, 1); i < rec.length; i++) {
     const a = rec[i - 1], b = rec[i], va = Math.min(a.cone, a.rod), vb = Math.min(b.cone, b.rod);
     g.strokeStyle = b.rod < b.cone ? '#c9a2ff' : '#ffb070'; g.lineWidth = 2;
     g.beginPath(); g.moveTo(tx(a.t), ydInv(va)); g.lineTo(tx(b.t), ydInv(vb)); g.stroke();
   }
   { const lL = Math.log10(lightOf().L); g.strokeStyle = 'rgba(232,240,244,0.55)'; g.setLineDash([4, 3]); g.lineWidth = 1.2;
-    g.beginPath(); g.moveTo(L.lx, ydInv(lL)); g.lineTo(L.rx, ydInv(lL)); g.stroke(); g.setLineDash([]);
-    if (!L.narrow) { g.font = `10px ${fb}`; g.fillStyle = 'rgba(232,240,244,0.7)'; g.textAlign = 'right'; g.fillText('いまの明るさ（これより下の線なら見える）', L.rx - 2, ydInv(lL) - 3); } }
+    g.beginPath(); g.moveTo(Ly.lx, ydInv(lL)); g.lineTo(Ly.rx, ydInv(lL)); g.stroke(); g.setLineDash([]);
+    if (!Ly.narrow) { g.font = `10px ${fb}`; g.fillStyle = 'rgba(232,240,244,0.7)'; g.textAlign = 'right'; g.fillText(L('いまの明るさ（これより下の線なら見える）', 'light level now (seen if the line is below it)'), Ly.rx - 2, ydInv(lL) - 3); } }
   // 段の右上の数字（目盛り）
   g.font = `10px ${fm}`; g.fillStyle = '#7f919c'; g.textAlign = 'left'; g.textBaseline = 'top';
-  g.fillText('12分', L.lx + 3, L.lanes[0] + 1); g.fillText(`${amax} D`, L.lx + 3, L.lanes[1] + 1); g.fillText('8 mm', L.lx + 3, L.lanes[2] + 1); g.fillText('明るい', L.lx + 3, L.lanes[3] + 1);
+  g.fillText(L('12分', '12′'), Ly.lx + 3, Ly.lanes[0] + 1); g.fillText(`${amax} D`, Ly.lx + 3, Ly.lanes[1] + 1); g.fillText('8 mm', Ly.lx + 3, Ly.lanes[2] + 1); g.fillText(L('明るい', 'bright'), Ly.lx + 3, Ly.lanes[3] + 1);
   g.textBaseline = 'alphabetic';
   // ふりかえりの線
   if (S.replay) {
     const x = tx(S.replay.t);
-    g.strokeStyle = '#ffffff'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x, L.top - 4); g.lineTo(x, L.H - L.top); g.stroke();
-    g.fillStyle = '#ffffff'; g.font = `11px ${fm}`; g.textAlign = x > L.rx - 60 ? 'right' : 'left';
-    g.fillText(`−${(tEnd - S.replay.t).toFixed(2)}秒`, x + (g.textAlign === 'right' ? -4 : 4), L.lanes[1] + L.lh / 2);
+    g.strokeStyle = '#ffffff'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x, Ly.top - 4); g.lineTo(x, Ly.H - Ly.top); g.stroke();
+    g.fillStyle = '#ffffff'; g.font = `11px ${fm}`; g.textAlign = x > Ly.rx - 60 ? 'right' : 'left';
+    g.fillText(`−${(tEnd - S.replay.t).toFixed(2)}${L('秒', ' s')}`, x + (g.textAlign === 'right' ? -4 : 4), Ly.lanes[1] + Ly.lh / 2);
   }
 }
 
 function tlInit() {
   const c = document.getElementById('tl');
-  const tAt = e => { const L = tlLayout(), b = c.getBoundingClientRect(); const x = Math.max(L.lx, Math.min(L.rx, e.clientX - b.left));
-    const tEnd = TL.live ? TL.rec[TL.rec.length - 1].t : S.t; return tEnd - TL.win + (x - L.lx) / (L.rx - L.lx) * TL.win; };
+  const tAt = e => { const Ly = tlLayout(), b = c.getBoundingClientRect(); const x = Math.max(Ly.lx, Math.min(Ly.rx, e.clientX - b.left));
+    const tEnd = TL.live ? TL.rec[TL.rec.length - 1].t : S.t; return tEnd - TL.win + (x - Ly.lx) / (Ly.rx - Ly.lx) * TL.win; };
   c.addEventListener('pointerdown', e => { if (!TL.rec.length) return; TL.drag = true; c.setPointerCapture(e.pointerId); tlReplayAt(tAt(e)); });
   c.addEventListener('pointermove', e => { if (TL.drag) tlReplayAt(tAt(e)); });
   const end = () => { TL.drag = false; };
