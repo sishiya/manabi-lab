@@ -71,13 +71,6 @@ function drawScene(g, w, h, sc, view) {
     g.fillStyle = `rgba(255,240,245,${0.3 * (1 - sc.since / 0.35)})`;
     for (const i of sc.flash.idx) g.fillRect(GEOM.xs[i] - SIM.gapMM * s / 2, 0, SIM.gapMM * s, h);
   }
-  // 塗っているところ（肌の表面の上だけ）
-  if (sc.paint) {
-    g.save(); g.beginPath(); g.rect(0, 0, w, y0 + 0.12 * s); g.clip();
-    g.fillStyle = TOOL_COLOR[sc.paint.tool] + '55';
-    for (const [px, py] of sc.paint.pts) { g.beginPath(); g.arc(px, py, sc.paint.r, 0, Math.PI * 2); g.fill(); }
-    g.restore();
-  }
   // 手入れの印: 手入れした毛穴の肌の表面に、道具の色の帯（30日でうすれる）
   for (const [i, m] of Object.entries(sc.marks || {})) {
     g.globalAlpha = Math.max(0.15, 1 - m.age / 30); g.fillStyle = TOOL_COLOR[m.type];
@@ -87,6 +80,7 @@ function drawScene(g, w, h, sc, view) {
   }
   for (let i = 0; i < N; i++) drawTag(g, sc.fs[i], GEOM.xs[i], Y, i === 0, narrow, i + 1, sc.recover && sc.recover[i]);
 
+  if (sc.tool) drawTool(g, sc.tool, y0, s, w, h);
   // 深さの目盛り（左はし）
   g.fillStyle = 'rgba(15,26,38,.7)'; g.fillRect(0, 0, 22, h);
   g.fillStyle = C.label; g.font = '10px "IBM Plex Mono", monospace'; g.textAlign = 'right'; g.textBaseline = 'middle';
@@ -115,7 +109,7 @@ function drawScene(g, w, h, sc, view) {
   // 光の結果の箱
   if (sc.flash && sc.since < 21 && !narrow) {
     const F = sc.flash, lines = [F.nA ? `毛母 最高 ${F.Tm.toFixed(0)}°C` : '色のある毛球なし', `いたむ ${F.hit}/${F.nA}`, `肌 ${F.Tepi.toFixed(0)}°C${F.omEpi >= 1 ? ' やけど' : F.omEpi >= 0.1 ? ' 熱い' : ''}`];
-    if (F.Thair) lines.push(`表の毛 ${F.Thair.toFixed(0)}°C`);
+    if (F.Thair) lines.push(`表の毛 ${Math.min(999, F.Thair).toFixed(0)}°C${F.charred ? ' 焦げた' : ''}`, `根もとへの光 −${(F.shade * 100).toFixed(0)}%`);
     g.font = '11px "Zen Kaku Gothic New", sans-serif'; g.textBaseline = 'top';
     const bw = Math.max(...lines.map(t => g.measureText(t).width)) + 10, bh = lines.length * 15 + 6, bx = w - bw - 6, byy = h - bh - 6;
     g.fillStyle = 'rgba(15,26,38,.85)'; g.fillRect(bx, byy, bw, bh);
@@ -195,7 +189,13 @@ function drawFollicle(g, f, x, y0, s, sc, i) {
       outsidePts(pts, x, y0, s, above, k, null, i);
       for (let q = 2; q < pts.length; q += 2) GEOM.pick.push({ i, x: pts[q][0], y: pts[q][1] });
     }
-    drawHairPath(g, pts, w, tapered, hp, hr.burnt, s);
+    drawHairPath(g, pts, w, tapered && !hr.singed, hp, hr.burnt, s);
+    if (hr.singed && pts.length > 2) {   // 焦げた毛: 表面から上が炭色で、先が縮れている
+      const out = pts.slice(1);
+      g.strokeStyle = 'rgba(43,43,43,.9)'; g.lineWidth = w * 1.1; g.lineCap = 'round'; g.beginPath(); out.forEach(([px, py], q) => q ? g.lineTo(px, py) : g.moveTo(px, py)); g.stroke();
+      const [ex, ey] = out[out.length - 1]; g.fillStyle = '#2b2b2b'; g.beginPath(); g.arc(ex, ey, w * 1.3, 0, Math.PI * 2); g.fill();
+      hit(ex, ey, 9, 'singed');
+    }
     if (hr.club) { g.fillStyle = '#f3ead8'; g.beginPath(); g.ellipse(x, Y(r), w * 0.9, w * 1.3, 0, 0, Math.PI * 2); g.fill(); if (i === 0) hit(x, Y(r), 8, 'club'); }
     const end = pts[pts.length - 1];
     if (hp <= 0 && tip < 0) hit(end[0], end[1], 9, 'white');
@@ -218,7 +218,11 @@ function drawGhost(g, x, y0, s, gh) {
   for (const hr of gh.hairs) {
     const p = gh.p, w = Math.max(2.5, 0.075 * s * hr.diam) * hr.thin;
     let root, dx = 0, dy = 0, alpha = 1;
-    if (gh.kind === 'pluck') {
+    if (gh.kind === 'cut') {
+      // 切れた毛先: 一瞬とまって、切り口から離れて飛んでいく
+      root = 0; const r = Math.max(0, (p - 0.15) / 0.85);
+      dx = r * 1.4 * s; dy = -(0.08 + r * 1.1) * s; alpha = 1 - r;
+    } else if (gh.kind === 'pluck') {
       const q = smooth(Math.min(1, p / 0.6));
       root = hr.root - q * (hr.root + 0.8);
       alpha = p < 0.6 ? 1 : 1 - (p - 0.6) / 0.4;
@@ -238,6 +242,41 @@ function drawGhost(g, x, y0, s, gh) {
     else if (hr.club) { g.fillStyle = '#f3ead8'; g.beginPath(); g.ellipse(rx, ry, w * 0.9, w * 1.3, 0, 0, Math.PI * 2); g.fill(); }
     g.restore();
   }
+}
+
+// 道具（tool = {kind, ptr, stroke, sweep, windowMM, razorMM}）
+function drawTool(g, tool, y0, s, w, h) {
+  const p = tool.ptr;
+  if (tool.kind === 'light' && p) {
+    // 照射口: 実物の幅で、肌の表面にあてた形
+    const half = tool.windowMM / 2 * s, x0 = p.x - half, top = Math.max(2, y0 - 0.7 * s);
+    g.fillStyle = 'rgba(255,143,177,.13)'; g.fillRect(x0, top, half * 2, y0 - top);
+    g.strokeStyle = '#ff8fb1'; g.lineWidth = 2; g.strokeRect(x0, top, half * 2, y0 - top);
+    g.fillStyle = 'rgba(255,143,177,.35)'; g.fillRect(x0, y0 - 3, half * 2, 3);
+    g.fillStyle = '#ffd3e0'; g.font = '700 11px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'top';
+    g.fillText('照射口 2 cm（実物大）', Math.max(70, Math.min(w - 70, p.x)), top + 3); g.textAlign = 'left';
+  }
+  if (tool.kind === 'shave') {
+    if (tool.stroke) {   // すべらせている所
+      const a = Math.min(tool.stroke.a, tool.stroke.b) - tool.razorMM * s, b = Math.max(tool.stroke.a, tool.stroke.b) + tool.razorMM * s;
+      g.fillStyle = 'rgba(127,200,255,.35)'; g.fillRect(a, y0 - 4, b - a, 6);
+    }
+    const rx = tool.sweep ? tool.sweep.x : tool.stroke ? tool.stroke.b : p && p.x;
+    if (rx != null) drawRazor(g, rx, y0, s);
+  }
+  if (tool.kind === 'pluck' && p) {   // 毛抜きの先
+    g.strokeStyle = '#ffd166'; g.lineWidth = 2.5; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(p.x - 2, p.y); g.lineTo(p.x + 14, p.y - 30); g.moveTo(p.x + 3, p.y + 1); g.lineTo(p.x + 22, p.y - 26); g.stroke();
+  }
+}
+function drawRazor(g, x, y0, s) {
+  // 刃（肌にふれる線）と、上に頭とえ
+  g.save(); g.translate(x, y0);
+  g.fillStyle = 'rgba(200,215,230,.95)'; g.fillRect(-10, -3, 20, 3);                 // 刃
+  g.fillStyle = 'rgba(127,200,255,.9)'; roundRect(g, -14, -14, 28, 11, 4); g.fill();   // 頭
+  g.strokeStyle = 'rgba(127,200,255,.9)'; g.lineWidth = 5; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(4, -14); g.lineTo(22, -46); g.stroke();                     // え
+  g.restore();
 }
 
 // 毛1本（点の列）。先 tapered = とがる（新しく作られた毛）、剃った毛は平ら。ふちが濃く、まん中が明るい

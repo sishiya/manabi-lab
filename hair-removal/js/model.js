@@ -171,7 +171,11 @@ Runner.prototype.applyUpTo = function () {
     const e = this.events[this.k++], idx = e.idx || this.fs.map((_, i) => i);
     if (e.type === 'shave') {
       let n = 0;
-      for (const i of idx) { const f = this.fs[i]; if (f.hairs.some(h => tipH(f, h) > 0)) n++; shave(f); }
+      for (const i of idx) {
+        const f = this.fs[i], cut = f.hairs.filter(h => tipH(f, h) > 0).map(h => Object.assign(hairShape(f, h), { root: 0, L: tipH(f, h), club: false }));
+        if (cut.length) { n++; this.note(t, i, '', 'cut', '', cut); }   // 切れた毛先（図で飛んでいく動き。一覧には出さない）
+        shave(f);
+      }
       this.note(t, null, `カミソリで剃った（${idx.length} 個の毛穴の上。表面から出ていた毛 ${n} 本を切った）`, 'shave');
     } else if (e.type === 'pluck') {
       for (const i of idx) {

@@ -190,15 +190,23 @@ function flashSurface(opt, unshaved, cool = true) {
 }
 
 // 表面に寝ている毛が光をさえぎる割合（剃っていないとき）。60 本/cm² 相当の毛が肌にそって寝ているとして推定
-function hairShade(fs, opt) {
+// 剃っていない毛（表面に寝ている毛）が光をさえぎる・焦げる
+//  毛は空気の中にあって熱がほとんど逃げない → 光る間に吸った熱がそのまま温度になる（断熱）。ρc は毛（ケラチン）の値で推定
+//  焦げる温度をこえると毛は炭になり、そのあとの光をほとんど吸う（どちらも推定）→ 根もとへ届く光がさらに減る
+const HAIR_AIR = { rhoC: 2.0, Tchar: 250, aChar: 0.9 };
+function hairShade(fs, opt, T0) {
   let cover = 0;
   for (const f of fs) for (const h of f.hairs) {
     const above = h.L - rootDepth(f, h);
-    if (above > 0.3) cover += (above / 10) * 0.007 * 60 / fs.length * (h.pig == null ? 1 : h.pig);   // 白い毛はほとんど吸わない   // 長さ cm × 太さ cm × 本数/cm²
+    if (above > 0.3) cover += (above / 10) * 0.007 * 60 / fs.length * (h.pig == null ? 1 : h.pig);   // 長さ cm × 太さ cm × 本数/cm²（白い毛はほとんど吸わない）
   }
   cover = Math.min(0.9, cover);
-  let a = 0; for (const s of opt.spec) a += s.w * (1 - Math.exp(-opt.fh * s.mel * 0.007));
-  return cover * a;     // さえぎられる光の割合
+  let a = 0, q = 0;
+  for (const s of opt.spec) { a += s.w * (1 - Math.exp(-opt.fh * s.mel * 0.0055)); q += s.w * opt.fh * s.mel * s.k0 * opt.F0; }   // 毛を横切る平均の長さ 55 µm
+  const dT = q / HAIR_AIR.rhoC;                         // 断熱で上がる温度
+  const fc = dT > 0 ? Math.min(1, Math.max(0, (HAIR_AIR.Tchar - T0) / dT)) : 1;   // 焦げるまでの光の割合
+  const aEff = a * fc + HAIR_AIR.aChar * (1 - fc);
+  return { shade: cover * aEff, cover, Thair: T0 + dT, charred: fc < 1 };
 }
 
 // 光を1回あてる（idx の毛穴だけ）。L = 光の設定 {level, skin, hair, cool}。できごとを R.log に、結果を R.flashes に残す
@@ -209,14 +217,16 @@ function lightEvent(fs, e, R, idx, L) {
   const F0 = L.level * LIGHT.fPerLevel;
   const opt = { F0, spec, fh: HAIRS[L.hair].fh, fmel: sk.fmel };
   const lit = idx.map(i => fs[i]);
-  const shade = hairShade(lit, opt);                // 剃っていない毛が表面で光をさえぎる
-  const surf = flashSurface(Object.assign({}, opt), shade > 0.01, L.cool);
+  const hs = hairShade(lit, opt, L.cool ? LIGHT.Tskin0 : LIGHT.TskinWarm), shade = hs.cover > 0.01 ? hs.shade : 0;
+  const surf = flashSurface(Object.assign({}, opt), false, L.cool);
+  if (hs.cover > 0.01) { surf.Thair = hs.Thair; surf.charred = hs.charred; }
   opt.F0 *= 1 - shade;
+  if (hs.charred) for (const i of idx) for (const h of fs[i].hairs) if (h.L - rootDepth(fs[i], h) > 0.3) h.singed = true;   // 表面の毛が焦げた
   let nA = 0, hit = 0, Tm = 0;
   const t = e.t;
   const skinWord = surf.omEpi >= 1 ? '（このモデルでは、やけどのおそれ）' : surf.omEpi >= 0.1 ? '（熱い）' : '';
   R.note(t, null, `光をあてた（Lv${L.level}・約 ${F0.toFixed(1)} J/cm²、${idx.length} 個の毛穴の上）。肌の表面（表皮）は最高 ${surf.Tepi.toFixed(0)}°C${skinWord}` +
-    (shade > 0.01 ? `。剃っていない毛が光の ${(shade * 100).toFixed(0)}% をさえぎり、表面の毛は ${surf.Thair.toFixed(0)}°C に（こげる）` : ''), 'light');
+    (shade > 0.01 ? `。剃っていない表面の毛が ${Math.min(999, surf.Thair).toFixed(0)}°C まで熱くなり${hs.charred ? '、焦げて炭になった（炭は光をよく吸う）' : ''}。そのぶん光の ${(shade * 100).toFixed(0)}% が根もとへ届かなかった。焦げた毛がふれる肌は熱い` : ''), 'light');
   for (const i of idx) {
     const f = fs[i], ph = f.ph, doomedBefore = f.doomed;
     const res = flashFollicle(f, opt);

@@ -43,7 +43,7 @@ function syncControls(S) {
 
 // できごとの一覧（いまの日まで・新しい順）
 function renderLog(log, t) {
-  const items = log.filter(n => n.t <= t + 1e-9).slice(-40).reverse();
+  const items = log.filter(n => n.t <= t + 1e-9 && n.kind !== 'cut').slice(-40).reverse();
   $('log').innerHTML = items.map(n => `<li><span class="d">${Math.floor(n.t)}日目</span><span class="n">${n.i == null ? '' : n.i + 1}</span><span>${n.text}</span></li>`).join('') || '<li>まだ何も起きていません</li>';
 }
 
