@@ -22,6 +22,8 @@
 - [ ] 準備ができたら `weekly-report.ps1` を通して中身を確かめる。
 
 ## 道具・そのほか
+- [ ] **リンク切れ**（2026-10-12 の健康診断）: god-view の出どころ `https://www.earthdata.nasa.gov/data/tools/gibs` が 404。NASA GIBS の今のページを探して直す。
+- [ ] **バックアップの写し先を決める**（ユーザー）: OneDrive・外付けなど。決まったら `backup-local.ps1 -Dest "<写し先>"` を1回（以後は健康診断のあと自動）。YouTube の秘密もふくめるか（`-IncludeSecrets`）も。`_dev/RECOVERY.md`
 - [ ] **録画を速くする**（2026-10-10 に調べただけ、未着手）: ① ペインや後ろのタブで録ると `promo.js` の `sleep()`（setTimeout）が間引かれて遅い → 待ちを `dequeue` イベント・`MessageChannel` に ② BGM を全部合成してから映像を始めている（長さの2乗に近く増え、〜1分）→ 並行に ③ 書き出し器に `prefer-hardware`（RTX 5070 の NVENC）④ god-view は地図の読みこみ待ちがほとんど → 先に温める。まず `?bench=300` のような計測モードで、1コマの内訳を測ってから。直したら同じ秒のコマを前とくらべる。
 - [ ] `record-promo.ps1` はプロフィール名 `manabi-record`・ポート 9336 が固定で、終わるときにその名前の Chrome をまとめて止める → **2本を同時に録ると、先に終わった方がもう1本を止める**。台本ごとに分ける。
 - [ ] 文書を軽くする（2026-10-12 の提案、未着手）: `_dev/promo/PLAN-9apps.md`（69KB）は引き継ぎの部分だけ残して台本の下書きを別ファイルへ。`IDEAS.md`（30KB）の作ったテーマは1行にして細かい案は各 `PLAN.md` へ。道具の出力は「NG と注意だけ＋最後の1行」にそろえる（smoke はすみ）。

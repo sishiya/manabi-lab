@@ -18,6 +18,9 @@
 | `youtube-upload.ps1` | YouTube へ上げる・英語・字幕・予約・一覧・`-Stats`（数を読むだけ） | ユーザーの GO のあと（`-Stats`・`-List` は読むだけ） |
 | `x-post.ps1` | X の投稿の下ごしらえ（投稿ボタンはユーザー） | ショートを出すとき |
 | `weekly-report.ps1` | 週のふり返り（Git で作ったもの・動作確認・動画の数・視聴時間と流入元・サイトのアクセス）→ `out/weekly-<日付>.md` | 週に1回 |
+| `health.ps1` | 健康診断: 一時的なローカルのサーバーで smoke（全アプリ）＋ `check-links.mjs`（外へのリンク切れ）→ `out/health-last.md`。終わったら `backup-local.ps1` も。`-Register` で毎週日曜 10:00 に Windows のタスクスケジューラが回す（Claude を使わない＝トークンなし）。問題があったときだけセッションのはじめのフック（`-Hook`）が数行で知らせる | 自動（週1）。手でも |
+| `check-links.mjs` | アプリの html・js の https:// のリンク（出どころなど）を調べる。NG は 404・410・ドメインが無いだけ（403 などは「注意」）→ `out/links-last.json` | health.ps1 から |
+| `backup-local.ps1` | Git に入っていないもの（Claude のメモリ・*.local.*・.private-words.txt・out/）と git bundle を、リポジトリの外の写し先へ。秘密は `-IncludeSecrets` のときだけ（読まず・表示せず）。Git のフォルダの中には写さない。戻し方は `_dev/RECOVERY.md` | 写し先を決めたら health.ps1 のあと自動 |
 | `seo.mjs`（`node _dev/tools/seo.mjs [--check]`） | 入口の `APPS` から、入口と入口のアプリの head の検索・リンクカード（説明文・OGP・hreflang）と `sitemap.xml` を作りなおす（`_dev/REACH.md`） | `APPS` を書きかえたとき（RULES 8.1） |
 | `rep.pl` | 文字列の置きかえ（I18N.md） | 英語対応 |
 | `start.ps1` | ローカルでまなびラボを開く（`start.bat` から） | ユーザーが開くとき |
