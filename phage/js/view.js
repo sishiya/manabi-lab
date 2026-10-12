@@ -71,7 +71,7 @@ const View = (() => {
 
   // ---- 大きさ ----
   function resize() {
-    const r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+    const r = cv.getBoundingClientRect(), dpr = Math.min(1.5, window.devicePixelRatio || 1); // 2倍にすると描く点が約1.8倍になり重い
     if (r.width < 2) return;
     W = r.width; H = r.height;
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
@@ -80,19 +80,59 @@ const View = (() => {
   }
   // カメラの目標（なめらかに近づく）。w は見せたい横はば（nm）
   function look(cx, cy, w, instant) {
-    const s = Math.max(sFit * 0.7, Math.min(sMax, W / Math.max(10, w)));
+    const s = Math.max(W / 4e9, Math.min(sMax, W / Math.max(10, w)));
     // 左下の説明カードにかからないよう、見せたい点を少し上に置く
     cy -= Math.min(70, H * 0.1) / s;
     cam.tcx = cx; cam.tcy = cy; cam.ts = s;
     if (instant) { cam.cx = cx; cam.cy = cy; cam.s = s; }
   }
   function fitAll(instant) { look(0, 330, 2500 * Math.max(1, (W / H) / (2500 / 1900)), instant); }
-  function stepCam(dt) {
-    const k = 1 - Math.exp(-dt * 3.2);
-    // 拡大率は掛け算でなめらかに
-    cam.s = Math.exp(Math.log(cam.s) + (Math.log(cam.ts) - Math.log(cam.s)) * k);
-    cam.cx += (cam.tcx - cam.cx) * k; cam.cy += (cam.tcy - cam.cy) * k;
+  // 動ける範囲: 物語の場所（原点）から、見ている横はばの半分＋少しまで（関係のないところへ行きすぎない）
+  function clampT(c) {
+    const w = W / c.ts, lim = 1600 + 0.55 * w;
+    c.tcx = Math.max(-lim, Math.min(lim, c.tcx)); c.tcy = Math.max(-lim - 0.25 * w, Math.min(lim, c.tcy));
   }
+  function stepCam(dt) {
+    clampT(cam);
+    // おまかせのときはゆっくり（場面が変わっても目が追いつくように）。自分で動かすときはすぐ
+    const k = 1 - Math.exp(-dt * (auto ? 1.1 : 3.2));
+    // 拡大率は掛け算でなめらかに。位置は「画面の上での距離」で近づける（人のからだ → 分子のように大きく寄るとき、目的の場所が画面の外に残らない）
+    const ease2 = (c, q) => { const s0 = c.s; c.s = Math.exp(Math.log(c.s) + (Math.log(c.ts) - Math.log(c.s)) * q); c.cx = c.tcx - (c.tcx - c.cx) * s0 * (1 - q) / c.s; c.cy = c.tcy - (c.tcy - c.cy) * s0 * (1 - q) / c.s; };
+    if (lp.on) ease2(lp, 1 - Math.exp(-dt * 1.6));
+    ease2(cam, k);
+  }
+
+  // ---- ルーペ（左上の小窓）: おまかせカメラは引いたまま、細かいところをここで見せる ----
+  const lp = { on: false, cx: 0, cy: 0, s: 1, tcx: 0, tcy: 0, ts: 1, x: 10, y: 50, size: 0, hot: [], title: '' };
+  function setLoupe(z, title) {
+    if (!z) { lp.on = false; return; }
+    lp.size = Math.round(Math.max(120, Math.min(250, W * 0.34, H * 0.42)));
+    const s = lp.size / Math.max(10, z[2]);
+    if (!lp.on) { lp.cx = z[0]; lp.cy = z[1]; lp.s = s; }
+    lp.tcx = z[0]; lp.tcy = z[1]; lp.ts = s; lp.on = true; lp.title = title || '';
+  }
+  function drawLoupe(fn) {
+    if (!lp.on || !auto) return;
+    const n = lp.size, x0 = lp.x, y0 = lp.y;
+    // 本図の上に、ルーペが見ているところの枠と、つなぐ線
+    const hw = n / 2 / lp.s, a = { x: W / 2 + (lp.cx - hw - cam.cx) * cam.s, y: H / 2 - (lp.cy + hw - cam.cy) * cam.s }, bw = 2 * hw * cam.s;
+    g.save(); g.strokeStyle = 'rgba(255,224,102,.85)'; g.lineWidth = 1.5; g.strokeRect(a.x, a.y, bw, bw);
+    g.setLineDash([4, 4]); g.beginPath(); g.moveTo(x0 + n, y0); g.lineTo(a.x + bw, a.y); g.moveTo(x0 + n, y0 + n); g.lineTo(a.x + bw, a.y + bw); g.moveTo(x0, y0 + n); g.lineTo(a.x, a.y + bw); g.stroke(); g.restore();
+    // ルーペの中を同じ描き方で描く（カメラと大きさを一時的に差しかえる）
+    const keep = { cx: cam.cx, cy: cam.cy, s: cam.s, W, H }, keepHot = hot;
+    cam.cx = lp.cx; cam.cy = lp.cy; cam.s = lp.s; W = n; H = n;
+    g.save(); g.translate(x0, y0); g.beginPath(); g.rect(0, 0, n, n); g.clip();
+    try { fn(); } finally { lp.hot = hot; hot = keepHot; g.restore(); cam.cx = keep.cx; cam.cy = keep.cy; cam.s = keep.s; W = keep.W; H = keep.H; }
+    g.save(); g.strokeStyle = '#ffe066'; g.lineWidth = 2; g.strokeRect(x0, y0, n, n);
+    const t = 'ルーペ' + (lp.title ? ': ' + lp.title : '');
+    g.font = '700 12px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'left'; g.textBaseline = 'top';
+    const tw = Math.min(n - 4, g.measureText(t).width + 10); g.fillStyle = 'rgba(10,22,27,.85)'; g.fillRect(x0 + 2, y0 + 2, tw, 18); g.fillStyle = '#ffe066'; g.fillText(t, x0 + 7, y0 + 5, n - 14);
+    g.restore();
+  }
+  const inLoupe = (px, py) => lp.on && auto && px >= lp.x && px <= lp.x + lp.size && py >= lp.y && py <= lp.y + lp.size;
+
+  // 前のコマと同じ絵になるか（止まっているときは描き直さない）
+  const sig = () => [cam.cx, cam.cy, cam.s, W, H, auto, lp.on, lp.cx, lp.cy, lp.s, View.real].join(',');
 
   // ---- 指・マウス ----
   const tip = document.getElementById('tip');
@@ -101,7 +141,7 @@ const View = (() => {
   function userMoved() { if (auto) { auto = false; View.onAuto && View.onAuto(false); } }
   function zoomAt(px, py, f) {
     const w0 = toWorld(px, py);
-    const s = Math.max(sFit * 0.7, Math.min(sMax, cam.ts * f));
+    const s = Math.max(W / 4e9, Math.min(sMax, cam.ts * f));
     cam.ts = s;
     // カーソルの下の点がそのまま残るように中心を動かす
     cam.tcx = w0.x - (px - W / 2) / s; cam.tcy = w0.y + (py - H / 2) / s;
@@ -125,7 +165,7 @@ const View = (() => {
         const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top;
         zoomAt(mx, my, (pinch.s * d / pinch.d) / cam.ts);
       } else if (drag && moved) {
-        cam.tcx = drag.cx - (e.clientX - drag.x) / cam.s; cam.tcy = drag.cy + (e.clientY - drag.y) / cam.s; cam.cx = cam.tcx; cam.cy = cam.tcy;
+        cam.tcx = drag.cx - (e.clientX - drag.x) / cam.s; cam.tcy = drag.cy + (e.clientY - drag.y) / cam.s; clampT(cam); cam.cx = cam.tcx; cam.cy = cam.tcy;
         userMoved();
       }
       hideTip();
@@ -141,13 +181,13 @@ const View = (() => {
   cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') hideTip(); });
 
   // 解説: その点にあるもの（上に描いたものから順に）
-  function find(wx, wy) {
-    for (let i = hot.length - 1; i >= 0; i--) {
-      const h = hot[i];
-      if (h.c) { if (Math.hypot(wx - h.c[0], wy - h.c[1]) <= Math.max(h.c[2], 6 / cam.s)) return h; }
+  function find(wx, wy, list = hot, sc = cam.s) {
+    for (let i = list.length - 1; i >= 0; i--) {
+      const h = list[i];
+      if (h.c) { if (Math.hypot(wx - h.c[0], wy - h.c[1]) <= Math.max(h.c[2], 6 / sc)) return h; }
       else if (h.box) { if (wx >= h.box[0] && wx <= h.box[2] && wy >= h.box[1] && wy <= h.box[3]) return h; }
       else if (h.seg) {
-        const w = Math.max(h.w || 2, 6 / cam.s);
+        const w = Math.max(h.w || 2, 6 / sc);
         for (let j = 1; j < h.seg.length; j++) { const a = h.seg[j - 1], b = h.seg[j], vx = b[0] - a[0], vy = b[1] - a[1], l2 = vx * vx + vy * vy || 1, t = Math.max(0, Math.min(1, ((wx - a[0]) * vx + (wy - a[1]) * vy) / l2)); if (Math.hypot(wx - a[0] - vx * t, wy - a[1] - vy * t) <= w) return h; }
       }
       else if (h.test && h.test(wx, wy)) return h;
@@ -156,7 +196,9 @@ const View = (() => {
   }
   let lastTip = null, pinned = false;
   function showTipAt(px, py, pin) {
-    const w = toWorld(px, py), h = find(w.x, w.y);
+    let w, h;
+    if (inLoupe(px, py)) { w = { x: lp.cx + (px - lp.x - lp.size / 2) / lp.s, y: lp.cy - (py - lp.y - lp.size / 2) / lp.s }; h = find(w.x, w.y, lp.hot, lp.s); }
+    else { w = toWorld(px, py); h = find(w.x, w.y); }
     if (!h) { hideTip(); return; }
     const info = h.infoAt ? h.infoAt(w.x, w.y) : typeof h.info === 'function' ? h.info() : h.info;
     if (!info) { hideTip(); return; }
@@ -170,7 +212,8 @@ const View = (() => {
   tip.addEventListener('pointerdown', () => { pinned = false; tip.hidden = true; });
 
   return {
-    V, cam, resize, look, fitAll, stepCam, zoomAt,
+    V, cam, resize, look, fitAll, stepCam, zoomAt, setLoupe, drawLoupe, sig, real: false,
+    get loupeRect() { return lp.on && auto ? { x: lp.x, y: lp.y, w: lp.size, h: lp.size } : null; },
     begin() { hot = []; g.clearRect(0, 0, W, H); },
     get W() { return W; }, get H() { return H; }, get sFit() { return sFit; }, get sMax() { return sMax; },
     get auto() { return auto; }, setAuto(v) { auto = v; View.onAuto && View.onAuto(v); },

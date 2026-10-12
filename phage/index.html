@@ -23,9 +23,13 @@
         <div class="now" id="nowCard"></div>
         <div class="zoomBtns" role="group" aria-label="拡大">
           <button id="zIn" title="拡大">＋</button><button id="zOut" title="縮小">−</button><button id="zFit" title="細菌の全体">全体</button>
-          <button id="zAuto" class="on" title="物語に合わせてカメラが動く">おまかせカメラ</button>
+          <button id="lookBtn" title="色分けした絵と、本物に近い見た目を切りかえる">見た目: わかりやすい</button>
         </div>
         <div class="tip" id="tip" hidden></div>
+        <div class="camMode" id="camMode" role="group" aria-label="カメラ">
+          <button id="camAuto" aria-pressed="true" title="物語に合わせてカメラが動く">🎥 おまかせカメラ</button>
+          <button id="camFree" aria-pressed="false" title="ホイール・ピンチ・ドラッグで自分で動かす">✋ 自分で動かす</button>
+        </div>
         <div class="howto" id="howto">ホイール・ピンチで拡大／ドラッグで移動／マウスを乗せると解説</div>
       </div>
       <div class="timebar">
@@ -37,9 +41,8 @@
           </div>
         </div>
         <div class="trow2">
+          <span class="speeds" id="speeds" role="group" aria-label="再生の速さ"><span class="spLab">速さ</span></span>
           <span class="tlabel mono" id="tlabel"></span>
-          <span class="spacer"></span>
-          <span class="speeds" id="speeds"></span>
         </div>
       </div>
     </main>
@@ -52,10 +55,23 @@
         <h2>もしも</h2>
         <div class="conds" id="conds"></div>
       </section>
+      <section class="box">
+        <h2>ぎもん</h2>
+        <div class="faq">
+          <details><summary>ファージはどこから来るの？</summary><p>細菌のいるところなら、どこにでもいる（水・土・下水・人や動物の腸の中）。T4 のような大腸菌のファージは、下水や便から見つかる。食べ物や水といっしょに口から入ることもある。<span class="kind sure">研究の値</span></p><button data-go="たくさんの大腸菌">その場面へ</button></details>
+          <details><summary>1つだけ？ たくさんいるの？</summary><p>たくさんいる。人の大腸の中身1gに、ウイルスは約1億〜100億個いて、そのほとんどがファージ（Shkoporov と Hill 2019）。種類もとても多い。このアプリでは、そのうちの1つを追いかけている。<span class="kind est">目安</span></p><button data-go="たくさんの大腸菌">その場面へ</button></details>
+          <details><summary>1つのファージから、どれだけ増えるの？</summary><p>細菌1つの中で約20〜25分のうちに100〜150個。出てきたファージがまた別の細菌にとりつくので、1回ごとに何十〜百倍になる（ねずみ算）。<span class="kind est">目安</span></p><button data-go="また破れて、もっと増える">その場面へ</button></details>
+          <details><summary>部品は、だれが組み立てているの？</summary><p>運ぶ係や組み立てる係はいない。部品は熱でふらふらとでたらめに動き（ブラウン運動）、正しい相手に正しい向きでぶつかったときだけくっつく（自己集合）。殻のたんぱくを折りたたむ gp31、長い脚を付けるのを助けるひげ（フィブリチン）など、手伝うたんぱくはある。<span class="kind sure">研究の値</span></p><button data-go="しっぽは別に組み立てる">その場面へ</button></details>
+          <details><summary>人にもうつるの？</summary><p>うつらない。ファージがとりつけるのは、脚がつかめる印（受け手）を持つ細菌だけ。T4 がとりつくのは大腸菌の一部の株で、人の細胞には入れない。<span class="kind sure">研究の値</span></p></details>
+          <details><summary>大腸菌はぜんぶやられちゃうの？</summary><p>いいえ。受け手（OmpC など）を変えた大腸菌は生き残る（「もしも: 受け手のない細菌」）。細菌は制限酵素などの守りも持つ。腸の中では、細菌とファージがずっといっしょにいつづける。<span class="kind sure">研究の値</span></p></details>
+          <details><summary>ファージは生きているの？</summary><p>自分では増えられず、栄養からエネルギーも作らない。細菌の中に入ったときだけ、細菌の材料と工場を使って増える。生き物と呼ぶかどうかは、人によって考えが分かれる。</p></details>
+          <details><summary>大きさの見え方は本当？</summary><p>細菌（約2µm）・ファージ（約0.2µm）・膜の厚さ・リボソーム（約20nm）・べん毛（太さ約20nm）は本当の大きさに合わせている。ただし DNA の長さ（T4 は約57µm、細菌は約1.6mm。どちらも細菌よりずっと長く、ぎゅっと折りたたまれている）、リボソームの数（本当は数万個）は、見やすさのために大きく減らして描いている。</p></details>
+        </div>
+      </section>
       <section class="box" id="countBox">
         <h2>細菌の中の数（いまの時刻）</h2>
         <div id="counts"></div>
-        <p class="small2">図の中の流れる点1つは、たくさんの分子の代わり（模式）。</p>
+        <p class="small2">図の中の流れる点1つは、たくさんの分子の代わり（模式）。細菌は立体なので、奥にあるもの（約7割）は薄く背景として描き、マウスを乗せて説明が出るのは手前のものだけ。数は減らしていない。</p>
       </section>
       <section class="box">
         <h2>色の見かた</h2>
@@ -69,6 +85,7 @@
           <li><i style="background:#ff6fa8"></i>ホリン（内膜）</li>
           <li><i style="background:#9be38a"></i>リゾチーム</li>
           <li><i style="background:#ffe066"></i>OmpC（脚がつかむ印）</li>
+          <li><i style="background:#ffe3a3"></i>まわりの・広がるファージ（点）</li>
         </ul>
       </section>
     </aside>
@@ -100,6 +117,15 @@
         <li>もしも: 約4分すぎに来た別のファージの DNA は中に入れない（重感染排除）。5分すぎに別のファージが来ると、破裂が大きくおくれる（溶菌阻止）。DNA にブドウ糖の目印がない変異の T4 は、大腸菌の制限酵素に切られる。<span class="kind sure">研究の値</span></li>
       </ul>
 
+      <h3>人のからだから・次々にうつる</h3>
+      <ul>
+        <li>はじめは人のからだ（身長約1.7m）から、おなかの大腸 → 大腸のかべ（粘膜・陰窩・粘膜下層・筋肉）→ 粘液 → 大腸菌（約2µm）へ寄っていく。人の体の細菌は約40兆個で、ほとんどが大腸にいる（Sender ら 2016）。<span class="kind est">目安</span></li>
+        <li>大腸の粘液は2層で、内側の層には細菌がほとんど入れず、外側の層に細菌がすむ（Johansson ら 2008）。大腸の中身1gにウイルスは約1億〜100億個、ほとんどがファージ（Shkoporov と Hill 2019）。<span class="kind sure">研究の値</span></li>
+        <li>組み立て: 頭は内膜の上で、入口 gp20 → 足場 gp22・gp21 → 殻 gp23（入口の側から付いていく）。はさみ gp21 が足場を切ると空の殻が離れ、DNA をつめはじめると殻がふくらみ、Hoc・Soc が付く。つめおわると首（gp13・gp14）が付き、別に組み立てたしっぽ（基盤 → 管 → さや → ふた）がはまり、最後に長い脚が付く。部品は運ばれるのではなく、熱でふらふら動いてぶつかったときにくっつく（自己集合）。<span class="kind sure">研究の値</span></li>
+        <li>破れて出る: ホリンが内膜に穴をあけ、リゾチームが細胞壁を切ると、細菌は棒の形を保てなくなり、スパニンが外膜を破って中身がいっせいに出る（Kongari ら 2018 などのスパニンの研究）。細菌は死に、膜はちぎれたかけらになる。<span class="kind sure">研究の値</span></li>
+        <li>次々にうつる: 出てきたファージが近くの細菌にとりつき、同じことがくり返される。どの細菌にいつうつるか、広がる速さ、まわりの細菌の位置・泳ぎ方は模式。「ファージ 約○個」は（破れた細菌の数）×（物語の細菌から出た数）の目安。<span class="kind art">模式</span></li>
+      </ul>
+
       <h3>簡単にしているところ</h3>
       <ul>
         <li>立体を横から見た平面の図にしている。6本の脚は奥行きを色の濃さで表す。</li>
@@ -109,6 +135,10 @@
         <li>細菌の中の分子（リボソーム・RNA ポリメラーゼ・コピーの機械・酵素）の数・置き場所・色は模式。大きさはおおよそ本当に合わせた（リボソーム約20nm、RNA ポリメラーゼ約15nm、DNA の太さ約2nm）。たんぱく質は丸や四角で描き、本当の原子の形ではない。<span class="kind art">模式</span></li>
         <li>流れる点は、1つがたくさんの分子の代わり。どこからどこへ流れるかは本当の順番どおりだが、点の数と動きは模式。「頭の殻 gp23 約○個」は、1つの頭に約960個（Rao と Black 2010）×作りはじめた頭の数で計算している。T4 の DNA の本数は、頭につめる数に足りるように決めた目安。<span class="kind art">模式</span></li>
         <li>頭が作られる速さは「最初の完成が約12〜15分・破裂までに100〜150個」に合うように決めた。溶菌阻止で破裂がどれだけおくれるかは条件で大きく変わる（数十分〜数時間）。アプリでは約60分にした。<span class="kind art">模式</span></li>
+        <li>DNA の長さは大きく短くしている（T4 の DNA は約57µm、細菌の DNA は約1.6mm で、どちらも細菌の長さ約2µm よりずっと長く、ぎゅっと折りたたまれている）。リボソームの数も本当（数万個）よりずっと少ない。大きさ（太さ・直径）は本当に合わせている。<span class="kind art">模式</span></li>
+        <li>べん毛（太さ約20nm、長さ5〜10µm。Turner ら 2000）・線毛の本数と向きは模式。ファージが降りる場所のまわりは、見やすさのため線毛を描いていない。<span class="kind art">模式</span></li>
+        <li>細菌の中は立体を平面に重ねて描いているので、頭どうしが重なって見える。破れるときの形のくずれ方・かけらの数は模式。<span class="kind art">模式</span></li>
+        <li>「見た目: 本物に近い」: 本物のファージや細菌は光の波長より小さく、色はない。電子顕微鏡の写真のように色を抜き、名前の札を消し、細胞の中をぎっしりにした見え方。形と大きさは「わかりやすい」と同じ。<span class="kind art">模式</span></li>
         <li>学習用に簡単にしています。医療や実験の判断には使えません。</li>
       </ul>
 
@@ -126,6 +156,11 @@
         <li>Sinha NK, Morris CF, Alberts BM (1980) Efficient in vitro replication of double-stranded DNA templates by a purified T4 bacteriophage replication system. Journal of Biological Chemistry 255:4290–4293（体の中の分かれ目は毎秒約500塩基）</li>
         <li>Dong F, Weitzel SE, von Hippel PH (1996) <a href="https://doi.org/10.1073/pnas.93.25.14456" target="_blank" rel="noopener">A coupled complex of T4 DNA replication helicase (gp41) and polymerase (gp43) can perform rapid and processive DNA strand-displacement synthesis</a>. PNAS 93:14456–14461</li>
         <li>Revel HR (1967) Restriction of nonglucosylated T-even bacteriophage. Virology 31:688–701</li>
+        <li>Sender R, Fuchs S, Milo R (2016) <a href="https://doi.org/10.1371/journal.pbio.1002533" target="_blank" rel="noopener">Revised estimates for the number of human and bacteria cells in the body</a>. PLOS Biology 14:e1002533（体の細菌 約40兆個、大腸の中身1gに約1000億個）</li>
+        <li>Shkoporov AN, Hill C (2019) <a href="https://doi.org/10.1016/j.chom.2019.01.017" target="_blank" rel="noopener">Bacteriophages of the human gut: the "known unknown" of the microbiome</a>. Cell Host &amp; Microbe 25:195–209（腸のウイルスの数、ほとんどがファージ）</li>
+        <li>Johansson MEV, Phillipson M, Petersson J ほか (2008) <a href="https://doi.org/10.1073/pnas.0803124105" target="_blank" rel="noopener">The inner of the two Muc2 mucin-dependent mucus layers in colon is devoid of bacteria</a>. PNAS 105:15064–15069</li>
+        <li>Kongari R, Rajaure M, Cahill J ほか (2018) <a href="https://doi.org/10.1186/s12859-018-2342-8" target="_blank" rel="noopener">Phage spanins: diversity, topological dynamics and gene convergence</a>. BMC Bioinformatics 19:326（外膜を破るスパニン）</li>
+        <li>Turner L, Ryu WS, Berg HC (2000) <a href="https://doi.org/10.1128/JB.182.10.2793-2801.2000" target="_blank" rel="noopener">Real-time imaging of fluorescent flagellar filaments</a>. Journal of Bacteriology 182:2793–2801（大腸菌のべん毛）</li>
         <li>Matias VRF, Al-Amoudi A, Dubochet J, Beveridge TJ (2003) Cryo-transmission electron microscopy of frozen-hydrated sections of <i>Escherichia coli</i> and <i>Pseudomonas aeruginosa</i>. Journal of Bacteriology 185:6112–6118（外膜・細胞壁の厚さ）</li>
       </ul>
       <h3>使っているもの</h3>
@@ -140,6 +175,7 @@
 <script src="js/view.js"></script>
 <script src="js/t4draw.js"></script>
 <script src="js/story.js"></script>
+<script src="js/macro.js"></script>
 <script src="js/scene.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>

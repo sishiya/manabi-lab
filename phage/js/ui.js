@@ -24,15 +24,19 @@ const UI = (() => {
   window.addEventListener('pointerup', () => { sliding = false; });
   $('play').addEventListener('click', () => { if (state.u >= 1) state.u = 0; state.playing = !state.playing; markPlay(); });
   function markPlay() { $('play').textContent = state.playing ? '⏸' : '▶'; }
-  for (const [v, lab] of [[0.5, 'ゆっくり'], [1, 'ふつう'], [2, 'はやい']]) {
-    const b = document.createElement('button'); b.textContent = lab; b.dataset.v = v;
+  for (const [v, lab] of [[0.25, '×¼'], [0.5, '×½'], [1, '×1'], [2, '×2'], [4, '×4']]) {
+    const b = document.createElement('button'); b.textContent = lab; b.dataset.v = v; b.title = `ふつうの${v}倍の速さ`;
     b.addEventListener('click', () => { state.speed = v; markSpeed(); });
     $('speeds').appendChild(b);
   }
   function markSpeed() { $('speeds').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.v === state.speed))); }
+  // 見どころが変わった直後は少しゆっくり進める（説明を読み、カメラが追いつくまで）
+  let sinceEv = 99;
   function advance(dt) {
     if (!state.playing) return;
-    state.u = Math.min(1, state.u + dt * state.speed / Story.total);
+    sinceEv += dt;
+    const slow = 0.3 + 0.7 * Math.min(1, sinceEv / 3.5);
+    state.u = Math.min(1, state.u + dt * state.speed * slow / Story.total);
     if (state.u >= 1) { state.playing = false; markPlay(); }
     slider.value = Math.round(state.u * 1000);
   }
@@ -59,14 +63,24 @@ const UI = (() => {
       ol.appendChild(li);
     });
   }
-  function evLabel(e) { const st = Story.at(e.u + 0.0005); return st.id === 'inside' ? `${st.min.toFixed(1)}分` : st.seg.name; }
+  function evLabel(e) { const st = Story.at(e.u + 0.0005); return st.id === 'inside' || st.id === 'spread' ? `${st.min.toFixed(st.id === 'spread' ? 0 : 1)}分` : st.seg.name; }
   function go(u, e) {
     state.u = u; slider.value = Math.round(u * 1000);
     View.setAuto(true);
     const ev = e || currentEvent(u); if (ev) camTo(ev, false);
   }
-  function camTo(e, instant) { if (!e || !e.cam) return; const c = typeof e.cam === 'function' ? e.cam() : e.cam; View.look(c[0], c[1], c[2], instant); }
+  function camTo(e, instant) {
+    if (!e || !e.cam) return;
+    const z = e.zoom ? (typeof e.zoom === 'function' ? e.zoom() : e.zoom) : null;
+    let c = typeof e.cam === 'function' ? e.cam() : e.cam;
+    if (typeof c === 'number') c = z ? [z[0], z[1], c] : null;
+    if (c) View.look(c[0], c[1], c[2], instant);
+    View.setLoupe(z, e.title);
+  }
   function currentEvent(u) { let cur = null; for (const e of events) if (e.u <= u + 1e-6) cur = e; return cur; }
+
+  // ぎもん: 「その場面へ」
+  document.querySelectorAll('.faq button[data-go]').forEach(b => b.addEventListener('click', () => { const e = events.find(q => q.title === b.dataset.go); if (e) go(e.u + 0.0005, e); }));
 
   // もしも
   for (const [id, lab] of Object.entries(Story.CONDS)) {
@@ -77,11 +91,19 @@ const UI = (() => {
   function markConds() { $('conds').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.id === Story.cond))); }
 
   // おまかせカメラ・拡大ボタン
-  View.onAuto = v => $('zAuto').classList.toggle('on', v);
-  $('zAuto').addEventListener('click', () => { View.setAuto(!View.auto); if (View.auto) camTo(currentEvent(state.u)); });
+  View.onAuto = v => {
+    $('camAuto').setAttribute('aria-pressed', String(v)); $('camFree').setAttribute('aria-pressed', String(!v));
+    // 自分で動かしたとき、切りかわったことがわかるように光らせる
+    if (!v) { const c = $('camMode'); c.classList.remove('pulse'); void c.offsetWidth; c.classList.add('pulse'); }
+  };
+  $('camAuto').addEventListener('click', () => { View.setAuto(true); camTo(currentEvent(state.u)); });
+  $('camFree').addEventListener('click', () => View.setAuto(false));
   $('zIn').addEventListener('click', () => View.zoomAt(View.W / 2, View.H / 2, 1.8));
   $('zOut').addEventListener('click', () => View.zoomAt(View.W / 2, View.H / 2, 1 / 1.8));
   $('zFit').addEventListener('click', () => { View.setAuto(false); View.fitAll(); });
+
+  // 見た目: わかりやすい（色分け・札あり）／本物に近い（色なし・電子顕微鏡の写真のような調子）
+  $('lookBtn').addEventListener('click', () => { View.real = !View.real; document.querySelector('.viewWrap').classList.toggle('real', View.real); $('lookBtn').classList.toggle('on', View.real); $('lookBtn').textContent = View.real ? '見た目: 本物に近い' : '見た目: わかりやすい'; });
 
   // 毎フレーム: 説明・見どころの印・数
   let lastEv = null, lastCount = '';
@@ -90,14 +112,16 @@ const UI = (() => {
     if (!sliding && Math.abs(slider.value - st.u * 1000) > 0.5) slider.value = Math.round(st.u * 1000);
     const ev = currentEvent(st.u);
     if (ev !== lastEv) {
-      lastEv = ev;
+      lastEv = ev; sinceEv = 0;
+      $('nowCard').classList.remove('flash'); void $('nowCard').offsetWidth; $('nowCard').classList.add('flash');
       $('nowCard').innerHTML = ev ? `<b>${ev.title}</b> <span class="kind ${ev.kind}">${KIND[ev.kind]}</span><p>${ev.body}</p>` : '';
       $('events').querySelectorAll('li').forEach((li, i) => li.classList.toggle('cur', events[i] === ev));
       if (View.auto && ev) camTo(ev);
     }
     const inside = st.id === 'inside' || st.id === 'burst';
     let html = '';
-    if (!inside) html = '<p class="small2">細菌の中に入ってから数える。</p>';
+    if (st.id === 'spread') { const cc = Story.colonyCounts(st.min - Story.M.tEnd); html = `<dl class="stat"><dt>ファージ</dt><dd>約${cc.phage.toLocaleString()}個 <small>目安</small></dd><dt>破れた細菌</dt><dd>${cc.burst} ／ ${cc.cells}</dd><dt>とりつかれて中で増えている</dt><dd>${cc.inf}</dd></dl>`; }
+    else if (!inside) html = '<p class="small2">細菌の中に入ってから数える。</p>';
     else {
       const c = Story.counts(st.min), n = v => Math.round(v).toLocaleString();
       html = `<dl class="stat"><dt>T4 の DNA</dt><dd>約${n(c.genomes)}本ぶん <small>目安</small></dd><dt>細菌の DNA</dt><dd>${Math.round(Story.hostLeft(st.min) * 100)}% <small>目安</small></dd><dt>頭の殻 gp23</dt><dd>約${n(c.gp23)}個</dd><dt>さや gp18</dt><dd>約${n(c.gp18)}個</dd><dt>組み立て中の頭</dt><dd>${c.building + c.packing}個</dd><dt>完成</dt><dd>${c.done}個</dd></dl>`;

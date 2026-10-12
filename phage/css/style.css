@@ -27,6 +27,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-of
 .viewWrap{position:relative;flex:1;min-height:0;user-select:none;-webkit-user-select:none}
 .viewWrap canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 .viewWrap canvas:active{cursor:grabbing}
+/* 本物に近い見た目: 色を抜いて電子顕微鏡の写真のような調子（CSS でまとめて。毎コマの計算はしない）と、つぶつぶ */
+.viewWrap.real canvas{filter:grayscale(1) contrast(1.25) brightness(1.05)}
+.viewWrap.real::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.16;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 1.2 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
 
 /* いま起きていること（図の左上） */
 .now{position:absolute;left:12px;bottom:12px;max-width:min(430px,calc(100% - 200px));background:rgba(10,22,27,.9);border:1px solid var(--acc);border-radius:10px;padding:8px 12px;pointer-events:none;font-size:12.5px;line-height:1.7;color:var(--muted)}
@@ -36,13 +39,22 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-of
 /* 拡大ボタン（右上） */
 .zoomBtns{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:4px;align-items:flex-end}
 .zoomBtns button{background:rgba(22,41,47,.92);border:1px solid var(--line);border-radius:8px;min-width:40px;padding:5px 9px;font-size:15px;cursor:pointer}
-.zoomBtns #zAuto{font-size:11.5px;color:var(--dim)}
-.zoomBtns #zAuto.on{color:#0e1c22;background:var(--acc);border-color:var(--acc);font-weight:700}
+.zoomBtns #lookBtn{font-size:11.5px;color:var(--dim)}
+.zoomBtns #lookBtn.on{color:#0e1c22;background:#d9dde0;border-color:#d9dde0;font-weight:700}
+.now.flash{animation:nowFlash 1.2s ease-out}
+@keyframes nowFlash{0%{box-shadow:0 0 0 3px var(--acc);transform:translateY(-3px)}100%{box-shadow:0 0 0 0 transparent;transform:none}}
+/* カメラの切りかえ（図の上のまん中。自分で動かすと「自分で動かす」が光り、すぐおまかせに戻せる） */
+.camMode{position:absolute;left:50%;transform:translateX(-50%);top:8px;display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:rgba(10,22,27,.92);z-index:4}
+.camMode button{border:0;background:transparent;color:var(--muted);font-size:13px;padding:6px 14px;cursor:pointer;white-space:nowrap}
+.camMode button[aria-pressed="true"]{background:var(--acc);color:#0e1c22;font-weight:700}
+.camMode #camFree[aria-pressed="true"]{background:#ffb35c}
+.camMode.pulse{animation:camPulse 1.4s ease-out}
+@keyframes camPulse{0%{box-shadow:0 0 0 4px #ffb35c}100%{box-shadow:0 0 0 0 transparent}}
 /* マウスを乗せたときの解説 */
 .tip{position:absolute;z-index:5;max-width:320px;background:rgba(10,22,27,.96);border:1px solid #ffe066;border-radius:10px;padding:7px 11px 8px;font-size:12.5px;line-height:1.7;color:var(--muted);pointer-events:auto}
 .tip b{color:#ffe066;font-size:13.5px}
 .tip p{margin:3px 0 0}
-.howto{position:absolute;left:50%;transform:translateX(-50%);top:8px;font-size:11.5px;color:var(--dim);background:rgba(10,22,27,.75);border-radius:6px;padding:3px 8px;pointer-events:none}
+.howto{animation:howtoOut 1s 10s forwards;position:absolute;left:50%;transform:translateX(-50%);top:46px;font-size:11.5px;color:var(--dim);background:rgba(10,22,27,.75);border-radius:6px;padding:3px 8px;pointer-events:none}
 
 /* 時間のスライダー */
 .timebar{flex:none;border-top:1px solid var(--line);background:#0b181d;padding:8px 12px 8px}
@@ -56,7 +68,14 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-of
 .trow2{display:flex;align-items:center;gap:10px;margin-top:4px}
 .tlabel{font-size:13px;color:var(--ink)}
 .spacer{flex:1}
-.speeds{display:inline-flex;gap:3px}
+.faq details{border-top:1px solid var(--line);padding:6px 0}
+.faq details:first-child{border-top:0}
+.faq summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--ink)}
+.faq p{margin:6px 0 4px;font-size:12.5px;line-height:1.75;color:var(--muted)}
+.faq button{background:var(--btn);border:1px solid var(--line);border-radius:6px;padding:3px 9px;font-size:12px;cursor:pointer}
+.speeds{display:inline-flex;gap:3px;align-items:center;flex:none}
+.spLab{font-size:11.5px;color:var(--dim);margin-right:2px}
+.speeds button{padding:3px 8px!important;min-width:34px}
 .speeds button,.conds button{background:var(--btn);border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:12.5px;cursor:pointer}
 .speeds button[aria-pressed=true],.conds button[aria-pressed=true]{border-color:var(--acc);color:var(--acc);background:#173431}
 
@@ -105,9 +124,12 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-of
   .brand b{font-size:16px}
   .now{max-width:calc(100% - 70px);font-size:11.5px;padding:6px 9px}
   .now b{font-size:13px}
-  .zoomBtns #zAuto{display:none}
+  .camMode button{font-size:12px;padding:5px 10px}
   .howto{display:none}
   .seg{font-size:10px}
   .tip{max-width:calc(100% - 20px)}
 }
 .speeds button{white-space:nowrap}
+
+/* 使い方の1行は、はじめの10秒だけ（図の上の札と重ならないように） */
+@keyframes howtoOut{to{opacity:0;visibility:hidden}}
