@@ -1,0 +1,90 @@
+/* ちいさな地球 */
+:root{--bg:#07131d;--panel:#0e2233;--ink:#e8f0f4;--muted:#a3b4bf;--acc:#6fd3ff;--line:#23405a;
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+*{box-sizing:border-box}
+/* スマホ: 星を上に固定、操作と数字は下でスクロール（RULES 9章） */
+#stage{position:sticky;top:0;z-index:2;height:52vh;min-height:260px;background:#02060c}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#hud{position:absolute;left:10px;top:8px;font-family:var(--f-mono);font-size:13px;line-height:1.5;text-shadow:0 1px 3px #000;pointer-events:none}
+#hudR{font-size:16px;color:var(--acc)}
+#hudX{color:#ffc95a}
+#hint{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:12px;color:var(--muted);text-shadow:0 1px 3px #000;pointer-events:none;padding:0 8px}
+#panel{padding:4px 16px 32px;background:var(--panel)}
+#top h1{font-family:var(--f-display);font-weight:400;font-size:22px;margin:10px 0 4px}
+.lead{margin:0 0 10px;font-size:14px;line-height:1.7;color:var(--muted)}
+.lead b{color:var(--ink);font-weight:500}
+.ctl{border-top:1px solid var(--line);padding:10px 0}
+.ctl label{display:block;font-size:14px;margin-bottom:6px}
+.ctl label b{font-family:var(--f-mono);color:var(--acc);font-weight:500;margin-left:6px}
+input[type=range]{width:100%;height:36px;accent-color:var(--acc)}
+.btns{display:flex;flex-wrap:wrap;gap:6px}
+button,select{font:inherit;font-size:14px;min-height:36px;padding:4px 12px;border-radius:8px;border:1px solid var(--line);background:#16324a;color:var(--ink);cursor:pointer}
+button:hover{background:#1d4163}
+button.on{background:#2d6a92;border-color:var(--acc)}
+.note{font-size:12.5px;color:var(--muted);margin:6px 0 0;line-height:1.6}
+h2{font-size:15px;margin:18px 0 6px;border-top:1px solid var(--line);padding-top:12px}
+dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;font-size:13.5px;line-height:1.5}
+dt{color:var(--muted)}
+dd{margin:0;font-family:var(--f-mono)}
+dd small{font-family:var(--f-body);color:var(--muted)}
+#facts{margin:0;padding-left:20px;font-size:14px;line-height:1.75}
+#facts li{margin-bottom:4px}
+#about{margin-top:18px;color:var(--muted);font-size:13.5px;line-height:1.8;border-top:1px solid var(--line);padding-top:10px}
+#about summary{cursor:pointer;color:var(--ink);min-height:36px}
+#about a{color:var(--acc)}
+#about h3{font-size:14px;color:var(--ink)}
+/* パソコン: 星を左いっぱい、右に操作 */
+@media (min-width:900px){
+  #app{display:grid;grid-template-columns:1fr 380px;height:100vh}
+  #stage{position:relative;height:100vh}
+  #panel{height:100vh;overflow-y:auto}
+}
+button.warn{background:#4a2a1e;border-color:#b0603a}
+button.warn:hover{background:#5d3524}
+#hBox{margin-top:8px}
+#hBox label b{color:#ffc95a}
+.sub{font-size:13px;color:var(--muted);margin:10px 0 4px}
+#hEv{margin:0;padding-left:20px;font-size:13.5px;line-height:1.6}
+#hEv li{cursor:pointer;margin-bottom:3px}
+#hEv li:hover{color:var(--acc)}
+#hEv li.past{color:var(--muted)}
+#hEv li b{font-family:var(--f-mono);font-weight:500;color:#ffc95a;margin-right:6px}
+#hNow{margin-top:8px}
+/* 正直モードの温度計（星の右上）。目盛りは −120〜+30℃ */
+#thermo{position:absolute;right:8px;top:8px;width:132px;padding:8px 8px 6px;background:rgba(4,12,20,.72);border:1px solid var(--line);border-radius:10px;font-size:11.5px;line-height:1.4;pointer-events:none}
+.thRow{display:flex;gap:10px;align-items:flex-end;height:118px;position:relative;padding-left:2px}
+.th{display:flex;flex-direction:column;align-items:center;width:30px;height:100%}
+.tube{position:relative;width:10px;flex:1;border-radius:6px;background:#1a2a38;border:1px solid #39546c;overflow:hidden}
+.fill{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#ff8a5c,#ffb36b);transition:height .2s}
+.fill.cold{background:linear-gradient(#7fd0ff,#4a90d9)}
+.th span{color:var(--muted);margin-top:2px}
+.th b{font-family:var(--f-mono);font-weight:500;font-size:11px;white-space:nowrap}
+.ticks{position:absolute;left:78px;top:0;bottom:30px;width:40px}
+.ticks i{position:absolute;left:0;font-style:normal;font-family:var(--f-mono);font-size:10px;color:var(--muted);transform:translateY(50%)}
+.ticks i::before{content:'';display:inline-block;width:6px;border-top:1px solid #39546c;margin-right:3px;vertical-align:middle}
+#vap{margin-top:6px;border-top:1px solid var(--line);padding-top:4px;color:var(--muted)}
+#vap b{color:#dff3ff;font-family:var(--f-mono);font-weight:500}
+#thMsg{margin:4px 0 0;color:var(--ink);font-size:11.5px}
+#lightBtns{margin-top:6px;align-items:center}
+#lightBtns .lbl{font-size:13px;color:var(--muted);margin-right:2px}
+/* 殻を外したときの「信号がとぎれる」文字（2.5 秒）。明るさは点滅させず、位置と色のずれだけ動かす */
+#glitch{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);pointer-events:none;text-align:center;font-family:var(--f-mono);color:#bff8ff;text-shadow:-2px 0 #ff4fd8,2px 0 #3ffff0;white-space:nowrap}
+#glitch b{display:block;font-size:22px;letter-spacing:.3em}
+#glitch span{display:block;font-size:14px;margin-top:4px}
+#glitch i{display:block;font-style:normal;font-size:11px;color:#9fd6e6;margin-top:4px}
+#glitch.run{animation:gl-shift 2.5s steps(1,end) forwards}
+#glitch.run b,#glitch.run span{animation:gl-jit .5s steps(4,end) 5}
+@keyframes gl-jit{0%{transform:translateX(0)}25%{transform:translateX(-6px) skewX(-8deg)}50%{transform:translateX(4px)}75%{transform:translateX(-2px) skewX(6deg)}100%{transform:translateX(0)}}
+@keyframes gl-shift{0%{opacity:.95}80%{opacity:.95}100%{opacity:0}}
+#toast{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);background:rgba(10,40,60,.85);border:1px solid #5ec8ff;color:#dff6ff;font-size:13px;padding:6px 12px;border-radius:8px;pointer-events:none;white-space:nowrap}
+#toast.show{animation:toast-f 2.5s ease forwards}
+@keyframes toast-f{0%{opacity:0;transform:translate(-50%,6px)}10%{opacity:1;transform:translate(-50%,0)}80%{opacity:1}100%{opacity:0}}
+ul.small{margin:0;padding-left:20px;font-size:13px;line-height:1.65;color:var(--ink)}
+.dim{color:var(--muted);font-weight:400}
+#lifeNums{margin-top:8px}
+/* 言語（I18N.md）: 選んでいないほうを隠す */
+:root[lang=en] [lang=ja],:root:not([lang=en]) [lang=en]{display:none!important}
+.langsw{float:right;display:flex;gap:4px;margin-top:10px}
+.langsw button{min-height:30px;padding:2px 8px;font-size:12px}
+:root:not([lang=en]) .langsw .lang-ja,:root[lang=en] .langsw .lang-en{background:#2d6a92;border-color:var(--acc)}

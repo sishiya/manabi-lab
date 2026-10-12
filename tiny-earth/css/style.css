@@ -83,3 +83,8 @@ button.warn:hover{background:#5d3524}
 ul.small{margin:0;padding-left:20px;font-size:13px;line-height:1.65;color:var(--ink)}
 .dim{color:var(--muted);font-weight:400}
 #lifeNums{margin-top:8px}
+/* 言語（I18N.md）: 選んでいないほうを隠す */
+:root[lang=en] [lang=ja],:root:not([lang=en]) [lang=en]{display:none!important}
+.langsw{float:right;display:flex;gap:4px;margin-top:10px}
+.langsw button{min-height:30px;padding:2px 8px;font-size:12px}
+:root:not([lang=en]) .langsw .lang-ja,:root[lang=en] .langsw .lang-en{background:#2d6a92;border-color:var(--acc)}

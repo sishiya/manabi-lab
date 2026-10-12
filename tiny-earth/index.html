@@ -1,7 +1,18 @@
+<!doctype html>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ちいさな地球</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230e2233'/><circle cx='32' cy='32' r='16' fill='%232f7fb8'/><path d='M18 34q7-6 14 0t14 0' stroke='%23bfefff' stroke-width='4' fill='none'/></svg>">
 <script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<!-- seo（検索・リンクカード。_dev/tools/seo.mjs が入口の APPS から作る。手で直さない） -->
+<meta name="description" content="地球を同じ材料のまま小さくしたら、海と森はどう動く？ 本物の地球の地形で、重力・波・風・生きもの・森を計算。殻を外すと、空気が逃げて海が沸いて凍り、消えていく。">
+<meta property="og:type" content="website"><meta property="og:site_name" content="まなびラボ"><meta property="og:locale" content="ja_JP"><meta property="og:locale:alternate" content="en_US">
+<meta property="og:title" content="ちいさな地球｜まなびラボ"><meta property="og:description" content="地球を同じ材料のまま小さくしたら、海と森はどう動く？ 本物の地球の地形で、重力・波・風・生きもの・森を計算。殻を外すと、空気が逃げて海が沸いて凍り、消えていく。"><meta property="og:url" content="https://sishiya.github.io/manabi-lab/tiny-earth/">
+<meta property="og:image" content="https://sishiya.github.io/manabi-lab/assets/thumbs/tiny-earth.jpg"><meta property="og:image:width" content="640"><meta property="og:image:height" content="360">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@sishiya22">
+<link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/tiny-earth/?lang=ja"><link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/tiny-earth/?lang=en"><link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/tiny-earth/">
+<!-- /seo -->
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
@@ -11,139 +22,141 @@
   <main id="stage">
     <canvas id="cv"></canvas>
     <div id="hud">
-      <div id="hudR">半径 1 km</div>
-      <div id="hudT">0 時間</div>
-      <div id="hudX">高さ ×100</div>
+      <div id="hudR"></div>
+      <div id="hudT"></div>
+      <div id="hudX"></div>
     </div>
     <div id="toast" hidden></div>
-    <div id="glitch" hidden><b>NO SIGNAL</b><span>殻の信号がとぎれました…</span><i>SHELL.SYS · 空気の境界がなくなりました</i></div>
+    <div id="glitch" hidden><b>NO SIGNAL</b><span lang="ja">殻の信号がとぎれました…</span><span lang="en">The shell signal was lost…</span><i lang="ja">SHELL.SYS · 空気の境界がなくなりました</i><i lang="en">SHELL.SYS · the edge holding the air is gone</i></div>
     <div id="thermo" hidden>
       <div class="thRow">
-        <div class="th"><div class="tube"><div class="fill" id="thSea"></div></div><span>海</span><b id="thSeaV">15℃</b></div>
-        <div class="th"><div class="tube"><div class="fill air" id="thAir"></div></div><span>空気</span><b id="thAirV">15℃</b></div>
+        <div class="th"><div class="tube"><div class="fill" id="thSea"></div></div><span><span lang="ja">海</span><span lang="en">Sea</span></span><b id="thSeaV">15℃</b></div>
+        <div class="th"><div class="tube"><div class="fill air" id="thAir"></div></div><span><span lang="ja">空気</span><span lang="en">Air</span></span><b id="thAirV">15℃</b></div>
         <div class="ticks"><i style="bottom:93.3%">20</i><i style="bottom:80%">0</i><i style="bottom:46.7%">−50</i><i style="bottom:13.3%">−100</i></div>
       </div>
-      <div id="vap"><span id="vapK">蒸発</span> <b id="vapV">0</b></div>
+      <div id="vap"><span id="vapK"></span> <b id="vapV">0</b></div>
       <p id="thMsg"></p>
     </div>
-    <div id="hint">海をタップ → 水のかたまりを落とす ／ ドラッグでまわす・つまむ（ホイール）で寄る</div>
+    <div id="hint"><span lang="ja">海をタップ → 水のかたまりを落とす ／ ドラッグでまわす・つまむ（ホイール）で寄る</span><span lang="en">Tap the sea → drop a lump of water · drag to turn · pinch (wheel) to zoom</span></div>
   </main>
   <section id="panel">
     <header id="top">
-      <h1>ちいさな地球</h1>
-      <p class="lead">地球を<b>同じ材料のまま</b>小さくしたら、海と森はどう動く？ 空気は<b>透明な殻</b>で閉じこめている（仮定）。</p>
+      <div class="langsw"><button type="button" onclick="setLang('ja')" class="lang-ja">日本語</button><button type="button" onclick="setLang('en')" class="lang-en">English</button></div>
+      <h1><span lang="ja">ちいさな地球</span><span lang="en">A Tiny Earth</span></h1>
+      <p class="lead" lang="ja">地球を<b>同じ材料のまま</b>小さくしたら、海と森はどう動く？ 空気は<b>透明な殻</b>で閉じこめている（仮定）。</p>
+      <p class="lead" lang="en">If Earth were shrunk but kept <b>the same materials</b>, how would its seas and forests behave? The air is held in by a <b>transparent shell</b> (an assumption).</p>
     </header>
 
     <div class="ctl">
-      <label for="size">大きさ（半径） <b id="sizeV">1 km</b></label>
+      <label for="size"><span lang="ja">大きさ（半径）</span><span lang="en">Size (radius)</span> <b id="sizeV">1 km</b></label>
       <input id="size" type="range" min="0" max="1000" step="1">
       <div class="btns" id="presets">
         <button data-r="100">100 m</button><button data-r="1000">1 km</button><button data-r="10000">10 km</button>
-        <button data-r="1737400">月くらい</button><button data-r="6371000">地球</button>
+        <button data-r="1737400" data-en="Moon-sized">月くらい</button><button data-r="6371000" data-en="Earth">地球</button>
       </div>
     </div>
 
     <div class="ctl">
-      <label>地形</label>
-      <div class="btns" id="terrBtns"><button data-t="earth" class="on">本物の地球</button><button data-t="fake">作りもの</button></div>
-      <p class="note" id="terrNote">本物の地球の地形（ETOPO1）を、同じ割合で小さくしています。</p>
+      <label><span lang="ja">地形</span><span lang="en">Terrain</span></label>
+      <div class="btns" id="terrBtns"><button data-t="earth" class="on" data-en="Real Earth">本物の地球</button><button data-t="fake" data-en="Made-up">作りもの</button></div>
+      <p class="note" id="terrNote"></p>
     </div>
 
     <div class="ctl" id="honestCtl">
-      <label>透明な殻（空気をとじこめる仮定）</label>
-      <div class="btns"><button id="shellBtn" class="warn">殻を外す（正直モード）</button></div>
+      <label><span lang="ja">透明な殻（空気をとじこめる仮定）</span><span lang="en">Transparent shell (an assumption that holds the air in)</span></label>
+      <div class="btns"><button id="shellBtn" class="warn"></button></div>
       <div id="hBox" hidden>
-        <label for="ht">殻を外してから <b id="htV">0 秒</b></label>
+        <label for="ht"><span lang="ja">殻を外してから</span><span lang="en">Since the shell was removed</span> <b id="htV">0</b></label>
         <input id="ht" type="range" min="0" max="1000" step="1" value="0">
-        <div class="btns"><button id="hPlay">一時停止</button></div>
+        <div class="btns"><button id="hPlay"></button></div>
         <dl id="hNow"></dl>
-        <p class="sub">出来事（押すとその時刻へ）</p>
+        <p class="sub"><span lang="ja">出来事（押すとその時刻へ）</span><span lang="en">Events (tap to jump to that time)</span></p>
         <ol id="hEv"></ol>
       </div>
-      <p class="note" id="hNote">殻を外すと、空気・海・森がこの大きさの星で本当はどうなるかを、時間を追って見られます。</p>
+      <p class="note" id="hNote"></p>
     </div>
 
     <div class="ctl">
-      <label>時間</label>
+      <label><span lang="ja">時間</span><span lang="en">Time</span></label>
       <div class="btns">
-        <button id="play">一時停止</button>
-        <select id="speed" aria-label="時間の速さ">
-          <option value="600">1秒 = 10分</option>
-          <option value="3600" selected>1秒 = 1時間</option>
-          <option value="21600">1秒 = 6時間</option>
+        <button id="play"></button>
+        <select id="speed">
+          <option value="600" data-en="1 s = 10 min">1秒 = 10分</option>
+          <option value="3600" selected data-en="1 s = 1 hour">1秒 = 1時間</option>
+          <option value="21600" data-en="1 s = 6 hours">1秒 = 6時間</option>
         </select>
-        <button id="reset">海をもどす</button>
+        <button id="reset" data-en="Reset the sea">海をもどす</button>
       </div>
     </div>
 
     <div class="ctl">
-      <label for="wind">風 <b id="windV">0 m/s</b></label>
+      <label for="wind"><span lang="ja">風</span><span lang="en">Wind</span> <b id="windV">0 m/s</b></label>
       <input id="wind" type="range" min="0" max="20" step="0.5" value="0">
-      <div class="btns"><button id="windDir">風の向き: いまの画面で右へ</button></div>
+      <div class="btns"><button id="windDir" data-en="Wind direction: to the right on screen">風の向き: いまの画面で右へ</button></div>
     </div>
 
     <div class="ctl">
-      <label>海をゆらす</label>
+      <label><span lang="ja">海をゆらす</span><span lang="en">Shake the sea</span></label>
       <div class="btns">
-        <button id="shake">星をぐいっと押す（画面の右へ）</button>
-        <button id="dropC">まん中に水を落とす</button>
+        <button id="shake" data-en="Give the planet a shove (to the right)">星をぐいっと押す（画面の右へ）</button>
+        <button id="dropC" data-en="Drop water in the middle">まん中に水を落とす</button>
       </div>
       <p class="note" id="shakeNote"></p>
     </div>
 
     <div class="ctl" id="closeCtl">
-      <label>そばで見る（目の高さ 1.6 m）</label>
-      <div class="btns"><button id="closeBtn">画面のまん中に立つ</button></div>
+      <label><span lang="ja">そばで見る（目の高さ 1.6 m）</span><span lang="en">Look up close (eye height 1.6 m)</span></label>
+      <div class="btns"><button id="closeBtn"></button></div>
       <div id="closeBox" hidden>
         <div class="btns">
-          <button id="jumpBtn">ジャンプ</button><button id="stoneBtn">石を投げる（15 m 先）</button><button id="rainBtn">雨を降らせる</button>
-          <select id="closeSpeed" aria-label="そばで見るときの時間の速さ"><option value="1">1秒 = 1秒</option><option value="10">1秒 = 10秒</option><option value="60">1秒 = 1分</option></select>
+          <button id="jumpBtn" data-en="Jump">ジャンプ</button><button id="stoneBtn" data-en="Throw a stone (15 m ahead)">石を投げる（15 m 先）</button><button id="rainBtn" data-en="Make it rain">雨を降らせる</button>
+          <select id="closeSpeed"><option value="1" data-en="1 s = 1 s">1秒 = 1秒</option><option value="10" data-en="1 s = 10 s">1秒 = 10秒</option><option value="60" data-en="1 s = 1 min">1秒 = 1分</option></select>
         </div>
-        <p class="note">ドラッグで見まわす。海をタップすると、そこに石が落ちる。高さの強調は ×1、生きものは本当の大きさ。</p>
+        <p class="note"><span lang="ja">ドラッグで見まわす。海をタップすると、そこに石が落ちる。高さの強調は ×1、生きものは本当の大きさ。</span><span lang="en">Drag to look around. Tap the sea to drop a stone there. Heights are not exaggerated (×1) and animals are shown at their real size.</span></p>
         <ul id="closeNums" class="small"></ul>
       </div>
     </div>
 
     <div class="ctl" id="forestCtl">
-      <label for="treeH">森: 木の高さ（ためしに） <b id="treeHV">30 m</b></label>
+      <label for="treeH"><span lang="ja">森: 木の高さ（ためしに）</span><span lang="en">Forest: tree height (try it)</span> <b id="treeHV">30 m</b></label>
       <input id="treeH" type="range" min="0" max="1000" step="1">
-      <div class="btns"><button id="leafBtn">葉を散らす</button><button id="treeReset">30 m にもどす</button></div>
-      <p class="note">幹の太さは 60 cm のまま、高さだけ変えます。自分の重さで曲がる高さをこえると、木は曲がって倒れます。風が吹くと木がゆれ、葉は風に運ばれます（ゆれの大きさは見た目）。</p>
+      <div class="btns"><button id="leafBtn" data-en="Scatter leaves">葉を散らす</button><button id="treeReset" data-en="Back to 30 m">30 m にもどす</button></div>
+      <p class="note"><span lang="ja">幹の太さは 60 cm のまま、高さだけ変えます。自分の重さで曲がる高さをこえると、木は曲がって倒れます。風が吹くと木がゆれ、葉は風に運ばれます（ゆれの大きさは見た目）。</span><span lang="en">Only the height changes; the trunk stays 60 cm thick. Above the height at which a tree bends under its own weight, the trees bend over. When the wind blows, trees sway and leaves are carried by the wind (the size of the sway is just for show).</span></p>
       <ul id="forestNums" class="small"></ul>
     </div>
 
     <div class="ctl" id="lifeCtl">
-      <label>生きもの <small class="dim">（見やすく 20 倍の大きさで描いています）</small></label>
-      <div class="btns"><button id="lifeShow" class="on">見せる</button><button id="lifeReset">置きなおす</button></div>
+      <label><span lang="ja">生きもの</span><span lang="en">Animals</span> <small class="dim"><span lang="ja">（見やすく 20 倍の大きさで描いています）</span><span lang="en">(drawn 20× larger so you can see them)</span></small></label>
+      <div class="btns"><button id="lifeShow" class="on"></button><button id="lifeReset" data-en="Place again">置きなおす</button></div>
       <dl id="lifeNums"></dl>
-      <p class="sub">この星の物理では</p>
+      <p class="sub"><span lang="ja">この星の物理では</span><span lang="en">With this planet's physics</span></p>
       <ul id="lifePhys" class="small"></ul>
-      <p class="sub">さいきんのできごと</p>
+      <p class="sub"><span lang="ja">さいきんのできごと</span><span lang="en">Recent events</span></p>
       <ul id="lifeLog" class="small"></ul>
     </div>
 
     <div class="ctl">
-      <label>光</label>
-      <div class="btns" id="lightBtns"><button data-l="cycle">めぐる（自転）</button><button data-l="day" class="on">いつも昼</button><button data-l="night">いつも夜</button></div>
-      <p class="note">光は見た目だけです（正直モードの温度は一日でならした日光で計算）。地形は見た目だけ段々にしています（陸は 400 m、海の底は 1000 m ごと。地球の大きさのときの高さで）。海と空気の計算は、なめらかな高さのまま。</p>
+      <label><span lang="ja">光</span><span lang="en">Light</span></label>
+      <div class="btns" id="lightBtns"><button data-l="cycle" data-en="Day and night (rotation)">めぐる（自転）</button><button data-l="day" class="on" data-en="Always day">いつも昼</button><button data-l="night" data-en="Always night">いつも夜</button></div>
+      <p class="note"><span lang="ja">光は見た目だけです（正直モードの温度は一日でならした日光で計算）。地形は見た目だけ段々にしています（陸は 400 m、海の底は 1000 m ごと。地球の大きさのときの高さで）。海と空気の計算は、なめらかな高さのまま。</span><span lang="en">Light is only for show (honest-mode temperatures use sunlight averaged over a day). The terrain is drawn in steps just for looks (every 400 m on land and 1000 m on the sea floor, in Earth-size heights). The sea and air are calculated with smooth heights.</span></p>
     </div>
 
     <div class="ctl">
-      <label for="ex">高さの強調 <b id="exV">×100</b></label>
+      <label for="ex"><span lang="ja">高さの強調</span><span lang="en">Height exaggeration</span> <b id="exV">×100</b></label>
       <input id="ex" type="range" min="0" max="300" step="1" value="200">
       <p class="note" id="exNote"></p>
     </div>
 
-    <h2>この大きさの星では</h2>
+    <h2><span lang="ja">この大きさの星では</span><span lang="en">On a planet this size</span></h2>
     <dl id="nums"></dl>
 
-    <h2>いまの海</h2>
+    <h2><span lang="ja">いまの海</span><span lang="en">The sea now</span></h2>
     <dl id="live"></dl>
 
-    <h2>わかること</h2>
+    <h2><span lang="ja">わかること</span><span lang="en">What we learn</span></h2>
     <ul id="facts"></ul>
 
-    <details id="about">
+    <details id="about" lang="ja">
       <summary>このアプリについて</summary>
       <p>地球と同じ材料（平均の密度 5513 kg/m³）で、半径だけを小さくした星を計算しています。重力は半径に比例して弱くなり（g = 4/3·π·G·ρ·R）、山の高さ・海の深さも同じ割合で小さくなります。木や人は小さくならないので、本当の大きさ（木は 30 m）で描いています。一日の長さは地球と同じ 24 時間です。</p>
       <p>海は、星の表面を約1万の「ます」に分けた浅水の式で計算しています（重力・コリオリ力・風の力・底の摩擦。陸にあふれる・引くも計算）。縮めた地球の海は、波の長さにくらべてとても浅いので、この式があてはまります。</p>
@@ -183,6 +196,47 @@
       </ul>
       <h3>使っているもの</h3>
       <p>three.js r128（MIT License）、フォント: Google Fonts（SIL Open Font License）</p>
+    </details>
+    <details id="aboutEn" lang="en">
+      <summary>About this app</summary>
+      <p>This app calculates a planet made of the same material as Earth (mean density 5513 kg/m³) with only its radius made smaller. Gravity gets weaker in proportion to the radius (g = 4/3·π·G·ρ·R), and mountain heights and sea depths shrink by the same ratio. Trees and people do not shrink, so they are drawn at their real size (trees are 30 m). A day lasts 24 hours, as on Earth.</p>
+      <p>The sea is calculated with the shallow-water equations on about 10,000 cells covering the planet (gravity, the Coriolis force, wind, and friction at the bottom, including water spilling onto land and draining back). The sea of a shrunken Earth is very shallow compared with the length of its waves, so these equations apply.</p>
+      <h3>What is simplified (this is a learning tool)</h3>
+      <ul>
+        <li><b>Transparent shell</b> (an assumption): on a small planet gravity is weak and the air would escape into space (on a 1 km planet the escape speed is about 1.8 m/s, while air molecules fly at about 500 m/s). Normally a shell (at 1.25 times the radius) is assumed to hold air at 1 atm and 15 °C.</li>
+        <li><b>Honest mode</b> (remove the shell): the spreading of the air is calculated with one-dimensional fluid equations along the radius (with gravity, no heat exchange). For large planets where gravity holds the air (λ &gt; 5), the fluid is not calculated; the escape rate is estimated with formulas (a Parker flow kept at 15 °C high up, and Jeans escape). If the Sun heats the upper air, it escapes faster.</li>
+        <li>Sea: when the air pressure drops below the vapor pressure of water (1706 Pa at 15 °C), the water boils, cools by evaporation, and freezes. The evaporation rate uses the formula for evaporation into a vacuum (Hertz–Knudsen, evaporation coefficient 1 = the fastest case). Deep water, where the weight of the water keeps the pressure above the vapor pressure, does not boil and freezes from the top under the ice (heat conduction through ice). The ice surface temperature balances sunlight averaged over a day and over latitude (solar constant 1361 W/m²; ice albedo 0.5 is an estimate) against heat radiation and sublimation. Day and night, the equator and the poles, boiling weakened by an ice lid, and heat from inside the planet are left out.</li>
+        <li>Animals (deer, rabbits, small birds, small fish, large fish): the app calculates “what would happen with this planet’s physics if they moved the way they do on Earth.” Sizes, weights, jump and swimming speeds are typical values (estimates). Walking speed is limited to a Froude number of 0.5, where walking turns into running (Kram et al. 1997). After a jump, the flight is calculated with gravity (weakening with the square of the distance), air drag (drag coefficient 1, estimate), wind and the Coriolis force; it stops if it hits the shell. Fish cannot enter water shallower than twice their body height (estimate). Animals drown if spilled water is deeper than their body height (estimate). Birth, eating and growth are not included. Animals are drawn 20× larger so you can see them.</li>
+        <li>Animals in honest mode: when the pressure falls below the vapor pressure of water at body temperature (37 °C; about 6.3 kPa, the Armstrong limit), body fluids begin to boil. In experiments where dogs were decompressed to near vacuum, they lost consciousness in 9–12 seconds, and all dogs exposed for less than 2 minutes survived (Bancroft &amp; Dunn 1965). Here animals lose consciousness after 10 s and die after 2.5 min (estimate). Fish die when their sea boils or freezes; they survive if liquid water remains under the ice (oxygen is not calculated). Animals that were floating or flying are carried into space with the escaping air if that wind is faster than the escape speed.</li>
+        <li>Look up close: you stand with your eyes 1.6 m high, and time starts at real speed. A jump uses the same push as a standing jump on Earth (50 cm, take-off speed 3.1 m/s) for a 70 kg person with a front area of 0.7 m² (estimate), with gravity, air drag, wind and the Coriolis force. Splash drops (1–6 mm across) and raindrops move with gravity and air drag (drag coefficient 0.5–0.6, estimate) and are carried by the wind. The largest raindrop is taken as about 6 mm across on Earth (larger drops break up; discussed by Villermaux &amp; Bossa 2009) and scaled by √(Earth’s gravity ÷ this planet’s gravity), following the balance of surface tension and gravity (the capillary length) — an estimate. The rain is something you make fall; clouds are not calculated.</li>
+        <li>Forest: the height at which a tree bends under its own weight uses the length at which a uniform column buckles under its own weight (0.788×(E D²/(ρg))^(1/3), Greenhill’s problem), with green-wood stiffness 10 GPa, density 800 kg/m³ and a 60 cm trunk (rough values, estimates). Real trees are thicker at the base and carry branches and leaves, so this is a rough guide. Wind loads are not included. On Earth, the limit to how high trees can lift water is set by gravity plus friction in the water pipes (Koch et al. 2004). The gravity part can be calculated, but the friction part has not been measured in weak gravity, so no new height limit is given. The falling speed of leaves assumes 0.1 kg of leaf per m² and a drag coefficient of 1 (estimates). The size of the sway is for show (wind force and wood stiffness do not depend on gravity, so trees sway almost as on Earth).</li>
+        <li>Forest: without air, water leaves the leaves and the trees die. How fast they die is not calculated (the color change is only for show).</li>
+        <li>You choose the wind (natural winds are not calculated). The wind blows around an axis.</li>
+        <li>The flow carrying its own momentum (advection) is left out. Breaking waves are not calculated.</li>
+        <li>The planet’s interior is treated as rigid. The terrain is either “Real Earth” (ETOPO1 sampled every 1° ≈ 110 km; high peaks are lowered by the sampling) or “Made-up” (only the spread of heights is made Earth-like: 29% land, mean sea depth 3682 m). Forests cover about 31% of the land (FAO 2020). On the real Earth, where forests grow is a rough guide based on latitude (more in the tropics and at 45–60°, fewer in the dry belt at 18–35°; this is not a real forest map). Tree numbers assume 400 trees per hectare; when there are too many, fewer are drawn.</li>
+        <li>The bottom friction coefficient 0.0025 is a value often used for tides and storm surges (estimate).</li>
+        <li>Below a radius of 100 m, surface tension and the stickiness of water take over and these equations no longer fit.</li>
+      </ul>
+      <h3>Main sources</h3>
+      <ul>
+        <li>Earth’s radius and mean density: <a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html" target="_blank" rel="noopener">NASA NSSDC, Earth Fact Sheet</a></li>
+        <li>Mean sea depth 3682 m: Charette, M. A. &amp; Smith, W. H. F. (2010) The volume of Earth’s ocean. <i>Oceanography</i> 23(2): 112–114.</li>
+        <li>Wind force on the sea (drag coefficient about 1.2×10⁻³): Large, W. G. &amp; Pond, S. (1981) Open ocean momentum flux measurements in moderate to strong winds. <i>J. Phys. Oceanogr.</i> 11: 324–336.</li>
+        <li>Shallow-water equations: Vallis, G. K. (2017) <i>Atmospheric and Oceanic Fluid Dynamics</i>, 2nd ed. Cambridge University Press.</li>
+        <li>How atmospheres escape to space: Catling, D. C. &amp; Kasting, J. F. (2017) <i>Atmospheric Evolution on Inhabited and Lifeless Worlds</i>, chapter 5. Cambridge University Press.</li>
+        <li>Vapor pressure of ice and water: Murphy, D. M. &amp; Koop, T. (2005) Review of the vapour pressures of ice and supercooled water for atmospheric applications. <i>Q. J. R. Meteorol. Soc.</i> 131: 1539–1565.</li>
+        <li>Evaporation coefficient of water: Eames, I. W., Marr, N. J. &amp; Sabir, H. (1997) The evaporation coefficient of water: a review. <i>Int. J. Heat Mass Transfer</i> 40: 2963–2973.</li>
+        <li>Solar constant: Kopp, G. &amp; Lean, J. L. (2011) A new, lower value of total solar irradiance. <i>Geophys. Res. Lett.</i> 38: L01706.</li>
+        <li>Walk–run transition (Froude number 0.5 in weak gravity): Kram, R., Domingo, A. &amp; Ferris, D. P. (1997) Effect of reduced gravity on the preferred walk-run transition speed. <i>J. Exp. Biol.</i> 200: 821–826.</li>
+        <li>Consciousness and survival near vacuum (dogs): Bancroft, R. W. &amp; Dunn, J. E. (1965) Times of consciousness, collapse, and survival and pathology examinations of dogs rapidly decompressed to near vacuum environment. USAF School of Aerospace Medicine SAM-TR-65-48.</li>
+        <li>Height of a column bending under its own weight: Greenhill, A. G. (1881) Determination of the greatest height consistent with stability that a vertical pole or mast can be made, and of the greatest height to which a tree of given proportions can grow. <i>Proc. Camb. Phil. Soc.</i> 4: 65–73. Applied to trees: McMahon, T. (1973) Size and shape in biology. <i>Science</i> 179: 1201–1204.</li>
+        <li>Limits to tree height (water): Koch, G. W., Sillett, S. C., Jennings, G. M. &amp; Davis, S. D. (2004) The limits to tree height. <i>Nature</i> 428: 851–854.</li>
+        <li>Size at which raindrops break up: Villermaux, E. &amp; Bossa, B. (2009) Single-drop fragmentation determines size distribution of raindrops. <i>Nature Physics</i> 5: 697–702.</li>
+        <li>Real Earth terrain: NOAA National Geophysical Data Center (2009) ETOPO1 1 Arc-Minute Global Relief Model. NOAA National Centers for Environmental Information (<a href="https://doi.org/10.7289/V5C8276M" target="_blank" rel="noopener">doi:10.7289/V5C8276M</a>, accessed 2026-10-12, sampled every 1°). Amante, C. &amp; Eakins, B. W. (2009) ETOPO1 1 Arc-Minute Global Relief Model: Procedures, Data Sources and Analysis. NOAA Technical Memorandum NESDIS NGDC-24.</li>
+        <li>Share of forest: FAO (2020) <i>Global Forest Resources Assessment 2020</i>.</li>
+      </ul>
+      <h3>Software used</h3>
+      <p>three.js r128 (MIT License); fonts: Google Fonts (SIL Open Font License)</p>
     </details>
   </section>
 </div>

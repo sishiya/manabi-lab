@@ -6,12 +6,14 @@
 //   生まれる・食べる・増えるは入れない。
 'use strict';
 const LIFE = (() => {
+  // 英語（I18N.md）: この中では L を生きものの入れ物の名前に使っているので、言語の関数は TX と呼ぶ
+  const TX = (ja, en) => (typeof LANG !== 'undefined' && LANG === 'en' ? en : ja);
   const SP = [
-    { id: 'deer', name: 'シカ', kind: 'land', n: 40, m: 60, len: 1.5, hgt: 1.0, leg: 0.8, A: 0.5, vE: 1.3, jump: 4.0, jumpRate: 1 / (8 * 3600), drown: 1.0, col: [0.62, 0.42, 0.24] },
-    { id: 'rabbit', name: 'ウサギ', kind: 'land', n: 80, m: 2, len: 0.4, hgt: 0.25, leg: 0.15, A: 0.04, vE: 0.6, jump: 2.5, jumpRate: 1 / 1800, drown: 0.25, col: [0.86, 0.84, 0.80] },
-    { id: 'bird', name: '小鳥', kind: 'bird', n: 40, m: 0.03, len: 0.15, hgt: 0.1, leg: 0.03, A: 0.004, vE: 0.2, fly: 10, flyRate: 1 / 900, drown: 0.1, col: [0.95, 0.72, 0.25] },
-    { id: 'fish', name: '小魚', kind: 'sea', n: 240, len: 0.2, depth: 0.05, swim: 0.5, col: [0.75, 0.82, 0.9] },
-    { id: 'bigfish', name: '大きな魚', kind: 'sea', n: 30, len: 2.0, depth: 0.5, swim: 1.0, col: [0.35, 0.45, 0.62] },
+    { id: 'deer', name: TX('シカ', 'Deer'), kind: 'land', n: 40, m: 60, len: 1.5, hgt: 1.0, leg: 0.8, A: 0.5, vE: 1.3, jump: 4.0, jumpRate: 1 / (8 * 3600), drown: 1.0, col: [0.62, 0.42, 0.24] },
+    { id: 'rabbit', name: TX('ウサギ', 'Rabbit'), kind: 'land', n: 80, m: 2, len: 0.4, hgt: 0.25, leg: 0.15, A: 0.04, vE: 0.6, jump: 2.5, jumpRate: 1 / 1800, drown: 0.25, col: [0.86, 0.84, 0.80] },
+    { id: 'bird', name: TX('小鳥', 'Small bird'), kind: 'bird', n: 40, m: 0.03, len: 0.15, hgt: 0.1, leg: 0.03, A: 0.004, vE: 0.2, fly: 10, flyRate: 1 / 900, drown: 0.1, col: [0.95, 0.72, 0.25] },
+    { id: 'fish', name: TX('小魚', 'Small fish'), kind: 'sea', n: 240, len: 0.2, depth: 0.05, swim: 0.5, col: [0.75, 0.82, 0.9] },
+    { id: 'bigfish', name: TX('大きな魚', 'Large fish'), kind: 'sea', n: 30, len: 2.0, depth: 0.5, swim: 1.0, col: [0.35, 0.45, 0.62] },
   ];
   const FR = 0.5, CD = 1.0, TURN_LAND = 60, TURN_SEA = 10;
 
@@ -137,8 +139,8 @@ const LIFE = (() => {
         if (res === 'land') {
           a.air = false; const r = Math.hypot(...a.X); a.p = [a.X[0] / r, a.X[1] / r, a.X[2] / r]; a.h = tangentDir(...a.p);
           if (a.flights === undefined) a.flights = 0;
-          if (O.h[a.c] > sp.drown && O.z[a.c] < 0) { kill(L, a, '海に落ちた'); note(L, `${sp.name}が海に落ちた（最高 ${Math.round(a.maxY)} m まで浮いた）`); }
-          else if (a.maxY > 3 * sp.hgt) note(L, `${sp.name}が降りてきた（最高 ${a.maxY < 10 ? a.maxY.toFixed(1) : Math.round(a.maxY)} m${a.hitShell ? '、殻にぶつかった' : ''}）`);
+          if (O.h[a.c] > sp.drown && O.z[a.c] < 0) { kill(L, a, TX('海に落ちた', 'fell into the sea')); note(L, TX(`${sp.name}が海に落ちた（最高 ${Math.round(a.maxY)} m まで浮いた）`, `${sp.name} fell into the sea (floated up to ${Math.round(a.maxY)} m)`)); }
+          else if (a.maxY > 3 * sp.hgt) { const my = a.maxY < 10 ? a.maxY.toFixed(1) : Math.round(a.maxY); note(L, TX(`${sp.name}が降りてきた（最高 ${my} m${a.hitShell ? '、殻にぶつかった' : ''}）`, `${sp.name} came back down (up to ${my} m${a.hitShell ? ', hit the shell' : ''})`)); }
           a.hitShell = false;
         }
         continue;
@@ -146,7 +148,7 @@ const LIFE = (() => {
       if (sp.kind === 'sea') { swim(L, a, dt); continue; }
       // 陸: あふれた水でおぼれる（体の高さより深い。推定）
       // 小鳥は木の上にいるのでおぼれない
-      if (sp.kind !== 'bird' && L.TR.elev[a.c] >= 0 && O.h[a.c] > sp.drown) { kill(L, a, 'あふれた水でおぼれた'); note(L, `${sp.name}があふれた水でおぼれた（深さ ${UI.len(O.h[a.c])}）`); continue; }
+      if (sp.kind !== 'bird' && L.TR.elev[a.c] >= 0 && O.h[a.c] > sp.drown) { kill(L, a, TX('あふれた水でおぼれた', 'drowned in spilled water')); note(L, TX(`${sp.name}があふれた水でおぼれた（深さ ${UI.len(O.h[a.c])}）`, `${sp.name} drowned in spilled water (${UI.len(O.h[a.c])} deep)`)); continue; }
       // ときどき跳ぶ（ウサギはふだんの動き方、シカはおどろいたとき）
       if (sp.jump && rnd() < 1 - Math.exp(-dt * sp.jumpRate)) { launch(L, a, sp.jump); continue; }
       // 小鳥: ときどき飛ぶ（木から木へ）。飛ぶあいだは羽ばたきで高さを保つ（地上 20 m）
@@ -175,7 +177,7 @@ const LIFE = (() => {
     if (O.h[a.c] < 2 * sp.depth) {
       let best = -1, bh = 2 * sp.depth;
       for (let j = M.deg[a.c]; j < M.deg[a.c + 1]; j++) { const k = L.nb[j]; if (L.TR.elev[k] < 0 && O.h[k] >= bh) { bh = O.h[k]; best = k; } }
-      if (best < 0) { kill(L, a, '干上がって打ち上げられた'); note(L, `${sp.name}が干上がって打ち上げられた`); return; }
+      if (best < 0) { kill(L, a, TX('干上がって打ち上げられた', 'stranded as the sea dried up')); note(L, TX(`${sp.name}が干上がって打ち上げられた`, `${sp.name} was stranded as the sea dried up`)); return; }
       a.c = best; a.p = [M.pos[best * 3], M.pos[best * 3 + 1], M.pos[best * 3 + 2]]; a.h = tangentDir(...a.p);
       return;
     }
@@ -198,7 +200,7 @@ const LIFE = (() => {
       const d = Math.acos(Math.max(-1, Math.min(1, a.p[0] * p[c * 3] + a.p[1] * p[c * 3 + 1] + a.p[2] * p[c * 3 + 2]))) * R;
       if (d < dist) { a.h = tangentDir(...a.p); launch(L, a, a.sp.jump); n++; }
     }
-    if (n) note(L, `おどろいて ${n} ひきが跳んだ`);
+    if (n) note(L, TX(`おどろいて ${n} ひきが跳んだ`, `${n} animals jumped in surprise`));
   }
 
   // ---------- 正直モード（殻を外してから t 秒）: 生きもののその時の様子を返す（ふだんの状態は書きかえない） ----------
@@ -211,7 +213,7 @@ const LIFE = (() => {
       const f = L.hd[k];
       let alive = a.alive, cause = a.cause, up = 0;
       if (alive && f.t != null && t >= f.t) { alive = false; cause = f.cause; if (f.up) up = Math.min(30 * R, f.up * (t - f.t)); }
-      else if (alive && f.tUnc != null && t >= f.tUnc) cause = '意識を失った';
+      else if (alive && f.tUnc != null && t >= f.tUnc) cause = TX('意識を失った', 'unconscious');
       out.push({ alive, cause, up });
       if (alive) sum[a.s].alive++; else sum[a.s].cause[cause] = (sum[a.s].cause[cause] || 0) + 1;
     });
@@ -230,14 +232,14 @@ const LIFE = (() => {
         const d = L.O.h[a.c];
         for (const t of Mo.tGrid) {
           const c = HONEST.colAt(Mo, d, t);
-          if (c[2] && d <= db) return { t, cause: '海が沸いた' };
-          if (c[0] < 2 * a.sp.depth && (c[1] > 0 || c[0] <= 0)) return { t, cause: '海が凍った・なくなった' };
+          if (c[2] && d <= db) return { t, cause: TX('海が沸いた', 'the sea boiled') };
+          if (c[0] < 2 * a.sp.depth && (c[1] > 0 || c[0] <= 0)) return { t, cause: TX('海が凍った・なくなった', 'the sea froze or vanished') };
         }
         return {};
       }
       // 浮いていた・飛んでいた: 抜ける空気の風が脱出速度より速ければ、いっしょに宇宙へ（離れる速さは見た目のため風の半分とする）
-      if ((a.air || a.flyLeft > 0) && tWind && uWind > P.vEsc) return { t: tWind, cause: '空気といっしょに宇宙へ', up: uWind * 0.5 };
-      if (tArm != null) return { t: tArm + 150, cause: '空気がなくなった', tUnc: tArm + 10 };
+      if ((a.air || a.flyLeft > 0) && tWind && uWind > P.vEsc) return { t: tWind, cause: TX('空気といっしょに宇宙へ', 'carried into space with the air'), up: uWind * 0.5 };
+      if (tArm != null) return { t: tArm + 150, cause: TX('空気がなくなった', 'no air left'), tUnc: tArm + 10 };
       return {};
     });
   }
