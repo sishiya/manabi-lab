@@ -27,7 +27,7 @@ const Story = (() => {
     const tEnd = cond === 'lin' ? TL.linLysis : cond === 'gt' ? 3 : 23.5;
     segs = [
       { id: 'zoomin', name: '人のからだから', dur: 6 },
-      { id: 'colony', name: 'たくさんの細菌', dur: 8 },
+      { id: 'colony', name: 'たくさんの細菌', dur: 4 },
       { id: 'approach', name: '近づく', dur: 7 },
       { id: 'bind', name: cond === 'norec' ? 'くっつけない' : 'くっつく', dur: cond === 'norec' ? 9 : 6 },
     ];

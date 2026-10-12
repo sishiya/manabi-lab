@@ -39,7 +39,8 @@ const UI = (() => {
   function advance(dt) {
     if (!state.playing) return;
     sinceEv += dt;
-    const zi = Story.at(state.u).id === 'zoomin';
+    // はじめの2区間（人のからだから・たくさんの細菌）は、見どころの直後も遅くしない
+    const zid = Story.at(state.u).id, zi = zid === 'zoomin' || zid === 'colony';
     const slow = zi ? 1 : 0.3 + 0.7 * Math.min(1, sinceEv / 3.5);
     state.u = Math.min(1, state.u + dt * state.speed * slow / Story.total);
     if (state.u >= 1) { state.playing = false; markPlay(); }
@@ -171,7 +172,7 @@ const UI = (() => {
       // 自分で動かせる範囲は、いまの見どころのまわり
       View.setBounds(camOf(ev));
     }
-    View.camK = sliding ? 4 : st.id === 'zoomin' ? 2.2 : 1.1;
+    View.camK = sliding ? 4 : st.id === 'zoomin' || st.id === 'colony' ? 2.2 : 1.1;
     updateClosing(st);
     const inside = st.id === 'inside' || st.id === 'burst';
     let html = '';
