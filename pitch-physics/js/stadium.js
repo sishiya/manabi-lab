@@ -121,13 +121,16 @@ const DOF = {
       gl_FragColor = c;
     }`,
   comp: `uniform sampler2D sharp; uniform sampler2D mid; uniform sampler2D far; uniform sampler2D depth;
-    uniform float cNear; uniform float cFar; uniform float fNear; uniform float fFar; uniform float aperture; varying vec2 vUv;
+    uniform float cNear; uniform float cFar; uniform float fNear; uniform float fFar; uniform float aperture; uniform float desat; uniform float bright; varying vec2 vUv;
     float viewZ(float d){ return (cNear * cFar) / ((cFar - cNear) * d - cFar); }
     void main(){
       float z = -viewZ(texture2D(depth, vUv).x);
       float coc = clamp(aperture * max((fNear - z) / max(z, 0.001), (z - fFar) / max(z, 0.001)), 0.0, 1.0);
       vec4 a = texture2D(sharp, vUv), b = texture2D(mid, vUv), c = texture2D(far, vUv);
-      gl_FragColor = coc < 0.5 ? mix(a, b, coc * 2.0) : mix(b, c, coc * 2.0 - 1.0);
+      vec4 col = coc < 0.5 ? mix(a, b, coc * 2.0) : mix(b, c, coc * 2.0 - 1.0);
+      float l = dot(col.rgb, vec3(0.299, 0.587, 0.114));
+      col.rgb = mix(col.rgb, vec3(l), desat) * bright * (1.0 - 0.28 * coc);   // 背景は色うすく・少し暗く（情報の線を前に出す）
+      gl_FragColor = col;
     }`,
 };
 function makeDof(renderer) {
@@ -144,7 +147,7 @@ function makeDof(renderer) {
   D.bmat = new THREE.ShaderMaterial({ uniforms: { tex: { value: null }, dir: { value: new THREE.Vector2() } }, vertexShader: DOF.vs, fragmentShader: DOF.blur, depthTest: false, depthWrite: false });
   D.cmat = new THREE.ShaderMaterial({
     uniforms: { sharp: { value: D.full.texture }, mid: { value: D.mid.texture }, far: { value: D.far.texture }, depth: { value: D.full.depthTexture },
-      cNear: { value: 0.05 }, cFar: { value: 2000 }, fNear: { value: 1 }, fFar: { value: 30 }, aperture: { value: 1.2 } },
+      cNear: { value: 0.05 }, cFar: { value: 2000 }, fNear: { value: 1 }, fFar: { value: 30 }, aperture: { value: 1.2 }, desat: { value: 0.5 }, bright: { value: 0.72 } },
     vertexShader: DOF.vs, fragmentShader: DOF.comp, depthTest: false, depthWrite: false,
   });
   D.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), D.bmat); D.scene.add(D.quad);

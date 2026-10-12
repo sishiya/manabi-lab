@@ -41,21 +41,26 @@ function init3d(canvas) {
   // ストライクゾーンとねらった点（打者の身長で変わるので、zoneMesh() で作りなおす）
   V3.zone = new THREE.Group(); fg.add(V3.zone); zoneMesh();
   // ガイド: 回転がなければ通る点（白い輪。ドラッグで動かせる）・実際に通った点（球種の色）・その間の線
-  // 土の上でも見えるよう、どれも黒いふちをつけ、いちばん上に描く（奥行きで隠さない）
+  // ガイド: 細い線と、まわりのやわらかい光（いちばん上に描き、奥行きで隠さない）
   const gm = (c, o) => new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide, depthTest: false, transparent: true, opacity: o == null ? 1 : o });
+  const glowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, 'rgba(255,255,255,.9)'); gr.addColorStop(0.35, 'rgba(255,255,255,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+  const glow = (size, col, op) => new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshBasicMaterial({ map: glowTex, color: col, transparent: true, opacity: op, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
   V3.gPlain = new THREE.Group();
-  V3.gPlain.add(new THREE.Mesh(new THREE.RingGeometry(0.038, 0.070, 48), gm('#000000', 0.55)), new THREE.Mesh(new THREE.RingGeometry(0.045, 0.062, 48), gm('#ffffff')));
+  V3.gPlainGlow = glow(0.22, '#ffffff', 0.18);
+  V3.gPlain.add(V3.gPlainGlow, new THREE.Mesh(new THREE.RingGeometry(0.050, 0.055, 64), gm('#ffffff', 0.95)));
   V3.gReal = new THREE.Group();
-  V3.gRealFill = new THREE.Mesh(new THREE.CircleGeometry(PHY.r, 32), gm('#ffd166', 0.95));
-  V3.gRealEdge = new THREE.Mesh(new THREE.RingGeometry(PHY.r, PHY.r * 1.35, 32), gm('#000000', 0.6));
-  V3.gReal.add(V3.gRealEdge, V3.gRealFill);
+  V3.gRealGlow = glow(0.16, '#ffd166', 0.35);
+  V3.gRealFill = new THREE.Mesh(new THREE.CircleGeometry(PHY.r * 0.7, 40), gm('#ffd166', 0.95));
+  V3.gRealEdge = new THREE.Mesh(new THREE.RingGeometry(PHY.r * 0.95, PHY.r * 1.05, 48), gm('#ffffff', 0.9));
+  V3.gReal.add(V3.gRealGlow, V3.gRealEdge, V3.gRealFill);
   V3.gLine = new THREE.Group();
-  V3.gLineDark = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), gm('#000000', 0.45));   // 点線の下の黒い帯（太さを持たせる）
-  V3.gLineDash = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineDashedMaterial({ color: '#ffffff', dashSize: 0.03, gapSize: 0.02, depthTest: false, transparent: true }));
+  V3.gLineDark = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), gm('#000000', 0)); V3.gLineDark.visible = false;   // （使わない）
+  V3.gLineDash = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineDashedMaterial({ color: '#ffffff', dashSize: 0.022, gapSize: 0.018, depthTest: false, transparent: true, opacity: 0.8 }));
   V3.gLine.add(V3.gLineDark, V3.gLineDash);
-  // 地面に落ちる球の、落ちる点（土の上に寝かせた輪）
+  // 地面に落ちる球の、落ちる点（土の上に寝かせた細い輪と光）
   V3.gGround = new THREE.Group();
-  V3.gGround.add(new THREE.Mesh(new THREE.RingGeometry(0.05, 0.085, 40), gm('#000000', 0.5)), new THREE.Mesh(new THREE.RingGeometry(0.058, 0.075, 40), gm('#ff9f7a')));
+  V3.gGround.add(glow(0.25, '#ff9f7a', 0.3), new THREE.Mesh(new THREE.RingGeometry(0.055, 0.061, 48), gm('#ffb38f', 0.95)));
   V3.gGround.rotation.x = -Math.PI / 2;
   V3.gPlain.traverse(o => o.renderOrder = 8); V3.gReal.traverse(o => o.renderOrder = 9); V3.gLine.traverse(o => o.renderOrder = 7); V3.gGround.traverse(o => o.renderOrder = 8);
   fg.add(V3.gGround);
@@ -257,7 +262,7 @@ function updateGuides3d() {
   const a = T3(refPoint()), b = T3(S.res.pPlate), dz = 0.003;
   a.z += dz; b.z += dz;
   V3.gPlain.position.copy(a); V3.gReal.position.copy(b);
-  V3.gRealFill.material.color.set(mainCol());
+  V3.gRealFill.material.color.set(mainCol()); V3.gRealGlow.material.color.set(mainCol());
   // 実際に通った点は、ボールがホームを通った瞬間に付ける（少しふくらんでから落ち着く）
   const since = S.t - S.res.tPlate, arrived = since >= -1e-6;
   const pop = arrived ? 1 + 0.6 * Math.max(0, 1 - since / 0.02) : 1;
@@ -268,8 +273,8 @@ function updateGuides3d() {
   const show = S.cam !== 'ball';
   // 通る点は投げる前から計算で分かっているので、通るまではうっすら、通ったらはっきり
   V3.gPlain.visible = show; V3.gReal.visible = V3.gLine.visible = show && !(S.guideRef === 'ff' && S.pitch === 'ff');
-  V3.gRealFill.material.opacity = arrived ? 0.95 : 0.45; V3.gRealEdge.material.opacity = arrived ? 0.6 : 0.3;
-  V3.gLineDash.material.opacity = arrived ? 1 : 0.55; V3.gLineDark.material.opacity = arrived ? 0.45 : 0.25;
+  V3.gRealFill.material.opacity = arrived ? 0.95 : 0.4; V3.gRealEdge.material.opacity = arrived ? 0.9 : 0.45; V3.gRealGlow.material.opacity = arrived ? 0.4 : 0.12;
+  V3.gLineDash.material.opacity = arrived ? 0.85 : 0.45;
   // 地面に落ちる球: ホームの面の点の代わりに、土の上の落ちる点を出す
   const gr = !!S.res.ground && show;
   V3.gGround.visible = gr; if (gr) V3.gGround.position.set(b.x, 0.006, b.z - dz);

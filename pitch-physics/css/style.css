@@ -258,3 +258,7 @@ i.sw.plain{background:repeating-linear-gradient(90deg,rgba(240,240,230,.9) 0 6px
 .mk.left{transform:translate(calc(-100% - 14px),-50%)}
 .mk.up.left{transform:translate(calc(-100% - 14px),-140%)}
 @media (max-width:640px){ #legendBtn{min-height:34px} #views.v3d #legend{display:flex} #views.v3d #legend[hidden]{display:none} #legend{max-width:calc(100% - 16px);font-size:11px} }
+
+/* ガイドの名札: 小さく、うすい暗色のガラス */
+.mk{font-size:11px;font-weight:500;letter-spacing:.02em;padding:2px 8px;border-radius:999px;background:rgba(8,14,12,.55);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(3px);text-shadow:none;color:#f2f5f7}
+.mk.real{color:#ffe3a3}
