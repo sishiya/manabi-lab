@@ -63,7 +63,7 @@ const HUI = (() => {
     if (A.mode === 'blowoff') t += ' 2 より小さいので、空気は重力ではつなぎとめられず、殻を外すとそのまま宇宙へ広がっていく（1次元の流体の計算）。';
     else if (A.mode === 'parker') t += ` 空気は星にとどまるが、上空から少しずつ流れ出る（Parker の流れの見つもり。半分以下になる目安 ${yr(A.tauEsc * Math.LN2)}）。`;
     else t += A.tauEsc > 3e15 ? ' 空気は重力でしっかりつなぎとめられ、殻がなくても残る（Jeans 逃散の見つもりでは、宇宙の年齢よりずっと長くもつ）。' : ` 空気は残り、分子がゆっくり逃げる（Jeans 逃散の見つもり。半分になる目安 ${yr(A.tauEsc * Math.LN2)}）。`;
-    $('hNote').textContent = t + ' 時間のスライダーは対数（右へ行くほど速く進む）。';
+    $('hNote').textContent = t + ' 時間のスライダーは対数（右へ行くほど速く進む）。右の端は、計算している出来事が出つくした時刻の3倍。その先は、空気も水もなく、この計算では変化がない。';
   }
   function events() {
     const ev = H.model.ev;
@@ -108,7 +108,7 @@ const HUI = (() => {
         ['氷', pct(wi / w0)],
         ['蒸発・昇華した水', `${pct(Math.max(0, 1 - (wl + wi) / w0))} <small>${H.model.A.lam < 2 ? '（重力が弱く、宇宙へ逃げる）' : '（宇宙へ逃げるか、星の冷たい所で凍りなおす。ここでは消えたとして計算）'}</small>`],
         ['氷の表面の温度', Tn > 0 ? `${Math.round(Tsum / Tn - 273.15)} ℃ <small>（一日・緯度でならした値）</small>` : '—'],
-        ['森', vs.brown <= 0 ? '生きている' : vs.brown < 1 ? '葉の水が抜けて枯れていく' : '枯れた（凍って乾いた）'],
+        ['森', vs.brown <= 0 ? '生きている' : vs.brown < 1 ? '葉の水が抜けて枯れていく' : '枯れて、凍って乾いたまま立っている <small>（くさらせる微生物も酸素もないので、長く残ると考えられる。紫外線などで表面が削られるのは計算していない）</small>'],
       ].map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
       for (const li of $('hEv').children) li.classList.toggle('past', !!li.dataset.t && +li.dataset.t <= t);
       thermo(t, air, Sn > 0 ? Ssum / Sn : null, Sn > 0 ? Fsum / Sn : 0, Sn > 0 ? Bn / Sn : 0, w0 > 0 ? (wl + wi) / w0 : 0);
@@ -132,7 +132,7 @@ const HUI = (() => {
     $('vapV').textContent = F <= 0 ? 'なし' : (mmDay >= 100 ? Math.round(mmDay / 10) / 100 + ' m' : mmDay >= 1 ? mmDay.toPrecision(2) + ' mm' : (mmDay * 1000).toPrecision(2) + ' μm') + '/日';
     let msg;
     if (t <= 0) msg = '殻の中: 1気圧・15℃。';
-    else if (left <= 1e-3) msg = '海はなくなった。空気も水もない星。';
+    else if (left <= 1e-3) msg = '海はなくなった。空気も水もない星。枯れた木は立ったまま残る（くさらせる微生物も酸素もない）。';
     else if (fBoil > 0.5 && Tsea > 273.2) msg = '海が沸騰。蒸発が熱をうばい、水が冷えていく。';
     else if (fBoil > 0.5) msg = '0℃ で沸きながら凍っていく。';
     else if (F > 0) msg = '氷の表面から水蒸気が出ていく（昇華）。日光と、熱の放射・昇華がつりあう温度。';
