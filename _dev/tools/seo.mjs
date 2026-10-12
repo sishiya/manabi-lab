@@ -47,7 +47,10 @@ function put(path, b) {
   if (out !== src) { stale.push(path); if (!check) writeFileSync(path, out); }
 }
 
-put(entrancePath, block({ url: BASE, title: 'まなびラボ', desc: lead, image: BASE + 'assets/og.jpg', w: 1200, h: 630 }));
+// Google Search Console の所有権の確認（URL プレフィックス https://sishiya.github.io/manabi-lab/。公開してよい値。消すと確認が外れる）
+const GSC = '<meta name="google-site-verification" content="dD02qa-rgBbwyVDz8sacKRQIVEWhm3mKeqHTb-JRRIw">';
+put(entrancePath, block({ url: BASE, title: 'まなびラボ', desc: lead, image: BASE + 'assets/og.jpg', w: 1200, h: 630 })
+  .replace('\n<!-- /seo -->', '\n' + GSC + '\n<!-- /seo -->'));
 for (const a of APPS) {
   put(join(root, a.id, 'index.html'), block({
     url: BASE + a.id + '/', title: a.title + '｜まなびラボ', desc: a.desc,
