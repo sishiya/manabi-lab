@@ -1,0 +1,51 @@
+/* 脱毛のしくみ */
+:root{--bg:#1c1513;--panel:#261c19;--line:#3d2e29;--ink:#f3e9e4;--muted:#b9a59c;--acc:#ffb37a;
+  --shave:#7fc8ff;--pluck:#ffd166;--light:#ff8fb1;
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+#app{max-width:1100px;margin:0 auto}
+button,select,input{font:inherit;color:inherit}
+button,select{background:var(--panel);border:1px solid var(--line);border-radius:8px;min-height:36px;padding:4px 12px;cursor:pointer}
+button:hover{border-color:var(--acc)}
+
+/* 上に固定する部分 */
+#pin{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding-bottom:6px}
+#top{display:flex;align-items:baseline;gap:12px;padding:8px 14px 2px;flex-wrap:wrap}
+#top h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0}
+#sub{color:var(--muted);font-size:13px}
+#stage{position:relative;height:min(52vh,460px)}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:pan-y}
+#tip{position:absolute;max-width:260px;background:rgba(20,14,12,.95);border:1px solid var(--acc);border-radius:8px;padding:6px 9px;font-size:13px;line-height:1.6;pointer-events:none;z-index:3}
+#timebar{display:flex;align-items:center;gap:10px;padding:4px 14px}
+#time{flex:1;accent-color:var(--acc);height:36px}
+#day{font-family:var(--f-mono);min-width:70px;text-align:right}
+#play{width:44px;padding:0}
+#guide{display:flex;gap:10px;align-items:center;padding:2px 14px;min-height:52px}
+#gtext{flex:1;margin:0;font-size:14px;line-height:1.6}
+.gbtn{display:flex;align-items:center;gap:6px;flex-shrink:0}
+#gnum{font-family:var(--f-mono);font-size:12px;color:var(--muted);min-width:34px;text-align:center}
+#gnext{background:var(--acc);color:#2a1d1a;border-color:var(--acc);font-weight:700}
+
+/* スクロールする部分 */
+.sec{padding:10px 14px}
+.sec h2{font-size:15px;margin:8px 0 6px}
+#gr{width:100%;height:200px;display:block;touch-action:pan-y;cursor:pointer}
+.hint{color:var(--muted);font-size:13px;margin:4px 0;line-height:1.6}
+.row{display:flex;align-items:center;gap:8px;margin:6px 0;flex-wrap:wrap}
+.lane{display:flex;align-items:center;gap:8px;margin:6px 0;flex-wrap:wrap}
+.lane b{min-width:3em}
+#site{max-width:100%}
+#about{color:var(--muted);font-size:14px;line-height:1.8;padding-bottom:28px}
+#about summary{cursor:pointer;color:var(--ink);min-height:36px;display:flex;align-items:center}
+#about a{color:var(--acc)}
+#about b{color:var(--ink)}
+#srcs li{margin-bottom:4px}
+
+@media (max-width:600px){
+  #stage{height:40vh;min-height:250px}
+  #sub{display:none}
+  #gtext{font-size:13px}
+  #guide{align-items:flex-start}
+  .gbtn{flex-direction:column-reverse;gap:2px}
+}

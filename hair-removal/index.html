@@ -1,0 +1,57 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>脱毛のしくみ</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%232a1d1a'/><path d='M8 40h48' stroke='%23e7b9a0' stroke-width='4'/><path d='M22 52V40q0-14 10-26' stroke='%23ffb37a' stroke-width='4' fill='none'/><path d='M40 52V40q0-10 8-18' stroke='%23ffb37a' stroke-width='4' fill='none'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <!-- 上に固定: 3列の断面・時間・案内（RULES 9章） -->
+  <div id="pin">
+    <header id="top"><h1>脱毛のしくみ</h1><span id="sub">すねの肌を3つに分けて比べる</span></header>
+    <div id="stage"><canvas id="cv"></canvas><div id="tip" hidden></div></div>
+    <div id="timebar">
+      <button id="play" aria-label="再生">▶</button>
+      <input id="time" type="range" min="-7" max="365" step="0.5" value="-7" aria-label="日">
+      <span id="day">0日目</span>
+    </div>
+    <div id="guide"><p id="gtext"></p><div class="gbtn"><button id="gprev" aria-label="もどる">◀</button><span id="gnum"></span><button id="gnext">つぎへ ▶</button></div></div>
+  </div>
+
+  <!-- その下をスクロール -->
+  <section class="sec">
+    <h2>表面から出ている毛の数</h2>
+    <canvas id="gr"></canvas>
+    <p class="hint">グラフをさわると、その日へ移ります。下の印は手入れをした日。</p>
+  </section>
+
+  <section class="sec" id="ctrl">
+    <h2>手入れの予定</h2>
+    <div id="lanesCtl"></div>
+    <label class="row">はやさ <select id="speed"><option value="7">1秒で1週</option><option value="30" selected>1秒で1か月</option><option value="2">1秒で2日</option></select></label>
+    <h2>周期の値</h2>
+    <label class="row"><select id="site"></select></label>
+    <p class="hint" id="siteNote"></p>
+  </section>
+
+  <details id="about" class="sec">
+    <summary>このアプリについて</summary>
+    <p>同じ毛穴の並びを3列に分け、剃る・抜く・光をあてる をそれぞれにした場合を、同じ時間で比べるシミュレーションです。毛穴1つずつが「成長期 → 退行期 → 休止期 → 新しい成長期」をくり返し、毛は毛球（毛の根もと）で作られて下から押し上げられます。</p>
+    <p><b>学習用に簡単にしています。</b>医療・美容の判断には使えません。毛穴は1列に60個を計算し、図にはそのうち数個を描いています。毛はまっすぐ・肌は平らとし、毛穴どうしは影響しあわないとしています。周期の長さは出どころによって大きくちがうので、選べるようにしています。</p>
+    <p>推定の値: 抜いたあと新しい成長期が始まるまで（平均7日）、毛抜きでつまめる長さ（0.5 mm）、古い毛が落ちるまで（0〜25日）、真皮の厚さ・バルジの深さ、周期のばらつき。</p>
+    <p id="lightNote">光の列: 段階A では「前の日に剃る」だけを計算しています。光の熱の計算は次の段階で入れます。</p>
+    <h3>おもな出どころ</h3>
+    <ul id="srcs"></ul>
+    <h3>使っているもの</h3>
+    <p>フォント: Google Fonts（SIL Open Font License）</p>
+  </details>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/model.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/graph.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
