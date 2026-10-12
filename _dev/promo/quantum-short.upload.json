@@ -1,6 +1,7 @@
 {
   "videoId": "rusEmkMXU_4",
   "file": "_dev/promo/out/quantum-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/quantum-short.jpg",
   "privacy": "private",
   "publishAt": "2026-10-15T20:05:00+09:00",
   "captions": { "en": "_dev/promo/out/quantum-short.en.srt" },

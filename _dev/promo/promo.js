@@ -356,97 +356,6 @@ function drawIdent(g, t, a) {
   }
   g.restore();
 }
-// 音の目印「ぽろろろんっ」: ハープ／カリンバのような音で、ド・ミ・ソ・ド と速く上がり（ぽろろろ）、ソ＋ドで止まる（んっ）
-// 心地よさのために: 音の高さは 260〜800 Hz（高いほど耳ざわりになる）、倍音は短く（長い倍音は耳ざわり）、
-// 2.5 kHz より上は切る（2〜4 kHz は耳がいちばん敏感で、耳ざわりのもと）。立ち上がりは 8 ミリ秒でやわらかく
-function identJingle(ctx, out, t0) {
-  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2500; lp.Q.value = 0.5; lp.connect(out);
-  const C4 = 261.63, hz = s => C4 * Math.pow(2, s / 12);
-  const pluck = (t, s, v, len, pan) => {
-    const p = ctx.createStereoPanner(); p.pan.value = pan; p.connect(lp);
-    for (const [m, gv, dl] of [[1, 1, len], [2, 0.35, 0.12], [3, 0.12, 0.06]]) {   // 倍音ほど早く消える
-      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = hz(s) * m;
-      const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v * gv, t + 0.008);
-      g.gain.exponentialRampToValueAtTime(0.0005, t + dl);
-      o.connect(g); g.connect(p); o.start(t); o.stop(t + dl + 0.05);
-    }
-  };
-  const s0 = t0 + 0.7;   // 本編が閉じてから
-  [[0, 0], [4, 0.07], [7, 0.14], [12, 0.21]].forEach(([s, dt], i) => pluck(s0 + 0.05 + dt, s, 0.32, 0.9, -0.3 + i * 0.2));   // ぽろろろ
-  pluck(s0 + 0.42, 7, 0.36, 1.8, -0.1); pluck(s0 + 0.43, 12, 0.3, 1.8, 0.15); pluck(s0 + 0.44, -12, 0.25, 1.6, 0);          // んっ
-}
-
-// 案内役のライオンの「しゃべり」（声の代わりの合成音）。cue = { t, type: 'babble', n: 音の数, seed, voice }
-// 1音ずつの有り無し・大きさ・高さを決まった乱数で決めるので、口の動き（babbleMouth）と音がぴったり合う
-// 声の種類 BABBLE_VOICES（2026-10-10 に見くらべ用に5つ。_dev/promo/babble-test.html）。どれもここで合成した音で、録音した声は使わない
-// 心地よさのために: 音の高さはだいたい 200〜900 Hz、2.2 kHz より上は切る、立ち上がりはやわらかく（目印の音と同じ考え）
-const BABBLE_RATE = 7.5;   // ぽこぽこ の 1秒あたりの音の数（声ごとの速さは BABBLE_VOICES の rate）
-const hash01 = (s, i) => { const x = Math.sin(s * 12.9898 + i * 78.233) * 43758.5453; return x - Math.floor(x); };
-const env = (ctx, t, a, peak, d) => { const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0005, t + a + d); return g; };
-const BABBLE_VOICES = {
-  // A ぽこぽこ: やわらかい三角波が少し下がる（最初の版）
-  poko: { name: 'ぽこぽこ', rate: 7.5, gap: 0.13, sound(ctx, out, t, s) {
-    const f = 330 * Math.pow(2, s.semi / 12), o = ctx.createOscillator(); o.type = 'triangle';
-    o.frequency.setValueAtTime(f * 1.06, t); o.frequency.exponentialRampToValueAtTime(f * 0.94, t + 0.09);
-    const g = env(ctx, t, 0.012, 0.16 * s.amp, 0.1); o.connect(g); g.connect(out); o.start(t); o.stop(t + 0.13);
-  } },
-  // B ぴよぴよ: 高めの短い音が上へ跳ねる（小鳥のよう）
-  piyo: { name: 'ぴよぴよ', rate: 9, gap: 0.15, sound(ctx, out, t, s) {
-    const f = 600 * Math.pow(2, s.semi / 12), o = ctx.createOscillator(); o.type = 'sine';
-    o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 1.3, t + 0.05);
-    const g = env(ctx, t, 0.008, 0.15 * s.amp, 0.07); o.connect(g); g.connect(out); o.start(t); o.stop(t + 0.1);
-  } },
-  // C もごもご（標準。2026-10-10 にユーザーが選んだ）: のこぎり波を「あ・い・う・え・お」の響き（2つの山）に通す。ことばっぽいけれど意味はない
-  mogo: { name: 'もごもご', rate: 8.5, gap: 0.12, sound(ctx, out, t, s, k, c) {
-    const V = [[800, 1200], [320, 2000], [350, 900], [500, 1750], [450, 800]][Math.floor(hash01(c.seed + 11, k) * 5)];
-    const f = 200 * Math.pow(2, s.semi / 24), o = ctx.createOscillator(); o.type = 'sawtooth';
-    o.frequency.setValueAtTime(f * 1.04, t); o.frequency.linearRampToValueAtTime(f * 0.97, t + 0.1);
-    const g = env(ctx, t, 0.015, 0.5 * s.amp, 0.1);
-    for (const [fq, q, v] of [[V[0], 5, 1], [V[1], 7, 0.5]]) {
-      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = fq; bp.Q.value = q;
-      const gv = ctx.createGain(); gv.gain.value = v; o.connect(bp); bp.connect(gv); gv.connect(g);
-    }
-    g.connect(out); o.start(t); o.stop(t + 0.14);
-  } },
-  // D ぽんぽん: 木琴のような音。ド・レ・ミ・ソ・ラ（五音）だけなので、何を言っても調子はずれにならない
-  pon: { name: 'ぽんぽん', rate: 6.5, gap: 0.1, sound(ctx, out, t, s, k, c) {
-    const f = 294 * Math.pow(2, [0, 2, 4, 7, 9, 12, 14][Math.floor(hash01(c.seed + 5, k) * 7)] / 12);
-    for (const [m, v, d] of [[1, 0.14, 0.25], [3.9, 0.03, 0.03]]) {
-      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f * m;
-      const g = env(ctx, t, 0.005, v * s.amp, d); o.connect(g); g.connect(out); o.start(t); o.stop(t + d + 0.05);
-    }
-  } },
-  // E ピピピ: 文字が1字ずつ出るときの昔のゲームのような短い電子音（高さは一定）
-  pipi: { name: 'ピピピ', rate: 13, gap: 0.05, sound(ctx, out, t, s, k, c) {
-    const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = 440 * Math.pow(2, ((c.seed % 3) - 1) / 12);
-    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1600;
-    const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.045, t + 0.004);
-    g.gain.setValueAtTime(0.045, t + 0.035); g.gain.linearRampToValueAtTime(0, t + 0.045);
-    o.connect(lp); lp.connect(g); g.connect(out); o.start(t); o.stop(t + 0.06);
-  } },
-};
-const babbleVoice = c => BABBLE_VOICES[c.voice] || BABBLE_VOICES.mogo;   // 省くと標準の もごもご
-function babbleSyl(c, k) {
-  const r = hash01(c.seed || 1, k), v = babbleVoice(c);
-  return { on: r > v.gap && (k + 1) % 9 !== 0, amp: 0.55 + 0.45 * hash01(c.seed + 7, k), semi: Math.round(hash01(c.seed + 3, k) * 7) - 2 };
-}
-// その時刻の口の開き（0〜1）
-function babbleMouth(cues, t) {
-  for (const c of cues) {
-    if (c.type !== 'babble' || t < c.t) continue;
-    const rate = babbleVoice(c).rate, u = (t - c.t) * rate, k = Math.floor(u);
-    if (k >= c.n) continue;
-    const s = babbleSyl(c, k); if (!s.on) return 0;
-    return Math.pow(Math.sin(Math.PI * (u - k)), 0.6) * s.amp * (rate > 11 ? 0.6 : 1);
-  }
-  return 0;
-}
-function babbleSound(ctx, out, c) {
-  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200; lp.connect(out);
-  const v = babbleVoice(c);
-  for (let k = 0; k < c.n; k++) { const s = babbleSyl(c, k); if (s.on) v.sound(ctx, lp, c.t + k / v.rate, s, k, c); }
-}
-
 // ---- 案内役のライオン（説明動画の標準。2026-10-10 にユーザーが決めた。見本は evolution-guide.html）----
 // _dev/vtuber/index.html?ext を裏の iframe で開き、1コマずつ描かせて右下に重ねる。
 // 台本で: setup の中で MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: CUR, exp: [[秒, '表情'], …], end: END, … })); await lionOpen();
@@ -551,104 +460,6 @@ function drawLion(g, t) {
   g.restore();
 }
 
-// ---- 音（ブラウザで合成。著作権の心配なし）----
-// music = { style, root, cues, quiet }
-//   style 'drone'   : 低い持続音（暗い・宇宙。root は低い音の Hz、既定 55）
-//   style 'journey' : 明るい和音＋アルペジオ（旅・歴史。root は和音のいちばん下の Hz、既定 130.8 = ド）
-//   cues  [{ t, type: 'boom' }] : その時刻に低い「ドン」
-//         [{ t, type: 'babble', n, seed }] : 案内役のライオンのしゃべり（babbleSound）
-//   quiet [[a, b]]             : その間はアルペジオを止め、和音を暗くする
-async function makeAudio(dur, music = {}) {
-  const ctx = new OfflineAudioContext(2, SR * dur, SR);
-  const master = ctx.createGain(); master.connect(ctx.destination);
-  master.gain.setValueAtTime(0, 0);
-  master.gain.linearRampToValueAtTime(0.22, 3);
-  const stop = music.stopAt ?? dur;   // stopAt: 本編の終わり。ここで BGM を消す（締めの画面は目印の音だけ）
-  master.gain.setValueAtTime(0.22, Math.max(3, stop - (music.stopAt ? 1 : 4)));
-  master.gain.linearRampToValueAtTime(0, music.stopAt ? stop + 0.3 : dur - 0.2);
-  // 残響（減衰する雑音をたたみこむ）
-  const ir = ctx.createBuffer(2, SR * 2.5, SR);
-  for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3); }
-  const verb = ctx.createConvolver(); verb.buffer = ir;
-  const wet = ctx.createGain(); wet.gain.value = 0.5; verb.connect(wet); wet.connect(master);
-  const bus = ctx.createGain(); bus.connect(master); bus.connect(verb);
-  const noise = ctx.createBuffer(1, SR * 2, SR), nd = noise.getChannelData(0);
-  for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
-  const quiet = music.quiet || [], isQuiet = t => quiet.some(([a, b]) => t >= a && t < b);
-
-  // しし屋の音の目印（cues の type: 'jingle'）。BGM の音量の山とは別に鳴らす（下の identJingle）
-  const jbus = ctx.createGain(); jbus.gain.value = 0.35; jbus.connect(ctx.destination);
-  const jverb = ctx.createConvolver(); jverb.buffer = ir; const jwet = ctx.createGain(); jwet.gain.value = 0.35;   // BGM を消しても響きは残す
-  jbus.connect(jverb); jverb.connect(jwet); jwet.connect(ctx.destination);
-  for (const c of music.cues || []) if (c.type === 'jingle') identJingle(ctx, jbus, c.t, c.kind);
-  for (const c of music.cues || []) if (c.type === 'babble') babbleSound(ctx, jbus, c);   // 案内役のしゃべり（BGM の音量とは別）
-  if (music.extra) await music.extra(ctx, ctx.destination);   // 台本ごとの音（ピアノを弾く手のピアノの音など。BGM の音量とは別）
-  if (music.style === 'none') {
-    // BGM なし（目印の音だけ）
-  } else if ((music.style || 'drone') === 'drone') {
-    const root = music.root || 55;
-    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.Q.value = 0.7; lp.connect(bus);
-    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.05;
-    const lfoG = ctx.createGain(); lfoG.gain.value = 500; lfo.connect(lfoG); lfoG.connect(lp.frequency); lfo.start();
-    // 根音・5度・オクターブを少しずらして重ね、左右に分ける
-    [[1, -0.6], [1.005, 0.6], [1.498, -0.3], [1.503, 0.3], [2, 0.5], [2.007, -0.5], [2.996, 0]].forEach(([m, pan], i) => {
-      const o = ctx.createOscillator(); o.type = i % 2 ? 'triangle' : 'sine'; o.frequency.value = root * m;
-      const gg = ctx.createGain(); gg.gain.value = m < 1.1 ? 0.5 : 0.22;
-      const p = ctx.createStereoPanner(); p.pan.value = pan;
-      o.connect(gg); gg.connect(p); p.connect(lp); o.start();
-    });
-    // 遠い風のような雑音
-    const ns = ctx.createBufferSource(); ns.buffer = noise; ns.loop = true;
-    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 400; bp.Q.value = 0.8;
-    const ng = ctx.createGain(); ng.gain.value = 0.05;
-    ns.connect(bp); bp.connect(ng); ng.connect(master); ns.start();
-  } else {
-    const root = music.root || 130.81, hz = s => root * Math.pow(2, s / 12);
-    // ド→ラ→ファ→ソ（I–vi–IV–V）。暗い所はラ→ミ（vi–iii）
-    const PROG = [[0, 4, 7], [-3, 0, 4], [-7, -3, 0], [-5, -1, 2]], DARK = [[-3, 0, 3], [-8, -5, -1]];
-    const beat = 60 / 84, bar = beat * 4, chordLen = bar * 2;
-    const pad = ctx.createBiquadFilter(); pad.type = 'lowpass'; pad.frequency.value = 1100; pad.connect(bus);
-    for (let k = 0, t = 0; t < dur; k++, t += chordLen) {
-      const dark = isQuiet(t + chordLen / 2), ch = dark ? DARK[k % 2] : PROG[k % 4];
-      // 和音（ゆっくりふくらむパッド）。いちばん下にオクターブ下の根音
-      [...ch, ch[0] - 12].forEach((s, i) => {
-        for (const det of [-6, 6]) {
-          const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = hz(s); o.detune.value = det;
-          const g = ctx.createGain(), v = (i === 3 ? 0.10 : 0.05) * (dark ? 0.8 : 1);
-          g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 1.2);
-          g.gain.setValueAtTime(v, t + chordLen - 0.4); g.gain.linearRampToValueAtTime(0, t + chordLen + 0.8);
-          const p = ctx.createStereoPanner(); p.pan.value = det < 0 ? -0.4 : 0.4;
-          o.connect(g); g.connect(p); p.connect(pad); o.start(t); o.stop(t + chordLen + 1);
-        }
-      });
-      // アルペジオ（8分音符。和音の音を1オクターブ上で上下に）
-      const pat = [0, 1, 2, 1, 0, 1, 2, 3];
-      for (let n = 0; n < 16; n++) {
-        const tn = t + n * beat / 2;
-        if (tn >= dur - 3 || tn < 2.5 || isQuiet(tn)) continue;
-        const s = pat[n % 8] === 3 ? ch[0] + 12 : ch[pat[n % 8]];
-        const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = hz(s + 12);
-        const g = ctx.createGain(); g.gain.setValueAtTime(0, tn); g.gain.linearRampToValueAtTime(0.09, tn + 0.01); g.gain.exponentialRampToValueAtTime(0.0005, tn + 0.9);
-        const p = ctx.createStereoPanner(); p.pan.value = (n % 2 ? 0.3 : -0.3);
-        o.connect(g); g.connect(p); p.connect(bus); o.start(tn); o.stop(tn + 1);
-      }
-    }
-  }
-  // 「ドン」: 下がっていく低い音＋こもった雑音
-  for (const c of music.cues || []) {
-    if (c.type !== 'boom') continue;
-    const o = ctx.createOscillator(); o.type = 'sine';
-    o.frequency.setValueAtTime(90, c.t); o.frequency.exponentialRampToValueAtTime(28, c.t + 2.5);
-    const g = ctx.createGain(); g.gain.setValueAtTime(0, c.t); g.gain.linearRampToValueAtTime(1.6, c.t + 0.03); g.gain.exponentialRampToValueAtTime(0.001, c.t + 3.5);
-    o.connect(g); g.connect(bus); o.start(c.t); o.stop(c.t + 3.6);
-    const ns = ctx.createBufferSource(); ns.buffer = noise; ns.loop = true;
-    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(1500, c.t); lp.frequency.exponentialRampToValueAtTime(120, c.t + 3);
-    const ng = ctx.createGain(); ng.gain.setValueAtTime(0, c.t); ng.gain.linearRampToValueAtTime(0.9, c.t + 0.05); ng.gain.exponentialRampToValueAtTime(0.001, c.t + 4);
-    ns.connect(lp); lp.connect(ng); ng.connect(bus); ns.start(c.t); ns.stop(c.t + 4.1);
-  }
-  return ctx.startRendering();
-}
-
 async function pickVideoCodec() {
   for (const codec of ['avc1.640033', 'avc1.4d0033']) {   // H.264 レベル 5.1（4K）
     const c = { codec, width: PW * RES, height: PH * RES, bitrate: 40e6, framerate: FPS };   // YouTube のおすすめは 4K30 で 35〜45 Mbps
@@ -737,6 +548,7 @@ function promoStart(cfg) {
     aenc.configure(acfg);
 
     const buf = await makeAudio(DUR, cfg.music);
+    logLoud(buf);
     const L = buf.getChannelData(0), R = buf.getChannelData(1), CH = SR / 10;
     for (let i = 0; i < L.length; i += CH) {
       const n = Math.min(CH, L.length - i), data = new Float32Array(n * 2);
@@ -788,6 +600,14 @@ function promoStart(cfg) {
     }
   }
 
+  const logLoud = b => { const l = b.loud; if (l) log(`音量: 全体 ${l.total.toFixed(1)} LUFS（BGM ${isFinite(l.bgmBefore) ? l.bgmBefore.toFixed(1) + ' → ' + LOUD.bgm : 'なし'}、ピークを最大 ${(-l.peakGain).toFixed(1)} dB 下げた）`); };
+  // 音だけ作りなおす: __promoAudio() → out/<out>.wav（映像はそのまま。_dev/tools/remix-audio.ps1 が mp4 の音を差しかえる）
+  window.__promoAudio = async () => {
+    const b = await makeAudio(cfg.dur, cfg.music); logLoud(b);
+    const r = await fetch(`out/${cfg.out}.wav`, { method: 'PUT', body: new Blob([wavBytes(b)], { type: 'audio/wav' }) });
+    window.__promoWav = { status: r.status, loud: b.loud };
+    return r.status;
+  };
   // 見本のコマ（確かめる用）: __promoPeek(秒)
   window.__promoPeek = async t => { await renderAt(t); return 'ok'; };
   // 何コマかを縮めて1枚に並べ、out/<name>.jpg に保存する（確かめ用。見終わったら消す）

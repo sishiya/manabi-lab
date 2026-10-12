@@ -9,6 +9,8 @@
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/record-promo.ps1 -Script black-hole -Short           # ショート（<app>.html?short）
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/record-promo.ps1 -Script quantum-guide -NoRecord -Peek 3,30,60,90   # コマだけ見る
 #   ふだんはヘッドレスで GPU を使って描く。GPU で絵がおかしいときは -Soft（ソフトウェアで描く。とても遅い）
+#   -AudioOnly: 録画しなおさずに音だけ作りなおす（__promoAudio → out/<out>.wav → ffmpeg で mp4 の音を差しかえ。映像はそのまま）。
+#     古い mp4 は out/<out>.before-<Reason>.mp4 に残す（-Reason の既定は loud）。音量の確かめは check-loudness.ps1
 #   -Visible: 見える窓で開く（ヘッドレスで H.264 に書き出せないときや、god-view のように地図の読みこみを見たいとき）
 # 見終わった peek-・check- の jpg は消す（README: 見終わったら消す）。out/ は Git に入れない。
 param(
@@ -17,6 +19,8 @@ param(
   [string]$Peek,
   [string]$Check,
   [switch]$NoRecord,
+  [switch]$AudioOnly,
+  [string]$Reason = 'loud',
   [switch]$Visible,
   [switch]$Soft,
   [int]$Port = 8765,
@@ -63,6 +67,23 @@ try {
     Write-Host "確かめ用のコマ: _dev/promo/out/peek-$out.jpg（$ts 秒、保存 $st）"
   }
   if ($NoRecord) { Show-Log $ws; return }
+
+  # --- 音だけ作りなおす ---
+  if ($AudioOnly) {
+    $mp4 = Join-Path $root "_dev/promo/out/$out.mp4"; $wav = Join-Path $root "_dev/promo/out/$out.wav"
+    if (-not (Test-Path $mp4)) { throw "$mp4 がない（音だけの差しかえは録画ずみの mp4 に）" }
+    $st = Invoke-CdpEval $ws 'window.__promoAudio()' -TimeoutSec 900
+    if ($st -ne 200 -and $st -ne 201 -and $st -ne 204) { Show-Log $ws; throw "wav を保存できなかった（$st）" }
+    Show-Log $ws
+    $old = Join-Path $root "_dev/promo/out/$out.before-$Reason.mp4"
+    if (Test-Path $old) { throw "$old がもうある（-Reason を変える）" }
+    Move-Item $mp4 $old
+    & ffmpeg -v error -i $old -i $wav -map 0:v -map 1:a -c:v copy -c:a aac -b:a 192k -ar 48000 -movflags +faststart -shortest -y $mp4
+    if ($LASTEXITCODE -ne 0) { Move-Item $old $mp4; throw 'ffmpeg で差しかえられなかった（元に戻した）' }
+    Remove-Item $wav
+    Write-Host "音を差しかえた: _dev/promo/out/$out.mp4（古いのは $out.before-$Reason.mp4、$(Elapsed)）"
+    return
+  }
 
   # --- 2. 録画 ---
   [void](Invoke-CdpEval $ws 'window.__promoRecord(), 1')

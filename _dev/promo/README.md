@@ -1,7 +1,7 @@
 # 紹介動画づくり（_dev/promo）
 
 アプリを iframe で開いて1コマずつ描き、字幕・矢印・BGM（コードで合成）を重ねて、ブラウザだけで 4K の mp4 にする。
-共通の仕組みは `promo.js`、アプリごとのページ（台本）は `<app>.html`・`<app>-guide.html`。
+共通の仕組みは `promo.js`（音は `promo-audio.js`。台本ページで promo.js のあとに読みこむ）、アプリごとのページ（台本）は `<app>.html`・`<app>-guide.html`。
 YouTube に出す順番（ジャンル・サムネイルの色味が連日で重ならないように並べた案）は `SCHEDULE.md`。
 
 ## すみわけ（2026-10-10 にユーザーが決めた）
@@ -44,7 +44,7 @@ YouTube に出す順番（ジャンル・サムネイルの色味が連日で重
   - 予約日時は `_dev/tools/schedule-videos.ps1 -Start <日付>`（`SCHEDULE.md` の順に、説明動画 20:00・ショート 20:05）。`-Apply` で書き、GO のあと `-Upload` で YouTube の予約まで。
 - 上げる: `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Meta _dev/promo/<out>.upload.json`。表示された ID を JSON の `videoId` に書く。
 - 上げたあとに英語・字幕を足す・直す: `-Update -Meta …`。チャンネルの動画の一覧: `-List`。公開前の最終確認（読むだけ）: `-Verify [-Date 日付]`（RULES 8.4）。
-- 再生リスト「まなびラボ ― アプリの使い方と見どころ（通しで見る）」（公開、https://www.youtube.com/playlist?list=PLPr9GEGpKWDg 、2026-10-12 ユーザーの指示で作った）: `-Playlist`。設定は `playlist.json`（名前・説明・英語・どの upload.json を入れるか）。**公開ずみ**の説明動画だけを公開の順に足す（予約中は足さない）ので、**動画が公開された日（20:00 のあと）に毎回走らせる**。何度走らせてもよい。`-DryRun` で足すものだけ見る。
+- 再生リスト「まなびラボ ― アプリの使い方と見どころ（通しで見る）」（公開、https://www.youtube.com/playlist?list=PLPr9GEGpKWDg 、2026-10-12 ユーザーの指示で作った）: `-Playlist`。設定は `playlist.json`（名前・説明・英語・どの upload.json を入れるか）。ショートは「まなびラボ ― ショート（通しで見る）」（https://www.youtube.com/playlist?list=PLYifG6DSkuLM 、設定は `playlist-shorts.json`）。`-Playlist` は `playlist*.json` を全部合わせる。毎晩 20:20 ごろの予約タスク（manabi-playlist-sync、Claude のアプリが開いているとき）が走らせる。**公開ずみ**の説明動画だけを公開の順に足す（予約中は足さない）ので、**動画が公開された日（20:00 のあと）に毎回走らせる**。何度走らせてもよい。`-DryRun` で足すものだけ見る。
 - **API の本数の上限で上げられないとき**: ユーザーが Studio で動画ファイルだけ上げる（「子ども向けではない」を選ぶ・非公開・予約はそこで）→ `-List` で ID を調べて JSON の `videoId` に書く → `-Update -Full -Meta …` で日本語と英語のタイトル・説明・タグ・字幕・サムネイルを入れる（上げたあとの更新は本数の上限に数えられない）。
 - **上げる・予約投稿はユーザーの GO のあとで**。予約は `publishAt`（日本時間 `+09:00`、19〜22時ごろ）。差し替えは新しく上げて、古い方はユーザーが Studio で消す（Claude は消さない）。
 - YouTube には1日に上げられる本数の上限がある（`exceeded the number of videos` が出たら日を改める）。2026-10-11 は API で8本＋Studio で3本（合わせて11本）上げても当たらなかった。API の使用量は `youtube-upload.ps1 -Quota`（記録は `_dev/tools/out/yt-quota.csv`。1日は太平洋時間の0時＝日本時間16時に切りかわる）。
@@ -65,7 +65,9 @@ YouTube に出す順番（ジャンル・サムネイルの色味が連日で重
   - はじまり: 本編が主役。左上に小さくアイコン＋名前が出て約3秒ではける（`drawIdentMini(g, t, 0.3)`、音なし）。**ショートにも入れる**（最後まで見ない人にも覚えてもらうため。2026-10-10 ユーザー）。大きさは横長と同じ（1.4 倍にしたら「主役は題名。隅に見えて色の残像が残ればいい」と言われて戻した）。左上にアプリの文字（年代・場所の名前など）を出す台本は、目印がはけてから（`IDENT_MINI + 0.3` 秒から）出す。
   - 締め: `END = DUR - IDENT_CLOSE`。本編の終わりで BGM を消し（`music.stopAt: END`）、締めの画面（`drawIdent(g, t, END)`）と音の目印（`cues: [{ t: END, type: 'jingle' }]`）。ショートにも入れる。本編の字幕と終わりの画面（`drawEnd`）は END までに終える。
   - 絵は元アイコン（`_dev/sns-icon/a-lion-glasses.svg`）と同じ形・色。音は「ぽろろろんっ」（基音 260〜800 Hz、倍音は短く、2.5 kHz より上は切る）。変えるときは全部の動画で同じに。
+- **音量をそろえる**（RULES 8.6、2026-10-12〜）: 音は `promo-audio.js`（`makeAudio`）が BGM を -20 LUFS にそろえてから声・目印を足し、ピークだけ下げる（`LOUD`）。録画のログに「音量: 全体 … LUFS」が出る。録画したら・上げる前に `_dev/tools/check-loudness.ps1`。映像はそのままで音だけ作りなおすときは `record-promo.ps1 -Script <台本> [-Short] -AudioOnly`（古い mp4 は `<out>.before-loud.mp4`）。
 - BGM はコードで合成した音だけ。作るたびに、権利上問題ないかを確かめてユーザーに伝える。
+- **サムネイルを必ず付ける**（RULES 8.7、2026-10-12〜）: 横長は `assets/thumbs/<app>.jpg`、ショートは `thumbs/<app>-short.jpg`（`short-thumbs.json` に1行足して `_dev/tools/make-short-thumbs.ps1 -Apps <app>`）。upload.json の `thumbnail` に書く。あとから付けるのは `youtube-upload.ps1 -Thumb -Meta a.upload.json,b.upload.json`。
 - 最初のカットは入口のサムネイル（`assets/thumbs/<app>.jpg`）に近い見た目にする。生き物などの名前を画面に出すと好評。
 - 性的な内容・R18 をまぜない（RULES 9章）。出どころは説明文と終わりの画面に書く。
 - **公開の前日に、翌日公開の分を最終確認・デバッグする**（RULES 8.4。`youtube-upload.ps1 -Verify`・mp4 のコマ・公開中のアプリ。結果は `upload-log.md` の「公開前の確認」）。

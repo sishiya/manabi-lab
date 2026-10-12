@@ -1,0 +1,16 @@
+{
+  "_note": "ショートのサムネイル（1080x1920）。t はショートの mp4 から取るコマの秒、lines は大きな2行、color は2行目の色。作るのは _dev/tools/make-short-thumbs.ps1",
+  "evolution":     { "name": "ヒトへの46億年", "t": 33,  "lines": ["46億年を", "40秒で"],               "color": "#ffd34d" },
+  "body-dive":     { "name": "体内ダイブ", "t": 3.4,  "lines": ["口から肛門まで", "旅してみた"],       "color": "#ffe08a" },
+  "black-hole":    { "name": "ブラックホールの見え方", "t": 4,   "lines": ["ブラックホールを", "光から計算"],     "color": "#ffc861" },
+  "animal-senses": { "name": "いきものの感じる世界", "t": 8,   "lines": ["カラスの目で", "庭を見ると"],         "color": "#d9a8ff" },
+  "quantum":       { "name": "量子の実験室", "t": 17,  "lines": ["電子を1個ずつ", "しま模様が出る"],   "color": "#ffd34d" },
+  "metamorphosis": { "name": "さなぎの中で", "t": 13,  "lines": ["さなぎの中は", "どうなってる？"],     "color": "#7fe3ff" },
+  "immune-battle": { "name": "免疫のたたかい", "t": 21,  "lines": ["インフルエンザが", "治るまで"],       "color": "#ff9db8" },
+  "air-flow":      { "name": "空気の流れの見える部屋", "t": 26,  "lines": ["窓を1か所と2か所", "こんなにちがう"], "color": "#7fe3ff" },
+  "ga-creatures":  { "name": "進化の箱庭", "t": 26,  "lines": ["でたらめな生きもの", "走り方を覚える"], "color": "#9dff9d" },
+  "god-view":      { "name": "神の視点マップ", "t": 12,  "lines": ["宇宙の果てから", "クォークまで"],     "color": "#7fd0ff" },
+  "wifi-wave":     { "name": "電波の見える部屋", "t": 29,  "lines": ["WiFi の電波は", "こう伝わる"],         "color": "#ffb347" },
+  "mold-growth":   { "name": "カビが育つまで", "t": 29,  "lines": ["お風呂のカビは", "こう広がる"],       "color": "#b8f07a" },
+  "piano-hand":    { "name": "ピアノを弾く手", "t": 22, "band": 1180, "lines": ["ピアノを弾く手の", "骨と筋肉"],       "color": "#ff9d9d" }
+}

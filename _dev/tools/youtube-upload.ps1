@@ -25,8 +25,10 @@
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Schedule -Meta _dev/promo/black-hole-guide.upload.json
 #       … 予約投稿の日時（publishAt）だけを入れる。JSON に publishAt がなければ予約を外して非公開のままにする（字幕を送らないので API の使用量が少ない）
 #         captions: { "en": "_dev/promo/out/<名前>.en.srt" } … 字幕（CC）。台本ページ（_dev/promo/*.html）を開くと out に保存される。日本語は動画に焼きこんであるので、ふつうは英語だけ
+#   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Thumb -Meta a.upload.json,b.upload.json
+#       … サムネイル（thumbnail）だけを付ける。公開ずみの動画にも。ショートは _dev/promo/thumbs/<app>-short.jpg（make-short-thumbs.ps1）
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Playlist [-DryRun]
-#       … 再生リスト（_dev/promo/playlist.json）を作る／名前・説明・英語を合わせ、match に当たる upload.json の動画のうち
+#       … 再生リスト（_dev/promo/playlist*.json。1ファイル1リスト: playlist.json＝説明動画、playlist-shorts.json＝ショート）を作る／名前・説明・英語を合わせ、match に当たる upload.json の動画のうち
 #         **公開ずみ**のものを publishAt の順に足す（予約中・非公開は足さない。もう入っているものは足さない）。何度走らせてもよい。
 #         作ったら playlist.json の playlistId に書く。-DryRun は読むだけ（足すものを出す）
 #
@@ -42,6 +44,7 @@ param(
   [switch]$Update,
   [switch]$Full,
   [switch]$Schedule,
+  [switch]$Thumb,
   [switch]$Stats,
   [switch]$Ga,
   [switch]$Quota,
@@ -380,6 +383,18 @@ function Invoke-Schedule {
   $at = Get-AccessToken
   Set-Schedule $m.videoId $m.publishAt @{ Authorization = "Bearer $at" }
 }
+# -Thumb: Meta の thumbnail だけを付ける（公開ずみの動画にも。1本 50 ポイント。-Meta は「,」で区切って何本でも）
+function Invoke-Thumb {
+  if (-not $Meta) { throw '-Meta で動画の情報の JSON を指定してください' }
+  $at = Get-AccessToken; $h = @{ Authorization = "Bearer $at" }
+  foreach ($mp in ($Meta -split ',' | Where-Object { $_ })) {
+    $m = Get-Content -Raw -Encoding UTF8 (Join-Path $root $mp) | ConvertFrom-Json
+    if (-not $m.videoId -or -not $m.thumbnail) { Write-Host "videoId か thumbnail がありません: $mp"; continue }
+    $tf = Join-Path $root $m.thumbnail; $ct = if ($tf -match '\.png$') { 'image/png' } else { 'image/jpeg' }
+    try { Invoke-RestMethod -Method Post -Uri "https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=$($m.videoId)" -Headers $h -ContentType $ct -InFile $tf | Out-Null; Write-Host "サムネイルを付けました: https://youtu.be/$($m.videoId)  $($m.thumbnail)" }
+    catch { Write-Host "サムネイルは付けられませんでした: $mp  $(Get-ErrText $_)" }
+  }
+}
 
 # ---- 上げたあとの動画に、翻訳したタイトルと説明・tags を足す ----
 function Invoke-Update {
@@ -481,8 +496,9 @@ function Invoke-Verify {
     }
     # 4K の動画の自動のサムネイルには maxres（1280）ができる。自分で付けた 640×360 のサムネイルだと standard（640）まで（2026-10-11 に確かめた）
     if ($m.thumbnail -and $sn.thumbnails.maxres) {
-      Add-Type -AssemblyName System.Drawing; $img = [Drawing.Image]::FromFile((Join-Path $root $m.thumbnail)); $tw = $img.Width; $img.Dispose()
-      if ($tw -lt 1280) { $bad.Add("サムネイルが自動のままかも（maxres があるが、付けた画像は幅 $tw）") }
+      Add-Type -AssemblyName System.Drawing; $img = [Drawing.Image]::FromFile((Join-Path $root $m.thumbnail)); $tw = $img.Width; $th = $img.Height; $img.Dispose()
+      # ショートの縦長（1080×1920）は付けても maxres が残るので、この見分け方は使えない（2026-10-12）
+      if ($tw -lt 1280 -and $tw -gt $th) { $bad.Add("サムネイルが自動のままかも（maxres があるが、付けた画像は幅 $tw）") }
     }
     $note.Add("サムネイル $(($sn.thumbnails.PSObject.Properties | ForEach-Object { "$($_.Name)=$($_.Value.width)" }) -join ',')")
     $note.Add("長さ $($v.contentDetails.duration -replace '^PT', '')")
@@ -498,8 +514,16 @@ function Invoke-Verify {
 }
 
 # ---- -Playlist: 再生リストを作る／合わせ、公開ずみの動画を公開の順に足す（playlists 50・playlistItems.insert 50 ポイント／本）----
+# 再生リストは _dev/promo/playlist*.json に1つずつ（playlist.json＝説明動画、playlist-shorts.json＝ショート）。全部を順に合わせる
 function Invoke-Playlist {
-  $pf = Join-Path $root '_dev/promo/playlist.json'
+  $fail = 0
+  foreach ($f in Get-ChildItem (Join-Path $root '_dev/promo') -Filter 'playlist*.json' | Sort-Object Name) {
+    Write-Host "== $($f.Name)"
+    try { Sync-Playlist $f.FullName } catch { Write-Host "失敗: $($_.Exception.Message)"; $fail++ }
+  }
+  if ($fail) { exit 1 }
+}
+function Sync-Playlist([string]$pf) {
   $p = Get-Content -Raw -Encoding UTF8 $pf | ConvertFrom-Json
   # 足したい順: match に当たる upload.json を publishAt の順に（videoId のあるものだけ）
   $want = @(Get-ChildItem (Join-Path $root '_dev/promo') -Filter $p.match | ForEach-Object {
@@ -563,5 +587,5 @@ function Invoke-Playlist {
   if ($plId) { Write-Host "通しで見る: https://www.youtube.com/playlist?list=$plId" }
 }
 
-try { if ($Quota) { Show-Quota } elseif ($Playlist) { Invoke-Playlist } elseif ($Verify) { Invoke-Verify } elseif ($Auth) { Invoke-Auth } elseif ($List) { Invoke-List } elseif ($Stats -and $Ga) { Invoke-GaStats } elseif ($Stats) { Invoke-Stats } elseif ($Schedule) { Invoke-Schedule } elseif ($Update) { Invoke-Update } else { Invoke-Upload } }
+try { if ($Quota) { Show-Quota } elseif ($Playlist) { Invoke-Playlist } elseif ($Verify) { Invoke-Verify } elseif ($Auth) { Invoke-Auth } elseif ($List) { Invoke-List } elseif ($Stats -and $Ga) { Invoke-GaStats } elseif ($Stats) { Invoke-Stats } elseif ($Schedule) { Invoke-Schedule } elseif ($Thumb) { Invoke-Thumb } elseif ($Update) { Invoke-Update } else { Invoke-Upload } }
 catch { Write-Host "失敗: $($_.Exception.Message)"; exit 1 }
