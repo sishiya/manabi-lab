@@ -5,6 +5,8 @@ const UI = (() => {
   const $ = id => document.getElementById(id);
   const KIND = { sure: '研究の値', est: '目安', art: '模式' };
   const state = { u: 0, playing: false, speed: 1, tab: 'view' };
+  // ふつう（×1）の速さ。区間の長さ（Story の dur）の2倍の速さで進む（2026-10-12 ユーザーの希望で、前の ×2 をふつうに）
+  const BASE = 2;
   let events = [];
 
   // タブ
@@ -42,7 +44,7 @@ const UI = (() => {
     // はじめの2区間（人のからだから・たくさんの細菌）は、見どころの直後も遅くしない
     const zid = Story.at(state.u).id, zi = zid === 'zoomin' || zid === 'colony';
     const slow = zi ? 1 : 0.3 + 0.7 * Math.min(1, sinceEv / 3.5);
-    state.u = Math.min(1, state.u + dt * state.speed * slow / Story.total);
+    state.u = Math.min(1, state.u + dt * state.speed * BASE * slow / Story.total);
     if (state.u >= 1) { state.playing = false; markPlay(); }
     slider.value = Math.round(state.u * 1000);
   }

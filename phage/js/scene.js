@@ -440,8 +440,19 @@ const Scene = (() => {
     return { x: h.x + Math.cos(a) * v * kv * 1.8, y: h.y + Math.sin(a) * v * kv * 1.8, ang: h.ang + kv * 2, a, kv, hb };
   }
   // 小さなファージの形（寄って大きく見えるとき）か点（引いて見るとき）
+  // 広がるファージは数が多い（千個以上）ので、ファージの絵を1枚だけ先に描いておき、縮めて貼る（毎回細かく描かない）
+  let sprite = null;
+  const SPR = { k: 0.5, ox: 125, oy: 235, w: 250, h: 290 };   // 絵の大きさ（nm）と、基盤の中心の位置
+  function phageSprite() {
+    if (sprite) return sprite;
+    sprite = document.createElement('canvas'); sprite.width = SPR.w * SPR.k; sprite.height = SPR.h * SPR.k;
+    const q = sprite.getContext('2d'); q.translate(SPR.ox * SPR.k, SPR.oy * SPR.k); q.scale(SPR.k, SPR.k); drawPhageSmall(q, { fill: 1 });
+    return sprite;
+  }
   function phageMark(x, y, ang, alpha = 1) {
-    if (V.s * 200 >= 7) { g.save(); g.globalAlpha = alpha; g.translate(V.X(x), V.Y(y)); g.rotate(-ang); g.scale(V.s, V.s); drawPhageSmall(g, { fill: 1 }); g.restore(); }
+    const px = V.s * 200;
+    if (px >= 60) { g.save(); g.globalAlpha = alpha; g.translate(V.X(x), V.Y(y)); g.rotate(-ang); g.scale(V.s, V.s); drawPhageSmall(g, { fill: 1 }); g.restore(); }
+    else if (px >= 6) { const sp = phageSprite(); g.save(); g.globalAlpha = alpha; g.translate(V.X(x), V.Y(y)); g.rotate(-ang); g.drawImage(sp, -SPR.ox * V.s, -SPR.oy * V.s, SPR.w * V.s, SPR.h * V.s); g.restore(); }
     else { const sz = Math.max(1.6, Math.min(5, 160 * V.s)); g.globalAlpha = alpha; g.fillStyle = '#ffe3a3'; g.fillRect(V.X(x) - sz / 2, V.Y(y) - sz / 2, sz, sz); g.globalAlpha = 1; }
   }
   function drawBurst(m, k0) {
