@@ -1,3 +1,15 @@
+The MIT License below applies to the source code of this repository only.
+App content (names, text, designs, images, sounds, videos and documents) is
+licensed under CC BY-NC 4.0 instead. See LICENSE-CONTENT for what counts as
+content. Third-party libraries and data keep their own licenses (see README.md).
+
+このリポジトリのソースコードには下の MIT License を適用します。
+アプリの中身（名前・文章・デザイン・画像・音・動画・文書）は CC BY-NC 4.0 です。
+どこまでが中身かは LICENSE-CONTENT を見てください。ほかの人のライブラリや
+データは、それぞれのライセンスに従います（README.md）。
+
+----------------------------------------------------------------------
+
 MIT License
 
 Copyright (c) 2026 sishiya

@@ -99,6 +99,8 @@ git の commit／push（push＝GitHub Pages への公開）の**前に毎回**�
 
 公開は**すべて GitHub Pages**（8.1）。Artifact は使わない（8.2）。各節の本文は `_dev/RULES-more.md`（8.1〜8.3）と `_dev/promo/RULES-video.md`（8.4〜8.7）。**その作業をするときは本文を読む**。
 
+- **ライセンス**（2026-10-13 ユーザー）: コードは MIT（`LICENSE`）、アプリの中身（名前・文章・デザイン・画像・音・動画・文書）は CC BY-NC 4.0（`LICENSE-CONTENT`）。新しいアプリもこれに入る。ほかの人のライブラリ・データ・素材を足したら README の「ライセンス」に書く（CC BY-NC と両立しない条件のものに注意）。
+
 ### 8.1 GitHub Pages（すべてのアプリ）
 
 - `main` のルートをそのまま配信（`https://sishiya.github.io/manabi-lab/<app>/`）。**push した時点で公開**される。

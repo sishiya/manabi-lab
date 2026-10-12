@@ -70,4 +70,7 @@ git config core.quotepath false
 
 ## ライセンス
 
-MIT（`LICENSE`）。読み込むライブラリ（Three.js・mp4-muxer など MIT、CesiumJS など Apache-2.0）と Google Fonts の書体（SIL Open Font License）は、それぞれのライセンスに従います。よく使うライブラリは LICENSE といっしょに `lib/` に置いています（一覧は `lib/README.md`）。地図・写真・標高などのデータは各提供元の条件に従います（`god-view/DEVNOTES.md` の「データ源」）。`god-view/data/stars.js` は HYG Database から作ったもので CC BY-SA 4.0 です。`tiny-earth/data/etopo1deg.bin` は NOAA NCEI の ETOPO1（アメリカでは著作権なし・パブリックドメイン。出典: NOAA NCEI）を 1°ごとに間引いたものです。
+- **プログラムのコード**: MIT（`LICENSE`）
+- **アプリの中身**（名前・文章・キャラクターや模型やステージのデザイン・画像・音・動画・企画書などの文書。コードの中に書かれていても）: CC BY-NC 4.0（`LICENSE-CONTENT`）。作者を表示すれば共有・改変してよく、授業や家庭での学習にも自由に使えます。営利目的には使えません。
+- 2026-10-13 より前のコミットは、すべて MIT で公開していました。
+- ほかの人のもの: 読み込むライブラリ（Three.js・mp4-muxer など MIT、CesiumJS など Apache-2.0）と Google Fonts の書体（SIL Open Font License）は、それぞれのライセンスに従います。よく使うライブラリは LICENSE といっしょに `lib/` に置いています（一覧は `lib/README.md`）。地図・写真・標高などのデータは各提供元の条件に従います（`god-view/DEVNOTES.md` の「データ源」）。`god-view/data/stars.js` は HYG Database から作ったもので CC BY-SA 4.0 です。`tiny-earth/data/etopo1deg.bin` は NOAA NCEI の ETOPO1（アメリカでは著作権なし・パブリックドメイン。出典: NOAA NCEI）を 1°ごとに間引いたものです。
