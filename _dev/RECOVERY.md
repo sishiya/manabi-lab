@@ -5,13 +5,13 @@
 
 ## ふだんの予防線
 - **こまめに push する**（push していないコミットは PC にしかない）。push はユーザーが行う（RULES 10章）。
-- **`_dev/tools/backup-local.ps1`** が、Git に入っていないもの（下の表の「写す」）と Git の全部の記録（`git bundle`。push していないコミットも入る）を、リポジトリの外の写し先へ写す。写し先を一度決めれば、週1回の健康診断（`health.ps1`）のあとに自動で写す。
-  - 写し先は **Git のフォルダの外**（中なら止まる）。OneDrive・外付けのディスクなど、PC とは別のところ。
-  - YouTube の秘密は、`-IncludeSecrets` をつけたときだけ写す（中身は読まず・表示しない）。写すなら、自分だけが読める・暗号化されたところに。写さなくても、下の手順で作りなおせる。
+- **いまの方針（2026-10-12 ユーザー）: PC が壊れたら、Git から作りなおして乗りきる。** Git に入っていないもののバックアップは保留（写し先を決めていないので、`backup-local.ps1` は健康診断のあとも何もしない）。下の表の「なくなったら」の手順で作りなおす。
+  - 保留の理由: 写すものにプライベートな情報（自分の語・メモリ）がふくまれ、Google ドライブ パソコン版を入れるとドライブ全体がこの PC の Claude から読めるようになるため。再開するなら、公開鍵で暗号化して（秘密鍵は PC の外だけ）手で上げる案（`_dev/TODO.md`）。
+  - `_dev/tools/backup-local.ps1` は残してある（`-Dest` で写し先を決めると、Git に入っていないもの＋git bundle を写す。秘密は `-IncludeSecrets` のときだけ。Git のフォルダの中には写さない。いまは暗号化しない）。
 
 ## PC にしかないもの
 
-| もの | 場所 | 写す？ | なくなったら |
+| もの | 場所 | 写す？（保留中） | なくなったら |
 |---|---|---|---|
 | 紹介動画の mp4・字幕（srt）・サムネイル（jpg） | `_dev/promo/out/` | 写さない（9GB） | Git の台本から作りなおせる: `record-promo.ps1`（mp4・srt。BGM はコードで合成）、`make-short-thumbs.ps1`・`make-thumbs.ps1`（サムネイル）。上げたものは YouTube にある。手順は `_dev/promo/README.md` |
 | Claude のメモリ | `~/.claude/projects/<このフォルダ>/memory/` | 写す | 写しから戻す。なくても、大事なことは RULES・各 DEVNOTES にある（RULES 10章） |
@@ -26,5 +26,5 @@
 1. Git・GitHub Desktop・Claude デスクトップ・Node.js・Google Chrome（smoke・録画・サムネイル）・ffmpeg（録画・音量）を入れる。Perl は Git for Windows についてくる（`.claude/hooks/guard.pl` が使う）。
 2. GitHub からクローン（GitHub がだめなら写しの `git clone manabi-lab.bundle manabi-lab`）→ RULES 10章の設定（`core.hooksPath .githooks`・`core.quotepath false`・作者の名前とアドレス）。
 3. 写しの `repo/` の中身を、リポジトリの同じ場所に戻す。`claude-memory/` を `~/.claude/projects/<このフォルダ>/memory/` に戻す（フォルダ名はパスの記号を `-` にしたもの）。
-4. 写した写し先をもう一度覚えさせる: `backup-local.ps1 -Dest "<写し先>"`。健康診断の登録: `health.ps1 -Register`。
+4. 健康診断の登録: `health.ps1 -Register`。（バックアップを再開していれば、写し先も `backup-local.ps1 -Dest "<写し先>"` で覚えさせる）
 5. YouTube を使うなら秘密を戻す（または上の表の手順で作りなおす）。`start.bat` でまなびラボが開くか、`smoke.ps1` が通るかを見る。
