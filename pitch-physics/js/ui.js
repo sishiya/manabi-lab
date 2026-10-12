@@ -293,6 +293,13 @@ function placeChips() {
   if (!small && chips.parentNode === $('dockChips')) home.parentNode.insertBefore(chips, home);
 }
 
+// 凡例はボタンで開け閉め。操作のヒントは 6 秒か、最初にさわったら消す
+function bindLegend() {
+  $('legendBtn').addEventListener('click', () => { const l = $('legend'); l.hidden = !l.hidden; $('legendBtn').setAttribute('aria-expanded', String(!l.hidden)); $('legendBtn').textContent = l.hidden ? '凡例' : '凡例を閉じる'; });
+  const gone = () => $('hint3d').classList.add('gone');
+  setTimeout(gone, 6000); $('gl').addEventListener('pointerdown', gone, { once: true });
+}
+
 // 3D の右上の「白い輪の基準」の切りかえ（③ねらい の「ガイドの基準」と同じ）
 function bindRefToggle() {
   $('refToggle').addEventListener('click', () => { S.guideRef = S.guideRef === 'ff' ? 'plain' : 'ff'; recompute(); syncAll(); });

@@ -160,12 +160,14 @@ function drawCatcher(g) {
   // ガイド: 回転がなければ通る点（白い輪。ドラッグで動かせる）・通った点（ボールがホームを通ったら付ける）
   const gp = P(refPoint()), gr = P(S.res.pPlate), rr = Math.max(5, gp[2] * PHY.r * 1.4);
   if (S.guideRef === 'ff' && S.ffRes && S.ffRes !== S.res && !S.overlay) polyline(g, S.ffRes, map0 => P(map0), 'rgba(255,255,255,.35)', 1.5);
+  g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 5; g.beginPath(); g.arc(gp[0], gp[1], rr, 0, 7); g.stroke();
   g.strokeStyle = '#ffffff'; g.lineWidth = 2; g.beginPath(); g.arc(gp[0], gp[1], rr, 0, 7); g.stroke();
   hit('plainMark', gp[0], gp[1], rr + 8); LAY.catcher.plainMark = [gp[0], gp[1], rr + 8];
   {   // 通る点（通るまではうっすら、通ったらはっきり）
     const arr = S.t >= S.res.tPlate - 1e-6;
-    g.globalAlpha = arr ? 1 : 0.35;
+    g.globalAlpha = arr ? 1 : 0.5;
     g.setLineDash([4, 3]); g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(gp[0], gp[1]); g.lineTo(gr[0], gr[1]); g.stroke(); g.setLineDash([]);
+    g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 3; g.beginPath(); g.arc(gr[0], gr[1], Math.max(4, gr[2] * PHY.r), 0, 7); g.stroke();
     g.fillStyle = mainCol(); g.beginPath(); g.arc(gr[0], gr[1], Math.max(4, gr[2] * PHY.r), 0, 7); g.fill(); hit('realMark', gr[0], gr[1], 8);
     g.globalAlpha = 1;
   }

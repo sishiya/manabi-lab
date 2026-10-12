@@ -12,7 +12,7 @@ const V3 = {
 // カメラの決まった位置（右投げのとき。左投げは X を逆に）
 // カメラの位置は見やすさで決めたこのアプリのオリジナル（ゾーン・道すじ・投手が一度に見えるように）
 const CAMS = {
-  catcher: { name: '捕手の目', look: true, pos: [0, 0.95, 1.0], tgt: [0, -0.3, -18], fov: 46 },   // 見る向きは少し下げ、ゾーンが画面のまん中近く・投手も入るように          // しゃがんだ捕手の目（ホームの後ろ 1.0 m・高さ 0.95 m の目安）。投手のほうを見たまま（初期値）
+  catcher: { name: '捕手の目', look: true, pos: [0, 0.95, 1.0], tgt: [0, -0.3, -18], fov: 54 },   // 見る向きは少し下げ、ゾーンが画面のまん中近く・投手も入るように          // しゃがんだ捕手の目（ホームの後ろ 1.0 m・高さ 0.95 m の目安）。投手のほうを見たまま（初期値）
   high:    { name: 'ホームの後ろ（高め）', pos: [0, 2.4, 6.5], tgt: [0, 0.9, -9], fov: 32 },      // 道すじ全体とゾーンを少し上から
   pitcher: { name: '投手の後ろ', pos: [1.1, 2.6, -24.5], tgt: [0, 1.0, -4], fov: 30 },          // 投手の少し後ろ・横から、道すじとゾーンを見通す（左投げは x を逆に）
   ball:    { name: 'ボールの後ろ', follow: true, fov: 50 },
@@ -41,9 +41,24 @@ function init3d(canvas) {
   // ストライクゾーンとねらった点（打者の身長で変わるので、zoneMesh() で作りなおす）
   V3.zone = new THREE.Group(); fg.add(V3.zone); zoneMesh();
   // ガイド: 回転がなければ通る点（白い輪。ドラッグで動かせる）・実際に通った点（球種の色）・その間の線
-  V3.gPlain = new THREE.Mesh(new THREE.RingGeometry(0.045, 0.062, 40), new THREE.MeshBasicMaterial({ color: '#ffffff', side: THREE.DoubleSide, depthTest: false, transparent: true }));
-  V3.gReal = new THREE.Mesh(new THREE.CircleGeometry(PHY.r, 32), new THREE.MeshBasicMaterial({ color: '#ffd166', side: THREE.DoubleSide, depthTest: false, transparent: true, opacity: 0.9 }));
-  V3.gLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineDashedMaterial({ color: '#ffffff', dashSize: 0.03, gapSize: 0.02, depthTest: false, transparent: true }));
+  // 土の上でも見えるよう、どれも黒いふちをつけ、いちばん上に描く（奥行きで隠さない）
+  const gm = (c, o) => new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide, depthTest: false, transparent: true, opacity: o == null ? 1 : o });
+  V3.gPlain = new THREE.Group();
+  V3.gPlain.add(new THREE.Mesh(new THREE.RingGeometry(0.038, 0.070, 48), gm('#000000', 0.55)), new THREE.Mesh(new THREE.RingGeometry(0.045, 0.062, 48), gm('#ffffff')));
+  V3.gReal = new THREE.Group();
+  V3.gRealFill = new THREE.Mesh(new THREE.CircleGeometry(PHY.r, 32), gm('#ffd166', 0.95));
+  V3.gRealEdge = new THREE.Mesh(new THREE.RingGeometry(PHY.r, PHY.r * 1.35, 32), gm('#000000', 0.6));
+  V3.gReal.add(V3.gRealEdge, V3.gRealFill);
+  V3.gLine = new THREE.Group();
+  V3.gLineDark = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), gm('#000000', 0.45));   // 点線の下の黒い帯（太さを持たせる）
+  V3.gLineDash = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineDashedMaterial({ color: '#ffffff', dashSize: 0.03, gapSize: 0.02, depthTest: false, transparent: true }));
+  V3.gLine.add(V3.gLineDark, V3.gLineDash);
+  // 地面に落ちる球の、落ちる点（土の上に寝かせた輪）
+  V3.gGround = new THREE.Group();
+  V3.gGround.add(new THREE.Mesh(new THREE.RingGeometry(0.05, 0.085, 40), gm('#000000', 0.5)), new THREE.Mesh(new THREE.RingGeometry(0.058, 0.075, 40), gm('#ff9f7a')));
+  V3.gGround.rotation.x = -Math.PI / 2;
+  V3.gPlain.traverse(o => o.renderOrder = 8); V3.gReal.traverse(o => o.renderOrder = 9); V3.gLine.traverse(o => o.renderOrder = 7); V3.gGround.traverse(o => o.renderOrder = 8);
+  fg.add(V3.gGround);
   for (const o of [V3.gPlain, V3.gReal, V3.gLine]) { o.renderOrder = 7; fg.add(o); }
   // ボール（縫い目つき）・見つけやすくする輪
   V3.ball = makeBall('#f2f0e6', true); fg.add(V3.ball);
@@ -242,21 +257,36 @@ function updateGuides3d() {
   const a = T3(refPoint()), b = T3(S.res.pPlate), dz = 0.003;
   a.z += dz; b.z += dz;
   V3.gPlain.position.copy(a); V3.gReal.position.copy(b);
-  V3.gReal.material.color.set(mainCol());
+  V3.gRealFill.material.color.set(mainCol());
   // 実際に通った点は、ボールがホームを通った瞬間に付ける（少しふくらんでから落ち着く）
   const since = S.t - S.res.tPlate, arrived = since >= -1e-6;
   const pop = arrived ? 1 + 0.6 * Math.max(0, 1 - since / 0.02) : 1;
   V3.gReal.scale.setScalar(pop);
-  V3.gLine.geometry.setFromPoints([a, b]); V3.gLine.computeLineDistances();
+  V3.gLineDash.geometry.setFromPoints([a, b]); V3.gLineDash.computeLineDistances();
+  { const mid = a.clone().add(b).multiplyScalar(0.5), d = b.clone().sub(a), L = d.length();
+    V3.gLineDark.position.copy(mid); V3.gLineDark.rotation.set(0, 0, Math.atan2(d.y, d.x)); V3.gLineDark.scale.set(Math.max(1e-3, L), 0.012, 1); }
   const show = S.cam !== 'ball';
   // 通る点は投げる前から計算で分かっているので、通るまではうっすら、通ったらはっきり
   V3.gPlain.visible = show; V3.gReal.visible = V3.gLine.visible = show && !(S.guideRef === 'ff' && S.pitch === 'ff');
-  V3.gReal.material.opacity = arrived ? 0.95 : 0.28; V3.gLine.material.opacity = arrived ? 1 : 0.35;
-  const lab = (id, v, txt) => { const e = document.getElementById(id), q = show && screenOf(v); if (!q) { e.hidden = true; return; } e.hidden = false; e.style.left = q[0] + 'px'; e.style.top = q[1] + 'px'; e.textContent = txt; };
+  V3.gRealFill.material.opacity = arrived ? 0.95 : 0.45; V3.gRealEdge.material.opacity = arrived ? 0.6 : 0.3;
+  V3.gLineDash.material.opacity = arrived ? 1 : 0.55; V3.gLineDark.material.opacity = arrived ? 0.45 : 0.25;
+  // 地面に落ちる球: ホームの面の点の代わりに、土の上の落ちる点を出す
+  const gr = !!S.res.ground && show;
+  V3.gGround.visible = gr; if (gr) V3.gGround.position.set(b.x, 0.006, b.z - dz);
+  if (gr) { V3.gReal.visible = false; V3.gLine.visible = false; }
+  const H = V3.renderer.domElement.clientHeight;
+  const W = V3.renderer.domElement.clientWidth;
+  const lab = (id, v, txt) => { const e = document.getElementById(id), q = show && screenOf(v); if (!q) { e.hidden = true; return; }
+    // 画面の外の点は、名札を画面のふちに置いて矢印で向きを示す
+    let arrow = '';
+    if (q[1] > H - 14) { q[1] = H - 14; arrow = '↓ '; } else if (q[1] < 14) { q[1] = 14; arrow = '↑ '; }
+    if (q[0] > W - 20) { q[0] = W - 20; arrow += '→ '; } else if (q[0] < 0) { q[0] = 4; arrow += '← '; }
+    e.hidden = false; e.style.left = q[0] + 'px'; e.style.top = q[1] + 'px'; e.textContent = arrow + txt;
+    e.classList.toggle('up', q[1] > H - 70); e.classList.toggle('left', q[0] > W - 260); };   // 下のほうでは名札を点の上へ（凡例に重ならないように）
   const rp = refPoint(), d = Math.hypot(S.res.pPlate[0] - rp[0], S.res.pPlate[2] - rp[2]) * 100, dzc = (S.res.pPlate[2] - rp[2]) * 100, dxc = (S.res.pPlate[0] - rp[0]) * 100;
   const same = S.guideRef === 'ff' && S.pitch === 'ff';
   lab('mkPlain', a, same ? 'フォーシーム（ドラッグで動かせる）' : refName() + 'ならここ（ドラッグで動かせる）');
-  if (arrived && S.res.ground) lab('mkReal', b, '地面に落ちた（' + (S.guideRef === 'ff' ? 'フォーシームと同じねらいだと。白い輪を上へドラッグすると届く' : 'ねらいが低すぎる') + '）');
+  if (S.res.ground) lab('mkReal', new THREE.Vector3(b.x, 0.01, b.z), (arrived ? '地面に落ちた（' : '地面に落ちる予定（') + (S.guideRef === 'ff' ? 'フォーシームと同じねらいだと。白い輪を上へドラッグすると届く' : 'ねらいが低すぎる') + '）');
   else if (!same && !S.res.ground) lab('mkReal', b, (arrived ? '通った点（' : '通る予定（') + refName() + 'より ' + (dzc >= 0 ? '上 ' : '下 ') + Math.abs(dzc).toFixed(0) + '・' + (dxc >= 0 ? '右 ' : '左 ') + Math.abs(dxc).toFixed(0) + ' cm）'); else document.getElementById('mkReal').hidden = true;
   document.getElementById('mkReal').classList.toggle('faint', !arrived);
 }

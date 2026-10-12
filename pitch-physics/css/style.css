@@ -245,3 +245,16 @@ i.sw.plain{background:repeating-linear-gradient(90deg,rgba(240,240,230,.9) 0 6px
 .chips,#cams,.envhead{scrollbar-width:none}
 .chips::-webkit-scrollbar,#cams::-webkit-scrollbar,.envhead::-webkit-scrollbar{display:none}
 .mk.faint{opacity:.6}
+.mk.up{transform:translate(14px,-140%)}
+.mk{text-shadow:0 1px 2px #000}
+
+/* 凡例はたたんでおく（下のほうの点や名札を隠さないように） */
+#legendBtn{position:absolute;left:8px;bottom:8px;z-index:2;background:rgba(13,24,18,.78);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font:500 12px var(--f-body);cursor:pointer;min-height:28px}
+#views:not(.v3d) #legendBtn{display:none}
+#legend{bottom:40px}
+#legend[hidden]{display:none}
+#hint3d{transition:opacity .6s}
+#hint3d.gone{opacity:0}
+.mk.left{transform:translate(calc(-100% - 14px),-50%)}
+.mk.up.left{transform:translate(calc(-100% - 14px),-140%)}
+@media (max-width:640px){ #legendBtn{min-height:34px} #views.v3d #legend{display:flex} #views.v3d #legend[hidden]{display:none} #legend{max-width:calc(100% - 16px);font-size:11px} }
