@@ -3,6 +3,7 @@
 
 // 球種の例（右投げ）。速さ km/h・回転数 rpm・回転の向き dir（捕手から見て「手前の面が動く向き」の時計の角度°）・使える回転の割合 eff
 // 値は MLB の平均的な値の目安（Statcast の記事・Driveline 2021）。変化の向きは、この回転から計算で決まる
+// 左投げは、捕手から見て左右を入れかえる（放す位置 x・回転の向き・回転軸。mirrorP）
 const PITCHES = [
   { id: 'ff', name: 'フォーシーム', v0: 151, rpm: 2300, dir: 330, eff: 0.90, note: 'いわゆるストレート。逆回転（バックスピン）で、上向きの力を受けて「落ちにくい」' },
   { id: 'si', name: 'ツーシーム・シュート', v0: 150, rpm: 2150, dir: 300, eff: 0.90, note: '回転の軸がフォーシームより傾き、投げる腕の側へずれながら少し沈む' },
@@ -24,7 +25,9 @@ const S = {
   pitch: 'ff',
   P: null,                 // いまの投げ方（launch の入力）
   autoAim: true,
-  t: 0, playing: false, speed: 1 / 20,
+  hand: 'R',               // 'R' 右投げ・'L' 左投げ
+  view: '3d', cam: 'pitcher',
+  t: 0, playing: false, speed: 1 / 5,
   show: { noAir: true, plain: true, forces: true },
   res: null, ghostNoAir: null, ghostPlain: null,
   many: null,              // ナックル10球
@@ -34,8 +37,22 @@ const S = {
 
 function presetP(id) {
   const k = PITCHES.find(p => p.id === id);
-  return Object.assign({ vAng: -1, hAng: 1.5, knuckle: false, seam0: 0, axisDeg: 0, dir: 0, eff: 1 }, RELEASE, k, { name: undefined, note: undefined, id: undefined });
+  const P = Object.assign({ vAng: -1, hAng: 1.5, knuckle: false, seam0: 0, axisDeg: 0, dir: 0, eff: 1 }, RELEASE, k, { name: undefined, note: undefined, id: undefined });
+  return S.hand === 'L' ? mirrorP(P) : P;
 }
+// 左右の入れかえ（捕手から見た鏡うつし）: 放す位置・左右の角度・回転の向き・ナックルの回転軸
+function mirrorP(P) {
+  P.x0 = -P.x0; P.hAng = -P.hAng;
+  P.dir = (360 - P.dir) % 360;
+  P.axisDeg = (180 - P.axisDeg) % 180;
+  return P;
+}
+function setHand(h) {
+  if (h === S.hand) return;
+  S.hand = h; mirrorP(S.P); S.many = null; recompute();
+}
+// 腕の側（右投げは捕手から見て左 = −x）
+const armSign = () => S.hand === 'R' ? -1 : 1;
 
 // 計算しなおす（ねらい → 本番・比べる道すじ）
 function recompute() {
@@ -85,24 +102,29 @@ const PARTS = {
   axis: '回転軸（右手の親指の向き。指の曲がる向きに回る）。',
 };
 
+// 3D のカメラを切りかえる（3D が使えないときは何もしない）
+function camTo(id) { if (typeof V3 !== 'undefined' && V3.ok) setCam(id); else S.cam = id; }
+
 // 案内（「つぎへ」ボタン1つで進む）。go は状態を作る関数
 const TOUR = [
-  { text: 'ボールに働く力は3つ。<b>重力</b>・<b>空気の抵抗</b>・<b>回転による力</b>。球種の名前で曲がり方を決めず、放す速さ・向き・回転から、この力を 1 ミリ秒ごとに計算して道すじを解いています。下の時間のつまみを動かしてみよう。',
-    go() { setPitch('ff'); S.show = { noAir: false, plain: false, forces: true }; S.t = 0.2; } },
+  { text: 'ボールに働く力は3つ。<b>重力</b>・<b>空気の抵抗</b>・<b>回転による力</b>。球種の名前で曲がり方を決めず、放す速さ・向き・回転から、この力を 1 ミリ秒ごとに計算して道すじを解いています。下の時間のつまみを動かしてみよう。3D の図はドラッグで回せます。',
+    go() { setPitch('ff'); S.show = { noAir: false, plain: false, forces: true }; S.t = 0.2; camTo('pitcher'); } },
   { text: 'もし空気がなかったら（<span class="k-noair">うすい線</span>）。重力だけなので放物線。151 km/h でも、ホームまでの 0.4 秒で 80 cm ほど落ちます。',
     go() { setPitch('no'); S.show = { noAir: true, plain: false, forces: true }; S.t = 0.2; } },
   { text: '空気があると、<b>抵抗</b>で遅くなります（ホームで約 1 割減）。でも回転がなければ、左右にも上にも曲がりません。',
     go() { setPitch('no'); S.show = { noAir: true, plain: false, forces: true }; S.t = S.res.tPlate; } },
   { text: '<b>フォーシーム</b>: 毎分 2300 回の逆回転。手前の面が上へ動く回転は、空気を下へ押しやり、反作用で<b>上向きの力（マグヌス力）</b>を受けます。回転なし（<span class="k-plain">点線</span>）より 40 cm ほど上を通る ＝「ホップするように見える」正体。',
-    go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0.25; } },
+    go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0.25; camTo('pitcher'); } },
+  { text: '<b>空気の流れの断面</b>の図: ボールといっしょに動いて見ると、空気は左から右へ流れていきます。逆回転で上の面は空気といっしょに動くので、空気がボールから<b>はがれる所</b>が上だけ後ろへずれ、後ろの流れ（伴流）が下へ曲がります。空気を下へ押しやった反作用で、ボールは上へ押される。これがマグヌス力です。3D は「ボールの後ろ」から。',
+    go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0.2; camTo('ball'); } },
   { text: '<b>スライダー</b>: 回転数はフォーシームより多いのに、曲がりは小さめ。回転軸が進む向きに近く（ジャイロ回転）、曲げるのに使える回転は 3 割ほどだから。下の「使える回転」を 100% にすると…？',
     go() { setPitch('sl'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0.25; } },
   { text: '<b>カーブ</b>: 手前の面が下へ動く回転（トップスピン）。マグヌス力が下向きで、重力に足されてよく落ちます。遅いので、ホームまでの時間も長い（0.47 秒）。',
     go() { setPitch('cu'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0.3; } },
   { text: '<b>ナックル</b>: ほとんど回らないので、マグヌス力はほぼ 0。かわりに<b>縫い目の向き</b>で、空気がはがれる場所が左右でずれ、横向きの力が生まれます（風洞の測定）。ゆっくり回ると、飛ぶ間に力の向きが入れかわります。',
-    go() { setPitch('kn'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0.3; } },
+    go() { setPitch('kn'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0.3; camTo('pitcher'); } },
   { text: '同じねらいで、縫い目の向き・ゆっくりした回転の量と軸だけを、投手がそろえきれない程度にばらつかせた<b>10球</b>。ホームでの行き先がばらばら。でも1球ずつの道すじは<b>なめらか</b>です。試合の測定でも同じ（Nathan 2012）。ナックルが「揺れる」と感じるのは、<b>小さな差で行き先が大きく変わり、だれにも読めない</b>から、と考えられています。',
-    go() { setPitch('kn'); S.show = { noAir: false, plain: false, forces: false }; throwMany(); S.t = S.res.tPlate; } },
-  { text: '自由に試そう。下で球種を選び、速さ・回転数・回転の向き（右のボールをドラッグ）・使える回転を変えると、すぐに計算しなおします。',
-    go() { setPitch('ff'); S.show = { noAir: true, plain: true, forces: true }; S.t = 0; } },
+    go() { setPitch('kn'); S.show = { noAir: false, plain: false, forces: false }; throwMany(); S.t = S.res.tPlate; camTo('catcher'); } },
+  { text: '自由に試そう。下で投げる手・球種を選び、速さ・回転数・回転の向き（右のボールをドラッグ）・使える回転を変えると、すぐに計算しなおします。',
+    go() { setPitch('ff'); S.show = { noAir: true, plain: true, forces: true }; S.t = 0; camTo('pitcher'); } },
 ];

@@ -11,11 +11,21 @@
   <header id="top"><h1>変化球のしくみ</h1><span class="sub">速さ・向き・回転から、ボールにかかる力を計算して道すじを解く</span></header>
   <div id="tour"><span id="tourNum"></span><p id="tourText"></p><button id="next">つぎへ</button></div>
   <main id="stage">
-    <div id="views"><canvas id="cv"></canvas></div>
-    <aside id="aside"><canvas id="ball"></canvas><div id="nums"></div></aside>
+    <div id="views">
+      <canvas id="gl"></canvas><canvas id="cv"></canvas>
+      <div id="vtabs"><button data-v="3d">3D</button><button data-v="2d">横・上・捕手の図</button></div>
+      <div id="cams"></div>
+      <div id="legend"><span><i class="sw path"></i>計算した道すじ</span><span><i class="sw plain"></i>回転の力なし</span><span><i class="sw noair"></i>空気なし</span><span><i class="sw grav"></i>重力</span><span><i class="sw drag"></i>抵抗</span><span><i class="sw magnus"></i>マグヌス力</span><span><i class="sw seam"></i>縫い目の力</span></div>
+      <div id="hint3d">ドラッグで回す・ホイールで寄る（背景の球場はぼかしています）</div>
+    </div>
+    <aside id="aside">
+      <div class="phead">空気の流れの断面 <span>（ボールといっしょに動いて見る）</span></div>
+      <canvas id="flow"></canvas><p id="flowCap"></p>
+      <canvas id="ball"></canvas><div id="nums"></div>
+    </aside>
   </main>
   <div id="timebar"><button id="play" aria-label="再生">▶</button><input type="range" id="time" min="0" max="0.4" step="0.001" aria-label="時刻"><span id="tlab"></span>
-    <select id="speed" aria-label="再生の速さ"><option value="0.05" selected>1/20 の速さ</option><option value="0.2">1/5 の速さ</option><option value="1">本当の速さ</option></select></div>
+    <select id="speed" aria-label="再生の速さ"><option value="0.05">1/20 の速さ</option><option value="0.2" selected>1/5 の速さ</option><option value="1">本当の速さ</option></select></div>
   <div id="controls"></div>
   <div id="tip" hidden></div>
   <details id="about">
@@ -29,12 +39,17 @@
     </ul>
     <p>C<sub>D</sub>・C<sub>L</sub> の式は、Alan Nathan の軌道計算機（ボールの飛び方の測定から作られたもの）と同じです。空気の流れそのものを解いているのではなく、<b>測定から作られた係数</b>で力を計算しています（ボールのまわりの乱れた流れは、ブラウザでは正確に解けないため）。</p>
     <p>計算の確かめ: 球種の例の値で、フォーシームは上へ約 43 cm・投げる腕の側へ約 24 cm、ツーシームは上へ約 24 cm・腕の側へ約 41 cm ずれ、MLB の平均的な変化量（Statcast）と同じくらいになりました。ナックルは、回転しないときの最大の変化が約 76 cm（30 インチ）で速さによらず、試合の測定（Nathan 2012、最大およそ 30 インチ）と同じくらいです（速さによらないことは Watts &amp; Sawyer の予想どおり）。</p>
+    <h3>空気の流れの断面（模式図）</h3>
+    <p>ボールといっしょに動いて見た空気の流れを、ボールの中心を通り「進む向き」と「横向きの力の向き」をふくむ面で切って描いています。空気がボールの面から<b>はがれる位置</b>が、力の側ほど後ろへずれ、後ろの流れ（伴流）が反対の側へ曲がります。空気を押しやった反作用が、ボールを押す力です（はく離が遅れる側へ力がかかることは、Watts &amp; Sawyer 1975・Nathan 2012 の説明のとおり）。</p>
+    <p>ただし、この図は<b>流れを計算したものではありません</b>。前側の流線は円柱のまわりの流れの式（回転があれば渦を足したもの）、はがれる位置のずれと伴流の曲がりは、計算した横向きの力の大きさに合わせた<b>目安</b>です。赤い点は、いまの時刻に縫い目がこの断面を横切る場所です。粒の動きは、見やすいように本物よりずっと遅くしています。</p>
+    <h3>3D の図</h3>
+    <p>道すじ・ボール・ストライクゾーン・マウンド・ホームは計算と寸法どおりの位置に描いています（道すじの管の太さは、遠くからでも見えるように太くしています）。背景の野球場は、実在の球場ではない絵で、ピントが合っていないようにぼかしています。左投げは、右投げを捕手から見て左右に鏡うつしにしたものです。</p>
     <h3>簡単にしているところ</h3>
     <ul>
       <li>ボールは点として動かしています。C<sub>D</sub>・C<sub>L</sub> は多くのボールの平均で、1球ごとの差や、縫い目の向きによる差（ナックルを除く）は入れていません。回転の多い球でも縫い目で伴流がずれる力（Seam-Shifted Wake。シンカーやスイーパーで知られる）はまだ入れていません。</li>
       <li>回転は飛ぶ間に減らしていません（ホームまでの 0.4〜0.5 秒ではほとんど減りません）。回転軸の向きも空間で変えません（コマのように保たれる）。そのため、放したときは純粋なジャイロ回転でも、ボールが落ちて進む向きが変わると、少しだけ曲げる回転になります。</li>
       <li>ナックルの縫い目の力は、4つの縫い目の向きの風洞の測定を sin 4θ でならした形です（本当の形はもっと複雑で、2つの縫い目の握りでは形がちがいます）。風洞の空気の密度は 1.20 kg/m³ としました。</li>
-      <li>空気の密度は 1.20 kg/m³（20 ℃・海面くらい）、風なし。放す位置は右投げのおおよその位置（高さ 1.8 m・投手板から 1.9 m 前）。ストライクゾーンの高さは目安です。</li>
+      <li>空気の密度は 1.20 kg/m³（20 ℃・海面くらい）、風なし。放す位置はおおよその位置（捕手から見て中心から 0.55 m 腕の側・高さ 1.8 m・投手板から 1.9 m 前）。ストライクゾーンの高さは目安です。</li>
       <li>球種の例の値（速さ・回転数・回転の向き・使える回転の割合）は、MLB の平均的な値の目安です。投手によって大きくちがいます。</li>
       <li>ボールの拡大の縫い目の絵は、向きの目安です（テニスボールの曲線で近似）。</li>
     </ul>
@@ -50,12 +65,16 @@
       <li>公認野球規則（ボールの重さ 5〜5¼ オンス・周り 9〜9¼ インチ、ストライクゾーンの幅 = ホームベースの幅 17 インチ）</li>
     </ul>
     <h3>使っているもの</h3>
-    <p>フォント: Google Fonts（SIL Open Font License）</p>
+    <p>three.js r128（MIT License）、フォント: Google Fonts（SIL Open Font License）</p>
   </details>
 </div>
 
+<script src="../lib/three@0.128.0/build/three.min.js"></script>
 <script src="js/physics.js"></script>
 <script src="js/scene.js"></script>
 <script src="js/draw.js"></script>
+<script src="js/flow.js"></script>
+<script src="js/stadium.js"></script>
+<script src="js/view3d.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>

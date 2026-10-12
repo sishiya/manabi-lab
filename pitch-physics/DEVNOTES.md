@@ -1,25 +1,28 @@
 # 変化球のしくみ 開発メモ
 
 ## 別セッションで続けるとき（まずここ）
-- いまの状態: **v002-stageA**（段階A: 力の計算・3つの図・ボールの拡大と力の矢印・時間のつまみ・球種の例11・案内9段・ナックル10球）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。公開 URL（push 後）: https://sishiya.github.io/manabi-lab/pitch-physics/
-- 次にやること: ユーザーに見てもらって感想を聞く → 段階B（空気の流れの断面）か C（気温・標高・風）。PLAN.md。
+- いまの状態: **v003-stageB**（段階B: 空気の流れの断面（模式図）・3D の図（5つのカメラ、背景の野球場はぼかす）・左投げ・再生の速さの初期値 1/5。段階Aの力の計算・2D の3つの図・案内10段もそのまま）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。公開 URL（push 後）: https://sishiya.github.io/manabi-lab/pitch-physics/
+- 次にやること: ユーザーに見てもらって感想を聞く → 段階C（気温・標高・風）か D（縫い目のずれた伴流・2つの縫い目のナックル）。PLAN.md。
 - 読む順: PLAN.md → このファイルの「ファイル構成」→ 関係するファイルだけ。計算だけなら physics.js。
-- 動かし方: サーバー apps〜apps-6（.claude/launch.json）で http://localhost:<port>/pitch-physics/ 。デバッグ用の窓口 `window.__piph`（`simRun(秒)`・`tour(i)`・`pitch(id)`・`set({v0, rpm, dir, eff, seam0, axisDeg, vAng, hAng})`・`time(t)`・`S`・`PHY`・`simulate`・`aim`・`forces`）、エラーは `window.__piphErr`。
+- 動かし方: サーバー apps〜apps-6（.claude/launch.json）で http://localhost:<port>/pitch-physics/ 。デバッグ用の窓口 `window.__piph`（`simRun(秒)`・`tour(i)`・`pitch(id)`・`set({v0, rpm, dir, eff, seam0, axisDeg, vAng, hAng})`・`time(t)`・`view('3d'|'2d')`・`cam('pitcher'|'ball'|'catcher'|'side'|'top')`・`hand('R'|'L')`・`V3`・`S`・`PHY`・`simulate`・`aim`・`forces`）、エラーは `window.__piphErr`。
 - 計算の確かめ: physics.js は Node で読める（`require('./js/physics.js')`）。
 - 区切りごとの手順: 「確認のしかた」と smoke.ps1 → 「状態」に1行 → launcher.html の表 → 公開前チェック → commit（節目の版だけ versions/ へコピーしてカードに。RULES 3章）。
 - ユーザーの好み: 「球種だからこう曲がる」ではなく、速さ・角度・回転から力を計算して求める（依頼の中心）。物理を曲げない。つぎへボタン1つの案内、マウスをのせると説明。
 
 ## ファイル構成
-読み込み順は physics → scene → draw → ui → main（後ろのファイルが前の関数を使う）。
+読み込み順は three（../lib/three@0.128.0）→ physics → scene → draw → flow → stadium → view3d → ui → main（後ろのファイルが前の関数を使う）。
 
 | ファイル | 中身 | 主な関数・変数 |
 |---|---|---|
 | index.html | 骨組み・このアプリについて（式・簡単にしたところ・出どころ） | |
 | css/style.css | 見た目。860px 以下は右の欄を下へ、640px 以下は図を縦に3つ | |
 | js/physics.js | 力と運動の計算（描画なし、Node でも動く） | `PHY`（定数・係数）・`V`（ベクトル）・`cdOf`・`clOf`・`launch(P)`・`forces(st,t,vel,opt)`・`simulate(P,opt)`・`sampleAt`・`aim(P,target)`・`movement` |
-| js/scene.js | 状態 `S`・球種の例 `PITCHES`・放す位置 `RELEASE`・ゾーン `ZONE`・`recompute`・`throwMany`（ナックル10球）・`setPitch`・説明 `PARTS`・案内 `TOUR` | |
+| js/scene.js | 状態 `S`（hand・view・cam もここ）・球種の例 `PITCHES`（右投げ）・放す位置 `RELEASE`・ゾーン `ZONE`・`mirrorP`/`setHand`/`armSign`（左投げ）・`recompute`・`throwMany`・`setPitch`・`camTo`・説明 `PARTS`・案内 `TOUR` | |
 | js/draw.js | 横から・上から・捕手の目線（透視）・ボールの拡大（縫い目・回転軸・力） | `layout`・`LAY`・`drawViews`・`drawSideTop`・`drawCatcher`・`drawBall`・`SEAM`・`HITS`/`HITS2`（説明の当たり判定） |
-| js/ui.js | 球種のボタン・つまみ・時間・案内・説明の吹き出し・ボールのドラッグ・数字 | `buildControls`・`syncAll`・`updateNums`・`buildTime`・`setTour`・`bindPointer`・`clock` |
+| js/flow.js | 段階B: 空気の流れの断面（2D canvas の模式図。粒を動かす） | `FLOW`・`flowState`（断面の向き・係数 c・はく離のずれ・循環）・`wakeGeom`・`inWake`・`flowVel`・`drawFlow`・`flowCaption` |
+| js/stadium.js | 3D の背景の野球場（ぼかす層）とぼかしの処理 | `T3`（座標の変換）・`standR`・`buildStadium`・`makeBlur`（半分の大きさで横・縦のガウスを3回） |
+| js/view3d.js | 3D の手前の層（マウンド・ホーム・ゾーン・道すじの管・ボール・縫い目・力の矢印）・カメラ・ドラッグで回す | `V3`・`CAMS`・`init3d`・`rebuild3d`・`makeTube`・`showUpTo`・`tubeRadius`・`setCam`・`placeCam`・`draw3d`・`resize3d` |
+| js/ui.js | 投げる手・球種のボタン・つまみ・図の切りかえとカメラのボタン・時間・案内・説明の吹き出し・ボールのドラッグ・数字 | `buildControls`・`setView`・`buildViewTabs`・`syncAll`・`updateNums`・`buildTime`・`setTour`・`bindPointer`・`clock` |
 | js/main.js | ループ（再生中は S.t を進める）・デバッグ用の窓口 | `step`・`draw` |
 
 ## しくみ
@@ -36,6 +39,14 @@
 - 図: 横から・上からは高さ・左右を広げて表示（倍率を図に書く）。捕手の目線は目 (0, −0.85, 0.80) から +y を見る透視で、大きさは本物どおり。力の矢印は 26 px/N。
 - 縫い目の絵: a cos t + b cos 3t … の曲線（a 0.75, b 0.25、単位球の上）。曲線の z 軸を回転軸にそろえ、軸のまわりに |ω| t（ナックルは θ0 も）回す。向きは目安。
 
+- 左投げ（`mirrorP`）: 捕手から見て鏡うつし（x0・hAng の符号、dir → 360−dir、axisDeg → 180−axisDeg）。プリセットは右投げの値を入れて、左投げならすぐ鏡うつし。「腕の側」は右投げで −x。
+- 3D: three の座標 X = x、Y = z、Z = −y（`T3`）。描くのは2層: 背景（stadium.js の野球場）をレンダーターゲットに描いて半分の大きさでガウスのぼかし3回 → 画面に貼る → 深さを消して手前の層（view3d.js）をくっきり描く。被写界深度の「それらしさ」で、本当の焦点の計算ではない。
+  - 道すじの管の太さはカメラから道すじのまん中までの距離 × 0.0011（fov で補正）。35% 以上かわると作りなおす。いまの時刻までは `setDrawRange` で描く範囲をしぼる。
+  - 力の矢印はカメラからの距離に比例した長さ（画面の上でだいたい同じ大きさ）。「ボールの後ろ」では矢印と輪を出さない。
+  - カメラ: 投手の後ろ（テレビの中堅カメラふうの望遠 fov 17°。左投げは X を逆）・ボールの後ろ（0.9 m 後ろ・0.18 m 上から進む向きを見る）・捕手の後ろ・横から（三塁側）・上から。ドラッグで回す・ホイールで寄る（ボールの後ろ以外）。
+  - 野球場は実在のものではない（両翼 100 m・中堅 122 m のフェンス、7段のスタンド、照明塔6本、スコアボード）。
+- 断面（flow.js）: 断面 = 進む向き v̂ と横向きの力（マグヌス力＋縫い目の力の v̂ に直角な成分）の向き n̂ をふくむ面。図の右 = −v̂（空気の流れ）、図の上 = n̂。横向きの力の係数 c = |F⊥| /(½ρAv²)。はく離の位置 = 105° ± ずれ、ずれ = min(1, c/0.25) × 22°（目安）。伴流の曲がり = −0.9 × ずれ。前側はポテンシャル流（円柱＋循環。循環は回転があってマグヌス力があるときだけ、上の面の速さ / v に比例・±0.6 まで）。赤い点 = 縫い目の曲線が断面を横切る所。
+
 ## 計算の確かめ（Node、2026-10-12）
 - フォーシーム（151 km/h・2300・dir 330・90%）: ホームまで 0.405 秒、変化 上 43 cm・腕の側 24 cm（MLB 平均の目安 16.8 / 7.6 インチ = 43 / 19 cm）。
 - ツーシーム: 上 24 cm・腕の側 41 cm（目安 9.5 / 15.2 インチ = 24 / 39 cm）。
@@ -44,15 +55,19 @@
 - スライダー: 使える回転 30% → 100% で変化 27 → 55 cm（C_L が S で頭打ちになるので比例しない）。
 
 ## ハマったところ
+- 3D の管は本物の太さ（1 cm ほど）だと、投手の後ろ（40 m）からは見えない → カメラからの距離で太さを変えた（演出と画面に書いた）。
+- 2D の canvas が display:none のときに layout すると大きさ 0 になる → `setView` は class を変えてから resize する。
 - preview_start の apps・apps-2・apps-4 はほかのセッションのサーバーが使っていた → 同じフォルダを配っているので、`preview_start` に url（http://localhost:8766/pitch-physics/）を渡して開いた。
 
 ## 確認のしかた（変更のたびに）
 1. `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/smoke.ps1 -Apps pitch-physics`（例外・読み込みの失敗・外への通信）
-2. 開いて `__piphErr` が空。最初の画面は案内 1/9・フォーシーム・0.200 秒。右の数字「ホームまで 0.405 秒」「上へ 43 cm・左へ 24 cm」。
-3. 「つぎへ」で9段を通す: 2段目 回転なし＋空気なしの線／4段目 フォーシームと点線（回転の力なし）／5段目 スライダー（使える回転を 100% にすると変化が 27 → 55 cm）／7段目 ナックルで縫い目の力（緑）が出る／8段目 10球がばらばら（広がり 左右 34 cm・上下 21 cm）。
+2. 開いて `__piphErr` が空。最初の画面は案内 1/10・3D（投手の後ろ）・フォーシーム・0.200 秒・再生の速さ 1/5。背景の野球場がぼけていて、ボールの輪と力の矢印が見える。断面の図で粒が左から右へ流れ、上のはく離点が後ろへずれ、伴流が下へ曲がる。右の数字「ホームまで 0.405 秒」「上へ 43 cm・左へ 24 cm」。
+3. 「つぎへ」で10段を通す: 2段目 回転なし＋空気なしの線／4段目 フォーシームと点線（回転の力なし）／5段目 断面の説明で 3D が「ボールの後ろ」になる／6段目 スライダー（使える回転を 100% にすると変化が 27 → 55 cm）／8段目 ナックルで縫い目の力（緑）が出る／9段目 10球がばらばら（広がり 左右 34 cm・上下 21 cm）、3D は捕手の後ろ。
+3b. カメラの5つのボタン・「横・上・捕手の図」と「3D」の切りかえ。左投げにすると放す位置が捕手から見て右（x0 = +0.55）・フォーシームの変化が「右へ（腕の側）」。
 4. ボールを下へドラッグ → 回転の向き 6時・変化「下へ」。球種のボタン・つまみで数字が変わる。時間のつまみ・▶ で動く。図の線・矢印・ゾーン・右の表にマウスをのせると説明が出る。
-5. 幅 375px で横にはみ出さない（`document.documentElement.scrollWidth` が 375）。
+5. 幅 375px で横にはみ出さない（`document.documentElement.scrollWidth` が 375）。3D のボタンが重ならない（凡例は狭い画面では出さない）。
 
 ## 状態
 - 2026-10-12 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
 - 2026-10-12 v002-stageA: 段階A（ユーザーの依頼「速さ・角度・回転から空気の力で正確に計算」「ナックルはなぜ不規則に揺れるのか」）。
+- 2026-10-12 v003-stageB: 段階B（ユーザーの依頼「空気の流れの断面・3D で後ろから・背景は野球場（ぼかしてノイズにしない）・再生 1/5・右投げ左投げ」）。

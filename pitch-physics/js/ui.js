@@ -30,6 +30,10 @@ function check(parent, key, lab, get, set) {
 
 function buildControls() {
   const box = $('controls');
+  const hand = document.createElement('div'); hand.className = 'hand';
+  hand.innerHTML = '投げる手 <button data-h="R">右投げ</button><button data-h="L">左投げ</button>';
+  hand.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { setHand(b.dataset.h); if (S.cam === 'pitcher') setCam('pitcher'); syncAll(); }));
+  box.appendChild(hand);
   const chips = document.createElement('div'); chips.className = 'chips';
   for (const p of PITCHES) {
     const b = document.createElement('button'); b.textContent = p.name; b.dataset.id = p.id; b.title = p.note;
@@ -75,6 +79,10 @@ function syncAll() {
   $('many').hidden = !kn;
   CTRL.rpm.row.querySelector('input').max = kn ? 300 : 3500;
   CTRL.rpm.sync();
+  document.querySelectorAll('.hand button').forEach(b => b.classList.toggle('on', b.dataset.h === S.hand));
+  document.querySelectorAll('#vtabs button').forEach(b => b.classList.toggle('on', b.dataset.v === S.view));
+  document.querySelectorAll('#cams button').forEach(b => b.classList.toggle('on', b.dataset.c === S.cam));
+  $('views').classList.toggle('v3d', S.view === '3d');
   document.querySelectorAll('.chips button').forEach(b => b.classList.toggle('on', b.dataset.id === S.pitch));
   const p = PITCHES.find(q => q.id === S.pitch); $('pnote').textContent = p ? p.note : '';
   const T = $('time'); T.max = S.res.tPlate; T.value = S.t;
@@ -89,7 +97,7 @@ function updateNums() {
   const rows = [
     ['ホームまで', fmt(r.tPlate, 3) + ' 秒'],
     ['速さ', fmt(V.len(r.st.vel) * 3.6, 0) + ' → ' + fmt(V.len(r.vPlate) * 3.6, 0) + ' km/h'],
-    ['変化量', (up >= 0 ? '上へ ' : '下へ ') + fmt(Math.abs(up), 0) + ' cm・' + (rt >= 0 ? '右へ ' : '左へ ') + fmt(Math.abs(rt), 0) + ' cm', 'plain'],
+    ['変化量', (up >= 0 ? '上へ ' : '下へ ') + fmt(Math.abs(up), 0) + ' cm・' + (rt >= 0 ? '右へ ' : '左へ ') + fmt(Math.abs(rt), 0) + ' cm' + (Math.abs(rt) >= 1 ? '（' + (Math.sign(rt) === armSign() ? '腕の側' : 'グラブの側') + '）' : ''), 'plain'],
     ['空気なしより', (r.pPlate[2] >= S.ghostNoAir.pPlate[2] ? '上に ' : '下に ') + fmt(Math.abs(r.pPlate[2] - S.ghostNoAir.pPlate[2]) / 0.01, 0) + ' cm', 'noAir'],
   ];
   const frows = [
@@ -107,6 +115,18 @@ function updateNums() {
     html += '<div class="coef">10球のホームでの広がり: 左右 ' + fmt((Math.max(...xs) - Math.min(...xs)) / 0.01, 0) + ' cm・上下 ' + fmt((Math.max(...zs) - Math.min(...zs)) / 0.01, 0) + ' cm</div>';
   }
   $('nums').innerHTML = html;
+}
+
+// ---- 図の切りかえ・カメラ ----
+function setView(v) { S.view = v === '3d' && V3.ok ? '3d' : '2d'; syncAll(); resize(); }
+function buildViewTabs() {
+  document.querySelectorAll('#vtabs button').forEach(b => b.addEventListener('click', () => setView(b.dataset.v)));
+  const box = $('cams');
+  for (const id in CAMS) {
+    const b = document.createElement('button'); b.textContent = CAMS[id].name; b.dataset.c = id;
+    b.addEventListener('click', () => { setCam(id); syncAll(); });
+    box.appendChild(b);
+  }
 }
 
 // ---- 時間 ----

@@ -12,11 +12,26 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-bod
 #tourNum{font-family:var(--f-mono);color:var(--muted);font-size:12px;white-space:nowrap}
 #tourText{margin:0;flex:1;font-size:14px;line-height:1.7}
 #next{background:var(--acc);color:#1a1a1a;border:0;border-radius:8px;padding:9px 16px;font:700 14px var(--f-body);cursor:pointer;white-space:nowrap}
-#stage{display:grid;grid-template-columns:1fr 300px;gap:10px;padding:4px 16px}
-#views{position:relative;height:min(62vh,560px);min-height:380px}
-#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+#stage{display:grid;grid-template-columns:1fr 320px;gap:10px;padding:4px 16px}
+#views{position:relative;height:min(68vh,620px);min-height:400px}
+#cv,#gl{position:absolute;inset:0;width:100%;height:100%;display:block}
+#gl{border-radius:8px;cursor:grab;touch-action:none}
+#views.v3d #cv,#views:not(.v3d) #gl,#views:not(.v3d) #cams,#views:not(.v3d) #legend,#views:not(.v3d) #hint3d{display:none}
+#vtabs{position:absolute;top:8px;right:8px;display:flex;gap:4px;z-index:2}
+#vtabs button,#cams button{background:rgba(13,24,18,.75);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:4px 10px;font:500 12px var(--f-body);cursor:pointer;backdrop-filter:blur(2px)}
+#vtabs button.on,#cams button.on{background:var(--acc);color:#1a1a1a;border-color:var(--acc)}
+#views:not(.v3d) #vtabs{top:auto;bottom:6px;right:auto;left:50%;transform:translateX(-50%)}
+#cams{position:absolute;top:8px;left:8px;display:flex;flex-wrap:wrap;gap:4px;max-width:60%;z-index:2}
+#legend{position:absolute;left:8px;bottom:8px;display:flex;flex-wrap:wrap;gap:4px 10px;max-width:70%;font-size:11.5px;background:rgba(13,24,18,.7);padding:4px 8px;border-radius:8px;pointer-events:none}
+#hint3d{position:absolute;right:8px;bottom:8px;font-size:11px;color:#dfe8ee;background:rgba(13,24,18,.6);padding:3px 8px;border-radius:8px;pointer-events:none}
+.phead{font-weight:700;font-size:13px}.phead span{font-weight:400;color:var(--muted);font-size:12px}
+#flow{width:100%;height:200px;display:block;border-radius:8px}
+#flowCap{margin:0;font-size:12.5px;line-height:1.6;color:var(--muted)}
+.hand{display:flex;gap:6px;align-items:center;margin:0 0 8px;font-size:13px;color:var(--muted)}
+.hand button{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:5px 12px;font:500 13px var(--f-body);cursor:pointer}
+.hand button.on{background:var(--acc);color:#1a1a1a;border-color:var(--acc)}
 #aside{display:flex;flex-direction:column;gap:6px;min-width:0}
-#ball{width:100%;height:230px;display:block;cursor:grab;touch-action:none;background:rgba(255,255,255,.035);border-radius:8px}
+#ball{width:100%;height:170px;display:block;cursor:grab;touch-action:none;background:rgba(255,255,255,.035);border-radius:8px}
 #nums{font-size:13px;line-height:1.5}
 #nums table{border-collapse:collapse;width:100%}
 #nums th{text-align:left;font-weight:500;color:var(--muted);padding:2px 6px 2px 0;white-space:nowrap}
@@ -27,6 +42,7 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-bod
 i.sw{display:inline-block;width:14px;height:4px;border-radius:2px;margin-right:6px;vertical-align:middle;background:#fff}
 i.sw.grav{background:var(--c-grav)} i.sw.drag{background:var(--c-drag)} i.sw.magnus{background:var(--c-magnus)} i.sw.seam{background:var(--c-seam)}
 i.sw.noair{background:repeating-linear-gradient(90deg,rgba(160,190,210,.8) 0 2px,transparent 2px 5px)}
+i.sw.path{background:#ffd166}
 i.sw.plain{background:repeating-linear-gradient(90deg,rgba(240,240,230,.9) 0 6px,transparent 6px 10px)}
 .k-noair{color:#a0bed2} .k-plain{color:#f0f0e6;border-bottom:1px dashed}
 #timebar{display:flex;align-items:center;gap:10px;padding:6px 16px}
@@ -54,12 +70,19 @@ i.sw.plain{background:repeating-linear-gradient(90deg,rgba(240,240,230,.9) 0 6px
 #about a{color:var(--acc)}
 @media (max-width:860px){
   #stage{grid-template-columns:1fr}
-  #aside{display:grid;grid-template-columns:200px 1fr;gap:10px}
+  #aside{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}
+  .phead,#flow,#flowCap{grid-column:1/3}
   #ball{height:200px}
 }
 @media (max-width:640px){
   #views{height:640px}
   #aside{grid-template-columns:1fr}
+  .phead,#flow,#flowCap{grid-column:auto}
+  #views.v3d{height:420px}
+  #legend{display:none}
+  #views.v3d #vtabs{top:auto;bottom:8px;right:8px}
+  #cams{max-width:100%;right:8px}
+  #hint3d{display:none}
   #tour{flex-wrap:wrap}
   #tourText{flex-basis:100%}
   .grp{grid-template-columns:1fr}
