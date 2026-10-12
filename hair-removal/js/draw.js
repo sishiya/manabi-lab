@@ -255,7 +255,7 @@ function drawTool(g, tool, y0, s, w, h) {
     g.strokeStyle = '#ff8fb1'; g.lineWidth = 2; g.strokeRect(x0, top, half * 2, y0 - top);
     g.fillStyle = 'rgba(255,143,177,.35)'; g.fillRect(x0, y0 - 3, half * 2, 3);
     g.fillStyle = '#ffd3e0'; g.font = '700 11px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'top';
-    g.fillText('照射口 2 cm（実物大）', Math.max(70, Math.min(w - 70, p.x)), top + 3); g.textAlign = 'left';
+    g.fillText('照射口 幅 1.5 cm', Math.max(70, Math.min(w - 70, p.x)), top + 3); g.textAlign = 'left';
   }
   if (tool.kind === 'shave') {
     if (tool.stroke) {   // すべらせている所

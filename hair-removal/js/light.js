@@ -5,7 +5,7 @@
 
 const LIGHT = {
   lamMin: 600, lamMax: 1100, lamStep: 25,   // 光の波長の幅（nm）。ケノンは公表なし → 家庭用の光脱毛器の一般的な幅で推定
-  fPerLevel: 0.74,  // J/cm² / レベル。Lv10 = 35 J ÷ 4.5〜4.9 cm² ≈ 7.1〜7.7 J/cm²（ストロング2。販売店・比較サイト）の中ほど。ほかのレベルは比例と推定
+  fPerLevel: 0.77,  // J/cm² / レベル。Lv10 = 35 J ÷ 4.5 cm² ≈ 7.7 J/cm²（ストロング2。比較サイトの値。メーカーの公式の数値は見つからない）。ほかのレベルは比例と推定
   tau: 0.005,       // 光る長さ（秒）。公表なし → 推定 5 ms
   epiCm: 0.006,     // 表皮 60 µm（Jacques の皮ふの光学のまとめ）
   rhoC: 3.8,        // 体積あたりの熱容量 J/(cm³·K)（組織。推定）
@@ -120,10 +120,10 @@ function damage(resp, m, q, T0) {
 
 // 毛穴の部分の寸法（cm）
 const LG = {
-  shaftR: 0.0035,     // 毛の半径 35 µm
+  shaftR: 0.0035,     // 毛の半径 35 µm（推定）
   matrixR: 0.010,     // 毛球の色のある部分の半径 0.1 mm（推定）
-  bulgeAt: 0.0105,    // バルジの細胞（外毛根鞘の外側）の、毛の軸からの距離
-  papR: 0.005,        // 毛乳頭の半径 0.05 mm。毛母（色のある輪）に囲まれている
+  bulgeAt: 0.0105,    // バルジの細胞（外毛根鞘の外側）の、毛の軸からの距離（推定）
+  papR: 0.005,        // 毛乳頭の半径 0.05 mm（推定）。毛母（色のある輪）に囲まれている
 };
 
 // 1回の光で、毛穴1つに起きること。opt = {F0, spec, fh}
@@ -198,7 +198,7 @@ function hairShade(fs, opt, T0) {
   let cover = 0;
   for (const f of fs) for (const h of f.hairs) {
     const above = h.L - rootDepth(f, h);
-    if (above > 0.3) cover += (above / 10) * 0.007 * 60 / fs.length * (h.pig == null ? 1 : h.pig);   // 長さ cm × 太さ cm × 本数/cm²（白い毛はほとんど吸わない）
+    if (above > 0.3) cover += (above / 10) * 0.007 * 60 / fs.length * (h.pig == null ? 1 : h.pig);   // 長さ cm × 太さ cm（70 µm、推定）× 本数/cm²（60、推定）
   }
   cover = Math.min(0.9, cover);
   let a = 0, q = 0;

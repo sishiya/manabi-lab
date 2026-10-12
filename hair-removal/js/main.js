@@ -171,10 +171,10 @@ $('zall').onclick = () => { S.view = null; };
 
 // --- 断面: 道具を肌にあてる ---
 //  カミソリ: 刃を肌の表面にあて、横にすべらせた所を剃る（刃が毛穴の出口を通ると、そこで毛が切れる）
-//  光: 照射口（幅 2 cm・実物大）がマウスについてくる。クリックで、その下の毛穴に光る
+//  光: 照射口（幅 1.5 cm）がマウスについてくる。クリックで、その下の毛穴に光る
 //  毛抜き: いちばん近い毛が光る。クリックでその1本を抜く
 function local(e) { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
-const WINDOW_MM = 20;      // 照射口の幅（ケノンのカートリッジ 3.5 × 2.0 cm の短い辺）
+const WINDOW_MM = 15;      // 照射口の幅（ケノンのストロングのカートリッジ 1.5 × 3.0 cm の短い辺。比較サイトの値。強さもストロング2 の値なのでそろえた）
 const RAZOR_MM = 0.6;      // 刃が毛穴の出口を「通った」とみなす幅（片がわ）
 function underWindow(x) { const half = WINDOW_MM / 2 * GEOM.s; return GEOM.xs.map((fx, i) => (Math.abs(fx - x) <= half ? i : -1)).filter(i => i >= 0); }
 function underRazor(a, b) { const pad = RAZOR_MM * GEOM.s; return GEOM.xs.map((fx, i) => (fx >= Math.min(a, b) - pad && fx <= Math.max(a, b) + pad ? i : -1)).filter(i => i >= 0); }

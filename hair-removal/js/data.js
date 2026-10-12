@@ -7,7 +7,7 @@ const SITES = {
   shin: {
     name: 'すね（光脱毛の資料の値）',
     A: 112, C: 14, T: 168, v: 0.2,
-    note: '成長期 16 週・休止期 24 週・退行期 約2週（家庭用の光脱毛器の臨床試験の計画 NCT03945383 に書かれた値。もとは Richards & Meharg の表とされる）',
+    note: '成長期 16 週・休止期 24 週・退行期 約2週（家庭用の光脱毛器の臨床試験の計画 NCT03945383 に書かれた値）。のびる速さ 0.2 mm/日は推定',
   },
   thighF: {
     name: '太もも・女性（測った値）',
@@ -38,19 +38,19 @@ const SITES = {
 
 // 毛穴の形（mm。肌の表面が 0、下へ向かってプラス）
 const GEO = {
-  epi: 0.1,        // 表皮の厚さ
+  epi: 0.1,        // 表皮の厚さ（推定）
   dermis: 2.2,     // 真皮の下の端（ここから下は皮下脂肪）。推定
-  bulbDeep: 3.0,   // 成長期の毛球の深さ（2.5〜4 mm とされる値のまん中ごろ）
+  bulbDeep: 3.0,   // 成長期の毛球の深さ（推定。査読のある部位ごとの測定は見つけていない）
   bulge: 1.0,      // バルジ（毛を作りなおす幹細胞がいる所）。推定
-  seb: 0.6,        // 皮脂腺の高さ
-  clubDepth: 1.1,  // 休止期の棍毛（こんもう）の根もとの深さ
+  seb: 0.6,        // 皮脂腺の高さ（絵のための目安）
+  clubDepth: 1.1,  // 休止期の棍毛（こんもう）の根もとの深さ（推定）
   descend: 10,     // 新しい成長期で毛穴の下の部分が下へのび、毛球ができあがるまでの日数（推定）。このあいだ毛はまだない
   taper: 0.6,      // 新しい毛の先が細くとがっている長さ mm（見た目の目安）
 };
 
 const SIM = {
   N: 10,           // 一列に並べる毛穴の数（図に全部描く）
-  gapMM: 1.3,      // となりの毛穴までの距離 mm（すねで 1 cm² に約 60 本とされる密度の目安）
+  gapMM: 1.3,      // となりの毛穴までの距離 mm（推定。1 cm² に約 60 本として）
   dt: 0.25,        // 計算のきざみ（日）
   burnIn: 500,     // 0日目より前に回しておく日数（周期をばらばらにする）
   t0: 0,           // はじまりの日
@@ -75,7 +75,7 @@ const TOOLS = [
   { id: 'look', name: 'しらべる', icon: '🔍', hint: 'さわると説明。ホイール（＋−）で拡大・縮小、ドラッグで移動。' },
   { id: 'shave', name: 'カミソリ', icon: '🪒', hint: '刃を肌にあてて、横にすべらせた所を剃ります。' },
   { id: 'pluck', name: '毛抜き', icon: '✒', hint: '抜きたい毛をクリック（タップ）。短い毛はつまめません。' },
-  { id: 'light', name: '光', icon: '✦', hint: '照射口（幅2 cm・実物大）をあてたい所でクリック。' },
+  { id: 'light', name: '光', icon: '✦', hint: '照射口（幅 1.5 cm）をあてたい所でクリック。' },
 ];
 const TOOL_COLOR = { shave: '#7fc8ff', pluck: '#ffd166', light: '#ff8fb1' };
 
@@ -91,10 +91,8 @@ const PARTS = {
   club: '棍毛（こんもう）: 休止期の毛。根もとが白く丸まり、もう伸びない。やがて落ちる。',
   catagen: '退行期: 毛を作るのをやめ、毛穴の下半分が縮んでいく（約2週）。',
   regen: '抜いたあとの毛穴: 毛穴そのものは残っている。しばらくすると新しい成長期が始まる。',
-  phases: '帯: 60個の毛穴の期の割合。赤＝成長期、肌色＝退行期、灰＝休止期、黄＝抜いたあと次の成長期を待っている毛穴。',
   burnt: '光でいたんだ毛: 毛母が熱でいたみ、毛はもう伸びない。1〜3週かけて押し出されて落ちる（日数は推定）。毛穴は休止期へ。',
   flashbox: '光をあてたときの計算: 毛母（成長期の毛球の色のある所）の最高温度、成長期の毛穴のうち毛母がいたんだ数、肌（表皮）の温度。いたむ確率は温度と時間の積み重ね（Arrhenius の式）から。',
-  surface: '上から見た肌: この列の 60 個の毛穴の毛を、肌の上から見たところ。線＝表面から出ている毛（長さは縮めて描く）、黒い点＝剃った切り口や、表面すれすれの毛。',
   tag: '毛穴の札: いまこの毛穴が「のびる（成長期）・ちぢむ（退行期）・休む（休止期）・準備中（抜いたあと）」のどれか。毛穴の下半分は周期ごとに縮んで、また作りなおされる（本当に起きていること。1つの毛穴では周期に1回）。',
   mcsc: '色の幹細胞（メラノサイト幹細胞）: バルジのあたりにいて、成長期のたびに毛球へ移り、色の細胞（メラノサイト）になる。毛がちぢむとき色の細胞は消え、次の周期にまた作りなおす。年をとると幹細胞がうまく保たれず（Nishimura ほか 2005）、バルジに取り残されて毛球へ行けなくなる（Sun ほか 2023、マウス）→ その毛穴の次の毛から白くなる。',
   white: '白い毛: 毛球に色の細胞がなく、メラニンのない毛。光脱毛の光は吸われず熱にならない。',
@@ -102,9 +100,9 @@ const PARTS = {
   burntFol: '光でいたんだ毛穴: 毛母の細胞が熱でいたみ、毛を作るのをやめた。毛穴の下がちぢんで休みに入り、毛は 1〜3 週で押し出されて抜け落ちる。',
   mark_shave: '剃った所（色の帯は30日でうすれる）', mark_pluck: '抜いた所（色の帯は30日でうすれる）', mark_light: '光をあてた所（色の帯は30日でうすれる）',
   singed: '焦げた毛: 剃らずに光をあてると、表面の毛は空気の中で熱が逃げず 250°C をこえて焦げる（においがする）。炭になった毛はさらに光を吸うので、根もとへ届く光が減り、焦げた毛がふれる肌は熱くなる。光の前に剃るのはこのため。焦げる温度・炭の吸い方は推定。',
-  epi: '表皮: いちばん外の層（約 0.1 mm）。',
+  epi: '表皮: いちばん外の層（このモデルでは 0.1 mm。推定）。',
   dermis: '真皮: 毛穴・血管・神経がある層。',
-  fat: '皮下脂肪: 成長期の毛球はここ近くまで深くのびる（2.5〜4 mm）。',
+  fat: '皮下脂肪: 成長期の毛球はここ近くまで深くのびる（このモデルでは 3 mm。推定）。',
 };
 
 // 画面の「おもな出どころ」（確かめたものだけ）
@@ -122,7 +120,8 @@ const SOURCES = [
   ['Jacques SL (2010) How tissue optics affect dosimetry of photodynamic therapy. J Biomed Opt 15:051608（深さと光の量の式）', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC2973987/'],
   ['Jacques SL. Skin optics（OMLC, 1998）: メラニンの吸収の式・表皮のメラノソームの割合', 'https://omlc.org/news/jan98/skinoptics.html'],
   ['Prahl S. ヘモグロビンの吸光係数の表（OMLC）／ Hale GM, Querry MR (1973) 水の光学定数. Appl Opt 12:555', 'https://omlc.org/spectra/hemoglobin/summary.html'],
-  ['Henriques FC (1947) Studies of thermal injury: the predictability and the significance of thermally induced rate processes leading to irreversible epidermal injury. Arch Pathol 43:489–502（Arrhenius の定数）', 'https://pubmed.ncbi.nlm.nih.gov/20243514/'],
-  ['ケノン 公式サイト（レベル10段階・前日に剃る・前後に冷やす・ほくろに照射しない）', 'https://xn--rckyc9e.com/beforeuse.html'],
-  ['Myers RJ, Hamilton JB (1951) Regeneration and rate of growth of hairs in man. Ann N Y Acad Sci 53:562–568（太ももの毛 0.13〜0.25 mm/日。総説の引用で確認）', 'https://pubmed.ncbi.nlm.nih.gov/14819882/'],
+  ['Henriques FC (1947) Studies of thermal injury: the predictability and the significance of thermally induced rate processes leading to irreversible epidermal injury. Arch Pathol 43:489–502（Arrhenius の定数。この論文の値としてよく使われる A = 3.1×10⁹⁸/s・Ea = 6.28×10⁵ J/mol）', 'https://pubmed.ncbi.nlm.nih.gov/20243514/'],
+  ['ケノン 公式サイト（レベル10段階・前日に剃る・前後に冷やす・ほくろに照射しない。波長・強さの数値は公表なし）', 'https://xn--rckyc9e.com/beforeuse.html'],
+  ['比較サイト「ケノンの照射パワー（ジュール）」: ストロング2 は 35 J・7.7 J/cm²・4.5 cm²（メーカーの公式の資料ではない）', 'https://jibunde-datsumou.com/irradiation-power-of-kenon/'],
+  ['比較サイト「ケノンのカートリッジ」: ストロング 1.5 × 3.0 cm（4.5 cm²）', 'https://se-ec.co.jp/find_best/datsumou/homecare/epilator/kenon-6334/cartridge-type-7914/'],
 ];
