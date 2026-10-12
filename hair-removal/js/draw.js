@@ -171,12 +171,13 @@ function drawFollicle(g, f, x, y0, s, sc, i) {
   }
   // 色の幹細胞（黄色の点）
   const dots = (cx, cy, col, n) => { g.fillStyle = col; for (let d = 0; d < n; d++) { g.beginPath(); g.arc(cx + (d - (n - 1) / 2) * 3.5, cy + (d % 2) * 3, 1.7, 0, Math.PI * 2); g.fill(); } };
-  if (pig <= 0) dots(x - sw / 2 - 4, Y(GEO.bulge), C.mcscOff, 3);
+  if (!FEATURES.gray) { const rg = g.createRadialGradient(x - sw / 2, Y(GEO.bulge), 0, x - sw / 2, Y(GEO.bulge), sw * 0.6); rg.addColorStop(0, 'rgba(140,235,170,.6)'); rg.addColorStop(1, 'rgba(140,235,170,0)'); g.fillStyle = rg; g.beginPath(); g.arc(x - sw / 2, Y(GEO.bulge), sw * 0.6, 0, Math.PI * 2); g.fill(); }   // 白髪を外しているときは、色の幹細胞の点のかわりにバルジだけを示す
+  else if (pig <= 0) dots(x - sw / 2 - 4, Y(GEO.bulge), C.mcscOff, 3);
   else {
     dots(x - sw / 2 - 4, Y(GEO.bulge), C.mcsc, pig < 1 ? 1 : 2);
     if (f.ph === 'A' && f.t >= 5) dots(x, Y(deep) - bulbR * 1.05, C.mcsc, pig < 1 ? 2 : 3);
   }
-  if (i === 0) hit(x - sw / 2 - 4, Y(GEO.bulge), 9, 'mcsc');
+  if (i === 0) hit(x - sw / 2 - 4, Y(GEO.bulge), 9, FEATURES.gray ? 'mcsc' : 'bulge');
   // 毛（皮ふの中はたて、表面から上は立ち上がって肌にそって寝ていく）
   for (const hr of f.hairs) {
     if (hr.L <= 0.02) continue;

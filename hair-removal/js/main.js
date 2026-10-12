@@ -20,7 +20,7 @@ const HOOKS = { light: (fs, site, e, R, idx) => lightEvent(fs, e, R, idx, S.ligh
 const grid = t => Math.floor(t / SIM.dt + 1e-9) * SIM.dt;
 
 function changed() {
-  AGING.age = S.age; AGING.mean = GRAY_TYPES[S.gray].mean;
+  AGING.age = S.age; AGING.mean = FEATURES.gray ? GRAY_TYPES[S.gray].mean : 1e9;   // 白髪を外しているときは白くならない
   S.full = null; S.run = null; S.key = [S.site, S.age, S.gray, JSON.stringify(S.events), JSON.stringify(S.light)].join('|'); syncControls(S);
 }
 
@@ -130,7 +130,7 @@ function draw() {
   $('now').textContent = last && S.t - last.t < 5 ? `${Math.floor(last.t)}日目${last.i == null ? '' : ' 毛穴' + (last.i + 1)}: ${last.text}` : '';
   const dd = Math.floor(S.t), yy = Math.floor(dd / 365);
   $('day').textContent = yy ? yy + '年' + Math.floor((dd % 365) / 30.4) + 'か月' : dd + '日目';
-  $('day').title = dd + '日目・' + (S.age + S.t / 365).toFixed(1) + '歳';
+  $('day').title = dd + '日目' + (FEATURES.gray ? '・' + (S.age + S.t / 365).toFixed(1) + '歳' : '');
   $('play').textContent = S.playing ? '❚❚' : '▶';
   const lk = S.key + '|' + Math.floor(S.t * 4);
   if (lk !== _logKey) { _logKey = lk; renderLog(S.full.log, S.t); }

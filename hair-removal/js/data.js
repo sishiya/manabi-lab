@@ -66,6 +66,8 @@ const SIM = {
 // その年齢をこえて始まった成長期の毛は白い。手前の span 年は色がうすい（灰色）
 // 人の平均は「50歳で髪の半分が白い人は 6〜23%」（Panhard ほか 2012 の世界調査）に合う程度に置いた推定
 const AGING = { age: 30, mean: 62, sd: 10, span: 3 };
+// 白髪はいったん外している（2026-10-12 ユーザー）。true にすると、年齢・白髪の出やすさ・色の幹細胞の点・白い毛がもどる
+const FEATURES = { gray: false };
 const GRAY_TYPES = { early: { name: '早め', mean: 52 }, mid: { name: 'ふつう', mean: 62 }, late: { name: 'おそめ', mean: 72 } };
 
 // 道具（マウス・指で肌をさわって使う）
@@ -107,9 +109,9 @@ const PARTS = {
 
 // 画面の「おもな出どころ」（確かめたものだけ）
 const SOURCES = [
-  ['Nishimura EK, Granter SR, Fisher DE (2005) Mechanisms of hair graying: incomplete melanocyte stem cell maintenance in the niche. Science 307:720–724', 'https://pubmed.ncbi.nlm.nih.gov/15618488/'],
-  ['Sun Q ほか (2023) Dedifferentiation maintains melanocyte stem cells in a dynamic niche. Nature 616:774–782（マウス: 色の幹細胞は動き回り、年をとると取り残される）', 'https://pubmed.ncbi.nlm.nih.gov/37076619/'],
-  ['Panhard S, Lozano I, Loussouarn G (2012) Greying of the human hair: a worldwide survey, revisiting the “50” rule of thumb. Br J Dermatol 167:865–873', 'https://pubmed.ncbi.nlm.nih.gov/22716034/'],
+  ['gray:Nishimura EK, Granter SR, Fisher DE (2005) Mechanisms of hair graying: incomplete melanocyte stem cell maintenance in the niche. Science 307:720–724', 'https://pubmed.ncbi.nlm.nih.gov/15618488/'],
+  ['gray:Sun Q ほか (2023) Dedifferentiation maintains melanocyte stem cells in a dynamic niche. Nature 616:774–782（マウス: 色の幹細胞は動き回り、年をとると取り残される）', 'https://pubmed.ncbi.nlm.nih.gov/37076619/'],
+  ['gray:Panhard S, Lozano I, Loussouarn G (2012) Greying of the human hair: a worldwide survey, revisiting the “50” rule of thumb. Br J Dermatol 167:865–873', 'https://pubmed.ncbi.nlm.nih.gov/22716034/'],
   ['Paus R, Cotsarelis G (1999) The biology of hair follicles. N Engl J Med 341:491–497（毛周期・毛穴の下半分が周期ごとに作りなおされること・バルジ）', 'https://pubmed.ncbi.nlm.nih.gov/10441606/'],
   ['Seago SV, Ebling FJG (1985) The hair cycle on the human thigh and upper arm. Br J Dermatol 113:9–16', 'https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1365-2133.1985.tb02038.x'],
   ['ClinicalTrials.gov NCT03945383（家庭用 IPL の臨床試験の計画。部位ごとの周期と、2週ごと4回→4週ごとの予定）', 'https://clinicaltrials.gov/study/NCT03945383'],

@@ -25,13 +25,15 @@ function buildControls(S, on) {
   $('hairc').onchange = () => on.light({ hair: $('hairc').value });
   $('cool').onchange = () => on.light({ cool: $('cool').checked });
   $('speed').onchange = () => { S.speed = +$('speed').value; };
+  if (!FEATURES.gray) { $('age').closest('label').hidden = true; for (const id of ['grayH', 'grayRow', 'grayNote']) $(id).hidden = true; }
   const ul = $('srcs');
-  for (const [txt, url] of SOURCES) { const li = document.createElement('li'); const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = txt; li.appendChild(a); ul.appendChild(li); }
+  for (let [txt, url] of SOURCES) {
+    if (txt.startsWith('gray:')) { if (!FEATURES.gray) continue; txt = txt.slice(5); } const li = document.createElement('li'); const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = txt; li.appendChild(a); ul.appendChild(li); }
 }
 
 function syncControls(S) {
   $('site').value = S.site; $('age').value = S.age; $('gray').value = S.gray;
-  $('who').textContent = `${SITES[S.site].name.replace(/（.*）/, '')}・${S.age}歳`;
+  $('who').textContent = SITES[S.site].name.replace(/（.*）/, '') + (FEATURES.gray ? `・${S.age}歳` : '');
   $('siteNote').textContent = SITES[S.site].name + ': ' + SITES[S.site].note;
   for (const T of TOOLS) $('tool-' + T.id).setAttribute('aria-checked', String(S.tool === T.id));
   $('hint').textContent = TOOLS.find(T => T.id === S.tool).hint;
