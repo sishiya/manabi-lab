@@ -170,8 +170,8 @@ function showHandInfo() {
 // 楽譜ファイル
 // 曲の選択の分け方と並び（最初の曲を起動時に開く）
 const SONG_GROUPS = [
-  ['曲', 'Pieces', ['elise2', 'chords2', 'twinkle', 'ode', 'elise']],
-  ['基本の動き（音階・アルペジオ・和音）', 'Basics (scales, arpeggios, chords)', ['scale', 'scale2', 'dmaj', 'arp', 'chords']],
+  ['曲', 'Pieces', ['elise2', 'elise']],
+  ['基本の動き（音階）', 'Basics (scales)', ['scale', 'scale2', 'dmaj']],
   ['超絶技巧', 'Virtuoso', ['chopin', 'bravura']],
 ];
 const SAMPLES = [

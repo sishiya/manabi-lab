@@ -1,10 +1,10 @@
 // サンプルの楽譜ファイル（samples/）を作る: node piano-hand/tools/make-samples.js
-// 曲はどれも著作権の切れたもの。音の並びは js/songs.js と同じ（歓喜の歌の左手の和音はこのアプリでつけたもの）。
+// 曲はどれも著作権の切れたもの。音の並びは js/songs.js と同じ（歓喜の歌は下に。左手の和音はこのアプリでつけたもの）。
 'use strict';
 const fs = require('fs'), path = require('path');
 const dir = path.join(__dirname, '..');
 const src = fs.readFileSync(path.join(dir, 'js/songs.js'), 'utf8').replace(/^'use strict';/m, '').replace(/^const /gm, 'var ');
-const ctx = {}; require('vm').runInNewContext(src, ctx);
+const ctx = { L: ja => ja }; require('vm').runInNewContext(src, ctx);
 const { SONGS, NOTE_BASE } = ctx;
 
 // 「音名/拍」の文字列 → [{m, beat0, beats}]（休みは除く）
@@ -57,7 +57,9 @@ fs.writeFileSync(path.join(dir, 'samples/elise-opening.mid'), midi(elise.bpm, [
   track(noteEvents(beats(elise.src), 0), 'Right hand'), track(noteEvents(beats(elise.srcL), 1).concat(pedEv), 'Left hand')]));
 
 // 2) 歓喜の歌＋左手の和音（トラック1つ。和音と、高さで手を分けるのを試す）
-const ode = SONGS.find(s => s.id === 'ode');
+// 2026-10-12: 歓喜の歌は曲の一覧から外した（運指の出どころが非営利だけ可のため）。音の並びはここに残す（ベートーヴェン、著作権切れ）
+const ode = { bpm: 116, src: 'E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 E4/1.5 D4/.5 D4/2 ' +
+  'E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 D4/1.5 C4/.5 C4/2' };
 const chords = [];
 const prog = ['C', 'C', 'G', 'C', 'C', 'C', 'G', 'C'];
 const CH = { C: [48, 52, 55], G: [43, 47, 50] };

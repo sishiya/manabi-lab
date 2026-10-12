@@ -206,7 +206,7 @@ window.__timeSheet = (hi, times, eyeOff) => { const cv = V.r.domElement; if (!cv
   __iso(false); V.scene.background = bg; __sheet(out.toDataURL('image/jpeg', 0.9)); return 'ok'; };
 // ---- v040〜: 骨の重みで動かした皮ふが、その姿勢で作り直した陰関数（本来の形）からどれだけずれるか ----
 // __lbsSamples(ids) … 曲（ids）の両手から 0.4 秒ごとに指の角度を集める（手の座標なので左手も同じに扱える）
-window.__lbsSamples = async (ids = ['elise2', 'scale', 'chords', 'chopin', 'arp', 'twinkle', 'bravura', 'scale2']) => { const out = [];
+window.__lbsSamples = async (ids = ['elise2', 'scale', 'chopin', 'bravura', 'scale2']) => { const out = [];
   for (const id of ids) { __ph.loadSong(id); await new Promise(r => setTimeout(r, 200)); __ph.S.plan.hands.forEach((h, hi) => { for (let t = h.notes[0].t0; t < h.notes[h.notes.length - 1].t1; t += 0.4) out.push(__ph.poseAt(t, hi).fingers.map(f => f && { yaw: f.ang.yaw, a1: f.ang.a1, a2: f.ang.a2 })); }); }
   return (window.__samples = out); };
 // __lbsErrOne(fs, sel) … 指の角度 fs のときの、頂点 sel の「本来の形の陰関数の値」（− は本来の形より内側へへこむ、+ は外へふくらむ）

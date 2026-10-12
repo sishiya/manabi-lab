@@ -7,7 +7,6 @@
 
 // 運指の出どころ（2026-10-11 に原本の図・楽譜で確かめた）
 const SRC_HANON = L('ハノン『60の練習曲によるヴィルトゥオーゾ・ピアニスト』（1873）', 'Hanon, "The Virtuoso Pianist in 60 Exercises" (1873)');
-const SRC_BAYLOR = ch => L('Baylor Piano Basics（Michael Clark、ベイラー大学のピアノの教科書、CC BY-NC-SA 4.0）' + ch, 'Baylor Piano Basics (Michael Clark, Baylor University piano textbook, CC BY-NC-SA 4.0), ' + ch);
 const SRC_HENLE = L('Henle 版（1950、オットー・フォン・イルマー編、運指ヴァルター・ランペ）に書かれている指', 'Henle edition (1950, ed. Otto von Irmer, fingering by Walther Lampe), the printed fingers');
 // 運指の文字列 → 音ごとの [押す指, かえた先の指]。「[45]」は 4 で押して、押さえたまま 5 にかえる（v044〜）。0 は書かれていない音
 function parseRef(str) {
@@ -37,14 +36,6 @@ const ELISE_REF_R = refAt(35, { 1: 4, 6: 1, 10: 1, 13: 5, 14: 1, 19: 5, 20: 3, 2
 const ELISE_REF_L = refAt(18, { 6: 2 }); // 左手は第3小節のソ♯3 に 2 だけ（親指で黒鍵を押さない）
 
 const SONGS = [
-  // Baylor Piano Basics 29.1「Primary Chord Progression」の I・IV⁶₄・I・V⁶₅（三和音の形 V⁶）・I。右手 1-3-5／1-3-5／1-3-5／1-2-5／1-3-5、左手 5-3-1／5-2-1／5-3-1／5-3-1／5-3-1
-  { id: 'chords', name: L('和音（ハ長調の I・IV・I・V・I）', 'Chords (C major I, IV, I, V, I)'), why: L('和音の指の並び・和音から和音へ', 'finger order in chords, moving chord to chord'), bpm: 72,
-    src: 'C4+E4+G4/2 C4+F4+A4/2 C4+E4+G4/2 B3+D4+G4/2 C4+E4+G4/2', srcL: 'C3+E3+G3/2 C3+F3+A3/2 C3+E3+G3/2 B2+D3+G3/2 C3+E3+G3/2',
-    refR: '135' + '135' + '135' + '125' + '135', refL: '531' + '521' + '531' + '531' + '531', fsrc: SRC_BAYLOR(L('29.1（和音の進行）', '29.1 Primary Chord Progression')) },
-  { id: 'chords2', name: L('メロディと和音（歓喜の歌・左手の和音）', 'Melody and chords (Ode to Joy, left-hand chords)'), why: L('片手はメロディ、片手は和音', 'one hand melody, one hand chords'), bpm: 116,
-    src: 'E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 E4/1.5 D4/.5 D4/2',
-    srcL: 'C3+E3+G3/4 C3+E3+G3/4 B2+D3+G3/4 C3+E3+G3/2 B2+D3+G3/2', // 左手の V は 29.1 と同じ形（シ・レ・ソ）
-    refR: '334554321123322', refL: '531'.repeat(5), fsrc: SRC_BAYLOR(L('13.3（歓喜の歌、右手はドの5本指の位置）と 29.1（和音の指）', '13.3 Ode to Joy (right hand in C five-finger position) and 29.1 (chord fingering)')) },
   { id: 'scale2', name: L('ハ長調の音階（両手・2オクターブ）', 'C major scale (both hands, 2 octaves)'), why: L('左手の親指くぐり・両手', 'left-hand thumb-under, both hands'), bpm: 84,
     src: SCALE_C(4), srcL: SCALE_C(3),
     refR: '123123412312345' + '43213214321321', refL: '543213214321321' + '23123412312345', fsrc: L(SRC_HANON + ' 第39番（ハ長調の音階）', SRC_HANON + ', No. 39 (C major scale)') },
@@ -60,19 +51,6 @@ const SONGS = [
   { id: 'dmaj', name: L('ニ長調の音階', 'D major scale'), why: L('黒鍵（ファ♯・ド♯）', 'black keys (F♯, C♯)'), bpm: 92,
     src: 'D4/.5 E4/.5 F#4/.5 G4/.5 A4/.5 B4/.5 C#5/.5 D5/1 C#5/.5 B4/.5 A4/.5 G4/.5 F#4/.5 E4/.5 D4/1',
     refR: '12312345' + '4321321', fsrc: L(SRC_HANON + ' 第39番（ニ長調の音階）', SRC_HANON + ', No. 39 (D major scale)') },
-  { id: 'arp', name: L('ハ長調のアルペジオ', 'C major arpeggio'), why: L('大きな指またぎ', 'big finger crossing'), bpm: 76,
-    src: 'C4/.5 E4/.5 G4/.5 C5/.5 E5/.5 G5/.5 C6/1 G5/.5 E5/.5 C5/.5 G4/.5 E4/.5 C4/1',
-    refR: '1231235' + '321321', fsrc: SRC_BAYLOR(L('61（2オクターブの長調のアルペジオ。右手 123＋123＋5）', '61 Two-Octave Major Arpeggios (right hand 123 + 123 + 5)')) },
-  { id: 'twinkle', name: L('きらきら星', 'Twinkle, Twinkle, Little Star'), why: L('同じ音の連打・5本の指の位置', 'repeated notes, five-finger position'), bpm: 100,
-    src: 'C4 C4 G4 G4 A4 A4 G4/2 F4 F4 E4 E4 D4 D4 C4/2 G4 G4 F4 F4 E4 E4 D4/2 G4 G4 F4 F4 E4 E4 D4/2 ' +
-         'C4 C4 G4 G4 A4 A4 G4/2 F4 F4 E4 E4 D4 D4 C4/2',
-    // Baylor 13.8: ド1・ソ4・ラ5・ソ「4-5」（4 で押して、押さえたまま 5 にかえる。v044 から [45] で）・ファ4。5〜8小節はソ＝5 の位置（書かれていない指はその位置のまま）
-    refR: '114455[45]' + '4433221' + '5544332' + '5544332' + '114455[45]' + '4433221',
-    fsrc: SRC_BAYLOR(L('13.8（きらきら星。ソの「4-5」は押さえたまま指をかえる）', '13.8 Twinkle, Twinkle, Little Star (the G marked 4-5 changes finger while holding)')) },
-  { id: 'ode', name: L('歓喜の歌（ベートーヴェン）', 'Ode to Joy (Beethoven)'), why: L('手の位置がほとんど動かない', 'the hand hardly moves'), bpm: 116,
-    src: 'E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 E4/1.5 D4/.5 D4/2 ' +
-         'E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 D4/1.5 C4/.5 C4/2',
-    refR: '334554321123322' + '334554321123211', fsrc: SRC_BAYLOR(L('13.3（歓喜の歌。ミを 3 から、ドの5本指の位置のまま）', '13.3 Ode to Joy (E on finger 3, staying in the C five-finger position)')) },
   { id: 'elise', name: L('エリーゼのために 冒頭（右手だけ）', 'Für Elise, opening (right hand only)'), why: L('速い往復・黒鍵・跳躍', 'quick back-and-forth, black keys, jumps'), bpm: 66, src: ELISE_R, refR: ELISE_REF_R, fsrc: SRC_HENLE },
 ];
 
