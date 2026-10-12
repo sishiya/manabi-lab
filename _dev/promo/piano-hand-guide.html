@@ -20,17 +20,17 @@ const END = 148, DUR = END + IDENT_CLOSE;
 const TILT = { th: 0.55, ph: 0.8, d: 760, tg: [0, 0, -75] }, SIDE = { th: 1.35, ph: 1.25, d: 560, tg: [0, 20, -70] };
 const SC = [
   { a: 0, b: 16.5, song: 'elise2', s0: -0.4, speed: 0.75, cam: camLerp({ th: 0.7, ph: 0.85, d: 820, tg: [0, 0, -75] }, TILT, 16) },
-  { a: 16.5, b: 30, song: 'ode', s0: -0.2, cam: camLerp(TILT, { th: 0.4, ph: 0.75, d: 700, tg: [0, 0, -75] }, 13.5) },
-  { a: 30, b: 32, song: 'twinkle', s0: 0, cam: camFix(TILT) },
-  { a: 32, b: 38.5, song: 'twinkle', s0: 2, cam: camLerp(SIDE, { th: 1.2, ph: 1.15, d: 480, tg: [0, 20, -70] }, 6.5) },
-  { a: 38.5, b: 46, song: 'twinkle', s0: 8.5, cam: 'pov' },
+  { a: 16.5, b: 30, song: 'scale2', s0: -0.2, speed: 0.85, cam: camLerp(TILT, { th: 0.4, ph: 0.75, d: 700, tg: [0, 0, -75] }, 13.5) },
+  { a: 30, b: 32, song: 'hanon1', s0: 0, speed: 0.45, cam: camFix(TILT) },
+  { a: 32, b: 38.5, song: 'hanon1', s0: 0.9, speed: 0.45, cam: camLerp(SIDE, { th: 1.2, ph: 1.15, d: 480, tg: [0, 20, -70] }, 6.5) },
+  { a: 38.5, b: 46, song: 'hanon1', s0: 3.825, speed: 0.45, cam: 'pov' },
   { a: 46, b: 66, song: 'scale', s0: -0.4, speed: 0.6, opt: { fingerNums: true }, cam: camLerp({ th: 0.3, ph: 0.6, d: 560, tg: [0, 0, -70] }, { th: 0.15, ph: 0.55, d: 520, tg: [0, 0, -70] }, 20) },
   { a: 66, b: 68.5, song: 'elise', s0: -0.6, speed: 0.5, cam: camFix({ th: 0.75, ph: 0.85, d: 430, tg: [0, 10, -55] }) },
   { a: 68.5, b: 77, song: 'elise', s0: 0.65, speed: 0.5, look: 'xray', cam: camLerp({ th: 0.75, ph: 0.85, d: 430, tg: [0, 10, -55] }, { th: 0.55, ph: 0.8, d: 400, tg: [0, 10, -55] }, 8.5) },
   { a: 77, b: 84.5, song: 'elise', s0: 4.9, speed: 0.5, look: 'muscles', cam: camLerp({ th: 0.55, ph: 0.8, d: 400, tg: [0, 10, -55] }, { th: 0.35, ph: 0.75, d: 380, tg: [0, 10, -55] }, 7.5) },
   { a: 84.5, b: 90, song: 'elise', s0: 8.65, speed: 0.5, look: 'bones', cam: camFix({ th: 0.35, ph: 0.75, d: 380, tg: [0, 10, -55] }) },
-  { a: 90, b: 99, song: 'arp', s0: -0.3, speed: 0.75, posture: 'curved', cam: camLerp(SIDE, { th: 1.3, ph: 1.2, d: 500, tg: [0, 20, -70] }, 9) },
-  { a: 99, b: 108, song: 'arp', s0: -0.3, speed: 0.75, posture: 'flat', cam: camLerp(SIDE, { th: 1.3, ph: 1.2, d: 500, tg: [0, 20, -70] }, 9) },
+  { a: 90, b: 99, song: 'dmaj', s0: -0.3, speed: 0.75, posture: 'curved', cam: camLerp(SIDE, { th: 1.3, ph: 1.2, d: 500, tg: [0, 20, -70] }, 9) },
+  { a: 99, b: 108, song: 'dmaj', s0: -0.3, speed: 0.75, posture: 'flat', cam: camLerp(SIDE, { th: 1.3, ph: 1.2, d: 500, tg: [0, 20, -70] }, 9) },
   { a: 108, b: 126, song: 'bravura', s0: -0.3, speed: 0.7, cam: camLerp(TILT, { th: 0.35, ph: 0.72, d: 820, tg: [0, 0, -75] }, 18) },
   { a: 126, b: 133.5, song: 'elise2', s0: -0.3, scene: 'stage', cam: camLerp({ th: 0.3, ph: 0.75, d: 700, tg: [0, 0, -75] }, { th: 0.5, ph: 0.8, d: 680, tg: [0, 0, -75] }, 7.5) },
   { a: 133.5, b: DUR, song: 'elise2', s0: 7.2, scene: 'dusk', cam: camLerp({ th: 0.5, ph: 0.8, d: 680, tg: [0, 0, -75] }, { th: 0.65, ph: 0.85, d: 760, tg: [0, 0, -75] }, 14) },
@@ -38,7 +38,7 @@ const SC = [
 
 // ---- ボタンの札（アプリと同じ言葉・同じ側。見る向きは絵の左上、再生は下、ほかは右のパネル）。右下はライオンの場所 ----
 const CH = {
-  song: { x: 1240, y: 240, title: '曲（右のパネル）', btns: ['エリーゼのために 冒頭（両手）', '歓喜の歌（ベートーヴェン）', '超絶技巧の練習曲'], cols: 1 },
+  song: { x: 1240, y: 240, title: '曲（右のパネル）', btns: ['エリーゼのために 冒頭（両手）', 'ハ長調の音階（両手・2オクターブ）', '超絶技巧の練習曲'], cols: 1 },
   play: { x: 40, y: 820, title: '', btns: ['▶ 再生', '速さ ×1'] },
   file: { x: 1240, y: 240, title: '曲（右のパネル）', btns: ['楽譜を開く…'] },
   view: { x: 40, y: 240, title: '見る向き（絵の左上）', btns: ['ななめ', '真上', '正面', '横', '一人称'] },
@@ -95,8 +95,8 @@ const CAPS = [
     en: ['Finger numbers: 1 is the thumb, 5 the little finger', 'The computer searches for the most comfortable order of fingers'] },
   { a: 53.5, b: 59.5, main: '音階では、親指が手のひらの下をくぐる', sub: '指の開きの研究（Parncutt ほか 1997）の表をもとにしている',
     en: ['In a scale, the thumb passes under the palm', 'Based on a table of finger spans (Parncutt et al. 1997)'] },
-  { a: 60, b: 65.8, main: '教本の運指と 609 音中 590 音が同じ（97%）', sub: '右のパネルの「答え合わせ」で、ちがう所も見られる',
-    en: ['It matches textbook fingering on 590 of 609 notes (97%)', 'The "compare" button in the right panel shows where it differs'] },
+  { a: 60, b: 65.8, main: '教本の運指と 559 音中 533 音が同じ（95%）', sub: '右のパネルの「答え合わせ」で、ちがう所も見られる',
+    en: ['It matches textbook fingering on 533 of 559 notes (95%)', 'The "compare" button in the right panel shows where it differs'] },
   { a: 68.8, b: 76.5, main: '皮ふを透かして、骨', sub: '骨の長さは、大人66人の X 線写真の研究の値',
     en: ['Bones, seen through the skin', 'Bone lengths come from X-ray measurements of 66 adults'] },
   { a: 77.3, b: 84, main: '骨と筋肉・腱・脂肪', sub: '筋肉は体積を保ったまま、のび縮みする',

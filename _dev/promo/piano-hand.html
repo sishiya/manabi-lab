@@ -14,13 +14,13 @@
 <script>
 'use strict';
 // 台本: ピアノを弾く手（ショート、40秒＋締め）。?short で縦長に録る
-// エリーゼ（両手）→ 指の番号（歓喜の歌）→ 皮ふを透かして骨（音階の親指くぐり）→ 筋肉・腱・脂肪 → 超絶技巧の練習曲（一人称は縦長だと手が画面の外に出たのでやめた）
+// エリーゼ（両手）→ 指の番号（ハノン第1番）→ 皮ふを透かして骨（音階の親指くぐり）→ 筋肉・腱・脂肪（ニ長調の音階）→ 超絶技巧の練習曲（一人称は縦長だと手が画面の外に出たのでやめた）
 // 音は BGM ではなく、アプリと同じピアノの合成で、画面の手が押す音を鳴らす
 const V = new URLSearchParams(location.search).has('short');
 // カメラは縦長（ショート）と横長で別に（縦長は左右が狭いので、上から引いて見る）
 const CV = V ? [
   [{ th: 0.35, ph: 0.62, d: 1900, tg: [0, 0, -20] }, { th: 0.25, ph: 0.58, d: 1750, tg: [0, 0, -20] }],
-  [{ th: 0.2, ph: 0.55, d: 900, tg: [0, 0, -20] }, { th: 0.1, ph: 0.5, d: 850, tg: [0, 0, -20] }],
+  [{ th: 0.2, ph: 0.55, d: 1650, tg: [-60, 0, -20] }, { th: 0.1, ph: 0.5, d: 1550, tg: [-60, 0, -20] }], // ハノン第1番は両手が2オクターブ離れるので引く
   [{ th: -0.3, ph: 0.6, d: 800, tg: [0, 10, -20] }, { th: -0.45, ph: 0.65, d: 760, tg: [0, 10, -20] }],
   [{ th: 0.5, ph: 0.68, d: 1250, tg: [0, 10, -20] }, { th: 0.4, ph: 0.64, d: 1180, tg: [0, 10, -20] }],
   [{ th: -0.2, ph: 0.55, d: 1900, tg: [0, 0, -20] }, { th: 0.15, ph: 0.6, d: 1700, tg: [0, 0, -20] }],
@@ -33,14 +33,14 @@ const CV = V ? [
 ];
 const SC = [
   { a: 0, b: 6.3, song: 'elise2', s0: 0.2, cam: camLerp(...CV[0], 6.3) },
-  { a: 6.3, b: 13.4, song: 'ode', s0: 0.6, opt: { fingerNums: true }, cam: camLerp(...CV[1], 7) },
+  { a: 6.3, b: 13.4, song: 'hanon1', s0: 0, speed: 0.9, opt: { fingerNums: true }, cam: camLerp(...CV[1], 7) },
   { a: 13.4, b: 21.3, song: 'scale', s0: 0.9, speed: 0.75, look: 'xray', cam: camLerp(...CV[2], 7.9) },
-  { a: 21.3, b: 28.3, song: 'chords2', s0: 0.4, look: 'muscles', cam: camLerp(...CV[3], 7) },
+  { a: 21.3, b: 28.3, song: 'dmaj', s0: 0, speed: 0.8, look: 'muscles', cam: camLerp(...CV[3], 7) },
   { a: 28.3, b: SHORT_END + IDENT_CLOSE, song: 'bravura', s0: 0, cam: camLerp(...CV[4], 11.7) },
 ];
 const CAPS = [
-  { a: 6.6, b: 13.1, main: 'どの指で弾くかは、コンピュータが決める', sub: '教本の運指と 97% 同じ（609音で答え合わせ）',
-    en: ['The computer decides which finger plays each note', 'It matches textbook fingering 97% of the time (609 notes checked)'] },
+  { a: 6.6, b: 13.1, main: 'どの指で弾くかは、コンピュータが決める', sub: '教本の運指と 95% 同じ（559音で答え合わせ）',
+    en: ['The computer decides which finger plays each note', 'It matches textbook fingering 95% of the time (559 notes checked)'] },
   { a: 13.7, b: 21, main: '皮ふの下に骨。長さは測った研究の値', sub: '音階の「親指くぐり」：親指が手のひらの下を通る',
     en: ['Bones under the skin, with lengths from measurements', 'In a scale, the thumb passes under the palm'] },
   { a: 21.6, b: 28, main: '筋肉・腱・脂肪も入っていて、のび縮みする', sub: '皮ふは、骨と筋肉の模型から作っている',
