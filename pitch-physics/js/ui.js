@@ -75,6 +75,10 @@ function buildControls() {
   g2.appendChild(many);
 
   buildEnvGroup(box);
+  const gB = document.createElement('div'); gB.className = 'grp'; box.appendChild(gB);
+  selectCtl(gB, 'batSide', '打者', [['R', '右打者（捕手から見て左に立つ）'], ['L', '左打者（捕手から見て右に立つ）']], () => S.batSide, v => S.batSide = v);
+  slider(gB, 'swingMs', 'スイングの時間', 130, 280, 5, () => S.swingMs, v => S.swingMs = v, v => v + ' ms（振り始めから当たるまで。研究で 130〜280 ms）');
+  slider(gB, 'delayMs', '決めてから振り始めるまで', 150, 250, 5, () => S.delayMs, v => S.delayMs = v, v => v + ' ms（研究で 150〜250 ms）');
   const g3 = document.createElement('div'); g3.className = 'grp'; box.appendChild(g3);
   check(g3, 'noAir', '<i class="sw noair"></i>空気がないとき', () => S.show.noAir, v => S.show.noAir = v);
   check(g3, 'plain', '<i class="sw plain"></i>回転の力なし（重力と抵抗だけ）', () => S.show.plain, v => S.show.plain = v);

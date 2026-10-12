@@ -31,6 +31,7 @@ const S = {
   arm: 45,                 // 腕の角度（度）。投手の例の値から変えると、放す位置と回転の向きが変わる
   overlay: false, overlayAim: 'center', multi: null,   // 球種を重ねて見る（center = みんなゾーンのまん中へ、same = いまの球と同じ向きに放す）
   env: { tC: 20, elev: 0, p: 1013, rh: 50, ws: 0, wd: 0 }, envId: 'std',   // 段階C: 空気と風
+  batSide: 'R', swingMs: 150, delayMs: 150,   // 段階E: 打者（右打者・スイングの時間・決めてから振り始めるまで）
   t: 0, playing: false, speed: 1 / 5,
   show: { noAir: true, plain: true, forces: true, std: true },
   res: null, ghostNoAir: null, ghostPlain: null,
@@ -151,6 +152,8 @@ const PARTS = {
   path: '計算した道すじ。重力・空気の抵抗・回転の力（ナックルは縫い目の力も）を 1 ミリ秒ごとに足し合わせて、ボールの動きを解いています。',
   noAir: '空気がないとき（重力だけ）の道すじ。放物線になります。月の上で投げるとこうなります。',
   plain: '回転の力も縫い目の力もないとき（重力と空気の抵抗だけ）の道すじ。これとのずれが「変化量」です。',
+  decide: '振ると決める最後の点（緑の輪）。ここから先の変化を見てから決めても、スイングが間に合わない（決めてから振り始めるまで・スイングの時間は下のつまみ）。',
+  track: '目で追えなくなる点（白の輪）。打者の目から見たボールの動きが 70°/秒をこえ、目で滑らかに追えなくなる（Bahill & LaRitz 1984）。',
   target: 'ねらった点（ゾーンのまん中）。「ねらい方」で、この点へどう向けて放すかを変えられます。',
   zone: 'ストライクゾーン（幅 43 cm。高さは打者の体で変わるので目安）。',
   ball: 'いまの時刻のボール。矢印は働いている力です。',
@@ -199,6 +202,10 @@ const TOUR = [
     go() { setPitch('ff'); setEnv('head'); S.show = { noAir: false, plain: true, forces: true, std: true }; S.t = 0.3; camTo('ball'); } },
   { text: '<b>球種を重ねる</b>: 架空の本格派の投手が、4つの球種をまっすぐと<b>同じ向きに</b>放したとき。遅い球ほどホームまでの時間が長く、重力で落ちるぶんが増えるので、カーブは地面まで落ちてしまいます。だから投手は球種ごとに放す向きを変えています（下の「それぞれゾーンのまん中をねらう」に変えてみよう）。',
     go() { S.overlay = true; S.overlayAim = 'same'; setPitcher('power'); S.show = { noAir: false, plain: false, forces: false, std: false }; S.t = tEnd(); camTo('pitcher'); } },
+  { text: '<b>打者の目</b>: スイングに 0.15 秒、決めてから振り始めるまでに 0.15 秒かかるとすると、振ると決める最後の時刻は放してから約 0.1 秒（<span style="color:#7fd68a">緑の輪</span>、ホームの約 12 m 手前）。そのときまっすぐは、回転の力なしの道すじから 4 cm しかずれていません。変化の 9 割以上は、決めたあとに起こります。<b>白の輪</b>から先は、目で滑らかに追えない速さ（70°/秒）になります。',
+    go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: false }; S.t = 0.2; camTo('batter'); } },
+  { text: '<b>決める時刻の球種のちがい</b>: 架空の本格派の4球種を、それぞれ「回転の力がなければまん中に届く向き」に放したとき。下の帯の緑が終わる時刻（振ると決める最後）には、打者の目から見て球種どうしは<b>ボール半分ほど</b>（0.17°）しかはなれていないのに、ホームでは最大 <b>1 m</b> はなれます。時間のつまみを緑の終わりに合わせて、打者の目で見くらべてみよう。',
+    go() { S.overlay = true; S.overlayAim = 'center'; setPitcher('power'); S.show = { noAir: false, plain: false, forces: false, std: false }; S.t = batterInfo().tDecide; camTo('batter'); } },
   { text: '自由に試そう。下で投げる手・球種を選び、速さ・回転数・回転の向き（右のボールをドラッグ）・使える回転を変えると、すぐに計算しなおします。',
     go() { setPitch('ff'); S.show = { noAir: true, plain: true, forces: true }; S.t = 0; camTo('ball'); } },
 ];

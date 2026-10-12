@@ -27,6 +27,7 @@
   </main>
   <div id="timebar"><button id="play" aria-label="再生">▶</button><input type="range" id="time" min="0" max="0.4" step="0.001" aria-label="時刻"><span id="tlab"></span>
     <select id="speed" aria-label="再生の速さ"><option value="0.05">1/20 の速さ</option><option value="0.2" selected>1/5 の速さ</option><option value="1">本当の速さ</option></select></div>
+  <div id="stripBox"><canvas id="tstrip"></canvas><p id="batTxt"></p></div>
   <div id="controls"></div>
   <div id="tip" hidden></div>
   <details id="about">
@@ -49,6 +50,10 @@
     <p>初めは「回転と縫い目の力がなければ、ゾーンのまん中（十字）に届く向き」に放します。だから「まん中から」のずれが、回転と縫い目による変化です。ほかに「まん中へまっすぐ向けて放す」「この球がまん中に届くよう計算で合わせる」「角度のつまみで決める」を選べます。</p>
     <h3>投手の人形と腕の角度</h3>
     <p>人形は、ボールを放す瞬間の姿勢を、腕の角度と放す位置から組み立てた目安の絵で、計算には使っていません。腕の角度を変えると、放す位置（よくある値の表から）と回転の向き（腕の角度と同じだけ回す。回転の向きは腕の角度でほぼ決まる、Nathan 2023）が変わります。どちらも目安です。</p>
+    <h3>打者の目（段階E）</h3>
+    <p>時間のつまみの下の帯は、打者の時間割です。スイング（振り始めから当たるまで）と、振ると決めてから振り始めるまでの時間は、研究のまとめ（Nakashima ほか 2025）にある範囲（130〜280 ms・150〜250 ms）の中から、つまみで選べます（初めはどちらも 150 ms）。決める最後の時刻 ＝ ホームに着く時刻 − 2つの時間 です。人によって、また打ち方によって大きくちがうので、目安です。</p>
+    <p>「目で追えなくなる」は、打者の目（右打者で、ホームのまん中から捕手から見て左へ 0.8 m・高さ 1.5 m）から見たボールの動きが 70°/秒をこえる時刻です（目だけで滑らかに追える限界。Bahill &amp; LaRitz 1984 が Schalen 1980 を引用。人によって 100°/秒という報告もあり、頭を動かすともう少し追えます）。3D の「打者の目」のカメラは、この時刻まではボールを追い、そのあとは向きを止めます。</p>
+    <p>重ねた球種のはなれは、打者の目から見た向きのちがい（角度）で比べています。</p>
     <h3>空気の流れの断面（模式図）</h3>
     <p>ボールといっしょに動いて見た空気の流れを、ボールの中心を通り「進む向き」と「横向きの力の向き」をふくむ面で切って描いています。空気がボールの面から<b>はがれる位置</b>が、力の側ほど後ろへずれ、後ろの流れ（伴流）が反対の側へ曲がります。空気を押しやった反作用が、ボールを押す力です（はく離が遅れる側へ力がかかることは、Watts &amp; Sawyer 1975・Nathan 2012 の説明のとおり）。</p>
     <p>ただし、この図は<b>流れを計算したものではありません</b>。前側の流線は円柱のまわりの流れの式（回転があれば渦を足したもの）、はがれる位置のずれと伴流の曲がりは、計算した横向きの力の大きさに合わせた<b>目安</b>です。赤い点は、いまの時刻に縫い目がこの断面を横切る場所です。粒の動きは、見やすいように本物よりずっと遅くしています。</p>
@@ -75,6 +80,8 @@
       <li>Watts RG, Sawyer E (1975) Aerodynamics of a knuckleball. <i>American Journal of Physics</i> 43:960–963（縫い目の向きと横向きの力）</li>
       <li>Nathan AM (2012) Analysis of knuckleball trajectories. <i>Procedia Engineering</i> 34:116–121. <a href="https://doi.org/10.1016/j.proeng.2012.04.021" target="_blank" rel="noopener">doi:10.1016/j.proeng.2012.04.021</a>（ナックルの道すじはなめらか・変化は大きさも向きもばらばら）</li>
       <li>Morrissey MP (2009) The aerodynamics of the knuckleball pitch. MS Thesis, Marquette University（ゆっくり回るボールにかかる力。2つの縫い目の値は図 3-24 から読み取り。はがれる位置 約 104°）</li>
+      <li>Nakashima H, Horiuchi G, Kimura A, Sakurai S (2025) Acceptable range of timing error at bat-ball impact in baseball depends on the bat swing path. <i>Frontiers in Sports and Active Living</i> 7. <a href="https://doi.org/10.3389/fspor.2025.1557145" target="_blank" rel="noopener">doi:10.3389/fspor.2025.1557145</a>（スイングの時間・決めてから振り始めるまでの時間のまとめ）</li>
+      <li>Bahill AT, LaRitz T (1984) Why can't batters keep their eyes on the ball? <i>American Scientist</i> 72:249–253（目で追える速さの限界 約 70°/秒）</li>
       <li>Nathan AM (2023) What is the Hawkeye spin data teaching us? III: Searching for the seam-shifted wake.（<a href="https://baseball.physics.illinois.edu/Hawkeye-4S-2S.pdf" target="_blank" rel="noopener">baseball.physics.illinois.edu</a>。縫い目のずれた伴流の大きさ・回転の向きと腕の角度）</li>
       <li>Smith AW, Smith BL (2021) Using baseball seams to alter a pitch direction: The seam shifted wake. <i>Proceedings of the Institution of Mechanical Engineers, Part P</i>, pp. 21–28. <a href="https://doi.org/10.1177/1754337120961609" target="_blank" rel="noopener">doi:10.1177/1754337120961609</a>（縫い目で後ろの流れがずれるしくみ）</li>
       <li>MLB.com の Statcast の記事（2016。球種ごとの回転数の平均）、Driveline Baseball (2021) Spin rate: what we know now（使える回転の割合）</li>
@@ -97,4 +104,5 @@
 <script src="js/pitcher3d.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/ui-env.js"></script>
+<script src="js/batter.js"></script>
 <script src="js/main.js"></script>

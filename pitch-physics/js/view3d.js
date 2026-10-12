@@ -14,6 +14,7 @@ const CAMS = {
   ball:    { name: 'ボールの後ろ', follow: true, fov: 50 },
   catcher: { name: '捕手の後ろ', pos: [0, 1.05, 2.2], tgt: [0, 1.35, -18], fov: 38 },
   side:    { name: '横から', pos: [-14, 1.7, -9.4], tgt: [0, 1.1, -9.4], fov: 62 },
+  batter:  { name: '打者の目', batter: true, fov: 50 },
   top:     { name: '上から', pos: [0, 30, -9.4], tgt: [0, 0, -9.4], fov: 40, up: [0, 0, -1] },
 };
 
@@ -155,6 +156,9 @@ function rebuild3d() {
   const ring = (p, col) => { const m = new THREE.Mesh(new THREE.RingGeometry(PHY.r * 0.8, PHY.r * 1.15, 24), new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide, transparent: true, opacity: 0.9 })); m.position.copy(T3(p)); return m; };
   V3.noAirEnd = ring(S.ghostNoAir.pPlate, '#a0bed2'); grp.add(V3.noAirEnd);
   V3.plainEnd = ring(S.ghostPlain.pPlate, '#f0f0e6'); grp.add(V3.plainEnd);
+  // 段階E: 振ると決める最後の点（緑）と、目で追えなくなる点（白）
+  const I = batterInfo(), mk = (t, col) => { const m = new THREE.Mesh(new THREE.SphereGeometry(tr * 2.2, 12, 8), new THREE.MeshBasicMaterial({ color: col })); m.position.copy(T3(sampleAt(S.res, t).p)); return m; };
+  V3.mkDecide = mk(I.tDecide, '#7fd68a'); V3.mkTrack = mk(I.tTrack, '#ffffff'); grp.add(V3.mkDecide, V3.mkTrack);
   V3.fg.add(grp);
   V3.built = S.res;
 }
@@ -162,7 +166,7 @@ function rebuild3d() {
 function setCam(id) {
   S.cam = id;
   const c = CAMS[id];
-  if (c.follow) return;
+  if (c.follow || c.batter) { V3.cam.fov = c.fov; V3.cam.updateProjectionMatrix(); return; }
   const mir = S.hand === 'L' && id === 'pitcher' ? -1 : 1;
   const pos = new THREE.Vector3(c.pos[0] * mir, c.pos[1], c.pos[2]), tgt = new THREE.Vector3(c.tgt[0], c.tgt[1], c.tgt[2]);
   V3.target.copy(tgt);
@@ -172,6 +176,13 @@ function setCam(id) {
 }
 function placeCam(ballPos, vel) {
   const c = CAMS[S.cam];
+  if (c.batter) {
+    // 打者の目: ボールを目で追う。追える速さ（70°/秒）をこえたら、その向きのまま（目が追いつかない）
+    const eye = T3(eyePos()), I = batterInfo(), look = T3(sampleAt(S.res, Math.min(S.t, I.tTrack)).p);
+    V3.cam.position.copy(eye); V3.cam.up.set(0, 1, 0); V3.cam.lookAt(look);
+    if (V3.cam.fov !== c.fov) { V3.cam.fov = c.fov; V3.cam.updateProjectionMatrix(); }
+    return;
+  }
   if (c.follow) {
     // ボールの少し後ろ・少し上から、進む向きを見る
     const v = T3(vel).normalize(), up = new THREE.Vector3(0, 1, 0);

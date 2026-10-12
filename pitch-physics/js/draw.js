@@ -117,6 +117,11 @@ function drawSideTop(g, which) {
   if (S.show.noAir) for (let i = 0; i < S.ghostNoAir.pts.length; i += 40) { const q = map(S.ghostNoAir.pts[i].p); hit('noAir', q[0], q[1], 5); }
   if (S.show.plain) for (let i = 0; i < S.ghostPlain.pts.length; i += 40) { const q = map(S.ghostPlain.pts[i].p); hit('plain', q[0], q[1], 5); }
   if (S.many) for (const r of S.many) { const q = map(r.pPlate); hit('many', q[0], q[1], 6); }
+  // 段階E: 振ると決める最後の点（緑）・目で追えなくなる点（白）
+  const BI = batterInfo();
+  for (const [t, col, key] of [[BI.tDecide, '#7fd68a', 'decide'], [BI.tTrack, '#ffffff', 'track']]) {
+    const m = map(sampleAt(S.res, t).p); g.strokeStyle = col; g.lineWidth = 2; g.beginPath(); g.arc(m[0], m[1], 6, 0, 7); g.stroke(); hit(key, m[0], m[1], 8);
+  }
   // ボールと力
   const s = sampleAt(S.res, S.t), q = map(s.p);
   g.fillStyle = '#f2f0e6'; g.beginPath(); g.arc(q[0], q[1], 5, 0, 7); g.fill(); hit('ball', q[0], q[1], 8);
