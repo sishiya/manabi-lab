@@ -54,6 +54,10 @@ function compute() {
   const see = darkSee(S, lightOf().L);
   if (see.who === 'none') { state = 'blur'; stateText = L('暗くて見えない: 目がまだ暗さに慣れていない', 'Too dark to see: the eye is not used to the dark yet'); }
   else if (see.who === 'rod') { state = 'blur'; stateText = L('うす暗く見える: 桿体だけで見ている（まん中は見えない）', 'Dim: seeing with rods only (the middle is missing)'); }
+  else if (state === 'ok' && lightOf().L < 3) {   // ピントは合っているが、うす暗いので視力が下がる（view.js の acuityAt）
+    const pct = Math.round(acuityAt(lightOf().L) / acuityAt(3000) * 100);
+    state = 'blur'; stateText = L(`ピントは合っているが、うす暗くて細かい所が見えにくい（視力 ${pct}%）`, `In focus, but too dim to see fine detail (acuity ${pct}%)`);
+  }
   if (S.chart === 'after') {   // 残像の表を見ているとき
     state = S.afterMode === 'white' && S.afterA > 0.05 ? 'blur' : 'ok';
     stateText = S.afterMode === 'stare' ? L(`図を見つめている（順応 ${Math.round(S.afterA * 100)}%）`, `Staring at the figure (adapted ${Math.round(S.afterA * 100)}%)`)
