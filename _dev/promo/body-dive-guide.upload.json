@@ -1,7 +1,6 @@
 {
-  "videoId": "C6h7u6C5p88",
-  "oldVideoIds": ["Bb4pSYgpfx4"],
-  "oldDone": ["Bb4pSYgpfx4"],
+  "videoId": "Bb4pSYgpfx4",
+  "failedVideoIds": ["C6h7u6C5p88"],
   "file": "_dev/promo/out/body-dive-guide.mp4",
   "thumbnail": "_dev/promo/thumbs/body-dive-guide.jpg",
   "privacy": "private",
