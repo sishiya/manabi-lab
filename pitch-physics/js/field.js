@@ -57,7 +57,7 @@ function buildField(fg) {
     }
   });
   const home = new THREE.Mesh(new THREE.PlaneGeometry(2 * R, 2 * R), new THREE.MeshLambertMaterial({ map: tex, transparent: true, depthWrite: false }));
-  home.rotation.x = -Math.PI / 2; home.position.set(0, 0.004, -yc); home.renderOrder = -1; fg.add(home);
+  home.rotation.x = -Math.PI / 2; home.position.set(0, 0.004, -yc); home.renderOrder = -1; home.receiveShadow = true; fg.add(home);
   // ---- ホームベース（白いゴム。厚み 2 cm、まわりに黒いふち）----
   const w = 8.5 * IN, sh = new THREE.Shape();
   sh.moveTo(-w, 0); sh.lineTo(w, 0); sh.lineTo(w, -w); sh.lineTo(0, -2 * w); sh.lineTo(-w, -w); sh.closePath();
@@ -85,7 +85,7 @@ function buildField(fg) {
     }
   });
   const mound = new THREE.Mesh(lg, new THREE.MeshLambertMaterial({ map: mtex, transparent: true }));
-  mound.position.set(0, 0, -(PHY.rubberY - 18 * IN)); fg.add(mound);
+  mound.position.set(0, 0, -(PHY.rubberY - 18 * IN)); mound.receiveShadow = true; fg.add(mound);
   const rub = new THREE.Mesh(new THREE.BoxGeometry(24 * IN, 0.03, 6 * IN), new THREE.MeshLambertMaterial({ color: '#f6f6f2' }));
   rub.position.set(0, H + 0.005, -PHY.rubberY); fg.add(rub);
 }

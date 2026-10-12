@@ -113,3 +113,66 @@ i.sw.plain{background:repeating-linear-gradient(90deg,rgba(240,240,230,.9) 0 6px
 .armrow{display:flex;align-items:center;gap:8px;flex-basis:100%}
 .armrow input{width:220px;max-width:50vw;accent-color:var(--acc)}
 #armVal{color:var(--ink);font-size:12.5px}
+
+/* ---- 段階G: 見やすさの整理（2026-10-12）---- */
+/* 案内: 1〜2行の細い帯。文はタップで全文、× でしまえる */
+#tour{margin:4px 16px;padding:6px 8px 6px 12px;gap:10px}
+#tourText{font-size:13px;line-height:1.55;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+#tour.full #tourText{display:block}
+#next{padding:7px 14px;font-size:13px;min-height:36px}
+#tourClose{background:none;border:0;color:var(--muted);font-size:20px;line-height:1;padding:4px 6px;cursor:pointer;min-width:32px;min-height:36px}
+#tour[hidden]{display:none}
+#tourOpen{margin-left:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:4px 12px;font:500 12px var(--f-body);cursor:pointer}
+#tourOpen[hidden]{display:none}
+/* 設定: まとまりごとのカード。見出しに番号・名前・いまの設定 */
+#controls{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:10px;align-items:start}
+.sec{background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.sec#sec-pitch{grid-column:1/-1}
+.sec summary{list-style:none;display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;min-height:44px}
+.sec summary::-webkit-details-marker{display:none}
+.sec summary::after{content:'＋';margin-left:auto;color:var(--muted);font-size:14px}
+.sec[open] summary::after{content:'－'}
+.sec .num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.08);font:600 12px var(--f-mono);color:var(--acc)}
+.sec .t{font-weight:700;font-size:14px}
+.sec .sum{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.sec[open] .sum{display:none}
+.secb{padding:2px 12px 12px;display:grid;gap:8px}
+#sec-pitch .secb{grid-template-columns:repeat(auto-fill,minmax(340px,1fr));column-gap:20px}
+#sec-pitch .chips,#sec-pitch .help{grid-column:1/-1}
+.sl{grid-template-columns:118px 1fr}
+.help{margin:0;font-size:12.5px;line-height:1.6;color:var(--muted)}
+.hand{margin:0;display:flex;align-items:center;gap:6px}
+.hand .lab{width:118px;color:var(--muted);font-size:13px}
+.act{justify-self:start;background:var(--bg);color:var(--ink);border:1px solid var(--acc);border-radius:8px;padding:8px 14px;font:500 13px var(--f-body);cursor:pointer;min-height:40px}
+.ovrow{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.ovrow .sel{width:auto}
+.chips button{min-height:36px}
+/* スマホ: 3D をいちばん上に大きく。時間のつまみは親指の届く下に固定。球種は横にすべらせる */
+@media (max-width:640px){
+  #top{padding:8px 16px 2px}
+  #top h1{font-size:18px}
+  #top .sub{display:none}
+  #app{display:flex;flex-direction:column}
+  #stage{display:contents}
+  #views{order:1;margin:0 8px}
+  #views.v3d{height:56vh;min-height:300px}
+  #tour{order:2;margin:6px 8px}
+  #timebar{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--bg);padding:8px 12px calc(8px + env(safe-area-inset-bottom));box-shadow:0 -6px 16px rgba(0,0,0,.35)}
+  #app{padding-bottom:64px}
+  #play{width:48px;height:44px}
+  #time{height:32px}
+  #stripBox{order:4}
+  #controls{order:5;grid-template-columns:1fr;padding:6px 8px}
+  #aside{order:6;padding:0 8px}
+  #about{order:7}
+  #sec-pitch .secb{grid-template-columns:1fr}
+  .chips{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+  .chips button{flex:0 0 auto;min-height:44px;padding:8px 14px}
+  .sl{grid-template-columns:96px 1fr}
+  .hand .lab{width:96px}
+  input[type=range]{height:28px}
+  #cams{flex-wrap:nowrap;overflow-x:auto;max-width:calc(100% - 16px)}
+  #cams button,#vtabs button{min-height:36px;flex:0 0 auto}
+  .envhead{flex-wrap:nowrap;overflow-x:auto}
+  .envhead button{flex:0 0 auto;min-height:36px}
+}

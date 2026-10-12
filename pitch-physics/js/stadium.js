@@ -19,6 +19,10 @@ function buildStadium() {
   scene.fog = new THREE.Fog(haze, 60, 420);
   scene.add(new THREE.HemisphereLight('#dfefff', '#4b6a3c', 0.85));
   const sun = new THREE.DirectionalLight('#fff4e0', 0.75); sun.position.set(-60, 120, -40); scene.add(sun);
+  // 影（マウンドのまわりだけ。投手の人形の影を土に落とす）
+  sun.castShadow = true; sun.target.position.set(0, 0, -17.5); scene.add(sun.target);
+  const sc = sun.shadow.camera; sc.left = -5; sc.right = 5; sc.top = 5; sc.bottom = -5; sc.near = 100; sc.far = 220;
+  sun.shadow.mapSize.set(1024, 1024); sun.shadow.bias = -0.0005; sun.shadow.radius = 3;
 
   // 空（上ほど青い）
   const sky = new THREE.Mesh(new THREE.SphereGeometry(600, 32, 16), new THREE.ShaderMaterial({
@@ -101,10 +105,11 @@ function buildStadium() {
   return scene;
 }
 
-// ぼかし（横・縦に分けたガウスのぼかしを、半分の大きさで2回）
-const BLUR = {
+// 被写界深度（奥行きでぼかしの強さを変える）。シーンを色と奥行きで描き、ぼかした絵を2段（弱い・強い）作って、
+// 画素ごとに「ピントの距離からどれだけ前後にずれているか」でなめらかに混ぜる（境目が出ない）
+const DOF = {
   vs: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
-  fs: `uniform sampler2D tex; uniform vec2 dir; varying vec2 vUv;
+  blur: `uniform sampler2D tex; uniform vec2 dir; varying vec2 vUv;
     void main(){
       vec4 c = texture2D(tex, vUv) * 0.1964825501511404;
       c += texture2D(tex, vUv + dir * 1.411764705882353) * 0.2969069646728344;
@@ -115,35 +120,50 @@ const BLUR = {
       c += texture2D(tex, vUv - dir * 5.176470588235294) * 0.010381362401148057;
       gl_FragColor = c;
     }`,
+  comp: `uniform sampler2D sharp; uniform sampler2D mid; uniform sampler2D far; uniform sampler2D depth;
+    uniform float cNear; uniform float cFar; uniform float fNear; uniform float fFar; uniform float aperture; varying vec2 vUv;
+    float viewZ(float d){ return (cNear * cFar) / ((cFar - cNear) * d - cFar); }
+    void main(){
+      float z = -viewZ(texture2D(depth, vUv).x);
+      float coc = clamp(aperture * max((fNear - z) / max(z, 0.001), (z - fFar) / max(z, 0.001)), 0.0, 1.0);
+      vec4 a = texture2D(sharp, vUv), b = texture2D(mid, vUv), c = texture2D(far, vUv);
+      gl_FragColor = coc < 0.5 ? mix(a, b, coc * 2.0) : mix(b, c, coc * 2.0 - 1.0);
+    }`,
 };
-function makeBlur(renderer) {
-  const opts = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: false };
-  const B = {
-    full: new THREE.WebGLRenderTarget(4, 4, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }),
-    a: new THREE.WebGLRenderTarget(2, 2, opts), b: new THREE.WebGLRenderTarget(2, 2, opts),
+function makeDof(renderer) {
+  const lin = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter };
+  const D = {
+    full: new THREE.WebGLRenderTarget(4, 4, lin),
+    a: new THREE.WebGLRenderTarget(2, 2, Object.assign({ depthBuffer: false }, lin)),
+    mid: new THREE.WebGLRenderTarget(2, 2, Object.assign({ depthBuffer: false }, lin)),
+    far: new THREE.WebGLRenderTarget(2, 2, Object.assign({ depthBuffer: false }, lin)),
     cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), scene: new THREE.Scene(),
-    mat: new THREE.ShaderMaterial({ uniforms: { tex: { value: null }, dir: { value: new THREE.Vector2() } }, vertexShader: BLUR.vs, fragmentShader: BLUR.fs, depthTest: false, depthWrite: false }),
-    copy: new THREE.MeshBasicMaterial({ depthTest: false, depthWrite: false }),
-    w: 0, h: 0, amount: 1.6,
+    focus: 20, aperture: 1.2,
   };
-  B.cam.position.z = 0.5;
-  B.copy.map = B.b.texture; B.copy.needsUpdate = true;
-  B.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), B.mat); B.scene.add(B.quad);
-  B.resize = (w, h) => { B.w = w; B.h = h; B.full.setSize(w, h); const hw = Math.max(2, w >> 1), hh = Math.max(2, h >> 1); B.a.setSize(hw, hh); B.b.setSize(hw, hh); };
-  // bgScene をぼかして画面に描く
-  B.render = (bgScene, camera) => {
-    renderer.setRenderTarget(B.full); renderer.render(bgScene, camera);
-    const hw = B.a.width, hh = B.a.height;
-    let src = B.full;
-    for (let it = 0; it < 3; it++) {
-      B.quad.material = B.mat;
-      B.mat.uniforms.tex.value = src.texture; B.mat.uniforms.dir.value.set(B.amount / hw, 0); renderer.setRenderTarget(B.a); renderer.render(B.scene, B.cam);
-      B.mat.uniforms.tex.value = B.a.texture; B.mat.uniforms.dir.value.set(0, B.amount / hh); renderer.setRenderTarget(B.b); renderer.render(B.scene, B.cam);
-      src = B.b;
-    }
-    B.copy.map = B.b.texture; B.quad.material = B.copy;
-    renderer.setRenderTarget(null); renderer.render(B.scene, B.cam);
-    B.quad.material = B.mat;
+  D.full.depthTexture = new THREE.DepthTexture(4, 4); D.full.depthTexture.type = THREE.UnsignedIntType;
+  D.bmat = new THREE.ShaderMaterial({ uniforms: { tex: { value: null }, dir: { value: new THREE.Vector2() } }, vertexShader: DOF.vs, fragmentShader: DOF.blur, depthTest: false, depthWrite: false });
+  D.cmat = new THREE.ShaderMaterial({
+    uniforms: { sharp: { value: D.full.texture }, mid: { value: D.mid.texture }, far: { value: D.far.texture }, depth: { value: D.full.depthTexture },
+      cNear: { value: 0.05 }, cFar: { value: 2000 }, fNear: { value: 1 }, fFar: { value: 30 }, aperture: { value: 1.2 } },
+    vertexShader: DOF.vs, fragmentShader: DOF.comp, depthTest: false, depthWrite: false,
+  });
+  D.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), D.bmat); D.scene.add(D.quad);
+  D.resize = (w, h) => {
+    D.full.setSize(w, h); D.full.depthTexture.image.width = w; D.full.depthTexture.image.height = h;
+    const hw = Math.max(2, w >> 1), hh = Math.max(2, h >> 1);
+    D.a.setSize(hw, hh); D.mid.setSize(hw, hh); D.far.setSize(hw, hh);
   };
-  return B;
+  const pass = (src, dst, dx, dy) => { D.quad.material = D.bmat; D.bmat.uniforms.tex.value = src.texture; D.bmat.uniforms.dir.value.set(dx, dy); renderer.setRenderTarget(dst); renderer.render(D.scene, D.cam); };
+  // world を描く。距離 fNear〜fFar（m）はピントが合い、その前後ほどぼける。aperture が大きいほどぼける（望遠ほど大きくする）
+  D.render = (world, camera, fNear, fFar, aperture) => {
+    renderer.setRenderTarget(D.full); renderer.render(world, camera);
+    const hw = 1.5 / D.a.width, hh = 1.5 / D.a.height;
+    pass(D.full, D.a, hw, 0); pass(D.a, D.mid, 0, hh);                      // 弱いぼかし
+    pass(D.mid, D.a, hw * 2, 0); pass(D.a, D.far, 0, hh * 2);                // 強いぼかし（2回目は幅を広げる）
+    pass(D.far, D.a, hw * 3, 0); pass(D.a, D.far, 0, hh * 3);
+    const u = D.cmat.uniforms;
+    u.cNear.value = camera.near; u.cFar.value = camera.far; u.fNear.value = fNear; u.fFar.value = fFar; u.aperture.value = aperture;
+    D.quad.material = D.cmat; renderer.setRenderTarget(null); renderer.render(D.scene, D.cam);
+  };
+  return D;
 }

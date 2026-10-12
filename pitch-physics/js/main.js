@@ -38,7 +38,7 @@ function loop(now) { step(Math.max(0, Math.min(0.05, (now - last) / 1000))); las
 
 setPitch('ff');
 if (!init3d(gl)) S.view = '2d';
-buildControls(); buildViewTabs(); buildTime(); bindPointer();
+buildControls(); buildViewTabs(); buildTime(); bindPointer(); bindTourBar();
 document.getElementById('next').addEventListener('click', () => setTour(S.tour === TOUR.length - 1 ? 0 : S.tour + 1));
 window.addEventListener('resize', resize);
 setTour(0);

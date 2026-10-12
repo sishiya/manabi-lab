@@ -19,19 +19,27 @@ const PITCHES = [
 ];
 
 const RELEASE = { x0: -0.55, z0: 1.80, ext: 1.90 };   // 右投げのおおよその放す位置（捕手から見て左・高さ 1.8 m・投手板から 1.9 m 前）
-const ZONE = { x: 0.2159, zLo: 0.46, zHi: 1.07, zMid: 0.765 };   // ストライクゾーン（幅 17 インチ。高さは打者で変わるので目安）
+// ストライクゾーン（幅 17 インチ）。高さは打者で変わる: 規則では「ひざの下のくぼみ」から「肩の上とズボンの上の中間」まで（構えた姿勢で）。
+// ここでは身長 H に比べた目安 下 0.255H・上 0.575H（H = 185 cm で 0.47〜1.06 m。よく目安に使われる 1.5〜3.5 ft ＝ 0.46〜1.07 m に近い）
+const ZONE = { x: 0.2159, zLo: 0.47, zHi: 1.06, zMid: 0.765 };
+function setZoneFor(Hcm) {
+  const H = Hcm / 100;
+  ZONE.zLo = 0.255 * H; ZONE.zHi = 0.575 * H; ZONE.zMid = (ZONE.zLo + ZONE.zHi) / 2;
+  if (typeof TARGET !== 'undefined') TARGET.z = ZONE.zMid;
+  if (typeof BAT !== 'undefined') BAT.eye.z = 0.81 * H;   // 構えたときの目の高さ（目安）
+}
 
 const S = {
   pitch: 'ff',
   P: null,                 // いまの投げ方（launch の入力）
   aimMode: 'plain',        // ねらい方: plain = 回転の力がなければまん中に届く向き、line = まん中へまっすぐ向ける、fit = この球がまん中に届くよう合わせる、manual = 角度のつまみ
   hand: 'R',               // 'R' 右投げ・'L' 左投げ
-  view: '3d', cam: 'ball',
+  view: '3d', cam: 'catcher',
   pitcher: 'std',          // 投手の例（pitchers.js）
   arm: 45,                 // 腕の角度（度）。投手の例の値から変えると、放す位置と回転の向きが変わる
   overlay: false, overlayAim: 'center', multi: null,   // 球種を重ねて見る（center = みんなゾーンのまん中へ、same = いまの球と同じ向きに放す）
   env: { tC: 20, elev: 0, p: 1013, rh: 50, ws: 0, wd: 0 }, envId: 'std',   // 段階C: 空気と風
-  batSide: 'R', swingMs: 150, delayMs: 150,   // 段階E: 打者（右打者・スイングの時間・決めてから振り始めるまで）
+  batSide: 'R', batH: 185, swingMs: 150, delayMs: 150,   // 段階E: 打者（右打者・スイングの時間・決めてから振り始めるまで）
   t: 0, playing: false, speed: 1 / 5,
   show: { noAir: true, plain: true, forces: true, std: true },
   res: null, ghostNoAir: null, ghostPlain: null,
@@ -183,7 +191,7 @@ function camTo(id) { if (typeof V3 !== 'undefined' && V3.ok) setCam(id); else S.
 // 案内（「つぎへ」ボタン1つで進む）。go は状態を作る関数
 const TOUR = [
   { text: 'ボールに働く力は3つ。<b>重力</b>・<b>空気の抵抗</b>・<b>回転による力</b>。球種の名前で曲がり方を決めず、放す速さ・向き・回転から、この力を 1 ミリ秒ごとに計算して道すじを解いています。下の時間のつまみを動かしてみよう。3D の図はドラッグで回せます。',
-    go() { setPitch('ff'); S.show = { noAir: false, plain: false, forces: true }; S.t = 0.2; camTo('ball'); } },
+    go() { setPitch('ff'); S.show = { noAir: false, plain: false, forces: true }; S.t = 0.2; camTo('catcher'); } },
   { text: 'もし空気がなかったら（<span class="k-noair">うすい線</span>）。重力だけなので放物線。151 km/h でも、ホームまでの 0.4 秒で 80 cm ほど落ちます。',
     go() { setPitch('no'); S.show = { noAir: true, plain: false, forces: true }; S.t = 0.2; } },
   { text: '空気があると、<b>抵抗</b>で遅くなります（ホームで約 1 割減）。でも回転がなければ、左右にも上にも曲がりません。',
@@ -219,5 +227,5 @@ const TOUR = [
   { text: '<b>本物に近づける</b>: 回転が少しずつ減ること・空気の浮力・まわりの空気もいっしょに動くこと（付加質量）・地球の自転（コリオリの力）も計算に入れています。どれも、ホームでの位置を 1〜2 mm 動かすだけ。答えをいちばん大きく左右するのは、空気の力の係数（測定から作った式）の不確かさで、揚力の式を別の測定のものに変えると 1 cm ほど変わります（下の「本物に近づける」）。',
     go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0.2; camTo('ball'); } },
   { text: '自由に試そう。下で投げる手・球種を選び、速さ・回転数・回転の向き（右のボールをドラッグ）・使える回転を変えると、すぐに計算しなおします。',
-    go() { setPitch('ff'); S.show = { noAir: true, plain: true, forces: true }; S.t = 0; camTo('ball'); } },
+    go() { setPitch('ff'); S.show = { noAir: true, plain: true, forces: true }; S.t = 0; camTo('catcher'); } },
 ];

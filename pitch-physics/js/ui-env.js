@@ -2,25 +2,31 @@
 'use strict';
 
 function buildPitcherBar(box) {
-  const bar = document.createElement('div'); bar.className = 'pbar';
-  bar.innerHTML = '<label>投手 <select id="pitcherSel"></select></label>' +
-    '<label class="ck"><input type="checkbox" id="ovl"><span>球種を重ねて見る</span></label>' +
-    '<select id="ovlAim" aria-label="重ねるときのねらい"><option value="center">それぞれゾーンのまん中をねらう</option><option value="same">いまの球と同じ向きに放す</option></select>' +
-    '<span id="pnote2"></span>' +
-    '<label class="armrow">腕の角度 <input type="range" id="armSl" min="-40" max="85" step="1"><span id="armVal"></span></label>';
+  const bar = document.createElement('label'); bar.className = 'sl';
+  bar.innerHTML = '<span class="lab">投手</span><select id="pitcherSel" class="sel"></select><span class="val" id="pnote2"></span>';
   box.appendChild(bar);
   const sel = bar.querySelector('#pitcherSel');
   for (const p of PITCHERS) { const o = document.createElement('option'); o.value = p.id; o.textContent = p.name + (p.id === 'std' ? '' : '（架空）'); sel.appendChild(o); }
   sel.addEventListener('change', () => { setPitcher(sel.value); if (S.cam === 'pitcher') setCam('pitcher'); S.playing = false; syncAll(); });
-  bar.querySelector('#ovl').addEventListener('change', e => { S.overlay = e.target.checked; recompute(); syncAll(); });
-  bar.querySelector('#armSl').addEventListener('input', e => { setArm(Number(e.target.value)); if (S.cam === 'pitcher') setCam('pitcher'); syncAll(); });
-  bar.querySelector('#ovlAim').addEventListener('change', e => { S.overlayAim = e.target.value; recompute(); syncAll(); });
+}
+function buildArmRow(box) {
+  const row = document.createElement('label'); row.className = 'sl';
+  row.innerHTML = '<span class="lab">腕の角度</span><input type="range" id="armSl" min="-40" max="85" step="1"><span class="val" id="armVal"></span>';
+  box.appendChild(row);
+  row.querySelector('#armSl').addEventListener('input', e => { setArm(Number(e.target.value)); if (S.cam === 'pitcher') setCam('pitcher'); syncAll(); });
+}
+function buildOverlayRow(box) {
+  const row = document.createElement('div'); row.className = 'ovrow';
+  row.innerHTML = '<label class="ck"><input type="checkbox" id="ovl"><span>その投手の球種を重ねて見る（球種ごとの色）</span></label>' +
+    '<select id="ovlAim" class="sel" aria-label="重ねるときのねらい"><option value="center">それぞれ同じねらい方で放す</option><option value="same">いまの球と同じ向きに放す</option></select>';
+  box.appendChild(row);
+  row.querySelector('#ovl').addEventListener('change', e => { S.overlay = e.target.checked; recompute(); syncAll(); });
+  row.querySelector('#ovlAim').addEventListener('change', e => { S.overlayAim = e.target.value; recompute(); syncAll(); });
 }
 
 function buildEnvGroup(box) {
-  const g = document.createElement('div'); g.className = 'grp env';
+  const g = box;
   const head = document.createElement('div'); head.className = 'envhead';
-  head.innerHTML = '<b>空気と風</b> ';
   for (const e of ENVS) {
     const b = document.createElement('button'); b.textContent = e.name; b.dataset.env = e.id;
     b.addEventListener('click', () => { setEnv(e.id); syncAll(); });
@@ -34,8 +40,7 @@ function buildEnvGroup(box) {
   slider(g, 'rh', '湿度', 0, 100, 1, () => S.env.rh, v => envSet('rh', v), v => v + '%');
   slider(g, 'ws', '風の強さ', 0, 15, 0.5, () => S.env.ws, v => envSet('ws', v), v => v.toFixed(1) + ' m/s');
   slider(g, 'wd', '風の向き', 0, 359, 1, () => S.env.wd, v => envSet('wd', v), v => windName(Math.max(S.env.ws, 1), v).replace(/ [0-9.]+ m\/s$/, '') + '（' + v + '°）');
-  const out = document.createElement('p'); out.id = 'envOut'; g.appendChild(out);
-  box.appendChild(g);
+  const out = document.createElement('p'); out.id = 'envOut'; out.className = 'help'; g.appendChild(out);
 }
 
 function syncC() {
@@ -56,11 +61,11 @@ function syncC() {
       'どれもボールの大きさ（7.4 cm）よりずっと小さい。いちばん大きく答えを変えるのは、係数の不確かさです: 揚力の係数の式をもう一方に変えると、<b>上下 ' + S.clAlt.dz.toFixed(1) + ' cm・左右 ' + S.clAlt.dx.toFixed(1) + ' cm</b> 変わります。';
   }
   if (S.multi) {
-    const lg = $('legend'), want = S.multi.map(m => m.id).join();
+    const lg = $('legend'), want = S.pitch + '|' + S.multi.map(m => m.id).join();
     if (lg.dataset.multi !== want) {
       lg.dataset.multi = want;
       lg.querySelectorAll('.mx').forEach(e => e.remove());
-      for (const m of S.multi) { const sp = document.createElement('span'); sp.className = 'mx'; sp.innerHTML = '<i class="sw" style="background:' + m.col + '"></i>' + m.name; lg.appendChild(sp); }
+      for (const m of [{ col: PCOL[S.pitch], name: arsenal(S.pitcher).find(q => q.id === S.pitch).name + '（いまの球）' }].concat(S.multi)) { const sp = document.createElement('span'); sp.className = 'mx'; sp.innerHTML = '<i class="sw" style="background:' + m.col + '"></i>' + m.name; lg.appendChild(sp); }
     }
   } else if ($('legend').dataset.multi) { $('legend').dataset.multi = ''; $('legend').querySelectorAll('.mx').forEach(e => e.remove()); }
 }

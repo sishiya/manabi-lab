@@ -37,63 +37,94 @@ function check(parent, key, lab, get, set) {
   CTRL[key] = { row, sync() { inp.checked = get(); } };
 }
 
+// 設定は 7 つのまとまり（操作の流れの順: 誰が → どんな球を → どこへ → 誰に → 何と比べて → どんな空気で → くわしい設定）。
+// よく使う ① ② だけ最初から開き、ほかはたたむ。たたんだ見出しには、いまの設定を短く出す（開かなくても分かるように）
+function section(box, id, num, title, open) {
+  const d = document.createElement('details'); d.className = 'sec'; d.id = 'sec-' + id; if (open) d.open = true;
+  d.innerHTML = '<summary><span class="num">' + num + '</span><span class="t">' + title + '</span><span class="sum" id="sum-' + id + '"></span></summary><div class="secb"></div>';
+  box.appendChild(d);
+  return d.querySelector('.secb');
+}
 function buildControls() {
   const box = $('controls');
+  // ① 投手と球種
+  const s1 = section(box, 'pitch', '1', '投手と球種', true);
+  buildPitcherBar(s1);
   const hand = document.createElement('div'); hand.className = 'hand';
-  hand.innerHTML = '投げる手 <button data-h="R">右投げ</button><button data-h="L">左投げ</button>';
+  hand.innerHTML = '<span class="lab">投げる手</span><button data-h="R">右投げ</button><button data-h="L">左投げ</button>';
   hand.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { setHand(b.dataset.h); if (S.cam === 'pitcher') setCam('pitcher'); syncAll(); }));
-  box.appendChild(hand);
-  buildPitcherBar(box);
+  s1.appendChild(hand);
+  buildArmRow(s1);
   const chips = document.createElement('div'); chips.className = 'chips'; chips.id = 'chips';
-  box.appendChild(chips); rebuildChips();
-  const note = document.createElement('p'); note.id = 'pnote'; box.appendChild(note);
+  s1.appendChild(chips); rebuildChips();
+  const note = document.createElement('p'); note.id = 'pnote'; note.className = 'help'; s1.appendChild(note);
 
-  const g1 = document.createElement('div'); g1.className = 'grp'; box.appendChild(g1);
-  slider(g1, 'v0', '速さ', 60, 165, 1, () => S.P.v0, v => S.P.v0 = v, v => v + ' km/h（' + fmt(v / 3.6 / MPH, 0) + ' mph）');
-  slider(g1, 'rpm', '回転数', 0, 3500, 10, () => S.P.rpm, v => S.P.rpm = v, v => v + ' 回/分');
-  slider(g1, 'dir', '回転の向き', 0, 359, 1, () => S.P.dir, v => S.P.dir = v, v => '手前の面が ' + clock(v) + ' の向きへ動く（回転軸 ' + clock(v + 270) + '）');
-  slider(g1, 'eff', '使える回転', 0, 100, 1, () => Math.round(S.P.eff * 100), v => S.P.eff = v / 100, v => v + '%（のこりはジャイロ回転）');
-  slider(g1, 'seam0', '縫い目の向き', 0, 90, 1, () => S.P.seam0, v => S.P.seam0 = v, v => 'θ = ' + v + '°（放したとき）');
-  slider(g1, 'axisDeg', '回転軸', 0, 179, 1, () => S.P.axisDeg, v => S.P.axisDeg = v, v => clock(v) + '（捕手から見て）');
-  selectCtl(g1, 'grip', '縫い目の向き', [
+  // ② 球の速さと回転
+  const s2 = section(box, 'spin', '2', '球の速さと回転', true);
+  slider(s2, 'v0', '速さ', 60, 165, 1, () => S.P.v0, v => S.P.v0 = v, v => v + ' km/h（' + fmt(v / 3.6 / MPH, 0) + ' mph）');
+  slider(s2, 'rpm', '回転数', 0, 3500, 10, () => S.P.rpm, v => S.P.rpm = v, v => v + ' 回/分');
+  slider(s2, 'dir', '回転の向き', 0, 359, 1, () => S.P.dir, v => S.P.dir = v, v => '手前の面が ' + clock(v) + ' の向きへ（軸 ' + clock(v + 270) + '）');
+  slider(s2, 'eff', '使える回転', 0, 100, 1, () => Math.round(S.P.eff * 100), v => S.P.eff = v / 100, v => v + '%（のこりはジャイロ回転）');
+  selectCtl(s2, 'grip', '縫い目', [
     ['4S', '4つの縫い目（フォーシーム）', '1回転で縫い目が4回、前を通る'],
     ['2S', '2つの縫い目（ツーシーム）', '1回転で縫い目が2回、前を通る'],
-    ['none', '縫い目の力を入れない', '回転だけで計算する（段階Cまでと同じ）'],
+    ['none', '縫い目の力を入れない', '回転だけで計算する'],
   ], () => S.P.grip || 'none', v => S.P.grip = v === 'none' ? null : v);
-
-  const g2 = document.createElement('div'); g2.className = 'grp'; box.appendChild(g2);
-  selectCtl(g2, 'aimMode', 'ねらい方', [
-    ['plain', '回転の力がなければまん中に届く向きに放す', 'まん中からのずれ ＝ 回転と縫い目による変化'],
-    ['line', 'まん中へまっすぐ向けて放す', '重力・抵抗・回転のぶん、まん中からずれる'],
-    ['fit', 'この球がまん中に届くよう計算で合わせる', 'どの球もまん中に届く（段階Cまでと同じ）'],
-    ['manual', '角度のつまみで決める', ''],
-  ], () => S.aimMode, v => S.aimMode = v);
-  slider(g2, 'vAng', '放す角度（上下）', -6, 6, 0.05, () => S.P.vAng, v => { S.P.vAng = v; S.aimMode = 'manual'; }, v => fmt(v, 2) + '°');
-  slider(g2, 'hAng', '放す角度（左右）', -6, 6, 0.05, () => S.P.hAng, v => { S.P.hAng = v; S.aimMode = 'manual'; }, v => fmt(v, 2) + '°（＋は捕手から見て右へ）');
-  const many = document.createElement('button'); many.id = 'many'; many.textContent = '少しずつちがう10球を投げる';
+  slider(s2, 'seam0', '縫い目の角度', 0, 90, 1, () => S.P.seam0, v => S.P.seam0 = v, v => 'θ = ' + v + '°（放したとき）');
+  slider(s2, 'axisDeg', '回転軸', 0, 179, 1, () => S.P.axisDeg, v => S.P.axisDeg = v, v => clock(v) + '（捕手から見て）');
+  const many = document.createElement('button'); many.id = 'many'; many.className = 'act'; many.textContent = '少しずつちがう10球を投げる';
   many.addEventListener('click', () => { throwMany(); S.t = 0; S.playing = true; syncAll(); });
-  g2.appendChild(many);
+  s2.appendChild(many);
 
-  buildEnvGroup(box);
-  // 段階F: 本物に近づける（小さな効果・係数の式）
-  const gF = document.createElement('div'); gF.className = 'grp env'; box.appendChild(gF);
-  const hF = document.createElement('div'); hF.className = 'envhead'; hF.innerHTML = '<b>本物に近づける（小さな効果）</b>'; gF.appendChild(hF);
-  check(gF, 'fxDecay', '回転の減り（100 mph で約 22 秒で 1/e）', () => PHY.fx.decay, v => PHY.fx.decay = v);
-  check(gF, 'fxBuoy', '空気の浮力', () => PHY.fx.buoy, v => PHY.fx.buoy = v);
-  check(gF, 'fxAdded', '付加質量（まわりの空気もいっしょに動く）', () => PHY.fx.added, v => PHY.fx.added = v);
-  check(gF, 'fxCor', '地球の自転（コリオリの力）', () => PHY.fx.coriolis, v => PHY.fx.coriolis = v);
-  slider(gF, 'lat', '緯度', -60, 60, 1, () => PHY.lat, v => PHY.lat = v, v => (v >= 0 ? '北緯 ' : '南緯 ') + Math.abs(v) + '°（球場の向きは規則どおり、ホームから二塁が東北東）');
-  selectCtl(gF, 'clModel', '揚力の係数の式', [['nathan', 'Nathan の軌道計算機', ''], ['sawicki', 'Sawicki ほか 2003', '']], () => PHY.clModel, v => PHY.clModel = v);
-  const fo = document.createElement('p'); fo.id = 'fineOut'; gF.appendChild(fo);
-  const gB = document.createElement('div'); gB.className = 'grp'; box.appendChild(gB);
-  selectCtl(gB, 'batSide', '打者', [['R', '右打者（捕手から見て左に立つ）'], ['L', '左打者（捕手から見て右に立つ）']], () => S.batSide, v => S.batSide = v);
-  slider(gB, 'swingMs', 'スイングの時間', 130, 280, 5, () => S.swingMs, v => S.swingMs = v, v => v + ' ms（振り始めから当たるまで。研究で 130〜280 ms）');
-  slider(gB, 'delayMs', '決めてから振り始めるまで', 150, 250, 5, () => S.delayMs, v => S.delayMs = v, v => v + ' ms（研究で 150〜250 ms）');
-  const g3 = document.createElement('div'); g3.className = 'grp'; box.appendChild(g3);
-  check(g3, 'noAir', '<i class="sw noair"></i>空気がないとき', () => S.show.noAir, v => S.show.noAir = v);
-  check(g3, 'plain', '<i class="sw plain"></i>回転の力なし（重力と抵抗だけ）', () => S.show.plain, v => S.show.plain = v);
-  check(g3, 'std', '<i class="sw std"></i>ふつうの空気（20 ℃・海面・無風）で放したとき', () => S.show.std !== false, v => S.show.std = v);
-  check(g3, 'forces', '力の矢印', () => S.show.forces, v => S.show.forces = v);
+  // ③ ねらい
+  const s3 = section(box, 'aim', '3', 'ねらい', false);
+  selectCtl(s3, 'aimMode', 'ねらい方', [
+    ['plain', '回転の力がなければまん中に届く向き', 'まん中からのずれ ＝ 回転と縫い目による変化'],
+    ['line', 'まん中へまっすぐ向ける', '重力・抵抗・回転のぶん、まん中からずれる'],
+    ['fit', 'この球がまん中に届くよう合わせる', 'どの球もまん中に届く'],
+    ['manual', '角度を手で決める', ''],
+  ], () => S.aimMode, v => S.aimMode = v);
+  slider(s3, 'vAng', '放す角度（上下）', -6, 6, 0.05, () => S.P.vAng, v => { S.P.vAng = v; S.aimMode = 'manual'; }, v => fmt(v, 2) + '°');
+  slider(s3, 'hAng', '放す角度（左右）', -6, 6, 0.05, () => S.P.hAng, v => { S.P.hAng = v; S.aimMode = 'manual'; }, v => fmt(v, 2) + '°（＋は捕手から見て右へ）');
+
+  // ④ 打者
+  const s4 = section(box, 'bat', '4', '打者', false);
+  selectCtl(s4, 'batSide', '打席', [['R', '右打者（捕手から見て左）'], ['L', '左打者（捕手から見て右）']], () => S.batSide, v => S.batSide = v);
+  slider(s4, 'batH', '身長', 150, 205, 1, () => S.batH, v => { S.batH = v; setZoneFor(v); }, v => v + ' cm → ゾーン ' + Math.round(ZONE.zLo * 100) + '〜' + Math.round(ZONE.zHi * 100) + ' cm（目安）');
+  slider(s4, 'swingMs', 'スイングの時間', 130, 280, 5, () => S.swingMs, v => S.swingMs = v, v => v + ' ms（研究で 130〜280）');
+  slider(s4, 'delayMs', '決めてから振るまで', 150, 250, 5, () => S.delayMs, v => S.delayMs = v, v => v + ' ms（研究で 150〜250）');
+
+  // ⑤ くらべる
+  const s5 = section(box, 'cmp', '5', 'くらべる・重ねる', false);
+  buildOverlayRow(s5);
+  check(s5, 'noAir', '<i class="sw noair"></i>空気がないとき', () => S.show.noAir, v => S.show.noAir = v);
+  check(s5, 'plain', '<i class="sw plain"></i>回転の力なし（重力と抵抗だけ）', () => S.show.plain, v => S.show.plain = v);
+  check(s5, 'std', '<i class="sw std"></i>ふつうの空気で放したとき', () => S.show.std !== false, v => S.show.std = v);
+  check(s5, 'forces', '力の矢印', () => S.show.forces, v => S.show.forces = v);
+
+  // ⑥ 空気と風
+  buildEnvGroup(section(box, 'env', '6', '空気と風', false));
+
+  // ⑦ くわしい設定（本物に近づける小さな効果・係数の式）
+  const s7 = section(box, 'fine', '7', 'くわしい設定（本物に近づける）', false);
+  check(s7, 'fxDecay', '回転の減り', () => PHY.fx.decay, v => PHY.fx.decay = v);
+  check(s7, 'fxBuoy', '空気の浮力', () => PHY.fx.buoy, v => PHY.fx.buoy = v);
+  check(s7, 'fxAdded', '付加質量（まわりの空気もいっしょに動く）', () => PHY.fx.added, v => PHY.fx.added = v);
+  check(s7, 'fxCor', '地球の自転（コリオリの力）', () => PHY.fx.coriolis, v => PHY.fx.coriolis = v);
+  slider(s7, 'lat', '緯度', -60, 60, 1, () => PHY.lat, v => PHY.lat = v, v => (v >= 0 ? '北緯 ' : '南緯 ') + Math.abs(v) + '°');
+  selectCtl(s7, 'clModel', '揚力の係数の式', [['nathan', 'Nathan の軌道計算機', ''], ['sawicki', 'Sawicki ほか 2003', '']], () => PHY.clModel, v => PHY.clModel = v);
+  const fo = document.createElement('p'); fo.id = 'fineOut'; fo.className = 'help'; s7.appendChild(fo);
+}
+// たたんだ見出しに出す、いまの設定の短い説明
+function syncSummaries() {
+  const set = (id, t) => { const e = $('sum-' + id); if (e) e.textContent = t; };
+  const p = arsenal(S.pitcher).find(q => q.id === S.pitch);
+  set('pitch', pitcherOf(S.pitcher).name + '・' + (S.hand === 'R' ? '右投げ' : '左投げ') + '・' + (p ? p.name : ''));
+  set('spin', S.P.v0 + ' km/h・' + S.P.rpm + ' 回/分');
+  set('aim', { plain: '回転の力がなければまん中', line: 'まっすぐまん中へ', fit: 'まん中に合わせる', manual: '手で決める' }[S.aimMode]);
+  set('bat', (S.batSide === 'R' ? '右打者' : '左打者') + '・' + S.batH + ' cm');
+  set('cmp', S.overlay ? '球種を重ねている' : '');
+  set('env', (ENVS.find(e => e.id === S.envId) || { name: S.env.tC + ' ℃・' + S.env.elev + ' m' }).name + '・' + windName(S.env.ws, S.env.wd));
 }
 // 球種のボタン（いまの投手の球種だけ）
 let chipsFor = null;
@@ -128,7 +159,7 @@ function syncAll() {
   document.querySelectorAll('#vtabs button').forEach(b => b.classList.toggle('on', b.dataset.v === S.view));
   document.querySelectorAll('#cams button').forEach(b => b.classList.toggle('on', b.dataset.c === S.cam));
   $('views').classList.toggle('v3d', S.view === '3d');
-  rebuildChips(); syncC();
+  rebuildChips(); syncC(); syncSummaries();
   document.querySelectorAll('.chips button').forEach(b => b.classList.toggle('on', b.dataset.id === S.pitch));
   const p = arsenal(S.pitcher).find(q => q.id === S.pitch); $('pnote').textContent = p ? p.note : '';
   const T = $('time'); T.max = tEnd(); T.value = S.t;
@@ -207,12 +238,19 @@ function setTour(i) {
   S.tour = Math.max(0, Math.min(TOUR.length - 1, i));
   S.playing = false; $('play').textContent = '▶';
   // 案内の段は、平均的な右投げの投手・ふつうの空気・重ねないところから始める
-  S.pitcher = 'std'; S.hand = 'R'; S.arm = 45; S.aimMode = 'plain'; S.overlay = false; S.env = { tC: 20, elev: 0, p: 1013, rh: 50, ws: 0, wd: 0 }; S.envId = 'std'; applyEnv();
+  S.pitcher = 'std'; S.hand = 'R'; S.arm = 45; S.aimMode = 'plain'; S.overlay = false; S.batH = 185; setZoneFor(185); $('tour').classList.remove('full'); S.env = { tC: 20, elev: 0, p: 1013, rh: 50, ws: 0, wd: 0 }; S.envId = 'std'; applyEnv();
   TOUR[S.tour].go();
   $('tourNum').textContent = (S.tour + 1) + ' / ' + TOUR.length;
   $('tourText').innerHTML = TOUR[S.tour].text;
   $('next').textContent = S.tour === TOUR.length - 1 ? 'はじめから' : 'つぎへ';
   syncAll();
+}
+
+// 案内の帯: 文をタップで全文／2行、× でしまう
+function bindTourBar() {
+  $('tourText').addEventListener('click', () => $('tour').classList.toggle('full'));
+  $('tourClose').addEventListener('click', () => { $('tour').hidden = true; $('tourOpen').hidden = false; resize(); });
+  $('tourOpen').addEventListener('click', () => { $('tour').hidden = false; $('tourOpen').hidden = true; resize(); });
 }
 
 // ---- 説明の吹き出し・ボールのドラッグ ----

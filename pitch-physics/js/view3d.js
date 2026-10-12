@@ -1,18 +1,20 @@
-// 変化球のしくみ — 3D の図（手前のくっきり描く層: マウンド・ホーム・ゾーン・道すじ・ボール・力の矢印）とカメラ
-// 背景の野球場は stadium.js（ぼかす層）。座標の変換 T3 も stadium.js
+// 変化球のしくみ — 3D の図とカメラ
+// 描き方: 「world」（野球場・土・投手の人形）を被写界深度でぼかして描き（stadium.js の makeDof）、
+// その上に「fg」（ゾーン・道すじ・ボール・力の矢印。情報なのでいつもくっきり）を、world の奥行きで隠れるように描く。座標の変換 T3 は stadium.js
 'use strict';
 
 const V3 = {
-  ok: false, renderer: null, cam: null, fg: null, bg: null, blur: null,
+  ok: false, renderer: null, cam: null, fg: null, world: null, dof: null,
   paths: null, ball: null, halo: null, arrows: {}, built: null, multi: [], std: null,
   orbit: { yaw: 0, pitch: 0, dist: 1 }, target: new THREE.Vector3(),
 };
 
 // カメラの決まった位置（右投げのとき。左投げは X を逆に）
+// catcher = MLB の中継の「バックネット裏の高い所」から、pitcher = 中継の「センターのカメラ」（遠くから望遠。右投げでは少し左にずらして投手の体でホームが隠れないように）
 const CAMS = {
-  pitcher: { name: '投手の後ろ', pos: [0.9, 3.4, -36], tgt: [0, 0.95, -9], fov: 21 },
+  catcher: { name: '捕手の後ろ', pos: [0, 2.7, 8.5], tgt: [0, 0.75, -9], fov: 27 },
+  pitcher: { name: 'センター（投手の後ろ）', pos: [-2.6, 7.5, -125], tgt: [0, 1.1, 0], fov: 3.2 },
   ball:    { name: 'ボールの後ろ', follow: true, fov: 50 },
-  catcher: { name: '捕手の後ろ', pos: [0, 1.05, 2.2], tgt: [0, 1.35, -18], fov: 38 },
   side:    { name: '横から', pos: [-14, 1.7, -9.4], tgt: [0, 1.1, -9.4], fov: 62 },
   batter:  { name: '打者の目', batter: true, fov: 50 },
   top:     { name: '上から', pos: [0, 30, -9.4], tgt: [0, 0, -9.4], fov: 40, up: [0, 0, -1] },
@@ -24,22 +26,19 @@ function init3d(canvas) {
     r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     V3.renderer = r;
   } catch (e) { V3.ok = false; return false; }
-  V3.cam = new THREE.PerspectiveCamera(20, 1, 0.02, 2000);
-  V3.bg = buildStadium();
-  V3.blur = makeBlur(V3.renderer);
+  V3.cam = new THREE.PerspectiveCamera(20, 1, 0.05, 2000);
+  V3.renderer.shadowMap.enabled = true; V3.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  V3.world = buildStadium();
+  V3.dof = makeDof(V3.renderer);
+  // ホームのまわりの土・白線・ホームベース・マウンド（field.js）と投手の人形（pitcher3d.js）は world に入れる（同じピントの計算でぼける）
+  buildField(V3.world);
+  initPitcher(V3.world);
+  V3.depthOnly = new THREE.MeshDepthMaterial({ colorWrite: false });
   const fg = V3.fg = new THREE.Scene();
   fg.add(new THREE.HemisphereLight('#ffffff', '#55704a', 0.9));
   const sun = new THREE.DirectionalLight('#fff4e0', 0.6); sun.position.set(-60, 120, -40); fg.add(sun);
-  // ホームのまわりの土・白線・ホームベース・マウンド（field.js）
-  buildField(fg);
-  // ストライクゾーン
-  const zp = [[-ZONE.x, ZONE.zLo], [ZONE.x, ZONE.zLo], [ZONE.x, ZONE.zHi], [-ZONE.x, ZONE.zHi], [-ZONE.x, ZONE.zLo]].map(q => new THREE.Vector3(q[0], q[1], -PHY.plateY));
-  fg.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(zp), new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.7 })));
-  const zf = new THREE.Mesh(new THREE.PlaneGeometry(ZONE.x * 2, ZONE.zHi - ZONE.zLo), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.06, side: THREE.DoubleSide, depthWrite: false }));
-  zf.position.set(0, (ZONE.zHi + ZONE.zLo) / 2, -PHY.plateY); fg.add(zf);
-  // ねらった点（ゾーンのまん中）の十字
-  const tc = [[-0.05, 0], [0.05, 0], [0, -0.05], [0, 0.05]].map(q => new THREE.Vector3(q[0], ZONE.zMid + q[1], -PHY.plateY + 0.001));
-  fg.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(tc), new THREE.LineBasicMaterial({ color: '#ffffff' })));
+  // ストライクゾーンとねらった点（打者の身長で変わるので、zoneMesh() で作りなおす）
+  V3.zone = new THREE.Group(); fg.add(V3.zone); zoneMesh();
   // ボール（縫い目つき）・見つけやすくする輪
   V3.ball = makeBall('#f2f0e6', true); fg.add(V3.ball);
   const rc = document.createElement('canvas'); rc.width = rc.height = 64; const rg = rc.getContext('2d');
@@ -56,6 +55,17 @@ function init3d(canvas) {
   setCam(S.cam);
   bind3dPointer(canvas);
   return true;
+}
+
+function zoneMesh() {
+  const g = V3.zone; while (g.children.length) { const c = g.children.pop(); c.geometry.dispose(); }
+  const zp = [[-ZONE.x, ZONE.zLo], [ZONE.x, ZONE.zLo], [ZONE.x, ZONE.zHi], [-ZONE.x, ZONE.zHi], [-ZONE.x, ZONE.zLo]].map(q => new THREE.Vector3(q[0], q[1], -PHY.plateY));
+  g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(zp), new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.75 })));
+  const zf = new THREE.Mesh(new THREE.PlaneGeometry(ZONE.x * 2, ZONE.zHi - ZONE.zLo), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.06, side: THREE.DoubleSide, depthWrite: false }));
+  zf.position.set(0, (ZONE.zHi + ZONE.zLo) / 2, -PHY.plateY); g.add(zf);
+  const tc = [[-0.05, 0], [0.05, 0], [0, -0.05], [0, 0.05]].map(q => new THREE.Vector3(q[0], TARGET.z + q[1], -PHY.plateY + 0.001));
+  g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(tc), new THREE.LineBasicMaterial({ color: '#ffffff' })));
+  V3.zoneKey = ZONE.zLo + ',' + ZONE.zHi;
 }
 
 // ボールの形（体の座標で作り、毎コマ quaternion で回す）。縫い目は 108 の V 字の縫い目と、革の合わせ目の線
@@ -136,8 +146,10 @@ function rebuild3d() {
   if (V3.paths) { V3.fg.remove(V3.paths); V3.paths.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); }
   const grp = V3.paths = new THREE.Group();
   const tr = V3.tubeR = tubeRadius();
-  grp.add(V3.full = makeTube(S.res, tr * 0.6, '#ffd166', 0.35));
-  grp.add(V3.prog = makeTube(S.res, tr, '#ffd166', 1));
+  const mc = mainCol();
+  grp.add(V3.full = makeTube(S.res, tr * 0.6, mc, 0.35));
+  grp.add(V3.prog = makeTube(S.res, tr, mc, 1));
+  V3.halo.material.color.set(mc);
   V3.noAir = makeTube(S.ghostNoAir, tr * 0.6, '#a0bed2', 0.55); grp.add(V3.noAir);
   V3.plain = makeTube(S.ghostPlain, tr * 0.6, '#f0f0e6', 0.6); grp.add(V3.plain);
   V3.std = S.ghostStd ? makeTube(S.ghostStd, tr * 0.6, '#7fd4ff', 0.6) : null; if (V3.std) grp.add(V3.std);
@@ -209,7 +221,7 @@ function bind3dPointer(canvas) {
   canvas.addEventListener('pointerup', () => { drag = null; });
   canvas.addEventListener('wheel', e => {
     if (CAMS[S.cam].follow) return;
-    e.preventDefault(); V3.orbit.dist = Math.max(1.5, Math.min(120, V3.orbit.dist * Math.exp(e.deltaY * 0.001)));
+    e.preventDefault(); V3.orbit.dist = Math.max(1.5, Math.min(200, V3.orbit.dist * Math.exp(e.deltaY * 0.001)));
   }, { passive: false });
 }
 
@@ -217,7 +229,7 @@ function resize3d(w, h) {
   if (!V3.ok) return;
   V3.renderer.setSize(w, h, false);
   const pr = V3.renderer.getPixelRatio();
-  V3.blur.resize(Math.round(w * pr), Math.round(h * pr));
+  V3.dof.resize(Math.round(w * pr), Math.round(h * pr));
   V3.cam.aspect = w / Math.max(1, h); V3.cam.updateProjectionMatrix();
 }
 
@@ -258,10 +270,21 @@ function draw3d() {
     a.position.copy(bp); a.setDirection(f.normalize()); a.setLength(L, Math.min(L * 0.35, k * 0.4), Math.min(L * 0.2, k * 0.25));
   }
   V3.halo.visible = !CAMS[S.cam].follow;
-  // 投手の人形（ボールの後ろのカメラでは、カメラが体の中に入るので出さない）
-  const fig = buildPitcher(S.P, S.arm); fig.visible = !CAMS[S.cam].follow;
-  // 背景（ぼかす）→ 手前（くっきり）
-  const R = V3.renderer;
-  V3.blur.render(V3.bg, V3.cam);
-  R.autoClear = false; R.clearDepth(); R.render(V3.fg, V3.cam); R.autoClear = true;
+  // 輪の大きさ（画面の上で同じくらいに。望遠でふくらまないよう fov で直す）
+  const hs = 0.028 * Math.tan(V3.cam.fov * Math.PI / 360) / Math.tan(25 * Math.PI / 180);
+  V3.halo.scale.set(hs, hs, 1); for (const o of V3.multi) o.halo.scale.set(hs * 0.8, hs * 0.8, 1);
+  if (V3.zoneKey !== ZONE.zLo + ',' + ZONE.zHi) zoneMesh();
+  // 投手の人形（放してからの時刻で、腕を振り下ろしていく。ボールの後ろのカメラでは、カメラが体の中に入るので出さない）
+  posePitcher(S.P, S.arm, S.t); PITCHER.grp.visible = !CAMS[S.cam].follow;
+  // world を被写界深度で → world の奥行きだけを書く → その上に fg（隠れるところは隠れる）
+  // ピント: 投手からホームまで（道すじのある所）はいつも合わせ、その手前と奥をぼかす
+  const R = V3.renderer, cp = V3.cam.position;
+  const dA = cp.distanceTo(new THREE.Vector3(0, 1, -PHY.plateY)), dB = cp.distanceTo(new THREE.Vector3(0, 1.5, -PHY.rubberY));
+  const fNear = CAMS[S.cam].follow ? 0.3 : Math.max(0.3, Math.min(dA, dB) - 3), fFar = Math.max(dA, dB) + 4;
+  const aperture = Math.min(8, 0.30 / Math.tan(V3.cam.fov * Math.PI / 360));   // 望遠ほど浅いピント
+  V3.dof.render(V3.world, V3.cam, fNear, fFar, aperture);
+  R.autoClear = false; R.clearDepth();
+  V3.world.overrideMaterial = V3.depthOnly; const bgk = V3.world.background; V3.world.background = null;
+  R.render(V3.world, V3.cam); V3.world.overrideMaterial = null; V3.world.background = bgk;
+  R.render(V3.fg, V3.cam); R.autoClear = true;
 }

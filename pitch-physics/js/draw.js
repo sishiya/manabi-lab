@@ -108,8 +108,8 @@ function drawSideTop(g, which) {
   if (S.ghostStd && S.show.std !== false) polyline(g, S.ghostStd, map, COL.std, 2, [4, 3]);
   if (S.many) for (const r of S.many) polyline(g, r, map, COL.many, 1.5, null, S.t);
   drawMulti2d(g, map, 4);
-  polyline(g, S.res, map, COL.path, 1, [1, 3]);
-  polyline(g, S.res, map, COL.path, 3, null, S.t);
+  polyline(g, S.res, map, mainCol(), 1, [1, 3]);
+  polyline(g, S.res, map, mainCol(), 3, null, S.t);
   for (const r of [S.res]) {
     // 線の上にマウスを置いたときの説明（数点だけ）
     for (let i = 0; i < r.pts.length; i += 40) { const q = map(r.pts[i].p); hit('path', q[0], q[1], 6); }
@@ -165,8 +165,8 @@ function drawCatcher(g) {
   if (S.show.plain) polyline(g, S.ghostPlain, map, COL.plain, 1.5, [7, 5]);
   if (S.ghostStd && S.show.std !== false) { polyline(g, S.ghostStd, map, COL.std, 1.5, [4, 3]); }
   drawMulti2d(g, map, 0, true);
-  polyline(g, S.res, map, COL.path, 1, [1, 3]);
-  polyline(g, S.res, map, COL.path, 2, null, S.t);
+  polyline(g, S.res, map, mainCol(), 1, [1, 3]);
+  polyline(g, S.res, map, mainCol(), 2, null, S.t);
   // 比べる道すじのホームでの位置
   const dot = (r, col, key) => { const q = P(r.pPlate); g.strokeStyle = col; g.lineWidth = 1.5; g.beginPath(); g.arc(q[0], q[1], q[2] * PHY.r, 0, 7); g.stroke(); hit(key, q[0], q[1], Math.max(8, q[2] * PHY.r)); };
   if (S.show.noAir) dot(S.ghostNoAir, COL.noAir, 'noAir');
@@ -198,6 +198,9 @@ function drawMulti2d(g, map, r, plate) {
     if (plate && S.t >= m.res.tPlate - 1e-6) { const e = map(m.res.pPlate); if (e) label(g, m.name, e[0] + e[2] * PHY.r + 4, e[1] + 4, m.col); }
   }
 }
+
+// いまの球の色: 重ねて見るときは球種の色、ふだんは黄色
+function mainCol() { return S.overlay ? PCOL[S.pitch] : COL.path; }
 
 function drawViews(g, w, h) {
   HITS.length = 0;
