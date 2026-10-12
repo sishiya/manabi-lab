@@ -32,6 +32,20 @@
       </div>
     </div>
 
+    <div class="ctl" id="honestCtl">
+      <label>透明な殻（空気をとじこめる仮定）</label>
+      <div class="btns"><button id="shellBtn" class="warn">殻を外す（正直モード）</button></div>
+      <div id="hBox" hidden>
+        <label for="ht">殻を外してから <b id="htV">0 秒</b></label>
+        <input id="ht" type="range" min="0" max="1000" step="1" value="0">
+        <div class="btns"><button id="hPlay">一時停止</button></div>
+        <dl id="hNow"></dl>
+        <p class="sub">出来事（押すとその時刻へ）</p>
+        <ol id="hEv"></ol>
+      </div>
+      <p class="note" id="hNote">殻を外すと、空気・海・森がこの大きさの星で本当はどうなるかを、時間を追って見られます。</p>
+    </div>
+
     <div class="ctl">
       <label>時間</label>
       <div class="btns">
@@ -89,7 +103,10 @@
       <p>海は、星の表面を約1万の「ます」に分けた浅水の式で計算しています（重力・コリオリ力・風の力・底の摩擦。陸にあふれる・引くも計算）。縮めた地球の海は、波の長さにくらべてとても浅いので、この式があてはまります。</p>
       <h3>簡単にしているところ</h3>
       <ul>
-        <li><b>透明な殻</b>（仮定）: 小さな星は重力が弱く、空気は宇宙へ逃げてしまいます（半径 1 km なら脱出速度は約 1.8 m/s、空気の分子は約 500 m/s で飛んでいる）。ここでは殻が 1 気圧の空気を閉じこめているとしています。殻を外したらどうなるかは、これから作ります。</li>
+        <li><b>透明な殻</b>（仮定）: 小さな星は重力が弱く、空気は宇宙へ逃げてしまいます（半径 1 km なら脱出速度は約 1.8 m/s、空気の分子は約 500 m/s で飛んでいる）。ふだんは殻（半径の 1.25 倍の高さ）が 1 気圧・15℃ の空気を閉じこめているとしています。</li>
+        <li><b>正直モード</b>（殻を外す）: 空気の広がりは、半径の向きだけの1次元の流体の式（重力つき・熱のやりとりなし）で計算しています。空気が重力でとどまる大きな星（λ＞5）は流体の計算をせず、宇宙へ逃げる速さを式で見つもっています（上空まで 15℃ のままとした Parker の流れ・Jeans 逃散。上空が太陽で温まると、もっと速く逃げます）。</li>
+        <li>海: 気圧が水の蒸気圧（15℃ で 1706 Pa）より下がると沸き、蒸発で冷えて凍ります。蒸発の速さは真空への蒸発の式（Hertz–Knudsen、蒸発係数 1 ＝ いちばん速い場合）。水の重さで圧力が蒸気圧より高い深い所は沸かず、氷の下で上から凍ります（氷の熱伝導）。氷の表面の温度は、一日と緯度でならした日光（太陽定数 1361 W/m²、氷のアルベド 0.5 は推定）と、熱の放射・昇華のつりあいで決めています。昼と夜・赤道と極の差、氷のふたで沸騰が弱まること、地熱は省いています。</li>
+        <li>森: 空気がなくなると葉の水が抜けて枯れます。枯れる速さは計算していません（色の変わり方は見た目だけ）。</li>
         <li>風はあなたが決めます（自然の風の計算はしていません）。風は、ある軸のまわりをまわる向きに吹きます。</li>
         <li>流れが勢いを運ぶ効果（移流）は省いています。波が砕ける・しぶきは計算していません。</li>
         <li>星の中身はかたいものとしています。地形は作りもので、高さの分布だけ地球に近づけています（陸 29%、海の平均の深さ 3682 m）。森は陸の約 31%（FAO 2020）、1 ha に 400 本として数を出し、多すぎるときは間引いて描いています。</li>
@@ -102,6 +119,10 @@
         <li>海の平均の深さ 3682 m: Charette, M. A. &amp; Smith, W. H. F. (2010) The volume of Earth’s ocean. <i>Oceanography</i> 23(2): 112–114.</li>
         <li>海面の風の力（抗力係数 約 1.2×10⁻³）: Large, W. G. &amp; Pond, S. (1981) Open ocean momentum flux measurements in moderate to strong winds. <i>J. Phys. Oceanogr.</i> 11: 324–336.</li>
         <li>浅水の式: Vallis, G. K. (2017) <i>Atmospheric and Oceanic Fluid Dynamics</i>, 2nd ed. Cambridge University Press.</li>
+        <li>大気が宇宙へ逃げるしくみ: Catling, D. C. &amp; Kasting, J. F. (2017) <i>Atmospheric Evolution on Inhabited and Lifeless Worlds</i>, 5章. Cambridge University Press.</li>
+        <li>氷と水の蒸気圧: Murphy, D. M. &amp; Koop, T. (2005) Review of the vapour pressures of ice and supercooled water for atmospheric applications. <i>Q. J. R. Meteorol. Soc.</i> 131: 1539–1565.</li>
+        <li>水の蒸発係数: Eames, I. W., Marr, N. J. &amp; Sabir, H. (1997) The evaporation coefficient of water: a review. <i>Int. J. Heat Mass Transfer</i> 40: 2963–2973.</li>
+        <li>太陽定数: Kopp, G. &amp; Lean, J. L. (2011) A new, lower value of total solar irradiance. <i>Geophys. Res. Lett.</i> 38: L01706.</li>
         <li>森の割合: FAO (2020) <i>Global Forest Resources Assessment 2020</i>.</li>
       </ul>
       <h3>使っているもの</h3>
@@ -116,6 +137,8 @@
 <script src="js/terrain.js"></script>
 <script src="js/voxel.js"></script>
 <script src="js/ocean.js"></script>
+<script src="js/honest.js"></script>
 <script src="js/render.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/honestui.js"></script>
 <script src="js/main.js"></script>

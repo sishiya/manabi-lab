@@ -1,10 +1,10 @@
 // ちいさな地球 — 描画（three.js r128）。星の半径を 1 として描く。
 'use strict';
 const VIEW = (() => {
-  let renderer, scene, camera, planet, landMesh, waterMesh, landV, waterV, treeMesh, shell, sun, cv;
+  let halo, renderer, scene, camera, planet, landMesh, waterMesh, landV, waterV, treeMesh, shell, sun, cv;
   let C, rFloor;          // ボクセルのマス目・柱の床（陸の上の面）の半径
   let M, TR, O;           // 網・地形・海
-  const st = { style: 'voxel', ex: 100, az: 0.6, el: 0.35, alt: 2.2, treeShown: 0, treeReal: 0 };
+  const st = { honest: null, style: 'voxel', ex: 100, az: 0.6, el: 0.35, alt: 2.2, treeShown: 0, treeReal: 0 };
   const tmp = new THREE.Vector3();
 
   function init(canvas, mesh, terrain, ocean) {
@@ -49,6 +49,8 @@ const VIEW = (() => {
     // logarithmicDepthBuffer の書き込みが ShaderMaterial にはないので、殻は奥行きを見ない
     shell.material.depthTest = false; shell.renderOrder = 10;
     scene.add(shell);
+    halo = new THREE.Mesh(new THREE.SphereGeometry(1.25, 48, 24), new THREE.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.2, depthWrite: false, depthTest: false, side: THREE.BackSide }));
+    halo.renderOrder = 9; halo.visible = false; scene.add(halo);
     // 木（ボクセル: 箱の幹と葉 ／ なめらか: 丸い葉）。1本ずつ色を少し変える
     treeMesh = new THREE.InstancedMesh(treeGeom('voxel'), new THREE.MeshLambertMaterial({ vertexColors: true }), 16000);
     treeMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(16000 * 3).fill(1), 3);
@@ -152,8 +154,10 @@ const VIEW = (() => {
   // 海の形と色（毎コマ）
   function updateWater() {
     const R = O.R, ex = st.ex, H0 = O.P.H0, p = M.pos, pa = waterMesh.geometry.attributes.position.array, ca = waterMesh.geometry.attributes.color.array, vox = st.style === 'voxel';
+    const hs = st.honest, tt = performance.now() / 1000;
     for (let i = 0; i < M.N; i++) {
-      const h = O.h[i], wet = TR.elev[i] >= 0 ? h > 0.02 * H0 : h > O.hdry;   // 陸の上のうすい膜は描かない
+      // 正直モード: 水＋氷の厚さ（氷は水より 1.09 倍かさばる）
+      const h = hs ? hs.liq[i] + hs.ice[i] * 1.09 : O.h[i], wet = TR.elev[i] >= 0 ? h > 0.02 * H0 : h > O.hdry;   // 陸の上のうすい膜は描かない
       const r = wet ? 1 + ex * (O.z[i] + h) / R : 1 + ex * O.z[i] / R - 3 * Math.max(H0, 0.002 * R) * ex / R;
       if (!vox) { pa[i * 3] = p[i * 3] * r; pa[i * 3 + 1] = p[i * 3 + 1] * r; pa[i * 3 + 2] = p[i * 3 + 2] * r; }
       // 色: 深さ（浅い＝明るい）＋ もとの海面からの高さ（高い＝白っぽく、低い＝暗く）
@@ -161,13 +165,19 @@ const VIEW = (() => {
       const d = Math.min(1, h / (0.6 * H0)), a = (O.z[i] + h) / H0;
       let c = mix([0.25, 0.62, 0.70], [0.07, 0.30, 0.55], d);
       if (TR.elev[i] >= 0 && wet) c = mix(c, [0.55, 0.75, 0.85], 0.4);          // 陸にあふれた水
-      if (a > 0) c = mix(c, [0.95, 0.98, 1.0], Math.min(0.9, a * 1.8));
+      if (hs) {
+        // 沸いている水: 白くにごる（ゆっくり、場所ごとに少しずつちがう。点滅にならない速さ）。氷: 白っぽい青
+        if (hs.boil[i]) c = mix(c, [0.86, 0.92, 0.96], 0.55 + 0.15 * Math.sin(tt * 1.3 + i * 2.39));
+        // 氷があれば表面は氷（下に水が残っていても上から見えるのは氷のふた）
+        if (hs.ice[i] > 0 && !hs.boil[i]) c = mix(c, [0.82, 0.90, 0.96], 0.85);
+      } else if (a > 0) c = mix(c, [0.95, 0.98, 1.0], Math.min(0.9, a * 1.8));
       else c = mix(c, [0.0, 0.04, 0.16], Math.min(0.85, -a * 1.8));
       ca.set(c, i * 3);
       if (vox) {
         // 水の柱: 床（段々の地面）から水面まで。乾いている・水面が床より低いときは高さ 0
-        const top = wet ? Math.max(rFloor[i], r) : rFloor[i];
-        VOXEL.setCol(waterV.geometry, M, C, i, top, rFloor[i]);
+        // 乾いたマスは床の少し下へ隠す（高さ 0 の柱の上の面が床と重なって見えないように）
+        const top = wet ? Math.max(rFloor[i], r) : rFloor[i] - 1e-4;
+        VOXEL.setCol(waterV.geometry, M, C, i, top, wet ? rFloor[i] : top);
         VOXEL.setColorRGB(waterV.geometry, C, i, c[0], c[1], c[2], 0.85);
       }
     }
@@ -249,7 +259,14 @@ const VIEW = (() => {
   function render(spin) {
     planet.rotation.y = spin;
     placeCamera();
-    shell.visible = camera.position.length() > 1.3;   // 殻の内がわからは描かない（景色が白っぽくなるので）
+    const hs = st.honest;
+    // 殻: 正直モードで外したあとは消す。かわりに、逃げていく空気をうすい球で（大きさ・こさは見た目だけ）
+    shell.visible = camera.position.length() > 1.3 && !(hs && hs.removed);
+    halo.visible = !!(hs && hs.removed && hs.airM > 0.002);
+    if (halo.visible) { halo.scale.setScalar(1 + 3 * (1 - hs.airM)); halo.material.opacity = 0.35 * hs.airM; }
+    // 森: 空気がなくなると葉の水が抜けて枯れる（色の変わる速さは見た目だけ）
+    const br = hs ? hs.brown : 0;
+    treeMesh.material.color.setRGB(1 + 0.7 * br, 1 - 0.3 * br, 1 - 0.6 * br);   // 緑 → 茶色
     renderer.render(scene, camera);
   }
   return { init, setStyle, rebuildLand, updateWater, render, resize, pick, setAlt, screenUpInPlanet, screenRightInPlanet, st,

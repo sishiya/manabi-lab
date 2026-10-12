@@ -64,7 +64,7 @@ const UI = (() => {
       ['陸にあふれた水', `${area(flood)} <small>（星の ${sig(flood / tot * 100)}%。深さ ${len(0.02 * H0)} 以上）</small>`],
       ['干上がった海の底', `${area(bare)} <small>（星の ${sig(bare / tot * 100)}%）</small>`],
     ].map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
-    $('hudT').textContent = dur(O.t);
+    if (!HUI.on) $('hudT').textContent = dur(O.t);   // 正直モードでは HUI が「殻を外してから」を出す
   }
 
   function facts(O, U) {

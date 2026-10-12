@@ -40,3 +40,14 @@ dd small{font-family:var(--f-body);color:var(--muted)}
   #stage{position:relative;height:100vh}
   #panel{height:100vh;overflow-y:auto}
 }
+button.warn{background:#4a2a1e;border-color:#b0603a}
+button.warn:hover{background:#5d3524}
+#hBox{margin-top:8px}
+#hBox label b{color:#ffc95a}
+.sub{font-size:13px;color:var(--muted);margin:10px 0 4px}
+#hEv{margin:0;padding-left:20px;font-size:13.5px;line-height:1.6}
+#hEv li{cursor:pointer;margin-bottom:3px}
+#hEv li:hover{color:var(--acc)}
+#hEv li.past{color:var(--muted)}
+#hEv li b{font-family:var(--f-mono);font-weight:500;color:#ffc95a;margin-right:6px}
+#hNow{margin-top:8px}

@@ -21,6 +21,7 @@ function setR(R) {
   VIEW.setAlt(VIEW.st.alt);
   VIEW.rebuildLand();
   UI.nums(ocean); UI.facts(ocean, S.wind);
+  HUI.rebuild();   // 正直モードなら、この大きさで計算しなおす
   UI.$('shakeNote').textContent = `押す速さ ${UI.speed(ocean.P.c0)}（この星の長い波の速さと同じ）。水のかたまりは高さ ${UI.len(2 * ocean.P.H0)}・幅 ${UI.len(3 * mesh.Lavg * R)}。`;
   exNote();
 }
@@ -49,6 +50,7 @@ function centerCell() {
 }
 VIEW.onTap = e => { const c = VIEW.pick(e); if (c >= 0) dropAt(c); };
 UI.init(handlers);
+HUI.init({ mesh, ocean, terrain });
 
 // 風の向きの初め: 星の軸のまわり（西から東へ）
 ocean.wind.ax = 0; ocean.wind.ay = 1; ocean.wind.az = 0;
@@ -62,7 +64,8 @@ resize();
 { const asp = cv.clientWidth / Math.max(1, cv.clientHeight); VIEW.st.alt = asp < 1 ? 2.3 / asp : 2.3; }   // 縦長の画面でも星が入るように
 
 function step(realDt) {
-  if (!S.playing) return;
+  HUI.step(realDt);
+  if (!S.playing || HUI.on) return;     // 正直モードのあいだ、海の流れの計算は止める（凍る・消える海は別の計算）
   const want = realDt * S.speed;
   const r = OCEAN.advance(ocean, want, 60);
   S.behind = want - r.done;     // 追いつけなかった分（重いとき）
@@ -82,7 +85,7 @@ requestAnimationFrame(loop);
 
 // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）
 window.__tiea = {
-  S, mesh, terrain, ocean, VIEW, handlers,
+  S, mesh, terrain, ocean, VIEW, handlers, HUI,
   simRun(sec) { let n = 0; while (sec > 0 && n < 100000) { const r = OCEAN.advance(ocean, sec, 400); sec -= r.done; n += r.n; } S.lastUI = -1e9; draw(performance.now()); return n; },
   vol() { return OCEAN.volume(ocean) / ocean.vol0 - 1; },
   cam(o) { Object.assign(VIEW.st, o); draw(performance.now()); },
