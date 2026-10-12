@@ -43,22 +43,29 @@ const T4D = {
       g.save(); Z.poly(P); g.clip();
       const d = 13.5 * (o.scale || 1), arrive = [];
       // 引いて見ているときは並びを描かない（重くしない）。組み立て中は必ず描く
-      const lattice = Z.s > 2.6 || grow < 1;
+      // 寄るにつれてだんだん濃く（ある拡大率でいきなり出さない）。組み立て中は必ず描く
+      const la = grow < 1 ? 1 : Math.max(0, Math.min(1, (Z.s - 1.9) / 0.9)), lattice = la > 0;
+      // さらに寄ると、六角形から「6つの粒」へ（重ねてなめらかに切りかえる）
+      const cw = Math.max(0, Math.min(1, (Z.s - 3.6) / 0.8)), a0 = g.globalAlpha;
       for (let row = -12; row <= 12 && lattice; row++) for (let col = -6; col <= 6; col++) {
         const x = cx + col * d + (row % 2 ? d / 2 : 0), y = hc + row * d * 0.866;
         if (Math.abs(x - cx) > hw + d || Math.abs(y - hc) > hh + d) continue;
         if (grow < 1 && rank(x, y) > grow) { if (rank(x, y) < grow + 0.07 && ((x - cx) / hw) ** 2 + ((y - hc) / hh) ** 2 < 1) arrive.push([x, y, (rank(x, y) - grow) / 0.07]); continue; }
-        if (Z.s > 4) { for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3 + 0.5; Z.circle(x + Math.cos(a) * 3.9, y + Math.sin(a) * 3.9, 2.1, ZC.gp23); } }
-        else Z.hex(x, y, 6, ZC.gp23, Z.s > 3 ? '#123' : null, 0.5);
+        if (cw < 1) { g.globalAlpha = a0 * la * (1 - cw); Z.hex(x, y, 6, ZC.gp23, Z.s > 3 ? '#123' : null, 0.5); }
+        if (cw > 0) { g.globalAlpha = a0 * la * cw; for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3 + 0.5; Z.circle(x + Math.cos(a) * 3.9, y + Math.sin(a) * 3.9, 2.1, ZC.gp23); } }
+        g.globalAlpha = a0 * la;
         if (o.deco && (o.deco === true || rank(x, y) < o.deco)) { Z.circle(x, y, 1.9, ZC.hoc); Z.circle(x + d / 2, y + d * 0.29, 0.9, ZC.soc); Z.circle(x, y + d * 0.58, 0.9, ZC.soc); }
       }
+      g.globalAlpha = a0;
       g.restore();
       // 組み立て中: 次に付く6個組（gp23 の六量体）が、まわりから寄ってきて殻のふちにはまる
       for (const [x, y, f] of arrive) {
         const dx = x - cx, dy = y - hc, L = Math.hypot(dx, dy) || 1, off = 6 + f * 34;
         const ax = x + dx / L * off, ay = y + dy / L * off;
-        if (Z.s > 2.2) { for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3 + 0.5 + f * 1.5; Z.circle(ax + Math.cos(a) * 3.9, ay + Math.sin(a) * 3.9, 2.1, ZC.gp23); } }
-        else Z.hex(ax, ay, 6, ZC.gp23, '#123', f * 1.5);
+        // 殻に付いたものと同じ描き分け（六角形 ↔ 6つの粒を重ねて切りかえる）
+        if (cw < 1) { g.globalAlpha = a0 * (1 - cw); Z.hex(ax, ay, 6, ZC.gp23, '#123', f * 1.5); }
+        if (cw > 0) { g.globalAlpha = a0 * cw; for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3 + 0.5 + f * 1.5; Z.circle(ax + Math.cos(a) * 3.9, ay + Math.sin(a) * 3.9, 2.1, ZC.gp23); } }
+        g.globalAlpha = a0;
       }
     }
     if (grow >= 1) Z.poly(P, null, o.empty ? 'rgba(216,255,244,.5)' : View.real ? 'rgba(216,255,244,.35)' : '#d8fff4', View.real ? 1 : 1.5);

@@ -147,7 +147,7 @@ $devnotes = @"
 - 次にやること: PLAN.md の段階A。
 - 読む順: PLAN.md → このファイルの「ファイル構成」→ 関係するファイルだけ。
 - 動かし方: サーバー apps（.claude/launch.json）で http://localhost:8765/$Id/ 。デバッグ用の窓口 ``window.__$short``（``simRun(秒)``）、エラーは ``window.__${short}Err``。
-- 区切りごとの手順: versions/ にバックアップ → launcher.html → 「状態」に1行 → 「確認のしかた」と smoke.ps1 → 公開前チェック → commit。
+- 区切りごとの手順: 「確認のしかた」と smoke.ps1 → 「状態」に1行 → launcher.html の表 → 公開前チェック → commit（節目の版だけ versions/ へコピーしてカードに。RULES 3章）。
 - ユーザーの好み:
 
 ## ファイル構成

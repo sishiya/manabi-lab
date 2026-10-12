@@ -13,7 +13,7 @@ flowchart LR
     IDEAS["IDEAS.md<br/>テーマのストック・好み"]
     DOCS["PLAN.md / DEVNOTES.md / RULES.md / I18N.md<br/>企画・しくみ・引き継ぎ"]
     SRC["各アプリ index.html・css・js<br/>JP/EN の文"]
-    VER["versions/・launcher.html<br/>版のバックアップ"]
+    VER["versions/・launcher.html<br/>節目の版（ふだんは Git のコミット）"]
     THUMB["assets/thumbs/<br/>サムネイル"]
     PROMO["_dev/promo/ 台本 → out/<br/>mp4・ja/en.srt（Git に入れない）"]
     META["*.upload.json<br/>タイトル・説明・予約日時"]
@@ -99,7 +99,7 @@ sequenceDiagram
   C->>L: PLAN.md（段階 A・B・C…）
   C-->>U: 企画の確認・相談
   loop 段階ごと
-    C->>L: versions/ にバックアップ
+    C->>L: 区切りで commit（節目なら versions/ にも）
     C->>L: 実装（出典を確かめて画面に「おもな出どころ」）
     C->>B: DEVNOTES「確認のしかた」を通しで
     C->>B: smoke.ps1（例外・通信・英語の残り）

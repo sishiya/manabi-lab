@@ -83,9 +83,12 @@ const View = (() => {
     const s = Math.max(W / 4e9, Math.min(sMax, W / Math.max(10, w)));
     // 左下の説明カードにかからないよう、見せたい点を少し上に置く
     cy -= Math.min(70, H * 0.1) / s;
+    // 目標が変わったら、動き出しを少しゆるやかに（moveAge を 0 から数える）
+    if (Math.abs(Math.log(s / cam.ts)) > 0.05 || Math.hypot(cx - cam.tcx, cy - cam.tcy) * s > 20) moveAge = 0;
     cam.tcx = cx; cam.tcy = cy; cam.ts = s;
     if (instant) { cam.cx = cx; cam.cy = cy; cam.s = s; }
   }
+  let moveAge = 99;
   function fitAll(instant) { look(0, 330, 2500 * Math.max(1, (W / H) / (2500 / 1900)), instant); }
   // 動ける範囲: 物語の場所（原点）から、見ている横はばの半分＋少しまで（関係のないところへ行きすぎない）
   // 自分で動かせる範囲: いまの見どころの場所のまわりだけ（迷子にならないように）。引けるのは見どころの横はばの3倍まで
@@ -105,7 +108,10 @@ const View = (() => {
     clampT(cam);
     // おまかせのときはゆっくり（場面が変わっても目が追いつくように）。自分で動かすときはすぐ
     // おまかせのときはゆっくり。シークバーを動かしている間・人のからだの区間は速め（View.camK）
-    const k = 1 - Math.exp(-dt * (auto ? View.camK : 3.2));
+    // おまかせのときは、動き出しの約0.6秒で少しずつ速くなる（急に飛び出さない）
+    moveAge += dt;
+    const ramp = auto ? 0.4 + 0.6 * Math.min(1, moveAge / 0.6) ** 2 * (3 - 2 * Math.min(1, moveAge / 0.6)) : 1;
+    const k = 1 - Math.exp(-dt * (auto ? View.camK : 3.2) * ramp);
     // 拡大率は掛け算でなめらかに。位置は「画面の上での距離」で近づける（人のからだ → 分子のように大きく寄るとき、目的の場所が画面の外に残らない）
     const ease2 = (c, q) => {
       const s0 = c.s; c.s = Math.exp(Math.log(c.s) + (Math.log(c.ts) - Math.log(c.s)) * q); c.cx = c.tcx - (c.tcx - c.cx) * s0 * (1 - q) / c.s; c.cy = c.tcy - (c.tcy - c.cy) * s0 * (1 - q) / c.s;
