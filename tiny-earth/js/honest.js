@@ -46,7 +46,7 @@ const HONEST = (() => {
     // λ が大きい星は、空気が重力でとどまっていて殻を外しても急には変わらない。流体の計算もいらない
     // （この簡単な解き方は、成層したしずかな大気でもゆっくり温まって崩れてしまうので使わない。ハマったところ）
     if (lam > 5) {
-      res.samples = [[0, 1, 1]]; res.tEnd = 0; return res;
+      res.samples = [[0, 1, 1, T0]]; res.tEnd = 0; return res;
     }
     // 1次元の流体（球の半径方向）。格子は地面の近くほど細かい
     const N = 240, Lout = D * 60, dr0 = D / 120;
@@ -66,7 +66,7 @@ const HONEST = (() => {
     const Fd = new Float64Array(N + 1), Fm = new Float64Array(N + 1), FE = new Float64Array(N + 1), pr = new Float64Array(N), vel = new Float64Array(N);
     let t = 0, steps = 0, nextS = 1e-4 * D / c0;
     const tMax = 200 * D / c0;
-    res.samples.push([0, 1, 1]);
+    res.samples.push([0, 1, 1, T0]);
     while (t < tMax && steps < 300000) {
       let dt = Infinity;
       for (let i = 0; i < N; i++) {
@@ -102,32 +102,33 @@ const HONEST = (() => {
       }
       t += dt; steps++;
       if (t >= nextS) {
-        res.samples.push([t, pr[0] / P0, mass() / M0]);
+        res.samples.push([t, pr[0] / P0, mass() / M0, pr[0] / d[0] * mA / kB]);   // 地面の近くの空気の温度も
         nextS *= 1.12;
         if (pr[0] < 1e-6 * P0 && t > 5 * D / c0) break;
       }
     }
     res.tEnd = t; res.steps = steps;
     const last = res.samples[res.samples.length - 1];
-    res.endP = last[1]; res.endM = last[2];
+    res.endP = last[1]; res.endM = last[2]; res.endT = last[3];
     return res;
   }
   // 時刻 t の地面の気圧（1気圧との比）と、残っている空気の割合
   function airAt(A, t) {
     const s = A.samples;
-    if (A.tEnd === 0) return decay(A, 1, 1, t);          // 流体の計算をしない星（空気がとどまる）
+    if (A.tEnd === 0) return decay(A, 1, 1, t, T0);      // 流体の計算をしない星（空気がとどまる。温度は 15℃ のまま）
     if (t <= A.tEnd) {
-      if (t <= 0) return { p: 1, m: 1 };
+      if (t <= 0) return { p: 1, m: 1, T: T0 };
       let k = 1; while (k < s.length && s[k][0] < t) k++;
       if (k >= s.length) k = s.length - 1;
       const a = s[k - 1], b = s[k], f = b[0] > a[0] ? (t - a[0]) / (b[0] - a[0]) : 1;
-      return { p: a[1] + (b[1] - a[1]) * f, m: a[2] + (b[2] - a[2]) * f };
+      return { p: a[1] + (b[1] - a[1]) * f, m: a[2] + (b[2] - a[2]) * f, T: a[3] + (b[3] - a[3]) * f };
     }
     // 流体の計算の後: 吹き飛ぶ星は 3次元の自由な広がり（密度 ∝ t⁻³）、とどまる星は逃げる速さで減る
-    if (A.mode === 'blowoff') return { p: A.endP * (A.tEnd / t) ** 3, m: A.endM * (A.tEnd / t) ** 3 };
-    return decay(A, A.endP, A.endM, t - A.tEnd);
+    // 断熱で広がる気体の温度 ∝ 密度^(γ−1) ∝ t^(−3·0.4)
+    if (A.mode === 'blowoff') return { p: A.endP * (A.tEnd / t) ** 3, m: A.endM * (A.tEnd / t) ** 3, T: A.endT * (A.tEnd / t) ** 1.2 };
+    return decay(A, A.endP, A.endM, t - A.tEnd, A.endT);
   }
-  function decay(A, p, m, dt) { if (!(A.tauEsc > 0) || dt <= 0) return { p, m }; const f = Math.exp(-dt / A.tauEsc); return { p: p * f, m: m * f }; }
+  function decay(A, p, m, dt, T) { if (!(A.tauEsc > 0) || dt <= 0) return { p, m, T }; const f = Math.exp(-dt / A.tauEsc); return { p: p * f, m: m * f, T }; }
 
   // ---------- 海（深さ d の水の柱ひとつ） ----------
   // 返す: 時刻の列 ts と、そのときの 液体 L・氷 I（m、水の厚さに直したもの）・沸いているか・表面温度
@@ -225,5 +226,11 @@ const HONEST = (() => {
     const a = v(j), b = v(j + 1), sc = d / (ds[j] * (1 - h) + ds[j + 1] * h);
     return [(a[0] * (1 - h) + b[0] * h) * sc, (a[1] * (1 - h) + b[1] * h) * sc, h < 0.5 ? a[2] : b[2], a[3] * (1 - h) + b[3] * h];
   }
-  return { build, airAt, colAt, pIce, pLiq, PV15, T0, P0 };
+  // 柱の状態 [液体, 氷, 沸く, 温度] → 表面から蒸発・昇華する速さ kg/m²/s（空気がまだあって沸かない水は 0 とする）
+  function flux(c) {
+    if (c[2]) { const T = Math.max(c[3], 273.15); return hk(pLiq(T), T); }
+    if (c[1] > 0) return hk(pIce(c[3]), c[3]);
+    return 0;
+  }
+  return { build, airAt, colAt, flux, pIce, pLiq, PV15, T0, P0 };
 })();

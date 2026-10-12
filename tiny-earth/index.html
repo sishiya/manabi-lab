@@ -15,6 +15,15 @@
       <div id="hudT">0 時間</div>
       <div id="hudX">高さ ×100</div>
     </div>
+    <div id="thermo" hidden>
+      <div class="thRow">
+        <div class="th"><div class="tube"><div class="fill" id="thSea"></div></div><span>海</span><b id="thSeaV">15℃</b></div>
+        <div class="th"><div class="tube"><div class="fill air" id="thAir"></div></div><span>空気</span><b id="thAirV">15℃</b></div>
+        <div class="ticks"><i style="bottom:93.3%">20</i><i style="bottom:80%">0</i><i style="bottom:46.7%">−50</i><i style="bottom:13.3%">−100</i></div>
+      </div>
+      <div id="vap"><span id="vapK">蒸発</span> <b id="vapV">0</b></div>
+      <p id="thMsg"></p>
+    </div>
     <div id="hint">海をタップ → 水のかたまりを落とす ／ ドラッグでまわす・つまむ（ホイール）で寄る</div>
   </main>
   <section id="panel">
@@ -76,8 +85,9 @@
 
     <div class="ctl">
       <label>見た目</label>
-      <div class="btns" id="styleBtns"><button data-s="voxel" class="on">ボクセル</button><button data-s="smooth">なめらか</button></div>
-      <p class="note">ボクセルは見た目だけ段々にしています（陸は 400 m、海の底は 1000 m ごと。地球の大きさのときの高さで）。計算はなめらかな高さのまま。</p>
+      <div class="btns" id="styleBtns"><button data-s="voxel" class="on">ボクセル</button><button data-s="beads">つぶつぶ（球）</button></div>
+      <div class="btns" id="lightBtns"><span class="lbl">光</span><button data-l="cycle" class="on">めぐる（自転）</button><button data-l="day">いつも昼</button><button data-l="night">いつも夜</button></div>
+      <p class="note">どれも見た目だけです（光は、正直モードの温度の計算にはかかわりません。温度は一日でならした日光で計算）。地形は段々にしています（陸は 400 m、海の底は 1000 m ごと。地球の大きさのときの高さで）。海と空気の計算は、なめらかな高さのまま。</p>
     </div>
 
     <div class="ctl">

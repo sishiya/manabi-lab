@@ -96,6 +96,11 @@ const UI = (() => {
       for (const b of $('styleBtns').children) b.classList.toggle('on', b === e.target);
       h.setStyle(v);
     });
+    $('lightBtns').addEventListener('click', e => {
+      const v = e.target.dataset && e.target.dataset.l; if (!v) return;
+      for (const b of $('lightBtns').querySelectorAll('button')) b.classList.toggle('on', b === e.target);
+      VIEW.st.light = v;
+    });
   }
   return { init, nums, live, facts, setSizeLabel, len, speed, dur, sig, $ };
 })();

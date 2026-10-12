@@ -1,10 +1,10 @@
 // ちいさな地球 — 描画（three.js r128）。星の半径を 1 として描く。
 'use strict';
 const VIEW = (() => {
-  let halo, renderer, scene, camera, planet, landMesh, waterMesh, landV, waterV, treeMesh, shell, sun, cv;
+  let hemi, halo, vapor, rTop, wCol, wWet, renderer, scene, camera, planet, landB, waterB, coreB, landV, waterV, treeMesh, shell, sun, cv;
   let C, rFloor;          // ボクセルのマス目・柱の床（陸の上の面）の半径
   let M, TR, O;           // 網・地形・海
-  const st = { honest: null, style: 'voxel', ex: 100, az: 0.6, el: 0.35, alt: 2.2, treeShown: 0, treeReal: 0 };
+  const st = { light: 'cycle', honest: null, style: 'voxel', ex: 100, az: 0.6, el: 0.35, alt: 2.2, treeShown: 0, treeReal: 0 };
   const tmp = new THREE.Vector3();
 
   function init(canvas, mesh, terrain, ocean) {
@@ -15,24 +15,20 @@ const VIEW = (() => {
     scene.background = new THREE.Color(0x02060c);
     camera = new THREE.PerspectiveCamera(45, 1, 1e-6, 50);
     sun = new THREE.DirectionalLight(0xfff4e0, 1.25); sun.position.set(5, 2, 3); scene.add(sun);
-    scene.add(new THREE.HemisphereLight(0x9cc8ff, 0x20242a, 0.42));
+    hemi = new THREE.HemisphereLight(0x9cc8ff, 0x20242a, 0.42); scene.add(hemi);
     stars();
     planet = new THREE.Group(); scene.add(planet);
-    const idx = new THREE.BufferAttribute(M.tri, 1);
-    // 陸（海の底もふくむ）
-    const lg = new THREE.BufferGeometry();
-    lg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(M.N * 3), 3));
-    lg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(M.N * 3), 3));
-    lg.setIndex(idx);
-    landMesh = new THREE.Mesh(lg, new THREE.MeshLambertMaterial({ vertexColors: true }));
-    planet.add(landMesh);
-    // 海
-    const wg = new THREE.BufferGeometry();
-    wg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(M.N * 3), 3));
-    wg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(M.N * 3), 3));
-    wg.setIndex(idx);
-    waterMesh = new THREE.Mesh(wg, new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 25, specular: 0x1a2630 }));
-    planet.add(waterMesh);
+    // つぶつぶ（球）の陸と海: マス目ひとつを1つぶの球にする（見た目だけ。タップの当たりはボクセルの柱で取る）
+    const ball = new THREE.IcosahedronGeometry(1, 2);
+    landB = new THREE.InstancedMesh(ball, new THREE.MeshLambertMaterial(), M.N);
+    waterB = new THREE.InstancedMesh(ball, new THREE.MeshPhongMaterial({ shininess: 40, specular: 0x2a3a48 }), M.N);
+    for (const m of [landB, waterB]) {
+      m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(M.N * 3), 3);
+      m.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 3); m.frustumCulled = false; planet.add(m);
+    }
+    coreB = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 5), new THREE.MeshLambertMaterial({ color: 0x3a2e24 }));   // つぶのすき間から見える土
+    planet.add(coreB);
+    wCol = new Float32Array(M.N * 3); wWet = new Uint8Array(M.N);
     // ボクセルふうの陸と海（マス目を柱にする）
     C = VOXEL.cells(M); rFloor = new Float32Array(M.N);
     landV = new THREE.Mesh(VOXEL.columns(M, C), new THREE.MeshLambertMaterial({ vertexColors: true }));
@@ -51,7 +47,16 @@ const VIEW = (() => {
     scene.add(shell);
     halo = new THREE.Mesh(new THREE.SphereGeometry(1.25, 48, 24), new THREE.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.2, depthWrite: false, depthTest: false, side: THREE.BackSide }));
     halo.renderOrder = 9; halo.visible = false; scene.add(halo);
-    // 木（ボクセル: 箱の幹と葉 ／ なめらか: 丸い葉）。1本ずつ色を少し変える
+    // 湯気の粒（正直モード）: 沸いている水・氷の面から立ちのぼって散る。数はマスの蒸発の速さに合わせる（動きは見た目だけ）
+    const NV = 3000;
+    vapor = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: 3, sizeAttenuation: false, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    vapor.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NV * 3), 3));
+    vapor.geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(NV * 3), 3));
+    vapor.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 5); vapor.frustumCulled = false;
+    vapor.userData = { age: new Float32Array(NV).fill(9), life: new Float32Array(NV), vel: new Float32Array(NV), dir: new Float32Array(NV * 3), r0: new Float32Array(NV), next: 0, last: 0 };
+    planet.add(vapor);
+    rTop = new Float32Array(M.N);
+    // 木（ボクセル: 箱の幹と葉 ／ つぶつぶ: 丸い葉）。1本ずつ色を少し変える
     treeMesh = new THREE.InstancedMesh(treeGeom('voxel'), new THREE.MeshLambertMaterial({ vertexColors: true }), 16000);
     treeMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(16000 * 3).fill(1), 3);
     treeMesh.count = 0; planet.add(treeMesh);
@@ -91,16 +96,14 @@ const VIEW = (() => {
   function setStyle(style) {
     st.style = style;
     const vox = style === 'voxel';
-    landMesh.visible = waterMesh.visible = !vox; landV.visible = waterV.visible = vox;
+    landB.visible = waterB.visible = coreB.visible = !vox; landV.visible = waterV.visible = vox;
     treeMesh.geometry.dispose(); treeMesh.geometry = treeGeom(style);
   }
 
   // 大きさ・強調を変えたら陸と木を作りなおす
   function rebuildLand() {
-    const R = O.R, ex = st.ex, p = M.pos, pa = landMesh.geometry.attributes.position.array, ca = landMesh.geometry.attributes.color.array;
+    const ex = st.ex, p = M.pos, rb = beadR(), lm = landB.instanceMatrix.array, lc = landB.instanceColor.array;
     for (let i = 0; i < M.N; i++) {
-      const r = 1 + ex * O.z[i] / R;
-      pa[i * 3] = p[i * 3] * r; pa[i * 3 + 1] = p[i * 3 + 1] * r; pa[i * 3 + 2] = p[i * 3 + 2] * r;
       const e = TR.elev[i];
       let c;
       if (e < 0) c = mix([0.55, 0.50, 0.40], [0.22, 0.24, 0.28], Math.min(1, -e / 5000));     // 海の底
@@ -108,17 +111,27 @@ const VIEW = (() => {
       else if (e < 60) c = [0.78, 0.72, 0.52];                                                // 浜
       else c = mix([0.42, 0.52, 0.28], [0.55, 0.50, 0.45], Math.min(1, e / 3000));          // 草地〜岩
       if (Math.abs(p[i * 3 + 1]) > 0.93 && e > 0) c = [0.88, 0.9, 0.93];                      // 極の雪
-      ca.set(c, i * 3);
       // ボクセル: 見た目だけ段々に（陸は 400 m ごとに切り上げ、海の底は 1000 m ごとに切り下げ。地球の大きさのときの高さで。計算はなめらかな高さ）
       const de = e >= 0 ? 400 * (1 + Math.floor(e / 400)) : 1000 * Math.floor(e / 1000);
       rFloor[i] = 1 + ex * de / PHYS.RE;
       VOXEL.setCol(landV.geometry, M, C, i, rFloor[i], 1 - ex * 12000 / PHYS.RE);
       VOXEL.setColor(landV.geometry, C, i, c, e >= 0 ? mix(c, [0.36, 0.26, 0.17], 0.6) : mix(c, [0.1, 0.1, 0.12], 0.4));
+      // つぶつぶ: 上の面がボクセルの床と同じ高さになるように、球の中心を少し下げる
+      bead(lm, i, rFloor[i] - rb * 0.55, rb); lc[i * 3] = c[0]; lc[i * 3 + 1] = c[1]; lc[i * 3 + 2] = c[2];
     }
+    landB.instanceMatrix.needsUpdate = true; landB.instanceColor.needsUpdate = true;
+    coreB.scale.setScalar(1 - ex * 6000 / PHYS.RE);
     const lv = landV.geometry.attributes; lv.position.needsUpdate = true; lv.color.needsUpdate = true;
-    landMesh.geometry.attributes.position.needsUpdate = true; landMesh.geometry.attributes.color.needsUpdate = true;
-    landMesh.geometry.computeVertexNormals(); landMesh.geometry.computeBoundingSphere();
     placeTrees();
+  }
+  // つぶの半径（となりのつぶと少し重なる大きさ）と、i 番目のつぶの行列（回転なし: 拡大と位置だけ）
+  function beadR() { return M.Lavg * 0.62; }
+  function bead(arr, i, rc, sc) {
+    const o = i * 16;
+    arr[o] = sc; arr[o + 1] = 0; arr[o + 2] = 0; arr[o + 3] = 0;
+    arr[o + 4] = 0; arr[o + 5] = sc; arr[o + 6] = 0; arr[o + 7] = 0;
+    arr[o + 8] = 0; arr[o + 9] = 0; arr[o + 10] = sc; arr[o + 11] = 0;
+    arr[o + 12] = M.pos[i * 3] * rc; arr[o + 13] = M.pos[i * 3 + 1] * rc; arr[o + 14] = M.pos[i * 3 + 2] * rc; arr[o + 15] = 1;
   }
   function mix(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
 
@@ -128,38 +141,58 @@ const VIEW = (() => {
     let fa = 0; for (let i = 0; i < M.N; i++) if (TR.forest[i]) fa += M.area[i];
     st.treeReal = fa * R * R * 0.04;                 // 森 1 ha に 400 本（目安）
     if (hU < 2e-4) { treeMesh.count = 0; st.treeShown = 0; return; }   // 小さすぎて見えない
-    const want = Math.min(treeMesh.instanceMatrix.count, Math.round(st.treeReal));
+    let want = Math.min(treeMesh.instanceMatrix.count, Math.round(st.treeReal));
     const cells = []; for (let i = 0; i < M.N; i++) if (TR.forest[i]) cells.push(i);
     let s = 11; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
     const mtx = new THREE.Matrix4(), q = new THREE.Quaternion(), q2 = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), n = new THREE.Vector3(), sc = new THREE.Vector3(), tint = new THREE.Color();
     const vox = st.style === 'voxel';
-    const spread = M.Lavg * 0.6;
-    for (let k = 0; k < want; k++) {
+    // 樹冠が重ならないように置く: ランダムに置きながら、近くの木（空間を箱に分けて探す）と
+    // 樹冠の幅（葉の幅 0.62×高さ）ぶん以上はなれているものだけ残す。森のマスの中（中心から 0.45 マス以内）にだけ置く
+    const gap = 0.62 * hU * 1.15 * 1.05, gap2 = gap * gap, box = new Map(), pts = [];
+    const key = (x, y, z) => Math.floor(x / gap) + ',' + Math.floor(y / gap) + ',' + Math.floor(z / gap);
+    const far = (x, y, z) => {
+      const bx = Math.floor(x / gap), by = Math.floor(y / gap), bz = Math.floor(z / gap);
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
+        const l = box.get((bx + dx) + ',' + (by + dy) + ',' + (bz + dz)); if (!l) continue;
+        for (const j of l) { const ex2 = pts[j * 3] - x, ey2 = pts[j * 3 + 1] - y, ez2 = pts[j * 3 + 2] - z; if (ex2 * ex2 + ey2 * ey2 + ez2 * ez2 < gap2) return false; }
+      }
+      return true;
+    };
+    const rad = M.Lavg * 0.45, t1 = new THREE.Vector3(), t2 = new THREE.Vector3();
+    let k = 0;
+    for (let tries = 0; tries < want * 8 && k < want; tries++) {
       const i = cells[Math.floor(rnd() * cells.length)];
-      n.set(M.pos[i * 3] + (rnd() - 0.5) * spread, M.pos[i * 3 + 1] + (rnd() - 0.5) * spread, M.pos[i * 3 + 2] + (rnd() - 0.5) * spread).normalize();
+      const px = M.pos[i * 3], py = M.pos[i * 3 + 1], pz = M.pos[i * 3 + 2];
+      t1.set(-pz, 0, px); if (t1.lengthSq() < 1e-6) t1.set(1, 0, 0); t1.normalize(); t2.set(py * t1.z - pz * t1.y, pz * t1.x - px * t1.z, px * t1.y - py * t1.x);
+      const ra = rad * Math.sqrt(rnd()), an = rnd() * 6.283;
+      n.set(px + ra * (Math.cos(an) * t1.x + Math.sin(an) * t2.x), py + ra * (Math.cos(an) * t1.y + Math.sin(an) * t2.y), pz + ra * (Math.cos(an) * t1.z + Math.sin(an) * t2.z)).normalize();
+      if (!far(n.x, n.y, n.z)) continue;
+      pts.push(n.x, n.y, n.z); const kk = key(n.x, n.y, n.z); (box.get(kk) || box.set(kk, []).get(kk)).push(k);
       q.setFromUnitVectors(up, n).multiply(q2.setFromAxisAngle(up, rnd() * 6.283));
-      const hh = hU * (0.7 + 0.6 * rnd());
+      const hh = hU * (0.85 + 0.3 * rnd());
       sc.set(hh, hh, hh);
-      const base = vox ? rFloor[i] : 1 + ex * O.z[i] / R;
+      const base = rFloor[i];   // ボクセルの床・つぶの上の端と同じ高さ
       mtx.compose(n.clone().multiplyScalar(base - hh * 0.03), q, sc);
       treeMesh.setMatrixAt(k, mtx);
       const v = rnd(); tint.setRGB(0.8 + 0.35 * v, 0.85 + 0.3 * rnd(), 0.75 + 0.2 * (1 - v));   // 1本ずつ少しちがう緑
       treeMesh.setColorAt(k, tint);
+      k++;
     }
+    want = k;
     treeMesh.count = want; st.treeShown = want;
     treeMesh.instanceMatrix.needsUpdate = true;
     if (treeMesh.instanceColor) treeMesh.instanceColor.needsUpdate = true;
   }
 
-  // 海の形と色（毎コマ）
+  // 海の形と色（毎コマ）。水面の高さ rTop・色 wCol・ぬれているか wWet を出してから、見えている方の形に書く
   function updateWater() {
-    const R = O.R, ex = st.ex, H0 = O.P.H0, p = M.pos, pa = waterMesh.geometry.attributes.position.array, ca = waterMesh.geometry.attributes.color.array, vox = st.style === 'voxel';
+    const R = O.R, ex = st.ex, H0 = O.P.H0, vox = st.style === 'voxel';
     const hs = st.honest, tt = performance.now() / 1000;
     for (let i = 0; i < M.N; i++) {
       // 正直モード: 水＋氷の厚さ（氷は水より 1.09 倍かさばる）
       const h = hs ? hs.liq[i] + hs.ice[i] * 1.09 : O.h[i], wet = TR.elev[i] >= 0 ? h > 0.02 * H0 : h > O.hdry;   // 陸の上のうすい膜は描かない
-      const r = wet ? 1 + ex * (O.z[i] + h) / R : 1 + ex * O.z[i] / R - 3 * Math.max(H0, 0.002 * R) * ex / R;
-      if (!vox) { pa[i * 3] = p[i * 3] * r; pa[i * 3 + 1] = p[i * 3 + 1] * r; pa[i * 3 + 2] = p[i * 3 + 2] * r; }
+      wWet[i] = wet ? 1 : 0;
+      rTop[i] = Math.max(rFloor[i], 1 + ex * (O.z[i] + h) / R);
       // 色: 深さ（浅い＝明るい）＋ もとの海面からの高さ（高い＝白っぽく、低い＝暗く）
       //   深さはうすく（浅い所だけ少し明るい）、高さの変化を主に（±0.5×平均の深さでいっぱい）
       const d = Math.min(1, h / (0.6 * H0)), a = (O.z[i] + h) / H0;
@@ -172,18 +205,28 @@ const VIEW = (() => {
         if (hs.ice[i] > 0 && !hs.boil[i]) c = mix(c, [0.82, 0.90, 0.96], 0.85);
       } else if (a > 0) c = mix(c, [0.95, 0.98, 1.0], Math.min(0.9, a * 1.8));
       else c = mix(c, [0.0, 0.04, 0.16], Math.min(0.85, -a * 1.8));
-      ca.set(c, i * 3);
-      if (vox) {
-        // 水の柱: 床（段々の地面）から水面まで。乾いている・水面が床より低いときは高さ 0
-        // 乾いたマスは床の少し下へ隠す（高さ 0 の柱の上の面が床と重なって見えないように）
-        const top = wet ? Math.max(rFloor[i], r) : rFloor[i] - 1e-4;
-        VOXEL.setCol(waterV.geometry, M, C, i, top, wet ? rFloor[i] : top);
-        VOXEL.setColorRGB(waterV.geometry, C, i, c[0], c[1], c[2], 0.85);
-      }
+      wCol[i * 3] = c[0]; wCol[i * 3 + 1] = c[1]; wCol[i * 3 + 2] = c[2];
     }
-    if (vox) { const wv = waterV.geometry.attributes; wv.position.needsUpdate = true; wv.color.needsUpdate = true; return; }
-    waterMesh.geometry.attributes.position.needsUpdate = true; waterMesh.geometry.attributes.color.needsUpdate = true;
-    waterMesh.geometry.computeVertexNormals(); waterMesh.geometry.computeBoundingSphere();
+    if (vox) writeVoxelWater();
+    else {
+      const rb = beadR(), wm = waterB.instanceMatrix.array, wc = waterB.instanceColor.array;
+      for (let i = 0; i < M.N; i++) {
+        // 水のつぶ: 上の端が水面に来るように。乾いたマスは大きさ 0
+        if (wWet[i] && rTop[i] > rFloor[i]) bead(wm, i, rTop[i] - rb * 0.6, rb); else bead(wm, i, 1, 0);
+      }
+      wc.set(wCol);
+      waterB.instanceMatrix.needsUpdate = true; waterB.instanceColor.needsUpdate = true;
+    }
+  }
+  // ボクセルの水の柱（見えていないときも、タップの当たりを取る前に作る）
+  function writeVoxelWater() {
+    for (let i = 0; i < M.N; i++) {
+      // 床（段々の地面）から水面まで。乾いたマスは床の少し下へ隠す（高さ 0 の柱の上の面が床と重なって見えないように）
+      const top = wWet[i] ? rTop[i] : rFloor[i] - 1e-4;
+      VOXEL.setCol(waterV.geometry, M, C, i, top, wWet[i] ? rFloor[i] : top);
+      VOXEL.setColorRGB(waterV.geometry, C, i, wCol[i * 3], wCol[i * 3 + 1], wCol[i * 3 + 2], 0.85);
+    }
+    const wv = waterV.geometry.attributes; wv.position.needsUpdate = true; wv.color.needsUpdate = true;
   }
 
   // カメラ: 星のまわりをまわる（星と一緒に自転する）。近づくと地平線の方を向く
@@ -238,7 +281,9 @@ const VIEW = (() => {
   function pick(e) {
     const r = cv.getBoundingClientRect();
     ray.setFromCamera({ x: (e.clientX - r.left) / r.width * 2 - 1, y: -(e.clientY - r.top) / r.height * 2 + 1 }, camera);
-    const hit = ray.intersectObjects(st.style === 'voxel' ? [waterV, landV] : [waterMesh, landMesh])[0];
+    // 当たりはいつもボクセルの柱で取る（見えていなくても three.js の Raycaster は当たる）
+    if (st.style !== 'voxel') { writeVoxelWater(); waterV.updateMatrixWorld(); landV.updateMatrixWorld(); }
+    const hit = ray.intersectObjects([waterV, landV])[0];
     if (!hit) return -1;
     tmp.copy(hit.point).applyQuaternion(planet.quaternion.clone().invert()).normalize();
     return nearest(tmp.x, tmp.y, tmp.z);
@@ -256,9 +301,44 @@ const VIEW = (() => {
     const w = cv.clientWidth, h = cv.clientHeight;
     renderer.setSize(w, h, false); camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix();
   }
+  function updateVapor() {
+    const u = vapor.userData, hs = st.honest, now = performance.now() / 1000, dt = Math.min(0.1, u.last ? now - u.last : 0);
+    u.last = now;
+    const pa = vapor.geometry.attributes.position.array, ca = vapor.geometry.attributes.color.array, NV = u.age.length;
+    vapor.visible = !!(hs && hs.removed);
+    if (!vapor.visible) return;
+    // 生まれる: ランダムなマスを選び、蒸発の速さ（1e-6〜1 kg/m²/s を対数で 0〜1）の確率で
+    // 1コマに生む数は「入れ物の数 × dt ÷ 平均の寿命」まで（多すぎると、生まれてすぐ上書きされて見えない）
+    let budget = Math.ceil(NV * dt / 2.25);
+    for (let k = 0; k < 4000 && budget > 0; k++) {
+      const i = Math.floor(Math.random() * M.N), f = hs.flux[i];
+      if (!(f > 0) || Math.random() > Math.min(1, Math.log10(f / 1e-6) / 6) * 0.8) continue;
+      const j = u.next; u.next = (u.next + 1) % NV; budget--;
+      const jx = (Math.random() - 0.5) * M.Lavg, jy = (Math.random() - 0.5) * M.Lavg, jz = (Math.random() - 0.5) * M.Lavg;
+      let dx = M.pos[i * 3] + jx, dy = M.pos[i * 3 + 1] + jy, dz = M.pos[i * 3 + 2] + jz; const l = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      u.dir[j * 3] = dx / l; u.dir[j * 3 + 1] = dy / l; u.dir[j * 3 + 2] = dz / l;
+      u.r0[j] = rTop[i]; u.age[j] = 0; u.life[j] = 1.5 + Math.random() * 1.5; u.vel[j] = hs.boil[i] ? 0.22 : 0.09;
+    }
+    for (let j = 0; j < NV; j++) {
+      u.age[j] += dt;
+      const a = u.age[j] / u.life[j];
+      if (a >= 1) { ca[j * 3] = ca[j * 3 + 1] = ca[j * 3 + 2] = 0; continue; }
+      const r = u.r0[j] + u.vel[j] * u.age[j];
+      pa[j * 3] = u.dir[j * 3] * r; pa[j * 3 + 1] = u.dir[j * 3 + 1] * r; pa[j * 3 + 2] = u.dir[j * 3 + 2] * r;
+      const b = 0.75 * (1 - a) * Math.min(1, a * 6);          // ふわっと出て、うすれて消える
+      ca[j * 3] = b * 0.8; ca[j * 3 + 1] = b * 0.92; ca[j * 3 + 2] = b;   // 少し青みのある白
+    }
+    vapor.geometry.attributes.position.needsUpdate = true; vapor.geometry.attributes.color.needsUpdate = true;
+  }
   function render(spin) {
+    updateVapor();
     planet.rotation.y = spin;
     placeCamera();
+    // 光: めぐる＝太陽は止まっていて星が自転する／いつも昼＝見ている側の少し左上から／いつも夜＝見ている側の反対から（見た目だけ）
+    const cp = camera.position.clone().normalize();
+    if (st.light === 'day') { sun.position.copy(cp).multiplyScalar(5).add(new THREE.Vector3(-1.5, 2, 0).applyQuaternion(camera.quaternion)); sun.intensity = 1.25; hemi.intensity = 0.42; }
+    else if (st.light === 'night') { sun.position.copy(cp).multiplyScalar(-5).add(new THREE.Vector3(0, 1.2, 0).applyQuaternion(camera.quaternion)); sun.intensity = 1.0; hemi.intensity = 0.16; }
+    else { sun.position.set(5, 2, 3); sun.intensity = 1.25; hemi.intensity = 0.42; }
     const hs = st.honest;
     // 殻: 正直モードで外したあとは消す。かわりに、逃げていく空気をうすい球で（大きさ・こさは見た目だけ）
     shell.visible = camera.position.length() > 1.3 && !(hs && hs.removed);
@@ -270,5 +350,5 @@ const VIEW = (() => {
     renderer.render(scene, camera);
   }
   return { init, setStyle, rebuildLand, updateWater, render, resize, pick, setAlt, screenUpInPlanet, screenRightInPlanet, st,
-    set onTap(f) { onTap = f; }, get camera() { return camera; } };
+    set onTap(f) { onTap = f; }, get camera() { return camera; }, get vapor() { return vapor; } };
 })();

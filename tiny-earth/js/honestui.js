@@ -19,7 +19,7 @@ const HUI = (() => {
   function init(c) {
     ctx = c;
     const N = c.mesh.N;
-    vs = { liq: new Float32Array(N), ice: new Float32Array(N), boil: new Uint8Array(N), airM: 1, brown: 0, removed: false };
+    vs = { liq: new Float32Array(N), ice: new Float32Array(N), boil: new Uint8Array(N), flux: new Float32Array(N), airM: 1, brown: 0, removed: false };
     $('shellBtn').addEventListener('click', () => (H.on ? off() : on()));
     $('ht').addEventListener('input', () => { H.v = +$('ht').value; apply(); });
     $('hPlay').addEventListener('click', () => {
@@ -36,6 +36,7 @@ const HUI = (() => {
   }
   function off() {
     H.on = false; VIEW.st.honest = null; clearTimeout(H.timer); H.busy = false;
+    $('thermo').hidden = true;
     $('hBox').hidden = true;
     $('shellBtn').textContent = '殻を外す（正直モード）';
     $('hNote').textContent = '殻を外すと、空気・海・森がこの大きさの星で本当はどうなるかを、時間を追って見られます。';
@@ -51,7 +52,7 @@ const HUI = (() => {
       H.model = HONEST.build(O.R, O.P, O.P.H0);
       H.busy = false;
       VIEW.st.honest = vs;
-      $('hBox').hidden = false;
+      $('hBox').hidden = false; $('thermo').hidden = false;
       events(); explain(); apply();
     }, 120);
   }
@@ -79,14 +80,18 @@ const HUI = (() => {
     $('hudT').textContent = t <= 0 ? '殻を外す前' : '殻を外して ' + when(t);
     const air = HONEST.airAt(Mo.A, t);
     vs.removed = t > 0; vs.airM = air.m;
-    let wl = 0, wi = 0, w0 = 0, Tsum = 0, Tn = 0;
+    let wl = 0, wi = 0, w0 = 0, Tsum = 0, Tn = 0, Ssum = 0, Sn = 0, Fsum = 0, Bn = 0;
     for (let i = 0; i < m.N; i++) {
       const d = H.h0[i];
-      if (d <= 0) { vs.liq[i] = 0; vs.ice[i] = 0; vs.boil[i] = 0; continue; }
+      if (d <= 0) { vs.liq[i] = 0; vs.ice[i] = 0; vs.boil[i] = 0; vs.flux[i] = 0; continue; }
       const c = HONEST.colAt(Mo, d, t);
       vs.liq[i] = c[0]; vs.ice[i] = c[1]; vs.boil[i] = c[2];
       const a = m.area[i]; w0 += d * a; wl += c[0] * a; wi += c[1] * a;
       if (c[1] > 0 && !c[2]) { Tsum += c[3] * a; Tn += a; }
+      if (c[0] + c[1] > 0) {   // 水か氷が残っているマス: 表面の温度と蒸発の速さ
+        const f = vs.flux[i] = HONEST.flux(c);
+        Ssum += c[3] * a; Sn += a; Fsum += f * a; if (c[2]) Bn += a;
+      } else vs.flux[i] = 0;
     }
     // 森が枯れていく見た目: 気圧が水の蒸気圧を下回ってから、時刻が 100 倍になるまでに色を変える（速さは見た目だけ）
     const tb = (Mo.ev.find(e => e[1].startsWith('海が沸き')) || [])[0];
@@ -106,7 +111,34 @@ const HUI = (() => {
         ['森', vs.brown <= 0 ? '生きている' : vs.brown < 1 ? '葉の水が抜けて枯れていく' : '枯れた（凍って乾いた）'],
       ].map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
       for (const li of $('hEv').children) li.classList.toggle('past', !!li.dataset.t && +li.dataset.t <= t);
+      thermo(t, air, Sn > 0 ? Ssum / Sn : null, Sn > 0 ? Fsum / Sn : 0, Sn > 0 ? Bn / Sn : 0, w0 > 0 ? (wl + wi) / w0 : 0);
     }
+  }
+  // 温度計（目盛り −120〜+30℃）・蒸発の速さ・いま起きていること
+  function thermo(t, air, Tsea, F, fBoil, left) {
+    const set = (id, T) => {
+      const el = $(id), v = $(id + 'V');
+      if (T == null) { el.style.height = '0'; v.textContent = '—'; return; }
+      const c = T - 273.15;
+      el.style.height = Math.max(0, Math.min(100, (c + 120) / 150 * 100)) + '%';
+      el.classList.toggle('cold', c < 0);
+      v.textContent = Math.round(c) + '℃';
+    };
+    const airThere = air.p > 1e-4;
+    set('thSea', Tsea); set('thAir', airThere ? air.T : null);
+    // 蒸発の速さ: 表面 1 m² から 1 日に何 mm の水が消えるか
+    const mmDay = F / 1000 * 86400 * 1000;
+    $('vapK').textContent = fBoil > 0.5 ? '蒸発（沸騰）' : F > 0 ? '昇華（氷→水蒸気）' : '蒸発';
+    $('vapV').textContent = F <= 0 ? 'なし' : (mmDay >= 100 ? Math.round(mmDay / 10) / 100 + ' m' : mmDay >= 1 ? mmDay.toPrecision(2) + ' mm' : (mmDay * 1000).toPrecision(2) + ' μm') + '/日';
+    let msg;
+    if (t <= 0) msg = '殻の中: 1気圧・15℃。';
+    else if (left <= 1e-3) msg = '海はなくなった。空気も水もない星。';
+    else if (fBoil > 0.5 && Tsea > 273.2) msg = '海が沸騰。蒸発が熱をうばい、水が冷えていく。';
+    else if (fBoil > 0.5) msg = '0℃ で沸きながら凍っていく。';
+    else if (F > 0) msg = '氷の表面から水蒸気が出ていく（昇華）。日光と、熱の放射・昇華がつりあう温度。';
+    else if (airThere && air.p < 0.9) msg = '空気が宇宙へ広がっていく。広がる空気は冷える（断熱膨張）。';
+    else msg = '空気が残っている。海は沸かない。';
+    $('thMsg').textContent = msg;
   }
   function step(realDt) {
     if (!H.on || !H.model || H.busy) return;
