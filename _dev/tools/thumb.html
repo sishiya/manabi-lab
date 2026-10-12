@@ -19,6 +19,8 @@ const click = (w, sel) => { const e = w.document.querySelector(sel); if (e) e.cl
 
 // アプリごとの準備（w = アプリの window）
 const SETUP = {
+  // 目のなかの光の道（近くの物を見て水晶体がふくらみ、上の端からの光も見せる）
+  'eye-optics': async w => { await wait(800); w.__eyop.set({ age: 8, d: 250, showTop: true }); w.__eyop.simRun(1.5); await wait(300); },
   // 声帯のしくみ（画面ができたら、いちばん映える場面にする）
   'vocal-folds': async w => { await wait(1500); },
   // 細菌にとりつくウイルス（画面ができたら、いちばん映える場面にする）

@@ -1,0 +1,51 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>目のなかの光の道</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2313202e'/><ellipse cx='32' cy='32' rx='24' ry='14' fill='none' stroke='%237fd4ff' stroke-width='5'/><circle cx='32' cy='32' r='7' fill='%237fd4ff'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <header id="top"><h1>目のなかの光の道</h1><span class="sub">光が目の中で曲がって、網膜に像を結ぶまで</span></header>
+  <main id="stage">
+    <canvas id="cv"></canvas>
+    <div id="tour"><span id="tourNum"></span><p id="tourText"></p><button id="next">つぎへ</button></div>
+    <div id="info"></div>
+    <div id="view"><div id="viewHead">見え方</div><div class="chartbox"><canvas id="chart"></canvas><canvas id="chartLab"></canvas></div><div class="vnote">数字は視力の段（目安）。大きさはそろえて表示</div></div>
+    <div id="tip" hidden></div>
+  </main>
+  <div id="controls"></div>
+  <details id="about">
+    <summary>このアプリについて</summary>
+    <p>目を横から切った断面で、光線を1本ずつ計算しています。面ごとにスネルの法則（屈折の法則）で曲げ、虹彩（ひとみ）を通った光だけを網膜まで追います。目の寸法と屈折率は、研究で使われる目の模型（Navarro ほか 1985）の値です。近くを見るときの水晶体の形の変化（調節）も、その論文の式で計算しています。</p>
+    <p>ピント合わせは「網膜のぼけがいちばん小さくなる調節」を、その年齢でできる範囲（Hofstetter 1950 の平均の式）の中で探しています。ひとみの大きさは明るさから Crawford 1936 の式で決めています（明るさの値はおおよその例）。</p>
+    <h3>簡単にしているところ</h3>
+    <ul>
+      <li>断面の上下の1平面だけで光線を追っています。網膜は半径 12 mm の球としています（実際はやや平たいだ円体）。</li>
+      <li>水晶体の屈折率は一様としています（本物は中心ほど高い）。調節で、形をゆがめる度合い（非球面の係数）は変えていません。10 D をこえる調節は、式をそのままのばした推定です。</li>
+      <li>年齢で変わるのは調節できる幅だけです（水晶体の形・ひとみの大きさの年齢による変化は入れていません）。近視・遠視は目の長さだけを変えています。</li>
+      <li>光の回折、色によるずれ（色収差）、網膜の細胞の細かさは入れていません。「見え方」は、網膜のぼけの広がりを同じ広がりのぼかしにして近似したものです。「ぼやける」は、ぼけの円が 2 分（1/30 度）より大きいときとしています（このアプリの目安）。</li>
+      <li>メガネは角膜の 12 mm 手前のうすいレンズとし、度は 0.25 D きざみ。遠く用は遠くがいちばんくっきりする度、近く用は 40 cm を調節の半分の力で見られる度（このアプリの決め方）です。</li>
+      <li>視神経は、場所を示すために断面に描いています（実際は中心窩より鼻の側にあります）。</li>
+    </ul>
+    <p><b>学習用に簡単にしたものです。目の病気や視力の判断、メガネの度を決めることには使えません。</b>目のことは眼科で相談してください。</p>
+    <h3>おもな出どころ</h3>
+    <ul>
+      <li>Navarro R, Santamaría J, Bescós J (1985) Accommodation-dependent model of the human eye with aspherics. <i>Journal of the Optical Society of America A</i> 2(8):1273–1281. <a href="https://doi.org/10.1364/JOSAA.2.001273" target="_blank" rel="noopener">doi:10.1364/JOSAA.2.001273</a>（目の寸法・屈折率・調節の式）</li>
+      <li>Hofstetter HW (1950) Useful age-amplitude formula. <i>Optometric World</i> 38:42–45（年齢と調節できる幅の平均: 18.5 − 0.30 × 年齢 D）</li>
+      <li>Watson AB, Yellott JI (2012) A unified formula for light-adapted pupil size. <i>Journal of Vision</i> 12(10):12（ひとみの大きさの式のまとめ。ここでは その中の Crawford 1936 の式を使用）</li>
+      <li>Atchison DA ほか (2005) Shape of the retinal surface in emmetropia and myopia. <i>Investigative Ophthalmology &amp; Visual Science</i> 46(8):2698–2707（網膜の形）</li>
+      <li>ISO 8596（ランドルト環による視力表の形）</li>
+    </ul>
+    <h3>使っているもの</h3>
+    <p>フォント: Google Fonts（SIL Open Font License）</p>
+  </details>
+</div>
+
+<script src="js/optics.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>

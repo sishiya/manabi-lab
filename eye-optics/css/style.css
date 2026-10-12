@@ -1,0 +1,55 @@
+/* 目のなかの光の道 */
+:root{--bg:#13202e;--ink:#e8f0f4;--muted:#a3b4bf;--acc:#7fd4ff;--panel:rgba(12,22,32,0.86);--line:rgba(232,240,244,0.16);
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+#app{display:flex;flex-direction:column;min-height:100%}
+#top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding:10px 16px 4px}
+#top h1{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0}
+#top .sub{color:var(--muted);font-size:13px}
+#stage{flex:1;position:relative;min-height:560px;overflow:hidden}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+
+#tour{position:absolute;left:16px;top:8px;width:min(540px,calc(100% - 330px));background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;display:flex;gap:10px;align-items:center}
+#tour p{margin:0;font-size:14px;line-height:1.6;flex:1}
+#tourNum{font-family:var(--f-mono);font-size:11px;color:var(--muted);align-self:flex-start;padding-top:3px}
+#next{flex:none;font:inherit;font-weight:700;font-size:15px;background:var(--acc);color:#0b1620;border:0;border-radius:8px;padding:10px 16px;cursor:pointer}
+#next:hover{filter:brightness(1.1)}
+
+#info{position:absolute;left:16px;bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;min-width:250px}
+#info div{display:flex;gap:8px;align-items:baseline;line-height:1.7}
+#info span{color:var(--muted);flex:1}
+#info b{font-family:var(--f-mono);font-weight:500}
+#info small{color:var(--muted);font-family:var(--f-mono)}
+#info .state{margin-top:4px;font-weight:700}
+#info .state.ok{color:#9be59b}
+#info .state.blur{color:#ffb070}
+
+#view{position:absolute;right:16px;top:8px;width:290px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px}
+#viewHead{font-size:13px;margin-bottom:6px}
+.chartbox{position:relative;height:190px;border-radius:6px;overflow:hidden;background:#f4f1ea}
+.chartbox canvas{position:absolute;inset:0;width:100%;height:100%}
+.vnote{font-size:11px;color:var(--muted);margin-top:4px}
+
+#tip{position:absolute;max-width:300px;background:#f4f1ea;color:#16202a;border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.6;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:5}
+
+#controls{display:flex;flex-wrap:wrap;gap:8px 18px;padding:10px 16px;border-top:1px solid var(--line)}
+#controls .grp{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+#controls .gname{font-size:12px;color:var(--muted);margin-right:4px}
+#controls button{font:inherit;font-size:13px;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 9px;cursor:pointer}
+#controls button.on{background:var(--acc);color:#0b1620;border-color:var(--acc);font-weight:700}
+#controls .chk{font-size:13px;gap:6px;cursor:pointer}
+
+#about{padding:8px 16px 24px;color:var(--muted);font-size:14px;line-height:1.8;max-width:900px}
+#about summary{cursor:pointer;color:var(--ink)}
+#about a{color:var(--acc)}
+#about h3{color:var(--ink);font-size:15px;margin:14px 0 4px}
+
+@media (max-width:719px){
+  /* 狭い画面: 案内 → 図 → 数字 → 見え方 を縦に並べる（重ねない） */
+  #stage{display:flex;flex-direction:column;gap:8px;padding:6px 8px;min-height:0;overflow:visible}
+  #cv{position:relative;inset:auto;height:300px;order:2}
+  #tour{position:static;order:1;width:auto;flex-direction:column;align-items:stretch}
+  #info{position:static;order:3;min-width:0}
+  #view{position:static;order:4;width:auto}
+  .chartbox{height:170px}
+}
