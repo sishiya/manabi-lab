@@ -25,7 +25,7 @@
 
 | フォルダ | アプリ |
 |---|---|
-| `pitch-physics/` | 変化球のしくみ |
+| `pitch-physics/` | 変化球のしくみ（技術検証） |
 | `eye-optics/` | 目のなかの光の道 |
 | `passkey/` | パスキーのしくみ |
 | `brain-response/` | 刺激が脳に届くまで |

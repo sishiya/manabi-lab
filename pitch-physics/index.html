@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="css/style.css">
 
 <div id="app">
-  <header id="top"><h1>変化球のしくみ</h1><span class="sub">速さ・向き・回転から、ボールにかかる力を計算して道すじを解く</span><button id="tourOpen">案内を出す</button></header>
+  <header id="top"><h1>変化球のしくみ</h1><span class="badge" title="計算と見せ方を試すための技術検証です。選手の指導や評価には使えません">技術検証</span><span class="sub">速さ・向き・回転から、ボールにかかる力を計算して道すじを解く</span><button id="tourOpen">案内を出す</button></header>
   <div id="tour" hidden><span id="tourNum"></span><p id="tourText" title="タップで全文"></p><button id="next">つぎへ</button><button id="tourClose" aria-label="案内をしまう">×</button></div>
   <main id="stage">
     <div id="views">
@@ -35,6 +35,7 @@
   <div id="tip" hidden></div>
   <details id="about">
     <summary>このアプリについて</summary>
+    <p class="note-tech"><b>このアプリは技術検証です。</b>ボールの飛び方を、測定から作られた係数で計算して見せられるかを試しています。数値は研究や公開されている平均値をもとにした目安で、投手の例はすべて目安か架空です。選手の投げ方の指導・評価・判断には使えません。</p>
     <p>球種の名前から曲がり方を決めていません。放す位置・速さ・向きと、回転（回転数と回転軸の向き）だけを入れ、ボールに働く力を計算して運動方程式を解いています（4次のルンゲ＝クッタ法、1 ミリ秒きざみ）。働く力は次のとおりです。</p>
     <ul>
       <li><b>重力</b> mg（真下）。</li>

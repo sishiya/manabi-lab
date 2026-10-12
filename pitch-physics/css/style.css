@@ -225,3 +225,7 @@ i.sw.plain{background:repeating-linear-gradient(90deg,rgba(240,240,230,.9) 0 6px
 #refToggle{position:absolute;top:44px;right:8px;z-index:2;background:rgba(13,24,18,.78);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:14px;padding:4px 10px;font:500 12px var(--f-body);cursor:pointer;min-height:30px}
 #views:not(.v3d) #refToggle{display:none}
 @media (max-width:640px){ #views.v3d #refToggle{top:auto;bottom:52px;right:8px;min-height:36px} }
+
+/* 技術検証の札 */
+#top .badge{display:inline-block;font:700 11px var(--f-body);color:#1a1a1a;background:#ffd166;border-radius:10px;padding:2px 8px;letter-spacing:.05em}
+.note-tech{background:rgba(255,209,102,.1);border:1px solid rgba(255,209,102,.35);border-radius:8px;padding:8px 10px;color:var(--ink)}
