@@ -10,6 +10,9 @@
     続きは1行（GO はもらってある）: `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/replace-videos.ps1 -Apps metamorphosis,air-flow,ga-creatures,mold-growth`
     → 上限で止まったら日本時間16時すぎに同じコマンド。**さなぎ（10/16）は 10/15 の前日確認までに**。上がらなかった動画は古い方（音が小さい版）がそのまま公開される。
   - 46億年の2本は公開ずみなので差しかえない（2026-10-12 ユーザー）。
+  - 注意: 新しい体内ダイブの説明動画（C6h7u6C5p88）といきものの説明動画（FHNZ18v8kIQ）は、上げるとき「接続が切れた」が出た。11:30 の時点で YouTube の処理中（processing）。
+    `-Verify -Meta _dev/promo/<名前>.upload.json` が OK になるか見る。体内ダイブは 10/12 18:30 までに終わらなければ、古い Bb4pSYgpfx4 を 20:00 に予約しなおして新しい方の予約を外す見張りを動かした（セッションの中だけ）。
+    いきもの（10/14）が処理で止まったままなら、古い fTvY3UHVNYg を 10/14 20:00 に予約しなおすか、もう一度上げる。
   - [ ] 差しかえた古い動画を Studio で消す（ユーザー）: Bb4pSYgpfx4・y-jvQvZPn70・fTvY3UHVNYg・h8TCh3ey6xs（＋残り8本の古い ID は各 upload.json の `oldVideoIds`）。
 - [ ] **毎日の公開前の最終確認**（RULES 8.4、前日に）: 10/12〜10/22 の各日の2本を前の日に `youtube-upload.ps1 -Verify`・mp4 のコマ・公開中のアプリで。10/11 分はすみ（upload-log.md）。
   10/11 に -Verify で全日をざっと見たところ、10/12〜14 は OK、10/22 のカビ2本の英語の字幕も 10/11 に付けた。24本の予約日時は -List で表どおり。

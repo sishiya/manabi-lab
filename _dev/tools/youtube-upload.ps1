@@ -454,11 +454,15 @@ function Invoke-Verify {
     Write-Host ""; Write-Host "== $mp（https://youtu.be/$($m.videoId)）"
     $bad = New-Object 'Collections.Generic.List[string]'; $note = New-Object 'Collections.Generic.List[string]'
     if (-not $m.videoId) { Write-Host "  NG: videoId がありません"; $ng++; continue }
-    try { $v = (Invoke-RestMethod -Headers $h -Uri "https://www.googleapis.com/youtube/v3/videos?part=snippet,status,localizations,contentDetails&id=$($m.videoId)").items | Select-Object -First 1 }
+    try { $v = (Invoke-RestMethod -Headers $h -Uri "https://www.googleapis.com/youtube/v3/videos?part=snippet,status,localizations,contentDetails,processingDetails&id=$($m.videoId)").items | Select-Object -First 1 }
     catch { Write-Host "  NG: 動画を読めませんでした: $(Get-ErrText $_)"; $ng++; continue }
     if (-not $v) { Write-Host "  NG: YouTube に動画が見つかりません"; $ng++; continue }
     $st = $v.status; $sn = $v.snippet
-    if ($st.uploadStatus -ne 'processed') { $bad.Add("処理が終わっていない（$($st.uploadStatus)）") }
+    if ($st.uploadStatus -ne 'processed') {
+      $pd = $v.processingDetails   # 処理の進み具合（送り切れていない・失敗したときの理由も）
+      $why = if ($pd) { "、処理: $($pd.processingStatus)$(if ($pd.processingFailureReason) { ' ' + $pd.processingFailureReason })$(if ($pd.processingProgress) { " $($pd.processingProgress.partsProcessed)/$($pd.processingProgress.partsTotal)" })" } else { '' }
+      $bad.Add("処理が終わっていない（$($st.uploadStatus)$(if ($st.failureReason) { ' ' + $st.failureReason })$why）")
+    }
     if ($st.privacyStatus -ne 'private') { $bad.Add("公開の状態が $($st.privacyStatus)（予約は private のはず）") }
     if ($m.publishAt) {
       $want = [DateTimeOffset]::Parse($m.publishAt, [Globalization.CultureInfo]::InvariantCulture)
