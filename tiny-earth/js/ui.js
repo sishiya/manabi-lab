@@ -96,11 +96,6 @@ const UI = (() => {
       const ex = Math.round(Math.pow(10, +$('ex').value / 100)); $('exV').textContent = '×' + ex;
       if (!exPend) exPend = requestAnimationFrame(() => { exPend = 0; h.setEx(Math.round(Math.pow(10, +$('ex').value / 100))); });
     });
-    $('styleBtns').addEventListener('click', e => {
-      const v = e.target.dataset && e.target.dataset.s; if (!v) return;
-      for (const b of $('styleBtns').children) b.classList.toggle('on', b === e.target);
-      h.setStyle(v);
-    });
     $('lightBtns').addEventListener('click', e => {
       const v = e.target.dataset && e.target.dataset.l; if (!v) return;
       for (const b of $('lightBtns').querySelectorAll('button')) b.classList.toggle('on', b === e.target);
@@ -138,5 +133,14 @@ const UI = (() => {
     li.push('風で木がゆれる大きさ: 風の力も木の硬さも重力と関係ないので、地球とほとんど同じ');
     $('forestNums').innerHTML = li.map(t => `<li>${t}</li>`).join('');
   }
-  return { forest, life, lifePhys, init, nums, live, facts, setSizeLabel, len, speed, dur, sig, $ };
+  function close(O) {
+    const f = CLOSE.facts(), li = [];
+    li.push(`体重 70 kg の人が感じる重さ: ${f.weight < 1000 ? sig(f.weight) + ' g' : sig(f.weight / 1000) + ' kg'}（地球の ${ratio(O.P.gRel)}）`);
+    li.push(`地平線まで ${len(f.horizon)}。歩ける速さは ${speed(f.walk)} まで（それより速いと足が地面からはなれる）`);
+    li.push(`ジャンプ（地球で 50 cm の力）: ${len(f.jumpY)} まで上がり${f.jumpShell ? '（殻にぶつかる）' : ''}、降りてくるまで ${dur(f.jumpT)}。空気がなければ ${isFinite(f.jumpNoAir) ? len(f.jumpNoAir) + ' まで' : '宇宙へ飛んでいく'}`);
+    li.push(`しぶき（直径 3 mm）の落ちる速さ: ${speed(f.vDrop)}（地球 ${speed(f.vDropE)}）。霧のように漂う`);
+    li.push(`雨つぶの大きさの上限: 直径 ${len(f.dRain)}（地球 6 mm）。落ちる速さ ${speed(f.vRain)}（地球の 6 mm のつぶ ${speed(f.vRainE)}）、${len(Math.min(0.24 * O.R, 240))} の高さから ${dur(f.fallT)}`);
+    $('closeNums').innerHTML = li.map(t => `<li>${t}</li>`).join('');
+  }
+  return { close, forest, life, lifePhys, init, nums, live, facts, setSizeLabel, len, speed, dur, sig, $ };
 })();

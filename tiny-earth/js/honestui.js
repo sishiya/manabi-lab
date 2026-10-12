@@ -29,6 +29,7 @@ const HUI = (() => {
     $('hEv').addEventListener('click', e => { const li = e.target.closest('li'); if (li && li.dataset.t) { H.v = vOf(+li.dataset.t); apply(); } });
   }
   function on() {
+    if (CLOSE.on) document.getElementById('closeBtn').click();   // そばで見るのをやめてから
     H.on = true; H.v = 0; H.playing = true;
     $('shellBtn').textContent = '殻をもどす（ふだんの計算へ）';
     $('hPlay').textContent = '一時停止';

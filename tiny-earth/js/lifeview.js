@@ -1,7 +1,7 @@
 // ちいさな地球 — 生きものの描画（種類ごとに箱を組んだ形の InstancedMesh）。見やすく DRAW 倍の大きさで描く（画面に書く）
 'use strict';
 const LVIEW = (() => {
-  const DRAW = 20;
+  let DRAW = 20;   // そばで見るときは 1（本当の大きさ）
   let meshes = [], L = null;
   // 形: [幅, 高さ, 奥行き, x, y, z, 色の倍率]（体の長さ 1、+z が前、+y が上、足もとが原点）
   const SHAPE = {
@@ -65,5 +65,5 @@ const LVIEW = (() => {
     });
     meshes.forEach((m, s) => { m.count = idx[s]; m.instanceMatrix.needsUpdate = true; m.instanceColor.needsUpdate = true; });
   }
-  return { init, update, DRAW };
+  return { init, update, get DRAW() { return DRAW; }, set DRAW(v) { DRAW = v; } };
 })();

@@ -13,9 +13,11 @@ const cv = document.getElementById('cv');
 VIEW.init(cv, mesh, terrain, ocean);
 const life = LIFE.create(mesh, terrain, ocean);
 FOREST.init(VIEW.planet);
+CLOSE.init({ mesh, ocean, life, S, setEx: v => { handlers.setEx(v); UI.$('ex').value = Math.round(Math.log10(v) * 100); UI.$('exV').textContent = '×' + v; } });
 LVIEW.init(life);
 
 function setR(R) {
+  if (typeof CLOSE !== 'undefined' && CLOSE.on) UI.$('closeBtn').click();   // 大きさを変えたら、そばで見るのをやめる
   const keepT = ocean.t;
   OCEAN.reset(ocean, R);
   ocean.t = keepT;
@@ -46,7 +48,6 @@ const handlers = {
   shake() { const r = VIEW.screenRightInPlanet(); const v = ocean.P.c0; OCEAN.shake(ocean, r.x * v, r.y * v, r.z * v); LIFE.startle(life, 0, Math.PI * ocean.R * 2); },   // 星がゆれると、陸の生きものはみなおどろいて跳ぶ
   dropCenter() { const c = centerCell(); if (c >= 0) dropAt(c); },
   setEx(v) { VIEW.st.ex = v; VIEW.rebuildLand(); exNote(); },
-  setStyle(v) { VIEW.setStyle(v); VIEW.rebuildLand(); },
 };
 function dropAt(c) {
   // 水のかたまりが落ちてきて、海に着いた瞬間に水を足す（それまでは海は動かさない）
@@ -66,7 +67,7 @@ function centerCell() {
   const r = cv.getBoundingClientRect();
   return VIEW.pick({ clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 });
 }
-VIEW.onTap = e => { const c = VIEW.pick(e); if (c >= 0) dropAt(c); };
+VIEW.onTap = e => { const c = VIEW.pick(e); if (c < 0) return; if (CLOSE.on) CLOSE.splashAt(c); else dropAt(c); };   // そばで見るときは石が落ちる
 UI.init(handlers);
 HUI.init({ mesh, ocean, terrain, life });
 UI.$('lifeShow').addEventListener('click', e => { life.on = !life.on; e.target.classList.toggle('on', life.on); e.target.textContent = life.on ? '見せる' : '見せない'; });
@@ -78,6 +79,19 @@ let treePend = 0;
 UI.$('treeH').addEventListener('input', () => { const H = treeHOf(+UI.$('treeH').value); UI.$('treeHV').textContent = UI.len(H); if (!treePend) treePend = requestAnimationFrame(() => { treePend = 0; setTreeH(treeHOf(+UI.$('treeH').value)); }); });
 UI.$('treeReset').addEventListener('click', () => setTreeH(30));
 UI.$('leafBtn').addEventListener('click', () => FOREST.release(VIEW.st.trees || [], 1500));
+// そばで見る
+UI.$('closeBtn').addEventListener('click', () => {
+  if (CLOSE.on) { CLOSE.exit(); UI.$('closeBox').hidden = true; UI.$('closeBtn').textContent = '画面のまん中に立つ'; UI.$('speed').disabled = false; return; }
+  if (HUI.on) { toast('正直モードのあいだは、そばで見られません（殻をもどしてから）'); return; }
+  const c = centerCell(); if (c < 0) { toast('星のまん中に向けてから押してください'); return; }
+  CLOSE.st.speed = +UI.$('closeSpeed').value;
+  CLOSE.enter(c); UI.close(ocean);
+  UI.$('closeBox').hidden = false; UI.$('closeBtn').textContent = 'もどる（星を外から見る）'; UI.$('speed').disabled = true;
+});
+UI.$('jumpBtn').addEventListener('click', () => CLOSE.jump());
+UI.$('stoneBtn').addEventListener('click', () => { if (!CLOSE.throwAhead()) toast('15 m 先は陸でした（海の方を向いて投げてください）'); });
+UI.$('rainBtn').addEventListener('click', () => CLOSE.makeRain());
+UI.$('closeSpeed').addEventListener('change', () => { CLOSE.st.speed = +UI.$('closeSpeed').value; if (CLOSE.on) S.speed = CLOSE.st.speed; });
 UI.$('lifeReset').addEventListener('click', () => { LIFE.reset(life); UI.life(life); });
 
 // 風の向きの初め: 星の軸のまわり（西から東へ）
@@ -99,10 +113,12 @@ function step(realDt) {
   S.behind = want - r.done;     // 追いつけなかった分（重いとき）
   LIFE.step(life, r.done);
   FOREST.step(r.done, ocean, VIEW.st.trees || [], true, life);
+  CLOSE.step(r.done);
 }
 function draw(now) {
   VIEW.updateWater();
   LVIEW.update(HUI.on ? HUI.H.lifeHon : null);
+  CLOSE.draw();
   if (HUI.on) FOREST.step(0, ocean, [], false, life); else FOREST.draw(ocean);   // 正直モードでは落ち葉を出さない
   VIEW.render(ocean.t * PHYS.OMEGA);
   if (now - S.lastUI > 250) { UI.live(ocean, terrain); UI.life(life, HUI.on ? HUI.H.lifeHon : null); S.lastUI = now; }
@@ -117,7 +133,7 @@ requestAnimationFrame(loop);
 
 // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）
 window.__tiea = {
-  S, mesh, terrain, ocean, VIEW, handlers, HUI, life, setTreeH,
+  S, mesh, terrain, ocean, VIEW, handlers, HUI, life, setTreeH, CLOSE,
   simRun(sec) { let n = 0; while (sec > 0 && n < 100000) { const r = OCEAN.advance(ocean, sec, 400); sec -= r.done; n += r.n; } S.lastUI = -1e9; draw(performance.now()); return n; },
   vol() { return OCEAN.volume(ocean) / ocean.vol0 - 1; },
   cam(o) { Object.assign(VIEW.st, o); draw(performance.now()); },

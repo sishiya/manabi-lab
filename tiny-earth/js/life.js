@@ -256,5 +256,5 @@ const LIFE = (() => {
     const noAir = v >= vEsc ? Infinity : v * v * R / (2 * O.P.g * R - v * v) * Math.sin(1.05) ** 2;   // 空気がなければ（上向きの分）
     return { maxY: a.maxY, time: t, shell: !!a.hitShell, noAir };
   }
-  return { SP, create, reset, step, startle, honest, walkSpeed, cellNear, preview };
+  return { SP, create, reset, step, startle, honest, walkSpeed, cellNear, preview, fly, launch };
 })();
