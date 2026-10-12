@@ -28,11 +28,11 @@
 
 ## 進め方
 - **段階1（Claude）**: A。**2026-10-12 済み**（各アプリの `versions/<版>-seo`、smoke は全部 OK。push 前）。`_dev/tools/seo.mjs` が入口の `APPS` から、入口と各アプリの `index.html` のしるしの間（`<!-- seo -->`〜`<!-- /seo -->`）と `sitemap.xml` を作りなおす（説明文の出どころを `APPS` の1か所にする）。入口へ移したアプリはこれを走らせる（RULES 8.1）。
-- **段階2（ユーザー）**: B（登録のしかたは下）、H。
+- **段階2（ユーザー）**: B（登録のしかたは下）。**2026-10-12 済み**（確認タグは入口の head、seo.mjs が作る。sitemap 送信ずみ）。H はまだ。
 - **段階3**: C・D・E・F はユーザーが選んだものから。文案は Claude が書き、投稿・送信はユーザー。
 - 効き目は GA4 の「参照元」と Search Console で、2〜4週間後に見る。
 
-## Search Console の登録（ユーザー）
+## Search Console の登録（ユーザー。2026-10-12 済み）
 1. https://search.google.com/search-console →「プロパティを追加」→ **URL プレフィックス** に `https://sishiya.github.io/manabi-lab/`。
 2. 確認の方法は「HTML タグ」→ 出てきた `<meta name="google-site-verification" content="…">` の **content の値** を Claude に渡す（入口の `index.html` に入れて commit → push → 「確認」）。GA4 と同じアカウントなら「Google アナリティクス」の方法でも確認できることがある。
 3. 確認できたら「サイトマップ」に `sitemap.xml` を送る。
