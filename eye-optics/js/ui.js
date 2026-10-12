@@ -23,7 +23,8 @@ function buildControls() {
   const groups = [
     ['年齢', AGES.map(a => ({ key: a, label: a + '歳' })), () => S.age, 'age'],
     ['目の長さ', LENGTHS, () => S.len, 'len'],
-    ['乱視', ASTIGS, () => S.astig, 'astig'],
+    ['乱視', ASTIG_POWERS, () => S.astigP, 'astigP'],
+    ['強い向き', ASTIG_AXES, () => S.astigAx, 'astigAx'],
     ['断面', SECS, () => S.sec, 'sec'],
     ['メガネ', GLASSES, () => S.glasses, 'glasses'],
     ['明るさ', LIGHTS, () => S.light, 'light'],
@@ -48,7 +49,7 @@ function syncControls() {
   for (const row of document.querySelectorAll('#controls .grp')) {
     if (!row._get) continue;
     for (const b of row.querySelectorAll('button')) b.classList.toggle('on', String(row._get()) === b.dataset.k);
-    if (row._key === 'sec') row.hidden = S.astig === 'none';   // 断面の切りかえは乱視のときだけ
+    if (row._key === 'sec' || row._key === 'astigAx') row.hidden = S.astigP === 0;   // 向き・断面の切りかえは乱視のときだけ
   }
   for (const b of document.querySelectorAll('.vtabs button')) b.classList.toggle('on', b.dataset.c === S.chart);
   $('showTop').checked = S.showTop;
@@ -68,7 +69,7 @@ function setTour(i) {
   S.hl = st.hl; S.anim = st.anim ? { ...st.anim, t: 0 } : null;
   if (S.anim) { S.d = S.anim.from; markEvent('物を近づける'); }
   recompute(); syncControls();
-  if (st.settle) { dynSettle(S, S.At, S.stopRt); tlClear(); }   // 新しい場面: 目をすぐ合わせ、グラフも空にしてから始める
+  if (st.settle) { dynSettle(S, S.At, S.stopRt); darkSettle(S, lightOf().L); tlClear(); }   // 新しい場面: 目をすぐ合わせ、グラフも空にしてから始める
   S.sched = (st.go || []).map(g => { const o = { ...g }; delete o.at; return { t: S.t + g.at, o }; });
   $('tourText').textContent = typeof st.text === 'function' ? st.text() : st.text;
   $('tourNum').textContent = `${i + 1} / ${TOUR.length}`;
@@ -124,8 +125,8 @@ function initPointer() {
 function showTip(key, x, y) {
   const p = PARTS[key], tip = $('tip'); if (!p) return;
   tip.innerHTML = `<b>${p.name}</b><br>${p.text()}`; tip.hidden = false;
-  const W = $('stage').clientWidth, w = tip.offsetWidth;
-  const cb = $('cv').getBoundingClientRect(), sb = $('stage').getBoundingClientRect(), ox = cb.left - sb.left, oy = cb.top - sb.top;
+  const W = (tip.offsetParent || $('app')).clientWidth, w = tip.offsetWidth;
+  const cb = $('cv').getBoundingClientRect(), sb = (tip.offsetParent || $('app')).getBoundingClientRect(), ox = cb.left - sb.left, oy = cb.top - sb.top;   // 吹き出しの基準（パソコン #stage、スマホ #app）
   tip.style.left = Math.max(8, Math.min(W - w - 8, ox + x + 14)) + 'px'; tip.style.top = (oy + y + 16) + 'px';
 }
 function hideTip() { $('tip').hidden = true; }

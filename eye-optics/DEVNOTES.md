@@ -1,10 +1,10 @@
 # 目のなかの光の道 開発メモ
 
 ## 別セッションで続けるとき（まずここ）
-- いまの状態: **v004-astig**（段階C まで: 乱視（縦と横の断面を別に計算・だ円のぼけ・線の表・円柱レンズ）。段階B: ピント合わせとひとみが測られた遅れと速さで動く・時間の流れのグラフとふりかえり・速さ・見る先の切りかえ・スマホの並べ方。案内13段）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。公開 URL（push 後）: https://sishiya.github.io/manabi-lab/eye-optics/
-- 次にやること: ユーザーに見てもらう → PLAN.md の段階D以降（網膜の中・盲点・残像・暗順応・動物の目）。
+- いまの状態: **v005-dark**（段階D 暗順応（錐体と桿体のしきい値・桿体だけのときまん中が見えない）・段階E 乱視の強さ 0.75〜3 D と向き（縦・横・斜め）・スマホは図と見え方を上に固定。段階B の時間・C の乱視もふくむ。案内14段）。
+- 次にやること: 入口へ移す（ユーザーの指示 2026-10-12「準備ができたらトップページに」）: 英語対応（I18N.md）→ 入口の APPS へ。そのあと PLAN.md の段階F（網膜の中・盲点・残像・動物の目）。
 - 読む順: PLAN.md → このファイルの「ファイル構成」→ 関係するファイルだけ。
-- 動かし方: サーバー apps〜apps-6（.claude/launch.json）で http://localhost:<port>/eye-optics/ 。デバッグ用の窓口 `window.__eyop`（`simRun(秒)`＝シミュレーションの秒・`tour(i)`・`set({d, age, len, glasses, light, showTop})`（切りかえの印も残る）・`settle()`（目をすぐ合わせる）、`set({astig:'wtr'|'atr'|'none', sec:'v'|'h', chart:'acuity'|'fan'})`・`S`・`OPT`・`LAY`・`TL`（記録と印）・`DYN`（遅れと速さ））、エラーは `window.__eyopErr`。
+- 動かし方: サーバー apps〜apps-6（.claude/launch.json）で http://localhost:<port>/eye-optics/ 。デバッグ用の窓口 `window.__eyop`（`simRun(秒)`＝シミュレーションの秒・`tour(i)`・`set({d, age, len, glasses, light, showTop})`（切りかえの印も残る）・`settle()`（目をすぐ合わせる）、`set({astigP:0|0.75|1.5|3, astigAx:'v'|'h'|'d45'|'d135', sec:'s'|'w', chart:'acuity'|'fan'})`・`S`・`OPT`・`LAY`・`TL`（記録と印）・`DYN`（遅れと速さ））、エラーは `window.__eyopErr`。
 - 区切りごとの手順: versions/ にバックアップ → launcher.html → 「状態」に1行 → 「確認のしかた」と smoke.ps1 → 公開前チェック → commit。
 - ユーザーの好み: つぎへボタン1つで進める案内、マウスをのせると説明（RULES・メモリ）。物理を曲げない。
 
@@ -13,16 +13,16 @@
 
 | ファイル | 中身 | 主な関数・変数 |
 |---|---|---|
-| index.html | 骨組み（図・案内・数字・見え方・時間の流れ・ボタン）・このアプリについて（出どころ・簡単にしたところ） | |
-| css/style.css | 見た目。719px 以下は 案内 → 図 → 見え方と数字（横に2つ）→ 時間のグラフ → ボタン | |
+| index.html | 骨組み（`#pin`＝図と見え方・案内・数字・時間の流れ・ボタン）・このアプリについて（出どころ・簡単にしたところ）。`#pin` はパソコンでは display:contents | |
+| css/style.css | 見た目。719px 以下は `#stage` を display:contents にし、`#pin`（図と見え方と状態の1行）を sticky で上に固定、案内・数字・時間のグラフ・ボタンはスクロール（基本ルール RULES 9章） | |
 | js/optics.js | 目の模型と光線の計算（描画なし、Node でも動く）。乱視は `cyl`（角膜の前の面がその断面で強い分 D）を各関数の最後の引数で | `OPT`・`lensParams(A)`・`buildEye(A,dL,stopR,cyl)`・`traceRay`・`traceBundle`（扇と網膜のぼけ）・`paraxialFocus`・`solveAccommodation`・`refractiveError`・`farGlasses`・`nearGlasses`・`maxAccommodation`・`pupilDiameter`・`stopRadiusFor`・`retinaScale`・`goldenMin` |
-| js/dynamics.js | 時間の変化: 調節とひとみの遅れと速さ（Bharadwaj & Schor 2006・Mathôt 2018） | `DYN`・`dynStep(st,t,dt,At,stopRt)`・`dynSettle`・`makeDelay`・`delayFeed` |
-| js/scene.js | 状態 `S`（乱視 `astig`・断面 `sec`・表 `chart`、メガネ `Pv`/`Ph`、屈折 `err`/`errH`）・選べる条件（`ASTIGS`・`SECS`）・`recompute`/`retarget`・条件を変える `applyCond`（切りかえの印）・部分の説明 `PARTS`・案内 `TOUR`（`settle`・`go`・`win`） | `AGES`・`LENGTHS`・`GLASSES`・`LIGHTS`・`NEAR_D`/`FAR_D`・`EV_NAMES`・`fmtD`・`fmtDi` |
+| js/dynamics.js | 時間の変化: 調節とひとみの遅れと速さ（Bharadwaj & Schor 2006・Mathôt 2018）、暗順応（Patryas ほか 2013 ほか） | `DYN`・`dynStep(st,t,dt,At,stopRt)`・`dynSettle`・`makeDelay`・`delayFeed`・`DARK`・`darkStep(st,dt,L,age)`・`darkSettle`・`darkSee`（cone／rod／none と余裕） |
+| js/scene.js | 状態 `S`（乱視 `astigP`・`astigAx`・断面 `sec`（s 強い向き／w 弱い向き）・表 `chart`、メガネ `Ps`/`Pw`、屈折 `err`/`errW`、暗順応 `cone`/`rod`）・選べる条件（`ASTIG_POWERS`・`ASTIG_AXES`・`SECS`・`dirName`・`astigOf()`）・`recompute`/`retarget`・条件を変える `applyCond`（切りかえの印）・部分の説明 `PARTS`・案内 `TOUR`（`settle`・`go`・`win`） | `AGES`・`LENGTHS`・`GLASSES`・`LIGHTS`・`NEAR_D`/`FAR_D`・`EV_NAMES`・`fmtD`・`fmtDi` |
 | js/draw.js | 断面・光線・物・メガネ・拡大鏡の描画、画面の配置 `LAY` | `layout`・`dToX`/`xToD`・`drawEye`・`drawBundle`・`drawLoupe`・`drawSection`（乱視のときの断面の名前）・`drawAll` |
-| js/view.js | 見え方（視力表・放射状の線の表）と数字の表示。縦と横で別のぼかし（箱ぼかし3回） | `VIEW`・`drawChart`・`blurChart(sx,sy)`・`blurSigma`・`updateView` |
-| js/timeline.js | 時間の流れ: 毎コマの記録・グラフ・切りかえの印・ふりかえり・速さとグラフの長さ | `TL`・`SPEEDS`・`markEvent`・`tlRecord`・`tlDraw`・`tlReplayAt`・`tlResume`・`pupilShown`・`BLUR_OK` |
+| js/view.js | 見え方（視力表・放射状の線の表）と数字の表示。だ円のぼかし（箱ぼかし3回、斜めは表を回してから）、暗さ（明るさ・桿体だけのまん中の穴・視力 0.16 のぼかし） | `VIEW`・`drawChart`・`blurXY`・`blurChart(sL,sS,ang,vis,hole)`・`blurSigma`・`updateView` |
+| js/timeline.js | 時間の流れ: 毎コマの記録・グラフ（ぼけ・調節・ひとみ・暗さ慣れの4段）・切りかえの印・ふりかえり・速さ（〜×60）とグラフの長さ（6秒・30秒・40分） | `TL`・`SPEEDS`・`markEvent`・`tlRecord`・`tlDraw`・`tlReplayAt`・`tlResume`・`pupilShown`・`BLUR_OK` |
 | js/ui.js | ボタン（見る先・距離のスライダー・条件）・ドラッグ・説明の吹き出し・案内 | `buildControls`・`syncControls`・`setTour`・`hitTest`・`slToD`/`dToSl` |
-| js/main.js | ループ（`step`→`dynStep`→`compute`→`tlRecord`→`draw`）とデバッグ用の窓口 | `compute`（S.res を作る。乱視のときはもう一方の断面も計算して `diamV`/`diamH`） |
+| js/main.js | ループ（`step`→`dynStep`→`darkStep`→`compute`→`tlRecord`→`draw`）とデバッグ用の窓口 | `compute`（S.res を作る。乱視のときはもう一方の断面も計算して `diamS`/`diamW`・`ang`、暗さ `see`） |
 
 ## しくみ
 - 座標は mm、z は角膜の頂点から奥へ、y は上。断面の1平面だけ。面は円すい曲線（sag の式）、交点はニュートン法、屈折はスネルの法則のベクトル形。
@@ -39,6 +39,8 @@
 - 記録（`TL.rec`）はシミュレーションの時刻で 4 ms ごと・40 秒分。ふりかえりは記録の1コマ（距離・調節・ねらい・ひとみ・条件）を `applySnap` で目にのせ、いまの状態は `TL.live` にとっておく（そのあいだ時間は止まる）。ボタン・ドラッグ・案内の切りかえはふりかえりをぬけてから。
 - 速さ `S.speed`（1/10・1/4・1・4）はシミュレーションの時間だけ変える（`step` で dt × speed）。案内の `go` の時刻もシミュレーションの時刻。
 - 乱視（段階C）: `buildEye(..., cyl)` で角膜の前の面の曲率に cyl/((1.376−1)×1000) を足す（1.5 D → 半径 7.72→7.49 mm）。縦の断面は `cv`、横の断面は `ch`。トーリック面の主経線の断面にある光線は面の対称性でその平面に留まるので、2D の計算のまま正しい（斜めの光線＝skew ray は計算しない）。調節は縦横のぼけの二乗平均が最小の所（最小錯乱円）。メガネは縦横で別々に `farGlasses`/`nearGlasses`（円柱レンズ）。屈折は縦 −1.54 D・横 0（1.5 D の角膜乱視）、遠く用は縦 −1.50・横 0。直乱視（縦が強い）では縦にのびたぼけ（縦 14.3 分・横 2.3 分）→ 線の表で縦の線がくっきり。
+- 乱視（段階E で一般化）: 強さ `astigP` と強い向き `astigAx`（横から反時計回り ang: 縦 90・横 0・斜め／45・斜め＼135）。強い向きの断面 cyl=astigP、弱い向き cyl=0。ぼけは強い向き `diamS`・弱い向き `diamW`、見え方はその向き ang にのびるだ円。斜めは表を回して（canvas の rotate(90°+ang)）長い向きを縦にそろえてから縦横のぼかし → 回しもどす（点の像で、45° なら右上・左下にのびることを確かめた）。
+- 暗順応（段階D）: しきい値（log10 cd/m²）を錐体 `S.cone`・桿体 `S.rod` で持つ（`darkStep`）。暗くなると 錐体は頭打ち −1.4 へ時定数 1.5 分、桿体は 0.23 log/分（30歳から1年 0.001 ずつおそく。Patryas: 45歳以上 0.19）、rodAbs −4.6 の上 0.6 は 0.05 log/分。明るい所の桿体の高さ `rodLight(L)` = 1.2＋1.03 log L（推定。晴れ 3000 → 4.8 で切りかわり 6.5 分、部屋 100 → 3.3 で錐体の段なし＝Hecht の弱い光のあと）。明るくなると数秒（3 s）で上がる。晴れ→夜道（0.001）: 約13分まで見えない、30分で −4.59（測定 −4.40±0.44）。`darkSee`: 明るさが錐体＋0.3 を上回れば cone、桿体を上回れば rod、ほかは none。見え方の明るさは 余裕/1.5 log（目安）、rod はまん中 直径 75 分を平らに（Curcio の 1.25°）・σ 3 分を足す（視力 0.16、Shlaer）。
 - 見え方のぼかしは CSS の blur ではなく JS の箱ぼかし3回（縦横別。乱視のため）。σ の値が 0.01 px 変わったときだけ描き直す。
 
 ## ハマったところ
@@ -46,19 +48,23 @@
 - 近軸の焦点で調節・正視を決めると、球面収差のため遠くでもぼけが 28 µm と大きく出た → 「ぼけ最小」で決めるように直した。
 - 狭い画面で数字・見え方を図の上に重ねると読めない → 719px 以下は並べる（図 236px、見え方と数字は横に2つ）。図を `#cvwrap` で包んだので、説明の吹き出しの位置は `getBoundingClientRect` の差で出す（offsetLeft は 0 になる）。
 - 「見る先」のボタンが図から遠いとスマホで見比べられない → 図に「⇄ 近く／遠くを見る」ボタン（`#swap`）を重ねた。
+- スマホで固定（sticky）するとき、`#pin` の親が `#stage` のままだと #stage をこえた所で固定がはずれる → 719px 以下は `#stage{display:contents}` で #pin の親を #app（ページ全体）にした。説明の吹き出しは `tip.offsetParent` を基準に。
+- `.grp{display:flex}` が `hidden` 属性に勝って行が消えない → `#controls .grp[hidden]{display:none}`。
+- 暗順応を入れたら、案内9段目（晴れ→夜道でひとみが開く）は「暗くて見えない」になる（正しい）→ 案内の文をそれに合わせた。
 
 ## 確認のしかた（変更のたびに）
 1. `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/smoke.ps1 -Apps eye-optics`（例外・読み込みの失敗・外への通信）
 2. 開いて `__eyopErr` が空。最初の画面: 3 m・25歳・ふつうで「くっきり見える」、ぼけ 4 µm ほど、調節 0.2 D ほど。
 3. 時間: 「⇄ 近くを見る」→ `__eyop.simRun(0.1)` を何回か。0.3 秒までは調節 0.24 D のまま（「目がまだ反応していない（遅れ）」）、そのあと上がって 1.4 秒ごろ「くっきり」、3.4 D へ。グラフに「30 cm を見る」の印、ねらい（点線）を実線が追う。
-4. 「つぎへ」で13段を通す: 4段目で物が 20 cm へ／5段目（スロー 1/4）で 0.5 秒後に近くへ切りかわり遅れて合う／6段目（60歳・30 cm）で「水晶体がこれ以上ふくらめず」／7段目（近視）で −2.75 D・「網膜の手前」／8段目（メガネ）で「くっきり」／9段目（×4・グラフ 30秒）でひとみが 20 秒ほどかけて 6.4 mm へ／10段目（1/4）で 0.2 秒後に 1 秒ほどで 3 mm へ。
-5. 乱視: 12段目（乱視・線の表・5 m）で「縦と横でピントの合う所がちがう（乱視）」、ぼけ 縦 14.3・横 2.3 分、屈折「縦 −1.50 D・横 0.00 D」、縦の線だけくっきり。「横に切る」で図の名前が「横の断面・ふつうの向き」に。13段目（円柱レンズ 縦 −1.50・横 0.00）で「くっきり」、ぼけ 1 分ほど。
+4. 「つぎへ」で14段を通す（11段目＝暗順応 ×60・40分: 約13分まで「暗くて見えない」→ 桿体だけ「うす暗く見える」、まん中がぬける、グラフの暗さ慣れが 6.5 分ごろに折れる）: 4段目で物が 20 cm へ／5段目（スロー 1/4）で 0.5 秒後に近くへ切りかわり遅れて合う／6段目（60歳・30 cm）で「水晶体がこれ以上ふくらめず」／7段目（近視）で −2.75 D・「網膜の手前」／8段目（メガネ）で「くっきり」／9段目（×4・グラフ 30秒）でひとみが 20 秒ほどかけて 6.4 mm へ／10段目（1/4）で 0.2 秒後に 1 秒ほどで 3 mm へ。
+5. 乱視: 12段目（乱視 1.5 D 縦・線の表・5 m）で「縦と横でピントの合う所がちがう（乱視）」、ぼけ 縦 14.3・横 2.3 分、屈折「縦 −1.50 D・横 0.00 D」、縦の線だけくっきり。「弱い向きで切る」で図の名前が「横の断面・ふつうの向き」に。強さ 3 D・斜め／で ぼけ 30.7・2.3 分、点の像は右上にのびる。乱視なしでは「強い向き」「断面」の行が消える。13段目（円柱レンズ 縦 −1.50・横 0.00）で「くっきり」、ぼけ 1 分ほど。
 6. グラフを押すと「ふりかえり中」・「▶ いまへもどる」が出て、目と見え方がその瞬間になる。もどると続きから動く。
 7. 物をドラッグ・距離のスライダーで動く（印は「物を動かす」1つ）。部分にマウスをのせて説明が出る（`hitTest` が角膜・房水・虹彩・水晶体・毛様体・硝子体・網膜・中心窩・視神経・強膜・メガネ・物を返す）。
-8. 幅 375px で横にはみ出さない（`document.documentElement.scrollWidth` が 375）。案内 → 図（右下に ⇄ ボタン）→ 見え方と数字が横に2つ → 時間の流れ（ボタン1行）→ ボタン。
+8. 幅 375px で横にはみ出さない（`document.documentElement.scrollWidth` が 375）。上に固定: 図（右下に ⇄ ボタン）と見え方（表・見出し・状態の1行）。スクロールしても `#pin` の top が 0 のまま。その下に 案内 → 数字（2列）→ 時間の流れ → ボタン。
 
 ## 状態
 - 2026-10-12 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
 - 2026-10-12 v002-stageA: 段階A。IDEAS 18 から Claude が選んで試作（ユーザーの依頼「IDEAS からよさげなアプリを試作して保管庫へ」）。
 - 2026-10-12 v003-time: 段階B。ユーザー「時間で見え方が変わるのがおもしろい。この方向で作り込んで。操作性やスマホでの見え方も」。調節・ひとみを測られた遅れと速さで（dynamics.js）、時間の流れのグラフとふりかえり（timeline.js）、速さ 1/10〜×4、見る先の切りかえ、距離のスライダー、見え方を view.js へ分けて JS のぼかしに、スマホの並べ方。案内 9→11段。
 - 2026-10-12 v004-astig: 段階C。乱視（ユーザー「乱視とかもえらべたらいいけど、合わない？」→ 合うので入れた）。縦が強い・横が強い 1.5 D、断面の切りかえ、線の表（放射状）、円柱レンズ、だ円のぼけ。案内 11→13段。節目として versions/ へ。
+- 2026-10-12 v005-dark: 段階D 暗順応（ユーザー「暗順応か残像の段階に」→ 暗順応）、段階E 乱視の強さと向き（ユーザー）、スマホは図と見え方を固定・ほかはスクロール（ユーザー。基本ルールに）。案内 13→14段。

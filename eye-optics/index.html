@@ -10,10 +10,12 @@
 <div id="app">
   <header id="top"><h1>目のなかの光の道</h1><span class="sub">光が目の中で曲がって、網膜に像を結ぶまで</span></header>
   <main id="stage">
+    <div id="pin"><!-- スマホ: 図と見え方を上に固定（パソコンでは display:contents で今までどおり重ねる） -->
     <div id="cvwrap"><canvas id="cv"></canvas><button id="swap">近くを見る</button></div>
+    <div id="view"><div class="vtop"><div id="viewHead">見え方</div><span class="vtabs"><button data-c="acuity">視力表</button><button data-c="fan">線の表</button></span></div><div class="chartbox"><canvas id="chart"></canvas><canvas id="chartLab"></canvas></div><div id="vstate"></div><div class="vnote" id="vnote">数字は視力の段（目安）。大きさはそろえて表示</div></div>
+    </div>
     <div id="tour"><span id="tourNum"></span><p id="tourText"></p><button id="next">つぎへ</button></div>
     <div id="info"></div>
-    <div id="view"><div class="vtop"><div id="viewHead">見え方</div><span class="vtabs"><button data-c="acuity">視力表</button><button data-c="fan">線の表</button></span></div><div class="chartbox"><canvas id="chart"></canvas><canvas id="chartLab"></canvas></div><div class="vnote" id="vnote">数字は視力の段（目安）。大きさはそろえて表示</div></div>
     <div id="tip" hidden></div>
   </main>
   <section id="timebar">
@@ -28,7 +30,8 @@
     <p>目を横から切った断面で、光線を1本ずつ計算しています。面ごとにスネルの法則（屈折の法則）で曲げ、虹彩（ひとみ）を通った光だけを網膜まで追います。目の寸法と屈折率は、研究で使われる目の模型（Navarro ほか 1985）の値です。近くを見るときの水晶体の形の変化（調節）も、その論文の式で計算しています。</p>
     <p>ピント合わせは「網膜のぼけがいちばん小さくなる調節」を、その年齢でできる範囲（Hofstetter 1950 の平均の式）の中で探しています。ひとみの大きさは明るさから Crawford 1936 の式で決めています（明るさの値はおおよその例）。</p>
     <p>見る先や明るさを変えると、目はすぐには追いつきません。ピント合わせは約 0.3 秒の遅れのあと、動く量が大きいほど速く動きます（Bharadwaj &amp; Schor 2006 が測った速さの関係）。ひとみは明るくなると約 0.2 秒の遅れのあと 1 秒ほどで縮み、暗くなると 20 秒ほどかけてゆっくり開きます（Mathôt 2018、Gray ほか 2024）。「時間の流れ」のグラフは、そのあいだのぼけ・調節・ひとみの変わり方です。</p>
-    <p>乱視は、角膜の丸みが縦と横で少しちがう目です。ここでは角膜の前の面の丸みを、縦の向き（または横の向き）だけ 1.5 D 分きつくして、縦に切った断面と横に切った断面をそれぞれ光線で計算しています。見え方は、縦と横で広さのちがうぼかし（だ円のぼけ）です。乱視用のメガネ（円柱レンズ）は、縦と横で度をそれぞれ決めています。</p>
+    <p>乱視は、角膜の丸みが向きによって少しちがう目です。ここでは角膜の前の面の丸みを、ある向き（縦・横・斜め）だけ 0.75〜3 D 分きつくして、その向き（強い向き）と直角の向き（弱い向き）に切った断面をそれぞれ光線で計算しています。見え方は、向きによって広さのちがうぼかし（だ円のぼけ）です。乱視用のメガネ（円柱レンズ）は、2つの向きで度をそれぞれ決めています。</p>
+    <p>暗い所に入ると、目は分の単位でだんだん敏感になります（暗順応）。見える最小の明るさ（しきい値）を、明るい所で働く錐体と暗い所で働く桿体の2つで計算しています。強い光のあとは、錐体が数分で頭打ちになり、7分ごろに桿体へ切りかわって（Patryas ほか 2013 で 約7分）、桿体は 1 分に 0.23 桁ずつ（45歳以上はおそい）敏感になり、30分ほどでいちばん敏感になります。桿体だけで見ているときは、見え方のまん中がぬけます。中心窩には桿体がないためです（直径 1.25°、Curcio ほか 1990）。</p>
     <h3>簡単にしているところ</h3>
     <ul>
       <li>断面の上下の1平面だけで光線を追っています。網膜は半径 12 mm の球としています（実際はやや平たいだ円体）。</li>
@@ -37,7 +40,8 @@
       <li>光の回折、色によるずれ（色収差）、網膜の細胞の細かさは入れていません。「見え方」は、網膜のぼけの広がりを同じ広がりのぼかしにして近似したものです。「ぼやける」は、ぼけの円が 2 分（1/30 度）より大きいときとしています（このアプリの目安）。</li>
       <li>メガネは角膜の 12 mm 手前のうすいレンズとし、度は 0.25 D きざみ。遠く用は遠くがいちばんくっきりする度、近く用は 40 cm を調節の半分の力で見られる度（このアプリの決め方）です。</li>
       <li>時間の変化: ピント合わせとひとみは、遅れのあと指数関数で近づくとしています。ピント合わせの速さ（時定数）は、測られたピーク速度の式から「動く量 ÷ ピーク速度」で決めています（遅れは遠くへの切りかえで測られた約 0.3 秒を、近くへにも使用）。ひとみの縮む・開く時定数（0.35 秒・6 秒）は、論文に書かれた経過に合うように決めた推定です。年齢による速さの変化、ピントのわずかなゆれ、近くを見るときにひとみが縮む反応、暗さに目が慣れる（網膜の感度が上がる）ことは入れていません。</li>
-      <li>乱視: 角膜の前の面だけを、縦か横の向きで 1.5 D 強くしています（向きが斜めの乱視、水晶体による乱視は入れていません）。光線は縦と横の2つの断面の中だけで追い、見え方のぼけはその2つの広がりを縦と横のぼかしにしています（斜めに進む光線は計算していません）。ピント合わせは、縦と横のぼけの平均がいちばん小さくなる所をねらうとしています。</li>
+      <li>乱視: 角膜の前の面だけを、ある向きで強くしています（水晶体による乱視は入れていません）。光線は強い向きと弱い向きの2つの断面の中だけで追い、見え方のぼけはその2つの広がりを、その向きにそろえただ円のぼかしにしています（2つの断面の外を斜めに進む光線は計算していません）。ピント合わせは、2つのぼけの平均がいちばん小さくなる所をねらうとしています。</li>
+      <li>暗順応: 錐体の頭打ちの高さ（−1.4 log cd/m²）・桿体のいちばん低いしきい値（−4.6）・錐体の慣れる速さ（時定数 1.5 分）・終わりのゆっくりした部分・前の明るさから決める桿体のはじめの高さ・明るくなったときの速さ（数秒）は、測られた値（切りかわり約7分、30分後 −4.4、強い光で約5桁感度が下がる、錐体は 5〜10 分で頭打ち）に合うように決めた推定です。しきい値は 1° の光の点が見えるかどうかの値で、視力表の見え方の明るさは「しきい値をどれだけ上回るか」から決めた目安です。桿体だけのときの視力の上限 0.16（Shlaer 1937）は、すきま 6 分がやっと分かるぼかしで表しています（推定）。色の見え方の変化は入れていません。</li>
       <li>視神経は、場所を示すために断面に描いています（実際は中心窩より鼻の側にあります）。</li>
     </ul>
     <p><b>学習用に簡単にしたものです。目の病気や視力の判断、メガネの度を決めることには使えません。</b>目のことは眼科で相談してください。</p>
@@ -50,6 +54,11 @@
       <li>Metlapally S, Tong JL, Tahir HJ, Schor CM (2016) Potential role for microfluctuations as a temporal directional cue to accommodation. <i>Journal of Vision</i> 16(6):19（反応の遅れ 175–375 ms）</li>
       <li>Mathôt S (2018) Pupillometry: psychology, physiology, and function. <i>Journal of Cognition</i> 1(1):16. <a href="https://doi.org/10.5334/joc.18" target="_blank" rel="noopener">doi:10.5334/joc.18</a>（ひとみ: 光をつけて 0.2 秒まで動かず、1.5 秒までに縮む。消すと 10〜30 秒でゆっくり戻る）</li>
       <li>Gray NS ほか (2024) Measuring the pupillary light reflex using portable instruments in applied settings. <i>Vision</i> 8(4):60. <a href="https://doi.org/10.3390/vision8040060" target="_blank" rel="noopener">doi:10.3390/vision8040060</a>（ひとみの遅れ 200〜300 ms、最小になるのは 800〜1200 ms）</li>
+      <li>Patryas L ほか (2013) Assessment of age changes and repeatability for computer-based rod dark adaptation. <i>Graefe's Archive for Clinical and Experimental Ophthalmology</i> 251:1821–1827. <a href="https://doi.org/10.1007/s00417-013-2324-5" target="_blank" rel="noopener">doi:10.1007/s00417-013-2324-5</a>（暗順応: 切りかわり 約7分、桿体の速さ 0.23（45歳以上 0.19）・終わり 0.05 log/分、30分後 −4.4 log cd/m²）</li>
+      <li>Bakdalieh A ほか (2025) Dark adaptometry as a diagnostic tool in retinal diseases. <i>Journal of Clinical Medicine</i> 14(11):3742. <a href="https://doi.org/10.3390/jcm14113742" target="_blank" rel="noopener">doi:10.3390/jcm14113742</a>（錐体は 5〜10 分で頭打ち、桿体は 40 分ほどまで）</li>
+      <li>Hecht S, Haig C, Chase AM (1937) The influence of light adaptation on subsequent dark adaptation of the eye. <i>Journal of General Physiology</i> 20(6):831–850. <a href="https://doi.org/10.1085/jgp.20.6.831" target="_blank" rel="noopener">doi:10.1085/jgp.20.6.831</a>（前の光が弱いと桿体だけ、強いほど桿体の出番がおそい）</li>
+      <li>Curcio CA, Sloan KR, Kalina RE, Hendrickson AE (1990) Human photoreceptor topography. <i>Journal of Comparative Neurology</i> 292(4):497–523. <a href="https://doi.org/10.1002/cne.902920402" target="_blank" rel="noopener">doi:10.1002/cne.902920402</a>（中心窩の桿体のない所 直径 1.25°）</li>
+      <li>Shlaer S (1937) The relation between visual acuity and illumination. <i>Journal of General Physiology</i> 21(2):165–188. <a href="https://doi.org/10.1085/jgp.21.2.165" target="_blank" rel="noopener">doi:10.1085/jgp.21.2.165</a>（桿体で見るときの視力 0.16 まで）</li>
       <li>Kovesi P (2010) Fast almost-Gaussian filtering. DICTA 2010（見え方のぼかしの計算のしかた）</li>
       <li>Atchison DA ほか (2005) Shape of the retinal surface in emmetropia and myopia. <i>Investigative Ophthalmology &amp; Visual Science</i> 46(8):2698–2707（網膜の形）</li>
       <li>ISO 8596（ランドルト環による視力表の形）</li>

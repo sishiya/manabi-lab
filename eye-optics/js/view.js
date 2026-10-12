@@ -55,7 +55,7 @@ function drawChart() {
   }
   const src = g.getImageData(0, 0, w, h).data, sharp = new Float32Array(w * h);
   for (let i = 0; i < w * h; i++) sharp[i] = src[i * 4];
-  VIEW.sharp = sharp; VIEW.out = c.getContext('2d').createImageData(w, h);
+  VIEW.sharp = sharp; VIEW.sharpCv = off; VIEW.out = c.getContext('2d').createImageData(w, h);
 }
 
 // 箱ぼかし3回でガウスぼかし（σ）に近づける幅（Kovesi 2010 の求め方）
@@ -81,20 +81,53 @@ function boxPass(src, dst, w, h, r, horiz) {
     }
   }
 }
-// 横 sx・縦 sy（CSS の px）のぼかしで見え方を描く
-function blurChart(sx, sy) {
-  if (!VIEW.sharp) return;
-  const key = sx.toFixed(2) + ',' + sy.toFixed(2);
-  if (key === VIEW.last) return;
-  VIEW.last = key;
-  const { w, h, dpr } = VIEW;
-  let a = new Float32Array(VIEW.sharp), b = new Float32Array(w * h);
-  for (const [s, horiz] of [[sx * dpr, true], [sy * dpr, false]]) {
+// 横と縦で別のぼかし（σ は デバイスの px）
+function blurXY(src, w, h, sx, sy) {
+  let a = new Float32Array(src), b = new Float32Array(w * h);
+  for (const [s, horiz] of [[sx, true], [sy, false]]) {
     if (s < 0.25) continue;
     for (const bw of boxSizes(s)) { boxPass(a, b, w, h, (bw - 1) / 2, horiz); [a, b] = [b, a]; }
   }
+  return a;
+}
+// だ円のぼけで見え方を描く。sL: 長い向き（ang、横から反時計回りの角度）の σ、sS: それと直角の σ（CSS の px）。
+// vis: 明るさ（0＝見えない〜1）、hole: まん中が見えない（桿体だけ）
+function blurChart(sL, sS, ang = 90, vis = 1, hole = false) {
+  if (!VIEW.sharp) return;
+  const key = [sL.toFixed(2), sS.toFixed(2), ang, vis.toFixed(2), hole].join(',');
+  if (key === VIEW.last) return;
+  VIEW.last = key;
+  const { w, h, dpr } = VIEW, a90 = ((ang % 180) + 180) % 180;
+  let a;
+  if (a90 === 90) a = blurXY(VIEW.sharp, w, h, sS * dpr, sL * dpr);
+  else if (a90 === 0) a = blurXY(VIEW.sharp, w, h, sL * dpr, sS * dpr);
+  else {
+    // 斜め: 表を回して、長い向きを縦にそろえてからぼかし、回しもどす
+    const D = Math.ceil(Math.hypot(w, h)), th = (90 + a90) * Math.PI / 180;
+    const rc = document.createElement('canvas'); rc.width = rc.height = D;
+    const rg = rc.getContext('2d'); rg.fillStyle = `rgb(${PAPER},${PAPER},${PAPER})`; rg.fillRect(0, 0, D, D);
+    rg.translate(D / 2, D / 2); rg.rotate(th); rg.drawImage(VIEW.sharpCv, -w / 2, -h / 2);
+    const src = rg.getImageData(0, 0, D, D).data, f = new Float32Array(D * D);
+    for (let i = 0; i < D * D; i++) f[i] = src[i * 4];
+    const bl = blurXY(f, D, D, sS * dpr, sL * dpr), img = rg.createImageData(D, D);
+    for (let i = 0; i < D * D; i++) { img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = bl[i]; img.data[i * 4 + 3] = 255; }
+    rg.setTransform(1, 0, 0, 1, 0, 0); rg.putImageData(img, 0, 0);
+    const bc = document.createElement('canvas'); bc.width = w; bc.height = h;
+    const bg = bc.getContext('2d'); bg.translate(w / 2, h / 2); bg.rotate(-th); bg.drawImage(rc, -D / 2, -D / 2);
+    const d2 = bg.getImageData(0, 0, w, h).data; a = new Float32Array(w * h);
+    for (let i = 0; i < w * h; i++) a[i] = d2[i * 4];
+  }
   const o = VIEW.out.data;
-  for (let i = 0; i < w * h; i++) { const v = a[i]; o[i * 4] = v; o[i * 4 + 1] = v; o[i * 4 + 2] = v * 0.96; o[i * 4 + 3] = 255; }
+  // 中心窩の桿体のない所（直径 1.25°＝75 分。Curcio ほか 1990）: 桿体だけのときは形が分からない（ならした明るさ）
+  const cx = w / 2, cy = h / 2, R = 37.5 * VIEW.k * dpr, edge = 6 * VIEW.k * dpr;
+  let mean = 0; if (hole) { for (let i = 0; i < w * h; i++) mean += a[i]; mean /= w * h; }
+  for (let y = 0, i = 0; y < h; y++) for (let x = 0; x < w; x++, i++) {
+    let v = a[i];
+    if (hole) { const r = Math.hypot(x - cx, y - cy), f = Math.max(0, Math.min(1, (R + edge - r) / (2 * edge))); v = v * (1 - f) + mean * f; }
+    const n = (v - INK) / (PAPER - INK);   // 0＝字、1＝紙
+    v = 10 + n * (PAPER - 10) * vis + (1 - vis) * 4;
+    o[i * 4] = v; o[i * 4 + 1] = v; o[i * 4 + 2] = vis < 1 ? v * 1.02 : v * 0.96; o[i * 4 + 3] = 255;
+  }
   document.getElementById('chart').getContext('2d').putImageData(VIEW.out, 0, 0);
 }
 
@@ -105,12 +138,19 @@ function updateView() {
   const r = S.res; if (!r) return;
   if (VIEW.mode !== S.chart) {
     VIEW.mode = S.chart; drawChart();
-    document.getElementById('vnote').textContent = S.chart === 'fan' ? '30° ごとの線（太さ 1.5 分）。乱視だと、ある向きの線だけぼやける' : '数字は視力の段（目安）。大きさはそろえて表示';
   }
-  blurChart(blurSigma(r.diamH), blurSigma(r.diamV));
+  // 暗さ: 明るさがしきい値をどれだけ上回るかで見え方の明るさを決める（1.5 log 上回れば ふつう。このアプリの目安）。
+  // 桿体だけのとき: まん中がぬけ、視力は 0.16 まで（Shlaer 1937）→ すきま 6 分がやっと分かるぼかし（σ 3 分。推定）を足す
+  const see = r.see, vis = see.who === 'none' ? 0 : Math.max(0.12, Math.min(1, see.margin / 1.5)), rod = see.who === 'rod';
+  const nS = rod ? 3 * VIEW.k : 0, add = s => Math.sqrt(s * s + nS * nS);
+  blurChart(add(blurSigma(r.diamS)), add(blurSigma(r.diamW)), r.ang, vis, rod);
+  const note = document.getElementById('vnote');
+  note.textContent = see.who === 'none' ? '暗くて見えない（目がまだ暗さに慣れていない）' : rod ? '桿体だけ: まん中（中心窩）には桿体がないので見えない。視力も 0.16 まで' :
+    S.chart === 'fan' ? '30° ごとの線（太さ 1.5 分）。乱視だと、ある向きの線だけぼやける' : '数字は視力の段（目安）。大きさはそろえて表示';
   const Amax = maxAccommodation(S.age);
   const q = e => fmtDi(Math.round(e * 4) / 4), err = S.err;
-  const errTxt = r.astig ? `縦 ${q(S.err)}・横 ${q(S.errH)}` : Math.abs(err) < 0.2 ? '正視' : (err < 0 ? '近視 ' : '遠視 ') + q(err);
+  const ao = astigOf();
+  const errTxt = r.astig ? `${ao.strong} ${q(S.err)}・${ao.weak} ${q(S.errW)}` : Math.abs(err) < 0.2 ? '正視' : (err < 0 ? '近視 ' : '遠視 ') + q(err);
   const am = v => (v * 3437.75).toFixed(1);
   const pd = pupilShown(S.stopR);
   document.getElementById('info').innerHTML =
@@ -118,12 +158,15 @@ function updateView() {
     `<div><span>物までの距離</span><b>${fmtD(S.d)}</b></div>` +
     `<div><span>調節</span><b>${S.A.toFixed(1)} D</b><small>／最大 ${Amax.toFixed(1)}</small></div>` +
     `<div><span>ひとみ</span><b>${pd.toFixed(1)} mm</b></div>` +
-    (r.astig ? `<div><span>ぼけ 縦・横</span><b>${am(r.diamV)}・${am(r.diamH)} 分</b></div>`
+    `<div><span>暗さ慣れ</span><b>${r.see.who === 'cone' ? '錐体' : r.see.who === 'rod' ? '桿体だけ' : '見えない'}</b><small>（${Math.min(S.cone, S.rod).toFixed(1)}）</small></div>` +
+    (r.astig ? `<div><span>ぼけ ${ao.strong}・${ao.weak}</span><b>${am(r.diamS)}・${am(r.diamW)} 分</b></div>`
       : `<div><span>網膜のぼけ</span><b>${(r.main.blurD * 1000).toFixed(r.main.blurD < 0.01 ? 1 : 0)} µm</b><small>（${r.blurArcmin.toFixed(1)} 分）</small></div>`) +
     `<div class="wide"><span>目の屈折</span><b>${errTxt}</b></div>`;
+  const vs = document.getElementById('vstate'); vs.textContent = r.stateText; vs.className = r.state;   // スマホ: 固定部分にも状態の1行
   const since = S.ev ? S.t - S.ev.t : Infinity;
+  const fs = t => t < 10 ? t.toFixed(1) + ' 秒' : t < 60 ? Math.round(t) + ' 秒' : Math.floor(t / 60) + ' 分 ' + Math.round(t % 60) + ' 秒';
   document.getElementById('viewHead').innerHTML = `見え方 <small>${S.chart === 'fan' ? '線の表' : '視力表'}を ${fmtD(S.d)} に置いたら</small>` +
-    (S.replay ? ' <em>ふりかえり中</em>' : since < 40 ? ` <em>${S.ev.label} から ${since.toFixed(since < 10 ? 1 : 0)} 秒</em>` : '');
+    (S.replay ? ' <em>ふりかえり中</em>' : since < 3000 ? ` <em>${S.ev.label} から ${fs(since)}</em>` : '');
 }
 
 window.addEventListener('resize', () => { drawChart(); });

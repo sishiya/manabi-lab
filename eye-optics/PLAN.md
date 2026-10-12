@@ -37,9 +37,25 @@ Claude が `IDEAS.md` の 18「眼球のしくみ」を選んだ（17「残像�
 - 見え方は縦と横で別のぼけ（だ円のぼけ）。乱視の表（放射状の線）を見え方に足す。断面を「縦／横」で切りかえ。
 - メガネ（遠く用・近く用）は縦と横で別の度（円柱レンズ）。
 
-## 段階D以降（案）
+## 段階D: 暗さに慣れる（暗順応）（2026-10-12 ユーザー「暗順応か残像の段階に進めて」→ 暗順応を選んだ: いまの夜道の場面・時間のグラフにそのままつながり、測られた曲線で描ける）
+- 見える最小の明るさ（しきい値）が、暗い所で分の単位で下がっていく。はじめの数分は錐体（明るい所の細胞）が下がって頭打ち、7分ごろに桿体へ切りかわり（rod-cone break）、30分ほどでいちばん敏感に。
+  - 桿体の下がる速さ S2 0.23 log/分（若い人。45歳以上は 0.19、10年で 0.01 ずつおそく）、終わりの S3 0.05 log/分、切りかわり 約7分、30分後のしきい値 −4.4 log cd/m²（Patryas ほか 2013）。強い光のあとは感度が約5桁下がる（同）。錐体は 5〜10 分で頭打ち、桿体は 40 分ほどまで（Bakdalieh ほか 2025）。
+  - 弱い光のあとは錐体の段がなく桿体だけ、強い光のあとほど桿体の出番がおそい（Hecht ほか 1937）→ 前の明るさから「桿体のはじめの高さ」を決める（推定。画面に書く）。
+- 見え方: 視力表の明るさがしきい値より低いと見えない。桿体だけで見ているときは、まん中（中心窩の桿体のない所、直径 1.25°。Curcio ほか 1990）が見えず、視力は 0.16 まで（Shlaer 1937）。
+- 時間のグラフに「暗さへの慣れ」の段（しきい値と、いまの明るさ）。グラフの長さ 40 分、はやおくり ×60。
+
+## 段階E: 乱視の強さと向き（2026-10-12 ユーザー）
+- 強さ 0.75・1.5・3 D、強い向き 縦・横・斜め（45°・135°）。斜めでも、強い向きと弱い向きの断面（主経線）でそれぞれ光線を計算し、見え方のだ円のぼけをその向きに傾ける。
+
+## スマホ: 固定する部分とスクロールする部分（2026-10-12 ユーザー。基本ルール RULES 9章）
+- 上に固定: 図（目の断面）と見え方（と状態の1行）。その下をスクロール: 案内・数字・時間のグラフ・ボタン・このアプリについて。
+
+## 入口へ（2026-10-12 ユーザー「準備ができたらトップページに移して」）
+- 段階D・E のあと、ゲーム判定（ゲームではない）・英語対応（I18N.md）をして入口へ。
+
+## 段階F以降（案）
 - 網膜の中（錐体・桿体・中心窩）と盲点をその場で試す。斜めから来る光（周辺視）。
-- 残像（IDEAS 17）: 色の図を見つめてから白い面へ。陰性・陽性残像。暗さに慣れる（暗順応、分の単位）。
+- 残像（IDEAS 17）: 色の図を見つめてから白い面へ。陰性・陽性残像。
 - 動物の目とくらべる（`animal-senses/` と連携）、白内障。
 
 ## やらないこと
@@ -61,4 +77,9 @@ Claude が `IDEAS.md` の 18「眼球のしくみ」を選んだ（17「残像�
 - Metlapally S ほか (2016) Potential role for microfluctuations as a temporal directional cue to accommodation. Journal of Vision 16(6):19（反応の遅れ 175–375 ms）
 - Mathôt S (2018) Pupillometry: psychology, physiology, and function. Journal of Cognition 1(1):16. doi:10.5334/joc.18（光: 0–0.2 s 遅れ、0.2–1.5 s で縮む。消すと 10–30 s でゆっくり戻る）
 - Gray NS ほか (2024) Measuring the pupillary light reflex using portable instruments in applied settings. Vision 8(4):60. doi:10.3390/vision8040060（遅れ 200–300 ms、縮むのに 400–600 ms、最小は 800–1200 ms）
+- Patryas L, Parry NRA, Carden D, Baker DH, Kelly JMF, Aslam T, Murray IJ (2013) Assessment of age changes and repeatability for computer-based rod dark adaptation. Graefe's Arch Clin Exp Ophthalmol 251:1821–1827. doi:10.1007/s00417-013-2324-5（PMC3682089 で確認: 表1 RCB 7.04 分、S2 0.23／0.19、S3 0.05／0.04、T30 −4.40／−4.34 log cd/m²。S2 は 10年で 0.01 おそく。光で約5 log 感度が下がる）
+- Bakdalieh A, Khawaja LM, Yu M, Inoue M ほか (2025) Dark adaptometry as a diagnostic tool in retinal diseases. J Clin Med 14(11):3742. doi:10.3390/jcm14113742（錐体 5〜10 分で頭打ち、桿体 40 分ほどまで）
+- Hecht S, Haig C, Chase AM (1937) The influence of light adaptation on subsequent dark adaptation of the eye. J Gen Physiol 20(6):831–850（弱い光のあとは桿体だけ、強い光のあと桿体は 12〜13 分後に。錐体の幅は 3 log 以上）
+- Curcio CA ほか (1990) Human photoreceptor topography. J Comp Neurol 292:497–523（中心窩の桿体のない所 直径 0.350 mm＝1.25°）
+- Shlaer S (1937) The relation between visual acuity and illumination. J Gen Physiol 21(2):165–188（桿体で見る視力は 0.16 まで）
 - Atchison DA ほか (2005) Shape of the retinal surface in emmetropia and myopia. IOVS 46(8):2698–2707（網膜はやや平たいだ円体 → ここでは球で近似）

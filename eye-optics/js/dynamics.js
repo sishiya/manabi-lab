@@ -39,3 +39,39 @@ function dynStep(st, t, dt, At, stopRt) {
 function dynSettle(st, At, stopRt) {
   st.A = At; st.stopR = stopRt; st.acc = makeDelay(At); st.pup = makeDelay(stopRt); st.seg = null; st.aEff = At; st.pEff = stopRt;
 }
+
+// ── 暗順応（暗さに慣れる）。分の単位 ──
+// しきい値（見える最小の明るさ、log10 cd/m²）を、錐体 c と桿体 r の2つで持つ。見えるのは低いほう（敏感なほう）。
+// 数字: Patryas ほか 2013（強い光のあと: 切りかわり 約7分、桿体の下がる速さ S2 0.23 log/分（45歳以上 0.19、10年で 0.01 おそく）、
+// 終わり S3 0.05 log/分、30分後 −4.4）、Bakdalieh ほか 2025（錐体は 5〜10 分で頭打ち）、Hecht ほか 1937（弱い光のあとは桿体だけ）
+const DARK = {
+  rodAbs: -4.6,      // 桿体のいちばん低いしきい値（30分後 −4.4 と S3 から。推定）
+  conePlateau: -1.4, // 錐体の頭打ちの高さ（切りかわり 7分と S2 から逆算。推定）
+  coneTau: 1.5,      // 錐体が下がる時定数（分）: 5〜10 分で頭打ちに合わせた推定
+  coneWeber: -2.0,   // 明るい所の錐体のしきい値 ＝ 明るさ × 1%（ウェーバーの法則の目安。推定）
+  S3: 0.05, S3range: 0.6,   // 終わりの 0.6 log はゆっくり S3（推定）
+  lightTau: 3,       // 明るくなったときは数秒で合わせる（秒。推定）
+  S2: age => Math.max(0.12, 0.23 - 0.001 * Math.max(0, age - 30)),
+  // その明るさにいるときの桿体のしきい値（rodAbs からの高さ）。強い光ほど高く、あとで下がるのに時間がかかる（推定の直線。
+  // 晴れた屋外 3000 cd/m² で約 4.8 → 7分で錐体の頭打ちに追いつく。部屋 100 cd/m² では約 3.3 で、はじめから錐体より低い＝桿体だけ）
+  rodLight: L => Math.max(0, 1.2 + 1.03 * Math.log10(L)),
+};
+const coneLight = L => Math.max(DARK.conePlateau, Math.log10(L) + DARK.coneWeber);
+function darkSettle(st, L) { st.cone = coneLight(L); st.rod = DARK.rodAbs + DARK.rodLight(L); }
+// dt は秒
+function darkStep(st, dt, L, age) {
+  const m = dt / 60, cT = coneLight(L), rT = DARK.rodAbs + DARK.rodLight(L);
+  if (st.cone > cT) st.cone = cT + (st.cone - cT) * Math.exp(-m / DARK.coneTau);
+  else st.cone += (cT - st.cone) * (1 - Math.exp(-dt / DARK.lightTau));
+  if (st.rod > rT) {
+    const above = st.rod - DARK.rodAbs, slope = above > DARK.S3range ? DARK.S2(age) : DARK.S3;
+    st.rod = Math.max(rT, st.rod - slope * m);
+  } else st.rod += (rT - st.rod) * (1 - Math.exp(-dt / DARK.lightTau));
+}
+// いまの明るさ L で、だれが見ているか: 'cone'（錐体）・'rod'（桿体だけ）・'none'（見えない）と、明るさがしきい値をどれだけ上回るか（log）
+function darkSee(st, L) {
+  const l = Math.log10(L), mc = l - st.cone, mr = l - st.rod;
+  if (mc > 0.3) return { who: 'cone', margin: mc };
+  if (mr > 0) return { who: 'rod', margin: Math.max(mr, mc) };
+  return { who: 'none', margin: Math.max(mr, mc) };
+}

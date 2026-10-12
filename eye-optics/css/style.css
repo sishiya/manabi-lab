@@ -2,7 +2,9 @@
 :root{--bg:#13202e;--ink:#e8f0f4;--muted:#a3b4bf;--acc:#7fd4ff;--panel:rgba(12,22,32,0.86);--line:rgba(232,240,244,0.16);
   --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
-#app{display:flex;flex-direction:column;min-height:100%}
+#app{display:flex;flex-direction:column;min-height:100%;position:relative}
+#pin{display:contents}
+#vstate{display:none}
 #top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding:10px 16px 4px}
 #top h1{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0}
 #top .sub{color:var(--muted);font-size:13px}
@@ -51,10 +53,11 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
 .tbhead button,#controls button{font:inherit;font-size:13px;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 9px;cursor:pointer}
 .tbhead button.on,#controls button.on{background:var(--acc);color:#0b1620;border-color:var(--acc);font-weight:700}
 #resume{background:#ffd66a!important;color:#0b1620!important;border-color:#ffd66a!important;font-weight:700}
-#tl{display:block;width:100%;height:124px;margin-top:4px;touch-action:none;cursor:col-resize}
+#tl{display:block;width:100%;height:150px;margin-top:4px;touch-action:none;cursor:col-resize}
 
 #controls{display:flex;flex-wrap:wrap;gap:8px 18px;padding:10px 16px;border-top:1px solid var(--line)}
 #controls .grp{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+#controls .grp[hidden]{display:none}
 #controls .gname{font-size:12px;color:var(--muted);margin-right:4px}
 #controls .look{flex:1 1 100%}
 #dist{flex:1;min-width:140px;max-width:420px;accent-color:var(--acc);margin-left:6px}
@@ -66,31 +69,37 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
 #about h3{color:var(--ink);font-size:15px;margin:14px 0 4px}
 
 @media (max-width:719px){
-  /* 狭い画面: 案内 → 図 → 見え方と数字（横に2つ）→ 時間のグラフ → ボタン。重ねない */
+  /* 狭い画面（基本ルール RULES 9章）: 図と見え方を上に固定（#pin）、案内・数字・時間のグラフ・ボタン・説明はスクロール。
+     #stage を display:contents にして、#pin の sticky がページ全体にきくようにする */
   #top{padding:8px 12px 2px;gap:4px 10px}
   #top h1{font-size:19px}
   #top .sub{font-size:12px}
-  #stage{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:6px 8px;min-height:0;overflow:visible}
-  #cvwrap{position:relative;inset:auto;height:236px;grid-column:1/-1;grid-row:2}
-  #swap{left:auto;right:4px;bottom:4px;transform:none;font-size:13px;padding:8px 12px}
-  #tour{position:static;grid-column:1/-1;grid-row:1;width:auto;padding:6px 8px 6px 10px;gap:8px}
+  #stage{display:contents}
+  #pin{display:block;position:sticky;top:0;z-index:4;background:var(--bg);padding:4px 8px 6px;box-shadow:0 8px 12px -8px rgba(0,0,0,.7);border-bottom:1px solid var(--line)}
+  #cvwrap{position:relative;inset:auto;height:200px}
+  #swap{left:auto;right:4px;bottom:4px;transform:none;font-size:13px;padding:7px 11px}
+  #view{position:static;width:auto;margin-top:4px;padding:6px;display:grid;grid-template-columns:54% 1fr;gap:3px 8px;align-items:start}
+  #view .vtop{grid-column:2;grid-row:1;flex-direction:column;gap:3px;margin:0}
+  #viewHead{font-size:12px}
+  #viewHead small{display:none}
+  .vtabs button{padding:3px 7px}
+  .chartbox{grid-column:1;grid-row:1/span 3;height:124px}
+  #vstate{display:block;grid-column:2;grid-row:2;font-size:12px;font-weight:700;line-height:1.45}
+  #vstate.ok{color:#9be59b}
+  #vstate.blur{color:#ffb070}
+  .vnote{grid-column:2;grid-row:3;font-size:10.5px;margin:0;line-height:1.4}
+  #tour{position:static;width:auto;margin:8px 8px 0;padding:6px 8px 6px 10px;gap:8px}
   #tour p{font-size:13.5px;line-height:1.55}
   #tourNum{display:none}
   #next{padding:12px 10px;font-size:14px;align-self:stretch}
-  #view{position:static;grid-row:3;grid-column:1;width:auto;padding:6px}
-  #viewHead{font-size:12px}
-  #view .vtop{flex-direction:column;gap:3px;margin-bottom:4px}
-  .vtabs button{padding:4px 7px}
-  #viewHead small{display:none}
-  .chartbox{height:150px}
-  .vnote{display:none}
-  #info{position:static;grid-row:3;grid-column:2;min-width:0;padding:6px 8px;font-size:12px}
-  #info div{line-height:1.55;gap:4px}
+  #info{position:static;min-width:0;margin:8px 8px 0;padding:6px 8px;font-size:12.5px;display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+  #info .state{display:none}
+  #info div{line-height:1.6;gap:4px}
   #info small{display:none}
-  #info .state{font-size:12.5px}
+  #info div.wide{grid-column:1/-1}
   #timebar{padding:6px 8px 2px}
   .tbnote{flex-basis:100%;order:5}
-  #tl{height:132px}
+  #tl{height:170px}
   #controls{padding:8px 8px 10px;gap:8px 12px}
   #controls button{min-height:36px;padding:6px 10px}
   .tbhead{gap:6px 6px}
