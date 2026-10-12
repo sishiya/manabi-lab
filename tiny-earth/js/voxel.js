@@ -79,14 +79,16 @@ const VOXEL = (() => {
     }
   }
   // なめらかにつなぐ柱: 上の面の中心はそのマスの高さ val[i]、角は角で出会う3つのマスの平均（となりと同じ高さになり、すき間がなくなる）
-  function setColSmooth(g, M, C, i, val, rBot) {
+  // cls を渡すと、角の平均は同じ仲間（cls が同じ）のマスだけで取る（水のあるマスとないマスの高さをまぜない）
+  function setColSmooth(g, M, C, i, val, rBot, cls) {
     const pa = g.attributes.position.array, cf = C.cf, c0 = C.cs[i], k = C.cs[i + 1] - c0, s = C.start[i], tri = M.tri;
     const rTop = val[i];
     let t = s * 3;
     pa[t] = M.pos[i * 3] * rTop; pa[t + 1] = M.pos[i * 3 + 1] * rTop; pa[t + 2] = M.pos[i * 3 + 2] * rTop;
     for (let j = 0; j < k; j++) {
       const jb = (j + 1) % k, fa = C.ct[c0 + j] * 3, fb = C.ct[c0 + jb] * 3;
-      const ra = (val[tri[fa]] + val[tri[fa + 1]] + val[tri[fa + 2]]) / 3, rb = (val[tri[fb]] + val[tri[fb + 1]] + val[tri[fb + 2]]) / 3;
+      const ra = cls ? avgCls(val, tri, fa, cls, cls[i]) : (val[tri[fa]] + val[tri[fa + 1]] + val[tri[fa + 2]]) / 3;
+      const rb = cls ? avgCls(val, tri, fb, cls, cls[i]) : (val[tri[fb]] + val[tri[fb + 1]] + val[tri[fb + 2]]) / 3;
       const a = (c0 + j) * 3, b = (c0 + jb) * 3, ax = cf[a], ay = cf[a + 1], az = cf[a + 2], bx = cf[b], by = cf[b + 1], bz = cf[b + 2];
       t = (s + 1 + j) * 3;
       pa[t] = ax * ra; pa[t + 1] = ay * ra; pa[t + 2] = az * ra;
@@ -97,9 +99,13 @@ const VOXEL = (() => {
       pa[w + 9] = ax * rBot; pa[w + 10] = ay * rBot; pa[w + 11] = az * rBot;
     }
   }
-  // 上の面の法線を、となりとの坂に合わせて出す（なめらかにつないだ陸の陰影のため。中心と角の位置から）
+  function avgCls(val, tri, f, cls, c) { let s = 0, n = 0; for (let q = 0; q < 3; q++) { const m = tri[f + q]; if (cls[m] === c) { s += val[m]; n++; } } return s / n; }
+  // 上の面の法線: まずマスごとの坂の向きを出し、角では角で出会う3マスの平均にする（面のつなぎ目が見えない、なめらかな陰影）
+  const cellN = { arr: null };
   function topNormals(g, M, C) {
-    const pa = g.attributes.position.array, na = g.attributes.normal.array;
+    const pa = g.attributes.position.array, na = g.attributes.normal.array, tri = M.tri;
+    if (!cellN.arr || cellN.arr.length !== M.N * 3) cellN.arr = new Float32Array(M.N * 3);
+    const cn = cellN.arr;
     for (let i = 0; i < M.N; i++) {
       const c0 = C.cs[i], k = C.cs[i + 1] - c0, s = C.start[i];
       const cx = pa[s * 3], cy = pa[s * 3 + 1], cz = pa[s * 3 + 2];
@@ -110,9 +116,40 @@ const VOXEL = (() => {
         nx += uy * vz - uz * vy; ny += uz * vx - ux * vz; nz += ux * vy - uy * vx;
       }
       const l = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
-      for (let v = 0; v <= k; v++) { na[(s + v) * 3] = nx / l; na[(s + v) * 3 + 1] = ny / l; na[(s + v) * 3 + 2] = nz / l; }
+      cn[i * 3] = nx / l; cn[i * 3 + 1] = ny / l; cn[i * 3 + 2] = nz / l;
+    }
+    for (let i = 0; i < M.N; i++) {
+      const c0 = C.cs[i], k = C.cs[i + 1] - c0, s = C.start[i];
+      na[s * 3] = cn[i * 3]; na[s * 3 + 1] = cn[i * 3 + 1]; na[s * 3 + 2] = cn[i * 3 + 2];
+      for (let j = 0; j < k; j++) {
+        const f = C.ct[c0 + j] * 3, a = tri[f], b = tri[f + 1], c = tri[f + 2];
+        let x = cn[a * 3] + cn[b * 3] + cn[c * 3], y = cn[a * 3 + 1] + cn[b * 3 + 1] + cn[c * 3 + 1], z = cn[a * 3 + 2] + cn[b * 3 + 2] + cn[c * 3 + 2];
+        const l = Math.sqrt(x * x + y * y + z * z) || 1, v = (s + 1 + j) * 3;
+        na[v] = x / l; na[v + 1] = y / l; na[v + 2] = z / l;
+      }
     }
     g.attributes.normal.needsUpdate = true;
+  }
+  // 色のグラデーション: 上の面の中心はそのマスの色、角は角で出会うマスのうち「同じ仲間」（cls が同じ）の色の平均
+  // （陸と海の底、水のあるマスとないマスはまぜない）。横の面は上の面の色に f をかけた暗さ
+  function smoothColors(g, M, C, col, cls, f) {
+    const ca = g.attributes.color.array, tri = M.tri;
+    for (let i = 0; i < M.N; i++) {
+      const c0 = C.cs[i], k = C.cs[i + 1] - c0, s = C.start[i], ci = cls[i];
+      ca[s * 3] = col[i * 3]; ca[s * 3 + 1] = col[i * 3 + 1]; ca[s * 3 + 2] = col[i * 3 + 2];
+      for (let j = 0; j < k; j++) {
+        const t = C.ct[c0 + j] * 3;
+        let r = 0, gg = 0, b = 0, n = 0;
+        for (let q = 0; q < 3; q++) { const m = tri[t + q]; if (cls[m] === ci) { r += col[m * 3]; gg += col[m * 3 + 1]; b += col[m * 3 + 2]; n++; } }
+        const v = (s + 1 + j) * 3; ca[v] = r / n; ca[v + 1] = gg / n; ca[v + 2] = b / n;
+      }
+      // 横の面: 上の端は角の色に合わせて暗く
+      for (let j = 0; j < k; j++) {
+        const w = s + 1 + k + 4 * j, ta = (s + 1 + j) * 3, tb = (s + 1 + (j + 1) % k) * 3;
+        for (const [v, src] of [[w, ta], [w + 1, tb], [w + 2, tb], [w + 3, ta]]) { ca[v * 3] = ca[src] * f; ca[v * 3 + 1] = ca[src + 1] * f; ca[v * 3 + 2] = ca[src + 2] * f; }
+      }
+    }
+    g.attributes.color.needsUpdate = true;
   }
   // 横の面・上の面の法線を、最初の形（外向き・となりへの向き）に戻す
   function resetNormals(g, M, C) {
@@ -132,5 +169,5 @@ const VOXEL = (() => {
     for (let v = 0; v <= k; v++) ca.set(top, (s + v) * 3);
     for (let v = s + 1 + k; v < s + 1 + 5 * k; v++) ca.set(side, v * 3);
   }
-  return { cells, columns, setCol, setColSmooth, topNormals, resetNormals, setColor, setColorRGB };
+  return { cells, columns, setCol, setColSmooth, topNormals, smoothColors, resetNormals, setColor, setColorRGB };
 })();

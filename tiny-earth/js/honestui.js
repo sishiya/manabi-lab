@@ -66,7 +66,17 @@ const HUI = (() => {
     $('hNote').textContent = t + ' 時間のスライダーは対数（右へ行くほど速く進む）。右の端は、計算している出来事が出つくした時刻の3倍。その先は、空気も水もなく、この計算では変化がない。';
   }
   function events() {
-    const ev = H.model.ev;
+    const ev = H.model.ev.slice();
+    // 生きものの出来事（体温の水の蒸気圧 約 6.3 kPa を下回る時刻から）
+    const pArm = HONEST.pLiq(310.15) / HONEST.P0;
+    const tArm = H.model.tGrid.find(x => HONEST.airAt(H.model.A, x).p < pArm);
+    if (tArm != null) {
+      ev.push([tArm, `気圧が体温の水の蒸気圧（${(HONEST.pLiq(310.15) / 1000).toFixed(1)} kPa）を下回る: 生きものの体の水が沸きはじめる`]);
+      ev.push([tArm + 10, '陸の生きものが意識を失う（犬の実験で 9〜12 秒）']);
+      ev.push([tArm + 150, '陸の生きものが死ぬ（推定 約 2.5 分。犬は 2 分より短ければ生きのびた）']);
+    }
+    const A = H.model.A;
+    if (A.u30t && A.u30 > ctx.ocean.P.vEsc) ev.push([A.u30t, `空気が抜ける風（地上 30 m で 最大 ${Math.round(A.u30)} m/s）: 浮いていた・飛んでいた生きものは宇宙へ飛ばされる`]);
     $('hEv').innerHTML = ev.length ? ev.slice().sort((a, b) => a[0] - b[0]).map(([t, s]) => `<li data-t="${t}"><b>${when(t)}</b>${s}</li>`).join('')
       : '<li>この大きさでは、殻を外しても大きな変化はない（空気がとどまるので、海も沸かない）。</li>';
   }
@@ -93,6 +103,8 @@ const HUI = (() => {
         Ssum += c[3] * a; Sn += a; Fsum += f * a; if (c[2]) Bn += a;
       } else vs.flux[i] = 0;
     }
+    // 生きもの: 殻を外す前（ふだん）の様子から、この時刻にどうなっているか
+    H.lifeHon = ctx.life && ctx.life.counts ? LIFE.honest(ctx.life, Mo, t) : null;
     // 森が枯れていく見た目: 気圧が水の蒸気圧を下回ってから、時刻が 100 倍になるまでに色を変える（速さは見た目だけ）
     const tb = (Mo.ev.find(e => e[1].startsWith('海が沸き')) || [])[0];
     vs.brown = tb && t > tb ? Math.min(1, Math.log10(t / tb) / 2) : 0;

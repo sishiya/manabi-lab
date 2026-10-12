@@ -65,6 +65,9 @@ const HONEST = (() => {
     const M0 = mass(); function mass() { let s = 0; for (let i = 0; i < N; i++) if (rc[i] < 2 * Rs) s += d[i] * V[i]; return s; }
     const Fd = new Float64Array(N + 1), Fm = new Float64Array(N + 1), FE = new Float64Array(N + 1), pr = new Float64Array(N), vel = new Float64Array(N);
     let t = 0, steps = 0, nextS = 1e-4 * D / c0;
+    // 地上 30 m のマス（生きものが浮いている・飛んでいる高さ）。空気が抜けるときの上向きの風の、いちばん速いとき
+    let i30 = 0; while (i30 < N - 1 && rc[i30] - R < 30) i30++;
+    res.u30 = 0; res.u30t = 0;
     const tMax = 200 * D / c0;
     res.samples.push([0, 1, 1, T0]);
     while (t < tMax && steps < 300000) {
@@ -101,6 +104,7 @@ const HONEST = (() => {
         const ke = 0.5 * m[i] * m[i] / d[i]; if (E[i] - ke < pmin / (GAM - 1)) E[i] = ke + pmin / (GAM - 1);
       }
       t += dt; steps++;
+      { const u3 = m[i30] / d[i30]; if (u3 > res.u30 && d[i30] > 1e-6 * rho0) { res.u30 = u3; res.u30t = t; } }
       if (t >= nextS) {
         res.samples.push([t, pr[0] / P0, mass() / M0, pr[0] / d[0] * mA / kB]);   // 地面の近くの空気の温度も
         nextS *= 1.12;

@@ -90,7 +90,12 @@ const UI = (() => {
     $('windDir').addEventListener('click', () => h.windDir());
     $('shake').addEventListener('click', () => h.shake());
     $('dropC').addEventListener('click', () => h.dropCenter());
-    $('ex').addEventListener('change', () => h.setEx(+$('ex').value));
+    // 高さの強調: スライダー 0〜300 → ×1〜×1000（対数）。ドラッグ中は1コマに1回だけ作りなおす
+    let exPend = 0;
+    $('ex').addEventListener('input', () => {
+      const ex = Math.round(Math.pow(10, +$('ex').value / 100)); $('exV').textContent = '×' + ex;
+      if (!exPend) exPend = requestAnimationFrame(() => { exPend = 0; h.setEx(Math.round(Math.pow(10, +$('ex').value / 100))); });
+    });
     $('styleBtns').addEventListener('click', e => {
       const v = e.target.dataset && e.target.dataset.s; if (!v) return;
       for (const b of $('styleBtns').children) b.classList.toggle('on', b === e.target);
@@ -102,5 +107,27 @@ const UI = (() => {
       VIEW.st.light = v;
     });
   }
-  return { init, nums, live, facts, setSizeLabel, len, speed, dur, sig, $ };
+  // 生きものの欄。hon（正直モードの結果）があればそちらの数を出す
+  function life(L, hon) {
+    if (!L.counts) return;
+    $('lifeNums').innerHTML = LIFE.SP.map((sp, s) => {
+      const c = L.counts[s], alive = hon ? hon.sum[s].alive : c.alive, cause = hon ? hon.sum[s].cause : c.cause;
+      const cs = Object.entries(cause).map(([k, v]) => `${k} ${v}`).join('・');
+      const none = c.total === 0 ? '<small>（この星には住める所がない）</small>' : '';
+      return `<dt>${sp.name}</dt><dd>${alive} / ${c.total} ${none}${cs ? `<small>（${cs}）</small>` : ''}</dd>`;
+    }).join('');
+    $('lifeLog').innerHTML = L.log.length ? L.log.map(([t, m]) => `<li>${dur(t)}: ${m}</li>`).join('') : '<li>（まだない）</li>';
+  }
+  function lifePhys(L) {
+    const P = L.O.P, R = L.O.R, deer = LIFE.SP[0], rab = LIFE.SP[1], li = [];
+    const vw = LIFE.walkSpeed(L, deer);
+    li.push(`シカの歩く速さ: ${speed(vw)}${vw < deer.vE ? `（地球で ${deer.vE} m/s。これより速く歩こうとすると足が地面からはなれる。フルード数 0.5）` : ''}`);
+    const pv = LIFE.preview(L, rab);
+    li.push(`ウサギが地球と同じ速さ（${rab.jump} m/s）で跳ぶと: いちばん高くて ${len(pv.maxY)}${pv.shell ? '（殻にぶつかる）' : ''}、降りてくるまで ${dur(pv.time)}${pv.maxY > 5 ? '。空気の抵抗でふわふわ浮く' : ''}。空気がなければ ${isFinite(pv.noAir) ? len(pv.noAir) + ' まで上がる' : '脱出速度をこえて宇宙へ'}`);
+    let a1 = 0, a2 = 0, ao = 0; const m = L.M;
+    for (let i = 0; i < m.N; i++) if (L.TR.elev[i] < 0) { ao += m.area[i]; if (L.O.h[i] >= 0.1) a1 += m.area[i]; if (L.O.h[i] >= 1.0) a2 += m.area[i]; }
+    li.push(`泳げる海: 小魚（深さ 10 cm 以上）${sig(a1 / ao * 100)}%、大きな魚（深さ 1 m 以上）${sig(a2 / ao * 100)}%（海の平均の深さ ${len(P.H0)}）`);
+    $('lifePhys').innerHTML = li.map(t => `<li>${t}</li>`).join('');
+  }
+  return { life, lifePhys, init, nums, live, facts, setSizeLabel, len, speed, dur, sig, $ };
 })();

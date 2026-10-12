@@ -1,7 +1,7 @@
 // ちいさな地球 — 描画（three.js r128）。星の半径を 1 として描く。
 'use strict';
 const VIEW = (() => {
-  let hemi, halo, vapor, rTop, wCol, wWet, wVal, renderer, scene, camera, planet, landV, waterV, treeMesh, shell, sun, cv;
+  let hemi, halo, vapor, rTop, wCol, wWet, wVal, lCol, lCls, renderer, scene, camera, planet, landV, waterV, treeMesh, shell, sun, cv;
   let C, rFloor;          // ボクセルのマス目・柱の床（陸の上の面）の半径
   let M, TR, O;           // 網・地形・海
   const st = { light: 'cycle', honest: null, style: 'voxel', ex: 100, az: 0.6, el: 0.35, alt: 2.2, treeShown: 0, treeReal: 0 };
@@ -18,7 +18,7 @@ const VIEW = (() => {
     hemi = new THREE.HemisphereLight(0x9cc8ff, 0x20242a, 0.42); scene.add(hemi);
     stars();
     planet = new THREE.Group(); scene.add(planet);
-    wCol = new Float32Array(M.N * 3); wWet = new Uint8Array(M.N); wVal = new Float32Array(M.N);
+    wCol = new Float32Array(M.N * 3); wWet = new Uint8Array(M.N); wVal = new Float32Array(M.N); lCol = new Float32Array(M.N * 3); lCls = new Uint8Array(M.N);
     // ボクセルふうの陸と海（マス目を柱にする）
     C = VOXEL.cells(M); rFloor = new Float32Array(M.N);
     landV = new THREE.Mesh(VOXEL.columns(M, C), new THREE.MeshLambertMaterial({ vertexColors: true }));
@@ -26,17 +26,59 @@ const VIEW = (() => {
     planet.add(landV); planet.add(waterV);
     // 毎コマ全部の頂点から包み球を計算すると重いので、固定の球にして画面外の判定もしない
     for (const m of [landV, waterV]) { m.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 3); m.frustumCulled = false; }
-    // 殻（空気をとじこめる仮定）
-    shell = new THREE.Mesh(new THREE.SphereGeometry(1.25, 64, 32), new THREE.ShaderMaterial({
-      transparent: true, depthWrite: false, side: THREE.DoubleSide,
-      vertexShader: 'varying vec3 vN; varying vec3 vV; void main(){ vec4 p = modelViewMatrix*vec4(position,1.); vN = normalize(normalMatrix*normal); vV = normalize(-p.xyz); gl_Position = projectionMatrix*p; }',
-      fragmentShader: 'varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.-abs(dot(vN,vV)), 3.); gl_FragColor = vec4(0.55,0.85,1.0, 0.03 + 0.35*f); }',
+    // 殻（空気をとじこめる仮定）: 三角形のタイルの集まり。外すと、データが壊れるように（横ずれ・色ずれ）外へはじけて消える
+    //   明るさのチカチカはしない（毎秒3〜30回の点滅は使わない。RULES 9章）。乱れは位置と色のずれだけ
+    shell = new THREE.Mesh(shellGeom(), new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, depthTest: false, side: THREE.DoubleSide,
+      uniforms: { uProg: { value: 0 }, uTime: { value: 0 } },
+      vertexShader: `
+        uniform float uProg, uTime;
+        attribute vec3 aCenter; attribute float aSeed; attribute vec3 aBary;
+        varying vec3 vBary; varying float vQ; varying float vSeed; varying vec3 vN; varying vec3 vV;
+        float h(float x){ return fract(sin(x) * 43758.5453); }
+        void main(){
+          float q = clamp((uProg - aSeed * 0.55) / 0.45, 0., 1.);
+          vec3 p = position;
+          float g = step(0.001, q) * (1. - q);
+          float k = floor(uTime * 6. + aSeed * 37.);
+          p += (vec3(h(k * 12.99 + aSeed * 78.), h(k * 39.35 + aSeed * 11.), h(k * 7.77 + aSeed * 3.1)) - .5) * 0.07 * g;
+          p = aCenter + (p - aCenter) * (1. - q * 0.9);
+          p += normalize(aCenter) * q * q * 1.3;
+          vQ = q; vSeed = aSeed; vBary = aBary;
+          vec4 mv = modelViewMatrix * vec4(p, 1.);
+          vN = normalize(normalMatrix * normalize(aCenter)); vV = normalize(-mv.xyz);
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: `
+        varying vec3 vBary; varying float vQ; varying float vSeed; varying vec3 vN; varying vec3 vV;
+        void main(){
+          float edge = 1. - smoothstep(0., 0.07, min(min(vBary.x, vBary.y), vBary.z));
+          float f = pow(1. - abs(dot(vN, vV)), 3.);
+          vec3 col = vec3(0.55, 0.85, 1.0);
+          float on = step(0.001, vQ);
+          col = mix(col, fract(vSeed * 7.13) > .5 ? vec3(1., .35, .9) : vec3(.3, 1., .95), 0.65 * on);
+          float scan = 0.82 + 0.18 * step(0.5, fract(gl_FragCoord.y * 0.25));   // 止まった走査線
+          float a = (0.01 + 0.08 * f + edge * (0.12 * f + 0.35 * on)) * (1. - vQ) * scan;   // 殻は網目だけ（ふちのかさは大気が受け持つ）。ふだんは星のふち（横から見える所）だけうっすら
+          gl_FragColor = vec4(col, a);
+        }`,
     }));
-    // logarithmicDepthBuffer の書き込みが ShaderMaterial にはないので、殻は奥行きを見ない
-    shell.material.depthTest = false; shell.renderOrder = 10;
+    shell.renderOrder = 10; shell.userData = { start: 0, was: false };
     scene.add(shell);
-    halo = new THREE.Mesh(new THREE.SphereGeometry(1.25, 48, 24), new THREE.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.2, depthWrite: false, depthTest: false, side: THREE.BackSide }));
-    halo.renderOrder = 9; halo.visible = false; scene.add(halo);
+    // 大気: ふだんから、ふちに行くほど濃くなるうすい青（真ん中はほぼ透明）。殻を外すと、残っている空気の割合に合わせて広がりながら消える
+    halo = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 32), new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, depthTest: false,
+      uniforms: { uDen: { value: 1 }, uSpread: { value: 0 } },
+      vertexShader: 'varying vec3 vN; varying vec3 vV; void main(){ vec4 p = modelViewMatrix*vec4(position,1.); vN = normalize(normalMatrix*normal); vV = normalize(-p.xyz); gl_Position = projectionMatrix*p; }',
+      fragmentShader: `
+        uniform float uDen, uSpread; varying vec3 vN; varying vec3 vV;
+        void main(){
+          float f = 1. - abs(dot(vN, vV));
+          float rim = pow(f, mix(2.2, 1.2, uSpread));            // 広がるほど、ふちの濃さがぼやける
+          vec3 col = mix(vec3(0.45, 0.75, 1.0), vec3(0.75, 0.85, 1.0), uSpread);
+          gl_FragColor = vec4(col, uDen * (0.015 + 0.55 * rim));
+        }`,
+    }));
+    halo.renderOrder = 9; halo.scale.setScalar(1.25); scene.add(halo);
     // 湯気の粒（正直モード）: 沸いている水・氷の面から立ちのぼって散る。数はマスの蒸発の速さに合わせる（動きは見た目だけ）
     const NV = 3000;
     vapor = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: 3, sizeAttenuation: false, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -52,6 +94,20 @@ const VIEW = (() => {
     treeMesh.count = 0; planet.add(treeMesh);
     setStyle(st.style);
     controls();
+  }
+  // 殻のタイル: 正二十面体を3回割った三角形（1280枚）。三角形ごとに中心・乱数・重心座標
+  function shellGeom() {
+    const g = new THREE.IcosahedronGeometry(1.25, 3).toNonIndexed(), p = g.attributes.position.array, n = p.length / 9;
+    const cen = new Float32Array(p.length), seed = new Float32Array(p.length / 3), bary = new Float32Array(p.length);
+    let s = 7; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    for (let t = 0; t < n; t++) {
+      const cx = (p[t * 9] + p[t * 9 + 3] + p[t * 9 + 6]) / 3, cy = (p[t * 9 + 1] + p[t * 9 + 4] + p[t * 9 + 7]) / 3, cz = (p[t * 9 + 2] + p[t * 9 + 5] + p[t * 9 + 8]) / 3, sd = r();
+      for (let v = 0; v < 3; v++) { cen.set([cx, cy, cz], (t * 3 + v) * 3); seed[t * 3 + v] = sd; bary.set(v === 0 ? [1, 0, 0] : v === 1 ? [0, 1, 0] : [0, 0, 1], (t * 3 + v) * 3); }
+    }
+    g.setAttribute('aCenter', new THREE.BufferAttribute(cen, 3));
+    g.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
+    g.setAttribute('aBary', new THREE.BufferAttribute(bary, 3));
+    return g;
   }
   function stars() {
     const n = 1500, p = new Float32Array(n * 3);
@@ -105,10 +161,11 @@ const VIEW = (() => {
       rFloor[i] = 1 + ex * de / PHYS.RE;
       if (vox) VOXEL.setCol(landV.geometry, M, C, i, rFloor[i], rBase);
       VOXEL.setColor(landV.geometry, C, i, c, e >= 0 ? mix(c, [0.36, 0.26, 0.17], 0.6) : mix(c, [0.1, 0.1, 0.12], 0.4));
+      lCol[i * 3] = c[0]; lCol[i * 3 + 1] = c[1]; lCol[i * 3 + 2] = c[2]; lCls[i] = e >= 0 ? 1 : 0;   // 陸＝1・海の底＝0（色をまぜない）
     }
     // なめらかボクセル: 角の高さを、角で出会う3マスの床の平均に（段々の間が坂でつながる）。陰影のため上の面の法線も坂に合わせる
     if (vox) VOXEL.resetNormals(landV.geometry, M, C);
-    else { for (let i = 0; i < M.N; i++) VOXEL.setColSmooth(landV.geometry, M, C, i, rFloor, rBase); VOXEL.topNormals(landV.geometry, M, C); }
+    else { for (let i = 0; i < M.N; i++) VOXEL.setColSmooth(landV.geometry, M, C, i, rFloor, rBase); VOXEL.topNormals(landV.geometry, M, C); VOXEL.smoothColors(landV.geometry, M, C, lCol, lCls, 0.7); }
     const lv = landV.geometry.attributes; lv.position.needsUpdate = true; lv.color.needsUpdate = true;
     placeTrees();
   }
@@ -150,7 +207,7 @@ const VIEW = (() => {
       q.setFromUnitVectors(up, n).multiply(q2.setFromAxisAngle(up, rnd() * 6.283));
       const hh = hU * (0.85 + 0.3 * rnd());
       sc.set(hh, hh, hh);
-      const base = rFloor[i];   // ボクセルの床・つぶの上の端と同じ高さ
+      const base = groundR(i, n.x, n.y, n.z);   // 描いている地面の高さ（なめらかボクセルの坂でもめりこまない）
       mtx.compose(n.clone().multiplyScalar(base - hh * 0.03), q, sc);
       treeMesh.setMatrixAt(k, mtx);
       const v = rnd(); tint.setRGB(0.8 + 0.35 * v, 0.85 + 0.3 * rnd(), 0.75 + 0.2 * (1 - v));   // 1本ずつ少しちがう緑
@@ -194,10 +251,10 @@ const VIEW = (() => {
     for (let i = 0; i < M.N; i++) wVal[i] = wWet[i] ? rTop[i] : rFloor[i] - 1e-4;
     for (let i = 0; i < M.N; i++) {
       if (vox) VOXEL.setCol(waterV.geometry, M, C, i, wVal[i], wWet[i] ? rFloor[i] : wVal[i]);
-      else VOXEL.setColSmooth(waterV.geometry, M, C, i, wVal, rFloor[i] - 1e-4);
+      else VOXEL.setColSmooth(waterV.geometry, M, C, i, wVal, rFloor[i] - 1e-4, wWet);
       VOXEL.setColorRGB(waterV.geometry, C, i, wCol[i * 3], wCol[i * 3 + 1], wCol[i * 3 + 2], 0.85);
     }
-    if (!vox) VOXEL.topNormals(waterV.geometry, M, C);
+    if (!vox) { VOXEL.topNormals(waterV.geometry, M, C); VOXEL.smoothColors(waterV.geometry, M, C, wCol, wWet, 0.85); }
     else if (waterV.userData.smooth) VOXEL.resetNormals(waterV.geometry, M, C);
     waterV.userData.smooth = !vox;
     const wv = waterV.geometry.attributes; wv.position.needsUpdate = true; wv.color.needsUpdate = true;
@@ -302,8 +359,37 @@ const VIEW = (() => {
     }
     vapor.geometry.attributes.position.needsUpdate = true; vapor.geometry.attributes.color.needsUpdate = true;
   }
+  // 水を落としたしるし: 上から水のかたまりが落ちてきて（0.7 秒）、着いた所に波の輪が2つ広がる（1.6 秒）。本当の時間で動く見た目だけ
+  const fx = [];
+  function dropFx(c, width) {
+    const n = new THREE.Vector3(M.pos[c * 3], M.pos[c * 3 + 1], M.pos[c * 3 + 2]);
+    const r0 = Math.max(rTop[c] || 1, rFloor[c] || 1), w = Math.max(0.01, width / O.R);
+    const blob = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2), new THREE.MeshPhongMaterial({ color: 0x5ec8ff, transparent: true, opacity: 0.85, shininess: 80 }));
+    blob.scale.setScalar(w * 0.45); planet.add(blob);
+    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), n);
+    const rings = [0, 1].map(() => {
+      const m = new THREE.Mesh(new THREE.RingGeometry(0.86, 1, 48), new THREE.MeshBasicMaterial({ color: 0xbff4ff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, depthTest: false }));
+      m.renderOrder = 11;   // 落とした水のふくらみ（高さの強調つき）に隠れないように
+      m.quaternion.copy(q); m.position.copy(n).multiplyScalar(r0 + 2 * O.P.H0 * st.ex / O.R + 0.002); m.visible = false; planet.add(m); return m;
+    });
+    fx.push({ n, r0, w, blob, rings, t0: performance.now() });
+  }
+  function updateFx() {
+    const now = performance.now();
+    for (let k = fx.length - 1; k >= 0; k--) {
+      const f = fx[k], t = (now - f.t0) / 1000;
+      if (t < 0.7) { const e = t / 0.7; f.blob.position.copy(f.n).multiplyScalar(f.r0 + f.w * 0.45 + 0.35 * (1 - e * e)); f.blob.visible = true; }
+      else f.blob.visible = false;
+      f.rings.forEach((m, i) => {
+        const u = (t - 0.7 - i * 0.35) / 1.6;
+        m.visible = u > 0 && u < 1;
+        if (m.visible) { m.scale.setScalar(f.w * (0.6 + 3.2 * u)); m.material.opacity = 0.75 * (1 - u); }
+      });
+      if (t > 0.7 + 0.35 + 1.6) { [f.blob, ...f.rings].forEach(m => { planet.remove(m); m.geometry.dispose(); m.material.dispose(); }); fx.splice(k, 1); }
+    }
+  }
   function render(spin) {
-    updateVapor();
+    updateVapor(); updateFx();
     planet.rotation.y = spin;
     placeCamera();
     // 光: めぐる＝太陽は止まっていて星が自転する／いつも昼＝見ている側の少し左上から／いつも夜＝見ている側の反対から（見た目だけ）
@@ -313,14 +399,40 @@ const VIEW = (() => {
     else { sun.position.set(5, 2, 3); sun.intensity = 1.25; hemi.intensity = 0.42; }
     const hs = st.honest;
     // 殻: 正直モードで外したあとは消す。かわりに、逃げていく空気をうすい球で（大きさ・こさは見た目だけ）
-    shell.visible = camera.position.length() > 1.3 && !(hs && hs.removed);
-    halo.visible = !!(hs && hs.removed && hs.airM > 0.002);
-    if (halo.visible) { halo.scale.setScalar(1 + 3 * (1 - hs.airM)); halo.material.opacity = 0.35 * hs.airM; }
+    // 殻: 外した瞬間から 2.5 秒（本当の時間）で、こわれて消える
+    const now = performance.now(), su = shell.userData, removed = !!(hs && hs.removed);
+    if (removed && !su.was) { su.start = now; const gl = document.getElementById('glitch'); if (gl) { gl.hidden = false; gl.classList.remove('run'); void gl.offsetWidth; gl.classList.add('run'); setTimeout(() => { gl.hidden = true; }, 2600); } }
+    su.was = removed;
+    const prog = removed ? (now - su.start) / 2500 * 1.4 : 0;
+    shell.material.uniforms.uProg.value = prog; shell.material.uniforms.uTime.value = now / 1000;
+    shell.visible = prog < 1.4 && (camera.position.length() > 1.3 || removed);
+    // 大気: 殻の中の空気（残っている割合 airM）。外したあとは広がりながらうすれる（大きさ・こさは見た目だけ）
+    const am = hs && hs.removed ? Math.max(0, Math.min(1, hs.airM)) : 1;
+    halo.visible = am > 0.003 && camera.position.length() > 1.3;
+    halo.scale.setScalar(1.25 * (1 + 2.5 * (1 - am)));
+    halo.material.uniforms.uDen.value = Math.sqrt(am); halo.material.uniforms.uSpread.value = 1 - am;
     // 森: 空気がなくなると葉の水が抜けて枯れる（色の変わる速さは見た目だけ）
     const br = hs ? hs.brown : 0;
     treeMesh.material.color.setRGB(1 + 0.7 * br, 1 - 0.3 * br, 1 - 0.6 * br);   // 緑 → 茶色
     renderer.render(scene, camera);
   }
-  return { init, setStyle, rebuildLand, updateWater, render, resize, pick, setAlt, screenUpInPlanet, screenRightInPlanet, st,
+  // 描いている地面の高さ（マス c の中の向き p で）。ボクセルは床の高さ、なめらかボクセルは扇形の三角形の中で補間（生きもの・木が坂にめりこまないように）
+  function groundR(c, px, py, pz) {
+    if (st.style === 'voxel' || !rFloor[c]) return rFloor[c];
+    const c0 = C.cs[c], k = C.cs[c + 1] - c0, cf = C.cf, tri = M.tri;
+    const ox = M.pos[c * 3], oy = M.pos[c * 3 + 1], oz = M.pos[c * 3 + 2];
+    const hc = (f) => (rFloor[tri[f * 3]] + rFloor[tri[f * 3 + 1]] + rFloor[tri[f * 3 + 2]]) / 3;
+    for (let j = 0; j < k; j++) {
+      const a = (c0 + j) * 3, b = (c0 + (j + 1) % k) * 3;
+      // 中心 o・角 A・角 B の平面で、p の重心座標
+      const ax = cf[a] - ox, ay = cf[a + 1] - oy, az = cf[a + 2] - oz, bx = cf[b] - ox, by = cf[b + 1] - oy, bz = cf[b + 2] - oz, qx = px - ox, qy = py - oy, qz = pz - oz;
+      const d00 = ax * ax + ay * ay + az * az, d01 = ax * bx + ay * by + az * bz, d11 = bx * bx + by * by + bz * bz, d20 = qx * ax + qy * ay + qz * az, d21 = qx * bx + qy * by + qz * bz;
+      const den = d00 * d11 - d01 * d01; if (!den) continue;
+      const v = (d11 * d20 - d01 * d21) / den, w = (d00 * d21 - d01 * d20) / den;
+      if (v >= -1e-3 && w >= -1e-3 && v + w <= 1.001) return (1 - v - w) * rFloor[c] + v * hc(C.ct[c0 + j]) + w * hc(C.ct[c0 + (j + 1) % k]);
+    }
+    return rFloor[c];
+  }
+  return { groundR, get planet() { return planet; }, get rFloor() { return rFloor; }, get rTop() { return rTop; }, get mesh() { return M; }, init, dropFx, setStyle, rebuildLand, updateWater, render, resize, pick, setAlt, screenUpInPlanet, screenRightInPlanet, st,
     set onTap(f) { onTap = f; }, get camera() { return camera; }, get vapor() { return vapor; } };
 })();
