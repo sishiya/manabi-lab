@@ -126,7 +126,7 @@ const memIndex = path.join(projDir, 'memory/MEMORY.md');
 const docs = [
   ['CLAUDE.md', path.join(root, 'CLAUDE.md'), 10 * 1024, '会話のたびに読みこまれる'],
   ['memory/MEMORY.md', memIndex, 20 * 1024, '会話のたびに読みこまれる（200行で切れる）'],
-  ['RULES.md', path.join(root, 'RULES.md'), 40 * 1024, 'セッションのはじめに読む'],
+  ['RULES.md', path.join(root, 'RULES.md'), 25 * 1024, 'セッションのはじめに読む'],
 ];
 md.push('## 毎回読まれる文書', '');
 for (const [name, p, max, why] of docs) {
