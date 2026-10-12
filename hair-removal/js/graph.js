@@ -5,7 +5,7 @@ const PH_COL = { A: '#e57a7a', C: '#d7a28c', T: '#7d6a62', R: '#ffd166', X: '#33
 const GR = { padL: 30, padR: 8, padT: 22, padB: 20 };
 
 // rows[i][d] = {ph, vis}（d 日目）、events = 手入れ、t = いまの日、tEnd = グラフの右の端
-function drawCycles(g, w, h, rows, events, t, tEnd) {
+function drawCycles(g, w, h, rows, events, t, tEnd, hits) {
   g.clearRect(0, 0, w, h);
   if (w < 80 || h < 60 || !rows) return;
   const { padL, padR, padT, padB } = GR, pw = w - padL - padR, ph = h - padT - padB;
@@ -36,6 +36,14 @@ function drawCycles(g, w, h, rows, events, t, tEnd) {
     const x = X(e.t), c = TOOL_COLOR[e.type];
     g.fillStyle = c; g.beginPath(); g.moveTo(x, padT - 3); g.lineTo(x - 4, padT - 11); g.lineTo(x + 4, padT - 11); g.closePath(); g.fill();
     for (const i of e.idx) g.fillRect(x - 1, padT + i * rh + 1, 2, rh - 2);
+  }
+  // 光でいたんだ日（×）から、また のびる が始まるまで（ピンクの枠）
+  for (const n of hits || []) {
+    const row = rows[n.i], y = padT + n.i * rh;
+    let d2 = row.length - 1;
+    for (let d = Math.ceil(n.t + 1); d < row.length; d++) if (row[d].ph === 'A') { d2 = d; break; }
+    g.strokeStyle = '#ff8fb1'; g.lineWidth = 1.5; g.strokeRect(X(n.t), y + 1.5, X(d2) - X(n.t), rh - 3);
+    g.fillStyle = '#ff8fb1'; g.font = '700 10px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('×', X(n.t), y + rh / 2);
   }
   // いまより右は予想（うすく）
   const xt = X(Math.min(t, tEnd));

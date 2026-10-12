@@ -11,12 +11,12 @@ const SH_PL = [{ t: 0, type: 'shave', idx: [0, 1, 2, 3, 4] }, { t: 0, type: 'plu
 const GUIDE = [
   { t: 0, ev: [], tool: 'look', text: '<b>すね</b>の肌の断面です。毛穴が一列に10個。札は毛穴のいまのようす（のびる・ちぢむ・休む）。🔍 で図をさわると、部分の説明が出ます。' },
   { t: 0, ev: [], tool: 'look', play: true, text: '時間を進めてみます（▶、または +1日・+1週）。毛は「のびる → ちぢむ → 休む → また のびる」をくり返します。毛穴の下半分は周期ごとに縮んで作りなおされます（1つの毛穴では周期に1回）。' },
-  { t: 0, ev: SH_PL.slice(0, 1), tool: 'shave', text: '<b style="color:var(--shave)">カミソリ</b>で左の5個を剃りました（肌の表面を横になぞると剃れます）。表面で切るだけで、毛穴の中は何も変わりません。' },
+  { t: 0, ev: SH_PL.slice(0, 1), tool: 'shave', text: '<b style="color:var(--shave)">カミソリ</b>で左の5個を剃りました（肌の上の毛をなぞると剃れます）。表面で切るだけで、毛穴の中は何も変わりません。' },
   { t: 3, ev: SH_PL.slice(0, 1), tool: 'shave', text: '3日後。のびる毛穴の毛は、もう先が出ています。休む毛穴の毛は切ったまま伸びません。剃っても太くはなりません（Lynfield & Macwilliams 1970）。' },
-  { t: 0, ev: SH_PL, tool: 'pluck', text: '<b style="color:var(--pluck)">毛抜き</b>で右の5個を抜きました（どの道具も、横になぞった範囲に使えます）。根もとごと取れますが、毛穴は残ります。' },
+  { t: 0, ev: SH_PL, tool: 'pluck', text: '<b style="color:var(--pluck)">毛抜き</b>で右の5個を抜きました（どの道具も、肌の上をなぞって使います）。根もとごと取れますが、毛穴は残ります。' },
   { t: 28, ev: SH_PL, tool: 'pluck', text: '4週後。抜いた毛穴は新しい成長期に入り、毛の先が表面に出てきました。左の剃っただけの所とくらべてみてください。' },
   { t: 1.05, ev: LIGHT_DEMO, tool: 'light', text: '<b style="color:var(--light)">光</b>（家庭用の光脱毛器）: 前の日に剃ってから、10個ぜんぶにあてました。光は毛の黒い色に吸われて熱になり、のびる毛穴の毛球（色の濃い毛母）が 80°C をこえて、細胞がいたみます。休む毛穴は変化なし。' },
-  { t: 14, ev: LIGHT_DEMO, tool: 'light', text: 'いたんだ毛はもう伸びず、押し出されて抜け落ちます。毛穴はちぢんで休みに入りますが、なくなってはいません。' },
+  { t: 14, ev: LIGHT_DEMO, tool: 'light', text: 'いたんだ毛はもう伸びず、押し出されて抜け落ちます。毛穴はちぢんで休みに入りますが、なくなってはいません。札の<b style="color:var(--light)">「↻○日」</b>が、休みが終わってまた毛を作りはじめるまでの見込みです（下の周期のグラフではピンクの枠）。' },
   { t: 70, ev: LIGHT_MORE, tool: 'light', text: '2週ごとに4回あてました。休んでいた毛穴があとから のびる に入るので、何回もあてます。下の「毛穴ごとの周期」で、光の日に赤い帯（のびる）が途切れているのを見てください。' },
   { t: 0, ev: [], tool: 'look', age: 60, text: '<b>白髪</b>: 年齢を 60歳 にしました。札に「白」がある毛穴は、色の幹細胞（黄色の点）が毛球へ届かなくなり、バルジに取り残されています（灰色の点）。その毛穴は、次の周期から白い毛を作ります。' },
   { t: 1.05, ev: LIGHT_DEMO, tool: 'light', age: 60, text: '60歳の肌に光をあてました。白い毛はメラニンがないので光が熱にならず、いたみません（できごとの一覧に「白い毛で…無事」）。<b>光脱毛は白髪には効きません</b>。' },
@@ -51,6 +51,7 @@ function buildControls(S, on) {
 
 function syncControls(S) {
   $('site').value = S.site; $('age').value = S.age; $('gray').value = S.gray;
+  $('who').textContent = `${SITES[S.site].name.replace(/（.*）/, '')}・${S.age}歳`;
   $('siteNote').textContent = SITES[S.site].name + ': ' + SITES[S.site].note;
   for (const T of TOOLS) $('tool-' + T.id).setAttribute('aria-checked', String(S.tool === T.id));
   $('hint').textContent = TOOLS.find(T => T.id === S.tool).hint;
