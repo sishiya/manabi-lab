@@ -143,8 +143,9 @@ function updateView() {
   const note = document.getElementById('vnote');
   if (S.chart === 'after') {   // 残像の表（after.js）: ピントは合っている前提で、ぼかさない
     afterRender(document.getElementById('chart'));
-    note.textContent = S.afterMode === 'stare' ? L('まん中の＋を見つめる。順応で図の色が少しずつうすれる', 'Stare at the + in the middle. Adaptation slowly fades the colors')
-      : L('白い面: 見つめていた図の反対の色が見え、数秒〜十数秒で消える', 'White surface: the opposite colors of the figure appear, then fade over several seconds');
+    note.textContent = (S.afterMode === 'stare' ? L('まん中の＋を見つめる。順応で図の色が少しずつうすれる。', 'Stare at the + in the middle. Adaptation slowly fades the colors. ')
+      : L('白い面: 見つめていた図の反対の色が見え、数秒〜十数秒で消える。', 'White surface: the opposite colors appear, then fade over several seconds. '))
+      + L('図形をさわると、しくみの図でその場所の細胞を見られる', 'Tap a shape to see that spot’s cells in the diagram');
   } else {
   // 暗さ: 明るさがしきい値をどれだけ上回るかで見え方の明るさを決める（1.5 log 上回れば ふつう。このアプリの目安）。
   // 桿体だけのとき: まん中がぬけ、視力は 0.16 まで（Shlaer 1937）→ すきま 6 分がやっと分かるぼかし（σ 3 分。推定）を足す

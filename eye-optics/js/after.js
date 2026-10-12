@@ -77,4 +77,10 @@ function afterRender(out) {
   const cx = out.width / 2, cy = out.height / 2, r = out.height * 0.035;
   g.strokeStyle = '#111'; g.lineWidth = Math.max(1.5, out.height * 0.008);
   g.beginPath(); g.moveTo(cx - r, cy); g.lineTo(cx + r, cy); g.moveTo(cx, cy - r); g.lineTo(cx, cy + r); g.stroke();
+  // しくみの図で見ている場所（mech.js）: 点線の輪
+  if (typeof SPOTS !== 'undefined') {
+    const sp = SPOTS[S.afterSpot];
+    g.setLineDash([4, 3]); g.strokeStyle = '#ffd66a'; g.lineWidth = Math.max(1.5, out.height * 0.01);
+    g.beginPath(); g.arc(sp.fx * out.width, sp.fy * out.height, out.height * 0.2, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
+  }
 }

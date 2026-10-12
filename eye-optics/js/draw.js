@@ -245,5 +245,12 @@ function drawAll(g, W, H) {
   drawRetinalImage(g, r.main, r.top);
   drawLabels(g, r.eye);
   drawSection(g);
-  drawLoupe(g, r.eye, S.showTop ? [[r.main, C.ray], [r.top, C.rayTop]] : [[r.main, C.ray]]);
+  if (S.chart === 'after') {   // 残像の表のとき: 拡大鏡の代わりに「網膜の中」のしくみの図（mech.js）。狭い画面は図いっぱいに
+    if (LAY.narrow) drawAfterMech(g, 4, 4, W - 8, H - 8, null);
+    else {   // 右上の「見え方」の欄の下に入るように
+      const v = document.getElementById('view'), vb = v ? v.offsetTop + v.offsetHeight + 8 : 0;
+      const w = Math.min(380, W * 0.38), h = Math.max(150, Math.min(230, H - vb - 10));
+      drawAfterMech(g, W - w - 14, H - h - 10, w, h, [X(r.eye.L - 0.3), Y(-2.5)]);
+    }
+  } else drawLoupe(g, r.eye, S.showTop ? [[r.main, C.ray], [r.top, C.rayTop]] : [[r.main, C.ray]]);
 }

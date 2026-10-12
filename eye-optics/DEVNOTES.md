@@ -1,7 +1,7 @@
 # 目のなかの光の道 開発メモ
 
 ## 別セッションで続けるとき（まずここ）
-- いまの状態: **v007-after**（段階F 残像を追加。それまでは v006-entrance: 2026-10-12 に入口へ。英語対応 JP／EN。段階B 時間・C 乱視・D 暗順応・E 乱視の強さと向き・スマホは図と見え方を固定。案内15段）。入口の `APPS` に `en:true`（cat body）。公開 URL: https://sishiya.github.io/manabi-lab/eye-optics/
+- いまの状態: **v008-mech**（残像のしくみの図＝網膜の中の拡大を追加。v007-after で段階F 残像。それまでは v006-entrance: 2026-10-12 に入口へ。英語対応 JP／EN。段階B 時間・C 乱視・D 暗順応・E 乱視の強さと向き・スマホは図と見え方を固定。案内15段）。入口の `APPS` に `en:true`（cat body）。公開 URL: https://sishiya.github.io/manabi-lab/eye-optics/
 - 次にやること: ユーザーに見てもらう → PLAN.md の段階G以降（網膜の中・盲点・動物の目・白内障）。文を足すときは英語も（I18N.md 2.2）。
 - 読む順: PLAN.md → このファイルの「ファイル構成」→ 関係するファイルだけ。
 - 動かし方: サーバー apps〜apps-6（.claude/launch.json）で http://localhost:<port>/eye-optics/ 。デバッグ用の窓口 `window.__eyop`（`simRun(秒)`＝シミュレーションの秒・`tour(i)`・`set({d, age, len, glasses, light, showTop})`（切りかえの印も残る）・`settle()`（目をすぐ合わせる）、`set({astigP:0|0.75|1.5|3, astigAx:'v'|'h'|'d45'|'d135', sec:'s'|'w', chart:'acuity'|'fan'})`・`S`・`OPT`・`LAY`・`TL`（記録と印）・`DYN`（遅れと速さ））、エラーは `window.__eyopErr`。
@@ -9,7 +9,7 @@
 - ユーザーの好み: つぎへボタン1つで進める案内、マウスをのせると説明（RULES・メモリ）。物理を曲げない。
 
 ## ファイル構成
-読み込み順は optics → dynamics → scene → after（S に afterA・afterMode を足す）→ draw → view → timeline → ui → main（後ろのファイルが前の関数を使う。scene の `applyCond` は timeline の `markEvent`・ui の `syncControls` を呼ぶが、呼ばれるのは起動後なので順番は問題ない）。
+読み込み順は optics → dynamics → scene → after（S に afterA・afterMode を足す）→ mech（S に afterSpot）→ draw → view → timeline → ui → main（後ろのファイルが前の関数を使う。scene の `applyCond` は timeline の `markEvent`・ui の `syncControls` を呼ぶが、呼ばれるのは起動後なので順番は問題ない）。
 
 | ファイル | 中身 | 主な関数・変数 |
 |---|---|---|
@@ -18,6 +18,7 @@
 | js/optics.js | 目の模型と光線の計算（描画なし、Node でも動く）。乱視は `cyl`（角膜の前の面がその断面で強い分 D）を各関数の最後の引数で | `OPT`・`lensParams(A)`・`buildEye(A,dL,stopR,cyl)`・`traceRay`・`traceBundle`（扇と網膜のぼけ）・`paraxialFocus`・`solveAccommodation`・`refractiveError`・`farGlasses`・`nearGlasses`・`maxAccommodation`・`pupilDiameter`・`stopRadiusFor`・`retinaScale`・`goldenMin` |
 | js/dynamics.js | 時間の変化: 調節とひとみの遅れと速さ（Bharadwaj & Schor 2006・Mathôt 2018）、暗順応（Patryas ほか 2013 ほか） | `DYN`・`dynStep(st,t,dt,At,stopRt)`・`dynSettle`・`makeDelay`・`delayFeed`・`DARK`・`darkStep(st,dt,L,age)`・`darkSettle`・`darkSee`（cone／rod／none と余裕） |
 | js/after.js | 残像（段階F）: 図の錐体コントラスト（sRGB→XYZ→LMS）・順応の量 α（`S.afterA`、時定数 7 s）・描画 | `AFTER`・`afterBuild`・`afterStep(dt)`・`afterRender(canvas)`・`M_RGB2LMS` |
+| js/mech.js | 残像のしくみの図（網膜の中の拡大）: とどく光 → 錐体 L・M・S → 神経節細胞（入ってくる − 慣れ ＝ 脳へ、符号つきの棒）→ 見える色。図形（`SPOTS`）を選んで見る | `SPOTS`・`S.afterSpot`・`spotSeen`・`pickSpot`・`drawAfterMech(g,x,y,w,h,anchor)`・`wrapText` |
 | js/scene.js | 状態 `S`（乱視 `astigP`・`astigAx`・断面 `sec`（s 強い向き／w 弱い向き）・表 `chart`、メガネ `Ps`/`Pw`、屈折 `err`/`errW`、暗順応 `cone`/`rod`）・選べる条件（`ASTIG_POWERS`・`ASTIG_AXES`・`SECS`・`dirName`・`astigOf()`）・`recompute`/`retarget`・条件を変える `applyCond`（切りかえの印）・部分の説明 `PARTS`・案内 `TOUR`（`settle`・`go`・`win`） | `AGES`・`LENGTHS`・`GLASSES`・`LIGHTS`・`NEAR_D`/`FAR_D`・`EV_NAMES`・`fmtD`・`fmtDi` |
 | js/draw.js | 断面・光線・物・メガネ・拡大鏡の描画、画面の配置 `LAY` | `layout`・`dToX`/`xToD`・`drawEye`・`drawBundle`・`drawLoupe`・`drawSection`（乱視のときの断面の名前）・`drawAll` |
 | js/view.js | 見え方（視力表・放射状の線の表）と数字の表示。だ円のぼかし（箱ぼかし3回、斜めは表を回してから）、暗さ（明るさ・桿体だけのまん中の穴・視力 0.16 のぼかし） | `VIEW`・`drawChart`・`blurXY`・`blurChart(sL,sS,ang,vis,hole)`・`blurSigma`・`updateView` |
@@ -43,6 +44,7 @@
 - 乱視（段階E で一般化）: 強さ `astigP` と強い向き `astigAx`（横から反時計回り ang: 縦 90・横 0・斜め／45・斜め＼135）。強い向きの断面 cyl=astigP、弱い向き cyl=0。ぼけは強い向き `diamS`・弱い向き `diamW`、見え方はその向き ang にのびるだ円。斜めは表を回して（canvas の rotate(90°+ang)）長い向きを縦にそろえてから縦横のぼかし → 回しもどす（点の像で、45° なら右上・左下にのびることを確かめた）。
 - 暗順応（段階D）: しきい値（log10 cd/m²）を錐体 `S.cone`・桿体 `S.rod` で持つ（`darkStep`）。暗くなると 錐体は頭打ち −1.4 へ時定数 1.5 分、桿体は 0.23 log/分（30歳から1年 0.001 ずつおそく。Patryas: 45歳以上 0.19）、rodAbs −4.6 の上 0.6 は 0.05 log/分。明るい所の桿体の高さ `rodLight(L)` = 1.2＋1.03 log L（推定。晴れ 3000 → 4.8 で切りかわり 6.5 分、部屋 100 → 3.3 で錐体の段なし＝Hecht の弱い光のあと）。明るくなると数秒（3 s）で上がる。晴れ→夜道（0.001）: 約13分まで見えない、30分で −4.59（測定 −4.40±0.44）。`darkSee`: 明るさが錐体＋0.3 を上回れば cone、桿体を上回れば rod、ほかは none。見え方の明るさは 余裕/1.5 log（目安）、rod はまん中 直径 75 分を平らに（Curcio の 1.25°）・σ 3 分を足す（視力 0.16、Shlaer）。
 - 残像（段階F）: 図は変わらず目も動かないので、場所ごとの順応は c(x)·α(t)。dα/dt = (s − α)/τ（s: 残像の表で「図を見つめる」なら 1、ほかは 0）、τ 7 s（Zaidi ほか 2012 の神経節細胞 5〜12 s、Kelly & Martinez-Uriegas 1993 の 4〜8 s の中の推定）。見える錐体コントラスト: 見つめる c·(1 − kα)、白い面 −kα·c（k 0.42 = Zaidi の図4a の傾き。推定）。灰色 128 の地／白 236 で LMS に戻して sRGB へ。15 秒で α 0.88、白へ変えて 0.5 s で強さ 34%、15 秒で 4%、30 秒で消える。α は記録に入るので、ふりかえりで残像の途中にも戻れる。見え方の表のタブ「残像」（`S.chart='after'`）、図の上の `#afterBtn`（白い面へ／図を見つめる）。ぼかし（光学）はかけない（ピントは合っている前提）。
+- 残像のしくみの図（ユーザー「残像のメカニズムも図でわかるように」）: 残像の表のとき、draw.js の `drawAll` が拡大鏡の代わりに `drawAfterMech` を描く（パソコンは右下・見え方の欄の下に入る高さ、網膜へ線。狭い画面は図いっぱい）。棒の値は after.js と同じ s・kα・s−kα（その図形の色を +、反対の色を −）、見える色は `spotSeen`（after.js と同じ式）。残像の表の `#chartLab` をさわると `pickSpot` でいちばん近い図形を選ぶ（表に点線の輪）。残像の表では `#swap` を隠す。
 - 見え方のぼかしは CSS の blur ではなく JS の箱ぼかし3回（縦横別。乱視のため）。σ の値が 0.01 px 変わったときだけ描き直す。
 
 ## 英語対応（2026-10-12、入口へ移すときに）
@@ -65,7 +67,7 @@
 1. `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/smoke.ps1 -Apps eye-optics`（例外・読み込みの失敗・外への通信）
 2. 開いて `__eyopErr` が空。最初の画面: 3 m・25歳・ふつうで「くっきり見える」、ぼけ 4 µm ほど、調節 0.2 D ほど。
 3. 時間: 「⇄ 近くを見る」→ `__eyop.simRun(0.1)` を何回か。0.3 秒までは調節 0.24 D のまま（「目がまだ反応していない（遅れ）」）、そのあと上がって 1.4 秒ごろ「くっきり」、3.4 D へ。グラフに「30 cm を見る」の印、ねらい（点線）を実線が追う。
-4. 「つぎへ」で15段を通す（12段目＝残像: 15 秒で順応 88% → 白い面で「残像: 反対の色」、赤い円が青緑に。グラフの残像の段が上がって下がる）（11段目＝暗順応 ×60・40分: 約13分まで「暗くて見えない」→ 桿体だけ「うす暗く見える」、まん中がぬける、グラフの暗さ慣れが 6.5 分ごろに折れる）: 4段目で物が 20 cm へ／5段目（スロー 1/4）で 0.5 秒後に近くへ切りかわり遅れて合う／6段目（60歳・30 cm）で「水晶体がこれ以上ふくらめず」／7段目（近視）で −2.75 D・「網膜の手前」／8段目（メガネ）で「くっきり」／9段目（×4・グラフ 30秒）でひとみが 20 秒ほどかけて 6.4 mm へ／10段目（1/4）で 0.2 秒後に 1 秒ほどで 3 mm へ。
+4. 「つぎへ」で15段を通す（12段目＝残像: 15 秒で順応 88% → 白い面で「残像: 反対の色」、赤い円が青緑に。グラフの残像の段が上がって下がる。しくみの図の「＝ 脳へ」が +100 → +63 → −34 → 0、緑の四角をさわると「赤紫」の図に）（11段目＝暗順応 ×60・40分: 約13分まで「暗くて見えない」→ 桿体だけ「うす暗く見える」、まん中がぬける、グラフの暗さ慣れが 6.5 分ごろに折れる）: 4段目で物が 20 cm へ／5段目（スロー 1/4）で 0.5 秒後に近くへ切りかわり遅れて合う／6段目（60歳・30 cm）で「水晶体がこれ以上ふくらめず」／7段目（近視）で −2.75 D・「網膜の手前」／8段目（メガネ）で「くっきり」／9段目（×4・グラフ 30秒）でひとみが 20 秒ほどかけて 6.4 mm へ／10段目（1/4）で 0.2 秒後に 1 秒ほどで 3 mm へ。
 5. 乱視: 12段目（乱視 1.5 D 縦・線の表・5 m）で「縦と横でピントの合う所がちがう（乱視）」、ぼけ 縦 14.3・横 2.3 分、屈折「縦 −1.50 D・横 0.00 D」、縦の線だけくっきり。「弱い向きで切る」で図の名前が「横の断面・ふつうの向き」に。強さ 3 D・斜め／で ぼけ 30.7・2.3 分、点の像は右上にのびる。乱視なしでは「強い向き」「断面」の行が消える。13段目（円柱レンズ 縦 −1.50・横 0.00）で「くっきり」、ぼけ 1 分ほど。
 6. グラフを押すと「ふりかえり中」・「▶ いまへもどる」が出て、目と見え方がその瞬間になる。もどると続きから動く。
 7. 物をドラッグ・距離のスライダーで動く（印は「物を動かす」1つ）。部分にマウスをのせて説明が出る（`hitTest` が角膜・房水・虹彩・水晶体・毛様体・硝子体・網膜・中心窩・視神経・強膜・メガネ・物を返す）。
@@ -80,3 +82,4 @@
 - 2026-10-12 v005-dark: 段階D 暗順応（ユーザー「暗順応か残像の段階に」→ 暗順応）、段階E 乱視の強さと向き（ユーザー）、スマホは図と見え方を固定・ほかはスクロール（ユーザー。基本ルールに）。案内 13→14段。
 - 2026-10-12 v006-entrance: ユーザー「準備ができたらトップページに移して」→ 英語対応・ゲーム判定（ゲームではない）・互換モードの確認をして入口へ（保管庫のカードを外し APPS のいちばん下、seo）。節目として versions/ へ。
 - 2026-10-12 v007-after: 段階F 残像（ユーザー「残像の段階に進めて」）。after.js、見え方のタブ「残像」、時間のグラフに残像の段（5段に）、案内 14→15段。日本語・英語とも。
+- 2026-10-12 v008-mech: 残像のしくみの図（mech.js。網膜の中の拡大: とどく光 → 錐体 → 神経節細胞の引き算 → 見える色、図形をさわって場所を選ぶ）。日本語・英語。

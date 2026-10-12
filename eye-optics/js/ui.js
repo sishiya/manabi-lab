@@ -45,6 +45,11 @@ function buildControls() {
   $('showTop').onchange = e => { S.showTop = e.target.checked; };
   for (const b of document.querySelectorAll('.vtabs button')) b.onclick = () => { if (S.chart !== b.dataset.c) applyCond({ chart: b.dataset.c, afterMode: 'stare' }); };
   $('afterBtn').onclick = () => applyCond({ afterMode: S.afterMode === 'stare' ? 'white' : 'stare' });
+  // 残像の表をさわると、しくみの図で見る場所（図形）を選ぶ
+  $('chartLab').addEventListener('pointerdown', e => {
+    if (S.chart !== 'after') return;
+    const b = e.currentTarget.getBoundingClientRect(); pickSpot((e.clientX - b.left) / b.width, (e.clientY - b.top) / b.height); AFTER.last = '';
+  });
 }
 function syncControls() {
   for (const row of document.querySelectorAll('#controls .grp')) {
@@ -54,6 +59,7 @@ function syncControls() {
   }
   for (const b of document.querySelectorAll('.vtabs button')) b.classList.toggle('on', b.dataset.c === S.chart);
   $('afterBtn').hidden = S.chart !== 'after';
+  $('swap').hidden = S.chart === 'after';   // 残像の表では見る先は関係ない
   $('afterBtn').textContent = S.afterMode === 'stare' ? L('白い面へ →', 'To white →') : L('図を見つめる', 'Stare again');
   $('showTop').checked = S.showTop;
   $('lookNear').classList.toggle('on', S.d === NEAR_D); $('lookFar').classList.toggle('on', S.d === FAR_D);
