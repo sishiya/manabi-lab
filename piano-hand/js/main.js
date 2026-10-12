@@ -117,7 +117,7 @@ function setSong(song) {
   renderFgNow(song);
   $('fgCost').textContent = S.plan.cost.toFixed(1);
   $('fgList').innerHTML = S.plan.hands.map(h => '<p class="fg-hand">' + HAND_NAME(h.side) + '</p>' + h.notes.map(n =>
-    `<span data-t="${n.t0}" style="border-color:#${FCOL[n.f].toString(16)}">${noteName(n.m)}<b>${fmtFing(n.f, n.fh)}</b>${n.alt ? L('<i>変</i>', '<i title="changed for this hand size">C</i>') : n.std || !FG_STD ? '' : L('<i>推</i>', '<i title="chosen by the computer">E</i>')}</span>`).join('')).join('');
+    `<span data-t="${n.t0}" style="border-color:#${FCOL[n.f].toString(16)}">${noteName(n.m)}<b>${fmtFing(n.f, n.fh)}</b>${n.alt ? L('<i>変</i>', '<i title="changed for this hand size">C</i>') : n.std || !FG_STD || !hasStdFg(song) ? '' : L('<i>推</i>', '<i title="chosen by the computer">E</i>')}</span>`).join('')).join('');
   const fm = fingeringMatch(S.plan);
   const alt = S.plan.notes.filter(n => n.alt);
   const difList = ns => ns.slice(0, 12).map(n => '<span class="dif" data-t="' + n.t0 + '">' + noteName(n.m) + ' ' + fmtFing(n.f, n.fh) + '→' + fmtFing(n.ref, n.refH) + '</span>').join(' ') + (ns.length > 12 ? L(' ほか ', ' and ') + (ns.length - 12) + L('', ' more') : '');
@@ -132,9 +132,19 @@ function setSong(song) {
   setTime(tStart());
 }
 
+// 曲に一般的な運指のデータ（refR・refL・楽譜ファイルに書かれた指）があるか
+function hasStdFg(song) { return !!(song && (song.refR || song.refL || (song.notes || []).some(n => n.given || n.ref))); }
+// 運指のプルダウン: データがない曲では「コンピュータの推定」を見せて選べなくする。選んだもの（FG_STD）は変えないので、データのある曲に戻ると元の表示に
+function syncFgMode() {
+  const has = hasStdFg(S.song), el = $('fgMode');
+  el.value = has && FG_STD ? 'std' : 'est'; el.disabled = !has;
+  el.title = has ? '' : L('この曲には一般的な運指のデータがないので、コンピュータの推定で弾きます', "This piece has no standard fingering data, so it is played with the computer's estimate");
+}
+
 // いまの運指の選び方と出どころ（曲の欄の下）
 function renderFgNow(song) {
-  const has = !!(song.refR || song.refL || (song.notes || []).some(n => n.given || n.ref));
+  const has = hasStdFg(song);
+  syncFgMode();
   const src = song.fsrc || (song.notes ? L('楽譜ファイルに書かれた指', 'the fingers written in the score file') : '');
   $('fgNow').innerHTML = !has ? L('運指: <b>コンピュータの推定</b>（この曲には一般的な運指のデータがありません' + (song.notes ? '' : '。このアプリで作った曲') + '）', "Fingering: <b>the computer's estimate</b> (no standard fingering data for this piece" + (song.notes ? '' : '; a piece made for this app') + ')')
     : FG_STD ? L('運指: <b>一般的な運指</b>（出どころ: ' + src + '）', 'Fingering: <b>standard</b> (source: ' + src + ')') +
@@ -175,7 +185,7 @@ const SONG_GROUPS = [
   ['超絶技巧', 'Virtuoso', ['chopin', 'bravura']],
 ];
 const SAMPLES = [
-  { file: 'elise-opening.mid', name: L('エリーゼのために 冒頭（MIDI・両手のトラック）', 'Für Elise, opening (MIDI, a track per hand)') },
+  { file: 'fur-elise-opening-fingered.musicxml', name: L('エリーゼのために 冒頭（MusicXML・両手・運指つき）', 'Für Elise, opening (MusicXML, both hands, with fingering)') },
   { file: 'c-major-scale-fingered.musicxml', name: L('ハ長調の音階（MusicXML・両手・運指つき）', 'C major scale (MusicXML, both hands, with fingering)') },
   { file: 'ode-to-joy-with-chords.mid', name: L('歓喜の歌＋左手の和音（MIDI・トラック1つ）', 'Ode to Joy + left-hand chords (MIDI, one track)') },
 ];
@@ -341,7 +351,7 @@ function initUI() {
   $('missOut').addEventListener('click', e => { const s = e.target.closest('[data-t]'); if (s) { setPlaying(false); setTime(+s.dataset.t); } });
   // 運指の選び方（v043〜）: 一般的な運指（最初）／コンピュータの推定
   $('fgMode').innerHTML = [['std', L('運指: 一般的な運指', 'Fingering: standard')], ['est', L('運指: コンピュータの推定', "Fingering: computer's estimate")]].map(([k, t]) => `<option value="${k}">${t}</option>`).join('');
-  $('fgMode').value = FG_STD ? 'std' : 'est'; $('fgMode').setAttribute('aria-label', L('運指', 'Fingering'));
+  syncFgMode(); $('fgMode').setAttribute('aria-label', L('運指', 'Fingering'));
   $('fgMode').addEventListener('change', e => { setPlaying(false); FG_STD = e.target.value === 'std'; if (S.song) busy(L('運指と手の動きを計算しています…', 'Working out fingering and hand motion…'), () => setSong(S.song)); });
   const fr = $('frame');
   fr.addEventListener('dragover', e => { e.preventDefault(); fr.classList.add('drop'); });

@@ -4,7 +4,7 @@
 
 ## 別セッションで続けるとき（まずここ）
 
-- **いまの状態（2026-10-12）**: `v050-thumbspring` ＋ 2026-10-12 の収録曲の見直し（非営利だけ可の Baylor Piano Basics を出どころにしていた5曲＝和音・メロディと和音・アルペジオ・きらきら星・歓喜の歌を外した。下の「状態」）。**入口に掲載・英語対応ずみ**（v011〜。英語名 "Hands at the Piano"）。GitHub Pages で公開（push で。v021 まで push 済み）。Artifact にはしていない。
+- **いまの状態（2026-10-12）**: `v050-thumbspring` ＋ 2026-10-12 の収録曲の見直し（非営利だけ可の Baylor Piano Basics を出どころにしていた5曲＝和音・メロディと和音・アルペジオ・きらきら星・歓喜の歌を外した。下の「状態」）＋エリーゼのサンプルを運指つき MusicXML に・運指のデータがない曲ではプルダウンを推定に固定（同じ日）。**入口に掲載・英語対応ずみ**（v011〜。英語名 "Hands at the Piano"）。GitHub Pages で公開（push で。v021 まで push 済み）。Artifact にはしていない。
 - **ユーザーの方針（いちばん大事）**:
   1. **目標は「本物と見間違える見た目」。そのために現実世界に可能な限り忠実に**。
   2. **物理を曲げて帳尻を合わせない**。届かなければ「押せなかった」を結果に出す。そのあと「関節をやわらかく」など現実の要素を足して試し、それでも無理なら「むずかしい・運指を大きく変える必要」と結果で出す。数値は結果に合わせて決めない。
@@ -47,7 +47,7 @@
 | `js/keys.js` | 鍵盤の寸法（mm）と位置 | `KB`, `keyX(m)`, `keyTop(m)`, `pressZ(m,f)`, `surfaceAt(x,z,depress)`, `noteName(m)` |
 | `js/songs.js` | 検証用の曲（著作権の切れたもの）・一般的な運指 `refR`/`refL`（0 は書かれていない音）と出どころ `fsrc` | `SONGS`, `SRC_HANON`・`SRC_HENLE`, `refAt`, `ELISE_REF_R`, `SCALE_C`, `ELISE_R`, `parseSong`, `parseLine` |
 | `js/import.js` | 楽譜ファイルの読みこみ（MIDI・MusicXML・.mxl の zip）、手の分け方、和音をへらす | `parseMidi`, `songFromMidi`, `songFromMusicXml`, `unzipMxl`, `finishSong`, `songFromFile` |
-| `samples/` | サンプルの楽譜ファイル（`tools/make-samples.js` で作る） | elise-opening.mid（2トラック）・c-major-scale-fingered.musicxml（2段・運指つき）・ode-to-joy-with-chords.mid（1トラック・和音） |
+| `samples/` | サンプルの楽譜ファイル（`tools/make-samples.js` で作る） | fur-elise-opening-fingered.musicxml（2段・Henle 版の指・ペダル）・c-major-scale-fingered.musicxml（2段・運指つき）・ode-to-joy-with-chords.mid（1トラック・和音。運指なし） |
 | `tools/make-samples.js` | サンプルを作る Node のスクリプト（`node piano-hand/tools/make-samples.js`） | |
 | `js/fingering.js` | ① 運指（左手は鏡・和音）。手の大きさで指の開きの表を縮める | `SPAN`, `SPAN0`, `setSpanScale`, `SPAN_K`, `CROSS`, `noteCost`, `pairCost`, `tripleCost`, `planFingering(notes, side)`, `planMelody`, `planChords`, `chordAssigns`, `chordCost`, `handPos`, `eventTrans` |
 | `js/hand.js` | ②③④ 手の骨・FK・IK・手首・指先の目標 | `FINGERS`, `fingerFK`, `fingerIK`, `TIP_N`, `WRIST_Y`, `rotY`, `toWorld`/`toLocal`（手首の姿勢 W=[x,y,z,ψ,side]）, `yawRange`, `HAND_NAME`, `REST_OFF`・`strikeShare`・`liftPeak`（リラックス）, `POSTURES`・`POSTURE`・`tipN`・`wyOf`・`postAt`（指の構え）, `FG_STD`（一般的な運指で弾く）, `buildPlan`（曲全体。届かない所の選び直し）, `buildPlanWith`, `buildHandPlan`（片手）, `solveWrist`, `reachErr`, `anchorAt`, `wristAt`, `fingerTarget`, `keepOrder`, `poseAt`, `depressAt` |
@@ -92,7 +92,7 @@
 ## 確認のしかた（変更のたびに）
 
 1. 開いて `window.__phErr` が undefined、コンソールにエラーがない。
-2. すべての曲で `__ph.checksAll()` を実行し、HISTORY.md の検査の表より悪くなっていない（運指の並びと、一般的な運指との一致 `match` も見る。「答え合わせをまとめて」で 533/559 より下がらない（2026-10-12 に5曲を外す前は 664/704））。**運指の切りかえ**: 一般的な運指（最初）で全曲の押せなかった音 0（大人）・一般的な運指との一致がすべて 100%（選び直し n.alt 0）、曲の欄の下に出どころ。推定に切りかえると前と同じ比べ方。子どもの手でも選び直しが理由なく出ない。
+2. すべての曲で `__ph.checksAll()` を実行し、HISTORY.md の検査の表より悪くなっていない（運指の並びと、一般的な運指との一致 `match` も見る。「答え合わせをまとめて」で 533/559 より下がらない（2026-10-12 に5曲を外す前は 664/704））。**運指の切りかえ**: 一般的な運指（最初）で全曲の押せなかった音 0（大人）・一般的な運指との一致がすべて 100%（選び直し n.alt 0）、曲の欄の下に出どころ。推定に切りかえると前と同じ比べ方。子どもの手でも選び直しが理由なく出ない。運指のデータがない曲（サンプルの歓喜の歌の MIDI など）では運指のプルダウンが「コンピュータの推定」で選べなくなり、データのある曲に戻ると選んでいた方に戻る。サンプルのエリーゼ（MusicXML）は内蔵の「エリーゼのために 冒頭（両手）」と同じ指。
 3. 再生して鍵が光り、音が鳴る。時刻のつまみ・矢印キーで1コマずつ動く。検査の表の行を押すとその時刻へ跳ぶ。
 4. 視点4つ（ななめ・真上・正面・横）で手が見える。真上から見て、親指くぐりで手が回る（音階 2.24 秒あたり）。
 5. 375px 幅で横にはみ出さない。
@@ -107,6 +107,7 @@
 
 - 2026-10-10 v000-poc: 技術検証の最初の版。6曲・検査の表。
 - 2026-10-10 保管庫に掲載（中身は v000-poc のまま）。2026-10-11 入口へ（v011-english）。
+- 2026-10-12 サンプルと運指のプルダウン（版のコピーなし）: エリーゼのサンプルを MIDI から MusicXML（Henle 版の指つき）に、MIDI のサンプルは歓喜の歌＋和音だけ。運指のデータがない曲ではプルダウンを「コンピュータの推定」にして選べなくする（選んだものは保つ）。HISTORY.md の同じ日付。
 - 2026-10-12 収録曲の見直し（版のコピーなし）: 収益化に備えて、**非営利の利用だけ許されている出どころ（Baylor Piano Basics、CC BY-NC-SA 4.0）の運指を使っていた5曲を外した**（和音・メロディと和音・アルペジオ・きらきら星・歓喜の歌）。著作権の切れた教本（ハノン第41番のアルペジオなど）で置きかえる案は、原本を IMSLP で確かめないと書けないため、ユーザーの判断で「確かめられない曲は外す」。答え合わせは 533/559（95%）。残りの曲の検査は前と同じ。サンプルの「歓喜の歌＋左手の和音」の MIDI は運指を含まないので残し、音の並びは tools/make-samples.js に移した（作り直しても同じファイル）。make-samples.js が英語対応（L）のあとから動かなかったのも直した。**紹介動画の台本**（_dev/promo/piano-hand.html・piano-hand-guide.html）は外した曲（ode・chords2・twinkle・arp）を使っているので、撮り直す前に曲を差しかえる → 2026-10-12 に差しかえて2本とも撮り直した（_dev/promo/upload-log.md）。公開済みの動画は推定の運指で撮ったもので、Baylor の運指は使っていない。押さえたまま指をかえる [45] の仕組みは残す（楽譜ファイルの運指で使える）。
 - 2026-10-11 v050-thumbspring: 親指がバネのように急に伸びるのを減らす（先回りのねらいを押す時刻の手から見た鍵の位置に、押さえているあいだの重み 1.5、下限は時間でなめらかに）。
 - 2026-10-11 v049-thumbrest: 押していない親指を反らせない（第1関節・付け根の関節を 20° より伸ばさず、足りない高さは CM 関節で）。親指くぐりでは入れない。
