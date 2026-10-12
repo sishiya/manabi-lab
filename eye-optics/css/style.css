@@ -21,14 +21,20 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
 #info{position:absolute;left:16px;bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;min-width:250px}
 #info div{display:flex;gap:8px;align-items:baseline;line-height:1.7}
 #info span{color:var(--muted);flex:1}
-#info b{font-family:var(--f-mono);font-weight:500}
+#info b{font-family:var(--f-mono);font-weight:500;white-space:nowrap}
+#info span{white-space:nowrap}
+#info div.wide{flex-wrap:wrap;justify-content:flex-end}
 #info small{color:var(--muted);font-family:var(--f-mono)}
 #info .state{margin-bottom:2px;font-weight:700;line-height:1.5}
 #info .state.ok{color:#9be59b}
 #info .state.blur{color:#ffb070}
 
 #view{position:absolute;right:16px;top:8px;width:290px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px}
-#viewHead{font-size:13px;margin-bottom:6px;line-height:1.5}
+#view .vtop{display:flex;align-items:flex-start;gap:6px;margin-bottom:6px}
+#viewHead{font-size:13px;line-height:1.5;flex:1}
+.vtabs{display:flex;gap:2px;flex:none}
+.vtabs button{font:inherit;font-size:11px;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:2px 6px;cursor:pointer}
+.vtabs button.on{background:var(--acc);color:#0b1620;border-color:var(--acc);font-weight:700}
 #viewHead small{color:var(--muted);font-size:11px}
 #viewHead em{font-style:normal;color:#ffd66a;font-family:var(--f-mono);font-size:11px;white-space:nowrap}
 .chartbox{position:relative;height:190px;border-radius:6px;overflow:hidden;background:#f4f1ea}
@@ -72,7 +78,9 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
   #tourNum{display:none}
   #next{padding:12px 10px;font-size:14px;align-self:stretch}
   #view{position:static;grid-row:3;grid-column:1;width:auto;padding:6px}
-  #viewHead{font-size:12px;margin-bottom:4px}
+  #viewHead{font-size:12px}
+  #view .vtop{flex-direction:column;gap:3px;margin-bottom:4px}
+  .vtabs button{padding:4px 7px}
   #viewHead small{display:none}
   .chartbox{height:150px}
   .vnote{display:none}

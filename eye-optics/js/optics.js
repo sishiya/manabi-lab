@@ -24,18 +24,19 @@ function lensParams(A) {
   };
 }
 
-// 目をつくる: A＝調節（D）、dL＝目の長さのちがい（mm、＋で長い＝近視）、stopR＝ひとみ（虹彩のあな）の半径
-function buildEye(A, dL, stopR) {
+// 目をつくる: A＝調節（D）、dL＝目の長さのちがい（mm、＋で長い＝近視）、stopR＝ひとみ（虹彩のあな）の半径、
+// cyl＝この断面で角膜の前の面が強い分（D）。乱視は 縦の断面と横の断面で cyl を変えて2回計算する（トーリック面の主経線の断面の光線は、面の対称性でその平面に留まる）
+function buildEye(A, dL, stopR, cyl = 0) {
   const p = lensParams(A);
   const z2 = OPT.corneaT, z3 = z2 + p.acd, z4 = z3 + p.t;
   const surfs = [
-    { name: 'cornea1', z: 0, c: 1 / 7.72, k: -0.26, n1: OPT.nAir, n2: OPT.nCornea, semi: 6 },
+    { name: 'cornea1', z: 0, c: 1 / 7.72 + cyl / ((OPT.nCornea - OPT.nAir) * 1000), k: -0.26, n1: OPT.nAir, n2: OPT.nCornea, semi: 6 },
     { name: 'cornea2', z: z2, c: 1 / 6.50, k: 0, n1: OPT.nCornea, n2: OPT.nAqueous, semi: 6 },
     { name: 'lens1', z: z3, c: 1 / p.R3, k: p.k3, n1: OPT.nAqueous, n2: p.n, semi: 5 },
     { name: 'lens2', z: z4, c: 1 / p.R4, k: p.k4, n1: p.n, n2: OPT.nVitreous, semi: 5 },
   ];
   const L = OPT.L0 + dL;
-  return { A, dL, lens: p, surfs, stopZ: z3 - OPT.stopBeforeLens, stopR, L, retinaC: L - OPT.retinaR };
+  return { A, dL, cyl, lens: p, surfs, stopZ: z3 - OPT.stopBeforeLens, stopR, L, retinaC: L - OPT.retinaR };
 }
 
 // 円すい曲線の面のたわみ（sag）と傾き
@@ -190,24 +191,27 @@ function goldenMin(f, lo, hi, it = 32) {
   return (a + b) / 2;
 }
 // 網膜のぼけ（二乗平均の半径 mm）。ピント合わせの目安
-function blurRms(A, dL, obj, glassesP, stopR) {
-  const v = traceBundle(buildEye(A, dL, stopR), { d: obj.d, ang: 0 }, glassesP, 21).rms;
+function blurRms(A, dL, obj, glassesP, stopR, cyl = 0) {
+  const v = traceBundle(buildEye(A, dL, stopR, cyl), { d: obj.d, ang: 0 }, glassesP, 21).rms;
   return isFinite(v) ? v : 1e3;
 }
 
 // 調節の量 A を決める: 網膜のぼけがいちばん小さくなるように（0〜Amax の中で）。
 // 像の位置（近軸）ではなくぼけの小ささで決めるのは、本物の目も「いちばんくっきり」をねらうため（球面収差があるので少しちがう）
-function solveAccommodation(dL, obj, glassesP, Amax, stopR) {
+// 乱視のとき（縦の cyl と横の cylH、縦横で別のメガネ glassesP・Ph）は、縦と横のぼけの二乗の平均がいちばん小さい所（最小錯乱円）をねらう
+function solveAccommodation(dL, obj, glassesP, Amax, stopR, cyl = 0, Ph = glassesP, cylH = 0) {
   if (Amax <= 0) return 0;
-  const f = A => blurRms(A, dL, obj, glassesP, stopR);
+  const two = cyl !== cylH || Ph !== glassesP;
+  const f = two ? A => Math.sqrt((blurRms(A, dL, obj, glassesP, stopR, cyl) ** 2 + blurRms(A, dL, obj, Ph, stopR, cylH) ** 2) / 2)
+    : A => blurRms(A, dL, obj, glassesP, stopR);
   const A = goldenMin(f, 0, Amax, 26);
   return f(0) <= f(A) ? 0 : (f(Amax) <= f(A) ? Amax : A);
 }
 
 // 目の屈折（D）: ゆるめた目でいちばんくっきり見える物のバージェンス（角膜の位置）。0＝正視、－＝近視、＋＝遠視
 // 求め方: 角膜の位置にうすいレンズを置いたとして、遠くがいちばんくっきりする度を探す（その符号を返す）
-function refractiveError(dL, stopR) {
-  const eye = buildEye(0, dL, stopR), save = OPT.glassesZ;
+function refractiveError(dL, stopR, cyl = 0) {
+  const eye = buildEye(0, dL, stopR, cyl), save = OPT.glassesZ;
   OPT.glassesZ = -1e-3;
   const P = goldenMin(P => {
     const v = traceBundle(eye, { d: Infinity, ang: 0 }, P, 21).rms; return isFinite(v) ? v : 1e3;
@@ -217,15 +221,16 @@ function refractiveError(dL, stopR) {
 }
 
 // メガネの度を、ぼけがいちばん小さくなるように探して 0.25 D きざみにまるめる（実際のメガネと同じきざみ）
-function bestGlasses(A, dL, obj, stopR) {
-  const P = goldenMin(P => blurRms(A, dL, obj, P, stopR), -20, 20, 40);
+function bestGlasses(A, dL, obj, stopR, cyl = 0) {
+  const P = goldenMin(P => blurRms(A, dL, obj, P, stopR, cyl), -20, 20, 40);
   return Math.round(P * 4) / 4 || 0;
 }
 // 遠く用: ゆるめた目で遠くがいちばんくっきり
-function farGlasses(dL, stopR) { return bestGlasses(0, dL, { d: Infinity }, stopR); }
+// 乱視のときは縦と横で別々に決める（円柱レンズ: 縦と横で度がちがうレンズ）
+function farGlasses(dL, stopR, cyl = 0) { return bestGlasses(0, dL, { d: Infinity }, stopR, cyl); }
 // 近く用（老眼鏡）: 40 cm を、調節の半分の力でくっきり見られる度（このアプリの決め方）。遠く用より弱くはしない
-function nearGlasses(dL, Amax, stopR) {
-  const far = farGlasses(dL, stopR), near = bestGlasses(Amax / 2, dL, { d: 400 }, stopR);
+function nearGlasses(dL, Amax, stopR, cyl = 0) {
+  const far = farGlasses(dL, stopR, cyl), near = bestGlasses(Amax / 2, dL, { d: 400 }, stopR, cyl);
   return Math.max(far, near);
 }
 

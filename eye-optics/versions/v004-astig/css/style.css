@@ -1,0 +1,100 @@
+/* 目のなかの光の道 */
+:root{--bg:#13202e;--ink:#e8f0f4;--muted:#a3b4bf;--acc:#7fd4ff;--panel:rgba(12,22,32,0.86);--line:rgba(232,240,244,0.16);
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+#app{display:flex;flex-direction:column;min-height:100%}
+#top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding:10px 16px 4px}
+#top h1{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0}
+#top .sub{color:var(--muted);font-size:13px}
+#stage{flex:1;position:relative;min-height:500px;overflow:hidden}
+#cvwrap{position:absolute;inset:0}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#swap{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);font:inherit;font-weight:700;font-size:14px;background:rgba(12,22,32,0.86);color:#ffd66a;border:1.5px solid #ffd66a;border-radius:20px;padding:8px 16px;cursor:pointer;white-space:nowrap}
+#swap:hover{background:#ffd66a;color:#0b1620}
+
+#tour{position:absolute;left:16px;top:8px;width:min(540px,calc(100% - 330px));background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;display:flex;gap:10px;align-items:center}
+#tour p{margin:0;font-size:14px;line-height:1.6;flex:1}
+#tourNum{font-family:var(--f-mono);font-size:11px;color:var(--muted);align-self:flex-start;padding-top:3px}
+#next{flex:none;font:inherit;font-weight:700;font-size:15px;background:var(--acc);color:#0b1620;border:0;border-radius:8px;padding:10px 16px;cursor:pointer}
+#next:hover{filter:brightness(1.1)}
+
+#info{position:absolute;left:16px;bottom:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;min-width:250px}
+#info div{display:flex;gap:8px;align-items:baseline;line-height:1.7}
+#info span{color:var(--muted);flex:1}
+#info b{font-family:var(--f-mono);font-weight:500;white-space:nowrap}
+#info span{white-space:nowrap}
+#info div.wide{flex-wrap:wrap;justify-content:flex-end}
+#info small{color:var(--muted);font-family:var(--f-mono)}
+#info .state{margin-bottom:2px;font-weight:700;line-height:1.5}
+#info .state.ok{color:#9be59b}
+#info .state.blur{color:#ffb070}
+
+#view{position:absolute;right:16px;top:8px;width:290px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px}
+#view .vtop{display:flex;align-items:flex-start;gap:6px;margin-bottom:6px}
+#viewHead{font-size:13px;line-height:1.5;flex:1}
+.vtabs{display:flex;gap:2px;flex:none}
+.vtabs button{font:inherit;font-size:11px;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:2px 6px;cursor:pointer}
+.vtabs button.on{background:var(--acc);color:#0b1620;border-color:var(--acc);font-weight:700}
+#viewHead small{color:var(--muted);font-size:11px}
+#viewHead em{font-style:normal;color:#ffd66a;font-family:var(--f-mono);font-size:11px;white-space:nowrap}
+.chartbox{position:relative;height:190px;border-radius:6px;overflow:hidden;background:#f4f1ea}
+.chartbox canvas{position:absolute;inset:0;width:100%;height:100%}
+.vnote{font-size:11px;color:var(--muted);margin-top:4px}
+
+#tip{position:absolute;max-width:300px;background:#f4f1ea;color:#16202a;border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.6;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:5}
+
+#timebar{border-top:1px solid var(--line);padding:6px 16px 4px}
+.tbhead{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;font-size:13px}
+.tbnote{color:var(--muted);font-size:12px;flex:1}
+.tbgrp{display:flex;gap:3px;align-items:center}
+.tblab{color:var(--muted);font-size:12px;margin-right:3px}
+.tbhead button,#controls button{font:inherit;font-size:13px;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 9px;cursor:pointer}
+.tbhead button.on,#controls button.on{background:var(--acc);color:#0b1620;border-color:var(--acc);font-weight:700}
+#resume{background:#ffd66a!important;color:#0b1620!important;border-color:#ffd66a!important;font-weight:700}
+#tl{display:block;width:100%;height:124px;margin-top:4px;touch-action:none;cursor:col-resize}
+
+#controls{display:flex;flex-wrap:wrap;gap:8px 18px;padding:10px 16px;border-top:1px solid var(--line)}
+#controls .grp{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+#controls .gname{font-size:12px;color:var(--muted);margin-right:4px}
+#controls .look{flex:1 1 100%}
+#dist{flex:1;min-width:140px;max-width:420px;accent-color:var(--acc);margin-left:6px}
+#controls .chk{font-size:13px;gap:6px;cursor:pointer}
+
+#about{padding:8px 16px 24px;color:var(--muted);font-size:14px;line-height:1.8;max-width:900px}
+#about summary{cursor:pointer;color:var(--ink)}
+#about a{color:var(--acc)}
+#about h3{color:var(--ink);font-size:15px;margin:14px 0 4px}
+
+@media (max-width:719px){
+  /* 狭い画面: 案内 → 図 → 見え方と数字（横に2つ）→ 時間のグラフ → ボタン。重ねない */
+  #top{padding:8px 12px 2px;gap:4px 10px}
+  #top h1{font-size:19px}
+  #top .sub{font-size:12px}
+  #stage{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:6px 8px;min-height:0;overflow:visible}
+  #cvwrap{position:relative;inset:auto;height:236px;grid-column:1/-1;grid-row:2}
+  #swap{left:auto;right:4px;bottom:4px;transform:none;font-size:13px;padding:8px 12px}
+  #tour{position:static;grid-column:1/-1;grid-row:1;width:auto;padding:6px 8px 6px 10px;gap:8px}
+  #tour p{font-size:13.5px;line-height:1.55}
+  #tourNum{display:none}
+  #next{padding:12px 10px;font-size:14px;align-self:stretch}
+  #view{position:static;grid-row:3;grid-column:1;width:auto;padding:6px}
+  #viewHead{font-size:12px}
+  #view .vtop{flex-direction:column;gap:3px;margin-bottom:4px}
+  .vtabs button{padding:4px 7px}
+  #viewHead small{display:none}
+  .chartbox{height:150px}
+  .vnote{display:none}
+  #info{position:static;grid-row:3;grid-column:2;min-width:0;padding:6px 8px;font-size:12px}
+  #info div{line-height:1.55;gap:4px}
+  #info small{display:none}
+  #info .state{font-size:12.5px}
+  #timebar{padding:6px 8px 2px}
+  .tbnote{flex-basis:100%;order:5}
+  #tl{height:132px}
+  #controls{padding:8px 8px 10px;gap:8px 12px}
+  #controls button{min-height:36px;padding:6px 10px}
+  .tbhead{gap:6px 6px}
+  .tbhead button{min-height:34px;padding:4px 7px}
+  .tblab{display:none}
+  #dist{flex-basis:100%;max-width:none;margin:6px 0 0;height:28px}
+}

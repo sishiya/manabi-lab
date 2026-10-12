@@ -5,7 +5,7 @@
 const TL = { rec: [], ev: [], win: 6, lastT: -1, live: null, drag: false };
 const SPEEDS = [{ v: 0.1, label: '1/10', title: 'スロー 1/10 倍' }, { v: 0.25, label: '1/4', title: 'スロー 1/4 倍' }, { v: 1, label: 'ふつう', title: 'ふつうの速さ' }, { v: 4, label: '×4', title: 'はやおくり 4 倍' }];
 const WINS = [6, 30];
-const COND_KEYS = ['age', 'len', 'glasses', 'light'];
+const COND_KEYS = ['age', 'len', 'glasses', 'light', 'astig'];
 const BLUR_OK = 2;   // ぼけの円 2 分（このアプリの「ぼやける」の目安）
 
 // 見かけのひとみの直径（mm）: 虹彩のあなの半径から（stopRadiusFor はほぼ比例なので比で戻す）

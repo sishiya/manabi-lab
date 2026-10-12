@@ -152,7 +152,20 @@ function drawGlasses(g) {
   else { g.moveTo(X(z), Y(h)); g.quadraticCurveTo(X(z + w * 2), Y(0), X(z), Y(-h)); g.quadraticCurveTo(X(z - w * 2), Y(0), X(z), Y(h)); }
   g.fillStyle = 'rgba(200,230,255,0.25)'; g.fill(); g.strokeStyle = 'rgba(220,240,255,0.9)'; g.lineWidth = 1.3; g.stroke(); glow(g, false);
   g.fillStyle = C.ink; g.textAlign = 'center'; g.font = `12px ${getComputedStyle(document.documentElement).getPropertyValue('--f-mono')}`;
-  g.fillText(fmtDi(S.P), X(z), Y(h) - 8);
+  g.fillText(fmtDi(S.P) + (S.Pv !== S.Ph ? (S.sec === 'h' ? '（横）' : '（縦）') : ''), X(z), Y(h) - 8);
+}
+// 乱視のとき: いま描いている断面の名前
+function drawSection(g) {
+  if (S.astig === 'none') return;
+  const a = astigOf(), strong = (S.sec === 'h' ? a.ch : a.cv) > 0;
+  g.fillStyle = strong ? '#ffb070' : '#9be59b';
+  if (LAY.narrow) {   // 狭い画面: 短く、右上に
+    g.font = `12px ${getComputedStyle(document.documentElement).getPropertyValue('--f-body')}`; g.textAlign = 'right';
+    g.fillText(`${S.sec === 'h' ? '横' : '縦'}の断面・${strong ? '強い向き' : 'ふつうの向き'}`, LAY.W - 6, 13);
+    return;
+  }
+  g.font = `13px ${getComputedStyle(document.documentElement).getPropertyValue('--f-body')}`; g.textAlign = 'center';
+  g.fillText(`${S.sec === 'h' ? '横に切った断面（上から見る）' : '縦に切った断面（横から見る）'}・角膜${strong ? 'が 1.5 D 強い向き' : 'はふつうの向き'}`, X(OPT.L0 / 2), Y(OPT.retinaR + 1.6));
 }
 
 // 光線の束。目の外は物の印から引く（距離を縮めているので向きは絵）。目の中は計算どおり
@@ -231,5 +244,6 @@ function drawAll(g, W, H) {
   drawBundle(g, r.main, C.ray, inf ? LAY.trackL : LAY.objX, LAY.oy, inf);
   drawRetinalImage(g, r.main, r.top);
   drawLabels(g, r.eye);
+  drawSection(g);
   drawLoupe(g, r.eye, S.showTop ? [[r.main, C.ray], [r.top, C.rayTop]] : [[r.main, C.ray]]);
 }

@@ -23,6 +23,8 @@ function buildControls() {
   const groups = [
     ['年齢', AGES.map(a => ({ key: a, label: a + '歳' })), () => S.age, 'age'],
     ['目の長さ', LENGTHS, () => S.len, 'len'],
+    ['乱視', ASTIGS, () => S.astig, 'astig'],
+    ['断面', SECS, () => S.sec, 'sec'],
     ['メガネ', GLASSES, () => S.glasses, 'glasses'],
     ['明るさ', LIGHTS, () => S.light, 'light'],
   ];
@@ -34,18 +36,21 @@ function buildControls() {
       b.onclick = () => { S.anim = null; applyCond({ [key]: it.key }); };
       row.appendChild(b);
     }
-    row._get = get; box.appendChild(row);
+    row._get = get; row._key = key; box.appendChild(row);
   }
   const t = document.createElement('label'); t.className = 'grp chk';
   t.innerHTML = '<input type="checkbox" id="showTop"> 物の上の端からの光も';
   box.appendChild(t);
   $('showTop').onchange = e => { S.showTop = e.target.checked; };
+  for (const b of document.querySelectorAll('.vtabs button')) b.onclick = () => { S.chart = b.dataset.c; syncControls(); };
 }
 function syncControls() {
   for (const row of document.querySelectorAll('#controls .grp')) {
     if (!row._get) continue;
     for (const b of row.querySelectorAll('button')) b.classList.toggle('on', String(row._get()) === b.dataset.k);
+    if (row._key === 'sec') row.hidden = S.astig === 'none';   // 断面の切りかえは乱視のときだけ
   }
+  for (const b of document.querySelectorAll('.vtabs button')) b.classList.toggle('on', b.dataset.c === S.chart);
   $('showTop').checked = S.showTop;
   $('lookNear').classList.toggle('on', S.d === NEAR_D); $('lookFar').classList.toggle('on', S.d === FAR_D);
   $('swap').textContent = S.d === NEAR_D ? `⇄ 遠くを見る（${fmtD(FAR_D)}）` : `⇄ 近くを見る（${fmtD(NEAR_D)}）`;

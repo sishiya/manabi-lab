@@ -103,19 +103,26 @@ const blurSigma = diamRad => diamRad / 2 * 3437.75 / 2 * VIEW.k;
 
 function updateView() {
   const r = S.res; if (!r) return;
+  if (VIEW.mode !== S.chart) {
+    VIEW.mode = S.chart; drawChart();
+    document.getElementById('vnote').textContent = S.chart === 'fan' ? '30° ごとの線（太さ 1.5 分）。乱視だと、ある向きの線だけぼやける' : '数字は視力の段（目安）。大きさはそろえて表示';
+  }
   blurChart(blurSigma(r.diamH), blurSigma(r.diamV));
   const Amax = maxAccommodation(S.age);
-  const err = S.err, errTxt = Math.abs(err) < 0.2 ? '正視' : (err < 0 ? '近視 ' : '遠視 ') + fmtDi(Math.round(err * 4) / 4);
+  const q = e => fmtDi(Math.round(e * 4) / 4), err = S.err;
+  const errTxt = r.astig ? `縦 ${q(S.err)}・横 ${q(S.errH)}` : Math.abs(err) < 0.2 ? '正視' : (err < 0 ? '近視 ' : '遠視 ') + q(err);
+  const am = v => (v * 3437.75).toFixed(1);
   const pd = pupilShown(S.stopR);
   document.getElementById('info').innerHTML =
     `<div class="state ${r.state}">${r.stateText}</div>` +
     `<div><span>物までの距離</span><b>${fmtD(S.d)}</b></div>` +
     `<div><span>調節</span><b>${S.A.toFixed(1)} D</b><small>／最大 ${Amax.toFixed(1)}</small></div>` +
     `<div><span>ひとみ</span><b>${pd.toFixed(1)} mm</b></div>` +
-    `<div><span>網膜のぼけ</span><b>${(r.main.blurD * 1000).toFixed(r.main.blurD < 0.01 ? 1 : 0)} µm</b><small>（${r.blurArcmin.toFixed(1)} 分）</small></div>` +
+    (r.astig ? `<div><span>ぼけ 縦・横</span><b>${am(r.diamV)}・${am(r.diamH)} 分</b></div>`
+      : `<div><span>網膜のぼけ</span><b>${(r.main.blurD * 1000).toFixed(r.main.blurD < 0.01 ? 1 : 0)} µm</b><small>（${r.blurArcmin.toFixed(1)} 分）</small></div>`) +
     `<div class="wide"><span>目の屈折</span><b>${errTxt}</b></div>`;
   const since = S.ev ? S.t - S.ev.t : Infinity;
-  document.getElementById('viewHead').innerHTML = `見え方 <small>視力表を ${fmtD(S.d)} に置いたら</small>` +
+  document.getElementById('viewHead').innerHTML = `見え方 <small>${S.chart === 'fan' ? '線の表' : '視力表'}を ${fmtD(S.d)} に置いたら</small>` +
     (S.replay ? ' <em>ふりかえり中</em>' : since < 40 ? ` <em>${S.ev.label} から ${since.toFixed(since < 10 ? 1 : 0)} 秒</em>` : '');
 }
 
