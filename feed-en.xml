@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+  <title>Manabi Lab</title>
+  <subtitle>New and updated apps</subtitle>
+  <link href="https://sishiya.github.io/manabi-lab/?lang=en"/>
+  <link rel="self" href="https://sishiya.github.io/manabi-lab/feed-en.xml"/>
+  <id>https://sishiya.github.io/manabi-lab/feed-en.xml</id>
+  <updated>2026-10-12T00:00:00+09:00</updated>
+  <author><name>Shishiya</name></author>
+  <entry>
+    <title>The Virus That Infects Bacteria</title>
+    <link href="https://sishiya.github.io/manabi-lab/phage/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/phage/?lang=en</id>
+    <published>2026-10-11T00:00:00+09:00</published>
+    <updated>2026-10-12T00:00:00+09:00</updated>
+    <summary>How a T4 phage infects E. coli, multiplies to over 100 inside it, and bursts out. Zoom anywhere from the human body down to single molecules along one time slider, and hover for explanations.</summary>
+  </entry>
+  <entry>
+    <title>Hands at the Piano</title>
+    <link href="https://sishiya.github.io/manabi-lab/piano-hand/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/piano-hand/?lang=en</id>
+    <published>2026-10-10T00:00:00+09:00</published>
+    <updated>2026-10-11T00:00:00+09:00</updated>
+    <summary>Two 3D hands play the falling notes. A test prototype that works out which finger presses each key from the music, and checks whether a human hand could really move that way. Compare with textbook fingering, or open MIDI and MusicXML scores.</summary>
+  </entry>
+  <entry>
+    <title>Body Dive</title>
+    <link href="https://sishiya.github.io/manabi-lab/body-dive/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/body-dive/?lang=en</id>
+    <published>2026-10-03T00:00:00+09:00</published>
+    <updated>2026-10-11T00:00:00+09:00</updated>
+    <summary>Go in through the mouth, nose or anus and travel through the digestive tract and airways in 3D.</summary>
+  </entry>
+  <entry>
+    <title>What a Black Hole Looks Like</title>
+    <link href="https://sishiya.github.io/manabi-lab/black-hole/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/black-hole/?lang=en</id>
+    <published>2026-10-08T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>The black hole from the movie “Interstellar”, drawn by tracing light through curved spacetime point by point. Click to see where that light came from.</summary>
+  </entry>
+  <entry>
+    <title>Inside the Pupa</title>
+    <link href="https://sishiya.github.io/manabi-lab/metamorphosis/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/metamorphosis/?lang=en</id>
+    <published>2026-10-06T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>Inside the body as a caterpillar becomes a pupa and then a moth. Follow which organs break down, stay or are newly built, day by day from tobacco hornworm research.</summary>
+  </entry>
+  <entry>
+    <title>Seeing Airflow at Home</title>
+    <link href="https://sishiya.github.io/manabi-lab/air-flow/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/air-flow/?lang=en</id>
+    <published>2026-10-06T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>See how windows, vents, fans and the wind outside change the air in a home, and where it gets stale, colored by the “age of air”.</summary>
+  </entry>
+  <entry>
+    <title>Evolution Sandbox</title>
+    <link href="https://sishiya.github.io/manabi-lab/ga-creatures/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/ga-creatures/?lang=en</id>
+    <published>2026-10-06T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>Evolve creatures made of joints and muscles with a genetic algorithm. Flat ground, slopes, ice, the Moon and water each give rise to different bodies and ways of moving.</summary>
+  </entry>
+  <entry>
+    <title>How Mold Grows</title>
+    <link href="https://sishiya.github.io/manabi-lab/mold-growth/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/mold-growth/?lang=en</id>
+    <published>2026-10-06T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>A “mold garden” on a magnified bathroom wall. Spores sprout and spread by growing threads called hyphae. Try water, grime, mold remover and anti-mold agents with your finger to find out how to keep it away.</summary>
+  </entry>
+  <entry>
+    <title>God’s-Eye Map</title>
+    <link href="https://sishiya.github.io/manabi-lab/god-view/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/god-view/?lang=en</id>
+    <published>2026-10-05T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>A 3D Earth with real terrain, aerial photos, buildings and moving trains and buses. Zoom out to the edge of the universe or in to atoms and particles, all with one wheel.</summary>
+  </entry>
+  <entry>
+    <title>Quantum Lab</title>
+    <link href="https://sishiya.github.io/manabi-lab/quantum/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/quantum/?lang=en</id>
+    <published>2026-10-04T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>The double slit, tunneling, polarizers, entanglement and the uncertainty principle.</summary>
+  </entry>
+  <entry>
+    <title>Seeing WiFi at Home</title>
+    <link href="https://sishiya.github.io/manabi-lab/wifi-wave/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/wifi-wave/?lang=en</id>
+    <published>2026-10-04T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>See how WiFi signals travel through a home, with an electromagnetic wave simulation.</summary>
+  </entry>
+  <entry>
+    <title>How Animals Sense the World</title>
+    <link href="https://sishiya.github.io/manabi-lab/animal-senses/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/animal-senses/?lang=en</id>
+    <published>2026-10-04T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>See the same garden through the senses of a human, a crow, a pit viper and more. Ultraviolet light and heat are turned into colors you can see.</summary>
+  </entry>
+  <entry>
+    <title>The Immune Battle</title>
+    <link href="https://sishiya.github.io/manabi-lab/immune-battle/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/immune-battle/?lang=en</id>
+    <published>2026-10-04T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>Viruses and bacteria get in, multiply and are cleared by the immune system. Watch it in a microscopic cross-section and graphs.</summary>
+  </entry>
+  <entry>
+    <title>4.6 Billion Years to Us</title>
+    <link href="https://sishiya.github.io/manabi-lab/evolution/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/evolution/?lang=en</id>
+    <published>2026-10-03T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>Watch one place from the sky and follow 4.6 billion years of Earth, life and humankind in 3D.</summary>
+  </entry>
+</feed>

@@ -38,6 +38,7 @@
 
 - **公開中**: https://sishiya.github.io/manabi-lab/ （入口のページから全アプリを開けます。GitHub Pages）
 - **紹介動画**: YouTube「しし屋」 https://www.youtube.com/@sishiya22 （入口のページの下からもリンク）
+- **新着のお知らせ（RSS／Atom）**: https://sishiya.github.io/manabi-lab/feed.xml （英語は `feed-en.xml`）。入口のアプリの公開と更新が届きます。`sitemap.xml` と一緒に `_dev/tools/seo.mjs` が入口の `APPS` から作ります。
 - 入口は日本語と英語を切り替えられます（右上の JP／EN。選んだ言語と並び順はブラウザに覚えます）。入口の13本のアプリは、中も英語に対応しています（2026-10-10〜。企画と作り方・英語の文を足すときの約束は `I18N.md`）。
 - 入口（ルートの `index.html`）のサムネイルは `assets/thumbs/`（`_dev/tools/make-thumbs.ps1` で撮り直し）。各アプリにはファビコン（SVG を埋め込み）。
 - 各アプリの `index.html` が最新版、`launcher.html` から節目の版を開けます（`versions/`）。ほかの版は Git の記録にあります（ランチャーの表の「Git」）。

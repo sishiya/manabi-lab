@@ -1,4 +1,4 @@
-// 検索・リンクカード用の head の部分と sitemap.xml を、入口の APPS から作りなおす（_dev/REACH.md）。
+// 検索・リンクカード用の head の部分と sitemap.xml・feed.xml・feed-en.xml（RSS／Atom）を、入口の APPS から作りなおす（_dev/REACH.md）。
 // 使い方: node _dev/tools/seo.mjs          … 書きかえる
 //         node _dev/tools/seo.mjs --check  … 書きかえずに、古いところがあれば知らせる（終了コード 1）
 // 入口（index.html）と、APPS にある各アプリの index.html の、アクセス解析の1行の次に
@@ -49,8 +49,10 @@ function put(path, b) {
 
 // Google Search Console の所有権の確認（URL プレフィックス https://sishiya.github.io/manabi-lab/。公開してよい値。消すと確認が外れる）
 const GSC = '<meta name="google-site-verification" content="dD02qa-rgBbwyVDz8sacKRQIVEWhm3mKeqHTb-JRRIw">';
+// 入口の head に置く、フィード（feed.xml・feed-en.xml）の場所。RSS リーダーが入口の URL から見つけられるように
+const FEEDS = '<link rel="alternate" type="application/atom+xml" title="まなびラボ" href="' + BASE + 'feed.xml"><link rel="alternate" type="application/atom+xml" title="Manabi Lab (English)" href="' + BASE + 'feed-en.xml">';
 put(entrancePath, block({ url: BASE, title: 'まなびラボ', desc: lead, image: BASE + 'assets/og.jpg', w: 1200, h: 630 })
-  .replace('\n<!-- /seo -->', '\n' + GSC + '\n<!-- /seo -->'));
+  .replace('\n<!-- /seo -->', '\n' + GSC + '\n' + FEEDS + '\n<!-- /seo -->'));
 for (const a of APPS) {
   put(join(root, a.id, 'index.html'), block({
     url: BASE + a.id + '/', title: a.title + '｜まなびラボ', desc: a.desc,
@@ -73,6 +75,36 @@ const smPath = join(root, 'sitemap.xml');
 let oldSm = '';
 try { oldSm = readFileSync(smPath, 'utf8'); } catch (e) {}
 if (oldSm !== sitemap) { stale.push(smPath); if (!check) writeFileSync(smPath, sitemap); }
+
+// feed.xml・feed-en.xml（Atom。入口のアプリの公開と更新を RSS リーダーへ知らせる。1本＝1件、更新日は APPS の updated）
+const toTime = d => d + 'T00:00:00+09:00';
+function feed(lang) {
+  const en = lang === 'en';
+  const self = BASE + (en ? 'feed-en.xml' : 'feed.xml');
+  const q = en ? '?lang=en' : '';
+  const items = [...APPS].sort((a, b) => b.updated.localeCompare(a.updated) || b.created.localeCompare(a.created));
+  const entries = items.map(a => {
+    const url = BASE + a.id + '/';
+    const title = en ? (a.title_en || a.title) : a.title;
+    const desc = en ? (a.desc_en || a.desc) : a.desc;
+    return `  <entry>\n    <title>${esc(title)}</title>\n    <link href="${url}${q}"/>\n    <id>${url}${q}</id>\n`
+      + `    <published>${toTime(a.created)}</published>\n    <updated>${toTime(a.updated)}</updated>\n`
+      + `    <summary>${esc(desc)}</summary>\n  </entry>`;
+  });
+  return '<?xml version="1.0" encoding="UTF-8"?>\n'
+    + `<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="${lang}">\n`
+    + `  <title>${en ? 'Manabi Lab' : 'まなびラボ'}</title>\n`
+    + `  <subtitle>${esc(en ? 'New and updated apps' : 'アプリの公開と更新')}</subtitle>\n`
+    + `  <link href="${BASE}${q}"/>\n  <link rel="self" href="${self}"/>\n`
+    + `  <id>${self}</id>\n  <updated>${toTime(latest)}</updated>\n  <author><name>${en ? 'Shishiya' : 'しし屋'}</name></author>\n`
+    + entries.join('\n') + '\n</feed>\n';
+}
+for (const [file, lang] of [['feed.xml', 'ja'], ['feed-en.xml', 'en']]) {
+  const p = join(root, file), body = feed(lang);
+  let old = '';
+  try { old = readFileSync(p, 'utf8'); } catch (e) {}
+  if (old !== body) { stale.push(p); if (!check) writeFileSync(p, body); }
+}
 
 const rel = p => p.slice(root.length + 1).replace(/\\/g, '/');
 if (check) {

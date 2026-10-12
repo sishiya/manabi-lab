@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="ja">
+  <title>まなびラボ</title>
+  <subtitle>アプリの公開と更新</subtitle>
+  <link href="https://sishiya.github.io/manabi-lab/"/>
+  <link rel="self" href="https://sishiya.github.io/manabi-lab/feed.xml"/>
+  <id>https://sishiya.github.io/manabi-lab/feed.xml</id>
+  <updated>2026-10-12T00:00:00+09:00</updated>
+  <author><name>しし屋</name></author>
+  <entry>
+    <title>細菌にとりつくウイルス</title>
+    <link href="https://sishiya.github.io/manabi-lab/phage/"/>
+    <id>https://sishiya.github.io/manabi-lab/phage/</id>
+    <published>2026-10-11T00:00:00+09:00</published>
+    <updated>2026-10-12T00:00:00+09:00</updated>
+    <summary>T4 ファージが大腸菌にとりつき、細菌の中で100個以上に増えて破れて出るまで。人のからだから分子の大きさまで、タイムスライダー1本でどこでも寄れて、マウスを乗せると解説。</summary>
+  </entry>
+  <entry>
+    <title>ピアノを弾く手</title>
+    <link href="https://sishiya.github.io/manabi-lab/piano-hand/"/>
+    <id>https://sishiya.github.io/manabi-lab/piano-hand/</id>
+    <published>2026-10-10T00:00:00+09:00</published>
+    <updated>2026-10-11T00:00:00+09:00</updated>
+    <summary>降ってくるノーツを3Dの両手が弾く。どの指で押すかを楽譜から自動で決め、人の手として無理のない動きにできるかを確かめる検証用の試作。教本の運指との答え合わせ、MIDI・MusicXML の楽譜も。</summary>
+  </entry>
+  <entry>
+    <title>体内ダイブ</title>
+    <link href="https://sishiya.github.io/manabi-lab/body-dive/"/>
+    <id>https://sishiya.github.io/manabi-lab/body-dive/</id>
+    <published>2026-10-03T00:00:00+09:00</published>
+    <updated>2026-10-11T00:00:00+09:00</updated>
+    <summary>口・鼻・肛門から入って、消化管と気道の中を3Dで進む。</summary>
+  </entry>
+  <entry>
+    <title>ブラックホールの見え方</title>
+    <link href="https://sishiya.github.io/manabi-lab/black-hole/"/>
+    <id>https://sishiya.github.io/manabi-lab/black-hole/</id>
+    <published>2026-10-08T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>映画「インターステラー」のブラックホールを、曲がった時空を進む光を1点ずつ計算して描く。クリックすると、その光がどこから来たのかが分かる。</summary>
+  </entry>
+  <entry>
+    <title>さなぎの中で</title>
+    <link href="https://sishiya.github.io/manabi-lab/metamorphosis/"/>
+    <id>https://sishiya.github.io/manabi-lab/metamorphosis/</id>
+    <published>2026-10-06T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>イモムシがさなぎになり、ガになるまでの体の中。壊れる・残る・新しく作られる器官を、タバコスズメガの研究の日付で追う。</summary>
+  </entry>
+  <entry>
+    <title>空気の流れの見える部屋</title>
+    <link href="https://sishiya.github.io/manabi-lab/air-flow/"/>
+    <id>https://sishiya.github.io/manabi-lab/air-flow/</id>
+    <published>2026-10-06T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>窓・給気口・換気扇・外の風で、家の空気がどう入れかわり、どこがよどむのかを「空気の年齢」の色で見る。</summary>
+  </entry>
+  <entry>
+    <title>進化の箱庭</title>
+    <link href="https://sishiya.github.io/manabi-lab/ga-creatures/"/>
+    <id>https://sishiya.github.io/manabi-lab/ga-creatures/</id>
+    <published>2026-10-06T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>関節と筋肉でできた生きものを、遺伝的アルゴリズムで進化させる。平地・坂・氷・月・水の中で、ちがう体と動き方が生まれる。</summary>
+  </entry>
+  <entry>
+    <title>カビが育つまで</title>
+    <link href="https://sishiya.github.io/manabi-lab/mold-growth/"/>
+    <id>https://sishiya.github.io/manabi-lab/mold-growth/</id>
+    <published>2026-10-06T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>浴室の壁を拡大した「カビの箱庭」。胞子が芽を出し、菌糸をのばして増えていく。水・汚れ・カビ取り剤・防カビ剤を指で試して、どうすれば生えないかを探す。</summary>
+  </entry>
+  <entry>
+    <title>神の視点マップ</title>
+    <link href="https://sishiya.github.io/manabi-lab/god-view/"/>
+    <id>https://sishiya.github.io/manabi-lab/god-view/</id>
+    <published>2026-10-05T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>本物の地形・航空写真・建物・電車やバスの動きで見る3Dの地球。引けば宇宙の果てまで、寄れば原子や素粒子まで、ホイールひとつで。</summary>
+  </entry>
+  <entry>
+    <title>量子の実験室</title>
+    <link href="https://sishiya.github.io/manabi-lab/quantum/"/>
+    <id>https://sishiya.github.io/manabi-lab/quantum/</id>
+    <published>2026-10-04T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>二重スリット・トンネル効果・偏光板・量子もつれ・不確定性原理。</summary>
+  </entry>
+  <entry>
+    <title>電波の見える部屋</title>
+    <link href="https://sishiya.github.io/manabi-lab/wifi-wave/"/>
+    <id>https://sishiya.github.io/manabi-lab/wifi-wave/</id>
+    <published>2026-10-04T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>WiFi の電波が家の中をどう伝わるかを、電磁波のシミュレーションで見る。</summary>
+  </entry>
+  <entry>
+    <title>いきものの感じる世界</title>
+    <link href="https://sishiya.github.io/manabi-lab/animal-senses/"/>
+    <id>https://sishiya.github.io/manabi-lab/animal-senses/</id>
+    <published>2026-10-04T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>同じ庭を、人間・カラス・マムシなどの感覚で見る。紫外線や熱も見えるように置き換えて表示。</summary>
+  </entry>
+  <entry>
+    <title>免疫のたたかい</title>
+    <link href="https://sishiya.github.io/manabi-lab/immune-battle/"/>
+    <id>https://sishiya.github.io/manabi-lab/immune-battle/</id>
+    <published>2026-10-04T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>ウイルスや細菌が入って増え、免疫に片づけられるまでを、ミクロの断面とグラフで見る。</summary>
+  </entry>
+  <entry>
+    <title>ヒトへの46億年</title>
+    <link href="https://sishiya.github.io/manabi-lab/evolution/"/>
+    <id>https://sishiya.github.io/manabi-lab/evolution/</id>
+    <published>2026-10-03T00:00:00+09:00</published>
+    <updated>2026-10-10T00:00:00+09:00</updated>
+    <summary>同じ場所を空から見つづけて、地球と生命と人類の46億年をたどる3D。</summary>
+  </entry>
+</feed>
