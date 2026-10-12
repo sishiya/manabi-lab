@@ -244,3 +244,4 @@ i.sw.plain{background:repeating-linear-gradient(90deg,rgba(240,240,230,.9) 0 6px
 /* 横にすべらせる列はスクロールバーを出さない（指やトラックパッドで動かす） */
 .chips,#cams,.envhead{scrollbar-width:none}
 .chips::-webkit-scrollbar,#cams::-webkit-scrollbar,.envhead::-webkit-scrollbar{display:none}
+.mk.faint{opacity:.6}

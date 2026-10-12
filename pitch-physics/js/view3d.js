@@ -43,7 +43,7 @@ function init3d(canvas) {
   // ガイド: 回転がなければ通る点（白い輪。ドラッグで動かせる）・実際に通った点（球種の色）・その間の線
   V3.gPlain = new THREE.Mesh(new THREE.RingGeometry(0.045, 0.062, 40), new THREE.MeshBasicMaterial({ color: '#ffffff', side: THREE.DoubleSide, depthTest: false, transparent: true }));
   V3.gReal = new THREE.Mesh(new THREE.CircleGeometry(PHY.r, 32), new THREE.MeshBasicMaterial({ color: '#ffd166', side: THREE.DoubleSide, depthTest: false, transparent: true, opacity: 0.9 }));
-  V3.gLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineDashedMaterial({ color: '#ffffff', dashSize: 0.03, gapSize: 0.02, depthTest: false }));
+  V3.gLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineDashedMaterial({ color: '#ffffff', dashSize: 0.03, gapSize: 0.02, depthTest: false, transparent: true }));
   for (const o of [V3.gPlain, V3.gReal, V3.gLine]) { o.renderOrder = 7; fg.add(o); }
   // ボール（縫い目つき）・見つけやすくする輪
   V3.ball = makeBall('#f2f0e6', true); fg.add(V3.ball);
@@ -249,13 +249,16 @@ function updateGuides3d() {
   V3.gReal.scale.setScalar(pop);
   V3.gLine.geometry.setFromPoints([a, b]); V3.gLine.computeLineDistances();
   const show = S.cam !== 'ball';
-  V3.gPlain.visible = show; V3.gReal.visible = V3.gLine.visible = show && arrived;
+  // 通る点は投げる前から計算で分かっているので、通るまではうっすら、通ったらはっきり
+  V3.gPlain.visible = show; V3.gReal.visible = V3.gLine.visible = show && !(S.guideRef === 'ff' && S.pitch === 'ff');
+  V3.gReal.material.opacity = arrived ? 0.95 : 0.28; V3.gLine.material.opacity = arrived ? 1 : 0.35;
   const lab = (id, v, txt) => { const e = document.getElementById(id), q = show && screenOf(v); if (!q) { e.hidden = true; return; } e.hidden = false; e.style.left = q[0] + 'px'; e.style.top = q[1] + 'px'; e.textContent = txt; };
   const rp = refPoint(), d = Math.hypot(S.res.pPlate[0] - rp[0], S.res.pPlate[2] - rp[2]) * 100, dzc = (S.res.pPlate[2] - rp[2]) * 100, dxc = (S.res.pPlate[0] - rp[0]) * 100;
   const same = S.guideRef === 'ff' && S.pitch === 'ff';
   lab('mkPlain', a, same ? 'フォーシーム（ドラッグで動かせる）' : refName() + 'ならここ（ドラッグで動かせる）');
   if (arrived && S.res.ground) lab('mkReal', b, '地面に落ちた（' + (S.guideRef === 'ff' ? 'フォーシームと同じねらいだと。白い輪を上へドラッグすると届く' : 'ねらいが低すぎる') + '）');
-  else if (arrived && !same) lab('mkReal', b, '通った点（' + refName() + 'より ' + (dzc >= 0 ? '上 ' : '下 ') + Math.abs(dzc).toFixed(0) + '・' + (dxc >= 0 ? '右 ' : '左 ') + Math.abs(dxc).toFixed(0) + ' cm）'); else document.getElementById('mkReal').hidden = true;
+  else if (!same && !S.res.ground) lab('mkReal', b, (arrived ? '通った点（' : '通る予定（') + refName() + 'より ' + (dzc >= 0 ? '上 ' : '下 ') + Math.abs(dzc).toFixed(0) + '・' + (dxc >= 0 ? '右 ' : '左 ') + Math.abs(dxc).toFixed(0) + ' cm）'); else document.getElementById('mkReal').hidden = true;
+  document.getElementById('mkReal').classList.toggle('faint', !arrived);
 }
 
 function bind3dPointer(canvas) {

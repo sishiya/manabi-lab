@@ -162,9 +162,12 @@ function drawCatcher(g) {
   if (S.guideRef === 'ff' && S.ffRes && S.ffRes !== S.res && !S.overlay) polyline(g, S.ffRes, map0 => P(map0), 'rgba(255,255,255,.35)', 1.5);
   g.strokeStyle = '#ffffff'; g.lineWidth = 2; g.beginPath(); g.arc(gp[0], gp[1], rr, 0, 7); g.stroke();
   hit('plainMark', gp[0], gp[1], rr + 8); LAY.catcher.plainMark = [gp[0], gp[1], rr + 8];
-  if (S.t >= S.res.tPlate - 1e-6) {
+  {   // 通る点（通るまではうっすら、通ったらはっきり）
+    const arr = S.t >= S.res.tPlate - 1e-6;
+    g.globalAlpha = arr ? 1 : 0.35;
     g.setLineDash([4, 3]); g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(gp[0], gp[1]); g.lineTo(gr[0], gr[1]); g.stroke(); g.setLineDash([]);
     g.fillStyle = mainCol(); g.beginPath(); g.arc(gr[0], gr[1], Math.max(4, gr[2] * PHY.r), 0, 7); g.fill(); hit('realMark', gr[0], gr[1], 8);
+    g.globalAlpha = 1;
   }
   // 投手板
   const rb = P([0, PHY.rubberY, 0.254]); g.fillStyle = '#e8f0f4'; g.fillRect(rb[0] - 4, rb[1] - 1, 8, 2);
