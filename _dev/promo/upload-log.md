@@ -36,3 +36,4 @@ upload-batch.ps1 が書く。1日の区切りは太平洋時間の0時（日本�
 | 2026-10-12 10:35 | body-dive-guide | ? | （上の続き）実は上がっていた → C6h7u6C5p88。-Update -Full で仕上げた |
 | 2026-10-12 10:47 | animal-senses-guide | ? | 失敗: 動画を送れませんでした: The underlying connection was closed: An unexpected error occurred on a send. |
 | 2026-10-12 10:47 | animal-senses-guide | ? | （上の続き）実は上がっていた → FHNZ18v8kIQ。-Update -Full で仕上げた |
+| 2026-10-12 18:42 | body-dive-guide | ? | 動画は上がった（CXfe6ztaSGU）が、字幕（en）を付けられませんでした: 403 The request cannot be completed because you have exceeded your <a href="/youtube/v3/getting-started#quota">quota</a>. → 上限が戻ってから youtube-upload.ps1 -Update |

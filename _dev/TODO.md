@@ -5,10 +5,12 @@
 
 ## 紹介動画（YouTube）
 - [x] **音量をそろえた動画への差しかえ（2026-10-12）**: さなぎ・空気の流れ・進化の箱庭・カビ・いきものの説明動画とショートを差しかえた。
-  体内ダイブの説明動画だけは、新しい方（C6h7u6C5p88）が YouTube の処理で止まり、10/12 は古い版（音が小さい）で公開。46億年は公開ずみなので差しかえない。
+  体内ダイブの説明動画は、最初に上げた C6h7u6C5p88 が処理で止まったので、18:41 に上げなおした CXfe6ztaSGU を 10/12 20:00 に予約（古い Bb4pSYgpfx4 の予約は外した）。46億年は公開ずみなので差しかえない。
+  - [ ] **CXfe6ztaSGU（体内ダイブの説明動画）に英語の字幕がない**（上げたとき API の1日の上限に当たった）。10/13 の16時（日本時間）すぎに
+    `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Update -Meta _dev/promo/body-dive-guide.upload.json` で付ける。
   - 処理で止まった2本は「接続が切れた」が出た 550〜600MB の動画（1回の PUT で送っていた）。youtube-upload.ps1 を 32MB ずつ送り、切れたら続きから送る形に直した（10/12）。
   - [ ] 新しく上げた9本（-List の 10/14〜10/22）の処理が終わったかを、各日の前日確認（-Verify）で見る。
-  - [ ] 差しかえた古い動画・止まった動画を Studio で消す（ユーザー）: C6h7u6C5p88・FHNZ18v8kIQ（処理で止まった）、y-jvQvZPn70・fTvY3UHVNYg・h8TCh3ey6xs・_SpVbv1EVAM・9yB61JTpk6Q・UojA-4KWDxY・BUNj9IxFrP8・kscSWupNRdI・oCRqEFwwQVQ・q9Hv3NKkYm4・FJnDw9MjCL0（古い版。予約は外してある）。**Bb4pSYgpfx4 は 10/12 に公開する版なので消さない**。
+  - [ ] 差しかえた古い動画・止まった動画を Studio で消す（ユーザー）: C6h7u6C5p88・FHNZ18v8kIQ（処理で止まった）、y-jvQvZPn70・fTvY3UHVNYg・h8TCh3ey6xs・_SpVbv1EVAM・9yB61JTpk6Q・UojA-4KWDxY・BUNj9IxFrP8・kscSWupNRdI・oCRqEFwwQVQ・q9Hv3NKkYm4・FJnDw9MjCL0（古い版。予約は外してある）。Bb4pSYgpfx4（体内ダイブの古い説明動画。予約は外した）も消してよい。
 - [ ] **毎日の公開前の最終確認**（RULES 8.4、前日に）: 10/12〜10/22 の各日の2本を前の日に `youtube-upload.ps1 -Verify`・mp4 のコマ・公開中のアプリで。10/11 分はすみ（upload-log.md）。
   10/11 に -Verify で全日をざっと見たところ、10/12〜14 は OK、10/22 のカビ2本の英語の字幕も 10/11 に付けた。24本の予約日時は -List で表どおり。
 - [ ] 古い46億年のショート QWAG8kMWAn8（予約を外した・非公開）を Studio で消す（ユーザーが消す、10/11）。
