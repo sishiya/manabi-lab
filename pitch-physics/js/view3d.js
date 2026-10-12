@@ -10,7 +10,7 @@ const V3 = {
 
 // カメラの決まった位置（右投げのとき。左投げは X を逆に）
 const CAMS = {
-  pitcher: { name: '投手の後ろ', pos: [0.9, 3.8, -40], tgt: [0, 0.9, -7], fov: 17 },
+  pitcher: { name: '投手の後ろ', pos: [0.9, 3.4, -36], tgt: [0, 0.95, -9], fov: 21 },
   ball:    { name: 'ボールの後ろ', follow: true, fov: 50 },
   catcher: { name: '捕手の後ろ', pos: [0, 1.05, 2.2], tgt: [0, 1.35, -18], fov: 38 },
   side:    { name: '横から', pos: [-14, 1.7, -9.4], tgt: [0, 1.1, -9.4], fov: 62 },
@@ -29,28 +29,16 @@ function init3d(canvas) {
   const fg = V3.fg = new THREE.Scene();
   fg.add(new THREE.HemisphereLight('#ffffff', '#55704a', 0.9));
   const sun = new THREE.DirectionalLight('#fff4e0', 0.6); sun.position.set(-60, 120, -40); fg.add(sun);
-  const dirt = new THREE.MeshLambertMaterial({ color: '#b98a5c' }), white = new THREE.MeshLambertMaterial({ color: '#f4f4f0' });
-  // マウンド（直径 18 フィート・高さ 10 インチ）と投手板、ホームのまわりの土
-  const mound = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 2.74, 0.254, 40), dirt); mound.position.set(0, 0.127, -PHY.rubberY + 0.3); fg.add(mound);
-  const rub = new THREE.Mesh(new THREE.BoxGeometry(0.61, 0.03, 0.15), white); rub.position.set(0, 0.26, -PHY.rubberY); fg.add(rub);
-  const hd = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 0.01, 48), dirt); hd.position.set(0, 0.005, 0.4); fg.add(hd);
-  // ホームベース（五角形。17 インチ）
-  const w = 0.2159, e = 0.2159, sh = new THREE.Shape();
-  sh.moveTo(-w, 0); sh.lineTo(w, 0); sh.lineTo(w, -e * 0.5 * 2); sh.lineTo(0, -e * 2); sh.lineTo(-w, -e * 0.5 * 2); sh.closePath();
-  const plate = new THREE.Mesh(new THREE.ShapeGeometry(sh), white); plate.rotation.x = -Math.PI / 2; plate.position.set(0, 0.012, -PHY.plateY); fg.add(plate);
-  // ShapeGeometry の y → −Z なので、−e*2 は +Z（捕手の側）へ
-  // バッターボックスの線
-  const lineMat = new THREE.LineBasicMaterial({ color: '#f4f4f0' });
-  for (const s of [-1, 1]) {
-    const x0 = s * (0.2159 + 0.15), x1 = s * (0.2159 + 0.15 + 1.22), z0 = -PHY.plateY - 0.91 + 0.4, z1 = z0 + 1.83;
-    const gb = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x0, 0.013, z0), new THREE.Vector3(x1, 0.013, z0), new THREE.Vector3(x1, 0.013, z1), new THREE.Vector3(x0, 0.013, z1), new THREE.Vector3(x0, 0.013, z0)]);
-    fg.add(new THREE.Line(gb, lineMat));
-  }
+  // ホームのまわりの土・白線・ホームベース・マウンド（field.js）
+  buildField(fg);
   // ストライクゾーン
   const zp = [[-ZONE.x, ZONE.zLo], [ZONE.x, ZONE.zLo], [ZONE.x, ZONE.zHi], [-ZONE.x, ZONE.zHi], [-ZONE.x, ZONE.zLo]].map(q => new THREE.Vector3(q[0], q[1], -PHY.plateY));
   fg.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(zp), new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.7 })));
   const zf = new THREE.Mesh(new THREE.PlaneGeometry(ZONE.x * 2, ZONE.zHi - ZONE.zLo), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.06, side: THREE.DoubleSide, depthWrite: false }));
   zf.position.set(0, (ZONE.zHi + ZONE.zLo) / 2, -PHY.plateY); fg.add(zf);
+  // ねらった点（ゾーンのまん中）の十字
+  const tc = [[-0.05, 0], [0.05, 0], [0, -0.05], [0, 0.05]].map(q => new THREE.Vector3(q[0], ZONE.zMid + q[1], -PHY.plateY + 0.001));
+  fg.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(tc), new THREE.LineBasicMaterial({ color: '#ffffff' })));
   // ボール（縫い目つき）・見つけやすくする輪
   V3.ball = makeBall('#f2f0e6', true); fg.add(V3.ball);
   const rc = document.createElement('canvas'); rc.width = rc.height = 64; const rg = rc.getContext('2d');
@@ -259,6 +247,8 @@ function draw3d() {
     a.position.copy(bp); a.setDirection(f.normalize()); a.setLength(L, Math.min(L * 0.35, k * 0.4), Math.min(L * 0.2, k * 0.25));
   }
   V3.halo.visible = !CAMS[S.cam].follow;
+  // 投手の人形（ボールの後ろのカメラでは、カメラが体の中に入るので出さない）
+  const fig = buildPitcher(S.P, S.arm); fig.visible = !CAMS[S.cam].follow;
   // 背景（ぼかす）→ 手前（くっきり）
   const R = V3.renderer;
   V3.blur.render(V3.bg, V3.cam);

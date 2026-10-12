@@ -40,6 +40,15 @@
     </ul>
     <p>C<sub>D</sub>・C<sub>L</sub> の式は、Alan Nathan の軌道計算機（ボールの飛び方の測定から作られたもの）と同じです。空気の流れそのものを解いているのではなく、<b>測定から作られた係数</b>で力を計算しています（ボールのまわりの乱れた流れは、ブラウザでは正確に解けないため）。</p>
     <p>計算の確かめ: 球種の例の値で、フォーシームは上へ約 43 cm・投げる腕の側へ約 24 cm、ツーシームは上へ約 24 cm・腕の側へ約 41 cm ずれ、MLB の平均的な変化量（Statcast）と同じくらいになりました。ナックルは、回転しないときの最大の変化が約 76 cm（30 インチ）で速さによらず、試合の測定（Nathan 2012、最大およそ 30 インチ）と同じくらいです（速さによらないことは Watts &amp; Sawyer の予想どおり）。</p>
+    <h3>縫い目の力（段階D）</h3>
+    <ul>
+      <li><b>ナックル</b>: 4つの縫い目の握りは Watts &amp; Sawyer 1975 の sin 4θ。2つの縫い目の握り（初めの値）は、Morrissey 2009 の風洞の測定（70 mph・毎分 50 回転のボール1つ）のグラフから 10° ごとに読み取った値で、回転軸と進む向きの両方に直角な向きの力と、回転軸の向きの力（論文でも「正しくないかもしれない」とされている）を使っています。2つの縫い目の値は 4つの縫い目より大きく、回らないときの最大の変化は約 96 cm になります（試合の測定の最大およそ 76 cm より大きい）。</li>
+      <li><b>縫い目のずれた伴流（Seam-Shifted Wake）</b>: まっすぐ・ツーシーム・チェンジアップで、握りの縫い目の向き（4つ／2つ）を選べます。マグヌス力に直角な向きに、2つの縫い目は投げる腕の側へ、4つの縫い目はグラブの側へ力をかけます。大きさは、Nathan 2023 が MLB 2021 年の測定から求めた「使える回転の割合ごとの横の変化の平均」（シンカーとまっすぐ）のグラフから読み取り、その変化になるように合わせた<b>平均の目安</b>です。縫い目の向きを1つずつ計算しているのではありません。チェンジアップにはシンカーの値を使っています。ほかの球種（スライダーなど）には入れていません。</li>
+    </ul>
+    <h3>ねらい方</h3>
+    <p>初めは「回転と縫い目の力がなければ、ゾーンのまん中（十字）に届く向き」に放します。だから「まん中から」のずれが、回転と縫い目による変化です。ほかに「まん中へまっすぐ向けて放す」「この球がまん中に届くよう計算で合わせる」「角度のつまみで決める」を選べます。</p>
+    <h3>投手の人形と腕の角度</h3>
+    <p>人形は、ボールを放す瞬間の姿勢を、腕の角度と放す位置から組み立てた目安の絵で、計算には使っていません。腕の角度を変えると、放す位置（よくある値の表から）と回転の向き（腕の角度と同じだけ回す。回転の向きは腕の角度でほぼ決まる、Nathan 2023）が変わります。どちらも目安です。</p>
     <h3>空気の流れの断面（模式図）</h3>
     <p>ボールといっしょに動いて見た空気の流れを、ボールの中心を通り「進む向き」と「横向きの力の向き」をふくむ面で切って描いています。空気がボールの面から<b>はがれる位置</b>が、力の側ほど後ろへずれ、後ろの流れ（伴流）が反対の側へ曲がります。空気を押しやった反作用が、ボールを押す力です（はく離が遅れる側へ力がかかることは、Watts &amp; Sawyer 1975・Nathan 2012 の説明のとおり）。</p>
     <p>ただし、この図は<b>流れを計算したものではありません</b>。前側の流線は円柱のまわりの流れの式（回転があれば渦を足したもの）、はがれる位置のずれと伴流の曲がりは、計算した横向きの力の大きさに合わせた<b>目安</b>です。赤い点は、いまの時刻に縫い目がこの断面を横切る場所です。粒の動きは、見やすいように本物よりずっと遅くしています。</p>
@@ -48,7 +57,7 @@
     <h3>投手の例</h3>
     <p>「平均的な投手」の球種の値は MLB の平均的な値の目安です。ほかの投手（本格派・フォーク・サイドスロー・アンダースロー・技巧派の左腕・ナックルボーラー）は、よくある投げ方を表した<b>架空の例</b>で、実在の投手ではなく、測られた値でもありません。放す高さ・位置と、球種ごとの速さ・回転は目安です。</p>
     <h3>3D の図</h3>
-    <p>道すじ・ボール・ストライクゾーン・マウンド・ホームは計算と寸法どおりの位置に描いています（道すじの管の太さは、遠くからでも見えるように太くしています）。背景の野球場は、実在の球場ではない絵で、ピントが合っていないようにぼかしています。ボールの縫い目は、108 の V 字の縫い目を、テニスボールの曲線で近似した縫い目の線にそって並べた絵です（形は目安）。左投げは、右投げを捕手から見て左右に鏡うつしにしたものです。</p>
+    <p>道すじ・ボール・ストライクゾーン・マウンド・ホームは計算と寸法どおりの位置に描いています（道すじの管の太さは、遠くからでも見えるように太くしています）。ホームのまわりの土の円・バッターボックス・白線・ホームベース・マウンドは公認野球規則の寸法のおおよそです。背景の野球場は、実在の球場ではない絵で、ピントが合っていないようにぼかしています。ボールの縫い目は、108 の V 字の縫い目を、テニスボールの曲線で近似した縫い目の線にそって並べた絵です（形は目安）。左投げは、右投げを捕手から見て左右に鏡うつしにしたものです。</p>
     <h3>簡単にしているところ</h3>
     <ul>
       <li>ボールは点として動かしています。C<sub>D</sub>・C<sub>L</sub> は多くのボールの平均で、1球ごとの差や、縫い目の向きによる差（ナックルを除く）は入れていません。回転の多い球でも縫い目で伴流がずれる力（Seam-Shifted Wake。シンカーやスイーパーで知られる）はまだ入れていません。</li>
@@ -65,7 +74,9 @@
       <li>Nathan AM, Hopkins J, Chong L, Kaczmarski H (2006) The effect of spin on the flight of a baseball. <a href="https://arxiv.org/abs/physics/0605041" target="_blank" rel="noopener">arXiv:physics/0605041</a>（回転するボールの揚力の測定）</li>
       <li>Watts RG, Sawyer E (1975) Aerodynamics of a knuckleball. <i>American Journal of Physics</i> 43:960–963（縫い目の向きと横向きの力）</li>
       <li>Nathan AM (2012) Analysis of knuckleball trajectories. <i>Procedia Engineering</i> 34:116–121. <a href="https://doi.org/10.1016/j.proeng.2012.04.021" target="_blank" rel="noopener">doi:10.1016/j.proeng.2012.04.021</a>（ナックルの道すじはなめらか・変化は大きさも向きもばらばら）</li>
-      <li>Morrissey MP (2009) The aerodynamics of the knuckleball pitch. MS Thesis, Marquette University（ゆっくり回るボールにかかる力）</li>
+      <li>Morrissey MP (2009) The aerodynamics of the knuckleball pitch. MS Thesis, Marquette University（ゆっくり回るボールにかかる力。2つの縫い目の値は図 3-24 から読み取り。はがれる位置 約 104°）</li>
+      <li>Nathan AM (2023) What is the Hawkeye spin data teaching us? III: Searching for the seam-shifted wake.（<a href="https://baseball.physics.illinois.edu/Hawkeye-4S-2S.pdf" target="_blank" rel="noopener">baseball.physics.illinois.edu</a>。縫い目のずれた伴流の大きさ・回転の向きと腕の角度）</li>
+      <li>Smith AW, Smith BL (2021) Using baseball seams to alter a pitch direction: The seam shifted wake. <i>Proceedings of the Institution of Mechanical Engineers, Part P</i>, pp. 21–28. <a href="https://doi.org/10.1177/1754337120961609" target="_blank" rel="noopener">doi:10.1177/1754337120961609</a>（縫い目で後ろの流れがずれるしくみ）</li>
       <li>MLB.com の Statcast の記事（2016。球種ごとの回転数の平均）、Driveline Baseball (2021) Spin rate: what we know now（使える回転の割合）</li>
       <li>公認野球規則（ボールの重さ 5〜5¼ オンス・周り 9〜9¼ インチ、ストライクゾーンの幅 = ホームベースの幅 17 インチ）</li>
     </ul>
@@ -82,6 +93,8 @@
 <script src="js/flow.js"></script>
 <script src="js/stadium.js"></script>
 <script src="js/view3d.js"></script>
+<script src="js/field.js"></script>
+<script src="js/pitcher3d.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/ui-env.js"></script>
 <script src="js/main.js"></script>

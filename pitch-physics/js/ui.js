@@ -19,6 +19,15 @@ function slider(parent, key, lab, min, max, step, get, set, show) {
   parent.appendChild(row);
   CTRL[key] = { row, sync() { inp.value = get(); val.textContent = show(get()); } };
 }
+function selectCtl(parent, key, lab, opts, get, set) {
+  const row = document.createElement('label'); row.className = 'sl';
+  row.innerHTML = `<span class="lab">${lab}</span><select class="sel"></select><span class="val"></span>`;
+  const sel = row.querySelector('select'), val = row.querySelector('.val');
+  for (const o of opts) { const e = document.createElement('option'); e.value = o[0]; e.textContent = o[1]; sel.appendChild(e); }
+  sel.addEventListener('change', () => { set(sel.value); onChange(); });
+  parent.appendChild(row);
+  CTRL[key] = { row, sync() { sel.value = get(); const o = opts.find(q => q[0] === get()); val.textContent = o && o[2] || ''; } };
+}
 function check(parent, key, lab, get, set) {
   const row = document.createElement('label'); row.className = 'ck';
   row.innerHTML = `<input type="checkbox"><span>${lab}</span>`;
@@ -46,11 +55,21 @@ function buildControls() {
   slider(g1, 'eff', '使える回転', 0, 100, 1, () => Math.round(S.P.eff * 100), v => S.P.eff = v / 100, v => v + '%（のこりはジャイロ回転）');
   slider(g1, 'seam0', '縫い目の向き', 0, 90, 1, () => S.P.seam0, v => S.P.seam0 = v, v => 'θ = ' + v + '°（放したとき）');
   slider(g1, 'axisDeg', '回転軸', 0, 179, 1, () => S.P.axisDeg, v => S.P.axisDeg = v, v => clock(v) + '（捕手から見て）');
+  selectCtl(g1, 'grip', '縫い目の向き', [
+    ['4S', '4つの縫い目（フォーシーム）', '1回転で縫い目が4回、前を通る'],
+    ['2S', '2つの縫い目（ツーシーム）', '1回転で縫い目が2回、前を通る'],
+    ['none', '縫い目の力を入れない', '回転だけで計算する（段階Cまでと同じ）'],
+  ], () => S.P.grip || 'none', v => S.P.grip = v === 'none' ? null : v);
 
   const g2 = document.createElement('div'); g2.className = 'grp'; box.appendChild(g2);
-  slider(g2, 'vAng', '放す角度（上下）', -6, 4, 0.05, () => S.P.vAng, v => { S.P.vAng = v; S.autoAim = false; }, v => fmt(v, 2) + '°');
-  slider(g2, 'hAng', '放す角度（左右）', -4, 6, 0.05, () => S.P.hAng, v => { S.P.hAng = v; S.autoAim = false; }, v => fmt(v, 2) + '°（＋は捕手から見て右へ）');
-  check(g2, 'autoAim', 'いつもゾーンのまん中をねらう（放す角度を計算で合わせる）', () => S.autoAim, v => S.autoAim = v);
+  selectCtl(g2, 'aimMode', 'ねらい方', [
+    ['plain', '回転の力がなければまん中に届く向きに放す', 'まん中からのずれ ＝ 回転と縫い目による変化'],
+    ['line', 'まん中へまっすぐ向けて放す', '重力・抵抗・回転のぶん、まん中からずれる'],
+    ['fit', 'この球がまん中に届くよう計算で合わせる', 'どの球もまん中に届く（段階Cまでと同じ）'],
+    ['manual', '角度のつまみで決める', ''],
+  ], () => S.aimMode, v => S.aimMode = v);
+  slider(g2, 'vAng', '放す角度（上下）', -6, 6, 0.05, () => S.P.vAng, v => { S.P.vAng = v; S.aimMode = 'manual'; }, v => fmt(v, 2) + '°');
+  slider(g2, 'hAng', '放す角度（左右）', -6, 6, 0.05, () => S.P.hAng, v => { S.P.hAng = v; S.aimMode = 'manual'; }, v => fmt(v, 2) + '°（＋は捕手から見て右へ）');
   const many = document.createElement('button'); many.id = 'many'; many.textContent = '少しずつちがう10球を投げる';
   many.addEventListener('click', () => { throwMany(); S.t = 0; S.playing = true; syncAll(); });
   g2.appendChild(many);
@@ -77,7 +96,7 @@ function rebuildChips() {
 
 function onChange(viewOnly) {
   if (!viewOnly) { S.many = null; recompute(); }
-  else if (CTRL.autoAim && S.autoAim) recompute();
+  else recompute();
   syncAll();
 }
 
@@ -86,6 +105,8 @@ function syncAll() {
   const kn = !!S.P.knuckle;
   for (const k of ['dir', 'eff']) CTRL[k].row.hidden = kn;
   for (const k of ['seam0', 'axisDeg']) CTRL[k].row.hidden = !kn;
+  // 縫い目の向き: ナックルと、測定のある球種（まっすぐ・シンカー・チェンジアップ）だけ
+  CTRL.grip.row.hidden = !(kn || ['ff', 'si', 'ch'].includes(S.pitch));
   $('many').hidden = !kn;
   CTRL.rpm.row.querySelector('input').max = kn ? 300 : 3500;
   CTRL.rpm.sync();
@@ -109,6 +130,7 @@ function updateNums() {
     ['ホームまで', fmt(r.tPlate, 3) + ' 秒'],
     ['速さ', fmt(V.len(r.st.vel) * 3.6, 0) + ' → ' + fmt(V.len(r.vPlate) * 3.6, 0) + ' km/h'],
     ['変化量', (up >= 0 ? '上へ ' : '下へ ') + fmt(Math.abs(up), 0) + ' cm・' + (rt >= 0 ? '右へ ' : '左へ ') + fmt(Math.abs(rt), 0) + ' cm' + (Math.abs(rt) >= 1 ? '（' + (Math.sign(rt) === armSign() ? '腕の側' : 'グラブの側') + '）' : ''), 'plain'],
+    ['まん中から', missText(r), 'zone'],
     ['空気なしより', (r.pPlate[2] >= S.ghostNoAir.pPlate[2] ? '上に ' : '下に ') + fmt(Math.abs(r.pPlate[2] - S.ghostNoAir.pPlate[2]) / 0.01, 0) + ' cm', 'noAir'],
     ['空気', 'ρ = ' + fmt(r.st.rho, 3) + ' kg/m³（ふつうの ' + fmt(r.st.rho / STD_ENV.rho * 100, 0) + '%）・' + windName(S.env.ws, S.env.wd), 'air'],
   ];
@@ -119,7 +141,7 @@ function updateNums() {
   const frows = [
     ['grav', '重力', Fn('grav')], ['drag', '空気の抵抗', Fn('drag')], ['magnus', 'マグヌス力', Fn('magnus')],
   ];
-  if (r.st.knuckle) frows.push(['seam', '縫い目の力', Fn('seam')]);
+  if (r.st.knuckle || r.st.grip) frows.push(['seam', r.st.knuckle ? '縫い目の力' : '縫い目の力（ずれた伴流）', Fn('seam')]);
   const wT = S.P.knuckle ? r.st.rpm : r.st.rpm * S.P.eff;
   let html = '<table>' + rows.map(x => `<tr${x[2] ? ` data-k="${x[2]}"` : ''}><th>${x[0]}</th><td>${x[1]}</td></tr>`).join('') + '</table>';
   html += '<div class="fh">いま働いている力（' + fmt(S.t, 3) + ' 秒）</div><table class="ft">' +
@@ -131,6 +153,15 @@ function updateNums() {
     html += '<div class="coef">10球のホームでの広がり: 左右 ' + fmt((Math.max(...xs) - Math.min(...xs)) / 0.01, 0) + ' cm・上下 ' + fmt((Math.max(...zs) - Math.min(...zs)) / 0.01, 0) + ' cm</div>';
   }
   $('nums').innerHTML = html;
+}
+
+// ゾーンのまん中からのずれ（ホームの前の端で）
+function missText(r) {
+  const dz = (r.pPlate[2] - TARGET.z) / 0.01, dx = (r.pPlate[0] - TARGET.x) / 0.01;
+  const inZone = Math.abs(r.pPlate[0]) <= ZONE.x + PHY.r && r.pPlate[2] >= ZONE.zLo - PHY.r && r.pPlate[2] <= ZONE.zHi + PHY.r;
+  if (r.ground) return '地面に落ちた';
+  if (Math.hypot(dz, dx) < 1) return 'ほぼまん中';
+  return (dz >= 0 ? '上へ ' : '下へ ') + fmt(Math.abs(dz), 0) + ' cm・' + (dx >= 0 ? '右へ ' : '左へ ') + fmt(Math.abs(dx), 0) + ' cm（' + (inZone ? 'ゾーンの中' : 'ゾーンの外') + '）';
 }
 
 // ---- 図の切りかえ・カメラ ----
@@ -162,7 +193,7 @@ function setTour(i) {
   S.tour = Math.max(0, Math.min(TOUR.length - 1, i));
   S.playing = false; $('play').textContent = '▶';
   // 案内の段は、平均的な右投げの投手・ふつうの空気・重ねないところから始める
-  S.pitcher = 'std'; S.hand = 'R'; S.overlay = false; S.env = { tC: 20, elev: 0, p: 1013, rh: 50, ws: 0, wd: 0 }; S.envId = 'std'; applyEnv();
+  S.pitcher = 'std'; S.hand = 'R'; S.arm = 45; S.aimMode = 'plain'; S.overlay = false; S.env = { tC: 20, elev: 0, p: 1013, rh: 50, ws: 0, wd: 0 }; S.envId = 'std'; applyEnv();
   TOUR[S.tour].go();
   $('tourNum').textContent = (S.tour + 1) + ' / ' + TOUR.length;
   $('tourText').innerHTML = TOUR[S.tour].text;

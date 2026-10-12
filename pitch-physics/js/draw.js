@@ -148,6 +148,11 @@ function drawCatcher(g) {
   const z1 = P([-ZONE.x, PHY.plateY, ZONE.zHi]), z2 = P([ZONE.x, PHY.plateY, ZONE.zLo]);
   g.strokeStyle = COL.zone; g.lineWidth = 1.5; g.strokeRect(z1[0], z1[1], z2[0] - z1[0], z2[1] - z1[1]);
   hitRect('zone', z1[0], z1[1], z2[0] - z1[0], z2[1] - z1[1]);
+  // ねらった点（ゾーンのまん中）
+  const tg = P([TARGET.x, PHY.plateY, TARGET.z]);
+  g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 1.2; g.beginPath();
+  g.moveTo(tg[0] - 7, tg[1]); g.lineTo(tg[0] + 7, tg[1]); g.moveTo(tg[0], tg[1] - 7); g.lineTo(tg[0], tg[1] + 7); g.stroke();
+  hit('target', tg[0], tg[1], 8);
   // 投手板
   const rb = P([0, PHY.rubberY, 0.254]); g.fillStyle = '#e8f0f4'; g.fillRect(rb[0] - 4, rb[1] - 1, 8, 2);
   const map = p => P(p);

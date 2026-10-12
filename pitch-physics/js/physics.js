@@ -17,6 +17,34 @@ const PHY = {
   knuckleRefV: 65 * 0.44704,
 };
 PHY.A = Math.PI * PHY.r * PHY.r;
+
+// 段階D: 2つの縫い目で握ったナックル。Morrissey 2009 の図 3-24（70 mph・毎分 50 回転・風洞）をグラフから読み取った値（10° ごと、ボールの重さを 1 とした力）
+// lift = 回転軸と進む向きの両方に直角な向きの力、lat = 回転軸の向きの力（論文でも「正しくないかもしれない」と書かれている）
+PHY.k2s = {
+  lift: [0.28, 0.15, -0.38, -0.03, -0.20, -0.32, -0.40, -0.20, -0.02, 0.05, -0.15, -0.30, -0.28, -0.15, 0.10, 0.35, 0.55, 0.68, 0.40, -0.25, -0.50, -0.38, -0.40, -0.44, -0.45, -0.25, 0.00, 0.02, -0.25, -0.24, -0.22, -0.05, 0.30, 0.42, 0.30, 0.42, 0.28],
+  lat: [0.00, 0.33, 0.25, 0.00, 0.08, 0.15, 0.30, 0.10, -0.15, -0.30, -0.20, -0.22, -0.25, -0.18, -0.10, 0.05, 0.28, 0.20, 0.10, 0.10, 0.12, 0.10, 0.08, 0.05, 0.02, -0.10, -0.30, -0.30, -0.30, -0.25, -0.20, 0.05, 0.05, 0.05, -0.05, 0.10, 0.30],
+  refV: 70 * 0.44704, W: 0.3307 * 4.44822,   // 図の重さ 0.3307 lbf（右の目盛りから）
+};
+// 段階D: 縫い目がずれた後ろの流れ（Seam-Shifted Wake）。Nathan 2023（MLB 2021 年の Hawkeye の実測）の
+// 「使える回転の割合 → マグヌス力に直角な向きの変化量（インチ、y = 50 ft からホームまで）」の平均の線を図から読み取った値
+// 2S = シンカーの平均（投げる腕の側へ）、4S = まっすぐの平均（グラブの側へ）。下の calibSSW で力の係数にする
+PHY.ssw = {
+  eff: [0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 1.00],
+  in2S: [8.8, 8.8, 8.7, 8.3, 7.3, 5.0, 2.0],
+  in4S: [3.0, 2.9, 2.8, 2.7, 2.5, 2.2, 1.8],
+  perInch: 0,   // 1 インチの変化に当たる係数（calibSSW で決める）
+};
+function lerpTable(xs, ys, x) {
+  if (x <= xs[0]) return ys[0];
+  for (let i = 1; i < xs.length; i++) if (x <= xs[i]) { const f = (x - xs[i - 1]) / (xs[i] - xs[i - 1]); return ys[i - 1] + (ys[i] - ys[i - 1]) * f; }
+  return ys[ys.length - 1];
+}
+function k2sAt(theta) {   // θ（ラジアン）→ 2つの縫い目のナックルの係数 { lift, lat }（重さに対する比 → ½ρAv² に対する係数）
+  const d = ((theta * 180 / Math.PI) % 360 + 360) % 360, i = Math.floor(d / 10), f = d / 10 - i;
+  const L = PHY.k2s.lift, T = PHY.k2s.lat;
+  const k = PHY.k2s.W / (0.5 * PHY.rho * PHY.A * PHY.k2s.refV * PHY.k2s.refV);
+  return { lift: (L[i] + (L[i + 1] - L[i]) * f) * k, lat: (T[i] + (T[i + 1] - T[i]) * f) * k };
+}
 // 65 mph で ½ρA C v² = 0.5 mg となる C（風洞の空気の密度は論文に書かれていないので 1.20 とした）
 PHY.ck0 = 0.5 * PHY.m * PHY.g / (0.5 * PHY.rho * PHY.A * PHY.knuckleRefV * PHY.knuckleRefV);
 
@@ -74,7 +102,8 @@ function launch(P, env = PHY.env) {
     const wG = V.mul(vh, w * Math.sqrt(1 - eff * eff));         // ジャイロ回転（進む向きと同じ向き）
     omega = V.add(wT, wG);
   }
-  return { pos, vel, omega, rpm: P.rpm, knuckle: !!P.knuckle, seam0: (P.seam0 || 0) * Math.PI / 180, rho: env.rho, wind: env.wind.slice() };
+  return { pos, vel, omega, rpm: P.rpm, knuckle: !!P.knuckle, seam0: (P.seam0 || 0) * Math.PI / 180, rho: env.rho, wind: env.wind.slice(),
+    grip: P.grip || (P.knuckle ? '4S' : null), eff: P.knuckle ? 1 : Math.max(0, Math.min(1, P.eff)), arm: P.x0 < 0 ? -1 : 1, sswK: P.sswK };
 }
 
 // 力（N）を部分ごとに。opt: { air, magnus, seam } で入れる力を選ぶ（比べる道すじ用）
@@ -95,10 +124,28 @@ function forces(st, t, vel, opt) {
   if (opt.seam && st.knuckle) {
     const w = V.len(st.omega);
     out.theta = st.seam0 + w * t;                               // 縫い目の向き（回転軸のまわりの角度）
-    out.ck = PHY.ck0 * Math.sin(4 * out.theta);
     const ax = w > 1e-9 ? V.mul(st.omega, 1 / w) : [0, 0, 1];
     const n = V.cross(ax, vh), nl = V.len(n);
-    if (nl > 1e-9) out.seam = V.mul(n, q * out.ck / nl);
+    if (nl > 1e-9) {
+      if (st.grip === '2S') {                                   // 2つの縫い目: Morrissey の測定の表
+        const k = k2sAt(out.theta), axp = V.norm(V.sub(ax, V.mul(vh, V.dot(ax, vh))));
+        out.ck = k.lift;
+        out.seam = V.add(V.mul(n, q * k.lift / nl), V.mul(axp, q * k.lat));
+      } else {                                                  // 4つの縫い目: Watts & Sawyer の sin 4θ
+        out.ck = PHY.ck0 * Math.sin(4 * out.theta);
+        out.seam = V.mul(n, q * out.ck / nl);
+      }
+    }
+  }
+  // 縫い目がずれた後ろの流れ（SSW）: マグヌス力に直角な向き。2S は投げる腕の側、4S はグラブの側へ
+  if (opt.seam && !st.knuckle && (st.grip === '2S' || st.grip === '4S') && wT > 1e-9) {
+    const lift = V.norm(V.cross(wPerp, vh));
+    let side = V.cross(vh, lift);
+    const want = st.grip === '2S' ? st.arm : -st.arm;
+    if (Math.sign(side[0] || 1) !== want) side = V.mul(side, -1);
+    const inch = lerpTable(PHY.ssw.eff, st.grip === '2S' ? PHY.ssw.in2S : PHY.ssw.in4S, st.eff);
+    out.cs = (st.sswK != null ? st.sswK : 1) * inch * PHY.ssw.perInch;
+    out.seam = V.mul(side, q * out.cs);
   }
   return out;
 }
@@ -142,11 +189,11 @@ function sampleAt(res, t) {
   return { t, p: V.add(a.p, V.mul(V.sub(b.p, a.p), f)), v: V.add(a.v, V.mul(V.sub(b.v, a.v), f)) };
 }
 
-// ねらい: 放す角度を変えて、ホームの前の端で (x, z) = target を通るようにする（全部の力を入れた道すじで）
-function aim(P, target = { x: 0, z: 0.75 }) {
+// ねらい: 放す角度を変えて、ホームの前の端で (x, z) = target を通るようにする（opt で、どの力を入れた道すじで合わせるか）
+function aim(P, target = { x: 0, z: 0.75 }, opt) {
   const Q = Object.assign({}, P);
   for (let k = 0; k < 8; k++) {
-    const r = simulate(Q), d = Math.max(1, Q.ext ? PHY.rubberY - Q.ext - PHY.plateY : 17);
+    const r = simulate(Q, opt), d = Math.max(1, Q.ext ? PHY.rubberY - Q.ext - PHY.plateY : 17);
     const ex = target.x - r.pPlate[0], ez = target.z - r.pPlate[2];
     Q.vAng += Math.atan2(ez, d) * 180 / Math.PI;
     Q.hAng += Math.atan2(ex, d) * 180 / Math.PI;
@@ -160,4 +207,17 @@ function movement(full, plain) {
   return { dx: full.pPlate[0] - plain.pPlate[0], dz: full.pPlate[2] - plain.pPlate[2] };
 }
 
-if (typeof module !== 'undefined') module.exports = { airDensity, STD_ENV, PHY, V, KMH, MPH, RPM, cdOf, clOf, launch, forces, simulate, sampleAt, aim, movement };
+// SSW の係数: 速さ 150 km/h の球で、y = 50 ft からホームまでの横の変化が 1 インチになる係数を求める（変化量は速さによらずほぼ同じ）
+function calibSSW() {
+  const P = { v0: 150, vAng: -1.3, hAng: 1.5, x0: -0.55, z0: 1.8, ext: 1.9, rpm: 2200, dir: 330, eff: 0.9, grip: '2S', sswK: 1 };
+  PHY.ssw.perInch = 0.01;
+  const on = simulate(P, undefined, STD_ENV), off = simulate(Object.assign({}, P, { grip: null }), undefined, STD_ENV);
+  const y50 = 50 * 0.3048, a = on.pts.find(q => q.p[1] <= y50), T = on.tPlate;
+  const dx = Math.hypot(on.pPlate[0] - off.pPlate[0], on.pPlate[2] - off.pPlate[2]);
+  const frac = Math.pow((T - a.t) / T, 2);                     // 一定の力なら、変化は時間の2乗に比例
+  const used = lerpTable(PHY.ssw.eff, PHY.ssw.in2S, P.eff) * 0.01;   // 計算に使った係数（表の値 × 0.01）
+  PHY.ssw.perInch = used / (dx * frac / 0.0254);
+}
+calibSSW();
+
+if (typeof module !== 'undefined') module.exports = { calibSSW, k2sAt, airDensity, STD_ENV, PHY, V, KMH, MPH, RPM, cdOf, clOf, launch, forces, simulate, sampleAt, aim, movement };

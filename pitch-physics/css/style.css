@@ -20,7 +20,7 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-bod
 #vtabs{position:absolute;top:8px;right:8px;display:flex;gap:4px;z-index:2}
 #vtabs button,#cams button{background:rgba(13,24,18,.75);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:4px 10px;font:500 12px var(--f-body);cursor:pointer;backdrop-filter:blur(2px)}
 #vtabs button.on,#cams button.on{background:var(--acc);color:#1a1a1a;border-color:var(--acc)}
-#views:not(.v3d) #vtabs{top:auto;bottom:6px;right:auto;left:50%;transform:translateX(-50%)}
+#views:not(.v3d) #cv{top:40px;height:calc(100% - 40px)}
 #cams{position:absolute;top:8px;left:8px;display:flex;flex-wrap:wrap;gap:4px;max-width:60%;z-index:2}
 #legend{position:absolute;left:8px;bottom:8px;display:flex;flex-wrap:wrap;gap:4px 10px;max-width:70%;font-size:11.5px;background:rgba(13,24,18,.7);padding:4px 8px;border-radius:8px;pointer-events:none}
 #hint3d{position:absolute;right:8px;bottom:8px;font-size:11px;color:#dfe8ee;background:rgba(13,24,18,.6);padding:3px 8px;border-radius:8px;pointer-events:none}
@@ -62,6 +62,7 @@ i.sw.plain{background:repeating-linear-gradient(90deg,rgba(240,240,230,.9) 0 6px
 .sl{display:grid;grid-template-columns:110px 1fr;grid-template-rows:auto auto;column-gap:8px;align-items:center;font-size:13px}
 .sl .lab{grid-row:1/3;color:var(--muted)}
 .sl input{width:100%;accent-color:var(--acc)}
+.sl .sel{width:100%;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 4px;font:500 12.5px var(--f-body)}
 .sl .val{font-size:12px;color:var(--ink)}
 .sl[hidden],.ck[hidden],#many[hidden]{display:none}
 .ck{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer}
@@ -84,6 +85,7 @@ i.sw.plain{background:repeating-linear-gradient(90deg,rgba(240,240,230,.9) 0 6px
   #views.v3d{height:420px}
   #legend{display:none}
   #views.v3d #vtabs{top:auto;bottom:8px;right:8px}
+  #views:not(.v3d) #vtabs{top:6px;right:8px}
   #cams{max-width:100%;right:8px}
   #hint3d{display:none}
   #tour{flex-wrap:wrap}
@@ -103,3 +105,6 @@ i.sw.plain{background:repeating-linear-gradient(90deg,rgba(240,240,230,.9) 0 6px
 #windBadge{position:absolute;top:44px;left:8px;font-size:12px;background:rgba(13,24,18,.7);padding:3px 8px;border-radius:8px;pointer-events:none}
 #windBadge:empty{display:none}
 #views:not(.v3d) #windBadge{display:none}
+.armrow{display:flex;align-items:center;gap:8px;flex-basis:100%}
+.armrow input{width:220px;max-width:50vw;accent-color:var(--acc)}
+#armVal{color:var(--ink);font-size:12.5px}

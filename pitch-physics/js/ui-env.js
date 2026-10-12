@@ -6,12 +6,14 @@ function buildPitcherBar(box) {
   bar.innerHTML = '<label>投手 <select id="pitcherSel"></select></label>' +
     '<label class="ck"><input type="checkbox" id="ovl"><span>球種を重ねて見る</span></label>' +
     '<select id="ovlAim" aria-label="重ねるときのねらい"><option value="center">それぞれゾーンのまん中をねらう</option><option value="same">いまの球と同じ向きに放す</option></select>' +
-    '<span id="pnote2"></span>';
+    '<span id="pnote2"></span>' +
+    '<label class="armrow">腕の角度 <input type="range" id="armSl" min="-40" max="85" step="1"><span id="armVal"></span></label>';
   box.appendChild(bar);
   const sel = bar.querySelector('#pitcherSel');
   for (const p of PITCHERS) { const o = document.createElement('option'); o.value = p.id; o.textContent = p.name + (p.id === 'std' ? '' : '（架空）'); sel.appendChild(o); }
   sel.addEventListener('change', () => { setPitcher(sel.value); if (S.cam === 'pitcher') setCam('pitcher'); S.playing = false; syncAll(); });
   bar.querySelector('#ovl').addEventListener('change', e => { S.overlay = e.target.checked; recompute(); syncAll(); });
+  bar.querySelector('#armSl').addEventListener('input', e => { setArm(Number(e.target.value)); if (S.cam === 'pitcher') setCam('pitcher'); syncAll(); });
   bar.querySelector('#ovlAim').addEventListener('change', e => { S.overlayAim = e.target.value; recompute(); syncAll(); });
 }
 
@@ -41,6 +43,8 @@ function syncC() {
   sel.value = S.pitcher;
   $('ovl').checked = S.overlay; $('ovlAim').value = S.overlayAim; $('ovlAim').hidden = !S.overlay;
   $('pnote2').textContent = pitcherOf(S.pitcher).note;
+  $('armSl').value = S.arm;
+  $('armVal').textContent = S.arm + '°・' + armName(S.arm) + '（放す高さ ' + S.P.z0.toFixed(2) + ' m）';
   document.querySelectorAll('.envhead button').forEach(b => b.classList.toggle('on', b.dataset.env === S.envId));
   const rho = PHY.env.rho;
   $('windBadge').textContent = isStdEnv() ? '' : '空気 ' + rho.toFixed(3) + ' kg/m³・' + windName(S.env.ws, S.env.wd);
