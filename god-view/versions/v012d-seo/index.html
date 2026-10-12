@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>神の視点マップ</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230b1a2e'/><g fill='none' stroke='%236cc3ff' stroke-width='3.5'><circle cx='32' cy='32' r='20'/><ellipse cx='32' cy='32' rx='9' ry='20'/><path d='M12 32h40M15 22h34M15 42h34'/></g></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<!-- seo（検索・リンクカード。_dev/tools/seo.mjs が入口の APPS から作る。手で直さない） -->
+<meta name="description" content="本物の地形・航空写真・建物・電車やバスの動きで見る3Dの地球。引けば宇宙の果てまで、寄れば原子や素粒子まで、ホイールひとつで。">
+<meta property="og:type" content="website"><meta property="og:site_name" content="まなびラボ"><meta property="og:locale" content="ja_JP"><meta property="og:locale:alternate" content="en_US">
+<meta property="og:title" content="神の視点マップ｜まなびラボ"><meta property="og:description" content="本物の地形・航空写真・建物・電車やバスの動きで見る3Dの地球。引けば宇宙の果てまで、寄れば原子や素粒子まで、ホイールひとつで。"><meta property="og:url" content="https://sishiya.github.io/manabi-lab/god-view/">
+<meta property="og:image" content="https://sishiya.github.io/manabi-lab/assets/thumbs/god-view.jpg"><meta property="og:image:width" content="640"><meta property="og:image:height" content="360">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@sishiya22">
+<link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/god-view/?lang=ja"><link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/god-view/?lang=en"><link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/god-view/">
+<!-- /seo -->
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
+<script>window.CESIUM_BASE_URL = 'https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/';</script>
+<script src="https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/Cesium.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/Widgets/widgets.css">
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+<div id="globe"></div>
+<canvas id="space"></canvas>
+<canvas id="micro"></canvas>
+<div id="micro-info"></div>
+<div id="space-labels"></div>
+<div id="space-credit"><span lang="ja">宇宙: 惑星・月の位置は <a href="https://github.com/cosinekitty/astronomy" target="_blank" rel="noopener">astronomy-engine</a> で計算（推定）、恒星は <a href="https://github.com/astronexus/HYG-Database" target="_blank" rel="noopener">HYG Database</a>（CC BY-SA 4.0、実データ）、地球の写真は NASA Blue Marble（<a href="https://www.earthdata.nasa.gov/data/tools/gibs" target="_blank" rel="noopener">GIBS</a>）。<b>天の川銀河・ほかの銀河の形・宇宙の大規模構造・月の表面は演出</b>（位置と大きさは観測にもとづく）。惑星の大きさは本当の半径で、小さいときは光の点で示しています。</span><span lang="en">Space: positions of the planets and Moon are calculated with <a href="https://github.com/cosinekitty/astronomy" target="_blank" rel="noopener">astronomy-engine</a> (estimate), stars are from the <a href="https://github.com/astronexus/HYG-Database" target="_blank" rel="noopener">HYG Database</a> (CC BY-SA 4.0, real data), Earth photos from NASA Blue Marble (<a href="https://www.earthdata.nasa.gov/data/tools/gibs" target="_blank" rel="noopener">GIBS</a>). <b>The shapes of the Milky Way and other galaxies, the large-scale structure of the universe, and the Moon’s surface are display stand-ins</b> (positions and sizes are based on observations). Planets are drawn at their true radius; when tiny, they are shown as points of light.</span></div>
+<div id="space-hint"><span lang="ja">ホイール（ピンチ）で引くと宇宙の果てまで、寄ると地球の地図に戻ります。ドラッグで向きを変えます。下の目盛りを押すと、その大きさへ。</span><span lang="en">Zoom out with the wheel (pinch) to reach the edge of the universe; zoom in to return to the Earth map. Drag to turn. Tap the ruler below to jump to that size.</span></div>
+<button id="btn-tear"><span lang="ja">✋ 地球をちぎる</span><span lang="en">✋ Tear off a piece of Earth</span></button>
+<canvas id="tear"></canvas>
+<aside id="tear-panel"></aside>
+<div id="tear-info"></div>
+<div id="tear-pop"><span lang="ja">ぶちっ！</span><span lang="en">Rrrip!</span></div>
+<div id="tear-credit"><span lang="ja">計算（<span class="tag tag-est">推定</span>）: 地球を約 1.6 万個の粒にして、重力・圧力・粘りを SPH（粒子法）で計算。粒 1 個 ≒ 400 km なので、地殻や山は見えません。海は別の軽い粒（水色）、湯気は白（高さは 5 倍に強調）。簡単にしたこと: 岩の固さ、相転移、自転、空気。くわしくは「?」の「地球をちぎる」へ。</span><span lang="en">Calculation (<span class="tag tag-est">estimate</span>): Earth is made of about 16,000 particles, and gravity, pressure and stickiness are computed with SPH (a particle method). One particle ≈ 400 km, so the crust and mountains cannot be seen. The ocean is separate light particles (light blue), steam is white (height exaggerated 5×). Simplified: rock strength, phase changes, rotation, air. More in “Tearing off a piece of Earth” under “?”.</span></div>
+
+<header id="top">
+  <button id="btn-layers" class="icon">☰</button>
+  <div class="title"><span lang="ja">神の視点マップ</span><span lang="en">God’s-Eye Map</span></div>
+  <form id="search" autocomplete="off">
+    <input id="search-q" type="search">
+    <ul id="search-list" hidden></ul>
+  </form>
+  <button id="btn-home" class="icon">⌂</button>
+  <div class="langsw" id="langsw" role="group" aria-label="言語 / Language"><button data-l="ja" title="日本語">JP</button><button data-l="en" title="English">EN</button></div>
+  <button id="btn-about" class="icon">?</button>
+</header>
+
+<aside id="layers"><div id="layers-body"></div></aside>
+
+<div id="point" hidden></div>
+
+<footer id="scale">
+  <div class="scale-now">
+    <span><span lang="ja">画面の幅</span><span lang="en">Screen width</span></span> <b id="scale-w">–</b>
+    <span class="what">≒ <span id="scale-what">–</span></span>
+    <span id="scale-pow" class="pow"></span>
+  </div>
+  <div id="ruler-bar"></div>
+</footer>
+
+<div id="about" class="modal" hidden>
+  <div class="card">
+    <button id="about-close" class="x">×</button>
+    <div lang="ja">
+    <h2>神の視点マップ</h2>
+    <p>本物の地形・航空写真・地図を読み込んで、地球全体から家1軒までを見わたすアプリです。さらに引けば宇宙の果て（約 10^27 m）まで、寄れば素粒子とプランク長（約 10^-35 m）まで、ホイールひとつで行き来できます。</p>
+    <h3>操作</h3>
+    <ul>
+      <li>ホイール／ピンチ: 寄る・引く</li>
+      <li>左ドラッグ: 動かす　右ドラッグ・Ctrl＋ドラッグ／2本指: 傾ける・回す</li>
+      <li>クリック: その地点の住所（世界）と標高（日本のみ）。建物なら名前・用途・高さ・階数も（PLATEAU のある都市）</li>
+      <li>生きている地球: 時刻をずらす・早送りする（昼と夜が動く）、夜の街の明かり、きのうの衛星写真（雲）、地震、人工衛星・ISS。</li>
+      <li>ミクロへ: 地面すれすれまで寄ってからさらにホイールで寄ると、その場所の地面に合わせて「岩・砂」（街・山）・「水」（海・川・湖）・「植物」（森・草地・公園）の道に分かれ、原子 → 原子核 → 陽子とクォーク → プランク長まで。形は演出、大きさは本物</li>
+      <li>宇宙へ: いちばん引いた所からさらにホイールで引くと宇宙へ。月・太陽系（本当の位置）、近くの恒星、天の川銀河、局所銀河群、宇宙の大規模構造、観測できる宇宙の果てまで。下の目盛りの帯を押すとその大きさへ</li>
+      <li>地球をちぎる: 宇宙で地球が見えているときの「✋ 地球をちぎる」から。地球をつまんで外へ引っぱると、ちぎれた穴がどうなるか（くずれ込む・溶ける・熱くなる）を計算で見られます。くわしくは下の「地球をちぎる」</li>
+      <li>動く街: 都営の電車・バス（いまの位置。駅・バス停の間は推定）、車・人・鳥（道路に合わせた架空の動き＝演出）</li>
+      <li>地下を見る: 地面が半透明になり、ホイールやドラッグで地面の下にも潜れます。見どころのボタンで東京駅の地下街・長岡市の地下の管へ</li>
+    </ul>
+    <h3>印の意味</h3>
+    <p><span class="tag tag-real">実データ</span> 公開されているデータをそのまま表示　<span class="tag tag-est">推定</span> データから計算したもの　<span class="tag tag-fx">演出</span> それらしく作ったもの（本物ではない）</p>
+    <h3>注意</h3>
+    <p>非営利の学習用アプリです。Google などの地図サービスとは関係がなく、そのデータも使っていません。<br>地図・写真・標高は公開データで、撮影や測量の時期によって今の様子と違うことがあります。日本の外の地形は粗く、海の深さは表示していません（海面を 0m にしています）。測量や防災・登山などの判断には使わないでください。<br>地図や写真の画像、検索・住所・標高は、それぞれの提供元のサーバーから直接読み込みます（見ている場所の座標や検索した言葉が提供元に送られます）。このアプリ自体は何も記録・送信しません。</p>
+    <h3>地球をちぎる（計算のしかた）</h3>
+    <p class="small">地球を約 1.6 万個の粒（1 個 ≒ 400 km）にして、重力・圧力・粘りを SPH（粒子法の流体の計算）で 1 歩 約 10 秒ずつ進めています。<span class="tag tag-est">推定</span></p>
+    <ul class="small">
+      <li>層の境目（内核 1221 km・核とマントルの境目 3480 km）は PREM。密度は、選んだ状態方程式（Murnaghan）で重力と圧力をつり合わせて求めたもので、PREM の密度に近い（マントルの底 約 4.9、外核 9.7〜11.9、中心 13.0 g/cm³）が同じではありません。</li>
+      <li>はじめの温度: 地表 15℃ → 深さ 100 km で 1600 K、その下は断熱（Katsura ほか 2010 にもとづく）、核とマントルの境目のすぐ上 約 3800 K（核の側は 約 4000 K。Lay ほか 2008）、内核 約 5400 K（研究によって幅があります）。圧力が抜けると断熱で冷え、くずれ込んで落ちた分のエネルギーは熱になります。</li>
+      <li>溶け: マントルの溶けはじめる温度（ソリダス）を Hirschmann 2000（低い圧力）と Fiquet ほか 2010（高い圧力）からつないだ近似と比べ、溶けるのに使う熱も入れて「一部溶けた割合」を出しています。</li>
+      <li>海と湯気: 海は平均 3.7 km と粒よりずっと薄いので、岩とは別の軽い粒（約 3600 個、1 個 ≒ 37 万 km³）で表し、岩の上に乗せています。地面の上を流れる速さは、深さ 3.7 km の水の波の速さ √(g×深さ) ≒ 秒速 0.19 km まで（崖から落ちるときは上限なし）。表に出た熱い岩に触れた水は沸騰して湯気になり、その量は沸騰でいちばん熱が伝わるときの値（限界熱流束 約 1 MW/m²）で数えた多めの見積もりです。湯気の分子の速さは秒速 1 km ほどで、地球から逃げる速さ（秒速 11 km）に届かないので、空にとどまってやがて雨になります（雨は計算していません）。かけらの上の水は、真空で表面が沸きながら凍ります（凍るまでに約 14% が蒸発する: 温度を下げる熱と凍る熱を、蒸発の熱で割った値）。出た水蒸気は秒速 0.3〜0.7 km で、かけらの重力で落ちてきます。湯気の高さは見やすいように 5 倍に強調して描いています。</li>
+      <li>簡単にしたこと: 岩の固さ（地球の大きさでは重力の力が岩の強さの 100 倍以上なので流体として扱えるが、小さなかけらは本当は形が残りやすい）、鉱物の相転移、地球の自転、空気、水の重さ（海は地球の重さの 0.02%）。重力は「地球」と「かけら」それぞれの中心からの距離で、球対称として計算しています。「遠くへ運ぶ」は、地球の重力が届かないくらい遠くへ運んだことにして、画面では近くに置いています。表に出た所の黒い皮は、溶岩の表面が冷えて固まることからの推定です。</li>
+      <li>出どころ: Dziewonski & Anderson (1981) Preliminary reference Earth model. <i>Phys. Earth Planet. Inter.</i> 25 ／ Katsura et al. (2010) Adiabatic temperature profile in the mantle. <i>Phys. Earth Planet. Inter.</i> 183 ／ Lay, Hernlund & Buffett (2008) Core–mantle boundary heat flow. <i>Nature Geoscience</i> 1 ／ Hirschmann (2000) Mantle solidus: Experimental constraints and the effects of peridotite composition. <i>Geochem. Geophys. Geosyst.</i> 1 ／ Fiquet et al. (2010) Melting of peridotite to 140 gigapascals. <i>Science</i> 329 ／ Monaghan (1992) Smoothed particle hydrodynamics. <i>Annu. Rev. Astron. Astrophys.</i> 30 ／ 海の水の量 13.35 億 km³・平均の深さ: Eakins & Sharman (2010) Volumes of the World's Oceans from ETOPO1. NOAA National Geophysical Data Center ／ 沸騰の限界熱流束: Lienhard & Lienhard, <i>A Heat Transfer Textbook</i>（Phlogiston Press）</li>
+    </ul>
+    <h3>使っているもの・出典</h3>
+    <ul class="small">
+      <li>CesiumJS（Apache License 2.0）</li>
+      <li>建物: <a href="https://www.mlit.go.jp/plateau/" target="_blank" rel="noopener">3D都市モデル（Project PLATEAU）</a>（国土交通省、政府標準利用規約）。地下街（東京・札幌）と地下埋設物（長岡市の下水道管・マンホール・水道管・ガス管など）も。地形に合わせるため、国土地理院のジオイド高で高さを補正して表示。水道管・ガス管などは平面のデータしかないため、深さ約1.2mは推定</li>
+      <li>生きている地球: NASA EOSDIS GIBS（きのうの衛星写真 VIIRS、夜の明かり VIIRS Black Marble 2016）、USGS 地震情報（過去7日・M2.5以上）、CelesTrak の軌道要素と satellite.js（MIT）で計算した人工衛星の位置</li>
+      <li>宇宙: Three.js（MIT）、astronomy-engine（MIT、惑星・月の位置の計算）、HYG Database v4.1（David Nash、CC BY-SA 4.0。明るさ6等まで・20パーセク以内の 6641 個を選んだもの）、NASA Blue Marble（GIBS）。天の川銀河・ほかの銀河の形・宇宙の大規模構造は観測にもとづく演出</li>
+      <li>電車・バス: <a href="https://ckan.odpt.org/organization/toei" target="_blank" rel="noopener">東京都交通局・公共交通オープンデータセンター</a>（CC BY 4.0。キー不要の公開 API）。車・人・鳥は OSM の道路・緑地（OpenFreeMap）から作った演出で、実在の人や車ではありません</li>
+      <li>PLATEAU のない所の建物: <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © OpenMapTiles Data from OpenStreetMap（ODbL）。高さは OSM の高さ・階数のタグから計算した値で、タグがない建物は推定値</li>
+      <li><a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>（国土地理院。標準地図・淡色地図・全国最新写真（シームレス）・色別標高図・陰影起伏図・標高タイル）と<a href="https://maps.gsi.go.jp/development/elevation_s.html" target="_blank" rel="noopener">標高 API</a>。<a href="https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html" target="_blank" rel="noopener">国土地理院コンテンツ利用規約</a>に従って利用。タイルごとの追加の出典（GEBCO・VMAP0・海上保安庁・NASA LP DAAC／USGS EROS・GRUS画像 © Axelspace）は地図の下に表示</li>
+      <li><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>（地図は ODbL。世界の地図タイル、検索と住所は Nominatim。いずれも <a href="https://osmfoundation.org/wiki/Terms_of_Use" target="_blank" rel="noopener">OSMF の利用規約</a>に従い、ふつうの閲覧の範囲で利用）</li>
+      <li>日本の外の「航空写真」「色別標高図」: <a href="https://www.earthdata.nasa.gov/data/tools/gibs" target="_blank" rel="noopener">NASA EOSDIS GIBS</a> の Blue Marble Next Generation と Blue Marble Shaded Relief and Bathymetry（NASA、自由に使えるデータ。細かさは 500m ほどまで）</li>
+      <li><a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Terrain Tiles</a>（Mapzen、AWS Open Data）。<a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noopener">出典一覧</a>: SRTM・3DEP・GMTED2010 courtesy of the U.S. Geological Survey、ETOPO1 U.S. NOAA、EU-DEM（Copernicus）、ArcticDEM、Geoscience Australia、Kartverket、LINZ、INEGI、Environment Agency、Open Government Licence – Canada、Österreich DGM</li>
+    </ul>
+    </div>
+    <div lang="en">
+    <h2>God’s-Eye Map</h2>
+    <p>An app that loads real terrain, aerial photos and maps so you can look over everything from the whole Earth down to a single house. Zoom further out to reach the edge of the universe (about 10^27 m), or further in to elementary particles and the Planck length (about 10^-35 m), all with one wheel.</p>
+    <h3>Controls</h3>
+    <ul>
+      <li>Wheel / pinch: zoom in and out</li>
+      <li>Left-drag: move   Right-drag, Ctrl + drag, or two fingers: tilt and rotate</li>
+      <li>Click: the address of that spot (worldwide) and elevation (Japan only). For buildings, also the name, use, height and number of floors (in cities with PLATEAU data)</li>
+      <li>Living Earth: shift or fast-forward the time (day and night move), city lights at night, yesterday’s satellite photo (clouds), earthquakes, satellites and the ISS.</li>
+      <li>Into the micro world: zoom right down to the ground, then keep zooming with the wheel. Depending on the ground at that spot, the path splits into “rock and sand” (towns, mountains), “water” (sea, rivers, lakes) or “plants” (forests, grass, parks), then on to atoms → atomic nuclei → protons and quarks → the Planck length. Shapes are display stand-ins; sizes are real</li>
+      <li>Into space: from the farthest zoom, keep zooming out with the wheel to go into space: the Moon, the Solar System (real positions), nearby stars, the Milky Way, the Local Group, the large-scale structure of the universe, up to the edge of the observable universe. Tap the ruler band at the bottom to jump to that size</li>
+      <li>Tear off a piece of Earth: from “✋ Tear off a piece of Earth” when Earth is visible in space. Pinch Earth and pull outward to see, by calculation, what happens to the torn hole (it collapses, melts, heats up). Details in “Tearing off a piece of Earth” below</li>
+      <li>Moving city: Toei trains and buses in Tokyo (current positions; between stations and stops is estimated), cars, people and birds (imaginary movement along roads = display)</li>
+      <li>Underground: the ground becomes see-through, and you can dive below it with the wheel or by dragging. Use the highlight buttons to visit the underground malls at Tokyo Station or the pipes under Nagaoka City</li>
+    </ul>
+    <h3>What the tags mean</h3>
+    <p><span class="tag tag-real">Real data</span> public data shown as it is   <span class="tag tag-est">Estimate</span> calculated from data   <span class="tag tag-fx">Display</span> made to look plausible (not real)</p>
+    <h3>Notes</h3>
+    <p>A non-profit learning app. It has nothing to do with Google or other map services and does not use their data.<br>Maps, photos and elevations are public data and may differ from today depending on when they were photographed or surveyed. Terrain outside Japan is coarse, and ocean depth is not shown (sea level is set to 0 m). Do not use this for surveying, disaster preparedness, mountain climbing or similar decisions.<br>Map and photo images, search, addresses and elevations are loaded directly from each provider’s servers (the coordinates you are viewing and the words you search are sent to the provider). The app itself records and sends nothing.</p>
+    <h3>Tearing off a piece of Earth (how it is calculated)</h3>
+    <p class="small">Earth is made of about 16,000 particles (1 particle ≈ 400 km), and gravity, pressure and stickiness are advanced with SPH (a particle method for fluids) about 10 seconds per step. <span class="tag tag-est">Estimate</span></p>
+    <ul class="small">
+      <li>Layer boundaries (inner core 1221 km, core–mantle boundary 3480 km) follow PREM. Densities come from balancing gravity and pressure with the chosen equation of state (Murnaghan); they are close to PREM (bottom of the mantle about 4.9, outer core 9.7–11.9, center 13.0 g/cm³) but not the same.</li>
+      <li>Starting temperatures: 15 ℃ at the surface → 1600 K at 100 km depth, adiabatic below that (based on Katsura et al. 2010), about 3800 K just above the core–mantle boundary (about 4000 K on the core side; Lay et al. 2008), and about 5400 K in the inner core (studies vary). When pressure is released, material cools adiabatically, and the energy of material collapsing and falling becomes heat.</li>
+      <li>Melting: the temperature at which the mantle starts to melt (solidus) is approximated by joining Hirschmann 2000 (low pressure) and Fiquet et al. 2010 (high pressure); including the heat used for melting, the app gives the “partly melted fraction”.</li>
+      <li>Ocean and steam: the ocean averages only 3.7 km deep, much thinner than a particle, so it is shown as separate light particles (about 3600, each ≈ 370,000 km³) resting on the rock. Its speed over the ground is limited to the speed of a water wave in water 3.7 km deep, √(g × depth) ≈ 0.19 km per second (no limit when falling off a cliff). Water touching hot exposed rock boils into steam; the amount is a generous estimate using the most efficient boiling heat transfer (critical heat flux about 1 MW/m²). Steam molecules move about 1 km per second, short of Earth’s escape speed (11 km per second), so the steam stays in the sky and eventually becomes rain (rain is not calculated). Water on the torn piece freezes while its surface boils in the vacuum (about 14% evaporates before freezing: the heat to cool and freeze it divided by the heat of evaporation). The vapor leaves at 0.3–0.7 km per second and falls back under the piece’s gravity. The steam height is drawn 5× taller so it is easy to see.</li>
+      <li>Simplified: rock strength (at Earth’s size, gravity is over 100 times stronger than rock, so it can be treated as a fluid, though small pieces would really keep their shape more), mineral phase changes, Earth’s rotation, air, the weight of water (the oceans are 0.02% of Earth’s mass). Gravity is calculated as spherically symmetric, from the distance to the centers of “Earth” and the “piece”. “Carry it far away” assumes the piece was taken beyond the reach of Earth’s gravity, though it is placed nearby on screen. The black skin on exposed areas is an estimate based on the surface of lava cooling and hardening.</li>
+      <li>Sources: Dziewonski &amp; Anderson (1981) Preliminary reference Earth model. <i>Phys. Earth Planet. Inter.</i> 25 / Katsura et al. (2010) Adiabatic temperature profile in the mantle. <i>Phys. Earth Planet. Inter.</i> 183 / Lay, Hernlund &amp; Buffett (2008) Core–mantle boundary heat flow. <i>Nature Geoscience</i> 1 / Hirschmann (2000) Mantle solidus: Experimental constraints and the effects of peridotite composition. <i>Geochem. Geophys. Geosyst.</i> 1 / Fiquet et al. (2010) Melting of peridotite to 140 gigapascals. <i>Science</i> 329 / Monaghan (1992) Smoothed particle hydrodynamics. <i>Annu. Rev. Astron. Astrophys.</i> 30 / Ocean volume 1.335 billion km³ and mean depth: Eakins &amp; Sharman (2010) Volumes of the World's Oceans from ETOPO1. NOAA National Geophysical Data Center / Critical heat flux of boiling: Lienhard &amp; Lienhard, <i>A Heat Transfer Textbook</i> (Phlogiston Press)</li>
+    </ul>
+    <h3>What it uses, and sources</h3>
+    <ul class="small">
+      <li>CesiumJS (Apache License 2.0)</li>
+      <li>Buildings: <a href="https://www.mlit.go.jp/plateau/" target="_blank" rel="noopener">3D city models (Project PLATEAU)</a> (Ministry of Land, Infrastructure, Transport and Tourism of Japan; Government of Japan Standard Terms of Use), including underground malls (Tokyo, Sapporo) and buried utilities (sewer pipes, manholes, water and gas pipes in Nagaoka City). Heights are corrected with the GSI geoid height to fit the terrain. Water and gas pipes only have flat data, so their depth of about 1.2 m is an estimate</li>
+      <li>Living Earth: NASA EOSDIS GIBS (yesterday’s satellite photo VIIRS, night lights VIIRS Black Marble 2016), USGS earthquake data (past 7 days, M2.5 and up), satellite positions calculated from CelesTrak orbital elements with satellite.js (MIT)</li>
+      <li>Space: Three.js (MIT), astronomy-engine (MIT, positions of planets and the Moon), HYG Database v4.1 (David Nash, CC BY-SA 4.0; 6641 stars chosen down to magnitude 6 within 20 parsecs), NASA Blue Marble (GIBS). The shapes of the Milky Way and other galaxies and the large-scale structure of the universe are display stand-ins based on observations</li>
+      <li>Trains and buses: <a href="https://ckan.odpt.org/organization/toei" target="_blank" rel="noopener">Bureau of Transportation, Tokyo Metropolitan Government / Public Transportation Open Data Center</a> (CC BY 4.0; public API, no key needed). Cars, people and birds are display stand-ins made from OSM roads and green areas (OpenFreeMap), not real people or cars</li>
+      <li>Buildings where there is no PLATEAU data: <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © OpenMapTiles Data from OpenStreetMap (ODbL). Heights are calculated from OSM height and floor tags; buildings without tags get estimated values</li>
+      <li><a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">GSI Tiles</a> (Geospatial Information Authority of Japan: standard map, pale map, latest nationwide photos (seamless), color elevation map, hillshade, elevation tiles) and the <a href="https://maps.gsi.go.jp/development/elevation_s.html" target="_blank" rel="noopener">elevation API</a> (pages in Japanese), used under the <a href="https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html" target="_blank" rel="noopener">GSI Content Terms of Use</a>. Extra credits for each tile (GEBCO, VMAP0, Japan Coast Guard, NASA LP DAAC / USGS EROS, GRUS imagery © Axelspace) are shown below the map</li>
+      <li><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> (map data ODbL; world map tiles, and search and addresses via Nominatim, all used within normal browsing under the <a href="https://osmfoundation.org/wiki/Terms_of_Use" target="_blank" rel="noopener">OSMF Terms of Use</a>)</li>
+      <li>“Aerial photo” and “color elevation” outside Japan: Blue Marble Next Generation and Blue Marble Shaded Relief and Bathymetry from <a href="https://www.earthdata.nasa.gov/data/tools/gibs" target="_blank" rel="noopener">NASA EOSDIS GIBS</a> (NASA, free to use; detail down to about 500 m)</li>
+      <li><a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Terrain Tiles</a> (Mapzen, AWS Open Data). <a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noopener">Attribution list</a>: SRTM, 3DEP, GMTED2010 courtesy of the U.S. Geological Survey, ETOPO1 U.S. NOAA, EU-DEM (Copernicus), ArcticDEM, Geoscience Australia, Kartverket, LINZ, INEGI, Environment Agency, Open Government Licence – Canada, Österreich DGM</li>
+    </ul>
+    </div>
+  </div>
+</div>
+
+<div id="fatal" hidden><span lang="ja">地球を表示できませんでした。WebGL が使えるブラウザで開いてください。</span><span lang="en">Could not show the Earth. Please open this in a browser that supports WebGL.</span></div>
+
+<script src="js/sources.js"></script>
+<script src="js/terrain.js"></script>
+<script src="js/earth.js"></script>
+<script src="data/plateau-bldg.js"></script>
+<script src="js/buildings.js"></script>
+<script src="js/mvt.js"></script>
+<script src="js/osmbuildings.js"></script>
+<script src="data/plateau-under.js"></script>
+<script src="js/underground.js"></script>
+<script src="js/life.js"></script>
+<script src="js/transit.js"></script>
+<script src="js/agents.js"></script>
+<script src="js/space.js"></script>
+<script src="js/micro.js"></script>
+<script src="js/tear.js"></script>
+<script src="js/scale.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

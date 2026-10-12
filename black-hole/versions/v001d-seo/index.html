@@ -1,0 +1,215 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ブラックホールの見え方</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2307080c'/><ellipse cx='32' cy='36' rx='27' ry='5' fill='%23ffb35c'/><path d='M14 31a18 18 0 0 1 36 0' fill='none' stroke='%23ffd9a0' stroke-width='5'/><circle cx='32' cy='33' r='11' fill='%23000'/><path d='M21 37h22' stroke='%23ffe2b8' stroke-width='3'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<!-- seo（検索・リンクカード。_dev/tools/seo.mjs が入口の APPS から作る。手で直さない） -->
+<meta name="description" content="映画「インターステラー」のブラックホールを、曲がった時空を進む光を1点ずつ計算して描く。クリックすると、その光がどこから来たのかが分かる。">
+<meta property="og:type" content="website"><meta property="og:site_name" content="まなびラボ"><meta property="og:locale" content="ja_JP"><meta property="og:locale:alternate" content="en_US">
+<meta property="og:title" content="ブラックホールの見え方｜まなびラボ"><meta property="og:description" content="映画「インターステラー」のブラックホールを、曲がった時空を進む光を1点ずつ計算して描く。クリックすると、その光がどこから来たのかが分かる。"><meta property="og:url" content="https://sishiya.github.io/manabi-lab/black-hole/">
+<meta property="og:image" content="https://sishiya.github.io/manabi-lab/assets/thumbs/black-hole.jpg"><meta property="og:image:width" content="640"><meta property="og:image:height" content="360">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@sishiya22">
+<link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/black-hole/?lang=ja"><link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/black-hole/?lang=en"><link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/black-hole/">
+<!-- /seo -->
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="frame">
+      <canvas id="view"></canvas>
+      <canvas id="mark" aria-hidden="true"></canvas>
+      <div id="toast" hidden></div>
+      <div id="busy" hidden><span lang="ja">光をたどっています…</span><span lang="en">Tracing light…</span></div>
+      <div id="fail" hidden></div>
+    </div>
+    <div id="toolbar" role="group">
+      <div class="seg" id="segPreset">
+        <button data-v="movie" aria-pressed="true"><span lang="ja">映画の角度</span><span lang="en">Movie angle</span></button>
+        <button data-v="side" aria-pressed="false"><span lang="ja">真横</span><span lang="en">Edge-on</span></button>
+        <button data-v="tilt" aria-pressed="false"><span lang="ja">ななめ上</span><span lang="en">Tilted</span></button>
+        <button data-v="top" aria-pressed="false"><span lang="ja">真上</span><span lang="en">From above</span></button>
+      </div>
+      <button class="btn" id="btnPause" aria-pressed="false"></button>
+      <p id="probe"></p>
+    </div>
+    <p id="hint"><span lang="ja">画面を<b>ドラッグ</b>するとまわりを回り、<b>ホイール</b>（スマホは2本指）で近づきます。<b>クリック</b>（タップ）すると、その点に届いた光が通ってきた道すじを、右の図に出します。</span><span lang="en"><b>Drag</b> to orbit around, and use the <b>wheel</b> (two fingers on a phone) to move closer. <b>Click</b> (tap) a point to see, in the diagram, the path the light took to reach it.</span></p>
+  </main>
+
+  <aside id="panel">
+    <header class="brand">
+      <div class="brand-top">
+        <h1><span lang="ja">ブラックホールの見え方</span><span lang="en">What a Black Hole Looks Like</span></h1>
+        <div class="langsw" id="langsw" role="group" aria-label="言語 / Language"><button data-l="ja" title="日本語">JP</button><button data-l="en" title="English">EN</button></div>
+      </div>
+      <p lang="ja">映画「インターステラー」のブラックホールは、円盤が穴の上と下にも回り込んで見えます。なぜあの形なのか。曲がった時空の中を進む光を、画面の1点ずつ本当に計算して確かめます。</p>
+      <p lang="en">In the movie “Interstellar”, the black hole’s disk seems to wrap over and under the hole. Why does it look like that? Here, light traveling through curved spacetime is actually calculated for every point on the screen to find out.</p>
+    </header>
+
+    <section class="card" id="readout">
+      <div class="ro-top"><span class="lbl"><span lang="ja">この光の道すじ</span><span lang="en">PATH OF THIS LIGHT</span></span><span class="ro-tag" id="rayTag"></span></div>
+      <canvas id="rayCv" width="640" height="400"></canvas>
+      <div class="rayctl">
+        <div class="seg tiny" id="segRayView"><button data-v="side" aria-pressed="true"><span lang="ja">横から</span><span lang="en">Side</span></button><button data-v="top" aria-pressed="false"><span lang="ja">上から</span><span lang="en">Top</span></button></div>
+        <div class="seg tiny" id="segRayZoom"><button data-v="all" aria-pressed="true"><span lang="ja">全体</span><span lang="en">Whole</span></button><button data-v="near" aria-pressed="false"><span lang="ja">穴の近く</span><span lang="en">Near the hole</span></button></div>
+      </div>
+      <div id="rayText"><p lang="ja">画面の好きな所をクリックしてみよう。円盤の上に見える光の帯や、黒い影のふちの細い輪が、どこから来た光なのかが分かります。</p><p lang="en">Click anywhere on the image. You can find out where the band of light above the disk, or the thin ring at the edge of the black shadow, really comes from.</p></div>
+    </section>
+
+    <section>
+      <h2><span lang="ja">見え方</span><span lang="en">LOOK</span></h2>
+      <div class="seg" id="segReal">
+        <button data-v="film" aria-pressed="true"><span lang="ja">映画版</span><span lang="en">Movie version</span></button>
+        <button data-v="real" aria-pressed="false"><span lang="ja">本当の見え方</span><span lang="en">Real look</span></button>
+      </div>
+      <p class="cap" id="realCap"></p>
+    </section>
+
+    <section>
+      <h2><span lang="ja">ブラックホールの回転の速さ</span><span lang="en">BLACK HOLE SPIN</span></h2>
+      <div class="seg small" id="segSpin">
+        <button data-v="0"><span lang="ja">止まっている</span><span lang="en">Not spinning</span><br>0</button>
+        <button data-v="0.6" aria-pressed="true"><span lang="ja">映画</span><span lang="en">Movie</span><br>0.6</button>
+        <button data-v="0.99"><span lang="ja">とても速い</span><span lang="en">Very fast</span><br>0.99</button>
+      </div>
+      <input type="range" id="spin" min="0" max="0.998" step="0.002" value="0.6">
+      <p class="cap" id="spinCap"></p>
+    </section>
+
+    <section>
+      <h2><span lang="ja">カメラの距離</span><span lang="en">CAMERA DISTANCE</span></h2>
+      <input type="range" id="dist" min="0" max="1000" step="1" value="500">
+      <div class="ro-grid" id="camGrid"></div>
+    </section>
+
+    <section>
+      <h2><span lang="ja">まわりのもの</span><span lang="en">SURROUNDINGS</span></h2>
+      <h3><span lang="ja">うしろの空</span><span lang="en">Background sky</span></h3>
+      <div class="seg small" id="segSky">
+        <button data-v="stars" aria-pressed="true"><span lang="ja">星空</span><span lang="en">Stars</span></button>
+        <button data-v="grid" aria-pressed="false"><span lang="ja">方眼</span><span lang="en">Grid</span></button>
+        <button data-v="none" aria-pressed="false"><span lang="ja">まっ暗</span><span lang="en">Dark</span></button>
+      </div>
+      <h3><span lang="ja">ガスの円盤</span><span lang="en">Gas disk</span></h3>
+      <div class="seg small" id="segDisk">
+        <button data-v="on" aria-pressed="true"><span lang="ja">あり</span><span lang="en">On</span></button>
+        <button data-v="off" aria-pressed="false"><span lang="ja">なし</span><span lang="en">Off</span></button>
+      </div>
+    </section>
+
+    <section>
+      <h2><span lang="ja">見つけてみよう</span><span lang="en">THINGS TO FIND</span></h2>
+      <ul class="quests" id="quests"></ul>
+    </section>
+
+    <section class="explain">
+      <h2><span lang="ja">解説</span><span lang="en">EXPLANATION</span></h2>
+      <div lang="ja">
+      <details open>
+        <summary>なぜ円盤が穴の上と下にも見える？</summary>
+        <p>ガスの円盤は、本当は穴のまわりの<b>平らな輪</b>です。真横に近い所から見ると、手前の円盤は穴の前を横切る細い帯に見えます。</p>
+        <p>穴の<b>上</b>に見える光の帯は、<b>穴の向こう側にある円盤</b>です。向こう側の円盤から出た光が、穴の重力で曲げられ、穴の上を回り込んでカメラに届きます。<b>下</b>に見える帯も向こう側の円盤で、こちらは穴の下をくぐってきた光、つまり<b>円盤の下の面</b>の光です。上から見ているのに、下の面が見えるのです。</p>
+        <p>画面の帯をクリックして、右の図で光の道すじを確かめてみましょう。</p>
+      </details>
+      <details>
+        <summary>黒い影と、ふちの細い光の輪</summary>
+        <p>真ん中の黒い所は、穴そのもの（事象の地平面）より<b>ずっと大きく</b>見えます。この向きから来る光をたどると、どれも穴に落ちる道になっているからです。これを<b>ブラックホールの影</b>といいます。回っていないブラックホールでは、影の半径は地平面の約2.6倍です。</p>
+        <p>影のふちには細い光の輪があります。穴のまわりには、光が円を描いて回れる所（回っていないブラックホールでは地平面の1.5倍の半径）があり、その近くを通った光は、穴のまわりを1周・2周してから出てきます。輪の中には、円盤や空がもう一度、さらにもう一度、細く縮んで写っています（光子リング）。</p>
+      </details>
+      <details>
+        <summary>映画版と本当の見え方</summary>
+        <p>円盤のガスは、光の速さの何割もの速さで回っています。こちらへ向かってくる側は光がつまって<b>明るく、青っぽく</b>、遠ざかる側は<b>暗く、赤っぽく</b>見えます（ドップラー効果）。さらに穴の近くから出た光は、重力をのぼってくる間に赤くなります（重力赤方偏移）。</p>
+        <p>映画を作った人たちの論文によると、これを全部入れた本当の見え方は、片側だけがとても明るく、影もほとんど見えなくなって分かりにくいので、映画では使いませんでした。映画の絵は、色と明るさのずれを入れない円盤に、カメラのレンズのにじみを足したものです。「本当の見え方」では、明るさを振動数のずれ g の4乗、色を g 倍の温度の色にしています。</p>
+      </details>
+      <details>
+        <summary>回るブラックホール</summary>
+        <p>回っているブラックホールは、まわりの空間ごと引きずって回します。回転と同じ向きに進む光は穴の近くまで寄れて、逆向きの光は遠くで落ちてしまいます。だから真横から見ると、影は<b>片側がつぶれて平らに</b>なり、もう片側へずれます。回転を「とても速い」にして、真横から見てみましょう。</p>
+        <p>映画の話では、ブラックホールはもっとずっと速く回っている設定です。でも、影の片側がつぶれた絵は観客に分かりにくいので、映画の絵は回転の速さ 0.6（いちばん速いときを 1 とした値）で描かれました。</p>
+        <p>回転が速いほど、円盤のガスは穴の近くまで安定して回れます（円盤のいちばん内側＝いちばん内側の安定な円軌道）。</p>
+      </details>
+      <details>
+        <summary>時計の進み方</summary>
+        <p>ブラックホールの近くでは、遠くと比べて時計がゆっくり進みます。カメラを近づけると、「カメラの距離」の下に、ここの1時間が遠くの何時間にあたるかを出します（その場所に、回らずにとどまっている人の時計。とどまるにはロケットで支え続ける必要があります）。</p>
+        <p>映画のミラーの星では、1時間が地球の約7年でした。この計算をしたキップ・ソーンの本によると、そのためには、ブラックホールがいちばん速い回転にとても近い速さで回っていて、星が地平面のすぐそばを回っている必要があります。</p>
+      </details>
+      <details>
+        <summary>このシミュレーションのしくみ</summary>
+        <p><b>光の道すじ</b>: 画面の1ピクセルごとに、カメラに届いた光を逆向きにたどります。回るブラックホールのまわりの時空（カー時空）の中の光の通り道（測地線）の式を、ルンゲ・クッタ法で少しずつ進めます（穴に近いほど歩幅を小さく）。穴に落ちたら黒、赤道面の円盤に当たったら円盤の色、遠くへ抜けたら空の色です。計算はパソコンのグラフィックス（GPU）で行い、カメラを止めると細かく描き直します。長さは<b>ブラックホールの質量 M</b> を単位にしています（M は質量を長さにしたもので、地平面の半径は回らない穴で 2M）。</p>
+        <p><b>カメラ</b>は、その場所に浮かび、空間の引きずりと一緒に回る観測者（ゼロ角運動量の観測者）の向きです。カメラ自身が動く速さによるゆがみ（光行差）は入れていません。</p>
+        <p><b>円盤</b>: 厚みのない円盤を、回転と同じ向きのケプラー回転で回しています。内側の端は、いちばん内側の安定な円軌道です。外側の端は、映画を作った人たちの論文の図と同じ 18.7M にしました。円盤の模様は作りもの（演出）で、映画の円盤もアーティストが作った模様でした。本当の見え方の温度の形は、薄い円盤の基本のモデル（シャクラ・スニヤエフ）の形を使い、いちばん熱い所を 5200 K としたのは見やすさのための目安です。円盤の回る速さは、見やすいように実際よりずっと速くしています（Gargantua の大きさなら、実際の約4000倍）。</p>
+        <p><b>うしろの空</b>の星と天の川は作りものです。<b>簡単にしたところ</b>: 円盤は光を通さない板として扱い、円盤の厚み・ガスの流れ・円盤の光が円盤自身を照らすことは入れていません。穴のごく近くの、何周も回ってくる光の細い輪は、画面の細かさより細いので一部しか描けません。</p>
+      </details>
+      <details>
+        <summary>おもな出どころ</summary>
+        <ul class="src">
+          <li>James, von Tunzelmann, Franklin, Thorne（2015）「Gravitational lensing by spinning black holes in astrophysics, and in the movie Interstellar」Classical and Quantum Gravity 32 巻 065001（<a href="https://arxiv.org/abs/1502.03808" target="_blank" rel="noopener">arXiv 1502.03808</a>）: 映画の絵の回転の速さ 0.6 とその理由、映画では色と明るさのずれを入れなかったこととその理由、論文の図の円盤の大きさ（9.26M〜18.70M）、影の片側が平らになること、光の通り道の計算のしかた</li>
+          <li>Thorne（2014）『The Science of Interstellar』W. W. Norton: Gargantua は太陽の約1億倍の重さ（映画の設定）、ミラーの星の1時間が約7年になるしくみ</li>
+          <li>Carter（1968）「Global structure of the Kerr family of gravitational fields」Physical Review 174 巻: 光の通り道の保存量（カーターの定数）</li>
+          <li>Bardeen, Press, Teukolsky（1972）「Rotating black holes: locally nonrotating frames, energy extraction, and scalar synchrotron radiation」Astrophysical Journal 178 巻: カメラの観測者（ゼロ角運動量の観測者）、円軌道の速さ、いちばん内側の安定な円軌道、光の円軌道</li>
+          <li>Shakura と Sunyaev（1973）「Black holes in binary systems. Observational appearance」Astronomy and Astrophysics 24 巻: 薄い円盤の温度の形</li>
+          <li>Luminet（1979）「Image of a spherical black hole with thin accretion disk」Astronomy and Astrophysics 75 巻: 円盤のあるブラックホールの見え方を初めて計算した研究（片側が明るくなること）</li>
+        </ul>
+        <p>使っているもの: 描画は WebGL2（ライブラリなし）。文字に Dela Gothic One・Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）。</p>
+        <p class="note">学習用に簡単にしたシミュレーションです。画面の明るさ・色は見やすさのために調整しています。</p>
+      </details>
+      </div>
+      <div lang="en">
+      <details open>
+        <summary>Why does the disk appear above and below the hole?</summary>
+        <p>The gas disk is really a <b>flat ring</b> around the hole. Seen from nearly edge-on, the near part of the disk looks like a thin band crossing in front of the hole.</p>
+        <p>The band of light <b>above</b> the hole is <b>the part of the disk behind the hole</b>. Light from the far side of the disk is bent by the hole’s gravity, curves over the top of the hole and reaches the camera. The band <b>below</b> is also the far side of the disk, but this is light that passed under the hole, from <b>the underside of the disk</b>. You are looking from above, yet you can see the underside.</p>
+        <p>Click on a band and check the light’s path in the diagram.</p>
+      </details>
+      <details>
+        <summary>The black shadow and the thin ring at its edge</summary>
+        <p>The black area in the middle looks <b>much bigger</b> than the hole itself (the event horizon). That is because if you trace light back from these directions, every path leads into the hole. This is called the <b>black hole’s shadow</b>. For a non-spinning black hole, the shadow’s radius is about 2.6 times the horizon’s.</p>
+        <p>At the edge of the shadow is a thin ring of light. Around the hole there is a distance where light can travel in a circle (1.5 times the horizon radius for a non-spinning black hole), and light passing near it goes once or twice around the hole before coming out. Inside the ring, the disk and the sky appear again and again, squeezed thinner each time (the photon ring).</p>
+      </details>
+      <details>
+        <summary>The movie version and the real look</summary>
+        <p>The gas in the disk moves at a large fraction of the speed of light. The side coming toward us looks <b>brighter and bluer</b> because the light is squeezed together, and the side moving away looks <b>dimmer and redder</b> (the Doppler effect). On top of that, light from close to the hole becomes redder as it climbs out against gravity (gravitational redshift).</p>
+        <p>According to the paper by the people who made the movie, the real look with all of this included has one side very bright and the shadow hard to see, which would confuse viewers, so the movie did not use it. The movie images show the disk without the color and brightness shifts, plus a glow like a camera lens adds. In “Real look”, brightness goes with the 4th power of the frequency shift g, and the color is that of a temperature g times higher.</p>
+      </details>
+      <details>
+        <summary>A spinning black hole</summary>
+        <p>A spinning black hole drags the space around it along with its spin. Light moving the same way as the spin can come close to the hole, while light moving the other way falls in from farther out. So seen edge-on, the shadow becomes <b>flattened on one side</b> and shifts to the other. Set the spin to “Very fast” and look edge-on.</p>
+        <p>In the story of the movie, the black hole spins much faster. But a shadow squashed on one side would confuse the audience, so the movie images were drawn with a spin of 0.6 (where 1 is the fastest possible).</p>
+        <p>The faster the spin, the closer to the hole the gas in the disk can orbit stably (the inner edge of the disk = the innermost stable circular orbit).</p>
+      </details>
+      <details>
+        <summary>How clocks run</summary>
+        <p>Near a black hole, clocks run slower than far away. When you move the camera close, the panel under “Camera distance” shows how many hours far away one hour here corresponds to (for the clock of someone staying in place without orbiting, which would need a rocket holding them up the whole time).</p>
+        <p>On Miller’s planet in the movie, one hour was about 7 years on Earth. According to the book by Kip Thorne, who did this calculation, that requires the black hole to spin extremely close to the fastest possible rate, and the planet to orbit right next to the horizon.</p>
+      </details>
+      <details>
+        <summary>How this simulation works</summary>
+        <p><b>Light paths</b>: for each pixel on the screen, the light that reached the camera is traced backward. The equations for light paths (geodesics) in the spacetime around a spinning black hole (Kerr spacetime) are stepped forward a little at a time with the Runge–Kutta method (smaller steps closer to the hole). If the light falls into the hole it is black, if it hits the disk in the equatorial plane it gets the disk’s color, and if it escapes it gets the sky’s color. The calculation runs on the computer’s graphics chip (GPU), and when the camera stops, the image is redrawn in finer detail. Lengths are measured in units of <b>the black hole’s mass M</b> (M is the mass turned into a length; the horizon radius is 2M for a non-spinning hole).</p>
+        <p>The <b>camera</b> points the way an observer would who floats in place and turns along with the dragging of space (a zero-angular-momentum observer). The distortion caused by the camera’s own motion (aberration) is left out.</p>
+        <p><b>Disk</b>: a disk with no thickness turns in Keplerian orbits in the same direction as the spin. The inner edge is the innermost stable circular orbit. The outer edge is 18.7M, the same as in the figures of the paper by the movie makers. The disk’s pattern is made up for show; the movie’s disk pattern was also made by artists. For the real look, the temperature profile follows the basic thin-disk model (Shakura–Sunyaev), and setting the hottest part to 5200 K is a rough choice to make it easy to see. The disk turns much faster than in reality so you can see it move (about 4000 times faster for something the size of Gargantua).</p>
+        <p>The stars and Milky Way in the <b>background sky</b> are made up. <b>What is simplified</b>: the disk is treated as an opaque sheet, and its thickness, gas flows and the disk lighting itself are left out. The thinnest rings of light that circle the hole many times are narrower than a pixel, so only some of them can be drawn.</p>
+      </details>
+      <details>
+        <summary>Main sources</summary>
+        <ul class="src">
+          <li>James, von Tunzelmann, Franklin and Thorne (2015), “Gravitational lensing by spinning black holes in astrophysics, and in the movie Interstellar”, <i>Classical and Quantum Gravity</i> 32, 065001 (<a href="https://arxiv.org/abs/1502.03808" target="_blank" rel="noopener">arXiv 1502.03808</a>): the spin of 0.6 used for the movie images and why, why the color and brightness shifts were left out of the movie, the disk size in the paper’s figures (9.26M–18.70M), the shadow flattening on one side, and how to calculate light paths</li>
+          <li>Thorne (2014), <i>The Science of Interstellar</i>, W. W. Norton: Gargantua is about 100 million times the mass of the Sun (as set in the movie), and how one hour on Miller’s planet becomes about 7 years</li>
+          <li>Carter (1968), “Global structure of the Kerr family of gravitational fields”, <i>Physical Review</i> 174: the conserved quantity of light paths (Carter’s constant)</li>
+          <li>Bardeen, Press and Teukolsky (1972), “Rotating black holes: locally nonrotating frames, energy extraction, and scalar synchrotron radiation”, <i>Astrophysical Journal</i> 178: the camera’s observer (zero-angular-momentum observer), orbital speeds, the innermost stable circular orbit and the circular orbit of light</li>
+          <li>Shakura and Sunyaev (1973), “Black holes in binary systems. Observational appearance”, <i>Astronomy and Astrophysics</i> 24: the temperature profile of a thin disk</li>
+          <li>Luminet (1979), “Image of a spherical black hole with thin accretion disk”, <i>Astronomy and Astrophysics</i> 75: the first calculation of how a black hole with a disk looks (one side becomes brighter)</li>
+        </ul>
+        <p>Made with: WebGL2 for drawing (no libraries). Fonts: Dela Gothic One, Zen Kaku Gothic New and IBM Plex Mono (SIL Open Font License).</p>
+        <p class="note">This is a simplified simulation for learning. Screen brightness and colors are adjusted to make things easy to see.</p>
+      </details>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<script src="js/kerr.js"></script>
+<script src="js/sky.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>

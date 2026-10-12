@@ -1,0 +1,162 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>カビが育つまで</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23121815'/><path d='M32 52V30M32 30l-9-9M32 30l9-9M32 38l-12 4M32 40l12 3' stroke='%23dfe8d8' stroke-width='2.5' stroke-linecap='round'/><circle cx='22' cy='19' r='5' fill='%239ccf5b'/><circle cx='42' cy='19' r='5' fill='%235fa58a'/><circle cx='32' cy='14' r='5' fill='%23c2c25a'/><rect x='8' y='50' width='48' height='5' rx='2' fill='%237a8378'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<!-- seo（検索・リンクカード。_dev/tools/seo.mjs が入口の APPS から作る。手で直さない） -->
+<meta name="description" content="浴室の壁を拡大した「カビの箱庭」。胞子が芽を出し、菌糸をのばして増えていく。水・汚れ・カビ取り剤・防カビ剤を指で試して、どうすれば生えないかを探す。">
+<meta property="og:type" content="website"><meta property="og:site_name" content="まなびラボ"><meta property="og:locale" content="ja_JP"><meta property="og:locale:alternate" content="en_US">
+<meta property="og:title" content="カビが育つまで｜まなびラボ"><meta property="og:description" content="浴室の壁を拡大した「カビの箱庭」。胞子が芽を出し、菌糸をのばして増えていく。水・汚れ・カビ取り剤・防カビ剤を指で試して、どうすれば生えないかを探す。"><meta property="og:url" content="https://sishiya.github.io/manabi-lab/mold-growth/">
+<meta property="og:image" content="https://sishiya.github.io/manabi-lab/assets/thumbs/mold-growth.jpg"><meta property="og:image:width" content="640"><meta property="og:image:height" content="360">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@sishiya22">
+<link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/mold-growth/?lang=ja"><link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/mold-growth/?lang=en"><link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/mold-growth/">
+<!-- /seo -->
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="shell">
+  <header id="topbar">
+    <div class="brand"><b><span lang="ja">カビが育つまで</span><span lang="en">How Mold Grows</span></b><span lang="ja">浴室の壁の上で、カビが生まれて増えるまで</span><span lang="en">From a spore to a spreading patch on a bathroom wall</span></div>
+    <nav id="tabs" role="tablist">
+      <button role="tab" data-tab="sim" aria-selected="true"><b>🧫 <span lang="ja">箱庭で試す</span><span lang="en">Mold garden</span></b><small lang="ja">カビを育てて、対策を試す</small><small lang="en">Grow mold and try fixes</small></button>
+      <button role="tab" data-tab="zukan" aria-selected="false"><b>📖 <span lang="ja">カビの図鑑</span><span lang="en">Mold guide</span></b><small lang="ja">8種類の形と特徴</small><small lang="en">8 kinds: shapes and traits</small></button>
+      <button role="tab" data-tab="about" aria-selected="false"><b>ℹ️ <span lang="ja">このアプリについて</span><span lang="en">About this app</span></b><small lang="ja">できること・しくみ・出どころ</small><small lang="en">What it does, how, sources</small></button>
+    </nav>
+    <div class="langsw" id="langsw" role="group" aria-label="言語 / Language"><button data-l="ja" title="日本語">JP</button><button data-l="en" title="English">EN</button></div>
+  </header>
+
+  <div id="app" class="page" data-page="sim">
+    <main id="stage">
+      <div id="work">
+        <nav id="toolbar">
+          <div id="tools"></div>
+          <label class="brush"><span lang="ja">指の大きさ</span><span lang="en">Finger size</span> <input id="brush" type="range" min="1.5" max="12" step="0.5" value="5"></label>
+        </nav>
+        <div id="viewWrap">
+          <canvas id="world"></canvas>
+          <div id="modes" role="group">
+            <button data-mode="hidden" aria-pressed="false"><span lang="ja">見えないものも見る</span><span lang="en">Show hidden things</span></button>
+            <button data-mode="moist" aria-pressed="false"><span lang="ja">湿り気を見る</span><span lang="en">Show dampness</span></button>
+            <span class="zoom" role="group">
+              <button id="zoomOut">−</button><button id="zoomIn">＋</button>
+              <button id="zoomReset" hidden></button>
+            </span>
+          </div>
+          <div id="moistLegend" hidden>
+            <span><i style="background:#ffe15a"></i><span lang="ja">乾きに強いカビだけ育つ</span><span lang="en">only dry-tolerant molds grow</span></span>
+            <span><i style="background:#ff8a28"></i><span lang="ja">クロカビも育つ</span><span lang="en">black mold grows too</span></span>
+            <span><i style="background:#3c96eb"></i><span lang="ja">ぬれている（水の膜）</span><span lang="en">wet (film of water)</span></span>
+            <span><i style="background:transparent;border:1px solid #869385"></i><span lang="ja">どのカビも育たない</span><span lang="en">no mold can grow</span></span>
+          </div>
+          <div id="side">
+            <div id="status"></div>
+            <div id="hud" aria-live="off"></div>
+            <div id="toast" role="status" aria-live="polite"></div>
+          </div>
+        </div>
+      </div>
+      <div id="timebar">
+        <button id="play" aria-label="再生">▶</button>
+        <div class="seg" id="speeds" role="group"></div>
+        <span id="clock" class="mono"></span>
+        <span class="spacer"></span>
+        <button id="restart"><span lang="ja">最初から</span><span lang="en">Start over</span></button>
+        <button id="record" class="acc"></button>
+      </div>
+    </main>
+
+    <aside id="panel">
+      <p class="lead" lang="ja">浴室の壁の一部（横10cm）を大きくした<b>カビの箱庭</b>。左の道具を選んで壁をなぞり、<b>どうすれば生えないか</b>を試そう。ホイール（スマホは2本指）で拡大すると、顕微鏡の見え方になる。</p>
+      <p class="lead" lang="en">A <b>mold garden</b>: a magnified piece of bathroom wall, 10 cm wide. Pick a tool on the left, trace over the wall, and find out <b>how to keep mold from growing</b>. Zoom in with the wheel (two fingers on a phone) to switch to a microscope view.</p>
+
+      <section class="box">
+        <h2><span lang="ja">毎日の習慣（毎晩21時に入浴）</span><span lang="en">Daily habits (bath every night at 9 pm)</span></h2>
+        <div id="habits"></div>
+      </section>
+
+      <section class="box">
+        <h2><span lang="ja">ためした記録（8週間）</span><span lang="en">Your trials (8 weeks)</span></h2>
+        <div id="records"><p class="hint" lang="ja">「8週間をはやおくりして記録」を押すと、いまの習慣で最初から8週間を進めて、ここに1行ずつ残します。習慣を変えて何度か試すと、どれがよく効くかが分かります。</p><p class="hint" lang="en">Press “Fast-forward 8 weeks and record” to run 8 weeks from the start with your current habits and add a row here. Try different habits a few times to see which works best.</p></div>
+      </section>
+
+      <section class="box">
+        <h2><span lang="ja">発見カード</span><span lang="en">Discovery cards</span> <span id="cardCount" class="mono"></span></h2>
+        <div id="cards"><p class="hint" lang="ja">はじめて起きたことが、ここに集まります。</p><p class="hint" lang="en">Things that happen for the first time are collected here.</p></div>
+      </section>
+    </aside>
+  </div>
+
+  <section id="pageZukan" class="page" data-page="zukan" hidden>
+    <div class="zbox">
+      <div class="ztop"><h2><span lang="ja">カビの図鑑</span><span lang="en">Mold guide</span></h2><span class="hint" lang="ja">家でよく見るカビと、カビに似たもの。種類を選ぶと、顕微鏡で見た形・目で見た様子・育つ条件が見られる</span><span class="hint" lang="en">Molds often seen at home, and something that looks like mold. Choose one to see its shape under the microscope, how it looks to the eye, and the conditions it needs</span></div>
+      <div class="zbody"><nav id="zkList"></nav><article id="zkDetail"></article></div>
+    </div>
+  </section>
+
+  <section id="pageAbout" class="page" data-page="about" hidden>
+    <div class="aboutPage" lang="ja">
+      <h2>このアプリでできること</h2>
+      <div class="cando">
+        <button data-go="sim"><b>🧫 箱庭で試す</b><span>浴室の壁の上で、空気から落ちた胞子が芽を出し、菌糸をのばし、胞子を作って増えていく。水をかける・ふく・こする・カビ取り剤・防カビ剤などを指で試して、効いているか、よくなっているか、心配が残るかを見る。</span></button>
+        <button data-go="sim"><b>📅 習慣を比べる</b><span>換気扇・入浴後の水切り・掃除の習慣を選んで、8週間をはやおくり。何日目にカビが見えたか、8週後にどれだけ広がったかを並べて比べる。</span></button>
+        <button data-go="zukan"><b>📖 カビの図鑑</b><span>家でよく見る8種類の、顕微鏡で見た形・目で見た様子・育つ湿り気と温度・いる所・豆知識。</span></button>
+      </div>
+
+      <h2>遊び方</h2>
+      <ol class="howto">
+        <li><b>時間を進める</b>: 下の ▶ と速さ（1秒に1時間〜1週）。毎晩21時に入浴して壁がぬれる。</li>
+        <li><b>道具で試す</b>: 左の道具を選んで、壁をなぞる。「乾かす・えさを減らす」「カビを殺す・おさえる」「悪化させる（実験）」に分けてある。</li>
+        <li><b>拡大する</b>: ホイール・＋ボタン・2本指。大きくすると顕微鏡の見え方になり、菌糸や胞子の柄の形が見える。拡大したら「見る・動かす」で引っぱって移動。</li>
+        <li><b>いまの状況を見る</b>: 右上に「悪化している／よくなっている／心配が残る」と理由、さっき使った対策の効果。</li>
+        <li><b>見え方を変える</b>: 「見えないものも見る」で落ちた胞子・菌糸の先・防カビ剤、「湿り気を見る」でカビが育てる湿り気。</li>
+      </ol>
+
+      <h2>しくみと注意</h2>
+      <p><b>学習用に簡単にしたシミュレーションです。健康・医療の判断や、建物の診断には使えません。</b>薬剤は製品の説明書に従い、塩素系は酸性のものと混ぜないでください。</p>
+      <p>育つ条件（カビが育つ最低の湿り気、温度）、発芽・菌糸ののび方・胞子の作り方・薬剤の働きは研究や製品の表示にもとづいています。速さ・量（菌糸ののびる速さ、胞子の数、薬がどれだけ奥まで効くか）は、実験の値をもとにした<b>推定</b>で、実際の浴室では何倍もちがうことがあります。</p>
+      <p>絵の菌糸の1本は、実際には何十本もの菌糸の束として描いています。顕微鏡の見え方での柄や胞子の形は、種類ごとの典型的な形を簡単にしたものです。道具を使ったときの霧・泡・しぶきは、何が起きたかを分かりやすくする絵です（<span class="tag art">演出</span>）。</p>
+      <p>説明の札: <span class="tag sure">確か</span> 研究で確かめられている・製品の表示　<span class="tag est">推定</span> 目安・幅が大きい　<span class="tag art">演出</span> 見やすくするための絵</p>
+      <h2>おもな出どころ</h2>
+      <ul class="plain sources"></ul>
+      <p class="small">使っているもの: 文字に Zen Maru Gothic・Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）。</p>
+    </div>
+    <div class="aboutPage" lang="en">
+      <h2>What you can do in this app</h2>
+      <div class="cando">
+        <button data-go="sim"><b>🧫 Mold garden</b><span>On a bathroom wall, spores falling from the air sprout, grow hyphae, make spores and spread. Try splashing water, wiping, scrubbing, mold remover, anti-mold agents and more with your finger, and see whether they work, whether things get better, or whether worries remain.</span></button>
+        <button data-go="sim"><b>📅 Compare habits</b><span>Choose habits for the fan, squeegeeing after a bath and cleaning, then fast-forward 8 weeks. Compare on which day mold became visible and how far it had spread after 8 weeks.</span></button>
+        <button data-go="zukan"><b>📖 Mold guide</b><span>8 kinds often seen at home: their shape under the microscope, how they look to the eye, the dampness and temperature they need, where they live, and fun facts.</span></button>
+      </div>
+
+      <h2>How to play</h2>
+      <ol class="howto">
+        <li><b>Move time forward</b>: use ▶ and the speed (1 hour to 1 week per second) at the bottom. Every night at 9 pm someone takes a bath and the wall gets wet.</li>
+        <li><b>Try tools</b>: pick a tool on the left and trace over the wall. They are grouped into “Dry it / remove food”, “Kill / hold back mold” and “Make it worse (experiment)”.</li>
+        <li><b>Zoom in</b>: wheel, the + button or two fingers. Zoomed in, it switches to a microscope view where you can see hyphae and spore stalks. Once zoomed, use “Look / move” and drag to move around.</li>
+        <li><b>Check how things are going</b>: the top right says “getting worse / getting better / worries remain” with reasons, and the effect of the last thing you did.</li>
+        <li><b>Change the view</b>: “Show hidden things” shows fallen spores, hyphal tips and anti-mold agent; “Show dampness” shows where it is damp enough for mold to grow.</li>
+      </ol>
+
+      <h2>How it works, and cautions</h2>
+      <p><b>This is a simplified simulation for learning. It cannot be used for health or medical decisions, or to inspect a building.</b> Follow the product instructions for any cleaning chemical, and never mix chlorine products with anything acidic.</p>
+      <p>The growth conditions (the lowest dampness and the temperatures at which mold grows), germination, hyphal growth, spore production and how the chemicals work are based on research and product labels. Speeds and amounts (how fast hyphae grow, how many spores, how deep chemicals reach) are <b>estimates</b> based on lab values, and in a real bathroom they can differ several times over.</p>
+      <p>Each hypha in the picture actually stands for a bundle of dozens of hyphae. The shapes of stalks and spores in the microscope view are simplified versions of the typical shape of each kind. The mist, foam and splashes when you use a tool are drawn to make it clear what happened (<span class="tag art">for show</span>).</p>
+      <p>Labels: <span class="tag sure">confirmed</span> confirmed by research or product labels &nbsp; <span class="tag est">estimate</span> rough value, wide range &nbsp; <span class="tag art">for show</span> drawn to make it easier to see</p>
+      <h2>Main sources</h2>
+      <ul class="plain sources"></ul>
+      <p class="small">Fonts: Zen Maru Gothic, Zen Kaku Gothic New and IBM Plex Mono (SIL Open Font License).</p>
+    </div>
+  </section>
+</div>
+
+<script src="js/world.js"></script>
+<script src="js/tools.js"></script>
+<script src="js/render.js"></script>
+<script src="js/micro.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/cards.js"></script>
+<script src="js/status.js"></script>
+<script src="js/zukan.js"></script>
+<script src="js/main.js"></script>

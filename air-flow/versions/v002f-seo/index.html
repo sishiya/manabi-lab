@@ -1,0 +1,228 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>空気の流れの見える部屋</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230b2026'/><g fill='none' stroke='%237ee0c8' stroke-width='4.5' stroke-linecap='round'><path d='M10 24h28a7 7 0 1 0-7-7'/><path d='M10 34h38a7 7 0 1 1-7 7'/><path d='M10 44h16'/></g></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<!-- seo（検索・リンクカード。_dev/tools/seo.mjs が入口の APPS から作る。手で直さない） -->
+<meta name="description" content="窓・給気口・換気扇・外の風で、家の空気がどう入れかわり、どこがよどむのかを「空気の年齢」の色で見る。">
+<meta property="og:type" content="website"><meta property="og:site_name" content="まなびラボ"><meta property="og:locale" content="ja_JP"><meta property="og:locale:alternate" content="en_US">
+<meta property="og:title" content="空気の流れの見える部屋｜まなびラボ"><meta property="og:description" content="窓・給気口・換気扇・外の風で、家の空気がどう入れかわり、どこがよどむのかを「空気の年齢」の色で見る。"><meta property="og:url" content="https://sishiya.github.io/manabi-lab/air-flow/">
+<meta property="og:image" content="https://sishiya.github.io/manabi-lab/assets/thumbs/air-flow.jpg"><meta property="og:image:width" content="640"><meta property="og:image:height" content="360">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@sishiya22">
+<link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/air-flow/?lang=ja"><link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/air-flow/?lang=en"><link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/air-flow/">
+<!-- /seo -->
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="frame">
+      <canvas id="view"></canvas>
+    </div>
+    <div id="toolbar" role="group">
+      <div class="seg" id="segTool">
+        <button data-v="touch" aria-pressed="true"><span lang="ja">押して開け閉め</span><span lang="en">Tap to open/close</span></button>
+        <button data-v="smoke" aria-pressed="false"><span lang="ja">煙を出す</span><span lang="en">Add smoke</span></button>
+        <button data-v="circ" aria-pressed="false"><span lang="ja">サーキュレーターを置く</span><span lang="en">Place a fan</span></button>
+      </div>
+      <p id="probe" class="mono-ish"></p>
+    </div>
+    <p id="hint"></p>
+  </main>
+
+  <aside id="panel">
+    <header class="brand">
+      <div class="brand-top">
+        <h1><span lang="ja">空気の流れの見える部屋</span><span lang="en">Seeing Airflow at Home</span></h1>
+        <div class="langsw" id="langsw" role="group" aria-label="言語 / Language"><button data-l="ja" title="日本語">JP</button><button data-l="en" title="English">EN</button></div>
+      </div>
+      <p lang="ja">外の空気はどこから入り、家の中をどう流れ、どこから出ていくのか。どこの空気が古いまま残るのか。真上から見た空気の流れのシミュレーションです。</p>
+      <p lang="en">Where does outside air come in, how does it flow through the home, and where does it leave? Where does old air stay behind? A simulation of airflow, seen from above.</p>
+    </header>
+
+    <section class="card" id="readout">
+      <div class="ro-top"><span class="lbl"><span lang="ja">家全体の換気</span><span lang="en">WHOLE-HOME VENTILATION</span></span><span class="ro-tag" id="roTag"></span></div>
+      <div class="ro-num"><b id="roVal">—</b><small><span lang="ja">回/時</span><span lang="en">air changes / hour</span></small></div>
+      <div id="roVerdict"></div>
+      <div class="ro-grid" id="roGrid"></div>
+      <p class="ro-note" lang="ja">※ 目安です。床から約1mの高さで見た2次元の計算で、温度差による流れ・家具・人の動きは入れていません。</p>
+      <p class="ro-note" lang="en">* A rough guide. It is a 2D calculation at about 1 m above the floor, and it leaves out flows caused by temperature differences, furniture and people moving.</p>
+    </section>
+
+    <section>
+      <h2><span lang="ja">場面</span><span lang="en">SCENES</span></h2>
+      <div class="presets" id="scenes"></div>
+    </section>
+
+    <section>
+      <h2><span lang="ja">表示</span><span lang="en">VIEW</span></h2>
+      <div class="seg" id="segMode">
+        <button data-v="age" aria-pressed="true"><span lang="ja">空気の古さ</span><span lang="en">Age of air</span></button>
+        <button data-v="speed" aria-pressed="false"><span lang="ja">風の速さ</span><span lang="en">Air speed</span></button>
+        <button data-v="smoke" aria-pressed="false"><span lang="ja">煙</span><span lang="en">Smoke</span></button>
+      </div>
+      <div class="legend" id="legend"></div>
+      <label class="chk"><input type="checkbox" id="optPart" checked> <span lang="ja">流れの粒を出す</span><span lang="en">Show flow particles</span></label>
+      <div class="seg small" id="segPSpeed">
+        <button data-v="1" aria-pressed="true"><span lang="ja">粒は実際の速さ</span><span lang="en">Particles at real speed</span></button>
+        <button data-v="10" aria-pressed="false"><span lang="ja">粒を10倍速に</span><span lang="en">Particles 10× faster</span></button>
+      </div>
+    </section>
+
+    <section>
+      <h2><span lang="ja">時間</span><span lang="en">TIME</span></h2>
+      <div class="row">
+        <button class="btn" id="btnPlay"></button>
+        <span class="cap mono" id="timeCap"></span>
+      </div>
+      <div class="seg small" id="segSpeed"></div>
+      <p class="cap" id="speedCap"></p>
+    </section>
+
+    <section>
+      <h2><span lang="ja">煙で入れかわりを見る</span><span lang="en">WATCH THE AIR CHANGE WITH SMOKE</span></h2>
+      <div class="row">
+        <button class="btn" id="btnFill"><span lang="ja">部屋じゅうを煙で満たす</span><span lang="en">Fill the home with smoke</span></button>
+        <button class="btn" id="btnClear"><span lang="ja">煙を消す</span><span lang="en">Clear smoke</span></button>
+      </div>
+      <canvas id="chart" width="300" height="120"></canvas>
+      <p class="cap" id="chartCap"></p>
+    </section>
+
+    <section>
+      <h2><span lang="ja">外の風</span><span lang="en">OUTSIDE WIND</span></h2>
+      <div class="windrow">
+        <div class="compass" id="compass" role="group"></div>
+        <div class="windspd">
+          <input type="range" id="windU" min="0" max="8" step="1" value="2">
+          <p class="cap mono" id="windCap"></p>
+          <p class="cap" lang="ja">家の図の上が北。左が共用廊下側（西）、右がバルコニー側（東）。上下はとなりの家です。</p>
+          <p class="cap" lang="en">North is up. The left side faces the shared outdoor corridor (west) and the right side faces the balcony (east). Above and below are the neighbors’ homes.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2><span lang="ja">窓・ドア・換気扇</span><span lang="en">WINDOWS, DOORS &amp; FANS</span></h2>
+      <p class="cap" lang="ja">図のふちの「入12」「出55」は、そこを通る空気の量（m³/時）。「すき間」は閉めた窓や玄関のすき間から。給気口は丸の塗りが開け具合、換気扇とサーキュレーターは羽根の回る速さ、エアコンとサーキュレーターは前に出る風の線（弱2本・強3本）、どれも「弱」「強」の印で強さを表します。</p>
+      <p class="cap" lang="en">Labels on the edge of the map such as “in 12” and “out 55” show how much air passes there (m³/h). “leak” means air through the gaps around a closed window or front door. For vents, how much of the circle is filled shows how far they are open. For exhaust fans and circulator fans, the spinning speed of the blades shows the strength; for air conditioners and fans, so do the lines of air in front (2 for low, 3 for high). All of them also show “L” (low) or “H” (high).</p>
+      <div id="els"></div>
+    </section>
+
+    <section>
+      <h2><span lang="ja">サーキュレーター</span><span lang="en">CIRCULATOR FAN</span></h2>
+      <div class="row">
+        <button class="btn" id="btnCirc"><span lang="ja">置く</span><span lang="en">Place</span></button>
+        <button class="btn" id="btnCircClear"><span lang="ja">全部片づける</span><span lang="en">Remove all</span></button>
+      </div>
+      <p class="cap" lang="ja">「置く」を押してから図をクリック。ドラッグで動かし、先の黄色い丸をドラッグで向きを変える。本体を押すと 弱→強→切。</p>
+      <p class="cap" lang="en">Press “Place”, then click on the map. Drag the fan to move it, and drag the yellow dot in front to turn it. Tap the fan to switch low → high → off.</p>
+    </section>
+
+    <section class="explain">
+      <h2><span lang="ja">解説</span><span lang="en">EXPLANATION</span></h2>
+      <div class="now" id="nowText"></div>
+      <div lang="ja">
+      <details open>
+        <summary>空気の古さ（空気の年齢）とは</summary>
+        <p>外から入ってきた空気が、家の中で<b>何分たったか</b>を「空気の年齢（空気齢）」といいます。換気の研究や設計で、空気がよどむ場所を探すのに使う本物の指標です。</p>
+        <p>年齢が若い所は新しい空気が届いている所、年をとっている所は空気が入れかわらずに<b>よどんでいる</b>所。人の吐く息やにおい、ほこりも、こういう所にたまりやすくなります。</p>
+      </details>
+      <details>
+        <summary>24時間換気と換気回数</summary>
+        <p>2003年から、新しく建てる住まいには<b>24時間換気</b>が義務になりました（建築基準法。シックハウス対策）。1時間に家の空気の半分以上（<b>0.5回/時</b>）を入れかえる換気扇を、ずっと回しておくしくみです。</p>
+        <p>換気回数 0.5回/時 は、家じゅうの空気が<b>約2時間で1回</b>入れかわる量。ただし空気はまんべんなく入れかわるわけではありません。給気口を閉めたり、ドアの下のすき間をふさいだりすると、行き届かない部屋ができます。</p>
+      </details>
+      <details>
+        <summary>窓は2か所あけると風が通る</summary>
+        <p>風が家に当たると、風上の壁は押されて気圧が上がり、風下や横の壁は吸われて気圧が下がります。窓を<b>風上と風下の2か所</b>あけると、この気圧の差で空気が通りぬけます。</p>
+        <p>窓が1か所だけだと出口がないので、風の乱れで窓の近くが入れかわるくらい。向かい合う窓がないときは、<b>換気扇を回して反対側の窓をあける</b>と、通り道が作れます。</p>
+      </details>
+      <details>
+        <summary>換気扇と給気口</summary>
+        <p>換気扇は、家の中の空気を外へ押し出すぶん、どこかから空気が入らないと回りません。入口（給気口・窓）が少ないと<b>家の中の気圧が下がり</b>、すき間から無理に空気を引きこみます。換気扇の力は気圧の差が大きいほど弱まるので、思ったほど換気できなくなります。</p>
+        <p>キッチンの換気扇を強にすると玄関ドアが重くなるのはこのため。給気口を開けるか、窓を少しあけると楽に回ります。</p>
+      </details>
+      <details>
+        <summary>サーキュレーターの使い方</summary>
+        <p>換気は「家に入る空気の量」を決めますが、部屋の奥まで届くかは<b>家の中の流れ</b>しだい。サーキュレーターで空気をかきまぜると、よどんだ所の空気も、入ってきた新しい空気と混ざります。</p>
+        <p>窓をあけて換気するときは、窓の近くで<b>外に向けて</b>回すと、部屋の空気を押し出す力になります。</p>
+      </details>
+      <details>
+        <summary>このシミュレーションのしくみ</summary>
+        <p><b>入れかわる量</b>は、換気の設計で使う「換気回路網」の計算です。窓・給気口・すき間は「オリフィスの式」、換気扇は「強く引くほど量が落ちる」特性、風は壁にかかる圧力（風圧係数。低い建物の Swami と Chandra の式）で表し、入る量と出る量がつり合う家の中の気圧を求めます。窓1か所の風の乱れによる入れかわりは Warren の式（0.025×面積×風速）です。</p>
+        <p><b>家の中の流れ</b>は、床から約1mの高さの水平な面での2次元の流れの計算（1マス10cm、空気は縮まないとする）です。乱れは、ねばりけと混ざりやすさを大きめにして表しています。サーキュレーターとエアコンの風は、その場所で風を吹き出させて表しています。</p>
+        <p><b>空気の古さ</b>は、流れに運ばれながら1秒ごとに1秒ずつ年をとる量として計算しています。出口（換気扇や風下の窓）から出ていく空気の平均の年齢は、どんな流れでも「家の容積 ÷ 換気量」に等しくなる、という性質で計算を確かめています。</p>
+        <p><b>簡単にしたところ</b>: 高さ方向の流れ、温度の差（暖かい空気が上へ行く・すき間風の温度差換気）、家具・人の動き、ドア下のすき間の抵抗は入れていません。すき間の量は鉄筋コンクリートのマンションの目安（相当すき間面積 2 cm²/m²）、換気扇の風量は一般的な製品の目安です。実際の家の換気量を測るものではありません。健康の判断には使えません。</p>
+      </details>
+      <details>
+        <summary>おもな出どころ</summary>
+        <ul class="src">
+          <li>建築基準法施行令 第20条の8（シックハウス対策の24時間換気、住宅は換気回数 0.5回/時。2003年7月施行）</li>
+          <li>Sandberg（1981）「What is ventilation efficiency?」Building and Environment 16 巻: 空気齢と換気効率の考え方</li>
+          <li>Etheridge と Sandberg（1996）『Building Ventilation: Theory and Measurement』Wiley: 換気回路網、空気齢、出口の空気齢が名目換気時間に等しいこと</li>
+          <li>Swami と Chandra（1988）ASHRAE Transactions 94 巻: 低い建物の壁にかかる風圧係数の式</li>
+          <li>Warren と Parkins（1985）「Single-sided ventilation through open windows」: 窓1か所の換気の式</li>
+          <li>すき間の量（相当すき間面積 2 cm²/m²）と換気扇の風量は、一般的な建物・製品の値の<b>目安</b>です</li>
+        </ul>
+        <p>使っているもの: 文字に Dela Gothic One・Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）。</p>
+      </details>
+      </div>
+      <div lang="en">
+      <details open>
+        <summary>What is the “age of air”?</summary>
+        <p>The “age of air” is <b>how many minutes have passed</b> since a bit of air came in from outside. It is a real measure used in ventilation research and design to find places where air gets stale.</p>
+        <p>Where the age is young, fresh air is arriving. Where it is old, the air is not being replaced and is <b>stagnant</b>. Breath, smells and dust tend to build up in places like this.</p>
+      </details>
+      <details>
+        <summary>24-hour ventilation and air changes per hour</summary>
+        <p>Since 2003, new homes in Japan must have <b>24-hour ventilation</b> (Building Standards Act, to prevent “sick house” problems from indoor chemicals). A fan runs all the time and replaces at least half of the home’s air every hour (<b>0.5 air changes per hour</b>).</p>
+        <p>0.5 air changes per hour means enough air to replace all the air in the home <b>about once every 2 hours</b>. But the air is not replaced evenly. If you close the vents or block the gaps under the doors, some rooms do not get fresh air.</p>
+      </details>
+      <details>
+        <summary>Open two windows to let the wind through</summary>
+        <p>When wind hits a house, the wall facing the wind is pushed and its pressure goes up, while the walls on the far side and the sides are sucked and their pressure goes down. If you open windows in <b>two places, on the windward and leeward sides</b>, this pressure difference pushes air through the home.</p>
+        <p>With only one window open there is no way out, so only the air near the window is replaced by gusts. If there is no window on the opposite side, <b>run an exhaust fan and open a window on the other side</b> to make a path for the air.</p>
+      </details>
+      <details>
+        <summary>Exhaust fans and vents</summary>
+        <p>An exhaust fan pushes air out of the home, so it only works if the same amount of air can come in somewhere. If there are few inlets (vents and windows), <b>the pressure inside the home drops</b> and air is forced in through gaps. A fan gets weaker as the pressure difference grows, so it ventilates less than you might expect.</p>
+        <p>This is why the front door feels heavy when the kitchen fan is on high. Opening a vent or a window a little lets the fan work easily.</p>
+      </details>
+      <details>
+        <summary>How to use a circulator fan</summary>
+        <p>Ventilation decides <b>how much air comes into the home</b>, but whether it reaches the back of a room depends on <b>the airflow inside</b>. Stirring the air with a circulator fan mixes the stale air with the fresh air that has come in.</p>
+        <p>When you open a window to ventilate, running the fan near the window <b>pointing outward</b> helps push the room’s air out.</p>
+      </details>
+      <details>
+        <summary>How this simulation works</summary>
+        <p><b>How much air is exchanged</b> is calculated with a “ventilation network”, the method used in ventilation design. Windows, vents and gaps follow the “orifice equation”, fans follow the rule that “the harder they pull, the less air they move”, and wind is shown as pressure on the walls (wind pressure coefficients, from the formula by Swami and Chandra for low buildings). From these, it finds the pressure inside the home at which the air coming in equals the air going out. The exchange through a single window caused by gusts uses Warren’s formula (0.025 × area × wind speed).</p>
+        <p><b>The airflow inside the home</b> is a 2D flow calculation on a horizontal plane about 1 m above the floor (cells of 10 cm, with air treated as incompressible). Turbulence is represented by making the viscosity and mixing larger. The air from circulator fans and air conditioners is made by blowing air out at that spot.</p>
+        <p><b>The age of air</b> is calculated as an amount that is carried by the flow and grows older by one second every second. The calculation is checked with a known property: for any flow, the average age of the air leaving through the outlets (fans and leeward windows) equals “volume of the home ÷ ventilation rate”.</p>
+        <p><b>What is simplified</b>: vertical airflow, temperature differences (warm air rising, drafts driven by temperature), furniture, people moving and the resistance of the gaps under doors are left out. The amount of leakage is a rough guide for a reinforced-concrete apartment (equivalent leakage area 2 cm²/m²), and the fan airflows are rough guides for typical products. This does not measure the ventilation of a real home, and it cannot be used for health decisions.</p>
+      </details>
+      <details>
+        <summary>Main sources</summary>
+        <ul class="src">
+          <li>Order for Enforcement of the Building Standards Act (Japan), Article 20-8 (24-hour ventilation against “sick house” problems; 0.5 air changes per hour for homes; in force since July 2003) (in Japanese)</li>
+          <li>Sandberg (1981), “What is ventilation efficiency?”, <i>Building and Environment</i> 16: the ideas of age of air and ventilation efficiency</li>
+          <li>Etheridge and Sandberg (1996), <i>Building Ventilation: Theory and Measurement</i>, Wiley: ventilation networks, age of air, and the fact that the age at the outlet equals the nominal time constant</li>
+          <li>Swami and Chandra (1988), <i>ASHRAE Transactions</i> 94: the formula for wind pressure coefficients on the walls of low buildings</li>
+          <li>Warren and Parkins (1985), “Single-sided ventilation through open windows”: the formula for ventilation through one window</li>
+          <li>The amount of leakage (equivalent leakage area 2 cm²/m²) and the fan airflows are <b>rough guides</b> based on typical buildings and products</li>
+        </ul>
+        <p>Fonts: Dela Gothic One, Zen Kaku Gothic New and IBM Plex Mono (SIL Open Font License).</p>
+      </details>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<script src="js/plan.js"></script>
+<script src="js/net.js"></script>
+<script src="js/fluid.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>

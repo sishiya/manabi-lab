@@ -16,6 +16,7 @@
 | `youtube-upload.ps1` | YouTube へ上げる・英語・字幕・予約・一覧・`-Stats`（数を読むだけ） | ユーザーの GO のあと（`-Stats`・`-List` は読むだけ） |
 | `x-post.ps1` | X の投稿の下ごしらえ（投稿ボタンはユーザー） | ショートを出すとき |
 | `weekly-report.ps1` | 週のふり返り（Git で作ったもの・動作確認・動画の数・視聴時間と流入元・サイトのアクセス）→ `out/weekly-<日付>.md` | 週に1回 |
+| `seo.mjs`（`node _dev/tools/seo.mjs [--check]`） | 入口の `APPS` から、入口と入口のアプリの head の検索・リンクカード（説明文・OGP・hreflang）と `sitemap.xml` を作りなおす（`_dev/REACH.md`） | `APPS` を書きかえたとき（RULES 8.1） |
 | `rep.pl` | 文字列の置きかえ（I18N.md） | 英語対応 |
 | `start.ps1` | ローカルでまなびラボを開く（`start.bat` から） | ユーザーが開くとき |
 | `cdp.ps1` | Chrome を DevTools プロトコルで動かす共通の部品（smoke・record-promo が読みこむ） | — |

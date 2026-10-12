@@ -1,0 +1,261 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>免疫のたたかい</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230d2620'/><path d='M32 52V33M32 33L18 17M32 33l14-16M18 17l-5 5M46 17l5 5' fill='none' stroke='%237fe0b0' stroke-width='5' stroke-linecap='round'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<!-- seo（検索・リンクカード。_dev/tools/seo.mjs が入口の APPS から作る。手で直さない） -->
+<meta name="description" content="ウイルスや細菌が入って増え、免疫に片づけられるまでを、ミクロの断面とグラフで見る。">
+<meta property="og:type" content="website"><meta property="og:site_name" content="まなびラボ"><meta property="og:locale" content="ja_JP"><meta property="og:locale:alternate" content="en_US">
+<meta property="og:title" content="免疫のたたかい｜まなびラボ"><meta property="og:description" content="ウイルスや細菌が入って増え、免疫に片づけられるまでを、ミクロの断面とグラフで見る。"><meta property="og:url" content="https://sishiya.github.io/manabi-lab/immune-battle/">
+<meta property="og:image" content="https://sishiya.github.io/manabi-lab/assets/thumbs/immune-battle.jpg"><meta property="og:image:width" content="640"><meta property="og:image:height" content="360">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@sishiya22">
+<link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/immune-battle/?lang=ja"><link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/immune-battle/?lang=en"><link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/immune-battle/">
+<!-- /seo -->
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="microWrap">
+      <canvas id="micro"></canvas>
+      <div id="zoomCtl" role="group"><button id="zoomOut">−</button><div id="zoomStops"></div><button id="zoomIn">＋</button></div>
+      <div id="hoverTip" hidden></div>
+      <div id="pickCard" hidden></div>
+      <div id="teamKey" aria-hidden="true"><span><i class="e"></i><span lang="ja">敵</span><span lang="en">Enemy</span></span><span><i class="a"></i><span lang="ja">味方（免疫）</span><span lang="en">Ally (immune)</span></span><span><i class="s"></i><span lang="ja">からだ</span><span lang="en">Body</span></span><span><i class="d"></i><span lang="ja">くすり</span><span lang="en">Medicine</span></span></div>
+      <section id="bodyWin">
+        <div class="bwHead"><span><span lang="ja">からだ全体</span><span lang="en">Whole body</span></span><button id="bwToggle">−</button></div>
+        <div id="bwBody">
+          <canvas id="body" aria-hidden="true"></canvas>
+          <div id="bwInfo"></div>
+        </div>
+      </section>
+      <div id="timebar">
+        <button id="play">❚❚</button>
+        <div class="seg" id="speeds" role="group"></div>
+        <span id="clock" class="mono"></span>
+        <button id="reset">⟲<span class="rs"><span lang="ja"> 最初から</span><span lang="en"> Restart</span></span></button>
+      </div>
+    </div>
+    <div id="status" role="status" aria-live="off"></div>
+    <div id="chartWrap">
+      <div id="chartLegend"></div>
+      <canvas id="chart"></canvas>
+    </div>
+  </main>
+
+  <aside id="panel">
+    <header>
+      <div class="htop"><div class="eyebrow">IMMUNE BATTLE</div><div class="langsw" id="langsw" role="group" aria-label="言語 / Language"><button data-l="ja" title="日本語">JP</button><button data-l="en" title="English">EN</button></div></div>
+      <h1><span lang="ja">免疫のたたかい</span><span lang="en">The Immune Battle</span></h1>
+      <p class="lead" lang="ja">ウイルスや細菌がからだに入ってから、増えて、免疫に片づけられるまで。数を変えたり、くすりやワクチンを使ったりすると、その後の経過（点線）がすぐ変わる。</p>
+      <p class="lead" lang="en">From the moment viruses or bacteria get into the body, through how they multiply, until the immune system clears them away. Change the numbers or use medicines and vaccines, and the course ahead (dotted line) changes right away.</p>
+    </header>
+
+    <section class="box" id="nowBox">
+      <h2><span lang="ja">いま何がどれだけ働いているか</span><span lang="en">What is working now, and how much</span></h2>
+      <div id="now"></div>
+    </section>
+
+    <section class="box">
+      <h2><span lang="ja">入ってくるもの</span><span lang="en">What gets in</span></h2>
+      <div id="pathogens" class="cards2"></div>
+      <p id="route" class="note"></p>
+    </section>
+
+    <section class="box">
+      <h2><span lang="ja">からだ</span><span lang="en">Body</span></h2>
+      <div id="bodies" class="seg wrap" role="group"></div>
+      <p id="bodyNote" class="note"></p>
+      <div class="row"><span class="lab"><span lang="ja">前の記憶</span><span lang="en">Past memory</span></span><div id="mems" class="seg wrap" role="group"></div></div>
+    </section>
+
+    <section class="box">
+      <h2><span lang="ja">数を調整する</span><span lang="en">Adjust the numbers</span></h2>
+      <label class="slider"><span class="lab"><span lang="ja">入ってきた数</span><span lang="en">Number that got in</span></span><input type="range" id="dose"><output id="doseV" class="mono"></output></label>
+      <label class="slider"><span class="lab"><span lang="ja">自然免疫の細胞<small>好中球・マクロファージ・NK</small></span><span lang="en">Innate immune cells<small>neutrophils, macrophages, NK</small></span></span><input type="range" id="inn" min="-4.4" max="1.6" step="0.1"><output id="innV" class="mono"></output></label>
+      <label class="slider"><span class="lab"><span lang="ja">獲得免疫の細胞<small>T細胞・B細胞</small></span><span lang="en">Adaptive immune cells<small>T cells, B cells</small></span></span><input type="range" id="adp" min="-4.4" max="1.6" step="0.1"><output id="adpV" class="mono"></output></label>
+      <p class="note" lang="ja">免疫の細胞の数は、動かしている途中でも変えられる（予測の点線がすぐ変わる）。入ってきた数・からだ・記憶を変えると最初から。</p>
+      <p class="note" lang="en">You can change the number of immune cells while it is running (the dotted forecast changes right away). Changing the number that got in, the body or memory starts over.</p>
+      <div class="row"><button id="again"><span lang="ja">＋ 同じ数がもう一度入ってくる</span><span lang="en">+ The same number gets in again</span></button></div>
+    </section>
+
+    <section class="box" id="medBox">
+      <h2><span lang="ja">くすり・治療</span><span lang="en">Medicine and treatment</span></h2>
+      <div id="strainRow" class="row"><span class="lab"><span lang="ja">菌の種類</span><span lang="en">Strain</span></span><div id="strains" class="seg wrap" role="group"></div></div>
+      <div id="meds"></div>
+      <p id="medNote" class="note"></p>
+    </section>
+
+    <section class="box" id="abxBox">
+      <h2><span lang="ja">抗生物質は何にどう効く？</span><span lang="en">How do antibiotics work, and on what?</span></h2>
+      <p class="note" style="margin-top:0" lang="ja">抗生物質は、<b>菌にはあって、ヒトの細胞にはない（または形がちがう）しくみ</b>をねらう。だから菌だけをやっつけられる。番号にさわると、図のその場所が光る。</p>
+      <p class="note" style="margin-top:0" lang="en">Antibiotics aim at <b>parts that bacteria have but human cells do not (or that are shaped differently)</b>. That is why they can attack only the bacteria. Touch a number and that spot in the picture lights up.</p>
+      <svg id="abxSvg" viewBox="0 0 330 168" role="img">
+        <g transform="translate(82,84)">
+          <text class="ttl" x="0" y="-70"><tspan lang="ja">グラム陽性菌</tspan><tspan lang="en">Gram-positive</tspan></text><text class="sub" x="0" y="-58"><tspan lang="ja">ブドウ球菌・肺炎球菌</tspan><tspan lang="en">Staph, pneumococcus</tspan></text>
+          <circle class="wall t1" r="46"/><circle class="mem" r="37"/>
+          <g class="t2"><circle class="ribo" cx="-14" cy="-12" r="3.2"/><circle class="ribo" cx="10" cy="-18" r="3.2"/><circle class="ribo" cx="16" cy="12" r="3.2"/><circle class="ribo" cx="-18" cy="14" r="3.2"/></g>
+          <path class="dna t3" d="M-12 2 q6 -10 12 0 t12 0 q-6 10 -12 0 t-12 0"/>
+          <g class="t4"><rect class="fol" x="-4" y="18" width="8" height="8" rx="2"/></g>
+          <text class="lab" x="0" y="66"><tspan lang="ja">厚い壁（ペプチドグリカン）</tspan><tspan lang="en">Thick wall (peptidoglycan)</tspan></text>
+        </g>
+        <g transform="translate(248,84)">
+          <text class="ttl" x="0" y="-70"><tspan lang="ja">グラム陰性菌</tspan><tspan lang="en">Gram-negative</tspan></text><text class="sub" x="0" y="-58"><tspan lang="ja">大腸菌</tspan><tspan lang="en">E. coli</tspan></text>
+          <rect class="outer t5" x="-56" y="-38" width="112" height="76" rx="38"/>
+          <rect class="wall thin t1" x="-50" y="-32" width="100" height="64" rx="32"/>
+          <rect class="mem" x="-46" y="-28" width="92" height="56" rx="28"/>
+          <g class="t2"><circle class="ribo" cx="-22" cy="-8" r="3.2"/><circle class="ribo" cx="20" cy="-12" r="3.2"/><circle class="ribo" cx="24" cy="10" r="3.2"/></g>
+          <path class="dna t3" d="M-14 4 q6 -10 12 0 t12 0 q-6 10 -12 0 t-12 0"/>
+          <g class="t4"><rect class="fol" x="-26" y="10" width="8" height="8" rx="2"/></g>
+          <text class="lab" x="0" y="56"><tspan lang="ja">外膜 ＋ うすい壁</tspan><tspan lang="en">Outer membrane + thin wall</tspan></text>
+        </g>
+        <g class="nums">
+          <g class="t1"><circle cx="34" cy="38" r="8"/><text x="34" y="41">1</text></g>
+          <g class="t2"><circle cx="64" cy="66" r="8"/><text x="64" y="69">2</text></g>
+          <g class="t3"><circle cx="96" cy="100" r="8"/><text x="96" y="103">3</text></g>
+          <g class="t4"><circle cx="64" cy="118" r="8"/><text x="64" y="121">4</text></g>
+          <g class="t5"><circle cx="300" cy="40" r="8"/><text x="300" y="43">5</text></g>
+        </g>
+      </svg>
+      <ol id="abxList" class="abxList" lang="ja">
+        <li data-t="1"><b>細胞の壁を作れなくする</b><span class="ex">βラクタム系（ペニシリン系＝アモキシシリン、セフェム系＝セファレキシン など）、グリコペプチド系（バンコマイシン）</span>菌が分裂するとき、壁（ペプチドグリカン）を作れず破れて死ぬ（殺菌）。ヒトの細胞には壁がない。増えていない菌や、うみ・細胞の中の菌には効きにくい。バンコマイシンは大きくて外膜を通れないので、大腸菌には効かない。<span class="inapp">このアプリのセファレキシン・アモキシシリン・バンコマイシン</span></li>
+        <li data-t="2"><b>たんぱく質工場（リボソーム）を止める</b><span class="ex">マクロライド系（クラリスロマイシン など）、テトラサイクリン系、アミノグリコシド系</span>菌のリボソームはヒトのものと形がちがう（菌は70S、ヒトは80S）。たんぱく質が作れず、多くは増えるのが止まる（静菌）。</li>
+        <li data-t="3"><b>遺伝子（DNA）のコピーを止める</b><span class="ex">ニューキノロン系（レボフロキサシン など）</span>DNA のからまりをほどく菌の酵素を止め、コピーも分裂もできなくする（殺菌）。</li>
+        <li data-t="4"><b>葉酸を作らせない</b><span class="ex">ST合剤</span>菌は葉酸（DNA の材料づくりに必要）を自分で作るが、ヒトは食べ物からとる。膀胱炎などに使う。</li>
+        <li data-t="5"><b>外膜をこわす</b><span class="ex">ポリミキシン系（コリスチン）</span>グラム陰性菌の外膜に穴をあける。副作用が強く、ほかが効かないときの最後の手段。</li>
+      </ol>
+      <ol id="abxListEn" class="abxList" lang="en">
+        <li data-t="1"><b>Stop the cell wall from being built</b><span class="ex">Beta-lactams (penicillins = amoxicillin, cephalosporins = cephalexin, etc.), glycopeptides (vancomycin)</span>When the bacterium divides, it cannot build its wall (peptidoglycan), so the wall bursts and it dies (bactericidal). Human cells have no wall. Works poorly on bacteria that are not multiplying, or that are inside pus or cells. Vancomycin is too big to pass the outer membrane, so it does not work on E. coli.<span class="inapp">Cephalexin, amoxicillin and vancomycin in this app</span></li>
+        <li data-t="2"><b>Stop the protein factories (ribosomes)</b><span class="ex">Macrolides (clarithromycin, etc.), tetracyclines, aminoglycosides</span>Bacterial ribosomes are shaped differently from human ones (70S in bacteria, 80S in humans). Proteins cannot be made, and most bacteria stop multiplying (bacteriostatic).</li>
+        <li data-t="3"><b>Stop the gene (DNA) from being copied</b><span class="ex">Fluoroquinolones (levofloxacin, etc.)</span>They block the bacterial enzyme that untangles DNA, so the bacterium can neither copy it nor divide (bactericidal).</li>
+        <li data-t="4"><b>Stop folic acid from being made</b><span class="ex">Trimethoprim-sulfamethoxazole (ST)</span>Bacteria make their own folic acid (needed to build DNA), but humans get it from food. Used for bladder infections and more.</li>
+        <li data-t="5"><b>Break the outer membrane</b><span class="ex">Polymyxins (colistin)</span>They punch holes in the outer membrane of gram-negative bacteria. Strong side effects, so a last resort when nothing else works.</li>
+      </ol>
+      <details lang="ja"><summary>ウイルスには効かない</summary><p>ウイルスには壁もリボソームもなく、ヒトの細胞の中で、ヒトの細胞のしくみを使って増える。だからインフルエンザ・コロナ・ノロ・かぜに抗生物質は効かない（ウイルスには抗ウイルス薬）。</p></details>
+      <details lang="ja"><summary>効かなくなる菌（耐性菌）</summary><p>菌は、①薬をこわす酵素を持つ（βラクタマーゼ。大腸菌の ESBL など）②ねらわれる場所の形を変える（MRSA は壁を作る酵素が別もの）③薬をくみ出すポンプを持つ ④薬の入口を減らす、といった方法で生き残る。薬を使うたびに、生き残った耐性の菌が増えやすくなる。必要なときだけ、医師の指示どおりに使うことが大事。</p></details>
+      <details lang="ja"><summary>腸の中の良い菌も減る</summary><p>抗生物質は、腸に住む役に立つ菌も減らす。そのため下痢になることがある。</p></details>
+      <details lang="en"><summary>They do not work on viruses</summary><p>Viruses have no wall and no ribosomes; they multiply inside human cells using the human cell’s own machinery. So antibiotics do not work on flu, COVID-19, norovirus or colds (viruses need antiviral drugs).</p></details>
+      <details lang="en"><summary>Bacteria that resist (resistant bacteria)</summary><p>Bacteria survive by ① having enzymes that break the drug (beta-lactamases, such as ESBL in E. coli), ② changing the shape of the target (MRSA has a different wall-building enzyme), ③ having pumps that push the drug out, or ④ having fewer doors for the drug to get in. Each time a drug is used, the resistant survivors can spread more easily. It is important to use antibiotics only when needed, exactly as a doctor says.</p></details>
+      <details lang="en"><summary>Good bacteria in the gut also decrease</summary><p>Antibiotics also reduce the helpful bacteria living in the gut. That can cause diarrhea.</p></details>
+    </section>
+
+    <section class="box" id="memBox">
+      <h2><span lang="ja">2回目の感染・ワクチン</span><span lang="en">Second infection, vaccines</span></h2>
+      <p class="note" style="margin-top:0" lang="ja">一度戦うと、その相手に合うT細胞・B細胞の一部が「記憶細胞」として残る。2回目は早く、強く戦える。ワクチンは、病気にならずにこの記憶を作るしくみ。</p>
+      <p class="note" style="margin-top:0" lang="en">After one fight, some of the T cells and B cells that match that enemy remain as “memory cells”. The second time, the body fights faster and harder. A vaccine is a way to make this memory without getting sick.</p>
+      <div id="memBtns" class="memBtns"></div>
+      <p id="memNote" class="note"></p>
+    </section>
+
+    <section class="box">
+      <h2><span lang="ja">いまの数</span><span lang="en">Numbers now</span></h2>
+      <table id="nums"></table>
+    </section>
+
+    <section class="box">
+      <h2><span lang="ja">できごと</span><span lang="en">Events</span></h2>
+      <ol id="log"></ol>
+    </section>
+
+    <section class="box" id="resultBox">
+      <h2 id="resultTitle"></h2>
+      <div id="result"></div>
+    </section>
+
+    <section class="box" id="faq">
+      <h2><span lang="ja">ふしぎに答える</span><span lang="en">Questions and answers</span></h2>
+      <div lang="ja">
+      <details><summary>ウイルスは細胞のまわりをうろうろしているだけ？</summary>
+        <p>ウイルスは自分では動けず、細胞の外では増えられない。粘液の流れやゆらぎで運ばれ、たまたま細胞の表面にくっつくと、細胞に飲みこまれる。中で遺伝子が核に入り、細胞の仕組みを使って自分のコピーを作らせる。6〜8時間ほどで新しいウイルスが表面から出てくる（1個の細胞から数千個）。画面では ①くっつく ②飲みこまれる ③核でコピー ④出てくる、を吹き出しで知らせる。</p></details>
+      <details><summary>結局、ウイルスは増えているの？</summary>
+        <p>画面の上の「いまの状況」に、いま1日に「生まれる数」と「消える数」を出している。生まれる方が多ければ増えている。最初の2日ほどは6〜8時間で何十倍にもなり、2〜3日目がいちばん多い。そのあと、守りを固めた細胞が増え、キラーT細胞と抗体が来て減っていく。グラフ上の色の帯（赤＝増えている、橙＝ピーク、緑＝減っている）でも分かる。</p></details>
+      <details><summary>感染した細胞はどうなるの？死ぬの？</summary>
+        <p>死ぬ。ウイルスを作りつづけた細胞は1日ほどで力尽きる。その前に NK細胞やキラーT細胞が見つけて壊すこともある（ウイルス工場をつぶすので、まわりへの広がりが止まる）。死んだ細胞ははがれ落ち、かけらはマクロファージが食べて片づける。すき間は下にある細胞が分かれて埋め、1〜2週間で元にもどる。線毛のある細胞がそろうまで、せきが長引くことがある。</p></details>
+      <details><summary>なぜ高い熱が出るの？</summary>
+        <p>ウイルスが熱を出しているのではない。感染した細胞や免疫細胞が出す合図の物質（インターフェロン、IL-1、IL-6、TNF など＝サイトカイン）が血液に乗って脳に届き、体温の中枢（視床下部）がプロスタグランジンE2という物質を作って「目標の体温」を上げる。からだは目標に合わせようとして、ふるえ（寒気）で熱を作り、皮膚の血管をしめて熱を逃がさない。熱は免疫細胞を働きやすくし、ウイルスを増えにくくすると考えられている。解熱剤はこのプロスタグランジンを作らせないので熱は下がるが、ウイルスは減らない。ズームで「頭」まで引くと、合図が体温の中枢に届く様子が見える。</p></details>
+      <details><summary>マクロファージはウイルスを食べているの？</summary>
+        <p>食べている。ただ、鼻やのどでは、ウイルスを減らしている一番の理由は粘液の流れ（とウイルスが自然にこわれること）で、後半は抗体（IgA）が大きい。マクロファージは数が少なく、多くは上皮の下で死んだ細胞のかけらを片づけている。肺の奥ではマクロファージの役わりがずっと大きい。いま何がどれだけ減らしているかは「いまの状況」の帯に出る。</p></details>
+      <details><summary>粘液は流れた先でどうなるの？</summary>
+        <p>線毛が粘液をのどの方へ運び、知らないうちに飲みこまれて食道から胃へ行き、胃酸で分解される。鼻をかんだり、くしゃみやせきで外へ出したりもする。粘液の中のウイルスや抗体もいっしょに運ばれる。ズームで「頭」まで引くと、流れの道すじが見える。</p></details>
+      <details><summary>樹状細胞は手をのばして何をしているの？</summary>
+        <p>上皮細胞のすき間から腕を表面までのばして、外から来たもののかけらを集めている（見張り）。かけらを持つとリンパ管を通ってリンパ節へ行き、そこで「このかけらに合う」キラーT細胞とB細胞を探して知らせる。知らされた細胞が何万倍にも増えて、数日後に戦いに加わる。首のリンパ節がはれるのはこのため。</p></details>
+      <details><summary>2回目にかかると、なぜ軽くすむの？</summary>
+        <p>1回目に増えたキラーT細胞・B細胞のうち一部が「記憶細胞」として何年も残る。最初は数百個しかいなかった「その相手に合う細胞」が何百倍もいて、しかも少しのかけらにもすぐ反応する。抗体を作り続ける細胞も残る。だから2回目は、働きだすまでが5〜7日から2〜3日に縮まり、増える前に片づくことも多い。ただし、インフルエンザやコロナは表面の形が少しずつ変わるので、前の抗体がくっつきにくくなり、何度もかかる。「2回目の感染・ワクチン」のボタンで試せる。</p></details>
+      <details><summary>ワクチンはなぜ効くの？</summary>
+        <p>病原体のかけら（または、かけらの設計図）だけを先に見せて、病気にならずに記憶細胞と抗体を作っておくしくみ。本物が来たときには「2回目」と同じように早く戦える。打ったあとに腕が痛くなったり熱が出たりするのは、免疫が反応している印。かからなくするだけでなく、かかっても重くなりにくくする。</p></details>
+      <details><summary>細菌はウイルスとどうちがうの？</summary>
+        <p>細菌（黄色ブドウ球菌）は自分で栄養をとって、細胞の外で2つに分かれて増える。だから細胞の壁を作れなくする抗生物質が効く。ウイルスは細胞の中でしか増えられないので抗生物質は効かず、抗ウイルス薬はウイルスの増え方の別のところを止める。</p></details>
+      </div>
+      <div lang="en">
+      <details><summary>Do viruses just wander around the cells?</summary>
+        <p>Viruses cannot move on their own and cannot multiply outside cells. They are carried by the flow and jiggling of mucus, and when one happens to stick to a cell’s surface, the cell swallows it. Inside, its genes go into the nucleus and use the cell’s machinery to make copies of the virus. In about 6 to 8 hours, new viruses come out of the surface (thousands from one cell). On screen, speech bubbles tell you about ① sticking, ② being swallowed, ③ copying in the nucleus and ④ coming out.</p></details>
+      <details><summary>So are the viruses increasing or not?</summary>
+        <p>The “status now” at the top of the screen shows how many are “born” and how many “disappear” per day right now. If more are born, they are increasing. For the first 2 days or so they multiply tens of times every 6 to 8 hours, peaking on day 2 or 3. After that, protected cells increase, killer T cells and antibodies arrive, and the numbers fall. The colored band on the chart (red = increasing, orange = peak, green = decreasing) shows it too.</p></details>
+      <details><summary>What happens to infected cells? Do they die?</summary>
+        <p>Yes. A cell that keeps making viruses wears out in about a day. Before that, NK cells or killer T cells may find and destroy it (wrecking the virus factory stops the spread). Dead cells peel off, and macrophages eat up the pieces. Cells underneath divide to fill the gaps, and it heals in 1 to 2 weeks. A cough can linger until the cells with cilia are all back.</p></details>
+      <details><summary>Why does a high fever happen?</summary>
+        <p>The virus does not make the heat. Signal substances (interferon, IL-1, IL-6, TNF and others = cytokines) released by infected cells and immune cells travel in the blood to the brain, where the temperature center (hypothalamus) makes a substance called prostaglandin E2 and raises the “target temperature”. To reach the target, the body makes heat by shivering (chills) and narrows the blood vessels in the skin to keep heat in. Fever is thought to help immune cells work and make it harder for viruses to multiply. Fever reducers stop prostaglandin from being made, so the fever goes down, but the viruses do not decrease. Zoom out to “Head” to see the signal reaching the temperature center.</p></details>
+      <details><summary>Do macrophages eat viruses?</summary>
+        <p>Yes. But in the nose and throat, the main thing removing viruses is the flow of mucus (and viruses breaking down on their own), and later antibodies (IgA) do a lot. Macrophages are few there, and most of them clean up pieces of dead cells under the lining. Deep in the lungs, macrophages play a much bigger role. What is removing how much right now is shown in the bar of the “status now”.</p></details>
+      <details><summary>Where does the mucus go?</summary>
+        <p>Cilia carry the mucus toward the throat, where it is swallowed without you noticing, goes down the esophagus to the stomach, and is broken down by stomach acid. Blowing your nose, sneezing and coughing also push it out. Viruses and antibodies in the mucus are carried along too. Zoom out to “Head” to see the path of the flow.</p></details>
+      <details><summary>What are dendritic cells doing with their arms out?</summary>
+        <p>They reach their arms between the lining cells up to the surface and collect pieces of things coming from outside (keeping watch). With a piece in hand, they travel through lymph vessels to a lymph node, where they look for killer T cells and B cells that “match this piece” and alert them. The alerted cells multiply tens of thousands of times and join the fight a few days later. That is why the lymph nodes in your neck swell.</p></details>
+      <details><summary>Why is the second infection milder?</summary>
+        <p>Some of the killer T cells and B cells that multiplied the first time stay for years as “memory cells”. Cells that “match that enemy”, which were only a few hundred at first, are now hundreds of times more, and they react quickly to even a few pieces. Cells that keep making antibodies remain too. So the second time, the wait before they start working shrinks from 5–7 days to 2–3 days, and the infection is often cleared before it grows. But flu and COVID-19 slowly change their surface shapes, so old antibodies stick less well and people catch them again. Try it with the “Second infection, vaccines” buttons.</p></details>
+      <details><summary>Why do vaccines work?</summary>
+        <p>They show only pieces of the germ (or the blueprint for a piece) in advance, so memory cells and antibodies are made without getting sick. When the real thing comes, the body can fight fast, just like a “second time”. A sore arm or fever after a shot is a sign the immune system is reacting. Vaccines not only help prevent infection, they also make it less likely to become serious.</p></details>
+      <details><summary>How are bacteria different from viruses?</summary>
+        <p>Bacteria (like Staphylococcus aureus) take in nutrients by themselves and multiply by splitting in two outside cells. That is why antibiotics that stop the cell wall from being built work on them. Viruses can only multiply inside cells, so antibiotics do not work; antiviral drugs block other steps of how viruses multiply.</p></details>
+      </div>
+    </section>
+
+    <section class="box">
+      <h2><span lang="ja">画面の見かた（タップで説明）</span><span lang="en">How to read the screen (tap for details)</span></h2>
+      <p class="note" style="margin:0 0 8px" lang="ja">色のきまり: 敵は赤〜オレンジ（ぼんやり赤く光る）、味方の免疫は青〜水色、からだの細胞は肌色、くすりは黄緑。</p>
+      <p class="note" style="margin:0 0 8px" lang="en">Colors: enemies are red to orange (with a soft red glow), immune allies are blue to light blue, body cells are skin-colored, medicines are yellow-green.</p>
+      <div id="key"></div>
+      <label class="row"><input type="checkbox" id="labels" checked> <span lang="ja">場所の名前を出す</span><span lang="en">Show place names</span></label>
+      <label class="row"><input type="checkbox" id="talk" checked> <span lang="ja">起きたことを吹き出しで説明する</span><span lang="en">Explain what happens in speech bubbles</span></label>
+      <p class="note" lang="ja">ホイール（スマホは2本指）で、細胞の中から全身まで切れ目なくズームできる。近づいたときはドラッグで見回せる。</p>
+      <p class="note" lang="en">Use the wheel (two fingers on a phone) to zoom from inside a cell all the way out to the whole body. When zoomed in, drag to look around.</p>
+    </section>
+
+    <section class="box" id="about" lang="ja">
+      <h2>このアプリについて</h2>
+      <p>裏で、病原体・感染した細胞・免疫細胞・抗体の数の変化を、研究で使われる形の式（微分方程式）で計算している。ミクロの画面とからだの小窓は、その数に合わせて動かしている。</p>
+      <p><span class="k k-sure">確か</span>しくみ（何が何をするか）、およその時間（ウイルスが出てくるまで6〜8時間、キラーT細胞は5〜7日目ごろ、など）。</p>
+      <p><span class="k k-est">推定</span>数・体温・傷みの量。モデルの目安で、人によって大きくちがう。</p>
+      <p><span class="k k-art">演出</span>画面の粒の数は本当の数ではない（何億個にもなるので、10倍ごとに十数個ずつ増える「対数」で描いている）。ウイルスや抗体は実際よりずっと大きく描いている。</p>
+      <p>簡単にしたところ: どの病原体も、感染した場所を1か所としてまとめた（鼻とのど・小腸・傷のまわり・肺の一部・膀胱）。肺や腎臓への広がりは「傷みや菌の数が大きいと広がるおそれ」として表しただけ。インフルエンザやコロナでも好中球が集まるが、画面とモデルには入れていない。粘液の流れは本当はずっと速い（1分に数mm）が、ゆっくり描いている。くすりは効き目の強さを一定とみなし、飲む回数ごとの上下は省いた。ワクチンは「かけらを数日あたえる」として、種類ごとのちがい（不活化・mRNA・結合型）は強さだけで表した。2回目の感染の間の日々は、病原体のいない状態でモデルを進めて、抗体や記憶細胞の減り方を計算している。ほかの病気・年齢による細かい差は入れていない。</p>
+      <p>モデルの形と数値の参考: 標的細胞が限られるウイルスのモデル（Baccam ら, J Virol 2006）、皮膚に化膿を起こす黄色ブドウ球菌の数（Elek, Ann N Y Acad Sci 1957）、ノロウイルスがうつる数（Teunis ら, J Med Virol 2008）、免疫学の教科書（Janeway's Immunobiology など）。数値は、よく知られた経過（熱の日数・治るまでの日数・薬で短くなる日数）に近くなるよう調整した目安。</p>
+      <p class="warn">しくみを知るためのものです。病気かどうか・治療の判断には使えません。熱が高い・息が苦しい・傷が赤く広がる・吐いて水分がとれない・おしっこが痛くて熱があるなどのときは医療機関へ。</p>
+      <p>使っているもの: 文字に Zen Maru Gothic・Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）。</p>
+    </section>
+    <section class="box" id="aboutEn" lang="en">
+      <h2>About this app</h2>
+      <p>Behind the scenes, the changing numbers of germs, infected cells, immune cells and antibodies are calculated with the kind of equations used in research (differential equations). The micro view and the whole-body window move to match those numbers.</p>
+      <p><span class="k k-sure">Known</span>How things work (what does what), and rough timing (6 to 8 hours until new viruses come out, killer T cells around day 5 to 7, etc.).</p>
+      <p><span class="k k-est">Estimate</span>Numbers, body temperature and amount of damage. These are rough values from the model and differ a lot from person to person.</p>
+      <p><span class="k k-art">Display</span>The number of dots on screen is not the real number (it reaches hundreds of millions, so we draw on a “log” scale that adds a dozen or so dots for every 10×). Viruses and antibodies are drawn much larger than they really are.</p>
+      <p>What we simplified: for every germ, the infected area is treated as one place (nose and throat, small intestine, around a wound, part of a lung, bladder). Spread to the lungs or kidneys is only shown as “may spread when damage or bacteria are high”. Neutrophils also gather in flu and COVID-19, but they are not included in the screen or the model. Mucus really flows much faster (a few mm a minute) but is drawn slowly. Medicines are treated as having a steady strength, leaving out the ups and downs between doses. Vaccines are treated as “giving pieces for a few days”, and the differences between types (inactivated, mRNA, conjugate) are shown only as strength. For the days between first and second infections, the model runs with no germs to calculate how antibodies and memory cells fade. Other illnesses and fine differences by age are not included.</p>
+      <p>Model shapes and numbers are based on: a virus model with limited target cells (Baccam et al., J Virol 2006), the number of Staphylococcus aureus that causes skin infection (Elek, Ann N Y Acad Sci 1957), the number of noroviruses that can infect (Teunis et al., J Med Virol 2008), and immunology textbooks (such as Janeway’s Immunobiology). The numbers are rough values tuned to match well-known courses of illness (days of fever, days to recover, days shortened by medicine).</p>
+      <p class="warn">This is for learning how things work. It cannot be used to decide whether someone is sick or how to treat them. If there is a high fever, trouble breathing, a wound with spreading redness, vomiting so you cannot keep fluids down, or painful urination with fever, see a doctor.</p>
+      <p>Made with: fonts Zen Maru Gothic, Zen Kaku Gothic New and IBM Plex Mono (SIL Open Font License).</p>
+    </section>
+  </aside>
+</div>
+
+<script src="js/model.js"></script>
+<script src="js/text.js"></script>
+<script src="js/text-en.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/micro.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/scales.js"></script>
+<script src="js/zoom.js"></script>
+<script src="js/body.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/main.js"></script>

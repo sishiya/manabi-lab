@@ -1,0 +1,143 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>さなぎの中で</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23142019'/><path d='M32 10c-8 6-11 16-10 26 1 9 5 16 10 20 5-4 9-11 10-20 1-10-2-20-10-26z' fill='%2350b87a'/><path d='M32 16v36' stroke='%23d8f0a0' stroke-width='3' stroke-linecap='round'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<!-- seo（検索・リンクカード。_dev/tools/seo.mjs が入口の APPS から作る。手で直さない） -->
+<meta name="description" content="イモムシがさなぎになり、ガになるまでの体の中。壊れる・残る・新しく作られる器官を、タバコスズメガの研究の日付で追う。">
+<meta property="og:type" content="website"><meta property="og:site_name" content="まなびラボ"><meta property="og:locale" content="ja_JP"><meta property="og:locale:alternate" content="en_US">
+<meta property="og:title" content="さなぎの中で｜まなびラボ"><meta property="og:description" content="イモムシがさなぎになり、ガになるまでの体の中。壊れる・残る・新しく作られる器官を、タバコスズメガの研究の日付で追う。"><meta property="og:url" content="https://sishiya.github.io/manabi-lab/metamorphosis/">
+<meta property="og:image" content="https://sishiya.github.io/manabi-lab/assets/thumbs/metamorphosis.jpg"><meta property="og:image:width" content="640"><meta property="og:image:height" content="360">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@sishiya22">
+<link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/metamorphosis/?lang=ja"><link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/metamorphosis/?lang=en"><link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/metamorphosis/">
+<!-- /seo -->
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="viewWrap">
+      <canvas id="view"></canvas>
+      <div id="stageName" aria-live="polite"></div>
+      <div id="viewCtl" role="group">
+        <button data-mode="in" aria-pressed="true"><span lang="ja">透かして見る</span><span lang="en">See-through</span></button>
+        <button data-mode="cut" aria-pressed="false"><span lang="ja">割って見る</span><span lang="en">Cut open</span></button>
+        <button data-mode="out" aria-pressed="false"><span lang="ja">外から見る</span><span lang="en">Outside</span></button>
+      </div>
+      <div id="hoverTip" hidden></div>
+      <div id="card" hidden></div>
+      <div id="timebar">
+        <button id="play" aria-label="再生">▶</button>
+        <div class="seg" id="speeds" role="group"></div>
+        <input id="time" type="range" min="0" max="1000" step="1" value="0">
+        <span id="clock" class="mono"></span>
+      </div>
+    </div>
+    <div id="chartWrap">
+      <canvas id="chart"></canvas>
+    </div>
+  </main>
+
+  <aside id="panel">
+    <header>
+      <div class="langsw" id="langsw" role="group" aria-label="言語 / Language"><button data-l="ja" title="日本語">JP</button><button data-l="en" title="English">EN</button></div>
+      <div class="eyebrow">INSIDE THE CHRYSALIS</div>
+      <h1><span lang="ja">さなぎの中で</span><span lang="en">Inside the Pupa</span></h1>
+      <p class="lead" lang="ja">イモムシがさなぎになり、ガ（成虫）になるまでの約3週間。外からはほとんど変わらないさなぎの中で、体はどう作りかえられているのか。変態の研究でいちばんくわしく調べられている<b>タバコスズメガ</b>で、時間を動かして見る。</p>
+      <p class="lead" lang="en">About 3 weeks from caterpillar to pupa to moth. Inside a pupa that hardly changes from outside, how is the body rebuilt? Move through time with the <b>tobacco hornworm</b>, one of the insects studied most closely for metamorphosis.</p>
+    </header>
+
+    <section class="box" id="nowBox">
+      <h2><span lang="ja">いま起きていること</span><span lang="en">What is happening now</span></h2>
+      <div id="now"></div>
+    </section>
+
+    <section class="box" id="cutBox" hidden>
+      <h2><span lang="ja">割って見ると（人の目で見た様子）</span><span lang="en">Cut open (as the eye would see it)</span></h2>
+      <ul class="plain" id="cutNotes"></ul>
+    </section>
+
+    <section class="box">
+      <h2><span lang="ja">色の意味（押すと表示を切りかえ）</span><span lang="en">What the colors mean (tap to show/hide)</span></h2>
+      <div id="cats"></div>
+      <label class="row"><input type="checkbox" id="labels" checked> <span lang="ja">名前を表示</span><span lang="en">Show names</span></label>
+    </section>
+
+    <section class="box">
+      <h2><span lang="ja">器官の一覧（押すと説明）</span><span lang="en">Organs (tap for details)</span></h2>
+      <div id="organList"></div>
+    </section>
+
+    <section class="box">
+      <h2><span lang="ja">よくある誤解</span><span lang="en">Common misunderstandings</span></h2>
+      <div id="myths"></div>
+    </section>
+
+    <section class="box">
+      <h2><span lang="ja">まだ分かっていないこと</span><span lang="en">Still unknown</span></h2>
+      <ul class="plain" id="unknowns"></ul>
+    </section>
+
+    <section class="box about" lang="en">
+      <h2>About this app</h2>
+      <p>A simplified schematic for learning. Paired organs are drawn on one side only, and fewer thin tubes and nerves are drawn. Sizes and positions are approximate.</p>
+      <p>Times are research values for the tobacco hornworm (<i>Manduca sexta</i>) raised at 26 °C (the day of pupation is day 0, and the adult emerges on the night of day 18; 18–20 days depending on the lab and strain). Where no dated record was found (such as the days the eyes and wings get their color), the values are <b>rough guides</b>, marked “estimate” in the descriptions. The hormone graph traces the shape of the measured levels as a rough guide.</p>
+      <p>“Cut open” shows what the eye would see if the animal were cut lengthwise, drawn from observation records (shapes are schematic, textures are for show).</p>
+      <p>Labels: <span class="tag sure">confirmed</span> confirmed by research &nbsp; <span class="tag est">estimate</span> no dated record, or carried over from other insects &nbsp; <span class="tag art">for show</span> drawn to make things easier to see</p>
+      <details><summary>Main sources</summary><ul class="plain">
+        <li>Truman and Riddiford (1999), <i>Nature</i>: hormones of complete metamorphosis, and the theory of where larvae came from</li>
+        <li>Jindra, Palli and Riddiford (2013), <i>Annual Review of Entomology</i>: the switch genes <i>Kr-h1</i>, <i>broad</i> and <i>E93</i></li>
+        <li>Bollenbacher et al. (1981): changes in ecdysone levels in the tobacco hornworm</li>
+        <li>Fain and Riddiford (1975), <i>Biological Bulletin</i>: juvenile hormone levels</li>
+        <li>Tolbert, Matsumoto and Hildebrand (1983), <i>J Neurosci</i>: dividing the 18 days of adult development into daily stages</li>
+        <li>Rowland and Goodman (2016), <i>PLOS ONE</i>: MRI of the gut and air sacs of the tobacco hornworm</li>
+        <li>Zakeri et al. (1996): cell death in the labial glands</li>
+        <li>Weeks and Ernst-Utzschneider (1989), <i>J Neurobiol</i>: remodeling of the nerves that move the prolegs</li>
+        <li>Kent and Levine (1988), <i>J Comp Neurol</i>: the nerves that move the legs survive into the adult</li>
+        <li>Champlin and Truman (1998), <i>Development</i>: eye development and ecdysone</li>
+        <li>Schwartz and Truman (1982), <i>Science</i>: muscles between abdominal segments die after emergence</li>
+        <li>Hegstrom, Riddiford and Truman (1998), <i>J Neurosci</i>: remodeling of larval muscles and the flight muscles</li>
+        <li>Cho and Nijhout (2013), <i>Arthropod Structure &amp; Development</i>: polyploidy of scale-making cells (from pupal day 3)</li>
+        <li>Reynolds (1977), <i>J Exp Biol</i>: how the wing skin becomes stretchy after emergence</li>
+        <li>Blackiston, Silva Casey and Weiss (2008), <i>PLOS ONE</i>: what larvae learn is retained by the adult</li>
+      </ul></details>
+      <p>Fonts: Zen Maru Gothic, Zen Kaku Gothic New and IBM Plex Mono (SIL Open Font License).</p>
+    </section>
+    <section class="box about" lang="ja">
+      <h2>このアプリについて</h2>
+      <p>学習用に簡単にした模式図です。左右一対の器官は片側だけ、細い管や神経は少なめに描いています。大きさと位置はおおよそです。</p>
+      <p>時間はタバコスズメガ（<i>Manduca sexta</i>）を 26℃で育てたときの研究の値（蛹になった日を0日、成虫が出るのは18日目の夜。研究室や系統によって18〜20日）。日付の記録が見つからないもの（目や翅が色づく日など）は<b>目安</b>で、説明に「推定」と書いています。ホルモンのグラフは測った量の形をなぞった目安です。</p>
+      <p>「割って見る」は、縦に割ったとき人の目にどう見えるかを、観察の記録をもとに描いたものです（形は模式図、質感は演出）。</p>
+      <p>説明の札: <span class="tag sure">確か</span> 研究で確かめられている　<span class="tag est">推定</span> 日付の記録がない・ほかの虫からのあてはめ　<span class="tag art">演出</span> 見やすくするための描き方</p>
+      <details><summary>おもな出どころ</summary><ul class="plain">
+        <li>Truman と Riddiford（1999）Nature: 完全変態のホルモンと、幼虫の起源の説</li>
+        <li>Jindra・Palli・Riddiford（2013）Annual Review of Entomology: スイッチの遺伝子 <i>Kr-h1</i>・<i>broad</i>・<i>E93</i></li>
+        <li>Bollenbacher ほか（1981）: タバコスズメガのエクジソンの量の移り変わり</li>
+        <li>Fain と Riddiford（1975）Biological Bulletin: 幼若ホルモンの量</li>
+        <li>Tolbert・Matsumoto・Hildebrand（1983）J Neurosci: 成虫になる18日を1日ずつの段階に分ける</li>
+        <li>Rowland と Goodman（2016）PLOS ONE: タバコスズメガの消化管と気嚢の MRI</li>
+        <li>Zakeri ほか（1996）: 唇腺の細胞死</li>
+        <li>Weeks と Ernst-Utzschneider（1989）J Neurobiol: 腹脚を動かす神経の作りかえ</li>
+        <li>Kent と Levine（1988）J Comp Neurol: 脚を動かす神経が成虫まで残る</li>
+        <li>Champlin と Truman（1998）Development: 目の発生とエクジソン</li>
+        <li>Schwartz と Truman（1982）Science: 腹の節の間の筋肉が羽化のあとに死ぬ</li>
+        <li>Hegstrom・Riddiford・Truman（1998）J Neurosci: 幼虫の筋肉の作りかえと飛ぶ筋肉</li>
+        <li>Cho と Nijhout（2013）Arthropod Structure &amp; Development: 鱗粉を作る細胞の倍数化（蛹の3日目から）</li>
+        <li>Reynolds（1977）J Exp Biol: 羽化のあと翅の皮がのびやすくなるしくみ</li>
+        <li>Blackiston・Silva Casey・Weiss（2008）PLOS ONE: 幼虫で覚えたことが成虫に残る</li>
+      </ul></details>
+      <p>使っているもの: 文字に Zen Maru Gothic・Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）。</p>
+    </section>
+  </aside>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/text.js"></script>
+<script src="js/body.js"></script>
+<script src="js/organs.js"></script>
+<script src="js/text-en.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/main.js"></script>
