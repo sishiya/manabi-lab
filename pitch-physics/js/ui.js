@@ -61,7 +61,7 @@ function buildControls() {
 
   // ② 球の速さと回転
   const s2 = section(box, 'spin', '2', '球の速さと回転', true);
-  slider(s2, 'v0', '速さ', 60, 165, 1, () => S.P.v0, v => S.P.v0 = v, v => v + ' km/h（' + fmt(v / 3.6 / MPH, 0) + ' mph）');
+  slider(s2, 'v0', '速さ', 60, 170, 1, () => S.P.v0, v => S.P.v0 = v, v => v + ' km/h（' + fmt(v / 3.6 / MPH, 0) + ' mph）');
   slider(s2, 'rpm', '回転数', 0, 3500, 10, () => S.P.rpm, v => S.P.rpm = v, v => v + ' 回/分');
   slider(s2, 'dir', '回転の向き', 0, 359, 1, () => S.P.dir, v => S.P.dir = v, v => '手前の面が ' + clock(v) + ' の向きへ（軸 ' + clock(v + 270) + '）');
   slider(s2, 'eff', '使える回転', 0, 100, 1, () => Math.round(S.P.eff * 100), v => S.P.eff = v / 100, v => v + '%（のこりはジャイロ回転）');
@@ -175,7 +175,7 @@ function updateNums() {
     ['ホームまで', fmt(r.tPlate, 3) + ' 秒'],
     ['速さ', fmt(V.len(r.st.vel) * 3.6, 0) + ' → ' + fmt(V.len(r.vPlate) * 3.6, 0) + ' km/h'],
     ['変化量', (up >= 0 ? '上へ ' : '下へ ') + fmt(Math.abs(up), 0) + ' cm・' + (rt >= 0 ? '右へ ' : '左へ ') + fmt(Math.abs(rt), 0) + ' cm' + (Math.abs(rt) >= 1 ? '（' + (Math.sign(rt) === armSign() ? '腕の側' : 'グラブの側') + '）' : ''), 'plain'],
-    ['まん中から', missText(r), 'zone'],
+    ['ねらった点から', missText(r), 'target'],
     ['空気なしより', (r.pPlate[2] >= S.ghostNoAir.pPlate[2] ? '上に ' : '下に ') + fmt(Math.abs(r.pPlate[2] - S.ghostNoAir.pPlate[2]) / 0.01, 0) + ' cm', 'noAir'],
     ['空気', 'ρ = ' + fmt(r.st.rho, 3) + ' kg/m³（ふつうの ' + fmt(r.st.rho / STD_ENV.rho * 100, 0) + '%）・' + windName(S.env.ws, S.env.wd), 'air'],
   ];
@@ -200,7 +200,7 @@ function updateNums() {
   $('nums').innerHTML = html;
 }
 
-// ゾーンのまん中からのずれ（ホームの前の端で）
+// ねらった点（初めはゾーンのまん中）からのずれ（ホームの前の端で）
 function missText(r) {
   const dz = (r.pPlate[2] - TARGET.z) / 0.01, dx = (r.pPlate[0] - TARGET.x) / 0.01;
   const inZone = Math.abs(r.pPlate[0]) <= ZONE.x + PHY.r && r.pPlate[2] >= ZONE.zLo - PHY.r && r.pPlate[2] <= ZONE.zHi + PHY.r;
@@ -238,7 +238,7 @@ function setTour(i) {
   S.tour = Math.max(0, Math.min(TOUR.length - 1, i));
   S.playing = false; $('play').textContent = '▶';
   // 案内の段は、平均的な右投げの投手・ふつうの空気・重ねないところから始める
-  S.pitcher = 'std'; S.hand = 'R'; S.arm = 45; S.aimMode = 'plain'; S.overlay = false; S.batH = 185; setZoneFor(185); $('tour').classList.remove('full'); S.env = { tC: 20, elev: 0, p: 1013, rh: 50, ws: 0, wd: 0 }; S.envId = 'std'; applyEnv();
+  S.pitcher = 'std'; S.hand = 'R'; S.arm = 45; S.aimMode = 'plain'; S.overlay = false; S.batH = 185; setZoneFor(185); TARGET.x = 0; $('tour').classList.remove('full'); S.env = { tC: 20, elev: 0, p: 1013, rh: 50, ws: 0, wd: 0 }; S.envId = 'std'; applyEnv();
   TOUR[S.tour].go();
   S.t = 0; S.playing = true; $('play').textContent = '❚❚';   // 案内の段は 0.0 秒から再生する
   $('tourNum').textContent = (S.tour + 1) + ' / ' + TOUR.length;
@@ -276,7 +276,17 @@ function showTip(key, ev) {
 }
 function bindPointer() {
   const cv = $('cv'), bc = $('ball');
-  cv.addEventListener('mousemove', e => { const r = cv.getBoundingClientRect(); const h = findHit(HITS, e.clientX - r.left, e.clientY - r.top); showTip(h && h.key, e); });
+  cv.addEventListener('mousemove', e => { const r = cv.getBoundingClientRect(); const h = findHit(HITS, e.clientX - r.left, e.clientY - r.top); showTip(h && h.key, e); cv.style.cursor = h && h.key === 'plainMark' ? 'move' : ''; });
+  // 2D の「捕手の目線」で、回転がなければ通る点をドラッグ（ホームの面へ逆に写す）
+  let tdrag = false, raf = 0, pend = null;
+  const toPlate = e => { const r = cv.getBoundingClientRect(), ct = LAY.catcher, x = e.clientX - r.left, y = e.clientY - r.top, d = PHY.plateY - ct.eye[1];
+    return [ct.eye[0] + (x - ct.cx) * d / ct.f, ct.eye[2] - (y - ct.cy) * d / ct.f]; };
+  cv.addEventListener('pointerdown', e => {
+    const r = cv.getBoundingClientRect(), m = LAY.catcher.plainMark; if (!m) return;
+    if (Math.hypot(e.clientX - r.left - m[0], e.clientY - r.top - m[1]) < m[2]) { tdrag = true; S.playing = false; cv.setPointerCapture(e.pointerId); }
+  });
+  cv.addEventListener('pointermove', e => { if (!tdrag) return; pend = toPlate(e); if (!raf) raf = requestAnimationFrame(() => { raf = 0; if (pend) { setTarget(pend[0], pend[1]); syncAll(); } }); });
+  cv.addEventListener('pointerup', () => { tdrag = false; });
   cv.addEventListener('mouseleave', () => showTip(null));
   // ボール: ドラッグで回転の向きを決める（手前の面をこすった向きに回る）
   let drag = false;

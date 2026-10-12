@@ -40,6 +40,11 @@ function init3d(canvas) {
   const sun = new THREE.DirectionalLight('#fff4e0', 0.6); sun.position.set(-60, 120, -40); fg.add(sun);
   // ストライクゾーンとねらった点（打者の身長で変わるので、zoneMesh() で作りなおす）
   V3.zone = new THREE.Group(); fg.add(V3.zone); zoneMesh();
+  // ガイド: 回転がなければ通る点（白い輪。ドラッグで動かせる）・実際に通った点（球種の色）・その間の線
+  V3.gPlain = new THREE.Mesh(new THREE.RingGeometry(0.045, 0.062, 40), new THREE.MeshBasicMaterial({ color: '#ffffff', side: THREE.DoubleSide, depthTest: false, transparent: true }));
+  V3.gReal = new THREE.Mesh(new THREE.CircleGeometry(PHY.r, 32), new THREE.MeshBasicMaterial({ color: '#ffd166', side: THREE.DoubleSide, depthTest: false, transparent: true, opacity: 0.9 }));
+  V3.gLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineDashedMaterial({ color: '#ffffff', dashSize: 0.03, gapSize: 0.02, depthTest: false }));
+  for (const o of [V3.gPlain, V3.gReal, V3.gLine]) { o.renderOrder = 7; fg.add(o); }
   // ボール（縫い目つき）・見つけやすくする輪
   V3.ball = makeBall('#f2f0e6', true); fg.add(V3.ball);
   const rc = document.createElement('canvas'); rc.width = rc.height = 64; const rg = rc.getContext('2d');
@@ -64,8 +69,9 @@ function zoneMesh() {
   g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(zp), new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.75 })));
   const zf = new THREE.Mesh(new THREE.PlaneGeometry(ZONE.x * 2, ZONE.zHi - ZONE.zLo), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.06, side: THREE.DoubleSide, depthWrite: false }));
   zf.position.set(0, (ZONE.zHi + ZONE.zLo) / 2, -PHY.plateY); g.add(zf);
-  const tc = [[-0.05, 0], [0.05, 0], [0, -0.05], [0, 0.05]].map(q => new THREE.Vector3(q[0], TARGET.z + q[1], -PHY.plateY + 0.001));
-  g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(tc), new THREE.LineBasicMaterial({ color: '#ffffff' })));
+  // ゾーンのまん中（目安の十字。うすく）
+  const tc = [[-0.04, 0], [0.04, 0], [0, -0.04], [0, 0.04]].map(q => new THREE.Vector3(q[0], ZONE.zMid + q[1], -PHY.plateY + 0.001));
+  g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(tc), new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.45 })));
   V3.zoneKey = ZONE.zLo + ',' + ZONE.zHi;
 }
 
@@ -211,15 +217,51 @@ function placeCam(ballPos, vel) {
 }
 
 // ドラッグで回す・ホイールで寄る（ボールの後ろのときは回さない）
+// ガイドの位置と、名札（HTML）の位置
+function screenOf(v) { const p = v.clone().project(V3.cam), c = V3.renderer.domElement; return p.z > 1 ? null : [(p.x + 1) / 2 * c.clientWidth, (1 - p.y) / 2 * c.clientHeight]; }
+function updateGuides3d() {
+  const a = T3(S.ghostPlain.pPlate), b = T3(S.res.pPlate), dz = 0.003;
+  a.z += dz; b.z += dz;
+  V3.gPlain.position.copy(a); V3.gReal.position.copy(b);
+  V3.gReal.material.color.set(mainCol());
+  // 実際に通った点は、ボールがホームを通った瞬間に付ける（少しふくらんでから落ち着く）
+  const since = S.t - S.res.tPlate, arrived = since >= -1e-6;
+  const pop = arrived ? 1 + 0.6 * Math.max(0, 1 - since / 0.02) : 1;
+  V3.gReal.scale.setScalar(pop);
+  V3.gLine.geometry.setFromPoints([a, b]); V3.gLine.computeLineDistances();
+  const show = S.cam !== 'ball';
+  V3.gPlain.visible = show; V3.gReal.visible = V3.gLine.visible = show && arrived;
+  const lab = (id, v, txt) => { const e = document.getElementById(id), q = show && screenOf(v); if (!q) { e.hidden = true; return; } e.hidden = false; e.style.left = q[0] + 'px'; e.style.top = q[1] + 'px'; e.textContent = txt; };
+  const d = Math.hypot(S.res.pPlate[0] - S.ghostPlain.pPlate[0], S.res.pPlate[2] - S.ghostPlain.pPlate[2]) * 100;
+  lab('mkPlain', a, '回転がなければ（ドラッグで動かせる）');
+  if (arrived) lab('mkReal', b, '通った点（回転がなければの点から ' + d.toFixed(0) + ' cm）'); else document.getElementById('mkReal').hidden = true;
+}
+
 function bind3dPointer(canvas) {
-  let drag = null;
-  canvas.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); });
+  let drag = null, tgt = null, pend = null;
+  const rc = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), PHY.plateY);
+  const local = e => { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top, r]; };
+  const nearPlain = e => { if (!V3.gPlain.visible) return false; const [x, y] = local(e), q = screenOf(V3.gPlain.position); return q && Math.hypot(q[0] - x, q[1] - y) < 26; };
+  const moveTarget = e => {
+    const [x, y, r] = local(e);
+    rc.setFromCamera(new THREE.Vector2(x / r.width * 2 - 1, -(y / r.height * 2 - 1)), V3.cam);
+    const p = new THREE.Vector3(); if (!rc.ray.intersectPlane(plane, p)) return;
+    // 印の点は回転がなければ通る点なので、そこへ向けて放しなおす（重いので 1 コマに 1 回）
+    pend = [p.x, p.y]; if (!tgt.raf) tgt.raf = requestAnimationFrame(() => { tgt.raf = 0; if (pend) { setTarget(pend[0], pend[1]); syncAll(); } });
+  };
+  canvas.addEventListener('pointerdown', e => {
+    canvas.setPointerCapture(e.pointerId);
+    if (nearPlain(e)) { tgt = { raf: 0 }; S.playing = false; return; }
+    drag = { x: e.clientX, y: e.clientY };
+  });
   canvas.addEventListener('pointermove', e => {
-    if (!drag || CAMS[S.cam].follow) return;
+    if (tgt) { moveTarget(e); return; }
+    if (!drag) { canvas.style.cursor = nearPlain(e) ? 'move' : 'grab'; return; }
+    if (CAMS[S.cam].follow) return;
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag = { x: e.clientX, y: e.clientY };
     V3.orbit.yaw -= dx * 0.005; V3.orbit.pitch = Math.max(-0.1, Math.min(1.55, V3.orbit.pitch + dy * 0.005));
   });
-  canvas.addEventListener('pointerup', () => { drag = null; });
+  canvas.addEventListener('pointerup', () => { drag = null; tgt = null; });
   canvas.addEventListener('wheel', e => {
     if (CAMS[S.cam].follow) return;
     e.preventDefault(); V3.orbit.dist = Math.max(1.5, Math.min(200, V3.orbit.dist * Math.exp(e.deltaY * 0.001)));
@@ -276,6 +318,7 @@ function draw3d() {
   const hs = 0.028 * Math.tan(V3.cam.fov * Math.PI / 360) / Math.tan(25 * Math.PI / 180);
   V3.halo.scale.set(hs, hs, 1); for (const o of V3.multi) o.halo.scale.set(hs * 0.8, hs * 0.8, 1);
   if (V3.zoneKey !== ZONE.zLo + ',' + ZONE.zHi) zoneMesh();
+  updateGuides3d();
   // 投手の人形（放してからの時刻で、腕を振り下ろしていく。ボールの後ろのカメラでは、カメラが体の中に入るので出さない）
   posePitcher(S.P, S.arm, S.t); PITCHER.grp.visible = !CAMS[S.cam].follow;
   // world を被写界深度で → world の奥行きだけを書く → その上に fg（隠れるところは隠れる）

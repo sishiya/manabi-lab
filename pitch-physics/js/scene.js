@@ -96,7 +96,12 @@ const armSign = () => S.hand === 'R' ? -1 : 1;
 
 // 計算しなおす（ねらい → 本番・比べる道すじ）
 // ねらい方に合わせて放す角度を決める
-const TARGET = { x: 0, z: ZONE.zMid };
+const TARGET = { x: 0, z: ZONE.zMid };   // ねらった点（「回転がなければ通る点」の印。ドラッグで動かせる）
+// ねらった点を動かす: 「回転がなければここを通る」向きに放しなおす
+function setTarget(x, z) {
+  TARGET.x = Math.max(-0.9, Math.min(0.9, x)); TARGET.z = Math.max(0.1, Math.min(2.0, z));
+  S.aimMode = 'plain'; S.many = null; recompute();
+}
 function aimP(P, mode) {
   if (mode === 'fit') Object.assign(P, aim(P, TARGET));
   else if (mode === 'plain') Object.assign(P, aim(P, TARGET, { air: true, magnus: false, seam: false }));
@@ -172,6 +177,8 @@ const PARTS = {
   plain: '回転の力も縫い目の力もないとき（重力と空気の抵抗だけ）の道すじ。これとのずれが「変化量」です。',
   decide: '振ると決める最後の点（緑の輪）。ここから先の変化を見てから決めても、スイングが間に合わない（決めてから振り始めるまで・スイングの時間は下のつまみ）。',
   track: '目で追えなくなる点（白の輪）。打者の目から見たボールの動きが 70°/秒をこえ、目で滑らかに追えなくなる（Bahill & LaRitz 1984）。',
+  plainMark: '回転がなければ通る点（白い輪）。ドラッグすると、ここへ回転の力なしで届く向きに放しなおします。実際の球は、回転と縫い目の力のぶんだけずれた所を通ります。',
+  realMark: 'ボールが実際にホームを通った点。白い輪からのずれが、回転と縫い目による変化です。',
   target: 'ねらった点（ゾーンのまん中）。「ねらい方」で、この点へどう向けて放すかを変えられます。',
   zone: 'ストライクゾーン（幅 43 cm。高さは打者の体で変わるので目安）。',
   ball: 'いまの時刻のボール。矢印は働いている力です。',

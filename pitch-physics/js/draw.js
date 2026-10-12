@@ -153,11 +153,18 @@ function drawCatcher(g) {
   const z1 = P([-ZONE.x, PHY.plateY, ZONE.zHi]), z2 = P([ZONE.x, PHY.plateY, ZONE.zLo]);
   g.strokeStyle = COL.zone; g.lineWidth = 1.5; g.strokeRect(z1[0], z1[1], z2[0] - z1[0], z2[1] - z1[1]);
   hitRect('zone', z1[0], z1[1], z2[0] - z1[0], z2[1] - z1[1]);
-  // ねらった点（ゾーンのまん中）
-  const tg = P([TARGET.x, PHY.plateY, TARGET.z]);
-  g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 1.2; g.beginPath();
-  g.moveTo(tg[0] - 7, tg[1]); g.lineTo(tg[0] + 7, tg[1]); g.moveTo(tg[0], tg[1] - 7); g.lineTo(tg[0], tg[1] + 7); g.stroke();
-  hit('target', tg[0], tg[1], 8);
+  // ゾーンのまん中（目安の十字。うすく）
+  const zc = P([0, PHY.plateY, ZONE.zMid]);
+  g.strokeStyle = 'rgba(255,255,255,.4)'; g.lineWidth = 1; g.beginPath();
+  g.moveTo(zc[0] - 6, zc[1]); g.lineTo(zc[0] + 6, zc[1]); g.moveTo(zc[0], zc[1] - 6); g.lineTo(zc[0], zc[1] + 6); g.stroke();
+  // ガイド: 回転がなければ通る点（白い輪。ドラッグで動かせる）・通った点（ボールがホームを通ったら付ける）
+  const gp = P(S.ghostPlain.pPlate), gr = P(S.res.pPlate), rr = Math.max(5, gp[2] * PHY.r * 1.4);
+  g.strokeStyle = '#ffffff'; g.lineWidth = 2; g.beginPath(); g.arc(gp[0], gp[1], rr, 0, 7); g.stroke();
+  hit('plainMark', gp[0], gp[1], rr + 8); LAY.catcher.plainMark = [gp[0], gp[1], rr + 8];
+  if (S.t >= S.res.tPlate - 1e-6) {
+    g.setLineDash([4, 3]); g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(gp[0], gp[1]); g.lineTo(gr[0], gr[1]); g.stroke(); g.setLineDash([]);
+    g.fillStyle = mainCol(); g.beginPath(); g.arc(gr[0], gr[1], Math.max(4, gr[2] * PHY.r), 0, 7); g.fill(); hit('realMark', gr[0], gr[1], 8);
+  }
   // 投手板
   const rb = P([0, PHY.rubberY, 0.254]); g.fillStyle = '#e8f0f4'; g.fillRect(rb[0] - 4, rb[1] - 1, 8, 2);
   const map = p => P(p);
@@ -178,7 +185,7 @@ function drawCatcher(g) {
   // ボール（本物の大きさ）
   const s = sampleAt(S.res, S.t), q = P(s.p);
   if (q) {
-    const rr = Math.max(2, q[2] * PHY.r);
+    const rr = Math.min(14, Math.max(2, q[2] * PHY.r));   // ミットの所は目にとても近いので大きさに上限
     g.fillStyle = '#f2f0e6'; g.beginPath(); g.arc(q[0], q[1], rr, 0, 7); g.fill(); hit('ball', q[0], q[1], rr + 4);
   }
   if (S.t >= S.res.tPlate - 1e-6 && S.mv) {
