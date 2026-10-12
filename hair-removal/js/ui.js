@@ -1,70 +1,68 @@
-// 脱毛のしくみ — ボタン・選ぶもの・案内（つぎへ）・説明の吹き出し
+// 脱毛のしくみ — 道具・設定・案内（つぎへ）・吹き出し
 'use strict';
 
 const $ = id => document.getElementById(id);
 
-// 案内。set は S を書きかえる（main.js の applyGuide がよぶ）
+// 案内。ev = その段で使う手入れ（ユーザーの手入れは置きかわる）、t = 見せる日、tool = 選ぶ道具
+const ALL10 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+const LIGHT_DEMO = [{ t: 0, type: 'shave', idx: ALL10 }, { t: 1, type: 'light', idx: ALL10 }];
+const LIGHT_MORE = LIGHT_DEMO.concat([14, 28, 42].flatMap(d => [{ t: d, type: 'shave', idx: ALL10 }, { t: d + 1, type: 'light', idx: ALL10 }]));
+const SH_PL = [{ t: 0, type: 'shave', idx: [0, 1, 2, 3, 4] }, { t: 0, type: 'pluck', idx: [5, 6, 7, 8, 9] }];
 const GUIDE = [
-  { t: -7, text: '3列とも同じ<b>すね</b>の肌です。上の帯は肌を上から見たところ、その下は肌の断面です。毛穴の中で毛は「のびる（成長期）→ 止まる（退行期）→ 休む（休止期）」をくり返します。図の部分をさわると説明が出ます。' },
-  { t: -7, text: '毛穴の札に注目。「のびる」毛穴の下半分は、周期の終わりに<b>ちぢんで</b>休み、次の周期でまた下へ<b>のび直し</b>ます。毛穴の下半分は周期ごとに作りなおされる、本当に起きていることです（1つの毛穴では周期に1回、すねでは約10か月に1回。再生ではそれを縮めて見ています）。' },
-  { t: -7, text: '見出しの下の帯は毛穴の期の割合です（<span style="color:#e57a7a">赤</span>＝成長期、<span style="color:#b39a90">灰</span>＝休止期）。すねでは、休んでいる毛穴のほうが多いとされます。' },
-  { t: 0, text: '0日目に手入れをします。<b style="color:var(--shave)">剃る</b>は表面で切るだけ。<b style="color:var(--pluck)">抜く</b>は根もとから取ります。<b style="color:var(--light)">光</b>の列は、光の前の日に剃っておきます。' },
-  { t: 2, text: '剃って2日。のびている（成長期の）毛は、もう先が出てきました。毛穴の中は何も変わっていないからです。休止期の毛は切ったまま止まっています。' },
-  { t: 7, text: '剃っても毛は太く・濃くなりません（片足だけ毎週剃っても、太さ・のびる速さに差がなかった: Lynfield & Macwilliams 1970）。切り口が平らなので、チクチクするだけです。' },
-  { t: 18, text: '抜いた列: 毛穴の奥で新しい毛が作られ、表面へ向かってのびています（まだ見えない）。毛穴そのものは残っています。' },
-  { t: 35, text: '抜いて1か月ほどで、新しい毛が一度に出てきました。抜くとたくさんの毛穴が同時に生えかわりを始めるからです（遅れの日数は推定）。' },
-  { t: 0.05, text: '<b style="color:var(--light)">光</b>った瞬間。光は毛の黒い色（メラニン）に吸われて熱になります。成長期の毛球（色の濃い毛母）は 80°C をこえ、細胞がいたみます。細い毛からバルジへ届く熱は少しだけです（熱がすぐ逃げるため）。' },
-  { t: 8, text: '毛母がいたんだ毛はもう伸びず、押し出されて<b>伸びているように見え</b>、1〜3週で落ちます。毛穴そのもの（幹細胞）は残るので、休んだあとまた生えてきます。' },
-  { t: 13.9, text: '光の前の日に剃りました。いまは成長期の毛穴がほとんどありません（前の光で休みに入った）。<b>休止期の毛穴には光が効かない</b>ので、間をあけて何回もあてます（2週ごと4回→4週ごと）。' },
-  { t: 120, text: '4か月。<b style="color:var(--light)">光</b>の列は、表面に出る毛がとても少なくなりました。ただしこれは「生えかわりのたびに落としている」状態で、毛穴はこわれていません（このモデルでは）。' },
-  { t: 120, text: '下の「光」で強さ・肌の色・毛の色・光の前の準備を変えてみてください。茶色やうすい色の毛は熱をためられず、ほとんど効きません。濃い肌や日焼けした肌は表皮が熱くなります。' },
-  { t: 120, text: '「1週間前に抜く」にすると、目印の毛と色のある毛球がなく、光が効きにくくなります。周期の値・手入れの予定も変えて試せます（数値の多くは推定。下の「このアプリについて」）。' },
+  { t: 0, ev: [], tool: 'look', text: '<b>すね</b>の肌の断面です。毛穴が一列に10個。札は毛穴のいまのようす（のびる・ちぢむ・休む）。🔍 で図をさわると、部分の説明が出ます。' },
+  { t: 0, ev: [], tool: 'look', play: true, text: '時間を進めてみます（▶、または +1日・+1週）。毛は「のびる → ちぢむ → 休む → また のびる」をくり返します。毛穴の下半分は周期ごとに縮んで作りなおされます（1つの毛穴では周期に1回）。' },
+  { t: 0, ev: SH_PL.slice(0, 1), tool: 'shave', text: '<b style="color:var(--shave)">カミソリ</b>で左の5個を剃りました（肌の表面を横になぞると剃れます）。表面で切るだけで、毛穴の中は何も変わりません。' },
+  { t: 3, ev: SH_PL.slice(0, 1), tool: 'shave', text: '3日後。のびる毛穴の毛は、もう先が出ています。休む毛穴の毛は切ったまま伸びません。剃っても太くはなりません（Lynfield & Macwilliams 1970）。' },
+  { t: 0, ev: SH_PL, tool: 'pluck', text: '<b style="color:var(--pluck)">毛抜き</b>で右の5個を抜きました（毛をクリックで抜けます）。根もとごと取れますが、毛穴は残ります。' },
+  { t: 28, ev: SH_PL, tool: 'pluck', text: '4週後。抜いた毛穴は新しい成長期に入り、毛の先が表面に出てきました。左の剃っただけの所とくらべてみてください。' },
+  { t: 1.05, ev: LIGHT_DEMO, tool: 'light', text: '<b style="color:var(--light)">光</b>（家庭用の光脱毛器）: 前の日に剃ってから、10個ぜんぶにあてました。光は毛の黒い色に吸われて熱になり、のびる毛穴の毛球（色の濃い毛母）が 80°C をこえて、細胞がいたみます。休む毛穴は変化なし。' },
+  { t: 14, ev: LIGHT_DEMO, tool: 'light', text: 'いたんだ毛はもう伸びず、押し出されて抜け落ちます。毛穴はちぢんで休みに入りますが、なくなってはいません。' },
+  { t: 70, ev: LIGHT_MORE, tool: 'light', text: '2週ごとに4回あてました。休んでいた毛穴があとから のびる に入るので、何回もあてます。下の「毛穴ごとの周期」で、光の日に赤い帯（のびる）が途切れているのを見てください。' },
+  { t: 0, ev: [], tool: 'shave', free: true, text: 'ここからは自由に。部位と道具を選んで、好きなときに好きな所を手入れしてください（↶ で1つ戻せます）。光の強さ・肌や毛の色は下の「光の設定」で。' },
 ];
 
-const UI = { tipTimer: null };
-
-function buildControls(S, onChange) {
-  // 周期の値
+function buildControls(S, on) {
   const site = $('site');
-  for (const [k, v] of Object.entries(SITES)) { const o = document.createElement('option'); o.value = k; o.textContent = v.name; site.appendChild(o); }
-  site.value = S.site;
-  site.onchange = () => { S.site = site.value; onChange(true); };
-  // 列ごとの予定
-  const box = $('lanesCtl');
-  for (const L of LANES) {
-    const row = document.createElement('label'); row.className = 'lane';
-    row.innerHTML = `<b style="color:${L.color}">${L.name}</b>`;
-    const sel = document.createElement('select'); sel.id = 'pre-' + L.id;
-    for (const p of PRESETS[L.id]) { const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; sel.appendChild(o); }
-    sel.value = S.pre[L.id];
-    sel.onchange = () => { S.pre[L.id] = sel.value; onChange(true); };
-    row.appendChild(sel);
-    if (L.id === 'light') { const s = document.createElement('span'); s.className = 'hint'; s.textContent = '（前の日に剃る）'; row.appendChild(s); }
-    box.appendChild(row);
+  for (const k of ['shin', 'thighF', 'thighM', 'armF', 'armM', 'lip']) { const o = document.createElement('option'); o.value = k; o.textContent = SITES[k].name; site.appendChild(o); }
+  site.onchange = () => on.site(site.value);
+  const box = $('tools');
+  for (const T of TOOLS) {
+    const b = document.createElement('button'); b.className = 'tool'; b.id = 'tool-' + T.id; b.setAttribute('role', 'radio');
+    b.innerHTML = `<span class="ic" aria-hidden="true">${T.icon}</span>${T.name}`;
+    if (TOOL_COLOR[T.id]) b.style.setProperty('--c', TOOL_COLOR[T.id]);
+    b.onclick = () => on.tool(T.id);
+    box.appendChild(b);
   }
-  $('speed').onchange = () => { S.speed = +$('speed').value; };
-  // 光の設定
   for (const [id, tbl] of [['skin', SKINS], ['hairc', HAIRS]]) for (const [k, v] of Object.entries(tbl)) { const o = document.createElement('option'); o.value = k; o.textContent = v.name; $(id).appendChild(o); }
-  $('lv').oninput = () => { S.light.level = +$('lv').value; onChange(true); };
-  $('skin').onchange = () => { S.light.skin = $('skin').value; onChange(true); };
-  $('hairc').onchange = () => { S.light.hair = $('hairc').value; onChange(true); };
-  $('prep').onchange = () => { S.light.prep = $('prep').value; onChange(true); };
-  $('cool').onchange = () => { S.light.cool = $('cool').checked; onChange(true); };
-  // 出どころ
+  $('lv').oninput = () => on.light({ level: +$('lv').value });
+  $('skin').onchange = () => on.light({ skin: $('skin').value });
+  $('hairc').onchange = () => on.light({ hair: $('hairc').value });
+  $('cool').onchange = () => on.light({ cool: $('cool').checked });
+  $('speed').onchange = () => { S.speed = +$('speed').value; };
   const ul = $('srcs');
   for (const [txt, url] of SOURCES) { const li = document.createElement('li'); const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = txt; li.appendChild(a); ul.appendChild(li); }
 }
 
 function syncControls(S) {
   $('site').value = S.site;
-  for (const L of LANES) $('pre-' + L.id).value = S.pre[L.id];
-  $('siteNote').textContent = SITES[S.site].note;
+  $('siteNote').textContent = SITES[S.site].name + ': ' + SITES[S.site].note;
+  for (const T of TOOLS) $('tool-' + T.id).setAttribute('aria-checked', String(S.tool === T.id));
+  $('hint').textContent = TOOLS.find(T => T.id === S.tool).hint;
   const L = S.light;
   $('lv').value = L.level; $('lvv').textContent = 'Lv' + L.level; $('lvF').textContent = `約 ${(L.level * LIGHT.fPerLevel).toFixed(1)} J/cm²（推定）`;
-  $('skin').value = L.skin; $('hairc').value = L.hair; $('prep').value = L.prep; $('cool').checked = L.cool;
+  $('skin').value = L.skin; $('hairc').value = L.hair; $('cool').checked = L.cool;
+  $('undo').disabled = !S.events.length;
 }
 
-// 説明の吹き出し（マウスをのせる・さわる）
+// できごとの一覧（いまの日まで・新しい順）
+function renderLog(log, t) {
+  const items = log.filter(n => n.t <= t + 1e-9).slice(-40).reverse();
+  $('log').innerHTML = items.map(n => `<li><span class="d">${Math.floor(n.t)}日目</span><span class="n">${n.i == null ? '' : n.i + 1}</span><span>${n.text}</span></li>`).join('') || '<li>まだ何も起きていません</li>';
+}
+
+// 狭い画面では案内を3行で折りたたむ（さわると全部）
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#gtext')) $('gtext').classList.toggle('open'); });
+
 function showTip(x, y, key, stage) {
   const tip = $('tip');
   if (!key) { tip.hidden = true; return; }
@@ -74,4 +72,9 @@ function showTip(x, y, key, stage) {
   tip.style.maxWidth = tw + 'px';
   tip.style.left = Math.max(8, Math.min(W - tw - 8, x + 12)) + 'px';
   tip.style.top = Math.max(4, y - 10 - (y > stage.clientHeight / 2 ? tip.offsetHeight + 10 : -24)) + 'px';
+}
+let _toastT = null;
+function toast(msg) {
+  const el = $('toast'); el.textContent = msg; el.hidden = false;
+  clearTimeout(_toastT); _toastT = setTimeout(() => { el.hidden = true; }, 2200);
 }

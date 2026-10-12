@@ -1,7 +1,7 @@
 // 脱毛のしくみ — 毛穴のモデル（周期・剃る・抜く）。描画には関わらない
 'use strict';
 
-// 毛穴ごとの乱数（同じ番号の毛穴は3列で同じ数が出る → 何もしなければ3列は同じ）
+// 毛穴ごとの乱数（手入れの仕方を変えても、手入れしていない毛穴は同じ動きをする）
 function mulberry32(a) {
   return function () {
     a |= 0; a = (a + 0x6D2B79F5) | 0;
@@ -49,7 +49,7 @@ function startAnagen(f, site) {
   if (f.doomed) { f.ph = 'X'; f.t = 0; f.dur = Infinity; f.bulb = GEO.clubDepth; return; }   // 幹細胞がいたんで、もう作れない
   f.ph = 'A'; f.t = 0; f.dur = phaseDur(f, site, 'A'); f.bulb = GEO.clubDepth;
   for (const h of f.hairs) if (h.club && h.shedAt == null) h.shedAt = SIM.shedMax * f.rng();   // 古い棍毛はそのうち落ちる
-  f.hairs.push({ L: 0, club: false, thin: f.thin || 1 });
+  f.hairs.push({ L: 0, club: false, thin: f.thin || 1, fresh: true });
 }
 
 // ゆっくり始まりゆっくり止まる（のび方・縮み方の形。速さの細かい測定はない）
@@ -62,7 +62,8 @@ function stepF(f, site, dt) {
     if (h.shedAt != null) h.shedAt -= dt;
     if (h.push) h.clubRoot = Math.max(0.4, h.clubRoot - h.push * dt);   // いたんだ毛は押し出されていく
   }
-  f.hairs = f.hairs.filter(h => !(h.shedAt != null && h.shedAt <= 0));
+  const gone = f.hairs.filter(h => h.shedAt != null && h.shedAt <= 0);
+  if (gone.length) { f.justShed = gone.some(h => h.burnt) ? 'burnt' : 'club'; f.hairs = f.hairs.filter(h => !gone.includes(h)); }
   const cur = f.hairs.find(h => !h.club);
   if (f.ph === 'A') {
     f.bulb = GEO.clubDepth + (GEO.bulbDeep - GEO.clubDepth) * smooth(f.t / GEO.descend);
@@ -83,17 +84,22 @@ function stepF(f, site, dt) {
 function shave(f) {
   for (const h of f.hairs) { const th = tipH(f, h); if (th > 0) { h.L -= th; h.blunt = true; } }
 }
+// 返す: 'none'（つまめる毛がない）、'short'（毛はあるが短くてつまめない）、'club'（古い毛だけ抜けた）、'root'（根もとごと抜けた）
 function pluck(f, site) {
-  let gotActive = false;
+  let gotActive = false, got = false;
+  const hasHair = f.hairs.some(h => tipH(f, h) > 0);
   f.hairs = f.hairs.filter(h => {
-    if (tipH(f, h) >= SIM.grip) { if (!h.club || f.ph === 'T') gotActive = true; return false; }
+    if (tipH(f, h) >= SIM.grip) { got = true; if (!h.club || f.ph === 'T') gotActive = true; return false; }
     return true;
   });
+  if (!got) return hasHair ? 'short' : 'none';
   if (gotActive && f.ph !== 'X') {
     // 根もとごと取れた → 毛穴の下の部分が作りなおされるまで待ち、新しい成長期へ（遅れは推定）
     f.hairs = f.hairs.filter(h => h.club);   // 退行中の毛も一緒に取れる
     f.ph = 'R'; f.t = 0; f.dur = phaseDur(f, site, 'R'); f.bulb = GEO.clubDepth;
+    return 'root';
   }
+  return 'club';
 }
 
 // 0日目の毛穴（部位ごとに1回だけ作る）
@@ -114,41 +120,67 @@ function startState(siteKey) {
 // 光で毛穴に起きること（Ω は Arrhenius の積分。いたむ確率 = 1 − e^−Ω）
 function applyFlash(f, res, day) {
   const rng = f.rng;
+  let matrixHit = false;
   f.heat = { day, Tm: res.T.matrix, Tb: res.T.bulge };   // 図で熱を光らせる
   if ((f.ph === 'A' || f.ph === 'C') && rng() < 1 - Math.exp(-res.om.matrix)) {
     // 毛母がいたむ → 毛を作るのをやめ、いまの毛は 1〜3 週で押し出されて落ちる（推定）。毛穴は退行期へ
     const cur = f.hairs.find(h => !h.club);
-    if (cur) { cur.club = true; cur.clubRoot = f.bulb; cur.shedAt = 7 + 14 * rng(); cur.burnt = true; cur.push = (f.bulb - 0.4) / cur.shedAt; }
+    matrixHit = true;
+    if (cur) { cur.fresh = false; cur.club = true; cur.clubRoot = f.bulb; cur.shedAt = 7 + 14 * rng(); cur.burnt = true; cur.push = (f.bulb - 0.4) / cur.shedAt; }
     if (f.ph === 'A') { f.ph = 'C'; f.t = 0; f.dur = 14; f.bulbStart = f.bulb; }
     f.hitDay = day;
     // 毛乳頭もいたむと、次の毛は細くなる（推定 0.6 倍ずつ）。細くなりすぎたら作れなくなる
     if (rng() < 1 - Math.exp(-res.om.pap)) { f.thin = (f.thin || 1) * 0.6; if (f.thin < 0.3) f.doomed = true; }
   }
   if (rng() < 1 - Math.exp(-res.om.bulge)) { f.doomed = true; f.hitDay = day; }
+  return matrixHit;
 }
 
-// 1列ぶんの計算。決まったきざみ（SIM.dt）で進めるので、続きから進めても 0日目から計算しても同じになる
-// events: [{t, type:'shave'|'pluck'|'light'}]（t の順）
+// 一列ぶんの計算。決まったきざみ（SIM.dt）で進めるので、続きから進めても 0日目から計算しても同じになる
+// events: [{t, type:'shave'|'pluck'|'light', idx:[毛穴の番号]}]（t の順）
+// できごと（毛穴の中で起きたこと）は this.log に {t, i, text, kind} で残す
 function Runner(siteKey, events, hooks) {
   this.site = SITES[siteKey]; this.events = events; this.hooks = hooks || {};
   this.fs = startState(siteKey).map(({ f, seed }) => {
     const g = Object.assign({}, f, { hairs: f.hairs.map(h => Object.assign({}, h)) });
-    g.rng = mulberry32(seed); return g;
+    g.rng = mulberry32(seed); g.justShed = null; return g;
   });
   this.k = 0; this.n = 0;            // n = 進んだきざみの数（t = t0 + n·dt）
+  this.log = []; this.prev = this.fs.map(snap);
   this.applyUpTo();
 }
 Runner.prototype.t = function () { return SIM.t0 + this.n * SIM.dt; };
 Runner.prototype.applyUpTo = function () {
   const t = this.t(), site = this.site;
   while (this.k < this.events.length && this.events[this.k].t <= t + 1e-9) {
-    const e = this.events[this.k++];
-    for (const f of this.fs) {
-      if (e.type === 'shave') shave(f);
-      else if (e.type === 'pluck') pluck(f, site);
-    }
-    if (e.type === 'light' && this.hooks.light) this.hooks.light(this.fs, site, e, this);
+    const e = this.events[this.k++], idx = e.idx || this.fs.map((_, i) => i);
+    if (e.type === 'shave') {
+      let n = 0;
+      for (const i of idx) { const f = this.fs[i]; if (f.hairs.some(h => tipH(f, h) > 0)) n++; shave(f); }
+      this.note(t, null, `カミソリで剃った（${idx.length} 個の毛穴の上。表面から出ていた毛 ${n} 本を切った）`, 'shave');
+    } else if (e.type === 'pluck') {
+      for (const i of idx) {
+        const r = pluck(this.fs[i], site);
+        this.note(t, i, { root: '毛抜きで根もとごと抜いた（毛穴は残る）', club: '休んでいた古い毛が抜けた', short: '短くてつまめなかった', none: '抜く毛がなかった' }[r], 'pluck', { root: '抜いた', club: '古い毛が抜けた', short: 'つまめない', none: '毛がない' }[r]);
+      }
+    } else if (e.type === 'light' && this.hooks.light) this.hooks.light(this.fs, site, e, this, idx);
+    this.prev = this.fs.map(snap);
   }
+};
+Runner.prototype.note = function (t, i, text, kind, short) { this.log.push({ t, i, text, kind, short: short || text }); };
+// 1きざみごとに、毛穴の中の変化をできごとにする
+const PH_SHORT = { A: 'のびはじめ', C: 'ちぢみはじめ', T: '休みへ', X: '止まった' };
+const PH_TEXT = { A: '新しい毛を作りはじめた（成長期）', C: '毛を作るのをやめ、毛穴の下がちぢみはじめた（退行期）', T: '休みに入った（休止期）', X: 'もう毛を作れなくなった' };
+function snap(f) { return { ph: f.ph }; }
+Runner.prototype.watch = function () {
+  const t = this.t();
+  this.fs.forEach((f, i) => {
+    const p = this.prev[i], q = snap(f);
+    if (q.ph !== p.ph && PH_TEXT[q.ph] && !(q.ph === 'C' && f.hitDay != null && t - f.hitDay < 0.3)) this.note(t, i, PH_TEXT[q.ph], 'phase', PH_SHORT[q.ph]);
+    for (const h of f.hairs) if (h.fresh && tipH(f, h) > SIM.visible) { h.fresh = false; this.note(t, i, '新しい毛の先が表面に出た', 'emerge', '表面に出た'); }
+    if (f.justShed) { this.note(t, i, f.justShed === 'burnt' ? '光でいたんだ毛が抜け落ちた' : '古い毛（棍毛）が抜け落ちた', 'shed', '抜け落ちた'); f.justShed = null; }
+    this.prev[i] = q;
+  });
 };
 // tEnd 以下のいちばん近いきざみまで進める。rec(t, fs) は1日ごと
 Runner.prototype.advanceTo = function (tEnd, rec) {
@@ -157,6 +189,7 @@ Runner.prototype.advanceTo = function (tEnd, rec) {
   while (this.n < nEnd) {
     for (const f of this.fs) stepF(f, this.site, SIM.dt);
     this.n++;
+    this.watch();
     this.applyUpTo();
     if (rec && this.n % perDay === 0) rec(this.t(), this.fs);
   }
@@ -179,9 +212,4 @@ function countLane(fs) {
   }
   c.len = c.vis ? c.len / c.vis : 0;
   return c;
-}
-
-// 予定の配列 → events
-function makeEvents(laneId, days) {
-  return days.map(t => ({ t, type: laneId })).sort((a, b) => a.t - b.t);
 }

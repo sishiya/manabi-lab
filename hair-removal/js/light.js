@@ -199,3 +199,37 @@ function hairShade(fs, opt) {
   let a = 0; for (const s of opt.spec) a += s.w * (1 - Math.exp(-opt.fh * s.mel * 0.007));
   return cover * a;     // さえぎられる光の割合
 }
+
+// 光を1回あてる（idx の毛穴だけ）。L = 光の設定 {level, skin, hair, cool}。できごとを R.log に、結果を R.flashes に残す
+const _specCache = {};
+function lightEvent(fs, e, R, idx, L) {
+  const sk = SKINS[L.skin];
+  const spec = _specCache[L.skin] || (_specCache[L.skin] = lightSpectrum(sk.fmel));
+  const F0 = L.level * LIGHT.fPerLevel;
+  const opt = { F0, spec, fh: HAIRS[L.hair].fh, fmel: sk.fmel };
+  const lit = idx.map(i => fs[i]);
+  const shade = hairShade(lit, opt);                // 剃っていない毛が表面で光をさえぎる
+  const surf = flashSurface(Object.assign({}, opt), shade > 0.01, L.cool);
+  opt.F0 *= 1 - shade;
+  let nA = 0, hit = 0, Tm = 0;
+  const t = e.t;
+  const skinWord = surf.omEpi >= 1 ? '（このモデルでは、やけどのおそれ）' : surf.omEpi >= 0.1 ? '（熱い）' : '';
+  R.note(t, null, `光をあてた（Lv${L.level}・約 ${F0.toFixed(1)} J/cm²、${idx.length} 個の毛穴の上）。肌の表面（表皮）は最高 ${surf.Tepi.toFixed(0)}°C${skinWord}` +
+    (shade > 0.01 ? `。剃っていない毛が光の ${(shade * 100).toFixed(0)}% をさえぎり、表面の毛は ${surf.Thair.toFixed(0)}°C に（こげる）` : ''), 'light');
+  for (const i of idx) {
+    const f = fs[i], ph = f.ph, doomedBefore = f.doomed;
+    const res = flashFollicle(f, opt);
+    const hitNow = applyFlash(f, res, t);
+    if (ph === 'A' || ph === 'C') { nA++; Tm = Math.max(Tm, res.T.matrix); }   // 色のある毛球がある毛穴
+    let text;
+    if (ph === 'A' || ph === 'C') {
+      if (hitNow) { hit++; text = `毛母が ${res.T.matrix.toFixed(0)}°C になり、熱でいたんだ → この毛はもう伸びない`; }
+      else if (ph === 'A' && f.t < 12) text = `成長期のはじめで、毛母にまだ色がない（${res.T.matrix.toFixed(0)}°C）→ 無事`;
+      else text = `毛母は ${res.T.matrix.toFixed(0)}°C まで。温まり足りず無事`;
+    } else if (ph === 'X') text = 'もう毛を作らない毛穴（変化なし）';
+    else text = ph === 'R' ? '抜いたあとで毛も色のある毛球もない → 光が効かない' : '休み中で、色のある毛球がない → 変化なし';
+    if (f.doomed && !doomedBefore) text += '。幹細胞（バルジ）や毛乳頭もいたみ、次の毛は作れない';
+    R.note(t, i, text, hitNow ? 'hit' : 'safe', hitNow ? '熱でいたんだ' : (ph === 'A' || ph === 'C') ? '無事' : '効かない');
+  }
+  (R.flashes || (R.flashes = [])).push({ t, idx, nA, hit, Tm, shade, ...surf });
+}

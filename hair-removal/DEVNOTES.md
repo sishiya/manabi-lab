@@ -1,25 +1,29 @@
 # 脱毛のしくみ 開発メモ
 
 ## 別セッションで続けるとき（まずここ）
-- いまの状態: v003-light（段階B: 光の熱の物理＋リアル寄りの断面の図。案内13段）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。
-- 次にやること: PLAN.md の段階C（自分の予定で試す・間かく）か段階D（1本の毛穴へ寄る・ミリ秒の熱）。ユーザーに聞く。
+- いまの状態: v005-interactive（自分で手入れする形。節目なので versions/ にもコピー）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。
+- 形（2026-10-12 ユーザー「時系列が違うものを並べて比較してもわかりづらい」「部位・方法を選んで、任意のタイミング・マウスで選んだ場所で脱毛」「毛は一列」「タイムスライダーを眺めるアプリから、インタラクティブなアプリへ」）:
+  - 上に固定: 部位・道具（しらべる🔍・カミソリ・毛抜き・光）・一列 10 個の毛穴の断面・いまの数といま起きたこと・時間（▶・+1日・+1週・+1か月・↶ひとつ戻す）・案内（つぎへ、10段）。
+  - スクロール: 毛穴ごとの周期のグラフ（1段＝1毛穴、色＝期、黒線＝表面に毛、いまより右は「何もしない場合の予想」、さわるとその日へ）・再生のはやさ・光の設定・部位の値・できごとの一覧・このアプリについて。
+  - 操作: カミソリ／光 = 横になぞった範囲（クリックだけなら一番近い1個）、毛抜き = 毛（表面から出た線の上）か毛穴をクリック、しらべる = 部分の説明。いまより前の日に戻って手入れすると、その日より後の手入れは消える。
+- 次にやること: ユーザーに見てもらう。案: 1本の毛穴へ寄ってミリ秒の熱を見る（PLAN 段階D）、光をあてる間かくの比べ方。
 - 読む順: PLAN.md → このファイルの「ファイル構成」→ 関係するファイルだけ。
-- 動かし方: http://localhost:8765/hair-removal/ （サーバー apps。ほかのチャットが立てていれば `preview_start {url}` で開く）。デバッグ用の窓口 `window.__hare`（`applyGuide(i)`・`setTime(日)`・`set({site, pre})`・`counts()`・`simRun(秒)`）、エラーは `window.__hareErr`。node でもモデルだけ動く（data.js と model.js を eval。DOM を使わない）。
-- 区切りごとの手順: 「確認のしかた」と smoke.ps1 → 「状態」に1行 → launcher.html の表 → 公開前チェック → commit（節目の版だけ versions/ へコピーしてカードに。RULES 3章）。
-- ユーザーの好み: 3列で同じ肌を比べる・すねだけ・光はユーザーが使っている家庭用の光脱毛器ケノン。**概念図よりリアル寄りの造形**（2026-10-12）: 斜めの毛穴・さやの層・玉ねぎ形の毛球・皮脂腺の房・立毛筋・表皮突起・線維・血管・脂肪の小葉、寸法は実寸の比。
+- 動かし方: http://localhost:8765/hair-removal/ （ほかのチャットのサーバーが立っていれば `preview_start {url}`）。デバッグ用の窓口 `window.__hare`（`applyGuide(i)`・`setTime(日)`・`act(type, idx)`・`undo()`・`set({site, light})`・`counts()`）、エラーは `window.__hareErr`。node でもモデルと光だけ動く（data.js・model.js・light.js を eval）。
+- 区切りごとの手順: 「確認のしかた」と smoke.ps1 → 「状態」に1行 → launcher.html の表 → 公開前チェック → commit。
+- ユーザーの好み: すね（ほかの部位も選べる。VIO は入れない）・光はユーザーが使っているケノン・**リアル寄りの造形**・**同じ時間の中で、自分で手入れして中の変化を見る**（並べた比較はしない）。
 
 ## ファイル構成
 | ファイル | 中身 | 主な関数・変数 |
 |---|---|---|
-| index.html | 骨組み。上に固定（#pin: 断面・時間・案内）、下にスクロール（グラフ・予定・このアプリについて） | |
-| css/style.css | 見た目。600px 以下でスマホの並び | |
-| js/data.js | 数値と出どころ・部分の説明 | `SITES`（周期の値3種）・`GEO`（深さ mm）・`SIM`・`LANES`・`PRESETS`・`PARTS`・`SOURCES` |
-| js/model.js | 毛穴のモデル（DOM なし） | `newFollicle`・`stepF`・`shave`・`pluck`・`Runner`（`advanceTo(t, rec)`）・`simulate`・`countLane`・`tipH`・`rootDepth` |
-| js/light.js | 光の熱の物理（DOM なし） | `LIGHT`・`SKINS`・`HAIRS`・`lightSpectrum`・`melAbsorbed`・`unitResponse`（円柱の熱）・`damage`（Arrhenius）・`flashFollicle`・`epiResponse`・`flashSurface`・`hairShade` |
-| js/draw.js | 3列の断面を描く（リアル寄り）・光った瞬間の熱・説明の当たり判定 | `laneBackground`（層の絵を1回だけ描いておく）・`drawScene`・`drawFollicle`（毛穴の座標で描いて `TILT` だけ回す）・`hairPath`・`HITS`・`findHit` |
-| js/graph.js | 表面から出ている毛の数のグラフ | `drawGraph`・`graphDayAt` |
-| js/ui.js | 予定・周期の選択、案内の文、吹き出し | `GUIDE`・`buildControls`・`syncControls`・`showTip`・`$` |
-| js/main.js | 状態 `S`・計算のよびだし・ループ・窓口 | `laneEvents`・`computeSeries`・`computeScene`・`HOOKS`・`applyGuide`・`window.__hare` |
+| index.html | 骨組み。上に固定（#pin）、下にスクロール | |
+| css/style.css | 見た目。600px 以下でスマホの並び（断面の高さは main.js が中身に合わせる） | |
+| js/data.js | 数値と出どころ・部分の説明・道具 | `SITES`（6部位の周期）・`GEO`・`SIM`（N=10・gapMM・tMax=730）・`TOOLS`・`TOOL_COLOR`・`PARTS`・`SOURCES` |
+| js/model.js | 毛穴のモデル（DOM なし） | `stepF`・`shave`・`pluck`（結果を返す）・`applyFlash`・`Runner`（`events` は `{t,type,idx}`、`log` にできごと `{t,i,text,kind,short}`、`watch`）・`follicleInfo`・`countLane` |
+| js/light.js | 光の熱の物理（DOM なし） | `LIGHT`・`SKINS`・`HAIRS`・`lightSpectrum`・`unitResponse`・`damage`・`flashFollicle`・`flashSurface`・`hairShade`・`lightEvent`（1回の光・できごとを残す） |
+| js/draw.js | 一列の断面（リアル寄り）・字幕・光った瞬間・なぞる範囲・当たり判定 | `laneBackground`・`drawScene`（`GEOM` に毛穴の出口 `xs`・毛の点 `pick` を残す）・`drawFollicle`・`drawTag`・`hairPath`・`HITS`・`findHit` |
+| js/graph.js | 毛穴ごとの周期のグラフ | `drawCycles`・`graphDayAt`・`PH_COL` |
+| js/ui.js | 道具・設定・案内の文・一覧・吹き出し・お知らせ | `GUIDE`・`buildControls`・`syncControls`・`renderLog`・`showTip`・`toast`・`$` |
+| js/main.js | 状態 `S`・手入れの記録・計算・操作・ループ・窓口 | `act`・`undo`・`computeFull`（2年ぶん）・`sceneNow`（いまの日、続きから）・`pickHair`・`nextEvent`・`applyGuide`・`window.__hare` |
 読み込み順: data → model → light → draw → graph → ui → main（main が ui の `$` を使う）。
 
 ## しくみ
@@ -49,16 +53,16 @@
 - `_dev/tools/thumb.html` に new-app.ps1 が SETUP を足せなかった（ほかのセッションの変更が入っている）。サムネイルを撮るときに手で足す。
 
 ## 確認のしかた（変更のたびに）
-0. node でモデルと光だけ: data.js・model.js・light.js を eval し、`flashFollicle` の温度と Ω が「しくみ」の結果のめやすと合うか（例のスクリプトは使い捨て。`/tmp/t3.js` の形）。
-1. `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/smoke.ps1 -Apps hair-removal`（例外・読み込みの失敗・外への通信）
-2. 案内を 1→14 まで進め、各段で `__hareErr` が空、3列の見出しの数が文と合う（4段目: 剃るの列が約半分、抜くの列が 0〜数本。7段目: 抜くの列がほぼ全部。8段目: 光の列が白く光り、毛球がだいだい色、「いたむ 31/31」。11段目: 光の列の出ている毛が1割ほど）。
-3'. 光の設定（強さ・肌・毛の色・準備・冷やす）を変えるとグラフと光の列の箱が変わる（茶色の毛 → いたむ 0、1週間前に抜く → いたむが少ない）。
-3. 再生 ▶ で最後まで進む。グラフをさわると日が移る。予定・周期の値を変えるとグラフが変わる。
-4. 図の部分（毛球・毛乳頭・バルジ・皮脂腺・立毛筋・棍毛・剃った毛・いたんだ毛・光の箱・帯）にマウスをのせると説明が出る。
-5. 幅 375px: `scrollWidth` が 375、見出しが重ならない、図と時間と案内が上に固定。
+0. node でモデルと光だけ: data.js・model.js・light.js を eval し、`new Runner('shin', events, {light:(fs,site,e,R,idx)=>lightEvent(fs,e,R,idx,L)})` の `log` と `flashes` が「しくみ」の結果のめやすと合うか。
+1. `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/smoke.ps1 -Apps hair-removal`
+2. 案内 1→10 を `applyGuide(i)` で進め、`__hareErr` が空・数が文と合う（3段目 出ている毛 5、4段目 8、5段目 0、6段目 8、7段目 光 7/8、9段目 70日目で全部休む）。
+3. マウスで: カミソリで左半分をなぞる → 剃れる・お知らせ。毛抜きで寝ている長い毛をクリック → その毛の毛穴が抜ける。何もない所 → 「毛のない所です」。光で右半分をなぞる → 白く光り、毛球がだいだい、箱に温度。+1週・▶・↶ が動く。周期のグラフをさわると日が移る。
+4. 🔍 で部分（毛球・毛乳頭・バルジ・皮脂腺・立毛筋・棍毛・札・光の箱など）の説明が出る。
+5. 幅 375px: `scrollWidth` 375、上の固定部分 約 480px、道具が1行、字幕が2段まで。
 
 ## 状態
 - 2026-10-12 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
+- 2026-10-12 v005-interactive: 自分で手入れする形へ作り変え（ユーザーの指示）。一列10個の断面、道具をマウスで使う、好きなときに、できごとの記録（model の log）、毛穴ごとの周期のグラフ、部位6種（二の腕・口のまわりを追加）、↶ひとつ戻す、案内10段。節目として versions/ にコピー。
 - 2026-10-12 v004-clear: 分かりやすさの改善（上から見た肌・毛穴の札・手入れの日の字幕と一時停止・なめらかなのび縮み・最初は1秒で1週）。案内14段。
 - 2026-10-12 v003-light: リアル寄りの断面（ユーザーの希望）と段階B の光の熱の物理（light.js）。光の設定・光った瞬間の熱・案内13段・出どころ（Jacques・Prahl・Hale & Querry・Henriques・ケノン公式）。
 - 2026-10-12 v002-cycle: 段階A。毛の周期のモデル（Runner）・剃る・抜く・3列の断面・グラフ・予定・周期の値3種・案内9段・出どころ。

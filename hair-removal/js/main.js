@@ -1,4 +1,4 @@
-// 脱毛のしくみ — メイン（状態・計算のよびだし・描画ループ・デバッグ用の窓口）
+// 脱毛のしくみ — メイン（状態・手入れの記録・計算のよびだし・操作・ループ・デバッグ用の窓口）
 'use strict';
 window.__hareErr = [];
 window.addEventListener('error', e => window.__hareErr.push(String(e.message)));
@@ -6,93 +6,63 @@ window.addEventListener('error', e => window.__hareErr.push(String(e.message)));
 const cv = $('cv'), g = cv.getContext('2d');
 const gr = $('gr'), gg = gr.getContext('2d');
 const S = {
-  t: SIM.t0, site: 'shin', playing: false, speed: 7, guide: 0, hold: 0,
-  pre: { shave: 'once', pluck: 'once', light: 'home' },
-  light: { level: 10, skin: 'light', hair: 'black', prep: 'shave', cool: true },
-  series: null,   // グラフ用（予定・周期を変えたときだけ計算しなおす）
-  scene: null,    // いまの日の毛穴（日を動かすたびに計算しなおす）
-  dirty: true, key: '', runners: null,
+  t: 0, site: 'shin', tool: 'look', playing: false, speed: 7, hold: 0, guide: 0,
+  events: [],                                   // 手入れの記録 {t, type, idx}（t の順）
+  light: { level: 10, skin: 'light', hair: 'black', cool: true },
+  full: null,      // 2年ぶん計算した結果（周期のグラフ・できごと）。手入れや設定を変えたときだけ計算しなおす
+  run: null,       // いまの日の毛穴（日を進めるときは続きから）
+  sel: null, hover: null, key: '',
 };
+const HOOKS = { light: (fs, site, e, R, idx) => lightEvent(fs, e, R, idx, S.light) };
+const grid = t => Math.floor(t / SIM.dt + 1e-9) * SIM.dt;
 
-// 列ごとの手入れの日
-function laneEvents(id) {
-  const days = PRESETS[id].find(p => p.id === S.pre[id]).days();
-  if (id === 'light') {
-    // 光の前の準備: 前の日に剃る（ケノンの使い方。0日目は同じ日に剃ってから）／剃らない／1週間前に抜く
-    const ev = [], prep = S.light.prep;
-    for (const d of days) {
-      if (prep === 'shave') ev.push({ t: Math.max(0, d - 1), type: 'shave' });
-      if (prep === 'pluck') ev.push({ t: Math.max(SIM.t0, d - 7), type: 'pluck' });
-      ev.push({ t: d, type: 'light' });
-    }
-    return ev.sort((a, b) => a.t - b.t || (a.type === 'shave' ? -1 : 1));
+function changed() { S.full = null; S.run = null; S.key = S.site + JSON.stringify(S.events) + JSON.stringify(S.light); syncControls(S); }
+
+function computeFull() {
+  const R = new Runner(S.site, S.events, HOOKS), rows = Array.from({ length: SIM.N }, () => []);
+  R.advanceTo(SIM.tMax, (t, fs) => fs.forEach((f, i) => rows[i].push({ ph: f.ph, vis: follicleInfo(f).visible })));
+  S.full = { rows, log: R.log, flashes: R.flashes || [] };
+}
+function sceneNow() {
+  if (!S.full) computeFull();
+  if (!S.run || S.run.t() > S.t + 1e-9) S.run = new Runner(S.site, S.events, HOOKS);
+  const fs = S.run.advanceTo(S.t);
+  const fl = (S.run.flashes || []).filter(x => x.t <= S.t + 1e-9).pop();
+  // 毛穴の上の字幕: 7日以内のできごと（毛穴ごとに新しいものだけ）
+  const latest = {};
+  for (const n of S.full.log) { if (n.t > S.t + 1e-9) break; if (n.i != null && S.t - n.t < 7) latest[n.i] = n; }
+  const notes = Object.values(latest).map(n => Object.assign({ age: S.t - n.t }, n)).sort((a, b) => a.age - b.age);   // 新しいものから置く
+  return { fs, flash: fl, since: fl ? S.t - fl.t : Infinity, notes, sel: S.sel, hover: S.hover };
+}
+
+function setTime(t) { S.t = Math.max(0, Math.min(SIM.tMax, t)); }
+
+// --- 手入れ ---
+function act(type, idx) {
+  if (!idx.length) return;
+  S.playing = false;
+  S.t = grid(S.t);
+  const later = S.events.filter(e => e.t > S.t + 1e-9);
+  if (later.length) S.events = S.events.filter(e => e.t <= S.t + 1e-9);
+  S.events.push({ t: S.t, type, idx: idx.slice().sort((a, b) => a - b) });
+  changed(); computeFull();
+  // そのときのできごとを短く知らせる
+  let msg;
+  if (type === 'pluck') {
+    const n = S.full.log.filter(n => Math.abs(n.t - S.t) < 1e-9 && n.i === idx[0] && n.kind === 'pluck').pop();
+    msg = `毛穴${idx[0] + 1}: ` + (n ? n.text : '');
+  } else if (type === 'shave') msg = `毛穴 ${idx[0] + 1}〜${idx[idx.length - 1] + 1} を剃った`;
+  else {
+    const F = S.full.flashes.filter(f => Math.abs(f.t - S.t) < 1e-9).pop();
+    msg = F ? `光: 毛球に色がある毛穴 ${F.nA} 個のうち ${F.hit} 個の毛母がいたんだ` : '光をあてた';
   }
-  return makeEvents(id, days);
+  toast((later.length ? 'この日より後の手入れを消しました。' : '') + msg);
 }
-
-function lastAction(ev, t) {
-  const NAME = { shave: '剃った', pluck: '抜いた', light: '光をあてた' };
-  let last = null;
-  for (const e of ev) if (e.t <= t + 1e-9) last = e;   // 同じ日なら後の方（光）
-  if (!last) return '手入れなし';
-  const d = Math.round(t - last.t);
-  return `${NAME[last.type]}（${d === 0 ? '今日' : d + '日前'}）`;
+function undo() {
+  if (!S.events.length) return;
+  const e = S.events.pop(); changed();
+  toast(`${Math.floor(e.t)}日目の${{ shave: 'カミソリ', pluck: '毛抜き', light: '光' }[e.type]}を取り消しました`);
 }
-
-function computeSeries() {
-  S.series = LANES.map(lane => {
-    const ev = laneEvents(lane.id), vis = [];
-    simulate(S.site, ev, SIM.tMax, (t, fs) => vis.push(countLane(fs).vis), HOOKS);
-    return { lane, vis, marks: ev };
-  });
-}
-// いまの日の毛穴。前に計算した日より先なら続きから進める（再生中に軽い）
-function computeScene() {
-  if (!S.runners || S.runners.key !== S.key) S.runners = null;
-  S.scene = LANES.map((lane, i) => {
-    const ev = laneEvents(lane.id);
-    let R = S.runners && S.runners[i];
-    if (!R || R.t() > S.t + 1e-9) { R = new Runner(S.site, ev, HOOKS); if (S.runners) S.runners[i] = R; }
-    const fs = R.advanceTo(S.t);
-    if (!S.runners) { S.runners = []; S.runners.key = S.key; }
-    S.runners[i] = R;
-    const fl = (R.flashes || []).filter(x => x.t <= S.t + 1e-9).pop();
-    const today = ev.filter(x => x.t <= S.t + 1e-9 && x.t > S.t - 0.75);
-    return { lane, fs, count: countLane(fs), last: lastAction(ev, S.t), flash: fl, since: fl ? S.t - fl.t : Infinity, today };
-  });
-}
-// 光: 1回ごとに、列の毛穴すべてに light.js の計算を当てはめ、結果を runner に記録する
-const _spec = {};
-const HOOKS = {
-  light(fs, site, e, R) {
-    const L = S.light, sk = SKINS[L.skin];
-    const spec = _spec[L.skin] || (_spec[L.skin] = lightSpectrum(sk.fmel));
-    const opt = { F0: L.level * LIGHT.fPerLevel, spec, fh: HAIRS[L.hair].fh, fmel: sk.fmel };
-    const shade = hairShade(fs, opt);                 // 剃っていない毛が表面で光をさえぎる
-    const unshaved = shade > 0.01;
-    const surf = flashSurface(Object.assign({}, opt), unshaved, L.cool);
-    opt.F0 *= 1 - shade;
-    let nA = 0, hit = 0, Tm = 0;
-    for (const f of fs) {
-      const before = f.hitDay, wasA = f.ph === 'A';
-      const res = flashFollicle(f, opt);
-      if (wasA) { nA++; Tm = Math.max(Tm, res.T.matrix); }
-      applyFlash(f, res, e.t);
-      if (f.hitDay === e.t && before !== e.t) hit++;
-    }
-    (R.flashes || (R.flashes = [])).push({ t: e.t, nA, hit, Tm, shade, ...surf });
-  },
-};
-
-// (a, b] のあいだにある、いちばん早い手入れの日（光の前日の剃りは光の日にまとめて見せる）
-function nextEvent(a, b) {
-  let best = null;
-  if (!S.series) return null;
-  for (const L of S.series) for (const e of L.marks) if (e.t > a + 1e-9 && e.t <= b && (best == null || e.t < best)) best = e.t;
-  return best;
-}
-function setTime(t) { S.t = Math.max(SIM.t0, Math.min(SIM.tMax, t)); S.dirty = true; }
-function changed(series) { if (series) { S.series = null; S.key = S.site + JSON.stringify(S.pre) + JSON.stringify(S.light); } syncControls(S); S.dirty = true; }
 
 // --- 描画 ---
 function fit(c, ctx) {
@@ -102,25 +72,36 @@ function fit(c, ctx) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   return [r.width, r.height];
 }
+let _logKey = '';
 function draw() {
-  if (!S.series) computeSeries();
-  if (S.dirty || !S.scene) { computeScene(); S.dirty = false; }
+  if (!S.full) computeFull();
+  const sc = sceneNow();
   const [w, h] = fit(cv, g);
-  drawScene(g, w, h, S.scene, S.t, { K: w < 520 ? 3 : w < 820 ? 4 : 5 });
+  drawScene(g, w, h, sc, {});
+  // 狭い画面: 断面の高さを中身に合わせる（横幅で大きさが決まるので、上下の空きをなくす）
+  if (w <= 600 && GEOM.s) { const want = Math.round((1.6 + 3.6) * GEOM.s + 10); if (Math.abs(h - want) > 2) $('stage').style.height = want + 'px'; }
+  else if ($('stage').style.height) $('stage').style.height = '';
   const [gw, gh] = fit(gr, gg);
-  drawGraph(gg, gw, gh, S.series, S.t);
-  $('time').value = S.t;
-  $('day').textContent = (S.t < 0 ? '手入れの' + Math.round(-S.t) + '日前' : Math.floor(S.t) + '日目');
+  drawCycles(gg, gw, gh, S.full.rows, S.events, S.t, SIM.tMax);
+  const c = countLane(sc.fs);
+  $('counts').textContent = `出ている毛 ${c.vis}/${SIM.N}・のびる ${c.A}・ちぢむ ${c.C}・休む ${c.T + c.R}${c.X ? '・止まった ' + c.X : ''}`;
+  const last = S.full.log.filter(n => n.t <= S.t + 1e-9).pop();
+  $('now').textContent = last && S.t - last.t < 7 ? `${Math.floor(last.t)}日目${last.i == null ? '' : ' 毛穴' + (last.i + 1)}: ${last.text}` : '';
+  $('day').textContent = Math.floor(S.t) + '日目';
   $('play').textContent = S.playing ? '❚❚' : '▶';
+  const lk = S.key + '|' + Math.floor(S.t * 4);
+  if (lk !== _logKey) { _logKey = lk; renderLog(S.full.log, S.t); }
 }
 
 // --- 案内 ---
 function applyGuide(i) {
   S.guide = Math.max(0, Math.min(GUIDE.length - 1, i));
   const st = GUIDE[S.guide];
-  S.playing = false;
-  if (S.guide < GUIDE.length - 3) { S.pre = { shave: 'once', pluck: 'once', light: 'home' }; S.site = 'shin'; S.light = { level: 10, skin: 'light', hair: 'black', prep: 'shave', cool: true }; changed(true); }
-  setTime(st.t);
+  if (!st.free) { S.site = 'shin'; S.light = { level: 10, skin: 'light', hair: 'black', cool: true }; }
+  S.events = st.ev.map(e => Object.assign({}, e, { idx: e.idx.slice() }));
+  S.tool = st.tool; S.sel = null; S.hover = null;
+  changed();
+  setTime(st.t); S.playing = !!st.play; S.hold = 0;
   $('gtext').innerHTML = st.text;
   $('gnum').textContent = (S.guide + 1) + '/' + GUIDE.length;
   $('gprev').disabled = S.guide === 0;
@@ -128,23 +109,67 @@ function applyGuide(i) {
 }
 
 // --- 操作 ---
-buildControls(S, changed);
-syncControls(S);
-$('time').addEventListener('input', e => { S.playing = false; setTime(+e.target.value); });
-$('play').onclick = () => { if (!S.playing && S.t >= SIM.tMax) setTime(SIM.t0); S.playing = !S.playing; };
+buildControls(S, {
+  site: k => { S.site = k; changed(); },
+  tool: id => { S.tool = id; S.sel = null; S.hover = null; showTip(0, 0, null); syncControls(S); },
+  light: o => { Object.assign(S.light, o); changed(); },
+});
+$('play').onclick = () => { if (!S.playing && S.t >= SIM.tMax) setTime(0); S.playing = !S.playing; S.hold = 0; };
+document.querySelectorAll('.step').forEach(b => { b.onclick = () => { S.playing = false; setTime(S.t + +b.dataset.d); }; });
+$('undo').onclick = undo;
 $('gnext').onclick = () => applyGuide(S.guide === GUIDE.length - 1 ? 0 : S.guide + 1);
 $('gprev').onclick = () => applyGuide(S.guide - 1);
-function graphPointer(e) { if (e.type === 'pointermove' && !(e.buttons & 1)) return; const r = gr.getBoundingClientRect(); S.playing = false; setTime(Math.round(graphDayAt(e.clientX - r.left, r.width) * 2) / 2); }
+
+function graphPointer(e) {
+  if (e.type === 'pointermove' && !(e.buttons & 1)) return;
+  const r = gr.getBoundingClientRect(); S.playing = false;
+  setTime(Math.round(graphDayAt(e.clientX - r.left, r.width, SIM.tMax)));
+}
 gr.addEventListener('pointerdown', graphPointer);
 gr.addEventListener('pointermove', graphPointer);
-function canvasPointer(e) {
-  const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, hh = findHit(x, y);
-  showTip(x, y, hh && hh.key, $('stage'));
-}
-cv.addEventListener('pointermove', canvasPointer);
-cv.addEventListener('pointerdown', canvasPointer);
-cv.addEventListener('pointerleave', () => showTip(0, 0, null));
 
+// 断面: 道具ごとの操作
+function nearest(x, maxPx) {
+  let best = null, bd = maxPx;
+  GEOM.xs.forEach((fx, i) => { const d = Math.abs(fx - x); if (d < bd) { bd = d; best = i; } });
+  return best;
+}
+// クリックした所にいちばん近い毛（表面から出た毛の線の上、または毛穴の出口）
+function pickHair(x, y) {
+  let best = null, bd = 22;
+  for (const p of GEOM.pick) { const d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; best = p.i; } }
+  if (best == null && y > GEOM.y0) best = nearest(x + (y - GEOM.y0) * Math.tan(TILT), SIM.gapMM * GEOM.s * 0.5);   // 皮ふの中なら毛穴の線にそって
+  return best;
+}
+function local(e) { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+cv.addEventListener('pointerdown', e => {
+  const [x, y] = local(e);
+  if (S.tool === 'look') { const hh = findHit(x, y); showTip(x, y, hh && hh.key, $('stage')); return; }
+  if (S.tool === 'pluck') { const i = pickHair(x, y); if (i != null) act('pluck', [i]); else toast('毛のない所です。毛（または毛穴）をクリックしてください'); return; }
+  S.sel = { tool: S.tool, a: x, b: x }; cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener('pointermove', e => {
+  const [x, y] = local(e);
+  if (S.sel) { S.sel.b = x; return; }
+  if (S.tool === 'look' && e.pointerType === 'mouse') { const hh = findHit(x, y); showTip(x, y, hh && hh.key, $('stage')); }
+  S.hover = S.tool === 'pluck' ? pickHair(x, y) : null;
+});
+cv.addEventListener('pointerup', () => {
+  if (!S.sel) return;
+  const a = Math.min(S.sel.a, S.sel.b), b = Math.max(S.sel.a, S.sel.b), pad = SIM.gapMM * GEOM.s * 0.3, tool = S.sel.tool;
+  let idx = GEOM.xs.map((fx, i) => (fx >= a - pad && fx <= b + pad ? i : -1)).filter(i => i >= 0);
+  if (!idx.length) { const i = nearest((a + b) / 2, SIM.gapMM * GEOM.s); if (i != null) idx = [i]; }
+  S.sel = null;
+  act(tool, idx);
+});
+cv.addEventListener('pointerleave', () => { if (!S.sel) { S.hover = null; if (S.tool === 'look') showTip(0, 0, null); } });
+
+// (a, b] のあいだにある、いちばん早い手入れの日
+function nextEvent(a, b) {
+  let best = null;
+  for (const e of S.events) if (e.t > a + 1e-9 && e.t <= b && (best == null || e.t < best)) best = e.t;
+  return best;
+}
 let last = performance.now();
 function loop(now) {
   const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;   // 最初のコマは now が last より前のことがある
@@ -165,8 +190,9 @@ requestAnimationFrame(loop);
 
 // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）
 window.__hare = {
-  S, draw, applyGuide, setTime: t => { setTime(t); draw(); },
-  simRun(sec) { for (let i = 0; i < sec * 60; i++) { if (S.playing) setTime(S.t + S.speed / 60); } draw(); },
-  set(o) { Object.assign(S, o); changed(true); draw(); },
-  counts: () => S.scene.map(L => ({ lane: L.lane.id, ...L.count })),
+  S, draw, applyGuide, act, undo,
+  setTime: t => { setTime(t); draw(); },
+  simRun(sec) { for (let i = 0; i < sec * 60; i++) if (S.playing) setTime(S.t + S.speed / 60); draw(); },
+  set(o) { Object.assign(S, o); changed(); draw(); },
+  counts: () => countLane(sceneNow().fs),
 };

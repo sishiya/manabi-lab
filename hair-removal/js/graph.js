@@ -1,40 +1,52 @@
-// 脱毛のしくみ — 「表面から出ている毛の数」のグラフ（3列）。さわるとその日へ
+// 脱毛のしくみ — 毛穴ごとの周期のグラフ（1段 = 1つの毛穴）。さわるとその日へ
 'use strict';
 
-// series: [{lane, vis:[日ごとの数], days:[手入れの日]}]
-function drawGraph(g, w, h, series, t) {
+const PH_COL = { A: '#e57a7a', C: '#d7a28c', T: '#7d6a62', R: '#ffd166', X: '#333' };
+const GR = { padL: 30, padR: 8, padT: 22, padB: 20 };
+
+// rows[i][d] = {ph, vis}（d 日目）、events = 手入れ、t = いまの日、tEnd = グラフの右の端
+function drawCycles(g, w, h, rows, events, t, tEnd) {
   g.clearRect(0, 0, w, h);
-  if (w < 80 || h < 60) return;
-  const padL = 34, padR = 10, padT = 8, rowH = 9, marks = series.length * rowH + 6, padB = 18 + marks;
-  const pw = w - padL - padR, ph = h - padT - padB;
-  const X = d => padL + pw * (d - SIM.t0) / (SIM.tMax - SIM.t0), Yv = v => padT + ph * (1 - v / SIM.N);
-  // 目盛り
-  g.strokeStyle = '#3d2e29'; g.lineWidth = 1; g.fillStyle = '#b9a59c'; g.font = '11px "IBM Plex Mono", monospace';
-  g.textAlign = 'right'; g.textBaseline = 'middle';
-  for (const p of [0, 0.5, 1]) { const y = Yv(p * SIM.N); g.beginPath(); g.moveTo(padL, y); g.lineTo(padL + pw, y); g.stroke(); g.fillText(Math.round(p * 100) + '%', padL - 4, y); }
-  g.textAlign = 'center'; g.textBaseline = 'top';
-  for (let d = 0; d <= SIM.tMax; d += 60) { g.fillText(d + (d === 0 ? '日' : ''), X(d), padT + ph + 3); }
-  // 線
-  for (const S of series) {
-    g.strokeStyle = S.lane.color; g.lineWidth = 2; g.beginPath();
-    S.vis.forEach((v, i) => { const x = X(SIM.t0 + i), y = Yv(v); i ? g.lineTo(x, y) : g.moveTo(x, y); });
-    g.stroke();
-  }
-  // 手入れの印
-  series.forEach((S, i) => {
-    const y = padT + ph + 18 + i * rowH;
-    g.fillStyle = S.lane.color;
-    for (const e of S.marks) {
-      if (e.type === 'shave' && S.lane.id === 'light') { g.globalAlpha = 0.45; g.fillRect(X(e.t) - 1, y + 2, 2, rowH - 4); g.globalAlpha = 1; }
-      else g.fillRect(X(e.t) - 1.5, y, 3, rowH - 2);
+  if (w < 80 || h < 60 || !rows) return;
+  const { padL, padR, padT, padB } = GR, pw = w - padL - padR, ph = h - padT - padB;
+  const n = rows.length, rh = ph / n, X = d => padL + pw * d / tEnd;
+  g.font = '11px "IBM Plex Mono", monospace'; g.textBaseline = 'middle'; g.textAlign = 'right';
+  for (let i = 0; i < n; i++) {
+    const y = padT + i * rh, row = rows[i];
+    g.fillStyle = '#b9a59c'; g.fillText(String(i + 1), padL - 6, y + rh / 2);
+    // 期の色（同じ期が続く所はまとめて塗る）
+    let d0 = 0;
+    for (let d = 1; d <= row.length; d++) {
+      if (d === row.length || row[d].ph !== row[d0].ph) { g.fillStyle = PH_COL[row[d0].ph]; g.fillRect(X(d0), y + 1, X(d) - X(d0) + 0.5, rh - 2); d0 = d; }
     }
-  });
-  // いまの日
-  g.strokeStyle = '#ffb37a'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(X(t), padT); g.lineTo(X(t), h - 2); g.stroke();
-  return { X, padL, pw };
+    // 表面に毛が出ている日
+    g.fillStyle = '#140b08';
+    d0 = -1;
+    for (let d = 0; d <= row.length; d++) {
+      const v = d < row.length && row[d].vis;
+      if (v && d0 < 0) d0 = d;
+      if (!v && d0 >= 0) { g.fillRect(X(d0), y + rh * 0.42, X(d) - X(d0), Math.max(2, rh * 0.16)); d0 = -1; }
+    }
+  }
+  // 目盛り
+  g.fillStyle = '#b9a59c'; g.textAlign = 'center'; g.textBaseline = 'top';
+  const stepD = tEnd > 400 ? 90 : 60;
+  for (let d = 0; d <= tEnd; d += stepD) g.fillText(d + (d === 0 ? '日' : ''), X(d), padT + ph + 4);
+  // 手入れの印（上）と、その毛穴の段の小さな印
+  for (const e of events) {
+    const x = X(e.t), c = TOOL_COLOR[e.type];
+    g.fillStyle = c; g.beginPath(); g.moveTo(x, padT - 3); g.lineTo(x - 4, padT - 11); g.lineTo(x + 4, padT - 11); g.closePath(); g.fill();
+    for (const i of e.idx) g.fillRect(x - 1, padT + i * rh + 1, 2, rh - 2);
+  }
+  // いまより右は予想（うすく）
+  const xt = X(Math.min(t, tEnd));
+  g.fillStyle = 'rgba(28,21,19,.55)'; g.fillRect(xt, padT, padL + pw - xt, ph);
+  g.strokeStyle = '#ffb37a'; g.lineWidth = 2; g.beginPath(); g.moveTo(xt, 4); g.lineTo(xt, padT + ph); g.stroke();
+  g.fillStyle = '#ffb37a'; g.textAlign = xt > w - 60 ? 'right' : 'left'; g.textBaseline = 'top';
+  g.fillText('いま', xt + (xt > w - 60 ? -4 : 4), 2);
 }
 
-function graphDayAt(x, w) {
-  const padL = 34, padR = 10, pw = w - padL - padR;
-  return Math.max(SIM.t0, Math.min(SIM.tMax, SIM.t0 + (x - padL) / pw * (SIM.tMax - SIM.t0)));
+function graphDayAt(x, w, tEnd) {
+  const pw = w - GR.padL - GR.padR;
+  return Math.max(0, Math.min(tEnd, (x - GR.padL) / pw * tEnd));
 }

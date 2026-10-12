@@ -8,46 +8,55 @@
 <link rel="stylesheet" href="css/style.css">
 
 <div id="app">
-  <!-- 上に固定: 3列の断面・時間・案内（RULES 9章） -->
+  <!-- 上に固定: 道具・断面・いま起きたこと・時間・案内（RULES 9章） -->
   <div id="pin">
-    <header id="top"><h1>脱毛のしくみ</h1><span id="sub">すねの肌を3つに分けて比べる</span></header>
-    <div id="stage"><canvas id="cv"></canvas><div id="tip" hidden></div></div>
+    <header id="top">
+      <h1>脱毛のしくみ</h1>
+      <label id="siteBox">部位 <select id="site"></select></label>
+    </header>
+    <div id="tools" role="radiogroup" aria-label="道具"></div>
+    <p id="hint"></p>
+    <div id="stage"><canvas id="cv"></canvas><div id="tip" hidden></div><div id="toast" hidden></div></div>
+    <div id="status"><span id="counts"></span><span id="now"></span></div>
     <div id="timebar">
       <button id="play" aria-label="再生">▶</button>
-      <input id="time" type="range" min="-7" max="365" step="0.5" value="-7" aria-label="日">
+      <button class="step" data-d="1">+1日</button>
+      <button class="step" data-d="7">+1週</button>
+      <button class="step" data-d="30">+1か月</button>
       <span id="day">0日目</span>
-      <select id="speed" aria-label="はやさ"><option value="2">1秒で2日</option><option value="7" selected>1秒で1週</option><option value="30">1秒で1か月</option></select>
+      <button id="undo" title="最後の手入れを取り消す" aria-label="最後の手入れを取り消す">↶</button>
     </div>
     <div id="guide"><p id="gtext"></p><div class="gbtn"><button id="gprev" aria-label="もどる">◀</button><span id="gnum"></span><button id="gnext">つぎへ ▶</button></div></div>
   </div>
 
   <!-- その下をスクロール -->
   <section class="sec">
-    <h2>表面から出ている毛の数</h2>
+    <h2>毛穴ごとの周期</h2>
     <canvas id="gr"></canvas>
-    <p class="hint">グラフをさわると、その日へ移ります。下の印は手入れをした日。</p>
+    <p class="hint">1段が1つの毛穴。色は毛穴のようす（<span class="sw" style="background:#e57a7a"></span>のびる <span class="sw" style="background:#d7a28c"></span>ちぢむ <span class="sw" style="background:#7d6a62"></span>休む <span class="sw" style="background:#ffd166"></span>抜いたあと <span class="sw" style="background:#333"></span>止まった）、黒い線は表面に毛が出ている日。上の印は手入れ。いまより右は「このあと何もしない場合」の予想。さわるとその日へ移ります。</p>
+    <label class="row">再生のはやさ <select id="speed"><option value="2">1秒で2日</option><option value="7" selected>1秒で1週</option><option value="30">1秒で1か月</option></select></label>
   </section>
 
   <section class="sec" id="ctrl">
-    <h2>手入れの予定</h2>
-    <div id="lanesCtl"></div>
-    <h2>光（家庭用の光脱毛器）</h2>
+    <h2>光の設定（家庭用の光脱毛器）</h2>
     <label class="row">強さ <input id="lv" type="range" min="1" max="10" step="1" value="10"> <span id="lvv">Lv10</span> <span class="hint" id="lvF"></span></label>
     <label class="row">肌の色 <select id="skin"></select></label>
     <label class="row">毛の色 <select id="hairc"></select></label>
-    <label class="row">光の前に <select id="prep"><option value="shave">前の日に剃る</option><option value="none">何もしない</option><option value="pluck">1週間前に抜く</option></select></label>
     <label class="row"><input id="cool" type="checkbox" checked> 光の前後に冷やす</label>
-    <p class="hint" id="flashInfo"></p>
-    <h2>周期の値</h2>
-    <label class="row"><select id="site"></select></label>
+    <h2>部位の値</h2>
     <p class="hint" id="siteNote"></p>
+  </section>
+
+  <section class="sec">
+    <h2>できごと（いまの日まで）</h2>
+    <ol id="log"></ol>
   </section>
 
   <details id="about" class="sec">
     <summary>このアプリについて</summary>
-    <p>同じ毛穴の並びを3列に分け、剃る・抜く・光をあてる をそれぞれにした場合を、同じ時間で比べるシミュレーションです。毛穴1つずつが「成長期 → 退行期 → 休止期 → 新しい成長期」をくり返し、毛は毛球（毛の根もと）で作られて下から押し上げられます。</p>
-    <p><b>学習用に簡単にしています。</b>医療・美容の判断には使えません。毛穴は1列に60個を計算し、図にはそのうち数個を描いています。毛はまっすぐ・肌は平らとし、毛穴どうしは影響しあわないとしています。周期の長さは出どころによって大きくちがうので、選べるようにしています。</p>
-    <p>推定の値: 抜いたあと新しい成長期が始まるまで（平均7日）、毛抜きでつまめる長さ（0.5 mm）、古い毛が落ちるまで（0〜25日）、真皮の厚さ・バルジの深さ、周期のばらつき。</p>
+    <p>肌の断面に毛穴を一列に10個並べ、剃る・抜く・光をあてる を好きなときに好きな所へ行い、毛穴の中で起きることを時間で追うシミュレーションです。毛穴1つずつが「成長期 → 退行期 → 休止期 → 新しい成長期」をくり返し、毛は毛球（毛の根もと）で作られて下から押し上げられます。</p>
+    <p><b>学習用に簡単にしています。</b>医療・美容の判断には使えません。毛はまっすぐ・肌は平らとし、毛穴どうしは影響しあわないとしています。周期の長さは出どころによって大きくちがいます（部位の値）。毛穴の間かくは 1.3 mm（すねで 1 cm² に約60本とされる密度の目安）。本物の光脱毛器の照射口（数 cm）はこの断面（約 1.5 cm）より大きいですが、ここでは範囲を選べるようにしています。</p>
+    <p>推定の値: 抜いたあと新しい成長期が始まるまで（平均7日）、毛抜きでつまめる長さ（0.5 mm）、古い毛が落ちるまで（0〜25日）、新しい毛球が下へのびきるまで（10日）、真皮の厚さ・バルジの深さ、周期のばらつき。</p>
     <h3>光の計算</h3>
     <p>光（600〜1100 nm）が肌の中で散らばりながら弱まる量を波長ごとに計算し（皮ふの散乱・メラニン・血液・水の吸収）、毛と毛母のメラニンが吸った熱が、まわりへ広がる様子を熱の式で解きます。細胞がいたむかどうかは、温度と時間の積み重ね（Arrhenius の式、Henriques 1947 の定数）で決めます。表皮も同じように計算します。</p>
     <p><b>ケノンの数値は公表されていません</b>（波長・光る長さ・面積あたりの強さ）。ここでは、Lv10 = 35 J ÷ 4.5〜4.9 cm²（ストロング2。販売店・比較サイトの値）≈ 7.4 J/cm²、ほかのレベルは比例、波長 600〜1100 nm、光る長さ 5 ms と<b>推定</b>しています。毛のメラニンの量（黒 10%・茶 5%・うすい色 1.5%）も測った値が見つからない推定で、結果はこの値で大きく変わります。表皮のメラニンの量も測り方で大きくちがい（約1〜43%）、幅の中から選んでいます。</p>
