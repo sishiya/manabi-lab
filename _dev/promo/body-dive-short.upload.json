@@ -1,5 +1,7 @@
 {
-  "videoId": "y-jvQvZPn70",
+  "videoId": "zxDr4OZsspU",
+  "oldVideoIds": ["y-jvQvZPn70"],
+  "oldDone": ["y-jvQvZPn70"],
   "file": "_dev/promo/out/body-dive-short.mp4",
   "thumbnail": "_dev/promo/thumbs/body-dive-short.jpg",
   "privacy": "private",

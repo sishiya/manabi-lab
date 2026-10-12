@@ -13,6 +13,7 @@
 | `make-short-thumbs.ps1` | 紹介動画のサムネイル `_dev/promo/thumbs/<app>-short.jpg`（縦 1080×1920）と `<app>-guide.jpg`（横長の説明動画 1280×720）を mp4 のコマから作る。中身は `_dev/promo/short-thumbs.js`、デザインは `short-thumb.html`（ヘッドレスの Chrome で撮る）。付けるのは `youtube-upload.ps1 -Thumb` | ショートを録ったとき（RULES 8.7） |
 | `make-upload.ps1` | 紹介動画の `upload.json` の下書き（入口の APPS とアプリの出どころから）。`-Check` で全部の upload.json が決まり（説明欄の形・チャプター・字数・< >・予約の時刻）に合っているか調べる | 動画を作ったとき・上げる前 |
 | `record-promo.ps1` | 台本ページを開いて、確かめ用のコマ → 録画 → できた mp4 のコマを1枚に、まで一度に | 台本を書いたあと。`-AudioOnly` で映像はそのまま音だけ作りなおす |
+| `replace-videos.ps1` | 予約ずみの動画を作りなおした mp4 に差しかえる（上げて同じ日時で予約 → 古い方の予約を外す。`-Prepare` で upload.json の videoId → oldVideoIds） | 動画を直したとき（ユーザーの GO のあと） |
 | `check-loudness.ps1` | 紹介動画の mp4 の音量（LUFS・トゥルーピーク）を測って、範囲外を NG に（読むだけ） | 録画したら・上げる前に・公開前の確認で毎回（RULES 8.6） |
 | `schedule-videos.ps1` | `_dev/promo/SCHEDULE.md` の順に予約日時（publishAt）を割りふる。`-Apply` で upload.json と SCHEDULE.md、`-Entrance` で入口の `video`、`-Upload` で YouTube の予約まで | 公開を始める日が決まったとき（`-Upload` はユーザーの GO のあと） |
 | `youtube-upload.ps1` | YouTube へ上げる・英語・字幕・予約・一覧・`-Stats`（数を読むだけ） | ユーザーの GO のあと（`-Stats`・`-List` は読むだけ） |

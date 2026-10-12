@@ -1,5 +1,7 @@
 {
-  "videoId": "h8TCh3ey6xs",
+  "videoId": "KK_UQhoEloo",
+  "oldVideoIds": ["h8TCh3ey6xs"],
+  "oldDone": ["h8TCh3ey6xs"],
   "file": "_dev/promo/out/animal-senses-short.mp4",
   "thumbnail": "_dev/promo/thumbs/animal-senses-short.jpg",
   "privacy": "private",

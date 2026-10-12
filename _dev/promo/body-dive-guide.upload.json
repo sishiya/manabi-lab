@@ -1,7 +1,9 @@
 {
-  "videoId": "Bb4pSYgpfx4",
+  "videoId": "C6h7u6C5p88",
+  "oldVideoIds": ["Bb4pSYgpfx4"],
+  "oldDone": ["Bb4pSYgpfx4"],
   "file": "_dev/promo/out/body-dive-guide.mp4",
-  "thumbnail": "assets/thumbs/body-dive.jpg",
+  "thumbnail": "_dev/promo/thumbs/body-dive-guide.jpg",
   "privacy": "private",
   "publishAt": "2026-10-12T20:00:00+09:00",
   "captions": { "en": "_dev/promo/out/body-dive-guide.en.srt" },

@@ -1,7 +1,9 @@
 {
-  "videoId": "fTvY3UHVNYg",
+  "videoId": "FHNZ18v8kIQ",
+  "oldVideoIds": ["fTvY3UHVNYg"],
+  "oldDone": ["fTvY3UHVNYg"],
   "file": "_dev/promo/out/animal-senses-guide.mp4",
-  "thumbnail": "assets/thumbs/animal-senses.jpg",
+  "thumbnail": "_dev/promo/thumbs/animal-senses-guide.jpg",
   "privacy": "private",
   "publishAt": "2026-10-14T20:00:00+09:00",
   "captions": { "en": "_dev/promo/out/animal-senses-guide.en.srt" },
