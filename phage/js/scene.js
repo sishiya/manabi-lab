@@ -14,6 +14,7 @@ const Scene = (() => {
   const NO_OMPC = () => Story.cond === 'norec';
   // 奥行き: 細菌は立体なので、手前（約3割）はくっきり・説明あり、奥は薄い背景（説明なし）。数は減らさない
   const FRONT = 0.3, BACK_A = 0.22;
+  let baseA = 1;
 
   // 細胞のふちから m nm 内側の形
   let swell = 0;   // 破れる前のふくらみ（0..1）。0 ならふつうの棒の形
@@ -60,9 +61,10 @@ const Scene = (() => {
       drawHolins(m, pre, burst);
     } else {
       // 中身: 破れたところから広がりながら薄れる
-      g.save(); g.globalAlpha = Math.max(0, 1 - kk * 1.4);
+      const ca = Math.max(0, 1 - kk * 1.4);
+      g.save(); g.globalAlpha = ca;
       const tp = swollen(TEAR_U, 0, 1); g.translate(V.X(tp.x), V.Y(tp.y)); g.scale(1 + kk * 0.9, 1 + kk * 0.9); g.translate(-V.X(tp.x), -V.Y(tp.y));
-      drawInside(st, m, pre, c, burst);
+      if (ca > 0.02) drawInside(st, m, pre, c, burst);
       g.restore();
       drawDebris(kk);
     }
@@ -119,6 +121,8 @@ const Scene = (() => {
 
   // ---- 細菌の中 ----
   function drawInside(st, m, pre, c, burst) {
+    // 破れたあとに薄れていくとき、中で透明度を 1 にもどさないよう、はじめの濃さを基準にする
+    baseA = g.globalAlpha;
     const M = Story.M, s = V.s, vb = V.viewBox(), inView = (x, y, r = 30) => x > vb.x0 - r && x < vb.x1 + r && y > vb.y0 - r && y < vb.y1 + r;
     const tk = pre ? 0 : Math.min(1, m / TL.hostStop), gt = Story.cond === 'gt' && m >= 0.4;
     const late = m >= TL.late, prodCol = m < TL.late ? '#ffae5a' : '#5fe0c4';
@@ -128,7 +132,7 @@ const Scene = (() => {
       const r = M.ribo[ri];
       if (!inView(r.x, r.y)) continue;
       // 奥のもの（約7割）は薄い背景。説明は出さない
-      if (hash(ri, 5) > FRONT) { g.globalAlpha = BACK_A; if (s < 1.1) { g.fillStyle = rc; g.fillRect(V.X(r.x) - 1, V.Y(r.y) - 1, 2, 2); } else V.circle(r.x, r.y, 9.5, rc); g.globalAlpha = 1; continue; }
+      if (hash(ri, 5) > FRONT) { g.globalAlpha = baseA * BACK_A; if (s < 1.1) { g.fillStyle = rc; g.fillRect(V.X(r.x) - 1, V.Y(r.y) - 1, 2, 2); } else V.circle(r.x, r.y, 9.5, rc); g.globalAlpha = baseA; continue; }
       if (s < 1.1) { g.fillStyle = rc; g.fillRect(V.X(r.x) - 1.3, V.Y(r.y) - 1.3, 2.6, 2.6); }
       else {
         V.circle(r.x, r.y, 9.5, rc); V.circle(r.x + 6 * Math.cos(r.a), r.y + 6 * Math.sin(r.a), 6, 'rgba(255,255,255,.35)');
@@ -169,7 +173,7 @@ const Scene = (() => {
       if (j > 0 && !pre) n = Math.max(2, Math.floor(n * Math.min(1, (c.pool - j) * 1.5)));
       if (gt) { for (let i = 0; i < n - 6; i += 9) V.line(L.pts.slice(i, i + 5), 'rgba(255,159,107,.7)', Math.max(1.4, 4 * s)); V.hit({ seg: L.pts, w: 10, info: ZINFO.cut || INFO.cut }); continue; }
       const back = j > 0 && j % 3 !== 0;
-      if (back) { g.globalAlpha = BACK_A; V.line(L.pts.slice(0, n), '#ff9f6b', Math.max(1, (View.real ? 2 : 3) * s)); g.globalAlpha = 1; continue; }
+      if (back) { g.globalAlpha = baseA * BACK_A; V.line(L.pts.slice(0, n), '#ff9f6b', Math.max(1, (View.real ? 2 : 3) * s)); g.globalAlpha = baseA; continue; }
       if (s < 1.5 || View.real) V.line(L.pts.slice(0, n), '#ff9f6b', Math.max(1, (View.real ? 2 : 4) * s));
       else for (let i = 1; i < n; i++) { const a = L.pts[i - 1], b = L.pts[i]; if (!inView(a[0], a[1], 20)) continue; V.helix(a[0], a[1], b[0], b[1], { c1: '#ffb07a', c2: '#ff9f6b', phase: i * 2 }); if (s > 6 && i % 2 === 0) V.hex((a[0] + b[0]) / 2 + 1.6, (a[1] + b[1]) / 2 + 1.6, 0.7, '#bff5ef'); }
       V.hit({ seg: L.pts.slice(0, n), w: 6, info: INFO.t4Dna });
@@ -191,7 +195,7 @@ const Scene = (() => {
       const L = M.loops[j], idx = Math.floor((((j * 0.53 + q * 0.5 + m * 0.07) % 1) + 1) % 1 * (L.pts.length - 1)), p = L.pts[idx];
       if (!inView(p[0], p[1])) continue;
       // 奥の DNA の輪に付いているものは、薄い点だけ（説明なし）
-      if (j > 0 && j % 3 !== 0) { g.globalAlpha = BACK_A; g.fillStyle = '#9fb4c6'; g.fillRect(V.X(p[0]) - 1.5, V.Y(p[1]) - 1.5, 3, 3); g.globalAlpha = 1; continue; }
+      if (j > 0 && j % 3 !== 0) { g.globalAlpha = baseA * BACK_A; g.fillStyle = '#9fb4c6'; g.fillRect(V.X(p[0]) - 1.5, V.Y(p[1]) - 1.5, 3, 3); g.globalAlpha = baseA; continue; }
       const per = m < 3.5 ? 'early' : m < TL.late ? 'middle' : 'late';
       if (s < 1.1) { g.fillStyle = '#9fb4c6'; g.fillRect(V.X(p[0]) - 1.5, V.Y(p[1]) - 1.5, 3, 3); }
       else {
@@ -206,7 +210,7 @@ const Scene = (() => {
     if (m >= TL.repl) for (let j = 0; j < nL; j++) {
       const L = M.loops[j], idx = Story.forkIdx(j, m), p = L.pts[idx];
       if (!inView(p[0], p[1])) continue;
-      if (j > 0 && j % 3 !== 0) { g.globalAlpha = BACK_A; g.fillStyle = '#ffcf4a'; g.fillRect(V.X(p[0]) - 1.5, V.Y(p[1]) - 1.5, 3, 3); g.globalAlpha = 1; continue; }
+      if (j > 0 && j % 3 !== 0) { g.globalAlpha = baseA * BACK_A; g.fillStyle = '#ffcf4a'; g.fillRect(V.X(p[0]) - 1.5, V.Y(p[1]) - 1.5, 3, 3); g.globalAlpha = baseA; continue; }
       if (s < 1.1) { V.circle(p[0], p[1], 3.5 / s, '#ffcf4a'); }
       else {
         for (let k = 1; k <= 5; k++) { const q = L.pts[Math.min(L.pts.length - 1, idx + k)]; V.circle(q[0] + 2.5, q[1] + 2.5, 1.2, ZC.gp32); }
@@ -230,8 +234,8 @@ const Scene = (() => {
       const at = k => { const j = Math.sqrt(Math.sin(Math.PI * k)); return [q.x0 + (q.x1 - q.x0) * k + j * amp * (Math.sin(k * 31 + ph) * 0.6 + Math.sin(k * 77 + ph * 2) * 0.4), q.y0 + (q.y1 - q.y0) * k + j * amp * (Math.cos(k * 27 + ph * 1.3) * 0.6 + Math.cos(k * 69 + ph) * 0.4)]; };
       const [x, y] = at(q.p);
       if (!inView(x, y)) continue;
-      if (hash(q.key, 13) > 0.35) { g.globalAlpha = BACK_A; g.fillStyle = q.col; g.fillRect(V.X(x) - 1.5, V.Y(y) - 1.5, 3, 3); g.globalAlpha = 1; continue; }
-      if (s > 0.6) { const tr = []; for (let i = 6; i >= 0; i--) tr.push(at(Math.max(0, q.p - i * 0.02))); g.globalAlpha = 0.3; V.line(tr, q.col, 1); g.globalAlpha = 1; }
+      if (hash(q.key, 13) > 0.35) { g.globalAlpha = baseA * BACK_A; g.fillStyle = q.col; g.fillRect(V.X(x) - 1.5, V.Y(y) - 1.5, 3, 3); g.globalAlpha = baseA; continue; }
+      if (s > 0.6) { const tr = []; for (let i = 6; i >= 0; i--) tr.push(at(Math.max(0, q.p - i * 0.02))); g.globalAlpha = 0.3; V.line(tr, q.col, 1); g.globalAlpha = baseA; }
       if (s < 2.5) { g.fillStyle = q.col; g.beginPath(); g.arc(V.X(x), V.Y(y), 2.6, 0, 7); g.fill(); }
       else V.circle(x, y, 2.6, q.col, 'rgba(255,255,255,.35)');
       V.hit({ c: [x, y, 4], info: PI[q.id] });
@@ -272,7 +276,7 @@ const Scene = (() => {
       if (m < h.born) break;
       const hp = Story.headAt(h, m);
       const back = h.z > FRONT, simple = s < 0.9 || back;
-      g.globalAlpha = back ? BACK_A : 1;
+      g.globalAlpha = back ? baseA * BACK_A : baseA;
       const onMem = m < h.born + 0.35, maturing = !onMem && m < h.fs, packing = m >= h.fs && m < h.fe, joined = m >= h.fe + Story.JOIN, built = m >= h.fe;
       const near = V.visible(Math.min(h.x, hp.x) - 180, Math.min(h.y, hp.y) - 180, Math.max(h.x, hp.x) + 180, Math.max(h.y, hp.y) + 180);
       // しっぽ（DNA をつめているあいだに別の場所で組み立て → つめおわると寄ってはまる）
@@ -293,7 +297,7 @@ const Scene = (() => {
         g.strokeStyle = 'rgba(255,159,107,.85)'; g.lineWidth = Math.max(1, 1.6 * s);
         g.beginPath(); g.moveTo(V.X(L[0]), V.Y(L[1])); g.quadraticCurveTo(V.X((L[0] + P.x) / 2 + 30), V.Y((L[1] + P.y) / 2 - 30), V.X(P.x), V.Y(P.y)); g.stroke();
       }
-      if (!near) { g.globalAlpha = 1; continue; }
+      if (!near) { g.globalAlpha = baseA; continue; }
       const a = Math.min(1, (m - h.born) / 0.35);                       // 殻が付いていく進み
       const fill = packing ? (m - h.fs) / (h.fe - h.fs) : built ? 1 : 0;
       const sc = m < h.fs ? PRO : packing ? PRO + (1 - PRO) * ease(fill / 0.08) : 1;  // ふくらむ
@@ -342,7 +346,7 @@ const Scene = (() => {
         });
         g.restore();
       }
-      g.globalAlpha = 1;
+      g.globalAlpha = baseA;
       if (back) continue;
       // 解説（手前のものだけ）
       const P = Story.headPortal(h, m), c = joined ? Story.headCenter(h) : hp;
@@ -364,13 +368,22 @@ const Scene = (() => {
   }
 
   // ---- 破れて出る ----
+  // 破れたところへ寄りながら、まわりへ広がる。k: 0..1（破れてから）
+  function burstPos(h, k) {
+    const tp = perim(TEAR_U, 0), hb = h.born * 1000 | 0, oa = Math.atan2(h.y, h.x), ta = Math.atan2(tp.y - h.y, tp.x - h.x), a = (hash(hb, 7) < 0.45 ? ta : oa) + (hash(hb, 3) - 0.5) * 1.2, v = 300 + hash(hb, 4) * 700;
+    const kv = 1 - Math.pow(1 - k, 2.2);
+    return { x: h.x + Math.cos(a) * v * kv * 1.8, y: h.y + Math.sin(a) * v * kv * 1.8, ang: h.ang + kv * 2, a, kv, hb };
+  }
+  // 小さなファージの形（寄って大きく見えるとき）か点（引いて見るとき）
+  function phageMark(x, y, ang, alpha = 1) {
+    if (V.s * 200 >= 7) { g.save(); g.globalAlpha = alpha; g.translate(V.X(x), V.Y(y)); g.rotate(-ang); g.scale(V.s, V.s); drawPhageSmall(g, { fill: 1 }); g.restore(); }
+    else { const sz = Math.max(1.6, Math.min(5, 160 * V.s)); g.globalAlpha = alpha; g.fillStyle = '#ffe3a3'; g.fillRect(V.X(x) - sz / 2, V.Y(y) - sz / 2, sz, sz); g.globalAlpha = 1; }
+  }
   function drawBurst(m, k0) {
-    const M = Story.M, k = Math.max(0, (k0 - 0.22) / 0.78), tp = perim(TEAR_U, 0);
+    const M = Story.M, k = Math.max(0, (k0 - 0.22) / 0.78);
     // 破れる前（ふくらむあいだ、k=0）も、その場所にそのまま描く（消えないように）
     for (const h of M.heads) {
-      // 破れたところへ寄りながら、まわりへ広がる
-      const hb = h.born * 1000 | 0, oa = Math.atan2(h.y, h.x), ta = Math.atan2(tp.y - h.y, tp.x - h.x), a = (hash(hb, 7) < 0.45 ? ta : oa) + (hash(hb, 3) - 0.5) * 1.2, v = 300 + hash(hb, 4) * 700;
-      const ok = M.tEnd >= h.fe + 0.6, kv = 1 - Math.pow(1 - k, 2.2), x = h.x + Math.cos(a) * v * kv * 1.8, y = h.y + Math.sin(a) * v * kv * 1.8, ang = h.ang + kv * 2;
+      const { x, y, ang, kv } = burstPos(h, k), ok = M.tEnd >= h.fe + 0.6;
       // 中で奥にあったものは薄いまま始まり、外へ出るにつれてくっきり（中の絵から急に変わらないように）
       g.save(); g.globalAlpha = h.z > FRONT ? BACK_A + (1 - BACK_A) * kv : 1; g.translate(V.X(x), V.Y(y)); g.rotate(-ang); g.scale(V.s, V.s);
       if (ok) drawPhageSmall(g, { fill: 1 }); else { g.globalAlpha = Math.max(0, 1 - k * 2); drawPhageBody(g, { fill: 0.5, alpha: 0.6 }); }
@@ -389,7 +402,13 @@ const Scene = (() => {
 
   // ---- 着陸するファージ（近づく〜DNA が入る。そのあとは空のぬけがら）----
   function drawLanding(st) {
-    const L = Story.landing(st), P = Story.pierce(L.tA), Z = V.at(SITE.x + L.dx, SITE.y);
+    if (st.id === 'spread') return;
+    const L = Story.landing(st), P = Story.pierce(L.tA);
+    let Z, turned = false;
+    if (st.id === 'burst') {
+      const A = siteAnchor(st.p); Z = V.local(A.x, A.y, A.ang); turned = true;
+      g.globalAlpha = 1 - 0.6 * (A.kk || 0);
+    } else Z = V.at(SITE.x + L.dx, SITE.y);
     const Hb = L.tA >= 0 ? 70 - 36 * P.star : L.hb, h = 22 - 10 * P.star, w = T4.plateW + (T4.plateWStar - T4.plateW) * P.star;
     const rings = []; let tw = 0, Ls = 0;
     for (let i = 0; i < 23; i++) { const f = P.ring(i); rings.push({ h: T4.sheathLen / 23 + (T4.sheathShort / 23 - T4.sheathLen / 23) * f, r: 12 + 4.5 * f, tw }); tw += (17.2 + (31.47 - 17.2) * f) * Math.PI / 180; Ls += rings[i].h; }
@@ -428,8 +447,9 @@ const Scene = (() => {
     if (P.gp12 > 0) Z.hit({ box: [-w / 2, 2, w / 2, pb], info: ZINFO.gp12 });
     Z.hit({ box: [-5, Math.min(tubeEnd, needleTip), 5, Hb], info: nOff ? ZINFO.gp19 : ZINFO.gp5 });
     if (P.dna > 0 && !L.after) Z.hit({ box: [-60, -80, 60, -36], info: ZINFO.alt });
+    if (turned) { g.restore(); g.globalAlpha = 1; }
   }
-  const GHOST = { t: 'ぬけがら（ゴースト）', k: 'sure', b: 'DNA を入れおわった、空っぽの頭としっぽ。細菌の外に残る。' };
+  const GHOST = { t: 'ぬけがら（ゴースト）', k: 'sure', b: 'DNA を入れおわった、空っぽの頭としっぽ。もう感染できない。細菌の表面にささったまま残り、細菌が破れると、ささっていた膜のかけらといっしょに流される（ごみとして残る）。' };
   function legPts(phi, bound, k, Hb, star, w, touch) {
     const c = Math.cos(phi), sn = Math.sin(phi), hip = { x: (w / 2) * c, y: Hb - 9 * (1 - star) - 3, z: (w / 2) * sn };
     const freeTip = { x: 110 * c, y: Hb - 49, z: 110 * sn }, gnd = { x: 110 * c, y: 3, z: 110 * sn };
@@ -474,13 +494,27 @@ const Scene = (() => {
   const TEAR_U = (300 + HL) / (4 * HL + 2 * Math.PI * R);   // 破れる場所（上面の x=300。場所は模式）
   const CUTS = [0, 0.1, 0.24, 0.37, 0.5, 0.61, 0.76, 0.89];
   const DEBRIS = { t: 'ちぎれた膜のかけら', k: 'sure', b: '細胞壁（ペプチドグリカン）が切られると、細菌は棒の形を保てずにふくらみ、内膜・外膜も破れて中身がいっせいに出る。細菌は死に、膜はちぎれたかけらになる。形のくずれ方・かけらの数は模式。' };
+  function frag(f, kk) {
+    const gap = 0.006 + 0.03 * Math.min(1, kk * 2.5), ua = TEAR_U + CUTS[f] + gap, ub = TEAR_U + (CUTS[f + 1] ?? 1) - gap;
+    const mid = swollen((ua + ub) / 2, 0, 1), dir = Math.atan2(mid.ny, mid.nx), push = 90 * kk * (0.7 + 0.6 * hash(f, 11)), rot = (hash(f, 12) - 0.5) * 0.9 * kk, curl = 1 - 0.3 * kk;
+    const cx = mid.x, cy = mid.y, ox = Math.cos(dir) * push, oy = Math.sin(dir) * push, cr = Math.cos(rot), sr = Math.sin(rot);
+    const tf = p => { const dx = (p.x - cx) * curl, dy = (p.y - cy) * curl; return [cx + ox + dx * cr - dy * sr, cy + oy + dx * sr + dy * cr]; };
+    return { ua, ub, rot, tf };
+  }
+  // ファージがささった場所（ぬけがら）が、いまどこにあるか: ふくらむと外へ動き、破れたあとはそのかけらといっしょに流れる
+  const SITE_U = (SITE.x + HL) / (4 * HL + 2 * Math.PI * R);
+  function siteAnchor(burst) {
+    const TEAR = 0.22;
+    if (burst < TEAR) { const e = ease(burst / TEAR), p = swollen(SITE_U, 0, e); return { x: p.x, y: p.y, ang: Math.atan2(-p.nx, p.ny) }; }
+    const kk = (burst - TEAR) / (1 - TEAR), rel = (((SITE_U - TEAR_U) % 1) + 1) % 1;
+    let f = 0; while (f < CUTS.length - 1 && rel >= CUTS[f + 1]) f++;
+    const F = frag(f, kk), p = swollen(SITE_U, 0, 1), q = F.tf(p);
+    return { x: q[0] + Math.sin(SITE_U * 140 + f) * 10 * kk, y: q[1] + Math.cos(SITE_U * 120 + f) * 10 * kk, ang: Math.atan2(-p.nx, p.ny) + F.rot, kk };
+  }
   function drawDebris(kk) {
     for (let f = 0; f < CUTS.length; f++) {
-      const gap = 0.006 + 0.03 * Math.min(1, kk * 2.5), ua = TEAR_U + CUTS[f] + gap, ub = TEAR_U + (CUTS[f + 1] ?? 1) - gap;
+      const { ua, ub, tf } = frag(f, kk);
       if (ub <= ua) continue;
-      const mid = swollen((ua + ub) / 2, 0, 1), dir = Math.atan2(mid.ny, mid.nx), push = 90 * kk * (0.7 + 0.6 * hash(f, 11)), rot = (hash(f, 12) - 0.5) * 0.9 * kk, curl = 1 - 0.3 * kk;
-      const cx = mid.x, cy = mid.y, ox = Math.cos(dir) * push, oy = Math.sin(dir) * push, cr = Math.cos(rot), sr = Math.sin(rot);
-      const tf = p => { const dx = (p.x - cx) * curl, dy = (p.y - cy) * curl; return [cx + ox + dx * cr - dy * sr, cy + oy + dx * sr + dy * cr]; };
       g.globalAlpha = Math.max(0.5, 1 - kk * 0.4);
       for (const [mm, col, w] of [[31.5, '#6f8ea8', 7], [13, '#8a9a58', 6], [3.5, '#86a6c2', 7]]) {
         const pts = []; for (let i = 0; i <= 24; i++) { const u = ua + (ub - ua) * i / 24, p = swollen(u, mm, 1); const q = tf(p); q[0] += Math.sin(u * 140 + f) * 10 * kk; q[1] += Math.cos(u * 120 + f) * 10 * kk; pts.push(q); }
@@ -512,10 +546,9 @@ const Scene = (() => {
       V.hit({ seg: pts, w: 25, info: FLAG_INFO });
     }
     if (V.s > 0.25) {
-      g.strokeStyle = 'rgba(190,206,214,.22)'; g.lineWidth = Math.max(0.6, 7 * V.s); g.beginPath();
+      g.strokeStyle = V.s > 0.6 ? 'rgba(190,206,214,.13)' : 'rgba(190,206,214,.22)'; g.lineWidth = Math.max(0.6, 7 * V.s); g.beginPath();
       for (let i = 0; i < 70; i++) {
         const u = (i * 0.6180339 + 0.05) % 1, b = perim(u, 0);
-        if (Math.abs(b.x - SITE.x) < 450 && b.y > 0) continue;
         const ax = Math.max(-HL, Math.min(HL, b.x)), nl = Math.hypot(b.x - ax, b.y) || 1, nx = (b.x - ax) / nl, ny = b.y / nl, L = 300 + 700 * hash(i, 22), bend = (hash(i, 23) - 0.5) * 0.5;
         g.moveTo(V.X(b.x), V.Y(b.y)); g.lineTo(V.X(b.x + (nx - ny * bend) * L), V.Y(b.y + (ny + nx * bend) * L));
       }
@@ -586,16 +619,26 @@ const Scene = (() => {
   }
   // 広がるファージ（破れた細菌ごとに点の雲）
   function drawSpread(rm) {
-    const P = Story.P, src = [{ x: 0, y: 0, t: 0, i: 999, r0: 1800 }];
+    const P = Story.P, M = Story.M, src = [];
+    const vb = V.viewBox(), inV = (x, y) => x > vb.x0 - 300 && x < vb.x1 + 300 && y > vb.y0 - 300 && y < vb.y1 + 300;
+    // 最初の細菌から出たファージ（破れる場面の最後の位置から続ける）
+    {
+      const R2 = Story.REACH * 1.15 * Math.sqrt(Math.min(1, rm / 3)) + 700 * Math.min(1, rm / 40), wob = Math.min(1, rm * 2);
+      for (const h of M.heads) {
+        if (M.tEnd < h.fe + 0.6) continue;
+        const b = burstPos(h, 1), f = 0.25 + 0.75 * Math.sqrt(hash(b.hb, 6));
+        const x = b.x + Math.cos(b.a) * R2 * f + wob * Math.sin(rm * 0.7 + b.hb) * 120, y = b.y + Math.sin(b.a) * R2 * f + wob * Math.cos(rm * 0.6 + b.hb * 1.3) * 120;
+        if (inV(x, y)) phageMark(x, y, b.ang + rm * 0.3);
+      }
+      V.hit({ c: [0, 0, 1800 + R2 * 0.8], info: CLOUD });
+    }
     for (let i = 0; i < P.cells.length; i++) { const c = P.cells[i]; if (rm >= c.tBurst) { const q = Story.cellPose(c, 0, c.tInf); src.push({ x: q.x, y: q.y, t: c.tBurst, i, r0: 300 }); } }
-    g.fillStyle = '#ffe3a3';
-    const sz = Math.max(1.6, Math.min(5, 160 * V.s));
     for (const sc of src) {
       const dt = rm - sc.t, R = Story.REACH * 1.15 * Math.sqrt(Math.min(1, dt / 3)) + 700 * Math.min(1, dt / 40);
       for (let j = 0; j < 70; j++) {
         const a = hash(sc.i * 131 + j, 5) * 6.283, f = 0.25 + 0.75 * Math.sqrt(hash(sc.i * 131 + j, 6)), r = sc.r0 * f + R * f;
         const x = sc.x + Math.cos(a) * r + Math.sin(rm * 0.7 + j) * 120, y = sc.y + Math.sin(a) * r + Math.cos(rm * 0.6 + j * 1.3) * 120;
-        g.fillRect(V.X(x) - sz / 2, V.Y(y) - sz / 2, sz, sz);
+        if (inV(x, y)) phageMark(x, y, a + rm * 0.3);
       }
       V.hit({ c: [sc.x, sc.y, Math.max(600, sc.r0 + R * 0.8)], info: CLOUD });
     }
