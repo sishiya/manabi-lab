@@ -12,7 +12,7 @@ const V3 = {
 // カメラの決まった位置（右投げのとき。左投げは X を逆に）
 // catcher = MLB の中継の「バックネット裏の高い所」から、pitcher = 中継の「センターのカメラ」（遠くから望遠。右投げでは少し左にずらして投手の体でホームが隠れないように）
 const CAMS = {
-  catcher: { name: '捕手の後ろ', pos: [0, 1.45, 5.2], tgt: [0, 1.15, -18], fov: 17 },        // 捕手の少し後ろ・目の高さに近く、少しズーム（初期値）
+  catcher: { name: '捕手の目', pos: [0, 0.95, 1.0], tgt: [0, 1.15, -18], fov: 50 },          // しゃがんだ捕手の目（ホームの後ろ 1.0 m・高さ 0.95 m の目安）。投手のほうを見たまま（初期値）
   high:    { name: 'バックネット裏', pos: [0, 2.7, 8.5], tgt: [0, 0.75, -9], fov: 27 },
   pitcher: { name: 'センター（投手の後ろ）', pos: [-2.6, 7.5, -125], tgt: [0, 1.1, 0], fov: 3.2 },
   ball:    { name: 'ボールの後ろ', follow: true, fov: 50 },
@@ -236,6 +236,7 @@ function resize3d(w, h) {
 
 // 管の太さ: カメラから道すじのまん中までの距離に合わせる（遠くからでも線が見えるように。太さは見やすさのための演出）
 function tubeRadius() {
+  if (S.cam === 'catcher' || S.cam === 'batter') return 0.005;   // 目のカメラは道すじが目のすぐ近くを通るので細く
   const d = CAMS[S.cam].follow ? 2 : V3.cam.position.distanceTo(new THREE.Vector3(0, 1.2, -9));
   return Math.max(0.005, Math.min(0.08, d * 0.0011 * (V3.cam.fov / 30)));
 }
