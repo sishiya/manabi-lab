@@ -47,6 +47,6 @@ setTimeout(() => { UI.state.playing = true; document.getElementById('play').text
 window.__ph = {
   View, Story, Scene, UI,
   at(u) { UI.state.u = u; UI.state.playing = false; force = true; frame(0); },
-  show(u, x, y, w) { UI.state.u = u; UI.state.playing = false; View.setAuto(false); View.look(x, y, w, true); force = true; frame(0); },
+  show(u, x, y, w) { UI.state.u = u; UI.state.playing = false; View.setAuto(false); View.setBounds(null); View.look(x, y, w, true); force = true; frame(0); },
   simRun(sec, dt = 1 / 60) { for (let t = 0; t < sec; t += dt) frame(dt); },
 };

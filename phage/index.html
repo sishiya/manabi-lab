@@ -1,7 +1,16 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>細菌にとりつくウイルス</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230e1c22'/><polygon points='32,5 42,11 42,24 32,30 22,24 22,11' fill='%237fe0c4'/><rect x='29' y='30' width='6' height='16' fill='%237fe0c4'/><path d='M32 46 L16 58 M32 46 L48 58 M32 46 L26 60 M32 46 L38 60' stroke='%237fe0c4' stroke-width='3' fill='none'/></svg>">
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
 <script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<!-- seo（検索・リンクカード。_dev/tools/seo.mjs が入口の APPS から作る。手で直さない） -->
+<meta name="description" content="T4 ファージが大腸菌にとりつき、細菌の中で100個以上に増えて破れて出るまで。人のからだから分子の大きさまで、タイムスライダー1本でどこでも寄れて、マウスを乗せると解説。">
+<meta property="og:type" content="website"><meta property="og:site_name" content="まなびラボ"><meta property="og:locale" content="ja_JP"><meta property="og:locale:alternate" content="en_US">
+<meta property="og:title" content="細菌にとりつくウイルス｜まなびラボ"><meta property="og:description" content="T4 ファージが大腸菌にとりつき、細菌の中で100個以上に増えて破れて出るまで。人のからだから分子の大きさまで、タイムスライダー1本でどこでも寄れて、マウスを乗せると解説。"><meta property="og:url" content="https://sishiya.github.io/manabi-lab/phage/">
+<meta property="og:image" content="https://sishiya.github.io/manabi-lab/assets/thumbs/phage.jpg"><meta property="og:image:width" content="640"><meta property="og:image:height" content="360">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@sishiya22">
+<link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/phage/?lang=ja"><link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/phage/?lang=en"><link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/phage/">
+<!-- /seo -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
@@ -9,10 +18,11 @@
 
 <div id="shell">
   <header id="topbar">
-    <div class="brand"><b>細菌にとりつくウイルス</b><span>T4 ファージが大腸菌に降りて、乗っとって、破って出るまで</span></div>
+    <div class="brand"><b><span lang="ja">細菌にとりつくウイルス</span><span lang="en">The Virus That Infects Bacteria</span></b><span><span lang="ja">T4 ファージが大腸菌に降りて、乗っとって、破って出るまで</span><span lang="en">How a T4 phage lands on E. coli, takes it over, and bursts out</span></span></div>
+    <div class="langsw" id="langsw" role="group" aria-label="言語 / Language"><button data-l="ja" title="日本語">JP</button><button data-l="en" title="English">EN</button></div>
     <nav id="tabs" role="tablist">
-      <button role="tab" data-tab="view" aria-selected="true"><b>見る</b><small>時間を動かして、寄って見る</small></button>
-      <button role="tab" data-tab="about" aria-selected="false"><b>このアプリについて</b><small>しくみ・出どころ</small></button>
+      <button role="tab" data-tab="view" aria-selected="true"><b><span lang="ja">見る</span><span lang="en">View</span></b><small><span lang="ja">時間を動かして、寄って見る</span><span lang="en">Move through time, zoom in</span></small></button>
+      <button role="tab" data-tab="about" aria-selected="false"><b><span lang="ja">このアプリについて</span><span lang="en">About</span></b><small><span lang="ja">しくみ・出どころ</span><span lang="en">How it works, sources</span></small></button>
     </nav>
   </header>
 
@@ -23,15 +33,15 @@
         <div class="now" id="nowCard"></div>
         <div class="closing" id="closing" hidden></div>
         <div class="zoomBtns" role="group" aria-label="拡大">
-          <button id="zIn" title="拡大">＋</button><button id="zOut" title="縮小">−</button><button id="zFit" title="細菌の全体">全体</button>
-          <button id="lookBtn" title="色分けした絵と、本物に近い見た目を切りかえる">見た目: わかりやすい</button>
+          <button id="zIn" title="拡大">+</button><button id="zOut" title="縮小">−</button><button id="zFit" title="細菌の全体"><span lang="ja">全体</span><span lang="en">Whole</span></button>
+          <button id="lookBtn" title="色分けした絵と、本物に近い見た目を切りかえる"><span lang="ja">見た目: わかりやすい</span><span lang="en">Look: easy to read</span></button>
         </div>
         <div class="tip" id="tip" hidden></div>
         <div class="camMode" id="camMode" role="group" aria-label="カメラ">
-          <button id="camAuto" aria-pressed="true" title="物語に合わせてカメラが動く">🎥 おまかせカメラ</button>
-          <button id="camFree" aria-pressed="false" title="ホイール・ピンチ・ドラッグで自分で動かす">✋ 自分で動かす</button>
+          <button id="camAuto" aria-pressed="true" title="物語に合わせてカメラが動く">🎥 <span lang="ja">おまかせカメラ</span><span lang="en">Auto camera</span></button>
+          <button id="camFree" aria-pressed="false" title="ホイール・ピンチ・ドラッグで自分で動かす">✋ <span lang="ja">自分で動かす</span><span lang="en">Move it yourself</span></button>
         </div>
-        <div class="howto" id="howto">ホイール・ピンチで拡大／ドラッグで移動／マウスを乗せると解説</div>
+        <div class="howto" id="howto"><span lang="ja">ホイール・ピンチで拡大／ドラッグで移動／マウスを乗せると解説</span><span lang="en">Wheel or pinch to zoom · drag to move · hover for explanations</span></div>
       </div>
       <div class="timebar">
         <div class="trow">
@@ -42,51 +52,62 @@
           </div>
         </div>
         <div class="trow2">
-          <span class="speeds" id="speeds" role="group" aria-label="再生の速さ"><span class="spLab">速さ</span></span>
+          <span class="speeds" id="speeds" role="group" aria-label="再生の速さ"><span class="spLab"><span lang="ja">速さ</span><span lang="en">Speed</span></span></span>
           <span class="tlabel mono" id="tlabel"></span>
         </div>
       </div>
     </main>
     <aside class="panel">
       <section class="box">
-        <h2>見どころ（押すと、その時間・その場所へ）</h2>
+        <h2><span lang="ja">見どころ（押すと、その時間・その場所へ）</span><span lang="en">Highlights (click to jump to that time and place)</span></h2>
         <ol class="events" id="events"></ol>
       </section>
       <section class="box">
-        <h2>もしも</h2>
+        <h2><span lang="ja">もしも</span><span lang="en">What if</span></h2>
         <div class="conds" id="conds"></div>
       </section>
       <section class="box">
-        <h2>ぎもん</h2>
-        <div class="faq">
-          <details><summary>ファージはどこから来るの？</summary><p>細菌のいるところなら、どこにでもいる（水・土・下水・人や動物の腸の中）。T4 のような大腸菌のファージは、下水や便から見つかる。食べ物や水といっしょに口から入ることもある。<span class="kind sure">研究の値</span></p><button data-go="たくさんの大腸菌">その場面へ</button></details>
-          <details><summary>1つだけ？ たくさんいるの？</summary><p>たくさんいる。人の大腸の中身1gに、ウイルスは約1億〜100億個いて、そのほとんどがファージ（Shkoporov と Hill 2019）。種類もとても多い。このアプリでは、そのうちの1つを追いかけている。<span class="kind est">目安</span></p><button data-go="たくさんの大腸菌">その場面へ</button></details>
-          <details><summary>1つのファージから、どれだけ増えるの？</summary><p>細菌1つの中で約20〜25分のうちに100〜150個。出てきたファージがまた別の細菌にとりつくので、1回ごとに何十〜百倍になる（ねずみ算）。<span class="kind est">目安</span></p><button data-go="また破れて、もっと増える">その場面へ</button></details>
-          <details><summary>部品は、だれが組み立てているの？</summary><p>運ぶ係や組み立てる係はいない。部品は熱でふらふらとでたらめに動き（ブラウン運動）、正しい相手に正しい向きでぶつかったときだけくっつく（自己集合）。殻のたんぱくを折りたたむ gp31、長い脚を付けるのを助けるひげ（フィブリチン）など、手伝うたんぱくはある。<span class="kind sure">研究の値</span></p><button data-go="しっぽは別に組み立てる">その場面へ</button></details>
+        <h2><span lang="ja">ぎもん</span><span lang="en">Questions</span></h2>
+        <div class="faq" lang="ja">
+          <details><summary>ファージはどこから来るの？</summary><p>細菌のいるところなら、どこにでもいる（水・土・下水・人や動物の腸の中）。T4 のような大腸菌のファージは、下水や便から見つかる。食べ物や水といっしょに口から入ることもある。<span class="kind sure">研究の値</span></p><button data-go="colony">その場面へ</button></details>
+          <details><summary>1つだけ？ たくさんいるの？</summary><p>たくさんいる。人の大腸の中身1gに、ウイルスは約1億〜100億個いて、そのほとんどがファージ（Shkoporov と Hill 2019）。種類もとても多い。このアプリでは、そのうちの1つを追いかけている。<span class="kind est">目安</span></p><button data-go="colony">その場面へ</button></details>
+          <details><summary>1つのファージから、どれだけ増えるの？</summary><p>細菌1つの中で約20〜25分のうちに100〜150個。出てきたファージがまた別の細菌にとりつくので、1回ごとに何十〜百倍になる（ねずみ算）。<span class="kind est">目安</span></p><button data-go="more">その場面へ</button></details>
+          <details><summary>部品は、だれが組み立てているの？</summary><p>運ぶ係や組み立てる係はいない。部品は熱でふらふらとでたらめに動き（ブラウン運動）、正しい相手に正しい向きでぶつかったときだけくっつく（自己集合）。殻のたんぱくを折りたたむ gp31、長い脚を付けるのを助けるひげ（フィブリチン）など、手伝うたんぱくはある。<span class="kind sure">研究の値</span></p><button data-go="tail">その場面へ</button></details>
           <details><summary>人にもうつるの？</summary><p>うつらない。ファージがとりつけるのは、脚がつかめる印（受け手）を持つ細菌だけ。T4 がとりつくのは大腸菌の一部の株で、人の細胞には入れない。<span class="kind sure">研究の値</span></p></details>
           <details><summary>大腸菌はぜんぶやられちゃうの？</summary><p>いいえ。受け手（OmpC など）を変えた大腸菌は生き残る（「もしも: 受け手のない細菌」）。細菌は制限酵素などの守りも持つ。腸の中では、細菌とファージがずっといっしょにいつづける。<span class="kind sure">研究の値</span></p></details>
           <details><summary>ファージは生きているの？</summary><p>自分では増えられず、栄養からエネルギーも作らない。細菌の中に入ったときだけ、細菌の材料と工場を使って増える。生き物と呼ぶかどうかは、人によって考えが分かれる。</p></details>
           <details><summary>大きさの見え方は本当？</summary><p>細菌（約2µm）・ファージ（約0.2µm）・膜の厚さ・リボソーム（約20nm）・べん毛（太さ約20nm）は本当の大きさに合わせている。ただし DNA の長さ（T4 は約57µm、細菌は約1.6mm。どちらも細菌よりずっと長く、ぎゅっと折りたたまれている）、リボソームの数（本当は数万個）は、見やすさのために大きく減らして描いている。</p></details>
         </div>
+        <div class="faq" lang="en">
+          <details><summary>Where do phages come from?</summary><p>Anywhere there are bacteria: water, soil, sewage, and the guts of people and animals. E. coli phages like T4 are found in sewage and feces. They can also enter the mouth with food or water. <span class="kind sure">measured</span></p><button data-go="colony">Go to that scene</button></details>
+          <details><summary>Is there just one, or many?</summary><p>Many. One gram of human colon contents holds about 100 million to 10 billion viruses, and most are phages (Shkoporov and Hill 2019). There are many kinds, too. This app follows just one of them. <span class="kind est">rough guide</span></p><button data-go="colony">Go to that scene</button></details>
+          <details><summary>How many come from one phage?</summary><p>100-150 within about 20-25 minutes inside one bacterium. The released phages infect other bacteria, so each round multiplies them tens to a hundred times (explosive growth). <span class="kind est">rough guide</span></p><button data-go="more">Go to that scene</button></details>
+          <details><summary>Who puts the parts together?</summary><p>No one carries or assembles them. The parts jiggle around randomly from heat (Brownian motion) and stick only when they bump into the right partner in the right direction (self-assembly). Some proteins help, such as gp31, which folds the shell protein, and the whiskers (fibritin), which help attach the long legs. <span class="kind sure">measured</span></p><button data-go="tail">Go to that scene</button></details>
+          <details><summary>Can it infect people?</summary><p>No. A phage can attach only to bacteria that carry a mark its legs can grab (a receptor). T4 infects only some strains of E. coli and cannot enter human cells. <span class="kind sure">measured</span></p></details>
+          <details><summary>Do all the E. coli get wiped out?</summary><p>No. E. coli that change their receptors (such as OmpC) survive (see "What if: a bacterium without receptors"). Bacteria also have defenses such as restriction enzymes. In the gut, bacteria and phages keep living together. <span class="kind sure">measured</span></p></details>
+          <details><summary>Is a phage alive?</summary><p>It cannot multiply on its own and does not make energy from food. It multiplies only inside a bacterium, using the bacterium's materials and factories. People disagree about whether to call it a living thing.</p></details>
+          <details><summary>Are the sizes true to life?</summary><p>The bacterium (about 2 µm), the phage (about 0.2 µm), membrane thickness, ribosomes (about 20 nm) and flagella (about 20 nm thick) match real sizes. But DNA length (T4: about 57 µm; the bacterium: about 1.6 mm, both far longer than the bacterium and tightly folded) and the number of ribosomes (really tens of thousands) are greatly reduced to keep the picture readable.</p></details>
+        </div>
       </section>
       <section class="box" id="countBox">
-        <h2>細菌の中の数（いまの時刻）</h2>
+        <h2><span lang="ja">細菌の中の数（いまの時刻）</span><span lang="en">Counts inside the bacterium (now)</span></h2>
         <div id="counts"></div>
-        <p class="small2">図の中の流れる点1つは、たくさんの分子の代わり（模式）。細菌は立体なので、奥にあるもの（約7割）は薄く背景として描き、マウスを乗せて説明が出るのは手前のものだけ。数は減らしていない。</p>
+        <p class="small2" lang="en">Each moving dot stands for many molecules (schematic). The bacterium is 3D, so things at the back (about 70%) are drawn faint as background, and only things in front show an explanation on hover. Nothing has been removed from the counts.</p>
+        <p class="small2" lang="ja">図の中の流れる点1つは、たくさんの分子の代わり（模式）。細菌は立体なので、奥にあるもの（約7割）は薄く背景として描き、マウスを乗せて説明が出るのは手前のものだけ。数は減らしていない。</p>
       </section>
       <section class="box">
-        <h2>色の見かた</h2>
+        <h2><span lang="ja">色の見かた</span><span lang="en">Colors</span></h2>
         <ul class="legend2">
-          <li><i style="background:#ff9f6b"></i>T4 の DNA（設計図）</li>
-          <li><i style="background:#6ea9ff"></i>細菌の DNA ／ そのかけら（材料）</li>
-          <li><i style="background:#dcc8aa"></i>リボソーム（工場）</li>
-          <li><i style="background:#ffae5a"></i>早い時期の T4 のたんぱく</li>
-          <li><i style="background:#5fe0c4"></i>頭の殻の部品（gp23）</li>
-          <li><i style="background:#c39bff"></i>しっぽの部品</li>
-          <li><i style="background:#ff6fa8"></i>ホリン（内膜）</li>
-          <li><i style="background:#9be38a"></i>リゾチーム</li>
-          <li><i style="background:#ffe066"></i>OmpC（脚がつかむ印）</li>
-          <li><i style="background:#ffe3a3"></i>まわりの・広がるファージ（点）</li>
+          <li><i style="background:#ff9f6b"></i><span lang="ja">T4 の DNA（設計図）</span><span lang="en">T4 DNA (blueprint)</span></li>
+          <li><i style="background:#6ea9ff"></i><span lang="ja">細菌の DNA ／ そのかけら（材料）</span><span lang="en">Bacterial DNA / its pieces (material)</span></li>
+          <li><i style="background:#dcc8aa"></i><span lang="ja">リボソーム（工場）</span><span lang="en">Ribosomes (factories)</span></li>
+          <li><i style="background:#ffae5a"></i><span lang="ja">早い時期の T4 のたんぱく</span><span lang="en">Early T4 proteins</span></li>
+          <li><i style="background:#5fe0c4"></i><span lang="ja">頭の殻の部品（gp23）</span><span lang="en">Head shell parts (gp23)</span></li>
+          <li><i style="background:#c39bff"></i><span lang="ja">しっぽの部品</span><span lang="en">Tail parts</span></li>
+          <li><i style="background:#ff6fa8"></i><span lang="ja">ホリン（内膜）</span><span lang="en">Holins (inner membrane)</span></li>
+          <li><i style="background:#9be38a"></i><span lang="ja">リゾチーム</span><span lang="en">Lysozyme</span></li>
+          <li><i style="background:#ffe066"></i><span lang="ja">OmpC（脚がつかむ印）</span><span lang="en">OmpC (the mark the legs grab)</span></li>
+          <li><i style="background:#ffe3a3"></i><span lang="ja">まわりの・広がるファージ（点）</span><span lang="en">Other and spreading phages (dots)</span></li>
         </ul>
       </section>
     </aside>
@@ -94,6 +115,7 @@
 
   <div class="page" data-page="about" hidden>
     <article id="about">
+      <div lang="ja">
       <h2>このアプリについて</h2>
       <p><b>バクテリオファージ</b>（ファージ）は、細菌にとりつくウイルス。ここでは、研究でいちばん調べられてきた <b>T4 ファージ</b>と大腸菌を使う。T4 は頭が 120×86nm、しっぽと合わせて約 200nm。大腸菌（約 2µm）の10分の1ほどの大きさ。</p>
       <p><b>見かた</b>: 下のスライダーで時間を動かす（▶で再生）。ホイール・ピンチで拡大、ドラッグで移動。マウスを乗せる（スマホはタップ）と、そこにあるものの説明が出る。細菌全体（約2µm）から、たんぱく質が見える大きさ（横はば約20nm）まで寄れて、寄るほど細かく描く。「見どころ」を押すと、その時間・その場所へ寄る。</p>
@@ -168,6 +190,83 @@
       </ul>
       <h3>使っているもの</h3>
       <p>フォント: Google Fonts（Dela Gothic One・Zen Kaku Gothic New・IBM Plex Mono。SIL Open Font License）。ライブラリは使っていない（Canvas 2D）。</p>
+      </div>
+      <div lang="en">
+      <h2>About this app</h2>
+      <p>A <b>bacteriophage</b> (phage) is a virus that infects bacteria. This app uses the <b>T4 phage</b>, the most studied one, and E. coli. T4's head is 120×86 nm, and with the tail it is about 200 nm long: about one tenth the size of E. coli (about 2 µm).</p>
+      <p><b>How to use</b>: move through time with the slider at the bottom (▶ to play). Wheel or pinch to zoom, drag to move. Hover (tap on phones) to see what is there. You can zoom from the human body down to the size where proteins are visible (about 20 nm across), and the closer you get, the more detail is drawn. Click a highlight to jump to that time and place.</p>
+      <p>Marks after sentences: <span class="kind sure">measured</span> measured in research or well established &nbsp;<span class="kind est">rough guide</span> estimated times and numbers &nbsp;<span class="kind art">schematic</span> shapes chosen for display</p>
+
+      <h3>Sticking, piercing, DNA going in</h3>
+      <ul>
+        <li>The tips of the 6 long legs (long tail fibers, about 145 nm) stick to a specific mark on the bacterial surface (a receptor). In E. coli K-12 this is the outer-membrane protein OmpC. <span class="kind sure">measured</span></li>
+        <li>When <b>3 or more</b> legs stick, the baseplate changes from a hexagon (about 52 nm across) to a star (about 61 nm), and the short legs swing about 100° to grip the inner sugars of the LPS. <span class="kind sure">measured</span></li>
+        <li>The tail sheath (gp18, 6 copies × 23 rings) contracts ring by ring from the baseplate (92.5 → 42 nm, 17.2° twist per ring), and the tube inside is pushed out while turning about 345°, piercing the outer membrane. Lysozyme on the needle opens a hole in the cell wall and the DNA goes in. <span class="kind sure">measured</span></li>
+        <li>It cannot attach to mutant E. coli that lost its receptors (no OmpC and short LPS sugar chains) (what-if). <span class="kind sure">measured</span></li>
+      </ul>
+      <h3>Inside the bacterium (rough guide at 37 °C in rich broth)</h3>
+      <ul>
+        <li>Within 1 minute the bacterium makes almost none of its own proteins. <span class="kind sure">measured</span> T4's EndoII (cuts CCGC) and EndoIV (cuts cytosine DNA) break down the bacterial DNA and reuse it to build T4 DNA (2-10 minutes in this app). <span class="kind est">rough guide</span></li>
+        <li>T4 uses the bacterial RNA polymerase to the end, swapping in Alt, AsiA, MotA, gp55, gp33 and gp45 so that early → middle → late genes get read. <span class="kind sure">measured</span></li>
+        <li>T4 DNA copying at about 5 minutes (gp41, gp43, gp45, gp44/62, gp61, gp32 and others; about 400-500 bases per second), and parts for heads, tails and legs from about 9 minutes. <span class="kind est">rough guide</span></li>
+        <li>Head: scaffold (gp22, gp21) and shell (about 930-960 gp23, corners gp24) around the portal gp20 → the gp17 motor packs DNA (about 700 base pairs per second on average, up to about 2,000; about 4-5 minutes per head) → cut at 1.02 genomes. <span class="kind sure">measured</span></li>
+        <li>The tail is built separately from the head (baseplate → tube → sheath → caps) and attaches to a DNA-filled head. The long legs come last. <span class="kind sure">measured</span></li>
+        <li>The first finished phages at about 12-15 minutes; it bursts at about 22-25 minutes and 100-150 come out. <span class="kind est">rough guide</span></li>
+        <li>At a set time the holin (t) opens holes in the inner membrane, lysozyme (e) cuts the cell wall, and the cell bursts. <span class="kind sure">measured</span></li>
+        <li>What if: DNA from another phage arriving after about 4 minutes cannot get in (superinfection exclusion). If another phage arrives after 5 minutes, bursting is greatly delayed (lysis inhibition). Mutant T4 without glucose tags on its DNA is cut by E. coli restriction enzymes. <span class="kind sure">measured</span></li>
+      </ul>
+
+      <h3>From the human body, and spreading on</h3>
+      <ul>
+        <li>It starts with the human body (about 1.7 m tall) and zooms into the colon → the colon wall (mucosa, crypts, submucosa, muscle) → mucus → E. coli (about 2 µm). The human body holds about 40 trillion bacteria, mostly in the colon (Sender et al. 2016). <span class="kind est">rough guide</span></li>
+        <li>Colon mucus has two layers: bacteria can hardly enter the inner one and live in the outer one (Johansson et al. 2008). One gram of colon contents holds about 100 million to 10 billion viruses, mostly phages (Shkoporov and Hill 2019). <span class="kind sure">measured</span></li>
+        <li>Assembly: the head forms on the inner membrane as portal gp20 → scaffold gp22, gp21 → shell gp23 (added starting from the portal side). When the gp21 scissors cut the scaffold, the empty shell leaves; when DNA packing starts, the shell expands and Hoc and Soc attach. After packing, the neck (gp13, gp14) attaches, a separately built tail (baseplate → tube → sheath → caps) snaps on, and the long legs attach last. Parts are not carried: they jiggle around from heat and stick when they bump into each other (self-assembly). <span class="kind sure">measured</span></li>
+        <li>Bursting: when holins open holes in the inner membrane and lysozyme cuts the cell wall, the bacterium cannot keep its rod shape; spanins break the outer membrane and the contents rush out (studies of spanins such as Kongari et al. 2018). The bacterium dies and its membranes become torn pieces. <span class="kind sure">measured</span></li>
+        <li>Spreading on: the released phages infect nearby bacteria and the same thing happens again. Which bacterium is infected when, how fast they spread, and the positions and swimming of the other bacteria are schematic. "About N phages" is a rough guide: (number of burst bacteria) × (number released by the story's bacterium). <span class="kind art">schematic</span></li>
+      </ul>
+
+      <h3>What is simplified</h3>
+      <ul>
+        <li>The 3D scene is drawn as a flat side view. Depth of the 6 legs is shown by shade.</li>
+        <li>Time runs at different rates in each part of the slider (milliseconds while approaching and sticking, minutes inside). The part name and the real time are shown. <span class="kind art">schematic</span></li>
+        <li>The wobble while approaching (Brownian motion) and the timing of leg sticking are staged. Treating the phage as a sphere of about 75 nm radius, its diffusion coefficient is about 3 µm²/s (Stokes-Einstein equation). <span class="kind est">rough guide</span></li>
+        <li>How fast the sheath contracts and how long DNA entry takes have not been measured precisely for T4. How far the tube goes in is also schematic. <span class="kind art">schematic</span></li>
+        <li>The number, positions and colors of molecules inside the bacterium (ribosomes, RNA polymerase, copying machines, enzymes) are schematic. Sizes roughly match reality (ribosome about 20 nm, RNA polymerase about 15 nm, DNA about 2 nm thick). Proteins are drawn as circles and boxes, not their real atomic shapes. <span class="kind art">schematic</span></li>
+        <li>Each moving dot stands for many molecules. Where they flow from and to follows the real order, but the number and motion of dots are schematic. "Head shell gp23, about N" is calculated as about 960 per head (Rao and Black 2010) × the number of heads started. The number of T4 DNA copies is a rough guide chosen to be enough for the heads being packed. <span class="kind art">schematic</span></li>
+        <li>The rate of head production was set to match "first finished at about 12-15 minutes, 100-150 by bursting". How long lysis inhibition delays bursting varies a lot (tens of minutes to hours); this app uses about 60 minutes. <span class="kind art">schematic</span></li>
+        <li>DNA length is greatly shortened (T4 DNA is about 57 µm and bacterial DNA about 1.6 mm, both far longer than the 2 µm bacterium and tightly folded). There are also far fewer ribosomes than in reality (tens of thousands). Thickness and diameter match reality. <span class="kind art">schematic</span></li>
+        <li>The number and direction of flagella (about 20 nm thick, 5-10 µm long; Turner et al. 2000) and pili (about 7 nm thick, spread almost evenly over the body) are schematic. They are drawn faint when zoomed in. <span class="kind art">schematic</span></li>
+        <li>DNA in the head lies in many layers along the inner wall of the shell (about 2.5 nm apart). Packing is drawn as one DNA strand entering through the portal and winding from the outer layer inward (a commonly used idea; the exact order is still being studied). <span class="kind art">schematic</span></li>
+        <li>A phage that has injected its DNA (a ghost) cannot infect again and stays stuck on the bacterial surface. When the bacterium bursts, it drifts away with the piece of membrane it is stuck to. <span class="kind sure">measured</span></li>
+        <li>The inside of the bacterium is 3D flattened onto a plane, so heads appear to overlap. How the shape falls apart when bursting and the number of pieces are schematic. <span class="kind art">schematic</span></li>
+        <li>"Look: realistic": real phages and bacteria are smaller than the wavelength of light and have no color. This look removes color like an electron micrograph, hides the labels, and packs the inside of the cell. Shapes and sizes are the same as "easy to read". <span class="kind art">schematic</span></li>
+        <li>This is simplified for learning. Do not use it for medical or lab decisions.</li>
+      </ul>
+
+      <h3>Main sources</h3>
+      <ul class="src">
+        <li>Miller ES, Kutter E, Mosig G, et al. (2003) <a href="https://doi.org/10.1128/MMBR.67.1.86-156.2003" target="_blank" rel="noopener">Bacteriophage T4 genome</a>. Microbiology and Molecular Biology Reviews 67:86–156 (genome of 168,903 bp, host proteins 1 minute after infection, sheath 98.4→36 nm, 3 or more long legs, short legs and LPS, headful packaging, superinfection exclusion, lysis inhibition, holin, 100-150 progeny, McrA/McrBC)</li>
+        <li>Yap ML, Rossmann MG (2014) <a href="https://doi.org/10.2217/fmb.14.91" target="_blank" rel="noopener">Structure and function of bacteriophage T4</a>. Future Microbiology 9:1319–1327 (tail, long legs 145 nm)</li>
+        <li>Fokine A, et al. (2004) <a href="https://doi.org/10.1073/pnas.0400444101" target="_blank" rel="noopener">Molecular architecture of the prolate head of bacteriophage T4</a>. PNAS 101:6003–6008 / Rao VB, et al. (2023) review in Viruses (head 120×86 nm)</li>
+        <li>Taylor NMI, et al. (2016) <a href="https://doi.org/10.1038/nature17971" target="_blank" rel="noopener">Structure of the T4 baseplate and its function in triggering sheath contraction</a>. Nature 533:346–352</li>
+        <li>Hu B, Margolin W, Molineux IJ, Liu J (2015) <a href="https://doi.org/10.1073/pnas.1501064112" target="_blank" rel="noopener">Structural remodeling of bacteriophage T4 and host membranes during infection initiation</a>. PNAS 112:E4919–E4928 (OmpC of K-12, LPS of B, baseplate shape change)</li>
+        <li>Yu F, Mizushima S (1982) Roles of lipopolysaccharide and outer membrane protein OmpC of <i>Escherichia coli</i> K-12 in the receptor function for bacteriophage T4. Journal of Bacteriology 151:718–722 / Washizaki A, et al. (2016) MicrobiologyOpen 5:1003–1015 (LPS sugars without OmpC)</li>
+        <li>Fuller DN, et al. (2007) <a href="https://doi.org/10.1073/pnas.0704008104" target="_blank" rel="noopener">Single phage T4 DNA packaging motors exhibit large force generation, high velocity, and dynamic variability</a>. PNAS 104:16868–16873</li>
+        <li>Leiman PG, Arisaka F, van Raaij MJ, et al. (2010) <a href="https://doi.org/10.1186/1743-422X-7-355" target="_blank" rel="noopener">Morphogenesis of the T4 tail and tail fibers</a>. Virology Journal 7:355 (wedge order, numbers and sizes of sheath, tube and baseplate, sheath contraction, needle, long and short legs, caps)</li>
+        <li>Rao VB, Black LW (2010) <a href="https://doi.org/10.1186/1743-422X-7-356" target="_blank" rel="noopener">Structure and assembly of bacteriophage T4 head</a>. Virology Journal 7:356 (shell protein numbers, portal, packaging motor, headful packaging, Hoc and Soc, internal proteins)</li>
+        <li>Sinha NK, Morris CF, Alberts BM (1980) Efficient in vitro replication of double-stranded DNA templates by a purified T4 bacteriophage replication system. Journal of Biological Chemistry 255:4290–4293 (forks move about 500 bases per second in the cell)</li>
+        <li>Dong F, Weitzel SE, von Hippel PH (1996) <a href="https://doi.org/10.1073/pnas.93.25.14456" target="_blank" rel="noopener">A coupled complex of T4 DNA replication helicase (gp41) and polymerase (gp43) can perform rapid and processive DNA strand-displacement synthesis</a>. PNAS 93:14456–14461</li>
+        <li>Revel HR (1967) Restriction of nonglucosylated T-even bacteriophage. Virology 31:688–701</li>
+        <li>Sender R, Fuchs S, Milo R (2016) <a href="https://doi.org/10.1371/journal.pbio.1002533" target="_blank" rel="noopener">Revised estimates for the number of human and bacteria cells in the body</a>. PLOS Biology 14:e1002533 (about 40 trillion bacteria in the body, about 100 billion per gram of colon contents)</li>
+        <li>Shkoporov AN, Hill C (2019) <a href="https://doi.org/10.1016/j.chom.2019.01.017" target="_blank" rel="noopener">Bacteriophages of the human gut: the "known unknown" of the microbiome</a>. Cell Host &amp; Microbe 25:195–209 (number of gut viruses, mostly phages)</li>
+        <li>Johansson MEV, Phillipson M, Petersson J, et al. (2008) <a href="https://doi.org/10.1073/pnas.0803124105" target="_blank" rel="noopener">The inner of the two Muc2 mucin-dependent mucus layers in colon is devoid of bacteria</a>. PNAS 105:15064–15069</li>
+        <li>Kongari R, Rajaure M, Cahill J, et al. (2018) <a href="https://doi.org/10.1186/s12859-018-2342-8" target="_blank" rel="noopener">Phage spanins: diversity, topological dynamics and gene convergence</a>. BMC Bioinformatics 19:326 (spanins that break the outer membrane)</li>
+        <li>Turner L, Ryu WS, Berg HC (2000) <a href="https://doi.org/10.1128/JB.182.10.2793-2801.2000" target="_blank" rel="noopener">Real-time imaging of fluorescent flagellar filaments</a>. Journal of Bacteriology 182:2793–2801 (E. coli flagella)</li>
+        <li>Matias VRF, Al-Amoudi A, Dubochet J, Beveridge TJ (2003) Cryo-transmission electron microscopy of frozen-hydrated sections of <i>Escherichia coli</i> and <i>Pseudomonas aeruginosa</i>. Journal of Bacteriology 185:6112–6118 (thickness of the outer membrane and cell wall)</li>
+      </ul>
+      <h3>What it uses</h3>
+      <p>Fonts: Google Fonts (Dela Gothic One, Zen Kaku Gothic New, IBM Plex Mono; SIL Open Font License). No libraries (Canvas 2D).</p>
+      </div>
         </article>
   </div>
 </div>
@@ -179,6 +278,7 @@
 <script src="js/t4draw.js"></script>
 <script src="js/story.js"></script>
 <script src="js/macro.js"></script>
+<script src="js/scene-text.js"></script>
 <script src="js/scene.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>

@@ -4,13 +4,6 @@
 const Scene = (() => {
   const V = View.V, g = V.g;
   const R = CELL.R, HL = CELL.L / 2 - CELL.R;   // 半径と、まっすぐな部分の半分
-  const LX = {
-    water: { t: '水', k: 'sure', b: 'ファージのまわりの水。水の分子が四方八方からぶつかるので、ファージはふらふらゆれる（ブラウン運動）。ファージは自分では泳げない。' },
-    cyto: { t: '細菌の中（細胞質）', k: 'sure', b: '細菌の体の中。リボソーム（たんぱく質の工場）や細菌の DNA がある。寄ると、1つずつの分子が見える。' },
-    lps: { t: 'LPS（外膜の表面の糖の鎖）', k: 'sure', b: '外膜の外側にびっしり並ぶ糖の鎖。短い脚 gp12 は、刺さるときに鎖の根もと側の糖にくいこむ。' },
-    peri: { t: 'ペリプラズム（外膜と内膜のあいだ）', k: 'sure', b: '2枚の膜のあいだのすきま。細胞壁（ペプチドグリカン）がある。あとから来たファージの DNA は、ここに捨てられる。' },
-    cell: { t: '大腸菌 K-12', k: 'sure', b: '長さ約2µm、太さ約1µm の棒の形の細菌。寄ると、外膜・細胞壁・内膜と、中の分子が見える。' },
-  };
   const NO_OMPC = () => Story.cond === 'norec';
   // 奥行き: 細菌は立体なので、手前（約3割）はくっきり・説明あり、奥は薄い背景（説明なし）。数は減らさない
   const FRONT = 0.3, BACK_A = 0.22;
@@ -87,15 +80,15 @@ const Scene = (() => {
   }
 
   function envInfo(x, y, m, pre) {
-    if (!inCell(x, y, -1)) return LX.water;
-    if (swell > 0 || Story.at(UI.state.u).id === 'spread') return DEBRIS;
+    if (!inCell(x, y, -1)) return SX.LX.water;
+    if (swell > 0 || Story.at(UI.state.u).id === 'spread') return SX.DEBRIS;
     const d = depth(x, y);
-    if (d < 1.5 && y > R - 10 && Math.abs(x) < HL) return LX.lps;
+    if (d < 1.5 && y > R - 10 && Math.abs(x) < HL) return SX.LX.lps;
     if (d < 7) { const v = ((x - 6) % 32 + 32) % 32; return y > R - 10 && Math.abs(x) < HL && !NO_OMPC() && Math.min(v, 32 - v) < 6 ? ZINFO.ompc : ZINFO.om; }
-    if (d < 10 || (d >= 16 && d < 28)) return LX.peri;
+    if (d < 10 || (d >= 16 && d < 28)) return SX.LX.peri;
     if (d < 16) return ZINFO.pg;
     if (d < 35) return !pre && m > 12 ? ZINFO.holin : ZINFO.im;
-    return V.s < 0.35 ? LX.cell : LX.cyto;
+    return V.s < 0.35 ? SX.LX.cell : SX.LX.cyto;
   }
 
   // ---- 動かない背景の絵をとっておく（キャッシュ）----
@@ -153,7 +146,7 @@ const Scene = (() => {
         }
         if (V.s > 2.5 && !View.real) {
           const lab = (t, y) => V.text(t, Math.max(x0 + 2, vb.x0 + 4 / V.s), y, { size: 11, align: 'left', dx: 4, bg: 'rgba(11,26,34,.7)' });
-          lab('外膜', R - 3.5); lab('細胞壁', R - 13); lab('内膜', R - 31.5);
+          lab(L('外膜', "Outer membrane"), R - 3.5); lab(L('細胞壁', "Cell wall"), R - 13); lab(L('内膜', "Inner membrane"), R - 31.5);
         }
       }
     }
@@ -189,7 +182,7 @@ const Scene = (() => {
         }
         g.globalAlpha = baseA;
       }
-      V.hit({ c: [r.x, r.y, 11], info: !pre && m > TL.hostStop ? RIBO_T4 : INFO.ribo });
+      V.hit({ c: [r.x, r.y, 11], info: !pre && m > TL.hostStop ? SX.RIBO_T4 : INFO.ribo });
     }
     // 細菌の DNA
     const hl = Story.hostLeft(pre ? 0 : m), keep = Math.floor(M.nuc.length * hl);
@@ -215,15 +208,15 @@ const Scene = (() => {
     // T4 の DNA（設計図）
     const nL = pre ? (st.id === 'inject' ? 1 : 0) : c.loops;
     for (let j = 0; j < nL; j++) {
-      const L = M.loops[j]; let n = L.pts.length;
+      const LO = M.loops[j]; let n = LO.pts.length;
       if (st.id === 'inject') n = Math.max(2, Math.floor(n * Story.pierce(Story.landing(st).tA).dna));
       if (j > 0 && !pre) n = Math.max(2, Math.floor(n * Math.min(1, (c.pool - j) * 1.5)));
-      if (gt) { for (let i = 0; i < n - 6; i += 9) V.line(L.pts.slice(i, i + 5), 'rgba(255,159,107,.7)', Math.max(1.4, 4 * s)); V.hit({ seg: L.pts, w: 10, info: ZINFO.cut || INFO.cut }); continue; }
+      if (gt) { for (let i = 0; i < n - 6; i += 9) V.line(LO.pts.slice(i, i + 5), 'rgba(255,159,107,.7)', Math.max(1.4, 4 * s)); V.hit({ seg: LO.pts, w: 10, info: ZINFO.cut || INFO.cut }); continue; }
       const back = j > 0 && j % 3 !== 0;
-      if (back) { g.globalAlpha = baseA * BACK_A; V.line(L.pts.slice(0, n), '#ff9f6b', Math.max(1, (View.real ? 2 : 3) * s)); g.globalAlpha = baseA; continue; }
-      if (s < 1.5 || View.real) V.line(L.pts.slice(0, n), '#ff9f6b', Math.max(1, (View.real ? 2 : 4) * s));
-      else for (let i = 1; i < n; i++) { const a = L.pts[i - 1], b = L.pts[i]; if (!inView(a[0], a[1], 20)) continue; V.helix(a[0], a[1], b[0], b[1], { c1: '#ffb07a', c2: '#ff9f6b', phase: i * 2 }); if (s > 6 && i % 2 === 0) V.hex((a[0] + b[0]) / 2 + 1.6, (a[1] + b[1]) / 2 + 1.6, 0.7, '#bff5ef'); }
-      V.hit({ seg: L.pts.slice(0, n), w: 6, info: INFO.t4Dna });
+      if (back) { g.globalAlpha = baseA * BACK_A; V.line(LO.pts.slice(0, n), '#ff9f6b', Math.max(1, (View.real ? 2 : 3) * s)); g.globalAlpha = baseA; continue; }
+      if (s < 1.5 || View.real) V.line(LO.pts.slice(0, n), '#ff9f6b', Math.max(1, (View.real ? 2 : 4) * s));
+      else for (let i = 1; i < n; i++) { const a = LO.pts[i - 1], b = LO.pts[i]; if (!inView(a[0], a[1], 20)) continue; V.helix(a[0], a[1], b[0], b[1], { c1: '#ffb07a', c2: '#ff9f6b', phase: i * 2 }); if (s > 6 && i % 2 === 0) V.hex((a[0] + b[0]) / 2 + 1.6, (a[1] + b[1]) / 2 + 1.6, 0.7, '#bff5ef'); }
+      V.hit({ seg: LO.pts.slice(0, n), w: 6, info: INFO.t4Dna });
     }
     if (pre || gt || burst > 0) return;
     // 写し（mRNA）: T4 の DNA から近くの工場へ
@@ -231,7 +224,7 @@ const Scene = (() => {
       g.strokeStyle = m < TL.repl ? 'rgba(255,174,90,.5)' : m < TL.late ? 'rgba(255,216,107,.5)' : 'rgba(255,122,176,.5)'; g.lineWidth = Math.max(1, 0.5 * s);
       const cnt = Math.min(60, 10 + nL * 3);
       for (let i = 0; i < cnt; i++) {
-        const L = M.loops[i % nL], p = L.pts[(i * 13) % L.pts.length], r = M.ribo[(i * 37) % M.ribo.length];
+        const LO = M.loops[i % nL], p = LO.pts[(i * 13) % LO.pts.length], r = M.ribo[(i * 37) % M.ribo.length];
         if (Math.hypot(p[0] - r.x, p[1] - r.y) > 360) continue;
         const mx = (p[0] + r.x) / 2 + Math.sin(i + m * 5) * 20, my = (p[1] + r.y) / 2 + Math.cos(i + m * 5) * 20;
         g.beginPath(); g.moveTo(V.X(p[0]), V.Y(p[1])); g.quadraticCurveTo(V.X(mx), V.Y(my), V.X(r.x), V.Y(r.y)); g.stroke();
@@ -239,7 +232,7 @@ const Scene = (() => {
     }
     // RNA ポリメラーゼ（DNA を読む機械、約15nm）と、付けかえるたんぱく
     for (let j = 0; j < nL; j++) for (let q = 0; q < 2; q++) {
-      const L = M.loops[j], idx = Math.floor((((j * 0.53 + q * 0.5 + m * 0.07) % 1) + 1) % 1 * (L.pts.length - 1)), p = L.pts[idx];
+      const LO = M.loops[j], idx = Math.floor((((j * 0.53 + q * 0.5 + m * 0.07) % 1) + 1) % 1 * (LO.pts.length - 1)), p = LO.pts[idx];
       if (!inView(p[0], p[1])) continue;
       // 奥の DNA の輪に付いているものは、薄い点だけ（説明なし）
       if (j > 0 && j % 3 !== 0) { g.globalAlpha = baseA * BACK_A; g.fillStyle = '#9fb4c6'; g.fillRect(V.X(p[0]) - 1.5, V.Y(p[1]) - 1.5, 3, 3); g.globalAlpha = baseA; continue; }
@@ -250,18 +243,18 @@ const Scene = (() => {
         V.ell(p[0], p[1] + 4, 7.5, 6, 0, '#8aa4b8', 'rgba(255,255,255,.4)');
         if (per === 'late') { V.circle(p[0] - 5, p[1] + 7, 2.6, ZC.gp55); V.circle(p[0] + 5, p[1] + 8, 1.6, '#ffb3d6'); V.ell(p[0] - 9, p[1], 1.4, 3.4, 0, null, ZC.gp45, Math.max(1.5, 0.8 * s)); }
         else { V.ell(p[0] - 5, p[1] + 7, 3.2, 2.2, 0, ZC.sigma); V.circle(p[0] + 4, p[1] + 9, 1.3, ZC.alt); if (per === 'middle') { V.circle(p[0] - 8, p[1] + 9, 1.6, ZC.asia); V.ell(p[0] - 9, p[1] - 1, 2.2, 1.6, 0, ZC.mota); } }
-        if (s > 5) V.text(per === 'late' ? 'RNAP＋gp55' : per === 'middle' ? 'RNAP＋AsiA・MotA' : 'RNAP（σ70・Alt）', p[0], p[1] + 15, { size: 10, color: '#cfe0ec' });
+        if (s > 5) V.text(per === 'late' ? L('RNAP＋gp55', "RNAP + gp55") : per === 'middle' ? L('RNAP＋AsiA・MotA', "RNAP + AsiA, MotA") : L('RNAP（σ70・Alt）', "RNAP (σ70, Alt)"), p[0], p[1] + 15, { size: 10, color: '#cfe0ec' });
       }
       V.hit({ c: [p[0], p[1] + 4, 8], info: per === 'late' ? ZINFO.gp55 : per === 'middle' ? ZINFO.asia : ZINFO.rnap });
     }
     // DNA をコピーする機械（分かれ目）
     if (m >= TL.repl) for (let j = 0; j < nL; j++) {
-      const L = M.loops[j], idx = Story.forkIdx(j, m), p = L.pts[idx];
+      const LO = M.loops[j], idx = Story.forkIdx(j, m), p = LO.pts[idx];
       if (!inView(p[0], p[1])) continue;
       if (j > 0 && j % 3 !== 0) { g.globalAlpha = baseA * BACK_A; g.fillStyle = '#ffcf4a'; g.fillRect(V.X(p[0]) - 1.5, V.Y(p[1]) - 1.5, 3, 3); g.globalAlpha = baseA; continue; }
       if (s < 1.1) { V.circle(p[0], p[1], Math.max(8, 1.5 / s), '#ffcf4a'); }
       else {
-        for (let k = 1; k <= 5; k++) { const q = L.pts[Math.min(L.pts.length - 1, idx + k)]; V.circle(q[0] + 2.5, q[1] + 2.5, 1.2, ZC.gp32); }
+        for (let k = 1; k <= 5; k++) { const q = LO.pts[Math.min(LO.pts.length - 1, idx + k)]; V.circle(q[0] + 2.5, q[1] + 2.5, 1.2, ZC.gp32); }
         V.ell(p[0], p[1], 3.2, 4.2, 0, null, ZC.gp41, Math.max(2, 1 * s));
         V.circle(p[0] - 6, p[1] + 4, 4.4, ZC.gp43, 'rgba(255,255,255,.4)'); V.circle(p[0] - 6, p[1] - 5, 4.4, ZC.gp43, 'rgba(255,255,255,.4)');
         V.ell(p[0] - 10.5, p[1] + 4, 1.2, 3, 0, null, ZC.gp45, Math.max(1.5, 0.8 * s));
@@ -289,7 +282,6 @@ const Scene = (() => {
       V.hit({ c: [x, y, 4], info: PI[q.id] });
     }
   }
-  const RIBO_T4 = { t: 'リボソーム（乗っとられた工場）', k: 'sure', b: '直径約20nm。細菌の工場はそのまま、T4 の設計図の写し（mRNA、ピンクの線）を読んで、T4 のたんぱく質（色のついた鎖）を作る。早い時期は DNA をこわす・コピーする酵素、9分ごろからは頭・しっぽ・脚の部品。' };
 
   // ---- 頭・しっぽ（拡大すると細かく）----
   // 頭としっぽの組み立て（部品が1つずつ付いていく。ふわっと浮かび上がらせない）
@@ -351,7 +343,7 @@ const Scene = (() => {
             g.save(); g.translate(V.X(tp.x), V.Y(tp.y)); g.rotate(-tp.ang); g.scale(s, s);
             g.beginPath(); g.rect(-60, 40, 120, -40 - Math.max(8, k * 125)); g.clip(); drawPhageBody(g, { tailOnly: true }); g.restore();
           } else { const Z = V.local(tp.x, tp.y, tp.ang); tailStage(Z, k); g.restore(); }
-          if (!back) V.hit({ c: [tp.x - 60 * Math.sin(tp.ang), tp.y + 60 * Math.cos(tp.ang), 60], info: SHEATH_ASM });
+          if (!back) V.hit({ c: [tp.x - 60 * Math.sin(tp.ang), tp.y + 60 * Math.cos(tp.ang), 60], info: SX.SHEATH_ASM });
         }
       }
       // 頭へ吸いこまれる DNA
@@ -421,7 +413,6 @@ const Scene = (() => {
       if (joined) V.hit({ c: [h.x - 50 * Math.sin(h.ang), h.y + 50 * Math.cos(h.ang), 40], info: ZINFO.gp18 });
     }
   }
-  const SHEATH_ASM = { t: 'しっぽ（頭とは別に組み立て中）', k: 'sure', b: '基盤（くさび6つ＋中心）→ 管 gp19 → さや gp18（6個×23段）→ ふた gp3・gp15 の順にできる。DNA のつまった頭に寄っていって付く（Leiman ら 2010）。' };
   function nearestLoop(P) { const M = Story.M, c = Story.counts(0); let best = M.loops[0], bd = 1e18; for (let j = 0; j < M.loops.length; j++) { const L = M.loops[j]; const d = (L.cx - P.x) ** 2 + (L.cy - P.y) ** 2; if (d < bd) { bd = d; best = L; } } return best.pts[35]; }
 
   // ---- ホリン（内膜）----
@@ -517,7 +508,7 @@ const Scene = (() => {
     for (const p of legs) if (p.depth >= 0.5) T4D.ltf(Z, p.hip, p.knee, p.tip, p.depth);
     // 解説
     for (const p of legs) Z.hit({ seg: [p.hip, p.knee, p.tip], w: 3, info: ZINFO.ltf });
-    Z.hit({ c: [0, Hb + Ls + T4.neck + 60, 55], info: P.dna >= 1 ? GHOST : ZINFO.dnaIn });
+    Z.hit({ c: [0, Hb + Ls + T4.neck + 60, 55], info: P.dna >= 1 ? SX.GHOST : ZINFO.dnaIn });
     Z.hit({ box: [-14, Hb, 14, Hb + Ls], info: ZINFO.gp18 });
     Z.hit({ box: [-w / 2, pb, w / 2, Hb], info: ZINFO.plate });
     if (P.gp12 > 0) Z.hit({ box: [-w / 2, 2, w / 2, pb], info: ZINFO.gp12 });
@@ -525,7 +516,6 @@ const Scene = (() => {
     if (P.dna > 0 && !L.after) Z.hit({ box: [-60, -80, 60, -36], info: ZINFO.alt });
     if (turned) { g.restore(); g.globalAlpha = 1; }
   }
-  const GHOST = { t: 'ぬけがら（ゴースト）', k: 'sure', b: 'DNA を入れおわった、空っぽの頭としっぽ。もう感染できない。細菌の表面にささったまま残り、細菌が破れると、ささっていた膜のかけらといっしょに流される（ごみとして残る）。' };
   function legPts(phi, bound, k, Hb, star, w, touch) {
     const c = Math.cos(phi), sn = Math.sin(phi), hip = { x: (w / 2) * c, y: Hb - 9 * (1 - star) - 3, z: (w / 2) * sn };
     const freeTip = { x: 110 * c, y: Hb - 49, z: 110 * sn }, gnd = { x: 110 * c, y: 3, z: 110 * sn };
@@ -544,15 +534,15 @@ const Scene = (() => {
     const M = Story.M, sm = V.W < 520, tags = [];
     if (Story.cond === 'gt' && m >= 0.4) return;
     const L0 = M.loops[0];
-    tags.push({ text: `設計図: T4 の DNA（約${Math.round(c.genomes)}本ぶん）`, c: '#ff9f6b', ax: L0.pts[20][0], ay: L0.pts[20][1], slot: 'tl', pri: 1 });
-    if (m > TL.hostStop) { const r = M.ribo[7]; tags.push({ text: '工場: 細菌のリボソーム（T4 の部品を作る）', c: '#dcc8aa', ax: r.x, ay: r.y, slot: 'tr', pri: 2 }); }
-    if (m > TL.hostDnaFrom && Story.hostLeft(m) > 0.05) tags.push({ text: '材料: 細菌の DNA をこわして使う', c: '#6ea9ff', ax: 0, ay: -60, slot: 'bl', pri: 3 });
+    tags.push({ text: L(`設計図: T4 の DNA（約${Math.round(c.genomes)}本ぶん）`, `Blueprint: T4 DNA (about ${Math.round(c.genomes)} copies)`), c: '#ff9f6b', ax: L0.pts[20][0], ay: L0.pts[20][1], slot: 'tl', pri: 1 });
+    if (m > TL.hostStop) { const r = M.ribo[7]; tags.push({ text: L('工場: 細菌のリボソーム（T4 の部品を作る）', "Factory: bacterial ribosomes (making T4 parts)"), c: '#dcc8aa', ax: r.x, ay: r.y, slot: 'tr', pri: 2 }); }
+    if (m > TL.hostDnaFrom && Story.hostLeft(m) > 0.05) tags.push({ text: L('材料: 細菌の DNA をこわして使う', "Material: bacterial DNA is broken down and reused"), c: '#6ea9ff', ax: 0, ay: -60, slot: 'bl', pri: 3 });
     const bld = M.heads.filter(h => m >= h.born && m < h.fs);
-    if (bld.length) { const q = Story.headCenter(bld[bld.length - 1], m); tags.push({ text: '頭の殻を組み立て中（緑の点が部品）', c: '#5fe0c4', ax: q.x, ay: q.y, slot: 'bl', pri: 4 }); }
+    if (bld.length) { const q = Story.headCenter(bld[bld.length - 1], m); tags.push({ text: L('頭の殻を組み立て中（緑の点が部品）', "Building head shells (green dots are parts)"), c: '#5fe0c4', ax: q.x, ay: q.y, slot: 'bl', pri: 4 }); }
     const tl = M.heads.filter(h => m >= h.fs && m < h.fe);
-    if (tl.length) { const h = tl[0], p = Story.tailPos(h, m); tags.push({ text: 'しっぽ（別に作って、頭に付く。紫の点が部品）', c: '#c39bff', ax: p.x, ay: p.y, slot: 'br', pri: 5 }); const P = Story.headPortal(h); tags.push({ text: '頭に DNA をつめている', c: '#ff9f6b', ax: P.x, ay: P.y, slot: 'tr', pri: 6 }); }
+    if (tl.length) { const h = tl[0], p = Story.tailPos(h, m); tags.push({ text: L('しっぽ（別に作って、頭に付く。紫の点が部品）', "Tail (made separately, then attached to a head; purple dots are parts)"), c: '#c39bff', ax: p.x, ay: p.y, slot: 'br', pri: 5 }); const P = Story.headPortal(h); tags.push({ text: L('頭に DNA をつめている', "Packing DNA into a head"), c: '#ff9f6b', ax: P.x, ay: P.y, slot: 'tr', pri: 6 }); }
     const dn = M.heads.find(h => m >= h.fe + 0.6);
-    if (dn) tags.push({ text: `完成（${c.done}個）`, c: '#e8f0f4', ax: dn.x, ay: dn.y, slot: 'br', pri: 7 });
+    if (dn) tags.push({ text: L(`完成（${c.done}個）`, `Finished (${c.done})`), c: '#e8f0f4', ax: dn.x, ay: dn.y, slot: 'br', pri: 7 });
     const bySlot = {}; for (const t of tags) if (!bySlot[t.slot] || bySlot[t.slot].pri < t.pri) bySlot[t.slot] = t;
     let list = Object.values(bySlot).sort((a, b) => b.pri - a.pri); if (sm) list = list.slice(0, 2);
     const fs = sm ? 11 : 12.5; g.font = `700 ${fs}px "Zen Kaku Gothic New", sans-serif`; g.textBaseline = 'middle';
@@ -569,7 +559,6 @@ const Scene = (() => {
   // ---- 破れたあとの膜のかけら（模式）。外膜・細胞壁・内膜の3本の線で描く ----
   const TEAR_U = (300 + HL) / (4 * HL + 2 * Math.PI * R);   // 破れる場所（上面の x=300。場所は模式）
   const CUTS = [0, 0.1, 0.24, 0.37, 0.5, 0.61, 0.76, 0.89];
-  const DEBRIS = { t: 'ちぎれた膜のかけら', k: 'sure', b: '細胞壁（ペプチドグリカン）が切られると、細菌は棒の形を保てずにふくらみ、内膜・外膜も破れて中身がいっせいに出る。細菌は死に、膜はちぎれたかけらになる。形のくずれ方・かけらの数は模式。' };
   function frag(f, kk) {
     const gap = 0.006 + 0.03 * Math.min(1, kk * 2.5), ua = TEAR_U + CUTS[f] + gap, ub = TEAR_U + (CUTS[f + 1] ?? 1) - gap;
     const mid = swollen((ua + ub) / 2, 0, 1), dir = Math.atan2(mid.ny, mid.nx), push = 90 * kk * (0.7 + 0.6 * hash(f, 11)), rot = (hash(f, 12) - 0.5) * 0.9 * kk, curl = 1 - 0.3 * kk;
@@ -595,20 +584,19 @@ const Scene = (() => {
       for (const [mm, col, w] of [[31.5, '#6f8ea8', 7], [13, '#8a9a58', 6], [3.5, '#86a6c2', 7]]) {
         const pts = []; for (let i = 0; i <= 24; i++) { const u = ua + (ub - ua) * i / 24, p = swollen(u, mm, 1); const q = tf(p); q[0] += Math.sin(u * 140 + f) * 10 * kk; q[1] += Math.cos(u * 120 + f) * 10 * kk; pts.push(q); }
         V.line(pts, col, Math.max(2, w * V.s));
-        if (mm === 3.5) V.hit({ seg: pts, w: 20, info: DEBRIS });
+        if (mm === 3.5) V.hit({ seg: pts, w: 20, info: SX.DEBRIS });
       }
       g.globalAlpha = 1;
     }
   }
   function drawBurstTag(k, torn) {
-    const tp = perim(TEAR_U, 0), text = torn ? '1か所が破れて、中身がいっせいに出る' : '細胞壁が切られ、棒の形を保てずにふくらむ';
+    const tp = perim(TEAR_U, 0), text = torn ? L('1か所が破れて、中身がいっせいに出る', "It breaks open in one spot and the contents rush out") : L('細胞壁が切られ、棒の形を保てずにふくらむ', "The cell wall is cut and it swells, unable to keep its rod shape");
     V.text(text, tp.x, tp.y + 260, { size: 13, bold: true, color: '#ffd0e0', bg: 'rgba(10,22,27,.85)' });
   }
 
   // ---- 生き物らしい見た目: べん毛・線毛（外）、中のこみあい・立体感（中）----
   // 大腸菌 K-12 は体のあちこちからべん毛（太さ約20nm、長さ5〜10µm）が出る。線毛（太さ約7nm）は短い毛。本数・向きは模式
   const FLAG = [0.16, 0.29, 0.47, 0.6, 0.71, 0.86];
-  const FLAG_INFO = { t: 'べん毛', k: 'sure', b: '細菌が泳ぐためのらせんの毛（太さ約20nm、長さ5〜10µm）。根もとのモーターで回る。T4 はべん毛ではなく、外膜の OmpC にくっつく。本数・形は模式。' };
   function drawAppendages(m, alpha) {
     if (alpha <= 0 || V.s > 6) return;
     // 寄って見ているときは薄く（太さは本当の約20nm。ファージのしっぽと同じくらい）
@@ -619,7 +607,7 @@ const Scene = (() => {
       for (let d = 0; d <= len; d += Math.max(40, 3 / V.s)) { const wv = Math.sin(d / 2300 * Math.PI * 2 + ph) * 230 * Math.min(1, d / 600); pts.push([b.x + nx * d + tx * wv, b.y + ny * d + ty * wv]); }
       g.strokeStyle = 'rgba(200,214,224,.55)'; g.lineWidth = Math.max(1, 20 * V.s); g.lineCap = 'round'; g.lineJoin = 'round';
       g.beginPath(); pts.forEach(([x, y], j) => j ? g.lineTo(V.X(x), V.Y(y)) : g.moveTo(V.X(x), V.Y(y))); g.stroke();
-      V.hit({ seg: pts, w: 25, info: FLAG_INFO });
+      V.hit({ seg: pts, w: 25, info: SX.FLAG_INFO });
     }
     if (V.s > 0.25) {
       g.strokeStyle = V.s > 0.6 ? 'rgba(190,206,214,.13)' : 'rgba(190,206,214,.22)'; g.lineWidth = Math.max(0.6, 7 * V.s); g.beginPath();
@@ -656,9 +644,6 @@ const Scene = (() => {
   }
 
   // ---- まわりの細菌（たくさんの細菌・次々にうつる）----
-  const OTHER = { t: '別の大腸菌', k: 'sure', b: '同じ水の中のなかま。T4 が近くで増えると、ここにもファージがとりつく。位置・動き方は模式。' };
-  const OTHER_INF = { t: 'ファージにとりつかれた大腸菌', k: 'sure', b: '中で T4 が増えている（まん中の細菌と同じことが起きている）。約20〜25分で破れる。' };
-  const CLOUD = { t: '広がるファージ', k: 'est', b: '破れた細菌から出たファージ（1つの細菌から100個以上）。水の中をただよって、近くの細菌にとりつく。点の数は実際より少なく、広がり方は模式。' };
   function drawColony(tau, rm) {
     const P = Story.P; if (!P) return;
     const vb = V.viewBox();
@@ -691,7 +676,7 @@ const Scene = (() => {
         for (let j = 0; j < n; j++) Z.circle((hash(i * 97 + j, 1) - 0.5) * (L - 300), (hash(i * 97 + j, 2) - 0.5) * 600, 40, '#5fe0c4');
       }
       g.restore();
-      V.hit({ c: [q.x, q.y, 600], info: inf ? OTHER_INF : OTHER });
+      V.hit({ c: [q.x, q.y, 600], info: inf ? SX.OTHER_INF : SX.OTHER });
     }
   }
   // 広がるファージ（破れた細菌ごとに点の雲）
@@ -707,7 +692,7 @@ const Scene = (() => {
         const x = b.x + Math.cos(b.a) * R2 * f + wob * Math.sin(rm * 0.7 + b.hb) * 120, y = b.y + Math.sin(b.a) * R2 * f + wob * Math.cos(rm * 0.6 + b.hb * 1.3) * 120;
         if (inV(x, y)) phageMark(x, y, b.ang + rm * 0.3);
       }
-      V.hit({ c: [0, 0, 1800 + R2 * 0.8], info: CLOUD });
+      V.hit({ c: [0, 0, 1800 + R2 * 0.8], info: SX.CLOUD });
     }
     for (let i = 0; i < P.cells.length; i++) { const c = P.cells[i]; if (rm >= c.tBurst) { const q = Story.cellPose(c, 0, c.tInf); src.push({ x: q.x, y: q.y, t: c.tBurst, i, r0: 300 }); } }
     for (const sc of src) {
@@ -717,17 +702,16 @@ const Scene = (() => {
         const x = sc.x + Math.cos(a) * r + Math.sin(rm * 0.7 + j) * 120, y = sc.y + Math.sin(a) * r + Math.cos(rm * 0.6 + j * 1.3) * 120;
         if (inV(x, y)) phageMark(x, y, a + rm * 0.3);
       }
-      V.hit({ c: [sc.x, sc.y, Math.max(600, sc.r0 + R * 0.8)], info: CLOUD });
+      V.hit({ c: [sc.x, sc.y, Math.max(600, sc.r0 + R * 0.8)], info: SX.CLOUD });
     }
     // 数（目安）
     const cc = Story.colonyCounts(rm), fs = V.W < 520 ? 12 : 14;
-    const text = `ファージ 約${cc.phage.toLocaleString()}個 ・ 破れた細菌 ${cc.burst} ／ ${cc.cells}（目安）`;
+    const text = L(`ファージ 約${cc.phage.toLocaleString()}個 ・ 破れた細菌 ${cc.burst} ／ ${cc.cells}（目安）`, `About ${cc.phage.toLocaleString()} phages · burst bacteria ${cc.burst} / ${cc.cells} (rough guide)`);
     g.font = `700 ${fs}px "Zen Kaku Gothic New", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
     const w = g.measureText(text).width; g.fillStyle = 'rgba(10,22,27,.88)'; g.fillRect(V.W / 2 - w / 2 - 8, 70, w + 16, fs * 1.8);
     g.fillStyle = '#ffe3a3'; g.fillText(text, V.W / 2, 70 + fs * 0.9);
   }
   // ほかのファージ（腸の中にはファージがたくさんいる。ここに描く数は実際よりずっと少ない）
-  const FREE = { t: 'ほかのファージ', k: 'est', b: '腸の中には、ファージがたくさんいる（中身1gに約1億〜100億個のウイルスの多くがファージ）。いろいろな種類があり、それぞれ決まった細菌にしかとりつかない。ここに描いた数は実際よりずっと少ない。' };
   function drawFreePhages(tau) {
     const w = V.W / V.s; if (w > 400000 || w < 3000) return;
     g.fillStyle = 'rgba(255,227,163,.8)';
@@ -736,7 +720,7 @@ const Scene = (() => {
       const x = (hash(i, 31) - 0.5) * 60000 + Math.sin(tau * 0.5 + i) * 900, y = (hash(i, 32) - 0.5) * 34000 + Math.cos(tau * 0.43 + i * 2) * 900;
       if (Math.abs(x) < 2600 && Math.abs(y) < 1800) continue;
       g.fillRect(V.X(x) - sz / 2, V.Y(y) - sz / 2, sz, sz);
-      V.hit({ c: [x, y, 300], info: FREE });
+      V.hit({ c: [x, y, 300], info: SX.FREE });
     }
   }
   // はじめ: まん中の1つに印
@@ -744,10 +728,10 @@ const Scene = (() => {
     if (V.s > 0.2 || V.W / V.s > 200000) return;
     const cx = V.X(0), cy = V.Y(0), rr = Math.max(26, 1250 * V.s);
     g.strokeStyle = '#ffe066'; g.lineWidth = 2; g.setLineDash([6, 5]); g.beginPath(); g.ellipse(cx, cy, rr, rr * 0.62, 0, 0, 7); g.stroke(); g.setLineDash([]);
-    V.text('この1つに注目', 0, 0, { dy: -rr * 0.62 - 16, size: 13, bold: true, color: '#ffe066', bg: 'rgba(10,22,27,.85)' });
+    V.text(L('この1つに注目', "Watch this one"), 0, 0, { dy: -rr * 0.62 - 16, size: 13, bold: true, color: '#ffe066', bg: 'rgba(10,22,27,.85)' });
     const px = V.X(SITE.x), py = V.Y(SITE.y + 600);
     g.fillStyle = '#ffe3a3'; g.beginPath(); g.arc(px, py, 3, 0, 7); g.fill();
-    V.text('T4 ファージ', SITE.x, SITE.y + 600, { dx: -10, align: 'right', size: 12, color: '#ffe3a3', bg: 'rgba(10,22,27,.8)' });
+    V.text(L('T4 ファージ', "T4 phage"), SITE.x, SITE.y + 600, { dx: -10, align: 'right', size: 12, color: '#ffe3a3', bg: 'rgba(10,22,27,.8)' });
   }
 
   // ---- ものさし（いまの拡大率に合わせて、ちょうどよい長さ）----

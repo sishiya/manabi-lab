@@ -12,8 +12,15 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
 #shell{display:flex;flex-direction:column;height:100%}
 #topbar{flex:none;display:flex;align-items:center;gap:18px;padding:8px 14px;border-bottom:1px solid var(--line);background:#0a161b}
 .brand b{display:block;font-family:var(--f-display);font-weight:400;font-size:19px;letter-spacing:.04em}
-.brand span{font-size:11.5px;color:var(--dim)}
-#tabs{display:flex;gap:6px;margin-left:auto}
+.brand > span{display:block;font-size:11.5px;color:var(--dim)}
+/* 言語（I18N.md）: 選んでいないほうの言語を隠す */
+:root[lang=en] [lang=ja],:root:not([lang=en]) [lang=en]{display:none!important}
+/* 見出し・タブの中の言語の span はブロックに（互換モードと標準モードで行の高さが変わらないように） */
+.brand b>span,#tabs b>span,#tabs small>span{display:block}
+.langsw{flex:none;display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;margin-left:auto;align-self:center}
+.langsw button{border:0;background:none;padding:3px 8px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--dim);cursor:pointer}
+.langsw button[aria-pressed="true"]{background:var(--btn);color:var(--ink)}
+#tabs{display:flex;gap:6px;margin-left:10px}
 #tabs button{background:var(--btn);border:1px solid var(--line);border-radius:9px;padding:6px 14px;text-align:left;cursor:pointer;line-height:1.35;min-width:0}
 #tabs button b{display:block;font-size:14px;font-weight:700}
 #tabs button small{font-size:11px;color:var(--dim)}
@@ -72,7 +79,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-of
 .segs{display:flex;gap:2px;margin-bottom:4px}
 .seg{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11.5px;text-align:center;padding:2px 2px;border-radius:5px;background:#16292f;color:var(--muted);cursor:pointer}
 .seg-approach{background:#1d3340}.seg-bind{background:#2a3a2a}.seg-pierce{background:#3a2f45}.seg-inject{background:#45352a}.seg-inside{background:#173431}.seg-burst{background:#452a37}
-#time{width:100%;accent-color:var(--acc);height:22px;margin:0}
+#time{display:block;width:100%;accent-color:var(--acc);height:22px;margin:0}
 .trow2{display:flex;align-items:center;gap:10px;margin-top:4px}
 .tlabel{font-size:13px;color:var(--ink)}
 .spacer{flex:1}
@@ -80,7 +87,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-of
 .faq details:first-child{border-top:0}
 .faq summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--ink)}
 .faq p{margin:6px 0 4px;font-size:12.5px;line-height:1.75;color:var(--muted)}
-.faq button{background:var(--btn);border:1px solid var(--line);border-radius:6px;padding:3px 9px;font-size:12px;cursor:pointer}
+.faq p .kind{display:inline}
+/* 最後の行に印だけが残っても、互換モードと標準モードで行の高さが同じになるように（見えない空白を足す） */
+.faq p::after{content:"\00a0"}
+.faq button{display:block;margin-top:2px;background:var(--btn);border:1px solid var(--line);border-radius:6px;padding:3px 9px;font-size:12px;cursor:pointer}
 .speeds{display:inline-flex;gap:3px;align-items:center;flex:none}
 .spLab{font-size:11.5px;color:var(--dim);margin-right:2px}
 .speeds button{padding:3px 8px!important;min-width:34px}
@@ -128,7 +138,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-of
   .panel{width:auto;border-left:0;border-top:1px solid var(--line);overflow:visible}
 }
 @media (max-width:600px){
-  .brand span{display:none}
+  .brand > span{display:none}
   .brand b{font-size:16px}
   .now{max-width:calc(100% - 70px);font-size:11.5px;padding:6px 9px}
   .now b{font-size:13px}

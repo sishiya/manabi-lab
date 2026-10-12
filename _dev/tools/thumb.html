@@ -25,7 +25,7 @@ const SETUP = {
   'vocal-folds': async w => { await wait(1500); },
   // 細菌にとりつくウイルス（画面ができたら、いちばん映える場面にする）
   // 着陸して DNA を入れている途中（さやが縮み、DNA が細菌の中へ）
-  'phage': async w => { await wait(900); const P = w.__ph, S = P.Story; P.show(S.u('pierce', 0.62), -380, 470, 300); await wait(300); },
+  'phage': async w => { await wait(1000); const P = w.__ph, S = P.Story; P.UI.state.playing = false; P.UI.go(S.u('pierce', 0.62)); P.simRun(6); await wait(400); },
   'body-dive': async w => { click(w, '#go'); await wait(6000); },
   'urinary-dive': async w => { click(w, '#go'); await wait(6000); },
   'blood-dive': async w => { click(w, '#go'); await wait(6000); },

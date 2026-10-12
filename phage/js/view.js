@@ -8,7 +8,7 @@ const View = (() => {
   let W = 1, H = 1;
   const cam = { cx: 0, cy: 350, s: 0.3, tcx: 0, tcy: 350, ts: 0.3 };
   let sFit = 0.3, sMax = 40, dprCap = 1.5;
-  const KIND = { sure: '研究の値', est: '目安', art: '模式' };
+  const KIND = { sure: L('研究の値', "measured"), est: L('目安', "rough guide"), art: L('模式', "schematic") };
   let hot = [];          // 解説の出る場所（描くたびに作り直す）。あとに足したものが上
   let auto = true;       // おまかせカメラ
 
@@ -166,7 +166,7 @@ const View = (() => {
     g.save(); g.translate(x0, y0); g.beginPath(); g.rect(0, 0, n, n); g.clip();
     try { fn(); } finally { View.inLoupe = false; lp.hot = hot; hot = keepHot; g.restore(); cam.cx = keep.cx; cam.cy = keep.cy; cam.s = keep.s; W = keep.W; H = keep.H; }
     g.save(); g.strokeStyle = '#ffe066'; g.lineWidth = 2; g.strokeRect(x0, y0, n, n);
-    const t = 'ルーペ' + (lp.title ? ': ' + lp.title : '');
+    const t = L('ルーペ', "Loupe") + (lp.title ? ': ' + lp.title : '');
     g.font = '700 12px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'left'; g.textBaseline = 'top';
     const tw = Math.min(n - 4, g.measureText(t).width + 10); g.fillStyle = 'rgba(10,22,27,.85)'; g.fillRect(x0 + 2, y0 + 2, tw, 18); g.fillStyle = '#ffe066'; g.fillText(t, x0 + 7, y0 + 5, n - 14);
     g.restore();

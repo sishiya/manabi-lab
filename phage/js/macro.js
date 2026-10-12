@@ -10,16 +10,16 @@ const Macro = (() => {
   const LR = 2.2 * CM, WT = 2.3 * MM;   // 大腸の中の半径（太さ約4.4cm）と、かべの厚さ
   const YC = SURF + LR;          // 横行結腸のまん中の高さ（下のかべの内側の表面が、かべの断面の SURF とそろう）
   const INFO_M = {
-    body: { t: '人のからだ（身長 約1.7m）', k: 'est', b: 'おなかの中の大腸に、とても多くの細菌がすんでいる。人の体の細菌は全部で約40兆個で、ほとんどが大腸にいる（Sender ら 2016）。' },
-    colon: { t: '大腸', k: 'est', b: '長さ約1.5m の太い腸。食べ物の残りから水を吸う。中には細菌がぎっしり（中身1gに約1000億個）。大腸菌はそのうちの1%より少ない。' },
-    small: { t: '小腸', k: 'sure', b: '長さ約6m の細い腸。栄養を吸う。細菌は大腸よりずっと少ない。' },
-    wall: { t: '大腸のかべ', k: 'sure', b: '内側から、粘膜（上皮と陰窩）・粘膜下層・筋肉の層。筋肉が中身を少しずつ送る。' },
-    crypt: { t: '陰窩（いんか）', k: 'sure', b: '粘膜の小さなくぼみ（深さ約0.4mm）。底で新しい上皮の細胞が生まれ、粘液を出す細胞も多い。' },
-    epi: { t: '上皮の細胞', k: 'sure', b: '大腸の内側をおおう1層の細胞（幅 数µm）。ところどころの杯細胞（さかずき細胞）が粘液を出す。' },
-    inner: { t: '粘液の内側の層', k: 'sure', b: 'ぎっしりした粘液の層。細菌はほとんど入れず、上皮を守っている（Johansson ら 2008）。厚さは目安。' },
-    outer: { t: '粘液の外側の層', k: 'sure', b: 'ゆるい粘液の層。大腸菌など多くの細菌がすんでいて、ファージもたくさんいる。物語の細菌はここにいる。' },
-    lumen: { t: '大腸の中（中身）', k: 'est', b: '食べ物の残りと水、たくさんの細菌とウイルス。ウイルスは中身1gに約1億〜100億個で、ほとんどがファージ（Shkoporov と Hill 2019）。' },
-    bact: { t: '腸の細菌たち', k: 'est', b: 'いろいろな種類の細菌（ここでは形だけの模式）。大腸菌はその一部。' },
+    body: { t: L('人のからだ（身長 約1.7m）', "Human body (about 1.7 m tall)"), k: 'est', b: L('おなかの中の大腸に、とても多くの細菌がすんでいる。人の体の細菌は全部で約40兆個で、ほとんどが大腸にいる（Sender ら 2016）。', "A huge number of bacteria live in the colon in the belly. The human body holds about 40 trillion bacteria in all, mostly in the colon (Sender et al. 2016).") },
+    colon: { t: L('大腸', "Large intestine (colon)"), k: 'est', b: L('長さ約1.5m の太い腸。食べ物の残りから水を吸う。中には細菌がぎっしり（中身1gに約1000億個）。大腸菌はそのうちの1%より少ない。', "A wide gut about 1.5 m long. It takes water back from food leftovers. It is packed with bacteria (about 100 billion per gram of contents). E. coli is less than 1% of them.") },
+    small: { t: L('小腸', "Small intestine"), k: 'sure', b: L('長さ約6m の細い腸。栄養を吸う。細菌は大腸よりずっと少ない。', "A narrow gut about 6 m long. It absorbs nutrients. It has far fewer bacteria than the colon.") },
+    wall: { t: L('大腸のかべ', "Wall of the colon"), k: 'sure', b: L('内側から、粘膜（上皮と陰窩）・粘膜下層・筋肉の層。筋肉が中身を少しずつ送る。', "From the inside: the mucosa (lining and crypts), the submucosa, and the muscle layers. The muscles push the contents along little by little.") },
+    crypt: { t: L('陰窩（いんか）', "Crypt"), k: 'sure', b: L('粘膜の小さなくぼみ（深さ約0.4mm）。底で新しい上皮の細胞が生まれ、粘液を出す細胞も多い。', "A small pit in the mucosa (about 0.4 mm deep). New lining cells are born at the bottom, and many cells here make mucus.") },
+    epi: { t: L('上皮の細胞', "Lining cells (epithelium)"), k: 'sure', b: L('大腸の内側をおおう1層の細胞（幅 数µm）。ところどころの杯細胞（さかずき細胞）が粘液を出す。', "A single layer of cells (a few µm wide) covering the inside of the colon. Goblet cells here and there make mucus.") },
+    inner: { t: L('粘液の内側の層', "Inner mucus layer"), k: 'sure', b: L('ぎっしりした粘液の層。細菌はほとんど入れず、上皮を守っている（Johansson ら 2008）。厚さは目安。', "A dense layer of mucus. Bacteria can hardly get in, so it protects the lining (Johansson et al. 2008). The thickness is a rough guide.") },
+    outer: { t: L('粘液の外側の層', "Outer mucus layer"), k: 'sure', b: L('ゆるい粘液の層。大腸菌など多くの細菌がすんでいて、ファージもたくさんいる。物語の細菌はここにいる。', "A loose layer of mucus. Many bacteria, including E. coli, live here, and so do many phages. The bacterium in our story is here.") },
+    lumen: { t: L('大腸の中（中身）', "Inside the colon (contents)"), k: 'est', b: L('食べ物の残りと水、たくさんの細菌とウイルス。ウイルスは中身1gに約1億〜100億個で、ほとんどがファージ（Shkoporov と Hill 2019）。', "Food leftovers and water, with lots of bacteria and viruses. There are about 100 million to 10 billion viruses per gram of contents, and most are phages (Shkoporov and Hill 2019).") },
+    bact: { t: L('腸の細菌たち', "Gut bacteria"), k: 'est', b: L('いろいろな種類の細菌（ここでは形だけの模式）。大腸菌はその一部。', "Many kinds of bacteria (shapes only, schematic). E. coli is just one of them.") },
   };
   // 見えている横はば w（nm）に合わせて、その段の濃さ（対数で前後をなめらかに）
   const lg = Math.log10;
@@ -97,7 +97,7 @@ const Macro = (() => {
       const x = V.X(0), y = V.Y(0), r = 14;
       g.save(); g.globalAlpha = a; g.strokeStyle = '#ffe066'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, r, 0, 7); g.stroke();
       g.fillStyle = '#ffe066'; g.font = '700 13px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'left'; g.textBaseline = 'middle';
-      g.fillText(w > 60 * CM ? 'おなかの中の大腸へ' : '大腸の内側のかべへ', x + r + 6, y - r - 4); g.restore();
+      g.fillText(w > 60 * CM ? L('おなかの中の大腸へ', "Into the colon in the belly") : L('大腸の内側のかべへ', "To the inner wall of the colon"), x + r + 6, y - r - 4); g.restore();
     }
   }
 
@@ -124,7 +124,7 @@ const Macro = (() => {
     // 層の名前（左はし）
     if (!View.real && a > 0.6) {
       const lab = (t, y) => { if (Y(y) > 20 && Y(y) < V.H - 20) V.text(t, vb.x0, y, { dx: 10, align: 'left', size: 12, bold: true, color: '#f0dde2', bg: 'rgba(10,22,27,.7)' }); };
-      lab('粘液', (INNER + SURF) / 2 + 60 * UM); lab('粘膜（陰窩が並ぶ）', SURF - 0.25 * MM); lab('粘膜下層', SURF - 0.82 * MM); lab('筋肉の層', SURF - 1.6 * MM);
+      lab(L('粘液', "Mucus"), (INNER + SURF) / 2 + 60 * UM); lab(L('粘膜（陰窩が並ぶ）', "Mucosa (lined with crypts)"), SURF - 0.25 * MM); lab(L('粘膜下層', "Submucosa"), SURF - 0.82 * MM); lab(L('筋肉の層', "Muscle layers"), SURF - 1.6 * MM);
     }
     g.restore();
     V.hit({ test: (x, y) => y < SURF && y > SURF - 2.1 * MM, infoAt: (x, y) => { const xx = ((x % step) + step) % step; return y > SURF - 0.4 * MM && Math.abs(xx - step / 2) < cw / 2 ? INFO_M.crypt : INFO_M.wall; } });
