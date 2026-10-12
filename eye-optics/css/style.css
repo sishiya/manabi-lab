@@ -45,6 +45,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
 #viewHead em{font-style:normal;color:#ffd66a;font-family:var(--f-mono);font-size:11px;white-space:nowrap}
 .chartbox{position:relative;height:190px;border-radius:6px;overflow:hidden;background:#f4f1ea}
 .chartbox canvas{position:absolute;inset:0;width:100%;height:100%}
+#afterBtn{position:absolute;right:6px;bottom:6px;font:inherit;font-size:12px;font-weight:700;background:rgba(12,22,32,0.86);color:#ffd66a;border:1.5px solid #ffd66a;border-radius:14px;padding:5px 10px;cursor:pointer;z-index:2}
 .vnote{font-size:11px;color:var(--muted);margin-top:4px}
 
 #tip{position:absolute;max-width:300px;background:#f4f1ea;color:#16202a;border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.6;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:5}
@@ -57,7 +58,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
 .tbhead button,#controls button{font:inherit;font-size:13px;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 9px;cursor:pointer}
 .tbhead button.on,#controls button.on{background:var(--acc);color:#0b1620;border-color:var(--acc);font-weight:700}
 #resume{background:#ffd66a!important;color:#0b1620!important;border-color:#ffd66a!important;font-weight:700}
-#tl{display:block;width:100%;height:150px;margin-top:4px;touch-action:none;cursor:col-resize}
+#tl{display:block;width:100%;height:176px;margin-top:4px;touch-action:none;cursor:col-resize}
 
 #controls{display:flex;flex-wrap:wrap;gap:8px 18px;padding:10px 16px;border-top:1px solid var(--line)}
 #controls .grp{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
@@ -104,7 +105,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
   #info div.wide{grid-column:1/-1}
   #timebar{padding:6px 8px 2px}
   .tbnote{flex-basis:100%;order:5}
-  #tl{height:170px}
+  #tl{height:190px}
   #controls{padding:8px 8px 10px;gap:8px 12px}
   #controls button{min-height:36px;padding:6px 10px}
   .tbhead{gap:6px 6px}

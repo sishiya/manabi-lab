@@ -24,6 +24,7 @@ function step(dtReal) {
   while (S.sched && S.sched.length && S.sched[0].t <= S.t) applyCond(S.sched.shift().o);   // 案内の「この時刻に切りかえる」
   dynStep(S, S.t, dt, S.At, S.stopRt);   // 調節とひとみは、測られた遅れと速さで追いかける（dynamics.js）
   darkStep(S, dt, lightOf().L, S.age);   // 暗さに慣れる（分の単位）
+  afterStep(dt);                          // 残像の順応（after.js）
   compute();
   tlRecord();
 }
@@ -53,6 +54,11 @@ function compute() {
   const see = darkSee(S, lightOf().L);
   if (see.who === 'none') { state = 'blur'; stateText = L('暗くて見えない: 目がまだ暗さに慣れていない', 'Too dark to see: the eye is not used to the dark yet'); }
   else if (see.who === 'rod') { state = 'blur'; stateText = L('うす暗く見える: 桿体だけで見ている（まん中は見えない）', 'Dim: seeing with rods only (the middle is missing)'); }
+  if (S.chart === 'after') {   // 残像の表を見ているとき
+    state = S.afterMode === 'white' && S.afterA > 0.05 ? 'blur' : 'ok';
+    stateText = S.afterMode === 'stare' ? L(`図を見つめている（順応 ${Math.round(S.afterA * 100)}%）`, `Staring at the figure (adapted ${Math.round(S.afterA * 100)}%)`)
+      : S.afterA > 0.05 ? L(`残像: 反対の色が見える（強さ ${Math.round(S.afterA * AFTER.k * 100)}%）`, `Afterimage: opposite colors (strength ${Math.round(S.afterA * AFTER.k * 100)}%)`) : L('残像は消えた', 'The afterimage is gone');
+  }
   S.res = { eye, main, top: top || main, scale, zf, state, stateText, diamS, diamW, ang: a.ang, blurArcmin, astig, see };
 }
 function draw() { drawAll(g, cv.clientWidth, cv.clientHeight); updateView(); tlDraw(); syncSlider(); }
@@ -84,5 +90,5 @@ window.__eyop = {
   simRun(sec, dt = 1 / 60) { for (let t = 0; t < sec; t += dt * S.speed) step(dt); draw(); },   // sec はシミュレーションの秒
   tour(i) { setTour(i); },
   set(o) { applyCond(o); },
-  settle() { dynSettle(S, S.At, S.stopRt); darkSettle(S, lightOf().L); compute(); draw(); },
+  settle() { dynSettle(S, S.At, S.stopRt); darkSettle(S, lightOf().L); S.afterA = 0; compute(); draw(); },
 };

@@ -22,7 +22,7 @@
   <main id="stage">
     <div id="pin"><!-- スマホ: 図と見え方を上に固定（パソコンでは display:contents で今までどおり重ねる） -->
     <div id="cvwrap"><canvas id="cv"></canvas><button id="swap"></button></div>
-    <div id="view"><div class="vtop"><div id="viewHead"></div><span class="vtabs"><button data-c="acuity"><span lang="ja">視力表</span><span lang="en">Eye chart</span></button><button data-c="fan"><span lang="ja">線の表</span><span lang="en">Lines</span></button></span></div><div class="chartbox"><canvas id="chart"></canvas><canvas id="chartLab"></canvas></div><div id="vstate"></div><div class="vnote" id="vnote"></div></div>
+    <div id="view"><div class="vtop"><div id="viewHead"></div><span class="vtabs"><button data-c="acuity"><span lang="ja">視力表</span><span lang="en">Eye chart</span></button><button data-c="fan"><span lang="ja">線の表</span><span lang="en">Lines</span></button><button data-c="after"><span lang="ja">残像</span><span lang="en">Afterimage</span></button></span></div><div class="chartbox"><canvas id="chart"></canvas><canvas id="chartLab"></canvas><button id="afterBtn" hidden></button></div><div id="vstate"></div><div class="vnote" id="vnote"></div></div>
     </div>
     <div id="tour"><span id="tourNum"></span><p id="tourText"></p><button id="next"></button></div>
     <div id="info"></div>
@@ -42,6 +42,7 @@
     <p>見る先や明るさを変えると、目はすぐには追いつきません。ピント合わせは約 0.3 秒の遅れのあと、動く量が大きいほど速く動きます（Bharadwaj &amp; Schor 2006 が測った速さの関係）。ひとみは明るくなると約 0.2 秒の遅れのあと 1 秒ほどで縮み、暗くなると 20 秒ほどかけてゆっくり開きます（Mathôt 2018、Gray ほか 2024）。「時間の流れ」のグラフは、そのあいだのぼけ・調節・ひとみ・暗さ慣れの変わり方です。</p>
     <p>乱視は、角膜の丸みが向きによって少しちがう目です。ここでは角膜の前の面の丸みを、ある向き（縦・横・斜め）だけ 0.75〜3 D 分きつくして、その向き（強い向き）と直角の向き（弱い向き）に切った断面をそれぞれ光線で計算しています。見え方は、向きによって広さのちがうぼかし（だ円のぼけ）です。乱視用のメガネ（円柱レンズ）は、2つの向きで度をそれぞれ決めています。</p>
     <p>暗い所に入ると、目は分の単位でだんだん敏感になります（暗順応）。見える最小の明るさ（しきい値）を、明るい所で働く錐体と暗い所で働く桿体の2つで計算しています。強い光のあとは、錐体が数分で頭打ちになり、7分ごろに桿体へ切りかわって（Patryas ほか 2013 で 約7分）、桿体は 1 分に 0.23 桁ずつ（45歳以上はおそい）敏感になり、30分ほどでいちばん敏感になります。桿体だけで見ているときは、見え方のまん中がぬけます。中心窩には桿体がないためです（直径 1.25°、Curcio ほか 1990）。</p>
+    <p>残像: 色の図をじっと見つめると、網膜の神経細胞（神経節細胞）がその信号に慣れて、見える信号から少しずつ引き算されます（順応）。図を消して白い面を見ると、引き算だけが残り、反対の色の残像が見えます。その時定数は、サルの網膜の神経節細胞で 5〜12 秒ほど（Zaidi ほか 2012）、人が見る残像で 4〜8 秒（Kelly &amp; Martinez-Uriegas 1993）と測られています。ここでは図の色を3種類の錐体（L・M・S）の信号の差にして、順応の時定数 7 秒で計算しています。</p>
     <h3>簡単にしているところ</h3>
     <ul>
       <li>断面の上下の1平面だけで光線を追っています。網膜は半径 12 mm の球としています（実際はやや平たいだ円体）。</li>
@@ -52,6 +53,7 @@
       <li>時間の変化: ピント合わせとひとみは、遅れのあと指数関数で近づくとしています。ピント合わせの速さ（時定数）は、測られたピーク速度の式から「動く量 ÷ ピーク速度」で決めています（遅れは遠くへの切りかえで測られた約 0.3 秒を、近くへにも使用）。ひとみの縮む・開く時定数（0.35 秒・6 秒）は、論文に書かれた経過に合うように決めた推定です。年齢によるピント合わせの速さの変化、ピントのわずかなゆれ、近くを見るときにひとみが縮む反応は入れていません。</li>
       <li>乱視: 角膜の前の面だけを、ある向きで強くしています（水晶体による乱視は入れていません）。光線は強い向きと弱い向きの2つの断面の中だけで追い、見え方のぼけはその2つの広がりを、その向きにそろえただ円のぼかしにしています（2つの断面の外を斜めに進む光線は計算していません）。ピント合わせは、2つのぼけの平均がいちばん小さくなる所をねらうとしています。</li>
       <li>暗順応: 錐体の頭打ちの高さ（−1.4 log cd/m²）・桿体のいちばん低いしきい値（−4.6）・錐体の慣れる速さ（時定数 1.5 分）・終わりのゆっくりした部分・前の明るさから決める桿体のはじめの高さ・明るくなったときの速さ（数秒）は、測られた値（切りかわり約7分、30分後 −4.4、強い光で約5桁感度が下がる、錐体は 5〜10 分で頭打ち）に合うように決めた推定です。しきい値は 1° の光の点が見えるかどうかの値で、視力表の見え方の明るさは「しきい値をどれだけ上回るか」から決めた目安です。桿体だけのときの視力の上限 0.16（Shlaer 1937）は、すきま 6 分がやっと分かるぼかしで表しています（推定）。色の見え方の変化は入れていません。</li>
+      <li>残像: 順応の時定数 7 秒と、はねかえりの大きさ（順応しきったとき図の 42%。Zaidi ほか 2012 の、はねかえりの反応と最大の反応の比 0.42 から）は推定です。目はまったく動かず、ピントは合っているとしています。L・M・S の3つの錐体の時定数は同じとし、白い面に変えたときの明るさへの合わせ（光受容体のすばやい順応）は一瞬としています。画面の色から錐体の信号へは、sRGB → XYZ → LMS（Hunt–Pointer–Estévez）の標準の式で換算しています。見る人自身の目にも残像が出るので、画面の残像と重なって見えることがあります。</li>
       <li>視神経は、場所を示すために断面に描いています（実際は中心窩より鼻の側にあります）。</li>
     </ul>
     <p><b>学習用に簡単にしたものです。目の病気や視力の判断、メガネの度を決めることには使えません。</b>目のことは眼科で相談してください。</p>
@@ -69,6 +71,8 @@
       <li>Hecht S, Haig C, Chase AM (1937) The influence of light adaptation on subsequent dark adaptation of the eye. <i>Journal of General Physiology</i> 20(6):831–850. <a href="https://doi.org/10.1085/jgp.20.6.831" target="_blank" rel="noopener">doi:10.1085/jgp.20.6.831</a>（前の光が弱いと桿体だけ、強いほど桿体の出番がおそい）</li>
       <li>Curcio CA, Sloan KR, Kalina RE, Hendrickson AE (1990) Human photoreceptor topography. <i>Journal of Comparative Neurology</i> 292(4):497–523. <a href="https://doi.org/10.1002/cne.902920402" target="_blank" rel="noopener">doi:10.1002/cne.902920402</a>（中心窩の桿体のない所 直径 1.25°）</li>
       <li>Shlaer S (1937) The relation between visual acuity and illumination. <i>Journal of General Physiology</i> 21(2):165–188. <a href="https://doi.org/10.1085/jgp.21.2.165" target="_blank" rel="noopener">doi:10.1085/jgp.21.2.165</a>（桿体で見るときの視力 0.16 まで）</li>
+      <li>Zaidi Q, Ennis R, Cao D, Lee B (2012) Neural locus of color afterimages. <i>Current Biology</i> 22(3):220–224. <a href="https://doi.org/10.1016/j.cub.2011.12.021" target="_blank" rel="noopener">doi:10.1016/j.cub.2011.12.021</a>（残像は網膜で生まれる。神経節細胞の引き算の順応の時定数 4.8〜17.6 秒、ほとんど 5〜12 秒）</li>
+      <li>Kelly DH, Martinez-Uriegas E (1993) Measurements of chromatic and achromatic afterimages. <i>Journal of the Optical Society of America A</i> 10(1):29–37. <a href="https://doi.org/10.1364/josaa.10.000029" target="_blank" rel="noopener">doi:10.1364/josaa.10.000029</a>（残像の濃さは図の濃さに比例、強まるのも消えるのも時定数 4〜8 秒）</li>
       <li>Kovesi P (2010) Fast almost-Gaussian filtering. DICTA 2010（見え方のぼかしの計算のしかた）</li>
       <li>Atchison DA ほか (2005) Shape of the retinal surface in emmetropia and myopia. <i>Investigative Ophthalmology &amp; Visual Science</i> 46(8):2698–2707（網膜の形）</li>
       <li>ISO 8596（ランドルト環による視力表の形）</li>
@@ -83,6 +87,7 @@
     <p>When you change where you look or how bright it is, the eye does not catch up at once. Focusing starts after a delay of about 0.3 s and then moves faster for bigger changes (the speed relation measured by Bharadwaj &amp; Schor 2006). The pupil shrinks in about 1 s after a delay of about 0.2 s when it gets bright, and slowly opens over about 20 s when it gets dark (Mathôt 2018; Gray et al. 2024). The “Over time” graph shows how blur, focusing, the pupil and dark adaptation change meanwhile.</p>
     <p>Astigmatism means the cornea is curved a little differently in different directions. Here the front of the cornea is made 0.75–3 D more curved in one direction (vertical, horizontal or diagonal), and rays are calculated in two slices: along that “stronger” direction and at right angles to it (the “weaker” direction). What you see uses a blur whose size differs by direction (an oval blur). Glasses for astigmatism (a cylinder lens) get a separate power for each of the two directions.</p>
     <p>In the dark, the eye slowly becomes more sensitive over minutes (dark adaptation). The dimmest light you can see (the threshold) is calculated for two kinds of cells: cones, which work in bright light, and rods, which work in dim light. After bright light, the cones level off within a few minutes; around 7 min the rods take over (about 7 min in Patryas et al. 2013), become 0.23 log units more sensitive per minute (slower over age 45), and reach their best after about 30 min. When only rods are seeing, the middle of the view goes missing, because the fovea has no rods (1.25° across; Curcio et al. 1990).</p>
+    <p>Afterimages: when you stare at a colored figure, nerve cells in the retina (ganglion cells) get used to its signal, and it is slowly subtracted from what you see (adaptation). When the figure is replaced by a white surface, only the subtraction remains, so you see an afterimage in the opposite colors. Its time constant was measured as about 5–12 s in monkey retinal ganglion cells (Zaidi et al. 2012) and 4–8 s for afterimages people see (Kelly &amp; Martinez-Uriegas 1993). Here the figure’s colors are turned into differences in the signals of the three cone types (L, M, S) and adapted with a 7 s time constant.</p>
     <h3>What is simplified</h3>
     <ul>
       <li>Rays are followed only in one up-and-down slice. The retina is treated as a sphere of radius 12 mm (really a slightly flattened ellipsoid).</li>
@@ -93,6 +98,7 @@
       <li>Over time: focusing and the pupil approach their targets exponentially after a delay. The focusing speed (time constant) is “size of change ÷ peak speed” using the measured peak-speed formulas (the about-0.3 s delay was measured when switching to far; it is also used for near). The pupil’s shrinking and opening time constants (0.35 s and 6 s) are estimates chosen to match the time courses described in the papers. Age changes in focusing speed, tiny focusing wobbles, and the pupil shrinking when looking near are not included.</li>
       <li>Astigmatism: only the front of the cornea is made stronger in one direction (astigmatism from the lens is not included). Rays are followed only in the two slices (stronger and weaker), and the blur in “What you see” is an oval blur lined up with those directions (rays traveling outside the two slices are not calculated). Focusing aims for the smallest average of the two blurs.</li>
       <li>Dark adaptation: the cone level-off (−1.4 log cd/m²), the lowest rod threshold (−4.6), the cone time constant (1.5 min), the slow last part, the rods’ starting height set from the earlier light level, and the speed of readjusting to bright light (a few seconds) are estimates chosen to match measured values (switch to rods at about 7 min, −4.4 after 30 min, about 5 log units of sensitivity lost after bright light, cones level off within 5–10 min). The threshold is for seeing a 1° spot of light; how bright the chart looks is a rough guide based on how far the light is above the threshold. The rod-only acuity limit of 0.16 (Shlaer 1937) is shown as a blur that just lets a 6-arcmin gap be seen (an estimate). Changes in color vision are not included.</li>
+      <li>Afterimages: the 7 s time constant and the rebound size (42% of the figure when fully adapted, from the 0.42 ratio of rebound to maximum response in Zaidi et al. 2012) are estimates. The eye is assumed to stay perfectly still and in focus. The three cone types share one time constant, and the quick brightness adjustment of the photoreceptors when switching to white is treated as instant. Screen colors are converted to cone signals with the standard sRGB → XYZ → LMS (Hunt–Pointer–Estévez) formulas. Your own eyes also make afterimages, which may mix with the one on screen.</li>
       <li>The optic nerve is drawn in this slice only to show it (it really lies toward the nose from the fovea).</li>
     </ul>
     <p><b>This is simplified for learning. It cannot be used to judge eye diseases or eyesight, or to choose glasses.</b> Please see an eye doctor about your eyes.</p>
@@ -110,6 +116,8 @@
       <li>Hecht S, Haig C, Chase AM (1937) The influence of light adaptation on subsequent dark adaptation of the eye. <i>Journal of General Physiology</i> 20(6):831–850. <a href="https://doi.org/10.1085/jgp.20.6.831" target="_blank" rel="noopener">doi:10.1085/jgp.20.6.831</a> (after dim light only rods adapt; the brighter the earlier light, the later the rods take over)</li>
       <li>Curcio CA, Sloan KR, Kalina RE, Hendrickson AE (1990) Human photoreceptor topography. <i>Journal of Comparative Neurology</i> 292(4):497–523. <a href="https://doi.org/10.1002/cne.902920402" target="_blank" rel="noopener">doi:10.1002/cne.902920402</a> (the rod-free zone of the fovea is 1.25° across)</li>
       <li>Shlaer S (1937) The relation between visual acuity and illumination. <i>Journal of General Physiology</i> 21(2):165–188. <a href="https://doi.org/10.1085/jgp.21.2.165" target="_blank" rel="noopener">doi:10.1085/jgp.21.2.165</a> (acuity with rods is at most 0.16)</li>
+      <li>Zaidi Q, Ennis R, Cao D, Lee B (2012) Neural locus of color afterimages. <i>Current Biology</i> 22(3):220–224. <a href="https://doi.org/10.1016/j.cub.2011.12.021" target="_blank" rel="noopener">doi:10.1016/j.cub.2011.12.021</a> (afterimages arise in the retina; ganglion-cell subtractive adaptation time constants 4.8–17.6 s, mostly 5–12 s)</li>
+      <li>Kelly DH, Martinez-Uriegas E (1993) Measurements of chromatic and achromatic afterimages. <i>Journal of the Optical Society of America A</i> 10(1):29–37. <a href="https://doi.org/10.1364/josaa.10.000029" target="_blank" rel="noopener">doi:10.1364/josaa.10.000029</a> (afterimage contrast is proportional to the figure’s contrast; builds up and fades with a 4–8 s time constant)</li>
       <li>Kovesi P (2010) Fast almost-Gaussian filtering. DICTA 2010 (how the blur in “What you see” is computed)</li>
       <li>Atchison DA et al. (2005) Shape of the retinal surface in emmetropia and myopia. <i>Investigative Ophthalmology &amp; Visual Science</i> 46(8):2698–2707 (shape of the retina)</li>
       <li>ISO 8596 (the Landolt-ring eye chart)</li>
@@ -122,6 +130,7 @@
 <script src="js/optics.js"></script>
 <script src="js/dynamics.js"></script>
 <script src="js/scene.js"></script>
+<script src="js/after.js"></script>
 <script src="js/draw.js"></script>
 <script src="js/view.js"></script>
 <script src="js/timeline.js"></script>

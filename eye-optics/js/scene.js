@@ -85,11 +85,13 @@ const EV_NAMES = {
   light: v => LIGHTS.find(l => l.key === v).label,
   astigP: v => v === 0 ? L('乱視なし', 'No astigmatism') : L(`乱視 ${v} D`, `Astigmatism ${v} D`),
   astigAx: v => L('乱視の向き ', 'Astigmatism: ') + ASTIG_AXES.find(l => l.key === v).label,
+  chart: v => v === 'after' ? L('残像の図', 'Afterimage figure') : null,
+  afterMode: v => v === 'white' ? L('白い面へ', 'To white') : L('図を見つめる', 'Stare'),
 };
 function applyCond(o) {
   if (S.replay) tlResume();
   const labels = [];
-  for (const k in o) if (S[k] !== o[k] && EV_NAMES[k]) labels.push(EV_NAMES[k](o[k]));
+  for (const k in o) if (S[k] !== o[k] && EV_NAMES[k]) { const t = EV_NAMES[k](o[k]); if (t) labels.push(t); }
   Object.assign(S, o);
   if (labels.length) markEvent(labels.join(L('・', ' · ')));
   recompute(); syncControls();
@@ -119,7 +121,7 @@ const PARTS = {
 const TOUR = [
   { text: () => L('目を横から切った図です。左の矢印（物）から出た光が、目の中でどう曲がって網膜に届くかを、本物の目の寸法の模型で1本ずつ計算しています。',
       'This is the eye cut in half, seen from the side. Light from the arrow (the object) on the left bends inside the eye and reaches the retina. Each ray is calculated one by one with a model of a real eye’s sizes.'),
-    set: { d: 3000, age: 25, len: 'normal', glasses: 'none', light: 'room', showTop: false, speed: 1, astigP: 0, astigAx: 'v', sec: 's', chart: 'acuity' }, settle: true, win: 6, hl: null },
+    set: { d: 3000, age: 25, len: 'normal', glasses: 'none', light: 'room', showTop: false, speed: 1, astigP: 0, astigAx: 'v', sec: 's', chart: 'acuity', afterMode: 'stare' }, settle: true, win: 6, hl: null },
   { text: () => L('光をいちばん大きく曲げるのは、目の表面の「角膜」。空気と角膜の境目で光の進む速さが大きく変わるからです。奥の「水晶体」はピントの細かい調整係。',
       'The part that bends light the most is the cornea on the front of the eye, because light’s speed changes a lot where air meets the cornea. The lens deeper inside does the fine focusing.'),
     hl: 'cornea' },
@@ -149,10 +151,13 @@ const TOUR = [
     set: { speed: 0.25 }, win: 6, go: [{ at: 0.4, light: 'room' }], hl: 'iris' },
   { text: () => L('暗さに慣れる（はやおくり ×60: 1秒で1分）。晴れた屋外から夜道へ。はじめは何も見えません。まず錐体（明るい所の細胞）が数分で慣れて頭打ちになり、7分ごろから桿体（暗い所の細胞）に切りかわって、30分ほどでいちばん敏感になります。グラフの「暗さ慣れ」の折れ目に注目。桿体だけで見るときは、見え方のまん中がぬけます（中心窩には桿体がない）。',
       'Getting used to the dark (fast-forward ×60: 1 s = 1 min). From sunny outdoors to a night street. At first you see nothing. The cones (bright-light cells) adjust within a few minutes and level off; around 7 min the rods (dim-light cells) take over, and after about 30 min the eye is most sensitive. Look for the kink in “Dark” in the graph. When only rods are seeing, the middle of the view goes missing (the fovea has no rods).'),
-    set: { glasses: 'none', len: 'normal', light: 'sun', d: FAR_D, chart: 'acuity', speed: 60 }, settle: true, win: 2400, go: [{ at: 30, light: 'night' }], hl: 'retina' },
+    set: { glasses: 'none', len: 'normal', light: 'sun', d: FAR_D, chart: 'acuity', speed: 60, astigP: 0 }, settle: true, win: 2400, go: [{ at: 30, light: 'night' }], hl: 'retina' },
+  { text: () => L('残像: 見え方の「残像」の図のまん中の＋を、15秒じっと見つめてください。網膜の神経細胞が慣れて（順応）、図の色が少しずつうすれます。15秒たつと白い面に変わり、見つめていた図の反対の色（赤→青緑、黄→青）が見えて、十数秒で消えていきます。グラフの「残像」の段が順応の量です。あなたの目にも本物の残像が出るかもしれません。',
+      'Afterimages: stare at the + in the middle of the “Afterimage” figure for 15 s. Nerve cells in the retina get used to it (adaptation), and the colors slowly fade. After 15 s it switches to a white surface: you see the opposite colors (red → blue-green, yellow → blue), which fade over a dozen seconds or so. The “Afterimage” lane in the graph shows the amount of adaptation. Your own eyes may make a real afterimage too.'),
+    set: { glasses: 'none', len: 'normal', light: 'room', d: FAR_D, chart: 'after', afterMode: 'stare', speed: 1, astigP: 0 }, settle: true, win: 30, go: [{ at: 15, afterMode: 'white' }], hl: 'retina' },
   { text: () => L('乱視: 角膜の丸みが、縦と横で少しちがう目。ここでは縦の向きが 1.5 D 強い（直乱視）。放射状の線の表を見ると、ある向きの線ははっきり、直角の向きの線はぼやけます。縦の断面では像が網膜の手前に、横の断面ではちょうど網膜の上にできます（下の「断面」で切りかえ）。乱視の強さと向き（斜めも）も下で選べます。',
       'Astigmatism: an eye whose cornea is curved a little differently up-and-down than side-to-side. Here the vertical direction is 1.5 D stronger. On the chart of lines, lines in one direction look sharp while those at right angles blur. In the vertical slice the image forms in front of the retina; in the horizontal slice, right on it (switch with “Slice” below). You can also choose the strength and direction (even diagonal) below.'),
-    set: { glasses: 'none', light: 'room', len: 'normal', astigP: 1.5, astigAx: 'v', sec: 's', chart: 'fan', d: FAR_D, speed: 1 }, settle: true, win: 6, hl: 'cornea' },
+    set: { glasses: 'none', light: 'room', len: 'normal', astigP: 1.5, astigAx: 'v', sec: 's', chart: 'fan', afterMode: 'stare', d: FAR_D, speed: 1 }, settle: true, win: 6, hl: 'cornea' },
   { text: () => L(`縦と横で度のちがうメガネ（円柱レンズ: ${astigOf().strong} ${fmtDi(S.Ps)}・${astigOf().weak} ${fmtDi(S.Pw)}）をかけると、縦も横も網膜に集まって、どの向きの線もくっきり見えます。`,
       `Glasses with different powers in the two directions (a cylinder lens: ${astigOf().strong} ${fmtDi(S.Ps)}, ${astigOf().weak} ${fmtDi(S.Pw)}) bring both directions onto the retina, so lines in every direction look sharp.`),
     set: { glasses: 'far' }, hl: 'glasses' },

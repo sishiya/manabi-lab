@@ -21,6 +21,7 @@ function drawChart() {
   g.fillStyle = `rgb(${PAPER},${PAPER},${PAPER})`; g.fillRect(0, 0, Wp, Hp);
   const k = Hp / CHART_FOV; VIEW.k = k;   // 1分あたりの px（CSS）
   g.fillStyle = `rgb(${INK},${INK},${INK})`;
+  if (VIEW.mode === 'after') { VIEW.sharp = null; return; }   // 残像の表は after.js が毎コマ描く
   gl.font = '10px ' + getComputedStyle(document.documentElement).getPropertyValue('--f-mono'); gl.fillStyle = '#5b6670'; gl.textAlign = 'left';
   if (VIEW.mode === 'acuity') {
     let y = 6 * k; const dirs = [0, 2, 1, 3, 0, 3, 2, 1, 1, 0, 2, 3, 1, 3, 0, 2, 3, 0, 1, 2];
@@ -139,16 +140,22 @@ function updateView() {
   if (VIEW.mode !== S.chart) {
     VIEW.mode = S.chart; drawChart();
   }
+  const note = document.getElementById('vnote');
+  if (S.chart === 'after') {   // 残像の表（after.js）: ピントは合っている前提で、ぼかさない
+    afterRender(document.getElementById('chart'));
+    note.textContent = S.afterMode === 'stare' ? L('まん中の＋を見つめる。順応で図の色が少しずつうすれる', 'Stare at the + in the middle. Adaptation slowly fades the colors')
+      : L('白い面: 見つめていた図の反対の色が見え、数秒〜十数秒で消える', 'White surface: the opposite colors of the figure appear, then fade over several seconds');
+  } else {
   // 暗さ: 明るさがしきい値をどれだけ上回るかで見え方の明るさを決める（1.5 log 上回れば ふつう。このアプリの目安）。
   // 桿体だけのとき: まん中がぬけ、視力は 0.16 まで（Shlaer 1937）→ すきま 6 分がやっと分かるぼかし（σ 3 分。推定）を足す
   const see = r.see, vis = see.who === 'none' ? 0 : Math.max(0.12, Math.min(1, see.margin / 1.5)), rod = see.who === 'rod';
   const nS = rod ? 3 * VIEW.k : 0, add = s => Math.sqrt(s * s + nS * nS);
   blurChart(add(blurSigma(r.diamS)), add(blurSigma(r.diamW)), r.ang, vis, rod);
-  const note = document.getElementById('vnote');
   note.textContent = see.who === 'none' ? L('暗くて見えない（目がまだ暗さに慣れていない）', 'Too dark to see (the eye is not used to the dark yet)') :
     rod ? L('桿体だけ: まん中（中心窩）には桿体がないので見えない。視力も 0.16 まで', 'Rods only: the middle (fovea) has no rods, so it is not seen. Acuity is at most 0.16') :
     S.chart === 'fan' ? L('30° ごとの線（太さ 1.5 分）。乱視だと、ある向きの線だけぼやける', 'Lines every 30° (1.5 arcmin thick). With astigmatism, only lines in some directions blur') :
     L('数字は視力の段（目安）。大きさはそろえて表示', 'Numbers are acuity rows (decimal, rough guide). Shown at matching size');
+  }
   const Amax = maxAccommodation(S.age);
   const q = e => fmtDi(Math.round(e * 4) / 4), err = S.err;
   const ao = astigOf();
@@ -167,7 +174,7 @@ function updateView() {
   const vs = document.getElementById('vstate'); vs.textContent = r.stateText; vs.className = r.state;   // スマホ: 固定部分にも状態の1行
   const since = S.ev ? S.t - S.ev.t : Infinity;
   const fs = t => t < 10 ? t.toFixed(1) + L(' 秒', ' s') : t < 60 ? Math.round(t) + L(' 秒', ' s') : Math.floor(t / 60) + L(' 分 ', ' min ') + Math.round(t % 60) + L(' 秒', ' s');
-  const chartName = S.chart === 'fan' ? L('線の表', 'line chart') : L('視力表', 'eye chart');
+  const chartName = S.chart === 'fan' ? L('線の表', 'line chart') : S.chart === 'after' ? (S.afterMode === 'stare' ? L('色の図', 'color figure') : L('白い面', 'white surface')) : L('視力表', 'eye chart');
   document.getElementById('viewHead').innerHTML = L('見え方', 'What you see') + ` <small>${L(`${chartName}を ${fmtD(S.d)} に置いたら`, `${chartName} at ${fmtD(S.d)}`)}</small>` +
     (S.replay ? ` <em>${L('ふりかえり中', 'Replaying')}</em>` : since < 3000 ? ` <em>${L(`${S.ev.label} から ${fs(since)}`, `${fs(since)} after “${S.ev.label}”`)}</em>` : '');
 }

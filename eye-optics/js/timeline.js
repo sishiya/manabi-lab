@@ -6,7 +6,7 @@ const TL = { rec: [], ev: [], win: 6, lastT: -1, live: null, drag: false };
 const SPEEDS = [{ v: 0.1, label: '1/10', title: L('スロー 1/10 倍', 'Slow motion 1/10') }, { v: 0.25, label: '1/4', title: L('スロー 1/4 倍', 'Slow motion 1/4') }, { v: 1, label: L('ふつう', 'Normal'), title: L('ふつうの速さ', 'Normal speed') }, { v: 4, label: '×4', title: L('はやおくり 4 倍', 'Fast-forward ×4') }, { v: 60, label: '×60', title: L('はやおくり 60 倍（1秒で1分）', 'Fast-forward ×60 (1 s = 1 min)') }];
 const WINS = [6, 30, 2400];   // グラフの長さ（秒）。2400 秒＝40 分（暗さに慣れる）
 const winLabel = w => w >= 60 ? w / 60 + L('分', ' min') : w + L('秒', ' s');
-const COND_KEYS = ['age', 'len', 'glasses', 'light', 'astigP', 'astigAx'];
+const COND_KEYS = ['age', 'len', 'glasses', 'light', 'astigP', 'astigAx', 'chart', 'afterMode'];
 const BLUR_OK = 2;   // ぼけの円 2 分（このアプリの「ぼやける」の目安）
 
 // 見かけのひとみの直径（mm）: 虹彩のあなの半径から（stopRadiusFor はほぼ比例なので比で戻す）
@@ -26,7 +26,7 @@ function tlRecord() {
   if (S.replay || !S.res) return;
   if (S.t - TL.lastT < Math.max(0.004, TL.win / 3000)) return;   // グラフの長さに合わせて間引く
   TL.lastT = S.t;
-  const r = { t: S.t, d: S.d, A: S.A, At: S.At, stopR: S.stopR, blur: S.res.blurArcmin, cone: S.cone, rod: S.rod, see: S.res.see.who };
+  const r = { t: S.t, d: S.d, A: S.A, At: S.At, stopR: S.stopR, blur: S.res.blurArcmin, cone: S.cone, rod: S.rod, see: S.res.see.who, af: S.afterA };
   for (const k of COND_KEYS) r[k] = S[k];
   TL.rec.push(r);
   const old = S.t - Math.max(40, TL.win * 1.05);
@@ -35,13 +35,13 @@ function tlRecord() {
 function tlClear() { TL.rec.length = 0; TL.ev.length = 0; TL.lastT = -1; S.ev = null; }
 
 // ふりかえり: 記録の1コマの状態を目にのせる（いまの状態は TL.live にとっておく）
-function snapshot() { const o = { d: S.d, A: S.A, At: S.At, stopR: S.stopR, cone: S.cone, rod: S.rod }; for (const k of COND_KEYS) o[k] = S[k]; return o; }
+function snapshot() { const o = { d: S.d, A: S.A, At: S.At, stopR: S.stopR, cone: S.cone, rod: S.rod, af: S.afterA }; for (const k of COND_KEYS) o[k] = S[k]; return o; }
 function applySnap(o) {
   let changed = false;
   for (const k of COND_KEYS) if (S[k] !== o[k]) { S[k] = o[k]; changed = true; }
   S.d = o.d;
   if (changed) { recompute(); syncControls(); }
-  S.A = o.A; S.At = o.At; S.stopR = o.stopR; S.cone = o.cone; S.rod = o.rod;
+  S.A = o.A; S.At = o.At; S.stopR = o.stopR; S.cone = o.cone; S.rod = o.rod; S.afterA = o.af;
   compute();
 }
 function tlReplayAt(t) {
@@ -62,8 +62,8 @@ function tlResume() {
 function tlLayout() {
   const c = document.getElementById('tl'), W = c.clientWidth, H = c.clientHeight;
   const narrow = W < 560, lx = narrow ? 50 : 74, top = 14, bot = 16, gap = 4;
-  const lh = (H - top - bot - gap * 3) / 4;
-  return { W, H, lx, rx: W - 8, top, lh, gap, narrow, lanes: [0, 1, 2, 3].map(i => top + i * (lh + gap)) };
+  const lh = (H - top - bot - gap * 4) / 5;
+  return { W, H, lx, rx: W - 8, top, lh, gap, narrow, lanes: [0, 1, 2, 3, 4].map(i => top + i * (lh + gap)) };
 }
 function tlDraw() {
   const c = document.getElementById('tl'); if (!c) return;
@@ -75,9 +75,9 @@ function tlDraw() {
   const font = getComputedStyle(document.documentElement);
   const fb = font.getPropertyValue('--f-body'), fm = font.getPropertyValue('--f-mono');
   // 段の背景と名前
-  const names = [[L('見え方のぼけ', 'Blur'), L('ぼけ', 'Blur')], [L('調節（ピント）', 'Focusing'), L('調節', 'Focus')], [L('ひとみ', 'Pupil'), L('ひとみ', 'Pupil')], [L('暗さ慣れ', 'Dark'), L('暗さ慣れ', 'Dark')]];
+  const names = [[L('見え方のぼけ', 'Blur'), L('ぼけ', 'Blur')], [L('調節（ピント）', 'Focusing'), L('調節', 'Focus')], [L('ひとみ', 'Pupil'), L('ひとみ', 'Pupil')], [L('暗さ慣れ', 'Dark'), L('暗さ慣れ', 'Dark')], [L('残像（順応）', 'Afterimage'), L('残像', 'After')]];
   g.font = `11px ${fb}`; g.textAlign = 'left'; g.textBaseline = 'middle';
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 5; i++) {
     const y = Ly.lanes[i];
     g.fillStyle = 'rgba(255,255,255,0.035)'; g.fillRect(Ly.lx, y, Ly.rx - Ly.lx, Ly.lh);
     g.fillStyle = '#a3b4bf'; g.fillText(names[i][Ly.narrow ? 1 : 0], 4, y + Ly.lh / 2);
@@ -136,9 +136,11 @@ function tlDraw() {
   { const lL = Math.log10(lightOf().L); g.strokeStyle = 'rgba(232,240,244,0.55)'; g.setLineDash([4, 3]); g.lineWidth = 1.2;
     g.beginPath(); g.moveTo(Ly.lx, ydInv(lL)); g.lineTo(Ly.rx, ydInv(lL)); g.stroke(); g.setLineDash([]);
     if (!Ly.narrow) { g.font = `10px ${fb}`; g.fillStyle = 'rgba(232,240,244,0.7)'; g.textAlign = 'right'; g.fillText(L('いまの明るさ（これより下の線なら見える）', 'light level now (seen if the line is below it)'), Ly.rx - 2, ydInv(lL) - 3); } }
+  // 残像: 順応の量 α（0〜100%）
+  line(4, r => r.af, 0, 1, '#ff8fc8', false);
   // 段の右上の数字（目盛り）
   g.font = `10px ${fm}`; g.fillStyle = '#7f919c'; g.textAlign = 'left'; g.textBaseline = 'top';
-  g.fillText(L('12分', '12′'), Ly.lx + 3, Ly.lanes[0] + 1); g.fillText(`${amax} D`, Ly.lx + 3, Ly.lanes[1] + 1); g.fillText('8 mm', Ly.lx + 3, Ly.lanes[2] + 1); g.fillText(L('明るい', 'bright'), Ly.lx + 3, Ly.lanes[3] + 1);
+  g.fillText(L('12分', '12′'), Ly.lx + 3, Ly.lanes[0] + 1); g.fillText(`${amax} D`, Ly.lx + 3, Ly.lanes[1] + 1); g.fillText('8 mm', Ly.lx + 3, Ly.lanes[2] + 1); g.fillText(L('明るい', 'bright'), Ly.lx + 3, Ly.lanes[3] + 1); g.fillText('100%', Ly.lx + 3, Ly.lanes[4] + 1);
   g.textBaseline = 'alphabetic';
   // ふりかえりの線
   if (S.replay) {

@@ -43,7 +43,8 @@ function buildControls() {
   t.innerHTML = '<input type="checkbox" id="showTop"> ' + L('物の上の端からの光も', 'Also light from the top of the object');
   box.appendChild(t);
   $('showTop').onchange = e => { S.showTop = e.target.checked; };
-  for (const b of document.querySelectorAll('.vtabs button')) b.onclick = () => { S.chart = b.dataset.c; syncControls(); };
+  for (const b of document.querySelectorAll('.vtabs button')) b.onclick = () => { if (S.chart !== b.dataset.c) applyCond({ chart: b.dataset.c, afterMode: 'stare' }); };
+  $('afterBtn').onclick = () => applyCond({ afterMode: S.afterMode === 'stare' ? 'white' : 'stare' });
 }
 function syncControls() {
   for (const row of document.querySelectorAll('#controls .grp')) {
@@ -52,6 +53,8 @@ function syncControls() {
     if (row._key === 'sec' || row._key === 'astigAx') row.hidden = S.astigP === 0;   // 向き・断面の切りかえは乱視のときだけ
   }
   for (const b of document.querySelectorAll('.vtabs button')) b.classList.toggle('on', b.dataset.c === S.chart);
+  $('afterBtn').hidden = S.chart !== 'after';
+  $('afterBtn').textContent = S.afterMode === 'stare' ? L('白い面へ →', 'To white →') : L('図を見つめる', 'Stare again');
   $('showTop').checked = S.showTop;
   $('lookNear').classList.toggle('on', S.d === NEAR_D); $('lookFar').classList.toggle('on', S.d === FAR_D);
   $('swap').textContent = S.d === NEAR_D ? L(`⇄ 遠くを見る（${fmtD(FAR_D)}）`, `⇄ Look far (${fmtD(FAR_D)})`) : L(`⇄ 近くを見る（${fmtD(NEAR_D)}）`, `⇄ Look near (${fmtD(NEAR_D)})`);
@@ -69,7 +72,7 @@ function setTour(i) {
   S.hl = st.hl; S.anim = st.anim ? { ...st.anim, t: 0 } : null;
   if (S.anim) { S.d = S.anim.from; markEvent(L('物を近づける', 'Bring closer')); }
   recompute(); syncControls();
-  if (st.settle) { dynSettle(S, S.At, S.stopRt); darkSettle(S, lightOf().L); tlClear(); }   // 新しい場面: 目をすぐ合わせ、グラフも空にしてから始める
+  if (st.settle) { dynSettle(S, S.At, S.stopRt); darkSettle(S, lightOf().L); S.afterA = 0; tlClear(); }   // 新しい場面: 目をすぐ合わせ、グラフも空にしてから始める
   S.sched = (st.go || []).map(g => { const o = { ...g }; delete o.at; return { t: S.t + g.at, o }; });
   $('tourText').textContent = typeof st.text === 'function' ? st.text() : st.text;
   $('tourNum').textContent = `${i + 1} / ${TOUR.length}`;

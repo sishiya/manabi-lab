@@ -53,9 +53,15 @@ Claude が `IDEAS.md` の 18「眼球のしくみ」を選んだ（17「残像�
 ## 入口へ（2026-10-12 ユーザー「準備ができたらトップページに移して」）
 - 段階D・E のあと、ゲーム判定（ゲームではない）・英語対応（I18N.md）をして入口へ。
 
-## 段階F以降（案）
+## 段階F: 残像（2026-10-12 ユーザー「残像の段階に進めて」）
+- 見え方に「残像」の表: 灰色の地に色の図形とまん中の＋。＋を見つめていると図が少しずつ薄れ（順応）、「白い面へ」で反対の色の残像が出て、数秒〜十数秒で消える。
+- しくみ（測られたこと）: 残像は網膜（神経節細胞）の「引き算の順応」で生まれ、時定数は 4.8〜17.6 秒（ほとんど 5〜12 秒）、止めたときにはね返りの反応が出る（Zaidi ほか 2012）。見る人の残像の濃さは見つめた図の濃さに比例し、強まるのも消えるのも指数関数で時定数 4〜8 秒（Kelly & Martinez-Uriegas 1993）。
+- 計算: 画面の色 → 錐体（L・M・S）の明るさのちがい（コントラスト）。場所ごとに順応の量 a が時定数 7 秒（上の範囲の中の推定）でいまの信号に近づき、見える信号 ＝ 信号 − k·a。k はねかえりの大きさ 0.42（Zaidi の図4a の傾き。推定）。白い面では信号 0 なので −k·a ＝ 反対の色。
+- 時間のグラフに「残像」の段（順応の量）。案内に1段。
+- 簡単にするところ: 目はまったく動かない（実際は小さく動く）。ピントは合っている。L・M・S の時定数は同じ。光受容体のすばやい明るさ合わせ（白い面に変えた瞬間）は一瞬とした。
+
+## 段階G以降（案）
 - 網膜の中（錐体・桿体・中心窩）と盲点をその場で試す。斜めから来る光（周辺視）。
-- 残像（IDEAS 17）: 色の図を見つめてから白い面へ。陰性・陽性残像。
 - 動物の目とくらべる（`animal-senses/` と連携）、白内障。
 
 ## やらないこと
@@ -82,4 +88,6 @@ Claude が `IDEAS.md` の 18「眼球のしくみ」を選んだ（17「残像�
 - Hecht S, Haig C, Chase AM (1937) The influence of light adaptation on subsequent dark adaptation of the eye. J Gen Physiol 20(6):831–850（弱い光のあとは桿体だけ、強い光のあと桿体は 12〜13 分後に。錐体の幅は 3 log 以上）
 - Curcio CA ほか (1990) Human photoreceptor topography. J Comp Neurol 292:497–523（中心窩の桿体のない所 直径 0.350 mm＝1.25°）
 - Shlaer S (1937) The relation between visual acuity and illumination. J Gen Physiol 21(2):165–188（桿体で見る視力は 0.16 まで）
+- Zaidi Q, Ennis R, Cao D, Lee B (2012) Neural locus of color afterimages. Current Biology 22(3):220–224. doi:10.1016/j.cub.2011.12.021（PMC3562597 の本文で確認: 神経節細胞の引き算の順応の時定数 4.8〜17.6 s、ほとんど 5〜12 s。はねかえりの反応と最大の反応の傾き −0.42）
+- Kelly DH, Martinez-Uriegas E (1993) Measurements of chromatic and achromatic afterimages. J Opt Soc Am A 10(1):29–37. doi:10.1364/josaa.10.000029（要旨: 残像の濃さは見つめた図の濃さに比例、強まるのも消えるのも指数関数で時定数 4〜8 s）
 - Atchison DA ほか (2005) Shape of the retinal surface in emmetropia and myopia. IOVS 46(8):2698–2707（網膜はやや平たいだ円体 → ここでは球で近似）
