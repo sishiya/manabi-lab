@@ -66,16 +66,34 @@ foreach ($p in 8771..8779) {
   if ($ok) { $port = $p; break }
   if (-not $server.HasExited) { Stop-Process -Id $server.Id -Force }
 }
-$smokeNg = -1; $smokeWarn = 0
+$smokeNg = 0; $smokeWarn = 0
+$smokeAll = New-Object Collections.Generic.List[object]
 try {
   if ($port) {
-    & (Join-Path $PSScriptRoot 'smoke.ps1') -Port $port -DebugPort $DebugPort | Out-Null
-    $smoke = Get-Content (Join-Path $outDir 'smoke-last.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-    Copy-Item (Join-Path $outDir 'smoke-last.json') (Join-Path $outDir 'health-smoke.json') -Force
-    $smokeNg = @($smoke | Where-Object { -not $_.ok }).Count
-    $smokeWarn = @($smoke | Where-Object { $_.ok -and @($_.warnings).Count }).Count
-    foreach ($r in @($smoke | Where-Object { -not $_.ok })) { $lines.Add("smoke NG $($r.app) [$($r.lang)]: $(@($r.errors)[0])") }
-  } else { $lines.Add('smoke: サーバーを立てられなかった（8771〜8779）') }
+    # 1本ずつ別に回す（1本で Chrome との接続が切れても、ほかは調べられるように）。並びは smoke.ps1 と同じ
+    $apps = @('_root') + (Get-ChildItem $root -Directory | Where-Object {
+        $_.Name -notmatch '^[_.]|^assets$' -and (Test-Path (Join-Path $_.FullName 'index.html')) } | ForEach-Object { $_.Name })
+    $smokeLast = Join-Path $outDir 'smoke-last.json'
+    foreach ($a in $apps) {
+      if (Test-Path $smokeLast) { Remove-Item $smokeLast -Force }
+      $err = $null
+      foreach ($try in 1..2) {   # Chrome の立ち上がりが間に合わないことがあるので1回だけやりなおす
+        try {
+          & (Join-Path $PSScriptRoot 'smoke.ps1') -Apps $a -Port $port -DebugPort $DebugPort *> $null
+          $parsed = Get-Content $smokeLast -Raw -Encoding UTF8 | ConvertFrom-Json   # 5.1 は配列を1つで返すので変数に受けてから
+          foreach ($r in $parsed) { $smokeAll.Add($r) }
+          $err = $null; break
+        } catch { $err = $_.Exception.Message; Start-Sleep -Seconds 3 }
+      }
+      if ($err) { $smokeAll.Add([pscustomobject]@{ app = $a; lang = '-'; ok = $false; errors = @("smoke が途中で止まった: $err"); warnings = @() }) }
+    }
+    $smokeAll | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 (Join-Path $outDir 'health-smoke.json')
+    $smokeNg = @($smokeAll | Where-Object { -not $_.ok }).Count
+    $smokeWarn = @($smokeAll | Where-Object { $_.ok -and @($_.warnings).Count }).Count
+    foreach ($r in @($smokeAll | Where-Object { -not $_.ok })) { $lines.Add("smoke NG $($r.app) [$($r.lang)]: $(@($r.errors)[0])") }
+  } else { $smokeNg = 1; $lines.Add('smoke: サーバーを立てられなかった（8771〜8779）') }
+} catch {
+  $smokeNg = [Math]::Max($smokeNg, 1); $lines.Add("smoke が動かなかった: $($_.Exception.Message)")
 } finally {
   if ($server -and -not $server.HasExited) { Stop-Process -Id $server.Id -Force }
 }
@@ -90,7 +108,6 @@ try {
   foreach ($r in @($links | Where-Object { $_.level -eq 'NG' })) { $lines.Add("リンク切れ $($r.url)（$($r.apps -join '・')）") }
 } catch { $lines.Add("リンクの確認が動かなかった: $($_.Exception.Message)") }
 
-if ($smokeNg -lt 0) { $smokeNg = 1 }
 if ($linkNg -lt 0) { $linkNg = 1 }
 $date = Get-Date -Format 's'
 [ordered]@{ date = $date; smokeNg = $smokeNg; smokeWarn = $smokeWarn; linkNg = $linkNg; linkWarn = $linkWarn; lines = @($lines) } |
