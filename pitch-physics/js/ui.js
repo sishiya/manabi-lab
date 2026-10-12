@@ -62,6 +62,25 @@ function buildControls() {
   // ② 球の速さと回転
   const s2 = section(box, 'spin', '2', '球の速さと回転', true);
   slider(s2, 'v0', '速さ', 60, 170, 1, () => S.P.v0, v => S.P.v0 = v, v => v + ' km/h（' + fmt(v / 3.6 / MPH, 0) + ' mph）');
+  // 速さの測り方（どこで測るかで数字が変わる）と、昔の記録を初速に直す計算
+  const sp = document.createElement('div'); sp.className = 'speedbox'; sp.innerHTML =
+    '<div class="sbh">速さの測り方（いまの球）</div><table id="spTable"></table>' +
+    '<div class="sbh">測った記録を、放した瞬間の速さに直す</div>' +
+    '<div class="conv"><input type="number" id="cvVal" value="100.8" step="0.1" min="40" max="200" aria-label="測った速さ"><select id="cvUnit"><option value="mph">mph</option><option value="kmh">km/h</option></select>' +
+    '<select id="cvWhere"><option value="y10">ホームの 10 ft 手前で</option><option value="plate">ホームで（終速）</option><option value="y50">50 ft 地点で</option><option value="release">放した瞬間に</option></select>' +
+    '<button id="cvGo" class="act">直す</button></div><p class="help" id="cvOut">例: 1974 年の大リーグで、ホームの約 10 ft 手前で 100.8 mph と測られた記録（Sports Illustrated 1974）。いまの投げ方・空気で計算します。</p>';
+  s2.appendChild(sp);
+  sp.querySelector('#cvGo').addEventListener('click', () => {
+    const v = Number($('cvVal').value), unit = $('cvUnit').value, where = $('cvWhere').value;
+    if (!(v > 0)) return;
+    const ms = unit === 'mph' ? v * MPH : v / 3.6, P = Object.assign({}, S.P);
+    const v0 = releaseFromMeasured(P, where, ms), r = simulate(Object.assign({}, P, { v0 }));
+    const wn = { y10: 'ホームの 10 ft 手前', plate: 'ホーム', y50: '50 ft 地点', release: '放した瞬間' }[where];
+    $('cvOut').innerHTML = wn + 'で ' + v + ' ' + (unit === 'mph' ? 'mph' : 'km/h') + ' → 放した瞬間は <b>' + fmt(v0, 1) + ' km/h（' + fmt(v0 / 3.6 / MPH, 1) + ' mph）</b>。' +
+      '（いまの投げ方: 回転数 ' + P.rpm + ' 回/分・空気 ' + fmt(PHY.env.rho, 3) + ' kg/m³ で計算。50 ft 地点なら ' + fmt(speedAt(r, 'y50') * 3.6, 1) + ' km/h、ホームで ' + fmt(speedAt(r, 'plate') * 3.6, 1) + ' km/h）' +
+      ' <button id="cvUse" class="act">この速さで投げる</button>';
+    $('cvUse').addEventListener('click', () => { S.P.v0 = Math.min(200, Math.round(v0)); onChange(); });
+  });
   slider(s2, 'rpm', '回転数', 0, 3500, 10, () => S.P.rpm, v => S.P.rpm = v, v => v + ' 回/分');
   slider(s2, 'dir', '回転の向き', 0, 359, 1, () => S.P.dir, v => S.P.dir = v, v => '手前の面が ' + clock(v) + ' の向きへ（軸 ' + clock(v + 270) + '）');
   slider(s2, 'eff', '使える回転', 0, 100, 1, () => Math.round(S.P.eff * 100), v => S.P.eff = v / 100, v => v + '%（のこりはジャイロ回転）');
@@ -168,6 +187,13 @@ function syncAll() {
   document.querySelectorAll('.chips button').forEach(b => b.classList.toggle('on', b.dataset.id === S.pitch));
   const p = arsenal(S.pitcher).find(q => q.id === S.pitch); $('pnote').textContent = p ? p.note : '';
   const T = $('time'); T.max = tEnd(); T.value = S.t;
+  $('play').textContent = S.playing ? '❚❚' : '▶';   // 球種を変えたときなども、再生の印をいまの状態に合わせる
+  const tb = $('spTable');
+  if (tb) {
+    const row = (w, lab) => '<tr><th>' + lab + '</th><td>' + fmt(speedAt(S.res, w) * 3.6, 1) + ' km/h</td><td class="w">' + fmt(speedAt(S.res, w) / MPH, 1) + ' mph</td></tr>';
+    tb.innerHTML = row('release', '放した瞬間（初速。いまの MLB・NPB のトラックマンなど）') + row('y50', 'ホームから 50 ft（2007〜16 年の MLB）') +
+      row('y10', 'ホームから 10 ft（1974 年の大リーグの測定）') + row('plate', 'ホーム（終速。打者の近く）');
+  }
   updateNums();
 }
 

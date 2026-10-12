@@ -229,3 +229,18 @@ i.sw.plain{background:repeating-linear-gradient(90deg,rgba(240,240,230,.9) 0 6px
 /* 技術検証の札 */
 #top .badge{display:inline-block;font:700 11px var(--f-body);color:#1a1a1a;background:#ffd166;border-radius:10px;padding:2px 8px;letter-spacing:.05em}
 .note-tech{background:rgba(255,209,102,.1);border:1px solid rgba(255,209,102,.35);border-radius:8px;padding:8px 10px;color:var(--ink)}
+
+/* 速さの測り方 */
+.speedbox{border-top:1px solid var(--line);padding-top:8px;display:grid;gap:4px}
+.sbh{font-weight:700;font-size:12.5px;color:var(--ink)}
+#spTable{border-collapse:collapse;font-size:12.5px;width:100%}
+#spTable th{text-align:left;font-weight:500;color:var(--muted);padding:2px 8px 2px 0}
+#spTable td{font-family:var(--f-mono);white-space:nowrap;padding:2px 6px}
+#spTable td.w{color:var(--muted)}
+.conv{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.conv input,.conv select{background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 6px;font:500 13px var(--f-body);min-height:34px}
+.conv input{width:84px}
+#cvOut .act{margin-left:6px;padding:4px 10px;min-height:30px}
+/* 横にすべらせる列はスクロールバーを出さない（指やトラックパッドで動かす） */
+.chips,#cams,.envhead{scrollbar-width:none}
+.chips::-webkit-scrollbar,#cams::-webkit-scrollbar,.envhead::-webkit-scrollbar{display:none}

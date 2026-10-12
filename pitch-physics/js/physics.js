@@ -235,6 +235,25 @@ function aim(P, target = { x: 0, z: 0.75 }, opt) {
   return { vAng: Q.vAng, hAng: Q.hAng };
 }
 
+// 速さを測る場所: release = 放した瞬間（初速。2017 年からの MLB）、y50 = ホームから 50 ft（2007〜16 年の MLB の PITCHf/x）、
+// y10 = ホームから 10 ft（1974 年の大リーグの測定の位置）、plate = ホームの前の端（終速）
+const SPEED_AT = { release: null, y50: 50 * 0.3048, y10: 10 * 0.3048, plate: PHY.plateY };
+function speedAt(res, where) {
+  if (where === 'release') return V.len(res.st.vel);
+  if (where === 'plate') return V.len(res.vPlate);
+  const y = SPEED_AT[where], i = res.pts.findIndex(q => q.p[1] <= y);
+  return V.len((i < 0 ? res.pts[res.pts.length - 1] : res.pts[i]).v);
+}
+// ある場所で測った速さ（m/s）から、放した瞬間の速さ（km/h）を逆に求める（同じ投げ方・同じ空気で。二分法）
+function releaseFromMeasured(P, where, measured) {
+  let lo = 40, hi = 230;
+  for (let k = 0; k < 30; k++) {
+    const mid = (lo + hi) / 2, r = simulate(Object.assign({}, P, { v0: mid }));
+    if (speedAt(r, where) < measured) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
 // 変化量（よく使われる測り方の目安）: y = 50 ft の点からホームまでに、回転と縫い目の力で生まれたずれ（その点でのずれと、ずれの速さのぶんを引く）
 function movement50(full, plain) {
   const y = 50 * 0.3048, i = full.pts.findIndex(q => q.p[1] <= y);
@@ -263,4 +282,4 @@ function calibSSW() {
 }
 calibSSW();
 
-if (typeof module !== 'undefined') module.exports = { movement50, earthOmega, calibSSW, k2sAt, airDensity, STD_ENV, PHY, V, KMH, MPH, RPM, cdOf, clOf, launch, forces, simulate, sampleAt, aim, movement };
+if (typeof module !== 'undefined') module.exports = { speedAt, releaseFromMeasured, movement50, earthOmega, calibSSW, k2sAt, airDensity, STD_ENV, PHY, V, KMH, MPH, RPM, cdOf, clOf, launch, forces, simulate, sampleAt, aim, movement };
