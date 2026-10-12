@@ -33,11 +33,9 @@ const T4D = {
       // 中: DNA の巻き（同心のだ円）と内部たんぱく
       const f = o.fill ?? 1;
       if (f > 0) {
-        g.save(); Z.poly(P); g.clip();
-        const top = hc - hh + 2 * hh * f;
-        g.beginPath(); g.rect(Z.X(-1e4), Z.Y(top), 1e6, 1e6); g.clip(); // 回した座標でもはみ出さない大きな四角
-        for (let r = 3; r < hw - 2; r += 2.2) Z.ell(cx, hc, r, r * 1.32, 0, null, 'rgba(255,159,107,.75)', Math.max(1, 0.6 * Z.s));
-        g.restore();
+        // 入口（下の頂点 P[3]）から入った DNA が、かべに沿って外側の層から巻いていく（層の間かく約2.5nm）
+        const SP = P.map(([x, y]) => [Z.X(x), Z.Y(y)]);
+        dnaSpool(g, SP, Z.X(cx), Z.Y(hc), SP[3], Math.min(1, f), Math.max(2, 2.5 * Z.s), Math.max(1, 0.7 * Z.s), 'rgba(255,159,107,.8)');
       }
       if (o.ip !== false) for (let i = 0; i < 40; i++) { const a = i * 2.4, rr = (i % 7) * 5 + 6; Z.circle(cx + Math.cos(a) * rr * 0.8, hc + Math.sin(a) * rr * 1.1, 1.3, ZC.ip); }
     } else {

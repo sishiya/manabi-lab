@@ -7,7 +7,7 @@ const View = (() => {
   const g = cv.getContext('2d');
   let W = 1, H = 1;
   const cam = { cx: 0, cy: 350, s: 0.3, tcx: 0, tcy: 350, ts: 0.3 };
-  let sFit = 0.3, sMax = 40;
+  let sFit = 0.3, sMax = 40, dprCap = 1.5;
   const KIND = { sure: '研究の値', est: '目安', art: '模式' };
   let hot = [];          // 解説の出る場所（描くたびに作り直す）。あとに足したものが上
   let auto = true;       // おまかせカメラ
@@ -71,7 +71,7 @@ const View = (() => {
 
   // ---- 大きさ ----
   function resize() {
-    const r = cv.getBoundingClientRect(), dpr = Math.min(1.5, window.devicePixelRatio || 1); // 2倍にすると描く点が約1.8倍になり重い
+    const r = cv.getBoundingClientRect(), dpr = Math.min(dprCap, window.devicePixelRatio || 1); // 2倍にすると描く点が約1.8倍になり重い。重い環境では自動で下げる（setDprCap）
     if (r.width < 2) return;
     W = r.width; H = r.height;
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
@@ -107,7 +107,11 @@ const View = (() => {
     // おまかせのときはゆっくり。シークバーを動かしている間・人のからだの区間は速め（View.camK）
     const k = 1 - Math.exp(-dt * (auto ? View.camK : 3.2));
     // 拡大率は掛け算でなめらかに。位置は「画面の上での距離」で近づける（人のからだ → 分子のように大きく寄るとき、目的の場所が画面の外に残らない）
-    const ease2 = (c, q) => { const s0 = c.s; c.s = Math.exp(Math.log(c.s) + (Math.log(c.ts) - Math.log(c.s)) * q); c.cx = c.tcx - (c.tcx - c.cx) * s0 * (1 - q) / c.s; c.cy = c.tcy - (c.tcy - c.cy) * s0 * (1 - q) / c.s; };
+    const ease2 = (c, q) => {
+      const s0 = c.s; c.s = Math.exp(Math.log(c.s) + (Math.log(c.ts) - Math.log(c.s)) * q); c.cx = c.tcx - (c.tcx - c.cx) * s0 * (1 - q) / c.s; c.cy = c.tcy - (c.tcy - c.cy) * s0 * (1 - q) / c.s;
+      // ほとんど着いたら、ぴたりと止める（止まっていれば描き直さない・背景の絵を使い回せる）
+      if (Math.abs(c.s / c.ts - 1) < 2e-3 && Math.abs(c.tcx - c.cx) * c.s < 0.3 && Math.abs(c.tcy - c.cy) * c.s < 0.3) { c.s = c.ts; c.cx = c.tcx; c.cy = c.tcy; }
+    };
     if (lp.on) ease2(lp, 1 - Math.exp(-dt * 1.6));
     ease2(cam, k);
   }
@@ -143,9 +147,9 @@ const View = (() => {
     g.stroke(); g.restore();
     // ルーペの中を同じ描き方で描く（カメラと大きさを一時的に差しかえる）
     const keep = { cx: cam.cx, cy: cam.cy, s: cam.s, W, H }, keepHot = hot;
-    cam.cx = lp.cx; cam.cy = lp.cy; cam.s = lp.s; W = n; H = n;
+    cam.cx = lp.cx; cam.cy = lp.cy; cam.s = lp.s; W = n; H = n; View.inLoupe = true;
     g.save(); g.translate(x0, y0); g.beginPath(); g.rect(0, 0, n, n); g.clip();
-    try { fn(); } finally { lp.hot = hot; hot = keepHot; g.restore(); cam.cx = keep.cx; cam.cy = keep.cy; cam.s = keep.s; W = keep.W; H = keep.H; }
+    try { fn(); } finally { View.inLoupe = false; lp.hot = hot; hot = keepHot; g.restore(); cam.cx = keep.cx; cam.cy = keep.cy; cam.s = keep.s; W = keep.W; H = keep.H; }
     g.save(); g.strokeStyle = '#ffe066'; g.lineWidth = 2; g.strokeRect(x0, y0, n, n);
     const t = 'ルーペ' + (lp.title ? ': ' + lp.title : '');
     g.font = '700 12px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'left'; g.textBaseline = 'top';
@@ -235,7 +239,8 @@ const View = (() => {
   tip.addEventListener('pointerdown', () => { pinned = false; tip.hidden = true; });
 
   return {
-    V, cam, resize, look, fitAll, stepCam, zoomAt, setLoupe, drawLoupe, setBounds, sig, real: false, camK: 1.1,
+    V, cam, resize, look, fitAll, stepCam, zoomAt, setLoupe, drawLoupe, setBounds, sig, real: false, camK: 1.1, inLoupe: false,
+    setDprCap(v) { if (v !== dprCap) { dprCap = v; resize(); } }, get dprCap() { return dprCap; },
     get loupeRect() { return lp.shown && auto ? { x: lp.x, y: lp.y, w: lp.size, h: lp.size } : null; },
     begin() { hot = []; g.clearRect(0, 0, W, H); },
     get W() { return W; }, get H() { return H; }, get sFit() { return sFit; }, get sMax() { return sMax; },

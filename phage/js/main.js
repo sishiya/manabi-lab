@@ -1,7 +1,8 @@
 // 細菌にとりつくウイルス — 始め方・描画ループ・デバッグ用の窓口
 'use strict';
 window.__phErr = window.__phErr || [];
-window.addEventListener('error', e => window.__phErr.push(String(e.message)));
+// ResizeObserver のループのお知らせは害がないので記録しない
+window.addEventListener('error', e => { if (!/ResizeObserver loop/.test(String(e.message))) window.__phErr.push(String(e.message)); });
 
 View.resize(); View.fitAll(true);
 UI.init();
@@ -19,11 +20,18 @@ function frame(dt) {
   const sig = UI.state.u + '|' + View.sig();
   if (sig === lastSig && !force) return;
   lastSig = sig; force = false;
+  const t0 = performance.now();
   Scene.draw(st);
   View.drawLoupe(() => { Scene.draw(st); });
+  // 描くのにかかった時間の平均。重い（14ms をこえる）なら解像度を下げる（1.5 → 1.25 → 1）
+  drawMs = drawMs * 0.92 + (performance.now() - t0) * 0.08;
+  if (++drawN > 40 && drawMs > 14 && View.dprCap > 1) { View.setDprCap(View.dprCap > 1.25 ? 1.25 : 1); force = true; drawN = 0; drawMs = 8; }
 }
+let drawMs = 8, drawN = 0;
 let lastSig = '', force = true;
 function loop(now) {
+  // 画面の書きかえが速い（120Hz など）ときも、描くのは最大で毎秒約60回
+  if (now - last < 15) { requestAnimationFrame(loop); return; }
   // 最初のコマは now が last より前のことがあるので、0〜0.05秒に収める
   const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
   try { frame(dt); } catch (e) { window.__phErr.push(String(e && e.stack || e)); }

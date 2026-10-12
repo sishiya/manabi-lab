@@ -42,21 +42,28 @@ const Scene = (() => {
     const m = spread ? M.tEnd : st.min, burst = st.id === 'burst' ? st.p : spread ? 1 : 0;
     const tau = st.u * Story.total, rm = spread ? st.min - M.tEnd : -1;
     const c = Story.counts(pre ? 0 : m);
-    g.fillStyle = '#0b1a22'; g.fillRect(0, 0, V.W, V.H);
     // 水と細胞の外側の層（解説は深さで決める。いちばん下に登録して、ほかのものが上）
     V.hit({ test: () => true, infoAt: (x, y) => envInfo(x, y, m, pre) });
-    Macro.draw();
-    drawColony(tau, rm);
-    if (st.id === 'zoomin' || st.id === 'colony' || st.id === 'approach') drawFreePhages(tau);
     // 破れて出る: 0〜0.22 で棒の形がくずれてふくらむ → 1か所が破れ、中身がいっせいに出る → 膜はちぎれたかけらに
     const TEAR = 0.22, torn = burst >= TEAR, kk = torn ? (burst - TEAR) / (1 - TEAR) : 0;
     swell = burst > 0 ? ease(Math.min(1, burst / TEAR)) : 0;
+    // 動かないもの（背景・からだ・膜・細胞の中の模様・奥のリボソーム）: カメラと状態が同じなら、とっておいた絵を使う
+    const tk = pre ? 0 : Math.min(1, m / TL.hostStop);
+    const skey = burst > 0 || View.inLoupe ? null : [V.cam.cx, V.cam.cy, V.s, V.W, V.H, View.real, pre, Math.round(tk * 8), Story.cond].join(',');
+    staticLayer(skey, () => {
+      g.fillStyle = '#0b1a22'; g.fillRect(0, 0, V.W, V.H);
+      Macro.draw();
+      if (!torn) {
+        drawEnvelope(m, pre, burst);
+        cellPath(35); g.save(); g.clip(); drawCytoLook(pre, m); drawRiboBack(tk); g.restore();
+      }
+    });
+    drawColony(tau, rm);
+    if (st.id === 'zoomin' || st.id === 'colony' || st.id === 'approach') drawFreePhages(tau);
     drawAppendages(m, burst > 0 ? Math.max(0, 1 - kk * 1.5) : 1);
     if (!torn) {
-      drawEnvelope(m, pre, burst);
       cellPath(35); g.save(); g.clip();
       drawInside(st, m, pre, c, burst);
-      drawCytoLook(pre, m);
       g.restore();
       drawHolins(m, pre, burst);
     } else {
@@ -89,6 +96,39 @@ const Scene = (() => {
     if (d < 16) return ZINFO.pg;
     if (d < 35) return !pre && m > 12 ? ZINFO.holin : ZINFO.im;
     return V.s < 0.35 ? LX.cell : LX.cyto;
+  }
+
+  // ---- 動かない背景の絵をとっておく（キャッシュ）----
+  // key が前と同じなら、とっておいた絵をそのまま写す（描いたときに登録した解説の場所も、もう一度登録する）
+  let sCanvas = null, sKey = null, sHits = [];
+  function staticLayer(key, fn) {
+    const cv = g.canvas;
+    if (key && key === sKey && sCanvas && sCanvas.width === cv.width && sCanvas.height === cv.height) {
+      g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(sCanvas, 0, 0); g.restore();
+      const hot = View.hot(); for (const h of sHits) hot.push(h);
+      return;
+    }
+    const hot = View.hot(), n0 = hot.length;
+    fn();
+    if (!key) return;
+    sHits = hot.slice(n0);
+    if (!sCanvas) sCanvas = document.createElement('canvas');
+    if (sCanvas.width !== cv.width || sCanvas.height !== cv.height) { sCanvas.width = cv.width; sCanvas.height = cv.height; }
+    const q = sCanvas.getContext('2d'); q.setTransform(1, 0, 0, 1, 0, 0); q.clearRect(0, 0, cv.width, cv.height); q.drawImage(cv, 0, 0);
+    sKey = key;
+  }
+  // 奥のリボソーム（背景の絵に入れる。手前のものは drawInside で）
+  function drawRiboBack(tk) {
+    const M = Story.M, s = V.s, vb = V.viewBox();
+    const rc = `rgb(${Math.round(120 + 100 * tk)},${Math.round(170 + 30 * tk)},${Math.round(220 - 50 * tk)})`;
+    g.globalAlpha = BACK_A; g.fillStyle = rc;
+    const rp = Math.max(1, 9.5 * s), dot = rp < 3;
+    for (let ri = 0; ri < M.ribo.length; ri++) {
+      if (hash(ri, 5) <= FRONT) continue;
+      const r = M.ribo[ri]; if (r.x < vb.x0 - 30 || r.x > vb.x1 + 30 || r.y < vb.y0 - 30 || r.y > vb.y1 + 30) continue;
+      if (dot) g.fillRect(V.X(r.x) - rp, V.Y(r.y) - rp, 2 * rp, 2 * rp); else V.circle(r.x, r.y, 9.5, rc);
+    }
+    g.globalAlpha = 1;
   }
 
   // ---- 細胞の外側の層 ----
@@ -134,8 +174,8 @@ const Scene = (() => {
       // どの拡大率でも本当の大きさ（直径約20nm）で描く（小さな点から急に丸へ切りかえない）。小さすぎるときは同じ大きさの四角
       const rp = Math.max(1, 9.5 * s), dot = rp < 3;
       const disc = () => { if (dot) { g.fillStyle = rc; g.fillRect(V.X(r.x) - rp, V.Y(r.y) - rp, 2 * rp, 2 * rp); } else V.circle(r.x, r.y, 9.5, rc); };
-      // 奥のもの（約7割）は薄い背景。説明は出さない
-      if (hash(ri, 5) > FRONT) { g.globalAlpha = baseA * BACK_A; disc(); g.globalAlpha = baseA; continue; }
+      // 奥のもの（約7割）は薄い背景（drawRiboBack で背景の絵に入れる。破れたあとに薄れるときだけここで）。説明は出さない
+      if (hash(ri, 5) > FRONT) { if (burst > 0) { g.globalAlpha = baseA * BACK_A; disc(); g.globalAlpha = baseA; } continue; }
       disc();
       // 細かい部分（小さいほうの粒・読んでいる mRNA・作っている鎖）は、寄るにつれてだんだん濃く
       const da = Math.max(0, Math.min(1, (s - 0.9) / 0.7));
@@ -273,6 +313,21 @@ const Scene = (() => {
     if (n > 0) T4D.sheath(Z, 0, y0, T4D.ringsExtended().slice(0, n));
     if (k >= 0.9) Z.rect(0, y0 + T4.sheathLen + 3, 22, 6, ZC.neck, 2);
   }
+  // いちばん軽い形: 頭の六角形（DNA の量は色の濃さで。引いて見るときは層までは見えない）と、しっぽの線、脚の線
+  const HEXG = [[0, 1], [0.72, 0.57], [0.72, -0.57], [0, -1], [-0.72, -0.57], [-0.72, 0.57]];
+  function glyph(bx, by, hp, ang, fill, joined, legs, sc) {
+    const s = V.s, hh = T4.headLen / 2 * sc, ca = Math.cos(ang), sa = Math.sin(ang);
+    const hcx = joined ? bx - 172 * sa : hp.x, hcy = joined ? by + 172 * ca : hp.y;
+    g.beginPath();
+    HEXG.forEach(([u, v], i) => { const lx = u * hh, ly = v * hh, x = hcx + lx * ca - ly * sa, y = hcy + lx * sa + ly * ca; i ? g.lineTo(V.X(x), V.Y(y)) : g.moveTo(V.X(x), V.Y(y)); });
+    g.closePath(); g.fillStyle = '#18323a'; g.fill();
+    if (fill > 0) { const a0 = g.globalAlpha; g.globalAlpha = a0 * (0.2 + 0.6 * fill); g.fillStyle = '#ff9f6b'; g.fill(); g.globalAlpha = a0; }
+    g.strokeStyle = PCOL.headEdge; g.lineWidth = 1; g.stroke();
+    if (joined) {
+      g.strokeStyle = PCOL.sheath; g.lineWidth = Math.max(1.5, 20 * s); g.beginPath(); g.moveTo(V.X(bx), V.Y(by)); g.lineTo(V.X(bx - 110 * sa), V.Y(by + 110 * ca)); g.stroke();
+      if (legs) { g.strokeStyle = PCOL.fiber; g.lineWidth = 1; g.beginPath(); for (const d of [-1, 1]) { g.moveTo(V.X(bx), V.Y(by)); g.lineTo(V.X(bx + d * 90 * ca + 30 * sa), V.Y(by + d * 90 * sa - 30 * ca)); } g.stroke(); }
+    }
+  }
   function scaffold(Z, n, sc, frag) {
     for (let i = 0; i < n; i++) { const a = i * 2.39, rr = (i % 6) * 4.4 + 2; Z.circle(Math.cos(a) * rr * 0.9 * sc, Math.sin(a) * rr * 1.5 * sc - 6, 1.5, i % 8 === 0 ? ZC.gp21 : ZC.gp22); }
     // 切られた足場のかけら（殻のすきまから出ていく）
@@ -309,7 +364,9 @@ const Scene = (() => {
       const a = Math.min(1, (m - h.born) / 0.35);                       // 殻が付いていく進み
       const fill = packing ? (m - h.fs) / (h.fe - h.fs) : built ? 1 : 0;
       const sc = m < h.fs ? PRO : packing ? PRO + (1 - PRO) * ease(fill / 0.08) : 1;  // ふくらむ
-      if (simple) {
+      // かなり引いているとき（奥のものは少し寄っても）: 線と面だけのいちばん軽い形
+      if (s < (back ? 0.42 : 0.3)) { glyph(joined ? h.x : null, joined ? h.y : null, hp, joined ? h.ang : hp.ang, joined ? 1 : fill, joined, m >= h.fe + Story.JOIN + 0.3, sc); }
+      else if (simple) {
         if (joined) {
           g.save(); g.translate(V.X(h.x), V.Y(h.y)); g.rotate(-h.ang); g.scale(s, s);
           if (m < h.fe + 0.6) drawPhageBody(g, { fill: 1 }); else drawPhageSmall(g, { fill: 1 });

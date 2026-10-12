@@ -19,6 +19,38 @@ const PCOL = {
   plate: '#c7a6ff', fiber: '#e9f3f6', dna: '#ff9f6b',
 };
 
+// 頭の中の DNA（つめこみ中も）: 入口から入った1本の DNA が、殻の内側のかべに沿って外側の層から巻いていき、
+// だんだん中心へつまっていく（下から水位が上がる「ゲージ」のようにはしない）。f: 0..1（つめた割合）
+// P: 殻の六角形の頂点（描く座標）、(cx, cy): 中心、portal: 入口の点、step: 層の間かく（描く座標）
+function dnaSpool(g, P, cx, cy, portal, f, step, lw, col) {
+  if (f <= 0) return;
+  const rmax = Math.max(...P.map(([x, y]) => Math.hypot(x - cx, y - cy)));
+  const nL = Math.max(1, Math.floor(rmax * 0.82 / step)), done = f * nL, full = Math.floor(done), part = done - full;
+  // 層 i の形: 殻の形を中心へちぢめたもの（かべに近い外側が先）
+  const ring = i => { const k = 1 - (i + 0.6) * step / rmax; return P.map(([x, y]) => [cx + (x - cx) * k, cy + (y - cy) * k]); };
+  g.save(); g.strokeStyle = col; g.lineWidth = lw; g.lineJoin = 'round';
+  g.beginPath();
+  for (let i = 0; i < Math.min(full, nL); i++) { const R = ring(i); R.forEach(([x, y], j) => j ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); }
+  g.stroke();
+  let tip = portal;
+  if (full < nL && part > 0) {
+    // いま巻いている層（入口に近い頂点から回りはじめ、part の分だけ）
+    const R = ring(full), n = R.length, L = []; let tot = 0;
+    for (let j = 0; j < n; j++) { const a = R[j], b = R[(j + 1) % n], d = Math.hypot(b[0] - a[0], b[1] - a[1]); L.push(d); tot += d; }
+    let i0 = 0, bd = 1e18; R.forEach(([x, y], j) => { const d = Math.hypot(x - portal[0], y - portal[1]); if (d < bd) { bd = d; i0 = j; } });
+    let left = tot * part; g.beginPath(); g.moveTo(R[i0][0], R[i0][1]); tip = R[i0];   // 入口からの糸は、巻きはじめの点へつなぐ
+    for (let s = 0; s < n && left > 0; s++) {
+      const j = (i0 + s) % n, a = R[j], b = R[(j + 1) % n], d = L[j], t = Math.min(1, left / d);
+      const x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t; g.lineTo(x, y); left -= d;
+    }
+    g.stroke();
+  }
+  // 入口から入ってくる糸（入口 → いちばん近い頂点。つめおわったら描かない）
+  if (full >= nL || part <= 0) { const R = ring(Math.min(full, nL - 1)); let bd = 1e18; R.forEach(p => { const d = Math.hypot(p[0] - portal[0], p[1] - portal[1]); if (d < bd) { bd = d; tip = p; } }); }
+  if (f < 1) { g.globalAlpha *= 0.9; g.beginPath(); g.moveTo(portal[0], portal[1]); g.lineTo(tip[0], tip[1]); g.stroke(); }
+  g.restore();
+}
+
 // o: { sheath, sheathW, plateW, tubeOut, fill (0..1 頭の DNA), alpha, ghost, headOnly, tailOnly }
 function drawPhageBody(g, o) {
   const L = o.sheath ?? T4.sheathLen, sw = o.sheathW ?? T4.sheathW, pw = o.plateW ?? T4.plateW;
@@ -31,15 +63,9 @@ function drawPhageBody(g, o) {
   const hex = [[0, -hh], [hw, -hh + 26], [hw, hh - 26], [0, hh], [-hw, hh - 26], [-hw, -hh + 26]];
   g.beginPath(); hex.forEach(([x, y], i) => i ? g.lineTo(x, headC + y) : g.moveTo(x, headC + y)); g.closePath();
   g.fillStyle = PCOL.headIn; g.fill();
-  if (fill > 0.01) { // 中の DNA（ぎっしり巻かれている）
-    g.save(); g.clip();
-    g.globalAlpha *= Math.min(1, fill * 1.2);
-    g.fillStyle = 'rgba(255,159,107,.55)';
-    const top = headC + hh - (T4.headLen * Math.min(1, fill));
-    g.fillRect(-hw, top, T4.headW, headC + hh - top);
-    g.strokeStyle = 'rgba(255,190,150,.55)'; g.lineWidth = 1.2;
-    for (let r = 6; r < hw; r += 7) { g.beginPath(); g.ellipse(0, headC + 8, r, r * 1.35, 0, 0, Math.PI * 2); g.stroke(); }
-    g.restore();
+  if (fill > 0.01) { // 中の DNA（かべに沿って外側の層から巻いていく）
+    const P = hex.map(([x, y]) => [x, headC + y]);
+    dnaSpool(g, P, 0, headC, [0, headC + hh], Math.min(1, fill), 7, 2.4, 'rgba(255,170,120,.8)');
   }
   g.beginPath(); hex.forEach(([x, y], i) => i ? g.lineTo(x, headC + y) : g.moveTo(x, headC + y)); g.closePath();
   g.strokeStyle = o.ghost ? 'rgba(216,255,244,.55)' : PCOL.headEdge; g.lineWidth = 2; g.stroke();
