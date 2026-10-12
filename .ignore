@@ -2,6 +2,8 @@
 # 中を探したいときは、Grep の path にそのフォルダやファイルを直接わたす（ファイルを直接わたせば読む）、または Bash の grep で。
 # 各版の丸ごとの写し（同じ行が何十回も当たる）
 **/versions/
+# よそから持ってきたライブラリ（圧縮されていて1行が長い。一覧は lib/README.md）
+lib/
 # 生成したデータ（1行がとても長い。作り方は各 DEVNOTES）
 god-view/data/
 vocal-folds/js/table.js

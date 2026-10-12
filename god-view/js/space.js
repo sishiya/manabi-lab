@@ -11,7 +11,7 @@
   const L_ENTER = 7.55;          // これより引いたら宇宙（地球の直径の約3倍）
   const L_MAX = 27.4;            // 観測できる宇宙（直径 約 8.8×10^26 m）の全体が見えるまで
   const LIBS = [
-    'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+    '../lib/three@0.128.0/build/three.min.js',
     'https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js',
     'data/stars.js',
   ];

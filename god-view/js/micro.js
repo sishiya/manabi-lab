@@ -10,7 +10,7 @@
 
 (function () {
   const GV = window.GV;
-  const THREE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+  const THREE_URL = '../lib/three@0.128.0/build/three.min.js';
   const L_START = 0.55, L_EXIT = 0.75, L_MIN = -35.3;
   const DESERT_A = -33.2, DESERT_B = -19.4;   // 何もない区間。ホイールで速く進む
   const FADE = 700;
