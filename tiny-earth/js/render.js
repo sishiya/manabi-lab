@@ -267,7 +267,8 @@ uniform float uTime, uAmp, uS;
       // 正直モード: 水＋氷の厚さ（氷は水より 1.09 倍かさばる）
       const h = hs ? hs.liq[i] + hs.ice[i] * 1.09 : O.h[i], wet = TR.elev[i] >= 0 ? h > 0.02 * H0 : h > O.hdry;   // 陸の上のうすい膜は描かない
       wWet[i] = wet ? 1 : 0;
-      rTop[i] = Math.max(rFloor[i], 1 + ex * (O.z[i] + h) / R);
+      // 水面の高さ。水のないマスは描いている床（段々で本当の高さより低い）と同じにする（本当の海底の高さにすると、床より上に青い柱が残った）
+      rTop[i] = wet ? Math.max(rFloor[i], 1 + ex * (O.z[i] + h) / R) : rFloor[i];
       // 色: 深さ（浅い＝明るい）＋ もとの海面からの高さ（高い＝白っぽく、低い＝暗く）
       //   深さはうすく（浅い所だけ少し明るい）、高さの変化を主に（±0.5×平均の深さでいっぱい）
       const d = Math.min(1, h / (0.6 * H0)), a = (O.z[i] + h) / H0;
