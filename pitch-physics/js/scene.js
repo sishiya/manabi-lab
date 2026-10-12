@@ -105,23 +105,36 @@ function refName() { return S.guideRef === 'ff' && S.ffRes ? 'フォーシーム
 // 基準の点をドラッグした先 (x, z) へ: 基準がフォーシームなら、フォーシームがそこを通るように、ねらった点を同じだけずらす
 function setRef(x, z) {
   const p = refPoint();
-  if (S.guideRef === 'ff' && S.ffRes) setTarget(TARGET.x + (x - p[0]), TARGET.z + (z - p[2]));
-  else setTarget(x, z);
+  setTarget(x, z);   // フォーシーム基準でも、フォーシームが TARGET を通るので、そのまま TARGET を動かせばよい
 }
 function setTarget(x, z) {
   TARGET.x = Math.max(-0.9, Math.min(0.9, x)); TARGET.z = Math.max(0.1, Math.min(2.0, z));
   S.aimMode = 'plain'; S.many = null; recompute();
 }
-function aimP(P, mode) {
-  if (mode === 'fit') Object.assign(P, aim(P, TARGET));
-  else if (mode === 'plain') Object.assign(P, aim(P, TARGET, { air: true, magnus: false, seam: false }));
+// ねらいの点 pt（初めは TARGET。フォーシーム基準のときは、フォーシームが TARGET を通るようにずらした点 S.aimPt）
+function aimP(P, mode, pt) {
+  pt = pt || S.aimPt || TARGET;
+  if (mode === 'fit') Object.assign(P, aim(P, pt));
+  else if (mode === 'plain') Object.assign(P, aim(P, pt, { air: true, magnus: false, seam: false }));
   else if (mode === 'line') {
     const d = PHY.rubberY - P.ext - PHY.plateY;
-    P.vAng = Math.atan2(TARGET.z - P.z0, d) * 180 / Math.PI; P.hAng = Math.atan2(TARGET.x - P.x0, d) * 180 / Math.PI;
+    P.vAng = Math.atan2(pt.z - P.z0, d) * 180 / Math.PI; P.hAng = Math.atan2(pt.x - P.x0, d) * 180 / Math.PI;
   }
   return P;
 }
+// フォーシーム基準: 同じねらい方で投げたフォーシームが TARGET（初めはゾーンのまん中）を通るように、ねらいの点をずらす
+function updateAimPt() {
+  S.aimPt = { x: TARGET.x, z: TARGET.z };
+  if (S.guideRef !== 'ff' || S.aimMode === 'manual' || !arsenal(S.pitcher).some(k => k.id === 'ff')) return;
+  const Q = presetP('ff');
+  for (let k = 0; k < 3; k++) {
+    aimP(Q, S.aimMode, S.aimPt);
+    const r = simulate(Q);
+    S.aimPt.x += TARGET.x - r.pPlate[0]; S.aimPt.z += TARGET.z - r.pPlate[2];
+  }
+}
 function recompute() {
+  updateAimPt();
   aimP(S.P, S.aimMode);
   S.res = simulate(S.P);
   S.ghostNoAir = simulate(S.P, { air: false, magnus: false, seam: false });
@@ -226,7 +239,7 @@ const TOUR = [
   { text: '<b>フォーシーム</b>: 毎分 2300 回の逆回転。手前の面が上へ動く回転は、空気を下へ押しやり、反作用で<b>上向きの力（マグヌス力）</b>を受けます。回転なし（<span class="k-plain">点線</span>）より 45 cm ほど上を通る ＝「ホップするように見える」正体。',
     go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0; camTo('ball'); } },
   { text: '<b>ねらった点</b>（十字）: いまは「回転の力がなければまん中に届く向き」に放しています。だから<b>まん中からのずれ ＝ 回転と縫い目による変化</b>。まっすぐは上へ 46 cm、ゾーンの上をこえます。下の「ねらい方」で「まん中へまっすぐ向けて放す」にすると、重力で落ちるぶんもずれに入ります。',
-    go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0; camTo('catcher'); } },
+    go() { S.guideRef = 'plain';  setPitch('ff'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0; camTo('catcher'); } },
   { text: '<b>空気の流れの断面</b>の図: ボールといっしょに動いて見ると、空気は左から右へ流れていきます。逆回転で上の面は空気といっしょに動くので、空気がボールから<b>はがれる所</b>が上だけ後ろへずれ、後ろの流れ（伴流）が下へ曲がります。空気を下へ押しやった反作用で、ボールは上へ押される。これがマグヌス力です。3D は「ボールの後ろ」から。',
     go() { setPitch('ff'); S.show = { noAir: false, plain: true, forces: true }; S.t = 0; camTo('ball'); } },
   { text: '<b>スライダー</b>: 回転数はフォーシームより多いのに、曲がりは小さめ。回転軸が進む向きに近く（ジャイロ回転）、曲げるのに使える回転がわずかだから。下の「使える回転」を 100% にすると…？',

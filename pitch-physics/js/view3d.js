@@ -254,7 +254,8 @@ function updateGuides3d() {
   const rp = refPoint(), d = Math.hypot(S.res.pPlate[0] - rp[0], S.res.pPlate[2] - rp[2]) * 100, dzc = (S.res.pPlate[2] - rp[2]) * 100, dxc = (S.res.pPlate[0] - rp[0]) * 100;
   const same = S.guideRef === 'ff' && S.pitch === 'ff';
   lab('mkPlain', a, same ? 'フォーシーム（ドラッグで動かせる）' : refName() + 'ならここ（ドラッグで動かせる）');
-  if (arrived && !same) lab('mkReal', b, '通った点（' + refName() + 'より ' + (dzc >= 0 ? '上 ' : '下 ') + Math.abs(dzc).toFixed(0) + '・' + (dxc >= 0 ? '右 ' : '左 ') + Math.abs(dxc).toFixed(0) + ' cm）'); else document.getElementById('mkReal').hidden = true;
+  if (arrived && S.res.ground) lab('mkReal', b, '地面に落ちた（' + (S.guideRef === 'ff' ? 'フォーシームと同じねらいだと。白い輪を上へドラッグすると届く' : 'ねらいが低すぎる') + '）');
+  else if (arrived && !same) lab('mkReal', b, '通った点（' + refName() + 'より ' + (dzc >= 0 ? '上 ' : '下 ') + Math.abs(dzc).toFixed(0) + '・' + (dxc >= 0 ? '右 ' : '左 ') + Math.abs(dxc).toFixed(0) + ' cm）'); else document.getElementById('mkReal').hidden = true;
 }
 
 function bind3dPointer(canvas) {

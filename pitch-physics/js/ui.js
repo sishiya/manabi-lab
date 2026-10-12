@@ -164,6 +164,7 @@ function syncAll() {
   document.querySelectorAll('#cams button').forEach(b => b.classList.toggle('on', b.dataset.c === S.cam));
   $('views').classList.toggle('v3d', S.view === '3d');
   rebuildChips(); syncC(); syncSummaries();
+  $('refToggle').textContent = '白い輪: ' + (S.guideRef === 'ff' ? 'フォーシームならここ' : '回転がなければここ') + '（タップで切りかえ）';
   document.querySelectorAll('.chips button').forEach(b => b.classList.toggle('on', b.dataset.id === S.pitch));
   const p = arsenal(S.pitcher).find(q => q.id === S.pitch); $('pnote').textContent = p ? p.note : '';
   const T = $('time'); T.max = tEnd(); T.value = S.t;
@@ -249,7 +250,7 @@ function setTour(i) {
   S.tour = Math.max(0, Math.min(TOUR.length - 1, i));
   S.playing = false; $('play').textContent = '▶';
   // 案内の段は、平均的な右投げの投手・ふつうの空気・重ねないところから始める
-  S.pitcher = 'std'; S.hand = 'R'; S.arm = 45; S.aimMode = 'plain'; S.overlay = false; S.batH = 185; setZoneFor(185); TARGET.x = 0; $('tour').classList.remove('full'); S.env = { tC: 20, elev: 0, p: 1013, rh: 50, ws: 0, wd: 0 }; S.envId = 'std'; applyEnv();
+  S.pitcher = 'std'; S.hand = 'R'; S.arm = 45; S.aimMode = 'plain'; S.overlay = false; S.batH = 185; setZoneFor(185); TARGET.x = 0; S.guideRef = 'ff'; $('tour').classList.remove('full'); S.env = { tC: 20, elev: 0, p: 1013, rh: 50, ws: 0, wd: 0 }; S.envId = 'std'; applyEnv();
   TOUR[S.tour].go();
   S.t = 0; S.playing = true; $('play').textContent = '❚❚';   // 案内の段は 0.0 秒から再生する
   $('tourNum').textContent = (S.tour + 1) + ' / ' + TOUR.length;
@@ -264,6 +265,11 @@ function placeChips() {
   const home = $('pnote');
   if (small && chips.parentNode !== $('dockChips')) $('dockChips').appendChild(chips);
   if (!small && chips.parentNode === $('dockChips')) home.parentNode.insertBefore(chips, home);
+}
+
+// 3D の右上の「白い輪の基準」の切りかえ（③ねらい の「ガイドの基準」と同じ）
+function bindRefToggle() {
+  $('refToggle').addEventListener('click', () => { S.guideRef = S.guideRef === 'ff' ? 'plain' : 'ff'; recompute(); syncAll(); });
 }
 
 // 案内の帯: 文をタップで全文／2行、× でしまう

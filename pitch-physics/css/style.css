@@ -220,3 +220,8 @@ i.sw.plain{background:repeating-linear-gradient(90deg,rgba(240,240,230,.9) 0 6px
 @media (min-width:861px){
   #aside{max-height:min(68vh,620px);overflow-y:auto;padding-right:4px;scrollbar-width:thin}
 }
+
+/* ガイドの基準の切りかえボタン（3D の右上、3D/図 の下） */
+#refToggle{position:absolute;top:44px;right:8px;z-index:2;background:rgba(13,24,18,.78);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:14px;padding:4px 10px;font:500 12px var(--f-body);cursor:pointer;min-height:30px}
+#views:not(.v3d) #refToggle{display:none}
+@media (max-width:640px){ #views.v3d #refToggle{top:auto;bottom:52px;right:8px;min-height:36px} }
