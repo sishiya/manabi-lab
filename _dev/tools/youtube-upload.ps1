@@ -206,6 +206,57 @@ function Get-AccessToken {
 }
 
 # ---- 動画を上げる（再開できるアップロード） ----
+# 32MB ずつ送る（Content-Range）。途中で接続が切れたら、YouTube に「どこまで届いたか」を聞いて続きから送る（2026-10-12〜。
+# 1回で送ると、600MB ほどの動画で「接続が切れた」が出て、送り切れていない動画が「処理中」のまま止まったことがある）
+function Send-Resumable($loc, $file, $size, $at) {
+  $chunk = 32MB; $pos = [long]0; $tries = 0
+  $fs = [IO.File]::OpenRead($file)
+  try {
+    while ($true) {
+      $n = [long][Math]::Min($chunk, $size - $pos)
+      $req = [Net.HttpWebRequest]::Create($loc); $req.Method = 'PUT'; $req.Timeout = 600000; $req.ReadWriteTimeout = 600000
+      $req.Headers.Add('Authorization', "Bearer $at"); $req.ContentType = 'video/mp4'; $req.AllowWriteStreamBuffering = $false; $req.AllowAutoRedirect = $false
+      $req.ContentLength = $n
+      $req.Headers.Add('Content-Range', "bytes $pos-$($pos + $n - 1)/$size")
+      try {
+        $fs.Position = $pos; $rs = $req.GetRequestStream(); $buf = New-Object byte[] (1MB); $left = $n
+        while ($left -gt 0) { $k = $fs.Read($buf, 0, [int][Math]::Min($buf.Length, $left)); $rs.Write($buf, 0, $k); $left -= $k }
+        $rs.Close()
+        $res = $req.GetResponse()
+        if ([int]$res.StatusCode -eq 308) {   # 続きを待っている（.NET は 308 を例外にしないことがある）
+          $rg = $res.Headers['Range']; $res.Close()
+          $pos = if ($rg -match '-(\d+)$') { [long]$Matches[1] + 1 } else { 0 }
+          Write-Host ("  送りました: {0}%" -f [int](100 * $pos / $size)); $tries = 0; continue
+        }
+        $txt = (New-Object IO.StreamReader($res.GetResponseStream())).ReadToEnd(); $res.Close()
+        Write-Host "  送りました: 100%"
+        return ($txt | ConvertFrom-Json)   # 200/201: 最後まで届いた
+      } catch [Net.WebException] {
+        $r = $_.Exception.Response
+        if ($r -and [int]$r.StatusCode -eq 308) {   # 続きを待っている
+          $rg = $r.Headers['Range']; $r.Close()
+          $pos = if ($rg -match '-(\d+)$') { [long]$Matches[1] + 1 } else { 0 }
+          Write-Host ("  送りました: {0}%" -f [int](100 * $pos / $size)); $tries = 0; continue
+        }
+        if ($r -and [int]$r.StatusCode -ge 400 -and [int]$r.StatusCode -lt 500 -and [int]$r.StatusCode -ne 408) { $m = (New-Object IO.StreamReader($r.GetResponseStream())).ReadToEnd(); throw "動画を送れませんでした: $([int]$r.StatusCode) $m" }
+        if (++$tries -gt 6) { throw "動画を送れませんでした（6回やりなおしても続かない）: $($_.Exception.Message)" }
+        Write-Host "  接続が切れた（$($_.Exception.Message)）。どこまで届いたか聞いて続きから送る（$tries 回目）"
+        Start-Sleep -Seconds (5 * $tries)
+        # どこまで届いたか（Content-Range: bytes */size の空の PUT）
+        $q = [Net.HttpWebRequest]::Create($loc); $q.Method = 'PUT'; $q.ContentLength = 0; $q.Headers.Add('Authorization', "Bearer $at"); $q.Headers.Add('Content-Range', "bytes */$size"); $q.AllowAutoRedirect = $false
+        try {
+          $res = $q.GetResponse()
+          if ([int]$res.StatusCode -eq 308) { $rg = $res.Headers['Range']; $res.Close(); $pos = if ($rg -match '-(\d+)$') { [long]$Matches[1] + 1 } else { 0 }; continue }
+          $txt = (New-Object IO.StreamReader($res.GetResponseStream())).ReadToEnd(); $res.Close(); Write-Host '  もう最後まで届いていた'; return ($txt | ConvertFrom-Json) }
+        catch [Net.WebException] {
+          $r2 = $_.Exception.Response
+          if ($r2 -and [int]$r2.StatusCode -eq 308) { $rg = $r2.Headers['Range']; $r2.Close(); $pos = if ($rg -match '-(\d+)$') { [long]$Matches[1] + 1 } else { 0 } }
+          # 聞けなかったら同じところからもう一度
+        }
+      }
+    }
+  } finally { $fs.Close() }
+}
 function Invoke-Upload {
   if (-not $Meta) { throw '-Meta で動画の情報の JSON を指定してください' }
   $m = Get-Content -Raw -Encoding UTF8 (Join-Path $root $Meta) | ConvertFrom-Json
@@ -237,8 +288,7 @@ function Invoke-Upload {
       -Uri "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=$parts"
   } catch { throw "アップロードを始められませんでした: $(Get-ErrText $_)" }
   $loc = $r.Headers['Location']
-  try { $v = Invoke-RestMethod -Method Put -Uri $loc -Headers @{ Authorization = "Bearer $at" } -ContentType 'video/mp4' -InFile $file -TimeoutSec 3600 }
-  catch { throw "動画を送れませんでした: $(Get-ErrText $_)" }
+  $v = Send-Resumable $loc $file $size $at
   Write-Host "上がりました: https://youtu.be/$($v.id)（$($v.status.privacyStatus)）  ← Meta の JSON の videoId に書いておく"
   if ($m.thumbnail) {
     $tf = Join-Path $root $m.thumbnail
