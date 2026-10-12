@@ -44,7 +44,8 @@ const GEO = {
   bulge: 1.0,      // バルジ（毛を作りなおす幹細胞がいる所）。推定
   seb: 0.6,        // 皮脂腺の高さ
   clubDepth: 1.1,  // 休止期の棍毛（こんもう）の根もとの深さ
-  descend: 10,     // 新しい成長期で毛球が下へのびきるまでの日数（推定）
+  descend: 10,     // 新しい成長期で毛穴の下の部分が下へのび、毛球ができあがるまでの日数（推定）。このあいだ毛はまだない
+  taper: 0.6,      // 新しい毛の先が細くとがっている長さ mm（見た目の目安）
 };
 
 const SIM = {
@@ -61,12 +62,18 @@ const SIM = {
   visible: 0.05,   // 表面から出ているとみなす長さ（mm）
 };
 
+// 白髪（色の幹細胞）。毛穴ごとに「色の幹細胞が毛球へ届かなくなる年齢」をばらつかせる（推定）。
+// その年齢をこえて始まった成長期の毛は白い。手前の span 年は色がうすい（灰色）
+// 人の平均は「50歳で髪の半分が白い人は 6〜23%」（Panhard ほか 2012 の世界調査）に合う程度に置いた推定
+const AGING = { age: 30, mean: 62, sd: 10, span: 3 };
+const GRAY_TYPES = { early: { name: '早め', mean: 52 }, mid: { name: 'ふつう', mean: 62 }, late: { name: 'おそめ', mean: 72 } };
+
 // 道具（マウス・指で肌をさわって使う）
 const TOOLS = [
   { id: 'look', name: 'しらべる', icon: '🔍', hint: '毛穴の部分をさわると説明が出ます。' },
-  { id: 'shave', name: 'カミソリ', icon: '🪒', hint: '肌の表面を横になぞると、なぞった所の毛を剃ります。' },
-  { id: 'pluck', name: '毛抜き', icon: '✒', hint: '抜きたい毛をクリック（タップ）します。短すぎる毛はつまめません。' },
-  { id: 'light', name: '光', icon: '✦', hint: '光をあてる範囲を横になぞります（家庭用の光脱毛器。強さは下の「光の設定」）。' },
+  { id: 'shave', name: 'カミソリ', icon: '🪒', hint: '横になぞった範囲の毛を剃ります（クリックなら1本）。' },
+  { id: 'pluck', name: '毛抜き', icon: '✒', hint: '横になぞった範囲の毛を抜きます（クリックなら1本）。短すぎる毛はつまめません。' },
+  { id: 'light', name: '光', icon: '✦', hint: '横になぞった範囲に光をあてます（クリックなら1本）。強さは下の「光の設定」。' },
 ];
 const TOOL_COLOR = { shave: '#7fc8ff', pluck: '#ffd166', light: '#ff8fb1' };
 
@@ -87,6 +94,8 @@ const PARTS = {
   flashbox: '光をあてたときの計算: 毛母（成長期の毛球の色のある所）の最高温度、成長期の毛穴のうち毛母がいたんだ数、肌（表皮）の温度。いたむ確率は温度と時間の積み重ね（Arrhenius の式）から。',
   surface: '上から見た肌: この列の 60 個の毛穴の毛を、肌の上から見たところ。線＝表面から出ている毛（長さは縮めて描く）、黒い点＝剃った切り口や、表面すれすれの毛。',
   tag: '毛穴の札: いまこの毛穴が「のびる（成長期）・ちぢむ（退行期）・休む（休止期）・準備中（抜いたあと）」のどれか。毛穴の下半分は周期ごとに縮んで、また作りなおされる（本当に起きていること。1つの毛穴では周期に1回）。',
+  mcsc: '色の幹細胞（メラノサイト幹細胞）: バルジのあたりにいて、成長期のたびに毛球へ移り、色の細胞（メラノサイト）になる。毛がちぢむとき色の細胞は消え、次の周期にまた作りなおす。年をとると幹細胞がうまく保たれず（Nishimura ほか 2005）、バルジに取り残されて毛球へ行けなくなる（Sun ほか 2023、マウス）→ その毛穴の次の毛から白くなる。',
+  white: '白い毛: 毛球に色の細胞がなく、メラニンのない毛。光脱毛の光は吸われず熱にならない。',
   epi: '表皮: いちばん外の層（約 0.1 mm）。',
   dermis: '真皮: 毛穴・血管・神経がある層。',
   fat: '皮下脂肪: 成長期の毛球はここ近くまで深くのびる（2.5〜4 mm）。',
@@ -94,6 +103,9 @@ const PARTS = {
 
 // 画面の「おもな出どころ」（確かめたものだけ）
 const SOURCES = [
+  ['Nishimura EK, Granter SR, Fisher DE (2005) Mechanisms of hair graying: incomplete melanocyte stem cell maintenance in the niche. Science 307:720–724', 'https://pubmed.ncbi.nlm.nih.gov/15618488/'],
+  ['Sun Q ほか (2023) Dedifferentiation maintains melanocyte stem cells in a dynamic niche. Nature 616:774–782（マウス: 色の幹細胞は動き回り、年をとると取り残される）', 'https://pubmed.ncbi.nlm.nih.gov/37076619/'],
+  ['Panhard S, Lozano I, Loussouarn G (2012) Greying of the human hair: a worldwide survey, revisiting the “50” rule of thumb. Br J Dermatol 167:865–873', 'https://pubmed.ncbi.nlm.nih.gov/22716034/'],
   ['Paus R, Cotsarelis G (1999) The biology of hair follicles. N Engl J Med 341:491–497（毛周期・毛穴の下半分が周期ごとに作りなおされること・バルジ）', 'https://pubmed.ncbi.nlm.nih.gov/10441606/'],
   ['Seago SV, Ebling FJG (1985) The hair cycle on the human thigh and upper arm. Br J Dermatol 113:9–16', 'https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1365-2133.1985.tb02038.x'],
   ['ClinicalTrials.gov NCT03945383（家庭用 IPL の臨床試験の計画。部位ごとの周期と、2週ごと4回→4週ごとの予定）', 'https://clinicaltrials.gov/study/NCT03945383'],

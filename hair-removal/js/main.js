@@ -9,6 +9,7 @@ const S = {
   t: 0, site: 'shin', tool: 'look', playing: false, speed: 7, hold: 0, guide: 0,
   events: [],                                   // 手入れの記録 {t, type, idx}（t の順）
   light: { level: 10, skin: 'light', hair: 'black', cool: true },
+  age: 30, gray: 'mid',                          // 年齢（0日目）と白髪の出やすさ
   full: null,      // 2年ぶん計算した結果（周期のグラフ・できごと）。手入れや設定を変えたときだけ計算しなおす
   run: null,       // いまの日の毛穴（日を進めるときは続きから）
   sel: null, hover: null, key: '',
@@ -16,11 +17,14 @@ const S = {
 const HOOKS = { light: (fs, site, e, R, idx) => lightEvent(fs, e, R, idx, S.light) };
 const grid = t => Math.floor(t / SIM.dt + 1e-9) * SIM.dt;
 
-function changed() { S.full = null; S.run = null; S.key = S.site + JSON.stringify(S.events) + JSON.stringify(S.light); syncControls(S); }
+function changed() {
+  AGING.age = S.age; AGING.mean = GRAY_TYPES[S.gray].mean;
+  S.full = null; S.run = null; S.key = [S.site, S.age, S.gray, JSON.stringify(S.events), JSON.stringify(S.light)].join('|'); syncControls(S);
+}
 
 function computeFull() {
   const R = new Runner(S.site, S.events, HOOKS), rows = Array.from({ length: SIM.N }, () => []);
-  R.advanceTo(SIM.tMax, (t, fs) => fs.forEach((f, i) => rows[i].push({ ph: f.ph, vis: follicleInfo(f).visible })));
+  R.advanceTo(SIM.tMax, (t, fs) => fs.forEach((f, i) => { const inf = follicleInfo(f); rows[i].push({ ph: f.ph, vis: inf.visible, white: inf.pig < 0.5 }); }));
   S.full = { rows, log: R.log, flashes: R.flashes || [] };
 }
 function sceneNow() {
@@ -49,8 +53,9 @@ function act(type, idx) {
   // そのときのできごとを短く知らせる
   let msg;
   if (type === 'pluck') {
-    const n = S.full.log.filter(n => Math.abs(n.t - S.t) < 1e-9 && n.i === idx[0] && n.kind === 'pluck').pop();
-    msg = `毛穴${idx[0] + 1}: ` + (n ? n.text : '');
+    const ns = S.full.log.filter(n => Math.abs(n.t - S.t) < 1e-9 && idx.includes(n.i) && n.kind === 'pluck');
+    const root = ns.filter(n => n.short === '抜いた').length, short = ns.filter(n => n.short === 'つまめない').length;
+    msg = idx.length === 1 ? `毛穴${idx[0] + 1}: ` + (ns[0] ? ns[0].text : '') : `毛抜き: 根もとごと抜けた ${root} 本` + (short ? `・短くてつまめない ${short} 本` : '');
   } else if (type === 'shave') msg = `毛穴 ${idx[0] + 1}〜${idx[idx.length - 1] + 1} を剃った`;
   else {
     const F = S.full.flashes.filter(f => Math.abs(f.t - S.t) < 1e-9).pop();
@@ -77,9 +82,9 @@ function draw() {
   if (!S.full) computeFull();
   const sc = sceneNow();
   const [w, h] = fit(cv, g);
-  drawScene(g, w, h, sc, {});
+  drawScene(g, w, h, sc);
   // 狭い画面: 断面の高さを中身に合わせる（横幅で大きさが決まるので、上下の空きをなくす）
-  if (w <= 600 && GEOM.s) { const want = Math.round((1.6 + 3.6) * GEOM.s + 10); if (Math.abs(h - want) > 2) $('stage').style.height = want + 'px'; }
+  if (w <= 600 && GEOM.s) { const want = Math.round((UP_MM + DOWN_MM) * GEOM.s + 10); if (Math.abs(h - want) > 2) $('stage').style.height = want + 'px'; }
   else if ($('stage').style.height) $('stage').style.height = '';
   const [gw, gh] = fit(gr, gg);
   drawCycles(gg, gw, gh, S.full.rows, S.events, S.t, SIM.tMax);
@@ -97,7 +102,7 @@ function draw() {
 function applyGuide(i) {
   S.guide = Math.max(0, Math.min(GUIDE.length - 1, i));
   const st = GUIDE[S.guide];
-  if (!st.free) { S.site = 'shin'; S.light = { level: 10, skin: 'light', hair: 'black', cool: true }; }
+  if (!st.free) { S.site = 'shin'; S.light = { level: 10, skin: 'light', hair: 'black', cool: true }; S.age = st.age || 30; S.gray = 'mid'; }
   S.events = st.ev.map(e => Object.assign({}, e, { idx: e.idx.slice() }));
   S.tool = st.tool; S.sel = null; S.hover = null;
   changed();
@@ -111,6 +116,7 @@ function applyGuide(i) {
 // --- 操作 ---
 buildControls(S, {
   site: k => { S.site = k; changed(); },
+  age: (a, gr) => { if (a != null) S.age = a; if (gr) S.gray = gr; changed(); },
   tool: id => { S.tool = id; S.sel = null; S.hover = null; showTip(0, 0, null); syncControls(S); },
   light: o => { Object.assign(S.light, o); changed(); },
 });
@@ -134,25 +140,17 @@ function nearest(x, maxPx) {
   GEOM.xs.forEach((fx, i) => { const d = Math.abs(fx - x); if (d < bd) { bd = d; best = i; } });
   return best;
 }
-// クリックした所にいちばん近い毛（表面から出た毛の線の上、または毛穴の出口）
-function pickHair(x, y) {
-  let best = null, bd = 22;
-  for (const p of GEOM.pick) { const d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; best = p.i; } }
-  if (best == null && y > GEOM.y0) best = nearest(x + (y - GEOM.y0) * Math.tan(TILT), SIM.gapMM * GEOM.s * 0.5);   // 皮ふの中なら毛穴の線にそって
-  return best;
-}
 function local(e) { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
 cv.addEventListener('pointerdown', e => {
   const [x, y] = local(e);
   if (S.tool === 'look') { const hh = findHit(x, y); showTip(x, y, hh && hh.key, $('stage')); return; }
-  if (S.tool === 'pluck') { const i = pickHair(x, y); if (i != null) act('pluck', [i]); else toast('毛のない所です。毛（または毛穴）をクリックしてください'); return; }
   S.sel = { tool: S.tool, a: x, b: x }; cv.setPointerCapture(e.pointerId);
 });
 cv.addEventListener('pointermove', e => {
   const [x, y] = local(e);
   if (S.sel) { S.sel.b = x; return; }
   if (S.tool === 'look' && e.pointerType === 'mouse') { const hh = findHit(x, y); showTip(x, y, hh && hh.key, $('stage')); }
-  S.hover = S.tool === 'pluck' ? pickHair(x, y) : null;
+  S.hover = S.tool !== 'look' ? nearest(x, SIM.gapMM * GEOM.s * 0.5) : null;
 });
 cv.addEventListener('pointerup', () => {
   if (!S.sel) return;

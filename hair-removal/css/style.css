@@ -1,5 +1,5 @@
 /* 脱毛のしくみ */
-:root{--bg:#1c1513;--panel:#261c19;--line:#3d2e29;--ink:#f3e9e4;--muted:#b9a59c;--acc:#ffb37a;
+:root{--bg:#0f1a26;--panel:#16253a;--line:#25384f;--ink:#e6edf3;--muted:#8fa3b5;--acc:#ffb37a;
   --shave:#7fc8ff;--pluck:#ffd166;--light:#ff8fb1;
   --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
 *{box-sizing:border-box}
@@ -14,7 +14,8 @@ button:disabled{opacity:.4;cursor:default}
 #pin{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding-bottom:4px}
 #top{display:flex;align-items:center;gap:12px;padding:6px 14px 2px;flex-wrap:wrap;justify-content:space-between}
 #top h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0}
-#siteBox{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+#siteBox{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#siteBox label{display:flex;align-items:center;gap:4px}
 #siteBox select{max-width:190px;font-size:13px;padding:2px 6px}
 #tools{display:flex;gap:6px;padding:4px 14px}
 .tool{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-height:40px;font-weight:700}

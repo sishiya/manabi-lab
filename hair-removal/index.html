@@ -12,7 +12,7 @@
   <div id="pin">
     <header id="top">
       <h1>脱毛のしくみ</h1>
-      <label id="siteBox">部位 <select id="site"></select></label>
+      <div id="siteBox"><label>部位 <select id="site"></select></label><label>年齢 <select id="age"></select></label></div>
     </header>
     <div id="tools" role="radiogroup" aria-label="道具"></div>
     <p id="hint"></p>
@@ -33,7 +33,7 @@
   <section class="sec">
     <h2>毛穴ごとの周期</h2>
     <canvas id="gr"></canvas>
-    <p class="hint">1段が1つの毛穴。色は毛穴のようす（<span class="sw" style="background:#e57a7a"></span>のびる <span class="sw" style="background:#d7a28c"></span>ちぢむ <span class="sw" style="background:#7d6a62"></span>休む <span class="sw" style="background:#ffd166"></span>抜いたあと <span class="sw" style="background:#333"></span>止まった）、黒い線は表面に毛が出ている日。上の印は手入れ。いまより右は「このあと何もしない場合」の予想。さわるとその日へ移ります。</p>
+    <p class="hint">1段が1つの毛穴。色は毛穴のようす（<span class="sw" style="background:#e57a7a"></span>のびる <span class="sw" style="background:#d7a28c"></span>ちぢむ <span class="sw" style="background:#7d6a62"></span>休む <span class="sw" style="background:#ffd166"></span>抜いたあと <span class="sw" style="background:#333"></span>止まった）、黒い線は表面に毛が出ている日（白い線は白い毛）。上の印は手入れ。いまより右は「このあと何もしない場合」の予想。さわるとその日へ移ります。</p>
     <label class="row">再生のはやさ <select id="speed"><option value="2">1秒で2日</option><option value="7" selected>1秒で1週</option><option value="30">1秒で1か月</option></select></label>
   </section>
 
@@ -43,6 +43,9 @@
     <label class="row">肌の色 <select id="skin"></select></label>
     <label class="row">毛の色 <select id="hairc"></select></label>
     <label class="row"><input id="cool" type="checkbox" checked> 光の前後に冷やす</label>
+    <h2>白髪</h2>
+    <label class="row">白髪の出やすさ <select id="gray"></select></label>
+    <p class="hint">毛穴ごとに「色の幹細胞が毛球へ届かなくなる年齢」がばらついていて、その年齢をこえて始まった周期から毛が白くなります。ここで選ぶのはその平均（早め 52歳・ふつう 62歳・おそめ 72歳、ばらつき ±10歳）。人での数値は少なく、推定です。</p>
     <h2>部位の値</h2>
     <p class="hint" id="siteNote"></p>
   </section>

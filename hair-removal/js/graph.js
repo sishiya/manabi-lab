@@ -19,13 +19,12 @@ function drawCycles(g, w, h, rows, events, t, tEnd) {
     for (let d = 1; d <= row.length; d++) {
       if (d === row.length || row[d].ph !== row[d0].ph) { g.fillStyle = PH_COL[row[d0].ph]; g.fillRect(X(d0), y + 1, X(d) - X(d0) + 0.5, rh - 2); d0 = d; }
     }
-    // 表面に毛が出ている日
-    g.fillStyle = '#140b08';
+    // 表面に毛が出ている日（黒い線、白い毛は白い線）
     d0 = -1;
     for (let d = 0; d <= row.length; d++) {
-      const v = d < row.length && row[d].vis;
-      if (v && d0 < 0) d0 = d;
-      if (!v && d0 >= 0) { g.fillRect(X(d0), y + rh * 0.42, X(d) - X(d0), Math.max(2, rh * 0.16)); d0 = -1; }
+      const v = d < row.length && row[d].vis ? (row[d].white ? 'w' : 'k') : '';
+      if (d0 >= 0 && v !== row[d0].mark) { g.fillStyle = row[d0].mark === 'w' ? '#f4f1ea' : '#140b08'; g.fillRect(X(d0), y + rh * 0.42, X(d) - X(d0), Math.max(2, rh * 0.16)); d0 = -1; }
+      if (v && d0 < 0) { d0 = d; row[d].mark = v; }
     }
   }
   // 目盛り

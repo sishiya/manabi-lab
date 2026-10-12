@@ -36,27 +36,35 @@ function rootDepth(f, h) {
 function newFollicle(i, site, seed) {
   const rng = mulberry32(seed * 1000 + i * 7919 + 13);
   const f = { i, rng, v: site.v * (0.85 + 0.3 * rng()), ph: 'T', t: 0, dur: 0, bulb: GEO.clubDepth, hairs: [], shed: null, diam: 0.8 + 0.4 * rng() };
+  // 白髪: 色の幹細胞が毛球へ届かなくなる年齢（別の乱数。ほかの動きは変えない）
+  const g2 = mulberry32(seed * 7 + i * 104729 + 5), u = Math.max(1e-9, g2()), w = g2();
+  f.gAge = AGING.mean + AGING.sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * w);
+  f.age = AGING.age - SIM.burnIn / 365;                      // 0日目に AGING.age 歳になるよう、さかのぼった年齢から始める
   // はじめは周期のどこかにいる（周期の長さに比べた割合で期を選ぶ）
   const tot = site.A + site.C + site.T, r = rng() * tot;
   if (r < site.A) { startAnagen(f, site); advance(f, site, r); }
   else if (r < site.A + site.C) { startAnagen(f, site); f.dur = site.A; advance(f, site, site.A + (r - site.A)); }
-  else { f.ph = 'T'; f.dur = phaseDur(f, site, 'T'); f.t = 0; f.hairs.push({ L: site.v * site.A + GEO.clubDepth, club: true, clubRoot: GEO.clubDepth }); advance(f, site, r - site.A - site.C); }
+  else { f.ph = 'T'; f.dur = phaseDur(f, site, 'T'); f.t = 0; f.pig = pigAt(f); f.hairs.push({ L: site.v * site.A + GEO.clubDepth, club: true, clubRoot: GEO.clubDepth, pig: f.pig }); advance(f, site, r - site.A - site.C); }
   return f;
 }
 function advance(f, site, days) { for (let d = 0; d < days; d += SIM.dt) stepF(f, site, SIM.dt); }
 
+// 色の幹細胞が毛球へ届くか（1 = 色あり、0 = 白、そのあいだは灰色）
+function pigAt(f) { return Math.max(0, Math.min(1, (f.gAge - f.age) / AGING.span)); }
+
 function startAnagen(f, site) {
   if (f.doomed) { f.ph = 'X'; f.t = 0; f.dur = Infinity; f.bulb = GEO.clubDepth; return; }   // 幹細胞がいたんで、もう作れない
   f.ph = 'A'; f.t = 0; f.dur = phaseDur(f, site, 'A'); f.bulb = GEO.clubDepth;
+  f.pigPrev = f.pig == null ? 1 : f.pig; f.pig = pigAt(f);
   for (const h of f.hairs) if (h.club && h.shedAt == null) h.shedAt = SIM.shedMax * f.rng();   // 古い棍毛はそのうち落ちる
-  f.hairs.push({ L: 0, club: false, thin: f.thin || 1, fresh: true });
+  f.hairs.push({ L: 0, club: false, thin: f.thin || 1, fresh: true, pig: f.pig });
 }
 
 // ゆっくり始まりゆっくり止まる（のび方・縮み方の形。速さの細かい測定はない）
 function smooth(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
 
 function stepF(f, site, dt) {
-  f.t += dt;
+  f.t += dt; f.age += dt / 365;
   // 古い棍毛が落ちる
   for (const h of f.hairs) {
     if (h.shedAt != null) h.shedAt -= dt;
@@ -67,7 +75,7 @@ function stepF(f, site, dt) {
   const cur = f.hairs.find(h => !h.club);
   if (f.ph === 'A') {
     f.bulb = GEO.clubDepth + (GEO.bulbDeep - GEO.clubDepth) * smooth(f.t / GEO.descend);
-    if (cur) cur.L += f.v * dt;
+    if (cur && f.t >= GEO.descend) cur.L += f.v * dt;      // 毛球ができあがってから毛を作り、下から押し上げる
     if (f.t >= f.dur) { f.ph = 'C'; f.t = 0; f.dur = phaseDur(f, site, 'C'); f.bulbStart = f.bulb; }
   } else if (f.ph === 'C') {
     f.bulb = f.bulbStart + (GEO.clubDepth - f.bulbStart) * smooth(f.t / f.dur);
@@ -105,7 +113,8 @@ function pluck(f, site) {
 // 0日目の毛穴（部位ごとに1回だけ作る）
 const _start = {};
 function startState(siteKey) {
-  if (_start[siteKey]) return _start[siteKey];
+  const key = siteKey + '|' + AGING.age + '|' + AGING.mean;
+  if (_start[key]) return _start[key];
   const site = SITES[siteKey], fs = [];
   for (let i = 0; i < SIM.N; i++) {
     const f = newFollicle(i, site, 20261012);
@@ -113,8 +122,8 @@ function startState(siteKey) {
     fs.push(f);
   }
   // rng の状態ごと保存しておき、使うたびに複製する
-  _start[siteKey] = fs.map(f => ({ f, seed: Math.floor(f.rng() * 4294967296) }));
-  return _start[siteKey];
+  _start[key] = fs.map(f => ({ f, seed: Math.floor(f.rng() * 4294967296) }));
+  return _start[key];
 }
 
 // 光で毛穴に起きること（Ω は Arrhenius の積分。いたむ確率 = 1 − e^−Ω）
@@ -169,14 +178,23 @@ Runner.prototype.applyUpTo = function () {
 };
 Runner.prototype.note = function (t, i, text, kind, short) { this.log.push({ t, i, text, kind, short: short || text }); };
 // 1きざみごとに、毛穴の中の変化をできごとにする
-const PH_SHORT = { A: 'のびはじめ', C: 'ちぢみはじめ', T: '休みへ', X: '止まった' };
-const PH_TEXT = { A: '新しい毛を作りはじめた（成長期）', C: '毛を作るのをやめ、毛穴の下がちぢみはじめた（退行期）', T: '休みに入った（休止期）', X: 'もう毛を作れなくなった' };
+// 成長期が始まったときの色のできごと
+function pigNote(f) {
+  if (f.ph !== 'A' || f.t > SIM.dt * 1.01) return null;
+  if (f.pig <= 0 && f.pigPrev > 0) return ['色の幹細胞が毛球へ届かず（バルジに取り残され）、白い毛を作りはじめた', '白い毛に'];
+  if (f.pig > 0 && f.pig < 1 && f.pigPrev >= 1) return ['毛球に届く色の細胞が減り、色のうすい毛を作りはじめた', '色がうすく'];
+  return null;
+}
+const PH_SHORT = { A: '下へのびる', C: 'ちぢみはじめ', T: '休みへ', X: '止まった' };
+const PH_TEXT = { A: '毛穴の下の部分が、また下へのびはじめた（成長期のはじめ。毛はまだない）', C: '毛を作るのをやめ、毛穴の下がちぢみはじめた（退行期）', T: '休みに入った（休止期）', X: 'もう毛を作れなくなった' };
 function snap(f) { return { ph: f.ph }; }
 Runner.prototype.watch = function () {
   const t = this.t();
   this.fs.forEach((f, i) => {
     const p = this.prev[i], q = snap(f);
     if (q.ph !== p.ph && PH_TEXT[q.ph] && !(q.ph === 'C' && f.hitDay != null && t - f.hitDay < 0.3)) this.note(t, i, PH_TEXT[q.ph], 'phase', PH_SHORT[q.ph]);
+    if (f.ph === 'A' && f.t >= GEO.descend && f.t - SIM.dt < GEO.descend) this.note(t, i, '毛球ができあがり、新しい毛を作って下から押し上げはじめた', 'phase', '毛を作る');
+    if (q.ph !== p.ph && q.ph === 'A') { const pn = pigNote(f); if (pn) this.note(t, i, pn[0], 'gray', pn[1]); }
     for (const h of f.hairs) if (h.fresh && tipH(f, h) > SIM.visible) { h.fresh = false; this.note(t, i, '新しい毛の先が表面に出た', 'emerge', '表面に出た'); }
     if (f.justShed) { this.note(t, i, f.justShed === 'burnt' ? '光でいたんだ毛が抜け落ちた' : '古い毛（棍毛）が抜け落ちた', 'shed', '抜け落ちた'); f.justShed = null; }
     this.prev[i] = q;
@@ -199,9 +217,9 @@ function simulate(siteKey, events, tEnd, rec, hooks) { return new Runner(siteKey
 
 // 毛穴1つの見え方のまとめ
 function follicleInfo(f) {
-  let top = -Infinity, blunt = false;
-  for (const h of f.hairs) { const th = tipH(f, h); if (th > top) { top = th; blunt = !!h.blunt; } }
-  return { top, blunt, visible: top > SIM.visible };
+  let top = -Infinity, blunt = false, pig = 1;
+  for (const h of f.hairs) { const th = tipH(f, h); if (th > top) { top = th; blunt = !!h.blunt; pig = h.pig == null ? 1 : h.pig; } }
+  return { top, blunt, pig, visible: top > SIM.visible };
 }
 function countLane(fs) {
   const c = { vis: 0, A: 0, C: 0, T: 0, R: 0, X: 0, len: 0 };

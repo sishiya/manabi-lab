@@ -133,17 +133,18 @@ function flashFollicle(f, opt) {
   const res = { om: { matrix: 0, pap: 0, bulge: 0 }, T: { matrix: LIGHT.T0, bulge: LIGHT.T0 } };
   const tau = LIGHT.tau;
   const hasShaft = f.hairs.some(h => h.L > 0.2);
+  const shaftPig = Math.max(0, ...f.hairs.filter(h => h.L > 0.2).map(h => h.pig == null ? 1 : h.pig));   // 白い毛はメラニンがない
   // バルジ: 毛（色のある毛幹）が熱をもつ。休止期は根もと（棍毛のまわり）に色がなく弱い（推定 0.3 倍）
   if (hasShaft) {
     const pig = f.ph === 'T' ? 0.3 : f.ph === 'R' || f.ph === 'X' ? 0 : 1;
-    const q = fh * pig * melAbsorbed(spec, GEO.bulge / 10) * F0 / tau;
+    const q = fh * pig * shaftPig * melAbsorbed(spec, GEO.bulge / 10) * F0 / tau;
     const r = unitResponse(LG.shaftR, [LG.bulgeAt]);
     const d = damage(r, 0, q, LIGHT.T0);
     res.om.bulge = d.om; res.T.bulge = d.Tmax;
   }
   // 毛球: 成長期は毛母にいちばん色が多い。退行期は色を作るのをやめる（推定 0.4 倍）。休止期・抜いたあとは色のある毛球がない
   // 成長期の毛母が色を作りはじめるのは、毛球ができあがってから（成長期のはじめは色がない）。5日目から12日目にかけて増えると推定
-  const pigM = f.ph === 'A' ? Math.min(1, Math.max(0, (f.t - 5) / 7)) : f.ph === 'C' ? 0.4 : 0;
+  const pigM = (f.ph === 'A' ? Math.min(1, Math.max(0, (f.t - 5) / 7)) : f.ph === 'C' ? 0.4 : 0) * (f.pig == null ? 1 : f.pig);   // 白髪の毛穴は毛母に色の細胞がない
   if (pigM > 0) {
     const z = Math.max(0.1, f.bulb - 0.15) / 10;
     const q = fh * pigM * melAbsorbed(spec, z) * F0 / tau;
@@ -193,7 +194,7 @@ function hairShade(fs, opt) {
   let cover = 0;
   for (const f of fs) for (const h of f.hairs) {
     const above = h.L - rootDepth(f, h);
-    if (above > 0.3) cover += (above / 10) * 0.007 * 60 / fs.length;   // 長さ cm × 太さ cm × 本数/cm²
+    if (above > 0.3) cover += (above / 10) * 0.007 * 60 / fs.length * (h.pig == null ? 1 : h.pig);   // 白い毛はほとんど吸わない   // 長さ cm × 太さ cm × 本数/cm²
   }
   cover = Math.min(0.9, cover);
   let a = 0; for (const s of opt.spec) a += s.w * (1 - Math.exp(-opt.fh * s.mel * 0.007));
@@ -224,8 +225,9 @@ function lightEvent(fs, e, R, idx, L) {
     let text;
     if (ph === 'A' || ph === 'C') {
       if (hitNow) { hit++; text = `毛母が ${res.T.matrix.toFixed(0)}°C になり、熱でいたんだ → この毛はもう伸びない`; }
+      else if (f.pig === 0) text = `白い毛で、毛母にも毛にも色（メラニン）がない → 熱にならず無事（${res.T.matrix.toFixed(0)}°C）`;
       else if (ph === 'A' && f.t < 12) text = `成長期のはじめで、毛母にまだ色がない（${res.T.matrix.toFixed(0)}°C）→ 無事`;
-      else text = `毛母は ${res.T.matrix.toFixed(0)}°C まで。温まり足りず無事`;
+      else text = (f.pig < 1 ? '色がうすい毛で、' : '') + `毛母は ${res.T.matrix.toFixed(0)}°C まで。温まり足りず無事`;
     } else if (ph === 'X') text = 'もう毛を作らない毛穴（変化なし）';
     else text = ph === 'R' ? '抜いたあとで毛も色のある毛球もない → 光が効かない' : '休み中で、色のある毛球がない → 変化なし';
     if (f.doomed && !doomedBefore) text += '。幹細胞（バルジ）や毛乳頭もいたみ、次の毛は作れない';
