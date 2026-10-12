@@ -6,6 +6,7 @@ const VIEW = (() => {
   let M, TR, O;           // 網・地形・海
   const st = { light: 'day', honest: null, style: 'voxel', ex: 100, az: 0.6, el: 0.35, alt: 2.2, treeShown: 0, treeReal: 0 };
   const tmp = new THREE.Vector3();
+  const swayU = { uTime: { value: 0 }, uAmp: { value: 0 }, uS: { value: 1 } };
 
   function init(canvas, mesh, terrain, ocean) {
     cv = canvas; M = mesh; TR = terrain; O = ocean;
@@ -92,6 +93,17 @@ const VIEW = (() => {
     // 木（ボクセル: 箱の幹と葉 ／ なめらかボクセル: 丸い葉）。1本ずつ色を少し変える
     treeMesh = new THREE.InstancedMesh(treeGeom('voxel'), new THREE.MeshLambertMaterial({ vertexColors: true }), 16000);
     treeMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(16000 * 3).fill(1), 3);
+    // 風でゆれる: 高さの2乗に比例して、風下へ（ゆらぎつき）。ゆれの大きさは見た目（重力ではほとんど変わらない）
+    treeMesh.material.onBeforeCompile = sh => {
+      sh.uniforms.uTime = swayU.uTime; sh.uniforms.uAmp = swayU.uAmp; sh.uniforms.uS = swayU.uS;
+      sh.vertexShader = `attribute vec4 aW; attribute float aTrunk;
+uniform float uTime, uAmp, uS;
+` + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+  // 高さ uS 倍: 幹（0〜0.4）は 0〜0.4＋(uS−1) へのばし、葉はその上へずらすだけ（大きさはそのまま）
+  transformed.y = aTrunk > 0.5 ? position.y * (0.4 + uS - 1.) / 0.4 : position.y + (uS - 1.);
+  float yy = clamp(transformed.y / uS, 0., 1.);
+  transformed += aW.xyz * uAmp * yy * yy * (0.65 + 0.35 * sin(uTime * 2.2 + aW.w));`);
+    };
     treeMesh.count = 0; planet.add(treeMesh);
     setStyle(st.style);
     controls();
@@ -127,14 +139,15 @@ const VIEW = (() => {
     const parts = style === 'voxel'
       ? [[new THREE.BoxGeometry(1, 1, 1), trunk, 0.2, 0.14, 0.4], [new THREE.BoxGeometry(1, 1, 1), leaf, 0.56, 0.62, 0.46], [new THREE.BoxGeometry(1, 1, 1), leaf2, 0.88, 0.38, 0.24]]
       : [[new THREE.CylinderGeometry(0.5, 0.6, 1, 7), trunk, 0.2, 0.12, 0.4], [new THREE.IcosahedronGeometry(0.5, 1), leaf, 0.6, 0.66, 0.72], [new THREE.IcosahedronGeometry(0.5, 1), leaf2, 0.84, 0.4, 0.34]];
-    const pos = [], nor = [], col = [];
+    const pos = [], nor = [], col = [], trk = [];
     for (const [g0, c, y, sx, sy] of parts) {
       const g = g0.toNonIndexed(); g.scale(sx, sy, sx); g.translate(0, y, 0); g.computeVertexNormals();
       const p = g.attributes.position.array, n = g.attributes.normal.array;
       for (let i = 0; i < p.length; i++) { pos.push(p[i]); nor.push(n[i]); }
-      for (let i = 0; i < p.length / 3; i++) col.push(...c);
+      for (let i = 0; i < p.length / 3; i++) { col.push(...c); trk.push(c === trunk ? 1 : 0); }
     }
     const g = new THREE.BufferGeometry();
+    g.setAttribute('aTrunk', new THREE.Float32BufferAttribute(trk, 1));   // 1＝幹（高くするとき、のばすのは幹だけ）
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
     g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
@@ -144,6 +157,7 @@ const VIEW = (() => {
     st.style = style;
     const vox = style === 'voxel';
     treeMesh.geometry.dispose(); treeMesh.geometry = treeGeom(style);
+    treeMesh.geometry.setAttribute('aW', new THREE.InstancedBufferAttribute(swayA, 4));
   }
 
   // 大きさ・強調を変えたら陸と木を作りなおす
@@ -174,10 +188,12 @@ const VIEW = (() => {
 
   // 木: 本当の大きさ（30 m）。数が多すぎるときは間引いて置く
   function placeTrees() {
-    const R = O.R, hU = PHYS.TREE_H / R, ex = st.ex;
+    const R = O.R, hU = PHYS.TREE_H / R, ex = st.ex, H = FOREST.st.H, tU = H / R;
+    const bent = H > FOREST.buckle(O.P.g);          // 自分の重さで曲がる高さをこえた（幹の太さ 60 cm のまま高くしたとき）
+    st.trees = []; treeQ = []; swayU.uS.value = H / PHYS.TREE_H;
     let fa = 0; for (let i = 0; i < M.N; i++) if (TR.forest[i]) fa += M.area[i];
     st.treeReal = fa * R * R * 0.04;                 // 森 1 ha に 400 本（目安）
-    if (hU < 2e-4) { treeMesh.count = 0; st.treeShown = 0; return; }   // 小さすぎて見えない
+    if (Math.max(hU, tU) < 2e-4) { treeMesh.count = 0; st.treeShown = 0; return; }   // 小さすぎて見えない
     let want = Math.min(treeMesh.instanceMatrix.count, Math.round(st.treeReal));
     const cells = []; for (let i = 0; i < M.N; i++) if (TR.forest[i]) cells.push(i);
     let s = 11; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
@@ -206,8 +222,11 @@ const VIEW = (() => {
       if (!far(n.x, n.y, n.z)) continue;
       pts.push(n.x, n.y, n.z); const kk = key(n.x, n.y, n.z); (box.get(kk) || box.set(kk, []).get(kk)).push(k);
       q.setFromUnitVectors(up, n).multiply(q2.setFromAxisAngle(up, rnd() * 6.283));
-      const hh = hU * (0.85 + 0.3 * rnd());
-      sc.set(hh, hh, hh);
+      if (bent) q.multiply(q2.setFromAxisAngle(new THREE.Vector3(1, 0, 0), 1.0 + 0.35 * rnd()));   // 曲がって倒れかけた形
+      const f = 0.85 + 0.3 * rnd(), hh = hU * f;
+      sc.set(hh, hh, hh);   // 30 m の木の大きさ。高くするときは、シェーダーで幹だけのばす（uS）
+      treeQ.push(q.clone());
+      st.trees.push({ p: [n.x, n.y, n.z], c: i, h: bent ? H * f * 0.3 : H * f });
       const base = groundR(i, n.x, n.y, n.z);   // 描いている地面の高さ（なめらかボクセルの坂でもめりこまない）
       mtx.compose(n.clone().multiplyScalar(base - hh * 0.03), q, sc);
       treeMesh.setMatrixAt(k, mtx);
@@ -216,9 +235,24 @@ const VIEW = (() => {
       k++;
     }
     want = k;
-    treeMesh.count = want; st.treeShown = want;
+    treeMesh.count = want; st.treeShown = want; st.treeBent = bent;
     treeMesh.instanceMatrix.needsUpdate = true;
     if (treeMesh.instanceColor) treeMesh.instanceColor.needsUpdate = true;
+    swayDir();
+  }
+  // ゆれる向き: 木ごとに、その場所の風の向き（軸 a のまわり U·(a×p)）を木の向きにもどしたもの＋ゆれのずれ（見た目）
+  let treeQ = [];
+  const swayA = new Float32Array(16000 * 4);
+  function swayDir() {
+    const W = O.wind, v = new THREE.Vector3(), qi = new THREE.Quaternion();
+    for (let k = 0; k < treeQ.length; k++) {
+      const p = st.trees[k].p;
+      v.set(W.ay * p[2] - W.az * p[1], W.az * p[0] - W.ax * p[2], W.ax * p[1] - W.ay * p[0]);
+      const l = v.length(); if (l > 1e-6) v.multiplyScalar(1 / l);
+      v.applyQuaternion(qi.copy(treeQ[k]).invert());
+      swayA[k * 4] = v.x * l; swayA[k * 4 + 1] = v.y * l; swayA[k * 4 + 2] = v.z * l; swayA[k * 4 + 3] = (k * 2.399) % 6.283;
+    }
+    const at = treeMesh.geometry.getAttribute('aW'); if (at) at.needsUpdate = true;
   }
 
   // 海の形と色（毎コマ）。水面の高さ rTop・色 wCol・ぬれているか wWet を出してから、見えている方の形に書く
@@ -362,20 +396,21 @@ const VIEW = (() => {
   }
   // 水を落としたしるし: 上から水のかたまりが落ちてきて（0.7 秒）、着いたところでしぶきがはじける（FX）。本当の時間で動く見た目だけ
   const fx = [];
-  function dropFx(c, width) {
+  function dropFx(c, width, onLand) {
     const n = new THREE.Vector3(M.pos[c * 3], M.pos[c * 3 + 1], M.pos[c * 3 + 2]);
     const r0 = Math.max(rTop[c] || 1, rFloor[c] || 1), w = Math.max(0.01, width / O.R);
     const blob = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2), new THREE.MeshPhongMaterial({ color: 0x5ec8ff, transparent: true, opacity: 0.85, shininess: 80 }));
     blob.scale.setScalar(w * 0.45); planet.add(blob);
-    fx.push({ n, r0, w, blob, t0: performance.now(), hit: false });
+    fx.push({ n, r0, w, blob, t0: performance.now(), onLand });
   }
   function updateFx() {
     const now = performance.now();
     for (let k = fx.length - 1; k >= 0; k--) {
       const f = fx[k], t = (now - f.t0) / 1000;
       if (t < 0.7) { const e = t / 0.7; f.blob.position.copy(f.n).multiplyScalar(f.r0 + f.w * 0.45 + 0.35 * (1 - e * e)); continue; }
-      // 着いた: かたまりを消して、しぶき（落とした水のふくらみの上から）
-      FX.splashAt(planet, f.n, f.r0 + 2 * O.P.H0 * st.ex / O.R, f.w);
+      // 着いた: ここで海に水を足す（海の計算・動物がおどろく）。かたまりを消して、しぶき
+      if (f.onLand) f.onLand();
+      FX.splashAt(planet, f.n, f.r0, f.w);
       planet.remove(f.blob); f.blob.geometry.dispose(); f.blob.material.dispose(); fx.splice(k, 1);
     }
   }
@@ -406,6 +441,9 @@ const VIEW = (() => {
     const loss = hs && hs.removed ? Math.max(1 - am, 1 - Math.pow(Math.max(0, Math.min(1, hs.airP)), 0.25)) : 0;
     FX.updateAir(loss, camera, planet, renderer.getPixelRatio());
     FX.updateSplash(planet);
+    // 風でゆれる大きさ（見た目）: 風の速さの2乗（風の力）に比例。空気がなければゆれない
+    const airOK = !(hs && hs.removed && hs.airP < 0.01);
+    swayU.uTime.value = now / 1000; swayU.uAmp.value = airOK ? Math.min(0.12, 0.08 * (O.wind.U / 15) ** 2) : 0;
     // 森: 空気がなくなると葉の水が抜けて枯れる（色の変わる速さは見た目だけ）
     const br = hs ? hs.brown : 0;
     treeMesh.material.color.setRGB(1 + 0.7 * br, 1 - 0.3 * br, 1 - 0.6 * br);   // 緑 → 茶色
@@ -428,6 +466,6 @@ const VIEW = (() => {
     }
     return rFloor[c];
   }
-  return { groundR, get planet() { return planet; }, get rFloor() { return rFloor; }, get rTop() { return rTop; }, get mesh() { return M; }, init, dropFx, setStyle, rebuildLand, updateWater, render, resize, pick, setAlt, screenUpInPlanet, screenRightInPlanet, st,
+  return { swayDir, groundR, get planet() { return planet; }, get rFloor() { return rFloor; }, get rTop() { return rTop; }, get mesh() { return M; }, init, dropFx, setStyle, rebuildLand, updateWater, render, resize, pick, setAlt, screenUpInPlanet, screenRightInPlanet, st,
     set onTap(f) { onTap = f; }, get camera() { return camera; }, get vapor() { return vapor; } };
 })();

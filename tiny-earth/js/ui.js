@@ -129,5 +129,14 @@ const UI = (() => {
     li.push(`泳げる海: 小魚（深さ 10 cm 以上）${sig(a1 / ao * 100)}%、大きな魚（深さ 1 m 以上）${sig(a2 / ao * 100)}%（海の平均の深さ ${len(P.H0)}）`);
     $('lifePhys').innerHTML = li.map(t => `<li>${t}</li>`).join('');
   }
-  return { life, lifePhys, init, nums, live, facts, setSizeLabel, len, speed, dur, sig, $ };
+  // 森の欄
+  function forest(O, U) {
+    const f = FOREST.facts(O.P, U), H = FOREST.st.H, li = [];
+    li.push(`幹の太さ 60 cm の木が自分の重さで曲がらない高さ: ${len(f.hb)}（地球では ${len(f.hbE)}。重力の 1/3 乗に反比例）${H > f.hb ? ` → いまの ${len(H)} はこえているので曲がる` : ''}`);
+    li.push(`水を高い所へ持ち上げるのに重力のぶんで要る力: 1 m あたり ${f.pw < 1e-4 ? f.pw.toExponential(1) : f.pw.toPrecision(2)} MPa（地球 ${f.pwE.toFixed(4)} MPa）。地球の木の高さの限界 122〜130 m はこれと管の摩擦で決まる。重力のぶんはほとんどなくなるが、摩擦のぶんは残る（どこまで高くなれるかは測られていない）`);
+    li.push(`葉が落ちる速さ: ${speed(f.v)}（地球 ${speed(f.vE)}）。高さ ${len(H)} から地面まで ${dur(f.tf)}${U > 0 ? `。そのあいだに風 ${U} m/s で ${len(f.drift)} 運ばれる${f.drift > Math.PI * O.R ? '（星を半周より遠く）' : ''}` : ''}`);
+    li.push('風で木がゆれる大きさ: 風の力も木の硬さも重力と関係ないので、地球とほとんど同じ');
+    $('forestNums').innerHTML = li.map(t => `<li>${t}</li>`).join('');
+  }
+  return { forest, life, lifePhys, init, nums, live, facts, setSizeLabel, len, speed, dur, sig, $ };
 })();

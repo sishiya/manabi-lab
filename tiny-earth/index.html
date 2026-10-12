@@ -85,6 +85,14 @@
       <p class="note" id="shakeNote"></p>
     </div>
 
+    <div class="ctl" id="forestCtl">
+      <label for="treeH">森: 木の高さ（ためしに） <b id="treeHV">30 m</b></label>
+      <input id="treeH" type="range" min="0" max="1000" step="1">
+      <div class="btns"><button id="leafBtn">葉を散らす</button><button id="treeReset">30 m にもどす</button></div>
+      <p class="note">幹の太さは 60 cm のまま、高さだけ変えます。自分の重さで曲がる高さをこえると、木は曲がって倒れます。風が吹くと木がゆれ、葉は風に運ばれます（ゆれの大きさは見た目）。</p>
+      <ul id="forestNums" class="small"></ul>
+    </div>
+
     <div class="ctl" id="lifeCtl">
       <label>生きもの <small class="dim">（見やすく 20 倍の大きさで描いています）</small></label>
       <div class="btns"><button id="lifeShow" class="on">見せる</button><button id="lifeReset">置きなおす</button></div>
@@ -128,6 +136,7 @@
         <li>海: 気圧が水の蒸気圧（15℃ で 1706 Pa）より下がると沸き、蒸発で冷えて凍ります。蒸発の速さは真空への蒸発の式（Hertz–Knudsen、蒸発係数 1 ＝ いちばん速い場合）。水の重さで圧力が蒸気圧より高い深い所は沸かず、氷の下で上から凍ります（氷の熱伝導）。氷の表面の温度は、一日と緯度でならした日光（太陽定数 1361 W/m²、氷のアルベド 0.5 は推定）と、熱の放射・昇華のつりあいで決めています。昼と夜・赤道と極の差、氷のふたで沸騰が弱まること、地熱は省いています。</li>
         <li>生きもの（シカ・ウサギ・小鳥・小魚・大きな魚）: 「地球と同じ動き方をするとしたら、この星の物理でどうなるか」を計算しています。大きさ・重さ・跳ぶ速さ・泳ぐ速さは代表の値（推定）。歩く速さは、歩きから走りに変わるフルード数 0.5（Kram ほか 1997）までとしています。跳んだあとは、重力（距離の2乗で弱まる）・空気の抵抗（抗力係数 1、推定）・風・コリオリ力で飛び方を計算し、殻にぶつかれば止まります。魚は体の高さの2倍より浅い所には入れないとしています（推定）。あふれた水が体の高さより深いと、おぼれるとしています（推定）。生まれる・食べる・増えるは入れていません。画面では見やすく 20 倍の大きさで描いています。</li>
         <li>正直モードの生きもの: 気圧が体温（37℃）の水の蒸気圧（約 6.3 kPa、アームストロング限界）を下回ると体液が沸きはじめます。犬を真空近くまで減圧した実験では 9〜12 秒で意識を失い、2 分より短ければ全頭が生きのびました（Bancroft &amp; Dunn 1965）。ここでは 10 秒で意識を失い、2.5 分で死ぬとしています（推定）。魚は住む海が沸くか凍ると死ぬとしています。氷の下に水が残れば生きのびます（酸素は計算していません）。浮いていた・飛んでいた生きものは、空気が抜けるときの風が脱出速度より速ければ、空気といっしょに宇宙へ飛ばされます。</li>
+        <li>森（段階B）: 自分の重さで曲がる高さは、一様な太さの柱が自重で曲がる長さ（0.788×(E D²/(ρg))^(1/3)、Greenhill の問題）で出しています（生木のヤング率 10 GPa・密度 800 kg/m³・幹の太さ 60 cm はおおよその値、推定）。本当の木は根元ほど太く、枝や葉の重さもあるので、これは目安です。風の力は入れていません。水を吸い上げる限界は、地球では重力のぶんと管の摩擦のぶんで決まります（Koch ほか 2004）。重力のぶんは計算できますが、摩擦のぶんは重力が弱い所で測られていないので、新しい限界の高さは出していません。葉の落ちる速さは、葉の面積あたりの重さ 0.1 kg/m²・抗力係数 1（推定）として、空気の抵抗と重さのつりあいから出しています。木のゆれの大きさは見た目です（風の力も木の硬さも重力と関係ないので、ゆれ方は地球とほとんど同じ）。</li>
         <li>森: 空気がなくなると葉の水が抜けて枯れます。枯れる速さは計算していません（色の変わり方は見た目だけ）。</li>
         <li>風はあなたが決めます（自然の風の計算はしていません）。風は、ある軸のまわりをまわる向きに吹きます。</li>
         <li>流れが勢いを運ぶ効果（移流）は省いています。波が砕ける・しぶきは計算していません。</li>
@@ -147,6 +156,8 @@
         <li>太陽定数: Kopp, G. &amp; Lean, J. L. (2011) A new, lower value of total solar irradiance. <i>Geophys. Res. Lett.</i> 38: L01706.</li>
         <li>歩きから走りに変わる速さ（フルード数 0.5、重力が弱いとき）: Kram, R., Domingo, A. &amp; Ferris, D. P. (1997) Effect of reduced gravity on the preferred walk-run transition speed. <i>J. Exp. Biol.</i> 200: 821–826.</li>
         <li>真空近くでの意識と生存（犬）: Bancroft, R. W. &amp; Dunn, J. E. (1965) Times of consciousness, collapse, and survival and pathology examinations of dogs rapidly decompressed to near vacuum environment. USAF School of Aerospace Medicine SAM-TR-65-48.</li>
+        <li>自分の重さで曲がる柱の高さ: Greenhill, A. G. (1881) Determination of the greatest height consistent with stability that a vertical pole or mast can be made, and of the greatest height to which a tree of given proportions can grow. <i>Proc. Camb. Phil. Soc.</i> 4: 65–73。木への当てはめ: McMahon, T. (1973) Size and shape in biology. <i>Science</i> 179: 1201–1204.</li>
+        <li>木の高さの限界（水）: Koch, G. W., Sillett, S. C., Jennings, G. M. &amp; Davis, S. D. (2004) The limits to tree height. <i>Nature</i> 428: 851–854.</li>
         <li>森の割合: FAO (2020) <i>Global Forest Resources Assessment 2020</i>.</li>
       </ul>
       <h3>使っているもの</h3>
@@ -166,6 +177,7 @@
 <script src="js/render.js"></script>
 <script src="js/lifeview.js"></script>
 <script src="js/fx.js"></script>
+<script src="js/forest.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/honestui.js"></script>
 <script src="js/main.js"></script>
