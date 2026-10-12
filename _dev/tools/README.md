@@ -21,6 +21,7 @@
 | `weekly-report.ps1` | 週のふり返り（Git で作ったもの・動作確認・動画の数・視聴時間と流入元・サイトのアクセス）→ `out/weekly-<日付>.md` | 週に1回 |
 | `health.ps1` | 健康診断: 一時的なローカルのサーバーで smoke（全アプリ）＋ `check-links.mjs`（外へのリンク切れ）→ `out/health-last.md`。終わったら `backup-local.ps1` も。`-Register` で毎週日曜 10:00 に Windows のタスクスケジューラが回す（Claude を使わない＝トークンなし）。問題があったときだけセッションのはじめのフック（`-Hook`）が数行で知らせる | 自動（週1）。手でも |
 | `check-links.mjs` | アプリの html・js の https:// のリンク（出どころなど）を調べる。NG は 404・410・ドメインが無いだけ（403 などは「注意」）→ `out/links-last.json` | health.ps1 から |
+| `upkeep.mjs`（`node _dev/tools/upkeep.mjs`） | 片づけの点検（トークンなし）: Claude のセッションの記録から、この7日のトークンの多い順・文脈が 300k をこえたもの・同じ大きいファイル（30KB〜）を5回以上読んだもの・7日さわっていないもの／アプリごとの versions の数（10 本より多い）とランチャーから行けない版／800行か60KB をこえるファイル（versions・lib・HISTORY.md をのぞく）／毎回読まれる文書（CLAUDE.md・MEMORY.md・RULES.md）の大きさ → `out/upkeep-last.md`。注意があればフックが1行で知らせる。日曜 10:30 ごろに Claude の定期タスク「まなびラボの片づけ」が、7日さわっていないセッションをアーカイブし（削除はしない）、この結果を短く報告する（直すのは提案だけ） | health.ps1 から（週1）。手でも |
 | `backup-local.ps1` | Git に入っていないもの（Claude のメモリ・*.local.*・.private-words.txt・out/）と git bundle を、リポジトリの外の写し先へ。秘密は `-IncludeSecrets` のときだけ（読まず・表示せず）。Git のフォルダの中には写さない。戻し方は `_dev/RECOVERY.md` | 写し先を決めたら health.ps1 のあと自動 |
 | `seo.mjs`（`node _dev/tools/seo.mjs [--check]`） | 入口の `APPS` から、入口と入口のアプリの head の検索・リンクカード（説明文・OGP・hreflang）と `sitemap.xml`・`feed.xml`・`feed-en.xml`（RSS／Atom）を作りなおす（`_dev/REACH.md`） | `APPS` を書きかえたとき（RULES 8.1） |
 | `rep.pl` | 文字列の置きかえ（I18N.md） | 英語対応 |

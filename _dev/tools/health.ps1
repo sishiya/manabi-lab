@@ -1,6 +1,7 @@
 ﻿# 健康診断（週1回、Windows のタスクスケジューラが Claude なしで回す。トークンを使わない）。
 #   1. smoke.ps1 で全アプリ（このフォルダのいまの中身を、一時的に立てたローカルのサーバーで。公開版で回すと GA に数えられるため）
 #   2. check-links.mjs で外へのリンク（出どころなど）の切れ
+#   3. upkeep.mjs で片づけの点検（Claude のセッションのトークン・versions の数・大きいファイル）
 # 結果は _dev/tools/out/health-last.json・health-last.md（Git に入れない）。問題があったときだけ、セッションのはじめのフック（-Hook）が数行で知らせる。
 # 使い方（リポジトリのルートで）:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/health.ps1              # いま回す（10分ほど）
@@ -28,6 +29,11 @@ if ($Hook) {
   if ($h.smokeNg -gt 0 -or $h.linkNg -gt 0) {
     Write-Output "健康診断（$($h.date.Substring(0,10))）: smoke の NG $($h.smokeNg)、リンク切れ $($h.linkNg)。くわしくは _dev/tools/out/health-last.md"
     $h.lines | Select-Object -First 4 | ForEach-Object { Write-Output "  $_" }
+  }
+  $up = Join-Path $outDir "upkeep-last.json"
+  if (Test-Path $up) {
+    $u = Get-Content $up -Raw -Encoding UTF8 | ConvertFrom-Json
+    if (@($u.warn).Count) { Write-Output "片づけの点検（$($u.date.Substring(0,10))）: $(@($u.warn) -join "／")。くわしくは _dev/tools/out/upkeep-last.md" }
   }
   exit 0
 }
@@ -115,6 +121,9 @@ $date = Get-Date -Format 's'
 $md = @("# 健康診断 $date", '', "- smoke: NG $smokeNg・注意 $smokeWarn（くわしくは health-smoke.json）", "- リンク: NG $linkNg・注意 $linkWarn（くわしくは links-last.json。注意は 403 などサイト側の都合が多い）", '') + @($lines | ForEach-Object { "- $_" })
 $md -join "`n" | Set-Content -Encoding UTF8 (Join-Path $outDir 'health-last.md')
 Write-Host "健康診断: smoke NG $smokeNg・注意 $smokeWarn、リンク NG $linkNg・注意 $linkWarn（_dev/tools/out/health-last.md）"
+
+# 2b. 片づけの点検（セッションのトークン・versions・大きいファイル。upkeep.mjs）
+try { & node (Join-Path $PSScriptRoot "upkeep.mjs") | Out-Null } catch { Write-Host "片づけの点検が動かなかった: $($_.Exception.Message)" }
 
 # 3. 写し先が決まっていれば、Git に入っていないものをバックアップ（秘密はふくめない。backup-local.ps1）
 try { & (Join-Path $PSScriptRoot 'backup-local.ps1') -Quiet } catch { Write-Host "バックアップが失敗: $($_.Exception.Message)" }
