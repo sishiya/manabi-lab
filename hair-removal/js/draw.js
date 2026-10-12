@@ -35,10 +35,10 @@ function drawScene(g, w, h, sc, view) {
   HITS = [];
   g.clearRect(0, 0, w, h);
   if (w < 120 || h < 100) return;
-  const N = sc.fs.length, L = layout(w, h, N, view), s = L.s;
-  const X = mm => L.ox + mm * s, Y = mm => L.oy + mm * s, y0 = Y(0);
-  Object.assign(GEOM, { y0, s, s0: L.s0, ox: L.ox, oy: L.oy, stripMM: L.stripMM, w, h, xs: [], pick: [] });
-  const narrow = L.s0 < 40;
+  const N = sc.fs.length, LY = layout(w, h, N, view), s = LY.s;
+  const X = mm => LY.ox + mm * s, Y = mm => LY.oy + mm * s, y0 = Y(0);
+  Object.assign(GEOM, { y0, s, s0: LY.s0, ox: LY.ox, oy: LY.oy, stripMM: LY.stripMM, w, h, xs: [], pick: [] });
+  const narrow = LY.s0 < 40;
   const xa = 0, xb = w;                                   // 肌は画面いっぱい（縮小すると毛先まで見える）
 
   // 層（なめらかな陰影だけ）
@@ -53,11 +53,11 @@ function drawScene(g, w, h, sc, view) {
   g.fillStyle = gr; g.fillRect(xa, Y(GEO.dermis), xb - xa, Math.max(0, h - Y(GEO.dermis)));
   // 表皮（下の境目がゆるく波打つ）
   g.fillStyle = '#efc4b0'; g.beginPath(); g.moveTo(xa, y0);
-  for (let x = xa; x <= xb; x += 3) g.lineTo(x, y0 + GEO.epi * s + Math.sin((x - L.ox) / (0.12 * s)) * 0.025 * s);
+  for (let x = xa; x <= xb; x += 3) g.lineTo(x, y0 + GEO.epi * s + Math.sin((x - LY.ox) / (0.12 * s)) * 0.025 * s);
   g.lineTo(xb, y0); g.closePath(); g.fill();
   g.strokeStyle = '#f8e2d6'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(xa, y0); g.lineTo(xb, y0); g.stroke();
   g.fillStyle = 'rgba(255,255,255,.55)'; g.font = '11px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'right'; g.textBaseline = 'bottom';
-  if (!narrow || view) { g.fillText('表皮', xb - 4, y0 - 2); g.fillText('真皮', xb - 4, Y(GEO.dermis) - 3); g.fillText('皮下脂肪', xb - 4, Math.min(h - 3, Y(GEO.dermis + 1.2))); }
+  if (!narrow || view) { g.fillText(L('表皮', 'Epidermis'), xb - 4, y0 - 2); g.fillText(L('真皮', 'Dermis'), xb - 4, Y(GEO.dermis) - 3); g.fillText(L('皮下脂肪', 'Fat'), xb - 4, Math.min(h - 3, Y(GEO.dermis + 1.2))); }
   hit(xb - 14, y0 + 3, 9, 'epi'); hit(xb - 14, Y(1.6), 14, 'dermis'); hit(xb - 14, Y(3.0), 14, 'fat');
 
   // 毛穴（左から）
@@ -86,7 +86,7 @@ function drawScene(g, w, h, sc, view) {
   g.fillStyle = C.label; g.font = '10px "IBM Plex Mono", monospace'; g.textAlign = 'right'; g.textBaseline = 'middle';
   const step = s > 120 ? 0.5 : 1;
   for (let d = 0; d <= 8; d += step) { const y = Y(d); if (y > 6 && y < h - 6) g.fillText(String(d), 19, y); }
-  g.save(); g.translate(7, Math.min(h - 30, Y(1.5))); g.rotate(-Math.PI / 2); g.textAlign = 'center'; g.fillText('深さ mm', 0, 0); g.restore();
+  g.save(); g.translate(7, Math.min(h - 30, Y(1.5))); g.rotate(-Math.PI / 2); g.textAlign = 'center'; g.fillText(L('深さ mm', 'depth mm'), 0, 0); g.restore();
 
   // 毛穴の上の短い字幕（新しいものから、重なる分は出さない）
   g.font = '700 ' + (narrow ? 10 : 12) + 'px "Zen Kaku Gothic New", sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'center';
@@ -108,8 +108,8 @@ function drawScene(g, w, h, sc, view) {
   g.textAlign = 'left';
   // 光の結果の箱
   if (sc.flash && sc.since < 21 && !narrow) {
-    const F = sc.flash, lines = [F.nA ? `毛母 最高 ${F.Tm.toFixed(0)}°C` : '色のある毛球なし', `いたむ ${F.hit}/${F.nA}`, `肌 ${F.Tepi.toFixed(0)}°C${F.omEpi >= 1 ? ' やけど' : F.omEpi >= 0.1 ? ' 熱い' : ''}`];
-    if (F.Thair) lines.push(`表の毛 ${Math.min(999, F.Thair).toFixed(0)}°C${F.charred ? ' 焦げた' : ''}`, `根もとへの光 −${(F.shade * 100).toFixed(0)}%`);
+    const F = sc.flash, lines = [F.nA ? L(`毛母 最高 ${F.Tm.toFixed(0)}°C`, `Matrix max ${F.Tm.toFixed(0)}°C`) : L('色のある毛球なし', 'No colored bulb'), L(`いたむ ${F.hit}/${F.nA}`, `Damaged ${F.hit}/${F.nA}`), L(`肌 ${F.Tepi.toFixed(0)}°C`, `Skin ${F.Tepi.toFixed(0)}°C`) + (F.omEpi >= 1 ? L(' やけど', ' burn') : F.omEpi >= 0.1 ? L(' 熱い', ' hot') : '')];
+    if (F.Thair) lines.push(L(`表の毛 ${Math.min(999, F.Thair).toFixed(0)}°C`, `Surface hair ${Math.min(999, F.Thair).toFixed(0)}°C`) + (F.charred ? L(' 焦げた', ' burnt') : ''), L(`根もとへの光 −${(F.shade * 100).toFixed(0)}%`, `Light to roots −${(F.shade * 100).toFixed(0)}%`));
     g.font = '11px "Zen Kaku Gothic New", sans-serif'; g.textBaseline = 'top';
     const bw = Math.max(...lines.map(t => g.measureText(t).width)) + 10, bh = lines.length * 15 + 6, bx = w - bw - 6, byy = h - bh - 6;
     g.fillStyle = 'rgba(15,26,38,.85)'; g.fillRect(bx, byy, bw, bh);
@@ -255,7 +255,7 @@ function drawTool(g, tool, y0, s, w, h) {
     g.strokeStyle = '#ff8fb1'; g.lineWidth = 2; g.strokeRect(x0, top, half * 2, y0 - top);
     g.fillStyle = 'rgba(255,143,177,.35)'; g.fillRect(x0, y0 - 3, half * 2, 3);
     g.fillStyle = '#ffd3e0'; g.font = '700 11px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'top';
-    g.fillText('照射口 幅 1.5 cm', Math.max(70, Math.min(w - 70, p.x)), top + 3); g.textAlign = 'left';
+    g.fillText(L('照射口 幅 1.5 cm', 'Window 1.5 cm wide'), Math.max(70, Math.min(w - 70, p.x)), top + 3); g.textAlign = 'left';
   }
   if (tool.kind === 'shave') {
     if (tool.stroke) {   // すべらせている所
@@ -316,10 +316,10 @@ function mixCol(a, b, t) {
 }
 
 // 毛穴の札（番号・いまの期・白髪・光のあと また生えるまでの日数）
-const TAGS = { A: ['のびる', '#e57a7a'], C: ['ちぢむ', '#d7a28c'], T: ['休む', '#9fb0bf'], R: ['準備中', '#ffd166'], X: ['止まった', '#7d8a96'] };
+const TAGS = { A: [L('のびる', 'growing'), '#e57a7a'], C: [L('ちぢむ', 'shrinking'), '#d7a28c'], T: [L('休む', 'resting'), '#9fb0bf'], R: [L('準備中', 'getting ready'), '#ffd166'], X: [L('止まった', 'stopped'), '#7d8a96'] };
 function drawTag(g, f, x, Y, hits, narrow, num, rec) {
   let [txt, col] = TAGS[f.ph];
-  txt = narrow ? String(num) : num + ' ' + txt + (f.pig === 0 ? '・白' : '');   // 狭い画面は番号だけ（色で期）
+  txt = narrow ? String(num) : num + ' ' + txt + (f.pig === 0 ? L('・白', ' · white') : '');   // 狭い画面は番号だけ（色で期）
   const d = (f.ph === 'A' || f.ph === 'C' ? f.bulb : GEO.clubDepth) + 0.32;
   let y = Math.min(Y(d), GEOM.h - 30);
   g.font = '700 ' + (narrow ? 10 : 11) + 'px "Zen Kaku Gothic New", sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'center';
@@ -330,7 +330,7 @@ function drawTag(g, f, x, Y, hits, narrow, num, rec) {
   if (hits) hit(x, y, 12, 'tag');
   // 光でいたんだ毛穴: また生えるまで
   if (rec) {
-    const t2 = rec.days == null ? '↻ ―' : `↻${rec.days}日`;   // また生えるまで（説明は 🔍）
+    const t2 = rec.days == null ? '↻ ―' : L(`↻${rec.days}日`, `↻${rec.days} d`);   // また生えるまで（説明は 🔍）
     y += 18 + (narrow ? (num % 2) * 17 : 0); const t2w = g.measureText(t2).width + 8;
     g.fillStyle = 'rgba(255,143,177,.92)'; roundRect(g, x - t2w / 2, y - 8, t2w, 16, 8); g.fill();
     g.fillStyle = '#1c1013'; g.fillText(t2, x, y + 0.5);

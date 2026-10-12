@@ -176,12 +176,12 @@ Runner.prototype.applyUpTo = function () {
         if (cut.length) { n++; this.note(t, i, '', 'cut', '', cut); }   // 切れた毛先（図で飛んでいく動き。一覧には出さない）
         shave(f);
       }
-      this.note(t, null, `カミソリで剃った（${idx.length} 個の毛穴の上。表面から出ていた毛 ${n} 本を切った）`, 'shave');
+      this.note(t, null, L(`カミソリで剃った（${idx.length} 個の毛穴の上。表面から出ていた毛 ${n} 本を切った）`, `Shaved with a razor (over ${idx.length} follicles; cut ${n} hairs sticking out of the skin)`), 'shave');
     } else if (e.type === 'pluck') {
       for (const i of idx) {
         this.fs[i].goneHairs = [];
         const r = pluck(this.fs[i], site);
-        this.note(t, i, { root: '毛抜きで根もとごと抜いた（毛穴は残る）', club: '休んでいた古い毛が抜けた', short: '短くてつまめなかった', none: '抜く毛がなかった' }[r], 'pluck', { root: '抜いた', club: '古い毛が抜けた', short: 'つまめない', none: '毛がない' }[r], this.fs[i].goneHairs);
+        this.note(t, i, { root: L('毛抜きで根もとごと抜いた（毛穴は残る）', 'Pulled out with the root by tweezers (the follicle stays)'), club: L('休んでいた古い毛が抜けた', 'An old resting hair came out'), short: L('短くてつまめなかった', 'Too short to grip'), none: L('抜く毛がなかった', 'No hair to pull') }[r], 'pluck', { root: L('抜いた', 'pulled'), club: L('古い毛が抜けた', 'old hair out'), short: L('つまめない', 'too short'), none: L('毛がない', 'no hair') }[r], this.fs[i].goneHairs);
         this.fs[i].goneHairs = null;
       }
     } else if (e.type === 'light' && this.hooks.light) this.hooks.light(this.fs, site, e, this, idx);
@@ -193,22 +193,22 @@ Runner.prototype.note = function (t, i, text, kind, short, hairs) { this.log.pus
 // 成長期が始まったときの色のできごと
 function pigNote(f) {
   if (f.ph !== 'A' || f.t > SIM.dt * 1.01) return null;
-  if (f.pig <= 0 && f.pigPrev > 0) return ['色の幹細胞が毛球へ届かず（バルジに取り残され）、白い毛を作りはじめた', '白い毛に'];
-  if (f.pig > 0 && f.pig < 1 && f.pigPrev >= 1) return ['毛球に届く色の細胞が減り、色のうすい毛を作りはじめた', '色がうすく'];
+  if (f.pig <= 0 && f.pigPrev > 0) return [L('色の幹細胞が毛球へ届かず（バルジに取り残され）、白い毛を作りはじめた', 'Pigment stem cells did not reach the bulb (stranded in the bulge), so it started making white hair'), L('白い毛に', 'turns white')];
+  if (f.pig > 0 && f.pig < 1 && f.pigPrev >= 1) return [L('毛球に届く色の細胞が減り、色のうすい毛を作りはじめた', 'Fewer pigment cells reached the bulb, so it started making paler hair'), L('色がうすく', 'paler')];
   return null;
 }
-const PH_SHORT = { A: '下へのびる', C: 'ちぢみはじめ', T: '休みへ', X: '止まった' };
-const PH_TEXT = { A: '毛穴の下の部分が、また下へのびはじめた（成長期のはじめ。毛はまだない）', C: '毛を作るのをやめ、毛穴の下がちぢみはじめた（退行期）', T: '休みに入った（休止期）', X: 'もう毛を作れなくなった' };
+const PH_SHORT = { A: L('下へのびる', 'grows down'), C: L('ちぢみはじめ', 'shrinking'), T: L('休みへ', 'resting'), X: L('止まった', 'stopped') };
+const PH_TEXT = { A: L('毛穴の下の部分が、また下へのびはじめた（成長期のはじめ。毛はまだない）', 'The lower follicle started growing down again (start of the growing phase; no hair yet)'), C: L('毛を作るのをやめ、毛穴の下がちぢみはじめた（退行期）', 'Stopped making hair, and the lower follicle started to shrink (shrinking phase)'), T: L('休みに入った（休止期）', 'Went into a rest (resting phase)'), X: L('もう毛を作れなくなった', 'Can no longer make hair') };
 function snap(f) { return { ph: f.ph }; }
 Runner.prototype.watch = function () {
   const t = this.t();
   this.fs.forEach((f, i) => {
     const p = this.prev[i], q = snap(f);
     if (q.ph !== p.ph && PH_TEXT[q.ph] && !(q.ph === 'C' && f.hitDay != null && t - f.hitDay < 0.3)) this.note(t, i, PH_TEXT[q.ph], 'phase', PH_SHORT[q.ph]);
-    if (f.ph === 'A' && f.t >= GEO.descend && f.t - SIM.dt < GEO.descend) this.note(t, i, '毛球ができあがり、新しい毛を作って下から押し上げはじめた', 'phase', '毛を作る');
+    if (f.ph === 'A' && f.t >= GEO.descend && f.t - SIM.dt < GEO.descend) this.note(t, i, L('毛球ができあがり、新しい毛を作って下から押し上げはじめた', 'The bulb is ready and started making a new hair, pushing it up from below'), 'phase', L('毛を作る', 'making hair'));
     if (q.ph !== p.ph && q.ph === 'A') { const pn = pigNote(f); if (pn) this.note(t, i, pn[0], 'gray', pn[1]); }
-    for (const h of f.hairs) if (h.fresh && tipH(f, h) > SIM.visible) { h.fresh = false; this.note(t, i, '新しい毛の先が表面に出た', 'emerge', '表面に出た'); }
-    if (f.justShed) { this.note(t, i, f.justShed === 'burnt' ? '光でいたんだ毛が抜け落ちた' : '古い毛（棍毛）が抜け落ちた', 'shed', '抜け落ちた', f.goneHairs); f.justShed = null; f.goneHairs = null; }
+    for (const h of f.hairs) if (h.fresh && tipH(f, h) > SIM.visible) { h.fresh = false; this.note(t, i, L('新しい毛の先が表面に出た', 'The tip of a new hair came out of the skin'), 'emerge', L('表面に出た', 'came out')); }
+    if (f.justShed) { this.note(t, i, f.justShed === 'burnt' ? L('光でいたんだ毛が抜け落ちた', 'The hair damaged by light fell out') : L('古い毛（棍毛）が抜け落ちた', 'The old hair (club hair) fell out'), 'shed', L('抜け落ちた', 'fell out'), f.goneHairs); f.justShed = null; f.goneHairs = null; }
     this.prev[i] = q;
   });
 };

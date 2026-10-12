@@ -19,15 +19,15 @@ const LIGHT = {
 // 肌の色: 表皮（60 µm）のメラノソームの体積割合。
 // 測り方で大きくちがう（生体の測定 Tseng ほか 2011: 約 0.9〜1.7%。Jacques 1998 のまとめ: 明るい 1.3〜6.3%・中ほど 11〜16%・濃い 18〜43%）→ 幅の中から推定
 const SKINS = {
-  light: { name: '明るい肌', fmel: 0.02 },
-  mid: { name: '中ほど', fmel: 0.05 },
-  dark: { name: '濃い肌・日焼け', fmel: 0.13 },
+  light: { name: L('明るい肌', 'Light skin'), fmel: 0.02 },
+  mid: { name: L('中ほど', 'Medium'), fmel: 0.05 },
+  dark: { name: L('濃い肌・日焼け', 'Dark or tanned skin'), fmel: 0.13 },
 };
 // 毛の色: 毛のなかのメラニン（メラノソーム相当）の体積割合。測った値が見つからない → 推定
 const HAIRS = {
-  black: { name: '黒い毛', fh: 0.10 },
-  brown: { name: '茶色の毛', fh: 0.05 },
-  light: { name: 'うすい色の毛', fh: 0.015 },
+  black: { name: L('黒い毛', 'Black hair'), fh: 0.10 },
+  brown: { name: L('茶色の毛', 'Brown hair'), fh: 0.05 },
+  light: { name: L('うすい色の毛', 'Light-colored hair'), fh: 0.015 },
 };
 
 // --- 光学（Jacques 2013・OMLC）。λ は nm、係数は 1/cm ---
@@ -160,14 +160,14 @@ function flashFollicle(f, opt) {
 let _epiResp = null;
 function epiResponse() {
   if (_epiResp) return _epiResp;
-  const alpha = LIGHT.kappa / LIGHT.rhoC, L = LIGHT.epiCm, dz = L / 12, N = Math.ceil(0.05 / dz);
+  const alpha = LIGHT.kappa / LIGHT.rhoC, Lep = LIGHT.epiCm, dz = Lep / 12, N = Math.ceil(0.05 / dz);
   const dt = 0.3 * dz * dz / alpha, tEnd = LIGHT.tau * 4;
   let T = new Float64Array(N), Tn = new Float64Array(N);
-  const hist = [], jB = Math.round(L / dz) - 1;           // 基底層（表皮のいちばん下）
+  const hist = [], jB = Math.round(Lep / dz) - 1;           // 基底層（表皮のいちばん下）
   for (let t = 0; t < tEnd; t += dt) {
     for (let i = 0; i < N - 1; i++) {
       const lap = i === 0 ? 2 * (T[1] - T[0]) / (dz * dz) : (T[i + 1] - 2 * T[i] + T[i - 1]) / (dz * dz);
-      Tn[i] = T[i] + dt * (alpha * lap + (t < LIGHT.tau && i * dz < L ? 1 / LIGHT.rhoC : 0));
+      Tn[i] = T[i] + dt * (alpha * lap + (t < LIGHT.tau && i * dz < Lep ? 1 / LIGHT.rhoC : 0));
     }
     Tn[N - 1] = 0; [T, Tn] = [Tn, T]; hist.push(T[jB]);
   }
@@ -211,22 +211,23 @@ function hairShade(fs, opt, T0) {
 
 // 光を1回あてる（idx の毛穴だけ）。L = 光の設定 {level, skin, hair, cool}。できごとを R.log に、結果を R.flashes に残す
 const _specCache = {};
-function lightEvent(fs, e, R, idx, L) {
-  const sk = SKINS[L.skin];
-  const spec = _specCache[L.skin] || (_specCache[L.skin] = lightSpectrum(sk.fmel));
-  const F0 = L.level * LIGHT.fPerLevel;
-  const opt = { F0, spec, fh: HAIRS[L.hair].fh, fmel: sk.fmel };
+function lightEvent(fs, e, R, idx, LS) {
+  const sk = SKINS[LS.skin];
+  const spec = _specCache[LS.skin] || (_specCache[LS.skin] = lightSpectrum(sk.fmel));
+  const F0 = LS.level * LIGHT.fPerLevel;
+  const opt = { F0, spec, fh: HAIRS[LS.hair].fh, fmel: sk.fmel };
   const lit = idx.map(i => fs[i]);
-  const hs = hairShade(lit, opt, L.cool ? LIGHT.Tskin0 : LIGHT.TskinWarm), shade = hs.cover > 0.01 ? hs.shade : 0;
-  const surf = flashSurface(Object.assign({}, opt), false, L.cool);
+  const hs = hairShade(lit, opt, LS.cool ? LIGHT.Tskin0 : LIGHT.TskinWarm), shade = hs.cover > 0.01 ? hs.shade : 0;
+  const surf = flashSurface(Object.assign({}, opt), false, LS.cool);
   if (hs.cover > 0.01) { surf.Thair = hs.Thair; surf.charred = hs.charred; }
   opt.F0 *= 1 - shade;
   if (hs.charred) for (const i of idx) for (const h of fs[i].hairs) if (h.L - rootDepth(fs[i], h) > 0.3) h.singed = true;   // 表面の毛が焦げた
   let nA = 0, hit = 0, Tm = 0;
   const t = e.t;
-  const skinWord = surf.omEpi >= 1 ? '（このモデルでは、やけどのおそれ）' : surf.omEpi >= 0.1 ? '（熱い）' : '';
-  R.note(t, null, `光をあてた（Lv${L.level}・約 ${F0.toFixed(1)} J/cm²、${idx.length} 個の毛穴の上）。肌の表面（表皮）は最高 ${surf.Tepi.toFixed(0)}°C${skinWord}` +
-    (shade > 0.01 ? `。剃っていない表面の毛が ${Math.min(999, surf.Thair).toFixed(0)}°C まで熱くなり${hs.charred ? '、焦げて炭になった（炭は光をよく吸う）' : ''}。そのぶん光の ${(shade * 100).toFixed(0)}% が根もとへ届かなかった。焦げた毛がふれる肌は熱い` : ''), 'light');
+  const skinWord = surf.omEpi >= 1 ? L('（このモデルでは、やけどのおそれ）', ' (risk of a burn in this model)') : surf.omEpi >= 0.1 ? L('（熱い）', ' (hot)') : '';
+  R.note(t, null, L(`光をあてた（約 ${F0.toFixed(1)} J/cm²、${idx.length} 個の毛穴の上）。肌の表面（表皮）は最高 ${surf.Tepi.toFixed(0)}°C${skinWord}`, `Flashed the light (about ${F0.toFixed(1)} J/cm², over ${idx.length} follicles). Skin surface (epidermis) up to ${surf.Tepi.toFixed(0)}°C${skinWord}`) +
+    (shade > 0.01 ? L(`。剃っていない表面の毛が ${Math.min(999, surf.Thair).toFixed(0)}°C まで熱くなり${hs.charred ? '、焦げて炭になった（炭は光をよく吸う）' : ''}。そのぶん光の ${(shade * 100).toFixed(0)}% が根もとへ届かなかった。焦げた毛がふれる肌は熱い`,
+      `. The unshaved hair above the skin got as hot as ${Math.min(999, surf.Thair).toFixed(0)}°C${hs.charred ? ' and burned to char (char absorbs light well)' : ''}, so ${(shade * 100).toFixed(0)}% of the light did not reach the roots. The skin touching the burnt hair gets hot`) : ''), 'light');
   for (const i of idx) {
     const f = fs[i], ph = f.ph, doomedBefore = f.doomed;
     const res = flashFollicle(f, opt);
@@ -234,14 +235,14 @@ function lightEvent(fs, e, R, idx, L) {
     if (ph === 'A' || ph === 'C') { nA++; Tm = Math.max(Tm, res.T.matrix); }   // 色のある毛球がある毛穴
     let text;
     if (ph === 'A' || ph === 'C') {
-      if (hitNow) { hit++; text = `毛母が ${res.T.matrix.toFixed(0)}°C になり、熱でいたんだ → この毛はもう伸びない`; }
-      else if (f.pig === 0) text = `白い毛で、毛母にも毛にも色（メラニン）がない → 熱にならず無事（${res.T.matrix.toFixed(0)}°C）`;
-      else if (ph === 'A' && f.t < 12) text = `成長期のはじめで、毛母にまだ色がない（${res.T.matrix.toFixed(0)}°C）→ 無事`;
-      else text = (f.pig < 1 ? '色がうすい毛で、' : '') + `毛母は ${res.T.matrix.toFixed(0)}°C まで。温まり足りず無事`;
-    } else if (ph === 'X') text = 'もう毛を作らない毛穴（変化なし）';
-    else text = ph === 'R' ? '抜いたあとで毛も色のある毛球もない → 光が効かない' : '休み中で、色のある毛球がない → 変化なし';
-    if (f.doomed && !doomedBefore) text += '。幹細胞（バルジ）や毛乳頭もいたみ、次の毛は作れない';
-    R.note(t, i, text, hitNow ? 'hit' : 'safe', hitNow ? '熱でいたんだ' : (ph === 'A' || ph === 'C') ? '無事' : '効かない');
+      if (hitNow) { hit++; text = L(`毛母が ${res.T.matrix.toFixed(0)}°C になり、熱でいたんだ → この毛はもう伸びない`, `The matrix reached ${res.T.matrix.toFixed(0)}°C and was damaged by heat → this hair will not grow any more`); }
+      else if (f.pig === 0) text = L(`白い毛で、毛母にも毛にも色（メラニン）がない → 熱にならず無事（${res.T.matrix.toFixed(0)}°C）`, `White hair: no color (melanin) in the matrix or the hair → no heat, unharmed (${res.T.matrix.toFixed(0)}°C)`);
+      else if (ph === 'A' && f.t < 12) text = L(`成長期のはじめで、毛母にまだ色がない（${res.T.matrix.toFixed(0)}°C）→ 無事`, `Start of the growing phase: the matrix has no color yet (${res.T.matrix.toFixed(0)}°C) → unharmed`);
+      else text = L((f.pig < 1 ? '色がうすい毛で、' : '') + `毛母は ${res.T.matrix.toFixed(0)}°C まで。温まり足りず無事`, (f.pig < 1 ? 'Pale hair: ' : '') + `the matrix only reached ${res.T.matrix.toFixed(0)}°C. Not hot enough, unharmed`);
+    } else if (ph === 'X') text = L('もう毛を作らない毛穴（変化なし）', 'A follicle that no longer makes hair (no change)');
+    else text = ph === 'R' ? L('抜いたあとで毛も色のある毛球もない → 光が効かない', 'Just plucked: no hair and no colored bulb → the light has no effect') : L('休み中で、色のある毛球がない → 変化なし', 'Resting: no colored bulb → no change');
+    if (f.doomed && !doomedBefore) text += L('。幹細胞（バルジ）や毛乳頭もいたみ、次の毛は作れない', '. The stem cells (bulge) or papilla were also damaged, so no new hair can be made');
+    R.note(t, i, text, hitNow ? 'hit' : 'safe', hitNow ? L('熱でいたんだ', 'heat damage') : (ph === 'A' || ph === 'C') ? L('無事', 'unharmed') : L('効かない', 'no effect'));
   }
   (R.flashes || (R.flashes = [])).push({ t, idx, nA, hit, Tm, shade, ...surf });
 }

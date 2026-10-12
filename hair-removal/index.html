@@ -3,6 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>脱毛のしくみ</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%232a1d1a'/><path d='M8 40h48' stroke='%23e7b9a0' stroke-width='4'/><path d='M22 52V40q0-14 10-26' stroke='%23ffb37a' stroke-width='4' fill='none'/><path d='M40 52V40q0-10 8-18' stroke='%23ffb37a' stroke-width='4' fill='none'/></svg>">
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
 <script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
 <!-- seo（検索・リンクカード。_dev/tools/seo.mjs が入口の APPS から作る。手で直さない） -->
 <meta name="description" content="肌の断面に並んだ毛穴に、カミソリ・毛抜き・光（家庭用の光脱毛器）を好きなときに使って、毛穴の中で何が起きるかを時間で追う。毛はのびて・ちぢんで・休んでをくり返し、光は伸びている毛の根もとだけを熱でいためる。">
@@ -15,83 +16,108 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="css/style.css?v=015">
+<link rel="stylesheet" href="css/style.css?v=016">
 
 <div id="app">
-  <!-- 上に固定: 道具・断面・いま起きたこと・時間・案内（RULES 9章） -->
+  <!-- 上に固定: 道具・断面・いま起きたこと・時間（RULES 9章） -->
   <div id="pin">
     <header id="top">
-      <h1>脱毛のしくみ</h1>
+      <h1><span lang="ja">脱毛のしくみ</span><span lang="en">How Hair Removal Works</span></h1>
       <span id="who"></span>
+      <span class="langsw" id="langsw"><button data-l="ja">JP</button><button data-l="en">EN</button></span>
     </header>
-    <div id="tools" role="radiogroup" aria-label="道具"></div>
+    <div id="tools" role="radiogroup"></div>
     <p id="hint"></p>
     <div id="stage"><canvas id="cv"></canvas><div id="tip" hidden></div><div id="toast" hidden></div>
-      <div id="zoom"><button id="zin" aria-label="拡大">＋</button><button id="zout" aria-label="縮小">−</button><button id="zall" aria-label="全体">全体</button></div></div>
+      <div id="zoom"><button id="zin">+</button><button id="zout">−</button><button id="zall"><span lang="ja">全体</span><span lang="en">All</span></button></div></div>
     <div id="status"><span id="counts"></span><span id="now"></span></div>
     <div id="timebar">
-      <button id="play" aria-label="再生">▶</button>
-      <button class="step" data-d="1">+1日</button>
-      <button class="step" data-d="7">+1週</button>
-      <button class="step" data-d="30">+1か月</button>
-      <span id="day">0日目</span>
-      <button id="undo" title="最後の手入れを取り消す" aria-label="最後の手入れを取り消す">↶</button>
+      <button id="play">▶</button>
+      <button class="step" data-d="1"><span lang="ja">+1日</span><span lang="en">+1 d</span></button>
+      <button class="step" data-d="7"><span lang="ja">+1週</span><span lang="en">+1 wk</span></button>
+      <button class="step" data-d="30"><span lang="ja">+1か月</span><span lang="en">+1 mo</span></button>
+      <span id="day"></span>
+      <button id="undo">↶</button>
     </div>
   </div>
 
   <!-- その下をスクロール -->
   <section class="sec">
-    <h2>毛穴ごとの周期</h2>
+    <h2><span lang="ja">毛穴ごとの周期</span><span lang="en">Each follicle’s cycle</span></h2>
     <canvas id="gr"></canvas>
-    <p class="hint">1段が1つの毛穴。ピンクの枠は、光でいたんだ日（×）から また のびはじめるまで。色は毛穴のようす（<span class="sw" style="background:#e57a7a"></span>のびる <span class="sw" style="background:#d7a28c"></span>ちぢむ <span class="sw" style="background:#7d6a62"></span>休む <span class="sw" style="background:#ffd166"></span>抜いたあと <span class="sw" style="background:#333"></span>止まった）、黒い線は表面に毛が出ている日。上の印は手入れ。いまより右は「このあと何もしない場合」の予想。いまの前後の2年を表示し、時間が進むとずれていきます。さわるとその日へ移ります。</p>
-    <label class="row">再生のはやさ <select id="speed"><option value="2">1秒で2日</option><option value="7" selected>1秒で1週</option><option value="30">1秒で1か月</option><option value="120">1秒で4か月</option></select></label>
+    <p class="hint" lang="ja">1段が1つの毛穴。ピンクの枠は、光でいたんだ日（×）から また のびはじめるまで。色は毛穴のようす（<span class="sw" style="background:#e57a7a"></span>のびる <span class="sw" style="background:#d7a28c"></span>ちぢむ <span class="sw" style="background:#7d6a62"></span>休む <span class="sw" style="background:#ffd166"></span>抜いたあと <span class="sw" style="background:#333"></span>止まった）、黒い線は表面に毛が出ている日。上の印は手入れ。いまより右は「このあと何もしない場合」の予想。いまの前後の2年を表示し、時間が進むとずれていきます。さわるとその日へ移ります。</p>
+    <p class="hint" lang="en">Each row is one follicle. A pink frame runs from the day light damaged it (×) until it starts growing again. Colors show the follicle’s state (<span class="sw" style="background:#e57a7a"></span>growing <span class="sw" style="background:#d7a28c"></span>shrinking <span class="sw" style="background:#7d6a62"></span>resting <span class="sw" style="background:#ffd166"></span>after plucking <span class="sw" style="background:#333"></span>stopped); the black line marks days when hair is out of the skin. Marks on top are treatments. Right of “now” is a forecast if you do nothing more. It shows two years around now and scrolls as time passes. Touch it to jump to that day.</p>
+    <label class="row"><span lang="ja">再生のはやさ</span><span lang="en">Playback speed</span> <select id="speed"></select></label>
   </section>
 
   <section class="sec" id="ctrl">
     <h2 id="siteH">部位と年齢</h2>
-    <div class="row" id="siteBox"><label>部位 <select id="site"></select></label><label>年齢 <select id="age"></select></label></div>
-    <div class="warn"><b>医療・美容の判断には使えません。</b>このアプリは、毛が生えかわるしくみと、光脱毛で一般に何が起きるかを学ぶためのシミュレーションです。効き目・安全性・肌に合うかどうかは人や機器によってちがいます。光脱毛器は説明書にしたがって使い、肌の異常や不安があれば医師に相談してください。</div>
-    <h2>光の条件（この画面が想定していること）</h2>
-    <ul class="hint cond">
+    <div class="row" id="siteBox"><label><span lang="ja">部位</span><span lang="en">Body site</span> <select id="site"></select></label><label><span lang="ja">年齢</span><span lang="en">Age</span> <select id="age"></select></label></div>
+    <div class="warn" lang="ja"><b>医療・美容の判断には使えません。</b>このアプリは、毛が生えかわるしくみと、光脱毛で一般に何が起きるかを学ぶためのシミュレーションです。効き目・安全性・肌に合うかどうかは人や機器によってちがいます。光脱毛器は説明書にしたがって使い、肌の異常や不安があれば医師に相談してください。</div>
+    <div class="warn" lang="en"><b>Not for medical or beauty decisions.</b> This app is a simulation for learning how hair is replaced and what generally happens with light-based hair removal. How well it works, how safe it is and whether it suits your skin differ from person to person and device to device. Use any device as its manual says, and see a doctor if your skin has a problem or you are worried.</div>
+    <h2><span lang="ja">光の条件（この画面が想定していること）</span><span lang="en">Light conditions (what this screen assumes)</span></h2>
+    <ul class="hint cond" lang="ja">
       <li>家庭用の光脱毛器の強めの設定: 面積あたり約 7.7 J/cm²（ある機種のカートリッジの値。メーカーの公式の数値ではなく、比較サイトの値）</li>
       <li>光の色（波長）600〜1100 nm、光る長さ 5 ms（どちらも推定。家庭用の機器は公表していないことが多い）</li>
       <li>黒い毛・明るい肌・光の前後に冷やす</li>
       <li>照射口の幅 1.5 cm</li>
     </ul>
-    <p class="hint">毛のメラニンの量・肌のメラニンの量など、結果を大きく左右する値の多くは測った値が見つからない推定です（下の「このアプリについて」）。数字は「このモデルではこうなる」という目安で、実際の温度や効き目を表すものではありません。</p>
-    <h2 id="grayH">白髪</h2>
-    <label class="row" id="grayRow">白髪の出やすさ <select id="gray"></select></label>
-    <p class="hint" id="grayNote">毛穴ごとに「色の幹細胞が毛球へ届かなくなる年齢」がばらついていて、その年齢をこえて始まった周期から毛が白くなります。ここで選ぶのはその平均（早め 52歳・ふつう 62歳・おそめ 72歳、ばらつき ±10歳）。人での数値は少なく、推定です。</p>
-    <h2>部位の値</h2>
+    <ul class="hint cond" lang="en">
+      <li>A strong setting on a home light-based (IPL) hair removal device: about 7.7 J/cm² (the value for one model’s cartridge, from a comparison site, not an official maker figure)</li>
+      <li>Light color (wavelength) 600–1100 nm, flash length 5 ms (both estimates; home devices often do not publish them)</li>
+      <li>Black hair, light skin, skin cooled before and after the flash</li>
+      <li>Window 1.5 cm wide</li>
+    </ul>
+    <p class="hint" lang="ja">毛のメラニンの量・肌のメラニンの量など、結果を大きく左右する値の多くは測った値が見つからない推定です（下の「このアプリについて」）。数字は「このモデルではこうなる」という目安で、実際の温度や効き目を表すものではありません。</p>
+    <p class="hint" lang="en">Many values that strongly change the results, such as how much melanin is in the hair and in the skin, are estimates because no measured values were found (see “About this app” below). The numbers are a rough guide to what happens in this model, not real temperatures or real effects.</p>
+    <h2 id="grayH"><span lang="ja">白髪</span><span lang="en">Gray hair</span></h2>
+    <label class="row" id="grayRow"><span lang="ja">白髪の出やすさ</span><span lang="en">How early hair turns gray</span> <select id="gray"></select></label>
+    <p class="hint" id="grayNote"><span lang="ja">毛穴ごとに「色の幹細胞が毛球へ届かなくなる年齢」がばらついていて、その年齢をこえて始まった周期から毛が白くなります。ここで選ぶのはその平均（早め 52歳・ふつう 62歳・おそめ 72歳、ばらつき ±10歳）。人での数値は少なく、推定です。</span><span lang="en">Each follicle has its own age at which pigment stem cells stop reaching the bulb; cycles that start after that age make white hair. Here you choose the average (early 52, average 62, late 72, spread ±10 years). Human data are scarce, so these are estimates.</span></p>
+    <h2><span lang="ja">部位の値</span><span lang="en">Values for this site</span></h2>
     <p class="hint" id="siteNote"></p>
   </section>
 
   <section class="sec">
-    <h2>できごと（いまの日まで）</h2>
+    <h2><span lang="ja">できごと（いまの日まで）</span><span lang="en">Events (up to today)</span></h2>
     <ol id="log"></ol>
   </section>
 
-  <details id="about" class="sec">
+  <details id="about" class="sec" lang="ja">
     <summary>このアプリについて</summary>
     <p>肌の断面に毛穴を一列に10個並べ、剃る・抜く・光をあてる を好きなときに好きな所へ行い、毛穴の中で起きることを時間で追うシミュレーションです。毛穴1つずつが「成長期 → 退行期 → 休止期 → 新しい成長期」をくり返し、毛は毛球（毛の根もと）で作られて下から押し上げられます。</p>
     <p><b>学習用に簡単にしています。医療・美容の判断には使えません。</b>実際の光脱毛の効き目や安全性を予測するものではありません。毛はまっすぐ・肌は平らとし、毛穴どうしは影響しあわないとしています。周期の長さは出どころによって大きくちがいます（部位の値）。毛穴の間かくは 1.3 mm（1 cm² に約60本として。推定）。照射口の幅 1.5 cm は、ケノンのストロングのカートリッジ（1.5 × 3.0 cm、比較サイトの値）の短い辺です。</p>
     <p>推定の値（測った値が見つからないもの）: 毛ののびる速さ（すね 0.2 mm/日など）、毛の太さ（70 µm）、毛球の深さ（3 mm）、表皮・真皮の厚さ、バルジの深さ、毛の密度（1 cm² に60本）、周期のばらつき、抜いたあと新しい成長期が始まるまで（平均7日）、毛抜きでつまめる長さ（0.5 mm）、古い毛が抜ける前にゆるむ日数（4日）と落ちるまで（0〜25日）、新しい毛球が下へのびきるまで（10日）、毛母が色を作りはじめる日（5〜12日目）、退行期の長さ（すね以外は14日）、光でいたんだ毛が抜け落ちるまで（1〜3週）。</p>
     <h3>光の計算</h3>
     <p>光（600〜1100 nm）が肌の中で散らばりながら弱まる量を波長ごとに計算し（皮ふの散乱・メラニン・血液・水の吸収）、毛と毛母のメラニンが吸った熱が、まわりへ広がる様子を熱の式で解きます。細胞がいたむかどうかは、温度と時間の積み重ね（Arrhenius の式、Henriques 1947 の定数）で決めます。表皮も同じように計算します。</p>
-    <p><b>ケノンの数値は公表されていません</b>（波長・光る長さ・面積あたりの強さ）。ここでは、Lv10 = 35 J ÷ 4.5 cm²（ストロング2。比較サイトの値で、メーカーの公式の資料ではありません）≈ 7.7 J/cm²、ほかのレベルは比例、波長 600〜1100 nm、光る長さ 5 ms と<b>推定</b>しています。強さ・照射口の幅とも、ストロング（2）のカートリッジの値です（付属のスーパープレミアムの強さは見つかりませんでした）。毛のメラニンの量（黒 10%・茶 5%・うすい色 1.5%）も測った値が見つからない推定で、結果はこの値で大きく変わります。表皮のメラニンの量も測り方で大きくちがい（約1〜43%）、幅の中から選んでいます（明るい 2%・中ほど 5%・濃い 13%）。</p>
-    <p>そのほかの光の推定: 組織の熱の性質（熱容量 3.8 J/cm³K・熱伝導率 0.0052 W/cmK）、毛穴のまわりのはじめの温度（35°C）、表皮のはじめの温度（冷やす 22°C・冷やさない 32°C）、毛母と毛乳頭の大きさ、休止期・退行期の毛の色の割合、深さと光の量の式の係数（Jacques 2010 の文の値から直線で近似）、剃っていない毛の熱容量（2.0 J/cm³K）・焦げる温度（250°C）・焦げた毛が光を吸う割合（9割）。</p>
+    <p><b>ケノンの数値は公表されていません</b>（波長・光る長さ・面積あたりの強さ）。ここでは、Lv10 = 35 J ÷ 4.5 cm²（ストロング2。比較サイトの値で、メーカーの公式の資料ではありません）≈ 7.7 J/cm²、波長 600〜1100 nm、光る長さ 5 ms と<b>推定</b>しています。強さ・照射口の幅とも、ストロング（2）のカートリッジの値です（付属のスーパープレミアムの強さは見つかりませんでした）。毛のメラニンの量（黒 10%）も測った値が見つからない推定で、結果はこの値で大きく変わります。表皮のメラニンの量も測り方で大きくちがい（約1〜43%）、幅の中から選んでいます（明るい肌 2%）。</p>
+    <p>そのほかの光の推定: 組織の熱の性質（熱容量 3.8 J/cm³K・熱伝導率 0.0052 W/cmK）、毛穴のまわりのはじめの温度（35°C）、表皮のはじめの温度（冷やす 22°C）、毛母と毛乳頭の大きさ、休止期・退行期の毛の色の割合、深さと光の量の式の係数（Jacques 2010 の文の値から直線で近似）、剃っていない毛の熱容量（2.0 J/cm³K）・焦げる温度（250°C）・焦げた毛が光を吸う割合（9割）。</p>
     <p>実際の製品の効き目や安全性の判断には使えません。使い方は製品の説明書にしたがってください。</p>
     <h3>おもな出どころ</h3>
-    <ul id="srcs"></ul>
+    <ul class="srcs"></ul>
     <h3>使っているもの</h3>
     <p>フォント: Google Fonts（SIL Open Font License）</p>
   </details>
+  <details id="about-en" class="sec" lang="en">
+    <summary>About this app</summary>
+    <p>A simulation that lines up 10 hair follicles in a cross-section of skin. Shave, pluck or flash light wherever and whenever you like, and follow over time what happens inside each follicle. Every follicle repeats “growing → shrinking → resting → growing again”, and the hair is made in the bulb (the root) and pushed up from below.</p>
+    <p><b>This is simplified for learning. Do not use it for medical or beauty decisions.</b> It does not predict how well or how safely real light-based hair removal works. Hairs are straight, the skin is flat, and follicles do not affect each other. Cycle lengths differ a lot between sources (see “Values for this site”). Follicles are 1.3 mm apart (about 60 per cm², an estimate). The 1.5 cm window is the short side of the KE-NON “Strong” cartridge (1.5 × 3.0 cm, value from a comparison site).</p>
+    <p>Estimated values (no measured value found): hair growth speed (0.2 mm/day on the shin, etc.), hair thickness (70 µm), bulb depth (3 mm), thickness of the epidermis and dermis, bulge depth, hair density (60 per cm²), spread of cycle lengths, time from plucking to a new growing phase (7 days on average), the length tweezers can grip (0.5 mm), days an old hair loosens before falling (4) and until it falls (0–25), days for a new bulb to grow down (10), the day the matrix starts making color (day 5–12), shrinking-phase length (14 days except the shin), and time for a light-damaged hair to fall out (1–3 weeks).</p>
+    <h3>The light calculation</h3>
+    <p>For each wavelength (600–1100 nm), it calculates how light weakens as it scatters through the skin (skin scattering; absorption by melanin, blood and water), then solves the heat equation for how heat absorbed by melanin in the hair and matrix spreads around. Whether cells are damaged depends on temperature added up over time (the Arrhenius equation with Henriques 1947 constants). The epidermis is calculated the same way.</p>
+    <p><b>KE-NON does not publish these numbers</b> (wavelength, flash length, energy per area). Here we <b>estimate</b> level 10 = 35 J ÷ 4.5 cm² (Strong2 cartridge; a comparison-site value, not an official maker document) ≈ 7.7 J/cm², wavelength 600–1100 nm and flash length 5 ms. Both the energy and the window width are for the Strong (2) cartridge (we could not find the energy of the bundled Super Premium cartridge). The amount of melanin in the hair (10% for black hair) is also an estimate with no measured value found, and the results depend strongly on it. Melanin in the epidermis also varies a lot with the measuring method (about 1–43%); we picked a value in that range (2% for light skin).</p>
+    <p>Other light estimates: heat properties of tissue (heat capacity 3.8 J/cm³K, conductivity 0.0052 W/cmK), starting temperature around the follicle (35°C), starting temperature of the epidermis (22°C after cooling), the sizes of the matrix and papilla, how much color resting and shrinking hairs have, the coefficients of the light-vs-depth formula (a straight-line fit to values stated in Jacques 2010), and for unshaved hair its heat capacity (2.0 J/cm³K), burning temperature (250°C) and how much light burnt hair absorbs (90%).</p>
+    <p>Not for judging the effect or safety of real products. Follow each product’s manual.</p>
+    <h3>Main sources</h3>
+    <ul class="srcs"></ul>
+    <h3>Made with</h3>
+    <p>Fonts: Google Fonts (SIL Open Font License)</p>
+  </details>
 </div>
 
-<script src="js/data.js?v=015"></script>
-<script src="js/model.js?v=015"></script>
-<script src="js/light.js?v=015"></script>
-<script src="js/draw.js?v=015"></script>
-<script src="js/graph.js?v=015"></script>
-<script src="js/ui.js?v=015"></script>
-<script src="js/main.js?v=015"></script>
+<script src="js/data.js?v=016"></script>
+<script src="js/model.js?v=016"></script>
+<script src="js/light.js?v=016"></script>
+<script src="js/draw.js?v=016"></script>
+<script src="js/graph.js?v=016"></script>
+<script src="js/ui.js?v=016"></script>
+<script src="js/main.js?v=016"></script>

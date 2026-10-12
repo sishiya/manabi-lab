@@ -87,11 +87,11 @@ function act(type, idx, group) {
   if (later.length) S.events = S.events.filter(e => e.t <= t + 1e-9);
   S.events.push({ t, type, idx: idx.slice().sort((a, b) => a - b), g: group });
   changed(); computeFull();
-  if (later.length) toast('この日より後の手入れを消しました');
+  if (later.length) toast(L('この日より後の手入れを消しました', 'Removed the treatments after this day'));
   if (type === 'pluck') {
     const ns = S.full.log.filter(n => Math.abs(n.t - t) < 1e-9 && idx.includes(n.i) && n.kind === 'pluck');
-    const bad = ns.filter(n => n.short === 'つまめない' || n.short === '毛がない').length;
-    if (bad === ns.length) toast('短すぎる（または毛がない）ので、つまめませんでした');
+    const bad = ns.filter(n => !n.hairs).length;   // 抜いた毛の記録がない = つまめなかった・毛がなかった
+    if (bad === ns.length) toast(L('短すぎる（または毛がない）ので、つまめませんでした', 'Could not grip it: too short (or no hair)'));
   }
 }
 function undo() {
@@ -99,7 +99,7 @@ function undo() {
   const e = S.events.pop();
   if (e.g != null) while (S.events.length && S.events[S.events.length - 1].g === e.g) S.events.pop();   // 1回なぞった分はまとめて
   changed();
-  toast(`${Math.floor(e.t)}日目の${{ shave: 'カミソリ', pluck: '毛抜き', light: '光' }[e.type]}を取り消しました`);
+  toast(L(`${Math.floor(e.t)}日目の${{ shave: 'カミソリ', pluck: '毛抜き', light: '光' }[e.type]}を取り消しました`, `Undid the ${{ shave: 'razor', pluck: 'tweezers', light: 'light' }[e.type]} on day ${Math.floor(e.t)}`));
 }
 
 // --- 描画 ---
@@ -125,12 +125,12 @@ function draw() {
   drawCycles(gg, gw, gh, S.full.rows, S.events, S.t, from, to, S.full.hits);
   S.gWin = [from, to];
   const c = countLane(sc.fs);
-  $('counts').textContent = `出ている毛 ${c.vis}/${SIM.N}`;
+  $('counts').textContent = L(`出ている毛 ${c.vis}/${SIM.N}`, `Hairs out ${c.vis}/${SIM.N}`);
   const last = S.full.log.filter(n => n.t <= S.t + 1e-9 && n.kind !== 'safe' && n.kind !== 'cut').pop();
-  $('now').textContent = last && S.t - last.t < 5 ? `${Math.floor(last.t)}日目${last.i == null ? '' : ' 毛穴' + (last.i + 1)}: ${last.text}` : '';
+  $('now').textContent = last && S.t - last.t < 5 ? L(`${Math.floor(last.t)}日目${last.i == null ? '' : ' 毛穴' + (last.i + 1)}: ${last.text}`, `Day ${Math.floor(last.t)}${last.i == null ? '' : ', follicle ' + (last.i + 1)}: ${last.text}`) : '';
   const dd = Math.floor(S.t), yy = Math.floor(dd / 365);
-  $('day').textContent = yy ? yy + '年' + Math.floor((dd % 365) / 30.4) + 'か月' : dd + '日目';
-  $('day').title = dd + '日目' + (FEATURES.gray ? '・' + (S.age + S.t / 365).toFixed(1) + '歳' : '');
+  $('day').textContent = yy ? L(yy + '年' + Math.floor((dd % 365) / 30.4) + 'か月', yy + ' y ' + Math.floor((dd % 365) / 30.4) + ' mo') : L(dd + '日目', 'Day ' + dd);
+  $('day').title = L(dd + '日目', 'day ' + dd) + (FEATURES.gray ? L('・' + (S.age + S.t / 365).toFixed(1) + '歳', ' · age ' + (S.age + S.t / 365).toFixed(1)) : '');
   $('play').textContent = S.playing ? '❚❚' : '▶';
   const lk = S.key + '|' + Math.floor(S.t * 4);
   if (lk !== _logKey) { _logKey = lk; renderLog(S.full.log, S.t); }
@@ -157,7 +157,7 @@ gr.addEventListener('pointerdown', graphPointer);
 gr.addEventListener('pointermove', graphPointer);
 
 // --- 断面: 拡大（ホイール・ボタン）と、しらべる でのドラッグ移動 ---
-function curView() { const L = layout(GEOM.w, GEOM.h, SIM.N, null); return S.view || { z: 1, cx: L.stripMM / 2, cy: (DOWN_MM - UP_MM) / 2 }; }
+function curView() { const LY = layout(GEOM.w, GEOM.h, SIM.N, null); return S.view || { z: 1, cx: LY.stripMM / 2, cy: (DOWN_MM - UP_MM) / 2 }; }
 function zoomAt(mx, my, factor) {
   const v = curView(), z = Math.max(0.35, Math.min(10, v.z * factor));
   const wx = (mx - GEOM.ox) / GEOM.s, wy = (my - GEOM.oy) / GEOM.s, s2 = GEOM.s0 * z;
@@ -202,8 +202,8 @@ cv.addEventListener('pointerdown', e => {
     return;
   }
   if (S.tool === 'shave') { S.stroke = { a: x, b: x, done: new Set(), g: ++strokeId }; cv.setPointerCapture(e.pointerId); razorPass(x, x); return; }
-  if (S.tool === 'light') { const idx = underWindow(x); if (idx.length) act('light', idx); else toast('照射口の下に毛穴がありません'); return; }
-  if (S.tool === 'pluck') { const i = pickHair(x, y); if (i != null) act('pluck', [i]); else toast('毛のない所です。抜きたい毛をクリックしてください'); }
+  if (S.tool === 'light') { const idx = underWindow(x); if (idx.length) act('light', idx); else toast(L('照射口の下に毛穴がありません', 'No follicle under the window')); return; }
+  if (S.tool === 'pluck') { const i = pickHair(x, y); if (i != null) act('pluck', [i]); else toast(L('毛のない所です。抜きたい毛をクリックしてください', 'No hair here. Click the hair you want to pull out')); }
 });
 cv.addEventListener('pointermove', e => {
   const [x, y] = local(e);

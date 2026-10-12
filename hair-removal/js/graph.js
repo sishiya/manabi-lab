@@ -32,7 +32,7 @@ function drawCycles(g, w, h, rows, events, t, from, to, hits) {
   g.restore();
   // 目盛り（日。365日ごとに年）
   g.fillStyle = '#b9a59c'; g.textAlign = 'center'; g.textBaseline = 'top';
-  for (let d = Math.ceil(from / 90) * 90; d <= to; d += 90) g.fillText(d % 365 === 0 && d ? (d / 365) + '年' : d + (d === 0 ? '日' : ''), X(d), padT + ph + 4);
+  for (let d = Math.ceil(from / 90) * 90; d <= to; d += 90) g.fillText(d % 365 === 0 && d ? (d / 365) + L('年', ' y') : d + (d === 0 ? L('日', ' d') : ''), X(d), padT + ph + 4);
   // 手入れの印（上）と、その毛穴の段の小さな印
   for (const e of events) {
     if (e.t < from || e.t > to) continue;
@@ -55,7 +55,7 @@ function drawCycles(g, w, h, rows, events, t, from, to, hits) {
   g.fillStyle = 'rgba(28,21,19,.55)'; g.fillRect(xt, padT, padL + pw - xt, ph);
   g.strokeStyle = '#ffb37a'; g.lineWidth = 2; g.beginPath(); g.moveTo(xt, 4); g.lineTo(xt, padT + ph); g.stroke();
   g.fillStyle = '#ffb37a'; g.textAlign = xt > w - 60 ? 'right' : 'left'; g.textBaseline = 'top';
-  g.fillText('いま', xt + (xt > w - 60 ? -4 : 4), 2);
+  g.fillText(L('いま', 'now'), xt + (xt > w - 60 ? -4 : 4), 2);
 }
 
 function graphDayAt(x, w, from, to) {
