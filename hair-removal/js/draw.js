@@ -103,7 +103,7 @@ function drawScene(g, w, h, lanes, t, opt) {
   g.clearRect(0, 0, w, h);
   if (w < 120 || h < 120) return;                     // ペインが隠れているときなど
   const gap = 8, padL = w < 520 ? 22 : 30, laneW = (w - padL - gap * 2 - 6) / 3;
-  const headH = 40, top = headH + 4, bottom = h - 6;
+  const headH = 40, SH = h < 360 ? 36 : 46, sTop = headH + 2, top = sTop + SH + 4, bottom = h - 6;   // SH = 上から見た肌の帯
   const upMM = 1.6, downMM = 3.6;                       // 表面の上 1.6 mm・下 3.6 mm を見せる
   const s = (bottom - top) / (upMM + downMM);           // 1 mm あたりの px
   const y0 = top + upMM * s;                            // 肌の表面
@@ -118,6 +118,7 @@ function drawScene(g, w, h, lanes, t, opt) {
 
   lanes.forEach((L, li) => {
     const x0 = padL + li * (laneW + gap), x1 = x0 + laneW;
+    drawSurface(g, x0, sTop, laneW, SH, L.fs, li === 0);
     g.save();
     g.beginPath(); g.rect(x0, top, laneW, bottom - top); g.clip();
     g.drawImage(bg, x0, top, laneW, bottom - top);
@@ -129,6 +130,17 @@ function drawScene(g, w, h, lanes, t, opt) {
     for (let k = 0; k < K; k++) {
       const f = L.fs[k], fx = K === 1 ? (xa + xb) / 2 : xa + (xb - xa) * k / (K - 1);
       drawFollicle(g, f, fx, y0, s, (li === 0 || (li === 2 && L.flash)) && k === K - 1, Object.assign({ flash: L.flash, since: L.since }, opt));
+      drawTag(g, f, fx, y0, s, li === 0 && k === 0, laneW < 200);
+    }
+    // 手入れをした日: 列の上に字幕
+    if (L.today && L.today.length) {
+      const e = L.today[L.today.length - 1];
+      const narrow = laneW < 200, txt = (narrow ? { shave: '剃った', pluck: '抜いた', light: '光った' } : { shave: 'カミソリで剃った', pluck: '毛抜きで抜いた', light: '光をあてた' })[e.type];
+      g.font = '700 ' + (narrow ? 12 : 13) + 'px "Zen Kaku Gothic New", sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'center';
+      const tw = g.measureText(txt).width + 18, cx = x0 + laneW / 2, cy = top + 16;
+      g.fillStyle = 'rgba(28,21,19,.85)'; roundRect(g, cx - tw / 2, cy - 12, tw, 24, 12); g.fill();
+      g.strokeStyle = L.lane.color; g.lineWidth = 1.5; g.stroke();
+      g.fillStyle = '#fff'; g.fillText(txt, cx, cy + 1); g.textAlign = 'left';
     }
     // 光った瞬間（その日のうち）: 白い光と、熱の目安
     if (L.flash && L.since < 0.35) { g.fillStyle = `rgba(255,250,235,${0.55 * (1 - L.since / 0.35)})`; g.fillRect(x0, top, laneW, bottom - top); }
@@ -285,6 +297,44 @@ function drawFollicle(g, f, xs, y0, s, hits, opt) {
   }
 }
 
+// 上から見た肌の帯: 60 個の毛穴の毛（位置は列どうし同じ）。線の長さは表面から出た長さ（縮めて描く）
+function drawSurface(g, x0, y, w, h, fs, hits) {
+  const gr = g.createLinearGradient(0, y, 0, y + h);
+  gr.addColorStop(0, '#f1cdb8'); gr.addColorStop(1, '#e2b39d');
+  g.fillStyle = gr; g.fillRect(x0, y, w, h);
+  const rng = mulberry32(99), maxL = Math.min(w * 0.3, 34);
+  for (let i = 0; i < fs.length; i++) {
+    const px = x0 + 3 + rng() * (w - 10), py = y + 4 + rng() * (h - 8), ang = 0.25 + rng() * 0.35;
+    const f = fs[i];
+    let top = -Infinity, hh = null;
+    for (const hr of f.hairs) { const th = tipH(f, hr); if (th > top) { top = th; hh = hr; } }
+    g.fillStyle = 'rgba(150,95,80,.45)'; g.beginPath(); g.arc(px, py, 1, 0, Math.PI * 2); g.fill();   // 毛穴の口
+    if (!hh || top < -0.02) continue;
+    const col = hh.burnt ? '#7a6658' : '#1e130d', wid = 1.4 * f.diam * (hh.thin || 1);
+    if (top <= 0.3) { g.fillStyle = col; g.beginPath(); g.arc(px, py, Math.max(0.9, wid * 0.8), 0, Math.PI * 2); g.fill(); continue; }   // 切り口・すれすれの毛は点
+    const len = Math.min(maxL, 2 + top * 2.2);
+    g.strokeStyle = col; g.lineWidth = wid; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(px, py); g.quadraticCurveTo(px + Math.cos(ang) * len * 0.5, py + Math.sin(ang) * len * 0.2, px + Math.cos(ang) * len, py + Math.sin(ang) * len * 0.55); g.stroke();
+  }
+  g.fillStyle = 'rgba(60,35,28,.75)'; g.font = '10px "Zen Kaku Gothic New", sans-serif'; g.textBaseline = 'top'; g.textAlign = 'right';
+  if (w > 200) g.fillText('上から見た肌', x0 + w - 3, y + 2); g.textAlign = 'left';
+  if (hits) hit(x0 + w / 2, y + h / 2, h * 0.6, 'surface');
+}
+
+// 毛穴の札（いまの期）。毛穴の深い端の下に
+const TAGS = { A: ['のびる', '#e57a7a'], C: ['ちぢむ', '#d7a28c'], T: ['休む', '#9c8a82'], R: ['準備中', '#ffd166'], X: ['止まった', '#666'] };
+function drawTag(g, f, xs, y0, s, hits, narrow) {
+  let [txt, col] = TAGS[f.ph];
+  if (narrow) txt = { A: 'のび', C: 'ちぢ', T: '休', R: '準備', X: '止' }[f.ph];
+  const d = (f.ph === 'A' || f.ph === 'C' ? f.bulb : GEO.clubDepth) + 0.28;
+  const x = xs - d * Math.tan(TILT) * s, y = y0 + d * s;
+  g.font = '700 ' + (narrow ? 10 : 11) + 'px "Zen Kaku Gothic New", sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'center';
+  const tw = g.measureText(txt).width + (narrow ? 6 : 10);
+  g.fillStyle = 'rgba(28,21,19,.8)'; roundRect(g, x - tw / 2, y - 8, tw, 16, 8); g.fill();
+  g.fillStyle = col; g.fillText(txt, x, y + 0.5); g.textAlign = 'left';
+  if (hits) hit(x, y, 12, 'tag');
+}
+
 // 軸にそった管（毛穴の座標）
 function tube(g, w, y1, y2, fill, edge) {
   if (y2 <= y1) return;
@@ -325,4 +375,11 @@ function hairPath(g, pts, w, tapered) {
     g.strokeStyle = '#7a5640'; g.lineWidth = 1.2; g.beginPath();
     g.moveTo(bx - dy / l * w / 2, by + dx / l * w / 2); g.lineTo(bx + dy / l * w / 2, by - dx / l * w / 2); g.stroke();
   }
+}
+
+function roundRect(g, x, y, w, h, r) {
+  r = Math.min(r, w / 2, Math.abs(h) / 2);
+  g.beginPath(); g.moveTo(x + r, y); g.lineTo(x + w - r, y); g.quadraticCurveTo(x + w, y, x + w, y + r);
+  g.lineTo(x + w, y + h - r); g.quadraticCurveTo(x + w, y + h, x + w - r, y + h); g.lineTo(x + r, y + h);
+  g.quadraticCurveTo(x, y + h, x, y + h - r); g.lineTo(x, y + r); g.quadraticCurveTo(x, y, x + r, y); g.closePath();
 }

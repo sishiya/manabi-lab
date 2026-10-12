@@ -6,7 +6,7 @@ window.addEventListener('error', e => window.__hareErr.push(String(e.message)));
 const cv = $('cv'), g = cv.getContext('2d');
 const gr = $('gr'), gg = gr.getContext('2d');
 const S = {
-  t: SIM.t0, site: 'shin', playing: false, speed: 30, guide: 0,
+  t: SIM.t0, site: 'shin', playing: false, speed: 7, guide: 0, hold: 0,
   pre: { shave: 'once', pluck: 'once', light: 'home' },
   light: { level: 10, skin: 'light', hair: 'black', prep: 'shave', cool: true },
   series: null,   // グラフ用（予定・周期を変えたときだけ計算しなおす）
@@ -57,7 +57,8 @@ function computeScene() {
     if (!S.runners) { S.runners = []; S.runners.key = S.key; }
     S.runners[i] = R;
     const fl = (R.flashes || []).filter(x => x.t <= S.t + 1e-9).pop();
-    return { lane, fs, count: countLane(fs), last: lastAction(ev, S.t), flash: fl, since: fl ? S.t - fl.t : Infinity };
+    const today = ev.filter(x => x.t <= S.t + 1e-9 && x.t > S.t - 0.75);
+    return { lane, fs, count: countLane(fs), last: lastAction(ev, S.t), flash: fl, since: fl ? S.t - fl.t : Infinity, today };
   });
 }
 // 光: 1回ごとに、列の毛穴すべてに light.js の計算を当てはめ、結果を runner に記録する
@@ -83,6 +84,13 @@ const HOOKS = {
   },
 };
 
+// (a, b] のあいだにある、いちばん早い手入れの日（光の前日の剃りは光の日にまとめて見せる）
+function nextEvent(a, b) {
+  let best = null;
+  if (!S.series) return null;
+  for (const L of S.series) for (const e of L.marks) if (e.t > a + 1e-9 && e.t <= b && (best == null || e.t < best)) best = e.t;
+  return best;
+}
 function setTime(t) { S.t = Math.max(SIM.t0, Math.min(SIM.tMax, t)); S.dirty = true; }
 function changed(series) { if (series) { S.series = null; S.key = S.site + JSON.stringify(S.pre) + JSON.stringify(S.light); } syncControls(S); S.dirty = true; }
 
@@ -140,7 +148,15 @@ cv.addEventListener('pointerleave', () => showTip(0, 0, null));
 let last = performance.now();
 function loop(now) {
   const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;   // 最初のコマは now が last より前のことがある
-  if (S.playing) { setTime(S.t + dt * S.speed); if (S.t >= SIM.tMax) S.playing = false; }
+  if (S.playing) {
+    if (S.hold > 0) S.hold -= dt;                  // 手入れの日は少し止まって見せる
+    else {
+      let tn = S.t + dt * S.speed;
+      const ev = nextEvent(S.t, tn);
+      if (ev != null) { tn = ev; S.hold = 1.3; }
+      setTime(tn); if (S.t >= SIM.tMax) S.playing = false;
+    }
+  }
   draw();
   requestAnimationFrame(loop);
 }

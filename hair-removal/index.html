@@ -16,6 +16,7 @@
       <button id="play" aria-label="再生">▶</button>
       <input id="time" type="range" min="-7" max="365" step="0.5" value="-7" aria-label="日">
       <span id="day">0日目</span>
+      <select id="speed" aria-label="はやさ"><option value="2">1秒で2日</option><option value="7" selected>1秒で1週</option><option value="30">1秒で1か月</option></select>
     </div>
     <div id="guide"><p id="gtext"></p><div class="gbtn"><button id="gprev" aria-label="もどる">◀</button><span id="gnum"></span><button id="gnext">つぎへ ▶</button></div></div>
   </div>
@@ -37,7 +38,6 @@
     <label class="row">光の前に <select id="prep"><option value="shave">前の日に剃る</option><option value="none">何もしない</option><option value="pluck">1週間前に抜く</option></select></label>
     <label class="row"><input id="cool" type="checkbox" checked> 光の前後に冷やす</label>
     <p class="hint" id="flashInfo"></p>
-    <label class="row">はやさ <select id="speed"><option value="7">1秒で1週</option><option value="30" selected>1秒で1か月</option><option value="2">1秒で2日</option></select></label>
     <h2>周期の値</h2>
     <label class="row"><select id="site"></select></label>
     <p class="hint" id="siteNote"></p>

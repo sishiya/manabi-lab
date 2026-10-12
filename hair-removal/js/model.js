@@ -52,6 +52,9 @@ function startAnagen(f, site) {
   f.hairs.push({ L: 0, club: false, thin: f.thin || 1 });
 }
 
+// ゆっくり始まりゆっくり止まる（のび方・縮み方の形。速さの細かい測定はない）
+function smooth(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
+
 function stepF(f, site, dt) {
   f.t += dt;
   // 古い棍毛が落ちる
@@ -62,11 +65,11 @@ function stepF(f, site, dt) {
   f.hairs = f.hairs.filter(h => !(h.shedAt != null && h.shedAt <= 0));
   const cur = f.hairs.find(h => !h.club);
   if (f.ph === 'A') {
-    f.bulb = GEO.clubDepth + (GEO.bulbDeep - GEO.clubDepth) * Math.min(1, f.t / GEO.descend);
+    f.bulb = GEO.clubDepth + (GEO.bulbDeep - GEO.clubDepth) * smooth(f.t / GEO.descend);
     if (cur) cur.L += f.v * dt;
     if (f.t >= f.dur) { f.ph = 'C'; f.t = 0; f.dur = phaseDur(f, site, 'C'); f.bulbStart = f.bulb; }
   } else if (f.ph === 'C') {
-    f.bulb = f.bulbStart + (GEO.clubDepth - f.bulbStart) * Math.min(1, f.t / f.dur);
+    f.bulb = f.bulbStart + (GEO.clubDepth - f.bulbStart) * smooth(f.t / f.dur);
     if (f.t >= f.dur) {
       f.ph = 'T'; f.t = 0; f.dur = phaseDur(f, site, 'T');
       if (cur) { cur.club = true; cur.clubRoot = GEO.clubDepth; }
