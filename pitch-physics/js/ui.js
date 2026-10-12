@@ -84,6 +84,10 @@ function buildControls() {
     ['fit', 'この球がまん中に届くよう合わせる', 'どの球もまん中に届く'],
     ['manual', '角度を手で決める', ''],
   ], () => S.aimMode, v => S.aimMode = v);
+  selectCtl(s3, 'guideRef', 'ガイドの基準', [
+    ['ff', 'フォーシーム（同じねらいで投げたまっすぐ）', '白い輪 ＝ まっすぐならここ。ずれ ＝ まっすぐとの変化の差'],
+    ['plain', '回転がなければ', '白い輪 ＝ 回転と縫い目の力がなければここ。ずれ ＝ 変化そのもの'],
+  ], () => S.guideRef, v => S.guideRef = v);
   slider(s3, 'vAng', '放す角度（上下）', -6, 6, 0.05, () => S.P.vAng, v => { S.P.vAng = v; S.aimMode = 'manual'; }, v => fmt(v, 2) + '°');
   slider(s3, 'hAng', '放す角度（左右）', -6, 6, 0.05, () => S.P.hAng, v => { S.P.hAng = v; S.aimMode = 'manual'; }, v => fmt(v, 2) + '°（＋は捕手から見て右へ）');
 
@@ -121,7 +125,7 @@ function syncSummaries() {
   const p = arsenal(S.pitcher).find(q => q.id === S.pitch);
   set('pitch', pitcherOf(S.pitcher).name + '・' + (S.hand === 'R' ? '右投げ' : '左投げ') + '・' + (p ? p.name : ''));
   set('spin', S.P.v0 + ' km/h・' + S.P.rpm + ' 回/分');
-  set('aim', { plain: '回転の力がなければまん中', line: 'まっすぐまん中へ', fit: 'まん中に合わせる', manual: '手で決める' }[S.aimMode]);
+  set('aim', { plain: '回転の力がなければねらいへ', line: 'まっすぐねらいへ', fit: 'ねらいに合わせる', manual: '手で決める' }[S.aimMode] + '・基準 ' + (S.guideRef === 'ff' ? 'フォーシーム' : '回転なし'));
   set('bat', (S.batSide === 'R' ? '右打者' : '左打者') + '・' + S.batH + ' cm');
   set('cmp', S.overlay ? '球種を重ねている' : '');
   set('env', (ENVS.find(e => e.id === S.envId) || { name: S.env.tC + ' ℃・' + S.env.elev + ' m' }).name + '・' + windName(S.env.ws, S.env.wd));
@@ -285,7 +289,7 @@ function bindPointer() {
     const r = cv.getBoundingClientRect(), m = LAY.catcher.plainMark; if (!m) return;
     if (Math.hypot(e.clientX - r.left - m[0], e.clientY - r.top - m[1]) < m[2]) { tdrag = true; S.playing = false; cv.setPointerCapture(e.pointerId); }
   });
-  cv.addEventListener('pointermove', e => { if (!tdrag) return; pend = toPlate(e); if (!raf) raf = requestAnimationFrame(() => { raf = 0; if (pend) { setTarget(pend[0], pend[1]); syncAll(); } }); });
+  cv.addEventListener('pointermove', e => { if (!tdrag) return; pend = toPlate(e); if (!raf) raf = requestAnimationFrame(() => { raf = 0; if (pend) { setRef(pend[0], pend[1]); syncAll(); } }); });
   cv.addEventListener('pointerup', () => { tdrag = false; });
   cv.addEventListener('mouseleave', () => showTip(null));
   // ボール: ドラッグで回転の向きを決める（手前の面をこすった向きに回る）

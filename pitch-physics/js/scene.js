@@ -32,6 +32,7 @@ function setZoneFor(Hcm) {
 const S = {
   pitch: 'ff',
   P: null,                 // いまの投げ方（launch の入力）
+  guideRef: 'ff',          // ホームの面のガイドの基準: ff = 同じねらいで投げたフォーシームが通る点、plain = 回転がなければ通る点
   aimMode: 'plain',        // ねらい方: plain = 回転の力がなければまん中に届く向き、line = まん中へまっすぐ向ける、fit = この球がまん中に届くよう合わせる、manual = 角度のつまみ
   hand: 'R',               // 'R' 右投げ・'L' 左投げ
   view: '3d', cam: 'catcher',
@@ -98,6 +99,15 @@ const armSign = () => S.hand === 'R' ? -1 : 1;
 // ねらい方に合わせて放す角度を決める
 const TARGET = { x: 0, z: ZONE.zMid };   // ねらった点（「回転がなければ通る点」の印。ドラッグで動かせる）
 // ねらった点を動かす: 「回転がなければここを通る」向きに放しなおす
+// ガイドの基準の点（ホームの前の端）
+function refPoint() { return S.guideRef === 'ff' && S.ffRes ? S.ffRes.pPlate : S.ghostPlain.pPlate; }
+function refName() { return S.guideRef === 'ff' && S.ffRes ? 'フォーシーム' : '回転がなければ'; }
+// 基準の点をドラッグした先 (x, z) へ: 基準がフォーシームなら、フォーシームがそこを通るように、ねらった点を同じだけずらす
+function setRef(x, z) {
+  const p = refPoint();
+  if (S.guideRef === 'ff' && S.ffRes) setTarget(TARGET.x + (x - p[0]), TARGET.z + (z - p[2]));
+  else setTarget(x, z);
+}
 function setTarget(x, z) {
   TARGET.x = Math.max(-0.9, Math.min(0.9, x)); TARGET.z = Math.max(0.1, Math.min(2.0, z));
   S.aimMode = 'plain'; S.many = null; recompute();
@@ -117,6 +127,14 @@ function recompute() {
   S.ghostNoAir = simulate(S.P, { air: false, magnus: false, seam: false });
   S.ghostPlain = simulate(S.P, { air: true, magnus: false, seam: false });
   S.mv = movement(S.res, S.ghostPlain);
+  // ガイドの基準: 同じ投手・同じねらい方で投げたフォーシーム（いまの球がフォーシームならそのもの）
+  S.ffRes = null;
+  if (S.pitch === 'ff') S.ffRes = S.res;
+  else if (arsenal(S.pitcher).some(k => k.id === 'ff')) {
+    const Q = presetP('ff');
+    if (S.aimMode === 'manual') { Q.vAng = S.P.vAng; Q.hAng = S.P.hAng; } else aimP(Q, S.aimMode);
+    S.ffRes = simulate(Q);
+  }
   // ふつうの空気（20 ℃・海面・無風）で同じように放したとき
   S.ghostStd = isStdEnv() ? null : simulate(S.P, undefined, STD_ENV);
   // 段階F: 小さな効果のそれぞれを外したら、ホームでの位置が何 mm 変わるか。揚力の係数の式を変えたら何 cm 変わるか
@@ -177,7 +195,7 @@ const PARTS = {
   plain: '回転の力も縫い目の力もないとき（重力と空気の抵抗だけ）の道すじ。これとのずれが「変化量」です。',
   decide: '振ると決める最後の点（緑の輪）。ここから先の変化を見てから決めても、スイングが間に合わない（決めてから振り始めるまで・スイングの時間は下のつまみ）。',
   track: '目で追えなくなる点（白の輪）。打者の目から見たボールの動きが 70°/秒をこえ、目で滑らかに追えなくなる（Bahill & LaRitz 1984）。',
-  plainMark: '回転がなければ通る点（白い輪）。ドラッグすると、ここへ回転の力なしで届く向きに放しなおします。実際の球は、回転と縫い目の力のぶんだけずれた所を通ります。',
+  plainMark: 'ガイドの基準の点（白い輪）。「フォーシーム」なら同じねらいで投げたまっすぐが通る点、「回転がなければ」なら回転と縫い目の力なしで通る点（③ねらい で切りかえ）。ドラッグすると、その点を通るようにねらいを動かします。',
   realMark: 'ボールが実際にホームを通った点。白い輪からのずれが、回転と縫い目による変化です。',
   target: 'ねらった点（ゾーンのまん中）。「ねらい方」で、この点へどう向けて放すかを変えられます。',
   zone: 'ストライクゾーン（幅 43 cm。高さは打者の体で変わるので目安）。',

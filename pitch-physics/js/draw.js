@@ -158,7 +158,8 @@ function drawCatcher(g) {
   g.strokeStyle = 'rgba(255,255,255,.4)'; g.lineWidth = 1; g.beginPath();
   g.moveTo(zc[0] - 6, zc[1]); g.lineTo(zc[0] + 6, zc[1]); g.moveTo(zc[0], zc[1] - 6); g.lineTo(zc[0], zc[1] + 6); g.stroke();
   // ガイド: 回転がなければ通る点（白い輪。ドラッグで動かせる）・通った点（ボールがホームを通ったら付ける）
-  const gp = P(S.ghostPlain.pPlate), gr = P(S.res.pPlate), rr = Math.max(5, gp[2] * PHY.r * 1.4);
+  const gp = P(refPoint()), gr = P(S.res.pPlate), rr = Math.max(5, gp[2] * PHY.r * 1.4);
+  if (S.guideRef === 'ff' && S.ffRes && S.ffRes !== S.res && !S.overlay) polyline(g, S.ffRes, map0 => P(map0), 'rgba(255,255,255,.35)', 1.5);
   g.strokeStyle = '#ffffff'; g.lineWidth = 2; g.beginPath(); g.arc(gp[0], gp[1], rr, 0, 7); g.stroke();
   hit('plainMark', gp[0], gp[1], rr + 8); LAY.catcher.plainMark = [gp[0], gp[1], rr + 8];
   if (S.t >= S.res.tPlate - 1e-6) {

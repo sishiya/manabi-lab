@@ -10,11 +10,11 @@ const V3 = {
 };
 
 // カメラの決まった位置（右投げのとき。左投げは X を逆に）
-// catcher = MLB の中継の「バックネット裏の高い所」から、pitcher = 中継の「センターのカメラ」（遠くから望遠。右投げでは少し左にずらして投手の体でホームが隠れないように）
+// カメラの位置は見やすさで決めたこのアプリのオリジナル（ゾーン・道すじ・投手が一度に見えるように）
 const CAMS = {
   catcher: { name: '捕手の目', pos: [0, 0.95, 1.0], tgt: [0, 1.15, -18], fov: 50 },          // しゃがんだ捕手の目（ホームの後ろ 1.0 m・高さ 0.95 m の目安）。投手のほうを見たまま（初期値）
-  high:    { name: 'バックネット裏', pos: [0, 2.7, 8.5], tgt: [0, 0.75, -9], fov: 27 },
-  pitcher: { name: 'センター（投手の後ろ）', pos: [-2.6, 7.5, -125], tgt: [0, 1.1, 0], fov: 3.2 },
+  high:    { name: 'ホームの後ろ（高め）', pos: [0, 2.4, 6.5], tgt: [0, 0.9, -9], fov: 32 },      // 道すじ全体とゾーンを少し上から
+  pitcher: { name: '投手の後ろ', pos: [1.1, 2.6, -24.5], tgt: [0, 1.0, -4], fov: 30 },          // 投手の少し後ろ・横から、道すじとゾーンを見通す（左投げは x を逆に）
   ball:    { name: 'ボールの後ろ', follow: true, fov: 50 },
   side:    { name: '横から', pos: [-14, 1.7, -9.4], tgt: [0, 1.1, -9.4], fov: 62 },
   batter:  { name: '打者の目', batter: true, fov: 50 },
@@ -160,6 +160,8 @@ function rebuild3d() {
   V3.noAir = makeTube(S.ghostNoAir, tr * 0.6, '#a0bed2', 0.55); grp.add(V3.noAir);
   V3.plain = makeTube(S.ghostPlain, tr * 0.6, '#f0f0e6', 0.6); grp.add(V3.plain);
   V3.std = S.ghostStd ? makeTube(S.ghostStd, tr * 0.6, '#7fd4ff', 0.6) : null; if (V3.std) grp.add(V3.std);
+  // フォーシーム基準のとき、そのフォーシームの道すじ（白くうすく）
+  V3.ffTube = S.guideRef === 'ff' && S.ffRes && S.ffRes !== S.res && !S.overlay ? makeTube(S.ffRes, tr * 0.5, '#ffffff', 0.35) : null; if (V3.ffTube) grp.add(V3.ffTube);
   // 重ねた球種: 管と、ボール・色の輪
   V3.multi = [];
   if (S.multi) for (const m of S.multi) {
@@ -220,7 +222,7 @@ function placeCam(ballPos, vel) {
 // ガイドの位置と、名札（HTML）の位置
 function screenOf(v) { const p = v.clone().project(V3.cam), c = V3.renderer.domElement; return p.z > 1 ? null : [(p.x + 1) / 2 * c.clientWidth, (1 - p.y) / 2 * c.clientHeight]; }
 function updateGuides3d() {
-  const a = T3(S.ghostPlain.pPlate), b = T3(S.res.pPlate), dz = 0.003;
+  const a = T3(refPoint()), b = T3(S.res.pPlate), dz = 0.003;
   a.z += dz; b.z += dz;
   V3.gPlain.position.copy(a); V3.gReal.position.copy(b);
   V3.gReal.material.color.set(mainCol());
@@ -232,9 +234,10 @@ function updateGuides3d() {
   const show = S.cam !== 'ball';
   V3.gPlain.visible = show; V3.gReal.visible = V3.gLine.visible = show && arrived;
   const lab = (id, v, txt) => { const e = document.getElementById(id), q = show && screenOf(v); if (!q) { e.hidden = true; return; } e.hidden = false; e.style.left = q[0] + 'px'; e.style.top = q[1] + 'px'; e.textContent = txt; };
-  const d = Math.hypot(S.res.pPlate[0] - S.ghostPlain.pPlate[0], S.res.pPlate[2] - S.ghostPlain.pPlate[2]) * 100;
-  lab('mkPlain', a, '回転がなければ（ドラッグで動かせる）');
-  if (arrived) lab('mkReal', b, '通った点（回転がなければの点から ' + d.toFixed(0) + ' cm）'); else document.getElementById('mkReal').hidden = true;
+  const rp = refPoint(), d = Math.hypot(S.res.pPlate[0] - rp[0], S.res.pPlate[2] - rp[2]) * 100, dzc = (S.res.pPlate[2] - rp[2]) * 100, dxc = (S.res.pPlate[0] - rp[0]) * 100;
+  const same = S.guideRef === 'ff' && S.pitch === 'ff';
+  lab('mkPlain', a, same ? 'フォーシーム（ドラッグで動かせる）' : refName() + 'ならここ（ドラッグで動かせる）');
+  if (arrived && !same) lab('mkReal', b, '通った点（' + refName() + 'より ' + (dzc >= 0 ? '上 ' : '下 ') + Math.abs(dzc).toFixed(0) + '・' + (dxc >= 0 ? '右 ' : '左 ') + Math.abs(dxc).toFixed(0) + ' cm）'); else document.getElementById('mkReal').hidden = true;
 }
 
 function bind3dPointer(canvas) {
@@ -247,7 +250,7 @@ function bind3dPointer(canvas) {
     rc.setFromCamera(new THREE.Vector2(x / r.width * 2 - 1, -(y / r.height * 2 - 1)), V3.cam);
     const p = new THREE.Vector3(); if (!rc.ray.intersectPlane(plane, p)) return;
     // 印の点は回転がなければ通る点なので、そこへ向けて放しなおす（重いので 1 コマに 1 回）
-    pend = [p.x, p.y]; if (!tgt.raf) tgt.raf = requestAnimationFrame(() => { tgt.raf = 0; if (pend) { setTarget(pend[0], pend[1]); syncAll(); } });
+    pend = [p.x, p.y]; if (!tgt.raf) tgt.raf = requestAnimationFrame(() => { tgt.raf = 0; if (pend) { setRef(pend[0], pend[1]); syncAll(); } });
   };
   canvas.addEventListener('pointerdown', e => {
     canvas.setPointerCapture(e.pointerId);
