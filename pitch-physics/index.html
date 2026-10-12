@@ -1,0 +1,61 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>変化球のしくみ</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2313241a'/><circle cx='32' cy='32' r='17' fill='%23f2f0e6'/><path d='M22 19c6 7 6 19 0 26M42 19c-6 7-6 19 0 26' fill='none' stroke='%23d8473f' stroke-width='3'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <header id="top"><h1>変化球のしくみ</h1><span class="sub">速さ・向き・回転から、ボールにかかる力を計算して道すじを解く</span></header>
+  <div id="tour"><span id="tourNum"></span><p id="tourText"></p><button id="next">つぎへ</button></div>
+  <main id="stage">
+    <div id="views"><canvas id="cv"></canvas></div>
+    <aside id="aside"><canvas id="ball"></canvas><div id="nums"></div></aside>
+  </main>
+  <div id="timebar"><button id="play" aria-label="再生">▶</button><input type="range" id="time" min="0" max="0.4" step="0.001" aria-label="時刻"><span id="tlab"></span>
+    <select id="speed" aria-label="再生の速さ"><option value="0.05" selected>1/20 の速さ</option><option value="0.2">1/5 の速さ</option><option value="1">本当の速さ</option></select></div>
+  <div id="controls"></div>
+  <div id="tip" hidden></div>
+  <details id="about">
+    <summary>このアプリについて</summary>
+    <p>球種の名前から曲がり方を決めていません。放す位置・速さ・向きと、回転（回転数と回転軸の向き）だけを入れ、ボールに働く力を計算して運動方程式を解いています（4次のルンゲ＝クッタ法、1 ミリ秒きざみ）。働く力は次のとおりです。</p>
+    <ul>
+      <li><b>重力</b> mg（真下）。</li>
+      <li><b>空気の抵抗（抗力）</b> ½ρAC<sub>D</sub>v²（進む向きと逆）。C<sub>D</sub> = 0.3008 + 0.0292 ×（回転数 / 1000 回/分）。</li>
+      <li><b>回転による力（マグヌス力）</b> ½ρAC<sub>L</sub>v²。向きは「回転のうち進む向きに直角な成分 ω⊥」と進む向きの両方に直角（ω⊥ × v の向き）。C<sub>L</sub> = 1.120 S /(0.583 + 2.333 S)、S = rω⊥/v。進む向きと同じ向きの回転（ジャイロ回転）は、この力を生みません。</li>
+      <li><b>縫い目の力（ナックルだけ）</b> ½ρAC<sub>K</sub>(θ)v²。C<sub>K</sub>(θ) = 0.33 sin 4θ（θ は回転軸のまわりの縫い目の向き）。風洞の測定（Watts &amp; Sawyer 1975）の「4つの縫い目の向きで sin 4θ に近い形・65 mph で最大がボールの重さの約半分・速さの2乗に比例」に合わせた大きさです。向きは回転軸と進む向きの両方に直角。</li>
+    </ul>
+    <p>C<sub>D</sub>・C<sub>L</sub> の式は、Alan Nathan の軌道計算機（ボールの飛び方の測定から作られたもの）と同じです。空気の流れそのものを解いているのではなく、<b>測定から作られた係数</b>で力を計算しています（ボールのまわりの乱れた流れは、ブラウザでは正確に解けないため）。</p>
+    <p>計算の確かめ: 球種の例の値で、フォーシームは上へ約 43 cm・投げる腕の側へ約 24 cm、ツーシームは上へ約 24 cm・腕の側へ約 41 cm ずれ、MLB の平均的な変化量（Statcast）と同じくらいになりました。ナックルは、回転しないときの最大の変化が約 76 cm（30 インチ）で速さによらず、試合の測定（Nathan 2012、最大およそ 30 インチ）と同じくらいです（速さによらないことは Watts &amp; Sawyer の予想どおり）。</p>
+    <h3>簡単にしているところ</h3>
+    <ul>
+      <li>ボールは点として動かしています。C<sub>D</sub>・C<sub>L</sub> は多くのボールの平均で、1球ごとの差や、縫い目の向きによる差（ナックルを除く）は入れていません。回転の多い球でも縫い目で伴流がずれる力（Seam-Shifted Wake。シンカーやスイーパーで知られる）はまだ入れていません。</li>
+      <li>回転は飛ぶ間に減らしていません（ホームまでの 0.4〜0.5 秒ではほとんど減りません）。回転軸の向きも空間で変えません（コマのように保たれる）。そのため、放したときは純粋なジャイロ回転でも、ボールが落ちて進む向きが変わると、少しだけ曲げる回転になります。</li>
+      <li>ナックルの縫い目の力は、4つの縫い目の向きの風洞の測定を sin 4θ でならした形です（本当の形はもっと複雑で、2つの縫い目の握りでは形がちがいます）。風洞の空気の密度は 1.20 kg/m³ としました。</li>
+      <li>空気の密度は 1.20 kg/m³（20 ℃・海面くらい）、風なし。放す位置は右投げのおおよその位置（高さ 1.8 m・投手板から 1.9 m 前）。ストライクゾーンの高さは目安です。</li>
+      <li>球種の例の値（速さ・回転数・回転の向き・使える回転の割合）は、MLB の平均的な値の目安です。投手によって大きくちがいます。</li>
+      <li>ボールの拡大の縫い目の絵は、向きの目安です（テニスボールの曲線で近似）。</li>
+    </ul>
+    <p>学習用に簡単にしたものです。</p>
+    <h3>おもな出どころ</h3>
+    <ul>
+      <li>Nathan AM, Trajectory Calculator（<a href="https://baseball.physics.illinois.edu/trajectory-calculator-new.html" target="_blank" rel="noopener">baseball.physics.illinois.edu</a>）。C<sub>D</sub>・C<sub>L</sub> の式と係数は、その移植（<a href="https://github.com/bdilday/pybbda" target="_blank" rel="noopener">pybbda</a>）で確かめました。</li>
+      <li>Nathan AM, Hopkins J, Chong L, Kaczmarski H (2006) The effect of spin on the flight of a baseball. <a href="https://arxiv.org/abs/physics/0605041" target="_blank" rel="noopener">arXiv:physics/0605041</a>（回転するボールの揚力の測定）</li>
+      <li>Watts RG, Sawyer E (1975) Aerodynamics of a knuckleball. <i>American Journal of Physics</i> 43:960–963（縫い目の向きと横向きの力）</li>
+      <li>Nathan AM (2012) Analysis of knuckleball trajectories. <i>Procedia Engineering</i> 34:116–121. <a href="https://doi.org/10.1016/j.proeng.2012.04.021" target="_blank" rel="noopener">doi:10.1016/j.proeng.2012.04.021</a>（ナックルの道すじはなめらか・変化は大きさも向きもばらばら）</li>
+      <li>Morrissey MP (2009) The aerodynamics of the knuckleball pitch. MS Thesis, Marquette University（ゆっくり回るボールにかかる力）</li>
+      <li>MLB.com の Statcast の記事（2016。球種ごとの回転数の平均）、Driveline Baseball (2021) Spin rate: what we know now（使える回転の割合）</li>
+      <li>公認野球規則（ボールの重さ 5〜5¼ オンス・周り 9〜9¼ インチ、ストライクゾーンの幅 = ホームベースの幅 17 インチ）</li>
+    </ul>
+    <h3>使っているもの</h3>
+    <p>フォント: Google Fonts（SIL Open Font License）</p>
+  </details>
+</div>
+
+<script src="js/physics.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
