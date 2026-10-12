@@ -1,0 +1,216 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>変化球のしくみ</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2313241a'/><circle cx='32' cy='32' r='17' fill='%23f2f0e6'/><path d='M22 19c6 7 6 19 0 26M42 19c-6 7-6 19 0 26' fill='none' stroke='%23d8473f' stroke-width='3'/></svg>">
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <header id="top"><h1><span lang="ja">変化球のしくみ</span><span lang="en">How Pitches Break</span></h1><span class="badge" id="badge"><span lang="ja">技術検証</span><span lang="en">Tech demo</span></span><span class="sub"><span lang="ja">速さ・向き・回転から、ボールにかかる力を計算して道すじを解く</span><span lang="en">Computes the forces on the ball from its speed, direction and spin, and solves for its path</span></span><div class="langsw" id="langsw" role="group" aria-label="言語 / Language"><button data-l="ja" title="日本語">JP</button><button data-l="en" title="English">EN</button></div><button id="tourOpen"><span lang="ja">案内を出す</span><span lang="en">Show guide</span></button></header>
+  <div id="tour" hidden><span id="tourNum"></span><p id="tourText"></p><button id="next"></button><button id="tourClose">×</button></div>
+  <main id="stage">
+    <div id="views">
+      <canvas id="gl"></canvas><canvas id="cv"></canvas>
+      <div id="vtabs"><button data-v="3d">3D</button><button data-v="2d"><span lang="ja">横・上・捕手の図</span><span lang="en">Side · top · catcher</span></button></div>
+      <div id="cams"></div>
+      <button id="legendBtn" aria-expanded="false"></button>
+      <div id="legend" hidden><span><i class="sw path"></i><span lang="ja">計算した道すじ</span><span lang="en">Computed path</span></span><span><i class="sw plain"></i><span lang="ja">回転の力なし</span><span lang="en">No spin force</span></span><span><i class="sw noair"></i><span lang="ja">空気なし</span><span lang="en">No air</span></span><span><i class="sw std"></i><span lang="ja">ふつうの空気</span><span lang="en">Standard air</span></span><span><i class="sw grav"></i><span lang="ja">重力</span><span lang="en">Gravity</span></span><span><i class="sw drag"></i><span lang="ja">抵抗</span><span lang="en">Drag</span></span><span><i class="sw magnus"></i><span lang="ja">マグヌス力</span><span lang="en">Magnus force</span></span><span><i class="sw seam"></i><span lang="ja">縫い目の力</span><span lang="en">Seam force</span></span></div>
+      <div class="mk" id="mkPlain" hidden></div><div class="mk real" id="mkReal" hidden></div>
+      <button id="refToggle"></button>
+      <div id="windBadge"></div>
+      <div id="hint3d"><span lang="ja">ドラッグで回す・ホイールで寄る（背景の球場はぼかしています）</span><span lang="en">Drag to rotate, scroll to zoom (the ballpark behind is blurred on purpose)</span></div>
+    </div>
+    <aside id="aside">
+      <div class="phead"><span lang="ja">空気の流れの断面 <small>（ボールといっしょに動いて見る）</small></span><span lang="en">Airflow cross-section <small>(seen moving with the ball)</small></span></div>
+      <canvas id="flow"></canvas><p id="flowCap"></p>
+      <canvas id="ball"></canvas><div id="nums"></div>
+    </aside>
+  </main>
+  <div id="dock"><div id="dockChips"></div>
+  <div id="timebar"><button id="play">▶</button><input type="range" id="time" min="0" max="0.4" step="0.001"><span id="tlab"></span>
+    <select id="speed"><option value="0.05"></option><option value="0.2" selected></option><option value="1"></option></select></div></div>
+  <div id="stripBox"><canvas id="tstrip"></canvas><p id="batTxt"></p></div>
+  <div id="controls"></div>
+  <div id="tip" hidden></div>
+  <details id="about">
+    <summary><span lang="ja">このアプリについて</span><span lang="en">About this app</span></summary>
+    <div lang="ja">
+    <p class="note-tech"><b>このアプリは技術検証です。</b>ボールの飛び方を、測定から作られた係数で計算して見せられるかを試しています。数値は研究や公開されている平均値をもとにした目安で、投手の例はすべて目安か架空です。選手の投げ方の指導・評価・判断には使えません。</p>
+    <p>球種の名前から曲がり方を決めていません。放す位置・速さ・向きと、回転（回転数と回転軸の向き）だけを入れ、ボールに働く力を計算して運動方程式を解いています（4次のルンゲ＝クッタ法、1 ミリ秒きざみ）。働く力は次のとおりです。</p>
+    <ul>
+      <li><b>重力</b> mg（真下）。</li>
+      <li><b>空気の抵抗（抗力）</b> ½ρAC<sub>D</sub>v²（進む向きと逆）。C<sub>D</sub> = 0.3008 + 0.0292 ×（回転数 / 1000 回/分）。</li>
+      <li><b>回転による力（マグヌス力）</b> ½ρAC<sub>L</sub>v²。向きは「回転のうち進む向きに直角な成分 ω⊥」と進む向きの両方に直角（ω⊥ × v の向き）。C<sub>L</sub> = 1.120 S /(0.583 + 2.333 S)、S = rω⊥/v。進む向きと同じ向きの回転（ジャイロ回転）は、この力を生みません。</li>
+      <li><b>縫い目の力（ナックルだけ）</b> ½ρAC<sub>K</sub>(θ)v²。C<sub>K</sub>(θ) = 0.33 sin 4θ（θ は回転軸のまわりの縫い目の向き）。風洞の測定（Watts &amp; Sawyer 1975）の「4つの縫い目の向きで sin 4θ に近い形・65 mph で最大がボールの重さの約半分・速さの2乗に比例」に合わせた大きさです。向きは回転軸と進む向きの両方に直角。</li>
+    </ul>
+    <p>C<sub>D</sub>・C<sub>L</sub> の式は、Alan Nathan の軌道計算機（ボールの飛び方の測定から作られたもの）と同じです。空気の流れそのものを解いているのではなく、<b>測定から作られた係数</b>で力を計算しています（ボールのまわりの乱れた流れは、ブラウザでは正確に解けないため）。</p>
+    <p>計算の確かめ: 「変化量（50 ft から）」は、ホームから 50 フィートの点からホームまでのずれで、試合の測定の解析でよく使われる測り方に合わせた目安です。球種の例の値では、まっすぐ 上 15・腕の側 6 インチ、ツーシーム 上 9・腕の側 14、カーブ 下 11・グラブの側 9、チェンジアップ 上 6・腕の側 15、スプリット 上 4・腕の側 10、スイーパー グラブの側 13、カット 上 9・グラブの側 3、スライダー 上 1・グラブの側 4 インチで、MLB の平均的な変化量の目安（まっすぐ 16.8・7.6 など）と同じくらいです。「変化量（放してから）」は手を離れた所からのずれで、2 割ほど大きくなります。ナックルは、回転しないときの最大の変化が約 76 cm（30 インチ）で速さによらず、試合の測定（Nathan 2012、最大およそ 30 インチ）と同じくらいです（速さによらないことは Watts &amp; Sawyer の予想どおり）。</p>
+    <h3>縫い目の力（段階D）</h3>
+    <ul>
+      <li><b>ナックル</b>: 4つの縫い目の握りは Watts &amp; Sawyer 1975 の sin 4θ。2つの縫い目の握り（初めの値）は、Morrissey 2009 の風洞の測定（70 mph・毎分 50 回転のボール1つ）のグラフから 10° ごとに読み取った値で、回転軸と進む向きの両方に直角な向きの力と、回転軸の向きの力（論文でも「正しくないかもしれない」とされている）を使っています。2つの縫い目の値は 4つの縫い目より大きく、回らないときの最大の変化は約 96 cm になります（試合の測定の最大およそ 76 cm より大きい）。</li>
+      <li><b>縫い目のずれた伴流（Seam-Shifted Wake）</b>: まっすぐ・ツーシーム・チェンジアップで、握りの縫い目の向き（4つ／2つ）を選べます。マグヌス力に直角な向きに、2つの縫い目は投げる腕の側へ、4つの縫い目はグラブの側へ力をかけます。大きさは、Nathan 2023 が MLB 2021 年の測定から求めた「使える回転の割合ごとの横の変化の平均」（シンカーとまっすぐ）のグラフから読み取り、その変化になるように合わせた<b>平均の目安</b>です。縫い目の向きを1つずつ計算しているのではありません。チェンジアップにはシンカーの値を使っています。ほかの球種（スライダーなど）には入れていません。</li>
+    </ul>
+    <h3>ねらい方</h3>
+    <p>ホームの面に、<b>基準の点</b>（白い輪）と、ボールが通ったときに<b>実際に通った点</b>（球種の色）の印を出します。基準は「③ ねらい」で選べます: <b>フォーシーム</b>（初め。同じねらい方で投げたまっすぐが通る点。ずれ ＝ まっすぐとの変化の差）か、<b>回転がなければ</b>（回転と縫い目の力なしで通る点。ずれ ＝ 変化そのもの）。白い輪はドラッグして動かせます。動かすと、基準の球がその点を通るようにねらいを動かします。初めは白い輪はゾーンのまん中（うすい十字）にあります。</p>
+    <p>初めは「回転と縫い目の力がなければ、ねらった点に届く向き」に放します。だから「まん中から」のずれが、回転と縫い目による変化です。ほかに「まん中へまっすぐ向けて放す」「この球がまん中に届くよう計算で合わせる」「角度のつまみで決める」を選べます。</p>
+    <h3>投手の人形と腕の角度</h3>
+    <p>人形は、ボールを放す瞬間から投げ終わり（放して 0.35 秒後）までの姿勢を（腕はほぼのばしたまま肩のまわりの弧を、前から下・グラブの側へ振り下ろす。放した直後がいちばん速い）、腕の角度と放す位置から組み立てた目安の絵で、計算には使っていません。腕の角度を変えると、放す位置（よくある値の表から）と回転の向き（腕の角度と同じだけ回す。回転の向きは腕の角度でほぼ決まる、Nathan 2023）が変わります。どちらも目安です。</p>
+    <h3>本物に近づける（段階F）</h3>
+    <p>次の小さな効果も計算に入れています（それぞれ外せます）。</p>
+    <ul>
+      <li><b>回転の減り</b>: dω/dt = −λvω/r、λ = 3.7×10⁻⁵（Nathan がゴルフボールの測定から大きさを直して見積もった 3.3〜4.1×10⁻⁵ のまん中。100 mph で約 22 秒で 1/e）。空気の抵抗の係数の回転の項にも、減った回転を使います。</li>
+      <li><b>空気の浮力</b> ρVg（上向き）。</li>
+      <li><b>付加質量</b>: 加速するボールはまわりの空気も動かすので、½ρV だけ重いものとして加速を計算します（球のまわりの流れの理論の値）。</li>
+      <li><b>地球の自転（コリオリの力）</b> −2Ω×v。球場の向きは公認野球規則どおり（ホームから二塁が東北東）、緯度はつまみで選べます。</li>
+    </ul>
+    <p>どれもホームでの位置を 1〜2 mm 動かすだけです。計算の刻みを 1 ms から 0.25 ms にしても、答えは 0.001 mm も変わりませんでした。答えをいちばん大きく左右するのは、空気の力の係数（C<sub>D</sub>・C<sub>L</sub>・縫い目の力）が測定から作った式で、ボールごと・測り方ごとにちがうことです。揚力の係数は、別の測定の式（Sawicki ほか 2003）に変えて、答えがどれだけ変わるかを見られます。空気の抵抗の係数（投球で 0.35〜0.37）は、試合の測定の平均（約 0.35、Kagan &amp; Nathan 2014）と同じくらいです。</p>
+    <h3>速さの測り方</h3>
+    <p>球速は、どこで測るかで数字が変わります（ボールは空気の抵抗でホームまでに 1 割ほど遅くなるため）。「② 球の速さと回転」に、いまの球を 放した瞬間（初速）・ホームから 50 ft・ホームから 10 ft・ホーム（終速）で測ったときの速さを出しています。大リーグの公式の球速は、2008〜16 年は 50 ft 地点（PITCHf/x）、2017 年からは放した瞬間（Statcast。平均で約 0.6 mph 速く出るようになった）です。日本のプロ野球で球速の表示が始まったのは 1979 年ごろで、測る位置や角度が球場によってちがい、昔と今の数字はそのままは比べられないとされています。</p>
+    <p>「測った記録を、放した瞬間の速さに直す」では、いまの投げ方（回転・空気）のまま、ある場所で測った速さになる初速を逆に計算します。例: 1974 年の大リーグで、ホームの約 10 ft 手前で 100.8 mph と測られた記録は、この計算では放した瞬間 約 177 km/h（110 mph）になります（ボールや回転・空気が今と同じと仮定した目安）。</p>
+    <h3>打者の目（段階E）</h3>
+    <p>時間のつまみの下の帯は、打者の時間割です。スイング（振り始めから当たるまで）と、振ると決めてから振り始めるまでの時間は、研究のまとめ（Nakashima ほか 2025）にある範囲（130〜280 ms・150〜250 ms）の中から、つまみで選べます（初めはどちらも 150 ms）。決める最後の時刻 ＝ ホームに着く時刻 − 2つの時間 です。人によって、また打ち方によって大きくちがうので、目安です。</p>
+    <p>「目で追えなくなる」は、打者の目（右打者で、ホームのまん中から捕手から見て左へ 0.8 m・高さ 1.5 m）から見たボールの動きが 70°/秒をこえる時刻です（目だけで滑らかに追える限界。Bahill &amp; LaRitz 1984 が Schalen 1980 を引用。人によって 100°/秒という報告もあり、頭を動かすともう少し追えます）。3D の「打者の目」のカメラは、この時刻まではボールを追い、そのあとは向きを止めます。</p>
+    <p>重ねた球種のはなれは、打者の目から見た向きのちがい（角度）で比べています。</p>
+    <h3>空気の流れの断面（模式図）</h3>
+    <p>ボールといっしょに動いて見た空気の流れを、ボールの中心を通り「進む向き」と「横向きの力の向き」をふくむ面で切って描いています。空気がボールの面から<b>はがれる位置</b>が、力の側ほど後ろへずれ、後ろの流れ（伴流）が反対の側へ曲がります。空気を押しやった反作用が、ボールを押す力です（はく離が遅れる側へ力がかかることは、Watts &amp; Sawyer 1975・Nathan 2012 の説明のとおり）。</p>
+    <p>ただし、この図は<b>流れを計算したものではありません</b>。前側の流線は円柱のまわりの流れの式（回転があれば渦を足したもの）、はがれる位置のずれと伴流の曲がりは、計算した横向きの力の大きさに合わせた<b>目安</b>です。赤い点は、いまの時刻に縫い目がこの断面を横切る場所です。粒の動きは、見やすいように本物よりずっと遅くしています。</p>
+    <h3>空気と風</h3>
+    <p>空気の密度は、気温・標高・気圧・湿度から Nathan の軌道計算機と同じ式で計算しています（ρ = 1.2929 × 273/(T+273) × (P·e<sup>−βh</sup> − 0.3783 × 湿度 × 飽和水蒸気圧) / 760、気圧は mmHg、β = 1.217×10⁻⁴ /m）。空気の抵抗・マグヌス力・縫い目の力はどれも密度に比例するので、標高 1600 m では 18% ほど小さくなります。風があるときは、力を<b>空気に対する速さ</b>（ボールの速度 − 風の速度）で計算しています。風は地面からの高さによらず、同じ強さ・向きとしています。</p>
+    <h3>投手の例</h3>
+    <p>「平均的な投手」の球種の値は MLB の平均的な値の目安です。ほかの投手（本格派・フォーク・サイドスロー・アンダースロー・技巧派の左腕・ナックルボーラー）は、よくある投げ方を表した<b>架空の例</b>で、実在の投手ではなく、測られた値でもありません。放す高さ・位置と、球種ごとの速さ・回転は目安です。</p>
+    <h3>3D の図</h3>
+    <p>道すじ・ボール・ストライクゾーン・マウンド・ホームは計算と寸法どおりの位置に描いています（道すじの管の太さは、遠くからでも見えるように太くしています）。ホームのまわりの土の円・バッターボックス・白線・ホームベース・マウンドは公認野球規則の寸法のおおよそです。背景の野球場は、実在の球場ではない絵で、投手からホームまでにピントを合わせ、その手前と奥を、カメラからの距離に応じてなめらかにぼかしています（望遠のカメラほどピントが浅い。本物のレンズの計算ではなく、それらしく見せるための処理）。カメラの「捕手の目」（初めの画面）は、しゃがんだ捕手の目の位置の目安（ホームの後ろ 1.0 m・高さ 0.95 m）から投手のほうを見たまま、ほかのカメラの位置は、ゾーン・道すじ・投手が一度に見えるように決めたこのアプリのオリジナルです。ボールはホームを通ったあとも、ホームの 0.55 m 後ろ（捕手のミットの位置の目安）まで計算します。変化量などの数字は、ホームの前の端で測っています。重ねて見るときは、いまの球も球種の色で描きます。ボールの縫い目は、108 の V 字の縫い目を、テニスボールの曲線で近似した縫い目の線にそって並べた絵です（形は目安）。左投げは、右投げを捕手から見て左右に鏡うつしにしたものです。</p>
+    <h3>簡単にしているところ</h3>
+    <ul>
+      <li>ボールは点として動かしています。C<sub>D</sub>・C<sub>L</sub> は多くのボールの平均で、1球ごとの差や、縫い目の向きによる差（ナックルと、下の Seam-Shifted Wake の平均の目安を除く）は入れていません。Seam-Shifted Wake は、まっすぐ・ツーシーム・チェンジアップに平均の大きさで入れているだけで、スライダー・スイーパーなどには入れていません。</li>
+      <li>回転の減りは入れています（段階F）が、ホームまでの 0.4〜0.5 秒ではほとんど減りません。回転軸の向きは空間で変えません（コマのように保たれる）。そのため、放したときは純粋なジャイロ回転でも、ボールが落ちて進む向きが変わると、少しだけ曲げる回転になります。</li>
+      <li>ナックルの縫い目の力は、4つの縫い目の向きの風洞の測定を sin 4θ でならした形です（本当の形はもっと複雑で、2つの縫い目の握りでは形がちがいます）。風洞の空気の密度は 1.20 kg/m³ としました。</li>
+      <li>空気は初め 20 ℃・海面・湿度 50%（密度 1.20 kg/m³）、風なし（「空気と風」で変えられます）。放す位置はおおよその位置（捕手から見て中心から 0.55 m 腕の側・高さ 1.8 m・投手板から 1.9 m 前）。ストライクゾーンの高さは打者の身長から決めた目安です（規則では、構えたときの「ひざの下のくぼみ」から「肩の上とズボンの上の中間」まで。ここでは身長の 0.255〜0.575 倍。185 cm で 47〜106 cm）。打者の目の高さも身長の 0.81 倍の目安です。</li>
+      <li>球種の例の値（速さ・回転数・回転の向き・使える回転の割合）は、MLB の平均的な値の目安です。投手によって大きくちがいます。</li>
+      <li>ボールの拡大の縫い目の絵は、向きの目安です（テニスボールの曲線で近似）。</li>
+    </ul>
+    <p>学習用に簡単にしたものです。</p>
+    <h3>おもな出どころ</h3>
+    <ul>
+      <li>Nathan AM, Trajectory Calculator（<a href="https://baseball.physics.illinois.edu/trajectory-calculator-new.html" target="_blank" rel="noopener">baseball.physics.illinois.edu</a>）。C<sub>D</sub>・C<sub>L</sub> の式と係数は、その移植（<a href="https://github.com/bdilday/pybbda" target="_blank" rel="noopener">pybbda</a>）で確かめました。</li>
+      <li>Nathan AM, Hopkins J, Chong L, Kaczmarski H (2006) The effect of spin on the flight of a baseball. <a href="https://arxiv.org/abs/physics/0605041" target="_blank" rel="noopener">arXiv:physics/0605041</a>（回転するボールの揚力の測定）</li>
+      <li>Watts RG, Sawyer E (1975) Aerodynamics of a knuckleball. <i>American Journal of Physics</i> 43:960–963（縫い目の向きと横向きの力）</li>
+      <li>Nathan AM (2012) Analysis of knuckleball trajectories. <i>Procedia Engineering</i> 34:116–121. <a href="https://doi.org/10.1016/j.proeng.2012.04.021" target="_blank" rel="noopener">doi:10.1016/j.proeng.2012.04.021</a>（ナックルの道すじはなめらか・変化は大きさも向きもばらばら）</li>
+      <li>Morrissey MP (2009) The aerodynamics of the knuckleball pitch. MS Thesis, Marquette University（ゆっくり回るボールにかかる力。2つの縫い目の値は図 3-24 から読み取り。はがれる位置 約 104°）</li>
+      <li>Nathan AM, The spin decay of a baseball（<a href="https://baseball.physics.illinois.edu/spindown-rev1.pdf" target="_blank" rel="noopener">baseball.physics.illinois.edu</a>。回転の減り）</li>
+      <li>Kagan D, Nathan AM (2014) Simplified models for the drag coefficient of a pitched baseball. <i>The Physics Teacher</i> 52:278. <a href="https://doi.org/10.1119/1.4872406" target="_blank" rel="noopener">doi:10.1119/1.4872406</a>（投球の空気の抵抗の係数）</li>
+      <li>Meyer E, Bohn J (2007) Influence of a humidor on the aerodynamics of baseballs. <a href="https://arxiv.org/abs/0712.0380" target="_blank" rel="noopener">arXiv:0712.0380</a>（Sawicki ほか 2003 の揚力の式の引用）</li>
+      <li>公認野球規則 2.01（球場の向き: ホームから投手板を通って二塁へ向かう線は東北東）</li>
+      <li>Sports Illustrated (1974-09-16) Speed trap for an angel（<a href="https://vault.si.com/vault/1974/09/16/speed-trap-for-an-angel" target="_blank" rel="noopener">vault.si.com</a>。1974 年の速球の測定）</li>
+      <li>ESPN (2017) Speed bump: Radar readings up with MLB change to Statcast（<a href="https://www.espn.com/mlb/story/_/id/19107750" target="_blank" rel="noopener">espn.com</a>。測る位置の変更で平均約 0.6 mph 速く）、Baseball Savant の CSV の説明（<a href="https://baseballsavant.mlb.com/csv-docs" target="_blank" rel="noopener">baseballsavant.mlb.com</a>。2008〜16 年は PITCHf/x）</li>
+      <li>日本経済新聞 (2016) 大谷は本当に史上最速？ 奥が深いスピードの話（球速のテレビ表示の始まり）</li>
+      <li>Nakashima H, Horiuchi G, Kimura A, Sakurai S (2025) Acceptable range of timing error at bat-ball impact in baseball depends on the bat swing path. <i>Frontiers in Sports and Active Living</i> 7. <a href="https://doi.org/10.3389/fspor.2025.1557145" target="_blank" rel="noopener">doi:10.3389/fspor.2025.1557145</a>（スイングの時間・決めてから振り始めるまでの時間のまとめ）</li>
+      <li>Bahill AT, LaRitz T (1984) Why can't batters keep their eyes on the ball? <i>American Scientist</i> 72:249–253（目で追える速さの限界 約 70°/秒）</li>
+      <li>Nathan AM (2023) What is the Hawkeye spin data teaching us? III: Searching for the seam-shifted wake.（<a href="https://baseball.physics.illinois.edu/Hawkeye-4S-2S.pdf" target="_blank" rel="noopener">baseball.physics.illinois.edu</a>。縫い目のずれた伴流の大きさ・回転の向きと腕の角度）</li>
+      <li>Smith AW, Smith BL (2021) Using baseball seams to alter a pitch direction: The seam shifted wake. <i>Proceedings of the Institution of Mechanical Engineers, Part P</i>, pp. 21–28. <a href="https://doi.org/10.1177/1754337120961609" target="_blank" rel="noopener">doi:10.1177/1754337120961609</a>（縫い目で後ろの流れがずれるしくみ）</li>
+      <li>MLB.com の Statcast の記事（2016。球種ごとの回転数の平均）、Driveline Baseball (2021) Spin rate: what we know now（使える回転の割合）</li>
+      <li>公認野球規則（ボールの重さ 5〜5¼ オンス・周り 9〜9¼ インチ、ストライクゾーンの幅 = ホームベースの幅 17 インチ）</li>
+    </ul>
+    <h3>使っているもの</h3>
+    <p>three.js r128（MIT License）、フォント: Google Fonts（SIL Open Font License）</p>
+    </div>
+    <div lang="en">
+    <p class="note-tech"><b>This app is a tech demo.</b> It tests whether a ball's flight can be computed and shown using coefficients built from measurements. The numbers are rough guides based on research and published averages, and every pitcher example is either an average or fictional. It cannot be used to coach, evaluate or judge how real players throw.</p>
+    <p>The way a pitch breaks is <b>not</b> decided from its name. The app only takes the release point, speed and direction, and the spin (spin rate and spin-axis direction). It computes the forces on the ball and solves the equations of motion (4th-order Runge–Kutta, 1 ms steps). The forces are:</p>
+    <ul>
+      <li><b>Gravity</b> mg (straight down).</li>
+      <li><b>Air resistance (drag)</b> ½ρAC<sub>D</sub>v² (opposite to the motion). C<sub>D</sub> = 0.3008 + 0.0292 × (spin rate / 1000 rpm).</li>
+      <li><b>Force from spin (Magnus force)</b> ½ρAC<sub>L</sub>v². Its direction is at right angles to both the motion and “the part of the spin at right angles to the motion, ω⊥” (the direction of ω⊥ × v). C<sub>L</sub> = 1.120 S / (0.583 + 2.333 S), S = rω⊥/v. Spin around the direction of motion (gyro spin) makes no such force.</li>
+      <li><b>Seam force (knuckleball only)</b> ½ρAC<sub>K</sub>(θ)v². C<sub>K</sub>(θ) = 0.33 sin 4θ (θ is the seam angle around the spin axis). The size matches wind-tunnel measurements (Watts &amp; Sawyer 1975): close to a sin 4θ shape for the four-seam orientation, a peak of about half the ball's weight at 65 mph, and proportional to speed squared. It points at right angles to both the spin axis and the motion.</li>
+    </ul>
+    <p>The C<sub>D</sub> and C<sub>L</sub> formulas are the same as in Alan Nathan's trajectory calculator (built from measurements of real ball flights). The app does not solve the airflow itself; it computes the forces from <b>coefficients built from measurements</b> (the turbulent flow around a ball cannot be solved accurately in a browser).</p>
+    <p>Checking the numbers: “Break (from 50 ft)” is the deviation from a point 50 feet from home plate to the plate, a rough match to the way game-tracking data is often analysed. With the example pitches it gives: four-seam up 15 / arm side 6 inches, two-seam up 9 / arm side 14, curveball down 11 / glove side 9, changeup up 6 / arm side 15, splitter up 4 / arm side 10, sweeper glove side 13, cutter up 9 / glove side 3, slider up 1 / glove side 4 inches — about the same as typical MLB averages (four-seam 16.8 and 7.6, and so on). “Break (from release)” is measured from the hand and is about 20% larger. For the knuckleball, the largest break with no spin is about 76 cm (30 inches) whatever the speed, about the same as in game data (Nathan 2012, up to about 30 inches); not depending on speed is what Watts &amp; Sawyer predicted.</p>
+    <h3>Seam forces (stage D)</h3>
+    <ul>
+      <li><b>Knuckleball</b>: the four-seam grip uses the sin 4θ of Watts &amp; Sawyer 1975. The two-seam grip (the default) uses values read every 10° from a graph of Morrissey 2009's wind-tunnel measurements (one ball, 70 mph, 50 rpm): the force at right angles to both the spin axis and the motion, and the force along the spin axis (which the thesis itself says may not be correct). The two-seam values are larger than the four-seam ones, and the largest break without spin is about 96 cm (more than the roughly 76 cm maximum seen in games).</li>
+      <li><b>Seam-shifted wake</b>: for the four-seam, two-seam and changeup you can choose the grip (four or two seams). At right angles to the Magnus force, the two-seam grip pushes toward the throwing-arm side and the four-seam grip toward the glove side. The size is an <b>average guide</b>: it was read from Nathan 2023's graphs of “average sideways break for each spin efficiency” (sinkers and four-seamers) from 2021 MLB tracking data, and the force was scaled to give that break. The seam orientation is not computed seam by seam. The changeup uses the sinker values. Other pitches (slider and so on) do not include it.</li>
+    </ul>
+    <h3>Aiming</h3>
+    <p>On the plane of home plate the app shows a <b>reference point</b> (white ring) and, once the ball has passed, the <b>point it actually crossed</b> (in the pitch colour). Choose the reference under “③ Aim”: <b>Four-seam</b> (default; where a four-seam thrown with the same aiming would cross, so the gap = the difference in break from a four-seam) or <b>No spin</b> (where it would cross without spin and seam forces, so the gap = the break itself). You can drag the white ring; the aim then changes so that the reference pitch crosses that point. At first the white ring is at the middle of the zone (faint cross).</p>
+    <p>By default the ball is released “in the direction that would reach the aim point if there were no spin or seam force”, so the gap from the middle is the break caused by spin and seams. You can also choose “point straight at the middle”, “fit so this pitch reaches the middle”, or “set the angle with the sliders”.</p>
+    <h3>The pitcher figure and arm angle</h3>
+    <p>The figure is a rough drawing built from the arm angle and release point, from release to the end of the follow-through (0.35 s after release; the nearly straight arm swings along an arc around the shoulder, forward, down and toward the glove side, fastest right after release). It is not used in the calculation. Changing the arm angle changes the release point (from a table of typical values) and the spin direction (rotated by the same amount; the spin direction is mostly set by the arm angle, Nathan 2023). Both are rough guides.</p>
+    <h3>Getting closer to reality (stage F)</h3>
+    <p>These small effects are also included (each can be turned off):</p>
+    <ul>
+      <li><b>Spin decay</b>: dω/dt = −λvω/r, λ = 3.7×10⁻⁵ (the middle of Nathan's estimate of 3.3–4.1×10⁻⁵, scaled from golf-ball measurements; at 100 mph the spin falls to 1/e in about 22 s). The spin term of the drag coefficient also uses the reduced spin.</li>
+      <li><b>Buoyancy of the air</b> ρVg (upward).</li>
+      <li><b>Added mass</b>: an accelerating ball also moves the air around it, so it is treated as heavier by ½ρV (the theoretical value for flow around a sphere).</li>
+      <li><b>Earth's rotation (Coriolis force)</b> −2Ω×v. The field faces the direction in the Official Baseball Rules (home to second base points east-northeast), and you can pick the latitude with a slider.</li>
+    </ul>
+    <p>Each one moves the ball at the plate by only 1–2 mm. Changing the time step from 1 ms to 0.25 ms changed the answer by less than 0.001 mm. What matters most is that the air-force coefficients (C<sub>D</sub>, C<sub>L</sub>, seam forces) are formulas built from measurements, and they differ from ball to ball and from method to method. You can switch the lift coefficient to a formula from another measurement (Sawicki et al. 2003) to see how much the answer changes. The drag coefficient for pitches (0.35–0.37) is about the same as the game-data average (about 0.35, Kagan &amp; Nathan 2014).</p>
+    <h3>How pitch speed is measured</h3>
+    <p>The speed number depends on where it is measured (air resistance slows the ball by about 10% before it reaches the plate). “② Speed and spin” shows the current pitch's speed at release, 50 ft from the plate, 10 ft from the plate, and at the plate. MLB's official pitch speed was measured at 50 ft in 2008–16 (PITCHf/x) and at release since 2017 (Statcast; on average about 0.6 mph faster). In Japanese pro baseball, speed displays began around 1979; the measuring position and angle differed between ballparks, so old and new numbers are said not to be directly comparable.</p>
+    <p>“Convert a measured speed to release speed” works backwards: keeping the current pitch (spin, air), it finds the release speed that would give the measured speed at that spot. Example: a 1974 MLB pitch measured at 100.8 mph about 10 ft before the plate comes out at about 177 km/h (110 mph) at release in this calculation (a rough guide that assumes the ball, spin and air are the same as today).</p>
+    <h3>The batter's eye (stage E)</h3>
+    <p>The strip under the time slider is the batter's timetable. The swing time (from starting the swing to contact) and the time from deciding to starting the swing can be set with sliders within the ranges in a research review (Nakashima et al. 2025: 130–280 ms and 150–250 ms; both start at 150 ms). The last moment to decide = the time the ball reaches the plate − the two times. These vary a lot between people and swings, so they are rough guides.</p>
+    <p>“Eyes can't keep up” is when the ball's motion, seen from the batter's eye (a right-handed batter, 0.8 m to the catcher's left of the plate centre, 1.5 m high), goes faster than 70°/s (the limit for following smoothly with the eyes alone; Bahill &amp; LaRitz 1984 citing Schalen 1980; some report 100°/s, and moving the head helps a little). The 3D “Batter's eye” camera follows the ball until that moment and then stops turning.</p>
+    <p>For overlaid pitches, the separation is compared as the difference in direction (angle) seen from the batter's eye.</p>
+    <h3>Airflow cross-section (schematic)</h3>
+    <p>It shows the air as seen moving along with the ball, cut by the plane through the ball's centre that contains the direction of motion and the direction of the sideways force. The point where the air <b>separates</b> from the ball moves further back on the force side, and the flow behind the ball (the wake) bends to the opposite side. The reaction to pushing the air away is the force that pushes the ball (the force acts toward the side where separation is delayed, as explained by Watts &amp; Sawyer 1975 and Nathan 2012).</p>
+    <p>However, this picture is <b>not a flow computation</b>. The streamlines in front come from the formula for flow around a cylinder (plus a vortex when there is spin), and the shift of the separation points and the bend of the wake are <b>rough guides</b> sized to the computed sideways force. The red dots are where the seams cross this plane right now. The particles move much more slowly than the real air so they are easy to follow.</p>
+    <h3>Air and wind</h3>
+    <p>Air density is computed from temperature, altitude, pressure and humidity with the same formula as Nathan's trajectory calculator (ρ = 1.2929 × 273/(T+273) × (P·e<sup>−βh</sup> − 0.3783 × humidity × saturation vapour pressure) / 760, pressure in mmHg, β = 1.217×10⁻⁴ /m). Drag, Magnus force and seam force are all proportional to density, so at 1600 m altitude they are about 18% smaller. With wind, the forces use the <b>speed relative to the air</b> (ball velocity − wind velocity). The wind has the same strength and direction at every height.</p>
+    <h3>Pitcher examples</h3>
+    <p>The “Average pitcher” pitch values are rough guides to MLB averages. The other pitchers (power, forkball, sidearm, submarine, crafty lefty, knuckleballer) are <b>fictional examples</b> of common styles. They are not real pitchers and not measured values. Release height, release point, and each pitch's speed and spin are rough guides.</p>
+    <h3>The 3D view</h3>
+    <p>The path, ball, strike zone, mound and home plate are drawn at the computed and regulation positions (the path tube is drawn thicker so it can be seen from far away). The dirt circle around home, batter's boxes, chalk lines, home plate and mound roughly follow the Official Baseball Rules dimensions. The ballpark in the background is an invented drawing, not a real stadium. The focus is set from the pitcher to home plate, and things in front and behind are smoothly blurred by their distance from the camera (narrower cameras have shallower focus; this is a visual effect, not a real lens calculation). The “Catcher's eye” camera (the opening view) sits at a rough crouching catcher's eye position (1.0 m behind the plate, 0.95 m high) looking toward the pitcher. The other camera positions are this app's own, chosen so the zone, path and pitcher can be seen at once. The calculation continues after the plate to 0.55 m behind it (roughly where the catcher's mitt is). Numbers such as break are measured at the front edge of home plate. When pitches are overlaid, the current pitch is also drawn in its pitch colour. The ball's seams are a picture: 108 V-shaped stitches placed along a seam line approximated by the tennis-ball curve (the shape is a rough guide). Left-handed pitching is the right-handed pitch mirrored left–right as seen by the catcher.</p>
+    <h3>What is simplified</h3>
+    <ul>
+      <li>The ball moves as a point. C<sub>D</sub> and C<sub>L</sub> are averages over many balls; differences between individual balls and between seam orientations (except the knuckleball and the average seam-shifted wake below) are not included. The seam-shifted wake is only added at an average size to the four-seam, two-seam and changeup, not to the slider, sweeper and others.</li>
+      <li>Spin decay is included (stage F), but the spin hardly drops in the 0.4–0.5 s to the plate. The spin axis keeps its direction in space (like a top). So even a pure gyro spin at release becomes slightly “breaking” spin as the ball drops and its direction of motion changes.</li>
+      <li>The knuckleball seam force is a sin 4θ smoothing of wind-tunnel measurements for the four-seam orientation (the real shape is more complicated and differs for the two-seam grip). The wind-tunnel air density was taken as 1.20 kg/m³.</li>
+      <li>The air starts at 20 °C, sea level, 50% humidity (density 1.20 kg/m³) with no wind (change it under “Air and wind”). The release point is approximate (0.55 m from the centre toward the throwing arm as seen by the catcher, 1.8 m high, 1.9 m in front of the rubber). The strike-zone height is a rough guide from the batter's height (the rule: from the hollow beneath the kneecap to the midpoint between the top of the shoulders and the top of the pants, in the batting stance; here 0.255–0.575 × height, 47–106 cm at 185 cm). The batter's eye height is also a rough 0.81 × height.</li>
+      <li>The example pitch values (speed, spin rate, spin direction, spin efficiency) are rough guides to MLB averages. They differ a lot between pitchers.</li>
+      <li>The seams in the close-up of the ball show the orientation only roughly (tennis-ball curve).</li>
+    </ul>
+    <p>Simplified for learning.</p>
+    <h3>Main sources</h3>
+    <ul>
+      <li>Nathan AM, Trajectory Calculator (<a href="https://baseball.physics.illinois.edu/trajectory-calculator-new.html" target="_blank" rel="noopener">baseball.physics.illinois.edu</a>). The C<sub>D</sub> and C<sub>L</sub> formulas and coefficients were checked against a port of it (<a href="https://github.com/bdilday/pybbda" target="_blank" rel="noopener">pybbda</a>).</li>
+      <li>Nathan AM, Hopkins J, Chong L, Kaczmarski H (2006) The effect of spin on the flight of a baseball. <a href="https://arxiv.org/abs/physics/0605041" target="_blank" rel="noopener">arXiv:physics/0605041</a> (measured lift on spinning balls)</li>
+      <li>Watts RG, Sawyer E (1975) Aerodynamics of a knuckleball. <i>American Journal of Physics</i> 43:960–963 (seam orientation and sideways force)</li>
+      <li>Nathan AM (2012) Analysis of knuckleball trajectories. <i>Procedia Engineering</i> 34:116–121. <a href="https://doi.org/10.1016/j.proeng.2012.04.021" target="_blank" rel="noopener">doi:10.1016/j.proeng.2012.04.021</a> (knuckleball paths are smooth; the break varies in size and direction)</li>
+      <li>Morrissey MP (2009) The aerodynamics of the knuckleball pitch. MS Thesis, Marquette University (forces on a slowly spinning ball; two-seam values read from Fig. 3-24; separation at about 104°)</li>
+      <li>Nathan AM, The spin decay of a baseball (<a href="https://baseball.physics.illinois.edu/spindown-rev1.pdf" target="_blank" rel="noopener">baseball.physics.illinois.edu</a>; spin decay)</li>
+      <li>Kagan D, Nathan AM (2014) Simplified models for the drag coefficient of a pitched baseball. <i>The Physics Teacher</i> 52:278. <a href="https://doi.org/10.1119/1.4872406" target="_blank" rel="noopener">doi:10.1119/1.4872406</a> (drag coefficient of pitches)</li>
+      <li>Meyer E, Bohn J (2007) Influence of a humidor on the aerodynamics of baseballs. <a href="https://arxiv.org/abs/0712.0380" target="_blank" rel="noopener">arXiv:0712.0380</a> (quotes the lift formula of Sawicki et al. 2003)</li>
+      <li>Official Baseball Rules 2.01 (field orientation: the line from home through the rubber to second base runs east-northeast)</li>
+      <li>Sports Illustrated (1974-09-16) Speed trap for an angel (<a href="https://vault.si.com/vault/1974/09/16/speed-trap-for-an-angel" target="_blank" rel="noopener">vault.si.com</a>; a 1974 fastball measurement)</li>
+      <li>ESPN (2017) Speed bump: Radar readings up with MLB change to Statcast (<a href="https://www.espn.com/mlb/story/_/id/19107750" target="_blank" rel="noopener">espn.com</a>; about 0.6 mph faster on average after the change of measuring point), Baseball Savant CSV documentation (<a href="https://baseballsavant.mlb.com/csv-docs" target="_blank" rel="noopener">baseballsavant.mlb.com</a>; PITCHf/x in 2008–16)</li>
+      <li>Nikkei (2016) on the history of TV pitch-speed displays in Japan (in Japanese)</li>
+      <li>Nakashima H, Horiuchi G, Kimura A, Sakurai S (2025) Acceptable range of timing error at bat-ball impact in baseball depends on the bat swing path. <i>Frontiers in Sports and Active Living</i> 7. <a href="https://doi.org/10.3389/fspor.2025.1557145" target="_blank" rel="noopener">doi:10.3389/fspor.2025.1557145</a> (review of swing time and decision-to-swing time)</li>
+      <li>Bahill AT, LaRitz T (1984) Why can't batters keep their eyes on the ball? <i>American Scientist</i> 72:249–253 (limit of smooth eye tracking, about 70°/s)</li>
+      <li>Nathan AM (2023) What is the Hawkeye spin data teaching us? III: Searching for the seam-shifted wake. (<a href="https://baseball.physics.illinois.edu/Hawkeye-4S-2S.pdf" target="_blank" rel="noopener">baseball.physics.illinois.edu</a>; size of the seam-shifted wake, spin direction vs arm angle)</li>
+      <li>Smith AW, Smith BL (2021) Using baseball seams to alter a pitch direction: The seam shifted wake. <i>Proceedings of the Institution of Mechanical Engineers, Part P</i>, pp. 21–28. <a href="https://doi.org/10.1177/1754337120961609" target="_blank" rel="noopener">doi:10.1177/1754337120961609</a> (how seams shift the wake)</li>
+      <li>MLB.com Statcast article (2016; average spin rate by pitch type), Driveline Baseball (2021) Spin rate: what we know now (spin efficiency)</li>
+      <li>Official Baseball Rules (ball weight 5–5¼ oz, circumference 9–9¼ in, strike-zone width = plate width 17 in)</li>
+    </ul>
+    <h3>What it uses</h3>
+    <p>three.js r128 (MIT License); fonts: Google Fonts (SIL Open Font License)</p>
+    </div>
+  </details>
+</div>
+
+<script src="../../../lib/three@0.128.0/build/three.min.js"></script>
+<script src="js/physics.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/pitchers.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/flow.js"></script>
+<script src="js/stadium.js"></script>
+<script src="js/view3d.js"></script>
+<script src="js/field.js"></script>
+<script src="js/pitcher3d.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/ui-env.js"></script>
+<script src="js/text-en.js"></script>
+<script src="js/batter.js"></script>
+<script src="js/main.js"></script>

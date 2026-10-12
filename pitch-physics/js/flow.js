@@ -85,12 +85,12 @@ function drawFlow(g, w, h, now) {
   g.fillStyle = 'rgba(255,255,255,.035)'; g.fillRect(0, 0, w, h);
   const X = x => cx + x * sc, Y = y => cy - y * sc;
   // 伴流（うすく塗る）
-  const wg = st.wg, dlt = wg.dlt, cT = wg.cT, cB = wg.cB, pT = wg.pT, pB = wg.pB, dirT = wg.dirT, dirB = wg.dirB, L = 9;
+  const wg = st.wg, dlt = wg.dlt, cT = wg.cT, cB = wg.cB, pT = wg.pT, pB = wg.pB, dirT = wg.dirT, dirB = wg.dirB, WL = 9;
   g.fillStyle = 'rgba(120,150,170,.16)'; g.beginPath();
   g.moveTo(X(pT[0]), Y(pT[1]));
   for (let a = cT; a > cB; a -= 0.05) g.lineTo(X(Math.cos(a)), Y(Math.sin(a)));
-  g.lineTo(X(pB[0]), Y(pB[1])); g.lineTo(X(pB[0] + L * Math.cos(dirB)), Y(pB[1] + L * Math.sin(dirB)));
-  g.lineTo(X(pT[0] + L * Math.cos(dirT)), Y(pT[1] + L * Math.sin(dirT))); g.closePath(); g.fill();
+  g.lineTo(X(pB[0]), Y(pB[1])); g.lineTo(X(pB[0] + WL * Math.cos(dirB)), Y(pB[1] + WL * Math.sin(dirB)));
+  g.lineTo(X(pT[0] + WL * Math.cos(dirT)), Y(pT[1] + WL * Math.sin(dirT))); g.closePath(); g.fill();
   // 空気のつぶ（流れる線）
   const speed = 2.2;   // 図の上での速さ（ボールの半径/秒）。本当は 1 秒に 1000 倍以上速い
   g.lineWidth = 1.4; g.lineCap = 'round';
@@ -133,7 +133,7 @@ function drawFlow(g, w, h, now) {
   // はく離点
   g.fillStyle = '#ffd166';
   for (const p of [pT, pB]) { g.beginPath(); g.arc(X(p[0]), Y(p[1]), 4, 0, 7); g.fill(); }
-  label(g, 'はがれる所', X(pT[0]) + 8, Y(pT[1]) - 8, '#ffd166', 'left');
+  label(g, L('はがれる所', 'Separation'), X(pT[0]) + 8, Y(pT[1]) - 8, '#ffd166', 'left');
   // 力と、伴流が押しやられる向き
   const Fl = st.c * 0.5 * (S.res.st.rho || PHY.rho) * PHY.A * st.U * st.U;
   if (Fl > 0.03) {
@@ -141,18 +141,27 @@ function drawFlow(g, w, h, now) {
     arrow(g, X(0), Y(0), 0, -Math.min(sc * 2.2, Fl * sc * 1.6), col, 3);
     const ax = X(3.2), ay = Y(0) , dl = Math.min(sc * 1.4, Fl * sc * 1.2);
     arrow(g, ax, ay, Math.cos(dlt) * sc * 0.9, -Math.sin(dlt) * sc * 0.9 + dl * 0, 'rgba(170,200,220,.9)', 2);
-    label(g, '空気を押しやる', ax, ay + 18, 'rgba(170,200,220,.95)', 'left');
+    label(g, L('空気を押しやる', 'Pushes air away'), ax, ay + 18, 'rgba(170,200,220,.95)', 'left');
   }
-  label(g, '空気 →', 6, 16, COL.text);
-  label(g, '↑ 横向きの力の向き', w - 6, 16, COL.text, 'right');
-  label(g, '模式図（はがれる所のずれは計算した力に合わせた目安）', w / 2, h - 6, COL.text, 'center');
+  label(g, L('空気 →', 'Air →'), 6, 16, COL.text);
+  label(g, L('↑ 横向きの力の向き', '↑ Side force'), w - 6, 16, COL.text, 'right');
+  label(g, L('模式図（はがれる所のずれは計算した力に合わせた目安）', 'Schematic (shift sized to the computed force)'), w / 2, h - 6, COL.text, 'center');
   return st;
 }
 
+// 断面の下に出す一言（英語）
+function flowCaptionEn(st, kn, sideTxt) {
+  if (st.c < 0.02) return 'Almost no sideways force. The air separates the same way above and below, so the flow behind (the wake) goes straight back.' + (st.gyroRpm > 100 ? ' (The ' + Math.round(st.gyroRpm) + ' rpm of gyro spin has its axis along the motion in this cut, so it does not bend the ball.)' : '');
+  const ssw = !kn && S.res.st.grip && V.len(st.F.seam) > 0.02;
+  if (ssw) return 'With the spin, the top surface in the picture moves with the air, so the air separates later (Magnus force). On top of that, with the ' + (S.res.st.grip === '2S' ? 'two' : 'four') + '-seam grip and a little gyro spin, a seam stays on one side; the air separates differently there and the wake shifts a bit more (seam-shifted wake). The combined force pushes the ball up in the picture (' + sideTxt + ').';
+  if (kn) return 'Almost no spin. Where the seams (red dots) are, the air becomes turbulent and separates later on one side (now the top). The wake bends the other way, and the reaction pushes the ball up in the picture (' + sideTxt + '). As the seams turn, the sides can swap.';
+  return 'With the spin, the top surface in the picture moves with the air, so the air separates later there; the bottom is the opposite. The wake is pushed down in the picture, and the reaction pushes the ball up (' + sideTxt + ') = the Magnus force.';
+}
 // 断面の下に出す一言
 function flowCaption(st) {
   const kn = S.res.st.knuckle;
-  const sideTxt = '捕手から見て ' + clock(Math.atan2(st.n[0], st.n[2]) * 180 / Math.PI);
+  const sideTxt = L('捕手から見て ', 'toward ') + clock(Math.atan2(st.n[0], st.n[2]) * 180 / Math.PI) + L('', " as seen by the catcher");
+  if (LANG === 'en') return flowCaptionEn(st, kn, sideTxt);
   if (st.c < 0.02) return '横向きの力がほとんどない。上下で空気のはがれ方が同じなので、後ろの流れ（伴流）はまっすぐ。' + (st.gyroRpm > 100 ? '（ジャイロ回転 ' + Math.round(st.gyroRpm) + ' 回/分は、この断面では軸が進む向きなので曲げない）' : '');
   const ssw = !kn && S.res.st.grip && V.len(st.F.seam) > 0.02;
   if (ssw) return '回転で、図の上の面は空気といっしょに動き、空気がはがれるのが遅れる（マグヌス力）。さらに' + (S.res.st.grip === '2S' ? '2つ' : '4つ') + 'の縫い目の握りでは、少しのジャイロ回転で片側にいつも縫い目が来て、その側のはがれ方が変わり、後ろの流れがもう少しずれる（縫い目のずれた伴流）。合わせた力で図の上（' + sideTxt + '）へ押される。';

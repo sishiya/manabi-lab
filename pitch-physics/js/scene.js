@@ -101,7 +101,7 @@ const TARGET = { x: 0, z: ZONE.zMid };   // ねらった点（「回転がなけ
 // ねらった点を動かす: 「回転がなければここを通る」向きに放しなおす
 // ガイドの基準の点（ホームの前の端）
 function refPoint() { return S.guideRef === 'ff' && S.ffRes ? S.ffRes.pPlate : S.ghostPlain.pPlate; }
-function refName() { return S.guideRef === 'ff' && S.ffRes ? 'フォーシーム' : '回転がなければ'; }
+function refName() { return S.guideRef === 'ff' && S.ffRes ? L('フォーシーム', 'four-seam') : L('回転がなければ', 'no spin'); }
 // 基準の点をドラッグした先 (x, z) へ: 基準がフォーシームなら、フォーシームがそこを通るように、ねらった点を同じだけずらす
 function setRef(x, z) {
   const p = refPoint();

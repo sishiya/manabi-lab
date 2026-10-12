@@ -8,6 +8,14 @@
   <updated>2026-10-12T00:00:00+09:00</updated>
   <author><name>しし屋</name></author>
   <entry>
+    <title>変化球のしくみ</title>
+    <link href="https://sishiya.github.io/manabi-lab/pitch-physics/"/>
+    <id>https://sishiya.github.io/manabi-lab/pitch-physics/</id>
+    <published>2026-10-12T00:00:00+09:00</published>
+    <updated>2026-10-12T00:00:00+09:00</updated>
+    <summary>ボールの速さ・向き・回転から、重力・空気の抵抗・回転の力を1ミリ秒ごとに計算して道すじを解く技術検証。フォーシームが「落ちにくい」わけも、ナックルの行き先が読めないわけも、力から見える。</summary>
+  </entry>
+  <entry>
     <title>細菌にとりつくウイルス</title>
     <link href="https://sishiya.github.io/manabi-lab/phage/"/>
     <id>https://sishiya.github.io/manabi-lab/phage/</id>

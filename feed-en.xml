@@ -8,6 +8,14 @@
   <updated>2026-10-12T00:00:00+09:00</updated>
   <author><name>Shishiya</name></author>
   <entry>
+    <title>How Pitches Break</title>
+    <link href="https://sishiya.github.io/manabi-lab/pitch-physics/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/pitch-physics/?lang=en</id>
+    <published>2026-10-12T00:00:00+09:00</published>
+    <updated>2026-10-12T00:00:00+09:00</updated>
+    <summary>A tech demo that solves a pitch's path by computing gravity, air drag and the spin force every millisecond from its speed, direction and spin. See why a four-seam fastball “drops less” and why nobody can predict a knuckleball.</summary>
+  </entry>
+  <entry>
     <title>The Virus That Infects Bacteria</title>
     <link href="https://sishiya.github.io/manabi-lab/phage/?lang=en"/>
     <id>https://sishiya.github.io/manabi-lab/phage/?lang=en</id>

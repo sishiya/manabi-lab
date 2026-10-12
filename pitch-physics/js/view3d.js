@@ -300,9 +300,9 @@ function updateGuides3d() {
     if (!toLeft && q[0] + 14 + w > W - 4) e.style.left = Math.max(4 - 14, W - 4 - 14 - w) + 'px'; };
   const rp = refPoint(), d = Math.hypot(S.res.pPlate[0] - rp[0], S.res.pPlate[2] - rp[2]) * 100, dzc = (S.res.pPlate[2] - rp[2]) * 100, dxc = (S.res.pPlate[0] - rp[0]) * 100;
   const same = S.guideRef === 'ff' && S.pitch === 'ff';
-  lab('mkPlain', a, same ? 'フォーシーム（ドラッグで動かせる）' : refName() + 'ならここ（ドラッグで動かせる）');
-  if (S.res.ground) lab('mkReal', new THREE.Vector3(b.x, 0.01, b.z), (arrived ? '地面に落ちた（' : '地面に落ちる予定（') + (S.guideRef === 'ff' ? 'フォーシームと同じねらいだと。白い輪を上へドラッグすると届く' : 'ねらいが低すぎる') + '）');
-  else if (!same && !S.res.ground) lab('mkReal', b, (arrived ? '通った点（' : '通る予定（') + refName() + 'より ' + (dzc >= 0 ? '上 ' : '下 ') + Math.abs(dzc).toFixed(0) + '・' + (dxc >= 0 ? '右 ' : '左 ') + Math.abs(dxc).toFixed(0) + ' cm）'); else document.getElementById('mkReal').hidden = true;
+  lab('mkPlain', a, same ? L('フォーシーム（ドラッグで動かせる）', 'Four-seam (drag to move)') : L(refName() + 'ならここ（ドラッグで動かせる）', refName() + ' (drag to move)'));
+  if (S.res.ground) lab('mkReal', new THREE.Vector3(b.x, 0.01, b.z), L((arrived ? '地面に落ちた（' : '地面に落ちる予定（') + (S.guideRef === 'ff' ? 'フォーシームと同じねらいだと。白い輪を上へドラッグすると届く' : 'ねらいが低すぎる') + '）', (arrived ? 'Hit the ground (' : 'Will hit the ground (') + (S.guideRef === 'ff' ? 'with the four-seam\'s aim; drag the white ring up to reach' : 'aimed too low') + ')'));
+  else if (!same && !S.res.ground) lab('mkReal', b, L((arrived ? '通った点（' : '通る予定（') + refName() + 'より ' + (dzc >= 0 ? '上 ' : '下 ') + Math.abs(dzc).toFixed(0) + '・' + (dxc >= 0 ? '右 ' : '左 ') + Math.abs(dxc).toFixed(0) + ' cm）', (arrived ? 'Crossed here (' : 'Will cross here (') + (dzc >= 0 ? 'up ' : 'down ') + Math.abs(dzc).toFixed(0) + ', ' + (dxc >= 0 ? 'right ' : 'left ') + Math.abs(dxc).toFixed(0) + ' cm vs ' + refName() + ')')); else document.getElementById('mkReal').hidden = true;
   document.getElementById('mkReal').classList.toggle('faint', !arrived);
 }
 

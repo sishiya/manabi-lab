@@ -45,14 +45,14 @@ function drawTimeStrip(g, w, h) {
     g.fillStyle = col; g.fillRect(X(a), y0, Math.max(0, X(b) - X(a)), bh);
     if (X(b) - X(a) > 70) { g.fillStyle = '#10201a'; g.font = '11px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center'; g.fillText(txt, (X(a) + X(b)) / 2, y0 + 11); }
   };
-  seg(0, I.tDecide, '#7fd68a', '見て決められる');
-  seg(I.tDecide, I.tSwing, '#ffd166', '決めた → 振り始め');
-  seg(I.tSwing, I.T, '#ff9f7a', 'スイング');
-  seg(I.T, T, 'rgba(255,255,255,.18)', 'ホームを通過後');
+  seg(0, I.tDecide, '#7fd68a', L('見て決められる', 'Can still decide'));
+  seg(I.tDecide, I.tSwing, '#ffd166', L('決めた → 振り始め', 'Decided → start'));
+  seg(I.tSwing, I.T, '#ff9f7a', L('スイング', 'Swing'));
+  seg(I.T, T, 'rgba(255,255,255,.18)', L('ホームを通過後', 'Past the plate'));
   // 目で追えなくなる時刻
   g.strokeStyle = '#ffffff'; g.lineWidth = 2; g.beginPath(); g.moveTo(X(I.tTrack), y0 - 2); g.lineTo(X(I.tTrack), y0 + bh + 2); g.stroke();
   g.fillStyle = '#e8f0f4'; g.font = '11px "Zen Kaku Gothic New", sans-serif';
-  const lab = '目で追えなくなる（' + BAT.pursuit + '°/秒）';
+  const lab = L('目で追えなくなる（' + BAT.pursuit + '°/秒）', "Eyes can't keep up (" + BAT.pursuit + '°/s)');
   g.textAlign = X(I.tTrack) > w - 150 ? 'right' : 'left';
   g.fillText(lab, X(I.tTrack) + (g.textAlign === 'right' ? -4 : 4), y0 + bh + 13);
   // いまの時刻
@@ -62,6 +62,13 @@ function drawTimeStrip(g, w, h) {
 
 function batterText(I) {
   const pct = I.devT > 0.005 ? Math.round(I.devD / I.devT * 100) : 0;
+  if (LANG === 'en') {
+    let e = 'The last moment to decide to swing is ' + I.tDecide.toFixed(3) + ' s after release (' + (I.yDecide - PHY.plateY).toFixed(1) + ' m before the plate). ' +
+      'By then the ball is only <b>' + (I.devD * 100).toFixed(0) + ' cm</b> off the no-spin path; at the plate it is ' + (I.devT * 100).toFixed(0) + ' cm, so ' +
+      '<b>only ' + pct + '% of the break has happened</b> (the rest comes after the decision).';
+    if (S.multi && S.multi.length) e += ' At decision time the overlaid pitches are at most ' + I.sepD.toFixed(1) + '° apart from the batter\'s eye (' + (I.sepD / I.ballD).toFixed(1) + ' ball widths at that moment), and up to ' + (I.sepT * 100).toFixed(0) + ' cm apart at the plate.';
+    return e + ' At the plate the ball seems to move at ' + Math.round(I.angPlate) + '°/s.';
+  }
   let s = '振ると決める最後の時刻は放してから ' + I.tDecide.toFixed(3) + ' 秒（ホームの ' + (I.yDecide - PHY.plateY).toFixed(1) + ' m 手前）。' +
     'そのとき、回転の力なしの道すじからのずれは <b>' + (I.devD * 100).toFixed(0) + ' cm</b>。ホームでは ' + (I.devT * 100).toFixed(0) + ' cm なので、' +
     '<b>変化の ' + pct + '% しか起きていない</b>（残りは決めた後に起こる）。';

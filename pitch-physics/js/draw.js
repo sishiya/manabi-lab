@@ -79,7 +79,7 @@ function panelBg(g, b, title, sub) {
 // 横から・上から（2D の図）
 function drawSideTop(g, which) {
   const b = LAY[which], side = which === 'side';
-  panelBg(g, b, side ? '横から（三塁側から見る）' : '上から', (side ? '高さ' : '左右') + 'は ×' + b.ex.toFixed(1) + ' に広げて表示');
+  panelBg(g, b, side ? L('横から（三塁側から見る）', 'Side (from the third-base side)') : L('上から', 'Top'), L((side ? '高さ' : '左右') + 'は ×' + b.ex.toFixed(1) + ' に広げて表示', (side ? 'Height' : 'Sideways') + ' stretched ×' + b.ex.toFixed(1)));
   g.save(); g.beginPath(); g.rect(b.x, b.y, b.w, b.h); g.clip();
   // 目盛り（1 m ごと）
   g.strokeStyle = COL.grid; g.lineWidth = 1;
@@ -95,7 +95,7 @@ function drawSideTop(g, which) {
     g.strokeStyle = COL.grid; g.beginPath(); g.moveTo(b.x, b.Y(0)); g.lineTo(b.x + b.w, b.Y(0)); g.stroke();
     g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(b.X(PHY.plateY) - 2, b.Y(-ZONE.x), 4, b.Y(ZONE.x) - b.Y(-ZONE.x));
     hitRect('zone', b.X(PHY.plateY) - 6, b.Y(-ZONE.x), 12, b.Y(ZONE.x) - b.Y(-ZONE.x));
-    label(g, '捕手から見て右 ↓', b.x + b.w - 4, b.y + b.h - 6, COL.text, 'right');
+    label(g, L('捕手から見て右 ↓', "Catcher's right ↓"), b.x + b.w - 4, b.y + b.h - 6, COL.text, 'right');
   }
   // 投手板・ホーム
   g.fillStyle = '#e8f0f4';
@@ -139,7 +139,7 @@ function drawSideTop(g, which) {
 // 捕手の目線（本当の大きさの透視）
 function drawCatcher(g) {
   const b = LAY.catcher;
-  panelBg(g, b, '捕手の目線', '大きさは本物どおり');
+  panelBg(g, b, L('捕手の目線', "Catcher's view"), L('大きさは本物どおり', 'True size'));
   g.save(); g.beginPath(); g.rect(b.x, b.y, b.w, b.h); g.clip();
   // 地面の目安線（ホーム → 投手板）
   const P = b.P;
@@ -194,7 +194,7 @@ function drawCatcher(g) {
     g.fillStyle = '#f2f0e6'; g.beginPath(); g.arc(q[0], q[1], rr, 0, 7); g.fill(); hit('ball', q[0], q[1], rr + 4);
   }
   if (S.t >= S.res.tPlate - 1e-6 && S.mv) {
-    label(g, 'ホームを通った位置', b.x + 6, b.y + b.h - 8, COL.text);
+    label(g, L('ホームを通った位置', 'Where it crossed the plate'), b.x + 6, b.y + b.h - 8, COL.text);
   }
   g.restore();
 }
@@ -294,7 +294,7 @@ function drawBall(g, w, h) {
   g.beginPath(); g.arc(dx, dy, 8, 0, 7); g.moveTo(dx - 5.5, dy - 5.5); g.lineTo(dx + 5.5, dy + 5.5); g.moveTo(dx + 5.5, dy - 5.5); g.lineTo(dx - 5.5, dy + 5.5); g.stroke();
   hit2('drag', dx, dy, 10);
   g.fillStyle = COL.text; g.font = '11px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center';
-  g.fillText('捕手から見たボール（' + (S.playing ? '再生中' : 'いまの時刻の向き') + '）', cx, h - 6);
+  g.fillText(L('捕手から見たボール（' + (S.playing ? '再生中' : 'いまの時刻の向き') + '）', 'The ball from the catcher (' + (S.playing ? 'playing' : 'at the current time') + ')'), cx, h - 6);
   return { cx, cy, R };
 }
 const HITS2 = [];

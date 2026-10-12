@@ -24,7 +24,7 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-bod
 #cams{position:absolute;top:8px;left:8px;display:flex;flex-wrap:wrap;gap:4px;max-width:60%;z-index:2}
 #legend{position:absolute;left:8px;bottom:8px;display:flex;flex-wrap:wrap;gap:4px 10px;max-width:70%;font-size:11.5px;background:rgba(13,24,18,.7);padding:4px 8px;border-radius:8px;pointer-events:none}
 #hint3d{position:absolute;right:8px;bottom:8px;font-size:11px;color:#dfe8ee;background:rgba(13,24,18,.6);padding:3px 8px;border-radius:8px;pointer-events:none}
-.phead{font-weight:700;font-size:13px}.phead span{font-weight:400;color:var(--muted);font-size:12px}
+.phead{font-weight:700;font-size:13px}.phead small{font-weight:400;color:var(--muted);font-size:12px}
 #flow{width:100%;height:200px;display:block;border-radius:8px}
 #flowCap{margin:0;font-size:12.5px;line-height:1.6;color:var(--muted)}
 .hand{display:flex;gap:6px;align-items:center;margin:0 0 8px;font-size:13px;color:var(--muted)}
@@ -34,6 +34,7 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-bod
 #ball{width:100%;height:170px;display:block;cursor:grab;touch-action:none;background:rgba(255,255,255,.035);border-radius:8px}
 #nums{font-size:13px;line-height:1.5}
 #nums table{border-collapse:collapse;width:100%}
+table{font-size:inherit;line-height:inherit;font-weight:inherit}   /* 互換モード（doctype なし）でも表の文字の大きさ・行の高さを受けつぐ（RULES 8.1 の比べ方） */
 #nums th{text-align:left;font-weight:500;color:var(--muted);padding:2px 6px 2px 0;white-space:nowrap}
 #nums td{font-family:var(--f-mono);padding:2px 0;font-size:12.5px}
 #nums td.w{color:var(--muted);text-align:right}
@@ -263,3 +264,10 @@ i.sw.plain{background:repeating-linear-gradient(90deg,rgba(240,240,230,.9) 0 6px
 /* ガイドの名札: 小さく、うすい暗色のガラス */
 .mk{font-size:11px;font-weight:500;letter-spacing:.02em;padding:2px 8px;border-radius:999px;background:rgba(8,14,12,.55);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(3px);text-shadow:none;color:#f2f5f7}
 .mk.real{color:#ffe3a3}
+/* 英語対応（I18N.md）: 選んでいないほうの言語を隠す・JP／EN の切りかえ */
+:root[lang=en] [lang=ja],:root:not([lang=en]) [lang=en]{display:none!important}
+.langsw{flex:none;display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;align-self:center}
+.langsw button{border:0;background:none;padding:3px 8px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--muted);cursor:pointer}
+.langsw button[aria-pressed="true"]{background:var(--panel);color:var(--ink)}
+#top .langsw{margin-left:auto}
+#top .langsw+#tourOpen{margin-left:0}

@@ -105,4 +105,11 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/phage/?lang=en"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/phage/"/>
   </url>
+  <url>
+    <loc>https://sishiya.github.io/manabi-lab/pitch-physics/</loc>
+    <lastmod>2026-10-12</lastmod>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/pitch-physics/?lang=ja"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/pitch-physics/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/pitch-physics/"/>
+  </url>
 </urlset>

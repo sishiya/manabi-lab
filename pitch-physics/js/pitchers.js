@@ -43,7 +43,7 @@ const PITCHERS = [
 // 目安の表（よくある放す位置。投手ごとに大きくちがう）
 const ARM_TABLE = { a: [-35, -15, 0, 20, 45, 60, 75, 85], x: [0.80, 1.00, 1.05, 0.90, 0.55, 0.45, 0.35, 0.25], z: [0.50, 0.85, 1.15, 1.50, 1.80, 1.90, 1.98, 2.03] };
 function releaseFor(arm) { return { x: lerpTable(ARM_TABLE.a, ARM_TABLE.x, arm), z: lerpTable(ARM_TABLE.a, ARM_TABLE.z, arm) }; }
-function armName(a) { return a >= 65 ? 'オーバースロー（上から）' : a >= 30 ? 'スリークォーター（斜め上から）' : a >= -5 ? 'サイドスロー（横から）' : 'アンダースロー（下から）'; }
+function armName(a) { return a >= 65 ? L('オーバースロー（上から）', 'overhand') : a >= 30 ? L('スリークォーター（斜め上から）', 'three-quarter') : a >= -5 ? L('サイドスロー（横から）', 'sidearm') : L('アンダースロー（下から）', 'submarine (from below)'); }
 const pitcherOf = id => PITCHERS.find(p => p.id === id) || PITCHERS[0];
 // その投手の球種の一覧（名前つき）
 function arsenal(pid) {
@@ -66,8 +66,8 @@ const ENVS = [
 // 風の向き wd: 風が吹いていく向き。0 = 捕手の方へ（ボールにとって追い風）、180 = 投手の方へ（向かい風）、90 = 捕手から見て右へ
 function windVec(ws, wd) { const a = wd * Math.PI / 180; return [ws * Math.sin(a), -ws * Math.cos(a), 0]; }
 function windName(ws, wd) {
-  if (ws < 0.05) return '無風';
+  if (ws < 0.05) return L('無風', 'no wind');
   const a = ((wd % 360) + 360) % 360;
-  const nm = a < 23 || a >= 338 ? '追い風' : a >= 158 && a < 203 ? '向かい風' : a < 158 ? '捕手から見て右へ吹く風' : '捕手から見て左へ吹く風';
+  const nm = a < 23 || a >= 338 ? L('追い風', 'tailwind') : a >= 158 && a < 203 ? L('向かい風', 'headwind') : a < 158 ? L('捕手から見て右へ吹く風', "wind to the catcher's right") : L('捕手から見て左へ吹く風', "wind to the catcher's left");
   return nm + ' ' + ws.toFixed(1) + ' m/s';
 }

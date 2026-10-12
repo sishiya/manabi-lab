@@ -43,7 +43,7 @@ function loop(now) { step(Math.max(0, Math.min(0.05, (now - last) / 1000))); las
 
 setPitch('ff');
 if (!init3d(gl)) S.view = '2d';
-buildControls(); buildViewTabs(); buildTime(); bindPointer(); bindTourBar(); placeChips(); bindRefToggle(); bindLegend();
+initLang(); buildControls(); buildViewTabs(); buildTime(); bindPointer(); bindTourBar(); placeChips(); bindRefToggle(); bindLegend();
 window.matchMedia('(max-width:640px)').addEventListener('change', () => { placeChips(); resize(); });
 document.getElementById('next').addEventListener('click', () => setTour(S.tour === TOUR.length - 1 ? 0 : S.tour + 1));
 window.addEventListener('resize', resize);
