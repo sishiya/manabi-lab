@@ -209,7 +209,8 @@ i.sw.plain{background:repeating-linear-gradient(90deg,rgba(240,240,230,.9) 0 6px
 #dockChips:empty{display:none}
 
 /* 力の表: 数字は折り返さない（名前のほうを折り返す） */
-#nums td{white-space:nowrap}
+#nums table.ft td{white-space:nowrap}
+#nums table:not(.ft) td{white-space:normal}
 #nums table.ft th{white-space:normal;font-size:12.5px;line-height:1.35}
 #nums table.ft td{padding-left:6px}
 /* 時間割の帯は、時間のつまみと同じ位置・幅（main.js の resize で合わせる） */

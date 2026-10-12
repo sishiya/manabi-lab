@@ -191,7 +191,7 @@ function syncAll() {
   const tb = $('spTable');
   if (tb) {
     const row = (w, lab) => '<tr><th>' + lab + '</th><td>' + fmt(speedAt(S.res, w) * 3.6, 1) + ' km/h</td><td class="w">' + fmt(speedAt(S.res, w) / MPH, 1) + ' mph</td></tr>';
-    tb.innerHTML = row('release', '放した瞬間（初速。いまの MLB・NPB のトラックマンなど）') + row('y50', 'ホームから 50 ft（2007〜16 年の MLB）') +
+    tb.innerHTML = row('release', '放した瞬間（初速。いまの MLB・NPB のトラックマンなど）') + row('y50', 'ホームから 50 ft（2008〜16 年の MLB）') +
       row('y10', 'ホームから 10 ft（1974 年の大リーグの測定）') + row('plate', 'ホーム（終速。打者の近く）');
   }
   updateNums();

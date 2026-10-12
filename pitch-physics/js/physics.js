@@ -235,7 +235,7 @@ function aim(P, target = { x: 0, z: 0.75 }, opt) {
   return { vAng: Q.vAng, hAng: Q.hAng };
 }
 
-// 速さを測る場所: release = 放した瞬間（初速。2017 年からの MLB）、y50 = ホームから 50 ft（2007〜16 年の MLB の PITCHf/x）、
+// 速さを測る場所: release = 放した瞬間（初速。2017 年からの MLB）、y50 = ホームから 50 ft（2008〜16 年の MLB の PITCHf/x）、
 // y10 = ホームから 10 ft（1974 年の大リーグの測定の位置）、plate = ホームの前の端（終速）
 const SPEED_AT = { release: null, y50: 50 * 0.3048, y10: 10 * 0.3048, plate: PHY.plateY };
 function speedAt(res, where) {

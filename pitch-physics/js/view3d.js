@@ -284,13 +284,20 @@ function updateGuides3d() {
   if (gr) { V3.gReal.visible = false; V3.gLine.visible = false; }
   const H = V3.renderer.domElement.clientHeight;
   const W = V3.renderer.domElement.clientWidth;
+  // 名札を置ける下の限り: 下のボタン（凡例・3D）と、白い輪の切りかえボタンの上まで
+  const rt = document.getElementById('refToggle'), cv = V3.renderer.domElement.getBoundingClientRect();
+  const bot = Math.min(H - 50, rt && !rt.hidden && rt.offsetParent ? rt.getBoundingClientRect().top - cv.top - 6 : H);
   const lab = (id, v, txt) => { const e = document.getElementById(id), q = show && screenOf(v); if (!q) { e.hidden = true; return; }
     // 画面の外の点は、名札を画面のふちに置いて矢印で向きを示す
     let arrow = '';
-    if (q[1] > H - 14) { q[1] = H - 14; arrow = '↓ '; } else if (q[1] < 14) { q[1] = 14; arrow = '↑ '; }
+    if (q[1] > bot) { if (q[1] > H - 14) arrow = '↓ '; q[1] = bot; } else if (q[1] < 14) { q[1] = 14; arrow = '↑ '; }
     if (q[0] > W - 20) { q[0] = W - 20; arrow += '→ '; } else if (q[0] < 0) { q[0] = 4; arrow += '← '; }
     e.hidden = false; e.style.left = q[0] + 'px'; e.style.top = q[1] + 'px'; e.textContent = arrow + txt;
-    e.classList.toggle('up', q[1] > H - 70); e.classList.toggle('left', q[0] > W - 260); };   // 下のほうでは名札を点の上へ（凡例に重ならないように）
+    e.classList.toggle('up', q[1] > H - 70);   // 下のほうでは名札を点の上へ（凡例に重ならないように）
+    // 名札は点の右に。入らなければ左に。どちらにも入らない（狭い画面）ときは画面の中に寄せる
+    const w = e.offsetWidth, toLeft = q[0] + 14 + w > W - 4 && q[0] - 14 - w >= 4;
+    e.classList.toggle('left', toLeft);
+    if (!toLeft && q[0] + 14 + w > W - 4) e.style.left = Math.max(4 - 14, W - 4 - 14 - w) + 'px'; };
   const rp = refPoint(), d = Math.hypot(S.res.pPlate[0] - rp[0], S.res.pPlate[2] - rp[2]) * 100, dzc = (S.res.pPlate[2] - rp[2]) * 100, dxc = (S.res.pPlate[0] - rp[0]) * 100;
   const same = S.guideRef === 'ff' && S.pitch === 'ff';
   lab('mkPlain', a, same ? 'フォーシーム（ドラッグで動かせる）' : refName() + 'ならここ（ドラッグで動かせる）');
