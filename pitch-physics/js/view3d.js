@@ -54,6 +54,8 @@ function init3d(canvas) {
   V3.gRealFill = new THREE.Mesh(new THREE.CircleGeometry(PHY.r * 0.7, 40), gm('#ffd166', 0.95));
   V3.gRealEdge = new THREE.Mesh(new THREE.RingGeometry(PHY.r * 0.95, PHY.r * 1.05, 48), gm('#ffffff', 0.9));
   V3.gReal.add(V3.gRealGlow, V3.gRealEdge, V3.gRealFill);
+  // 通った瞬間に広がって消える輪（波紋）
+  V3.gRipple = new THREE.Mesh(new THREE.RingGeometry(PHY.r * 1.0, PHY.r * 1.18, 48), gm('#ffd166', 0)); V3.gRipple.renderOrder = 9; fg.add(V3.gRipple);
   V3.gLine = new THREE.Group();
   V3.gLineDark = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), gm('#000000', 0)); V3.gLineDark.visible = false;   // （使わない）
   V3.gLineDash = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineDashedMaterial({ color: '#ffffff', dashSize: 0.022, gapSize: 0.018, depthTest: false, transparent: true, opacity: 0.8 }));
@@ -265,14 +267,18 @@ function updateGuides3d() {
   V3.gRealFill.material.color.set(mainCol()); V3.gRealGlow.material.color.set(mainCol());
   // 実際に通った点は、ボールがホームを通った瞬間に付ける（少しふくらんでから落ち着く）
   const since = S.t - S.res.tPlate, arrived = since >= -1e-6;
-  const pop = arrived ? 1 + 0.6 * Math.max(0, 1 - since / 0.02) : 1;
+  const pop = arrived ? 1 + 0.6 * Math.max(0, 1 - since / 0.03) : 1;
   V3.gReal.scale.setScalar(pop);
   V3.gLineDash.geometry.setFromPoints([a, b]); V3.gLineDash.computeLineDistances();
   { const mid = a.clone().add(b).multiplyScalar(0.5), d = b.clone().sub(a), L = d.length();
     V3.gLineDark.position.copy(mid); V3.gLineDark.rotation.set(0, 0, Math.atan2(d.y, d.x)); V3.gLineDark.scale.set(Math.max(1e-3, L), 0.012, 1); }
   const show = S.cam !== 'ball';
   // 通る点は投げる前から計算で分かっているので、通るまではうっすら、通ったらはっきり
-  V3.gPlain.visible = show; V3.gReal.visible = V3.gLine.visible = show && !(S.guideRef === 'ff' && S.pitch === 'ff');
+  const sameRef = S.guideRef === 'ff' && S.pitch === 'ff';
+  V3.gPlain.visible = show; V3.gReal.visible = show; V3.gLine.visible = show && !sameRef;   // ストレートのときも通った点の丸は出す（線と文字は出さない）
+  // 波紋: 通ってから 0.06 秒（計算の時刻）で 3.5 倍に広がって消える
+  const rp0 = arrived && since < 0.06; V3.gRipple.visible = show && rp0 && !S.res.ground;
+  if (rp0) { const f = since / 0.06; V3.gRipple.position.copy(b); V3.gRipple.scale.setScalar(1 + 2.5 * f); V3.gRipple.material.opacity = 0.85 * (1 - f); V3.gRipple.material.color.set(mainCol()); }
   V3.gRealFill.material.opacity = arrived ? 0.95 : 0.4; V3.gRealEdge.material.opacity = arrived ? 0.9 : 0.45; V3.gRealGlow.material.opacity = arrived ? 0.4 : 0.12;
   V3.gLineDash.material.opacity = arrived ? 0.85 : 0.45;
   // 地面に落ちる球: ホームの面の点の代わりに、土の上の落ちる点を出す

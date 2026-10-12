@@ -169,6 +169,10 @@ function drawCatcher(g) {
     g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 1; g.beginPath(); g.arc(gr[0], gr[1], Math.max(4, gr[2] * PHY.r) + 2, 0, 7); g.stroke();
     g.fillStyle = mainCol(); g.beginPath(); g.arc(gr[0], gr[1], Math.max(4, gr[2] * PHY.r), 0, 7); g.fill(); hit('realMark', gr[0], gr[1], 8);
     g.globalAlpha = 1;
+    // 通った瞬間の波紋（0.06 秒で広がって消える）
+    const since = S.t - S.res.tPlate;
+    if (since >= 0 && since < 0.06 && !S.res.ground) { const f = since / 0.06, r0 = Math.max(4, gr[2] * PHY.r);
+      g.globalAlpha = 0.85 * (1 - f); g.strokeStyle = mainCol(); g.lineWidth = 2; g.beginPath(); g.arc(gr[0], gr[1], r0 * (1 + 2.5 * f) + 2, 0, 7); g.stroke(); g.globalAlpha = 1; }
   }
   // 投手板
   const rb = P([0, PHY.rubberY, 0.254]); g.fillStyle = '#e8f0f4'; g.fillRect(rb[0] - 4, rb[1] - 1, 8, 2);
