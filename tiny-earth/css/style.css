@@ -1,0 +1,42 @@
+/* ちいさな地球 */
+:root{--bg:#07131d;--panel:#0e2233;--ink:#e8f0f4;--muted:#a3b4bf;--acc:#6fd3ff;--line:#23405a;
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+*{box-sizing:border-box}
+/* スマホ: 星を上に固定、操作と数字は下でスクロール（RULES 9章） */
+#stage{position:sticky;top:0;z-index:2;height:52vh;min-height:260px;background:#02060c}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#hud{position:absolute;left:10px;top:8px;font-family:var(--f-mono);font-size:13px;line-height:1.5;text-shadow:0 1px 3px #000;pointer-events:none}
+#hudR{font-size:16px;color:var(--acc)}
+#hudX{color:#ffc95a}
+#hint{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:12px;color:var(--muted);text-shadow:0 1px 3px #000;pointer-events:none;padding:0 8px}
+#panel{padding:4px 16px 32px;background:var(--panel)}
+#top h1{font-family:var(--f-display);font-weight:400;font-size:22px;margin:10px 0 4px}
+.lead{margin:0 0 10px;font-size:14px;line-height:1.7;color:var(--muted)}
+.lead b{color:var(--ink);font-weight:500}
+.ctl{border-top:1px solid var(--line);padding:10px 0}
+.ctl label{display:block;font-size:14px;margin-bottom:6px}
+.ctl label b{font-family:var(--f-mono);color:var(--acc);font-weight:500;margin-left:6px}
+input[type=range]{width:100%;height:36px;accent-color:var(--acc)}
+.btns{display:flex;flex-wrap:wrap;gap:6px}
+button,select{font:inherit;font-size:14px;min-height:36px;padding:4px 12px;border-radius:8px;border:1px solid var(--line);background:#16324a;color:var(--ink);cursor:pointer}
+button:hover{background:#1d4163}
+button.on{background:#2d6a92;border-color:var(--acc)}
+.note{font-size:12.5px;color:var(--muted);margin:6px 0 0;line-height:1.6}
+h2{font-size:15px;margin:18px 0 6px;border-top:1px solid var(--line);padding-top:12px}
+dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;font-size:13.5px;line-height:1.5}
+dt{color:var(--muted)}
+dd{margin:0;font-family:var(--f-mono)}
+dd small{font-family:var(--f-body);color:var(--muted)}
+#facts{margin:0;padding-left:20px;font-size:14px;line-height:1.75}
+#facts li{margin-bottom:4px}
+#about{margin-top:18px;color:var(--muted);font-size:13.5px;line-height:1.8;border-top:1px solid var(--line);padding-top:10px}
+#about summary{cursor:pointer;color:var(--ink);min-height:36px}
+#about a{color:var(--acc)}
+#about h3{font-size:14px;color:var(--ink)}
+/* パソコン: 星を左いっぱい、右に操作 */
+@media (min-width:900px){
+  #app{display:grid;grid-template-columns:1fr 380px;height:100vh}
+  #stage{position:relative;height:100vh}
+  #panel{height:100vh;overflow-y:auto}
+}

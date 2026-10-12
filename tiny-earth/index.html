@@ -1,0 +1,114 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ちいさな地球</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230e2233'/><circle cx='32' cy='32' r='16' fill='%232f7fb8'/><path d='M18 34q7-6 14 0t14 0' stroke='%23bfefff' stroke-width='4' fill='none'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <canvas id="cv"></canvas>
+    <div id="hud">
+      <div id="hudR">半径 1 km</div>
+      <div id="hudT">0 時間</div>
+      <div id="hudX">高さ ×100</div>
+    </div>
+    <div id="hint">海をタップ → 水のかたまりを落とす ／ ドラッグでまわす・つまむ（ホイール）で寄る</div>
+  </main>
+  <section id="panel">
+    <header id="top">
+      <h1>ちいさな地球</h1>
+      <p class="lead">地球を<b>同じ材料のまま</b>小さくしたら、海と森はどう動く？ 空気は<b>透明な殻</b>で閉じこめている（仮定）。</p>
+    </header>
+
+    <div class="ctl">
+      <label for="size">大きさ（半径） <b id="sizeV">1 km</b></label>
+      <input id="size" type="range" min="0" max="1000" step="1">
+      <div class="btns" id="presets">
+        <button data-r="100">100 m</button><button data-r="1000">1 km</button><button data-r="10000">10 km</button>
+        <button data-r="1737400">月くらい</button><button data-r="6371000">地球</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <label>時間</label>
+      <div class="btns">
+        <button id="play">一時停止</button>
+        <select id="speed" aria-label="時間の速さ">
+          <option value="600">1秒 = 10分</option>
+          <option value="3600" selected>1秒 = 1時間</option>
+          <option value="21600">1秒 = 6時間</option>
+        </select>
+        <button id="reset">海をもどす</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <label for="wind">風 <b id="windV">0 m/s</b></label>
+      <input id="wind" type="range" min="0" max="20" step="0.5" value="0">
+      <div class="btns"><button id="windDir">風の向き: いまの画面で右へ</button></div>
+    </div>
+
+    <div class="ctl">
+      <label>海をゆらす</label>
+      <div class="btns">
+        <button id="shake">星をぐいっと押す</button>
+        <button id="dropC">まん中に水を落とす</button>
+      </div>
+      <p class="note" id="shakeNote"></p>
+    </div>
+
+    <div class="ctl">
+      <label for="ex">高さの強調</label>
+      <select id="ex">
+        <option value="1">×1（本当の高さ）</option><option value="10">×10</option><option value="100" selected>×100</option><option value="1000">×1000</option>
+      </select>
+      <p class="note" id="exNote"></p>
+    </div>
+
+    <h2>この大きさの星では</h2>
+    <dl id="nums"></dl>
+
+    <h2>いまの海</h2>
+    <dl id="live"></dl>
+
+    <h2>わかること</h2>
+    <ul id="facts"></ul>
+
+    <details id="about">
+      <summary>このアプリについて</summary>
+      <p>地球と同じ材料（平均の密度 5513 kg/m³）で、半径だけを小さくした星を計算しています。重力は半径に比例して弱くなり（g = 4/3·π·G·ρ·R）、山の高さ・海の深さも同じ割合で小さくなります。木や人は小さくならないので、本当の大きさ（木は 30 m）で描いています。一日の長さは地球と同じ 24 時間です。</p>
+      <p>海は、星の表面を約1万の「ます」に分けた浅水の式で計算しています（重力・コリオリ力・風の力・底の摩擦。陸にあふれる・引くも計算）。縮めた地球の海は、波の長さにくらべてとても浅いので、この式があてはまります。</p>
+      <h3>簡単にしているところ</h3>
+      <ul>
+        <li><b>透明な殻</b>（仮定）: 小さな星は重力が弱く、空気は宇宙へ逃げてしまいます（半径 1 km なら脱出速度は約 1.8 m/s、空気の分子は約 500 m/s で飛んでいる）。ここでは殻が 1 気圧の空気を閉じこめているとしています。殻を外したらどうなるかは、これから作ります。</li>
+        <li>風はあなたが決めます（自然の風の計算はしていません）。風は、ある軸のまわりをまわる向きに吹きます。</li>
+        <li>流れが勢いを運ぶ効果（移流）は省いています。波が砕ける・しぶきは計算していません。</li>
+        <li>星の中身はかたいものとしています。地形は作りもので、高さの分布だけ地球に近づけています（陸 29%、海の平均の深さ 3682 m）。森は陸の約 31%（FAO 2020）、1 ha に 400 本として数を出し、多すぎるときは間引いて描いています。</li>
+        <li>底の摩擦係数 0.0025 は、潮や高潮の計算でよく使われる値（推定）です。</li>
+        <li>半径 100 m より小さいと、表面張力と水の粘りけが主役になり、この式は合わなくなります。</li>
+      </ul>
+      <h3>おもな出どころ</h3>
+      <ul>
+        <li>地球の半径・平均の密度: <a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html" target="_blank" rel="noopener">NASA NSSDC, Earth Fact Sheet</a></li>
+        <li>海の平均の深さ 3682 m: Charette, M. A. &amp; Smith, W. H. F. (2010) The volume of Earth’s ocean. <i>Oceanography</i> 23(2): 112–114.</li>
+        <li>海面の風の力（抗力係数 約 1.2×10⁻³）: Large, W. G. &amp; Pond, S. (1981) Open ocean momentum flux measurements in moderate to strong winds. <i>J. Phys. Oceanogr.</i> 11: 324–336.</li>
+        <li>浅水の式: Vallis, G. K. (2017) <i>Atmospheric and Oceanic Fluid Dynamics</i>, 2nd ed. Cambridge University Press.</li>
+        <li>森の割合: FAO (2020) <i>Global Forest Resources Assessment 2020</i>.</li>
+      </ul>
+      <h3>使っているもの</h3>
+      <p>three.js r128（MIT License）、フォント: Google Fonts（SIL Open Font License）</p>
+    </details>
+  </section>
+</div>
+
+<script src="../lib/three@0.128.0/build/three.min.js"></script>
+<script src="js/phys.js"></script>
+<script src="js/mesh.js"></script>
+<script src="js/terrain.js"></script>
+<script src="js/ocean.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>

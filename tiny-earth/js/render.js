@@ -1,0 +1,220 @@
+// ちいさな地球 — 描画（three.js r128）。星の半径を 1 として描く。
+'use strict';
+const VIEW = (() => {
+  let renderer, scene, camera, planet, landMesh, waterMesh, treeMesh, shell, sun, cv;
+  let M, TR, O;           // 網・地形・海
+  const st = { ex: 100, az: 0.6, el: 0.35, alt: 2.2, treeShown: 0, treeReal: 0 };
+  const tmp = new THREE.Vector3();
+
+  function init(canvas, mesh, terrain, ocean) {
+    cv = canvas; M = mesh; TR = terrain; O = ocean;
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, logarithmicDepthBuffer: true, preserveDrawingBuffer: true });
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x02060c);
+    camera = new THREE.PerspectiveCamera(45, 1, 1e-6, 50);
+    sun = new THREE.DirectionalLight(0xfff4e0, 1.25); sun.position.set(5, 2, 3); scene.add(sun);
+    scene.add(new THREE.HemisphereLight(0x9cc8ff, 0x20242a, 0.42));
+    stars();
+    planet = new THREE.Group(); scene.add(planet);
+    const idx = new THREE.BufferAttribute(M.tri, 1);
+    // 陸（海の底もふくむ）
+    const lg = new THREE.BufferGeometry();
+    lg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(M.N * 3), 3));
+    lg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(M.N * 3), 3));
+    lg.setIndex(idx);
+    landMesh = new THREE.Mesh(lg, new THREE.MeshLambertMaterial({ vertexColors: true }));
+    planet.add(landMesh);
+    // 海
+    const wg = new THREE.BufferGeometry();
+    wg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(M.N * 3), 3));
+    wg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(M.N * 3), 3));
+    wg.setIndex(idx);
+    waterMesh = new THREE.Mesh(wg, new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 25, specular: 0x1a2630 }));
+    planet.add(waterMesh);
+    // 殻（空気をとじこめる仮定）
+    shell = new THREE.Mesh(new THREE.SphereGeometry(1.25, 64, 32), new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, side: THREE.DoubleSide,
+      vertexShader: 'varying vec3 vN; varying vec3 vV; void main(){ vec4 p = modelViewMatrix*vec4(position,1.); vN = normalize(normalMatrix*normal); vV = normalize(-p.xyz); gl_Position = projectionMatrix*p; }',
+      fragmentShader: 'varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.-abs(dot(vN,vV)), 3.); gl_FragColor = vec4(0.55,0.85,1.0, 0.03 + 0.35*f); }',
+    }));
+    // logarithmicDepthBuffer の書き込みが ShaderMaterial にはないので、殻は奥行きを見ない
+    shell.material.depthTest = false; shell.renderOrder = 10;
+    scene.add(shell);
+    // 木（円すい＋幹）
+    treeMesh = new THREE.InstancedMesh(treeGeom(), new THREE.MeshLambertMaterial({ vertexColors: true }), 16000);
+    treeMesh.count = 0; planet.add(treeMesh);
+    controls();
+  }
+  function stars() {
+    const n = 1500, p = new Float32Array(n * 3);
+    let s = 3;
+    const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < n; i++) {
+      const z = r() * 2 - 1, a = r() * Math.PI * 2, q = Math.sqrt(1 - z * z);
+      p.set([q * Math.cos(a) * 40, z * 40, q * Math.sin(a) * 40], i * 3);
+    }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+    scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0x9fb4c8, size: 1.3, sizeAttenuation: false })));
+  }
+  // 高さ 1・根元が原点・+y が上の木
+  function treeGeom() {
+    const pos = [], col = [];
+    const ring = (y, r, k) => [Math.cos(k / 6 * Math.PI * 2) * r, y, Math.sin(k / 6 * Math.PI * 2) * r];
+    const add = (a, b, c, color) => { pos.push(...a, ...b, ...c); for (let i = 0; i < 3; i++) col.push(...color); };
+    for (let k = 0; k < 6; k++) {
+      add(ring(0.25, 0.26, k), [0, 1, 0], ring(0.25, 0.26, k + 1), [0.13, 0.33, 0.16]);   // 葉
+      add(ring(0.25, 0.26, k + 1), [0, 0.25, 0], ring(0.25, 0.26, k), [0.10, 0.25, 0.12]);
+      add(ring(0, 0.04, k), ring(0.3, 0.03, k), ring(0, 0.04, k + 1), [0.35, 0.25, 0.16]);  // 幹
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.computeVertexNormals();
+    return g;
+  }
+
+  // 大きさ・強調を変えたら陸と木を作りなおす
+  function rebuildLand() {
+    const R = O.R, ex = st.ex, p = M.pos, pa = landMesh.geometry.attributes.position.array, ca = landMesh.geometry.attributes.color.array;
+    for (let i = 0; i < M.N; i++) {
+      const r = 1 + ex * O.z[i] / R;
+      pa[i * 3] = p[i * 3] * r; pa[i * 3 + 1] = p[i * 3 + 1] * r; pa[i * 3 + 2] = p[i * 3 + 2] * r;
+      const e = TR.elev[i];
+      let c;
+      if (e < 0) c = mix([0.55, 0.50, 0.40], [0.22, 0.24, 0.28], Math.min(1, -e / 5000));     // 海の底
+      else if (TR.forest[i]) c = [0.14, 0.30, 0.15];
+      else if (e < 60) c = [0.78, 0.72, 0.52];                                                // 浜
+      else c = mix([0.42, 0.52, 0.28], [0.55, 0.50, 0.45], Math.min(1, e / 3000));          // 草地〜岩
+      if (Math.abs(p[i * 3 + 1]) > 0.93 && e > 0) c = [0.88, 0.9, 0.93];                      // 極の雪
+      ca.set(c, i * 3);
+    }
+    landMesh.geometry.attributes.position.needsUpdate = true; landMesh.geometry.attributes.color.needsUpdate = true;
+    landMesh.geometry.computeVertexNormals(); landMesh.geometry.computeBoundingSphere();
+    placeTrees();
+  }
+  function mix(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
+
+  // 木: 本当の大きさ（30 m）。数が多すぎるときは間引いて置く
+  function placeTrees() {
+    const R = O.R, hU = PHYS.TREE_H / R, ex = st.ex;
+    let fa = 0; for (let i = 0; i < M.N; i++) if (TR.forest[i]) fa += M.area[i];
+    st.treeReal = fa * R * R * 0.04;                 // 森 1 ha に 400 本（目安）
+    if (hU < 2e-4) { treeMesh.count = 0; st.treeShown = 0; return; }   // 小さすぎて見えない
+    const want = Math.min(treeMesh.instanceMatrix.count, Math.round(st.treeReal));
+    const cells = []; for (let i = 0; i < M.N; i++) if (TR.forest[i]) cells.push(i);
+    let s = 11; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    const mtx = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), n = new THREE.Vector3(), sc = new THREE.Vector3();
+    const spread = M.Lavg * 0.6;
+    for (let k = 0; k < want; k++) {
+      const i = cells[Math.floor(rnd() * cells.length)];
+      n.set(M.pos[i * 3] + (rnd() - 0.5) * spread, M.pos[i * 3 + 1] + (rnd() - 0.5) * spread, M.pos[i * 3 + 2] + (rnd() - 0.5) * spread).normalize();
+      q.setFromUnitVectors(up, n);
+      const hh = hU * (0.7 + 0.6 * rnd());
+      sc.set(hh, hh, hh);
+      mtx.compose(n.clone().multiplyScalar(1 + ex * O.z[i] / R - hh * 0.05), q, sc);
+      treeMesh.setMatrixAt(k, mtx);
+    }
+    treeMesh.count = want; st.treeShown = want;
+    treeMesh.instanceMatrix.needsUpdate = true;
+  }
+
+  // 海の形と色（毎コマ）
+  function updateWater() {
+    const R = O.R, ex = st.ex, H0 = O.P.H0, p = M.pos, pa = waterMesh.geometry.attributes.position.array, ca = waterMesh.geometry.attributes.color.array;
+    for (let i = 0; i < M.N; i++) {
+      const h = O.h[i], wet = TR.elev[i] >= 0 ? h > 0.02 * H0 : h > O.hdry;   // 陸の上のうすい膜は描かない
+      const r = wet ? 1 + ex * (O.z[i] + h) / R : 1 + ex * O.z[i] / R - 3 * Math.max(H0, 0.002 * R) * ex / R;
+      pa[i * 3] = p[i * 3] * r; pa[i * 3 + 1] = p[i * 3 + 1] * r; pa[i * 3 + 2] = p[i * 3 + 2] * r;
+      // 色: 深さ（浅い＝明るい）＋ もとの海面からの高さ（高い＝白っぽく、低い＝暗く）
+      //   深さはうすく（浅い所だけ少し明るい）、高さの変化を主に（±0.5×平均の深さでいっぱい）
+      const d = Math.min(1, h / (0.6 * H0)), a = (O.z[i] + h) / H0;
+      let c = mix([0.25, 0.62, 0.70], [0.07, 0.30, 0.55], d);
+      if (TR.elev[i] >= 0 && wet) c = mix(c, [0.55, 0.75, 0.85], 0.4);          // 陸にあふれた水
+      if (a > 0) c = mix(c, [0.95, 0.98, 1.0], Math.min(0.9, a * 1.8));
+      else c = mix(c, [0.0, 0.04, 0.16], Math.min(0.85, -a * 1.8));
+      ca.set(c, i * 3);
+    }
+    waterMesh.geometry.attributes.position.needsUpdate = true; waterMesh.geometry.attributes.color.needsUpdate = true;
+    waterMesh.geometry.computeVertexNormals(); waterMesh.geometry.computeBoundingSphere();
+  }
+
+  // カメラ: 星のまわりをまわる（星と一緒に自転する）。近づくと地平線の方を向く
+  function placeCamera() {
+    const ce = Math.cos(st.el), dp = new THREE.Vector3(ce * Math.sin(st.az), Math.sin(st.el), ce * Math.cos(st.az));
+    const i = nearest(dp.x, dp.y, dp.z), surf = 1 + st.ex * Math.max(O.z[i], O.z[i] + O.h[i]) / O.R;
+    const d = dp.clone().applyQuaternion(planet.quaternion);
+    camera.position.copy(d).multiplyScalar(surf + st.alt);
+    const t = Math.min(1, Math.max(0, Math.log10(st.alt / 2) / Math.log10(0.03 / 2)));   // alt 2→0、0.03→1
+    const north = new THREE.Vector3(0, 1, 0).sub(d.clone().multiplyScalar(d.y)).normalize();
+    if (!isFinite(north.x)) north.set(1, 0, 0);
+    // 見る向き: 遠いときは星の中心、近いときは少し下向きに地平線の方（向きどうしを混ぜる）
+    const toC = camera.position.clone().negate().normalize();
+    const toH = north.clone().multiplyScalar(Math.cos(0.12)).addScaledVector(d, -Math.sin(0.12));
+    const k = t * t * (3 - 2 * t), dir = toC.multiplyScalar(1 - k).addScaledVector(toH, k).normalize();
+    camera.up.copy(k > 0.5 ? d : north);
+    camera.lookAt(camera.position.clone().add(dir));
+    camera.near = Math.max(1e-7, st.alt * 0.02); camera.far = 60; camera.updateProjectionMatrix();
+  }
+  function nearest(x, y, z) {
+    let best = -2, bi = 0; const p = M.pos;
+    for (let i = 0; i < M.N; i++) { const s = p[i * 3] * x + p[i * 3 + 1] * y + p[i * 3 + 2] * z; if (s > best) { best = s; bi = i; } }
+    return bi;
+  }
+
+  // 指・マウス: ドラッグでまわす、ホイール・2本指で寄る、タップで onTap
+  let onTap = null;
+  function controls() {
+    const pts = new Map(); let moved = 0, pinch0 = 0, alt0 = 0;
+    cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); moved = 0;
+      if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]); alt0 = st.alt; } });
+    cv.addEventListener('pointermove', e => {
+      if (!pts.has(e.pointerId)) return;
+      const [x0, y0] = pts.get(e.pointerId), dx = e.clientX - x0, dy = e.clientY - y0;
+      pts.set(e.pointerId, [e.clientX, e.clientY]);
+      moved += Math.abs(dx) + Math.abs(dy);
+      if (pts.size === 2) { const [a, b] = [...pts.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch0 > 0) setAlt(alt0 * pinch0 / d); return; }
+      const k = 2.6 * Math.min(1, st.alt + 0.002) / cv.clientHeight;   // 近いほどゆっくり
+      st.az -= dx * k; st.el = Math.max(-1.45, Math.min(1.45, st.el + dy * k));
+    });
+    const up = e => {
+      if (pts.has(e.pointerId) && pts.size === 1 && moved < 6 && onTap) onTap(e);
+      pts.delete(e.pointerId); if (pts.size < 2) pinch0 = 0;
+    };
+    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', e => pts.delete(e.pointerId));
+    cv.addEventListener('wheel', e => { e.preventDefault(); setAlt(st.alt * Math.exp(e.deltaY * 0.0015)); }, { passive: false });
+  }
+  function setAlt(a) { st.alt = Math.max(2 / O.R, Math.min(6, a)); }
+
+  // タップした所の点（星の座標の番号）。海・陸に当たらなければ -1
+  const ray = new THREE.Raycaster();
+  function pick(e) {
+    const r = cv.getBoundingClientRect();
+    ray.setFromCamera({ x: (e.clientX - r.left) / r.width * 2 - 1, y: -(e.clientY - r.top) / r.height * 2 + 1 }, camera);
+    const hit = ray.intersectObjects([waterMesh, landMesh])[0];
+    if (!hit) return -1;
+    tmp.copy(hit.point).applyQuaternion(planet.quaternion.clone().invert()).normalize();
+    return nearest(tmp.x, tmp.y, tmp.z);
+  }
+  // 画面の右向き（星の座標）: 風の向きを決めるのに使う。風は軸 a のまわりをまわる → a = 画面の上向き
+  function screenUpInPlanet() {
+    const v = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion).applyQuaternion(planet.quaternion.clone().invert());
+    return v.normalize();
+  }
+  function screenRightInPlanet() {
+    return new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion).applyQuaternion(planet.quaternion.clone().invert()).normalize();
+  }
+
+  function resize() {
+    const w = cv.clientWidth, h = cv.clientHeight;
+    renderer.setSize(w, h, false); camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix();
+  }
+  function render(spin) {
+    planet.rotation.y = spin;
+    placeCamera();
+    shell.visible = camera.position.length() > 1.3;   // 殻の内がわからは描かない（景色が白っぽくなるので）
+    renderer.render(scene, camera);
+  }
+  return { init, rebuildLand, updateWater, render, resize, pick, setAlt, screenUpInPlanet, screenRightInPlanet, st,
+    set onTap(f) { onTap = f; }, get camera() { return camera; } };
+})();

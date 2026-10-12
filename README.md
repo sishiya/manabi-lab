@@ -27,6 +27,7 @@
 
 | フォルダ | アプリ |
 |---|---|
+| `tiny-earth/` | ちいさな地球 |
 | `hair-removal/` | 脱毛のしくみ |
 | `passkey/` | パスキーのしくみ |
 | `brain-response/` | 刺激が脳に届くまで |
