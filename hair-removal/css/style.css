@@ -3,6 +3,7 @@
   --shave:#7fc8ff;--pluck:#ffd166;--light:#ff8fb1;
   --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
 *{box-sizing:border-box}
+[hidden]{display:none !important}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
 #app{max-width:1000px;margin:0 auto}
 button,select,input{font:inherit;color:inherit}
