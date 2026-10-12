@@ -34,6 +34,14 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-of
 /* いま起きていること（図の左上） */
 .now{position:absolute;left:12px;bottom:12px;max-width:min(430px,calc(100% - 200px));background:rgba(10,22,27,.9);border:1px solid var(--acc);border-radius:10px;padding:8px 12px;pointer-events:none;font-size:12.5px;line-height:1.7;color:var(--muted)}
 .now:empty{display:none}
+/* 締めのまとめ（シークバーの最後に、図のまん中に） */
+.closing{position:absolute;left:50%;top:50%;transform:translate(-50%,-46%);width:min(560px,calc(100% - 24px));max-height:calc(100% - 110px);overflow:auto;background:rgba(10,22,27,.94);border:1px solid var(--acc);border-radius:14px;padding:16px 20px 14px;z-index:6;font-size:13.5px;line-height:1.8;color:var(--muted);animation:closingIn .8s ease-out}
+.closing h3{margin:0 0 8px;color:var(--acc);font-size:18px}
+.closing p{margin:0 0 8px}
+.closing .cbtn{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.closing button{background:var(--acc);color:#0e1c22;border:0;border-radius:8px;padding:7px 14px;font-weight:700;font-size:13px;cursor:pointer}
+.closing button+button{background:var(--btn);color:var(--ink);border:1px solid var(--line)}
+@keyframes closingIn{from{opacity:0;transform:translate(-50%,-40%)}to{opacity:1;transform:translate(-50%,-46%)}}
 .now b{color:var(--acc);font-size:15px}
 .now p{margin:3px 0 0}
 /* 拡大ボタン（右上） */

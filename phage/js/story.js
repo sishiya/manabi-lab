@@ -19,7 +19,8 @@ const Story = (() => {
     lin: 'もしも: あとからもう1つ来る',
   };
   let cond = 'normal', segs = [], M = null, P = null, total = 1;
-  const SPREAD_MIN = 80;   // 次々にうつる区間の長さ（最初の細菌が破れてからの分）
+  const SPREAD_MIN = 80;
+  const END_P = 0.9;       // 次々にうつる区間のここから、締めのまとめを出す   // 次々にうつる区間の長さ（最初の細菌が破れてからの分）
 
   function build(c) {
     cond = c || cond;
@@ -297,7 +298,8 @@ const Story = (() => {
       add(u('burst', 0.22), '破れて中身が出る', '外膜も破れ（スパニンというたんぱくが外膜をこわす）、ファージと細菌の中身がいっせいに外へ。細菌は死に、膜はちぎれたかけらになる。', 'sure', [0, 0, 4200]);
       const c1 = P.cells.filter(c => c.tBurst < Infinity).sort((a, b) => a.tBurst - b.tBurst)[0];
       add(u('spread', 0), 'となりの細菌へ', `出てきたファージ（約${Math.max(80, countsAtEnd())}個）が水の中に広がり、近くの細菌にとりつく。とりつかれた細菌の中でも、同じことがくり返される。`, 'sure', [0, 0, 22000]);
-      if (c1) add(u('spread', Math.min(0.95, c1.tBurst / SPREAD_MIN)), 'また破れて、もっと増える', '1つの細菌から100個以上。1回ごとに何十〜百倍になるので、ファージは「ねずみ算」で増え、細菌はへっていく。広がり方は模式。', 'est', [0, 0, 34000]);
+      add(u('spread', END_P), 'こうして増えていく', '1つのファージが、細菌から細菌へうつるたびに何十〜百倍に。締めのまとめを図の上に出す。', 'est', [0, 0, 42000]);
+      if (c1) add(u('spread', Math.min(0.85, c1.tBurst / SPREAD_MIN)), 'また破れて、もっと増える', '1つの細菌から100個以上。1回ごとに何十〜百倍になるので、ファージは「ねずみ算」で増え、細菌はへっていく。広がり方は模式。', 'est', [0, 0, 34000]);
     }
     E.sort((a, b) => a.u - b.u);
     return E;
@@ -306,7 +308,7 @@ const Story = (() => {
   build('normal');
   return {
     CONDS, build, at, u, uMin, forkIdx, landing, pierce, counts, particles, tailPos, headAt, headCenter, headPortal, hostLeft, events,
-    cellPose, colonyCounts, REACH, JOIN,
+    cellPose, colonyCounts, REACH, JOIN, END_P,
     get cond() { return cond; }, get segs() { return segs; }, get M() { return M; }, get P() { return P; }, get total() { return total; },
   };
 })();

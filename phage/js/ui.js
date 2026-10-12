@@ -113,6 +113,46 @@ const UI = (() => {
   $('zOut').addEventListener('click', () => View.zoomAt(View.W / 2, View.H / 2, 1 / 1.8));
   $('zFit').addEventListener('click', () => { View.setAuto(false); View.fitAll(); });
 
+  // 締めのまとめ（シークバーの最後）。もしもごとに結末がちがう
+  const CLOSING = {
+    normal: { t: 'こうして、ファージは次々に増えていく', p: [
+      ['1つのファージが細菌に入ると、約25分で100〜150個に。出てきたファージがまた近くの細菌にとりつくので、くり返すたびに何十〜百倍になる（ねずみ算）。細菌がたくさんいれば、数回で何万〜何百万にもなりうる。', 'est'],
+      ['とりつかれた細菌は破れて死ぬ。ファージは水の中や腸の中で、細菌がふえすぎないように数をおさえている。', 'sure'],
+      ['でも細菌もやられっぱなしではない。受け手（OmpC など）を変えた細菌は生き残り、ファージの側も変わっていく。このいたちごっこが続くので、腸の中では細菌とファージがずっといっしょにいる。', 'sure'],
+      ['ファージは人にはうつらない。抗生物質の効かない細菌をファージでやっつける研究（ファージ療法）も進んでいる。T4 などのファージの研究から、遺伝子のしくみがたくさんわかった。', 'sure'],
+    ] },
+    lin: null,
+    norec: { t: '受け手がないと、ファージは入れない', p: [
+      ['ファージがとりつけるのは、脚がつかめる印（受け手）を持つ細菌だけ。OmpC をなくし LPS の糖の鎖も短くなった大腸菌には、T4 はくっつけない。', 'sure'],
+      ['こうした変異の細菌は、T4 がいても生き残ってふえる。ファージの側も、別の受け手をつかめるように変わることがある（いたちごっこ）。', 'sure'],
+    ] },
+    gt: { t: '目印がないと、設計図が切られる', p: [
+      ['大腸菌は、外から入ってきた DNA を切る酵素（制限酵素）で身を守っている。T4 はふつう、DNA にブドウ糖の目印を付けて切られないようにしている。', 'sure'],
+      ['目印のない T4 の DNA は入ってすぐに切られ、細菌の中で増えられない。細菌が勝つこともある。', 'sure'],
+    ] },
+  };
+  CLOSING.lin = CLOSING.normal;
+  function closingHtml() {
+    const c = CLOSING[Story.cond]; if (!c) return '';
+    return `<h3>${c.t}</h3>` + c.p.map(([t, k]) => `<p>${t} <span class="kind ${k}">${KIND[k]}</span></p>`).join('') +
+      '<div class="cbtn"><button data-act="again">▶ もう一度はじめから</button><button data-act="faq">ぎもんを見る</button></div>';
+  }
+  $('closing').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.act === 'again') { go(0); state.playing = true; markPlay(); }
+    else { const f = document.querySelector('.faq'); if (f) { f.scrollIntoView({ behavior: 'smooth', block: 'start' }); const d = f.querySelector('details'); if (d) d.open = true; } }
+  });
+  let closingOn = false;
+  function updateClosing(st) {
+    // 最後の区間の終わり近く（次々にうつるなら END_P から、ほかの結末は最後の3%）
+    const last = Story.segs[Story.segs.length - 1];
+    const on = st.id === last.id && (st.id === 'spread' ? st.p >= Story.END_P : st.p >= 0.97 || st.u >= 0.999);
+    if (on === closingOn) return;
+    closingOn = on; const el = $('closing');
+    if (on) { el.innerHTML = closingHtml(); el.hidden = false; } else el.hidden = true;
+    $('nowCard').style.visibility = on ? 'hidden' : '';
+  }
+
   // 見た目: わかりやすい（色分け・札あり）／本物に近い（色なし・電子顕微鏡の写真のような調子）
   $('lookBtn').addEventListener('click', () => { View.real = !View.real; document.querySelector('.viewWrap').classList.toggle('real', View.real); $('lookBtn').classList.toggle('on', View.real); $('lookBtn').textContent = View.real ? '見た目: 本物に近い' : '見た目: わかりやすい'; });
 
@@ -132,6 +172,7 @@ const UI = (() => {
       View.setBounds(camOf(ev));
     }
     View.camK = sliding ? 4 : st.id === 'zoomin' ? 2.2 : 1.1;
+    updateClosing(st);
     const inside = st.id === 'inside' || st.id === 'burst';
     let html = '';
     if (st.id === 'spread') { const cc = Story.colonyCounts(st.min - Story.M.tEnd); html = `<dl class="stat"><dt>ファージ</dt><dd>約${cc.phage.toLocaleString()}個 <small>目安</small></dd><dt>破れた細菌</dt><dd>${cc.burst} ／ ${cc.cells}</dd><dt>とりつかれて中で増えている</dt><dd>${cc.inf}</dd></dl>`; }
