@@ -10,7 +10,7 @@
 | `smoke.ps1` | 全アプリの動作確認。ヘッドレスの Chrome で `thumb.html` の準備まで動かし、例外・読み込みの失敗・許可していない外への通信・ローカルの GA・英語に残った日本語を調べる。`-Base https://sishiya.github.io/manabi-lab` で公開版も | 変更のあと（各 DEVNOTES の「確認のしかた」と合わせて）、push のあと |
 | `new-app.ps1` | 新しいアプリの雛形（PLAN・DEVNOTES・index.html・css/js・launcher・versions/v001-start）と、保管庫のカード・thumb.html の SETUP・make-thumbs の一覧・CLAUDE.md・README の表への追加 | 新しいアプリを始めるとき（PLAN.md の相談のあと） |
 | `make-thumbs.ps1` | 入口・保管庫のサムネイル `assets/thumbs/<app>.jpg` を撮る | 画面が大きく変わったとき |
-| `make-short-thumbs.ps1` | ショート動画のサムネイル `_dev/promo/thumbs/<app>-short.jpg`（縦 1080×1920）を mp4 のコマから作る。設定は `_dev/promo/short-thumbs.json`。付けるのは `youtube-upload.ps1 -Thumb` | ショートを録ったとき（RULES 8.7） |
+| `make-short-thumbs.ps1` | ショート動画のサムネイル `_dev/promo/thumbs/<app>-short.jpg`（縦 1080×1920）を mp4 のコマから作る。中身は `_dev/promo/short-thumbs.js`、デザインは `short-thumb.html`（ヘッドレスの Chrome で撮る）。付けるのは `youtube-upload.ps1 -Thumb` | ショートを録ったとき（RULES 8.7） |
 | `make-upload.ps1` | 紹介動画の `upload.json` の下書き（入口の APPS とアプリの出どころから）。`-Check` で全部の upload.json が決まり（説明欄の形・チャプター・字数・< >・予約の時刻）に合っているか調べる | 動画を作ったとき・上げる前 |
 | `record-promo.ps1` | 台本ページを開いて、確かめ用のコマ → 録画 → できた mp4 のコマを1枚に、まで一度に | 台本を書いたあと。`-AudioOnly` で映像はそのまま音だけ作りなおす |
 | `check-loudness.ps1` | 紹介動画の mp4 の音量（LUFS・トゥルーピーク）を測って、範囲外を NG に（読むだけ） | 録画したら・上げる前に・公開前の確認で毎回（RULES 8.6） |

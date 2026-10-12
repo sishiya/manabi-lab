@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ショートのサムネイル</title>
+<!-- ?app=<app> で1枚を 1080×1920 に描く。make-short-thumbs.ps1 がヘッドレスの Chrome でスクリーンショットを撮る（RULES 8.7）。
+     絵は out/thumbsrc/<app>.jpg（mp4 から取ったコマ、2160×3840）。file:// でも開けるように設定は JS で読む -->
+<script src="short-thumbs.js"></script>
+<style>
+  html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; }
+  body { position: relative; font-family: 'Noto Sans JP', 'Yu Gothic', sans-serif; color: #fff; }
+  #bg { position: absolute; left: 0; top: 0; }
+  /* 下のパネル: 絵をぼかして暗くし、焼きこみの字幕を読めなくする */
+  #panel { position: absolute; left: 0; right: 0; top: 1060px; bottom: 0;
+    backdrop-filter: blur(34px) brightness(0.42) saturate(1.3);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 150px); mask-image: linear-gradient(to bottom, transparent 0, #000 150px); }
+  #shade { position: absolute; left: 0; right: 0; top: 0; bottom: 0;
+    background: radial-gradient(ellipse 85% 55% at 50% 32%, transparent 55%, rgba(0,0,0,0.45) 100%),
+                linear-gradient(to bottom, rgba(0,0,0,0.35) 0, transparent 220px); }
+  #brand { position: absolute; left: 40px; top: 40px; display: flex; align-items: center; gap: 16px;
+    padding: 10px 26px 10px 12px; border-radius: 60px; background: rgba(0,0,0,0.55); font-size: 38px; font-weight: 700; letter-spacing: 0.04em; }
+  #brand img { width: 72px; height: 72px; }
+  #text { position: absolute; left: 0; right: 0; top: 1180px; text-align: center; }
+  #kicker { display: inline-block; font-size: 50px; font-weight: 800; padding: 8px 34px; border-radius: 14px;
+    background: var(--c2); color: #111; letter-spacing: 0.02em; transform: rotate(-2deg); box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+  #big { margin-top: 22px; display: inline-block; position: relative; font-weight: 900; line-height: 1.1; letter-spacing: -0.01em; white-space: nowrap; }
+  /* 2枚重ね: 下は太いふち＋影、上はグラデーションの文字 */
+  #big .s { color: #000; -webkit-text-stroke: 26px #000; filter: drop-shadow(0 12px 18px rgba(0,0,0,0.8)) drop-shadow(0 0 46px var(--glow)); }
+  #big .f { position: absolute; left: 0; top: 0; background: linear-gradient(to bottom, var(--c1) 22%, var(--c2) 88%);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  #sub { margin-top: 18px; font-size: 64px; font-weight: 800; color: #fff;
+    -webkit-text-stroke: 10px #000; paint-order: stroke fill; filter: drop-shadow(0 6px 10px rgba(0,0,0,0.7)); }
+  #name { position: absolute; left: 0; right: 0; bottom: 70px; text-align: center; font-size: 40px; font-weight: 700; color: rgba(255,255,255,0.85); letter-spacing: 0.08em; }
+  #name::before, #name::after { content: ''; display: inline-block; width: 80px; height: 3px; background: var(--c2); vertical-align: middle; margin: 0 24px; opacity: 0.9; }
+</style>
+</head>
+<body>
+<img id="bg" alt="">
+<div id="shade"></div>
+<div id="panel"></div>
+<div id="brand"><img src="../sns-icon/a-lion-glasses.png" alt="">しし屋 まなびラボ</div>
+<div id="text"><div id="kicker"></div><div id="big"></div><div id="sub"></div></div>
+<div id="name"></div>
+<script>
+const app = new URLSearchParams(location.search).get('app') || 'evolution';
+const c = SHORT_THUMBS[app];
+const root = document.documentElement.style;
+root.setProperty('--c1', c.c1); root.setProperty('--c2', c.c2); root.setProperty('--glow', c.c2 + '88');
+document.getElementById('kicker').textContent = c.kicker;
+const big = document.getElementById('big');
+for (const k of ['s', 'f']) { const e = document.createElement('span'); e.className = k; e.textContent = c.big; big.appendChild(e); }
+document.getElementById('sub').textContent = c.sub;
+document.getElementById('name').textContent = c.name;
+// 大きな言葉は横幅に合わせて文字の大きさを決める（最大 260px）
+let fs = 260; big.style.fontSize = fs + 'px';
+while (big.offsetWidth > 1000 && fs > 80) { fs -= 4; big.style.fontSize = fs + 'px'; }
+// 絵: focus の点が上の見せ場（y = 600）に来るように寄せる。すき間ができないように端でとめる
+const W = 1080 * (c.zoom || 1), H = 1920 * (c.zoom || 1);
+const [fx, fy] = c.focus || [0.5, 0.33];
+const x0 = Math.min(0, Math.max(1080 - W, 540 - fx * W)), y0 = Math.min(0, Math.max(1920 - H, 600 - fy * H));
+const bg = document.getElementById('bg');
+Object.assign(bg.style, { width: W + 'px', height: H + 'px', left: x0 + 'px', top: y0 + 'px' });
+bg.src = 'out/thumbsrc/' + app + '.jpg';
+</script>
+</body>
+</html>
