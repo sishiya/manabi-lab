@@ -99,6 +99,7 @@ const PARTS = {
 
 // 画面の「おもな出どころ」（確かめたものだけ）
 const SOURCES = [
+  ['Paus R, Cotsarelis G (1999) The biology of hair follicles. N Engl J Med 341:491–497（毛周期・毛穴の下半分が周期ごとに作りなおされること・バルジ）', 'https://pubmed.ncbi.nlm.nih.gov/10441606/'],
   ['Seago SV, Ebling FJG (1985) The hair cycle on the human thigh and upper arm. Br J Dermatol 113:9–16', 'https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1365-2133.1985.tb02038.x'],
   ['ClinicalTrials.gov NCT03945383（家庭用 IPL の臨床試験の計画。部位ごとの周期と、2週ごと4回→4週ごとの予定）', 'https://clinicaltrials.gov/study/NCT03945383'],
   ['Lynfield YL, Macwilliams P (1970) Shaving and hair growth. J Invest Dermatol 55:170–172', 'https://pubmed.ncbi.nlm.nih.gov/5459955/'],
