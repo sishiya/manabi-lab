@@ -16,19 +16,19 @@ const VOXEL = (() => {
       const list = [];
       for (let j = M.tdeg[i]; j < M.tdeg[i + 1]; j++) {
         const f = M.vTri[j], cx = M.cc[f * 3], cy = M.cc[f * 3 + 1], cz = M.cc[f * 3 + 2];
-        list.push([Math.atan2(cx * e2x + cy * e2y + cz * e2z, cx * e1x + cy * e1y + cz * e1z), cx, cy, cz]);
+        list.push([Math.atan2(cx * e2x + cy * e2y + cz * e2z, cx * e1x + cy * e1y + cz * e1z), cx, cy, cz, f]);
       }
       list.sort((a, b) => a[0] - b[0]);
-      corners.push(list.map(c => [c[1], c[2], c[3]]));
+      corners.push(list.map(c => [c[1], c[2], c[3], c[4]]));   // 角の位置と、その角の三角形（＝角で出会う3つのマス）
       start[i] = nv; nv += 1 + 5 * list.length; ni += 3 * list.length * 3;
     }
     start[M.N] = nv;
     // 角を平たい配列にも（毎コマの書きこみを速くする）
     const cs = new Int32Array(M.N + 1);
     for (let i = 0; i < M.N; i++) cs[i + 1] = cs[i] + corners[i].length;
-    const cf = new Float32Array(cs[M.N] * 3);
-    for (let i = 0; i < M.N; i++) corners[i].forEach((c, j) => cf.set(c, (cs[i] + j) * 3));
-    return { corners, start, nv, ni, cs, cf };
+    const cf = new Float32Array(cs[M.N] * 3), ct = new Int32Array(cs[M.N]);
+    for (let i = 0; i < M.N; i++) corners[i].forEach((c, j) => { cf.set(c.slice(0, 3), (cs[i] + j) * 3); ct[cs[i] + j] = c[3]; });
+    return { corners, start, nv, ni, cs, cf, ct };
   }
 
   // 柱の集まり（陸または海）を作る
@@ -78,6 +78,47 @@ const VOXEL = (() => {
       pa[w + 9] = ax * rBot; pa[w + 10] = ay * rBot; pa[w + 11] = az * rBot;
     }
   }
+  // なめらかにつなぐ柱: 上の面の中心はそのマスの高さ val[i]、角は角で出会う3つのマスの平均（となりと同じ高さになり、すき間がなくなる）
+  function setColSmooth(g, M, C, i, val, rBot) {
+    const pa = g.attributes.position.array, cf = C.cf, c0 = C.cs[i], k = C.cs[i + 1] - c0, s = C.start[i], tri = M.tri;
+    const rTop = val[i];
+    let t = s * 3;
+    pa[t] = M.pos[i * 3] * rTop; pa[t + 1] = M.pos[i * 3 + 1] * rTop; pa[t + 2] = M.pos[i * 3 + 2] * rTop;
+    for (let j = 0; j < k; j++) {
+      const jb = (j + 1) % k, fa = C.ct[c0 + j] * 3, fb = C.ct[c0 + jb] * 3;
+      const ra = (val[tri[fa]] + val[tri[fa + 1]] + val[tri[fa + 2]]) / 3, rb = (val[tri[fb]] + val[tri[fb + 1]] + val[tri[fb + 2]]) / 3;
+      const a = (c0 + j) * 3, b = (c0 + jb) * 3, ax = cf[a], ay = cf[a + 1], az = cf[a + 2], bx = cf[b], by = cf[b + 1], bz = cf[b + 2];
+      t = (s + 1 + j) * 3;
+      pa[t] = ax * ra; pa[t + 1] = ay * ra; pa[t + 2] = az * ra;
+      const w = (s + 1 + k + 4 * j) * 3;
+      pa[w] = ax * ra; pa[w + 1] = ay * ra; pa[w + 2] = az * ra;
+      pa[w + 3] = bx * rb; pa[w + 4] = by * rb; pa[w + 5] = bz * rb;
+      pa[w + 6] = bx * rBot; pa[w + 7] = by * rBot; pa[w + 8] = bz * rBot;
+      pa[w + 9] = ax * rBot; pa[w + 10] = ay * rBot; pa[w + 11] = az * rBot;
+    }
+  }
+  // 上の面の法線を、となりとの坂に合わせて出す（なめらかにつないだ陸の陰影のため。中心と角の位置から）
+  function topNormals(g, M, C) {
+    const pa = g.attributes.position.array, na = g.attributes.normal.array;
+    for (let i = 0; i < M.N; i++) {
+      const c0 = C.cs[i], k = C.cs[i + 1] - c0, s = C.start[i];
+      const cx = pa[s * 3], cy = pa[s * 3 + 1], cz = pa[s * 3 + 2];
+      let nx = 0, ny = 0, nz = 0;
+      for (let j = 0; j < k; j++) {
+        const a = (s + 1 + j) * 3, b = (s + 1 + (j + 1) % k) * 3;
+        const ux = pa[a] - cx, uy = pa[a + 1] - cy, uz = pa[a + 2] - cz, vx = pa[b] - cx, vy = pa[b + 1] - cy, vz = pa[b + 2] - cz;
+        nx += uy * vz - uz * vy; ny += uz * vx - ux * vz; nz += ux * vy - uy * vx;
+      }
+      const l = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+      for (let v = 0; v <= k; v++) { na[(s + v) * 3] = nx / l; na[(s + v) * 3 + 1] = ny / l; na[(s + v) * 3 + 2] = nz / l; }
+    }
+    g.attributes.normal.needsUpdate = true;
+  }
+  // 横の面・上の面の法線を、最初の形（外向き・となりへの向き）に戻す
+  function resetNormals(g, M, C) {
+    const fresh = columns(M, C).attributes.normal.array;
+    g.attributes.normal.array.set(fresh); g.attributes.normal.needsUpdate = true;
+  }
   // 色: 上の面 (r,g,b)、横の面は上の面に f をかけたもの
   function setColorRGB(g, C, i, r, gg, b, f) {
     const ca = g.attributes.color.array, k = C.cs[i + 1] - C.cs[i], s = C.start[i];
@@ -91,5 +132,5 @@ const VOXEL = (() => {
     for (let v = 0; v <= k; v++) ca.set(top, (s + v) * 3);
     for (let v = s + 1 + k; v < s + 1 + 5 * k; v++) ca.set(side, v * 3);
   }
-  return { cells, columns, setCol, setColor, setColorRGB };
+  return { cells, columns, setCol, setColSmooth, topNormals, resetNormals, setColor, setColorRGB };
 })();

@@ -1,7 +1,7 @@
 // ちいさな地球 — 描画（three.js r128）。星の半径を 1 として描く。
 'use strict';
 const VIEW = (() => {
-  let hemi, halo, vapor, rTop, wCol, wWet, renderer, scene, camera, planet, landB, waterB, coreB, landV, waterV, treeMesh, shell, sun, cv;
+  let hemi, halo, vapor, rTop, wCol, wWet, wVal, renderer, scene, camera, planet, landV, waterV, treeMesh, shell, sun, cv;
   let C, rFloor;          // ボクセルのマス目・柱の床（陸の上の面）の半径
   let M, TR, O;           // 網・地形・海
   const st = { light: 'cycle', honest: null, style: 'voxel', ex: 100, az: 0.6, el: 0.35, alt: 2.2, treeShown: 0, treeReal: 0 };
@@ -18,17 +18,7 @@ const VIEW = (() => {
     hemi = new THREE.HemisphereLight(0x9cc8ff, 0x20242a, 0.42); scene.add(hemi);
     stars();
     planet = new THREE.Group(); scene.add(planet);
-    // つぶつぶ（球）の陸と海: マス目ひとつを1つぶの球にする（見た目だけ。タップの当たりはボクセルの柱で取る）
-    const ball = new THREE.IcosahedronGeometry(1, 2);
-    landB = new THREE.InstancedMesh(ball, new THREE.MeshLambertMaterial(), M.N);
-    waterB = new THREE.InstancedMesh(ball, new THREE.MeshPhongMaterial({ shininess: 40, specular: 0x2a3a48 }), M.N);
-    for (const m of [landB, waterB]) {
-      m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(M.N * 3), 3);
-      m.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 3); m.frustumCulled = false; planet.add(m);
-    }
-    coreB = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 5), new THREE.MeshLambertMaterial({ color: 0x3a2e24 }));   // つぶのすき間から見える土
-    planet.add(coreB);
-    wCol = new Float32Array(M.N * 3); wWet = new Uint8Array(M.N);
+    wCol = new Float32Array(M.N * 3); wWet = new Uint8Array(M.N); wVal = new Float32Array(M.N);
     // ボクセルふうの陸と海（マス目を柱にする）
     C = VOXEL.cells(M); rFloor = new Float32Array(M.N);
     landV = new THREE.Mesh(VOXEL.columns(M, C), new THREE.MeshLambertMaterial({ vertexColors: true }));
@@ -56,7 +46,7 @@ const VIEW = (() => {
     vapor.userData = { age: new Float32Array(NV).fill(9), life: new Float32Array(NV), vel: new Float32Array(NV), dir: new Float32Array(NV * 3), r0: new Float32Array(NV), next: 0, last: 0 };
     planet.add(vapor);
     rTop = new Float32Array(M.N);
-    // 木（ボクセル: 箱の幹と葉 ／ つぶつぶ: 丸い葉）。1本ずつ色を少し変える
+    // 木（ボクセル: 箱の幹と葉 ／ なめらかボクセル: 丸い葉）。1本ずつ色を少し変える
     treeMesh = new THREE.InstancedMesh(treeGeom('voxel'), new THREE.MeshLambertMaterial({ vertexColors: true }), 16000);
     treeMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(16000 * 3).fill(1), 3);
     treeMesh.count = 0; planet.add(treeMesh);
@@ -96,13 +86,12 @@ const VIEW = (() => {
   function setStyle(style) {
     st.style = style;
     const vox = style === 'voxel';
-    landB.visible = waterB.visible = coreB.visible = !vox; landV.visible = waterV.visible = vox;
     treeMesh.geometry.dispose(); treeMesh.geometry = treeGeom(style);
   }
 
   // 大きさ・強調を変えたら陸と木を作りなおす
   function rebuildLand() {
-    const ex = st.ex, p = M.pos, rb = beadR(), lm = landB.instanceMatrix.array, lc = landB.instanceColor.array;
+    const ex = st.ex, p = M.pos, vox = st.style === 'voxel', rBase = 1 - ex * 12000 / PHYS.RE;
     for (let i = 0; i < M.N; i++) {
       const e = TR.elev[i];
       let c;
@@ -114,24 +103,14 @@ const VIEW = (() => {
       // ボクセル: 見た目だけ段々に（陸は 400 m ごとに切り上げ、海の底は 1000 m ごとに切り下げ。地球の大きさのときの高さで。計算はなめらかな高さ）
       const de = e >= 0 ? 400 * (1 + Math.floor(e / 400)) : 1000 * Math.floor(e / 1000);
       rFloor[i] = 1 + ex * de / PHYS.RE;
-      VOXEL.setCol(landV.geometry, M, C, i, rFloor[i], 1 - ex * 12000 / PHYS.RE);
+      if (vox) VOXEL.setCol(landV.geometry, M, C, i, rFloor[i], rBase);
       VOXEL.setColor(landV.geometry, C, i, c, e >= 0 ? mix(c, [0.36, 0.26, 0.17], 0.6) : mix(c, [0.1, 0.1, 0.12], 0.4));
-      // つぶつぶ: 上の面がボクセルの床と同じ高さになるように、球の中心を少し下げる
-      bead(lm, i, rFloor[i] - rb * 0.55, rb); lc[i * 3] = c[0]; lc[i * 3 + 1] = c[1]; lc[i * 3 + 2] = c[2];
     }
-    landB.instanceMatrix.needsUpdate = true; landB.instanceColor.needsUpdate = true;
-    coreB.scale.setScalar(1 - ex * 6000 / PHYS.RE);
+    // なめらかボクセル: 角の高さを、角で出会う3マスの床の平均に（段々の間が坂でつながる）。陰影のため上の面の法線も坂に合わせる
+    if (vox) VOXEL.resetNormals(landV.geometry, M, C);
+    else { for (let i = 0; i < M.N; i++) VOXEL.setColSmooth(landV.geometry, M, C, i, rFloor, rBase); VOXEL.topNormals(landV.geometry, M, C); }
     const lv = landV.geometry.attributes; lv.position.needsUpdate = true; lv.color.needsUpdate = true;
     placeTrees();
-  }
-  // つぶの半径（となりのつぶと少し重なる大きさ）と、i 番目のつぶの行列（回転なし: 拡大と位置だけ）
-  function beadR() { return M.Lavg * 0.62; }
-  function bead(arr, i, rc, sc) {
-    const o = i * 16;
-    arr[o] = sc; arr[o + 1] = 0; arr[o + 2] = 0; arr[o + 3] = 0;
-    arr[o + 4] = 0; arr[o + 5] = sc; arr[o + 6] = 0; arr[o + 7] = 0;
-    arr[o + 8] = 0; arr[o + 9] = 0; arr[o + 10] = sc; arr[o + 11] = 0;
-    arr[o + 12] = M.pos[i * 3] * rc; arr[o + 13] = M.pos[i * 3 + 1] * rc; arr[o + 14] = M.pos[i * 3 + 2] * rc; arr[o + 15] = 1;
   }
   function mix(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
 
@@ -207,25 +186,20 @@ const VIEW = (() => {
       else c = mix(c, [0.0, 0.04, 0.16], Math.min(0.85, -a * 1.8));
       wCol[i * 3] = c[0]; wCol[i * 3 + 1] = c[1]; wCol[i * 3 + 2] = c[2];
     }
-    if (vox) writeVoxelWater();
-    else {
-      const rb = beadR(), wm = waterB.instanceMatrix.array, wc = waterB.instanceColor.array;
-      for (let i = 0; i < M.N; i++) {
-        // 水のつぶ: 上の端が水面に来るように。乾いたマスは大きさ 0
-        if (wWet[i] && rTop[i] > rFloor[i]) bead(wm, i, rTop[i] - rb * 0.6, rb); else bead(wm, i, 1, 0);
-      }
-      wc.set(wCol);
-      waterB.instanceMatrix.needsUpdate = true; waterB.instanceColor.needsUpdate = true;
-    }
+    writeWater(vox);
   }
-  // ボクセルの水の柱（見えていないときも、タップの当たりを取る前に作る）
-  function writeVoxelWater() {
+  // 水の柱: 床（段々の地面）から水面まで。乾いたマスは床の少し下へ隠す（高さ 0 の柱の上の面が床と重なって見えないように）
+  // なめらかボクセルでは、角の高さをとなりの水面との平均にして、水面をなめらかにつなぐ
+  function writeWater(vox) {
+    for (let i = 0; i < M.N; i++) wVal[i] = wWet[i] ? rTop[i] : rFloor[i] - 1e-4;
     for (let i = 0; i < M.N; i++) {
-      // 床（段々の地面）から水面まで。乾いたマスは床の少し下へ隠す（高さ 0 の柱の上の面が床と重なって見えないように）
-      const top = wWet[i] ? rTop[i] : rFloor[i] - 1e-4;
-      VOXEL.setCol(waterV.geometry, M, C, i, top, wWet[i] ? rFloor[i] : top);
+      if (vox) VOXEL.setCol(waterV.geometry, M, C, i, wVal[i], wWet[i] ? rFloor[i] : wVal[i]);
+      else VOXEL.setColSmooth(waterV.geometry, M, C, i, wVal, rFloor[i] - 1e-4);
       VOXEL.setColorRGB(waterV.geometry, C, i, wCol[i * 3], wCol[i * 3 + 1], wCol[i * 3 + 2], 0.85);
     }
+    if (!vox) VOXEL.topNormals(waterV.geometry, M, C);
+    else if (waterV.userData.smooth) VOXEL.resetNormals(waterV.geometry, M, C);
+    waterV.userData.smooth = !vox;
     const wv = waterV.geometry.attributes; wv.position.needsUpdate = true; wv.color.needsUpdate = true;
   }
 
@@ -281,8 +255,6 @@ const VIEW = (() => {
   function pick(e) {
     const r = cv.getBoundingClientRect();
     ray.setFromCamera({ x: (e.clientX - r.left) / r.width * 2 - 1, y: -(e.clientY - r.top) / r.height * 2 + 1 }, camera);
-    // 当たりはいつもボクセルの柱で取る（見えていなくても three.js の Raycaster は当たる）
-    if (st.style !== 'voxel') { writeVoxelWater(); waterV.updateMatrixWorld(); landV.updateMatrixWorld(); }
     const hit = ray.intersectObjects([waterV, landV])[0];
     if (!hit) return -1;
     tmp.copy(hit.point).applyQuaternion(planet.quaternion.clone().invert()).normalize();
