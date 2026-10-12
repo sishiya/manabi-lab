@@ -6,7 +6,7 @@ const PHY = {
   m: 0.145,                         // ボールの重さ kg（5.125 オンス。規則 5〜5¼）
   r: 0.0369,                        // 半径 m（周り 9.125 インチ ÷ 2π）
   g: 9.80665,
-  rho: 1.20,                        // 空気の密度 kg/m³（20 ℃・海面くらい）
+  rho: 1.20,                        // 風洞（ナックルの係数）とふつうの空気の密度 kg/m³（20 ℃・海面くらい）
   plateY: 17 / 12 * 0.3048,         // ホームベースの前の端（y = 17 インチ）
   rubberY: 60.5 * 0.3048,           // 投手板（18.44 m）
   dt: 0.001,
@@ -19,6 +19,18 @@ const PHY = {
 PHY.A = Math.PI * PHY.r * PHY.r;
 // 65 mph で ½ρA C v² = 0.5 mg となる C（風洞の空気の密度は論文に書かれていないので 1.20 とした）
 PHY.ck0 = 0.5 * PHY.m * PHY.g / (0.5 * PHY.rho * PHY.A * PHY.knuckleRefV * PHY.knuckleRefV);
+
+// 空気の密度（Nathan の軌道計算機と同じ式。pybbda の parameters.py で確認）
+// tC 気温 ℃、elev 標高 m、pHpa 海面に直した気圧 hPa（天気予報の気圧）、rh 湿度 %
+// ρ = 1.2929 × 273/(T+273) × (P·e^(−βh) − 0.3783 × RH × SVP / 100) / 760（P・SVP は mmHg、β = 1.217×10⁻⁴ /m）
+function airDensity(tC, elev, pHpa, rh) {
+  const pmm = pHpa * 0.750062;
+  const svp = 4.5841 * Math.exp((18.687 - tC / 234.5) * tC / (257.14 + tC));   // 飽和水蒸気圧 mmHg
+  return 1.2929 * (273 / (tC + 273)) * (pmm * Math.exp(-1.217e-4 * elev) - 0.3783 * rh * svp * 0.01) / 760;
+}
+// 空気と風。wind は地面に対する風の速度（m/s、x・y・z）
+const STD_ENV = { rho: airDensity(20, 0, 1013.25, 50), wind: [0, 0, 0] };
+PHY.env = { rho: STD_ENV.rho, wind: [0, 0, 0] };
 
 const KMH = 1 / 3.6, MPH = 0.44704;
 const RPM = 2 * Math.PI / 60;
@@ -41,7 +53,7 @@ const clOf = S => S <= 0 ? 0 : PHY.cl2 * S / (PHY.cl0 + PHY.cl1 * S);
 // P: { v0 km/h, vAng 上下の角度°（＋上）, hAng 左右の角度°（＋捕手から見て右）, x0, z0, ext（投手板から前へ m）,
 //      rpm, dir 回転の向き（捕手から見た「手前の面が動く向き」の時計の角度°。0=12時、90=3時）, eff 使える回転の割合 0〜1,
 //      knuckle 縫い目の力を入れるか, seam0 縫い目の向き θ0°, axisDeg ナックルの回転軸（捕手から見た時計の角度°） }
-function launch(P) {
+function launch(P, env = PHY.env) {
   const v0 = P.v0 * KMH;
   const va = P.vAng * Math.PI / 180, ha = P.hAng * Math.PI / 180;
   const vel = [v0 * Math.cos(va) * Math.sin(ha), -v0 * Math.cos(va) * Math.cos(ha), v0 * Math.sin(va)];
@@ -62,14 +74,16 @@ function launch(P) {
     const wG = V.mul(vh, w * Math.sqrt(1 - eff * eff));         // ジャイロ回転（進む向きと同じ向き）
     omega = V.add(wT, wG);
   }
-  return { pos, vel, omega, rpm: P.rpm, knuckle: !!P.knuckle, seam0: (P.seam0 || 0) * Math.PI / 180 };
+  return { pos, vel, omega, rpm: P.rpm, knuckle: !!P.knuckle, seam0: (P.seam0 || 0) * Math.PI / 180, rho: env.rho, wind: env.wind.slice() };
 }
 
 // 力（N）を部分ごとに。opt: { air, magnus, seam } で入れる力を選ぶ（比べる道すじ用）
 function forces(st, t, vel, opt) {
   const m = PHY.m, out = { grav: [0, 0, -m * PHY.g], drag: [0, 0, 0], magnus: [0, 0, 0], seam: [0, 0, 0], S: 0, cd: 0, cl: 0, ck: 0, theta: 0 };
   if (!opt.air) return out;
-  const v = V.len(vel), vh = V.mul(vel, 1 / v), q = 0.5 * PHY.rho * PHY.A * v * v;
+  // 空気の力は、空気に対する速さ（ボールの速度 − 風）で決まる
+  const vr = V.sub(vel, st.wind || [0, 0, 0]);
+  const v = V.len(vr), vh = V.mul(vr, 1 / v), q = 0.5 * (st.rho || PHY.rho) * PHY.A * v * v;
   out.cd = cdOf(st.rpm);
   out.drag = V.mul(vh, -q * out.cd);
   const wPar = V.dot(st.omega, vh), wPerp = V.sub(st.omega, V.mul(vh, wPar)), wT = V.len(wPerp);
@@ -95,8 +109,8 @@ function accel(st, t, vel, opt) {
 }
 
 // RK4 でホームベースの前の端まで。返す: { pts: [{t, p, v}], tPlate, pPlate, vPlate }
-function simulate(P, opt = { air: true, magnus: true, seam: true }) {
-  const st = launch(P);
+function simulate(P, opt = { air: true, magnus: true, seam: true }, env = PHY.env) {
+  const st = launch(P, env);
   let p = st.pos.slice(), v = st.vel.slice(), t = 0;
   const dt = PHY.dt, pts = [{ t, p: p.slice(), v: v.slice() }];
   for (let i = 0; i < 4000; i++) {
@@ -146,4 +160,4 @@ function movement(full, plain) {
   return { dx: full.pPlate[0] - plain.pPlate[0], dz: full.pPlate[2] - plain.pPlate[2] };
 }
 
-if (typeof module !== 'undefined') module.exports = { PHY, V, KMH, MPH, RPM, cdOf, clOf, launch, forces, simulate, sampleAt, aim, movement };
+if (typeof module !== 'undefined') module.exports = { airDensity, STD_ENV, PHY, V, KMH, MPH, RPM, cdOf, clOf, launch, forces, simulate, sampleAt, aim, movement };

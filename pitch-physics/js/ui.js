@@ -34,13 +34,9 @@ function buildControls() {
   hand.innerHTML = '投げる手 <button data-h="R">右投げ</button><button data-h="L">左投げ</button>';
   hand.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { setHand(b.dataset.h); if (S.cam === 'pitcher') setCam('pitcher'); syncAll(); }));
   box.appendChild(hand);
-  const chips = document.createElement('div'); chips.className = 'chips';
-  for (const p of PITCHES) {
-    const b = document.createElement('button'); b.textContent = p.name; b.dataset.id = p.id; b.title = p.note;
-    b.addEventListener('click', () => { setPitch(p.id); S.playing = false; syncAll(); });
-    chips.appendChild(b);
-  }
-  box.appendChild(chips);
+  buildPitcherBar(box);
+  const chips = document.createElement('div'); chips.className = 'chips'; chips.id = 'chips';
+  box.appendChild(chips); rebuildChips();
   const note = document.createElement('p'); note.id = 'pnote'; box.appendChild(note);
 
   const g1 = document.createElement('div'); g1.className = 'grp'; box.appendChild(g1);
@@ -59,10 +55,24 @@ function buildControls() {
   many.addEventListener('click', () => { throwMany(); S.t = 0; S.playing = true; syncAll(); });
   g2.appendChild(many);
 
+  buildEnvGroup(box);
   const g3 = document.createElement('div'); g3.className = 'grp'; box.appendChild(g3);
   check(g3, 'noAir', '<i class="sw noair"></i>空気がないとき', () => S.show.noAir, v => S.show.noAir = v);
   check(g3, 'plain', '<i class="sw plain"></i>回転の力なし（重力と抵抗だけ）', () => S.show.plain, v => S.show.plain = v);
+  check(g3, 'std', '<i class="sw std"></i>ふつうの空気（20 ℃・海面・無風）で放したとき', () => S.show.std !== false, v => S.show.std = v);
   check(g3, 'forces', '力の矢印', () => S.show.forces, v => S.show.forces = v);
+}
+// 球種のボタン（いまの投手の球種だけ）
+let chipsFor = null;
+function rebuildChips() {
+  const box = $('chips'); if (!box || chipsFor === S.pitcher) return;
+  chipsFor = S.pitcher; box.innerHTML = '';
+  for (const p of arsenal(S.pitcher)) {
+    const b = document.createElement('button'); b.dataset.id = p.id; b.title = p.note;
+    b.innerHTML = '<i class="dot" style="background:' + PCOL[p.id] + '"></i>' + p.name;
+    b.addEventListener('click', () => { setPitch(p.id); S.playing = false; syncAll(); });
+    box.appendChild(b);
+  }
 }
 
 function onChange(viewOnly) {
@@ -83,23 +93,29 @@ function syncAll() {
   document.querySelectorAll('#vtabs button').forEach(b => b.classList.toggle('on', b.dataset.v === S.view));
   document.querySelectorAll('#cams button').forEach(b => b.classList.toggle('on', b.dataset.c === S.cam));
   $('views').classList.toggle('v3d', S.view === '3d');
+  rebuildChips(); syncC();
   document.querySelectorAll('.chips button').forEach(b => b.classList.toggle('on', b.dataset.id === S.pitch));
-  const p = PITCHES.find(q => q.id === S.pitch); $('pnote').textContent = p ? p.note : '';
-  const T = $('time'); T.max = S.res.tPlate; T.value = S.t;
+  const p = arsenal(S.pitcher).find(q => q.id === S.pitch); $('pnote').textContent = p ? p.note : '';
+  const T = $('time'); T.max = tEnd(); T.value = S.t;
   updateNums();
 }
 
 function updateNums() {
   const r = S.res, s = sampleAt(r, S.t), F = forces(r.st, s.t, s.v, r.opt), W = PHY.m * PHY.g;
   const Fn = k => V.len(F[k]);
-  $('tlab').textContent = fmt(S.t, 3) + ' 秒 / ' + fmt(r.tPlate, 3);
+  $('tlab').textContent = fmt(S.t, 3) + ' 秒 / ' + fmt(tEnd(), 3);
   const mv = S.mv, up = mv.dz / 0.01, rt = mv.dx / 0.01;
   const rows = [
     ['ホームまで', fmt(r.tPlate, 3) + ' 秒'],
     ['速さ', fmt(V.len(r.st.vel) * 3.6, 0) + ' → ' + fmt(V.len(r.vPlate) * 3.6, 0) + ' km/h'],
     ['変化量', (up >= 0 ? '上へ ' : '下へ ') + fmt(Math.abs(up), 0) + ' cm・' + (rt >= 0 ? '右へ ' : '左へ ') + fmt(Math.abs(rt), 0) + ' cm' + (Math.abs(rt) >= 1 ? '（' + (Math.sign(rt) === armSign() ? '腕の側' : 'グラブの側') + '）' : ''), 'plain'],
     ['空気なしより', (r.pPlate[2] >= S.ghostNoAir.pPlate[2] ? '上に ' : '下に ') + fmt(Math.abs(r.pPlate[2] - S.ghostNoAir.pPlate[2]) / 0.01, 0) + ' cm', 'noAir'],
+    ['空気', 'ρ = ' + fmt(r.st.rho, 3) + ' kg/m³（ふつうの ' + fmt(r.st.rho / STD_ENV.rho * 100, 0) + '%）・' + windName(S.env.ws, S.env.wd), 'air'],
   ];
+  if (S.ghostStd) {
+    const dz = (r.pPlate[2] - S.ghostStd.pPlate[2]) / 0.01, dx = (r.pPlate[0] - S.ghostStd.pPlate[0]) / 0.01;
+    rows.push(['ふつうの空気より', (dz >= 0 ? '上に ' : '下に ') + fmt(Math.abs(dz), 0) + ' cm・' + (dx >= 0 ? '右に ' : '左に ') + fmt(Math.abs(dx), 0) + ' cm', 'std']);
+  }
   const frows = [
     ['grav', '重力', Fn('grav')], ['drag', '空気の抵抗', Fn('drag')], ['magnus', 'マグヌス力', Fn('magnus')],
   ];
@@ -135,7 +151,7 @@ function buildTime() {
   T.step = 0.001;
   T.addEventListener('input', () => { S.t = Number(T.value); S.playing = false; $('play').textContent = '▶'; updateNums(); });
   $('play').addEventListener('click', () => {
-    if (!S.playing && S.t >= S.res.tPlate - 1e-6) S.t = 0;
+    if (!S.playing && S.t >= tEnd() - 1e-6) S.t = 0;
     S.playing = !S.playing; $('play').textContent = S.playing ? '❚❚' : '▶';
   });
   $('speed').addEventListener('change', e => { S.speed = Number(e.target.value); });
@@ -145,6 +161,8 @@ function buildTime() {
 function setTour(i) {
   S.tour = Math.max(0, Math.min(TOUR.length - 1, i));
   S.playing = false; $('play').textContent = '▶';
+  // 案内の段は、平均的な右投げの投手・ふつうの空気・重ねないところから始める
+  S.pitcher = 'std'; S.hand = 'R'; S.overlay = false; S.env = { tC: 20, elev: 0, p: 1013, rh: 50, ws: 0, wd: 0 }; S.envId = 'std'; applyEnv();
   TOUR[S.tour].go();
   $('tourNum').textContent = (S.tour + 1) + ' / ' + TOUR.length;
   $('tourText').innerHTML = TOUR[S.tour].text;

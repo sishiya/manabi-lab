@@ -18,7 +18,8 @@ function flowRnd() { FLOW.seed = (FLOW.seed * 16807) % 2147483647; return FLOW.s
 // いまの時刻の断面の向きと、模式図の数（はく離のずれ・伴流の曲がり・循環）
 function flowState() {
   const r = S.res, s = sampleAt(r, S.t), F = forces(r.st, s.t, s.v, r.opt);
-  const vh = V.norm(s.v), q = 0.5 * PHY.rho * PHY.A * V.dot(s.v, s.v);
+  const vr = V.sub(s.v, r.st.wind || [0, 0, 0]);   // 空気に対する速さ（風があるとき）
+  const vh = V.norm(vr), q = 0.5 * (r.st.rho || PHY.rho) * PHY.A * V.dot(vr, vr);
   let lat = V.add(F.magnus, F.seam);
   lat = V.sub(lat, V.mul(vh, V.dot(lat, vh)));
   const latN = V.len(lat), c = latN / q;                 // 横向きの力の係数（C_L と C_K をあわせたもの）
@@ -30,7 +31,7 @@ function flowState() {
   // 断面の中の回転: 上の面が下流（図の右）へ動くなら時計まわり
   const wv = r.st.omega, top = V.cross(wv, n), spinDown = -V.dot(top, vh);   // 上の面の速さの「下流向き」成分（m/s ÷ r）
   const surf = spinDown * PHY.r;                         // 上の面の速さ m/s（下流向きが＋）
-  const U = V.len(s.v);
+  const U = V.len(vr);
   const gam = Math.max(-0.6, Math.min(0.6, surf / U)) * (latN > 1e-6 && F.cl > 0 ? 1 : 0);
   const st = { s, F, vh, n, m, c, shift, gam, U, surf, wPerpRpm: Math.abs(V.dot(wv, m)) / RPM, gyroRpm: Math.abs(V.dot(wv, vh)) / RPM };
   st.wg = wakeGeom(st);
@@ -134,7 +135,7 @@ function drawFlow(g, w, h, now) {
   for (const p of [pT, pB]) { g.beginPath(); g.arc(X(p[0]), Y(p[1]), 4, 0, 7); g.fill(); }
   label(g, 'はがれる所', X(pT[0]) + 8, Y(pT[1]) - 8, '#ffd166', 'left');
   // 力と、伴流が押しやられる向き
-  const Fl = st.c * 0.5 * PHY.rho * PHY.A * st.U * st.U;
+  const Fl = st.c * 0.5 * (S.res.st.rho || PHY.rho) * PHY.A * st.U * st.U;
   if (Fl > 0.03) {
     const col = V.len(st.F.seam) > V.len(st.F.magnus) ? COL.seam : COL.magnus;
     arrow(g, X(0), Y(0), 0, -Math.min(sc * 2.2, Fl * sc * 1.6), col, 3);

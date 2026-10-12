@@ -15,7 +15,8 @@
       <canvas id="gl"></canvas><canvas id="cv"></canvas>
       <div id="vtabs"><button data-v="3d">3D</button><button data-v="2d">横・上・捕手の図</button></div>
       <div id="cams"></div>
-      <div id="legend"><span><i class="sw path"></i>計算した道すじ</span><span><i class="sw plain"></i>回転の力なし</span><span><i class="sw noair"></i>空気なし</span><span><i class="sw grav"></i>重力</span><span><i class="sw drag"></i>抵抗</span><span><i class="sw magnus"></i>マグヌス力</span><span><i class="sw seam"></i>縫い目の力</span></div>
+      <div id="legend"><span><i class="sw path"></i>計算した道すじ</span><span><i class="sw plain"></i>回転の力なし</span><span><i class="sw noair"></i>空気なし</span><span><i class="sw std"></i>ふつうの空気</span><span><i class="sw grav"></i>重力</span><span><i class="sw drag"></i>抵抗</span><span><i class="sw magnus"></i>マグヌス力</span><span><i class="sw seam"></i>縫い目の力</span></div>
+      <div id="windBadge"></div>
       <div id="hint3d">ドラッグで回す・ホイールで寄る（背景の球場はぼかしています）</div>
     </div>
     <aside id="aside">
@@ -42,8 +43,12 @@
     <h3>空気の流れの断面（模式図）</h3>
     <p>ボールといっしょに動いて見た空気の流れを、ボールの中心を通り「進む向き」と「横向きの力の向き」をふくむ面で切って描いています。空気がボールの面から<b>はがれる位置</b>が、力の側ほど後ろへずれ、後ろの流れ（伴流）が反対の側へ曲がります。空気を押しやった反作用が、ボールを押す力です（はく離が遅れる側へ力がかかることは、Watts &amp; Sawyer 1975・Nathan 2012 の説明のとおり）。</p>
     <p>ただし、この図は<b>流れを計算したものではありません</b>。前側の流線は円柱のまわりの流れの式（回転があれば渦を足したもの）、はがれる位置のずれと伴流の曲がりは、計算した横向きの力の大きさに合わせた<b>目安</b>です。赤い点は、いまの時刻に縫い目がこの断面を横切る場所です。粒の動きは、見やすいように本物よりずっと遅くしています。</p>
+    <h3>空気と風</h3>
+    <p>空気の密度は、気温・標高・気圧・湿度から Nathan の軌道計算機と同じ式で計算しています（ρ = 1.2929 × 273/(T+273) × (P·e<sup>−βh</sup> − 0.3783 × 湿度 × 飽和水蒸気圧) / 760、気圧は mmHg、β = 1.217×10⁻⁴ /m）。空気の抵抗・マグヌス力・縫い目の力はどれも密度に比例するので、標高 1600 m では 18% ほど小さくなります。風があるときは、力を<b>空気に対する速さ</b>（ボールの速度 − 風の速度）で計算しています。風は地面からの高さによらず、同じ強さ・向きとしています。</p>
+    <h3>投手の例</h3>
+    <p>「平均的な投手」の球種の値は MLB の平均的な値の目安です。ほかの投手（本格派・フォーク・サイドスロー・アンダースロー・技巧派の左腕・ナックルボーラー）は、よくある投げ方を表した<b>架空の例</b>で、実在の投手ではなく、測られた値でもありません。放す高さ・位置と、球種ごとの速さ・回転は目安です。</p>
     <h3>3D の図</h3>
-    <p>道すじ・ボール・ストライクゾーン・マウンド・ホームは計算と寸法どおりの位置に描いています（道すじの管の太さは、遠くからでも見えるように太くしています）。背景の野球場は、実在の球場ではない絵で、ピントが合っていないようにぼかしています。左投げは、右投げを捕手から見て左右に鏡うつしにしたものです。</p>
+    <p>道すじ・ボール・ストライクゾーン・マウンド・ホームは計算と寸法どおりの位置に描いています（道すじの管の太さは、遠くからでも見えるように太くしています）。背景の野球場は、実在の球場ではない絵で、ピントが合っていないようにぼかしています。ボールの縫い目は、108 の V 字の縫い目を、テニスボールの曲線で近似した縫い目の線にそって並べた絵です（形は目安）。左投げは、右投げを捕手から見て左右に鏡うつしにしたものです。</p>
     <h3>簡単にしているところ</h3>
     <ul>
       <li>ボールは点として動かしています。C<sub>D</sub>・C<sub>L</sub> は多くのボールの平均で、1球ごとの差や、縫い目の向きによる差（ナックルを除く）は入れていません。回転の多い球でも縫い目で伴流がずれる力（Seam-Shifted Wake。シンカーやスイーパーで知られる）はまだ入れていません。</li>
@@ -72,9 +77,11 @@
 <script src="../lib/three@0.128.0/build/three.min.js"></script>
 <script src="js/physics.js"></script>
 <script src="js/scene.js"></script>
+<script src="js/pitchers.js"></script>
 <script src="js/draw.js"></script>
 <script src="js/flow.js"></script>
 <script src="js/stadium.js"></script>
 <script src="js/view3d.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/ui-env.js"></script>
 <script src="js/main.js"></script>

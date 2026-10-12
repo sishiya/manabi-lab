@@ -4,7 +4,7 @@
 
 const V3 = {
   ok: false, renderer: null, cam: null, fg: null, bg: null, blur: null,
-  paths: null, ball: null, seam: null, halo: null, arrows: {}, built: null,
+  paths: null, ball: null, halo: null, arrows: {}, built: null, multi: [], std: null,
   orbit: { yaw: 0, pitch: 0, dist: 1 }, target: new THREE.Vector3(),
 };
 
@@ -51,13 +51,12 @@ function init3d(canvas) {
   fg.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(zp), new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.7 })));
   const zf = new THREE.Mesh(new THREE.PlaneGeometry(ZONE.x * 2, ZONE.zHi - ZONE.zLo), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.06, side: THREE.DoubleSide, depthWrite: false }));
   zf.position.set(0, (ZONE.zHi + ZONE.zLo) / 2, -PHY.plateY); fg.add(zf);
-  // ボール・縫い目・見つけやすくする輪
-  V3.ball = new THREE.Mesh(new THREE.SphereGeometry(PHY.r, 24, 16), new THREE.MeshLambertMaterial({ color: '#f2f0e6' })); fg.add(V3.ball);
-  const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(SEAM.length * 3), 3));
-  V3.seam = new THREE.Line(sg, new THREE.LineBasicMaterial({ color: '#d8473f' })); fg.add(V3.seam);
+  // ボール（縫い目つき）・見つけやすくする輪
+  V3.ball = makeBall('#f2f0e6', true); fg.add(V3.ball);
   const rc = document.createElement('canvas'); rc.width = rc.height = 64; const rg = rc.getContext('2d');
-  rg.strokeStyle = 'rgba(255,209,102,.95)'; rg.lineWidth = 4; rg.beginPath(); rg.arc(32, 32, 26, 0, 7); rg.stroke();
-  V3.halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(rc), depthTest: false, sizeAttenuation: false, transparent: true }));
+  rg.strokeStyle = '#ffffff'; rg.lineWidth = 4; rg.beginPath(); rg.arc(32, 32, 26, 0, 7); rg.stroke();
+  V3.ringTex = new THREE.CanvasTexture(rc);
+  V3.halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: V3.ringTex, color: '#ffd166', depthTest: false, sizeAttenuation: false, transparent: true }));
   V3.halo.scale.set(0.028, 0.028, 1); V3.halo.renderOrder = 5; fg.add(V3.halo);
   for (const k of ['grav', 'drag', 'magnus', 'seam']) {
     const a = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(), 1, new THREE.Color(COL[k]).getHex());
@@ -68,6 +67,54 @@ function init3d(canvas) {
   setCam(S.cam);
   bind3dPointer(canvas);
   return true;
+}
+
+// ボールの形（体の座標で作り、毎コマ quaternion で回す）。縫い目は 108 の V 字の縫い目と、革の合わせ目の線
+// 体の座標: 縫い目の曲線 SEAM の (a, b, c) を three の (a, c, −b) に置く（T3 と同じ並べかえ）。曲線の c 軸 = three の Y
+let SEAM_BODY = null;
+function seamBody() {
+  if (SEAM_BODY) return SEAM_BODY;
+  const a = 0.75, b = 0.25, c = 2 * Math.sqrt(a * b), n = 1440, pts = [], cum = [0];
+  for (let i = 0; i <= n; i++) { const t = i / n * Math.PI * 2; pts.push(new THREE.Vector3(a * Math.cos(t) + b * Math.cos(3 * t), c * Math.sin(2 * t), -(a * Math.sin(t) - b * Math.sin(3 * t))).normalize()); if (i) cum.push(cum[i - 1] + pts[i].distanceTo(pts[i - 1])); }
+  SEAM_BODY = { pts, cum, len: cum[n] };
+  return SEAM_BODY;
+}
+function makeBall(color, stitches) {
+  const R = PHY.r, grp = new THREE.Group();
+  grp.add(new THREE.Mesh(new THREE.SphereGeometry(R, 32, 20), new THREE.MeshLambertMaterial({ color })));
+  if (!stitches) return grp;
+  const sb = seamBody();
+  // 革の合わせ目（うすい灰色の細い管）
+  const curve = new THREE.CatmullRomCurve3(sb.pts.filter((_, i) => i % 6 === 0).map(p => p.clone().multiplyScalar(R * 1.001)), true);
+  grp.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 240, R * 0.012, 4, true), new THREE.MeshLambertMaterial({ color: '#a9a294' })));
+  // 108 の縫い目（V 字の2本ずつ）
+  const N = 108, arm = new THREE.CylinderGeometry(R * 0.017, R * 0.017, 1, 5);
+  const im = new THREE.InstancedMesh(arm, new THREE.MeshLambertMaterial({ color: '#c8322a' }), N * 2);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), sc = new THREE.Vector3();
+  let k = 0, j = 0;
+  for (let i = 0; i < N; i++) {
+    const target = (i + 0.5) / N * sb.len;
+    while (j < sb.cum.length - 2 && sb.cum[j + 1] < target) j++;
+    const p = sb.pts[j], T = sb.pts[j + 1].clone().sub(sb.pts[Math.max(0, j - 1)]).normalize(), B = p.clone().cross(T).normalize();
+    const w = 0.11, h = 0.055;   // 縫い目の半分の幅・V のかたむき（ボールの半径を 1 として）
+    for (const sgn of [1, -1]) {
+      const a0 = p.clone().addScaledVector(B, sgn * w).addScaledVector(T, -h).normalize().multiplyScalar(R * 1.01);
+      const a1 = p.clone().normalize().multiplyScalar(R * 1.012);
+      const d = a1.clone().sub(a0), L = d.length();
+      q.setFromUnitVectors(up, d.normalize());
+      m4.compose(a0.clone().add(a1).multiplyScalar(0.5), q, sc.set(1, L, 1));
+      im.setMatrixAt(k++, m4);
+    }
+  }
+  grp.add(im);
+  return grp;
+}
+// 体の座標 → いまの時刻の向き（回転軸に曲線の c 軸をそろえ、軸のまわりに ang 回す。draw.js の baseSeam・rotAxis と同じ）
+const _qa = new THREE.Quaternion(), _qs = new THREE.Quaternion(), _y = new THREE.Vector3(0, 1, 0);
+function orientBall(obj, axis, ang) {
+  const ax = T3(axis).normalize();
+  _qa.setFromUnitVectors(_y, ax); _qs.setFromAxisAngle(ax, ang);
+  obj.quaternion.copy(_qs).multiply(_qa);
 }
 
 // 道すじの管（全体はうすく、放してからいまの時刻まではこく）
@@ -104,6 +151,16 @@ function rebuild3d() {
   grp.add(V3.prog = makeTube(S.res, tr, '#ffd166', 1));
   V3.noAir = makeTube(S.ghostNoAir, tr * 0.6, '#a0bed2', 0.55); grp.add(V3.noAir);
   V3.plain = makeTube(S.ghostPlain, tr * 0.6, '#f0f0e6', 0.6); grp.add(V3.plain);
+  V3.std = S.ghostStd ? makeTube(S.ghostStd, tr * 0.6, '#7fd4ff', 0.6) : null; if (V3.std) grp.add(V3.std);
+  // 重ねた球種: 管と、ボール・色の輪
+  V3.multi = [];
+  if (S.multi) for (const m of S.multi) {
+    const full = makeTube(m.res, tr * 0.5, m.col, 0.35), prog = makeTube(m.res, tr * 0.9, m.col, 1);
+    const ball = makeBall('#f2f0e6', true);
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: V3.ringTex, color: m.col, depthTest: false, sizeAttenuation: false, transparent: true }));
+    halo.scale.set(0.022, 0.022, 1); halo.renderOrder = 5;
+    grp.add(full, prog, ball, halo); V3.multi.push({ m, prog, ball, halo });
+  }
   V3.many = [];
   if (S.many) for (const r of S.many) { const m = makeTube(r, tr * 0.7, '#ffd166', 0.75); V3.many.push([m, r]); grp.add(m); }
   // ホームを通った点の印（比べる道すじ）
@@ -177,11 +234,16 @@ function draw3d() {
   if (V3.built !== S.res || V3.builtMany !== S.many || Math.abs(want / (V3.tubeR || 1) - 1) > 0.35) { rebuild3d(); V3.builtMany = S.many; }
   const s = sampleAt(S.res, S.t), bp = T3(s.p);
   V3.ball.position.copy(bp); V3.halo.position.copy(bp);
-  // 縫い目（いまの時刻の向き）
+  // 縫い目の向き（いまの時刻）
   const st = S.res.st, wv = V.len(st.omega), axis = wv > 1e-9 ? V.mul(st.omega, 1 / wv) : [0, 0, 1];
-  const ang = (st.knuckle ? st.seam0 : 0) + wv * s.t, arr = V3.seam.geometry.attributes.position.array, base = baseSeam(axis);
-  for (let i = 0; i < base.length; i++) { const p = rotAxis(base[i], axis, ang), r = PHY.r * 1.02; arr[i * 3] = bp.x + p[0] * r; arr[i * 3 + 1] = bp.y + p[2] * r; arr[i * 3 + 2] = bp.z - p[1] * r; }
-  V3.seam.geometry.attributes.position.needsUpdate = true;
+  orientBall(V3.ball, axis, (st.knuckle ? st.seam0 : 0) + wv * s.t);
+  for (const o of V3.multi) {
+    const r = o.m.res, s2 = sampleAt(r, S.t), p2 = T3(s2.p), w2 = V.len(r.st.omega), ax2 = w2 > 1e-9 ? V.mul(r.st.omega, 1 / w2) : [0, 0, 1];
+    o.ball.position.copy(p2); o.halo.position.copy(p2);
+    orientBall(o.ball, ax2, (r.st.knuckle ? r.st.seam0 : 0) + w2 * s2.t);
+    showUpTo(o.prog, r, S.t);
+  }
+  if (V3.std) V3.std.visible = S.show.std !== false;
   // 管
   showUpTo(V3.prog, S.res, S.t);
   V3.noAir.visible = V3.noAirEnd.visible = S.show.noAir;

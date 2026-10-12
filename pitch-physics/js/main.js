@@ -18,7 +18,7 @@ function resize() { fit(cv, g); fit(bc, gb); fit(fc, gf); layout(cv.clientWidth,
 function step(dt) {
   if (!S.playing) return;
   S.t += dt * S.speed;
-  if (S.t >= S.res.tPlate) { S.t = S.res.tPlate; S.playing = false; document.getElementById('play').textContent = '▶'; }
+  if (S.t >= tEnd()) { S.t = tEnd(); S.playing = false; document.getElementById('play').textContent = '▶'; }
   document.getElementById('time').value = S.t;
   updateNums();
 }

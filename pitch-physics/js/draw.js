@@ -4,6 +4,7 @@
 const COL = {
   path: '#ffd166', noAir: 'rgba(160,190,210,.55)', plain: 'rgba(240,240,230,.75)', many: 'rgba(255,209,102,.6)',
   grav: '#7fb8ff', drag: '#c8a2ff', magnus: '#ff6b5a', seam: '#5ce0a0',
+  std: '#7fd4ff',
   grid: 'rgba(255,255,255,.08)', text: '#a3b4bf', zone: 'rgba(255,255,255,.45)', ground: '#2a3f2f',
 };
 const ARROW_PX_PER_N = 26;
@@ -104,7 +105,9 @@ function drawSideTop(g, which) {
   const map = side ? p => [b.X(p[1]), b.Y(p[2])] : p => [b.X(p[1]), b.Y(p[0])];
   if (S.show.noAir) polyline(g, S.ghostNoAir, map, COL.noAir, 2, [2, 4]);
   if (S.show.plain) polyline(g, S.ghostPlain, map, COL.plain, 2, [7, 5]);
+  if (S.ghostStd && S.show.std !== false) polyline(g, S.ghostStd, map, COL.std, 2, [4, 3]);
   if (S.many) for (const r of S.many) polyline(g, r, map, COL.many, 1.5, null, S.t);
+  drawMulti2d(g, map, 4);
   polyline(g, S.res, map, COL.path, 1, [1, 3]);
   polyline(g, S.res, map, COL.path, 3, null, S.t);
   for (const r of [S.res]) {
@@ -150,6 +153,8 @@ function drawCatcher(g) {
   const map = p => P(p);
   if (S.show.noAir) polyline(g, S.ghostNoAir, map, COL.noAir, 1.5, [2, 4]);
   if (S.show.plain) polyline(g, S.ghostPlain, map, COL.plain, 1.5, [7, 5]);
+  if (S.ghostStd && S.show.std !== false) { polyline(g, S.ghostStd, map, COL.std, 1.5, [4, 3]); }
+  drawMulti2d(g, map, 0, true);
   polyline(g, S.res, map, COL.path, 1, [1, 3]);
   polyline(g, S.res, map, COL.path, 2, null, S.t);
   // 比べる道すじのホームでの位置
@@ -170,6 +175,18 @@ function drawCatcher(g) {
     label(g, 'ホームを通った位置', b.x + 6, b.y + b.h - 8, COL.text);
   }
   g.restore();
+}
+
+// 重ねた球種（色つき）。いまの時刻までをこく、その先をうすく、ボールの位置に点。plate = ホームを通った位置に名前
+function drawMulti2d(g, map, r, plate) {
+  if (!S.multi) return;
+  for (const m of S.multi) {
+    g.globalAlpha = 0.35; polyline(g, m.res, map, m.col, 1.5); g.globalAlpha = 1;
+    polyline(g, m.res, map, m.col, 2.5, null, S.t);
+    const q = map(sampleAt(m.res, S.t).p);
+    if (q) { g.fillStyle = m.col; g.beginPath(); g.arc(q[0], q[1], r || Math.max(2, q[2] * PHY.r), 0, 7); g.fill(); }
+    if (plate && S.t >= m.res.tPlate - 1e-6) { const e = map(m.res.pPlate); if (e) label(g, m.name, e[0] + e[2] * PHY.r + 4, e[1] + 4, m.col); }
+  }
 }
 
 function drawViews(g, w, h) {
@@ -214,7 +231,22 @@ function drawBall(g, w, h) {
   const seam = baseSeam(axis).map(p => rotAxis(p, axis, ang));
   g.strokeStyle = '#d8473f'; g.lineWidth = Math.max(1.5, R * 0.035); g.lineCap = 'round';
   g.beginPath(); let pen = false;
+  g.strokeStyle = '#a9a294'; g.lineWidth = Math.max(1, R * 0.02);
   for (const p of seam) { if (p[1] < 0.02) { const q = P2(p); if (!pen) { g.moveTo(q[0], q[1]); pen = true; } else g.lineTo(q[0], q[1]); } else pen = false; }
+  g.stroke();
+  // 108 の V 字の縫い目（見えている側だけ）
+  g.strokeStyle = '#c8322a'; g.lineWidth = Math.max(1.2, R * 0.03);
+  g.beginPath();
+  const n = seam.length - 1;
+  for (let i = 0; i < 108; i++) {
+    const f = (i + 0.5) / 108 * n, j = Math.max(1, Math.min(n - 1, Math.round(f))), p = seam[j];
+    if (p[1] > -0.05) continue;
+    const T = V.norm(V.sub(seam[j + 1], seam[j - 1])), B = V.norm(V.cross(p, T));
+    for (const sg of [1, -1]) {
+      const a0 = V.norm(V.add(V.add(p, V.mul(B, sg * 0.11)), V.mul(T, -0.055))), q0 = P2(a0), q1 = P2(p);
+      g.moveTo(q0[0], q0[1]); g.lineTo(q1[0], q1[1]);
+    }
+  }
   g.stroke();
   hit2('ball', cx, cy, R);
   // 回転軸
