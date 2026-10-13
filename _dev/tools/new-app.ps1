@@ -239,7 +239,7 @@ function Edit-Text($p, [scriptblock]$fn, [string]$what) {
   Write-Host "足した: $p（$what）"
 }
 $h = [Security.SecurityElement]::Escape($Desc)
-$card = "    <div class=`"card`"><div class=`"pic`"><img class=`"thumb`" src=`"assets/thumbs/$Id.jpg`" alt=`"`" width=`"640`" height=`"360`" loading=`"lazy`"></div><div class=`"body`"><a class=`"open`" href=`"$Id/`">$Title</a><p>$h</p><p class=`"state`">$State</p><div class=`"foot`"><span class=`"dates`">作成 $today ・ 更新 $today</span><a class=`"ver`" href=`"$Id/launcher.html`">過去の版</a></div></div></div>"
+$card = "    <div class=`"card`"><div class=`"pic`"><span class=`"proto`">試作</span><img class=`"thumb`" src=`"assets/thumbs/$Id.jpg`" alt=`"`" width=`"640`" height=`"360`" loading=`"lazy`"></div><div class=`"body`"><a class=`"open`" href=`"$Id/`">$Title</a><p>$h</p><p class=`"state`">$State</p><div class=`"foot`"><span class=`"dates`">作成 $today ・ 更新 $today</span><a class=`"ver`" href=`"$Id/launcher.html`">過去の版</a></div></div></div>"
 Edit-Text 'archive.html' { param($s) $i = $s.IndexOf('    <div class="card">'); if ($i -lt 0) { $s } else { $s.Insert($i, $card + "`n") } } '保管庫のカード（いちばん上）'
 Edit-Text '_dev/tools/thumb.html' { param($s) $s.Replace("const SETUP = {`n", "const SETUP = {`n  // $Title（画面ができたら、いちばん映える場面にする）`n  '$Id': async w => { await wait(1500); },`n") } 'SETUP'
 Edit-Text '_dev/tools/make-thumbs.ps1' { param($s) $s -replace "('quantum'\),)", "'$Id',`$1" } '撮影の一覧'
