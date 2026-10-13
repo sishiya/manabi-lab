@@ -39,3 +39,6 @@ upload-batch.ps1 が書く。1日の区切りは太平洋時間の0時（日本�
 | 2026-10-12 18:42 | body-dive-guide | ? | 動画は上がった（CXfe6ztaSGU）が、字幕（en）を付けられませんでした: 403 The request cannot be completed because you have exceeded your <a href="/youtube/v3/getting-started#quota">quota</a>. → 上限が戻ってから youtube-upload.ps1 -Update |
 | 2026-10-13 07:50（当日） | black-hole-guide・short（QrKfvjFg1ts・yCJesqekVlI、10/13） | OK: -Verify（ショートは全部 OK、説明動画は予約 20:00・サムネイルまで OK、字幕の一覧だけ API の上限で読めず）・コマ（10秒・3秒おき）・音量 -20.8／-21.1 LUFS・公開中のアプリ（smoke ja/en OK、クリックで光の道すじ） | なし。説明動画の字幕は上限が戻る 16:00 以降に -Verify -Date 2026-10-13 で見る |
 | 2026-10-13 07:50（前日） | animal-senses-guide・short（zUkmU8Q_4B8・KK_UQhoEloo、10/14） | OK: コマ（10秒・3秒おき）・音量 -20.0／-20.1 LUFS（音をそろえた版に差しかえずみ）・公開中のアプリ（smoke ja/en OK、カラスに切りかえ、コンソールのエラーなし）。録ったあとのアプリの変更は three.js を lib/ に置いただけ。-Verify は API の上限で読めず | なし。16:00 以降に -Verify -Date 2026-10-14 |
+| 2026-10-13 16:26 | black-hole-guide（QrKfvjFg1ts） 字幕 | OK: -Verify -Date 2026-10-13（字幕 en あり・予約 10/13 20:00・サムネイル・長さ 2:36）。ショート（yCJesqekVlI）も OK | なし |
+| 2026-10-13 16:26 | animal-senses-guide（zUkmU8Q_4B8） | OK: -Verify -Date 2026-10-14（予約 10/14 20:00・字幕 en・サムネイル・長さ 2:36） | なし |
+| 2026-10-13 16:26 | animal-senses-short（KK_UQhoEloo） | OK: -Verify -Date 2026-10-14（予約 10/14 20:05・字幕 en・サムネイル・長さ 0:46） | なし |
