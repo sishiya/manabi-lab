@@ -52,7 +52,7 @@
 - `_dev/tools/README.md` — 道具（公開前チェック・smoke・健康診断・バックアップ・サムネイル・起動）。
 - `lib/README.md` — 外部ライブラリの一覧（lib/ に置いたもの・CDN のまま・ライセンス）。ライブラリを足す・版を上げるときに。
 - `_dev/RECOVERY.md` — PC が壊れたときの戻し方・Git に入っていないもの。
-- `_dev/promo/README.md` — 紹介動画の作り方・英語の字幕・YouTube。`_dev/promo/SCHEDULE.md`（公開の予定）、`_dev/TODO.md`（残りの作業）。
+- `_dev/promo/README.md` — 紹介動画の作り方・英語の字幕・YouTube。`_dev/promo/SCHEDULE.md`（公開の予定）、**`_dev/promo/DAILY.md`（公開の日に毎日やること。2026-10-15〜、その日の最初に見る）**、`_dev/TODO.md`（残りの作業）。
 
 ## かならず守ること（詳しくは RULES.md）
 - 返事は日本語で。
