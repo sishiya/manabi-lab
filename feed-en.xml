@@ -5,8 +5,16 @@
   <link href="https://sishiya.github.io/manabi-lab/?lang=en"/>
   <link rel="self" href="https://sishiya.github.io/manabi-lab/feed-en.xml"/>
   <id>https://sishiya.github.io/manabi-lab/feed-en.xml</id>
-  <updated>2026-10-12T00:00:00+09:00</updated>
+  <updated>2026-10-13T00:00:00+09:00</updated>
   <author><name>Shishiya</name></author>
+  <entry>
+    <title>Body Dive</title>
+    <link href="https://sishiya.github.io/manabi-lab/body-dive/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/body-dive/?lang=en</id>
+    <published>2026-10-03T00:00:00+09:00</published>
+    <updated>2026-10-13T00:00:00+09:00</updated>
+    <summary>Go in through the mouth, nose or anus and travel through the digestive tract and airways in 3D.</summary>
+  </entry>
   <entry>
     <title>How Pitches Break</title>
     <link href="https://sishiya.github.io/manabi-lab/pitch-physics/?lang=en"/>
@@ -46,14 +54,6 @@
     <published>2026-10-10T00:00:00+09:00</published>
     <updated>2026-10-11T00:00:00+09:00</updated>
     <summary>Two 3D hands play the falling notes. A test prototype that works out which finger presses each key from the music, and checks whether a human hand could really move that way. Compare with textbook fingering, or open MIDI and MusicXML scores.</summary>
-  </entry>
-  <entry>
-    <title>Body Dive</title>
-    <link href="https://sishiya.github.io/manabi-lab/body-dive/?lang=en"/>
-    <id>https://sishiya.github.io/manabi-lab/body-dive/?lang=en</id>
-    <published>2026-10-03T00:00:00+09:00</published>
-    <updated>2026-10-11T00:00:00+09:00</updated>
-    <summary>Go in through the mouth, nose or anus and travel through the digestive tract and airways in 3D.</summary>
   </entry>
   <entry>
     <title>What a Black Hole Looks Like</title>

@@ -5,8 +5,16 @@
   <link href="https://sishiya.github.io/manabi-lab/"/>
   <link rel="self" href="https://sishiya.github.io/manabi-lab/feed.xml"/>
   <id>https://sishiya.github.io/manabi-lab/feed.xml</id>
-  <updated>2026-10-12T00:00:00+09:00</updated>
+  <updated>2026-10-13T00:00:00+09:00</updated>
   <author><name>しし屋</name></author>
+  <entry>
+    <title>体内ダイブ</title>
+    <link href="https://sishiya.github.io/manabi-lab/body-dive/"/>
+    <id>https://sishiya.github.io/manabi-lab/body-dive/</id>
+    <published>2026-10-03T00:00:00+09:00</published>
+    <updated>2026-10-13T00:00:00+09:00</updated>
+    <summary>口・鼻・肛門から入って、消化管と気道の中を3Dで進む。</summary>
+  </entry>
   <entry>
     <title>変化球のしくみ</title>
     <link href="https://sishiya.github.io/manabi-lab/pitch-physics/"/>
@@ -46,14 +54,6 @@
     <published>2026-10-10T00:00:00+09:00</published>
     <updated>2026-10-11T00:00:00+09:00</updated>
     <summary>降ってくるノーツを3Dの両手が弾く。どの指で押すかを楽譜から自動で決め、人の手として無理のない動きにできるかを確かめる検証用の試作。教本の運指との答え合わせ、MIDI・MusicXML の楽譜も。</summary>
-  </entry>
-  <entry>
-    <title>体内ダイブ</title>
-    <link href="https://sishiya.github.io/manabi-lab/body-dive/"/>
-    <id>https://sishiya.github.io/manabi-lab/body-dive/</id>
-    <published>2026-10-03T00:00:00+09:00</published>
-    <updated>2026-10-11T00:00:00+09:00</updated>
-    <summary>口・鼻・肛門から入って、消化管と気道の中を3Dで進む。</summary>
   </entry>
   <entry>
     <title>ブラックホールの見え方</title>
