@@ -17,7 +17,7 @@ upload-batch.ps1 が書く。1日の区切りは太平洋時間の0時（日本�
 - チャンネルとしては 21本（API 18本＋Studio 3本）上げても、本数の上限（exceeded the number of videos）には当たらなかった。
 - API の使用量の上限には 09:26（日本時間）に当たった。Google の表の値で数えて約 22,800 ポイントの時点（videos.insert を表どおり 1600 と数えると上限 10,000 を超えるので、実際の insert はもっと安い）。
 - 上限に当たったあとも videos.insert（動画を上げる）は通り、字幕（captions）だけが 403 quota で断られた。だから、上限の近くで上げると字幕のない動画ができる。
-- 600MB くらいの大きい動画は、送り終わったところで「The underlying connection was closed」が出ることがある（3回。どれも実は上がっていた）。
+- 600MB くらいの大きい動画は、送り終わったところで「The underlying connection was closed」が出ることがある（3回。動画はできていたが、**中身は途中までで処理が止まったまま**だった。2026-10-14 にわかった）。大きい動画は 32MB ずつ送る（Send-Resumable）。上げたら -Verify で「処理」と「長さ」を見る。
 
 ## 公開前の確認（RULES 8.4。公開の日に、その日の分）
 
@@ -42,3 +42,4 @@ upload-batch.ps1 が書く。1日の区切りは太平洋時間の0時（日本�
 | 2026-10-13 16:26 | black-hole-guide（QrKfvjFg1ts） 字幕 | OK: -Verify -Date 2026-10-13（字幕 en あり・予約 10/13 20:00・サムネイル・長さ 2:36）。ショート（yCJesqekVlI）も OK | なし |
 | 2026-10-13 16:26 | animal-senses-guide（zUkmU8Q_4B8） | OK: -Verify -Date 2026-10-14（予約 10/14 20:00・字幕 en・サムネイル・長さ 2:36） | なし |
 | 2026-10-13 16:26 | animal-senses-short（KK_UQhoEloo） | OK: -Verify -Date 2026-10-14（予約 10/14 20:05・字幕 en・サムネイル・長さ 0:46） | なし |
+| 2026-10-14 | 処理が止まった動画（ユーザーがチャンネルの一覧でぐるぐるに気づいた） | -Verify で全26本＋古い ID を調べた。immune-battle-guide（CmcYXIB0BzU）・god-view-guide（BP7FtZfR2Kg）・wifi-wave-guide（vLXOfsPsrq8）と、上げ直す前の古い body-dive-guide（C6h7u6C5p88）・animal-senses-guide（FHNZ18v8kIQ）が、長さ 0・uploaded／processing のまま2〜3日止まっていた。「接続が切れたが実は上がっていた」分は中身が途中までしか届いていなかった | GO をもらって3本を上げ直した（32MB ずつ送る今の Send-Resumable）→ xIVVbiMCsL0（10/17）・T_RpJJJP86w（10/20）・OF5BIJJbPPU（10/21）。予約・字幕 en・サムネイルとも -Verify OK。upload.json・POSTS.md の ID を書きかえた。壊れた3本は -Schedule で予約を外せなかった（処理が終わっていない動画は status を変えられないらしい）→ **5本ともユーザーが Studio で消す**（10/17 までに） |
