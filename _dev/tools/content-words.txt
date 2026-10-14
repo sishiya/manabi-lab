@@ -1,0 +1,24 @@
+# check-content.ps1 が読む語の一覧（UTF-8）。「種類<TAB>正規表現<TAB>なぜ見るか」。# の行は説明。
+# 見つかっても止めない。1件ずつ目で確かめて、問題なければそのまま（RULES 7.1）。
+# --- 医療・健康の言い切り（体・病気・目のアプリ。薬機法・誤解） ---
+medical	治る|治せる|治ります|完治|予防できる|防げます|効果があります|効きます|必ず効く|安全です|副作用はない|診断できる	医療の効き目を言い切っていないか（目安・推定と書いてあるか）
+medical	cures?|guaranteed|prevents? (?:disease|infection)|safe to use|no side effects|diagnos(?:e|is) your	英語の医療の言い切り
+# --- 言い切り・誇張 ---
+claim	絶対に|100%正確|完全に再現|本物と同じ|世界初|唯一の	誇張になっていないか
+claim	(?i)world's first|100% accurate|perfectly (?:accurate|reproduc)|exactly like the real	英語の誇張
+# --- 商標・作品名・団体名（使い方が説明のための言及にとどまっているか、ロゴや画像をまねていないか） ---
+brand	Google|YouTube|Apple|iPhone|Android|Microsoft|Netflix|Disney|ディズニー|ポケモン|Pok[eé]mon|任天堂|Nintendo|ジブリ|Ghibli|マインクラフト|Minecraft	商標。説明のための言及だけか、関係があるように見せていないか
+brand	インターステラー|Interstellar|ワーナー|Warner|パラマウント|Paramount	映画名。画像や映像を使っていないか、公式に見えないか
+brand	MLB|NPB|Statcast|PITCHf/x|Hawk-?Eye|大谷|ダルビッシュ|Ohtani|Darvish	野球の団体・実在の選手。実在の選手のデータを使っていないか（MLB のデータの利用条件）
+brand	PillCam|Medtronic|ケノン|KE-NON|ルンバ|Roomba|ダイソン|Dyson	製品名。宣伝・比べる形になっていないか
+# --- ライセンス・素材 ---
+license	非営利|NonCommercial|CC BY-NC|CC-BY-NC|BY-NC-SA|non-commercial	使っているデータ・素材が非営利だけのものでないか（自分の LICENSE-CONTENT の説明はよい）
+license	All rights reserved|無断転載|著作権者の許可|Getty|Shutterstock|PIXTA|いらすとや	他人の素材をそのまま使っていないか
+license	Wikipedia|ウィキペディア	文章や図をそのまま写していないか（CC BY-SA の条件）
+# --- 危険・まねされると困る ---
+danger	飲んでみ|食べてみ|やってみよう.*(?:電池|磁石|薬|毒|キノコ|酒)|試してみて.*(?:電池|磁石|薬|毒)	まねすると危ないことをすすめる言い方になっていないか（注意書きがあるか）
+danger	(?i)try (?:eating|drinking|swallowing)	英語の危ないすすめ
+# --- 人・差別・からかい ---
+people	バカ|アホ|キモ|ブス|デブ|ハゲ|障害者は|女なのに|男なのに	人を傷つける言い方がないか
+# --- AI の扱い ---
+ai	\bAI\b|Claude|ChatGPT|生成AI	AI の書き方（記事の最後の一文だけか、アプリの画面で誤解がないか）
