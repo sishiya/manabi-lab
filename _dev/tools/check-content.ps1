@@ -41,6 +41,7 @@ $allow = @(
 # ---- which apps ----
 $idx = [IO.File]::ReadAllText((Join-Path $root 'index.html'), $utf8)
 $entrance = [regex]::Matches($idx, "\{\s*id:\s*'([a-z0-9-]+)'") | ForEach-Object { $_.Groups[1].Value } | Where-Object { Test-Path (Join-Path $root "$_/index.html") }
+if ($Apps) { $Apps = @($Apps | ForEach-Object { $_ -split ',' } | Where-Object { $_ }) }   # -File passes "a,b" as one string
 if (-not $Apps) { $Apps = $entrance }
 $health = @('body-dive','immune-battle','eye-optics','hair-removal','animal-senses','brain-response','muscle-growth','urinary-dive','blood-dive','vocal-folds','house-dust','mold-growth','air-flow','wifi-wave','extreme')
 
@@ -111,6 +112,20 @@ if (-not $NoArticles -and (Test-Path $zenn)) {
     }
     Scan-Words $label $f.FullName
   }
+}
+
+# 5. promo videos: titles, descriptions, tags (upload.json) and subtitles (srt), always checked
+foreach ($f in @(Get-ChildItem "$root/_dev/promo/*.upload.json" -ErrorAction SilentlyContinue) + @(Get-ChildItem "$root/_dev/promo/out/*.srt" -ErrorAction SilentlyContinue | Where-Object { $_.Name -notmatch '\.before-' })) {
+  $label = 'promo/' + $f.Name
+  $t = [IO.File]::ReadAllText($f.FullName, $utf8)
+  if ($f.Extension -eq '.json' -and $t -notmatch 'sishiya\.github\.io/manabi-lab') { Note 'promo' "$label : description has no link to the app" }
+  if ($f.Extension -eq '.json') {
+    foreach ($m in [regex]::Matches($t, 'https?://([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})')) {
+      $h = $m.Groups[1].Value.ToLower(); $ok = $allow | Where-Object { $h -eq $_ -or $h.EndsWith('.' + $_) }
+      if (-not $ok) { Note 'host' "$label : link to $h" }
+    }
+  }
+  Scan-Words $label $f.FullName
 }
 
 $notes | ForEach-Object { $_ }

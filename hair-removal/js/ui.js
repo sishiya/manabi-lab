@@ -30,7 +30,7 @@ function buildControls(S, on) {
   document.querySelectorAll('#langsw button').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.l === LANG)); b.onclick = () => { if (b.dataset.l !== LANG) setLang(b.dataset.l); }; });
   if (!FEATURES.gray) { $('siteH').textContent = L('部位', 'Body site'); $('age').closest('label').remove(); for (const id of ['grayH', 'grayRow', 'grayNote']) $(id).remove(); }   // 白髪を外しているときは設定ごと取り除く（hidden だけだと .row の display:flex で見えてしまう）
   document.querySelectorAll('.srcs').forEach(ul => { for (let [txt, url] of SOURCES) {
-    if (txt.startsWith('gray:')) { if (!FEATURES.gray) continue; txt = txt.slice(5); } const li = document.createElement('li'); const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = txt; li.appendChild(a); ul.appendChild(li); } });
+    if (txt.startsWith('gray:')) { if (!FEATURES.gray) continue; txt = txt.slice(5); } const li = document.createElement('li'); if (!url) { li.textContent = txt; ul.appendChild(li); continue; } const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = txt; li.appendChild(a); ul.appendChild(li); } });
 }
 
 function syncControls(S) {

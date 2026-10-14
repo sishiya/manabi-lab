@@ -57,13 +57,13 @@
     <div class="warn" lang="en"><b>Not for medical or beauty decisions.</b> This app is a simulation for learning how hair is replaced and what generally happens with light-based hair removal. How well it works, how safe it is and whether it suits your skin differ from person to person and device to device. Use any device as its manual says, and see a doctor if your skin has a problem or you are worried.</div>
     <h2><span lang="ja">光の条件（この画面が想定していること）</span><span lang="en">Light conditions (what this screen assumes)</span></h2>
     <ul class="hint cond" lang="ja">
-      <li>家庭用の光脱毛器の強めの設定: 面積あたり約 7.7 J/cm²（ある機種のカートリッジの値。メーカーの公式の数値ではなく、比較サイトの値）</li>
+      <li>家庭用の光脱毛器の強めの設定: 面積あたり約 7.7 J/cm²（市販品の一例の販売情報の値。メーカーの公式の数値ではない）</li>
       <li>光の色（波長）600〜1100 nm、光る長さ 5 ms（どちらも推定。家庭用の機器は公表していないことが多い）</li>
       <li>黒い毛・明るい肌・光の前後に冷やす</li>
       <li>照射口の幅 1.5 cm</li>
     </ul>
     <ul class="hint cond" lang="en">
-      <li>A strong setting on a home light-based (IPL) hair removal device: about 7.7 J/cm² (the value for one model’s cartridge, from a comparison site, not an official maker figure)</li>
+      <li>A strong setting on a home light-based (IPL) hair removal device: about 7.7 J/cm² (a value from sales information for one example on the market, not an official maker figure)</li>
       <li>Light color (wavelength) 600–1100 nm, flash length 5 ms (both estimates; home devices often do not publish them)</li>
       <li>Black hair, light skin, skin cooled before and after the flash</li>
       <li>Window 1.5 cm wide</li>
@@ -85,11 +85,11 @@
   <details id="about" class="sec" lang="ja">
     <summary>このアプリについて</summary>
     <p>肌の断面に毛穴を一列に10個並べ、剃る・抜く・光をあてる を好きなときに好きな所へ行い、毛穴の中で起きることを時間で追うシミュレーションです。毛穴1つずつが「成長期 → 退行期 → 休止期 → 新しい成長期」をくり返し、毛は毛球（毛の根もと）で作られて下から押し上げられます。</p>
-    <p><b>学習用に簡単にしています。医療・美容の判断には使えません。</b>実際の光脱毛の効き目や安全性を予測するものではありません。毛はまっすぐ・肌は平らとし、毛穴どうしは影響しあわないとしています。周期の長さは出どころによって大きくちがいます（部位の値）。毛穴の間かくは 1.3 mm（1 cm² に約60本として。推定）。照射口の幅 1.5 cm は、ケノンのストロングのカートリッジ（1.5 × 3.0 cm、比較サイトの値）の短い辺です。</p>
+    <p><b>学習用に簡単にしています。医療・美容の判断には使えません。</b>実際の光脱毛の効き目や安全性を予測するものではありません。毛はまっすぐ・肌は平らとし、毛穴どうしは影響しあわないとしています。周期の長さは出どころによって大きくちがいます（部位の値）。毛穴の間かくは 1.3 mm（1 cm² に約60本として。推定）。照射口の幅 1.5 cm は、市販の家庭用の光脱毛器（一例）の照射口（1.5 × 3.0 cm、販売情報の値）の短い辺です。</p>
     <p>推定の値（測った値が見つからないもの）: 毛ののびる速さ（すね 0.2 mm/日など）、毛の太さ（70 µm）、毛球の深さ（3 mm）、表皮・真皮の厚さ、バルジの深さ、毛の密度（1 cm² に60本）、周期のばらつき、抜いたあと新しい成長期が始まるまで（平均7日）、毛抜きでつまめる長さ（0.5 mm）、古い毛が抜ける前にゆるむ日数（4日）と落ちるまで（0〜25日）、新しい毛球が下へのびきるまで（10日）、毛母が色を作りはじめる日（5〜12日目）、退行期の長さ（すね以外は14日）、光でいたんだ毛が抜け落ちるまで（1〜3週）。</p>
     <h3>光の計算</h3>
     <p>光（600〜1100 nm）が肌の中で散らばりながら弱まる量を波長ごとに計算し（皮ふの散乱・メラニン・血液・水の吸収）、毛と毛母のメラニンが吸った熱が、まわりへ広がる様子を熱の式で解きます。細胞がいたむかどうかは、温度と時間の積み重ね（Arrhenius の式、Henriques 1947 の定数）で決めます。表皮も同じように計算します。</p>
-    <p><b>ケノンの数値は公表されていません</b>（波長・光る長さ・面積あたりの強さ）。ここでは、Lv10 = 35 J ÷ 4.5 cm²（ストロング2。比較サイトの値で、メーカーの公式の資料ではありません）≈ 7.7 J/cm²、波長 600〜1100 nm、光る長さ 5 ms と<b>推定</b>しています。強さ・照射口の幅とも、ストロング（2）のカートリッジの値です（付属のスーパープレミアムの強さは見つかりませんでした）。毛のメラニンの量（黒 10%）も測った値が見つからない推定で、結果はこの値で大きく変わります。表皮のメラニンの量も測り方で大きくちがい（約1〜43%）、幅の中から選んでいます（明るい肌 2%）。</p>
+    <p><b>家庭用の光脱毛器の数値は、メーカーが公表していないことが多い</b>です（波長・光る長さ・面積あたりの強さ）。ここでは、市販品の一例の販売情報の値（メーカーの公式の資料ではありません）から、Lv10 = 35 J ÷ 4.5 cm² ≈ 7.7 J/cm²、波長 600〜1100 nm、光る長さ 5 ms と<b>推定</b>しています。強さと照射口の幅は、同じ照射口の値にそろえました。特定の製品をすすめるものではありません。毛のメラニンの量（黒 10%）も測った値が見つからない推定で、結果はこの値で大きく変わります。表皮のメラニンの量も測り方で大きくちがい（約1〜43%）、幅の中から選んでいます（明るい肌 2%）。</p>
     <p>そのほかの光の推定: 組織の熱の性質（熱容量 3.8 J/cm³K・熱伝導率 0.0052 W/cmK）、毛穴のまわりのはじめの温度（35°C）、表皮のはじめの温度（冷やす 22°C）、毛母と毛乳頭の大きさ、休止期・退行期の毛の色の割合、深さと光の量の式の係数（Jacques 2010 の文の値から直線で近似）、剃っていない毛の熱容量（2.0 J/cm³K）・焦げる温度（250°C）・焦げた毛が光を吸う割合（9割）。</p>
     <p>実際の製品の効き目や安全性の判断には使えません。使い方は製品の説明書にしたがってください。</p>
     <h3>おもな出どころ</h3>
@@ -100,11 +100,11 @@
   <details id="about-en" class="sec" lang="en">
     <summary>About this app</summary>
     <p>A simulation that lines up 10 hair follicles in a cross-section of skin. Shave, pluck or flash light wherever and whenever you like, and follow over time what happens inside each follicle. Every follicle repeats “growing → shrinking → resting → growing again”, and the hair is made in the bulb (the root) and pushed up from below.</p>
-    <p><b>This is simplified for learning. Do not use it for medical or beauty decisions.</b> It does not predict how well or how safely real light-based hair removal works. Hairs are straight, the skin is flat, and follicles do not affect each other. Cycle lengths differ a lot between sources (see “Values for this site”). Follicles are 1.3 mm apart (about 60 per cm², an estimate). The 1.5 cm window is the short side of the KE-NON “Strong” cartridge (1.5 × 3.0 cm, value from a comparison site).</p>
+    <p><b>This is simplified for learning. Do not use it for medical or beauty decisions.</b> It does not predict how well or how safely real light-based hair removal works. Hairs are straight, the skin is flat, and follicles do not affect each other. Cycle lengths differ a lot between sources (see “Values for this site”). Follicles are 1.3 mm apart (about 60 per cm², an estimate). The 1.5 cm window is the short side of the window of one example of a home light-based device on the market (1.5 × 3.0 cm, a value from sales information).</p>
     <p>Estimated values (no measured value found): hair growth speed (0.2 mm/day on the shin, etc.), hair thickness (70 µm), bulb depth (3 mm), thickness of the epidermis and dermis, bulge depth, hair density (60 per cm²), spread of cycle lengths, time from plucking to a new growing phase (7 days on average), the length tweezers can grip (0.5 mm), days an old hair loosens before falling (4) and until it falls (0–25), days for a new bulb to grow down (10), the day the matrix starts making color (day 5–12), shrinking-phase length (14 days except the shin), and time for a light-damaged hair to fall out (1–3 weeks).</p>
     <h3>The light calculation</h3>
     <p>For each wavelength (600–1100 nm), it calculates how light weakens as it scatters through the skin (skin scattering; absorption by melanin, blood and water), then solves the heat equation for how heat absorbed by melanin in the hair and matrix spreads around. Whether cells are damaged depends on temperature added up over time (the Arrhenius equation with Henriques 1947 constants). The epidermis is calculated the same way.</p>
-    <p><b>KE-NON does not publish these numbers</b> (wavelength, flash length, energy per area). Here we <b>estimate</b> level 10 = 35 J ÷ 4.5 cm² (Strong2 cartridge; a comparison-site value, not an official maker document) ≈ 7.7 J/cm², wavelength 600–1100 nm and flash length 5 ms. Both the energy and the window width are for the Strong (2) cartridge (we could not find the energy of the bundled Super Premium cartridge). The amount of melanin in the hair (10% for black hair) is also an estimate with no measured value found, and the results depend strongly on it. Melanin in the epidermis also varies a lot with the measuring method (about 1–43%); we picked a value in that range (2% for light skin).</p>
+    <p><b>Makers of home light-based devices often do not publish these numbers</b> (wavelength, flash length, energy per area). Here we <b>estimate</b>, from sales information for one example on the market (not an official maker document), level 10 = 35 J ÷ 4.5 cm² ≈ 7.7 J/cm², wavelength 600–1100 nm and flash length 5 ms. The energy and the window width are for the same window. This does not recommend any particular product. The amount of melanin in the hair (10% for black hair) is also an estimate with no measured value found, and the results depend strongly on it. Melanin in the epidermis also varies a lot with the measuring method (about 1–43%); we picked a value in that range (2% for light skin).</p>
     <p>Other light estimates: heat properties of tissue (heat capacity 3.8 J/cm³K, conductivity 0.0052 W/cmK), starting temperature around the follicle (35°C), starting temperature of the epidermis (22°C after cooling), the sizes of the matrix and papilla, how much color resting and shrinking hairs have, the coefficients of the light-vs-depth formula (a straight-line fit to values stated in Jacques 2010), and for unshaved hair its heat capacity (2.0 J/cm³K), burning temperature (250°C) and how much light burnt hair absorbs (90%).</p>
     <p>Not for judging the effect or safety of real products. Follow each product’s manual.</p>
     <h3>Main sources</h3>

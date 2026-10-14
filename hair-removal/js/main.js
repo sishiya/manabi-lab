@@ -174,7 +174,7 @@ $('zall').onclick = () => { S.view = null; };
 //  光: 照射口（幅 1.5 cm）がマウスについてくる。クリックで、その下の毛穴に光る
 //  毛抜き: いちばん近い毛が光る。クリックでその1本を抜く
 function local(e) { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
-const WINDOW_MM = 15;      // 照射口の幅（ケノンのストロングのカートリッジ 1.5 × 3.0 cm の短い辺。比較サイトの値。強さもストロング2 の値なのでそろえた）
+const WINDOW_MM = 15;      // 照射口の幅（市販の家庭用の光脱毛器の一例の照射口 1.5 × 3.0 cm の短い辺。販売情報の値。強さも同じ照射口の値なのでそろえた）
 const RAZOR_MM = 0.6;      // 刃が毛穴の出口を「通った」とみなす幅（片がわ）
 function underWindow(x) { const half = WINDOW_MM / 2 * GEOM.s; return GEOM.xs.map((fx, i) => (Math.abs(fx - x) <= half ? i : -1)).filter(i => i >= 0); }
 function underRazor(a, b) { const pad = RAZOR_MM * GEOM.s; return GEOM.xs.map((fx, i) => (fx >= Math.min(a, b) - pad && fx <= Math.max(a, b) + pad ? i : -1)).filter(i => i >= 0); }

@@ -5,8 +5,32 @@
   <link href="https://sishiya.github.io/manabi-lab/"/>
   <link rel="self" href="https://sishiya.github.io/manabi-lab/feed.xml"/>
   <id>https://sishiya.github.io/manabi-lab/feed.xml</id>
-  <updated>2026-10-13T00:00:00+09:00</updated>
+  <updated>2026-10-15T00:00:00+09:00</updated>
   <author><name>しし屋</name></author>
+  <entry>
+    <title>脱毛のしくみ</title>
+    <link href="https://sishiya.github.io/manabi-lab/hair-removal/"/>
+    <id>https://sishiya.github.io/manabi-lab/hair-removal/</id>
+    <published>2026-10-12T00:00:00+09:00</published>
+    <updated>2026-10-15T00:00:00+09:00</updated>
+    <summary>肌の断面に並んだ毛穴に、カミソリ・毛抜き・光（家庭用の光脱毛器）を好きなときに使って、毛穴の中で何が起きるかを時間で追う。毛はのびて・ちぢんで・休んでをくり返し、光は伸びている毛の根もとだけを熱でいためる。</summary>
+  </entry>
+  <entry>
+    <title>ピアノを弾く手</title>
+    <link href="https://sishiya.github.io/manabi-lab/piano-hand/"/>
+    <id>https://sishiya.github.io/manabi-lab/piano-hand/</id>
+    <published>2026-10-10T00:00:00+09:00</published>
+    <updated>2026-10-15T00:00:00+09:00</updated>
+    <summary>降ってくるノーツを3Dの両手が弾く。どの指で押すかを楽譜から自動で決め、人の手として無理のない動きにできるかを確かめる検証用の試作。教本の運指との答え合わせ、MIDI・MusicXML の楽譜も。</summary>
+  </entry>
+  <entry>
+    <title>免疫のたたかい</title>
+    <link href="https://sishiya.github.io/manabi-lab/immune-battle/"/>
+    <id>https://sishiya.github.io/manabi-lab/immune-battle/</id>
+    <published>2026-10-04T00:00:00+09:00</published>
+    <updated>2026-10-15T00:00:00+09:00</updated>
+    <summary>ウイルスや細菌が入って増え、免疫に片づけられるまでを、ミクロの断面とグラフで見る。</summary>
+  </entry>
   <entry>
     <title>体内ダイブ</title>
     <link href="https://sishiya.github.io/manabi-lab/body-dive/"/>
@@ -32,28 +56,12 @@
     <summary>光が角膜と水晶体で曲がり、網膜に像を結ぶまでを、本物の目の模型で光線を1本ずつ計算。ピントやひとみが追いつくまでの時間、暗さに慣れていく30分、老眼・近視・乱視とメガネも、測られた値で。</summary>
   </entry>
   <entry>
-    <title>脱毛のしくみ</title>
-    <link href="https://sishiya.github.io/manabi-lab/hair-removal/"/>
-    <id>https://sishiya.github.io/manabi-lab/hair-removal/</id>
-    <published>2026-10-12T00:00:00+09:00</published>
-    <updated>2026-10-12T00:00:00+09:00</updated>
-    <summary>肌の断面に並んだ毛穴に、カミソリ・毛抜き・光（家庭用の光脱毛器）を好きなときに使って、毛穴の中で何が起きるかを時間で追う。毛はのびて・ちぢんで・休んでをくり返し、光は伸びている毛の根もとだけを熱でいためる。</summary>
-  </entry>
-  <entry>
     <title>細菌にとりつくウイルス</title>
     <link href="https://sishiya.github.io/manabi-lab/phage/"/>
     <id>https://sishiya.github.io/manabi-lab/phage/</id>
     <published>2026-10-11T00:00:00+09:00</published>
     <updated>2026-10-12T00:00:00+09:00</updated>
     <summary>T4 ファージが大腸菌にとりつき、細菌の中で100個以上に増えて破れて出るまで。人のからだから分子の大きさまで、タイムスライダー1本でどこでも寄れて、マウスを乗せると解説。</summary>
-  </entry>
-  <entry>
-    <title>ピアノを弾く手</title>
-    <link href="https://sishiya.github.io/manabi-lab/piano-hand/"/>
-    <id>https://sishiya.github.io/manabi-lab/piano-hand/</id>
-    <published>2026-10-10T00:00:00+09:00</published>
-    <updated>2026-10-11T00:00:00+09:00</updated>
-    <summary>降ってくるノーツを3Dの両手が弾く。どの指で押すかを楽譜から自動で決め、人の手として無理のない動きにできるかを確かめる検証用の試作。教本の運指との答え合わせ、MIDI・MusicXML の楽譜も。</summary>
   </entry>
   <entry>
     <title>ブラックホールの見え方</title>
@@ -126,14 +134,6 @@
     <published>2026-10-04T00:00:00+09:00</published>
     <updated>2026-10-10T00:00:00+09:00</updated>
     <summary>同じ庭を、人間・カラス・マムシなどの感覚で見る。紫外線や熱も見えるように置き換えて表示。</summary>
-  </entry>
-  <entry>
-    <title>免疫のたたかい</title>
-    <link href="https://sishiya.github.io/manabi-lab/immune-battle/"/>
-    <id>https://sishiya.github.io/manabi-lab/immune-battle/</id>
-    <published>2026-10-04T00:00:00+09:00</published>
-    <updated>2026-10-10T00:00:00+09:00</updated>
-    <summary>ウイルスや細菌が入って増え、免疫に片づけられるまでを、ミクロの断面とグラフで見る。</summary>
   </entry>
   <entry>
     <title>ヒトへの46億年</title>

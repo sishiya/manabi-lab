@@ -5,8 +5,32 @@
   <link href="https://sishiya.github.io/manabi-lab/?lang=en"/>
   <link rel="self" href="https://sishiya.github.io/manabi-lab/feed-en.xml"/>
   <id>https://sishiya.github.io/manabi-lab/feed-en.xml</id>
-  <updated>2026-10-13T00:00:00+09:00</updated>
+  <updated>2026-10-15T00:00:00+09:00</updated>
   <author><name>Shishiya</name></author>
+  <entry>
+    <title>How Hair Removal Works</title>
+    <link href="https://sishiya.github.io/manabi-lab/hair-removal/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/hair-removal/?lang=en</id>
+    <published>2026-10-12T00:00:00+09:00</published>
+    <updated>2026-10-15T00:00:00+09:00</updated>
+    <summary>Use a razor, tweezers or a home light-based hair removal device on a row of hair follicles whenever you like, and watch over time what happens inside. Hairs grow, shrink and rest in cycles, and the light only damages the roots of hairs that are growing.</summary>
+  </entry>
+  <entry>
+    <title>Hands at the Piano</title>
+    <link href="https://sishiya.github.io/manabi-lab/piano-hand/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/piano-hand/?lang=en</id>
+    <published>2026-10-10T00:00:00+09:00</published>
+    <updated>2026-10-15T00:00:00+09:00</updated>
+    <summary>Two 3D hands play the falling notes. A test prototype that works out which finger presses each key from the music, and checks whether a human hand could really move that way. Compare with textbook fingering, or open MIDI and MusicXML scores.</summary>
+  </entry>
+  <entry>
+    <title>The Immune Battle</title>
+    <link href="https://sishiya.github.io/manabi-lab/immune-battle/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/immune-battle/?lang=en</id>
+    <published>2026-10-04T00:00:00+09:00</published>
+    <updated>2026-10-15T00:00:00+09:00</updated>
+    <summary>Viruses and bacteria get in, multiply and are cleared by the immune system. Watch it in a microscopic cross-section and graphs.</summary>
+  </entry>
   <entry>
     <title>Body Dive</title>
     <link href="https://sishiya.github.io/manabi-lab/body-dive/?lang=en"/>
@@ -32,28 +56,12 @@
     <summary>Follow light as the cornea and lens bend it into an image on the retina, ray by ray, with a model of a real eye. See how long focusing and the pupil take to catch up, how the eye gets used to the dark over 30 minutes, and presbyopia, nearsightedness, astigmatism and glasses, all from measured values.</summary>
   </entry>
   <entry>
-    <title>How Hair Removal Works</title>
-    <link href="https://sishiya.github.io/manabi-lab/hair-removal/?lang=en"/>
-    <id>https://sishiya.github.io/manabi-lab/hair-removal/?lang=en</id>
-    <published>2026-10-12T00:00:00+09:00</published>
-    <updated>2026-10-12T00:00:00+09:00</updated>
-    <summary>Use a razor, tweezers or a home light-based hair removal device on a row of hair follicles whenever you like, and watch over time what happens inside. Hairs grow, shrink and rest in cycles, and the light only damages the roots of hairs that are growing.</summary>
-  </entry>
-  <entry>
     <title>The Virus That Infects Bacteria</title>
     <link href="https://sishiya.github.io/manabi-lab/phage/?lang=en"/>
     <id>https://sishiya.github.io/manabi-lab/phage/?lang=en</id>
     <published>2026-10-11T00:00:00+09:00</published>
     <updated>2026-10-12T00:00:00+09:00</updated>
     <summary>How a T4 phage infects E. coli, multiplies to over 100 inside it, and bursts out. Zoom anywhere from the human body down to single molecules along one time slider, and hover for explanations.</summary>
-  </entry>
-  <entry>
-    <title>Hands at the Piano</title>
-    <link href="https://sishiya.github.io/manabi-lab/piano-hand/?lang=en"/>
-    <id>https://sishiya.github.io/manabi-lab/piano-hand/?lang=en</id>
-    <published>2026-10-10T00:00:00+09:00</published>
-    <updated>2026-10-11T00:00:00+09:00</updated>
-    <summary>Two 3D hands play the falling notes. A test prototype that works out which finger presses each key from the music, and checks whether a human hand could really move that way. Compare with textbook fingering, or open MIDI and MusicXML scores.</summary>
   </entry>
   <entry>
     <title>What a Black Hole Looks Like</title>
@@ -126,14 +134,6 @@
     <published>2026-10-04T00:00:00+09:00</published>
     <updated>2026-10-10T00:00:00+09:00</updated>
     <summary>See the same garden through the senses of a human, a crow, a pit viper and more. Ultraviolet light and heat are turned into colors you can see.</summary>
-  </entry>
-  <entry>
-    <title>The Immune Battle</title>
-    <link href="https://sishiya.github.io/manabi-lab/immune-battle/?lang=en"/>
-    <id>https://sishiya.github.io/manabi-lab/immune-battle/?lang=en</id>
-    <published>2026-10-04T00:00:00+09:00</published>
-    <updated>2026-10-10T00:00:00+09:00</updated>
-    <summary>Viruses and bacteria get in, multiply and are cleared by the immune system. Watch it in a microscopic cross-section and graphs.</summary>
   </entry>
   <entry>
     <title>4.6 Billion Years to Us</title>
