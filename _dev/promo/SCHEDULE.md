@@ -37,12 +37,16 @@
 紺の3本は 5・9・11日目（いちばん近くて1日おき）。
 
 ## Zenn の技術記事（2026-10-14〜、動画と同じ日の 20:10 に予約公開）
+**記事の順は YouTube の公開順と同じ**（2026-10-15 ユーザー）。動画が先に出ていた3本は 10/15 にまとめて出して追いつく（10分ずつずらす）。
 記事は隣のフォルダ `../zenn/`（決まりはそこの README）。書くのは Claude、予約の push は記事ごとのユーザーの GO のあと。
 
 | 日付 | アプリ | 記事（slug） | 状態 |
 |---|---|---|---|
 | 2026-10-14 | ブラックホールの見え方（動画は 10/13） | `blackhole-kerr-raytracing-webgl2` | 公開ずみ |
-| 2026-10-15 | 量子の実験室 | `quantum-tunnel-visscher-canvas` | 下書き |
+| 2026-10-15 20:10 | ヒトへの46億年（動画は 10/11） | `evolution-earth-box-model` | 下書き |
+| 2026-10-15 20:20 | 体内ダイブ（動画は 10/12） | `body-dive-tube-shader-junction` | 下書き |
+| 2026-10-15 20:30 | いきものの感じる世界（動画は 10/14） | `animal-senses-shader-passes` | 下書き |
+| 2026-10-15 20:40 | 量子の実験室 | `quantum-tunnel-visscher-canvas` | 下書き |
 | 2026-10-16 | さなぎの中で | `metamorphosis-time-driven-canvas` | 下書き |
 | 2026-10-17 | 免疫のたたかい | `immune-ode-model-rk4` | 下書き |
 | 2026-10-18 | 空気の流れの見える部屋 | `airflow-age-of-air-bicgstab` | 下書き |
