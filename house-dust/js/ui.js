@@ -73,16 +73,30 @@ function buildUI(S, H) {
   // 時間
   $('tl').oninput = e => { restoreSnap(+e.target.value); };
   $('restart').onclick = () => { restartSim(); };
-  // 図をさわる: ルーペの場所
-  const pick = ev => {
-    const r = cv.getBoundingClientRect(), w = toWorld(ev.clientX - r.left, ev.clientY - r.top);
+  // 図をさわる: タップ = ルーペの場所（顕微鏡の絵では粒の説明）、ドラッグ = 動かす、ホイール・2本指 = ズーム
+  const pick = (px, py) => {
+    const w = toWorld(px, py);
     if (w.x < -0.05 || w.x > ROOM_W + 0.05 || w.y < -0.1 || w.y > ROOM_H + 0.05) return;
     const f = nearestFace(w.x, w.y);
     S.sel = { x: w.x, y: w.y, f };
     if (f >= 0) S.selPlace = FACES[f].place;
   };
-  cv.addEventListener('pointerdown', pick);
-  cv.addEventListener('pointermove', ev => { if (ev.buttons) pick(ev); });
+  setupInput(
+    (px, py) => { if (microAlpha() > 0.5) { VIEW.hover = microHit(px, py); } else pick(px, py); },
+    (px, py) => { if (microAlpha() > 0.5) VIEW.hover = microHit(px, py); },
+  );
+  $('zIn').onclick = () => zoomAt(VIEW.w / 2, VIEW.h / 2, 2.5);
+  $('zOut').onclick = () => zoomAt(VIEW.w / 2, VIEW.h / 2, 1 / 2.5);
+  $('zAll').onclick = () => resetView();
+  $('mjump').onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const ok = jumpTo(b.dataset.k, S.sel ? S.sel.f : -1);
+    if (!ok) { VIEW.note = `この面の近くには、まだ${b.textContent}の粒がない`; VIEW.noteT = performance.now(); }
+  };
+  $('zoomHere').onclick = () => {   // えらんだ場所へ、幅 3mm になるまで寄る
+    const F = S.sel && S.sel.f >= 0 ? FACES[S.sel.f] : FACES.find(F => F.place === '床');
+    VIEW.mf = -1; aimAt(F.x, F.y + 0.002, VIEW.w / 0.003 / VIEW.s0);
+  };
   $('places').onclick = e => {
     const r = e.target.closest('.pl'); if (!r) return;
     S.selPlace = r.dataset.p;
@@ -128,9 +142,14 @@ function updateReadout(S) {
     const L = loupeCounts(f), cnt = {};
     for (const it of L.items) cnt[it.k] = (cnt[it.k] || 0) + it.n;
     const parts = [['fiber', '繊維'], ['skin', '皮ふ'], ['soil', '土'], ['pollen', '花粉']].map(([k, n]) => cnt[k] >= 0.5 ? `${n} ${cnt[k] < 10 ? Math.round(cnt[k]) : Math.round(cnt[k]).toLocaleString()}` : '').filter(Boolean);
-    const all = Object.values(cnt).reduce((a, b) => a + b, 0) * 100 / (LOUPE_MM * LOUPE_MM);
+    const all = ['fiber', 'skin', 'soil', 'pollen'].reduce((a, k) => a + (cnt[k] || 0), 0) * 100 / (LOUPE_MM * LOUPE_MM);
     $('roCount').textContent = parts.length ? `ルーペ（1mm四方）の中: ${parts.join('・')} こ。1cm四方なら 約${Math.round(all).toLocaleString()}こ` : 'ルーペの中: まだ粒はない';
   } else $('roCount').textContent = '';
+  // 顕微鏡の絵の説明
+  const mc = $('mcap'), on = microAlpha() > 0.3;
+  mc.hidden = !on; if (on && lastPlaces % 4 === 0) mc.innerHTML = microCaption() + '<br><small>' + (VIEW.note && performance.now() - VIEW.noteT < 3000 ? VIEW.note : '粒にさわると名前が出る') + '</small>';
+  $('zhint').hidden = VIEW.z > 1.5;
+  $('mjump').hidden = !on;
   // 場所の表（重いので 4コマに1回）
   if (++lastPlaces % 4 === 0) {
     const rows = Object.entries(bp).filter(([k]) => !['天井', '壁', '家具の横', '家具の裏', '窓'].includes(k)).sort((x, y) => y[1].gm2 - x[1].gm2);

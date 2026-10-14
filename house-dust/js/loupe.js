@@ -9,9 +9,9 @@ const GRAIN = {
   skin:   { 2: { ng: 0.04, size: 5 }, 3: { ng: 0.5, size: 13 }, 4: { ng: 4, size: 32 } },                      // 厚さ 3〜4µm の平たいかけら
   soil:   { 2: { ng: 0.01, size: 2 }, 3: { ng: 0.33, size: 6 }, 4: { ng: 8.8, size: 19 }, 5: { ng: 320, size: 62 } }, // 密度 2.6 の球に近い粒
   pollen: { 4: { ng: 14, size: 30 } },                                                                     // スギ花粉 約30µm
+  soot:   { 0: { ng: 1.4e-5, size: 0.3 }, 1: { ng: 5e-4, size: 1 } },                                      // すすのかたまり（密度 1 とした）
 };
 
-function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
 // いちばん近い「上向きの面」（なければどの面でも）
 function nearestFace(x, y) {

@@ -88,7 +88,7 @@ function curK() { return K_EDDY + (K_EDDY_STIR - K_EDDY) * D.stir; }
 function stepParticles(dt, st) {
   const K = curK(), sig = Math.sqrt(2 * K * dt);
   const pur = st.purifier ? FURN.find(f => f.key === 'pur') : null;
-  const purI0 = pur ? Math.round(pur.x0 / DX) : -9, purEff = PURIFIER.eff;
+  const purI0 = pur ? Math.round(pur.x0 / DX) : -9, purI1 = pur ? Math.round(pur.x1 / DX) : -9, purEff = PURIFIER.eff;
   const acF = FURN.find(f => f.key === 'ac'), acI0 = Math.round(acF.x0 / DX), acI1 = Math.round(acF.x1 / DX), acJ0 = Math.round(acF.y0 / DX);
   for (let k = P.n - 1; k >= 0; k--) {
     const b = P.b[k], vs = BINS[b].vs;
@@ -123,8 +123,8 @@ function stepParticles(dt, st) {
     if (gone) { kill(k); continue; }
     const i = Math.floor(x / DX), j = Math.floor(y / DX), c = ix(i, j);
     // 空気清浄機に吸われる（吸いこみ口の前のマス）
-    if (pur && i === purI0 - 1 && j >= 1 && j < 8) {
-      const uin = Math.max(0, fu[uI(purI0, j)]);
+    if (pur && (i === purI0 - 1 || i === purI1) && j >= 1 && j < 8) {   // 両横の吸いこみ口
+      const uin = i === purI1 ? Math.max(0, -fu[uI(purI1, j)]) : Math.max(0, fu[uI(purI0, j)]);
       if (Math.random() < 1 - Math.exp(-uin * dt / DX)) {
         if (Math.random() < purEff[b]) { D.tot.pur[P.s[k]] += P.m[k]; kill(k); continue; }
       }

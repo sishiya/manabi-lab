@@ -117,7 +117,7 @@ function taskStep(dt, st) {
     const C = T.type === 'vacuum' ? VACUUM : WIPE;
     const v2 = (ROOM_W - 0.06) / T.dur;              // 断面の上を進む速さ（部屋全体を1回かける時間で）
     T.head = Math.min(ROOM_W - 0.03, 0.03 + v2 * T.t);
-    PS.x = Math.max(WALK_X[0] - 0.05, Math.min(3.3, T.head + 0.7));
+    PS.x = Math.max(WALK_X[0] - 0.05, Math.min(3.3, T.head + 0.75));
     const tPass = 0.3 / v2;
     for (let f = 0; f < FACES.length; f++) {
       const F = FACES[f]; if (F.o !== 'up' || F.j !== 0 || Math.abs(F.x - T.head) > 0.15) continue;
@@ -132,11 +132,11 @@ function taskStep(dt, st) {
       disturb(f, (T.type === 'vacuum' ? 0.02 : 0.002) * used / tPass, 'brush');
     }
   } else if (T.type === 'duster') {
-    PS.x = 2.3;
+    PS.x = 2.5;
     const fr = 1 - Math.pow(1 - DUSTER_FRAC, used / T.dur);
     for (let f = 0; f < FACES.length; f++) { const pl = FACES[f].place; if (pl === '棚の上' || pl === '机の上' || pl === 'エアコンの上' || pl === '空気清浄機の上' || pl === '家具の上') disturb(f, fr, 'duster'); }
   } else if (T.type === 'bed') {
-    PS.x = 1.3;
+    PS.x = 1.38;
     const fr = used / T.dur;
     releaseBed(1 - Math.pow(1 - EMIT.bedShake, fr), 'shake', 0.7);   // はたくとベッドの外まで飛ぶ
     emit('shake', 0.6, 0.8, SI.fiber, SPLIT.fiber, EMIT.bedShakeFiber * fr, 0.7);

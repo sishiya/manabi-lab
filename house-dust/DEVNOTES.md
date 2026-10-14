@@ -5,7 +5,7 @@
 家のほこりの出どころ・中身・舞い上がり・積もる場所を、6畳の洋室の断面で試すアプリ。企画は `PLAN.md`（`../IDEAS.md` の 21 から）。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: v002-stageA（段階A）。保管庫（`archive.html`）に掲載。入口には載せない（RULES 8.1）。英語はまだ（入口へ移すときに）。
+- **いまの状態**: v003-zoom（人と家具の絵を作りこみ、ズームの奥に顕微鏡の絵）。その前は v002-stageA（段階A）。保管庫（`archive.html`）に掲載。入口には載せない（RULES 8.1）。英語はまだ（入口へ移すときに）。
 - **次にやること**: ユーザーの感想しだい。案は `PLAN.md` の段階B（ダニ・湿度・アレルゲン、カビの胞子）、C（綿ぼこりのかたまり・静電気・床の種類）。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。数値（出る量・取れる割合）を変えるなら `js/data.js` だけ。
 - **動かし方**: サーバー `apps`（`.claude/launch.json`）で http://localhost:8765/house-dust/ 。
@@ -17,15 +17,20 @@
 
 | ファイル | 中身 | 主な名前 |
 |---|---|---|
-| `index.html` | 骨組み（doctype なし）。左（スマホは上に固定）: `#bar`（時刻・再生・速さ・色の見方）`#frame`（`#cv`）`#ro`（空気中・えらんだ場所・ルーペ `#loupe`）。右（スマホは下）: `#panel`（いまのようす `#now`・やってみる `#acts`・部屋 `#toggles`・人 `#segPerson`・時間 `#tlc` `#tl`・場所ごと `#places` `#chart`・設定・しくみ・このアプリについて／おもな出どころ） | 読み込み順: data → room → flow → dust → life → draw → loupe → ui → main |
+| `index.html` | 骨組み（doctype なし）。左（スマホは上に固定）: `#bar`（時刻・再生・速さ・色の見方）`#frame`（`#cv`）`#ro`（空気中・えらんだ場所・ルーペ `#loupe`）。右（スマホは下）: `#panel`（いまのようす `#now`・やってみる `#acts`・部屋 `#toggles`・人 `#segPerson`・時間 `#tlc` `#tl`・場所ごと `#places` `#chart`・設定・しくみ・このアプリについて／おもな出どころ） | 読み込み順: data → room → flow → dust → life → view → shapes → furniture → person → draw → micro → loupe → ui → main。図の上に `.zoom`（＋−全体）`#mcap`（顕微鏡の説明）`#mjump`（近くの粒へ）`#zhint` |
 | `css/style.css` | PC は右パネル 370px。899px 以下は `#stage` を sticky で上に固定、420px 以下は速さの「/秒」・色の見方の位置を詰める | `.xs` `.ps`（狭いとき隠す） |
 | `js/data.js` | 部屋の寸法 `ROOM_W` `ROOM_H` `DEPTH` `DX` `NX` `NY`、空気 `AIR`・乱れ `K_EDDY`・`U_STAR`、粒の大きさ `BINS`（`vs` 落ちる速さ・`dep` 面への付く速さ）、`settlingVelocity()` `cunningham()` `laiNazaroff()`、出どころ `SRC` `SI`、大きさの割合 `SPLIT`、出る量 `EMIT`、外 `OUTDOOR`、給気口 `VENT_PASS`、舞い上がり `RESUSP_STEP` `RESUSP_WIND` `DUSTER_FRAC`、道具 `VACUUM` `WIPE` `PURIFIER` `VENT_ACH`、いつもの1日 `ROUTINE` | |
 | `js/room.js` | マス `solid`・`ix()`・`isSolid()`、家具 `FURN`、開口 `WINDOW` `VENT` `DOOR`、位置 `DESK_X` `WALK_X`、面 `FACES`（`o` 向き・`place` 場所の名前・`dep` 出どころ×大きさ µg・`corner` `underBed`）と `faceAt`（マス→面）、`buildRoom()` `placeLabel()` `fluidCount()` | |
 | `js/flow.js` | 流れ（MAC）`fu` `fv`、`setupFaces(st)`（給気口・ドアの下・窓・空気清浄機・エアコンの決まった速度）、`JETS`（目標の速度へ寄せる範囲）、`flowStep()` `project()`（SOR）、`sampleU()` `sampleV()` `speedAt()`、`windowInflow()`、`maxDiv()` | `FLOW_DT` 0.1s |
 | `js/dust.js` | 大きい粒の点 `P`、全体 `D`、`emit()`（出た量として数える）`addAir()`（舞い上がりなど）、`flushPending()` `spawn()`、`stepParticles()`（流れ＋落ちる＋ランダムウォーク、出口・清浄機・エアコン・面に付く）、`stepBox()`（細かい粒: 換気・清浄機・面へ付く、を厳密な指数で）、`disturb()` `removeFrom()` `windResuspend()`、`faceGm2()` `airborne()` `byPlace()` `massBalance()` `tuneDots()` | `di(s,b)` |
 | `js/life.js` | 人 `PS`・`TASKS`、`routineAct()` `personState()` `startTask()` `logEvent()`、`lifeStep()`（皮ふ・繊維・足もとの土、寝ている間はふとんへ）、`feetResuspend()`、`homeReturn()`、`taskStep()`（掃除機・拭く・はたき・ふとん）、`washSheets()`、`buildJets()` | |
-| `js/draw.js` | `fitView()` `X()` `Y()` `toWorld()`、`drawScene()`（外・もや・流れの矢印・積もった層・家具・粒・人・壁）、`depPx()`（厚みは対数） | `FF`（フォント） |
-| `js/loupe.js` | ルーペ: `LOUPE_MM`（1mm 四方）、粒1つの重さ `GRAIN`（推定）、`nearestFace()` `loupeCounts()` `drawLoupe()` | |
+| `js/view.js` | 見え方: `VIEW`（`s` px/m・`z`・`cx` `cy`・顕微鏡の奥行き `cvz`・見ている面 `mf`・`hover`）、`WORLD`、`MICRO_IN` 3cm `MICRO_FULL` 1.5cm、`fitView()` `updateView()` `X()` `Y()` `toWorld()` `fieldW()` `microAlpha()` `nearestUpFace()`、`zoomAt()` `panBy()` `resetView()` `aimAt()` `viewTick()` `jumpTo(kind)`、`setupInput(onTap, onHover)`（ホイール・つまむ・ドラッグ・タップ・ダブルクリック） | `cv` `g` |
+| `js/shapes.js` | 粒の形の絵: `mulberry()`、`drawFiber()`（綿＝ねじれたリボン／合成＝なめらかな円柱、`FIBER_DYES`）`drawSkin()` `drawSoil()`（`MINERALS` `pickMineral()`）`drawPollen()` `drawSoot()` | |
+| `js/furniture.js` | 部屋の絵: `COL` `FF`、`rrect()` `seg()` `lw()` `fsz()`、`drawShellBack()`（外・壁の厚み・床板）`drawShellFront()`（窓わく・ガラス・給気口・ラベル）`drawFurniture()`（ベッド・清浄機・机とスタンド・いす・棚と本・エアコン）`drawDuvet(top, bump)` `drawFurnitureLabels()` | |
+| `js/person.js` | 人の絵: `BODY`（長さ）`PCOL`、`poseOf(kind, ph)`（stand・walk・sit・vacuum・wipe・duster・bed の関節の角度）`joints()` `limb()` `foot()` `drawBody()` `drawHead()`（横顔）`drawPerson()`（寝ている・掃除機の本体とホース・はたき・ふとん） | 動きは実際の時計 |
+| `js/draw.js` | `drawScene()`（顕微鏡の絵とのまぜ具合で `drawSide()` と `drawMicro()`）、`drawSide()`（順: 外と壁 → もや → 流れ → 家具 → 積もった層 → 粒 → 人 → 窓わく → ラベル）、`drawFlow()` `drawDeposits()`（`depPx()` 厚みは対数）`drawParticles()` `drawMicroHover()` `wrapText()` `drawSel()` | |
+| `js/micro.js` | 顕微鏡の絵: `microClasses()`（GRAIN から。ます目 `T` = 大きさ×120）、`genTile()`（ます目ごとに決まった乱数で並べる）`findNearest(kind)` `numPerM2()` `surfaceLook()`（フローリング・シーツ・天板）`drawMicro(alpha)` `microCaption()` `microHit()` | |
+| `js/loupe.js` | ルーペ: `LOUPE_MM`（1mm 四方）、粒1つの重さ `GRAIN`（推定。顕微鏡の絵も使う。すす 0.3・1µm も）、`nearestFace()` `loupeCounts()` `drawLoupe()` | |
 | `js/ui.js` | `SPEEDS` `PERSON` `CHART_PLACES`、`buildUI()` `syncUI()` `updateReadout()` `nowText()` `drawTimeline()` `drawChart()`、表示の形 `fmtNum()` `fmtDur()` `fmtClock()` `mixHTML()` | `$()` |
 | `js/main.js` | 状態 `S`・記録 `H`、`advance(simDt)`（1コマ: 人 → 流れ → 外から入る粒 → 点 → 細かい粒 → 風の舞い上がり）、`takeSnap()` `restoreSnap()` `restartSim()` `recordSeries()`、ループ、`window.__hodu` | `T0`（1日目の7時から） |
 
@@ -55,7 +60,13 @@
 - 強い風（0.5m/s をこえた分の2乗）で床から舞う。はたき: 高い所の 70%。
 - 掃除機: 断面を 3分で1回（＝部屋全体を1回）。吸える割合 1µm 40%〜100µm 90%、ベッドの下 ×0.35、すみ ×0.25。吸った分のうち排気からもれる 0.3µm 30%・1µm 20%・3µm 5%（HEPA は 0.03%）。ブラシで 2% 舞う。拭き掃除: 60〜90%、すみ ×0.7、舞うのは 0.2%。
 
-### 4. 記録と巻きもどし
+### 4. ズームと顕微鏡の絵
+- 見えている幅 `fieldW()` が 3cm より狭くなると、いちばん近い上向きの面（下にある面を優先）を真上から見た絵がまざり始め、1.5cm で全部になる。顕微鏡の絵では、横 = 部屋の x、縦 = 奥行き（0〜2.7m）。ドラッグは奥行きの向きにも動く。
+- 粒の数 = 面の 出どころ×大きさ の重さ ÷ 粒1つの重さ（`GRAIN`）。ます目（1辺 = 大きさ×120、40µm〜8mm）ごとに、場所で決まる乱数で並べる。数が増えると同じ列の後ろに足されるので、時間がたっても前からある粒は動かない。画面で 0.6px より小さい粒は、おおう面積の割合の「もや」にする。1コマ 6000 粒まで。
+- 綿 2/3・合成 1/3（Dris ら 2017）、色つきの繊維は推定。鉱物のまざり方（石英 4割など）も推定の絵。
+- 「近くの粒へ」: その面の列のまわり（左右 8列・奥行き 0.4m）で、いちばん近い粒をさがして寄る（大きい段を優先）。着いたらその粒の説明を出す。
+
+### 5. 記録と巻きもどし
 - 1時間ごとに面・細かい粒・大きい粒の点・ふとん・合計・人・部屋の状態を `H.snaps` に（30日まで）。時間のバーで戻すと、そこから先を消して試しなおす（戻しても帳じりは合ったまま）。10分ごとに場所ごとの g/m² と空気中の量を `H.series`（グラフ）。
 
 ## ハマったところ
@@ -72,7 +83,10 @@
 5. 時間のバーを戻して、そこから進められる。「はじめから」で 1日目 7:00 に戻る。
 6. 幅 375px: `scrollWidth` が 375、上に固定した部分が画面の半分くらい、ボタンが押せる大きさ。
 7. 図をさわるとルーペの場所が変わり、数字のカードの場所の名前が変わる。
+8. ズーム: ホイール・ダブルクリック・＋で寄って、幅 3cm から顕微鏡の絵になる。「近くの粒へ」の5つで寄れて、着いた粒の説明が出る（`jumpTo('skin', 面)` のあと `simRun(0)` を 100回くらい）。「全体」で戻る。幅 375px で説明の札と上の説明が重ならない。
+9. 人のポーズ: `window.__hoduHold = true` で絵を止め、`joints(poseOf(種類, ph), x, 向き)` → `drawBody()` で並べて見る（歩く・すわる・立つ・掃除機・拭く・はたき・ふとん）。寝ている絵は夜中に。
 
 ## 状態
 - 2026-10-14 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
+- 2026-10-14 v003-zoom: ユーザーの「人などがチープ」「ズームして埃の正体を」に。人を関節で動く横顔の絵に（歩く・すわる・寝る・掃除機・拭く・はたき・ふとん）、家具・壁・窓を描きこみ（空気清浄機をベッドと机のあいだへ、机を右の壁ぎわへ移した）。どこでもズームでき、幅 3cm から積もったほこりを真上から見る顕微鏡の絵（本当の大きさ・計算どおりの数）。近くの粒へ寄るボタン、粒の説明。
 - 2026-10-14 v002-stageA: 段階A。部屋の断面・流れ・6段の粒×5つの出どころ・いつもの1日・掃除機／拭く／はたき／ふとん／歩く／シーツ・窓／換気／エアコン／清浄機・ルーペ・時間のバー（巻きもどし）・場所ごとの量とグラフ・しくみの説明・おもな出どころ。

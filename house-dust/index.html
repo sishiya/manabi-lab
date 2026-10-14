@@ -14,7 +14,12 @@
       <div class="seg tiny" id="segSpeed" role="group" aria-label="速さ"></div>
       <div class="srcchips" id="srcChips" aria-label="色の見方"></div>
     </div>
-    <div id="frame"><canvas id="cv" aria-label="部屋の断面。ほこりの粒と積もった量"></canvas></div>
+    <div id="frame"><canvas id="cv" aria-label="部屋の断面。ほこりの粒と積もった量。ホイールや2本指で寄ると、積もったほこりを顕微鏡で見る絵になる"></canvas>
+      <div class="zoom" role="group" aria-label="ズーム"><button class="btn icon" id="zIn" aria-label="寄る" title="寄る">＋</button><button class="btn icon" id="zOut" aria-label="はなれる" title="はなれる">−</button><button class="btn small" id="zAll">全体</button></div>
+      <div class="mcap" id="mcap" hidden></div>
+      <div class="mjump" id="mjump" role="group" aria-label="いちばん近い粒へ寄る"><span>近くの粒へ:</span><button class="btn small" data-k="fiber">繊維</button><button class="btn small" data-k="skin">皮ふ</button><button class="btn small" data-k="soil">土・砂</button><button class="btn small" data-k="pollen">花粉</button><button class="btn small" data-k="soot">すす</button></div>
+      <div class="zhint" id="zhint">ホイール・2本指・ダブルクリックで寄る（どこまでも）。寄ると積もったほこりを顕微鏡で見る絵になる</div>
+    </div>
     <div class="srcchips m" id="srcChipsM" aria-hidden="true"></div>
     <div id="ro">
       <div class="ro-c">
@@ -30,7 +35,7 @@
       </div>
       <div class="ro-c loupe-c">
         <canvas id="loupe" aria-label="ルーペ: 1mm 四方の中の粒"></canvas>
-        <span class="ro-note">ルーペ（1mm 四方）。図をさわって場所をえらぶ</span>
+        <button class="btn small" id="zoomHere">ここに寄る</button>
       </div>
     </div>
   </div>
@@ -104,6 +109,16 @@
         <p>どれが多いかは家によって何倍もちがいます。くつを脱ぐ日本の家では、繊維と皮ふが多い「綿ぼこり」になりやすく、くつのまま入る家では外の土がほこりのかなりの部分になります（Layton &amp; Beamer 2009 の考え方）。</p>
       </details>
       <details>
+        <summary>ズームして、ほこりの正体を見る</summary>
+        <p>図をホイール・2本指・ダブルクリックで寄っていくと、見えている幅が 3cm より狭くなったところで、いちばん近い面を<b>真上から見た顕微鏡の絵</b>に切りかわります。そのまま 0.1mm くらいまで寄れます。下の「近くの粒へ」で、繊維・皮ふ・土・花粉・すすのいちばん近い1つへ寄れます。粒にさわると名前が出ます。</p>
+        <ul>
+          <li><b>粒の数は計算どおり</b>: その面に積もった重さを、粒1つの重さ（推定）でわって、本当の大きさ・本当の数で並べています。掃除したばかりの床では 1mm² に数こしかなく、深く寄るとほとんど何もないのがふつうです。</li>
+          <li><b>綿の繊維</b>は平たいリボンがねじれた形、<b>ポリエステルなど合成の繊維</b>はまっすぐでなめらかな円柱。色のついた繊維は服やタオルから。</li>
+          <li><b>皮ふのかけら</b>は、はがれた角質の細胞（1つ 30〜40µm）が数枚かさなった薄い板。</li>
+          <li><b>土・砂</b>は角ばった鉱物の粒（石英・長石など）と、粘土や有機物のかたまり。<b>スギ花粉</b>は直径 20〜30µm の球に突起が1本。<b>すす</b>は小さな玉がつながったかたまりで、1µm より小さいので、うんと寄らないと見えません（それまでは灰色のもや）。</li>
+        </ul>
+      </details>
+      <details>
         <summary>大きさで、落ちる速さがまったくちがう</summary>
         <table class="vs" id="vsTable"></table>
         <p>粒が落ちる速さは、直径の2乗にほぼ比例します（ストークスの式）。10倍小さい粒は100倍ゆっくり。だから大きい繊維や皮ふのかけらは出たところのすぐ近くに落ち、細かい粒は何時間も浮いて、換気や空気清浄機で外へ出ていくか、少しずつどこにでも積もります。</p>
@@ -140,6 +155,7 @@
         <li>粒の大きさは6段だけ。繊維や皮ふのかけらは、落ちる速さが同じになる球の大きさ（空気力学的な大きさ）に置きかえています。</li>
         <li>粒どうしがくっついて綿ぼこりのかたまりになること、静電気、湿気、ダニは入れていません（つぎの段階で）。</li>
         <li>空気の乱れは、拡散の強さ1つ（推定）で表しています。</li>
+        <li>顕微鏡の絵の粒の形・色・鉱物の種類のまざり方は、資料の写真や説明をもとにした推定の絵です（数は計算から）。粒は重なりも、くっつきもしないで並べています。</li>
         <li>図の積もったほこりの厚みは、見やすいように対数で大げさに描いています（本当の量は数字で）。図の点1つは、たくさんの粒をまとめたものです（ふだんは 0.4µg ぶん。皮ふのかけらなら約100こ。点が多すぎるときは1つの点の重さを増やします）。</li>
       </ul>
       <h3>推定で決めた値</h3>
@@ -158,6 +174,8 @@
         <li>Shraim, A.M. ほか, Loading rates of dust and metals in residential houses of arid and dry climatic regions. <i>Aerosol Air Qual. Res.</i> <a href="https://aaqr.org/articles/aaqr-15-10-oa-0611" target="_blank" rel="noopener">AAQR</a></li>
         <li>Ferro, A.R., Kopperud, R.J. &amp; Hildemann, L.M. (2004) Source strengths for indoor human activities that resuspend particulate matter. <i>Environ. Sci. Technol.</i>（ふとんを整える・はたき・掃除機などで 5µm 以下が 1分に 0.1〜1.4mg）</li>
         <li>Lai, A.C.K. &amp; Nazaroff, W.W. (2000) Modeling indoor particle deposition from turbulent flow onto smooth surfaces. <i>J. Aerosol Sci.</i> 31:463–476. <a href="https://hero.epa.gov/reference/12270" target="_blank" rel="noopener">EPA HERO</a></li>
+        <li>綿・ポリエステルの繊維の形: HBCSE (TIFR)「8.6 Twists in the fibres」<a href="https://vp.hbcse.tifr.res.in/wp-content/uploads/2023/12/8.6-Twists-in-the-fibres.pdf" target="_blank" rel="noopener">PDF</a>、CAMEO（Museum of Fine Arts, Boston）の綿の顕微鏡写真 <a href="https://cameo.mfa.org/wiki/Cotton_Fiber,_1865-1875,_Brown_cotton_print_dress,_cotton_lining:_FRIL" target="_blank" rel="noopener">CAMEO</a></li>
+        <li>スギ花粉の形と大きさ: 長野県林業総合センター 技術情報（直径 約0.02mm・ツノが1本）<a href="https://www.pref.nagano.lg.jp/ringyosogo/seika/gijyutsu/documents/089-4.pdf" target="_blank" rel="noopener">PDF</a>、石川県農林総合研究センター（球の頂きに小突起）<a href="https://www.pref.ishikawa.lg.jp/noken/noushi/boujositsu_dayori/documents/boujo62.pdf" target="_blank" rel="noopener">PDF</a></li>
         <li>Hinds, W.C. (1999)『Aerosol Technology』第2版（ストークスの式・カニンガムの補正）</li>
         <li>建築基準法のシックハウス対策（2003年〜。住宅の居室は 1時間に 0.5回の換気）</li>
       </ul>
@@ -172,7 +190,12 @@
 <script src="js/flow.js"></script>
 <script src="js/dust.js"></script>
 <script src="js/life.js"></script>
+<script src="js/view.js"></script>
+<script src="js/shapes.js"></script>
+<script src="js/furniture.js"></script>
+<script src="js/person.js"></script>
 <script src="js/draw.js"></script>
+<script src="js/micro.js"></script>
 <script src="js/loupe.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>

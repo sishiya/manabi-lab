@@ -121,6 +121,7 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 function frame() {
+  if (window.__hoduHold) return;   // デバッグ: ポーズ見本などを描いたまま止める
   drawScene(S);
   updateReadout(S);
   if (frameN++ % 6 === 0) { drawTimeline(S, H); drawChart(S, H); syncUI(S); }
@@ -147,4 +148,5 @@ window.__hodu = {
   balance: massBalance, byPlace, airborne, maxDiv,
   act(type) { startTask(type, S); }, set(k, v) { S[k] = v; syncUI(S); },
   restart: restartSim, restore: restoreSnap,
+  view: VIEW, zoomAt, aimAt, resetView, look(x, y, fieldM) { VIEW.mf = -1; VIEW.cx = x; VIEW.cy = y; VIEW.z = VIEW.w / fieldM / VIEW.s0; updateView(); frame(); },
 };
