@@ -113,19 +113,27 @@ function drawHead(c, rot, f) {
   g.beginPath(); g.ellipse(0, 0, R * 0.9, R * 1.08, 0, 0, 7); g.fill(); g.stroke();
   // 鼻
   g.beginPath(); g.moveTo(R * 0.86, -R * 0.15); g.quadraticCurveTo(R * 1.08, R * 0.05, R * 0.85, R * 0.16); g.fill(); g.stroke();
-  // かみ（うしろと上）
+  // かみ（ひたいの生えぎわから頭のてっぺん、うしろ、えりあしまで。少しふくらませる）
   g.fillStyle = PCOL.hair; g.beginPath();
-  g.moveTo(R * 0.75, -R * 0.55); g.quadraticCurveTo(R * 0.2, -R * 1.25, -R * 0.75, -R * 0.75);
-  g.quadraticCurveTo(-R * 1.05, -R * 0.1, -R * 0.75, R * 0.55); g.quadraticCurveTo(-R * 0.45, R * 0.1, -R * 0.2, -R * 0.35);
-  g.quadraticCurveTo(R * 0.3, -R * 0.55, R * 0.75, -R * 0.55); g.fill();
+  g.moveTo(R * 0.84, -R * 0.36);
+  g.quadraticCurveTo(R * 0.8, -R * 1.18, -R * 0.1, -R * 1.2);
+  g.quadraticCurveTo(-R * 1.08, -R * 1.02, -R * 1.0, R * 0.15);
+  g.quadraticCurveTo(-R * 0.95, R * 0.64, -R * 0.62, R * 0.74);
+  g.lineTo(-R * 0.48, R * 0.36);
+  g.quadraticCurveTo(-R * 0.4, -R * 0.22, R * 0.15, -R * 0.46);
+  g.quadraticCurveTo(R * 0.52, -R * 0.52, R * 0.84, -R * 0.36);
+  g.closePath(); g.fill();
+  g.strokeStyle = 'rgba(120,100,90,.5)'; g.lineWidth = 1; g.stroke();
   // 耳・目
   g.fillStyle = '#c9a283'; g.beginPath(); g.ellipse(-R * 0.15, R * 0.05, R * 0.14, R * 0.2, 0, 0, 7); g.fill();
   g.fillStyle = '#1d1a18'; g.beginPath(); g.arc(R * 0.5, -R * 0.12, Math.max(0.8, R * 0.08), 0, 7); g.fill();
   g.restore();
 }
 
+const PV = { x: null, dir: 1, dist: 0, t: 0 };   // 見た目の位置（計算の位置 PS.x を、なめらかに追う）
 function drawPerson(st) {
   const s = VIEW.s, state = PS.state, tt = performance.now() / 1000, T = PS.task;
+  if (state === 'out' || state === 'sleep') { PV.x = state === 'out' ? 3.3 : 1.25; PV.t = tt; }   // 帰ってきたらドアから、起きたらベッドの横から歩く
   if (state === 'out') {
     g.fillStyle = COL.muted; g.font = `${fsz(0.06, 10, 14)}px ${FF}`; g.textAlign = 'right';
     g.fillText('（出かけている）', X(ROOM_W - 0.06), Y(1.25));
@@ -141,11 +149,31 @@ function drawPerson(st) {
     g.globalAlpha = 0.5 + 0.5 * Math.sin(tt * 1.3); g.fillText('z z', X(0.55), Y(0.95)); g.globalAlpha = 1;
     return;
   }
-  let kind = 'stand', f = PS.dir >= 0 ? 1 : -1, x = PS.x;
+  let kind = 'stand', f = PS.dir >= 0 ? 1 : -1;
   if (state === 'walk') kind = 'walk';
   else if (state === 'sit') { kind = 'sit'; f = 1; }
   else if (T) { kind = T.type === 'roam' ? 'walk' : T.type; f = T.type === 'duster' ? 1 : -1; }
-  const ph = kind === 'walk' ? (x - WALK_X[0]) / 0.33 * Math.PI : tt * 3;   // 歩くのは進んだ道のりで足を出す
+  // 見た目の位置 PV は画面の時間で動かす（速く進めると計算の PS.x は1コマで何mもとぶので、そのまま描くとガクガクする）
+  const dtR = Math.min(0.1, Math.max(0, tt - PV.t)); PV.t = tt;
+  const run = st.playing ? dtR : 0;
+  if (PV.x === null) PV.x = PS.x;
+  if (kind === 'walk') {
+    if (st.speed <= 1) { const mv = PS.x - PV.x; if (Math.abs(mv) < 0.3) { PV.dist += Math.abs(mv); if (mv) PV.dir = Math.sign(mv); PV.x = PS.x; } else PV.x += Math.sign(mv) * Math.min(Math.abs(mv), 0.9 * run); }
+    else {
+      PV.x += PV.dir * 0.8 * run; PV.dist += 0.8 * run;
+      if (PV.dir > 0 && PV.x > WALK_X[1]) PV.dir = -1; else if (PV.dir < 0 && PV.x < WALK_X[0]) PV.dir = 1;   // 範囲の外にいたら、範囲へ歩いて入る（とばさない）
+    }
+    f = PV.dir;
+  } else {
+    const d = PS.x - PV.x;
+    if (!st.playing) PV.x = PS.x;
+    else if (Math.abs(d) > 0.02) {   // 次の場所まで歩いていく
+      const stp = Math.min(Math.abs(d), (st.speed <= 1 ? 0.9 : 1.6) * run);
+      PV.x += Math.sign(d) * stp; PV.dist += stp; kind = 'walk'; f = Math.sign(d);
+    } else PV.x = PS.x;
+  }
+  const x = PV.x;
+  const ph = kind === 'walk' ? PV.dist / 0.33 * Math.PI : tt * 3;   // 歩くのは進んだ道のりで足を出す（向きを変えても足は前へ）
   const J = joints(poseOf(kind, ph), x, f);
   // 掃除機: 本体（床の上）・ホース・パイプ・ノズル
   if (T && T.type === 'vacuum') {
