@@ -43,7 +43,16 @@
 |---|---|---|---|
 | 2026-10-14 | ブラックホールの見え方（動画は 10/13） | `blackhole-kerr-raytracing-webgl2` | 公開ずみ |
 | 2026-10-15 | 量子の実験室 | `quantum-tunnel-visscher-canvas` | 下書き |
-| 2026-10-16〜10-24 | 上の表の 6〜13日目 | まだ | |
+| 2026-10-16 | さなぎの中で | `metamorphosis-time-driven-canvas` | 下書き |
+| 2026-10-17 | 免疫のたたかい | `immune-ode-model-rk4` | 下書き |
+| 2026-10-18 | 空気の流れの見える部屋 | `airflow-age-of-air-bicgstab` | 下書き |
+| 2026-10-19 | 進化の箱庭 | `ga-creatures-spring-physics` | 下書き |
+| 2026-10-20 | 神の視点マップ | `godview-tear-earth-sph-worker` | 下書き |
+| 2026-10-21 | 電波の見える部屋 | `wifi-fdtd-webgl2-grid-fix` | 下書き |
+| 2026-10-22 | カビが育つまで | `mold-growth-hyphae-grid` | 下書き |
+| 2026-10-24 | 変化球のしくみ | `pitch-magnus-nathan-rk4` | 下書き |
+
+英語版は DEV（dev.to）へ（`../zenn/dev/`・`tools/devto.ps1`）。1本目はブラックホール（下書き）。
 
 ## 録画が間に合わないとき
 そのまま入れかえられるのは 量子⇔電波（5⇔11）だけ（同じジャンル・同じ色味）。いきもの同士の入れかえは色味か微生物の並びがぶつかる（例: さなぎ⇔進化の箱庭だと 5・6日目が紺で続く）。ほかを動かすときは上の決まりで確かめ直す。
