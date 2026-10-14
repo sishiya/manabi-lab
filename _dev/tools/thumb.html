@@ -19,6 +19,8 @@ const click = (w, sel) => { const e = w.document.querySelector(sel); if (e) e.cl
 
 // アプリごとの準備（w = アプリの window）
 const SETUP = {
+  // ほこりが積もるまで（2日たって、ふとんをはたいた直後: 舞い上がった皮ふと繊維、すみ・家具の上に積もった層）
+  'house-dust': async w => { await wait(800); const h = w.__hodu; h.S.playing = false; h.S.speed = 3600; h.simRun(2 * 86400); h.S.speed = 1; h.act('bed'); h.simRun(15); await wait(300); },
   // 脱毛のしくみ（剃ってから光をあてた直後: 伸びている毛の根もとが熱で光る）
   'hair-removal': async w => { await wait(1000); const H = w.__hare, d = w.document, all = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; H.S.playing = false; H.setTime(0); H.act('shave', all); H.setTime(1); H.act('light', all); d.getElementById('tool-light').click(); H.S.ptr = null; d.getElementById('toast').hidden = true; H.setTime(1.06); await wait(400); },
   // ちいさな地球（半径 1 km、星を押して 3 時間後の海のゆれ。高さ ×100）

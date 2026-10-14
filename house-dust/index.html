@@ -1,0 +1,178 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ほこりが積もるまで</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2316202b'/><g fill='none' stroke='%23e6c88a' stroke-width='3' stroke-linecap='round'><path d='M12 46 Q32 40 52 46'/><circle cx='22' cy='22' r='3'/><circle cx='36' cy='16' r='2'/><circle cx='44' cy='30' r='2.5'/><path d='M26 32 q4 -4 8 0'/></g></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<div id="app">
+  <div id="stage">
+    <div id="bar">
+      <b id="clock" class="mono">1日目 7:00</b>
+      <button class="btn icon" id="play" aria-label="止める" title="止める／進める">❚❚</button>
+      <div class="seg tiny" id="segSpeed" role="group" aria-label="速さ"></div>
+      <div class="srcchips" id="srcChips" aria-label="色の見方"></div>
+    </div>
+    <div id="frame"><canvas id="cv" aria-label="部屋の断面。ほこりの粒と積もった量"></canvas></div>
+    <div class="srcchips m" id="srcChipsM" aria-hidden="true"></div>
+    <div id="ro">
+      <div class="ro-c">
+        <span class="lbl">空気中<span class="xs">（部屋の平均）</span></span>
+        <div class="ro-n"><b id="roFine" class="mono">–</b><small>µg/m³<br>細かい粒<span class="xs">（3µm 以下）</span></small></div>
+        <div class="ro-n"><b id="roCoarse" class="mono">–</b><small>µg/m³<br>大きい粒<span class="xs">（10µm 以上）</span></small></div>
+      </div>
+      <div class="ro-c" id="roPlaceCard">
+        <span class="lbl"><span id="roPlace">床</span>に積もった量</span>
+        <div class="ro-n"><b id="roGm2" class="mono">–</b><small>g/m²</small></div>
+        <div class="mix" id="roMix" aria-label="出どころの割合（重さ）"></div>
+        <div id="roCount" class="ro-note"></div>
+      </div>
+      <div class="ro-c loupe-c">
+        <canvas id="loupe" aria-label="ルーペ: 1mm 四方の中の粒"></canvas>
+        <span class="ro-note">ルーペ（1mm 四方）。図をさわって場所をえらぶ</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="panel">
+    <header class="brand">
+      <h1>ほこりが積もるまで</h1>
+      <p>家のほこりは、どこから来て、何でできていて、どこに積もるのか。掃除したばかりの6畳の部屋を横から切った図で、自分で試してみよう。</p>
+    </header>
+
+    <section class="card now">
+      <h2>いまのようす</h2>
+      <p id="now"></p>
+    </section>
+
+    <section>
+      <h2>やってみる（いつでも）</h2>
+      <div class="acts" id="acts">
+        <button class="btn act" data-task="vacuum">掃除機をかける<small>3分</small></button>
+        <button class="btn act" data-task="wipe">床を拭く<small>フローリングワイパー・3分</small></button>
+        <button class="btn act" data-task="duster">はたきをかける<small>棚・机の上・1分</small></button>
+        <button class="btn act" data-task="bed">ふとんをはたく<small>1分</small></button>
+        <button class="btn act" data-task="roam">歩きまわる<small>5分</small></button>
+        <button class="btn act" data-do="wash">シーツを洗う<small>ふとんにたまった分</small></button>
+      </div>
+    </section>
+
+    <section>
+      <h2>部屋</h2>
+      <div class="toggles" id="toggles">
+        <button class="btn tg" data-k="window">窓をあける</button>
+        <button class="btn tg" data-k="vent">24時間換気</button>
+        <button class="btn tg" data-k="ac">エアコン</button>
+        <button class="btn tg" data-k="purifier">空気清浄機</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>人</h2>
+      <div class="seg small" id="segPerson" role="group" aria-label="人"></div>
+      <p class="cap">「いつもの1日」: 23時〜7時 ねる、7時 ふとんを整える、8時〜18時 出かける、夜は机。ほかをえらぶと、その間はずっとそうしている。</p>
+    </section>
+
+    <section>
+      <h2>時間（もどして試しなおせる）</h2>
+      <canvas id="tlc" class="tlc" aria-hidden="true"></canvas>
+      <input type="range" id="tl" min="0" max="0" value="0" step="1" aria-label="時間をもどす（1時間ごと）">
+      <div class="row"><span class="cap" id="tlInfo"></span><button class="btn small" id="restart">はじめから</button></div>
+    </section>
+
+    <section>
+      <h2>場所ごとの積もった量</h2>
+      <div id="places" class="places"></div>
+      <canvas id="chart" class="chart" aria-label="積もった量の時間の変化"></canvas>
+      <div class="legend" id="chartLegend"></div>
+    </section>
+
+    <section>
+      <h2>設定</h2>
+      <label class="chk"><input type="checkbox" id="optSpring"> 春（スギ花粉の季節）</label>
+      <label class="chk"><input type="checkbox" id="optShoes"> 土足の家（くつのまま入る。海外に多い）</label>
+      <label class="chk"><input type="checkbox" id="optHepa"> 掃除機の排気に HEPA フィルター</label>
+      <label class="chk"><input type="checkbox" id="optFlow" checked> 空気の流れを矢印で見せる</label>
+    </section>
+
+    <section class="explain">
+      <h2>しくみ</h2>
+      <details open>
+        <summary>ほこりの正体（5つの出どころ）</summary>
+        <ul class="srcs" id="srcList"></ul>
+        <p>どれが多いかは家によって何倍もちがいます。くつを脱ぐ日本の家では、繊維と皮ふが多い「綿ぼこり」になりやすく、くつのまま入る家では外の土がほこりのかなりの部分になります（Layton &amp; Beamer 2009 の考え方）。</p>
+      </details>
+      <details>
+        <summary>大きさで、落ちる速さがまったくちがう</summary>
+        <table class="vs" id="vsTable"></table>
+        <p>粒が落ちる速さは、直径の2乗にほぼ比例します（ストークスの式）。10倍小さい粒は100倍ゆっくり。だから大きい繊維や皮ふのかけらは出たところのすぐ近くに落ち、細かい粒は何時間も浮いて、換気や空気清浄機で外へ出ていくか、少しずつどこにでも積もります。</p>
+      </details>
+      <details>
+        <summary>どこに積もりやすい？</summary>
+        <ul>
+          <li><b>出るところの近く</b>: ベッドのまわり（ふとんをはたく・寝返り）、人がいる机のまわり。大きい粒は数秒〜数分で、出たところのすぐ下に落ちます。</li>
+          <li><b>すみ・家具のきわ、ベッドと壁のすきま</b>: 部屋の空気は壁や家具にそって下りてきて床で向きを変えるので、そこに粒が運ばれて落ちやすい。そのうえ掃除機のノズルが届きにくく、ふまれないので、日がたつほど差がつきます。</li>
+          <li><b>高いところの上</b>: 机・棚・エアコンの上。ここから舞い上がることはほとんどなく、ふだん掃除もしないので、たまる一方になります。</li>
+          <li><b>ベッドの下は？</b> この断面の計算では、ベッドの下に入りこむ粒は意外に少なめです。実際の部屋でベッドの下に綿ぼこりがたまるのは、床をころがる繊維のかたまりや、掃除が届かないことが大きいと考えられます（綿ぼこりのかたまりは、このアプリにはまだ入れていません）。</li>
+        </ul>
+      </details>
+      <details>
+        <summary>対策のこつ（図で確かめてみよう）</summary>
+        <ul>
+          <li><b>朝いちばん・帰ってすぐに床を拭く</b>: 寝ている間・出かけている間に、舞っていたほこりが床へ落ちきっています。まず舞い上げない「拭く」で取ると、空気中の量が増えにくい。</li>
+          <li><b>上から下へ</b>: はたきで落としたほこりは、大きいものは数分、細かいものは何時間もかけて落ちます。はたきのあと時間をおいてから床を掃除すると、落ちた分も取れます。</li>
+          <li><b>掃除機は排気に注意</b>: 吸ったほこりのうち細かい粒は、ふつうのフィルターだと排気から出ることがあります（HEPA にくらべてみよう）。排気の風が床をなでる所では舞い上がりも。</li>
+          <li><b>換気・空気清浄機は細かい粒に効く</b>: 部屋で舞い上げた細かい粒は、換気で外へ出せます（ただし外の空気にもすすなどの細かい粒があるので、窓をあけると部屋は外の濃さに近づきます）。空気清浄機は外から入った分もふくめて取ります。でも、すぐ落ちる大きい繊維や皮ふのかけらは、清浄機に届く前に床へ落ちます。床のほこりは掃除で取るしかない。</li>
+          <li><b>出どころをへらす</b>: シーツを洗う（ふとんにたまる皮ふ）、外から帰ったら服をはらう（花粉・土）。</li>
+        </ul>
+        <p class="cap">ここでの「効く・効かない」は、このアプリの計算での結果です。どれも出る量・取れる割合を推定で決めているので、数字そのものより、ちがいの向きを見てください。</p>
+      </details>
+    </section>
+
+    <details id="about" class="explain">
+      <summary>このアプリについて</summary>
+      <h3>計算のしかた</h3>
+      <p>部屋を 5cm のマスに分け、空気の流れ（エアコン・空気清浄機・窓・給気口・人の体温の上昇流・歩く人）を2次元で計算しています。10µm より大きい粒は、点1つ1つを「流れ ＋ 落ちる速さ ＋ 空気の乱れ」で動かし、面に届いたら積もります。3µm より小さい粒は部屋の中でよくまざると考え、部屋全体の濃さ1つで計算し、すべての面へ付く速さ（Lai &amp; Nazaroff 2000）で積もらせています。歩く・強い風・はたき・掃除機のブラシで、積もったほこりが舞い上がります。</p>
+      <h3>簡単にしたところ</h3>
+      <ul>
+        <li>部屋は断面の2次元で、奥行きはどこも同じとしています。家具は四角。</li>
+        <li>粒の大きさは6段だけ。繊維や皮ふのかけらは、落ちる速さが同じになる球の大きさ（空気力学的な大きさ）に置きかえています。</li>
+        <li>粒どうしがくっついて綿ぼこりのかたまりになること、静電気、湿気、ダニは入れていません（つぎの段階で）。</li>
+        <li>空気の乱れは、拡散の強さ1つ（推定）で表しています。</li>
+        <li>図の積もったほこりの厚みは、見やすいように対数で大げさに描いています（本当の量は数字で）。図の点1つは、たくさんの粒をまとめたものです（ふだんは 0.4µg ぶん。皮ふのかけらなら約100こ。点が多すぎるときは1つの点の重さを増やします）。</li>
+      </ul>
+      <h3>推定で決めた値</h3>
+      <p>出どころごとに出る量（服の繊維・ふとんにたまる割合・帰ったときの花粉や土・外の空気の濃さ）、歩いたときに舞い上がる割合、掃除機や拭き掃除で取れる割合、エアコン・空気清浄機の風量は、どれも推定です。家・季節・人によって何倍もちがいます。測られた値（皮ふは1時間に 30〜90mg、室内に落ちる繊維は 1日 1,600〜11,000本/m²、室内に積もる速さの例 0.07〜1.6 g/m²/週、部屋に入るだけで 1µm 以上の粒が最大2倍に）に、大きさが合うようにしました。</p>
+      <p>学習用に簡単にした計算です。アレルギーなど健康のことの判断には使えません。</p>
+      <h3>おもな出どころ</h3>
+      <ul class="refs">
+        <li>Layton, D.W. &amp; Beamer, P.I. (2009) Migration of contaminated soil and airborne particulates to indoor dust. <i>Environ. Sci. Technol.</i> 43:8199–8205. <a href="https://heronetnext.epa.gov/reference/685471" target="_blank" rel="noopener">EPA HERO</a></li>
+        <li>Thatcher, T.L. &amp; Layton, D.W. (1995) Deposition, resuspension, and penetration of particles within a residence. <i>Atmos. Environ.</i> 29:1487–1497. <a href="https://doi.org/10.1016/1352-2310(95)00016-R" target="_blank" rel="noopener">doi</a></li>
+        <li>Qian, J., Peccia, J. &amp; Ferro, A.R. (2014) Walking-induced particle resuspension in indoor environments. <i>Atmos. Environ.</i> 89:464–481.</li>
+        <li>Mackintosh, C.A., Lidwell, O.M., Towers, A.G. &amp; Marples, R.R. (1978) The dimensions of skin fragments dispersed into the air during activity. <i>J. Hyg.</i> 81:471–479. <a href="https://www.ncbi.nlm.nih.gov/pubmed/731026" target="_blank" rel="noopener">PubMed</a></li>
+        <li>Clark, R.P. (1974) Skin scales among airborne particles. <i>J. Hyg.</i> <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC2130262/" target="_blank" rel="noopener">PMC</a></li>
+        <li>Weschler, C.J. ほか (2011) Squalene and cholesterol in dust from Danish homes and daycare centers. <i>Environ. Sci. Technol.</i> <a href="https://orbit.dtu.dk/en/publications/squalene-and-cholesterol-in-dust-from-danish-homes-and-daycare-ce/" target="_blank" rel="noopener">DTU</a>。1時間に 30〜90mg の皮ふは Weschler の発表を伝えた記事（<a href="https://www.sciencenews.org/blog/science-public/skinny-indoor-ozone" target="_blank" rel="noopener">Science News</a>）から。</li>
+        <li>Dris, R. ほか (2017) A first overview of textile fibers, including microplastics, in indoor and outdoor environments. <i>Environ. Pollut.</i> 221:453–458. <a href="https://researchportal.ip-paris.fr/en/publications/a-first-overview-of-textile-fibers-including-microplastics-in-ind/" target="_blank" rel="noopener">IP Paris</a></li>
+        <li>Khoder, M.I., Hassan, S.K. &amp; El-Abssawy, A.A. (2010) An evaluation of loading rate of dust, Pb, Cd, and Ni … in domestic houses. <i>Indoor Built Environ.</i> 19:391–399.</li>
+        <li>Shraim, A.M. ほか, Loading rates of dust and metals in residential houses of arid and dry climatic regions. <i>Aerosol Air Qual. Res.</i> <a href="https://aaqr.org/articles/aaqr-15-10-oa-0611" target="_blank" rel="noopener">AAQR</a></li>
+        <li>Ferro, A.R., Kopperud, R.J. &amp; Hildemann, L.M. (2004) Source strengths for indoor human activities that resuspend particulate matter. <i>Environ. Sci. Technol.</i>（ふとんを整える・はたき・掃除機などで 5µm 以下が 1分に 0.1〜1.4mg）</li>
+        <li>Lai, A.C.K. &amp; Nazaroff, W.W. (2000) Modeling indoor particle deposition from turbulent flow onto smooth surfaces. <i>J. Aerosol Sci.</i> 31:463–476. <a href="https://hero.epa.gov/reference/12270" target="_blank" rel="noopener">EPA HERO</a></li>
+        <li>Hinds, W.C. (1999)『Aerosol Technology』第2版（ストークスの式・カニンガムの補正）</li>
+        <li>建築基準法のシックハウス対策（2003年〜。住宅の居室は 1時間に 0.5回の換気）</li>
+      </ul>
+      <h3>使っているもの</h3>
+      <p>フォント: Google Fonts（SIL Open Font License）。ライブラリは使っていません。</p>
+    </details>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/room.js"></script>
+<script src="js/flow.js"></script>
+<script src="js/dust.js"></script>
+<script src="js/life.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/loupe.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
