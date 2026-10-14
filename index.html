@@ -45,7 +45,7 @@ h1{margin:0;font-size:32px;line-height:1.3}
 .head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:0 0 8px}
 .lang button{padding:4px 12px;font-weight:600;letter-spacing:.04em}
 .lang button[aria-pressed=false]{color:var(--muted)}
-.jponly{position:absolute;right:10px;bottom:10px;font-size:11px;line-height:1;padding:4px 6px;border-radius:5px;background:rgba(14,18,24,.62);color:#fff;white-space:nowrap}
+.jponly{position:absolute;z-index:1;pointer-events:none;right:10px;bottom:10px;font-size:11px;line-height:1;padding:4px 6px;border-radius:5px;background:rgba(14,18,24,.62);color:#fff;white-space:nowrap}
 .lead{color:var(--muted);margin:0 0 24px;max-width:720px}
 
 /* 操作欄: 分野（左）と並び順（右）。狭いと並び順は分野の下へ（しぼってから並べかえる順） */
@@ -79,7 +79,7 @@ h2+.grid{margin-top:0}
 .card:hover .thumb{filter:brightness(1.08)}
 .pic{position:relative}
 .thumb{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;background:var(--thumb)}
-.badge{position:absolute;top:10px;left:10px;font-size:12px;font-weight:700;line-height:1;padding:5px 8px;border-radius:6px;background:var(--new);color:var(--new-ink)}
+.badge{position:absolute;z-index:1;pointer-events:none;top:10px;left:10px;font-size:12px;font-weight:700;line-height:1;padding:5px 8px;border-radius:6px;background:var(--new);color:var(--new-ink)}
 .badge.upd{font-weight:500;background:rgba(14,18,24,.62);color:#fff}
 .body{padding:14px 16px 16px;display:flex;flex-direction:column;flex:1}
 .cat{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-bottom:4px}
