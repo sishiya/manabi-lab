@@ -47,6 +47,8 @@ $allowApp = @{
   # 地図・地形・写真・建物・データ源（god-view/DEVNOTES.md の「データ源」。キー不要のものだけ）
   'god-view' = @('\.gsi\.go\.jp$', '^gibs\.earthdata\.nasa\.gov$', '(^|\.)openstreetmap\.org$', '(^|\.)openfreemap\.org$',
     '^earthquake\.usgs\.gov$', '\.odpt\.org$', '^celestrak\.org$', '\.amazonaws\.com$', '\.plateau\.reearth\.io$')
+  # 分類（Catalogue of Life, CC BY）と和名（Wikidata, CC0）。枝を開く・検索するときに読む（tree-of-life/PLAN.md の「使ってよいか」）
+  'tree-of-life' = @('^api\.checklistbank\.org$', '^query\.wikidata\.org$', '^www\.wikidata\.org$')
 }
 # 失敗してもよい読み込み（URL の正規表現）
 $ignoreFail = @('/favicon\.ico$')
