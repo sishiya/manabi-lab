@@ -30,16 +30,19 @@ const V3 = (() => {
     const s = F / zc;
     return [W / 2 + (dx * R[0] + dy * R[1] + dz * R[2]) * s, H / 2 - (dx * U[0] + dy * U[1] + dz * U[2]) * s, s, zc];
   }
-  const X = n => n.ay, Z = n => n.lv * DZ;
+  // 左右の位置は「ルートからの差」: ルート（細胞をもつ生きもの）を方眼の原点に固定する。2D の行の位置は枝を開くたびに全体がずれるので、そのままだと方眼の上で木がすべって見えた
+  const X = n => n.ay - T.root.ay, Z = n => n.lv * DZ;
+  const XT = n => n.y - T.root.y;   // 決めた位置（アニメ前）での左右
   // 遠いほどうすく（霧）。奥行きの手がかり
   const fog = zc => Math.max(0.12, Math.min(1, 1.25 - zc / (cam.dist * 2.6)));
 
   // ---------- ガイド ----------
   function extent() {
     let x0 = Infinity, x1 = -Infinity, z1 = 0;
-    for (const n of V.vis) { if (n.ay === undefined) continue; x0 = Math.min(x0, n.ay); x1 = Math.max(x1, n.ay); z1 = Math.max(z1, n.lv); }
+    for (const n of V.vis) { if (n.ay === undefined) continue; x0 = Math.min(x0, X(n)); x1 = Math.max(x1, X(n)); z1 = Math.max(z1, n.lv); }
     if (!isFinite(x0)) { x0 = -200; x1 = 200; }
-    return { x0: x0 - 160, x1: x1 + 160, n: Math.ceil(z1) + 2 };
+    // 方眼のはしは 240 ごとにそろえる（枝を開くたびに地面のはしが少しずつ動かないように）
+    return { x0: Math.floor((x0 - 160) / 240) * 240, x1: Math.ceil((x1 + 160) / 240) * 240, n: Math.ceil((z1 + 2) / 5) * 5 };
   }
   function line3(g, a, b, steps = 1) {
     let prev = null;
@@ -270,13 +273,13 @@ const V3 = (() => {
     if (!n || n.lv === undefined) return;
     // 進みすぎない: 子の並ぶ少し手前を見る。開いたふし（親）が画面の下のはしに残るか、たしかめて少しずつもどす
     const kids = V.kidsOf(n).filter(k => k.y !== undefined);
-    const kx = kids.length ? (kids[0].y + kids[kids.length - 1].y) / 2 : n.y;
+    const kx = kids.length ? (XT(kids[0]) + XT(kids[kids.length - 1])) / 2 : XT(n);
     const save = { tx: cam.tx, tz: cam.tz };
     let to = null;
     for (const ahead of [0.85, 0.6, 0.35, 0.1, -0.2]) {
-      const c = { tx: n.y + (kx - n.y) * 0.6, tz: n.lv * DZ + DZ * ahead };
+      const c = { tx: XT(n) + (kx - XT(n)) * 0.6, tz: n.lv * DZ + DZ * ahead };
       cam.tx = c.tx; cam.tz = c.tz; setup();
-      const p = P(n.y, 0, n.lv * DZ);
+      const p = P(XT(n), 0, n.lv * DZ);
       to = c;
       if (p && p[1] < H - 36 && p[1] > 40 && p[0] > 20 && p[0] < W - 70) break;
     }
@@ -293,12 +296,12 @@ const V3 = (() => {
   // あるふしと、その先の見えている枝がちょうど入るように（3D に入ったとき）
   function frame(n, ms = 700) {
     if (!n || n.lv === undefined) return;
-    let x0 = n.y, x1 = n.y, z0 = n.lv, z1 = n.lv;
+    let x0 = XT(n), x1 = XT(n), z0 = n.lv, z1 = n.lv;
     for (const m of V.vis) {
       if (m.y === undefined) continue;
       let a = m; while (a && a !== n) a = a.parent;
       if (!a) continue;
-      x0 = Math.min(x0, m.y); x1 = Math.max(x1, m.y); z1 = Math.max(z1, m.lv);
+      x0 = Math.min(x0, XT(m)); x1 = Math.max(x1, XT(m)); z1 = Math.max(z1, m.lv);
     }
     const to = { tx: (x0 + x1) / 2, tz: (z0 + z1) / 2 * DZ + DZ * 0.5,
       dist: Math.max(500, Math.min(6000, Math.max((x1 - x0) * 1.15, (z1 - z0 + 2) * DZ * 1.25))) };
@@ -315,7 +318,7 @@ const V3 = (() => {
   // 全体: 開いている枝がぜんぶ入るように
   function fit() {
     let x0 = Infinity, x1 = -Infinity, z1 = 0;
-    for (const n of V.vis) { if (n.y === undefined) continue; x0 = Math.min(x0, n.y); x1 = Math.max(x1, n.y); z1 = Math.max(z1, n.lv); }
+    for (const n of V.vis) { if (n.y === undefined) continue; x0 = Math.min(x0, XT(n)); x1 = Math.max(x1, XT(n)); z1 = Math.max(z1, n.lv); }
     if (!isFinite(x0)) return;
     cam.tx = (x0 + x1) / 2; cam.tz = z1 * DZ / 2;
     cam.dist = Math.max(400, Math.min(12000, Math.max(x1 - x0, z1 * DZ) * 1.1));
