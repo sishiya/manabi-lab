@@ -134,12 +134,42 @@ document.getElementById('zclose').onclick = () => {
 // 大きさが変わったら描きなおす。まだだれも動かしていなければ全体が入るように（最初は CSS が効く前で大きさ 0 のことがある）
 cv.addEventListener('pointerdown', () => touched = true);
 cv.addEventListener('wheel', () => touched = true);
-new ResizeObserver(() => { V.resize(); if (!touched) V.fit(); }).observe(cv);
-// はじめ: 根もとと真核生物を開いておく
-T.root.open = true;
-const euk = T.root.kids.find(k => k.name === 'Eukaryota'); if (euk) euk.open = true;
-V.resize(); V.fit();
-UI.show(T.root); V.selected = T.root; V.draw();
+new ResizeObserver(() => { V.resize(); if (!touched && replace) replace(); }).observe(cv);
+// はじめ: ドメインからではなく、なじみのある所から。哺乳類を開いて、ネコ目・サル目などの「目」がならんだところ
+//   （哺乳類 → 獣亜綱 → 真獣下綱 → 目。真獣下綱から下は COL から読む。読めなかったら哺乳類のところで止まる）
+let replace = null;   // はじめの場所に置きなおす（ResizeObserver から）
+async function startView() {
+  const mam = T.nodes.find(n => n.name === 'Mammalia');
+  if (!mam) { T.root.open = true; V.fit(); return; }
+  T.ancestors(mam).forEach(a => a.open = true);
+  V.selected = mam; UI.show(mam);
+  const place = (n, ny = n) => {   // n を左の少し内側、ny をたて真ん中に（だれもさわっていない間は、大きさが変わってもここへ）
+    replace = () => place(n, ny);
+    V.resize(); V.layout(); V.settle();
+    const [W, H] = V.size, k = W < 600 ? 0.78 : 0.88;
+    V.cam.k = k; V.cam.x = Math.min(24, W * 0.03) + 6 - n.x * k; V.cam.y = H / 2 - ny.y * k;
+    V.draw();
+  };
+  place(mam);
+  let n = mam;
+  try {
+    for (const name of ['Theria', 'Eutheria']) {
+      await T.open(n);
+      const next = n.kids.find(k => k.name === name);
+      if (!next || touched) break;
+      n = next;
+    }
+    await T.open(n);
+  } catch (e) { warn(); }
+  if (touched) return;   // 読みこみの間にさわっていたら、そのまま
+  // 広い画面は哺乳類から目まで入れる。せまい画面は目のならびが見えるところから
+  V.layout();
+  const [W] = V.size;
+  const fits = (n.jx + 38 + 150 - mam.x) * (W < 600 ? 0.78 : 0.88) < W - 30;
+  place(fits ? mam : n, n);
+}
+V.resize();
+startView();
 
 // デバッグ用（RULES 5）: 状態を見る・押す・探す
 window.__trofli = {

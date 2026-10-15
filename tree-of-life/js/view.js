@@ -4,7 +4,7 @@
 const V = (() => {
   const cv = document.getElementById('cv');
   const g = cv.getContext('2d');
-  const ROW = 28;             // 葉1つの高さ
+  const ROW = 34;             // 葉1つの高さ（名前は2段: 和名の下に小さく学名と種の数）
   const GAP = 38;             // 分かれ目から子までの横のはば（曲線の長さ）
   const cam = { x: 20, y: 0, k: 1 };   // 画面 = 世界 * k + (x, y)
   let vis = [];               // 見えているふし（配置ずみ）
@@ -14,8 +14,11 @@ const V = (() => {
   const INK = '#2c2a24', SUB = '#7a7262', FAINT = '#9b927e';
   const FONT = "14px 'Zen Old Mincho','Yu Mincho','Hiragino Mincho ProN',serif";
   const FONT_B = "700 14px 'Zen Old Mincho','Yu Mincho','Hiragino Mincho ProN',serif";
-  const FONT_SCI = "italic 13px 'EB Garamond',Georgia,serif";
-  const FONT_S = "11px 'IBM Plex Mono',Consolas,monospace";
+  const FONT_SCI = "italic 14px 'EB Garamond',Georgia,serif";      // 和名がないときの1段め
+  const FONT_SCI2 = "italic 11.5px 'EB Garamond',Georgia,serif";   // 2段めの学名（小さめ。くわしくは詳細で）
+  const FONT_S = "10px 'IBM Plex Mono',Consolas,monospace";
+  const LINE2 = 13;            // 1段めから2段めまで
+  const SEL_BG = '#ead9ad', HOV_BG = '#ebe3cf', PAPER = '#f4efe3';   // 名前の下じき（不透明: 吸いこまれる子は、この裏へまわる）
   const FONT_TAG = "700 10px 'Zen Kaku Gothic New','Yu Gothic',sans-serif";
   const widthMemo = new Map();
   // フォントが読みこまれたら、名前の幅を測りなおす
@@ -35,17 +38,20 @@ const V = (() => {
     const cnt = n.count > 0 ? fmt(n.count) + '種' : '';
     return { tag: n.rank === 'root' ? '' : tag, main, sci, cnt, sciMain: !n.ja && !n.more };
   }
+  // 2段の名前の幅: 札 ＋ max(1段め［和名 ›］, 2段め［学名 種の数］)
   function labelW(n) {
     const p = labelParts(n);
-    let w = 0;
-    if (p.tag) w += tw(p.tag, FONT_TAG) + 11;
-    w += tw(p.main, p.sciMain ? FONT_SCI : FONT);
-    if (p.sci) w += 7 + tw(p.sci, FONT_SCI);
-    if (p.cnt) w += 8 + tw(p.cnt, FONT_S);
-    if (T.expandable(n) && T.named(n) && !n.more) w += 14;
-    return w;
+    const tag = p.tag ? tw(p.tag, FONT_TAG) + 11 : 0;
+    let w1 = tw(p.main, p.sciMain ? FONT_SCI : FONT_B);   // 太字（えらんだとき）でも収まる幅
+    if (T.expandable(n) && T.named(n) && !n.more) w1 += 14;
+    let w2 = 0;
+    if (p.sci) w2 += tw(p.sci, FONT_SCI2);
+    if (p.cnt) w2 += (w2 ? 7 : 0) + tw(p.cnt, FONT_S);
+    return tag + Math.max(w1, w2);
   }
-  const labelY = (n, y) => (T.isOpen(n) && n.kids.length ? y - 10 : y);   // 開いているふしは名前を枝の上に
+  const twoLines = n => { const p = labelParts(n); return !!(p.sci || p.cnt); };
+  // 1段めの高さ。閉じたふしは点の横、開いているふしは2段ごと枝の上へ
+  const labelY = (n, y) => (T.isOpen(n) && n.kids.length ? y - (twoLines(n) ? 8 + LINE2 : 10) : y);
 
   // 配置: 葉は上から1行ずつ、親は子の真ん中。名前のあるふしは名前のぶん右へ
   // 見た目の位置（ax, ay, ajx）は、ここで決めた位置（x, y, jx）へ少しずつ近づく（step）
@@ -101,7 +107,7 @@ const V = (() => {
     for (const L of leaving) {
       L.t = Math.min(1, L.t + dt / 0.3);
       const e = L.t * L.t * L.t;
-      L.x = L.sx + (L.a.ax - L.sx) * e; L.y = L.sy + (L.a.ay - L.sy) * e;
+      L.x = L.sx + (L.a.ax - L.sx) * e; L.y = L.sy + (L.a.ay - L.sy) * e;   // 親の点へ（名前の下じきの裏を通る）
       L.alpha = 1 - L.t * L.t; L.scale = 1 - e * 0.85;
       if (L.t >= 1 && !L.a.popped) { L.a.pulse = 1; L.a.popped = true; }
     }
@@ -175,12 +181,13 @@ const V = (() => {
       if (T.named(L.n)) {
         g.fillStyle = L.n.more ? FAINT : GROUP_COLOR[RANK_GROUP(L.n.rank)];
         g.beginPath(); g.arc(L.x, L.y, (2.6 + Math.log10(L.n.count + 1) * 0.7) * L.scale, 0, 7); g.fill();
-        if (L.t < 0.35) { g.globalAlpha = L.alpha * (1 - L.t / 0.35); g.font = FONT; g.fillStyle = INK; g.textBaseline = 'middle'; g.fillText(L.n.ja || L.n.name, L.x + 8, L.y); }
+        if (L.t < 0.3) { g.globalAlpha = L.alpha * (1 - L.t / 0.3); g.font = FONT; g.fillStyle = INK; g.textBaseline = 'middle'; g.fillText(L.n.ja || L.n.name, L.x + 8, L.y); }
       }
     }
     g.globalAlpha = 1;
     // ふしと名前
     g.textBaseline = 'middle';
+    const suck = new Set(leaving.map(L => L.a));
     for (const n of vis) {
       if (n.ay < y0 || n.ay > y1 || !T.named(n)) continue;
       g.globalAlpha = n.alpha;
@@ -189,9 +196,13 @@ const V = (() => {
       const open = T.isOpen(n) && n.kids.length;
       const ly = labelY(n, n.ay);
       const p = labelParts(n);
-      if (n === selected || n === hover) {
-        g.fillStyle = n === selected ? 'rgba(201,163,74,.26)' : 'rgba(120,100,60,.09)';
-        roundRect(n.ax - r - 4, ly - 11, n.lw + r * 2 + 14, 22, 11); g.fill();
+      // 名前の下じき: えらんだ・指している・子を吸いこみ中のふしは不透明に（子や枝はこの裏へ）
+      const two = twoLines(n);
+      const bh = two ? 30 : 22, by = ly - 11;
+      const sucking = suck.has(n);
+      if (n === selected || n === hover || sucking) {
+        g.fillStyle = n === selected ? SEL_BG : n === hover ? HOV_BG : PAPER;
+        roundRect(n.ax - r - 4, by, n.lw + r * 2 + 16, bh, 9); g.fill();
       }
       g.fillStyle = col; g.strokeStyle = '#f6f1e6'; g.lineWidth = 1.6;
       const pu = n.pulse > 0 ? Math.sin(n.pulse * Math.PI) : 0;   // ぽん（閉じて子を吸いこんだ・開いたとき）
@@ -204,13 +215,17 @@ const V = (() => {
         g.fillStyle = '#fbf8f1'; g.fillText(p.tag, x + 3.5, ly + 0.5);
         x += w + 4;
       }
+      const x2 = x;   // 2段めは和名の頭にそろえる
       const mf = p.sciMain ? FONT_SCI : n === selected ? FONT_B : FONT;
       g.font = mf; g.fillStyle = n.more ? SUB : INK; g.fillText(p.main, x, ly); x += tw(p.main, mf);
-      if (p.sci) { x += 7; g.font = FONT_SCI; g.fillStyle = SUB; g.fillText(p.sci, x, ly); x += tw(p.sci, FONT_SCI); }
-      if (p.cnt) { x += 8; g.font = FONT_S; g.fillStyle = FAINT; g.fillText(p.cnt, x, ly + 0.5); x += tw(p.cnt, FONT_S); }
       if (T.expandable(n) && !n.more) {
         g.font = FONT_S; g.fillStyle = n.loading ? '#b8860b' : '#3d7a5a';
         g.fillText(n.loading ? '…' : open ? '‹' : '›', x + 5, ly);
+      }
+      if (two) {
+        let xx = x2; const l2 = ly + LINE2;
+        if (p.sci) { g.font = FONT_SCI2; g.fillStyle = SUB; g.fillText(p.sci, xx, l2); xx += tw(p.sci, FONT_SCI2) + 7; }
+        if (p.cnt) { g.font = FONT_S; g.fillStyle = FAINT; g.fillText(p.cnt, xx, l2 + 0.5); }
       }
     }
     g.globalAlpha = 1;
@@ -226,8 +241,9 @@ const V = (() => {
     for (const n of vis) {
       if (!T.named(n)) continue;
       const ly = labelY(n, n.y);
-      if (wx >= n.x - 9 - pad && wx <= n.x + n.lw + 16 + pad && Math.abs(wy - ly) <= 12 + pad) {
-        const d = Math.abs(wy - ly);
+      const bot = ly + (twoLines(n) ? LINE2 + 8 : 11);
+      if (wx >= n.x - 9 - pad && wx <= n.x + n.lw + 16 + pad && wy >= ly - 12 - pad && wy <= bot + pad) {
+        const d = Math.abs(wy - (ly + bot) / 2);
         if (d < bd) { bd = d; best = n; }
       }
     }
