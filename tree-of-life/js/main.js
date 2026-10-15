@@ -84,8 +84,8 @@ cv.addEventListener('pointerdown', e => {
   try { cv.setPointerCapture(e.pointerId); } catch (_) { }   // 作ったイベント（テスト）では失敗する
   pts.set(e.pointerId, [e.offsetX, e.offsetY]);
   if (pts.size === 1) drag = { x: e.offsetX, y: e.offsetY, cx: V.cam.x, cy: V.cam.y, moved: 0, lx: e.offsetX, ly: e.offsetY,
-    // 3D のマウス: 左ドラッグ・中ボタン = 平行移動、右ドラッグ・Shift＋左 = 回転。指（タッチ）は1本で回転
-    rot: e.pointerType === 'mouse' ? (e.button === 2 || (e.button === 0 && e.shiftKey)) : true };
+    // 3D のマウス: 左ドラッグ・中ボタン = 平行移動、右ドラッグ・Shift＋左 = 回転。指（タッチ）は1本で平行移動
+    rot: e.pointerType === 'mouse' ? (e.button === 2 || (e.button === 0 && e.shiftKey)) : false };
   if (pts.size === 2) {
     const [a, b] = [...pts.values()];
     if (V3.on) { pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2 }; drag = null; return; }
@@ -96,10 +96,11 @@ cv.addEventListener('pointerdown', e => {
 cv.addEventListener('pointermove', e => {
   if (pts.has(e.pointerId)) pts.set(e.pointerId, [e.offsetX, e.offsetY]);
   if (pinch && pts.size === 2 && V3.on) {
-    // 3D: ピンチで近づく・はなれる、2本指でずらす
+    // 3D の指: 2本指を左右に動かすと回転、上下に動かすと近づく・はなれる（ピンチでも）
     const [a, b] = [...pts.values()];
     const d = Math.hypot(a[0] - b[0], a[1] - b[1]), mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
-    V3.dolly(pinch.d / Math.max(1, d)); V3.pan(mx - pinch.mx, my - pinch.my);
+    V3.orbit(mx - pinch.mx, 0);
+    V3.dolly(Math.exp((my - pinch.my) * 0.006) * (pinch.d / Math.max(1, d)));
     pinch.d = d; pinch.mx = mx; pinch.my = my;
     redraw(false); return;
   }
@@ -220,19 +221,20 @@ function set3d(on) {
   V3.on = on;
   b3d.textContent = on ? '2D' : '3D';
   b3d.title = on ? 'ふつうの図にもどす' : '3D でぐるぐる回して見る';
-  gbar.hidden = !on;
+  gbar.classList.toggle('is2d', !on);   // 2D では「方眼・なし」だけ
   if (on) { V.layout(); V.settle(); V3.frame(V.selected && V.selected.name ? V.selected : T.root); }
   else { V.layout(); if (V.selected) V.focus(V.selected); }
-  try { localStorage.setItem('tol-guide', V3.guide); } catch (e) { }
+  try { localStorage.setItem('tol-guide2', V3.guide); } catch (e) { }
 }
 b3d.onclick = () => { touched = true; set3d(!V3.on); };
 gbar.addEventListener('click', e => {
   const b = e.target.closest('button[data-g]'); if (!b) return;
-  V3.guide = b.dataset.g;
+  V3.guide = b.dataset.g; V.grid2d = V3.guide !== 'none'; V.draw();
   gbar.querySelectorAll('button[data-g]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
-  try { localStorage.setItem('tol-guide', V3.guide); } catch (e) { }
+  try { localStorage.setItem('tol-guide2', V3.guide); } catch (e) { }
 });
-try { const gsv = localStorage.getItem('tol-guide'); if (gsv) { V3.guide = gsv; gbar.querySelectorAll('button[data-g]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.g === gsv))); } } catch (e) { }
+// はじめは方眼（v014 で覚えておく名前を変えた: それまでに試したほかのガイドが残らないように）
+try { const gsv = localStorage.getItem('tol-guide2'); if (gsv) { V3.guide = gsv; V.grid2d = gsv !== 'none'; gbar.querySelectorAll('button[data-g]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.g === gsv))); } } catch (e) { }
 
 // ---------- 詳細の欄: はじめはコンパクト。つまみを押すと広げる・縮める、ドラッグで好きな大きさに（なめらかに） ----------
 //   スマホ: 下の板の高さ（--sheet-h）。PC: 右の欄の幅（--side-w）。上のつまみと、PC は左のふち（#edge）でも

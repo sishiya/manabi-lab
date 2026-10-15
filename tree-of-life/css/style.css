@@ -70,6 +70,7 @@ html,body{height:100%;overflow:hidden}
 /* 3D のガイドの切りかえ（樹形図の左上） */
 #guide3d{position:absolute;left:8px;top:8px;z-index:3;display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;max-width:calc(100% - 80px);background:rgba(251,248,241,.92);border:1px solid var(--rule);border-radius:12px;padding:5px 8px;font-size:12px}
 #guide3d[hidden]{display:none}
+#guide3d.is2d button[data-g=strata],#guide3d.is2d button[data-g=gates],#guide3d.is2d .gnote{display:none}   /* 2D は方眼かなしだけ */
 #guide3d .gl{color:var(--sub);font-family:var(--f-mincho)}
 #guide3d button{border:1px solid var(--rule);background:var(--card);border-radius:12px;padding:2px 10px;min-height:30px;font-size:12.5px;cursor:pointer;color:var(--ink)}
 #guide3d button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#fbf8f1}

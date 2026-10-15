@@ -171,6 +171,25 @@ const V = (() => {
   function resize() { if (measure()) draw(); }
 
   const branchW = c => 0.8 + Math.log10(c + 1) * 0.45;   // 種の数が多い枝ほど太い（100万種で約3.5）
+  let grid2d = true;   // 2D の方眼（3D のガイドと同じく、ルートを基準に。枝を開いても方眼はすべらない）
+  const CELL = 34;     // 1マス（= 葉1行の高さ）
+  function drawGrid(x0, x1, y0, y1) {
+    const ox = T.root.ax, oy = T.root.ay;   // ルートの見た目の位置を原点に
+    const step = CELL * (cam.k * CELL < 9 ? 5 : 1);   // 小さく見えているときは5マスごとだけ
+    g.save();
+    g.lineWidth = 1 / cam.k;
+    for (let i = Math.floor((x0 - ox) / step); ox + i * step <= x1; i++) {
+      const x = ox + i * step, major = Math.round(i * step / CELL) % 5 === 0;
+      g.strokeStyle = major ? 'rgba(138,122,85,.32)' : 'rgba(169,155,120,.2)';
+      g.beginPath(); g.moveTo(x, y0); g.lineTo(x, y1); g.stroke();
+    }
+    for (let j = Math.floor((y0 - oy) / step); oy + j * step <= y1; j++) {
+      const y = oy + j * step, major = Math.round(j * step / CELL) % 5 === 0;
+      g.strokeStyle = major ? 'rgba(138,122,85,.32)' : 'rgba(169,155,120,.2)';
+      g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke();
+    }
+    g.restore();
+  }
   let draw3d = null;   // 3D のときはこちらで描く（view3d.js）
   function draw() {
     if (!W) measure();
@@ -183,6 +202,7 @@ const V = (() => {
     const [x0, x1] = viewRect(40);
     const y0 = -cam.y / cam.k - ROW * 2, y1 = (H - cam.y) / cam.k + ROW * 2;
     const minW = 0.9 / cam.k;   // 縮めても細くなりすぎない
+    if (grid2d && T.root.ay !== undefined) drawGrid(x0, x1, y0, y1);
     // 細かさを大きさで変える（たくさん開いて縮めたときに重くならないように）: 0.3 倍より小さいと名前は描かない、0.12 倍より小さいと点も描かない
     const showText = cam.k >= 0.3, showDots = cam.k >= 0.12;
     // 枝: 親の名前の下をのびて、分かれ目からやわらかい曲線で子へ。画面の外は描かない
@@ -356,7 +376,7 @@ const V = (() => {
 
   // デバッグ用: 描画が止まっている間（ペインがかくれている）も、アニメを1コマずつ進める
   const tick = (dt = 1 / 60) => { const m = step(dt); draw(); return { moving: m, leaving: leaving.length }; };
-  return { set draw3d(f) { draw3d = f; }, get is3d() { return !!draw3d; }, labelParts, tw, branchW, get leaving() { return leaving; },
+  return { set grid2d(v) { grid2d = !!v; }, set draw3d(f) { draw3d = f; }, get is3d() { return !!draw3d; }, labelParts, tw, branchW, get leaving() { return leaving; },
     get selected3() { return selected; }, get hover3() { return hover; }, KMIN, KMAX, bbox, set onDraw(f) { onDrawFn = f; }, get drawn() { return drawn; }, isVis: n => visSet.has(n), set only(v) { only = v; }, kidsOf, set onWorld(f) { onWorldFn = f; }, cv, cam, layout, draw, resize, hit, zoomAt, fit, focus, screenOf, settle, shift, pop, labelY, tick,
     get vis() { return vis; }, get selected() { return selected; }, set selected(n) { selected = n; },
     set hover(n) { hover = n; }, get size() { return [W, H]; } };
