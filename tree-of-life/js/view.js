@@ -72,9 +72,11 @@ const V = (() => {
   function layout() {
     const before = visSet;
     vis = [];
-    let row = 0;
+    const rowH = only ? ROW * 1.7 : ROW;   // くらべている間は2本の道すじの間を広く
+    let cy = 0;                            // つぎの葉を置く高さ
     (function place(n, x, parent) {
       n.x = x;
+      const idx = vis.length, cyStart = cy;
       vis.push(n);
       if (!before.has(n) || n.ax === undefined) {   // 新しく見えたふしは親のところから出てくる
         const p = parent && parent.ax !== undefined ? parent : null;
@@ -83,10 +85,19 @@ const V = (() => {
       const named = T.named(n);
       n.lw = named ? labelW(n) : 0;
       const kids = kidsOf(n);
-      if (!kids.length) { n.y = row++ * (only ? ROW * 1.7 : ROW); n.jx = x; return; }   // くらべている間は2本の道すじの間を広く
+      if (!kids.length) { n.y = cy; cy += rowH; n.jx = x; return; }
       n.jx = named ? x + n.lw + 16 : x + 2;
       for (const k of kids) place(k, n.jx + GAP, n);
       n.y = (kids[0].y + kids[kids.length - 1].y) / 2;
+      // 開いたふしの名前は枝の上に持ち上げる。子が少ない（1つなど）と、1つ上の行の名前にかかるので、
+      // そのときは、この枝ごと下へずらす（1つ上の行の名前の下はし ≒ cyStart - rowH + 20）
+      if (named && cyStart > 0) {
+        const top = labelY(n, n.y) - 12, need = cyStart - rowH + 24 - top;
+        if (need > 0) {
+          for (let i = idx; i < vis.length; i++) vis[i].y += need;
+          cy += need;
+        }
+      }
     })(T.root, 0, null);
     // 見えなくなったふし: いちばん近い見えている祖先（閉じた親）へ吸いこまれる
     //   アニメにするのは画面の中のものだけ（たくさん閉じても重くならないように。最大 300）
@@ -101,7 +112,7 @@ const V = (() => {
     }
     active = vis.slice();
     kick();
-    return row;
+    return Math.round(cy / ROW);
   }
   // すべて決めた位置へ（はじめ・テスト用）
   function settle() { for (const n of vis) { n.ax = n.x; n.ay = n.y; n.ajx = n.jx; n.alpha = 1; n.pulse = 0; } leaving = []; active = []; draw(); }

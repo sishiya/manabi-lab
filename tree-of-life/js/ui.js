@@ -51,7 +51,7 @@ const UI = (() => {
       <div class="d-rank">${rk ? `<span class="tag" style="background:${c}">${esc(rk)}</span>` : ''}${n.count ? `<span>${fmt(n.count)} 種</span>` : ''}</div>
       <h2>${n.extinct ? '† ' : ''}${esc(n.ja || n.name)}${n.part ? '（一部）' : ''}</h2>
       <p class="sci">${n.rank !== 'root' ? `<i>${esc(n.name)}</i>` : ''} <span class="auth" id="d-auth"></span></p>
-      <div class="acts"><button class="act" data-act="cmp">どこで分かれた？ ほかとくらべる</button><button class="act" data-act="trip">ここから ふしぎ旅</button><button class="act" data-act="share" title="このページのリンクをコピー">リンク</button></div>
+      <div class="acts"><button class="act" data-act="cmp">どこで分かれた？ ほかとくらべる</button><button class="act" data-act="share" title="このページのリンクをコピー">リンク</button></div>
       <div class="plate" id="d-plate">${canImg ? '<p class="none">図を読みこみ中…</p>' : ''}</div>
       <p class="wd" id="d-wd"></p>
       ${rows ? `<h3>分類</h3><table class="cls">${rows}</table>` : ''}
@@ -202,5 +202,5 @@ const UI = (() => {
     catch (e) { window.prompt('このリンクをコピーしてください', location.href); }
     setTimeout(() => btn.textContent = old, 1800);
   }
-  return { show, refresh, onPick() { }, onTrip() { }, onOpen() { }, onShown() { } };
+  return { show, refresh, onPick() { }, onOpen() { }, onShown() { } };
 })();

@@ -14,7 +14,7 @@ T.onChange = () => { redraw(true); UI.refresh(); Compare.refresh(); };
 
 // ふしを押した: 選んで詳細を出し、閉じていれば開く・選んでいて開いていれば閉じる。押した名前は画面の同じ場所に
 async function press(n) {
-  touched = true; reachId++; tripId++;
+  touched = true; reachId++;
   if (Compare.picking && !n.more) { Compare.choose(n); return; }   // 「どこで分かれた？」の2つめ
   if (Compare.showing) Compare.clear(false);   // くらべ終わったあとに押したら、しぼりこみをやめてふつうにもどる
   if (!V.isVis(n)) { T.ancestors(n).forEach(a => a.open = true); V.focus(n); }   // まだ見えていない（道すじ・デバッグから）
@@ -65,7 +65,7 @@ function setStatus(t) { document.getElementById('status').textContent = t || '';
 function warn() { const s = document.getElementById('status'); s.textContent = '読みこめませんでした。通信を確かめて、もう一度押してください。'; setTimeout(() => s.textContent = '', 5000); }
 // 検索や道すじから: 開いて真ん中に
 UI.onPick = (n, fromSearch) => {
-  touched = true; reachId++; tripId++;
+  touched = true; reachId++;
   if (Compare.picking) { T.ancestors(n).forEach(a => a.open = true); Compare.choose(n); return; }
   if (Compare.showing) Compare.clear(false);
   T.ancestors(n).forEach(a => a.open = true);
@@ -147,47 +147,6 @@ V.onDraw = () => {
 };
 V.onWorld = (g, k) => { Compare.draw(g, k); C.draw(g); };
 
-// ---------- ふしぎ旅: 枝をランダムに下って、知らない生きものへ（さわるとそこで止まる） ----------
-let tripId = 0;
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-function glideTo(n, ms = 450) {
-  V.layout();
-  const [W, H] = V.size, k = Math.max(V.cam.k, 0.8);
-  const to = { k, x: W * 0.32 - n.x * k, y: H / 2 - n.y * k }, from = { ...V.cam }, s = performance.now();
-  (function f(t) {
-    const u = Math.min(1, (t - s) / ms), e = u * u * (3 - 2 * u);
-    V.cam.k = from.k + (to.k - from.k) * e; V.cam.x = from.x + (to.x - from.x) * e; V.cam.y = from.y + (to.y - from.y) * e;
-    V.draw();
-    if (u < 1) requestAnimationFrame(f);
-  })(s);
-  // ペインがかくれていて requestAnimationFrame が止まっていても、行き先には着くように
-  setTimeout(() => { V.cam.k = to.k; V.cam.x = to.x; V.cam.y = to.y; V.draw(); }, ms + 60);
-}
-// 名前のある子（名前のない分かれ目はくぐる）
-const namedKids = n => n.kids.flatMap(k => k.more ? [] : k.name ? [k] : namedKids(k));
-async function trip(from) {
-  touched = true; reachId++;
-  const my = ++tripId, st = document.getElementById('status');
-  let n = from || T.root;
-  const path = [];
-  for (let i = 0; i < 40 && my === tripId; i++) {
-    if (!T.expandable(n) || n.rank === 'species') break;   // 「種」に着いたらおしまい（亜種までは下りない）
-    try { await T.open(n); } catch (e) { warn(); break; }
-    if (my !== tripId) return;
-    const ks = namedKids(n);
-    if (!ks.length) break;
-    n = ks[Math.floor(Math.random() * ks.length)];
-    path.push(n.ja || n.name);
-    V.selected = n; V.pop(n);
-    st.textContent = 'ふしぎ旅: ' + path.slice(-3).join(' › ');
-    glideTo(n);
-    await sleep(700);
-  }
-  if (my !== tripId) return;
-  st.textContent = '';
-  V.selected = n; UI.show(n); glideTo(n);
-}
-UI.onTrip = n => trip(n);
 UI.onOpen = n => press(n);
 
 // ---------- アドレスの # : いま見ている生きもの（共有・ブックマーク用） ----------
@@ -214,7 +173,6 @@ async function fromHash() {
     touched = true; V.resize(); UI.onPick(n, true); return true;
   } catch (e) { console.warn(e); return false; } finally { setStatus(''); }
 }
-document.getElementById('ztrip').onclick = () => Compare.clear(false) || trip(V.selected && V.selected.name ? V.selected : T.root);
 
 document.getElementById('critter-on').addEventListener('change', e => { C.on = e.target.checked; V.draw(); });
 // ---------- 使い方（？）のポップアップ ----------
@@ -224,9 +182,9 @@ document.addEventListener('click', e => { if (!help.hidden && !e.target.closest(
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !help.hidden) helpBtn.click(); });
 
 // 大きさが変わったら描きなおす。まだだれもさわっていなければ、はじめの場所に置きなおす（最初は CSS が効く前で大きさ 0 のことがある）
-cv.addEventListener('pointerdown', () => { touched = true; tripId++; });
+cv.addEventListener('pointerdown', () => { touched = true; });
 cv.addEventListener('wheel', () => touched = true);
-document.getElementById('cmpbar').addEventListener('click', () => { touched = true; tripId++; });
+document.getElementById('cmpbar').addEventListener('click', () => { touched = true; });
 document.getElementById('detail').addEventListener('click', () => { touched = true; });
 new ResizeObserver(() => { V.resize(); if (!touched && replace) replace(); }).observe(cv);
 // はじめ: ドメインからではなく、なじみのある所から。哺乳類を開いて、ネコ目・サル目などの「目」がならんだところ
@@ -274,7 +232,7 @@ fromHash().then(ok => { if (!ok) startView(); });
 
 // デバッグ用（RULES 5）: 状態を見る・押す・探す
 window.__trofli = {
-  T, V, UI, C, Compare, trip,
+  T, V, UI, C, Compare,
   find: name => T.nodes.find(n => n.name === name || n.ja === name),
   press: name => press(window.__trofli.find(name)),
   reveal: async colId => { const n = await T.reveal(colId); UI.onPick(n); return n; },
