@@ -7,10 +7,15 @@ const COL = {
   dead: [150, 132, 98], pan: [176, 214, 120], ripe: [214, 190, 118], ink: '#e8f0f4', muted: '#a3b4bf', sheet: '#6d7d8c', acc: '#9be37a',
 };
 const FX = [];   // 落ちるタネの見た目だけ（計算には関係ない）
-function fxShed(x, y, k) {
-  if (FX.length > 120) return;
-  for (let i = 0; i < Math.min(3, k); i++) FX.push({ x, y, vx: (Math.random() - 0.5) * 0.25, vy: 0, t: 0 });
+// 穂から落ちるタネ: いま描いている穂（p._g）のどこかから、ときどき1粒（毎回出すと、ずっと降って見えるので）
+function fxShed(p, k) {
+  if (FX.length > 60 || Math.random() > 0.3) return;
+  const G = p._g; if (!G || !G.pans.length) return;
+  const pn = G.pans[Math.floor(Math.random() * G.pans.length)], q = pn.pts[3 + Math.floor(Math.random() * 8)];
+  FX.push({ x: q.x, y: q.y, vx: (Math.random() - 0.5) * 0.1, vy: 0, t: 0, c: COL.ripe });
 }
+// 手で落としたタネ（さわった高さから。土の中をさわったら少し上から）
+function fxDrop(x, y) { FX.push({ x, y: Math.max(0.04, y), vx: 0, vy: 0, t: 0, c: [240, 207, 114], big: true }); }
 // 抜いたときの「すぽん」（見た目と音だけ。計算には関係ない）: 根ごと土から出て、少し跳ねて傾き、消える。土が飛ぶ
 const PULLFX = [];
 const SND = { on: true, ctx: null, last: 0 };
@@ -109,6 +114,11 @@ function drawScene() {
   drawFX();
   drawRulers();
   drawToolPreview();
+  if (SCENARIOS[S.scen].empty && !S.tot.dropped && $('menu').hidden) {   // まだタネを落としていないとき
+    g.font = '700 15px ' + getComputedStyle(document.body).fontFamily; g.textAlign = 'center';
+    g.fillStyle = COL.acc; g.fillText(TOOL === 'seed' ? '花だんの上をタップ（なぞる）してタネを落とそう ↓' : '「タネ」をえらんで、花だんの上をタップ ↓', VIEW.w / 2, Math.max(30, Y(0) - 60));
+    g.textAlign = 'left';
+  }
 }
 
 // ---------- 土の中 ----------
@@ -351,8 +361,10 @@ function drawPanicles(p, G) {
 // ---------- 見た目だけの動き・ものさし ----------
 function drawFX() {
   if (!FX.length) return;
-  g.fillStyle = COL.ripe ? rgb(COL.ripe) : '#ccc';
-  for (const f of FX) { const d = Math.max(1.5, SP.seedLen * VIEW.s); g.fillRect(X(f.x) - d / 2, Y(f.y) - d / 2, d, d * 0.7); }
+  for (const f of FX) {
+    const d = Math.max(f.big ? 3 : 1.5, SP.seedLen * VIEW.s); g.fillStyle = rgb(f.c || COL.ripe);
+    g.beginPath(); g.ellipse(X(f.x), Y(f.y), d / 2, d * 0.32, 1.2, 0, Math.PI * 2); g.fill();
+  }
 }
 function fxTick(dt) {
   for (const f of FX) { f.vy -= 2.5 * dt; f.x += f.vx * dt; f.y += f.vy * dt; f.t += dt; }

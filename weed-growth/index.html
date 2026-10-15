@@ -20,6 +20,26 @@
     <div id="frame"><canvas id="cv" aria-label="細長い花だんを横から切った図。上は地上の株、下は土の中のタネと根。ホイールや2本指で、タネや根の先の中まで寄れる"></canvas>
       <div class="zoom" role="group" aria-label="ズーム"><button class="btn icon" id="zIn" aria-label="寄る" title="寄る">＋</button><button class="btn icon" id="zOut" aria-label="はなれる" title="はなれる">−</button><button class="btn small" id="zAll">全体</button></div>
       <div class="tip" id="tip" hidden></div>
+      <div class="menu" id="menu" role="dialog" aria-label="なんのタネを落とす？">
+        <div class="menu-in">
+          <h2 class="menu-h">なんのタネを落とす？</h2>
+          <p class="menu-p">タネのない、まっさらな花だん（5月1日）。タネをえらんで、図の上をタップ（なぞる）して何粒か落としてみよう。</p>
+          <div class="menu-g">
+            <button class="mcard" data-sp="foxtail">
+              <svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke-linecap="round"><path d="M32 60 C31 44 30 30 34 14" stroke="#7dc66a" stroke-width="2.5"/><path d="M32 52 C24 42 18 38 10 36 M32 46 C40 38 46 34 54 33" stroke="#84cd70" stroke-width="2.5"/><path d="M34 14 C38 8 44 6 48 8" stroke="#d6be76" stroke-width="7"/></g></svg>
+              <b>エノコログサ</b><small>ねこじゃらし。夏の草。1本で1万粒ものタネ</small></button>
+            <button class="mcard" disabled>
+              <svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="#7fae8a" stroke-width="3" stroke-linecap="round"><path d="M24 60V8M40 60V16"/><path d="M20 20h8M20 36h8M36 28h8M36 44h8"/><path d="M8 56 C20 52 44 52 58 56" stroke="#a08a6a"/></g></svg>
+              <b>竹</b><small>地下の茎でふえる（準備中）</small></button>
+            <button class="mcard" disabled>
+              <svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke-linecap="round"><path d="M32 60V30" stroke="#7dc66a" stroke-width="2.5"/><circle cx="32" cy="20" r="11" stroke="#d8dde4" stroke-width="2" stroke-dasharray="2 3"/><path d="M14 58 L24 50 M50 58 L40 50" stroke="#84cd70" stroke-width="3"/></g></svg>
+              <b>タンポポ</b><small>綿毛で遠くへ飛ぶ（準備中）</small></button>
+            <button class="mcard" disabled>
+              <svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke-linecap="round"><path d="M8 52 C20 46 30 50 32 44 C34 50 46 46 56 52" stroke="#b07a6a" stroke-width="3"/><g fill="#7dc66a" stroke="none"><ellipse cx="18" cy="46" rx="5" ry="3"/><ellipse cx="46" cy="46" rx="5" ry="3"/><ellipse cx="32" cy="40" rx="4" ry="3"/></g><circle cx="32" cy="36" r="3" fill="#e8c45a" stroke="none"/></g></svg>
+              <b>スベリヒユ</b><small>抜いても実が熟す（準備中）</small></button>
+          </div>
+        </div>
+      </div>
       <div class="legend fl" id="legendFl"><span><i class="dot" style="background:#b58a52"></i>眠っているタネ</span><span><i class="dot" style="background:#f0cf72"></i>目ざめたタネ</span></div>
       <div class="zhint" id="zhint">ホイール・2本指で寄る。道具はなぞって使う。動かすのは右ドラッグか「見る」</div>
     </div>
@@ -50,8 +70,9 @@
 
     <section>
       <h2>道具の使い方（いつでも、好きな場所で）</h2>
-      <p class="cap">上の「抜く・刈る・耕す・おおう」をえらんで、図の上をタップするか、<b>ドラッグでなぞる</b>（なぞった所に続けて使える）。はばは「10cm・30cm・全部」。図を動かすのは「見る」でドラッグ、右ドラッグ、2本指。</p>
+      <p class="cap">上の「タネ・抜く・刈る・耕す・おおう」をえらんで、図の上をタップするか、<b>ドラッグでなぞる</b>（なぞった所に続けて使える）。はばは「10cm・30cm・全部」。図を動かすのは「見る」でドラッグ、右ドラッグ、2本指。</p>
       <ul class="cap tools-note">
+        <li><b>タネ</b>: 花だんの表面にタネを落とす（なぞると 2cm に1粒）。冬をこして目ざめたタネ。表面のタネは虫や鳥に食べられることもある。</li>
         <li><b>抜く</b>: いちばん近い1本を根ごと（すぽっ）。なぞると、通った所の株を次々に。熟した穂があると、ゆれて2割が落ちる（推定）。</li>
         <li><b>刈る</b>: 高さ5cm で。穂は持ち去るが、株は生きていて、のびなおしてまた穂を出す。</li>
         <li><b>耕す</b>: 深さ15cm までよくまぜる。浅いタネは深くへ、深いタネは浅くへ。</li>

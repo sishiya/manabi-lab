@@ -63,12 +63,12 @@ function dateOf(day) {
 
 // ---------- 状態 ----------
 const S = {
-  day: 0, scen: 'garden', SD: new Int32Array(NX * NZ), SN: new Int32Array(NX * NZ),
+  day: 0, scen: 'empty', SD: new Int32Array(NX * NZ), SN: new Int32Array(NX * NZ),
   plants: [], nid: 1, sheet: new Uint8Array(NX),
   opts: { xray: true, noDorm: false, autoPull: false },
   tot: null, year: 1, yr: null, ev: [], acc: { d: 0, cold: 0, warm: 0 },
 };
-function zeroTot() { return { shed: 0, lost: 0, decayed: 0, eaten: 0, germ: 0, fatal: 0, emerged: 0, thinned: 0, frost: 0, pulled: 0, removedSeeds: 0, headed: 0 }; }
+function zeroTot() { return { dropped: 0, shed: 0, lost: 0, decayed: 0, eaten: 0, germ: 0, fatal: 0, emerged: 0, thinned: 0, frost: 0, pulled: 0, removedSeeds: 0, headed: 0 }; }
 function zeroYear() { return { shed: 0, emerged: 0, firstEm: false, firstHead: false, firstShed: false, frost: false }; }
 const H = { snaps: [], plants: new Float32Array(MAX_DAYS + 2).fill(NaN), heads: new Float32Array(MAX_DAYS + 2).fill(NaN), bank: new Float32Array(MAX_DAYS + 2).fill(NaN) };
 const DF = new Float32Array(NZ);  // 深さごとの芽の出やすさ
@@ -87,13 +87,11 @@ function logEvent(text, kind) {
 
 function restartSim(scen) {
   S.scen = scen || S.scen; R.s = 12345;
-  S.day = 0; S.year = 1; S.SD.fill(0); S.SN.fill(0); S.plants = []; S.nid = 1; S.sheet.fill(0);
+  const sc = SCENARIOS[S.scen];
+  S.day = sc.startDay || 0; S.year = yearOf(S.day); S.SD.fill(0); S.SN.fill(0); S.plants = []; S.nid = 1; S.sheet.fill(0);
   S.tot = zeroTot(); S.yr = zeroYear(); S.ev = []; S.acc = { d: 0, cold: 0, warm: 0 };
   H.snaps = []; H.plants.fill(NaN); H.heads.fill(NaN); H.bank.fill(NaN);
-  const sc = SCENARIOS[S.scen];
-  if (sc.one) {
-    S.SN[2 * NX + Math.floor(NX / 2)] = 1;   // 1cm の深さ（0.5cm のます目の3段目）
-  } else {
+  if (!sc.empty) {
     const n = Math.round(sc.perM2 * BED_W * BED_D), zmax = Math.round(sc.depth / DZC);
     for (let k = 0; k < n; k++) {
       const i = Math.floor(rnd() * zmax) * NX + Math.floor(rnd() * NX);
@@ -212,7 +210,7 @@ function disperse(p, k) {
     const i = Math.floor(x / DXC);
     if (nd) S.SN[i]++; else S.SD[i]++;
   }
-  if (k > 0 && typeof fxShed === 'function') fxShed(px, Math.max(0.01, p.H), k);   // 見た目だけ
+  if (k > 0 && typeof fxShed === 'function') fxShed(p, k);   // 見た目だけ（穂から落ちるところ）
   if (k > 0 && p.st !== 3 && !S.yr.firstShed) { S.yr.firstShed = true; logEvent('熟したタネが落ちはじめた（' + S.year + '年目）', 'shed'); }
 }
 
@@ -370,6 +368,7 @@ function endStroke(k) {
   if (!k) return;
   const fd = dateOf(S.day), d = `${fd.m}月${fd.d}日 `, len = Math.max(1, Math.round((k.x1 - k.x0) * 100));
   const sd = k.seeds + k.drop ? `（穂のタネ ${k.seeds} 粒を持ち出し、${k.drop} 粒が落ちた）` : '';
+  if (k.tool === 'seed' && k.n) logEvent(d + `タネを ${k.n} 粒落とした（冬をこした、目ざめたタネ）`, 'act');
   if (k.tool === 'pull' && k.n) logEvent(d + `${k.n}本抜いた` + sd, 'act');
   if (k.tool === 'mow' && k.n) logEvent(d + `${k.n}本を高さ ${Math.round(k.h * 100)}cm で刈った` + sd, 'act');
   if (k.tool === 'till' && k.cols.size) logEvent(d + `${k.cols.size}cm を深さ ${Math.round(k.depth * 100)}cm まで耕した` + (k.n ? `（株 ${k.n} 本をすきこんだ）` : ''), 'act');
@@ -379,6 +378,15 @@ function span(k, x0, x1) { if (k) { k.x0 = Math.min(k.x0, x0); k.x1 = Math.max(k
 // 1つのストロークで1回だけ使うための仮の stroke（タップや窓口から呼んだとき）
 function once(tool, fn) { const k = newStroke(tool); const r = fn(k); endStroke(k); return r; }
 
+// タネを落とす（ユーザーが手で）: 表面（0〜5mm）に目ざめたタネを1粒。なぞると 2cm ごとに1粒
+function dropSeed(x, k) {
+  if (!k) return once('seed', k2 => dropSeed(x, k2));
+  if (x < 0 || x >= BED_W) return false;
+  if (k.lastX != null && Math.abs(x - k.lastX) < 0.02) return false;
+  k.lastX = x; k.n++; span(k, x, x);
+  S.SN[clamp(Math.floor(x / DXC), 0, NX - 1)]++; S.tot.dropped++;
+  return true;
+}
 function pullAt(x, y, k) {   // y は地上の高さ（画面でさわった所）。いちばん近い株
   if (!k) return once('pull', k2 => pullAt(x, y, k2));
   let best = null, bd = 1e9;

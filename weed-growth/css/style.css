@@ -30,6 +30,18 @@ button,input{font:inherit;color:inherit}
 .tip{position:absolute;max-width:290px;background:rgba(8,12,18,.9);border:1px solid var(--line2);border-radius:8px;padding:6px 10px;font-size:12px;line-height:1.55;color:var(--muted);pointer-events:none;z-index:3}
 .tip b{color:var(--ink)}
 
+/* はじめに出す「なんのタネを落とす？」 */
+.menu{position:absolute;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;background:rgba(10,18,26,.86);padding:12px;overflow:auto}
+.menu-in{max-width:620px;text-align:center}
+.menu-h{font:400 22px/1.3 var(--f-display);color:var(--ink);letter-spacing:.04em;margin:0 0 6px}
+.menu-p{margin:0 0 14px;color:var(--muted);font-size:13px}
+.menu-g{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.mcard{display:flex;flex-direction:column;align-items:center;gap:4px;border:1px solid var(--line2);background:var(--raise);border-radius:12px;padding:10px 8px;cursor:pointer;line-height:1.35}
+.mcard svg{width:56px;height:56px}
+.mcard b{font-size:14px}
+.mcard small{font-size:11px;color:var(--muted)}
+.mcard:not([disabled]):hover{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.mcard[disabled]{opacity:.45;cursor:default}
 #tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 #segTool{flex:1;min-width:260px}
 #ro{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -105,6 +117,14 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-of
   .zhint{display:none}
   .legend.fl{font-size:10px}
   #panel{border-left:0;padding:14px 14px 40px;overflow:visible}
+}
+@media (max-width: 600px){
+  .menu-g{grid-template-columns:repeat(2,1fr);gap:6px}
+  .mcard{padding:6px 4px;gap:2px}
+  .mcard svg{width:30px;height:30px}
+  .mcard small{font-size:10px}
+  .menu-h{font-size:17px}
+  .menu-p{font-size:11.5px;margin-bottom:8px}
 }
 @media (max-width: 420px){
   #bar{flex-wrap:nowrap}

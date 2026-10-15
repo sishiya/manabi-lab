@@ -2,7 +2,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const SPEEDS = [['1日<span class="ps">/秒</span>', 1], ['1週<span class="ps">/秒</span>', 7], ['1か月<span class="ps">/秒</span>', 30]];   // 狭い画面では「/秒」を隠す
-const TOOLS = [['見る', 'look'], ['抜く', 'pull'], ['刈る', 'mow'], ['耕す', 'till'], ['おおう', 'cover']];
+const TOOLS = [['見る', 'look'], ['タネ', 'seed'], ['抜く', 'pull'], ['刈る', 'mow'], ['耕す', 'till'], ['おおう', 'cover']];
 const WIDTHS = [['10cm', 0.1], ['30cm', 0.3], ['全部', 2.2]];
 const UI = { speed: 7, playing: true, lastRo: 0, lastTl: 0 };
 
@@ -21,11 +21,11 @@ function setPressed(el, v) { el.setAttribute('aria-pressed', String(!!v)); }
 
 function buildUI() {
   seg($('segSpeed'), SPEEDS, UI.speed, v => { UI.speed = v; });
-  seg($('segTool'), TOOLS, TOOL, v => { TOOL = v; cv.classList.toggle('tool', v !== 'look'); });
+  setTool(TOOL);
+  for (const b of $('menu').querySelectorAll('.mcard[data-sp]')) b.onclick = () => chooseSeed(b.dataset.sp);
   seg($('segWidth'), WIDTHS, TOOL_W, v => { TOOL_W = v; });
   seg($('segScen'), Object.entries(SCENARIOS).map(([k, v]) => [v.name, k]), S.scen, v => {
-    restartSim(v); $('scenNote').textContent = SCENARIOS[v].note; UI.lastTl = 0;
-    if (SCENARIOS[v].one) aimAt(BED_W / 2, 0.01, 0.1); else resetView();   // 1粒は、そのタネのそばから
+    startScenario(v);
   });
   $('scenNote').textContent = SCENARIOS[S.scen].note;
   $('play').onclick = () => { UI.playing = !UI.playing; syncPlay(); };
@@ -50,6 +50,22 @@ function buildUI() {
     if (d < S.day - 0.5) { restoreSnap(snapIndexAt(Math.max(0, d))); UI.lastTl = 0; updateReadout(true); }
   });
 }
+// はじめかた: まっさらな土なら「なんのタネを落とす？」を出して止めておく（タネを落とすと動きだす）
+function startScenario(v) {
+  restartSim(v); $('scenNote').textContent = SCENARIOS[v].note; UI.lastTl = 0;
+  const empty = !!SCENARIOS[v].empty;
+  $('menu').hidden = !empty;
+  if (empty) { UI.playing = false; aimAt(BED_W / 2, 0.14, 0.6, 0.01); viewTick(1); }
+  else { UI.playing = true; resetView(); if (TOOL === 'seed') setTool('look'); }
+  syncPlay(); updateReadout(true);
+}
+function chooseSeed(sp) {   // いまはエノコログサだけ（SPECIES に足した種をここでえらべるように）
+  SP = SPECIES[sp]; $('menu').hidden = true; setTool('seed');
+}
+function setTool(v) {
+  TOOL = v; cv.classList.toggle('tool', v !== 'look');
+  seg($('segTool'), TOOLS, v, t => { TOOL = t; cv.classList.toggle('tool', t !== 'look'); });
+}
 function syncPlay() { $('play').textContent = UI.playing ? '❚❚' : '▶'; $('play').setAttribute('aria-label', UI.playing ? '止める' : '進める'); }
 
 // ---------- 数字といまのようす ----------
@@ -73,8 +89,12 @@ function nowText(c, T) {
   if (S.opts.autoPull) out.push('実験中: 穂が出た株は、その日のうちに抜いている。');
   if (c.up === 0 && c.under === 0) {
     out.push(T < SP.tb ? `寒くて（${T.toFixed(0)}℃）タネは芽を出せない。` : 'いまは地上に株がない。');
-    out.push(bank + (c.bank ? `。そのうち ${Math.round(c.dorm / Math.max(1, c.bank) * 100)}% は眠っている（休眠）。眠っているタネは、冬の寒さで少しずつ目ざめる。` : '。'));
-    if (!c.bank && SCENARIOS[S.scen].one && S.tot.shed === 0 && S.day < 300) out.push('1粒のタネが暖かくなるのを待っている（深さ 1cm）。');
+    out.push(bank + (c.dorm ? `。そのうち ${Math.round(c.dorm / Math.max(1, c.bank) * 100)}% は眠っている（休眠）。眠っているタネは、冬の寒さで少しずつ目ざめる。` : '。'));
+    if (SCENARIOS[S.scen].empty && S.tot.dropped && !S.tot.germ && c.bank) {
+      let top = 0; for (let x = 0; x < NX; x++) top += S.SD[x] + S.SN[x];
+      if (top === c.bank) out.push('落としたタネは地面の表面にある。表面は乾きやすくて芽を出しにくく、虫や鳥に食べられることもある（推定）。1粒だとなかなか出ない。何粒か落とすか、「耕す」で土にまぜると出やすい。');
+    }
+    if (SCENARIOS[S.scen].empty && !S.tot.dropped) out.push('まだタネがない。上の「タネ」をえらんで、花だんの上をタップ（なぞる）してタネを落としてみよう。');
     if (!c.bank && S.tot.shed > 0) out.push('タネがなくなった。もう生えてこない。');
   } else {
     if (c.under) out.push(`土の中で <b>${c.under} 本</b>の芽が地上へのびている。`);

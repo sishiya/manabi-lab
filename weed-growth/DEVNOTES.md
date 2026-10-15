@@ -5,11 +5,11 @@
 エノコログサ（ねこじゃらし）の一生を、長さ1.5m・幅30cm の花だん（計算は手前半分の 15cm）を横から切った断面で計算するアプリ。企画は `PLAN.md`。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: v004-drag-pull（2026-10-15。道具をドラッグでなぞって使う、抜くと「すぽっ」、まとめる株を増やして図をすっきり、寄るとタネは手前 1cm の切り口だけ）。その前は v003-lighter（花だん 1.5m×15cm）、v002-stageA（段階A）。保管庫（`archive.html`）に掲載。入口には載せない（RULES 8.1）。英語はまだ（入口へ移すときに）。
-- **次にやること**: ユーザーに見てもらって感想を聞く。そのあと `PLAN.md` の段階B（竹＝地下茎、タンポポ＝綿毛、スベリヒユ）。種を足すときは `data.js` の `SPECIES` に足し、`model.js` の `SP` を切りかえる形に（株の形 `shapes.js` は種ごとに関数を分ける）。
+- **いまの状態**: v005-drop-seed（2026-10-15。まっさらな土から始め、はじめに「なんのタネを落とす？」のメニュー、「タネ」の道具で自分で落とす。穂から落ちるタネの見た目を直した）。その前は v004-drag-pull（道具をドラッグでなぞって使う、抜くと「すぽっ」、まとめる株を増やして図をすっきり、寄るとタネは手前 1cm の切り口だけ）。その前は v003-lighter（花だん 1.5m×15cm）、v002-stageA（段階A）。保管庫（`archive.html`）に掲載。入口には載せない（RULES 8.1）。英語はまだ（入口へ移すときに）。
+- **次にやること**: ユーザーに見てもらって感想を聞く。そのあと `PLAN.md` の段階B（竹＝地下茎、タンポポ＝綿毛、スベリヒユ）。はじめのメニュー `#menu` にカードがある（いまは「準備中」で押せない）。種を足すときは `data.js` の `SPECIES` に足し、カードに `data-sp` をつけると `chooseSeed()` が `SP` を切りかえる（株の形 `shapes.js` は種ごとに関数を分ける。1つの花だんに2種まぜるなら、株ごとに種を持たせる）。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。数値を変えるなら `js/data.js` だけ。
 - **動かし方**: サーバー `apps`（`.claude/launch.json`）で http://localhost:8765/weed-growth/ 。
-- **デバッグ用**: `window.__wegr` — `S`（状態: `day` 始めからの日数・`SD` `SN` 眠っている／目ざめたタネのます目・`plants`・`sheet`・`opts`・`tot` 合計・`yr` 今年・`ev` できごと）、`H`（`snaps` 巻きもどし用・`plants` `heads` `bank` 日ごとの数）、`counts()`、`run(日, h=1)`（描かずに進める。ペインが裏だと rAF が止まるので）、`draw()`、`restart(scen)`、`pullAt(x, y)` `mow(x0, x1, h)` `till(x0, x1, d)` `cover(x0, x1, on)`、`jump('seed'|'sprout'|'root'|'flower')`、`aimAt(x, y, 幅)`、`describeAt(px, py)`、`restoreSnap(i)` `snapIndexAt(day)`、`set(k, v)`（`speed` `play` か `opts` の名前）、`tool(t, w)`、`stroke([[px,py],…])`（画面の点の列でドラッグをまねる。1点ならタップ）。例外は `window.__wegrErr`。寄る動きを一気に終わらせるには `viewTick(5)`。
+- **デバッグ用**: `window.__wegr` — `S`（状態: `day` 始めからの日数・`SD` `SN` 眠っている／目ざめたタネのます目・`plants`・`sheet`・`opts`・`tot` 合計・`yr` 今年・`ev` できごと）、`H`（`snaps` 巻きもどし用・`plants` `heads` `bank` 日ごとの数）、`counts()`、`run(日, h=1)`（描かずに進める。ペインが裏だと rAF が止まるので）、`draw()`、`restart(scen)`、`pullAt(x, y)` `mow(x0, x1, h)` `till(x0, x1, d)` `cover(x0, x1, on)`、`jump('seed'|'sprout'|'root'|'flower')`、`aimAt(x, y, 幅)`、`describeAt(px, py)`、`restoreSnap(i)` `snapIndexAt(day)`、`set(k, v)`（`speed` `play` か `opts` の名前）、`tool(t, w)`（`'seed'` `'pull'` `'mow'` `'till'` `'cover'` `'look'`）、`startScenario('empty'|'garden'|'field')`（ページの関数）、`stroke([[px,py],…])`（画面の点の列でドラッグをまねる。1点ならタップ）。例外は `window.__wegrErr`。寄る動きを一気に終わらせるには `viewTick(5)`。
 - **区切りごとに**: 「確認のしかた」と smoke.ps1 → 下の「状態」に1行 → `launcher.html` の表 → 公開前チェック → commit（節目だけ versions/ へコピーしてカードに。RULES 3章）。
 - **ユーザーの好み**: 正確さ（推定と測った値を分けて書く）。1つの花だんで、いつでも自分で試せる形（押して進める型にしない）。濃紺の線の図。スマホでは図と数字を上に固定。ホイールで中まで寄れること（依頼のときの言葉）。
 
@@ -20,17 +20,19 @@
 | `index.html` | 骨組み（doctype なし）。左（スマホは上に固定）: `#bar`（日付・気温・再生・速さ）`#frame`（`#cv`・ズーム・`#tip` 説明・色の見方）`#tools`（道具 `#segTool`・はば `#segWidth`）`#ro`（地上の株・土の中のタネ・今年落ちたタネ）。右（スマホは下）: いまのようす `#now`・道具の使い方・時間のグラフ `#tl`・寄って見る `#jumps`・はじめから `#segScen`・実験 `#tgXray` `#tgNoDorm` `#tgAutoPull`・できごと `#log`・しくみ・簡単にしているところ・このアプリについて／おもな出どころ | 読み込み順: data → model → view → shapes → draw → micro → ui → main |
 | `css/style.css` | PC は右パネル 370px。899px 以下は `#stage` を sticky で上に固定、420px 以下は道具のボタンを詰める | |
 | `js/data.js` | 花だん `BED_W` `BED_D` `SOIL_D`、タネのます目 `NX` `DXC` `NZ` `DZC`、光のます目 `LX` `LY` `LC`・高さの段 `HEDGE`、`MAX_DAYS` `SNAP_EVERY`、気温 `TOKYO_T` `T_NOISE` `START_DOY`、種の値 `SPECIES.foxtail`、はじめかた `SCENARIOS` | |
-| `js/model.js` | 乱数 `R` `rnd` `gauss` `poisson` `binom`、暦と気温 `tempAt` `dayLength` `dateOf` `yearOf`、状態 `S`・記録 `H`、深さの出やすさ `DF` `ZG`、`restartSim`、光 `computeLight` `crownCells` `binOf` `binFrac`、`seedsStep`（芽を出すのは毎コマ、ほかは `SLOW_EVERY` 5日ごと）、`newPlant` `plantsStep` `disperse` `killPlant` `headCdNow`、`stepModel`、`counts` `record`、巻きもどし `takeSnap` `restoreSnap` `snapIndexAt`、まとめる `groupSeedlings` `GROUP_AT`、道具 `newStroke` `endStroke`（1回のドラッグを1行の記録に）`pullAt(x, y, k)` `mow(x0, x1, h, k)` `till(x0, x1, d, k)` `cover(x0, x1, on, k)`（k を省くとその場で1回） | 株の `st`: 0 土の中 / 1 葉 / 2 穂 / 3 枯れ。`n` まとめた本数 |
+| `js/model.js` | 乱数 `R` `rnd` `gauss` `poisson` `binom`、暦と気温 `tempAt` `dayLength` `dateOf` `yearOf`、状態 `S`・記録 `H`、深さの出やすさ `DF` `ZG`、`restartSim`、光 `computeLight` `crownCells` `binOf` `binFrac`、`seedsStep`（芽を出すのは毎コマ、ほかは `SLOW_EVERY` 5日ごと）、`newPlant` `plantsStep` `disperse` `killPlant` `headCdNow`、`stepModel`、`counts` `record`、巻きもどし `takeSnap` `restoreSnap` `snapIndexAt`、まとめる `groupSeedlings` `GROUP_AT`、道具 `newStroke` `endStroke`（1回のドラッグを1行の記録に）`dropSeed(x, k)`（表面に目ざめたタネを1粒。なぞると 2cm ごと。`tot.dropped`）`pullAt(x, y, k)` `mow(x0, x1, h, k)` `till(x0, x1, d, k)` `cover(x0, x1, on, k)`（k を省くとその場で1回） | 株の `st`: 0 土の中 / 1 葉 / 2 穂 / 3 枯れ。`n` まとめた本数 |
 | `js/view.js` | `VIEW`（`s` px/m・`cx` `cy`・`anim`）、`FIELD_MIN` 0.4mm、`X()` `Y()` `toWorld()` `fieldW()` `fitScale()`、`resizeView()` `resetView()` `clampView()` `zoomAt()` `panBy()` `aimAt()` `viewTick()`、`setupInput(H)`（H = `tap` `hover` `isPaint` `paintStart` `paint` `paintEnd`。道具をえらんでいると左ドラッグ・1本指は塗る、右・中ドラッグと2本指は動かす） | `cv` `g` |
 | `js/shapes.js` | `mulberry()` `h01()` `qpt()`、`seedSpot(i, k)`（ます目の k 番目のタネの位置）、`plantGeom(p)`（茎・葉・穂。`p._g` にしまう）`panAt()`、`rootGeom(p)`（根と根の先 `tips`）、`sproutGeom(p)` | |
-| `js/draw.js` | `COL`、抜いたときの「すぽっ」`PULLFX` `fxPull` `pullFxTick` `drawPullFX`・音 `SND` `popSound`（WebAudio の短い音。`#tgSnd` で切る）、見た目だけの落ちるタネ `FX` `fxShed` `fxTick`、描くタネの数 `seedShown` `SLICE`、`drawScene()`（空 → 土 → 土の中 → シート → 株 → FX → ものさし → 道具の範囲）、`drawSeedsIn()` `seedCap()` `drawSoilLife()`（タネ・根・土の中の芽）`drawSheet()`、`drawPlants()`（近く: 1本ずつ面で）`drawPlantsFar()`（遠く: 色ごとにまとめて線で）`drawPaniclesFar()` `drawPanicles()` `panState()`、`drawRulers()` `fmtLen()`、`TOOL` `TOOL_W` `HOVER` `drawToolPreview()` | |
+| `js/draw.js` | `COL`、穂から落ちるタネ `fxShed(p, k)`（いま描いている穂 `p._g` の点から、3割の確からしさで1粒）・手で落とすタネ `fxDrop`、まだタネを落としていないときの案内の字、抜いたときの「すぽっ」`PULLFX` `fxPull` `pullFxTick` `drawPullFX`・音 `SND` `popSound`（WebAudio の短い音。`#tgSnd` で切る）、見た目だけの落ちるタネ `FX` `fxShed` `fxTick`、描くタネの数 `seedShown` `SLICE`、`drawScene()`（空 → 土 → 土の中 → シート → 株 → FX → ものさし → 道具の範囲）、`drawSeedsIn()` `seedCap()` `drawSoilLife()`（タネ・根・土の中の芽）`drawSheet()`、`drawPlants()`（近く: 1本ずつ面で）`drawPlantsFar()`（遠く: 色ごとにまとめて線で）`drawPaniclesFar()` `drawPanicles()` `panState()`、`drawRulers()` `fmtLen()`、`TOOL` `TOOL_W` `HOVER` `drawToolPreview()` | |
 | `js/micro.js` | 寄ったときの中: `offerLabel()` `drawLabels()`（名札は画面の中央にいちばん近い1つだけ）`tag()` `caption()`、`drawSeedDetail()`（殻・胚乳・胚盤・幼芽・幼根。芽を出すと胚乳が減る）、`drawRootTip()`（根冠・分裂・のびる・根毛・中心柱・細胞の壁）、`drawSpikelet()`（剛毛・小穂・おしべ・めしべ・熟した実） | |
-| `js/ui.js` | `SPEEDS` `TOOLS` `WIDTHS` `UI`、`buildUI()` `seg()`、`updateReadout()` `nowText()` `renderLog()`、時間のグラフ `drawTimeline()` `tlDays()` `TLM`（押すとその日へもどる）、説明 `describeAt()` `seedText()` `plantText()` `showTip()`、`jump(kind)` | `$()` |
+| `js/ui.js` | `SPEEDS`（狭い画面では「/秒」を隠す）`TOOLS` `WIDTHS` `UI`、`buildUI()` `seg()`、はじめかた `startScenario()`（まっさらな土ならメニューを出して止める）`chooseSeed()` `setTool()`、`updateReadout()` `nowText()` `renderLog()`、時間のグラフ `drawTimeline()` `tlDays()` `TLM`（押すとその日へもどる）、説明 `describeAt()` `seedText()` `plantText()` `showTip()`、`jump(kind)` | `$()` |
 | `js/main.js` | `advance()`（1フレーム 24ms まで計算。重いときはゆっくりになる）`frame()` `loop()`、道具のドラッグ `STROKE` `paintStart` `paintSeg`（前の点から今の点まで。抜くは 4px ごと、通った線から 10px 以内）`paintEnd`、`onHover()`、`window.__wegr` | |
 
 ## しくみ
 
 ### 1. 花だんと時間
+- はじめかた: まっさらな土（5月1日から。はじめに「なんのタネを落とす？」を出し、タネを落とすまで止めておく。最初のひと塗りで動きだす）、ふつうの庭（1,000粒/m²）、草ぼうぼうの空き地（15,000粒/m²）。後の2つは3月1日から。
+- 手で落としたタネは表面（0〜5mm）の目ざめたタネ。表面は出にくく（0.3倍）食べられもするので、1粒だと 90日のうちに芽が出るのは 20回に2回ほど、10粒なら 20回に19回（v005 で測った）。画面にそう書いて、何粒か落とす・耕すをすすめる。
 - 長さ 1.5m（横）× 幅 30cm。計算は手前半分（奥行き 15cm、y = 0 が通路の縁、0.15 がまん中）。向こう半分は鏡うつしで同じとし、まん中をこえて落ちたタネは入れかわる（y が 0〜0.30 なら花だん、外は通路）。奥行きは1つにまとめる。土は 20cm まで見せる。始まりは1年目の3月1日。「n年目」は3月1日から次の2月末まで。
 - 気温は東京の平年値（1991〜2020）の月平均を線でつなぎ、日ごとのゆらぎ（AR(1)、標準偏差 2℃、決まった乱数なので道具を使っても天気は同じ）。日の長さは緯度 35.7°。
 - 1コマ = 0.25日（1日/秒）・0.5日（1週/秒）・1日（1か月/秒）。
@@ -74,7 +76,7 @@
 2. http://localhost:8765/weed-growth/ を開き、`__wegr.set('play',false); __wegr.run(150,0.5)`（1年目の7月末）→ 穂のそろった株・根・土の中のタネが見える。`__wegrErr` が空。
 3. `__wegr.jump('seed')`・`'root'`・`'flower'` → `viewTick(5); __wegr.draw()` で、タネの断面・根の先の細胞と根毛・小穂の花が描かれ、名札が出る。
 4. 道具: `tool('mow',0.1); stroke([[X(0.1),Y(0)-40],[X(0.6),Y(0)-40]])` で、なぞった所に 5cm より高い株がなく、できごとに1行。耕す・おおう（同じ所をもう一度なぞると外す）・抜く（なぞると通った所だけ。`PULLFX` が増える）も同じ。本物のマウスでも、道具をえらんで左ドラッグで塗れて、図が動かないこと。`cover(0,0.5,true)` → `run(60)` でシートの下の株が 0。時間のグラフを押して（`restoreSnap(snapIndexAt(30))`）もどれる。
-5. 「タネ1粒だけ」を押すと、そのタネのそばへ寄る。`run(75,0.5)` で芽が出て根がある。
+5. ページを開くと「なんのタネを落とす？」が出て止まっている。エノコログサを押すと「タネ」の道具になり、図をタップ・なぞるとタネが落ちて（`FX`）動きだす。「ふつうの庭」にするとメニューが消えて動く、「まっさらな土」でまた出る。穂から落ちるタネ `FX` がどれも穂の点から出ている。
 6. 重さ: `restart('garden')` から30日ずつ3年進め、`frame()` が 20ms 以下・`stepModel(1)` が 10ms 以下・`S.plants.length` が 3,000 以下。
 7. 幅 375px（`resize_window` mobile）で横にはみ出さない（`scrollWidth` 375）、図・道具・数字が上に固定、道具の「おおう」が1行。
 
@@ -83,3 +85,4 @@
 - 2026-10-15 v002-stageA: 段階A。エノコログサ1種、土の中のタネ（ます目）・芽・株（1本ずつ）・光の取りあい・穂・落ちるタネ、道具4つ（抜く・刈る・耕す・おおう）、実験3つ、はじめかた3つ、巻きもどし、ズームの中（タネの断面・根の先・小穂）。versions/v002-stageA に保存。
 - 2026-10-15 v003-lighter: ユーザー「数を間引いて、範囲も3/4くらいに。おもすぎる」→ 花だんを 1.5m（3/4）× 計算 15cm（向こう半分は鏡うつし）にして数を 37% に、芽が 900 より多いときは同じころの小さな芽をまとめて計算（`groupSeedlings`）、葉を面で描くのは 8px から。いちばん混む時期の 1フレーム 180ms → 10ms。
 - 2026-10-15 v004-drag-pull: ユーザー「抜く にすぽんという演出」「刈る・覆うなどはドラッグ操作でスムーズに」「まだ密度高いかも」「デバッグも」→ 道具はドラッグでなぞって使う（1回のドラッグ = 記録1行）、抜くと根ごと「すぽっ」（音つき、切れる）、まとめる株を 250本から・2cm の列・0.2g まで（図の株の数 約1/6）、小さな枯れた株は早く消す、寄るとタネは手前 1cm の切り口だけ、スマホで速さの「/秒」を隠す。抜くをなぞると広く抜きすぎた・「すぽっ」の字が重なった・スマホの上の行がつまった、を直した。
+- 2026-10-15 v005-drop-seed: ユーザー「最初は雑草1本から。タネがない状態から」→「タネを落とすところをユーザーにやらせる。なんのタネかは最初にメニュー」「将来は別の植物も選べるといい」「開いた直後のすっからかんを緩和」、「空中からずっとタネがふっている」→ まっさらな土（5月1日）から始め、メニュー（エノコログサ、竹・タンポポ・スベリヒユは準備中）、「タネ」の道具。落ちるタネの見た目は描いている穂の点からだけ、3割に減らした（前は株の高さの空中から毎回出ていて、枯れて倒れた株でも空中から降っていた）。「タネ1粒だけ」のはじめかたは消した。

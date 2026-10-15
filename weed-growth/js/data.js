@@ -69,10 +69,10 @@ const SPECIES = {
 
 // ---------- はじめかた ----------
 const SCENARIOS = {
+  empty:  { name: 'まっさらな土', perM2: 0, empty: true, startDay: 61,
+    note: 'タネのない土（5月1日から）。「タネ」の道具で、花だんにタネを落としてみよう。' },
   garden: { name: 'ふつうの庭', perM2: 1000, awake: 0.6, depth: 0.15,
     note: '土の中にエノコログサのタネが 1m² に 1,000粒（畑のおよそ半分はこれより多い: Forcella ら 1993）。' },
   field:  { name: '草ぼうぼうの空き地', perM2: 15000, awake: 0.6, depth: 0.10,
     note: '去年たくさん実った空き地。1m² に 15,000粒（推定）。' },
-  one:    { name: 'タネ1粒だけ', perM2: 0, one: true,
-    note: 'まっさらな土の 1cm の深さに、目ざめたタネを1粒だけ。' },
 };

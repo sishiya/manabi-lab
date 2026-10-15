@@ -35,6 +35,14 @@ function paintSeg(ax, ay, bx, by) {
   if (!STROKE) return;
   const a = toWorld(ax, ay), b = toWorld(bx, by), hw = TOOL_W / 2;
   const x0 = Math.max(0, Math.min(a.x, b.x) - hw), x1 = Math.min(BED_W, Math.max(a.x, b.x) + hw);
+  if (TOOL === 'seed') {   // 押した所に1粒。なぞると 2cm ごとに1粒（落ちていくところも見せる）
+    const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 3));
+    for (let i = (ax === bx && ay === by) ? n : 1; i <= n; i++) {
+      const w = toWorld(ax + (bx - ax) * i / n, ay + (by - ay) * i / n);
+      if (dropSeed(w.x, STROKE)) fxDrop(w.x, w.y);
+    }
+    updateReadout(true); return;
+  }
   if (TOOL === 'pull') {   // 押した所はいちばん近い株。なぞると、通った線から 10px（1.2cm 以上）以内の株を次々に
     if (ax === bx && ay === by) { const w = toWorld(ax, ay); pullAt(w.x, Math.max(0, w.y), STROKE); }
     else {
@@ -49,7 +57,12 @@ function paintSeg(ax, ay, bx, by) {
   if (TOOL === 'cover') cover(x0, x1, !S.sheet[clamp(Math.floor(a.x / DXC), 0, NX - 1)], STROKE);
   computeLight(); updateReadout(true);
 }
-function paintEnd() { endStroke(STROKE); STROKE = null; UI.lastTl = 0; updateReadout(true); }
+function paintEnd() {
+  const first = STROKE && STROKE.tool === 'seed' && STROKE.n && S.tot.dropped === STROKE.n;
+  endStroke(STROKE); STROKE = null; UI.lastTl = 0;
+  if (first && !UI.playing) { UI.playing = true; syncPlay(); }   // はじめてタネを落としたら動きだす
+  updateReadout(true);
+}
 let tipTimer = 0;
 function onHover(px, py, touch) {
   HOVER = px < 0 ? null : { px, py };
@@ -59,8 +72,7 @@ function onHover(px, py, touch) {
 }
 
 window.addEventListener('resize', () => { resizeView(); UI.lastTl = 0; });
-restartSim('garden');
-buildUI(); resizeView(); syncPlay();
+buildUI(); resizeView(); startScenario('empty');
 setupInput({ tap: () => {}, hover: onHover, isPaint: () => TOOL !== 'look', paintStart, paint: paintSeg, paintEnd });
 requestAnimationFrame(loop);
 
