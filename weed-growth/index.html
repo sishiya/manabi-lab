@@ -28,9 +28,9 @@
             <button class="mcard" data-sp="foxtail">
               <svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke-linecap="round"><path d="M32 60 C31 44 30 30 34 14" stroke="#7dc66a" stroke-width="2.5"/><path d="M32 52 C24 42 18 38 10 36 M32 46 C40 38 46 34 54 33" stroke="#84cd70" stroke-width="2.5"/><path d="M34 14 C38 8 44 6 48 8" stroke="#d6be76" stroke-width="7"/></g></svg>
               <b>エノコログサ</b><small>ねこじゃらし。夏の草。1本で1万粒ものタネ</small></button>
-            <button class="mcard" disabled>
+            <button class="mcard" data-sp="bamboo">
               <svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="#7fae8a" stroke-width="3" stroke-linecap="round"><path d="M24 60V8M40 60V16"/><path d="M20 20h8M20 36h8M36 28h8M36 44h8"/><path d="M8 56 C20 52 44 52 58 56" stroke="#a08a6a"/></g></svg>
-              <b>竹</b><small>地下の茎でふえる（準備中）</small></button>
+              <b>竹（モウソウチク）</b><small>地下の茎でふえる。タネのかわりに地下茎ごと植える</small></button>
             <button class="mcard" disabled>
               <svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke-linecap="round"><path d="M32 60V30" stroke="#7dc66a" stroke-width="2.5"/><circle cx="32" cy="20" r="11" stroke="#d8dde4" stroke-width="2" stroke-dasharray="2 3"/><path d="M14 58 L24 50 M50 58 L40 50" stroke="#84cd70" stroke-width="3"/></g></svg>
               <b>タンポポ</b><small>綿毛で遠くへ飛ぶ（準備中）</small></button>
@@ -40,7 +40,8 @@
           </div>
         </div>
       </div>
-      <div class="legend fl" id="legendFl"><span><i class="dot" style="background:#b58a52"></i>眠っているタネ</span><span><i class="dot" style="background:#f0cf72"></i>目ざめたタネ</span></div>
+      <div class="legend fl" id="legendFl" data-kind="seed"><span><i class="dot" style="background:#b58a52"></i>眠っているタネ</span><span><i class="dot" style="background:#f0cf72"></i>目ざめたタネ</span></div>
+      <div class="legend fl" id="legendFlB" data-kind="clone"><span><i class="dot" style="background:#decea5"></i>地下茎</span><span><i class="dot" style="background:#7a5a4a"></i>タケノコ</span></div>
       <div class="zhint" id="zhint">ホイール・2本指で寄る。道具はなぞって使う。動かすのは右ドラッグか「見る」</div>
     </div>
     <div id="tools" role="group" aria-label="道具">
@@ -48,19 +49,20 @@
       <div class="seg tiny" id="segWidth" role="group" aria-label="道具のはば"></div>
     </div>
     <div id="ro">
-      <div class="ro-c"><span class="lbl">地上の株</span>
-        <div class="ro-n"><b id="roUp" class="mono">–</b><small>本<br><span id="roHeads">穂 0</span></small></div></div>
-      <div class="ro-c"><span class="lbl">土の中のタネ</span>
-        <div class="ro-n"><b id="roBank" class="mono">–</b><small>粒/m²<br><span id="roDorm">眠る –</span></small></div></div>
-      <div class="ro-c"><span class="lbl">今年落ちたタネ</span>
-        <div class="ro-n"><b id="roShed" class="mono">–</b><small>粒/m²<br><span id="roOnPlant">穂に –</span></small></div></div>
+      <div class="ro-c"><span class="lbl" id="roL1">地上の株</span>
+        <div class="ro-n"><b id="roUp" class="mono">–</b><small><span id="roU1">本</span><br><span id="roHeads">穂 0</span></small></div></div>
+      <div class="ro-c"><span class="lbl" id="roL2">土の中のタネ</span>
+        <div class="ro-n"><b id="roBank" class="mono">–</b><small><span id="roU2">粒/m²</span><br><span id="roDorm">眠る –</span></small></div></div>
+      <div class="ro-c"><span class="lbl" id="roL3">今年落ちたタネ</span>
+        <div class="ro-n"><b id="roShed" class="mono">–</b><small><span id="roU3">粒/m²</span><br><span id="roOnPlant">穂に –</span></small></div></div>
     </div>
   </div>
 
   <div id="panel">
     <header class="brand">
       <h1>雑草がふえるまで</h1>
-      <p>抜いても抜いても、いつのまにか生えてくる雑草。そのわけは土の中にある。エノコログサ（ねこじゃらし）の一生を、長さ1.5mの花だんを横から切った図で計算してみよう。</p>
+      <p data-kind="seed">抜いても抜いても、いつのまにか生えてくる雑草。そのわけは土の中にある。エノコログサ（ねこじゃらし）の一生を、長さ1.5mの花だんを横から切った図で計算してみよう。</p>
+      <p data-kind="clone" hidden>庭のすみに植えた竹が、いつのまにか遠くから生えてくる。そのわけは土の中の地下茎。モウソウチクを、長さ16mの帯を横から切った図で計算してみよう。</p>
     </header>
 
     <section class="card now">
@@ -70,8 +72,16 @@
 
     <section>
       <h2>道具の使い方（いつでも、好きな場所で）</h2>
-      <p class="cap">上の「タネ・抜く・刈る・耕す・おおう」をえらんで、図の上をタップするか、<b>ドラッグでなぞる</b>（なぞった所に続けて使える）。はばは「10cm・30cm・全部」。図を動かすのは「見る」でドラッグ、右ドラッグ、2本指。</p>
-      <ul class="cap tools-note">
+      <p class="cap" data-kind="seed">上の「タネ・抜く・刈る・耕す・おおう」をえらんで、図の上をタップするか、<b>ドラッグでなぞる</b>（なぞった所に続けて使える）。はばは「10cm・30cm・全部」。図を動かすのは「見る」でドラッグ、右ドラッグ、2本指。</p>
+      <p class="cap" data-kind="clone" hidden>上の「植える・掘る・切る・耕す・根止め」をえらんで、図の上をタップするか、<b>ドラッグでなぞる</b>。はばは「50cm・2m・全部」。図を動かすのは「見る」でドラッグ、右ドラッグ、2本指。</p>
+      <ul class="cap tools-note" data-kind="clone" hidden>
+        <li><b>植える</b>: 地下茎のついた若い竹（太さ 3cm・高さ 4.7m。推定）を1本。</li>
+        <li><b>掘る</b>: のびている途中のタケノコを掘りとる（すぽっ）。</li>
+        <li><b>切る</b>: 竹とタケノコを根もとで切る。地下茎は生きていて、春にまたタケノコを出す（ためた養分が減ると細い竹になる）。</li>
+        <li><b>耕す</b>: 深さ15cm までの地下茎を切る。もっと深い地下茎は残る。</li>
+        <li><b>根止め</b>: 深さ50cm の板を立てる（もう一度で外す）。板より浅い地下茎はここで止まる（長野県の手引き: 50cm 以上うめる）。</li>
+      </ul>
+      <ul class="cap tools-note" data-kind="seed">
         <li><b>タネ</b>: 花だんの表面にタネを落とす（なぞると 2cm に1粒）。冬をこして目ざめたタネ。表面のタネは虫や鳥に食べられることもある。</li>
         <li><b>抜く</b>: いちばん近い1本を根ごと（すぽっ）。なぞると、通った所の株を次々に。熟した穂があると、ゆれて2割が落ちる（推定）。</li>
         <li><b>刈る</b>: 高さ5cm で。穂は持ち去るが、株は生きていて、のびなおしてまた穂を出す。</li>
@@ -83,7 +93,7 @@
     <section>
       <h2>時間（押すとその日へもどる）</h2>
       <canvas id="tl" class="chart" aria-label="地上の株の数と、土の中のタネの数のうつりかわり。押すとその日へもどって試しなおせる"></canvas>
-      <div class="legend"><span><i style="background:#9be37a"></i>地上の株（本）</span><span><i style="background:#f0cf72"></i>土の中のタネ（粒/m²）</span><span><i style="background:#e9a0c8"></i>穂のある株</span><span class="dim">たては対数（1目もりで10倍）</span></div>
+      <div class="legend"><span><i style="background:#9be37a"></i><span id="lgP">地上の株（本）</span></span><span><i style="background:#f0cf72"></i><span id="lgB">土の中のタネ（粒/m²）</span></span><span><i style="background:#e9a0c8"></i><span id="lgH">穂のある株</span></span><span class="dim">たては対数（1目もりで10倍）</span></div>
     </section>
 
     <section>
@@ -107,13 +117,14 @@
       <h2>コンピュータならではの実験</h2>
       <div class="toggles">
         <button class="btn tg" id="tgXray" aria-pressed="true">土を透かして見る</button>
-        <button class="btn tg" id="tgNoDorm" aria-pressed="false">休眠をなくす</button>
+        <button class="btn tg" id="tgNoDorm" aria-pressed="false" data-kind="seed">休眠をなくす</button>
         <button class="btn tg" id="tgAutoPull" aria-pressed="false">穂が出たらすぐ抜く</button>
       </div>
       <ul class="cap">
-        <li><b>土を透かして見る</b>: 本当は見えない土の中。外すと、ふだん私たちが見ている花だん（表面のタネだけ）。</li>
-        <li><b>休眠をなくす</b>: タネが眠らず、暖かければすぐ芽を出す（これから落ちるタネと、土の中のタネ全部）。</li>
-        <li><b>穂が出たらすぐ抜く</b>: 毎日見回って、穂が出た株をその日に抜く（タネを1粒も落とさせない、完ぺきな草取り）。土の中のタネが何年で減るか。</li>
+        <li><b>土を透かして見る</b>: 本当は見えない土の中。外すと、ふだん私たちが見ている地面。</li>
+        <li data-kind="seed"><b>休眠をなくす</b>: タネが眠らず、暖かければすぐ芽を出す（これから落ちるタネと、土の中のタネ全部）。</li>
+        <li data-kind="clone" hidden><b>タケノコを出たらすぐ掘る</b>: 地上に出たタケノコをその日に全部掘る。竹はふえない。でも地下茎は、ためた養分でのびつづける。</li>
+        <li data-kind="seed"><b>穂が出たらすぐ抜く</b>: 毎日見回って、穂が出た株をその日に抜く（タネを1粒も落とさせない、完ぺきな草取り）。土の中のタネが何年で減るか。</li>
       </ul>
     </section>
 
@@ -123,7 +134,27 @@
     </section>
 
     <div class="explain">
-      <details>
+      <details data-kind="clone" hidden>
+        <summary>竹のしくみ（計算していること）</summary>
+        <ul>
+          <li><b>地下茎</b>: 土の中を横に走る茎（深さ 5〜40cm。推定）。7月下旬〜11月上旬に先がのびる（長野県）。1年に 2m ほど（推定。1〜10m: 長野県、5m の記録: 林野庁）。年に1回、1〜4年目の地下茎から枝分かれ（推定）。10年で枯れる（推定）。</li>
+          <li><b>タケノコ</b>: 地下茎の節の芽から、春（3月下旬〜5月）に出る（モウソウチクは4月ごろ: 長野県）。いちばん出しやすいのは3〜4年目の地下茎（林野庁）。とちゅうで枯れるものもある（15%。推定）。</li>
+          <li><b>のびる</b>: 地上に出てから 55日ほどで背丈まで（推定）。いちばん速いときは1日に数十cm〜1m（記録はモウソウチクで 1日 119cm: 林野庁）。そのあとは太くも高くもならない（長野県）。高さは太さで決まる（太さ 10cm で 13m。推定）。</li>
+          <li><b>ためた養分</b>: 竹の葉で作った養分（乾いた重さ）を、つながった地下茎にためて、みんなで使う。春にタケノコ、夏の終わりに地下茎へ。若い竹やぶは、年ごとに太い竹を出す。たけのこの表年・裏年（おおむね1年おき: 林野庁）。</li>
+          <li><b>竹の一生</b>: 竹（稈）は 20年ほど（林野庁）。8年をすぎると枯れやすくなる（推定）。枯れた竹は 300日ほどで倒れる（推定）。</li>
+          <li><b>花</b>: モウソウチクの花は約67年に1回で、咲くと竹やぶがまだらに枯れる（長野県）。この10年では咲かない。</li>
+        </ul>
+      </details>
+      <details data-kind="clone" hidden>
+        <summary>簡単にしているところ（竹）</summary>
+        <ul>
+          <li>地下茎は画面の左右の向きにだけのびるとしています（本当は四方八方へ）。帯の外へ出た地下茎はそこで終わり。</li>
+          <li>つながった竹は、ためた養分を1つの池で分けあうとしています（耕して切っても分けあう）。</li>
+          <li>葉で作る養分・竹1本の重さ・地下茎にかかる養分・枝分かれ・とちゅうで枯れる割合はどれも推定。1本の竹が1年に作る養分で、竹やぶの竹が1年に 1/5 ほど入れかわる大きさにしました。</li>
+          <li>節の間の長さ・枝・葉・壁の厚さ・タケノコの中の節の数は、写真や図に合わせた目安の絵です。</li>
+        </ul>
+      </details>
+      <details data-kind="seed">
         <summary>しくみ（計算していること）</summary>
         <ul>
           <li><b>土の中のタネ</b>: 横 1cm・深さ 0.5cm のます目ごとに、眠っている（休眠）タネと目ざめたタネの数。眠っているタネは冬の寒さ（日平均 10℃ 未満）で目ざめ、夏に 2cm より深いとまた眠る（推定）。</li>
@@ -136,7 +167,7 @@
           <li><b>冬</b>: 日平均 7℃ を下まわると地上の株は枯れる（このころ霜がおりる）。タネだけが冬をこす。</li>
         </ul>
       </details>
-      <details>
+      <details data-kind="seed">
         <summary>簡単にしているところ</summary>
         <ul>
           <li>計算するのは、幅 30cm の花だんの手前半分（奥行き 15cm）。向こう半分は同じようすとし、まん中をこえて落ちたタネは向こうから来る分と入れかわるとしています。奥行きは1つにまとめ、タネは横の位置と深さだけで数えます。株の奥行きは色の濃さだけ。</li>
@@ -163,6 +194,9 @@
         <li>Forcella, F. &amp; Banken, K.R.（エノコログサの芽の育ちを、10℃ を下限にした積算温度で表す）<i>Weed Technology</i></li>
         <li>Michigan State University (2023)「MSU plant biologists shed light on 144-year-old seedy mystery」（1879年に土に埋めたタネが、2021年に掘り出して芽を出した）<a href="https://msutoday.msu.edu/news/2023/11/msu-plant-biologists-shed-light-on-144-year-old-seedy-mystery" target="_blank" rel="noopener">MSU Today</a></li>
         <li>気象庁 平年値（1991〜2020年、東京の月平均気温）</li>
+        <li>長野県『長野県版外来種対策ハンドブック』対策に取り組みたい外来種㉘ モウソウチクなどの竹類（高さ 25m・太さ 25cm に達する、タケノコは4月ごろ、根茎は1年で 1〜10m、地下茎は 7月下旬〜11月上旬にのびる、一度のびたら太く高くならない、約67年に1回開花、根止めの板は 50cm 以上）<a href="https://www.pref.nagano.lg.jp/shizenhogo/kurashi/shizen/hogo/gairai/documents/28_take.pdf" target="_blank" rel="noopener">PDF</a></li>
+        <li>林野庁「竹の性質」（1日にマダケで 121cm・モウソウチクで 119cm のびた記録、竹の寿命は 20年ほど、地下茎が1年に 5m のびた記録、3〜4年目の地下茎がいちばんたけのこを出す、表年・裏年）<a href="https://www.rinya.maff.go.jp/j/tokuyou/take/seisitu.html" target="_blank" rel="noopener">林野庁</a></li>
+        <li>鳥居厚志・酒井敦・奥田史郎（森林総合研究所四国支所）「香川県下の里山地域における竹林の分布拡大の現状と植物多様性の解析に関する研究」、香川県「研究機関の調査結果」より（竹林の広がる速さ 年 0.53〜2.11m、中央値 1.46m）<a href="https://www.pref.kagawa.lg.jp/midoriseibi/seibi/tikurin/1_siryou.html" target="_blank" rel="noopener">香川県</a></li>
       </ul>
       <h3>使っているもの</h3>
       <p>フォント: Google Fonts（SIL Open Font License）。ライブラリは使っていません。</p>
@@ -172,9 +206,12 @@
 
 <script src="js/data.js"></script>
 <script src="js/model.js"></script>
+<script src="js/bamboo.js"></script>
 <script src="js/view.js"></script>
 <script src="js/shapes.js"></script>
 <script src="js/draw.js"></script>
 <script src="js/micro.js"></script>
+<script src="js/bamboo-draw.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/species-ui.js"></script>
 <script src="js/main.js"></script>

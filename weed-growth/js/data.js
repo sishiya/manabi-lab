@@ -2,14 +2,19 @@
 // 「推定」と書いたものは測られた値ではなく、測られた値（横に書いた）に合う大きさにした目安。
 'use strict';
 
-// ---------- 花だん（横から切った断面） ----------
-const BED_W = 1.5;      // 長さ m（画面の横）
+// ---------- 世界の大きさ（種ごとに切りかえる。setWorld） ----------
+// seed: タネでふえる草の花だん（横から切った断面）。clone: 竹（地下茎でふえる）の帯
+const WORLDS = {
+  seed:  { w: 1.5, soil: 0.20, air: 1.0, view: 0.8, grid: 0.05, curb: true },
+  clone: { w: 16, soil: 0.60, air: 24, view: 20, grid: 0.1, curb: false },
+};
+let BED_W = 1.5, SOIL_D = 0.20, AIR_H = 1.0, VIEW_AIR = 0.8, WORLD = WORLDS.seed;   // 長さ・見せる土の深さ・空気の高さ m
+function setWorld(k) { WORLD = WORLDS[k]; BED_W = WORLD.w; SOIL_D = WORLD.soil; AIR_H = WORLD.air; VIEW_AIR = WORLD.view; }
+// タネでふえる草の花だん（長さ 1.5m、土 20cm）のます目
 const BED_D = 0.15;     // 奥行き m（幅 30cm の花だんの半分。残り半分は鏡うつしで同じとする。1つにまとめる）
-const SOIL_D = 0.20;    // 見せる土の深さ m
-const AIR_H = 1.0;      // 見せる空気の高さ m
-const NX = 150, DXC = BED_W / NX;     // タネのます目: 横 1cm
-const NZ = 40, DZC = SOIL_D / NZ;     // 深さ 0.5cm
-const LX = 30, LY = 3, LC = BED_W / LX; // 光のます目: 5cm 四方（奥行きも 5cm×3）
+const NX = 150, DXC = 1.5 / NX;       // タネのます目: 横 1cm
+const NZ = 40, DZC = 0.20 / NZ;       // 深さ 0.5cm
+const LX = 30, LY = 3, LC = 1.5 / LX; // 光のます目: 5cm 四方（奥行きも 5cm×3）
 // 光の高さの段（地面の近くほど細かく。芽どうしの背の差で光の取りあいが決まるので）
 const HEDGE = [0, 0.005, 0.01, 0.02, 0.03, 0.05, 0.08, 0.12, 0.18, 0.26, 0.36, 0.5, 0.7, 2];
 const HB = HEDGE.length - 1;
@@ -26,8 +31,34 @@ const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 // ---------- 種ごとの値 ----------
 // 段階Bで竹・タンポポなどをここへ足す（PLAN.md）。
 const SPECIES = {
+  // 竹（モウソウチク）: タネではなく地下茎でふえる。kind: 'clone' で bamboo.js が計算する
+  bamboo: {
+    kind: 'clone', world: 'clone', name: '竹（モウソウチク）', short: '竹', sci: 'Phyllostachys edulis',
+    dmax: 0.20,           // m 稈のいちばん太い太さ（太さ 25cm・高さ 25m に達する: 長野県版外来種対策ハンドブック。ここでは 20cm まで）
+    hOfD: [1.2, 115, 24], // 高さ m = a + b×太さ（上限 c）（推定。太さ 10cm で 12.7m、20cm で 24m）
+    shootWin: [80, 140],  // タケノコが地上に出る日（1月1日から。3月21日〜5月20日。4月ごろ: 長野県）
+    growDays: 55,         // 地上に出てから背丈までの日数（推定。数か月で立派な竹に: 林野庁）
+    life: 20,             // 年 稈の寿命（太いものほど長く 20年ほど: 林野庁）
+    rhWin: [205, 310],    // 地下茎がのびる日（7月下旬〜11月上旬: 長野県）
+    rhV: 0.022,           // m/日 地下茎の先がのびる速さ（推定。1年で 2m ほど。1〜10m: 長野県、5m の記録: 林野庁。竹林の広がりは年 0.53〜2.11m: 鳥居ら（香川県の資料））
+    rhDepth: [0.05, 0.40],// m 地下茎の深さの範囲（推定。根止めの板は 50cm 以上うめる: 長野県 → それより浅いとした）
+    rhLife: 10,           // 年 地下茎が生きている長さ（推定。たけのこを多く出すのは 3〜4年目、5年目をすぎると減る: 林野庁）
+    rhDia: 0.025,         // m 地下茎の太さ（推定）
+    nodeGap: 0.04,        // m 地下茎の節の間（推定）
+    prod: 0.04,           // kg/日 太さ 10cm の竹1本が葉で作る養分（乾いた重さ。推定。細い竹は太さの 1.3乗に比例して少ない）
+    culmMass: 18,         // kg 太さ 10cm の竹1本の重さ（推定。太さの 2.4乗に比例）
+    rhCost: 0.3,          // kg/m 地下茎 1m を作る養分（推定）
+    shootShare: 0.75,     // 春にためた養分のうちタケノコに使う割合（推定）
+    keep: 0.0004,         // kg/日 地下茎 1m を生かしておくのに使う養分（推定）
+    rhShare: 0.3,         // 夏の終わりにためた養分のうち地下茎に使う割合（推定）
+    branch: 0.12,         // 1〜4年目の地下茎が1年に枝分かれする確からしさ（推定）
+    rhDense: 3,           // m まわり ±1m にこれより長い地下茎があると枝分かれしない（推定）
+    abort: 0.15,          // とちゅうで枯れるタケノコの割合（推定）
+    barrierDepth: 0.5,    // m 根止めの板の深さ（長野県: 50cm 以上）
+    flowerYears: 67,      // 年 花が咲く間かく（モウソウチクは約67年に1回: 長野県）
+  },
   foxtail: {
-    name: 'エノコログサ', nameEn: 'green foxtail', sci: 'Setaria viridis',
+    kind: 'seed', world: 'seed', name: 'エノコログサ', short: 'エノコログサ', nameEn: 'green foxtail', sci: 'Setaria viridis',
     // タネ
     seedMass: 0.0012,     // g（推定。殻つき）
     seedLen: 0.0021, seedWid: 0.0012, // m（推定。2mm ほど）
@@ -67,12 +98,16 @@ const SPECIES = {
   },
 };
 
-// ---------- はじめかた ----------
+// ---------- はじめかた（kind: その種の仲間だけで出す） ----------
 const SCENARIOS = {
-  empty:  { name: 'まっさらな土', perM2: 0, empty: true, startDay: 61,
+  bEmpty: { kind: 'clone', name: 'まっさらな土', empty: true, startDay: 61,
+    note: '竹のない土（5月1日から）。「植える」で、地下茎のついた若い竹を植えてみよう。' },
+  bGrove: { kind: 'clone', name: '竹林のとなり', grove: true, startDay: 0,
+    note: '左の 4m は 15年たった竹林。右の空き地へ、地下茎がのびていく。' },
+  empty:  { kind: 'seed', name: 'まっさらな土', perM2: 0, empty: true, startDay: 61,
     note: 'タネのない土（5月1日から）。「タネ」の道具で、花だんにタネを落としてみよう。' },
-  garden: { name: 'ふつうの庭', perM2: 1000, awake: 0.6, depth: 0.15,
+  garden: { kind: 'seed', name: 'ふつうの庭', perM2: 1000, awake: 0.6, depth: 0.15,
     note: '土の中にエノコログサのタネが 1m² に 1,000粒（畑のおよそ半分はこれより多い: Forcella ら 1993）。' },
-  field:  { name: '草ぼうぼうの空き地', perM2: 15000, awake: 0.6, depth: 0.10,
+  field:  { kind: 'seed', name: '草ぼうぼうの空き地', perM2: 15000, awake: 0.6, depth: 0.10,
     note: '去年たくさん実った空き地。1m² に 15,000粒（推定）。' },
 };

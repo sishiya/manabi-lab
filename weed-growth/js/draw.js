@@ -57,7 +57,7 @@ function drawPullFX() {
     g.strokeStyle = COL.root + '0.85)'; g.lineWidth = Math.max(0.8, SP.rootDia * s); g.beginPath();   // 根（土がついたまま）
     for (const rt of f.R.roots.slice(0, 40)) { let q = L(rt.pts[0].x, rt.pts[0].y); g.moveTo(q[0], q[1]); for (let i = 1; i < rt.pts.length; i++) { q = L(rt.pts[i].x, rt.pts[i].y); g.lineTo(q[0], q[1]); } }
     g.stroke();
-    g.strokeStyle = rgb(f.c); g.lineWidth = Math.max(0.8, 0.0025 * s); g.beginPath();
+    g.strokeStyle = rgb(f.c); g.lineWidth = Math.max(0.8, (f.w || 0.0025) * s); g.beginPath();
     for (const st of f.G.stems) { const a = L(st.x0, st.y0), c = L(st.cx, st.cy), b = L(st.x1, st.y1); g.moveTo(a[0], a[1]); g.quadraticCurveTo(c[0], c[1], b[0], b[1]); }
     g.stroke();
     g.lineWidth = Math.max(0.9, SP.leafW * s * 0.6); g.beginPath();
@@ -99,24 +99,25 @@ function drawScene() {
     g.fillStyle = lg; g.fillRect(X(0), gy, (BED_W) * s, h - gy);
     g.fillStyle = COL.path;
     g.fillRect(0, gy + 0.01 * s, X(0), h); g.fillRect(X(BED_W), gy + 0.01 * s, w, h);
-    g.fillStyle = '#3a4048'; g.fillRect(X(-0.012), gy - 0.012 * s, 0.012 * s, h); g.fillRect(X(BED_W), gy - 0.012 * s, 0.012 * s, h); // 縁石
-    // 深さの線（5cm ごと）
+    if (WORLD.curb) { g.fillStyle = '#3a4048'; g.fillRect(X(-0.012), gy - 0.012 * s, 0.012 * s, h); g.fillRect(X(BED_W), gy - 0.012 * s, 0.012 * s, h); } // 縁石
+    // 深さの線（5cm・竹は10cm ごと）
     g.strokeStyle = COL.grid; g.lineWidth = 1; g.beginPath();
-    for (let d = 0.05; d <= SOIL_D + 1e-9; d += 0.05) { const yy = Y(-d); g.moveTo(X(0), yy); g.lineTo(X(BED_W), yy); }
+    for (let d = WORLD.grid; d <= SOIL_D + 1e-9; d += WORLD.grid) { const yy = Y(-d); g.moveTo(X(0), yy); g.lineTo(X(BED_W), yy); }
     g.stroke();
-    if (S.opts.xray) drawSoilLife();
+    if (SP.kind === 'clone') { if (S.opts.xray) drawBambooUnder(); }
+    else if (S.opts.xray) drawSoilLife();
     else drawSurfaceSeeds();
     g.strokeStyle = 'rgba(220,200,170,0.5)'; g.lineWidth = 1; g.beginPath(); g.moveTo(X(0), gy); g.lineTo(X(BED_W), gy); g.stroke();
   }
-  drawSheet();
-  drawPlants();
+  if (SP.kind === 'clone') { drawBamboo(); drawBambooMap(); }
+  else { drawSheet(); drawPlants(); }
   drawPullFX();
   drawFX();
   drawRulers();
   drawToolPreview();
-  if (SCENARIOS[S.scen].empty && !S.tot.dropped && $('menu').hidden) {   // まだタネを落としていないとき
+  if (SCENARIOS[S.scen].empty && !kindUI().started() && $('menu').hidden) {   // まだタネを落としていない・竹を植えていないとき
     g.font = '700 15px ' + getComputedStyle(document.body).fontFamily; g.textAlign = 'center';
-    g.fillStyle = COL.acc; g.fillText(TOOL === 'seed' ? '花だんの上をタップ（なぞる）してタネを落とそう ↓' : '「タネ」をえらんで、花だんの上をタップ ↓', VIEW.w / 2, Math.max(30, Y(0) - 60));
+    g.fillStyle = COL.acc; g.fillText(kindUI().hint(), VIEW.w / 2, Math.max(30, Math.min(VIEW.h - 40, Y(0) - 60)));
     g.textAlign = 'left';
   }
 }

@@ -4,7 +4,7 @@ window.__wegrErr = window.__wegrErr || [];
 window.addEventListener('error', e => window.__wegrErr.push(String(e.message)));
 
 const LOOP = { acc: 0, last: performance.now(), slow: false };
-function stepSize() { return UI.speed <= 1 ? 0.25 : UI.speed <= 7 ? 0.5 : 1; }
+function stepSize() { return UI.speed <= 1 ? 0.25 : UI.speed <= 7 ? 0.5 : 1; }   // 1年/秒も1日ずつ（重いときはゆっくりになる）
 function advance(realDt) {
   if (!UI.playing || S.day >= MAX_DAYS) return;
   const h = stepSize(), t0 = performance.now();
@@ -35,6 +35,17 @@ function paintSeg(ax, ay, bx, by) {
   if (!STROKE) return;
   const a = toWorld(ax, ay), b = toWorld(bx, by), hw = TOOL_W / 2;
   const x0 = Math.max(0, Math.min(a.x, b.x) - hw), x1 = Math.min(BED_W, Math.max(a.x, b.x) + hw);
+  if (SP.kind === 'clone') {   // 竹: 植える・タケノコを掘る・切る・耕す・根止めの板
+    const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 4)), one = ax === bx && ay === by;
+    if (TOOL === 'seed' || TOOL === 'pull') for (let i = one ? n : 1; i <= n; i++) {
+      const w = toWorld(ax + (bx - ax) * i / n, ay + (by - ay) * i / n);
+      if (TOOL === 'seed') bPlant(w.x, STROKE); else { if (!one) STROKE.tol = Math.max(0.15, 12 / VIEW.s); bDig(w.x, w.y, STROKE); }
+    }
+    if (TOOL === 'mow') bCut(x0, x1, STROKE);
+    if (TOOL === 'till') bTill(x0, x1, 0.15, STROKE);
+    if (TOOL === 'cover' && one) bBarrier(b.x, STROKE);
+    updateReadout(true); return;
+  }
   if (TOOL === 'seed') {   // 押した所に1粒。なぞると 2cm ごとに1粒（落ちていくところも見せる）
     const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 3));
     for (let i = (ax === bx && ay === by) ? n : 1; i <= n; i++) {
@@ -58,7 +69,7 @@ function paintSeg(ax, ay, bx, by) {
   computeLight(); updateReadout(true);
 }
 function paintEnd() {
-  const first = STROKE && STROKE.tool === 'seed' && STROKE.n && S.tot.dropped === STROKE.n;
+  const first = STROKE && STROKE.tool === 'seed' && STROKE.n && (SP.kind === 'clone' ? B.tot.planted === STROKE.n : S.tot.dropped === STROKE.n);
   endStroke(STROKE); STROKE = null; UI.lastTl = 0;
   if (first && !UI.playing) { UI.playing = true; syncPlay(); }   // はじめてタネを落としたら動きだす
   updateReadout(true);
@@ -72,7 +83,7 @@ function onHover(px, py, touch) {
 }
 
 window.addEventListener('resize', () => { resizeView(); UI.lastTl = 0; });
-buildUI(); resizeView(); startScenario('empty');
+buildUI(); resizeView(); applyKindUI(); startScenario('empty');
 setupInput({ tap: () => {}, hover: onHover, isPaint: () => TOOL !== 'look', paintStart, paint: paintSeg, paintEnd });
 requestAnimationFrame(loop);
 

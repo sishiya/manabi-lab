@@ -91,7 +91,8 @@ function restartSim(scen) {
   S.day = sc.startDay || 0; S.year = yearOf(S.day); S.SD.fill(0); S.SN.fill(0); S.plants = []; S.nid = 1; S.sheet.fill(0);
   S.tot = zeroTot(); S.yr = zeroYear(); S.ev = []; S.acc = { d: 0, cold: 0, warm: 0 };
   H.snaps = []; H.plants.fill(NaN); H.heads.fill(NaN); H.bank.fill(NaN);
-  if (!sc.empty) {
+  if (SP.kind === 'clone') bambooReset(sc);
+  else if (!sc.empty) {
     const n = Math.round(sc.perM2 * BED_W * BED_D), zmax = Math.round(sc.depth / DZC);
     for (let k = 0; k < n; k++) {
       const i = Math.floor(rnd() * zmax) * NX + Math.floor(rnd() * NX);
@@ -314,13 +315,12 @@ function groupSeedlings() {
 function stepModel(dt) {
   if (S.day >= MAX_DAYS) return;
   const T = tempAt(S.day);
-  computeLight();
-  seedsStep(T, dt);
-  plantsStep(T, dt);
+  if (SP.kind === 'clone') stepBamboo(T, dt);
+  else { computeLight(); seedsStep(T, dt); plantsStep(T, dt); }
   const before = Math.floor(S.day);
   S.day += dt;
   const y = yearOf(S.day);
-  if (y !== S.year) { S.year = y; S.yr = zeroYear(); }
+  if (y !== S.year) { S.year = y; S.yr = zeroYear(); if (SP.kind === 'clone') bambooNewYear(); }
   for (let d = before + 1; d <= Math.floor(S.day); d++) {
     record(d);
     if (d % SNAP_EVERY === 0) takeSnap();
@@ -330,6 +330,10 @@ function stepModel(dt) {
 // ---------- 数える ----------
 function bankTotal() { let a = 0, d = 0; for (let i = 0; i < NX * NZ; i++) { a += S.SN[i]; d += S.SD[i]; } return { a, d, n: a + d }; }
 function counts() {
+  if (SP.kind === 'clone') {   // 竹: 地上の竹・タケノコ・地下茎の長さ（グラフは cm）
+    const b = bCounts();
+    return Object.assign(b, { up: b.culms, heads: b.shoots, under: 0, onPlant: 0, bank: b.rh, awake: 0, dorm: 0, perM2: b.rh * 100 });
+  }
   let up = 0, heads = 0, under = 0, dead = 0, onPlant = 0;
   for (const p of S.plants) {
     if (p.st === 0) under += p.n; else if (p.st === 3) dead += p.n; else { up += p.n; if (p.st === 2) heads += p.n; }
@@ -348,13 +352,15 @@ function record(d) {
 function clonePlant(p) { const q = Object.assign({}, p); q.batches = p.batches.map(b => ({ n: b.n, cd: b.cd })); delete q._cells; delete q._ck; delete q._g; delete q._gk; return q; }
 function takeSnap() {
   H.snaps.push({ day: S.day, SD: S.SD.slice(), SN: S.SN.slice(), plants: S.plants.map(clonePlant), sheet: S.sheet.slice(),
-    tot: Object.assign({}, S.tot), yr: Object.assign({}, S.yr), acc: Object.assign({}, S.acc), year: S.year, ev: S.ev.length, rs: R.s, nid: S.nid });
+    tot: Object.assign({}, S.tot), yr: Object.assign({}, S.yr), acc: Object.assign({}, S.acc), year: S.year, ev: S.ev.length, rs: R.s, nid: S.nid,
+    b: SP.kind === 'clone' ? JSON.stringify({ rh: B.rh, tips: B.tips, culms: B.culms, R: B.R, nid: B.nid, barrier: B.barrier, tot: B.tot, yr: B.yr }) : null });
 }
 function restoreSnap(i) {
   const s = H.snaps[i]; if (!s) return;
   S.day = s.day; S.SD.set(s.SD); S.SN.set(s.SN); S.plants = s.plants.map(clonePlant); S.sheet.set(s.sheet);
   S.tot = Object.assign({}, s.tot); S.yr = Object.assign({}, s.yr); S.acc = Object.assign({}, s.acc); S.year = s.year; S.ev.length = Math.min(S.ev.length, s.ev);
   R.s = s.rs; S.nid = s.nid;
+  if (s.b) Object.assign(B, JSON.parse(s.b));
   H.snaps.length = i + 1;
   for (let d = Math.floor(s.day) + 1; d < H.plants.length; d++) { H.plants[d] = NaN; H.heads[d] = NaN; H.bank[d] = NaN; }
   computeLight();
@@ -368,6 +374,14 @@ function endStroke(k) {
   if (!k) return;
   const fd = dateOf(S.day), d = `${fd.m}月${fd.d}日 `, len = Math.max(1, Math.round((k.x1 - k.x0) * 100));
   const sd = k.seeds + k.drop ? `（穂のタネ ${k.seeds} 粒を持ち出し、${k.drop} 粒が落ちた）` : '';
+  if (SP.kind === 'clone') {   // 竹
+    if (k.tool === 'seed' && k.n) logEvent(d + `地下茎のついた若い竹を ${k.n} 本植えた`, 'act');
+    if (k.tool === 'pull' && k.n) logEvent(d + `タケノコを ${k.n} 本掘った`, 'act');
+    if (k.tool === 'mow' && k.n) logEvent(d + `竹を ${k.n} 本切った（地下茎は生きている）`, 'act');
+    if (k.tool === 'till' && k.x1 > k.x0) logEvent(d + `${len}cm を深さ ${Math.round(k.depth * 100)}cm まで耕した` + (k.n ? `（浅い地下茎 ${k.n}cm を切った）` : '（浅い地下茎はなかった）'), 'act');
+    if (k.tool === 'cover' && k.n) logEvent(d + (k.on ? '根止めの板（深さ 50cm）を立てた' : '根止めの板を外した'), 'act');
+    return;
+  }
   if (k.tool === 'seed' && k.n) logEvent(d + `タネを ${k.n} 粒落とした（冬をこした、目ざめたタネ）`, 'act');
   if (k.tool === 'pull' && k.n) logEvent(d + `${k.n}本抜いた` + sd, 'act');
   if (k.tool === 'mow' && k.n) logEvent(d + `${k.n}本を高さ ${Math.round(k.h * 100)}cm で刈った` + sd, 'act');

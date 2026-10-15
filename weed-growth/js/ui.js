@@ -1,9 +1,7 @@
 // 雑草がふえるまで — 画面の部品（速さ・道具・数字・いまのようす・時間のグラフ・できごと・説明・寄って見る）
 'use strict';
 const $ = id => document.getElementById(id);
-const SPEEDS = [['1日<span class="ps">/秒</span>', 1], ['1週<span class="ps">/秒</span>', 7], ['1か月<span class="ps">/秒</span>', 30]];   // 狭い画面では「/秒」を隠す
-const TOOLS = [['見る', 'look'], ['タネ', 'seed'], ['抜く', 'pull'], ['刈る', 'mow'], ['耕す', 'till'], ['おおう', 'cover']];
-const WIDTHS = [['10cm', 0.1], ['30cm', 0.3], ['全部', 2.2]];
+const SPEEDS = [['1日<span class="ps">/秒</span>', 1], ['1週<span class="ps">/秒</span>', 7], ['1<span class="ps">か</span>月<span class="ps">/秒</span>', 30], ['1年<span class="ps">/秒</span>', 365]];   // 狭い画面では「/秒」を隠す
 const UI = { speed: 7, playing: true, lastRo: 0, lastTl: 0 };
 
 function fmtNumS(n) { n = Math.round(n); return n >= 100000 ? (n / 10000).toFixed(n >= 1e6 ? 0 : 1) + '万' : n.toLocaleString('ja-JP'); }
@@ -23,17 +21,13 @@ function buildUI() {
   seg($('segSpeed'), SPEEDS, UI.speed, v => { UI.speed = v; });
   setTool(TOOL);
   for (const b of $('menu').querySelectorAll('.mcard[data-sp]')) b.onclick = () => chooseSeed(b.dataset.sp);
-  seg($('segWidth'), WIDTHS, TOOL_W, v => { TOOL_W = v; });
-  seg($('segScen'), Object.entries(SCENARIOS).map(([k, v]) => [v.name, k]), S.scen, v => {
-    startScenario(v);
-  });
   $('scenNote').textContent = SCENARIOS[S.scen].note;
   $('play').onclick = () => { UI.playing = !UI.playing; syncPlay(); };
   $('tgSnd').onclick = () => { SND.on = !SND.on; setPressed($('tgSnd'), SND.on); };
   $('zIn').onclick = () => zoomAt(VIEW.w / 2, VIEW.h / 2, 2);
   $('zOut').onclick = () => zoomAt(VIEW.w / 2, VIEW.h / 2, 0.5);
   $('zAll').onclick = () => resetView();
-  $('tgXray').onclick = () => { S.opts.xray = !S.opts.xray; setPressed($('tgXray'), S.opts.xray); $('legendFl').hidden = !S.opts.xray; };
+  $('tgXray').onclick = () => { S.opts.xray = !S.opts.xray; setPressed($('tgXray'), S.opts.xray); applyKindUI(); };
   $('tgNoDorm').onclick = () => {
     S.opts.noDorm = !S.opts.noDorm; setPressed($('tgNoDorm'), S.opts.noDorm);
     if (S.opts.noDorm) { for (let i = 0; i < NX * NZ; i++) { S.SN[i] += S.SD[i]; S.SD[i] = 0; } }
@@ -41,9 +35,8 @@ function buildUI() {
   };
   $('tgAutoPull').onclick = () => {
     S.opts.autoPull = !S.opts.autoPull; setPressed($('tgAutoPull'), S.opts.autoPull);
-    logEvent(fmtDate(S.day).replace(/^\S+ /, '') + (S.opts.autoPull ? ' 実験: 穂が出たらすぐ抜くことにした' : ' 実験: すぐ抜くのをやめた'), 'act');
+    logEvent(fmtDate(S.day).replace(/^\S+ /, '') + ' 実験: ' + kindUI().autoPull + (S.opts.autoPull ? '（はじめた）' : '（やめた）'), 'act');
   };
-  for (const b of $('jumps').querySelectorAll('button')) b.onclick = () => jump(b.dataset.j);
   const tl = $('tl');
   tl.addEventListener('click', e => {
     const r = tl.getBoundingClientRect(), d = (e.clientX - r.left - TLM.l) / (r.width - TLM.l - TLM.r) * tlDays();
@@ -55,16 +48,23 @@ function startScenario(v) {
   restartSim(v); $('scenNote').textContent = SCENARIOS[v].note; UI.lastTl = 0;
   const empty = !!SCENARIOS[v].empty;
   $('menu').hidden = !empty;
-  if (empty) { UI.playing = false; aimAt(BED_W / 2, 0.14, 0.6, 0.01); viewTick(1); }
+  if (empty) { UI.playing = false; resetView(); kindUI().start(); }
   else { UI.playing = true; resetView(); if (TOOL === 'seed') setTool('look'); }
   syncPlay(); updateReadout(true);
 }
-function chooseSeed(sp) {   // いまはエノコログサだけ（SPECIES に足した種をここでえらべるように）
-  SP = SPECIES[sp]; $('menu').hidden = true; setTool('seed');
+// メニューで種をえらぶ: 仲間（タネ／竹）がかわるときは世界の大きさもかえて、まっさらな土から
+function chooseSeed(sp) {
+  const kind0 = SP.kind; SP = SPECIES[sp];
+  if (SP.kind !== kind0) {
+    setWorld(SP.world); restartSim(SP.kind === 'clone' ? 'bEmpty' : 'empty');
+    UI.playing = false; syncPlay(); resetView(); kindUI().start(); UI.lastTl = 0;
+    $('scenNote').textContent = SCENARIOS[S.scen].note;
+  }
+  $('menu').hidden = true; TOOL = 'seed'; applyKindUI(); updateReadout(true);
 }
 function setTool(v) {
   TOOL = v; cv.classList.toggle('tool', v !== 'look');
-  seg($('segTool'), TOOLS, v, t => { TOOL = t; cv.classList.toggle('tool', t !== 'look'); });
+  seg($('segTool'), kindUI().tools, v, t => { TOOL = t; cv.classList.toggle('tool', t !== 'look'); });
 }
 function syncPlay() { $('play').textContent = UI.playing ? '❚❚' : '▶'; $('play').setAttribute('aria-label', UI.playing ? '止める' : '進める'); }
 
@@ -74,6 +74,7 @@ function updateReadout(force) {
   const c = counts(), T = tempAt(S.day), A = BED_W * BED_D;
   $('clock').textContent = fmtDate(S.day);
   $('temp').textContent = T.toFixed(0) + '℃';
+  if (SP.kind === 'clone') { bReadout(c); $('now').innerHTML = bNowText(c); renderLog(); return; }
   $('roUp').textContent = c.up.toLocaleString('ja-JP');
   $('roHeads').textContent = '穂 ' + c.heads.toLocaleString('ja-JP') + (c.under ? '・土の中の芽 ' + c.under : '');
   $('roBank').textContent = fmtNumS(c.perM2);
@@ -154,6 +155,7 @@ function drawTimeline(force) {
 
 // ---------- マウスを乗せたときの説明 ----------
 function describeAt(px, py) {
+  if (SP.kind === 'clone') return bDescribe(px, py);
   const w = toWorld(px, py), s = VIEW.s, tol = 10 / s;
   if (w.y < 0 && w.y > -SOIL_D && w.x >= 0 && w.x <= BED_W) {
     if (S.opts.xray) {
@@ -217,6 +219,7 @@ function showTip(px, py, html) {
 // ---------- 寄って見る ----------
 function jump(kind) {
   const msg = $('jumpMsg'); msg.textContent = '';
+  if (SP.kind === 'clone') { bJump(kind); return; }
   if (kind !== 'flower' && kind !== 'sprout' && !S.opts.xray) { S.opts.xray = true; setPressed($('tgXray'), true); $('legendFl').hidden = false; }
   if (kind === 'seed') {
     let best = null, bd = 1e9;

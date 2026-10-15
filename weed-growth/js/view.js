@@ -10,7 +10,7 @@ function X(x) { return (x - VIEW.cx) * VIEW.s + VIEW.w / 2; }
 function Y(y) { return VIEW.h / 2 - (y - VIEW.cy) * VIEW.s; }
 function toWorld(px, py) { return { x: (px - VIEW.w / 2) / VIEW.s + VIEW.cx, y: VIEW.cy - (py - VIEW.h / 2) / VIEW.s }; }
 function fieldW() { return VIEW.w / VIEW.s; }
-function fitScale() { return Math.min(VIEW.w / (BED_W + 0.1), VIEW.h / (0.8 + SOIL_D + 0.05)); }
+function fitScale() { return Math.min(VIEW.w / (BED_W * 1.07), VIEW.h / ((VIEW_AIR + SOIL_D) * 1.06)); }
 
 function resizeView() {
   const r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -20,12 +20,12 @@ function resizeView() {
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   if (first) { resetView(); VIEW.inited = true; } else clampView();
 }
-function resetView() { VIEW.anim = null; VIEW.s = fitScale(); VIEW.cx = BED_W / 2; VIEW.cy = (0.8 - SOIL_D - 0.05) / 2; clampView(); }
+function resetView() { VIEW.anim = null; VIEW.s = fitScale(); VIEW.cx = BED_W / 2; VIEW.cy = -SOIL_D * 1.05 + VIEW.h / 2 / VIEW.s; clampView(); }   // 土の底を画面の下に
 function clampView() {
   const smin = fitScale() * 0.8, smax = VIEW.w / FIELD_MIN;
   VIEW.s = Math.min(smax, Math.max(smin, VIEW.s));
   const hw = VIEW.w / 2 / VIEW.s, hh = VIEW.h / 2 / VIEW.s;
-  const x0 = -0.05, x1 = BED_W + 0.05, y0 = -SOIL_D - 0.02, y1 = AIR_H;
+  const x0 = -BED_W * 0.035, x1 = BED_W * 1.035, y0 = -SOIL_D * 1.1, y1 = AIR_H;
   VIEW.cx = (x1 - x0) < 2 * hw ? (x0 + x1) / 2 : Math.min(x1 - hw, Math.max(x0 + hw, VIEW.cx));
   VIEW.cy = (y1 - y0) < 2 * hh ? (y0 + y1) / 2 : Math.min(y1 - hh, Math.max(y0 + hh, VIEW.cy));
 }
