@@ -10,7 +10,7 @@ const UI = (() => {
   $('legend').innerHTML = GROUPS.map(g => `<span><i style="background:${g[2]}"></i>${g[1]}</span>`).join('');
 
   // ---------- 詳細（図鑑の1ページ） ----------
-  let showing = null, shownJa = '', token = 0;
+  let showing = null, shownJa = '', token = 0, showingExtra = '';
   function chip(n) {
     const c = GROUP_COLOR[RANK_GROUP(n.rank)];
     return `<button class="chip" data-i="${n.i}"><i style="background:${c}"></i>${esc(n.ja || n.name)}</button>`;
@@ -19,8 +19,8 @@ const UI = (() => {
   const MAJOR = [['domain', 'ドメイン'], ['kingdom', '界'], ['phylum', '門'], ['class', '綱'], ['order', '目'], ['family', '科'], ['genus', '属'], ['species', '種']];
   // 人とその近くの写真は出さない（Wikidata の人の写真には、子ども向けに合わないものがある。RULES 9）
   const NO_IMAGE = /^(Homo|Homo sapiens|Hominidae|Homininae|Hominini|Pan|Pan troglodytes|Pan paniscus)$/;
-  function show(n) {
-    showing = n; shownJa = n.ja; const my = ++token;
+  function show(n, extra = '') {
+    showing = n; shownJa = n.ja; showingExtra = extra; const my = ++token;
     const c = GROUP_COLOR[RANK_GROUP(n.rank)];
     const rk = RANK_JA[n.rank] || '';
     const line = T.ancestors(n).concat([n]);
@@ -37,10 +37,11 @@ const UI = (() => {
       return m ? `<tr><th>${label}</th><td><button data-i="${m.i}">${esc(m.ja || m.name)}</button>${m.ja ? `<span class="s">${esc(m.name)}</span>` : ''}</td></tr>` : '';
     }).join('');
     const canImg = n.q && !NO_IMAGE.test(n.name);
-    $('detail').innerHTML = `
+    $('detail').innerHTML = extra + `
       <div class="d-rank">${rk ? `<span class="tag" style="background:${c}">${esc(rk)}</span>` : ''}${n.count ? `<span>${fmt(n.count)} 種</span>` : ''}</div>
       <h2>${n.extinct ? '† ' : ''}${esc(n.ja || n.name)}${n.part ? '（一部）' : ''}</h2>
       <p class="sci">${n.rank !== 'root' ? `<i>${esc(n.name)}</i>` : ''} <span class="auth" id="d-auth"></span></p>
+      <div class="acts"><button class="act" data-act="cmp">どこで分かれた？ ほかとくらべる</button><button class="act" data-act="trip">ここから ふしぎ旅</button></div>
       <div class="plate" id="d-plate">${canImg ? '<p class="none">図を読みこみ中…</p>' : ''}</div>
       <p class="wd" id="d-wd"></p>
       ${rows ? `<h3>分類</h3><table class="cls">${rows}</table>` : ''}
@@ -53,7 +54,13 @@ const UI = (() => {
       </dl>
       ${notes.map(s => `<p class="note">${esc(s)}</p>`).join('')}
       ${path.length ? `<details class="path"><summary>根もとからの道すじ（${path.length} 段）</summary><div class="path">${path.map(chip).join('<span class="arr">›</span>')}</div></details>` : ''}
+      <p class="silcredit" id="d-sil"></p>
       <p class="links" id="d-links">${n.col ? ext('https://www.catalogueoflife.org/data/taxon/' + encodeURIComponent(n.col), 'Catalogue of Life') : ''}</p>`;
+    // シルエット（樹形図で動いているもの）の作者と条件
+    C.silhouette(n).then(sl => {
+      if (my !== token || !sl) return;
+      $('d-sil').innerHTML = `樹形図のシルエット${sl.from ? `（${esc(sl.from)}の絵）` : ''}: ${esc(sl.author || '作者不明')} ／ ${ext(sl.licenseUrl, sl.license)} ／ ${ext(sl.page, 'PhyloPic')}`;
+    }).catch(() => { });
     // あとから読むもの（著者・説明・図・Wikipedia）
     if (n.col) API.taxon(n.col).then(d => {
       if (my !== token) return;
@@ -97,6 +104,8 @@ const UI = (() => {
     P.querySelectorAll('img').forEach(img => img.addEventListener('error', () => img.closest('figure').remove()));
   }
   $('detail').addEventListener('click', e => {
+    const act = e.target.closest('button.act');
+    if (act) { if (act.dataset.act === 'cmp') Compare.start(showing); else { Compare.clear(false); UI.onTrip(showing); } return; }
     const b = e.target.closest('.chip, table.cls button');
     if (b) UI.onPick(T.nodes[+b.dataset.i]);
   });
@@ -165,6 +174,6 @@ const UI = (() => {
   $('meta').textContent = `上のほうの樹形図: COL ${M.col.alias}（${M.col.version}）と Open Tree ${M.ott.synth}（${M.ott.date.slice(0, 10)}）から ${M.built} に作成。${T.nodes.length} のまとまり。`;
 
   // 和名があとから届いたら出しなおす
-  function refresh() { if (showing && showing.ja !== shownJa) show(showing); }
-  return { show, refresh, onPick() { } };
+  function refresh() { if (showing && showing.ja !== shownJa) show(showing, showingExtra); }
+  return { show, refresh, onPick() { }, onTrip() { } };
 })();

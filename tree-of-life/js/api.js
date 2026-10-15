@@ -82,6 +82,38 @@ const API = (() => {
       const d = await getJSON(`https://en.wikipedia.org/w/api.php?action=query&titles=${enc(title)}&prop=pageimages&piprop=name&pilicense=free&format=json&origin=*`);
       return Object.values((d.query || {}).pages || {}).map(p => p.pageimage).filter(Boolean).map(s => s.replace(/_/g, ' '));
     },
+    // PhyloPic: 学名 → シルエット1枚 { src, w, h, author, license, licenseUrl, page } か null
+    //   その名前のまとまりの代表の絵。代表がNCなら、同じまとまりの中で NC でない絵をさがす
+    async phylopic(name) {
+      const PP = 'https://api.phylopic.org';
+      // 版の番号（build）がいる。いちばん上のページの案内から読む
+      const root = await getJSON(PP + '/');
+      const build = root.build || (JSON.stringify(root).match(/build=(\d+)/) || [])[1];
+      const d = await getJSON(`${PP}/nodes?build=${build}&filter_name=${enc(name.toLowerCase())}&embed_items=true&embed_primaryImage=true&page=0`);
+      const items = (d._embedded && d._embedded.items) || [];
+      // names は「名前」の並び。1つの名前は部分の並び（学名の部分 class=scientific をつなぐ）
+      const sci = nm => nm.filter(x => x.class === 'scientific').map(x => x.text).join(' ').replace(/\s+/g, ' ').trim().toLowerCase();
+      const node = items.find(n => (n.names || []).some(nm => sci(nm) === name.toLowerCase()));
+      if (!node) return null;
+      const okLic = im => im && im._links && im._links.license && !/-nc/i.test(im._links.license.href);
+      let im = node._embedded && node._embedded.primaryImage;
+      if (!okLic(im)) {
+        const uuid = node._links.self.href.split('/')[2].split('?')[0];
+        const r = await getJSON(`${PP}/images?build=${build}&filter_clade=${uuid}&filter_license_nc=false&embed_items=true&page=0`);
+        im = ((r._embedded && r._embedded.items) || []).find(okLic);
+        if (!im) return null;
+      }
+      // 縦横比のままの PNG で、長いほうが 256px 前後のもの（なければいちばん小さいもの）
+      const ras = (im._links.rasterFiles || []).map(f => { const [w, h] = f.sizes.split('x').map(Number); return { href: f.href, w, h }; });
+      if (!ras.length) return null;
+      ras.sort((a, b) => Math.max(a.w, a.h) - Math.max(b.w, b.h));
+      const pick = ras.find(f => Math.max(f.w, f.h) >= 240) || ras[ras.length - 1];
+      const lic = im._links.license.href;
+      const licName = /zero/.test(lic) ? 'CC0' : /publicdomain\/mark/.test(lic) ? 'パブリックドメイン' : 'CC ' + (lic.match(/licenses\/([a-z-]+)\/([\d.]+)/) || ['', 'by', ''])[1].toUpperCase() + ' ' + ((lic.match(/licenses\/[a-z-]+\/([\d.]+)/) || ['', ''])[1]);
+      const author = im.attribution || (im._links.contributor && im._links.contributor.title) || '';
+      return { src: pick.href, w: pick.w, h: pick.h, author, license: licName.trim(), licenseUrl: lic,
+        page: 'https://www.phylopic.org' + im._links.self.href.replace(/\?.*$/, '') };
+    },
     // Commons: ファイル名 → [{ src, w, h, page, author, license, licenseUrl, title }]
     //   出すのは、作者と条件を書けば使えるもの（CC0・パブリックドメイン・CC BY・CC BY-SA）だけ。
     //   NC・ND・GFDL だけのもの・条件の分からないものは出さない（RULES・no-noncommercial-sources）

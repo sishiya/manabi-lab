@@ -20,14 +20,19 @@
         <p>名前を押すと、その先の枝が開きます。もう一度押すと閉じます。</p>
         <p>ドラッグで動かし、右のつまみ・ホイール・ピンチで大きさを変えます。「全体」で、いま開いている枝がぜんぶ入ります。</p>
         <p>「ライオン」「シイタケ」「Homo sapiens」のように、和名でも学名でもさがせます。</p>
+        <p>名前の右で動くシルエットを押すと、その詳細が出ます。動き方は演出です。</p>
+        <p>詳細の「どこで分かれた？」で2つをくらべると、共通の祖先まで枝が光ります。「旅」は、枝をランダムに下って知らない生きものへ連れていきます。</p>
+        <label class="tog"><input type="checkbox" id="critter-on" checked> シルエットを動かす</label>
         <p class="lg-title">名札の色は分類の段</p>
         <div id="legend"></div>
       </div>
     </header>
     <main id="stage">
       <canvas id="cv" aria-label="生きものの系統樹。名前を押すと開く"></canvas>
+      <div id="cmpbar" hidden></div>
       <div id="zoom">
         <button id="zfit" title="開いている枝がぜんぶ入るように">全体</button>
+        <button id="ztrip" title="ふしぎ旅: 枝をランダムに下って、知らない生きものへ">旅</button>
         <span class="zl" aria-hidden="true">大</span>
         <input id="zs" type="range" min="0" max="1000" value="500" aria-label="大きさ">
         <span class="zl" aria-hidden="true">小</span>
@@ -48,17 +53,20 @@
         <li>綱より下（目・科・属・種）は、開いたときに COL から読みます。ここは<strong>分類</strong>で、進化の枝分かれの順ではありません（種の数の多い順）。</li>
         <li>枝の長さは時間を表していません（形だけ）。分かれた年代は、まだ入れていません。</li>
         <li>図（写真）は、Wikidata に登録された写真を Wikimedia Commons から読み、作者と条件（CC0・パブリックドメイン・CC BY・CC BY-SA）を図の下に出しています。それ以外の条件の写真と、人の写真は出しません。写真の中身は、ほかの人のものです（このアプリのライセンスには入りません）。</li>
+        <li>名前の右で動くシルエットは PhyloPic の絵です。その生きものの絵がないときは、近い祖先のまとまりの絵を使います。歩く・飛ぶ・泳ぐ・ゆれるなどの動き方はグループごとの演出で、本物の動きではありません。作者と条件は、押したときの詳細に出します（だれでも使える条件の絵だけ）。</li>
+        <li>「どこで分かれた？」の分かれたところは、この樹形図の上で2つの道すじが合わさるまとまりです。綱より下は分類なので目安です。</li>
         <li>和名は Wikidata のラベルです。ないものは学名だけ。同じ学名が動物と植物にあるときなど、ちがう和名が出ることがあります。</li>
         <li>COL に種がまだ入っていないまとまりと、ウイルスは入れていません。COL は「知られている種の8割ほど」をおさめていると書いています。</li>
         <li>分類と系統は研究でよく変わります。学習用の目安として見てください。</li>
       </ul>
       <h3>通信について</h3>
-      <p>枝を開く・検索するときに、学名や検索の文字を COL（api.checklistbank.org）と Wikidata（wikidata.org）へ、写真の名前を Wikimedia Commons（commons.wikimedia.org・upload.wikimedia.org・thumb.wikimedia.org、英語版 Wikipedia）へ送って読みます。それ以外は送りません。</p>
+      <p>枝を開く・検索するときに、学名や検索の文字を COL（api.checklistbank.org）と Wikidata（wikidata.org）へ、シルエットのために学名を PhyloPic（api.phylopic.org・images.phylopic.org）へ、写真の名前を Wikimedia Commons（commons.wikimedia.org・upload.wikimedia.org・thumb.wikimedia.org、英語版 Wikipedia）へ送って読みます。それ以外は送りません。</p>
       <h3>おもな出どころ（データ）</h3>
       <ul>
         <li>Bánki, O. ほか. Catalogue of Life. <span id="meta"></span> doi:10.48580/dgz5n. <a href="https://www.catalogueoflife.org/" target="_blank" rel="noopener">catalogueoflife.org</a>（CC BY 4.0）</li>
         <li>Open Tree of Life 合成系統樹 と Open Tree Taxonomy. <a href="https://tree.opentreeoflife.org/" target="_blank" rel="noopener">tree.opentreeoflife.org</a>（CC0）</li>
         <li>Hinchliff, C. E. ほか (2015) Synthesis of phylogeny and taxonomy into a comprehensive tree of life. PNAS 112: 12764–12769.</li>
+        <li>PhyloPic（シルエット。作者・条件は絵ごとに）. <a href="https://www.phylopic.org/" target="_blank" rel="noopener">phylopic.org</a></li>
         <li>Wikimedia Commons（図。作者・条件は図ごとに）. <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">commons.wikimedia.org</a></li>
         <li>Wikidata（和名・説明・Wikipedia への行き先）. <a href="https://www.wikidata.org/" target="_blank" rel="noopener">wikidata.org</a>（CC0）</li>
       </ul>
@@ -72,5 +80,7 @@
 <script src="js/api.js"></script>
 <script src="js/tree.js"></script>
 <script src="js/view.js"></script>
+<script src="js/critters.js"></script>
+<script src="js/compare.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>

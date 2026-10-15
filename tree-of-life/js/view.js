@@ -11,6 +11,7 @@ const V = (() => {
   let leaving = [];           // 閉じたときに親へ吸いこまれていくふし（0.3秒ほどで消える）
   let selected = null, hover = null;
   let onDrawFn = null;        // 描いたあとに呼ぶ（大きさのつまみを合わせる）
+  let onWorldFn = null;       // 枝のあと・名前の前に、世界の座標で描きたすもの（いきもの・光る道すじ）
   let W = 0, H = 0;
   const INK = '#2c2a24', SUB = '#7a7262', FAINT = '#9b927e';
   const FONT = "14px 'Zen Old Mincho','Yu Mincho','Hiragino Mincho ProN',serif";
@@ -50,9 +51,12 @@ const V = (() => {
     if (p.cnt) w2 += (w2 ? 7 : 0) + tw(p.cnt, FONT_S);
     return tag + Math.max(w1, w2);
   }
+  // 見せる子: 開いているふしの子。「しぼりこみ」（only）があれば、その中のものだけ（どこで分かれた？の2本の道すじ）
+  let only = null;
+  const kidsOf = n => !T.isOpen(n) ? [] : only ? n.kids.filter(k => only.has(k)) : n.kids;
   const twoLines = n => { const p = labelParts(n); return !!(p.sci || p.cnt); };
   // 1段めの高さ。閉じたふしは点の横、開いているふしは2段ごと枝の上へ
-  const labelY = (n, y) => (T.isOpen(n) && n.kids.length ? y - (twoLines(n) ? 8 + LINE2 : 10) : y);
+  const labelY = (n, y) => (kidsOf(n).length ? y - (twoLines(n) ? 8 + LINE2 : 10) : y);
 
   // 配置: 葉は上から1行ずつ、親は子の真ん中。名前のあるふしは名前のぶん右へ
   // 見た目の位置（ax, ay, ajx）は、ここで決めた位置（x, y, jx）へ少しずつ近づく（step）
@@ -69,8 +73,8 @@ const V = (() => {
       }
       const named = T.named(n);
       n.lw = named ? labelW(n) : 0;
-      const kids = T.isOpen(n) ? n.kids : [];
-      if (!kids.length) { n.y = row++ * ROW; n.jx = x; return; }
+      const kids = kidsOf(n);
+      if (!kids.length) { n.y = row++ * (only ? ROW * 1.7 : ROW); n.jx = x; return; }   // くらべている間は2本の道すじの間を広く
       n.jx = named ? x + n.lw + 16 : x + 2;
       for (const k of kids) place(k, n.jx + GAP, n);
       n.y = (kids[0].y + kids[kids.length - 1].y) / 2;
@@ -149,7 +153,7 @@ const V = (() => {
     // 枝: 親の名前の下をのびて、分かれ目からやわらかい曲線で子へ
     g.lineCap = 'round';
     for (const n of vis) {
-      const kids = T.isOpen(n) ? n.kids : [];
+      const kids = kidsOf(n);
       if (!kids.length) continue;
       let top = Infinity, bot = -Infinity;
       for (const k of kids) { top = Math.min(top, k.ay); bot = Math.max(bot, k.ay); }
@@ -186,6 +190,7 @@ const V = (() => {
       }
     }
     g.globalAlpha = 1;
+    if (onWorldFn) onWorldFn(g, cam.k);
     // ふしと名前
     g.textBaseline = 'middle';
     const suck = new Set(leaving.map(L => L.a));
@@ -194,7 +199,7 @@ const V = (() => {
       g.globalAlpha = n.alpha;
       const col = n.more ? FAINT : GROUP_COLOR[RANK_GROUP(n.rank)];
       const r = n.more ? 3 : 2.6 + Math.log10(n.count + 1) * 0.7;
-      const open = T.isOpen(n) && n.kids.length;
+      const open = kidsOf(n).length;
       const ly = labelY(n, n.ay);
       const p = labelParts(n);
       // 名前の下じき: えらんだ・指している・子を吸いこみ中のふしは不透明に（子や枝はこの裏へ）
@@ -291,7 +296,7 @@ const V = (() => {
 
   // デバッグ用: 描画が止まっている間（ペインがかくれている）も、アニメを1コマずつ進める
   const tick = (dt = 1 / 60) => { const m = step(dt); draw(); return { moving: m, leaving: leaving.length }; };
-  return { KMIN, KMAX, bbox, set onDraw(f) { onDrawFn = f; }, cv, cam, layout, draw, resize, hit, zoomAt, fit, focus, screenOf, settle, shift, pop, labelY, tick,
+  return { KMIN, KMAX, bbox, set onDraw(f) { onDrawFn = f; }, set only(v) { only = v; }, kidsOf, set onWorld(f) { onWorldFn = f; }, cv, cam, layout, draw, resize, hit, zoomAt, fit, focus, screenOf, settle, shift, pop, labelY, tick,
     get vis() { return vis; }, get selected() { return selected; }, set selected(n) { selected = n; },
     set hover(n) { hover = n; }, get size() { return [W, H]; } };
 })();
