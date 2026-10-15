@@ -4,13 +4,13 @@
 <script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Old+Mincho:wght@400;700&display=swap">
 <link rel="stylesheet" href="css/style.css">
 
 <div id="app">
   <div id="pin">
     <header id="top">
-      <h1>いのちの系統樹</h1>
+      <h1>いのちの系統樹<small>TREE OF LIFE</small></h1>
       <div id="search">
         <input id="q" type="search" placeholder="名前でさがす（和名・学名）" autocomplete="off" enterkeyhint="search">
         <ul id="results"></ul>
@@ -38,21 +38,23 @@
         <li>上のほう（界〜綱、約650のまとまり）は、Open Tree of Life の合成系統樹（たくさんの研究の系統樹をまとめたもの）から、Catalogue of Life（COL）の界〜綱の名前で切り出した枝分かれの形です。名前のない点は「ここで分かれた」ところ。Open Tree で見つからないまとまりは、COL の分類で親の下につないでいます。</li>
         <li>綱より下（目・科・属・種）は、開いたときに COL から読みます。ここは<strong>分類</strong>で、進化の枝分かれの順ではありません（種の数の多い順）。</li>
         <li>枝の長さは時間を表していません（形だけ）。分かれた年代は、まだ入れていません。</li>
+        <li>図（写真）は、Wikidata に登録された写真を Wikimedia Commons から読み、作者と条件（CC0・パブリックドメイン・CC BY・CC BY-SA）を図の下に出しています。それ以外の条件の写真と、人の写真は出しません。写真の中身は、ほかの人のものです（このアプリのライセンスには入りません）。</li>
         <li>和名は Wikidata のラベルです。ないものは学名だけ。同じ学名が動物と植物にあるときなど、ちがう和名が出ることがあります。</li>
         <li>COL に種がまだ入っていないまとまりと、ウイルスは入れていません。COL は「知られている種の8割ほど」をおさめていると書いています。</li>
         <li>分類と系統は研究でよく変わります。学習用の目安として見てください。</li>
       </ul>
       <h3>通信について</h3>
-      <p>枝を開く・検索するときに、学名や検索の文字を COL（api.checklistbank.org）と Wikidata（wikidata.org）へ送って読みます。それ以外は送りません。</p>
+      <p>枝を開く・検索するときに、学名や検索の文字を COL（api.checklistbank.org）と Wikidata（wikidata.org）へ、写真の名前を Wikimedia Commons（commons.wikimedia.org・upload.wikimedia.org・thumb.wikimedia.org、英語版 Wikipedia）へ送って読みます。それ以外は送りません。</p>
       <h3>おもな出どころ（データ）</h3>
       <ul>
         <li>Bánki, O. ほか. Catalogue of Life. <span id="meta"></span> doi:10.48580/dgz5n. <a href="https://www.catalogueoflife.org/" target="_blank" rel="noopener">catalogueoflife.org</a>（CC BY 4.0）</li>
         <li>Open Tree of Life 合成系統樹 と Open Tree Taxonomy. <a href="https://tree.opentreeoflife.org/" target="_blank" rel="noopener">tree.opentreeoflife.org</a>（CC0）</li>
         <li>Hinchliff, C. E. ほか (2015) Synthesis of phylogeny and taxonomy into a comprehensive tree of life. PNAS 112: 12764–12769.</li>
+        <li>Wikimedia Commons（図。作者・条件は図ごとに）. <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">commons.wikimedia.org</a></li>
         <li>Wikidata（和名・説明・Wikipedia への行き先）. <a href="https://www.wikidata.org/" target="_blank" rel="noopener">wikidata.org</a>（CC0）</li>
       </ul>
       <h3>使っているもの</h3>
-      <p>フォント: Google Fonts（SIL Open Font License）</p>
+      <p>フォント: Zen Old Mincho・Zen Kaku Gothic New・EB Garamond・IBM Plex Mono（Google Fonts、SIL Open Font License）</p>
     </details>
   </aside>
 </div>

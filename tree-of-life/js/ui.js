@@ -9,16 +9,21 @@ const UI = (() => {
   // 凡例（色 = 段）
   $('legend').innerHTML = GROUPS.map(g => `<span><i style="background:${g[2]}"></i>${g[1]}</span>`).join('');
 
-  // ---------- 詳細 ----------
+  // ---------- 詳細（図鑑の1ページ） ----------
   let showing = null, shownJa = '', token = 0;
   function chip(n) {
     const c = GROUP_COLOR[RANK_GROUP(n.rank)];
     return `<button class="chip" data-i="${n.i}"><i style="background:${c}"></i>${esc(n.ja || n.name)}</button>`;
   }
+  // 分類の表に出す段（図鑑でおなじみの段）
+  const MAJOR = [['domain', 'ドメイン'], ['kingdom', '界'], ['phylum', '門'], ['class', '綱'], ['order', '目'], ['family', '科'], ['genus', '属'], ['species', '種']];
+  // 人とその近くの写真は出さない（Wikidata の人の写真には、子ども向けに合わないものがある。RULES 9）
+  const NO_IMAGE = /^(Homo|Homo sapiens|Hominidae|Homininae|Hominini|Pan|Pan troglodytes|Pan paniscus)$/;
   function show(n) {
     showing = n; shownJa = n.ja; const my = ++token;
     const c = GROUP_COLOR[RANK_GROUP(n.rank)];
     const rk = RANK_JA[n.rank] || '';
+    const line = T.ancestors(n).concat([n]);
     const path = T.ancestors(n).filter(a => a.name);
     const notes = [];
     if (n.rank === 'clade') notes.push('Open Tree of Life の系統樹にある、分類の階級をもたない枝（共通の祖先から分かれた仲間）。');
@@ -27,29 +32,36 @@ const UI = (() => {
     if (n.live) notes.push('この段は COL の分類（目・科・属・種）。ならびは種の数の多い順で、進化の枝分かれの順ではありません。');
     // すぐ下の名前のあるまとまり（名前のない分かれ目はくぐって数える）
     const kidsNamed = (function cnt(m) { return m.kids.reduce((s, k) => s + (k.name ? 1 : k.more ? 0 : cnt(k)), 0); })(n);
+    const rows = MAJOR.map(([r, label]) => {
+      const m = line.filter(x => x.rank === r && x.name).pop();
+      return m ? `<tr><th>${label}</th><td><button data-i="${m.i}">${esc(m.ja || m.name)}</button>${m.ja ? `<span class="s">${esc(m.name)}</span>` : ''}</td></tr>` : '';
+    }).join('');
+    const canImg = n.q && !NO_IMAGE.test(n.name);
     $('detail').innerHTML = `
-      <div class="d-head">
-        ${rk ? `<span class="tag" style="background:${c}">${esc(rk)}</span>` : ''}
-        <h2>${n.extinct ? '† ' : ''}${esc(n.ja || n.name)}${n.part ? '（一部）' : ''}</h2>
-      </div>
-      ${n.ja ? `<p class="sci"><i>${esc(n.name)}</i> <span id="d-auth"></span></p>` : `<p class="sci"><span id="d-auth"></span></p>`}
-      <dl>
+      <div class="d-rank">${rk ? `<span class="tag" style="background:${c}">${esc(rk)}</span>` : ''}${n.count ? `<span>${fmt(n.count)} 種</span>` : ''}</div>
+      <h2>${n.extinct ? '† ' : ''}${esc(n.ja || n.name)}${n.part ? '（一部）' : ''}</h2>
+      <p class="sci">${n.rank !== 'root' ? `<i>${esc(n.name)}</i>` : ''} <span class="auth" id="d-auth"></span></p>
+      <div class="plate" id="d-plate">${canImg ? '<p class="none">図を読みこみ中…</p>' : ''}</div>
+      <p class="wd" id="d-wd"></p>
+      ${rows ? `<h3>分類</h3><table class="cls">${rows}</table>` : ''}
+      <h3>しらべ</h3>
+      <dl class="facts">
         ${n.count ? `<dt>種の数</dt><dd>${fmt(n.count)} 種 <small>（COL にのっている今の種と絶滅した種）</small></dd>` : ''}
         ${kidsNamed ? `<dt>すぐ下</dt><dd>${fmt(kidsNamed)} のまとまり${n.kids.some(k => k.more) ? '（まだ続きあり）' : ''}</dd>` : ''}
         ${n.extinct ? `<dt>絶滅</dt><dd>絶滅した生きもの（COL の記録）</dd>` : ''}
+        <dt>位置</dt><dd>根もとから ${path.length} 段め</dd>
       </dl>
-      <p class="wd" id="d-wd"></p>
       ${notes.map(s => `<p class="note">${esc(s)}</p>`).join('')}
-      ${path.length ? `<h3>根もとからの道すじ</h3><div class="path">${path.map(chip).join('<span class="arr">›</span>')}</div>` : ''}
+      ${path.length ? `<details class="path"><summary>根もとからの道すじ（${path.length} 段）</summary><div class="path">${path.map(chip).join('<span class="arr">›</span>')}</div></details>` : ''}
       <p class="links" id="d-links">${n.col ? ext('https://www.catalogueoflife.org/data/taxon/' + encodeURIComponent(n.col), 'Catalogue of Life') : ''}</p>`;
-    // あとから読むもの（著者・説明・Wikipedia）
+    // あとから読むもの（著者・説明・図・Wikipedia）
     if (n.col) API.taxon(n.col).then(d => {
       if (my !== token) return;
       const a = d.name && d.name.authorship;
       if (a) $('d-auth').textContent = a;
       if (d.extinct && !n.extinct) { n.extinct = true; T.onChange(); }
     }).catch(() => { });
-    if (n.q) API.wdInfo(n.q).then(w => {
+    if (n.q) API.wdInfo(n.q).then(async w => {
       if (my !== token) return;
       const desc = w.descJa || w.descEn;
       $('d-wd').innerHTML = desc ? esc(desc) + ` <small>（Wikidata${w.descJa ? '' : '・英語'}）</small>` : '';
@@ -57,10 +69,35 @@ const UI = (() => {
       if (w.wikiJa) L.insertAdjacentHTML('beforeend', ext(w.wikiJa, 'Wikipedia（日本語）'));
       if (w.wikiEn) L.insertAdjacentHTML('beforeend', ext(w.wikiEn, 'Wikipedia（英語）'));
       L.insertAdjacentHTML('beforeend', ext('https://www.wikidata.org/wiki/' + n.q, 'Wikidata'));
-    }).catch(() => { });
+      if (!canImg) return;
+      let imgs = [], files = w.imgs, from = '';
+      try {
+        if (!files.length) { files = await API.leadImage(w.enTitle); from = files.length ? 'wiki' : ''; }
+        imgs = await API.images(files);
+      } catch (e) { console.warn(e); }
+      imgs.forEach(im => im.from = from);
+      if (my !== token) return;
+      plate(n, imgs, files.length);
+    }).catch(() => { const P = $('d-plate'); if (P && my === token) P.innerHTML = ''; });
+  }
+  // 図: 写真と、作者・ライセンス・もとのページ（Wikimedia Commons）
+  function plate(n, imgs, had) {
+    const P = $('d-plate');
+    if (!imgs.length) {
+      P.innerHTML = `<p class="none">${had ? '登録されている図は、使える条件が合わないので出していません。' : 'この仲間の図は、まだ見つかりません（Wikidata・Wikipedia に登録なし）。'}</p>`;
+      return;
+    }
+    const name = esc(n.ja || n.name);
+    P.innerHTML = imgs.slice(0, 2).map((im, k) => `<figure>
+      <img src="${esc(im.src)}" alt="${name}" referrerpolicy="no-referrer">
+      <figcaption><b>図${imgs.length > 1 ? k + 1 : ''}　${name}</b>${n.ja ? ` <i class="sci">${esc(n.name)}</i>` : ''}<br>
+      ${im.from === 'wiki' ? '（英語版 Wikipedia の記事の図）<br>' : ''}写真: ${esc(im.author)} ／ ${im.licenseUrl ? ext(im.licenseUrl, im.license) : esc(im.license)} ／ ${ext(im.page, 'Wikimedia Commons')}</figcaption>
+    </figure>`).join('');
+    // 読めなかった写真は図ごとかくす
+    P.querySelectorAll('img').forEach(img => img.addEventListener('error', () => img.closest('figure').remove()));
   }
   $('detail').addEventListener('click', e => {
-    const b = e.target.closest('.chip');
+    const b = e.target.closest('.chip, table.cls button');
     if (b) UI.onPick(T.nodes[+b.dataset.i]);
   });
 
@@ -105,10 +142,12 @@ const UI = (() => {
       if (!n) {
         let col = it.col;
         if (!col) {   // 和名（Wikidata）→ 学名 → COL
+          // 学名ぴったりの名前（受け入れられた名前を先に。別名・亜属なら、COL がいま使っている名前へ）
           const d = await API.exact(it.name);
-          const r = (d.result || [])[0];
+          const rs = (d.result || []).filter(r => r.usage.name.scientificName === it.name);
+          const r = rs.find(r => r.usage.status === 'accepted') || rs.find(r => r.usage.accepted);
           if (!r) { list.innerHTML = `<li class="empty">「${esc(it.name)}」は COL で見つかりませんでした</li>`; return; }
-          col = r.id;
+          col = r.usage.status === 'accepted' ? r.id : r.usage.accepted.id;
         }
         n = await T.reveal(col);
       } else T.ancestors(n).forEach(a => a.open = true);

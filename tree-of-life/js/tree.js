@@ -21,9 +21,9 @@ const RANK_GROUP = r => {
   if (/species$|^variety$|^subvariety$|^form/.test(r)) return 'species';
   return 'clade';
 };
-const GROUPS = [
-  ['kingdom', '界・ドメイン', '#e8eef2'], ['phylum', '門', '#c79bff'], ['class', '綱', '#6fb6ff'], ['order', '目', '#55d6b0'],
-  ['family', '科', '#ffd166'], ['genus', '属', '#ff9f5a'], ['species', '種', '#ff7aa2'], ['clade', '枝（階級なし）', '#8fa3ad'],
+const GROUPS = [   // 図鑑の紙に合う、落ちついたインクの色
+  ['kingdom', '界・ドメイン', '#4a4740'], ['phylum', '門', '#7a4f9a'], ['class', '綱', '#2f68a0'], ['order', '目', '#2c7d5e'],
+  ['family', '科', '#a8790f'], ['genus', '属', '#bf5a2a'], ['species', '種', '#b0345a'], ['clade', '枝（階級なし）', '#8a8373'],
 ];
 const GROUP_COLOR = Object.fromEntries(GROUPS.map(g => [g[0], g[2]]));
 

@@ -14,7 +14,7 @@ T.onChange = () => { redraw(true); UI.refresh(); };
 
 // ふしを押した: 選んで詳細を出し、閉じていれば開く・選んでいて開いていれば閉じる。押した名前は画面の同じ場所に
 async function press(n) {
-  touched = true;
+  touched = true; reachId++;
   if (!V.vis.includes(n)) { T.ancestors(n).forEach(a => a.open = true); V.focus(n); }   // まだ見えていない（道すじ・デバッグから）
   const [bx, by] = V.screenOf(n);
   if (n.more) {
@@ -24,12 +24,19 @@ async function press(n) {
   }
   const wasSel = V.selected === n;
   V.selected = n; UI.show(n);
-  const stay = () => { V.layout(); const ly = T.isOpen(n) && n.kids.length ? n.y - 9 : n.y; V.cam.x = bx - n.x * V.cam.k; V.cam.y = by - ly * V.cam.k; V.draw(); };
+  // 配置しなおしても、押した名前は画面の同じ場所に。まわりは今見えている場所から新しい場所へすべっていく
+  const stay = () => {
+    const k = V.cam.k, ox = (bx - V.cam.x) / k, oy = (by - V.cam.y) / k;
+    V.layout();
+    const dx = n.x - ox, dy = V.labelY(n, n.y) - oy;
+    V.shift(dx, dy); V.cam.x -= dx * k; V.cam.y -= dy * k;
+    V.draw();
+  };
   if (!T.expandable(n)) { V.draw(); return; }
-  if (n.open && wasSel) { n.open = false; stay(); return; }
+  if (n.open && wasSel) { n.open = false; stay(); return; }   // 閉じる: 子は親へ吸いこまれる（view.js の leaving）
   if (!n.open) {
     const p = T.open(n);
-    stay();
+    stay(); V.pop(n);
     try { await p; } catch (e) { n.open = false; warn(); }
     stay();
     reach(n);
@@ -37,14 +44,16 @@ async function press(n) {
   } else V.draw();
 }
 // 開いた子が画面の右の外なら、なめらかに左へ寄せる（スマホのせまい幅で、開いたのに見えないことがないように）
+let reachId = 0;
 function reach(n) {
   const [W] = V.size, k = V.cam.k;
-  const need = (n.jx + 14) * k + V.cam.x + 160 - W;     // 子の名前の頭が 160px 見えるまで
+  const need = (n.jx + 38) * k + V.cam.x + 160 - W;     // 子の名前の頭が 160px 見えるまで
   const most = n.x * k + V.cam.x - 12;                  // 押した名前の頭は画面に残す
   const dx = Math.min(need, most);
   if (dx <= 0) return;
-  const x0 = V.cam.x, t0 = performance.now();
+  const x0 = V.cam.x, t0 = performance.now(), id = ++reachId;
   (function anim(t) {
+    if (id !== reachId) return;   // あとから押した・検索したときは、前の寄せはやめる
     const u = Math.min(1, (t - t0) / 250), e = u * (2 - u);
     V.cam.x = x0 - dx * e; V.draw();
     if (u < 1) requestAnimationFrame(anim);
@@ -53,7 +62,7 @@ function reach(n) {
 function warn() { const s = document.getElementById('status'); s.textContent = '読みこめませんでした。通信を確かめて、もう一度押してください。'; setTimeout(() => s.textContent = '', 5000); }
 // 検索や道すじから: 開いて真ん中に
 UI.onPick = (n, fromSearch) => {
-  touched = true;
+  touched = true; reachId++;
   T.ancestors(n).forEach(a => a.open = true);
   V.selected = n; UI.show(n);
   V.focus(n);
