@@ -264,11 +264,17 @@ function initInput() {
   const map = { ArrowUp:'KeyW', ArrowDown:'KeyS', ArrowLeft:'KeyA', ArrowRight:'KeyD', Space:'KeyE', ShiftLeft:'KeyQ' };
   window.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT' && e.target.type === 'range') return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;   // shortcuts (Ctrl+D etc.) open dialogs that swallow the keyup
     const k = map[e.code] || e.code;
     if (['KeyW','KeyA','KeyS','KeyD','KeyQ','KeyE'].includes(k)) { S.keys.add(k); S.tween = null; e.preventDefault(); }
   });
-  window.addEventListener('keyup', e => S.keys.delete(map[e.code] || e.code));
-  window.addEventListener('blur', () => S.keys.clear());
+  // a held key must never stay stuck: the keyup is lost when a menu, dialog or another tab takes the keyboard
+  const release = () => S.keys.clear();
+  window.addEventListener('keyup', e => { if (e.key === 'Meta') release(); else S.keys.delete(map[e.code] || e.code); });   // macOS sends no keyup for keys released while ⌘ is held
+  window.addEventListener('blur', release);
+  document.addEventListener('visibilitychange', release);
+  window.addEventListener('contextmenu', release);
+  cv.addEventListener('contextmenu', e => e.preventDefault());   // right-drag on the view just looks around, no menu
   document.querySelectorAll('#pad button').forEach(b => {
     b.addEventListener('pointerdown', e => { S.keys.add(b.dataset.k); S.tween = null; b.setPointerCapture(e.pointerId); e.preventDefault(); });
     const up = () => S.keys.delete(b.dataset.k);
