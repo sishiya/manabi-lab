@@ -64,7 +64,9 @@ html,body{height:100%;overflow:hidden}
 .cmpcols li::marker{color:var(--faint);font-size:10px}
 .cmpcols li.end{font-weight:700;color:#9a6a0c}
 .cmpbox .small{font-size:12px;color:var(--sub)}
-.acts{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.acts{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:12px 0 14px}
+.acts .copied{font-size:12px;color:var(--acc);opacity:0;transition:opacity .2s}
+.acts .copied.on{opacity:1}
 .act{border:1px solid var(--rule);background:#f6f1e4;border-radius:14px;padding:3px 12px;min-height:32px;font-size:12.5px;cursor:pointer;color:var(--acc);font-weight:700}
 .act.done{background:#e3efe4;border-color:var(--acc)}
 .act:hover{border-color:var(--acc);background:#eef3ec}

@@ -60,7 +60,7 @@ const UI = (() => {
         </div>
       </div>
       <p class="credit" id="d-credit"></p>
-      <div class="acts"><button class="act" data-act="share" title="${L('このページのリンクをコピー', 'Copy the link to this page')}">${L('リンク', 'Link')}</button></div>
+      <div class="acts"><button class="act" data-act="share" title="${L('このページのリンクをコピー', 'Copy the link to this page')}">${L('リンク', 'Link')}</button><span class="copied" aria-hidden="true">${L('✓ コピーしました', '✓ Copied')}</span></div>
       ${rows ? `<h3>${L('分類', 'Classification')}</h3><table class="cls">${rows}</table>` : ''}
       <h3>${L('しらべ', 'Facts')}</h3>
       <dl class="facts">
@@ -241,6 +241,9 @@ const UI = (() => {
     const msg = L('リンクをコピーしました', 'Link copied');
     if (ok) { const st = $('status'); st.textContent = msg; clearTimeout(share.t); share.t = setTimeout(() => { if (st.textContent === msg) st.textContent = ''; }, 1800); }
     btn.classList.add('done'); setTimeout(() => btn.classList.remove('done'), 600);
+    // ボタンのすぐ横にも知らせる（樹形図の下の知らせは PC だと遠くて、押しても何も起きないように見えた）
+    const c = btn.parentNode.querySelector('.copied');
+    if (ok && c) { c.classList.add('on'); clearTimeout(share.c); share.c = setTimeout(() => c.classList.remove('on'), 1800); }
   }
   return { show, refresh, onPick() { }, onOpen() { }, onShown() { } };
 })();
