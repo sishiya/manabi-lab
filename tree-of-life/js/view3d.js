@@ -82,7 +82,7 @@ const V3 = (() => {
         g.globalAlpha = fog(p[3]) * (major ? 0.55 : 0.28);
         g.strokeStyle = major ? '#8a7a55' : '#a99b78'; g.lineWidth = major ? 1.6 : 1;
         line3(g, [e.x0, GROUND, z], [e.x1, GROUND, z], 6);
-        if (major && k > 0 && k <= e.n - 5) label3(g, `${k}段`, e.x0 - 20, GROUND, z, 15, '#7a6a45', 'right');
+        if (major && k > 0 && k <= e.n - 5) label3(g, L(`${k}段`, `step ${k}`), e.x0 - 20, GROUND, z, 15, '#7a6a45', 'right');
       }
       for (let x = Math.floor(e.x0 / 120) * 120; x <= e.x1; x += 120) {
         g.globalAlpha = 0.22; g.strokeStyle = '#a99b78'; g.lineWidth = 1;
@@ -102,7 +102,7 @@ const V3 = (() => {
         if (k % 5 === 0) {
           g.strokeStyle = '#b9a77e'; g.lineWidth = 1.2; g.globalAlpha *= 0.6;
           line3(g, [e.x0, GROUND, za], [e.x1, GROUND, za], 6);
-          label3(g, (k + 1) + '〜' + (k + 5) + '段', e.x0 + 12, GROUND, za + DZ * 2.5, 14, '#7a6a45', 'left');
+          label3(g, L((k + 1) + '〜' + (k + 5) + '段', `steps ${k + 1}–${k + 5}`), e.x0 + 12, GROUND, za + DZ * 2.5, 14, '#7a6a45', 'left');
         }
       }
     } else if (guide === 'gates') {
@@ -117,7 +117,7 @@ const V3 = (() => {
         line3(g, [e.x0 - 30, top, z], [e.x1 + 30, top, z], 4);
         g.lineWidth = Math.max(1, 4 * p[2]); g.globalAlpha = a * 0.4;
         line3(g, [e.x0, top - 40, z], [e.x1, top - 40, z], 4);
-        label3(g, k ? `${k}段` : '根もと', (e.x0 + e.x1) / 2, top + 18, z, 22, '#6e5528');
+        label3(g, k ? L(`${k}段`, `step ${k}`) : L('根もと', 'root'), (e.x0 + e.x1) / 2, top + 18, z, 22, '#6e5528');
         // 地面に影の線
         g.strokeStyle = '#a99b78'; g.lineWidth = 1; g.globalAlpha = a * 0.35;
         line3(g, [e.x0, GROUND, z], [e.x1, GROUND, z], 6);

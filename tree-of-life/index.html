@@ -5,6 +5,7 @@
 <title>いのちの系統樹</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2310241c'/><path d='M32 54V30M32 30L18 16M32 30L46 16M18 16L12 8M18 16L24 8M46 16L52 8' stroke='%237fe0a8' stroke-width='5' fill='none' stroke-linecap='round'/></svg>">
 <script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
 <!-- seo（検索・リンクカード。_dev/tools/seo.mjs が入口の APPS から作る。手で直さない） -->
 <meta name="description" content="名前のついている生きもの約220万種を、図鑑のような進化の枝分かれの図でたどる。押すと枝がひらいて生きもののシルエットが動きだし、名前でさがせて、写真も見られる。3D にすると、根もとから枝の先までを手前から奥へながめられる。">
 <meta property="og:type" content="website"><meta property="og:site_name" content="まなびラボ"><meta property="og:locale" content="ja_JP"><meta property="og:locale:alternate" content="en_US">
@@ -21,50 +22,63 @@
 <div id="app">
   <div id="pin">
     <header id="top">
-      <h1>いのちの系統樹<small>TREE OF LIFE</small></h1>
+      <h1><span lang="ja">いのちの系統樹</span><span lang="en">Tree of Life</span><small lang="ja">TREE OF LIFE</small></h1>
       <div id="search">
-        <input id="q" type="search" placeholder="名前でさがす" autocomplete="off" enterkeyhint="search">
+        <input id="q" type="search" autocomplete="off" enterkeyhint="search">
         <ul id="results"></ul>
       </div>
-      <button id="helpbtn" aria-expanded="false" aria-controls="help" title="使い方">？</button>
+      <button id="helpbtn" aria-expanded="false" aria-controls="help">？</button>
       <div id="help" hidden>
+        <span class="langsw" id="langsw"><button data-l="ja">JP</button><button data-l="en">EN</button></span>
+        <div lang="ja">
         <p>名前を押すと、その先の枝が開きます。もう一度押すと閉じます。</p>
         <p>ドラッグで動かし、右のつまみ・ホイール・ピンチで大きさを変えます。下（PC は右）の詳細は、つまみを押すと広げる・縮める、ドラッグで好きな大きさにできます。「全体」で、いま開いている枝がぜんぶ入ります。</p>
         <p>「ライオン」「シイタケ」「Homo sapiens」のように、和名でも学名でもさがせます。</p>
         <p>名前の右で動くシルエットを押すと、その詳細が出ます。動き方は演出です。</p>
-        <p>はじめは 3D で、手前（根もと）から奥（枝分かれの先）をながめます。マウスは右ドラッグ（か Shift＋左ドラッグ）で回し、左ドラッグか中ボタンのドラッグで動かします。指は1本で動かし、2本指を左右に動かすと回し、上下に動かすと（ピンチでも）近づきます。「2D」で真上からの図に（3D で真上まで回しても、2D の並びにつながります）。奥行きは枝分かれの段で、年代の目盛りではありません。</p>
+        <p>「3D」で、手前（根もと）から奥（枝分かれの先）をながめます。マウスは右ドラッグ（か Shift＋左ドラッグ）で回し、左ドラッグか中ボタンのドラッグで動かします。指は1本で動かし、2本指を左右に動かすと回し、上下に動かすと（ピンチでも）近づきます。「2D」で真上からの図に（3D で真上まで回しても、2D の並びにつながります）。奥行きは枝分かれの段で、年代の目盛りではありません。</p>
         <p>詳細の「リンク」で、いま見ているところを人に送れます。</p>
-        <label class="tog"><input type="checkbox" id="critter-on" checked> シルエットを動かす</label>
-        <p class="lg-title">名札の色は分類の段</p>
+        </div>
+        <div lang="en">
+        <p>Tap a name to open the branches beyond it. Tap it again to close them.</p>
+        <p>Drag to move. Change the size with the slider on the right, the mouse wheel, or a pinch. The details panel (below, or on the right on a PC) grows or shrinks when you tap its handle, and you can drag it to any size. “All” fits every open branch on the screen.</p>
+        <p>Search by common name or by scientific name, like “lion”, “shiitake” or “Homo sapiens”.</p>
+        <p>Tap a moving silhouette next to a name to see its details. The way it moves is just for fun (not real behavior).</p>
+        <p>“3D” lets you look from the front (the root) to the back (the tips of the branches). With a mouse, right-drag (or Shift + left-drag) to turn, and left-drag or middle-drag to move. With fingers, drag one finger to move; move two fingers sideways to turn, or up and down (or pinch) to come closer. “2D” shows the view from straight above (turning the 3D view until it looks straight down also leads into the 2D layout). Depth shows the steps of branching. It is not a time scale.</p>
+        <p>“Link” in the details lets you send the place you are looking at to someone.</p>
+        </div>
+        <label class="tog"><input type="checkbox" id="critter-on" checked> <span lang="ja">シルエットを動かす</span><span lang="en">Move the silhouettes</span></label>
+        <p class="lg-title"><span lang="ja">名札の色は分類の段</span><span lang="en">Label colors show the rank</span></p>
         <div id="legend"></div>
       </div>
     </header>
     <main id="stage">
-      <canvas id="cv" aria-label="生きものの系統樹。名前を押すと開く"></canvas>
+      <canvas id="cv"></canvas>
       <div id="cmpbar" hidden></div>
       <div id="guide3d" hidden>
-        <span class="gl">ガイド</span>
-        <button data-g="grid" aria-pressed="true">方眼</button><button data-g="none" aria-pressed="false">なし</button>
-        <span class="gnote">奥ほど、あとから分かれた（年代の目盛りではありません）</span>
+        <span class="gl"><span lang="ja">ガイド</span><span lang="en">Guide</span></span>
+        <button data-g="grid" aria-pressed="true"><span lang="ja">方眼</span><span lang="en">Grid</span></button><button data-g="none" aria-pressed="false"><span lang="ja">なし</span><span lang="en">None</span></button>
+        <span class="gnote"><span lang="ja">奥ほど、あとから分かれた（年代の目盛りではありません）</span><span lang="en">Farther back = split off later (not a time scale)</span></span>
       </div>
       <div id="zoom">
-        <button id="z3d" title="3D でぐるぐる回して見る">3D</button>
-        <button id="zfit" title="開いている枝がぜんぶ入るように">全体</button>
-        <span class="zl" aria-hidden="true">大</span>
-        <input id="zs" type="range" min="0" max="1000" value="500" aria-label="大きさ">
-        <span class="zl" aria-hidden="true">小</span>
+        <button id="z3d">3D</button>
+        <button id="zfit"><span lang="ja">全体</span><span lang="en">All</span></button>
+        <span class="zl" aria-hidden="true"><span lang="ja">大</span><span lang="en">+</span></span>
+        <input id="zs" type="range" min="0" max="1000" value="500">
+        <span class="zl" aria-hidden="true"><span lang="ja">小</span><span lang="en">−</span></span>
       </div>
       <p id="status" role="status"></p>
     </main>
   </div>
 
-  <div id="edge" title="ドラッグで詳細の幅を変える（押すと広げる・縮める）"></div>
+  <div id="edge"></div>
   <aside id="side">
-    <button id="grip" aria-expanded="false" aria-label="詳細を広げる・縮める" title="詳細を広げる・縮める（ドラッグで大きさを変える）"><span class="bar"></span></button>
+    <button id="grip" aria-expanded="false"><span class="bar"></span></button>
     <section id="detail"></section>
 
     <details id="about">
-      <summary>このアプリについて</summary>
+      <summary><span lang="ja">このアプリについて</span><span lang="en">About this app</span></summary>
+      <div class="langrow"><span class="langsw" id="langsw2"><button data-l="ja">JP</button><button data-l="en">EN</button></span></div>
+      <div lang="ja">
       <p>名前のついている生きもの（約220万種）を、進化の枝分かれの図でたどります。左が根もと（すべての生きものの共通の祖先）、右へいくほど細かい仲間です。色は分類の段（界・門・綱・目・科・属・種）。</p>
       <h3>しくみと、簡単にしているところ</h3>
       <ul>
@@ -79,6 +93,24 @@
       </ul>
       <h3>通信について</h3>
       <p>枝を開く・検索するときに、学名や検索の文字を COL（api.checklistbank.org）と Wikidata（wikidata.org）へ、シルエットのために学名を PhyloPic（api.phylopic.org・images.phylopic.org）へ、写真の名前を Wikimedia Commons（commons.wikimedia.org・upload.wikimedia.org・thumb.wikimedia.org、英語版 Wikipedia）へ送って読みます。それ以外は送りません。</p>
+      </div>
+      <div lang="en">
+      <p>Explore the named living things (about 2.2 million species) on a tree of how life branched in evolution. The left end is the root (the common ancestor of all living things); the farther right you go, the smaller the groups. Colors show the rank (kingdom, phylum, class, order, family, genus, species).</p>
+      <h3>How it works, and what is simplified</h3>
+      <ul>
+        <li>The upper part (kingdoms to classes, about 650 groups) is the branching shape cut out of the Open Tree of Life synthetic tree (a tree that combines the trees of many studies), using the kingdom-to-class names of the Catalogue of Life (COL). Dots without a name are places where lineages split. Groups not found in Open Tree are attached under their parent in the COL classification.</li>
+        <li>Below the class level (orders, families, genera, species), the app reads COL when you open a branch. This part is a <strong>classification</strong>, not the order of evolutionary branching (it is sorted by number of species).</li>
+        <li>Branch lengths do not show time (only the shape). Dates of the splits are not included yet.</li>
+        <li>Pictures (photos) are the photos registered in Wikidata, loaded from Wikimedia Commons, with the author and license (CC0, public domain, CC BY, CC BY-SA) shown below. Photos with other licenses, and photos of people, are not shown. The photos belong to their authors (they are not covered by this app's license).</li>
+        <li>The moving silhouettes next to the names are PhyloPic drawings. When there is no drawing of that group, a drawing of a close ancestor group is used. Walking, flying, swimming, swaying and so on are made-up movements by group, not real behavior. The author and license appear in the details when you tap one (only drawings anyone may use).</li>
+        <li>Common names are Wikidata's English labels (or its English “taxon common name” when the label is just the scientific name). Many larger groups have no everyday English name, so they show only the scientific name. When the same scientific name is used for an animal and a plant, for example, a wrong common name may appear.</li>
+        <li>Groups that do not yet have species in COL, and viruses, are not included. COL says it covers about 80% of known species.</li>
+        <li>Classification and family trees often change with new research. Please treat this as a rough guide for learning.</li>
+      </ul>
+      <h3>Data sent over the network</h3>
+      <p>When you open branches or search, the app sends scientific names and your search words to COL (api.checklistbank.org) and Wikidata (wikidata.org), scientific names to PhyloPic (api.phylopic.org, images.phylopic.org) for the silhouettes, and photo file names to Wikimedia Commons (commons.wikimedia.org, upload.wikimedia.org, thumb.wikimedia.org, English Wikipedia) to read data. Nothing else is sent.</p>
+      </div>
+      <div lang="ja">
       <h3>おもな出どころ（データ）</h3>
       <ul>
         <li>Bánki, O. ほか. Catalogue of Life. <span id="meta"></span> doi:10.48580/dgz5n. <a href="https://www.catalogueoflife.org/" target="_blank" rel="noopener">catalogueoflife.org</a>（CC BY 4.0）</li>
@@ -90,6 +122,20 @@
       </ul>
       <h3>使っているもの</h3>
       <p>フォント: Zen Old Mincho・Zen Kaku Gothic New・EB Garamond・IBM Plex Mono（Google Fonts、SIL Open Font License）</p>
+      </div>
+      <div lang="en">
+      <h3>Main sources (data)</h3>
+      <ul>
+        <li>Bánki, O. et al. Catalogue of Life. <span id="meta-en"></span> doi:10.48580/dgz5n. <a href="https://www.catalogueoflife.org/" target="_blank" rel="noopener">catalogueoflife.org</a> (CC BY 4.0)</li>
+        <li>Open Tree of Life synthetic tree and Open Tree Taxonomy. <a href="https://tree.opentreeoflife.org/" target="_blank" rel="noopener">tree.opentreeoflife.org</a> (CC0)</li>
+        <li>Hinchliff, C. E. et al. (2015) Synthesis of phylogeny and taxonomy into a comprehensive tree of life. PNAS 112: 12764–12769.</li>
+        <li>PhyloPic (silhouettes; author and license for each drawing). <a href="https://www.phylopic.org/" target="_blank" rel="noopener">phylopic.org</a></li>
+        <li>Wikimedia Commons (pictures; author and license for each picture). <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">commons.wikimedia.org</a></li>
+        <li>Wikidata (common names, descriptions, links to Wikipedia). <a href="https://www.wikidata.org/" target="_blank" rel="noopener">wikidata.org</a> (CC0)</li>
+      </ul>
+      <h3>Built with</h3>
+      <p>Fonts: Zen Old Mincho, Zen Kaku Gothic New, EB Garamond, IBM Plex Mono (Google Fonts, SIL Open Font License)</p>
+      </div>
     </details>
   </aside>
 </div>

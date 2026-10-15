@@ -31,17 +31,17 @@ const V = (() => {
     if (w === undefined) { g.font = font; w = g.measureText(text).width; widthMemo.set(key, w); }
     return w;
   }
-  const fmt = n => n.toLocaleString('ja-JP');
+  const fmt = n => n.toLocaleString(L('ja-JP', 'en-US'));
   // 名前の部品。数字の区切り（toLocaleString）は重いので、ふしごとにおぼえておく（中身が変わったら作りなおす）
   function labelParts(n) {
     const key = n.more ? 'm' + n.loading + n.rest : n.ja + '|' + n.name + '|' + n.count + '|' + n.extinct + '|' + n.part + '|' + n.rank;
     if (n._lpk === key) return n._lp;
     let p;
-    if (n.more) p = { tag: '', main: n.loading ? '読みこみ中…' : `＋ あと ${fmt(n.rest)} 件`, sci: '', cnt: '' };
+    if (n.more) p = { tag: '', main: n.loading ? L('読みこみ中…', 'Loading…') : L(`＋ あと ${fmt(n.rest)} 件`, `+ ${fmt(n.rest)} more`), sci: '', cnt: '' };
     else {
       const tag = RANK_JA[n.rank] || '';
-      const main = (n.extinct ? '† ' : '') + (n.ja || n.name) + (n.part ? '（一部）' : '');
-      p = { tag: n.rank === 'root' ? '' : tag, main, sci: n.ja ? n.name : '', cnt: n.count > 0 ? fmt(n.count) + '種' : '', sciMain: !n.ja };
+      const main = (n.extinct ? '† ' : '') + (n.ja || n.name) + (n.part ? L('（一部）', ' (part)') : '');
+      p = { tag: n.rank === 'root' ? '' : tag, main, sci: n.ja ? n.name : '', cnt: n.count > 0 ? fmt(n.count) + L('種', ' spp.') : '', sciMain: !n.ja };
     }
     n._lpk = key; n._lp = p;
     return p;

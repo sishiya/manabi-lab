@@ -17,6 +17,16 @@ const API = (() => {
     return p;
   }
   const enc = encodeURIComponent;
+  // ふつうの名前の言語（I18N.md）。英語のラベルは学名のまま（Mollusca）のことが多いので、そのときは一般名 P1843 の英語。
+  // 学名と同じもの・学名＋著者は出さない。英語は小文字で始まるもの（lion）が多いので頭を大文字に、「;」の後ろは捨てる（tools/build-backbone.mjs と同じ）
+  const WL = LANG === 'en' ? 'en' : 'ja';
+  const common = (s, sci) => {
+    if (!s || s.toLowerCase() === sci.toLowerCase()) return '';
+    if (WL !== 'en') return s;
+    if (s.toLowerCase().startsWith(sci.toLowerCase() + ' ')) return '';
+    const t = s.split(';')[0].trim();
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  };
 
   return {
     // 子のまとまり（1ページ）。{ total, result:[{id,name,rank,count,childCount,extinct,status}] }
@@ -30,7 +40,7 @@ const API = (() => {
     // 学名ぴったりで探す（和名から学名がわかったとき）
     exact: name => getJSON(`${COL}/nameusage/search?q=${enc(name)}&type=EXACT&content=SCIENTIFIC_NAME&limit=10`),
 
-    // Wikidata: 学名の束 → { 学名: { q, ja } }（SPARQL。P225 = 学名）
+    // Wikidata: 学名の束 → { 学名: { q, ja } }（SPARQL。P225 = 学名。ja は今の言語のラベル。英語なら英語）
     // Wikidata の SPARQL は同時にたくさん送ると断られるので、1つずつ順に（失敗したら1回だけやりなおす）
     jaNames(names) {
       const run = () => this._jaNames(names).catch(() => new Promise(r => setTimeout(r, 1500)).then(() => this._jaNames(names)));
@@ -42,27 +52,35 @@ const API = (() => {
       const out = {};
       if (!names.length) return out;
       const vals = names.map(s => JSON.stringify(s)).join(' ');
-      const q = `SELECT ?n ?i ?ja WHERE { VALUES ?n { ${vals} } ?i wdt:P225 ?n . OPTIONAL { ?i rdfs:label ?ja FILTER(lang(?ja)='ja') } }`;
+      const cn = WL === 'en' ? ` OPTIONAL { ?i wdt:P1843 ?cn FILTER(lang(?cn)='en') }` : '';
+      const q = `SELECT ?n ?i ?ja${cn ? ' ?cn' : ''} WHERE { VALUES ?n { ${vals} } ?i wdt:P225 ?n . OPTIONAL { ?i rdfs:label ?ja FILTER(lang(?ja)='${WL}') }${cn} }`;
       const d = await getJSON('https://query.wikidata.org/sparql?format=json&query=' + enc(q));
+      // 一般名 P1843 は、その学名の項目が1つだけのときに使う（同じ学名の植物の名前が動物に付かないように。Proboscidea → 'Mule grab' になった）
+      const items = {};
+      for (const b of d.results.bindings) (items[b.n.value] ||= new Set()).add(b.i.value);
       for (const b of d.results.bindings) {
         const n = b.n.value, ja = b.ja ? b.ja.value : '', qid = b.i.value.split('/').pop();
-        if (!out[n] || (!out[n].ja && ja)) out[n] = { q: qid, ja: ja === n ? '' : ja };
+        const c = common(ja, n) || (b.cn && items[n].size === 1 ? common(b.cn.value, n) : '');
+        if (!out[n] || (!out[n].ja && c)) out[n] = { q: qid, ja: c };
       }
       return out;
     },
-    // Wikidata: 和名などで探す → 学名（P225）のある項目だけ [{ q, ja, desc, name }]
+    // Wikidata: 和名（英語のときは英語の名前）などで探す → 学名（P225）のある項目だけ [{ q, ja, desc, name }]
     async searchJa(text) {
-      const s = await getJSON(`https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${enc(text)}&language=ja&uselang=ja&type=item&limit=15&format=json&origin=*`);
+      const s = await getJSON(`https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${enc(text)}&language=${WL}&uselang=${WL}&type=item&limit=15&format=json&origin=*`);
       const ids = (s.search || []).map(r => r.id);
       if (!ids.length) return [];
-      const e = await getJSON(`https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${ids.join('|')}&props=claims|labels|descriptions&languages=ja&format=json&origin=*`);
+      const e = await getJSON(`https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${ids.join('|')}&props=claims|labels|descriptions&languages=${WL}&format=json&origin=*`);
       const out = [];
       for (const id of ids) {
         const it = e.entities && e.entities[id];
         const p = it && it.claims && it.claims.P225;
         if (!p || !p[0].mainsnak.datavalue) continue;
-        out.push({ q: id, name: p[0].mainsnak.datavalue.value,
-          ja: it.labels.ja ? it.labels.ja.value : '', desc: it.descriptions.ja ? it.descriptions.ja.value : '' });
+        const name = p[0].mainsnak.datavalue.value;
+        // 英語でラベルが学名のままのときは、一般名 P1843 の英語（Lentinula edodes → shiitake）
+        const cns = WL === 'en' ? (it.claims.P1843 || []).map(c => c.mainsnak.datavalue && c.mainsnak.datavalue.value).filter(v => v && v.language === 'en').map(v => v.text) : [];
+        const ja = [it.labels[WL] ? it.labels[WL].value : ''].concat(cns).map(s => common(s, name)).find(Boolean) || '';
+        out.push({ q: id, name, ja, desc: it.descriptions[WL] ? it.descriptions[WL].value : '' });
       }
       return out;
     },
@@ -110,7 +128,7 @@ const API = (() => {
       ras.sort((a, b) => Math.max(a.w, a.h) - Math.max(b.w, b.h));
       const pick = ras.find(f => Math.max(f.w, f.h) >= 120) || ras[ras.length - 1];
       const lic = im._links.license.href;
-      const licName = /zero/.test(lic) ? 'CC0' : /publicdomain\/mark/.test(lic) ? 'パブリックドメイン' : 'CC ' + (lic.match(/licenses\/([a-z-]+)\/([\d.]+)/) || ['', 'by', ''])[1].toUpperCase() + ' ' + ((lic.match(/licenses\/[a-z-]+\/([\d.]+)/) || ['', ''])[1]);
+      const licName = /zero/.test(lic) ? 'CC0' : /publicdomain\/mark/.test(lic) ? L('パブリックドメイン', 'Public domain') : 'CC ' + (lic.match(/licenses\/([a-z-]+)\/([\d.]+)/) || ['', 'by', ''])[1].toUpperCase() + ' ' + ((lic.match(/licenses\/[a-z-]+\/([\d.]+)/) || ['', ''])[1]);
       const author = im.attribution || (im._links.contributor && im._links.contributor.title) || '';
       return { src: pick.href, w: pick.w, h: pick.h, author, license: licName.trim(), licenseUrl: lic,
         page: 'https://www.phylopic.org' + im._links.self.href.replace(/\?.*$/, '') };
@@ -135,7 +153,7 @@ const API = (() => {
         // 子どもが見て困るものは出さない（RULES 9）。ファイル名と説明でよける
         const text = (f + ' ' + strip(v('ImageDescription')) + ' ' + strip(v('Categories'))).toLowerCase();
         if (/nude|naked|nudity|genital|penis|vagin|vulva|sexual|copulat|mating|breast|裸|性器|交尾|corpse|dead body|死体/.test(text)) continue;
-        out.push({ src: ii.thumburl || ii.url, page: ii.descriptionurl, author: strip(v('Artist')).slice(0, 120) || '作者不明',
+        out.push({ src: ii.thumburl || ii.url, page: ii.descriptionurl, author: strip(v('Artist')).slice(0, 120) || L('作者不明', 'Unknown author'),
           license: lic, licenseUrl: v('LicenseUrl'), title: f.replace(/\.[a-z]+$/i, '') });
       }
       return out;

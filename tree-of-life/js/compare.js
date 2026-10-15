@@ -13,8 +13,10 @@ const Compare = (() => {
   function start(n) {
     clear(false);
     phase = 'pick'; a = n;
-    setBar(`<span>1つめ: <b>${esc(nm(n))}</b>。くらべる相手を、樹形図で押すか検索してください</span>
-      <button data-act="demo" title="ヒトとシイタケでためす">例: ヒト×シイタケ</button><button data-act="end">やめる</button>`);
+    setBar(L(`<span>1つめ: <b>${esc(nm(n))}</b>。くらべる相手を、樹形図で押すか検索してください</span>
+      <button data-act="demo" title="ヒトとシイタケでためす">例: ヒト×シイタケ</button><button data-act="end">やめる</button>`,
+      `<span>First: <b>${esc(nm(n))}</b>. Now tap another one on the tree, or search for it</span>
+      <button data-act="demo" title="Try with humans and shiitake">Example: human × shiitake</button><button data-act="end">Stop</button>`));
   }
   // 2つめが決まった: 共通の祖先をさがして、光らせる
   function choose(n) {
@@ -46,16 +48,17 @@ const Compare = (() => {
     const da = steps(chains[0]), db = steps(chains[1]);
     // 片方がもう片方の祖先のときは「〜のなかま」
     const inner = mrca === a ? b : mrca === b ? a : null;
-    const head = inner ? `<b>${esc(nm(inner))}</b> は <b class="gold">${esc(nm(mrca))}</b> のなかま`
-      : `<b>${esc(nm(a))}</b> と <b>${esc(nm(b))}</b> は <b class="gold">${esc(nm(mrca))}</b> で分かれた`;
+    const head = inner ? L(`<b>${esc(nm(inner))}</b> は <b class="gold">${esc(nm(mrca))}</b> のなかま`, `<b>${esc(nm(inner))}</b> belongs to <b class="gold">${esc(nm(mrca))}</b>`)
+      : L(`<b>${esc(nm(a))}</b> と <b>${esc(nm(b))}</b> は <b class="gold">${esc(nm(mrca))}</b> で分かれた`, `<b>${esc(nm(a))}</b> and <b>${esc(nm(b))}</b> split at <b class="gold">${esc(nm(mrca))}</b>`);
     setBar(`<span>${head}</span>
-      <button data-act="again">ほかとくらべる</button><button data-act="end">やめる</button>`);
-    UI.show(mrca, `<div class="cmpbox"><h3>どこで分かれた？</h3>
-      ${inner ? `<p><b>${esc(nm(inner))}</b> は <b class="gold">${esc(nm(mrca))}</b>${mrca.ja ? `（<i class="sci">${esc(mrca.name)}</i>）` : ''} の中にいます。</p>`
-        : `<p><b>${esc(nm(a))}</b> と <b>${esc(nm(b))}</b> の道すじは、<b class="gold">${esc(nm(mrca))}</b>${mrca.ja ? `（<i class="sci">${esc(mrca.name)}</i>）` : ''} で合わさります。</p>`}
-      <p>${inner ? `${esc(nm(mrca))} から ${esc(nm(inner))} まで ${Math.max(da, db)} 段。` : `ここから ${esc(nm(a))} まで ${da} 段、${esc(nm(b))} まで ${db} 段。`}</p>
+      <button data-act="again">${L('ほかとくらべる', 'Compare another')}</button><button data-act="end">${L('やめる', 'Stop')}</button>`);
+    const sci = mrca.ja ? L(`（<i class="sci">${esc(mrca.name)}</i>）`, ` (<i class="sci">${esc(mrca.name)}</i>)`) : '';
+    UI.show(mrca, `<div class="cmpbox"><h3>${L('どこで分かれた？', 'Where did they split?')}</h3>
+      ${inner ? L(`<p><b>${esc(nm(inner))}</b> は <b class="gold">${esc(nm(mrca))}</b>${sci} の中にいます。</p>`, `<p><b>${esc(nm(inner))}</b> is inside <b class="gold">${esc(nm(mrca))}</b>${sci}.</p>`)
+        : L(`<p><b>${esc(nm(a))}</b> と <b>${esc(nm(b))}</b> の道すじは、<b class="gold">${esc(nm(mrca))}</b>${sci} で合わさります。</p>`, `<p>The paths of <b>${esc(nm(a))}</b> and <b>${esc(nm(b))}</b> meet at <b class="gold">${esc(nm(mrca))}</b>${sci}.</p>`)}
+      <p>${inner ? L(`${esc(nm(mrca))} から ${esc(nm(inner))} まで ${Math.max(da, db)} 段。`, `${Math.max(da, db)} steps from ${esc(nm(mrca))} to ${esc(nm(inner))}.`) : L(`ここから ${esc(nm(a))} まで ${da} 段、${esc(nm(b))} まで ${db} 段。`, `From here: ${da} steps to ${esc(nm(a))}, ${db} steps to ${esc(nm(b))}.`)}</p>
       <div class="cmpcols">${chains.map(ch => `<ol>${ch.slice(0, -1).reverse().filter(x => x.name).map(x => `<li${x === ch[0] ? ' class="end"' : ''}>${esc(nm(x))}</li>`).join('')}</ol>`).join('')}</div>
-      <p class="small">分かれたところ＝2つの道すじがいっしょだった、いちばん先のまとまり（この樹形図の上で）。枝の長さは時間ではありません。綱より下は分類なので目安です。</p></div>`);
+      <p class="small">${L('分かれたところ＝2つの道すじがいっしょだった、いちばん先のまとまり（この樹形図の上で）。枝の長さは時間ではありません。綱より下は分類なので目安です。', 'Split point = the last group the two paths share (on this tree). Branch lengths are not time. Below the class level it is a classification, so treat it as a rough guide.')}</p></div>`);
   }
   function refresh() { if (phase === 'show' && shown !== nm(a) + '|' + nm(b) + '|' + nm(mrca)) render(); }
   function clear(redraw = true) {
@@ -67,13 +70,13 @@ const Compare = (() => {
   }
   // ヒトとシイタケで、すぐためす
   async function demo() {
-    setBar('<span>ヒトとシイタケの枝をたどっています…</span>');
+    setBar(L('<span>ヒトとシイタケの枝をたどっています…</span>', '<span>Following the branches of humans and shiitake…</span>'));
     try {
       const id = async name => { const d = await API.exact(name); const r = (d.result || []).find(r => r.usage.status === 'accepted'); return r && r.id; };
       const [ia, ib] = await Promise.all([id('Homo sapiens'), id('Lentinula edodes')]);
       const na = await T.reveal(ia), nb = await T.reveal(ib);
       start(na); choose(nb);
-    } catch (e) { console.warn(e); setBar('<span>読みこめませんでした</span><button data-act="end">とじる</button>'); }
+    } catch (e) { console.warn(e); setBar(L('<span>読みこめませんでした</span><button data-act="end">とじる</button>', '<span>Could not load</span><button data-act="end">Close</button>')); }
   }
   bar.addEventListener('click', e => {
     const act = e.target.closest('button') && e.target.closest('button').dataset.act;

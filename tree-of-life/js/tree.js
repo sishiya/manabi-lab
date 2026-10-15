@@ -10,6 +10,17 @@ const RANK_JA = {
   species: '種', subspecies: '亜種', variety: '変種', subvariety: '亜変種', form: '品種', forma: '品種',
   clade: '枝', unranked: '階級なし', other: '階級なし',
 };
+// 英語（I18N.md）: 同じ鍵に上書き。札に出るので、ふつうの英語の階級名
+if (LANG === 'en') Object.assign(RANK_JA, {
+  domain: 'Domain', superkingdom: 'Superkingdom', kingdom: 'Kingdom', subkingdom: 'Subkingdom', infrakingdom: 'Infrakingdom',
+  superphylum: 'Superphylum', phylum: 'Phylum', subphylum: 'Subphylum', infraphylum: 'Infraphylum', parvphylum: 'Parvphylum',
+  gigaclass: 'Gigaclass', megaclass: 'Megaclass', superclass: 'Superclass', class: 'Class', subclass: 'Subclass', infraclass: 'Infraclass', subterclass: 'Subterclass',
+  superorder: 'Superorder', order: 'Order', suborder: 'Suborder', infraorder: 'Infraorder', parvorder: 'Parvorder',
+  superfamily: 'Superfamily', epifamily: 'Epifamily', family: 'Family', subfamily: 'Subfamily', tribe: 'Tribe', subtribe: 'Subtribe',
+  genus: 'Genus', subgenus: 'Subgenus', section: 'Section', subsection: 'Subsection', series: 'Series',
+  species: 'Species', subspecies: 'Subspecies', variety: 'Variety', subvariety: 'Subvariety', form: 'Form', forma: 'Form',
+  clade: 'Clade', unranked: 'Unranked', other: 'Unranked',
+});
 // 色は「どの段か」ごとに7つ（界・門・綱・目・科・属・種）。ひと目で段が分かるように
 const RANK_GROUP = r => {
   if (/^(root|domain|superkingdom|kingdom|subkingdom|infrakingdom)$/.test(r)) return 'kingdom';
@@ -22,8 +33,8 @@ const RANK_GROUP = r => {
   return 'clade';
 };
 const GROUPS = [   // 図鑑の紙に合う、落ちついたインクの色
-  ['kingdom', '界・ドメイン', '#4a4740'], ['phylum', '門', '#7a4f9a'], ['class', '綱', '#2f68a0'], ['order', '目', '#2c7d5e'],
-  ['family', '科', '#a8790f'], ['genus', '属', '#bf5a2a'], ['species', '種', '#b0345a'], ['clade', '枝（階級なし）', '#8a8373'],
+  ['kingdom', L('界・ドメイン', 'Kingdom, domain'), '#4a4740'], ['phylum', L('門', 'Phylum'), '#7a4f9a'], ['class', L('綱', 'Class'), '#2f68a0'], ['order', L('目', 'Order'), '#2c7d5e'],
+  ['family', L('科', 'Family'), '#a8790f'], ['genus', L('属', 'Genus'), '#bf5a2a'], ['species', L('種', 'Species'), '#b0345a'], ['clade', L('枝（階級なし）', 'Clade (no rank)'), '#8a8373'],
 ];
 const GROUP_COLOR = Object.fromEntries(GROUPS.map(g => [g[0], g[2]]));
 
@@ -40,11 +51,12 @@ const T = (() => {
   }
   // data/backbone.js: [親, 学名, 和名, 階級, COL id, 種の数, Wikidata id, しるし]
   for (const r of window.TOL_ROWS) {
-    add({ parent: r[0] >= 0 ? nodes[r[0]] : null, name: r[1], ja: r[2], rank: r[3], col: r[4], count: r[5], q: r[6],
+    // ja = いまの言語のふつうの名前（英語のときは Wikidata の英語のラベル r[8]）
+    add({ parent: r[0] >= 0 ? nodes[r[0]] : null, name: r[1], ja: LANG === 'en' ? r[8] || '' : r[2], rank: r[3], col: r[4], count: r[5], q: r[6],
       canLoad: !!(r[7] & 1), colOnly: !!(r[7] & 2), part: !!(r[7] & 4) });
   }
   const root = nodes[0];
-  root.ja = '細胞をもつ生きもの';
+  root.ja = L('細胞をもつ生きもの', 'Cellular life');
 
   const named = n => !!n.name || n.more;
   const expandable = n => n.kids.length > 0 || n.canLoad;

@@ -12,6 +12,25 @@ function redraw(relayout = true) {
 }
 T.onChange = () => { redraw(true); UI.refresh(); Compare.refresh(); };
 
+// 言語（I18N.md）: 題名・属性の文と JP／EN のボタン
+{
+  const $ = id => document.getElementById(id);
+  document.title = L('いのちの系統樹', 'Tree of Life');
+  $('q').placeholder = L('名前でさがす', 'Search by name');
+  $('helpbtn').title = L('使い方', 'How to use');
+  $('helpbtn').textContent = L('？', '?');
+  $('cv').setAttribute('aria-label', L('生きものの系統樹。名前を押すと開く', 'Tree of life. Tap a name to open it'));
+  $('zfit').title = L('開いている枝がぜんぶ入るように', 'Fit every open branch');
+  $('zs').setAttribute('aria-label', L('大きさ', 'Size'));
+  $('edge').title = L('ドラッグで詳細の幅を変える（押すと広げる・縮める）', 'Drag to change the width of the details (tap to widen or narrow)');
+  $('grip').setAttribute('aria-label', L('詳細を広げる・縮める', 'Widen or narrow the details'));
+  $('grip').title = L('詳細を広げる・縮める（ドラッグで大きさを変える）', 'Widen or narrow the details (drag to change the size)');
+  document.querySelectorAll('.langsw button').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.l === LANG));
+    b.onclick = () => { if (b.dataset.l !== LANG) setLang(b.dataset.l); };
+  });
+}
+
 // ふしを押した: 選んで詳細を出し、閉じていれば開く・選んでいて開いていれば閉じる。押した名前は画面の同じ場所に
 async function press(n) {
   touched = true; reachId++;
@@ -62,7 +81,7 @@ function reach(n) {
   })(t0);
 }
 function setStatus(t) { document.getElementById('status').textContent = t || ''; }
-function warn() { const s = document.getElementById('status'); s.textContent = '読みこめませんでした。通信を確かめて、もう一度押してください。'; setTimeout(() => s.textContent = '', 5000); }
+function warn() { const s = document.getElementById('status'); s.textContent = L('読みこめませんでした。通信を確かめて、もう一度押してください。', 'Could not load. Check your connection and tap again.'); setTimeout(() => s.textContent = '', 5000); }
 // 検索や道すじから: 開いて真ん中に
 UI.onPick = (n, fromSearch) => {
   touched = true; reachId++;
@@ -213,7 +232,7 @@ async function fromHash() {
   const h = location.hash.slice(1);
   if (!h) return false;
   const p = new URLSearchParams(h);
-  setStatus('リンクの生きものをさがしています…');
+  setStatus(L('リンクの生きものをさがしています…', 'Finding the living thing in the link…'));
   const byKey = async (v, kind) => kind === 'n' ? T.nodes.find(x => x.name === v) : T.reveal(v);
   try {
     if (p.get('c')) {
@@ -240,7 +259,7 @@ function set3d(on, instant) {
   }
   V3.on = on;
   b3d.textContent = on ? '2D' : '3D';
-  b3d.title = on ? 'ふつうの図にもどす' : '3D でぐるぐる回して見る';
+  b3d.title = on ? L('ふつうの図にもどす', 'Back to the flat view') : L('3D でぐるぐる回して見る', 'Turn it around in 3D');
   gbar.classList.toggle('is2d', !on);   // 2D では「方眼・なし」だけ
   // 切りかえは、カメラが真上（2D）とななめ（3D）の間をなめらかに動く（2D と 3D はつながっている）
   V.layout(); V.settle();
@@ -248,7 +267,7 @@ function set3d(on, instant) {
   try { localStorage.setItem('tol-guide2', V3.guide); } catch (e) { }
 }
 b3d.onclick = () => { touched = true; set3d(!V3.on); };
-b3d.title = '2D（真上）と 3D（ななめ）を切りかえる。3D で真上まで回しても 2D の並びにつながる';
+b3d.title = L('2D（真上）と 3D（ななめ）を切りかえる。3D で真上まで回しても 2D の並びにつながる', 'Switch between 2D (from above) and 3D (at an angle). Turning 3D until it looks straight down also leads into 2D');
 gbar.addEventListener('click', e => {
   const b = e.target.closest('button[data-g]'); if (!b) return;
   V3.guide = b.dataset.g; V.grid2d = V3.guide !== 'none'; V.draw();
@@ -344,7 +363,7 @@ async function startView() {
     if (V3.on) V3.frame(mam, 0);   // 3D でも、哺乳類から下が入るように（大きさが変わったときも）
   };
   place(mam);
-  setStatus('哺乳類のなかまを読みこみ中…');
+  setStatus(L('哺乳類のなかまを読みこみ中…', 'Loading the mammals…'));
   let n = mam;
   try {
     for (const name of ['Theria', 'Eutheria']) {

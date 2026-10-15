@@ -11,7 +11,7 @@ i.sci,.sci i{font-family:var(--f-sci);font-style:italic}
 /* スマホ: 画面いっぱいの樹形図＋下から出る詳細の板（はじめはカード1枚分、つまみで広げる） */
 html,body{height:100%;overflow:hidden}
 #app{display:flex;flex-direction:column;height:100vh;height:100svh}
-#pin{position:relative;flex:1;min-height:0;z-index:2;background:var(--paper);display:flex;flex-direction:column}
+#pin{position:relative;flex:1;min-height:0;z-index:3;background:var(--paper);display:flex;flex-direction:column}
 #top{position:relative;display:flex;align-items:center;gap:8px;padding:6px 10px}
 /* スマホ: タイトルはごく小さく（1行の左はしに2段で） */
 #top h1{font-family:var(--f-mincho);font-weight:700;font-size:11px;line-height:1.25;margin:0;white-space:nowrap;letter-spacing:.06em;display:flex;flex-direction:column}
@@ -22,6 +22,13 @@ html,body{height:100%;overflow:hidden}
 #help{position:absolute;right:10px;top:50px;z-index:6;width:min(340px,calc(100vw - 20px));background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:10px 14px 12px;box-shadow:0 10px 28px rgba(60,48,20,.2);font-size:13.5px;line-height:1.7}
 #help p{margin:0 0 6px}
 #help .lg-title{margin:10px 0 4px;color:var(--sub);font-size:12px;border-top:1px solid var(--rule2);padding-top:8px}
+/* 言語（I18N.md）: 選んでいないほうを隠す。JP／EN は ？ の中と「このアプリについて」に */
+:root[lang=en] [lang=ja],:root:not([lang=en]) [lang=en]{display:none!important}
+.langsw{display:inline-flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden;vertical-align:middle}
+.langsw button{font:inherit;border:0;background:none;min-width:40px;min-height:30px;padding:2px 8px;font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--sub);cursor:pointer}
+.langsw button[aria-pressed="true"]{background:var(--acc);color:#fff}
+#help .langsw{float:right;margin:0 0 4px 8px}
+#about .langrow{margin:4px 0 6px}
 #q{width:100%;height:38px;border-radius:19px;border:1px solid var(--rule);background:var(--card);color:var(--ink);padding:0 14px;font:inherit;font-size:15px}
 #q::placeholder{color:var(--faint)}
 #q:focus{outline:2px solid var(--acc);outline-offset:0}

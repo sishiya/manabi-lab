@@ -238,8 +238,40 @@ const wd = await cached('wikidata', async () => {
   return res;
 });
 
+// ---------- 5b. Wikidata: 英語の名前（英語の画面用。I18N.md）----------
+// 和名と同じ項目（Q id）の英語のラベル。英語のラベルは学名のまま（Mollusca）のことが多いので、そのときは
+// 「一般名」P1843 の英語（mollusc）。学名と同じもの・学名＋著者（'Thermotogae Reysenbach 2001'）は入れない。頭は大文字に（lion → Lion）
+const qids = [...new Set(Object.values(wd).map(w => w.q))];
+const wdEn = await cached('wikidata-en', async () => {
+  const res = {};
+  for (let i = 0; i < qids.length; i += 200) {
+    const vals = qids.slice(i, i + 200).map(q => 'wd:' + q).join(' ');
+    const q = `SELECT ?i ?en ?cn WHERE { VALUES ?i { ${vals} } OPTIONAL { ?i rdfs:label ?en FILTER(lang(?en)='en') } OPTIONAL { ?i wdt:P1843 ?cn FILTER(lang(?cn)='en') } }`;
+    const d = await getJSON('https://query.wikidata.org/sparql', {
+      method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/sparql-results+json' },
+      body: 'query=' + encodeURIComponent(q)
+    });
+    for (const b of d.results.bindings) {
+      const r = res[b.i.value.split('/').pop()] ||= { label: '', cn: [] };
+      if (b.en) r.label = b.en.value;
+      if (b.cn && !r.cn.includes(b.cn.value)) r.cn.push(b.cn.value);
+    }
+    console.log('Wikidata en', Math.min(i + 200, qids.length), '/', qids.length);
+    await sleep(1000);
+  }
+  return res;
+});
+const enName = (w, sci) => {
+  const e = w && wdEn[w.q];
+  if (!e) return '';
+  const ok = s => s && s.toLowerCase() !== sci.toLowerCase() && !s.toLowerCase().startsWith(sci.toLowerCase() + ' ');
+  const s = ok(e.label) ? e.label : e.cn.sort().find(ok) || '';
+  const t = s.split(';')[0].trim();   // 'Alphaproteobacterium; alphaproteobacteria' → 前だけ
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : '';
+};
+
 // ---------- 6. 書き出す ----------
-// 1ふし = [親の番号, 学名, 和名, 階級, COL id, 種の数, Wikidata id, しるし]
+// 1ふし = [親の番号, 学名, 和名, 階級, COL id, 種の数, Wikidata id, しるし, 英語の名前]
 //   しるし: 1 = 開いたときに COL から子を読む（綱、または綱より下の子もいるまとまり）, 2 = Open Tree にない（COL の親の下へつないだ）, 4 = その一部（ほかの子は Open Tree の別の場所）
 const rows = [];
 (function walk(n, p) {
@@ -248,7 +280,7 @@ const rows = [];
   const t = n.col && colById[n.col];
   const flag = (t && ((!t.expanded && t.kids > 0) || t.more) ? 1 : 0) | (n.colOnly ? 2 : 0) | (n.part ? 4 : 0);
   const idx = rows.length;
-  rows.push([p, n.name || '', ja, n.rank, n.col || '', n.count, w ? w.q : '', flag]);
+  rows.push([p, n.name || '', ja, n.rank, n.col || '', n.count, w ? w.q : '', flag, n.name ? enName(w, n.name) : '']);
   // 種の数の多い順
   n.kids.sort((a, b) => b.count - a.count).forEach(k => walk(k, idx));
 })(tree, -1);
