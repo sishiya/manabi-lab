@@ -1,0 +1,29 @@
+1
+00:00:00,600 --> 00:00:05,600
+El arenero de la evolución
+Criaturas al azar hechas de articulaciones y músculos
+
+2
+00:00:06,300 --> 00:00:13,000
+La primera generación apenas puede avanzar
+Las que llegan más lejos pueden tener crías
+
+3
+00:00:13,500 --> 00:00:21,000
+Las crías heredan los genes de sus padres con pequeños cambios
+Y se repite (un algoritmo genético)
+
+4
+00:00:21,500 --> 00:00:30,000
+Hacia la generación 40 ha surgido una forma de correr
+Nadie se lo enseñó
+
+5
+00:00:30,500 --> 00:00:35,000
+En la Luna evolucionan otro cuerpo y otra forma de andar
+La gravedad es una sexta parte de la terrestre
+
+6
+00:00:35,200 --> 00:00:40,000
+El arenero de la evolución
+Funciona en el navegador. Llano, cuestas, hielo, la Luna, bajo el agua

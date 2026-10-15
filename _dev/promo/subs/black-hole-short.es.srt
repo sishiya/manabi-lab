@@ -1,0 +1,28 @@
+1
+00:00:00,600 --> 00:00:05,600
+Cómo se ve un agujero negro
+El agujero negro de Interstellar, calculado con los caminos de la luz
+
+2
+00:00:06,000 --> 00:00:13,000
+La banda de luz sobre el agujero es el lado lejano del disco
+La gravedad curva su luz hacia nosotros
+
+3
+00:00:13,500 --> 00:00:21,000
+Cambia el ángulo de vista y cambia la forma
+El camino de la luz se recalcula en cada píxel
+
+4
+00:00:21,500 --> 00:00:28,000
+Vista realista: el lado izquierdo es más brillante
+El gas que se acerca se ve más brillante (la película lo omitió)
+
+5
+00:00:28,500 --> 00:00:35,000
+Acercándonos
+
+6
+00:00:35,200 --> 00:00:40,000
+Cómo se ve un agujero negro
+Funciona en el navegador (texto en japonés). Haz clic en un punto para ver el camino de su luz

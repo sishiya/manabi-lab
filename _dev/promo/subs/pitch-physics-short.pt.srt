@@ -1,0 +1,29 @@
+1
+00:00:00,600 --> 00:00:05,600
+Como os arremessos fazem curva
+Calculando o caminho da bola pela velocidade e pelo giro
+
+2
+00:00:06,000 --> 00:00:13,000
+A bola rápida não sobe: ela só cai menos
+O giro para trás a eleva 46 cm acima do caminho sem giro (linha branca)
+
+3
+00:00:13,500 --> 00:00:21,000
+Mesma direção de soltura, arremessos bem diferentes
+Forças calculadas a cada milissegundo pela velocidade e pelo giro
+
+4
+00:00:21,500 --> 00:00:28,000
+O rebatedor precisa decidir em cerca de 0,1 s
+Nesse momento, os arremessos estão só a 0,7 largura de bola um do outro
+
+5
+00:00:28,500 --> 00:00:35,000
+Ninguém consegue prever uma knuckleball
+Mesma mira, mas se espalham 38 cm para os lados e 47 cm para cima e para baixo
+
+6
+00:00:35,200 --> 00:00:40,000
+Como os arremessos fazem curva
+Roda no navegador (JP/EN). Mude o arremesso e o giro para testar

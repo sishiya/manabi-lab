@@ -1,0 +1,69 @@
+1
+00:00:00,600 --> 00:00:06,600
+Vendo o Wi-Fi em casa
+Como usar o app e o que observar
+
+2
+00:00:07,300 --> 00:00:17,400
+Um apartamento de 2 quartos visto de cima. As ondas saem do roteador perto da entrada
+As equações do eletromagnetismo são resolvidas passo a passo numa grade de 0,75 cm
+
+3
+00:00:18,000 --> 00:00:29,600
+Mude para “Força do sinal” para ver a cobertura em cores
+As linhas batem mais ou menos com as barrinhas do celular. Cada parede enfraquece o sinal
+
+4
+00:00:30,500 --> 00:00:40,800
+Arraste o roteador para movê-lo
+Leve-o da entrada para o meio da casa e ele chega aos quartos do fundo
+
+5
+00:00:41,300 --> 00:00:51,600
+Dá para mover o celular também. O sinal dele aparece à direita
+Compare com o valor “sem paredes” para ver quanto as paredes tiram
+
+6
+00:00:52,500 --> 00:01:00,600
+O Wi-Fi usa 2,4 GHz e 5 GHz
+O comprimento de onda de 2,4 GHz é de cerca de 12 cm
+
+7
+00:01:01,300 --> 00:01:09,600
+5 GHz (cerca de 6 cm) enfraquece mais atrás das paredes
+Mais rápido, mas com alcance menor
+
+8
+00:01:10,500 --> 00:01:31,600
+“Teste de paredes”: sete faixas, cada uma com um tipo de parede
+O concreto enfraquece muito e o metal bloqueia. Os números são a perda em cada faixa
+
+9
+00:01:32,500 --> 00:01:41,600
+“Experimento das fendas”: as ondas fazem curva por frestas numa placa de metal
+Isso é difração. As frestas têm 20, 8, 4 e 2 cm, de cima para baixo
+
+10
+00:01:42,200 --> 00:01:51,600
+Frestas menores que meio comprimento de onda quase não deixam passar nada
+Meio comprimento de onda em 2,4 GHz é cerca de 6 cm, então uma fresta de 2 cm bloqueia
+
+11
+00:01:52,500 --> 00:02:03,800
+Escolha um material e arraste para desenhar uma parede
+Ponha uma parede de concreto no corredor e a sala recebe menos sinal
+
+12
+00:02:04,300 --> 00:02:09,600
+“Desfazer” remove
+Teste uma planta parecida com a da sua casa
+
+13
+00:02:10,500 --> 00:02:21,600
+Uma casa de madeira também. Os valores dos materiais vêm de recomendações da UIT-R
+Os limites de sinal são aproximados, e nada aqui trata de efeitos na saúde
+
+14
+00:02:22,200 --> 00:02:30,000
+Vendo o Wi-Fi em casa
+Roda no navegador (PC ou celular). O app está em japonês e inglês (botão EN)

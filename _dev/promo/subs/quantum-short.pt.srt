@@ -1,0 +1,29 @@
+1
+00:00:00,600 --> 00:00:05,600
+Laboratório quântico
+O que acontece se você disparar elétrons um de cada vez?
+
+2
+00:00:06,000 --> 00:00:13,000
+Disparados um a um, caem em lugares aleatórios
+Nunca dá para saber onde o próximo vai cair
+
+3
+00:00:13,500 --> 00:00:21,000
+Junte muitos e aparecem faixas
+A marca das ondas das duas fendas se sobrepondo
+
+4
+00:00:21,500 --> 00:00:28,000
+Verifique por qual fenda cada um passou e as faixas somem
+No lugar fica uma só corcova suave
+
+5
+00:00:28,500 --> 00:00:35,000
+Algumas partículas atravessam uma parede (tunelamento quântico)
+Parte da onda passa em vez de voltar
+
+6
+00:00:35,200 --> 00:00:40,000
+Laboratório quântico
+Roda no navegador. Teste os cinco experimentos você mesmo

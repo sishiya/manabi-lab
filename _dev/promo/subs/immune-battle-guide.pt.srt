@@ -1,0 +1,74 @@
+1
+00:00:00,600 --> 00:00:06,600
+A batalha imunológica
+Como usar o app e o que observar
+
+2
+00:00:07,300 --> 00:00:17,500
+A vista grande é um corte microscópico da mucosa do nariz e da garganta
+Vírus da gripe entram nas células e as fazem copiar o vírus
+
+3
+00:00:18,000 --> 00:00:27,600
+“Situação atual” em cima, um gráfico dos números embaixo, o corpo na janela do alto à direita
+Notas curtas aparecem bem onde as coisas acontecem
+
+4
+00:00:28,400 --> 00:00:37,600
+Escolha entre três vírus e três bactérias
+Estafilococo num ferimento na pele: neutrófilos (azul) se juntam e formam pus
+
+5
+00:00:38,400 --> 00:00:47,600
+Pneumococo nos alvéolos do pulmão. Dá para escolher o corpo também
+Compare crianças, idosos e imunidade baixa
+
+6
+00:00:48,400 --> 00:00:58,000
+Role para aproximar em etapas
+Dentro de uma célula, partes do vírus são montadas e transportadas
+
+7
+00:00:58,500 --> 00:01:09,600
+Até a mucosa, um corte da cabeça e o corpo inteiro
+O sinal de febre chega ao centro de temperatura no cérebro
+
+8
+00:01:10,400 --> 00:01:19,600
+Remédio: oseltamivir
+Vírus novos não conseguem sair da célula (os pontos verde-amarelos são o remédio)
+
+9
+00:01:20,000 --> 00:01:29,600
+Começado logo depois da febre, encurta a febre em cerca de um dia
+É o resultado do modelo, parecido com os ensaios clínicos
+
+10
+00:01:30,400 --> 00:01:40,600
+Antibióticos para bactérias: elas incham e estouram
+Eles têm dificuldade de chegar ao interior do pus
+
+11
+00:01:41,200 --> 00:01:51,600
+O mesmo remédio não funciona no MRSA resistente
+O número de bactérias no gráfico quase não cai
+
+12
+00:01:52,400 --> 00:02:02,600
+Segunda infecção: o mesmo vírus chega um ano depois
+Células de memória reagem rápido e os anticorpos sobem depressa
+
+13
+00:02:03,000 --> 00:02:13,600
+A linha clara do gráfico é a primeira vez. A segunda é mais leve
+Uma vacina é um treino antes da hora de verdade
+
+14
+00:02:14,400 --> 00:02:21,600
+“Perguntas respondidas” traz dúvidas comuns
+É um modelo de aprendizado. Não use para diagnosticar ou tratar doenças
+
+15
+00:02:22,200 --> 00:02:30,000
+A batalha imunológica
+Roda no navegador (PC ou celular). Por enquanto, o texto do app está em japonês

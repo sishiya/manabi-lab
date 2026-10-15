@@ -4,7 +4,7 @@
   "thumbnail": "_dev/promo/thumbs/evolution-short.jpg",
   "privacy": "private",
   "publishAt": "2026-10-11T20:05:00+09:00",
-  "captions": { "en": "_dev/promo/out/evolution-short.en.srt" },
+  "captions": { "en": "_dev/promo/out/evolution-short.en.srt", "es": "_dev/promo/subs/evolution-short.es.srt", "ko": "_dev/promo/subs/evolution-short.ko.srt", "pt": "_dev/promo/subs/evolution-short.pt.srt", "zh-TW": "_dev/promo/subs/evolution-short.zh-TW.srt" },
   "title": "46億年を40秒で ― 溶けた地球から恐竜、そして人類へ #Shorts",
   "description": "同じ場所に立ちつづけて、地球と生命と人類の歴史を早送りで見るブラウザのアプリ「ヒトへの46億年」から。\n\nアプリ: https://sishiya.github.io/manabi-lab/evolution/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ: 国際層序委員会「国際年代層序表」2023年版 ほか（アプリの「このアプリについて」→「おもな出典」）\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#地球の歴史 #恐竜 #まなびラボ",
   "tags": ["地球の歴史", "進化", "恐竜", "Shorts", "まなびラボ", "しし屋", "history of Earth", "evolution", "dinosaurs"],

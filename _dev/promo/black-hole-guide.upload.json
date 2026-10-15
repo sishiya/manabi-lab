@@ -4,7 +4,7 @@
   "thumbnail": "_dev/promo/thumbs/black-hole-guide.jpg",
   "privacy": "private",
   "publishAt": "2026-10-13T20:00:00+09:00",
-  "captions": { "en": "_dev/promo/out/black-hole-guide.en.srt" },
+  "captions": { "en": "_dev/promo/out/black-hole-guide.en.srt", "es": "_dev/promo/subs/black-hole-guide.es.srt", "ko": "_dev/promo/subs/black-hole-guide.ko.srt", "pt": "_dev/promo/subs/black-hole-guide.pt.srt", "zh-TW": "_dev/promo/subs/black-hole-guide.zh-TW.srt" },
   "title": "ブラックホールの見え方 ― 使い方と見どころ（光の道すじ・本当の見え方・回転・時計の遅れ）",
   "description": "映画『インターステラー』のブラックホールを、回るブラックホールのまわりで光がどう曲がるかを1ピクセルずつ計算して描くブラウザのアプリ「ブラックホールの見え方」の、使い方と見どころです。\n\n0:00 はじめに\n0:14 見る角度を変える（ドラッグ・真上から）\n0:33 クリックで光の道すじ（穴の上の帯・円盤の下の面・光の輪・影）\n1:14 映画版と本当の見え方\n1:33 回転の速さと空のゆがみ\n1:56 近づくと時計がゆっくり進む\n2:15 見つけてみよう\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/black-hole/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nJames, von Tunzelmann, Franklin, Thorne (2015) Gravitational lensing by spinning black holes in astrophysics, and in the movie Interstellar. Classical and Quantum Gravity 32, 065001. https://arxiv.org/abs/1502.03808\nThorne (2014) The Science of Interstellar. W. W. Norton\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#ブラックホール #インターステラー #相対性理論 #まなびラボ",
   "tags": ["ブラックホール", "インターステラー", "相対性理論", "重力レンズ", "シミュレーション", "使い方", "まなびラボ", "しし屋", "black hole", "Interstellar", "general relativity", "gravitational lensing", "ray tracing"],

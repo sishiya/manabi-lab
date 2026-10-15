@@ -4,7 +4,7 @@
   "thumbnail": "_dev/promo/thumbs/god-view-short.jpg",
   "privacy": "private",
   "publishAt": "2026-10-20T20:05:00+09:00",
-  "captions": { "en": "_dev/promo/out/god-view-short.en.srt" },
+  "captions": { "en": "_dev/promo/out/god-view-short.en.srt", "es": "_dev/promo/subs/god-view-short.es.srt", "ko": "_dev/promo/subs/god-view-short.ko.srt", "pt": "_dev/promo/subs/god-view-short.pt.srt", "zh-TW": "_dev/promo/subs/god-view-short.zh-TW.srt" },
   "title": "ホイールひとつで、宇宙の果てからクォークまで ― 本物の地図の3D地球 #Shorts",
   "description": "本物の地形・航空写真・建物・電車やバスの動きで見る3Dの地球。引けば宇宙の果てまで、寄れば原子や素粒子まで、ホイールひとつで動けるブラウザのアプリ「神の視点マップ」から。\n\nアプリ: https://sishiya.github.io/manabi-lab/god-view/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n地図・データの出典: 地理院タイル（国土地理院、全国最新写真）、3D都市モデル（Project PLATEAU、国土交通省）、NASA Blue Marble（NASA GIBS）、Terrain Tiles（Mapzen、AWS Open Data）、HYG Database（CC BY-SA 4.0）、astronomy-engine、CesiumJS ほか（アプリの「このアプリについて」→「使っているもの・出典」）。宇宙とミクロの形の一部は観測・研究にもとづく演出です。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#3D地図 #宇宙 #まなびラボ",
   "tags": ["3D地図", "地球", "宇宙", "原子", "スケール", "PLATEAU", "Shorts", "まなびラボ", "しし屋", "3D map", "Powers of Ten", "scale of the universe"],

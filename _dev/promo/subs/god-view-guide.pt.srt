@@ -1,0 +1,74 @@
+1
+00:00:00,600 --> 00:00:06,600
+O mapa do olho de Deus
+Como usar o app e o que observar
+
+2
+00:00:07,300 --> 00:00:16,600
+Arraste para mover, role para aproximar e afastar
+Arraste com o botão direito (ou Ctrl + arrastar) para inclinar
+
+3
+00:00:17,400 --> 00:00:26,600
+Busque um lugar para voar até lá. O relevo é em 3D
+O monte Fuji, feito com dados de altitude
+
+4
+00:00:27,400 --> 00:00:37,600
+Os prédios vêm dos modelos 3D de cidades do Japão (PLATEAU)
+Perto da estação de Tóquio, alguns com fotos das paredes e telhados
+
+5
+00:00:38,400 --> 00:00:49,600
+“Ver o subsolo” deixa o chão transparente
+Aparece o shopping subterrâneo da estação de Tóquio (Yaesu)
+
+6
+00:00:50,400 --> 00:01:00,600
+A Terra viva: luzes das cidades, terremotos, satélites
+Terremotos da última semana; satélites calculados pelas órbitas
+
+7
+00:01:01,400 --> 00:01:11,600
+Onde estão agora os trens e ônibus da Toei
+Dados abertos do Departamento de Transportes de Tóquio (a cada 30 s)
+
+8
+00:01:12,400 --> 00:01:21,000
+Continue se afastando, direto para o espaço
+As posições dos planetas são calculadas; as formas das galáxias vêm de observações
+
+9
+00:01:21,400 --> 00:01:29,600
+Até a borda do universo observável, cerca de 10²⁷ m
+Você também pode pular usando a barra de escala
+
+10
+00:01:30,400 --> 00:01:39,600
+Aproxime do chão e você entra no micromundo daquele lugar
+A grama leva às plantas, o mar à água, a cidade à rocha e à areia
+
+11
+00:01:40,000 --> 00:01:49,600
+Átomos, núcleos, quarks, até o comprimento de Planck
+As formas são ilustrativas; os tamanhos são reais
+
+12
+00:01:50,400 --> 00:02:01,600
+“Rasgar a Terra”: o planeta é simulado como cerca de 16 000 partículas
+Agarre e puxe, e um pedaço se solta
+
+13
+00:02:02,000 --> 00:02:13,600
+O buraco desaba e se enche, e a rocha derrete quando a pressão cai
+O oceano entra e vira vapor sobre a rocha quente
+
+14
+00:02:14,400 --> 00:02:21,600
+Etiquetas mostram o que é dado real, estimativa ou efeito
+Mapas e prédios são dados abertos. As fontes estão embaixo e em “Sobre”
+
+15
+00:02:22,200 --> 00:02:30,000
+O mapa do olho de Deus
+Roda no navegador (melhor no PC). Por enquanto, o texto do app está em japonês

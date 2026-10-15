@@ -1,0 +1,28 @@
+1
+00:00:00,600 --> 00:00:05,600
+Como um buraco negro aparece
+O buraco negro de Interestelar, calculado pelos caminhos da luz
+
+2
+00:00:06,000 --> 00:00:13,000
+A faixa de luz acima do buraco é o lado de trás do disco
+A gravidade curva sua luz em nossa direção
+
+3
+00:00:13,500 --> 00:00:21,000
+Mude o ângulo de visão e a forma muda
+O caminho da luz é recalculado em cada pixel
+
+4
+00:00:21,500 --> 00:00:28,000
+Visão realista: o lado esquerdo é mais claro
+O gás que vem em nossa direção parece mais claro (o filme deixou isso de fora)
+
+5
+00:00:28,500 --> 00:00:35,000
+Chegando mais perto
+
+6
+00:00:35,200 --> 00:00:40,000
+Como um buraco negro aparece
+Roda no navegador (texto em japonês). Clique em qualquer ponto para ver o caminho da luz

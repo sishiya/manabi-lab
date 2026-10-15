@@ -1,0 +1,99 @@
+1
+00:00:00,600 --> 00:00:06,600
+Cómo se rompen los lanzamientos
+Cómo usar la app y qué observar
+
+2
+00:00:07,000 --> 00:00:13,200
+No por el nombre del lanzamiento, sino por velocidad, dirección y giro
+La gravedad, la resistencia del aire y la fuerza del giro se suman cada milisegundo
+
+3
+00:00:14,000 --> 00:00:19,600
+Siete cámaras. Arrastra la vista 3D para girarla
+Empieza a 1/5 de velocidad para ver un lanzamiento despacio
+
+4
+00:00:20,500 --> 00:00:29,500
+Si no hubiera aire (línea tenue)
+Solo con gravedad sale una parábola: unos 80 cm de caída en los 0,4 s hasta el plato
+
+5
+00:00:30,500 --> 00:00:37,000
+Recta de cuatro costuras: el giro hacia atrás da una fuerza hacia arriba (fuerza de Magnus)
+Cruza 46 cm por encima del camino sin giro (línea blanca): por eso “parece subir”
+
+6
+00:00:37,500 --> 00:00:43,600
+El panel muestra el quiebre y las fuerzas en este momento
+“Quiebre (desde 50 ft)” coincide con cómo se suelen analizar los datos de seguimiento
+
+7
+00:00:44,500 --> 00:00:50,000
+Corte del flujo de aire: el aire se separa más tarde solo por arriba
+Con giro hacia atrás, la superficie de arriba se mueve junto con el aire
+
+8
+00:00:50,500 --> 00:00:55,600
+Empujar el aire hacia abajo empuja la pelota hacia arriba
+Un esquema a escala de la fuerza calculada (el flujo en sí no se simula)
+
+9
+00:00:56,500 --> 00:01:02,200
+Slider: mucho giro, pero poco quiebre
+Casi todo es giro giroscópico (eje en la dirección del movimiento), que no da fuerza de quiebre
+
+10
+00:01:03,000 --> 00:01:09,600
+Pon el “giro útil” al 100 %
+El quiebre (desde la suelta) pasa de 13 cm a 55 cm
+
+11
+00:01:10,500 --> 00:01:16,600
+Knuckleball: casi no gira
+Las costuras hacen que el aire se separe distinto a cada lado: una fuerza lateral (flecha verde)
+
+12
+00:01:17,500 --> 00:01:25,600
+10 lanzamientos ligeramente distintos
+Cada camino es suave, pero se dispersan 38 cm a los lados y 47 cm arriba y abajo
+
+13
+00:01:26,500 --> 00:01:34,600
+Ojo del bateador: la franja bajo el control de tiempo es su horario
+El último momento para decidir es 0,10 s tras la suelta; solo ha ocurrido el 7 % del quiebre
+
+14
+00:01:35,500 --> 00:01:43,600
+Detén cuatro tipos en el momento de decidir
+Desde el ojo del bateador, solo los separan 0,7 anchos de pelota (hasta 79 cm en el plato)
+
+15
+00:01:44,500 --> 00:01:50,600
+Aire y viento: a 1600 m el aire es más ligero
+El aire es el 82 % de lo normal; la subida de la recta pasa de 46 a 38 cm
+
+16
+00:01:51,500 --> 00:01:57,600
+Un viento en contra de 8 m/s hace que quiebre más
+Sube 61 cm: las fuerzas dependen de la velocidad respecto al aire
+
+17
+00:01:58,500 --> 00:02:04,600
+Arrastra la pelota para cambiar la dirección del giro
+Velocidad, giro por minuto y giro útil también se recalculan al instante
+
+18
+00:02:05,000 --> 00:02:11,600
+“Mostrar guía” abre un recorrido de 19 pasos
+Zurdos, ejemplos de lanzadores, superponer lanzamientos, aire y viento. En japonés e inglés
+
+19
+00:02:12,000 --> 00:02:21,600
+Esta app es una demostración técnica
+Los coeficientes son fórmulas a partir de mediciones; no sirve para entrenar ni evaluar jugadores
+
+20
+00:02:22,200 --> 00:02:30,000
+Cómo se rompen los lanzamientos
+Funciona en el navegador (PC o móvil). La app está en japonés e inglés (botón EN)

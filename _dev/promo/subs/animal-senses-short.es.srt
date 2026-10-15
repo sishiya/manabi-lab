@@ -1,0 +1,29 @@
+1
+00:00:00,600 --> 00:00:05,600
+Cómo sienten el mundo los animales
+El mismo jardín, con los sentidos de distintos animales
+
+2
+00:00:06,300 --> 00:00:12,300
+Cuervo: ve el ultravioleta
+Las puntas de los pétalos del girasol brillan en UV
+
+3
+00:00:12,800 --> 00:00:19,300
+Víbora de foseta: ve el calor a oscuras
+Sus fosetas captan el calor del cuerpo de un ratón
+
+4
+00:00:19,800 --> 00:00:26,300
+Murciélago: ve con ecos
+Solo aparece lo que devuelve su llamada
+
+5
+00:00:26,800 --> 00:00:35,000
+Gato: ve unas cinco veces mejor a oscuras
+La mitad izquierda es la vista humana. En la misma oscuridad, el gato ve mucho más
+
+6
+00:00:35,200 --> 00:00:40,000
+Cómo sienten el mundo los animales
+Funciona en el navegador. Cambia entre 14 formas de ver

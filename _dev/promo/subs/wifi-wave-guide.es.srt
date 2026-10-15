@@ -1,0 +1,69 @@
+1
+00:00:00,600 --> 00:00:06,600
+Ver el wifi en casa
+Cómo usar la app y qué observar
+
+2
+00:00:07,300 --> 00:00:17,400
+Un piso de 2 dormitorios visto desde arriba. Las ondas salen del router junto a la entrada
+Las ecuaciones del electromagnetismo se resuelven paso a paso en una malla de 0,75 cm
+
+3
+00:00:18,000 --> 00:00:29,600
+Cambia a “Intensidad de señal” para ver la cobertura en color
+Las líneas coinciden más o menos con las barras del móvil. Cada pared debilita la señal
+
+4
+00:00:30,500 --> 00:00:40,800
+Arrastra el router para moverlo
+Muévelo de la entrada al centro de la casa y llega a las habitaciones lejanas
+
+5
+00:00:41,300 --> 00:00:51,600
+También puedes mover el móvil. Su señal aparece a la derecha
+Compárala con el valor “sin paredes” para ver cuánto restan las paredes
+
+6
+00:00:52,500 --> 00:01:00,600
+El wifi usa 2,4 GHz y 5 GHz
+La longitud de onda de 2,4 GHz es de unos 12 cm
+
+7
+00:01:01,300 --> 00:01:09,600
+5 GHz (unos 6 cm) se debilita más tras las paredes
+Más rápido, pero de menor alcance
+
+8
+00:01:10,500 --> 00:01:31,600
+“Prueba de paredes”: siete carriles, cada uno con un tipo de pared
+El hormigón la debilita mucho y el metal la bloquea. Los números son la pérdida en cada carril
+
+9
+00:01:32,500 --> 00:01:41,600
+“Experimento de rendijas”: las ondas se curvan al pasar por huecos en una placa de metal
+Es la difracción. Los huecos miden 20, 8, 4 y 2 cm, de arriba abajo
+
+10
+00:01:42,200 --> 00:01:51,600
+Huecos menores que media longitud de onda casi no dejan pasar nada
+Media longitud de onda a 2,4 GHz son unos 6 cm, así que un hueco de 2 cm la bloquea
+
+11
+00:01:52,500 --> 00:02:03,800
+Elige un material y arrastra para dibujar una pared
+Pon una pared de hormigón en el pasillo y el salón recibe menos señal
+
+12
+00:02:04,300 --> 00:02:09,600
+“Deshacer” la quita
+Prueba una distribución como la de tu casa
+
+13
+00:02:10,500 --> 00:02:21,600
+También una casa de madera. Los valores de materiales vienen de recomendaciones de la UIT-R
+Los umbrales de señal son orientativos, y nada aquí trata de efectos en la salud
+
+14
+00:02:22,200 --> 00:02:30,000
+Ver el wifi en casa
+Funciona en el navegador (PC o móvil). La app está en japonés e inglés (botón EN)

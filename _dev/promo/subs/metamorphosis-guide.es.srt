@@ -1,0 +1,73 @@
+1
+00:00:00,600 --> 00:00:06,600
+Dentro de la crisálida
+Cómo usar la app y qué observar
+
+2
+00:00:07,300 --> 00:00:16,600
+Avanza en el tiempo con la barra de abajo o pulsa ▶
+El tiempo se cuenta en días desde la pupación (fechas de investigación del gusano del tabaco)
+
+3
+00:00:17,200 --> 00:00:26,600
+La oruga ya tiene esbozos de alas en el tórax
+Cuando deja de comer, se entierra y se vuelve prepupa
+
+4
+00:00:27,400 --> 00:00:38,600
+Los colores marcan órganos que se deshacen, se quedan o se forman de nuevo
+Las partes que solo necesita la larva mueren y las células de la sangre (rosa) las retiran
+
+5
+00:00:39,000 --> 00:00:49,600
+Nervios, tubos de aire y corazón se quedan y se reconstruyen
+Toca un órgano para ver una explicación, marcada como “seguro” o “estimación”
+
+6
+00:00:50,400 --> 00:01:00,600
+La gráfica de abajo muestra hormonas y genes interruptor
+Los niveles de ecdisona y hormona juvenil dan la señal del cambio
+
+7
+00:01:01,000 --> 00:01:11,600
+Los músculos de vuelo y el cuerpo adulto crecen de pequeños esbozos
+Los genes interruptor Kr-h1, broad y E93 se turnan
+
+8
+00:01:12,500 --> 00:01:19,600
+Hay tres vistas. “Transparente” es un diagrama
+Las escamas de las alas empiezan a tomar color
+
+9
+00:01:20,200 --> 00:01:27,600
+“Abierto” la muestra como la verían tus ojos
+Los colores son cercanos a los reales (seguros o estimados); la textura es un efecto
+
+10
+00:01:28,200 --> 00:01:34,600
+“Exterior” muestra qué parte de la crisálida se vuelve ala
+
+11
+00:01:35,400 --> 00:01:47,600
+La noche del día 18 se abre la parte delantera y sale el adulto
+Sube desde la tierra hasta la superficie
+
+12
+00:01:48,000 --> 00:02:00,600
+Despliega sus alas arrugadas en poco más de una hora (estimación)
+Bombea líquido corporal para estirarlas
+
+13
+00:02:01,000 --> 00:02:13,600
+Luego pliega las alas como un tejado
+Expulsa los desechos guardados en la crisálida. Tras emerger, desaparecen algunos músculos del abdomen
+
+14
+00:02:14,400 --> 00:02:21,600
+Además: “mitos comunes” y “lo que aún no sabemos”
+La investigación sugiere que algunos recuerdos de la oruga sobreviven en la polilla
+
+15
+00:02:22,200 --> 00:02:30,000
+Dentro de la crisálida
+Funciona en el navegador (PC o móvil). La app está en japonés e inglés (botón EN)

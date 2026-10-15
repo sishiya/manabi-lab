@@ -1,0 +1,84 @@
+1
+00:00:00,600 --> 00:00:06,600
+Cómo se ve un agujero negro
+Cómo usar la app y qué observar
+
+2
+00:00:07,000 --> 00:00:13,500
+Cada píxel se dibuja siguiendo el camino de la luz
+El agujero negro de la película Interstellar, con su disco de gas brillante
+
+3
+00:00:14,500 --> 00:00:21,000
+Arrastra para moverte a su alrededor
+Arrastra arriba o abajo para cambiar el ángulo de vista
+
+4
+00:00:22,800 --> 00:00:28,800
+Visto desde arriba, el disco es una rosquilla
+Su parte interior parece más grande porque la luz se curva
+
+5
+00:00:33,000 --> 00:00:38,800
+Haz clic en un punto para ver el camino de su luz
+En la app aparece de lado, en el panel derecho
+
+6
+00:00:39,300 --> 00:00:47,000
+La banda sobre el agujero es el lado lejano del disco
+Su luz se curvó por encima del agujero para llegar a nosotros
+
+7
+00:00:49,500 --> 00:00:57,000
+La banda fina de abajo es la cara inferior del disco
+Miramos desde arriba, pero nos llega la luz que pasa por debajo
+
+8
+00:00:59,500 --> 00:01:06,400
+El fino anillo de luz al borde de la sombra
+Esta luz se curvó 325° y dio la vuelta al agujero
+
+9
+00:01:08,500 --> 00:01:14,000
+La sombra negra es mucho mayor que el propio agujero
+Toda la luz en esa dirección cae en el agujero
+
+10
+00:01:17,500 --> 00:01:24,500
+Vista realista: el lado izquierdo es brillante y azulado
+El gas que se acerca se ve más brillante; el que se aleja, tenue y rojo
+
+11
+00:01:25,000 --> 00:01:31,000
+La película lo omitió porque costaba entenderlo
+Del artículo de quienes hicieron la película (2015)
+
+12
+00:01:38,500 --> 00:01:46,000
+Haz que gire muy rápido y míralo de lado
+El borde izquierdo de la sombra se aplana: la luz que va con el giro puede acercarse más
+
+13
+00:01:47,500 --> 00:01:55,000
+Cambia el cielo a una cuadrícula para ver la distorsión
+El anillo alrededor de la sombra es el cielo justo detrás del agujero (anillo de Einstein)
+
+14
+00:01:58,500 --> 00:02:06,000
+Usa la rueda del ratón para acercarte
+En el móvil, con dos dedos, o con el control del panel derecho
+
+15
+00:02:06,500 --> 00:02:14,000
+Cerca del agujero, los relojes van más lentos
+Una hora aquí (7M) son 1,18 horas lejos
+
+16
+00:02:15,000 --> 00:02:21,500
+8 retos en “Encuéntralo” (見つけてみよう)
+Al pie del panel derecho; cada uno explica lo que encontraste
+
+17
+00:02:22,200 --> 00:02:30,000
+Cómo se ve un agujero negro
+Funciona en el navegador (PC o móvil). Por ahora, el texto de la app está en japonés

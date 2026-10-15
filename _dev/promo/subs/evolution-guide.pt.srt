@@ -1,0 +1,114 @@
+1
+00:00:00,600 --> 00:00:06,600
+4,6 bilhões de anos até nós
+Como usar o app e o que observar
+
+2
+00:00:07,500 --> 00:00:13,000
+Observe um só lugar do céu, sem nunca se mover
+Hoje é a margem de um lago na África Oriental, onde muitos fósseis humanos foram achados
+
+3
+00:00:14,000 --> 00:00:23,300
+“Próximo evento” (次の出来事) avança no tempo
+A explosão cambriana → as plantas chegam à terra → as primeiras florestas
+
+4
+00:00:24,000 --> 00:00:31,300
+“Reproduzir” (再生) faz o tempo correr suavemente
+Você também pode arrastar a linha do tempo embaixo ou apertar a barra de espaço
+
+5
+00:00:32,000 --> 00:00:38,600
+Arraste para girar a vista, role para dar zoom
+No celular, use os dedos; arraste com o botão direito para mover
+
+6
+00:00:39,500 --> 00:00:45,200
+Afaste tudo para ver o planeta inteiro
+Ou aperte “Ver a Terra” (地球を見る). A marca amarela é o nosso lugar
+
+7
+00:00:45,700 --> 00:00:52,300
+Volte no tempo e o planeta fica branco
+A Terra bola de neve, há cerca de 700 milhões de anos. O gelo chegou ao equador
+
+8
+00:00:53,500 --> 00:01:00,300
+O anel amarelo marca o seu ancestral
+Há 375 milhões de anos: um peixe com ossos parecidos com braços nas nadadeiras
+
+9
+00:01:01,200 --> 00:01:10,300
+“Nomes” (名前) identifica os seres vivos
+Ou clique em uma criatura. Elas são desenhadas bem maiores que o real para dar para ver
+
+10
+00:01:11,200 --> 00:01:16,500
+Há 66 milhões de anos, um asteroide cai
+O céu brilha e a era dos dinossauros acaba
+
+11
+00:01:17,000 --> 00:01:22,500
+Depois: florestas mortas e samambaias
+Os pequenos mamíferos que sobreviveram se espalham daqui
+
+12
+00:01:23,500 --> 00:01:29,500
+Há 1,9 milhão de anos: Homo erectus
+Os primeiros humanos vivem em volta do lago e da savana
+
+13
+00:01:30,300 --> 00:01:33,500
+E a cidade de hoje
+Trens, carros e aviões
+
+14
+00:01:34,000 --> 00:01:40,300
+“Hora” (時刻) troca entre dia, noite e automático
+À noite, acendem janelas, postes e faróis
+
+15
+00:01:41,300 --> 00:01:51,000
+De hoje em diante, é uma previsão
+O cenário de emissões muda o ano 2100 (+1,6 a +4,0 °C neste modelo)
+
+16
+00:01:52,000 --> 00:01:57,600
+Daqui a 250 milhões de anos: o próximo supercontinente
+Os continentes se juntam e o interior vira terra alta e seca
+
+17
+00:01:58,500 --> 00:02:04,500
+Daqui a 5 bilhões de anos: um grande Sol vermelho
+Quanto mais longe, menos certeza. Pessoas e cidades não são desenhadas além de alguns milhares de anos
+
+18
+00:02:05,500 --> 00:02:11,800
+“Mecanismo” (しくみ) compara o modelo com o registro
+Linhas pontilhadas: o registro. Linhas cheias: um modelo de vulcões, intemperismo, gelo e fotossíntese
+
+19
+00:02:12,300 --> 00:02:18,500
+Terras bola de neve e extinções em massa também saem do modelo
+Onde não bate (a extinção do fim do Ordoviciano), ele mostra isso também
+
+20
+00:02:19,500 --> 00:02:25,000
+“E se” (もしも) deixa você mudar a história
+Escolha entre 7 mudanças e o app recalcula tudo depois
+
+21
+00:02:25,500 --> 00:02:31,500
+Se o asteroide tivesse errado: dinossauros há 1 milhão de anos
+Seus nomes dizem “sobrevivente” (生き残り)
+
+22
+00:02:32,000 --> 00:02:38,000
+E os humanos nunca aparecem
+O que o modelo não consegue decidir aparece como “imaginado” (想像) na tela
+
+23
+00:02:38,600 --> 00:02:45,000
+4,6 bilhões de anos até nós
+Roda no navegador (PC ou celular). Por enquanto, o texto do app está em japonês

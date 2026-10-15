@@ -1,0 +1,29 @@
+1
+00:00:00,600 --> 00:00:05,600
+Cómo se rompen los lanzamientos
+Calcular el camino de una pelota a partir de su velocidad y giro
+
+2
+00:00:06,000 --> 00:00:13,000
+Una recta no sube: solo cae menos
+El giro hacia atrás la eleva 46 cm sobre el camino sin giro (línea blanca)
+
+3
+00:00:13,500 --> 00:00:21,000
+Misma dirección de suelta, lanzamientos muy distintos
+Fuerzas calculadas cada milisegundo a partir de velocidad y giro
+
+4
+00:00:21,500 --> 00:00:28,000
+El bateador debe decidir en unos 0,1 s
+En ese momento, los lanzamientos solo están a 0,7 anchos de pelota
+
+5
+00:00:28,500 --> 00:00:35,000
+Nadie puede predecir una knuckleball
+Mismo objetivo, pero se dispersan 38 cm a los lados y 47 cm arriba y abajo
+
+6
+00:00:35,200 --> 00:00:40,000
+Cómo se rompen los lanzamientos
+Funciona en el navegador (JP/EN). Cambia el lanzamiento y el giro para probar

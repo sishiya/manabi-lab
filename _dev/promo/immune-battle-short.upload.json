@@ -4,7 +4,7 @@
   "thumbnail": "_dev/promo/thumbs/immune-battle-short.jpg",
   "privacy": "private",
   "publishAt": "2026-10-17T20:05:00+09:00",
-  "captions": { "en": "_dev/promo/out/immune-battle-short.en.srt" },
+  "captions": { "en": "_dev/promo/out/immune-battle-short.en.srt", "es": "_dev/promo/subs/immune-battle-short.es.srt", "ko": "_dev/promo/subs/immune-battle-short.ko.srt", "pt": "_dev/promo/subs/immune-battle-short.pt.srt", "zh-TW": "_dev/promo/subs/immune-battle-short.zh-TW.srt" },
   "title": "インフルエンザが鼻に入ってから治るまで、からだの中で起きること #Shorts",
   "description": "ウイルスや細菌がからだに入って増え、免疫に片づけられるまでを、ミクロの断面とグラフで見るブラウザのアプリ「免疫のたたかい」から。日数はアプリの学習用のモデル（健康な大人・10万個）の結果です。\n\nアプリ: https://sishiya.github.io/manabi-lab/immune-battle/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nモデルの参考: Baccam ほか（2006）J Virol、Elek（1957）、Teunis ほか（2008）J Med Virol、『Janeway's Immunobiology』ほか。学習用のモデルで、病気の診断や治療の判断には使えません。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#免疫 #インフルエンザ #まなびラボ",
   "tags": ["免疫", "インフルエンザ", "ウイルス", "抗体", "Shorts", "まなびラボ", "しし屋", "immune system", "influenza", "antibodies"],

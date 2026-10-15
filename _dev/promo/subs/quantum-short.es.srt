@@ -1,0 +1,29 @@
+1
+00:00:00,600 --> 00:00:05,600
+Laboratorio cuántico
+¿Qué pasa si disparas electrones de uno en uno?
+
+2
+00:00:06,000 --> 00:00:13,000
+Disparados uno a uno, caen en sitios al azar
+Nunca sabes dónde caerá el siguiente
+
+3
+00:00:13,500 --> 00:00:21,000
+Junta muchos y aparecen franjas
+La huella de las ondas de ambas rendijas superpuestas
+
+4
+00:00:21,500 --> 00:00:28,000
+Comprueba por qué rendija pasó cada uno y las franjas desaparecen
+En su lugar queda una sola joroba suave
+
+5
+00:00:28,500 --> 00:00:35,000
+Algunas partículas atraviesan una pared (efecto túnel)
+Parte de la onda pasa en vez de rebotar
+
+6
+00:00:35,200 --> 00:00:40,000
+Laboratorio cuántico
+Funciona en el navegador. Prueba tú los cinco experimentos

@@ -40,7 +40,8 @@ YouTube に出す順番（ジャンル・サムネイルの色味が連日で重
 - 表情は台本ごとの時刻の表 `exp: [[秒, 名前], …]`（名前は `LION_XP`: calm・smile・wow・shock・sad・cold・think・sleepy・proud）。見る向きはマウスの矢印、しゃべるときはこちら。クリックでうなずく。右下をあけるため、右の札とタイムライン・図を左へ寄せる。
 
 ## YouTube に上げる（`_dev/tools/youtube-upload.ps1`）
-- `<out>.upload.json` を作る: 説明欄は「アプリ: URL」の行と「しし屋 まなびラボ（ほかのアプリ）: URL」の行の間を1行あける（ショートも横長も。英語も同じ）。`file`・`thumbnail`・`privacy: private`・`title`・`description`（横長はチャプター `0:00 …`）・`tags`（日本語＋英語）・`localizations.en`（英語のタイトルと説明。「アプリの文字はいまは日本語」と書く）・`captions: { "en": "_dev/promo/out/<out>.en.srt" }`。日本語は焼きこんであるので CC は英語だけ。
+- `<out>.upload.json` を作る: 説明欄は「アプリ: URL」の行と「しし屋 まなびラボ（ほかのアプリ）: URL」の行の間を1行あける（ショートも横長も。英語も同じ）。`file`・`thumbnail`・`privacy: private`・`title`・`description`（横長はチャプター `0:00 …`）・`tags`（日本語＋英語）・`localizations.en`（英語のタイトルと説明。「アプリの文字はいまは日本語」と書く）・`captions: { "en": "_dev/promo/out/<out>.en.srt" }`。日本語は焼きこんであるので CC は英語＋翻訳（下）。
+- 字幕の翻訳（2026-10-15〜、スペイン語 `es`・ポルトガル語 `pt`・繁体字中国語 `zh-TW`・韓国語 `ko`）: 英語の字幕と同じ数・順で `_dev/promo/subs/<言語>.json` に `"<名前>": ["1行目 // 2行目", …]` を足す（アプリのボタンの日本語の名前は （次の出来事） のように残す）→ `node _dev/tools/build-subs.mjs`（英語の時刻を写して `subs/<名前>.<言語>.srt` を作り、upload.json の captions にも足す）→ `youtube-upload.ps1 -Captions -Lang es,pt,zh-TW,ko -Meta …`（まだない言語だけ送る。1本 400 ポイント）。
   - 下書きは `_dev/tools/make-upload.ps1 -App <app>`（入口の APPS とアプリの出どころから。TODO を埋める）。上げる前に `make-upload.ps1 -Check` で、説明欄の形・チャプター（0:00 から、**1つ10秒以上**。短いと YouTube がチャプターを出さない）・字数・< >・予約の時刻を確かめる。
   - 予約日時は `_dev/tools/schedule-videos.ps1 -Start <日付>`（`SCHEDULE.md` の順に、説明動画 20:00・ショート 20:05）。`-Apply` で書き、GO のあと `-Upload` で YouTube の予約まで。
 - 上げる: `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Meta _dev/promo/<out>.upload.json`。表示された ID を JSON の `videoId` に書く。

@@ -1,0 +1,64 @@
+1
+00:00:00,600 --> 00:00:04,800
+Viaje por el cuerpo
+Conviértete en una cápsula endoscópica y entra por la boca
+
+2
+00:00:05,300 --> 00:00:06,967
+Boca
+Los dientes trituran la comida y la mezclan con saliva
+
+3
+00:00:06,967 --> 00:00:08,300
+Faringe
+Donde se cruzan los caminos del aire y la comida
+
+4
+00:00:08,300 --> 00:00:13,967
+Esófago
+Unos 25 cm. Ondas musculares (peristaltismo) llevan la comida al estómago
+
+5
+00:00:13,967 --> 00:00:18,967
+Estómago
+El jugo gástrico es muy ácido (pH 1,5 a 3,5)
+
+6
+00:00:18,967 --> 00:00:21,633
+Duodeno
+Entran la bilis y el jugo pancreático y lo tiñen de amarillo
+
+7
+00:00:21,633 --> 00:00:29,633
+Yeyuno
+Pliegues y vellosidades aumentan la superficie para absorber nutrientes
+
+8
+00:00:29,633 --> 00:00:41,300
+Íleon
+Absorbe la vitamina B12 y los ácidos biliares
+
+9
+00:00:41,300 --> 00:00:44,633
+Colon ascendente
+Las bacterias fermentan la fibra y se absorbe el agua
+
+10
+00:00:44,633 --> 00:00:48,967
+Colon transverso
+Las bacterias vuelven marrones las heces
+
+11
+00:00:48,967 --> 00:00:51,967
+Colon descendente
+A estas alturas las heces son bastante firmes
+
+12
+00:00:51,967 --> 00:00:55,000
+Colon sigmoide
+Aquí se almacenan las heces, justo antes del recto
+
+13
+00:00:55,200 --> 00:00:59,000
+Viaje por el cuerpo
+Recorre el tubo digestivo en 3D, de la boca al ano. También puedes ser un alimento (texto en japonés)

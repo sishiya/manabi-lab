@@ -1,0 +1,29 @@
+1
+00:00:00,600 --> 00:00:05,600
+Vendo o ar em casa
+Onde o ar fica parado na sua casa?
+
+2
+00:00:06,000 --> 00:00:13,000
+Só com a ventilação 24 horas, o ar muda devagar
+A cor mostra a “idade do ar”: minutos desde que entrou de fora
+
+3
+00:00:13,500 --> 00:00:21,000
+Abrir só uma janela move pouco ar
+Sem saída, só o ar perto da janela muda
+
+4
+00:00:21,500 --> 00:00:28,000
+Abra duas e o vento encontra um caminho
+A casa toda se renova em minutos
+
+5
+00:00:28,500 --> 00:00:35,000
+Um ventilador circulador empurra ar para um cômodo abafado
+Importa onde você coloca e para onde aponta
+
+6
+00:00:35,200 --> 00:00:40,000
+Vendo o ar em casa
+Roda no navegador. Toque nas janelas e ventiladores para testar

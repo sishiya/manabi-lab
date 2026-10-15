@@ -1,0 +1,64 @@
+1
+00:00:00,600 --> 00:00:04,800
+Mergulho no corpo
+Vire uma cápsula endoscópica e entre pela boca
+
+2
+00:00:05,300 --> 00:00:06,967
+Boca
+Os dentes trituram a comida e misturam com saliva
+
+3
+00:00:06,967 --> 00:00:08,300
+Faringe
+Onde os caminhos do ar e da comida se cruzam
+
+4
+00:00:08,300 --> 00:00:13,967
+Esôfago
+Cerca de 25 cm. Ondas musculares (peristaltismo) levam a comida ao estômago
+
+5
+00:00:13,967 --> 00:00:18,967
+Estômago
+O suco gástrico é muito ácido (pH 1,5 a 3,5)
+
+6
+00:00:18,967 --> 00:00:21,633
+Duodeno
+A bile e o suco pancreático entram e deixam tudo amarelo
+
+7
+00:00:21,633 --> 00:00:29,633
+Jejuno
+Dobras e vilosidades aumentam a área para absorver nutrientes
+
+8
+00:00:29,633 --> 00:00:41,300
+Íleo
+Absorve a vitamina B12 e os ácidos biliares
+
+9
+00:00:41,300 --> 00:00:44,633
+Cólon ascendente
+As bactérias fermentam as fibras e a água é absorvida
+
+10
+00:00:44,633 --> 00:00:48,967
+Cólon transverso
+As bactérias deixam as fezes marrons
+
+11
+00:00:48,967 --> 00:00:51,967
+Cólon descendente
+Aqui as fezes já estão bem firmes
+
+12
+00:00:51,967 --> 00:00:55,000
+Cólon sigmoide
+As fezes ficam guardadas aqui, logo antes do reto
+
+13
+00:00:55,200 --> 00:00:59,000
+Mergulho no corpo
+Percorra o tubo digestivo em 3D, da boca ao ânus. Você também pode virar um alimento (texto em japonês)

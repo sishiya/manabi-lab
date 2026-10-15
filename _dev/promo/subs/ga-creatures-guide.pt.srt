@@ -1,0 +1,69 @@
+1
+00:00:00,600 --> 00:00:06,600
+Caixa de areia da evolução
+Como usar o app e o que observar
+
+2
+00:00:07,300 --> 00:00:17,000
+Criaturas feitas de juntas e músculos: até onde chegam em 15 segundos?
+No alto à esquerda: o campeão atual correndo (geração 40)
+
+3
+00:00:17,500 --> 00:00:27,600
+Embaixo: a geração inteira. O gráfico mostra a distância percorrida
+As cores são “espécies” (mesmo número de juntas e músculos)
+
+4
+00:00:28,400 --> 00:00:40,000
+A primeira geração tem corpos aleatórios e mal se mexe
+As que vão mais longe têm filhotes, que mudam um pouco (mutação)
+
+5
+00:00:40,400 --> 00:00:51,600
+Clique em qualquer criatura da lista para vê-la correr
+“Auto” mantém a evolução andando
+
+6
+00:00:52,400 --> 00:01:03,000
+Os genes definem onde ficam as juntas e quando cada músculo contrai
+O painel da direita mostra os genes da que você está vendo
+
+7
+00:01:03,400 --> 00:01:14,600
+Ninguém ensinou elas a andar
+Só ficam as que vão mais longe, de novo e de novo (um algoritmo genético)
+
+8
+00:01:15,400 --> 00:01:26,600
+Mude o ambiente e outros corpos vencem
+Na Lua, a gravidade é cerca de um sexto da Terra. Elas vão aos saltos
+
+9
+00:01:27,400 --> 00:01:39,600
+Debaixo d’água, elas se movem como se nadassem
+Plano, subida, gelo, a Lua, debaixo d’água
+
+10
+00:01:40,400 --> 00:01:49,600
+“Como a evolução funciona” deixa mudar a população e a seleção
+Também a taxa de mutação e o cruzamento (misturar os genes de dois pais)
+
+11
+00:01:50,000 --> 00:01:59,600
+Mutação demais estraga bons projetos
+A mesma semente repete a mesma evolução
+
+12
+00:02:00,400 --> 00:02:11,600
+“Campeões anteriores” deixa rever o caminho
+Geração 3 → 15 → 40
+
+13
+00:02:12,400 --> 00:02:21,600
+Força muscular e atrito são valores escolhidos para ficar claro
+Veja “Como isso difere da evolução real” nas explicações
+
+14
+00:02:22,200 --> 00:02:30,000
+Caixa de areia da evolução
+Roda no navegador (PC ou celular). O app está em japonês e inglês (botão EN)

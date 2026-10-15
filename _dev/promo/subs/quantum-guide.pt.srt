@@ -1,0 +1,84 @@
+1
+00:00:00,600 --> 00:00:06,600
+Laboratório quântico
+Como usar o app e o que observar
+
+2
+00:00:07,300 --> 00:00:14,000
+Alterne entre cinco experimentos pelas abas
+Primeiro, a fenda dupla. “1000 de uma vez” faz as faixas crescerem
+
+3
+00:00:14,600 --> 00:00:22,400
+Com uma só fenda aberta, não há faixas
+Só com as duas abertas as duas ondas se sobrepõem, somando e se anulando
+
+4
+00:00:23,000 --> 00:00:31,000
+Verifique por qual fenda cada um passa e as faixas somem
+Fica uma só corcova suave. Só de olhar, o resultado muda
+
+5
+00:00:31,600 --> 00:00:41,600
+Deixe as fendas largas e afastadas, e aparecem duas faixas
+A conhecida imagem “faixas ou duas bandas” junta duas montagens diferentes
+
+6
+00:00:42,500 --> 00:00:51,000
+Tunelamento: mesmo com menos energia que a parede, uma parte passa
+Parte da onda volta, e parte segue além da parede
+
+7
+00:00:51,600 --> 00:00:59,600
+Deixe a parede mais grossa e a parte que passa cai muito
+A parte que passou e o valor teórico estão à direita
+
+8
+00:01:00,300 --> 00:01:06,800
+Meça, e a partícula aparece de um lado só
+O mesmo efeito importa na fusão das estrelas e na memória flash
+
+9
+00:01:07,600 --> 00:01:16,600
+Dois polarizadores em ângulo reto bloqueiam quase toda a luz
+Cada fóton passa com uma chance definida pelo ângulo
+
+10
+00:01:17,200 --> 00:01:26,600
+Ponha um a 45° no meio e passa cerca de 12,5 %
+Mais filtros, e mesmo assim passa mais luz
+
+11
+00:01:27,600 --> 00:01:38,000
+Emaranhamento: dois fótons dão resultados combinados mesmo longe
+Alice e Bob medem cada um com seu polarizador
+
+12
+00:01:38,700 --> 00:01:46,500
+Teste de Bell: o emaranhamento dá S ≈ 2,83
+Com “variáveis ocultas” que fixam as respostas antes, S não passa de 2
+
+13
+00:01:47,000 --> 00:01:54,600
+Experimentos reais também passaram de 2
+Prêmio Nobel de Física de 2022
+
+14
+00:01:55,600 --> 00:02:05,400
+Meça a posição e a onda estreita, mas o momento se espalha
+Meça o momento e acontece o contrário
+
+15
+00:02:06,200 --> 00:02:13,600
+Não dá para deixar pequenos ao mesmo tempo o espalhamento de posição e de momento
+Δx·Δp nunca fica abaixo de 0,5 (ħ/2): o princípio da incerteza
+
+16
+00:02:14,200 --> 00:02:21,600
+Cada experimento tem “Tente isto” e “O que está acontecendo?”
+Os artigos e livros por trás estão listados embaixo
+
+17
+00:02:22,200 --> 00:02:30,000
+Laboratório quântico
+Roda no navegador (PC ou celular). O app está em japonês e inglês (botão EN)

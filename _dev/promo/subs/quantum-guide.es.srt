@@ -1,0 +1,84 @@
+1
+00:00:00,600 --> 00:00:06,600
+Laboratorio cuántico
+Cómo usar la app y qué observar
+
+2
+00:00:07,300 --> 00:00:14,000
+Cambia entre cinco experimentos con las pestañas
+Primero, la doble rendija. “1000 a la vez” hace crecer las franjas
+
+3
+00:00:14,600 --> 00:00:22,400
+Con una sola rendija abierta, no hay franjas
+Solo con ambas abiertas se superponen las dos ondas, sumándose y anulándose
+
+4
+00:00:23,000 --> 00:00:31,000
+Comprueba por qué rendija pasa cada uno y las franjas desaparecen
+Queda una sola joroba suave. Solo con mirar cambia el resultado
+
+5
+00:00:31,600 --> 00:00:41,600
+Haz las rendijas anchas y separadas, y salen dos bandas
+La conocida imagen “franjas o dos bandas” mezcla dos montajes distintos
+
+6
+00:00:42,500 --> 00:00:51,000
+Efecto túnel: aun con menos energía que la pared, parte pasa
+Parte de la onda rebota y parte llega al otro lado
+
+7
+00:00:51,600 --> 00:00:59,600
+Haz la pared más gruesa y la parte que pasa cae en picado
+La parte que pasó y el valor teórico están a la derecha
+
+8
+00:01:00,300 --> 00:01:06,800
+Al medir, la partícula aparece en un solo lado
+El mismo efecto importa en la fusión de las estrellas y en la memoria flash
+
+9
+00:01:07,600 --> 00:01:16,600
+Dos polarizadores en ángulo recto bloquean casi toda la luz
+Cada fotón pasa con una probabilidad que fija el ángulo
+
+10
+00:01:17,200 --> 00:01:26,600
+Añade uno a 45° en medio y pasa un 12,5 %
+Más filtros, y aun así pasa más luz
+
+11
+00:01:27,600 --> 00:01:38,000
+Entrelazamiento: dos fotones dan resultados a juego aun lejos
+Alice y Bob miden cada uno con su propio polarizador
+
+12
+00:01:38,700 --> 00:01:46,500
+Prueba de Bell: el entrelazamiento da S ≈ 2,83
+Con “variables ocultas” que fijan las respuestas de antemano, S no puede pasar de 2
+
+13
+00:01:47,000 --> 00:01:54,600
+Los experimentos reales también pasaron de 2
+Premio Nobel de Física 2022
+
+14
+00:01:55,600 --> 00:02:05,400
+Mide la posición y la onda se estrecha, pero el momento se dispersa
+Mide el momento y pasa lo contrario
+
+15
+00:02:06,200 --> 00:02:13,600
+No puedes hacer pequeñas a la vez la dispersión de posición y de momento
+Δx·Δp nunca baja de 0,5 (ħ/2): el principio de incertidumbre
+
+16
+00:02:14,200 --> 00:02:21,600
+Cada experimento tiene “Prueba esto” y “¿Qué está pasando?”
+Los artículos y libros en que se basa están abajo
+
+17
+00:02:22,200 --> 00:02:30,000
+Laboratorio cuántico
+Funciona en el navegador (PC o móvil). La app está en japonés e inglés (botón EN)

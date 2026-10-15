@@ -1,0 +1,29 @@
+1
+00:00:00,600 --> 00:00:05,600
+Ver el aire en casa
+¿Dónde se vicia el aire de tu casa?
+
+2
+00:00:06,000 --> 00:00:13,000
+Solo con la ventilación de 24 horas, el aire cambia despacio
+El color muestra la “edad del aire”: minutos desde que entró de fuera
+
+3
+00:00:13,500 --> 00:00:21,000
+Abrir una sola ventana mueve poco aire
+Sin salida, solo cambia el aire junto a la ventana
+
+4
+00:00:21,500 --> 00:00:28,000
+Abre dos y el viento encuentra camino
+Toda la casa se renueva en minutos
+
+5
+00:00:28,500 --> 00:00:35,000
+Un ventilador circulador empuja aire a una habitación viciada
+Importa dónde lo pones y hacia dónde apunta
+
+6
+00:00:35,200 --> 00:00:40,000
+Ver el aire en casa
+Funciona en el navegador. Toca ventanas y ventiladores para probar

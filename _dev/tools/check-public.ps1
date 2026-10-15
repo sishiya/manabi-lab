@@ -13,7 +13,7 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)   # _dev/tools の2つ上
 Set-Location $root
 
-$textExt = '.html','.htm','.js','.mjs','.css','.md','.txt','.json','.ps1','.pl','.sh','.bat','.cmd','.yml','.yaml','.xml','.musicxml','.svg','.csv','.ini','.cfg','.toml',''
+$textExt = '.html','.htm','.js','.mjs','.css','.md','.txt','.json','.ps1','.pl','.sh','.bat','.cmd','.yml','.yaml','.xml','.musicxml','.svg','.csv','.ini','.cfg','.toml','.srt',''
 $imageExt = '.jpg','.jpeg','.png','.gif','.webp'
 $midiExt = '.mid','.midi'   # 楽譜の MIDI: 中に入っている文字（曲名・トラック名・歌詞など）を取り出して、テキストと同じように調べる
 $badNames ='^\.env', '\.pem$', '\.key$', '\.pfx$', '\.p12$', '^id_(rsa|ed25519|ecdsa)', '^credentials', '\.kdbx$'

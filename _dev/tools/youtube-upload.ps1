@@ -27,6 +27,9 @@
 #         captions: { "en": "_dev/promo/out/<名前>.en.srt" } … 字幕（CC）。台本ページ（_dev/promo/*.html）を開くと out に保存される。日本語は動画に焼きこんであるので、ふつうは英語だけ
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Thumb -Meta a.upload.json,b.upload.json
 #       … サムネイル（thumbnail）だけを付ける。公開ずみの動画にも。ショートは _dev/promo/thumbs/<app>-short.jpg（make-short-thumbs.ps1）
+#   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Captions -Meta a.upload.json,b.upload.json -Lang es,pt,zh-TW,ko
+#       … 字幕だけを足す。-Lang の言語のうち、YouTube にまだないものだけ送る（あるものは置きかえない。1本 400 ポイントなので、
+#         上限で止まっても、もう一度同じコマンドで続きから）。翻訳の字幕は _dev/promo/subs/（_dev/tools/build-subs.mjs で英語の字幕の時刻から作る）
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Playlist [-DryRun]
 #       … 再生リスト（_dev/promo/playlist*.json。1ファイル1リスト: playlist.json＝説明動画、playlist-shorts.json＝ショート）を作る／名前・説明・英語を合わせ、match に当たる upload.json の動画のうち
 #         **公開ずみ**のものを publishAt の順に足す（予約中・非公開は足さない。もう入っているものは足さない）。何度走らせてもよい。
@@ -50,6 +53,8 @@ param(
   [switch]$Quota,
   [switch]$Verify,
   [switch]$Playlist,
+  [switch]$Captions,
+  [string[]]$Lang,
   [switch]$DryRun,
   [string]$Date,
   [int]$Days = 7,
@@ -58,6 +63,7 @@ param(
   [string]$SecretDir
 )
 $ErrorActionPreference = 'Stop'
+if ($Lang) { $Lang = @($Lang | ForEach-Object { $_ -split ',' } | Where-Object { $_ }) }
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)   # _dev/tools の2つ上
 if (-not $SecretDir) {
@@ -307,6 +313,8 @@ function Set-Captions($id, $m, $at) {
   catch { Write-Host "字幕の一覧を取れませんでした: $(Get-ErrText $_)"; return }
   foreach ($p in $m.captions.PSObject.Properties) {
     $lang = $p.Name; $file = Join-Path $root $p.Value
+    if ($Lang -and $Lang -notcontains $lang) { continue }
+    if ($Captions -and ($have | Where-Object { $_.snippet.language -eq $lang -and $_.snippet.trackKind -ne 'asr' })) { Write-Host "字幕（$lang）はもうあります（とばす）"; continue }
     if (-not (Test-Path $file)) { Write-Host "字幕データがありません（先に _dev/promo の台本ページを開くと out に保存されます）: $($p.Value)"; continue }
     $old = $have | Where-Object { $_.snippet.language -eq $lang -and $_.snippet.trackKind -ne 'asr' } | Select-Object -First 1
     $info = if ($old) { @{ id = $old.id; snippet = @{ isDraft = $false } } } else { @{ snippet = @{ videoId = $id; language = $lang; name = ''; isDraft = $false } } }
@@ -434,6 +442,18 @@ function Invoke-Schedule {
   Set-Schedule $m.videoId $m.publishAt @{ Authorization = "Bearer $at" }
 }
 # -Thumb: Meta の thumbnail だけを付ける（公開ずみの動画にも。1本 50 ポイント。-Meta は「,」で区切って何本でも）
+# ---- -Captions: 字幕だけ（-Lang の言語の、まだないものだけ）----
+function Invoke-Captions {
+  if (-not $Meta) { throw '-Meta で動画の情報の JSON を指定してください' }
+  $at = Get-AccessToken
+  foreach ($mp in ($Meta -split ',' | Where-Object { $_ })) {
+    $m = Get-Content -Raw -Encoding UTF8 (Join-Path $root $mp) | ConvertFrom-Json
+    if (-not $m.videoId) { Write-Host "videoId がありません: $mp"; continue }
+    Write-Host "== $mp（https://youtu.be/$($m.videoId)）"
+    Set-Captions $m.videoId $m $at
+  }
+}
+
 function Invoke-Thumb {
   if (-not $Meta) { throw '-Meta で動画の情報の JSON を指定してください' }
   $at = Get-AccessToken; $h = @{ Authorization = "Bearer $at" }
@@ -641,5 +661,5 @@ function Sync-Playlist([string]$pf) {
   if ($plId) { Write-Host "通しで見る: https://www.youtube.com/playlist?list=$plId" }
 }
 
-try { if ($Quota) { Show-Quota } elseif ($Playlist) { Invoke-Playlist } elseif ($Verify) { Invoke-Verify } elseif ($Auth) { Invoke-Auth } elseif ($List) { Invoke-List } elseif ($Stats -and $Ga) { Invoke-GaStats } elseif ($Stats) { Invoke-Stats } elseif ($Schedule) { Invoke-Schedule } elseif ($Thumb) { Invoke-Thumb } elseif ($Update) { Invoke-Update } else { Invoke-Upload } }
+try { if ($Quota) { Show-Quota } elseif ($Playlist) { Invoke-Playlist } elseif ($Verify) { Invoke-Verify } elseif ($Auth) { Invoke-Auth } elseif ($List) { Invoke-List } elseif ($Stats -and $Ga) { Invoke-GaStats } elseif ($Stats) { Invoke-Stats } elseif ($Schedule) { Invoke-Schedule } elseif ($Thumb) { Invoke-Thumb } elseif ($Captions) { Invoke-Captions } elseif ($Update) { Invoke-Update } else { Invoke-Upload } }
 catch { Write-Host "失敗: $($_.Exception.Message)"; exit 1 }

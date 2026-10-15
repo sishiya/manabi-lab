@@ -1,0 +1,29 @@
+1
+00:00:00,600 --> 00:00:05,600
+Vendo o Wi-Fi em casa
+Como o Wi-Fi realmente percorre uma casa
+
+2
+00:00:06,000 --> 00:00:13,000
+Cada parede o enfraquece, e ele faz curva pelas frestas
+Calculado pelas equações do eletromagnetismo numa grade de 0,75 cm
+
+3
+00:00:13,500 --> 00:00:21,500
+Vendo pela força, ele é irregular (interferência)
+Mova alguns centímetros e o sinal muda
+
+4
+00:00:22,000 --> 00:00:28,000
+Leve o roteador para o meio da casa
+e ele chega aos quartos do fundo
+
+5
+00:00:28,500 --> 00:00:35,000
+5 GHz enfraquece mais atrás das paredes
+2,4 GHz vai mais longe; 5 GHz é mais rápido, mas de alcance menor
+
+6
+00:00:35,200 --> 00:00:40,000
+Vendo o Wi-Fi em casa
+Roda no navegador. Desenhe suas próprias paredes e teste

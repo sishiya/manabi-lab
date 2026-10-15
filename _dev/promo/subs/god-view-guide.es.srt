@@ -1,0 +1,74 @@
+1
+00:00:00,600 --> 00:00:06,600
+El mapa del ojo de Dios
+Cómo usar la app y qué observar
+
+2
+00:00:07,300 --> 00:00:16,600
+Arrastra para moverte, rueda para acercar y alejar
+Arrastre derecho (o Ctrl + arrastrar) para inclinar
+
+3
+00:00:17,400 --> 00:00:26,600
+Busca un lugar para volar allí. El relieve es en 3D
+El monte Fuji, hecho con datos de elevación
+
+4
+00:00:27,400 --> 00:00:37,600
+Los edificios vienen de los modelos 3D urbanos de Japón (PLATEAU)
+Alrededor de la estación de Tokio, algunos con fotos de muros y tejados
+
+5
+00:00:38,400 --> 00:00:49,600
+“Ver el subsuelo” vuelve transparente el suelo
+Aparece el centro comercial subterráneo de la estación de Tokio (Yaesu)
+
+6
+00:00:50,400 --> 00:01:00,600
+La Tierra viva: luces de ciudades, terremotos, satélites
+Terremotos de la última semana; satélites calculados a partir de sus órbitas
+
+7
+00:01:01,400 --> 00:01:11,600
+Dónde están ahora los trenes y autobuses de Toei
+Datos abiertos de la Oficina de Transporte de Tokio (cada 30 s)
+
+8
+00:01:12,400 --> 00:01:21,000
+Sigue alejándote, directo al espacio
+Las posiciones de los planetas se calculan; las formas de las galaxias se basan en observaciones
+
+9
+00:01:21,400 --> 00:01:29,600
+Hasta el borde del universo observable, unos 10²⁷ m
+También puedes saltar con la barra de escala
+
+10
+00:01:30,400 --> 00:01:39,600
+Acércate al suelo y entras en el micromundo de ese lugar
+La hierba lleva a las plantas, el mar al agua, la ciudad a roca y arena
+
+11
+00:01:40,000 --> 00:01:49,600
+Átomos, núcleos, quarks, hasta la longitud de Planck
+Las formas son ilustrativas; los tamaños son reales
+
+12
+00:01:50,400 --> 00:02:01,600
+“Romper la Tierra”: el planeta se simula como unas 16 000 partículas
+Agarra y tira, y se arranca un trozo
+
+13
+00:02:02,000 --> 00:02:13,600
+El hueco se derrumba y se llena, y la roca se funde al bajar la presión
+El océano entra y se vuelve vapor sobre la roca caliente
+
+14
+00:02:14,400 --> 00:02:21,600
+Las etiquetas indican qué es dato real, estimación o efecto
+Los mapas y edificios son datos abiertos. Las fuentes están abajo y en “Acerca de”
+
+15
+00:02:22,200 --> 00:02:30,000
+El mapa del ojo de Dios
+Funciona en el navegador (mejor en PC). Por ahora, el texto de la app está en japonés

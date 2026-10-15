@@ -1,0 +1,72 @@
+1
+00:00:00,600 --> 00:00:06,600
+Vendo o ar em casa
+Como usar o app e o que observar
+
+2
+00:00:07,300 --> 00:00:17,000
+A cor mostra a “idade do ar”: há quanto tempo ele entrou de fora
+Azul é ar fresco; vermelho, ar parado
+
+3
+00:00:17,500 --> 00:00:26,600
+Os pontos em movimento mostram o fluxo de ar
+Com duas janelas abertas, o ar entra pela janela oeste e sai pela leste
+
+4
+00:00:27,400 --> 00:00:38,600
+Só a “ventilação 24 horas”, com as janelas fechadas
+A norma japonesa pede 0,5 troca de ar por hora. O número no canto superior direito é da casa toda
+
+5
+00:00:39,400 --> 00:00:49,800
+Abrir uma só janela não deixa o vento passar
+Sem saída, só o ar perto da janela muda um pouco
+
+6
+00:00:50,300 --> 00:00:59,600
+Toque nas janelas e portas para abrir ou fechar
+Abra uma segunda janela e o vento encontra um caminho
+
+7
+00:01:00,400 --> 00:01:14,600
+A direção do vento muda por onde o ar entra e sai
+A parede de barlavento é empurrada e a de sotavento, puxada (pressão do vento)
+
+8
+00:01:15,400 --> 00:01:22,000
+Feche as grelhas e ligue a coifa da cozinha no máximo
+Só entrando por frestas, a pressão cai e quase nada se move
+
+9
+00:01:22,500 --> 00:01:29,600
+Abra as grelhas e o ar de fora entra
+Um exaustor precisa de uma entrada para funcionar
+
+10
+00:01:30,400 --> 00:01:39,600
+“Encher a casa de fumaça” para ver o ar mudar
+O gráfico mostra quanto tempo a fumaça leva para sair
+
+11
+00:01:40,000 --> 00:01:49,600
+Com uma só janela aberta, a fumaça demora a sair
+
+12
+00:01:50,400 --> 00:01:59,600
+Um ventilador circulador leva ar a um cômodo abafado
+Arraste para mudar onde ele fica e para onde aponta
+
+13
+00:02:00,200 --> 00:02:09,600
+Desligue e o ar do quarto 2 fica mais velho
+
+14
+00:02:10,400 --> 00:02:21,600
+A “Explicação” fala de idade do ar, trocas de ar e como funciona
+Um modelo simplificado. Frestas e vazão do ventilador são aproximados
+
+15
+00:02:22,200 --> 00:02:30,000
+Vendo o ar em casa
+Roda no navegador (PC ou celular). O app está em japonês e inglês (botão EN)

@@ -1,0 +1,72 @@
+1
+00:00:00,600 --> 00:00:06,600
+Ver el aire en casa
+Cómo usar la app y qué observar
+
+2
+00:00:07,300 --> 00:00:17,000
+El color muestra la “edad del aire”: cuánto hace que entró de fuera
+Azul es aire fresco; rojo, aire viciado
+
+3
+00:00:17,500 --> 00:00:26,600
+Los puntos en movimiento muestran el flujo de aire
+Con dos ventanas abiertas, entra por la ventana oeste y sale por la este
+
+4
+00:00:27,400 --> 00:00:38,600
+Solo la “ventilación de 24 horas”, con las ventanas cerradas
+La norma japonesa pide 0,5 renovaciones por hora. El número arriba a la derecha es de toda la casa
+
+5
+00:00:39,400 --> 00:00:49,800
+Abrir una sola ventana no deja pasar el viento
+Sin salida, solo cambia un poco el aire junto a la ventana
+
+6
+00:00:50,300 --> 00:00:59,600
+Toca ventanas y puertas para abrirlas o cerrarlas
+Abre una segunda ventana y el viento encuentra camino
+
+7
+00:01:00,400 --> 00:01:14,600
+La dirección del viento cambia por dónde entra y sale el aire
+El muro de barlovento recibe empuje y el de sotavento, succión (presión del viento)
+
+8
+00:01:15,400 --> 00:01:22,000
+Cierra las rejillas y pon la campana de cocina al máximo
+Si solo entra aire por las rendijas, la presión baja y casi no se mueve
+
+9
+00:01:22,500 --> 00:01:29,600
+Abre las rejillas y entra aire de fuera
+Un extractor necesita una entrada para funcionar
+
+10
+00:01:30,400 --> 00:01:39,600
+“Llenar la casa de humo” para ver cómo cambia el aire
+La gráfica muestra cuánto tarda en irse el humo
+
+11
+00:01:40,000 --> 00:01:49,600
+Con una sola ventana abierta, el humo tarda en irse
+
+12
+00:01:50,400 --> 00:01:59,600
+Un ventilador circulador lleva aire a una habitación viciada
+Arrástralo para cambiar dónde está y hacia dónde apunta
+
+13
+00:02:00,200 --> 00:02:09,600
+Apágalo y el aire del dormitorio 2 envejece
+
+14
+00:02:10,400 --> 00:02:21,600
+La “Explicación” trata la edad del aire, las renovaciones y cómo funciona
+Es un modelo simplificado. Las rendijas y el caudal del ventilador son aproximados
+
+15
+00:02:22,200 --> 00:02:30,000
+Ver el aire en casa
+Funciona en el navegador (PC o móvil). La app está en japonés e inglés (botón EN)

@@ -1,0 +1,84 @@
+1
+00:00:00,600 --> 00:00:06,600
+Como um buraco negro aparece
+Como usar o app e o que observar
+
+2
+00:00:07,000 --> 00:00:13,500
+Cada pixel é desenhado seguindo o caminho da luz
+O buraco negro do filme Interestelar, com seu disco de gás brilhante
+
+3
+00:00:14,500 --> 00:00:21,000
+Arraste para se mover ao redor
+Arraste para cima ou para baixo para mudar o ângulo de visão
+
+4
+00:00:22,800 --> 00:00:28,800
+Visto de cima, o disco é uma rosquinha
+A parte interna parece maior porque a luz é curvada
+
+5
+00:00:33,000 --> 00:00:38,800
+Clique em um ponto para ver o caminho da sua luz
+No app ele aparece de lado, no painel da direita
+
+6
+00:00:39,300 --> 00:00:47,000
+A faixa acima do buraco é o lado de trás do disco
+Sua luz fez a curva por cima do buraco para chegar até nós
+
+7
+00:00:49,500 --> 00:00:57,000
+A faixa fina de baixo é a face inferior do disco
+Olhamos de cima, mas a luz que passa por baixo do buraco chega até nós
+
+8
+00:00:59,500 --> 00:01:06,400
+O fino anel de luz na borda da sombra
+Essa luz curvou 325° e deu a volta no buraco
+
+9
+00:01:08,500 --> 00:01:14,000
+A sombra preta é bem maior que o próprio buraco
+Toda luz nessa direção cai no buraco
+
+10
+00:01:17,500 --> 00:01:24,500
+Visão realista: o lado esquerdo é claro e azulado
+O gás que vem em nossa direção parece mais claro; o que se afasta, fraco e vermelho
+
+11
+00:01:25,000 --> 00:01:31,000
+O filme deixou isso de fora porque ficava difícil de entender
+Do artigo de quem fez o filme (2015)
+
+12
+00:01:38,500 --> 00:01:46,000
+Faça girar muito rápido e olhe de lado
+A borda esquerda da sombra achata: a luz que vai com o giro pode chegar mais perto
+
+13
+00:01:47,500 --> 00:01:55,000
+Troque o céu por uma grade para ver a distorção
+O anel em volta da sombra é o céu logo atrás do buraco (anel de Einstein)
+
+14
+00:01:58,500 --> 00:02:06,000
+Use a roda do mouse para se aproximar
+No celular, com dois dedos, ou com o controle do painel da direita
+
+15
+00:02:06,500 --> 00:02:14,000
+Perto do buraco, os relógios andam devagar
+Uma hora aqui (7M) são 1,18 hora longe dali
+
+16
+00:02:15,000 --> 00:02:21,500
+8 desafios em “Encontre” (見つけてみよう)
+No fim do painel da direita; cada um explica o que você achou
+
+17
+00:02:22,200 --> 00:02:30,000
+Como um buraco negro aparece
+Roda no navegador (PC ou celular). Por enquanto, o texto do app está em japonês

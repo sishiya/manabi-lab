@@ -1,0 +1,74 @@
+1
+00:00:00,600 --> 00:00:06,600
+La batalla inmunitaria
+Cómo usar la app y qué observar
+
+2
+00:00:07,300 --> 00:00:17,500
+La vista grande es un corte microscópico de la mucosa de nariz y garganta
+Los virus de la gripe entran en las células y las obligan a copiar el virus
+
+3
+00:00:18,000 --> 00:00:27,600
+Arriba el “estado actual”, abajo una gráfica de cifras, el cuerpo en la ventana de arriba a la derecha
+Notas breves aparecen justo donde pasan las cosas
+
+4
+00:00:28,400 --> 00:00:37,600
+Elige entre tres virus y tres bacterias
+Estafilococo en una herida: los neutrófilos (azul) se reúnen y forman pus
+
+5
+00:00:38,400 --> 00:00:47,600
+Neumococo en los alvéolos del pulmón. También puedes elegir el cuerpo
+Compara niños, personas mayores e inmunidad débil
+
+6
+00:00:48,400 --> 00:00:58,000
+Usa la rueda para acercarte por pasos
+Dentro de una célula se fabrican y transportan piezas del virus
+
+7
+00:00:58,500 --> 00:01:09,600
+Hasta la mucosa, un corte de la cabeza y el cuerpo entero
+La señal de fiebre llega al centro de la temperatura del cerebro
+
+8
+00:01:10,400 --> 00:01:19,600
+Medicamento: oseltamivir
+Los virus nuevos no pueden salir de la célula (los puntos verde amarillo son el fármaco)
+
+9
+00:01:20,000 --> 00:01:29,600
+Si se empieza poco después de la fiebre, la acorta en un día aprox.
+Es el resultado del modelo, parecido al de los ensayos clínicos
+
+10
+00:01:30,400 --> 00:01:40,600
+Antibióticos para bacterias: se hinchan y revientan
+Les cuesta llegar al interior del pus
+
+11
+00:01:41,200 --> 00:01:51,600
+El mismo fármaco no sirve contra el SARM resistente
+El número de bacterias en la gráfica apenas baja
+
+12
+00:01:52,400 --> 00:02:02,600
+Segunda infección: el mismo virus llega un año después
+Las células de memoria reaccionan rápido y los anticuerpos suben deprisa
+
+13
+00:02:03,000 --> 00:02:13,600
+La línea tenue de la gráfica es la primera vez. La segunda es más leve
+Una vacuna es un ensayo antes de lo real
+
+14
+00:02:14,400 --> 00:02:21,600
+“Preguntas respondidas” trata dudas frecuentes
+Es un modelo de aprendizaje. No lo uses para diagnosticar ni tratar enfermedades
+
+15
+00:02:22,200 --> 00:02:30,000
+La batalla inmunitaria
+Funciona en el navegador (PC o móvil). Por ahora, el texto de la app está en japonés

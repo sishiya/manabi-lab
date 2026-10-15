@@ -4,9 +4,7 @@
   "thumbnail": "_dev/promo/thumbs/pitch-physics-guide.jpg",
   "privacy": "private",
   "publishAt": "2026-10-24T20:00:00+09:00",
-  "captions": {
-    "en": "_dev/promo/out/pitch-physics-guide.en.srt"
-  },
+  "captions": { "en": "_dev/promo/out/pitch-physics-guide.en.srt", "es": "_dev/promo/subs/pitch-physics-guide.es.srt", "ko": "_dev/promo/subs/pitch-physics-guide.ko.srt", "pt": "_dev/promo/subs/pitch-physics-guide.pt.srt", "zh-TW": "_dev/promo/subs/pitch-physics-guide.zh-TW.srt" },
   "title": "変化球のしくみ ― 使い方と見どころ（ホップの正体・ナックル・打者の0.1秒）",
   "description": "ボールの速さ・向き・回転から、重力・空気の抵抗・回転の力を1ミリ秒ごとに計算して道すじを解くブラウザのアプリ「変化球のしくみ」の、使い方と見どころです。球種の名前で曲がり方を決めず、力の計算だけで、フォーシームが「落ちにくい」わけや、ナックルの行き先が読めないわけを見ます。計算と見せ方を試す技術検証で、選手の指導や評価には使えません。\n\n0:00 はじめに（カメラと時間のつまみ）\n0:20 もし空気がなかったら\n0:30 フォーシームと「ホップ」の正体\n0:44 空気の流れの断面\n0:56 スライダーと「使える回転」\n1:10 ナックルと10球のばらつき\n1:26 打者の目（決める時刻）\n1:44 空気と風（高地・向かい風）\n1:58 自由に試す\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/pitch-physics/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nNathan AM, Trajectory Calculator（ボールの飛び方の計算機。空気の抵抗・揚力の係数）\nWatts RG, Sawyer E (1975) Aerodynamics of a knuckleball. American Journal of Physics 43:960–963\nNathan AM (2012) Analysis of knuckleball trajectories. Procedia Engineering 34:116–121\nMorrissey MP (2009) The aerodynamics of the knuckleball pitch. MS Thesis, Marquette University\nNathan AM (2023) What is the Hawkeye spin data teaching us? III: Searching for the seam-shifted wake\nNakashima H ほか (2025) Frontiers in Sports and Active Living 7（スイングの時間）\nBahill AT, LaRitz T (1984) American Scientist 72:249–253（目で追える速さ）\n投手の例は、よくある投げ方を表した架空の例です。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#変化球 #野球 #物理 #まなびラボ",
   "tags": [

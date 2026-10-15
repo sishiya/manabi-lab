@@ -1,0 +1,29 @@
+1
+00:00:00,600 --> 00:00:05,600
+Caixa de areia da evolução
+Criaturas aleatórias feitas de juntas e músculos
+
+2
+00:00:06,300 --> 00:00:13,000
+A primeira geração mal consegue andar
+As que vão mais longe podem ter filhotes
+
+3
+00:00:13,500 --> 00:00:21,000
+Os filhotes herdam os genes dos pais com pequenas mudanças
+E repete (um algoritmo genético)
+
+4
+00:00:21,500 --> 00:00:30,000
+Na geração 40, surgiu um jeito de correr
+Ninguém ensinou
+
+5
+00:00:30,500 --> 00:00:35,000
+Na Lua, evoluem outro corpo e outro jeito de andar
+A gravidade é cerca de um sexto da Terra
+
+6
+00:00:35,200 --> 00:00:40,000
+Caixa de areia da evolução
+Roda no navegador. Plano, ladeiras, gelo, a Lua, debaixo d’água

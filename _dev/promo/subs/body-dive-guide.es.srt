@@ -1,0 +1,69 @@
+1
+00:00:00,600 --> 00:00:06,600
+Viaje por el cuerpo
+Cómo usar la app y qué observar
+
+2
+00:00:07,500 --> 00:00:18,300
+Primero, elige tres cosas
+En qué te conviertes (un alimento, una cápsula, una pila…), por dónde entras y cuán lleno está el estómago
+
+3
+00:00:19,500 --> 00:00:27,500
+Mantén W para avanzar por la ruta
+Arrastra para mirar. G cambia de sentido o a movimiento libre. En el móvil, usa la palanca de la pantalla
+
+4
+00:00:28,500 --> 00:00:39,500
+“Piloto automático” (自動航行) te deja mirar tranquilo
+El nombre del lugar aparece arriba a la izquierda
+
+5
+00:00:42,000 --> 00:00:50,500
+“Vista exterior” (外観) muestra dónde estás en el cuerpo
+El punto brillante eres tú. Haz clic en el mapa de abajo a la izquierda para saltar allí
+
+6
+00:00:52,500 --> 00:00:59,500
+Conviértete en un bocado de carne y pasa a tercera persona para verte
+20 g. Masticado en la boca y luego por el esófago
+
+7
+00:01:00,500 --> 00:01:08,500
+Estómago: el jugo gástrico te descompone y cambia tu color
+El tiempo va más rápido en cada parte (×60 en estómago e intestino delgado)
+
+8
+00:01:09,500 --> 00:01:17,500
+Intestino delgado: la bilis te tiñe de amarillo mientras se absorben nutrientes
+Las proteínas y grasas pasan al cuerpo
+
+9
+00:01:18,500 --> 00:01:26,500
+Intestino grueso: se retira el agua y te vuelves marrón
+Es obra de las bacterias intestinales. Aquí el tiempo va aún más rápido (×240)
+
+10
+00:01:27,500 --> 00:01:34,500
+Al salir, recibes un resumen del viaje
+El tiempo que tardó y la forma de las heces (escala de Bristol). “Ver desde fuera” (外から体を見る) muestra tu recorrido
+
+11
+00:01:35,500 --> 00:01:47,500
+Entra por la nariz para llegar a las vías respiratorias
+Los pliegues de la nariz → la garganta → las cuerdas vocales → la tráquea con anillos → los pulmones
+
+12
+00:01:48,500 --> 00:02:01,500
+Cuatro vasos de sake: gráfica del alcohol en sangre
+Beberlo de golpe arriesga una intoxicación etílica (en Japón es ilegal beber antes de los 20)
+
+13
+00:02:02,500 --> 00:02:21,500
+Una pila de botón se atasca en el esófago
+Puede quemar gravemente la mucosa en unas 2 horas. Si pudo tragarse, ve al hospital enseguida
+
+14
+00:02:22,200 --> 00:02:30,000
+Viaje por el cuerpo
+Funciona en el navegador (PC o móvil). Por ahora, el texto de la app está en japonés

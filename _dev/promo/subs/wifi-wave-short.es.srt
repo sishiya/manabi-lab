@@ -1,0 +1,29 @@
+1
+00:00:00,600 --> 00:00:05,600
+Ver el wifi en casa
+Cómo viaja de verdad el wifi por una casa
+
+2
+00:00:06,000 --> 00:00:13,000
+Cada pared lo debilita, y se curva al pasar por huecos
+Calculado con las ecuaciones del electromagnetismo en una malla de 0,75 cm
+
+3
+00:00:13,500 --> 00:00:21,500
+Visto por intensidad, es irregular (interferencia)
+Muévete unos centímetros y la señal cambia
+
+4
+00:00:22,000 --> 00:00:28,000
+Mueve el router al centro de la casa
+y llega a las habitaciones lejanas
+
+5
+00:00:28,500 --> 00:00:35,000
+5 GHz se debilita más tras las paredes
+2,4 GHz llega más lejos; 5 GHz es más rápido pero de menor alcance
+
+6
+00:00:35,200 --> 00:00:40,000
+Ver el wifi en casa
+Funciona en el navegador. Dibuja tus propias paredes y prueba
