@@ -248,14 +248,16 @@ V3.guide = 'grid'; V.grid2d = true;
 const app = document.getElementById('app'), grip = document.getElementById('grip'), edge = document.getElementById('edge'), side = document.getElementById('side');
 const isPC = () => window.matchMedia('(min-width: 900px)').matches;
 const SZ = { h0: 200, w0: 320, w1: 460 };
-const h1 = () => Math.round(innerHeight * 0.72);
+const maxSheet = () => Math.round(innerHeight - document.getElementById('top').getBoundingClientRect().height - 150);   // 樹形図を 150px は残す
+const h1 = () => Math.min(maxSheet(), Math.round(innerHeight * 0.72));
 let sheetH = SZ.h0, sideW = SZ.w0;
 function applySize() {
   app.style.setProperty('--sheet-h', sheetH + 'px');
   app.style.setProperty('--side-w', sideW + 'px');
   const big = isPC() ? sideW > (SZ.w0 + SZ.w1) / 2 : sheetH > (SZ.h0 + h1()) / 2;
   grip.setAttribute('aria-expanded', String(big));
-  app.classList.toggle('tall', !isPC() && sheetH > innerHeight * 0.45);   // スマホで板が高いときは大きさのつまみをかくす
+  // スマホで板が高く、樹形図の場所が低いときは、大きさのつまみをかくす（2D・全体のボタンは残す）
+  app.classList.toggle('tall', !isPC() && innerHeight - sheetH - document.getElementById('top').getBoundingClientRect().height < 340);
 }
 function toggleSize() {
   if (isPC()) sideW = sideW > (SZ.w0 + SZ.w1) / 2 ? SZ.w0 : SZ.w1;
@@ -272,8 +274,9 @@ function dragSize(el, horizontal) {
     const move = ev => {
       if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 4) return;
       moved = true; app.classList.add('dragging');
-      if (horizontal && isPC()) sideW = Math.round(Math.max(260, Math.min(Math.min(760, innerWidth * 0.6), innerWidth - ev.clientX)));
-      else if (!isPC()) sheetH = Math.round(Math.max(110, Math.min(innerHeight * 0.88, innerHeight - ev.clientY + 14)));
+      // 限界: 樹形図の場所が小さくなりすぎない（右下の道具や上の見出しと重ならない）ように
+      if (horizontal && isPC()) sideW = Math.round(Math.max(260, Math.min(760, innerWidth - 480, innerWidth - ev.clientX)));
+      else if (!isPC()) sheetH = Math.round(Math.max(110, Math.min(maxSheet(), innerHeight - ev.clientY + 14)));
       applySize();
     };
     const up = () => {

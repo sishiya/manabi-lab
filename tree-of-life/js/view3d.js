@@ -46,8 +46,10 @@ const V3 = (() => {
     let x0 = Infinity, x1 = -Infinity, z1 = 0;
     for (const n of V.vis) { if (n.ay === undefined) continue; x0 = Math.min(x0, X(n)); x1 = Math.max(x1, X(n)); z1 = Math.max(z1, n.lv); }
     if (!isFinite(x0)) { x0 = -200; x1 = 200; }
-    // 方眼のはしは 240 ごとにそろえる（枝を開くたびに地面のはしが少しずつ動かないように）
-    return { x0: Math.floor((x0 - 160) / 240) * 240, x1: Math.ceil((x1 + 160) / 240) * 240, n: Math.ceil((z1 + 2) / 5) * 5 };
+    // 方眼のはしは 240 ごとにそろえ（枝を開くたびに地面のはしが少しずつ動かないように）、ひとまわり余裕をもたせる
+    //   左右は 2 マスぶん、奥行きはルートの手前に 3 段・いちばん奥の先に 5 段
+    return { x0: Math.floor((Math.min(x0, 0) - 480) / 240) * 240, x1: Math.ceil((Math.max(x1, 0) + 480) / 240) * 240,
+      z0: -3, n: Math.ceil((z1 + 5) / 5) * 5 };
   }
   function line3(g, a, b, steps = 1) {
     let prev = null;
@@ -73,28 +75,28 @@ const V3 = (() => {
     g.lineCap = 'round';
     if (guide === 'grid') {
       // 方眼の地面: 段ごとの横の線（5段ごとに太く、数字）＋奥へのびる縦の線
-      for (let k = 0; k <= e.n; k++) {
+      for (let k = e.z0; k <= e.n; k++) {
         const z = k * DZ, major = k % 5 === 0;
         const p = P((e.x0 + e.x1) / 2, GROUND, z); if (!p) continue;
         g.globalAlpha = fog(p[3]) * (major ? 0.55 : 0.28);
         g.strokeStyle = major ? '#8a7a55' : '#a99b78'; g.lineWidth = major ? 1.6 : 1;
         line3(g, [e.x0, GROUND, z], [e.x1, GROUND, z], 6);
-        if (major && k > 0) label3(g, `${k}段`, e.x0 - 20, GROUND, z, 15, '#7a6a45', 'right');
+        if (major && k > 0 && k <= e.n - 5) label3(g, `${k}段`, e.x0 - 20, GROUND, z, 15, '#7a6a45', 'right');
       }
       for (let x = Math.floor(e.x0 / 120) * 120; x <= e.x1; x += 120) {
         g.globalAlpha = 0.22; g.strokeStyle = '#a99b78'; g.lineWidth = 1;
-        line3(g, [x, GROUND, 0], [x, GROUND, e.n * DZ], 14);
+        line3(g, [x, GROUND, e.z0 * DZ], [x, GROUND, e.n * DZ], 16);
       }
     } else if (guide === 'strata') {
       // 地層の帯: 5段ごとに色のちがう帯。奥へ行くほど「あとから分かれた」
       const cols = ['#e9dcc0', '#dfe6cf', '#e8d6c8', '#d8e2e6', '#ece2c6', '#e2d8e8'];
       // 1段ずつの板に分けて描く（手前の板がカメラのうしろにかかっても、見える板は出る）。色は5段ごと
-      for (let k = 0; k <= e.n; k++) {
+      for (let k = e.z0; k <= e.n; k++) {
         const za = k * DZ, zb = (k + 1) * DZ, band = Math.floor(k / 5);
         const q = [[e.x0, za], [e.x1, za], [e.x1, zb], [e.x0, zb]].map(([x, z]) => P(x, GROUND, z));
         if (q.some(p => !p)) continue;
         g.globalAlpha = fog(Math.min(q[0][3], q[1][3])) * 0.85;
-        g.fillStyle = cols[band % cols.length];
+        g.fillStyle = cols[((band % cols.length) + cols.length) % cols.length];
         g.beginPath(); q.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.fill();
         if (k % 5 === 0) {
           g.strokeStyle = '#b9a77e'; g.lineWidth = 1.2; g.globalAlpha *= 0.6;
@@ -268,11 +270,13 @@ const V3 = (() => {
   // ---------- カメラ ----------
   function orbit(dx, dy) { cam.yaw += dx * 0.006; cam.pitch = Math.max(0.05, Math.min(PITCH_MAX, cam.pitch + dy * 0.005)); }
   function pan(dx, dy) {
-    // 画面の右・奥の向きに、地面にそって動かす
-    const s = cam.dist / F;
+    // 画面の右・奥の向きに、地面にそって動かす。つかんだ地面が指（マウス）についてくるように:
+    //   はじめの速さ（つかんだ所がそのまま）と、速くしすぎた版（大画面で最大 1.7 倍・たては 1/sin 倍）の、ちょうど間（ユーザー）
+    const boost = 1 + (Math.max(1, Math.min(1.7, Math.sqrt(F / 520))) - 1) / 2;
+    const s = cam.dist / F * boost, sv = s * (1 + (1 / Math.max(0.35, Math.sin(cam.pitch)) - 1) / 2);
     const rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);   // 右
     const fx = Math.sin(cam.yaw), fz = Math.cos(cam.yaw);    // 奥
-    cam.tx -= (rx * dx - fx * dy) * s; cam.tz -= (rz * dx - fz * dy) * s;
+    cam.tx -= rx * dx * s - fx * dy * sv; cam.tz -= rz * dx * s - fz * dy * sv;
   }
   function dolly(f) { cam.dist = Math.max(120, Math.min(12000, cam.dist * f)); }
   // あるふしを見る（なめらかに）

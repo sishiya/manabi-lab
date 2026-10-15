@@ -104,23 +104,24 @@ const API = (() => {
         if (!im) return null;
       }
       // 縦横比のままの PNG で、長いほうが 256px 前後のもの（なければいちばん小さいもの）
-      const ras = (im._links.rasterFiles || []).map(f => { const [w, h] = f.sizes.split('x').map(Number); return { href: f.href, w, h }; });
+      // 通信を少なく: 樹形図では 30px ほどにしか描かないので、いちばん小さい版（128px ほど）で十分
+      const ras = (im._links.rasterFiles || []).concat(im._links.thumbnailFiles || []).map(f => { const [w, h] = f.sizes.split('x').map(Number); return { href: f.href, w, h }; });
       if (!ras.length) return null;
       ras.sort((a, b) => Math.max(a.w, a.h) - Math.max(b.w, b.h));
-      const pick = ras.find(f => Math.max(f.w, f.h) >= 240) || ras[ras.length - 1];
+      const pick = ras.find(f => Math.max(f.w, f.h) >= 120) || ras[ras.length - 1];
       const lic = im._links.license.href;
       const licName = /zero/.test(lic) ? 'CC0' : /publicdomain\/mark/.test(lic) ? 'パブリックドメイン' : 'CC ' + (lic.match(/licenses\/([a-z-]+)\/([\d.]+)/) || ['', 'by', ''])[1].toUpperCase() + ' ' + ((lic.match(/licenses\/[a-z-]+\/([\d.]+)/) || ['', ''])[1]);
       const author = im.attribution || (im._links.contributor && im._links.contributor.title) || '';
       return { src: pick.href, w: pick.w, h: pick.h, author, license: licName.trim(), licenseUrl: lic,
         page: 'https://www.phylopic.org' + im._links.self.href.replace(/\?.*$/, '') };
     },
-    // Commons: ファイル名 → [{ src, w, h, page, author, license, licenseUrl, title }]
+    // Commons: ファイル名 →（写真の幅は PC 500px・スマホ 330px の縮小版。大きな PNG だと 1MB をこえることがあった） [{ src, w, h, page, author, license, licenseUrl, title }]
     //   出すのは、作者と条件を書けば使えるもの（CC0・パブリックドメイン・CC BY・CC BY-SA）だけ。
     //   NC・ND・GFDL だけのもの・条件の分からないものは出さない（RULES・no-noncommercial-sources）
     async images(files) {
       if (!files.length) return [];
       const titles = files.map(f => 'File:' + f).join('|');
-      const d = await getJSON(`https://commons.wikimedia.org/w/api.php?action=query&titles=${enc(titles)}&prop=imageinfo&iiprop=url|size|extmetadata&iiurlwidth=640&format=json&origin=*`);
+      const d = await getJSON(`https://commons.wikimedia.org/w/api.php?action=query&titles=${enc(titles)}&prop=imageinfo&iiprop=url|size|extmetadata&iiurlwidth=${window.matchMedia('(min-width: 900px)').matches ? 500 : 330}&format=json&origin=*`);
       const pages = Object.values((d.query || {}).pages || {});
       const strip = h => new DOMParser().parseFromString(h || '', 'text/html').body.textContent.replace(/\s+/g, ' ').trim();   // 外の HTML は動かさずに文字だけ
       const out = [];
