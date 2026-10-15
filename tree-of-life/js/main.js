@@ -83,7 +83,9 @@ let drag = null, pinch = null;
 cv.addEventListener('pointerdown', e => {
   try { cv.setPointerCapture(e.pointerId); } catch (_) { }   // 作ったイベント（テスト）では失敗する
   pts.set(e.pointerId, [e.offsetX, e.offsetY]);
-  if (pts.size === 1) drag = { x: e.offsetX, y: e.offsetY, cx: V.cam.x, cy: V.cam.y, moved: 0, lx: e.offsetX, ly: e.offsetY, pan: e.shiftKey || e.button === 2 };
+  if (pts.size === 1) drag = { x: e.offsetX, y: e.offsetY, cx: V.cam.x, cy: V.cam.y, moved: 0, lx: e.offsetX, ly: e.offsetY,
+    // 3D のマウス: 左ドラッグ・中ボタン = 平行移動、右ドラッグ・Shift＋左 = 回転。指（タッチ）は1本で回転
+    rot: e.pointerType === 'mouse' ? (e.button === 2 || (e.button === 0 && e.shiftKey)) : true };
   if (pts.size === 2) {
     const [a, b] = [...pts.values()];
     if (V3.on) { pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2 }; drag = null; return; }
@@ -116,7 +118,7 @@ cv.addEventListener('pointermove', e => {
       // 3D: ドラッグでぐるぐる回す（Shift か右ボタンでずらす）
       if (drag.moved > 5) {
         const mx = e.offsetX - drag.lx, my = e.offsetY - drag.ly;
-        if (drag.pan || e.shiftKey) V3.pan(mx, my); else V3.orbit(mx, my);
+        if (drag.rot) V3.orbit(mx, my); else V3.pan(mx, my);
         redraw(false);
       }
       drag.lx = e.offsetX; drag.ly = e.offsetY;
@@ -143,7 +145,8 @@ function up(e) {
 cv.addEventListener('pointerup', up);
 cv.addEventListener('pointercancel', up);
 cv.addEventListener('pointerleave', () => { V.hover = null; redraw(false); });
-cv.addEventListener('contextmenu', e => { if (V3.on) e.preventDefault(); });   // 3D: 右ドラッグでずらすため
+cv.addEventListener('contextmenu', e => { if (V3.on) e.preventDefault(); });   // 3D: 右ドラッグで回すため
+cv.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); });   // 中ボタンの自動スクロールを出さない
 cv.addEventListener('wheel', e => {
   e.preventDefault();
   if (V3.on) {   // 3D: ホイールで近づく・はなれる。横の量（トラックパッド）で回す
@@ -231,14 +234,52 @@ gbar.addEventListener('click', e => {
 });
 try { const gsv = localStorage.getItem('tol-guide'); if (gsv) { V3.guide = gsv; gbar.querySelectorAll('button[data-g]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.g === gsv))); } } catch (e) { }
 
-// ---------- 詳細の欄: はじめはコンパクト、つまみで広げる・縮める（樹形図を広く見せるため） ----------
-const grip = document.getElementById('grip');
-grip.onclick = () => {
-  const wide = !document.getElementById('app').classList.toggle('wide') ? false : true;
-  grip.setAttribute('aria-expanded', String(wide));
-  grip.querySelector('.lbl').textContent = wide ? '縮める' : '広げる';
-  if (!wide) document.getElementById('side').scrollTop = 0;
-};
+// ---------- 詳細の欄: はじめはコンパクト。つまみを押すと広げる・縮める、ドラッグで好きな大きさに（なめらかに） ----------
+//   スマホ: 下の板の高さ（--sheet-h）。PC: 右の欄の幅（--side-w）。上のつまみと、PC は左のふち（#edge）でも
+const app = document.getElementById('app'), grip = document.getElementById('grip'), edge = document.getElementById('edge'), side = document.getElementById('side');
+const isPC = () => window.matchMedia('(min-width: 900px)').matches;
+const SZ = { h0: 200, w0: 320, w1: 460 };
+const h1 = () => Math.round(innerHeight * 0.72);
+let sheetH = SZ.h0, sideW = SZ.w0;
+function applySize() {
+  app.style.setProperty('--sheet-h', sheetH + 'px');
+  app.style.setProperty('--side-w', sideW + 'px');
+  const big = isPC() ? sideW > (SZ.w0 + SZ.w1) / 2 : sheetH > (SZ.h0 + h1()) / 2;
+  grip.setAttribute('aria-expanded', String(big));
+  grip.querySelector('.lbl').textContent = big ? '縮める' : '広げる';
+  app.classList.toggle('tall', !isPC() && sheetH > innerHeight * 0.45);   // スマホで板が高いときは大きさのつまみをかくす
+}
+function toggleSize() {
+  if (isPC()) sideW = sideW > (SZ.w0 + SZ.w1) / 2 ? SZ.w0 : SZ.w1;
+  else sheetH = sheetH > (SZ.h0 + h1()) / 2 ? SZ.h0 : h1();
+  applySize();
+  if (grip.getAttribute('aria-expanded') === 'false') side.scrollTop = 0;
+}
+function dragSize(el, horizontal) {
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    try { el.setPointerCapture(e.pointerId); } catch (_) { }
+    const sx = e.clientX, sy = e.clientY;
+    let moved = false;
+    const move = ev => {
+      if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 4) return;
+      moved = true; app.classList.add('dragging');
+      if (horizontal && isPC()) sideW = Math.round(Math.max(260, Math.min(Math.min(760, innerWidth * 0.6), innerWidth - ev.clientX)));
+      else if (!isPC()) sheetH = Math.round(Math.max(110, Math.min(innerHeight * 0.88, innerHeight - ev.clientY + 14)));
+      applySize();
+    };
+    const up = () => {
+      el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+      app.classList.remove('dragging');
+      if (!moved) toggleSize();
+    };
+    el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  });
+}
+dragSize(grip, true);   // PC では上のつまみを左右に、スマホでは上下に
+dragSize(edge, true);
+applySize();
+window.addEventListener('resize', applySize);
 
 // ---------- 使い方（？）のポップアップ ----------
 const helpBtn = document.getElementById('helpbtn'), help = document.getElementById('help');
@@ -274,6 +315,7 @@ async function startView() {
       : Math.max(Math.min(12 - narrow.x * k, AW - (b.right + 90) * k), 6 - narrow.jx * k);
     V.cam.y = H / 2 - (b.top + b.bottom) / 2 * k;
     V.draw();
+    if (V3.on) V3.frame(mam, 0);   // 3D でも、哺乳類から下が入るように（大きさが変わったときも）
   };
   place(mam);
   setStatus('哺乳類のなかまを読みこみ中…');
@@ -290,9 +332,11 @@ async function startView() {
   setStatus('');
   if (touched) return;   // 読みこみの間にさわっていたら、そのまま
   place(n);
+  if (V3.on) V3.frame(mam);   // はじめは 3D: 哺乳類から目のならびが入るように
   UI.show(mam);   // すぐ下のなかまが読めたので、詳細を出しなおす
 }
 V.resize();
+set3d(true);   // はじめから 3D（2D へはボタンで）
 fromHash().then(ok => { if (!ok) startView(); });
 
 // デバッグ用（RULES 5）: 状態を見る・押す・探す

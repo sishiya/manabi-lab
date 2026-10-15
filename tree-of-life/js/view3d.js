@@ -26,7 +26,7 @@ const V3 = (() => {
   function P(x, y, z) {
     const dx = x - C0[0], dy = y - C0[1], dz = z - C0[2];
     const zc = dx * Fw[0] + dy * Fw[1] + dz * Fw[2];
-    if (zc < 20) return null;
+    if (!(zc >= 20)) return null;   // カメラのうしろ（NaN もここで落とす）
     const s = F / zc;
     return [W / 2 + (dx * R[0] + dy * R[1] + dz * R[2]) * s, H / 2 - (dx * U[0] + dy * U[1] + dz * U[2]) * s, s, zc];
   }
@@ -186,11 +186,20 @@ const V3 = (() => {
     // 名前を出すか決める（えらんだもの・手前を優先。うんと遠いものは出さない）
     labels.sort((x, y) => (y.n === sel) - (x.n === sel) || x.p[3] - y.p[3]);
     for (const L of labels) {
-      if (L.kr < 0.22 && L.n !== sel) continue;   // うんと遠いものは名前を出さない
-      const lw = L.n.lw * L.k + 10;
-      const rect = [L.p[0] - L.r - 4, L.p[1] - L.fs * 1.5, L.p[0] + L.r + 6 + lw, L.p[1] + L.fs * 0.7];
-      if (taken.some(t => rect[0] < t[2] && t[0] < rect[2] && rect[1] < t[3] && t[1] < rect[3])) continue;
-      taken.push(rect); L.show = true; L.rect = rect;
+      if (L.kr < 0.1 && L.n !== sel) continue;   // うんと遠いものは名前を出さない
+      // 遠い（字が小さい）ものは名前（1段め）だけの小さな札にして、場所を取りすぎないように
+      L.one = L.fs < 10.5 && L.n !== sel;
+      const parts = V.labelParts(L.n);
+      const w1 = (V.tw(parts.main, "14px 'Zen Old Mincho','Yu Mincho',serif") + (parts.tag ? 24 : 0)) * L.k + 8;
+      const lw = L.one ? w1 : Math.max(w1, L.n.lw * L.k + 10);
+      const m = 2;   // 少しの重なりは許す
+      const free = rc => !taken.some(t => rc[0] + m < t[2] && t[0] + m < rc[2] && rc[1] + m < t[3] && t[1] + m < rc[3]);
+      // 置き場所の候補: 点の右 → 少し上 → 少し下（ずらしたときは細い線で点とつなぐ）
+      const hh = L.fs * (L.one ? 1.5 : 2.2);
+      for (const dy of [0, -hh, hh, -2 * hh]) {
+        const rect = [L.p[0] - L.r - 3, L.p[1] + dy - L.fs * (L.one ? 1.3 : 1.5), L.p[0] + L.r + 4 + lw, L.p[1] + dy + L.fs * (L.one ? 0.2 : 0.7)];
+        if (free(rect)) { taken.push(rect); L.show = true; L.rect = rect; L.dy = dy; break; }
+      }
     }
     // 遠いものから描く（手前が上に）
     labels.sort((x, y) => y.p[3] - x.p[3]);
@@ -198,7 +207,7 @@ const V3 = (() => {
     for (const L of labels) {
       const { p, n, k, fs, r, a } = L;
       const col = GROUP_COLOR[RANK_GROUP(n.rank)];
-      g.globalAlpha = a * (n.alpha === undefined ? 1 : n.alpha);
+      g.globalAlpha = (L.show ? Math.max(0.6, a) : a) * (n.alpha === undefined ? 1 : n.alpha);   // 名前を出すものは、遠くても うすくしすぎない
       // 地面への影（立っている感じ）
       const pg = P(X(n), GROUND, Z(n));
       if (pg) { g.fillStyle = 'rgba(90,80,50,.18)'; g.beginPath(); g.ellipse(pg[0], pg[1], r * 1.6, r * 0.5, 0, 0, 7); g.fill(); }
@@ -207,7 +216,8 @@ const V3 = (() => {
       picks.push({ n, x: p[0], y: p[1], rect: L.show ? L.rect : [p[0] - r - 6, p[1] - r - 6, p[0] + r + 6, p[1] + r + 6] });
       if (!L.show) continue;
       const parts = V.labelParts(n);
-      const ly = p[1] - fs * 0.75;
+      const ly = p[1] - fs * 0.75 + (L.dy || 0);
+      if (L.dy) { g.strokeStyle = 'rgba(110,103,87,.45)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(p[0] + r + 3, ly + fs * 0.35); g.stroke(); }
       if (n === sel || n === hov) {
         g.fillStyle = n === sel ? '#ead9ad' : '#ebe3cf';
         const [x0, y0, x1, y1] = L.rect; roundRect(g, x0, y0, x1 - x0, y1 - y0, 8); g.fill();
@@ -223,7 +233,7 @@ const V3 = (() => {
       g.fillStyle = '#2c2a24';
       g.font = parts.sciMain ? `italic ${fs.toFixed(1)}px 'EB Garamond',Georgia,serif` : `${n === sel ? 700 : 400} ${fs.toFixed(1)}px 'Zen Old Mincho','Yu Mincho',serif`;
       g.fillText(parts.main, x, ly);
-      if (fs >= 10 && (parts.sci || parts.cnt)) {
+      if (!L.one && (parts.sci || parts.cnt)) {
         g.fillStyle = '#7a7262';
         g.font = `italic ${(11.5 * k).toFixed(1)}px 'EB Garamond',Georgia,serif`;
         g.fillText(parts.sci + (parts.cnt ? '  ' + parts.cnt : ''), x, ly + 13 * k);
@@ -232,7 +242,7 @@ const V3 = (() => {
     g.globalAlpha = 1;
     shown = labels.filter(l => l.show).map(l => l.n);
     // いきもの（名前を出したものの右に）
-    C.draw3d(g, n => { const L = labels.find(l => l.n === n && l.show); return L ? { x: L.rect[2] + 4, y: L.p[1] + 4 * L.k, s: L.k } : null; });
+    C.draw3d(g, n => { const L = labels.find(l => l.n === n && l.show); if (!L) return null; const x = L.rect[2] + 4, y = L.p[1] + (L.dy || 0) + 4 * L.k, rc = [x, y - 28 * L.k, x + 90 * L.k, y]; if (taken.some(t => t !== L.rect && rc[0] < t[2] && t[0] < rc[2] && rc[1] < t[3] && t[1] < rc[3])) return null; return { x, y, s: L.k }; /* ほかの名前にかぶるところには出さない */ });
   }
   function roundRect(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 
@@ -258,7 +268,20 @@ const V3 = (() => {
   // あるふしを見る（なめらかに）
   function glideTo(n, ms = 600) {
     if (!n || n.lv === undefined) return;
-    const to = { tx: n.y, tz: n.lv * DZ + DZ * 2 }, from = { tx: cam.tx, tz: cam.tz }, s = performance.now();
+    // 進みすぎない: 子の並ぶ少し手前を見る。開いたふし（親）が画面の下のはしに残るか、たしかめて少しずつもどす
+    const kids = V.kidsOf(n).filter(k => k.y !== undefined);
+    const kx = kids.length ? (kids[0].y + kids[kids.length - 1].y) / 2 : n.y;
+    const save = { tx: cam.tx, tz: cam.tz };
+    let to = null;
+    for (const ahead of [0.85, 0.6, 0.35, 0.1, -0.2]) {
+      const c = { tx: n.y + (kx - n.y) * 0.6, tz: n.lv * DZ + DZ * ahead };
+      cam.tx = c.tx; cam.tz = c.tz; setup();
+      const p = P(n.y, 0, n.lv * DZ);
+      to = c;
+      if (p && p[1] < H - 36 && p[1] > 40 && p[0] > 20 && p[0] < W - 70) break;
+    }
+    cam.tx = save.tx; cam.tz = save.tz;
+    const from = { tx: cam.tx, tz: cam.tz }, s = performance.now();
     (function f(t) {
       const u = Math.min(1, (t - s) / ms), e = u * u * (3 - 2 * u);
       cam.tx = from.tx + (to.tx - from.tx) * e; cam.tz = from.tz + (to.tz - from.tz) * e;
@@ -279,6 +302,7 @@ const V3 = (() => {
     }
     const to = { tx: (x0 + x1) / 2, tz: (z0 + z1) / 2 * DZ + DZ * 0.5,
       dist: Math.max(500, Math.min(6000, Math.max((x1 - x0) * 1.15, (z1 - z0 + 2) * DZ * 1.25))) };
+    if (!(ms > 0)) { Object.assign(cam, to); V.draw(); return; }   // すぐに置く（0 で割らない）
     const from = { tx: cam.tx, tz: cam.tz, dist: cam.dist }, s = performance.now();
     (function f(t) {
       const u = Math.min(1, (t - s) / ms), e = u * u * (3 - 2 * u);
