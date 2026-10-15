@@ -92,6 +92,8 @@ foreach ($f in $files) {
     $lines = @([regex]::Matches($txt, '[\x20-\x7e　-鿿＀-￯]{3,}') | ForEach-Object { $_.Value })
   } elseif ($textExt -notcontains $ext) { [void]$hits.Add("$rel : テキスト以外のファイル（画像なら撮影情報・写り込みを目で確認）"); continue }
   else { $lines = [IO.File]::ReadAllLines($f, [Text.Encoding]::UTF8) }
+  # 起動の .bat と、cmd・PowerShell 5.1 が ANSI で読むスクリプトは英語（ASCII）だけ（日本語がまざると次の行がこわれる。2026-10-15 start.bat が動かなかった）
+  if ($rel -match '(^|[\\/])(start\.bat|start\.ps1|serve\.ps1)$' -and ($lines -join "`n") -match '[^\x00-\x7F]') { [void]$hits.Add("$rel : 起動スクリプトに日本語などがまざっている（ASCII だけにする）") }
   for ($i = 0; $i -lt $lines.Length; $i++) {
     $line = $lines[$i]
     foreach ($ru in $rules) {
