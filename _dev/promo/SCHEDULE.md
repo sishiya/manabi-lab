@@ -43,7 +43,7 @@
 | 日付 | アプリ | 記事（slug） | 状態 |
 |---|---|---|---|
 | 2026-10-14 | ブラックホールの見え方（動画は 10/13） | `blackhole-kerr-raytracing-webgl2` | 公開ずみ |
-| 2026-10-15 20:10 | ヒトへの46億年（動画は 10/11） | `evolution-earth-box-model` | Zenn は上限で待ち・DEV は公開ずみ |
+| 2026-10-15 20:10 | ヒトへの46億年（動画は 10/11） | `evolution-earth-box-model` | 公開ずみ（Zenn 10/15 0:33・DEV） |
 | 2026-10-15 20:20 | 体内ダイブ（動画は 10/12） | `body-dive-tube-shader-junction` | Zenn は上限で待ち・DEV は公開ずみ |
 | 2026-10-15 20:30 | いきものの感じる世界（動画は 10/14） | `animal-senses-shader-passes` | Zenn は上限で待ち・DEV は公開ずみ |
 | 2026-10-15 20:40 | 量子の実験室 | `quantum-tunnel-visscher-canvas` | Zenn は上限で待ち・DEV は公開ずみ |
