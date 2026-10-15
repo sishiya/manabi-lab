@@ -234,15 +234,16 @@ const V = (() => {
     }
     for (const [w, p] of bucket) { g.lineWidth = w; g.stroke(p); }
     // まだ先がある（閉じている）まとまりは、名前の右へうっすら線をのばす（シルエットはこの上を歩く）
+    //   枝と同じ色・太さの3〜4割で、右へ消えていく（方眼の線と見分けがつくように）
     if (showText) {
-      g.lineWidth = Math.max(minW * 0.8, 1.1);
       for (const n of vis) {
         if (!n.name || n.more || n.ay < y0 || n.ay > y1 || kidsOf(n).length || !T.expandable(n)) continue;
-        const sx = n.ax + n.lw + 14, ex = sx + 92, y = n.ay + 8;
+        const sx = n.ax + n.lw + 12, ex = sx + 84, y = n.ay + 8;
         if (sx > x1 || ex < x0) continue;
         const gr = g.createLinearGradient(sx, 0, ex, 0);
-        gr.addColorStop(0, 'rgba(68,82,60,.22)'); gr.addColorStop(1, 'rgba(68,82,60,0)');
+        gr.addColorStop(0, 'rgba(68,82,60,.5)'); gr.addColorStop(0.5, 'rgba(68,82,60,.22)'); gr.addColorStop(1, 'rgba(68,82,60,0)');
         g.globalAlpha = n.alpha === undefined ? 1 : n.alpha;
+        g.lineWidth = Math.max(minW, branchW(n.count) * 0.75);
         g.strokeStyle = gr; g.beginPath(); g.moveTo(sx, y); g.lineTo(ex, y); g.stroke();
       }
       g.globalAlpha = 1; g.strokeStyle = 'rgba(68,82,60,.62)';

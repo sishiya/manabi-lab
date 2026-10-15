@@ -36,8 +36,8 @@ html,body{height:100%;overflow:hidden}
 #legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--sub)}
 #stage{flex:1;position:relative;min-height:0;background:var(--paper);border-top:1px solid var(--rule2)}   /* 無地（名前の下じきと同じ紙の色） */
 #cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
-/* 大きさ: 右はしに、たてのつまみ（上が大きい）と「全体」 */
-#zoom{position:absolute;right:8px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:2px;background:rgba(251,248,241,.9);border:1px solid var(--rule);border-radius:20px;padding:6px 4px}
+/* 大きさ: 右下に、たてのつまみ（上が大きい）と「全体」・2D/3D */
+#zoom{position:absolute;right:8px;bottom:10px;display:flex;flex-direction:column;align-items:center;gap:2px;background:rgba(251,248,241,.9);border:1px solid var(--rule);border-radius:20px;padding:6px 4px}
 #zoom button{width:40px;height:36px;border-radius:18px;border:0;background:none;color:var(--acc);font-size:12.5px;font-weight:700;cursor:pointer;padding:0}
 #zoom button:hover{background:#eef3ec}
 #zoom .zl{font-family:var(--f-mincho);font-size:11px;color:var(--sub);line-height:1.2}
@@ -85,10 +85,10 @@ html,body{height:100%;overflow:hidden}
 #app.tall #zoom .zl,#app.tall #zs{display:none}   /* スマホで詳細を広げている間は、樹形図がせまいので大きさのつまみはかくす（ピンチで） */
 #zoom{max-height:calc(100% - 12px)}
 /* つまみ: 押すと広げる・縮める */
-#grip{position:sticky;top:0;z-index:2;touch-action:none;display:flex;flex-direction:column;align-items:center;gap:1px;width:100%;border:0;background:var(--paper2);padding:6px 0 4px;cursor:pointer;color:var(--sub);font-size:11px}
+#grip{position:sticky;top:0;z-index:2;touch-action:none;display:flex;flex-direction:column;align-items:center;gap:1px;width:100%;border:0;background:var(--paper2);padding:8px 0 6px;cursor:pointer;color:var(--sub);font-size:11px}
 #grip .bar{width:44px;height:5px;border-radius:3px;background:#c9bc9c}
 #grip:hover .bar{background:var(--acc)}
-#grip .lbl{line-height:1.2}
+#grip .lbl{display:none}
 #edge{display:none}
 #detail{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:10px 12px 12px;box-shadow:0 1px 0 var(--rule2),0 6px 18px rgba(80,60,20,.06)}
 #detail .d-rank{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--sub);letter-spacing:.1em}
@@ -158,12 +158,13 @@ a{color:var(--acc)}
   /* パソコン: 樹形図を左に広く、詳細は右の細い欄（つまみで広げる） */
   #app{display:grid;grid-template-columns:1fr var(--side-w,320px);height:100vh;position:relative;transition:grid-template-columns .25s ease}
   #app.dragging{transition:none}
+  #grip{display:none}   /* PC は左のふち（#edge）で幅を変える */
   /* 詳細の左のふち: ドラッグで幅をなめらかに変える */
   #edge{display:block;position:absolute;top:0;bottom:0;right:calc(var(--side-w,320px) - 5px);width:10px;z-index:4;cursor:col-resize;touch-action:none}
   #edge::after{content:'';position:absolute;left:4px;top:calc(50% - 22px);width:3px;height:44px;border-radius:2px;background:#c9bc9c;opacity:.0;transition:opacity .2s}
   #edge:hover::after,#app.dragging #edge::after{opacity:1;background:var(--acc)}
   #pin{height:100vh;border-right:1px solid var(--rule)}
-  #side{height:100vh;border-top:0;box-shadow:none;padding:0 14px 24px}
+  #side{height:100vh;border-top:0;box-shadow:none;padding:12px 14px 24px}
   #app.tall #zoom .zl,#app.tall #zs{display:revert}
   .d-thumb{width:120px;height:90px}
   #top{padding:8px 14px;gap:14px}

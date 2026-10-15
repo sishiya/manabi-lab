@@ -216,17 +216,24 @@ async function fromHash() {
 document.getElementById('critter-on').addEventListener('change', e => { C.on = e.target.checked; V.draw(); });
 // ---------- 3D（ぐるぐる回せる）とガイド ----------
 const b3d = document.getElementById('z3d'), gbar = document.getElementById('guide3d');
-function set3d(on) {
+function set3d(on, instant) {
   Compare.clear(false);
+  if (!on && V3.on && !instant) {   // 3D → 2D: 真上まで起き上がってから、2D の絵にかえる
+    b3d.disabled = true;
+    V3.morphTo2D(() => { V3.toTop2D(V.cam); b3d.disabled = false; set3d(false, true); });
+    return;
+  }
   V3.on = on;
   b3d.textContent = on ? '2D' : '3D';
   b3d.title = on ? 'ふつうの図にもどす' : '3D でぐるぐる回して見る';
   gbar.classList.toggle('is2d', !on);   // 2D では「方眼・なし」だけ
-  if (on) { V.layout(); V.settle(); V3.frame(V.selected && V.selected.name ? V.selected : T.root); }
-  else { V.layout(); if (V.selected) V.focus(V.selected); }
+  // 切りかえは、カメラが真上（2D）とななめ（3D）の間をなめらかに動く（2D と 3D はつながっている）
+  V.layout(); V.settle();
+  if (on && !instant && V.size[0]) { V3.fromTop2D(V.cam, V.size[0], V.size[1]); V3.morphTo3D(); }   // 2D → 3D: 真上から手前へ倒れこむ
   try { localStorage.setItem('tol-guide2', V3.guide); } catch (e) { }
 }
 b3d.onclick = () => { touched = true; set3d(!V3.on); };
+b3d.title = '2D（真上）と 3D（ななめ）を切りかえる。3D で真上まで回しても 2D の並びにつながる';
 gbar.addEventListener('click', e => {
   const b = e.target.closest('button[data-g]'); if (!b) return;
   V3.guide = b.dataset.g; V.grid2d = V3.guide !== 'none'; V.draw();
@@ -234,7 +241,7 @@ gbar.addEventListener('click', e => {
   try { localStorage.setItem('tol-guide2', V3.guide); } catch (e) { }
 });
 // はじめは方眼（v014 で覚えておく名前を変えた: それまでに試したほかのガイドが残らないように）
-try { const gsv = localStorage.getItem('tol-guide2'); if (gsv) { V3.guide = gsv; V.grid2d = gsv !== 'none'; gbar.querySelectorAll('button[data-g]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.g === gsv))); } } catch (e) { }
+try { const gsv = localStorage.getItem('tol-guide2'); if (gsv === 'grid' || gsv === 'none') { V3.guide = gsv; V.grid2d = gsv !== 'none'; gbar.querySelectorAll('button[data-g]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.g === gsv))); } } catch (e) { }
 
 // ---------- 詳細の欄: はじめはコンパクト。つまみを押すと広げる・縮める、ドラッグで好きな大きさに（なめらかに） ----------
 //   スマホ: 下の板の高さ（--sheet-h）。PC: 右の欄の幅（--side-w）。上のつまみと、PC は左のふち（#edge）でも
@@ -248,7 +255,6 @@ function applySize() {
   app.style.setProperty('--side-w', sideW + 'px');
   const big = isPC() ? sideW > (SZ.w0 + SZ.w1) / 2 : sheetH > (SZ.h0 + h1()) / 2;
   grip.setAttribute('aria-expanded', String(big));
-  grip.querySelector('.lbl').textContent = big ? '縮める' : '広げる';
   app.classList.toggle('tall', !isPC() && sheetH > innerHeight * 0.45);   // スマホで板が高いときは大きさのつまみをかくす
 }
 function toggleSize() {
@@ -338,7 +344,7 @@ async function startView() {
   UI.show(mam);   // すぐ下のなかまが読めたので、詳細を出しなおす
 }
 V.resize();
-set3d(true);   // はじめから 3D（2D へはボタンで）
+set3d(true, true);   // はじめから 3D（2D へはボタンで）
 fromHash().then(ok => { if (!ok) startView(); });
 
 // デバッグ用（RULES 5）: 状態を見る・押す・探す

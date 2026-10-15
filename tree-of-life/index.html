@@ -21,7 +21,7 @@
         <p>ドラッグで動かし、右のつまみ・ホイール・ピンチで大きさを変えます。下（PC は右）の詳細は、つまみを押すと広げる・縮める、ドラッグで好きな大きさにできます。「全体」で、いま開いている枝がぜんぶ入ります。</p>
         <p>「ライオン」「シイタケ」「Homo sapiens」のように、和名でも学名でもさがせます。</p>
         <p>名前の右で動くシルエットを押すと、その詳細が出ます。動き方は演出です。</p>
-        <p>はじめは 3D で、手前（根もと）から奥（枝分かれの先）をながめます。マウスは右ドラッグ（か Shift＋左ドラッグ）で回し、左ドラッグか中ボタンのドラッグで動かします。指は1本で動かし、2本指を左右に動かすと回し、上下に動かすと（ピンチでも）近づきます。「2D」でふつうの図にもどせます。ガイドは方眼・地層・ゲートから選べます。奥行きは枝分かれの段で、年代の目盛りではありません。</p>
+        <p>はじめは 3D で、手前（根もと）から奥（枝分かれの先）をながめます。マウスは右ドラッグ（か Shift＋左ドラッグ）で回し、左ドラッグか中ボタンのドラッグで動かします。指は1本で動かし、2本指を左右に動かすと回し、上下に動かすと（ピンチでも）近づきます。「2D」で真上からの図に（3D で真上まで回しても、2D の並びにつながります）。ガイド（方眼）は消すこともできます。奥行きは枝分かれの段で、年代の目盛りではありません。</p>
         <p>詳細の「リンク」で、いま見ているところを人に送れます。</p>
         <label class="tog"><input type="checkbox" id="critter-on" checked> シルエットを動かす</label>
         <p class="lg-title">名札の色は分類の段</p>
@@ -33,7 +33,7 @@
       <div id="cmpbar" hidden></div>
       <div id="guide3d">
         <span class="gl">ガイド</span>
-        <button data-g="grid" aria-pressed="true">方眼</button><button data-g="strata" aria-pressed="false">地層</button><button data-g="gates" aria-pressed="false">ゲート</button><button data-g="none" aria-pressed="false">なし</button>
+        <button data-g="grid" aria-pressed="true">方眼</button><button data-g="none" aria-pressed="false">なし</button>
         <span class="gnote">奥ほど、あとから分かれた（年代の目盛りではありません）</span>
       </div>
       <div id="zoom">
@@ -49,7 +49,7 @@
 
   <div id="edge" title="ドラッグで詳細の幅を変える（押すと広げる・縮める）"></div>
   <aside id="side">
-    <button id="grip" aria-expanded="false" title="詳細を広げる・縮める"><span class="bar"></span><span class="lbl">広げる</span></button>
+    <button id="grip" aria-expanded="false" aria-label="詳細を広げる・縮める" title="詳細を広げる・縮める（ドラッグで大きさを変える）"><span class="bar"></span></button>
     <section id="detail"></section>
 
     <details id="about">

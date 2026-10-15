@@ -5,6 +5,7 @@
 'use strict';
 const V3 = (() => {
   const DZ = 130;            // 1段の奥行き
+  const PITCH_MAX = 1.56;   // 真上（2D とつながる）の少し手前
   const GROUND = -16;        // 地面の高さ（ふしより少し下）
   const cam = { tx: 0, ty: 0, tz: 400, yaw: -0.35, pitch: 0.42, dist: 900 };
   let on = false, guide = 'grid';
@@ -31,8 +32,12 @@ const V3 = (() => {
     return [W / 2 + (dx * R[0] + dy * R[1] + dz * R[2]) * s, H / 2 - (dx * U[0] + dy * U[1] + dz * U[2]) * s, s, zc];
   }
   // 左右の位置は「ルートからの差」: ルート（細胞をもつ生きもの）を方眼の原点に固定する。2D の行の位置は枝を開くたびに全体がずれるので、そのままだと方眼の上で木がすべって見えた
-  const X = n => n.ay - T.root.ay, Z = n => n.lv * DZ;
+  // 奥行き: ふつうは段（lv）ごとに同じ間かく。真上から見るほど 2D の並び（名前の幅ぶん右へ）に近づける（2D とつながる）
+  let B = 0;   // 0 = 3D の並び、1 = 2D の並び（カメラが真上に近いほど 1）
+  const blendOf = pitch => { const u = Math.max(0, Math.min(1, (pitch - 1.1) / (PITCH_MAX - 1.1))); return u * u * (3 - 2 * u); };
+  const X = n => n.ay - T.root.ay, Z = n => n.lv * DZ * (1 - B) + (n.ax - T.root.ax) * B;
   const XT = n => n.y - T.root.y;   // 決めた位置（アニメ前）での左右
+  const ZT = n => n.lv * DZ * (1 - B) + (n.x - T.root.x) * B;
   // 遠いほどうすく（霧）。奥行きの手がかり
   const fog = zc => Math.max(0.12, Math.min(1, 1.25 - zc / (cam.dist * 2.6)));
 
@@ -139,6 +144,7 @@ const V3 = (() => {
   }
   function draw(g, w, h) {
     W = w; H = h;
+    B = blendOf(cam.pitch);
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     // 空と地平のグラデーション（奥行きの手がかり）
@@ -180,8 +186,8 @@ const V3 = (() => {
     const sel = V.selected3, hov = V.hover3;
     const labels = [];
     for (const [p, n] of items) {
-      const k = Math.min(1.25, p[2] * cam.dist / 900);   // 字の大きさの倍率（近いほど大きい。上限あり）
-      const fs = Math.max(9, 14 * k);   // 遠くても 9px より小さくしない（読めるように。重なるものは手前を優先して省く）
+      const k = p[2];   // 字の大きさの倍率 = 遠近の倍率（真上から見たとき 2D の拡大と同じになる）
+      const fs = Math.max(9, Math.min(22, 14 * k));   // 遠くても 9px より小さくしない（読めるように。重なるものは手前を優先して省く）
       const r = (2.6 + Math.log10(n.count + 1) * 0.7) * Math.max(0.5, k);
       const a = fog(p[3]);
       labels.push({ p, n, k: fs / 14, kr: k, fs, r, a, show: false });   // k: 名前の大きさの倍率、kr: 実際の遠さ
@@ -214,6 +220,11 @@ const V3 = (() => {
       // 地面への影（立っている感じ）
       const pg = P(X(n), GROUND, Z(n));
       if (pg) { g.fillStyle = 'rgba(90,80,50,.18)'; g.beginPath(); g.ellipse(pg[0], pg[1], r * 1.6, r * 0.5, 0, 0, 7); g.fill(); }
+      // 前後: 名前の下じき → 点 → 名前（点が下じきに隠れないように）
+      if (L.show && (n === sel || n === hov)) {
+        g.fillStyle = n === sel ? '#ead9ad' : '#ebe3cf';
+        const [x0, y0, x1, y1] = L.rect; roundRect(g, x0, y0, x1 - x0, y1 - y0, 8); g.fill();
+      }
       g.fillStyle = col; g.strokeStyle = '#f6f1e6'; g.lineWidth = 1.4;
       g.beginPath(); g.arc(p[0], p[1], r, 0, 7); g.fill(); g.stroke();
       picks.push({ n, x: p[0], y: p[1], rect: L.show ? L.rect : [p[0] - r - 6, p[1] - r - 6, p[0] + r + 6, p[1] + r + 6] });
@@ -221,10 +232,6 @@ const V3 = (() => {
       const parts = V.labelParts(n);
       const ly = p[1] - fs * 0.75 + (L.dy || 0);
       if (L.dy) { g.strokeStyle = 'rgba(110,103,87,.45)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(p[0] + r + 3, ly + fs * 0.35); g.stroke(); }
-      if (n === sel || n === hov) {
-        g.fillStyle = n === sel ? '#ead9ad' : '#ebe3cf';
-        const [x0, y0, x1, y1] = L.rect; roundRect(g, x0, y0, x1 - x0, y1 - y0, 8); g.fill();
-      }
       let x = p[0] + r + 5;
       if (parts.tag) {
         const tf = `700 ${(10 * k).toFixed(1)}px 'Zen Kaku Gothic New','Yu Gothic',sans-serif`;
@@ -259,7 +266,7 @@ const V3 = (() => {
   }
 
   // ---------- カメラ ----------
-  function orbit(dx, dy) { cam.yaw += dx * 0.006; cam.pitch = Math.max(0.05, Math.min(1.45, cam.pitch + dy * 0.005)); }
+  function orbit(dx, dy) { cam.yaw += dx * 0.006; cam.pitch = Math.max(0.05, Math.min(PITCH_MAX, cam.pitch + dy * 0.005)); }
   function pan(dx, dy) {
     // 画面の右・奥の向きに、地面にそって動かす
     const s = cam.dist / F;
@@ -277,9 +284,9 @@ const V3 = (() => {
     const save = { tx: cam.tx, tz: cam.tz };
     let to = null;
     for (const ahead of [0.85, 0.6, 0.35, 0.1, -0.2]) {
-      const c = { tx: XT(n) + (kx - XT(n)) * 0.6, tz: n.lv * DZ + DZ * ahead };
+      const c = { tx: XT(n) + (kx - XT(n)) * 0.6, tz: ZT(n) + DZ * ahead };
       cam.tx = c.tx; cam.tz = c.tz; setup();
-      const p = P(XT(n), 0, n.lv * DZ);
+      const p = P(XT(n), 0, ZT(n));
       to = c;
       if (p && p[1] < H - 36 && p[1] > 40 && p[0] > 20 && p[0] < W - 70) break;
     }
@@ -296,15 +303,15 @@ const V3 = (() => {
   // あるふしと、その先の見えている枝がちょうど入るように（3D に入ったとき）
   function frame(n, ms = 700) {
     if (!n || n.lv === undefined) return;
-    let x0 = XT(n), x1 = XT(n), z0 = n.lv, z1 = n.lv;
+    let x0 = XT(n), x1 = XT(n), z0 = ZT(n), z1 = ZT(n);
     for (const m of V.vis) {
       if (m.y === undefined) continue;
       let a = m; while (a && a !== n) a = a.parent;
       if (!a) continue;
-      x0 = Math.min(x0, XT(m)); x1 = Math.max(x1, XT(m)); z1 = Math.max(z1, m.lv);
+      x0 = Math.min(x0, XT(m)); x1 = Math.max(x1, XT(m)); z1 = Math.max(z1, ZT(m));
     }
-    const to = { tx: (x0 + x1) / 2, tz: (z0 + z1) / 2 * DZ + DZ * 0.5,
-      dist: Math.max(500, Math.min(6000, Math.max((x1 - x0) * 1.15, (z1 - z0 + 2) * DZ * 1.25))) };
+    const to = { tx: (x0 + x1) / 2, tz: (z0 + z1) / 2 + DZ * 0.5,
+      dist: Math.max(500, Math.min(6000, Math.max((x1 - x0) * 1.15, (z1 - z0 + 2 * DZ) * 1.25))) };
     if (!(ms > 0)) { Object.assign(cam, to); V.draw(); return; }   // すぐに置く（0 で割らない）
     const from = { tx: cam.tx, tz: cam.tz, dist: cam.dist }, s = performance.now();
     (function f(t) {
@@ -315,6 +322,72 @@ const V3 = (() => {
     })(s);
     setTimeout(() => { Object.assign(cam, to); V.draw(); }, ms + 60);
   }
+  // ---------- 2D とつなぐ ----------
+  //   2D の見え方 = 真上（pitch≒90°）から、奥行きを右・左右を下にして見たところ（yaw = -90°）
+  const TOP = { yaw: -Math.PI / 2, pitch: PITCH_MAX };
+  const near = (from, to) => from + ((((to - from) % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI) - Math.PI);   // いちばん近い回り方
+  // 見る点のいちばん近くのふし（並びが 2D⇔3D で変わっても、それが同じ所に写るよう見る点を合わせる）
+  const ZB = (n, b) => n.lv * DZ * (1 - b) + (n.x - T.root.x) * b;
+  function anchorNear() {
+    let best = null, bd = Infinity; const b = blendOf(cam.pitch);
+    for (const n of V.vis) { if (!n.name || n.y === undefined) continue; const d = Math.hypot(XT(n) - cam.tx, ZB(n, b) - cam.tz); if (d < bd) { bd = d; best = n; } }
+    return best ? { n: best, off: cam.tz - ZB(best, b) } : null;
+  }
+  function tween(to, ms, done) {
+    const from = { ...cam }, s = performance.now(), an = anchorNear();
+    const follow = () => { if (an) cam.tz = ZB(an.n, blendOf(cam.pitch)) + an.off; };
+    if (to.yaw !== undefined) to.yaw = near(from.yaw, to.yaw);
+    let fin = false;
+    const end = () => { if (fin) return; fin = true; Object.assign(cam, to); follow(); V.draw(); if (done) done(); };
+    (function f(t) {
+      if (fin) return;
+      const u = Math.min(1, (t - s) / ms), e = u * u * (3 - 2 * u);
+      for (const k in to) cam[k] = from[k] + (to[k] - from[k]) * e;
+      follow();
+      V.draw();
+      if (u < 1) requestAnimationFrame(f); else end();
+    })(s);
+    setTimeout(end, ms + 80);   // コマ送りが止まっていても終わる
+  }
+  // 2D のカメラ（拡大 k と位置）→ 真上からの 3D のカメラ
+  function fromTop2D(c2, w, h) {
+    W = w || W; H = h || H;
+    Object.assign(cam, TOP);
+    B = 1; setup();
+    const s = Math.sin(cam.pitch);
+    cam.dist = F / c2.k / s;   // 地面までの高さで、2D と同じ大きさに
+    cam.tz = (W / 2 - c2.x) / c2.k - T.root.ax;
+    cam.tx = (H / 2 - c2.y) / c2.k - T.root.ay;
+    // 少しななめ（真上の少し手前）なので、ルートの写る場所でずれを1回なおす
+    // 画面の真ん中に近いふしを基準に合わせる（遠いルートで合わせると、少しななめな分のずれが真ん中で大きくなる）
+    const a = centerNode((n) => [n.ax * c2.k + c2.x, n.ay * c2.k + c2.y]);
+    if (!a) return;
+    const want = [a.ax * c2.k + c2.x, a.ay * c2.k + c2.y];
+    for (let i = 0; i < 3; i++) {
+      setup();
+      const p = P(X(a), 0, Z(a)); if (!p) break;
+      cam.tz += (p[0] - want[0]) / c2.k; cam.tx += (p[1] - want[1]) / c2.k;
+    }
+  }
+  // 真上からの 3D のカメラ → 2D のカメラ
+  function toTop2D(c2) {
+    B = 1; setup();
+    const n = centerNode(m => { const p = P(X(m), 0, Z(m)); return p ? [p[0], p[1]] : [1e9, 1e9]; });
+    if (!n) return;
+    const a = P(X(n), 0, Z(n)), b = P(X(n), 0, Z(n) + 100);
+    if (!a || !b) return;
+    const k = (b[0] - a[0]) / 100;
+    c2.k = k; c2.x = a[0] - n.ax * k; c2.y = a[1] - n.ay * k;
+  }
+  // 画面の真ん中にいちばん近いふし（screenOf: ふし → 画面の [x, y]）
+  function centerNode(screenOf) {
+    let best = null, bd = Infinity;
+    for (const n of V.vis) { if (!n.name || n.ax === undefined) continue; const [x, y] = screenOf(n); const d = Math.hypot(x - W / 2, y - H / 2); if (d < bd) { bd = d; best = n; } }
+    return best;
+  }
+  function morphTo2D(done) { tween({ ...TOP }, 750, done); }
+  function morphTo3D() { tween({ yaw: -0.35, pitch: 0.42 }, 900); }
+
   // 全体: 開いている枝がぜんぶ入るように
   function fit() {
     let x0 = Infinity, x1 = -Infinity, z1 = 0;
@@ -326,7 +399,8 @@ const V3 = (() => {
   }
 
   return {
-    cam, draw, hit, orbit, pan, dolly, glideTo, frame, fit,
+    cam, draw, hit, orbit, pan, dolly, glideTo, frame, fit, fromTop2D, toTop2D, morphTo2D, morphTo3D,
+    project: n => { B = blendOf(cam.pitch); setup(); return P(X(n), 0, Z(n)); },   // デバッグ用: ふしの画面の場所
     get on() { return on; }, get shown() { return shown; },
     set on(v) { on = !!v; V.draw3d = on ? draw : null; V.draw(); },
     get guide() { return guide; }, set guide(v) { guide = v; V.draw(); },
