@@ -48,8 +48,8 @@
 | 2026-10-15 20:30 | いきものの感じる世界（動画は 10/14） | `animal-senses-shader-passes` | Zenn は上限で待ち・DEV は公開ずみ |
 | 2026-10-15 20:40 | 量子の実験室 | `quantum-tunnel-visscher-canvas` | Zenn は上限で待ち・DEV は公開ずみ |
 | 2026-10-16 | さなぎの中で | `metamorphosis-time-driven-canvas` | Zenn 予約ずみ（10/16 20:10）・DEV は当日に |
-| 2026-10-17 | 免疫のたたかい | `immune-ode-model-rk4` | 下書き |
-| 2026-10-18 | 空気の流れの見える部屋 | `airflow-age-of-air-bicgstab` | 下書き |
+| 2026-10-17 | 免疫のたたかい | `immune-ode-model-rk4` | 下書き（10/16 に数字をコード・DEVNOTES と読み合わせ済み、日英とも） |
+| 2026-10-18 | 空気の流れの見える部屋 | `airflow-age-of-air-bicgstab` | 下書き（10/16 に数字をコード・DEVNOTES と読み合わせ済み） |
 | 2026-10-19 | 進化の箱庭 | `ga-creatures-spring-physics` | 下書き |
 | 2026-10-20 | 神の視点マップ | `godview-tear-earth-sph-worker` | 下書き |
 | 2026-10-21 | 電波の見える部屋 | `wifi-fdtd-webgl2-grid-fix` | 下書き |
