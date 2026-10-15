@@ -5,6 +5,7 @@
 # Steps: ffmpeg takes the frame at t seconds of _dev/promo/out/<app>-short.mp4 -> _dev/promo/out/thumbsrc/<app>.jpg,
 # headless Chrome screenshots short-thumb.html?app=<app> (file://, no server needed), ffmpeg turns it into
 # _dev/promo/thumbs/<app>-short.jpg (under 2MB, the YouTube limit). Then set it with youtube-upload.ps1 -Thumb.
+# still: 'stills/x.jpg' in the table uses that picture (2160x3840, kept in Git) instead of a frame of the mp4.
 # Needs ffmpeg on PATH and Chrome or Edge. Keep this file ASCII only (Windows PowerShell 5.1 reads BOM-less scripts as ANSI).
 param([string[]]$Apps = @())
 $ErrorActionPreference = 'Stop'
@@ -19,7 +20,9 @@ $chrome = @("$env:ProgramFiles\Google\Chrome\Application\chrome.exe", "${env:Pro
 if (-not $chrome) { throw 'Chrome or Edge not found' }
 
 # app names and frame times from the JS table: lines like  'app': { name: ..., t: 33, ...
-$list = [regex]::Matches($cfg, "'([a-z0-9-]+)':\s*\{[^\n]*?\bt:\s*([0-9.]+)") | ForEach-Object { [pscustomobject]@{ App = $_.Groups[1].Value; T = $_.Groups[2].Value } }
+$list = [regex]::Matches($cfg, "'([a-z0-9-]+)':\s*\{([^\n]*?)\bt:\s*([0-9.]+)([^\n]*)") | ForEach-Object {
+  $still = [regex]::Match($_.Groups[2].Value + $_.Groups[4].Value, "\bstill:\s*'([^']+)'")
+  [pscustomobject]@{ App = $_.Groups[1].Value; T = $_.Groups[3].Value; Still = $(if ($still.Success) { $still.Groups[1].Value } else { '' }) } }
 $Apps = @($Apps | ForEach-Object { $_ -split ',' } | Where-Object { $_ })   # -File passes "a,b" as one string
 if ($Apps.Count) { $list = $list | Where-Object { $Apps -contains $_.App } }
 $page = [Uri](Join-Path $promo 'short-thumb.html')
@@ -27,7 +30,8 @@ foreach ($e in $list) {
   $app = $e.App
   $mp4 = Join-Path $promo "out/$app-short.mp4"
   if (-not (Test-Path $mp4)) { Write-Host "skip $app (no $mp4)"; continue }
-  & ffmpeg -v error -y -ss $e.T -i $mp4 -frames:v 1 -q:v 2 (Join-Path $srcDir "$app.jpg")
+  if ($e.Still) { Copy-Item -Force (Join-Path $promo $e.Still) (Join-Path $srcDir "$app.jpg"); $global:LASTEXITCODE = 0 }
+  else { & ffmpeg -v error -y -ss $e.T -i $mp4 -frames:v 1 -q:v 2 (Join-Path $srcDir "$app.jpg") }
   if ($LASTEXITCODE -ne 0) { Write-Host "FAILED frame $app"; continue }
   # two sizes from the same frame: the short (1080x1920) and the long guide video (1280x720, ?wide)
   foreach ($k in @(@{ Kind = 'short'; Size = '1080,1920'; Q = '' }, @{ Kind = 'guide'; Size = '1280,720'; Q = '&wide' })) {

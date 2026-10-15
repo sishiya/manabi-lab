@@ -6,7 +6,8 @@ window.SHORT_THUMBS = {
   'evolution':     { name: 'ヒトへの46億年', t: 33, focus: [0.5, 0.33], zoom: 1.5, kicker: '溶けた地球 → 恐竜 → 人類', big: '46億年', sub: 'を40秒で', c1: '#fff3a0', c2: '#ffb21e' },
   'body-dive':     { name: '体内ダイブ', t: 3.4, focus: [0.5, 0.3], zoom: 1.15, kicker: 'カプセル内視鏡になって', big: '口から肛門', sub: 'まで旅してみた', c1: '#ffffff', c2: '#ffd36b' },
   'black-hole':    { name: 'ブラックホールの見え方', t: 20, focus: [0.5, 0.36], zoom: 1.35, kicker: '映画では省かれた、本当の姿', big: 'ブラックホール', sub: '本当は左が明るい', c1: '#fff6d8', c2: '#ffb347' },
-  'animal-senses': { name: 'いきものの感じる世界', t: 8, focus: [0.5, 0.33], zoom: 1.5, kicker: '同じ庭なのに', big: 'カラスの目', sub: 'には紫外線が見える', c1: '#f3dcff', c2: '#b26bff' },
+  // 2026-10-16: カラスの目（人の目とほぼ同じ絵で目立たなかった）→ ハエの目。ショートにハエの場面はないので、アプリの絵を stills/ に（4K で撮って真ん中を縦に切り出し）
+  'animal-senses': { name: 'いきものの感じる世界', t: 8, still: 'stills/animal-senses-fly.jpg', focus: [0.5, 0.36], zoom: 1, wzoom: 0.5, wfocus: [0.5, 0.42], kicker: '同じ庭なのに', big: 'ハエの目', sub: 'には、こう見える', c1: '#fff3d0', c2: '#ffb84a' },
   'quantum':       { name: '量子の実験室', t: 17, focus: [0.5, 0.3], zoom: 1.6, kicker: '電子を1個ずつ飛ばすと', big: 'しま模様', sub: 'が現れる ― 二重スリット', c1: '#fff3a0', c2: '#ffc21e' },
   'metamorphosis': { name: 'さなぎの中で', t: 13, focus: [0.5, 0.36], zoom: 1.7, kicker: 'イモムシがガになるまで18日', big: 'さなぎの中', sub: 'はどうなってる？', c1: '#e0fbff', c2: '#43d3ff' },
   'immune-battle': { name: '免疫のたたかい', t: 21, focus: [0.5, 0.35], zoom: 1.6, kicker: 'インフルエンザのウイルスは3日目に', big: '数十億個', sub: 'それでも8日目ごろ消える', c1: '#ffe0ea', c2: '#ff5c8a' },
