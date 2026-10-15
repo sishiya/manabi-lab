@@ -61,6 +61,7 @@ function reach(n) {
     if (u < 1) requestAnimationFrame(anim);
   })(t0);
 }
+function setStatus(t) { document.getElementById('status').textContent = t || ''; }
 function warn() { const s = document.getElementById('status'); s.textContent = '読みこめませんでした。通信を確かめて、もう一度押してください。'; setTimeout(() => s.textContent = '', 5000); }
 // 検索や道すじから: 開いて真ん中に
 UI.onPick = (n, fromSearch) => {
@@ -124,8 +125,11 @@ cv.addEventListener('pointercancel', up);
 cv.addEventListener('pointerleave', () => { V.hover = null; redraw(false); });
 cv.addEventListener('wheel', e => {
   e.preventDefault();
-  // ホイール = 拡大・縮小（トラックパッドのピンチは ctrlKey つき）。Shift か横スクロールは移動
-  if (!e.ctrlKey && (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY))) { V.cam.x -= e.deltaX || e.deltaY; redraw(false); return; }
+  // マウスのホイール = 拡大・縮小。トラックパッドの2本指 = 動かす（ピンチは ctrlKey つきで拡大）。Shift は横へ
+  //   見分け方: マウスのホイールは1回の量が大きく（50 以上の整数）、横の量が 0。トラックパッドは小さな量が続き、横もまざる
+  const mouseWheel = e.deltaMode === 1 || (e.deltaX === 0 && Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY));
+  if (!e.ctrlKey && e.shiftKey) { V.cam.x -= e.deltaY || e.deltaX; redraw(false); return; }
+  if (!e.ctrlKey && !mouseWheel) { V.cam.x -= e.deltaX; V.cam.y -= e.deltaY; redraw(false); return; }
   const dy = e.deltaMode === 1 ? e.deltaY * 30 : e.deltaY;
   V.zoomAt(e.offsetX, e.offsetY, Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0015)));
 }, { passive: false });
@@ -185,6 +189,32 @@ async function trip(from) {
   V.selected = n; UI.show(n); glideTo(n);
 }
 UI.onTrip = n => trip(n);
+UI.onOpen = n => press(n);
+
+// ---------- アドレスの # : いま見ている生きもの（共有・ブックマーク用） ----------
+//   #t=<COL id> ／ #n=<学名>（COL id のないまとまり）／ #c=<id>,<id>（どこで分かれた？）
+const keyOf = n => n.col ? 't=' + encodeURIComponent(n.col) : n.name && n.rank !== 'root' ? 'n=' + encodeURIComponent(n.name) : '';
+function setHash(h) { try { history.replaceState(null, '', h ? '#' + h : location.pathname + location.search); } catch (e) { } }
+UI.onShown = n => { if (touched) setHash(keyOf(n)); };
+Compare.onShown = (a, b) => { const ka = keyOf(a), kb = keyOf(b); if (ka && kb) setHash('c=' + ka.slice(2) + ',' + kb.slice(2) + (ka[0] === 'n' || kb[0] === 'n' ? '&k=' + ka[0] + kb[0] : '')); };
+async function fromHash() {
+  const h = location.hash.slice(1);
+  if (!h) return false;
+  const p = new URLSearchParams(h);
+  setStatus('リンクの生きものをさがしています…');
+  const byKey = async (v, kind) => kind === 'n' ? T.nodes.find(x => x.name === v) : T.reveal(v);
+  try {
+    if (p.get('c')) {
+      const [x, y] = p.get('c').split(','), kinds = p.get('k') || 'tt';
+      const na = await byKey(x, kinds[0]), nb = await byKey(y, kinds[1]);
+      if (!na || !nb) return false;
+      touched = true; Compare.start(na); Compare.choose(nb); return true;
+    }
+    const n = p.get('t') ? await T.reveal(p.get('t')) : p.get('n') ? T.nodes.find(x => x.name === p.get('n')) : null;
+    if (!n) return false;
+    touched = true; V.resize(); UI.onPick(n, true); return true;
+  } catch (e) { console.warn(e); return false; } finally { setStatus(''); }
+}
 document.getElementById('ztrip').onclick = () => Compare.clear(false) || trip(V.selected && V.selected.name ? V.selected : T.root);
 
 document.getElementById('critter-on').addEventListener('change', e => { C.on = e.target.checked; V.draw(); });
@@ -224,6 +254,7 @@ async function startView() {
     V.draw();
   };
   place(mam);
+  setStatus('哺乳類のなかまを読みこみ中…');
   let n = mam;
   try {
     for (const name of ['Theria', 'Eutheria']) {
@@ -234,11 +265,13 @@ async function startView() {
     }
     await T.open(n);
   } catch (e) { warn(); }
+  setStatus('');
   if (touched) return;   // 読みこみの間にさわっていたら、そのまま
   place(n);
+  UI.show(mam);   // すぐ下のなかまが読めたので、詳細を出しなおす
 }
 V.resize();
-startView();
+fromHash().then(ok => { if (!ok) startView(); });
 
 // デバッグ用（RULES 5）: 状態を見る・押す・探す
 window.__trofli = {

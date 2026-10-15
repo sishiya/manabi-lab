@@ -19,8 +19,18 @@ const UI = (() => {
   const MAJOR = [['domain', 'ドメイン'], ['kingdom', '界'], ['phylum', '門'], ['class', '綱'], ['order', '目'], ['family', '科'], ['genus', '属'], ['species', '種']];
   // 人とその近くの写真は出さない（Wikidata の人の写真には、子ども向けに合わないものがある。RULES 9）
   const NO_IMAGE = /^(Homo|Homo sapiens|Hominidae|Homininae|Hominini|Pan|Pan troglodytes|Pan paniscus)$/;
+  // すぐ下のなかま（名前のない分かれ目はくぐる）。スマホで樹形図を押しにくいときも、ここからたどれる
+  const namedKids = n => n.kids.flatMap(k => k.more ? [] : k.name ? [k] : namedKids(k));
+  function kidsHTML(n) {
+    if (!T.expandable(n)) return '';
+    const ks = namedKids(n), more = (function m(x) { return x.kids.reduce((s, k) => s + (k.more ? k.rest : k.name ? 0 : m(k)), 0); })(n);
+    if (!ks.length) return n.canLoad ? `<h3>すぐ下のなかま</h3><button class="act" data-act="open">すぐ下のなかまを読む</button>` : '';
+    const list = ks.slice(0, 40);
+    return `<h3>すぐ下のなかま <small>${fmt(ks.length + more)}</small></h3><div class="kids">${list.map(chip).join('')}${ks.length > list.length || more ? `<span class="morek">ほか ${fmt(ks.length - list.length + more)}（樹形図で）</span>` : ''}</div>`;
+  }
   function show(n, extra = '') {
-    showing = n; shownJa = n.ja; showingExtra = extra; const my = ++token;
+    showing = n; shownJa = sig(n); showingExtra = extra; const my = ++token;
+    if (!extra) UI.onShown(n);   // アドレスの # を合わせる（main.js）
     const c = GROUP_COLOR[RANK_GROUP(n.rank)];
     const rk = RANK_JA[n.rank] || '';
     const line = T.ancestors(n).concat([n]);
@@ -41,7 +51,7 @@ const UI = (() => {
       <div class="d-rank">${rk ? `<span class="tag" style="background:${c}">${esc(rk)}</span>` : ''}${n.count ? `<span>${fmt(n.count)} 種</span>` : ''}</div>
       <h2>${n.extinct ? '† ' : ''}${esc(n.ja || n.name)}${n.part ? '（一部）' : ''}</h2>
       <p class="sci">${n.rank !== 'root' ? `<i>${esc(n.name)}</i>` : ''} <span class="auth" id="d-auth"></span></p>
-      <div class="acts"><button class="act" data-act="cmp">どこで分かれた？ ほかとくらべる</button><button class="act" data-act="trip">ここから ふしぎ旅</button></div>
+      <div class="acts"><button class="act" data-act="cmp">どこで分かれた？ ほかとくらべる</button><button class="act" data-act="trip">ここから ふしぎ旅</button><button class="act" data-act="share" title="このページのリンクをコピー">リンク</button></div>
       <div class="plate" id="d-plate">${canImg ? '<p class="none">図を読みこみ中…</p>' : ''}</div>
       <p class="wd" id="d-wd"></p>
       ${rows ? `<h3>分類</h3><table class="cls">${rows}</table>` : ''}
@@ -52,6 +62,7 @@ const UI = (() => {
         ${n.extinct ? `<dt>絶滅</dt><dd>絶滅した生きもの（COL の記録）</dd>` : ''}
         <dt>位置</dt><dd>根もとから ${path.length} 段め</dd>
       </dl>
+      ${kidsHTML(n)}
       ${notes.map(s => `<p class="note">${esc(s)}</p>`).join('')}
       ${path.length ? `<details class="path"><summary>根もとからの道すじ（${path.length} 段）</summary><div class="path">${path.map(chip).join('<span class="arr">›</span>')}</div></details>` : ''}
       <p class="silcredit" id="d-sil"></p>
@@ -105,7 +116,14 @@ const UI = (() => {
   }
   $('detail').addEventListener('click', e => {
     const act = e.target.closest('button.act');
-    if (act) { if (act.dataset.act === 'cmp') Compare.start(showing); else { Compare.clear(false); UI.onTrip(showing); } return; }
+    if (act) {
+      const k = act.dataset.act;
+      if (k === 'cmp') Compare.start(showing);
+      else if (k === 'open') UI.onOpen(showing);
+      else if (k === 'share') share(act);
+      else { Compare.clear(false); UI.onTrip(showing); }
+      return;
+    }
     const b = e.target.closest('.chip, table.cls button');
     if (b) UI.onPick(T.nodes[+b.dataset.i]);
   });
@@ -174,6 +192,15 @@ const UI = (() => {
   $('meta').textContent = `上のほうの樹形図: COL ${M.col.alias}（${M.col.version}）と Open Tree ${M.ott.synth}（${M.ott.date.slice(0, 10)}）から ${M.built} に作成。${T.nodes.length} のまとまり。`;
 
   // 和名があとから届いたら出しなおす
-  function refresh() { if (showing && showing.ja !== shownJa) show(showing, showingExtra); }
-  return { show, refresh, onPick() { }, onTrip() { } };
+  // 和名があとから届いたら出しなおす（自分と、すぐ下のなかまの和名・数）
+  function sig(n) { return n.ja + '|' + namedKids(n).map(k => k.ja).join(',') + '|' + n.kids.length; }
+  function refresh() { if (showing && sig(showing) !== shownJa) show(showing, showingExtra); }
+  // リンクをコピー（アドレスの # に、いま見ている生きもの・くらべている2つが入っている）
+  async function share(btn) {
+    const old = btn.textContent;
+    try { await navigator.clipboard.writeText(location.href); btn.textContent = 'コピーしました'; }
+    catch (e) { window.prompt('このリンクをコピーしてください', location.href); }
+    setTimeout(() => btn.textContent = old, 1800);
+  }
+  return { show, refresh, onPick() { }, onTrip() { }, onOpen() { }, onShown() { } };
 })();

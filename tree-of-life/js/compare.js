@@ -41,13 +41,19 @@ const Compare = (() => {
   let shown = '';
   function render() {
     shown = nm(a) + '|' + nm(b) + '|' + nm(mrca);
+    Compare.onShown(a, b);
     const steps = ch => ch.slice(0, -1).filter(x => x.name).length;   // 名前のあるまとまりの数（名前のない分かれ目は数えない）
     const da = steps(chains[0]), db = steps(chains[1]);
-    setBar(`<span><b>${esc(nm(a))}</b> と <b>${esc(nm(b))}</b> は <b class="gold">${esc(nm(mrca))}</b> で分かれた</span>
+    // 片方がもう片方の祖先のときは「〜のなかま」
+    const inner = mrca === a ? b : mrca === b ? a : null;
+    const head = inner ? `<b>${esc(nm(inner))}</b> は <b class="gold">${esc(nm(mrca))}</b> のなかま`
+      : `<b>${esc(nm(a))}</b> と <b>${esc(nm(b))}</b> は <b class="gold">${esc(nm(mrca))}</b> で分かれた`;
+    setBar(`<span>${head}</span>
       <button data-act="again">ほかとくらべる</button><button data-act="end">やめる</button>`);
     UI.show(mrca, `<div class="cmpbox"><h3>どこで分かれた？</h3>
-      <p><b>${esc(nm(a))}</b> と <b>${esc(nm(b))}</b> の道すじは、<b class="gold">${esc(nm(mrca))}</b>${mrca.ja ? `（<i class="sci">${esc(mrca.name)}</i>）` : ''} で合わさります。</p>
-      <p>ここから ${esc(nm(a))} まで ${da} 段、${esc(nm(b))} まで ${db} 段。</p>
+      ${inner ? `<p><b>${esc(nm(inner))}</b> は <b class="gold">${esc(nm(mrca))}</b>${mrca.ja ? `（<i class="sci">${esc(mrca.name)}</i>）` : ''} の中にいます。</p>`
+        : `<p><b>${esc(nm(a))}</b> と <b>${esc(nm(b))}</b> の道すじは、<b class="gold">${esc(nm(mrca))}</b>${mrca.ja ? `（<i class="sci">${esc(mrca.name)}</i>）` : ''} で合わさります。</p>`}
+      <p>${inner ? `${esc(nm(mrca))} から ${esc(nm(inner))} まで ${Math.max(da, db)} 段。` : `ここから ${esc(nm(a))} まで ${da} 段、${esc(nm(b))} まで ${db} 段。`}</p>
       <div class="cmpcols">${chains.map(ch => `<ol>${ch.slice(0, -1).reverse().filter(x => x.name).map(x => `<li${x === ch[0] ? ' class="end"' : ''}>${esc(nm(x))}</li>`).join('')}</ol>`).join('')}</div>
       <p class="small">分かれたところ＝2つの道すじがいっしょだった、いちばん先のまとまり（この樹形図の上で）。枝の長さは時間ではありません。綱より下は分類なので目安です。</p></div>`);
   }
@@ -135,5 +141,5 @@ const Compare = (() => {
     }
     g.restore();
   }
-  return { start, choose, clear, draw, demo, refresh, get picking() { return phase === 'pick'; }, get showing() { return phase === 'show'; } };
+  return { onShown() { }, start, choose, clear, draw, demo, refresh, get picking() { return phase === 'pick'; }, get showing() { return phase === 'show'; } };
 })();
