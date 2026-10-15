@@ -88,6 +88,8 @@ if (LANG === 'en') {
       facts:[
         'A compound eye is a group of tiny eyes (ommatidia). A housefly has about 3000 in each eye. Each ommatidium is roughly one dot (pixel) of the picture.',
         'Neighboring ommatidia point a few degrees apart, so the fly sees detail tens of times less sharply than a human. One hexagon = one ommatidium (change its size with the slider).',
+        'The dark lines around the hexagons (“Outlines: On”) are only a guide to show where each ommatidium is. The fly sees no lines; each ommatidium gives one dot (“Off” is closer to real).',
+        'The colors are drawn as human eyes see them. Flies also sense ultraviolet and are not very sensitive to red, so the colors they really see are different.',
         'The two compound eyes see almost all the way around at once, except a little right behind. The screen spreads about 330° side to side and 170° up and down into one picture.',
         'Humans can see flicker up to about 60 times a second; measurements for flies are about 200–300 times (a rough guide that varies by species and method).',
         'Old fluorescent lights (on 50 Hz power in eastern Japan) brighten and dim 100 times a second. Humans cannot tell, but to a fly it may look like flickering.',

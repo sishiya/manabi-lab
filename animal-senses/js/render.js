@@ -75,7 +75,7 @@ function initRender(canvas) {
     uniforms:{
       tCube:{ value:R.cubeVis.texture }, tCubeUV:{ value:R.cubeUV.texture }, tVis:{ value:R.rtVis.texture },
       uRot:{ value:new THREE.Matrix3() }, uRes:{ value:new THREE.Vector2() }, uPx:{ value:new THREE.Vector2() },
-      uDegPx:{ value:new THREE.Vector2(0.5, 0.5) }, uHex:{ value:3 }, uExp:{ value:1 }, uNight:{ value:0 }, uSplit:{ value:0 }, uPol:{ value:1 },
+      uDegPx:{ value:new THREE.Vector2(0.5, 0.5) }, uHex:{ value:3 }, uEdge:{ value:0 }, uExp:{ value:1 }, uNight:{ value:0 }, uSplit:{ value:0 }, uPol:{ value:1 },
       uSunUp:{ value:1 }, uTime:{ value:0 }, uSense:{ value:0 }, uSunDir:v3(), uGrain:{ value:0.035 }, uExpH:{ value:1 },
     },
     vertexShader:SH.QUAD_VS, fragmentShader:SH.CUBE_FS, depthTest:false,
@@ -123,7 +123,7 @@ function pass(mode, rt) {
   R.renderer.render(R.scene, R.cam);
 }
 
-// o: { animal, split, lampK, uvK, uvOnly, pit, eye, blur, time, calls[], nowT, tau, hex, pol, scan, polOn }
+// o: { animal, split, lampK, uvK, uvOnly, pit, eye, blur, time, calls[], nowT, tau, hex, hexEdge, pol, scan, polOn }
 function renderFrame(o) {
   const tm = R.tm, U = R.U, k = o.animal;
   U.uCamPos.value.copy(R.cam.position);
@@ -144,7 +144,7 @@ function renderFrame(o) {
     if (o.split) pass(0, R.rtVis);
     cm.uRot.value.setFromMatrix4(R.cam.matrixWorld);
     cm.uSense.value = SENSE_ID[k]; cm.uSplit.value = o.split ? 1 : 0;
-    cm.uHex.value = o.hex; cm.uPol.value = o.pol ? 1 : 0;
+    cm.uHex.value = o.hex; cm.uEdge.value = o.hexEdge ? 1 : 0; cm.uPol.value = o.pol ? 1 : 0;
     cm.uExp.value = tm.exp * dk.gain; cm.uGrain.value = dk.grain; cm.uNight.value = tm.night; cm.uTime.value = o.time % 100;
     R.renderer.setRenderTarget(null);
     R.renderer.render(R.cubeScene, R.qcam);

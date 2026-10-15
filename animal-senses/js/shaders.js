@@ -342,7 +342,7 @@ void main(){
 // Panoramic compound eye (fly = 0, bee = 1). Screen -> (azimuth, elevation) in degrees -> hexagonal ommatidia lattice
 SH.CUBE_FS = `
 uniform samplerCube tCube, tCubeUV; uniform sampler2D tVis;
-uniform mat3 uRot; uniform vec2 uRes, uPx, uDegPx; uniform float uHex, uExp, uExpH, uNight, uSplit, uPol, uSunUp, uTime;
+uniform mat3 uRot; uniform vec2 uRes, uPx, uDegPx; uniform float uHex, uEdge, uExp, uExpH, uNight, uSplit, uPol, uSunUp, uTime;
 uniform int uSense; uniform vec3 uSunDir;
 varying vec2 vUv;
 ` + SH.COMMON + `
@@ -378,7 +378,7 @@ void main(){
     }
   }
   float hd = max(dot(abs(gv), vec2(0.5, 0.8660254)), abs(gv.x));
-  if (uHex / max(uDegPx.x, uDegPx.y) > 3.0) col *= mix(1.0, 0.3, smoothstep(0.4, 0.5, hd));
+  if (uEdge > 0.5 && uHex / max(uDegPx.x, uDegPx.y) > 3.0) col *= mix(1.0, 0.3, smoothstep(0.4, 0.5, hd));
   float edge = smoothstep(150.0, 168.0, abs(deg.x));      // small blind zone straight behind
   gl_FragColor = vec4(mix(col, vec3(0.02, 0.02, 0.03), edge), 1.0);
 }`;

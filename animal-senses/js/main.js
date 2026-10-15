@@ -7,6 +7,7 @@ const S = {
   uvK:1, uvOnly:false, pit:true, eye:true, blur:3.5,
   batEye:false, sound:false, pol:true, polOn:true, flicker:false,
   clock:{}, hex:{},                  // per animal: chosen time scale index, ommatidium size
+  hexEdge:false,                     // dark outline around each ommatidium: a guide only (the fly sees one dot per ommatidium, no lines)
   // low vision: type + one value per type (acuity, scotoma radius °, field radius °, cataract 0–1)
   // refraction: type (0 myopia, 1 hyperopia, 2 astigmatism, 3 presbyopia), dioptres per type, age, astig axis
   cv:{ type:1, k:1 }, night:'lit',
@@ -62,6 +63,8 @@ function senseControls() {
     const h = S.hex[k] || a.hex;
     const d = add(`<label class="row"><span class="lab">${L('個眼の大きさ', 'Ommatidium size')}</span><input type="range" id="hex" min="1" max="8" step="0.25" value="${h}"><span class="mono" id="hexV">${h.toFixed(1)}°</span></label>`);
     d.querySelector('#hex').oninput = e => { S.hex[k] = +e.target.value; $('hexV').textContent = S.hex[k].toFixed(1) + '°'; };
+    const eg = add(`<div class="row seg" role="group" aria-label="${L('個眼のふち', 'Ommatidium outlines')}"><span class="lab">${L('ふち', 'Outlines')}</span>${[[false, L('なし（本当に近い）', 'Off (closer to real)')], [true, L('あり（目印）', 'On (guide only)')]].map(([v, t]) => `<button data-v="${v}" aria-pressed="${S.hexEdge === v}">${t}</button>`).join('')}</div>`);
+    eg.querySelectorAll('button').forEach(b => b.onclick = () => { S.hexEdge = b.dataset.v === 'true'; senseControls(); });
   }
   if (a.types) {
     const st = k === 'low' ? S.lv : k === 'cvd' ? S.cv : S.rf;
@@ -306,7 +309,7 @@ function step(dt) {
   renderFrame({
     animal:k, split:S.split && k !== 'human', lampK:lampFlicker(clock, S.t, S.flicker),
     uvK:S.uvK, uvOnly:S.uvOnly, pit:S.pit, eye:k === 'bat' ? S.batEye : S.eye, blur:S.blur, time:S.t,
-    calls:SX.calls, nowT:S.t, tau:0.12, hex:S.hex[k] || a.hex || 3, pol:S.pol,
+    calls:SX.calls, nowT:S.t, tau:0.12, hex:S.hex[k] || a.hex || 3, hexEdge:S.hexEdge, pol:S.pol,
     scan:0.5 + 0.36 * Math.sin(S.t * 0.8), polOn:S.polOn,
     lvType: k === 'low' ? S.lv.type : k === 'cvd' ? S.cv.type : (S.rf.type === 2 ? 2 : 0), lvR: S.lv.v[S.lv.type],
     lvK: k === 'cvd' ? S.cv.k : S.lv.v[3], lvSigma: lvSigma(),
