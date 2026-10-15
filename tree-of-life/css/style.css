@@ -37,7 +37,7 @@ html,body{height:100%;overflow:hidden}
 #stage{flex:1;position:relative;min-height:0;background:var(--paper);border-top:1px solid var(--rule2)}   /* 無地（名前の下じきと同じ紙の色） */
 #cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 /* 大きさ: 右下に、たてのつまみ（上が大きい）と「全体」・2D/3D */
-#zoom{position:absolute;right:8px;bottom:10px;display:flex;flex-direction:column;align-items:center;gap:2px;background:rgba(251,248,241,.9);border:1px solid var(--rule);border-radius:20px;padding:6px 4px}
+#zoom{position:absolute;right:max(14px, env(safe-area-inset-right));bottom:max(16px, env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:2px;background:rgba(251,248,241,.9);border:1px solid var(--rule);border-radius:20px;padding:6px 4px}
 #zoom button{width:40px;height:36px;border-radius:18px;border:0;background:none;color:var(--acc);font-size:12.5px;font-weight:700;cursor:pointer;padding:0}
 #zoom button:hover{background:#eef3ec}
 #zoom .zl{font-family:var(--f-mincho);font-size:11px;color:var(--sub);line-height:1.2}
@@ -83,7 +83,7 @@ html,body{height:100%;overflow:hidden}
 #side{position:relative;flex:none;height:var(--sheet-h,200px);overflow:auto;padding:0 12px 24px;line-height:1.7;background:var(--paper2);border-top:1px solid var(--rule);box-shadow:0 -6px 18px rgba(80,60,20,.08);transition:height .25s ease;overscroll-behavior:contain}
 #app.dragging #side{transition:none}
 #app.tall #zoom .zl,#app.tall #zs{display:none}   /* スマホで詳細を広げている間は、樹形図がせまいので大きさのつまみはかくす（ピンチで） */
-#zoom{max-height:calc(100% - 12px)}
+#zoom{max-height:calc(100% - 32px)}
 /* つまみ: 押すと広げる・縮める */
 #grip{position:sticky;top:0;z-index:2;touch-action:none;display:flex;flex-direction:column;align-items:center;gap:1px;width:100%;border:0;background:var(--paper2);padding:8px 0 6px;cursor:pointer;color:var(--sub);font-size:11px}
 #grip .bar{width:44px;height:5px;border-radius:3px;background:#c9bc9c}

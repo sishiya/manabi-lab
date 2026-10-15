@@ -240,8 +240,8 @@ gbar.addEventListener('click', e => {
   gbar.querySelectorAll('button[data-g]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
   try { localStorage.setItem('tol-guide2', V3.guide); } catch (e) { }
 });
-// はじめは方眼（v014 で覚えておく名前を変えた: それまでに試したほかのガイドが残らないように）
-try { const gsv = localStorage.getItem('tol-guide2'); if (gsv === 'grid' || gsv === 'none') { V3.guide = gsv; V.grid2d = gsv !== 'none'; gbar.querySelectorAll('button[data-g]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.g === gsv))); } } catch (e) { }
+// ガイドはいったん方眼に固定（切りかえは画面に出さない。v016）
+V3.guide = 'grid'; V.grid2d = true;
 
 // ---------- 詳細の欄: はじめはコンパクト。つまみを押すと広げる・縮める、ドラッグで好きな大きさに（なめらかに） ----------
 //   スマホ: 下の板の高さ（--sheet-h）。PC: 右の欄の幅（--side-w）。上のつまみと、PC は左のふち（#edge）でも
