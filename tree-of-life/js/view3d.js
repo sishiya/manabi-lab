@@ -10,8 +10,8 @@ const V3 = (() => {
   const cam = { tx: 0, ty: 0, tz: 400, yaw: -0.35, pitch: 0.42, dist: 900 };
   let on = false, guide = 'grid';
   let W = 0, H = 0, F = 600;
-  let picks = [], shown = [];
-  let lastLab = 0, fadeRaf = 0;   // 名前の出入りのアニメ   // shown: 名前の札を出したふし（いきもの用）            // 押せるもの（名前の札・点）の画面の場所
+  let picks = [], shown = [];   // picks: 押せるもの（名前の札・点）の画面の場所、shown: 名前の札を出したふし（いきもの用）
+  let lastLab = 0;   // 名前の出入りのアニメ（前のコマの時刻）
   let C0 = null, R = null, U = null, Fw = null;   // カメラの位置と向き
 
   // ---------- 投影 ----------
@@ -230,7 +230,7 @@ const V3 = (() => {
       L.n._la = Math.abs(t - a1) < 0.02 ? t : a1;
       if (L.n._la !== t) fading = true;
     }
-    if (fading && !fadeRaf) fadeRaf = requestAnimationFrame(() => { fadeRaf = 0; V.draw(); });
+    if (fading) V.requestDraw();   // 出入りのあいだはコマを送る（ほかの描きなおしとまとめて1コマ1回）
     // 遠いものから描く（手前が上に）
     labels.sort((x, y) => y.p[3] - x.p[3]);
     g.textBaseline = 'middle';

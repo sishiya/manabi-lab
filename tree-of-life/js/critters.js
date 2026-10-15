@@ -236,7 +236,7 @@ const C = (() => {
       // いきもののための描きなおし。木全体を描くのに時間がかかるとき（たくさん開いたとき）は回数を減らす
       //   8ms をこえたら2コマに1回、16ms をこえたら3コマに1回（ふだんは毎コマ。ほかの動き・アニメは自分で描くので変わらない）
       const every = cost > 16 ? 3 : cost > 8 ? 2 : 1;
-      if (frame++ % every === 0) { const s = performance.now(); V.draw(); cost = cost * 0.8 + (performance.now() - s) * 0.2; }
+      if (frame++ % every === 0) { V.requestDraw(); cost = cost * 0.8 + V.lastCost * 0.2; }
       raf = more ? requestAnimationFrame(loop) : 0;
     });
   }

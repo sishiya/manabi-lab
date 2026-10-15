@@ -154,7 +154,7 @@ const V = (() => {
     last = performance.now();
     raf = requestAnimationFrame(function loop(t) {
       const moving = step(Math.min(0.05, (t - last) / 1000)); last = t;
-      draw();
+      requestDraw();
       raf = moving ? requestAnimationFrame(loop) : 0;
     });
   }
@@ -190,6 +190,9 @@ const V = (() => {
     }
     g.restore();
   }
+  // 描きなおしの予約: アニメ・いきもの・名前の出入りが、それぞれ描くと1コマに2〜3回描いていた → 1コマ1回にまとめる
+  let drawQueued = 0, lastCost = 0;
+  function requestDraw() { if (!drawQueued) drawQueued = requestAnimationFrame(() => { drawQueued = 0; const s = performance.now(); draw(); lastCost = performance.now() - s; }); }
   let draw3d = null;   // 3D のときはこちらで描く（view3d.js）
   function draw() {
     if (!W) measure();
@@ -378,7 +381,7 @@ const V = (() => {
 
   // デバッグ用: 描画が止まっている間（ペインがかくれている）も、アニメを1コマずつ進める
   const tick = (dt = 1 / 60) => { const m = step(dt); draw(); return { moving: m, leaving: leaving.length }; };
-  return { set grid2d(v) { grid2d = !!v; }, set draw3d(f) { draw3d = f; }, get is3d() { return !!draw3d; }, labelParts, tw, branchW, get leaving() { return leaving; },
+  return { requestDraw, get lastCost() { return lastCost; }, set grid2d(v) { grid2d = !!v; }, set draw3d(f) { draw3d = f; }, get is3d() { return !!draw3d; }, labelParts, tw, branchW, get leaving() { return leaving; },
     get selected3() { return selected; }, get hover3() { return hover; }, KMIN, KMAX, bbox, set onDraw(f) { onDrawFn = f; }, get drawn() { return drawn; }, isVis: n => visSet.has(n), set only(v) { only = v; }, kidsOf, set onWorld(f) { onWorldFn = f; }, cv, cam, layout, draw, resize, hit, zoomAt, fit, focus, screenOf, settle, shift, pop, labelY, tick,
     get vis() { return vis; }, get selected() { return selected; }, set selected(n) { selected = n; },
     set hover(n) { hover = n; }, get size() { return [W, H]; } };

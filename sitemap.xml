@@ -126,4 +126,11 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/hair-removal/?lang=en"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/hair-removal/"/>
   </url>
+  <url>
+    <loc>https://sishiya.github.io/manabi-lab/tree-of-life/</loc>
+    <lastmod>2026-10-15</lastmod>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/tree-of-life/?lang=ja"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/tree-of-life/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/tree-of-life/"/>
+  </url>
 </urlset>

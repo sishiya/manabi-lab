@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>いのちの系統樹</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2310241c'/><path d='M32 54V30M32 30L18 16M32 30L46 16M18 16L12 8M18 16L24 8M46 16L52 8' stroke='%237fe0a8' stroke-width='5' fill='none' stroke-linecap='round'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Old+Mincho:wght@400;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <div id="pin">
+    <header id="top">
+      <h1>いのちの系統樹<small>TREE OF LIFE</small></h1>
+      <div id="search">
+        <input id="q" type="search" placeholder="名前でさがす" autocomplete="off" enterkeyhint="search">
+        <ul id="results"></ul>
+      </div>
+      <button id="helpbtn" aria-expanded="false" aria-controls="help" title="使い方">？</button>
+      <div id="help" hidden>
+        <p>名前を押すと、その先の枝が開きます。もう一度押すと閉じます。</p>
+        <p>ドラッグで動かし、右のつまみ・ホイール・ピンチで大きさを変えます。下（PC は右）の詳細は、つまみを押すと広げる・縮める、ドラッグで好きな大きさにできます。「全体」で、いま開いている枝がぜんぶ入ります。</p>
+        <p>「ライオン」「シイタケ」「Homo sapiens」のように、和名でも学名でもさがせます。</p>
+        <p>名前の右で動くシルエットを押すと、その詳細が出ます。動き方は演出です。</p>
+        <p>はじめは 3D で、手前（根もと）から奥（枝分かれの先）をながめます。マウスは右ドラッグ（か Shift＋左ドラッグ）で回し、左ドラッグか中ボタンのドラッグで動かします。指は1本で動かし、2本指を左右に動かすと回し、上下に動かすと（ピンチでも）近づきます。「2D」で真上からの図に（3D で真上まで回しても、2D の並びにつながります）。奥行きは枝分かれの段で、年代の目盛りではありません。</p>
+        <p>詳細の「リンク」で、いま見ているところを人に送れます。</p>
+        <label class="tog"><input type="checkbox" id="critter-on" checked> シルエットを動かす</label>
+        <p class="lg-title">名札の色は分類の段</p>
+        <div id="legend"></div>
+      </div>
+    </header>
+    <main id="stage">
+      <canvas id="cv" aria-label="生きものの系統樹。名前を押すと開く"></canvas>
+      <div id="cmpbar" hidden></div>
+      <div id="guide3d" hidden>
+        <span class="gl">ガイド</span>
+        <button data-g="grid" aria-pressed="true">方眼</button><button data-g="none" aria-pressed="false">なし</button>
+        <span class="gnote">奥ほど、あとから分かれた（年代の目盛りではありません）</span>
+      </div>
+      <div id="zoom">
+        <button id="z3d" title="3D でぐるぐる回して見る">3D</button>
+        <button id="zfit" title="開いている枝がぜんぶ入るように">全体</button>
+        <span class="zl" aria-hidden="true">大</span>
+        <input id="zs" type="range" min="0" max="1000" value="500" aria-label="大きさ">
+        <span class="zl" aria-hidden="true">小</span>
+      </div>
+      <p id="status" role="status"></p>
+    </main>
+  </div>
+
+  <div id="edge" title="ドラッグで詳細の幅を変える（押すと広げる・縮める）"></div>
+  <aside id="side">
+    <button id="grip" aria-expanded="false" aria-label="詳細を広げる・縮める" title="詳細を広げる・縮める（ドラッグで大きさを変える）"><span class="bar"></span></button>
+    <section id="detail"></section>
+
+    <details id="about">
+      <summary>このアプリについて</summary>
+      <p>名前のついている生きもの（約220万種）を、進化の枝分かれの図でたどります。左が根もと（すべての生きものの共通の祖先）、右へいくほど細かい仲間です。色は分類の段（界・門・綱・目・科・属・種）。</p>
+      <h3>しくみと、簡単にしているところ</h3>
+      <ul>
+        <li>上のほう（界〜綱、約650のまとまり）は、Open Tree of Life の合成系統樹（たくさんの研究の系統樹をまとめたもの）から、Catalogue of Life（COL）の界〜綱の名前で切り出した枝分かれの形です。名前のない点は「ここで分かれた」ところ。Open Tree で見つからないまとまりは、COL の分類で親の下につないでいます。</li>
+        <li>綱より下（目・科・属・種）は、開いたときに COL から読みます。ここは<strong>分類</strong>で、進化の枝分かれの順ではありません（種の数の多い順）。</li>
+        <li>枝の長さは時間を表していません（形だけ）。分かれた年代は、まだ入れていません。</li>
+        <li>図（写真）は、Wikidata に登録された写真を Wikimedia Commons から読み、作者と条件（CC0・パブリックドメイン・CC BY・CC BY-SA）を図の下に出しています。それ以外の条件の写真と、人の写真は出しません。写真の中身は、ほかの人のものです（このアプリのライセンスには入りません）。</li>
+        <li>名前の右で動くシルエットは PhyloPic の絵です。その生きものの絵がないときは、近い祖先のまとまりの絵を使います。歩く・飛ぶ・泳ぐ・ゆれるなどの動き方はグループごとの演出で、本物の動きではありません。作者と条件は、押したときの詳細に出します（だれでも使える条件の絵だけ）。</li>
+        <li>和名は Wikidata のラベルです。ないものは学名だけ。同じ学名が動物と植物にあるときなど、ちがう和名が出ることがあります。</li>
+        <li>COL に種がまだ入っていないまとまりと、ウイルスは入れていません。COL は「知られている種の8割ほど」をおさめていると書いています。</li>
+        <li>分類と系統は研究でよく変わります。学習用の目安として見てください。</li>
+      </ul>
+      <h3>通信について</h3>
+      <p>枝を開く・検索するときに、学名や検索の文字を COL（api.checklistbank.org）と Wikidata（wikidata.org）へ、シルエットのために学名を PhyloPic（api.phylopic.org・images.phylopic.org）へ、写真の名前を Wikimedia Commons（commons.wikimedia.org・upload.wikimedia.org・thumb.wikimedia.org、英語版 Wikipedia）へ送って読みます。それ以外は送りません。</p>
+      <h3>おもな出どころ（データ）</h3>
+      <ul>
+        <li>Bánki, O. ほか. Catalogue of Life. <span id="meta"></span> doi:10.48580/dgz5n. <a href="https://www.catalogueoflife.org/" target="_blank" rel="noopener">catalogueoflife.org</a>（CC BY 4.0）</li>
+        <li>Open Tree of Life 合成系統樹 と Open Tree Taxonomy. <a href="https://tree.opentreeoflife.org/" target="_blank" rel="noopener">tree.opentreeoflife.org</a>（CC0）</li>
+        <li>Hinchliff, C. E. ほか (2015) Synthesis of phylogeny and taxonomy into a comprehensive tree of life. PNAS 112: 12764–12769.</li>
+        <li>PhyloPic（シルエット。作者・条件は絵ごとに）. <a href="https://www.phylopic.org/" target="_blank" rel="noopener">phylopic.org</a></li>
+        <li>Wikimedia Commons（図。作者・条件は図ごとに）. <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">commons.wikimedia.org</a></li>
+        <li>Wikidata（和名・説明・Wikipedia への行き先）. <a href="https://www.wikidata.org/" target="_blank" rel="noopener">wikidata.org</a>（CC0）</li>
+      </ul>
+      <h3>使っているもの</h3>
+      <p>フォント: Zen Old Mincho・Zen Kaku Gothic New・EB Garamond・IBM Plex Mono（Google Fonts、SIL Open Font License）</p>
+    </details>
+  </aside>
+</div>
+
+<div id="lightbox" hidden></div>
+
+<script src="data/backbone.js"></script>
+<script src="js/api.js"></script>
+<script src="js/tree.js"></script>
+<script src="js/view.js"></script>
+<script src="js/view3d.js"></script>
+<script src="js/critters.js"></script>
+<script src="js/compare.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
