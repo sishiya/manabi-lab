@@ -125,11 +125,10 @@ cv.addEventListener('pointercancel', up);
 cv.addEventListener('pointerleave', () => { V.hover = null; redraw(false); });
 cv.addEventListener('wheel', e => {
   e.preventDefault();
-  // マウスのホイール = 拡大・縮小。トラックパッドの2本指 = 動かす（ピンチは ctrlKey つきで拡大）。Shift は横へ
-  //   見分け方: マウスのホイールは1回の量が大きく（50 以上の整数）、横の量が 0。トラックパッドは小さな量が続き、横もまざる
-  const mouseWheel = e.deltaMode === 1 || (e.deltaX === 0 && Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY));
+  // ホイール（たて）= 拡大・縮小。横の量がまざるとき（トラックパッドの2本指）は動かす。ピンチ（ctrlKey）は拡大、Shift は横へ
+  //   v007 では「量が 50 以上の整数ならマウス」で見分けたが、Windows の表示の拡大率で量が小数になり、ホイールで拡大できなくなった
   if (!e.ctrlKey && e.shiftKey) { V.cam.x -= e.deltaY || e.deltaX; redraw(false); return; }
-  if (!e.ctrlKey && !mouseWheel) { V.cam.x -= e.deltaX; V.cam.y -= e.deltaY; redraw(false); return; }
+  if (!e.ctrlKey && e.deltaX !== 0) { V.cam.x -= e.deltaX; V.cam.y -= e.deltaY; redraw(false); return; }
   const dy = e.deltaMode === 1 ? e.deltaY * 30 : e.deltaY;
   V.zoomAt(e.offsetX, e.offsetY, Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0015)));
 }, { passive: false });
