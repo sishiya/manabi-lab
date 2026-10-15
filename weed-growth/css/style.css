@@ -109,7 +109,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-of
 @media (max-width: 420px){
   #bar{flex-wrap:nowrap}
   #clock{font-size:12.5px;min-width:0;white-space:nowrap}
-  .tempc{font-size:11px;min-width:0}
+  .tempc{font-size:11px;min-width:0;margin-left:2px}
+  .ps{display:none}
+  .ro-n b{white-space:nowrap}
+  #tgSnd{padding:2px 8px;min-height:30px}
   .seg.tiny button{padding:2px 5px;font-size:11px}
   .seg.small button{padding:5px 3px;font-size:12px}
   #tools{flex-wrap:nowrap}

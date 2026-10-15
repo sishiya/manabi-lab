@@ -52,22 +52,32 @@ function viewTick(dt) {
   if (u >= 1) VIEW.anim = null;
 }
 
-// 入力: ホイール = ズーム、ドラッグ = 動かす、2本指 = つまむ、タップ = 道具
-function setupInput(onTap, onHover) {
+// 入力: ホイール = ズーム、2本指 = つまむ・動かす、右・中ボタンのドラッグ = 動かす。
+// 左ボタン（1本指）のドラッグ: 道具をえらんでいれば道具で塗る（H.isPaint()）、「見る」なら動かす。タップは H.tap
+function setupInput(H) {
   const pts = new Map(); let drag = null, pinch = null;
   const pos = e => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  const endPaint = () => { if (drag && drag.paint) { H.paintEnd(); drag.paint = false; } };
   cv.addEventListener('wheel', e => {
     e.preventDefault(); const p = pos(e);
     zoomAt(p.x, p.y, Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0018)));
   }, { passive: false });
+  cv.addEventListener('contextmenu', e => e.preventDefault());
   cv.addEventListener('pointerdown', e => {
     cv.setPointerCapture(e.pointerId); const p = pos(e); pts.set(e.pointerId, p);
-    if (pts.size === 1) drag = { x: p.x, y: p.y, sx: p.x, sy: p.y, moved: false, touch: e.pointerType === 'touch' };
-    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; drag = null; }
+    if (pts.size === 1) {
+      const paint = e.button === 0 && H.isPaint();
+      drag = { x: p.x, y: p.y, sx: p.x, sy: p.y, moved: false, touch: e.pointerType === 'touch', paint };
+      if (paint) H.paintStart(p.x, p.y);
+    }
+    if (pts.size === 2) {
+      endPaint();
+      const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; drag = null;
+    }
   });
   cv.addEventListener('pointermove', e => {
     const p = pos(e);
-    if (!pts.has(e.pointerId)) { onHover(p.x, p.y, false); return; }
+    if (!pts.has(e.pointerId)) { H.hover(p.x, p.y, false); return; }
     pts.set(e.pointerId, p);
     if (pinch && pts.size >= 2) {
       const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
@@ -76,19 +86,22 @@ function setupInput(onTap, onHover) {
     }
     if (drag) {
       if (Math.hypot(p.x - drag.sx, p.y - drag.sy) > 6) drag.moved = true;
-      if (drag.moved) { panBy(p.x - drag.x, p.y - drag.y); VIEW.follow = false; }
+      if (drag.paint) { H.paint(drag.x, drag.y, p.x, p.y); H.hover(p.x, p.y, false); }
+      else if (drag.moved) panBy(p.x - drag.x, p.y - drag.y);
       drag.x = p.x; drag.y = p.y;
     }
   });
   const up = e => {
     const p = pos(e);
-    if (drag && !drag.moved && pts.size === 1) { onTap(p.x, p.y); if (drag.touch) onHover(p.x, p.y, true); }
+    if (drag && !drag.moved && !drag.paint && pts.size === 1) H.tap(p.x, p.y);
+    if (drag && drag.touch && !drag.moved) H.hover(p.x, p.y, true);
+    if (pts.size === 1) endPaint();
     pts.delete(e.pointerId);
     if (pts.size < 2) pinch = null;
     if (pts.size === 0) drag = null;
   };
   cv.addEventListener('pointerup', up);
-  cv.addEventListener('pointercancel', e => { pts.delete(e.pointerId); pinch = null; drag = null; });
-  cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') onHover(-1, -1, false); });
-  cv.addEventListener('dblclick', e => { const p = pos(e); zoomAt(p.x, p.y, 2.5); });
+  cv.addEventListener('pointercancel', e => { if (pts.size === 1) endPaint(); pts.delete(e.pointerId); pinch = null; if (!pts.size) drag = null; });
+  cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !pts.size) H.hover(-1, -1, false); });
+  cv.addEventListener('dblclick', e => { if (H.isPaint()) return; const p = pos(e); zoomAt(p.x, p.y, 2.5); });
 }

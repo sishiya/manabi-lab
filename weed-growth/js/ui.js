@@ -1,7 +1,7 @@
 // 雑草がふえるまで — 画面の部品（速さ・道具・数字・いまのようす・時間のグラフ・できごと・説明・寄って見る）
 'use strict';
 const $ = id => document.getElementById(id);
-const SPEEDS = [['1日/秒', 1], ['1週/秒', 7], ['1か月/秒', 30]];
+const SPEEDS = [['1日<span class="ps">/秒</span>', 1], ['1週<span class="ps">/秒</span>', 7], ['1か月<span class="ps">/秒</span>', 30]];   // 狭い画面では「/秒」を隠す
 const TOOLS = [['見る', 'look'], ['抜く', 'pull'], ['刈る', 'mow'], ['耕す', 'till'], ['おおう', 'cover']];
 const WIDTHS = [['10cm', 0.1], ['30cm', 0.3], ['全部', 2.2]];
 const UI = { speed: 7, playing: true, lastRo: 0, lastTl: 0 };
@@ -12,7 +12,7 @@ function fmtDate(day) { const d = dateOf(day); return `${yearOf(day)}年目 ${d.
 function seg(el, items, cur, on) {
   el.innerHTML = '';
   for (const [label, v] of items) {
-    const b = document.createElement('button'); b.textContent = label; b.setAttribute('aria-pressed', String(v === cur));
+    const b = document.createElement('button'); b.innerHTML = label; b.setAttribute('aria-pressed', String(v === cur));
     b.onclick = () => { for (const c of el.children) c.setAttribute('aria-pressed', 'false'); b.setAttribute('aria-pressed', 'true'); on(v); };
     el.appendChild(b);
   }
@@ -29,6 +29,7 @@ function buildUI() {
   });
   $('scenNote').textContent = SCENARIOS[S.scen].note;
   $('play').onclick = () => { UI.playing = !UI.playing; syncPlay(); };
+  $('tgSnd').onclick = () => { SND.on = !SND.on; setPressed($('tgSnd'), SND.on); };
   $('zIn').onclick = () => zoomAt(VIEW.w / 2, VIEW.h / 2, 2);
   $('zOut').onclick = () => zoomAt(VIEW.w / 2, VIEW.h / 2, 0.5);
   $('zAll').onclick = () => resetView();
@@ -146,13 +147,14 @@ function describeAt(px, py) {
       const xi = Math.floor(w.x / DXC), zi = Math.floor(-w.y / DZC), i = zi * NX + xi;
       const len = SP.seedLen * s, cap = seedCap(DXC * s);
       for (const [A, awake, off] of [[S.SN, true, 50000], [S.SD, false, 0]]) {
-        for (let k = 0; k < Math.min(A[i], cap); k++) {
+        for (let k = 0; k < seedShown(A[i], DXC * s); k++) {
           const sp = seedSpot(i, k + off);
           if (Math.hypot(sp.x - w.x, sp.y - w.y) * s < Math.max(5, len / 2)) return seedText(awake, -sp.y);
         }
       }
       const d = S.SD[i], a = S.SN[i];
       return `<b>土の中</b> 深さ ${(-w.y * 100).toFixed(1)}cm<br>このます目（横1cm・深さ0.5cm・奥行き15cm）に タネ ${d + a} 粒（眠る ${d}・目ざめた ${a}）。` +
+        (DXC * s > 15 ? '<br>寄っているので、描いているのは手前の薄い切り口のぶんだけ。' : '') +
         (zi < ZG ? (DF[zi] >= 1 ? '<br>芽を出しやすい深さ。' : '<br>ここからも芽を出せる（出にくい）。') : '<br>深すぎて芽を出さない。耕すと浅いところへ上がる。');
     }
     return '<b>土</b><br>ふだんは中が見えない。「土を透かして見る」で、眠っているタネや根が見える。';
@@ -180,7 +182,7 @@ function plantText(p) {
   let t = `<b>エノコログサ</b>（${state}。芽が出て ${age}日）` + (p.n > 1 ? `<br>ここに同じころ生えた <b>${p.n} 本</b>をまとめて計算（描くのは1本。数値は1本あたり）` : '') + `<br>高さ ${(p.H * 100).toFixed(0)}cm・重さ ${p.W < 1 ? (p.W * 1000).toFixed(0) + 'mg' : p.W.toFixed(1) + 'g'}（乾いた重さ）・茎 ${1 + p.til} 本`;
   if (p.st !== 3) t += `・光 ${Math.round(p.light * 100)}%`;
   if (p.st >= 2) t += `<br>穂で作ったタネ ${Math.round(p.made / p.n).toLocaleString('ja-JP')} 粒（熟して穂にある ${Math.round(p.ripe / p.n).toLocaleString('ja-JP')}・落とした ${Math.round(p.shedN / p.n).toLocaleString('ja-JP')}）`;
-  if (TOOL === 'pull') t += '<br><span style="color:var(--acc)">タップで抜く</span>';
+  if (TOOL === 'pull') t += '<br><span style="color:var(--acc)">タップで抜く（なぞると次々に）</span>';
   return t;
 }
 function showTip(px, py, html) {

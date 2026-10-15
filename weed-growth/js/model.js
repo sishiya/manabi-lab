@@ -288,22 +288,22 @@ function plantsStep(T, dt) {
     // 枯れた株: 残った熟したタネを落としながら倒れていく
     p.dd += dt;
     const k = binom(p.ripe, 1 - Math.exp(-0.12 * dt)); p.ripe -= k; p.shedN += k; disperse(p, k);
-    if (p.dd > 50) { disperse(p, p.ripe); p.ripe = 0; continue; }
+    if (p.dd > (p.W < 0.3 ? 12 : 50)) { disperse(p, p.ripe); p.ripe = 0; continue; }   // 小さい株は早く倒れて見えなくなる
     keep.push(p);
   }
   S.plants = keep;
   if (S.plants.length > GROUP_AT) groupSeedlings();
 }
 
-// 数が多いときの間引き（計算と描くのを軽くする）: 同じ 1cm の列・同じころの小さな芽を1つのまとまりに（本数 n は数えたまま）。
-// まとめた芽は同じ重さ・同じ育ち方として計算し、絵は代表の1本だけ描く。大きな株（0.05g より重い）はまとめない
-const GROUP_AT = 900;
+// 数が多いときの間引き（計算と描くのを軽くし、図を見やすく）: 同じ 2cm の列・同じころの小さな株を1つのまとまりに（本数 n は数えたまま）。
+// まとめた株は同じ重さ・同じ育ち方として計算し、絵は代表の1本だけ描く。大きな株（0.2g より重い）と穂の出た株はまとめない
+const GROUP_AT = 250;
 function groupSeedlings() {
   const map = new Map(), keep = [];
   for (const p of S.plants) {
     let key = null;
-    if (p.st === 0) key = '0|' + Math.floor(p.x / DXC) + '|' + Math.floor(p.z0 / 0.005) + '|' + Math.floor(p.cdU / 15);
-    else if (p.st === 1 && p.W < 0.05) key = '1|' + Math.floor(p.x / DXC) + '|' + Math.round(Math.log2(p.W) * 2) + '|' + Math.floor(p.cd / 25) + '|' + (p.capH < 9 ? 1 : 0);
+    if (p.st === 0) key = '0|' + Math.floor(p.x / 0.02) + '|' + Math.floor(p.z0 / 0.005) + '|' + Math.floor(p.cdU / 15);
+    else if (p.st === 1 && p.W < 0.2) key = '1|' + Math.floor(p.x / 0.02) + '|' + Math.round(Math.log2(p.W) * 2) + '|' + Math.floor(p.cd / 25) + '|' + (p.capH < 9 ? 1 : 0);
     const q = key && map.get(key);
     if (!q) { if (key) map.set(key, p); keep.push(p); continue; }
     const n = q.n + p.n;
@@ -364,64 +364,86 @@ function restoreSnap(i) {
 function snapIndexAt(day) { let k = 0; for (let i = 0; i < H.snaps.length; i++) if (H.snaps[i].day <= day + 1e-6) k = i; return k; }
 
 // ---------- 道具（いつでも、好きな場所で） ----------
-function pullAt(x, y) {   // y は地上の高さ（画面でさわった所）。いちばん近い株
+// ---------- 道具（いつでも、好きな場所で。ドラッグ中は1つの「ひと塗り」stroke にまとめて、終わりに1行だけ記録） ----------
+function newStroke(tool) { return { tool, n: 0, seeds: 0, drop: 0, x0: 1e9, x1: -1e9, cols: new Set(), ids: new Set(), on: null, h: 0.05, depth: 0.15 }; }
+function endStroke(k) {
+  if (!k) return;
+  const fd = dateOf(S.day), d = `${fd.m}月${fd.d}日 `, len = Math.max(1, Math.round((k.x1 - k.x0) * 100));
+  const sd = k.seeds + k.drop ? `（穂のタネ ${k.seeds} 粒を持ち出し、${k.drop} 粒が落ちた）` : '';
+  if (k.tool === 'pull' && k.n) logEvent(d + `${k.n}本抜いた` + sd, 'act');
+  if (k.tool === 'mow' && k.n) logEvent(d + `${k.n}本を高さ ${Math.round(k.h * 100)}cm で刈った` + sd, 'act');
+  if (k.tool === 'till' && k.cols.size) logEvent(d + `${k.cols.size}cm を深さ ${Math.round(k.depth * 100)}cm まで耕した` + (k.n ? `（株 ${k.n} 本をすきこんだ）` : ''), 'act');
+  if (k.tool === 'cover' && k.cols.size) logEvent(d + `${k.cols.size}cm を` + (k.on ? '光を通さないシートでおおった' : 'シートを外した'), 'act');
+}
+function span(k, x0, x1) { if (k) { k.x0 = Math.min(k.x0, x0); k.x1 = Math.max(k.x1, x1); } }
+// 1つのストロークで1回だけ使うための仮の stroke（タップや窓口から呼んだとき）
+function once(tool, fn) { const k = newStroke(tool); const r = fn(k); endStroke(k); return r; }
+
+function pullAt(x, y, k) {   // y は地上の高さ（画面でさわった所）。いちばん近い株
+  if (!k) return once('pull', k2 => pullAt(x, y, k2));
   let best = null, bd = 1e9;
   for (const p of S.plants) {
-    if (p.st === 0) continue;
-    const top = Math.max(p.H, 0.01), w = 0.02 + 0.25 * Math.sqrt(p.W / SP.wmax);
+    if (p.st === 0 || k.ids.has(p.id)) continue;
+    // タップは葉の広がりのどこでも。なぞっている間（k.tol）は根もとの近くだけ（通った所の株だけを抜く）
+    const top = Math.max(p.H, 0.01), w = k.tol || 0.02 + 0.25 * Math.sqrt(p.W / SP.wmax);
     const dx = Math.abs(p.x - x) / w, dy = y > top ? (y - top) / 0.03 : 0;
     const d = dx + dy;
-    if (d < bd && dx < 1.6 && dy < 1.5) { bd = d; best = p; }
+    if (d < bd && dx < (k.tol ? 1 : 1.6) && dy < 1.5) { bd = d; best = p; }
   }
   if (!best) return null;
+  k.ids.add(best.id);
+  if (typeof fxPull === 'function') fxPull(best);   // 見た目だけ（すぽん）
   const f = 1 / best.n;                          // まとめた株からは1本ぶん
   const mine = Math.round(best.ripe * f), drop = binom(mine, 0.2);   // 抜くときにゆれて落ちる（推定 2割）
   disperse(best, drop);
   let onP = mine - drop;
-  for (const b of best.batches) { const k = Math.round(b.n * f); onP += k; b.n -= k; }
+  for (const b of best.batches) { const c = Math.round(b.n * f); onP += c; b.n -= c; }
   best.ripe -= mine; S.tot.pulled++; S.tot.removedSeeds += onP;
   if (best.n > 1) { best.n--; best.LA = SP.lar * best.W * best.n; } else S.plants = S.plants.filter(p => p !== best);
-  const fd = dateOf(S.day);
-  logEvent(`${fd.m}月${fd.d}日 1本抜いた` + (best.st === 2 ? `（穂のタネ ${onP} 粒を持ち出し、${drop} 粒が落ちた）` : best.st === 3 ? '（枯れた株）' : ''), 'act');
+  k.n++; k.seeds += onP; k.drop += drop; span(k, best.x, best.x);
   return best;
 }
-function mow(x0, x1, h) {
-  h = h || 0.05; let n = 0, seeds = 0, drop = 0;
+function mow(x0, x1, h, k) {
+  if (!k) return once('mow', k2 => mow(x0, x1, h, k2));
+  h = h || 0.05; k.h = h; let n = 0;
   for (const p of S.plants) {
     if (p.st === 0 || p.x < x0 || p.x > x1 || p.H <= h) continue;
     const m = 1 - h / p.H;                         // 刈りとった高さの割合
     if (p.st === 2 || p.st === 3) {                // 穂はてっぺん → 刈ると穂ごと持ち去る（熟したタネの3割は落ちる。推定）
-      const k = binom(p.ripe, 0.3); disperse(p, k); drop += k;
-      seeds += p.ripe - k; for (const b of p.batches) seeds += b.n;
+      const c = binom(p.ripe, 0.3); disperse(p, c); k.drop += c;
+      k.seeds += p.ripe - c; S.tot.removedSeeds += p.ripe - c;
+      for (const b of p.batches) { k.seeds += b.n; S.tot.removedSeeds += b.n; }
       p.ripe = 0; p.batches = [];
     }
     if (p.st === 3) { p.dd = 99; }
     p.W *= 1 - 0.8 * m; p.LA = SP.lar * p.W * p.n; p.capH = h; p.H = h; n += p.n;
   }
-  S.tot.removedSeeds += seeds;
-  const fd = dateOf(S.day);
-  if (n) logEvent(`${fd.m}月${fd.d}日 ${n}本を高さ ${Math.round(h * 100)}cm で刈った` + (seeds + drop ? `（穂のタネ ${seeds} 粒を持ち出し、${drop} 粒が落ちた）` : ''), 'act');
+  k.n += n; span(k, x0, x1);
   return n;
 }
-function till(x0, x1, depth) {
-  depth = depth || 0.15; const zm = Math.round(depth / DZC); let n = 0;
+function till(x0, x1, depth, k) {
+  if (!k) return once('till', k2 => till(x0, x1, depth, k2));
+  depth = depth || 0.15; k.depth = depth; const zm = Math.round(depth / DZC);
   for (const p of S.plants) if (p.x >= x0 && p.x <= x1) {  // 株は土にすきこむ。熟したタネは土の中へ
-    n += p.n; const xi = clamp(Math.floor(p.x / DXC), 0, NX - 1);
-    const k = p.ripe; for (let j = 0; j < k; j++) S.SD[Math.floor(rnd() * zm) * NX + xi]++;
+    k.n += p.n; const xi = clamp(Math.floor(p.x / DXC), 0, NX - 1);
+    const c = p.ripe; for (let j = 0; j < c; j++) S.SD[Math.floor(rnd() * zm) * NX + xi]++;
     p._gone = true;
   }
   S.plants = S.plants.filter(p => !p._gone);
   const a0 = clamp(Math.floor(x0 / DXC), 0, NX - 1), a1 = clamp(Math.floor(x1 / DXC), 0, NX - 1);
-  for (let x = a0; x <= a1; x++) for (const A of [S.SD, S.SN]) {   // 0〜15cm をよくまぜる
-    let tot = 0; for (let z = 0; z < zm; z++) { tot += A[z * NX + x]; A[z * NX + x] = 0; }
-    for (let j = 0; j < tot; j++) A[Math.floor(rnd() * zm) * NX + x]++;
+  for (let x = a0; x <= a1; x++) {                 // 0〜15cm をよくまぜる（1回のドラッグで同じ列は1回だけ）
+    if (k.cols.has(x)) continue; k.cols.add(x);
+    for (const A of [S.SD, S.SN]) {
+      let tot = 0; for (let z = 0; z < zm; z++) { tot += A[z * NX + x]; A[z * NX + x] = 0; }
+      for (let j = 0; j < tot; j++) A[Math.floor(rnd() * zm) * NX + x]++;
+    }
   }
-  const fd = dateOf(S.day);
-  logEvent(`${fd.m}月${fd.d}日 ${Math.round((x1 - x0) * 100)}cm を深さ ${Math.round(depth * 100)}cm まで耕した` + (n ? `（株 ${n} 本をすきこんだ）` : ''), 'act');
+  span(k, x0, x1);
 }
-function cover(x0, x1, on) {
+function cover(x0, x1, on, k) {
+  if (!k) return once('cover', k2 => cover(x0, x1, on, k2));
+  if (k.on === null) k.on = on;                    // 1回のドラッグの中は、はじめに決めた向き（おおう／外す）のまま
   const a0 = clamp(Math.floor(x0 / DXC), 0, NX - 1), a1 = clamp(Math.floor(x1 / DXC), 0, NX - 1);
-  for (let x = a0; x <= a1; x++) S.sheet[x] = on ? 1 : 0;
-  const fd = dateOf(S.day);
-  logEvent(`${fd.m}月${fd.d}日 ${Math.round((x1 - x0) * 100)}cm を` + (on ? '光を通さないシートでおおった' : 'シートを外した'), 'act');
+  for (let x = a0; x <= a1; x++) { if (S.sheet[x] !== (k.on ? 1 : 0)) k.cols.add(x); S.sheet[x] = k.on ? 1 : 0; }
+  span(k, x0, x1);
 }

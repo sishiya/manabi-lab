@@ -11,6 +11,71 @@ function fxShed(x, y, k) {
   if (FX.length > 120) return;
   for (let i = 0; i < Math.min(3, k); i++) FX.push({ x, y, vx: (Math.random() - 0.5) * 0.25, vy: 0, t: 0 });
 }
+// 抜いたときの「すぽん」（見た目と音だけ。計算には関係ない）: 根ごと土から出て、少し跳ねて傾き、消える。土が飛ぶ
+const PULLFX = [];
+const SND = { on: true, ctx: null, last: 0 };
+function popSound(big) {
+  if (!SND.on) return;
+  const now = performance.now(); if (now - SND.last < 70) return; SND.last = now;
+  try {
+    const A = SND.ctx || (SND.ctx = new (window.AudioContext || window.webkitAudioContext)()), t = A.currentTime;
+    const o = A.createOscillator(), gn = A.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(big ? 180 : 260, t); o.frequency.exponentialRampToValueAtTime(big ? 700 : 950, t + 0.08);
+    gn.gain.setValueAtTime(0.0001, t); gn.gain.exponentialRampToValueAtTime(0.12, t + 0.01); gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+    o.connect(gn); gn.connect(A.destination); o.start(t); o.stop(t + 0.15);
+  } catch (e) { SND.on = false; }
+}
+function fxPull(p) {
+  if (PULLFX.length > 40) PULLFX.shift();
+  const dirt = [];
+  for (let i = 0; i < 12; i++) dirt.push({ x: (Math.random() - 0.5) * 0.01, y: 0, vx: (Math.random() - 0.5) * 0.5, vy: 0.4 + Math.random() * 0.7 });
+  // 「すぽっ！」の字は、近く（60px）で 0.3秒以内に出ていなければ（なぞって次々に抜くと重なるので）
+  const txt = !PULLFX.some(f => f.txt && f.t < 0.3 && Math.abs(X(f.x) - X(p.x)) < 60);
+  PULLFX.push({ txt, G: plantGeom(p), R: rootGeom(p), x: p.x, H: Math.max(0.01, p.H), c: plantColor(p), pc: p.st === 3 ? COL.dead : mix(COL.pan, COL.ripe, panState(p).ripeF),
+    dir: Math.random() < 0.5 ? -1 : 1, t: 0, dirt });
+  popSound(p.W > 1);
+}
+function pullFxTick(dt) {
+  for (const f of PULLFX) { f.t += dt; for (const d of f.dirt) { d.vy -= 3 * dt; d.x += d.vx * dt; d.y = Math.max(0, d.y + d.vy * dt); } }
+  for (let i = PULLFX.length - 1; i >= 0; i--) if (PULLFX[i].t > 1.2) PULLFX.splice(i, 1);
+}
+function drawPullFX() {
+  const s = VIEW.s;
+  for (const f of PULLFX) {
+    const t = f.t, ease = u => 1 - (1 - u) ** 3;
+    const u = Math.max(0, Math.min(1, (t - 0.1) / 0.5));
+    const rise = (t < 0.1 ? 0.004 * t / 0.1 : 0.004 + (0.06 + f.H * 0.45) * ease(u));   // 少しふんばってから、すぽん
+    const rot = f.dir * 0.55 * ease(u), alpha = t < 0.75 ? 1 : Math.max(0, 1 - (t - 0.75) / 0.45);
+    const L = (wx, wy) => [(wx - f.x) * s, -wy * s];
+    g.save(); g.globalAlpha = alpha; g.translate(X(f.x), Y(0)); g.rotate(rot); g.translate(0, -rise * s);
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    g.strokeStyle = COL.root + '0.85)'; g.lineWidth = Math.max(0.8, SP.rootDia * s); g.beginPath();   // 根（土がついたまま）
+    for (const rt of f.R.roots.slice(0, 40)) { let q = L(rt.pts[0].x, rt.pts[0].y); g.moveTo(q[0], q[1]); for (let i = 1; i < rt.pts.length; i++) { q = L(rt.pts[i].x, rt.pts[i].y); g.lineTo(q[0], q[1]); } }
+    g.stroke();
+    g.strokeStyle = rgb(f.c); g.lineWidth = Math.max(0.8, 0.0025 * s); g.beginPath();
+    for (const st of f.G.stems) { const a = L(st.x0, st.y0), c = L(st.cx, st.cy), b = L(st.x1, st.y1); g.moveTo(a[0], a[1]); g.quadraticCurveTo(c[0], c[1], b[0], b[1]); }
+    g.stroke();
+    g.lineWidth = Math.max(0.9, SP.leafW * s * 0.6); g.beginPath();
+    for (const l of f.G.leaves) { const a = L(l.x0, l.y0), c = L(l.cx, l.cy), b = L(l.x1, l.y1); g.moveTo(a[0], a[1]); g.quadraticCurveTo(c[0], c[1], b[0], b[1]); }
+    g.stroke();
+    if (f.G.pans.length) {
+      g.strokeStyle = rgb(f.pc); g.lineWidth = Math.max(1.6, 0.008 * s); g.beginPath();
+      for (const pn of f.G.pans) { let q = L(pn.pts[0].x, pn.pts[0].y); g.moveTo(q[0], q[1]); for (const pt of pn.pts) { q = L(pt.x, pt.y); g.lineTo(q[0], q[1]); } }
+      g.stroke();
+    }
+    g.fillStyle = '#5a4634'; g.beginPath(); g.ellipse(0, 0.004 * s, Math.max(3, 0.012 * s), Math.max(2, 0.008 * s), 0, 0, Math.PI * 2); g.fill();   // 根もとの土のかたまり
+    g.restore();
+    g.save(); g.globalAlpha = alpha; g.fillStyle = '#6b5640';
+    for (const d of f.dirt) { const r = Math.max(1.5, 0.003 * s); g.fillRect(X(f.x + d.x) - r / 2, Y(d.y) - r / 2, r, r); }
+    if (!f.txt) { g.restore(); continue; }
+    const fs = Math.round(Math.max(15, Math.min(26, 0.04 * s)));
+    g.font = `700 ${fs}px ` + getComputedStyle(document.body).fontFamily; g.textAlign = 'center';
+    g.lineWidth = 4; g.strokeStyle = 'rgba(10,18,26,0.8)'; g.fillStyle = COL.acc;
+    const ty = Y(0) - Math.min(VIEW.h * 0.4, (f.H * 0.5 + 0.03) * s) - 22 - t * 30;
+    g.strokeText('すぽっ！', X(f.x), ty); g.fillText('すぽっ！', X(f.x), ty);
+    g.restore();
+  }
+}
 function rgb(c, a) { return a == null ? `rgb(${c[0]},${c[1]},${c[2]})` : `rgba(${c[0]},${c[1]},${c[2]},${a})`; }
 function mix(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t].map(Math.round); }
 function inView(x, y, m) { const px = X(x), py = Y(y); return px > -m && px < VIEW.w + m && py > -m && py < VIEW.h + m; }
@@ -40,12 +105,19 @@ function drawScene() {
   }
   drawSheet();
   drawPlants();
+  drawPullFX();
   drawFX();
   drawRulers();
   drawToolPreview();
 }
 
 // ---------- 土の中 ----------
+// 描くタネの数: 遠くからは奥行き 15cm ぶん全部を重ねて。寄るほど、手前の薄い切り口（1cm）のぶんだけにする（重なって見えすぎないように）
+const SLICE = 0.01;
+function seedShown(n, cellPx) {
+  const f = cellPx <= 15 ? 1 : cellPx >= 60 ? SLICE / BED_D : 1 + (SLICE / BED_D - 1) * (cellPx - 15) / 45;
+  return Math.min(Math.round(n * f), seedCap(cellPx));
+}
 function seedCap(cellPx) { return cellPx < 6 ? 2 : cellPx < 15 ? 6 : cellPx < 40 ? 25 : cellPx < 120 ? 120 : 400; }
 function visibleCells() {
   const a = toWorld(0, 0), b = toWorld(VIEW.w, VIEW.h);
@@ -60,8 +132,8 @@ function drawSeedsIn(zFrom, zTo) {
     g.fillStyle = col; g.beginPath();
     for (let z = z0; z <= z1; z++) for (let x = V.x0; x <= V.x1; x++) {
       const i = z * NX + x, n = A[i]; if (!n) continue;
-      const m = Math.min(n, cap);
-      if (n > cap && cellPx > 2) {   // 描ききれない分は、ます目の濃さで
+      const m = seedShown(n, cellPx);
+      if (n > cap && cellPx > 2 && cellPx <= 15) {   // 描ききれない分は、ます目の濃さで
         g.save(); g.globalAlpha = Math.min(0.45, 0.07 * Math.log2(n / cap + 1)); g.fillRect(X(x * DXC), Y(-z * DZC), cellPx, DZC * s); g.restore();
       }
       for (let k = 0; k < m; k++) {
@@ -317,6 +389,9 @@ function drawRulers() {
 }
 let TOOL = 'look', TOOL_W = 0.3, HOVER = null;
 function drawToolPreview() {
+  if (typeof STROKE !== 'undefined' && STROKE && STROKE.x1 > STROKE.x0 && TOOL !== 'pull') {   // いまのドラッグで塗った範囲
+    g.fillStyle = 'rgba(155,227,122,0.10)'; g.fillRect(X(STROKE.x0), 0, (STROKE.x1 - STROKE.x0) * VIEW.s, VIEW.h);
+  }
   if (!HOVER || HOVER.px < 0 || TOOL === 'look' || TOOL === 'pull') return;
   const w = toWorld(HOVER.px, HOVER.py), x0 = Math.max(0, w.x - TOOL_W / 2), x1 = Math.min(BED_W, w.x + TOOL_W / 2), s = VIEW.s;
   g.save(); g.setLineDash([5, 4]); g.strokeStyle = COL.acc; g.lineWidth = 1.5;

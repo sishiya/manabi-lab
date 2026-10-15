@@ -15,12 +15,13 @@
       <span id="temp" class="mono tempc">5℃</span>
       <button class="btn icon" id="play" aria-label="止める" title="止める／進める">❚❚</button>
       <div class="seg tiny" id="segSpeed" role="group" aria-label="速さ"></div>
+      <button class="btn small tg" id="tgSnd" aria-pressed="true" title="抜いたときの音">音</button>
     </div>
     <div id="frame"><canvas id="cv" aria-label="細長い花だんを横から切った図。上は地上の株、下は土の中のタネと根。ホイールや2本指で、タネや根の先の中まで寄れる"></canvas>
       <div class="zoom" role="group" aria-label="ズーム"><button class="btn icon" id="zIn" aria-label="寄る" title="寄る">＋</button><button class="btn icon" id="zOut" aria-label="はなれる" title="はなれる">−</button><button class="btn small" id="zAll">全体</button></div>
       <div class="tip" id="tip" hidden></div>
       <div class="legend fl" id="legendFl"><span><i class="dot" style="background:#b58a52"></i>眠っているタネ</span><span><i class="dot" style="background:#f0cf72"></i>目ざめたタネ</span></div>
-      <div class="zhint" id="zhint">ホイール・2本指・ダブルクリックで寄る（タネの中・根の先の細胞まで）。ドラッグで動かす</div>
+      <div class="zhint" id="zhint">ホイール・2本指で寄る。道具はなぞって使う。動かすのは右ドラッグか「見る」</div>
     </div>
     <div id="tools" role="group" aria-label="道具">
       <div class="seg small" id="segTool"></div>
@@ -49,12 +50,12 @@
 
     <section>
       <h2>道具の使い方（いつでも、好きな場所で）</h2>
-      <p class="cap">上の「抜く・刈る・耕す・おおう」をえらんで、図の上をタップ（クリック）。はばは「10cm・30cm・全部」。ドラッグはいつでも図を動かす。</p>
+      <p class="cap">上の「抜く・刈る・耕す・おおう」をえらんで、図の上をタップするか、<b>ドラッグでなぞる</b>（なぞった所に続けて使える）。はばは「10cm・30cm・全部」。図を動かすのは「見る」でドラッグ、右ドラッグ、2本指。</p>
       <ul class="cap tools-note">
-        <li><b>抜く</b>: いちばん近い1本を根ごと。熟した穂があると、ゆれて2割が落ちる（推定）。</li>
+        <li><b>抜く</b>: いちばん近い1本を根ごと（すぽっ）。なぞると、通った所の株を次々に。熟した穂があると、ゆれて2割が落ちる（推定）。</li>
         <li><b>刈る</b>: 高さ5cm で。穂は持ち去るが、株は生きていて、のびなおしてまた穂を出す。</li>
         <li><b>耕す</b>: 深さ15cm までよくまぜる。浅いタネは深くへ、深いタネは浅くへ。</li>
-        <li><b>おおう</b>: 光を通さないシート（もう一度で外す）。下で芽を出しても育たない。</li>
+        <li><b>おおう</b>: 光を通さないシート。シートの上からなぞると外す。下で芽を出しても育たない。</li>
       </ul>
     </section>
 
@@ -123,7 +124,7 @@
           <li>まわりから飛んでくるタネ・鳥やアリに運ばれるタネ・病気や虫は入れていません。</li>
           <li>株の形（分げつ・葉・穂・根）は重さから作った目安の絵です。根は土の中の1本1本ではなく、広がり方の目安。</li>
           <li>タネの中・根の先の細胞・小穂の花は、教科書の模式図をもとにした絵です（大きさは本当の大きさの目安）。</li>
-          <li>小さすぎて見えないもの（遠くから見たタネ・根・葉）は、見やすいように太く描いています。ます目に描ききれないほどタネがあるところは、ます目の色の濃さで表しています。</li>
+          <li>小さすぎて見えないもの（遠くから見たタネ・根・葉）は、見やすいように太く描いています。ます目に描ききれないほどタネがあるところは、ます目の色の濃さで表しています。遠くからは奥行き 15cm ぶんのタネを重ねて描き、寄るほど手前の薄い切り口（厚さ 1cm）のぶんだけにしていきます。</li>
         </ul>
       </details>
     </div>
