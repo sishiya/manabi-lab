@@ -1,0 +1,157 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>雑草がふえるまで</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2314202c'/><path d='M32 54 C30 40 26 30 18 20 M32 54 C34 40 40 32 48 26 M32 54 C32 36 33 22 36 10' fill='none' stroke='%239be37a' stroke-width='5' stroke-linecap='round'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+
+<div id="app">
+  <div id="stage">
+    <div id="bar">
+      <b id="clock" class="mono">1年目 3月1日</b>
+      <span id="temp" class="mono tempc">5℃</span>
+      <button class="btn icon" id="play" aria-label="止める" title="止める／進める">❚❚</button>
+      <div class="seg tiny" id="segSpeed" role="group" aria-label="速さ"></div>
+    </div>
+    <div id="frame"><canvas id="cv" aria-label="細長い花だんを横から切った図。上は地上の株、下は土の中のタネと根。ホイールや2本指で、タネや根の先の中まで寄れる"></canvas>
+      <div class="zoom" role="group" aria-label="ズーム"><button class="btn icon" id="zIn" aria-label="寄る" title="寄る">＋</button><button class="btn icon" id="zOut" aria-label="はなれる" title="はなれる">−</button><button class="btn small" id="zAll">全体</button></div>
+      <div class="tip" id="tip" hidden></div>
+      <div class="legend fl" id="legendFl"><span><i class="dot" style="background:#b58a52"></i>眠っているタネ</span><span><i class="dot" style="background:#f0cf72"></i>目ざめたタネ</span></div>
+      <div class="zhint" id="zhint">ホイール・2本指・ダブルクリックで寄る（タネの中・根の先の細胞まで）。ドラッグで動かす</div>
+    </div>
+    <div id="tools" role="group" aria-label="道具">
+      <div class="seg small" id="segTool"></div>
+      <div class="seg tiny" id="segWidth" role="group" aria-label="道具のはば"></div>
+    </div>
+    <div id="ro">
+      <div class="ro-c"><span class="lbl">地上の株</span>
+        <div class="ro-n"><b id="roUp" class="mono">–</b><small>本<br><span id="roHeads">穂 0</span></small></div></div>
+      <div class="ro-c"><span class="lbl">土の中のタネ</span>
+        <div class="ro-n"><b id="roBank" class="mono">–</b><small>粒/m²<br><span id="roDorm">眠る –</span></small></div></div>
+      <div class="ro-c"><span class="lbl">今年落ちたタネ</span>
+        <div class="ro-n"><b id="roShed" class="mono">–</b><small>粒/m²<br><span id="roOnPlant">穂に –</span></small></div></div>
+    </div>
+  </div>
+
+  <div id="panel">
+    <header class="brand">
+      <h1>雑草がふえるまで</h1>
+      <p>抜いても抜いても、いつのまにか生えてくる雑草。そのわけは土の中にある。エノコログサ（ねこじゃらし）の一生を、長さ2mの花だんを横から切った図で計算してみよう。</p>
+    </header>
+
+    <section class="card now">
+      <h2>いまのようす</h2>
+      <p id="now"></p>
+    </section>
+
+    <section>
+      <h2>道具の使い方（いつでも、好きな場所で）</h2>
+      <p class="cap">上の「抜く・刈る・耕す・おおう」をえらんで、図の上をタップ（クリック）。はばは「10cm・30cm・全部」。ドラッグはいつでも図を動かす。</p>
+      <ul class="cap tools-note">
+        <li><b>抜く</b>: いちばん近い1本を根ごと。熟した穂があると、ゆれて2割が落ちる（推定）。</li>
+        <li><b>刈る</b>: 高さ5cm で。穂は持ち去るが、株は生きていて、のびなおしてまた穂を出す。</li>
+        <li><b>耕す</b>: 深さ15cm までよくまぜる。浅いタネは深くへ、深いタネは浅くへ。</li>
+        <li><b>おおう</b>: 光を通さないシート（もう一度で外す）。下で芽を出しても育たない。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>時間（押すとその日へもどる）</h2>
+      <canvas id="tl" class="chart" aria-label="地上の株の数と、土の中のタネの数のうつりかわり。押すとその日へもどって試しなおせる"></canvas>
+      <div class="legend"><span><i style="background:#9be37a"></i>地上の株（本）</span><span><i style="background:#f0cf72"></i>土の中のタネ（粒/m²）</span><span><i style="background:#e9a0c8"></i>穂のある株</span><span class="dim">たては対数（1目もりで10倍）</span></div>
+    </section>
+
+    <section>
+      <h2>寄って見る</h2>
+      <div class="acts" id="jumps">
+        <button class="btn act" data-j="seed">土の中のタネ<small>眠っている・目ざめた</small></button>
+        <button class="btn act" data-j="sprout">芽を出すところ<small>土の中で</small></button>
+        <button class="btn act" data-j="root">根の先<small>細胞・根毛</small></button>
+        <button class="btn act" data-j="flower">穂の花・実<small>小穂</small></button>
+      </div>
+      <p class="cap" id="jumpMsg"></p>
+    </section>
+
+    <section>
+      <h2>はじめから</h2>
+      <div class="seg small" id="segScen"></div>
+      <p class="cap" id="scenNote"></p>
+    </section>
+
+    <section>
+      <h2>コンピュータならではの実験</h2>
+      <div class="toggles">
+        <button class="btn tg" id="tgXray" aria-pressed="true">土を透かして見る</button>
+        <button class="btn tg" id="tgNoDorm" aria-pressed="false">休眠をなくす</button>
+        <button class="btn tg" id="tgAutoPull" aria-pressed="false">穂が出たらすぐ抜く</button>
+      </div>
+      <ul class="cap">
+        <li><b>土を透かして見る</b>: 本当は見えない土の中。外すと、ふだん私たちが見ている花だん（表面のタネだけ）。</li>
+        <li><b>休眠をなくす</b>: タネが眠らず、暖かければすぐ芽を出す（これから落ちるタネと、土の中のタネ全部）。</li>
+        <li><b>穂が出たらすぐ抜く</b>: 毎日見回って、穂が出た株をその日に抜く（タネを1粒も落とさせない、完ぺきな草取り）。土の中のタネが何年で減るか。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>できごと</h2>
+      <ol class="log" id="log" reversed></ol>
+    </section>
+
+    <div class="explain">
+      <details>
+        <summary>しくみ（計算していること）</summary>
+        <ul>
+          <li><b>土の中のタネ</b>: 横 1cm・深さ 0.5cm のます目ごとに、眠っている（休眠）タネと目ざめたタネの数。眠っているタネは冬の寒さ（日平均 10℃ 未満）で目ざめ、夏に 2cm より深いとまた眠る（推定）。</li>
+          <li><b>芽を出す</b>: 目ざめたタネが、10.2℃ より暖かいと少しずつ芽を出す。出やすいのは深さ 2〜15mm、5cm より深いとほとんど出ない（近い種キンエノコロの測定）。表面（0〜5mm）は乾きやすいので出にくい（推定）。</li>
+          <li><b>地上へ</b>: 芽は胚乳（タネの中の弁当）を使って土の中をのびる。深いほど時間がかかり、5cm より深いと弁当が足りず、地上に届かずに死ぬ。</li>
+          <li><b>育つ</b>: 1本ずつ、気温（10℃ を下限、30℃ でいちばん）と光で重さが増える。葉の広さは重さに比例。5cm 四方・高さの段ごとに葉を数え、自分より上にある葉の重なりで光が減る（背の高い株が勝つ）。光が足りない芽は枯れる。</li>
+          <li><b>穂と実</b>: 芽が出てからの積算温度（10℃ をこえた分）で穂が出る。日が短いと早く出る（秋に出た芽は小さいまま穂をつける）。穂が出たあとに増えた重さの45%がタネになり、花から約220℃日で熟して、毎日5%ずつ落ちる。</li>
+          <li><b>落ちる</b>: 株のまわり（標準 10cm ＋ 高さ×0.25）にばらまく。花だんの外（通路）に落ちた分はなくなる。</li>
+          <li><b>土の中で減る</b>: 1年に9%が死ぬ・くさる。表面のタネは虫や鳥に1日0.8%食べられ、1日0.6%が雨や土の割れ目で 5mm より下へ（推定）。</li>
+          <li><b>冬</b>: 日平均 7℃ を下まわると地上の株は枯れる（このころ霜がおりる）。タネだけが冬をこす。</li>
+        </ul>
+      </details>
+      <details>
+        <summary>簡単にしているところ</summary>
+        <ul>
+          <li>花だんの幅（奥行き 30cm）は1つにまとめ、タネは横の位置と深さだけで数えています。株の奥行きは色の濃さだけ。</li>
+          <li>気温は東京の平年値（月平均）に、日ごとのゆらぎ（推定）を足したもの。雨・土の水分・日照りは入れていません（いつも芽が出られる湿りけ）。</li>
+          <li>まわりから飛んでくるタネ・鳥やアリに運ばれるタネ・病気や虫は入れていません。</li>
+          <li>株の形（分げつ・葉・穂・根）は重さから作った目安の絵です。根は土の中の1本1本ではなく、広がり方の目安。</li>
+          <li>タネの中・根の先の細胞・小穂の花は、教科書の模式図をもとにした絵です（大きさは本当の大きさの目安）。</li>
+          <li>小さすぎて見えないもの（遠くから見たタネ・根・葉）は、見やすいように太く描いています。ます目に描ききれないほどタネがあるところは、ます目の色の濃さで表しています。</li>
+        </ul>
+      </details>
+    </div>
+
+    <details id="about">
+      <summary>このアプリについて</summary>
+      <p>学習用に簡単にした計算です。成長・休眠・タネの死ぬ速さなど、ほとんどの値は推定で、下の測られた値に合う大きさにしました（1本だけ広いところで育つと 1万粒ほど）。本当の庭では、天気・土・ほかの草でまったくちがいます。</p>
+      <h3>おもな出どころ</h3>
+      <ul class="refs">
+        <li>Utah State University Extension「Green foxtail」（1本 5,000〜12,000粒。タネは6年生きる）<a href="https://extension.usu.edu/planthealth/ipm/ornamental-pest-guide/weeds/w_green-foxtail" target="_blank" rel="noopener">USU</a></li>
+        <li>Roberts, H.A. &amp; Feast, P.M. (1973) Emergence and longevity of seeds of annual weeds in cultivated and undisturbed soils. <i>J. Appl. Ecol.</i> 10:133–143（土の中のタネは、耕す土で年32%、耕さない土で年12% 減る。1年目に芽を出すのは 20〜25%）。数値はデンマーク環境省の報告（1999）の引用で確かめた <a href="https://www2.mst.dk/udgiv/publications/1999/87-7909-206-3/html/kap03.htm" target="_blank" rel="noopener">MST</a></li>
+        <li>Forcella, F., Eradat-Oskoui, K. &amp; Wagner, S.W. (1993) Application of weed seedbank ecology to low-input crop management. <i>Ecol. Appl.</i> 3:74–83（畑のおよそ半分は、タネが 1m² に 1,000粒より多い）</li>
+        <li>Forcella, F. ほか (1992) Weed seedbanks of the U.S. corn belt: magnitude, variation, emergence, and application. <i>Weed Science</i>（8か所の畑で、生きたタネが 1m² に 600〜162,000粒）</li>
+        <li>AgResearch「Yellow bristle grass (Setaria pumila) germination biology」<i>New Zealand Plant Protection</i>（近い種で、芽を出す下限 10.2℃、深さ 2〜50mm から出て、おもに 2〜15mm）<a href="https://agresearch.figshare.com/articles/journal_contribution/Yellow_bristle_grass_Setaria_pumila_germination_biology/22739648" target="_blank" rel="noopener">AgResearch</a></li>
+        <li>Forcella, F. &amp; Banken, K.R.（エノコログサの芽の育ちを、10℃ を下限にした積算温度で表す）<i>Weed Technology</i></li>
+        <li>Michigan State University (2023)「MSU plant biologists shed light on 144-year-old seedy mystery」（1879年に土に埋めたタネが、2021年に掘り出して芽を出した）<a href="https://msutoday.msu.edu/news/2023/11/msu-plant-biologists-shed-light-on-144-year-old-seedy-mystery" target="_blank" rel="noopener">MSU Today</a></li>
+        <li>気象庁 平年値（1991〜2020年、東京の月平均気温）</li>
+      </ul>
+      <h3>使っているもの</h3>
+      <p>フォント: Google Fonts（SIL Open Font License）。ライブラリは使っていません。</p>
+    </details>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/model.js"></script>
+<script src="js/view.js"></script>
+<script src="js/shapes.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/micro.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
