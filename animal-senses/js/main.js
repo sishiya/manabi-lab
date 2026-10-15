@@ -147,7 +147,8 @@ function updateLegend() {
   } else if (k === 'bat') {
     const tm = clockOf('bat') < 1 ? ANIMALS.bat.clocks[S.clock.bat != null ? S.clock.bat : 1][0] : '';
     h = L('<b style="color:#6f8cff">青い線</b> = 声の波が当たっている所　<b style="color:#bfe6ff">水色〜白</b> = 返ってきたこだま', '<b style="color:#6f8cff">Blue line</b> = where the call’s sound wave is hitting  <b style="color:#bfe6ff">Light blue to white</b> = echoes that came back')
-      + L(`<br>つかまえたガ: ${SX.caught} 匹${tm ? `（時間 ${tm}）` : ''}`, `<br>Moths caught: ${SX.caught}${tm ? ` (time ${tm})` : ''}`);
+      + L(`<br>つかまえたガ: ${SX.caught} 匹${tm ? `（時間 ${tm}）` : ''}`, `<br>Moths caught: ${SX.caught}${tm ? ` (time ${tm})` : ''}`)
+      + L('<br>※ こだまは音なので、コウモリに線や光が見えるわけではない。こだまで分かる形と距離を、目で見える絵に置き換えている', '<br>* Echoes are sound, so the bat does not see lines or light. The shapes and distances it learns from echoes are turned into a picture you can see');
   } else if (k === 'bee') {
     h = L('ハチの色を人の色にずらして表示: <b style="color:#ff6a5a">赤</b>=ハチの緑　<b style="color:#6fe07a">緑</b>=ハチの青　<b style="color:#6f8cff">青</b>=紫外線', 'Bee colors shifted into human colors: <b style="color:#ff6a5a">red</b> = bee green, <b style="color:#6fe07a">green</b> = bee blue, <b style="color:#6f8cff">blue</b> = ultraviolet') + edgeNote();
   } else if (k === 'shrimp') {
