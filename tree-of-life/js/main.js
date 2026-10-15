@@ -121,17 +121,23 @@ cv.addEventListener('wheel', e => {
   V.zoomAt(e.offsetX, e.offsetY, Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0015)));
 }, { passive: false });
 
-// ---------- ボタン ----------
+// ---------- 全体ボタンと、大きさのつまみ（たて。上が大きい） ----------
 const [W0, H0] = [() => V.size[0], () => V.size[1]];
-document.getElementById('zin').onclick = () => V.zoomAt(W0() / 2, H0() / 2, 1.3);
-document.getElementById('zout').onclick = () => V.zoomAt(W0() / 2, H0() / 2, 1 / 1.3);
-document.getElementById('zfit').onclick = () => V.fit();
-document.getElementById('zclose').onclick = () => {
-  for (const n of T.nodes) n.open = false;
-  T.root.open = true; V.selected = null; V.fit();
-};
+document.getElementById('zfit').onclick = () => { touched = true; reachId++; V.fit(); };
+const zs = document.getElementById('zs');
+const KMIN = V.KMIN, KMAX = V.KMAX;
+const k2v = k => Math.round(1000 * Math.log(k / KMIN) / Math.log(KMAX / KMIN));
+const v2k = v => KMIN * Math.pow(KMAX / KMIN, v / 1000);
+zs.addEventListener('input', () => { touched = true; V.zoomAt(W0() / 2, H0() / 2, v2k(+zs.value) / V.cam.k); });
+V.onDraw = () => { if (document.activeElement !== zs) zs.value = k2v(V.cam.k); };   // ホイール・ピンチ・全体で変わったら、つまみも動かす
 
-// 大きさが変わったら描きなおす。まだだれも動かしていなければ全体が入るように（最初は CSS が効く前で大きさ 0 のことがある）
+// ---------- 使い方（？）のポップアップ ----------
+const helpBtn = document.getElementById('helpbtn'), help = document.getElementById('help');
+helpBtn.onclick = e => { e.stopPropagation(); help.hidden = !help.hidden; helpBtn.setAttribute('aria-expanded', String(!help.hidden)); };
+document.addEventListener('click', e => { if (!help.hidden && !e.target.closest('#help')) { help.hidden = true; helpBtn.setAttribute('aria-expanded', 'false'); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !help.hidden) helpBtn.click(); });
+
+// 大きさが変わったら描きなおす。まだだれもさわっていなければ、はじめの場所に置きなおす（最初は CSS が効く前で大きさ 0 のことがある）
 cv.addEventListener('pointerdown', () => touched = true);
 cv.addEventListener('wheel', () => touched = true);
 new ResizeObserver(() => { V.resize(); if (!touched && replace) replace(); }).observe(cv);
@@ -143,11 +149,17 @@ async function startView() {
   if (!mam) { T.root.open = true; V.fit(); return; }
   T.ancestors(mam).forEach(a => a.open = true);
   V.selected = mam; UI.show(mam);
-  const place = (n, ny = n) => {   // n を左の少し内側、ny をたて真ん中に（だれもさわっていない間は、大きさが変わってもここへ）
-    replace = () => place(n, ny);
+  // 哺乳類から下の、いま見えている枝の囲み。入るなら画面の真ん中に、入らなければ narrow を左はしに
+  const place = narrow => {
+    replace = () => place(narrow);
     V.resize(); V.layout(); V.settle();
-    const [W, H] = V.size, k = W < 600 ? 0.78 : 0.88;
-    V.cam.k = k; V.cam.x = Math.min(24, W * 0.03) + 6 - n.x * k; V.cam.y = H / 2 - ny.y * k;
+    const [W, H] = V.size;
+    const b = V.bbox(V.vis.filter(n => n === mam || T.ancestors(n).includes(mam)));
+    const k = W < 600 ? 0.78 : Math.max(0.72, Math.min(0.92, (H - 40) / (b.bottom - b.top)));
+    V.cam.k = k;
+    const AW = W - 56;   // 右のつまみの分をのぞいた幅
+    V.cam.x = (b.right - b.left) * k <= AW - 24 ? (AW - (b.right - b.left) * k) / 2 - b.left * k : 12 - narrow.x * k;
+    V.cam.y = H / 2 - (b.top + b.bottom) / 2 * k;
     V.draw();
   };
   place(mam);
@@ -162,11 +174,7 @@ async function startView() {
     await T.open(n);
   } catch (e) { warn(); }
   if (touched) return;   // 読みこみの間にさわっていたら、そのまま
-  // 広い画面は哺乳類から目まで入れる。せまい画面は目のならびが見えるところから
-  V.layout();
-  const [W] = V.size;
-  const fits = (n.jx + 38 + 150 - mam.x) * (W < 600 ? 0.78 : 0.88) < W - 30;
-  place(fits ? mam : n, n);
+  place(n);
 }
 V.resize();
 startView();

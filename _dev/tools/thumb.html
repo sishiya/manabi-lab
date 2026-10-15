@@ -20,7 +20,7 @@ const click = (w, sel) => { const e = w.document.querySelector(sel); if (e) e.cl
 // アプリごとの準備（w = アプリの window）
 const SETUP = {
   // いのちの系統樹（はじめの画面のまま）
-  'tree-of-life': async w => { await wait(5000); const h = w.__trofli; h.V.resize(); h.V.settle(); },   // はじめの画面（哺乳類の目のならび）
+  'tree-of-life': async w => { await wait(9000); const h = w.__trofli; h.V.resize(); h.V.settle(); },   // はじめの画面（哺乳類の目のならび）
   // 雑草がふえるまで（はじめのメニューを閉じ、ふつうの庭の2年目の8月: 穂がそろい、土の中にタネ・根）
   'weed-growth': async w => { await wait(800); const h = w.__wegr; w.startScenario('garden'); h.set('play', false); h.run(365 + 160, 1); h.draw(); await wait(300); },
   // ほこりが積もるまで（2日たって、ふとんをはたいた直後: 舞い上がった皮ふと繊維、すみ・家具の上に積もった層）

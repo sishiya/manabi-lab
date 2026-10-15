@@ -12,22 +12,31 @@
     <header id="top">
       <h1>いのちの系統樹<small>TREE OF LIFE</small></h1>
       <div id="search">
-        <input id="q" type="search" placeholder="名前でさがす（和名・学名）" autocomplete="off" enterkeyhint="search">
+        <input id="q" type="search" placeholder="名前でさがす" autocomplete="off" enterkeyhint="search">
         <ul id="results"></ul>
       </div>
+      <button id="helpbtn" aria-expanded="false" aria-controls="help" title="使い方">？</button>
+      <div id="help" hidden>
+        <p>名前を押すと、その先の枝が開きます。もう一度押すと閉じます。</p>
+        <p>ドラッグで動かし、右のつまみ・ホイール・ピンチで大きさを変えます。「全体」で、いま開いている枝がぜんぶ入ります。</p>
+        <p>「ライオン」「シイタケ」「Homo sapiens」のように、和名でも学名でもさがせます。</p>
+        <p class="lg-title">名札の色は分類の段</p>
+        <div id="legend"></div>
+      </div>
     </header>
-    <div id="legend" aria-label="色と段"></div>
     <main id="stage">
       <canvas id="cv" aria-label="生きものの系統樹。名前を押すと開く"></canvas>
       <div id="zoom">
-        <button id="zin" title="拡大">＋</button><button id="zout" title="縮小">−</button><button id="zfit" title="全体">全体</button><button id="zclose" title="すべて閉じる">閉じる</button>
+        <button id="zfit" title="開いている枝がぜんぶ入るように">全体</button>
+        <span class="zl" aria-hidden="true">大</span>
+        <input id="zs" type="range" min="0" max="1000" value="500" aria-label="大きさ">
+        <span class="zl" aria-hidden="true">小</span>
       </div>
       <p id="status" role="status"></p>
     </main>
   </div>
 
   <aside id="side">
-    <p id="hint">「ライオン」「シイタケ」「Homo sapiens」などで検索できます。名前を押すと、その先の枝が開きます（もう一度押すと閉じる）。ドラッグで動かし、ホイール・ピンチで拡大。</p>
     <section id="detail"></section>
 
     <details id="about">

@@ -9,10 +9,16 @@ i.sci,.sci i{font-family:var(--f-sci);font-style:italic}
 
 /* スマホ: 上（見出し・検索・凡例・樹形図）を固定し、詳細と説明は下でスクロール */
 #pin{position:sticky;top:0;z-index:2;background:var(--paper);display:flex;flex-direction:column;height:62vh;height:62svh;border-bottom:1px solid var(--rule)}
-#top{display:flex;align-items:center;gap:10px 14px;padding:10px 14px 6px;flex-wrap:wrap}
-#top h1{font-family:var(--f-mincho);font-weight:700;font-size:21px;margin:0;white-space:nowrap;letter-spacing:.08em;display:flex;align-items:baseline;gap:8px}
-#top h1 small{font-family:var(--f-sci);font-weight:400;font-size:12px;letter-spacing:.2em;color:var(--sub)}
-#search{position:relative;flex:1;min-width:200px}
+#top{position:relative;display:flex;align-items:center;gap:8px;padding:6px 10px}
+/* スマホ: タイトルはごく小さく（1行の左はしに2段で） */
+#top h1{font-family:var(--f-mincho);font-weight:700;font-size:11px;line-height:1.25;margin:0;white-space:nowrap;letter-spacing:.06em;display:flex;flex-direction:column}
+#top h1 small{font-family:var(--f-sci);font-weight:400;font-size:8.5px;letter-spacing:.16em;color:var(--sub)}
+#search{position:relative;flex:1;min-width:0}
+#helpbtn{flex:none;width:38px;height:38px;border-radius:50%;border:1px solid var(--rule);background:var(--card);color:var(--acc);font-family:var(--f-mincho);font-weight:700;font-size:17px;cursor:pointer}
+#helpbtn[aria-expanded="true"],#helpbtn:hover{border-color:var(--acc);background:#eef3ec}
+#help{position:absolute;right:10px;top:50px;z-index:6;width:min(340px,calc(100vw - 20px));background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:10px 14px 12px;box-shadow:0 10px 28px rgba(60,48,20,.2);font-size:13.5px;line-height:1.7}
+#help p{margin:0 0 6px}
+#help .lg-title{margin:10px 0 4px;color:var(--sub);font-size:12px;border-top:1px solid var(--rule2);padding-top:8px}
 #q{width:100%;height:38px;border-radius:19px;border:1px solid var(--rule);background:var(--card);color:var(--ink);padding:0 14px;font:inherit;font-size:15px}
 #q::placeholder{color:var(--faint)}
 #q:focus{outline:2px solid var(--acc);outline-offset:0}
@@ -24,17 +30,19 @@ i.sci,.sci i{font-family:var(--f-sci);font-style:italic}
 #results i,#legend i,.chip i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:1px}
 #results span{color:var(--sub);font-size:12px}
 #results .empty{padding:10px 12px;color:var(--sub);font-size:13px}
-#legend{display:flex;gap:4px 12px;padding:0 14px 7px;font-size:12px;color:var(--sub);overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+#legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--sub)}
 #stage{flex:1;position:relative;min-height:0;background:var(--paper);border-top:1px solid var(--rule2)}   /* 無地（名前の下じきと同じ紙の色） */
 #cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
-#zoom{position:absolute;right:10px;bottom:10px;display:flex;gap:4px}
-#zoom button{min-width:38px;height:38px;border-radius:19px;border:1px solid var(--rule);background:rgba(251,248,241,.94);color:var(--ink);font-size:14px;cursor:pointer;padding:0 10px}
-#zoom button:hover{border-color:var(--acc);color:var(--acc)}
+/* 大きさ: 右はしに、たてのつまみ（上が大きい）と「全体」 */
+#zoom{position:absolute;right:8px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:2px;background:rgba(251,248,241,.9);border:1px solid var(--rule);border-radius:20px;padding:6px 4px}
+#zoom button{width:40px;height:36px;border-radius:18px;border:0;background:none;color:var(--acc);font-size:12.5px;font-weight:700;cursor:pointer;padding:0}
+#zoom button:hover{background:#eef3ec}
+#zoom .zl{font-family:var(--f-mincho);font-size:11px;color:var(--sub);line-height:1.2}
+#zs{writing-mode:vertical-lr;direction:rtl;width:28px;height:min(160px,28vh);margin:2px 0;accent-color:var(--acc);cursor:pointer}
 #status{position:absolute;left:10px;bottom:10px;margin:0;font-size:12px;color:#9a5b12;max-width:60%}
 
 /* 詳細: 図鑑の1ページ */
 #side{padding:14px 18px 32px;line-height:1.75;background:var(--paper2)}
-#hint{color:var(--sub);font-size:13px;margin:0 0 12px}
 #detail{background:var(--card);border:1px solid var(--rule);border-radius:4px;padding:16px 18px 14px;box-shadow:0 1px 0 var(--rule2),0 6px 18px rgba(80,60,20,.06)}
 #detail .d-rank{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--sub);letter-spacing:.1em}
 #detail .tag{color:#fbf8f1;font-weight:700;font-size:12px;padding:1px 9px;border-radius:10px;letter-spacing:0}
@@ -81,5 +89,8 @@ a{color:var(--acc)}
   #app{display:grid;grid-template-columns:1fr 400px;height:100vh}
   #pin{position:relative;height:100vh;border-bottom:0;border-right:1px solid var(--rule)}
   #side{overflow:auto;height:100vh}
-  #top h1{font-size:23px}
+  #top{padding:8px 14px;gap:14px}
+  #top h1{font-size:20px;flex-direction:row;align-items:baseline;gap:8px;letter-spacing:.08em}
+  #top h1 small{font-size:11px;letter-spacing:.2em}
+  #help{top:56px}
 }

@@ -10,6 +10,7 @@ const V = (() => {
   let vis = [];               // 見えているふし（配置ずみ）
   let leaving = [];           // 閉じたときに親へ吸いこまれていくふし（0.3秒ほどで消える）
   let selected = null, hover = null;
+  let onDrawFn = null;        // 描いたあとに呼ぶ（大きさのつまみを合わせる）
   let W = 0, H = 0;
   const INK = '#2c2a24', SUB = '#7a7262', FAINT = '#9b927e';
   const FONT = "14px 'Zen Old Mincho','Yu Mincho','Hiragino Mincho ProN',serif";
@@ -230,6 +231,7 @@ const V = (() => {
     }
     g.globalAlpha = 1;
     g.restore();
+    if (onDrawFn) onDrawFn();
   }
   function roundRect(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 
@@ -237,7 +239,7 @@ const V = (() => {
   function hit(px, py) {
     const wx = (px - cam.x) / cam.k, wy = (py - cam.y) / cam.k;
     let best = null, bd = 1e9;
-    const pad = Math.max(0, 8 / cam.k - 8);   // 小さく見えているときは当たりを広く
+    const pad = Math.min(30, Math.max(0, 8 / cam.k - 8));   // 小さく見えているときは当たりを広く
     for (const n of vis) {
       if (!T.named(n)) continue;
       const ly = labelY(n, n.y);
@@ -251,19 +253,30 @@ const V = (() => {
   }
 
   // 拡大・移動
+  const KMIN = 0.05, KMAX = 3;
   function zoomAt(px, py, f) {
-    const k = Math.max(0.08, Math.min(3, cam.k * f));
+    const k = Math.max(KMIN, Math.min(KMAX, cam.k * f));
     cam.x = px - (px - cam.x) * (k / cam.k); cam.y = py - (py - cam.y) * (k / cam.k); cam.k = k;
     draw();
   }
-  // 木全体が入るように
+  // ふしの囲み（名前の2段もふくむ。決めた位置で）
+  function bbox(list) {
+    const b = { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity };
+    for (const n of list) {
+      const ly = labelY(n, n.y);
+      b.left = Math.min(b.left, n.x - 10); b.right = Math.max(b.right, n.x + (n.lw || 0) + 24);
+      b.top = Math.min(b.top, ly - 14); b.bottom = Math.max(b.bottom, Math.max(n.y, ly + LINE2) + 12);
+    }
+    return b;
+  }
+  // 全体: いま開いている枝がぜんぶ入るように、真ん中に（文字が読めないほど小さくなっても、形を見わたすため）
   function fit() {
     measure();
-    const rows = layout();
-    let maxX = 0; for (const n of vis) maxX = Math.max(maxX, n.x + (n.lw || 0) + 30);
-    const k = Math.min(1.2, (W - 30) / Math.max(1, maxX), (H - 30) / Math.max(1, rows * ROW));
-    cam.k = Math.max(0.6, k);   // 小さすぎて読めないほどには縮めない（入りきらないぶんはドラッグで）
-    cam.x = 15; cam.y = Math.max(24, (H - (rows - 1) * ROW * cam.k) / 2);
+    layout();
+    const b = bbox(vis), bw = b.right - b.left, bh = b.bottom - b.top;
+    const AW = W - 24 - 56;   // 右はしの大きさのつまみ（約 56px）にかからないように
+    cam.k = Math.max(KMIN, Math.min(1.2, AW / bw, (H - 24) / bh));
+    cam.x = 12 + (AW - bw * cam.k) / 2 - b.left * cam.k; cam.y = (H - bh * cam.k) / 2 - b.top * cam.k;
     draw();
   }
   function focus(n) {
@@ -278,7 +291,7 @@ const V = (() => {
 
   // デバッグ用: 描画が止まっている間（ペインがかくれている）も、アニメを1コマずつ進める
   const tick = (dt = 1 / 60) => { const m = step(dt); draw(); return { moving: m, leaving: leaving.length }; };
-  return { cv, cam, layout, draw, resize, hit, zoomAt, fit, focus, screenOf, settle, shift, pop, labelY, tick,
+  return { KMIN, KMAX, bbox, set onDraw(f) { onDrawFn = f; }, cv, cam, layout, draw, resize, hit, zoomAt, fit, focus, screenOf, settle, shift, pop, labelY, tick,
     get vis() { return vis; }, get selected() { return selected; }, set selected(n) { selected = n; },
     set hover(n) { hover = n; }, get size() { return [W, H]; } };
 })();
