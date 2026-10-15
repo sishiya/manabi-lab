@@ -48,12 +48,17 @@ const UI = (() => {
     }).join('');
     const canImg = n.q && !NO_IMAGE.test(n.name);
     $('detail').innerHTML = extra + `
-      <div class="d-rank">${rk ? `<span class="tag" style="background:${c}">${esc(rk)}</span>` : ''}${n.count ? `<span>${fmt(n.count)} 種</span>` : ''}</div>
-      <h2>${n.extinct ? '† ' : ''}${esc(n.ja || n.name)}${n.part ? '（一部）' : ''}</h2>
-      <p class="sci">${n.rank !== 'root' ? `<i>${esc(n.name)}</i>` : ''} <span class="auth" id="d-auth"></span></p>
-      <div class="acts"><button class="act" data-act="cmp">どこで分かれた？ ほかとくらべる</button><button class="act" data-act="share" title="このページのリンクをコピー">リンク</button></div>
-      <div class="plate" id="d-plate">${canImg ? '<p class="none">図を読みこみ中…</p>' : ''}</div>
-      <p class="wd" id="d-wd"></p>
+      <div class="d-card">
+        <div class="d-thumb" id="d-plate">${canImg ? '<span class="thumb-wait"></span>' : ''}</div>
+        <div class="d-headtext">
+          <div class="d-rank">${rk ? `<span class="tag" style="background:${c}">${esc(rk)}</span>` : ''}${n.count ? `<span>${fmt(n.count)} 種</span>` : ''}</div>
+          <h2>${n.extinct ? '† ' : ''}${esc(n.ja || n.name)}${n.part ? '（一部）' : ''}</h2>
+          <p class="sci">${n.rank !== 'root' ? `<i>${esc(n.name)}</i>` : ''} <span class="auth" id="d-auth"></span></p>
+          <p class="wd" id="d-wd"></p>
+        </div>
+      </div>
+      <p class="credit" id="d-credit"></p>
+      <div class="acts"><button class="act" data-act="share" title="このページのリンクをコピー">リンク</button></div>
       ${rows ? `<h3>分類</h3><table class="cls">${rows}</table>` : ''}
       <h3>しらべ</h3>
       <dl class="facts">
@@ -95,26 +100,46 @@ const UI = (() => {
       } catch (e) { console.warn(e); }
       imgs.forEach(im => im.from = from);
       if (my !== token) return;
-      plate(n, imgs, files.length);
+      plate(n, imgs, files.length, my);
     }).catch(() => { const P = $('d-plate'); if (P && my === token) P.innerHTML = ''; });
   }
   // 図: 写真と、作者・ライセンス・もとのページ（Wikimedia Commons）
-  function plate(n, imgs, had) {
-    const P = $('d-plate');
+  // 図: カードの左に小さく（押すと大きく）。作者と条件はカードの下に1行、大きくしたときはくわしく
+  //   写真がないときは、樹形図のシルエットを代わりに（シルエットの作者・条件を出す）
+  let lightItems = [];
+  function plate(n, imgs, had, my) {
+    const P = $('d-plate'), Cr = $('d-credit');
+    const name = esc(n.ja || n.name);
     if (!imgs.length) {
-      P.innerHTML = `<p class="none">${had ? '登録されている図は、使える条件が合わないので出していません。' : 'この仲間の図は、まだ見つかりません（Wikidata・Wikipedia に登録なし）。'}</p>`;
+      C.silhouette(n).then(sl => {
+        if (my !== token) return;
+        if (!sl) { P.innerHTML = ''; P.classList.add('empty'); Cr.textContent = had ? '登録されている図は、使える条件が合わないので出していません。' : ''; return; }
+        P.innerHTML = `<span class="sil"><img src="${esc(sl.src)}" alt="${name}のシルエット" referrerpolicy="no-referrer"></span>`;
+        Cr.innerHTML = `シルエット${sl.from ? `（${esc(sl.from)}の絵）` : ''}: ${esc(sl.author || '作者不明')} ／ ${ext(sl.licenseUrl, sl.license)} ／ ${ext(sl.page, 'PhyloPic')}`;
+      }).catch(() => { P.innerHTML = ''; P.classList.add('empty'); });
       return;
     }
-    const name = esc(n.ja || n.name);
-    P.innerHTML = imgs.slice(0, 2).map((im, k) => `<figure>
-      <img src="${esc(im.src)}" alt="${name}" referrerpolicy="no-referrer">
-      <figcaption><b>図${imgs.length > 1 ? k + 1 : ''}　${name}</b>${n.ja ? ` <i class="sci">${esc(n.name)}</i>` : ''}<br>
-      ${im.from === 'wiki' ? '（英語版 Wikipedia の記事の図）<br>' : ''}写真: ${esc(im.author)} ／ ${im.licenseUrl ? ext(im.licenseUrl, im.license) : esc(im.license)} ／ ${ext(im.page, 'Wikimedia Commons')}</figcaption>
-    </figure>`).join('');
-    // 読めなかった写真は図ごとかくす
-    P.querySelectorAll('img').forEach(img => img.addEventListener('error', () => img.closest('figure').remove()));
+    lightItems = imgs.slice(0, 3).map(im => ({ im, name, sci: n.ja ? n.name : '' }));
+    P.innerHTML = `<button class="thumb" title="大きく見る"><img src="${esc(imgs[0].src)}" alt="${name}" referrerpolicy="no-referrer">${imgs.length > 1 ? `<span class="cnt">${Math.min(3, imgs.length)}</span>` : ''}</button>`;
+    const im = imgs[0];
+    Cr.innerHTML = `写真: ${esc(im.author)} ／ ${im.licenseUrl ? ext(im.licenseUrl, im.license) : esc(im.license)} ／ ${ext(im.page, 'Commons')}`;
+    P.querySelector('img').addEventListener('error', () => { P.innerHTML = ''; P.classList.add('empty'); Cr.textContent = ''; });
   }
+  // 大きく見る（押すか Esc で閉じる）
+  const lb = $('lightbox');
+  function openLight() {
+    if (!lightItems.length) return;
+    lb.innerHTML = `<div class="lb-in">${lightItems.map((x, k) => `<figure>
+      <img src="${esc(x.im.src)}" alt="${x.name}" referrerpolicy="no-referrer">
+      <figcaption><b>図${lightItems.length > 1 ? k + 1 : ''}　${x.name}</b>${x.sci ? ` <i class="sci">${esc(x.sci)}</i>` : ''}<br>
+      ${x.im.from === 'wiki' ? '（英語版 Wikipedia の記事の図）<br>' : ''}写真: ${esc(x.im.author)} ／ ${x.im.licenseUrl ? ext(x.im.licenseUrl, x.im.license) : esc(x.im.license)} ／ ${ext(x.im.page, 'Wikimedia Commons')}</figcaption></figure>`).join('')}</div>
+      <button class="lb-close" title="とじる">×</button>`;
+    lb.hidden = false;
+  }
+  lb.addEventListener('click', e => { if (!e.target.closest('a') && (e.target === lb || e.target.closest('.lb-close') || e.target.tagName === 'IMG')) lb.hidden = true; });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !lb.hidden) lb.hidden = true; });
   $('detail').addEventListener('click', e => {
+    if (e.target.closest('.thumb')) { openLight(); return; }
     const act = e.target.closest('button.act');
     if (act) {
       const k = act.dataset.act;
@@ -196,11 +221,12 @@ const UI = (() => {
   function sig(n) { return n.ja + '|' + namedKids(n).map(k => k.ja).join(',') + '|' + n.kids.length; }
   function refresh() { if (showing && sig(showing) !== shownJa) show(showing, showingExtra); }
   // リンクをコピー（アドレスの # に、いま見ている生きもの・くらべている2つが入っている）
+  // リンクをコピー。ボタンの文字は変えず（幅が変わって次の行へ回りこまないように）、知らせは樹形図の下に小さく
   async function share(btn) {
-    const old = btn.textContent;
-    try { await navigator.clipboard.writeText(location.href); btn.textContent = 'コピーしました'; }
-    catch (e) { window.prompt('このリンクをコピーしてください', location.href); }
-    setTimeout(() => btn.textContent = old, 1800);
+    let ok = true;
+    try { await navigator.clipboard.writeText(location.href); } catch (e) { ok = false; window.prompt('このリンクをコピーしてください', location.href); }
+    if (ok) { const st = $('status'); st.textContent = 'リンクをコピーしました'; clearTimeout(share.t); share.t = setTimeout(() => { if (st.textContent === 'リンクをコピーしました') st.textContent = ''; }, 1800); }
+    btn.classList.add('done'); setTimeout(() => btn.classList.remove('done'), 600);
   }
   return { show, refresh, onPick() { }, onOpen() { }, onShown() { } };
 })();

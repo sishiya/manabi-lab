@@ -69,6 +69,7 @@ const C = (() => {
   // 出すのは、見えていて閉じている名前（開いた枝の先）。画面の中で、上から MAX まで
   function wanted() {
     if (!on) return [];
+    if (V.is3d) return V3.shown.filter(n => !n.more && n.rank !== 'root' && !V.kidsOf(n).length).slice(0, MAX);   // 3D: 名前の札を出したもの
     const [W, H] = V.size, k = V.cam.k;
     if (k < 0.35) return [];   // 小さすぎるときは出さない（形を見わたすとき）
     const out = [];
@@ -129,41 +130,71 @@ const C = (() => {
 
   // ---------- 描く（V.draw の中、枝のあと・名前の前。世界の座標） ----------
   const easeBack = u => { const s = 1.4; return 1 + (s + 1) * Math.pow(u - 1, 3) + s * Math.pow(u - 1, 2); };
+  // 動き方ごとの上下・かたむき・大きさ（演出）。居場所の地面からのずれで返す
+  function pose(c) {
+    let dx = 0, dy = 0, sc = 1, rot = 0, alpha = 0.88;
+    const t = c.t + c.phase;
+    if (c.kind === 'walk') dy -= Math.abs(Math.sin(t * 9)) * (c.pause > 0 ? 0 : 1.4);
+    if (c.kind === 'fly') { dy -= 9 + Math.sin(t * 2.2) * 4; sc = 1 + Math.sin(t * 16) * 0.05; }
+    if (c.kind === 'swim') { dy -= 4 + Math.sin(t * 1.8) * 3; rot = Math.sin(t * 1.8 + 1) * 0.12; }
+    if (c.kind === 'slither') rot = Math.sin(t * 5) * 0.08;
+    if (c.kind === 'hop' && c.hopT > 0) dy -= Math.sin((1 - c.hopT / 0.38) * Math.PI) * 9;
+    if (c.kind === 'sway') rot = Math.sin(t * 1.3) * 0.06;
+    if (c.kind === 'drift') { dy -= 3 + Math.sin(t * 1.1) * 3; dx += Math.sin(t * 2.7) * 1.2; }
+    // ぽこっ: 居場所で、地面から少し大きくなってもどる（名前の上は通らない）
+    if (c.born < 1) {
+      const u = c.born, e = easeBack(u);
+      dy += (1 - Math.min(1, u * 1.4)) * 5;
+      sc *= Math.max(0, e); alpha *= Math.min(1, u * 3);
+    }
+    return { dx, dy, sc, rot, alpha };
+  }
+  function put(g, c, im, x, y, w, h, sc, rot, alpha) {
+    g.save();
+    g.globalAlpha = alpha;
+    g.translate(x, y); g.rotate(rot);
+    g.scale(sc * (c.dir < 0 && c.kind !== 'sway' ? -1 : 1), sc);
+    g.drawImage(im, -w / 2, -h, w, h);   // 足もとが地面
+    g.restore();
+  }
+  function size(im) { const ar = im.width / im.height; return ar > 1 ? [SIZE, SIZE / ar] : [SIZE * ar, SIZE]; }
+  // 2D（V.draw の中、世界の座標）
   function draw(g) {
     for (const [n, c] of live) {
       if (!c.rec || !c.rec.ok || c.born < 0) continue;
-      const im = c.rec.tinted, ar = im.width / im.height;
-      const h = ar > 1 ? SIZE / ar : SIZE, w = ar > 1 ? SIZE : SIZE * ar;
-      let [bx, by] = c.dying >= 0 ? c.from : basePos(c);
-      let x = bx + c.x, y = by, sc = 1, rot = 0, alpha = 0.88;
-      // 動き方ごとの上下・かたむき（演出）
-      const t = c.t + c.phase;
-      if (c.kind === 'walk') y -= Math.abs(Math.sin(t * 9)) * (c.pause > 0 ? 0 : 1.4);
-      if (c.kind === 'fly') { y -= 9 + Math.sin(t * 2.2) * 4; sc = 1 + Math.sin(t * 16) * 0.05; }
-      if (c.kind === 'swim') { y -= 4 + Math.sin(t * 1.8) * 3; rot = Math.sin(t * 1.8 + 1) * 0.12; }
-      if (c.kind === 'slither') rot = Math.sin(t * 5) * 0.08;
-      if (c.kind === 'hop' && c.hopT > 0) y -= Math.sin((1 - c.hopT / 0.38) * Math.PI) * 9;
-      if (c.kind === 'sway') rot = Math.sin(t * 1.3) * 0.06;
-      if (c.kind === 'drift') { y -= 3 + Math.sin(t * 1.1) * 3; x += Math.sin(t * 2.7) * 1.2; }
-      // ぽこっ: 居場所で、地面から少し大きくなってもどる（名前の上は通らない）
-      if (c.born < 1) {
-        const u = c.born, e = easeBack(u);
-        y += (1 - Math.min(1, u * 1.4)) * 5;
-        sc *= Math.max(0, e); alpha *= Math.min(1, u * 3);
-      }
+      const im = c.rec.tinted, [w, h] = size(im);
+      const [bx, by] = c.dying >= 0 ? c.from : basePos(c);
+      const q = pose(c);
+      let x = bx + c.x + q.dx, y = by + q.dy, sc = q.sc, alpha = q.alpha;
       // きゅぽん: 祖先の点へ、加速しながら小さく
       if (c.dying >= 0) {
         const tgt = anchorOf(n) || [x, y], e = c.dying * c.dying * c.dying;
         x += (tgt[0] - x) * e; y += (tgt[1] - y) * e; sc *= 1 - e * 0.95; alpha *= 1 - c.dying * 0.5;
       }
-      g.save();
-      g.globalAlpha = alpha * (n.alpha === undefined ? 1 : n.alpha);
-      g.translate(x, y); g.rotate(rot);
-      g.scale(sc * (c.dir < 0 && c.kind !== 'sway' ? -1 : 1), sc);
-      g.drawImage(im, -w / 2, -h, w, h);   // 足もとが地面
-      g.restore();
+      put(g, c, im, x, y, w, h, sc, q.rot, alpha * (n.alpha === undefined ? 1 : n.alpha));
       c.hit = [x - w / 2 * sc, y - h * sc, w * sc, h * sc];
+      c.hit3 = null;
     }
+  }
+  // 3D（画面の座標）: placeOf(ふし) → 名前の札の右はし { x, y, s（大きさの倍率） } か null
+  function draw3d(g, placeOf) {
+    for (const [n, c] of live) {
+      c.hit = null; c.hit3 = null;
+      if (!c.rec || !c.rec.ok || c.born < 0 || c.dying >= 0) continue;
+      const pl = placeOf(n); if (!pl) continue;
+      const im = c.rec.tinted, [w, h] = size(im), q = pose(c);
+      const x = pl.x + (c.x + q.dx) * pl.s, y = pl.y + q.dy * pl.s, sc = q.sc * pl.s;
+      put(g, c, im, x, y, w, h, sc, q.rot, q.alpha);
+      c.hit3 = [x - w / 2 * sc, y - h * sc, w * sc, h * sc];
+    }
+  }
+  function hit3(px, py) {
+    for (const [n, c] of live) {
+      if (!c.hit3) continue;
+      const [x, y, w, h] = c.hit3;
+      if (px >= x - 4 && px <= x + w + 4 && py >= y - 4 && py <= y + h + 4) return n;
+    }
+    return null;
   }
   // 押したいきもの → そのふし
   function hit(wx, wy) {
@@ -187,7 +218,7 @@ const C = (() => {
     });
   }
   return {
-    draw, hit, step, kick, silhouette,
+    draw, draw3d, hit, hit3, step, kick, silhouette,
     get on() { return on; }, set on(v) { on = !!v; kick(); },
     get count() { return live.size; },
   };

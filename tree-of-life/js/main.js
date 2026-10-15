@@ -41,7 +41,7 @@ async function press(n) {
     stay(); V.pop(n);
     try { await p; } catch (e) { n.open = false; warn(); }
     stay();
-    reach(n);
+    if (V3.on) V3.glideTo(n); else reach(n);
     UI.show(n);
   } else V.draw();
 }
@@ -71,6 +71,7 @@ UI.onPick = (n, fromSearch) => {
   T.ancestors(n).forEach(a => a.open = true);
   V.selected = n; UI.show(n);
   V.focus(n);
+  if (V3.on) V3.glideTo(n);
   if (fromSearch && T.expandable(n) && !n.open) press(n);
   if (window.matchMedia('(max-width: 899px)').matches) document.getElementById('stage').scrollIntoView({ block: 'nearest' });
 };
@@ -82,15 +83,24 @@ let drag = null, pinch = null;
 cv.addEventListener('pointerdown', e => {
   try { cv.setPointerCapture(e.pointerId); } catch (_) { }   // 作ったイベント（テスト）では失敗する
   pts.set(e.pointerId, [e.offsetX, e.offsetY]);
-  if (pts.size === 1) drag = { x: e.offsetX, y: e.offsetY, cx: V.cam.x, cy: V.cam.y, moved: 0 };
+  if (pts.size === 1) drag = { x: e.offsetX, y: e.offsetY, cx: V.cam.x, cy: V.cam.y, moved: 0, lx: e.offsetX, ly: e.offsetY, pan: e.shiftKey || e.button === 2 };
   if (pts.size === 2) {
     const [a, b] = [...pts.values()];
+    if (V3.on) { pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2 }; drag = null; return; }
     pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), k: V.cam.k, cx: V.cam.x, cy: V.cam.y, mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2 };
     drag = null;
   }
 });
 cv.addEventListener('pointermove', e => {
   if (pts.has(e.pointerId)) pts.set(e.pointerId, [e.offsetX, e.offsetY]);
+  if (pinch && pts.size === 2 && V3.on) {
+    // 3D: ピンチで近づく・はなれる、2本指でずらす
+    const [a, b] = [...pts.values()];
+    const d = Math.hypot(a[0] - b[0], a[1] - b[1]), mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+    V3.dolly(pinch.d / Math.max(1, d)); V3.pan(mx - pinch.mx, my - pinch.my);
+    pinch.d = d; pinch.mx = mx; pinch.my = my;
+    redraw(false); return;
+  }
   if (pinch && pts.size === 2) {
     const [a, b] = [...pts.values()];
     const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -102,20 +112,30 @@ cv.addEventListener('pointermove', e => {
   if (drag) {
     const dx = e.offsetX - drag.x, dy = e.offsetY - drag.y;
     drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
+    if (V3.on) {
+      // 3D: ドラッグでぐるぐる回す（Shift か右ボタンでずらす）
+      if (drag.moved > 5) {
+        const mx = e.offsetX - drag.lx, my = e.offsetY - drag.ly;
+        if (drag.pan || e.shiftKey) V3.pan(mx, my); else V3.orbit(mx, my);
+        redraw(false);
+      }
+      drag.lx = e.offsetX; drag.ly = e.offsetY;
+      return;
+    }
     if (drag.moved > 5) { V.cam.x = drag.cx + dx; V.cam.y = drag.cy + dy; redraw(false); }
     return;
   }
-  const h = V.hit(e.offsetX, e.offsetY);
-  cv.style.cursor = h || C.hit((e.offsetX - V.cam.x) / V.cam.k, (e.offsetY - V.cam.y) / V.cam.k) ? 'pointer' : 'grab';
+  const h = V3.on ? V3.hit(e.offsetX, e.offsetY) : V.hit(e.offsetX, e.offsetY);
+  cv.style.cursor = h || (V3.on ? C.hit3(e.offsetX, e.offsetY) : C.hit((e.offsetX - V.cam.x) / V.cam.k, (e.offsetY - V.cam.y) / V.cam.k)) ? 'pointer' : 'grab';
   V.hover = h; redraw(false);
 });
 function up(e) {
   pts.delete(e.pointerId);
   if (drag && drag.moved <= 5 && e.type === 'pointerup') {
     // いきものを押した: その詳細（枝は開け閉めしない）
-    const c = C.hit((e.offsetX - V.cam.x) / V.cam.k, (e.offsetY - V.cam.y) / V.cam.k);
+    const c = V3.on ? C.hit3(e.offsetX, e.offsetY) : C.hit((e.offsetX - V.cam.x) / V.cam.k, (e.offsetY - V.cam.y) / V.cam.k);
     if (c && !Compare.picking) { touched = true; V.selected = c; UI.show(c); V.draw(); }
-    else { const n = c || V.hit(e.offsetX, e.offsetY); if (n) press(n); }
+    else { const n = c || (V3.on ? V3.hit(e.offsetX, e.offsetY) : V.hit(e.offsetX, e.offsetY)); if (n) press(n); }
   }
   if (pts.size < 2) pinch = null;
   drag = null;
@@ -123,8 +143,15 @@ function up(e) {
 cv.addEventListener('pointerup', up);
 cv.addEventListener('pointercancel', up);
 cv.addEventListener('pointerleave', () => { V.hover = null; redraw(false); });
+cv.addEventListener('contextmenu', e => { if (V3.on) e.preventDefault(); });   // 3D: 右ドラッグでずらすため
 cv.addEventListener('wheel', e => {
   e.preventDefault();
+  if (V3.on) {   // 3D: ホイールで近づく・はなれる。横の量（トラックパッド）で回す
+    if (e.deltaX !== 0 && !e.ctrlKey) V3.orbit(-e.deltaX, 0);
+    const dy = e.deltaMode === 1 ? e.deltaY * 30 : e.deltaY;
+    V3.dolly(Math.exp(dy * (e.ctrlKey ? 0.01 : 0.0015)));
+    redraw(false); return;
+  }
   // ホイール（たて）= 拡大・縮小。横の量がまざるとき（トラックパッドの2本指）は動かす。ピンチ（ctrlKey）は拡大、Shift は横へ
   //   v007 では「量が 50 以上の整数ならマウス」で見分けたが、Windows の表示の拡大率で量が小数になり、ホイールで拡大できなくなった
   if (!e.ctrlKey && e.shiftKey) { V.cam.x -= e.deltaY || e.deltaX; redraw(false); return; }
@@ -135,14 +162,22 @@ cv.addEventListener('wheel', e => {
 
 // ---------- 全体ボタンと、大きさのつまみ（たて。上が大きい） ----------
 const [W0, H0] = [() => V.size[0], () => V.size[1]];
-document.getElementById('zfit').onclick = () => { touched = true; reachId++; V.fit(); };
+document.getElementById('zfit').onclick = () => { touched = true; reachId++; if (V3.on) V3.fit(); else V.fit(); };
 const zs = document.getElementById('zs');
 const KMIN = V.KMIN, KMAX = V.KMAX;
 const k2v = k => Math.round(1000 * Math.log(k / KMIN) / Math.log(KMAX / KMIN));
 const v2k = v => KMIN * Math.pow(KMAX / KMIN, v / 1000);
-zs.addEventListener('input', () => { touched = true; V.zoomAt(W0() / 2, H0() / 2, v2k(+zs.value) / V.cam.k); });
+// 3D では、つまみはカメラの近さ（上が近い）
+const D_NEAR = 120, D_FAR = 12000;
+const d2v = d => Math.round(1000 * (1 - Math.log(d / D_NEAR) / Math.log(D_FAR / D_NEAR)));
+const v2d = v => D_NEAR * Math.pow(D_FAR / D_NEAR, 1 - v / 1000);
+zs.addEventListener('input', () => {
+  touched = true;
+  if (V3.on) { V3.cam.dist = v2d(+zs.value); V.draw(); return; }
+  V.zoomAt(W0() / 2, H0() / 2, v2k(+zs.value) / V.cam.k);
+});
 V.onDraw = () => {
-  if (document.activeElement !== zs) zs.value = k2v(V.cam.k);   // ホイール・ピンチ・全体で変わったら、つまみも動かす
+  if (document.activeElement !== zs) zs.value = V3.on ? d2v(V3.cam.dist) : k2v(V.cam.k);   // ホイール・ピンチ・全体で変わったら、つまみも動かす
   C.kick();   // 見えている名前が変わったら、いきものを出す・消す
 };
 V.onWorld = (g, k) => { Compare.draw(g, k); C.draw(g); };
@@ -175,6 +210,36 @@ async function fromHash() {
 }
 
 document.getElementById('critter-on').addEventListener('change', e => { C.on = e.target.checked; V.draw(); });
+// ---------- 3D（ぐるぐる回せる）とガイド ----------
+const b3d = document.getElementById('z3d'), gbar = document.getElementById('guide3d');
+function set3d(on) {
+  Compare.clear(false);
+  V3.on = on;
+  b3d.textContent = on ? '2D' : '3D';
+  b3d.title = on ? 'ふつうの図にもどす' : '3D でぐるぐる回して見る';
+  gbar.hidden = !on;
+  if (on) { V.layout(); V.settle(); V3.frame(V.selected && V.selected.name ? V.selected : T.root); }
+  else { V.layout(); if (V.selected) V.focus(V.selected); }
+  try { localStorage.setItem('tol-guide', V3.guide); } catch (e) { }
+}
+b3d.onclick = () => { touched = true; set3d(!V3.on); };
+gbar.addEventListener('click', e => {
+  const b = e.target.closest('button[data-g]'); if (!b) return;
+  V3.guide = b.dataset.g;
+  gbar.querySelectorAll('button[data-g]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  try { localStorage.setItem('tol-guide', V3.guide); } catch (e) { }
+});
+try { const gsv = localStorage.getItem('tol-guide'); if (gsv) { V3.guide = gsv; gbar.querySelectorAll('button[data-g]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.g === gsv))); } } catch (e) { }
+
+// ---------- 詳細の欄: はじめはコンパクト、つまみで広げる・縮める（樹形図を広く見せるため） ----------
+const grip = document.getElementById('grip');
+grip.onclick = () => {
+  const wide = !document.getElementById('app').classList.toggle('wide') ? false : true;
+  grip.setAttribute('aria-expanded', String(wide));
+  grip.querySelector('.lbl').textContent = wide ? '縮める' : '広げる';
+  if (!wide) document.getElementById('side').scrollTop = 0;
+};
+
 // ---------- 使い方（？）のポップアップ ----------
 const helpBtn = document.getElementById('helpbtn'), help = document.getElementById('help');
 helpBtn.onclick = e => { e.stopPropagation(); help.hidden = !help.hidden; helpBtn.setAttribute('aria-expanded', String(!help.hidden)); };
@@ -232,7 +297,7 @@ fromHash().then(ok => { if (!ok) startView(); });
 
 // デバッグ用（RULES 5）: 状態を見る・押す・探す
 window.__trofli = {
-  T, V, UI, C, Compare,
+  T, V, V3, UI, C, Compare, set3d,
   find: name => T.nodes.find(n => n.name === name || n.ja === name),
   press: name => press(window.__trofli.find(name)),
   reveal: async colId => { const n = await T.reveal(colId); UI.onPick(n); return n; },

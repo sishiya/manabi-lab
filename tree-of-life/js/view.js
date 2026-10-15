@@ -84,6 +84,7 @@ const V = (() => {
       }
       const named = T.named(n);
       n.lw = named ? labelW(n) : 0;
+      n.lv = parent ? parent.lv + (named ? 1 : 0.35) : 0;   // 3D の奥行き（名前のある段で1、名前のない分かれ目は少しだけ）
       const kids = kidsOf(n);
       if (!kids.length) { n.y = cy; cy += rowH; n.jx = x; return; }
       n.jx = named ? x + n.lw + 16 : x + 2;
@@ -170,8 +171,10 @@ const V = (() => {
   function resize() { if (measure()) draw(); }
 
   const branchW = c => 0.8 + Math.log10(c + 1) * 0.45;   // 種の数が多い枝ほど太い（100万種で約3.5）
+  let draw3d = null;   // 3D のときはこちらで描く（view3d.js）
   function draw() {
     if (!W) measure();
+    if (draw3d) { draw3d(g, W, H); if (onDrawFn) onDrawFn(); return; }
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, W, H);
@@ -210,6 +213,20 @@ const V = (() => {
       }
     }
     for (const [w, p] of bucket) { g.lineWidth = w; g.stroke(p); }
+    // まだ先がある（閉じている）まとまりは、名前の右へうっすら線をのばす（シルエットはこの上を歩く）
+    if (showText) {
+      g.lineWidth = Math.max(minW * 0.8, 1.1);
+      for (const n of vis) {
+        if (!n.name || n.more || n.ay < y0 || n.ay > y1 || kidsOf(n).length || !T.expandable(n)) continue;
+        const sx = n.ax + n.lw + 14, ex = sx + 92, y = n.ay + 8;
+        if (sx > x1 || ex < x0) continue;
+        const gr = g.createLinearGradient(sx, 0, ex, 0);
+        gr.addColorStop(0, 'rgba(68,82,60,.22)'); gr.addColorStop(1, 'rgba(68,82,60,0)');
+        g.globalAlpha = n.alpha === undefined ? 1 : n.alpha;
+        g.strokeStyle = gr; g.beginPath(); g.moveTo(sx, y); g.lineTo(ex, y); g.stroke();
+      }
+      g.globalAlpha = 1; g.strokeStyle = 'rgba(68,82,60,.62)';
+    }
     // 吸いこまれていく枝と点（名前はすぐ消す）
     const posOf = new Map(leaving.map(L => [L.n, L]));
     for (const L of leaving) {
@@ -339,7 +356,8 @@ const V = (() => {
 
   // デバッグ用: 描画が止まっている間（ペインがかくれている）も、アニメを1コマずつ進める
   const tick = (dt = 1 / 60) => { const m = step(dt); draw(); return { moving: m, leaving: leaving.length }; };
-  return { KMIN, KMAX, bbox, set onDraw(f) { onDrawFn = f; }, get drawn() { return drawn; }, isVis: n => visSet.has(n), set only(v) { only = v; }, kidsOf, set onWorld(f) { onWorldFn = f; }, cv, cam, layout, draw, resize, hit, zoomAt, fit, focus, screenOf, settle, shift, pop, labelY, tick,
+  return { set draw3d(f) { draw3d = f; }, get is3d() { return !!draw3d; }, labelParts, tw, branchW, get leaving() { return leaving; },
+    get selected3() { return selected; }, get hover3() { return hover; }, KMIN, KMAX, bbox, set onDraw(f) { onDrawFn = f; }, get drawn() { return drawn; }, isVis: n => visSet.has(n), set only(v) { only = v; }, kidsOf, set onWorld(f) { onWorldFn = f; }, cv, cam, layout, draw, resize, hit, zoomAt, fit, focus, screenOf, settle, shift, pop, labelY, tick,
     get vis() { return vis; }, get selected() { return selected; }, set selected(n) { selected = n; },
     set hover(n) { hover = n; }, get size() { return [W, H]; } };
 })();

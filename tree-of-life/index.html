@@ -21,7 +21,8 @@
         <p>ドラッグで動かし、右のつまみ・ホイール・ピンチで大きさを変えます。「全体」で、いま開いている枝がぜんぶ入ります。</p>
         <p>「ライオン」「シイタケ」「Homo sapiens」のように、和名でも学名でもさがせます。</p>
         <p>名前の右で動くシルエットを押すと、その詳細が出ます。動き方は演出です。</p>
-        <p>詳細の「どこで分かれた？」で2つをくらべると、共通の祖先まで枝が光ります。詳細の「リンク」で、いま見ているところを人に送れます。</p>
+        <p>「3D」で、手前（根もと）から奥（枝分かれの先）をながめられます。ドラッグで回し、Shift か右ドラッグ・2本指でずらします。ガイドは方眼・地層・ゲートから選べます。奥行きは枝分かれの段で、年代の目盛りではありません。</p>
+        <p>詳細の「リンク」で、いま見ているところを人に送れます。</p>
         <label class="tog"><input type="checkbox" id="critter-on" checked> シルエットを動かす</label>
         <p class="lg-title">名札の色は分類の段</p>
         <div id="legend"></div>
@@ -30,7 +31,13 @@
     <main id="stage">
       <canvas id="cv" aria-label="生きものの系統樹。名前を押すと開く"></canvas>
       <div id="cmpbar" hidden></div>
+      <div id="guide3d" hidden>
+        <span class="gl">ガイド</span>
+        <button data-g="grid" aria-pressed="true">方眼</button><button data-g="strata" aria-pressed="false">地層</button><button data-g="gates" aria-pressed="false">ゲート</button><button data-g="none" aria-pressed="false">なし</button>
+        <span class="gnote">奥ほど、あとから分かれた（年代の目盛りではありません）</span>
+      </div>
       <div id="zoom">
+        <button id="z3d" title="3D でぐるぐる回して見る">3D</button>
         <button id="zfit" title="開いている枝がぜんぶ入るように">全体</button>
         <span class="zl" aria-hidden="true">大</span>
         <input id="zs" type="range" min="0" max="1000" value="500" aria-label="大きさ">
@@ -41,6 +48,7 @@
   </div>
 
   <aside id="side">
+    <button id="grip" aria-expanded="false" title="詳細を広げる・縮める"><span class="bar"></span><span class="lbl">広げる</span></button>
     <section id="detail"></section>
 
     <details id="about">
@@ -53,7 +61,6 @@
         <li>枝の長さは時間を表していません（形だけ）。分かれた年代は、まだ入れていません。</li>
         <li>図（写真）は、Wikidata に登録された写真を Wikimedia Commons から読み、作者と条件（CC0・パブリックドメイン・CC BY・CC BY-SA）を図の下に出しています。それ以外の条件の写真と、人の写真は出しません。写真の中身は、ほかの人のものです（このアプリのライセンスには入りません）。</li>
         <li>名前の右で動くシルエットは PhyloPic の絵です。その生きものの絵がないときは、近い祖先のまとまりの絵を使います。歩く・飛ぶ・泳ぐ・ゆれるなどの動き方はグループごとの演出で、本物の動きではありません。作者と条件は、押したときの詳細に出します（だれでも使える条件の絵だけ）。</li>
-        <li>「どこで分かれた？」の分かれたところは、この樹形図の上で2つの道すじが合わさるまとまりです。綱より下は分類なので目安です。</li>
         <li>和名は Wikidata のラベルです。ないものは学名だけ。同じ学名が動物と植物にあるときなど、ちがう和名が出ることがあります。</li>
         <li>COL に種がまだ入っていないまとまりと、ウイルスは入れていません。COL は「知られている種の8割ほど」をおさめていると書いています。</li>
         <li>分類と系統は研究でよく変わります。学習用の目安として見てください。</li>
@@ -75,10 +82,13 @@
   </aside>
 </div>
 
+<div id="lightbox" hidden></div>
+
 <script src="data/backbone.js"></script>
 <script src="js/api.js"></script>
 <script src="js/tree.js"></script>
 <script src="js/view.js"></script>
+<script src="js/view3d.js"></script>
 <script src="js/critters.js"></script>
 <script src="js/compare.js"></script>
 <script src="js/ui.js"></script>
