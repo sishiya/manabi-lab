@@ -152,7 +152,7 @@ function plantColor(p) {
   return COL.leaf[shade];
 }
 function drawPlants() {
-  const s = VIEW.s, wide = SP.leafW * s > 3.5;
+  const s = VIEW.s, wide = SP.leafW * s > 8;   // 葉の幅が 8px をこえたら1枚ずつ面で
   g.lineCap = 'round'; g.lineJoin = 'round';
   if (!wide) { drawPlantsFar(); return; }
   // 近く: 1本ずつ、葉を面で（奥から手前へ）

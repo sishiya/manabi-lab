@@ -19,12 +19,12 @@ function seedSpot(i, k) {
 // ---------- 地上の株（エノコログサ: 根もとから分げつした茎に葉、てっぺんに穂） ----------
 function plantGeom(p) {
   const fall = p.st === 3 ? Math.min(1, p.dd / 45) : 0;
-  const key = p.st + '|' + Math.round(p.H * 600) + '|' + p.til + '|' + Math.round(fall * 20) + '|' + (p.st >= 2 ? Math.min(30, Math.floor(p.made / 120)) : 0);
+  const key = p.st + '|' + Math.round(p.H * 600) + '|' + p.til + '|' + Math.round(fall * 20) + '|' + (p.st >= 2 ? Math.min(30, Math.floor(p.made / p.n / 120)) : 0);
   if (p._gk === key) return p._g;
   const r = mulberry(p.rs), G = { stems: [], leaves: [], pans: [] };
   const H = Math.max(0.006, p.H), seedling = H < 0.03;
   const nt = seedling ? 1 : Math.min(10, 1 + p.til), fs = p.lean >= 0 ? 1 : -1;
-  const npan = p.st >= 2 ? Math.min(nt, 1 + Math.floor(p.made / 500)) : 0;
+  const npan = p.st >= 2 ? Math.min(nt, 1 + Math.floor(p.made / p.n / 500)) : 0;
   for (let k = 0; k < nt; k++) {
     const side = k === 0 ? 0 : (k % 2 ? 1 : -1), ring = Math.ceil(k / 2);
     let a = side * (0.07 + 0.08 * ring) * (0.8 + 0.5 * r()) + p.lean * 0.25 + fall * fs * 1.25;

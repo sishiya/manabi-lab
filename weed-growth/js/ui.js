@@ -138,7 +138,7 @@ function describeAt(px, py) {
     if (S.opts.xray) {
       for (const p of S.plants) if (p.st === 0 && Math.abs(p.x - w.x) < tol && w.y < 0.001 && w.y > -p.z0 - 0.004) {
         const q = sproutGeom(p);
-        return `<b>土の中でのびる芽</b>（深さ ${(p.z0 * 100).toFixed(1)}cm）<br>タネの中の胚乳（でんぷん）を使って、地上まであと ${Math.max(0, (q.shootTop * -100)).toFixed(1)}cm。` +
+        return `<b>土の中でのびる芽</b>（深さ ${(p.z0 * 100).toFixed(1)}cm` + (p.n > 1 ? `、同じころの ${p.n} 本をまとめて計算` : '') + `）<br>タネの中の胚乳（でんぷん）を使って、地上まであと ${Math.max(0, (q.shootTop * -100)).toFixed(1)}cm。` +
           (p.z0 > SP.depthMax ? '<br>深すぎて、弁当が足りずに地上に届かない。' : '');
       }
       if (SP.rootDia * s > 4) for (const p of S.plants) if (p.st === 1 || p.st === 2) for (const t of rootGeom(p).tips)
@@ -152,7 +152,7 @@ function describeAt(px, py) {
         }
       }
       const d = S.SD[i], a = S.SN[i];
-      return `<b>土の中</b> 深さ ${(-w.y * 100).toFixed(1)}cm<br>このます目（横1cm・深さ0.5cm・奥行き30cm）に タネ ${d + a} 粒（眠る ${d}・目ざめた ${a}）。` +
+      return `<b>土の中</b> 深さ ${(-w.y * 100).toFixed(1)}cm<br>このます目（横1cm・深さ0.5cm・奥行き15cm）に タネ ${d + a} 粒（眠る ${d}・目ざめた ${a}）。` +
         (zi < ZG ? (DF[zi] >= 1 ? '<br>芽を出しやすい深さ。' : '<br>ここからも芽を出せる（出にくい）。') : '<br>深すぎて芽を出さない。耕すと浅いところへ上がる。');
     }
     return '<b>土</b><br>ふだんは中が見えない。「土を透かして見る」で、眠っているタネや根が見える。';
@@ -177,9 +177,9 @@ function seedText(awake, depth) {
 function plantText(p) {
   const age = p.em >= 0 ? Math.round(S.day - p.em) : 0, st = panState(p);
   const state = p.st === 3 ? '枯れた株' : p.st === 2 ? (st.flower ? '穂が出て花が咲いている' : '穂のタネが熟していく') : p.H < 0.03 ? '芽生え' : '葉をふやしている';
-  let t = `<b>エノコログサ</b>（${state}。芽が出て ${age}日）<br>高さ ${(p.H * 100).toFixed(0)}cm・重さ ${p.W < 1 ? (p.W * 1000).toFixed(0) + 'mg' : p.W.toFixed(1) + 'g'}（乾いた重さ）・茎 ${1 + p.til} 本`;
+  let t = `<b>エノコログサ</b>（${state}。芽が出て ${age}日）` + (p.n > 1 ? `<br>ここに同じころ生えた <b>${p.n} 本</b>をまとめて計算（描くのは1本。数値は1本あたり）` : '') + `<br>高さ ${(p.H * 100).toFixed(0)}cm・重さ ${p.W < 1 ? (p.W * 1000).toFixed(0) + 'mg' : p.W.toFixed(1) + 'g'}（乾いた重さ）・茎 ${1 + p.til} 本`;
   if (p.st !== 3) t += `・光 ${Math.round(p.light * 100)}%`;
-  if (p.st >= 2) t += `<br>穂で作ったタネ ${p.made.toLocaleString('ja-JP')} 粒（熟して穂にある ${p.ripe.toLocaleString('ja-JP')}・落とした ${p.shedN.toLocaleString('ja-JP')}）`;
+  if (p.st >= 2) t += `<br>穂で作ったタネ ${Math.round(p.made / p.n).toLocaleString('ja-JP')} 粒（熟して穂にある ${Math.round(p.ripe / p.n).toLocaleString('ja-JP')}・落とした ${Math.round(p.shedN / p.n).toLocaleString('ja-JP')}）`;
   if (TOOL === 'pull') t += '<br><span style="color:var(--acc)">タップで抜く</span>';
   return t;
 }

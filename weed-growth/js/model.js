@@ -139,6 +139,7 @@ function computeLight() {
     if (p.st !== 1 && p.st !== 2) continue;
     const bh = binOf(0.6 * p.H);
     let own = 0; for (let b = bh; b <= p._hb; b++) own += p._per * binFrac(p.H, b);
+    own /= p.n;   // まとめた芽は、自分1本ぶんの葉だけ除く（ほかの芽とは光を取りあう）
     let L = 0;
     for (const c of p._cells) L += Math.exp(-SP.kext * Math.max(0, CUM[c * HB + bh] - own));
     p.light = L / p._cells.length;
@@ -150,7 +151,7 @@ function newPlant(xi, z) {
   const depth = (z + rnd()) * DZC;
   const p = { id: S.nid++, x: (xi + rnd()) * DXC, y: rnd() * BED_D, z0: depth, st: 0, cdU: 0,
     need: SP.emBase + SP.emPerCm * depth * 100, cd: 0, cdH: 0, W: SP.seedMass * 0.5, H: 0, LA: 0, til: 0,
-    light: 1, batches: [], ripe: 0, made: 0, shedN: 0, sAcc: 0, born: S.day, em: -1, dd: 0, capH: 9, rs: (rnd() * 1e9) | 0, lean: gauss() * 0.15 };
+    n: 1, light: 1, batches: [], ripe: 0, made: 0, shedN: 0, sAcc: 0, born: S.day, em: -1, dd: 0, capH: 9, rs: (rnd() * 1e9) | 0, lean: gauss() * 0.15 };
   S.plants.push(p); S.tot.germ++;
 }
 
@@ -204,7 +205,9 @@ function disperse(p, k) {
   for (let j = 0; j < k; j++) {
     const x = px + gauss() * sig, y = p.y + gauss() * sig;
     S.tot.shed++;
-    if (x < 0 || x >= BED_W || y < 0 || y >= BED_D) { S.tot.lost++; continue; }   // 花だんの外（通路）
+    // 計算するのは幅 30cm の花だんの半分（y = 0 が通路の縁、BED_D が花だんのまん中）。
+    // 残りの半分は鏡うつしで同じようすとし、まん中をこえて落ちた分は、向こう半分から来る分と入れかわる
+    if (x < 0 || x >= BED_W || y < 0 || y >= 2 * BED_D) { S.tot.lost++; continue; }   // 花だんの外（通路）
     S.yr.shed++;
     const i = Math.floor(x / DXC);
     if (nd) S.SN[i]++; else S.SD[i]++;
@@ -231,12 +234,12 @@ function plantsStep(T, dt) {
   for (const p of S.plants) {
     if (p.st === 0) {                       // 土の中で芽をのばす
       p.cdU += Math.max(0, T - sp.tb) * dt;
-      if (T < sp.frostT) { S.tot.fatal++; continue; }
+      if (T < sp.frostT) { S.tot.fatal += p.n; continue; }
       const lim = sp.emBase + sp.emPerCm * sp.depthMax * 100;
       if (p.cdU >= p.need && p.z0 <= sp.depthMax) {
-        p.st = 1; p.em = S.day; p.H = 0.008; S.tot.emerged++; S.yr.emerged++;
+        p.st = 1; p.em = S.day; p.H = 0.008; S.tot.emerged += p.n; S.yr.emerged += p.n;
         if (!S.yr.firstEm) { S.yr.firstEm = true; logEvent('今年はじめての芽が地上に出た（' + S.year + '年目）', 'em'); }
-      } else if (p.cdU >= lim) { S.tot.fatal++; continue; }   // 深すぎて地上に届かなかった
+      } else if (p.cdU >= lim) { S.tot.fatal += p.n; continue; }   // 深すぎて地上に届かなかった
       keep.push(p); continue;
     }
     if (p.st === 1 || p.st === 2) {
@@ -245,16 +248,16 @@ function plantsStep(T, dt) {
       p.W += dW;
       if (p.capH < 9) p.capH += 0.01 * fT * dt;     // 刈ったあと、のびなおす（推定 1cm/日）
       p.H = Math.min(p.capH, Math.max(0.008, sp.hmax * Math.pow(p.W / sp.wmax, 0.4)));
-      p.LA = sp.lar * p.W; p.til = Math.min(14, Math.floor(Math.log2(1 + p.W / 0.12)));
+      p.LA = sp.lar * p.W * p.n; p.til = Math.min(14, Math.floor(Math.log2(1 + p.W / 0.12)));
       p.cd += tt;
       if (p.st === 1 && p.cd >= hcd && p.W > 0.004) {
-        p.st = 2; S.tot.headed++;
+        p.st = 2; S.tot.headed += p.n;
         if (!S.yr.firstHead) { S.yr.firstHead = true; logEvent('穂が出た（花が咲く）（' + S.year + '年目）', 'head'); }
       }
       if (p.st === 2) {
-        if (S.opts.autoPull) { S.tot.pulled++; S.tot.removedSeeds += p.ripe; continue; }
+        if (S.opts.autoPull) { S.tot.pulled += p.n; S.tot.removedSeeds += p.ripe; continue; }
         p.cdH += tt;
-        p.sAcc += sp.reproFrac * dW / sp.seedMass + (p.made === 0 ? 3 : 0);   // 小さい株でも穂に数粒はつく（推定）
+        p.sAcc += (sp.reproFrac * dW / sp.seedMass + (p.made === 0 ? 3 : 0)) * p.n;   // まとめた株は n 本ぶん   // 小さい株でも穂に数粒はつく（推定）
         const n = Math.floor(p.sAcc);
         if (n > 0) {
           p.sAcc -= n; p.made += n;
@@ -271,8 +274,13 @@ function plantsStep(T, dt) {
       }
       if (p.st !== 3) {
         const thin = light < 0.15 ? sp.thin * (1 - light / 0.15) * (p.W < 0.5 ? 1 : 0.3) + (sh ? 0.3 : 0) : 0;
-        if (thin && rnd() < 1 - Math.exp(-thin * dt)) {
-          S.tot.thinned++; if (p.W < 0.02) continue; killPlant(p, 'thin');
+        if (thin) {
+          const k = p.n > 1 ? binom(p.n, 1 - Math.exp(-thin * dt)) : (rnd() < 1 - Math.exp(-thin * dt) ? 1 : 0);
+          if (k) {
+            S.tot.thinned += k;
+            if (k < p.n) { p.n -= k; p.LA = sp.lar * p.W * p.n; }   // まとめた芽の一部が枯れる
+            else if (p.W < 0.02) continue; else killPlant(p, 'thin');
+          }
         }
       }
       keep.push(p); continue;
@@ -282,6 +290,25 @@ function plantsStep(T, dt) {
     const k = binom(p.ripe, 1 - Math.exp(-0.12 * dt)); p.ripe -= k; p.shedN += k; disperse(p, k);
     if (p.dd > 50) { disperse(p, p.ripe); p.ripe = 0; continue; }
     keep.push(p);
+  }
+  S.plants = keep;
+  if (S.plants.length > GROUP_AT) groupSeedlings();
+}
+
+// 数が多いときの間引き（計算と描くのを軽くする）: 同じ 1cm の列・同じころの小さな芽を1つのまとまりに（本数 n は数えたまま）。
+// まとめた芽は同じ重さ・同じ育ち方として計算し、絵は代表の1本だけ描く。大きな株（0.05g より重い）はまとめない
+const GROUP_AT = 900;
+function groupSeedlings() {
+  const map = new Map(), keep = [];
+  for (const p of S.plants) {
+    let key = null;
+    if (p.st === 0) key = '0|' + Math.floor(p.x / DXC) + '|' + Math.floor(p.z0 / 0.005) + '|' + Math.floor(p.cdU / 15);
+    else if (p.st === 1 && p.W < 0.05) key = '1|' + Math.floor(p.x / DXC) + '|' + Math.round(Math.log2(p.W) * 2) + '|' + Math.floor(p.cd / 25) + '|' + (p.capH < 9 ? 1 : 0);
+    const q = key && map.get(key);
+    if (!q) { if (key) map.set(key, p); keep.push(p); continue; }
+    const n = q.n + p.n;
+    q.W = (q.W * q.n + p.W * p.n) / n; q.cd = (q.cd * q.n + p.cd * p.n) / n; q.cdU = (q.cdU * q.n + p.cdU * p.n) / n;
+    q.n = n; q.LA = SP.lar * q.W * n;
   }
   S.plants = keep;
 }
@@ -307,7 +334,7 @@ function bankTotal() { let a = 0, d = 0; for (let i = 0; i < NX * NZ; i++) { a +
 function counts() {
   let up = 0, heads = 0, under = 0, dead = 0, onPlant = 0;
   for (const p of S.plants) {
-    if (p.st === 0) under++; else if (p.st === 3) dead++; else { up++; if (p.st === 2) heads++; }
+    if (p.st === 0) under += p.n; else if (p.st === 3) dead += p.n; else { up += p.n; if (p.st === 2) heads += p.n; }
     onPlant += p.ripe; for (const b of p.batches) onPlant += b.n;
   }
   const b = bankTotal();
@@ -347,11 +374,13 @@ function pullAt(x, y) {   // y は地上の高さ（画面でさわった所）�
     if (d < bd && dx < 1.6 && dy < 1.5) { bd = d; best = p; }
   }
   if (!best) return null;
-  const drop = binom(best.ripe, 0.2);           // 抜くときにゆれて落ちる（推定 2割）
+  const f = 1 / best.n;                          // まとめた株からは1本ぶん
+  const mine = Math.round(best.ripe * f), drop = binom(mine, 0.2);   // 抜くときにゆれて落ちる（推定 2割）
   disperse(best, drop);
-  let onP = best.ripe - drop; for (const b of best.batches) onP += b.n;
-  S.tot.pulled++; S.tot.removedSeeds += onP;
-  S.plants = S.plants.filter(p => p !== best);
+  let onP = mine - drop;
+  for (const b of best.batches) { const k = Math.round(b.n * f); onP += k; b.n -= k; }
+  best.ripe -= mine; S.tot.pulled++; S.tot.removedSeeds += onP;
+  if (best.n > 1) { best.n--; best.LA = SP.lar * best.W * best.n; } else S.plants = S.plants.filter(p => p !== best);
   const fd = dateOf(S.day);
   logEvent(`${fd.m}月${fd.d}日 1本抜いた` + (best.st === 2 ? `（穂のタネ ${onP} 粒を持ち出し、${drop} 粒が落ちた）` : best.st === 3 ? '（枯れた株）' : ''), 'act');
   return best;
@@ -367,7 +396,7 @@ function mow(x0, x1, h) {
       p.ripe = 0; p.batches = [];
     }
     if (p.st === 3) { p.dd = 99; }
-    p.W *= 1 - 0.8 * m; p.capH = h; p.H = h; n++;
+    p.W *= 1 - 0.8 * m; p.LA = SP.lar * p.W * p.n; p.capH = h; p.H = h; n += p.n;
   }
   S.tot.removedSeeds += seeds;
   const fd = dateOf(S.day);
@@ -377,7 +406,7 @@ function mow(x0, x1, h) {
 function till(x0, x1, depth) {
   depth = depth || 0.15; const zm = Math.round(depth / DZC); let n = 0;
   for (const p of S.plants) if (p.x >= x0 && p.x <= x1) {  // 株は土にすきこむ。熟したタネは土の中へ
-    n++; const xi = clamp(Math.floor(p.x / DXC), 0, NX - 1);
+    n += p.n; const xi = clamp(Math.floor(p.x / DXC), 0, NX - 1);
     const k = p.ripe; for (let j = 0; j < k; j++) S.SD[Math.floor(rnd() * zm) * NX + xi]++;
     p._gone = true;
   }

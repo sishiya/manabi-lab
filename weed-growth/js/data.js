@@ -3,13 +3,13 @@
 'use strict';
 
 // ---------- 花だん（横から切った断面） ----------
-const BED_W = 2.0;      // 長さ m（画面の横）
-const BED_D = 0.30;     // 幅 m（画面の奥行き。1つにまとめる）
+const BED_W = 1.5;      // 長さ m（画面の横）
+const BED_D = 0.15;     // 奥行き m（幅 30cm の花だんの半分。残り半分は鏡うつしで同じとする。1つにまとめる）
 const SOIL_D = 0.20;    // 見せる土の深さ m
 const AIR_H = 1.0;      // 見せる空気の高さ m
-const NX = 200, DXC = BED_W / NX;     // タネのます目: 横 1cm
+const NX = 150, DXC = BED_W / NX;     // タネのます目: 横 1cm
 const NZ = 40, DZC = SOIL_D / NZ;     // 深さ 0.5cm
-const LX = 40, LY = 6, LC = BED_W / LX; // 光のます目: 5cm 四方（奥行きも 5cm×6）
+const LX = 30, LY = 3, LC = BED_W / LX; // 光のます目: 5cm 四方（奥行きも 5cm×3）
 // 光の高さの段（地面の近くほど細かく。芽どうしの背の差で光の取りあいが決まるので）
 const HEDGE = [0, 0.005, 0.01, 0.02, 0.03, 0.05, 0.08, 0.12, 0.18, 0.26, 0.36, 0.5, 0.7, 2];
 const HB = HEDGE.length - 1;
