@@ -72,7 +72,7 @@ const C = (() => {
     const [W, H] = V.size, k = V.cam.k;
     if (k < 0.35) return [];   // 小さすぎるときは出さない（形を見わたすとき）
     const out = [];
-    for (const n of V.vis) {
+    for (const n of V.drawn) {   // 名前を描いたもの（画面の中）だけ見る
       if (!n.name || n.more || n.rank === 'root' || V.kidsOf(n).length) continue;
       const sx = (n.x + n.lw + 20) * k + V.cam.x, sy = n.y * k + V.cam.y;
       if (sx < -40 || sx > W + 10 || sy < -20 || sy > H + 20) continue;
@@ -90,8 +90,8 @@ const C = (() => {
   }
   // 吸いこまれる先: 見えていればそのふし、見えていなければ見えている祖先の点
   function anchorOf(n) {
-    if (V.vis.includes(n)) return [n.ax, n.ay];
-    let a = n.parent; while (a && !V.vis.includes(a)) a = a.parent;
+    if (V.isVis(n)) return [n.ax, n.ay];
+    let a = n.parent; while (a && !V.isVis(a)) a = a.parent;
     return a ? [a.ax, a.ay] : null;
   }
 

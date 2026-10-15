@@ -120,7 +120,7 @@ const Compare = (() => {
       const L = ch.length - 1;
       for (let i = 0; i < L; i++) {
         const c = ch[i], p = ch[i + 1];
-        if (!V.vis.includes(c) || !V.vis.includes(p)) continue;
+        if (!V.isVis(c) || !V.isVis(p)) continue;
         const f = Math.max(0, Math.min(1, u * L - i));
         if (f <= 0) continue;
         const d = c.ax - p.ajx;
@@ -134,7 +134,7 @@ const Compare = (() => {
     }
     g.setLineDash([]);
     // 合わさるところ: 光が着いたら金の輪
-    if (u >= 1 && V.vis.includes(mrca)) {
+    if (u >= 1 && V.isVis(mrca)) {
       const v = Math.min(1, (u - 1) * 3);
       g.lineWidth = Math.max(2.4, 1.6 / k); g.globalAlpha = v;
       g.beginPath(); g.arc(mrca.ax, mrca.ay, 9 + (1 - v) * 6, 0, 7); g.stroke();

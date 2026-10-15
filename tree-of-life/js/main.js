@@ -17,7 +17,7 @@ async function press(n) {
   touched = true; reachId++; tripId++;
   if (Compare.picking && !n.more) { Compare.choose(n); return; }   // 「どこで分かれた？」の2つめ
   if (Compare.showing) Compare.clear(false);   // くらべ終わったあとに押したら、しぼりこみをやめてふつうにもどる
-  if (!V.vis.includes(n)) { T.ancestors(n).forEach(a => a.open = true); V.focus(n); }   // まだ見えていない（道すじ・デバッグから）
+  if (!V.isVis(n)) { T.ancestors(n).forEach(a => a.open = true); V.focus(n); }   // まだ見えていない（道すじ・デバッグから）
   const [bx, by] = V.screenOf(n);
   if (n.more) {
     n.loading = true; redraw();

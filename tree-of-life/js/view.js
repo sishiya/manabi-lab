@@ -32,13 +32,19 @@ const V = (() => {
     return w;
   }
   const fmt = n => n.toLocaleString('ja-JP');
+  // 名前の部品。数字の区切り（toLocaleString）は重いので、ふしごとにおぼえておく（中身が変わったら作りなおす）
   function labelParts(n) {
-    if (n.more) return { tag: '', main: n.loading ? '読みこみ中…' : `＋ あと ${fmt(n.rest)} 件`, sci: '', cnt: '' };
-    const tag = RANK_JA[n.rank] || '';
-    const main = (n.extinct ? '† ' : '') + (n.ja || n.name) + (n.part ? '（一部）' : '');
-    const sci = n.ja ? n.name : '';
-    const cnt = n.count > 0 ? fmt(n.count) + '種' : '';
-    return { tag: n.rank === 'root' ? '' : tag, main, sci, cnt, sciMain: !n.ja && !n.more };
+    const key = n.more ? 'm' + n.loading + n.rest : n.ja + '|' + n.name + '|' + n.count + '|' + n.extinct + '|' + n.part + '|' + n.rank;
+    if (n._lpk === key) return n._lp;
+    let p;
+    if (n.more) p = { tag: '', main: n.loading ? '読みこみ中…' : `＋ あと ${fmt(n.rest)} 件`, sci: '', cnt: '' };
+    else {
+      const tag = RANK_JA[n.rank] || '';
+      const main = (n.extinct ? '† ' : '') + (n.ja || n.name) + (n.part ? '（一部）' : '');
+      p = { tag: n.rank === 'root' ? '' : tag, main, sci: n.ja ? n.name : '', cnt: n.count > 0 ? fmt(n.count) + '種' : '', sciMain: !n.ja };
+    }
+    n._lpk = key; n._lp = p;
+    return p;
   }
   // 2段の名前の幅: 札 ＋ max(1段め［和名 ›］, 2段め［学名 種の数］)
   function labelW(n) {
@@ -60,8 +66,11 @@ const V = (() => {
 
   // 配置: 葉は上から1行ずつ、親は子の真ん中。名前のあるふしは名前のぶん右へ
   // 見た目の位置（ax, ay, ajx）は、ここで決めた位置（x, y, jx）へ少しずつ近づく（step）
+  let visSet = new Set();      // 見えているふし（すぐ調べるため）
+  let active = [];             // アニメ中のふし（止まったものは毎コマ調べない）
+  let drawn = [];              // さっき名前を描いたふし（当たり判定・いきもの用。画面の中だけ）
   function layout() {
-    const before = new Set(vis);
+    const before = visSet;
     vis = [];
     let row = 0;
     (function place(n, x, parent) {
@@ -80,43 +89,52 @@ const V = (() => {
       n.y = (kids[0].y + kids[kids.length - 1].y) / 2;
     })(T.root, 0, null);
     // 見えなくなったふし: いちばん近い見えている祖先（閉じた親）へ吸いこまれる
-    const now = new Set(vis);
+    //   アニメにするのは画面の中のものだけ（たくさん閉じても重くならないように。最大 300）
+    const now = visSet = new Set(vis);
+    const [x0, x1, y0, y1] = viewRect(60);
     for (const n of before) {
       if (now.has(n) || n.ax === undefined) continue;
+      const inView = n.ax >= x0 && n.ax <= x1 && n.ay >= y0 && n.ay <= y1 && leaving.length < 300;
       let a = n.parent; while (a && !now.has(a)) a = a.parent;
-      if (!a) continue;
-      leaving.push({ n, a, sx: n.ax, sy: n.ay, x: n.ax, y: n.ay, t: 0, alpha: 1, scale: 1 });
+      if (a && inView) leaving.push({ n, a, sx: n.ax, sy: n.ay, x: n.ax, y: n.ay, t: 0, alpha: 1, scale: 1 });
       n.ax = undefined;   // つぎに見えたときは、また親から出てくる
     }
+    active = vis.slice();
     kick();
     return row;
   }
   // すべて決めた位置へ（はじめ・テスト用）
-  function settle() { for (const n of vis) { n.ax = n.x; n.ay = n.y; n.ajx = n.jx; n.alpha = 1; n.pulse = 0; } leaving = []; draw(); }
-  function pop(n) { n.pulse = 1; kick(); }   // 開いたときにも小さく弾む
+  function settle() { for (const n of vis) { n.ax = n.x; n.ay = n.y; n.ajx = n.jx; n.alpha = 1; n.pulse = 0; } leaving = []; active = []; draw(); }
+  function pop(n) { n.pulse = 1; active.push(n); kick(); }   // 開いたときにも小さく弾む
+  // 画面に見えている世界の範囲（すこし余白つき）
+  function viewRect(m = 0) { return [(-cam.x - m) / cam.k, (W - cam.x + m) / cam.k, (-cam.y - m) / cam.k, (H - cam.y + m) / cam.k]; }
   // 見た目の位置をまとめてずらす（押した名前を画面の同じ場所に残すとき、まわりがとばないように）
-  function shift(dx, dy) { for (const n of vis) { n.ax += dx; n.ay += dy; n.ajx += dx; } for (const L of leaving) { L.sx += dx; L.sy += dy; L.x += dx; L.y += dy; } }
+  function shift(dx, dy) { for (const n of vis) { n.ax += dx; n.ay += dy; n.ajx += dx; } active = vis.slice(); for (const L of leaving) { L.sx += dx; L.sy += dy; L.x += dx; L.y += dy; } }
 
   let raf = 0, last = 0;
   function step(dt) {
     const f = 1 - Math.exp(-dt * 11);
-    let moving = false;
-    for (const n of vis) {
+    const still = [];
+    for (const n of active) {
+      if (!visSet.has(n) || n.ax === undefined) continue;
       n.ax += (n.x - n.ax) * f; n.ay += (n.y - n.ay) * f; n.ajx += (n.jx - n.ajx) * f;
       n.alpha += (1 - n.alpha) * Math.min(1, f * 0.8);
-      if (Math.abs(n.x - n.ax) > 0.2 || Math.abs(n.y - n.ay) > 0.2 || Math.abs(n.jx - n.ajx) > 0.2 || n.alpha < 0.99) moving = true;
-      else { n.ax = n.x; n.ay = n.y; n.ajx = n.jx; n.alpha = 1; }
-      if (n.pulse > 0) { n.pulse = Math.max(0, n.pulse - dt * 4); moving = true; }
+      let m = Math.abs(n.x - n.ax) > 0.2 || Math.abs(n.y - n.ay) > 0.2 || Math.abs(n.jx - n.ajx) > 0.2 || n.alpha < 0.99;
+      if (!m) { n.ax = n.x; n.ay = n.y; n.ajx = n.jx; n.alpha = 1; }
+      if (n.pulse > 0) { n.pulse = Math.max(0, n.pulse - dt * 4); m = true; }
+      if (m) still.push(n);
     }
+    active = still;
+    let moving = active.length > 0;
     // 吸いこまれる: はじめはゆっくり、さいごにすっと（加速）。着いたら親がぽんと弾む
     for (const L of leaving) {
       L.t = Math.min(1, L.t + dt / 0.3);
       const e = L.t * L.t * L.t;
       L.x = L.sx + (L.a.ax - L.sx) * e; L.y = L.sy + (L.a.ay - L.sy) * e;   // 親の点へ（名前の下じきの裏を通る）
       L.alpha = 1 - L.t * L.t; L.scale = 1 - e * 0.85;
-      if (L.t >= 1 && !L.a.popped) { L.a.pulse = 1; L.a.popped = true; }
+      if (L.t >= 1 && !(L.a.pulse > 0)) { L.a.pulse = 1; active.push(L.a); }
     }
-    if (leaving.length) { leaving = leaving.filter(L => L.t < 1); for (const n of vis) n.popped = false; moving = true; }
+    if (leaving.length) { leaving = leaving.filter(L => L.t < 1); moving = true; }
     return moving;
   }
   function kick() {
@@ -148,32 +166,39 @@ const V = (() => {
     g.clearRect(0, 0, W, H);
     g.save();
     g.translate(cam.x, cam.y); g.scale(cam.k, cam.k);
+    const [x0, x1] = viewRect(40);
     const y0 = -cam.y / cam.k - ROW * 2, y1 = (H - cam.y) / cam.k + ROW * 2;
     const minW = 0.9 / cam.k;   // 縮めても細くなりすぎない
-    // 枝: 親の名前の下をのびて、分かれ目からやわらかい曲線で子へ
+    // 細かさを大きさで変える（たくさん開いて縮めたときに重くならないように）: 0.3 倍より小さいと名前は描かない、0.12 倍より小さいと点も描かない
+    const showText = cam.k >= 0.3, showDots = cam.k >= 0.12;
+    // 枝: 親の名前の下をのびて、分かれ目からやわらかい曲線で子へ。画面の外は描かない
+    //   止まっている枝は太さごとにまとめて1回で描く（Path2D）。アニメ中（うすい）の枝だけ1本ずつ
     g.lineCap = 'round';
+    g.strokeStyle = 'rgba(68,82,60,.62)';
+    const bucket = new Map();
+    const pathOf = w => { const q = Math.round(w * 4) / 4; let p = bucket.get(q); if (!p) bucket.set(q, p = new Path2D()); return p; };
     for (const n of vis) {
       const kids = kidsOf(n);
       if (!kids.length) continue;
-      let top = Infinity, bot = -Infinity;
-      for (const k of kids) { top = Math.min(top, k.ay); bot = Math.max(bot, k.ay); }
-      if (Math.max(bot, n.ay) < y0 || Math.min(top, n.ay) > y1) continue;
-      g.strokeStyle = 'rgba(68,82,60,.62)';
-      if (T.named(n) || n === T.root) {
-        g.lineWidth = Math.max(minW, branchW(n.count));
-        g.beginPath(); g.moveTo(n.ax, n.ay); g.lineTo(n.ajx, n.ay); g.stroke();
+      if (n.ax > x1) continue;
+      const top = kids[0].ay, bot = kids[kids.length - 1].ay;   // 子は上から順（アニメ中も大きくは入れかわらない）
+      if (Math.max(bot, top, n.ay) < y0 || Math.min(top, bot, n.ay) > y1) continue;
+      if ((T.named(n) || n === T.root) && n.ajx >= x0) {
+        const p = pathOf(Math.max(minW, branchW(n.count))); p.moveTo(n.ax, n.ay); p.lineTo(n.ajx, n.ay);
       }
       for (const k of kids) {
-        if (Math.max(k.ay, n.ay) < y0 || Math.min(k.ay, n.ay) > y1) continue;
-        const d = k.ax - n.ajx;
-        g.globalAlpha = k.alpha;
-        g.lineWidth = Math.max(minW, branchW(k.count));
-        g.beginPath(); g.moveTo(n.ajx, n.ay);
-        g.bezierCurveTo(n.ajx + d * 0.55, n.ay, k.ax - d * 0.55, k.ay, k.ax, k.ay);
-        g.stroke();
+        if (Math.max(k.ay, n.ay) < y0 || Math.min(k.ay, n.ay) > y1 || k.ax < x0) continue;
+        const d = k.ax - n.ajx, w = Math.max(minW, branchW(k.count));
+        if (k.alpha >= 0.99) {
+          const p = pathOf(w); p.moveTo(n.ajx, n.ay); p.bezierCurveTo(n.ajx + d * 0.55, n.ay, k.ax - d * 0.55, k.ay, k.ax, k.ay);
+        } else {
+          g.globalAlpha = k.alpha; g.lineWidth = w;
+          g.beginPath(); g.moveTo(n.ajx, n.ay); g.bezierCurveTo(n.ajx + d * 0.55, n.ay, k.ax - d * 0.55, k.ay, k.ax, k.ay); g.stroke();
+          g.globalAlpha = 1;
+        }
       }
-      g.globalAlpha = 1;
     }
+    for (const [w, p] of bucket) { g.lineWidth = w; g.stroke(p); }
     // 吸いこまれていく枝と点（名前はすぐ消す）
     const posOf = new Map(leaving.map(L => [L.n, L]));
     for (const L of leaving) {
@@ -194,8 +219,16 @@ const V = (() => {
     // ふしと名前
     g.textBaseline = 'middle';
     const suck = new Set(leaving.map(L => L.a));
+    drawn = [];
     for (const n of vis) {
-      if (n.ay < y0 || n.ay > y1 || !T.named(n)) continue;
+      if (n.ay < y0 || n.ay > y1 || !T.named(n) || n.ax > x1 || n.ax + (n.lw || 0) + 30 < x0) continue;
+      if (!showDots) continue;
+      if (!showText) {   // 小さいときは点だけ
+        g.globalAlpha = n.alpha; g.fillStyle = n.more ? FAINT : GROUP_COLOR[RANK_GROUP(n.rank)];
+        g.beginPath(); g.arc(n.ax, n.ay, 2.6 + Math.log10(n.count + 1) * 0.7, 0, 7); g.fill();
+        continue;
+      }
+      drawn.push(n);
       g.globalAlpha = n.alpha;
       const col = n.more ? FAINT : GROUP_COLOR[RANK_GROUP(n.rank)];
       const r = n.more ? 3 : 2.6 + Math.log10(n.count + 1) * 0.7;
@@ -245,8 +278,7 @@ const V = (() => {
     const wx = (px - cam.x) / cam.k, wy = (py - cam.y) / cam.k;
     let best = null, bd = 1e9;
     const pad = Math.min(30, Math.max(0, 8 / cam.k - 8));   // 小さく見えているときは当たりを広く
-    for (const n of vis) {
-      if (!T.named(n)) continue;
+    for (const n of drawn) {   // さっき名前を描いたものだけ（画面の外・小さすぎて描かなかったものは押せない）
       const ly = labelY(n, n.y);
       const bot = ly + (twoLines(n) ? LINE2 + 8 : 11);
       if (wx >= n.x - 9 - pad && wx <= n.x + n.lw + 16 + pad && wy >= ly - 12 - pad && wy <= bot + pad) {
@@ -296,7 +328,7 @@ const V = (() => {
 
   // デバッグ用: 描画が止まっている間（ペインがかくれている）も、アニメを1コマずつ進める
   const tick = (dt = 1 / 60) => { const m = step(dt); draw(); return { moving: m, leaving: leaving.length }; };
-  return { KMIN, KMAX, bbox, set onDraw(f) { onDrawFn = f; }, set only(v) { only = v; }, kidsOf, set onWorld(f) { onWorldFn = f; }, cv, cam, layout, draw, resize, hit, zoomAt, fit, focus, screenOf, settle, shift, pop, labelY, tick,
+  return { KMIN, KMAX, bbox, set onDraw(f) { onDrawFn = f; }, get drawn() { return drawn; }, isVis: n => visSet.has(n), set only(v) { only = v; }, kidsOf, set onWorld(f) { onWorldFn = f; }, cv, cam, layout, draw, resize, hit, zoomAt, fit, focus, screenOf, settle, shift, pop, labelY, tick,
     get vis() { return vis; }, get selected() { return selected; }, set selected(n) { selected = n; },
     set hover(n) { hover = n; }, get size() { return [W, H]; } };
 })();
