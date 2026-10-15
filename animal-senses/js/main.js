@@ -7,7 +7,7 @@ const S = {
   uvK:1, uvOnly:false, pit:true, eye:true, blur:3.5,
   batEye:false, sound:false, pol:true, polOn:true, flicker:false,
   clock:{}, hex:{},                  // per animal: chosen time scale index, ommatidium size
-  hexEdge:false,                     // dark outline around each ommatidium: a guide only (the fly sees one dot per ommatidium, no lines)
+  hexEdge:true,                      // dark outline around each ommatidium: a guide only, said in the legend (the fly sees one dot per ommatidium, no lines)
   // low vision: type + one value per type (acuity, scotoma radius °, field radius °, cataract 0–1)
   // refraction: type (0 myopia, 1 hyperopia, 2 astigmatism, 3 presbyopia), dioptres per type, age, astig axis
   cv:{ type:1, k:1 }, night:'lit',
@@ -63,8 +63,8 @@ function senseControls() {
     const h = S.hex[k] || a.hex;
     const d = add(`<label class="row"><span class="lab">${L('個眼の大きさ', 'Ommatidium size')}</span><input type="range" id="hex" min="1" max="8" step="0.25" value="${h}"><span class="mono" id="hexV">${h.toFixed(1)}°</span></label>`);
     d.querySelector('#hex').oninput = e => { S.hex[k] = +e.target.value; $('hexV').textContent = S.hex[k].toFixed(1) + '°'; };
-    const eg = add(`<div class="row seg" role="group" aria-label="${L('個眼のふち', 'Ommatidium outlines')}"><span class="lab">${L('ふち', 'Outlines')}</span>${[[false, L('なし（本当に近い）', 'Off (closer to real)')], [true, L('あり（目印）', 'On (guide only)')]].map(([v, t]) => `<button data-v="${v}" aria-pressed="${S.hexEdge === v}">${t}</button>`).join('')}</div>`);
-    eg.querySelectorAll('button').forEach(b => b.onclick = () => { S.hexEdge = b.dataset.v === 'true'; senseControls(); });
+    const eg = add(`<div class="row seg" role="group" aria-label="${L('個眼のふち', 'Ommatidium outlines')}"><span class="lab">${L('ふち', 'Outlines')}</span>${[[true, L('あり（目印）', 'On (guide only)')], [false, L('なし（本当に近い）', 'Off (closer to real)')]].map(([v, t]) => `<button data-v="${v}" aria-pressed="${S.hexEdge === v}">${t}</button>`).join('')}</div>`);
+    eg.querySelectorAll('button').forEach(b => b.onclick = () => { S.hexEdge = b.dataset.v === 'true'; senseControls(); updateLegend(); });
   }
   if (a.types) {
     const st = k === 'low' ? S.lv : k === 'cvd' ? S.cv : S.rf;
@@ -127,6 +127,8 @@ function senseControls() {
   }
 }
 
+// the hexagon outlines are a guide only: say so whenever they are shown (fly, bee)
+const edgeNote = () => S.hexEdge ? L('<br>※ 六角形のふちは見やすさのための目印（虫には見えない）。「ふち なし」で本当に近い見え方に', '<br>* The hexagon outlines are only a guide for easier viewing (insects see no lines). “Off” is closer to real') : '';
 function updateLegend() {
   const lg = $('legend'), k = S.animal;
   const bar = (grad, ends) => `<div class="bar" style="background:${grad}"></div><div class="ends">${ends.map(e => `<span>${e}</span>`).join('')}</div>`;
@@ -140,13 +142,14 @@ function updateLegend() {
     h = L('夜は色を区別しない桿体がはたらくので、色がうすく、ぼんやり見える。', 'At night the rods, which cannot tell colors apart, do the work, so colors fade and things look blurry.');
   } else if (k === 'fly') {
     h = (clockOf('fly') < 1 ? L('ハエの速さ: 世界が約1/4の速さで動く', 'Fly speed: the world moves at about 1/4 speed') + (S.flicker && !REDUCED_MOTION ? L('（玄関の灯りがちらつく。本当はもっと暗くなる）', ' (the porch lamp flickers; really it dims much more)') : '') : L('人と同じ速さ', 'Same speed as humans'))
-      + L(`<br>ハエたたき: よけた ${SX.dodges} 回・たたかれた ${SX.hits} 回`, `<br>Fly swatter: dodged ${SX.dodges} · swatted ${SX.hits}`);
+      + L(`<br>ハエたたき: よけた ${SX.dodges} 回・たたかれた ${SX.hits} 回`, `<br>Fly swatter: dodged ${SX.dodges} · swatted ${SX.hits}`)
+      + edgeNote();
   } else if (k === 'bat') {
     const tm = clockOf('bat') < 1 ? ANIMALS.bat.clocks[S.clock.bat != null ? S.clock.bat : 1][0] : '';
     h = L('<b style="color:#6f8cff">青い線</b> = 声の波が当たっている所　<b style="color:#bfe6ff">水色〜白</b> = 返ってきたこだま', '<b style="color:#6f8cff">Blue line</b> = where the call’s sound wave is hitting  <b style="color:#bfe6ff">Light blue to white</b> = echoes that came back')
       + L(`<br>つかまえたガ: ${SX.caught} 匹${tm ? `（時間 ${tm}）` : ''}`, `<br>Moths caught: ${SX.caught}${tm ? ` (time ${tm})` : ''}`);
   } else if (k === 'bee') {
-    h = L('ハチの色を人の色にずらして表示: <b style="color:#ff6a5a">赤</b>=ハチの緑　<b style="color:#6fe07a">緑</b>=ハチの青　<b style="color:#6f8cff">青</b>=紫外線', 'Bee colors shifted into human colors: <b style="color:#ff6a5a">red</b> = bee green, <b style="color:#6fe07a">green</b> = bee blue, <b style="color:#6f8cff">blue</b> = ultraviolet');
+    h = L('ハチの色を人の色にずらして表示: <b style="color:#ff6a5a">赤</b>=ハチの緑　<b style="color:#6fe07a">緑</b>=ハチの青　<b style="color:#6f8cff">青</b>=紫外線', 'Bee colors shifted into human colors: <b style="color:#ff6a5a">red</b> = bee green, <b style="color:#6fe07a">green</b> = bee blue, <b style="color:#6f8cff">blue</b> = ultraviolet') + edgeNote();
   } else if (k === 'shrimp') {
     h = L('黄色い線の帯の中だけ色（おおまかな12の仲間）。帯が上下に走査する。<b style="color:#3fe0c8">緑のしま</b> = 偏光の強い所', 'Color only inside the band between the yellow lines (12 rough groups). The band scans up and down. <b style="color:#3fe0c8">Green stripes</b> = strongly polarized light');
   } else if (k === 'dog' || k === 'cat') {
