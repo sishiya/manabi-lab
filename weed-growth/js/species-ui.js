@@ -7,6 +7,7 @@ const KIND_UI = {
     jumps: [['seed', '土の中のタネ', '眠っている・目ざめた'], ['sprout', '芽を出すところ', '土の中で'], ['root', '根の先', '細胞・根毛'], ['flower', '穂の花・実', '小穂']],
     legend: ['地上の株（本）', '土の中のタネ（粒/m²）', '穂のある株'],
     autoPull: '穂が出たらすぐ抜く',
+    words: () => ({ jumps3: SP.words.flowerJump, legend2: SP.words.heads, autoPull: SP.words.head + 'が出たらすぐ抜く' }),
     ro: [['地上の株', '本'], ['土の中のタネ', '粒/m²'], ['今年落ちたタネ', '粒/m²']],
     start: () => { aimAt(BED_W / 2, 0.14, 0.6, 0.01); viewTick(1); },
     hint: () => TOOL === 'seed' ? '花だんの上をタップ（なぞる）してタネを落とそう ↓' : '「タネ」をえらんで、花だんの上をタップ ↓',
@@ -36,11 +37,14 @@ function applyKindUI() {
   setTool(TOOL);
   const js = $('jumps'); js.innerHTML = '';
   for (const [j, t, sm] of K.jumps) { const b = document.createElement('button'); b.className = 'btn act'; b.dataset.j = j; b.innerHTML = `${t}<small>${sm}</small>`; b.onclick = () => jump(j); js.appendChild(b); }
-  $('lgP').textContent = K.legend[0]; $('lgB').textContent = K.legend[1]; $('lgH').textContent = K.legend[2];
-  $('tgAutoPull').textContent = K.autoPull;
+  const Wd = K.words ? K.words() : null;
+  if (Wd) { K.jumps[3] = ['flower', Wd.jumps3[0], Wd.jumps3[1]]; js.lastChild.innerHTML = `${Wd.jumps3[0]}<small>${Wd.jumps3[1]}</small>`; }
+  $('lgP').textContent = K.legend[0]; $('lgB').textContent = K.legend[1]; $('lgH').textContent = Wd ? Wd.legend2 : K.legend[2];
+  $('tgAutoPull').textContent = Wd ? Wd.autoPull : K.autoPull;
   K.ro.forEach(([l, u], i) => { $('roL' + (i + 1)).textContent = l; $('roU' + (i + 1)).textContent = u; });
   seg($('segScen'), Object.entries(SCENARIOS).filter(([, v]) => v.kind === SP.kind).map(([k, v]) => [v.name, k]), S.scen, v => startScenario(v));
   $('jumpMsg').textContent = '';
+  if (SP.kind === 'seed') $('brandSeed').textContent = `抜いても抜いても、いつのまにか生えてくる雑草。そのわけは土の中にある。${SP.name}の一生を、長さ1.5mの花だんを横から切った図で計算してみよう。`;
 }
 
 // ---------- 竹: 数字・いまのようす・説明・寄って見る ----------

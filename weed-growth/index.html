@@ -31,12 +31,15 @@
             <button class="mcard" data-sp="bamboo">
               <svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="#7fae8a" stroke-width="3" stroke-linecap="round"><path d="M24 60V8M40 60V16"/><path d="M20 20h8M20 36h8M36 28h8M36 44h8"/><path d="M8 56 C20 52 44 52 58 56" stroke="#a08a6a"/></g></svg>
               <b>竹（モウソウチク）</b><small>地下の茎でふえる。タネのかわりに地下茎ごと植える</small></button>
-            <button class="mcard" disabled>
+            <button class="mcard" data-sp="dandelion">
               <svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke-linecap="round"><path d="M32 60V30" stroke="#7dc66a" stroke-width="2.5"/><circle cx="32" cy="20" r="11" stroke="#d8dde4" stroke-width="2" stroke-dasharray="2 3"/><path d="M14 58 L24 50 M50 58 L40 50" stroke="#84cd70" stroke-width="3"/></g></svg>
-              <b>タンポポ</b><small>綿毛で遠くへ飛ぶ（準備中）</small></button>
-            <button class="mcard" disabled>
+              <b>タンポポ</b><small>綿毛で風に乗る。抜いても根が残るとまた出る</small></button>
+            <button class="mcard" data-sp="purslane">
               <svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke-linecap="round"><path d="M8 52 C20 46 30 50 32 44 C34 50 46 46 56 52" stroke="#b07a6a" stroke-width="3"/><g fill="#7dc66a" stroke="none"><ellipse cx="18" cy="46" rx="5" ry="3"/><ellipse cx="46" cy="46" rx="5" ry="3"/><ellipse cx="32" cy="40" rx="4" ry="3"/></g><circle cx="32" cy="36" r="3" fill="#e8c45a" stroke="none"/></g></svg>
-              <b>スベリヒユ</b><small>抜いても実が熟す（準備中）</small></button>
+              <b>スベリヒユ</b><small>地面をはう夏の草。抜いて置いておくと実が熟す</small></button>
+            <button class="mcard" data-sp="oxalis">
+              <svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke-linecap="round"><path d="M10 54 C24 50 40 52 56 54" stroke="#7fae5a" stroke-width="2.5"/><path d="M24 52V34M40 53V30" stroke="#8fbf6a" stroke-width="2"/><g fill="#7cc46a" stroke="none"><circle cx="19" cy="32" r="5"/><circle cx="29" cy="32" r="5"/><circle cx="24" cy="26" r="5"/></g><g fill="#f3d64e" stroke="none"><circle cx="40" cy="22" r="3"/><circle cx="44" cy="26" r="3"/><circle cx="36" cy="26" r="3"/><circle cx="38" cy="31" r="3"/><circle cx="42" cy="31" r="3"/></g></g></svg>
+              <b>カタバミ</b><small>熟した実がはじけて、タネを 3m 以上とばす</small></button>
           </div>
         </div>
       </div>
@@ -61,7 +64,7 @@
   <div id="panel">
     <header class="brand">
       <h1>雑草がふえるまで</h1>
-      <p data-kind="seed">抜いても抜いても、いつのまにか生えてくる雑草。そのわけは土の中にある。エノコログサ（ねこじゃらし）の一生を、長さ1.5mの花だんを横から切った図で計算してみよう。</p>
+      <p data-kind="seed" id="brandSeed">抜いても抜いても、いつのまにか生えてくる雑草。そのわけは土の中にある。エノコログサ（ねこじゃらし）の一生を、長さ1.5mの花だんを横から切った図で計算してみよう。</p>
       <p data-kind="clone" hidden>庭のすみに植えた竹が、いつのまにか遠くから生えてくる。そのわけは土の中の地下茎。モウソウチクを、長さ16mの帯を横から切った図で計算してみよう。</p>
     </header>
 
@@ -83,7 +86,7 @@
       </ul>
       <ul class="cap tools-note" data-kind="seed">
         <li><b>タネ</b>: 花だんの表面にタネを落とす（なぞると 2cm に1粒）。冬をこして目ざめたタネ。表面のタネは虫や鳥に食べられることもある。</li>
-        <li><b>抜く</b>: いちばん近い1本を根ごと（すぽっ）。なぞると、通った所の株を次々に。熟した穂があると、ゆれて2割が落ちる（推定）。</li>
+        <li><b>抜く</b>: いちばん近い1本を根ごと（すぽっ）。なぞると、通った所の株を次々に。熟した実（穂）があると、ゆれて2割が落ちる（推定）。タンポポ・カタバミは根や茎が残って、また出ることがある。スベリヒユは抜いた株をその場に置く（地面の上でも実が熟し、根づくこともある）。</li>
         <li><b>刈る</b>: 高さ5cm で。穂は持ち去るが、株は生きていて、のびなおしてまた穂を出す。</li>
         <li><b>耕す</b>: 深さ15cm までよくまぜる。浅いタネは深くへ、深いタネは浅くへ。</li>
         <li><b>おおう</b>: 光を通さないシート。シートの上からなぞると外す。下で芽を出しても育たない。</li>
@@ -155,7 +158,16 @@
         </ul>
       </details>
       <details data-kind="seed">
-        <summary>しくみ（計算していること）</summary>
+        <summary>タンポポ・スベリヒユ・カタバミのちがい</summary>
+        <ul>
+          <li><b>同じ計算</b>: 土の中のタネ・芽・光の取りあい・花と実は、エノコログサと同じしくみ。値（下の「おもな出どころ」と推定）と形をかえています。</li>
+          <li><b>タンポポ</b>: 何年も生きる（冬も葉が残る）。花はおもに 4〜5月、秋にも（Ohio State）。株が育っていると花の季節に咲き、葉で作った養分の一部がタネになる（大きな株で1年に 3,000〜5,000粒。測られた幅は 3,000〜23,000粒）。綿毛で風に乗り、平均 1.5m（推定。まれにずっと遠く）とぶので、多くは花だんの外へ。抜いても半分は根の切れはしが残って、また芽を出す（根の切れはしから再生: Ohio State。割合は推定）。</li>
+          <li><b>スベリヒユ</b>: 夏の一年草。暖かくなってから芽を出し（下限 15℃。推定）、芽が出て 3〜6週でもうタネができる（UF/IFAS）。地面をはい、こみあうと下の芽は育たない。実のふたが取れて株のまわりにこぼれる。抜いた株はその場に置く: 地面の上でも実が熟して落ち、4本に1本は 5日で根づく（UF/IFAS: 抜いた株が根づいたり花やタネをつけたりする。割合は推定）。タネは土の中で 15年ほど（UF/IFAS）。</li>
+          <li><b>カタバミ</b>: 何年も生きる。花はほとんど一年中（UC IPM。日平均 12℃ 以上の日。推定）。熟したさやがはじけて、タネを 3m 以上とばす（UC IPM）。いちばん多いのは株のすぐ近く（Rezvani ら 2010）。ここでは7割が 15cm ほどまで、3割が 0〜3m のどこかへ（推定）。抜いても 3割は残った茎からまた出る（推定）。</li>
+        </ul>
+      </details>
+      <details data-kind="seed">
+        <summary>しくみ（計算していること・エノコログサ）</summary>
         <ul>
           <li><b>土の中のタネ</b>: 横 1cm・深さ 0.5cm のます目ごとに、眠っている（休眠）タネと目ざめたタネの数。眠っているタネは冬の寒さ（日平均 10℃ 未満）で目ざめ、夏に 2cm より深いとまた眠る（推定）。</li>
           <li><b>芽を出す</b>: 目ざめたタネが、10.2℃ より暖かいと少しずつ芽を出す。出やすいのは深さ 2〜15mm、5cm より深いとほとんど出ない（近い種キンエノコロの測定）。表面（0〜5mm）は乾きやすいので出にくい（推定）。</li>
@@ -194,6 +206,11 @@
         <li>Forcella, F. &amp; Banken, K.R.（エノコログサの芽の育ちを、10℃ を下限にした積算温度で表す）<i>Weed Technology</i></li>
         <li>Michigan State University (2023)「MSU plant biologists shed light on 144-year-old seedy mystery」（1879年に土に埋めたタネが、2021年に掘り出して芽を出した）<a href="https://msutoday.msu.edu/news/2023/11/msu-plant-biologists-shed-light-on-144-year-old-seedy-mystery" target="_blank" rel="noopener">MSU Today</a></li>
         <li>気象庁 平年値（1991〜2020年、東京の月平均気温）</li>
+        <li>Ohio State University「Ohio Perennial and Biennial Weed Guide: Dandelion」（何年も生きる、1株 1年に 3,000〜23,000粒、風で飛ぶタネ、太く深い直根、根の切れはしから再生、花はおもに 4〜5月）<a href="https://weedguide.cfaes.osu.edu/singlerecord.asp?id=33" target="_blank" rel="noopener">Ohio State</a></li>
+        <li>University of California IPM「Weed Gallery: Dandelion」（実は 3mm、直根から新しい芽が出る）<a href="https://ipm.ucanr.edu/weeds-identification-gallery/dandelion/" target="_blank" rel="noopener">UC IPM</a></li>
+        <li>Boyd, N.S. &amp; Sandhu, R.K.「Biology and Management of Common Purslane in Fruiting Vegetables, Cucurbits, and Strawberries」UF/IFAS（1株 24万粒まで、土の中で 15年、芽が出て 3〜6週で生きたタネ、抜いた株が根づいて花やタネをつける、実のふたが取れる）<a href="https://ask.ifas.ufl.edu/publication/HS1238" target="_blank" rel="noopener">UF/IFAS</a></li>
+        <li>University of California IPM「Weed Gallery: Creeping woodsorrel」（何年も生きる、さやがはじけてタネを 300cm 以上とばす、タネは 1.6mm で横のすじ、花はほとんど一年中）<a href="https://ipm.ucanr.edu/weeds-identification-gallery/creeping-woodsorrel/" target="_blank" rel="noopener">UC IPM</a></li>
+        <li>Rezvani, M., Cousens, R.D., Zaefarian, F., Karimmojeni, H. &amp; Robinson, A.P. (2010) Shapes of ballistic seed dispersal distributions: a comparison of <i>Oxalis corniculata</i> with a theoretical model. <i>Weed Research</i> 50:631–637（いちばん多いのは株のすぐ近く）</li>
         <li>長野県『長野県版外来種対策ハンドブック』対策に取り組みたい外来種㉘ モウソウチクなどの竹類（高さ 25m・太さ 25cm に達する、タケノコは4月ごろ、根茎は1年で 1〜10m、地下茎は 7月下旬〜11月上旬にのびる、一度のびたら太く高くならない、約67年に1回開花、根止めの板は 50cm 以上）<a href="https://www.pref.nagano.lg.jp/shizenhogo/kurashi/shizen/hogo/gairai/documents/28_take.pdf" target="_blank" rel="noopener">PDF</a></li>
         <li>林野庁「竹の性質」（1日にマダケで 121cm・モウソウチクで 119cm のびた記録、竹の寿命は 20年ほど、地下茎が1年に 5m のびた記録、3〜4年目の地下茎がいちばんたけのこを出す、表年・裏年）<a href="https://www.rinya.maff.go.jp/j/tokuyou/take/seisitu.html" target="_blank" rel="noopener">林野庁</a></li>
         <li>鳥居厚志・酒井敦・奥田史郎（森林総合研究所四国支所）「香川県下の里山地域における竹林の分布拡大の現状と植物多様性の解析に関する研究」、香川県「研究機関の調査結果」より（竹林の広がる速さ 年 0.53〜2.11m、中央値 1.46m）<a href="https://www.pref.kagawa.lg.jp/midoriseibi/seibi/tikurin/1_siryou.html" target="_blank" rel="noopener">香川県</a></li>
@@ -205,10 +222,12 @@
 </div>
 
 <script src="js/data.js"></script>
+<script src="js/species-more.js"></script>
 <script src="js/model.js"></script>
 <script src="js/bamboo.js"></script>
 <script src="js/view.js"></script>
 <script src="js/shapes.js"></script>
+<script src="js/forms.js"></script>
 <script src="js/draw.js"></script>
 <script src="js/micro.js"></script>
 <script src="js/bamboo-draw.js"></script>

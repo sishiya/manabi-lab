@@ -54,8 +54,8 @@ function startScenario(v) {
 }
 // メニューで種をえらぶ: 仲間（タネ／竹）がかわるときは世界の大きさもかえて、まっさらな土から
 function chooseSeed(sp) {
-  const kind0 = SP.kind; SP = SPECIES[sp];
-  if (SP.kind !== kind0) {
+  const sp0 = SP; SP = SPECIES[sp];
+  if (SP !== sp0 || S.tot.dropped || (B.tot && B.tot.planted)) {   // 種がかわったら、まっさらな土から
     setWorld(SP.world); restartSim(SP.kind === 'clone' ? 'bEmpty' : 'empty');
     UI.playing = false; syncPlay(); resetView(); kindUI().start(); UI.lastTl = 0;
     $('scenNote').textContent = SCENARIOS[S.scen].note;
@@ -76,18 +76,18 @@ function updateReadout(force) {
   $('temp').textContent = T.toFixed(0) + '℃';
   if (SP.kind === 'clone') { bReadout(c); $('now').innerHTML = bNowText(c); renderLog(); return; }
   $('roUp').textContent = c.up.toLocaleString('ja-JP');
-  $('roHeads').textContent = '穂 ' + c.heads.toLocaleString('ja-JP') + (c.under ? '・土の中の芽 ' + c.under : '');
+  $('roHeads').textContent = SP.words.head + ' ' + c.heads.toLocaleString('ja-JP') + (c.under ? '・土の中の芽 ' + c.under : '');
   $('roBank').textContent = fmtNumS(c.perM2);
   $('roDorm').textContent = c.bank ? '眠る ' + Math.round(c.dorm / c.bank * 100) + '%' : '眠る –';
   $('roShed').textContent = fmtNumS(S.yr.shed / A);
-  $('roOnPlant').textContent = '穂に ' + fmtNumS(c.onPlant / A);
+  $('roOnPlant').textContent = SP.words.head + 'に ' + fmtNumS(c.onPlant / A);
   $('now').innerHTML = nowText(c, T);
   renderLog();
 }
 function nowText(c, T) {
   const d = dateOf(S.day), A = BED_W * BED_D, out = [];
   const bank = `土の中にはタネが <b>1m² に ${fmtNumS(c.perM2)} 粒</b>（花だん全体で ${c.bank.toLocaleString('ja-JP')} 粒）`;
-  if (S.opts.autoPull) out.push('実験中: 穂が出た株は、その日のうちに抜いている。');
+  if (S.opts.autoPull) out.push(`実験中: ${SP.words.head}が出た株は、その日のうちに抜いている` + (SP.pullRegrow ? '（でも根が残ると、また出てくる）。' : '。'));
   if (c.up === 0 && c.under === 0) {
     out.push(T < SP.tb ? `寒くて（${T.toFixed(0)}℃）タネは芽を出せない。` : 'いまは地上に株がない。');
     out.push(bank + (c.dorm ? `。そのうち ${Math.round(c.dorm / Math.max(1, c.bank) * 100)}% は眠っている（休眠）。眠っているタネは、冬の寒さで少しずつ目ざめる。` : '。'));
@@ -101,10 +101,10 @@ function nowText(c, T) {
     if (c.under) out.push(`土の中で <b>${c.under} 本</b>の芽が地上へのびている。`);
     if (c.up) {
       const young = c.up - c.heads;
-      out.push(`地上に <b>${c.up.toLocaleString('ja-JP')} 本</b>` + (c.heads ? `（穂が出たもの ${c.heads.toLocaleString('ja-JP')} 本）` : '') + '。' +
+      out.push(`地上に <b>${c.up.toLocaleString('ja-JP')} 本</b>` + (c.heads ? `（${SP.words.head}のあるもの ${c.heads.toLocaleString('ja-JP')} 本）` : '') + '。' +
         (young > c.heads * 3 && c.up > 50 ? 'こみあうと、背の低い芽は光が足りなくて枯れていく。' : ''));
     }
-    if (c.onPlant) out.push(`穂には育っているタネが 1m² あたり ${fmtNumS(c.onPlant / A)} 粒。`);
+    if (c.onPlant) out.push(`${SP.words.head}には育っているタネが 1m² あたり ${fmtNumS(c.onPlant / A)} 粒。`);
     if (S.yr.shed) out.push(`今年はもう <b>1m² に ${fmtNumS(S.yr.shed / A)} 粒</b>花だんに落ちた（タネは株のまわりに落ちる。通路に落ちた分は数えない）。`);
     out.push(bank + '。');
   }
@@ -194,16 +194,16 @@ function describeAt(px, py) {
   return null;
 }
 function seedText(awake, depth) {
-  return `<b>${awake ? '目ざめたタネ' : '眠っているタネ（休眠）'}</b>（深さ ${(depth * 100).toFixed(1)}cm、長さ約2mm）<br>` +
+  return `<b>${awake ? '目ざめたタネ' : '眠っているタネ（休眠）'}</b>（深さ ${(depth * 100).toFixed(1)}cm、長さ約${(SP.seedLen * 1000).toFixed(1)}mm）<br>` +
     (awake ? (depth <= SP.depthMax ? '暖かくなれば（10℃ より上）芽を出せる。' : '深すぎて芽を出さない。浅いところへ上がるのを待つ。')
       : '暖かくても芽を出さない。冬の寒さで少しずつ目ざめる。一度に全部が芽を出さないので、抜いても次が出てくる。');
 }
 function plantText(p) {
   const age = p.em >= 0 ? Math.round(S.day - p.em) : 0, st = panState(p);
-  const state = p.st === 3 ? '枯れた株' : p.st === 2 ? (st.flower ? '穂が出て花が咲いている' : '穂のタネが熟していく') : p.H < 0.03 ? '芽生え' : '葉をふやしている';
-  let t = `<b>エノコログサ</b>（${state}。芽が出て ${age}日）` + (p.n > 1 ? `<br>ここに同じころ生えた <b>${p.n} 本</b>をまとめて計算（描くのは1本。数値は1本あたり）` : '') + `<br>高さ ${(p.H * 100).toFixed(0)}cm・重さ ${p.W < 1 ? (p.W * 1000).toFixed(0) + 'mg' : p.W.toFixed(1) + 'g'}（乾いた重さ）・茎 ${1 + p.til} 本`;
+  const state = p.st === 3 ? '枯れた株' : p.st === 2 ? (SP.shape === 'grass' ? (st.flower ? '穂が出て花が咲いている' : '穂のタネが熟していく') : '花が咲いている') : p.uproot ? '抜いて置いてある（実は熟していく）' : p.H < 0.03 ? '芽生え' : '葉をふやしている';
+  let t = `<b>${SP.short}</b>（${state}。芽が出て ${age}日）` + (p.n > 1 ? `<br>ここに同じころ生えた <b>${p.n} 本</b>をまとめて計算（描くのは1本。数値は1本あたり）` : '') + `<br>高さ ${(p.H * 100).toFixed(0)}cm・重さ ${p.W < 1 ? (p.W * 1000).toFixed(0) + 'mg' : p.W.toFixed(1) + 'g'}（乾いた重さ）・茎 ${1 + p.til} 本`;
   if (p.st !== 3) t += `・光 ${Math.round(p.light * 100)}%`;
-  if (p.st >= 2) t += `<br>穂で作ったタネ ${Math.round(p.made / p.n).toLocaleString('ja-JP')} 粒（熟して穂にある ${Math.round(p.ripe / p.n).toLocaleString('ja-JP')}・落とした ${Math.round(p.shedN / p.n).toLocaleString('ja-JP')}）`;
+  if (p.st >= 2) t += `<br>${SP.words.head}で作ったタネ ${Math.round(p.made / p.n).toLocaleString('ja-JP')} 粒（熟して${SP.words.head}にある ${Math.round(p.ripe / p.n).toLocaleString('ja-JP')}・落とした ${Math.round(p.shedN / p.n).toLocaleString('ja-JP')}）`;
   if (TOOL === 'pull') t += '<br><span style="color:var(--acc)">タップで抜く（なぞると次々に）</span>';
   return t;
 }
@@ -249,7 +249,9 @@ function jump(kind) {
   if (kind === 'flower') {
     const hs = alive.filter(p => p.st === 2);
     const p = hs.find(p => panState(p).flower) || hs.sort((a, b) => b.made - a.made)[0];
-    if (!p) { msg.textContent = 'いまは穂のある株がない（穂が出るのは夏〜秋）。'; return; }
-    const pn = plantGeom(p).pans[0], q = panAt(pn, 0.5); aimAt(q.x, q.y, 0.014);
+    if (!p) { msg.textContent = `いまは${SP.words.head}のある株がない。`; return; }
+    const G = plantGeom(p);
+    if (G.heads && G.heads.length) { const h = G.heads.find(h => h.t === 'puff' || h.t === 'ocap' || h.t === 'pcap') || G.heads[0]; aimAt(h.x, h.y + (h.t === 'ocap' ? h.r * 2 : 0), Math.max(0.02, h.r * (h.t === 'ocap' ? 18 : 8))); return; }
+    const pn = G.pans[0], q = panAt(pn, 0.5); aimAt(q.x, q.y, 0.014);
   }
 }

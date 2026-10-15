@@ -27,6 +27,7 @@ function caption(px, py, text) {
 // ---------- タネ（殻＝えい に包まれた実）の縦の断面 ----------
 // kind: 'dorm' 眠っている / 'awake' 目ざめた / 'sprout' 芽を出している（q = sproutGeom）
 function drawSeedDetail(x, y, a, kind, q) {
+  if (SP.shape && SP.shape !== 'grass') return drawSeedOther(x, y, a, kind, q);   // ほかの種のタネ（forms.js）
   const s = VIEW.s, L = SP.seedLen * s, W = SP.seedWid * s, px = X(x), py = Y(y);
   const f = q ? q.f : 0;
   g.save(); g.translate(px, py); g.rotate(a);

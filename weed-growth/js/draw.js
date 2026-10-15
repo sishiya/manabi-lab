@@ -10,7 +10,16 @@ const FX = [];   // 落ちるタネの見た目だけ（計算には関係ない
 // 穂から落ちるタネ: いま描いている穂（p._g）のどこかから、ときどき1粒（毎回出すと、ずっと降って見えるので）
 function fxShed(p, k) {
   if (FX.length > 60 || Math.random() > 0.3) return;
-  const G = p._g; if (!G || !G.pans.length) return;
+  const G = p._g; if (!G) return;
+  if (G.heads && G.heads.length) {   // 綿毛は風に流れ、はじける実は上へとぶ、ほかはこぼれる
+    const h = G.heads.find(h => h.t === 'puff' || h.ripe || h.open); if (!h) return;
+    const d = SP.disp.type;
+    FX.push(d === 'wind' ? { x: h.x, y: h.y, vx: 0.15 + Math.random() * 0.35, vy: 0.05, t: 0, c: [238, 242, 244], float: true, big: true }
+      : d === 'ballistic' ? { x: h.x, y: h.y, vx: (Math.random() - 0.5) * 3, vy: 1 + Math.random() * 1.5, t: 0, c: COL.ripe }
+        : { x: h.x, y: h.y, vx: (Math.random() - 0.5) * 0.1, vy: 0, t: 0, c: [40, 38, 32] });
+    return;
+  }
+  if (!G.pans.length) return;
   const pn = G.pans[Math.floor(Math.random() * G.pans.length)], q = pn.pts[3 + Math.floor(Math.random() * 8)];
   FX.push({ x: q.x, y: q.y, vx: (Math.random() - 0.5) * 0.1, vy: 0, t: 0, c: COL.ripe });
 }
@@ -68,6 +77,7 @@ function drawPullFX() {
       for (const pn of f.G.pans) { let q = L(pn.pts[0].x, pn.pts[0].y); g.moveTo(q[0], q[1]); for (const pt of pn.pts) { q = L(pt.x, pt.y); g.lineTo(q[0], q[1]); } }
       g.stroke();
     }
+    if (f.G.blobs) { g.fillStyle = rgb(f.c); g.beginPath(); for (const b of f.G.blobs) { const q = L(b.x, b.y); g.moveTo(q[0] + b.rx * s, q[1]); g.ellipse(q[0], q[1], Math.max(0.8, b.rx * s), Math.max(0.6, b.ry * s), b.a, 0, Math.PI * 2); } g.fill(); }
     g.fillStyle = '#5a4634'; g.beginPath(); g.ellipse(0, 0.004 * s, Math.max(3, 0.012 * s), Math.max(2, 0.008 * s), 0, 0, Math.PI * 2); g.fill();   // 根もとの土のかたまり
     g.restore();
     g.save(); g.globalAlpha = alpha; g.fillStyle = '#6b5640';
@@ -127,7 +137,7 @@ function drawScene() {
 const SLICE = 0.01;
 function seedShown(n, cellPx) {
   const f = cellPx <= 15 ? 1 : cellPx >= 60 ? SLICE / BED_D : 1 + (SLICE / BED_D - 1) * (cellPx - 15) / 45;
-  return Math.min(Math.round(n * f), seedCap(cellPx));
+  return Math.min(Math.max(n > 0 ? 1 : 0, Math.round(n * f)), seedCap(cellPx));   // タネのあるます目には少なくとも1粒
 }
 function seedCap(cellPx) { return cellPx < 6 ? 2 : cellPx < 15 ? 6 : cellPx < 40 ? 25 : cellPx < 120 ? 120 : 400; }
 function visibleCells() {
@@ -237,7 +247,7 @@ function plantColor(p) {
 function drawPlants() {
   const s = VIEW.s, wide = SP.leafW * s > 8;   // 葉の幅が 8px をこえたら1枚ずつ面で
   g.lineCap = 'round'; g.lineJoin = 'round';
-  if (!wide) { drawPlantsFar(); return; }
+  if (!wide || (SP.shape && SP.shape !== 'grass')) { drawPlantsFar(); return; }
   // 近く: 1本ずつ、葉を面で（奥から手前へ）
   const list = S.plants.filter(p => p.st !== 0 && inView(p.x, p.H / 2, Math.max(60, p.H * s))).sort((a, b) => b.y - a.y);
   for (const p of list) {
@@ -262,6 +272,12 @@ function drawPlants() {
 // 遠く: 奥行きの3段・枯れ の4つの色ごとに、茎と葉を1本の線のまとまりで（数千本でも軽く）
 function drawPlantsFar() {
   const s = VIEW.s, groups = [[], [], [], []], heads = [];
+  if (SP.shape && SP.shape !== 'grass') {   // タンポポ・スベリヒユ・カタバミ（forms.js）。枯れた株はうすく
+    const list = S.plants.filter(p => p.st !== 0 && inView(p.x, 0.05, 0.4 * s + 40));
+    const dead = list.filter(p => p.st === 3 && !p.uproot), live = list.filter(p => !(p.st === 3 && !p.uproot));
+    if (dead.length) { g.save(); g.globalAlpha = 0.35; drawFormsBatch(dead, null, s); g.restore(); }
+    drawFormsBatch(live, null, s); return;
+  }
   for (const p of S.plants) {
     if (p.st === 0 || !inView(p.x, p.H / 2, Math.max(40, p.H * s))) continue;
     groups[p.st === 3 ? 3 : Math.min(2, Math.floor(p.y / BED_D * 3))].push(p);
@@ -368,8 +384,12 @@ function drawFX() {
   }
 }
 function fxTick(dt) {
-  for (const f of FX) { f.vy -= 2.5 * dt; f.x += f.vx * dt; f.y += f.vy * dt; f.t += dt; }
-  for (let i = FX.length - 1; i >= 0; i--) if (FX[i].y <= 0 || FX[i].t > 3) FX.splice(i, 1);
+  for (const f of FX) {
+    if (f.float) { f.vy = -0.3 + 0.15 * Math.sin(f.t * 3); f.vx += (Math.random() - 0.45) * dt; }   // 綿毛: ゆっくり落ちながら風に流れる（落ちる速さは推定）
+    else f.vy -= (f.vy > 0 ? 9.8 : 2.5) * dt;
+    f.x += f.vx * dt; f.y += f.vy * dt; f.t += dt;
+  }
+  for (let i = FX.length - 1; i >= 0; i--) if (FX[i].y <= 0 || FX[i].t > (FX[i].float ? 6 : 3)) FX.splice(i, 1);
 }
 function niceLen(m) { const e = Math.pow(10, Math.floor(Math.log10(m))), f = m / e; return (f >= 5 ? 5 : f >= 2 ? 2 : 1) * e; }
 function fmtLen(m) {

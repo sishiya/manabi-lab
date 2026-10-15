@@ -18,6 +18,7 @@ function seedSpot(i, k) {
 
 // ---------- 地上の株（エノコログサ: 根もとから分げつした茎に葉、てっぺんに穂） ----------
 function plantGeom(p) {
+  if (SP.shape && SP.shape !== 'grass') return formGeom(p);   // タンポポ・スベリヒユ・カタバミ（forms.js）
   const fall = p.st === 3 ? Math.min(1, p.dd / 45) : 0;
   const key = p.st + '|' + Math.round(p.H * 600) + '|' + p.til + '|' + Math.round(fall * 20) + '|' + (p.st >= 2 ? Math.min(30, Math.floor(p.made / p.n / 120)) : 0);
   if (p._gk === key) return p._g;
@@ -73,8 +74,9 @@ function rootGeom(p) {
   const D = Math.min(0.19, 0.012 + 0.2 * Math.pow(p.W / SP.wmax, 0.45) + 0.04 * Math.min(1, p.cd / 250));
   for (let j = 0; j < nr; j++) {
     // 1本目はタネから出た根（種子根）。ほかは地ぎわの節から出る根（冠根）
-    const sx = p.x + (j === 0 ? 0 : (r() - 0.5) * 0.004), sy = j === 0 ? -p.z0 : -0.004 - r() * 0.006;
-    let a = j === 0 ? (r() - 0.5) * 0.3 : (r() * 2 - 1) * 1.15;
+    const tap = SP.root === 'tap';   // 直根（タンポポ・カタバミ）: 1本目は太くまっすぐ深く、ほかは細い根
+    const sx = p.x + (j === 0 ? 0 : (r() - 0.5) * 0.004), sy = j === 0 ? (tap ? -0.004 : -p.z0) : tap ? -0.01 - r() * D * 0.6 : -0.004 - r() * 0.006;
+    let a = j === 0 ? (r() - 0.5) * (tap ? 0.12 : 0.3) : (r() * 2 - 1) * 1.15;
     const L = Math.max(0.003 + Math.min(0.03, p.cd * 0.0002), (D + sy) * (j === 0 ? 1 : 0.45 + 0.55 * r()) / Math.max(0.5, Math.cos(a) * 0.8 + 0.2));
     const pts = [{ x: sx, y: sy }], n = 10;
     let x = sx, y = sy;
@@ -84,8 +86,9 @@ function rootGeom(p) {
       if (y < -SOIL_D + 0.004) y = -SOIL_D + 0.004;
       pts.push({ x, y });
     }
-    R0.roots.push({ pts, w: SP.rootDia * (j === 0 ? 1 : 1.15) });
-    R0.tips.push({ x, y, a: Math.PI + a, w: SP.rootDia * (j === 0 ? 1 : 1.15), p });
+    const rw = tap ? (j === 0 ? SP.rootDia * (0.3 + 0.7 * Math.sqrt(Math.min(1, p.W / SP.wmax))) : 0.0004) : SP.rootDia * (j === 0 ? 1 : 1.15);
+    R0.roots.push({ pts, w: rw });
+    R0.tips.push({ x, y, a: Math.PI + a, w: rw, p });
     // 横に出る細い根
     const nlat = Math.min(6, Math.floor(L / 0.02));
     for (let k = 0; k < nlat; k++) {
