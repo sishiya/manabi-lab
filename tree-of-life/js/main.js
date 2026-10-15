@@ -100,7 +100,7 @@ cv.addEventListener('pointermove', e => {
     const [a, b] = [...pts.values()];
     const d = Math.hypot(a[0] - b[0], a[1] - b[1]), mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
     V3.orbit(mx - pinch.mx, 0);
-    V3.dolly(Math.exp((my - pinch.my) * 0.006) * (pinch.d / Math.max(1, d)));
+    V3.zoomAt(mx, my, Math.exp((my - pinch.my) * 0.006) * (pinch.d / Math.max(1, d)));   // 指の間の点を中心に
     pinch.d = d; pinch.mx = mx; pinch.my = my;
     redraw(false); return;
   }
@@ -132,13 +132,28 @@ cv.addEventListener('pointermove', e => {
   cv.style.cursor = h || (V3.on ? C.hit3(e.offsetX, e.offsetY) : C.hit((e.offsetX - V.cam.x) / V.cam.k, (e.offsetY - V.cam.y) / V.cam.k)) ? 'pointer' : 'grab';
   V.hover = h; redraw(false);
 });
+// ダブルタップ・ダブルクリック: 何もない所なら、その点を中心に少し拡大（名前やシルエットの上は、ふつうの「押す」）
+let lastTap = { t: 0, x: 0, y: 0 };
+function zoomInAt(x, y) {
+  touched = true;
+  if (V3.on) V3.zoomAt(x, y, 0.62); else V.zoomAt(x, y, 1.6);
+  redraw(false);
+}
 function up(e) {
   pts.delete(e.pointerId);
   if (drag && drag.moved <= 5 && e.type === 'pointerup') {
     // いきものを押した: その詳細（枝は開け閉めしない）
     const c = V3.on ? C.hit3(e.offsetX, e.offsetY) : C.hit((e.offsetX - V.cam.x) / V.cam.k, (e.offsetY - V.cam.y) / V.cam.k);
     if (c && !Compare.picking) { touched = true; V.selected = c; UI.show(c); V.draw(); }
-    else { const n = c || (V3.on ? V3.hit(e.offsetX, e.offsetY) : V.hit(e.offsetX, e.offsetY)); if (n) press(n); }
+    else {
+      const n = c || (V3.on ? V3.hit(e.offsetX, e.offsetY) : V.hit(e.offsetX, e.offsetY));
+      if (n) { press(n); lastTap.t = 0; }
+      else {   // 何もない所: 0.32 秒以内に近くをもう一度押したら拡大
+        const now = performance.now();
+        if (now - lastTap.t < 320 && Math.hypot(e.offsetX - lastTap.x, e.offsetY - lastTap.y) < 30) { zoomInAt(e.offsetX, e.offsetY); lastTap.t = 0; }
+        else lastTap = { t: now, x: e.offsetX, y: e.offsetY };
+      }
+    }
   }
   if (pts.size < 2) pinch = null;
   drag = null;
@@ -153,7 +168,7 @@ cv.addEventListener('wheel', e => {
   if (V3.on) {   // 3D: ホイールで近づく・はなれる。横の量（トラックパッド）で回す
     if (e.deltaX !== 0 && !e.ctrlKey) V3.orbit(-e.deltaX, 0);
     const dy = e.deltaMode === 1 ? e.deltaY * 30 : e.deltaY;
-    V3.dolly(Math.exp(dy * (e.ctrlKey ? 0.01 : 0.0015)));
+    V3.zoomAt(e.offsetX, e.offsetY, Math.exp(dy * (e.ctrlKey ? 0.01 : 0.0015)));   // マウスの位置を中心に
     redraw(false); return;
   }
   // ホイール（たて）= 拡大・縮小。横の量がまざるとき（トラックパッドの2本指）は動かす。ピンチ（ctrlKey）は拡大、Shift は横へ
@@ -347,7 +362,8 @@ async function startView() {
   UI.show(mam);   // すぐ下のなかまが読めたので、詳細を出しなおす
 }
 V.resize();
-set3d(true, true);   // はじめから 3D（2D へはボタンで）
+// はじめは 2D（v018 でユーザーの声で 3D から戻した）。3D はボタンで（真上から倒れこむ）
+set3d(false, true);
 fromHash().then(ok => { if (!ok) startView(); });
 
 // デバッグ用（RULES 5）: 状態を見る・押す・探す

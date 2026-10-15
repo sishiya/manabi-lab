@@ -4,7 +4,7 @@
 //   ・動き方はグループごとの演出（本物の歩き方ではない）。シルエットは条件の合うものだけ、作者・条件は詳細に
 'use strict';
 const C = (() => {
-  const MAX = 14;            // いちどに出す数（多すぎると文字が読みにくい）
+  const MAX = 18;            // いちどに出す数（多すぎると文字が読みにくい。v018 で 14 → 18）
   const SIZE = 25;           // 長いほうの大きさ（世界の単位）
   const YARD = 64;           // 名前の右で動ける幅
   const INKC = '#3c4436';
@@ -72,13 +72,20 @@ const C = (() => {
     if (V.is3d) return V3.shown.filter(n => !n.more && n.rank !== 'root' && !V.kidsOf(n).length).slice(0, MAX);   // 3D: 名前の札を出したもの
     const [W, H] = V.size, k = V.cam.k;
     if (k < 0.35) return [];   // 小さすぎるときは出さない（形を見わたすとき）
-    const out = [];
-    for (const n of V.drawn) {   // 名前を描いたもの（画面の中）だけ見る
-      if (!n.name || n.more || n.rank === 'root' || V.kidsOf(n).length) continue;
+    // シルエットのいる場所（名前の右、はば約 90）が画面に少しでもかかっていれば、出しておく（早く消えすぎないように）
+    const inView = n => {
       const sx = (n.x + n.lw + 20) * k + V.cam.x, sy = n.y * k + V.cam.y;
-      if (sx < -40 || sx > W + 10 || sy < -20 || sy > H + 20) continue;
-      out.push(n);
+      return sx + 90 * k > -30 && sx < W + 30 && sy > -40 && sy < H + 40;
+    };
+    const ok = n => n.name && !n.more && n.rank !== 'root' && V.isVis(n) && !V.kidsOf(n).length && inView(n);
+    // いまいるものを先に残し（動かすたびに入れかわらないように）、あいた分を上から足す
+    const out = [];
+    for (const n of live.keys()) if (out.length < MAX && ok(n)) out.push(n);
+    const y0 = (-V.cam.y - 40) / k, y1 = (V.size[1] - V.cam.y + 40) / k;
+    for (const n of V.vis) {
       if (out.length >= MAX) break;
+      if (n.y < y0 || n.y > y1 || live.has(n) || !ok(n)) continue;
+      out.push(n);
     }
     return out;
   }
@@ -101,7 +108,12 @@ const C = (() => {
     const want = new Set(wanted());
     for (const n of want) if (!live.has(n)) spawn(n);
     for (const [n, c] of live) {
-      if (!want.has(n) && c.dying < 0) { c.dying = 0; c.from = basePos(c); }
+      // 見えなくなった: 枝を閉じた（ふしが消えた）ときは親へきゅぽん、画面の外や名前が出なくなっただけのときは、その場でふわっと消える
+      if (!want.has(n) && c.dying < 0) {
+        if (V.isVis(n)) c.fade = Math.min(1, (c.fade || 0) + dt / 0.35);
+        else { c.dying = 0; c.from = basePos(c); }
+      } else if (want.has(n) && c.fade > 0) c.fade = Math.max(0, c.fade - dt / 0.25);   // また見えたら、もどる
+      if (c.fade >= 1) { live.delete(n); continue; }
       c.t += dt;
       if (c.born < 0 && c.rec && c.rec.ok) c.born = 0;
       if (c.born >= 0 && c.born < 1) c.born = Math.min(1, c.born + dt / 0.45);
@@ -125,7 +137,7 @@ const C = (() => {
   // 名前の右の、動ける場所の左はし（地面の高さ）
   function basePos(c) {
     const n = c.n;
-    return [n.ax + n.lw + 22, n.ay + 8];
+    return [n.ax + n.lw + 22, n.ay + 1];   // 「先がある線」（点の高さ）の上に立つ
   }
 
   // ---------- 描く（V.draw の中、枝のあと・名前の前。世界の座標） ----------
@@ -171,21 +183,28 @@ const C = (() => {
         const tgt = anchorOf(n) || [x, y], e = c.dying * c.dying * c.dying;
         x += (tgt[0] - x) * e; y += (tgt[1] - y) * e; sc *= 1 - e * 0.95; alpha *= 1 - c.dying * 0.5;
       }
-      put(g, c, im, x, y, w, h, sc, q.rot, alpha * (n.alpha === undefined ? 1 : n.alpha));
-      c.hit = [x - w / 2 * sc, y - h * sc, w * sc, h * sc];
+      const fd = c.fade || 0;
+      put(g, c, im, x, y, w, h, sc * (1 - 0.25 * fd), q.rot, alpha * (1 - fd) * (n.alpha === undefined ? 1 : n.alpha));
+      c.hit = fd > 0.5 ? null : [x - w / 2 * sc, y - h * sc, w * sc, h * sc];
       c.hit3 = null;
     }
   }
   // 3D（画面の座標）: placeOf(ふし) → 名前の札の右はし { x, y, s（大きさの倍率） } か null
   function draw3d(g, placeOf) {
+    // 3D: 名前の札の右に。札が出なくなったとき（重なり）は、さっきの場所でふわっと消える
+    const now = performance.now();
     for (const [n, c] of live) {
       c.hit = null; c.hit3 = null;
       if (!c.rec || !c.rec.ok || c.born < 0 || c.dying >= 0) continue;
-      const pl = placeOf(n); if (!pl) continue;
-      const im = c.rec.tinted, [w, h] = size(im), q = pose(c);
-      const x = pl.x + (c.x + q.dx) * pl.s, y = pl.y + q.dy * pl.s, sc = q.sc * pl.s;
-      put(g, c, im, x, y, w, h, sc, q.rot, q.alpha);
-      c.hit3 = [x - w / 2 * sc, y - h * sc, w * sc, h * sc];
+      const dt = Math.min(0.05, (now - (c.t3 || now)) / 1000) || 0.016; c.t3 = now;
+      const pl = placeOf(n);
+      if (pl) c.pl = pl;
+      c.a3 = (c.a3 === undefined ? 0 : c.a3) + ((pl ? 1 : 0) - (c.a3 || 0)) * Math.min(1, dt * 10);
+      if (!c.pl || c.a3 < 0.02) continue;
+      const P3 = c.pl, im = c.rec.tinted, [w, h] = size(im), q = pose(c), fd = c.fade || 0;
+      const x = P3.x + (c.x + q.dx) * P3.s, y = P3.y + q.dy * P3.s, sc = q.sc * P3.s * (1 - 0.25 * fd);
+      put(g, c, im, x, y, w, h, sc, q.rot, q.alpha * c.a3 * (1 - fd));
+      if (pl && c.a3 > 0.5) c.hit3 = [x - w / 2 * sc, y - h * sc, w * sc, h * sc];
     }
   }
   function hit3(px, py) {

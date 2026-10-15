@@ -238,7 +238,8 @@ const V = (() => {
     if (showText) {
       for (const n of vis) {
         if (!n.name || n.more || n.ay < y0 || n.ay > y1 || kidsOf(n).length || !T.expandable(n)) continue;
-        const sx = n.ax + n.lw + 12, ex = sx + 84, y = n.ay + 8;
+        // 開いたときに枝が伸びる所（点の高さ・名前の終わりの分かれ目から、子の並ぶ所の先まで）
+        const sx = n.ax + n.lw + 16, ex = sx + GAP + 56, y = n.ay;
         if (sx > x1 || ex < x0) continue;
         const gr = g.createLinearGradient(sx, 0, ex, 0);
         gr.addColorStop(0, 'rgba(68,82,60,.5)'); gr.addColorStop(0.5, 'rgba(68,82,60,.22)'); gr.addColorStop(1, 'rgba(68,82,60,0)');

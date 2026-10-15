@@ -10,7 +10,8 @@ const V3 = (() => {
   const cam = { tx: 0, ty: 0, tz: 400, yaw: -0.35, pitch: 0.42, dist: 900 };
   let on = false, guide = 'grid';
   let W = 0, H = 0, F = 600;
-  let picks = [], shown = [];   // shown: 名前の札を出したふし（いきもの用）            // 押せるもの（名前の札・点）の画面の場所
+  let picks = [], shown = [];
+  let lastLab = 0, fadeRaf = 0;   // 名前の出入りのアニメ   // shown: 名前の札を出したふし（いきもの用）            // 押せるもの（名前の札・点）の画面の場所
   let C0 = null, R = null, U = null, Fw = null;   // カメラの位置と向き
 
   // ---------- 投影 ----------
@@ -194,12 +195,14 @@ const V3 = (() => {
       const a = fog(p[3]);
       labels.push({ p, n, k: fs / 14, kr: k, fs, r, a, show: false });   // k: 名前の大きさの倍率、kr: 実際の遠さ
     }
-    // 名前を出すか決める（えらんだもの・手前を優先。うんと遠いものは出さない）
-    labels.sort((x, y) => (y.n === sel) - (x.n === sel) || x.p[3] - y.p[3]);
+    // 名前を出すか決める（えらんだもの → さっきまで出ていたもの → 手前 の順。うんと遠いものは出さない）
+    //   さっきまで出ていたものを先にして、置き場所もなるべく同じにする（動かすたびに名前がぱかぱか入れかわらないように）
+    labels.sort((x, y) => (y.n === sel) - (x.n === sel) || ((y.n._la || 0) > 0.5) - ((x.n._la || 0) > 0.5) || x.p[3] - y.p[3]);
     for (const L of labels) {
       if (L.kr < 0.1 && L.n !== sel) continue;   // うんと遠いものは名前を出さない
-      // 遠い（字が小さい）ものは名前（1段め）だけの小さな札にして、場所を取りすぎないように
-      L.one = L.fs < 10.5 && L.n !== sel;
+      // 遠い（字が小さい）ものは名前（1段め）だけの小さな札にして、場所を取りすぎないように（切りかわりに少し幅をもたせる）
+      L.one = L.n !== sel && (L.n._one ? L.fs < 11.5 : L.fs < 9.8);
+      L.n._one = L.one;
       const parts = V.labelParts(L.n);
       const w1 = (V.tw(parts.main, "14px 'Zen Old Mincho','Yu Mincho',serif") + (parts.tag ? 24 : 0)) * L.k + 8;
       const lw = L.one ? w1 : Math.max(w1, L.n.lw * L.k + 10);
@@ -207,11 +210,27 @@ const V3 = (() => {
       const free = rc => !taken.some(t => rc[0] + m < t[2] && t[0] + m < rc[2] && rc[1] + m < t[3] && t[1] + m < rc[3]);
       // 置き場所の候補: 点の右 → 少し上 → 少し下（ずらしたときは細い線で点とつなぐ）
       const hh = L.fs * (L.one ? 1.5 : 2.2);
-      for (const dy of [0, -hh, hh, -2 * hh]) {
-        const rect = [L.p[0] - L.r - 3, L.p[1] + dy - L.fs * (L.one ? 1.3 : 1.5), L.p[0] + L.r + 4 + lw, L.p[1] + dy + L.fs * (L.one ? 0.2 : 0.7)];
-        if (free(rect)) { taken.push(rect); L.show = true; L.rect = rect; L.dy = dy; break; }
+      const rectAt = dy => [L.p[0] - L.r - 3, L.p[1] + dy - L.fs * (L.one ? 1.3 : 1.5), L.p[0] + L.r + 4 + lw, L.p[1] + dy + L.fs * (L.one ? 0.2 : 0.7)];
+      const cands = [0, -hh, hh, -2 * hh];
+      const prev = L.n._slot;   // さっき使った置き場所（何番めの候補か）を先に
+      const order = prev !== undefined ? [prev].concat([0, 1, 2, 3].filter(i => i !== prev)) : [0, 1, 2, 3];
+      for (const i of order) {
+        const rect = rectAt(cands[i]);
+        if (free(rect)) { taken.push(rect); L.show = true; L.rect = rect; L.dy = cands[i]; L.n._slot = i; break; }
       }
+      if (!L.show) L.rect = rectAt(cands[L.n._slot || 0]), L.dy = cands[L.n._slot || 0];   // 消えていく名前は、さっきの場所のまま
     }
+    // 名前の濃さを、出す（1）・出さない（0）へ少しずつ近づける（約 0.2 秒）。まだ動いているあいだはコマを送る
+    const now = performance.now(), dt = Math.min(0.05, (now - (lastLab || now)) / 1000) || 0.016;
+    lastLab = now;
+    let fading = false;
+    for (const L of labels) {
+      const t = L.show ? 1 : 0, a0 = L.n._la || 0;
+      const a1 = a0 + (t - a0) * Math.min(1, dt * 12);
+      L.n._la = Math.abs(t - a1) < 0.02 ? t : a1;
+      if (L.n._la !== t) fading = true;
+    }
+    if (fading && !fadeRaf) fadeRaf = requestAnimationFrame(() => { fadeRaf = 0; V.draw(); });
     // 遠いものから描く（手前が上に）
     labels.sort((x, y) => y.p[3] - x.p[3]);
     g.textBaseline = 'middle';
@@ -230,7 +249,9 @@ const V3 = (() => {
       g.fillStyle = col; g.strokeStyle = '#f6f1e6'; g.lineWidth = 1.4;
       g.beginPath(); g.arc(p[0], p[1], r, 0, 7); g.fill(); g.stroke();
       picks.push({ n, x: p[0], y: p[1], rect: L.show ? L.rect : [p[0] - r - 6, p[1] - r - 6, p[0] + r + 6, p[1] + r + 6] });
-      if (!L.show) continue;
+      const la = n._la || 0;
+      if (la < 0.02 || !L.rect) continue;
+      g.globalAlpha *= la;   // ふわっと出る・消える
       const parts = V.labelParts(n);
       const ly = p[1] - fs * 0.75 + (L.dy || 0);
       if (L.dy) { g.strokeStyle = 'rgba(110,103,87,.45)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(p[0] + r + 3, ly + fs * 0.35); g.stroke(); }
@@ -279,6 +300,22 @@ const V3 = (() => {
     cam.tx -= rx * dx * s - fx * dy * sv; cam.tz -= rz * dx * s - fz * dy * sv;
   }
   function dolly(f) { cam.dist = Math.max(120, Math.min(12000, cam.dist * f)); }
+  // 画面の点の下の地面（y=0）の場所。空を指していれば null
+  function groundAt(sx, sy) {
+    setup();
+    const dx = (sx - W / 2) / F, dy = -(sy - H / 2) / F;
+    const d = [Fw[0] + R[0] * dx + U[0] * dy, Fw[1] + R[1] * dx + U[1] * dy, Fw[2] + R[2] * dx + U[2] * dy];
+    if (d[1] > -1e-4) return null;
+    const t = -C0[1] / d[1];
+    return [C0[0] + d[0] * t, C0[2] + d[2] * t];
+  }
+  // その点を中心に近づく・はなれる（ピンチ・ホイール・ダブルタップ）。点の下の地面が動かないように見る点をずらす
+  function zoomAt(sx, sy, f) {
+    const a = groundAt(sx, sy);
+    dolly(f);
+    const b = groundAt(sx, sy);
+    if (a && b) { cam.tx += a[0] - b[0]; cam.tz += a[1] - b[1]; }
+  }
   // あるふしを見る（なめらかに）
   function glideTo(n, ms = 600) {
     if (!n || n.lv === undefined) return;
@@ -403,7 +440,7 @@ const V3 = (() => {
   }
 
   return {
-    cam, draw, hit, orbit, pan, dolly, glideTo, frame, fit, fromTop2D, toTop2D, morphTo2D, morphTo3D,
+    cam, draw, hit, orbit, pan, dolly, zoomAt, glideTo, frame, fit, fromTop2D, toTop2D, morphTo2D, morphTo3D,
     project: n => { B = blendOf(cam.pitch); setup(); return P(X(n), 0, Z(n)); },   // デバッグ用: ふしの画面の場所
     get on() { return on; }, get shown() { return shown; },
     set on(v) { on = !!v; V.draw3d = on ? draw : null; V.draw(); },
