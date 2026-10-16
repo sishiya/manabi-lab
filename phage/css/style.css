@@ -82,6 +82,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-of
 #time{display:block;width:100%;accent-color:var(--acc);height:22px;margin:0}
 .trow2{display:flex;align-items:center;gap:10px;margin-top:4px}
 .tlabel{font-size:13px;color:var(--ink)}
+:root[lang=en] .tlabel{font-family:var(--f-body);font-size:12px;line-height:1.35} /* 英語は等幅だと幅が足りずスマホで4行になるため */
 .spacer{flex:1}
 .faq details{border-top:1px solid var(--line);padding:6px 0}
 .faq details:first-child{border-top:0}

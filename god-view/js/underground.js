@@ -120,7 +120,7 @@
   function setCredit(on) {
     const cd = GV.viewer.creditDisplay;
     if (on && !credit) {
-      credit = new Cesium.Credit(L('地下: ', 'Underground: ') + '<a href="https://www.mlit.go.jp/plateau/" target="_blank" rel="noopener">3D都市モデル（Project PLATEAU）国土交通省</a>' + L('（地下街・地下埋設物。水道管などの深さは推定）', ' (underground malls and buried utilities; depth of water pipes etc. is estimated)'), true);
+      credit = new Cesium.Credit(L('地下: ', 'Underground: ') + '<a href="https://www.mlit.go.jp/plateau/" target="_blank" rel="noopener">3D都市モデル（Project PLATEAU）国土交通省</a>' + L('', ' = 3D City Model, MLIT Japan') + L('（地下街・地下埋設物。水道管などの深さは推定）', ' (underground malls and buried utilities; depth of water pipes etc. is estimated)'), true);
       cd.addStaticCredit(credit);
     } else if (!on && credit) { cd.removeStaticCredit(credit); credit = null; }
   }

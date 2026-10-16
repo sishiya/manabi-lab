@@ -3,7 +3,7 @@
 #   - 例外（JS のエラー）・console.error・読み込みの失敗（404 など）
 #   - 許可していない外への通信（RULES 7章: 許可した CDN とフォントだけ。god-view は地図・データ源も）
 #   - ローカルで Google アナリティクスが動いていないか（gtag が undefined か）
-#   - 英語（?lang=en）で画面に日本語が残っていないか（入口の APPS で en:true のアプリ。見えている文字だけ）
+#   - 英語（?lang=en）で画面に日本語が残っていないか（入口の APPS で en:true のアプリ。見えている文字・キャンバスに書いた文字・title と aria-label）
 # 各アプリの DEVNOTES の「確認のしかた」の代わりではない（共通の壊れ方を早く見つけるためのもの）。
 #
 # 使い方（ローカルのサーバー apps を起動しておく。リポジトリのルートで）:
@@ -68,12 +68,27 @@ $probe = @'
   const txt = (d.body && d.body.innerText) || '';
   const jp = /[぀-ヿ㐀-鿿]/;
   const lines = txt.split(/\n/).map(s => s.trim()).filter(s => s && jp.test(s) && !/^(日本語|JP)$/.test(s));
+  // キャンバスに書いた日本語（$canvasHook が集めたもの）と、title・aria-label（読み上げ）に残った日本語
+  for (const s of (w.__jpCanvas || []).slice().reverse()) lines.unshift('[canvas] ' + s);
+  d.querySelectorAll('[title],[aria-label],[placeholder]').forEach(e => {
+    if (e.tagName === 'LINK' || e.closest('[lang=ja]') || e.title === '日本語' || /Language/.test(e.getAttribute('aria-label') || '')) return;
+    for (const a of ['title', 'aria-label', 'placeholder']) { const v = e.getAttribute(a); if (v && jp.test(v)) lines.push('[' + a + '] ' + v); }
+  });
   return JSON.stringify({
     title: d.title, lang: d.documentElement.lang, gtag: typeof w.gtag,
     textLen: txt.length, canvases: d.querySelectorAll('canvas').length,
     jpCount: lines.length, jpLines: lines.slice(0, 6)
   });
 })()
+'@
+
+# どのフレームでもアプリより先に動かす: キャンバスに書く日本語を集める（英語で残っていないか見るため）
+$canvasHook = @'
+(() => { const jp = /[぀-ヿ㐀-鿿]/; const s = window.__jpCanvas = [];
+  const ps = [window.CanvasRenderingContext2D, window.OffscreenCanvasRenderingContext2D].filter(Boolean).map(c => c.prototype);
+  for (const P of ps) for (const f of ['fillText', 'strokeText']) { const o = P[f];
+    P[f] = function (t, ...a) { t = String(t); if (jp.test(t) && s.length < 40 && !s.includes(t)) s.push(t.slice(0, 40)); return o.call(this, t, ...a); }; }
+})();
 '@
 
 try { Invoke-WebRequest -UseBasicParsing "$Base/_dev/tools/thumb.html" -TimeoutSec 10 | Out-Null }
@@ -87,6 +102,7 @@ try {
       $label = "$a [$lg]"
       $ws = Open-CdpTab $cdp
       foreach ($d in 'Runtime.enable', 'Log.enable', 'Network.enable', 'Page.enable') { [void](Send-Cdp $ws $d) }
+      if ($lg -eq 'en') { [void](Send-Cdp $ws 'Page.addScriptToEvaluateOnNewDocument' @{ source = $canvasHook }) }
       $t0 = Get-Date
       [void](Send-Cdp $ws 'Page.navigate' @{ url = "$Base/_dev/tools/thumb.html?app=$a&lang=$lg" })
       $ready = $false

@@ -91,7 +91,7 @@ function buildPanel() {
     ['#view', 'aria-label', 'タバコスズメガの体を横から見た図。器官をタップすると説明が出る', 'Side view of a tobacco hornworm. Tap an organ for its description'],
     ['#viewCtl', 'aria-label', '見かた', 'View'], ['[data-mode=in]', 'title', '器官を役割の色で見る', 'Color organs by their role'],
     ['[data-mode=cut]', 'title', '縦に割ったとき、人の目にどう見えるか（形は模式図）', 'What you would see if cut lengthwise (shapes are schematic)'], ['[data-mode=out]', 'title', '外から見た姿', 'How it looks from outside'],
-    ['#speeds', 'aria-label', '再生の速さ', 'Playback speed'], ['#time', 'aria-label', '時間', 'Time'],
+    ['#speeds', 'aria-label', '再生の速さ', 'Playback speed'], ['#time', 'aria-label', '時間', 'Time'], ['#play', 'aria-label', '再生', 'Play'],
     ['#chart', 'aria-label', 'ホルモンの量の目安とスイッチの遺伝子のグラフ。押すとその時間へ移る', 'Graph of rough hormone levels and switch genes. Tap to jump to that time'],
   ]) document.querySelector(sel).setAttribute(attr, L(ja, en));
   // speeds

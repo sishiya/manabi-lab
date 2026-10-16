@@ -127,7 +127,7 @@ i.sw.plain{background:repeating-linear-gradient(90deg,rgba(240,240,230,.9) 0 6px
 #tourOpen[hidden]{display:none}
 /* 設定: まとまりごとのカード。見出しに番号・名前・いまの設定 */
 #controls{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:10px;align-items:start}
-.sec{background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.sec{background:var(--panel);border:1px solid var(--line);border-radius:10px;min-width:0} /* min-width:0 … 閉じたときの長いまとめの行（英語）で列が広がり、スマホで横にはみ出したため */
 .sec#sec-pitch{grid-column:1/-1}
 .sec summary{list-style:none;display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;min-height:44px}
 .sec summary::-webkit-details-marker{display:none}

@@ -76,7 +76,7 @@
   function setCredit(on) {
     const cd = GV.viewer.creditDisplay;
     if (on && !credit) {
-      credit = new Cesium.Credit(L('建物: ', 'Buildings: ') + '<a href="https://www.mlit.go.jp/plateau/" target="_blank" rel="noopener">3D都市モデル（Project PLATEAU）国土交通省</a>' + L('（ジオイド高の分だけ高さを補正）', ' (heights corrected by the geoid height)'), true);
+      credit = new Cesium.Credit(L('建物: ', 'Buildings: ') + '<a href="https://www.mlit.go.jp/plateau/" target="_blank" rel="noopener">3D都市モデル（Project PLATEAU）国土交通省</a>' + L('', ' = 3D City Model, MLIT Japan') + L('（ジオイド高の分だけ高さを補正）', ' (heights corrected by the geoid height)'), true);
       cd.addStaticCredit(credit);
     } else if (!on && credit) {
       cd.removeStaticCredit(credit); credit = null;
