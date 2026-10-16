@@ -37,7 +37,7 @@
 紺の3本は 5・9・11日目（いちばん近くて1日おき）。
 
 ## Zenn の技術記事（2026-10-14〜、動画と同じ日の 20:10 に予約公開）
-**記事の順は YouTube の公開順と同じ**（2026-10-15 ユーザー）。動画が先に出ていた3本は 10/15 にまとめて出して追いつく（10分ずつずらす）。
+**記事の順は YouTube の公開順と同じ**（2026-10-15 ユーザー）。**2026-10-16 から、動画より遅れてよいので1日1本**（ユーザー）: 毎朝 9:30 ごろスケジュールの作業 `zenn-daily-publish` が次の1本を出す。左の「日付」は動画の日（DEV はこの日に）。動画が先に出ていた3本は 10/15 にまとめて出して追いつく（10分ずつずらす）。
 記事は隣のフォルダ `../zenn/`（決まりはそこの README）。書くのは Claude、予約の push は記事ごとのユーザーの GO のあと。
 
 | 日付 | アプリ | 記事（slug） | 状態 |
@@ -45,16 +45,16 @@
 | 2026-10-14 | ブラックホールの見え方（動画は 10/13） | `blackhole-kerr-raytracing-webgl2` | 公開ずみ |
 | 2026-10-15 20:10 | ヒトへの46億年（動画は 10/11） | `evolution-earth-box-model` | 公開ずみ（Zenn 10/15 0:33・DEV） |
 | 2026-10-15 20:20 | 体内ダイブ（動画は 10/12） | `body-dive-tube-shader-junction` | 公開ずみ（Zenn 10/16 8:58・DEV） |
-| 2026-10-15 20:30 | いきものの感じる世界（動画は 10/14） | `animal-senses-shader-passes` | Zenn は 10/16 9:00 の push が上限で止まった（published: true のまま。次の push で再デプロイされる）・DEV は公開ずみ |
-| 2026-10-15 20:40 | 量子の実験室 | `quantum-tunnel-visscher-canvas` | Zenn は上限で待ち・DEV は公開ずみ |
-| 2026-10-16 | さなぎの中で | `metamorphosis-time-driven-canvas` | Zenn は順番待ち（10/16 に予約を外して下書きへ。体内ダイブ・いきもの・量子のあと）・DEV は当日に |
-| 2026-10-17 | 免疫のたたかい | `immune-ode-model-rk4` | 下書き（10/16 に数字をコード・DEVNOTES と読み合わせ済み、日英とも） |
-| 2026-10-18 | 空気の流れの見える部屋 | `airflow-age-of-air-bicgstab` | 下書き（10/16 に数字をコード・DEVNOTES と読み合わせ済み） |
-| 2026-10-19 | 進化の箱庭 | `ga-creatures-spring-physics` | 下書き |
-| 2026-10-20 | 神の視点マップ | `godview-tear-earth-sph-worker` | 下書き |
-| 2026-10-21 | 電波の見える部屋 | `wifi-fdtd-webgl2-grid-fix` | 下書き |
-| 2026-10-22 | カビが育つまで | `mold-growth-hyphae-grid` | 下書き |
-| 2026-10-24 | 変化球のしくみ | `pitch-magnus-nathan-rk4` | 下書き |
+| 2026-10-15 20:30 | いきものの感じる世界（動画は 10/14） | `animal-senses-shader-passes` | Zenn は 10/17 の朝に出す予定（1日1本）・DEV は公開ずみ |
+| 2026-10-15 20:40 | 量子の実験室 | `quantum-tunnel-visscher-canvas` | Zenn は 10/18 の朝に出す予定（1日1本）・DEV は公開ずみ |
+| 2026-10-16 | さなぎの中で | `metamorphosis-time-driven-canvas` | Zenn は 10/19 の朝に出す予定（1日1本）・DEV は動画の日に |
+| 2026-10-17 | 免疫のたたかい | `immune-ode-model-rk4` | Zenn は 10/20 の朝に出す予定（1日1本）・DEV は動画の日に |
+| 2026-10-18 | 空気の流れの見える部屋 | `airflow-age-of-air-bicgstab` | Zenn は 10/21 の朝に出す予定（1日1本）・DEV は動画の日に |
+| 2026-10-19 | 進化の箱庭 | `ga-creatures-spring-physics` | Zenn は 10/22 の朝に出す予定（1日1本）・DEV は動画の日に |
+| 2026-10-20 | 神の視点マップ | `godview-tear-earth-sph-worker` | Zenn は 10/23 の朝に出す予定（1日1本）・DEV は動画の日に |
+| 2026-10-21 | 電波の見える部屋 | `wifi-fdtd-webgl2-grid-fix` | Zenn は 10/24 の朝に出す予定（1日1本）・DEV は動画の日に |
+| 2026-10-22 | カビが育つまで | `mold-growth-hyphae-grid` | Zenn は 10/25 の朝に出す予定（1日1本）・DEV は動画の日に |
+| 2026-10-24 | 変化球のしくみ | `pitch-magnus-nathan-rk4` | Zenn は 10/26 の朝に出す予定（1日1本）・DEV は動画の日に |
 
 **Zenn には公開の数の上限がある**（10/15 に3本が止まった）。上限が戻ったら、動画の順に1本ずつ出す。下書きに `published_at` を書かない（デプロイ全体が止まる）。
 英語版は DEV（dev.to）へ（`../zenn/dev/`・`tools/devto.ps1`）。1本目はブラックホール（下書き）。

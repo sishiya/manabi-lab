@@ -5,9 +5,7 @@
 
 ## その日の朝〜昼（Claude が声をかける）
 1. **今日の分の確認**: `SCHEDULE.md` で、今日の動画（説明 20:00・ショート 20:05、YouTube は予約ずみ）と今日の記事を見る。
-2. **今日の記事の GO をもらう**（まだなら）→ Zenn: `published: true` と `published_at: "<今日> 20:10"` を**同時に**書いて commit → push。
-   - 下書きに `published_at` を書かない（Zenn のデプロイ全体が止まる）。
-   - Zenn には公開の数の上限がある。まとめて出さず、1本ずつ。push のあとデプロイ履歴か記事の URL（`https://zenn.dev/sishiya/articles/<slug>`）で確かめる。
+2. **Zenn の記事**（2026-10-16〜）: 動画より遅れてよいので、順番どおり1日1本。毎朝 9:30 ごろスケジュールの作業 `zenn-daily-publish` が次の1本を出して push する（ユーザーが 10/16 に頼んだ）。その結果（出たか・上限で止まったか）を確かめてユーザーに伝える。順と日付は `SCHEDULE.md`。
 3. **明日の分の前日の最終確認**（RULES 8.4、手順は `RULES-video.md`）: 明日の動画（`youtube-upload.ps1 -Verify`）と、**明日の記事を読み直す**（数字がアプリの DEVNOTES と合うか）。
 4. **2日後の分の UI/UX のブラッシュアップ**（RULES 8.5）。
 
