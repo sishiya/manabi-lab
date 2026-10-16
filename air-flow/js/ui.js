@@ -50,14 +50,13 @@ function buildUI() {
   }
   $('segMode').onclick = e => { const b = e.target.closest('button'); if (!b) return; S.mode = b.dataset.v; setSeg($('segMode'), S.mode); updateLegend(); };
   $('segPSpeed').onclick = e => { const b = e.target.closest('button'); if (!b) return; S.pSpeed = +b.dataset.v; setSeg($('segPSpeed'), S.pSpeed); };
-  $('optPart').onchange = e => { S.particles = e.target.checked; };
+  $('optPart').onchange = e => { S.particles = e.target.checked; $('segPSpeed').hidden = !S.particles; };
   $('segTool').onclick = e => { const b = e.target.closest('button'); if (b) setTool(b.dataset.v); };
   const playLabel = () => { $('btnPlay').textContent = S.paused ? L('再生', 'Play') : L('一時停止', 'Pause'); };
   $('btnPlay').onclick = () => { S.paused = !S.paused; playLabel(); };
   playLabel();
   $('btnFill').onclick = () => fillSmoke();
   $('btnClear').onclick = () => { smoke.fill(0); S.fill = null; S.smokeOn = false; drawChart(); };
-  $('btnCirc').onclick = () => setTool('circ');
   $('btnCircClear').onclick = () => { S.circs = []; };
   $('hint').onclick = () => $('hint').classList.toggle('open');
   addEventListener('keydown', e => { if (e.code === 'Space' && e.target === document.body) { e.preventDefault(); $('btnPlay').click(); } });
@@ -145,14 +144,19 @@ function updateReadout() {
   const old = ROOMS.reduce((a, r) => r.meanAge > a.meanAge ? r : a);
   const eff = st.tau / (2 * st.meanAge);
   const pa = `${st.p >= 0 ? '+' : '−'}${Math.abs(st.p) < 10 ? Math.abs(st.p).toFixed(1) : Math.round(Math.abs(st.p))} Pa`;
+  // いつも出すのは2つ。気圧は外との差が目立つとき（換気扇で引かれているなど）だけ上に、ほかは「くわしい数字」に
+  const press = [L('室内の気圧', 'Indoor pressure'), L(`外より ${pa}`, `${pa} vs. outside`), pressWord(st.p)];
   const rows = [
-    [L('入れかわる空気', 'Air exchanged'), L(`${Math.round(st.Q * 3600)} m³/時`, `${Math.round(st.Q * 3600)} m³/h`), L(`家の空気 ${Math.round(st.V)} m³`, `home holds ${Math.round(st.V)} m³`)],
-    [L('室内の気圧', 'Indoor pressure'), L(`外より ${pa}`, `${pa} vs. outside`), pressWord(st.p)],
-    [L('空気の古さ（平均）', 'Age of air (average)'), fmtAge(st.meanAge), settled ? '' : L('変化中', 'changing')],
-    [L('空気交換効率', 'Air change efficiency'), settled && isFinite(eff) ? `${Math.round(eff * 100)}%` : '—', settled ? effWord(eff) : L('落ち着くのを待っています', 'waiting for it to settle')],
     [L('いちばん古い部屋', 'Stalest room'), `${old.name}`, fmtAge(old.meanAge)],
+    [L('空気の古さ（平均）', 'Age of air (average)'), fmtAge(st.meanAge), settled ? '' : L('変化中', 'changing')],
   ];
-  $('roGrid').innerHTML = rows.map(([a, b, c]) => `<span>${a}</span><div><b>${b}</b>${c ? ` <small>${c}</small>` : ''}</div>`).join('');
+  const more = [
+    [L('入れかわる空気', 'Air exchanged'), L(`${Math.round(st.Q * 3600)} m³/時`, `${Math.round(st.Q * 3600)} m³/h`), L(`家の空気 ${Math.round(st.V)} m³`, `home holds ${Math.round(st.V)} m³`)],
+    [L('空気交換効率', 'Air change efficiency'), settled && isFinite(eff) ? `${Math.round(eff * 100)}%` : '—', settled ? effWord(eff) : L('落ち着くのを待っています', 'waiting for it to settle')],
+  ];
+  (Math.abs(st.p) > 5 ? rows : more).push(press);
+  const grid = rs => rs.map(([a, b, c]) => `<span>${a}</span><div><b>${b}</b>${c ? ` <small>${c}</small>` : ''}</div>`).join('');
+  $('roGrid').innerHTML = grid(rows); $('roGrid2').innerHTML = grid(more);
   if (S.fill) { S.fill.pts.push([S.t - S.fill.t0, st.meanSmoke]); if (S.fill.pts.length > 600) S.fill.pts = S.fill.pts.filter((_, i) => i % 2 === 0); drawChart(); }
 }
 const pressWord = p => p < -20 ? L('ドアが重くなるほど', 'enough to make doors heavy') : p < -5 ? L('少し引かれている', 'pulled a little') : p > 5 ? L('外より高い', 'higher than outside') : L('ほぼ外と同じ', 'about the same as outside');

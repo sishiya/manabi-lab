@@ -96,6 +96,8 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .explain{gap:6px}
 .explain>div[lang]{display:contents}
 details{border-top:1px solid var(--line);padding-top:8px}
+details.more{border-top:0;padding-top:4px;margin-top:6px}
+details.more summary{font-weight:500;font-size:12px;color:var(--muted)}
 summary{cursor:pointer;font-weight:700;font-size:13px;padding:2px 0}
 details p{color:var(--muted);font-size:13px;margin:6px 0 0}
 details b{color:var(--ink);font-weight:500}

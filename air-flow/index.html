@@ -47,6 +47,7 @@
       <div class="ro-num"><b id="roVal">—</b><small><span lang="ja">回/時</span><span lang="en">air changes / hour</span></small></div>
       <div id="roVerdict"></div>
       <div class="ro-grid" id="roGrid"></div>
+      <details class="more" id="roMore"><summary><span lang="ja">くわしい数字</span><span lang="en">More numbers</span></summary><div class="ro-grid" id="roGrid2"></div></details>
       <p class="ro-note" lang="ja">※ 目安です。床から約1mの高さで見た2次元の計算で、温度差による流れ・家具・人の動きは入れていません。</p>
       <p class="ro-note" lang="en">* A rough guide. It is a 2D calculation at about 1 m above the floor, and it leaves out flows caused by temperature differences, furniture and people moving.</p>
     </section>
@@ -106,19 +107,26 @@
 
     <section>
       <h2><span lang="ja">窓・ドア・換気扇</span><span lang="en">WINDOWS, DOORS &amp; FANS</span></h2>
-      <p class="cap" lang="ja">図のふちの「入12」「出55」は、そこを通る空気の量（m³/時）。「すき間」は閉めた窓や玄関のすき間から。給気口は丸の塗りが開け具合、換気扇とサーキュレーターは羽根の回る速さ、エアコンとサーキュレーターは前に出る風の線（弱2本・強3本）、どれも「弱」「強」の印で強さを表します。</p>
-      <p class="cap" lang="en">Labels on the edge of the map such as “in 12” and “out 55” show how much air passes there (m³/h). “leak” means air through the gaps around a closed window or front door. For vents, how much of the circle is filled shows how far they are open. For exhaust fans and circulator fans, the spinning speed of the blades shows the strength; for air conditioners and fans, so do the lines of air in front (2 for low, 3 for high). All of them also show “L” (low) or “H” (high).</p>
-      <div id="els"></div>
+      <p class="cap" lang="ja">図の上の窓・ドア・給気口・換気扇を押すと、開け閉めや強さが変わります。</p>
+      <p class="cap" lang="en">Tap the windows, doors, vents and fans on the map to open, close or change them.</p>
+      <details class="more">
+        <summary><span lang="ja">図の印の見かた</span><span lang="en">How to read the map</span></summary>
+        <p lang="ja">図のふちの「入12」「出55」は、そこを通る空気の量（m³/時）。「すき間」は閉めた窓や玄関のすき間から。給気口は丸の塗りが開け具合、換気扇とサーキュレーターは羽根の回る速さ、エアコンとサーキュレーターは前に出る風の線（弱2本・強3本）、どれも「弱」「強」の印で強さを表します。</p>
+        <p lang="en">Labels on the edge of the map such as “in 12” and “out 55” show how much air passes there (m³/h). “leak” means air through the gaps around a closed window or front door. For vents, how much of the circle is filled shows how far they are open. For exhaust fans and circulator fans, the spinning speed of the blades shows the strength; for air conditioners and fans, so do the lines of air in front (2 for low, 3 for high). All of them also show “L” (low) or “H” (high).</p>
+      </details>
+      <details class="more">
+        <summary><span lang="ja">一覧で切りかえる</span><span lang="en">Switch from a list</span></summary>
+        <div id="els"></div>
+      </details>
     </section>
 
     <section>
       <h2><span lang="ja">サーキュレーター</span><span lang="en">CIRCULATOR FAN</span></h2>
       <div class="row">
-        <button class="btn" id="btnCirc"><span lang="ja">置く</span><span lang="en">Place</span></button>
         <button class="btn" id="btnCircClear"><span lang="ja">全部片づける</span><span lang="en">Remove all</span></button>
       </div>
-      <p class="cap" lang="ja">「置く」を押してから図をクリック。ドラッグで動かし、先の黄色い丸をドラッグで向きを変える。本体を押すと 弱→強→切。</p>
-      <p class="cap" lang="en">Press “Place”, then click on the map. Drag the fan to move it, and drag the yellow dot in front to turn it. Tap the fan to switch low → high → off.</p>
+      <p class="cap" lang="ja">図の上の「サーキュレーターを置く」を押してから図をクリック。ドラッグで動かし、先の黄色い丸をドラッグで向きを変える。本体を押すと 弱→強→切。</p>
+      <p class="cap" lang="en">Press “Place a fan” above the map, then click on the map. Drag the fan to move it, and drag the yellow dot in front to turn it. Tap the fan to switch low → high → off.</p>
     </section>
 
     <section class="explain">

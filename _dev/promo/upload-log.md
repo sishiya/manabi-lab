@@ -46,3 +46,5 @@ upload-batch.ps1 が書く。1日の区切りは太平洋時間の0時（日本�
 | 2026-10-15（当日） | quantum-guide・short（S3gdGhRhGy4・rusEmkMXU_4、10/15） | OK: -Verify（予約 20:00／20:05・字幕 en・サムネイル・長さ 2:36／0:46）・音量 -20.9／-20.0 LUFS・公開中のアプリ（smoke quantum・_root の ja/en OK）。10/13 以降アプリに変更なし | なし |
 | 2026-10-16 08:21 | animal-senses-short・guide（KK_UQhoEloo・zUkmU8Q_4B8） | 失敗: -Thumb で「ハエの目」のサムネイル（709d5c9）に差しかえようとしたが、API の上限（403 quota。10/15 の字幕4言語で使い切り） | **16:00 以降に** `youtube-upload.ps1 -Thumb -Meta _dev/promo/animal-senses-short.upload.json,_dev/promo/animal-senses-guide.upload.json`（GO はもらいずみ）→ -Verify |
 | 2026-10-16 | animal-senses-short・guide（KK_UQhoEloo・zUkmU8Q_4B8） | OK: サムネイルをマムシ（cc93940、夜・まっくら・ネズミ）に**ユーザーが Studio で差しかえ**。上の 08:21 の -Thumb のやり直しは要らない | なし |
+| 2026-10-16 21:30（前日） | immune-battle-guide・short（xIVVbiMCsL0・rzaesFC3yqc、10/17） | OK: -Verify（予約 20:00／20:05・字幕 en・サムネイル・長さ 2:36／0:46。4言語の字幕の NG はこのあと付けて解消）・音量 -20.5／-21.4 LUFS・公開中のアプリ（smoke immune-battle・_root の ja/en OK）。コマは 10/12 に確認ずみ、録ったあとのアプリの変更は「おもな出どころ」の見出しだけ | なし |
+| 2026-10-16（前々日） | air-flow（10/18） | UI/UX のブラッシュアップ（RULES 8.5）: 数字のカードを2行に・印の説明と一覧を折りたたみ・サーキュレーターの「置く」をけずった。動画には前のパネルが映る（録りなおすかはユーザー） | DEVNOTES の「状態」 |
