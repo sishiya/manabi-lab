@@ -47,7 +47,7 @@
 | 2026-10-15 20:20 | 体内ダイブ（動画は 10/12） | `body-dive-tube-shader-junction` | 公開ずみ（Zenn 10/16 8:58・DEV） |
 | 2026-10-15 20:30 | いきものの感じる世界（動画は 10/14） | `animal-senses-shader-passes` | Zenn は 10/17 の朝に出す予定（1日1本）・DEV は公開ずみ |
 | 2026-10-15 20:40 | 量子の実験室 | `quantum-tunnel-visscher-canvas` | Zenn は 10/18 の朝に出す予定（1日1本）・DEV は公開ずみ |
-| 2026-10-16 | さなぎの中で | `metamorphosis-time-driven-canvas` | Zenn は 10/19 の朝に出す予定（1日1本）・DEV は動画の日に |
+| 2026-10-16 | さなぎの中で | `metamorphosis-time-driven-canvas` | Zenn は 10/19 の朝に出す予定（1日1本）・DEV は公開ずみ（10/16） |
 | 2026-10-17 | 免疫のたたかい | `immune-ode-model-rk4` | Zenn は 10/20 の朝に出す予定（1日1本）・DEV は動画の日に |
 | 2026-10-18 | 空気の流れの見える部屋 | `airflow-age-of-air-bicgstab` | Zenn は 10/21 の朝に出す予定（1日1本）・DEV は動画の日に |
 | 2026-10-19 | 進化の箱庭 | `ga-creatures-spring-physics` | Zenn は 10/22 の朝に出す予定（1日1本）・DEV は動画の日に |
