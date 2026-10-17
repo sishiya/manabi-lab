@@ -77,6 +77,7 @@ $css = @"
 :root{--bg:$Color;--ink:#e8f0f4;--muted:#a3b4bf;--acc:$Accent;
   --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+[hidden]{display:none!important}
 #app{display:flex;flex-direction:column;min-height:100%}
 #top h1{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0;padding:12px 16px}
 #stage{flex:1;position:relative;min-height:60vh}
