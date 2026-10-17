@@ -65,6 +65,21 @@ function renderTyped(t) {
   if (html !== S.lastTyped) { $('typedKeys').innerHTML = html; S.lastTyped = html; }
 }
 
+// 打つ間隔のグラフ（ながめる）: キーごとの棒（前のキーからの間隔）、色は組の種類、点線は平均、いま打っているキーは明るく
+const KIND_COL = { alt: '#4dabf7', hand: '#8a93a3', finger: '#ffa94d', repeat: '#b197fc' };
+const KIND_JA = { alt: '左右交互', hand: '同じ手', finger: '同じ指', repeat: '同じキー2回' };
+function drawIki(cur) {
+  const cv = $('ikiChart'); if (!cv || !S.plan || S.mode !== 'watch') return;
+  const ns = S.plan.notes.filter(n => n.iki), w = cv.clientWidth, h = cv.clientHeight, dpr = Math.min(2, devicePixelRatio || 1);
+  if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  if (!ns.length) return;
+  const mx = Math.max(...ns.map(n => n.iki)) * 1.05, mean = ns.reduce((s, n) => s + n.iki, 0) / ns.length, bw = w / ns.length;
+  ns.forEach((n, i) => { const bh = (h - 14) * n.iki / mx; g.globalAlpha = cur < 0 || n === S.plan.notes[cur] ? 1 : 0.55; g.fillStyle = KIND_COL[n.kind] || '#888'; g.fillRect(i * bw + (bw > 3 ? 0.5 : 0), h - bh, Math.max(1, bw - (bw > 3 ? 1 : 0)), bh); });
+  g.globalAlpha = 1; g.strokeStyle = 'rgba(255,255,255,.6)'; g.setLineDash([4, 3]); const my = h - (h - 14) * mean / mx; g.beginPath(); g.moveTo(0, my); g.lineTo(w, my); g.stroke(); g.setLineDash([]);
+  g.fillStyle = '#a4acb8'; g.font = '11px sans-serif'; g.fillText('最長 ' + Math.round(Math.max(...ns.map(n => n.iki)) * 1000) + 'ms・平均 ' + Math.round(mean * 1000) + 'ms・最短 ' + Math.round(Math.min(...ns.map(n => n.iki)) * 1000) + 'ms', 2, 11);
+}
+
 function frame(now) {
   try {
     const dt = Math.min(0.1, (now - (S.lastNow || now)) / 1000);
@@ -101,11 +116,12 @@ function step() {
   if (!S.live && document.activeElement !== $('time')) $('time').value = Math.round(1000 * (t - tStart()) / (tEnd() - tStart()));
   $('clock').textContent = t.toFixed(2) + ' 秒';
   renderTyped(t);
+  if (S.mode === 'watch') { let ci = -1; notes.forEach((n, i) => { if (n.t0 <= t + 1e-6) ci = i; }); if (ci !== S.ikiCur || S.ikiPlan !== plan) { S.ikiCur = ci; S.ikiPlan = plan; drawIki(ci); } }
   // 止めているときだけ、この瞬間の様子（どの指でどのキーか）
   if (S.live) $('hint').textContent = REC.notes.length ? `打ったキーを、${REC_LAG} 秒おくれて画面の手が打ちます。` : 'キーボードを打つか、下の画面のキーボードを押してください。';
   else if (!S.playing) {
     const now = notes.filter(n => t >= n.t0 - 0.02 && t <= n.t1 + 0.02);
-    $('hint').innerHTML = now.length ? 'この瞬間 — ' + now.map(n => `<b>${noteName(n.m)}</b> を${HAND_OF(n.hand === 'R' ? 1 : -1)}${FINGERS[n.f].name}で`).join('、')
+    $('hint').innerHTML = now.length ? 'この瞬間 — ' + now.map(n => `<b>${noteName(n.m)}</b> を${HAND_OF(n.hand === 'R' ? 1 : -1)}${FINGERS[n.f].name}で${n.iki ? `（前のキーから ${Math.round(n.iki * 1000)}ms・${KIND_JA[n.kind] || ''}）` : ''}`).join('、')
       : 'ドラッグで向きを変え、ホイールや2本指のピンチで寄れます。時刻のつまみ・矢印キーで1コマずつ動かせます。';
   } else $('hint').textContent = '';
 }
@@ -179,7 +195,7 @@ function initUI() {
   $('btnRecClear').addEventListener('click', () => { recClear(); S.t = 0; S.prevT = 0; });
   $('btnRecPlay').addEventListener('click', recPlayAll);
   makeScreenKeyboard();
-  $('timingSel').innerHTML = [['model', '打つ間隔: 組で変える（左右交互は速く・同じ指は遅く。推定）'], ['even', '打つ間隔: いつも同じ']].map(([k, t]) => `<option value="${k}">${t}</option>`).join('');
+  $('timingSel').innerHTML = [['model', '打つ間隔: 運指で変えて、ゆらぎも（推定）'], ['pair', '打つ間隔: 運指で変える（ゆらぎなし）'], ['even', '打つ間隔: いつも同じ']].map(([k, t]) => `<option value="${k}">${t}</option>`).join('');
   $('timingSel').value = TIMING;
   $('timingSel').addEventListener('change', e => { setPlaying(false); TIMING = e.target.value; busy('手の動きを計算しています…', () => setText(S.text.id)); });
   setPlaying(false);

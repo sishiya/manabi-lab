@@ -24,34 +24,64 @@ function charCode(c) {
 const KPM_LIST = [60, 120, 200, 300, 400, 500, 600, 800, 1080];
 const KPM_RECORD = 1080;
 let KPM = 300; // 最初の速さ（ユーザーの希望 2026-10-17）
-// 打つ間隔のゆれ（段階B〜）: 'model' = 前のキーとの組で間隔を変える（推定）、'even' = いつも同じ間隔。
-// 傾向は Dhakal ほか (2018) の本文による: いまのキーボードでは、左右の手を交互に打つ組は同じ手の組より 5〜20ms 速い（速い人・練習した人・
-// していない人）。昔のタイプライターの研究では、左右交互は同じ手より 30〜60ms、同じ指より約 80ms 速い。同じ文字を2回は、速い人では
-// 20〜40ms 遅い。ここから決めた差（推定。測ったデータは使っていない）: 左右交互 −10ms、同じ手のちがう指 0、同じ指でちがうキー +35ms、
-// 同じキーを2回 +30ms。全体の平均は 60/KPM 秒のままになるようにそろえる
+// 打つ間隔（2026-10-17、ユーザーの指摘「速い人も等速ではなく、平均してその速さのはず」）。前のキーとの組と、打つ指の動く距離で間隔を変え、
+// さらに毎回少しゆらす。最後に、平均が 60/KPM 秒になるようにそろえる（選んだ速さは平均の速さ）。
+// TIMING: 'model' = 組・距離・ゆらぎ、'pair' = 組と距離だけ（ゆらぎなし）、'even' = いつも同じ間隔
+// 傾向の出どころは Dhakal ほか (2018, CHI) の本文: いまのキーボードでは左右交互は同じ手より 5〜20ms 速い。昔のタイプライターの研究
+// （平均の間隔 140ms ほどの熟練した人）では、左右交互は同じ手より 30〜60ms、同じ指より約 80ms 速い。空白のあとの文字（語の頭）は遅い。
+// 同じ文字を2回は、遅い人では速く、速い人では 20〜40ms 遅い。下の倍率はここから決めた推定（測ったデータは使っていない）。
+// 速さによって差の大きさは変わるはずだが、それを測った値は見つからなかったので、間隔に比べた割合（倍率）でどの速さにも同じにしている
 let TIMING = 'model';
-const IKI_ADJ = { alt: -0.010, hand: 0, finger: 0.035, repeat: 0.030 };
+const IKI_K = {
+  alt: 0.85,        // 左右の手を交互: 次の手は前の手が打つあいだに構えられる
+  hand: 1.0,        // 同じ手のちがう指
+  finger: 1.3,      // 同じ指でちがうキー: 指を持ち上げて動かしてから打つ。さらに距離 1 キー分ごとに FINGER_DIST を足す
+  repeat: 1.1,      // 同じキーを2回
+};
+const FINGER_DIST = 0.12, WORD_START = 1.2; // 同じ指の移動 1 キー分あたり／空白のあとの文字（語の頭）
+const JITTER = 0.15; // ゆらぎ（毎回の間隔に、平均 1・ばらつき約 15% の倍率をかける。推定。文ごとに同じ乱数なので何度見ても同じ）
 function pairKind(a, b) {
   if (a.m === b.m) return 'repeat';
   if (KEYS[a.m].side !== KEYS[b.m].side) return 'alt';
   return KEYS[a.m].f === KEYS[b.m].f ? 'finger' : 'hand';
 }
-const DWELL = 0.09; // キーを押さえている時間（秒、目安）
-// 文 → notes（m: キーの番号、t0・t1: 押す・離す時刻、hand: 'R'・'L'、given: 指、ch: 打つ文字）
+// 決まった種から作る乱数（0〜1）。同じ文・同じ位置ならいつも同じ値
+function seeded(seed) { let x = seed >>> 0 || 1; return () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; }; }
+// 前のキー a のあとに b を打つときの間隔の倍率（平均をそろえる前）
+function ikiFactor(a, b, prevSame) {
+  const kind = pairKind(a, b);
+  let k = IKI_K[kind];
+  if (kind === 'finger') k += FINGER_DIST * keyDist(a.m, b.m) / KB.U;
+  else if (prevSame && prevSame.m !== b.m) k += 0.5 * FINGER_DIST * keyDist(prevSame.m, b.m) / KB.U; // 同じ指が少し前に別のキーを打っていた（そこから動く）
+  if (a.ch === ' ' && b.ch !== ' ') k *= WORD_START;
+  return { k, kind };
+}
+const DWELL = 0.09; // キーを押さえている時間（秒、目安）。次のキーまでが短いときは、その 6 割まで
+// 文 → notes（m: キーの番号、t0・t1: 押す・離す時刻、hand: 'R'・'L'、given: 指、ch: 打つ文字、iki: 前のキーからの間隔、kind: 組の種類）
 function textToSong(tx) {
-  const iki = 60 / KPM, notes = [];
-  let t = 0.6;
+  const base = 60 / KPM, notes = [];
   for (const c of tx.keys) {
     const k = KEY_BY_CODE[charCode(c)];
     if (!k) continue;
-    if (c === '\n' || (c === ' ' && notes.length && notes[notes.length - 1].ch === '.')) t += 0.3; // 確定の前・文の終わりは少し間をおく（目安）
-    notes.push({ m: k.m, t0: t, t1: t + Math.min(DWELL, iki * 0.6), hand: k.side > 0 ? 'R' : 'L', given: k.f, vel: 80, ch: c });
-    t += iki;
+    notes.push({ m: k.m, hand: k.side > 0 ? 'R' : 'L', given: k.f, vel: 80, ch: c });
   }
-  if (TIMING === 'model' && notes.length > 2) { // 組ごとの差を足し、平均が変わらないように全体から引く
-    const adj = notes.slice(1).map((n, i) => IKI_ADJ[pairKind(notes[i], n)]), mean = adj.reduce((s, v) => s + v, 0) / adj.length;
-    let shift = 0;
-    notes.forEach((n, i) => { if (i) shift += adj[i - 1] - mean; n.t0 += shift; n.t1 += shift; n.kind = i ? pairKind(notes[i - 1], n) : ''; });
-  }
+  // 間隔の倍率
+  const rnd = seeded([...tx.id].reduce((h, ch) => h * 31 + ch.charCodeAt(0), 7) + KB.id.length * 977);
+  const fac = notes.map((n, i) => {
+    if (!i || TIMING === 'even') return { k: 1, kind: i ? pairKind(notes[i - 1], n) : '' };
+    const prevSame = notes.slice(Math.max(0, i - 4), i - 1).reverse().find(o => KEYS[o.m].f === KEYS[n.m].f && KEYS[o.m].side === KEYS[n.m].side);
+    const r = ikiFactor(notes[i - 1], n, prevSame);
+    if (TIMING === 'model') { const u = rnd() + rnd() + rnd() - 1.5; r.k *= Math.exp(JITTER * u * 2); } // ゆらぎ（3つの和でなめらかな山の形、σ ≈ 0.15）
+    return r;
+  });
+  const mean = fac.slice(1).reduce((s, f) => s + f.k, 0) / Math.max(1, fac.length - 1);
+  let t = 0.6;
+  notes.forEach((n, i) => {
+    const c = n.ch;
+    if (i) { n.iki = base * fac[i].k / mean; t += n.iki; }
+    if (c === '\n' || (c === ' ' && i && notes[i - 1].ch === '.')) t += 0.3; // 確定の前・文の終わりは少し間をおく（目安。平均の速さには入れない）
+    n.t0 = t; n.kind = fac[i].kind;
+  });
+  notes.forEach((n, i) => { const nx = notes[i + 1]; n.t1 = n.t0 + Math.min(DWELL, 0.6 * (nx ? nx.t0 - n.t0 : base)); });
   return { id: tx.id, name: tx.name, tx, notes };
 }

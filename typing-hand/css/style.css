@@ -175,3 +175,6 @@ button:disabled,select:disabled,input:disabled{opacity:.45;cursor:default}
   #app[data-mode=replay] #frame{height:min(34vh,92vw);height:min(34dvh,92vw)}
   #app[data-mode=replay] #typedShow{font-size:12px}
 }
+/* 打つ間隔のグラフ */
+#ikiChart{width:100%;height:80px;display:block;background:var(--raise);border:1px solid var(--line);border-radius:8px}
+.kd.alt{color:#4dabf7}.kd.hand{color:#8a93a3}.kd.finger{color:#ffa94d}.kd.repeat{color:#b197fc}
