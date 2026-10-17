@@ -86,12 +86,12 @@ const DRAW = (() => {
     }
     // 説明の小さな文字
     g.fillStyle = C.muted; g.textAlign = 'left'; g.font = `${narrow ? 10 : 12}px 'Zen Kaku Gothic New',sans-serif`;
-    g.fillText(`時間 ${fmtT(sys.t)}　板の動きは ${XMAG} 倍で描いています`, 10, narrow ? 14 : 18);
+    g.fillText(L(`時間 ${fmtT(sys.t)}　板の動きは ${XMAG} 倍で描いています`, `Time ${fmtT(sys.t)}   Board motion drawn ${XMAG}× larger`), 10, narrow ? 14 : 18);
     // 位相の円
     const ccx = narrow ? w - circR - 12 : w - circR - 30, ccy = narrow ? circR + 26 : h * 0.4;
     phaseCircle(g, ccx, ccy, circR, sys, narrow);
   }
-  function fmtT(t) { const m = Math.floor(t / 60), s = t - m * 60; return m ? `${m}分${s.toFixed(0).padStart(2, '0')}秒` : `${s.toFixed(1)}秒`; }
+  function fmtT(t) { const m = Math.floor(t / 60), s = t - m * 60; return m ? L(`${m}分${s.toFixed(0).padStart(2, '0')}秒`, `${m} min ${s.toFixed(0).padStart(2, '0')} s`) : L(`${s.toFixed(1)}秒`, `${s.toFixed(1)} s`); }
 
   // 位相の円: 各メトロノームが円の上の点。そろうと1か所に集まる。まん中の矢印の長さ＝そろい具合 r
   function phaseCircle(g, cx, cy, R, sys, narrow) {
@@ -109,8 +109,8 @@ const DRAW = (() => {
     g.strokeStyle = C.acc; g.lineWidth = 2.5;
     g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + R * r * Math.cos(-a - Math.PI / 2), cy + R * r * Math.sin(-a - Math.PI / 2)); g.stroke();
     g.fillStyle = C.muted; g.textAlign = 'center'; g.font = `${narrow ? 10 : 12}px 'Zen Kaku Gothic New',sans-serif`;
-    g.fillText(`そろい具合 ${r.toFixed(2)}`, cx, cy + R + (narrow ? 14 : 20));
-    if (!narrow) g.fillText('振り子のリズムの位置（位相）', cx, cy - R - 12);
+    g.fillText(L(`そろい具合 ${r.toFixed(2)}`, `In step ${r.toFixed(2)}`), cx, cy + R + (narrow ? 14 : 20));
+    if (!narrow) g.fillText(L('振り子のリズムの位置（位相）', 'Place in the rhythm (phase)'), cx, cy - R - 12);
   }
   function hit(x, y) {
     if (!geo) return -1;

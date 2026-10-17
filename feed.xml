@@ -5,8 +5,24 @@
   <link href="https://sishiya.github.io/manabi-lab/"/>
   <link rel="self" href="https://sishiya.github.io/manabi-lab/feed.xml"/>
   <id>https://sishiya.github.io/manabi-lab/feed.xml</id>
-  <updated>2026-10-15T00:00:00+09:00</updated>
+  <updated>2026-10-17T00:00:00+09:00</updated>
   <author><name>しし屋</name></author>
+  <entry>
+    <title>メトロノームがそろうまで</title>
+    <link href="https://sishiya.github.io/manabi-lab/metronome-sync/"/>
+    <id>https://sishiya.github.io/manabi-lab/metronome-sync/</id>
+    <published>2026-10-17T00:00:00+09:00</published>
+    <updated>2026-10-17T00:00:00+09:00</updated>
+    <summary>空き缶にのせた板の上で、ばらばらに動かしたメトロノームが、ひとりでに同じリズムにそろう。板と振り子の運動方程式を近似なしで解き、実験の論文の値で。板をおさえる・重くする・床をぬらすと、そろい方が変わる。</summary>
+  </entry>
+  <entry>
+    <title>空気の流れの見える部屋</title>
+    <link href="https://sishiya.github.io/manabi-lab/air-flow/"/>
+    <id>https://sishiya.github.io/manabi-lab/air-flow/</id>
+    <published>2026-10-06T00:00:00+09:00</published>
+    <updated>2026-10-16T00:00:00+09:00</updated>
+    <summary>窓・給気口・換気扇・外の風で、家の空気がどう入れかわり、どこがよどむのかを「空気の年齢」の色で見る。</summary>
+  </entry>
   <entry>
     <title>いのちの系統樹</title>
     <link href="https://sishiya.github.io/manabi-lab/tree-of-life/"/>
@@ -86,14 +102,6 @@
     <published>2026-10-06T00:00:00+09:00</published>
     <updated>2026-10-10T00:00:00+09:00</updated>
     <summary>イモムシがさなぎになり、ガになるまでの体の中。壊れる・残る・新しく作られる器官を、タバコスズメガの研究の日付で追う。</summary>
-  </entry>
-  <entry>
-    <title>空気の流れの見える部屋</title>
-    <link href="https://sishiya.github.io/manabi-lab/air-flow/"/>
-    <id>https://sishiya.github.io/manabi-lab/air-flow/</id>
-    <published>2026-10-06T00:00:00+09:00</published>
-    <updated>2026-10-10T00:00:00+09:00</updated>
-    <summary>窓・給気口・換気扇・外の風で、家の空気がどう入れかわり、どこがよどむのかを「空気の年齢」の色で見る。</summary>
   </entry>
   <entry>
     <title>進化の箱庭</title>

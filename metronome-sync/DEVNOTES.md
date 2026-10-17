@@ -1,13 +1,19 @@
 # メトロノームがそろうまで 開発メモ
 
 ## 別セッションで続けるとき（まずここ）
-- いまの状態: v002-stageA（段階A）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。日本語だけ（入口へ移すときに英語）。
+- いまの状態: v003-entrance（英語対応して入口へ。2026-10-17 ユーザーの指示）。入口の `APPS` のいちばん下（cat: phys、en:true）。公開 URL https://sishiya.github.io/manabi-lab/metronome-sync/ （push はユーザー）。節目の版 versions/v002-stageA（入口へ移す直前・日本語だけ）。
 - 次にやること: ユーザーの感想を聞く → PLAN.md の段階B（テンポを変える・板どうしをばねで・ぜんまいがほどける など）。
 - 読む順: PLAN.md → このファイルの「ファイル構成」「しくみ」→ 関係するファイルだけ。
 - 動かし方: サーバー apps（.claude/launch.json。使われていたら apps-2〜6）で http://localhost:8765/metronome-sync/ 。デバッグ用の窓口 `window.__mesy`（`simRun(秒)`・`SIM`・`PHYS`・`UI`）、エラーは `window.__mesyErr`。
 - 物理の検証: `node metronome-sync/tools/verify.js vdp`（と `kick`）。保存則・1台の振動数・2台のそろい方を表で出す（約1分）。
 - 区切りごとの手順: 「確認のしかた」と smoke.ps1 → 「状態」に1行 → launcher.html の表 → 公開前チェック → commit（節目の版だけ versions/ へコピーしてカードに。RULES 3章）。
 - ユーザーの好み: 正確な物理シミュレーション（依頼のとき「正確な物理シミュレーションが必要かも」）。
+
+## 英語対応（I18N.md）
+- index.html の先頭（解析の1行の次）に言語の窓口 `LANG`・`L()`・`setLang`。HTML は `<span lang="ja">`／`<span lang="en">`、「このアプリについて」は `<details class="about" lang="ja">` と `lang="en"` の2つ。
+- JS の文は `L('日本語','English')`（ui.js の ROWS・TOUR・ボタン、draw.js・graph.js のキャンバスの文字）。題名と JP／EN ボタンは main.js の起動のところ。
+- graph.js の左の余白は `PL`（`L` という名前の変数は `L()` を隠すので使わない）。
+- 文を足すときは英語も同じ変更で。
 
 ## ファイル構成
 | ファイル | 中身 | 主な関数・変数 |
@@ -56,7 +62,9 @@
 4. つぎへを3回（4/6 ぬれた床）→ `simRun(360)` で `SIM.S.hist.at(-1).d[0]` が約 ±2.9 rad（約 169°）。6/6（10台）まで例外なし。
 5. 幅 375px: `document.documentElement.scrollWidth` が 375、図とつぎへが上に固定、ボタンの高さ 36px 以上。
 6. メトロノームをさわると振り子がつつかれる。板をおさえる／はなす。音（🔇→🔊）。
+7. 英語: `?lang=en` で、つぎへを6段・説明を開いて、画面とキャンバスに日本語が残っていないか（I18N.md 2.4 のコンソールの式）。`smoke.ps1 -Apps metronome-sync -Lang en`。375px でも。
 
 ## 状態
 - 2026-10-17 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
-- 2026-10-17 v002-stageA: 段階A。運動方程式（近似なし・RK4 0.5 ms）、Pantaleone 2002 の値と van der Pol、押し方「まん中で押す」も、つぎへ6段、位相の円・ずれのグラフ・カチの音、検証 tools/verify.js。
+- 2026-10-17 v002-stageA（versions に保存。入口へ移す直前）: 段階A。運動方程式（近似なし・RK4 0.5 ms）、Pantaleone 2002 の値と van der Pol、押し方「まん中で押す」も、つぎへ6段、位相の円・ずれのグラフ・カチの音、検証 tools/verify.js。
+- 2026-10-17 v003-entrance: 英語対応（L()・lang の span）して入口へ（保管庫のカードを外し APPS のいちばん下、seo.mjs）。日本語の表示は v002 と同じ（innerText で比較）、互換モードと標準モードで全要素の位置が同じ（135 要素）。グラフの右の余白を少し広く（「1 min」が切れていた）。

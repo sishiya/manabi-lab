@@ -3,23 +3,23 @@
 const GRAPH = (() => {
   function draw(g, w, h, hist, n, speed) {
     g.fillStyle = DRAW.C.bg; g.fillRect(0, 0, w, h);
-    const L = 44, R = 10, T = 10, B = 22;
-    const pw = w - L - R, ph = h - T - B;
+    const PL = 44, R = 20, T = 10, B = 22;
+    const pw = w - PL - R, ph = h - T - B;
     const last = hist.length ? hist[hist.length - 1].t : 0;
     const win = Math.min(1200, Math.max(60, speed * 30));     // 見える時間の幅（秒）
     const t0 = Math.max(0, last - win);
-    const X = t => L + (t - t0) / win * pw, Y = d => T + ph / 2 - d / Math.PI * ph / 2;
+    const X = t => PL + (t - t0) / win * pw, Y = d => T + ph / 2 - d / Math.PI * ph / 2;
     // 目もり
     g.font = "11px 'Zen Kaku Gothic New',sans-serif"; g.textAlign = 'right'; g.textBaseline = 'middle';
-    for (const [d, lab] of [[Math.PI, '逆'], [Math.PI / 2, '90°'], [0, '同じ'], [-Math.PI / 2, '−90°'], [-Math.PI, '逆']]) {
+    for (const [d, lab] of [[Math.PI, L('逆', 'opp.')], [Math.PI / 2, '90°'], [0, L('同じ', 'same')], [-Math.PI / 2, '−90°'], [-Math.PI, L('逆', 'opp.')]]) {
       g.strokeStyle = d === 0 ? 'rgba(255,201,90,0.45)' : 'rgba(111,135,150,0.35)'; g.lineWidth = 1;
-      g.beginPath(); g.moveTo(L, Y(d)); g.lineTo(L + pw, Y(d)); g.stroke();
-      g.fillStyle = DRAW.C.muted; g.fillText(lab, L - 6, Y(d));
+      g.beginPath(); g.moveTo(PL, Y(d)); g.lineTo(PL + pw, Y(d)); g.stroke();
+      g.fillStyle = DRAW.C.muted; g.fillText(lab, PL - 6, Y(d));
     }
     g.textAlign = 'center'; g.textBaseline = 'alphabetic';
     const step = win <= 60 ? 10 : win <= 300 ? 60 : win <= 600 ? 120 : 300;
     for (let t = Math.ceil(t0 / step) * step; t <= t0 + win; t += step) {
-      g.fillStyle = DRAW.C.muted; g.fillText(t >= 60 ? `${Math.round(t / 60)}分` : `${t}秒`, X(t), h - 6);
+      g.fillStyle = DRAW.C.muted; g.fillText(t >= 60 ? L(`${Math.round(t / 60)}分`, `${Math.round(t / 60)} min`) : L(`${t}秒`, `${t} s`), X(t), h - 6);
       g.strokeStyle = 'rgba(111,135,150,0.2)'; g.beginPath(); g.moveTo(X(t), T); g.lineTo(X(t), T + ph); g.stroke();
     }
     // 点（線でつなぐと ±180° の折り返しで縦線になるので点で）

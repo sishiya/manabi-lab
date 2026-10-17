@@ -31,6 +31,8 @@ function loop(now) {
   SIM.advance(Math.max(0, Math.min(0.05, (now - last) / 1000))); last = now;   // 最初のコマは now が last より前のことがある
   draw(); requestAnimationFrame(loop);
 }
+document.title = L('メトロノームがそろうまで', 'Metronomes Falling into Step');
+document.querySelectorAll('#langsw button').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.l === LANG)); b.onclick = () => { if (b.dataset.l !== LANG) setLang(b.dataset.l); }; });
 SIM.reset();
 UI.build();
 window.addEventListener('resize', resize);

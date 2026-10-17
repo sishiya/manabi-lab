@@ -5,8 +5,24 @@
   <link href="https://sishiya.github.io/manabi-lab/?lang=en"/>
   <link rel="self" href="https://sishiya.github.io/manabi-lab/feed-en.xml"/>
   <id>https://sishiya.github.io/manabi-lab/feed-en.xml</id>
-  <updated>2026-10-15T00:00:00+09:00</updated>
+  <updated>2026-10-17T00:00:00+09:00</updated>
   <author><name>Shishiya</name></author>
+  <entry>
+    <title>Metronomes Falling into Step</title>
+    <link href="https://sishiya.github.io/manabi-lab/metronome-sync/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/metronome-sync/?lang=en</id>
+    <published>2026-10-17T00:00:00+09:00</published>
+    <updated>2026-10-17T00:00:00+09:00</updated>
+    <summary>Metronomes started at random on a board resting on empty cans fall into the same rhythm all by themselves. The board and pendulum equations of motion are solved without shortcuts, using values from an experiment paper. Hold the board down, make it heavier or wet the floor, and the way they line up changes.</summary>
+  </entry>
+  <entry>
+    <title>Seeing Airflow at Home</title>
+    <link href="https://sishiya.github.io/manabi-lab/air-flow/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/air-flow/?lang=en</id>
+    <published>2026-10-06T00:00:00+09:00</published>
+    <updated>2026-10-16T00:00:00+09:00</updated>
+    <summary>See how windows, vents, fans and the wind outside change the air in a home, and where it gets stale, colored by the “age of air”.</summary>
+  </entry>
   <entry>
     <title>The Tree of Life</title>
     <link href="https://sishiya.github.io/manabi-lab/tree-of-life/?lang=en"/>
@@ -86,14 +102,6 @@
     <published>2026-10-06T00:00:00+09:00</published>
     <updated>2026-10-10T00:00:00+09:00</updated>
     <summary>Inside the body as a caterpillar becomes a pupa and then a moth. Follow which organs break down, stay or are newly built, day by day from tobacco hornworm research.</summary>
-  </entry>
-  <entry>
-    <title>Seeing Airflow at Home</title>
-    <link href="https://sishiya.github.io/manabi-lab/air-flow/?lang=en"/>
-    <id>https://sishiya.github.io/manabi-lab/air-flow/?lang=en</id>
-    <published>2026-10-06T00:00:00+09:00</published>
-    <updated>2026-10-10T00:00:00+09:00</updated>
-    <summary>See how windows, vents, fans and the wind outside change the air in a home, and where it gets stale, colored by the “age of air”.</summary>
   </entry>
   <entry>
     <title>Evolution Sandbox</title>

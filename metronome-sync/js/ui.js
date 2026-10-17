@@ -4,33 +4,39 @@ const UI = (() => {
   const $ = id => document.getElementById(id);
   // 操作の行: [ラベル, opt のキー, [[表示, 値]...], 変えたらはじめからか, 説明]
   const ROWS = [
-    ['速さ', 'speed', [['×1', 1], ['×4', 4], ['×16', 16], ['×64', 64]], false, '×16 より速いと音は鳴りません'],
-    ['台数', 'n', [['2台', 2], ['3台', 3], ['5台', 5], ['10台', 10]], true],
-    ['はじめ方', 'start', [['逆向き', 'anti'], ['ばらばら', 'rand'], ['そろえて', 'same']], true],
-    ['ばらつき', 'spread', [['なし', 0], ['0.1%', 0.001], ['1%', 0.01], ['3%', 0.03]], false, 'いちばん速い台とおそい台の速さのちがい'],
-    ['板', 'addMass', [['ふつう 58 g', 0], ['+2 kg', 2]], false],
-    ['床', 'damp', [['ふつう', 0], ['ぬれた床', 30]], false, 'ぬれた床: 缶が転がりにくく、板の動きにブレーキ（大きさは推定）'],
-    ['押し方', 'esc', [['論文の式', 'vdp'], ['まん中で押す', 'kick']], false, 'ぜんまいが振り子を押す形（くわしくは「このアプリについて」）'],
+    [L('速さ', 'Speed'), 'speed', [['×1', 1], ['×4', 4], ['×16', 16], ['×64', 64]], false, L('×16 より速いと音は鳴りません', 'No sound faster than ×16')],
+    [L('台数', 'How many'), 'n', [[L('2台', '2'), 2], [L('3台', '3'), 3], [L('5台', '5'), 5], [L('10台', '10'), 10]], true],
+    [L('はじめ方', 'Start'), 'start', [[L('逆向き', 'Opposite'), 'anti'], [L('ばらばら', 'Scattered'), 'rand'], [L('そろえて', 'Together'), 'same']], true],
+    [L('ばらつき', 'Spread'), 'spread', [[L('なし', 'None'), 0], ['0.1%', 0.001], ['1%', 0.01], ['3%', 0.03]], false, L('いちばん速い台とおそい台の速さのちがい', 'Speed difference between the fastest and the slowest metronome')],
+    [L('板', 'Board'), 'addMass', [[L('ふつう 58 g', 'Normal 58 g'), 0], ['+2 kg', 2]], false],
+    [L('床', 'Floor'), 'damp', [[L('ふつう', 'Normal'), 0], [L('ぬれた床', 'Wet floor'), 30]], false, L('ぬれた床: 缶が転がりにくく、板の動きにブレーキ（大きさは推定）', 'Wet floor: the cans roll less easily, which brakes the board (the size is an estimate)')],
+    [L('押し方', 'Push'), 'esc', [[L('論文の式', 'Paper’s formula'), 'vdp'], [L('まん中で押す', 'Push in the middle'), 'kick']], false, L('ぜんまいが振り子を押す形（くわしくは「このアプリについて」）', 'How the spring pushes the pendulum (see “About this app”)')],
   ];
   const TOUR = [
     { o: { n: 2, start: 'anti', spread: 0.001, addMass: 0, damp: 0, esc: 'vdp' }, pin: false, speed: 1,
-      t: '空き缶2本の上の軽い板に、メトロノームを2台。わざと逆向きに動かし始めます。しばらく見ていてください（30秒ほど）。' },
+      t: L('空き缶2本の上の軽い板に、メトロノームを2台。わざと逆向きに動かし始めます。しばらく見ていてください（30秒ほど）。',
+        'Two metronomes on a light board resting on two empty cans. We start them swinging opposite ways on purpose. Watch for a while (about 30 seconds).') },
     { o: { start: 'anti' }, pin: true, speed: 1,
-      t: 'こんどは板を手でおさえて、同じように始めます。板が動かないと、2台はおたがいを感じられず、そろいません。' },
+      t: L('こんどは板を手でおさえて、同じように始めます。板が動かないと、2台はおたがいを感じられず、そろいません。',
+        'Now we hold the board down and start the same way. If the board cannot move, the two cannot feel each other, and they do not fall into step.') },
     { o: { start: 'anti', addMass: 2 }, pin: false, speed: 4,
-      t: '板に 2 kg のおもりをのせました（論文の実験と同じ）。板のゆれが小さくなり、そろうのに時間がかかります（速さ ×4）。' },
+      t: L('板に 2 kg のおもりをのせました（論文の実験と同じ）。板のゆれが小さくなり、そろうのに時間がかかります（速さ ×4）。',
+        'We put a 2 kg weight on the board (as in the paper’s experiment). The board moves less, so falling into step takes longer (speed ×4).') },
     { o: { start: 'anti', addMass: 0, damp: 30, spread: 0 }, pin: false, speed: 16,
-      t: 'ぬれた床では缶が転がりにくく、板の動きにブレーキがかかります。1 と同じく逆向きから始めると、こんどは逆向きに近いところにとどまります（速さ ×16。「そろえて」始めると同じ向きのまま。どちらもありえます）。' },
+      t: L('ぬれた床では缶が転がりにくく、板の動きにブレーキがかかります。1 と同じく逆向きから始めると、こんどは逆向きに近いところにとどまります（速さ ×16。「そろえて」始めると同じ向きのまま。どちらもありえます）。',
+        'On a wet floor the cans roll less easily, which brakes the board. Starting from opposite swings as in step 1, this time they stay close to opposite swings (speed ×16; if you start them “Together” they stay together, so both can happen).') },
     { o: { n: 5, start: 'rand', spread: 0.01, damp: 0 }, pin: false, speed: 1,
-      t: '5台をばらばらに。速さが少しずつちがうメトロノームでも、1つのリズムに集まります。右上の円の点が1か所に集まっていきます。' },
+      t: L('5台をばらばらに。速さが少しずつちがうメトロノームでも、1つのリズムに集まります。右上の円の点が1か所に集まっていきます。',
+        'Five metronomes, started scattered. Even with slightly different speeds, they gather into one rhythm. Watch the dots on the circle at the top right come together.') },
     { o: { n: 10, start: 'rand', spread: 0.01 }, pin: false, speed: 1,
-      t: '10台。メトロノームをさわると振り子をつつけます。そろったあとにつついても、またもどってきます。下のボタンで条件を変えてみてください。' },
+      t: L('10台。メトロノームをさわると振り子をつつけます。そろったあとにつついても、またもどってきます。下のボタンで条件を変えてみてください。',
+        'Ten metronomes. Touch a metronome to poke its pendulum. Even if you poke one after they are in step, it comes back. Try changing the conditions with the buttons below.') },
   ];
   let tourI = 0, holdOn = false, sound = false, ac = null;
 
   function build() {
     const box = $('controls');
-    let html = '<div class="row"><span class="lab">再生</span><button id="play">⏸ 止める</button><button id="restart">はじめから</button><button id="snd">🔇 音</button></div>';
+    let html = `<div class="row"><span class="lab">${L('再生', 'Play')}</span><button id="play"></button><button id="restart">${L('はじめから', 'Restart')}</button><button id="snd"></button></div>`;
     ROWS.forEach(([lab, key, opts, , note], r) => {
       html += `<div class="row"><span class="lab">${lab}</span>` + opts.map(([s], k) => `<button data-r="${r}" data-k="${k}">${s}</button>`).join('') + (note ? `<span class="note">${note}</span>` : '') + '</div>';
     });
@@ -60,7 +66,7 @@ const UI = (() => {
     SIM.reset(st.o); SIM.S.sys.pinned = holdOn; SIM.S.speed = st.speed; SIM.S.playing = true;
     $('tourNum').textContent = `${tourI + 1}/${TOUR.length}`;
     $('tourText').textContent = st.t;
-    $('next').textContent = tourI === TOUR.length - 1 ? 'はじめから' : 'つぎへ';
+    $('next').textContent = tourI === TOUR.length - 1 ? L('はじめから', 'Start over') : L('つぎへ', 'Next');
     sync();
   }
   // ボタンの見た目をいまの設定に合わせる
@@ -70,11 +76,11 @@ const UI = (() => {
       const [, key, opts] = ROWS[+b.dataset.r], v = opts[+b.dataset.k][1];
       b.classList.toggle('on', (key === 'speed' ? SIM.S.speed : p[key]) === v);
     });
-    $('play').textContent = SIM.S.playing ? '⏸ 止める' : '▶ 動かす';
-    $('snd').textContent = sound ? '🔊 音' : '🔇 音';
+    $('play').textContent = SIM.S.playing ? L('⏸ 止める', '⏸ Pause') : L('▶ 動かす', '▶ Play');
+    $('snd').textContent = (sound ? '🔊 ' : '🔇 ') + L('音', 'Sound');
     $('snd').classList.toggle('on', sound);
     $('hold').classList.toggle('on', holdOn);
-    $('hold').textContent = holdOn ? '板をはなす' : '板をおさえる';
+    $('hold').textContent = holdOn ? L('板をはなす', 'Let go of board') : L('板をおさえる', 'Hold board down');
   }
   // カチの音（台ごとに少しちがう高さ）
   function audio() {

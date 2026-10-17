@@ -2,25 +2,35 @@
 <title>メトロノームがそろうまで</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2316202c'/><path d='M20 50 L44 50 L38 14 L26 14 Z' fill='none' stroke='%23a3b4bf' stroke-width='4'/><line x1='32' y1='42' x2='40' y2='12' stroke='%23ffc95a' stroke-width='5' stroke-linecap='round'/></svg>">
 <script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<!-- seo（検索・リンクカード。_dev/tools/seo.mjs が入口の APPS から作る。手で直さない） -->
+<meta name="description" content="空き缶にのせた板の上で、ばらばらに動かしたメトロノームが、ひとりでに同じリズムにそろう。板と振り子の運動方程式を近似なしで解き、実験の論文の値で。板をおさえる・重くする・床をぬらすと、そろい方が変わる。">
+<meta property="og:type" content="website"><meta property="og:site_name" content="まなびラボ"><meta property="og:locale" content="ja_JP"><meta property="og:locale:alternate" content="en_US">
+<meta property="og:title" content="メトロノームがそろうまで｜まなびラボ"><meta property="og:description" content="空き缶にのせた板の上で、ばらばらに動かしたメトロノームが、ひとりでに同じリズムにそろう。板と振り子の運動方程式を近似なしで解き、実験の論文の値で。板をおさえる・重くする・床をぬらすと、そろい方が変わる。"><meta property="og:url" content="https://sishiya.github.io/manabi-lab/metronome-sync/">
+<meta property="og:image" content="https://sishiya.github.io/manabi-lab/assets/thumbs/metronome-sync.jpg"><meta property="og:image:width" content="640"><meta property="og:image:height" content="360">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@sishiya22">
+<link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/metronome-sync/?lang=ja"><link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/metronome-sync/?lang=en"><link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/metronome-sync/">
+<!-- /seo -->
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="css/style.css">
 
 <div id="app">
-  <header id="top"><h1>メトロノームがそろうまで</h1><span class="sub">動く板の上で、メトロノームがひとりでに同じリズムになる</span></header>
+  <header id="top"><h1><span lang="ja">メトロノームがそろうまで</span><span lang="en">Metronomes Falling into Step</span></h1><span class="sub"><span lang="ja">動く板の上で、メトロノームがひとりでに同じリズムになる</span><span lang="en">On a board that can roll, metronomes fall into the same rhythm all by themselves</span></span>
+    <span class="langsw" id="langsw"><button data-l="ja">JP</button><button data-l="en">EN</button></span></header>
   <div id="pin"><!-- スマホ: 図とつぎへを上に固定。グラフ・操作・説明はその下でスクロール -->
     <div id="cvwrap"><canvas id="cv"></canvas>
-      <button id="hold" class="ov">板をおさえる</button>
+      <button id="hold" class="ov"></button>
     </div>
-    <div id="tour"><span id="tourNum"></span><p id="tourText"></p><button id="next">つぎへ</button></div>
+    <div id="tour"><span id="tourNum"></span><p id="tourText"></p><button id="next"></button></div>
   </div>
   <section id="graph">
-    <div class="ghead"><b>1台目とのずれ</b><span class="gnote">0 の線に集まると同じ向きでそろった、上下のはしは逆向き</span></div>
+    <div class="ghead"><b><span lang="ja">1台目とのずれ</span><span lang="en">Offset from metronome 1</span></b><span class="gnote"><span lang="ja">0 の線に集まると同じ向きでそろった、上下のはしは逆向き</span><span lang="en">Gathering on the 0 line means in step; the top and bottom edges mean opposite swings</span></span></div>
     <canvas id="gv"></canvas>
   </section>
   <section id="controls"></section>
-  <details id="about">
+  <details id="about" class="about" lang="ja">
     <summary>このアプリについて</summary>
     <p>空き缶2本の上に軽い板をのせ、その上にメトロノームをならべます。振り子がふれると、そのはんどうで板がほんの少し（1 mm ほど）横にゆれます。そのゆれが、ほかのメトロノームの振り子を押したり引いたりします。こうしておたがいに少しずつ影響しあううちに、リズムがそろいます。</p>
     <p>計算は、板の位置と振り子の角度の運動方程式（ラグランジュの式）を、近似なしで解いています（角度は sin・cos のまま。小さいふれの近似は使っていません）。0.5 ミリ秒きざみのルンゲ＝クッタ法（RK4）で進めています。押す力と摩擦を切ると、エネルギーと運動量が 60 秒で 10<sup>−11</sup> 以下の割合しか変わらないことで、計算の誤差を確かめています。</p>
@@ -49,6 +59,36 @@
     </ul>
     <h3>使っているもの</h3>
     <p>フォント: Google Fonts（SIL Open Font License）</p>
+  </details>
+  <details id="about-en" class="about" lang="en">
+    <summary>About this app</summary>
+    <p>A light board sits on two empty cans, and metronomes stand in a row on top of it. When a pendulum swings, it pushes back on the board, so the board slides sideways just a little (about 1 mm). That tiny motion pushes and pulls on the other pendulums. As they keep nudging each other bit by bit, their rhythms line up.</p>
+    <p>The app solves the equations of motion for the board's position and the pendulum angles (Lagrange's equations) without shortcuts: the angles stay inside sin and cos, and there is no small-swing approximation. Time moves forward in steps of 0.5 milliseconds with the Runge–Kutta method (RK4). To check the error, we switch off the drive and the friction: then the energy and momentum change by less than 10<sup>−11</sup> of their size in 60 seconds.</p>
+    <p>The sizes, weights and speed of the metronomes and the board come from the experiment by Pantaleone (2002): each metronome 94 g, the board 58 g, 208 ticks a minute (104 back-and-forth swings), a largest swing of about 45°, and a board motion scale of 0.088 cm. The way the wound-up spring pushes the pendulum (the escapement) and the pendulum's friction are put in as one formula that the paper fitted to its measurements (a van der Pol type term, strength 0.010). In the paper's experiment, two metronomes fell into step, swinging the same way, within a few tens of seconds. With a 2 kg weight on the board they still ended up swinging the same way, and on a wet table (where the cans roll less easily) they ended up swinging opposite ways.</p>
+    <p>Christiaan Huygens noticed the same thing long ago with two pendulum clocks (1665). His clocks, hung on a heavy support, ended up swinging opposite ways (rebuilt by Bennett and others in 2002).</p>
+    <h3>What the calculation showed (results tried in this app)</h3>
+    <ul>
+      <li>On a normal floor, two metronomes fall into step, swinging the same way, in 30 to 60 seconds, with either the paper's formula or the “push in the middle” form (the same as the paper's observation). Five or ten metronomes also fall into step.</li>
+      <li>If you hold the board down, they do not fall into step. They just drift apart because their speeds are slightly different.</li>
+      <li>On a wet floor (a strong brake on the board's motion), starting from opposite swings or from a shifted start, they stayed near opposite swings (about 150 to 170°). Starting almost in step, they stayed in step (both can happen). Staying near opposite swings only happened when the two metronomes had almost exactly the same speed (no spread); with a 0.1% spread they slowly drifted. With a medium brake, the offset can keep wandering back and forth without settling. Whether this matches the clear opposite swings seen in the paper's experiment depends on the detailed shape of the push and of the floor friction, which this app's model cannot settle.</li>
+    </ul>
+    <h3>What is simplified</h3>
+    <ul>
+      <li>The spring's push and the air drag on the pendulum are combined into one formula (the paper's). “Push in the middle” is this app's own estimate: the pendulum is pushed with a steady force in the direction it moves while it is within ±0.1 rad (about 6°) of the middle, and the friction is proportional to speed (set so that how fast the swing settles, and the size of the swing, match the paper's formula).</li>
+      <li>The weight and rolling of the cans are left out (the paper does the same). The board only moves sideways.</li>
+      <li>The friction of the wet floor is a force proportional to the board's speed (30 N·s/m). Its size is an estimate.</li>
+      <li>The metronome's rod points up, but its center of mass is below the pivot (a weight inside the body). The dotted line shows that side.</li>
+      <li>The tick sound plays when a pendulum passes the middle (a little different from when a real metronome ticks).</li>
+      <li>“Spread” is how much the speeds differ between metronomes (from the fastest to the slowest). It is made by changing the pendulum's moment of inertia, as if the sliding weight were moved a little.</li>
+      <li>The phase (position in the rhythm) is a rough measure calculated from the angle and the angular speed.</li>
+    </ul>
+    <h3>Main sources</h3>
+    <ul>
+      <li>J. Pantaleone, “Synchronization of metronomes”, American Journal of Physics 70, 992–1000 (2002). <a href="https://doi.org/10.1119/1.1501118" target="_blank" rel="noopener">doi:10.1119/1.1501118</a></li>
+      <li>M. Bennett, M. F. Schatz, H. Rockwood, K. Wiesenfeld, “Huygens’s clocks”, Proceedings of the Royal Society of London A 458, 563–579 (2002).</li>
+    </ul>
+    <h3>What this app uses</h3>
+    <p>Fonts: Google Fonts (SIL Open Font License)</p>
   </details>
 </div>
 

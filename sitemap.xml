@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://sishiya.github.io/manabi-lab/</loc>
-    <lastmod>2026-10-15</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <xhtml:link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/?lang=ja"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/?lang=en"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/"/>
@@ -65,7 +65,7 @@
   </url>
   <url>
     <loc>https://sishiya.github.io/manabi-lab/air-flow/</loc>
-    <lastmod>2026-10-10</lastmod>
+    <lastmod>2026-10-16</lastmod>
     <xhtml:link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/air-flow/?lang=ja"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/air-flow/?lang=en"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/air-flow/"/>
@@ -132,5 +132,12 @@
     <xhtml:link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/tree-of-life/?lang=ja"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/tree-of-life/?lang=en"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/tree-of-life/"/>
+  </url>
+  <url>
+    <loc>https://sishiya.github.io/manabi-lab/metronome-sync/</loc>
+    <lastmod>2026-10-17</lastmod>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/metronome-sync/?lang=ja"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/metronome-sync/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/metronome-sync/"/>
   </url>
 </urlset>
