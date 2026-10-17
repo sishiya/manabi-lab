@@ -36,6 +36,8 @@
 
 ## 段階
 - **A データ**: `popular.ps1` を作り、手元で `popular.json` が出るところまで。ユーザーの 1・2 が済んでから動かせる。それまではテスト用の json で進める。
+  - **済み（2026-10-17）**: `youtube-upload.ps1 -Ga -Popular`（pagePath × date ごとの engagedSessions）と `popular.ps1`。テスト用の数で、launcher.html・保管庫・入口の一覧のページを数えないこと、入口に出る前の日の分を外すこと、少ないときは空になることを確かめた。**本物の GA ではまだ動かしていない**（プロパティ ID と許可がまだ）。pagePath と engagedSessions の組み合わせを GA が受けつけるかは、そのとき確かめる。
+  - 入口に出た日は APPS の `created` を使う。`created` より前に入口へ出ていたアプリはない前提。
 - **B 見せ方**: `index.html` に 3案を `?pop=` で切りかえられるように入れる。幅 375px・暗い色でも確認。ユーザーが1つ選ぶ。
 - **C 仕上げ**: 選ばなかった案を消す。`_dev/tools/README.md` に道具を1行、週のふり返りの手順に「popular.ps1 → commit」を足す。
 

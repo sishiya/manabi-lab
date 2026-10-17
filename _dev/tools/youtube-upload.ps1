@@ -22,6 +22,8 @@
 #       … サイトのアクセス（GA4）を読む許可。GA を持っている Google アカウントで。トークンは $SecretDir\ga-token.dat（暗号化）
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Ga -Stats [-Days 7] [-Out …]
 #       … GA4 のページごとの表示・人数・どこから来たか・国・言語、前の期間との比べ（プロパティ ID は analytics.local.txt）
+#   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Ga -Popular -Days 28 -Out …
+#       … 昨日までの -Days 日の、ページごとのエンゲージメントのあったセッション数（入口の「人気」のもと。popular.ps1 が使う）
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Schedule -Meta _dev/promo/black-hole-guide.upload.json
 #       … 予約投稿の日時（publishAt）だけを入れる。JSON に publishAt がなければ予約を外して非公開のままにする（字幕を送らないので API の使用量が少ない）
 #         captions: { "en": "_dev/promo/out/<名前>.en.srt" } … 字幕（CC）。台本ページ（_dev/promo/*.html）を開くと out に保存される。日本語は動画に焼きこんであるので、ふつうは英語だけ
@@ -50,6 +52,7 @@ param(
   [switch]$Thumb,
   [switch]$Stats,
   [switch]$Ga,
+  [switch]$Popular,
   [switch]$Quota,
   [switch]$Verify,
   [switch]$Playlist,
@@ -417,6 +420,25 @@ function Invoke-GaStats {
   if ($Out) { [IO.File]::WriteAllText($Out, $json, (New-Object Text.UTF8Encoding $false)); Write-Host "書いた: $Out" } else { $json }
 }
 
+# ---- -Ga -Popular: 入口の「人気」のもと（popular.ps1 が使う。読むだけ）。昨日までの -Days 日の、ページごとのエンゲージメントのあったセッション数 ----
+# 今日の分は途中なので入れない。数は out/ だけに置き、Git には順位だけ（_dev/PLAN-popular.md）
+function Invoke-GaPopular {
+  $lf = Join-Path $PSScriptRoot 'analytics.local.txt'
+  if (-not (Test-Path $lf)) { throw "GA4 のプロパティ ID（数字）を $lf に1行で書いてください（Git に入れません）" }
+  $pid_ = (Get-Content -Encoding UTF8 $lf | Where-Object { $_.Trim() -and -not $_.StartsWith('#') } | Select-Object -First 1).Trim() -replace '^properties/', ''
+  if ($pid_ -notmatch '^\d+$') { throw 'プロパティ ID は数字だけ（G- で始まる測定 ID ではない。GA の 管理 → プロパティの詳細）' }
+  $at = Get-AccessToken; $h = @{ Authorization = "Bearer $at" }
+  $from = (Get-Date).AddDays(-$Days).ToString('yyyy-MM-dd'); $to = (Get-Date).AddDays(-1).ToString('yyyy-MM-dd')
+  $body = @{ dateRanges = @(@{ startDate = $from; endDate = $to }); dimensions = @(@{ name = 'pagePath' }, @{ name = 'date' }); metrics = @(@{ name = 'engagedSessions' }); limit = 20000 }
+  $b = [Text.Encoding]::UTF8.GetBytes(($body | ConvertTo-Json -Depth 8))
+  try { $r = Invoke-RestMethod -Method Post -Headers $h -ContentType 'application/json; charset=UTF-8' -Body $b -Uri "https://analyticsdata.googleapis.com/v1beta/properties/${pid_}:runReport" }
+  catch { throw "GA4 を読めませんでした（403 なら、GA のプロパティにこのアカウントの閲覧の権限があるか、Google Analytics Data API を有効にしたか）: $(Get-ErrText $_)" }
+  # 日ごとに分けて取る（入口へ移す前の日の分を popular.ps1 が外せるように）。date は yyyyMMdd
+  $rows = @($r.rows | ForEach-Object { [ordered]@{ pagePath = $_.dimensionValues[0].value; date = $_.dimensionValues[1].value; engagedSessions = [double]$_.metricValues[0].value } })
+  $json = [ordered]@{ at = (Get-Date).ToString('yyyy-MM-ddTHH:mm:sszzz'); from = $from; to = $to; rows = $rows } | ConvertTo-Json -Depth 5
+  if ($Out) { [IO.File]::WriteAllText($Out, $json, (New-Object Text.UTF8Encoding $false)); Write-Host "書いた: $Out（ページ $($rows.Count) 件）" } else { $json }
+}
+
 # ---- 予約投稿の日時を入れる／外す（status だけを書きかえる。字幕は送らないので API の使用量が少ない）----
 # $publishAt が空なら予約を外して非公開のままにする
 function Set-Schedule($id, $publishAt, $h) {
@@ -661,5 +683,5 @@ function Sync-Playlist([string]$pf) {
   if ($plId) { Write-Host "通しで見る: https://www.youtube.com/playlist?list=$plId" }
 }
 
-try { if ($Quota) { Show-Quota } elseif ($Playlist) { Invoke-Playlist } elseif ($Verify) { Invoke-Verify } elseif ($Auth) { Invoke-Auth } elseif ($List) { Invoke-List } elseif ($Stats -and $Ga) { Invoke-GaStats } elseif ($Stats) { Invoke-Stats } elseif ($Schedule) { Invoke-Schedule } elseif ($Thumb) { Invoke-Thumb } elseif ($Captions) { Invoke-Captions } elseif ($Update) { Invoke-Update } else { Invoke-Upload } }
+try { if ($Quota) { Show-Quota } elseif ($Playlist) { Invoke-Playlist } elseif ($Verify) { Invoke-Verify } elseif ($Auth) { Invoke-Auth } elseif ($List) { Invoke-List } elseif ($Popular -and $Ga) { Invoke-GaPopular } elseif ($Stats -and $Ga) { Invoke-GaStats } elseif ($Stats) { Invoke-Stats } elseif ($Schedule) { Invoke-Schedule } elseif ($Thumb) { Invoke-Thumb } elseif ($Captions) { Invoke-Captions } elseif ($Update) { Invoke-Update } else { Invoke-Upload } }
 catch { Write-Host "失敗: $($_.Exception.Message)"; exit 1 }

@@ -20,6 +20,7 @@
 | `schedule-videos.ps1` | `_dev/promo/SCHEDULE.md` の順に予約日時（publishAt）を割りふる。`-Apply` で upload.json と SCHEDULE.md、`-Entrance` で入口の `video`、`-Upload` で YouTube の予約まで | 公開を始める日が決まったとき（`-Upload` はユーザーの GO のあと） |
 | `youtube-upload.ps1` | YouTube へ上げる・英語・字幕・予約・一覧・`-Stats`（数を読むだけ） | ユーザーの GO のあと（`-Stats`・`-List` は読むだけ） |
 | `x-post.ps1` | X の投稿の下ごしらえ（投稿ボタンはユーザー） | ショートを出すとき |
+| `popular.ps1` | 入口の「よく遊ばれている」の順位 → `assets/popular.json`（順位だけ。数は `out/ga-popular-<日付>.json`）。GA4 の昨日までの28日のエンゲージメントのあったセッション数、新しいアプリは1日あたり、少なければ空。`-From <json> -DryRun` で GA を読まずに計算だけ。企画は `_dev/PLAN-popular.md` | 週のふり返りのあと → commit（公開は push のとき） |
 | `weekly-report.ps1` | 週のふり返り（Git で作ったもの・動作確認・動画の数・視聴時間と流入元・サイトのアクセス）→ `out/weekly-<日付>.md` | 週に1回 |
 | `health.ps1` | 健康診断: 一時的なローカルのサーバーで smoke（全アプリ）＋ `check-links.mjs`（外へのリンク切れ）→ `out/health-last.md`。終わったら `backup-local.ps1` も。`-Register` で毎週日曜 10:00 に Windows のタスクスケジューラが回す（Claude を使わない＝トークンなし）。問題があったときだけセッションのはじめのフック（`-Hook`）が数行で知らせる | 自動（週1）。手でも |
 | `check-links.mjs` | アプリの html・js の https:// のリンク（出どころなど）を調べる。NG は 404・410・ドメインが無いだけ（403 などは「注意」）→ `out/links-last.json` | health.ps1 から |
