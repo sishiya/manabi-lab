@@ -1,10 +1,10 @@
 # タイピングする手 開発メモ
 
 ## 別セッションで続けるとき（まずここ）
-- いまの状態（2026-10-17）: **v002-stageA**（段階A「ながめる」モード）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。日本語だけ（`L()` は日本語を返すだけにしてある）。
-- 次にやること: PLAN.md の段階B（「再現する」モード: 自分のキーボードで打ったキーの位置 `KeyboardEvent.code` と時刻だけを読んで、手が打ち直す。画面のキーボード。打つ間隔のモデル）。
+- いまの状態（2026-10-17）: **v003-stageB**（段階B「自分で打つ（再現する）」モードと、ながめるの打つ間隔の推定）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。日本語だけ（`L()` は日本語を返すだけにしてある）。
+- 次にやること: PLAN.md の段階C（使う指を少なくした打ち方とくらべる・US 配列・かな入力）か、ユーザーの感想しだい。気になっている所: 小指がホームでほぼのびきる（検査の「関節の限界」が 5〜20%。ホームの手首を4本の指の平均で合わせる試しはかえって悪くなった）。
 - 読む順: PLAN.md → このファイルの「ファイル構成」「しくみ」→ 関係するファイルだけ。手の中身（骨・皮ふ・筋肉の模型・IK）は piano-hand と同じなので、くわしくは `piano-hand/DEVNOTES.md` の「しくみ」。
-- 動かし方: サーバー apps（.claude/launch.json）で http://localhost:8765/typing-hand/ 。デバッグ用の窓口 `window.__tyha`（`simRun(秒)`・`setTime`・`setText(id)`・`nextTour()`・`checksAll()`・`sheet(times, cam)`）、エラーは `window.__tyhaErr`（配列）。
+- 動かし方: サーバー apps（.claude/launch.json）で http://localhost:8765/typing-hand/ 。デバッグ用の窓口 `window.__tyha`（`simRun(秒)`・`setTime`・`setText(id)`・`nextTour()`・`setMode('watch'|'replay')`・`recKeyDown(code)`・`recKeyUp(code)`・`recPlayAll()`・`REC`・`checksAll()`・`sheet(times, cam)`）。プレビューのペインが隠れていると requestAnimationFrame が止まるので、確かめるときは `simRun(0)` をくり返し呼ぶ、エラーは `window.__tyhaErr`（配列）。
 - 区切りごとの手順: 「確認のしかた」と smoke.ps1 → 「状態」に1行 → launcher.html の表 → 公開前チェック → commit（節目の版だけ versions/ へコピーしてカードに。RULES 3章）。
 - **ユーザーの方針（2026-10-17）**: 指運びの参考データ（モーションキャプチャ）は商用不可（CC BY-NC など）なので使わない。**指の動きはコンピュータで計算したシミュレーションだと、画面の目立つ所にいつも出す**（`#simNote`）。紹介文・動画でも同じ。
 
@@ -20,7 +20,9 @@
 | index.html | 画面の骨組み（doctype なし）。説明・しくみ・出どころ | |
 | css/style.css | 見た目（piano-hand の写し＋終わりに「タイピングする手」の分）。820px 以下・縦長は上下に重ねる | |
 | js/keys.js | キーボード（JIS）の寸法・位置・標準の指の割り当て。手の計算から見た呼び方は鍵盤と同じ | `KB`, `KEYS`, `KEY_BY_CODE`, `keyX`, `keyTop`, `pressZ`, `keyDist`, `surfaceAt`, `surfaceZ`, `surfaceFloor`, `noteName` |
-| js/texts.js | 「ながめる」の文と、文 → 押すキーの並び | `TEXTS`, `KPM`, `KPM_LIST`, `DWELL`, `textToSong` |
+| js/texts.js | 「ながめる」の文と、文 → 押すキーの並び、打つ間隔の推定 | `TEXTS`, `KPM`, `KPM_LIST`, `TIMING`, `IKI_ADJ`, `pairKind`, `DWELL`, `textToSong` |
+| js/replay.js | 「自分で打つ」: 打鍵の記録（位置と時刻だけ）・Worker に計算を頼む・追いかける表示・入れかわりをまぜる・通して再生・画面のキーボード・自分のキーボード | `REC`, `REC_LAG`, `REC_WIN`, `recKeyDown`, `recKeyUp`, `recTick`, `recPlayAll`, `livePose`, `blendPose`, `homeRest`, `makeScreenKeyboard`, `onPhysKey` |
+| js/plan-worker.js | 手の動きの計算（buildPlan）を裏で行う Web Worker（keys・fingering・hand・plan・skeleton・check を読む） | |
 | js/fingering.js | 指はキーごとに決まり（`KEYS[m].f`）。plan.js が呼ぶ名前だけ | `planFingering`, `setSpanScale`, `parseSong` |
 | js/hand.js | ③ 骨の寸法・FK・IK・手のモデル・指の構え・手首の座標・キーの押しこみ・**ホームポジションの形** | `FINGERS`, `fingerFK`, `fingerIK`, `setHandModel`, `HOME_CODES`, `homePoint`, `homeWrist`, `tipN`, `toWorld`/`toLocal`, `keyDown`, `pressDepth` |
 | js/plan.js | ②④ 打つ計画（手首を解く・指先の目標・指の並び・関節の速さの上限）と毎コマの姿勢 | `buildPlan`, `solveWrist`（`HOME_PULL`）, `fingerTarget`, `keepOrder`, `poseAt`, `depressAt` |
@@ -28,7 +30,7 @@
 | js/view.js | Three.js r128 の描画（机・キーボード・両手・指先の印）とカメラ | `initView`, `renderPose`, `CAMS`, `setCam`, `updateCam` |
 | js/keyboard.js | キーの見た目（上がせまい台形・上面の文字・F と J の出っぱり・土台）と、沈み・色 | `makeKeyboard`, `setKeyState` |
 | js/skin.js・skinview.js・skeleton.js・tissue.js・scene.js | piano-hand のまま（皮ふ・肌のシェーダー・骨格・筋肉の模型・シーン） | |
-| js/main.js | 画面の操作・毎フレーム・カチッという音・つぎへ・`window.__tyha` | `setText`, `step`, `TOUR`, `nextTour`, `renderTyped` |
+| js/main.js | 画面の操作・毎フレーム・カチッという音・つぎへ・モード・`window.__tyha` | `setText`, `step`, `TOUR`, `nextTour`, `setMode`, `renderTyped` |
 | tools/skin-check.js | 開発用（piano-hand のもの。画面からは読まない） | |
 
 ## しくみ
@@ -39,7 +41,9 @@
 3. **休む指の形 = ホームポジション**（`hand.js` の `computeHome`）: ピアノの力を抜いた形は指の間が約 24mm に開き、ホームの段より奥へはみ出したので、「人さし指が力を抜いた形のまま J に届く手首」から見た J K L ;（親指はスペースの右へ 22mm）を、休む指の形（手の座標）にした。左手はその鏡（ホームの段は左右対称）。打つキーへ手首を合わせるときもこの形を使う（`anchorAt`）。
 4. **手首はホームへ引かれる**（`plan.js` の `HOME_PULL`=0.5、目安）: 押す指の重み（1）より小さいので、遠いキーへは手首が一部だけ動き、残りは指が伸びて届く。
 5. **打つ**: 指だけで打つ（`STROKE='finger'`）。持ち上げの高さ・触れたまま押す割合は、ピアノの研究の値（Goebl & Palmer 2008、Dalla Bella & Palmer 2011）を目安としてそのまま使っている（タイピングで測った値ではない。画面の「しくみ」にも書いた）。
-6. **文 → キー**（`texts.js`）: 一定の間隔（60/KPM 秒）、押さえる時間 0.09 秒（目安）。文の終わり・確定の前は 0.3 秒あける（目安）。日本語はローマ字入力＋スペースで変換＋Enter で確定。
+6. **文 → キー**（`texts.js`）: 平均の間隔 60/KPM 秒、押さえる時間 0.09 秒（目安）。文の終わり・確定の前は 0.3 秒あける（目安）。日本語はローマ字入力＋スペースで変換＋Enter で確定。
+7. **打つ間隔の推定**（段階B〜、`TIMING='model'`）: 前のキーとの組で、左右交互 −10ms・同じ手のちがう指 0・同じ指でちがうキー +35ms・同じキー2回 +30ms を足し、平均を引いて全体の長さを変えない。傾向は Dhakal ほか (2018, CHI) の本文（いまのキーボードで左右交互は同じ手より 5〜20ms 速い。昔のタイプライターの研究では同じ手より 30〜60ms、同じ指より約 80ms 速い。同じ文字2回は速い人で 20〜40ms 遅い）。数は推定（そのデータは商用不可なので使っていない。論文の本文の傾向だけ）。
+8. **自分で打つ**（`replay.js`）: `KeyboardEvent.code` と時刻だけを読む（e.key は読まない。保存・送信しない）。Ctrl・Alt・⌘ と一緒のキーは読まない。最初のキーを 0.6 秒に置く。打っているあいだ（`S.live`）は、直近 `REC_WIN`=5 秒分を Worker で計算し、`REC_LAG`=1.5 秒おくれて表示する（計算は文の長さ1秒あたり約 0.1 秒）。計算が入れかわるときは前の計算の姿勢から 0.25 秒でまぜる（まぜないと、新しく打ったキーへの先回りが前の計算に入っておらず、指先が最大 30mm 跳んだ）。まだ打っていない手は「ホームポジション」の文の 0.3 秒の姿勢で休む。「通して再生」で全体（最大 300 キー）を計算し、検査も出す。打つ指はキーで決まる（その人の指ではない）。
 
 ## ハマったところ
 - ピアノの「力を抜いた形」のままだと、休んでいる指がホームの段に乗らず、指がキーボードの奥（数字の段のあたり）へはみ出した。→ 休む指の形をホームポジションにした（しくみ 3）。
@@ -47,6 +51,8 @@
 - スマホの縦長の画面では、ななめのカメラでキーボードの左右が切れた → 縦長ほど引く（`1.15 / aspect`）。
 
 ## 確認のしかた（変更のたびに）
+（段階B〜）8. 「自分で打つ」: キーを打つ（`__tyha.recKeyDown/recKeyUp` か KeyboardEvent）と、1.5 秒おくれて手が打つ。打った行にキーの文字。片手だけ打っても、もう一方の手はホームで休む。追いかける表示のコマごとの指先の動きの最大が、同じ打鍵を全体で計算したときと同じくらい（2026-10-17: どちらも 32mm/コマ、95% 点 13mm）。「通して再生」で検査の表と時刻のつまみが出る。幅 375px・高さ 667px で、図・画面のキーボード・ボタンが上に収まる。大きな画面とマウスでは画面のキーボードを出さない。
+
 1. `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/smoke.ps1 -Apps typing-hand`（例外・読み込みの失敗・外への通信）
 2. 開いて `window.__tyhaErr` が空、コンソールにエラーがない。
 3. `__tyha.checksAll()`（約 16 秒）: すべての文 × 速さで `miss`（押せなかったキー）が空。2026-10-17 の値: 届かない 最大 7.2mm（date@300）、関節の限界 最大 16%（小指がホームのキーでほぼのびきる）、指どうしのめりこみ 最大 1.1mm、左右の手 最大 3.9mm、指の関節の速さは 200 キー/分 から上限 1500 度/秒に当たる。これより理由なく悪くならない。
@@ -57,4 +63,5 @@
 
 ## 状態
 - 2026-10-17 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
+- 2026-10-17 v003-stageB: 段階B「自分で打つ（再現する）」。キーの位置と時刻だけを読み、Worker で計算して 1.5 秒おくれて追いかける（入れかわりは 0.25 秒でまぜる）、通して再生で検査、画面のキーボード（スマホでは図の下に固定）。ながめるの打つ間隔を推定のゆれに（Dhakal ほか 2018 の本文の傾向）。文5つ×速さ4つで押せなかったキー 0（打つ間隔を変えたあとも）。つぎへの最後の段が「自分で打つ」へ。
 - 2026-10-17 v002-stageA: 段階A「ながめる」。piano-hand（a25440d）の手を写し、JIS のキーボード・標準の指の割り当て・休む指の形をホームポジションに・手首をホームへ引く。文5つ（ホームポジション・今日はいい天気ですね。・すもももも…・英語のパングラム・日付）× 打つ速さ4つ（120〜400 キー/分）で押せなかったキー 0。つぎへ5段、手の見え方6つ、指の割り当ての色、カチッという音。サムネイル assets/thumbs/typing-hand.jpg。

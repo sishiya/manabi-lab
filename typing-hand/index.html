@@ -25,6 +25,10 @@
     <div id="tour"><p id="tourMsg"></p><button class="btn primary" id="btnNext">つぎへ ▶</button></div>
     <p id="simNote">この指の動きは、コンピュータが計算した<b>シミュレーション</b>です。実際の人の指の動きを測ったものではありません。</p>
     <div id="typed" aria-live="off"><p id="typedShow"></p><p id="typedKeys" class="mono"></p></div>
+    <div id="recBox" hidden>
+      <div id="oskb" aria-label="画面のキーボード"></div>
+      <div class="row"><button class="btn" id="btnRecPlay">通して再生</button><button class="btn" id="btnRecClear">消して打ちなおす</button></div>
+    </div>
     <div id="toolbar">
       <button class="btn primary" id="btnPlay"></button>
       <select id="speedSel" aria-label="再生の速さ"></select>
@@ -40,11 +44,24 @@
       <p>キーボードを打つ両手を3Dで見るアプリです。どのキーをどの指で打つかは、タッチタイピングで一般に教えられる<b>標準の割り当て</b>にしました（だれもがこう打つわけではありません）。手首の動き・指の曲げ方は、骨の長さと関節の範囲から<b>コンピュータが計算</b>したものです。</p>
     </header>
 
-    <section>
+    <div id="modeSeg" class="seg" role="group" aria-label="モード">
+      <button data-m="watch" aria-pressed="true">ながめる</button>
+      <button data-m="replay" aria-pressed="false">自分で打つ（再現する）</button>
+    </div>
+
+    <section id="secReplay" hidden>
+      <h2>自分で打つ</h2>
+      <p class="cap">キーボードを打つと、<b>1.5 秒おくれて</b>画面の手が同じキーを打ちます。スマホ・タブレットは、図の下の画面のキーボードで。読むのは<b>押したキーの位置と時刻だけ</b>で、どこにも保存・送信しません。パスワードなどは打たないでください。</p>
+      <p class="cap">画面の手がどの指で打つかは、<b>あなたの指ではなく標準の割り当て</b>です（キーの位置と時刻しかわからないため）。日本語入力がオンでも、そのまま打てます。</p>
+      <p class="cap">通して再生すると、打ったもの全体（最大 300 キー）で手の動きを計算しなおし、時刻のつまみと検査の結果が使えます。</p>
+    </section>
+
+    <section id="secWatch">
       <h2>打つ文</h2>
       <select id="textSel" aria-label="打つ文"></select>
       <select id="kpmSel" aria-label="打つ速さ"></select>
-      <p class="cap">日本語はローマ字入力で打ち、スペースで変換、Enter で確定します（変換の候補を選ぶ所は入れていません）。打つ間隔はいつも同じにしています（人が打つときの間隔のゆれは入れていません）。</p>
+      <select id="timingSel" aria-label="打つ間隔"></select>
+      <p class="cap">日本語はローマ字入力で打ち、スペースで変換、Enter で確定します（変換の候補を選ぶ所は入れていません）。打つ間隔は、左右の手を交互に打つ組を少し速く、同じ指で続けて打つ組を遅くしています（論文に書かれた傾向をもとにした<b>推定</b>で、ひとりひとりの打ち方のゆれは入れていません）。</p>
     </section>
 
     <section>
@@ -79,6 +96,8 @@
         <li><b>指</b>: 指先の目標から関節の角度を逆算します（逆運動学）。関節は人の範囲で止め、先の2つの関節は連動させます。押していない指はキーの上で力を抜いて休み、次に打つキーの上へ先回りします。</li>
         <li><b>打つ</b>: 指は下りてくる勢いのままキーを押し下げ（4mm）、底で止まります。持ち上げる高さは打つ速さで変わります（ピアノの研究の値をもとにした目安で、タイピングで測った値ではありません）。</li>
         <li><b>届かないキー</b>: 骨の長さと関節の範囲で届かなければ、押せなかったキーになります。届くように数値を合わせることはしません。</li>
+        <li><b>打つ間隔</b>（ながめる）: 左右交互 −10ms、同じ指でちがうキー ＋35ms、同じキーを2回 ＋30ms（平均の速さは変えない）。Dhakal ほか (2018) の本文にある傾向（いまのキーボードで、左右交互は同じ手より 5〜20ms 速いなど）をもとにした推定です。</li>
+        <li><b>自分で打つ</b>: 押したキーの位置と、押した・離した時刻から、同じ計算で手の動きを作ります。計算に時間がかかるので、打っているあいだは画面の裏（Web Worker）で直近の 5 秒分だけを計算し、1.5 秒おくれて表示します。</li>
         <li><b>検査</b>: 1/120 秒ごとに、届かなさ・関節の限界・指どうしのめりこみ・キーへのめりこみ・左右の手のぶつかり・速さを測ります。</li>
       </ol>
       <p class="cap">手のしくみ（骨・皮ふ・筋肉の模型・関節の計算）は、同じシリーズの「ピアノを弾く手」のものを使っています。キーボードの寸法（キーの間隔 19.05mm、押しこみ 4mm、段の高さ）は一般的な値と目安です。</p>
@@ -88,6 +107,7 @@
       <summary>おもな出どころ・使っているもの</summary>
       <ul>
         <li>指の動きを測ったデータ（モーションキャプチャ）の研究はありますが、このアプリでは使っていません。指の動きはすべて計算によるものです。</li>
+        <li>Dhakal, Feit, Kristensson, Oulasvirta (2018) Observations on Typing from 136 Million Keystrokes. CHI 2018. <a href="https://userinterfaces.aalto.fi/136Mkeystrokes/resources/chi-18-analysis.pdf" target="_blank" rel="noopener">PDF</a>（論文の本文に書かれた、打つ間隔の傾向だけを使っています。データは使っていません）</li>
         <li>Buryanov, Kotiuk (2010) Proportions of hand segments. <i>International Journal of Morphology</i> 28(3). <a href="https://scielo.conicyt.cl/pdf/ijmorphol/v28n3/art15.pdf" target="_blank" rel="noopener">PDF</a>（指の骨の長さ。「ピアノを弾く手」と同じ）</li>
         <li>Häger-Ross, Schieber (2000) Quantifying the independence of human finger movements. <i>Journal of Neuroscience</i> 20(22). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC6773164/" target="_blank" rel="noopener">PMC</a>（1本の指を動かすと、となりの指がついてくる割合）</li>
         <li>Dalla Bella, Palmer (2011) Rate Effects on Timing, Key Velocity, and Finger Kinematics in Piano Performance. <i>PLoS ONE</i> 6(6). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3121738/" target="_blank" rel="noopener">PMC</a> / Goebl, Palmer (2008) <i>Experimental Brain Research</i> 186（打つ前の指の持ち上げ。ピアノの研究で、タイピングでは目安として使っています）</li>
@@ -119,4 +139,5 @@
 <script src="js/skeleton.js"></script>
 <script src="js/tissue.js"></script>
 <script src="js/scene.js"></script>
+<script src="js/replay.js"></script>
 <script src="js/main.js"></script>

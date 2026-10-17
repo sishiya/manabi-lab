@@ -15,9 +15,21 @@ function charCode(c) {
   if (/[0-9]/.test(c)) return 'Digit' + c;
   return CHAR_CODE[c] || null;
 }
-// 打つ速さ（1分あたりのキーの数）。一定の間隔で打つ（段階A。人の打ち方の間隔のゆれは入れていない）
+// 打つ速さ（1分あたりのキーの数）
 const KPM_LIST = [120, 200, 300, 400];
 let KPM = 200;
+// 打つ間隔のゆれ（段階B〜）: 'model' = 前のキーとの組で間隔を変える（推定）、'even' = いつも同じ間隔。
+// 傾向は Dhakal ほか (2018) の本文による: いまのキーボードでは、左右の手を交互に打つ組は同じ手の組より 5〜20ms 速い（速い人・練習した人・
+// していない人）。昔のタイプライターの研究では、左右交互は同じ手より 30〜60ms、同じ指より約 80ms 速い。同じ文字を2回は、速い人では
+// 20〜40ms 遅い。ここから決めた差（推定。測ったデータは使っていない）: 左右交互 −10ms、同じ手のちがう指 0、同じ指でちがうキー +35ms、
+// 同じキーを2回 +30ms。全体の平均は 60/KPM 秒のままになるようにそろえる
+let TIMING = 'model';
+const IKI_ADJ = { alt: -0.010, hand: 0, finger: 0.035, repeat: 0.030 };
+function pairKind(a, b) {
+  if (a.m === b.m) return 'repeat';
+  if (KEYS[a.m].side !== KEYS[b.m].side) return 'alt';
+  return KEYS[a.m].f === KEYS[b.m].f ? 'finger' : 'hand';
+}
 const DWELL = 0.09; // キーを押さえている時間（秒、目安）
 // 文 → notes（m: キーの番号、t0・t1: 押す・離す時刻、hand: 'R'・'L'、given: 指、ch: 打つ文字）
 function textToSong(tx) {
@@ -29,6 +41,11 @@ function textToSong(tx) {
     if (c === '\n' || (c === ' ' && notes.length && notes[notes.length - 1].ch === '.')) t += 0.3; // 確定の前・文の終わりは少し間をおく（目安）
     notes.push({ m: k.m, t0: t, t1: t + Math.min(DWELL, iki * 0.6), hand: k.side > 0 ? 'R' : 'L', given: k.f, vel: 80, ch: c });
     t += iki;
+  }
+  if (TIMING === 'model' && notes.length > 2) { // 組ごとの差を足し、平均が変わらないように全体から引く
+    const adj = notes.slice(1).map((n, i) => IKI_ADJ[pairKind(notes[i], n)]), mean = adj.reduce((s, v) => s + v, 0) / adj.length;
+    let shift = 0;
+    notes.forEach((n, i) => { if (i) shift += adj[i - 1] - mean; n.t0 += shift; n.t1 += shift; n.kind = i ? pairKind(notes[i - 1], n) : ''; });
   }
   return { id: tx.id, name: tx.name, tx, notes };
 }

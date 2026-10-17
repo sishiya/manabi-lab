@@ -1,0 +1,143 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>タイピングする手</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2314171c'/><rect x='8' y='34' width='48' height='20' rx='3' fill='%23f3f1ea'/><path d='M14 40h6M24 40h6M34 40h6M44 40h6M18 47h28' stroke='%2314171c' stroke-width='3'/><path d='M22 12v18M30 9v20M38 10v20M46 15v15' stroke='%23e9b796' stroke-width='6' stroke-linecap='round'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<script>/* 言語: いまは日本語だけ（英語対応は入口へ移すとき。I18N.md）。写したコードの L(ja, en) はそのまま使う */var LANG='ja';document.documentElement.lang='ja';function L(ja,en){return ja;}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="frame">
+      <div id="loading" role="status" aria-live="polite"><div class="spin" aria-hidden="true"></div><p id="loadMsg">準備しています…</p></div>
+      <canvas id="view" aria-label="キーボードと、打っている両手の3D。ドラッグで向きを変え、ホイールや2本指のピンチで寄れます"></canvas>
+      <div id="views" class="seg tiny" role="group" aria-label="見る向き">
+        <button data-v="tilt" aria-pressed="true">ななめ</button>
+        <button data-v="top" aria-pressed="false">真上</button>
+        <button data-v="front" aria-pressed="false">正面</button>
+        <button data-v="side" aria-pressed="false">横</button>
+        <button data-v="pov" aria-pressed="false">一人称</button>
+      </div>
+      <p id="clock" class="mono"></p>
+    </div>
+    <div id="tour"><p id="tourMsg"></p><button class="btn primary" id="btnNext">つぎへ ▶</button></div>
+    <p id="simNote">この指の動きは、コンピュータが計算した<b>シミュレーション</b>です。実際の人の指の動きを測ったものではありません。</p>
+    <div id="typed" aria-live="off"><p id="typedShow"></p><p id="typedKeys" class="mono"></p></div>
+    <div id="recBox" hidden>
+      <div id="oskb" aria-label="画面のキーボード"></div>
+      <div class="row"><button class="btn" id="btnRecPlay">通して再生</button><button class="btn" id="btnRecClear">消して打ちなおす</button></div>
+    </div>
+    <div id="toolbar">
+      <button class="btn primary" id="btnPlay"></button>
+      <select id="speedSel" aria-label="再生の速さ"></select>
+      <input type="range" id="time" min="0" max="1000" value="0" aria-label="時刻">
+      <label class="chk"><input type="checkbox" id="chkSound" checked> 音</label>
+    </div>
+    <p id="hint"></p>
+  </main>
+
+  <aside id="panel">
+    <header class="brand">
+      <h1>タイピングする手 <small>試作</small></h1>
+      <p>キーボードを打つ両手を3Dで見るアプリです。どのキーをどの指で打つかは、タッチタイピングで一般に教えられる<b>標準の割り当て</b>にしました（だれもがこう打つわけではありません）。手首の動き・指の曲げ方は、骨の長さと関節の範囲から<b>コンピュータが計算</b>したものです。</p>
+    </header>
+
+    <div id="modeSeg" class="seg" role="group" aria-label="モード">
+      <button data-m="watch" aria-pressed="true">ながめる</button>
+      <button data-m="replay" aria-pressed="false">自分で打つ（再現する）</button>
+    </div>
+
+    <section id="secReplay" hidden>
+      <h2>自分で打つ</h2>
+      <p class="cap">キーボードを打つと、<b>1.5 秒おくれて</b>画面の手が同じキーを打ちます。スマホ・タブレットは、図の下の画面のキーボードで。読むのは<b>押したキーの位置と時刻だけ</b>で、どこにも保存・送信しません。パスワードなどは打たないでください。</p>
+      <p class="cap">画面の手がどの指で打つかは、<b>あなたの指ではなく標準の割り当て</b>です（キーの位置と時刻しかわからないため）。日本語入力がオンでも、そのまま打てます。</p>
+      <p class="cap">通して再生すると、打ったもの全体（最大 300 キー）で手の動きを計算しなおし、時刻のつまみと検査の結果が使えます。</p>
+    </section>
+
+    <section id="secWatch">
+      <h2>打つ文</h2>
+      <select id="textSel" aria-label="打つ文"></select>
+      <select id="kpmSel" aria-label="打つ速さ"></select>
+      <select id="timingSel" aria-label="打つ間隔"></select>
+      <p class="cap">日本語はローマ字入力で打ち、スペースで変換、Enter で確定します（変換の候補を選ぶ所は入れていません）。打つ間隔は、左右の手を交互に打つ組を少し速く、同じ指で続けて打つ組を遅くしています（論文に書かれた傾向をもとにした<b>推定</b>で、ひとりひとりの打ち方のゆれは入れていません）。</p>
+    </section>
+
+    <section>
+      <h2>見え方</h2>
+      <select id="handLook" aria-label="手の見え方"></select>
+      <p class="cap" id="lookLegend" hidden><span style="color:#c0574e">■</span>筋肉 <span style="color:#a9bdd0">■</span>腱 <span style="color:#d9b14a">■</span>脂肪 <span style="color:#e6dcc6">■</span>骨</p>
+      <label class="chk"><input type="checkbox" id="optFingerMap" checked> <span>どの指で打つキーかを色で（<span style="color:#ff6b6b">親指</span>・<span style="color:#ffa94d">人さし指</span>・<span style="color:#69db7c">中指</span>・<span style="color:#4dabf7">薬指</span>・<span style="color:#b197fc">小指</span>）</span></label>
+      <label class="chk"><input type="checkbox" id="optFingerNums"> 指先に指の番号（1 親指 〜 5 小指）</label>
+      <label class="chk"><input type="checkbox" id="optFollow"> カメラが手について行く</label>
+      <label class="chk"><input type="checkbox" id="optTargets"> 指先の目標点（IK でねらう場所）</label>
+      <div class="row"><select id="sceneSel" aria-label="シーン"></select></div>
+      <label class="chk"><input type="checkbox" id="optFx"> エフェクト（光のにじみ・もや。動きが重いときは外す）</label>
+    </section>
+
+    <section>
+      <h2>手</h2>
+      <select id="handModel" aria-label="手のモデル"></select>
+      <p class="cap">手の大きさ・骨の長さ・関節の範囲は「ピアノを弾く手」と同じ（大人の手の測定値と目安）です。</p>
+    </section>
+
+    <section class="card" id="checks">
+      <div class="ro-top"><span class="lbl">検査の結果</span><span class="ro-tag" id="chkSum"></span></div>
+      <table id="chkTable"></table>
+      <p class="ro-note">行を押すと、いちばん悪かった時刻へ跳びます。◯△✕ の境目は「ピアノを弾く手」で決めた目安です。</p>
+    </section>
+
+    <details class="about">
+      <summary>しくみ</summary>
+      <ol>
+        <li><b>指の割り当て</b>: キーごとに打つ指が決まっています（標準のタッチタイピングの割り当て。「6」は右手の人さし指、スペースは右手の親指にしました）。人によって割り当てはちがい、使う指が少ない打ち方の人も多くいます。</li>
+        <li><b>手首</b>: 押している指（と、もうすぐ押す指）が、力を抜いた形のまま届く位置へ手首を近づけながら、急に動かないようになめらかにつなぎます。届かない瞬間があれば、そこを重くして計算し直します。手首から先を水平に回す向きも一緒に決めます。</li>
+        <li><b>指</b>: 指先の目標から関節の角度を逆算します（逆運動学）。関節は人の範囲で止め、先の2つの関節は連動させます。押していない指はキーの上で力を抜いて休み、次に打つキーの上へ先回りします。</li>
+        <li><b>打つ</b>: 指は下りてくる勢いのままキーを押し下げ（4mm）、底で止まります。持ち上げる高さは打つ速さで変わります（ピアノの研究の値をもとにした目安で、タイピングで測った値ではありません）。</li>
+        <li><b>届かないキー</b>: 骨の長さと関節の範囲で届かなければ、押せなかったキーになります。届くように数値を合わせることはしません。</li>
+        <li><b>打つ間隔</b>（ながめる）: 左右交互 −10ms、同じ指でちがうキー ＋35ms、同じキーを2回 ＋30ms（平均の速さは変えない）。Dhakal ほか (2018) の本文にある傾向（いまのキーボードで、左右交互は同じ手より 5〜20ms 速いなど）をもとにした推定です。</li>
+        <li><b>自分で打つ</b>: 押したキーの位置と、押した・離した時刻から、同じ計算で手の動きを作ります。計算に時間がかかるので、打っているあいだは画面の裏（Web Worker）で直近の 5 秒分だけを計算し、1.5 秒おくれて表示します。</li>
+        <li><b>検査</b>: 1/120 秒ごとに、届かなさ・関節の限界・指どうしのめりこみ・キーへのめりこみ・左右の手のぶつかり・速さを測ります。</li>
+      </ol>
+      <p class="cap">手のしくみ（骨・皮ふ・筋肉の模型・関節の計算）は、同じシリーズの「ピアノを弾く手」のものを使っています。キーボードの寸法（キーの間隔 19.05mm、押しこみ 4mm、段の高さ）は一般的な値と目安です。</p>
+    </details>
+
+    <details class="about">
+      <summary>おもな出どころ・使っているもの</summary>
+      <ul>
+        <li>指の動きを測ったデータ（モーションキャプチャ）の研究はありますが、このアプリでは使っていません。指の動きはすべて計算によるものです。</li>
+        <li>Dhakal, Feit, Kristensson, Oulasvirta (2018) Observations on Typing from 136 Million Keystrokes. CHI 2018. <a href="https://userinterfaces.aalto.fi/136Mkeystrokes/resources/chi-18-analysis.pdf" target="_blank" rel="noopener">PDF</a>（論文の本文に書かれた、打つ間隔の傾向だけを使っています。データは使っていません）</li>
+        <li>Buryanov, Kotiuk (2010) Proportions of hand segments. <i>International Journal of Morphology</i> 28(3). <a href="https://scielo.conicyt.cl/pdf/ijmorphol/v28n3/art15.pdf" target="_blank" rel="noopener">PDF</a>（指の骨の長さ。「ピアノを弾く手」と同じ）</li>
+        <li>Häger-Ross, Schieber (2000) Quantifying the independence of human finger movements. <i>Journal of Neuroscience</i> 20(22). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC6773164/" target="_blank" rel="noopener">PMC</a>（1本の指を動かすと、となりの指がついてくる割合）</li>
+        <li>Dalla Bella, Palmer (2011) Rate Effects on Timing, Key Velocity, and Finger Kinematics in Piano Performance. <i>PLoS ONE</i> 6(6). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3121738/" target="_blank" rel="noopener">PMC</a> / Goebl, Palmer (2008) <i>Experimental Brain Research</i> 186（打つ前の指の持ち上げ。ピアノの研究で、タイピングでは目安として使っています）</li>
+        <li>手の皮ふ・骨・筋肉の模型の出どころは「ピアノを弾く手」の「おもな出どころ」をご覧ください。</li>
+      </ul>
+      <p class="cap">使っているもの: Three.js（MIT ライセンス。光のにじみは Three.js に付いている EffectComposer・UnrealBloomPass）、Google Fonts（SIL Open Font License）。打つ文はこのアプリで書いたもの、または昔からある言葉です。</p>
+    </details>
+  </aside>
+</div>
+
+<script src="../../../lib/three@0.128.0/build/three.min.js"></script>
+<!-- 光のにじみ（ブルーム）: Three.js r128 のおまけ（MIT）。同じ版を lib/ に置いたもの -->
+<script src="../../../lib/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="../../../lib/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="../../../lib/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="../../../lib/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="../../../lib/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="../../../lib/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script src="js/keys.js"></script>
+<script src="js/texts.js"></script>
+<script src="js/fingering.js"></script>
+<script src="js/hand.js"></script>
+<script src="js/plan.js"></script>
+<script src="js/skin.js"></script>
+<script src="js/check.js"></script>
+<script src="js/view.js"></script>
+<script src="js/keyboard.js"></script>
+<script src="js/skinview.js"></script>
+<script src="js/skeleton.js"></script>
+<script src="js/tissue.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/replay.js"></script>
+<script src="js/main.js"></script>
