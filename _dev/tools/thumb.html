@@ -19,6 +19,9 @@ const click = (w, sel) => { const e = w.document.querySelector(sel); if (e) e.cl
 
 // アプリごとの準備（w = アプリの window）
 const SETUP = {
+  // メトロノームがそろうまで（画面ができたら、いちばん映える場面にする）
+  // メトロノームがそろうまで（5台をばらばらに始めて25秒: 集まりかけ）
+  'metronome-sync': async w => { await wait(800); const h = w.__mesy; h.SIM.reset({ n: 5, start: 'rand', spread: 0.01 }); h.simRun(25); await wait(300); },
   // いのちの系統樹（はじめの画面のまま）
   'tree-of-life': async w => { await wait(9000); const h = w.__trofli; h.V.resize(); h.V.settle(); for (let i = 0; i < 40; i++) h.C.step(1 / 30); h.V.draw(); },   // はじめの画面（哺乳類の目のならび・シルエットつき）
   // 雑草がふえるまで（はじめのメニューを閉じ、ふつうの庭の2年目の8月: 穂がそろい、土の中にタネ・根）

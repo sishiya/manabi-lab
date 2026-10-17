@@ -1,0 +1,60 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>メトロノームがそろうまで</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2316202c'/><path d='M20 50 L44 50 L38 14 L26 14 Z' fill='none' stroke='%23a3b4bf' stroke-width='4'/><line x1='32' y1='42' x2='40' y2='12' stroke='%23ffc95a' stroke-width='5' stroke-linecap='round'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <header id="top"><h1>メトロノームがそろうまで</h1><span class="sub">動く板の上で、メトロノームがひとりでに同じリズムになる</span></header>
+  <div id="pin"><!-- スマホ: 図とつぎへを上に固定。グラフ・操作・説明はその下でスクロール -->
+    <div id="cvwrap"><canvas id="cv"></canvas>
+      <button id="hold" class="ov">板をおさえる</button>
+    </div>
+    <div id="tour"><span id="tourNum"></span><p id="tourText"></p><button id="next">つぎへ</button></div>
+  </div>
+  <section id="graph">
+    <div class="ghead"><b>1台目とのずれ</b><span class="gnote">0 の線に集まると同じ向きでそろった、上下のはしは逆向き</span></div>
+    <canvas id="gv"></canvas>
+  </section>
+  <section id="controls"></section>
+  <details id="about">
+    <summary>このアプリについて</summary>
+    <p>空き缶2本の上に軽い板をのせ、その上にメトロノームをならべます。振り子がふれると、そのはんどうで板がほんの少し（1 mm ほど）横にゆれます。そのゆれが、ほかのメトロノームの振り子を押したり引いたりします。こうしておたがいに少しずつ影響しあううちに、リズムがそろいます。</p>
+    <p>計算は、板の位置と振り子の角度の運動方程式（ラグランジュの式）を、近似なしで解いています（角度は sin・cos のまま。小さいふれの近似は使っていません）。0.5 ミリ秒きざみのルンゲ＝クッタ法（RK4）で進めています。押す力と摩擦を切ると、エネルギーと運動量が 60 秒で 10<sup>−11</sup> 以下の割合しか変わらないことで、計算の誤差を確かめています。</p>
+    <p>メトロノームと板の大きさ・重さ・速さは、Pantaleone（2002）の実験の値です: メトロノーム 1 台 94 g、板 58 g、1 分に 208 回カチ（104 往復）、いちばん大きなふれ約 45°、板のゆれの大きさの目安 0.088 cm。ぜんまいが振り子を押すしくみ（脱進機）と振り子の摩擦は、論文が実験に合うように決めた式（van der Pol 型の項、強さ 0.010）で入れています。論文の実験では、2台は数十秒で同じ向きにそろいました。板に 2 kg のおもりをのせても同じ向きでそろい、ぬれた台の上（缶が転がりにくい）では逆向きでそろいました。</p>
+    <p>同じことはずっと前に Huygens（ホイヘンス）が、2つの振り子時計で見つけています（1665年）。重い台にかけた時計は、逆向きでそろいました（Bennett ほか 2002 が再現）。</p>
+    <h3>計算で分かったこと（このアプリで試した結果）</h3>
+    <ul>
+      <li>ふつうの床では、論文の式でも「まん中で押す」形でも、2台は 30〜60 秒で同じ向きにそろいます（論文の観察と同じ）。5台・10台でもそろいます。</li>
+      <li>板をおさえると、そろいません。速さのちがいの分だけ、ずれていきます。</li>
+      <li>ぬれた床（板の動きに強いブレーキ）では、逆向きや、ずれた向きから始めると、逆向きに近いところ（約 150〜170°）にとどまりました。ほとんどそろえて始めると、同じ向きのままでした（どちらもありえる）。逆向きに近いところにとどまるのは、2台の速さがほとんど同じ（ばらつきなし）のときだけで、ばらつき 0.1% ではゆっくりずれていきました。ブレーキが中くらいだと、ずれが行ったり来たりして止まらないこともあります。論文の実験ではっきり逆向きになったのと同じかどうかは、押し方のくわしい形や床の摩擦の形で変わり、このアプリのモデルでは決めきれません。</li>
+    </ul>
+    <h3>簡単にしているところ</h3>
+    <ul>
+      <li>ぜんまいが押すしくみと振り子の空気の抵抗を、1つの式にまとめています（論文の式）。「まん中で押す」は、振り子がまん中から ±0.1 rad（約 6°）のあいだ動く向きに一定の力で押し、摩擦は速さに比例するとした、このアプリの推定の形です（ふれはばが落ちつく速さと、ふれはばを論文の式とそろえています）。</li>
+      <li>空き缶の重さと回転は入れていません（論文も同じ）。板は横にだけ動きます。</li>
+      <li>ぬれた床の摩擦は、板の速さに比例する力（30 N·s/m）としています。大きさは推定です。</li>
+      <li>メトロノームの棒は上にのびていますが、重心は支点より下（本体の中のおもり）にあります。点線がその重心の側です。</li>
+      <li>カチの音は、振り子がまん中を通る瞬間に鳴らしています（実物のカチの瞬間とは少しちがいます）。</li>
+      <li>「ばらつき」は台ごとの速さのちがい（いちばん速い台といちばんおそい台の差）です。おもりの位置を少し変えたものとして、振り子の慣性モーメントを変えています。</li>
+      <li>位相（リズムの位置）は、角度と角速度から計算した目安です。</li>
+    </ul>
+    <h3>おもな出どころ</h3>
+    <ul>
+      <li>J. Pantaleone, “Synchronization of metronomes”, American Journal of Physics 70, 992–1000 (2002). <a href="https://doi.org/10.1119/1.1501118" target="_blank" rel="noopener">doi:10.1119/1.1501118</a></li>
+      <li>M. Bennett, M. F. Schatz, H. Rockwood, K. Wiesenfeld, “Huygens’s clocks”, Proceedings of the Royal Society of London A 458, 563–579 (2002).</li>
+    </ul>
+    <h3>使っているもの</h3>
+    <p>フォント: Google Fonts（SIL Open Font License）</p>
+  </details>
+</div>
+
+<script src="js/physics.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/graph.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
