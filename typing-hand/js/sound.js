@@ -5,24 +5,28 @@
 // キーの左右の位置で、音を左右に少し振り分ける
 'use strict';
 let AC = null, NOISE = null, OUT = null;
-const SND = { vol: 11 }; // 全体の大きさ（いちばん大きい所が 0.2〜0.3 になるくらい。2026-10-17 に OfflineAudioContext で測って決めた）
+const SND = { vol: 3.2 }; // 全体の大きさ（続けて打ったときのいちばん大きい所が 0.56 くらい（割れ止めの手前）。2026-10-17 に OfflineAudioContext で測って決めた。前の 11 では 1.18 になって割れ、「ブツブツ」の原因になった）
 function sndInit() {
   if (AC) return true;
   const C = window.AudioContext || window.webkitAudioContext; if (!C) return false;
   AC = new C();
   NOISE = AC.createBuffer(1, AC.sampleRate * 0.5, AC.sampleRate);
   const d = NOISE.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-  // 全体をまとめる圧縮（速く打って音が重なっても割れないように）
-  OUT = AC.createDynamicsCompressor(); OUT.threshold.value = -18; OUT.ratio.value = 3; OUT.connect(AC.destination);
+  // 出口: ごく低い音（耳には「ブツッ」と聞こえる）を切る。圧縮（コンプレッサー）は音量がこまかく上下して雑音のもとになったのでやめた（2026-10-17）
+  OUT = AC.createBiquadFilter(); OUT.type = 'highpass'; OUT.frequency.value = 120; OUT.Q.value = 0.7;
+  // 割れ止め: 1 に近づいたときだけ強く抑える（ふだんの大きさでは働かない）
+  const lim = AC.createDynamicsCompressor(); lim.threshold.value = -4; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.05;
+  OUT.connect(lim); lim.connect(AC.destination);
   return true;
 }
 // 雑音の一部を、帯域のフィルターに通して鳴らす
 function sndNoise(t, dur, freq, q, gain, decay, pan, type) {
   const src = AC.createBufferSource(), bp = AC.createBiquadFilter(), g = AC.createGain();
   src.buffer = NOISE; bp.type = type || 'bandpass'; bp.frequency.value = freq; bp.Q.value = q;
-  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + 0.0008); g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+  // 出だしは 1.5ms で上げ、終わりは 0 まで下げてから止める（急に始まる・切れる所が「ブツッ」と鳴らないように）
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain, t + 0.0015); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.0015 + decay); g.gain.linearRampToValueAtTime(0, t + 0.0035 + decay);
   src.connect(bp); bp.connect(g); g.connect(pan);
-  src.start(t, Math.random() * 0.4, dur);
+  src.start(t, Math.random() * 0.4, Math.max(dur, decay + 0.01));
 }
 // 短く消える音程の音（響き）
 function sndTone(t, f0, f1, gain, decay, pan, type) {
@@ -36,7 +40,8 @@ function keySound(m, up, speed) {
   if (!$('chkSound').checked || !sndInit()) return;
   if (AC.state === 'suspended') AC.resume();
   const k = KEYS[m]; if (!k) return;
-  const t = AC.currentTime + 0.005, r = () => 1 + (Math.random() - 0.5) * 0.12; // 毎回のゆらぎ（±6%）
+  // 鳴らす時刻は 25ms 先（5ms では画面の処理が少し遅れると、出だしが途中から急に始まって「ブツッ」と鳴った）。毎回のゆらぎ ±6%
+  const t = AC.currentTime + 0.025, r = () => 1 + (Math.random() - 0.5) * 0.12;
   const thin = KB.DEPTH < 2, big = k.w >= 1.75 || k.d > 1;
   const pan = AC.createStereoPanner ? AC.createStereoPanner() : AC.createGain();
   if (pan.pan) pan.pan.value = Math.max(-0.6, Math.min(0.6, keyX(m) / 250));
@@ -45,7 +50,7 @@ function keySound(m, up, speed) {
   // 2つの山に分かれ、あいだは静か。離す音は押す音よりかなり小さい。どちらでも板が震える（ここでは低い所だけ通した雑音で、響きにした）
   const plate = (at, g, len) => { // 板とケースの響き: 大きいキーほど低く長い（目安）
     const fb = (thin ? 1400 : big ? 450 : 750 + 60 * (2 - k.row)) * r();
-    sndNoise(at, 0.06, fb, 0.9, g * r(), len, pan, 'lowpass');
+    sndNoise(at, 0.06, fb, 0.8, g * r(), len, pan); // 帯域を通す（ローパスはごく低い音まで通して「ブツッ」と鳴った）
   };
   if (up) { // ④ 離す音: キーが上に戻って当たる（小さく）
     sndNoise(t, 0.02, (thin ? 5000 : 3800) * r(), 1.5, 0.11 * r(), 0.004, pan);
