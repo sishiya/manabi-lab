@@ -130,5 +130,17 @@ foreach ($f in @(Get-ChildItem "$root/_dev/promo/*.upload.json" -ErrorAction Sil
   Scan-Words $label $f.FullName
 }
 
+# 6. note drafts (posted by hand by the user)
+foreach ($f in @(Get-ChildItem "$root/_dev/promo/note/*.md" -ErrorAction SilentlyContinue)) {
+  $label = 'note/' + $f.Name
+  $t = [IO.File]::ReadAllText($f.FullName, $utf8)
+  if ($t.Contains([string][char]0x3010)) { Note 'note' "$label : brackets left to fill" }
+  foreach ($m in [regex]::Matches($t, 'https?://([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})')) {
+    $h = $m.Groups[1].Value.ToLower(); $ok = $allow | Where-Object { $h -eq $_ -or $h.EndsWith('.' + $_) }
+    if (-not $ok) { Note 'host' "$label : link to $h" }
+  }
+  Scan-Words $label $f.FullName
+}
+
 $notes | ForEach-Object { $_ }
 Write-Output ("content check: {0} item(s) to look at ({1} apps{2})" -f $warn, @($Apps).Count, $(if ($NoArticles) { '' } else { ' + articles' }))
