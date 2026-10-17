@@ -19,6 +19,8 @@ const click = (w, sel) => { const e = w.document.querySelector(sel); if (e) e.cl
 
 // アプリごとの準備（w = アプリの window）
 const SETUP = {
+  // タイピングする手: 2つめの「つぎへ」（ゆっくり打つ・指の番号）のとちゅうで止める
+  'typing-hand': async w => { for (let i = 0; i < 100 && !(w.__tyha && w.__tyha.S.plan); i++) await wait(100); await wait(300); w.document.getElementById('chkSound').checked = false; w.__tyha.nextTour(); await wait(2500); w.document.getElementById('btnPlay').click(); w.__tyha.setTime(2.35); w.__tyha.simRun(0); await wait(1500); },
   // メトロノームがそろうまで（画面ができたら、いちばん映える場面にする）
   // メトロノームがそろうまで（5台をばらばらに始めて25秒: 集まりかけ）
   'metronome-sync': async w => { await wait(800); const h = w.__mesy; h.SIM.reset({ n: 5, start: 'rand', spread: 0.01 }); h.simRun(25); await wait(300); },
