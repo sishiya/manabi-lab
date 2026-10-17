@@ -39,6 +39,9 @@
   - **済み（2026-10-17）**: `youtube-upload.ps1 -Ga -Popular`（pagePath × date ごとの engagedSessions）と `popular.ps1`。テスト用の数で、launcher.html・保管庫・入口の一覧のページを数えないこと、入口に出る前の日の分を外すこと、少ないときは空になることを確かめた。**本物の GA ではまだ動かしていない**（プロパティ ID と許可がまだ）。pagePath と engagedSessions の組み合わせを GA が受けつけるかは、そのとき確かめる。
   - 入口に出た日は APPS の `created` を使う。`created` より前に入口へ出ていたアプリはない前提。
 - **B 見せ方**: `index.html` に 3案を `?pop=` で切りかえられるように入れる。幅 375px・暗い色でも確認。ユーザーが1つ選ぶ。
+  - **済み（2026-10-17）**: `?pop=a|b|c`（なしは c）。印は右上の青い「人気」（上位3本）、並び順の4つめに「人気順」、操作欄の下に根拠の1行（期間は popular.json の from〜to）。`assets/popular.json` は rank が空のものを置いた（ないと 404 で smoke が止まるため）→ 公開しても何も出ない。
+  - 見くらべ方（ローカルだけ、テスト用の順位）: `_dev/tools/out/popular-test.json` を作り、`http://localhost:8765/?pop=a&popsrc=_dev/tools/out/popular-test.json`（b・c も）。`popsrc` は localhost でしか効かない。
+  - 確かめたこと: 3案の印・ボタン・根拠の出かた、ファイルが空のとき何も出ず人気順を選んでいても分野ごとになる、英語、幅 375px で4つのボタンが収まり横にはみ出さない、エラーなし。
 - **C 仕上げ**: 選ばなかった案を消す。`_dev/tools/README.md` に道具を1行、週のふり返りの手順に「popular.ps1 → commit」を足す。
 
 ## やらないこと

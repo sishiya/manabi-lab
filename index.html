@@ -81,6 +81,8 @@ h2+.grid{margin-top:0}
 .thumb{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;background:var(--thumb)}
 .badge{position:absolute;z-index:1;pointer-events:none;top:10px;left:10px;font-size:12px;font-weight:700;line-height:1;padding:5px 8px;border-radius:6px;background:var(--new);color:var(--new-ink)}
 .badge.upd{font-weight:500;background:rgba(14,18,24,.62);color:#fff}
+.badge.pop{left:auto;right:10px;background:var(--accent);color:var(--accent-ink)} /* よく遊ばれている上位3本（_dev/PLAN-popular.md）。左上の「新作」「更新」と重ならないよう右上 */
+.popnote{margin:0;font-size:12px;line-height:1.5;color:var(--muted)}
 .body{padding:14px 16px 16px;display:flex;flex-direction:column;flex:1}
 .cat{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-bottom:4px}
 .card a.open{color:var(--accent);font-size:18px;font-weight:700;line-height:1.45;text-decoration:none}
@@ -122,6 +124,7 @@ h2+.grid{margin-top:0}
   .pic{flex:none;width:112px;align-self:flex-start;margin:10px 0 10px 10px} /* 高さは説明文に合わせて伸ばさず、形を決めて上にそろえる */
   .thumb{aspect-ratio:4/3;border-radius:6px}
   .badge{top:4px;left:4px;font-size:11px;padding:3px 6px}
+  .badge.pop{right:4px}
   .jponly{right:4px;bottom:4px;font-size:10px;padding:3px 4px}
   .body{padding:10px 12px;min-width:0}
   .cat{margin-bottom:0}
@@ -146,9 +149,10 @@ h2+.grid{margin-top:0}
     <div class="row">
       <div class="chips" id="cats" role="group"></div>
       <div class="sort"><span id="sort-label"></span><div class="seg" id="sort" role="group" aria-labelledby="sort-label">
-        <button type="button" data-sort="cat"></button><button type="button" data-sort="new"></button><button type="button" data-sort="upd"></button>
+        <button type="button" data-sort="cat"></button><button type="button" data-sort="new"></button><button type="button" data-sort="upd"></button><button type="button" data-sort="pop" hidden></button>
       </div></div>
     </div>
+    <p class="popnote" id="popnote" hidden></p>
     <p class="status" id="status" aria-live="polite"></p>
   </div>
   <div id="list"></div>
@@ -245,7 +249,7 @@ const CATS = [
   {id:'life', name:'いきもの', name_en:'Living Things'},
   {id:'phys', name:'物理', name_en:'Physics'},
 ];
-const SORTS = ['cat','new','upd'];
+const SORTS = ['cat','new','upd','pop'];
 const FRESH_DAYS = 3; // きょう・きのう・おとといの公開・更新に印をつける
 
 // 画面の言葉（日本語と英語）。L(ja, en) は選んでいる言語のほうを返す
@@ -280,11 +284,24 @@ const state = {
   sort: SORTS.includes(params.get('sort')) ? params.get('sort') : SORTS.includes(stored('manabi-sort')) ? stored('manabi-sort') : 'cat',
 };
 
+// よく遊ばれている（_dev/PLAN-popular.md）。assets/popular.json は _dev/tools/popular.ps1 が作る順位だけ（数は出さない）。
+// ないとき・rank が空のとき・3週間より古いときは何も出さない。
+// 出し方の試し（段階B）: ?pop=a 印だけ／b 並び順だけ／c 両方。ローカルでは ?popsrc=<json> でテスト用の順位を読める
+const POP_MODES = ['a','b','c'];
+const POP_MODE = POP_MODES.includes(params.get('pop')) ? params.get('pop') : 'c';
+const POP_SRC = (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && params.get('popsrc')) || 'assets/popular.json';
+let POP = null; // {from, to, rank: [id…]}
+const popRank = id => POP ? POP.rank.indexOf(id) : -1;
+const popBadge = id => POP && POP_MODE !== 'b' && popRank(id) >= 0 && popRank(id) < 3;
+const popSort = () => POP && POP_MODE !== 'a';
+
 function saveState() {
   const p = new URLSearchParams();
   if (LANG === 'en') p.set('lang', 'en');
+  if (params.has('pop')) p.set('pop', POP_MODE);
+  if (params.has('popsrc')) p.set('popsrc', params.get('popsrc'));
   if (state.cat !== 'all') p.set('cat', state.cat);
-  if (state.sort !== 'cat') p.set('sort', state.sort);
+  if (state.sort !== 'cat' && (state.sort !== 'pop' || popSort())) p.set('sort', state.sort); // 人気順は順位があるときだけ
   const s = p.toString();
   history.replaceState(null, '', s ? '?' + s : location.pathname);
 }
@@ -307,7 +324,7 @@ function card(a, showCat) {
   const href = a.id + '/' + (LANG === 'en' ? '?lang=en' : ''); // アプリも同じ言語で開く
   const jpOnly = LANG === 'en' && !a.en;
   return `<div class="card c-${a.cat}">
-    <div class="pic"><img class="thumb" src="assets/thumbs/${a.id}.jpg" alt="" width="640" height="360" loading="lazy">${badge ? `<span class="badge${badge === 'upd' ? ' upd' : ''}">${badge === 'new' ? L('新作', 'New') : L('更新', 'Updated')}</span>` : ''}${jpOnly ? '<span class="jponly" title="The app itself is in Japanese for now">Japanese only</span>' : ''}</div>
+    <div class="pic"><img class="thumb" src="assets/thumbs/${a.id}.jpg" alt="" width="640" height="360" loading="lazy">${badge ? `<span class="badge${badge === 'upd' ? ' upd' : ''}">${badge === 'new' ? L('新作', 'New') : L('更新', 'Updated')}</span>` : ''}${popBadge(a.id) ? `<span class="badge pop">${L('人気', 'Popular')}</span>` : ''}${jpOnly ? '<span class="jponly" title="The app itself is in Japanese for now">Japanese only</span>' : ''}</div>
     <div class="body">
       ${showCat ? `<span class="cat"><span class="dot"></span>${esc(nameOf(c))}</span>` : ''}
       <a class="open" href="${href}"${jpOnly ? ' hreflang="ja"' : ''}>${esc(L(a.title, a.title_en))}</a>
@@ -322,7 +339,7 @@ function renderTexts() {
   document.title = L('まなびラボ', 'Manabi Lab');
   $('cats').setAttribute('aria-label', L('分野でしぼる', 'Filter by subject'));
   $('sort-label').textContent = L('並び順', 'Sort');
-  const sortText = {cat: [L('分野ごと', 'By subject')], new: [L('新着順', 'Newest'), L('公開が新しい順', 'Most recently published first')], upd: [L('更新順', 'Updated'), L('更新が新しい順', 'Most recently updated first')]};
+  const sortText = {cat: [L('分野ごと', 'By subject')], new: [L('新着順', 'Newest'), L('公開が新しい順', 'Most recently published first')], upd: [L('更新順', 'Updated'), L('更新が新しい順', 'Most recently updated first')], pop: [L('人気順', 'Popular'), L('よく遊ばれている順', 'Most played first')]};
   document.querySelectorAll('#sort button').forEach(b => { const [t, tip] = sortText[b.dataset.sort]; b.textContent = t; if (tip) b.title = tip; });
   document.querySelectorAll('#lang button').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === LANG));
 }
@@ -337,7 +354,15 @@ function render() {
     return `<button type="button" class="chip c-${c.id}" data-cat="${c.id}" aria-pressed="${state.cat === c.id}">${c.id === 'all' ? '' : '<span class="dot"></span>'}${esc(nameOf(c))}<span class="n">${n}</span></button>`;
   }).join('');
   $('cats').scrollLeft = scrollX;
-  document.querySelectorAll('#sort button').forEach(b => b.setAttribute('aria-pressed', b.dataset.sort === state.sort));
+  const sort = state.sort === 'pop' && !popSort() ? 'cat' : state.sort; // 順位がまだないときは分野ごと（覚えた選択は消さない）
+  $('sort').querySelector('[data-sort=pop]').hidden = !popSort();
+  document.querySelectorAll('#sort button').forEach(b => b.setAttribute('aria-pressed', b.dataset.sort === sort));
+
+  // 人気の根拠（出どころ）。印か人気順が見えているときだけ
+  const popShown = POP && (POP_MODE !== 'b' || sort === 'pop');
+  $('popnote').hidden = !popShown;
+  if (popShown) $('popnote').textContent = L(`${POP_MODE === 'b' ? '人気順' : '「人気」'}は ${shortDate(POP.from)}〜${shortDate(POP.to)}によく遊ばれたアプリ（Google アナリティクスで集計。新しいアプリは1日あたりでくらべる）`,
+    `${POP_MODE === 'b' ? '“Popular”' : 'The “Popular” tag'} is based on how often each app was played from ${shortDate(POP.from)} to ${shortDate(POP.to)} (Google Analytics; newer apps are compared per day)`);
 
   // いまの表示の説明（読み上げ用）
   $('status').textContent = state.cat === 'all' ? L(`${shown.length}本すべて`, `All ${nApps(shown.length)}`) : L(`${nameOf(catOf(state.cat))}で ${shown.length}本`, `${nameOf(catOf(state.cat))}: ${nApps(shown.length)}`);
@@ -346,7 +371,7 @@ function render() {
   const byKey = key => (x, y) => { const kx = key(x), ky = key(y); for (let i = 0; i < kx.length; i++) { if (kx[i] !== ky[i]) return kx[i] < ky[i] ? 1 : -1; } return 0; };
   const byCreated = byKey(a => [a.created, a.order]);
 
-  if (state.sort === 'cat') {
+  if (sort === 'cat') {
     // 分野の中も公開が新しい順（更新日だと直すたびに並びが動くので使わない）
     $('list').innerHTML = CATS.map(c => {
       const items = shown.filter(a => a.cat === c.id).sort(byCreated);
@@ -354,7 +379,9 @@ function render() {
       return `<h2 class="c-${c.id}"><span class="dot"></span>${esc(nameOf(c))}<span class="n">${nApps(items.length)}</span></h2><div class="grid">${items.map(a => card(a, false)).join('')}</div>`;
     }).join('');
   } else {
-    const sorted = [...shown].sort(state.sort === 'new' ? byCreated : byKey(a => [a.updated, a.created, a.order]));
+    // 人気順: 順位のあるものが先、ないもの（まだ遊ばれていない）は新しい順であと
+    const byPop = (x, y) => { const rx = popRank(x.id), ry = popRank(y.id); return rx >= 0 && ry >= 0 ? rx - ry : rx >= 0 ? -1 : ry >= 0 ? 1 : byCreated(x, y); };
+    const sorted = [...shown].sort(sort === 'new' ? byCreated : sort === 'pop' ? byPop : byKey(a => [a.updated, a.created, a.order]));
     $('list').innerHTML = `<div class="grid">${sorted.map(a => card(a, true)).join('')}</div>`;
   }
 }
@@ -375,6 +402,13 @@ renderTexts();
 saveState();
 render();
 showChosenCat();
+
+// 順位はあとから読んで、届いたら描きなおす（読めなくても一覧はそのまま）
+fetch(POP_SRC, {cache: 'no-cache'}).then(r => r.ok ? r.json() : null).then(p => {
+  if (!p || !Array.isArray(p.rank) || !p.rank.length || !/^\d{4}-\d\d-\d\d$/.test(p.to || '') || daysAgo(p.to) > 21) return;
+  POP = {from: p.from, to: p.to, rank: p.rank.filter(id => APPS.some(a => a.id === id))};
+  saveState(); render(); MotionThumbs.pick();
+}).catch(() => {});
 </script>
 </body>
 </html>
