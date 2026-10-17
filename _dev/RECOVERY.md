@@ -19,7 +19,7 @@
 | 道具の設定 | `_dev/tools/*.local.txt`（YouTube の秘密の場所・GA のプロパティ ID・バックアップの写し先） | 写す | 写しから戻す。GA のプロパティ ID は GA の管理画面で見られる |
 | 道具の記録 | `_dev/tools/out/`（YouTube の数の履歴・quota・健康診断） | 写す | なくても困らない（週のふり返りの「増えた数」が1回分出ないだけ） |
 | Claude の手元の設定 | `.claude/settings.local.json` | 写す（あれば） | なくても動く |
-| YouTube の秘密（OAuth のクライアントとトークン） | `youtube-upload.local.txt` が指すフォルダ | `-IncludeSecrets` のときだけ | Google Cloud Console で OAuth クライアント（デスクトップ）の JSON を取りなおして同じフォルダに置き、`youtube-upload.ps1 -Auth`（チャンネル「しし屋」を選ぶ）。GA も読むなら `-Ga -Auth` |
+| YouTube の秘密（OAuth のクライアントとトークン） | `youtube-upload.local.txt` が指すフォルダ | `-IncludeSecrets` のときだけ | Google Cloud Console で OAuth クライアント（デスクトップ）の JSON を取りなおして同じフォルダに置き、`youtube-upload.ps1 -Auth`（チャンネル「しし屋」を選ぶ）。GA も読むなら `-Ga -Auth`。OAuth 同意画面は 2026-10-17 に**本番環境**へ切り替えた（テスト中だと許可が7日で切れる。Google の確認の申請はしない＝「確認されていません」の画面は「詳細」→ 移動で進む。ロゴは入れない＝入れると審査が要る。プライバシーポリシーは `privacy.html`） |
 | 古いメモ | `PUBLISH.local.md`（以前の Artifact の URL） | 写す | 要らない（Artifact は使わない） |
 
 ## 新しい PC で戻す順
