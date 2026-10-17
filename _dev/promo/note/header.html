@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- note のクリエイターページの背景（ヘッダー）画像。1920×1006（note のおすすめ）。
      書き出し: msedge --headless --screenshot=header.png --window-size=1920,1006 header.html → ffmpeg で jpg。
-     note は真ん中を切りとって見せる（PC とスマホで幅が変わる）ので、文字は真ん中の帯に寄せる。 -->
+     note は真ん中を切りとって見せる。スマホでは高さの真ん中 3割ほどの細い帯になる（2026-10-17 に確かめた）ので、文字は2段だけにして真ん中に寄せる（しし屋の名前は下に出る）。 -->
 <html lang="ja"><head><meta charset="utf-8">
 <style>
   html, body { margin: 0; width: 1920px; height: 1006px; overflow: hidden; background: #0b1424; }
@@ -12,7 +12,7 @@
           background: radial-gradient(ellipse 62% 48% at 50% 50%, rgba(11,20,36,0.94) 0%, rgba(11,20,36,0.82) 55%, rgba(11,20,36,0.45) 100%); }
   .text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
           color: #eef3fb; font-family: 'Yu Gothic UI', 'Meiryo', sans-serif; text-align: center; }
-  .lead { font-size: 44px; letter-spacing: 0.08em; color: #bcd0ea; margin-bottom: 26px; }
+  .lead { font-size: 44px; letter-spacing: 0.08em; color: #bcd0ea; margin-bottom: 18px; }
   .labs { font-size: 92px; font-weight: 700; letter-spacing: 0.06em; }
   .labs span { color: #6d8bb3; font-weight: 400; margin: 0 0.3em; }
   .line { width: 520px; height: 2px; background: #5b7aa6; margin: 34px 0 26px; }
@@ -23,8 +23,6 @@
 <div class="text">
   <div class="lead">百科事典の続きを、AI といっしょに</div>
   <div class="labs">まなびラボ<span>・</span>あそびラボ</div>
-  <div class="line"></div>
-  <div class="brand">しし屋</div>
 </div>
 <script>
   // 入口の18本（並びは似た色が隣りあわないように手で混ぜた）
