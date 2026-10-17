@@ -16,6 +16,14 @@
     <summary>空き缶にのせた板の上で、ばらばらに動かしたメトロノームが、ひとりでに同じリズムにそろう。板と振り子の運動方程式を近似なしで解き、実験の論文の値で。板をおさえる・重くする・床をぬらすと、そろい方が変わる。</summary>
   </entry>
   <entry>
+    <title>タイピングする手</title>
+    <link href="https://sishiya.github.io/manabi-lab/typing-hand/"/>
+    <id>https://sishiya.github.io/manabi-lab/typing-hand/</id>
+    <published>2026-10-17T00:00:00+09:00</published>
+    <updated>2026-10-17T00:00:00+09:00</updated>
+    <summary>キーボードを打つ両手を3Dで。どのキーをどの指で打つか、手首がどう動くかをコンピュータで計算したシミュレーション。自分で打ったキーを画面の手が打ち直すモードも。タイプライターなどキーボードは7種類、打つ間隔は運指で変わる。</summary>
+  </entry>
+  <entry>
     <title>空気の流れの見える部屋</title>
     <link href="https://sishiya.github.io/manabi-lab/air-flow/"/>
     <id>https://sishiya.github.io/manabi-lab/air-flow/</id>

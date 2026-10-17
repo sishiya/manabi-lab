@@ -16,6 +16,14 @@
     <summary>Metronomes started at random on a board resting on empty cans fall into the same rhythm all by themselves. The board and pendulum equations of motion are solved without shortcuts, using values from an experiment paper. Hold the board down, make it heavier or wet the floor, and the way they line up changes.</summary>
   </entry>
   <entry>
+    <title>Hands on the Keyboard</title>
+    <link href="https://sishiya.github.io/manabi-lab/typing-hand/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/typing-hand/?lang=en</id>
+    <published>2026-10-17T00:00:00+09:00</published>
+    <updated>2026-10-17T00:00:00+09:00</updated>
+    <summary>Two 3D hands typing on a keyboard: a computer simulation of which finger presses each key and how the wrists move. There is also a mode where the hands on screen retype the keys you type. Seven keyboards including a typewriter, and the gaps between keys change with the fingers used.</summary>
+  </entry>
+  <entry>
     <title>Seeing Airflow at Home</title>
     <link href="https://sishiya.github.io/manabi-lab/air-flow/?lang=en"/>
     <id>https://sishiya.github.io/manabi-lab/air-flow/?lang=en</id>

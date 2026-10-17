@@ -20,11 +20,11 @@ const FING = {
 const fingOf = code => FING[code] || [5, 1]; // 右の端の記号・Enter・Backspace などは右手の小指
 // 1段ぶんのキーを左から並べる: [code, 文字, 幅（キー何個分）]。code が '' なら空き（キーなし）
 const ROWS_JIS = [
-  [0, [['Backquote', '半/全', 1], ['Digit1', '1', 1], ['Digit2', '2', 1], ['Digit3', '3', 1], ['Digit4', '4', 1], ['Digit5', '5', 1], ['Digit6', '6', 1], ['Digit7', '7', 1], ['Digit8', '8', 1], ['Digit9', '9', 1], ['Digit0', '0', 1], ['Minus', '-', 1], ['Equal', '^', 1], ['IntlYen', '¥', 1], ['Backspace', 'BS', 1]]],
+  [0, [['Backquote', L('半/全', 'Han/Zen'), 1], ['Digit1', '1', 1], ['Digit2', '2', 1], ['Digit3', '3', 1], ['Digit4', '4', 1], ['Digit5', '5', 1], ['Digit6', '6', 1], ['Digit7', '7', 1], ['Digit8', '8', 1], ['Digit9', '9', 1], ['Digit0', '0', 1], ['Minus', '-', 1], ['Equal', '^', 1], ['IntlYen', '¥', 1], ['Backspace', 'BS', 1]]],
   [0, [['Tab', 'Tab', 1.5], ['KeyQ', 'Q', 1], ['KeyW', 'W', 1], ['KeyE', 'E', 1], ['KeyR', 'R', 1], ['KeyT', 'T', 1], ['KeyY', 'Y', 1], ['KeyU', 'U', 1], ['KeyI', 'I', 1], ['KeyO', 'O', 1], ['KeyP', 'P', 1], ['BracketLeft', '@', 1], ['BracketRight', '[', 1]]],
-  [0, [['CapsLock', '英数', 1.75], ['KeyA', 'A', 1], ['KeyS', 'S', 1], ['KeyD', 'D', 1], ['KeyF', 'F', 1], ['KeyG', 'G', 1], ['KeyH', 'H', 1], ['KeyJ', 'J', 1], ['KeyK', 'K', 1], ['KeyL', 'L', 1], ['Semicolon', ';', 1], ['Quote', ':', 1], ['Backslash', ']', 1], ['Enter', 'Enter', 1.3, 2]]],
+  [0, [['CapsLock', L('英数', 'Eisu'), 1.75], ['KeyA', 'A', 1], ['KeyS', 'S', 1], ['KeyD', 'D', 1], ['KeyF', 'F', 1], ['KeyG', 'G', 1], ['KeyH', 'H', 1], ['KeyJ', 'J', 1], ['KeyK', 'K', 1], ['KeyL', 'L', 1], ['Semicolon', ';', 1], ['Quote', ':', 1], ['Backslash', ']', 1], ['Enter', 'Enter', 1.3, 2]]],
   [0, [['ShiftLeft', 'Shift', 2.25], ['KeyZ', 'Z', 1], ['KeyX', 'X', 1], ['KeyC', 'C', 1], ['KeyV', 'V', 1], ['KeyB', 'B', 1], ['KeyN', 'N', 1], ['KeyM', 'M', 1], ['Comma', ',', 1], ['Period', '.', 1], ['Slash', '/', 1], ['IntlRo', '\\', 1], ['ShiftRight', 'Shift', 1.75]]],
-  [0, [['ControlLeft', 'Ctrl', 1.5], ['MetaLeft', '', 1], ['AltLeft', 'Alt', 1], ['NonConvert', '無変換', 1.25], ['Space', '', 3.75], ['Convert', '変換', 1.25], ['KanaMode', 'かな', 1.25], ['AltRight', 'Alt', 1.25], ['ContextMenu', 'Menu', 1.25], ['ControlRight', 'Ctrl', 1.25]]],
+  [0, [['ControlLeft', 'Ctrl', 1.5], ['MetaLeft', '', 1], ['AltLeft', 'Alt', 1], ['NonConvert', L('無変換', 'Muhenkan'), 1.25], ['Space', '', 3.75], ['Convert', L('変換', 'Henkan'), 1.25], ['KanaMode', L('かな', 'Kana'), 1.25], ['AltRight', 'Alt', 1.25], ['ContextMenu', 'Menu', 1.25], ['ControlRight', 'Ctrl', 1.25]]],
 ];
 const ROWS_US = [
   [0, [['Backquote', '`', 1], ['Digit1', '1', 1], ['Digit2', '2', 1], ['Digit3', '3', 1], ['Digit4', '4', 1], ['Digit5', '5', 1], ['Digit6', '6', 1], ['Digit7', '7', 1], ['Digit8', '8', 1], ['Digit9', '9', 1], ['Digit0', '0', 1], ['Minus', '-', 1], ['Equal', '=', 1], ['Backspace', 'Back', 2]]],

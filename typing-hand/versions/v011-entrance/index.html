@@ -1,0 +1,191 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>タイピングする手</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2314171c'/><rect x='8' y='34' width='48' height='20' rx='3' fill='%23f3f1ea'/><path d='M14 40h6M24 40h6M34 40h6M44 40h6M18 47h28' stroke='%2314171c' stroke-width='3'/><path d='M22 12v18M30 9v20M38 10v20M46 15v15' stroke='%23e9b796' stroke-width='6' stroke-linecap='round'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<!-- seo（検索・リンクカード。_dev/tools/seo.mjs が入口の APPS から作る。手で直さない） -->
+<meta name="description" content="キーボードを打つ両手を3Dで。どのキーをどの指で打つか、手首がどう動くかをコンピュータで計算したシミュレーション。自分で打ったキーを画面の手が打ち直すモードも。タイプライターなどキーボードは7種類、打つ間隔は運指で変わる。">
+<meta property="og:type" content="website"><meta property="og:site_name" content="まなびラボ"><meta property="og:locale" content="ja_JP"><meta property="og:locale:alternate" content="en_US">
+<meta property="og:title" content="タイピングする手｜まなびラボ"><meta property="og:description" content="キーボードを打つ両手を3Dで。どのキーをどの指で打つか、手首がどう動くかをコンピュータで計算したシミュレーション。自分で打ったキーを画面の手が打ち直すモードも。タイプライターなどキーボードは7種類、打つ間隔は運指で変わる。"><meta property="og:url" content="https://sishiya.github.io/manabi-lab/typing-hand/">
+<meta property="og:image" content="https://sishiya.github.io/manabi-lab/assets/thumbs/typing-hand.jpg"><meta property="og:image:width" content="640"><meta property="og:image:height" content="360">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@sishiya22">
+<link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/typing-hand/?lang=ja"><link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/typing-hand/?lang=en"><link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/typing-hand/">
+<!-- /seo -->
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <main id="stage">
+    <div id="frame">
+      <div id="loading" role="status" aria-live="polite"><div class="spin" aria-hidden="true"></div><p id="loadMsg"><span lang="ja">準備しています…</span><span lang="en">Getting ready…</span></p></div>
+      <canvas id="view"></canvas>
+      <div id="views" class="seg tiny" role="group">
+        <button data-v="tilt" aria-pressed="true"><span lang="ja">ななめ</span><span lang="en">Angled</span></button>
+        <button data-v="top" aria-pressed="false"><span lang="ja">真上</span><span lang="en">Top</span></button>
+        <button data-v="front" aria-pressed="false"><span lang="ja">正面</span><span lang="en">Front</span></button>
+        <button data-v="side" aria-pressed="false"><span lang="ja">横</span><span lang="en">Side</span></button>
+        <button data-v="pov" aria-pressed="false"><span lang="ja">一人称</span><span lang="en">POV</span></button>
+      </div>
+      <p id="clock" class="mono"></p>
+    </div>
+    <div id="tour"><p id="tourMsg"></p><button class="btn primary" id="btnNext"></button></div>
+    <p id="simNote"><span lang="ja">この指の動きは、コンピュータが計算した<b>シミュレーション</b>です。実際の人の指の動きを測ったものではありません。</span><span lang="en">These finger movements are a <b>simulation</b> worked out by the computer. They are not measurements of a real person's fingers.</span></p>
+    <div id="typed" aria-live="off"><p id="typedShow"></p><p id="typedKeys" class="mono"></p></div>
+    <div id="recBox" hidden>
+      <div id="oskb"></div>
+      <div class="row"><button class="btn" id="btnRecPlay"><span lang="ja">通して再生</span><span lang="en">Play it all back</span></button><button class="btn" id="btnRecClear"><span lang="ja">消して打ちなおす</span><span lang="en">Clear and start again</span></button></div>
+    </div>
+    <div id="toolbar">
+      <button class="btn primary" id="btnPlay"></button>
+      <select id="speedSel"></select>
+      <input type="range" id="time" min="0" max="1000" value="0">
+      <label class="chk"><input type="checkbox" id="chkSound" checked> <span lang="ja">音</span><span lang="en">Sound</span></label>
+    </div>
+    <p id="hint"></p>
+  </main>
+
+  <aside id="panel">
+    <header class="brand">
+      <div class="brand-top">
+        <h1><span lang="ja">タイピングする手</span><span lang="en">Hands on the Keyboard</span> <small><span lang="ja">試作</span><span lang="en">Prototype</span></small></h1>
+        <div class="langsw" id="langsw" role="group" aria-label="言語 / Language"><button data-l="ja" title="日本語">JP</button><button data-l="en" title="English">EN</button></div>
+      </div>
+      <p lang="ja">キーボードを打つ両手を3Dで見るアプリです。どのキーをどの指で打つかは、タッチタイピングで一般に教えられる<b>標準の割り当て</b>にしました（だれもがこう打つわけではありません）。手首の動き・指の曲げ方は、骨の長さと関節の範囲から<b>コンピュータが計算</b>したものです。</p>
+      <p lang="en">See two 3D hands typing on a keyboard. Which finger types each key follows the <b>standard assignment</b> taught for touch typing (not everyone types this way). The wrist movements and finger bending are <b>worked out by the computer</b> from bone lengths and joint ranges.</p>
+    </header>
+
+    <div id="modeSeg" class="seg" role="group">
+      <button data-m="watch" aria-pressed="true"><span lang="ja">ながめる</span><span lang="en">Watch</span></button>
+      <button data-m="replay" aria-pressed="false"><span lang="ja">自分で打つ（再現する）</span><span lang="en">Type yourself (replay)</span></button>
+    </div>
+
+    <section id="secReplay" hidden>
+      <h2><span lang="ja">自分で打つ</span><span lang="en">Type yourself</span></h2>
+      <p class="cap" lang="ja">キーボードを打つと、<b>1.5 秒おくれて</b>画面の手が同じキーを打ちます。スマホ・タブレットは、図の下の画面のキーボードで。読むのは<b>押したキーの位置と時刻だけ</b>で、どこにも保存・送信しません。パスワードなどは打たないでください。</p>
+      <p class="cap" lang="en">When you type on your keyboard, the hands on screen type the same keys <b>1.5 s later</b>. On a phone or tablet, use the on-screen keyboard under the picture. Only <b>which key you pressed and when</b> is read, and nothing is saved or sent anywhere. Please do not type passwords or anything private.</p>
+      <p class="cap" lang="ja">画面の手がどの指で打つかは、<b>あなたの指ではなく標準の割り当て</b>です（キーの位置と時刻しかわからないため）。日本語入力がオンでも、そのまま打てます。</p>
+      <p class="cap" lang="en">The finger the hands use is the <b>standard finger for that key, not the finger you used</b> (only the key and the time are known). It also works with a Japanese input method turned on.</p>
+      <p class="cap" lang="ja">通して再生すると、打ったもの全体（最大 300 キー）で手の動きを計算しなおし、時刻のつまみと検査の結果が使えます。</p>
+      <p class="cap" lang="en">“Play it all back” works out the hand movements again for everything you typed (up to 300 keys), and then the time slider and the check results can be used.</p>
+    </section>
+
+    <section id="secWatch">
+      <h2><span lang="ja">打つ文</span><span lang="en">Text to type</span></h2>
+      <select id="textSel"></select>
+      <select id="kpmSel"></select>
+      <select id="timingSel"></select>
+      <canvas id="ikiChart"></canvas>
+      <p class="cap" id="ikiLegend" lang="ja"><span class="kd alt">■</span>左右交互 <span class="kd hand">■</span>同じ手 <span class="kd finger">■</span>同じ指 <span class="kd repeat">■</span>同じキー2回 ― 点線は平均（選んだ速さ）</p>
+      <p class="cap" lang="en"><span class="kd alt">■</span>other hand <span class="kd hand">■</span>same hand <span class="kd finger">■</span>same finger <span class="kd repeat">■</span>same key twice — the dotted line is the average (the speed you chose)</p>
+      <p class="cap" lang="ja">打つ速さは<b>平均</b>の速さです。キーごとの間隔は、左右の手を交互に打つ組は短く、同じ指で別のキーへ動く組は長く（遠いほど長く）、語の頭（空白のあと）は長くし、毎回少しゆらしています。どれも論文に書かれた傾向をもとにした<b>推定</b>で、人の打鍵を測ったデータではありません。日本語はローマ字入力で打ち、スペースで変換、Enter で確定します（変換の候補を選ぶ所は入れていません）。</p>
+      <p class="cap" lang="en">The speed is the <b>average</b> speed. The gap before each key is shorter when the hands take turns, longer when the same finger moves to another key (longer for farther keys), longer at the start of a word (after a space), and wobbles a little every time. All of this is an <b>estimate</b> based on trends described in research papers, not measured keystroke data. Japanese is typed in romaji (Latin letters); Space converts to Japanese characters and Enter confirms (choosing between conversion options is not included). Capital letters are typed as small letters (Shift is not used yet).</p>
+    </section>
+
+    <section>
+      <h2><span lang="ja">見え方</span><span lang="en">Look</span></h2>
+      <select id="handLook"></select>
+      <p class="cap" id="lookLegend" hidden><span lang="ja"><span style="color:#c0574e">■</span>筋肉 <span style="color:#a9bdd0">■</span>腱 <span style="color:#d9b14a">■</span>脂肪 <span style="color:#e6dcc6">■</span>骨</span><span lang="en"><span style="color:#c0574e">■</span>muscle <span style="color:#a9bdd0">■</span>tendon <span style="color:#d9b14a">■</span>fat <span style="color:#e6dcc6">■</span>bone</span></p>
+      <label class="chk"><input type="checkbox" id="optFingerMap" checked> <span><span lang="ja">どの指で打つキーかを色で（<span style="color:#ff6b6b">親指</span>・<span style="color:#ffa94d">人さし指</span>・<span style="color:#69db7c">中指</span>・<span style="color:#4dabf7">薬指</span>・<span style="color:#b197fc">小指</span>）</span><span lang="en">Color the keys by finger (<span style="color:#ff6b6b">thumb</span>, <span style="color:#ffa94d">index</span>, <span style="color:#69db7c">middle</span>, <span style="color:#4dabf7">ring</span>, <span style="color:#b197fc">little</span>)</span></span></label>
+      <label class="chk"><input type="checkbox" id="optFingerNums"> <span><span lang="ja">指先に指の番号（1 親指 〜 5 小指）</span><span lang="en">Finger numbers on the fingertips (1 thumb to 5 little finger)</span></span></label>
+      <label class="chk"><input type="checkbox" id="optFollow"> <span><span lang="ja">カメラが手について行く</span><span lang="en">Camera follows the hands</span></span></label>
+      <label class="chk"><input type="checkbox" id="optTargets"> <span><span lang="ja">指先の目標点（IK でねらう場所）</span><span lang="en">Fingertip targets (where the joint calculation aims)</span></span></label>
+      <div class="row"><select id="sceneSel"></select></div>
+      <label class="chk"><input type="checkbox" id="optFx"> <span><span lang="ja">エフェクト（光のにじみ・もや。動きが重いときは外す）</span><span lang="en">Effects (glow and haze; turn off if it runs slowly)</span></span></label>
+    </section>
+
+    <section>
+      <h2><span lang="ja">キーボード</span><span lang="en">Keyboard</span></h2>
+      <select id="kbSel"></select>
+      <p class="cap" lang="ja">キーの並び・押しこみの深さ・段の高さが変わります（寸法はどれも一般的な値と目安で、特定の製品ではありません）。文字のキーをどの指で打つかは、どれも同じ標準の割り当てです。左右に分かれたキーボードは、左右を 70mm はなし、それぞれ指先が内向きになる向きに 10 度まわしました（目安）。手動のタイプライターは丸いキーがレバーの先にあり、段の差が大きく（1段 12mm）、押しこみが深い形です（目安）。打鍵の音も種類ごとに変わります（タイプライターは、活字の棒が紙のうしろのローラーを打つ音と、紙を送る音）。</p>
+      <p class="cap" lang="en">The key layout, how deep the keys press and the height of each row change (all sizes are typical values and rough guides, not any particular product). The letter keys use the same standard fingers on every keyboard. The split keyboard has its halves 70 mm apart, each turned 10° so the fingers point slightly inward (a rough guide). The manual typewriter has round keys on levers, big steps between rows (12 mm) and deep key travel (rough guides). The key sound also changes with the keyboard (on the typewriter: the type bar striking the roller behind the paper, then the paper moving along).</p>
+    </section>
+
+    <section>
+      <h2><span lang="ja">手</span><span lang="en">Hands</span></h2>
+      <select id="handModel"></select>
+      <select id="postureSel"></select>
+      <label class="chk"><input type="checkbox" id="optFlex"> <span><span lang="ja">関節をやわらかく（指を横に開く範囲と、付け根をそらす範囲を 10° ずつ広げる。ストレッチした手の目安）</span><span lang="en">Flexible joints (spread the fingers and bend the base joints back 10° more; a rough guide for a stretched hand)</span></span></label>
+      <p class="cap" lang="ja">手の大きさ・骨の長さ・関節の範囲は「ピアノを弾く手」と同じ（大人の手の測定値と目安）です。</p>
+      <p class="cap" lang="en">Hand size, bone lengths and joint ranges are the same as in “Hands at the Piano” (measurements of adult hands and rough guides).</p>
+    </section>
+
+    <section class="card" id="checks">
+      <div class="ro-top"><span class="lbl"><span lang="ja">検査の結果</span><span lang="en">Check results</span></span><span class="ro-tag" id="chkSum"></span></div>
+      <table id="chkTable"></table>
+      <p class="ro-note" lang="ja">行を押すと、いちばん悪かった時刻へ跳びます。◯△✕ の境目は「ピアノを弾く手」で決めた目安です。</p>
+      <p class="ro-note" lang="en">Click a row to jump to the worst moment. The ◯ △ ✕ limits are rough guides made for “Hands at the Piano.”</p>
+    </section>
+
+    <details class="about" lang="ja">
+      <summary>しくみ</summary>
+      <ol>
+        <li><b>指の割り当て</b>: キーごとに打つ指が決まっています（標準のタッチタイピングの割り当て。「6」は右手の人さし指、スペースは右手の親指にしました）。人によって割り当てはちがい、使う指が少ない打ち方の人も多くいます。</li>
+        <li><b>手首</b>: 押している指（と、もうすぐ押す指）が、力を抜いた形のまま届く位置へ手首を近づけながら、急に動かないようになめらかにつなぎます。手はホームポジションへゆるく引かれます。届かない瞬間や、指が伸びきりそうな瞬間があれば、そこを重くして計算し直します。手首から先を水平に回す向きも一緒に決めます。</li>
+        <li><b>指</b>: 指先の目標から関節の角度を逆算します（逆運動学）。関節は人の範囲で止め、先の2つの関節は連動させます。押していない指はキーの上で力を抜いて休み、次に打つキーの上へ先回りします。</li>
+        <li><b>打つ</b>: 指は下りてくる勢いのままキーを押し下げ、底で止まります（ふつうのキーボードで 4mm、約 10ms）。持ち上げる高さは打つ速さで変わります（ピアノの研究の値をもとにした目安で、タイピングで測った値ではありません）。</li>
+        <li><b>届かないキー</b>: 骨の長さと関節の範囲で届かなければ、押せなかったキーになります。届くように数値を合わせることはしません。</li>
+        <li><b>打つ間隔</b>（ながめる）: 同じ手のちがう指を 1 として、左右交互 0.85 倍、同じ指でちがうキー 1.3 倍＋1キー分の距離ごとに 0.12、同じキーを2回 1.1 倍、語の頭 1.2 倍。毎回、ばらつき約 15% のゆらぎをかけ、最後に平均が選んだ速さになるようにそろえます。Dhakal ほか (2018) の本文にある傾向（左右交互は同じ手より速い、同じ指はさらに遅い、語の頭は遅い）をもとにした推定です。</li>
+        <li><b>自分で打つ</b>: 押したキーの位置と、押した・離した時刻から、同じ計算で手の動きを作ります。計算に時間がかかるので、打っているあいだは画面の裏（Web Worker）で直近の 5 秒分だけを計算し、1.5 秒おくれて表示します。</li>
+        <li><b>検査</b>: 1/120 秒ごとに、届かなさ・関節の限界・指どうしのめりこみ・キーへのめりこみ・左右の手のぶつかり・速さを測ります。</li>
+      </ol>
+      <p class="cap">手のしくみ（骨・皮ふ・筋肉の模型・関節の計算）は、同じシリーズの「ピアノを弾く手」のものを使っています。キーボードの寸法（キーの間隔 19.05mm、押しこみ 4mm、段の高さ）は一般的な値と目安です。</p>
+    </details>
+    <details class="about" lang="en">
+      <summary>How it works</summary>
+      <ol>
+        <li><b>Finger for each key</b>: each key has a set finger (the standard touch-typing assignment; here “6” is the right index finger and Space is the right thumb). People differ, and many type with fewer fingers.</li>
+        <li><b>Wrist</b>: the wrist moves toward where the pressing finger (and the finger about to press) can reach in its relaxed shape, joined smoothly so it never jumps. The hand is gently pulled back to the home position. Moments when a finger cannot reach, or is about to straighten all the way, are weighted more and worked out again. The sideways turn of the hand at the wrist is chosen at the same time.</li>
+        <li><b>Fingers</b>: the joint angles are worked backward from the fingertip target (inverse kinematics). Joints stop at human limits, and the last two joints bend together. Fingers that are not pressing rest lightly on the keys and move ahead over their next key.</li>
+        <li><b>Pressing</b>: the finger keeps its downward speed and pushes the key to the bottom (4 mm in about 10 ms on a standard keyboard). How high fingers lift depends on the speed (a rough guide from piano research, not measured in typing).</li>
+        <li><b>Keys out of reach</b>: if the bone lengths and joint ranges cannot reach a key, it counts as not pressed. Numbers are never adjusted just to make it reach.</li>
+        <li><b>Timing</b> (Watch): taking a different finger of the same hand as 1, the gap is ×0.85 when the hands take turns, ×1.3 plus 0.12 per key of distance for the same finger on another key, ×1.1 for the same key twice, and ×1.2 at the start of a word. Each gap wobbles by about 15%, and finally everything is scaled so the average matches the chosen speed. This is an estimate based on trends described in Dhakal et al. (2018): taking turns is faster than one hand, the same finger is slower still, and word starts are slower.</li>
+        <li><b>Type yourself</b>: the hand movements are worked out the same way from which key you pressed and when you pressed and released it. Because it takes time, while you type only the last 5 seconds are worked out in the background (a Web Worker), shown 1.5 s late.</li>
+        <li><b>Checks</b>: every 1/120 s it measures reach, joint limits, fingers overlapping, sinking into keys, the two hands bumping, and speeds.</li>
+      </ol>
+      <p class="cap">The hands (bones, skin, muscle model and joint calculations) come from “Hands at the Piano” in the same series. Keyboard sizes (19.05 mm between keys, 4 mm key travel, row heights) are typical values and rough guides.</p>
+    </details>
+
+    <details class="about">
+      <summary><span lang="ja">おもな出どころ・使っているもの</span><span lang="en">Main sources and credits</span></summary>
+      <ul>
+        <li><span lang="ja">指の動きを測ったデータ（モーションキャプチャ）の研究はありますが、このアプリでは使っていません。指の動きはすべて計算によるものです。</span><span lang="en">There is research that measured finger movements (motion capture), but this app does not use it. All finger movements are calculated.</span></li>
+        <li>Guinness World Records “Fastest typist on an electronic typewriter” <span lang="ja">（1946 年、1分に 216 語）。</span><span lang="en">(1946, 216 words in a minute). </span><a href="https://www.guinnessworldrecords.com/world-records/67967-fastest-typist-on-an-electronic-typewriter" target="_blank" rel="noopener"><span lang="ja">ページ</span><span lang="en">Page</span></a><span lang="ja">（打つ速さの「世界記録の速さ」。1語＝5文字（空白をふくむ）の一般的な数え方で 1分に約 1080 キー。タイプライターでの記録で、このアプリのキーボードとはちがいます）</span><span lang="en"> (the “world-record speed” option: counting a word as 5 characters including the space, the usual way, about 1080 keys a minute. It was set on a typewriter, not on the keyboards in this app)</span></li>
+        <li>Asonov, Agrawal (2004) Keyboard Acoustic Emanations. <i>IEEE Symposium on Security and Privacy</i> <span lang="ja">（打鍵の音の形: 押す音は約 10ms のあいだに「指が触れる音」と「キーが板に当たる音」の2つの山、離す音はそれより小さく、1回の打鍵は約 100ms。音はこの形をまねてブラウザの中で合成しています）</span><span lang="en">(the shape of a keystroke sound: the press sound has two peaks about 10 ms apart, the finger touching the key and the key hitting the plate; the release sound is much quieter; one keystroke lasts about 100 ms. The sounds here are made in the browser following this shape)</span></li>
+        <li>Dhakal, Feit, Kristensson, Oulasvirta (2018) Observations on Typing from 136 Million Keystrokes. CHI 2018. <a href="https://userinterfaces.aalto.fi/136Mkeystrokes/resources/chi-18-analysis.pdf" target="_blank" rel="noopener">PDF</a> <span lang="ja">（論文の本文に書かれた、打つ間隔の傾向だけを使っています。データは使っていません）</span><span lang="en">(only the timing trends described in the paper are used, not the data)</span></li>
+        <li>Buryanov, Kotiuk (2010) Proportions of hand segments. <i>International Journal of Morphology</i> 28(3). <a href="https://scielo.conicyt.cl/pdf/ijmorphol/v28n3/art15.pdf" target="_blank" rel="noopener">PDF</a> <span lang="ja">（指の骨の長さ。「ピアノを弾く手」と同じ）</span><span lang="en">(finger bone lengths, as in “Hands at the Piano”)</span></li>
+        <li>Häger-Ross, Schieber (2000) Quantifying the independence of human finger movements. <i>Journal of Neuroscience</i> 20(22). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC6773164/" target="_blank" rel="noopener">PMC</a> <span lang="ja">（1本の指を動かすと、となりの指がついてくる割合）</span><span lang="en">(how much neighboring fingers follow when one finger moves)</span></li>
+        <li>Dalla Bella, Palmer (2011) Rate Effects on Timing, Key Velocity, and Finger Kinematics in Piano Performance. <i>PLoS ONE</i> 6(6). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3121738/" target="_blank" rel="noopener">PMC</a> / Goebl, Palmer (2008) <i>Experimental Brain Research</i> 186 <span lang="ja">（打つ前の指の持ち上げ。ピアノの研究で、タイピングでは目安として使っています）</span><span lang="en">(how high fingers lift before a key; piano research, used here as a rough guide for typing)</span></li>
+        <li><span lang="ja">手の皮ふ・骨・筋肉の模型の出どころは「ピアノを弾く手」の「おもな出どころ」をご覧ください。</span><span lang="en">For the sources of the skin, bones and muscle model, see “Main sources” in “Hands at the Piano.”</span></li>
+      </ul>
+      <p class="cap" lang="ja">打鍵の音はブラウザの中で合成しています（録音した音は使っていません）。使っているもの: Three.js（MIT ライセンス。光のにじみは Three.js に付いている EffectComposer・UnrealBloomPass）、Google Fonts（SIL Open Font License）。打つ文はこのアプリで書いたもの、昔からある言葉、または著作権の切れた文（宮沢賢治「雨ニモマケズ」、ルイス・キャロル『不思議の国のアリス』）です。</p>
+      <p class="cap" lang="en">Key sounds are made in the browser (no recordings). Uses: Three.js (MIT License; the glow uses EffectComposer and UnrealBloomPass that come with Three.js) and Google Fonts (SIL Open Font License). The texts were written for this app, are traditional sayings, or are public domain (Kenji Miyazawa's “Ame ni mo makezu” and Lewis Carroll's “Alice's Adventures in Wonderland”).</p>
+    </details>
+  </aside>
+</div>
+
+<script src="../../../lib/three@0.128.0/build/three.min.js"></script>
+<!-- 光のにじみ（ブルーム）: Three.js r128 のおまけ（MIT）。同じ版を lib/ に置いたもの -->
+<script src="../../../lib/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="../../../lib/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="../../../lib/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="../../../lib/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="../../../lib/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="../../../lib/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script src="js/keys.js"></script>
+<script src="js/texts.js"></script>
+<script src="js/fingering.js"></script>
+<script src="js/hand.js"></script>
+<script src="js/plan.js"></script>
+<script src="js/skin.js"></script>
+<script src="js/check.js"></script>
+<script src="js/view.js"></script>
+<script src="js/keyboard.js"></script>
+<script src="js/skinview.js"></script>
+<script src="js/skeleton.js"></script>
+<script src="js/tissue.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/replay.js"></script>
+<script src="js/main.js"></script>

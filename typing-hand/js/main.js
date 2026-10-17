@@ -34,18 +34,18 @@ function renderChecks() {
   $('chkTable').innerHTML = CHECKS.map(c => {
     const r = R[c.id];
     if (r.grade === 'ng' || (r.grade === 'warn' && worst === 'ok')) worst = r.grade;
-    const where = r.at !== null && r.grade !== 'ok' ? `<small>${r.at.toFixed(2)} 秒${r.who ? '・' + r.who : ''}</small>` : '';
+    const where = r.at !== null && r.grade !== 'ok' ? `<small>${r.at.toFixed(2)} ${L('秒', 's')}${r.who ? L('・', ', ') + r.who : ''}</small>` : '';
     return `<tr data-id="${c.id}" title="${c.tip}"><td class="g ${r.grade}">${mark[r.grade]}</td><td class="n">${c.name}${where}</td><td class="v">${fmt(c, r)} ${c.unit}</td></tr>`;
   }).join('');
   const miss = S.plan.notes.filter(n => n.miss).length;
-  const sum = { ok: ['破綻なし', 'ok'], warn: ['ぎりぎりの所あり', 'warn'], ng: ['破綻あり', 'ng'] }[worst];
-  $('chkSum').textContent = sum[0] + (miss ? `・押せなかったキー ${miss}` : ''); $('chkSum').className = 'ro-tag ' + (miss ? 'ng' : sum[1]);
+  const sum = { ok: [L('破綻なし', 'No breakdowns'), 'ok'], warn: [L('ぎりぎりの所あり', 'Some close calls'), 'warn'], ng: [L('破綻あり', 'Breakdowns found'), 'ng'] }[worst];
+  $('chkSum').textContent = sum[0] + (miss ? L(`・押せなかったキー ${miss}`, ` · keys not pressed: ${miss}`) : ''); $('chkSum').className = 'ro-tag ' + (miss ? 'ng' : sum[1]);
 }
 
 // 打った文字の行: 打ちおえた文字は明るく、いま押しているキーは指の色
 function renderTyped(t) {
   const rp = S.mode === 'replay';
-  $('typedShow').textContent = rp ? '自分で打ったキー（キーの位置と時刻だけ。どこにも保存・送信しません）' : S.text.show;
+  $('typedShow').textContent = rp ? L('自分で打ったキー（キーの位置と時刻だけ。どこにも保存・送信しません）', 'Keys you typed (only which key and when; nothing is saved or sent)') : (LANG === 'en' && S.text.show_en || S.text.show);
   // 「再現する」では打った順のキー（最後の 60 個）。手の計算の結果（miss）は計算した音と時刻で合わせる
   const list = rp ? REC.notes.slice(-60).map(n => Object.assign({}, n, { f: KEYS[n.m].f, miss: S.plan && S.plan.notes.some(o => o.miss && o.m === n.m && Math.abs(o.t0 - n.t0) < 1e-6) })) : S.plan.notes;
   let html = '';
@@ -59,7 +59,7 @@ function renderTyped(t) {
 
 // 打つ間隔のグラフ（ながめる）: キーごとの棒（前のキーからの間隔）、色は組の種類、点線は平均、いま打っているキーは明るく
 const KIND_COL = { alt: '#4dabf7', hand: '#8a93a3', finger: '#ffa94d', repeat: '#b197fc' };
-const KIND_JA = { alt: '左右交互', hand: '同じ手', finger: '同じ指', repeat: '同じキー2回' };
+const KIND_JA = { alt: L('左右交互', 'other hand'), hand: L('同じ手', 'same hand'), finger: L('同じ指', 'same finger'), repeat: L('同じキー2回', 'same key twice') };
 function drawIki(cur) {
   const cv = $('ikiChart'); if (!cv || !S.plan || S.mode !== 'watch') return;
   const ns = S.plan.notes.filter(n => n.iki), w = cv.clientWidth, h = cv.clientHeight, dpr = Math.min(2, devicePixelRatio || 1);
@@ -69,7 +69,7 @@ function drawIki(cur) {
   const mx = Math.max(...ns.map(n => n.iki)) * 1.05, mean = ns.reduce((s, n) => s + n.iki, 0) / ns.length, bw = w / ns.length;
   ns.forEach((n, i) => { const bh = (h - 14) * n.iki / mx; g.globalAlpha = cur < 0 || n === S.plan.notes[cur] ? 1 : 0.55; g.fillStyle = KIND_COL[n.kind] || '#888'; g.fillRect(i * bw + (bw > 3 ? 0.5 : 0), h - bh, Math.max(1, bw - (bw > 3 ? 1 : 0)), bh); });
   g.globalAlpha = 1; g.strokeStyle = 'rgba(255,255,255,.6)'; g.setLineDash([4, 3]); const my = h - (h - 14) * mean / mx; g.beginPath(); g.moveTo(0, my); g.lineTo(w, my); g.stroke(); g.setLineDash([]);
-  g.fillStyle = '#a4acb8'; g.font = '11px sans-serif'; g.fillText('最長 ' + Math.round(Math.max(...ns.map(n => n.iki)) * 1000) + 'ms・平均 ' + Math.round(mean * 1000) + 'ms・最短 ' + Math.round(Math.min(...ns.map(n => n.iki)) * 1000) + 'ms', 2, 11);
+  g.fillStyle = '#a4acb8'; g.font = '11px sans-serif'; { const lo = Math.round(Math.min(...ns.map(n => n.iki)) * 1000), hi = Math.round(Math.max(...ns.map(n => n.iki)) * 1000), av = Math.round(mean * 1000); g.fillText(L(`最長 ${hi}ms・平均 ${av}ms・最短 ${lo}ms`, `longest ${hi} ms · average ${av} ms · shortest ${lo} ms`), 2, 11); }
 }
 
 function frame(now) {
@@ -110,28 +110,28 @@ function step() {
   renderPose(disp, poses, OPT);
   $('toolbar').hidden = $('hint').hidden = S.live; // 打っているあいだは再生の操作を隠す（画面のキーボードの場所をあける）
   if (!S.live && document.activeElement !== $('time')) $('time').value = Math.round(1000 * (t - tStart()) / (tEnd() - tStart()));
-  $('clock').textContent = t.toFixed(2) + ' 秒';
+  $('clock').textContent = t.toFixed(2) + L(' 秒', ' s');
   renderTyped(t);
   if (S.mode === 'watch') { let ci = -1; notes.forEach((n, i) => { if (n.t0 <= t + 1e-6) ci = i; }); if (ci !== S.ikiCur || S.ikiPlan !== plan) { S.ikiCur = ci; S.ikiPlan = plan; drawIki(ci); } }
   // 止めているときだけ、この瞬間の様子（どの指でどのキーか）
-  if (S.live) $('hint').textContent = REC.notes.length ? `打ったキーを、${REC_LAG} 秒おくれて画面の手が打ちます。` : 'キーボードを打つか、下の画面のキーボードを押してください。';
+  if (S.live) $('hint').textContent = REC.notes.length ? L(`打ったキーを、${REC_LAG} 秒おくれて画面の手が打ちます。`, `The hands on screen type your keys ${REC_LAG} s later.`) : L('キーボードを打つか、下の画面のキーボードを押してください。', 'Type on your keyboard, or tap the on-screen keyboard below.');
   else if (!S.playing) {
     const now = notes.filter(n => t >= n.t0 - 0.02 && t <= n.t1 + 0.02);
-    $('hint').innerHTML = now.length ? 'この瞬間 — ' + now.map(n => `<b>${noteName(n.m)}</b> を${HAND_OF(n.hand === 'R' ? 1 : -1)}${FINGERS[n.f].name}で${n.iki ? `（前のキーから ${Math.round(n.iki * 1000)}ms・${KIND_JA[n.kind] || ''}）` : ''}`).join('、')
-      : 'ドラッグで向きを変え、ホイールや2本指のピンチで寄れます。時刻のつまみ・矢印キーで1コマずつ動かせます。';
+    $('hint').innerHTML = now.length ? L('この瞬間 — ', 'Right now — ') + now.map(n => L(`<b>${noteName(n.m)}</b> を${HAND_OF(n.hand === 'R' ? 1 : -1)}${FINGERS[n.f].name}で${n.iki ? `（前のキーから ${Math.round(n.iki * 1000)}ms・${KIND_JA[n.kind] || ''}）` : ''}`, `<b>${noteName(n.m)}</b> with the ${HAND_OF(n.hand === 'R' ? 1 : -1)}${FINGERS[n.f].name}${n.iki ? ` (${Math.round(n.iki * 1000)} ms after the last key, ${KIND_JA[n.kind] || ''})` : ''}`)).join(L('、', '; '))
+      : L('ドラッグで向きを変え、ホイールや2本指のピンチで寄れます。時刻のつまみ・矢印キーで1コマずつ動かせます。', 'Drag to turn the view, and use the wheel or a two-finger pinch to zoom. Step frame by frame with the time slider or the arrow keys.');
   } else $('hint').textContent = '';
 }
 function setPlaying(on) {
   if (S.live) on = false;
   S.playing = on;
-  $('btnPlay').textContent = on ? '⏸ 止める' : '▶ 再生';
+  $('btnPlay').textContent = on ? L('⏸ 止める', '⏸ Pause') : L('▶ 再生', '▶ Play');
   if (on && S.t >= tEnd() - 0.01) setTime(tStart());
   if (on && AC && AC.state === 'suspended') AC.resume();
 }
 
 // 手の見え方（ピアノを弾く手と同じ6つ）
-const LOOKS = [['skin', '手: 皮ふ', {}], ['ghost', '手: 半透明', { ghost: true }], ['xray', '手: 皮ふを透かして骨', { xray: true }],
-  ['xraymus', '手: 皮ふを透かして骨と筋肉', { xray: true, muscles: true }], ['muscles', '手: 骨と筋肉・腱・脂肪', { muscles: true }], ['bones', '手: 骨だけ', { bones: true }]];
+const LOOKS = [['skin', L('手: 皮ふ', 'Hands: skin'), {}], ['ghost', L('手: 半透明', 'Hands: see-through'), { ghost: true }], ['xray', L('手: 皮ふを透かして骨', 'Hands: bones through the skin'), { xray: true }],
+  ['xraymus', L('手: 皮ふを透かして骨と筋肉', 'Hands: bones and muscles through the skin'), { xray: true, muscles: true }], ['muscles', L('手: 骨と筋肉・腱・脂肪', 'Hands: bones, muscles, tendons and fat'), { muscles: true }], ['bones', L('手: 骨だけ', 'Hands: bones only'), { bones: true }]];
 function setLook(id) {
   const f = LOOKS.find(l => l[0] === id)[2];
   for (const k of ['ghost', 'xray', 'muscles', 'bones']) OPT[k] = !!f[k];
@@ -144,23 +144,23 @@ function setView(name) {
 
 // 「つぎへ」1つで順に見る（タブやボタンを探さなくてよいように）。各段で文・速さ・見え方・カメラを決めて、再生する
 const TOUR = [
-  { msg: '人さし指を F と J（小さな出っぱりのあるキー）に置くのが「ホームポジション」。キーの色は、どの指で打つかの割り当てです。', text: 'ame', kpm: 400, look: 'skin', view: 'top', map: true, speed: 1, at: 0.3, play: false },
-  { msg: 'ゆっくり打ちます。指先の番号（1 親指 〜 5 小指）で、どの指が動くかを見てください。', text: 'tenki', kpm: 120, look: 'skin', view: 'tilt', map: true, nums: true, speed: 1, play: true },
-  { msg: 'ふつうの速さ（1分に 400 キー）。打たない指もキーの上で休みながら、次のキーへ先回りしています。', text: 'tenki', kpm: 400, look: 'skin', view: 'tilt', map: false, speed: 1, play: true },
-  { msg: '皮ふを透かして骨と筋肉。キーを押すたびに、指の骨と関節がどう曲がるかが見えます（筋肉・腱の模型は目安）。', text: 'fox', kpm: 400, look: 'xraymus', view: 'tilt', map: false, speed: 1, play: true },
-  { msg: '自分で打ってみましょう。打ったキーを、1.5 秒おくれて画面の手が打ちます（指は標準の割り当て）。', end: true },
+  { msg: L('人さし指を F と J（小さな出っぱりのあるキー）に置くのが「ホームポジション」。キーの色は、どの指で打つかの割り当てです。', 'Resting the index fingers on F and J (the keys with small bumps) is the “home position.” The key colors show which finger types each key.'), text: 'ame', kpm: 400, look: 'skin', view: 'top', map: true, speed: 1, at: 0.3, play: false },
+  { msg: L('ゆっくり打ちます。指先の番号（1 親指 〜 5 小指）で、どの指が動くかを見てください。', 'Typing slowly. Watch the numbers on the fingertips (1 thumb to 5 little finger) to see which finger moves.'), text: 'tenki', kpm: 120, look: 'skin', view: 'tilt', map: true, nums: true, speed: 1, play: true },
+  { msg: L('ふつうの速さ（1分に 400 キー）。打たない指もキーの上で休みながら、次のキーへ先回りしています。', 'Normal speed (400 keys a minute). Fingers that are not typing rest on the keys and move ahead to their next key.'), text: 'tenki', kpm: 400, look: 'skin', view: 'tilt', map: false, speed: 1, play: true },
+  { msg: L('皮ふを透かして骨と筋肉。キーを押すたびに、指の骨と関節がどう曲がるかが見えます（筋肉・腱の模型は目安）。', 'Bones and muscles through the skin. With each key press you can see how the finger bones and joints bend (the muscle and tendon model is a rough guide).'), text: 'fox', kpm: 400, look: 'xraymus', view: 'tilt', map: false, speed: 1, play: true },
+  { msg: L('自分で打ってみましょう。打ったキーを、1.5 秒おくれて画面の手が打ちます（指は標準の割り当て）。', 'Now try typing yourself. The hands on screen type your keys 1.5 s later (with the standard finger for each key).'), end: true },
 ];
 let tourI = -1;
 function nextTour() {
   tourI = (tourI + 1) % TOUR.length;
   const s = TOUR[tourI];
   $('tourMsg').textContent = s.msg;
-  $('btnNext').textContent = tourI === TOUR.length - 1 ? '最初から ↺' : 'つぎへ ▶';
+  $('btnNext').textContent = tourI === TOUR.length - 1 ? L('最初から ↺', 'From the start ↺') : L('つぎへ ▶', 'Next ▶');
   if (s.end) { setMode('replay'); setView('tilt'); setLook('skin'); return; }
   setMode('watch', true);
   setPlaying(false);
   KPM = s.kpm; $('kpmSel').value = String(KPM);
-  busy('手の動きを計算しています…', async () => {
+  busy(L('手の動きを計算しています…', 'Working out the hand movements…'), async () => {
     await setText(s.text);
     setLook(s.look); setView(s.view);
     OPT.fingerMap = $('optFingerMap').checked = s.map;
@@ -179,28 +179,38 @@ function setMode(m, noCompute) {
   document.querySelectorAll('#modeSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.m === m));
   $('secWatch').hidden = m !== 'watch'; $('secReplay').hidden = $('recBox').hidden = m !== 'replay';
   if (m === 'replay') { // 「つぎへ」の説明も、最後の段（自分で打つ）に合わせる
-    tourI = TOUR.length - 1; $('tourMsg').textContent = TOUR[tourI].msg; $('btnNext').textContent = '最初から ↺';
+    tourI = TOUR.length - 1; $('tourMsg').textContent = TOUR[tourI].msg; $('btnNext').textContent = L('最初から ↺', 'From the start ↺');
     recClear(); S.t = 0; S.prevT = 0; return;
   }
   S.live = false; REC.reqId++; $('checks').hidden = false;
-  if (!noCompute) busy('手の動きを計算しています…', () => setText(S.text.id));
+  if (!noCompute) busy(L('手の動きを計算しています…', 'Working out the hand movements…'), () => setText(S.text.id));
 }
 
 function initUI() {
+  // 言語・題名・読み上げ用の名前（I18N.md）
+  document.title = L('タイピングする手', 'Hands on the Keyboard');
+  $('langsw').querySelectorAll('button').forEach(b => { b.setAttribute('aria-pressed', b.dataset.l === LANG); b.onclick = () => { if (b.dataset.l !== LANG) setLang(b.dataset.l); }; });
+  const AR = { view: ['キーボードと、打っている両手の3D。ドラッグで向きを変え、ホイールや2本指のピンチで寄れます', 'A 3D keyboard and two typing hands. Drag to turn the view, use the wheel or a two-finger pinch to zoom'],
+    views: ['見る向き', 'View'], oskb: ['画面のキーボード', 'On-screen keyboard'], speedSel: ['再生の速さ', 'Playback speed'], time: ['時刻', 'Time'],
+    modeSeg: ['モード', 'Mode'], textSel: ['打つ文', 'Text to type'], kpmSel: ['打つ速さ', 'Typing speed'], timingSel: ['打つ間隔', 'Timing'],
+    ikiChart: ['キーごとの打つ間隔のグラフ', 'Chart of the gap before each key'], handLook: ['手の見え方', 'How the hands look'], sceneSel: ['シーン', 'Scene'],
+    kbSel: ['キーボードの種類', 'Keyboard type'], handModel: ['手のモデル', 'Hand model'], postureSel: ['指の構え', 'Finger posture'] };
+  for (const id in AR) $(id).setAttribute('aria-label', L(...AR[id]));
+  $('btnNext').textContent = L('つぎへ ▶', 'Next ▶');
   document.querySelectorAll('#modeSeg button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.m)));
   $('btnRecClear').addEventListener('click', () => { recClear(); S.t = 0; S.prevT = 0; });
   $('btnRecPlay').addEventListener('click', recPlayAll);
   makeScreenKeyboard();
-  $('timingSel').innerHTML = [['model', '打つ間隔: 運指で変えて、ゆらぎも（推定）'], ['pair', '打つ間隔: 運指で変える（ゆらぎなし）'], ['even', '打つ間隔: いつも同じ']].map(([k, t]) => `<option value="${k}">${t}</option>`).join('');
+  $('timingSel').innerHTML = [['model', L('打つ間隔: 運指で変えて、ゆらぎも（推定）', 'Timing: varies by finger, with wobble (estimate)')], ['pair', L('打つ間隔: 運指で変える（ゆらぎなし）', 'Timing: varies by finger (no wobble)')], ['even', L('打つ間隔: いつも同じ', 'Timing: always the same')]].map(([k, t]) => `<option value="${k}">${t}</option>`).join('');
   $('timingSel').value = TIMING;
-  $('timingSel').addEventListener('change', e => { setPlaying(false); TIMING = e.target.value; busy('手の動きを計算しています…', () => setText(S.text.id)); });
+  $('timingSel').addEventListener('change', e => { setPlaying(false); TIMING = e.target.value; busy(L('手の動きを計算しています…', 'Working out the hand movements…'), () => setText(S.text.id)); });
   setPlaying(false);
   $('textSel').innerHTML = TEXTS.map(x => `<option value="${x.id}">${x.name}</option>`).join('');
-  $('textSel').addEventListener('change', e => { setPlaying(false); busy('手の動きを計算しています…', () => setText(e.target.value)); });
-  $('kpmSel').innerHTML = KPM_LIST.map(v => `<option value="${v}">打つ速さ: 1分に ${v} キー${v === KPM_RECORD ? '（世界記録の速さ）' : ''}</option>`).join('');
+  $('textSel').addEventListener('change', e => { setPlaying(false); busy(L('手の動きを計算しています…', 'Working out the hand movements…'), () => setText(e.target.value)); });
+  $('kpmSel').innerHTML = KPM_LIST.map(v => `<option value="${v}">${L(`打つ速さ: 1分に ${v} キー`, `Speed: ${v} keys a minute`)}${v === KPM_RECORD ? L('（世界記録の速さ）', ' (world-record speed)') : ''}</option>`).join('');
   $('kpmSel').value = String(KPM);
-  $('kpmSel').addEventListener('change', e => { setPlaying(false); KPM = +e.target.value; busy('手の動きを計算しています…', () => setText(S.text.id)); });
-  $('speedSel').innerHTML = SPEEDS.map(v => `<option value="${v}">再生 ×${v}</option>`).join('');
+  $('kpmSel').addEventListener('change', e => { setPlaying(false); KPM = +e.target.value; busy(L('手の動きを計算しています…', 'Working out the hand movements…'), () => setText(S.text.id)); });
+  $('speedSel').innerHTML = SPEEDS.map(v => `<option value="${v}">${L('再生 ×', 'Playback ×')}${v}</option>`).join('');
   $('speedSel').value = String(S.speed);
   $('speedSel').addEventListener('change', e => { S.speed = +e.target.value; });
   $('btnPlay').addEventListener('click', () => setPlaying(!S.playing));
@@ -211,24 +221,24 @@ function initUI() {
   $('handLook').addEventListener('change', e => setLook(e.target.value));
   const opts = { optFingerMap: 'fingerMap', optFingerNums: 'fingerNums', optTargets: 'targets' };
   for (const id in opts) { OPT[opts[id]] = $(id).checked; $(id).addEventListener('change', e => { OPT[opts[id]] = e.target.checked; }); }
-  $('sceneSel').innerHTML = Object.entries(SCENES).map(([k, s]) => `<option value="${k}">シーン: ${s.name}</option>`).join('');
+  $('sceneSel').innerHTML = Object.entries(SCENES).map(([k, s]) => `<option value="${k}">${L('シーン: ', 'Scene: ')}${s.name}</option>`).join('');
   $('sceneSel').value = V.sceneId;
   $('sceneSel').addEventListener('change', e => applyScene(e.target.value));
   $('optFx').checked = V.fxLevel > 0;
   $('optFx').addEventListener('change', e => applyFx(e.target.checked ? 1 : 0));
   // キーボードの種類（2026-10-17〜、ユーザーの希望）: 並び・寸法が変わるので、キーの見た目・手の形・計算をすべて作りなおす
-  $('kbSel').innerHTML = Object.entries(KB_TYPES).map(([k, t]) => `<option value="${k}">キーボード: ${t.name}</option>`).join('');
+  $('kbSel').innerHTML = Object.entries(KB_TYPES).map(([k, t]) => `<option value="${k}">${L('キーボード: ', 'Keyboard: ')}${t.name}</option>`).join('');
   $('kbSel').value = KB.id;
-  $('kbSel').addEventListener('change', e => { setPlaying(false); busy('キーボードを作りなおしています…', async () => { useKeyboard(e.target.value); makeKeyboard(V.scene); makeScreenKeyboard(); REC.home = null; if (S.mode === 'replay') { recClear(); S.t = 0; } else await setText(S.text.id); }); });
+  $('kbSel').addEventListener('change', e => { setPlaying(false); busy(L('キーボードを作りなおしています…', 'Rebuilding the keyboard…'), async () => { useKeyboard(e.target.value); makeKeyboard(V.scene); makeScreenKeyboard(); REC.home = null; if (S.mode === 'replay') { recClear(); S.t = 0; } else await setText(S.text.id); }); });
   // 指の構え（ピアノを弾く手と同じ3つ。最初は中間）: 力を抜いた指の曲げと手首の高さが変わり、ホームポジションの形も作りなおす
-  $('postureSel').innerHTML = [['curved', '指の構え: 立てる'], ['mid', '指の構え: 中間'], ['flat', '指の構え: 寝かせる']].map(([k, t]) => `<option value="${k}">${t}</option>`).join('');
+  $('postureSel').innerHTML = [['curved', L('指の構え: 立てる', 'Fingers: curved')], ['mid', L('指の構え: 中間', 'Fingers: in between')], ['flat', L('指の構え: 寝かせる', 'Fingers: flat')]].map(([k, t]) => `<option value="${k}">${t}</option>`).join('');
   $('postureSel').value = POSTURE;
-  $('postureSel').addEventListener('change', e => { setPlaying(false); busy('手の動きを計算しています…', async () => { POSTURE = e.target.value; HOME_TIP = null; REC.home = null; if (S.mode === 'replay') { recClear(); S.t = 0; } else await setText(S.text.id); }); });
+  $('postureSel').addEventListener('change', e => { setPlaying(false); busy(L('手の動きを計算しています…', 'Working out the hand movements…'), async () => { POSTURE = e.target.value; HOME_TIP = null; REC.home = null; if (S.mode === 'replay') { recClear(); S.t = 0; } else await setText(S.text.id); }); });
   $('optFlex').checked = FLEX;
-  $('optFlex').addEventListener('change', e => { setPlaying(false); busy('手の動きを計算しています…', async () => { applyFlex(e.target.checked); HOME_TIP = null; REC.home = null; if (S.mode === 'replay') { recClear(); S.t = 0; } else await setText(S.text.id); }); });
-  $('handModel').innerHTML = Object.entries(HAND_MODELS).map(([k, m]) => `<option value="${k}">手のモデル: ${m.name}</option>`).join('');
+  $('optFlex').addEventListener('change', e => { setPlaying(false); busy(L('手の動きを計算しています…', 'Working out the hand movements…'), async () => { applyFlex(e.target.checked); HOME_TIP = null; REC.home = null; if (S.mode === 'replay') { recClear(); S.t = 0; } else await setText(S.text.id); }); });
+  $('handModel').innerHTML = Object.entries(HAND_MODELS).map(([k, m]) => `<option value="${k}">${L('手のモデル: ', 'Hand model: ')}${m.name}</option>`).join('');
   $('handModel').value = HAND.id;
-  $('handModel').addEventListener('change', e => { setPlaying(false); busy('手を作りなおしています…', async () => { setHandModel(e.target.value); rebuildSkins(); REC.home = null; if (S.mode === 'replay') { recClear(); S.t = 0; } else await setText(S.text.id); }); });
+  $('handModel').addEventListener('change', e => { setPlaying(false); busy(L('手を作りなおしています…', 'Rebuilding the hands…'), async () => { setHandModel(e.target.value); rebuildSkins(); REC.home = null; if (S.mode === 'replay') { recClear(); S.t = 0; } else await setText(S.text.id); }); });
   $('chkTable').addEventListener('click', e => {
     const tr = e.target.closest('tr'); if (!tr) return;
     const r = S.checks[tr.dataset.id];
@@ -284,14 +294,14 @@ async function busy(msg, fn) { await showLoading(msg); try { await fn(); } final
 
 async function boot() {
   try {
-    await showLoading('手の皮ふを作っています…');
+    await showLoading(L('手の皮ふを作っています…', 'Building the skin of the hands…'));
     initView($('view'));
     initUI();
-    await showLoading('手の動きを計算しています…');
+    await showLoading(L('手の動きを計算しています…', 'Working out the hand movements…'));
     tourI = -1;
     hideLoading();
     nextTour();
     requestAnimationFrame(frame);
-  } catch (e) { window.__tyhaErr.push(String(e && e.message)); console.error(e); $('loadMsg').textContent = '読みこめませんでした: ' + e.message; }
+  } catch (e) { window.__tyhaErr.push(String(e && e.message)); console.error(e); $('loadMsg').textContent = L('読みこめませんでした: ', 'Could not load: ') + e.message; }
 }
 boot();

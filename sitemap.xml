@@ -140,4 +140,11 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/metronome-sync/?lang=en"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/metronome-sync/"/>
   </url>
+  <url>
+    <loc>https://sishiya.github.io/manabi-lab/typing-hand/</loc>
+    <lastmod>2026-10-17</lastmod>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/typing-hand/?lang=ja"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/typing-hand/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/typing-hand/"/>
+  </url>
 </urlset>

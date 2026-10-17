@@ -7,7 +7,7 @@ const REC_WIN = 5;        // 追いかけるときに計算する範囲（いま
 const REC_MAX_KEYS = 300; // ためておくキーの数（古いものから消す）
 const REC = { notes: [], t0: 0, down: {}, dirty: false, busy: false, reqId: 0, home: null };
 let PW = null;
-try { PW = new Worker('js/plan-worker.js'); PW.onmessage = onPlanDone; PW.onerror = () => { PW = null; }; } catch (e) { PW = null; }
+try { PW = new Worker('js/plan-worker.js?lang=' + LANG); PW.onmessage = onPlanDone; PW.onerror = () => { PW = null; }; } catch (e) { PW = null; }
 
 const recNow = () => (performance.now() - REC.t0) / 1000;
 function recClear() {
@@ -74,7 +74,7 @@ function recPlayAll() {
   const last = REC.notes[REC.notes.length - 1];
   for (const c in REC.down) recKeyUp(c);
   S.live = false; S.plan = null;
-  showLoading('打ったキーから手の動きを計算しています…');
+  showLoading(L('打ったキーから手の動きを計算しています…', 'Working out the hand movements from your keys…'));
   REC.reqId++; // 追いかける計算の結果は捨てる
   workerPlan(recNotes(-1), true).then(({ plan, checks }) => {
     S.plan = plan; S.checks = checks; renderChecks(); $('checks').hidden = false;
@@ -96,7 +96,7 @@ function makeScreenKeyboard() {
     const row = document.createElement('div'); row.className = 'oskb-row';
     for (const k of KEYS.filter(x => x.row === r)) {
       const b = document.createElement('button');
-      b.type = 'button'; b.className = 'oskb-key' + (k.f ? ' f' + k.f : ' off'); b.style.flexGrow = k.w; b.textContent = k.code === 'Space' ? 'スペース' : k.label;
+      b.type = 'button'; b.className = 'oskb-key' + (k.f ? ' f' + k.f : ' off'); b.style.flexGrow = k.w; b.textContent = k.code === 'Space' ? L('スペース', 'Space') : k.label;
       b.dataset.code = k.code; b.tabIndex = -1;
       if (k.f) {
         b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (err) { /* なくても続ける */ } b.classList.add('down'); recKeyDown(k.code); });
