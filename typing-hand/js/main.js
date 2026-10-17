@@ -7,15 +7,7 @@ const S = { mode: 'watch', live: false, plan: null, checks: null, text: null, t:
 const OPT = { fingerMap: true, fingerNums: false, targets: false, ghost: false, bones: false, xray: false, muscles: false };
 const SPEEDS = [0.25, 0.5, 1, 1.5, 2];
 
-// 音: キーを押した瞬間の「カタッ」（短い雑音をフィルターに通す。ブラウザの中で合成し、外の音の素材は読まない）
-let AC = null, NOISE = null;
-function click(m) {
-  if (!$('chkSound').checked) return;
-  if (!AC) { AC = new (window.AudioContext || window.webkitAudioContext)(); NOISE = AC.createBuffer(1, AC.sampleRate * 0.05, AC.sampleRate); const d = NOISE.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (AC.sampleRate * 0.006)); }
-  const now = AC.currentTime, src = AC.createBufferSource(), bp = AC.createBiquadFilter(), g = AC.createGain();
-  src.buffer = NOISE; bp.type = 'bandpass'; bp.frequency.value = KEYS[m].w > 2 ? 900 : 2200 + 300 * Math.sin(m * 7.1); bp.Q.value = 1.4;
-  g.gain.value = 0.5; src.connect(bp); bp.connect(g); g.connect(AC.destination); src.start(now);
-}
+// 音は sound.js（keySound）
 
 function tStart() { return 0; }
 function tEnd() { return S.plan ? S.plan.end + 1.2 : 1; }
@@ -96,7 +88,11 @@ function step() {
   if (S.mode === 'replay') recTick();
   if (!S.plan && S.mode !== 'replay') return; // 最初の計算がおわる前
   const plan = S.plan, t = S.t, notes = plan ? plan.notes : [];
-  if (S.playing || S.live) for (const n of notes) if (n.t0 > S.prevT && n.t0 <= t && !n.miss) click(n.m);
+  if (S.playing || S.live) for (const n of notes) { // 押した音と離した音
+    if (n.miss) continue;
+    if (n.t0 > S.prevT && n.t0 <= t) keySound(n.m, false, S.live ? 1 : S.speed);
+    if (n.t1 > S.prevT && n.t1 <= t) keySound(n.m, true, S.live ? 1 : S.speed);
+  }
   S.prevT = t;
   let disp = plan, poses;
   if (S.mode === 'replay') { // まだ打っていない手は、ホームポジションで休む
@@ -224,6 +220,8 @@ function initUI() {
   $('kbSel').innerHTML = Object.entries(KB_TYPES).map(([k, t]) => `<option value="${k}">キーボード: ${t.name}</option>`).join('');
   $('kbSel').value = KB.id;
   $('kbSel').addEventListener('change', e => { setPlaying(false); busy('キーボードを作りなおしています…', async () => { useKeyboard(e.target.value); makeKeyboard(V.scene); makeScreenKeyboard(); REC.home = null; if (S.mode === 'replay') { recClear(); S.t = 0; } else await setText(S.text.id); }); });
+  $('optFlex').checked = FLEX;
+  $('optFlex').addEventListener('change', e => { setPlaying(false); busy('手の動きを計算しています…', async () => { applyFlex(e.target.checked); HOME_TIP = null; REC.home = null; if (S.mode === 'replay') { recClear(); S.t = 0; } else await setText(S.text.id); }); });
   $('handModel').innerHTML = Object.entries(HAND_MODELS).map(([k, m]) => `<option value="${k}">手のモデル: ${m.name}</option>`).join('');
   $('handModel').value = HAND.id;
   $('handModel').addEventListener('change', e => { setPlaying(false); busy('手を作りなおしています…', async () => { setHandModel(e.target.value); rebuildSkins(); REC.home = null; if (S.mode === 'replay') { recClear(); S.t = 0; } else await setText(S.text.id); }); });

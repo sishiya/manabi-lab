@@ -163,7 +163,7 @@ const FINGERS_BASE = FINGERS.map(F => F && JSON.parse(JSON.stringify(F)));
 // 関節をやわらかく（ストレッチした手）: 指を横に開く範囲を両側に FLEX_YAW 度、付け根の関節をそらす限界を FLEX_EXT 度ふやす。
 // 値はこのアプリの目安（研究の値で確かめていない）。届かなかった音が、やわらかい手なら届くかを試すためのもの
 const FLEX_YAW = 10 * D2R, FLEX_EXT = 10 * D2R;
-let FLEX = false; // 最初はオン（下の applyFlex(true)。ユーザーの希望）
+let FLEX = false; // タイピング: 最初はオフ（2026-10-17、ユーザー「人さし指が柔らかすぎる」。ピアノを弾く手では最初オン）。「手」の欄で選べる
 function applyFlex(on) {
   FLEX = !!on;
   for (let f = 1; f <= 5; f++) {
@@ -172,7 +172,7 @@ function applyFlex(on) {
     F.a1 = [B.a1[0] - k * FLEX_EXT, B.a1[1]];
   }
 }
-applyFlex(true);
+applyFlex(false);
 const FINGERS_U = FINGERS.map(F => F && Object.assign({}, F)); // 大きさをかける前（皮ふの網はこの大きさで作ってから縮める）
 let HAND = null;
 function setHandModel(id) {
@@ -285,7 +285,9 @@ const lerp3 = (a, b, s) => [a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s, 
 // 最小ジャークの曲線（速さも加速度も 0 から始まり 0 で終わる。3次の smoothstep は動き出しの加速度がいきなり大きく、機械のように見えた）
 const ease5 = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * x * (10 + x * (6 * x - 15));
 // 打鍵: 指は鍵に着いたときの速さ VC のまま押し下げ、TK 秒で底に着いて止まる（前は鍵の上でいったん止まってから押していた）
-const TK = 0.035, TR = 0.12;
+// タイピング: キーが底に着くまでの時間 TK を 35ms（ピアノの鍵 10mm）→ 10ms に。打鍵音の測定（Asonov & Agrawal 2004）で、押す音の山は約 10ms のあいだに
+// 「指が触れる音」と「キーが板に当たる音」が分かれて並ぶため（キーの押しこみは約 4mm）
+const TK = 0.010, TR = 0.12;
 let VC = 1.5 * KB.DEPTH / TK; // タイピング: キーボードの種類で押しこみの深さが変わるので useKeyboard で決めなおす
 // キーボードの種類を変える（keys.js の setKeyboard）。押しこみの深さ・休む指の沈みが変わるので、手首の高さと休む指の形も作りなおす
 function useKeyboard(id) { setKeyboard(id); VC = 1.5 * KB.DEPTH / TK; setHandModel(HAND ? HAND.id : 'adult-l'); }

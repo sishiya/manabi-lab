@@ -38,7 +38,7 @@ function recNotes(from) {
 function requestPlan(notes, cb) {
   const id = ++REC.reqId;
   REC.busy = true; REC.cb = cb;
-  if (PW) PW.postMessage({ id, notes, hand: HAND.id, kb: KB.id });
+  if (PW) PW.postMessage({ id, notes, hand: HAND.id, kb: KB.id, flex: FLEX });
   else setTimeout(() => onPlanDone({ data: { id, plan: buildPlan({ notes }) } }), 0); // Worker が使えないときは画面の側で
 }
 // 計算を Worker に頼んで待つ（ながめるの文・通して再生）。Worker が使えないときは画面の側で
@@ -47,7 +47,7 @@ function workerPlan(notes, checks) {
   return new Promise((res, rej) => {
     if (!PW) { const plan = buildPlan({ notes }); res({ plan, checks: checks ? runChecks(plan) : null }); return; }
     const id = 'w' + (++PW_SEQ); PW_WAIT[id] = { res, rej };
-    PW.postMessage({ id, notes, hand: HAND.id, kb: KB.id, checks });
+    PW.postMessage({ id, notes, hand: HAND.id, kb: KB.id, flex: FLEX, checks });
   });
 }
 function onPlanDone(e) {

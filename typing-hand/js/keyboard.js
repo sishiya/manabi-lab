@@ -4,14 +4,49 @@
 const KEY_BOTTOM_GAP = 1.2; // となりのキーとの、下の端のすき間（mm、目安）
 const capIn = () => (KB.U - KB.CAP) / 2; // 上面が下より内側に入る量（片側。キーボードの種類で変わる）
 
-// 上がせまい台形の箱（下 w×d、上は片側 capIn() ずつせまい、高さ h）。上面が y=0
-function capGeometry(w, d, h) {
-  const g = new THREE.BoxGeometry(w, h, d, 1, 1, 1), p = g.attributes.position;
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-    if (y > 0) p.setXYZ(i, x - Math.sign(x) * (capIn() - KEY_BOTTOM_GAP / 2), y, z - Math.sign(z) * (capIn() - KEY_BOTTOM_GAP / 2));
+// キーの形（2026-10-17 に作りなおし。ユーザー「ポリゴンすぎる」）: 角を丸めた四角の断面を、下から上へすぼめながら重ねた筒。
+// 側面は少しふくらみ、上面のふちは丸く落とし、上面は指の当たる所が横方向に少しくぼむ（円筒のくぼみ）。面の陰影はなめらか。
+// 下 w×d、上は片側 capIn() ずつせまい、高さ h。上面のふちが y=0。寸法の丸め・くぼみの深さは目安
+const CAP_CORNER = 1.6, CAP_TOP_CORNER = 2.6, CAP_EDGE = 0.9, CAP_SEG = 5; // 下の角の半径・上の角の半径・上のふちの丸み・角の分け数
+function roundRectRing(w, d, r, y, dish) { // 角の丸い四角の周の点（反時計まわり、どの大きさでも同じ数）
+  const pts = [], hw = w / 2, hd = d / 2; r = Math.min(r, hw - 0.1, hd - 0.1);
+  const cs = [[hw - r, hd - r, 0], [-hw + r, hd - r, 0.5], [-hw + r, -hd + r, 1], [hw - r, -hd + r, 1.5]];
+  for (const [cx, cz, a0] of cs) for (let i = 0; i <= CAP_SEG; i++) {
+    const a = (a0 + 0.5 * i / CAP_SEG) * Math.PI, x = cx + r * Math.cos(a), z = cz + r * Math.sin(a);
+    pts.push([x, y - (dish ? dish(x) : 0), z]);
   }
-  g.translate(0, -h / 2, 0);
+  return pts;
+}
+function capGeometry(w, d, h) {
+  const ins = capIn() - KEY_BOTTOM_GAP / 2, tw = w - 2 * ins, td = d - 2 * ins, thin = h < 5;
+  const dishD = thin ? 0.15 : 0.6, dish = x => dishD * (1 - Math.min(1, (2 * x / tw) ** 2)); // 上面のくぼみ（横に円筒）
+  const rings = [];
+  // 側面: 下から上へ。少しふくらませる（まっすぐな台形より丸みのある形）
+  const NS = 5;
+  for (let i = 0; i <= NS; i++) {
+    const s = i / NS, bulge = Math.sin(Math.PI * s) * 0.35;
+    const ww = w + (tw - w) * s + bulge, dd = d + (td - d) * s + bulge, r = CAP_CORNER + (CAP_TOP_CORNER - CAP_CORNER) * s;
+    rings.push(roundRectRing(ww, dd, r, -h + (h - CAP_EDGE) * s, null));
+  }
+  // 上のふちの丸み（4分の1円）
+  for (let i = 1; i <= 3; i++) {
+    const a = i / 3 * Math.PI / 2, inset = CAP_EDGE * (1 - Math.cos(a)), up = CAP_EDGE * Math.sin(a);
+    rings.push(roundRectRing(tw - 2 * inset, td - 2 * inset, CAP_TOP_CORNER - inset, -CAP_EDGE + up, i === 3 ? dish : null));
+  }
+  // 上面（くぼみ）: まん中へ向かって小さくした周を重ね、最後はまん中の1点
+  const tw2 = tw - 2 * CAP_EDGE, td2 = td - 2 * CAP_EDGE;
+  for (const s of [0.7, 0.4]) rings.push(roundRectRing(tw2 * s, td2 * s, (CAP_TOP_CORNER - CAP_EDGE) * s, 0, dish));
+  const n = rings[0].length, pos = [], idx = [];
+  for (const R of rings) for (const p of R) pos.push(...p);
+  const c = pos.length / 3; pos.push(0, -dishD, 0);
+  for (let j = 0; j < rings.length - 1; j++) for (let i = 0; i < n; i++) {
+    const a = j * n + i, b = j * n + (i + 1) % n, cc = (j + 1) * n + i, dd = (j + 1) * n + (i + 1) % n;
+    idx.push(a, cc, b, b, cc, dd);
+  }
+  const last = (rings.length - 1) * n;
+  for (let i = 0; i < n; i++) idx.push(last + i, c, last + (i + 1) % n);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx);
   g.computeVertexNormals();
   return g;
 }

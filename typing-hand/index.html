@@ -87,6 +87,7 @@
     <section>
       <h2>手</h2>
       <select id="handModel" aria-label="手のモデル"></select>
+      <label class="chk"><input type="checkbox" id="optFlex"> <span>関節をやわらかく（指を横に開く範囲と、付け根をそらす範囲を 10° ずつ広げる。ストレッチした手の目安）</span></label>
       <p class="cap">手の大きさ・骨の長さ・関節の範囲は「ピアノを弾く手」と同じ（大人の手の測定値と目安）です。</p>
     </section>
 
@@ -116,13 +117,14 @@
       <ul>
         <li>指の動きを測ったデータ（モーションキャプチャ）の研究はありますが、このアプリでは使っていません。指の動きはすべて計算によるものです。</li>
         <li>Guinness World Records「Fastest typist on an electronic typewriter」（1946 年、1分に 216 語）。<a href="https://www.guinnessworldrecords.com/world-records/67967-fastest-typist-on-an-electronic-typewriter" target="_blank" rel="noopener">ページ</a>（打つ速さの「世界記録の速さ」。1語＝5文字（空白をふくむ）の一般的な数え方で 1分に約 1080 キー。タイプライターでの記録で、このアプリのキーボードとはちがいます）</li>
+        <li>Asonov, Agrawal (2004) Keyboard Acoustic Emanations. <i>IEEE Symposium on Security and Privacy</i>（打鍵の音の形: 押す音は約 10ms のあいだに「指が触れる音」と「キーが板に当たる音」の2つの山、離す音はそれより小さく、1回の打鍵は約 100ms。音はこの形をまねてブラウザの中で合成しています）</li>
         <li>Dhakal, Feit, Kristensson, Oulasvirta (2018) Observations on Typing from 136 Million Keystrokes. CHI 2018. <a href="https://userinterfaces.aalto.fi/136Mkeystrokes/resources/chi-18-analysis.pdf" target="_blank" rel="noopener">PDF</a>（論文の本文に書かれた、打つ間隔の傾向だけを使っています。データは使っていません）</li>
         <li>Buryanov, Kotiuk (2010) Proportions of hand segments. <i>International Journal of Morphology</i> 28(3). <a href="https://scielo.conicyt.cl/pdf/ijmorphol/v28n3/art15.pdf" target="_blank" rel="noopener">PDF</a>（指の骨の長さ。「ピアノを弾く手」と同じ）</li>
         <li>Häger-Ross, Schieber (2000) Quantifying the independence of human finger movements. <i>Journal of Neuroscience</i> 20(22). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC6773164/" target="_blank" rel="noopener">PMC</a>（1本の指を動かすと、となりの指がついてくる割合）</li>
         <li>Dalla Bella, Palmer (2011) Rate Effects on Timing, Key Velocity, and Finger Kinematics in Piano Performance. <i>PLoS ONE</i> 6(6). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3121738/" target="_blank" rel="noopener">PMC</a> / Goebl, Palmer (2008) <i>Experimental Brain Research</i> 186（打つ前の指の持ち上げ。ピアノの研究で、タイピングでは目安として使っています）</li>
         <li>手の皮ふ・骨・筋肉の模型の出どころは「ピアノを弾く手」の「おもな出どころ」をご覧ください。</li>
       </ul>
-      <p class="cap">使っているもの: Three.js（MIT ライセンス。光のにじみは Three.js に付いている EffectComposer・UnrealBloomPass）、Google Fonts（SIL Open Font License）。打つ文はこのアプリで書いたもの、または昔からある言葉です。</p>
+      <p class="cap">打鍵の音はブラウザの中で合成しています（録音した音は使っていません）。使っているもの: Three.js（MIT ライセンス。光のにじみは Three.js に付いている EffectComposer・UnrealBloomPass）、Google Fonts（SIL Open Font License）。打つ文はこのアプリで書いたもの、または昔からある言葉です。</p>
     </details>
   </aside>
 </div>
@@ -148,5 +150,6 @@
 <script src="js/skeleton.js"></script>
 <script src="js/tissue.js"></script>
 <script src="js/scene.js"></script>
+<script src="js/sound.js"></script>
 <script src="js/replay.js"></script>
 <script src="js/main.js"></script>

@@ -9,6 +9,12 @@ const TEXTS = [
   // 寿限無（古典落語）。ローマ字入力で、区切りごとにスペースで変換。「ん」のあとに「な行」が続く所は nn と打つ（ringannno → りんがんの）
   { id: 'jugemu', name: L('寿限無（じゅげむ。落語の長い名前）', 'Jugemu (a long name from rakugo)'), show: '寿限無 寿限無 五劫の擦り切れ 海砂利水魚の 水行末 雲来末 風来末 食う寝る処に住む処 やぶら小路の藪柑子 パイポパイポ パイポのシューリンガン シューリンガンのグーリンダイ グーリンダイのポンポコピーのポンポコナーの 長久命の長助',
     keys: 'jugemu jugemu gokounosurikire kaijarisuigyono suigyoumatu unraimatu fuuraimatu kuunerutokoronisumutokoro yaburakoujinoyabukouji paipopaipo paiponoshu-ringann shu-ringannnogu-rindai gu-rindainoponpokopi-noponpokona-no choukyuumeinochousuke \n' },
+  // 宮沢賢治「雨ニモマケズ」の冒頭（著作権の切れた文）。ヲ は wo、ヅ は du、ヰ は wyi、ッ は子音を2つ（tt）
+  { id: 'ame', name: L('雨ニモマケズ（宮沢賢治。冒頭）', 'Ame ni mo makezu (Miyazawa Kenji, opening)'), show: '雨ニモマケズ 風ニモマケズ 雪ニモ夏ノ暑サニモマケヌ 丈夫ナカラダヲモチ 慾ハナク 決シテ瞋ラズ イツモシヅカニワラッテヰル',
+    keys: 'amenimomakezu kazenimomakezu yukinimonatunoatusanimomakenu joubunakaradawomoti yokuhanaku kessiteikarazu itumosidukaniwarattewyiru \n' },
+  // ルイス・キャロル『不思議の国のアリス』の冒頭（著作権の切れた文）。大文字（Shift）はまだ入れていないので、すべて小文字で打つ
+  { id: 'alice', name: L('不思議の国のアリス（英語。冒頭）', 'Alice in Wonderland (opening)'), show: 'Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do.',
+    keys: 'alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do.' },
   { id: 'fox', name: L('英語の文（アルファベットを全部使う）', 'The quick brown fox'), show: 'the quick brown fox jumps over the lazy dog.', keys: 'the quick brown fox jumps over the lazy dog.' },
   { id: 'date', name: L('2026年10月17日', 'A date in Japanese (with numbers)'), show: '2026年10月17日', keys: '2026nen10gatu17niti \n' },
 ];
