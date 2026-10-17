@@ -18,6 +18,7 @@
 
 <div id="app">
   <main id="stage">
+    <div id="pin"><!-- スマホでは、この中（図・つぎへ・シミュレーションの一文）だけを上に固定 -->
     <div id="frame">
       <div id="loading" role="status" aria-live="polite"><div class="spin" aria-hidden="true"></div><p id="loadMsg"><span lang="ja">準備しています…</span><span lang="en">Getting ready…</span></p></div>
       <canvas id="view"></canvas>
@@ -32,6 +33,7 @@
     </div>
     <div id="tour"><p id="tourMsg"></p><button class="btn primary" id="btnNext"></button></div>
     <p id="simNote"><span lang="ja">この指の動きは、コンピュータが計算した<b>シミュレーション</b>です。実際の人の指の動きを測ったものではありません。</span><span lang="en">These finger movements are a <b>simulation</b> worked out by the computer. They are not measurements of a real person's fingers.</span></p>
+    </div>
     <div id="typed" aria-live="off"><p id="typedShow"></p><p id="typedKeys" class="mono"></p></div>
     <div id="recBox" hidden>
       <div id="oskb"></div>
