@@ -45,7 +45,7 @@
 | 2026-10-14 | ブラックホールの見え方（動画は 10/13） | `blackhole-kerr-raytracing-webgl2` | 公開ずみ |
 | 2026-10-15 20:10 | ヒトへの46億年（動画は 10/11） | `evolution-earth-box-model` | 公開ずみ（Zenn 10/15 0:33・DEV） |
 | 2026-10-15 20:20 | 体内ダイブ（動画は 10/12） | `body-dive-tube-shader-junction` | 公開ずみ（Zenn 10/16 8:58・DEV） |
-| 2026-10-15 20:30 | いきものの感じる世界（動画は 10/14） | `animal-senses-shader-passes` | Zenn は 10/17 の朝に出す予定（1日1本）・DEV は公開ずみ |
+| 2026-10-15 20:30 | いきものの感じる世界（動画は 10/14） | `animal-senses-shader-passes` | 公開ずみ（Zenn 10/17 9:34・DEV は公開ずみ） |
 | 2026-10-15 20:40 | 量子の実験室 | `quantum-tunnel-visscher-canvas` | Zenn は 10/18 の朝に出す予定（1日1本）・DEV は公開ずみ |
 | 2026-10-16 | さなぎの中で | `metamorphosis-time-driven-canvas` | Zenn は 10/19 の朝に出す予定（1日1本）・DEV は公開ずみ（10/16） |
 | 2026-10-17 | 免疫のたたかい | `immune-ode-model-rk4` | Zenn は 10/20 の朝に出す予定（1日1本）・DEV は動画の日に |
