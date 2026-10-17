@@ -148,7 +148,7 @@ cv.addEventListener('pointermove', e => {
     return;
   }
   const h = V3.on ? V3.hit(e.offsetX, e.offsetY) : V.hit(e.offsetX, e.offsetY);
-  cv.style.cursor = h || (V3.on ? C.hit3(e.offsetX, e.offsetY) : C.hit((e.offsetX - V.cam.x) / V.cam.k, (e.offsetY - V.cam.y) / V.cam.k)) ? 'pointer' : 'grab';
+  cv.style.cursor = h ? 'pointer' : 'grab';
   V.hover = h; redraw(false);
 });
 // ダブルタップ・ダブルクリック: 何もない所なら、その点を中心に少し拡大（名前やシルエットの上は、ふつうの「押す」）
@@ -161,11 +161,11 @@ function zoomInAt(x, y) {
 function up(e) {
   pts.delete(e.pointerId);
   if (drag && drag.moved <= 5 && e.type === 'pointerup') {
-    // いきものを押した: その詳細（枝は開け閉めしない）
+    // いきもの（シルエット）を押した: いまは何もしない（名前＝詳細、右の枝＝開け閉め、と操作が重なるため。2026-10-17 ユーザー）
     const c = V3.on ? C.hit3(e.offsetX, e.offsetY) : C.hit((e.offsetX - V.cam.x) / V.cam.k, (e.offsetY - V.cam.y) / V.cam.k);
-    if (c && !Compare.picking) { touched = true; V.selected = c; UI.show(c); V.draw(); }
+    if (c) lastTap.t = 0;
     else {
-      const n = c || (V3.on ? V3.hit(e.offsetX, e.offsetY) : V.hit(e.offsetX, e.offsetY));
+      const n = V3.on ? V3.hit(e.offsetX, e.offsetY) : V.hit(e.offsetX, e.offsetY);
       if (n) { press(n); lastTap.t = 0; }
       else {   // 何もない所: 0.32 秒以内に近くをもう一度押したら拡大
         const now = performance.now();
