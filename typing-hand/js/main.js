@@ -144,7 +144,7 @@ function setView(name) {
 
 // 「つぎへ」1つで順に見る（タブやボタンを探さなくてよいように）。各段で文・速さ・見え方・カメラを決めて、再生する
 const TOUR = [
-  { msg: '人さし指を F と J（小さな出っぱりのあるキー）に置くのが「ホームポジション」。キーの色は、どの指で打つかの割り当てです。', text: 'home', kpm: 400, look: 'skin', view: 'top', map: true, speed: 1, at: 0.3, play: false },
+  { msg: '人さし指を F と J（小さな出っぱりのあるキー）に置くのが「ホームポジション」。キーの色は、どの指で打つかの割り当てです。', text: 'tenki', kpm: 400, look: 'skin', view: 'top', map: true, speed: 1, at: 0.3, play: false },
   { msg: 'ゆっくり打ちます。指先の番号（1 親指 〜 5 小指）で、どの指が動くかを見てください。', text: 'tenki', kpm: 120, look: 'skin', view: 'tilt', map: true, nums: true, speed: 1, play: true },
   { msg: 'ふつうの速さ（1分に 400 キー）。打たない指もキーの上で休みながら、次のキーへ先回りしています。', text: 'tenki', kpm: 400, look: 'skin', view: 'tilt', map: false, speed: 1, play: true },
   { msg: '皮ふを透かして骨と筋肉。キーを押すたびに、指の骨と関節がどう曲がるかが見えます（筋肉・腱の模型は目安）。', text: 'fox', kpm: 400, look: 'xraymus', view: 'tilt', map: false, speed: 1, play: true },
