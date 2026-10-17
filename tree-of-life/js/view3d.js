@@ -10,7 +10,7 @@ const V3 = (() => {
   const cam = { tx: 0, ty: 0, tz: 400, yaw: -0.35, pitch: 0.42, dist: 900 };
   let on = false, guide = 'grid';
   let W = 0, H = 0, F = 600;
-  let picks = [], shown = [];   // picks: 押せるもの（名前の札・点）の画面の場所、shown: 名前の札を出したふし（いきもの用）
+  let picks = [], shown = [], twigs = [];   // twigs: 奥へのびるうっすらの枝（画面の線分。押すと開く）   // picks: 押せるもの（名前の札・点）の画面の場所、shown: 名前の札を出したふし（いきもの用）
   let lastLab = 0;   // 名前の出入りのアニメ（前のコマの時刻）
   let C0 = null, R = null, U = null, Fw = null;   // カメラの位置と向き
 
@@ -165,10 +165,12 @@ const V3 = (() => {
     }
     // まだ先がある（閉じている）まとまりは、奥へうっすら線をのばす
     g.lineWidth = 1;
+    twigs = [];
     for (const n of V.vis) {
       if (!n.name || n.more || n.ay === undefined || V.kidsOf(n).length || !T.expandable(n)) continue;
       const a = P(X(n), 0, Z(n)), b = P(X(n), 0, Z(n) + DZ * 0.8);
       if (!a || !b) continue;
+      twigs.push({ n, a, b });
       const gr = g.createLinearGradient(a[0], a[1], b[0], b[1]);
       gr.addColorStop(0, 'rgba(68,82,60,.28)'); gr.addColorStop(1, 'rgba(68,82,60,0)');
       g.globalAlpha = fog(a[3]); g.strokeStyle = gr; g.lineWidth = Math.max(0.8, 1.6 * a[2]);
@@ -285,7 +287,15 @@ const V3 = (() => {
       const { n, rect } = picks[i];
       if (px >= rect[0] && px <= rect[2] && py >= rect[1] && py <= rect[3]) return n;
     }
-    return null;
+    // 奥へのびるうっすらの枝: 線は細いので、線から 12px までを当たりに（いちばん近い線）
+    let best = null, bd = 12;
+    for (const { n, a, b } of twigs) {
+      const vx = b[0] - a[0], vy = b[1] - a[1], L2 = vx * vx + vy * vy || 1;
+      const t = Math.max(0, Math.min(1, ((px - a[0]) * vx + (py - a[1]) * vy) / L2));
+      const d = Math.hypot(px - a[0] - vx * t, py - a[1] - vy * t);
+      if (d < bd) { bd = d; best = n; }
+    }
+    return best;
   }
 
   // ---------- カメラ ----------

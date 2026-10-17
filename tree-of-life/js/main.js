@@ -161,17 +161,13 @@ function zoomInAt(x, y) {
 function up(e) {
   pts.delete(e.pointerId);
   if (drag && drag.moved <= 5 && e.type === 'pointerup') {
-    // いきもの（シルエット）を押した: いまは何もしない（名前＝詳細、右の枝＝開け閉め、と操作が重なるため。2026-10-17 ユーザー）
-    const c = V3.on ? C.hit3(e.offsetX, e.offsetY) : C.hit((e.offsetX - V.cam.x) / V.cam.k, (e.offsetY - V.cam.y) / V.cam.k);
-    if (c) lastTap.t = 0;
-    else {
-      const n = V3.on ? V3.hit(e.offsetX, e.offsetY) : V.hit(e.offsetX, e.offsetY);
-      if (n) { press(n); lastTap.t = 0; }
-      else {   // 何もない所: 0.32 秒以内に近くをもう一度押したら拡大
-        const now = performance.now();
-        if (now - lastTap.t < 320 && Math.hypot(e.offsetX - lastTap.x, e.offsetY - lastTap.y) < 30) { zoomInAt(e.offsetX, e.offsetY); lastTap.t = 0; }
-        else lastTap = { t: now, x: e.offsetX, y: e.offsetY };
-      }
+    // シルエットは押せない（素通り）。名前と、その右のうっすらの枝（view の hit）を押すと開く（2026-10-17 ユーザー）
+    const n = V3.on ? V3.hit(e.offsetX, e.offsetY) : V.hit(e.offsetX, e.offsetY);
+    if (n) { press(n); lastTap.t = 0; }
+    else {   // 何もない所: 0.32 秒以内に近くをもう一度押したら拡大
+      const now = performance.now();
+      if (now - lastTap.t < 320 && Math.hypot(e.offsetX - lastTap.x, e.offsetY - lastTap.y) < 30) { zoomInAt(e.offsetX, e.offsetY); lastTap.t = 0; }
+      else lastTap = { t: now, x: e.offsetX, y: e.offsetY };
     }
   }
   if (pts.size < 2) pinch = null;

@@ -339,6 +339,15 @@ const V = (() => {
         if (d < bd) { bd = d; best = n; }
       }
     }
+    if (best) return best;
+    // 名前の右のうっすらの枝（閉じている・先がある）: 線は細いので、上下に帯で当てる
+    //   はばは画面で上下 14px 以上（シルエットが立つ線の上も入る）、ただし自分の行（ROW の半分）まで
+    const hb = Math.min(ROW / 2, Math.max(14, 14 / cam.k));
+    for (const n of drawn) {
+      if (n.more || kidsOf(n).length || !T.expandable(n)) continue;
+      const sx = n.x + n.lw + 16, ex = sx + GAP + 56, d = Math.abs(wy - n.y);
+      if (wx >= sx && wx <= ex + pad && d <= hb && d < bd) { bd = d; best = n; }
+    }
     return best;
   }
 
