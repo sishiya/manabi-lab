@@ -7,8 +7,9 @@ function L(ja) { return ja; }
 var THREE = { Matrix4: function () {} }; // skeleton.js が読みこむときに作る行列（ここでは使わない）
 importScripts('keys.js', 'fingering.js', 'hand.js', 'plan.js', 'skeleton.js', 'check.js');
 self.onmessage = e => {
-  const { id, notes, hand, kb, checks, flex } = e.data;
+  const { id, notes, hand, kb, checks, flex, posture } = e.data;
   try {
+    if (posture && posture !== POSTURE) { POSTURE = posture; HOME_TIP = null; } // 指の構え（画面と同じに）
     if (!!flex !== FLEX) { applyFlex(flex); HOME_TIP = null; } // 関節をやわらかく（画面と同じに）
     if (kb && kb !== KB.id) useKeyboard(kb); // キーボードの種類（画面と同じものに）
     if (hand && hand !== HAND.id) setHandModel(hand);

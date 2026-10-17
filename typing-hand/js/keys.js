@@ -49,6 +49,15 @@ const ROWS_ORTHO = [
   [0, [['ShiftLeft', 'Shift', 1], ['KeyZ', 'Z', 1], ['KeyX', 'X', 1], ['KeyC', 'C', 1], ['KeyV', 'V', 1], ['KeyB', 'B', 1], ['KeyN', 'N', 1], ['KeyM', 'M', 1], ['Comma', ',', 1], ['Period', '.', 1], ['Slash', '/', 1], ['Enter', 'Enter', 1]]],
   [0, [['ControlLeft', 'Ctrl', 1], ['MetaLeft', '', 1], ['AltLeft', 'Alt', 1], ['NonConvert', '', 1], ['', '', 1], ['Space', '', 2], ['', '', 1], ['AltRight', 'Alt', 1], ['ContextMenu', 'Menu', 1], ['ShiftRight', 'Shift', 1], ['ControlRight', 'Ctrl', 1]]],
 ];
+// 手動のタイプライター（2026-10-17〜）: 文字・数字と Shift・スペースだけ。丸いキーがレバーの先についていて、段の差が大きく、押しこみが深い。
+// 数字の段の「1」・Q・A・Z の位置（段のずれ）はほかの種類と同じにした。寸法はどれも目安（特定の機種ではない）
+const ROWS_TYPEWRITER = [
+  [1, [['Digit1', '1', 1], ['Digit2', '2', 1], ['Digit3', '3', 1], ['Digit4', '4', 1], ['Digit5', '5', 1], ['Digit6', '6', 1], ['Digit7', '7', 1], ['Digit8', '8', 1], ['Digit9', '9', 1], ['Digit0', '0', 1], ['Minus', '-', 1]]],
+  [1.5, [['KeyQ', 'Q', 1], ['KeyW', 'W', 1], ['KeyE', 'E', 1], ['KeyR', 'R', 1], ['KeyT', 'T', 1], ['KeyY', 'Y', 1], ['KeyU', 'U', 1], ['KeyI', 'I', 1], ['KeyO', 'O', 1], ['KeyP', 'P', 1]]],
+  [1.75, [['KeyA', 'A', 1], ['KeyS', 'S', 1], ['KeyD', 'D', 1], ['KeyF', 'F', 1], ['KeyG', 'G', 1], ['KeyH', 'H', 1], ['KeyJ', 'J', 1], ['KeyK', 'K', 1], ['KeyL', 'L', 1], ['Semicolon', ';', 1]]],
+  [0.5, [['ShiftLeft', 'Shift', 1.75], ['KeyZ', 'Z', 1], ['KeyX', 'X', 1], ['KeyC', 'C', 1], ['KeyV', 'V', 1], ['KeyB', 'B', 1], ['KeyN', 'N', 1], ['KeyM', 'M', 1], ['Comma', ',', 1], ['Period', '.', 1], ['Slash', '/', 1], ['ShiftRight', 'Shift', 1.75]]],
+  [2.75, [['Space', '', 8]]],
+];
 // 種類: rows（並び）、stagger（段のずれ。ふつうは 0・0.5・0.75・1.25 キー分）、寸法（どれも目安）
 // split: 左右に分けて、あいだを gap mm はなし、それぞれ rot 度まわす（右手のほうは時計と反対まわり＝指先が内向きになる向き。手の計算の腕の向きと同じ向き）
 const STAGGER = [0, 0, 0, 0, 0];
@@ -56,8 +65,9 @@ const KB_TYPES = {
   jis: { name: L('ふつう（日本語配列 JIS）', 'Standard (Japanese JIS)'), rows: ROWS_JIS, CAP: 12.5, CAP_H: 8, DEPTH: 4, REST_SINK: 1.5, ROW_UP: 2 },
   us: { name: L('英語配列（US）', 'US layout'), rows: ROWS_US, CAP: 12.5, CAP_H: 8, DEPTH: 4, REST_SINK: 1.5, ROW_UP: 2 },
   laptop: { name: L('ノートパソコン（JIS・うすい。押しこみ 1.5mm）', 'Laptop (JIS, thin)'), rows: ROWS_JIS, CAP: 15.5, CAP_H: 3, DEPTH: 1.5, REST_SINK: 0.8, ROW_UP: 0 },
-  compact: { name: L('小さな英語配列（60%。Control が A の左）', 'Compact US (60%, Control left of A)'), rows: ROWS_COMPACT, CAP: 12.5, CAP_H: 9, DEPTH: 4, REST_SINK: 1.5, ROW_UP: 2.5 },
+  compact: { name: L('小さな英語配列（60%。Control が A の左）', 'Compact US (60%, Control left of A)'), rows: ROWS_COMPACT, snd: 'deep', CAP: 12.5, CAP_H: 9, DEPTH: 4, REST_SINK: 1.5, ROW_UP: 2.5 },
   split: { name: L('左右に分かれたキーボード（US）', 'Split keyboard (US)'), rows: ROWS_US, CAP: 12.5, CAP_H: 8, DEPTH: 4, REST_SINK: 1.5, ROW_UP: 2, split: { gap: 70, rot: 10 } },
+  typewriter: { name: L('手動のタイプライター（丸いキー・押しこみ 10mm）', 'Manual typewriter (round keys)'), rows: ROWS_TYPEWRITER, CAP: 13, CAP_H: 4, DEPTH: 10, REST_SINK: 1.5, ROW_UP: 12, round: true, TK: 0.03, snd: 'type' },
   ortho: { name: L('格子配列（段のずれがない）', 'Ortholinear (grid, no stagger)'), rows: ROWS_ORTHO, CAP: 12.5, CAP_H: 8, DEPTH: 4, REST_SINK: 1.5, ROW_UP: 2, stagger: STAGGER },
 };
 // 段（0 = 数字の段 … 4 = スペースの段）の奥行きの位置と高さ
@@ -66,7 +76,7 @@ const ROW_TOP = r => (2 - r) * KB.ROW_UP;
 let KEYS = [], KEY_BY_CODE = {};
 function setKeyboard(id) {
   const T = KB_TYPES[id] || KB_TYPES.jis;
-  Object.assign(KB, { id: KB_TYPES[id] ? id : 'jis', CAP: T.CAP, CAP_H: T.CAP_H, DEPTH: T.DEPTH, REST_SINK: T.REST_SINK, ROW_UP: T.ROW_UP });
+  Object.assign(KB, { id: KB_TYPES[id] ? id : 'jis', CAP: T.CAP, CAP_H: T.CAP_H, DEPTH: T.DEPTH, REST_SINK: T.REST_SINK, ROW_UP: T.ROW_UP, round: !!T.round, TK: T.TK || 0.010, snd: T.snd || (T.DEPTH < 2 ? 'thin' : 'std') });
   KB.W = KB.U; // 手の計算で「となりの鍵の幅」として使う
   KEYS = [];
   T.rows.forEach(([start, list], row) => {

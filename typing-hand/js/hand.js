@@ -287,10 +287,10 @@ const ease5 = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * x * (10 + x * (6 * x - 15))
 // 打鍵: 指は鍵に着いたときの速さ VC のまま押し下げ、TK 秒で底に着いて止まる（前は鍵の上でいったん止まってから押していた）
 // タイピング: キーが底に着くまでの時間 TK を 35ms（ピアノの鍵 10mm）→ 10ms に。打鍵音の測定（Asonov & Agrawal 2004）で、押す音の山は約 10ms のあいだに
 // 「指が触れる音」と「キーが板に当たる音」が分かれて並ぶため（キーの押しこみは約 4mm）
-const TK = 0.010, TR = 0.12;
+let TK = 0.010; const TR = 0.12; // TK はキーボードの種類で変わる（タイプライターは押しこみが深く 30ms、目安）
 let VC = 1.5 * KB.DEPTH / TK; // タイピング: キーボードの種類で押しこみの深さが変わるので useKeyboard で決めなおす
 // キーボードの種類を変える（keys.js の setKeyboard）。押しこみの深さ・休む指の沈みが変わるので、手首の高さと休む指の形も作りなおす
-function useKeyboard(id) { setKeyboard(id); VC = 1.5 * KB.DEPTH / TK; setHandModel(HAND ? HAND.id : 'adult-l'); }
+function useKeyboard(id) { setKeyboard(id); TK = KB.TK; VC = 1.5 * KB.DEPTH / TK; setHandModel(HAND ? HAND.id : 'adult-l'); }
 // 押せたとみなす指先のずれ（mm）。指の腹の半径（約 6.5mm）の 3/4: これより離れると、指の腹が鍵の上面にしっかり当たらない（目安）
 const MISS_MM = 5;
 const SUB_OV = 0.06; // 押さえたまま指をかえるとき、2本の指が同じ鍵に乗っている時間（秒、目安）

@@ -51,10 +51,10 @@ function capGeometry(w, d, h) {
   return g;
 }
 // キーの文字（上面に貼る板）
-function capLabelTexture(text, wpx) {
+function capLabelTexture(text, wpx, color) {
   const c = document.createElement('canvas'); c.width = wpx; c.height = 128;
   const g = c.getContext('2d');
-  g.fillStyle = '#3a3d44'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = color || '#3a3d44'; g.textAlign = 'center'; g.textBaseline = 'middle';
   const big = text.length <= 1;
   g.font = (big ? '600 70px' : '500 40px') + ' "Zen Kaku Gothic New", sans-serif';
   g.fillText(text, wpx / 2, 66);
@@ -70,19 +70,22 @@ function makeKeyboard(sc) {
   const capMat = () => new THREE.MeshPhysicalMaterial({ color: linCol(0xe8e6e1), roughness: 0.55, clearcoat: 0.15, clearcoatRoughness: 0.5 });
   for (const k of KEYS) {
     const kw = k.w * KB.U - KEY_BOTTOM_GAP, kd = k.d * KB.U - KEY_BOTTOM_GAP, zc = k.zv !== undefined ? k.zv : k.z;
-    // 土台の板（キーの下に、キー1つ分ずつ。左右に分かれた形でも同じ作り方ですむ）
-    const base = new THREE.Mesh(new THREE.BoxGeometry(k.w * KB.U, 4, k.d * KB.U), V.baseMat);
-    base.position.set(k.x, k.top - KB.CAP_H - 2.2, zc); base.rotation.y = k.rot; base.receiveShadow = true; root.add(base);
     const grp = new THREE.Group(); grp.position.set(k.x, k.top, zc); grp.rotation.y = k.rot;
-    const mat = capMat();
-    const cap = new THREE.Mesh(capGeometry(kw, kd, KB.CAP_H), mat);
-    cap.castShadow = true; cap.receiveShadow = true; grp.add(cap);
+    const mat = KB.round ? new THREE.MeshPhysicalMaterial({ color: linCol(0x1b1b1d), roughness: 0.35, clearcoat: 0.6 }) : capMat();
+    if (KB.round) typewriterKey(grp, k, kw, mat, root);
+    else {
+      // 土台の板（キーの下に、キー1つ分ずつ。左右に分かれた形でも同じ作り方ですむ）
+      const base = new THREE.Mesh(new THREE.BoxGeometry(k.w * KB.U, 4, k.d * KB.U), V.baseMat);
+      base.position.set(k.x, k.top - KB.CAP_H - 2.2, zc); base.rotation.y = k.rot; base.receiveShadow = true; root.add(base);
+      const cap = new THREE.Mesh(capGeometry(kw, kd, KB.CAP_H), mat);
+      cap.castShadow = true; cap.receiveShadow = true; grp.add(cap);
+    }
     const tw = kw - 2 * capIn() + KEY_BOTTOM_GAP, td = kd - 2 * capIn() + KEY_BOTTOM_GAP;
-    if (k.label) {
+    if (k.label && !KB.round) {
       const lab = new THREE.Mesh(new THREE.PlaneGeometry(tw * 0.9, Math.min(td, KB.CAP) * 0.9), new THREE.MeshBasicMaterial({ map: capLabelTexture(k.label, Math.round(128 * Math.max(1, tw / KB.CAP))), transparent: true, depthWrite: false }));
       lab.rotation.x = -Math.PI / 2; lab.position.set(0, 0.05, k.d === 2 ? KB.U / 2 - 1 : 0); grp.add(lab);
     }
-    if (k.code === 'KeyF' || k.code === 'KeyJ') { // ホームポジションの目印（小さな横棒の出っぱり）
+    if (!KB.round && (k.code === 'KeyF' || k.code === 'KeyJ')) { // ホームポジションの目印（小さな横棒の出っぱり）
       const bump = new THREE.Mesh(new THREE.BoxGeometry(4, 0.6, 0.8), mat);
       bump.position.set(0, 0.3, 3.5); grp.add(bump);
     }
@@ -90,15 +93,40 @@ function makeKeyboard(sc) {
     V.keys[k.m] = { grp, mat, k, y0: k.top };
   }
 }
+// タイプライターのキー（2026-10-17〜）: 黒い丸い天板（文字は白）を金属の輪でかこみ、細い棒（レバー）が奥へ下りていく。スペースは横に長い金属の棒。
+// 寸法は目安。機械の本体はキーボードの奥の下に置いた暗い箱
+const TW_METAL = () => new THREE.MeshStandardMaterial({ color: linCol(0xb9bcc2), roughness: 0.25, metalness: 1 });
+function typewriterKey(grp, k, kw, mat, root) {
+  const metal = TW_METAL();
+  if (k.code === 'Space') {
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(kw, KB.CAP_H, 9), metal); bar.position.y = -KB.CAP_H / 2; bar.castShadow = true; grp.add(bar);
+  } else {
+    const r = KB.CAP / 2, h = KB.CAP_H;
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 32), mat); top.position.y = -h / 2; top.castShadow = true; grp.add(top);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(r + 0.4, 0.9, 10, 40), metal); ring.rotation.x = Math.PI / 2; ring.position.y = -0.6; grp.add(ring);
+    const lab = new THREE.Mesh(new THREE.CircleGeometry(r * 0.82, 32), new THREE.MeshBasicMaterial({ map: capLabelTexture(k.label, 128, '#f2efe6'), transparent: true, depthWrite: false }));
+    lab.rotation.x = -Math.PI / 2; lab.position.y = 0.05; grp.add(lab);
+  }
+  // レバー: キーの下から奥の下へ（本体の中へ）
+  const len = 60 + (4 - k.row) * 10, stem = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, len, 8), metal);
+  const tilt = 0.5, hh = len / 2; // 上の端がキーの下、下の端は奥（−z）の下へ
+  stem.rotation.x = tilt; stem.position.set(0, -KB.CAP_H - hh * Math.cos(tilt), -hh * Math.sin(tilt)); grp.add(stem);
+  if (!V.twBody || V.twBody.parent !== root) { // 本体（1つだけ）
+    const body = V.twBody = new THREE.Mesh(new THREE.BoxGeometry(KB.X_MAX - KB.X_MIN + 40, 60, 140), V.baseMat);
+    body.position.set((KB.X_MAX + KB.X_MIN) / 2, -60, KB.Z_BACK - 40); body.receiveShadow = true; root.add(body);
+  }
+}
+
 // キーの沈み（mm）と、押している指の色（なければ割り当ての色を淡く、または色なし）
 function setKeyState(m, depth, finger, mapOn) {
+  const BASE = KB.round ? 0x1b1b1d : 0xe8e6e1;
   const K = V.keys[m]; if (!K) return;
   K.grp.position.y = K.y0 - depth;
   const f = finger || 0, base = mapOn && K.k.f ? FCOL[K.k.f] : 0;
   const key = f * 1e7 + base;
   if (K.last === key) return;
   K.last = key;
-  if (f) { K.mat.color.copy(linCol(0xe8e6e1)).lerp(linCol(FCOL[f]), 0.55); K.mat.emissive.copy(linCol(FCOL[f])).multiplyScalar(0.12); }
-  else if (base) { K.mat.color.copy(linCol(0xe8e6e1)).lerp(linCol(base), 0.45); K.mat.emissive.setRGB(0, 0, 0); }
-  else { K.mat.color.copy(linCol(0xe8e6e1)); K.mat.emissive.setRGB(0, 0, 0); }
+  if (f) { K.mat.color.copy(linCol(BASE)).lerp(linCol(FCOL[f]), 0.55); K.mat.emissive.copy(linCol(FCOL[f])).multiplyScalar(0.12); }
+  else if (base) { K.mat.color.copy(linCol(BASE)).lerp(linCol(base), 0.45); K.mat.emissive.setRGB(0, 0, 0); }
+  else { K.mat.color.copy(linCol(BASE)); K.mat.emissive.setRGB(0, 0, 0); }
 }

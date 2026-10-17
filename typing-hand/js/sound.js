@@ -43,15 +43,18 @@ function keySound(m, up, speed) {
   const k = KEYS[m]; if (!k) return;
   // 鳴らす時刻は 25ms 先（5ms では画面の処理が少し遅れると、出だしが途中から急に始まって「ブツッ」と鳴った）。毎回のゆらぎ ±6%
   const t = AC.currentTime + 0.025, r = () => 1 + (Math.random() - 0.5) * 0.12;
-  const thin = KB.DEPTH < 2, big = k.w >= 1.75 || k.d > 1;
+  const P = KB.snd || 'std', thin = P === 'thin', big = k.w >= 1.75 || k.d > 1;
   const pan = AC.createStereoPanner ? AC.createStereoPanner() : AC.createGain();
   if (pan.pan) pan.pan.value = Math.max(-0.6, Math.min(0.6, keyX(m) / 250));
   const vol = AC.createGain(); vol.gain.value = SND.vol * (thin ? 0.55 : 1); pan.connect(vol); vol.connect(OUT);
+  if (P === 'type') { typewriterSound(k, t, up, speed, pan, r); return; }
   // 本物の打鍵音の形（Asonov & Agrawal 2004 の測定）: 押す音は約 10ms のあいだに「指がキーに触れる音（はっきり）」と「キーが板に当たる音」の
-  // 2つの山に分かれ、あいだは静か。離す音は押す音よりかなり小さい。どちらでも板が震える（ここでは低い所だけ通した雑音で、響きにした）
-  const plate = (at, g, len) => { // 板とケースの響き: 大きいキーほど低く長い（目安）
-    const fb = (thin ? 1400 : big ? 450 : 750 + 60 * (2 - k.row)) * r();
-    sndNoise(at, 0.06, fb, 0.8, g * r(), len, pan); // 帯域を通す（ローパスはごく低い音まで通して「ブツッ」と鳴った）
+  // 2つの山に分かれ、あいだは静か。離す音は押す音よりかなり小さい。どちらでも板が震える（ここでは帯域を通した雑音で、響きにした）
+  // 種類ごと（目安）: std ふつう、thin ノートパソコン（高く短く小さい）、deep 小さな英語配列（響きが低く長く、触れる音はひかえめ）
+  const deep = P === 'deep';
+  const plate = (at, g, len) => { // 板とケースの響き: 大きいキーほど低く長い
+    const fb = (thin ? 1400 : big ? 450 : 750 + 60 * (2 - k.row)) * (deep ? 0.7 : 1) * r();
+    sndNoise(at, 0.06, fb, 0.8, g * (deep ? 1.25 : 1) * r(), len * (deep ? 1.3 : 1), pan);
   };
   if (up) { // ④ 離す音: キーが上に戻って当たる（小さく）
     sndNoise(t, 0.02, (thin ? 3800 : 3000) * r(), 1.5, 0.09 * r(), 0.004, pan);
@@ -59,11 +62,28 @@ function keySound(m, up, speed) {
     return;
   }
   // ① 指がキーに触れる音（いちばんはっきり、2〜3ms）
-  sndNoise(t, 0.02, (thin ? 2800 : 2200) * r(), 0.8, 0.22 * r(), 0.003, pan);
+  sndNoise(t, 0.02, (thin ? 2800 : 2200) * r(), 0.8, (deep ? 0.17 : 0.22) * r(), 0.003, pan);
   // ② キーが底（板）に当たる音: 触れてから TK（hand.js、約 10ms）おくれて。短い「カッ」と板の響き
   const th = t + TK / (speed || 1);
   sndNoise(th, 0.02, (thin ? 2000 : 1600) * r(), 1.0, 0.18 * r(), 0.003, pan);
   plate(th, thin ? 0.12 : big ? 0.5 : 0.32, thin ? 0.012 : big ? 0.035 : 0.022);
   // ③ 長いキーの支え（スタビライザー）が少しおくれて当たる
   if (big && !thin) sndNoise(th + 0.005 * r(), 0.02, 1800 * r(), 1.5, 0.10, 0.006, pan);
+}
+// 手動のタイプライター（目安）: キーを押すとレバーが動き（低い「コト」）、押しこみきる所で活字の棒が紙のうしろの太いローラーを打つ
+// （大きくはっきりした「カシャン」＝広い帯域の短い音と、金属の棒が少し鳴る細い帯域の音）。つづいて紙を1文字ぶん送る仕かけが「チッ」と鳴る。
+// スペースは活字を打たないので、レバーと紙を送る音だけ。離す音はレバーが戻る小さな音。時間・周波数・大きさはどれも目安
+function typewriterSound(k, t, up, speed, pan, r) {
+  const sp = speed || 1, space = k.code === 'Space', shift = /Shift/.test(k.code);
+  if (up) { sndNoise(t, 0.03, 900 * r(), 1, 0.07 * r(), 0.010, pan); return; }
+  sndNoise(t, 0.04, 700 * r(), 1, 0.12 * r(), 0.014, pan); // レバー
+  if (shift) { sndNoise(t + 0.02 / sp, 0.06, 400 * r(), 0.8, 0.25 * r(), 0.04, pan); return; } // 活字の台が持ち上がる重い音
+  const hit = t + TK / sp; // 押しこみきった所（hand.js の TK、タイプライターは 30ms）
+  if (!space) {
+    sndNoise(hit, 0.03, 2400 * r(), 0.7, 0.34 * r(), 0.007, pan); // 活字がローラーを打つ（ほかのキーボードより大きい）
+    sndNoise(hit, 0.06, 1100 * r(), 0.9, 0.22 * r(), 0.02, pan);
+    sndNoise(hit + 0.001, 0.08, 3300 * r(), 14, 0.05, 0.05, pan); // 金属の棒が少し鳴る（細い帯域）
+    sndNoise(hit + 0.001, 0.08, 4700 * r(), 16, 0.035, 0.04, pan);
+  }
+  sndNoise(hit + 0.025 / sp, 0.02, 5200 * r(), 2, 0.10 * r(), 0.003, pan); // 紙を送る仕かけ
 }
