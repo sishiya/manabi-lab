@@ -123,6 +123,9 @@ const MOTION = {
   'weed-growth': async w => { const h = w.__wegr; w.startScenario('garden'); h.set('play', false); h.run(365 + 90, 1); h.set('speed', 30); h.set('play', true); },
   // サル目（Primates）を押して開く（枝がやわらかく伸びて、ならびが動く）
   'tree-of-life': async w => { const t = w.__trofli; return k => { if (k === 6) t.press('Primates'); }; },
+  // 見る角度を 85° → 79° → 85° とゆっくり往復（円盤の下側の回りこみが見え隠れする。始まりは静止画と同じ 85°、つなぎ目なくくり返す）。
+  // 角度を変えると粗い絵から描きなおすので、コマごとに細かい段まで描き切る
+  'black-hole': async w => { const B = w.__bh; return k => { B.S.th = (82 + 3 * Math.cos(2 * Math.PI * k / 60)) * Math.PI / 180; B.S.geoDirty = true; B.renderNow(); }; },
   // 人 → ミツバチ（紫外線）→ マムシ（熱）と、同じ庭の見え方を切りかえる
   'animal-senses': async w => { const A = w.__as; return k => { if (k === 0) A.setAnimal('human'); if (k === 20) A.setAnimal('bee'); if (k === 40) A.setAnimal('snake'); }; },
   // 体内ダイブ・尿の旅・血管の旅: 自動航行（管の中を進んでいく。Shift の速さだと場面がとびとびになる）
