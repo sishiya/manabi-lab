@@ -7,10 +7,11 @@ function L(ja) { return ja; }
 var THREE = { Matrix4: function () {} }; // skeleton.js が読みこむときに作る行列（ここでは使わない）
 importScripts('keys.js', 'fingering.js', 'hand.js', 'plan.js', 'skeleton.js', 'check.js');
 self.onmessage = e => {
-  const { id, notes, hand } = e.data;
+  const { id, notes, hand, kb, checks } = e.data;
   try {
+    if (kb && kb !== KB.id) useKeyboard(kb); // キーボードの種類（画面と同じものに）
     if (hand && hand !== HAND.id) setHandModel(hand);
     const plan = buildPlan({ notes });
-    self.postMessage({ id, plan });
+    self.postMessage({ id, plan, checks: checks ? runChecks(plan) : null }); // checks: 検査も（ながめる・通して再生）
   } catch (err) { self.postMessage({ id, error: String(err && err.message) }); }
 };

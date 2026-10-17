@@ -22,12 +22,15 @@ function tEnd() { return S.plan ? S.plan.end + 1.2 : 1; }
 function setTime(t) { S.t = Math.min(tEnd(), Math.max(tStart(), t)); S.prevT = S.t; }
 
 // 文を選ぶ・速さを変える → 手の動きを計算し直す
-function setText(id) {
+// 計算は Worker で（寿限無のような長い文をゆっくり打つと 20 秒以上かかり、画面の側では止まってしまう）
+async function setText(id) {
   const tx = TEXTS.find(x => x.id === id) || TEXTS[0];
   S.text = tx;
-  const song = textToSong(tx);
-  S.plan = buildPlan(song);
-  S.checks = runChecks(S.plan);
+  const song = textToSong(tx), seq = S.textSeq = (S.textSeq || 0) + 1;
+  const r = await workerPlan(song.notes, true);
+  if (seq !== S.textSeq || S.mode !== 'watch') return; // そのあいだに別の文・モードにした
+  S.plan = r.plan; S.plan.song = song;
+  S.checks = r.checks;
   renderChecks();
   $('textSel').value = tx.id;
   setTime(tStart());
@@ -129,10 +132,10 @@ function setView(name) {
 
 // 「つぎへ」1つで順に見る（タブやボタンを探さなくてよいように）。各段で文・速さ・見え方・カメラを決めて、再生する
 const TOUR = [
-  { msg: '人さし指を F と J（小さな出っぱりのあるキー）に置くのが「ホームポジション」。キーの色は、どの指で打つかの割り当てです。', text: 'home', kpm: 120, look: 'skin', view: 'top', map: true, speed: 0.5, at: 0.3, play: false },
-  { msg: 'ゆっくり打ちます。指先の番号（1 親指 〜 5 小指）で、どの指が動くかを見てください。', text: 'tenki', kpm: 120, look: 'skin', view: 'tilt', map: true, nums: true, speed: 0.5, play: true },
+  { msg: '人さし指を F と J（小さな出っぱりのあるキー）に置くのが「ホームポジション」。キーの色は、どの指で打つかの割り当てです。', text: 'home', kpm: 300, look: 'skin', view: 'top', map: true, speed: 1, at: 0.3, play: false },
+  { msg: 'ゆっくり打ちます。指先の番号（1 親指 〜 5 小指）で、どの指が動くかを見てください。', text: 'tenki', kpm: 120, look: 'skin', view: 'tilt', map: true, nums: true, speed: 1, play: true },
   { msg: 'ふつうの速さ（1分に 300 キー）。打たない指もキーの上で休みながら、次のキーへ先回りしています。', text: 'tenki', kpm: 300, look: 'skin', view: 'tilt', map: false, speed: 1, play: true },
-  { msg: '皮ふを透かして骨と筋肉。キーを押すたびに、指の骨と関節がどう曲がるかが見えます（筋肉・腱の模型は目安）。', text: 'fox', kpm: 300, look: 'xraymus', view: 'tilt', map: false, speed: 0.5, play: true },
+  { msg: '皮ふを透かして骨と筋肉。キーを押すたびに、指の骨と関節がどう曲がるかが見えます（筋肉・腱の模型は目安）。', text: 'fox', kpm: 300, look: 'xraymus', view: 'tilt', map: false, speed: 1, play: true },
   { msg: '自分で打ってみましょう。打ったキーを、1.5 秒おくれて画面の手が打ちます（指は標準の割り当て）。', end: true },
 ];
 let tourI = -1;
@@ -145,8 +148,8 @@ function nextTour() {
   setMode('watch', true);
   setPlaying(false);
   KPM = s.kpm; $('kpmSel').value = String(KPM);
-  busy('手の動きを計算しています…', () => {
-    setText(s.text);
+  busy('手の動きを計算しています…', async () => {
+    await setText(s.text);
     setLook(s.look); setView(s.view);
     OPT.fingerMap = $('optFingerMap').checked = s.map;
     OPT.fingerNums = $('optFingerNums').checked = !!s.nums;
@@ -182,11 +185,11 @@ function initUI() {
   setPlaying(false);
   $('textSel').innerHTML = TEXTS.map(x => `<option value="${x.id}">${x.name}</option>`).join('');
   $('textSel').addEventListener('change', e => { setPlaying(false); busy('手の動きを計算しています…', () => setText(e.target.value)); });
-  $('kpmSel').innerHTML = KPM_LIST.map(v => `<option value="${v}">打つ速さ: 1分に ${v} キー</option>`).join('');
+  $('kpmSel').innerHTML = KPM_LIST.map(v => `<option value="${v}">打つ速さ: 1分に ${v} キー${v === KPM_RECORD ? '（世界記録の速さ）' : ''}</option>`).join('');
   $('kpmSel').value = String(KPM);
   $('kpmSel').addEventListener('change', e => { setPlaying(false); KPM = +e.target.value; busy('手の動きを計算しています…', () => setText(S.text.id)); });
   $('speedSel').innerHTML = SPEEDS.map(v => `<option value="${v}">再生 ×${v}</option>`).join('');
-  $('speedSel').value = '1';
+  $('speedSel').value = String(S.speed);
   $('speedSel').addEventListener('change', e => { S.speed = +e.target.value; });
   $('btnPlay').addEventListener('click', () => setPlaying(!S.playing));
   $('btnNext').addEventListener('click', nextTour);
@@ -201,9 +204,13 @@ function initUI() {
   $('sceneSel').addEventListener('change', e => applyScene(e.target.value));
   $('optFx').checked = V.fxLevel > 0;
   $('optFx').addEventListener('change', e => applyFx(e.target.checked ? 1 : 0));
+  // キーボードの種類（2026-10-17〜、ユーザーの希望）: 並び・寸法が変わるので、キーの見た目・手の形・計算をすべて作りなおす
+  $('kbSel').innerHTML = Object.entries(KB_TYPES).map(([k, t]) => `<option value="${k}">キーボード: ${t.name}</option>`).join('');
+  $('kbSel').value = KB.id;
+  $('kbSel').addEventListener('change', e => { setPlaying(false); busy('キーボードを作りなおしています…', async () => { useKeyboard(e.target.value); makeKeyboard(V.scene); makeScreenKeyboard(); REC.home = null; if (S.mode === 'replay') { recClear(); S.t = 0; } else await setText(S.text.id); }); });
   $('handModel').innerHTML = Object.entries(HAND_MODELS).map(([k, m]) => `<option value="${k}">手のモデル: ${m.name}</option>`).join('');
   $('handModel').value = HAND.id;
-  $('handModel').addEventListener('change', e => { setPlaying(false); busy('手を作りなおしています…', () => { setHandModel(e.target.value); rebuildSkins(); REC.home = null; if (S.mode === 'replay') { recClear(); S.t = 0; } else setText(S.text.id); }); });
+  $('handModel').addEventListener('change', e => { setPlaying(false); busy('手を作りなおしています…', async () => { setHandModel(e.target.value); rebuildSkins(); REC.home = null; if (S.mode === 'replay') { recClear(); S.t = 0; } else await setText(S.text.id); }); });
   $('chkTable').addEventListener('click', e => {
     const tr = e.target.closest('tr'); if (!tr) return;
     const r = S.checks[tr.dataset.id];
@@ -225,9 +232,9 @@ window.__tyha = {
   poseAt: (t, hi) => poseAt(S.plan.hands[hi || 0], t),
   simRun(sec) { setTime(S.t + sec); step(); return S.t; },
   // すべての文・速さで検査（押せなかったキーの数も）
-  checksAll() {
+  checksAll(ids, kpms) { // 例 checksAll(['fox'], [300, 1080])。なしなら寿限無を除く文 × 120〜400 と 1080（全部だと何分もかかる）
     const out = {}, k0 = KPM;
-    for (const kpm of KPM_LIST) for (const tx of TEXTS) {
+    for (const kpm of kpms || [120, 200, 300, 400, 1080]) for (const tx of TEXTS.filter(x => ids ? ids.includes(x.id) : x.id !== 'jugemu')) {
       KPM = kpm; const p = buildPlan(textToSong(tx)), r = runChecks(p);
       out[tx.id + '@' + kpm] = { miss: p.notes.filter(n => n.miss).map(n => n.ch).join(''), ...Object.fromEntries(CHECKS.map(c => [c.id, +r[c.id].v.toFixed(1) + (r[c.id].at !== null ? '@' + r[c.id].at.toFixed(2) : '')])) };
     }

@@ -39,7 +39,7 @@ function initView(canvas) {
   // 両手
   for (const side of [1, -1]) V.hands.push({ side, skin: makeSkinHand(sc, side), bones: makeSkeletonHand(sc, side), tissue: makeTissueHand(sc, side), marks: makeMarks(sc) });
   initScene();
-  applyScene('studio'); applyFx(0); // 最初はスタジオ・エフェクトなし（キーの文字が読みやすいように）
+  applyScene('stage'); applyFx(0); // 最初は夜のステージ（ユーザーの希望 2026-10-17）・エフェクトなし
   initCamera(canvas);
 }
 

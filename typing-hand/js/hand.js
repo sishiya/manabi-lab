@@ -229,14 +229,21 @@ function computePostures() {
 // キーボードのホームの段は左右対称なので、左手は右手の形を鏡に映すだけでよい。親指の位置（スペースの右へ 22mm、段の 4mm 奥）は目安
 const HOME_CODES = [null, "Space", "KeyJ", "KeyK", "KeyL", "Semicolon"];
 let HOME_TIP = null, HOME_W = null;
-const homePoint = f => { const k = KEY_BY_CODE[HOME_CODES[f]]; return [f === 1 ? 22 : k.x, k.top + PAD - KB.REST_SINK * HAND.s, f === 1 ? k.z - 4 : k.z]; };
+const homePoint = f => { const k = KEY_BY_CODE[HOME_CODES[f]]; return [f === 1 ? keyX(k.m) : k.x, k.top + PAD - KB.REST_SINK * HAND.s, f === 1 ? k.z - 4 : k.z]; };
 function homeWrist() {
   const k = Math.max(0, POSTURES.findIndex(q => q.id === POSTURE)), P = homePoint(2);
   let x = P[0] - TIP_N[2][0], psi = 0;
   for (let it = 0; it < 4; it++) { psi = baseYaw(x, 1); const q = rotY(psi, POST_TIPS[k][2] || TIP_N[2]); x = P[0] - q[0]; }
   const q = rotY(psi, POST_TIPS[k][2] || TIP_N[2]);
-  return [P[0] - q[0], wyOf(k), P[2] - q[2], psi, 1];
+  const W = [P[0] - q[0], wyOf(k), P[2] - q[2], psi, 1];
+  // 小指のゆとり（2026-10-17、ユーザーの指摘「小指がピンと伸びすぎ」）: 小指は付け根が人さし指より約 12mm 手前で、長さも約 10mm 短いのに、
+  // ホームの ; は J と同じ段にある。人さし指が力を抜いた形のままの手首だと、届かない分をすべて小指が受けもち、第2関節が 0°（範囲の端）まで
+  // のびきった。手首を 1mm ずつ奥へ動かし、小指の第2関節が HOME_PINKY_A2 曲がる所で止める（人さし指〜薬指は少し深く曲がる）。値は目安
+  const pk = homePoint(5);
+  for (let dz = 0; dz < 30; dz++) { if (fingerIK(FINGERS[5], toLocal(W, pk)).a2 >= HOME_PINKY_A2) break; W[2] -= 1; }
+  return W;
 }
+const HOME_PINKY_A2 = 30 * D2R;
 function computeHome() {
   HOME_W = homeWrist(); HOME_TIP = [null];
   for (let f = 1; f <= 5; f++) HOME_TIP.push(toLocal(HOME_W, homePoint(f)));
@@ -278,7 +285,10 @@ const lerp3 = (a, b, s) => [a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s, 
 // 最小ジャークの曲線（速さも加速度も 0 から始まり 0 で終わる。3次の smoothstep は動き出しの加速度がいきなり大きく、機械のように見えた）
 const ease5 = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * x * (10 + x * (6 * x - 15));
 // 打鍵: 指は鍵に着いたときの速さ VC のまま押し下げ、TK 秒で底に着いて止まる（前は鍵の上でいったん止まってから押していた）
-const TK = 0.035, VC = 1.5 * KB.DEPTH / TK, TR = 0.12;
+const TK = 0.035, TR = 0.12;
+let VC = 1.5 * KB.DEPTH / TK; // タイピング: キーボードの種類で押しこみの深さが変わるので useKeyboard で決めなおす
+// キーボードの種類を変える（keys.js の setKeyboard）。押しこみの深さ・休む指の沈みが変わるので、手首の高さと休む指の形も作りなおす
+function useKeyboard(id) { setKeyboard(id); VC = 1.5 * KB.DEPTH / TK; setHandModel(HAND ? HAND.id : 'adult-l'); }
 // 押せたとみなす指先のずれ（mm）。指の腹の半径（約 6.5mm）の 3/4: これより離れると、指の腹が鍵の上面にしっかり当たらない（目安）
 const MISS_MM = 5;
 const SUB_OV = 0.06; // 押さえたまま指をかえるとき、2本の指が同じ鍵に乗っている時間（秒、目安）

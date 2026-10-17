@@ -38,10 +38,21 @@ function recNotes(from) {
 function requestPlan(notes, cb) {
   const id = ++REC.reqId;
   REC.busy = true; REC.cb = cb;
-  if (PW) PW.postMessage({ id, notes, hand: HAND.id });
+  if (PW) PW.postMessage({ id, notes, hand: HAND.id, kb: KB.id });
   else setTimeout(() => onPlanDone({ data: { id, plan: buildPlan({ notes }) } }), 0); // Worker が使えないときは画面の側で
 }
+// 計算を Worker に頼んで待つ（ながめるの文・通して再生）。Worker が使えないときは画面の側で
+let PW_SEQ = 0; const PW_WAIT = {};
+function workerPlan(notes, checks) {
+  return new Promise((res, rej) => {
+    if (!PW) { const plan = buildPlan({ notes }); res({ plan, checks: checks ? runChecks(plan) : null }); return; }
+    const id = 'w' + (++PW_SEQ); PW_WAIT[id] = { res, rej };
+    PW.postMessage({ id, notes, hand: HAND.id, kb: KB.id, checks });
+  });
+}
 function onPlanDone(e) {
+  const W = PW_WAIT[e.data.id];
+  if (W) { delete PW_WAIT[e.data.id]; if (e.data.error) W.rej(new Error(e.data.error)); else W.res(e.data); return; }
   const { id, plan, error } = e.data;
   if (id !== REC.reqId) return; // 古い計算（そのあと消した・通して再生にした）
   REC.busy = false;
@@ -64,10 +75,11 @@ function recPlayAll() {
   for (const c in REC.down) recKeyUp(c);
   S.live = false; S.plan = null;
   showLoading('打ったキーから手の動きを計算しています…');
-  requestPlan(recNotes(-1), plan => {
-    S.plan = plan; S.checks = runChecks(plan); renderChecks(); $('checks').hidden = false;
+  REC.reqId++; // 追いかける計算の結果は捨てる
+  workerPlan(recNotes(-1), true).then(({ plan, checks }) => {
+    S.plan = plan; S.checks = checks; renderChecks(); $('checks').hidden = false;
     hideLoading(); setTime(Math.max(0, REC.notes[0].t0 - 0.5)); setPlaying(true);
-  });
+  }, err => { hideLoading(); window.__tyhaErr.push(String(err.message)); });
   return last;
 }
 // 片方の手がまだ打っていない（追いかける範囲にキーがない）ときは、ホームポジションで休む手を出す
