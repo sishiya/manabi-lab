@@ -26,6 +26,8 @@
 - [ ] サイトのアクセス（GA4）: Google Cloud で「YouTube Analytics API」「Google Analytics Data API」を有効に → GA のプロパティ ID（数字）を
   `_dev/tools/analytics.local.txt` に1行 → `youtube-upload.ps1 -Ga -Auth`（GA を持っているアカウント）。
 - [ ] 準備ができたら `weekly-report.ps1` を通して中身を確かめる。
+- [ ] 入口の「人気」（`_dev/PLAN-popular.md`）: GA の準備ができたら `popular.ps1` を初めて本物で動かす（pagePath × date × engagedSessions を GA が受けつけるか、表の数が GA の画面と合うか）。そのあとは**週のふり返りのたびに** `popular.ps1` → `assets/popular.json` を commit（公開は push のとき。3週間更新しないと入口から消える）。
+- [ ] （おすすめ）GA の内部トラフィックの定義に自宅の IP を足してフィルタを有効に（自分の確認を人気に数えない。ユーザーが GA の管理画面で）。
 
 ## 道具・そのほか
 - [ ] **リンク切れ**（2026-10-12 の健康診断）: god-view の出どころ `https://www.earthdata.nasa.gov/data/tools/gibs` が 404。NASA GIBS の今のページを探して直す。

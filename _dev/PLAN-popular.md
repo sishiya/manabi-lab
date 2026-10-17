@@ -43,6 +43,11 @@
   - 見くらべ方（ローカルだけ、テスト用の順位）: `_dev/tools/out/popular-test.json` を作り、`http://localhost:8765/?pop=a&popsrc=_dev/tools/out/popular-test.json`（b・c も）。`popsrc` は localhost でしか効かない。
   - 確かめたこと: 3案の印・ボタン・根拠の出かた、ファイルが空のとき何も出ず人気順を選んでいても分野ごとになる、英語、幅 375px で4つのボタンが収まり横にはみ出さない、エラーなし。
 - **C 仕上げ**: 選ばなかった案を消す。`_dev/tools/README.md` に道具を1行、週のふり返りの手順に「popular.ps1 → commit」を足す。
+  - **済み（2026-10-17）**: ユーザーが **C（印＋人気順）** を選んだ。`?pop=` と A・B を消した。根拠の1行は「「人気」と人気順は …」。週の手順と GA の準備は `_dev/TODO.md` の「週のふり返り」に。`?popsrc=`（localhost だけ）はテスト用に残す。
+
+## 状態（2026-10-17）
+- 段階A〜C まで済み。公開版の `assets/popular.json` は空の順位なので、入口にはまだ何も出ない。
+- 残り: ユーザーの GA の準備 → `popular.ps1` を初めて本物で動かして確かめる → commit・push で入口に出る。
 
 ## やらないこと
 - 数（人数・回数）を画面や Git に出す。

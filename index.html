@@ -285,20 +285,17 @@ const state = {
 };
 
 // よく遊ばれている（_dev/PLAN-popular.md）。assets/popular.json は _dev/tools/popular.ps1 が作る順位だけ（数は出さない）。
-// ないとき・rank が空のとき・3週間より古いときは何も出さない。
-// 出し方の試し（段階B）: ?pop=a 印だけ／b 並び順だけ／c 両方。ローカルでは ?popsrc=<json> でテスト用の順位を読める
-const POP_MODES = ['a','b','c'];
-const POP_MODE = POP_MODES.includes(params.get('pop')) ? params.get('pop') : 'c';
+// 上位3本に「人気」の印、並び順に「人気順」（3案から選んだ。2026-10-17 ユーザー）。
+// ないとき・rank が空のとき・3週間より古いときは何も出さない。ローカルでは ?popsrc=<json> でテスト用の順位を読める
 const POP_SRC = (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && params.get('popsrc')) || 'assets/popular.json';
 let POP = null; // {from, to, rank: [id…]}
 const popRank = id => POP ? POP.rank.indexOf(id) : -1;
-const popBadge = id => POP && POP_MODE !== 'b' && popRank(id) >= 0 && popRank(id) < 3;
-const popSort = () => POP && POP_MODE !== 'a';
+const popBadge = id => popRank(id) >= 0 && popRank(id) < 3;
+const popSort = () => !!POP;
 
 function saveState() {
   const p = new URLSearchParams();
   if (LANG === 'en') p.set('lang', 'en');
-  if (params.has('pop')) p.set('pop', POP_MODE);
   if (params.has('popsrc')) p.set('popsrc', params.get('popsrc'));
   if (state.cat !== 'all') p.set('cat', state.cat);
   if (state.sort !== 'cat' && (state.sort !== 'pop' || popSort())) p.set('sort', state.sort); // 人気順は順位があるときだけ
@@ -358,11 +355,10 @@ function render() {
   $('sort').querySelector('[data-sort=pop]').hidden = !popSort();
   document.querySelectorAll('#sort button').forEach(b => b.setAttribute('aria-pressed', b.dataset.sort === sort));
 
-  // 人気の根拠（出どころ）。印か人気順が見えているときだけ
-  const popShown = POP && (POP_MODE !== 'b' || sort === 'pop');
-  $('popnote').hidden = !popShown;
-  if (popShown) $('popnote').textContent = L(`${POP_MODE === 'b' ? '人気順' : '「人気」'}は ${shortDate(POP.from)}〜${shortDate(POP.to)}によく遊ばれたアプリ（Google アナリティクスで集計。新しいアプリは1日あたりでくらべる）`,
-    `${POP_MODE === 'b' ? '“Popular”' : 'The “Popular” tag'} is based on how often each app was played from ${shortDate(POP.from)} to ${shortDate(POP.to)} (Google Analytics; newer apps are compared per day)`);
+  // 人気の根拠（出どころ）。順位があるときだけ
+  $('popnote').hidden = !POP;
+  if (POP) $('popnote').textContent = L(`「人気」と人気順は ${shortDate(POP.from)}〜${shortDate(POP.to)}によく遊ばれたアプリ（Google アナリティクスで集計。新しいアプリは1日あたりでくらべる）`,
+    `“Popular” is based on how often each app was played from ${shortDate(POP.from)} to ${shortDate(POP.to)} (Google Analytics; newer apps are compared per day)`);
 
   // いまの表示の説明（読み上げ用）
   $('status').textContent = state.cat === 'all' ? L(`${shown.length}本すべて`, `All ${nApps(shown.length)}`) : L(`${nameOf(catOf(state.cat))}で ${shown.length}本`, `${nameOf(catOf(state.cat))}: ${nApps(shown.length)}`);
