@@ -108,10 +108,12 @@ function setKeyboard(id) {
       }
     }
   }
-  // スペースを押す所: 右手の親指が休んでいる所（J の 6.6mm 左。JIS ではまん中から 22mm 右、hand.js の homePoint）。まん中を押すと、すぐ上の B を打つ
+  // スペースを押す所: 右手の親指が休んでいる所（hand.js の homePoint）。まん中を押すと、すぐ上の B を打つ
   // 左手の人さし指とぶつかった（2026-10-17）。横長のキーは、どこを押しても沈む。キーの端から 6mm より外には出さない
   const sp = KEY_BY_CODE.Space, hw = sp.w * KB.U / 2 - 6;
-  sp.px = Math.max(sp.x - hw, Math.min(sp.x + hw, KEY_BY_CODE.KeyJ.x - 6.6));
+  // 2026-10-17: J の 6.6mm 左（中心から 22mm）→ J の 1.4mm 右（中心から 30mm）。休んでいる左手の親指（鏡で中心から左 30mm）と右手の親指が
+  // 近く、左手が真ん中へ寄ると親指どうしがぶつかった（雨ニモマケズで 7.4mm）
+  sp.px = Math.max(sp.x - hw, Math.min(sp.x + hw, KEY_BY_CODE.KeyJ.x + 1.4));
   KB.lo = 0; KB.hi = KEYS.length - 1;
   // キーボード全体の広さ
   KB.X_MIN = Math.min(...KEYS.map(k => k.x - k.w * KB.U / 2)) - 6;

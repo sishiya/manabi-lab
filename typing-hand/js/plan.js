@@ -179,12 +179,14 @@ const W_ITER = 5, W_MULMAX = 12, W_PRE = 0.5, W_LEAD = 0.25;
 // 手首の回転: 位置を解いたあと、コマごとに「押している指がいちばん届く ψ」を探し（回さないほうへ少し罰）、
 // なめらかにしてから位置を解き直す（交互に W_ITER 回）
 const YAW_REG = 0.03, YAW_TAU = 0.1;
-const HOME_PULL = 0.5; // タイピング: ホームポジションへ引く重み（目安）
+const HOME_PULL = 0.3; // タイピング: ホームポジションへ引く重み（目安。0.5 では上の段へ指を伸ばしきることが多く、0.3 に。2026-10-17）
+const A2_MARGIN = 10 * D2R; // タイピング: これより伸びたら手首を寄せる（目安）
 // 手首の姿勢 W のとき、音 n を押し下げた指先がどれだけ届かないか（mm）
 function reachErr(W, n) {
   const T = toLocal(W, [n.P[0], n.P[1] - KB.DEPTH, n.P[2]]);
   const F = FINGERS[n.f], ik = fingerIK(F, T), tip = fingerFK(F, ik.yaw, ik.a1, ik.a2)[3];
   reachErr.lim = ik.lim; // 関節の限界で止まったか
+  reachErr.a2 = ik.a2; // 2つめの関節の曲げ（タイピング: 伸びきりに近いかを見る）
   return Math.hypot(tip[0] - T[0], tip[1] - T[1], tip[2] - T[2]);
 }
 // 向き ψ のとき、指 f が力を抜いた形のまま押す場所に届く手首の位置（x, z）
@@ -270,7 +272,9 @@ function solveWrist(plan) {
       const t = ta + i / W_HZ, W = [plan.wx[i], wyOf(plan.pp[i]), plan.wz[i], plan.wy[i] + B[i], sd];
       for (const e of ent[i]) {
         if (!downAt(e, t)) continue;
-        const err = reachErr(W, e.n) + (reachErr.lim ? 2 : 0);
+        // タイピング: 2つめの関節が A2_MARGIN より伸びた（伸びきりに近い）コマも、手首を寄せる重みを増やす。雨ニモマケズで、人さし指が上の段
+        // （U・Y・T）へ伸びきっても届かない瞬間が「関節の限界」のおもな原因だった（2026-10-17）。本物の手も、指を伸ばしきるまでは引っぱらない
+        const err = reachErr(W, e.n) + (reachErr.lim ? 2 : 0) + Math.max(0, (A2_MARGIN - reachErr.a2) / D2R) * 0.2;
         if (err > 0.5) e.mul = Math.min(W_MULMAX, e.mul * (1 + err / 2));
       }
     }
