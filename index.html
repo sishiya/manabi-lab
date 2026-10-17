@@ -78,6 +78,8 @@ h2+.grid{margin-top:0}
 .card:hover{border-color:var(--accent)}
 .card:hover .thumb{filter:brightness(1.08)}
 .pic{position:relative}
+.thumb.motion{position:absolute;inset:0;height:100%;opacity:0;transition:opacity .3s;pointer-events:none}
+.thumb.motion.on{opacity:1}
 .thumb{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;background:var(--thumb)}
 .badge{position:absolute;z-index:1;pointer-events:none;top:10px;left:10px;font-size:12px;font-weight:700;line-height:1;padding:5px 8px;border-radius:6px;background:var(--new);color:var(--new-ink)}
 .badge.upd{font-weight:500;background:rgba(14,18,24,.62);color:#fff}
@@ -303,7 +305,7 @@ function card(a, showCat) {
   const href = a.id + '/' + (LANG === 'en' ? '?lang=en' : ''); // アプリも同じ言語で開く
   const jpOnly = LANG === 'en' && !a.en;
   return `<div class="card c-${a.cat}">
-    <div class="pic"><img class="thumb" src="assets/thumbs/${a.id}.jpg" alt="" width="640" height="360" loading="lazy">${badge ? `<span class="badge${badge === 'upd' ? ' upd' : ''}">${badge === 'new' ? L('新作', 'New') : L('更新', 'Updated')}</span>` : ''}${jpOnly ? '<span class="jponly" title="The app itself is in Japanese for now">Japanese only</span>' : ''}</div>
+    <div class="pic"${MOTION.has(a.id) ? ` data-motion="${a.id}"` : ''}><img class="thumb" src="assets/thumbs/${a.id}.jpg" alt="" width="640" height="360" loading="lazy">${badge ? `<span class="badge${badge === 'upd' ? ' upd' : ''}">${badge === 'new' ? L('新作', 'New') : L('更新', 'Updated')}</span>` : ''}${jpOnly ? '<span class="jponly" title="The app itself is in Japanese for now">Japanese only</span>' : ''}</div>
     <div class="body">
       ${showCat ? `<span class="cat"><span class="dot"></span>${esc(nameOf(c))}</span>` : ''}
       <a class="open" href="${href}"${jpOnly ? ' hreflang="ja"' : ''}>${esc(L(a.title, a.title_en))}</a>
@@ -355,7 +357,54 @@ function render() {
   }
 }
 
-function update() { saveState(); render(); }
+function update() { saveState(); render(); pickMotion(); }
+
+// 動くサムネイル（assets/thumbs/<id>.mp4、1本 50KB ほど。_dev/tools/make-motion-thumbs.ps1）。
+// 通信を使いすぎないよう、読みこむのは動かすときだけ: PC はマウスを乗せたカード、スマホは画面のまんなかで止まった1枚だけ。
+// データセーバー・遅い回線・「動きを減らす」の設定では使わず、静止画のまま
+const MOTION = (() => {
+  const c = navigator.connection;
+  if (c && (c.saveData || /2g|3g/.test(c.effectiveType || ''))) return new Set();
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return new Set();
+  return new Set(['metronome-sync', 'phage', 'pitch-physics']);
+})();
+const HOVER = matchMedia('(hover: hover) and (pointer: fine)').matches;
+let motionPic = null;
+function playMotion(pic) {
+  if (pic === motionPic) return;
+  if (motionPic) { const v = motionPic.querySelector('video'); if (v) { v.pause(); v.classList.remove('on'); } }
+  motionPic = pic;
+  if (!pic) return;
+  let v = pic.querySelector('video');
+  if (!v) {
+    v = document.createElement('video');
+    v.className = 'thumb motion'; v.muted = true; v.loop = true; v.playsInline = true; v.setAttribute('aria-hidden', 'true');
+    v.addEventListener('playing', () => { if (motionPic && motionPic.contains(v)) v.classList.add('on'); });   // 絵が出てから重ねる（ちらつかない）
+    v.src = 'assets/thumbs/' + pic.dataset.motion + '.mp4';
+    pic.querySelector('img').after(v);   // 「新作」などの札より下に
+  }
+  v.play().catch(() => {});
+}
+// スマホ: 画面に全部入っているカードのうち、まんなかにいちばん近い1枚
+function pickMotion() {
+  if (HOVER || !MOTION.size) return;
+  let best = null, bd = Infinity;
+  document.querySelectorAll('.pic[data-motion]').forEach(p => {
+    const r = p.getBoundingClientRect();
+    if (r.top < 0 || r.bottom > innerHeight) return;
+    const d = Math.abs(r.top + r.height / 2 - innerHeight / 2);
+    if (d < bd) { bd = d; best = p; }
+  });
+  playMotion(best);
+}
+if (HOVER) {
+  $('list').addEventListener('mouseover', e => { const c = e.target.closest('.card'); playMotion(c && c.querySelector('.pic[data-motion]')); });
+  $('list').addEventListener('mouseleave', () => playMotion(null));
+} else {
+  let st = 0;
+  addEventListener('scroll', () => { clearTimeout(st); st = setTimeout(pickMotion, 250); }, {passive: true});   // スクロールが止まってから
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) playMotion(null); else pickMotion(); });
 
 $('tools').hidden = false;
 $('lang').hidden = false;
@@ -370,6 +419,7 @@ renderTexts();
 saveState();
 render();
 showChosenCat();
+setTimeout(pickMotion, 1500);   // スマホ: 開いてすぐは画面の読みこみを先に
 </script>
 </body>
 </html>

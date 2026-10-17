@@ -11,6 +11,7 @@
 | `smoke.ps1` | 全アプリの動作確認。ヘッドレスの Chrome で `thumb.html` の準備まで動かし、例外・読み込みの失敗・許可していない外への通信・ローカルの GA・英語に残った日本語（画面の文字・キャンバスに書いた文字・title と aria-label）を調べる。`-Base https://sishiya.github.io/manabi-lab` で公開版も | 変更のあと（各 DEVNOTES の「確認のしかた」と合わせて）、push のあと |
 | `new-app.ps1` | 新しいアプリの雛形（PLAN・DEVNOTES・index.html・css/js・launcher・versions/v001-start）と、保管庫のカード・thumb.html の SETUP・make-thumbs の一覧・CLAUDE.md・README の表への追加 | 新しいアプリを始めるとき（PLAN.md の相談のあと） |
 | `make-thumbs.ps1` | 入口・保管庫のサムネイル `assets/thumbs/<app>.jpg` を撮る | 画面が大きく変わったとき |
+| `make-motion-thumbs.ps1` | 入口の動くサムネイル `assets/thumbs/<app>.mp4`（640×360・4秒・音なし・1本 50KB ほど）。`thumb.html?motion=1` でアプリの時計を止めて1コマずつ進めて撮る。動きはじめの場面は thumb.html の `MOTION`、使うアプリは index.html の `MOTION`。再生は PC はマウスを乗せたとき・スマホは画面のまんなかの1枚だけ（データセーバー・遅い回線・動きを減らす設定では静止画のまま） | 画面が大きく変わったとき（jpg と一緒に） |
 | `make-short-thumbs.ps1` | 紹介動画のサムネイル `_dev/promo/thumbs/<app>-short.jpg`（縦 1080×1920）と `<app>-guide.jpg`（横長の説明動画 1280×720）を mp4 のコマから作る。中身は `_dev/promo/short-thumbs.js`、デザインは `short-thumb.html`（ヘッドレスの Chrome で撮る）。付けるのは `youtube-upload.ps1 -Thumb` | ショートを録ったとき（RULES 8.7） |
 | `make-upload.ps1` | 紹介動画の `upload.json` の下書き（入口の APPS とアプリの出どころから）。`-Check` で全部の upload.json が決まり（説明欄の形・チャプター・字数・< >・予約の時刻）に合っているか調べる | 動画を作ったとき・上げる前 |
 | `record-promo.ps1` | 台本ページを開いて、確かめ用のコマ → 録画 → できた mp4 のコマを1枚に、まで一度に | 台本を書いたあと。`-AudioOnly` で映像はそのまま音だけ作りなおす |
