@@ -28,9 +28,10 @@
     </header>
     <div id="tools" role="radiogroup"></div>
     <p id="hint"></p>
-    <div id="stage"><canvas id="cv"></canvas><div id="tip" hidden></div><div id="toast" hidden></div>
+    <div id="stage"><canvas id="cv"></canvas><div id="tip" hidden></div><div id="toast" hidden></div></div>
+    <!-- 拡大ボタンは断面の外に（断面の上は道具でなぞる場所なので、重ねると押しまちがえる） -->
+    <div id="status"><span id="counts"></span><span id="now"></span>
       <div id="zoom"><button id="zin">+</button><button id="zout">−</button><button id="zall"><span lang="ja">全体</span><span lang="en">All</span></button></div></div>
-    <div id="status"><span id="counts"></span><span id="now"></span></div>
     <div id="timebar">
       <button id="play">▶</button>
       <button class="step" data-d="1"><span lang="ja">+1日</span><span lang="en">+1 d</span></button>

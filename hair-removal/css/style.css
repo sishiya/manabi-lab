@@ -20,7 +20,7 @@ button:disabled{opacity:.4;cursor:default}
 .langsw{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
 .langsw button{font:inherit;border:0;background:none;min-height:28px;padding:3px 8px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--muted);cursor:pointer}
 .langsw button[aria-pressed="true"]{background:var(--acc);color:#0b1620}
-#zoom{position:absolute;right:6px;top:6px;display:flex;gap:4px;z-index:2}
+#zoom{display:flex;gap:4px;margin-left:auto;align-self:center}
 #zoom button{min-height:30px;padding:2px 9px;font-size:14px;background:rgba(22,37,58,.85)}
 #siteBox{font-size:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 #siteBox label{display:flex;align-items:center;gap:4px}
@@ -82,5 +82,6 @@ button:disabled{opacity:.4;cursor:default}
   #gtext{font-size:13px}
   #guide{align-items:flex-start}
   .gbtn{flex-direction:column-reverse;gap:2px}
-  #status{font-size:12px}
+  #status{font-size:12px;row-gap:0}
+  #now{order:3;flex-basis:100%}   /* 1行目に 数と拡大ボタン、いま起きたことは2行目 */
 }
