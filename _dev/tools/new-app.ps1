@@ -5,10 +5,11 @@
 #   <id>/PLAN.md・DEVNOTES.md（決まった見出し）、index.html（viewport・ファビコン・アクセス解析の1行・フォント・css/js）、
 #   css/style.css、js/main.js（デバッグ用の窓口 window.__<略>・__<略>Err）、launcher.html、versions/v001-start/（丸ごと）
 # 足すもの（どれも1行・1枚。あとで中身を書きかえる）:
-#   archive.html のいちばん上のカード（新着順）、_dev/tools/thumb.html の SETUP、make-thumbs.ps1 の一覧、
+#   archive.html のいちばん上のカード（新着順）、_dev/tools/thumb.html の SETUP、make-thumbs.ps1・make-motion-thumbs.ps1 の一覧、
 #   CLAUDE.md の一覧、README.md の保管庫の表
 # 入口（index.html の APPS）には足さない（ユーザーが指示したときだけ。RULES 8.1）。
-# サムネイル assets/thumbs/<id>.jpg は、画面ができてから make-thumbs.ps1 -Apps <id> で撮る。
+# サムネイル assets/thumbs/<id>.jpg と動く <id>.mp4 は、画面ができてから make-thumbs.ps1・make-motion-thumbs.ps1 -Apps <id> で撮る
+# （止めて撮るアプリは、thumb.html の MOTION で動きはじめさせる）。
 param(
   [Parameter(Mandatory = $true)][ValidatePattern('^[a-z][a-z0-9-]+$')][string]$Id,
   [Parameter(Mandatory = $true)][string]$Title,
@@ -244,8 +245,9 @@ $card = "    <div class=`"card`"><div class=`"pic`"><span class=`"proto`">試作
 Edit-Text 'archive.html' { param($s) $i = $s.IndexOf('    <div class="card">'); if ($i -lt 0) { $s } else { $s.Insert($i, $card + "`n") } } '保管庫のカード（いちばん上）'
 Edit-Text '_dev/tools/thumb.html' { param($s) $s.Replace("const SETUP = {`n", "const SETUP = {`n  // $Title（画面ができたら、いちばん映える場面にする）`n  '$Id': async w => { await wait(1500); },`n") } 'SETUP'
 Edit-Text '_dev/tools/make-thumbs.ps1' { param($s) $s -replace "('quantum'\),)", "'$Id',`$1" } '撮影の一覧'
+Edit-Text '_dev/tools/make-motion-thumbs.ps1' { param($s) $s -replace "('quantum'\),)", "'$Id',`$1" } '動くサムネイルの一覧'
 Edit-Text 'CLAUDE.md' { param($s) $i = $s.IndexOf("`n`n新しいアプリを足したら"); if ($i -lt 0) { $s } else { $s.Insert($i, "`n| ``$Id/`` | $Title | 保管庫 | $Desc |") } } '一覧の表の1行'
 Edit-Text 'README.md' { param($s) $m = [regex]::Match($s, '### 保管庫[^\n]*\n\n\| フォルダ \| アプリ \|\r?\n\|---\|---\|\r?\n'); if (-not $m.Success) { $s } else { $s.Insert($m.Index + $m.Length, "| ``$Id/`` | $Title |`n") } } '保管庫の表'
 
 Write-Host ''
-Write-Host "できた: $Id（http://localhost:8765/$Id/）。次: PLAN.md を書く → 画面ができたら thumb.html の SETUP を直して make-thumbs.ps1 -Apps $Id → smoke.ps1 -Apps $Id"
+Write-Host "できた: $Id（http://localhost:8765/$Id/）。次: PLAN.md を書く → 画面ができたら thumb.html の SETUP（と MOTION）を直して make-thumbs.ps1・make-motion-thumbs.ps1 -Apps $Id → smoke.ps1 -Apps $Id"

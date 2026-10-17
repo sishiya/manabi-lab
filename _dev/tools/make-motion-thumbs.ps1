@@ -6,7 +6,9 @@
 # アプリの時計を止めて 1 コマずつ進めては撮り、ffmpeg で mp4 にする（重いアプリでも動画の中の速さは本物どおり）。
 # 開いたとき止まっているアプリは、thumb.html の MOTION で動きはじめさせる。
 param(
-  [string[]]$Apps = @('metronome-sync','phage','pitch-physics'),
+  [string[]]$Apps = @('god-view','evolution','body-dive','urinary-dive','blood-dive','immune-battle','animal-senses','metamorphosis','ga-creatures','wifi-wave','air-flow','extreme','illusions','muscle-growth','mold-growth','ferrofluid','black-hole','brain-response','passkey','piano-hand','phage','eye-optics','pitch-physics','hair-removal','tiny-earth','house-dust','weed-growth','tree-of-life','metronome-sync','typing-hand','quantum'),
+  [string]$Sheet = '',
+  [string]$Probe = '',   # 確かめ用: 撮りはじめと撮り終わりに、この式をアプリの窓（w）で評価して表示（例: 'w.__ph.UI.state.u'）   # 指定すると、確かめ用に4コマを並べた png をこのフォルダに作る
   [double]$Sec = 4,
   [int]$Fps = 15,
   [int]$Crf = 30,
@@ -54,9 +56,13 @@ try {
 
   foreach ($a in $Apps) {
     $url = "http://localhost:$Port/_dev/tools/thumb.html?app=$a&motion=1"
-    $tab = Invoke-RestMethod -Method Put "http://127.0.0.1:$DebugPort/json/new?$url"
+    $tab = Invoke-RestMethod -Method Put "http://127.0.0.1:$DebugPort/json/new?about:blank"
     $ws = New-Object Net.WebSockets.ClientWebSocket
     $ws.ConnectAsync([Uri]$tab.webSocketDebuggerUrl, [Threading.CancellationToken]::None).Wait()
+    # 描ける部分をちょうど 1280×720 に（--window-size だけだと窓のふちの分だけ低く 1280×約624 になり、
+    # 静止画は縦にのび・動画は下に黒い帯が出ていた。2026-10-17）
+    Send-Cdp $ws 'Emulation.setDeviceMetricsOverride' @{ width = 1280; height = 720; deviceScaleFactor = 1; mobile = $false } | Out-Null
+    Send-Cdp $ws 'Page.navigate' @{ url = $url } | Out-Null
     $ok = $false
     $t0 = Get-Date
     while (((Get-Date) - $t0).TotalSeconds -lt $TimeoutSec) {
@@ -72,11 +78,14 @@ try {
     [IO.Directory]::CreateDirectory($dir) | Out-Null
     $clip = @{ x = 0; y = 0; width = 1280; height = 720; scale = 0.5 }
     $n = [int]($Sec * $Fps)
+    $probeJs = "(() => { const w = document.getElementById('f').contentWindow; try { return JSON.stringify($Probe); } catch (e) { return String(e); } })()"
+    if ($Probe) { Write-Host "  はじめ: $((Send-Cdp $ws 'Runtime.evaluate' @{ expression = $probeJs }).result.result.value)" }
     for ($i = 0; $i -lt $n; $i++) {
       Send-Cdp $ws 'Runtime.evaluate' @{ expression = "window.__motionStep($(1000 / $Fps))"; awaitPromise = $true } | Out-Null
       $shot = Send-Cdp $ws 'Page.captureScreenshot' @{ format = 'jpeg'; quality = 92; clip = $clip }
       [IO.File]::WriteAllBytes((Join-Path $dir ('f{0:D4}.jpg' -f $i)), [Convert]::FromBase64String($shot.result.data))
     }
+    if ($Probe) { Write-Host "  おわり: $((Send-Cdp $ws 'Runtime.evaluate' @{ expression = $probeJs }).result.result.value)" }
     $ws.Dispose()
     Invoke-RestMethod "http://127.0.0.1:$DebugPort/json/close/$($tab.id)" | Out-Null
 
@@ -84,6 +93,10 @@ try {
     & $ffmpeg -y -loglevel error -framerate $Fps -i (Join-Path $dir 'f%04d.jpg') -vf 'scale=640:360,format=yuv420p' `
       -c:v libx264 -preset slow -crf $Crf -profile:v main -movflags +faststart -an $mp4
     if ($LASTEXITCODE -ne 0) { throw "ffmpeg に失敗: $a" }
+    if ($Sheet) {
+      [IO.Directory]::CreateDirectory($Sheet) | Out-Null
+      & $ffmpeg -y -loglevel error -i $mp4 -vf "select='not(mod(n\,$([int]($n / 4))))',scale=480:270,tile=4x1" -frames:v 1 (Join-Path $Sheet "$a.png")
+    }
     $kb = [int]((Get-Item $mp4).Length / 1024)
     Write-Host "作成: assets/thumbs/$a.mp4（$n コマ・$kb KB・$([int]((Get-Date) - $t0).TotalSeconds) 秒）"
   }

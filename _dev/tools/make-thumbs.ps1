@@ -6,7 +6,7 @@
 # thumb.html が各アプリの準備（開始ボタン・カメラ移動など）を終えて document.title を 'ready' にしたら撮る。
 # （--screenshot だけだと読み込み直後に撮ってしまい、地図などの読み込みを待てないため）
 param(
-  [string[]]$Apps = @('god-view','evolution','body-dive','urinary-dive','blood-dive','immune-battle','animal-senses','metamorphosis','ga-creatures','wifi-wave','air-flow','extreme','illusions','muscle-growth','mold-growth','ferrofluid','black-hole','brain-response','passkey','piano-hand','phage','vocal-folds','eye-optics','pitch-physics','hair-removal','tiny-earth','house-dust','weed-growth','tree-of-life','metronome-sync','typing-hand','quantum'),
+  [string[]]$Apps = @('god-view','evolution','body-dive','urinary-dive','blood-dive','immune-battle','animal-senses','metamorphosis','ga-creatures','wifi-wave','air-flow','extreme','illusions','muscle-growth','mold-growth','ferrofluid','black-hole','brain-response','passkey','piano-hand','phage','eye-optics','pitch-physics','hair-removal','tiny-earth','house-dust','weed-growth','tree-of-life','metronome-sync','typing-hand','quantum'),
   [int]$Port = 8765,
   [int]$DebugPort = 9333,
   [int]$TimeoutSec = 150
@@ -55,9 +55,13 @@ try {
 
   foreach ($a in $Apps) {
     $url = "http://localhost:$Port/_dev/tools/thumb.html?app=$a"
-    $tab = Invoke-RestMethod -Method Put "http://127.0.0.1:$DebugPort/json/new?$url"
+    $tab = Invoke-RestMethod -Method Put "http://127.0.0.1:$DebugPort/json/new?about:blank"
     $ws = New-Object Net.WebSockets.ClientWebSocket
     $ws.ConnectAsync([Uri]$tab.webSocketDebuggerUrl, [Threading.CancellationToken]::None).Wait()
+    # 描ける部分をちょうど 1280×720 に（--window-size だけだと窓のふちの分だけ低く 1280×約624 になり、
+    # 静止画は縦にのび・動画は下に黒い帯が出ていた。2026-10-17）
+    Send-Cdp $ws 'Emulation.setDeviceMetricsOverride' @{ width = 1280; height = 720; deviceScaleFactor = 1; mobile = $false } | Out-Null
+    Send-Cdp $ws 'Page.navigate' @{ url = $url } | Out-Null
     $ok = $false
     $t0 = Get-Date
     while (((Get-Date) - $t0).TotalSeconds -lt $TimeoutSec) {

@@ -86,23 +86,70 @@ const SETUP = {
 // 動くサムネイル（make-motion-thumbs.ps1 が ?motion=1 で開く）: SETUP のあと、ここで動きはじめさせてから撮る。
 // ここにないアプリは SETUP のまま（もともと動いているもの）を撮る
 const MOTION = {
+  // 東京駅のまわりを、カメラがゆっくり回る（撮りはじめるまでは止めておく）
+  'god-view': async w => {
+    const C = w.Cesium, v = w.__gv.viewer, sc = v.scene;
+    const c = C.Cartesian3.fromDegrees(139.7671, 35.6812, 30);
+    let h = C.Math.toRadians(230);
+    const look = () => v.camera.lookAt(c, new C.HeadingPitchRange(h, C.Math.toRadians(-22), 520));
+    look(); sc.requestRenderMode = false;
+    sc.preRender.addEventListener(() => { if (window.__motionStep) { h += C.Math.toRadians(0.2); look(); } });
+    await wait(10000);   // 地図・建物の読みこみ
+  },
+  // 蛹の1日目から ×4 で再生（4秒で全体の約1/4: 部品が壊れて作りなおされていく）
+  'metamorphosis': async w => { const M = w.__mm; M.UI.speed = 4; M.UI.playing = true; },
+  // 風船を 3000 m から山頂へ（ふくらんでいく）
+  'extreme': async w => { const E = w.__ex; E.go(3000, true); await wait(300); E.go(8849); },
+  // 筋トレ2日後から、1秒に12時間で再生（傷が片づき、直っていく）
+  'muscle-growth': async w => { const M = w.__mg; M.UI.speed = 12; M.UI.playing = true; },
+  // 2週目から1秒に1週間で再生（目地とパッキンにカビが広がっていく）
+  'mold-growth': async w => { const M = w.__mk; M.restart(); M.run(14 * 24); M.UI.speed = 168; M.UI.playing = true; },
+  // 磁石を遠く（40 mm: トゲなし）から 5 mm へ近づける（トゲが立ち上がる）
+  'ferrofluid': async w => { const F = w.__ff; F.S.gap = 40; F.S.shapeDirty = true; F.advance(3); return k => { if (k === 12) { F.S.gap = 5; F.S.shapeDirty = true; } }; },
+  // 顔の写真を見せた瞬間から再生（目 → 視覚野 → 顔の領域へ信号が進む）
+  'brain-response': async w => { const B = w.__br; B.seek(0); B.S.playing = true; },
+  // にせものサイトでもう一度ログインを押したところから（やりとりが動き、ブラウザが止める）
+  'passkey': async w => { const P = w.__pk; P.startExp('phish', 'passkey'); await wait(400); w.document.getElementById('gLogin').click(); await wait(200); },
+  // 弾いているところを再生（音は SETUP で切ってある）
+  'piano-hand': async w => { w.eval('setPlaying(true)'); },
+  'typing-hand': async w => { w.eval('setPlaying(true)'); },
+  // 光をあてた直後から時間を流す（熱が引き、そのあと毛の伸び方が変わっていく）
+  'hair-removal': async w => { w.__hare.S.playing = true; },
+  // 時間を流し（海のゆれ）、カメラも少しずつ回す
+  'tiny-earth': async w => { const T = w.__tiea; T.S.playing = true; return k => T.cam({ alt: 2.1, el: 0.3, az: 0.6 + k * 0.012 }); },
+  // ふとんをはたいた直後から、ふつうの速さで（ほこりが舞って落ちていく）
+  'house-dust': async w => { const H = w.__hodu; H.S.speed = 1; H.S.playing = true; },
+  // 2年目の4月から1秒に1か月で（芽が出て伸び、穂がそろう）
+  'weed-growth': async w => { const h = w.__wegr; w.startScenario('garden'); h.set('play', false); h.run(365 + 90, 1); h.set('speed', 30); h.set('play', true); },
+  // サル目（Primates）を押して開く（枝がやわらかく伸びて、ならびが動く）
+  'tree-of-life': async w => { const t = w.__trofli; return k => { if (k === 6) t.press('Primates'); }; },
+  // 人 → ミツバチ（紫外線）→ マムシ（熱）と、同じ庭の見え方を切りかえる
+  'animal-senses': async w => { const A = w.__as; return k => { if (k === 0) A.setAnimal('human'); if (k === 20) A.setAnimal('bee'); if (k === 40) A.setAnimal('snake'); }; },
+  // 体内ダイブ・尿の旅・血管の旅: 自動航行（管の中を進んでいく。Shift の速さだと場面がとびとびになる）
+  'body-dive': async w => { w.eval('if (!autoOn) toggleAuto();'); await wait(300); },
+  'urinary-dive': async w => { w.eval('if (!autoOn) toggleAuto();'); await wait(300); },
+  'blood-dive': async w => { w.eval('if (!autoOn) toggleAuto();'); await wait(300); },
   // ばらばらに揺れている5台（そのまま動かす）
   'metronome-sync': async w => {},
-  // DNA を入れているところから再生
-  'phage': async w => { const P = w.__ph; P.UI.state.u = P.Story.u('pierce', 0.55); P.UI.state.playing = true; },
-  // ボールの後ろから、カーブを 1/4 の速さで投げる
-  'pitch-physics': async w => { const P = w.__piph; P.S.speed = 0.25; P.time(0); P.S.playing = true; },
+  // はじまり: 人のからだから、たくさんの細菌が見えるまで寄っていく。時刻はこちらで1コマずつ進め、4秒で「近づく」の手前まで
+  // （再生の速さを上げても4秒でほとんど進まず、描くループも止まって見えたので、simRun で描く）。カメラはアプリのおまかせのまま
+  'phage': async w => { const P = w.__ph, U = P.Story.u('approach', 0); P.UI.state.playing = false; P.UI.state.u = 0; return k => { P.UI.state.u = U * k / 60; P.simRun(1 / 15, 1 / 60); }; },
+  // 投手の後ろから、1球を約 0.15 倍の速さで（約3秒で捕手まで。曲がる道すじが見える）
+  'pitch-physics': async w => { const P = w.__piph; P.cam('pitcher'); P.S.speed = 0.15; P.time(0); P.S.playing = true; },
 };
 
 // アプリの時計（requestAnimationFrame と performance.now）を止め、撮る側が __motionStep(ms) で1コマずつ進める。
 // 重いアプリでも撮るのが遅いだけで、動画の中の速さは本物と同じになる
-async function freezeClock(w) {
+async function freezeClock(w, onFrame) {
   const q = [];
   let now = w.performance.now();
   w.requestAnimationFrame = cb => { q.push(cb); return q.length; };
   w.performance.now = () => now;
   await wait(200);   // 本物の rAF に残っている分が1回まわって、止めた rAF に入るのを待つ
+  let k = 0;
   window.__motionStep = async ms => {
+    if (onFrame) { try { onFrame(k); } catch (e) { console.error(e); } }
+    k++;
     const sub = Math.max(1, Math.round(ms / (1000 / 60)));   // 1/60 秒ずつ（dt に上限のあるアプリのため）
     for (let i = 0; i < sub; i++) { now += ms / sub; q.splice(0).forEach(cb => { try { cb(now); } catch (e) { console.error(e); } }); }
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));   // 描いた絵が画面に出るのを待つ
@@ -116,8 +163,9 @@ f.onload = async () => {
   if (s) { try { await s(f.contentWindow); } catch (e) { console.error(e); } }
   else await wait(5000);
   if (new URLSearchParams(location.search).get('motion')) {
-    if (MOTION[app]) { try { await MOTION[app](f.contentWindow); } catch (e) { console.error(e); } }
-    await freezeClock(f.contentWindow);
+    let onFrame = null;   // MOTION が関数を返したら、撮るコマごとに（コマ番号を渡して）呼ぶ
+    if (MOTION[app]) { try { onFrame = await MOTION[app](f.contentWindow); } catch (e) { console.error(e); } }
+    await freezeClock(f.contentWindow, typeof onFrame === 'function' ? onFrame : null);
   }
   document.title = 'ready';
 };
