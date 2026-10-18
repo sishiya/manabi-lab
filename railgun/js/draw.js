@@ -48,7 +48,7 @@
 
     const sh = st.show || { cur: 1, field: 1, force: 1, racks: 1 };   // 案内の段ごとに出すもの
     // コンデンサの台（引いたとき）
-    if (sh.racks) racks(g, V, o, p, 1 - l1);
+    const pol = SIM.S.pol;   // ＋−の向き（電流と磁場の向きだけ逆。力は同じ）
 
     // 磁場（弾のうしろ、レールの間）。引いたときは青いもや、寄ると ⊗ の並び
     const fx1 = out ? xL : xArm0;
@@ -61,7 +61,9 @@
         const ys = []; for (let y = (yT0 + yB0) / 2 - Math.floor((yB0 - yT0 - 14) / 2 / step) * step; y < yB0 - 6; y += step) ys.push(y);
         const xs0 = Math.max(x0 + 12, -20), xs1 = Math.min(fx1 - 10, w + 20);
         for (let x = xs0 + ((x0 + 12 - xs0) % step + step) % step; x < xs1; x += step) for (const y of ys) {
-          const r = 6; g.beginPath(); g.arc(x, y, r, 0, 7); g.moveTo(x - r * 0.7, y - r * 0.7); g.lineTo(x + r * 0.7, y + r * 0.7); g.moveTo(x + r * 0.7, y - r * 0.7); g.lineTo(x - r * 0.7, y + r * 0.7); g.stroke();
+          const r = 6; g.beginPath(); g.arc(x, y, r, 0, 7);
+          if (pol > 0) { g.moveTo(x - r * 0.7, y - r * 0.7); g.lineTo(x + r * 0.7, y + r * 0.7); g.moveTo(x + r * 0.7, y - r * 0.7); g.lineTo(x - r * 0.7, y + r * 0.7); g.stroke(); }
+          else { g.stroke(); g.fillStyle = g.strokeStyle; g.beginPath(); g.arc(x, y, 2, 0, 7); g.fill(); }
         }
       }
       hit('field', x0, yT0, fx1, yB0);
@@ -77,13 +79,14 @@
     // 電流（上のレール → 電機子 → 下のレール）。点線の流れる速さは電流の大きさ
     if (sh.cur && iu > 0.002 && !out) {
       const ym1 = (yT0 + yT1) / 2, ym2 = (yB0 + yB1) / 2, xc = V.X(xa - 0.55 * la);
-      g.save(); g.setLineDash([10, 9]); g.lineDashOffset = -st.phase; g.lineCap = 'round';
+      g.save(); g.setLineDash([10, 9]); g.lineDashOffset = -st.phase * pol; g.lineCap = 'round';
       g.strokeStyle = C.cur; g.lineWidth = 1.5 + 3 * Math.min(1, iu); g.globalAlpha = (0.35 + 0.65 * Math.min(1, iu * 2)) * (1 - l2);
       g.beginPath(); g.moveTo(x0 - 30, ym1); g.lineTo(xc, ym1); g.lineTo(xc, ym2); g.lineTo(x0 - 30, ym2); g.stroke();
       g.restore();
       if (l1 > 0.3) {
         const xm = Math.max(x0 + 40, Math.min(xc - 60, w * 0.3));
-        arrow(g, xm - 22, ym1, xm + 22, ym1, C.cur, 2); arrow(g, xm + 22, ym2, xm - 22, ym2, C.cur, 2);
+        if (pol > 0) { arrow(g, xm - 22, ym1, xm + 22, ym1, C.cur, 2); arrow(g, xm + 22, ym2, xm - 22, ym2, C.cur, 2); }
+        else { arrow(g, xm + 22, ym1, xm - 22, ym1, C.cur, 2); arrow(g, xm - 22, ym2, xm + 22, ym2, C.cur, 2); }
         text(g, '電流', xm - 22, yB1 + 14, C.cur, 13);
       }
       hit('cur', Math.max(x0 - 30, 0), yT1 - 4, xc + 6, yB1 + 4);
@@ -91,6 +94,8 @@
 
     // 弾（電機子＋装弾筒＋弾心）。砲口を出たら装弾筒が少しずつはなれる（形は目安）
     pack(g, V, o, p, la, xa, out, l2);
+    scorch(g, V, p, wc, hr);
+    stopper(g, V, o, p, xa, out);
 
     // 力の矢印
     if (sh.force && o.F > 0 && !out) {
@@ -121,32 +126,13 @@
     // 電機子の中（いちばん寄ったとき）
     if (l2 > 0.01) micro(g, V, o, p, la, xa, l2, st);
 
+    boxes(g, w, h, o, p);
     if (st.focus) focusRing(g, st.focus);
     scaleBar(g, V, w, h);
-    if (V.sy > V.s * 1.05) text(g, '※ たての太さは広げてある', 12 + Math.min(130, 150) + 10, h - 14, C.muted, 11);
+    if (V.sy > V.s * 1.05) text(g, '※ たての太さは広げてある', w - 10, 62, C.muted, 11, 'right');
   }
 
   function fmtF(F) { return F >= 1e6 ? `${(F / 1e6).toFixed(2)} MN` : `${(F / 1e3).toFixed(0)} kN`; }
-
-  function racks(g, V, o, p, alpha) {
-    if (alpha < 0.03) return;
-    const n = p.racks.length, cols = 5, rows = Math.ceil(n / cols);
-    const bw = 30, bh = 22, gap = 8, x1 = Math.max(8, V.X(0)), yTop = V.Y(-p.w / 2 - 0.6 * p.w) + 44;
-    const yb = V.Y(-p.w / 2 - 0.6 * p.w);
-    g.globalAlpha = alpha;
-    text(g, `コンデンサ ${n}台（緑＝のこりの電気。大きさは目安）`, x1, yTop - 14, C.muted, 11);
-    for (let k = 0; k < n; k++) {
-      const c = k % cols, r = (k / cols) | 0;
-      const x = x1 + c * (bw + gap), y = yTop + r * (bh + gap);
-      const fill = Math.max(0, o.vc[k] / p.racks[k].V0), on = o.i[k] / (SIM.base().limit / 4);
-      if (on > 0.02) { g.globalAlpha = alpha * Math.min(1, on); g.strokeStyle = C.cur; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x + bw / 2, y); g.lineTo(V.X(0) + 2, yb); g.stroke(); g.globalAlpha = alpha; }
-      g.strokeStyle = on > 0.02 ? C.cur : C.line; g.lineWidth = on > 0.02 ? 2 : 1;
-      g.fillStyle = '#1b2c3b'; g.fillRect(x, y, bw, bh); g.strokeRect(x, y, bw, bh);
-      g.fillStyle = C.cap; g.fillRect(x + 3, y + 3 + (bh - 6) * (1 - fill), bw - 6, (bh - 6) * fill);
-      hit('rack', x, y, x + bw, y + bh);
-    }
-    g.globalAlpha = 1;
-  }
 
   function pack(g, V, o, p, la, xa, out, l2) {
     const wc = p.w, pl = SIM.base().projLen;
@@ -218,13 +204,68 @@
     g.stroke(); g.restore();
   }
 
+  // 焦げ跡: 位置ごとの ∫I²dt（推定の目安）。レールの内がわの面を黒く
+  function scorch(g, V, p, wc, hr) {
+    const A = SIM.S.scorch, nb = A.length, ref = Math.pow(SIM.base().limit, 2) * 5e-6;
+    const railPx = V.Y(wc / 2) - V.Y(wc / 2 + hr), th = railPx < 20 ? railPx : railPx * 0.35;   // 引いた図ではレールの厚みぜんぶ
+    const yT = V.Y(wc / 2), yB = V.Y(-wc / 2);
+    let best = -1, bestA = 0;
+    for (let b = 0; b < nb; b++) {
+      if (A[b] <= 0) continue;
+      const a = Math.min(0.92, Math.log10(1 + A[b] / ref) / 2.2);
+      if (a < 0.02) continue;
+      const x0 = V.X(b / nb * p.len), x1 = V.X((b + 1) / nb * p.len);
+      if (x1 < 0 || x0 > V.w) continue;
+      g.fillStyle = `rgba(12,6,2,${a})`;
+      g.fillRect(x0, yT - th, Math.max(2, x1 - x0), th); g.fillRect(x0, yB, Math.max(2, x1 - x0), th);
+      if (a > bestA) { bestA = a; best = (x0 + x1) / 2; }
+    }
+    if (best >= 0 && bestA > 0.25 && railPx < 20) text(g, '焦げ跡 ↓', best, yT - railPx - 10, '#c9a27f', 11, 'center');
+  }
+
+  // 止め板（電機子を動けなくする）。置く前は、置ける所を点線で
+  function stopper(g, V, o, p, xa, out) {
+    const S = SIM.S, pl = SIM.base().projLen, wc = p.w, hr = 0.6 * wc;
+    if (out) return;
+    const xs = V.X(xa + pl) + 4, wpx = Math.max(6, 0.012 * V.s), yT = V.Y(wc / 2 + hr) - 6, yB = V.Y(-wc / 2 - hr) + 6;
+    if (S.hold) {
+      g.fillStyle = '#6f7d88'; g.strokeStyle = '#c7d2da'; g.lineWidth = 1.5;
+      g.fillRect(xs, yT, wpx, yB - yT); g.strokeRect(xs, yT, wpx, yB - yT);
+      text(g, '止め板', xs + wpx + 4, yT + 8, C.ink, 12);
+    } else if (S.phase === 'ready' && o.v < 1) {
+      g.save(); g.setLineDash([5, 5]); g.strokeStyle = '#a3b4bf88'; g.lineWidth = 1.2;
+      g.strokeRect(xs, yT, wpx, yB - yT); g.restore();
+      text(g, '止め板', xs + wpx + 4, yT + 8, C.muted, 11);
+    }
+    hit('stop', xs - 10, yT, xs + Math.max(60, wpx + 50), yB);
+  }
+
+  // コンデンサの箱の帯（図の下にいつも。タップで放電）
+  function boxes(g, w, h, o, p) {
+    const n = p.racks.length, cols = 5, rows = Math.ceil(n / cols);
+    const gap = 6, bs = Math.max(40, Math.min(54, (w - 20) / cols - gap)), bw = Math.min(bs * 1.5, (w - 20) / cols - gap), bh = Math.max(32, bs * 0.62);
+    const totalW = cols * (bw + gap) - gap, x0 = Math.max(10, (w - totalW) / 2), y0 = h - rows * (bh + gap) - 8;
+    const S = SIM.S, live = S.phase === 'ready' || S.phase === 'live';
+    g.fillStyle = 'rgba(16,26,36,0.88)'; g.fillRect(0, y0 - 24, w, h - y0 + 24);
+    text(g, live ? 'コンデンサの箱（タップで電気を送る）' : 'コンデンサの箱（「もう一回」でためなおす）', x0, y0 - 12, C.muted, 12);
+    for (let k = 0; k < n; k++) {
+      const c = k % cols, r = (k / cols) | 0, x = x0 + c * (bw + gap), y = y0 + r * (bh + gap);
+      const fill = Math.max(0, o.vc[k] / p.racks[k].V0), on = o.i[k] / (SIM.base().limit / 6), fired = o.fired[k] > 0.5;
+      g.fillStyle = '#1b2c3b'; g.fillRect(x, y, bw, bh);
+      g.fillStyle = C.cap; g.globalAlpha = fired ? 0.55 : 1; g.fillRect(x + 4, y + 4 + (bh - 8) * (1 - fill), bw - 8, (bh - 8) * fill); g.globalAlpha = 1;
+      g.strokeStyle = on > 0.03 ? C.cur : fired ? C.line : '#9be38f'; g.lineWidth = on > 0.03 ? 3 : 1.5; g.strokeRect(x, y, bw, bh);
+      text(g, S.pol > 0 ? '＋' : '−', x + 5, y + 10, C.ink, 10);
+      hit('box' + k, x, y, x + bw, y + bh);
+    }
+  }
+
   function scaleBar(g, V, w, h) {
     const want = 120 / V.s, e = Math.pow(10, Math.floor(Math.log10(want))), m = want / e;
     const len = (m >= 5 ? 5 : m >= 2 ? 2 : 1) * e, px = len * V.s;
     const lab = len >= 1 ? `${len} m` : len >= 0.01 ? `${Math.round(len * 100)} cm` : `${Math.round(len * 1000)} mm`;
     g.strokeStyle = C.muted; g.lineWidth = 1.5;
-    g.beginPath(); g.moveTo(12, h - 14); g.lineTo(12 + px, h - 14); g.moveTo(12, h - 19); g.lineTo(12, h - 9); g.moveTo(12 + px, h - 19); g.lineTo(12 + px, h - 9); g.stroke();
-    text(g, lab, 12 + px / 2, h - 28, C.muted, 11, 'center');
+    const yb = 72; g.beginPath(); g.moveTo(12, yb); g.lineTo(12 + px, yb); g.moveTo(12, yb - 5); g.lineTo(12, yb + 5); g.moveTo(12 + px, yb - 5); g.lineTo(12 + px, yb + 5); g.stroke();
+    text(g, lab, 12 + px / 2, yb - 12, C.muted, 11, 'center');
   }
 
   // 断面（根元の側から砲口の方を見る）。レールを細い電線の束として、磁場をビオ・サバールで計算
@@ -238,7 +279,7 @@
     const nz = 7, ny = 3;
     for (let a = 0; a < nz; a++) for (let b = 0; b < ny; b++) {
       const z = (-0.5 + (a + 0.5) / nz) * wc, yo = wc / 2 + (b + 0.5) / ny * hr;
-      fil.push([yo, z, +1]); fil.push([-yo, z, -1]);   // 上: 奥へ（+x）、下: 手前へ
+      const pl = SIM.S.pol; fil.push([yo, z, pl]); fil.push([-yo, z, -pl]);   // 上: 奥へ（+x）、下: 手前へ（＋−を入れかえると逆）
     }
     const Bat = (y, z) => {
       let by_ = 0, bz = 0;
@@ -262,7 +303,7 @@
       g.fillStyle = C.railFill; g.strokeStyle = C.rail; g.fillRect(x0, y0, x1 - x0, y1 - y0); g.strokeRect(x0, y0, x1 - x0, y1 - y0);
       const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, r = 7;
       g.strokeStyle = C.cur; g.lineWidth = 1.5; g.beginPath(); g.arc(mx, my, r, 0, 7); g.stroke();
-      if (s > 0) { g.beginPath(); g.moveTo(mx - 5, my - 5); g.lineTo(mx + 5, my + 5); g.moveTo(mx + 5, my - 5); g.lineTo(mx - 5, my + 5); g.stroke(); }
+      if (s * SIM.S.pol > 0) { g.beginPath(); g.moveTo(mx - 5, my - 5); g.lineTo(mx + 5, my + 5); g.moveTo(mx + 5, my - 5); g.lineTo(mx - 5, my + 5); g.stroke(); }
       else { g.fillStyle = C.cur; g.beginPath(); g.arc(mx, my, 2.5, 0, 7); g.fill(); }
       if (iu > 0.05) arrow(g, mx + 30, s > 0 ? y0 - 2 : y1 + 2, mx + 30, s > 0 ? y0 - 18 : y1 + 18, C.force, 2);
     }

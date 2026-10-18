@@ -20,7 +20,7 @@ const click = (w, sel) => { const e = w.document.querySelector(sel); if (e) e.cl
 // アプリごとの準備（w = アプリの window）
 const SETUP = {
   // レールガンのしくみ（画面ができたら、いちばん映える場面にする）
-  'railgun': async w => { await wait(800); w.UI.setStep(2); w.__ra.simRun(2); w.__ra.at(1.6); await wait(300); },
+  'railgun': async w => { await wait(800); for (const k of [0, 1, 2, 3]) w.__ra.tap(k); w.__ra.simRun(2.2); await wait(300); },
   // エジソンの蓄音機（画面ができたら、いちばん映える場面にする）
   'phonograph': async w => { w.__ph.offline('vowel', 115, 60, 1.6); w.UI.setZoom(1.6, true); await wait(1500); w.__ph.draw(); },
   // タイピングする手: 2つめの「つぎへ」（ゆっくり打つ・指の番号）のとちゅうで止める
@@ -138,8 +138,8 @@ const MOTION = {
   'blood-dive': async w => { w.eval('if (!autoOn) toggleAuto();'); await wait(300); },
   // ばらばらに揺れている5台（そのまま動かす）
   'metronome-sync': async w => {},
-  // 発射: 砲ぜんたいを1000分の1の速さで（つぎへの6段目）
-  'railgun': async w => { w.UI.setStep(5); },
+  // 箱を4つタップしたところから（3000分の1の速さで進む）
+  'railgun': async w => { w.UI.setStep(0); for (const k of [0, 1, 2, 3]) w.__ra.tap(k); },
   // はじまり: 人のからだから、たくさんの細菌が見えるまで寄っていく。時刻はこちらで1コマずつ進め、4秒で「近づく」の手前まで
   // （再生の速さを上げても4秒でほとんど進まず、描くループも止まって見えたので、simRun で描く）。カメラはアプリのおまかせのまま
   'phage': async w => { const P = w.__ph, U = P.Story.u('approach', 0); P.UI.state.playing = false; P.UI.state.u = 0; return k => { P.UI.state.u = U * k / 60; P.simRun(1 / 15, 1 / 60); }; },

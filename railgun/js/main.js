@@ -17,7 +17,7 @@ window.addEventListener('error', e => window.__raErr.push(String(e.message)));
     W = r.width; H = r.height;
     cv.width = Math.max(1, Math.round(W * dpr)); cv.height = Math.max(1, Math.round(H * dpr));
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    cam.vy = 0.45;
+    cam.vy = W < 640 ? 0.3 : 0.36;
     if (UI.camMode) onCam(UI.camMode, true);
   }
 
@@ -63,11 +63,11 @@ window.addEventListener('error', e => window.__raErr.push(String(e.message)));
     }
     const dx = e.clientX - prev[0];
     moved += Math.abs(dx) + Math.abs(e.clientY - prev[1]);
-    if (moved > 6) { cam.x -= dx / cam.s; cam.off -= dx / cam.s; goal = null; UI.camMode = null; tipEl.hidden = true; UI.free(); }
+    if (moved > 6 && S.phase !== 'live') { cam.x -= dx / cam.s; cam.off -= dx / cam.s; goal = null; UI.camMode = null; tipEl.hidden = true; UI.free(); }
   });
   const up = e => {
     pts.delete(e.pointerId); if (pts.size < 2) pinch = 0;
-    if (moved <= 6 && downAt) { const r = cv.getBoundingClientRect(); showTip(e.clientX - r.left, e.clientY - r.top, true); }
+    if (moved <= 6 && downAt) { const r = cv.getBoundingClientRect(); tapAt(e.clientX - r.left, e.clientY - r.top); }
     downAt = null;
   };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
@@ -77,6 +77,14 @@ window.addEventListener('error', e => window.__raErr.push(String(e.message)));
     const o = SIM.sample(S.t), ax = W / 2 + (o.x - cam.x) * cam.s;
     zoomAt(z === 'in' ? 1.8 : 1 / 1.8, Math.max(0, Math.min(W, ax)));
   });
+
+  // タップ: 箱なら放電、止め板の所なら置く／外す、ほかは説明（撃っているあいだは説明を出さない）
+  function tapAt(x, y) {
+    const k = DRAW.hitTest(x, y);
+    if (k && k.startsWith('box')) { if (SIM.tap(+k.slice(3))) { tipEl.hidden = true; UI.onTap(); } return; }
+    if (k === 'stop') { UI.toggleHold(); return; }
+    if (S.phase !== 'live') showTip(x, y, true);
+  }
 
   let tipHold = 0;
   function showTip(x, y, hold) {
@@ -90,9 +98,10 @@ window.addEventListener('error', e => window.__raErr.push(String(e.message)));
   }
 
   function step(dtWall) {
-    if (S.playing) {
-      S.t += dtWall * S.speed;
-      if (S.t >= S.tEnd) { S.t = S.tEnd; S.playing = false; }
+    if (!S.paused) {
+      if (S.phase === 'live') SIM.advance(dtWall * S.speed * (SIM.fast() ? 20 : 1));
+      else if (S.phase === 'after') SIM.advance(dtWall * S.speed);
+      else if (S.replay) { S.t += dtWall * S.speed; if (S.t >= S.tEnd) { S.t = S.tEnd; S.replay = false; } }
     }
     const o = SIM.sample(S.t);
     st.phase += dtWall * (20 + 140 * Math.min(1.3, o.I / SIM.base().limit));
@@ -110,22 +119,21 @@ window.addEventListener('error', e => window.__raErr.push(String(e.message)));
 
   function draw(o) {
     st.inset = UI.inset; st.show = UI.show; st.focus = UI.focus; DRAW.scene(g, W, H, cam, o, st);
-    if (UI.inset) { const sz = Math.min(210, W * 0.42); DRAW.inset(g, W - sz - 10, 56, sz, o); }
-    GRAPH.draw(document.getElementById('graph'), S.t);
+    if (UI.inset) { const sz = Math.min(200, W * 0.42); DRAW.inset(g, W - sz - 10, 56, sz, o); }
+    if (UI.moreOpen()) GRAPH.draw(document.getElementById('graph'), S.t);
   }
 
   let last = performance.now();
   function loop(now) {
     const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;   // 最初のコマは now が last より前のことがある
-    const playing = S.playing;
     const o = step(dt);
-    if (playing || S.playing) UI.refresh();
+    UI.refresh();
     draw(o);
     requestAnimationFrame(loop);
   }
 
   UI.onCam = mode => onCam(mode, false);
-  SIM.compute();
+  SIM.reset();
   window.addEventListener('resize', resize);
   resize();
   UI.build();
@@ -136,6 +144,7 @@ window.addEventListener('error', e => window.__raErr.push(String(e.message)));
   window.__ra = {
     S, cam, SIM, PHYS, PRESETS, onCam,
     simRun(sec, dt = 1 / 60) { let o; for (let t = 0; t < sec; t += dt) o = step(dt); UI.refresh(); draw(o || SIM.sample(S.t)); },
-    at(tms) { S.playing = false; S.t = tms / 1e3; UI.refresh(); draw(step(0)); },
+    at(tms) { S.replay = false; S.t = tms / 1e3; UI.refresh(); draw(step(0)); },
+    tap: k => { SIM.tap(k); UI.onTap(); }, tapAt,
   };
 })();

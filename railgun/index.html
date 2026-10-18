@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="stylesheet" href="css/style.css?v=4">
 
 <div id="app">
   <header id="top"><h1>レールガンのしくみ</h1><span class="sub">2本のレールと大電流だけで、弾を秒速2 kmこえまで</span></header>
@@ -19,15 +19,16 @@
     </div>
     <div id="caption"><p id="say"></p><p id="ruler"></p></div>
     <div id="bar">
-      <button id="play">▶ 発射</button>
-      <input type="range" id="time" min="0" max="1000" value="0" step="1" aria-label="時刻">
-      <span id="tlabel">0.00 ms</span>
+      <button id="play">▶ おまかせで撃つ</button>
+      <button id="bHold">止め板を置く</button>
+      <button id="bPol">＋− 入れかえ</button>
+      <span class="tl"><input type="range" id="time" min="0" max="1000" value="0" step="1" aria-label="時刻（撃ったあとに見返す）"><span id="tlabel">0.00 ms</span></span>
     </div>
   </section>
 
   <main id="below">
     <details id="more" class="box">
-    <summary>くわしく見る（数字・グラフ・自分で試す）</summary>
+    <summary>くわしく見る（数字・グラフ・電気の量や弾の重さ）</summary>
     <div id="readout"></div>
     <section id="results"></section>
 
@@ -42,7 +43,7 @@
     </section>
 
     <section class="box" id="controls">
-      <h2>自分で試す</h2>
+      <h2>電気の量・弾の重さ <small>（つぎの1発から）</small></h2>
       <div class="row"><label>大きさ</label>
         <select id="preset">
           <option value="atla">40 mm 試作の大きさ（防衛装備庁の公開値に合わせた推定）</option>
@@ -50,8 +51,6 @@
         </select></div>
       <div class="row"><label>ためる電気</label><input type="range" id="E"><span id="Ev"></span></div>
       <div class="row"><label>弾の重さ</label><input type="range" id="m"><span id="mv"></span></div>
-      <div class="row"><label>放電のしかた</label>
-        <span class="seg"><button data-seq="1" class="on">弾にあわせて順に</button><button data-seq="0">一度に全部</button></span></div>
       <p class="note" id="warn"></p>
     </section>
 
@@ -77,8 +76,10 @@
       <h3>記録・推定・目印</h3>
       <ul>
         <li><b>記録（公開値）</b>: 防衛装備庁の 40 mm 試作の口径・全長 約6 m・充電 5 MJ・初速 2,297 m/s（2,300 m/s 以上）・レール耐久 200 発以上。弾 約320 g・8.5 kV は報道（装備庁の 2022 年の資料から）。</li>
-        <li><b>推定</b>: 40 mm 試作の中の回路（台の数・C・L・R・L′・R′・スイッチの位置）は公開されていないので、ISL と同じ形の回路で、公開値（5 MJ・320 g で 2,297 m/s、効率 約17%）に合うよう選んだ。レールの限界の目安 2 MA は、同じ 40 mm のドイツ・フランスの PEGASUS の値。</li>
-        <li><b>目印・目安</b>: 電子の動き（何万倍にして描く）、⊗ の並び、砲口の火花の形、装弾筒のはなれ方、引いたときのたての太さ、コンデンサの箱の大きさ。磁場の強さ（B ≈ L′I／2w）と電子の速さは平均の見積もり。</li>
+        <li><b>推定</b>: 40 mm 試作の中の回路（台の数・C・L・R・L′・R′・スイッチの位置）は公開されていないので、ISL と同じ形の回路で、公開値（5 MJ・320 g で 2,297 m/s、効率 約17%）に合うよう選んだ（実測の値ではない。たとえば R′ は銅のレールの抵抗より小さめ）。「おまかせで撃つ」はこの推定の順番。レールの限界の目安 2 MA は、同じ 40 mm のドイツ・フランスの PEGASUS で使われた電流の上限からの目安。</li>
+        <li><b>焦げ跡</b>: その場所に流れた電流の2乗×時間（∫I²dt）の目安で濃さを決めている。温度は計算していない（本物は表面のごく薄い所が熱くなり、止まった電機子は溶けてくっつくこともある）。</li>
+        <li><b>見せる速さ</b>: 計算は本物の時間（0.5 マイクロ秒きざみ）。見せるのは 3000 分の1 の速さ。電流がないまま弾が進むところは早送り。止め板は「電機子が動かない」として計算する（押さえる力は押す力とつり合う）。</li>
+        <li><b>目印・目安</b>: 電子の動き（何万倍にして描く。速さは電機子全体の平均）、⊗ の並び、砲口の火花の形、装弾筒のはなれ方、引いたときのたての太さ、コンデンサの箱の大きさ。磁場の強さ（B ≈ L′I／2w）と電子の速さは平均の見積もり。</li>
       </ul>
       <h3>簡単にしているところ</h3>
       <ul>
@@ -101,10 +102,10 @@
   </main>
 </div>
 
-<script src="js/physics.js?v=3"></script>
-<script src="js/presets.js?v=3"></script>
-<script src="js/sim.js?v=3"></script>
-<script src="js/draw.js?v=3"></script>
-<script src="js/graph.js?v=3"></script>
-<script src="js/ui.js?v=3"></script>
-<script src="js/main.js?v=3"></script>
+<script src="js/physics.js?v=4"></script>
+<script src="js/presets.js?v=4"></script>
+<script src="js/sim.js?v=4"></script>
+<script src="js/draw.js?v=4"></script>
+<script src="js/graph.js?v=4"></script>
+<script src="js/ui.js?v=4"></script>
+<script src="js/main.js?v=4"></script>

@@ -76,7 +76,7 @@
     PARTS.forEach((p, i) => {
       const f = Math.max(0, v[p.k] / E0);
       bar.children[i].style.width = (f * 100).toFixed(2) + '%';
-      const lab = out && p.k === 'mag' ? '砲口で火花に（残った磁場）' : p.ja;
+      const lab = out && p.k === 'mag' ? '砲口の火花と配線の熱（残った磁場）' : p.ja;
       lg.children[i].innerHTML = `<i style="background:${p.col}"></i>${lab} <b>${(f * 100).toFixed(0)}%</b>`;
     });
   }

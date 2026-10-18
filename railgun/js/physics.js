@@ -72,10 +72,11 @@
       dQ += r.R * i[k] * i[k];
     }
     const F = 0.5 * p.Lp * I * I;
-    out.dx = v;
-    out.dv = (1 - p.fric) * F / p.m;
+    // 指で電機子を押さえているとき（s.hold）は動かない: 押す力は指の力とつり合い、L′vI もない
+    out.dx = s.hold ? 0 : v;
+    out.dv = s.hold ? 0 : (1 - p.fric) * F / p.m;
     out.dQ = dQ;
-    out.dWf = p.fric * F * v;
+    out.dWf = s.hold ? 0 : p.fric * F * v;
     out.I = I; out.F = F; out.dI = S;
     return out;
   }
@@ -154,6 +155,9 @@
     return { F, B, P: F / (p.w * p.h), Pmag: B * B / (2 * MU0) };
   }
 
-  const PHYS = { MU0, racks, make, step, run, snap, summary, gauge, energyCap };
+  // 台 k のスイッチをいま入れる（手でタップしたとき）
+  function fire(s, k) { if (!s.out && !s.fired[k]) { s.fired[k] = 1; return true; } return false; }
+
+  const PHYS = { MU0, racks, make, step, fire, run, snap, summary, gauge, energyCap };
   if (typeof module !== 'undefined' && module.exports) module.exports = PHYS; else root.PHYS = PHYS;
 })(typeof window !== 'undefined' ? window : globalThis);
