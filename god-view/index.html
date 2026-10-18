@@ -16,11 +16,11 @@
 <!-- /seo -->
 <script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
 <script>window.CESIUM_BASE_URL = 'https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/';</script>
-<script src="https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/Cesium.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/Widgets/widgets.css">
 <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
+<div id="loading" role="status"><div class="spin"></div><span lang="ja">地球を読みこんでいます…</span><span lang="en">Loading the Earth…</span></div>
 <div id="globe"></div>
 <canvas id="space"></canvas>
 <canvas id="micro"></canvas>
@@ -154,6 +154,8 @@
 
 <div id="fatal" hidden><span lang="ja">地球を表示できませんでした。WebGL が使えるブラウザで開いてください。</span><span lang="en">Could not show the Earth. Please open this in a browser that supports WebGL.</span></div>
 
+<!-- Cesium.js は数 MB あるので本文の後ろで読む（読むあいだ #loading を出す） -->
+<script src="https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/Cesium.js"></script>
 <script src="js/sources.js"></script>
 <script src="js/terrain.js"></script>
 <script src="js/earth.js"></script>

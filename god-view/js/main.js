@@ -8,8 +8,14 @@
   window.addEventListener('error', e => GV.err(e.error || e.message));
   window.addEventListener('unhandledrejection', e => GV.err(e.reason));
 
+  // 読み込み中の表示: 最初の地形・写真のタイルが来たら消す（来なくても 25 秒で消す）
+  const loading = document.getElementById('loading');
+  const loaded = () => { if (loading) loading.classList.add('done'); };
+  setTimeout(loaded, 25000);
+
   // file:// では Cesium の Worker が読めず地球が出ない → 案内を出して止める
   if (location.protocol === 'file:') {
+    loaded();
     const f = document.getElementById('fatal');
     f.innerHTML = L('このアプリはファイルを直接開くと動きません。<br>いちばん上のフォルダ（アプリ開発）の <b>start.bat</b> をダブルクリックして、<br>まなびラボから「神の視点マップ」を開いてください（http://localhost:… で開きます）。', 'This app does not work when the file is opened directly.<br>Double-click <b>start.bat</b> in the top folder,<br>then open “God’s-Eye Map” from Manabi Lab (it opens at http://localhost:…).');
     f.hidden = false;
@@ -28,8 +34,14 @@
     GV.initMicro();
     GV.initUI();
     GV.home(0);
+    let seen = false;
+    const off = GV.viewer.scene.globe.tileLoadProgressEvent.addEventListener(n => {
+      if (n > 0) seen = true;
+      else if (seen) { off(); loaded(); }
+    });
   } catch (e) {
     GV.err(e);
+    loaded();
     document.getElementById('fatal').hidden = false;
   }
 
