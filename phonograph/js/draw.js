@@ -124,11 +124,32 @@ const Draw = (() => {
     if (Math.hypot(X, Y) < R) return 'drum';
     return null;
   }
+  // 入れる音を「♪ 聴く」で鳴らしているあいだ: 図の右はしに、音の出どころ（声なら横顔、ほかはスピーカー）と、広がる音の輪。蓄音機は通さない
+  function source(S) {
+    if (!S.src) return;
+    const g = Draw.g, x = cam.w - 46, y = cam.h * 0.55, t = performance.now() / 1000, voice = S.src === 'mary' || S.src === 'vowel' || S.src === 'mic';
+    g.save(); g.strokeStyle = col.voice; g.lineWidth = 1.6; g.globalAlpha = 0.85;
+    if (voice) {   // 左を向いた横顔（線だけ）
+      g.beginPath();
+      g.moveTo(x + 16, y - 26); g.bezierCurveTo(x - 2, y - 30, x - 12, y - 18, x - 11, y - 8);   // 頭の上〜ひたい
+      g.lineTo(x - 15, y + 1); g.lineTo(x - 11, y + 3);                                          // 鼻
+      g.lineTo(x - 12, y + 7); g.lineTo(x - 9, y + 9); g.lineTo(x - 11, y + 12);                 // 口
+      g.quadraticCurveTo(x - 9, y + 19, x, y + 20); g.lineTo(x + 4, y + 30);                     // あご〜首
+      g.stroke();
+    } else {   // 小さなスピーカー
+      g.beginPath(); g.rect(x - 2, y - 7, 10, 14); g.moveTo(x - 2, y - 7); g.lineTo(x - 12, y - 15); g.lineTo(x - 12, y + 15); g.lineTo(x - 2, y + 7); g.stroke();
+    }
+    for (let i = 0; i < 3; i++) {   // 口の前から左へ広がる輪
+      const ph = (t * 1.2 + i / 3) % 1, r = 8 + ph * 26;
+      g.beginPath(); g.arc(x - 12, y + 7, r, Math.PI - 0.6, Math.PI + 0.6); g.globalAlpha = 0.7 * (1 - ph); g.stroke();
+    }
+    g.restore();
+  }
   function frame(g, w, h, S, Z) {
     Draw.g = g; camera(w, h, Z);
     g.fillStyle = '#16140f'; g.fillRect(0, 0, w, h);
     Draw.lastG = geom(S);
-    machine(S); micro(S); scaleBar();
+    machine(S); micro(S); scaleBar(); source(S);
   }
   return { frame, hit, cam, wx, wy, sx, sy, col, R, knob: null, g: null, lastG: null };
 })();

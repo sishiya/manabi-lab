@@ -7,7 +7,7 @@ const UI = (() => {
   const send = m => Audio.send(m);
 
   // ---------- 録音・再生・止める（押すと決まった動きをして、終わったら止まる） ----------
-  function crank() { send({ t: 'crank', hand: !!st.act || !!st.drag, om: st.drag ? st.drag.om : omOf(st.act && st.act.rpm || st.rpm) }); }
+  function crank() { send({ t: 'crank', hand: (!!st.act && st.act.kind !== 'orig') || !!st.drag, om: st.drag ? st.drag.om : omOf(st.act && st.act.rpm || st.rpm) }); }
   function setMode(m) { send({ t: 'mode', m }); S().mode = m; }
   const REC_SEC = { mary: 11, vowel: 4, whistle: 4, sweep: 10, mic: 6 };   // 録音の長さ（メリーは1曲、上がる音は1回ぶん）
   async function record(maxSec = REC_SEC[st.src] || 8) {

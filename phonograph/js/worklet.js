@@ -30,6 +30,7 @@ class PhonoProc extends AudioWorkletProcessor {
         if (this.orig < 0) this.port.postMessage({ t: 'origEnd' });
         break;
       }
+      case 'dbg': this.port.postMessage({ t: 'dbg', recN: this.recN, recKind: this.recKind, kind: this.kind, orig: this.orig, origN: this.origN, gOrig: this.gOrig, ssRec: this.ssRec, mode: ph.mode }); break;   // デバッグ用（window.__ph.dbg）
       case 'crank': ph.setCrank(d.hand, d.om); break;
       case 'rewind': ph.rewind(); break;
       case 'reset': ph.resetFoil(); break;
