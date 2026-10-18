@@ -2,7 +2,7 @@
 'use strict';
 const UI = (() => {
   const $ = id => document.getElementById(id), S = () => window.__ph.S;
-  const st = { act: null, recEnd: 0, rpm: 60, src: 'mary', dB: 105, vol: 18, plays: 0, drag: null, Z: 1, Zt: 1, cont: 0, contN: 0, bounced: false };
+  const st = { act: null, recEnd: 0, recDur: 0, rpm: 60, src: 'mary', dB: 105, vol: 18, plays: 0, drag: null, Z: 1, Zt: 1, cont: 0, contN: 0, bounced: false };
   const omOf = r => r * 2 * Math.PI / 60;
   const send = m => Audio.send(m);
 
@@ -24,19 +24,27 @@ const UI = (() => {
     send({ t: 'rewind' }); setMode('play'); st.plays++; st.cont = st.contN = 0;
     return begin({ kind: 'play', rpm, end: st.recEnd });
   }
+  async function orig() {   // 元の音（機械を通す前に、マウスピースに入れた音）
+    if (!st.recEnd) { flash('まだ何も録っていません。先に「● 録音」を。'); return; }
+    if (!await Audio.start()) return;
+    stop(true); send({ t: 'orig', on: true });
+    return begin({ kind: 'orig' });
+  }
+  function origEnd() { if (st.act && st.act.kind === 'orig') stop(); }
   function begin(act) {
     act.t0 = performance.now(); act.armed = act.kind === 'rec';
     return new Promise(res => { act.done = res; st.act = act; crank(); sync(); });
   }
   function stop(quiet) {
     const a = st.act; if (!a) { if (!quiet) { setMode('up'); sync(); } return; }
-    if (a.kind === 'rec') st.recEnd = Math.max(0.05, S().x);
+    if (a.kind === 'rec') { st.recEnd = Math.max(0.05, S().x); st.recDur = (performance.now() - a.t0) / 1000; }
     if (a.kind === 'play') st.bounced = st.contN > 10 && st.cont / st.contN < 0.85;
     st.act = null; setMode('up'); crank(); sync(); a.done();
   }
   function tick(now) {   // main.js が毎コマよぶ
     const a = st.act; if (!a) return;
     if (a.kind === 'rec' && (now - a.t0 > a.maxSec * 1000 || S().atEnd)) stop();
+    if (a.kind === 'orig' && now - a.t0 > (st.recDur + 2) * 1000) stop();   // 終わりの知らせが来なかったとき
     if (a.kind === 'play') {
       if (!a.armed) { if (S().x < a.end * 0.5 || now - a.t0 > 1500) a.armed = true; return; }   // もどす知らせが届くまで待つ
       if (S().x >= a.end || S().atEnd) stop();
@@ -50,7 +58,8 @@ const UI = (() => {
   }
   function sync() {
     const a = st.act;
-    $('bRec').classList.toggle('on', !!a && a.kind === 'rec'); $('bPlay').classList.toggle('on', !!a && a.kind === 'play');
+    $('bRec').classList.toggle('on', !!a && a.kind === 'rec'); $('bPlay').classList.toggle('on', !!a && a.kind === 'play'); $('bOrig').classList.toggle('on', !!a && a.kind === 'orig');
+    $('bOrig').disabled = !st.recEnd && !a;
     $('bPlay').disabled = !st.recEnd && !a; $('bStop').disabled = !a;
     $('rpmV').textContent = '毎分 ' + st.rpm + ' 回転'; $('lvlV').textContent = st.dB + ' dB';
     const gv = Math.pow(10, st.vol / 20); $('volV').textContent = '×' + (gv < 10 ? gv.toFixed(1) : Math.round(gv));
@@ -61,6 +70,7 @@ const UI = (() => {
     const a = st.act;
     if (now - flashT < 3000) return '<span class="rec big">' + flashMsg + '</span>';
     if (a && a.kind === 'rec') return '<span class="rec big">● 録音中 ' + ((now - a.t0) / 1000).toFixed(1) + ' 秒</span>';
+    if (a && a.kind === 'orig') return '<span class="voice big">♪ 元の音（機械を通す前に、マウスピースに入れた音）</span>';
     if (a && a.kind === 'play') return '<span class="play big">▶ 再生中（' + st.plays + ' 回目）</span>';
     if (st.bounced) return '<span class="rec big">さっきの再生では、針が溝から跳ねていました</span>';
     return st.recEnd ? '<span class="big">止まっています</span>' : '<span class="big">まだ何も録っていません</span>';
@@ -123,13 +133,16 @@ const UI = (() => {
       async () => { setZoom(1.6); await setSrc('mary'); st.rpm = 60; $('rpm').value = 60; sync(); await record(8); }),
     T('録れました。筒のふちの明るい所が、声の刻まれた溝です。はじめにもどして、針で溝をなぞります。聞こえるのは、溝の形だけから計算した音です。', '▶ 再生する',
       async () => { await play(); }),
+    T('いまのが、溝の形から計算した音です。くらべるために、マウスピースに入れた元の音を聴きます（大きさは、いまの再生にそろえます）。', '♪ 元の音を聴く',
+      async () => { await orig(); }),
     T('こもって聞こえるのは、振動板の共振（700 Hz あたり）と、針の先の丸みのため。つぎは針の先に寄って、もう一度なぞります。', '🔍 針の先に寄って再生',
       async () => { setZoom(400); await play(); }),
     T('いまのが本当の大きさ: 溝の深さは約 0.05 mm、針の先は半径 0.15 mm。つぎは2倍の速さで回して再生します。', '⏩ 2倍の速さで再生',
       async () => { setZoom(1.6); await play(120); }),
-    T('速く回すと、1オクターブ高い声になりました。つぎは、マイクで自分の声を録ってみましょう（マイクの音は計算に使うだけで、残しません）。', '🎤 自分の声を録る（6秒）',
+    T('速く回すと、1オクターブ高い声になりました。つぎは、マイクで自分の声を録ってみましょう（マイクの音はこのページの中だけで覚え、保存も送信もしません）。', '🎤 自分の声を録る（6秒）',
       async () => { await setSrc('mic'); if (st.src !== 'mic') return; await record(6); }),
     T('録れました。聴いてみましょう。', '▶ 再生する', async () => { await play(); }),
+    T('自分の元の声とくらべてみましょう。', '♪ 元の声を聴く', async () => { await orig(); }),
     T('あとは下の「自由に試す」で、入れる音・声の大きさ・回す速さを変えてみてください。声が大きすぎると、再生で針が溝から跳ねて、ガリガリという雑音になります。', 'はじめから',
       async () => { ti = -1; }),
   ];
@@ -149,12 +162,13 @@ const UI = (() => {
   $('bRec').onclick = () => { if (st.act && st.act.kind === 'rec') stop(); else record(20); };
   $('bPlay').onclick = () => { if (st.act && st.act.kind === 'play') stop(); else play(); };
   $('bStop').onclick = () => stop();
+  $('bOrig').onclick = () => { if (st.act && st.act.kind === 'orig') stop(); else orig(); };
   $('rpm').oninput = e => { st.rpm = +e.target.value; crank(); sync(); };
   $('src').onchange = e => setSrc(e.target.value);
   $('lvl').oninput = e => { st.dB = +e.target.value; send({ t: 'level', dB: st.dB }); sync(); };
   $('vol').oninput = e => { st.vol = +e.target.value; send({ t: 'gain', g: Math.pow(10, st.vol / 20) }); sync(); };
   send({ t: 'gain', g: Math.pow(10, st.vol / 20) }); send({ t: 'level', dB: st.dB }); send({ t: 'src', kind: st.src });
   tourShow(); sync();
-  return { st, sync, record, play, stop, tick, onSnap, status, setSrc, setZoom, tour: TOUR };
+  return { st, sync, record, play, orig, origEnd, stop, tick, onSnap, status, setSrc, setZoom, tour: TOUR };
 })();
 window.UI = UI;   // サムネイル（_dev/tools/thumb.html）から使う

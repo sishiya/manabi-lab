@@ -1,7 +1,7 @@
 # エジソンの蓄音機 開発メモ
 
 ## 別セッションで続けるとき（まずここ）
-- いまの状態: v003-flow（段階A＋操作の作りなおし）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。
+- いまの状態: v004-orig（段階A＋操作の作りなおし＋元の音）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。
 - 次にやること: ユーザーに聴いてもらい感想を聞く → PLAN.md の段階B（ラッパの中の波・マウスピースの空気の部屋・回す速さのむら）。
 - 読む順: PLAN.md → このファイルの「ファイル構成」→ 関係するファイルだけ。物理を直すなら physics.js と tools/verify.js。
 - 動かし方: サーバー apps（.claude/launch.json）で http://localhost:8765/phonograph/ 。音は最初のクリック（つぎへ・ボタン・クランク）で始まる（AudioContext は手の操作がいる）。
@@ -17,7 +17,7 @@
 | css/style.css | 見た目（上に固定 `#pin`、スマホは 560px 以下） | |
 | js/physics.js | 物理のすべて（window を使わない。worklet・ページ・node で共通） | `P`（値と出どころ）・`makePlate`・`foilModel`・`Phono`（`process`・`contactForce`・`setMode`・`setCrank`・`window`・`updateSegs`） |
 | js/sources.js | 計算で作る入力（声「あー」・メリー・口笛・上がる音・tone） | `Source.fill(buf, n, dB)` |
-| js/worklet.js | AudioWorklet（ES モジュール。physics.js・sources.js を import）。マイク → 圧力、出力、画面への様子 | `PhonoProc`、メッセージ `mode`・`crank`・`rewind`・`reset`・`src`・`level`・`gain` |
+| js/worklet.js | AudioWorklet（ES モジュール。physics.js・sources.js を import）。マイク → 圧力、出力、画面への様子。元の音の入れもの `recBuf`（いちばん新しい録音、最大21秒、メモリだけ） | `PhonoProc`、メッセージ `mode`・`crank`・`rewind`・`reset`・`src`・`level`・`gain`・`orig`（→ 終わったら `origEnd` を返す） |
 | js/audio.js | AudioContext・マイクの開け閉め・worklet への送り口 | `Audio.start`・`send`・`useMic` |
 | js/draw.js | 機械の図（筒の軸の向きから見る）と顕微鏡（溝・針の先） | `Draw.frame`・`hit`・`camera`（寄るほど `E` 倍率が 20→5→1） |
 | js/panels.js | 下の図: 波・成分（FFT）、箔をひろげた図 | `Panels.waves`・`foil` |
@@ -68,3 +68,4 @@
 - 2026-10-18 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
 - 2026-10-18 v002-stageA: 段階A。振動板（モード5つ）・針・箔の塑性・溝・なぞる・すり減り・空気へ、を AudioWorklet で 192 kHz。計算の入力4種＋マイク。機械の図と顕微鏡（1〜1500 倍）、波・成分・箔をひろげた図、つぎへ 7 段。tools/verify.js。
 - 2026-10-18 v003-flow: 操作を作りなおし（つぎへ 7 段が、押すと録音8秒・再生・寄って再生・2倍速・マイクで録る、をして止まる。下は「自由に試す」の 録音／再生／止める）。声の大きさの初期値 115 → 105 dB（跳ねる雑音の原因）、入れる音の初期値をメリーさんのひつじに。verify.js に bounce。
+- 2026-10-18 v004-orig: 「♪ 元の音」（ユーザー「元の入れる音も適宜再生したい」）。いちばん新しい録音でマウスピースに入れた音を、さっきの機械の再生と同じ大きさにそろえて鳴らす。つぎへにも2段（計算の声のあと・マイクの声のあと）。入れた音はページを開いているあいだだけメモリに覚え、保存・送信しない（画面とPLANの文も直した）。

@@ -1,4 +1,5 @@
-// エジソンの蓄音機 — AudioWorklet（音の計算はここで。録ったマイクの音はどこにも残さない: 振動板を押す力にするだけ）
+// エジソンの蓄音機 — AudioWorklet（音の計算はここで。機械の再生は溝からだけ計算する。
+// 入れた音は「元の音」とくらべるために、このページが開いているあいだだけメモリに覚える。保存も送信もしない）
 import './physics.js';
 import './sources.js';
 const { Phono } = globalThis.PhonoPhys, { Source } = globalThis.PhonoSrc;
@@ -11,13 +12,18 @@ class PhonoProc extends AudioWorkletProcessor {
     this.pin = new Float32Array(128); this.pout = new Float32Array(128);
     this.half = 400; this.win = new Float32Array(2 * this.half + 1);
     this.ringN = 4096; this.rIn = new Float32Array(this.ringN); this.rOut = new Float32Array(this.ringN); this.ri = 0; this.qi = 0;
+    this.recBuf = new Float32Array(Math.ceil(sampleRate * 21)); this.recN = 0; this.ssRec = 0;   // 元の音（いちばん新しい録音の、マウスピースの中の圧力）
+    this.ssPlay = 0; this.nPlay = 0; this.orig = -1; this.gOrig = 0;
     this.blk = 0; this.ssIn = 0; this.ssOut = 0; this.nS = 0; this.splIn = 0; this.splOut = 0; this.clip = 0;
     this.port.onmessage = e => this.msg(e.data);
   }
   msg(d) {
     const ph = this.ph;
     switch (d.t) {
-      case 'mode': ph.setMode(d.m); break;
+      case 'mode': ph.setMode(d.m); if (d.m === 'rec') { this.recN = 0; this.ssRec = 0; } if (d.m === 'play') { this.ssPlay = 0; this.nPlay = 0; } this.orig = -1; break;
+      case 'orig':   // 元の音を鳴らす。大きさは、さっき機械で再生した音の大きさにそろえる（音色をくらべるため）
+        if (d.on && this.recN > 0) { const rr = Math.sqrt(this.ssRec / this.recN), pr = this.nPlay > 0 ? Math.sqrt(this.ssPlay / this.nPlay) : 0.02; this.gOrig = rr > 0 ? pr / rr : 0; this.orig = 0; } else this.orig = -1;
+        break;
       case 'crank': ph.setCrank(d.hand, d.om); break;
       case 'rewind': ph.rewind(); break;
       case 'reset': ph.resetFoil(); break;
@@ -38,6 +44,9 @@ class PhonoProc extends AudioWorkletProcessor {
     let clip = 0;
     for (let i = 0; i < n; i++) {
       let y = rec ? 0 : pout[i] * this.gain;   // 録音中は鳴らさない（マイクに戻るため）
+      if (this.orig >= 0) { y = this.orig < this.recN ? this.recBuf[this.orig++] * this.gOrig * this.gain : 0; if (this.orig >= this.recN) { this.orig = -1; this.port.postMessage({ t: 'origEnd' }); } }
+      if (rec && this.recN < this.recBuf.length) { this.recBuf[this.recN++] = pin[i]; this.ssRec += pin[i] * pin[i]; }
+      if (ph.mode === 'play') { this.ssPlay += pout[i] * pout[i]; this.nPlay++; }
       if (y > 1) { y = 1; clip = 1; } else if (y < -1) { y = -1; clip = 1; }
       out[i] = y;
       if (rec) { this.rIn[this.qi] = pin[i]; this.qi = (this.qi + 1) % this.ringN; } else { this.rOut[this.ri] = pout[i]; this.ri = (this.ri + 1) % this.ringN; }   // 入れた音は録音中だけ、出た音は録音中でないときだけ書く

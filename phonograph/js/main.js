@@ -5,6 +5,7 @@ const cv = document.getElementById('cv'), g = cv.getContext('2d'), hud = documen
 let wavesDirty = false, foilDirty = true, clipT = -1e9;
 
 Audio.onSnap = m => {
+  if (m.t === 'origEnd') { if (typeof UI !== 'undefined') UI.origEnd(); return; }
   if (m.t !== 'snap') return;
   for (const k of ['x', 'om', 'z', 'z0', 'q', 'Fc', 'contact', 'mode', 'atEnd', 'win', 'half', 'pIn', 'pOut']) S[k] = m[k];
   if (m.clip) clipT = performance.now();

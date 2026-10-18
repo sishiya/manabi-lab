@@ -20,15 +20,15 @@
   </div>
   <section id="controls">
     <h2 class="sec">自由に試す</h2>
-    <div class="row"><button id="bRec" class="big">● 録音</button><button id="bPlay" class="big">▶ 再生</button><button id="bStop" class="big">■ 止める</button></div>
-    <p class="hint">録音: 新しい箔に、入れる音を刻みます（止めるまで。長くて20秒）。再生: はじめにもどして、録った所の終わりまでなぞります。</p>
+    <div class="row"><button id="bRec" class="big">● 録音</button><button id="bPlay" class="big">▶ 再生</button><button id="bOrig" class="big">♪ 元の音</button><button id="bStop" class="big">■ 止める</button></div>
+    <p class="hint">録音: 新しい箔に、入れる音を刻みます（止めるまで。長くて20秒）。再生: はじめにもどして、録った所の終わりまでなぞります。元の音: 機械を通す前に入れた音（大きさは、さっきの再生にそろえます）。</p>
     <div class="row"><span class="lab">入れる音</span><select id="src">
       <option value="mary">メリーさんのひつじ（計算で作った声）</option>
       <option value="vowel">声「あー」（計算で作った声）</option>
       <option value="whistle">口笛のような音</option>
       <option value="sweep">低い音から高い音へ（機械の特性を見る）</option>
       <option value="mic">マイク（自分の声）</option>
-    </select><span class="note" id="micNote">マイクの音は、振動板を押す力にするだけで、どこにも残しません。録音中はスピーカーから出しません。</span></div>
+    </select><span class="note" id="micNote">マイクの音は、振動板を押す力にするのと、「元の音」でくらべるために、このページを開いているあいだだけ覚えておきます（保存も送信もしません。つぎに録音すると消えます）。録音中はスピーカーから出しません。</span></div>
     <div class="row"><span class="lab">声の大きさ</span><input id="lvl" type="range" min="90" max="125" step="1" value="105"><span id="lvlV" class="val"></span>
       <span class="note">マウスピースの中の音の大きさ（推定の目安）。110 dB をこえると溝が深く刻まれすぎて、再生のとき針が溝から跳ね、ガリガリという雑音になります（これも計算の結果です）。</span></div>
     <div class="row"><span class="lab">回す速さ</span><input id="rpm" type="range" min="30" max="120" step="1" value="60"><span id="rpmV" class="val"></span>
@@ -45,7 +45,7 @@
   <details id="about" class="about">
     <summary>このアプリについて</summary>
     <p>1877年にエジソンが作った蓄音機は、手で回す筒に、すず箔を巻いたものでした。マウスピースに向かって話すと、うすい振動板がふるえ、まん中についた針が箔を押して、らせんの溝に「深い・浅い」の形を刻みます。はじめにもどして針で溝をなぞると、振動板がふるえて、また声になります。</p>
-    <p>このアプリは、マイクや計算で作った音を「マウスピースの中の空気の圧力」として入れるだけです。そこから先の、振動板のふるえ → 針が箔を押す → 箔が凹んで溝になる → 針の先が溝をなぞる → 振動板がふるえる → 空気を押す、をすべて計算しています。録った音はどこにも残さず、聞こえる音は溝の形から計算したものです。</p>
+    <p>このアプリは、マイクや計算で作った音を「マウスピースの中の空気の圧力」として入れるだけです。そこから先の、振動板のふるえ → 針が箔を押す → 箔が凹んで溝になる → 針の先が溝をなぞる → 振動板がふるえる → 空気を押す、をすべて計算しています。「▶ 再生」で聞こえる音は、溝の形だけから計算したものです。入れた音は「♪ 元の音」でくらべるために、ページを開いているあいだだけ覚えておきます（保存も送信もしません）。</p>
     <h3>計算していること</h3>
     <ul>
       <li><b>振動板</b>: ふちを留めた雲母の円板（直径 50 mm）。板の曲げの式の、まん中が動く形（軸対称のモード）を5つ。いちばん低い共振は約 600 Hz（針が箔にふれていないとき）。</li>

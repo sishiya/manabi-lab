@@ -13,7 +13,8 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-bod
 #cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 #hud{position:absolute;left:10px;top:8px;font-family:var(--f-mono);font-size:12px;line-height:1.55;color:var(--muted);pointer-events:none;white-space:pre}
 #hud b{color:var(--ink);font-weight:500}
-#hud .rec{color:var(--voice)}#hud .play{color:var(--play)}
+#hud .rec,#hud .voice{color:var(--voice)}#hud .play{color:var(--play)}
+#bOrig.on{background:var(--voice);border-color:var(--voice);color:#1a1a1a}
 #zoom{position:absolute;right:10px;top:8px;display:flex;flex-direction:column;gap:6px}
 #zoom button{width:40px;min-height:40px;padding:0;font-size:20px}
 #tip{position:absolute;max-width:270px;background:rgba(28,26,22,.95);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.6;pointer-events:none;z-index:3}
