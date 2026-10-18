@@ -26,6 +26,7 @@ const P = {
   sigY: 10e6,                // すずが流れ出す強さ Pa（推定）
   wChan: 0.5e-3,             // 筒の溝（箔の下のすきま）の幅 m（推定）
   keRatio: 10,               // 箔の弾性のかたさ ÷ 塑性のかたさ（推定）
+  cContact: 0,               // 針と箔がふれているときの減衰 N·s/m（ためし用。0 = 入れない。0.5〜1.5 にしても跳ね方はほとんど変わらなかった）
   // 針のおしこみ（ねじで合わせる。録音は溝が 0.05 mm になるように＝セントルイスのすず箔の測定）
   depthRec: 0.05e-3,         // 録音のときの針の先の深さの目安 m
   trackRatio: 0.3,           // 再生のときの押す力 ÷ 0.05 mm を刻む力（再生は浅め＝Iowa 大の演示資料。0.3 は推定）
@@ -89,7 +90,7 @@ function Phono(fs, opt) {
   this.segN = 256; this.seg = new Float32Array(p.nRev * this.segN); this.segDirty = new Uint8Array(p.nRev);
   this.x = 0; this.om = 0; this.omT = 0; this.hand = false;
   this.mode = 'up'; this.z0 = -0.4e-3; this.z0T = -0.4e-3;
-  this.Fc = 0; this.pen = 0; this.contact = false; this.wear = 0; this.atEnd = false;
+  this.Fc = 0; this.pen = 0; this.penPrev = 0; this.contact = false; this.wear = 0; this.atEnd = false;
   const k = this.plate.kPoint, f = this.foil;
   this.z0Rec = p.depthRec + f.Fp(p.depthRec) / k;                         // 押しこみのねじ（録音）
   this.z0Play = p.depthRec + p.trackRatio * f.Fp(p.depthRec) / k;         // 押しこみのねじ（再生。浅め）
@@ -111,10 +112,10 @@ Phono.prototype.contactForce = function (z) {
   const lo = Math.max(0, i0 - nr), hi = Math.min(this.len - 1, i0 + nr);
   let pen = -1;
   for (let j = lo; j <= hi; j++) { const u = j * dx - this.x; if (u * u >= r * r) continue; const d = c + Math.sqrt(r * r - u * u) - s[j]; if (d > pen) pen = d; }
-  this.pen = pen;
+  this.pen = pen; const rate = (pen - this.penPrev) / this.dt; this.penPrev = pen;
   if (pen <= 0) { this.contact = false; return 0; }
   this.contact = true;
-  const Fe = f.ke * pen, Fp = f.Fp(z);
+  const Fe = Math.max(0, f.ke * pen + p.cContact * rate), Fp = f.Fp(z);   // ぶつかるときの減衰（すずはやわらかく、跳ね返りが小さい）
   if (Fe <= Fp) return Fe;
   const de = Fp / f.ke; let worn = 0;
   for (let j = lo; j <= hi; j++) {

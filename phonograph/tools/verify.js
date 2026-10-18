@@ -80,6 +80,22 @@ if (on('trace')) {
   console.log('  ※ ひずみには、針の丸みのほかに、箔が「押せば凹むが戻らない」ことと振動板の共振の分も入る。');
 }
 
+if (on('bounce')) {
+  console.log('■ 声の大きさと、再生の針の跳ね（3秒録って、同じ速さで再生。針が溝にふれていた時間の割合）');
+  for (const kind of ['mary', 'vowel']) {
+    const row = [];
+    for (const lv of [100, 105, 108, 111, 115]) {
+      const ph = new Phono(fs), src = new Source(fs, kind); record(ph, src, lv, 60, 3);
+      const g = grooveStats(ph, 0.5 * ph.circ, 2.5 * ph.circ);
+      ph.setCrank(true, omOf(60)); ph.rewind(); ph.setMode('play'); let c = 0, n = 0; const o = new Float32Array(128);
+      for (let i = 0; i < fs * 3 / 128; i++) { ph.process(null, o, 128); if (i * 128 > 0.5 * fs) { n++; if (ph.contact) c++; } }
+      row.push(`${lv} dB: ふれ ±${(g.amp * 1e6).toFixed(1)} µm・ふれていた ${(c / n * 100).toFixed(0)}%`);
+    }
+    console.log(`  ${kind === 'mary' ? 'メリー' : '「あー」'}  ` + row.join('  '));
+  }
+  console.log('  ※ 声「あー」は 110 dB あたりから、針が溝から跳ねつづける（跳ねる音がガリガリという雑音になる）。');
+}
+
 if (on('wear')) {
   console.log('■ すり減り（声「あー」115 dB を録って、毎分60回転で5回再生）');
   const ph = new Phono(fs), src = new Source(fs, 'vowel'); record(ph, src, 115, 60, 3);

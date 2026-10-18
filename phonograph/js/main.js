@@ -2,7 +2,7 @@
 'use strict';
 const S = { x: 0, om: 0, z: -0.4e-3, z0: -0.4e-3, q: [0, 0, 0, 0, 0], Fc: 0, contact: false, mode: 'up', atEnd: false, win: null, half: 400, pIn: 0, pOut: 0, clip: 0, seg: null };
 const cv = document.getElementById('cv'), g = cv.getContext('2d'), hud = document.getElementById('hud');
-let wavesDirty = false, foilDirty = true, clipT = 0;
+let wavesDirty = false, foilDirty = true, clipT = -1e9;
 
 Audio.onSnap = m => {
   if (m.t !== 'snap') return;
@@ -11,6 +11,7 @@ Audio.onSnap = m => {
   if (m.wIn) { Panels.setWaves(m.wIn, m.wOut); wavesDirty = true; }
   if (m.seg) { S.seg = m.seg; foilDirty = true; }
   foilDirty = foilDirty || S.om > 0;
+  if (typeof UI !== 'undefined') UI.onSnap(m);
 };
 
 function resize() {
@@ -21,8 +22,7 @@ function resize() {
 const dBof = p => p > 0 ? (20 * Math.log10(p / 20e-6)).toFixed(0) : '—';
 function hudText() {
   const P = PhonoPhys.P, circ = 2 * Math.PI * P.R, rpm = S.om * 60 / (2 * Math.PI);
-  const md = S.mode === 'rec' ? '<span class="rec">● 録音</span>' : S.mode === 'play' ? '<span class="play">▶ 再生</span>' : '針は上';
-  const lines = [md + (S.atEnd ? '　箔の終わり' : ''),
+  const lines = [UI.status(performance.now()) + (S.atEnd ? '　箔の終わり' : ''),
     '毎分 <b>' + rpm.toFixed(0) + '</b> 回転　' + (S.x / circ + 1).toFixed(1).padStart(4) + ' 周目',
     S.mode === 'up' ? '' : '針の深さ <b>' + (S.z * 1e3).toFixed(3) + '</b> mm' + (S.contact ? '' : '　<span class="rec">はねている</span>'),
     S.mode === 'rec' ? '入れた音 <b>' + dBof(S.pIn) + '</b> dB' : S.mode === 'play' ? '耳もと 30 cm <b>' + dBof(S.pOut) + '</b> dB' : ''];
@@ -30,7 +30,7 @@ function hudText() {
   if (!Audio.ready) lines.push(Audio.err ? '<span class="rec">音が使えません: ' + Audio.err + '</span>' : '');
   hud.innerHTML = lines.filter(Boolean).join('\n');
 }
-let last = performance.now(), lastFoil = 0, loopT = 0;
+let last = performance.now(), lastFoil = 0;
 function loop(now) {
   const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;   // 最初のコマは now が last より前のことがある
   if (typeof UI === 'undefined') { requestAnimationFrame(loop); return; }   // ui.js がまだ読まれていない（読みこみの合間にコマが来ることがある）
@@ -38,7 +38,7 @@ function loop(now) {
   const w = cv.clientWidth, h = cv.clientHeight;
   if (w > 0 && h > 0) Draw.frame(g, w, h, S, st.Z);
   hudText();
-  if (UI.st.loopEnd && S.mode === 'play' && S.x > UI.st.loopEnd && now - loopT > 1000) { loopT = now; Audio.send({ t: 'rewind' }); }   // 案内のあいだだけ、録った所の終わりで、はじめにもどす
+  UI.tick(now);
   if (wavesDirty) { Panels.waves(document.getElementById('wv'), Audio.ctx ? Audio.ctx.sampleRate : 48000); wavesDirty = false; }
   if (foilDirty && now - lastFoil > 150) { Panels.foil(document.getElementById('fv'), S); foilDirty = false; lastFoil = now; }
   requestAnimationFrame(loop);
@@ -51,7 +51,7 @@ window.__ph = {
   S,
   draw() { Draw.frame(g, cv.clientWidth, cv.clientHeight, S, UI.st.Z); },
   // 計算で作った音を sec 秒録って、同じ速さで再生した結果（溝のふれと耳もとの dB）
-  offline(kind = 'vowel', dB = 115, rpm = 60, sec = 2) {
+  offline(kind = 'mary', dB = 105, rpm = 60, sec = 2) {
     if (!window.PhonoSrc) return 'sources.js を読んでいません';
     const fs = 48000, ph = new PhonoPhys.Phono(fs), src = new PhonoSrc.Source(fs, kind), b = new Float32Array(128), o = new Float32Array(128), om = rpm * 2 * Math.PI / 60;
     ph.setCrank(true, om); for (let i = 0; i < fs * 0.3 / 128; i++) ph.process(null, o, 128);

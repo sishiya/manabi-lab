@@ -16,23 +16,24 @@
       <div id="zoom"><button id="zin" aria-label="寄る">＋</button><button id="zout" aria-label="引く">－</button></div>
       <div id="tip" hidden></div>
     </div>
-    <div id="tour"><span id="tourNum"></span><p id="tourText"></p><button id="next">つぎへ</button></div>
+    <div id="tour"><span id="tourNum"></span><p id="tourText"></p><button id="next">● 録音する</button></div>
   </div>
   <section id="controls">
-    <div class="row"><span class="lab">針</span><button id="bRec">● 録音の針をおろす</button><button id="bPlay">▶ 再生の針をおろす</button><button id="bUp">針を上げる</button></div>
-    <div class="row"><span class="lab">クランク</span><button id="bTurn">回す</button><input id="rpm" type="range" min="30" max="120" step="1" value="60"><span id="rpmV" class="val"></span>
-      <span class="note">図のクランクの取っ手（丸）をつかんで、ぐるぐる回してもかまいません。</span></div>
-    <div class="row"><span class="lab">筒</span><button id="bRew">⏮ はじめにもどす</button><button id="bFoil">箔をはりかえる</button><span id="plays" class="val"></span></div>
+    <h2 class="sec">自由に試す</h2>
+    <div class="row"><button id="bRec" class="big">● 録音</button><button id="bPlay" class="big">▶ 再生</button><button id="bStop" class="big">■ 止める</button></div>
+    <p class="hint">録音: 新しい箔に、入れる音を刻みます（止めるまで。長くて20秒）。再生: はじめにもどして、録った所の終わりまでなぞります。</p>
     <div class="row"><span class="lab">入れる音</span><select id="src">
-      <option value="vowel">声「あー」（計算で作った声）</option>
       <option value="mary">メリーさんのひつじ（計算で作った声）</option>
+      <option value="vowel">声「あー」（計算で作った声）</option>
       <option value="whistle">口笛のような音</option>
       <option value="sweep">低い音から高い音へ（機械の特性を見る）</option>
       <option value="mic">マイク（自分の声）</option>
     </select><span class="note" id="micNote">マイクの音は、振動板を押す力にするだけで、どこにも残しません。録音中はスピーカーから出しません。</span></div>
-    <div class="row"><span class="lab">声の大きさ</span><input id="lvl" type="range" min="95" max="130" step="1" value="115"><span id="lvlV" class="val"></span>
-      <span class="note">マウスピースの中の音の大きさ。昔は口をつけて大声で話しました（目安。推定）。</span></div>
-    <div class="row"><span class="lab">スピーカー</span><input id="vol" type="range" min="-20" max="40" step="1" value="4"><span id="volV" class="val"></span>
+    <div class="row"><span class="lab">声の大きさ</span><input id="lvl" type="range" min="90" max="125" step="1" value="105"><span id="lvlV" class="val"></span>
+      <span class="note">マウスピースの中の音の大きさ（推定の目安）。110 dB をこえると溝が深く刻まれすぎて、再生のとき針が溝から跳ね、ガリガリという雑音になります（これも計算の結果です）。</span></div>
+    <div class="row"><span class="lab">回す速さ</span><input id="rpm" type="range" min="30" max="120" step="1" value="60"><span id="rpmV" class="val"></span>
+      <span class="note">録音と再生で速さを変えると、音の高さが変わります。図のクランクの取っ手（丸）をドラッグして、自分の手で回すこともできます。</span></div>
+    <div class="row"><span class="lab">スピーカー</span><input id="vol" type="range" min="-10" max="40" step="1" value="18"><span id="volV" class="val"></span>
       <span class="note">計算した耳もとの音を、あなたのスピーカーで何倍にして鳴らすか。本当の大きさは図の左上の dB です。</span></div>
   </section>
   <section id="graphs">
@@ -59,8 +60,8 @@
       <li>振動板の共振の高さの係数（λ²）は 10.216・39.771・89.104 で、板の教科書の値（10.2158・39.771・89.104）と同じです。一様な圧力でのまん中の変位も板の式と同じです。</li>
       <li>毎分60回転で録った 400 Hz の音を、毎分120回転で再生すると 800 Hz、毎分45回転で 300 Hz になります。</li>
       <li>同じ大きさ（120 dB）の音を録って再生すると、いちばんよく出るのは 700 Hz あたり（振動板が箔に押しつけられたときの共振）で、500〜2,000 Hz がよく出ます。300 Hz より低い音と 3,000 Hz より高い音は、溝にほとんど刻まれません（3,000 Hz で溝のふれは 1 µm 以下）。</li>
-      <li>ふつうの声（115 dB）で、溝の深さのふれは ±10〜15 µm ほど。溝の深さの平均（約 0.05 mm）は、押しこみのねじで合わせたものなので、答え合わせにはなりません。</li>
-      <li>再生では、針が溝にふれているのは時間の 4 割ほどで、あとは跳ねています。跳ねて落ちる強い力で溝の山がつぶれ、5回の再生で溝のふれは約3分の2になりました。ただし音は小さくならず、跳ねる音がまざったままです（実物のすず箔は数回で破れましたが、このアプリは破れを入れていません）。</li>
+      <li>声の大きさ 105 dB で、溝の深さのふれは ±5 µm ほど。溝の深さの平均（約 0.05 mm）は、押しこみのねじで合わせたものなので、答え合わせにはなりません。</li>
+      <li>声「あー」を 110 dB より大きく入れると（溝のふれ ±9 µm 以上）、再生で針が溝にふれているのは時間の 4 割ほどになり、あとは跳ねています。この跳ねる音がガリガリという雑音です。105 dB ならずっとふれたままで、雑音は出ません。跳ねて落ちる強い力で溝の山がつぶれ、5回の再生で溝のふれは約3分の2になりました（実物のすず箔は数回で破れましたが、このアプリは破れを入れていません）。</li>
       <li>針の先の丸みによるひずみを、古い論文の目安（溝の曲がりの半径が針の半径の5倍より大きければ、ひずみは約1割以下）とくらべようとしましたが、この模型では跳ねることと共振のひずみのほうが大きく、比べられませんでした。</li>
     </ul>
     <h3>簡単にしているところ・推定</h3>

@@ -1,32 +1,69 @@
-// エジソンの蓄音機 — 操作（ボタン・クランク・寄る・説明・つぎへ）
+// エジソンの蓄音機 — 操作（録音・再生・止める、つぎへ、クランクのドラッグ・寄る・説明）
 'use strict';
 const UI = (() => {
   const $ = id => document.getElementById(id), S = () => window.__ph.S;
-  const st = { loopEnd: 0, turning: false, rpm: 60, src: 'vowel', dB: 115, vol: 4, plays: 0, drag: null, Z: 1, Zt: 1 };
+  const st = { act: null, recEnd: 0, rpm: 60, src: 'mary', dB: 105, vol: 18, plays: 0, drag: null, Z: 1, Zt: 1, cont: 0, contN: 0, bounced: false };
   const omOf = r => r * 2 * Math.PI / 60;
+  const send = m => Audio.send(m);
 
-  // ---------- 針・筒・クランク ----------
-  async function mode(m) {
-    await Audio.start();
-    if (m === 'rec' && st.src === 'mic' && !await Audio.useMic(true)) { alert('マイクが使えませんでした。ほかの「入れる音」を選んでください。'); return; }
-    if (m === 'play' && S().mode !== 'play') { st.plays++; }
-    Audio.send({ t: 'mode', m }); S().mode = m; sync();
+  // ---------- 録音・再生・止める（押すと決まった動きをして、終わったら止まる） ----------
+  function crank() { send({ t: 'crank', hand: !!st.act || !!st.drag, om: st.drag ? st.drag.om : omOf(st.act && st.act.rpm || st.rpm) }); }
+  function setMode(m) { send({ t: 'mode', m }); S().mode = m; }
+  async function record(maxSec = 20) {
+    if (!await Audio.start()) return;
+    if (st.src === 'mic' && !await Audio.useMic(true)) { alert('マイクが使えませんでした（許可がない・マイクがない）。ほかの「入れる音」を選んでください。'); return; }
+    stop(true);
+    send({ t: 'src', kind: st.src, restart: true }); send({ t: 'reset' }); send({ t: 'rewind' }); S().seg = null; st.plays = 0; st.recEnd = 0; st.bounced = false;
+    setMode('rec');
+    return begin({ kind: 'rec', maxSec });
   }
-  function crank() { Audio.send({ t: 'crank', hand: st.turning || !!st.drag, om: st.drag ? st.drag.om : omOf(st.rpm) }); }
-  async function turn(on) { await Audio.start(); st.turning = on; crank(); sync(); }
-  async function rewind() { await Audio.start(); Audio.send({ t: 'rewind' }); }
-  async function newFoil() { await Audio.start(); Audio.send({ t: 'reset' }); st.plays = 0; S().seg = null; sync(); }
+  async function play(rpm) {
+    if (!st.recEnd) { flash('まだ何も録っていません。先に「● 録音」を。'); return; }
+    if (!await Audio.start()) return;
+    stop(true);
+    send({ t: 'rewind' }); setMode('play'); st.plays++; st.cont = st.contN = 0;
+    return begin({ kind: 'play', rpm, end: st.recEnd });
+  }
+  function begin(act) {
+    act.t0 = performance.now(); act.armed = act.kind === 'rec';
+    return new Promise(res => { act.done = res; st.act = act; crank(); sync(); });
+  }
+  function stop(quiet) {
+    const a = st.act; if (!a) { if (!quiet) { setMode('up'); sync(); } return; }
+    if (a.kind === 'rec') st.recEnd = Math.max(0.05, S().x);
+    if (a.kind === 'play') st.bounced = st.contN > 10 && st.cont / st.contN < 0.85;
+    st.act = null; setMode('up'); crank(); sync(); a.done();
+  }
+  function tick(now) {   // main.js が毎コマよぶ
+    const a = st.act; if (!a) return;
+    if (a.kind === 'rec' && (now - a.t0 > a.maxSec * 1000 || S().atEnd)) stop();
+    if (a.kind === 'play') {
+      if (!a.armed) { if (S().x < a.end * 0.5 || now - a.t0 > 1500) a.armed = true; return; }   // もどす知らせが届くまで待つ
+      if (S().x >= a.end || S().atEnd) stop();
+    }
+  }
+  function onSnap(m) { if (st.act && st.act.kind === 'play' && st.act.armed && m.mode === 'play') { st.contN++; if (m.contact) st.cont++; } }
   async function setSrc(k) {
-    st.src = k; $('src').value = k; await Audio.start();
-    if (k !== 'mic') await Audio.useMic(false); else if (!await Audio.useMic(true)) { alert('マイクが使えませんでした（許可がない・マイクがない）。ほかの音を選んでください。'); return setSrc('vowel'); }
-    Audio.send({ t: 'src', kind: k }); sync();
+    st.src = k; $('src').value = k;
+    if (k !== 'mic') { Audio.useMic(false); } else if (!await Audio.useMic(true)) { alert('マイクが使えませんでした（許可がない・マイクがない）。ほかの音を選んでください。'); return setSrc('mary'); }
+    send({ t: 'src', kind: k }); sync();
   }
   function sync() {
-    const m = S().mode;
-    $('bRec').classList.toggle('on', m === 'rec'); $('bPlay').classList.toggle('on', m === 'play'); $('bTurn').classList.toggle('on', st.turning);
-    $('bTurn').textContent = st.turning ? '回すのをやめる' : '回す';
-    $('rpmV').textContent = '毎分 ' + st.rpm + ' 回転'; $('lvlV').textContent = st.dB + ' dB'; const gv = Math.pow(10, st.vol / 20); $('volV').textContent = '×' + (gv < 10 ? gv.toFixed(1) : Math.round(gv));
-    $('plays').textContent = st.plays ? '再生 ' + st.plays + ' 回目' : '';
+    const a = st.act;
+    $('bRec').classList.toggle('on', !!a && a.kind === 'rec'); $('bPlay').classList.toggle('on', !!a && a.kind === 'play');
+    $('bPlay').disabled = !st.recEnd && !a; $('bStop').disabled = !a;
+    $('rpmV').textContent = '毎分 ' + st.rpm + ' 回転'; $('lvlV').textContent = st.dB + ' dB';
+    const gv = Math.pow(10, st.vol / 20); $('volV').textContent = '×' + (gv < 10 ? gv.toFixed(1) : Math.round(gv));
+  }
+  let flashT = -1e9, flashMsg = '';
+  function flash(m) { flashMsg = m; flashT = performance.now(); }
+  function status(now) {   // 図の左上の大きい1行
+    const a = st.act;
+    if (now - flashT < 3000) return '<span class="rec big">' + flashMsg + '</span>';
+    if (a && a.kind === 'rec') return '<span class="rec big">● 録音中 ' + ((now - a.t0) / 1000).toFixed(1) + ' 秒</span>';
+    if (a && a.kind === 'play') return '<span class="play big">▶ 再生中（' + st.plays + ' 回目）</span>';
+    if (st.bounced) return '<span class="rec big">さっきの再生では、針が溝から跳ねていました</span>';
+    return st.recEnd ? '<span class="big">止まっています</span>' : '<span class="big">まだ何も録っていません</span>';
   }
 
   // ---------- 図の上の手（クランクをつかむ・寄る・説明） ----------
@@ -79,33 +116,45 @@ const UI = (() => {
   $('zin').onclick = () => setZoom(ZSTEPS.find(v => v > st.Zt * 1.05) || 1500);
   $('zout').onclick = () => setZoom([...ZSTEPS].reverse().find(v => v < st.Zt / 1.05) || 1);
 
-  // ---------- つぎへ ----------
+  // ---------- つぎへ（押すと、書いてあることをして、終わったらつぎへ進む） ----------
+  const T = (t, btn, go) => ({ t, btn, go });
   const TOUR = [
-    { t: '1878年のすず箔の蓄音機を、筒の軸の向きから見た図です。「つぎへ」で、声を刻むところから始めます（音が出ます）。', go: async () => { setZoom(1); } },
-    { t: '声「あー」を入れて録音中。声で振動板がふるえ、針が箔に溝を刻んでいます（録音中はスピーカーから出しません）。自分の声は「入れる音」をマイクに。', go: async () => { st.loopEnd = 0; await newFoil(); if (st.src === 'mic') await setSrc('vowel'); await mode('rec'); await turn(true); setZoom(3); } },
-    { t: 'はじめにもどして、再生の針で溝をなぞっています。聞こえるのは溝の形から計算した音です（案内中は録った所をくり返します）。', go: async () => { st.loopEnd = S().x; await mode('up'); await rewind(); await mode('play'); await turn(true); setZoom(3); } },
-    { t: '針の先に寄りました（本当の大きさ）。溝の深さは約 0.05 mm。針の先の丸みは、細かい波の底に入れません。ときどき溝から跳ねます。', go: async () => { setZoom(400); } },
-    { t: 'もう一度なぞります。跳ねて落ちた針の強い力で、溝の山がつぶれていきます。何回か聴きくらべてみてください。', go: async () => { await mode('up'); await rewind(); await mode('play'); setZoom(40); } },
-    { t: '毎分120回転（2倍の速さ）で再生。音が1オクターブ高くなります。ゆっくり回すと低くなります。', go: async () => { st.rpm = 120; $('rpm').value = 120; await mode('up'); await rewind(); await mode('play'); await turn(true); setZoom(1); } },
-    { t: '下の図で、入れた音と出た音の波と成分をくらべられます。あとは自由に: マイク・速さ・声の大きさを変えて、録って、聴いてみてください。', go: async () => { st.loopEnd = 0; st.rpm = 60; $('rpm').value = 60; crank(); sync(); $('graphs').scrollIntoView({ behavior: 'smooth' }); } },
+    T('1878年のすず箔の蓄音機（筒の軸の向きから見た図）。「メリーさんのひつじ」の声（計算で作った声）をマウスピースに入れながら筒を回し、針で箔に溝を刻みます（8秒。録音中は音は出ません）。', '● 録音する',
+      async () => { setZoom(1.6); await setSrc('mary'); st.rpm = 60; $('rpm').value = 60; sync(); await record(8); }),
+    T('録れました。筒のふちの明るい所が、声の刻まれた溝です。はじめにもどして、針で溝をなぞります。聞こえるのは、溝の形だけから計算した音です。', '▶ 再生する',
+      async () => { await play(); }),
+    T('こもって聞こえるのは、振動板の共振（700 Hz あたり）と、針の先の丸みのため。つぎは針の先に寄って、もう一度なぞります。', '🔍 針の先に寄って再生',
+      async () => { setZoom(400); await play(); }),
+    T('いまのが本当の大きさ: 溝の深さは約 0.05 mm、針の先は半径 0.15 mm。つぎは2倍の速さで回して再生します。', '⏩ 2倍の速さで再生',
+      async () => { setZoom(1.6); await play(120); }),
+    T('速く回すと、1オクターブ高い声になりました。つぎは、マイクで自分の声を録ってみましょう（マイクの音は計算に使うだけで、残しません）。', '🎤 自分の声を録る（6秒）',
+      async () => { await setSrc('mic'); if (st.src !== 'mic') return; await record(6); }),
+    T('録れました。聴いてみましょう。', '▶ 再生する', async () => { await play(); }),
+    T('あとは下の「自由に試す」で、入れる音・声の大きさ・回す速さを変えてみてください。声が大きすぎると、再生で針が溝から跳ねて、ガリガリという雑音になります。', 'はじめから',
+      async () => { ti = -1; }),
   ];
-  let ti = 0;
-  function tourShow() { $('tourNum').textContent = (ti + 1) + '/' + TOUR.length; $('tourText').textContent = TOUR[ti].t; $('next').textContent = ti === TOUR.length - 1 ? 'はじめから' : 'つぎへ'; }
-  $('next').onclick = async () => { ti = (ti + 1) % TOUR.length; tourShow(); await TOUR[ti].go(); sync(); };
+  let ti = 0, busy = false;
+  function tourShow() {
+    $('tourNum').textContent = (ti + 1) + '/' + TOUR.length;
+    let t = TOUR[ti].t; if (st.bounced && ti > 0) t = '（いまの再生は、針が溝から跳ねて雑音がまざりました。「声の大きさ」を下げて録りなおすと、なめらかになります）' + t;
+    $('tourText').textContent = t; $('next').textContent = busy ? 'お待ちください…' : TOUR[ti].btn; $('next').disabled = busy;
+  }
+  $('next').onclick = async () => {
+    if (busy) return; busy = true; tourShow();
+    try { await TOUR[ti].go(); } finally { busy = false; }
+    ti = (ti + 1) % TOUR.length; tourShow();
+  };
 
-  // ---------- 下の操作 ----------
-  $('bRec').onclick = () => { st.loopEnd = 0; return mode(S().mode === 'rec' ? 'up' : 'rec'); };
-  $('bPlay').onclick = () => mode(S().mode === 'play' ? 'up' : 'play');
-  $('bUp').onclick = () => mode('up');
-  $('bTurn').onclick = () => turn(!st.turning);
-  $('bRew').onclick = rewind; $('bFoil').onclick = () => { st.loopEnd = 0; newFoil(); };
+  // ---------- 下の「自由に試す」 ----------
+  $('bRec').onclick = () => { if (st.act && st.act.kind === 'rec') stop(); else record(20); };
+  $('bPlay').onclick = () => { if (st.act && st.act.kind === 'play') stop(); else play(); };
+  $('bStop').onclick = () => stop();
   $('rpm').oninput = e => { st.rpm = +e.target.value; crank(); sync(); };
   $('src').onchange = e => setSrc(e.target.value);
-  $('lvl').oninput = e => { st.dB = +e.target.value; Audio.send({ t: 'level', dB: st.dB }); sync(); };
-  $('vol').oninput = e => { st.vol = +e.target.value; Audio.send({ t: 'gain', g: Math.pow(10, st.vol / 20) }); sync(); };
-  document.addEventListener('keydown', e => { if (e.code === 'Space' && e.target === document.body) { e.preventDefault(); turn(!st.turning); } });
-  Audio.send({ t: 'gain', g: Math.pow(10, st.vol / 20) }); Audio.send({ t: 'level', dB: st.dB });
+  $('lvl').oninput = e => { st.dB = +e.target.value; send({ t: 'level', dB: st.dB }); sync(); };
+  $('vol').oninput = e => { st.vol = +e.target.value; send({ t: 'gain', g: Math.pow(10, st.vol / 20) }); sync(); };
+  send({ t: 'gain', g: Math.pow(10, st.vol / 20) }); send({ t: 'level', dB: st.dB }); send({ t: 'src', kind: st.src });
   tourShow(); sync();
-  return { st, sync, mode, turn, rewind, newFoil, setSrc, setZoom, tour: TOUR };
+  return { st, sync, record, play, stop, tick, onSnap, status, setSrc, setZoom, tour: TOUR };
 })();
 window.UI = UI;   // サムネイル（_dev/tools/thumb.html）から使う

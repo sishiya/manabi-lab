@@ -7,7 +7,7 @@ class PhonoProc extends AudioWorkletProcessor {
   constructor() {
     super();
     this.ph = new Phono(sampleRate);
-    this.kind = 'vowel'; this.src = new Source(sampleRate, 'vowel'); this.dB = 115; this.gain = 1.6;
+    this.kind = 'mary'; this.src = new Source(sampleRate, 'mary'); this.dB = 105; this.gain = 8;
     this.pin = new Float32Array(128); this.pout = new Float32Array(128);
     this.half = 400; this.win = new Float32Array(2 * this.half + 1);
     this.ringN = 4096; this.rIn = new Float32Array(this.ringN); this.rOut = new Float32Array(this.ringN); this.ri = 0; this.qi = 0;
@@ -21,7 +21,7 @@ class PhonoProc extends AudioWorkletProcessor {
       case 'crank': ph.setCrank(d.hand, d.om); break;
       case 'rewind': ph.rewind(); break;
       case 'reset': ph.resetFoil(); break;
-      case 'src': if (d.kind !== this.kind) { this.kind = d.kind; if (d.kind !== 'mic') this.src = new Source(sampleRate, d.kind); } break;
+      case 'src': if (d.kind !== this.kind || d.restart) { this.kind = d.kind; if (d.kind !== 'mic') this.src = new Source(sampleRate, d.kind); } break;
       case 'level': this.dB = d.dB; break;
       case 'gain': this.gain = d.g; break;
     }
