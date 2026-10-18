@@ -2,7 +2,7 @@
 'use strict';
 const UI = (() => {
   const $ = id => document.getElementById(id), S = () => window.__ph.S;
-  const st = { act: null, recEnd: 0, recDur: 0, recKind: '', rpm: 60, src: 'mary', dB: 105, vol: 18, plays: 0, drag: null, Z: 1, Zt: 1, cont: 0, contN: 0, bounced: false };
+  const st = { act: null, recEnd: 0, recDur: 0, recKind: '', rpm: 60, src: 'mary', dB: 105, vol: 0, plays: 0, drag: null, Z: 1, Zt: 1, cont: 0, contN: 0, bounced: false };
   const omOf = r => r * 2 * Math.PI / 60;
   const send = m => Audio.send(m);
 

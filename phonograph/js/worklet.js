@@ -8,7 +8,7 @@ class PhonoProc extends AudioWorkletProcessor {
   constructor() {
     super();
     this.ph = new Phono(sampleRate);
-    this.kind = 'mary'; this.src = new Source(sampleRate, 'mary'); this.dB = 105; this.gain = 8;
+    this.kind = 'mary'; this.src = new Source(sampleRate, 'mary'); this.dB = 105; this.gain = 1;
     this.pin = new Float32Array(128); this.pout = new Float32Array(128);
     this.half = 400; this.win = new Float32Array(2 * this.half + 1);
     this.ringN = 4096; this.rIn = new Float32Array(this.ringN); this.rOut = new Float32Array(this.ringN); this.ri = 0; this.qi = 0;
