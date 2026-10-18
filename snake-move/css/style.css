@@ -1,0 +1,78 @@
+/* ヘビが進むしくみ */
+:root{--bg:#14202c;--panel:#192837;--line:#2c4255;--ink:#e8f0f4;--muted:#a3b4bf;--acc:#a6e07a;--warm:#ffc95a;--push:#a6e07a;--drag:#ff8a7a;--cyan:#7fd4ff;
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+button,select,input{font:inherit;color:inherit}
+button{min-height:36px;padding:4px 12px;border-radius:8px;border:1px solid var(--line);background:#20334a;cursor:pointer}
+button:hover{border-color:var(--acc)}
+button.on{border-color:var(--acc);color:var(--acc)}
+#app{max-width:1100px;margin:0 auto}
+#top{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;padding:10px 16px 6px}
+#top h1{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0}
+.seg{display:inline-flex;gap:6px;flex-wrap:wrap}
+#modes button{font-weight:700}
+
+/* 上に固定: 図・ひとこと・時間 */
+#pin{position:sticky;top:0;z-index:5;background:var(--bg);padding:0 16px 6px;border-bottom:1px solid var(--line)}
+#stage{position:relative;height:min(48vh,440px);border-radius:10px;overflow:hidden;border:1px solid var(--line);touch-action:none}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:pointer}
+#next{position:absolute;left:10px;top:10px;background:#2c5a3c;border-color:var(--acc);font-weight:700;padding:4px 16px}
+#zoom{position:absolute;right:10px;top:10px;display:flex;gap:6px}
+#zoom button{min-width:40px;background:rgba(32,51,74,.92)}
+#legend{position:absolute;left:10px;bottom:8px;font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 12px;pointer-events:none;max-width:calc(100% - 20px);text-shadow:0 0 3px #0b141c}
+#legend i{display:inline-block;width:14px;height:3px;vertical-align:3px;margin-right:4px;border-radius:2px}
+#tip{position:absolute;z-index:3;max-width:290px;background:#0d1720;border:1px solid var(--acc);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.6;pointer-events:none}
+#caption{padding:8px 2px 0;min-height:60px}
+#say{margin:0;font-size:17px;line-height:1.6;font-weight:500}
+#say b{color:var(--acc)}
+#say .n{font-family:var(--f-mono);font-size:13px;color:var(--acc);margin-right:6px}
+#say button{min-height:32px;margin:2px 4px 0 0;background:#2c5a3c;border-color:var(--acc);font-size:14px;font-weight:700}
+#ruler{margin:4px 0 0;font-size:15px;line-height:1.6;color:var(--warm);min-height:1.6em}
+#ruler .big{font-family:var(--f-mono);font-size:18px}
+#ruler .bad{color:#ff9a8b}
+#bar{display:flex;align-items:center;gap:8px;padding-top:8px;flex-wrap:wrap}
+#play{min-width:96px;font-weight:700}
+
+/* 下はスクロール */
+#below{padding:12px 16px 32px;display:grid;gap:12px}
+#below>*{min-width:0}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.box h2{font-size:15px;margin:0 0 8px}
+.box h2 small{color:var(--muted);font-weight:400;font-size:12px}
+#try .row{display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;margin:8px 0}
+#try label{min-width:72px;color:var(--muted);font-size:14px}
+#try input[type=range]{flex:1;min-width:140px;max-width:420px;accent-color:var(--acc);height:32px}
+#try .row>span:not(.seg){font-family:var(--f-mono);font-size:14px;min-width:64px}
+#try .seg button{font-size:14px}
+.note{font-size:14px;color:var(--warm);margin:6px 0 0;min-height:1.4em;line-height:1.6}
+.note.bad{color:#ff9a8b}
+.chips{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px}
+.chips label{display:inline-flex;align-items:center;gap:6px;min-height:36px;cursor:pointer}
+.chips input{width:18px;height:18px;accent-color:var(--acc)}
+#readout{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--muted);padding:4px 0 8px;font-family:var(--f-mono)}
+#readout b{color:var(--ink);font-weight:500}
+#more{font-size:14px;line-height:1.8}
+#more>summary,#about>summary{cursor:pointer;font-size:15px;min-height:36px;padding:7px 0;line-height:1.5}
+#more ol,#more ul,#about ul{padding-left:20px;margin:4px 0}
+#more h3,#about h3{font-size:14px;margin:12px 0 4px}
+#about{color:var(--muted);font-size:14px;line-height:1.8}
+#about>summary{color:var(--ink)}
+#about a{color:var(--acc)}
+
+@media (max-width:640px){
+  #top h1{font-size:19px}
+  #top{padding:8px 16px 4px}
+  #stage{height:37vh}
+  #caption{min-height:0;padding-top:6px}
+  #say{font-size:14px;line-height:1.55}
+  #ruler{font-size:13px;margin-top:2px}
+  #ruler .big{font-size:15px}
+  #try label{min-width:0;width:100%}
+  #bar{gap:5px;padding-top:6px;flex-wrap:nowrap}
+  #bar button{padding:2px 7px;font-size:13px;min-height:36px;white-space:nowrap}
+  #play{min-width:0}
+  #speeds{flex-wrap:nowrap;gap:4px}
+  #legend{font-size:11px;gap:0 8px}
+}

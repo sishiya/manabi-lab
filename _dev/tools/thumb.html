@@ -19,6 +19,8 @@ const click = (w, sel) => { const e = w.document.querySelector(sel); if (e) e.cl
 
 // アプリごとの準備（w = アプリの window）
 const SETUP = {
+  // ヘビが進むしくみ: 地面をうねる。摩擦の矢印と地面を押す所が出た状態で少し進めたところ
+  'snake-move': async w => { await wait(800); w.__snmo.simRun(4.3); await wait(300); },
   // レールガンのしくみ（画面ができたら、いちばん映える場面にする）
   'railgun': async w => { await wait(800); for (const k of [0, 1, 2, 3]) w.__ra.tap(k); w.__ra.simRun(2.2); await wait(300); },
   // エジソンの蓄音機（画面ができたら、いちばん映える場面にする）
@@ -137,6 +139,8 @@ const MOTION = {
   'urinary-dive': async w => { w.eval('if (!autoOn) toggleAuto();'); await wait(300); },
   'blood-dive': async w => { w.eval('if (!autoOn) toggleAuto();'); await wait(300); },
   // ばらばらに揺れている5台（そのまま動かす）
+  // ヘビが地面をうねる（そのまま動かす）
+  'snake-move': async w => {},
   'metronome-sync': async w => {},
   // 箱を4つタップしたところから（3000分の1の速さで進む）
   'railgun': async w => { w.UI.setStep(0); for (const k of [0, 1, 2, 3]) w.__ra.tap(k); },
