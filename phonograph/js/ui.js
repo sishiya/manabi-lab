@@ -9,7 +9,7 @@ const UI = (() => {
   // ---------- 録音・再生・止める（押すと決まった動きをして、終わったら止まる） ----------
   function crank() { send({ t: 'crank', hand: (!!st.act && st.act.kind !== 'orig') || !!st.drag, om: st.drag ? st.drag.om : omOf(st.act && st.act.rpm || st.rpm) }); }
   function setMode(m) { send({ t: 'mode', m }); S().mode = m; }
-  const REC_SEC = { mary: 11, vowel: 4, whistle: 4, sweep: 10, mic: 6 };   // 録音の長さ（メリーは1曲、上がる音は1回ぶん）
+  const REC_SEC = { mary: 14, vowel: 4, whistle: 4, sweep: 10, mic: 6 };   // 録音の長さ（メリーは1曲、上がる音は1回ぶん）
   async function record(maxSec = REC_SEC[st.src] || 8) {
     if (!await Audio.start()) return;
     if (st.src === 'mic' && !await Audio.useMic(true)) { alert('マイクが使えませんでした（許可がない・マイクがない）。ほかの「入れる音」を選んでください。'); return; }
@@ -50,7 +50,8 @@ const UI = (() => {
     if (a.kind === 'orig' && now - a.t0 > (a.sec + 2) * 1000) stop();   // 終わりの知らせが来なかったとき
     if (a.kind === 'play') {
       if (!a.armed) { if (S().x < a.end * 0.5 || now - a.t0 > 1500) a.armed = true; return; }   // もどす知らせが届くまで待つ
-      if (S().x >= a.end || S().atEnd) stop();
+      if (S().atEnd) stop();
+      else if (S().x >= a.end) { if (!a.tailT) a.tailT = now; else if (now - a.tailT > 300) stop(); }   // 録った所の終わりをこえて 0.3 秒なぞってから止める（最後の音を切らない）
     }
   }
   function onSnap(m) { if (st.act && st.act.kind === 'play' && st.act.armed && m.mode === 'play') { st.contN++; if (m.contact) st.cont++; } }
@@ -150,7 +151,7 @@ const UI = (() => {
   // ---------- つぎへ（押すと、書いてあることをして、終わったらつぎへ進む） ----------
   const T = (t, btn, go) => ({ t, btn, go });
   const TOUR = [
-    T('1878年のすず箔の蓄音機（筒の軸の向きから見た図）。「メリーさんのひつじ」の声（計算で作った声）をマウスピースに入れながら筒を回し、針で箔に溝を刻みます（1曲 11秒。録音中は、入れている声がそのまま聞こえます）。', '● 録音する',
+    T('1878年のすず箔の蓄音機（筒の軸の向きから見た図）。「メリーさんのひつじ」の声（計算で作った声）をマウスピースに入れながら筒を回し、針で箔に溝を刻みます（1曲 14秒。録音中は、入れている声がそのまま聞こえます）。', '● 録音する',
       async () => { setZoom(1.6); await setSrc('mary'); st.rpm = 60; $('rpm').value = 60; sync(); await record(); }),
     T('録れました。筒のふちの明るい所が、声の刻まれた溝です。はじめにもどして、針で溝をなぞります。聞こえるのは、溝の形だけから計算した音です。', '▶ 再生する',
       async () => { await play(); }),
