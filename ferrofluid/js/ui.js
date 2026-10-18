@@ -166,6 +166,10 @@ function buildUI() {
   $('btnClearPath').addEventListener('click', () => { S.path.length = 0; drawChart(); });
   $('btnFast').addEventListener('click', () => { S.speed = S.speed > 1 ? 1 : 10; syncUI(); });
   $('hint').addEventListener('click', () => $('hint').classList.toggle('open'));
+  // スマホ（縦）では説明を図の下のスクロール欄の頭へ移して、切らずに全部見せる
+  const hintMq = matchMedia('(max-width:860px) and (orientation:portrait)'), hintHome = $('hint').nextSibling;
+  const placeHint = () => { if (hintMq.matches) $('panel').prepend($('hint')); else $('stage').insertBefore($('hint'), hintHome); };
+  hintMq.addEventListener('change', placeHint); placeHint();
   wirePointer($('view'));
   syncUI();
 }

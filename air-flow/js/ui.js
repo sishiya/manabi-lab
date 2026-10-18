@@ -59,6 +59,10 @@ function buildUI() {
   $('btnClear').onclick = () => { smoke.fill(0); S.fill = null; S.smokeOn = false; drawChart(); };
   $('btnCircClear').onclick = () => { S.circs = []; };
   $('hint').onclick = () => $('hint').classList.toggle('open');
+  // スマホ（縦）では説明を図の下のスクロール欄の頭へ移して、切らずに全部見せる
+  const hintMq = matchMedia('(max-width:860px) and (orientation:portrait)'), hintHome = $('hint').nextSibling;
+  const placeHint = () => { if (hintMq.matches) $('panel').prepend($('hint')); else $('stage').insertBefore($('hint'), hintHome); };
+  hintMq.addEventListener('change', placeHint); placeHint();
   addEventListener('keydown', e => { if (e.code === 'Space' && e.target === document.body) { e.preventDefault(); $('btnPlay').click(); } });
   // 言語の切り替え（ページを読み直す）と、言語で変わる属性
   $('langsw').querySelectorAll('button').forEach(b => { b.setAttribute('aria-pressed', b.dataset.l === LANG); b.onclick = () => { if (b.dataset.l !== LANG) setLang(b.dataset.l); }; });

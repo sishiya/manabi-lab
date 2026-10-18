@@ -113,8 +113,8 @@ details b{color:var(--ink);font-weight:500}
   .brand h1{font-size:19px}
   .brand p{font-size:12px}
 }
-/* small screens: the hint is cut to two lines, tap to read it all */
-@media (max-width:860px) and (orientation:portrait), (orientation:landscape) and (max-height:560px){
+/* landscape phones: the hint is cut to two lines, tap to read it all (portrait phones move it to the top of the panel in full, see ui.js) */
+@media (orientation:landscape) and (max-height:560px){
   #hint{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;cursor:pointer}
   #hint.open{-webkit-line-clamp:unset;display:block}
 }

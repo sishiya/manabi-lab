@@ -346,16 +346,17 @@ function drawRoomLabels() {
 
 function drawCompass() {
   const c = ctx, s = scale, small = W * DX * scale < 560, R = small ? 13 : 20, x = 9.6 * s - R - 8, y = R + 8;
-  c.save(); c.translate(x, y);
-  c.fillStyle = 'rgba(6,12,16,.7)'; c.beginPath(); c.arc(0, 0, R, 0, 6.3); c.fill(); const k = R / 20; c.scale(k, k);
+  // wind tag and compass share one dark plate, so the words never run into the compass (UI check 2026-10-18)
+  const U = S.wind[1], txt = U > 0 ? L(`${DIRN[S.wind[0] / 45 | 0]}の風 ${U} m/s`, `Wind from ${DIRN[S.wind[0] / 45 | 0]}, ${U} m/s`) : L('無風', 'No wind');
+  c.font = `500 ${small ? 10 : 12}px 'Zen Kaku Gothic New',sans-serif`;
+  const w = c.measureText(txt).width + 14;
+  c.fillStyle = 'rgba(6,12,16,.72)'; rr(c, x - R - 4 - w, y - R - 3, w + 2 * R + 8, 2 * R + 6, R + 3); c.fill();
+  c.textAlign = 'right'; c.textBaseline = 'middle'; c.fillStyle = '#cfe0ea'; c.fillText(txt, x - R - 8, y + .5);
+  c.strokeStyle = 'rgba(207,224,234,.25)'; c.lineWidth = 1; c.beginPath(); c.moveTo(x - R - 3, y - R + 3); c.lineTo(x - R - 3, y + R - 3); c.stroke();
+  c.save(); c.translate(x, y); const k = R / 20; c.scale(k, k);
   c.font = `700 10px 'Zen Kaku Gothic New',sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#cfe0ea'; c.fillText(L('北', 'N'), 0, -12);
   c.strokeStyle = '#cfe0ea'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(0, -4); c.lineTo(0, 12); c.stroke();
   c.restore();
-  // wind tag
-  const U = S.wind[1], txt = U > 0 ? L(`${DIRN[S.wind[0] / 45 | 0]}の風 ${U} m/s`, `Wind from ${DIRN[S.wind[0] / 45 | 0]}, ${U} m/s`) : L('無風', 'No wind');
-  c.font = `500 ${small ? 10 : 12}px 'Zen Kaku Gothic New',sans-serif`; c.textAlign = 'right'; c.textBaseline = 'middle';
-  const w = c.measureText(txt).width + 12;
-  c.fillStyle = 'rgba(6,12,16,.7)'; rr(c, x - R - 6 - w, y - 9, w, 18, 4); c.fill(); c.fillStyle = '#cfe0ea'; c.fillText(txt, x - R - 12, y + .5);
   if (U > 0) { const a = S.wind[0] * Math.PI / 180, ux = -Math.sin(a), uy = Math.cos(a); c.strokeStyle = '#9fd8ff'; c.fillStyle = '#9fd8ff'; c.lineWidth = 2; arrow(c, x - ux * R * .7, y - uy * R * .7, x + ux * R * .7, y + uy * R * .7, small ? 5 : 6); }
 }
 const DIRN = LANG === 'en' ? ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] : ['北', '北東', '東', '南東', '南', '南西', '西', '北西'];

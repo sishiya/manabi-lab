@@ -46,6 +46,10 @@ ov.setAttribute('aria-label',L('間取り図。ルーターとスマホをドラ
 $('speed').setAttribute('aria-label',L('シミュレーションの速さ','Simulation speed'));
 $('btnReset').onclick=()=>resetField();
 $('hint').onclick=()=>$('hint').classList.toggle('open');
+// スマホ（縦）では説明を図の下のスクロール欄の頭へ移して、切らずに全部見せる
+const hintMq=matchMedia('(max-width:860px) and (orientation:portrait)'),hintHome=$('hint').nextSibling;
+const placeHint=()=>{if(hintMq.matches)$('panel').prepend($('hint'));else $('stage').insertBefore($('hint'),hintHome);};
+hintMq.addEventListener('change',placeHint);placeHint();
 $('btnUndo').onclick=()=>{const u=S.undo.pop();if(u){ids.set(u);mapChanged();}};
 addEventListener('keydown',e=>{if(e.code==='Space'&&e.target===document.body){e.preventDefault();$('btnPlay').click();}});
 

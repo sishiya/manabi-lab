@@ -100,7 +100,8 @@ function drawStrip(ctx, S) {
     ctx.strokeStyle = 'rgba(200,225,235,.45)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(BAR.x + BAR.w, it.y); ctx.lineTo(lx - 3, it.ly); ctx.stroke();
     ctx.fillStyle = near ? '#ffc95a' : '#b9cbd3';
-    ctx.fillText(fitText(ctx, it.m.short, SW - lx - 4), lx, it.ly);
+    const lw = SW - lx - 4, lab = it.m.mini && ctx.measureText(it.m.short).width > lw ? it.m.mini : it.m.short;
+    ctx.fillText(fitText(ctx, lab, lw), lx, it.ly);
     CV.hits.push({ x: lx - 4, y: it.ly - gap / 2, w: SW - lx, h: gap, z: it.m.z, name: it.m.name });
   }
   if (Math.abs(S.zTarget - S.z) > 0.5) {

@@ -52,13 +52,22 @@ const UI = (() => {
   // 区間の帯（スライダーの上）
   function buildSegs() {
     const box = $('segs'); box.innerHTML = '';
-    for (const s of Story.segs) {
+    Story.segs.forEach((s, i) => {
       const d = document.createElement('div'); d.className = 'seg seg-' + s.id; d.style.flex = String(s.u1 - s.u0);
-      d.textContent = s.name; d.title = s.name;
+      d.dataset.name = s.name; d.dataset.n = String(i + 1); d.title = `${i + 1} ${s.name}`;
       d.addEventListener('click', () => go(s.u0 + 0.0001));
       box.appendChild(d);
+    });
+    fitSegs();
+  }
+  // 名前が入りきらない区間（スマホの細い区間）は、途中で切らずに番号だけにする。名前は title と「見どころ」に
+  function fitSegs() {
+    for (const d of $('segs').children) {
+      d.textContent = d.dataset.name; d.classList.remove('num');
+      if (d.scrollWidth > d.clientWidth + 1) { d.textContent = d.dataset.n; d.classList.add('num'); }
     }
   }
+  addEventListener('resize', fitSegs);
 
   // 見どころ
   function buildEvents() {
@@ -71,7 +80,8 @@ const UI = (() => {
       ol.appendChild(li);
     });
   }
-  function evLabel(e) { const st = Story.at(e.u + 0.0005); return st.id === 'inside' || st.id === 'spread' ? L(`${st.min.toFixed(st.id === 'spread' ? 0 : 1)}分`, `${st.min.toFixed(st.id === 'spread' ? 0 : 1)} min`) : st.seg.name; }
+  // 頭の数字は時間のバーの区間の番号（スマホでは区間に番号だけが出る）
+  function evLabel(e) { const st = Story.at(e.u + 0.0005), n = Story.segs.indexOf(st.seg) + 1; return `${n} ` + (st.id === 'inside' || st.id === 'spread' ? L(`${st.min.toFixed(st.id === 'spread' ? 0 : 1)}分`, `${st.min.toFixed(st.id === 'spread' ? 0 : 1)} min`) : st.seg.name); }
   function go(u, e) {
     state.u = u; slider.value = Math.round(u * 1000);
     View.setAuto(true);

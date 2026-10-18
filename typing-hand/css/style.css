@@ -193,3 +193,9 @@ button:disabled,select:disabled,input:disabled{opacity:.45;cursor:default}
   #panel{overflow:visible;min-height:0}
   #app[data-mode=replay] #frame{height:min(30vh,92vw);height:min(30dvh,92vw)}
 }
+/* phones: the view buttons and the sound switch are big enough for a finger (UI check 2026-10-18) */
+@media (max-width:820px),(orientation:portrait) and (max-width:1000px){
+  #views.seg.tiny button{min-height:32px;padding:4px 10px}
+  #toolbar .chk{min-height:36px;padding:0 4px}
+  #toolbar .chk input{width:20px;height:20px;margin:0}
+}

@@ -737,7 +737,9 @@ const Scene = (() => {
   // ---- ものさし（いまの拡大率に合わせて、ちょうどよい長さ）----
   function drawScale() {
     const target = 110 / V.s, p10 = Math.pow(10, Math.floor(Math.log10(target))), nice = [1, 2, 5, 10].map(k => k * p10).reduce((a, b) => Math.abs(b - target) < Math.abs(a - target) ? b : a);
-    const len = nice * V.s, x0 = V.W - len - 16, y0 = V.H - 16;
+    // スマホの細い図では、左下の説明カードが右下まで広がるので、目もりはカードの上の高さに置く（ルーペの中は今までどおり）
+    const card = document.getElementById('nowCard'), narrow = V.W < 600 && !View.inLoupe && card;
+    const len = nice * V.s, x0 = V.W - len - 16, y0 = narrow ? V.H - card.offsetHeight - 34 : V.H - 16;
     const unit = nice >= 1e9 ? `${nice / 1e9} m` : nice >= 1e7 ? `${nice / 1e7} cm` : nice >= 1e6 ? `${nice / 1e6} mm` : nice >= 1000 ? `${nice / 1000} µm` : `${nice} nm`;
     g.strokeStyle = '#e8f0f4'; g.lineWidth = 2; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x0 + len, y0); g.moveTo(x0, y0 - 4); g.lineTo(x0, y0 + 4); g.moveTo(x0 + len, y0 - 4); g.lineTo(x0 + len, y0 + 4); g.stroke();
     g.fillStyle = '#e8f0f4'; g.font = '11px "IBM Plex Mono", monospace'; g.textAlign = 'left'; g.textBaseline = 'bottom';
