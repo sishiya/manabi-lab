@@ -41,6 +41,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans",
 /* 日本語を文節の切れ目で折り返す（Chrome・Edge。ほかのブラウザはふつうの折り返し） */
 p,.cat,.status{word-break:auto-phrase;text-wrap:pretty}
 main{max-width:1000px;margin:0 auto;padding:48px 16px 64px}
+/* 見出し: ロゴ（ファビコンと同じ絵）＋名前。あそびラボと同じ形 */
+.title{display:flex;align-items:center;gap:14px}
+.title svg{width:48px;height:48px;flex:none}
 h1{margin:0;font-size:32px;line-height:1.3}
 .head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:0 0 8px}
 .lang button{padding:4px 12px;font-weight:600;letter-spacing:.04em}
@@ -108,6 +111,7 @@ h2+.grid{margin-top:0}
 
 /* スマホ: 一覧は横長のリスト、分野は横にスクロールする1行、押す所は高さ44px */
 @media (max-width:639px){
+  .title svg{width:40px;height:40px}
   .lead{font-size:14px;margin-bottom:16px}
   .tools{gap:12px;padding:12px 0}
   .chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-right:-16px;padding-right:16px;
@@ -139,7 +143,10 @@ h2+.grid{margin-top:0}
 <body>
 <main>
   <div class="head">
+  <div class="title">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#2b6cb0"/><path d="M26 14h12M28 14v14L17 47a4 4 0 0 0 3.5 6h23a4 4 0 0 0 3.5-6L36 28V14" fill="none" stroke="#fff" stroke-width="3.5" stroke-linejoin="round"/><path d="M22 42h20l3 6H19z" fill="#fff"/></svg>
     <h1><span lang="ja">まなびラボ</span><span lang="en">Manabi Lab</span></h1>
+  </div>
     <div class="seg lang" id="lang" role="group" aria-label="言語 / Language" hidden>
       <button type="button" data-lang="ja" title="日本語">JP</button><button type="button" data-lang="en" title="English">EN</button>
     </div>
