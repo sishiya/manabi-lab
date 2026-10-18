@@ -5,7 +5,7 @@
 // tree  : 木の幹（太さ・順番・締めつけの余裕・ウロコ）。ぎりぎりの余裕も探す
 // stones: 石のあいだ（Gray 1946）。押す力・止まるかどうか
 // rect  : まっすぐ（Lissmann 1950）。止まる時間の割合と地面ですべるか
-// side  : 横ばい（Marvi ほか 2014）。跡の角度 33 ± 8°・ふれている所のすべり・波のずれ
+// side  : 横ばい（Marvi ほか 2014・Astley ほか 2015）。平面の版と立体の版（side3d.js）。跡の角度 33 ± 8°・止まっている所 44%・ふれている所のすべり
 'use strict';
 const GR = require('../js/ground.js');
 const mode = process.argv[2] || 'ground';
@@ -80,4 +80,15 @@ else if (mode === 'stones') {
   run('ふれる 20%', { contact: 0.2 });
   run('ふれる 45%', { contact: 0.45 });
   run('α 12', { alpha: 12 });
+  console.log('--- 立体（js/side3d.js）。実物: 跡 33 ± 8°・止まっている所 44%（Astley ほか 2015）・ふれている所はすべらない・砂に 1.4 ± 1.3 cm めりこむ');
+  const S3 = require('../js/side3d.js');
+  const r3 = (name, o) => { const r = S3.measure(o); console.log(`${name.padEnd(18)} 1回で体長の ${(r.perCycle * 100).toFixed(0)}%  跡と進む向き ${r.track.toFixed(0)}°  止まっている所 ${(r.still * 100).toFixed(0)}%  ふれている所のすべり 速さの ${(r.slip * 100).toFixed(0)}%  ふれる所の数 ${r.contacts.toFixed(1)}  めりこみ ${(r.sinkMax * 1000).toFixed(0)} mm  高さ ${(r.lift * 100).toFixed(1)} cm`); };
+  r3('砂（既定）', {});
+  r3('かたい地面', { sink: 0.001 });
+  r3('持ち上げ 0.1', { Av: 0.1 });
+  r3('持ち上げ 0.3', { Av: 0.3 });
+  r3('ふれる 20%', { contact: 0.2 });
+  r3('ふれる 60%', { contact: 0.6 });
+  r3('勢いなし', { inert: 0.01 });
+  r3('なめらかな2つの波', { shape: 'wave', Ah: 1.2, Av: 0.6 });
 }

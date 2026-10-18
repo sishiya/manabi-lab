@@ -55,17 +55,19 @@
     const P = []; for (let i = 0; i < N; i++) P.push(W(cam, s.x[i], s.y[i]));
     const w0 = p.mass * 9.81 / p.L;
     // 浮いている所の影（右下へずらす）
+    // 立体の計算（s.z がある）では、本当の高さ z の分だけ影をずらす（光はななめ上から。目印）
+    const liftOf = i => s.z ? Math.min(1, s.z[i] / 0.03) : 1 - Math.min(1, s.nu[i] / w0);
     g.fillStyle = 'rgba(0,0,0,.35)';
     for (let i = 0; i < N; i++) {
-      const lift = 1 - Math.min(1, s.nu[i] / w0);
-      if (lift < 0.25) continue;
-      const r = radius(i, N, cam), off = 2 + 5 * lift;
+      const lift = liftOf(i);
+      if (lift < 0.25 && !(s.z && s.z[i] > 0.002)) continue;
+      const r = radius(i, N, cam), off = s.z ? 2 + Math.min(40, s.z[i] * cam.s * 0.7) : 2 + 5 * lift;
       g.beginPath(); g.arc(P[i][0] + off, P[i][1] + off, r, 0, 7); g.fill();
     }
     // 体（区切りごとの丸を重ねる。浮いている所は明るく）
     for (let pass = 0; pass < 2; pass++) {
       for (let i = 0; i < N; i++) {
-        const r = radius(i, N, cam), lift = 1 - Math.min(1, s.nu[i] / w0);
+        const r = radius(i, N, cam), lift = liftOf(i);
         g.fillStyle = pass === 0 ? C.edge : mix(C.body, C.bodyLift, lift);
         g.beginPath(); g.arc(P[i][0], P[i][1], pass === 0 ? r + 1.2 : r, 0, 7); g.fill();
         if (i < N - 1) {

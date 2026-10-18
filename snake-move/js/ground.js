@@ -151,7 +151,47 @@
       x = [x[0] - lam * d[0], x[1] - lam * d[1], x[2] - lam * d[2]];
     }
     s.U = x[0]; s.V = x[1]; s.W = x[2] / L;
+    if (!ok) ok = irls(s, sh, dsh, nu, inr);
     return ok;
+  }
+
+  // ニュートン法が解けないとき（止まりかけの所が多い横ばいなど）: 摩擦の「重み」を前の速さで決めて固定し、
+  // 一次の式を解くのをくり返す（くり返し重みつき最小二乗）。重み = ν μ / √(|v|² + ε²)、向きごとの μ は前の速さの向きで
+  function irls(s, sh, dsh, nu, inr) {
+    const p = s.p, sf = SURF[p.surf], ds = p.L / N, c = Math.cos(s.TH), sn = Math.sin(s.TH), VE = 2e-4;
+    const gx = -p.mass * G / p.L * Math.sin(p.slope * Math.PI / 180);
+    let x = [s.U, s.V, s.W], I = 0;
+    for (let i = 0; i < N; i++) { const rx = c * sh.bx[i] - sn * sh.by[i], ry = sn * sh.bx[i] + c * sh.by[i]; I += (rx * rx + ry * ry) * ds; }
+    const m = p.mass, Iz = m / p.L * I;
+    for (let it = 0; it < 80; it++) {
+      const A = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], b = [0, 0, 0];
+      if (inr) { A[0][0] = A[1][1] = m / inr.dt; A[2][2] = Iz / inr.dt; b[0] = m / inr.dt * inr.U; b[1] = m / inr.dt * inr.V; b[2] = Iz / inr.dt * inr.W; }
+      for (let i = 0; i < N; i++) {
+        if (nu[i] <= 0) continue;
+        const rx = c * sh.bx[i] - sn * sh.by[i], ry = sn * sh.bx[i] + c * sh.by[i];
+        const dvx = c * dsh.bx[i] - sn * dsh.by[i], dvy = sn * dsh.bx[i] + c * dsh.by[i];
+        const vx = x[0] - x[2] * ry + dvx, vy = x[1] + x[2] * rx + dvy;
+        const th = sh.bt[i] + s.TH, tx = Math.cos(th), ty = Math.sin(th);
+        const w = nu[i] * ds / Math.sqrt(vx * vx + vy * vy + VE * VE);
+        const mt = (vx * tx + vy * ty) > 0 ? sf.mf : sf.mb;
+        // 力 = −w (μt n nᵀ + μ t tᵀ) v（= 行列 K v）
+        const K = [[sf.mt * ty * ty + mt * tx * tx, -sf.mt * tx * ty + mt * tx * ty], [-sf.mt * tx * ty + mt * tx * ty, sf.mt * tx * tx + mt * ty * ty]];
+        const ax = [1, 0, -ry], ay = [0, 1, rx];
+        for (let r = 0; r < 3; r++) {
+          for (let q = 0; q < 3; q++) A[r][q] += w * (ax[r] * (K[0][0] * ax[q] + K[0][1] * ay[q]) + ay[r] * (K[1][0] * ax[q] + K[1][1] * ay[q]));
+          b[r] -= w * (ax[r] * (K[0][0] * dvx + K[0][1] * dvy) + ay[r] * (K[1][0] * dvx + K[1][1] * dvy));
+        }
+        // 坂の重さ（−x へ）
+        b[0] += gx * ds; b[2] += -ry * 0 + (rx * 0 - ry * gx) * ds;
+      }
+      const nx = lin3(A, b);
+      if (!nx) return false;
+      const ch = Math.abs(nx[0] - x[0]) + Math.abs(nx[1] - x[1]) + Math.abs(nx[2] - x[2]) * p.L;
+      x = nx;
+      if (ch < 1e-7) break;
+    }
+    s.U = x[0]; s.V = x[1]; s.W = x[2];
+    return true;
   }
   function lin3(A, b) {
     const m = A.map((r, i) => [r[0], r[1], r[2], b[i]]);
