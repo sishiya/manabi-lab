@@ -36,7 +36,7 @@ function loop(now) {
   const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;   // 最初のコマは now が last より前のことがある
   if (typeof UI === 'undefined') { requestAnimationFrame(loop); return; }   // ui.js がまだ読まれていない（読みこみの合間にコマが来ることがある）
   const st = UI.st; st.Z = Math.exp(Math.log(st.Z) + (Math.log(st.Zt) - Math.log(st.Z)) * Math.min(1, dt * 5));
-  S.src = st.act && st.act.kind === 'orig' ? st.src : null;   // 「♪ 聴く」のあいだだけ、右はしに音の出どころの絵
+  S.src = st.act && (st.act.kind === 'orig' || (st.act.kind === 'rec' && st.src !== 'mic')) ? st.src : null;   // 「♪ 聴く」と、計算の音の録音中は、右はしに音の出どころの絵
   const w = cv.clientWidth, h = cv.clientHeight;
   if (w > 0 && h > 0) Draw.frame(g, w, h, S, st.Z);
   hudText();
