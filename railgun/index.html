@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="css/style.css?v=2">
+<link rel="stylesheet" href="css/style.css?v=3">
 
 <div id="app">
   <header id="top"><h1>レールガンのしくみ</h1><span class="sub">2本のレールと大電流だけで、弾を秒速2 kmこえまで</span></header>
@@ -13,20 +13,22 @@
   <section id="pin">
     <div id="stage">
       <canvas id="cv"></canvas>
-      <div id="card"></div>
       <div id="zoom"><button data-z="out" title="引く">−</button><button data-z="in" title="寄る">＋</button><button id="bInset" title="断面を見る">断面</button></div>
       <button id="next">つぎへ ▶</button>
       <div id="tip" hidden></div>
     </div>
+    <div id="caption"><p id="say"></p><p id="ruler"></p></div>
     <div id="bar">
       <button id="play">▶ 発射</button>
       <input type="range" id="time" min="0" max="1000" value="0" step="1" aria-label="時刻">
       <span id="tlabel">0.00 ms</span>
     </div>
-    <div id="readout"></div>
   </section>
 
   <main id="below">
+    <details id="more" class="box">
+    <summary>くわしく見る（数字・グラフ・自分で試す）</summary>
+    <div id="readout"></div>
     <section id="results"></section>
 
     <section class="box">
@@ -67,6 +69,7 @@
       <p>コンデンサ C・コイル L・抵抗 R・クローバーダイオードの「台」を 10 台、レールの根元につなぐ（ISL の論文と同じ回路）。レールは長さ x のぶんだけインダクタンス L′x と抵抗 R′x をもつ。回路の式と弾の運動の式（m dv/dt = ½L′I² の 90%。のこり 10% は摩擦）をいっしょに、0.5 マイクロ秒ずつ RK4 で解く。エネルギーの帳じりは 1万分の1 以内。</p>
       <p>検証: 論文の 25 MJ 艦載砲の計算例（10 台・L′ 0.5 µH/m・8 kg）を同じ値で計算すると、初速 2,527 m/s・電流の平らな所 4.5 MA・効率 48 / 41 / 34%（論文: 約 2,500 m/s・約 4.5 MA・47 / 40 / 33%）。</p>
     </section>
+    </details>
 
     <details id="about" class="box">
       <summary>このアプリについて</summary>
@@ -89,6 +92,7 @@
         <li>ITmedia NEWS「レールガンの洋上射撃試験 装備庁・海自『世界初』」2023-10-17（<a href="https://www.itmedia.co.jp/news/articles/2310/17/news161.html" target="_blank" rel="noopener">記事</a>。初速 2,297 m/s・戦車砲 約1,750 m/s）</li>
         <li>S. Hundertmark, O. Liebfried, "Power Supply Options for a Naval Railgun", arXiv:1709.05901 (2017)（<a href="https://arxiv.org/abs/1709.05901" target="_blank" rel="noopener">arXiv</a>。回路・台の値・効率の式）</li>
         <li>S. Hundertmark, G. Vincent, D. Simicic, M. Schneider, "Increasing Launch Efficiency with the PEGASUS Launcher", arXiv:1612.03614 (2016)（<a href="https://arxiv.org/abs/1612.03614" target="_blank" rel="noopener">arXiv</a>。40 mm・6 m・300 g が 3,100 m/s、電流 約1〜1.3 MA、レールの限界 約2 MA、接触の火花）</li>
+        <li>たとえに使った値: 家のコンセント 15 A（JIS C 8303 の定格）、東京スカイツリーの高さ 634 m、音の速さ 約340 m/秒（15 ℃ の空気）、MRI の磁場 1.5〜3 テスラ</li>
         <li>N. W. Ashcroft, N. D. Mermin, <i>Solid State Physics</i> (1976) 表1.1（アルミの自由電子の数密度）</li>
       </ul>
       <h3>使っているもの</h3>
@@ -97,10 +101,10 @@
   </main>
 </div>
 
-<script src="js/physics.js?v=2"></script>
-<script src="js/presets.js?v=2"></script>
-<script src="js/sim.js?v=2"></script>
-<script src="js/draw.js?v=2"></script>
-<script src="js/graph.js?v=2"></script>
-<script src="js/ui.js?v=2"></script>
-<script src="js/main.js?v=2"></script>
+<script src="js/physics.js?v=3"></script>
+<script src="js/presets.js?v=3"></script>
+<script src="js/sim.js?v=3"></script>
+<script src="js/draw.js?v=3"></script>
+<script src="js/graph.js?v=3"></script>
+<script src="js/ui.js?v=3"></script>
+<script src="js/main.js?v=3"></script>

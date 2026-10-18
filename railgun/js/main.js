@@ -17,7 +17,7 @@ window.addEventListener('error', e => window.__raErr.push(String(e.message)));
     W = r.width; H = r.height;
     cv.width = Math.max(1, Math.round(W * dpr)); cv.height = Math.max(1, Math.round(H * dpr));
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    cam.vy = W < 640 ? 0.3 : 0.45;
+    cam.vy = 0.45;
     if (UI.camMode) onCam(UI.camMode, true);
   }
 
@@ -25,7 +25,7 @@ window.addEventListener('error', e => window.__raErr.push(String(e.message)));
   function camFor(mode) {
     const p = S.p, la = 2 * p.w;
     if (mode === 'all') { const s = Math.max(10, (W - 50) / (p.len + 1.6)); return { s, x: (W / 2 - 30) / s, follow: false }; }
-    if (mode === 'arm') { const s = Math.max(W / 12, 44) / p.w; return { s, off: 0.12 * W / s, follow: true }; }
+    if (mode === 'arm') { const s = Math.max(W / 12, 34) / p.w; return { s, off: (W < 640 ? 0.25 : 0.12) * W / s, follow: true }; }
     const s = 300 / p.w; return { s, off: -la * 0.45, follow: true };   // micro: 電機子の中
   }
   function onCam(mode, now) {
@@ -42,7 +42,7 @@ window.addEventListener('error', e => window.__raErr.push(String(e.message)));
     cam.x = wx - (px - W / 2) / s2; cam.s = s2;
     const l1 = DRAW.lv(cam.s * S.p.w).l1;
     cam.follow = l1 > 0.5; cam.off = cam.x - o.x;
-    goal = null; UI.camMode = null;
+    goal = null; UI.camMode = null; UI.free();
   }
 
   // 入力: ホイール・ピンチ・ドラッグ・さわって説明
@@ -63,7 +63,7 @@ window.addEventListener('error', e => window.__raErr.push(String(e.message)));
     }
     const dx = e.clientX - prev[0];
     moved += Math.abs(dx) + Math.abs(e.clientY - prev[1]);
-    if (moved > 6) { cam.x -= dx / cam.s; cam.off -= dx / cam.s; goal = null; UI.camMode = null; tipEl.hidden = true; }
+    if (moved > 6) { cam.x -= dx / cam.s; cam.off -= dx / cam.s; goal = null; UI.camMode = null; tipEl.hidden = true; UI.free(); }
   });
   const up = e => {
     pts.delete(e.pointerId); if (pts.size < 2) pinch = 0;
@@ -109,7 +109,7 @@ window.addEventListener('error', e => window.__raErr.push(String(e.message)));
   }
 
   function draw(o) {
-    st.inset = UI.inset; DRAW.scene(g, W, H, cam, o, st);
+    st.inset = UI.inset; st.show = UI.show; st.focus = UI.focus; DRAW.scene(g, W, H, cam, o, st);
     if (UI.inset) { const sz = Math.min(210, W * 0.42); DRAW.inset(g, W - sz - 10, 56, sz, o); }
     GRAPH.draw(document.getElementById('graph'), S.t);
   }
@@ -129,7 +129,7 @@ window.addEventListener('error', e => window.__raErr.push(String(e.message)));
   window.addEventListener('resize', resize);
   resize();
   UI.build();
-  onCam('all', true);
+  onCam(UI.camMode || 'all', true);
   requestAnimationFrame(loop);
 
   // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）

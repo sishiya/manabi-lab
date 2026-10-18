@@ -46,12 +46,13 @@
     const yT0 = V.Y(wc / 2), yT1 = V.Y(wc / 2 + hr), yB0 = V.Y(-wc / 2), yB1 = V.Y(-wc / 2 - hr);
     const x0 = V.X(0), xL = V.X(p.len), xArm = V.X(xa), xArm0 = V.X(xa - la);
 
+    const sh = st.show || { cur: 1, field: 1, force: 1, racks: 1 };   // 案内の段ごとに出すもの
     // コンデンサの台（引いたとき）
-    racks(g, V, o, p, 1 - l1);
+    if (sh.racks) racks(g, V, o, p, 1 - l1);
 
     // 磁場（弾のうしろ、レールの間）。引いたときは青いもや、寄ると ⊗ の並び
     const fx1 = out ? xL : xArm0;
-    if (iu > 0.002) {
+    if (sh.field && iu > 0.002) {
       g.fillStyle = `rgba(127,212,255,${0.08 + 0.32 * Math.min(1, iu) * (1 - l1 * 0.6)})`;
       g.fillRect(x0, yT0, Math.max(0, fx1 - x0), yB0 - yT0);
       if (l1 > 0.05) {
@@ -74,7 +75,7 @@
     if (l1 < 0.6) { text(g, '砲口', xL + 6, (yT1 + yB1) / 2 - 14, C.muted, 11); text(g, '根元', x0 - 4, yB1 + 12, C.muted, 11, 'right'); }
 
     // 電流（上のレール → 電機子 → 下のレール）。点線の流れる速さは電流の大きさ
-    if (iu > 0.002 && !out) {
+    if (sh.cur && iu > 0.002 && !out) {
       const ym1 = (yT0 + yT1) / 2, ym2 = (yB0 + yB1) / 2, xc = V.X(xa - 0.55 * la);
       g.save(); g.setLineDash([10, 9]); g.lineDashOffset = -st.phase; g.lineCap = 'round';
       g.strokeStyle = C.cur; g.lineWidth = 1.5 + 3 * Math.min(1, iu); g.globalAlpha = (0.35 + 0.65 * Math.min(1, iu * 2)) * (1 - l2);
@@ -83,19 +84,20 @@
       if (l1 > 0.3) {
         const xm = Math.max(x0 + 40, Math.min(xc - 60, w * 0.3));
         arrow(g, xm - 22, ym1, xm + 22, ym1, C.cur, 2); arrow(g, xm + 22, ym2, xm - 22, ym2, C.cur, 2);
-        text(g, `電流 ${(o.I / 1e6).toFixed(2)} MA`, xm - 22, yB1 + 14, C.cur, 12);
+        text(g, '電流', xm - 22, yB1 + 14, C.cur, 13);
       }
+      hit('cur', Math.max(x0 - 30, 0), yT1 - 4, xc + 6, yB1 + 4);
     }
 
     // 弾（電機子＋装弾筒＋弾心）。砲口を出たら装弾筒が少しずつはなれる（形は目安）
     pack(g, V, o, p, la, xa, out, l2);
 
     // 力の矢印
-    if (o.F > 0 && !out) {
+    if (sh.force && o.F > 0 && !out) {
       const Lpx = 30 + 110 * Math.min(1, o.F / (0.5 * p.Lp * Iref * Iref));
       const yc = V.Y(0), xf = V.X(xa + SIM.base().projLen) + 8;
       arrow(g, xf, yc, xf + Lpx, yc, C.force, 4);
-      text(g, `押す力 ${fmtF(o.F)}`, xf + 4, yc - 16, C.force, 12);
+      text(g, '押す力', xf + 4, yc - 16, C.force, 13);
       hit('force', xf, yc - 22, xf + Lpx, yc + 10);
     }
     // レールが押し広げられる力（寄ったとき）
@@ -119,6 +121,7 @@
     // 電機子の中（いちばん寄ったとき）
     if (l2 > 0.01) micro(g, V, o, p, la, xa, l2, st);
 
+    if (st.focus) focusRing(g, st.focus);
     scaleBar(g, V, w, h);
     if (V.sy > V.s * 1.05) text(g, '※ たての太さは広げてある', 12 + Math.min(130, 150) + 10, h - 14, C.muted, 11);
   }
@@ -203,6 +206,16 @@
     text(g, '※ 電子の動きは何万倍にもして描いている', bx, by + 36, C.muted, 11);
     g.globalAlpha = 1;
     hit('micro', cx0, cy0, cx1, cy1);
+  }
+
+  // 見てほしい所に、ゆっくり光る枠（1秒に1回より遅い。点滅の決まり RULES 9章）
+  function focusRing(g, k) {
+    const h = hits.find(q => q.k === k); if (!h) return;
+    const a = 0.55 + 0.45 * Math.sin(performance.now() / 1000 * Math.PI * 1.2);
+    g.save(); g.strokeStyle = `rgba(255,255,255,${0.35 + 0.5 * a})`; g.lineWidth = 2.5; g.setLineDash([]);
+    const pad = 6; g.beginPath();
+    if (g.roundRect) g.roundRect(h.x0 - pad, h.y0 - pad, h.x1 - h.x0 + 2 * pad, h.y1 - h.y0 + 2 * pad, 8); else g.rect(h.x0 - pad, h.y0 - pad, h.x1 - h.x0 + 2 * pad, h.y1 - h.y0 + 2 * pad);
+    g.stroke(); g.restore();
   }
 
   function scaleBar(g, V, w, h) {
