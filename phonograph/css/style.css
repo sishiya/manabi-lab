@@ -34,6 +34,18 @@ button.big{min-height:44px;font-size:15px;padding:4px 16px}
 button:disabled{opacity:.45;cursor:default}
 .hint{margin:0;color:var(--muted);font-size:12px;line-height:1.6}
 #hud .big{font-size:14px;font-weight:500}
+#banner{position:absolute;left:50%;top:10px;transform:translateX(-50%);min-width:260px;max-width:calc(100% - 120px);background:rgba(22,20,15,.92);border:2px solid var(--line);border-radius:10px;padding:8px 12px;z-index:2;pointer-events:none}
+#banner.rec{border-color:var(--voice)}#banner.play{border-color:var(--play)}#banner.orig{border-color:var(--acc)}
+#bnText{font-size:16px;font-weight:700;white-space:nowrap}
+#banner.rec #bnText{color:var(--voice);animation:blink 1s steps(2) infinite}#banner.play #bnText{color:var(--play)}#banner.orig #bnText{color:var(--acc)}
+@keyframes blink{50%{opacity:.55}}
+#banner .bar{height:6px;background:rgba(233,225,207,.12);border-radius:3px;margin-top:6px;overflow:hidden;position:relative}
+#bnBar{height:100%;width:0;background:currentColor}
+#banner.rec #bnBar{background:var(--voice)}#banner.play #bnBar{background:var(--play)}#banner.orig #bnBar{background:var(--acc)}
+#banner .lv #bnLvBar{height:100%;width:0;background:var(--muted)}
+#banner .lv .mark{position:absolute;left:66.7%;top:0;bottom:0;width:2px;background:var(--voice)}
+#bnLv.over #bnLvBar{background:var(--voice)}
+#bnLvTxt{font-size:12px;color:var(--muted);margin-top:3px;font-family:var(--f-mono)}
 /* スクロールする部分 */
 #controls{padding:10px 16px;display:flex;flex-direction:column;gap:8px}
 .row{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
@@ -63,5 +75,7 @@ input[type=range]{width:180px;accent-color:var(--acc)}
   .row .lab{width:100%}
   .row .note{padding-left:0}
   #hud{font-size:11px}
+  #banner{top:auto;bottom:8px;min-width:0;width:calc(100% - 24px);max-width:none;padding:6px 10px}
+  #bnText{font-size:14px;white-space:normal}
   #wv{height:260px}
 }

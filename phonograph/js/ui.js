@@ -9,7 +9,8 @@ const UI = (() => {
   // ---------- 録音・再生・止める（押すと決まった動きをして、終わったら止まる） ----------
   function crank() { send({ t: 'crank', hand: !!st.act || !!st.drag, om: st.drag ? st.drag.om : omOf(st.act && st.act.rpm || st.rpm) }); }
   function setMode(m) { send({ t: 'mode', m }); S().mode = m; }
-  async function record(maxSec = 20) {
+  const REC_SEC = { mary: 11, vowel: 4, whistle: 4, sweep: 10, mic: 6 };   // 録音の長さ（メリーは1曲、上がる音は1回ぶん）
+  async function record(maxSec = REC_SEC[st.src] || 8) {
     if (!await Audio.start()) return;
     if (st.src === 'mic' && !await Audio.useMic(true)) { alert('マイクが使えませんでした（許可がない・マイクがない）。ほかの「入れる音」を選んでください。'); return; }
     stop(true);
@@ -42,6 +43,7 @@ const UI = (() => {
     st.act = null; setMode('up'); crank(); sync(); a.done();
   }
   function tick(now) {   // main.js が毎コマよぶ
+    banner(now);
     const a = st.act; if (!a) return;
     if (a.kind === 'rec' && (now - a.t0 > a.maxSec * 1000 || S().atEnd)) stop();
     if (a.kind === 'orig' && now - a.t0 > (st.recDur + 2) * 1000) stop();   // 終わりの知らせが来なかったとき
@@ -64,14 +66,32 @@ const UI = (() => {
     $('rpmV').textContent = '毎分 ' + st.rpm + ' 回転'; $('lvlV').textContent = st.dB + ' dB';
     const gv = Math.pow(10, st.vol / 20); $('volV').textContent = '×' + (gv < 10 ? gv.toFixed(1) : Math.round(gv));
   }
+  // 図の上のまん中の帯: いま何をしているか・あと何秒・（録音中は）入ってくる音の大きさ
+  const bn = $('banner');
+  function banner(now) {
+    const a = st.act; if (!a) { bn.hidden = true; return; }
+    let txt, frac, cls;
+    if (a.kind === 'rec') {
+      const el = (now - a.t0) / 1000; frac = el / a.maxSec; cls = 'rec';
+      txt = '● 録音中' + (st.src === 'mic' ? '　マイクに話してください' : '') + '　あと ' + Math.max(0, a.maxSec - el).toFixed(1) + ' 秒';
+    } else if (a.kind === 'play') { frac = a.armed ? S().x / a.end : 0; cls = 'play'; txt = '▶ 再生中（溝から計算した音）　' + Math.round(Math.min(1, frac) * 100) + '%'; }
+    else { const el = (now - a.t0) / 1000; frac = el / Math.max(0.1, st.recDur); cls = 'orig'; txt = '♪ 元の音（蓄音機を通す前の音）'; }
+    bn.hidden = false; bn.className = cls;
+    $('bnText').textContent = txt; $('bnBar').style.width = (Math.max(0, Math.min(1, frac)) * 100).toFixed(1) + '%';
+    const lv = $('bnLv');
+    if (a.kind === 'rec') {
+      const dB = S().pIn > 0 ? 20 * Math.log10(S().pIn / 20e-6) : 0;
+      lv.hidden = false; $('bnLvBar').style.width = Math.max(0, Math.min(100, (dB - 80) / 45 * 100)).toFixed(0) + '%';
+      $('bnLvTxt').textContent = '入ってくる音 ' + (dB > 0 ? dB.toFixed(0) : '—') + ' dB' + (dB > 110 ? '（大きすぎ: 再生で針が跳ねます）' : '');
+      lv.classList.toggle('over', dB > 110);
+    } else lv.hidden = true;
+  }
   let flashT = -1e9, flashMsg = '';
   function flash(m) { flashMsg = m; flashT = performance.now(); }
   function status(now) {   // 図の左上の大きい1行
     const a = st.act;
     if (now - flashT < 3000) return '<span class="rec big">' + flashMsg + '</span>';
-    if (a && a.kind === 'rec') return '<span class="rec big">● 録音中 ' + ((now - a.t0) / 1000).toFixed(1) + ' 秒</span>';
-    if (a && a.kind === 'orig') return '<span class="voice big">♪ 元の音（機械を通す前に、マウスピースに入れた音）</span>';
-    if (a && a.kind === 'play') return '<span class="play big">▶ 再生中（' + st.plays + ' 回目）</span>';
+    if (a) return '';   // 動いているあいだは、図のまん中の帯に出す
     if (st.bounced) return '<span class="rec big">さっきの再生では、針が溝から跳ねていました</span>';
     return st.recEnd ? '<span class="big">止まっています</span>' : '<span class="big">まだ何も録っていません</span>';
   }
@@ -129,8 +149,8 @@ const UI = (() => {
   // ---------- つぎへ（押すと、書いてあることをして、終わったらつぎへ進む） ----------
   const T = (t, btn, go) => ({ t, btn, go });
   const TOUR = [
-    T('1878年のすず箔の蓄音機（筒の軸の向きから見た図）。「メリーさんのひつじ」の声（計算で作った声）をマウスピースに入れながら筒を回し、針で箔に溝を刻みます（8秒。録音中は音は出ません）。', '● 録音する',
-      async () => { setZoom(1.6); await setSrc('mary'); st.rpm = 60; $('rpm').value = 60; sync(); await record(8); }),
+    T('1878年のすず箔の蓄音機（筒の軸の向きから見た図）。「メリーさんのひつじ」の声（計算で作った声）をマウスピースに入れながら筒を回し、針で箔に溝を刻みます（1曲 11秒。録音中は音は出ません）。', '● 録音する',
+      async () => { setZoom(1.6); await setSrc('mary'); st.rpm = 60; $('rpm').value = 60; sync(); await record(); }),
     T('録れました。筒のふちの明るい所が、声の刻まれた溝です。はじめにもどして、針で溝をなぞります。聞こえるのは、溝の形だけから計算した音です。', '▶ 再生する',
       async () => { await play(); }),
     T('いまのが、溝の形から計算した音です。くらべるために、マウスピースに入れた元の音を聴きます（大きさは、いまの再生にそろえます）。', '♪ 元の音を聴く',
@@ -140,7 +160,7 @@ const UI = (() => {
     T('いまのが本当の大きさ: 溝の深さは約 0.05 mm、針の先は半径 0.15 mm。つぎは2倍の速さで回して再生します。', '⏩ 2倍の速さで再生',
       async () => { setZoom(1.6); await play(120); }),
     T('速く回すと、1オクターブ高い声になりました。つぎは、マイクで自分の声を録ってみましょう（マイクの音はこのページの中だけで覚え、保存も送信もしません）。', '🎤 自分の声を録る（6秒）',
-      async () => { await setSrc('mic'); if (st.src !== 'mic') return; await record(6); }),
+      async () => { await setSrc('mic'); if (st.src !== 'mic') return; await record(); }),
     T('録れました。聴いてみましょう。', '▶ 再生する', async () => { await play(); }),
     T('自分の元の声とくらべてみましょう。', '♪ 元の声を聴く', async () => { await orig(); }),
     T('あとは下の「自由に試す」で、入れる音・声の大きさ・回す速さを変えてみてください。声が大きすぎると、再生で針が溝から跳ねて、ガリガリという雑音になります。', 'はじめから',
@@ -159,7 +179,7 @@ const UI = (() => {
   };
 
   // ---------- 下の「自由に試す」 ----------
-  $('bRec').onclick = () => { if (st.act && st.act.kind === 'rec') stop(); else record(20); };
+  $('bRec').onclick = () => { if (st.act && st.act.kind === 'rec') stop(); else record(); };
   $('bPlay').onclick = () => { if (st.act && st.act.kind === 'play') stop(); else play(); };
   $('bStop').onclick = () => stop();
   $('bOrig').onclick = () => { if (st.act && st.act.kind === 'orig') stop(); else orig(); };
