@@ -6,6 +6,8 @@ const guide={R:ROUTES[0],s:0};
 const vel=V3(0,0,0),keys={};
 let lookDX=0,lookDY=0,wheel=0;
 const stick={x:0,y:0};
+const TOUCH=matchMedia('(pointer:coarse)').matches; // タッチ端末ではキー名を出さず、スティックとボタンで言う
+const kb=(pc,touch)=>TOUCH?touch:pc;
 let loc=null,curReg='';
 const orbit={yaw:.6,pitch:.1,dist:150,target:V3(0,-50,0)};
 
@@ -28,7 +30,7 @@ const dirName=()=>guideDir>0?'流れに乗って':'さかのぼる';
 function cycleGuide(){
   if(mode!=='play')return;
   const d0=defaultDir();
-  if(control==='free'){if(setControl('guide',d0))toast(`順路モード（${dirName()}）: W を押し続けると進む`);}
+  if(control==='free'){if(setControl('guide',d0))toast(`順路モード（${dirName()}）: `+kb('W を押し続けると進む','スティックを上に倒し続けると進む'));}
   else if(guideDir===d0){guideDir=-d0;guide.s=projectOnRoute(guide.R,camera.position,guide.s);toast(`向きを反転（${dirName()}）`);updateButtons();}
   else{setControl('free');toast('順路モードをオフ（自由移動）');}
 }
@@ -81,7 +83,7 @@ function begin(matKey,entry,act){
   P.dest=pickDest();
   setControl('guide',defaultDir());
   updateButtons();
-  toast(`${m.n}として${ENTRIES[entry][0]}から入った。順路モード（${dirName()}）: W を押し続けると進む · 弁が閉じている間は待つ`);
+  toast(`${m.n}として${ENTRIES[entry][0]}から入った。順路モード（${dirName()}）: `+kb('W を押し続けると進む','スティックを上に倒し続けると進む')+' · 弁が閉じている間は待つ');
 }
 function pickDest(){if(SIM.destSel!=='auto')return SIM.destSel;const i=P?P.laps%4:0;return DESTS[i];}
 function showStart(){mode='demo';$('start').hidden=false;$('result').hidden=true;$('side').hidden=true;SIM.on=false;P=null;orbitOn=false;
@@ -99,7 +101,7 @@ $('btnLysis').onclick=()=>lysis();
 $('sideToggle').onclick=()=>$('side').classList.toggle('open');
 $('resAgain').onclick=showStart;
 $('resBack').onclick=()=>{$('result').hidden=true;if(P&&!P.done)mode='play';};
-function toggleOrbit(){if(mode==='demo')return;orbitOn=!orbitOn;updateButtons();if(orbitOn)toast('外観ビュー: ドラッグで回転、ホイールで拡大。光る点があなたの位置');}
+function toggleOrbit(){if(mode==='demo')return;orbitOn=!orbitOn;updateButtons();if(orbitOn)toast(kb('外観ビュー: ドラッグで回転、ホイールで拡大。光る点があなたの位置','外観ビュー: ドラッグで回転。光る点があなたの位置'));}
 function toggleTps(){if(mode!=='play')return;tps=!tps;tpsPos.copy(camera.position);updateButtons();toast(tps?'三人称視点':'一人称視点');}
 function toggleEx(){if(mode!=='play')return;SIM.ex=!SIM.ex;SIM.hrT=SIM.ex?140:65;updateButtons();
   toast(SIM.ex?'運動を始めた。心拍が上がり、心臓が送る血液は安静時の4〜5倍に。脚の筋肉の毛細血管が一斉に開く':'休んだ。心拍がゆっくり戻っていく');}

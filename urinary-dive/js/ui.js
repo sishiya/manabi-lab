@@ -6,6 +6,8 @@ const guide={R:ALL_ROUTES[0],s:0};
 const vel=V3(0,0,0),keys={};
 let lookDX=0,lookDY=0,wheel=0;
 const stick={x:0,y:0};
+const TOUCH=matchMedia('(pointer:coarse)').matches; // タッチ端末ではキー名を出さず、スティックとボタンで言う
+const kb=(pc,touch)=>TOUCH?touch:pc;
 let loc=null,curReg='';
 const orbit={yaw:.6,pitch:.12,dist:115,target:V3(0,-76,0)};
 
@@ -38,7 +40,7 @@ const dirName=()=>guideDir>0?guide.R.fwd:guide.R.rev;
 function cycleGuide(){
   if(mode!=='play')return;
   const d0=defaultDir();
-  if(control==='free'){if(setControl('guide',d0))toast(`順路モード（${dirName()}）: W を押し続けると進む · S で戻る`);}
+  if(control==='free'){if(setControl('guide',d0))toast(`順路モード（${dirName()}）: `+kb('W を押し続けると進む · S で戻る','スティックを上に倒し続けると進む · 下に倒すと戻る'));}
   else if(guideDir===d0){guideDir=-d0;guide.s=projectOnRoute(guide.R,camera.position,guide.s);toast(`向きを反転（${dirName()}）`);updateButtons();}
   else{setControl('free');toast('順路モードをオフ（自由移動）');}
 }
@@ -95,7 +97,7 @@ function begin(matKey,entry,sx,hyd){
   tps=!m.scope;tpsPos.copy(camera.position);
   setControl('guide',defaultDir());
   updateButtons();
-  toast(`${m.n}として${ENTRIES[entry][0]}から入った（${SEXES[sx][0]}）。順路モード（${dirName()}）: W を押し続けると進む`+(m.bact?' · C で壁にしがみつく':''));
+  toast(`${m.n}として${ENTRIES[entry][0]}から入った（${SEXES[sx][0]}）。順路モード（${dirName()}）: `+kb('W を押し続けると進む','スティックを上に倒し続けると進む')+(m.bact?kb(' · C で壁にしがみつく',' · 「しがみつく」で壁にしがみつく'):''));
 }
 function showStart(){mode='demo';$('start').hidden=false;$('result').hidden=true;$('side').hidden=true;SIM.on=false;P=null;orbitOn=false;
   setSex(sex);guide.R=ROUTES[0];guide.s=0;control='guide';guideDir=1;autoOn=true;teleportTo(TUB.urL,Math.round(.35/TUB.urL.def.ds));updateButtons();}
@@ -114,7 +116,7 @@ $('sideToggle').onclick=()=>$('side').classList.toggle('open');
 $('resAgain').onclick=showStart;
 $('resLook').onclick=()=>{$('result').hidden=true;mode='play';orbitOn=true;updateButtons();};
 function toggleFF(){if(mode!=='play')return;SIM.ff=SIM.ff>1?1:10;updateButtons();toast(SIM.ff>1?'早送り ×10':'早送りをオフ');}
-function toggleOrbit(){if(mode==='demo')return;orbitOn=!orbitOn;updateButtons();if(orbitOn)toast('外観ビュー: ドラッグで回転、ホイールで拡大。光る点があなたの位置');}
+function toggleOrbit(){if(mode==='demo')return;orbitOn=!orbitOn;updateButtons();if(orbitOn)toast(kb('外観ビュー: ドラッグで回転、ホイールで拡大。光る点があなたの位置','外観ビュー: ドラッグで回転。光る点があなたの位置'));}
 function toggleTps(){if(mode!=='play')return;tps=!tps;tpsPos.copy(camera.position);updateButtons();toast(tps?'三人称視点':'一人称視点');}
 function drink(){if(mode!=='play')return;SIM.gut+=500;toast('水を500mL飲んだ。腸から吸収されると、腎臓がつくる尿が増え、薄くなっていく（このアプリでは約20分で吸収される目安）');}
 function toggleCling(){if(!P||!P.mat.bact)return;P.cling=!P.cling;if(P.cling){vel.set(0,0,0);if(control==='guide')setControl('free');}updateButtons();

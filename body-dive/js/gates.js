@@ -75,14 +75,15 @@ function finishGates(dtR){
   }
 }
 function gateHint(g,up){
-  const ff=L(' · F で早送り',' · F to fast-forward');
-  if(P.mat===MATS.capsule&&g.bend)return L(`${g.name}: せまく曲がっている（括約筋ではない）。W で押し続けると通れる`,`${g.name}: narrow and bent (not a sphincter). Keep pressing W to get through`);
-  if(P.mat===MATS.capsule&&g.id!=='glot')return L(`${g.name}は閉じている。W で押し続けると押し広げて通れる（内視鏡と同じ）`,`The ${g.name.toLowerCase()} is closed. Keep pressing W to push it open and get through (like an endoscope)`);
+  const ff=kb(L(' · F で早送り',' · F to fast-forward'),L(' · 「早送り」で速く',' · “Fast ×10” to speed up'));
+  const pw=kb(L('W で押し続ける','Keep pressing W'),L('スティックを上に倒し続ける','Keep holding the stick up'));
+  if(P.mat===MATS.capsule&&g.bend)return L(`${g.name}: せまく曲がっている（括約筋ではない）。${pw}と通れる`,`${g.name}: narrow and bent (not a sphincter). ${pw} to get through`);
+  if(P.mat===MATS.capsule&&g.id!=='glot')return L(`${g.name}は閉じている。${pw}と押し広げて通れる（内視鏡と同じ）`,`The ${g.name.toLowerCase()} is closed. ${pw} to push it open and get through (like an endoscope)`);
   switch(g.id){
     case 'rsj':
       if(!up)return null;
-      return L(`S状結腸から直腸へは、せまく曲がったところ（括約筋ではない）。便はS状結腸にためられ、直腸はふだん空っぽ。大蠕動（1日3〜4回、食事中や食後）で直腸へ送られる（大腸 ${fmtT(P.tColon)} / 目安12時間）`+ff+' · M で食事（胃結腸反射）',
-        `The way from the sigmoid colon into the rectum is a narrow bend (not a sphincter). Stool is stored in the sigmoid colon, and the rectum is usually empty. A mass movement (3–4 times a day, during or after meals) sends it into the rectum (large intestine ${fmtT(P.tColon)} / about 12 h)`+ff+' · M to eat (gastrocolic reflex)');
+      return L(`S状結腸から直腸へは、せまく曲がったところ（括約筋ではない）。便はS状結腸にためられ、直腸はふだん空っぽ。大蠕動（1日3〜4回、食事中や食後）で直腸へ送られる（大腸 ${fmtT(P.tColon)} / 目安12時間）`+ff+kb(' · M で食事（胃結腸反射）',' · 「食事をする」で胃結腸反射'),
+        `The way from the sigmoid colon into the rectum is a narrow bend (not a sphincter). Stool is stored in the sigmoid colon, and the rectum is usually empty. A mass movement (3–4 times a day, during or after meals) sends it into the rectum (large intestine ${fmtT(P.tColon)} / about 12 h)`+ff+kb(' · M to eat (gastrocolic reflex)',' · “Eat a meal” for the gastrocolic reflex'));
     case 'les':return up?null:L('下部食道括約筋は、胃酸が逆流しないよう閉じている','The lower esophageal sphincter stays closed so stomach acid doesn’t flow back up');
     case 'ues':return up?null:L('上部食道括約筋は閉じている。逆流を防ぐしくみ','The upper esophageal sphincter is closed. It prevents backflow');
     case 'pyl':

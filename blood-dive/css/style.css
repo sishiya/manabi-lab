@@ -134,6 +134,7 @@ legend b{font-family:var(--f-mono);color:var(--art);margin-right:8px}
 }
 @media (pointer:coarse){
   #stick{display:block}
+  #dock kbd{display:none}
   #keys{display:none}
   #mapWrap{bottom:calc(env(safe-area-inset-bottom,0px) + 160px)}
 }

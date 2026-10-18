@@ -41,7 +41,7 @@ function heartLogic(dtR){
   $('btnLysis').hidden=!(P&&P.stuck&&!P.lysis);
   SIM.hintT-=dtR;
   if(SIM.hintT<=0&&inBody&&loc&&loc.tube&&P)for(const g of loc.tube.gates){
-    if(g.open<.3&&Math.abs(loc.s-g.s)<.9&&g.kind!=='ven'){toast(cath?`${g.name}は閉じている。W で押し続けると通れる`:`${g.name}が閉じている。次の拍動で開くまで待つ（${g.kind==='av'?'心室がゆるむ拡張期':'心室が縮む収縮期'}に開く）`);SIM.hintT=6;break;}
+    if(g.open<.3&&Math.abs(loc.s-g.s)<.9&&g.kind!=='ven'){toast(cath?`${g.name}は閉じている。`+kb('W で押し続ける','スティックを上に倒し続ける')+'と通れる':`${g.name}が閉じている。次の拍動で開くまで待つ（${g.kind==='av'?'心室がゆるむ拡張期':'心室が縮む収縮期'}に開く）`);SIM.hintT=6;break;}
   }
 }
 

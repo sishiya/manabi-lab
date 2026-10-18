@@ -36,7 +36,7 @@ function gateLogic(dtR){
   if(P&&P.resume){P.resume=false;setControl('guide',defaultDir());} // 詰まりが取れたら順路モードに戻る
   if(P&&m.stone){const side=P.stuckT&&P.stuckT.def.kid||'L';HYD[side].value+=(1+.6*P.hydro-HYD[side].value)*Math.min(1,dtR*2);}
   // 尿意の段階
-  if(P){const u=URGE.indexOf(urgeOf(SIM.vol));if(u>SIM.urgeIdx&&u>=1){toast(`尿意: ${URGE[u][1]}（${Math.round(SIM.vol)}mL）`+(u>=2?' · U でトイレ':''));}SIM.urgeIdx=u;}
+  if(P){const u=URGE.indexOf(urgeOf(SIM.vol));if(u>SIM.urgeIdx&&u>=1){toast(`尿意: ${URGE[u][1]}（${Math.round(SIM.vol)}mL）`+(u>=2?kb(' · U でトイレ',' · 「トイレ」ボタンで出す'):''));}SIM.urgeIdx=u;}
   if(SIM.vol>=650&&!SIM.voiding)startVoid(true);
   GATES.forEach(g=>{if(g.hold>0)g.target=1;g.open+=(g.target-g.open)*Math.min(1,dtR*(g.id.startsWith('uvj')?6:3));});
   // 閉じた関門の前で理由を出す
@@ -46,9 +46,9 @@ function gateLogic(dtR){
   }
 }
 function gateHint(g,up){
-  if(P.mat.scope)return `${g.name}は閉じている。W で押し続けると押し広げて通れる`;
+  if(P.mat.scope)return `${g.name}は閉じている。`+kb('W で押し続ける','スティックを上に倒し続ける')+'と押し広げて通れる';
   if(/^uvj/.test(g.id))return up?null:'尿管口は、膀胱から腎臓への逆流を防ぐ弁になっている'+(P.mat.bact?'。押し続けるとよじ登れる':'');
-  if(up)return `${g.name}は閉じている。尿がたまって尿意が来たら U でトイレ（いま ${Math.round(SIM.vol)}mL）`+(SIM.vol<150?' · F で早送り、M で水を飲む':'');
+  if(up)return `${g.name}は閉じている。尿がたまって尿意が来たら${kb(' U でトイレ','「トイレ」ボタンで出す')}（いま ${Math.round(SIM.vol)}mL）`+(SIM.vol<150?kb(' · F で早送り、M で水を飲む',' · 「早送り」で速く、「水を飲む」で尿がふえる'):'');
   return P.mat.bact?null:`${g.name}は閉じている。外から尿道はさかのぼれない`;
 }
 

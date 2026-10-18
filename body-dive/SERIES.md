@@ -127,6 +127,7 @@ __vd.simRun(20, ['KeyW']);                // 20秒ぶん W を押しっぱなし
 
 ## 6. 運用
 
+- **タッチ端末ではキー名を出さない**（2026-10-18〜、3本とも）: 案内の文は `ui.js` の `kb(PC の文, タッチの文)` で両方書く（`TOUCH = matchMedia('(pointer:coarse)')`）。ボタンの `<kbd>` は CSS の `@media (pointer:coarse){#dock kbd{display:none}}` で消える。
 - バックアップ・ランチャー・公開は `../RULES.md` 3章・8章のとおり。`index.html` は doctype なし（8.2 の名残）。css・js に分けたので、ローカルでは `.claude/launch.json` のサーバーで開く。
 
 ---

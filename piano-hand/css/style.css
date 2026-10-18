@@ -106,6 +106,13 @@ table.val td:nth-child(n+2){font-family:var(--f-mono);text-align:right;white-spa
 #loading p{margin:0}
 #loading .spin{width:28px;height:28px;border-radius:50%;border:3px solid rgba(255,255,255,.15);border-top-color:var(--accent);animation:spin .9s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* タッチ端末: 視点のボタンと「音」を指で押しやすく（見た目はそのまま、押せる所だけ上下に広げて 32px 前後） */
+@media (pointer:coarse){
+  .seg.tiny button{position:relative}
+  .seg.tiny button::after{content:'';position:absolute;left:0;right:0;top:-6px;bottom:-6px}
+  #toolbar .chk{min-height:32px;padding:0 4px}
+  #toolbar .chk input{width:18px;height:18px;margin:0}
+}
 @media (prefers-reduced-motion:reduce){#loading .spin{animation:none;border-top-color:rgba(255,255,255,.15);border-color:var(--accent)}}
 
 /* ペダルの表示（踏んでいる間は光る） */

@@ -1,6 +1,7 @@
 // 画面の操作と、毎フレームの更新。デバッグ用の窓口は window.__ph（例外は window.__phErr）
 'use strict';
 const $ = id => document.getElementById(id);
+const TOUCH = matchMedia('(pointer:coarse)').matches; // タッチ端末では、キー・ホイールの案内を出さない
 const S = { plan: null, checks: null, t: -1, playing: false, speed: 1, lastNow: 0, prevT: -1, extra: [] };
 const OPT = { notes: true, keyLabels: true, noteNums: true, fingerNums: false, targets: false, ghost: false, bones: false, xray: false, muscles: false };
 
@@ -293,7 +294,8 @@ function step() {
   if (far.length) msgs.unshift(L('届かない: ', "Can't reach: ") + '<b>' + far.join(L('、', ', ')) + '</b>');
   if (lims.length) msgs.push(L('関節の限界: ', 'Joint limit: ') + '<b>' + lims.join(L('、', ', ')) + '</b>');
   // 再生中は「この瞬間」の知らせを出さない（一瞬で切りかわって読めず、行数が変わって画面ががたついた）。止めたとき・1コマずつのときに出す
-  $('hint').innerHTML = msgs.length && !S.playing ? L('この瞬間 — ', 'Right now — ') + msgs.join(L(' ／ ', ' / ')) : L('ドラッグで向きを変え、ホイールや2本指のピンチで寄れます（一人称では体を前後に）。時刻のつまみ・矢印キーで1コマずつ、[ ] キーで速さを変えられます。', "Drag to turn the view, use the wheel or a two-finger pinch to zoom (in POV, the pianist's view, it leans you forward and back). Step frame by frame with the time slider or arrow keys, and change the speed with the [ and ] keys.");
+  $('hint').innerHTML = msgs.length && !S.playing ? L('この瞬間 — ', 'Right now — ') + msgs.join(L(' ／ ', ' / ')) : TOUCH ? L('ドラッグで向きを変え、2本指のピンチで寄れます（一人称では体を前後に）。時刻のつまみで1コマずつ、速さは再生ボタンの横で変えられます。', "Drag to turn, pinch with two fingers to zoom (in POV it leans you forward and back). Step with the time slider; set the speed next to Play.")
+    : L('ドラッグで向きを変え、ホイールや2本指のピンチで寄れます（一人称では体を前後に）。時刻のつまみ・矢印キーで1コマずつ、[ ] キーで速さを変えられます。', "Drag to turn the view, use the wheel or a two-finger pinch to zoom (in POV, the pianist's view, it leans you forward and back). Step frame by frame with the time slider or arrow keys, and change the speed with the [ and ] keys.");
 }
 
 function setPlaying(on) {
@@ -310,7 +312,7 @@ function initUI() {
   $('view').setAttribute('aria-label', L('鍵盤と、弾いている両手の3D。ドラッグで向きを変え、ホイールや2本指のピンチで寄れます', 'A 3D keyboard and two hands playing. Drag to turn the view, use the wheel or a two-finger pinch to zoom'));
   $('views').setAttribute('aria-label', L('見る向き', 'View'));
   $('pedalInd').title = L('音をのばすペダル（ダンパーペダル）を踏んでいる間は光る', 'Lights up while the sustain (damper) pedal is down');
-  $('speedSel').setAttribute('aria-label', L('速さ', 'Speed')); $('speedSel').title = L('速さ（キーの [ と ] でも変えられます）', 'Speed (you can also use the [ and ] keys)');
+  $('speedSel').setAttribute('aria-label', L('速さ', 'Speed')); $('speedSel').title = TOUCH ? L('速さ', 'Speed') : L('速さ（キーの [ と ] でも変えられます）', 'Speed (you can also use the [ and ] keys)');
   $('time').setAttribute('aria-label', L('時刻', 'Time'));
   $('vol').setAttribute('aria-label', L('音量', 'Volume')); $('vol').title = L('音量', 'Volume');
   [['song', '曲', 'Piece'], ['sceneSel', 'シーン', 'Scene'], ['handModel', '手のモデル', 'Hand model']].forEach(([id, ja, en]) => $(id).setAttribute('aria-label', L(ja, en)));

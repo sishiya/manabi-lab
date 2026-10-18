@@ -8,6 +8,8 @@ const guide={R:ROUTES[0],s:0};
 const vel=V3(0,0,0),keys={};
 let lookDX=0,lookDY=0,wheel=0;
 const stick={x:0,y:0};
+const TOUCH=matchMedia('(pointer:coarse)').matches; // タッチ端末ではキー名を出さず、スティックとボタンで言う
+const kb=(pc,touch)=>TOUCH?touch:pc;
 let loc=null,curReg='';
 const orbit={yaw:.5,pitch:.15,dist:170,target:V3(0,-45,1)};
 
@@ -29,7 +31,7 @@ const dirName=()=>guideDir>0?guide.R.fwd:guide.R.rev;
 function cycleGuide(){ // オフ → 既定の向き → 逆向き → オフ
   if(mode!=='play')return;
   const d0=defaultDir();
-  if(control==='free'){if(setControl('guide',d0))toast(L(`順路モード（${dirName()}）: W を押し続けると順路に沿って進む · S で戻る`,`Route mode (${dirName()}): hold W to follow the route · S to go back`));}
+  if(control==='free'){if(setControl('guide',d0))toast(kb(L(`順路モード（${dirName()}）: W を押し続けると順路に沿って進む · S で戻る`,`Route mode (${dirName()}): hold W to follow the route · S to go back`),L(`順路モード（${dirName()}）: スティックを上に倒し続けると順路に沿って進む · 下に倒すと戻る`,`Route mode (${dirName()}): hold the stick up to follow the route · down to go back`)));}
   else if(guideDir===d0){guideDir=-d0;guide.s=projectOnRoute(guide.R,camera.position,guide.s);toast(L(`向きを反転（${dirName()}）`,`Direction reversed (${dirName()})`));updateButtons();}
   else{setControl('free');toast(L('順路モードをオフ（自由移動）','Route mode off (free movement)'));}
 }
@@ -90,8 +92,8 @@ function begin(matKey,entry,belly){
   loc=locate(camera.position);
   tps=false;tpsPos.copy(camera.position); // 最初は一人称（T で三人称）
   setControl('guide',defaultDir());
-  toast(L(`${m.n}として${ENTRIES[entry][0]}から入った。`+(entry==='mouth'&&m.dig&&!m.liquid?'口にいる間はかまれて細かくなる。':'')+`W を押し続けると${dirName()}進む（G で向きを変える）`,
-  `You are “${m.n}”, in through the ${ENTRIES[entry][0].toLowerCase()}. `+(entry==='mouth'&&m.dig&&!m.liquid?'In the mouth you get chewed into small pieces. ':'')+`Hold W to move (${dirName()}) · G to change direction`));
+  toast(L(`${m.n}として${ENTRIES[entry][0]}から入った。`+(entry==='mouth'&&m.dig&&!m.liquid?'口にいる間はかまれて細かくなる。':'')+kb(`W を押し続けると${dirName()}進む（G で向きを変える）`,`スティックを上に倒し続けると${dirName()}進む（「順路」ボタンで向きを変える）`),
+  `You are “${m.n}”, in through the ${ENTRIES[entry][0].toLowerCase()}. `+(entry==='mouth'&&m.dig&&!m.liquid?'In the mouth you get chewed into small pieces. ':'')+kb(`Hold W to move (${dirName()}) · G to change direction`,`Hold the stick up to move (${dirName()}) · the “Route” button changes direction`)));
 }
 function mass0(m){let s=0;for(const k in m.comp)s+=m.comp[k];return s;}
 function showStart(){mode='demo';$('start').hidden=false;$('result').hidden=true;$('side').hidden=true;SIM.on=false;P=null;orbitOn=false;
@@ -115,7 +117,7 @@ function eatMeal(){
 $('btnRemove').onclick=()=>{if(P&&P.stuck){P.stuck=false;showResult('removed');}};
 $('resLook').onclick=()=>{$('result').hidden=true;mode='play';orbitOn=true;updateButtons();};
 function toggleFF(){if(mode!=='play')return;SIM.ff=SIM.ff>1?1:10;updateButtons();toast(SIM.ff>1?L('早送り ×10（体内時間が10倍速く進む）','Fast-forward ×10 (body time runs 10 times faster)'):L('早送りをオフ','Fast-forward off'));}
-function toggleOrbit(){if(mode==='demo')return;orbitOn=!orbitOn;updateButtons();if(orbitOn)toast(L('外観ビュー: ドラッグで回転、ホイールで拡大。光る点があなたの位置','Outside view: drag to rotate, wheel to zoom. The glowing dot is you'));}
+function toggleOrbit(){if(mode==='demo')return;orbitOn=!orbitOn;updateButtons();if(orbitOn)toast(kb(L('外観ビュー: ドラッグで回転、ホイールで拡大。光る点があなたの位置','Outside view: drag to rotate, wheel to zoom. The glowing dot is you'),L('外観ビュー: ドラッグで回転。光る点があなたの位置','Outside view: drag to rotate. The glowing dot is you')));}
 
 /* ---------- 入力 ---------- */
 addEventListener('keydown',e=>{

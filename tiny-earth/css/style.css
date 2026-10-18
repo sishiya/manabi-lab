@@ -9,6 +9,8 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-bod
 #hud{position:absolute;left:10px;top:8px;font-family:var(--f-mono);font-size:13px;line-height:1.5;text-shadow:0 1px 3px #000;pointer-events:none}
 #hudR{font-size:16px;color:var(--acc)}
 #hudX{color:#ffc95a}
+#hint .tc{display:none} /* タッチ端末では「ホイール」でなく「2本指」 */
+@media (pointer:coarse){#hint .pc{display:none}#hint .tc{display:inline}}
 #hint{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:12px;color:var(--muted);text-shadow:0 1px 3px #000;pointer-events:none;padding:0 8px}
 #panel{padding:4px 16px 32px;background:var(--panel)}
 #top h1{font-family:var(--f-display);font-weight:400;font-size:22px;margin:10px 0 4px}

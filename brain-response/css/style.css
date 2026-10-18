@@ -119,10 +119,16 @@ details ul.src li+li{margin-top:3px}
   #panel{padding:12px max(12px,env(safe-area-inset-right,0px)) 20px 12px;gap:14px}
   .brand h1{font-size:19px}
 }
-/* small screens: the hint is cut to two lines, tap to read it all */
+/* where the chooser is: beside (wide) or below (portrait phones); click or tap */
+#hint .narrow,#hint .tc,#hint .moreBtn{display:none}
+@media (max-width:860px) and (orientation:portrait){#hint .wide{display:none}#hint .narrow{display:inline}}
+@media (pointer:coarse){#hint .pc{display:none}#hint .tc{display:inline}}
+/* small screens: the first sentence (what to do) is always shown in full, the rest opens with くわしく */
 @media (max-width:860px) and (orientation:portrait), (orientation:landscape) and (max-height:560px){
-  #hint{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;cursor:pointer}
-  #hint.open{-webkit-line-clamp:unset;display:block}
+  #hint{cursor:pointer}
+  #hint .more{display:none}
+  #hint.open .more{display:inline}
+  #hint .moreBtn{display:inline;margin-left:6px;padding:2px 8px;min-height:28px;border:1px solid var(--line);border-radius:6px;background:none;color:var(--accent);font:inherit;cursor:pointer}
 }
 
 

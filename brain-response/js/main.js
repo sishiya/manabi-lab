@@ -200,7 +200,10 @@ function wire() {
   tl.addEventListener('pointermove', e => { if (drag) scrub(e); });
   tl.addEventListener('pointerup', () => (drag = false));
   $('stList').addEventListener('click', e => { const li = e.target.closest('li[data-id]'); if (li && !e.target.closest('a')) li.classList.toggle('open'); });
-  $('hint').addEventListener('click', () => $('hint').classList.toggle('open'));
+  $('hint').addEventListener('click', () => {
+    const open = $('hint').classList.toggle('open'), b = $('hint').querySelector('.moreBtn');
+    if (b) { b.textContent = open ? 'とじる' : 'くわしく'; b.setAttribute('aria-expanded', String(open)); }
+  });
   window.addEventListener('resize', resize);
 }
 
