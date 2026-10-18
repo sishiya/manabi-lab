@@ -1,0 +1,101 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>エジソンの蓄音機</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%231c1a16'/><circle cx='32' cy='32' r='15' fill='none' stroke='%23e8b860' stroke-width='5'/><circle cx='32' cy='32' r='5' fill='%23e8b860'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<script>window.__phErr = []; window.addEventListener('error', function (e) { window.__phErr.push(String(e.message)); }); function L(ja) { return ja; }</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <header id="top"><h1>エジソンの蓄音機</h1><span class="sub">声が溝になり、溝がまた声になるまでを、全部計算で</span></header>
+  <div id="pin"><!-- スマホ: 図とつぎへを上に固定。操作・波・説明はその下でスクロール -->
+    <div id="cvwrap"><canvas id="cv"></canvas>
+      <div id="hud"></div>
+      <div id="zoom"><button id="zin" aria-label="寄る">＋</button><button id="zout" aria-label="引く">－</button></div>
+      <div id="tip" hidden></div>
+    </div>
+    <div id="tour"><span id="tourNum"></span><p id="tourText"></p><button id="next">つぎへ</button></div>
+  </div>
+  <section id="controls">
+    <div class="row"><span class="lab">針</span><button id="bRec">● 録音の針をおろす</button><button id="bPlay">▶ 再生の針をおろす</button><button id="bUp">針を上げる</button></div>
+    <div class="row"><span class="lab">クランク</span><button id="bTurn">回す</button><input id="rpm" type="range" min="30" max="120" step="1" value="60"><span id="rpmV" class="val"></span>
+      <span class="note">図のクランクの取っ手（丸）をつかんで、ぐるぐる回してもかまいません。</span></div>
+    <div class="row"><span class="lab">筒</span><button id="bRew">⏮ はじめにもどす</button><button id="bFoil">箔をはりかえる</button><span id="plays" class="val"></span></div>
+    <div class="row"><span class="lab">入れる音</span><select id="src">
+      <option value="vowel">声「あー」（計算で作った声）</option>
+      <option value="mary">メリーさんのひつじ（計算で作った声）</option>
+      <option value="whistle">口笛のような音</option>
+      <option value="sweep">低い音から高い音へ（機械の特性を見る）</option>
+      <option value="mic">マイク（自分の声）</option>
+    </select><span class="note" id="micNote">マイクの音は、振動板を押す力にするだけで、どこにも残しません。録音中はスピーカーから出しません。</span></div>
+    <div class="row"><span class="lab">声の大きさ</span><input id="lvl" type="range" min="95" max="130" step="1" value="115"><span id="lvlV" class="val"></span>
+      <span class="note">マウスピースの中の音の大きさ。昔は口をつけて大声で話しました（目安。推定）。</span></div>
+    <div class="row"><span class="lab">スピーカー</span><input id="vol" type="range" min="-20" max="40" step="1" value="4"><span id="volV" class="val"></span>
+      <span class="note">計算した耳もとの音を、あなたのスピーカーで何倍にして鳴らすか。本当の大きさは図の左上の dB です。</span></div>
+  </section>
+  <section id="graphs">
+    <div class="ghead"><b>入れた音と出た音</b><span class="gnote">赤は最後に録ったときに入れた音、青は溝から計算して出た音</span></div>
+    <canvas id="wv"></canvas>
+    <div class="ghead"><b>箔をひろげると</b><span class="gnote">声が刻まれた所が明るい。白い印がいまの針</span></div>
+    <canvas id="fv"></canvas>
+  </section>
+  <details id="about" class="about">
+    <summary>このアプリについて</summary>
+    <p>1877年にエジソンが作った蓄音機は、手で回す筒に、すず箔を巻いたものでした。マウスピースに向かって話すと、うすい振動板がふるえ、まん中についた針が箔を押して、らせんの溝に「深い・浅い」の形を刻みます。はじめにもどして針で溝をなぞると、振動板がふるえて、また声になります。</p>
+    <p>このアプリは、マイクや計算で作った音を「マウスピースの中の空気の圧力」として入れるだけです。そこから先の、振動板のふるえ → 針が箔を押す → 箔が凹んで溝になる → 針の先が溝をなぞる → 振動板がふるえる → 空気を押す、をすべて計算しています。録った音はどこにも残さず、聞こえる音は溝の形から計算したものです。</p>
+    <h3>計算していること</h3>
+    <ul>
+      <li><b>振動板</b>: ふちを留めた雲母の円板（直径 50 mm）。板の曲げの式の、まん中が動く形（軸対称のモード）を5つ。いちばん低い共振は約 600 Hz（針が箔にふれていないとき）。</li>
+      <li><b>針と箔</b>: 箔は筒のらせんのすきまの上に張られていて、針が押すとすきまへ凹みます。押す力が「その深さを刻む力」をこえたときだけ深くなり、引いても戻りません（塑性）。針が離れれば何も刻まれません。</li>
+      <li><b>溝</b>: らせんにそって 8 µm ごとの深さ。回す速さが変われば、同じ声でも溝の詰まり方が変わります。</li>
+      <li><b>なぞる</b>: 針の先は丸く（半径 0.15 mm）、細かい波の底には入れません。溝から跳ねることもあります。跳ねて落ちたときの強い力で、溝の山がつぶれます（すり減り）。</li>
+      <li><b>空気へ</b>: 振動板が空気を押す量の変化から、30 cm 先の圧力を計算します。</li>
+      <li>1秒を 192,000 回に分けて計算しています。</li>
+    </ul>
+    <h3>計算で確かめたこと（tools/verify.js）</h3>
+    <ul id="verifyList">
+      <li>振動板の共振の高さの係数（λ²）は 10.216・39.771・89.104 で、板の教科書の値（10.2158・39.771・89.104）と同じです。一様な圧力でのまん中の変位も板の式と同じです。</li>
+      <li>毎分60回転で録った 400 Hz の音を、毎分120回転で再生すると 800 Hz、毎分45回転で 300 Hz になります。</li>
+      <li>同じ大きさ（120 dB）の音を録って再生すると、いちばんよく出るのは 700 Hz あたり（振動板が箔に押しつけられたときの共振）で、500〜2,000 Hz がよく出ます。300 Hz より低い音と 3,000 Hz より高い音は、溝にほとんど刻まれません（3,000 Hz で溝のふれは 1 µm 以下）。</li>
+      <li>ふつうの声（115 dB）で、溝の深さのふれは ±10〜15 µm ほど。溝の深さの平均（約 0.05 mm）は、押しこみのねじで合わせたものなので、答え合わせにはなりません。</li>
+      <li>再生では、針が溝にふれているのは時間の 4 割ほどで、あとは跳ねています。跳ねて落ちる強い力で溝の山がつぶれ、5回の再生で溝のふれは約3分の2になりました。ただし音は小さくならず、跳ねる音がまざったままです（実物のすず箔は数回で破れましたが、このアプリは破れを入れていません）。</li>
+      <li>針の先の丸みによるひずみを、古い論文の目安（溝の曲がりの半径が針の半径の5倍より大きければ、ひずみは約1割以下）とくらべようとしましたが、この模型では跳ねることと共振のひずみのほうが大きく、比べられませんでした。</li>
+    </ul>
+    <h3>簡単にしているところ・推定</h3>
+    <ul>
+      <li>振動板の厚み（0.1 mm）・減衰・針の重さ（30 mg）・針の先の丸み（半径 0.15 mm）・箔の下のすきまの幅（0.5 mm）は、記録が見つからなかったので推定です。</li>
+      <li>箔の凹み方は、すずが流れ出す強さ（10 MPa）を使った簡単な模型です（曲げ＋のび）。実験に合わせた値ではありません。</li>
+      <li>押しこみのねじは、録音の溝の深さが約 0.05 mm になるように合わせています（1878年のすず箔を光で測った研究の、ふつうの溝の深さ）。再生はそれより軽く押します。</li>
+      <li>マイクの音の大きさは本当の Pa がわからないので、「声の大きさ」で決めています。</li>
+      <li>マウスピースの中の空気の部屋と、ラッパの中を伝わる音の波は、まだ入れていません（つぎの段階）。振動板の片側だけが空気を押すとしています。</li>
+      <li>箔の表面のでこぼこ（雑音のもと）は入れていません。</li>
+      <li>最後のスピーカーは本物ではなく、あなたの PC・スマホのものです。その音の色がつきます。</li>
+    </ul>
+    <h3>おもな出どころ</h3>
+    <ul>
+      <li>T. A. Edison, Improvement in Phonograph or Speaking Machines, 米国特許 200,521（1878）. <a href="https://patents.google.com/patent/US200521" target="_blank" rel="noopener">Google Patents</a></li>
+      <li>Thomas A. Edison Papers（Rutgers 大学）, <a href="https://edison.rutgers.edu/life-of-edison/biographical-essays/tinfoil-phonograph/inventing-sound-recording" target="_blank" rel="noopener">Inventing Sound Recording</a>（最初の機械はねじのピッチ 1インチに10山・手回し）</li>
+      <li>The Henry Ford, <a href="https://www.thehenryford.org/collections/explore/artifact/76722" target="_blank" rel="noopener">Tinfoil Phonograph, 1878</a>（筒の直径 約 5.55 in）</li>
+      <li>Edisonium, <a href="https://hub.catalogit.app/edisonium/folder/entry/phonograph-bergmann-exhibition-tinfoil" target="_blank" rel="noopener">Bergmann Exhibition Tinfoil</a>（雲母の振動板 直径 50 mm、筒 約 140 mm）</li>
+      <li>edisontinfoil.com, <a href="https://edisontinfoil.com/foils.htm" target="_blank" rel="noopener">Original Phonographic Tinfoil</a>（箔の厚み 1.3〜1.5 mil）・<a href="https://edisontinfoil.com/brass.htm" target="_blank" rel="noopener">Bergmann の機械</a>（展示用は 1インチに24山）</li>
+      <li>University of Iowa, <a href="https://instructional-resources.physics.uiowa.edu/sites/instructional-resources.physics.uiowa.edu/files/field/demos/documents/3e50.00%20-%20Edison%27s%20Phonograph.pdf" target="_blank" rel="noopener">Edison's Phonograph（物理の演示資料）</a>（毎分 65〜70 回転、再生は浅めに）</li>
+      <li>C. Haber, E. Cornell ほか, <a href="http://irene.cornell7.net/Tinfoil_files/Restoring%20the%201878%20St.%20Louis%20Foil.pdf" target="_blank" rel="noopener">Restoring the 1878 "St. Louis" Edison Tinfoil Recording</a>（縦の溝、ふつうの溝の深さ 0.05 mm）</li>
+      <li>Library of Congress, <a href="https://www.loc.gov/static/programs/national-recording-preservation-board/documents/St-Louis-Tinfoil_Stephens-Hunter.pdf" target="_blank" rel="noopener">Edison's "St. Louis tinfoil" recording (1878)</a></li>
+      <li>SMPTE, <a href="https://journal.smpte.org/periodicals/Journal%20of%20the%20Society%20of%20Motion%20Picture%20Engineers/29/5/9/" target="_blank" rel="noopener">Distortion in the Reproduction of Hill-and-Dale Recording</a>（針の丸みとひずみ）</li>
+      <li>雲母のかたさ: A. Castellanos-Gomez ほか（薄い板で約 190 GPa）<a href="https://arxiv.org/abs/1208.6110" target="_blank" rel="noopener">arXiv:1208.6110</a>・Vaughan & Guggenheim (1986) <a href="https://earthref.org/ERR/36596" target="_blank" rel="noopener">EarthRef</a></li>
+      <li>すずの強さ: Smithells Metals Reference Book（引っぱり強さ 14.5 MPa・ヤング率 49.9 GPa）, <a href="https://www.princeton.edu/~maelabs/mae324/glos324/tin.htm" target="_blank" rel="noopener">Princeton MAE の材料のメモ</a>（降伏 7 MPa）</li>
+    </ul>
+    <h3>使っているもの</h3>
+    <p>フォント: Google Fonts（SIL Open Font License）</p>
+  </details>
+</div>
+
+<script src="js/physics.js"></script>
+<script src="js/sources.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/panels.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/main.js"></script>
+<script src="js/ui.js"></script>

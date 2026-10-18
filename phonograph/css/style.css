@@ -1,0 +1,58 @@
+/* エジソンの蓄音機 */
+:root{--bg:#1c1a16;--panel:#26231d;--line:#3a352b;--ink:#e9e1cf;--muted:#a89f8c;--acc:#e8b860;--voice:#f08a6c;--play:#8fd0ff;
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+[hidden]{display:none!important}
+#app{max-width:1100px;margin:0 auto}
+#top{padding:12px 16px 4px;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px}
+#top h1{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0}
+#top .sub{color:var(--muted);font-size:13px}
+/* 上に固定する部分（図＋つぎへ） */
+#pin{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+#cvwrap{position:relative;height:min(58vh,480px)}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#hud{position:absolute;left:10px;top:8px;font-family:var(--f-mono);font-size:12px;line-height:1.55;color:var(--muted);pointer-events:none;white-space:pre}
+#hud b{color:var(--ink);font-weight:500}
+#hud .rec{color:var(--voice)}#hud .play{color:var(--play)}
+#zoom{position:absolute;right:10px;top:8px;display:flex;flex-direction:column;gap:6px}
+#zoom button{width:40px;min-height:40px;padding:0;font-size:20px}
+#tip{position:absolute;max-width:270px;background:rgba(28,26,22,.95);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.6;pointer-events:none;z-index:3}
+#tip b{color:var(--acc)}
+button,select{font:inherit;font-size:14px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;min-height:38px;padding:4px 12px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button.on{background:var(--acc);color:#1a1a1a;border-color:var(--acc)}
+#bRec.on{background:var(--voice);border-color:var(--voice)}
+#bPlay.on{background:var(--play);border-color:var(--play)}
+#tour{display:flex;align-items:center;gap:10px;padding:8px 16px}
+#tourNum{font-family:var(--f-mono);color:var(--acc);font-size:13px;white-space:nowrap}
+#tourText{margin:0;flex:1;font-size:14px;line-height:1.6}
+#next{background:var(--acc);color:#1a1a1a;border-color:var(--acc);font-weight:700;white-space:nowrap}
+/* スクロールする部分 */
+#controls{padding:10px 16px;display:flex;flex-direction:column;gap:8px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.row .lab{width:6.5em;color:var(--muted);font-size:13px}
+.row .val{font-family:var(--f-mono);font-size:13px;color:var(--muted);min-width:5em}
+.row .note{color:var(--muted);font-size:12px;flex-basis:100%;padding-left:calc(6.5em + 6px);line-height:1.6}
+input[type=range]{width:180px;accent-color:var(--acc)}
+#graphs{padding:6px 16px 0}
+.ghead{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;font-size:14px;margin-top:8px}
+.gnote{color:var(--muted);font-size:12px}
+#wv{width:100%;height:300px;display:block;margin-top:6px}
+#fv{width:100%;height:150px;display:block;margin-top:6px}
+.about{padding:8px 16px 32px;color:var(--muted);font-size:14px;line-height:1.8}
+.about summary{cursor:pointer;color:var(--ink);font-size:15px}
+.about h3{color:var(--ink);font-size:15px;margin:14px 0 4px}
+.about b{color:var(--ink)}
+.about a{color:var(--acc)}
+@media (max-width:560px){
+  #top h1{font-size:19px}
+  #top .sub{font-size:12px}
+  #cvwrap{height:42vh;min-height:240px}
+  #tour{padding:6px 12px;gap:8px}
+  #tourText{font-size:13px;line-height:1.5}
+  #controls,#graphs,.about{padding-left:12px;padding-right:12px}
+  .row .lab{width:100%}
+  .row .note{padding-left:0}
+  #hud{font-size:11px}
+  #wv{height:260px}
+}
