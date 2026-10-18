@@ -2,7 +2,7 @@
 'use strict';
 const UI = (() => {
   const $ = id => document.getElementById(id), S = () => window.__ph.S;
-  const st = { act: null, recEnd: 0, recDur: 0, rpm: 60, src: 'mary', dB: 105, vol: 18, plays: 0, drag: null, Z: 1, Zt: 1, cont: 0, contN: 0, bounced: false };
+  const st = { act: null, recEnd: 0, recDur: 0, recKind: '', rpm: 60, src: 'mary', dB: 105, vol: 18, plays: 0, drag: null, Z: 1, Zt: 1, cont: 0, contN: 0, bounced: false };
   const omOf = r => r * 2 * Math.PI / 60;
   const send = m => Audio.send(m);
 
@@ -25,11 +25,12 @@ const UI = (() => {
     send({ t: 'rewind' }); setMode('play'); st.plays++; st.cont = st.contN = 0;
     return begin({ kind: 'play', rpm, end: st.recEnd });
   }
-  async function orig() {   // 元の音（機械を通す前に、マウスピースに入れた音）
-    if (!st.recEnd) { flash('まだ何も録っていません。先に「● 録音」を。'); return; }
+  async function orig() {   // 入れる音をそのまま聴く（蓄音機を通さない）。録音しなくても聴ける。マイクだけは録った声を
+    if (st.src === 'mic' && st.recKind !== 'mic') { flash('マイクの声は、録音すると聴けます。'); return; }
     if (!await Audio.start()) return;
-    stop(true); send({ t: 'orig', on: true });
-    return begin({ kind: 'orig' });
+    const sec = st.src === 'mic' ? st.recDur : REC_SEC[st.src] || 8;
+    stop(true); send({ t: 'orig', on: true, kind: st.src, sec });
+    return begin({ kind: 'orig', sec });
   }
   function origEnd() { if (st.act && st.act.kind === 'orig') stop(); }
   function begin(act) {
@@ -38,7 +39,7 @@ const UI = (() => {
   }
   function stop(quiet) {
     const a = st.act; if (!a) { if (!quiet) { setMode('up'); sync(); } return; }
-    if (a.kind === 'rec') { st.recEnd = Math.max(0.05, S().x); st.recDur = (performance.now() - a.t0) / 1000; }
+    if (a.kind === 'rec') { st.recEnd = Math.max(0.05, S().x); st.recDur = (performance.now() - a.t0) / 1000; st.recKind = st.src; }
     if (a.kind === 'play') st.bounced = st.contN > 10 && st.cont / st.contN < 0.85;
     st.act = null; setMode('up'); crank(); sync(); a.done();
   }
@@ -46,7 +47,7 @@ const UI = (() => {
     banner(now);
     const a = st.act; if (!a) return;
     if (a.kind === 'rec' && (now - a.t0 > a.maxSec * 1000 || S().atEnd)) stop();
-    if (a.kind === 'orig' && now - a.t0 > (st.recDur + 2) * 1000) stop();   // 終わりの知らせが来なかったとき
+    if (a.kind === 'orig' && now - a.t0 > (a.sec + 2) * 1000) stop();   // 終わりの知らせが来なかったとき
     if (a.kind === 'play') {
       if (!a.armed) { if (S().x < a.end * 0.5 || now - a.t0 > 1500) a.armed = true; return; }   // もどす知らせが届くまで待つ
       if (S().x >= a.end || S().atEnd) stop();
@@ -61,7 +62,7 @@ const UI = (() => {
   function sync() {
     const a = st.act;
     $('bRec').classList.toggle('on', !!a && a.kind === 'rec'); $('bPlay').classList.toggle('on', !!a && a.kind === 'play'); $('bOrig').classList.toggle('on', !!a && a.kind === 'orig');
-    $('bOrig').disabled = !st.recEnd && !a;
+    $('bOrig').disabled = !a && st.src === 'mic' && st.recKind !== 'mic';
     $('bPlay').disabled = !st.recEnd && !a; $('bStop').disabled = !a;
     $('rpmV').textContent = '毎分 ' + st.rpm + ' 回転'; $('lvlV').textContent = st.dB + ' dB';
     const gv = Math.pow(10, st.vol / 20); $('volV').textContent = '×' + (gv < 10 ? gv.toFixed(1) : Math.round(gv));
@@ -75,7 +76,7 @@ const UI = (() => {
       const el = (now - a.t0) / 1000; frac = el / a.maxSec; cls = 'rec';
       txt = '● 録音中' + (st.src === 'mic' ? '　マイクに話してください' : '') + '　あと ' + Math.max(0, a.maxSec - el).toFixed(1) + ' 秒';
     } else if (a.kind === 'play') { frac = a.armed ? S().x / a.end : 0; cls = 'play'; txt = '▶ 再生中（溝から計算した音）　' + Math.round(Math.min(1, frac) * 100) + '%'; }
-    else { const el = (now - a.t0) / 1000; frac = el / Math.max(0.1, st.recDur); cls = 'orig'; txt = '♪ 元の音（蓄音機を通す前の音）'; }
+    else { const el = (now - a.t0) / 1000; frac = el / Math.max(0.1, a.sec); cls = 'orig'; txt = '♪ 入れる音（蓄音機を通さない音）'; }
     bn.hidden = false; bn.className = cls;
     $('bnText').textContent = txt; $('bnBar').style.width = (Math.max(0, Math.min(1, frac)) * 100).toFixed(1) + '%';
     const lv = $('bnLv');
