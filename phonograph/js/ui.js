@@ -64,7 +64,7 @@ const UI = (() => {
     $('bRec').classList.toggle('on', !!a && a.kind === 'rec'); $('bPlay').classList.toggle('on', !!a && a.kind === 'play'); $('bOrig').classList.toggle('on', !!a && a.kind === 'orig');
     $('bOrig').disabled = !a && st.src === 'mic' && st.recKind !== 'mic';
     $('bPlay').disabled = !st.recEnd && !a; $('bStop').disabled = !a;
-    $('rpmV').textContent = '毎分 ' + st.rpm + ' 回転'; $('lvlV').textContent = st.dB + ' dB';
+    $('rpmV').textContent = '毎分 ' + st.rpm + ' 回転'; $('rpmReset').disabled = st.rpm === 60; $('lvlV').textContent = st.dB + ' dB';
     const gv = Math.pow(10, st.vol / 20); $('volV').textContent = '×' + (gv < 10 ? gv.toFixed(1) : Math.round(gv));
   }
   // 図の上のまん中の帯: いま何をしているか・あと何秒・（録音中は）入ってくる音の大きさ
@@ -185,6 +185,7 @@ const UI = (() => {
   $('bStop').onclick = () => stop();
   $('bOrig').onclick = () => { if (st.act && st.act.kind === 'orig') stop(); else orig(); };
   $('rpm').oninput = e => { st.rpm = +e.target.value; crank(); sync(); };
+  $('rpmReset').onclick = () => { st.rpm = 60; $('rpm').value = 60; crank(); sync(); };
   $('src').onchange = e => setSrc(e.target.value);
   $('lvl').oninput = e => { st.dB = +e.target.value; send({ t: 'level', dB: st.dB }); sync(); };
   $('vol').oninput = e => { st.vol = +e.target.value; send({ t: 'gain', g: Math.pow(10, st.vol / 20) }); sync(); };
