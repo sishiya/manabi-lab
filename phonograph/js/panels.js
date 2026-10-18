@@ -23,18 +23,18 @@ const Panels = (() => {
   function txt(g, s, x, y, c, al) { g.fillStyle = c; g.font = '12px "Zen Kaku Gothic New",sans-serif'; g.textAlign = al || 'left'; g.textBaseline = 'top'; g.fillText(s, x, y); }
   function waves(cv, fs) {
     const [g, w, h] = prep(cv); g.clearRect(0, 0, w, h);
-    if (!spec.wIn) { txt(g, '回すと、ここに波と成分が出ます', 10, 10, col.dim); return; }
+    if (!spec.wIn) { txt(g, L('回すと、ここに波と成分が出ます', 'Turn the drum to see the waves and their parts here'), 10, 10, col.dim); return; }
     const hw = Math.round(h * 0.42), n = Math.round(fs * 0.03), a0 = N - n;
     const tr = (x, y0, hh, c, lab) => {
       let mx = 0; for (let i = a0; i < N; i++) mx = Math.max(mx, Math.abs(x[i]));
       g.strokeStyle = col.line; g.beginPath(); g.moveTo(0, y0 + hh / 2); g.lineTo(w, y0 + hh / 2); g.stroke();
       g.beginPath(); for (let i = a0; i < N; i++) { const X = (i - a0) / n * w, Y = y0 + hh / 2 - (mx > 0 ? x[i] / mx : 0) * hh * 0.45; i === a0 ? g.moveTo(X, Y) : g.lineTo(X, Y); }
       g.strokeStyle = c; g.lineWidth = 1.3; g.stroke();
-      txt(g, lab + '（いちばん大きい所 ' + fmtPa(mx) + '）', 8, y0 + 2, c);
+      txt(g, lab + L('（いちばん大きい所 ' + fmtPa(mx) + '）', ' (peak ' + fmtPa(mx) + ')'), 8, y0 + 2, c);
     };
-    tr(spec.wIn, 0, hw / 2, col.voice, '入れた音（最後に録ったとき）: マウスピースの中の圧力');
-    tr(spec.wOut, hw / 2, hw / 2, col.play, '出た音（いま・最後に聴いたとき）: 耳もと 30 cm の圧力');
-    txt(g, '30 ミリ秒', w - 8, hw - 16, col.dim, 'right');
+    tr(spec.wIn, 0, hw / 2, col.voice, L('入れた音（最後に録ったとき）: マウスピースの中の圧力', 'Sound in (last recording): pressure in the mouthpiece'));
+    tr(spec.wOut, hw / 2, hw / 2, col.play, L('出た音（いま・最後に聴いたとき）: 耳もと 30 cm の圧力', 'Sound out (now or last playback): pressure at 30 cm'));
+    txt(g, L('30 ミリ秒', '30 ms'), w - 8, hw - 16, col.dim, 'right');
     // 成分（横は対数 50 Hz〜10 kHz、たては dB）
     const y0 = hw + 10, hh = h - y0 - 18, fx = f => Math.log(f / 50) / Math.log(200) * w, lo = 0, hi = 130, fy = d => y0 + hh * (1 - (d - lo) / (hi - lo));
     g.strokeStyle = col.line; g.lineWidth = 1;
@@ -42,7 +42,7 @@ const Panels = (() => {
     for (const d of [40, 80, 120]) { g.beginPath(); g.moveTo(0, fy(d)); g.lineTo(w, fy(d)); g.stroke(); txt(g, d + ' dB', 4, fy(d) + 1, col.dim); }
     const line = (s, c) => { g.beginPath(); let st = false; for (let k = 2; k < N / 2; k++) { const f = k * fs / N; if (f < 50 || f > 10000) continue; const X = fx(f), Y = Math.max(y0, Math.min(y0 + hh, fy(s[k]))); st ? g.lineTo(X, Y) : (g.moveTo(X, Y), st = true); } g.strokeStyle = c; g.lineWidth = 1.3; g.stroke(); };
     line(spec.in, col.voice); line(spec.out, col.play);
-    txt(g, '成分（Hz ごとの大きさ）', w - 8, y0 + 2, col.muted, 'right');
+    txt(g, L('成分（Hz ごとの大きさ）', 'Parts (loudness at each Hz)'), w - 8, y0 + 2, col.muted, 'right');
   }
   function fmtPa(p) { return p >= 1 ? p.toFixed(1) + ' Pa' : p >= 0.001 ? (p * 1000).toFixed(1) + ' mPa' : (p * 1e6).toFixed(0) + ' µPa'; }
   function foil(cv, S) {   // 箔をひろげた図: たてが周（1周目が上）、横が筒のまわり
@@ -56,7 +56,7 @@ const Panels = (() => {
     g.globalAlpha = 1;
     const circ = 2 * Math.PI * PhonoPhys.P.R, rr = S.x / circ, row = Math.floor(rr), fx = (rr - row) * w;
     g.fillStyle = col.ink; g.fillRect(fx - 1, row * rh - 2, 3, rh + 4);
-    txt(g, '1周目', 2, nR * rh + 2, col.dim); txt(g, nR + '周目（下）', w - 2, nR * rh + 2, col.dim, 'right');
+    txt(g, L('1周目', 'Turn 1'), 2, nR * rh + 2, col.dim); txt(g, L(nR + '周目（下）', 'Turn ' + nR + ' (bottom)'), w - 2, nR * rh + 2, col.dim, 'right');
   }
   return { setWaves, waves, foil, fmtPa };
 })();

@@ -23,12 +23,12 @@ function resize() {
 const dBof = p => p > 0 ? (20 * Math.log10(p / 20e-6)).toFixed(0) : '—';
 function hudText() {
   const P = PhonoPhys.P, circ = 2 * Math.PI * P.R, rpm = S.om * 60 / (2 * Math.PI);
-  const lines = [UI.status(performance.now()) + (S.atEnd ? '　箔の終わり' : ''),
-    '毎分 <b>' + rpm.toFixed(0) + '</b> 回転　' + (S.x / circ + 1).toFixed(1).padStart(4) + ' 周目',
-    S.mode === 'up' ? '' : '針の深さ <b>' + (S.z * 1e3).toFixed(3) + '</b> mm' + (S.contact ? '' : '　<span class="rec">はねている</span>'),
-    S.mode === 'rec' ? '入れた音 <b>' + dBof(S.pIn) + '</b> dB' : S.mode === 'play' ? '耳もと 30 cm <b>' + dBof(S.pOut) + '</b> dB' : ''];
-  if (performance.now() - clipT < 800) lines.push('<span class="rec">スピーカーで割れています（音量を下げて）</span>');
-  if (!Audio.ready) lines.push(Audio.err ? '<span class="rec">音が使えません: ' + Audio.err + '</span>' : '');
+  const lines = [UI.status(performance.now()) + (S.atEnd ? L('　箔の終わり', '  end of the foil') : ''),
+    L('毎分 <b>' + rpm.toFixed(0) + '</b> 回転　' + (S.x / circ + 1).toFixed(1).padStart(4) + ' 周目', '<b>' + rpm.toFixed(0) + '</b> rpm  turn ' + (S.x / circ + 1).toFixed(1)),
+    S.mode === 'up' ? '' : L('針の深さ <b>', 'Needle depth <b>') + (S.z * 1e3).toFixed(3) + '</b> mm' + (S.contact ? '' : L('　', '  ') + '<span class="rec">' + L('はねている', 'jumping') + '</span>'),
+    S.mode === 'rec' ? L('入れた音 <b>', 'Input <b>') + dBof(S.pIn) + '</b> dB' : S.mode === 'play' ? L('耳もと 30 cm <b>', 'At 30 cm <b>') + dBof(S.pOut) + '</b> dB' : ''];
+  if (performance.now() - clipT < 800) lines.push('<span class="rec">' + L('スピーカーで割れています（音量を下げて）', 'The speaker is clipping (turn it down)') + '</span>');
+  if (!Audio.ready) lines.push(Audio.err ? '<span class="rec">' + L('音が使えません: ', 'Sound is not available: ') + Audio.err + '</span>' : '');
   hud.innerHTML = lines.filter(Boolean).join('\n');
 }
 let last = performance.now(), lastFoil = 0;

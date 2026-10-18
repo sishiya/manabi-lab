@@ -88,7 +88,7 @@ function Phono(fs, opt) {
   this.len = Math.floor(p.nRev * this.circ / p.dx);
   this.s = new Float32Array(this.len);                // 溝の深さ（らせんにそった位置ごと）
   this.segN = 256; this.seg = new Float32Array(p.nRev * this.segN); this.segDirty = new Uint8Array(p.nRev);
-  this.x = 0; this.om = 0; this.omT = 0; this.hand = false;
+  this.x = 0; this.om = 0; this.omT = 0; this.hand = false; this.tauH = P.tauHand;
   this.mode = 'up'; this.z0 = -0.4e-3; this.z0T = -0.4e-3;
   this.Fc = 0; this.pen = 0; this.penPrev = 0; this.contact = false; this.wear = 0; this.atEnd = false;
   const k = this.plate.kPoint, f = this.foil;
@@ -102,7 +102,7 @@ Phono.prototype.setMode = function (m) {   // 'up'（針を上げる）・'rec'�
 };
 Phono.prototype.rewind = function () { this.x = 0; this.atEnd = false; };
 Phono.prototype.resetFoil = function () { this.s.fill(0); this.seg.fill(0); this.segDirty.fill(0); this.x = 0; this.wear = 0; this.atEnd = false; };
-Phono.prototype.setCrank = function (hand, om) { this.hand = !!hand; this.omT = om; };
+Phono.prototype.setCrank = function (hand, om, tau) { this.hand = !!hand; this.omT = om; this.tauH = tau || this.p.tauHand; };   // tau: 手が筒をじかにつかんでいるときは短く
 Phono.prototype.wCenter = function () { let w = 0; for (let i = 0; i < this.nm; i++) w += this.q[i]; return w; };
 
 // 針の先（丸い）と溝のふれあい。録音もすり減りも同じ式: 弾性で押し返し、力が「その深さを刻む力」をこえたら箔が流れて溝が深くなる。
@@ -139,10 +139,10 @@ Phono.prototype.process = function (pin, pout, n) {
     for (let o = 0; o < ov; o++) {
       const pr = pa + (pk - pa) * (o + 1) / ov;
       // クランクとはずみ車
-      if (this.hand) this.om += (this.omT - this.om) * dt / p.tauHand; else this.om -= this.om * dt / p.tauCoast;
-      if (this.om < 0) this.om = 0;
+      if (this.hand) this.om += (this.omT - this.om) * Math.min(1, dt / this.tauH); else this.om -= this.om * dt / p.tauCoast;   // 逆回しもできる
       this.x += this.om * p.R * dt;
       if (this.x > maxX) { this.x = maxX; this.om = 0; this.atEnd = true; }
+      if (this.x < 0) { this.x = 0; this.om = 0; }
       this.z0 += (this.z0T - this.z0) * dt / 0.05;                       // 針をおろす・上げる（0.05 秒で）
       // 振動板＋針
       let w = 0; for (let i = 0; i < nm; i++) w += q[i];

@@ -74,7 +74,7 @@ const Draw = (() => {
     circ(xc, 0, RT, col.ink, null);
     // 声・音
     const t = performance.now() / 1000;
-    if (S.mode === 'rec' && S.pIn > 0.05) waves(xr + 36, col.voice, clamp(Math.log10(S.pIn / 0.05) / 2.5, 0.1, 1), t, 1);
+    if (S.mode === 'rec' && S.pIn > 0.05 && !S.src) waves(xr + 36, col.voice, clamp(Math.log10(S.pIn / 0.05) / 2.5, 0.1, 1), t, 1);
     if (S.mode === 'play' && S.pOut > 2e-4) waves(xr + 36, col.play, clamp(Math.log10(S.pOut / 2e-4) / 2.5, 0.1, 1), t, -1);
   }
   function waves(X0, c, a, t, dir) {   // 口のまわりの音の輪（dir: 1 は入ってくる、-1 は出ていく）
@@ -109,7 +109,7 @@ const Draw = (() => {
     g.strokeStyle = col.muted; g.lineWidth = 2; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x0 + px, y0); g.moveTo(x0, y0 - 4); g.lineTo(x0, y0 + 4); g.moveTo(x0 + px, y0 - 4); g.lineTo(x0 + px, y0 + 4); g.stroke();
     g.fillStyle = col.muted; g.font = '12px "IBM Plex Mono",monospace'; g.textAlign = 'left'; g.textBaseline = 'bottom';
     const lab = v >= 1 ? v + ' mm' : v >= 0.001 ? (v * 1000).toFixed(0) + ' µm' : v + ' mm';
-    g.fillText(lab + (cam.E > 1 ? L('　動きと深さは ' + cam.E + ' 倍に', '') : L('　本当の大きさ', '')), x0, y0 - 6);
+    g.fillText(lab + (cam.E > 1 ? L('　動きと深さは ' + cam.E + ' 倍に', '  motion and depth ×' + cam.E) : L('　本当の大きさ', '  true size')), x0, y0 - 6);
   }
   function hit(px, py) {   // マウスの下の部品
     const X = wx(px), Y = wy(py), G = Draw.lastG; if (!G) return null;
@@ -127,8 +127,11 @@ const Draw = (() => {
   // 入れる音を「♪ 聴く」で鳴らしているあいだ: 図の右はしに、音の出どころ（声なら横顔、ほかはスピーカー）と、広がる音の輪。蓄音機は通さない
   function source(S) {
     if (!S.src) return;
-    const g = Draw.g, x = cam.w - 46, y = cam.h * 0.55, t = performance.now() / 1000, voice = S.src === 'mary' || S.src === 'vowel' || S.src === 'mic';
-    g.save(); g.strokeStyle = col.voice; g.lineWidth = 1.6; g.globalAlpha = 0.85;
+    // 置き場所: マウスピースの口のすぐ右（世界の座標）。図のはしからはみ出すなら、はしに寄せて小さく
+    const G = Draw.lastG, px = Math.min(cam.w - 20, sx(G.xRim + 46)), py = sy(0), sc = Math.max(0.6, Math.min(1, cam.k / 3));
+    const g = Draw.g, x = 0, y = 0, t = performance.now() / 1000, voice = S.src === 'mary' || S.src === 'vowel' || S.src === 'mic';
+    g.save(); g.translate(px, py); g.scale(sc, sc);
+    g.strokeStyle = col.voice; g.lineWidth = 1.6; g.globalAlpha = 0.85;
     if (voice) {   // 左を向いた横顔（線だけ）
       g.beginPath();
       g.moveTo(x + 16, y - 26); g.bezierCurveTo(x - 2, y - 30, x - 12, y - 18, x - 11, y - 8);   // 頭の上〜ひたい
