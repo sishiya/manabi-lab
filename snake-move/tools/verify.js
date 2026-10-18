@@ -16,7 +16,8 @@ const row = (name, o, dt) => {
   return r;
 };
 if (mode === 'ground') {
-  console.log('論文（Hu 2009 の模型）: 持ち上げなし 0.17、持ち上げ 0.23（+35%）、実測 0.22 ± 0.08。摩擦が同じならほとんど進まない');
+  console.log('実物（Hu 2009）: 0.22 ± 0.08 体長/周期・波長 0.4・ふれはば 0.1（形はこれに合わせた α 12・k 3.6）。論文の模型（α 7・k 2）は 持ち上げなし 0.17・持ち上げ 0.23');
+  row('論文の模型の形 α7 k2 持ち上げ', { alpha: 7, k: 2 });
   row('布・持ち上げなし', { surf: 'cloth', lift: false });
   row('布・持ち上げ', { surf: 'cloth', lift: true });
   row('なめらかな板・持ち上げ', { surf: 'board', lift: true });
@@ -32,10 +33,11 @@ else if (mode === 'tree') {
   const TR = require('../js/tree.js');
   const show = (n, o, dt) => {
     const r = TR.measure(o, 4, dt);
-    console.log(`${n.padEnd(20)} 1回で ${(r.up * 100).toFixed(2)} cm  速さ ${(r.speed * 100).toFixed(2)} cm/s  落ちた ${r.fellAt ? r.fellAt.toFixed(2) + ' 秒' : 'なし'}  つかみ ${(r.lg * 100).toFixed(1)} cm  まん中 ${(r.lm * 100).toFixed(1)} cm  ひと回り ${r.encircle}  必要 ${(r.need * r.lg / (0.042 * 9.81)).toFixed(2)} 体重  使う最大 ${(r.useMax * 100).toFixed(0)}%`);
+    console.log(`${n.padEnd(20)} 1回で ${(r.up * 100).toFixed(2)} cm  速さ ${(r.speed * 100).toFixed(2)} cm/s  落ちた ${r.fellAt ? r.fellAt.toFixed(2) + ' 秒' : 'なし'}  つかみ ${(r.lg * 100).toFixed(1)} cm  まん中 ${(r.lm * 100).toFixed(1)} cm  ひと回り ${r.encircle}  必要 ${(r.need * r.lg / (0.421 * 9.81)).toFixed(2)} 体重  使う最大 ${(r.useMax * 100).toFixed(0)}%`);
     return r;
   };
-  for (const D of [0.02, 0.03, 0.04, 0.05, 0.055, 0.06]) show(`幹 ${D * 100} cm`, { D });
+  console.log('実物（Astley & Jayne 2007、125 cm）: まっすぐ立つ柱を 1.6・2.9・4.1 cm は登れた、5.7 cm 以上は登れない');
+  for (const D of [0.016, 0.029, 0.041, 0.045, 0.05, 0.057]) show(`幹 ${(D * 100).toFixed(1)} cm`, { D });
   show('順番ちがい', { order: 'wrong' });
   show('ウロコを立てない', { scales: 'flat' });
   show('ななめ 45°', { slope: 45 });

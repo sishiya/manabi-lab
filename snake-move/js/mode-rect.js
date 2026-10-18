@@ -6,7 +6,7 @@ window.MODES = window.MODES || {};
   const f2 = x => x.toFixed(2), f1 = x => x.toFixed(1), f0 = x => x.toFixed(0);
   const C = { sky: '#14202c', ground: '#2a3326', line: '#55664c', body: '#3d6b4d', edge: '#a6e07a', bone: '#7fd4ff', skin: '#ffc95a', stuck: '#a6e07a',
     push: '#a6e07a', drag: '#ff8a7a', ink: '#e8f0f4', muted: '#a3b4bf' };
-  const BODY_H = 0.03;      // 体の太さ（推定）
+  const BODY_H = 0.05;      // 体の太さ（推定）
   const RP = { surf: 'cloth', duty: 0.5 };
   const MARK = 60;          // 印をつける区切り（まん中あたり）
 
@@ -18,7 +18,7 @@ window.MODES = window.MODES || {};
       { say: '体はうねらない。<b>青い点（背骨）</b>は同じ速さで進む。ボアなど太いヘビの進み方。', layers: { skin: false, rforce: false, plot: false } },
       { say: '下の黄色い線は<b>おなかの皮</b>（ウロコ）。皮だけが背骨に対して前後にずれ、<b>縮んだ所が地面に止まる</b>（緑）。', layers: { skin: true, rforce: false, plot: false } },
       { say: '縮む波は<b>頭から尾へ</b>流れる（体に2つ）。止まった皮を足場にして、筋肉が背骨を前へ引く。', ring: 'stuck', layers: { skin: true, rforce: false, plot: false } },
-      { say: '上のグラフ: 背骨の印（青）はなめらかに、皮の印（黄）は<b>止まっては進む</b>（1回 2.5 cm）。', layers: { skin: true, rforce: false, plot: true } },
+      { say: '上のグラフ: 背骨の印（青）はなめらかに、皮の印（黄）は<b>止まっては進む</b>（1回 4.5 cm）。', layers: { skin: true, rforce: false, plot: true } },
       { say: '緑は止まった皮が受ける<b>前向きの摩擦</b>、赤は前へすべる皮の<b>引きずる摩擦</b>。止まっている所が足りると、すべらずに進める。', layers: { skin: true, rforce: true, plot: false } },
       { say: '<b>試してみよう</b>: 皮が止まっている時間を短くすると（速く進もうとすると）…', act: [['止まる時間 35%', () => UI.setSlider('duty', 0.35)], ['なめらかな板にも', () => { UI.setSlider('duty', 0.4); UI.set('rsurf', 'board'); }], ['もとにもどす', () => { UI.setSlider('duty', 0.5); UI.set('rsurf', 'cloth'); }]], layers: { skin: true, rforce: true, plot: true } },
     ],
@@ -127,13 +127,13 @@ window.MODES = window.MODES || {};
     refresh(A) {
       const r = $('ruler'), res = $('result'), s = M.s, p = s.p, U = M.speed;
       const sf = GROUND.SURF[p.surf], need = sf.mf / (sf.mf + sf.mb);
-      const slipping = U != null && U < s.c * 0.98;
+      const slipping = U != null && U < s.c * 0.995;
       r.innerHTML = U == null ? '' : `進む速さ 秒速 <span class="big">${f2(U * 100)}</span> cm（1分で ${f0(U * 6000)} cm）${slipping ? `・<span class="bad">皮がすべって ${f0((1 - U / s.c) * 100)}% 遅い</span>` : '・皮はすべらない'}`;
       res.textContent = slipping
         ? `止まる時間 ${f0(p.duty * 100)}%: 前へすべる皮の摩擦（${sf.mf}×${f0((1 - p.duty) * 100)}%）が、止まった皮の摩擦の上限（${sf.mb}×${f0(p.duty * 100)}%）より大きい。止まるはずの皮が後ろへすべる（Lissmann は、とてもなめらかな所で後ろへすべると書いている）。`
         : `止まる時間 ${f0(p.duty * 100)}%。この地面では ${f0(need * 100)}% 以上止まっていれば、すべらない。`;
       res.classList.toggle('bad', slipping);
-      $('readout').innerHTML = `<span>1回の波で皮が進む <b>${p.step * 100} cm</b></span><span>波 <b>${p.waves}</b> つ・1回 <b>${p.tau} 秒</b>（推定）</span><span>止まっている皮 <b>${f0(s.stuckFrac * 100)}%</b></span><span>体長 <b>${p.L * 100} cm</b></span>`;
+      $('readout').innerHTML = `<span>1回の波で皮が進む <b>${p.step * 100} cm</b></span><span>体に波 <b>${p.waves}</b> つ・1回 <b>${p.tau} 秒</b></span><span>止まっている皮 <b>${f0(s.stuckFrac * 100)}%</b></span><span>体長 <b>${p.L * 100} cm</b></span>`;
     },
   };
   MODES.straight = M;

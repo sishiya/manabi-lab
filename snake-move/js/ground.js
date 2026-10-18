@@ -18,7 +18,8 @@
   function make(o = {}) {
     const p = Object.assign({
       L: 0.30, mass: 0.0152, tau: 2.0,  // Hu 2009 の模型の長さ 30 cm・周期 2 秒、ミルクヘビ 15.2 g
-      alpha: 7, k: 2,                   // κ L = α cos kπ(s/L + t/τ)（Hu 2009 の値）
+      alpha: 12, k: 3.6,                // κ L = α cos kπ(s/L + t/τ)。実物の形（Hu 2009 の測定: 波長 0.4 ± 0.1 L・ふれはば 0.1 ± 0.03 L）に合う値。
+                                        // （Hu 2009 の模型の値は α 7・k 2 だが、波長 0.77 L・ふれはば 0.2 L になり実物の形と合わない）
       surf: 'cloth', lift: true, slope: 0, // 坂（度）。+ のとき、頭のはじめの向き（+x）が上り
       gait: 'slither', delta: 1.51, contact: 0.3,   // 'side' = 横ばい（上下の波の位相のずれ・ふれる長さの割合）
     }, o);
@@ -45,11 +46,14 @@
     let th = 0, x = 0, y = 0;
     const kap = out === s ? s.kap : (out._k || (out._k = new Float64Array(N)));
     for (let i = 0; i < N; i++) {
-      const si = (i + 0.5) / N;
-      kap[i] = p.alpha / p.L * Math.cos(p.k * Math.PI * (si + t / p.tau));
+      const si = (i + 0.5) / N, ph = p.k * Math.PI * (si + t / p.tau);
+      kap[i] = p.alpha / p.L * Math.cos(ph);
     }
     for (let i = 0; i < N; i++) {
-      if (i > 0) { const th0 = th; th += 0.5 * (kap[i - 1] + kap[i]) * ds; const tm = 0.5 * (th0 + th); x += Math.cos(tm) * ds; y += Math.sin(tm) * ds; }
+      if (i > 0) {
+        const th0 = th; th += 0.5 * (kap[i - 1] + kap[i]) * ds; const tm = 0.5 * (th0 + th);
+        x += Math.cos(tm) * ds; y += Math.sin(tm) * ds;
+      }
       bx[i] = x; by[i] = y; bt[i] = th;
     }
     // 重心を原点へ、平均の向き（尾から頭の弦ではなく、接線の向きの平均）を 0 へ

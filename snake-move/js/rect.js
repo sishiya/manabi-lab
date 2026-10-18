@@ -10,11 +10,11 @@
 
   function make(o = {}) {
     const p = Object.assign({
-      L: 0.6, mass: 0.15,        // Lissmann 1950 の若いボア（57・60 cm）。重さは推定
-      waves: 2,                  // 体にのる波の数（Lissmann 1950: ふつう2つ）
-      step: 0.025,               // 1回の波で皮が進む長さ（Lissmann 1950: 2〜3 cm）
-      tau: 2,                    // 波1回の時間（推定）
-      duty: 0.5,                 // 皮が止まっている時間の割合（推定。Newman & Jayne: 速いときは短い）
+      L: 1.32, mass: 0.916,      // Newman & Jayne 2018 のボア（全長 132 cm・916 g）
+      waves: 2.8,                // 体にのる波の数: 波長 96 枚のウロコ（240 枚で胴 118 cm）≈ 0.47 m（Newman & Jayne 2018）
+      step: 0.045,               // 1回の波で皮が進む長さ: 皮のずれ 19 mm ≈ 歩幅 × 止まる割合 から（推定）
+      tau: 3,                    // 波1回の時間: 波の速さ 32 個の骨／秒 ÷ 波長 96 → 0.33 回／秒（Newman & Jayne 2018）
+      duty: 0.42,                // 皮が止まっている時間の割合（Newman & Jayne 2018 の平均 42%）
       surf: 'cloth',
     }, o);
     const s = { p, t: 0, X: 0, V: 0, Vc: 0, u: new Float64Array(N), ud: new Float64Array(N), v: new Float64Array(N), f: new Float64Array(N),

@@ -17,16 +17,17 @@
 
   function make(o = {}) {
     const p = Object.assign({
-      L: 0.61, mass: 0.042,    // Marvi & Hu 2012 のコーンスネーク（61 cm・42 g）
-      d: 0.014,                // 体の太さ（推定）
+      L: 1.25, mass: 0.421,    // Astley & Jayne 2007 のコーンスネーク（全長 125 cm・421 g）
+      d: 0.021,                // 体の太さ 2.1 cm（同）
+      grip: 0.11,              // つかみ1か所で幹に巻ける体の長さ（推定。4.1 cm は登れて 5.7 cm は登れない、という実測に合わせた）
       D: 0.04,                 // 幹の太さ（直径 m）
       slope: 90,               // 幹の傾き（度。90 = まっすぐ立った幹）
       tau: 4,                  // 1回のつかみなおしの時間（秒。推定）
       safety: 4,               // 締めつけの余裕（必要な力の何倍。Marvi & Hu 2012 では最大4倍）
       scales: 'dig',           // ウロコを立てる／立てない
       order: 'right',          // 'right' = 上をつかんでから下を放す、'wrong' = 下を先に放す
-      fold: 0.45,              // 折りたたんだ所の、たての長さの割合（推定）
-      tailLen: 0.07, headLen: 0.07,
+      fold: 0.7,               // 折りたたんだ所の、たての長さの割合（推定）
+      tailLen: 0.19, headLen: 0.05,   // 尾 = 全長 − 胴 106 cm（同）
     }, o);
     const s = {
       p, t: 0, Z: 0.4, V: 0,          // Z = 尾の先の高さ（m）、V = その速さ
@@ -46,14 +47,17 @@
     return s;
   }
 
-  // 体の区切り: 尾・下のつかみ・まん中・上のつかみ・頭。つかむには幹のまわり（πD）くらいの長さがいる（Savidge ほか 2021）
+  // 体の区切り: 尾・下のつかみ・まん中・上のつかみ・頭。
+  // つかみ1か所は、ひと回り（πD）か、巻ける長さ grip の短いほう。強く締めつけるには 180° より多く巻く必要がある
+  // （Astley & Jayne 2007: 「180° をこえる巻きつけなら、いつでも強く締めつけられる」。太い枝では巻ききれずに登れない）
   function layout(s) {
     const p = s.p, circ = Math.PI * (p.D + p.d);
     const free = p.L - p.tailLen - p.headLen;
     const minM = 0.05;                         // まん中は少なくとも 5 cm
-    const lg = Math.min(circ, (free - minM) / 2);
+    const lg = Math.min(circ, p.grip, (free - minM) / 2);
     s.lg = lg; s.lm = free - 2 * lg; s.circ = circ;
-    s.encircle = lg >= circ * 0.999;           // ひと回りできないと締めつけられない
+    s.wrapDeg = lg / ((p.D + p.d) / 2) * 180 / Math.PI;
+    s.encircle = s.wrapDeg > 180;              // 180° より多く巻けないと締めつけられない
     // 巻いた所の、たての長さの割合（らせんのピッチを体の太さの2倍とした。推定）
     const pitch = 2 * p.d;
     s.cw = pitch / Math.hypot(circ, pitch);
