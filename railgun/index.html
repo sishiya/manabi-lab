@@ -1,0 +1,106 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>レールガンのしくみ</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2314202c'/><rect x='10' y='20' width='44' height='6' fill='%237fd4ff'/><rect x='10' y='38' width='44' height='6' fill='%237fd4ff'/><rect x='34' y='26' width='8' height='12' fill='%23ffc95a'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css?v=2">
+
+<div id="app">
+  <header id="top"><h1>レールガンのしくみ</h1><span class="sub">2本のレールと大電流だけで、弾を秒速2 kmこえまで</span></header>
+
+  <section id="pin">
+    <div id="stage">
+      <canvas id="cv"></canvas>
+      <div id="card"></div>
+      <div id="zoom"><button data-z="out" title="引く">−</button><button data-z="in" title="寄る">＋</button><button id="bInset" title="断面を見る">断面</button></div>
+      <button id="next">つぎへ ▶</button>
+      <div id="tip" hidden></div>
+    </div>
+    <div id="bar">
+      <button id="play">▶ 発射</button>
+      <input type="range" id="time" min="0" max="1000" value="0" step="1" aria-label="時刻">
+      <span id="tlabel">0.00 ms</span>
+    </div>
+    <div id="readout"></div>
+  </section>
+
+  <main id="below">
+    <section id="results"></section>
+
+    <section class="box">
+      <h2>エネルギーの行き先 <small>（はじめにコンデンサにためた分を 100%）</small></h2>
+      <div id="energy"></div>
+    </section>
+
+    <section class="box">
+      <h2>電流と弾の速さ <small>（グラフをさわるとその時刻へ）</small></h2>
+      <canvas id="graph"></canvas>
+    </section>
+
+    <section class="box" id="controls">
+      <h2>自分で試す</h2>
+      <div class="row"><label>大きさ</label>
+        <select id="preset">
+          <option value="atla">40 mm 試作の大きさ（防衛装備庁の公開値に合わせた推定）</option>
+          <option value="isl">25 MJ 艦載砲の計算例（ISL の論文の値）</option>
+        </select></div>
+      <div class="row"><label>ためる電気</label><input type="range" id="E"><span id="Ev"></span></div>
+      <div class="row"><label>弾の重さ</label><input type="range" id="m"><span id="mv"></span></div>
+      <div class="row"><label>放電のしかた</label>
+        <span class="seg"><button data-seq="1" class="on">弾にあわせて順に</button><button data-seq="0">一度に全部</button></span></div>
+      <p class="note" id="warn"></p>
+    </section>
+
+    <section class="box" id="explain">
+      <h2>しくみのまとめ</h2>
+      <ol>
+        <li><b>電流のまわりに磁場</b>: 上のレール → 電機子 → 下のレールと電流がひと回りする。2本のレールの間では、どちらの電流が作る磁場も同じ向き（⊗ 奥へ）になり、強めあう。</li>
+        <li><b>磁場の中の電流は押される</b>（ローレンツ力）: 電機子を下向きに流れる電流が、奥向きの磁場に前へ押される。左手の法則と同じ。</li>
+        <li><b>力は電流の2乗</b>: F = ½ L′ I²。L′ はレールの形で決まる数（1 m あたり約 0.5 µH）。電流が2倍なら力は4倍。100万アンペア（1 MA）で約 25 万ニュートン（約25トンの重さ）。</li>
+        <li><b>エネルギーは半分ずつ</b>: 電源が送りこむ電気のうち、弾を押す仕事と同じだけが、弾のうしろにのびていく磁場にたまる（Hundertmark & Liebfried 2017）。弾が抜けると、その磁場は砲口の火花になる。だから抵抗がなくても、電流を一定にしたままでは半分しか弾にわたらない。</li>
+        <li><b>コンデンサは順に</b>: 1台ずつは短い山の形の電流。弾が進むのにあわせて順にスイッチを入れ、電流をほぼ一定に保つ（弾にかかる力の山をおさえる）。「一度に全部」にすると、この計算では効率は上がるが、電流の山がレールの限界をこえ、弾にも大きな衝撃がかかる。</li>
+        <li><b>むずかしいところ</b>: 抵抗の熱、レールどうしが押し広げられる力、速くなると電機子とレールの間が離れて火花になる損失（PEGASUS の実験）、レールのすりへり、大きな電源（40 mm 試作で 20 ft コンテナ4台）。</li>
+      </ol>
+      <h3>計算のしかた</h3>
+      <p>コンデンサ C・コイル L・抵抗 R・クローバーダイオードの「台」を 10 台、レールの根元につなぐ（ISL の論文と同じ回路）。レールは長さ x のぶんだけインダクタンス L′x と抵抗 R′x をもつ。回路の式と弾の運動の式（m dv/dt = ½L′I² の 90%。のこり 10% は摩擦）をいっしょに、0.5 マイクロ秒ずつ RK4 で解く。エネルギーの帳じりは 1万分の1 以内。</p>
+      <p>検証: 論文の 25 MJ 艦載砲の計算例（10 台・L′ 0.5 µH/m・8 kg）を同じ値で計算すると、初速 2,527 m/s・電流の平らな所 4.5 MA・効率 48 / 41 / 34%（論文: 約 2,500 m/s・約 4.5 MA・47 / 40 / 33%）。</p>
+    </section>
+
+    <details id="about" class="box">
+      <summary>このアプリについて</summary>
+      <p>レールガンのしくみを、回路と運動の式で計算して見せる学習用のアプリです。作り方や、まねをして作ることはすすめません（何十万〜何百万アンペアの電流と高い電圧はとても危険です）。</p>
+      <h3>記録・推定・目印</h3>
+      <ul>
+        <li><b>記録（公開値）</b>: 防衛装備庁の 40 mm 試作の口径・全長 約6 m・充電 5 MJ・初速 2,297 m/s（2,300 m/s 以上）・レール耐久 200 発以上。弾 約320 g・8.5 kV は報道（装備庁の 2022 年の資料から）。</li>
+        <li><b>推定</b>: 40 mm 試作の中の回路（台の数・C・L・R・L′・R′・スイッチの位置）は公開されていないので、ISL と同じ形の回路で、公開値（5 MJ・320 g で 2,297 m/s、効率 約17%）に合うよう選んだ。レールの限界の目安 2 MA は、同じ 40 mm のドイツ・フランスの PEGASUS の値。</li>
+        <li><b>目印・目安</b>: 電子の動き（何万倍にして描く）、⊗ の並び、砲口の火花の形、装弾筒のはなれ方、引いたときのたての太さ、コンデンサの箱の大きさ。磁場の強さ（B ≈ L′I／2w）と電子の速さは平均の見積もり。</li>
+      </ul>
+      <h3>簡単にしているところ</h3>
+      <ul>
+        <li>L′ と R′ は一定（本物は電流が表面に集まる効果で時間とともに変わる）。レールの温度上昇による抵抗の変化、弾の前の空気、電機子とレールの間の火花は入れていない。</li>
+        <li>摩擦は押す力を 10% 減らすだけ（論文と同じ扱い）。砲口を出たあとの電流と火花は計算していない（残った磁場のエネルギーを数えるだけ）。</li>
+        <li>砲口を出たあとの弾は同じ速さでまっすぐ描く（空気の抵抗・重力は入れていない）。</li>
+      </ul>
+      <h3>おもな出どころ</h3>
+      <ul>
+        <li>防衛装備庁 陸上装備研究所「電磁加速システムの洋上射撃試験」防衛装備庁 技術シンポジウム2025 講演資料（<a href="https://www.mod.go.jp/atla/research/ats2025/pdf_oral_matl/1111_1545_s11.pdf" target="_blank" rel="noopener">PDF</a>）</li>
+        <li>ITmedia NEWS「レールガンの洋上射撃試験 装備庁・海自『世界初』」2023-10-17（<a href="https://www.itmedia.co.jp/news/articles/2310/17/news161.html" target="_blank" rel="noopener">記事</a>。初速 2,297 m/s・戦車砲 約1,750 m/s）</li>
+        <li>S. Hundertmark, O. Liebfried, "Power Supply Options for a Naval Railgun", arXiv:1709.05901 (2017)（<a href="https://arxiv.org/abs/1709.05901" target="_blank" rel="noopener">arXiv</a>。回路・台の値・効率の式）</li>
+        <li>S. Hundertmark, G. Vincent, D. Simicic, M. Schneider, "Increasing Launch Efficiency with the PEGASUS Launcher", arXiv:1612.03614 (2016)（<a href="https://arxiv.org/abs/1612.03614" target="_blank" rel="noopener">arXiv</a>。40 mm・6 m・300 g が 3,100 m/s、電流 約1〜1.3 MA、レールの限界 約2 MA、接触の火花）</li>
+        <li>N. W. Ashcroft, N. D. Mermin, <i>Solid State Physics</i> (1976) 表1.1（アルミの自由電子の数密度）</li>
+      </ul>
+      <h3>使っているもの</h3>
+      <p>フォント: Google Fonts（SIL Open Font License）</p>
+    </details>
+  </main>
+</div>
+
+<script src="js/physics.js?v=2"></script>
+<script src="js/presets.js?v=2"></script>
+<script src="js/sim.js?v=2"></script>
+<script src="js/draw.js?v=2"></script>
+<script src="js/graph.js?v=2"></script>
+<script src="js/ui.js?v=2"></script>
+<script src="js/main.js?v=2"></script>
