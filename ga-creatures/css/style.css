@@ -89,8 +89,14 @@ details ul.src li+li{margin-top:3px}
 /* portrait phones: one column; the running view stays pinned at the top */
 @media (max-width:860px) and (orientation:portrait){
   #app{grid-template-columns:1fr;height:auto}
-  #stage{padding:10px 16px 8px}
-  #frame{flex:none;height:min(42svh,380px)}
+  /* 走る様子（#frame）と、そのすぐ下の操作の帯（#watchbar）を上に固定し、一覧・グラフ・右の欄はページごとスクロール（RULES 9章。2026-10-18。
+     以前は「固定」と書いていたが #stage の中でしか貼りつかず、スクロールすると消えていた）。#stage を display:contents にして #app の終わりまで貼りつく */
+  #app{position:relative;--fh:min(38svh,330px)}
+  #stage{display:contents}
+  #stage>*{margin-inline:16px}
+  #frame{flex:none;height:var(--fh);position:sticky;top:10px;z-index:6;margin-top:10px;box-shadow:0 0 0 10px var(--stage);border-radius:6px;background:var(--stage)}
+  #watchbar{position:sticky;top:calc(var(--fh) + 10px);z-index:6;background:var(--stage);padding:8px 0 6px;margin-inline:0;padding-inline:16px;border-bottom:1px solid var(--line)}
+  #lower{margin-top:8px;margin-bottom:8px}
   .mobile-only{display:inline-block}
   .gridbox .cvwrap{height:220px}
   #lower{grid-template-columns:1fr;flex:none}

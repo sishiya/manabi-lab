@@ -408,6 +408,8 @@ function drawLabels(S, g, W, H) {
   g.font = '500 12px "Zen Kaku Gothic New", "Yu Gothic", sans-serif';
   g.textBaseline = 'middle';
   const bottom = H - (VIEW.padB || 70) + 6;
+  // 上の限り: 左上の題（スマホでは見かたのボタンの下に2行）にかぶらないように（2026-10-18）
+  const sn = document.getElementById('stageName'), top = Math.max(56, sn ? sn.offsetTop + sn.offsetHeight + 4 : 56);
   for (const L of list) {
     const name = organName(L.id);   // organName (main.js) はこのループの外の L() を使う
     const cat = L.id === 'hemo' ? 'hem' : ORGAN_BY_ID[L.id].cat;
@@ -415,7 +417,7 @@ function drawLabels(S, g, W, H) {
     let best = null;
     for (const [dx, dy] of [[14, -16], [-14 - w, -16], [14, 14], [-14 - w, 14], [20, -34], [-20 - w, -34], [20, 32], [-20 - w, 32]]) {
       const r = { x: L.p[0] + dx, y: L.p[1] + dy - h / 2, w, h };
-      if (r.x < 4 || r.y < 56 || r.x + r.w > W - 4 || r.y + r.h > bottom) continue;
+      if (r.x < 4 || r.y < top || r.x + r.w > W - 4 || r.y + r.h > bottom) continue;
       if (placed.some(q => r.x < q.x + q.w + 3 && r.x + r.w + 3 > q.x && r.y < q.y + q.h + 2 && r.y + r.h + 2 > q.y)) continue;
       best = r; break;
     }

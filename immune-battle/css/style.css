@@ -230,3 +230,16 @@ input[type=checkbox]{accent-color:var(--acc)}
 .langsw{flex:none;display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
 .langsw button{border:0;background:none;padding:3px 8px;font:inherit;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--dim);cursor:pointer}
 .langsw button[aria-pressed="true"]{background:#1f272e;color:var(--ink)}
+/* スマホ縦: 断面（時間のバーつき）と、そのすぐ下のいまの様子（#status）を上に固定し、グラフと右の欄はページごとスクロール（RULES 9章。2026-10-18）。
+   #stage を display:contents にして、2つが #app の終わりまで貼りつくように。#status は断面の高さ（--mh）の下に重ねて貼る */
+@media (max-width:860px) and (orientation:portrait){
+  #app{--mh:46vh}
+  @supports (height:1dvh){#app{--mh:46dvh}}
+  #stage{display:contents}
+  #microWrap{position:sticky;top:0;z-index:6;height:var(--mh);min-height:300px;background:var(--bg)}
+  #status{position:sticky;top:max(var(--mh),300px);z-index:6;border-bottom:1px solid var(--line)}
+}
+/* ズームの −・＋ と小窓のたたむボタンが幅 15〜17px で押しにくかった（2026-10-18）→ 押せる幅を広げる（見た目の記号はそのまま） */
+#zoomCtl #zoomIn,#zoomCtl #zoomOut{min-width:30px;padding:3px 6px}
+.bwHead button{min-width:28px;min-height:24px;padding:2px 6px}
+@media (pointer:coarse){#zoomCtl #zoomIn,#zoomCtl #zoomOut{min-width:34px}#zoomCtl button{min-height:30px}}

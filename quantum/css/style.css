@@ -101,3 +101,16 @@ footer{font-size:12px;color:var(--dim);border-top:1px solid var(--line);padding-
 .langsw button{font:inherit;border:0;background:var(--raise);color:var(--dim);padding:3px 9px;font-size:11px;font-weight:700;letter-spacing:.04em;cursor:pointer}
 .langsw button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
 .why>div[lang]{display:contents}
+/* スマホ: 実験ごとのいちばん大事な図だけ上に固定し、ボタン・スライダー・説明はスクロール（RULES 9章。2026-10-18）。
+   .stage を display:contents にして、図が .exp-body（右の操作の欄まで）の終わりまで貼りつくように */
+@media (max-width:600px){
+  .exp-body{gap:10px}
+  .stage{display:contents}
+  #slitApp,#tunCv,#polCv,#bellCv,.stage>.two{position:sticky;top:6px;z-index:3;box-shadow:0 0 0 6px var(--bg)}
+  #slitApp{height:200px!important}
+  #tunCv{height:230px!important}
+  #polCv{height:210px!important}
+  #bellCv{height:190px!important}
+  .stage>.two{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;background:var(--bg)}
+  #unX,#unP{height:150px!important}
+}

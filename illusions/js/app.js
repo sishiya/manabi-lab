@@ -148,7 +148,9 @@ function sizeStage() {
   const pad = mobile ? 32 : 44, frame = 22;
   const top = $('top').offsetHeight;
   const availW = wrap.clientWidth - pad - frame;
-  const availH = mobile ? window.innerHeight * 0.62 : window.innerHeight - top - pad - frame;
+  // スマホでは図を上に固定する（style.css）ので、下の説明・スライダーが見える分を残して 4 割まで（2026-10-18）
+  document.documentElement.style.setProperty('--topH', top + 'px');
+  const availH = mobile ? window.innerHeight * 0.4 : window.innerHeight - top - pad - frame;
   const S = Math.max(200, Math.floor(Math.min(availW, availH)));
   const dpr = DPR();
   UI.S = S; UI.cv.style.width = UI.cv.style.height = S + 'px';

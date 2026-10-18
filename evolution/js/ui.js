@@ -297,3 +297,5 @@ function setMech(open){if(open&&!$('ifp').hidden)setIfPanel(false);mechOpen=open
 $('bMech').onclick=()=>setMech(!mechOpen);$('mechClose').onclick=()=>setMech(false);
 addEventListener('resize',()=>drawMech());
 
+// the dock wraps to 2-3 rows on narrow screens; panels above it read its height from --dock (app.css)
+{const dock=$('dock'),setDock=()=>document.documentElement.style.setProperty('--dock',dock.offsetHeight+'px');setDock();new ResizeObserver(setDock).observe(dock)}

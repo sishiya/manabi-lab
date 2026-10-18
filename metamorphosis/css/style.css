@@ -96,12 +96,15 @@ ul.plain li+li{margin-top:4px}
 @media (max-width:700px), (max-aspect-ratio:3/4){
   html,body{height:auto}
   #app{flex-direction:column;height:auto;overflow:visible}
-  #stage{height:auto}
-  #viewWrap{height:64vh;min-height:400px;flex:none}
+  /* 体の図（時間のバーつき）だけ上に固定し、ホルモンのグラフと説明はページごとスクロール（RULES 9章。2026-10-18）。
+     #stage を display:contents にして、#viewWrap が #app の終わりまで貼りつくように */
+  #stage{display:contents}
+  #viewWrap{position:sticky;top:0;z-index:5;height:52vh;height:52dvh;min-height:330px;flex:none;background:var(--bg);border-bottom:1px solid var(--line)}
   #chartWrap{height:170px}
   #panel{width:auto;height:auto;border-left:none;border-top:1px solid var(--line)}
   #stageName b{font-size:18px}
-  #stageName{max-width:52%}
+  #stageName{top:48px;max-width:calc(100% - 28px)} /* 見かたのボタンの下へ（題にボタンがかぶっていた） */
+  #viewCtl{left:12px;justify-content:flex-end}
   #viewCtl button{padding:4px 8px;font-size:12px}
   #timebar{flex-wrap:wrap;gap:6px}
   #time{order:5;flex-basis:100%}

@@ -89,8 +89,10 @@ ul.plain li+li{margin-top:4px}
 @media (max-width:700px), (max-aspect-ratio:3/4){
   html,body{height:auto}
   #app{flex-direction:column;height:auto;overflow:visible}
-  #stage{height:auto}
-  #viewWrap{height:72vh;min-height:520px;flex:none}
+  /* 断面（時間のバーつき）だけ上に固定し、グラフと条件の欄はページごとスクロール（RULES 9章。2026-10-18）。
+     #stage を display:contents にして、#viewWrap が #app の終わりまで貼りつくように */
+  #stage{display:contents}
+  #viewWrap{position:sticky;top:0;z-index:5;height:56vh;height:56dvh;min-height:400px;flex:none;background:var(--bg);border-bottom:1px solid var(--line)}
   #chartWrap{height:230px}
   #panel{width:auto;height:auto;border-left:none;border-top:1px solid var(--line)}
   #stageName b{font-size:17px}

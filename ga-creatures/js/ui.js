@@ -78,7 +78,7 @@ function chartGen(e, c) {
   return Math.round(clamp((x - PROG_GEOM.padL) / PROG_GEOM.iw, 0, 1) * PROG_GEOM.g1);
 }
 function showTip(e, html) {
-  const tip = $('tip'), st = $('stage').getBoundingClientRect();
+  const tip = $('tip'), st = (tip.offsetParent || $('stage')).getBoundingClientRect(); // スマホでは #stage が display:contents なので、いま基準になっている箱で測る
   tip.innerHTML = html; tip.hidden = false;
   let x = e.clientX - st.left + 14, y = e.clientY - st.top + 14;
   if (x + tip.offsetWidth > st.width - 8) x = e.clientX - st.left - tip.offsetWidth - 14;

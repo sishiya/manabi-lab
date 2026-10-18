@@ -29,6 +29,7 @@
 - ユーザーの好み: 子どもにも読めるやさしい日本語。断定しすぎない（量子もつれの説明で「一例」と明記するよう直した）。
 
 ## 状態
+- 2026-10-18: スマホ（600px 以下）で実験ごとのいちばん大事な図（slitApp・tunCv・polCv・bellCv・不確定性の2つ）を上に固定し、高さを少し低くした（.stage を display:contents）。ほかの図・ボタン・右の欄はスクロール。
 - 2026-10-05 `versions/v001g-favicon`: ファビコン（タブのアイコン、SVG を埋め込み）を追加。GitHub Pages（まなびラボ）用。Artifact へは再公開していない（いまは Pages だけ。`../RULES.md` 8.2）。
 - 2026-10-06 `versions/v001h-analytics`: アクセス解析の1行（Pages のときだけ）。中身は同じ。
 - 2026-10-07 `versions/v001i-sources`: 画面の下（footer の上）に「おもな出どころ」（`<details class="src">`、実験ごとに見出し）。Artifact へは再公開しない（いまは Pages だけ）。
