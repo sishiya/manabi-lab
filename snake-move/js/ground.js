@@ -20,6 +20,7 @@
       L: 0.30, mass: 0.0152, tau: 2.0,  // Hu 2009 の模型の長さ 30 cm・周期 2 秒、ミルクヘビ 15.2 g
       alpha: 7, k: 2,                   // κ L = α cos kπ(s/L + t/τ)（Hu 2009 の値）
       surf: 'cloth', lift: true, slope: 0, // 坂（度）。+ のとき、頭のはじめの向き（+x）が上り
+      gait: 'slither', delta: 1.51, contact: 0.3,   // 'side' = 横ばい（上下の波の位相のずれ・ふれる長さの割合）
     }, o);
     const s = {
       p, t: 0, X: 0, Y: 0, TH: 0,       // 体の重心の位置（m）と、体全体の向き（rad）
@@ -66,6 +67,17 @@
   // 地面を押す重さの配りかた
   function weights(s, kap, out) {
     const p = s.p, w = p.mass * G / p.L * Math.cos(p.slope * Math.PI / 180);
+    if (p.gait === 'side') {
+      // 横ばい: 曲がりの波と同じ速さで流れる「上下の波」の低い所だけが地面にふれる（Marvi ほか 2014: 2つの波・位相のずれ 1.51 rad）
+      const c0 = Math.cos(Math.PI * p.contact);   // ふれる長さの割合 contact になるしきい値
+      let sum = 0;
+      for (let i = 0; i < N; i++) {
+        const ph = p.k * Math.PI * ((i + 0.5) / N + s.t / p.tau) + p.delta;
+        out[i] = Math.max(0, Math.cos(ph) - c0); sum += out[i];
+      }
+      for (let i = 0; i < N; i++) out[i] = sum > 0 ? out[i] / sum * N * w : w;
+      return;
+    }
     if (!p.lift) { for (let i = 0; i < N; i++) out[i] = w; return; }
     // 持ち上げ: 曲がりのいちばん強い所を浮かせ、まっすぐな所（曲がり 0）に重さをかける（Hu 2009 の「持ち上げ」の形。くわしい配り方は推定）
     let sum = 0;

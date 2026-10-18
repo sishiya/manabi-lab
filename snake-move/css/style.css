@@ -76,3 +76,6 @@ button.on{border-color:var(--acc);color:var(--acc)}
   #speeds{flex-wrap:nowrap;gap:4px}
   #legend{font-size:11px;gap:0 8px}
 }
+.hint{font-size:13px;color:var(--muted);margin:4px 0 0;line-height:1.6}
+#modes{gap:5px}
+@media (max-width:640px){#modes button{padding:2px 8px;font-size:13px;min-height:34px}}

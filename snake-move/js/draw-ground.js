@@ -46,6 +46,12 @@
       o.trail.forEach((q, k) => { const w = W(cam, q[0], q[1]); k ? g.lineTo(w[0], w[1]) : g.moveTo(w[0], w[1]); });
       g.stroke(); g.setLineDash([]);
     }
+    // 地面に残った跡（横ばい: ふれた所）
+    if (o.tracks) {
+      g.fillStyle = '#6a5638';
+      const r = Math.max(1.5, BODY_D * cam.s * 0.35);
+      for (const q of o.tracks) { const w = W(cam, q[0], q[1]); if (w[0] > -9 && w[0] < cam.w + 9 && w[1] > -9 && w[1] < cam.h + 9) { g.beginPath(); g.arc(w[0], w[1], r, 0, 7); g.fill(); } }
+    }
     const P = []; for (let i = 0; i < N; i++) P.push(W(cam, s.x[i], s.y[i]));
     const w0 = p.mass * 9.81 / p.L;
     // 浮いている所の影（右下へずらす）
@@ -175,5 +181,5 @@
     return best;
   }
 
-  window.DRAWG = { scene, hitTest, toScreen: W, C, BODY_D };
+  window.DRAWG = { scene, hitTest, toScreen: W, C, BODY_D, arrow, radius, ring };
 })();

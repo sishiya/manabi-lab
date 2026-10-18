@@ -5,13 +5,16 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="css/style.css?v=1">
+<link rel="stylesheet" href="css/style.css?v=2">
 
 <div id="app">
   <header id="top">
     <h1>ヘビが進むしくみ</h1>
     <div class="seg" id="modes">
       <button data-mode="ground" class="on">地面をうねる</button>
+      <button data-mode="stones">石のあいだ</button>
+      <button data-mode="side">横ばい</button>
+      <button data-mode="straight">まっすぐ</button>
       <button data-mode="tree">木を登る</button>
     </div>
   </header>
@@ -20,7 +23,7 @@
     <div id="stage">
       <canvas id="cv"></canvas>
       <button id="next">つぎへ ▶</button>
-      <div id="zoom"><button id="bScale" title="おなかのウロコを見る">ウロコ</button><button data-z="out" title="引く">−</button><button data-z="in" title="寄る">＋</button></div>
+      <div id="zoom"><button id="bScale" title="おなかのウロコを見る" data-m="ground">ウロコ</button><button data-z="out" title="引く">−</button><button data-z="in" title="寄る">＋</button></div>
       <div id="legend"></div>
       <div id="tip" hidden></div>
     </div>
@@ -36,7 +39,7 @@
   <main id="below">
     <section class="box" id="try">
       <h2>試す <small>（いつでも変えられる。計算はそのまま続く）</small></h2>
-      <div id="tryGround">
+      <div data-m="ground">
         <div class="row"><label>地面</label><span class="seg" id="surf">
           <button data-v="cloth" class="on">布（ざらざら）</button><button data-v="board">なめらかな板</button><button data-v="same">摩擦をどの向きも同じに</button></span></div>
         <div class="row"><label>持ち上げ</label><span class="seg" id="lift">
@@ -45,7 +48,25 @@
         <div class="row"><label>ウロコ</label><span class="seg" id="dig">
           <button data-v="0" class="on">ふつう</button><button data-v="1">坂でウロコを立てる</button></span></div>
       </div>
-      <div id="tryTree" hidden>
+      <div data-m="stones" hidden>
+        <div class="row"><label>地面</label><span class="seg" id="tsurf">
+          <button data-v="board" class="on">なめらかな板</button><button data-v="cloth">布</button><button data-v="same">摩擦をどの向きも同じに</button></span></div>
+        <div class="row"><label>石</label><span class="seg" id="preset">
+          <button data-v="every" class="on">曲がりごとに</button><button data-v="half">3つに1つ取る</button><button data-v="none">ぜんぶ取る</button></span></div>
+        <p class="hint">図の地面をタップすると石を置く（道の近くなら体にふれる所へ）。石をタップすると取る。</p>
+      </div>
+      <div data-m="side" hidden>
+        <div class="row"><label>地面</label><span class="seg" id="ssurf">
+          <button data-v="same" class="on">砂（どの向きも同じ摩擦とみなす）</button><button data-v="cloth">布</button></span></div>
+        <div class="row"><label>波のずれ</label><input type="range" id="delta" min="0" max="180" step="1" value="87" aria-label="左右の波と上下の波のずれ"><span id="deltaV">87°</span></div>
+        <div class="row"><label>ふれる長さ</label><input type="range" id="contact" min="0.15" max="0.5" step="0.01" value="0.3" aria-label="地面にふれる長さの割合"><span id="contactV">30%</span></div>
+      </div>
+      <div data-m="straight" hidden>
+        <div class="row"><label>地面</label><span class="seg" id="rsurf">
+          <button data-v="cloth" class="on">布</button><button data-v="board">なめらかな板</button></span></div>
+        <div class="row"><label>止まる時間</label><input type="range" id="duty" min="0.3" max="0.7" step="0.01" value="0.5" aria-label="皮が地面に止まっている時間の割合"><span id="dutyV">50%</span></div>
+      </div>
+      <div data-m="tree" hidden>
         <div class="row"><label>幹の太さ</label><input type="range" id="dia" min="2" max="8" step="0.5" value="4" aria-label="幹の太さ"><span id="diaV">4 cm</span></div>
         <div class="row"><label>順番</label><span class="seg" id="order">
           <button data-v="right" class="on">上をつかんでから下を放す</button><button data-v="wrong">下を先に放す</button></span></div>
@@ -60,13 +81,23 @@
 
     <section class="box" id="layers">
       <h2>見えるもの</h2>
-      <div class="chips" id="chipsGround">
+      <div class="chips" data-m="ground side">
         <label><input type="checkbox" data-l="press" checked> 地面を押す所</label>
-        <label><input type="checkbox" data-l="force" checked> 地面からの力（摩擦）</label>
+        <label data-m="ground"><input type="checkbox" data-l="force" checked> 地面からの力（摩擦）</label>
         <label><input type="checkbox" data-l="slip"> すべる向き</label>
-        <label><input type="checkbox" data-l="trail" checked> 頭の通った跡</label>
+        <label data-m="ground"><input type="checkbox" data-l="trail" checked> 頭の通った跡</label>
       </div>
-      <div class="chips" id="chipsTree" hidden>
+      <div class="chips" data-m="stones" hidden>
+        <label><input type="checkbox" data-l="spush" checked> 石が押す力</label>
+        <label><input type="checkbox" data-l="sdrag" checked> 地面の摩擦</label>
+        <label><input type="checkbox" data-l="path" checked> 体がなぞる道</label>
+      </div>
+      <div class="chips" data-m="straight" hidden>
+        <label><input type="checkbox" data-l="skin" checked> おなかの皮</label>
+        <label><input type="checkbox" data-l="rforce" checked> 摩擦</label>
+        <label><input type="checkbox" data-l="plot" checked> 印の動き（グラフ）</label>
+      </div>
+      <div class="chips" data-m="tree" hidden>
         <label><input type="checkbox" data-l="stuck" checked> 止まっている所</label>
         <label><input type="checkbox" data-l="tforce" checked> 力（重さ・支える摩擦・締めつけ）</label>
         <label><input type="checkbox" data-l="move" checked> 動く向き</label>
@@ -76,7 +107,7 @@
     <details id="more" class="box">
       <summary>くわしく見る（数字・しくみのまとめ）</summary>
       <div id="readout"></div>
-      <section id="explainGround">
+      <section data-m="ground">
         <h3>地面をうねる（横うねり）</h3>
         <ol>
           <li><b>形はヘビが決める</b>: 体の曲がりの波を、頭から尾へ送る。</li>
@@ -87,7 +118,7 @@
           <li><b>坂</b>: 重さが後ろへ引くので、少しの坂で後ろへすべりはじめる。本物は 7 ± 2° まで登れた（ウロコを立てて摩擦を上げていると考えられている）。</li>
         </ol>
       </section>
-      <section id="explainTree" hidden>
+      <section data-m="tree" hidden>
         <h3>木を登る（アコーディオン）</h3>
         <ol>
           <li><b>止まっている所が支える</b>: 幹に巻きつけて締めつけた所は、幹に対して止まっている。止まっている所の摩擦（静止摩擦）が、体全体の重さを支える。</li>
@@ -98,12 +129,39 @@
           <li><b>ウロコを立てる</b>: 起きているヘビはウロコを立てて引っかけ、静止摩擦を約2倍にする。立てないと、同じだけ支えるのに強く締めつけなければならない。</li>
         </ol>
       </section>
-      <section>
-        <h3>ほかの進み方（このアプリではまだ計算していない）</h3>
+      <section data-m="stones" hidden>
+        <h3>石のあいだ（押す点を使う横うねり）</h3>
+        <ol>
+          <li><b>押すのは石</b>: 体が曲がりの外がわで石を押すと、石が体を押し返す（石の表面はなめらかで、押す力は体に直角）。その力の前向きの分で進む（Gray 1946。くいを立てた板の上のヨーロッパヤマカガシ）。</li>
+          <li><b>3つの石</b>: 押す力は押すだけで引けない。前へ・横へ・回る向きの3つをつりあわせるには、ふつう3つの石がいる。このアプリは、押す力の合計がいちばん小さくなる石の組を探している。</li>
+          <li><b>どこを押すか</b>: 曲がりの頂上ちょうどの石は、押す向きが真横で前へ押す分がない。曲がりの外がわの、体が進んでくる側の斜面を押すと前へ押せる。</li>
+          <li><b>止まっているのは形</b>: 体は道にそってすべるだけで、横へはすべらない。S 字の形が地面に止まっていて、体がその中を通っていく。だから、ウロコの向きの差がなくても進める。</li>
+          <li>石が足りないときは止める（本物はウロコの摩擦の横うねりにもどる。このアプリでは入れていない）。</li>
+        </ol>
+      </section>
+      <section data-m="side" hidden>
+        <h3>横ばい（サイドワインディング）</h3>
+        <ol>
+          <li><b>2つの波</b>: 左右に曲げる波と、上下に持ち上げる波を、同じ速さで頭から尾へ送る。2つは4分の1周くらいずれている（ヨコバイガラガラヘビで 1.51 ± 0.17 rad ≈ 87°。Marvi ほか 2014）。</li>
+          <li><b>ふれている所は止まっている</b>: 地面にふれるのはいつも2か所くらい。ふれている所は地面に対してほとんど動かず（この計算で体の速さの1割以下）、持ち上げた所だけが動く。だから、すべりやすい砂でもくずさずに進める。</li>
+          <li><b>平行な跡</b>: ふれた所は地面にななめの線の跡を残す。線の長さは体の長さくらい。跡と進む向きの角度は 33 ± 8°（論文）。</li>
+          <li><b>波のずれが大事</b>: ずれを 0 にすると、持ち上げる所と押す向きがかみあわず、ふれている所が大きくすべる（この計算では速さが約3割に、すべりは体の速さの1.5倍に）。急な砂の坂では、本物はふれる長さを長くしてすべりを防ぐ（0° から 20° で 41% 長く）。</li>
+          <li>このアプリでは、地面の摩擦を地面をうねるときと同じ式で計算している（砂がくずれることは入れていない）。</li>
+        </ol>
+      </section>
+      <section data-m="straight" hidden>
+        <h3>まっすぐ進む（ボアなど）</h3>
+        <ol>
+          <li><b>うねらない</b>: 背骨と、それにつながった所は同じ速さで進む（Lissmann 1950。若いボア 57・60 cm）。</li>
+          <li><b>皮だけが動く</b>: おなかの皮が背骨に対して前後にずれる。縮んだ所は地面に止まり、伸びる所は前へすべる。この波が頭から尾へ流れる（体にふつう2つ）。1回の波で皮は 2〜3 cm 進む。</li>
+          <li><b>足場は止まった皮</b>: 止まった皮の摩擦が体を前へ押し、前へすべる皮の摩擦が引きずる。止まっている所が足りないと、止まるはずの皮が後ろへすべる。</li>
+          <li><b>筋肉</b>: 皮と肋骨をつなぐ筋肉が、止まった皮を足場に背骨を前へ引き（肋骨と皮の下の筋）、皮をもとの位置へ戻す（上の筋）。速くするときは、止まる時間を短くし、回数と大きさを増やす（Newman & Jayne 2018）。</li>
+        </ol>
+      </section>
+      <section data-m="tree" hidden>
+        <h3>ほかの登り方（このアプリではまだ計算していない）</h3>
         <ul>
-          <li><b>まっすぐ進む</b>（ボアなど）: 体はうねらない。おなかの皮が地面に止まったまま、筋肉が骨を皮の中で前へ引く（Newman & Jayne 2018）。</li>
-          <li><b>横ばい</b>（砂の上のガラガラヘビ）: 地面にふれている所は止まっていて、持ち上げた所だけが動く。急な砂の坂では、ふれる長さを約2倍にする（Marvi ほか 2014）。</li>
-          <li><b>投げなわ</b>（ミナミオオガシラ）: 太い柱に体の輪を1つだけかけて、輪の中の小さな曲がりで少しずつ上がる（Savidge ほか 2021）。</li>
+          <li><b>投げなわ</b>（ミナミオオガシラ）: 太い柱に体の輪を1つだけかけて、輪の中の小さな曲がりで少しずつ上がる。とてもゆっくり（秒速 0.4 cm）で、よく休む（Savidge ほか 2021）。</li>
         </ul>
       </section>
     </details>
@@ -113,15 +171,18 @@
       <p>ヘビが足を使わずに進むしくみを、体の形と摩擦の式で計算して見せる学習用のアプリです。体の形の動き（うねり・巻きつき）は決めて与え、体全体がどこへどれだけ動くかは、力のつりあいで毎コマ計算しています。</p>
       <h3>記録・推定・目印</h3>
       <ul>
-        <li><b>記録（論文の値）</b>: 布・なめらかな板の摩擦、うねりの形（曲がりの波 α = 7・体長に1波・2秒に1回）、ミルクヘビの長さと重さ（Hu ほか 2009）。幹の上のウロコの摩擦（立てる／立てない）、コーンスネークの長さと重さ、押す力の余裕（Marvi & Hu 2012）。つかむには幹のまわりくらいの長さがいること、上をつかんでから下を放す順番（Savidge ほか 2021）。</li>
-        <li><b>推定</b>: 持ち上げのときの重さの配り方（曲がりの強さの2乗で減らした。Hu ほか 2009 は「曲がりが 0 の所に重さをかける」とだけ書いている）。坂でウロコを立てた摩擦（Hu ほか 2009 が坂の実測に合うとした μf 0.3 と比）。木の上の動きの順番と時間（1回 4 秒）、巻きつけのらせんの間かく（体の太さの2倍）、折りたたんだ長さの割合、体の太さ 1.4 cm、締めつけは巻きつけた所に一様。幹の摩擦は発泡スチロールの上の値で、本物の木の皮とはちがう。</li>
-        <li><b>目印</b>: 力の矢印の長さ（見やすい倍率）、地面のつぶつぶ、ウロコの拡大図（形は模式図）、止まっている所の緑の線、波の印。</li>
+        <li><b>記録（論文の値）</b>: 布・なめらかな板の摩擦、うねりの形（曲がりの波 α = 7・体長に1波・2秒に1回）、ミルクヘビの長さと重さ（Hu ほか 2009）。幹の上のウロコの摩擦（立てる／立てない）、コーンスネークの長さと重さ、押す力の余裕（Marvi & Hu 2012）。つかむには幹のまわりくらいの長さがいること、上をつかんでから下を放す順番（Savidge ほか 2021）。石を押す力は体に直角で、押すだけ（Gray 1946）。石のあいだの道の形（波長 0.4 体長・ふれはば 0.1 体長。Hu ほか 2009 の実測）。ボアの長さ、背骨は一定の速さ・皮は止まっては進む・波2つ・1回 2〜3 cm（Lissmann 1950）。ヨコバイガラガラヘビの長さと重さ、2つの波のずれ 1.51 rad、いつも2か所でふれる、跡の角度 33 ± 8°（Marvi ほか 2014）。</li>
+        <li><b>推定</b>: 持ち上げのときの重さの配り方（曲がりの強さの2乗で減らした。Hu ほか 2009 は「曲がりが 0 の所に重さをかける」とだけ書いている）。坂でウロコを立てた摩擦（Hu ほか 2009 が坂の実測に合うとした μf 0.3 と比）。木の上の動きの順番と時間（1回 4 秒）、巻きつけのらせんの間かく（体の太さの2倍）、折りたたんだ長さの割合、体の太さ 1.4 cm、締めつけは巻きつけた所に一様。幹の摩擦は発泡スチロールの上の値で、本物の木の皮とはちがう。石の置き場所（曲がりの頂上の 0.08 波長手前）と石の大きさ。ボアの重さ 150 g・体の太さ・波1回 2 秒・皮が止まる時間 50%・皮の動き方の形。横ばいの曲がりの強さ α 18（跡の角度が 33° になるよう選んだ）・ふれる長さ 30%・波1回 2 秒、砂を「どの向きも同じ摩擦」とみなしたこと。</li>
+        <li><b>目印</b>: 力の矢印の長さ（見やすい倍率）、地面のつぶつぶ・目もり、ウロコの拡大図（形は模式図）、止まっている所の緑の線、波の印、体がなぞる道の点線、石の色、背骨の点と皮の目もり、横ばいの跡の点。</li>
       </ul>
       <h3>簡単にしているところ</h3>
       <ul>
         <li>地面: 体は平らな面の上の線。勢い（慣性）は体全体の重心と回転だけに入れた。摩擦の大きさは速さによらない（すべる向きだけで決まる）。尾が細くなることは入れていない。石や草に体を押しつけて進むこと（本物ではよく使う）は入れていない。</li>
+        <li>石のあいだ: 体は決めた道を横すべりせずになぞる。石の表面の摩擦は 0。押せる石が足りないと止める（本物はウロコの摩擦の横うねりにもどる）。体を曲げる筋肉の力は計算していない。</li>
+        <li>まっすぐ: 背骨は曲がらない1本の棒、皮が地面を押す重さは一様、静止摩擦と動摩擦は同じ（Hu ほか 2009 と同じ仮定）。</li>
+        <li>横ばい: 地面をうねるときと同じ摩擦の式に、上下の波で重さの配り方を変えただけ。砂がくずれる・へこむことは入れていない。</li>
         <li>木: 体を幹にそった1本の線（上下だけ）で考えた。巻きつけた所は幹を一様に押す。幹から横へ落ちる・ねじれることは入れていない。</li>
-        <li>計算の検証（Hu ほか 2009 の模型とくらべた）: 重さを一様にすると 1回のうねりで体長の 0.12（論文の模型 0.17）、持ち上げると 0.20（論文 0.23、本物 0.22 ± 0.08）。摩擦をどの向きも同じにすると、ほとんど進まない（論文と同じ）。坂は約 4° で後ろへすべりはじめる（ウロコを立てた値で。本物は 7 ± 2°）。</li>
+        <li>計算の検証（Hu ほか 2009 の模型とくらべた）: 重さを一様にすると 1回のうねりで体長の 0.12（論文の模型 0.17）、持ち上げると 0.20（論文 0.23、本物 0.22 ± 0.08）。摩擦をどの向きも同じにすると、ほとんど進まない（論文と同じ）。坂は約 4° で後ろへすべりはじめる（ウロコを立てた値で。本物は 7 ± 2°）。横ばいの跡と進む向きの角度は 34°（論文 33 ± 8°。α をこれに合わせて選んだので、合うのは当たり前）、ふれている所のすべりは体の速さの 10%（論文「すべらない」）。</li>
         <li>飼育などの判断には使えません。野生のヘビには近づかないでください。</li>
       </ul>
       <h3>おもな出どころ</h3>
@@ -130,8 +191,10 @@
         <li>H. Marvi, D. L. Hu, "Friction enhancement in concertina locomotion of snakes", <i>J. R. Soc. Interface</i> 9, 3067–3080 (2012)（<a href="https://doi.org/10.1098/rsif.2012.0132" target="_blank" rel="noopener">論文</a>。ウロコを立てた摩擦・押す力の余裕 最大4倍・体重の9倍）</li>
         <li>H. C. Astley, B. C. Jayne, "Effects of perch diameter and incline on the kinematics, performance and modes of arboreal locomotion of corn snakes (<i>Elaphe guttata</i>)", <i>J. Exp. Biol.</i> 210, 3862–3872 (2007)（<a href="https://doi.org/10.1242/jeb.009050" target="_blank" rel="noopener">論文</a>。枝の上のアコーディオン・太くて傾いた枝は登れない）</li>
         <li>J. A. Savidge, T. F. Seibert, M. Kastner, B. C. Jayne, "Lasso locomotion expands the climbing repertoire of snakes", <i>Current Biology</i> 31, R7–R8 (2021)（<a href="https://doi.org/10.1016/j.cub.2020.11.050" target="_blank" rel="noopener">論文</a>。上をつかんでから下を放す・まわりくらいの長さ・投げなわ）</li>
-        <li>S. J. Newman, B. C. Jayne, "Crawling without wiggling: muscular mechanisms and kinematics of rectilinear locomotion in boa constrictors", <i>J. Exp. Biol.</i> 221 (2018)（<a href="https://doi.org/10.1242/jeb.166199" target="_blank" rel="noopener">論文</a>）</li>
-        <li>H. Marvi ほか, "Sidewinding with minimal slip: Snake and robot ascent of sandy slopes", <i>Science</i> 346, 224–229 (2014)（<a href="https://doi.org/10.1126/science.1255718" target="_blank" rel="noopener">論文</a>）</li>
+        <li>J. Gray, "The mechanism of locomotion in snakes", <i>J. Exp. Biol.</i> 23, 101–120 (1946)（<a href="https://doi.org/10.1242/jeb.23.2.101" target="_blank" rel="noopener">論文</a>。くいを押して進む・押す力は体に直角・3つのくい）</li>
+        <li>H. W. Lissmann, "Rectilinear locomotion in a snake (<i>Boa occidentalis</i>)", <i>J. Exp. Biol.</i> 26, 368–379 (1950)（<a href="https://doi.org/10.1242/jeb.26.4.368" target="_blank" rel="noopener">論文</a>。背骨は一定・皮は止まっては進む・波2つ・1回 2〜3 cm）</li>
+        <li>S. J. Newman, B. C. Jayne, "Crawling without wiggling: muscular mechanisms and kinematics of rectilinear locomotion in boa constrictors", <i>J. Exp. Biol.</i> 221 (2018)（<a href="https://doi.org/10.1242/jeb.166199" target="_blank" rel="noopener">論文</a>。止まった皮を足場に筋肉が背骨を引く・速くするときは止まる時間を短く）</li>
+        <li>H. Marvi ほか, "Sidewinding with minimal slip: Snake and robot ascent of sandy slopes", <i>Science</i> 346, 224–229 (2014)（<a href="https://doi.org/10.1126/science.1255718" target="_blank" rel="noopener">論文</a>。48 cm・98 g・2つの波のずれ 1.51 rad・2か所でふれる・跡の角度 33°・坂でふれる長さが 41% 増える）</li>
       </ul>
       <h3>使っているもの</h3>
       <p>フォント: Google Fonts（SIL Open Font License）</p>
@@ -139,9 +202,15 @@
   </main>
 </div>
 
-<script src="js/ground.js?v=1"></script>
-<script src="js/tree.js?v=1"></script>
-<script src="js/draw-ground.js?v=1"></script>
-<script src="js/draw-tree.js?v=1"></script>
-<script src="js/ui.js?v=1"></script>
-<script src="js/main.js?v=1"></script>
+<script src="js/ground.js?v=2"></script>
+<script src="js/tree.js?v=2"></script>
+<script src="js/stones.js?v=2"></script>
+<script src="js/rect.js?v=2"></script>
+<script src="js/draw-ground.js?v=2"></script>
+<script src="js/draw-tree.js?v=2"></script>
+<script src="js/ui.js?v=2"></script>
+<script src="js/mode-ground.js?v=2"></script>
+<script src="js/mode-stones.js?v=2"></script>
+<script src="js/mode-rect.js?v=2"></script>
+<script src="js/mode-tree.js?v=2"></script>
+<script src="js/main.js?v=2"></script>
