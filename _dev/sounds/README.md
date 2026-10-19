@@ -21,6 +21,14 @@
 - RTX 5070 で 3分の曲が約8秒、効果音は1秒ほど。最初だけモデルの読み込みに約40秒。
 - 新しいセッションの Claude からは MCP の `audio-studio`（`generate_audio`・`edit_audio`・`process_audio`）でも作れる。気に入ったらカタログに書き写す。
 
+## あそびラボの音のリメイク（ビフォーアフター）
+あそびラボの7本（dino-race・resistance・parasite-pilot・heaven-spheres・edge-falls・flat-history・pathstones）は、どれも Web Audio でその場で音を作っている。その音を Stable Audio 3 で作りなおして、試聴ページの「リメイク」で **いま（ビフォー）とリメイク（アフター）を並べて**聞けるようにした（2026-10-19。117件）。**ゲームの音はまだ差しかえていない。**
+
+- **ビフォーを録る**: launch.json の `sound-capture`（8811）で `../ゲーム` を配り、ゲームのページで `await import('/__rec.js')` してから音の関数を呼ぶ（`rec.js` が出口への音を横どりして MediaRecorder で録り、`capture_server.py` が `../sound-library/remake/before/<ゲーム>__<音>.webm` に置く）。BGM は効果音と別に録る（まざるため）。
+- **アフターを作る**: `remake.json` に1件ずつ（id はビフォーと同じ名前、`as` で作り方のきまり）。各ゲームの方針を守る（edge-falls・heaven-spheres は五音音階でねむく、pathstones は木のおもちゃ、resistance は虫の音を出さない、flat-history は古い楽器と紙）。
+- `build.py` がビフォーの webm を、アフターと同じものさしで音量をそろえた OGG にする（聞きくらべで大きさにだまされないよう。ゲームの中の大きさとはちがう）。
+- ゲームに入れるときは、あそびラボの README のライセンス（AI の音は対象外）・画面の出どころ・ユーザーの OK を先に（下の「きまり」）。
+
 ## そろえ方
 | 種類 | 長さ | 音量 | ほか |
 |---|---|---|---|

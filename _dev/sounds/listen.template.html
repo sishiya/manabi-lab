@@ -23,6 +23,8 @@
   audio { width:100%; height:34px; }
   .empty { color:var(--sub); font-size:13px; }
   .note { color:var(--sub); font-size:12px; margin-top:6px; }
+  .lab { font-size:12px; color:var(--acc); margin:2px 0; }
+  .lab.now { color:#f2c46d; }
 </style>
 </head>
 <body>
@@ -30,14 +32,16 @@
   <h1>しし屋サウンドライブラリ <span class="meta" id="count"></span></h1>
   <div class="chips" id="kinds"></div>
   <div class="chips" id="uses" style="margin-top:6px"></div>
+  <div class="chips" id="games" style="margin-top:6px"></div>
   <div class="note">Stable Audio 3（Stability AI Community License）で生成。使うときは出どころに「Stable Audio 3 で生成」と書く。</div>
 </header>
 <main id="list"></main>
 <script>
 const DATA = /*DATA*/[];
-const KIND = { bgm: "BGM", work: "作業用", jingle: "ジングル", sfx: "効果音", ambience: "環境音" };
+const KIND = { bgm: "BGM", work: "作業用", jingle: "ジングル", sfx: "効果音", ambience: "環境音", remake: "リメイク" };
+const GAME = { "dino-race": "恐竜かけっこ牧場", "resistance": "退治するほど手ごわくなる", "parasite-pilot": "宿主をあやつれ", "heaven-spheres": "天をまわす箱庭", "edge-falls": "果ての滝の箱庭", "flat-history": "ぺらぺら世界の歴史係", "pathstones": "pathstones" };
 const USE = { promo: "紹介動画", manabi: "まなびラボ", asobi: "あそびラボ", ui: "UI", work: "作業用" };
-let kind = "all", use = "all";
+let kind = "all", use = "all", game = "all";
 function chips(el, map, get, set) {
   const all = { all: "すべて", ...map };
   el.innerHTML = "";
@@ -51,26 +55,36 @@ function chips(el, map, get, set) {
 function render() {
   chips(document.getElementById("kinds"), KIND, () => kind, v => kind = v);
   chips(document.getElementById("uses"), USE, () => use, v => use = v);
-  const rows = DATA.filter(r => (kind === "all" || r.kind === kind) && (use === "all" || r.use.includes(use)));
+  const gEl = document.getElementById("games");
+  gEl.style.display = kind === "remake" ? "" : "none";
+  chips(gEl, GAME, () => game, v => game = v);
+  const rows = DATA.filter(r => (kind === "all" || r.kind === kind) && (use === "all" || r.use.includes(use))
+    && (kind !== "remake" || game === "all" || r.game === game));
   document.getElementById("count").textContent = `${rows.length} 件`;
   const list = document.getElementById("list");
   list.innerHTML = "";
   for (const r of rows) {
     const div = document.createElement("div");
     div.className = "item";
-    const meta = [KIND[r.kind], r.use.map(u => USE[u]).join("・"), r.bpm ? `${r.bpm} BPM` : "", `${r.seconds}秒`, `種 ${r.seed}`].filter(Boolean).join(" / ");
+    const meta = [r.game ? GAME[r.game] : "", KIND[r.kind_as || r.kind] + (r.kind === "remake" ? "（リメイク）" : ""), r.use.map(u => USE[u]).join("・"), r.bpm ? `${r.bpm} BPM` : "", `${r.seconds}秒`, `種 ${r.seed}`].filter(Boolean).join(" / ");
     div.innerHTML = `<div class="top"><span class="ja"></span><span class="id"></span><span class="meta"></span></div><div class="players"></div>`;
     div.querySelector(".ja").textContent = r.ja;
     div.querySelector(".id").textContent = r.id;
     div.querySelector(".meta").textContent = meta;
     const p = div.querySelector(".players");
     if (!r.files.length) p.innerHTML = '<span class="empty">まだ作っていない</span>';
-    for (const f of r.files) {
+    const looped = ["bgm", "work", "ambience"].includes(r.kind_as || r.kind);
+    const players = r.kind === "remake" ? [[r.before, "いま"], ...r.files.map((f, i) => [f, "リメイク" + (r.files.length > 1 ? i + 1 : "")])] : r.files.map(f => [f, ""]);
+    for (const [f, label] of players) {
+      const box = document.createElement("div");
+      if (label) { const s = document.createElement("div"); s.className = "lab" + (label === "いま" ? " now" : ""); s.textContent = label; box.appendChild(s); }
+      if (!f) { const s = document.createElement("span"); s.className = "empty"; s.textContent = "録音なし"; box.appendChild(s); p.appendChild(box); continue; }
       const a = document.createElement("audio");
       a.controls = true; a.preload = "none"; a.src = f; a.title = f;
-      a.loop = r.kind === "bgm" || r.kind === "work" || r.kind === "ambience";
+      a.loop = looped;
       a.addEventListener("play", () => document.querySelectorAll("audio").forEach(o => o !== a && o.pause()));
-      p.appendChild(a);
+      box.appendChild(a);
+      p.appendChild(box);
     }
     list.appendChild(div);
   }

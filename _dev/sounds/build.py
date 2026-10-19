@@ -10,7 +10,7 @@ Audio Studio MCP（%USERPROFILE%\\tools\\audio-studio-mcp）をふつうの MCP 
   masters\\<id>_v1.wav … 生成したままの音と .json（文・種・設定）
   library.json / listen.html … 一覧と試聴ページ
 """
-import argparse, asyncio, json, os, subprocess, sys, time, zlib
+import argparse, asyncio, json, os, re, subprocess, sys, time, zlib
 from pathlib import Path
 from mcp import Client, StdioServerParameters
 
@@ -32,12 +32,25 @@ async def call(c, name, args):
     return json.loads(text)
 
 
+def kind_of(item):
+    """remake の音は as（bgm・jingle・sfx・ambience）のきまりで作る"""
+    return item.get("as", item["kind"])
+
+
+def out_dir(item):
+    return LIB / "remake" / "after" if item["kind"] == "remake" else LIB / item["kind"]
+
+
 def gen_args(item, d):
     a = {"duration_seconds": item.get("seconds", d["seconds"]), "variations": item.get("variations", d["variations"]),
          "seed": seed_of(item), "title": item["id"], "original_idea": item["ja"]}
-    if item["kind"] in ("sfx", "ambience"):
-        a.update(audio_type="sfx", sound_source=item["source"], sound_action=item["action"],
-                 sound_material=item.get("material", ""), sound_space=item.get("space", ""))
+    if kind_of(item) in ("sfx", "ambience"):
+        a["audio_type"] = "sfx"
+        if "prompt" in item:
+            a["prompt"] = item["prompt"]
+        else:
+            a.update(sound_source=item["source"], sound_action=item["action"],
+                     sound_material=item.get("material", ""), sound_space=item.get("space", ""))
     else:
         a.update(audio_type="music", prompt=item["prompt"] + ("" if "no vocals" in item["prompt"] else ", no vocals"))
         if item.get("bpm"):
@@ -72,10 +85,10 @@ async def build(items, defaults, force):
     made = 0
     async with Client(params, read_timeout_seconds=3600) as c:
         for item in items:
-            d = defaults[item["kind"]]
+            d = defaults[kind_of(item)]
             n = item.get("variations", d["variations"])
-            outdir = LIB / item["kind"]
-            outdir.mkdir(exist_ok=True)
+            outdir = out_dir(item)
+            outdir.mkdir(parents=True, exist_ok=True)
             names = [item["id"] if n == 1 else f"{item['id']}_v{i + 1}" for i in range(n)]
             if not force and all((outdir / f"{nm}.ogg").exists() for nm in names):
                 continue
@@ -100,15 +113,42 @@ async def build(items, defaults, force):
     return made
 
 
+def ffmpeg(*args):
+    return subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-y", *args], capture_output=True, text=True,
+                          encoding="utf-8", errors="replace").stderr
+
+
+def convert_befores(items, defaults):
+    """ゲームで録った今の音（webm）を、リメイクと同じものさしで音量をそろえた OGG にする（聞きくらべ用）"""
+    src = LIB / "remake" / "before"
+    for item in items:
+        webm, ogg = src / f"{item['id']}.webm", src / f"{item['id']}.ogg"
+        if not webm.exists() or (ogg.exists() and ogg.stat().st_mtime > webm.stat().st_mtime):
+            continue
+        d = defaults[kind_of(item)]
+        trim = "silenceremove=start_periods=1:start_threshold=-60dB"
+        if "lufs" in d:
+            af = f"{trim},loudnorm=I={d['lufs']}:TP=-1:LRA=11"
+        else:
+            mx = re.search(r"max_volume: (-?[\d.]+) dB", ffmpeg("-i", str(webm), "-af", trim + ",volumedetect", "-f", "null", "-"))
+            af = f"{trim},volume={d['peak'] - float(mx.group(1)) if mx else 0:.2f}dB"
+        ffmpeg("-i", str(webm), "-af", af, "-ar", "48000", "-c:a", "libvorbis", "-q:a", "6", str(ogg))
+
+
 def write_index(catalog):
     rows = []
     for item in catalog["items"]:
-        d = catalog["defaults"][item["kind"]]
-        files = sorted((LIB / item["kind"]).glob(f"{item['id']}*.ogg"))
+        d = catalog["defaults"][kind_of(item)]
+        files = sorted(out_dir(item).glob(f"{item['id']}*.ogg"))
         files = [f for f in files if f.stem == item["id"] or f.stem.startswith(item["id"] + "_v")]
-        rows.append({"id": item["id"], "kind": item["kind"], "use": item["use"], "ja": item["ja"],
-                     "bpm": item.get("bpm"), "seconds": item.get("seconds", d["seconds"]), "seed": seed_of(item),
-                     "files": [f"{item['kind']}/{f.name}" for f in files]})
+        rel = out_dir(item).relative_to(LIB).as_posix()
+        row = {"id": item["id"], "kind": item["kind"], "use": item["use"], "ja": item["ja"],
+               "bpm": item.get("bpm"), "seconds": item.get("seconds", d["seconds"]), "seed": seed_of(item),
+               "files": [f"{rel}/{f.name}" for f in files]}
+        if item["kind"] == "remake":
+            before = LIB / "remake" / "before" / f"{item['id']}.ogg"
+            row.update(game=item["game"], kind_as=kind_of(item), before=f"remake/before/{before.name}" if before.exists() else None)
+        rows.append(row)
     (LIB / "library.json").write_text(json.dumps(rows, ensure_ascii=False, indent=1), encoding="utf-8")
     html = (HERE / "listen.template.html").read_text(encoding="utf-8")
     (LIB / "listen.html").write_text(html.replace("/*DATA*/[]", json.dumps(rows, ensure_ascii=False)), encoding="utf-8")
@@ -122,6 +162,10 @@ def main():
     ap.add_argument("--index-only", action="store_true")
     a = ap.parse_args()
     catalog = json.loads((HERE / "catalog.json").read_text(encoding="utf-8"))
+    remake = HERE / "remake.json"
+    if remake.exists():   # あそびラボの今の音のリメイク（ビフォーは capture_server.py ＋ rec.js で録る）
+        catalog["items"] += [{**i, "kind": "remake", "use": ["asobi"]} for i in json.loads(remake.read_text(encoding="utf-8"))["items"]]
+    convert_befores([i for i in catalog["items"] if i["kind"] == "remake"], catalog["defaults"])
     items = catalog["items"]
     if a.only:
         want = set(a.only.split(","))

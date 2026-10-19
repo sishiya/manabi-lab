@@ -48,6 +48,12 @@
       "runtimeExecutable": "powershell",
       "runtimeArgs": ["-NoProfile", "-Command", "& \"$env:USERPROFILE/tools/audio-studio-mcp/.venv/Scripts/python.exe\" -m http.server 8810 --bind 127.0.0.1 -d ../sound-library"],
       "port": 8810
+    },
+    {
+      "name": "sound-capture",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-NoProfile", "-Command", "& \"$env:USERPROFILE/tools/audio-studio-mcp/.venv/Scripts/python.exe\" _dev/sounds/capture_server.py 8811"],
+      "port": 8811
     }
   ]
 }
