@@ -42,6 +42,12 @@
       "runtimeExecutable": "powershell",
       "runtimeArgs": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "../くらし/.claude/serve.ps1", "-Port", "8800"],
       "port": 8800
+    },
+    {
+      "name": "sounds",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-NoProfile", "-Command", "& \"$env:USERPROFILE/tools/audio-studio-mcp/.venv/Scripts/python.exe\" -m http.server 8810 --bind 127.0.0.1 -d ../sound-library"],
+      "port": 8810
     }
   ]
 }

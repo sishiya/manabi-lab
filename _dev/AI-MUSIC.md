@@ -24,8 +24,14 @@
 - **映画・テレビ・ラジオ・「スタジオのゲーム」は Enterprise 以外どのプランでも不可**。インディーのゲーム（売上 50 万ドル未満など）は可。
 - 権利は利用者に残る。プロンプトにアーティスト名・曲名・歌詞を入れるのは禁止。
 
+### Stable Audio 3（自分の PC で動かす。2026-10-19 から使っている）
+- 重みが公開されたモデル（medium）を、Audio Studio MCP（KANA さん作、MIT）でこの PC の RTX 5070 で動かす。クラウドに何も送らない・料金なし。
+- **Stability AI Community License**（本文を 2026-10-19 に読んだ）: 作った音は使った人のもの（IV(c)(iii)）。商用も可、ただし本人と関連会社の年の売上が 100万ドルをこえたら終わる（III）。「Powered by Stability AI」の表示はモデルや派生物を配るときだけで、作った音には要らない（IV(a)）。作った音を別の生成 AI の土台モデルの学習に使うのは禁止（IV(b)）。透かしの義務はない。
+- 学習データはすべて許諾ずみと会社は言っている。
+- しし屋のサウンドライブラリはこれで作る → `_dev/sounds/README.md`（使い方のきまりもそこ）。
+
 ### そのほか（公式の本文までは読めていない。使うなら要確認）
-- **Stable Audio**: 有料は商用の許諾、無料は個人・非営利。学習データはすべて許諾ずみと会社は言っている。
+- **Stable Audio（クラウド版・Large）**: 有料は商用の許諾、無料は個人・非営利。
 - **Google Lyria（Gemini）**: 透かし SynthID が必ず入る。ふつうの Gemini の規約。「表現の道具で、プロの音楽制作向けではない」という位置づけ。
 - **Mubert・SOUNDRAW・AIVA**: どれも商用は有料プラン。Mubert は Content ID への登録を禁止。
 
@@ -62,8 +68,11 @@
 - 使うとしたら、まず **紹介動画の BGM だけ**（リポジトリに mp3 を入れない）で試すのが小さく始められる。
 - アプリの中で使うなら、その前に: ① README のライセンスに AI の音の除外を足す ② 画面の出どころに書く ③ 記録（道具・プラン・日付・プロンプト・規約の版・ダウンロードの記録）を `_dev/promo/` か各アプリの DEVNOTES に残す ④ 聞いて既存曲に似ていないか確かめる。
 - 実際に使うと決めたら、この文書と RULES 9章にルールとして足す。
+- **2026-10-19 追記**: Suno より先に、自分の PC で動く Stable Audio 3 を使いはじめた（規約がゆるく、記録が自動で残る）。まず紹介動画と作業用から。アプリに入れる前の手当ては上と同じ。
 
 ## おもな出どころ
+- Stability AI Community License https://stability.ai/community-license-agreement （2026-10-19 に読んだ）
+- Audio Studio MCP https://github.com/kanaworksai-hue/audio-studio-mcp
 - Suno 利用規約 https://suno.com/terms （2026-08-10 更新）
 - ElevenLabs Eleven Music の規約 https://elevenlabs.io/eleven-music-model-specific-terms （2026-10-09 更新）
 - Udio のダウンロード停止（Billboard） https://www.billboard.com/pro/udio-deal-backlash-ai-users-download-ai-songs-48-hours/
