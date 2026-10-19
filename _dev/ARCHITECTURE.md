@@ -17,9 +17,10 @@ flowchart TB
     subgraph REPOS["Documents/Claude/"]
       R1["アプリ開発/<br/>まなびラボ"]
       R2["ゲーム/<br/>あそびラボ"]
+      R4["くらし/<br/>くらしラボ"]
       R3["zenn/<br/>Zenn・DEV の記事"]
     end
-    SRV["ローカルサーバー<br/>localhost:8765〜8770<br/>（.claude/serve.ps1）"]
+    SRV["ローカルサーバー<br/>localhost:8765〜8770・8800<br/>（.claude/serve.ps1）"]
     TOOLS["道具 _dev/tools/*.ps1・*.mjs<br/>公開前チェック・smoke・録画・<br/>YouTube・X の下ごしらえ"]
     CHROME["Chrome（ヘッドレス）<br/>smoke・録画・サムネイル"]
     TS["Windows タスクスケジューラ<br/>manabi-lab health（日 10:00）"]
@@ -31,12 +32,14 @@ flowchart TB
   subgraph GITHUB["GitHub（アカウント sishiya）"]
     G1["sishiya/manabi-lab<br/>Public"]
     G2["sishiya/asobi-lab<br/>Public"]
+    G4["sishiya/kurashi-lab<br/>Public"]
     G3["sishiya/zenn-articles"]
   end
 
   subgraph PUB["公開先"]
     P1["GitHub Pages<br/>sishiya.github.io/manabi-lab/"]
     P2["GitHub Pages<br/>sishiya.github.io/asobi-lab/"]
+    P4["GitHub Pages<br/>sishiya.github.io/kurashi-lab/"]
     ZN["Zenn（日本語の技術記事）"]
     DEV["DEV（dev.to・英語の記事）"]
     YT["YouTube「しし屋」@sishiya22"]
@@ -52,13 +55,14 @@ flowchart TB
   VIS(["見る人"])
 
   U <--> CD
-  CD --> R1 & R2 & R3
-  R1 & R2 --> SRV --> CD
+  CD --> R1 & R2 & R3 & R4
+  R1 & R2 & R4 --> SRV --> CD
   CD --> TOOLS --> CHROME
-  R1 & R2 & R3 --> GH_D
-  GH_D --> G1 & G2 & G3
+  R1 & R2 & R3 & R4 --> GH_D
+  GH_D --> G1 & G2 & G3 & G4
   G1 --> P1
   G2 --> P2
+  G4 --> P4
   G3 -- "GitHub 連携（articles/ だけ）" --> ZN
   TOOLS -- "devto.ps1（API）" --> DEV
   SEC -. "スクリプトの中だけで読む" .-> TOOLS
@@ -69,7 +73,7 @@ flowchart TB
   TS --> TOOLS
   CST --> TOOLS
   CST -- "zenn-daily-publish が push" --> G3
-  P1 & P2 & ZN & DEV & YT & NOTE & X --> VIS
+  P1 & P2 & P4 & ZN & DEV & YT & NOTE & X --> VIS
   P1 --> GA --> TOOLS
   P1 --> GSC
 ```
@@ -80,6 +84,7 @@ flowchart TB
 |---|---|---|---|
 | `アプリ開発/` | `sishiya/manabi-lab`（Public） | https://sishiya.github.io/manabi-lab/ | まなびラボ（学習アプリ・入口・保管庫・道具・紹介動画の台本） |
 | `ゲーム/` | `sishiya/asobi-lab`（Public） | https://sishiya.github.io/asobi-lab/ | あそびラボ（ゲームのほう。決まりは `ゲーム/RULES.md`） |
+| `くらし/` | `sishiya/kurashi-lab`（Public） | https://sishiya.github.io/kurashi-lab/ | くらしラボ（仕事や生活に役立つツール。2026-10-19 に作った。方針は `くらし/CLAUDE.md`、案は `IDEAS.md` の「姉妹サイトのアイデア」。確認はまなびラボの launch.json の `kurashi`＝8800） |
 | `zenn/` | `sishiya/zenn-articles` | Zenn（`articles/`）・DEV（`dev/` を API で） | 技術記事。決まりは `zenn/README.md` |
 
 - push はどれもユーザーがチャットで頼んだときだけ（`MANABI_PUSH_OK=1`）。例外は `zenn-daily-publish` の zenn の push だけ（2026-10-16 にユーザーが頼んだ）。
@@ -136,7 +141,7 @@ flowchart LR
 - **ここにない外への通信はしない**。この一覧は `_dev/tools/smoke.ps1` の `$allowCommon`・`$allowApp` と同じで、ほかの所へつないだら smoke が「許可していない外への通信」で NG にする（正はそちら。アプリにつなぎ先を足したら smoke と、ここを直す）。
 - 出どころの論文・資料（doi.org・arxiv.org・pmc など）へは**リンクだけ**（見る人がクリックしたとき新しいタブで開く。自動ではつながない）。
 - GA は `sishiya.github.io` で開いたときだけ読みこむ（ローカルでは送らない）。プライバシーポリシーは `privacy.html`。
-- 開発中（ローカル）: Browser ペイン・ヘッドレスの Chrome → `localhost:8765〜8770`（`.claude/launch.json` の `apps`〜`apps-6`）。並行するセッションがポートを分けて使う。
+- 開発中（ローカル）: Browser ペイン・ヘッドレスの Chrome → `localhost:8765〜8770`（`.claude/launch.json` の `apps`〜`apps-6`）、くらしラボは `kurashi`（8800）。並行するセッションがポートを分けて使う。
 - 自分の PC から外へ出るのは、push（GitHub）・`youtube-upload.ps1`（YouTube Data API・YouTube Analytics API・GA4 Data API）・`devto.ps1`（DEV の API）・`check-links.mjs`（出どころのリンクを確かめる）・調べものだけ。
 
 ---

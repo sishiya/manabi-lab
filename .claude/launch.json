@@ -36,6 +36,12 @@
       "runtimeExecutable": "powershell",
       "runtimeArgs": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ".claude/serve.ps1", "-Port", "8770"],
       "port": 8770
+    },
+    {
+      "name": "kurashi",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "../くらし/.claude/serve.ps1", "-Port", "8800"],
+      "port": 8800
     }
   ]
 }
