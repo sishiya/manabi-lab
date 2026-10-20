@@ -75,6 +75,12 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 #hud .row span:first-child{color:var(--dim);white-space:nowrap}
 #hud .row b{font-weight:500;font-family:var(--f-mono);text-align:right}
 #hud .big{font-family:var(--f-mono);font-size:15px;margin-bottom:2px}
+#hudMore{background:rgba(13,17,16,.84);border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:12px}
+#hudMore summary{cursor:pointer;color:var(--dim)}
+#hudMore .row{display:flex;justify-content:space-between;gap:10px;line-height:1.65}
+#hudMore .row span:first-child{color:var(--dim);white-space:nowrap}
+#hudMore .row b{font-weight:500;font-family:var(--f-mono);text-align:right}
+#tools button:not([aria-pressed=true]):not(.once) small{display:none}
 #toast{background:rgba(24,32,28,.96);border:1px solid var(--acc);border-radius:10px;padding:9px 12px;font-size:12.5px;line-height:1.7;color:var(--muted);opacity:0;transition:opacity .4s;overflow:hidden}
 #toast.on{opacity:1}
 #toast b.t{display:block;color:var(--ink);font-size:14px;margin-bottom:2px}

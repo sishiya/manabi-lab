@@ -43,9 +43,9 @@ function status() {
   else if (dLive > Math.max(0.3, ref.live * 0.08) || dVis > Math.max(0.5, ref.vis * 0.05)) { level = 'bad'; title = L('悪化している（カビが増えている）', 'Getting worse (mold is spreading)'); }
   else if (dLive < -Math.max(0.3, ref.live * 0.08) || dVis < -Math.max(0.5, ref.vis * 0.05)) { level = bad ? 'warn' : 'good'; title = bad ? L('よくなっているが、心配が残る', 'Getting better, but worries remain') : L('よくなっている', 'Getting better'); }
   else { level = bad ? 'warn' : 'good'; title = L('横ばい（ほとんど増えていない）', 'Holding steady (hardly growing)'); }
-  const days = ((now.t - ref.t) / 24).toFixed(0);
-  const line = L(`${days}日前とくらべて　生きているカビ ${fmtPct(now.live, ref.live)}　目に見えるカビ ${mm2(ref.vis)}→${mm2(now.vis)}mm²`,
-    `vs. ${days} days ago: living mold ${fmtPct(now.live, ref.live)}, visible mold ${mm2(ref.vis)}→${mm2(now.vis)} mm²`);
+  const days = ((now.t - ref.t) / 24).toFixed(0), first = now.t - ref.t < 36;
+  const line = L(`${first ? 'はじめ' : days + '日前'}とくらべて　生きているカビ ${fmtPct(now.live, ref.live)}　目に見えるカビ ${mm2(ref.vis)}→${mm2(now.vis)}mm²`,
+    `vs. ${first ? 'the start' : days + ' days ago'}: living mold ${fmtPct(now.live, ref.live)}, visible mold ${mm2(ref.vis)}→${mm2(now.vis)} mm²`);
   return { level, title, line, list };
 }
 

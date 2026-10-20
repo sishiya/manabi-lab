@@ -26,7 +26,7 @@ function buildTools() {
     const sec = document.createElement('div'); sec.className = 'tgroup g-' + grp.id;
     sec.innerHTML = `<div class="tgname">${grp.name}</div><div class="tbtns" role="group" aria-label="${grp.name}"></div>`;
     for (const t of TOOLS.filter(t => t.g === grp.id)) {
-      const b = document.createElement('button'); b.dataset.tool = t.id;
+      const b = document.createElement('button'); b.dataset.tool = t.id; if (t.once) b.classList.add('once');
       if (t.col) b.style.setProperty('--tc', t.col);
       b.innerHTML = `<span class="ic" aria-hidden="true">${t.icon}</span><span>${t.name}${t.sub ? `<small>${t.sub}</small>` : ''}</span>`;
       b.addEventListener('click', () => t.once ? useOnce(t.id, b) : setTool(t.id));
@@ -221,13 +221,13 @@ function fungText() {
 const pad = (v, n) => String(v).padStart(n, ' ');
 function updateHud() {
   const st = W.stats;
-  $('hud').innerHTML = `<div class="big">${fmtClock(W.t)}</div>
-    <div class="row"><span>${L('浴室の空気', 'Bathroom air')}</span><b>${pad(Math.round(W.air.T), 2)}℃ ${pad(Math.round(W.air.RH), 3)}%</b></div>
-    <div class="row"><span>${L('空気中の胞子', 'Spores in the air')}</span><b>${L(`1m³に約${fmtN(W.air.C)}個`, `about ${fmtN(W.air.C)} per m³`)}</b></div>
+  // always: the air; only while it works: anti-mold; the rest folded (time is on the time bar, visible mold in the status)
+  const fung = fungNow() >= 0.02;
+  $('hud').innerHTML = `<div class="row"><span>${L('浴室の空気', 'Bathroom air')}</span><b>${pad(Math.round(W.air.T), 2)}℃ ${pad(Math.round(W.air.RH), 3)}%</b></div>
+    ${fung ? `<div class="row"><span>${L('防カビの効き', 'Anti-mold effect')}</span><b style="color:${fungNow() > 0.1 ? '#ffc890' : 'inherit'}">${fungText()}</b></div>` : ''}`;
+  if ($('hudMore').open) $('hudMoreBody').innerHTML = `<div class="row"><span>${L('空気中の胞子', 'Spores in the air')}</span><b>${L(`1m³に約${fmtN(W.air.C)}個`, `about ${fmtN(W.air.C)} per m³`)}</b></div>
     <div class="row"><span>${L('壁で待っている胞子', 'Spores waiting on the wall')}</span><b>${fmtN(W.spores.length)}${L('個', '')}</b></div>
-    <div class="row"><span>${L('菌糸の先', 'Hyphal tips')}</span><b>${L(`${st.moving || 0}本のびる・${st.paused || 0}本休み`, `${st.moving || 0} growing, ${st.paused || 0} resting`)}</b></div>
-    <div class="row"><span>${L('目に見えるカビ', 'Visible mold')}</span><b style="color:${st.visArea >= 1 ? '#ffb08a' : 'inherit'}">${st.visArea.toFixed(0)}mm²</b></div>
-    <div class="row"><span>${L('防カビの効き', 'Anti-mold effect')}</span><b style="color:${fungNow() > 0.1 ? '#ffc890' : 'inherit'}">${fungText()}</b></div>`;
+    <div class="row"><span>${L('菌糸の先', 'Hyphal tips')}</span><b>${L(`${st.moving || 0}本のびる・${st.paused || 0}本休み`, `${st.moving || 0} growing, ${st.paused || 0} resting`)}</b></div>`;
   $('clock').textContent = fmtClock(W.t);
   updateStatus();
 }

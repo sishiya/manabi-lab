@@ -1,11 +1,11 @@
 # カビが育つまで 開発メモ
 
-最終更新: 2026-10-10
+最終更新: 2026-10-20
 
 浴室の壁の一部（横10cm × 縦6cm。タイル・目地・ゴムパッキン・浴そうのふち）を拡大した「カビの箱庭」。空気から胞子が落ち、水とえさのある所で発芽し、菌糸の先（数千本）が1本ずつのび、胞子を作って増える。道具（水・ふく・乾かす・汚す・こする・塩素系・アルコール・防カビ剤・くん煙剤）を指でなぞって試し、毎日の習慣で8週間を比べる。企画は `PLAN.md`（v2）。v1（数のモデル＋グラフ）は合わなかったので試作として `versions/v001-first`・`PLAN-v1.md` に残す。Canvas 2D、外部ライブラリなし。
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: 最新は v4b（`versions/v004b-english`、**英語対応**。右上の JP／EN）。その前の v4（`versions/v004-tabs-micro`。いちばん外側のタブ「箱庭で試す／カビの図鑑／このアプリについて」、道具のグループ分け、拡大で顕微鏡の見え方、道具の動き。ルーペはやめた）。**入口「まなびラボ」に載せた**（2026-10-07。`APPS`・`assets/thumbs/mold-growth.jpg`・アクセス解析の1行。互換モードと標準モードで全要素の位置が同じことを 1400×860・1024×700・375×812 で確認）。Artifact には公開していない。中身を変えたら入口の `updated` も書きかえる。
+- **いまの状態**: 2026-10-20 に UI/UX のブラッシュアップ（RULES 8.5、下の「状態」。versions には取っていない）。その前の節目は v4b（`versions/v004b-english`、**英語対応**。右上の JP／EN）。その前の v4（`versions/v004-tabs-micro`。いちばん外側のタブ「箱庭で試す／カビの図鑑／このアプリについて」、道具のグループ分け、拡大で顕微鏡の見え方、道具の動き。ルーペはやめた）。**入口「まなびラボ」に載せた**（2026-10-07。`APPS`・`assets/thumbs/mold-growth.jpg`・アクセス解析の1行。互換モードと標準モードで全要素の位置が同じことを 1400×860・1024×700・375×812 で確認）。Artifact には公開していない。中身を変えたら入口の `updated` も書きかえる。
 - **次にやること**: 段階Cの残り「食べもの（パン）」の場面（ユーザーは段階Bより先に段階Cを選んだ。2026-10-07）。図鑑の感想しだいで直す。段階B（冬の結露）はそのあと。
 - **読む順**: `../RULES.md` → このファイル → 下の「ファイル構成」で関係するファイルだけ。育ち方の速さを変えたいときは `js/world.js` の `SPECIES`（`vmax`・`awMin`）と `germHour()`・`colonyHour()` の係数。
 - **動かし方**: ユーザーはルートの `start.bat`。Claude は `.claude/launch.json` の `apps`〜`apps-4` のどれかで `http://localhost:<port>/mold-growth/`。
@@ -18,7 +18,7 @@
 
 | ファイル | 中身 | 主な名前 |
 |---|---|---|
-| `index.html` | 骨組み（doctype なし）。読み込み順: world → tools → render → micro → fx → cards → status → zukan → main | `#tools` `#brush` `#smoke` `#world` `#modes` `#moistLegend` `#topbar` `#tabs`（data-tab: sim・zukan・about）、ページ `.page`（`#app` `#pageZukan` `#pageAbout`）、`#side`（`#status` `#hud` `#toast`）、`#zoomIn` `#zoomOut` `#zoomReset`、図鑑 `#zkList` `#zkDetail``#timebar`（`#speeds` `#restart` `#record`）`#habits` `#records` `#cards` |
+| `index.html` | 骨組み（doctype なし）。読み込み順: world → tools → render → micro → fx → cards → status → zukan → main | `#tools` `#brush` `#smoke` `#world` `#modes` `#moistLegend` `#topbar` `#tabs`（data-tab: sim・zukan・about）、ページ `.page`（`#app` `#pageZukan` `#pageAbout`）、`#side`（`#status` `#hud` `#hudMore`（くわしい数、`#hudMoreBody`）`#toast`）、`#zoomIn` `#zoomOut` `#zoomReset`、図鑑 `#zkList` `#zkDetail``#timebar`（`#speeds` `#restart` `#record`）`#habits` `#records` `#cards` |
 | `css/style.css` | 上にタブ（`#topbar`）。箱庭のページは PC: 左に道具（176px、グループごと）、まん中に箱庭、その右に状況と数値の列（`#side` 236px）、右にパネル 320px。縦長スマホ: `#stage` `#work` `#viewWrap` を `display:contents` にして order で並べる（箱庭 → 時間 → 道具（グループごとに3列）→ 状況・数値 → パネル）。図鑑のページ `.zbox`、このアプリについて `.aboutPage` | |
 | `js/world.js` | 世界: 大きさ `BOX_W` `BOX_H` `CELL`（0.5mm）`GW` `GH`、材料 `MATS` `matAt()`、カビの種類 `SPECIES`、季節 `SEASONS`、習慣 `HABITS`、育ちやすさ `growF()`、状態 `W`、`resetWorld()`、空気 `envHour()`、湿り気 `awAt()` `awOf()`、水 `bath()` `afterBath()` `runoff()` `dryHour()`、胞子が落ちる `landHour()` `addSpore()`、発芽 `germHour()`、菌糸の先 `addTip()` `killTip()` `tipsHour()`、胞子づくり・放出・再生・空気の胞子 `colonyHour()`、掃除 `weeklyClean()`、**1時間 `stepHour()`**、いまの量 `measure()`（`W.hist` に1時間ごと） | `cellOf()` `mulberry()` `BATH_HOUR`（21時）`RECORD_WEEKS`（8） |
 | `js/tools.js` | 道具のグループ `TOOL_GROUPS`（見る／乾かす・えさを減らす／カビを殺す・おさえる／悪化させる）、道具 `TOOLS`（`once` は押すだけ＝くん煙剤）、指の大きさ `BRUSH`（`base` はスライダー、`r` は拡大に合わせた mm）、`useTool(id, x, y, amt)`、くん煙剤 `useSmoke()` | `forCells()` `killTipsIn()` |
@@ -95,6 +95,7 @@
 - 道具の動きの数に上限があり、塩素系の「色が抜ける粒」で埋まって、ほかの道具の動きが出なかった。上限 700、色の粒は1回 15 まで。
 
 ## 状態
+- 2026-10-20 UI/UX のブラッシュアップ（RULES 8.5、10/22 の紹介動画の前々日）: 数値の欄の日時は下の時間の帯と同じなのでけずり、「目に見えるカビ」は状況の行（○日前とくらべて …→…mm²）と同じなのでけずった。いつも出すのは「浴室の空気」だけ、「防カビの効き」は効いているとき（2% 以上）だけ、空気中の胞子・壁で待っている胞子・菌糸の先は「くわしい数」（`details#hudMore`、開いているときだけ書く）。道具の説明の小さい字は、選んだ道具とくん煙剤（押すだけの道具、`.once`）だけ。状況の行が1日目に「0日前とくらべて」になっていたのを「はじめとくらべて」に。シミュレーションは同じ。動画（10/22）には前のパネルが映る。
 - 2026-10-18: スマホで見かたのボタン（#modes）・壁（#world）・時間のバーを上に積んで固定。湿り気の凡例は高さ 0 の sticky で壁の上に重ねる。道具から下はスクロール。
 - 2026-10-06 v1（`versions/v001-first`）: 数のモデル（VTT）＋3つの図＋グラフ。ユーザーに合わなかった（眺めるだけ、カビが生き物に見えない、広げすぎ）→ 企画を練り直し。
 - 2026-10-10 v4b（`versions/v004b-english`）: **英語対応**（`../I18N.md`）。`index.html` の先頭で `LANG`・`L()`・`setLang()`、HTML の文は `lang="ja"`／`lang="en"` を並べる（このアプリについては2つの `.aboutPage`、出どころは `ul.sources` 2つに同じ中身）。材料・カビ・季節・習慣（`world.js`）、道具（`tools.js`）、状況（`status.js`）、HUD・記録・速さ（`main.js`）、顕微鏡の説明（`micro.js`）、図の札（`render.js`）は `L()`。発見カード（`cards.js`）と図鑑（`zukan.js`）は英語の上書き表（同じ鍵）を下に置く。カードや種類を足したら英語の表にも足す。図鑑は `isMold`（日本語の kind から作る）でカビかどうかを見る。JP／EN は上の帯の右（スマホでは右上に重ねる）。日本語の表示は v4 と同じ（12日＋塩素で照合）。
