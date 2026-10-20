@@ -1,0 +1,85 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ビッグバンから惑星まで</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230e1626'/><circle cx='32' cy='32' r='9' fill='%23ffb35a'/><ellipse cx='32' cy='32' rx='24' ry='8' fill='none' stroke='%23ffb35a' stroke-width='2.5'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <header id="top">
+    <h1>ビッグバンから惑星まで</h1>
+    <span class="scene">場面④ ちりから惑星へ <small>（ほかの場面はこれから）</small></span>
+  </header>
+
+  <section id="pin">
+    <div id="stage">
+      <canvas id="cv"></canvas>
+      <canvas id="ov"></canvas>
+      <button id="next">つぎへ ▶</button>
+      <div id="zoom"><button data-z="out" title="引く">−</button><button data-z="in" title="寄る">＋</button></div>
+      <div id="legend"><span><i style="background:#b3bfd1"></i>冷たい岩</span><span><i style="background:#cc4d29"></i>熱い</span><span><i style="background:#ff9433"></i>とけている</span><span><i style="background:#fff2d1"></i>とても熱い</span><span>※ 岩・太陽の大きさと点線の軌道は目印</span></div>
+    </div>
+    <div id="caption"><p id="say">GPU の準備をしています…</p><p id="ruler"></p></div>
+    <div id="bar">
+      <button id="play" title="止める／動かす">❚❚ 止める</button>
+      <span class="seg" id="speeds"><button data-sp="slow">ゆっくり</button><button data-sp="normal" class="on">ふつう</button><button data-sp="fast">はやく</button></span>
+      <button id="reset" title="はじめから">最初から</button>
+    </div>
+  </section>
+
+  <main id="below">
+    <section class="box" id="try">
+      <h2>試す <small>（変えると最初から）</small></h2>
+      <div class="row"><label>岩の数</label><span class="seg" id="nPick">
+        <button data-v="auto" class="on" id="nAuto">自動</button><button data-v="2048">2千</button><button data-v="4096">4千</button><button data-v="8192">8千</button><button data-v="16384">1.6万</button></span></div>
+      <p class="hint">数を増やしても全体の重さは同じ（1個が小さくなる）。自動は、この端末の GPU の速さをはかって決めます。</p>
+      <div class="row"><label>ぶつかる大きさ</label><span class="seg" id="fPick">
+        <button data-v="1">本物（×1）</button><button data-v="10">×10</button><button data-v="30" class="on">×30</button></span></div>
+      <p class="hint">本物の大きさだと、ぶつかるまで何千年もかかります。大きくするほど早く育ちますが、そのぶん本物からはなれます。</p>
+    </section>
+
+    <section class="box">
+      <h2>見えるもの</h2>
+      <div id="readout"></div>
+      <table id="topList"></table>
+    </section>
+
+    <details class="box" id="more">
+      <summary>くわしく: どう計算しているか</summary>
+      <h3>重力</h3>
+      <p>太陽（動かないとする）と、すべての岩どうしの重力を足し合わせ、1歩 1/256 年（約1.4日）ずつ進めます（リープフロッグ法）。岩が 8千個なら、1歩で 6400万組。</p>
+      <h3>ぶつかり</h3>
+      <p>1歩のあいだにいちばん近づいたとき、ふれる距離より近ければぶつかったとします。ぶつかる速さが、2つを合わせた星から逃げる速さより遅ければ、くっついて1つに。速ければ、Leinhardt と Stewart（2012）の式で「いちばん大きく残る重さ」を決め、残りは かけら（最大8個）か、小さすぎれば「ちり」にします。9割より多く残ったときは「くっつく」、それより少ないときは「砕ける」と数えます。ぶつかる前と後で、重さと勢い（運動量）は変わりません。</p>
+      <h3>熱</h3>
+      <p>ぶつかるエネルギーは熱になり、温度が上がります（比熱 1000 J/kg/K、1500 K でとけはじめ、とける熱 40万 J/kg。蒸発は入れていません）。とけている岩は表面から光を出して冷え、固まったら熱は中からゆっくり伝わって逃げます（大きいほど何億年もかかる）。はじめのころは、アルミニウム26 がこわれる熱でも温まります。</p>
+      <h3>指</h3>
+      <p>指は、その場所で円くまわる岩といっしょにまわっていると考え、そこからの指の動きを、輪の中の岩に足します（1 秒で 1 周、半径 1.4 AU をなでると、地球の公転の約半分の速さ。いちばん速くて地球の公転と同じ）。止めた指は、輪の中の岩を円い軌道にそろえます。指は外からエネルギーを足す手なので、足した分（へらした分）を「指が足したエネルギー」に出しています。</p>
+    </details>
+
+    <details class="box" id="about">
+      <summary>このアプリについて</summary>
+      <p>学習用に簡単にしています。数値は、確かめた研究の値と、推定（ここで決めた値）をまぜています。</p>
+      <h3>簡単にしているところ</h3>
+      <ul>
+        <li>太陽は動かず、木星・土星・ガスの円盤は入れていない。岩はまっすぐ正面からぶつかるとして、ななめの衝突やすれちがい（ヒット・アンド・ラン）は入れていない。</li>
+        <li>はじめから同じ大きさの岩（直径 数百〜千 km）。ちり → 岩の段階は計算していない。</li>
+        <li>ぶつかる大きさを ×30 にしている（変えられる）。見た目の大きさも目印（実際よりずっと大きく描く）。</li>
+        <li>熱: とけた表面にふた（地殻・大気）がないとして冷やすので、本物より早く冷える。比熱・とける温度とその熱・密度 3000 kg/m³ は推定。</li>
+        <li>GPU は 32ビットの小数で計算するので、とても長い時間では軌道に少しずつずれがたまる。</li>
+      </ul>
+      <h3>おもな出どころ</h3>
+      <ul>
+        <li>Leinhardt, Z. M. & Stewart, S. T. (2012) Collisions between gravity-dominated bodies. I. Outcome regimes and scaling laws. <i>ApJ</i> 745, 79（式5・23・28。惑星くらいの大きさの値 c* = 1.9、μ̄ = 0.36）<a href="https://arxiv.org/abs/1106.6084" target="_blank" rel="noopener">arXiv</a></li>
+        <li>Hayashi, C. (1981) 最小質量の太陽系円盤（岩の面密度 7.1 g/cm² ×（距離/AU）<sup>−3/2</sup>。0.4〜2 AU で地球の約2.6倍）。値は後の論文・講義資料での引用で確認</li>
+        <li>Chambers, J. E. (2001) Making more terrestrial planets. <i>Icarus</i> 152（約150個の原始惑星から、約2億年で地球型の惑星が3〜4個。要旨）</li>
+        <li>MacPherson, Davis & Zinner (1995) <i>Meteoritics</i> 30（アルミニウム26 のはじめの割合 約5×10⁻⁵）。発熱 1.9×10⁻⁷ W/kg はここから計算した推定</li>
+      </ul>
+      <h3>使っているもの</h3>
+      <p>WebGPU（ブラウザの GPU の計算）。フォント: Google Fonts（SIL Open Font License）</p>
+    </details>
+  </main>
+</div>
+
+<script type="module" src="js/main.js"></script>

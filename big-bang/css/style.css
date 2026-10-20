@@ -1,0 +1,78 @@
+/* ビッグバンから惑星まで */
+:root{--bg:#0e1626;--panel:#152238;--line:#2a3d58;--ink:#e8f0f4;--muted:#a3b4bf;--acc:#ffb35a;--warm:#ffc95a;--cyan:#7fd4ff;--green:#a6e07a;
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+button,select,input{font:inherit;color:inherit}
+button{min-height:36px;padding:4px 12px;border-radius:8px;border:1px solid var(--line);background:#1e2f48;cursor:pointer}
+button:hover{border-color:var(--acc)}
+button.on{border-color:var(--acc);color:var(--acc)}
+button:disabled{opacity:.45;cursor:default}
+#app{max-width:1100px;margin:0 auto}
+#top{display:flex;align-items:baseline;gap:4px 14px;flex-wrap:wrap;padding:10px 16px 6px}
+#top h1{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0}
+#top .scene{font-size:14px;color:var(--acc)}
+#top .scene small{color:var(--muted)}
+.seg{display:inline-flex;gap:6px;flex-wrap:wrap}
+
+/* 上に固定: 図・ひとこと・時間 */
+#pin{position:sticky;top:0;z-index:5;background:var(--bg);padding:0 16px 6px;border-bottom:1px solid var(--line)}
+#stage{position:relative;height:min(56vh,560px);border-radius:10px;overflow:hidden;border:1px solid var(--line);touch-action:none;background:#0e1626}
+#cv,#ov{position:absolute;inset:0;width:100%;height:100%;display:block}
+#ov{cursor:crosshair}
+#next{position:absolute;left:10px;top:10px;background:#5a3a1c;border-color:var(--acc);font-weight:700;padding:4px 16px}
+#zoom{position:absolute;right:10px;top:10px;display:flex;gap:6px}
+#zoom button{min-width:40px;background:rgba(30,47,72,.92)}
+#legend{position:absolute;left:10px;bottom:8px;font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 12px;pointer-events:none;max-width:calc(100% - 20px);text-shadow:0 0 3px #0b141c}
+#legend i{display:inline-block;width:9px;height:9px;vertical-align:-1px;margin-right:4px;border-radius:50%}
+#caption{padding:8px 2px 0;min-height:60px}
+#say{margin:0;font-size:17px;line-height:1.6;font-weight:500}
+#say b{color:var(--acc)}
+#say .n{font-family:var(--f-mono);font-size:13px;color:var(--acc);margin-right:6px}
+#ruler{margin:4px 0 0;font-size:14px;line-height:1.6;color:var(--warm);min-height:1.6em}
+#ruler .big{font-family:var(--f-mono);font-size:17px}
+#ruler .bad{color:#ff9a8b}
+#bar{display:flex;align-items:center;gap:8px;padding-top:8px;flex-wrap:wrap}
+#play{min-width:96px;font-weight:700}
+
+/* 下はスクロール */
+#below{padding:12px 16px 32px;display:grid;gap:12px}
+#below>*{min-width:0}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.box h2{font-size:15px;margin:0 0 8px}
+.box h2 small{color:var(--muted);font-weight:400;font-size:12px}
+#try .row{display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;margin:8px 0}
+#try label{min-width:96px;color:var(--muted);font-size:14px}
+#try .seg button{font-size:14px}
+.hint{font-size:13px;color:var(--muted);margin:2px 0 6px;line-height:1.6}
+#readout{display:flex;flex-direction:column;gap:2px;font-size:14px;color:var(--muted);padding:0 0 8px}
+#readout b{color:var(--ink);font-weight:500;font-family:var(--f-mono)}
+table#topList{border-collapse:collapse;font-size:13px;font-family:var(--f-mono)}
+table#topList th{font-family:var(--f-body);font-weight:400;color:var(--muted);text-align:left;padding:2px 10px 2px 0}
+table#topList td{padding:2px 14px 2px 0}
+#more{font-size:14px;line-height:1.8}
+#more>summary,#about>summary{cursor:pointer;font-size:15px;min-height:36px;padding:7px 0;line-height:1.5}
+#more p{margin:4px 0}
+#more h3,#about h3{font-size:14px;margin:12px 0 4px}
+#about{color:var(--muted);font-size:14px;line-height:1.8}
+#about>summary{color:var(--ink)}
+#about ul{padding-left:20px;margin:4px 0}
+#about a{color:var(--acc)}
+
+@media (max-width:640px){
+  #top h1{font-size:19px}
+  #top{padding:8px 16px 4px}
+  #top .scene{font-size:12px}
+  #stage{height:42vh}
+  #caption{min-height:0;padding-top:6px}
+  #say{font-size:14px;line-height:1.55}
+  #ruler{font-size:12px;margin-top:2px}
+  #ruler .big{font-size:14px}
+  #try label{min-width:0;width:100%}
+  #bar{gap:5px;padding-top:6px;flex-wrap:nowrap}
+  #bar button{padding:2px 7px;font-size:13px;min-height:36px;white-space:nowrap}
+  #play{min-width:0}
+  #speeds{flex-wrap:nowrap;gap:4px}
+  #legend{font-size:11px;gap:0 8px}
+}
