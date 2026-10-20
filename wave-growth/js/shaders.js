@@ -93,6 +93,14 @@ void main(){
   o=vec4(col,1);
 }`;
 
+  const UNDER = `
+// 水の中（カメラが水面より下）: 光の吸収 KD・まっすぐ進む光の弱まり KC（吸収＋散乱、きれいな外洋の水の目安 /m。赤 > 緑 > 青）
+const vec3 KD=vec3(.35,.07,.03),KC=vec3(.40,.10,.06);
+uniform float under,camD;
+// 水の中の光（向き d を見たとき）: 上から見た海の色（水面へ上がってくる光）を下向き 1 として、横 5・上 40 くらい（目安）。深さ camD まで弱まる
+vec3 ubg(vec3 d,vec3 amb,vec3 L,vec3 sunC,float sunI){vec3 Lu=vec3(.004,.028,.06)*(amb*.9+sunC*sunI*.04*max(L.y,0.));
+  float k=d.y<0.?mix(1.,5.,1.+d.y):mix(5.,40.,d.y*d.y);return Lu*k*exp(-KD*camD);}
+`;
   const SKYL = `
 uniform sampler2D skyT;
 vec3 skyL(vec3 d,float lod){d.y=max(d.y,0.);float v=sqrt(d.y),u=atan(d.z,d.x)/6.2831853+.5;return textureLod(skyT,vec2(u,v),lod).rgb;}
@@ -100,10 +108,11 @@ vec3 tone(vec3 x){x=x*(2.51*x+.03)/(x*(2.43*x+.59)+.14);return pow(clamp(x,0.,1.
 float h12(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
 `;
 
-  const FS_SKY = HEAD + SKYL + `
+  const FS_SKY = HEAD + SKYL + UNDER + `
 uniform vec3 cf,cr,cu,L,sunC;uniform float tx,ty,sunI,expo,disc,stars,fogSky;in vec2 vUv;out vec4 o;
 void main(){
   vec3 d=normalize(cf+(vUv.x*2.-1.)*tx*cr+(vUv.y*2.-1.)*ty*cu);
+  if(under>0.){o=vec4(tone(ubg(d,skyL(vec3(0,1,0),6.),L,sunC,sunI)*expo)+(h12(gl_FragCoord.xy)-.5)/255.,1);return;}   // 水の中: 空のかわりに水の中の光
   vec3 c=skyL(d,0.);float mu=dot(d,L);
   c=mix(c,skyL(normalize(vec3(d.x,0.,d.z)),1.),fogSky*(1.-smoothstep(0.,.35,d.y)));   // 霧: 空の下のほうもかすむ
   c+=disc*sunC*sunI*(smoothstep(.99997,.99999,mu)*60.+pow(max(mu,0.),1500.)*.6+pow(max(mu,0.),40.)*.04);
@@ -115,33 +124,35 @@ void main(){
   // 画面に張った格子を海面へ投げて、3枚の海面の変位を足す（projected grid）
   const VS_WATER = HEAD + `
 in vec2 aG;
-uniform vec3 cam,cf,cr,cu,Ls;uniform float tx,ty,y0,y1,pixA,far,planeY,bigOn,bigL,bigX0,curvR;uniform mat4 VP;
+uniform vec3 cam,cf,cr,cu,Ls;uniform float tx,ty,y0,y1,pixA,far,planeY,bigOn,bigL,bigX0,curvR,bigWrap,gx;uniform mat4 VP;
 uniform sampler2D dA,dB,dC,bigT;
-out vec3 vPos;out vec2 vXZ;out float vH,vBS,vDep;
+out vec3 vPos;out vec2 vXZ;out float vH,vBS,vDep,vBF;
 float lod(float fp,float L){return max(0.,log2(fp/(L/256.)));}
 // ミラーの惑星: 浅い海の式の水面（r = 高さ、g = 傾き、b = 水深）を x で読む（4096 本の線を手で線形補間）
-vec3 big(float xw){float p=(bigX0+xw)/bigL*4096.-.5,f=fract(p);int i0=int(floor(p));i0=((i0%4096)+4096)%4096;int i1=(i0+1)%4096;
-  return mix(texelFetch(bigT,ivec2(i0,0),0).rgb,texelFetch(bigT,ivec2(i1,0),0).rgb,f);}
+vec4 big(float xw){float p=(bigX0+xw)/bigL*4096.-.5,f=fract(p);int i0=int(floor(p)),i1;
+  if(bigWrap>0.){i0=((i0%4096)+4096)%4096;i1=(i0+1)%4096;}else{i0=clamp(i0,0,4095);i1=min(i0+1,4095);f=clamp(f,0.,1.);}   // 浜はくり返さない
+  return mix(texelFetch(bigT,ivec2(i0,0),0),texelFetch(bigT,ivec2(i1,0),0),f);}
 void main(){
-  vec2 ndc=vec2(mix(-1.6,1.6,aG.x),mix(y0,y1,aG.y));
+  vec2 ndc=vec2(mix(-gx,gx,aG.x),mix(y0,y1,aG.y));
   vec3 d=normalize(cf+ndc.x*tx*cr+ndc.y*ty*cu);
-  float hgt=max(cam.y-planeY,.5);
-  float hor=d.y<-1e-5?length(d.xz)*hgt/(-d.y):1e9;hor=min(hor,far);
+  float hgt=cam.y-planeY;
+  float hor=hgt>=0.?(d.y<-1e-5?length(d.xz)*max(hgt,.5)/(-d.y):1e9):(d.y>1e-5?length(d.xz)*(-hgt)/d.y:1e9);hor=min(hor,far);   // 水の中からは上向きの光線で水面へ
   vec2 xz=cam.xz+normalize(d.xz+vec2(1e-6,0))*hor;
   float fp=max(hor,cam.y)*pixA*1.5;
   vec3 D=textureLod(dA,xz/Ls.x,lod(fp,Ls.x)).xyz;
   D+=textureLod(dB,xz/Ls.y,lod(fp,Ls.y)).xyz*(1.-smoothstep(2500.,5000.,hor));
   D+=textureLod(dC,xz/Ls.z,lod(fp,Ls.z)).xyz*(1.-smoothstep(150.,400.,hor));
-  vec3 p=vec3(xz.x,0,xz.y)+D;vBS=0.;vDep=1e4;
-  if(bigOn>0.){vec3 b=big(xz.x);p.y+=b.r;vBS=b.g;vDep=b.b;}
+  vBS=0.;vDep=1e4;vBF=0.;vec4 bg4=vec4(0);
+  if(bigOn>0.){bg4=big(xz.x);D*=clamp(bg4.b/1.5,0.,1.);vBS=bg4.g;vDep=bg4.b;vBF=bg4.a;}   // 浅い所ほど小さい風の波は弱い
+  vec3 p=vec3(xz.x,bg4.r,xz.y)+D;
   {float dd=length(xz-cam.xz);p.y-=dd*dd/(2.*curvR);}   // 星の丸みで遠くは沈む（地球の海は curvR = 地球の半径、ふだんは 1e9）
   vPos=p;vXZ=xz;vH=D.y;gl_Position=VP*vec4(p,1);
 }`;
 
-  const FS_WATER = HEAD + SKYL + `
-uniform vec3 cam,L,sunC,Ls;uniform float sunI,expo,fogL,sss,rough0,disc,fogH;
+  const FS_WATER = HEAD + SKYL + UNDER + `
+uniform vec3 cam,L,sunC,Ls,cfw;uniform float sunI,expo,fogL,sss,rough0,disc,fogH,windU,windA,hasBg,nearP,farP;uniform vec2 vpS;uniform sampler2D bgC,bgD;
 uniform sampler2D sA,sB,sC;
-in vec3 vPos;in vec2 vXZ;in float vH,vBS,vDep;out vec4 o;
+in vec3 vPos;in vec2 vXZ;in float vH,vBS,vDep,vBF;out vec4 o;
 float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
   return mix(mix(h12(i),h12(i+vec2(1,0)),f.x),mix(h12(i+vec2(0,1)),h12(i+vec2(1,1)),f.x),f.y);}
 void main(){
@@ -149,6 +160,13 @@ void main(){
   vec2 sl=a.xy+b.xy+c.xy;
   vec3 n=normalize(vec3(-sl.x-vBS,1.,-sl.y));
   vec3 V=cam-vPos;float dist=length(V);V/=dist;
+  if(under>0.){   // 水の中から水面を見る: 水 → 空気の屈折（スネルの窓）、窓の外は全反射。通った光は 1.33² 倍（放射輝度は n² に比例）。カメラまでは水のかすみ
+    vec3 amb0=skyL(vec3(0,1,0),6.),I=-V,Nd=-n,Tt=refract(I,Nd,1.33);float F=1.;vec3 col0=vec3(0);
+    if(dot(Tt,Tt)>0.){F=.02+.98*pow(1.-max(dot(Tt,n),0.),5.);col0=(skyL(Tt,rough0*4.)+sunC*sunI*pow(max(dot(Tt,L),0.),900.)*disc*.5)*(1.-F)*1.77;}
+    col0+=F*ubg(reflect(I,Nd),amb0,L,sunC,sunI);
+    float fmU=clamp(texture(sB,vXZ/Ls.y).z+vBF,0.,1.);col0=mix(col0,amb0*.6,smoothstep(.2,.8,fmU)*.7);   // 泡は下から見ると白くくもる
+    vec3 Tr=exp(-KC*dist);col0=col0*Tr+ubg(I,amb0,L,sunC,sunI)*(1.-Tr);
+    o=vec4(tone(col0*expo)+(h12(gl_FragCoord.xy)-.5)/255.,1);return;}
   float nv=max(dot(n,V),1e-3);
   float F=.02+.98*pow(1.-nv,5.);                         // フレネル（水の屈折率 1.33）
   vec3 R=reflect(-V,n);R.y=abs(R.y);
@@ -165,9 +183,18 @@ void main(){
   vec3 body=deep*(amb*.9+sunC*sunI*.04*max(L.y,0.))+sc*sunC*sunI*.012*(k1*3.*sss+k2);   // 水の中で散らばって出てくる光（見た目で決めた強さ）
   // 浅い所（ミラーの惑星の棚）は底が見える（水深で色がうすれる。見た目の目安）
   vec3 sand=vec3(.42,.38,.3)*(sunC*sunI*max(L.y,0.)*.05+amb*.7);body=mix(sand,body,1.-exp(-vDep/1.5));
+  // 水の下の物（大きさくらべの人など）: 物までの水の厚み t から、光が吸われる分（ベール–ランベルト。赤ほど早く吸われる）と水の中で散らばる分。少し屈折でずらす
+  float contact=0.;
+  if(hasBg>0.){vec2 uv=gl_FragCoord.xy/vpS;float dz=texture(bgD,uv).r;
+    if(dz<.99999){float zn=dz*2.-1.,zo=2.*nearP*farP/(farP+nearP-zn*(farP-nearP)),zw=dot(vPos-cam,cfw);
+      if(zo<zw-.02)discard;   // 物のほうが手前
+      float t=(zo-zw)/max(dot(-V,cfw),.2);vec2 uv2=clamp(uv+n.xz*.03*min(t,1.),0.,1.);float dz2=texture(bgD,uv2).r;if(dz2>=.99999)uv2=uv;
+      vec3 Tr=exp(-t*vec3(.45,.07,.04)*1.6);   // 吸収（外洋の水の目安 /m）
+      body=texture(bgC,uv2).rgb*Tr+body*(1.-Tr);contact=smoothstep(.07,0.,t);}}   // 物の色はすでに見た目の色（トーンのあと）
   vec3 col=mix(body,refl,F)+spec;
-  float fm=clamp(a.z*.8+b.z+c.z*.5,0.,1.);
-  float tex=vn(vXZ*2.3)*.6+vn(vXZ*7.1)*.4;
+  float fm=clamp(b.z+contact*.7+vBF,0.,1.);   // 白波は中の海面の泡（割合を観測に合わせているのと同じもの）。vBF = 浜で砕けたあとの泡   // 水面と物がふれる所は細い泡
+  vec2 wd=vec2(cos(windA),sin(windA)),q=vec2(dot(vXZ,wd),dot(vXZ,vec2(-wd.y,wd.x)));
+  float tex=mix(vn(vXZ*2.3)*.6+vn(vXZ*7.1)*.4,vn(q*vec2(.35,3.))*.7+vn(q*vec2(1.,9.))*.3,smoothstep(8.,16.,windU));   // 強い風では泡が風下にのびたすじ（見た目）
   fm=smoothstep(.15,.75,fm*(.55+.9*tex));
   vec3 foamC=(sunC*sunI*max(dot(n,L),0.)*.3+amb*1.1)*.9;
   col=mix(col,foamC,fm*.9);
@@ -189,7 +216,7 @@ void main(){int i=int(gl_FragCoord.x);vec2 xz=P[i];float wb=WB[i],w=WC[i];
   const VS_MESH = HEAD + `
 in vec3 aP,aN,aC,aM;uniform mat4 VP,M;out vec3 vP,vN,vC,vM;out float vLy;
 void main(){vec4 w=M*vec4(aP,1);vP=w.xyz;vN=mat3(M)*aN;vC=aC;vM=aM;vLy=aP.y;gl_Position=VP*w;}`;
-  const FS_MESH = HEAD + SKYL + `
+  const FS_MESH = HEAD + SKYL + UNDER + `
 uniform vec3 cam,L,sunC;uniform float sunI,expo,fogL,wetRain,wetSplash;in vec3 vP,vN,vC,vM;in float vLy;out vec4 o;
 // vM = (つや, 濡れやすさ, 0)。濡れると色が暗く、つやが強くなる（見た目の目安）
 void main(){vec3 n=normalize(vN);vec3 amb=skyL(vec3(0,1,0),6.);
@@ -200,7 +227,8 @@ void main(){vec3 n=normalize(vN);vec3 amb=skyL(vec3(0,1,0),6.);
   vec3 h=normalize(L+V);float nv=max(dot(n,V),0.),F=.04+.96*pow(1.-nv,5.);
   col+=sunC*sunI*pow(max(dot(n,h),0.),mix(10.,500.,gl))*gl*(.02+.25*F)*step(0.,dot(n,L));
   col+=skyL(reflect(-V,n),(1.-gl)*6.)*F*gl*.45;
-  col=mix(col,skyL(normalize(vec3(-V.x,0.,-V.z)),1.),1.-exp(-dist/fogL));
+  if(under>0.&&vP.y<cam.y+1.){vec3 Tr=exp(-KC*dist);col=col*Tr+ubg(-V,amb,L,sunC,sunI)*(1.-Tr);}   // 水の中から見る物は水のかすみ
+  else col=mix(col,skyL(normalize(vec3(-V.x,0.,-V.z)),1.),1.-exp(-dist/fogL));
   o=vec4(tone(col*expo),1);}`;
   // 地球儀（段階D）: 画面の点ごとに光線を地球（中心 (0,−Re,0)）に当てる。M = 世界の向き → 地球の座標
   const FS_GLOBE = HEAD + `
@@ -226,5 +254,6 @@ void main(){
   } else if(b<0.){float pd=sqrt(max(c+Re*Re-b*b,0.))-Re;col+=vec3(.3,.5,1.)*exp(-max(pd,0.)/70e3)*.6;}   // 地球のふちの空気の光
   o=vec4(pow(clamp(col,0.,1.),vec3(1./2.2)),alpha);
 }`;
-  return { FS_GLOBE, VS_FULL, FS_SPEC, FS_FFT, FS_ASM, FS_SKYTEX, FS_SKY, VS_WATER, FS_WATER, VS_MESH, FS_MESH, FS_PROBE };
+  const FS_COPY = HEAD + `uniform sampler2D T;in vec2 vUv;out vec4 o;void main(){o=texture(T,vUv);}`;
+  return { FS_COPY, FS_GLOBE, VS_FULL, FS_SPEC, FS_FFT, FS_ASM, FS_SKYTEX, FS_SKY, VS_WATER, FS_WATER, VS_MESH, FS_MESH, FS_PROBE };
 })();

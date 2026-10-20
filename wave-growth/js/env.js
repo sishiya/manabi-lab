@@ -6,7 +6,8 @@ window.WGenv = (() => {
   const LAT = 35 * Math.PI / 180;
   const TIMES = { morning: 7, noon: 12, evening: 17.6, night: 22 };
   const WEATHER = {
-    clear:  { cloud: 0.3,  cdark: 1.0,  dim: 1.0,  disc: 1.0,  fogL: 7000, expo: 1.0 },
+    fine:   { cloud: 0.04, cdark: 1.0,  dim: 1.0,  disc: 1.0,  fogL: 9000, expo: 1.0 },   // 快晴
+    clear:  { cloud: 0.38, cdark: 1.0,  dim: 1.0,  disc: 1.0,  fogL: 7000, expo: 1.0 },   // 晴れ（雲まじり）
     cloudy: { cloud: 0.95, cdark: 0.72, dim: 0.22, disc: 0.04, fogL: 5000, expo: 1.45 },
     rain:   { cloud: 1.0,  cdark: 0.45, dim: 0.1,  disc: 0.0,  fogL: 2200, expo: 1.8, rain: true },
     fog:    { cloud: 0.7,  cdark: 0.9,  dim: 0.35, disc: 0.25, fogL: 420,  expo: 1.25 },
@@ -29,7 +30,7 @@ window.WGenv = (() => {
     const w = WEATHER[weather] || WEATHER.clear, L = sunDir(clock), Lm = L.map(v => -v), el = Math.asin(L[1]) * 180 / Math.PI;
     const night = 1 - smooth(-10, -3, el);                     // 0 = 昼、1 = 夜
     return { L, Lm, moonI: 1.4 * night, cloud: w.cloud, cdark: w.cdark, dim: w.dim, disc: w.disc, fogL: w.fogL,
-      stars: night * (weather === 'clear' ? 1 : weather === 'fog' ? 0 : 0.1), expo: baseExpo(el) * w.expo, rain: !!w.rain, el };
+      stars: night * (weather === 'clear' || weather === 'fine' ? 1 : weather === 'fog' ? 0 : 0.1), expo: baseExpo(el) * w.expo, rain: !!w.rain, el };
   }
   function clockText(c) { c = ((c % 24) + 24) % 24; const h = Math.floor(c), m = Math.floor((c - h) * 60); return h + ':' + String(m).padStart(2, '0'); }
   return { make, sunDir, TIMES, WEATHER, clockText };

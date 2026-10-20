@@ -81,15 +81,33 @@
     th = Math.atan2(Math.sin(th), Math.cos(th));
     return Math.exp(lgamma(s + 1) - lgamma(s + 0.5)) / (2 * Math.sqrt(Math.PI)) * Math.pow(Math.cos(th / 2), 2 * s);
   }
-  // 波数の面での密度 S(kx, kz) [m⁴]。windAng = 波が進む向き（ラジアン）
-  function makeSpecK(Hm0, Tp, windAng, smax = 10) {
-    const fp = Tp > 0 ? 1 / Tp : 1;
+  // 短い波（Elfouhaily ほか 1997「ECKV」）: 長い波の分布はピークより短い側を exp[−(Ω/√10)(√(k/kp) − 1)] でなだらかに打ち切り、
+  // 風で強さが変わる短い波の曲率 B_h = 0.5 α_m (c_m/c) F_m を足す。α_m = 0.01[1 + ln(u*/c_m)]（u* ≤ c_m）／0.01[1 + 3 ln(u*/c_m)]、
+  // u* = √0.00144·U、c_m = 0.23 m/s、k_m = 370 rad/m、F_m = L_PM·J_p·exp[−(k/k_m − 1)²/4]。Ω = U/cp（波の年齢）。
+  // 長い波の部分は、打ち切ったあとも高さ Hm0 がかわらないように合わせなおす。U が無ければ前のまま（JONSWAP の尾）
+  function eckvParts(Hm0, Tp, U) {
+    const kp = Math.pow(2 * Math.PI / Tp, 2) / G, cp = G * Tp / (2 * Math.PI), Om = Math.min(5, Math.max(0.84, U / cp));
+    const us = Math.sqrt(0.00144) * U, cm = 0.23, km = 370, am = us <= cm ? 0.01 * (1 + Math.log(us / cm)) : 0.01 * (1 + 3 * Math.log(us / cm));
+    const gam = Om <= 1 ? 1.7 : 1.7 + 6 * Math.log10(Om), sig = 0.08 * (1 + 4 * Math.pow(Om, -3));
+    const cut = k => (k > kp ? Math.exp(-(Om / Math.sqrt(10)) * (Math.sqrt(k / kp) - 1)) : 1);
+    const Bh = k => { const c = Math.sqrt(G / k * (1 + (k / km) ** 2)), Lpm = Math.exp(-1.25 * (kp / k) ** 2), Jp = Math.pow(gam, Math.exp(-((Math.sqrt(k / kp) - 1) ** 2) / (2 * sig * sig)));
+      return Math.max(0, 0.5 * am * (cm / c) * Lpm * Jp * Math.exp(-0.25 * (k / km - 1) ** 2)); };
+    // 長い波の部分の合わせなおし（f の積分）
+    let m0 = 0, m0c = 0; const df = 0.0005 / Tp;
+    for (let f = df / 2; f < 30 / Tp; f += df) { const k = (2 * Math.PI * f) ** 2 / G, e = Sf(f, Hm0, Tp) * df; m0 += e; m0c += e * cut(k); }
+    return { kp, Om, am, us, cut, Bh, renorm: m0c > 0 ? m0 / m0c : 1 };
+  }
+  // 波数の面での密度 S(kx, kz) [m⁴]。windAng = 波が進む向き（ラジアン）、U = 風速（短い波を風で変えるとき）
+  function makeSpecK(Hm0, Tp, windAng, smax = 10, U = 0) {
+    const fp = Tp > 0 ? 1 / Tp : 1, E = U > 0 && Hm0 > 0 ? eckvParts(Hm0, Tp, U) : null;
     return (kx, kz) => {
       const k = Math.hypot(kx, kz); if (k < 1e-9) return 0;
       const w = Math.sqrt(G * k), f = w / (2 * Math.PI);
       const s = Math.max(0.5, f < fp ? smax * Math.pow(f / fp, 5) : smax * Math.pow(f / fp, -2.5));
       const dfdk = G / (2 * w) / (2 * Math.PI);
-      return Sf(f, Hm0, Tp) * dfdk / k * spread(Math.atan2(kz, kx) - windAng, s);
+      let Sk = Sf(f, Hm0, Tp) * dfdk;
+      if (E) Sk = Sk * E.cut(k) * E.renorm + E.Bh(k) / (k * k * k);
+      return Sk / k * spread(Math.atan2(kz, kx) - windAng, s);
     };
   }
 
@@ -112,6 +130,6 @@
       return E * (G / (2 * w) / (2 * Math.PI)) / k * norm * Math.pow(Math.cos(th / 2), 2 * s); };
   }
 
-  const api = { G, stokes, ustar, fromFetch, fromDurationFetch, makeSpecKTable, jonswapShape, fullyDev, fromDuration, durationForH, stateAt, Sf, makeSpecK, spread, lgamma };
+  const api = { eckvParts, G, stokes, ustar, fromFetch, fromDurationFetch, makeSpecKTable, jonswapShape, fullyDev, fromDuration, durationForH, stateAt, Sf, makeSpecK, spread, lgamma };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.WGgrowth = api;
 })(typeof window !== 'undefined' ? window : this);

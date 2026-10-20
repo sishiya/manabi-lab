@@ -3,7 +3,7 @@
 window.WGcamera = (() => {
   function create(el) {
     const C = { yaw: 0.35, pitch: 0.12, dist: 16, target: [0, 0, 0], minY: 2, fovY: 52 * Math.PI / 180,
-      DMIN: 3, DMAX: 900, PMIN: 0.02, PMAX: 1.45, free: false, eye: 3 };   // free = 前を見る（ミラーの惑星の 3D）。eye = 水面からの目の高さ
+      DMIN: 3, DMAX: 900, PMIN: 0.02, PMAX: 1.45, free: false, eye: 3, dive: false };   // dive = 水の中（eye は負 = 水面より下）   // free = 前を見る（ミラーの惑星の 3D）。eye = 水面からの目の高さ
     const ptr = new Map(); let pinch0 = 0, dist0 = 0, moved = 0;
     el.style.touchAction = 'none';
     el.addEventListener('pointerdown', e => { ptr.set(e.pointerId, [e.clientX, e.clientY]); el.setPointerCapture(e.pointerId); moved = 0;
@@ -11,13 +11,14 @@ window.WGcamera = (() => {
     el.addEventListener('pointermove', e => {
       const p = ptr.get(e.pointerId); if (!p) return;
       const dx = e.clientX - p[0], dy = e.clientY - p[1]; p[0] = e.clientX; p[1] = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
-      if (ptr.size === 1) { C.yaw += dx * 0.005 * (C.free ? C.fovY : 1); C.pitch = Math.min(C.PMAX, Math.max(C.free ? -0.6 : C.PMIN, C.pitch + dy * 0.004 * (C.free ? C.fovY : 1))); }
+      if (ptr.size === 1) { C.yaw += dx * 0.005 * (C.free ? C.fovY : 1); C.pitch = Math.min(C.PMAX, Math.max(C.dive ? -1.5 : C.free ? -0.6 : C.PMIN, C.pitch + dy * 0.004 * (C.free ? C.fovY : 1))); }
       else if (ptr.size === 2 && pinch0 > 0) { const [a, b] = [...ptr.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
         C.dist = Math.min(C.DMAX, Math.max(C.DMIN, dist0 * pinch0 / Math.max(d, 1))); }
     });
     const up = e => { ptr.delete(e.pointerId); if (ptr.size < 2) pinch0 = 0; };
     el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
-    el.addEventListener('wheel', e => { e.preventDefault(); if (C.free) C.eye = Math.min(3000, Math.max(2, C.eye * Math.exp(e.deltaY * 0.0015)));
+    el.addEventListener('wheel', e => { e.preventDefault(); if (C.dive) C.eye = -Math.min(60, Math.max(0.3, -C.eye * Math.exp(e.deltaY * 0.0015)));
+      else if (C.free) C.eye = Math.min(3000, Math.max(2, C.eye * Math.exp(e.deltaY * 0.0015)));
       else C.dist = Math.min(C.DMAX, Math.max(C.DMIN, C.dist * Math.exp(e.deltaY * 0.0012))); }, { passive: false });
 
     // 位置と向き。カメラは波の中に入らない（minY より下なら持ち上げ、海の1点を見続ける）

@@ -13,7 +13,7 @@
     <section id="pin">
       <div id="stage">
         <canvas id="cv"></canvas><canvas id="ov"></canvas>
-        <canvas id="sec" hidden></canvas><div id="beachBar" hidden><span id="slopes"><button data-s="0.1">急な浜</button><button data-s="0.033">ふつう</button><button data-s="0.01">遠浅</button></span><button id="beachClose">× 海にもどる</button></div><div id="secBar" hidden><button id="secMag">動きを3倍に</button><button id="secClose" aria-label="断面を閉じる">× 海にもどる</button></div>
+        <canvas id="sec" hidden></canvas><div id="beachBar" hidden><span id="slopes"><button data-s="0.1">急な浜</button><button data-s="0.033">ふつう</button><button data-s="0.01">遠浅</button></span><button id="beach3dBtn">3D で見る</button><button id="beachClose">× 海にもどる</button></div><div id="secBar" hidden><button id="secMag">動きを3倍に</button><button id="secClose" aria-label="断面を閉じる">× 海にもどる</button></div>
         <div id="hint">ドラッグで回す・ホイール／2本指で近づく</div>
         <button id="next">つぎへ ▶</button>
         <div id="glerr" hidden></div>
@@ -68,8 +68,9 @@
       </div>
       <div id="viewBox" class="box">
         <div class="row"><span>時間帯</span><span id="tods"><button data-k="morning">朝</button><button data-k="noon">昼</button><button data-k="evening">夕方</button><button data-k="night">夜</button><button data-k="auto" title="1日を4分で">自動</button></span></div>
-        <div class="row"><span>天気</span><span id="weathers"><button data-k="clear">晴れ</button><button data-k="cloudy">くもり</button><button data-k="rain">雨</button><button data-k="fog">霧</button></span></div>
-        <div class="row"><span>大きさくらべ</span><span id="objs"><button data-k="none">なし</button><button data-k="human">人</button><button data-k="boat">ボート</button><button data-k="fishing">漁船</button><button data-k="ship">大きな船</button></span></div>
+        <div class="row"><span>天気</span><span id="weathers"><button data-k="fine">快晴</button><button data-k="clear">晴れ</button><button data-k="cloudy">くもり</button><button data-k="rain">雨</button><button data-k="fog">霧</button></span></div>
+        <div class="row"><span>大きさくらべ</span><span id="objs"><button data-k="none">なし</button><button data-k="human">人</button><button data-k="boat" hidden>ボート</button><button data-k="fishing" hidden>漁船</button><button data-k="ship" hidden>大きな船</button></span></div>
+        <div class="row"><span>カメラ</span><span><button id="floatBtn" aria-pressed="false">海面に浮かべる: OFF</button> <button id="diveBtn" aria-pressed="false">水の中へ</button></span></div>
         <div class="row"><span>ブイ</span><span><button id="secBtn">断面を見る</button> <button id="clearBtn">消す</button></span></div>
         <div class="sub">海をタップすると浮かべられます（6 こまで）。ブイをタップすると断面。</div>
         <div class="row"><span>浅い海へ</span><button id="beachBtn">浜への断面を見る</button></div>
@@ -112,12 +113,16 @@
           <li>波長 20 cm より短い波は描いていない。くり返しのため、周期を 1000 秒で一周するように少しだけ丸めている。</li>
           <li>ブイは、その場の水の動き（3枚の海面の分）のとおりに動かし、風下へ流される分（ストークスドリフト。Kenyon 1969 の式）を足している。この版の分布は短い波が少ないので、流される速さは実際の海より小さめ（風速の 1〜1.5%。Kenyon は発達した海で 1.6〜3.6%）。</li>
           <li>浜への断面: いちばん多い波（周期 Tp・高さ Hm0）1つが、まっすぐな坂の浜へまっすぐ進むとして、線形の波の式（ω² = gk tanh kh、エネルギーの流れが同じ）で高さ・長さ・速さを出す。砕けるのは水深の 0.78 倍（McCowan 1894）か波の急さの限界（Miche 1944）の早いほう。本当の砕ける高さは坂の急さや波の形でかわる（Goda 2010）。砕けたあとは高さ = 水深 × 0.78 として簡単にした。底との摩擦・波の向きが曲がること（屈折）は入れていない。</li>
+          <li>水の中: 水面を下から見ると、水 → 空気の屈折（スネルの法則、屈折率 1.33）で、真上の円（半分の角度 48.6°）の中だけ空が見え、その外は全反射で水の中が映る。窓を通った光は 1.33² 倍（放射輝度は屈折率の 2 乗に比例）。水の中の光の弱まりは、吸収 0.35・0.07・0.03 /m、吸収＋散乱 0.40・0.10・0.06 /m（赤・緑・青。きれいな外洋の水の目安）。水の中の光の明るさは、上から見た海の色を下向き 1 として横 5・上 40 くらいにした（目安）。泡の見え方も目安。光のすじ（光芒）・海底のゆらめく光（コースティクス）は入れていない。</li>
+          <li>浜の 3D: 浜への断面の計算（いちばん多い波 1 つ）を、海岸と直角の向きの 1 本の線にして 3D の海に足した（海岸はまっすぐ、波はまっすぐ岸へ向かう、と仮定）。浅い所で山がとがるのはストークスの 2 次の波（有限の水深）。砕けたあとの泡・砂の色は見た目。小さな風の波（風速 4 m/s・1 時間）は、浅いほど弱める。海の底は水の厚みで見え方がかわる（水の吸収）。</li>
           <li>断面は、同じ分布から作った「風の向きに進む1本の波の列」（上の海とは模様がちがう）。深い海の線形の波の理論（動きは深さとともに e<sup>kz</sup> で小さくなる）。</li>
-          <li>大きさくらべの物（大きな浮き輪に板をわたした台に立つ人・ボート 4 m・漁船 15 m・大きな船 120 m）は、物の下の数か所の水の動きに平面を当てはめて浮き沈み・傾けている。大きい物ほど広い範囲でならし、ゆっくり追う（おくれの時間は見た目で決めた）。重さ・水の押し返し・流されることは計算していない。形はおおまかな模型。</li>
+          <li>大きさくらべの人（大きな浮き輪に板をわたした台に立つ）は、物の下の数か所の水の動きに平面を当てはめて浮き沈み・傾けている。大きい物ほど広い範囲でならし、ゆっくり追う（おくれの時間は見た目で決めた）。重さ・水の押し返し・流されることは計算していない。形はおおまかな模型。</li>
+          <li>短い波: 長い波の分布（JONSWAP）はピークより短い側をなだらかに打ち切り、風で強さが変わる短い波の部分を足した（Elfouhaily ほか 1997 の ECKV の形）。合計の海面の傾きは Cox &amp; Munk の観測に近い（10 m/s で 0.053 と 0.054）。描いているのは波長 20 cm まで（それより短い分は照り返しのにじみで）。</li>
+          <li>白波: 泡になる「波の面のつぶれ」の境目を、白波の面積の割合が観測の式（Monahan &amp; O'Muircheartaigh 1980: 3.84×10⁻⁶ U<sup>3.41</sup>、10 m/s で約 1%・20 m/s で約 10%）に近づくよう自動で合わせている。泡のすじの形・しぶき（風速 13 m/s から、波の山から風下へ飛ぶ白い粒）は見た目の目安。</li>
           <li>濡れて見えるのは見た目の目安（雨で全体、波が高いと下のほうがしぶきで）。</li>
           <li>白い泡は「波の面が横に押しつぶされた所」の目安（しきい値は見た目で決めた）。水の色・波の山を抜ける光の強さ・遠くのかすみも見た目で決めた。</li>
           <li>太陽の向きは北緯 35°・春分の日の時刻から計算。月は満月（太陽の反対側）。夜は、目が暗さに慣れたくらいの明るさで見せている（本当の月の光は太陽の約 40 万分の 1）。星は見た目だけ。「自動」は 1 日を 4 分で進める。</li>
-          <li>天気（くもり・雨・霧）は、雲の量・直射の光の弱まり・かすむ距離を見た目で決めた。雨のすじは見た目だけで、波には影響させていない。</li>
+          <li>天気（快晴・晴れ＝雲まじり・くもり・雨・霧）は、雲の量・直射の光の弱まり・かすむ距離を見た目で決めた。雨のすじは見た目だけで、波には影響させていない。</li>
           <li>地球儀: 陸の形は ETOPO1（NOAA）を 1°（約 110 km）ごとにしたもの（細い海峡や小さな島は出ない）。うねりは大円（球の上のまっすぐな道）にそって進み、陸に当たった向きは止まる。届く量の横の広がりは球の上の距離 Re·sin(R/Re)（地球の裏側の近くでは、また集まる）。陸や海の色・氷・星は見た目。太陽の向きは北緯 35° のまま（いる所を動かしても変えていない）。この場面のかすみは、地上の見通し 40 km・空気は高さ 8 km ごとにうすくなるとした（仮定）。</li>
           <li>遠くの嵐: 嵐の海は CEM の式（吹いた時間と嵐の広さの小さいほうで決まる）。その分布が、深い海の群速度（周期 T 秒の波は 1 秒に g·T/4π m）で道すじにそって進み、分布は保たれるとした（光の道すじと同じ考え方）。届く量は、いる所から見た嵐の幅の角度ぶんの向きの割合。長い旅で少しずつ弱まる分・惑星の丸みで道すじが集まる効果・ほかの風は入れていない（だから遠くでは実際より高めに出る）。表面には、そよ風（3 m/s・1 時間）のさざ波を重ねている。うねりの向きの広がりは、嵐の幅の角度から決めた。</li>
           <li hidden>ミラーの惑星の 3D: 計算した水面（惑星のまわりの1本の線）を横に広げ、その上に風速 5 m/s・2 時間の小さな風の波を重ねている。惑星の丸み（半径 8300 km）で遠くは沈む。空気のかすみは 200 km（仮定）。「高さ×10」は大波の高さだけを 10 倍にして形を見せるもの（そのときは画面に書く）。浅い所の底の色・空は見た目（ブラックホールは空に描いていない）。カメラと物は水面に浮かんでいる。</li>
@@ -135,6 +140,8 @@
           <li>NOAA National Centers for Environmental Information: ETOPO1 Global Relief Model（陸の形。1°ごとに間引いた）</li>
           <li>Snodgrass ほか (1966) Phil. Trans. R. Soc. A 259:431–497 “Propagation of ocean swell across the Pacific”（ニュージーランドからアラスカまで、うねりは周期の長い波から順に届き、大洋を横切ってもあまり弱まらない）</li>
           <li>Kenyon (1969) J. Geophys. Res. 74:6991 “Stokes drift for random gravity waves”（流される速さ: 16π³/g ∫ f³ S(f) df）</li>
+          <li>Elfouhaily, Chapron, Katsaros &amp; Vandemark (1997) J. Geophys. Res. 102(C7):15781 “A unified directional spectrum for long and short wind-driven waves”（短い波の部分。式は Mobley の Ocean Optics Web Book の写しで確かめた）</li>
+          <li>Monahan &amp; O'Muircheartaigh (1980) J. Phys. Oceanogr. 10:2094 “Optimal power-law description of oceanic whitecap coverage dependence on wind speed”（白波の割合）</li>
           <li>Cox &amp; Munk (1954) J. Opt. Soc. Am. 44:838（海面の傾きのばらつき σ² = 0.003 + 5.12×10⁻³ U: 太陽の照り返しのにじみ）</li>
           <li>Nishita ほか (1993)（空の色: 大気の散乱）</li>
           <li>McCowan (1894) Phil. Mag.（砕ける目安 H = 0.78 h）／Miche (1944)（波の急さの限界 H/L = 0.142 tanh kh）／Goda (2010) Coastal Engineering Journal（砕ける高さは条件でかわる）</li>
@@ -161,6 +168,7 @@
 <script src="js/floats.js"></script>
 <script src="js/section.js"></script>
 <script src="js/beach.js"></script>
+<script src="js/beach3d.js"></script>
 <script src="js/miller.js"></script>
 <script src="js/swell.js"></script>
 <script src="js/globe.js"></script>

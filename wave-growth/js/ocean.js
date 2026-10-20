@@ -50,7 +50,15 @@ window.WGocean = (() => {
 
     const S = window.WGsh;
     const pSpec = prog(S.VS_FULL, S.FS_SPEC), pFFT = prog(S.VS_FULL, S.FS_FFT), pAsm = prog(S.VS_FULL, S.FS_ASM);
-    const pSkyT = prog(S.VS_FULL, S.FS_SKYTEX), pSky = prog(S.VS_FULL, S.FS_SKY), pWater = prog(S.VS_WATER, S.FS_WATER), pMesh = prog(S.VS_MESH, S.FS_MESH), pGlobe = prog(S.VS_FULL, S.FS_GLOBE);
+    const pSkyT = prog(S.VS_FULL, S.FS_SKYTEX), pSky = prog(S.VS_FULL, S.FS_SKY), pWater = prog(S.VS_WATER, S.FS_WATER), pMesh = prog(S.VS_MESH, S.FS_MESH), pGlobe = prog(S.VS_FULL, S.FS_GLOBE), pCopy = prog(S.VS_FULL, S.FS_COPY);
+    // 物があるとき: 空と物を先に画面の外の絵（色＋深さ）に描き、海を描くときに読む（水の下の物を水ごしに見せる）
+    let bgW = 0, bgH = 0, bgColor = null, bgDepth = null, bgF = null;
+    function ensureBg(w, h) { if (w === bgW && h === bgH) return; if (bgF) { gl.deleteFramebuffer(bgF); gl.deleteTexture(bgColor); gl.deleteTexture(bgDepth); }
+      bgColor = tex(w, h, gl.RGBA8, gl.LINEAR, false); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      bgDepth = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, bgDepth); gl.texStorage2D(gl.TEXTURE_2D, 1, gl.DEPTH_COMPONENT24, w, h);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      bgF = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, bgF); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, bgColor, 0);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, bgDepth, 0); gl.bindFramebuffer(gl.FRAMEBUFFER, null); bgW = w; bgH = h; }
     const emptyVAO = gl.createVertexArray();
     const PP = [0, 1].map(() => { const a = tex(N, N, gl.RGBA32F, gl.NEAREST, false), b = tex(N, N, gl.RGBA32F, gl.NEAREST, false); return { a, b, f: fbo([a, b]) }; });
     CASC.forEach((c, ci) => {
@@ -58,6 +66,8 @@ window.WGocean = (() => {
       c.disp = tex(N, N, gl.RGBA16F, gl.LINEAR, true);
       c.slope = [tex(N, N, gl.RGBA16F, gl.LINEAR, true), tex(N, N, gl.RGBA16F, gl.LINEAR, true)];
       c.f = [fbo([c.disp, c.slope[0]]), fbo([c.disp, c.slope[1]])];
+      // 泡の平均（傾きの一番小さいミップ 1×1 の z）を読むための FBO
+      c.fm = [0, 1].map(k => { const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, c.slope[k], 8); return f; });
       // 波ごとの乱数（ずっと同じ。育っても同じ海の模様のまま大きくなる）
       let seed = 1234 + ci * 77; const r = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
         t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -98,6 +108,18 @@ window.WGocean = (() => {
     const probeBuf = new Float32Array(MAXP * 2 * 4), probeP = new Float32Array(MAXP * 2), probeW = new Float32Array(MAXP), probeB = new Float32Array(MAXP);
     const pbo = gl.createBuffer(); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo); gl.bufferData(gl.PIXEL_PACK_BUFFER, probeBuf.byteLength, gl.STREAM_READ); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
     let probeOut = [], pending = null;
+    // 白波の割合を観測に合わせる（Monahan & O'Muircheartaigh 1980: W = 3.84e−6 U^3.41）。中の海面の泡の平均を読み、泡にする境目 foamThr を少しずつ動かす
+    let foamThr = 0.55, foamTarget = 0, foamMean = 0, foamPend = null, foamTick = 0; const foamBuf = new Float32Array(4);
+    const foamPbo = gl.createBuffer(); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, foamPbo); gl.bufferData(gl.PIXEL_PACK_BUFFER, 16, gl.STREAM_READ); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+    function foamControl() {
+      if (foamPend) { const r = gl.clientWaitSync(foamPend, 0, 0);
+        if (r === gl.ALREADY_SIGNALED || r === gl.CONDITION_SATISFIED) { gl.bindBuffer(gl.PIXEL_PACK_BUFFER, foamPbo); gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, foamBuf); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+          gl.deleteSync(foamPend); foamPend = null; foamMean = foamBuf[2];
+          const err = Math.log(foamTarget + 2e-4) - Math.log(foamMean + 2e-4); foamThr = Math.min(1.2, Math.max(0.05, foamThr * Math.exp(0.15 * Math.max(-1, Math.min(1, err))))); } return; }
+      if (++foamTick % 20) return;
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, CASC[1].fm[cur]); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, foamPbo); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, 0);
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null); gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null); foamPend = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+    }
     function runProbe(points) {
       if (pending && ++pending.age % 4 === 0) {   // 確かめるのは 4 コマに 1 回（問い合わせも GPU を待たせるため）
         const r = gl.clientWaitSync(pending.fence, 0, 0);
@@ -122,7 +144,7 @@ window.WGocean = (() => {
 
     // ---- 海の分布を GPU へ（波の高さ・周期・向きが変わったとき） ----
     let fftVar = 0, fftSlope = 0;   // FFT の海面に入った分の分散と、傾きの分散（受け持ちの外の波は入らない）
-    function setSea(Hm0, Tp, windAng) { setSpec(Hm0 > 0 ? window.WGgrowth.makeSpecK(Hm0, Tp, windAng) : null); }
+    function setSea(Hm0, Tp, windAng, U = 0) { setSpec(Hm0 > 0 ? window.WGgrowth.makeSpecK(Hm0, Tp, windAng, 10, U) : null); }   // U = いまの風（短い波が風で変わる）
     function setSpec(SK) {   // SK(kx, kz) = 波数の面の密度（null = 波なし）
       fftVar = 0; fftSlope = 0; const Hm0 = SK ? 1 : 0;
       CASC.forEach(c => {
@@ -195,12 +217,12 @@ window.WGocean = (() => {
           gl.bindFramebuffer(gl.FRAMEBUFFER, PP[1 - src].f); use(pFFT);
           setAll(pFFT, { A: PP[src].a, B: PP[src].b, N, sub }); gl.uniform1i(pFFT.u.hz, dir); full(); src = 1 - src; }
         gl.bindFramebuffer(gl.FRAMEBUFFER, c.f[cur]); use(pAsm);
-        setAll(pAsm, { A: PP[src].a, B: PP[src].b, P: c.slope[1 - cur], lam: 1.0, thr: 0.55, gain: 2.0, decay }); full();
+        setAll(pAsm, { A: PP[src].a, B: PP[src].b, P: c.slope[1 - cur], lam: 1.0, thr: foamThr, gain: 2.0, decay }); full();
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.bindTexture(gl.TEXTURE_2D, c.disp); gl.generateMipmap(gl.TEXTURE_2D);
         gl.bindTexture(gl.TEXTURE_2D, c.slope[cur]); gl.generateMipmap(gl.TEXTURE_2D);
       });
-      runProbe(env.points || []);
+      runProbe(env.points || []); foamTarget = env.foamW || 0; if (!isSoft) foamControl();
       // 空は 4 コマに 1 回（雲はゆっくり。太陽を動かした直後は毎回）
       if (skyDirty || frameNo % 4 === 0) { skyDirty = false;
         gl.bindFramebuffer(gl.FRAMEBUFFER, skyF); gl.viewport(0, 0, SKW, SKH); use(pSkyT);
@@ -211,20 +233,24 @@ window.WGocean = (() => {
       gl.viewport(0, 0, W, H);
       const space = glb && glb.alpha >= 0.999;   // 宇宙から: 海と空は描かない
       if (!space) {
-      use(pSky); setAll(pSky, { cf, cr, cu, L, sunC, tx, ty, sunI: keyI, expo: env.expo, disc: env.disc, stars: env.stars, fogSky: Math.min(1, 600 / env.fogL), skyT: skyTex }); full();
+      const hasMesh = env.meshes && env.meshes.length > 0;
+      const drawSky = () => { use(pSky); setAll(pSky, { cf, cr, cu, L, sunC, tx, ty, sunI: keyI, expo: env.expo, disc: env.disc, stars: env.stars, fogSky: Math.min(1, 600 / env.fogL), skyT: skyTex, under: env.under ? 1 : 0, camD: env.camD || 0 }); full(); };
+      const drawMeshes = () => { use(pMesh); setAll(pMesh, { VP, cam: pos, L, sunC, sunI: keyI, expo: env.expo, fogL: env.fogL, wetRain: env.wetRain || 0, wetSplash: env.wetSplash || 0, skyT: skyTex, under: env.under ? 1 : 0, camD: env.camD || 0 });
+        for (const m of env.meshes) { set(pMesh, 'M', m.M); gl.bindVertexArray(m.mesh.vao); gl.drawArrays(gl.TRIANGLES, 0, m.mesh.count); } gl.bindVertexArray(null); };
+      if (hasMesh) {   // 空と物 → 画面の外の絵 → 画面へ写す
+        ensureBg(W, H); gl.bindFramebuffer(gl.FRAMEBUFFER, bgF); gl.viewport(0, 0, W, H); gl.disable(gl.DEPTH_TEST); drawSky();
+        gl.enable(gl.DEPTH_TEST); gl.clear(gl.DEPTH_BUFFER_BIT); drawMeshes(); gl.disable(gl.DEPTH_TEST);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, W, H); use(pCopy); setAll(pCopy, { T: bgColor }); full();
+      } else drawSky();
       gl.enable(gl.DEPTH_TEST); gl.clear(gl.DEPTH_BUFFER_BIT);
-      if (big) { for (let i = 0; i < 4096; i++) { bigBuf[4 * i] = big.eta[i]; bigBuf[4 * i + 1] = big.slope[i]; bigBuf[4 * i + 2] = big.depth[i]; }
+      if (big) { for (let i = 0; i < 4096; i++) { bigBuf[4 * i] = big.eta[i]; bigBuf[4 * i + 1] = big.slope[i]; bigBuf[4 * i + 2] = big.depth[i]; bigBuf[4 * i + 3] = big.foam ? big.foam[i] : 0; }
         gl.bindTexture(gl.TEXTURE_2D, bigTex); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, 1, gl.RGBA, gl.FLOAT, bigBuf); }
       use(pWater);
-      setAll(pWater, { cam: pos, cf, cr, cu, Ls: CASC.map(c => c.L), tx, ty, y0: -3.0, y1: Math.min(horizonY + (big ? 0.4 : 0.12), 1.2),
-        far: env.far || (big ? 300000 : 30000), planeY: big ? big.planeY : 0, bigOn: big ? 1 : 0, bigL: big ? big.L : 1, bigX0: big ? big.x0 : 0, curvR: big ? big.R : env.curvR || 1e9, bigT: bigTex,
-        pixA: 2 * ty / H, VP, L, sunC, sunI: keyI, expo: env.expo, fogL: env.fogL, sss: 1, rough0: env.rough0, disc: env.disc, fogH: env.fogH || 0, skyT: skyTex,
+      setAll(pWater, { cam: pos, cf, cr, cu, Ls: CASC.map(c => c.L), tx, ty, gx: env.wideGrid ? 2.6 : 1.6, y0: env.under ? Math.max(-1.2, horizonY - 0.15) : env.wideGrid ? -5.0 : -3.0, y1: env.under ? 3.0 : Math.min(horizonY + (big ? 0.4 : 0.12), 1.2), under: env.under ? 1 : 0, camD: env.camD || 0,
+        far: env.far || (big ? 300000 : 30000), planeY: big ? big.planeY : 0, bigOn: big ? 1 : 0, bigL: big ? big.L : 1, bigX0: big ? big.x0 : 0, bigWrap: big && big.noWrap ? 0 : 1, curvR: big ? big.R : env.curvR || 1e9, bigT: bigTex,
+        pixA: 2 * ty / H, VP, L, sunC, sunI: keyI, expo: env.expo, fogL: env.fogL, sss: 1, rough0: env.rough0, disc: env.disc, fogH: env.fogH || 0, windU: env.windU || 0, windA: env.windA || 0, skyT: skyTex, cfw: cf, hasBg: hasMesh ? 1 : 0, nearP: n, farP: f, vpS: [W, H], bgC: hasMesh ? bgColor : skyTex, bgD: hasMesh ? bgDepth : skyTex,
         dA: CASC[0].disp, dB: CASC[1].disp, dC: CASC[2].disp, sA: CASC[0].slope[cur], sB: CASC[1].slope[cur], sC: CASC[2].slope[cur] });
       gl.bindVertexArray(gridVAO); gl.drawElements(gl.TRIANGLES, gridVAO.count, gl.UNSIGNED_INT, 0); gl.bindVertexArray(null);
-      // 物（海の中の部分は水にかくれる）
-      if (env.meshes && env.meshes.length) { use(pMesh); setAll(pMesh, { VP, cam: pos, L, sunC, sunI: keyI, expo: env.expo, fogL: env.fogL, wetRain: env.wetRain || 0, wetSplash: env.wetSplash || 0, skyT: skyTex });
-        for (const m of env.meshes) { set(pMesh, 'M', m.M); gl.bindVertexArray(m.mesh.vao); gl.drawArrays(gl.TRIANGLES, 0, m.mesh.count); }
-        gl.bindVertexArray(null); }
       }
       if (glb && glb.alpha > 0) {   // 地球儀（重ねる）
         if (!elevSet && glb.elev) { gl.bindTexture(gl.TEXTURE_2D, elevTex); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 360, 181, gl.RED, gl.FLOAT, glb.elev); elevSet = true; }
@@ -236,7 +262,7 @@ window.WGocean = (() => {
       cur = 1 - cur;
       if (q) { gl.endQuery(tq.TIME_ELAPSED_EXT); tqs.push(q); }
     }
-    return { isSoft, setSea, setSpec, frame, makeMesh, get probe() { return probeOut; }, get VP() { return lastVP; }, get txty() { return lastTxTy; }, skyChanged() { skyDirty = true; }, get gpuMs() { return gpuMs; }, get fftHs() { return 4 * Math.sqrt(fftVar); }, get fftSlope() { return fftSlope; } };
+    return { isSoft, setSea, setSpec, frame, makeMesh, get probe() { return probeOut; }, get VP() { return lastVP; }, get txty() { return lastTxTy; }, skyChanged() { skyDirty = true; }, get gpuMs() { return gpuMs; }, get fftHs() { return 4 * Math.sqrt(fftVar); }, get fftSlope() { return fftSlope; }, get foam() { return { thr: foamThr, mean: foamMean, target: foamTarget }; } };
   }
   return { create, LOOP };
 })();
