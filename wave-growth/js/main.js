@@ -6,13 +6,21 @@ window.addEventListener('error', e => window.__wagrErr.push(String(e.message)));
 const $ = id => document.getElementById(id);
 const W = window.WGgrowth, HOUR = 3600, TMAX = 72 * HOUR;
 const WIND_ANG = Math.PI + 0.5;          // 波が進む向き（左前からこちらへ）
-const SUN = { sunEl: 25 * Math.PI / 180, sunAz: 0, cloud: 0.35, expo: 0.45, rough0: 0.012 };
+const SUN = { sunEl: 25 * Math.PI / 180, sunAz: 0, cloud: 0.35, expo: 0.45, rough0: 0.012, probe: [0, 0], meshes: [] };
+// 景色（太陽の高さ・向き・雲・明るさ）。カメラははじめ +x のほう（朝の太陽のほう）を見ている
+const SCENES = {
+  morning: { sunEl: 12, sunAz: 0.1, cloud: 0.4, expo: 0.45 },
+  noon:    { sunEl: 58, sunAz: 2.4, cloud: 0.3, expo: 0.6 },
+  dusk:    { sunEl: 2.2, sunAz: -0.15, cloud: 0.5, expo: 0.95 },
+  cloudy:  { sunEl: 35, sunAz: 1.2, cloud: 0.92, expo: 0.55 },
+};
 
 // ---- 状態 ----
 const S = {
   t: 0,                                   // 風が吹きはじめてからの時間（秒）
   sched: [{ t: 0, U: 10 }],               // 風の記録（いつから何 m/s）
-  play: false, speed: HOUR,               // ▶ のとき 1 秒で進む時間
+  play: true, speed: 0,                   // ▶ のとき 1 秒で進む時間（0 = おまかせ: つまみの目盛りで同じ速さ → はじめはゆっくり。72時間を1分で）
+  scene: 'morning', prop: true,
   simT: 0,                                // 画面の波の時計（ふつうの速さ）
   st: null,
 };
@@ -51,8 +59,8 @@ function resetWind(U) { S.sched = [{ t: 0, U }]; }
 
 // ---- 数字・表示 ----
 function fmtTime(t) {
-  if (t < HOUR) return Math.round(t / 60) + ' 分';
-  const h = Math.floor(t / HOUR), m = Math.round((t - h * HOUR) / 60);
+  const tm = Math.round(t / 60); if (tm < 60) return tm + ' 分';
+  const h = Math.floor(tm / 60), m = tm % 60;
   return h + ' 時間' + (m && h < 10 ? ' ' + m + ' 分' : '');
 }
 let lastSea = { H: -1, T: -1, at: 0 };
@@ -101,6 +109,7 @@ function drawOverlay(b) {
   const r = ov.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
   if (ov.width !== Math.round(r.width * dpr) || ov.height !== Math.round(r.height * dpr)) { ov.width = Math.round(r.width * dpr); ov.height = Math.round(r.height * dpr); }
   const g = ov.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, r.width, r.height);
+  drawPropLabel(g);
   const U = windAt(S.t); if (!(U > 0)) return;
   const fx = b.cf[0], fz = b.cf[2], fl = Math.hypot(fx, fz) || 1, rx = b.cr[0], rz = b.cr[2];
   const wx = Math.cos(WIND_ANG), wz = Math.sin(WIND_ANG), sx = wx * rx + wz * rz, sy = -(wx * fx + wz * fz) / fl;   // 画面の上 = カメラの前
@@ -112,6 +121,26 @@ function drawOverlay(b) {
   g.lineTo(cx + sx * 20 - 9 * Math.cos(a - .45), cy + sy * 20 - 9 * Math.sin(a - .45)); g.lineTo(cx + sx * 20 - 9 * Math.cos(a + .45), cy + sy * 20 - 9 * Math.sin(a + .45)); g.fill();
   g.font = '12px ' + getComputedStyle(document.documentElement).getPropertyValue('--f-body'); g.textAlign = 'center';
   g.fillText('風 ' + U.toFixed(0) + ' m/s', cx, cy + 44);
+}
+
+// ---- 景色・大きさくらべ ----
+function setScene(k) { const c = SCENES[k]; S.scene = k;
+  Object.assign(SUN, { sunEl: c.sunEl * Math.PI / 180, sunAz: c.sunAz, cloud: c.cloud, expo: c.expo }); if (ocean) ocean.skyChanged();
+  document.querySelectorAll('#scenes button').forEach(b => b.classList.toggle('on', b.dataset.k === k)); }
+document.querySelectorAll('#scenes button').forEach(b => b.onclick = () => setScene(b.dataset.k));
+const propMesh = ocean ? ocean.makeMesh(window.WGprops.geometry()) : null;
+function setProp(on) { S.prop = on; const b = $('propBtn'); b.textContent = '人（身長 1.7 m）: ' + (on ? 'ON' : 'OFF'); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }
+$('propBtn').onclick = () => setProp(!S.prop);
+// 人の頭の上に「1.7 m」の札（画面に投げて）
+function drawPropLabel(g) {
+  if (!S.prop || !ocean || !ocean.VP || !SUN.meshes.length) return;
+  const M = SUN.meshes[0].M, P = ocean.VP, top = [M[12] + M[4] * 2.0, M[13] + M[5] * 2.0, M[14] + M[6] * 2.0];
+  const cx = P[0] * top[0] + P[4] * top[1] + P[8] * top[2] + P[12], cy = P[1] * top[0] + P[5] * top[1] + P[9] * top[2] + P[13], cw = P[3] * top[0] + P[7] * top[1] + P[11] * top[2] + P[15];
+  if (cw <= 0) return;
+  const r = ov.getBoundingClientRect(), x = (cx / cw * 0.5 + 0.5) * r.width, y = (0.5 - cy / cw * 0.5) * r.height;
+  if (x < -50 || x > r.width + 50 || y < -20 || y > r.height + 20) return;
+  g.font = '12px ' + getComputedStyle(document.documentElement).getPropertyValue('--f-body'); g.textAlign = 'center';
+  g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(x - 30, y - 16, 60, 18); g.fillStyle = '#fff'; g.fillText('人 1.7 m', x, y - 3);
 }
 
 // ---- 案内 ----
@@ -128,7 +157,7 @@ cv.addEventListener('pointerdown', () => { $('hint').classList.add('gone'); });
 let last = performance.now(), fpsAcc = 0, fpsN = 0, slow = 0;
 function step(dt) {
   S.simT += dt;
-  if (S.play) { S.t = Math.min(TMAX, S.t + dt * S.speed); if (S.t >= TMAX) S.play = false; update(); }
+  if (S.play) { S.t = Math.min(TMAX, S.speed ? S.t + dt * S.speed : v2t(Math.sqrt(S.t / TMAX) * 1000 + dt * 1000 / 60)); if (S.t >= TMAX) S.play = false; update(); }
   if (camAnim) { camAnim.k = Math.min(1, camAnim.k + dt / 1.2); const e = 1 - Math.pow(1 - camAnim.k, 3);
     cam.pitch = camAnim.from.pitch + (camAnim.to.pitch - camAnim.from.pitch) * e; cam.dist = camAnim.from.dist + (camAnim.to.dist - camAnim.from.dist) * e;
     if (camAnim.k >= 1) camAnim = null; }
@@ -137,6 +166,7 @@ function draw(dt) {
   syncSea();
   const b = cam.basis();
   // 海面の傾きのばらつき（Cox & Munk 1954、きれいな海面）σ² = 0.003 + 5.12×10⁻³ U。描いている波の分を引いた残りで照り返しをにじませる
+  SUN.meshes = S.prop && propMesh ? [{ mesh: propMesh, M: window.WGprops.matrix(0, 0, ocean.probe, 0.6) }] : [];
   if (ocean) { const U = windAt(S.t), tot = S.st.Hm0 > 0 ? 0.003 + 5.12e-3 * U : 0;
     SUN.rough0 = Math.max(0.012, Math.sqrt(Math.max(tot - ocean.fftSlope, 0)));
     ocean.frame(dt, S.simT, b, SUN); }
@@ -152,8 +182,9 @@ function loop(now) {
     $('perf').textContent = `1コマ ${ms.toFixed(1)} ms` + (ocean && ocean.gpuMs ? `（GPU ${ocean.gpuMs.toFixed(1)}）` : '') + `・${cv.width}×${cv.height}`; }
   requestAnimationFrame(loop);
 }
-update();
-window.WGguide.show(0, guideApi);
+// はじめ: 朝の景色・人あり・風が吹く前から再生（案内は「つぎへ」で始まる）
+setScene('morning'); setProp(true);
+S.free = true; update();
 requestAnimationFrame(loop);
 
 // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）

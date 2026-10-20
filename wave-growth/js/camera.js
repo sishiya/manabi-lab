@@ -2,8 +2,8 @@
 'use strict';
 window.WGcamera = (() => {
   function create(el) {
-    const C = { yaw: 0.35, pitch: 0.14, dist: 30, target: [0, 0, 0], minY: 2, fovY: 52 * Math.PI / 180,
-      DMIN: 6, DMAX: 900, PMIN: 0.02, PMAX: 1.45 };
+    const C = { yaw: 0.35, pitch: 0.12, dist: 16, target: [0, 0, 0], minY: 2, fovY: 52 * Math.PI / 180,
+      DMIN: 3, DMAX: 900, PMIN: 0.02, PMAX: 1.45 };
     const ptr = new Map(); let pinch0 = 0, dist0 = 0, moved = 0;
     el.style.touchAction = 'none';
     el.addEventListener('pointerdown', e => { ptr.set(e.pointerId, [e.clientX, e.clientY]); el.setPointerCapture(e.pointerId); moved = 0;
@@ -11,7 +11,7 @@ window.WGcamera = (() => {
     el.addEventListener('pointermove', e => {
       const p = ptr.get(e.pointerId); if (!p) return;
       const dx = e.clientX - p[0], dy = e.clientY - p[1]; p[0] = e.clientX; p[1] = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
-      if (ptr.size === 1) { C.yaw -= dx * 0.005; C.pitch = Math.min(C.PMAX, Math.max(C.PMIN, C.pitch + dy * 0.004)); }
+      if (ptr.size === 1) { C.yaw += dx * 0.005; C.pitch = Math.min(C.PMAX, Math.max(C.PMIN, C.pitch + dy * 0.004)); }
       else if (ptr.size === 2 && pinch0 > 0) { const [a, b] = [...ptr.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
         C.dist = Math.min(C.DMAX, Math.max(C.DMIN, dist0 * pinch0 / Math.max(d, 1))); }
     });

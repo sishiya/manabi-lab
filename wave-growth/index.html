@@ -34,7 +34,11 @@
         <canvas id="tl" aria-hidden="true"></canvas>
         <div class="ticks"><span style="left:0">0</span><span style="left:11.8%">1時間</span><span style="left:28.9%">6</span><span style="left:57.7%">24</span><span style="left:100%">72時間</span></div>
         <div class="row"><button id="play">▶</button>
-          <span id="speeds">1秒で <button data-s="60">1分</button><button data-s="600">10分</button><button data-s="3600">1時間</button></span></div>
+          <span id="speeds"><button data-s="0" title="はじめはゆっくり、だんだん速く（72時間を1分で）">おまかせ</button> 1秒で <button data-s="600">10分</button><button data-s="3600">1時間</button></span></div>
+      </div>
+      <div id="viewBox" class="box">
+        <div class="row"><span>景色</span><span id="scenes"><button data-k="morning">朝</button><button data-k="noon">昼</button><button data-k="dusk">夕暮れ</button><button data-k="cloudy">くもり</button></span></div>
+        <div class="row"><span>大きさくらべ</span><button id="propBtn" aria-pressed="true">人（身長 1.7 m）: ON</button></div>
       </div>
       <div id="windBox" class="box">
         <div class="row"><span>風の速さ（いまから先）</span><b id="wLabel">10 m/s</b></div>
@@ -67,6 +71,7 @@
           <li>深い海だけ。風はずっと同じ向きで、場所によらない。うねり（遠くから来る波）は入れていない。</li>
           <li>風を弱めても波は小さくならない（本当はゆっくりうねりになって出ていく）。</li>
           <li>波長 20 cm より短い波は描いていない。くり返しのため、周期を 1000 秒で一周するように少しだけ丸めている。</li>
+          <li>浮き台（一辺 2 m）は、そのまん中の水の動き（大きい波と中くらいの波の分）のとおりに動かしている。浮き台の重さ・水の押し返し・流されることは計算していない。</li>
           <li>白い泡は「波の面が横に押しつぶされた所」の目安（しきい値は見た目で決めた）。水の色・波の山を抜ける光の強さ・遠くのかすみも見た目で決めた。</li>
           <li>空の色は大気の散乱の計算（1回散乱）。水平線のすぐ上は 2° の空で代用。</li>
           <li>照り返しのにじみ: Cox &amp; Munk の式の風速は高さ 12.5 m の値だが、10 m の風速をそのまま使っている。</li>
@@ -93,5 +98,6 @@
 <script src="js/ocean.js"></script>
 <script src="js/camera.js"></script>
 <script src="js/graph.js"></script>
+<script src="js/props.js"></script>
 <script src="js/guide.js"></script>
 <script src="js/main.js"></script>

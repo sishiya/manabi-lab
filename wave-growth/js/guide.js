@@ -4,15 +4,15 @@ window.WGguide = (() => {
   const H = 3600;
   // t: 風が吹きはじめてからの時間（秒）、U: 風速（あれば記録を作りなおす）、hl: 光らせる所、cam: カメラ
   const STEPS = [
-    { t: 0, U: 10, hl: '#stage', cam: { pitch: 0.14, dist: 30 },
+    { t: 0, U: 10, hl: '#stage', cam: { pitch: 0.12, dist: 16 },
       text: '風が吹く前の海は、鏡のように平ら。空がそのまま映っています。' },
     { t: 10 * 60, hl: '#nums', cam: { pitch: 0.5, dist: 8 },
       text: '風速 10 m/s の風が吹きはじめて10分。小さなさざ波が立ちます（波長 50 cm ほど）。' },
-    { t: 3 * H, hl: '#nums', cam: { pitch: 0.14, dist: 30 },
+    { t: 3 * H, hl: '#nums', cam: { pitch: 0.12, dist: 18 },
       text: '3時間。風に押されつづけて、波は高く・長くなりました。' },
     { t: 12 * H, hl: '#graphBox',
       text: 'グラフの山が左（長い波）へ動いていきます。風は、自分より遅い波を押して育てます。' },
-    { t: 34 * H, hl: '#nums', cam: { pitch: 0.1, dist: 60 },
+    { t: 34 * H, hl: '#nums', cam: { pitch: 0.1, dist: 40 },
       text: '30時間ほどで「発達しきった海」。いちばん多い波が風より速く走るようになり、もう育ちません。' },
     { t: null, hl: '#windBox',
       text: '風の強さを変えてみよう。ドラッグでカメラを回せます。時間のつまみで、いつにでも戻れます。' },

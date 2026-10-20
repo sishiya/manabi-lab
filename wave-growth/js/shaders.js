@@ -163,5 +163,16 @@ void main(){
   float mu=dot(-V,L);col+=sunC*sunI*(pow(max(mu,0.),1500.)*.6+pow(max(mu,0.),40.)*.04);
   o=vec4(tone(col*expo)+(h12(gl_FragCoord.xy)-.5)/255.,1);
 }`;
-  return { VS_FULL, FS_SPEC, FS_FFT, FS_ASM, FS_SKYTEX, FS_SKY, VS_WATER, FS_WATER };
+  // 大きさくらべの物（人・浮き台）。色は頂点ごと、光は太陽＋空
+  const VS_MESH = HEAD + `
+in vec3 aP,aN,aC;uniform mat4 VP,M;out vec3 vP,vN,vC;
+void main(){vec4 w=M*vec4(aP,1);vP=w.xyz;vN=mat3(M)*aN;vC=aC;gl_Position=VP*w;}`;
+  const FS_MESH = HEAD + SKYL + `
+uniform vec3 cam,L,sunC;uniform float sunI,expo,fogL;in vec3 vP,vN,vC;out vec4 o;
+void main(){vec3 n=normalize(vN);vec3 amb=skyL(vec3(0,1,0),6.);
+  vec3 col=vC*(sunC*sunI*max(dot(n,L),0.)*.06+amb*(.55+.45*n.y));
+  float dist=length(cam-vP);vec3 V=(cam-vP)/dist;
+  col=mix(col,skyL(normalize(vec3(-V.x,0.,-V.z)),1.),1.-exp(-dist/fogL));
+  o=vec4(tone(col*expo),1);}`;
+  return { VS_FULL, FS_SPEC, FS_FFT, FS_ASM, FS_SKYTEX, FS_SKY, VS_WATER, FS_WATER, VS_MESH, FS_MESH };
 })();

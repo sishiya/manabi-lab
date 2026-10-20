@@ -47,7 +47,7 @@ window.WGocean = (() => {
 
     const S = window.WGsh;
     const pSpec = prog(S.VS_FULL, S.FS_SPEC), pFFT = prog(S.VS_FULL, S.FS_FFT), pAsm = prog(S.VS_FULL, S.FS_ASM);
-    const pSkyT = prog(S.VS_FULL, S.FS_SKYTEX), pSky = prog(S.VS_FULL, S.FS_SKY), pWater = prog(S.VS_WATER, S.FS_WATER);
+    const pSkyT = prog(S.VS_FULL, S.FS_SKYTEX), pSky = prog(S.VS_FULL, S.FS_SKY), pWater = prog(S.VS_WATER, S.FS_WATER), pMesh = prog(S.VS_MESH, S.FS_MESH);
     const emptyVAO = gl.createVertexArray();
     const PP = [0, 1].map(() => { const a = tex(N, N, gl.RGBA32F, gl.NEAREST, false), b = tex(N, N, gl.RGBA32F, gl.NEAREST, false); return { a, b, f: fbo([a, b]) }; });
     CASC.forEach((c, ci) => {
@@ -76,6 +76,32 @@ window.WGocean = (() => {
       const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
       gridVAO.count = idx.length; }
     gl.bindVertexArray(null);
+
+    // ---- 物（人・浮き台）: 頂点 [x,y,z, nx,ny,nz, r,g,b] の並び ----
+    function makeMesh(data) {
+      const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+      const vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vb); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+      [['aP', 0], ['aN', 3], ['aC', 6]].forEach(([n, o]) => { const l = gl.getAttribLocation(pMesh, n); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, 3, gl.FLOAT, false, 36, o * 4); });
+      gl.bindVertexArray(null); return { vao, count: data.length / 9 };
+    }
+
+    // ---- 海面の1点の動きを読む（大と中の海面。小さいさざ波は浮き台の大きさでならされるので入れない） ----
+    // 結果は1コマおくれ。{ d: [横x, 上下, 横z], s: [傾きx, 傾きz] }
+    const probeBuf = new Float32Array(4), probeOut = { d: [0, 0, 0], s: [0, 0] };
+    function readTexel(i, j) { gl.readPixels(i, j, 1, 1, gl.RGBA, gl.FLOAT, probeBuf); return probeBuf; }
+    function probeCascade(c, x, z, acc) {
+      const fx = ((x / c.L) * N - 0.5) % N, fz = ((z / c.L) * N - 0.5) % N;
+      const u = (fx + N) % N, v = (fz + N) % N, i0 = Math.floor(u), j0 = Math.floor(v), ax = u - i0, az = v - j0;
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, c.f[cur]);
+      for (const [att, keys] of [[0, 'd'], [1, 's']]) {
+        gl.readBuffer(gl.COLOR_ATTACHMENT0 + att);
+        const r = [0, 0, 0];
+        [[0, 0, (1 - ax) * (1 - az)], [1, 0, ax * (1 - az)], [0, 1, (1 - ax) * az], [1, 1, ax * az]].forEach(([di, dj, w]) => {
+          const p = readTexel((i0 + di) % N, (j0 + dj) % N); r[0] += p[0] * w; r[1] += p[1] * w; r[2] += p[2] * w; });
+        if (keys === 'd') { acc.d[0] += r[0]; acc.d[1] += r[1]; acc.d[2] += r[2]; } else { acc.s[0] += r[0]; acc.s[1] += r[1]; }
+      }
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+    }
 
     // ---- 海の分布を GPU へ（波の高さ・周期・向きが変わったとき） ----
     let fftVar = 0, fftSlope = 0;   // FFT の海面に入った分の分散と、傾きの分散（受け持ちの外の波は入らない）
@@ -115,7 +141,7 @@ window.WGocean = (() => {
       return [5.8e-6, 13.5e-6, 33.1e-6].map(bR => Math.exp(-(bR * oR + 21e-6 * 1.1 * oM))); }
 
     function full() { gl.bindVertexArray(emptyVAO); gl.drawArrays(gl.TRIANGLES, 0, 3); }
-    let cur = 0, frameNo = 0, skyDirty = true, cloudOff = [0, 0], gpuMs = 0; const tqs = [];
+    let cur = 0, frameNo = 0, skyDirty = true, cloudOff = [0, 0], gpuMs = 0, lastVP = null; const tqs = [];
 
     // cam = { pos:[x,y,z], cf, cr, cu（向き・右・上の単位ベクトル）, fovY }、env = { sunEl, sunAz, cloud, expo }
     function frame(dt, simT, cam, env) {
@@ -125,8 +151,7 @@ window.WGocean = (() => {
       const t = simT % LOOP;
       const W = cv.width, H = cv.height, ty = Math.tan(cam.fovY / 2), tx = ty * W / H;
       const { cf, cr, cu } = cam, P0 = cam.pos;
-      // 位置は 1280 m ごとに戻しても海はつながっている（遠くても数字の細かさが落ちない）
-      const pos = [((P0[0] % 1280) + 1280) % 1280, P0[1], ((P0[2] % 1280) + 1280) % 1280];
+      const pos = P0;   // カメラは原点のまわりだけを回るので、位置を戻さなくてよい
       const n = 0.1, f = 40000, e = [-pos[0], -pos[1], -pos[2]];
       const V = [cr[0], cu[0], -cf[0], 0, cr[1], cu[1], -cf[1], 0, cr[2], cu[2], -cf[2], 0,
         cr[0] * e[0] + cr[1] * e[1] + cr[2] * e[2], cu[0] * e[0] + cu[1] * e[1] + cu[2] * e[2], -(cf[0] * e[0] + cf[1] * e[1] + cf[2] * e[2]), 1];
@@ -153,6 +178,7 @@ window.WGocean = (() => {
         gl.bindTexture(gl.TEXTURE_2D, c.disp); gl.generateMipmap(gl.TEXTURE_2D);
         gl.bindTexture(gl.TEXTURE_2D, c.slope[cur]); gl.generateMipmap(gl.TEXTURE_2D);
       });
+      if (env.probe) { const acc = { d: [0, 0, 0], s: [0, 0] }; probeCascade(CASC[0], env.probe[0], env.probe[1], acc); probeCascade(CASC[1], env.probe[0], env.probe[1], acc); probeOut.d = acc.d; probeOut.s = acc.s; }
       // 空は 4 コマに 1 回（雲はゆっくり。太陽を動かした直後は毎回）
       if (skyDirty || frameNo % 4 === 0) { skyDirty = false;
         gl.bindFramebuffer(gl.FRAMEBUFFER, skyF); gl.viewport(0, 0, SKW, SKH); use(pSkyT);
@@ -168,10 +194,15 @@ window.WGocean = (() => {
         pixA: 2 * ty / H, VP, L, sunC, sunI, expo: env.expo, fogL: 7000, sss: 1, rough0: env.rough0, skyT: skyTex,
         dA: CASC[0].disp, dB: CASC[1].disp, dC: CASC[2].disp, sA: CASC[0].slope[cur], sB: CASC[1].slope[cur], sC: CASC[2].slope[cur] });
       gl.bindVertexArray(gridVAO); gl.drawElements(gl.TRIANGLES, gridVAO.count, gl.UNSIGNED_INT, 0); gl.bindVertexArray(null);
+      // 物（海の中の部分は水にかくれる）
+      if (env.meshes && env.meshes.length) { use(pMesh); setAll(pMesh, { VP, cam: pos, L, sunC, sunI, expo: env.expo, fogL: 7000, skyT: skyTex });
+        for (const m of env.meshes) { set(pMesh, 'M', m.M); gl.bindVertexArray(m.mesh.vao); gl.drawArrays(gl.TRIANGLES, 0, m.mesh.count); }
+        gl.bindVertexArray(null); }
+      lastVP = VP;
       cur = 1 - cur;
       if (q) { gl.endQuery(tq.TIME_ELAPSED_EXT); tqs.push(q); }
     }
-    return { setSea, frame, skyChanged() { skyDirty = true; }, get gpuMs() { return gpuMs; }, get fftHs() { return 4 * Math.sqrt(fftVar); }, get fftSlope() { return fftSlope; } };
+    return { setSea, frame, makeMesh, probe: probeOut, get VP() { return lastVP; }, skyChanged() { skyDirty = true; }, get gpuMs() { return gpuMs; }, get fftHs() { return 4 * Math.sqrt(fftVar); }, get fftSlope() { return fftSlope; } };
   }
   return { create, LOOP };
 })();
