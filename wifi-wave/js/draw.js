@@ -11,7 +11,11 @@ function drawOverlay(now){
   // room labels
   const lf=small?9:Math.max(10,12*Math.min(1.2,scale/0.7));
   c.font=`500 ${lf}px 'Zen Kaku Gothic New',sans-serif`;
-  for(const [t,x,y] of S.labels){const [sx,sy]=P([x,y]);c.fillStyle='rgba(8,14,28,.55)';const w=c.measureText(t).width+(small?6:10);c.fillRect(sx-w/2,sy-lf*.75,w,lf*1.5);c.fillStyle='rgba(225,235,255,.85)';c.fillText(t,sx,sy);}
+  // on the small map, a room name under the router's own name tag is skipped (it reappears when the router is moved away)
+  const rb=small&&!S.line?(([rx,ry])=>[rx-22,ry-11,rx+22,ry+26])(P(S.router)):null;
+  for(const [t,x,y] of S.labels){const [sx,sy]=P([x,y]);
+    if(rb){const hw=c.measureText(t).width/2+3;if(sx+hw>rb[0]&&sx-hw<rb[2]&&sy+lf*.75>rb[1]&&sy-lf*.75<rb[3])continue;}
+    c.fillStyle='rgba(8,14,28,.55)';const w=c.measureText(t).width+(small?6:10);c.fillRect(sx-w/2,sy-lf*.75,w,lf*1.5);c.fillStyle='rgba(225,235,255,.85)';c.fillText(t,sx,sy);}
   // lane probes
   for(const p of S.probes){
     const [sx,sy]=P([p.x,p.y]);

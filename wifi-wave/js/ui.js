@@ -48,7 +48,7 @@ $('btnReset').onclick=()=>resetField();
 $('hint').onclick=()=>$('hint').classList.toggle('open');
 // スマホ（縦）では説明を図の下のスクロール欄の頭へ移して、切らずに全部見せる
 const hintMq=matchMedia('(max-width:860px) and (orientation:portrait)'),hintHome=$('hint').nextSibling;
-const placeHint=()=>{if(hintMq.matches)$('panel').prepend($('hint'));else $('stage').insertBefore($('hint'),hintHome);};
+const placeHint=()=>{if(hintMq.matches)$('panel').querySelector('.brand').after($('hint'));else $('stage').insertBefore($('hint'),hintHome);};
 hintMq.addEventListener('change',placeHint);placeHint();
 $('btnUndo').onclick=()=>{const u=S.undo.pop();if(u){ids.set(u);mapChanged();}};
 addEventListener('keydown',e=>{if(e.code==='Space'&&e.target===document.body){e.preventDefault();$('btnPlay').click();}});
@@ -201,7 +201,11 @@ ov.addEventListener('pointermove',e=>{
   }
 });
 function endDrag(){
-  if(drag&&drag.kind==='wall'){const m=MAT[S.tool];drawWall(m,drag.p0[0],drag.p0[1],drag.p1[0],drag.p1[1]);mapChanged();}
+  if(drag&&drag.kind==='wall'){
+    // a tap (no line) draws nothing, so drop its undo step too; otherwise the next 元に戻す would seem to do nothing
+    if(Math.hypot(drag.p1[0]-drag.p0[0],drag.p1[1]-drag.p0[1])<2) S.undo.pop();
+    else{const m=MAT[S.tool];drawWall(m,drag.p0[0],drag.p0[1],drag.p1[0],drag.p1[1]);mapChanged();}
+  }
   drag=null;
 }
 ov.addEventListener('pointerup',endDrag);ov.addEventListener('pointercancel',endDrag);

@@ -118,3 +118,12 @@ details b{color:var(--ink);font-weight:500}
   #hint{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;cursor:pointer}
   #hint.open{-webkit-line-clamp:unset;display:block}
 }
+/* phones (portrait or landscape): finger-sized targets, about 32–36px */
+@media (max-width:860px) and (orientation:portrait), (orientation:landscape) and (max-height:560px){
+  .tools button{min-height:36px}
+  .langsw button{min-height:32px;padding:3px 12px}
+  input[type=range]{height:32px}
+  .chk{min-height:36px}
+  .chk input{width:18px;height:18px;flex:none}
+  summary{padding:8px 0}
+}
