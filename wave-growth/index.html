@@ -38,7 +38,8 @@
           <span id="speeds"><button data-s="0" title="はじめはゆっくり、だんだん速く（72時間を1分で）">おまかせ</button> 1秒で <button data-s="600">10分</button><button data-s="3600">1時間</button></span></div>
       </div>
       <div id="viewBox" class="box">
-        <div class="row"><span>景色</span><span id="scenes"><button data-k="morning">朝</button><button data-k="noon">昼</button><button data-k="dusk">夕暮れ</button><button data-k="cloudy">くもり</button></span></div>
+        <div class="row"><span>時間帯</span><span id="tods"><button data-k="morning">朝</button><button data-k="noon">昼</button><button data-k="evening">夕方</button><button data-k="night">夜</button><button data-k="auto" title="1日を4分で">自動</button></span></div>
+        <div class="row"><span>天気</span><span id="weathers"><button data-k="clear">晴れ</button><button data-k="cloudy">くもり</button><button data-k="rain">雨</button><button data-k="fog">霧</button></span></div>
         <div class="row"><span>大きさくらべ</span><button id="propBtn" aria-pressed="true">人（身長 1.7 m）: ON</button></div>
         <div class="row"><span>ブイ</span><span><button id="secBtn">断面を見る</button> <button id="clearBtn">消す</button></span></div>
         <div class="sub">海をタップすると浮かべられます（6 こまで）。ブイをタップすると断面。</div>
@@ -78,6 +79,8 @@
           <li>断面は、同じ分布から作った「風の向きに進む1本の波の列」（上の海とは模様がちがう）。深い海の線形の波の理論（動きは深さとともに e<sup>kz</sup> で小さくなる）。</li>
           <li>浮き台（一辺 2 m）は、そのまん中の水の動き（大きい波と中くらいの波の分）のとおりに動かしている。浮き台の重さ・水の押し返し・流されることは計算していない。</li>
           <li>白い泡は「波の面が横に押しつぶされた所」の目安（しきい値は見た目で決めた）。水の色・波の山を抜ける光の強さ・遠くのかすみも見た目で決めた。</li>
+          <li>太陽の向きは北緯 35°・春分の日の時刻から計算。月は満月（太陽の反対側）。夜は、目が暗さに慣れたくらいの明るさで見せている（本当の月の光は太陽の約 40 万分の 1）。星は見た目だけ。「自動」は 1 日を 4 分で進める。</li>
+          <li>天気（くもり・雨・霧）は、雲の量・直射の光の弱まり・かすむ距離を見た目で決めた。雨のすじは見た目だけで、波には影響させていない。</li>
           <li>空の色は大気の散乱の計算（1回散乱）。水平線のすぐ上は 2° の空で代用。</li>
           <li>照り返しのにじみ: Cox &amp; Munk の式の風速は高さ 12.5 m の値だが、10 m の風速をそのまま使っている。</li>
           <li>「なぜ止まるの？」の説明は考え方の目安です（くわしいしくみは研究が続いている）。</li>
@@ -101,6 +104,7 @@
 
 <script src="js/growth.js"></script>
 <script src="js/shaders.js"></script>
+<script src="js/env.js"></script>
 <script src="js/ocean.js"></script>
 <script src="js/camera.js"></script>
 <script src="js/graph.js"></script>

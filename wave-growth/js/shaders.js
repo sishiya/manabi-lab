@@ -70,7 +70,7 @@ vec3 atmo(vec3 d,vec3 L,float sunI){
 
   // 空のテクスチャ（横 = 方角、縦 = 高さの平方根）。雲は高さ 1500 m の層
   const FS_SKYTEX = HEAD + ATMO + `
-uniform vec3 L,ambU;uniform float sunI,cover;uniform vec2 cOff;in vec2 vUv;out vec4 o;
+uniform vec3 L,Lm,ambU;uniform float sunI,moonI,cover,cdark;uniform vec2 cOff;in vec2 vUv;out vec4 o;
 float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
 float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
   return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
@@ -78,15 +78,17 @@ float fbm(vec2 p){float s=0.,a=.5;for(int i=0;i<6;i++){s+=a*vn(p);p=mat2(1.6,1.2
 void main(){
   float az=(vUv.x-.5)*6.2831853,y=vUv.y*vUv.y,r=sqrt(1.-y*y);
   vec3 d=vec3(cos(az)*r,y,sin(az)*r);
-  vec3 col=atmo(normalize(vec3(d.x,max(d.y,.035),d.z)),L,sunI);   // 1回散乱だけだと水平線が赤くなりすぎるので、2°より下は2°の空で代用
+  vec3 dd=normalize(vec3(d.x,max(d.y,.035),d.z));   // 1回散乱だけだと水平線が赤くなりすぎるので、2°より下は2°の空で代用
+  vec3 col=atmo(dd,L,sunI)+vec3(.0008,.0012,.0024);   // 夜でも真っ黒にはしない（星あかり・大気の光の目安）
+  if(moonI>0.)col+=atmo(dd,Lm,moonI);
   if(cover>0.){
     float t=1500./max(d.y,1e-3);vec2 p=d.xz*t+cOff;
     float n=fbm(p*.00035)*.75+fbm(p*.0021)*.25;
-    float a=smoothstep(1.05-cover,1.4-cover,n)*smoothstep(0.,.07,d.y);
+    float a=smoothstep(1.05-cover,1.4-cover,n)*mix(smoothstep(0.,.07,d.y),1.,smoothstep(.8,.95,cover));   // くもり・雨は水平線まで雲
     float mu=dot(d,L),hg=(1.-.36)/pow(1.+.36-1.2*mu,1.5)/12.566;
-    vec3 sl=sunI*sunT(vec3(0,Re+1500.,0),L)*max(L.y+.05,0.)*1.4;
-    vec3 cc=sl*(.05+hg*(1.4-a))+ambU*2.2;
-    col=mix(col,cc,a*exp(-t/30000.)*.95);
+    vec3 sl=sunI*sunT(vec3(0,Re+1500.,0),L)*max(L.y+.05,0.)*1.4+moonI*sunT(vec3(0,Re+1500.,0),Lm)*max(Lm.y+.05,0.)*1.4;
+    vec3 cc=(sl*(.05+hg*(1.4-a))+ambU*2.2)*cdark;
+    col=mix(col,cc,a*mix(exp(-t/30000.),1.,smoothstep(.8,.95,cover))*.95);
   }
   o=vec4(col,1);
 }`;
@@ -99,11 +101,14 @@ float h12(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
 `;
 
   const FS_SKY = HEAD + SKYL + `
-uniform vec3 cf,cr,cu,L,sunC;uniform float tx,ty,sunI,expo;in vec2 vUv;out vec4 o;
+uniform vec3 cf,cr,cu,L,sunC;uniform float tx,ty,sunI,expo,disc,stars,fogSky;in vec2 vUv;out vec4 o;
 void main(){
   vec3 d=normalize(cf+(vUv.x*2.-1.)*tx*cr+(vUv.y*2.-1.)*ty*cu);
   vec3 c=skyL(d,0.);float mu=dot(d,L);
-  c+=sunC*sunI*(smoothstep(.99997,.99999,mu)*60.+pow(max(mu,0.),1500.)*.6+pow(max(mu,0.),40.)*.04);
+  c=mix(c,skyL(normalize(vec3(d.x,0.,d.z)),1.),fogSky*(1.-smoothstep(0.,.35,d.y)));   // 霧: 空の下のほうもかすむ
+  c+=disc*sunC*sunI*(smoothstep(.99997,.99999,mu)*60.+pow(max(mu,0.),1500.)*.6+pow(max(mu,0.),40.)*.04);
+  if(stars>0.&&d.y>0.){vec2 sp=vec2(atan(d.z,d.x),asin(d.y))*180.;vec2 ci=floor(sp),f=fract(sp)-.5;float hs=h12(ci);
+    float st=step(.993,hs)*smoothstep(.22,0.,length(f))*(hs-.993)*140.*smoothstep(0.,.15,d.y);c+=vec3(st)*stars*.02;}
   o=vec4(tone(c*expo)+(h12(gl_FragCoord.xy)-.5)/255.,1);
 }`;
 
@@ -128,7 +133,7 @@ void main(){
 }`;
 
   const FS_WATER = HEAD + SKYL + `
-uniform vec3 cam,L,sunC,Ls;uniform float sunI,expo,fogL,sss,rough0;
+uniform vec3 cam,L,sunC,Ls;uniform float sunI,expo,fogL,sss,rough0,disc;
 uniform sampler2D sA,sB,sC;
 in vec3 vPos;in vec2 vXZ;in float vH;out vec4 o;
 float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
@@ -160,7 +165,7 @@ void main(){
   col=mix(col,foamC,fm*.9);
   vec3 hz=skyL(normalize(vec3(-V.x,0.,-V.z)),1.);
   col=mix(col,hz,1.-exp(-dist/fogL));
-  float mu=dot(-V,L);col+=sunC*sunI*(pow(max(mu,0.),1500.)*.6+pow(max(mu,0.),40.)*.04);
+  float mu=dot(-V,L);col+=disc*sunC*sunI*(pow(max(mu,0.),1500.)*.6+pow(max(mu,0.),40.)*.04);
   o=vec4(tone(col*expo)+(h12(gl_FragCoord.xy)-.5)/255.,1);
 }`;
   // 海面の点の動きを読む（横 = 点の番号、縦 0 = 変位、1 = 傾き）。WC = 小さい海面（20 m）を入れる割合

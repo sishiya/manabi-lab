@@ -155,7 +155,8 @@ window.WGocean = (() => {
     function full() { gl.bindVertexArray(emptyVAO); gl.drawArrays(gl.TRIANGLES, 0, 3); }
     let cur = 0, frameNo = 0, skyDirty = true, cloudOff = [0, 0], gpuMs = 0, lastVP = null, lastTxTy = [1, 1]; const tqs = [];
 
-    // cam = { pos:[x,y,z], cf, cr, cu（向き・右・上の単位ベクトル）, fovY }、env = { sunEl, sunAz, cloud, expo }
+    // cam = { pos:[x,y,z], cf, cr, cu（向き・右・上の単位ベクトル）, fovY }
+    // env = { L: 太陽の向き, Lm: 月の向き, moonI, dim（雲で直射が弱まる割合）, disc（太陽・月の円盤の見え方）, stars, cloud, cdark, expo, fogL, rough0, points, meshes }
     function frame(dt, simT, cam, env) {
       while (tq && tqs.length && gl.getQueryParameter(tqs[0], gl.QUERY_RESULT_AVAILABLE)) { const q = tqs.shift();
         if (!gl.getParameter(tq.GPU_DISJOINT_EXT)) gpuMs = gpuMs * 0.9 + gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6 * 0.1; gl.deleteQuery(q); }
@@ -171,8 +172,11 @@ window.WGocean = (() => {
       const VP = new Float32Array(16);
       for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) { let s = 0; for (let k = 0; k < 4; k++) s += Pm[k * 4 + r] * V[c * 4 + k]; VP[c * 4 + r] = s; }
       const horizonY = cu[1] > 1e-4 ? -cf[1] / (ty * cu[1]) : 2;
-      const el = env.sunEl, L = [Math.cos(el) * Math.cos(env.sunAz), Math.sin(el), Math.cos(el) * Math.sin(env.sunAz)];
-      const sunC = sunTrans(el), sunI = 20;
+      // 太陽と月。水・物を照らす光は明るいほう（夜は月）
+      const Ls = env.L, Lm = env.Lm, el = Math.asin(Ls[1]), elm = Math.asin(Lm[1]), sunI = 20, moonI = env.moonI || 0;
+      const sunCs = sunTrans(Math.max(el, -0.05)).map(v => v * (el > -0.05 ? 1 : 0)), moonC = sunTrans(Math.max(elm, 0.01)).map(v => v * (elm > 0 ? 1 : 0));
+      const useMoon = sunI * sunCs[1] * Math.max(el, 0.0) < moonI * moonC[1] * Math.max(elm, 0);
+      const L = useMoon ? Lm : Ls, keyI = useMoon ? moonI : sunI, sunC = (useMoon ? moonC.map((v, i) => v * [0.85, 0.92, 1][i]) : sunCs).map(v => v * env.dim);
       cloudOff[0] += dt * 6; cloudOff[1] += dt * 2;
 
       gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
@@ -194,20 +198,20 @@ window.WGocean = (() => {
       // 空は 4 コマに 1 回（雲はゆっくり。太陽を動かした直後は毎回）
       if (skyDirty || frameNo % 4 === 0) { skyDirty = false;
         gl.bindFramebuffer(gl.FRAMEBUFFER, skyF); gl.viewport(0, 0, SKW, SKH); use(pSkyT);
-        setAll(pSkyT, { L, sunI, cover: env.cloud, cOff: cloudOff, ambU: atmoUp(el, sunI) }); full();
+        setAll(pSkyT, { L: Ls, Lm, sunI, moonI, cover: env.cloud, cdark: env.cdark, cOff: cloudOff, ambU: atmoUp(el, sunI).map((v, i) => v + (moonI ? atmoUp(elm, moonI)[i] : 0)) }); full();
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.bindTexture(gl.TEXTURE_2D, skyTex); gl.generateMipmap(gl.TEXTURE_2D); }
       frameNo++;
       gl.viewport(0, 0, W, H);
-      use(pSky); setAll(pSky, { cf, cr, cu, L, sunC, tx, ty, sunI, expo: env.expo, skyT: skyTex }); full();
+      use(pSky); setAll(pSky, { cf, cr, cu, L, sunC, tx, ty, sunI: keyI, expo: env.expo, disc: env.disc, stars: env.stars, fogSky: Math.min(1, 600 / env.fogL), skyT: skyTex }); full();
       gl.enable(gl.DEPTH_TEST); gl.clear(gl.DEPTH_BUFFER_BIT);
       use(pWater);
       setAll(pWater, { cam: pos, cf, cr, cu, Ls: CASC.map(c => c.L), tx, ty, y0: -3.0, y1: Math.min(horizonY + 0.12, 1.2),
-        pixA: 2 * ty / H, VP, L, sunC, sunI, expo: env.expo, fogL: 7000, sss: 1, rough0: env.rough0, skyT: skyTex,
+        pixA: 2 * ty / H, VP, L, sunC, sunI: keyI, expo: env.expo, fogL: env.fogL, sss: 1, rough0: env.rough0, disc: env.disc, skyT: skyTex,
         dA: CASC[0].disp, dB: CASC[1].disp, dC: CASC[2].disp, sA: CASC[0].slope[cur], sB: CASC[1].slope[cur], sC: CASC[2].slope[cur] });
       gl.bindVertexArray(gridVAO); gl.drawElements(gl.TRIANGLES, gridVAO.count, gl.UNSIGNED_INT, 0); gl.bindVertexArray(null);
       // 物（海の中の部分は水にかくれる）
-      if (env.meshes && env.meshes.length) { use(pMesh); setAll(pMesh, { VP, cam: pos, L, sunC, sunI, expo: env.expo, fogL: 7000, skyT: skyTex });
+      if (env.meshes && env.meshes.length) { use(pMesh); setAll(pMesh, { VP, cam: pos, L, sunC, sunI: keyI, expo: env.expo, fogL: env.fogL, skyT: skyTex });
         for (const m of env.meshes) { set(pMesh, 'M', m.M); gl.bindVertexArray(m.mesh.vao); gl.drawArrays(gl.TRIANGLES, 0, m.mesh.count); }
         gl.bindVertexArray(null); }
       lastVP = VP; lastTxTy = [tx, ty];

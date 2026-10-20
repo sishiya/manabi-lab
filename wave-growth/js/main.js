@@ -6,21 +6,16 @@ window.addEventListener('error', e => window.__wagrErr.push(String(e.message)));
 const $ = id => document.getElementById(id);
 const W = window.WGgrowth, HOUR = 3600, TMAX = 72 * HOUR;
 const WIND_ANG = Math.PI + 0.5;          // 波が進む向き（左前からこちらへ）
-const SUN = { sunEl: 25 * Math.PI / 180, sunAz: 0, cloud: 0.35, expo: 0.45, rough0: 0.012, probe: [0, 0], meshes: [] };
-// 景色（太陽の高さ・向き・雲・明るさ）。カメラははじめ +x のほう（朝の太陽のほう）を見ている
-const SCENES = {
-  morning: { sunEl: 12, sunAz: 0.1, cloud: 0.4, expo: 0.45 },
-  noon:    { sunEl: 58, sunAz: 2.4, cloud: 0.3, expo: 0.6 },
-  dusk:    { sunEl: 2.2, sunAz: -0.15, cloud: 0.5, expo: 0.95 },
-  cloudy:  { sunEl: 35, sunAz: 1.2, cloud: 0.92, expo: 0.55 },
-};
+// 空・光（時刻と天気から js/env.js で毎コマ）。カメラははじめ +x（東）を見ている
+const SUN = { rough0: 0.012, meshes: [], points: [] };
+const DAY_SEC = 240;                     // 「自動」のとき 1 日を 4 分で
 
 // ---- 状態 ----
 const S = {
   t: 0,                                   // 風が吹きはじめてからの時間（秒）
   sched: [{ t: 0, U: 10 }],               // 風の記録（いつから何 m/s）
   play: true, speed: 0,                   // ▶ のとき 1 秒で進む時間（0 = おまかせ: つまみの目盛りで同じ速さ → はじめはゆっくり。72時間を1分で）
-  scene: 'morning', prop: true,
+  tod: 'morning', clock: 7, weather: 'clear', prop: true,
   simT: 0,                                // 画面の波の時計（ふつうの速さ）
   st: null,
 };
@@ -106,11 +101,14 @@ function drawTimeline() {
 }
 
 // 風の向きの矢印（画面の右上。カメラを回すと一緒に回る）
-function drawOverlay(b) {
+function drawOverlay(b, dt = 0) {
   const r = ov.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
   if (ov.width !== Math.round(r.width * dpr) || ov.height !== Math.round(r.height * dpr)) { ov.width = Math.round(r.width * dpr); ov.height = Math.round(r.height * dpr); }
   const g = ov.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, r.width, r.height);
+  if (SUN.rain) drawRain(g, r.width, r.height, dt);
   drawPropLabel(g); drawTrails(g);
+  g.font = '12px ' + getComputedStyle(document.documentElement).getPropertyValue('--f-body'); g.textAlign = 'left'; g.fillStyle = 'rgba(255,255,255,.8)';
+  g.fillText(E.clockText(S.clock) + (S.tod === 'auto' ? '（時間が進む）' : ''), 12, r.height - 14);
   const U = windAt(S.t); if (!(U > 0)) return;
   const fx = b.cf[0], fz = b.cf[2], fl = Math.hypot(fx, fz) || 1, rx = b.cr[0], rz = b.cr[2];
   const wx = Math.cos(WIND_ANG), wz = Math.sin(WIND_ANG), sx = wx * rx + wz * rz, sy = -(wx * fx + wz * fz) / fl;   // 画面の上 = カメラの前
@@ -125,10 +123,26 @@ function drawOverlay(b) {
 }
 
 // ---- 景色・大きさくらべ ----
-function setScene(k) { const c = SCENES[k]; S.scene = k;
-  Object.assign(SUN, { sunEl: c.sunEl * Math.PI / 180, sunAz: c.sunAz, cloud: c.cloud, expo: c.expo }); if (ocean) ocean.skyChanged();
-  document.querySelectorAll('#scenes button').forEach(b => b.classList.toggle('on', b.dataset.k === k)); }
-document.querySelectorAll('#scenes button').forEach(b => b.onclick = () => setScene(b.dataset.k));
+const E = window.WGenv;
+function setTod(k) { S.tod = k;
+  if (k !== 'auto') { S.clock = E.TIMES[k];
+    // 朝と夕方は太陽のほうへ向く（逆光のきらきら）
+    if (k === 'morning' || k === 'evening') { const L = E.sunDir(S.clock); guideApi.camTo({ yaw: Math.atan2(L[2], L[0]) + 0.25 }); } }
+  if (ocean) ocean.skyChanged();
+  document.querySelectorAll('#tods button').forEach(b => b.classList.toggle('on', b.dataset.k === k)); }
+function setWeather(k) { S.weather = k; if (ocean) ocean.skyChanged(); rainDrops = null;
+  document.querySelectorAll('#weathers button').forEach(b => b.classList.toggle('on', b.dataset.k === k)); }
+document.querySelectorAll('#tods button').forEach(b => b.onclick = () => setTod(b.dataset.k));
+document.querySelectorAll('#weathers button').forEach(b => b.onclick = () => setWeather(b.dataset.k));
+// 雨（画面の手前に落ちるすじ。見た目だけ）
+let rainDrops = null;
+function drawRain(g, w, h, dt) {
+  if (!rainDrops) rainDrops = Array.from({ length: 260 }, () => ({ x: Math.random() * w, y: Math.random() * h, v: 600 + Math.random() * 500, l: 10 + Math.random() * 16 }));
+  g.strokeStyle = 'rgba(210,225,235,.32)'; g.lineWidth = 1; g.beginPath();
+  for (const d of rainDrops) { d.y += d.v * dt; d.x -= d.v * dt * 0.12; if (d.y > h) { d.y = -d.l; d.x = Math.random() * w * 1.1; }
+    g.moveTo(d.x, d.y); g.lineTo(d.x + d.l * 0.12, d.y - d.l); }
+  g.stroke();
+}
 const propMesh = ocean ? ocean.makeMesh(window.WGprops.geometry()) : null, buoyMesh = ocean ? ocean.makeMesh(window.WGprops.buoy()) : null;
 const FL = window.WGfloats;
 function setProp(on) { S.prop = on; const b = $('propBtn'); b.textContent = '人（身長 1.7 m）: ' + (on ? 'ON' : 'OFF'); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }
@@ -180,7 +194,8 @@ $('secClose').onclick = closeSection;
 let camAnim = null;
 const guideApi = {
   resetWind, setTime(t) { S.t = t; S.play = false; update(); },
-  camTo(c) { camAnim = { from: { pitch: cam.pitch, dist: cam.dist }, to: Object.assign({ pitch: cam.pitch, dist: cam.dist }, c), k: 0 }; },
+  camTo(c) { let yaw = c.yaw != null ? c.yaw : cam.yaw; yaw = cam.yaw + Math.atan2(Math.sin(yaw - cam.yaw), Math.cos(yaw - cam.yaw));   // 近い回りで
+    camAnim = { from: { pitch: cam.pitch, dist: cam.dist, yaw: cam.yaw }, to: Object.assign({ pitch: cam.pitch, dist: cam.dist }, c, { yaw }), k: 0 }; },
   addBuoy() { if (!FL.list.length) FL.add(-6, -1.5, S.simT); }, section(on) { on ? openSection() : closeSection(); },
   caption(text, step) { S.free = false; $('cap').textContent = text; $('stepNo').textContent = step; },
 };
@@ -191,9 +206,10 @@ cv.addEventListener('pointerdown', () => { $('hint').classList.add('gone'); });
 let last = performance.now(), fpsAcc = 0, fpsN = 0, slow = 0;
 function step(dt) {
   S.simT += dt;
+  if (S.tod === 'auto') S.clock = (S.clock + dt * 24 / DAY_SEC) % 24;
   if (S.play) { S.t = Math.min(TMAX, S.speed ? S.t + dt * S.speed : v2t(Math.sqrt(S.t / TMAX) * 1000 + dt * 1000 / 60)); if (S.t >= TMAX) S.play = false; update(); }
   if (camAnim) { camAnim.k = Math.min(1, camAnim.k + dt / 1.2); const e = 1 - Math.pow(1 - camAnim.k, 3);
-    cam.pitch = camAnim.from.pitch + (camAnim.to.pitch - camAnim.from.pitch) * e; cam.dist = camAnim.from.dist + (camAnim.to.dist - camAnim.from.dist) * e;
+    cam.pitch = camAnim.from.pitch + (camAnim.to.pitch - camAnim.from.pitch) * e; cam.yaw = camAnim.from.yaw + (camAnim.to.yaw - camAnim.from.yaw) * e; cam.dist = camAnim.from.dist + (camAnim.to.dist - camAnim.from.dist) * e;
     if (camAnim.k >= 1) camAnim = null; }
 }
 function draw(dt) {
@@ -207,10 +223,11 @@ function draw(dt) {
   FL.step(dt, S.simT, pr.slice(off), S.us || 0, WIND_ANG);
   if (buoyMesh) FL.list.forEach(bu => { if (bu.p) SUN.meshes.push({ mesh: buoyMesh, M: window.WGprops.matrix(bu.x0 + bu.drift[0], bu.z0 + bu.drift[1], bu.p, 0) }); });
   SUN.points = (S.prop ? [{ x: 0, z: 0, wc: 0 }] : []).concat(FL.points());
+  Object.assign(SUN, E.make(S.clock, S.weather));
   if (ocean) { const U = windAt(S.t), tot = S.st.Hm0 > 0 ? 0.003 + 5.12e-3 * U : 0;
     SUN.rough0 = Math.max(0.012, Math.sqrt(Math.max(tot - ocean.fftSlope, 0)));
     ocean.frame(dt, S.simT, b, SUN); }
-  drawOverlay(b);
+  drawOverlay(b, dt);
   if (secOpen) window.WGsection.draw($('sec'), S.st, S.simT, FL.list.length > 0, S.us || 0, secMag);
 }
 function loop(now) {
@@ -224,7 +241,7 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 // はじめ: 朝の景色・人あり・風が吹く前から再生（案内は「つぎへ」で始まる）
-setScene('morning'); setProp(true);
+setTod('morning'); setWeather('clear'); setProp(true);
 S.free = true; update();
 requestAnimationFrame(loop);
 
