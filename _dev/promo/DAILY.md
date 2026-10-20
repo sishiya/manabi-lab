@@ -9,6 +9,8 @@
 3. **明日の分の前日の最終確認**（RULES 8.4、手順は `RULES-video.md`）: 明日の動画（`youtube-upload.ps1 -Verify`）と、**明日の記事を読み直す**（数字がアプリの DEVNOTES と合うか）。
 4. **2日後の分の UI/UX のブラッシュアップ**（RULES 8.5）。
 
+1・3 と、2 の結果・夜の 6 のつけ忘れ・4 が済んだかの点検は、2026-10-20 から毎朝 9:50 ごろスケジュールの作業 `manabi-daily-prerelease-check` が自動で行い、upload-log に記録して commit する（push・YouTube の書きかえ・アプリの修正はしない）（ユーザーが 10/20 に「毎日やって」と頼んだ）。その報告を見て、NG と 4 をユーザーと進める。
+
 ## 夜（20:00 の公開のあと）
 5. **DEV（英語）を公開**: `powershell -NoProfile -ExecutionPolicy Bypass -File ../zenn/tools/devto.ps1 -Slug <slug> -Publish`（DEV には予約がないので当日に。作るのは5分に1本まで）。
 6. **入口に「▶ 使い方の動画」**: `_dev/tools/check-video-links.ps1 -Fix` → 公開前チェック → commit（push はユーザー）。
