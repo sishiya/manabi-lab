@@ -351,7 +351,7 @@
 
   // ---------- 計算（Worker） ----------
   function startWorker() {
-    worker = new Worker('js/tear-worker.js?v=15');
+    worker = new Worker('js/tear-worker.js?v=16');
     setTimeout(sendWater, 0);                       // 写真がもう届いていれば海の場所を送る（まだなら届いたときに）
     worker.onmessage = e => {
       const d = e.data;
@@ -480,7 +480,7 @@
     return `<div class="tseg" data-k="${name}">` + items.map(([v, t]) => `<button data-v="${v}" class="${String(v) === String(cur) ? 'on' : ''}">${t}</button>`).join('') + '</div>';
   }
   function syncPanel() {
-    const p = $('tear-panel');
+    const p = $('tear-panel-body');   // 上のつまみ（.grip）は書きかえない
     p.innerHTML =
       `<div class="th">${L('ちぎる大きさ', 'Size to tear')}</div>` + seg('Rg', [[1e6, '1000 km'], [2e6, '2000 km'], [3e6, '3000 km']], opt.Rg) +
       `<div class="th">${L('はなすと', 'When released')}</div>` + seg('after', [['away', L('遠くへ運ぶ', 'Carry it far away')], ['drop', L('その場で落とす', 'Drop it there')]], opt.after) +

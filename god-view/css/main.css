@@ -212,3 +212,13 @@ body.layers-open #hint { opacity: 0; }
   #layers { bottom: 94px; max-height: 50vh; }
   body.layers-open .cesium-viewer-bottom { z-index: 3; }
 }
+/* v013d: スマホの下パネルのつまみ（いのちの系統樹と同じ。押すと広げる・縮める、ドラッグで高さ） */
+.grip { display: none; }
+@media (max-width: 640px) {
+  .grip { position: sticky; top: 0; z-index: 2; display: flex; justify-content: center; align-items: center; height: 26px; margin: 0 -12px 2px; background: rgba(14, 22, 38, 0.97); cursor: pointer; touch-action: none; border-radius: 14px 14px 0 0; }
+  .grip .bar { width: 44px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.35); }
+  .grip:hover .bar, .grip:focus-visible .bar { background: var(--accent); }
+  #layers, #tear-panel { max-height: none; padding-top: 0; transition: height .25s ease; }
+  #layers.dragging, #tear-panel.dragging { transition: none; }
+  #tear-panel .grip { margin: 0 -10px 2px; }
+}

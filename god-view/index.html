@@ -17,7 +17,7 @@
 <script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
 <script>window.CESIUM_BASE_URL = 'https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/';</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/Widgets/widgets.css">
-<link rel="stylesheet" href="css/main.css?v=15">
+<link rel="stylesheet" href="css/main.css?v=16">
 </head>
 <body>
 <div id="loading" role="status"><div class="spin"></div><span lang="ja">地球を読みこんでいます…</span><span lang="en">Loading the Earth…</span></div>
@@ -30,7 +30,7 @@
 <div id="space-hint"><span lang="ja">ホイール（ピンチ）で引くと宇宙の果てまで、寄ると地球の地図に戻ります。ドラッグで向きを変えます。下の目盛りを押すと、その大きさへ。</span><span lang="en">Zoom out with the wheel (pinch) to reach the edge of the universe; zoom in to return to the Earth map. Drag to turn. Tap the ruler below to jump to that size.</span></div>
 <button id="btn-tear"><span lang="ja">✋ 地球をちぎる</span><span lang="en">✋ Tear off a piece of Earth</span></button>
 <canvas id="tear"></canvas>
-<aside id="tear-panel"></aside>
+<aside id="tear-panel"><div class="grip" role="button" tabindex="0"><span class="bar"></span></div><div id="tear-panel-body"></div></aside>
 <div id="tear-info"></div>
 <div id="tear-pop"><span lang="ja">ぶちっ！</span><span lang="en">Rrrip!</span></div>
 <div id="tear-credit"><span lang="ja">計算（<span class="tag tag-est">推定</span>）: 地球を約 1.6 万個の粒にして、重力・圧力・粘りを SPH（粒子法）で計算。粒 1 個 ≒ 400 km なので、地殻や山は見えません。海は別の軽い粒（水色）、湯気は白（高さは 5 倍に強調）。簡単にしたこと: 岩の固さ、相転移、自転、空気。くわしくは「?」の「地球をちぎる」へ。</span><span lang="en">Calculation (<span class="tag tag-est">estimate</span>): Earth is made of about 16,000 particles, and gravity, pressure and stickiness are computed with SPH (a particle method). One particle ≈ 400 km, so the crust and mountains cannot be seen. The ocean is separate light particles (light blue), steam is white (height exaggerated 5×). Simplified: rock strength, phase changes, rotation, air. More in “Tearing off a piece of Earth” under “?”.</span></div>
@@ -47,7 +47,7 @@
   <button id="btn-about" class="icon">?</button>
 </header>
 
-<aside id="layers"><div id="layers-body"></div></aside>
+<aside id="layers"><div class="grip" role="button" tabindex="0"><span class="bar"></span></div><div id="layers-body"></div></aside>
 
 <div id="point" hidden></div>
 <div id="hint"><span lang="ja">ドラッグで動かす・ホイール（2本指）で寄る／引く。<br>引きつづけると宇宙の果てへ、寄りつづけると原子の中へ。</span><span lang="en">Drag to move, wheel (two fingers) to zoom.<br>Keep zooming out to reach the edge of the universe, keep zooming in to go inside atoms.</span></div>
@@ -159,23 +159,23 @@
 
 <!-- Cesium.js は数 MB あるので本文の後ろで読む（読むあいだ #loading を出す） -->
 <script src="https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/Cesium.js"></script>
-<script src="js/sources.js?v=15"></script>
-<script src="js/terrain.js?v=15"></script>
-<script src="js/earth.js?v=15"></script>
-<script src="data/plateau-bldg.js?v=15"></script>
-<script src="js/buildings.js?v=15"></script>
-<script src="js/mvt.js?v=15"></script>
-<script src="js/osmbuildings.js?v=15"></script>
-<script src="data/plateau-under.js?v=15"></script>
-<script src="js/underground.js?v=15"></script>
-<script src="js/life.js?v=15"></script>
-<script src="js/transit.js?v=15"></script>
-<script src="js/agents.js?v=15"></script>
-<script src="js/space.js?v=15"></script>
-<script src="js/micro.js?v=15"></script>
-<script src="js/tear.js?v=15"></script>
-<script src="js/scale.js?v=15"></script>
-<script src="js/ui.js?v=15"></script>
-<script src="js/main.js?v=15"></script>
+<script src="js/sources.js?v=16"></script>
+<script src="js/terrain.js?v=16"></script>
+<script src="js/earth.js?v=16"></script>
+<script src="data/plateau-bldg.js?v=16"></script>
+<script src="js/buildings.js?v=16"></script>
+<script src="js/mvt.js?v=16"></script>
+<script src="js/osmbuildings.js?v=16"></script>
+<script src="data/plateau-under.js?v=16"></script>
+<script src="js/underground.js?v=16"></script>
+<script src="js/life.js?v=16"></script>
+<script src="js/transit.js?v=16"></script>
+<script src="js/agents.js?v=16"></script>
+<script src="js/space.js?v=16"></script>
+<script src="js/micro.js?v=16"></script>
+<script src="js/tear.js?v=16"></script>
+<script src="js/scale.js?v=16"></script>
+<script src="js/ui.js?v=16"></script>
+<script src="js/main.js?v=16"></script>
 </body>
 </html>

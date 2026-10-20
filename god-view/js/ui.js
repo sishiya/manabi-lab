@@ -376,6 +376,48 @@
     $('ruler-mark').style.left = (GV.rulerX(Lsc) * 100) + '%';
   }
 
+  // ---------- スマホの下パネル: つまみを押すと小さく⇔大きく、ドラッグで好きな高さ（いのちの系統樹と同じ。v013d） ----------
+  // PC（641px〜）では何もしない（パネルは左上の欄）。小さいときは上の数行だけ見え、地図や地球を広く見られる
+  const isPhone = () => window.matchMedia('(max-width: 640px)').matches;
+  function makeSheet(panel, h0) {
+    const grip = panel.querySelector('.grip');
+    const maxH = () => Math.round(innerHeight - 64 - 94 - 120);   // 上のバー・下の目盛りの分と、上に地図を 120px は残す
+    const h1 = () => Math.min(maxH(), Math.round(innerHeight * 0.62));
+    let h = h0;
+    const apply = () => {
+      if (!isPhone()) { panel.style.height = ''; return; }
+      h = Math.max(96, Math.min(maxH(), h));
+      panel.style.height = h + 'px';
+      grip.setAttribute('aria-expanded', String(h > (h0 + h1()) / 2));
+    };
+    const toggle = () => { h = h > (h0 + h1()) / 2 ? h0 : h1(); apply(); if (h === h0) panel.scrollTop = 0; };
+    grip.setAttribute('aria-label', L('パネルを広げる・縮める（ドラッグで高さを変える）', 'Expand or shrink the panel (drag to change its height)'));
+    grip.title = grip.getAttribute('aria-label');
+    grip.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+    grip.addEventListener('pointerdown', e => {
+      if (!isPhone()) return;
+      e.preventDefault();
+      try { grip.setPointerCapture(e.pointerId); } catch (_) { }
+      const sy = e.clientY, sh = h, bottom = panel.getBoundingClientRect().bottom;
+      let moved = false;
+      const move = ev => {
+        if (!moved && Math.abs(ev.clientY - sy) < 4) return;
+        moved = true; panel.classList.add('dragging');
+        h = Math.round(bottom - ev.clientY + 14);
+        apply();
+      };
+      const up = () => {
+        grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); grip.removeEventListener('pointercancel', up);
+        panel.classList.remove('dragging');
+        if (!moved) toggle();
+        else if (sh !== h && h <= h0) panel.scrollTop = 0;
+      };
+      grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up); grip.addEventListener('pointercancel', up);
+    });
+    apply();
+    window.addEventListener('resize', apply);
+  }
+
   // ---------- パネルの開け閉め・このアプリについて ----------
   function setupPanels() {
     $('btn-layers').onclick = () => document.body.classList.toggle('layers-open');
@@ -386,6 +428,8 @@
     document.addEventListener('keydown', e => { if (e.key === 'Escape') { $('about').hidden = true; $('point').hidden = true; } });
     // スマホ幅でなければ開いておく（非表示のペインでは読み込み時の幅が 0 になることがある）
     if (!(window.innerWidth > 0 && window.innerWidth < 800)) document.body.classList.add('layers-open');
+    makeSheet($('layers'), 190);       // 見どころへ飛ぶ・背景が見える高さ
+    makeSheet($('tear-panel'), 150);   // ちぎる大きさ・はなすと が見える高さ
     // 出典の欄: ふだんは1行、押すと全部（もう一度押すと1行に）。閉じているときのリンクは開くだけにする
     document.addEventListener('click', e => {
       const c = e.target.closest('.cesium-widget-credits, #space-credit, #tear-credit');
