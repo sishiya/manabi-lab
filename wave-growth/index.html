@@ -1,0 +1,97 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>波が育つまで</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230e2233'/><path d='M8 38 Q18 28 28 38 T48 38 T58 34' stroke='%237fd0e8' stroke-width='4' fill='none'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <header id="top"><h1>波が育つまで</h1><span id="perf"></span></header>
+  <div id="wrap">
+    <section id="pin">
+      <div id="stage">
+        <canvas id="cv"></canvas><canvas id="ov"></canvas>
+        <div id="hint">ドラッグで回す・ホイール／2本指で近づく</div>
+        <button id="next">つぎへ ▶</button>
+        <div id="glerr" hidden></div>
+      </div>
+      <div id="capRow"><span id="stepNo"></span><p id="cap"></p></div>
+      <div id="nums">
+        <div><b id="nH">0</b><small>波の高さ<br>（有義波高）</small></div>
+        <div><b id="nT">—</b><small>いちばん多い<br>波の周期</small></div>
+        <div><b id="nL">—</b><small>その波長</small></div>
+        <div class="wide"><b id="nC">—</b><small>その波の速さ</small></div>
+        <div class="wide"><b id="nS">凪</b><small>いまの海</small></div>
+      </div>
+    </section>
+
+    <section id="panel">
+      <div id="timeBox" class="box">
+        <div class="row"><span>風が吹きはじめてから</span><b id="tLabel">0 分</b></div>
+        <input id="tSlider" type="range" min="0" max="1000" value="0" aria-label="風が吹きはじめてからの時間">
+        <canvas id="tl" aria-hidden="true"></canvas>
+        <div class="ticks"><span style="left:0">0</span><span style="left:11.8%">1時間</span><span style="left:28.9%">6</span><span style="left:57.7%">24</span><span style="left:100%">72時間</span></div>
+        <div class="row"><button id="play">▶</button>
+          <span id="speeds">1秒で <button data-s="60">1分</button><button data-s="600">10分</button><button data-s="3600">1時間</button></span></div>
+      </div>
+      <div id="windBox" class="box">
+        <div class="row"><span>風の速さ（いまから先）</span><b id="wLabel">10 m/s</b></div>
+        <input id="wSlider" type="range" min="0" max="20" step="0.5" value="10" aria-label="風の速さ">
+        <p class="note">時間のつまみの位置から先の風が変わります（上の帯の色）。風を弱めても、この版では波は小さくなりません。</p>
+      </div>
+      <div id="graphBox" class="box">
+        <div class="row"><span>どの長さの波が、どれだけあるか</span></div>
+        <canvas id="graph"></canvas>
+        <p class="note">色のついた山 = いま。点線 = この風で発達しきった海。細い線 = 1・3・6・12・24・48 時間のとき。</p>
+      </div>
+      <details class="box">
+        <summary>なぜ波は育つの？ なぜ止まるの？</summary>
+        <p>風は海面をこすり、押して、波にエネルギーをわたします。長い波ほど速く走るので（深い海では、周期 T 秒の波は 1 秒に約 1.56×T m 進む）、風に押されつづけると、多い波はだんだん長く・速くなります。</p>
+        <p>いちばん多い波が風と同じくらいの速さになると、風はもうその波を押せません。これが「発達しきった海」です。強い風ほど、高い波に育つまで長くかかります（風速 10 m/s で約 30 時間、20 m/s で約 3 日）。</p>
+        <p>ここの数字は、海で測った記録から作られた式（下の出どころ）で計算しています。海面の模様は、その分布どおりの何万もの波を FFT で重ねたものです。</p>
+      </details>
+      <details id="about" class="box">
+        <summary>このアプリについて</summary>
+        <p>学習用に簡単にしています。</p>
+        <h3>計算のしかた</h3>
+        <ul>
+          <li>風速 U（海面から 10 m の高さ）と吹いた時間 → 同じ育ち方をする距離 → 波の高さ（有義波高）とピークの周期（CEM の式）。発達しきった海で止まる。</li>
+          <li>風を途中で変えたとき: 区間ごとに「いまの高さになるまで新しい風で何時間吹けばよいか」に置きかえて続きを計算（CEM・SPM のふつうのやり方）。</li>
+          <li>分布の形は JONSWAP（γ 3.3）を、その高さと周期に合わせる。向きの広がりは cos<sup>2s</sup>(θ/2)、s は周期によって変わり、いちばん多い波で 10。</li>
+          <li>海面: 分布どおりの波を 3 枚（1280 m・160 m・20 m）の FFT で重ねる。深い海の速さ（ω² = gk）で動く。</li>
+        </ul>
+        <h3>簡単にしたところ・推定</h3>
+        <ul>
+          <li>深い海だけ。風はずっと同じ向きで、場所によらない。うねり（遠くから来る波）は入れていない。</li>
+          <li>風を弱めても波は小さくならない（本当はゆっくりうねりになって出ていく）。</li>
+          <li>波長 20 cm より短い波は描いていない。くり返しのため、周期を 1000 秒で一周するように少しだけ丸めている。</li>
+          <li>白い泡は「波の面が横に押しつぶされた所」の目安（しきい値は見た目で決めた）。水の色・波の山を抜ける光の強さ・遠くのかすみも見た目で決めた。</li>
+          <li>空の色は大気の散乱の計算（1回散乱）。水平線のすぐ上は 2° の空で代用。</li>
+          <li>照り返しのにじみ: Cox &amp; Munk の式の風速は高さ 12.5 m の値だが、10 m の風速をそのまま使っている。</li>
+          <li>「なぜ止まるの？」の説明は考え方の目安です（くわしいしくみは研究が続いている）。</li>
+        </ul>
+        <h3>おもな出どころ</h3>
+        <ul>
+          <li>U.S. Army Corps of Engineers (2003) Coastal Engineering Manual, EM 1110-2-1100, Part II Chapter 2 “Meteorology and Wave Climate”（式 II-2-36〜38: 成長の式・発達しきった海・時間の置きかえ、抗力係数）</li>
+          <li>Hasselmann ほか (1973) JONSWAP（波の分布の形）</li>
+          <li>Mitsuyasu ほか (1975)（向きの広がりの形）／<a href="https://www.pari.go.jp/en/1975/12/197512023001.html" target="_blank" rel="noopener">合田・鈴木 (1975) 港湾技研資料 No.230</a>（風の波の s<sub>max</sub> = 10）</li>
+          <li>Tessendorf (2001) “Simulating Ocean Water”（FFT で海面を作る方法）</li>
+          <li>Cox &amp; Munk (1954) J. Opt. Soc. Am. 44:838（海面の傾きのばらつき σ² = 0.003 + 5.12×10⁻³ U: 太陽の照り返しのにじみ）</li>
+          <li>Nishita ほか (1993)（空の色: 大気の散乱）</li>
+        </ul>
+        <h3>使っているもの</h3>
+        <p>フォント: Google Fonts（SIL Open Font License）</p>
+      </details>
+    </section>
+  </div>
+</div>
+
+<script src="js/growth.js"></script>
+<script src="js/shaders.js"></script>
+<script src="js/ocean.js"></script>
+<script src="js/camera.js"></script>
+<script src="js/graph.js"></script>
+<script src="js/guide.js"></script>
+<script src="js/main.js"></script>

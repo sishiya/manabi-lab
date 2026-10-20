@@ -1,0 +1,57 @@
+/* 波が育つまで */
+:root{--bg:#0e2233;--panel:#122a3d;--line:#2a4a62;--ink:#e8f0f4;--muted:#a3b4bf;--acc:#7fd0e8;--hl:#ffc95a;
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+[hidden]{display:none!important}
+#top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:8px 16px}
+#top h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0}
+#perf{font:11px var(--f-mono);color:var(--muted);opacity:.7}
+
+/* スマホ: 海・ひとこと・数字は上に固定、つまみとグラフは下へスクロール */
+#pin{position:sticky;top:0;z-index:2;background:var(--bg);padding:0 0 6px}
+#stage{position:relative;height:40vh;min-height:240px;background:#000;overflow:hidden}
+#cv,#ov{position:absolute;inset:0;width:100%;height:100%;display:block}
+#ov{pointer-events:none}
+#hint{position:absolute;left:12px;top:10px;font-size:12px;color:#fff;background:rgba(0,0,0,.35);padding:3px 10px;border-radius:12px;transition:opacity .8s;pointer-events:none;white-space:nowrap}
+#hint.gone{opacity:0}
+#next{position:absolute;right:12px;bottom:12px;font:700 15px var(--f-body);color:#0e2233;background:var(--hl);border:0;border-radius:20px;padding:8px 16px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+#glerr{position:absolute;inset:12px;color:#fbb;font-size:14px}
+#capRow{display:flex;gap:8px;align-items:baseline;padding:6px 16px 0}
+#stepNo{font:12px var(--f-mono);color:var(--hl);white-space:nowrap}
+#cap{margin:0;font-size:13.5px;line-height:1.5;min-height:3em}
+#nums{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 8px;padding:6px 16px 0;border-radius:8px}
+#nums div{display:flex;flex-direction:column}
+#nums div.wide{grid-column:span 1}
+#nums b{font:500 15px var(--f-mono);color:var(--acc)}
+#nums small{font-size:10.5px;color:var(--muted);line-height:1.3}
+
+#panel{padding:6px 12px 30px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:10px 0;font-size:14px;line-height:1.7}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.row b{font:500 15px var(--f-mono);color:var(--acc)}
+input[type=range]{width:100%;margin:8px 0 2px}
+#tl{display:block;width:100%;height:6px;border-radius:3px}
+.ticks{position:relative;height:16px;font-size:11px;color:var(--muted);margin:2px 8px 6px 4px}
+.ticks span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.ticks span:first-child{transform:none}.ticks span:last-child{transform:translateX(-100%)}
+button{font:inherit;color:var(--ink);background:#1d3a52;border:1px solid var(--line);border-radius:6px;padding:4px 10px;cursor:pointer}
+button.on{background:#2f6a8c;border-color:var(--acc)}
+#play{min-width:44px}
+#speeds{font-size:13px;color:var(--muted)}
+#graph{display:block;width:100%;height:190px}
+.note{font-size:12px;color:var(--muted);margin:6px 0 0;line-height:1.6}
+details summary{cursor:pointer}
+#about{color:var(--muted)}
+#about h3{font-size:14px;color:var(--ink);margin:12px 0 4px}
+#about ul{padding-left:1.2em;margin:4px 0}
+#about a{color:var(--acc)}
+.hl{outline:2px solid var(--hl);outline-offset:2px;box-shadow:0 0 14px rgba(255,201,90,.35)}
+
+/* 広い画面: 海を左に大きく、つまみとグラフは右の列 */
+@media (min-width:980px){
+  #wrap{display:grid;grid-template-columns:1fr 400px;gap:0 8px;align-items:start}
+  #pin{top:0}
+  #stage{height:calc(100vh - 150px)}
+  #nums{grid-template-columns:repeat(5,auto);justify-content:start;gap:4px 22px}
+  #panel{max-height:100vh;overflow:auto;position:sticky;top:0;padding-top:0}
+}
