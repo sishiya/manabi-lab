@@ -36,6 +36,11 @@ for (const s of [0.5, 2, 10, 40]) { let a = 0; const n = 20000; for (let i = 0; 
   const us = W.stokes(H, T, 3, 1e6), mono = w * k * a * a;
   console.log(`参考 u_s（JONSWAP の幅あり・向きはほぼそろえた）${us.toFixed(4)} m/s ／ 波1つ ${mono.toFixed(4)} m/s（幅のぶん大きくなる）`); }
 console.log('流される速さ（風速 10 m/s）: ' + [3, 12, 30].map(h => { const r = W.fromDuration(10, h * 3600); return `${h}時間 ${(W.stokes(r.Hm0, r.Tp) * 100).toFixed(1)} cm/s`; }).join('・'));
+// 8) うねり: 周期 15 秒の波の群れが 3000 km 進む時間 = R / (gT/4π) ≒ 2.96 日（深い海の群速度）
+{ global.window = { WGgrowth: W }; require('../js/swell.js'); const Sw = window.WGswell;
+  check('群速度で 3000 km（周期 15 秒）', 3000e3 / Sw.cg(1 / 15) / 86400, 3000e3 / (9.81 * 15 / (4 * Math.PI)) / 86400, 1e-9);
+  Sw.P.R = 3000e3; const early = Sw.obs(2.5 * 86400), late = Sw.obs(8 * 86400);
+  check('うねり: 後から届く波ほど周期が短い（8 日 < 2.5 日）', late.Tp < early.Tp ? 1 : 0, 1, 0); }
 // 表: 発達しきるまでの時間
 console.log('\n風速 → 発達しきった海（有義波高・周期）と、そこまでの時間');
 for (const U of [3, 5, 10, 15, 20, 25]) { const f = W.fullyDev(U); console.log(`  ${U} m/s: ${f.Hm0.toFixed(2)} m・${f.Tp.toFixed(1)} 秒・${(W.durationForH(U, f.Hm0) / 3600).toFixed(1)} 時間`); }

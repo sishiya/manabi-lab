@@ -121,8 +121,9 @@ window.WGocean = (() => {
 
     // ---- 海の分布を GPU へ（波の高さ・周期・向きが変わったとき） ----
     let fftVar = 0, fftSlope = 0;   // FFT の海面に入った分の分散と、傾きの分散（受け持ちの外の波は入らない）
-    function setSea(Hm0, Tp, windAng) {
-      const SK = window.WGgrowth.makeSpecK(Hm0, Tp, windAng); fftVar = 0; fftSlope = 0;
+    function setSea(Hm0, Tp, windAng) { setSpec(Hm0 > 0 ? window.WGgrowth.makeSpecK(Hm0, Tp, windAng) : null); }
+    function setSpec(SK) {   // SK(kx, kz) = 波数の面の密度（null = 波なし）
+      fftVar = 0; fftSlope = 0; const Hm0 = SK ? 1 : 0;
       CASC.forEach(c => {
         const dk = 2 * Math.PI / c.L, amp = new Float32Array(N * N), d = new Float32Array(N * N * 4);
         if (Hm0 > 0) for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
@@ -225,7 +226,7 @@ window.WGocean = (() => {
       cur = 1 - cur;
       if (q) { gl.endQuery(tq.TIME_ELAPSED_EXT); tqs.push(q); }
     }
-    return { isSoft, setSea, frame, makeMesh, get probe() { return probeOut; }, get VP() { return lastVP; }, get txty() { return lastTxTy; }, skyChanged() { skyDirty = true; }, get gpuMs() { return gpuMs; }, get fftHs() { return 4 * Math.sqrt(fftVar); }, get fftSlope() { return fftSlope; } };
+    return { isSoft, setSea, setSpec, frame, makeMesh, get probe() { return probeOut; }, get VP() { return lastVP; }, get txty() { return lastTxTy; }, skyChanged() { skyDirty = true; }, get gpuMs() { return gpuMs; }, get fftHs() { return 4 * Math.sqrt(fftVar); }, get fftSlope() { return fftSlope; } };
   }
   return { create, LOOP };
 })();

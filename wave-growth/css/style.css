@@ -16,6 +16,11 @@ label.slider b{font:500 14px var(--f-mono);color:var(--acc)}
 #mNums{font-size:13px;line-height:1.7;margin-top:6px}
 #mNums b{color:var(--acc);font-family:var(--f-mono)}
 body.miller #panel>.box:not(#millerBox):not(#about){display:none}
+body.swell #panel>.box:not(#swellBox):not(#viewBox):not(#about){display:none}
+body.swell #capRow,body.swell #nums,body.swell #next{display:none}
+#swellBox button.on{background:#2f6a8c;border-color:var(--acc)}
+#swNums{font-size:13px;line-height:1.7;margin:6px 0}
+#swNums b{color:var(--acc);font-family:var(--f-mono)}
 body.miller #capRow,body.miller #nums,body.miller #next,body.miller #hint{display:none}
 body.miller #stage{height:64vh}
 @media (min-width:980px){body.miller #stage{height:calc(100vh - 60px)}}

@@ -118,9 +118,9 @@ function drawOverlay(b, dt = 0) {
   drawPropLabel(g); drawTrails(g);
   g.font = '12px ' + getComputedStyle(document.documentElement).getPropertyValue('--f-body'); g.textAlign = 'left'; g.fillStyle = 'rgba(255,255,255,.8)';
   g.fillText(E.clockText(S.clock) + (S.tod === 'auto' ? '（時間が進む）' : ''), 12, r.height - 14);
-  const U = windAt(S.t); if (!(U > 0)) return;
+  const U = mode === 'swell' ? -1 : windAt(S.t); if (!(U > 0) && mode !== 'swell') return;
   const fx = b.cf[0], fz = b.cf[2], fl = Math.hypot(fx, fz) || 1, rx = b.cr[0], rz = b.cr[2];
-  const wx = Math.cos(WIND_ANG), wz = Math.sin(WIND_ANG), sx = wx * rx + wz * rz, sy = -(wx * fx + wz * fz) / fl;   // 画面の上 = カメラの前
+  const wx = Math.cos(mode === 'swell' ? SW_ANG : WIND_ANG), wz = Math.sin(mode === 'swell' ? SW_ANG : WIND_ANG), sx = wx * rx + wz * rz, sy = -(wx * fx + wz * fz) / fl;   // 画面の上 = カメラの前
   const cx = r.width - 44, cy = 44;
   g.strokeStyle = 'rgba(232,240,244,.55)'; g.lineWidth = 1.5; g.beginPath(); g.arc(cx, cy, 26, 0, Math.PI * 2); g.stroke();
   g.strokeStyle = '#e8f0f4'; g.fillStyle = '#e8f0f4'; g.lineWidth = 2.5;
@@ -128,7 +128,7 @@ function drawOverlay(b, dt = 0) {
   const a = Math.atan2(sy, sx); g.beginPath(); g.moveTo(cx + sx * 20, cy + sy * 20);
   g.lineTo(cx + sx * 20 - 9 * Math.cos(a - .45), cy + sy * 20 - 9 * Math.sin(a - .45)); g.lineTo(cx + sx * 20 - 9 * Math.cos(a + .45), cy + sy * 20 - 9 * Math.sin(a + .45)); g.fill();
   g.font = '12px ' + getComputedStyle(document.documentElement).getPropertyValue('--f-body'); g.textAlign = 'center';
-  g.fillText('風 ' + U.toFixed(0) + ' m/s', cx, cy + 44);
+  g.fillText(mode === 'swell' ? 'うねり' : '風 ' + U.toFixed(0) + ' m/s', cx, cy + 44);
 }
 
 // ---- 景色・大きさくらべ ----
@@ -241,7 +241,35 @@ let camY = null, camHold = null;
 $('mHold').onclick = () => { camHold = camHold == null ? (camY == null ? 0 : camY) + cam.eye : null; $('mHold').classList.toggle('on', camHold != null); $('mHold').textContent = camHold != null ? 'カメラを浮かべる' : 'カメラを止める'; };
 $('mX10').onclick = () => { camY = null; camHold = null; $('mHold').classList.remove('on'); $('mHold').textContent = 'カメラを止める'; MI.scale = MI.scale > 1 ? 1 : 10; $('mX10').classList.toggle('on', MI.scale > 1); };
 $('mTele').onclick = () => { const on = cam.fovY > 0.5; cam.fovY = (on ? 12 : 52) * Math.PI / 180; $('mTele').classList.toggle('on', on); };
-function setMode(m) { mode = m; document.body.classList.toggle('miller', m === 'miller');
+// ---- 遠くの嵐から届くうねり ----
+const SW = window.WGswell, SW_TMAX = 14 * 86400, SW_ANG = Math.PI + 0.5; let swPlay = true, swSpeed = 3600, swLast = { H: -1, T: -1, at: 0 }, swObs = null;
+function swLabels() { const P2 = SW.P; $('swTl').textContent = SW.fmtT(P2.t); $('swT').value = Math.round(P2.t / SW_TMAX * 1000);
+  $('swRl').textContent = (P2.R / 1e3).toFixed(0) + ' km'; $('swR').value = P2.R / 1e3; $('swUl').textContent = P2.U + ' m/s'; $('swU').value = P2.U;
+  $('swDl').textContent = (P2.Ds / 3600).toFixed(0) + ' 時間'; $('swD').value = P2.Ds / 3600; $('swLl').textContent = (P2.Ls / 1e3).toFixed(0) + ' km'; $('swL').value = P2.Ls / 1e3; }
+$('swT').addEventListener('input', () => { SW.P.t = +$('swT').value / 1000 * SW_TMAX; swUpdate(); });
+$('swR').addEventListener('input', () => { SW.P.R = +$('swR').value * 1e3; swUpdate(); });
+$('swU').addEventListener('input', () => { SW.P.U = +$('swU').value; swUpdate(); });
+$('swD').addEventListener('input', () => { SW.P.Ds = +$('swD').value * 3600; swUpdate(); });
+$('swL').addEventListener('input', () => { SW.P.Ls = +$('swL').value * 1e3; swUpdate(); });
+$('swPlay').onclick = () => { swPlay = !swPlay; $('swPlay').textContent = swPlay ? '❚❚' : '▶'; };
+function setSwSpeed(v) { swSpeed = v; document.querySelectorAll('#swSpeeds button').forEach(x => x.classList.toggle('on', +x.dataset.s === v)); }
+document.querySelectorAll('#swSpeeds button').forEach(b => b.onclick = () => setSwSpeed(+b.dataset.s));
+function swUpdate() {
+  swObs = SW.obs(SW.P.t); swLabels(); SW.drawMap($('swMap')); SW.drawChart($('swChart'), SW_TMAX);
+  const o = swObs, s2 = o.src, fa = SW.firstArrival(), lam = W.G * o.Tp * o.Tp / (2 * Math.PI);
+  $('swNums').innerHTML = `嵐の海: 高さ <b>${s2.Hm0.toFixed(1)} m</b>・周期 <b>${s2.Tp.toFixed(1)} 秒</b><br>`
+    + `いちばん早い波（周期 ${fa.T.toFixed(0)} 秒）が着くのは <b>${SW.fmtT(fa.t)}</b> 後<br>`
+    + (o.Hm0 > 0.02 ? `いま届いているうねり: 高さ <b>${o.Hm0.toFixed(2)} m</b>・いちばん多い周期 <b>${o.Tp.toFixed(1)} 秒</b>（波長 ${lam.toFixed(0)} m・その波の群れの速さ ${(SW.cg(1 / o.Tp) * 3.6).toFixed(0)} km/時）` : 'いまは、まだ（または、もう）うねりがほとんど届いていない');
+}
+function swSyncSea() {
+  if (!ocean || !swObs) return; const o = swObs, now = performance.now();
+  if ((Math.abs(o.Hm0 - swLast.H) > 0.01 * Math.max(o.Hm0, 0.05) || Math.abs(o.Tp - swLast.T) > 0.01 * Math.max(o.Tp, 1)) && now - swLast.at > 120) {
+    // うねり＋そよ風（3 m/s・1 時間）のさざ波（表面が鏡にならないように。画面に書く）
+    const sw = o.Hm0 > 0.005 ? W.makeSpecKTable(SW.fs, o.E, SW_ANG, o.s) : null, br = W.fromDuration(3, HOUR), loc = W.makeSpecK(br.Hm0, br.Tp, SW_ANG + 0.9);
+    ocean.setSpec(sw ? (kx, kz) => sw(kx, kz) + loc(kx, kz) : loc); swLast = { H: o.Hm0, T: o.Tp, at: now }; }
+}
+function setMode(m) { mode = m; document.body.classList.toggle('miller', m === 'miller'); document.body.classList.toggle('swell', m === 'swell');
+  $('swellBox').hidden = m !== 'swell'; if (m === 'swell') { cam.free = false; cam.target[1] = 0; swLast = { H: -1, T: -1, at: 0 }; swUpdate(); guideApi.camTo({ dist: 45, pitch: 0.15 }); }
   document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
   $('millerBox').hidden = m !== 'miller';
   if (m === 'miller') { closeSection(); closeBeach(); if (!MI.S.hist.length) { MI.reset(); } mLabels(); setMView(mView); }
@@ -301,10 +329,11 @@ function step(dt) {
     if (camAnim.k >= 1) camAnim = null; }
 }
 function draw(dt) {
+  if (mode === 'swell' && swPlay) { SW.P.t = Math.min(SW_TMAX, SW.P.t + dt * swSpeed); if (SW.P.t >= SW_TMAX) swPlay = false; if (++mNumsTick % 6 === 0) swUpdate(); }
   if (mode === 'miller') { if (mPlay) MI.advance(dt * mSpeed); if (++mNumsTick % 10 === 0) mNums();
     if (mView === 'section' || !ocean) { MI.draw($('sec')); return; }
     drawMiller3D(dt); return; }
-  syncSea();
+  if (mode === 'swell') { swSyncSea(); cam.minY = 1.5 + 1.2 * ((swObs && swObs.Hm0) || 0); } else syncSea();   // カメラは波の中に入らない
   const b = cam.basis();
   // 海面の傾きのばらつき（Cox & Munk 1954、きれいな海面）σ² = 0.003 + 5.12×10⁻³ U。描いている波の分を引いた残りで照り返しをにじませる
   // 物: 浮き台（点 0、さざ波は入れない）とブイ。前のコマに読んだ海面の動きで置く
@@ -322,7 +351,7 @@ function draw(dt) {
   const wantRain = SUN.rain ? 1 : 0; wetRain += (wantRain - wetRain) * (1 - Math.exp(-dt / (wantRain > wetRain ? 10 : 60)));
   SUN.wetRain = wetRain; SUN.wetSplash = (T ? T.splash : 0) * Math.min(1, Math.max(0, (S.st.Hm0 - 0.2) / 1.5));
   Object.assign(SUN, E.make(S.clock, S.weather));
-  if (ocean) { const U = windAt(S.t), tot = S.st.Hm0 > 0 ? 0.003 + 5.12e-3 * U : 0;
+  if (ocean) { const U = mode === 'swell' ? 2 : windAt(S.t), tot = (mode === 'swell' || S.st.Hm0 > 0) ? 0.003 + 5.12e-3 * U : 0;   // 遠くの嵐の場面は風がほとんどない海
     SUN.rough0 = Math.max(0.012, Math.sqrt(Math.max(tot - ocean.fftSlope, 0)));
     ocean.frame(dt, S.simT, b, SUN); }
   drawOverlay(b, dt);
@@ -340,7 +369,7 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 // はじめ: 朝の景色・人あり・風が吹く前から再生（案内は「つぎへ」で始まる）
-setTod('morning'); setWeather('clear'); setObj('human'); setMode('earth');
+setTod('morning'); setWeather('clear'); setObj('human'); setMode('earth'); setSwSpeed(3600);
 setMSpeed(300);
 S.free = true; update();
 requestAnimationFrame(loop);

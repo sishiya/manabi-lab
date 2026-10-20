@@ -17,6 +17,14 @@
     const H = 4.13e-2 * Math.sqrt(chi) * us * us / G, T = 0.651 * Math.cbrt(chi) * us / G, f = fullyDev(U);
     return { Hm0: Math.min(H, f.Hm0), Tp: Math.min(T, f.Tp), X: chi * us * us / G, full: H >= f.Hm0 };
   }
+  // 同じ風が距離 X（m）を吹きわたったとき（CEM II-2-36。発達しきった海で止まる）
+  function fromFetch(U, X) {
+    if (!(U > 0) || !(X > 0)) return { Hm0: 0, Tp: 0 };
+    const us = ustar(U), chi = G * X / (us * us), f = fullyDev(U);
+    return { Hm0: Math.min(4.13e-2 * Math.sqrt(chi) * us * us / G, f.Hm0), Tp: Math.min(0.651 * Math.cbrt(chi) * us / G, f.Tp) };
+  }
+  // 時間 t と広さ X の両方で決まる海（時間の置きかえの距離と広さの小さいほう）
+  function fromDurationFetch(U, t, X) { const us = ustar(U), Xeq = 5.23e-3 * Math.pow(G * t / us, 1.5) * us * us / G; return fromFetch(U, Math.min(Xeq, X)); }
   // 波の高さ H になるまでに、風 U が吹く時間（fromDuration の逆）
   function durationForH(U, H) {
     const us = ustar(U), chi = Math.pow(G * H / (4.13e-2 * us * us), 2);
@@ -94,6 +102,16 @@
     return 16 * Math.PI ** 3 / G * s;
   }
 
-  const api = { G, stokes, ustar, fullyDev, fromDuration, durationForH, stateAt, Sf, makeSpecK, spread, lgamma };
+  // 周波数の表 (fs, Es) から波数の面の密度。向きはせまく（s）
+  function makeSpecKTable(fs, Es, ang, s) {
+    const f0 = fs[0], df = fs[1] - fs[0], n = fs.length, norm = Math.exp(lgamma(s + 1) - lgamma(s + 0.5)) / (2 * Math.sqrt(Math.PI));
+    return (kx, kz) => { const k = Math.hypot(kx, kz); if (k < 1e-9) return 0;
+      const w = Math.sqrt(G * k), f = w / (2 * Math.PI), p = (f - f0) / df; if (p < 0 || p >= n - 1) return 0;
+      const i = Math.floor(p), E = Es[i] + (Es[i + 1] - Es[i]) * (p - i);
+      let th = Math.atan2(kz, kx) - ang; th = Math.atan2(Math.sin(th), Math.cos(th));
+      return E * (G / (2 * w) / (2 * Math.PI)) / k * norm * Math.pow(Math.cos(th / 2), 2 * s); };
+  }
+
+  const api = { G, stokes, ustar, fromFetch, fromDurationFetch, makeSpecKTable, jonswapShape, fullyDev, fromDuration, durationForH, stateAt, Sf, makeSpecK, spread, lgamma };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.WGgrowth = api;
 })(typeof window !== 'undefined' ? window : this);
