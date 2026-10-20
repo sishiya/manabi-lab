@@ -13,7 +13,8 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-bod
 #cv,#ov{position:absolute;inset:0;width:100%;height:100%;display:block}
 #ov{pointer-events:none}
 #sec{position:absolute;inset:0;width:100%;height:100%;display:block}
-#secBar{position:absolute;right:12px;bottom:10px;z-index:3;display:flex;gap:6px}
+#secBar,#beachBar{position:absolute;right:12px;bottom:10px;z-index:3;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+#beachBar button.on{background:#2f6a8c;border-color:var(--acc)}
 #secBar button.on{background:#2f6a8c;border-color:var(--acc)}
 #hint{position:absolute;left:12px;top:10px;font-size:12px;color:#fff;background:rgba(0,0,0,.35);padding:3px 10px;border-radius:12px;transition:opacity .8s;pointer-events:none;white-space:nowrap}
 #hint.gone{opacity:0}

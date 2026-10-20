@@ -191,14 +191,19 @@ cv.addEventListener('pointerup', e => {
   const t = -b.pos[1] / d[1]; if (t > 400) return;
   FL.add(b.pos[0] + d[0] * t, b.pos[2] + d[2] * t, S.simT);
 });
-$('clearBtn').onclick = () => FL.clear();
+$('clearBtn').onclick = () => { FL.clear(); closeSection(); };   // ブイの真下の断面なので一緒に閉じる
 // 断面
 let secOpen = false;
-let secMag = 1;
-function openSection() { secOpen = true; $('sec').hidden = false; $('secBar').hidden = false; $('next').hidden = true; $('stage').classList.add('sec'); }
-function closeSection() { secOpen = false; $('sec').hidden = true; $('secBar').hidden = true; $('next').hidden = false; $('stage').classList.remove('sec'); }
+let secMag = 1, beachOpen = false, beachSlope = 0.033;
+function openBeach() { if (beachOpen) { closeBeach(); return; } closeSection(); $('beachBtn').textContent = '浜の断面をとじる'; beachOpen = true; $('sec').hidden = false; $('beachBar').hidden = false; $('next').hidden = true; $('stage').classList.add('sec'); }
+function closeBeach() { beachOpen = false; $('beachBtn').textContent = '浜への断面を見る'; $('beachBar').hidden = true; if (!secOpen) { $('sec').hidden = true; $('next').hidden = false; $('stage').classList.remove('sec'); } }
+function setSlope(v) { beachSlope = v; document.querySelectorAll('#slopes button').forEach(b => b.classList.toggle('on', +b.dataset.s === v)); }
+document.querySelectorAll('#slopes button').forEach(b => b.onclick = () => setSlope(+b.dataset.s));
+$('beachBtn').onclick = openBeach; $('beachClose').onclick = closeBeach; setSlope(0.033);
+function openSection() { if (beachOpen) closeBeach(); secOpen = true; $('secBtn').textContent = '断面をとじる'; $('sec').hidden = false; $('secBar').hidden = false; $('next').hidden = true; $('stage').classList.add('sec'); }
+function closeSection() { secOpen = false; $('secBtn').textContent = '断面を見る'; $('sec').hidden = true; $('secBar').hidden = true; $('next').hidden = false; $('stage').classList.remove('sec'); }
 $('secMag').onclick = () => { secMag = secMag === 1 ? 3 : 1; $('secMag').classList.toggle('on', secMag > 1); $('secMag').textContent = secMag > 1 ? '本当の大きさに' : '動きを3倍に'; };
-$('secBtn').onclick = () => { if (!FL.list.length) FL.add(4, 2, S.simT); openSection(); };
+$('secBtn').onclick = () => { if (secOpen) { closeSection(); return; } if (!FL.list.length) FL.add(4, 2, S.simT); openSection(); };
 $('secClose').onclick = closeSection;
 
 // ---- 案内 ----
@@ -246,6 +251,7 @@ function draw(dt) {
     SUN.rough0 = Math.max(0.012, Math.sqrt(Math.max(tot - ocean.fftSlope, 0)));
     ocean.frame(dt, S.simT, b, SUN); }
   drawOverlay(b, dt);
+  if (beachOpen) window.WGbeach.draw($('sec'), S.st, S.simT, beachSlope);
   if (secOpen) window.WGsection.draw($('sec'), S.st, S.simT, FL.list.length > 0, S.us || 0, secMag);
 }
 function loop(now) {

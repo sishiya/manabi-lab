@@ -4,7 +4,7 @@
 'use strict';
 window.WGsection = (() => {
   const G = 9.81, NC = 40;   // 波の数
-  let comps = [], key = '', lam = 1, drift0 = 0, trails = new Map(), lastT = null;
+  let comps = [], key = null, lam = 1, drift0 = 0, trails = new Map(), lastT = null;
   // 分布 S(f) を周波数で区切って波を作る（乱数の位相は固定）
   function build(H, Tp) {
     const W = window.WGgrowth, fp = 1 / Tp; comps = [];
@@ -36,8 +36,9 @@ window.WGsection = (() => {
     g.fillStyle = 'rgba(14,34,51,.94)'; g.fillRect(0, 0, w, h);
     const css = getComputedStyle(document.documentElement), font = css.getPropertyValue('--f-body');
     g.font = '12px ' + font; g.fillStyle = '#e8f0f4'; g.textAlign = 'left';
-    if (!(st.Hm0 > 0)) { g.fillText('まだ波がない（風が吹く前）。水の粒は止まっています。', 16, 40); return; }
-    const k2 = st.Hm0.toFixed(3) + '/' + st.Tp.toFixed(3) + '/' + mag; if (k2 !== key) { key = k2; build(st.Hm0, st.Tp); }   // 倍率を変えたら跡も消す
+    if (!(st.Hm0 >= 0.05)) { g.fillText(st.Hm0 > 0 ? 'まだ波がとても小さい（高さ 5 cm 未満）。時間を進めてください。' : 'まだ波がない（風が吹く前）。水の粒は止まっています。', 16, 40); return; }
+    // 作りなおすのは高さか周期が 3% 以上かわったときと、倍率を変えたとき（跡も消える）
+    if (!key || Math.abs(st.Hm0 / key.H - 1) > 0.03 || Math.abs(st.Tp / key.T - 1) > 0.03 || key.mag !== mag) { key = { H: st.Hm0, T: st.Tp, mag }; build(st.Hm0, st.Tp); }
     const dt = lastT == null ? 0 : Math.max(0, Math.min(0.1, t - lastT)); lastT = t;
     // 縮尺（縦横同じ。本当の形のまま）: 横は波長の 1.4 倍、深さは波長の 0.55 倍まで
     const head = wrap(g, 'ブイの真下の断面（風の向きにそって・縦横同じ縮尺）' + (mag > 1 ? `　※ 水の動きを ${mag} 倍にして見せています` : ''), w - 32);

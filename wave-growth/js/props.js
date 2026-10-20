@@ -67,26 +67,29 @@ window.WGprops = (() => {
   // ---- 物 ----
   const SKIN = [0.86, 0.64, 0.5], TRUNKS = [0.12, 0.3, 0.62], HAIR = [0.1, 0.075, 0.06];
   const mSkin = [0.35, 1], mCloth = [0.12, 1], mHair = [0.3, 1], mVinyl = [0.8, 0.5];
-  function human() {   // 浮き輪に乗った人（身長 1.7 m・海パン）。前 = +z
-    const v = [];
-    torus(v, [0, 0.02, 0.08], 0.42, 0.15, mVinyl);
-    ellipsoid(v, [0, -0.1, 0], [0.17, 0.15, 0.12], TRUNKS, mCloth);       // 腰（海パン）
-    ellipsoid(v, [0, 0.16, 0], [0.155, 0.27, 0.105], SKIN, mSkin);         // おなか
-    ellipsoid(v, [0, 0.33, 0.005], [0.19, 0.15, 0.115], SKIN, mSkin);      // 胸
-    limb(v, [0, 0.45, 0], [0, 0.54, 0.01], 0.05, 0.048, SKIN, mSkin);       // 首
-    ellipsoid(v, [0, 0.655, 0.02], [0.092, 0.118, 0.105], SKIN, mSkin);    // 頭
-    ellipsoid(v, [0, 0.69, -0.01], [0.097, 0.092, 0.106], HAIR, mHair);   // 髪
-    ellipsoid(v, [0, 0.64, 0.124], [0.016, 0.024, 0.02], SKIN, mSkin);     // 鼻
+  function human() {   // 大きな浮き輪（直径 約 2 m）に板をわたした台に立つ人（身長 1.7 m・海パン）。前 = +z
+    const v = [], WOOD = [0.62, 0.46, 0.3], WOOD2 = [0.5, 0.36, 0.24], y0 = 0.33;
+    torus(v, [0, 0.05, 0], 0.85, 0.22, mVinyl, 40, 14);
+    for (const x of [-0.55, 0.55]) box(v, [x, 0.285, 0], [0.12, 0.06, 1.95], WOOD2, [0.25, 1]);             // 下の角材
+    for (let i = 0; i < 6; i++) box(v, [0, 0.31 + 0.002 * (i % 2), -0.6 + i * 0.24], [1.95, 0.04, 0.2], i % 2 ? WOOD : WOOD2.map(c => c * 1.1), [0.22, 1]);   // 板
+    const P = (x, y, z) => [x, y0 + y, z];
+    ellipsoid(v, P(0, 0.9, 0), [0.17, 0.13, 0.12], TRUNKS, mCloth);                 // 腰（海パン）
+    ellipsoid(v, P(0, 1.07, 0), [0.15, 0.17, 0.105], SKIN, mSkin);                   // おなか
+    ellipsoid(v, P(0, 1.27, 0.005), [0.185, 0.16, 0.115], SKIN, mSkin);              // 胸
+    limb(v, P(0, 1.42, 0), P(0, 1.52, 0.01), 0.05, 0.048, SKIN, mSkin);              // 首
+    ellipsoid(v, P(0, 1.6, 0.015), [0.092, 0.118, 0.105], SKIN, mSkin);              // 頭
+    ellipsoid(v, P(0, 1.635, -0.005), [0.097, 0.092, 0.106], HAIR, mHair);           // 髪
+    ellipsoid(v, P(0, 1.585, 0.118), [0.016, 0.024, 0.02], SKIN, mSkin);             // 鼻
     for (const sx of [-1, 1]) {
-      ellipsoid(v, [sx * 0.093, 0.65, 0.01], [0.018, 0.032, 0.022], SKIN, mSkin);              // 耳
-      ellipsoid(v, [sx * 0.19, 0.42, 0], [0.065, 0.06, 0.065], SKIN, mSkin);                   // 肩
-      limb(v, [sx * 0.21, 0.41, 0], [sx * 0.41, 0.24, 0.12], 0.055, 0.044, SKIN, mSkin);      // 上の腕
-      limb(v, [sx * 0.41, 0.24, 0.12], [sx * 0.39, 0.2, 0.37], 0.043, 0.034, SKIN, mSkin);    // 下の腕（浮き輪の上）
-      ellipsoid(v, [sx * 0.385, 0.195, 0.43], [0.034, 0.022, 0.05], SKIN, mSkin);             // 手
-      limb(v, [sx * 0.09, -0.12, 0.02], [sx * 0.1, 0.03, 0.24], 0.085, 0.075, TRUNKS, mCloth);  // もも（海パン）
-      limb(v, [sx * 0.1, 0.03, 0.24], [sx * 0.11, 0.22, 0.5], 0.072, 0.06, SKIN, mSkin);      // もも
-      limb(v, [sx * 0.11, 0.22, 0.5], [sx * 0.12, -0.22, 0.66], 0.05, 0.038, SKIN, mSkin);    // すね
-      ellipsoid(v, [sx * 0.12, -0.27, 0.71], [0.042, 0.03, 0.09], SKIN, mSkin);               // 足
+      ellipsoid(v, P(sx * 0.093, 1.595, 0.005), [0.018, 0.032, 0.022], SKIN, mSkin);           // 耳
+      ellipsoid(v, P(sx * 0.19, 1.39, 0), [0.062, 0.058, 0.062], SKIN, mSkin);                 // 肩
+      limb(v, P(sx * 0.21, 1.38, 0), P(sx * 0.27, 1.1, 0.02), 0.05, 0.042, SKIN, mSkin);      // 上の腕
+      limb(v, P(sx * 0.27, 1.1, 0.02), P(sx * 0.3, 0.86, 0.07), 0.04, 0.032, SKIN, mSkin);    // 下の腕
+      ellipsoid(v, P(sx * 0.305, 0.8, 0.08), [0.03, 0.06, 0.04], SKIN, mSkin);               // 手
+      limb(v, P(sx * 0.09, 0.86, 0), P(sx * 0.095, 0.7, 0.005), 0.085, 0.08, TRUNKS, mCloth);  // もも（海パン）
+      limb(v, P(sx * 0.095, 0.7, 0.005), P(sx * 0.1, 0.48, 0.02), 0.075, 0.056, SKIN, mSkin); // もも
+      limb(v, P(sx * 0.1, 0.48, 0.02), P(sx * 0.1, 0.09, 0), 0.053, 0.038, SKIN, mSkin);      // すね
+      ellipsoid(v, P(sx * 0.1, 0.04, 0.05), [0.045, 0.035, 0.12], SKIN, mSkin);               // 足（板の上）
     }
     return v;
   }
@@ -133,7 +136,7 @@ window.WGprops = (() => {
 
   // 種類: 形・海面を読む点（物の向きでの x, z）・読む海面（中 wb・小 wc）・動きのおくれ tau・札・カメラの距離・しぶきの濡れやすさ
   const TYPES = {
-    human:   { name: '人', size: '身長 1.7 m', geo: human, pts: [[0, 0]], wb: 1, wc: 0.4, tau: 0.25, labelY: 1.0, dist: 7, splash: 1 },
+    human:   { name: '人', size: '身長 1.7 m', geo: human, pts: [[0.8, 0], [-0.8, 0], [0, 0.8], [0, -0.8]], wb: 1, wc: 0.2, tau: 0.35, labelY: 2.3, dist: 8, splash: 1 },
     boat:    { name: 'ボート', size: '長さ 4 m', geo: boat, pts: [[1.6, 0], [-1.6, 0], [0, 0.6], [0, -0.6]], wb: 1, wc: 0, tau: 0.4, labelY: 1.4, dist: 12, splash: 0.8 },
     fishing: { name: '漁船', size: '長さ 15 m', geo: fishing, pts: [[6, 0], [-6, 0], [0, 2], [0, -2]], wb: 1, wc: 0, tau: 0.9, labelY: 10, dist: 34, splash: 0.4 },
     ship:    { name: '大きな船', size: '長さ 120 m', geo: ship, pts: [[50, 0], [-50, 0], [0, 9], [0, -9], [0, 0]], wb: 0, wc: 0, tau: 2.5, labelY: 36, dist: 220, splash: 0.1 },
