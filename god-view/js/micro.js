@@ -68,16 +68,35 @@
   // 岩: 小石の地面（4 m 四方）
   const gravelTex = () => canvasTex(2048, (x, S) => {
     x.fillStyle = '#6f6458'; x.fillRect(0, 0, S, S);
+    for (let i = 0; i < 60000; i++) { x.fillStyle = pick(['#7d7265', '#62584d', '#857a6b', '#5a5046']); x.fillRect(rnd() * S, rnd() * S, 1 + rnd() * 2, 1 + rnd() * 2); }   // 地面の細かい土
+    // 小石: 影 → 丸みのある色（光の当たる側を明るく）→ ふち（v013: 平たい多角形に見えた）
     for (let i = 0; i < 2600; i++) {
-      const cx = rnd() * S, cy = rnd() * S, r = 4 + rnd() * rnd() * 30, n = 7;
+      const cx = rnd() * S, cy = rnd() * S, r = 4 + rnd() * rnd() * 30, n = 9;
       const c = pick(['#9a9184', '#b3aa9b', '#7e766c', '#c8bfae', '#8c7c6a', '#5d5850']);
-      x.fillStyle = c; x.beginPath();
-      for (let k = 0; k < n; k++) { const a = k / n * 6.28, rr = r * (0.7 + rnd() * 0.5); k ? x.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr) : x.moveTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); }
-      x.fill();
-      x.fillStyle = 'rgba(255,255,255,0.12)'; x.beginPath(); x.arc(cx - r * 0.25, cy - r * 0.25, r * 0.35, 0, 6.28); x.fill();
+      const pts = [];
+      for (let k = 0; k < n; k++) { const a = k / n * 6.28, rr = r * (0.75 + rnd() * 0.4); pts.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]); }
+      const path = (dx, dy) => { x.beginPath(); pts.forEach((p, k) => { const mx = (p[0] + pts[(k + 1) % n][0]) / 2 + dx, my = (p[1] + pts[(k + 1) % n][1]) / 2 + dy; k ? x.quadraticCurveTo(p[0] + dx, p[1] + dy, mx, my) : x.moveTo(mx, my); }); x.quadraticCurveTo(pts[0][0] + dx, pts[0][1] + dy, (pts[0][0] + pts[1][0]) / 2 + dx, (pts[0][1] + pts[1][1]) / 2 + dy); };
+      x.fillStyle = 'rgba(30,24,18,0.45)'; path(r * 0.18, r * 0.22); x.fill();
+      const g = x.createRadialGradient(cx - r * 0.35, cy - r * 0.35, r * 0.05, cx, cy, r * 1.1);
+      g.addColorStop(0, 'rgba(255,255,255,0.35)'); g.addColorStop(0.35, c); g.addColorStop(1, 'rgba(40,34,28,0.9)');
+      x.fillStyle = c; path(0, 0); x.fill();
+      x.fillStyle = g; path(0, 0); x.fill();
     }
-    // 中央は砂（細かい粒）
-    for (let i = 0; i < 9000; i++) { const a = rnd() * 6.28, r = Math.sqrt(rnd()) * 160; x.fillStyle = pick(['#c9bba4', '#a89982', '#d8cdb8', '#8a7d6a']); x.fillRect(S / 2 + Math.cos(a) * r, S / 2 + Math.sin(a) * r, 2, 2); }
+  });
+  // 岩: まん中の砂（50 cm 四方、1 画素 約 0.25 mm）。寄ると砂つぶ 1 つずつが見える（v013: 小石の絵の 2 画素の点を拡大していて、四角いドットに見えた）
+  const sandTex = () => canvasTex(2048, (x, S) => {
+    x.fillStyle = '#8c7e66'; x.fillRect(0, 0, S, S);
+    const cols = ['#d8cdb8', '#c9bba4', '#e2dace', '#b8a68a', '#9a8b74', '#c9a58f', '#c2b49c', '#d8cdb8', '#b0a189', '#4a423a'];
+    for (let i = 0; i < 85000; i++) {
+      const cx = rnd() * S, cy = rnd() * S, r = 1.4 + rnd() * rnd() * 6.5, c = pick(cols);   // 半径 0.35〜2 mm
+      x.fillStyle = 'rgba(40,32,24,0.35)'; x.beginPath(); x.ellipse(cx + r * 0.25, cy + r * 0.3, r, r * 0.85, 0, 0, 6.28); x.fill();   // 影
+      x.fillStyle = c; x.beginPath(); x.ellipse(cx, cy, r, r * (0.7 + rnd() * 0.3), rnd() * 3, 0, 6.28); x.fill();
+      if (r > 3) { x.fillStyle = 'rgba(255,255,255,0.22)'; x.beginPath(); x.arc(cx - r * 0.3, cy - r * 0.3, r * 0.35, 0, 6.28); x.fill(); }   // 光
+    }
+    // ふちは小石の地面へなじむように透明に
+    x.globalCompositeOperation = 'destination-in';
+    const g = x.createRadialGradient(S / 2, S / 2, S * 0.3, S / 2, S / 2, S * 0.5); g.addColorStop(0, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = g; x.fillRect(0, 0, S, S);
   });
   // 岩: 砂つぶの表面（貝がら状の割れ目。600 µm 四方）
   const fractureTex = () => canvasTex(2048, (x, S) => {
@@ -217,7 +236,10 @@
 
     // ===== 岩・砂の道 =====
     layer({ path: 'rock', name: L('地面の小石と砂', 'Pebbles and sand on the ground'), Lmin: -1.3, Lmax: 1.5, unit: 1, desc: L('地面には小石と砂。まん中の砂の 1 つぶに寄っていきます。', 'Pebbles and sand on the ground. We zoom in on one grain of sand in the middle.'),
-      build: g => g.add(plane(4, gravelTex())) });
+      build: g => {
+        g.add(plane(4, gravelTex()));
+        const sand = plane(0.5, sandTex(), { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }); sand.position.z = 0.0005; g.add(sand);
+      } });
     layer({ path: 'rock', name: L('砂つぶ', 'Grains of sand'), Lmin: -3.3, Lmax: -1.1, unit: 1e-3, desc: L('砂は、岩がくだけた鉱物のつぶ（0.06〜2 mm）。白っぽいのは石英、ピンクは長石、黒は雲母など。まん中の石英のつぶに寄ります。', 'Sand is grains of minerals from broken rock (0.06–2 mm). Whitish ones are quartz, pink is feldspar, black is mica and so on. We zoom in on the quartz grain in the middle.'),
       build: g => {
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), mat(0x8c7f6c, { roughness: 1 })); ground.position.z = -1.0; g.add(ground);   // 粒の下の砂の地面（v010: 粒が宙に浮いて見えた）
@@ -232,7 +254,7 @@
       build: g => {
         g.add(plane(600, fractureTex()));
         const hex = new THREE.CylinderGeometry(1, 1, 0.12, 6);
-        for (let i = 0; i < 90; i++) { const m = new THREE.Mesh(hex, mat(0xd9cfbc)); const s = 0.4 + rnd() * 0.7; m.scale.set(s, 1, s); m.position.set(gauss() * 70, gauss() * 70, 0.1 + rnd() * 0.3); m.rotation.set(Math.PI / 2 + gauss() * 0.6, rnd() * 6, 0); if (Math.hypot(m.position.x, m.position.y) > 1.5) g.add(m); }
+        for (let i = 0; i < 90; i++) { const m = new THREE.Mesh(hex, mat(pick([0xd9cfbc, 0xcbbfa6, 0xe2d9c8]), { opacity: 0.85, roughness: 0.9 })); const s = 0.4 + rnd() * 0.7; m.scale.set(s, 1, s); m.position.set(gauss() * 70, gauss() * 70, 0.1 + rnd() * 0.3); m.rotation.set(Math.PI / 2 + gauss() * 0.6, rnd() * 6, 0); if (Math.hypot(m.position.x, m.position.y) > 1.5) g.add(m); }
       } });
     layer({ path: 'rock', name: L('結晶の段', 'Crystal steps'), Lmin: -7.7, Lmax: -5.4, unit: 1e-9, desc: L('石英は原子が規則正しく並んだ結晶。表面には、原子の層の段（高さ 約 0.4 nm〜数 nm）が階段のように続いています。', 'Quartz is a crystal with atoms lined up in a regular pattern. On its surface, steps of atomic layers (about 0.4 nm to a few nm high) continue like a staircase.'),
       build: g => {
@@ -521,7 +543,7 @@
     pathWhy += ` → ${PATHS[path].name}`;
     canvas.style.opacity = '0'; canvas.style.pointerEvents = '';
     GV.stage = 'micro';
-    document.body.classList.add('in-micro');
+    document.body.classList.add('in-micro'); GV.loaded && GV.loaded();
     resize();
     Lw = Lgoal = L_START;
     if (Lt != null) Lgoal = Math.max(L_MIN, Lt);
@@ -538,7 +560,7 @@
     GV.viewer.scene.requestRender();
     Lgoal = Lw; canvas.style.pointerEvents = 'none';
     fadeTo(false, () => {
-      if (GV.stage !== 'earth') return;
+      if (GV.stage === 'micro') return;              // もう一度ミクロへ入ったときだけ残す（目盛りで宇宙へ直行したときも片づける）
       document.body.classList.remove('in-micro');
       cancelAnimationFrame(raf); raf = 0;
       GV.updateScale && GV.updateScale();

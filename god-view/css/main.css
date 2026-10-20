@@ -54,6 +54,7 @@ body.layers-open #layers { display: block; }
 .scale-now .pow { margin-left: auto; font-variant-numeric: tabular-nums; }
 #ruler-bar { position: relative; height: 18px; margin-top: 4px; border-radius: 4px; overflow: hidden; background: rgba(255, 255, 255, 0.04); }
 .band { position: absolute; top: 0; bottom: 0; border-right: 1px solid var(--line); font-size: 10px; color: var(--muted); opacity: 0.45; overflow: hidden; white-space: nowrap; display: flex; align-items: center; justify-content: center; }
+.band .ls { display: none; }
 .band.ready { opacity: 1; background: rgba(108, 195, 255, 0.18); color: var(--text); }
 #ruler-mark { position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -1px; background: #ffd25e; box-shadow: 0 0 6px #ffd25e; }
 
@@ -160,3 +161,54 @@ body.in-tear #top { z-index: 5; }
 .langsw { flex: none; display: flex; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .langsw button { border: 0; background: none; color: inherit; opacity: 0.55; height: 36px; padding: 0 9px; font: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; cursor: pointer; }
 .langsw button[aria-pressed="true"] { opacity: 1; background: rgba(255,255,255,0.1); }
+
+/* v013（2026-10-20）: パネルをシンプルに・スマホは下から出るパネル・出典は1行・はじめの案内 */
+#layers { z-index: 2; }
+#layers .row > span { flex: none; }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 0 4px; }
+.seg button, #quick button { font: inherit; font-size: 12.5px; color: var(--text); background: rgba(255, 255, 255, 0.06); border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; min-height: 32px; cursor: pointer; }
+.seg button.on { background: rgba(108, 195, 255, 0.25); border-color: var(--accent); }
+.seg button:hover, #quick button:hover { border-color: var(--accent); }
+#quick button { background: rgba(108, 195, 255, 0.12); }
+#layers details { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 4px; }
+#layers summary { cursor: pointer; font-size: 12.5px; color: var(--muted); padding: 6px 0; }
+#layers summary:hover { color: var(--text); }
+#layers .sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+#layers [hidden] { display: none !important; }
+#time-box h3 b { color: var(--text); font-weight: 600; margin-left: 4px; }
+.legend { font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); margin: 10px 0 0; padding-top: 8px; line-height: 1.9; }
+.row input[type=checkbox] { width: 16px; height: 16px; margin: 0; }
+/* 出典: ふだんは1行、押すと全部（地図・宇宙・ちぎる） */
+.cesium-credit-logoContainer { display: none !important; }    /* Cesium ion は使っていない（トークンなし）のでロゴは出さない */
+.cesium-widget-credits, #space-credit, #tear-credit { cursor: pointer; white-space: nowrap; overflow: hidden !important; text-overflow: ellipsis; max-height: none !important; }
+.cesium-widget-credits * { white-space: nowrap; }
+body.credits-open .cesium-widget-credits, body.credits-open #space-credit, body.credits-open #tear-credit { white-space: normal; max-height: 40vh !important; overflow: auto !important; }
+body.credits-open .cesium-widget-credits * { white-space: normal; }
+.cesium-widget-credits::before, #space-credit::before, #tear-credit::before { content: '▸ '; color: var(--accent); }
+body.credits-open .cesium-widget-credits::before, body.credits-open #space-credit::before, body.credits-open #tear-credit::before { content: '▾ '; }
+.cesium-viewer-bottom { bottom: 72px !important; }
+#space-credit { bottom: 72px; }
+/* はじめの案内（数秒で消える）と、宇宙の案内も同じように消す */
+#hint { position: absolute; left: 50%; bottom: 104px; transform: translateX(-50%); width: max-content; max-width: calc(100% - 24px); padding: 8px 14px; font-size: 13px; line-height: 1.6; text-align: center; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; z-index: 3; pointer-events: none; transition: opacity .8s; }
+#hint.gone, #space-hint.gone { opacity: 0; pointer-events: none; }
+#space-hint { transition: opacity .8s; }
+body.in-space #hint, body.in-micro #hint { opacity: 0; }
+@media (max-width: 640px) {
+  /* スマホ: パネルは下から（地図は上に見えたまま）。押せる大きさに */
+  #layers { top: auto; bottom: 72px; max-height: 52vh; border-radius: 14px; padding-bottom: 14px; }
+  .cesium-viewer-bottom, #space-credit { bottom: 70px !important; }
+  .cesium-widget-credits, #space-credit { font-size: 10px !important; }
+  #layers .row { padding: 6px 0; }
+  .seg button, #quick button { min-height: 36px; font-size: 13px; }
+  #hint { bottom: 100px; font-size: 12.5px; }
+  .band .lf { display: none; } .band .ls { display: inline; font-size: 9px; }
+  #ruler-bar { height: 22px; }
+}
+#base-seg { flex-wrap: nowrap; }
+#base-seg button { flex: 1; padding: 0 4px; }
+@media (min-width: 641px) { #layers { max-height: calc(100% - 152px); } }
+body.layers-open #hint { opacity: 0; }
+@media (max-width: 640px) {
+  #layers { bottom: 94px; max-height: 50vh; }
+  body.layers-open .cesium-viewer-bottom { z-index: 3; }
+}

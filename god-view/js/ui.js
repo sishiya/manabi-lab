@@ -20,61 +20,77 @@
   $('langsw').querySelectorAll('button').forEach(b => { b.setAttribute('aria-pressed', b.dataset.l === LANG); b.onclick = () => { if (b.dataset.l !== LANG) setLang(b.dataset.l); }; });
 
   // ---------- 層のパネル ----------
+  // v013（2026-10-20）: パネルをシンプルに。いつも出す = 見どころ・背景・よく使う 8 つ、そのときだけ出す = 時刻（昼と夜・衛星・車のとき）・地下の見どころ、
+  // くわしい設定にしまう = 陰影・高さの強調・建物の形・地面の濃さ・ワイヤフレーム・大気。「実データ」の札は外し、推定と演出だけに印（凡例で説明）
+  const QUICK = [
+    ['fuji', L('富士山', 'Mt. Fuji'), () => GV.viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(138.727, 35.27, 6200), orientation: { heading: 0, pitch: Cesium.Math.toRadians(-16), roll: 0 }, duration: 3 })],
+    ['tokyo', L('東京駅のビル', 'Tokyo Station'), () => GV.viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(139.7671, 35.6745, 700), orientation: { heading: 0, pitch: Cesium.Math.toRadians(-35), roll: 0 }, duration: 3 })],
+    ['under', L('地下街', 'Underground mall'), () => GV.gotoUnder('tokyo')],
+    ['space', L('宇宙へ', 'To space'), () => GV.gotoL(7.7)],
+    ['micro', L('原子の世界へ', 'Into atoms'), () => GV.gotoL(-0.3)],
+  ];
+  const BASE_SHORT = { photo: L('写真', 'Photo'), std: L('地図', 'Map'), pale: L('淡色', 'Pale'), relief: L('標高', 'Elevation'), today: L('雲', 'Clouds') };
   function buildLayers() {
     const s = GV.state;
-    let h = `<h3>${L('背景', 'Background')}</h3>`;
-    for (const k in GV.BASES) {
-      const b = GV.BASES[k];
-      h += `<label class="row"><input type="radio" name="base" value="${k}" ${s.base === k ? 'checked' : ''}> ${b.label} ${tag(b.tag)}</label>`;
-    }
-    h += `<h3>${L('重ねる', 'Overlays')}</h3>`;
-    for (const k in GV.OVERLAYS) {
-      const o = GV.OVERLAYS[k];
-      h += `<label class="row"><input type="checkbox" data-ov="${k}" ${s.overlays[k] ? 'checked' : ''}> ${o.label} ${tag(o.tag)} <small>${L('日本のみ', 'Japan only')}</small></label>`;
-    }
-    h += `<h3>${L('地形', 'Terrain')}</h3>`;
-    h += `<label class="row"><input type="checkbox" id="opt-terrain" ${s.terrain ? 'checked' : ''}> ${L('立体の地形', '3D terrain')} ${tag('real')}</label>`;
-    h += `<label class="row slider">${L('高さの強調', 'Height exaggeration')} <input type="range" id="opt-exag" min="1" max="10" step="0.5" value="${s.exaggeration}"> <b id="exag-val">×${s.exaggeration}</b></label>`;
-    h += `<h3>${L('建物', 'Buildings')} ` + tag('real') + ` <small>${L('日本の都市（PLATEAU）', 'Japanese cities (PLATEAU)')}</small></h3>`;
-    for (const [k, label] of [['off', L('なし', 'None')], ['lod1', L('箱の形（LOD1）', 'Boxes (LOD1)')], ['lod2', L('屋根の形まで（LOD2）', 'With roof shapes (LOD2)')]]) {
-      h += `<label class="row"><input type="radio" name="bldg" value="${k}" ${s.buildings === k ? 'checked' : ''}> ${label}</label>`;
-    }
-    h += `<label class="row"><input type="checkbox" id="opt-btex" ${s.bldgTexture ? 'checked' : ''}> ${L('壁と屋根の写真（LOD2）', 'Wall and roof photos (LOD2)')}</label>`;
+    const chk = (id, on, label, extra = '') => `<label class="row"><input type="checkbox" id="${id}" ${on ? 'checked' : ''}> <span>${label}</span>${extra}</label>`;
+    let h = `<h3>${L('見どころへ飛ぶ', 'Jump to')}</h3><div class="spots" id="quick">` + QUICK.map(([k, l]) => `<button type="button" data-quick="${k}">${l}</button>`).join('') + '</div>';
+    h += `<h3>${L('背景', 'Background')}</h3><div class="seg" id="base-seg">` +
+      Object.keys(GV.BASES).map(k => `<button type="button" data-base="${k}" title="${GV.BASES[k].label}" class="${s.base === k ? 'on' : ''}">${BASE_SHORT[k] || GV.BASES[k].label}</button>`).join('') + '</div>';
+    h += `<div class="status" id="base-note"></div>`;
+    h += `<h3>${L('重ねる', 'Show')}</h3>`;
+    h += chk('opt-terrain', s.terrain, L('立体の地形', '3D terrain'));
+    h += chk('opt-bldg', s.buildings !== 'off' || s.osmBuildings, L('建物', 'Buildings'), ` <small>${L('日本の都市は PLATEAU', 'PLATEAU in Japanese cities')}</small>`);
     h += '<div id="bldg-status" class="status"></div>';
-    h += `<label class="row"><input type="checkbox" id="opt-osmb" ${s.osmBuildings ? 'checked' : ''}> ${L('PLATEAU のない所は OSM の建物', 'OSM buildings where there is no PLATEAU')} ${tag('real')}<small>${L('高さは推定を含む', 'heights partly estimated')}</small></label>`;
-    h += '<div id="osmb-status" class="status"></div>';
-    h += `<h3>${L('生きている地球', 'Living Earth')}</h3>`;
-    h += `<div class="row time"><b id="time-now">–</b></div>`;
-    h += `<label class="row slider">${L('時刻', 'Time')} <input type="range" id="opt-time" min="-24" max="24" step="0.25" value="0"> <span id="time-off" class="muted small">${L('いま', 'now')}</span></label>`;
-    h += '<div class="spots" id="time-speed">' + [[1, L('実時間', 'Real time')], [600, L('1秒＝10分', '1 s = 10 min')], [3600, L('1秒＝1時間', '1 s = 1 h')]].map(([x, l]) => `<button type="button" data-speed="${x}">${l}</button>`).join('') + `<button type="button" data-now="1">${L('いまに戻す', 'Back to now')}</button></div>`;
-    h += `<label class="row"><input type="checkbox" id="opt-night" ${s.nightLights ? 'checked' : ''}> ${L('夜の街の明かり', 'City lights at night')} ${tag('real')}<small>${L('2016年', '2016')}</small></label>`;
-    h += `<label class="row"><input type="checkbox" id="opt-quake" ${s.quakes ? 'checked' : ''}> ${L('地震（過去7日・M2.5以上）', 'Earthquakes (past 7 days, M2.5+)')} ${tag('real')}</label>`;
-    h += `<label class="row"><input type="checkbox" id="opt-sats" ${s.sats ? 'checked' : ''}> ${L('人工衛星・ISS', 'Satellites, ISS')} ${tag('est')}<small>${L('軌道から計算', 'calculated from orbits')}</small></label>`;
+    h += chk('opt-under', s.underground, L('地下を見る', 'See underground'), ` <small>${L('地面を半透明に', 'see-through ground')}</small>`);
+    h += '<div id="under-box"><div class="spots">' + Object.entries(GV.UNDER_SPOTS).map(([k, p]) => `<button type="button" data-spot="${k}">${L(p.label + 'へ', 'To ' + p.label)}</button>`).join('') + '</div><div id="under-status" class="status"></div></div>';
+    h += chk('opt-light', s.lighting, L('昼と夜', 'Day and night'), ` ${tag('est')} <small>${L('夜は街の明かり', 'city lights at night')}</small>`);
+    h += chk('opt-quake', s.quakes, L('地震', 'Earthquakes'), ` <small>${L('過去7日・M2.5以上', 'past 7 days, M2.5+')}</small>`);
+    h += chk('opt-sats', s.sats, L('人工衛星・ISS', 'Satellites, ISS'), ` ${tag('est')}`);
     h += '<div id="life-status" class="status"></div>';
-    h += `<h3>${L('動く街', 'Moving city')}</h3>`;
-    h += `<label class="row"><input type="checkbox" id="opt-transit" ${s.transit ? 'checked' : ''}> ${L('都営の電車・バス（いまの位置）', 'Toei trains and buses (current positions)')} ${tag('real')}<small>${L('東京都のみ。駅・バス停の間は推定', 'Tokyo only. Between stations and stops is estimated')}</small></label>`;
+    h += chk('opt-transit', s.transit, L('都営の電車・バス', 'Toei trains and buses'), ` <small>${L('いまの位置・東京', 'live, Tokyo')}</small>`);
     h += '<div id="transit-status" class="status"></div>';
-    h += `<label class="row"><input type="checkbox" id="opt-agents" ${s.agents ? 'checked' : ''}> ${L('車・人・鳥', 'Cars, people, birds')} ${tag('fx')}<small>${L('道路に合わせた架空の動き', 'imaginary movement along roads')}</small></label>`;
+    h += chk('opt-agents', s.agents, L('車・人・鳥', 'Cars, people, birds'), ` ${tag('fx')}`);
     h += '<div id="agents-status" class="status"></div>';
-    h += `<h3>${L('地下', 'Underground')}</h3>`;
-    h += `<label class="row"><input type="checkbox" id="opt-under" ${s.underground ? 'checked' : ''}> ${L('地下を見る（地面を半透明に）', 'See underground (see-through ground)')}</label>`;
-    h += `<label class="row slider">${L('地面の濃さ', 'Ground opacity')} <input type="range" id="opt-galpha" min="0.05" max="0.9" step="0.05" value="${s.groundAlpha}"></label>`;
-    h += '<div class="spots">' + Object.entries(GV.UNDER_SPOTS).map(([k, p]) => `<button type="button" data-spot="${k}">${L(p.label + 'へ', 'To ' + p.label)}</button>`).join('') + '</div>';
-    h += '<div id="under-status" class="status"></div>';
-    h += `<h3>${L('表示', 'Display')}</h3>`;
-    h += `<label class="row"><input type="checkbox" id="opt-wire" ${s.wireframe ? 'checked' : ''}> ${L('ワイヤフレーム（地形と PLATEAU の建物）', 'Wireframe (terrain and PLATEAU buildings)')}</label>`;
-    h += `<label class="row"><input type="checkbox" id="opt-light" ${s.lighting ? 'checked' : ''}> ${L('昼と夜（いまの太陽の位置）', 'Day and night (current sun position)')} ${tag('est')}</label>`;
-    h += `<label class="row"><input type="checkbox" id="opt-atmo" ${s.atmosphere ? 'checked' : ''}> ${L('大気', 'Atmosphere')}</label>`;
-    h += `<p class="soon">${L('宇宙へは、いちばん引いた所からさらにホイールで引く。ミクロへは、地面すれすれまで寄ってからさらに寄る。下の目盛りの帯を押してもその大きさへ移れます。', 'To go into space, keep zooming out with the wheel from the farthest view. To go into the micro world, zoom right down to the ground and keep going. You can also tap the ruler band at the bottom to jump to that size.')}</p>`;
+    h += `<div id="time-box"><h3>${L('時刻', 'Time')} <b id="time-now">–</b></h3>`;
+    h += `<label class="row slider"><input type="range" id="opt-time" min="-24" max="24" step="0.25" value="0" aria-label="${L('時刻をずらす', 'Shift the time')}"> <span id="time-off" class="muted small">${L('いま', 'now')}</span></label>`;
+    h += '<div class="seg" id="time-speed">' + [[1, L('実時間', 'Real time')], [600, L('1秒＝10分', '1 s = 10 min')], [3600, L('1秒＝1時間', '1 s = 1 h')]].map(([x, l]) => `<button type="button" data-speed="${x}">${l}</button>`).join('') + `<button type="button" data-now="1">${L('いまへ', 'Now')}</button></div></div>`;
+    h += `<details id="more"><summary>${L('くわしい設定', 'More settings')}</summary>`;
+    h += `<label class="row slider">${L('高さの強調', 'Height exaggeration')} <input type="range" id="opt-exag" min="1" max="10" step="0.5" value="${s.exaggeration}"> <b id="exag-val">×${s.exaggeration}</b></label>`;
+    for (const k in GV.OVERLAYS) h += `<label class="row"><input type="checkbox" data-ov="${k}" ${s.overlays[k] ? 'checked' : ''}> <span>${GV.OVERLAYS[k].label}</span> <small>${L('日本のみ', 'Japan only')}</small></label>`;
+    h += `<div class="sub">${L('建物の形', 'Building shape')}</div><div class="seg" id="bldg-seg">` + [['lod1', L('箱', 'Boxes')], ['lod2', L('屋根まで', 'With roofs')]].map(([k, l]) => `<button type="button" data-bldg="${k}" class="${(s.buildings === 'off' ? s.bldgShape || 'lod2' : s.buildings) === k ? 'on' : ''}">${l}</button>`).join('') + '</div>';
+    h += chk('opt-btex', s.bldgTexture, L('壁と屋根の写真', 'Wall and roof photos'));
+    h += chk('opt-osmb', s.osmBuildings, L('PLATEAU のない所は OSM の建物', 'OSM buildings where there is no PLATEAU'), ` <small>${L('高さは推定を含む', 'heights partly estimated')}</small>`);
+    h += '<div id="osmb-status" class="status"></div>';
+    h += chk('opt-night', s.nightLights, L('夜の街の明かり', 'City lights at night'), ` <small>${L('2016年', '2016')}</small>`);
+    h += `<label class="row slider">${L('地面の濃さ（地下）', 'Ground opacity (underground)')} <input type="range" id="opt-galpha" min="0.05" max="0.9" step="0.05" value="${s.groundAlpha}"></label>`;
+    h += chk('opt-wire', s.wireframe, L('ワイヤフレーム', 'Wireframe'), ` <small>${L('地形と PLATEAU の建物', 'terrain and PLATEAU buildings')}</small>`);
+    h += chk('opt-atmo', s.atmosphere, L('大気', 'Atmosphere'));
+    h += '</details>';
+    h += `<p class="legend">${L('印のないものは実データ。', 'Unmarked items are real data. ')}${tag('est')} ${L('計算・推定', 'calculated / estimated')}　${tag('fx')} ${L('演出（本物ではない）', 'for display (not real)')}</p>`;
     $('layers-body').innerHTML = h;
+
+    // 時刻は、時刻で変わるもの（昼と夜・人工衛星・車・人・鳥）を出しているときだけ
+    const syncBoxes = () => {
+      $('time-box').hidden = !(s.lighting || s.sats || s.agents);
+      $('under-box').hidden = !s.underground;
+      $('opt-bldg').checked = s.buildings !== 'off' || s.osmBuildings;
+      $('base-note').textContent = s.base === 'today' ? L(`NASA の衛星写真（${GV.YESTERDAY}）。雲も写っています`, `NASA satellite image (${GV.YESTERDAY}), clouds included`) : '';
+    };
+    GV.syncLayerBoxes = syncBoxes;
+    syncBoxes();
+    const setBldg = on => {
+      if (on) { s.buildings = s.bldgShape || 'lod2'; s.osmBuildings = true; $('opt-osmb').checked = true; }
+      else { if (s.buildings !== 'off') s.bldgShape = s.buildings; s.buildings = 'off'; s.osmBuildings = false; $('opt-osmb').checked = false; }
+      GV.applyBuildings(); GV.applyOsmBuildings();
+    };
 
     $('layers-body').addEventListener('change', e => {
       const t = e.target;
-      if (t.name === 'base') { s.base = t.value; GV.applyBase(); }
-      else if (t.name === 'bldg') { s.buildings = t.value; GV.applyBuildings(); GV.applyOsmBuildings(); }
+      if (t.id === 'opt-bldg') setBldg(t.checked);
       else if (t.id === 'opt-btex') { s.bldgTexture = t.checked; GV.applyBuildings(); }
       else if (t.id === 'opt-osmb') { s.osmBuildings = t.checked; GV.applyOsmBuildings(); }
       else if (t.id === 'opt-under') { s.underground = t.checked; GV.applyUnderground(); }
+      else if (t.id === 'opt-light') { s.lighting = s.nightLights = t.checked; $('opt-night').checked = t.checked; GV.applyView(); GV.applyLife(); }
       else if (t.id === 'opt-night') { s.nightLights = t.checked; if (t.checked && !s.lighting) { s.lighting = true; $('opt-light').checked = true; GV.applyView(); } GV.applyLife(); }
       else if (t.id === 'opt-quake') { s.quakes = t.checked; GV.applyLife(); }
       else if (t.id === 'opt-sats') { s.sats = t.checked; GV.applyLife(); }
@@ -83,8 +99,8 @@
       else if (t.dataset.ov) { s.overlays[t.dataset.ov] = t.checked; GV.applyOverlays(); }
       else if (t.id === 'opt-terrain') { s.terrain = t.checked; GV.applyTerrain(); }
       else if (t.id === 'opt-wire') { s.wireframe = t.checked; GV.applyView(); GV.applyBuildings(); }
-      else if (t.id === 'opt-light') { s.lighting = t.checked; GV.applyView(); }
       else if (t.id === 'opt-atmo') { s.atmosphere = t.checked; GV.applyView(); }
+      syncBoxes();
     });
     $('opt-galpha').addEventListener('input', e => { s.groundAlpha = +e.target.value; GV.applyUnderground(); });
     $('opt-time').addEventListener('input', e => { GV.setTimeOffset(+e.target.value); updateTime(true); });
@@ -96,8 +112,16 @@
       updateTime(true);
     });
     $('layers-body').addEventListener('click', e => {
-      const b = e.target.closest('button[data-spot]');
-      if (b) GV.gotoUnder(b.dataset.spot);
+      const b = e.target.closest('button');
+      if (!b) return;
+      if (b.dataset.spot) { GV.gotoUnder(b.dataset.spot); syncBoxes(); closeOnPhone(); }
+      else if (b.dataset.quick) { QUICK.find(q => q[0] === b.dataset.quick)[2](); setTimeout(syncBoxes, 50); closeOnPhone(); }
+      else if (b.dataset.base) { s.base = b.dataset.base; GV.applyBase(); $('base-seg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); syncBoxes(); }
+      else if (b.dataset.bldg) {
+        s.bldgShape = b.dataset.bldg; if (s.buildings !== 'off') s.buildings = b.dataset.bldg;
+        $('bldg-seg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+        GV.applyBuildings();
+      }
     });
     $('opt-exag').addEventListener('input', e => {
       s.exaggeration = +e.target.value;
@@ -105,6 +129,8 @@
       GV.applyTerrain();
     });
   }
+  // スマホ幅では、飛ぶボタンを押したらパネルを閉じて行き先を見せる
+  const closeOnPhone = () => { if (window.innerWidth < 800) document.body.classList.remove('layers-open'); };
 
   // ---------- Nominatim（OpenStreetMap の検索・住所） ----------
   // 利用規約: 1秒に1回まで、同じ問い合わせはキャッシュ。ここを通してだけ送る
@@ -303,10 +329,12 @@
   // ---------- スケール表示 ----------
   function buildRuler() {
     // 位置は GV.rulerX（何もない区間は短く縮めてある）
-    const bands = GV.BANDS.map(b => {
+    // スマホ幅は帯がせまいので短い名前（v013: 名前がなくて、どこを押せばよいか分からなかった）
+    const SHORT = L(['', '', '素粒子', '原子核', '原子', 'つぶ', '', '街', '地球', '太陽系', '銀河', '宇宙'], ['', '', 'Quark', 'Nucl.', 'Atom', 'Grain', '', 'Town', 'Earth', 'Solar', 'Galaxy', 'Cosmos']);
+    const bands = GV.BANDS.map((b, i) => {
       const x0 = GV.rulerX(b.from), x1 = GV.rulerX(b.to);
       const title = b.gap ? L('10^-19〜10^-33 m: 何もない（分かっていない）区間。目盛りでは短く縮めています', '10^-19 to 10^-33 m: an empty (unknown) stretch, shortened on the ruler') : b.label + (b.ready ? '' : L('（準備中）', ' (coming soon)'));
-      return `<div class="band ${b.ready ? 'ready' : ''} ${b.gap ? 'gap' : ''}" style="left:${x0 * 100}%;width:${(x1 - x0) * 100}%" title="${title}"><span>${b.label}</span></div>`;
+      return `<div class="band ${b.ready ? 'ready' : ''} ${b.gap ? 'gap' : ''}" style="left:${x0 * 100}%;width:${(x1 - x0) * 100}%" title="${title}"><span class="lf">${b.label}</span><span class="ls">${SHORT[i]}</span></div>`;
     }).join('');
     $('ruler-bar').innerHTML = bands + '<div id="ruler-mark"></div>';
     // 帯を押すと、その大きさへ（宇宙の帯なら宇宙へ、地球の帯なら地図へ）
@@ -354,8 +382,28 @@
     $('btn-home').onclick = () => { if (GV.stage === 'tear') GV.exitTear(); if (GV.stage === 'space') GV.exitSpace(); if (GV.stage === 'micro') GV.exitMicro(); GV.home(); };   // 宇宙・ミクロにいるときは地図に戻ってから
     $('btn-about').onclick = () => { $('about').hidden = false; };
     $('about-close').onclick = () => { $('about').hidden = true; };
+    $('about').addEventListener('click', e => { if (e.target === $('about')) $('about').hidden = true; });   // 外側を押しても閉じる
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { $('about').hidden = true; $('point').hidden = true; } });
     // スマホ幅でなければ開いておく（非表示のペインでは読み込み時の幅が 0 になることがある）
     if (!(window.innerWidth > 0 && window.innerWidth < 800)) document.body.classList.add('layers-open');
+    // 出典の欄: ふだんは1行、押すと全部（もう一度押すと1行に）。閉じているときのリンクは開くだけにする
+    document.addEventListener('click', e => {
+      const c = e.target.closest('.cesium-widget-credits, #space-credit, #tear-credit');
+      if (!c) return;
+      if (!document.body.classList.contains('credits-open')) { e.preventDefault(); document.body.classList.add('credits-open'); }
+      else if (!e.target.closest('a')) document.body.classList.remove('credits-open');
+    }, true);
+    // はじめの案内と宇宙の案内は、数秒たつか、さわったら消す（v013: ずっと出ていて地図や宇宙をかくしていた）
+    const fade = (el, ms) => {
+      if (!el) return;
+      el.classList.remove('gone');
+      clearTimeout(el._t);
+      el._t = setTimeout(() => el.classList.add('gone'), ms);
+    };
+    GV.onLoaded = () => fade($('hint'), 9000);       // 地球が出てから数える
+    let touched = 0;
+    for (const ev of ['wheel', 'pointerdown']) $('globe').addEventListener(ev, () => { if (++touched > 3) $('hint').classList.add('gone'); }, { passive: true });
+    GV.fadeHint = () => fade($('space-hint'), 7000);
   }
 
   GV.initUI = function () {
@@ -380,16 +428,16 @@
       if (!el) return;
       if (GV.state.buildings === 'off') el.textContent = '';
       else if (st.active.length) el.textContent = L('表示中: ', 'Showing: ') + st.active.join(L('・', ', ')) + (st.loading ? L('（読み込み中…）', ' (loading…)') : '');
-      else el.textContent = L('高さ 25km より近づくと、PLATEAU のある都市で出ます', 'Appears in cities with PLATEAU when closer than 25 km');
+      else el.textContent = '';
       const o = GV.osmStatus, oel = $('osmb-status');
       if (!oel) return;
       if (!GV.state.osmBuildings) oel.textContent = '';
       else if (o.shown || o.loading) oel.textContent = L(`${o.shown} 区画・${o.buildings.toLocaleString('ja-JP')} 棟`, `${o.shown} tiles, ${o.buildings.toLocaleString('en-US')} buildings`) + (o.loading ? L('（読み込み中…）', ' (loading…)') : '');
-      else oel.textContent = L('高さ 6km より近づくと出ます', 'Appears when closer than 6 km');
+      else oel.textContent = L('寄ると出ます（高さ 6km より下）', 'Appears when you zoom in (below 6 km)');
     };
     GV.onBuildings();
     GV.onUnderground = (checkBox) => {
-      if (checkBox && $('opt-under')) $('opt-under').checked = GV.state.underground;
+      if (checkBox && $('opt-under')) { $('opt-under').checked = GV.state.underground; GV.syncLayerBoxes && GV.syncLayerBoxes(); }
       const el = $('under-status'), u = GV.underStatus;
       if (!el) return;
       if (!GV.state.underground) { el.textContent = ''; return; }
@@ -429,7 +477,7 @@
     GV.updateScale = () => { lastW = 0; updateScale(); };
     // 宇宙にいるあいだは、宇宙の描画のたびにスケール表示を更新（W が変わったときだけ書きかえる）
     GV.onSpace = (W, msg) => {
-      if (msg) { $('space-hint').textContent = msg; document.body.classList.add('in-space'); return; }
+      if (msg) { $('space-hint').textContent = msg; $('space-hint').classList.remove('gone'); document.body.classList.add('in-space'); return; }
       if (W) updateScale();
     };
   };

@@ -8,10 +8,12 @@
   window.addEventListener('error', e => GV.err(e.error || e.message));
   window.addEventListener('unhandledrejection', e => GV.err(e.reason));
 
-  // 読み込み中の表示: 最初の地形・写真のタイルが来たら消す（来なくても 25 秒で消す）
+  // 読み込み中の表示: 最初の地形・写真のタイルが来たら消す（来なくても 15 秒で消す）
   const loading = document.getElementById('loading');
-  const loaded = () => { if (loading) loading.classList.add('done'); };
-  setTimeout(loaded, 25000);
+  let isLoaded = false;
+  const loaded = () => { if (isLoaded) return; isLoaded = true; if (loading) loading.classList.add('done'); if (GV.onLoaded) GV.onLoaded(); };
+  GV.loaded = loaded;                // 宇宙・ミクロへ移ったときも消す（地図の描画が止まり、タイルの読み込みが終わらないため）
+  setTimeout(loaded, 15000);
 
   // file:// では Cesium の Worker が読めず地球が出ない → 案内を出して止める
   if (location.protocol === 'file:') {

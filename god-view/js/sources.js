@@ -22,7 +22,7 @@ GV.CREDIT = {
   gsiDem: GSI + '（標高タイル）',
   osm: '© ' + A('https://www.openstreetmap.org/copyright', 'OpenStreetMap') + ' contributors',
   openfreemap: A('https://openfreemap.org', 'OpenFreeMap') + ' ' + A('https://www.openmaptiles.org/', '© OpenMapTiles') + ' Data from ' + A('https://www.openstreetmap.org/copyright', 'OpenStreetMap'),
-  bluemarble: A('https://www.earthdata.nasa.gov/data/tools/gibs', 'NASA Blue Marble（NASA EOSDIS GIBS）'),
+  bluemarble: A('https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api', 'NASA Blue Marble（NASA EOSDIS GIBS）'),
   terrarium: A('https://github.com/tilezen/joerd/blob/master/docs/attribution.md', 'Terrain Tiles') + ': Mapzen, AWS Open Data（SRTM・3DEP・GMTED2010 courtesy of the U.S. Geological Survey, ETOPO1: U.S. NOAA, EU-DEM: Copernicus ほか → 出典一覧）',
 };
 
@@ -85,7 +85,7 @@ GV.OSMB = { tilejson: 'https://tiles.openfreemap.org/planet' };
 // ---- 段階C「生きている地球」 ----
 // きのうの日付（UTC）。NASA の毎日の衛星写真は、その日の分がそろうのが翌日になるため
 GV.YESTERDAY = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-GV.CREDIT.gibs = A('https://www.earthdata.nasa.gov/data/tools/gibs', 'NASA EOSDIS GIBS');
+GV.CREDIT.gibs = A('https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api', 'NASA EOSDIS GIBS');
 GV.CREDIT.usgs = A('https://earthquake.usgs.gov/earthquakes/feed/', L('USGS 地震情報', 'USGS earthquakes'));
 GV.CREDIT.celestrak = A('https://celestrak.org/', 'CelesTrak') + L('（軌道要素）・satellite.js', ' (orbital elements), satellite.js');
 // （天気の出典は 2026-10-10 に削除）

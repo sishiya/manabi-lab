@@ -172,6 +172,14 @@
       ['木星', 'Jupiter', 6.9911e7, 0xd9b38c], ['土星', 'Saturn', 5.8232e7, 0xe8d4a2], ['天王星', 'Uranus', 2.5362e7, 0xa8e0e6], ['海王星', 'Neptune', 2.4622e7, 0x5b7fe0]];
     for (const [ja, en, r, c] of P) addBody(L(ja, en), r, c, () => helio(en), 7.5, 14.6, { px: 6 });
     GV._earthObj = addBody(L('地球', 'Earth'), 6.371e6, 0x2f6fb0, () => earthPos, 7.0, 14.6, { dot: '#7fb3ff', px: 7, rot: true });
+    // 大気の青い縁（演出。地図の「大気」と同じ見え方にして、地図⇔宇宙の切りかえで縁が消えないように）
+    const atmo = new THREE.Mesh(new THREE.SphereGeometry(1.03, 64, 32), new THREE.ShaderMaterial({
+      uniforms: { op: { value: 1 } }, transparent: true, depthWrite: false, side: THREE.BackSide, blending: THREE.AdditiveBlending,
+      vertexShader: '#include <common>\n#include <logdepthbuf_pars_vertex>\nvarying vec3 vN; varying vec3 vV;\nvoid main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv;\n#include <logdepthbuf_vertex>\n}',
+      fragmentShader: '#include <common>\n#include <logdepthbuf_pars_fragment>\nuniform float op; varying vec3 vN; varying vec3 vV;\nvoid main(){\n#include <logdepthbuf_fragment>\nfloat d = abs(dot(vN, vV)); float f = smoothstep(0.0, 0.55, d) * pow(1.0 - d, 1.5) * 2.2; gl_FragColor = vec4(vec3(0.35, 0.62, 1.0) * f * op, 1.0); }',
+    }));
+    GV._earthObj.mesh.add(atmo);
+    GV._atmo = atmo;
     addBody(L('月', 'Moon'), 1.7374e6, 0xbdbdbd, () => moonPos, 7.0, 10.5, { px: 4 });
     // 惑星の軌道（1 周分）
     orbitLines(P.map(p => p[1]).concat(['Earth']));
@@ -225,17 +233,30 @@
     nodes.push(radec(187.7, 12.4, 16.5));                                                                         // おとめ座銀河団
     const pos = [], col = [];
     const d2 = (a, b) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
-    for (const a of nodes) {
-      // 銀河団（節）
-      for (let k = 0; k < 60; k++) { pos.push(a[0] + (rnd() - 0.5) * 8, a[1] + (rnd() - 0.5) * 8, a[2] + (rnd() - 0.5) * 8); col.push(0.9, 0.75, 0.55); }
-      // 近い節どうしを糸（フィラメント）でつなぐ
-      const near = nodes.filter(b => b !== a).sort((p, q) => d2(a, p) - d2(a, q)).slice(0, 3);
-      for (const b of near) for (let k = 0; k < 40; k++) {
-        const f = rnd();
-        pos.push(a[0] + (b[0] - a[0]) * f + (rnd() - 0.5) * 6, a[1] + (b[1] - a[1]) * f + (rnd() - 0.5) * 6, a[2] + (b[2] - a[2]) * f + (rnd() - 0.5) * 6);
-        col.push(0.45, 0.5, 0.75);
+    const gs = () => (rnd() + rnd() + rnd() + rnd() - 2) / 1.15;   // だいたい正規分布（σ ≒ 0.5）
+    const done = new Set();
+    nodes.forEach((a, ia) => {
+      // 銀河団（節）: 重さをばらつかせ、重いほど大きく明るい。まん中ほど濃い（v013: 箱形の一様な塊が「点の固まり」に見えた）
+      const m = 0.25 + Math.pow(rnd(), 3) * 3, n = Math.round(20 + m * 45), sg = 1.5 + m * 1.6;
+      for (let k = 0; k < n; k++) { pos.push(a[0] + gs() * sg, a[1] + gs() * sg, a[2] + gs() * sg); const w = 0.75 + rnd() * 0.35; col.push(w, w * 0.82, w * 0.6); }
+      // 近い節どうしを糸（フィラメント）でつなぐ。糸はゆるく曲げ、まん中ほど細く暗く（v013: まっすぐな線の網に見えた）
+      const near = nodes.map((b, ib) => [b, ib]).filter(([b]) => b !== a).sort((p, q) => d2(a, p[0]) - d2(a, q[0])).slice(0, 3);
+      for (const [b, ib] of near) {
+        const key = Math.min(ia, ib) + '-' + Math.max(ia, ib);
+        if (done.has(key)) continue;
+        done.add(key);
+        const len = Math.sqrt(d2(a, b)), bend = [gs() * len * 0.3, gs() * len * 0.3, gs() * len * 0.3];
+        const ctl = [(a[0] + b[0]) / 2 + bend[0], (a[1] + b[1]) / 2 + bend[1], (a[2] + b[2]) / 2 + bend[2]];
+        const cnt = Math.round(30 + len * 0.6);
+        for (let k = 0; k < cnt; k++) {
+          const f = rnd(), u = 1 - f, mid = 4 * f * u;            // mid: 糸のまん中で 1
+          const w = (2.6 - mid * 1.2) * (0.6 + rnd() * 0.6);
+          pos.push(u * u * a[0] + 2 * u * f * ctl[0] + f * f * b[0] + gs() * w, u * u * a[1] + 2 * u * f * ctl[1] + f * f * b[1] + gs() * w, u * u * a[2] + 2 * u * f * ctl[2] + f * f * b[2] + gs() * w);
+          const br = 0.75 - mid * 0.35;
+          col.push(0.5 * br, 0.58 * br, 0.85 * br);
+        }
       }
-    }
+    });
     pointsCloud(pos, col, 2, sunPos, MPC, 23.3, 27.5, { map: tex, name: L('宇宙の大規模構造', 'Large-scale structure of the universe') });
   }
 
@@ -310,6 +331,7 @@
       }
       if (o.name === L('太陽', 'Sun')) GV._sunLight.position.copy(o.mesh.position);
     }
+    if (GV._atmo) { const em = GV._earthObj.mesh; GV._atmo.visible = em.visible && GV.state.atmosphere; GV._atmo.material.uniforms.op.value = em.material.opacity ?? 1; }
     for (const c of clouds) {
       const v = vis(c.Lmin, c.Lmax), rel = mul(sub(c.anchor, f), 1 / W), sc = c.unit / W;
       c.group.visible = v > 0.01;
@@ -330,9 +352,12 @@
       if (v < 0.3) return;
       const rel = mul(sub(pos, f), 1 / W), p = new THREE.Vector3(rel[0], rel[1], rel[2]).project(camera);
       if (p.z > 1 || Math.abs(p.x) > 1.1 || Math.abs(p.y) > 1.1) return;
-      items.push({ name, x: (p.x + 1) / 2 * canvas.clientWidth, y: (1 - p.y) / 2 * canvas.clientHeight, v });
+      const x = (p.x + 1) / 2 * canvas.clientWidth, y = (1 - p.y) / 2 * canvas.clientHeight;
+      if (y < 62 || y > canvas.clientHeight - 120) return;   // 上のバー・下の目盛りと出典に重なる所には名前を出さない
+      items.push({ name, x, y, v });
     };
-    for (const o of objs) if (o.label) put(o.name, o.pos, vis(o.Lmin, o.Lmax));
+    // 画面に大きく写っている天体（地球など）は、まん中に名前を重ねない（見れば分かる。写真がかくれる）
+    for (const o of objs) if (o.label && (o.fixedSize || o.radius / W < 0.05)) put(o.name, o.pos, vis(o.Lmin, o.Lmax));
     for (const c of clouds) if (c.name && c.labelPos) put(c.name, c.labelPos, vis(c.Lmin, c.Lmax));
     // 恒星の名前（明るい順に、近くを見ているときだけ）
     const sv = vis(13.0, 18.5);
@@ -347,7 +372,8 @@
     labelsEl.innerHTML = items.map(i => `<div style="left:${i.x.toFixed(0)}px;top:${i.y.toFixed(0)}px;opacity:${i.v.toFixed(2)}">${i.name}</div>`).join('');
   }
   const STAR_EN = { 'Rigil Kentaurus': 'Alpha Centauri', Proxima: 'Proxima Centauri (the nearest star)', Polaris: 'Polaris (North Star)', Vega: 'Vega', Altair: 'Altair' };
-  const STAR_JA = { Sirius: 'シリウス', Canopus: 'カノープス', Arcturus: 'アークトゥルス', Vega: 'ベガ（織姫）', Capella: 'カペラ', Rigel: 'リゲル', Procyon: 'プロキオン', Betelgeuse: 'ベテルギウス', Achernar: 'アケルナル', Altair: 'アルタイル（彦星）', Aldebaran: 'アルデバラン', Antares: 'アンタレス', Spica: 'スピカ', Pollux: 'ポルックス', Fomalhaut: 'フォーマルハウト', Deneb: 'デネブ', Regulus: 'レグルス', Polaris: '北極星', 'Rigil Kentaurus': 'ケンタウルス座α星', Proxima: 'プロキシマ・ケンタウリ（いちばん近い星）', "Barnard's Star": 'バーナード星', Castor: 'カストル', Mira: 'ミラ' };
+  const STAR_JA = { Sirius: 'シリウス', Canopus: 'カノープス', Arcturus: 'アークトゥルス', Vega: 'ベガ（織姫）', Capella: 'カペラ', Rigel: 'リゲル', Procyon: 'プロキオン', Betelgeuse: 'ベテルギウス', Achernar: 'アケルナル', Altair: 'アルタイル（彦星）', Aldebaran: 'アルデバラン', Antares: 'アンタレス', Spica: 'スピカ', Pollux: 'ポルックス', Fomalhaut: 'フォーマルハウト', Deneb: 'デネブ', Regulus: 'レグルス', Polaris: '北極星', 'Rigil Kentaurus': 'ケンタウルス座α星', Proxima: 'プロキシマ・ケンタウリ（いちばん近い星）', "Barnard's Star": 'バーナード星', Castor: 'カストル', Mira: 'ミラ',
+    Hadar: 'ハダル', Acrux: 'アクルックス', Mimosa: 'ミモザ', Toliman: 'トリマン', Adhara: 'アダーラ', Gacrux: 'ガクルックス', Shaula: 'シャウラ', Bellatrix: 'ベラトリックス', Elnath: 'エルナト', Miaplacidus: 'ミアプラキドゥス', Alnilam: 'アルニラム', Alnair: 'アルナイル', Alnitak: 'アルニタク', Alioth: 'アリオト', Mirfak: 'ミルファク', 'Kaus Australis': 'カウス・アウストラリス', Dubhe: 'ドゥーベ', Wezen: 'ウェズン', Alkaid: 'アルカイド', Avior: 'アヴィオール', Sargas: 'サルガス' };
 
   // ---------- 出入り ----------
   function resize() {
@@ -397,7 +423,7 @@
       setTimeout(() => { document.body.classList.remove('in-space'); hint.innerHTML = hintText; }, 2500);
       return;
     }
-    hint.innerHTML = hintText;
+    hint.innerHTML = hintText; GV.fadeHint && GV.fadeHint();
     if (!built) build();
     // 地図で見ていた向きのまま宇宙へ: カメラの地球に対する向き（地球固定）→ 恒星時で回して赤道座標に
     const cp = GV.viewer.camera.positionWC, r = Math.hypot(cp.x, cp.y, cp.z);
@@ -408,7 +434,7 @@
     canvas.style.opacity = '0';
     canvas.style.pointerEvents = '';
     GV.stage = 'space';
-    document.body.classList.add('in-space');        // 宇宙の画面を重ねる（まだ透明）。地図はまだ見えている
+    document.body.classList.add('in-space'); GV.loaded && GV.loaded();        // 宇宙の画面を重ねる（まだ透明）。地図はまだ見えている
     resize();
     // はじめの大きさは地図とぴったり同じに（目盛りの帯から来たときは、そこから目的の大きさへ動いていく）
     Lw = Lgoal = Math.max(7.2, LfromCesium());
@@ -438,8 +464,8 @@
     Lgoal = Lw;                                       // 戻るあいだは大きさを止める
     canvas.style.pointerEvents = 'none';             // 戻るあいだの操作は地図へ
     fadeTo(false, () => {
-      if (GV.stage !== 'earth') return;
-      document.body.classList.remove('in-space');
+      if (GV.stage === 'space') return;              // もう一度宇宙へ入ったときだけ残す（目盛りでミクロへ直行したときも片づける）
+      document.body.classList.remove('in-space', 'earth-near');
       cancelAnimationFrame(raf); raf = 0;
       labelsEl.innerHTML = '';
       GV.updateScale && GV.updateScale();

@@ -17,7 +17,7 @@
 <script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
 <script>window.CESIUM_BASE_URL = 'https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/';</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/Widgets/widgets.css">
-<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/main.css?v=13">
 </head>
 <body>
 <div id="loading" role="status"><div class="spin"></div><span lang="ja">地球を読みこんでいます…</span><span lang="en">Loading the Earth…</span></div>
@@ -26,7 +26,7 @@
 <canvas id="micro"></canvas>
 <div id="micro-info"></div>
 <div id="space-labels"></div>
-<div id="space-credit"><span lang="ja">宇宙: 惑星・月の位置は <a href="https://github.com/cosinekitty/astronomy" target="_blank" rel="noopener">astronomy-engine</a> で計算（推定）、恒星は <a href="https://github.com/astronexus/HYG-Database" target="_blank" rel="noopener">HYG Database</a>（CC BY-SA 4.0、実データ）、地球の写真は NASA Blue Marble（<a href="https://www.earthdata.nasa.gov/data/tools/gibs" target="_blank" rel="noopener">GIBS</a>）。<b>天の川銀河・ほかの銀河の形・宇宙の大規模構造・月の表面は演出</b>（位置と大きさは観測にもとづく）。惑星の大きさは本当の半径で、小さいときは光の点で示しています。</span><span lang="en">Space: positions of the planets and Moon are calculated with <a href="https://github.com/cosinekitty/astronomy" target="_blank" rel="noopener">astronomy-engine</a> (estimate), stars are from the <a href="https://github.com/astronexus/HYG-Database" target="_blank" rel="noopener">HYG Database</a> (CC BY-SA 4.0, real data), Earth photos from NASA Blue Marble (<a href="https://www.earthdata.nasa.gov/data/tools/gibs" target="_blank" rel="noopener">GIBS</a>). <b>The shapes of the Milky Way and other galaxies, the large-scale structure of the universe, and the Moon’s surface are display stand-ins</b> (positions and sizes are based on observations). Planets are drawn at their true radius; when tiny, they are shown as points of light.</span></div>
+<div id="space-credit"><span lang="ja">宇宙: 惑星・月の位置は <a href="https://github.com/cosinekitty/astronomy" target="_blank" rel="noopener">astronomy-engine</a> で計算（推定）、恒星は <a href="https://github.com/astronexus/HYG-Database" target="_blank" rel="noopener">HYG Database</a>（CC BY-SA 4.0、実データ）、地球の写真は NASA Blue Marble（<a href="https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api" target="_blank" rel="noopener">GIBS</a>）。<b>天の川銀河・ほかの銀河の形・宇宙の大規模構造・月の表面・地球の大気の光の縁は演出</b>（位置と大きさは観測にもとづく）。惑星の大きさは本当の半径で、小さいときは光の点で示しています。</span><span lang="en">Space: positions of the planets and Moon are calculated with <a href="https://github.com/cosinekitty/astronomy" target="_blank" rel="noopener">astronomy-engine</a> (estimate), stars are from the <a href="https://github.com/astronexus/HYG-Database" target="_blank" rel="noopener">HYG Database</a> (CC BY-SA 4.0, real data), Earth photos from NASA Blue Marble (<a href="https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api" target="_blank" rel="noopener">GIBS</a>). <b>The shapes of the Milky Way and other galaxies, the large-scale structure of the universe, the Moon’s surface and the glow of Earth’s atmosphere are display stand-ins</b> (positions and sizes are based on observations). Planets are drawn at their true radius; when tiny, they are shown as points of light.</span></div>
 <div id="space-hint"><span lang="ja">ホイール（ピンチ）で引くと宇宙の果てまで、寄ると地球の地図に戻ります。ドラッグで向きを変えます。下の目盛りを押すと、その大きさへ。</span><span lang="en">Zoom out with the wheel (pinch) to reach the edge of the universe; zoom in to return to the Earth map. Drag to turn. Tap the ruler below to jump to that size.</span></div>
 <button id="btn-tear"><span lang="ja">✋ 地球をちぎる</span><span lang="en">✋ Tear off a piece of Earth</span></button>
 <canvas id="tear"></canvas>
@@ -50,6 +50,7 @@
 <aside id="layers"><div id="layers-body"></div></aside>
 
 <div id="point" hidden></div>
+<div id="hint"><span lang="ja">ドラッグで動かす・ホイール（2本指）で寄る／引く。<br>引きつづけると宇宙の果てへ、寄りつづけると原子の中へ。</span><span lang="en">Drag to move, wheel (two fingers) to zoom.<br>Keep zooming out to reach the edge of the universe, keep zooming in to go inside atoms.</span></div>
 
 <footer id="scale">
   <div class="scale-now">
@@ -68,6 +69,7 @@
     <p>本物の地形・航空写真・地図を読み込んで、地球全体から家1軒までを見わたすアプリです。さらに引けば宇宙の果て（約 10^27 m）まで、寄れば素粒子とプランク長（約 10^-35 m）まで、ホイールひとつで行き来できます。</p>
     <h3>操作</h3>
     <ul>
+      <li>はじめは ☰ のパネルの「見どころへ飛ぶ」から（富士山・東京駅のビル・地下街・宇宙・原子の世界）</li>
       <li>ホイール／ピンチ: 寄る・引く</li>
       <li>左ドラッグ: 動かす　右ドラッグ・Ctrl＋ドラッグ／2本指: 傾ける・回す</li>
       <li>クリック: その地点の住所（世界）と標高（日本のみ）。建物なら名前・用途・高さ・階数も（PLATEAU のある都市）</li>
@@ -79,7 +81,7 @@
       <li>地下を見る: 地面が半透明になり、ホイールやドラッグで地面の下にも潜れます。見どころのボタンで東京駅の地下街・長岡市の地下の管へ</li>
     </ul>
     <h3>印の意味</h3>
-    <p><span class="tag tag-real">実データ</span> 公開されているデータをそのまま表示　<span class="tag tag-est">推定</span> データから計算したもの　<span class="tag tag-fx">演出</span> それらしく作ったもの（本物ではない）</p>
+    <p>印のないものと <span class="tag tag-real">実データ</span> は公開されているデータをそのまま表示　<span class="tag tag-est">推定</span> データから計算したもの　<span class="tag tag-fx">演出</span> それらしく作ったもの（本物ではない）</p>
     <h3>注意</h3>
     <p>学習用のアプリです。Google などの地図サービスとは関係がなく、そのデータも使っていません。<br>地図・写真・標高は公開データで、撮影や測量の時期によって今の様子と違うことがあります。日本の外の地形は粗く、海の深さは表示していません（海面を 0m にしています）。測量や防災・登山などの判断には使わないでください。<br>地図や写真の画像、検索・住所・標高は、それぞれの提供元のサーバーから直接読み込みます（見ている場所の座標や検索した言葉が提供元に送られます）。このアプリ自体は何も記録・送信しません。</p>
     <h3>地球をちぎる（計算のしかた）</h3>
@@ -102,7 +104,7 @@
       <li>PLATEAU のない所の建物: <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © OpenMapTiles Data from OpenStreetMap（ODbL）。高さは OSM の高さ・階数のタグから計算した値で、タグがない建物は推定値</li>
       <li><a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">地理院タイル</a>（国土地理院。標準地図・淡色地図・全国最新写真（シームレス）・色別標高図・陰影起伏図・標高タイル）と<a href="https://maps.gsi.go.jp/development/elevation_s.html" target="_blank" rel="noopener">標高 API</a>。<a href="https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html" target="_blank" rel="noopener">国土地理院コンテンツ利用規約</a>に従って利用。タイルごとの追加の出典（GEBCO・VMAP0・海上保安庁・NASA LP DAAC／USGS EROS・GRUS画像 © Axelspace）は地図の下に表示</li>
       <li><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>（地図は ODbL。世界の地図タイル、検索と住所は Nominatim。いずれも <a href="https://osmfoundation.org/wiki/Terms_of_Use" target="_blank" rel="noopener">OSMF の利用規約</a>に従い、ふつうの閲覧の範囲で利用）</li>
-      <li>日本の外の「航空写真」「色別標高図」: <a href="https://www.earthdata.nasa.gov/data/tools/gibs" target="_blank" rel="noopener">NASA EOSDIS GIBS</a> の Blue Marble Next Generation と Blue Marble Shaded Relief and Bathymetry（NASA、自由に使えるデータ。細かさは 500m ほどまで）</li>
+      <li>日本の外の「航空写真」「色別標高図」: <a href="https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api" target="_blank" rel="noopener">NASA EOSDIS GIBS</a> の Blue Marble Next Generation と Blue Marble Shaded Relief and Bathymetry（NASA、自由に使えるデータ。細かさは 500m ほどまで）</li>
       <li><a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Terrain Tiles</a>（Mapzen、AWS Open Data）。<a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noopener">出典一覧</a>: SRTM・3DEP・GMTED2010 courtesy of the U.S. Geological Survey、ETOPO1 U.S. NOAA、EU-DEM（Copernicus）、ArcticDEM、Geoscience Australia、Kartverket、LINZ、INEGI、Environment Agency、Open Government Licence – Canada、Österreich DGM</li>
     </ul>
     </div>
@@ -111,6 +113,7 @@
     <p>An app that loads real terrain, aerial photos and maps so you can look over everything from the whole Earth down to a single house. Zoom further out to reach the edge of the universe (about 10^27 m), or further in to elementary particles and the Planck length (about 10^-35 m), all with one wheel.</p>
     <h3>Controls</h3>
     <ul>
+      <li>To start, use “Jump to” at the top of the ☰ panel (Mt. Fuji, Tokyo Station, an underground mall, space, the world of atoms)</li>
       <li>Wheel / pinch: zoom in and out</li>
       <li>Left-drag: move   Right-drag, Ctrl + drag, or two fingers: tilt and rotate</li>
       <li>Click: the address of that spot (worldwide) and elevation (Japan only). For buildings, also the name, use, height and number of floors (in cities with PLATEAU data)</li>
@@ -122,7 +125,7 @@
       <li>Underground: the ground becomes see-through, and you can dive below it with the wheel or by dragging. Use the highlight buttons to visit the underground malls at Tokyo Station or the pipes under Nagaoka City</li>
     </ul>
     <h3>What the tags mean</h3>
-    <p><span class="tag tag-real">Real data</span> public data shown as it is   <span class="tag tag-est">Estimate</span> calculated from data   <span class="tag tag-fx">Display</span> made to look plausible (not real)</p>
+    <p>Unmarked items and <span class="tag tag-real">Real data</span>: public data shown as it is   <span class="tag tag-est">Estimate</span> calculated from data   <span class="tag tag-fx">Display</span> made to look plausible (not real)</p>
     <h3>Notes</h3>
     <p>A learning app. It has nothing to do with Google or other map services and does not use their data.<br>Maps, photos and elevations are public data and may differ from today depending on when they were photographed or surveyed. Terrain outside Japan is coarse, and ocean depth is not shown (sea level is set to 0 m). Do not use this for surveying, disaster preparedness, mountain climbing or similar decisions.<br>Map and photo images, search, addresses and elevations are loaded directly from each provider’s servers (the coordinates you are viewing and the words you search are sent to the provider). The app itself records and sends nothing.</p>
     <h3>Tearing off a piece of Earth (how it is calculated)</h3>
@@ -145,7 +148,7 @@
       <li>Buildings where there is no PLATEAU data: <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © OpenMapTiles Data from OpenStreetMap (ODbL). Heights are calculated from OSM height and floor tags; buildings without tags get estimated values</li>
       <li><a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">GSI Tiles</a> (Geospatial Information Authority of Japan: standard map, pale map, latest nationwide photos (seamless), color elevation map, hillshade, elevation tiles) and the <a href="https://maps.gsi.go.jp/development/elevation_s.html" target="_blank" rel="noopener">elevation API</a> (pages in Japanese), used under the <a href="https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html" target="_blank" rel="noopener">GSI Content Terms of Use</a>. Extra credits for each tile (GEBCO, VMAP0, Japan Coast Guard, NASA LP DAAC / USGS EROS, GRUS imagery © Axelspace) are shown below the map</li>
       <li><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> (map data ODbL; world map tiles, and search and addresses via Nominatim, all used within normal browsing under the <a href="https://osmfoundation.org/wiki/Terms_of_Use" target="_blank" rel="noopener">OSMF Terms of Use</a>)</li>
-      <li>“Aerial photo” and “color elevation” outside Japan: Blue Marble Next Generation and Blue Marble Shaded Relief and Bathymetry from <a href="https://www.earthdata.nasa.gov/data/tools/gibs" target="_blank" rel="noopener">NASA EOSDIS GIBS</a> (NASA, free to use; detail down to about 500 m)</li>
+      <li>“Aerial photo” and “color elevation” outside Japan: Blue Marble Next Generation and Blue Marble Shaded Relief and Bathymetry from <a href="https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api" target="_blank" rel="noopener">NASA EOSDIS GIBS</a> (NASA, free to use; detail down to about 500 m)</li>
       <li><a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Terrain Tiles</a> (Mapzen, AWS Open Data). <a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noopener">Attribution list</a>: SRTM, 3DEP, GMTED2010 courtesy of the U.S. Geological Survey, ETOPO1 U.S. NOAA, EU-DEM (Copernicus), ArcticDEM, Geoscience Australia, Kartverket, LINZ, INEGI, Environment Agency, Open Government Licence – Canada, Österreich DGM</li>
     </ul>
     </div>
@@ -156,23 +159,23 @@
 
 <!-- Cesium.js は数 MB あるので本文の後ろで読む（読むあいだ #loading を出す） -->
 <script src="https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/Cesium.js"></script>
-<script src="js/sources.js"></script>
-<script src="js/terrain.js"></script>
-<script src="js/earth.js"></script>
-<script src="data/plateau-bldg.js"></script>
-<script src="js/buildings.js"></script>
-<script src="js/mvt.js"></script>
-<script src="js/osmbuildings.js"></script>
-<script src="data/plateau-under.js"></script>
-<script src="js/underground.js"></script>
-<script src="js/life.js"></script>
-<script src="js/transit.js"></script>
-<script src="js/agents.js"></script>
-<script src="js/space.js"></script>
-<script src="js/micro.js"></script>
-<script src="js/tear.js"></script>
-<script src="js/scale.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/main.js"></script>
+<script src="js/sources.js?v=13"></script>
+<script src="js/terrain.js?v=13"></script>
+<script src="js/earth.js?v=13"></script>
+<script src="data/plateau-bldg.js?v=13"></script>
+<script src="js/buildings.js?v=13"></script>
+<script src="js/mvt.js?v=13"></script>
+<script src="js/osmbuildings.js?v=13"></script>
+<script src="data/plateau-under.js?v=13"></script>
+<script src="js/underground.js?v=13"></script>
+<script src="js/life.js?v=13"></script>
+<script src="js/transit.js?v=13"></script>
+<script src="js/agents.js?v=13"></script>
+<script src="js/space.js?v=13"></script>
+<script src="js/micro.js?v=13"></script>
+<script src="js/tear.js?v=13"></script>
+<script src="js/scale.js?v=13"></script>
+<script src="js/ui.js?v=13"></script>
+<script src="js/main.js?v=13"></script>
 </body>
 </html>
