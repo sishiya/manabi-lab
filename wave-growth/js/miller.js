@@ -91,5 +91,19 @@ window.WGmiller = (() => {
     const foot = wrap(c, `横 ${((x1 - x0) / 1e3).toFixed(0)} km・縦 ${fmtM(hi - lo)}。惑星の時間 ${(S.t / 3600).toFixed(1)} 時間（地球では ${(S.t / 3600 * 7).toFixed(1)} 年: 映画の設定 1 時間 = 7 年）`, w - 24);
     foot.forEach((l, i) => c.fillText(l, 12, h - 30 + i * 14));
   }
-  return { S, reset, advance, draw, fmtM, P, edgeX, obsI };
+  // 3D 用: いる所を世界の原点に（世界の +x = 棚の奥のほう、−x = 深い海のほう）
+  const big = { eta: new Float32Array(N), slope: new Float32Array(N), depth: new Float32Array(N), L, R, x0: 0, planeY: 0 };
+  let scale = 1;   // 見せるための高さの倍率（10 倍のときは画面に書く）
+  function bigData() {
+    for (let i = 0; i < N; i++) { big.eta[i] = eta(i) * scale; big.depth[i] = S.h[i]; }
+    for (let i = 0; i < N; i++) big.slope[i] = (big.eta[(i + 1) % N] - big.eta[(i - 1 + N) % N]) / (2 * dx);
+    big.x0 = edgeX() + S.obsKm * 1e3; return big;
+  }
+  // 世界の x（いる所から）での水面の高さ・傾き
+  function sample(xw) { const p = (edgeX() + S.obsKm * 1e3 + xw) / dx - 0.5, i0 = ((Math.floor(p) % N) + N) % N, i1 = (i0 + 1) % N, f = p - Math.floor(p);
+    const e0 = eta(i0) * scale, e1 = eta(i1) * scale; return { eta: e0 + (e1 - e0) * f, slope: (e1 - e0) / dx, real: (e0 + (e1 - e0) * f) / scale }; }
+  // いる所から深い海のほう（−x）へ 300 km の中で、いちばん高い所
+  function crest() { const io = obsI(); let best = -1e9, bi = io; for (let k = 0; k < Math.round(300e3 / dx); k++) { const i = (io - k + N) % N, e = eta(i); if (e > best) { best = e; bi = k; } }
+    return { h: best, km: bi * dx / 1e3 }; }
+  return { S, reset, advance, draw, fmtM, P, edgeX, obsI, bigData, sample, crest, get scale() { return scale; }, set scale(v) { scale = v; } };
 })();

@@ -65,6 +65,7 @@ window.WGocean = (() => {
       for (let i = 0; i < N * N; i++) { const u = Math.max(r(), 1e-9), v = r(), m = Math.sqrt(-2 * Math.log(u));
         c.xi[2 * i] = m * Math.cos(2 * Math.PI * v); c.xi[2 * i + 1] = m * Math.sin(2 * Math.PI * v); }
     });
+    const bigTex = tex(4096, 1, gl.RGBA32F, gl.NEAREST, false), bigBuf = new Float32Array(4096 * 4);   // ミラーの惑星の水面
     const skyTex = tex(SKW, SKH, gl.RGBA16F, gl.LINEAR, true);
     gl.bindTexture(gl.TEXTURE_2D, skyTex); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     const skyF = fbo([skyTex]);
@@ -168,7 +169,7 @@ window.WGocean = (() => {
       const W = cv.width, H = cv.height, ty = Math.tan(cam.fovY / 2), tx = ty * W / H;
       const { cf, cr, cu } = cam, P0 = cam.pos;
       const pos = P0;   // カメラは原点のまわりだけを回るので、位置を戻さなくてよい
-      const n = 0.1, f = 40000, e = [-pos[0], -pos[1], -pos[2]];
+      const big = env.big, n = big ? 0.5 : 0.1, f = big ? 400000 : 40000, e = [-pos[0], -pos[1], -pos[2]];
       const V = [cr[0], cu[0], -cf[0], 0, cr[1], cu[1], -cf[1], 0, cr[2], cu[2], -cf[2], 0,
         cr[0] * e[0] + cr[1] * e[1] + cr[2] * e[2], cu[0] * e[0] + cu[1] * e[1] + cu[2] * e[2], -(cf[0] * e[0] + cf[1] * e[1] + cf[2] * e[2]), 1];
       const Pm = [1 / tx, 0, 0, 0, 0, 1 / ty, 0, 0, 0, 0, -(f + n) / (f - n), -1, 0, 0, -2 * f * n / (f - n), 0];
@@ -208,8 +209,11 @@ window.WGocean = (() => {
       gl.viewport(0, 0, W, H);
       use(pSky); setAll(pSky, { cf, cr, cu, L, sunC, tx, ty, sunI: keyI, expo: env.expo, disc: env.disc, stars: env.stars, fogSky: Math.min(1, 600 / env.fogL), skyT: skyTex }); full();
       gl.enable(gl.DEPTH_TEST); gl.clear(gl.DEPTH_BUFFER_BIT);
+      if (big) { for (let i = 0; i < 4096; i++) { bigBuf[4 * i] = big.eta[i]; bigBuf[4 * i + 1] = big.slope[i]; bigBuf[4 * i + 2] = big.depth[i]; }
+        gl.bindTexture(gl.TEXTURE_2D, bigTex); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, 1, gl.RGBA, gl.FLOAT, bigBuf); }
       use(pWater);
-      setAll(pWater, { cam: pos, cf, cr, cu, Ls: CASC.map(c => c.L), tx, ty, y0: -3.0, y1: Math.min(horizonY + 0.12, 1.2),
+      setAll(pWater, { cam: pos, cf, cr, cu, Ls: CASC.map(c => c.L), tx, ty, y0: -3.0, y1: Math.min(horizonY + (big ? 0.4 : 0.12), 1.2),
+        far: big ? 300000 : 30000, planeY: big ? big.planeY : 0, bigOn: big ? 1 : 0, bigL: big ? big.L : 1, bigX0: big ? big.x0 : 0, curvR: big ? big.R : 1e9, bigT: bigTex,
         pixA: 2 * ty / H, VP, L, sunC, sunI: keyI, expo: env.expo, fogL: env.fogL, sss: 1, rough0: env.rough0, disc: env.disc, skyT: skyTex,
         dA: CASC[0].disp, dB: CASC[1].disp, dC: CASC[2].disp, sA: CASC[0].slope[cur], sB: CASC[1].slope[cur], sC: CASC[2].slope[cur] });
       gl.bindVertexArray(gridVAO); gl.drawElements(gl.TRIANGLES, gridVAO.count, gl.UNSIGNED_INT, 0); gl.bindVertexArray(null);

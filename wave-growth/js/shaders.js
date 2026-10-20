@@ -115,33 +115,38 @@ void main(){
   // 画面に張った格子を海面へ投げて、3枚の海面の変位を足す（projected grid）
   const VS_WATER = HEAD + `
 in vec2 aG;
-uniform vec3 cam,cf,cr,cu,Ls;uniform float tx,ty,y0,y1,pixA;uniform mat4 VP;
-uniform sampler2D dA,dB,dC;
-out vec3 vPos;out vec2 vXZ;out float vH;
+uniform vec3 cam,cf,cr,cu,Ls;uniform float tx,ty,y0,y1,pixA,far,planeY,bigOn,bigL,bigX0,curvR;uniform mat4 VP;
+uniform sampler2D dA,dB,dC,bigT;
+out vec3 vPos;out vec2 vXZ;out float vH,vBS,vDep;
 float lod(float fp,float L){return max(0.,log2(fp/(L/256.)));}
+// ミラーの惑星: 浅い海の式の水面（r = 高さ、g = 傾き、b = 水深）を x で読む（4096 本の線を手で線形補間）
+vec3 big(float xw){float p=(bigX0+xw)/bigL*4096.-.5,f=fract(p);int i0=int(floor(p));i0=((i0%4096)+4096)%4096;int i1=(i0+1)%4096;
+  return mix(texelFetch(bigT,ivec2(i0,0),0).rgb,texelFetch(bigT,ivec2(i1,0),0).rgb,f);}
 void main(){
   vec2 ndc=vec2(mix(-1.6,1.6,aG.x),mix(y0,y1,aG.y));
   vec3 d=normalize(cf+ndc.x*tx*cr+ndc.y*ty*cu);
-  float hor=d.y<-1e-5?length(d.xz)*cam.y/(-d.y):1e9;hor=min(hor,30000.);
+  float hgt=max(cam.y-planeY,.5);
+  float hor=d.y<-1e-5?length(d.xz)*hgt/(-d.y):1e9;hor=min(hor,far);
   vec2 xz=cam.xz+normalize(d.xz+vec2(1e-6,0))*hor;
   float fp=max(hor,cam.y)*pixA*1.5;
   vec3 D=textureLod(dA,xz/Ls.x,lod(fp,Ls.x)).xyz;
   D+=textureLod(dB,xz/Ls.y,lod(fp,Ls.y)).xyz*(1.-smoothstep(2500.,5000.,hor));
   D+=textureLod(dC,xz/Ls.z,lod(fp,Ls.z)).xyz*(1.-smoothstep(150.,400.,hor));
-  vec3 p=vec3(xz.x,0,xz.y)+D;
+  vec3 p=vec3(xz.x,0,xz.y)+D;vBS=0.;vDep=1e4;
+  if(bigOn>0.){vec3 b=big(xz.x);p.y+=b.r;vBS=b.g;vDep=b.b;float dd=length(xz-cam.xz);p.y-=dd*dd/(2.*curvR);}   // 惑星の丸みで遠くは沈む
   vPos=p;vXZ=xz;vH=D.y;gl_Position=VP*vec4(p,1);
 }`;
 
   const FS_WATER = HEAD + SKYL + `
 uniform vec3 cam,L,sunC,Ls;uniform float sunI,expo,fogL,sss,rough0,disc;
 uniform sampler2D sA,sB,sC;
-in vec3 vPos;in vec2 vXZ;in float vH;out vec4 o;
+in vec3 vPos;in vec2 vXZ;in float vH,vBS,vDep;out vec4 o;
 float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
   return mix(mix(h12(i),h12(i+vec2(1,0)),f.x),mix(h12(i+vec2(0,1)),h12(i+vec2(1,1)),f.x),f.y);}
 void main(){
   vec4 a=texture(sA,vXZ/Ls.x),b=texture(sB,vXZ/Ls.y),c=texture(sC,vXZ/Ls.z);
   vec2 sl=a.xy+b.xy+c.xy;
-  vec3 n=normalize(vec3(-sl.x,1.,-sl.y));
+  vec3 n=normalize(vec3(-sl.x-vBS,1.,-sl.y));
   vec3 V=cam-vPos;float dist=length(V);V/=dist;
   float nv=max(dot(n,V),1e-3);
   float F=.02+.98*pow(1.-nv,5.);                         // フレネル（水の屈折率 1.33）
@@ -157,6 +162,8 @@ void main(){
   float k1=max(vH+.3,0.)*pow(max(dot(L,-V),0.),4.)*pow(.5-.5*dot(L,n),3.);
   float k2=pow(nv,2.)*.25;
   vec3 body=deep*(amb*.9+sunC*sunI*.04*max(L.y,0.))+sc*sunC*sunI*.012*(k1*3.*sss+k2);   // 水の中で散らばって出てくる光（見た目で決めた強さ）
+  // 浅い所（ミラーの惑星の棚）は底が見える（水深で色がうすれる。見た目の目安）
+  vec3 sand=vec3(.42,.38,.3)*(sunC*sunI*max(L.y,0.)*.05+amb*.7);body=mix(sand,body,1.-exp(-vDep/1.5));
   vec3 col=mix(body,refl,F)+spec;
   float fm=clamp(a.z*.8+b.z+c.z*.5,0.,1.);
   float tex=vn(vXZ*2.3)*.6+vn(vXZ*7.1)*.4;
