@@ -166,7 +166,12 @@ self.onmessage = async e => {
   if (d.cmd === 'init') {
     S = T.create(d.N || 16000);
     self.postMessage({ type: 'static', n: S.n, s: S.s, mat: S.mat, surf: S.surf, lat: S.lat, lon: S.lon, R: T.R_E });
-    await T.relax(S, 300, f => self.postMessage({ type: 'progress', f }));
+    // 組み立て中も粒の位置と大きさを送る（画面は落ち着いていく粒の地球を描く。v013: 15 秒ほど何も出ていなかった）
+    await T.relax(S, 300, f => {
+      const pos = new Float32Array(S.x), size = new Float32Array(S.n);
+      for (let i = 0; i < S.n; i++) size[i] = Math.cbrt(S.m[i] / S.rho[i]);
+      self.postMessage({ type: 'progress', f, pos, size }, [pos.buffer, size.buffer]);
+    });
     let melt = 0, mm = 0;
     for (let i = 0; i < S.n; i++) if (S.mat[i] === 0) { melt += T.meltFrac(S, i) * S.m[i]; mm += S.m[i]; }
     melt0 = 100 * melt / mm;

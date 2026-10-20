@@ -211,6 +211,20 @@
     if (d && d.length) { worker.postMessage({ cmd: 'water', dirs: d }); waterSent = true; }
   }
 
+  // 組み立て中の粒（位置と大きさだけ）: 地表は写真の色、中は暗く
+  let preview = null;
+  function paintPreview() {
+    const d = preview, n = st.n, pos = geo.attributes.position.array, col = geo.attributes.acol.array, sz = geo.attributes.asize.array, aux = geo.attributes.aux.array;
+    for (let i = 0; i < n; i++) {
+      pos[3 * i] = d.pos[3 * i] / U; pos[3 * i + 1] = d.pos[3 * i + 1] / U; pos[3 * i + 2] = d.pos[3 * i + 2] / U;
+      sz[i] = (st.surf[i] ? 1.5 : 1.25) * d.size[i] / U;
+      const c = st.surf[i] ? photoColor(st.lat[i], st.lon[i]) : [0.16, 0.12, 0.1];
+      col[3 * i] = c[0]; col[3 * i + 1] = c[1]; col[3 * i + 2] = c[2];
+      aux[2 * i] = 0; aux[2 * i + 1] = 1;
+    }
+    geo.attributes.position.needsUpdate = geo.attributes.acol.needsUpdate = geo.attributes.asize.needsUpdate = geo.attributes.aux.needsUpdate = true;
+  }
+
   // ---------- 計算から届いた 1 こま を描く形に ----------
   function paint() {
     const n = st.n, F = frame, pos = geo.attributes.position.array, col = geo.attributes.acol.array, sz = geo.attributes.asize.array, aux = geo.attributes.aux.array;
@@ -337,21 +351,24 @@
 
   // ---------- 計算（Worker） ----------
   function startWorker() {
-    worker = new Worker('js/tear-worker.js');
+    worker = new Worker('js/tear-worker.js?v=14');
     setTimeout(sendWater, 0);                       // 写真がもう届いていれば海の場所を送る（まだなら届いたときに）
     worker.onmessage = e => {
       const d = e.data;
       if (d.type === 'static') {
         st = d; exposed = new Float32Array(d.n);
-        makePoints(d.n);
+        if (built) makePoints(d.n);
       } else if (d.type === 'progress') {
+        preview = d;
+        if (geo && GV.stage === 'tear') paintPreview();
         $('tear-info').innerHTML = L(`地球を粒（${st.n.toLocaleString('ja-JP')} 個、1 個 ≒ ${Math.round(st.s / 1e3)} km）で組み立てて、重力と圧力をつり合わせています… ${Math.round(d.f * 100)}%`, `Building Earth from particles (${st.n.toLocaleString('en-US')}, each ≈ ${Math.round(st.s / 1e3)} km) and balancing gravity and pressure… ${Math.round(d.f * 100)}%`);
       } else if (d.type === 'ready') {
         ready = true;
         worker.postMessage({ cmd: 'speed', v: opt.speed });
       } else if (d.type === 'frame') {
-        frame = d;
+        frame = d; preview = null;
         if (!stat0) stat0 = d.stats;
+        if (!geo || GV.stage !== 'tear') return;    // 先に始めた計算（prewarm）: 画面に入ったときに描く
         paint();
         worker.postMessage({ cmd: 'ack' });
       } else if (d.type === 'torn') {
@@ -503,14 +520,26 @@
   // ---------- 出入り ----------
   GV.enterTear = function () {
     if (GV.stage !== 'space' || !window.THREE) return;
-    if (!built) { build(); setupInput(); setupPanel(); loadPhoto(); }
+    if (!built) { build(); setupInput(); setupPanel(); if (!photoAsked) loadPhoto(); photoAsked = true; }
     GV.stage = 'tear';
     document.body.classList.add('in-tear');
     syncPanel();
     resize();
     if (!worker) { $('tear-info').textContent = L('地球を粒で組み立てています…', 'Building Earth from particles…'); startWorker(); }
-    else if (opt.run && (grab || torn)) worker.postMessage({ cmd: 'run', on: true });
+    else {
+      if (st && !geo) makePoints(st.n);               // 先に始めた計算に追いつく
+      if (frame) { paint(); worker.postMessage({ cmd: 'ack' }); }
+      else if (preview) paintPreview();
+      if (opt.run && (grab || torn)) worker.postMessage({ cmd: 'run', on: true });
+    }
     if (!raf) loop();
+  };
+  // 宇宙で地球に寄って「ちぎる」のボタンが出たら、裏で粒の組み立てを先に始めておく（画面と別のスレッドなので宇宙の描画は止まらない）
+  let photoAsked = false;
+  GV.prewarmTear = function () {
+    if (worker || !window.THREE) return;
+    if (!photoAsked) { loadPhoto(); photoAsked = true; }
+    startWorker();
   };
   GV.exitTear = function (toEarth) {
     if (GV.stage !== 'tear') return;

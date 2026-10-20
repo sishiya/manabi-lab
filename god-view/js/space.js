@@ -343,6 +343,7 @@
     drawLabels(f, W, vis);
     if (GV.onSpace) GV.onSpace(W);
     document.body.classList.toggle('earth-near', Lw < 8.7);       // 地球が大きく見えているあいだは「地球をちぎる」のボタン（v011）
+    if (Lw < 8.7 && GV.prewarmTear) GV.prewarmTear();            // そのあいだに、ちぎる用の粒の地球を裏で組み立てはじめる（v013）
   }
 
   // 名前のラベル（HTML）
