@@ -19,6 +19,7 @@ function resize() {
 // つまみが動いた → 計算し直して音に送る（音色・高さ・大きさが変わったら音程の曲線も）
 const CURVE_KEYS = ['f0', 'bright', 'stretch', 'level'];
 function recompute(k) {
+  if (k && k !== 'search') S.target = null;   // つまみを手で動かしたら、なぞった目標は消す
   S.res = Psycho.analyze(P);
   if (!S.curve || !k || CURVE_KEYS.includes(k)) S.curve = Psycho.roughCurve(P);
   Synth.send(S.res.parts, P);
@@ -31,7 +32,7 @@ const $why = document.getElementById('why');
 function showWhy() {
   if (S.step === 0) { $why.textContent = ''; return; }
   let t = UI.whyText(S.res);
-  if (S.mode === 'map' && S.target && !S.dragging && S.searchLeft <= 0 && S.lastDist > 0.12) t = 'ここまでは届きません（いちばん近い音にしました）。' + t;
+  if (S.target && !S.dragging && S.searchLeft <= 0 && S.lastDist > 0.12) t = (UI.TOUR[S.step].keys === 'all' || S.mode === 'map' ? 'ここまでは届きません' : 'このタブのつまみでは、ここまでは届きません') + '（いちばん近い音にしました）。' + t;
   if (S.mode === 'bgm' && P.mood) {
     const m = UI.MOODS[P.mood], lab = m.prog[P.chordIx % m.prog.length][1];
     t = `いまの和音 ${lab}（${Synth.on ? '次まで ' + Math.max(0, Math.ceil(P.chordSec - S.bgmT)) + ' 秒' : '止まっています'}）　／　` + t;
@@ -40,7 +41,7 @@ function showWhy() {
 }
 function step(dt) {
   // 地図でつくる: なぞっている間（と、はなしてから少しの間）つまみを探す
-  if (S.mode === 'map' && S.target && (S.dragging || S.searchLeft > 0)) {
+  if (S.target && (S.dragging || S.searchLeft > 0)) {
     const r = Inverse.iterate(P, S.target[0], S.target[1]);
     S.lastDist = r.dist;
     UI.sync(P); recompute('search');
@@ -73,8 +74,6 @@ function goStep(i) {
   S.mode = T.mode || null;
   if (S.mode === 'bgm') { UI.applyMood(P, P.mood || 'calm'); S.bgmT = 0; } else P.chord = null;
   S.target = null; S.dragging = false; S.searchLeft = 0;
-  cv.style.touchAction = S.mode === 'map' ? 'none' : 'manipulation';   // なぞるときは画面をスクロールさせない
-  cv.style.cursor = S.mode === 'map' ? 'pointer' : 'default';
   UI.sync(P); UI.show(T.keys, T.fresh);
   $me.classList.toggle('new', !!T.fresh && T.fresh.includes('me'));
   $me.hidden = i === 0;
@@ -107,15 +106,19 @@ function mapXY(e) {   // 画面の位置 → 地図の（快さ, 興奮）。地
   const v = (x - m.cx) / (m.rx * 0.92), a = -(y - m.cy) / (m.ry * 0.92);
   return Math.abs(v) > 1.15 || Math.abs(a) > 1.15 ? null : [Math.max(-1, Math.min(1, v)), Math.max(-1, Math.min(1, a))];
 }
-// 地図でつくる: なぞる
+// 地図をなぞる（どのタブでも。そのタブで見せているつまみだけを動かして探す。はじめにでは「地図でつくる」へ）
 cv.addEventListener('pointerdown', (e) => {
-  if (S.mode !== 'map' || S.placing) return;
+  if (S.placing) return;
   const t = mapXY(e); if (!t) return;
   if (!Synth.on) togglePlay();
-  S.target = t; S.dragging = true; Inverse.begin(P);
+  if (S.step === 0) goStep(UI.TOUR.findIndex(T => T.mode === 'map'));
+  S.target = t; S.dragging = true; Inverse.begin(P, UI.TOUR[S.step].keys);
   try { cv.setPointerCapture(e.pointerId); } catch (_) {}
 });
-cv.addEventListener('pointermove', (e) => { if (S.dragging) { const t = mapXY(e); if (t) { S.target = t; S.dirty = true; } } });
+cv.addEventListener('pointermove', (e) => {
+  if (S.dragging) { const t = mapXY(e); if (t) { S.target = t; S.dirty = true; } }
+  else if (e.pointerType === 'mouse' && !S.placing) cv.style.cursor = mapXY(e) ? 'pointer' : 'default';   // 地図の上だけ指の形
+});
 const release = () => { if (S.dragging) { S.dragging = false; S.searchLeft = 0.6; } };
 cv.addEventListener('pointerup', release); cv.addEventListener('pointercancel', release);
 cv.addEventListener('pointerdown', (e) => {

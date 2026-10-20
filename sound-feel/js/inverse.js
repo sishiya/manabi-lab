@@ -7,10 +7,10 @@ const Inverse = (() => {
   const VARS = ['f0', 'bright', 'level', 'squeal', 'amRate', 'amDepth', 'bpm', 'cents', 'noise', 'tone'];
   const meta = (k) => UI.KNOBS.find(d => d.k === k);
   const HI = { level: (68 - 40) / 35 };   // 探すときは 68 dB まで（大きくしすぎない）
-  let start = null, steps = {};
+  let start = null, steps = {}, allow = 'all';
 
-  function begin(P) {
-    start = {}; steps = {};
+  function begin(P, keys = 'all') {   // keys: そのタブで見せているつまみ（'all' ならぜんぶ）
+    allow = keys; start = {}; steps = {};
     for (const k of VARS) { start[k] = UI.toPos(meta(k), P[k]) / 1000; steps[k] = 0.08; }
   }
   function cost(P, x, tv, ta) {
@@ -21,7 +21,7 @@ const Inverse = (() => {
   // 1回呼ぶごとに、つまみ1本ずつ ± に動かして試す（なぞっている間、毎コマ呼ぶ）
   function iterate(P, tv, ta, passes = 2) {
     if (!start) begin(P);
-    const use = VARS.filter(k => (k !== 'cents' || P.two) && ((k !== 'noise' && k !== 'tone') || (P.nature && P.nature !== 'none')));
+    const use = VARS.filter(k => (allow === 'all' || allow.includes(k)) && (k !== 'cents' || P.two) && ((k !== 'noise' && k !== 'tone') || (P.nature && P.nature !== 'none')));
     const x = {}; for (const k of use) x[k] = UI.toPos(meta(k), P[k]) / 1000;
     let best = cost(P, x, tv, ta);
     for (let pass = 0; pass < passes; pass++) {

@@ -14,7 +14,7 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-bod
 /* 上に固定する部分 */
 #pin{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
 #cvwrap{position:relative;height:min(48vh,400px)}
-#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:manipulation}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}   /* 地図をなぞるので、図の上では画面をスクロールさせない */
 /* ボタン: さわれるものは青緑（.op）、じぶんの点は金（.me） */
 button{font:inherit;font-size:14px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;min-height:36px;padding:4px 12px;cursor:pointer}
 button.op{background:var(--op);border-color:var(--op);color:#0f1d26;font-weight:700}

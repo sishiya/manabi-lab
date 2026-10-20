@@ -15,7 +15,7 @@ const Draw = (() => {
 
   // 地図: 横＝快さ（左 不快・右 快）、縦＝興奮（上 興奮・下 落ち着き）。Russell 1980 の円環モデルの2つの軸
   function map(g, x, y, w, h, st, hl) {
-    frame(g, x, y, w, h, st.placing ? '地図をタップして置く' : st.mode === 'map' ? '地図をなぞる（目標）' : '快さ × 興奮の地図（推定）', st.placing ? 'me' : st.mode === 'map' ? 'op' : hl && 'look');
+    frame(g, x, y, w, h, st.placing ? '地図をタップして置く' : w < 230 ? '快さ×興奮（なぞれる）' : '快さ × 興奮の地図（なぞると音が変わる）', st.placing ? 'me' : 'op');   // 地図はいつでもさわれる（青緑）
     const pad = 22, top = 24, cx = x + w / 2, cy = y + top + (h - top) / 2;
     const rx = (w - pad * 2) / 2, ry = (h - top - pad * 1.4) / 2;
     st.layout = { map: { cx, cy, rx, ry } };
@@ -50,13 +50,11 @@ const Draw = (() => {
       g.fillStyle = C.me; g.beginPath(); g.arc(mx, my, 8, 0, Math.PI * 2); g.fill();
       g.fillStyle = C.bg; g.fillText(String(m.n), mx, my + 0.5);
     }
-    // 地図でつくる: 目標（青緑の輪＝さわって動かせる）
-    if (st.mode === 'map') {
-      if (st.target) {
-        const [tx, ty] = P(st.target[0], st.target[1]);
-        g.strokeStyle = C.acc; g.lineWidth = 3; g.beginPath(); g.arc(tx, ty, 12, 0, Math.PI * 2); g.stroke();
-        g.beginPath(); g.moveTo(tx - 17, ty); g.lineTo(tx - 7, ty); g.moveTo(tx + 7, ty); g.lineTo(tx + 17, ty); g.moveTo(tx, ty - 17); g.lineTo(tx, ty - 7); g.moveTo(tx, ty + 7); g.lineTo(tx, ty + 17); g.stroke();
-      }
+    // なぞった目標（青緑の輪＝さわって動かせる）
+    if (st.target && !st.placing) {
+      const [tx, ty] = P(st.target[0], st.target[1]);
+      g.strokeStyle = C.acc; g.lineWidth = 3; g.beginPath(); g.arc(tx, ty, 12, 0, Math.PI * 2); g.stroke();
+      g.beginPath(); g.moveTo(tx - 17, ty); g.lineTo(tx - 7, ty); g.moveTo(tx + 7, ty); g.lineTo(tx + 17, ty); g.moveTo(tx, ty - 17); g.lineTo(tx, ty - 7); g.moveTo(tx, ty + 7); g.lineTo(tx, ty + 17); g.stroke();
     }
     const [px, py] = P(st.dv, st.da);
     g.fillStyle = C.ink; g.beginPath(); g.arc(px, py, 7, 0, Math.PI * 2); g.fill();

@@ -133,7 +133,7 @@ const UI = (() => {
   const BASE = { f0: 220, bright: 0.3, two: false, cents: 700, squeal: 0, amRate: 0, amDepth: 0, stretch: 0, level: 60, tone: 1, nature: 'none', noise: 0, bpm: 0, wobble: 0, chord: null, mood: null, chordSec: 9, chordIx: 0 };
   const K1 = ['f0', 'bright', 'level'], K2 = [...K1, 'two', 'cents'], K3 = [...K2, 'squeal'], K4 = [...K3, 'amRate', 'amDepth'], K5 = [...K4, 'bpm'], K6 = [...K5, 'nature', 'noise', 'tone'];
   const TOUR = [
-    { tab: 'はじめに', t: 'つまみ（青緑）で音を作ると、耳のモデルで計算して、地図の白い点が動きます。左の「▶ 音を出す」で、小さな音から始まります。', btn: 'はじめる', keys: [], set: {}, hl: 'map' },
+    { tab: 'はじめに', t: 'つまみ（青緑）で音を作ると、耳のモデルで計算して、地図の白い点が動きます。地図をなぞると、そこに来る音を探します。「▶ 音を出す」で、小さな音から始まります。', btn: 'はじめる', keys: [], set: {}, hl: 'map' },
     { tab: '①1つの音', t: '①倍音（2倍・3倍…の高さ）がそろった1つの音。地図では「ゆったり」のほう。「明るさ」で倍音をふやすと？', keys: K1, fresh: ['bright'], set: {}, hl: 'map' },
     { tab: '②2つの音', t: '②2つ目の音。半音ちがい（100¢）だとうなってザラザラ（粗さ）。「音程」を 700¢（ド→ソ）へ動かすと、曲線の谷で落ち着きます。', keys: K2, fresh: ['cents'], set: { two: true, cents: 100, bright: 0.5 }, hl: 'curve' },
     { tab: '③キーキー', t: '③黒板をひっかく音がもつ 2,500〜5,500 Hz の帯。人がとくにいやがる帯です（Kumar ほか 2008）。耳がいちばん敏感な帯とも重なります。音量に注意。', keys: K3, fresh: ['squeal'], set: { squeal: 0.6, level: 55 }, hl: 'spec' },
@@ -141,7 +141,7 @@ const UI = (() => {
     { tab: '⑤テンポ', t: '⑤拍の速さ。速いテンポほど呼吸・心拍・血圧が上がり、音楽を止めた間で下がりました（Bernardi ほか 2006）。60 と 150 で点をくらべて。', keys: K5, fresh: ['bpm'], set: { f0: 330, bpm: 60 }, hl: 'map' },
     { tab: '⑥自然の音', t: '⑥波・雨・風（ノイズを形づけた合成）。耳のモデルでは快さが低めに出ますが、自然の音でストレスからの回復が速い傾向も（Alvarsson ほか 2010）。「じぶんの感じ方」を置いてくらべて。', keys: K6, fresh: ['nature', 'me'], set: { tone: 0.3, nature: 'wave', noise: 0.8, level: 52 }, hl: 'map' },
     { tab: '自由に', t: 'ここからは自由に。「ゆらぎ」「倍音のずれ」（鐘のような音）も使えます。気になった音は「じぶんの感じ方」を置いて、推定とくらべてみてください。', keys: [...K6, 'wobble', 'stretch'], fresh: ['wobble', 'stretch'], set: null, hl: null },
-    { tab: '地図でつくる', t: '地図の上を指（マウス）でなぞると、そこに来る音を、推定の式を逆にたどって探します。つまみも動きます。はなすと、なぜそこなのかが下に出ます。', keys: [...K6, 'wobble', 'stretch'], fresh: [], set: null, hl: null, mode: 'map' },
+    { tab: '地図でつくる', t: 'ぜんぶのつまみを使って、なぞった場所に来る音を探します（ほかのタブでは、そのタブのつまみだけで探します）。推定の式を逆にたどるので、答えは1つではありません。', keys: [...K6, 'wobble', 'stretch'], fresh: [], set: null, hl: null, mode: 'map' },
     { tab: 'BGM', t: '作業用の BGM。粗さの少ない和音（音どうしを広くあけた形）をゆっくり進めます。タブを隠しても止まりません（止めるのは ■）。', btn: '最初から', keys: ['mood', 'chordSec', 'nature', 'noise', 'level'], fresh: ['mood'], set: { mood: 'calm' }, hl: 'map', mode: 'bgm' },
   ];
   return { build, sync, show, buildVals, showVals, TOUR, BASE, KNOBS, MOODS, applyMood, whyText, toPos, fromPos };
