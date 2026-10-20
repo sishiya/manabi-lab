@@ -85,6 +85,15 @@
     };
   }
 
-  const api = { G, ustar, fullyDev, fromDuration, durationForH, stateAt, Sf, makeSpecK, spread, lgamma };
+  // 海面のストークスドリフト（波に乗った水が少しずつ前へ流される速さ）。深い海: u_s = 16π³/g ∫ f³ S(f) a1(f) df（Kenyon 1969）。
+  // a1 = 向きの広がりの平均の cos = s/(s+1)。3 Hz より短い波は FFT の海に描いていないので入れない
+  function stokes(Hm0, Tp, fmax = 3, smax = 10) {
+    if (!(Hm0 > 0) || !(Tp > 0)) return 0;
+    const fp = 1 / Tp, df = 0.002; let s = 0;
+    for (let f = df / 2; f < fmax; f += df) { const sp = Math.max(0.5, f < fp ? smax * (f / fp) ** 5 : smax * (f / fp) ** -2.5); s += f ** 3 * Sf(f, Hm0, Tp) * sp / (sp + 1) * df; }
+    return 16 * Math.PI ** 3 / G * s;
+  }
+
+  const api = { G, stokes, ustar, fullyDev, fromDuration, durationForH, stateAt, Sf, makeSpecK, spread, lgamma };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.WGgrowth = api;
 })(typeof window !== 'undefined' ? window : this);

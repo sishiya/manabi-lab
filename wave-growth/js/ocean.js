@@ -85,22 +85,34 @@ window.WGocean = (() => {
       gl.bindVertexArray(null); return { vao, count: data.length / 9 };
     }
 
-    // ---- 海面の1点の動きを読む（大と中の海面。小さいさざ波は浮き台の大きさでならされるので入れない） ----
-    // 結果は1コマおくれ。{ d: [横x, 上下, 横z], s: [傾きx, 傾きz] }
-    const probeBuf = new Float32Array(4), probeOut = { d: [0, 0, 0], s: [0, 0] };
-    function readTexel(i, j) { gl.readPixels(i, j, 1, 1, gl.RGBA, gl.FLOAT, probeBuf); return probeBuf; }
-    function probeCascade(c, x, z, acc) {
-      const fx = ((x / c.L) * N - 0.5) % N, fz = ((z / c.L) * N - 0.5) % N;
-      const u = (fx + N) % N, v = (fz + N) % N, i0 = Math.floor(u), j0 = Math.floor(v), ax = u - i0, az = v - j0;
-      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, c.f[cur]);
-      for (const [att, keys] of [[0, 'd'], [1, 's']]) {
-        gl.readBuffer(gl.COLOR_ATTACHMENT0 + att);
-        const r = [0, 0, 0];
-        [[0, 0, (1 - ax) * (1 - az)], [1, 0, ax * (1 - az)], [0, 1, (1 - ax) * az], [1, 1, ax * az]].forEach(([di, dj, w]) => {
-          const p = readTexel((i0 + di) % N, (j0 + dj) % N); r[0] += p[0] * w; r[1] += p[1] * w; r[2] += p[2] * w; });
-        if (keys === 'd') { acc.d[0] += r[0]; acc.d[1] += r[1]; acc.d[2] += r[2]; } else { acc.s[0] += r[0]; acc.s[1] += r[1]; }
+    // ---- 海面の点の動きを読む（16 点まで） ----
+    // points = [{x, z, wc}]（wc: 小さいさざ波を入れる割合。浮き台は大きいので 0、ブイは 1）
+    // GPU を待たないように、PBO に読ませて fence が終わったら受け取る（1〜2 コマおくれ。同時に 1 つだけ）
+    const pProbe = prog(S.VS_FULL, S.FS_PROBE), MAXP = 16;
+    const probeTex = tex(MAXP, 2, gl.RGBA32F, gl.NEAREST, false), probeF = fbo([probeTex]);
+    const probeBuf = new Float32Array(MAXP * 2 * 4), probeP = new Float32Array(MAXP * 2), probeW = new Float32Array(MAXP);
+    const pbo = gl.createBuffer(); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo); gl.bufferData(gl.PIXEL_PACK_BUFFER, probeBuf.byteLength, gl.STREAM_READ); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+    let probeOut = [], pending = null;
+    function runProbe(points) {
+      if (pending) {
+        const r = gl.clientWaitSync(pending.fence, 0, 0);
+        if (r === gl.ALREADY_SIGNALED || r === gl.CONDITION_SATISFIED) {
+          gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo); gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, probeBuf); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+          gl.deleteSync(pending.fence);
+          probeOut = []; for (let i = 0; i < pending.n; i++) { const a = 4 * i, b = 4 * (MAXP + i);
+            probeOut.push({ d: [probeBuf[a], probeBuf[a + 1], probeBuf[a + 2]], s: [probeBuf[b], probeBuf[b + 1]] }); }
+          pending = null;
+        }
       }
-      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+      const n = Math.min(points.length, MAXP); if (!n) { probeOut = []; return; }
+      if (pending) return;
+      for (let i = 0; i < n; i++) { probeP[2 * i] = points[i].x; probeP[2 * i + 1] = points[i].z; probeW[i] = points[i].wc; }
+      gl.bindFramebuffer(gl.FRAMEBUFFER, probeF); gl.viewport(0, 0, MAXP, 2); use(pProbe);
+      gl.uniform2fv(pProbe.u['P[0]'], probeP); gl.uniform1fv(pProbe.u['WC[0]'], probeW);
+      setAll(pProbe, { Ls: CASC.map(c => c.L), dA: CASC[0].disp, dB: CASC[1].disp, dC: CASC[2].disp, sA: CASC[0].slope[cur], sB: CASC[1].slope[cur], sC: CASC[2].slope[cur] }); full();
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo); gl.readPixels(0, 0, MAXP, 2, gl.RGBA, gl.FLOAT, 0); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+      pending = { fence: gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0), n };
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
     // ---- 海の分布を GPU へ（波の高さ・周期・向きが変わったとき） ----
@@ -141,7 +153,7 @@ window.WGocean = (() => {
       return [5.8e-6, 13.5e-6, 33.1e-6].map(bR => Math.exp(-(bR * oR + 21e-6 * 1.1 * oM))); }
 
     function full() { gl.bindVertexArray(emptyVAO); gl.drawArrays(gl.TRIANGLES, 0, 3); }
-    let cur = 0, frameNo = 0, skyDirty = true, cloudOff = [0, 0], gpuMs = 0, lastVP = null; const tqs = [];
+    let cur = 0, frameNo = 0, skyDirty = true, cloudOff = [0, 0], gpuMs = 0, lastVP = null, lastTxTy = [1, 1]; const tqs = [];
 
     // cam = { pos:[x,y,z], cf, cr, cu（向き・右・上の単位ベクトル）, fovY }、env = { sunEl, sunAz, cloud, expo }
     function frame(dt, simT, cam, env) {
@@ -178,7 +190,7 @@ window.WGocean = (() => {
         gl.bindTexture(gl.TEXTURE_2D, c.disp); gl.generateMipmap(gl.TEXTURE_2D);
         gl.bindTexture(gl.TEXTURE_2D, c.slope[cur]); gl.generateMipmap(gl.TEXTURE_2D);
       });
-      if (env.probe) { const acc = { d: [0, 0, 0], s: [0, 0] }; probeCascade(CASC[0], env.probe[0], env.probe[1], acc); probeCascade(CASC[1], env.probe[0], env.probe[1], acc); probeOut.d = acc.d; probeOut.s = acc.s; }
+      runProbe(env.points || []);
       // 空は 4 コマに 1 回（雲はゆっくり。太陽を動かした直後は毎回）
       if (skyDirty || frameNo % 4 === 0) { skyDirty = false;
         gl.bindFramebuffer(gl.FRAMEBUFFER, skyF); gl.viewport(0, 0, SKW, SKH); use(pSkyT);
@@ -198,11 +210,11 @@ window.WGocean = (() => {
       if (env.meshes && env.meshes.length) { use(pMesh); setAll(pMesh, { VP, cam: pos, L, sunC, sunI, expo: env.expo, fogL: 7000, skyT: skyTex });
         for (const m of env.meshes) { set(pMesh, 'M', m.M); gl.bindVertexArray(m.mesh.vao); gl.drawArrays(gl.TRIANGLES, 0, m.mesh.count); }
         gl.bindVertexArray(null); }
-      lastVP = VP;
+      lastVP = VP; lastTxTy = [tx, ty];
       cur = 1 - cur;
       if (q) { gl.endQuery(tq.TIME_ELAPSED_EXT); tqs.push(q); }
     }
-    return { setSea, frame, makeMesh, probe: probeOut, get VP() { return lastVP; }, skyChanged() { skyDirty = true; }, get gpuMs() { return gpuMs; }, get fftHs() { return 4 * Math.sqrt(fftVar); }, get fftSlope() { return fftSlope; } };
+    return { setSea, frame, makeMesh, get probe() { return probeOut; }, get VP() { return lastVP; }, get txty() { return lastTxTy; }, skyChanged() { skyDirty = true; }, get gpuMs() { return gpuMs; }, get fftHs() { return 4 * Math.sqrt(fftVar); }, get fftSlope() { return fftSlope; } };
   }
   return { create, LOOP };
 })();

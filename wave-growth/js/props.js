@@ -39,5 +39,15 @@ window.WGprops = (() => {
     const tz = [tx[1] * n[2] - tx[2] * n[1], tx[2] * n[0] - tx[0] * n[2], tx[0] * n[1] - tx[1] * n[0]];
     return new Float32Array([...tx, 0, ...n, 0, ...tz, 0, x + p.d[0], p.d[1], z + p.d[2], 1]);
   }
-  return { geometry, matrix, HUMAN };
+  // ブイ（直径 0.5 m・水の上に 0.6 m。赤白）
+  function buoy() {
+    const v = [], seg = 14, r = 0.25;
+    const ring = (y0, y1, col) => { for (let i = 0; i < seg; i++) { const a0 = i / seg * 2 * Math.PI, a1 = (i + 1) / seg * 2 * Math.PI;
+      const p = (a, y) => [Math.cos(a) * r, y, Math.sin(a) * r], n = a => [Math.cos(a), 0, Math.sin(a)];
+      for (const [a, y] of [[a0, y0], [a1, y0], [a1, y1], [a0, y0], [a1, y1], [a0, y1]]) v.push(...p(a, y), ...n(a), ...col); } };
+    ring(-0.3, 0.15, [0.85, 0.12, 0.1]); ring(0.15, 0.35, [0.95, 0.95, 0.95]); ring(0.35, 0.6, [0.85, 0.12, 0.1]);
+    sphere(v, [0, 0.62, 0], 0.08, [1, 0.85, 0.2], 6);
+    return v;
+  }
+  return { geometry, buoy, matrix, HUMAN };
 })();

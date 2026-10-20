@@ -72,6 +72,7 @@ function update() {
   document.querySelectorAll('#speeds button').forEach(b => b.classList.toggle('on', +b.dataset.s === S.speed));
   wSlider.value = U; $('wLabel').textContent = U.toFixed(1) + ' m/s';
   const lam = W.G * st.Tp ** 2 / (2 * Math.PI), c = W.G * st.Tp / (2 * Math.PI);
+  S.us = W.stokes(st.Hm0, st.Tp);
   $('nH').textContent = st.Hm0 > 0 ? (st.Hm0 < 0.1 ? (st.Hm0 * 100).toFixed(1) + ' cm' : st.Hm0.toFixed(2) + ' m') : '0';
   $('nT').textContent = st.Tp > 0 ? st.Tp.toFixed(1) + ' 秒' : '—';
   $('nL').textContent = st.Tp > 0 ? (lam < 1 ? (lam * 100).toFixed(0) + ' cm' : lam.toFixed(lam < 10 ? 1 : 0) + ' m') : '—';
@@ -109,7 +110,7 @@ function drawOverlay(b) {
   const r = ov.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
   if (ov.width !== Math.round(r.width * dpr) || ov.height !== Math.round(r.height * dpr)) { ov.width = Math.round(r.width * dpr); ov.height = Math.round(r.height * dpr); }
   const g = ov.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, r.width, r.height);
-  drawPropLabel(g);
+  drawPropLabel(g); drawTrails(g);
   const U = windAt(S.t); if (!(U > 0)) return;
   const fx = b.cf[0], fz = b.cf[2], fl = Math.hypot(fx, fz) || 1, rx = b.cr[0], rz = b.cr[2];
   const wx = Math.cos(WIND_ANG), wz = Math.sin(WIND_ANG), sx = wx * rx + wz * rz, sy = -(wx * fx + wz * fz) / fl;   // 画面の上 = カメラの前
@@ -128,7 +129,8 @@ function setScene(k) { const c = SCENES[k]; S.scene = k;
   Object.assign(SUN, { sunEl: c.sunEl * Math.PI / 180, sunAz: c.sunAz, cloud: c.cloud, expo: c.expo }); if (ocean) ocean.skyChanged();
   document.querySelectorAll('#scenes button').forEach(b => b.classList.toggle('on', b.dataset.k === k)); }
 document.querySelectorAll('#scenes button').forEach(b => b.onclick = () => setScene(b.dataset.k));
-const propMesh = ocean ? ocean.makeMesh(window.WGprops.geometry()) : null;
+const propMesh = ocean ? ocean.makeMesh(window.WGprops.geometry()) : null, buoyMesh = ocean ? ocean.makeMesh(window.WGprops.buoy()) : null;
+const FL = window.WGfloats;
 function setProp(on) { S.prop = on; const b = $('propBtn'); b.textContent = '人（身長 1.7 m）: ' + (on ? 'ON' : 'OFF'); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }
 $('propBtn').onclick = () => setProp(!S.prop);
 // 人の頭の上に「1.7 m」の札（画面に投げて）
@@ -143,11 +145,43 @@ function drawPropLabel(g) {
   g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(x - 30, y - 16, 60, 18); g.fillStyle = '#fff'; g.fillText('人 1.7 m', x, y - 3);
 }
 
+// ブイの通った跡（画面に投げて。古いほどうすく）
+function project(p) { const P = ocean && ocean.VP; if (!P) return null; const r = ov.getBoundingClientRect();
+  const cx = P[0] * p[0] + P[4] * p[1] + P[8] * p[2] + P[12], cy = P[1] * p[0] + P[5] * p[1] + P[9] * p[2] + P[13], cw = P[3] * p[0] + P[7] * p[1] + P[11] * p[2] + P[15];
+  return cw > 0 ? [(cx / cw * 0.5 + 0.5) * r.width, (0.5 - cy / cw * 0.5) * r.height] : null; }
+function drawTrails(g) {
+  FL.list.forEach(bu => { const n = bu.trail.length; g.lineWidth = 2;
+    for (let i = 1; i < n; i++) { const a = project(bu.trail[i - 1]), b = project(bu.trail[i]); if (!a || !b) continue;
+      g.strokeStyle = `rgba(255,201,90,${(0.85 * i / n).toFixed(3)})`; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); } });
+}
+// 海をタップ: ブイの近くなら断面、ほかはブイを浮かべる
+cv.addEventListener('pointerup', e => {
+  if (cam.wasDrag() || !ocean) return;
+  const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+  const hit = FL.list.find(bu => { const q = bu.pos && project(bu.pos); return q && Math.hypot(q[0] - px, q[1] - py) < 30; });
+  if (hit) { openSection(); return; }
+  const b = cam.basis(), [tx, ty] = ocean.txty, nx = px / r.width * 2 - 1, ny = 1 - py / r.height * 2;
+  const d = [0, 1, 2].map(i => b.cf[i] + nx * tx * b.cr[i] + ny * ty * b.cu[i]);
+  if (d[1] >= -1e-3) return;
+  const t = -b.pos[1] / d[1]; if (t > 400) return;
+  FL.add(b.pos[0] + d[0] * t, b.pos[2] + d[2] * t, S.simT);
+});
+$('clearBtn').onclick = () => FL.clear();
+// 断面
+let secOpen = false;
+let secMag = 1;
+function openSection() { secOpen = true; $('sec').hidden = false; $('secBar').hidden = false; $('next').hidden = true; $('stage').classList.add('sec'); }
+function closeSection() { secOpen = false; $('sec').hidden = true; $('secBar').hidden = true; $('next').hidden = false; $('stage').classList.remove('sec'); }
+$('secMag').onclick = () => { secMag = secMag === 1 ? 3 : 1; $('secMag').classList.toggle('on', secMag > 1); $('secMag').textContent = secMag > 1 ? '本当の大きさに' : '動きを3倍に'; };
+$('secBtn').onclick = () => { if (!FL.list.length) FL.add(4, 2, S.simT); openSection(); };
+$('secClose').onclick = closeSection;
+
 // ---- 案内 ----
 let camAnim = null;
 const guideApi = {
   resetWind, setTime(t) { S.t = t; S.play = false; update(); },
   camTo(c) { camAnim = { from: { pitch: cam.pitch, dist: cam.dist }, to: Object.assign({ pitch: cam.pitch, dist: cam.dist }, c), k: 0 }; },
+  addBuoy() { if (!FL.list.length) FL.add(-6, -1.5, S.simT); }, section(on) { on ? openSection() : closeSection(); },
   caption(text, step) { S.free = false; $('cap').textContent = text; $('stepNo').textContent = step; },
 };
 $('next').onclick = () => window.WGguide.next(guideApi);
@@ -166,11 +200,18 @@ function draw(dt) {
   syncSea();
   const b = cam.basis();
   // 海面の傾きのばらつき（Cox & Munk 1954、きれいな海面）σ² = 0.003 + 5.12×10⁻³ U。描いている波の分を引いた残りで照り返しをにじませる
-  SUN.meshes = S.prop && propMesh ? [{ mesh: propMesh, M: window.WGprops.matrix(0, 0, ocean.probe, 0.6) }] : [];
+  // 物: 浮き台（点 0、さざ波は入れない）とブイ。前のコマに読んだ海面の動きで置く
+  const pr = ocean ? ocean.probe : [], off = S.prop ? 1 : 0;
+  SUN.meshes = [];
+  if (S.prop && propMesh && pr[0]) SUN.meshes.push({ mesh: propMesh, M: window.WGprops.matrix(0, 0, pr[0], 0.6) });
+  FL.step(dt, S.simT, pr.slice(off), S.us || 0, WIND_ANG);
+  if (buoyMesh) FL.list.forEach(bu => { if (bu.p) SUN.meshes.push({ mesh: buoyMesh, M: window.WGprops.matrix(bu.x0 + bu.drift[0], bu.z0 + bu.drift[1], bu.p, 0) }); });
+  SUN.points = (S.prop ? [{ x: 0, z: 0, wc: 0 }] : []).concat(FL.points());
   if (ocean) { const U = windAt(S.t), tot = S.st.Hm0 > 0 ? 0.003 + 5.12e-3 * U : 0;
     SUN.rough0 = Math.max(0.012, Math.sqrt(Math.max(tot - ocean.fftSlope, 0)));
     ocean.frame(dt, S.simT, b, SUN); }
   drawOverlay(b);
+  if (secOpen) window.WGsection.draw($('sec'), S.st, S.simT, FL.list.length > 0, S.us || 0, secMag);
 }
 function loop(now) {
   const dt = Math.max(0, Math.min(0.1, (now - last) / 1000)); last = now;
@@ -189,4 +230,4 @@ requestAnimationFrame(loop);
 
 // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）
 window.__wagr = { S, cam, get ocean() { return ocean; }, update,
-  simRun(sec, dt = 1 / 60) { for (let t = 0; t < sec; t += dt) step(dt); draw(dt); return S.st; } };
+  simRun(sec, dt = 1 / 60) { for (let t = 0; t < sec; t += dt) { step(dt); draw(dt); } return S.st; } };   // 毎コマ描く（ブイは描いたコマの海面を読んで動くため）

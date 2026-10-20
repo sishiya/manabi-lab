@@ -163,6 +163,12 @@ void main(){
   float mu=dot(-V,L);col+=sunC*sunI*(pow(max(mu,0.),1500.)*.6+pow(max(mu,0.),40.)*.04);
   o=vec4(tone(col*expo)+(h12(gl_FragCoord.xy)-.5)/255.,1);
 }`;
+  // 海面の点の動きを読む（横 = 点の番号、縦 0 = 変位、1 = 傾き）。WC = 小さい海面（20 m）を入れる割合
+  const FS_PROBE = HEAD + `
+uniform vec2 P[16];uniform float WC[16];uniform vec3 Ls;uniform sampler2D dA,dB,dC,sA,sB,sC;out vec4 o;
+void main(){int i=int(gl_FragCoord.x);vec2 xz=P[i];float w=WC[i];
+  if(gl_FragCoord.y<1.)o=vec4(textureLod(dA,xz/Ls.x,0.).xyz+textureLod(dB,xz/Ls.y,0.).xyz+w*textureLod(dC,xz/Ls.z,0.).xyz,0.);
+  else o=vec4(textureLod(sA,xz/Ls.x,0.).xy+textureLod(sB,xz/Ls.y,0.).xy+w*textureLod(sC,xz/Ls.z,0.).xy,0.,0.);}`;
   // 大きさくらべの物（人・浮き台）。色は頂点ごと、光は太陽＋空
   const VS_MESH = HEAD + `
 in vec3 aP,aN,aC;uniform mat4 VP,M;out vec3 vP,vN,vC;
@@ -174,5 +180,5 @@ void main(){vec3 n=normalize(vN);vec3 amb=skyL(vec3(0,1,0),6.);
   float dist=length(cam-vP);vec3 V=(cam-vP)/dist;
   col=mix(col,skyL(normalize(vec3(-V.x,0.,-V.z)),1.),1.-exp(-dist/fogL));
   o=vec4(tone(col*expo),1);}`;
-  return { VS_FULL, FS_SPEC, FS_FFT, FS_ASM, FS_SKYTEX, FS_SKY, VS_WATER, FS_WATER, VS_MESH, FS_MESH };
+  return { VS_FULL, FS_SPEC, FS_FFT, FS_ASM, FS_SKYTEX, FS_SKY, VS_WATER, FS_WATER, VS_MESH, FS_MESH, FS_PROBE };
 })();

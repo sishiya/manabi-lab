@@ -14,7 +14,11 @@ window.WGguide = (() => {
       text: 'グラフの山が左（長い波）へ動いていきます。風は、自分より遅い波を押して育てます。' },
     { t: 34 * H, hl: '#nums', cam: { pitch: 0.1, dist: 40 },
       text: '30時間ほどで「発達しきった海」。いちばん多い波が風より速く走るようになり、もう育ちません。' },
-    { t: null, hl: '#windBox',
+    { t: 12 * H, hl: '#stage', buoy: true, section: false, cam: { pitch: 0.25, dist: 14 },
+      text: 'ブイを浮かべました（海をタップでも）。波は進むのに、ブイはその場で円をえがくだけ。黄色い線が通った跡。' },
+    { t: 12 * H, hl: '#stage', section: true,
+      text: 'ブイの真下を切ってみると、水の粒も円をえがいています。深くなるほど円は小さく、波長の半分の深さではほとんど動きません。' },
+    { t: null, hl: '#windBox', section: false,
       text: '風の強さを変えてみよう。ドラッグでカメラを回せます。時間のつまみで、いつにでも戻れます。' },
   ];
   let i = -1, hlEl = null;
@@ -27,6 +31,8 @@ window.WGguide = (() => {
     if (s.U != null) api.resetWind(s.U);
     if (s.t != null) api.setTime(s.t);
     if (s.cam) api.camTo(s.cam);
+    if (s.buoy) api.addBuoy();
+    if (s.section != null) api.section(s.section);
   }
   function next(api) { show(i + 1 < STEPS.length ? i + 1 : 0, api); }
   function clear() { if (hlEl) hlEl.classList.remove('hl'); hlEl = null; }
