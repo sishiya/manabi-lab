@@ -1,5 +1,6 @@
-/* 心地よい音・いやな音 */
-:root{--bg:#14202c;--panel:#1b2735;--line:#2c3b4a;--ink:#e8f0f4;--muted:#a3b4bf;--acc:#7fd3c8;--bad:#ff7a6b;--warm:#ffc95a;
+/* 心地よい音・いやな音
+   色の決まり（画面の凡例と同じ）: 青緑 --op＝さわれるもの、白・青 --view＝計算の結果（見るだけ）、金 --me＝じぶん、赤 --bad＝いやな側 */
+:root{--bg:#14202c;--panel:#1b2735;--line:#2c3b4a;--ink:#e8f0f4;--muted:#a3b4bf;--op:#7fd3c8;--op-dim:rgba(127,211,200,.12);--view:#c9d6de;--data:#8fb8ff;--me:#ffc95a;--bad:#ff7a6b;
   --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
 [hidden]{display:none!important}
@@ -7,49 +8,72 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-bod
 #top{padding:12px 16px 4px;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px}
 #top h1{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0}
 #top .sub{color:var(--muted);font-size:13px}
-/* 上に固定する部分（地図・スペクトル・曲線＋つぎへ） */
+.legend{display:flex;align-items:center;gap:4px 6px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-left:6px}
+.legend i.op{background:var(--op)} .legend i.view{background:var(--view)} .legend i.me{background:var(--me)}
+/* 上に固定する部分 */
 #pin{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
-#cvwrap{position:relative;height:min(52vh,420px)}
-#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+#cvwrap{position:relative;height:min(48vh,400px)}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:manipulation}
+/* ボタン: さわれるものは青緑（.op）、じぶんの点は金（.me） */
 button{font:inherit;font-size:14px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;min-height:36px;padding:4px 12px;cursor:pointer}
-button:hover{border-color:var(--muted)}
-#play[aria-pressed="true"]{background:var(--panel);border-color:var(--acc);color:var(--acc)}
-#play{white-space:nowrap}
-#tour{display:flex;align-items:center;gap:10px;padding:8px 16px}
-#tourNum{font-family:var(--f-mono);color:var(--acc);font-size:13px;white-space:nowrap}
-#tourText{margin:0;flex:1;font-size:14px;line-height:1.6}
-#next{background:var(--acc);color:#10202a;border-color:var(--acc);font-weight:700;white-space:nowrap}
-/* 計算した値 */
-#vals{padding:10px 16px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px}
-.val{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+button.op{background:var(--op);border-color:var(--op);color:#0f1d26;font-weight:700}
+button.op:hover{filter:brightness(1.08)}
+button.op[aria-pressed="true"]{background:var(--op-dim);color:var(--op)}
+button.me{background:transparent;border:1.5px solid var(--me);color:var(--me);font-weight:700}
+button.me[aria-pressed="true"]{background:var(--me);color:#1d1708}
+button.ghost{background:transparent;color:var(--muted)}
+button.new{box-shadow:0 0 0 3px rgba(255,255,255,.35)}
+#bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 16px 0}
+/* タブ（いつでもどの段にも行ける） */
+#tabs{display:flex;gap:6px;padding:8px 16px 0;overflow-x:auto;scrollbar-width:thin}
+#tabs button{flex:none;background:transparent;border:1.5px solid var(--op);color:var(--op);border-radius:18px;padding:2px 12px;font-size:13px}
+#tabs button[aria-selected="true"]{background:var(--op);color:#0f1d26;font-weight:700}
+#tour{display:flex;align-items:center;gap:10px;padding:6px 16px 8px}
+#tourText{margin:0;flex:1;font-size:14px;line-height:1.6;color:var(--view)}
+#next{white-space:nowrap}
+/* 見出し: さわれる側と、見るだけの側 */
+h2.sec{font-size:15px;margin:0 0 8px;display:flex;align-items:baseline;gap:10px;padding-left:8px;border-left:4px solid}
+h2.sec small{font-size:12px;font-weight:400;color:var(--muted)}
+h2.sec.op{border-color:var(--op);color:var(--op)}
+h2.sec.view{border-color:var(--view);color:var(--view)}
+/* 計算した値（見るだけ）: 枠なし・白いバー */
+#vals{padding:14px 16px 0}
+#valgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px 14px}
+.val{border-top:1px solid var(--line);padding:6px 2px}
 .val .k{font-size:13px;color:var(--muted)}
-.val .v{font-family:var(--f-mono);font-size:16px}
-.val .bar{height:5px;background:var(--line);border-radius:3px;margin:4px 0 2px;overflow:hidden}
-.val .bar i{display:block;height:100%;background:var(--acc);border-radius:3px;transition:width .15s}
+.val .v{font-family:var(--f-mono);font-size:16px;color:var(--view)}
+.val .bar{height:4px;background:var(--line);border-radius:2px;margin:4px 0 2px;overflow:hidden}
+.val .bar i{display:block;height:100%;background:var(--view);border-radius:2px;transition:width .15s}
+.val .bar i.bad{background:var(--bad)}
 .val .n{font-size:12px;color:var(--muted);line-height:1.5}
-/* つまみ */
-#controls{padding:10px 16px;display:flex;flex-direction:column;gap:6px}
-.row{display:grid;grid-template-columns:8.5em 1fr 6.5em;align-items:center;gap:4px 10px;border-radius:8px;padding:2px 6px}
-.row .lab{color:var(--muted);font-size:13px}
-.row input[type=range]{width:100%;accent-color:var(--acc);min-height:30px}
-.row .out{font-family:var(--f-mono);font-size:13px;text-align:right}
+/* つまみ（さわれる）: 青緑の枠のカード */
+#controls{padding:16px 16px 10px;display:flex;flex-direction:column;gap:8px}
+.row{display:grid;grid-template-columns:8.5em 1fr 6.5em;align-items:center;gap:2px 10px;border-radius:10px;padding:6px 10px;background:var(--op-dim);border:1px solid rgba(127,211,200,.35)}
+.row .lab{color:var(--ink);font-size:13px;font-weight:500}
+.row input[type=range]{width:100%;accent-color:var(--op);min-height:32px;cursor:pointer}
+.row .out{font-family:var(--f-mono);font-size:13px;text-align:right;color:var(--op)}
 .row .note{grid-column:2 / 4;color:var(--muted);font-size:12px;line-height:1.5}
-.row.new{outline:2px solid var(--acc);background:rgba(127,211,200,.07)}
-.row label.chk{display:flex;align-items:center;gap:6px;font-size:14px;min-height:36px}
-.row input[type=checkbox]{width:20px;height:20px;accent-color:var(--acc)}
+.row.new{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.25)}
+.row label.chk{display:flex;align-items:center;gap:6px;font-size:14px;min-height:36px;cursor:pointer}
+.row input[type=checkbox]{width:20px;height:20px;accent-color:var(--op)}
+.row .opts{grid-column:2 / 4;display:flex;flex-wrap:wrap;gap:6px}
+.row .opts button{background:transparent;border:1.5px solid var(--op);color:var(--op);padding:2px 12px;border-radius:18px}
+.row .opts button[aria-pressed="true"]{background:var(--op);color:#0f1d26;font-weight:700}
 .warn{margin:4px 16px;color:var(--muted);font-size:12px;line-height:1.6}
 .about{padding:8px 16px 32px;color:var(--muted);font-size:14px;line-height:1.8}
 .about summary{cursor:pointer;color:var(--ink);font-size:15px}
 .about h3{color:var(--ink);font-size:15px;margin:14px 0 4px}
-.about a{color:var(--acc)}
+.about a{color:var(--op)}
 @media (max-width:560px){
   #top h1{font-size:19px}
   #top .sub{font-size:12px}
-  #cvwrap{height:46vh;min-height:270px;max-height:340px}
-  #tour{padding:6px 10px;gap:6px;flex-wrap:wrap}
-  #tourText{font-size:13px;flex-basis:100%;order:3}
-  #tourNum{flex:1}
-  .row{grid-template-columns:6.5em 1fr 5em;padding:2px 2px}
-  #vals{grid-template-columns:1fr 1fr;padding:8px 10px 0}
+  #cvwrap{height:36vh;min-height:240px;max-height:290px}
+  #bar,#tabs{padding-left:10px;padding-right:10px}
+  #bar button{font-size:13px;padding:4px 10px}
+  #tour{padding:6px 10px 8px;gap:8px}
+  #tourText{font-size:13px}
+  .row{grid-template-columns:6.5em 1fr 5.2em;padding:6px 8px}
+  #valgrid{grid-template-columns:1fr 1fr}
   .val .n{display:none}
 }

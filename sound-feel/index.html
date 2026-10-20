@@ -8,16 +8,20 @@
 <link rel="stylesheet" href="css/style.css">
 
 <div id="app">
-  <header id="top"><h1>心地よい音・いやな音</h1><span class="sub">音をつまみで作ると、耳のモデルで計算して「快さ×興奮」の地図のどこに来るかを推定します</span></header>
-  <div id="pin"><!-- スマホ: 地図とつぎへを上に固定。数値・つまみ・説明はその下でスクロール -->
+  <header id="top"><h1>心地よい音・いやな音</h1><span class="sub">音をつまみで作ると、耳のモデルで計算して「快さ×興奮」の地図のどこに来るかを推定します</span>
+    <span class="legend"><i class="op"></i>さわれる <i class="view"></i>計算の結果（見るだけ） <i class="me"></i>じぶん</span></header>
+  <div id="pin"><!-- スマホ: 地図・操作ボタン・タブ・説明を上に固定。数値・つまみ・説明はその下でスクロール -->
     <div id="cvwrap"><canvas id="cv"></canvas></div>
-    <div id="tour">
-      <button id="play" aria-pressed="false">▶ 音を出す</button>
-      <span id="tourNum"></span><p id="tourText"></p><button id="next"></button>
+    <div id="bar">
+      <button id="play" class="op" aria-pressed="false">▶ 音を出す</button>
+      <button id="me" class="me" aria-pressed="false" hidden>● じぶんの感じ方を置く</button>
+      <button id="clearMe" class="ghost" hidden>点を消す</button>
     </div>
+    <div id="tabs" role="tablist" aria-label="段階"></div>
+    <div id="tour"><p id="tourText"></p><button id="next" class="op"></button></div>
   </div>
-  <section id="vals"></section>
-  <section id="controls"></section>
+  <section id="vals"><h2 class="sec view">計算の結果<small>見るだけ・耳のモデルの簡単版</small></h2><div id="valgrid"></div></section>
+  <section id="controls"><h2 class="sec op">つまみ<small>動かすと音と計算が変わる</small></h2></section>
   <p class="warn">音は小さめから始まります。ヘッドホンのときは、端末の音量を下げてから。いやな音の段は短く聞いてください。「想定の大きさ」は計算のための値で、本当の大きさは端末の音量で変わります。</p>
   <details id="about" class="about">
     <summary>このアプリについて</summary>
@@ -36,7 +40,16 @@
       <li>「キーキーの帯」は、黒板をひっかく音そのものではなく、その音がもつ帯域（2,500〜5,500 Hz）とゆっくりした揺れ（1秒に 1〜16 回）だけをまねた音です。</li>
       <li>数値は製品の計測ソフト（ISO 532 のラウドネスなど）とはずれます。くらべるための目安です。</li>
       <li>健康・医療の判断には使えません。</li>
-      <li>図の帯の色・地図の4つの言葉は、見やすさのための目印です。</li>
+      <li>拍（テンポ）は興奮の推定だけに入れています（音が鳴っては小さくなる分の大きさの変化は、計算に入れていません）。</li>
+      <li>自然の音は録音ではなく、ノイズをフィルタで形づけた合成です。耳のモデルは「それが何の音か」（水・鳥・車…）を知らないので、自然の音の心地よさの一部は数えられません。</li>
+      <li>図の帯の色・地図の4つの言葉は、見やすさのための目印です。色の決まり: 青緑＝さわれるもの、白・青＝計算の結果、金＝じぶんが置いた点、赤＝いやな側。</li>
+      <li>「じぶんの感じ方」の点は、この画面の中だけにあり、保存も送信もしません。</li>
+    </ul>
+    <h3>根拠の強さ（このアプリで使ったもの）</h3>
+    <ul>
+      <li><b>しっかり</b>: 2つの音のうなりと粗さ（Plomp と Levelt ほか多数）、鋭さ・大きさ（心理音響の標準の考え方）、テンポが速いと呼吸・心拍が上がる（Bernardi ほか 2006）。</li>
+      <li><b>まちまち</b>: 自然の音でストレスからの回復が速い（Alvarsson ほか 2010 では皮ふの電気の回復が速い傾向、心拍の変動には差なし）。粗さ・鋭さから快さを出す式（人や音の種類で当たり外れがある）。</li>
+      <li><b>弱い・はっきりしない</b>: 「1/f ゆらぎで落ち着く」（Voss と Clarke 1975 は、音楽や話し声の揺れが 1/f に近いことを測った研究で、落ち着く効果を確かめたものではない）。</li>
     </ul>
     <h3>おもな出どころ</h3>
     <ul>
@@ -52,6 +65,10 @@
       <li>L. H. Arnal, A. Flinker, A. Kleinschmidt, A.-L. Giraud, D. Poeppel, “Human screams occupy a privileged niche in the communication soundscape”, Current Biology 25, 2051–2056 (2015). <a href="https://doi.org/10.1016/j.cub.2015.06.043" target="_blank" rel="noopener">doi:10.1016/j.cub.2015.06.043</a></li>
       <li>J. H. McDermott, A. J. Lehr, A. J. Oxenham, “Individual differences reveal the basis of consonance”, Current Biology 20, 1035–1041 (2010).</li>
       <li>J. H. McDermott, A. F. Schultz, E. A. Undurraga, R. A. Godoy, “Indifference to dissonance in native Amazonians reveals cultural variation in music perception”, Nature 535, 547–550 (2016).</li>
+      <li>L. Bernardi, C. Porta, P. Sleight, “Cardiovascular, cerebrovascular, and respiratory changes induced by different types of music in musicians and non-musicians: the importance of silence”, Heart 92, 445–452 (2006). <a href="https://doi.org/10.1136/hrt.2005.064600" target="_blank" rel="noopener">doi:10.1136/hrt.2005.064600</a></li>
+      <li>J. J. Alvarsson, S. Wiens, M. E. Nilsson, “Stress recovery during exposure to nature sound and environmental noise”, International Journal of Environmental Research and Public Health 7, 1036–1046 (2010). <a href="https://doi.org/10.3390/ijerph7031036" target="_blank" rel="noopener">doi:10.3390/ijerph7031036</a></li>
+      <li>R. F. Voss, J. Clarke, “‘1/f noise’ in music and speech”, Nature 258, 317–318 (1975).</li>
+      <li>P. Kellet のピンクノイズのフィルタ（音のプログラムで広く使われている近似）。</li>
       <li>P. N. Juslin, P. Laukka, “Communication of emotions in vocal expression and music performance: Different channels, same code?”, Psychological Bulletin 129, 770–814 (2003).</li>
     </ul>
     <h3>使っているもの</h3>

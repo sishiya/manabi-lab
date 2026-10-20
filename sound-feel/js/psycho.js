@@ -52,8 +52,37 @@ function partialsOf(P) {
   addTone(P.f0, 0, 0);
   if (P.two) addTone(P.f0 * Math.pow(2, P.cents / 1200), 0, 16);
   if (P.squeal > 0.001) SQUEAL_F.forEach((f, i) => out.push({ f, a: 1.4 * P.squeal * (i % 2 ? 0.8 : 1), g: 1, s: 32 + i }));
-  return out;
+  // 音程のある音の全体の強さ（パワー）を tone² に、ノイズ（自然の音）を noise² にそろえる
+  const tone = P.tone === undefined ? 1 : P.tone;
+  let pt = 0; for (const p of out) pt += p.a * p.a;
+  const kt = pt > 0 ? tone / Math.sqrt(pt) : 0;
+  for (const p of out) p.a *= kt;
+  if (P.nature && P.nature !== 'none' && P.noise > 0.001) {
+    const nb = noiseBands(P.nature);
+    let pn = 0; for (const b of nb) pn += b.a * b.a;
+    for (const b of nb) out.push({ f: b.f, a: b.a * P.noise / Math.sqrt(pn), g: 2 });
+  }
+  return out.filter(p => p.a > 0);
 }
+
+// ---- ノイズ・自然の音のスペクトル（合成 worklet.js のフィルタと同じ形の式） ----
+// 1/3 オクターブの帯ごとに1つの成分（帯のパワーの平方根）として耳のモデルに入れる。粗さには数えない（g=2）
+const BANDS = []; for (let i = -13; i <= 11; i++) BANDS.push(1000 * Math.pow(2, i / 3));   // 約 50 Hz〜12.7 kHz
+const hp = (f, fc) => { const r = (f / fc) ** 2; return r / (1 + r); };
+const lp = (f, fc) => 1 / (1 + (f / fc) ** 2);
+const bp = (f, fc, q) => { const x = f / fc, d = x / q; return d * d / ((1 - x * x) ** 2 + d * d); };
+const NOISE = {
+  white: { name: 'ザー（ホワイトノイズ）', d: f => 1 },
+  pink:  { name: 'ピンクノイズ', d: f => 1 / f },
+  rain:  { name: '雨', d: f => (1 / f) * hp(f, 1000) * hp(f, 1000) * lp(f, 9000) },
+  wave:  { name: '波', d: f => (1 / (f * f)) * lp(f, 700) * hp(f, 40) },
+  wind:  { name: '風', d: f => (1 / f) * bp(f, 450, 1.5) },
+};
+function noiseBands(type) {
+  const n = NOISE[type]; if (!n) return [];
+  return BANDS.map(fc => ({ f: fc, a: Math.sqrt(n.d(fc) * fc * 0.2316) }));   // 帯の幅 = 0.2316·fc
+}
+
 // 振幅のゆらし（AM）を、ゆらす前の成分と両わきの成分に分ける（耳のモデル用。合成はゆらしをそのままかける）
 // 合成の式: (1 - m/2 + m/2·cos 2πfm t) → まん中 1 - m/2、両わき m/4 ずつ
 function withSidebands(parts, P) {
@@ -61,6 +90,7 @@ function withSidebands(parts, P) {
   if (m < 0.001 || fm < 0.5) return parts;
   const out = [];
   for (const p of parts) {
+    if (p.g === 2) { out.push(p); continue; }   // ゆらしは音程のある音だけにかける（合成も同じ）
     out.push({ f: p.f, a: p.a * (1 - m / 2), g: p.g });
     out.push({ f: p.f + fm, a: p.a * m / 4, g: p.g });
     if (p.f - fm > 15) out.push({ f: p.f - fm, a: p.a * m / 4, g: p.g });
@@ -100,15 +130,16 @@ function loudSharp(lv) {
 // 全体の大きさの分 2^((L-60)/20)（20 dB 大きいと2倍。音が大きいほど少し粗い）をかける。1 kHz・60 dB・70 Hz で 100% ゆらした音を 1 asper にそろえる
 function pairRough(lv) {
   let amax = 0, pw = 0;
-  for (const c of lv) { amax = Math.max(amax, c.a); pw += c.a * c.a; }
+  for (const c of lv) { if (c.g !== 2) amax = Math.max(amax, c.a); pw += c.a * c.a; }
   if (amax <= 0) return 0;
   const L = lv[0].lp - 20 * Math.log10(lv[0].a / Math.sqrt(pw));   // 全体の音圧レベル
   const G = Math.pow(2, (L - 60) / 20);
   let d = 0;
   for (let i = 0; i < lv.length; i++) {
     const a = lv[i]; if (a.sone <= 0) continue;
+    if (a.g === 2) continue;
     for (let j = i + 1; j < lv.length; j++) {
-      const b = lv[j]; if (b.sone <= 0) continue;
+      const b = lv[j]; if (b.sone <= 0 || b.g === 2) continue;
       const lo = Math.min(a.f, b.f), df = Math.abs(a.f - b.f);
       const s = 0.24 / (0.0207 * lo + 18.96), x = s * df;
       if (x > 6) continue;
@@ -132,10 +163,14 @@ function analyze(P) {
   const lv = levelsOf(comps, P.level);
   const { N, S, bandSone } = loudSharp(lv);
   const R = pairRough(lv) / ROUGH_REF;
-  const T = 1;   // 段階A はぜんぶ音程のある成分（ノイズなし）
+  // 音らしさ（tonality）: 音程のある成分の sone ÷ ぜんぶの sone（Aures の「音の成分の大きさの割合」の簡単版）
+  let st = 0, sa = 0; for (const c of lv) { sa += c.sone; if (c.g !== 2) st += c.sone; }
+  const T = sa > 0 ? st / sa : 1;
   const pleas = Math.exp(-0.7 * R) * Math.exp(-1.08 * S) * (1.24 - Math.exp(-2.43 * T)) * Math.exp(-Math.pow(0.023 * N, 2));
   const valence = Math.max(-1, Math.min(1, Math.log10(pleas / 0.25) / 0.65));
-  const arousal = Math.tanh(0.45 * Math.log2(Math.max(0.05, N) / 4) + 0.5 * (S - 1.0) + 0.6 * R);
+  // テンポ: 速いほど興奮のほう（Bernardi ほか 2006: 速いテンポで呼吸・心拍・血圧が上がった）。拍がないときは 0
+  const tempo = P.bpm > 0 ? 0.6 * Math.tanh((P.bpm - 90) / 40) : 0;
+  const arousal = Math.tanh(0.45 * Math.log2(Math.max(0.05, N) / 4) + 0.5 * (S - 1.0) + 0.6 * R + tempo);
   return { parts, comps: lv, N, S, R, T, pleas, valence, arousal, bandSone };
 }
 
@@ -150,4 +185,4 @@ function roughCurve(P, step = 5) {
   return out;
 }
 
-window.Psycho = { splToPhon, phonToSone, bark, partialsOf, withSidebands, levelsOf, loudSharp, analyze, roughCurve, SQUEAL_F, ISO_F, ISO_TF };
+window.Psycho = { NOISE, noiseBands, splToPhon, phonToSone, bark, partialsOf, withSidebands, levelsOf, loudSharp, analyze, roughCurve, SQUEAL_F, ISO_F, ISO_TF };

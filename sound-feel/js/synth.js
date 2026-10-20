@@ -35,8 +35,10 @@ const Synth = (() => {
     let pw = 0; for (const p of parts) pw += p.a * p.a;
     const norm = pw > 0 ? Math.SQRT2 * rmsOf(P.level) / Math.sqrt(pw) : 0;   // sin の RMS は振幅/√2
     const slots = [];
-    for (const p of parts) slots[p.s] = { f: p.f, a: p.a * norm, g: p.g };
-    node.port.postMessage({ parts: slots, amRate: P.amRate, amDepth: P.amDepth, gain: 1 });
+    let pn = 0;
+    for (const p of parts) { if (p.g === 2) pn += p.a * p.a; else slots[p.s] = { f: p.f, a: p.a * norm, g: p.g }; }
+    node.port.postMessage({ parts: slots, amRate: P.amRate, amDepth: P.amDepth, gain: 1, bpm: P.bpm || 0, wobble: P.wobble || 0,
+      nature: pn > 0 ? P.nature : 'none', noiseRms: Math.sqrt(pn / 2) * norm });   // ノイズの RMS = 帯のパワーの合計の分（sin と同じ 1/2）
   }
   return { start, stop, send, get on() { return on; }, get ctx() { return ctx; } };
 })();
