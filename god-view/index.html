@@ -17,7 +17,7 @@
 <script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
 <script>window.CESIUM_BASE_URL = 'https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/';</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/Widgets/widgets.css">
-<link rel="stylesheet" href="css/main.css?v=14">
+<link rel="stylesheet" href="css/main.css?v=15">
 </head>
 <body>
 <div id="loading" role="status"><div class="spin"></div><span lang="ja">地球を読みこんでいます…</span><span lang="en">Loading the Earth…</span></div>
@@ -159,23 +159,23 @@
 
 <!-- Cesium.js は数 MB あるので本文の後ろで読む（読むあいだ #loading を出す） -->
 <script src="https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/Cesium.js"></script>
-<script src="js/sources.js?v=14"></script>
-<script src="js/terrain.js?v=14"></script>
-<script src="js/earth.js?v=14"></script>
-<script src="data/plateau-bldg.js?v=14"></script>
-<script src="js/buildings.js?v=14"></script>
-<script src="js/mvt.js?v=14"></script>
-<script src="js/osmbuildings.js?v=14"></script>
-<script src="data/plateau-under.js?v=14"></script>
-<script src="js/underground.js?v=14"></script>
-<script src="js/life.js?v=14"></script>
-<script src="js/transit.js?v=14"></script>
-<script src="js/agents.js?v=14"></script>
-<script src="js/space.js?v=14"></script>
-<script src="js/micro.js?v=14"></script>
-<script src="js/tear.js?v=14"></script>
-<script src="js/scale.js?v=14"></script>
-<script src="js/ui.js?v=14"></script>
-<script src="js/main.js?v=14"></script>
+<script src="js/sources.js?v=15"></script>
+<script src="js/terrain.js?v=15"></script>
+<script src="js/earth.js?v=15"></script>
+<script src="data/plateau-bldg.js?v=15"></script>
+<script src="js/buildings.js?v=15"></script>
+<script src="js/mvt.js?v=15"></script>
+<script src="js/osmbuildings.js?v=15"></script>
+<script src="data/plateau-under.js?v=15"></script>
+<script src="js/underground.js?v=15"></script>
+<script src="js/life.js?v=15"></script>
+<script src="js/transit.js?v=15"></script>
+<script src="js/agents.js?v=15"></script>
+<script src="js/space.js?v=15"></script>
+<script src="js/micro.js?v=15"></script>
+<script src="js/tear.js?v=15"></script>
+<script src="js/scale.js?v=15"></script>
+<script src="js/ui.js?v=15"></script>
+<script src="js/main.js?v=15"></script>
 </body>
 </html>

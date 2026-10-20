@@ -400,7 +400,10 @@
       clearTimeout(el._t);
       el._t = setTimeout(() => el.classList.add('gone'), ms);
     };
-    GV.onLoaded = () => fade($('hint'), 9000);       // 地球が出てから数える
+    GV.onLoaded = () => {
+      fade($('hint'), 9000);                         // 地球が出てから数える
+      setTimeout(() => { new Image().src = 'data/earth-bluemarble-2048.jpg'; }, 3000);   // 宇宙の地球の写真を先読み（宇宙に出た瞬間に写真つきで出す）
+    };
     let touched = 0;
     for (const ev of ['wheel', 'pointerdown']) $('globe').addEventListener(ev, () => { if (++touched > 3) $('hint').classList.add('gone'); }, { passive: true });
     GV.fadeHint = () => fade($('space-hint'), 7000);

@@ -15,10 +15,10 @@
     'https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js',
     'data/stars.js',
   ];
-  const EARTH_TEX = 'https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=BlueMarble_ShadedRelief_Bathymetry&CRS=EPSG:4326&BBOX=-90,-180,90,180&WIDTH=2048&HEIGHT=1024&FORMAT=image/jpeg';
+  const EARTH_TEX = 'data/earth-bluemarble-2048.jpg';   // NASA Blue Marble（GIBS の BlueMarble_ShadedRelief_Bathymetry、2048×1024）を保存したもの。v013c: GIBS に毎回作らせると約 3 秒かかり、そのあいだ地球がただの青い球だった
 
   GV.stage = 'earth';
-  let libsP = null, built = false;
+  let libsP = null, built = false, texP = null;
   let THREE, A, renderer, scene, camera, canvas, labelsEl;
   let Lw = L_ENTER, Lgoal = L_ENTER, yaw = 0, pitch = 0.3;
   const objs = [];      // { pos: [x,y,z] m (関数でもよい), mesh, radius, Lmin, Lmax, label }
@@ -166,7 +166,7 @@
     const tex = new THREE.TextureLoader();
     tex.setCrossOrigin('anonymous');
     // 地球の写真は届いてから貼る（届く前に貼ると真っ黒に描かれる。v008）。それまでは海の色
-    tex.load(EARTH_TEX, t => { const m = GV._earthObj.mesh.material; m.map = t; m.color.set(0xffffff); m.needsUpdate = true; });
+    texP = new Promise(res => tex.load(EARTH_TEX, t => { const m = GV._earthObj.mesh.material; m.map = t; m.color.set(0xffffff); m.needsUpdate = true; res(); }, undefined, res));
     addBody(L('太陽', 'Sun'), 6.957e8, 0xffe9a8, () => sunPos, 7.5, 18.5, { emissive: true, dot: '#ffdd88', px: 16 });
     const P = [['水星', 'Mercury', 2.4397e6, 0xb5aea5], ['金星', 'Venus', 6.0518e6, 0xf0dcae], ['火星', 'Mars', 3.3895e6, 0xd2694a],
       ['木星', 'Jupiter', 6.9911e7, 0xd9b38c], ['土星', 'Saturn', 5.8232e7, 0xe8d4a2], ['天王星', 'Uranus', 2.5362e7, 0xa8e0e6], ['海王星', 'Neptune', 2.4622e7, 0x5b7fe0]];
@@ -426,6 +426,9 @@
     }
     hint.innerHTML = hintText; GV.fadeHint && GV.fadeHint();
     if (!built) build();
+    // 地球の写真が届くまで待ってから重ねる（ふつうは先読みで届いている。最大 1.5 秒）
+    await Promise.race([texP, new Promise(r => setTimeout(r, 1500))]);
+    if (GV.stage !== 'earth') return;
     // 地図で見ていた向きのまま宇宙へ: カメラの地球に対する向き（地球固定）→ 恒星時で回して赤道座標に
     const cp = GV.viewer.camera.positionWC, r = Math.hypot(cp.x, cp.y, cp.z);
     const gst = A.SiderealTime(Cesium.JulianDate.toDate(GV.viewer.clock.currentTime)) / 24 * 2 * Math.PI;

@@ -6,7 +6,7 @@
 (function () {
   const GV = window.GV;
   const U = 1e6;                       // 描くときの 1 = 1000 km
-  const EARTH_TEX = 'https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=BlueMarble_ShadedRelief_Bathymetry&CRS=EPSG:4326&BBOX=-90,-180,90,180&WIDTH=1024&HEIGHT=512&FORMAT=image/jpeg';
+  const EARTH_TEX = 'data/earth-bluemarble-2048.jpg';   // NASA Blue Marble（GIBS の BlueMarble_ShadedRelief_Bathymetry、2048×1024）を保存したもの。v013c: GIBS に毎回作らせると約 3 秒かかり、そのあいだ地球がただの青い球だった
   let THREE, renderer, scene, camera, canvas, points, geo, mat, worker = null;
   let built = false, ready = false, raf = 0;
   let st = null, frame = null, stat0 = null;
@@ -351,7 +351,7 @@
 
   // ---------- 計算（Worker） ----------
   function startWorker() {
-    worker = new Worker('js/tear-worker.js?v=14');
+    worker = new Worker('js/tear-worker.js?v=15');
     setTimeout(sendWater, 0);                       // 写真がもう届いていれば海の場所を送る（まだなら届いたときに）
     worker.onmessage = e => {
       const d = e.data;
