@@ -40,7 +40,7 @@ void main(){
 
   // 変位・ヤコビアン（つぶれ）・傾き・泡（泡は前のコマから少しずつ消える）
   const FS_ASM = HEAD + `
-uniform sampler2D A,B,P;uniform float lam,thr,gain,decay;
+uniform sampler2D A,B,P;uniform float lam,thr,gain,decay,sig;
 layout(location=0) out vec4 o0;layout(location=1) out vec4 o1;
 void main(){
   ivec2 ij=ivec2(gl_FragCoord.xy);vec4 a=texelFetch(A,ij,0),b=texelFetch(B,ij,0);
@@ -48,7 +48,7 @@ void main(){
   float jxx=1.-lam*Dxx,jzz=1.-lam*Dzz,jxz=-lam*Dxz,J=jxx*jzz-jxz*jxz;
   float f=clamp((thr-J)*gain,0.,1.),pf=texelFetch(P,ij,0).z;
   o0=vec4(-lam*Dx,h,-lam*Dz,J);
-  o1=vec4(hx/max(jxx,.3),hz/max(jzz,.3),max(pf*decay,f),0.);
+  float fo=max(pf*decay,f);o1=vec4(hx/max(jxx,.3),hz/max(jzz,.3),fo,smoothstep(.45,.55,fo));   // w = 白く見える泡（濃さ 0.5 以上）。ミップの平均 = その面積の割合
 }`;
 
   const ATMO = `
@@ -101,6 +101,22 @@ uniform float under,camD;
 vec3 ubg(vec3 d,vec3 amb,vec3 L,vec3 sunC,float sunI){vec3 Lu=vec3(.004,.028,.06)*(amb*.9+sunC*sunI*.04*max(L.y,0.));
   float k=d.y<0.?mix(1.,5.,1.+d.y):mix(5.,40.,d.y*d.y);return Lu*k*exp(-KD*camD);}
 `;
+  const CAUST = `
+// コースティクス: 太陽の光は水面の傾きで曲がって進み、深さ D で集まる所は明るい。明るさ = 1/|J|、J = det(I − D(1 − 1/1.33)·H)（H = 水面の高さの 2 階微分、
+// 中と小の海面の傾きを差で微分）。太陽の円盤の大きさで深いほどぼやけるので exp(−D/8) で弱める（目安）
+uniform sampler2D cS1,cS2;uniform vec3 cLs,cSun;
+vec2 cslope(vec2 p){return textureLod(cS1,p/cLs.y,0.).xy+textureLod(cS2,p/cLs.z,0.).xy;}
+float caust(vec2 xz,float D){if(D<=0.)return 1.;
+  vec3 t=refract(-cSun,vec3(0,1,0),1./1.33);if(t.y>-.05)return 1.;vec2 xs=xz+t.xz/t.y*D;   // その点に届く光が水面を通った所
+  const float e=.08;vec2 sx1=cslope(xs+vec2(e,0)),sx0=cslope(xs-vec2(e,0)),sz1=cslope(xs+vec2(0,e)),sz0=cslope(xs-vec2(0,e));
+  float hxx=(sx1.x-sx0.x)/(2.*e),hzx=(sx1.y-sx0.y)/(2.*e),hxz=(sz1.x-sz0.x)/(2.*e),hzz=(sz1.y-sz0.y)/(2.*e),k=D*(1.-1./1.33);
+  float J=(1.-k*hxx)*(1.-k*hzz)-k*k*hxz*hzx;return mix(1.,clamp(1./max(abs(J),.1),0.,6.),exp(-D/8.));}
+// 光芒: 見る向きにそって水の中を 10 点。各点に届く太陽の光（深さで弱まる × 集まり方）が、前に強く散らばる分（ヘニー–グリーンスタイン g 0.9、散乱 0.03 /m）
+vec3 shafts(vec3 ro,vec3 rd,float maxT,vec3 sunC,float sunI){vec3 t=refract(-cSun,vec3(0,1,0),1./1.33);if(t.y>-.05)return vec3(0);
+  float g=.9,mu=dot(t,-rd),ph=(1.-g*g)/(12.566*pow(1.+g*g-2.*g*mu,1.5)),dt=maxT/10.;vec3 acc=vec3(0);
+  for(int i=0;i<10;i++){vec3 p=ro+rd*(float(i)+.5)*dt;float D=-p.y;if(D<=0.)break;acc+=exp(-KD*D-KC*(float(i)+.5)*dt)*caust(p.xz,D)*dt;}
+  return acc*sunC*sunI*.03*ph*.25;}   // 最後の .25 は見え方の目安（光芒の強さの合わせ）
+`;
   const SKYL = `
 uniform sampler2D skyT;
 vec3 skyL(vec3 d,float lod){d.y=max(d.y,0.);float v=sqrt(d.y),u=atan(d.z,d.x)/6.2831853+.5;return textureLod(skyT,vec2(u,v),lod).rgb;}
@@ -108,12 +124,13 @@ vec3 tone(vec3 x){x=x*(2.51*x+.03)/(x*(2.43*x+.59)+.14);return pow(clamp(x,0.,1.
 float h12(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
 `;
 
-  const FS_SKY = HEAD + SKYL + UNDER + `
-uniform vec3 cf,cr,cu,L,sunC;uniform float tx,ty,sunI,expo,disc,stars,fogSky;in vec2 vUv;out vec4 o;
+  const FS_SKY = HEAD + SKYL + UNDER + CAUST + `
+uniform vec3 cf,cr,cu,L,sunC,cam;uniform float tx,ty,sunI,expo,disc,stars,fogSky;in vec2 vUv;out vec4 o;
 void main(){
   vec3 d=normalize(cf+(vUv.x*2.-1.)*tx*cr+(vUv.y*2.-1.)*ty*cu);
-  if(under>0.){o=vec4(tone(ubg(d,skyL(vec3(0,1,0),6.),L,sunC,sunI)*expo)+(h12(gl_FragCoord.xy)-.5)/255.,1);return;}   // 水の中: 空のかわりに水の中の光
+  if(under>0.){o=vec4(tone((ubg(d,skyL(vec3(0,1,0),6.),L,sunC,sunI)+shafts(cam,d,40.,sunC,sunI))*expo)+(h12(gl_FragCoord.xy)-.5)/255.,1);return;}   // 水の中: 空のかわりに水の中の光＋光芒
   vec3 c=skyL(d,0.);float mu=dot(d,L);
+  if(d.y<0.){float Fg=.02+.98*pow(1.-min(1.,-d.y*1.2),5.);c=mix(vec3(.004,.028,.06)*(skyL(vec3(0,1,0),6.)*.9+sunC*sunI*.04*max(L.y,0.)),skyL(vec3(d.x,-d.y,d.z),2.),Fg);}   // 水平線より下: 海の色の下地（網目が足りない所でも空にならないように）
   c=mix(c,skyL(normalize(vec3(d.x,0.,d.z)),1.),fogSky*(1.-smoothstep(0.,.35,d.y)));   // 霧: 空の下のほうもかすむ
   c+=disc*sunC*sunI*(smoothstep(.99997,.99999,mu)*60.+pow(max(mu,0.),1500.)*.6+pow(max(mu,0.),40.)*.04);
   if(stars>0.&&d.y>0.){vec2 sp=vec2(atan(d.z,d.x),asin(d.y))*180.;vec2 ci=floor(sp),f=fract(sp)-.5;float hs=h12(ci);
@@ -149,12 +166,16 @@ void main(){
   vPos=p;vXZ=xz;vH=D.y;gl_Position=VP*vec4(p,1);
 }`;
 
-  const FS_WATER = HEAD + SKYL + UNDER + `
-uniform vec3 cam,L,sunC,Ls,cfw;uniform float sunI,expo,fogL,sss,rough0,disc,fogH,windU,windA,hasBg,nearP,farP;uniform vec2 vpS;uniform sampler2D bgC,bgD;
+  const FS_WATER = HEAD + SKYL + UNDER + CAUST + `
+uniform vec3 cam,L,sunC,Ls,cfw;uniform float sunI,expo,fogL,sss,rough0,disc,fogH,windU,windA,hasBg,nearP,farP,foamStyle,sigB;uniform sampler2D dBt;uniform vec2 vpS;uniform sampler2D bgC,bgD;
 uniform sampler2D sA,sB,sC;
 in vec3 vPos;in vec2 vXZ;in float vH,vBS,vDep,vBF;out vec4 o;
 float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
   return mix(mix(h12(i),h12(i+vec2(1,0)),f.x),mix(h12(i+vec2(0,1)),h12(i+vec2(1,1)),f.x),f.y);}
+// 泡の網目: ばらばらに置いた点のいちばん近い 2 つへの距離の差（境目ほど 0）
+float foamCells(vec2 p){vec2 i=floor(p),f=fract(p);float d1=9.,d2=9.;
+  for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++){vec2 g=vec2(x,y),o=vec2(h12(i+g),h12(i+g+17.3));float d=length(g+o-f);if(d<d1){d2=d1;d1=d;}else if(d<d2)d2=d;}
+  return d2-d1;}
 void main(){
   vec4 a=texture(sA,vXZ/Ls.x),b=texture(sB,vXZ/Ls.y),c=texture(sC,vXZ/Ls.z);
   vec2 sl=a.xy+b.xy+c.xy;
@@ -165,7 +186,7 @@ void main(){
     if(dot(Tt,Tt)>0.){F=.02+.98*pow(1.-max(dot(Tt,n),0.),5.);col0=(skyL(Tt,rough0*4.)+sunC*sunI*pow(max(dot(Tt,L),0.),900.)*disc*.5)*(1.-F)*1.77;}
     col0+=F*ubg(reflect(I,Nd),amb0,L,sunC,sunI);
     float fmU=clamp(texture(sB,vXZ/Ls.y).z+vBF,0.,1.);col0=mix(col0,amb0*.6,smoothstep(.2,.8,fmU)*.7);   // 泡は下から見ると白くくもる
-    vec3 Tr=exp(-KC*dist);col0=col0*Tr+ubg(I,amb0,L,sunC,sunI)*(1.-Tr);
+    vec3 Tr=exp(-KC*dist);col0=col0*Tr+ubg(I,amb0,L,sunC,sunI)*(1.-Tr)+shafts(cam,I,min(dist,40.),sunC,sunI);
     o=vec4(tone(col0*expo)+(h12(gl_FragCoord.xy)-.5)/255.,1);return;}
   float nv=max(dot(n,V),1e-3);
   float F=.02+.98*pow(1.-nv,5.);                         // フレネル（水の屈折率 1.33）
@@ -194,8 +215,22 @@ void main(){
   vec3 col=mix(body,refl,F)+spec;
   float fm=clamp(b.z+contact*.7+vBF,0.,1.);   // 白波は中の海面の泡（割合を観測に合わせているのと同じもの）。vBF = 浜で砕けたあとの泡   // 水面と物がふれる所は細い泡
   vec2 wd=vec2(cos(windA),sin(windA)),q=vec2(dot(vXZ,wd),dot(vXZ,vec2(-wd.y,wd.x)));
-  float tex=mix(vn(vXZ*2.3)*.6+vn(vXZ*7.1)*.4,vn(q*vec2(.35,3.))*.7+vn(q*vec2(1.,9.))*.3,smoothstep(8.,16.,windU));   // 強い風では泡が風下にのびたすじ（見た目）
-  fm=smoothstep(.15,.75,fm*(.55+.9*tex));
+  // 泡の形（見た目の目安）: 砕けたばかりの濃い泡は白くはっきり、波の山ほど出やすい。うすくなるにつれて、小さな泡の膜の境目のような細い網目だけが残って消えていく。強い風では風下にのびる
+  // 泡の形の案（見比べ用）: 0 = A 細かく崩れた波頭（波の山の線にそって細長い）、1 = B 風下のすじ、2 = C 丸いかたまり
+  vec2 qs=foamStyle<.5?q*vec2(1.6,.7)*1.8:foamStyle<1.5?q*vec2(.22,2.2):mix(vXZ,q*vec2(.45,1.6),smoothstep(8.,16.,windU));
+  // 泡の量 fm を、いくつかの大きさを重ねたゆらぎ nz と比べる: 多い所はほとんど白く、少ない所はゆらぎの高い所だけが島のように残る（穴のあいたまだら）
+  float nz=.45*vn(qs*1.1)+.3*vn(qs*3.3+3.7)+.17*vn(qs*9.7+1.3)+.08*(1.-foamCells(qs*6.))*1.2;
+  float crest=clamp(vH/(abs(vH)+1.5),-1.,1.);
+  float amt=fm*1.35+.18*crest;   // 波の山ほど泡が残りやすい
+  float fresh=smoothstep(.42,.58,fm);   // 白く見える泡（面積の割合を観測に合わせているのと同じ境目 0.5）
+  float edge=foamStyle<.5?.025:.06;if(foamStyle<.5)nz=mix(nz,vn(qs*4.1+9.)*.6+vn(qs*13.)*.4,.45);   // A はふちを細かく崩す
+  float fm0=b.z;fm=smoothstep(nz-edge,nz+edge,amt)*fresh;   // 白く見える泡だけ（うすい泡のもやは、灰色にくすんでうそくさいので描かない）
+  // 本物の写真（NOAA の風力階級の写真）とくらべて足した（見た目の目安）: ①古い泡が風で引きのばされた細いすじ（風速 11〜18 m/s で現れる）
+  // ②砕ける波頭の下の青緑（巻きこまれた気泡が光を散らす）
+  float fsl=vn(q*vec2(.18,9.)+vec2(0,3.1))*.65+vn(q*vec2(.45,22.)+5.)*.35,sb=vn(q*vec2(.09,.9)+2.);   // 細いすじ × 途切れ
+  float st=smoothstep(.78,.9,fsl)*smoothstep(.35,.7,sb)*smoothstep(.08,.35,fm0)*smoothstep(11.,18.,windU)*.5;
+  col+=vec3(.03,.16,.14)*(sunC*sunI*max(L.y,0.)*.06+amb*.9)*smoothstep(.4,.8,fm0+.15*crest)*(1.-F)*.5;
+  fm=max(fm,st);
   vec3 foamC=(sunC*sunI*max(dot(n,L),0.)*.3+amb*1.1)*.9;
   col=mix(col,foamC,fm*.9);
   vec3 hz=skyL(normalize(vec3(-V.x,0.,-V.z)),1.);
@@ -216,18 +251,19 @@ void main(){int i=int(gl_FragCoord.x);vec2 xz=P[i];float wb=WB[i],w=WC[i];
   const VS_MESH = HEAD + `
 in vec3 aP,aN,aC,aM;uniform mat4 VP,M;out vec3 vP,vN,vC,vM;out float vLy;
 void main(){vec4 w=M*vec4(aP,1);vP=w.xyz;vN=mat3(M)*aN;vC=aC;vM=aM;vLy=aP.y;gl_Position=VP*w;}`;
-  const FS_MESH = HEAD + SKYL + UNDER + `
+  const FS_MESH = HEAD + SKYL + UNDER + CAUST + `
 uniform vec3 cam,L,sunC;uniform float sunI,expo,fogL,wetRain,wetSplash;in vec3 vP,vN,vC,vM;in float vLy;out vec4 o;
 // vM = (つや, 濡れやすさ, 0)。濡れると色が暗く、つやが強くなる（見た目の目安）
 void main(){vec3 n=normalize(vN);vec3 amb=skyL(vec3(0,1,0),6.);
   float dist=length(cam-vP);vec3 V=(cam-vP)/dist;if(dot(n,V)<0.)n=-n;
   float wet=clamp(max(wetRain,wetSplash*(1.-smoothstep(.15,1.4,vLy))),0.,1.)*vM.y;
   vec3 alb=vC*(1.-.45*wet);float gl=mix(vM.x,.9,wet);
-  vec3 col=alb*(sunC*sunI*max(dot(n,L),0.)*.06+amb*(.55+.45*n.y));
+  float Dw=max(-vP.y,0.),cst=Dw>0.?caust(vP.xz,Dw):1.;vec3 att=exp(-KD*Dw);   // 水の下の所: 光は深さで弱まり、コースティクスでゆらめく
+  vec3 col=alb*(sunC*sunI*max(dot(n,L),0.)*.06*att*cst+amb*(.55+.45*n.y)*att);
   vec3 h=normalize(L+V);float nv=max(dot(n,V),0.),F=.04+.96*pow(1.-nv,5.);
   col+=sunC*sunI*pow(max(dot(n,h),0.),mix(10.,500.,gl))*gl*(.02+.25*F)*step(0.,dot(n,L));
   col+=skyL(reflect(-V,n),(1.-gl)*6.)*F*gl*.45;
-  if(under>0.&&vP.y<cam.y+1.){vec3 Tr=exp(-KC*dist);col=col*Tr+ubg(-V,amb,L,sunC,sunI)*(1.-Tr);}   // 水の中から見る物は水のかすみ
+  if(under>0.&&vP.y<cam.y+1.){vec3 Tr=exp(-KC*dist);col=col*Tr+ubg(-V,amb,L,sunC,sunI)*(1.-Tr)+shafts(cam,-V,min(dist,40.),sunC,sunI);}   // 水の中から見る物は水のかすみ
   else col=mix(col,skyL(normalize(vec3(-V.x,0.,-V.z)),1.),1.-exp(-dist/fogL));
   o=vec4(tone(col*expo),1);}`;
   // 地球儀（段階D）: 画面の点ごとに光線を地球（中心 (0,−Re,0)）に当てる。M = 世界の向き → 地球の座標

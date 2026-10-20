@@ -184,6 +184,9 @@ function setFloat(on) { camFloat = on; camWater = null; const b = $('floatBtn');
   camAnim = null; if (on) { cam.free = true; cam.eye = 1.6; cam.dist = 0.01; cam.pitch = 0.05; cam.target = [FLOAT_AT[0], 0, FLOAT_AT[1]]; cam.yaw = Math.atan2(-FLOAT_AT[1], -FLOAT_AT[0]); }   // 人のほうを向く
   else { cam.free = false; cam.target = [0, 0, 0]; cam.dist = 16; cam.pitch = 0.12; } }
 $('floatBtn').onclick = () => setFloat(!camFloat);
+// 泡の形（見比べ。白く見える泡の量は観測の式でどれも同じ）
+function setFoamStyle(k) { SUN.foamStyle = k; document.querySelectorAll('#foamStyles button').forEach(b => b.classList.toggle('on', +b.dataset.f === k)); }
+document.querySelectorAll('#foamStyles button').forEach(b => b.onclick = () => setFoamStyle(+b.dataset.f));
 // 水の中へ: 平均の水面から eye（負）の深さ。見上げられる。波の谷が来るとカメラが水の外に出ることもある（そのときはふつうに描く）
 let diving = false;
 function setDive(on) { diving = on; camAnim = null; const b = $('diveBtn'); b.textContent = on ? '水から出る' : '水の中へ'; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
@@ -443,7 +446,7 @@ function draw(dt) {
       SUN.curvR = GL.Re; SUN.far = Math.max(30000, Math.min(400e3, 1.3 * Math.sqrt(2 * GL.Re * alt) + 30000)); SUN.fogL = Math.max(SUN.fogL, 40000); SUN.fogH = 8000;   // 地上の見通し 40 km（晴れの日の目安）、空気は 8 km ごとにうすく
       const a = Math.min(1, Math.max(0, (alt - 15e3) / 65e3)), al = a * a * (3 - 2 * a);
       if (al > 0 && glbElev) SUN.globe = { alpha: al, alt, Re: GL.Re, M: new Float32Array(GL.worldToEcef()), elev: glbElev }; }
-    const wHere = pc ? pc.d[1] : 0; SUN.under = diving && b.pos[1] < wHere - 0.05; SUN.wideGrid = camFloat || diving;   // 波のすぐそばでは網目を画面の外まで広く SUN.camD = Math.max(0, wHere - b.pos[1]);
+    const wHere = pc ? pc.d[1] : 0; SUN.under = diving && b.pos[1] < wHere - 0.05; SUN.wideGrid = camFloat || diving || (S.st && S.st.Hm0 > 2);   // 波のすぐそばでは網目を画面の外まで広く SUN.camD = Math.max(0, wHere - b.pos[1]);
     ocean.frame(dt, S.simT, b, SUN); SUN.under = false; }
   drawOverlay(b, dt);
   if (beachOpen && !beach3d) window.WGbeach.draw($('sec'), S.st, S.simT, beachSlope);
@@ -460,7 +463,7 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 // はじめ: 朝の景色・人あり・風が吹く前から再生（案内は「つぎへ」で始まる）
-setTod('morning'); setWeather('clear'); setObj('human'); setMode('earth'); setSwSpeed(3600); setSwPlace('storm');
+setTod('morning'); setWeather('clear'); setObj('human'); setFoamStyle(0); setMode('earth'); setSwSpeed(3600); setSwPlace('storm');
 setMSpeed(300);
 S.free = true; update();
 requestAnimationFrame(loop);

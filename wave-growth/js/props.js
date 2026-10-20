@@ -136,7 +136,7 @@ window.WGprops = (() => {
 
   // 種類: 形・海面を読む点（物の向きでの x, z）・読む海面（中 wb・小 wc）・動きのおくれ tau・札・カメラの距離・しぶきの濡れやすさ
   const TYPES = {
-    human:   { name: '人', size: '身長 1.7 m', geo: human, pts: [[0.8, 0], [-0.8, 0], [0, 0.8], [0, -0.8]], wb: 1, wc: 0.2, tau: 0.35, labelY: 2.3, dist: 8, splash: 1 },
+    human:   { name: '人', size: '身長 1.7 m', geo: human, pts: [[0.8, 0], [-0.8, 0], [0, 0.8], [0, -0.8]], wb: 1, wc: 0.2, tau: 0.08, labelY: 2.3, dist: 8, splash: 1 },
     boat:    { name: 'ボート', size: '長さ 4 m', geo: boat, pts: [[1.6, 0], [-1.6, 0], [0, 0.6], [0, -0.6]], wb: 1, wc: 0, tau: 0.4, labelY: 1.4, dist: 12, splash: 0.8 },
     fishing: { name: '漁船', size: '長さ 15 m', geo: fishing, pts: [[6, 0], [-6, 0], [0, 2], [0, -2]], wb: 1, wc: 0, tau: 0.9, labelY: 10, dist: 34, splash: 0.4 },
     ship:    { name: '大きな船', size: '長さ 120 m', geo: ship, pts: [[50, 0], [-50, 0], [0, 9], [0, -9], [0, 0]], wb: 0, wc: 0, tau: 2.5, labelY: 36, dist: 220, splash: 0.1 },
