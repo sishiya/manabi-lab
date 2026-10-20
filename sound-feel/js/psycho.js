@@ -40,7 +40,7 @@ function partialsOf(P) {
   const out = [];
   const pw = 5 - 4.3 * P.bright;                   // 倍音の弱まり方（大きいほど sin に近い）
   const ex = 1 + 0.12 * P.stretch;                  // 倍音のずれ（0 なら整数倍）
-  const addTone = (f0, grp, base) => {   // base: 合成の枠の番号（1つ目 0〜15、2つ目 16〜31、キーキー 32〜）
+  const addTone = (f0, grp, base) => {   // base: 合成の枠の番号（1つ目 0〜15、2つ目 16〜31、3つ目 32〜47、キーキー 48〜）
     for (let n = 1; n <= 16; n++) {
       const f = f0 * Math.pow(n, ex);
       if (f > 12000) break;
@@ -49,9 +49,12 @@ function partialsOf(P) {
       out.push({ f, a, g: grp, s: base + n - 1 });
     }
   };
-  addTone(P.f0, 0, 0);
-  if (P.two) addTone(P.f0 * Math.pow(2, P.cents / 1200), 0, 16);
-  if (P.squeal > 0.001) SQUEAL_F.forEach((f, i) => out.push({ f, a: 1.4 * P.squeal * (i % 2 ? 0.8 : 1), g: 1, s: 32 + i }));
+  if (P.chord && P.chord.length) P.chord.slice(0, 3).forEach((st, i) => addTone(P.f0 * Math.pow(2, st / 12), 0, 16 * i));   // BGM の和音（半音の数）
+  else {
+    addTone(P.f0, 0, 0);
+    if (P.two) addTone(P.f0 * Math.pow(2, P.cents / 1200), 0, 16);
+  }
+  if (P.squeal > 0.001) SQUEAL_F.forEach((f, i) => out.push({ f, a: 1.4 * P.squeal * (i % 2 ? 0.8 : 1), g: 1, s: 48 + i }));
   // 音程のある音の全体の強さ（パワー）を tone² に、ノイズ（自然の音）を noise² にそろえる
   const tone = P.tone === undefined ? 1 : P.tone;
   let pt = 0; for (const p of out) pt += p.a * p.a;
@@ -171,13 +174,18 @@ function analyze(P) {
   // テンポ: 速いほど興奮のほう（Bernardi ほか 2006: 速いテンポで呼吸・心拍・血圧が上がった）。拍がないときは 0
   const tempo = P.bpm > 0 ? 0.6 * Math.tanh((P.bpm - 90) / 40) : 0;
   const arousal = Math.tanh(0.45 * Math.log2(Math.max(0.05, N) / 4) + 0.5 * (S - 1.0) + 0.6 * R + tempo);
-  return { parts, comps: lv, N, S, R, T, pleas, valence, arousal, bandSone };
+  // 内わけ（地図の目盛りでの寄与）: 快さは log10 の各項 ÷ 0.65、興奮は tanh の中の各項
+  const why = {
+    v: { R: -0.7 * R / Math.LN10 / 0.65, S: -1.08 * S / Math.LN10 / 0.65, T: Math.log10((1.24 - Math.exp(-2.43 * T)) / (1.24 - Math.exp(-2.43))) / 0.65, N: -Math.pow(0.023 * N, 2) / Math.LN10 / 0.65 },
+    a: { N: 0.45 * Math.log2(Math.max(0.05, N) / 4), S: 0.5 * (S - 1.0), R: 0.6 * R, bpm: tempo },
+  };
+  return { parts, comps: lv, N, S, R, T, pleas, valence, arousal, bandSone, why };
 }
 
 // 2つ目の音の音程（セント）を 0〜1200 で動かしたときの粗さ（いまの音色・高さ・大きさで。ゆらしは入れない）
 function roughCurve(P, step = 5) {
   const out = [];
-  const q = Object.assign({}, P, { two: true, squeal: 0, amDepth: 0 });
+  const q = Object.assign({}, P, { two: true, squeal: 0, amDepth: 0, chord: null, nature: 'none' });
   for (let c = 0; c <= 1200; c += step) {
     q.cents = c;
     out.push(pairRough(levelsOf(partialsOf(q), q.level)) / ROUGH_REF);

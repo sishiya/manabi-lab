@@ -10,6 +10,7 @@ class Additive extends AudioWorkletProcessor {
     this.f = new Float64Array(SLOTS); this.ft = new Float64Array(SLOTS);
     this.a = new Float64Array(SLOTS); this.at = new Float64Array(SLOTS);
     this.g = new Uint8Array(SLOTS); this.ph = new Float64Array(SLOTS);
+    this.pf = new Float64Array(SLOTS); this.pa = new Float64Array(SLOTS); this.pend = new Uint8Array(SLOTS);   // 和音の切りかえ: 小さくしてから高さを変える
     this.amRate = 0; this.amDepth = 0; this.amRateT = 0; this.amDepthT = 0; this.amPh = 0;
     this.gain = 0; this.gainT = 0;
     // キーキーの帯のゆっくりした揺れ（1〜16 Hz。Kumar ほか 2008）: 2つの遅い乱れを足す
@@ -28,9 +29,12 @@ class Additive extends AudioWorkletProcessor {
         for (let i = 0; i < SLOTS; i++) {
           const p = m.parts[i];
           if (p) {
-            if (this.at[i] === 0 && this.a[i] < 1e-5) { this.f[i] = p.f; this.ph[i] = Math.random(); }   // 鳴っていなかった枠は高さを飛ばしてよい
-            this.ft[i] = p.f; this.at[i] = p.a; this.g[i] = p.g;
-          } else this.at[i] = 0;
+            if (this.at[i] === 0 && this.a[i] < 1e-5) { this.f[i] = p.f; this.ft[i] = p.f; this.ph[i] = Math.random(); }   // 鳴っていなかった枠は高さを飛ばしてよい
+            if (m.xfade && Math.abs(p.f / this.ft[i] - 1) > 0.005 && this.a[i] > 1e-5) {   // すべらせずに、いったん消して次の高さで鳴らす
+              this.pend[i] = 1; this.pf[i] = p.f; this.pa[i] = p.a; this.at[i] = 0; this.g[i] = p.g; continue;
+            }
+            this.pend[i] = 0; this.ft[i] = p.f; this.at[i] = p.a; this.g[i] = p.g;
+          } else { this.at[i] = 0; this.pend[i] = 0; }
         }
       }
       if (m.amRate !== undefined) { this.amRateT = m.amRate; this.amDepthT = m.amDepth; }
@@ -120,6 +124,7 @@ class Additive extends AudioWorkletProcessor {
       let v = 0;
       for (let i = 0; i < SLOTS; i++) {
         this.a[i] += (this.at[i] - this.a[i]) * k;
+        if (this.pend[i] && this.a[i] < this.pa[i] * 0.02 + 1e-6) { this.pend[i] = 0; this.f[i] = this.ft[i] = this.pf[i]; this.at[i] = this.pa[i]; }
         if (this.a[i] < 1e-6) continue;
         this.f[i] += (this.ft[i] - this.f[i]) * k;
         this.ph[i] += this.f[i] * fmul * dt; if (this.ph[i] > 1) this.ph[i] -= 1;

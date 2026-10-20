@@ -19,6 +19,8 @@ const UI = (() => {
     { k: 'noise', lab: '自然の音の量', min: 0, max: 1, step: 0.01, fmt: pct, note: '' },
     { k: 'tone', lab: '音程のある音の量', min: 0, max: 1, step: 0.01, fmt: pct, note: '0 にすると自然の音だけ' },
     { k: 'wobble', lab: 'ゆらぎ', min: 0, max: 1, step: 0.01, fmt: pct, note: '高さと大きさを、ゆっくり不規則に揺らす（いくつかの速さの揺れを足した 1/f に近い形）。「1/f ゆらぎで落ち着く」という説は根拠がまちまちなので、推定の点は動かしません' },
+    { k: 'mood', lab: '雰囲気', opts: [['calm', 'ゆったり'], ['quiet', 'しずか'], ['bright', 'あかるい']], apply: (P, v) => applyMood(P, v), note: 'なめらかな音色・小さめ・音どうしを広くあけた和音（粗さが少ない）の組み合わせ。地図のどこに来るかは上の点で' },
+    { k: 'chordSec', lab: '和音の長さ', min: 4, max: 20, step: 1, fmt: v => Math.round(v) + ' 秒', note: '和音を何秒ごとに次へ進めるか' },
     { k: 'stretch', lab: '倍音のずれ', min: 0, max: 1, step: 0.01, fmt: pct, note: '倍音を整数倍からずらす（鐘や金属の板のような音）' },
   ];
   const rows = {};
@@ -37,7 +39,8 @@ const UI = (() => {
         row.innerHTML = `<span class="lab">${d.lab}</span><span class="opts">${d.opts.map(([v, s]) => `<button type="button" data-v="${v}">${s}</button>`).join('')}</span>${note}`;
         row.querySelectorAll('.opts button').forEach(b => b.addEventListener('click', () => {
           P[d.k] = b.dataset.v;
-          if (P[d.k] !== 'none' && P.noise < 0.05) P.noise = 0.6;   // 選んだのに聞こえない、をふせぐ
+          if (d.apply) d.apply(P, b.dataset.v);
+          else if (P[d.k] !== 'none' && P.noise < 0.05) P.noise = 0.6;   // 選んだのに聞こえない、をふせぐ
           sync(P); cb(d.k);
         }));
         rows[d.k] = { row, d };
@@ -74,6 +77,29 @@ const UI = (() => {
     }
   }
 
+  // ---- BGM（作業用に流しっぱなし）: 雰囲気ごとの設定と和音の進み方（半音の数。なめらかにつながる転回形） ----
+  // 低い音域で近い音程（3度）はうなって粗くなる（Plomp と Levelt の曲線）ので、音どうしを広くあけた形（開いた配置）にする
+  const PI = [[0, 7, 16], 'Ⅰ'], PIV = [[-7, 9, 12], 'Ⅳ'], PV = [[-5, 11, 14], 'Ⅴ'], PVI = [[-3, 4, 12], 'Ⅵm'];
+  const MOODS = {
+    calm:   { f0: 196, bright: 0.2,  chordSec: 9,  nature: 'wave', noise: 0.35, tone: 0.8,  level: 46, prog: [PI, PVI, PIV, PV] },
+    quiet:  { f0: 165, bright: 0.12, chordSec: 13, nature: 'pink', noise: 0.2,  tone: 0.9,  level: 44, prog: [PI, PIV, PVI, PIV] },
+    bright: { f0: 262, bright: 0.35, chordSec: 7,  nature: 'rain', noise: 0.25, tone: 0.85, level: 50, prog: [PI, PV, PVI, PIV] },
+  };
+  function applyMood(P, v) {
+    const m = MOODS[v]; if (!m) return;
+    Object.assign(P, { mood: v, f0: m.f0, bright: m.bright, chordSec: m.chordSec, nature: m.nature, noise: m.noise, tone: m.tone, level: m.level,
+      two: false, squeal: 0, amRate: 0, amDepth: 0, bpm: 0, stretch: 0, wobble: 0.15, chordIx: 0, chord: m.prog[0][0] });
+  }
+
+  // ---- なぜそこに来るか（推定の式の項ごとの寄与。いちばん効いているものから） ----
+  const NAMES = { R: '粗さ', S: '鋭さ', T: '音らしさ', N: '大きさ', bpm: 'テンポ' };
+  function whyText(res) {
+    const fmt = (o, sign) => Object.entries(o).filter(([, x]) => sign * x > 0.04).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 3)
+      .map(([k, x]) => `${NAMES[k]} ${x > 0 ? '+' : '−'}${Math.abs(x).toFixed(2)}`).join('、');
+    const vd = fmt(res.why.v, -1), au = fmt(res.why.a, 1), ad = fmt(res.why.a, -1);
+    return [vd && `快さを下げているもの: ${vd}`, au && `興奮のほうへ: ${au}`, ad && `落ち着きのほうへ: ${ad}`].filter(Boolean).join('　／　') || 'どの項も小さい（ほぼまん中）';
+  }
+
   // ---- 計算した値（見るだけ） ----
   const VALS = [
     { k: 'N', lab: '大きさ', unit: 'sone', max: 24, note: '耳に聞こえる大きさ。40 phon（静かな部屋の話し声くらい）で 1' },
@@ -104,7 +130,7 @@ const UI = (() => {
   }
 
   // ---- タブとつぎへのツアー（1歩に新しいもの1つ。どのタブからでも始められるよう、set は BASE からの差） ----
-  const BASE = { f0: 220, bright: 0.3, two: false, cents: 700, squeal: 0, amRate: 0, amDepth: 0, stretch: 0, level: 60, tone: 1, nature: 'none', noise: 0, bpm: 0, wobble: 0 };
+  const BASE = { f0: 220, bright: 0.3, two: false, cents: 700, squeal: 0, amRate: 0, amDepth: 0, stretch: 0, level: 60, tone: 1, nature: 'none', noise: 0, bpm: 0, wobble: 0, chord: null, mood: null, chordSec: 9, chordIx: 0 };
   const K1 = ['f0', 'bright', 'level'], K2 = [...K1, 'two', 'cents'], K3 = [...K2, 'squeal'], K4 = [...K3, 'amRate', 'amDepth'], K5 = [...K4, 'bpm'], K6 = [...K5, 'nature', 'noise', 'tone'];
   const TOUR = [
     { tab: 'はじめに', t: 'つまみ（青緑）で音を作ると、耳のモデルで計算して、地図の白い点が動きます。左の「▶ 音を出す」で、小さな音から始まります。', btn: 'はじめる', keys: [], set: {}, hl: 'map' },
@@ -114,8 +140,10 @@ const UI = (() => {
     { tab: '④ザラザラ', t: '④音の大きさを1秒に 30〜150 回ゆらすと「粗さ」。悲鳴や警報の音がもつ性質です（Arnal ほか 2015）。点は興奮のほうへ上がり、快さは下がります。', keys: K4, fresh: ['amRate', 'amDepth'], set: { f0: 500, bright: 0.6, amRate: 70, amDepth: 0.9 }, hl: 'map' },
     { tab: '⑤テンポ', t: '⑤拍の速さ。速いテンポほど呼吸・心拍・血圧が上がり、音楽を止めた間で下がりました（Bernardi ほか 2006）。60 と 150 で点をくらべて。', keys: K5, fresh: ['bpm'], set: { f0: 330, bpm: 60 }, hl: 'map' },
     { tab: '⑥自然の音', t: '⑥波・雨・風（ノイズを形づけた合成）。耳のモデルでは快さが低めに出ますが、自然の音でストレスからの回復が速い傾向も（Alvarsson ほか 2010）。「じぶんの感じ方」を置いてくらべて。', keys: K6, fresh: ['nature', 'me'], set: { tone: 0.3, nature: 'wave', noise: 0.8, level: 52 }, hl: 'map' },
-    { tab: '自由に', t: 'ここからは自由に。「ゆらぎ」「倍音のずれ」（鐘のような音）も使えます。気になった音は「じぶんの感じ方」を置いて、推定とくらべてみてください。', btn: '最初から', keys: 'all', fresh: ['wobble', 'stretch'], set: null, hl: null },
+    { tab: '自由に', t: 'ここからは自由に。「ゆらぎ」「倍音のずれ」（鐘のような音）も使えます。気になった音は「じぶんの感じ方」を置いて、推定とくらべてみてください。', keys: [...K6, 'wobble', 'stretch'], fresh: ['wobble', 'stretch'], set: null, hl: null },
+    { tab: '地図でつくる', t: '地図の上を指（マウス）でなぞると、そこに来る音を、推定の式を逆にたどって探します。つまみも動きます。はなすと、なぜそこなのかが下に出ます。', keys: [...K6, 'wobble', 'stretch'], fresh: [], set: null, hl: null, mode: 'map' },
+    { tab: 'BGM', t: '作業用の BGM。粗さの少ない和音（音どうしを広くあけた形）をゆっくり進めます。タブを隠しても止まりません（止めるのは ■）。', btn: '最初から', keys: ['mood', 'chordSec', 'nature', 'noise', 'level'], fresh: ['mood'], set: { mood: 'calm' }, hl: 'map', mode: 'bgm' },
   ];
-  return { build, sync, show, buildVals, showVals, TOUR, BASE, KNOBS };
+  return { build, sync, show, buildVals, showVals, TOUR, BASE, KNOBS, MOODS, applyMood, whyText, toPos, fromPos };
 })();
 window.UI = UI;

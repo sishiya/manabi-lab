@@ -32,6 +32,7 @@ button.new{box-shadow:0 0 0 3px rgba(255,255,255,.35)}
 #tour{display:flex;align-items:center;gap:10px;padding:6px 16px 8px}
 #tourText{margin:0;flex:1;font-size:14px;line-height:1.6;color:var(--view)}
 #next{white-space:nowrap}
+#why{margin:0;padding:10px 16px 0;font-size:12px;line-height:1.6;color:var(--view);font-family:var(--f-mono);min-height:1.6em}
 /* 見出し: さわれる側と、見るだけの側 */
 h2.sec{font-size:15px;margin:0 0 8px;display:flex;align-items:baseline;gap:10px;padding-left:8px;border-left:4px solid}
 h2.sec small{font-size:12px;font-weight:400;color:var(--muted)}
@@ -73,6 +74,7 @@ h2.sec.view{border-color:var(--view);color:var(--view)}
   #bar button{font-size:13px;padding:4px 10px}
   #tour{padding:6px 10px 8px;gap:8px}
   #tourText{font-size:13px}
+  #why{padding:8px 10px 0;font-size:11px}
   .row{grid-template-columns:6.5em 1fr 5.2em;padding:6px 8px}
   #valgrid{grid-template-columns:1fr 1fr}
   .val .n{display:none}

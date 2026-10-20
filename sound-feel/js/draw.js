@@ -7,15 +7,15 @@ const Draw = (() => {
   const font = (px, w = 500) => `${w} ${px}px 'Zen Kaku Gothic New','Yu Gothic',sans-serif`;
 
   function frame(g, x, y, w, h, title, hl) {   // hl: 'look'＝いまの見どころ（白）、'me'＝タップできる（金）
-    g.fillStyle = C.panel; g.strokeStyle = hl === 'me' ? C.me : hl ? 'rgba(232,240,244,.7)' : C.line; g.lineWidth = hl ? 2 : 1;
+    g.fillStyle = C.panel; g.strokeStyle = hl === 'me' ? C.me : hl === 'op' ? C.acc : hl ? 'rgba(232,240,244,.7)' : C.line; g.lineWidth = hl ? 2 : 1;
     g.beginPath(); g.roundRect(x + 0.5, y + 0.5, w - 1, h - 1, 8); g.fill(); g.stroke();
-    g.fillStyle = C.ink; g.font = font(12, 700); g.textAlign = 'left'; g.textBaseline = 'top';
+    g.fillStyle = hl === 'me' ? C.me : hl === 'op' ? C.acc : C.ink; g.font = font(12, 700); g.textAlign = 'left'; g.textBaseline = 'top';
     g.fillText(title, x + 8, y + 6);
   }
 
   // 地図: 横＝快さ（左 不快・右 快）、縦＝興奮（上 興奮・下 落ち着き）。Russell 1980 の円環モデルの2つの軸
   function map(g, x, y, w, h, st, hl) {
-    frame(g, x, y, w, h, '快さ × 興奮の地図（推定）', st.placing ? 'me' : hl && 'look');
+    frame(g, x, y, w, h, st.placing ? '地図をタップして置く' : st.mode === 'map' ? '地図をなぞる（目標）' : '快さ × 興奮の地図（推定）', st.placing ? 'me' : st.mode === 'map' ? 'op' : hl && 'look');
     const pad = 22, top = 24, cx = x + w / 2, cy = y + top + (h - top) / 2;
     const rx = (w - pad * 2) / 2, ry = (h - top - pad * 1.4) / 2;
     st.layout = { map: { cx, cy, rx, ry } };
@@ -50,9 +50,13 @@ const Draw = (() => {
       g.fillStyle = C.me; g.beginPath(); g.arc(mx, my, 8, 0, Math.PI * 2); g.fill();
       g.fillStyle = C.bg; g.fillText(String(m.n), mx, my + 0.5);
     }
-    if (st.placing) {
-      g.fillStyle = C.me; g.font = font(12, 700); g.textAlign = 'center'; g.textBaseline = 'bottom';
-      g.fillText('ここをタップ', cx, y + h - 6);
+    // 地図でつくる: 目標（青緑の輪＝さわって動かせる）
+    if (st.mode === 'map') {
+      if (st.target) {
+        const [tx, ty] = P(st.target[0], st.target[1]);
+        g.strokeStyle = C.acc; g.lineWidth = 3; g.beginPath(); g.arc(tx, ty, 12, 0, Math.PI * 2); g.stroke();
+        g.beginPath(); g.moveTo(tx - 17, ty); g.lineTo(tx - 7, ty); g.moveTo(tx + 7, ty); g.lineTo(tx + 17, ty); g.moveTo(tx, ty - 17); g.lineTo(tx, ty - 7); g.moveTo(tx, ty + 7); g.lineTo(tx, ty + 17); g.stroke();
+      }
     }
     const [px, py] = P(st.dv, st.da);
     g.fillStyle = C.ink; g.beginPath(); g.arc(px, py, 7, 0, Math.PI * 2); g.fill();
