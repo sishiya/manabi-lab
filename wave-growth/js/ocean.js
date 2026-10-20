@@ -151,7 +151,8 @@ window.WGocean = (() => {
         const dk = 2 * Math.PI / c.L, amp = new Float32Array(N * N), d = new Float32Array(N * N * 4); let vc = 0;
         if (Hm0 > 0) for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
           const n = i < N / 2 ? i : i - N, m = j < N / 2 ? j : j - N, kx = n * dk, kz = m * dk, k = Math.hypot(kx, kz);
-          if (k >= c.kmin && k < c.kmax) { const s = SK(kx, kz); amp[j * N + i] = Math.sqrt(s * dk * dk / 2); fftVar += s * dk * dk; vc += s * dk * dk; fftSlope += k * k * s * dk * dk; } }
+          // 振れ幅は √(S dk²/4): h0(k) と h0(−k) の共役を足し、乱数（複素数）の大きさの 2 乗の期待値も 2 なので（2026-10-21 確かめ直しで /2 → /4。前は高さが √2 倍だった）
+          if (k >= c.kmin && k < c.kmax) { const s = SK(kx, kz); amp[j * N + i] = Math.sqrt(s * dk * dk / 4); fftVar += s * dk * dk; vc += s * dk * dk; fftSlope += k * k * s * dk * dk; } }
         if (ci === 1) sigB = Math.sqrt(vc);
         for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
           const a = j * N + i, b = ((N - j) % N) * N + (N - i) % N;
@@ -265,6 +266,12 @@ window.WGocean = (() => {
       if (q) { gl.endQuery(tq.TIME_ELAPSED_EXT); tqs.push(q); }
     }
     return { isSoft, setSea, setSpec, frame, makeMesh, get probe() { return probeOut; }, get VP() { return lastVP; }, get txty() { return lastTxTy; }, skyChanged() { skyDirty = true; }, get gpuMs() { return gpuMs; }, get fftHs() { return 4 * Math.sqrt(fftVar); }, get fftSlope() { return fftSlope; }, get foam() { return { thr: foamThr, mean: foamMean, target: foamTarget }; },
+      // 調べ用: 描いている海面（3 枚の FFT の高さ）の分散 → 有義波高。分布の式から出す値（fftHs）とくらべる
+      debugSea() { let tot = 0; const per = []; CASC.forEach(c => { const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+          gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, c.disp, 0); const b = new Float32Array(N * N * 4); gl.readPixels(0, 0, N, N, gl.RGBA, gl.FLOAT, b);
+          let m = 0, v = 0; for (let i = 0; i < N * N; i++) m += b[4 * i + 1]; m /= N * N; for (let i = 0; i < N * N; i++) v += (b[4 * i + 1] - m) ** 2; v /= N * N;
+          gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.deleteFramebuffer(f); per.push(+(4 * Math.sqrt(v)).toFixed(3)); tot += v; });
+        return { HsGPU: 4 * Math.sqrt(tot), HsSpectrum: 4 * Math.sqrt(fftVar), perCascade: per }; },
       // 調べ用: 中の海面の泡を、1×1 のミップと 256×256 の全部で数える（数え方の確かめ）
       debugFoam() { const out = {}; for (const k of [0, 1]) { const c = CASC[1], f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f);
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, c.slope[k], 0); const b = new Float32Array(N * N * 4); gl.readPixels(0, 0, N, N, gl.RGBA, gl.FLOAT, b);
