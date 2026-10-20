@@ -219,7 +219,8 @@ $('mZ').addEventListener('input', () => { MI.S.Z = zOf(+$('mZ').value); MI.reset
 $('mD').addEventListener('input', () => { MI.S.hDeep = Math.max(MI.S.hShelf, dOf(+$('mD').value)); MI.reset(); mLabels(); mNums(); });
 $('mO').addEventListener('input', () => { MI.S.obsKm = +$('mO').value; MI.S.maxObs = 0; MI.S.maxSlope = 0; mLabels(); mNums(); });
 document.querySelectorAll('#mPresets button').forEach(b => b.onclick = () => mPreset(b.dataset.p));
-document.querySelectorAll('#mSpeeds button').forEach(b => b.onclick = () => { mSpeed = +b.dataset.s; document.querySelectorAll('#mSpeeds button').forEach(x => x.classList.toggle('on', x === b)); });
+function setMSpeed(v) { mSpeed = v; document.querySelectorAll('#mSpeeds button').forEach(x => x.classList.toggle('on', +x.dataset.s === v)); }
+document.querySelectorAll('#mSpeeds button').forEach(b => b.onclick = () => setMSpeed(+b.dataset.s));
 $('mPlay').onclick = () => { mPlay = !mPlay; $('mPlay').textContent = mPlay ? '❚❚' : '▶'; };
 $('mReset').onclick = () => { MI.reset(); mNums(); };
 function mNums() { const S2 = MI.S, film = 1200;
@@ -232,10 +233,13 @@ let mView = 'section';
 function setMView(v) { mView = v; document.querySelectorAll('#mViews button[data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === v));
   $('sec').hidden = mode !== 'miller' || v !== 'section';
   if (v === '3d' && ocean) { const r = W.fromDuration(5, 2 * HOUR); ocean.setSea(r.Hm0, r.Tp, WIND_ANG); lastSea = { H: -1, T: -1, at: 0 };
-    camAnim = null; cam.free = true; cam.eye = 3; cam.dist = 7; cam.pitch = 0.03; cam.yaw = Math.PI + 0.12; ocean.skyChanged(); }   // 深い海のほう（−x）を向く
+    camAnim = null; setMSpeed(10); camY = null; cam.free = true; cam.eye = 3; cam.dist = 7; cam.pitch = 0.03; cam.yaw = Math.PI + 0.12; ocean.skyChanged(); }   // 深い海のほう（−x）を向く
   else cam.free = false; }
 document.querySelectorAll('#mViews button[data-v]').forEach(b => b.onclick = () => setMView(b.dataset.v));
-$('mX10').onclick = () => { MI.scale = MI.scale > 1 ? 1 : 10; $('mX10').classList.toggle('on', MI.scale > 1); };
+// カメラ: ふつうは水面に浮かぶ（高さは 0.6 秒でならして追う）。止めると空中の一か所から見る（水面が来たら押し上げる）
+let camY = null, camHold = null;
+$('mHold').onclick = () => { camHold = camHold == null ? (camY == null ? 0 : camY) + cam.eye : null; $('mHold').classList.toggle('on', camHold != null); $('mHold').textContent = camHold != null ? 'カメラを浮かべる' : 'カメラを止める'; };
+$('mX10').onclick = () => { camY = null; camHold = null; $('mHold').classList.remove('on'); $('mHold').textContent = 'カメラを止める'; MI.scale = MI.scale > 1 ? 1 : 10; $('mX10').classList.toggle('on', MI.scale > 1); };
 $('mTele').onclick = () => { const on = cam.fovY > 0.5; cam.fovY = (on ? 12 : 52) * Math.PI / 180; $('mTele').classList.toggle('on', on); };
 function setMode(m) { mode = m; document.body.classList.toggle('miller', m === 'miller');
   document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
@@ -247,7 +251,9 @@ document.querySelectorAll('#modes button').forEach(b => b.onclick = () => setMod
 // ミラーの惑星を 3D で（カメラ・物は水面に浮かぶ。惑星の丸みで遠くは沈む）
 function drawMiller3D(dt) {
   const big = MI.bigData(), here = MI.sample(0), r0 = W.fromDuration(5, 2 * HOUR);
-  cam.target[1] = here.eta; cam.minY = here.eta + 1.6 + 1.2 * r0.Hm0;
+  camY = camY == null ? here.eta : camY + (here.eta - camY) * (1 - Math.exp(-dt / 0.6));
+  if (camHold != null) { cam.target[1] = camHold - cam.eye; cam.minY = here.eta + 1.6 + 1.2 * r0.Hm0; }
+  else { cam.target[1] = camY; cam.minY = here.eta + 1.6 + 1.2 * r0.Hm0; }   // 水の中には入らない
   const b = cam.basis(); big.planeY = MI.sample(b.pos[0]).eta;
   Object.assign(SUN, E.make(S.clock, S.weather)); SUN.fogL = S.weather === 'fog' ? 600 : S.weather === 'rain' ? 30000 : 200000;   // この惑星の空気は澄んでいると仮定 SUN.big = big;
   SUN.rough0 = Math.sqrt(Math.max(0.003 + 5.12e-3 * 5 - ocean.fftSlope, 1.5e-4));
@@ -265,7 +271,7 @@ function drawMiller3D(dt) {
   const g = ov.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, r.width, r.height);
   if (SUN.rain) drawRain(g, r.width, r.height, dt);
   drawPropLabel(g);
-  const cr = MI.crest(), lines = [`惑星の時間 ${(MI.S.t / 3600).toFixed(2)} 時間（地球では ${(MI.S.t / 3600 * 7).toFixed(1)} 年）`,
+  const cr = MI.crest(), tShow = MI.S.t + MI.S.debt, lines = [`惑星の時間 ${(tShow / 3600).toFixed(2)} 時間（地球では ${(tShow / 3600 * 7).toFixed(1)} 年）`,
     `いる所の水面: ふだんより ${MI.fmtM(here.real)}`, `深い海のほう（はじめのカメラの向き）でいちばん高い所: ${cr.km < 1 ? 'ここ' : cr.km.toFixed(0) + ' km 先'}・${MI.fmtM(cr.h)}`];
   g.font = '13px ' + getComputedStyle(document.documentElement).getPropertyValue('--f-body'); g.textAlign = 'left';
   if (MI.scale > 1) lines.push('※ 大波の高さを 10 倍にして見せています（数字は本当の高さ）');
@@ -335,7 +341,7 @@ function loop(now) {
 }
 // はじめ: 朝の景色・人あり・風が吹く前から再生（案内は「つぎへ」で始まる）
 setTod('morning'); setWeather('clear'); setObj('human'); setMode('earth');
-document.querySelector('#mSpeeds [data-s="300"]').classList.add('on');
+setMSpeed(300);
 S.free = true; update();
 requestAnimationFrame(loop);
 

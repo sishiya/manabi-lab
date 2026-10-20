@@ -7,17 +7,19 @@
 window.WGmiller = (() => {
   const g = 12.75, R = 8.3e6, P = 3600, Cd = 0.0025, N = 4096, L = Math.PI * R, dx = L / N, XC = L / 2;
   const S = { b: new Float64Array(N), h: new Float64Array(N), q: new Float64Array(N), t: 0, Z: 2.5e5, hDeep: 4000, hShelf: 0.5, shelfW: 1500e3, slopeW: 300e3,
-    obsKm: 30, hist: [], maxObs: 0, maxDeep: 0, maxSlope: 0 };
+    obsKm: 30, hist: [], maxObs: 0, maxDeep: 0, maxSlope: 0, debt: 0, tPrev: 0 };
+  const prevEta = new Float64Array(N);   // 1 つ前の計算の水面（見せる水面は前と今のあいだをなめらかにつなぐ）
   const Fh = new Float64Array(N), FqL = new Float64Array(N), FqR = new Float64Array(N);
   const edgeX = () => XC - S.shelfW / 2;                         // 棚の左のふち（深い海から棚へ入る所）
   const obsI = () => Math.round((edgeX() + S.obsKm * 1e3) / dx);
   function reset() {
     for (let i = 0; i < N; i++) { const x = (i + 0.5) * dx, d = Math.abs(x - XC), s = Math.min(1, Math.max(0, (d - S.shelfW / 2) / S.slopeW));
       const dep = S.hShelf + (S.hDeep - S.hShelf) * s * s * (3 - 2 * s); S.b[i] = -dep; S.h[i] = dep; S.q[i] = 0; }
-    S.t = 0; S.hist = []; S.maxObs = 0; S.maxDeep = 0; S.maxSlope = 0;
+    S.t = 0; S.hist = []; S.maxObs = 0; S.maxDeep = 0; S.maxSlope = 0; S.debt = 0; S.tPrev = 0; for (let i = 0; i < N; i++) prevEta[i] = S.h[i] + S.b[i];
   }
   function step() {
     const { b, h, q } = S; let a = 1e-9;
+    for (let i = 0; i < N; i++) prevEta[i] = h[i] + b[i]; S.tPrev = S.t;
     for (let i = 0; i < N; i++) { const u = h[i] > 1e-6 ? q[i] / h[i] : 0; a = Math.max(a, Math.abs(u) + Math.sqrt(g * h[i])); }
     const dt = Math.min(0.45 * dx / a, 30);
     for (let i = 0; i < N; i++) { const j = (i + 1) % N, bs = Math.max(b[i], b[j]);
@@ -33,16 +35,19 @@ window.WGmiller = (() => {
     S.t += dt; return dt;
   }
   // 惑星の時間で sec 秒すすめる。観測点の水面（ふだんの水面からの高さ）を記録
+  // 計算は 1 回で 25 秒ほど進むので、すすめたい時間を「借り」にためて、借りがある分だけ計算する（見せる時刻 = S.t + debt）
   function advance(sec) {
-    let done = 0; const io = obsI(), id = Math.round(0.2 * N);
-    while (done < sec) { done += step();
+    const io = obsI(), id = Math.round(0.2 * N); S.debt += sec;
+    while (S.debt > 0) { S.debt -= step();
       const eo = S.h[io] + S.b[io], ed = S.h[id] + S.b[id];
       S.hist.push([S.t, eo]); if (S.hist.length > 3000) S.hist.shift();
       if (S.t > 2 * P) { S.maxObs = Math.max(S.maxObs, eo); S.maxDeep = Math.max(S.maxDeep, ed);
         // いる所のまわり（±100 km）の水面のいちばん急な傾き
-        const k = Math.round(100e3 / dx); for (let i = io - k; i < io + k; i++) S.maxSlope = Math.max(S.maxSlope, Math.abs(eta(i + 1) - eta(i)) / dx); } }
+        const k = Math.round(100e3 / dx); for (let i = io - k; i < io + k; i++) S.maxSlope = Math.max(S.maxSlope, Math.abs(etaNow(i + 1) - etaNow(i)) / dx); } }
   }
-  const eta = i => S.h[i] + S.b[i];   // 水面の高さ（ふだんの深い海の水面 = 0）
+  const etaNow = i => S.h[i] + S.b[i];   // 水面の高さ（ふだんの深い海の水面 = 0）
+  // 見せる水面（前の計算と今の計算のあいだを、見せる時刻でつなぐ）
+  const eta = i => { const span = S.t - S.tPrev; if (!(span > 0)) return etaNow(i); const a = Math.min(1, Math.max(0, (S.t + S.debt - S.tPrev) / span)); return prevEta[i] + (etaNow(i) - prevEta[i]) * a; };
   const fmtM = v => Math.abs(v) >= 1000 ? (v / 1000).toFixed(2) + ' km' : Math.abs(v) >= 10 ? v.toFixed(0) + ' m' : v.toFixed(2) + ' m';
   function wrap(g2, text, maxW) { const out = []; let line = ''; for (const ch of text) { if (g2.measureText(line + ch).width > maxW && line) { out.push(line); line = ch; } else line += ch; } if (line) out.push(line); return out; }
 
@@ -88,7 +93,7 @@ window.WGmiller = (() => {
     const xo = X(edgeX() + S.obsKm * 1e3); c.fillStyle = '#ffc95a'; c.beginPath(); c.moveTo(xo, bot + 2); c.lineTo(xo - 5, bot + 10); c.lineTo(xo + 5, bot + 10); c.fill();
     c.fillStyle = '#a3b4bf'; c.textAlign = 'center'; const xe = X(edgeX()); c.fillText('棚のふち', xe, bot + 22); c.fillStyle = '#ffc95a'; c.fillText('いる所', xo, bot + (Math.abs(xo - xe) < 60 ? 36 : 22));
     c.textAlign = 'left'; c.fillStyle = '#a3b4bf';
-    const foot = wrap(c, `横 ${((x1 - x0) / 1e3).toFixed(0)} km・縦 ${fmtM(hi - lo)}。惑星の時間 ${(S.t / 3600).toFixed(1)} 時間（地球では ${(S.t / 3600 * 7).toFixed(1)} 年: 映画の設定 1 時間 = 7 年）`, w - 24);
+    const foot = wrap(c, `横 ${((x1 - x0) / 1e3).toFixed(0)} km・縦 ${fmtM(hi - lo)}。惑星の時間 ${((S.t + S.debt) / 3600).toFixed(1)} 時間（地球では ${((S.t + S.debt) / 3600 * 7).toFixed(1)} 年: 映画の設定 1 時間 = 7 年）`, w - 24);
     foot.forEach((l, i) => c.fillText(l, 12, h - 30 + i * 14));
   }
   // 3D 用: いる所を世界の原点に（世界の +x = 棚の奥のほう、−x = 深い海のほう）
