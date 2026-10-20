@@ -44,6 +44,10 @@ button.on{background:#2f6a8c;border-color:var(--acc)}
 #play{min-width:44px}
 #speeds{font-size:13px;color:var(--muted)}
 #graph{display:block;width:100%;height:190px}
+#bfTable{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+#bfTable th,#bfTable td{border-bottom:1px solid var(--line);padding:3px 4px;text-align:left;vertical-align:top}
+#bfTable th{color:var(--muted);font-weight:500}
+#bfTable tr.now td{background:rgba(127,208,232,.16);color:var(--ink)}
 .note{font-size:12px;color:var(--muted);margin:6px 0 0;line-height:1.6}
 details summary{cursor:pointer}
 #about{color:var(--muted)}
@@ -57,6 +61,6 @@ details summary{cursor:pointer}
   #wrap{display:grid;grid-template-columns:1fr 400px;gap:0 8px;align-items:start}
   #pin{top:0}
   #stage{height:calc(100vh - 150px)}
-  #nums{grid-template-columns:repeat(5,auto);justify-content:start;gap:4px 22px}
+  #nums{grid-template-columns:repeat(6,auto);justify-content:start;gap:4px 22px}
   #panel{max-height:100vh;overflow:auto;position:sticky;top:0;padding-top:0}
 }

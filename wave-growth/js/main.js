@@ -58,7 +58,12 @@ function fmtTime(t) {
   const h = Math.floor(tm / 60), m = tm % 60;
   return h + ' 時間' + (m && h < 10 ? ' ' + m + ' 分' : '');
 }
-let lastSea = { H: -1, T: -1, at: 0 };
+let lastSea = { H: -1, T: -1, at: 0 }, bfRow = -1;
+// 風力階級の表（この計算の発達しきった海の高さは、その風速の範囲のまん中で）
+document.querySelector('#bfTable tbody').innerHTML = window.WGbeaufort.T.map(r => {
+  const mid = isFinite(r[2]) ? (r[1] + r[2]) / 2 : r[1], f = mid > 0.4 && r[0] <= 8 ? W.fullyDev(mid).Hm0 : 0;   // この計算の風は 20 m/s まで
+  const tb = r[4] == null ? '—' : r[4] + ' m' + (r[5] != null ? `（${r[5]}）` : '');
+  return `<tr><td>${r[0]}</td><td>${r[1].toFixed(1)}〜${isFinite(r[2]) ? r[2].toFixed(1) : ''}</td><td>${r[3]}</td><td>${tb}</td><td>${f ? (f < 1 ? f.toFixed(2) : f.toFixed(1)) + ' m' : '—'}</td></tr>`; }).join('');
 function update() {
   const st = S.st = W.stateAt(S.sched, S.t), U = windAt(S.t);
   tSlider.value = t2v(S.t);
@@ -74,6 +79,9 @@ function update() {
   $('nC').textContent = st.Tp > 0 ? c.toFixed(1) + ' m/s' + (U > 0 ? `（風の ${(c / U).toFixed(2)} 倍）` : '') : '—';
   $('nS').textContent = st.Hm0 <= 0 ? '凪' : st.kept ? '前の強い風の波が残っている' : st.full ? '発達しきった' : '育っている途中';
   cam.minY = 1.5 + 1.2 * st.Hm0;
+  // 風力階級（気象庁）
+  const bf = window.WGbeaufort.at(U); $('nB').textContent = '風力 ' + bf[0]; $('nBd').textContent = bf[3];
+  if (bfRow !== bf[0]) { bfRow = bf[0]; document.querySelectorAll('#bfTable tbody tr').forEach((tr, i) => tr.classList.toggle('now', i === bf[0])); }
   // 自分でつまみを動かしたら、案内の文のかわりに、いまの様子をひとことで
   if (S.free) { window.WGguide.clear(); $('stepNo').textContent = '';
     $('cap').textContent = st.Hm0 <= 0 ? (U > 0 ? '風が吹く前。海は鏡のように平ら。' : '風がない。海は鏡のように平ら。')

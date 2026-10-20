@@ -17,6 +17,7 @@
 | js/growth.js | 成長の式（CEM）・風の記録から時刻の海・JONSWAP の形・向きの広がり。node でも動く | `fromDuration`・`stateAt`・`Sf`・`makeSpecK` |
 | js/shaders.js | GLSL（FFT・空・海） | `WGsh` |
 | js/env.js | 時刻（北緯35°・春分の太陽、満月）と天気（晴れ・くもり・雨・霧）から空のようす | `WGenv.make`・`TIMES`・`WEATHER` |
+| js/beaufort.js | 気象庁風力階級表（2006）の風速・海のようす（要約）・参考の波の高さ | `WGbeaufort.T`・`at` |
 | js/ocean.js | WebGL2 の海（FFT の海面3枚 1280/160/20 m・空のテクスチャ・projected grid） | `WGocean.create` → `setSea`・`frame` |
 | js/camera.js | 海の1点のまわりを回るカメラ（ドラッグ・ホイール・2本指） | `WGcamera.create` → `basis` |
 | js/graph.js | 分布のグラフ（縦横とも対数） | `WGgraph.draw` |
@@ -58,6 +59,7 @@
 
 ## 状態
 - 2026-10-20 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
+- 2026-10-21 v007-beaufort: 段階C①。数字の横に「風力 N・海のようす」、たたむ欄に気象庁の表とこの計算の発達しきった海の高さ（風力4〜5までは近い、強い風ほど計算が高い。理由を表の注に）。数値は気象庁 PDF（marine.kishou.go.jp/brochure/beaufort-jp.pdf、文字の割り当てがずれていたので数字だけ戻して読んだ）とコトバンクの表で確かめた。
 - 2026-10-21 v006-props: 大きさくらべを5つ（なし・人・ボート・漁船・大きな船）に。人は浮き輪・海パン・丸い形、つやと濡れ。
 - 2026-10-21 v005-sky: 時間帯（朝・昼・夕方・夜・自動）と天気（晴れ・くもり・雨・霧）。
 - 2026-10-20 v004-stageB: 段階B（ユーザー「ほか進められるところはすすめて」）。ブイ・跡・ストークスドリフト・断面・案内 8 段。
