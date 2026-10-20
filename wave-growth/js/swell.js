@@ -6,13 +6,13 @@
 window.WGswell = (() => {
   const G = 9.81, NF = 300, F0 = 0.02, F1 = 0.6, DF = (F1 - F0) / (NF - 1);
   const fs = Float64Array.from({ length: NF }, (_, i) => F0 + i * DF);
-  const P = { R: 3000e3, U: 20, Ds: 36 * 3600, Ls: 1000e3, t: 0 };
+  const P = { R: 3000e3, U: 20, Ds: 36 * 3600, Ls: 1000e3, t: 0, Rs: 0, blocked: false };   // Rs = 球の上の横の広がりの距離 Re·sin(R/Re)（0 なら平らな海）、blocked = 陸でさえぎられる
   let src = null, srcKey = '';
   const cg = f => G / (4 * Math.PI * f);
   function source() {
-    const k = [P.U, P.Ds, P.Ls, P.R].join('/'); if (k === srcKey) return src; srcKey = k;
+    const k = [P.U, P.Ds, P.Ls, P.R, P.Rs].join('/'); if (k === srcKey) return src; srcKey = k;
     const W = window.WGgrowth, s = W.fromDurationFetch(P.U, P.Ds, P.Ls);
-    const E = new Float64Array(NF), frac = new Float64Array(NF), dth = Math.min(Math.PI, P.Ls / P.R);
+    const E = new Float64Array(NF), frac = new Float64Array(NF), dth = Math.min(Math.PI, P.Ls / Math.max(P.Rs || P.R, 1));
     for (let i = 0; i < NF; i++) { const f = fs[i], fp = 1 / s.Tp, sp = Math.max(0.5, f < fp ? 10 * Math.pow(f / fp, 5) : 10 * Math.pow(f / fp, -2.5));
       E[i] = W.Sf(f, s.Hm0, s.Tp); let a = 0; const n = 40; for (let j = 0; j < n; j++) a += W.spread(-dth / 2 + (j + .5) * dth / n, sp) * dth / n; frac[i] = Math.min(1, a); }
     return (src = { ...s, E, frac, dth });
@@ -22,7 +22,7 @@ window.WGswell = (() => {
     const S = source(), E = new Float64Array(NF); let m0 = 0, best = 0, Tp = 0;
     for (let i = 0; i < NF; i++) { const c = cg(fs[i]), t1 = (P.R - P.Ls / 2) / c, t2 = P.Ds + (P.R + P.Ls / 2) / c;
       const edge = 0.04 * (t2 - t1) + 600, on = Math.min(1, Math.max(0, (t - t1) / edge + 0.5)) * Math.min(1, Math.max(0, (t2 - t) / edge + 0.5));
-      E[i] = S.E[i] * S.frac[i] * on; m0 += E[i] * DF; if (E[i] > best) { best = E[i]; Tp = 1 / fs[i]; } }
+      E[i] = P.blocked ? 0 : S.E[i] * S.frac[i] * on; m0 += E[i] * DF; if (E[i] > best) { best = E[i]; Tp = 1 / fs[i]; } }
     const width = Math.max(0.05, Math.min(Math.PI, S.dth)), s = Math.min(400, Math.max(2, 2 / Math.pow(width / 2.35, 2)));
     return { E, Hm0: 4 * Math.sqrt(m0), Tp, s, src: S };
   }

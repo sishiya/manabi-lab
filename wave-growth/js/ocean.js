@@ -50,7 +50,7 @@ window.WGocean = (() => {
 
     const S = window.WGsh;
     const pSpec = prog(S.VS_FULL, S.FS_SPEC), pFFT = prog(S.VS_FULL, S.FS_FFT), pAsm = prog(S.VS_FULL, S.FS_ASM);
-    const pSkyT = prog(S.VS_FULL, S.FS_SKYTEX), pSky = prog(S.VS_FULL, S.FS_SKY), pWater = prog(S.VS_WATER, S.FS_WATER), pMesh = prog(S.VS_MESH, S.FS_MESH);
+    const pSkyT = prog(S.VS_FULL, S.FS_SKYTEX), pSky = prog(S.VS_FULL, S.FS_SKY), pWater = prog(S.VS_WATER, S.FS_WATER), pMesh = prog(S.VS_MESH, S.FS_MESH), pGlobe = prog(S.VS_FULL, S.FS_GLOBE);
     const emptyVAO = gl.createVertexArray();
     const PP = [0, 1].map(() => { const a = tex(N, N, gl.RGBA32F, gl.NEAREST, false), b = tex(N, N, gl.RGBA32F, gl.NEAREST, false); return { a, b, f: fbo([a, b]) }; });
     CASC.forEach((c, ci) => {
@@ -65,6 +65,7 @@ window.WGocean = (() => {
       for (let i = 0; i < N * N; i++) { const u = Math.max(r(), 1e-9), v = r(), m = Math.sqrt(-2 * Math.log(u));
         c.xi[2 * i] = m * Math.cos(2 * Math.PI * v); c.xi[2 * i + 1] = m * Math.sin(2 * Math.PI * v); }
     });
+    const elevTex = tex(360, 181, gl.R32F, gl.NEAREST, false); let elevSet = false;   // 地球儀の陸の高さ
     const bigTex = tex(4096, 1, gl.RGBA32F, gl.NEAREST, false), bigBuf = new Float32Array(4096 * 4);   // ミラーの惑星の水面
     const skyTex = tex(SKW, SKH, gl.RGBA16F, gl.LINEAR, true);
     gl.bindTexture(gl.TEXTURE_2D, skyTex); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -170,7 +171,7 @@ window.WGocean = (() => {
       const W = cv.width, H = cv.height, ty = Math.tan(cam.fovY / 2), tx = ty * W / H;
       const { cf, cr, cu } = cam, P0 = cam.pos;
       const pos = P0;   // カメラは原点のまわりだけを回るので、位置を戻さなくてよい
-      const big = env.big, n = big ? 0.5 : 0.1, f = big ? 400000 : 40000, e = [-pos[0], -pos[1], -pos[2]];
+      const big = env.big, glb = env.globe, n = glb ? Math.max(0.1, glb.alt * 2e-4) : big ? 0.5 : 0.1, f = glb ? Math.max(40000, glb.alt * 1.2 + 2.2 * glb.Re) : big ? 400000 : 40000, e = [-pos[0], -pos[1], -pos[2]];
       const V = [cr[0], cu[0], -cf[0], 0, cr[1], cu[1], -cf[1], 0, cr[2], cu[2], -cf[2], 0,
         cr[0] * e[0] + cr[1] * e[1] + cr[2] * e[2], cu[0] * e[0] + cu[1] * e[1] + cu[2] * e[2], -(cf[0] * e[0] + cf[1] * e[1] + cf[2] * e[2]), 1];
       const Pm = [1 / tx, 0, 0, 0, 0, 1 / ty, 0, 0, 0, 0, -(f + n) / (f - n), -1, 0, 0, -2 * f * n / (f - n), 0];
@@ -208,20 +209,29 @@ window.WGocean = (() => {
         gl.bindTexture(gl.TEXTURE_2D, skyTex); gl.generateMipmap(gl.TEXTURE_2D); }
       frameNo++;
       gl.viewport(0, 0, W, H);
+      const space = glb && glb.alpha >= 0.999;   // 宇宙から: 海と空は描かない
+      if (!space) {
       use(pSky); setAll(pSky, { cf, cr, cu, L, sunC, tx, ty, sunI: keyI, expo: env.expo, disc: env.disc, stars: env.stars, fogSky: Math.min(1, 600 / env.fogL), skyT: skyTex }); full();
       gl.enable(gl.DEPTH_TEST); gl.clear(gl.DEPTH_BUFFER_BIT);
       if (big) { for (let i = 0; i < 4096; i++) { bigBuf[4 * i] = big.eta[i]; bigBuf[4 * i + 1] = big.slope[i]; bigBuf[4 * i + 2] = big.depth[i]; }
         gl.bindTexture(gl.TEXTURE_2D, bigTex); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, 1, gl.RGBA, gl.FLOAT, bigBuf); }
       use(pWater);
       setAll(pWater, { cam: pos, cf, cr, cu, Ls: CASC.map(c => c.L), tx, ty, y0: -3.0, y1: Math.min(horizonY + (big ? 0.4 : 0.12), 1.2),
-        far: big ? 300000 : 30000, planeY: big ? big.planeY : 0, bigOn: big ? 1 : 0, bigL: big ? big.L : 1, bigX0: big ? big.x0 : 0, curvR: big ? big.R : 1e9, bigT: bigTex,
-        pixA: 2 * ty / H, VP, L, sunC, sunI: keyI, expo: env.expo, fogL: env.fogL, sss: 1, rough0: env.rough0, disc: env.disc, skyT: skyTex,
+        far: env.far || (big ? 300000 : 30000), planeY: big ? big.planeY : 0, bigOn: big ? 1 : 0, bigL: big ? big.L : 1, bigX0: big ? big.x0 : 0, curvR: big ? big.R : env.curvR || 1e9, bigT: bigTex,
+        pixA: 2 * ty / H, VP, L, sunC, sunI: keyI, expo: env.expo, fogL: env.fogL, sss: 1, rough0: env.rough0, disc: env.disc, fogH: env.fogH || 0, skyT: skyTex,
         dA: CASC[0].disp, dB: CASC[1].disp, dC: CASC[2].disp, sA: CASC[0].slope[cur], sB: CASC[1].slope[cur], sC: CASC[2].slope[cur] });
       gl.bindVertexArray(gridVAO); gl.drawElements(gl.TRIANGLES, gridVAO.count, gl.UNSIGNED_INT, 0); gl.bindVertexArray(null);
       // 物（海の中の部分は水にかくれる）
       if (env.meshes && env.meshes.length) { use(pMesh); setAll(pMesh, { VP, cam: pos, L, sunC, sunI: keyI, expo: env.expo, fogL: env.fogL, wetRain: env.wetRain || 0, wetSplash: env.wetSplash || 0, skyT: skyTex });
         for (const m of env.meshes) { set(pMesh, 'M', m.M); gl.bindVertexArray(m.mesh.vao); gl.drawArrays(gl.TRIANGLES, 0, m.mesh.count); }
         gl.bindVertexArray(null); }
+      }
+      if (glb && glb.alpha > 0) {   // 地球儀（重ねる）
+        if (!elevSet && glb.elev) { gl.bindTexture(gl.TEXTURE_2D, elevTex); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 360, 181, gl.RED, gl.FLOAT, glb.elev); elevSet = true; }
+        gl.disable(gl.DEPTH_TEST); gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        use(pGlobe); setAll(pGlobe, { cf, cr, cu, cam: pos, L: Ls, tx, ty, Re: glb.Re, alpha: glb.alpha, elevT: elevTex }); gl.uniformMatrix3fv(pGlobe.u.M, false, glb.M); full();
+        gl.disable(gl.BLEND);
+      }
       lastVP = VP; lastTxTy = [tx, ty];
       cur = 1 - cur;
       if (q) { gl.endQuery(tq.TIME_ELAPSED_EXT); tqs.push(q); }

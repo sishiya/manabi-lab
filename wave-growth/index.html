@@ -38,7 +38,10 @@
         <canvas id="swMap" style="width:100%;height:190px;display:block"></canvas>
         <canvas id="swChart" style="width:100%;height:170px;display:block;margin-top:6px"></canvas>
         <div id="swNums"></div>
-        <label class="slider"><span>嵐までの距離</span><b id="swRl"></b><input id="swR" type="range" min="500" max="10000" step="100"></label>
+        <div class="row"><span>地球儀で置く</span><span id="swPlace"><button data-p="storm">嵐</button><button data-p="obs">いる所</button></span></div>
+        <p class="note">ホイール／2本指で、宇宙から見た地球まで引けます。地球儀をタップすると、えらんだほう（嵐・いる所）をそこへ置きます。</p>
+        <div class="row"><span>嵐までの距離（地球の上のまっすぐな道）</span><b id="swRl"></b></div><div id="swGeo" class="note"></div>
+        <input id="swR" type="range" min="500" max="10000" step="100" hidden>
         <label class="slider"><span>嵐の風の速さ</span><b id="swUl"></b><input id="swU" type="range" min="10" max="30" step="1"></label>
         <label class="slider"><span>嵐が吹いた時間</span><b id="swDl"></b><input id="swD" type="range" min="6" max="96" step="6"></label>
         <label class="slider"><span>嵐の広さ</span><b id="swLl"></b><input id="swL" type="range" min="300" max="2000" step="100"></label>
@@ -115,6 +118,7 @@
           <li>白い泡は「波の面が横に押しつぶされた所」の目安（しきい値は見た目で決めた）。水の色・波の山を抜ける光の強さ・遠くのかすみも見た目で決めた。</li>
           <li>太陽の向きは北緯 35°・春分の日の時刻から計算。月は満月（太陽の反対側）。夜は、目が暗さに慣れたくらいの明るさで見せている（本当の月の光は太陽の約 40 万分の 1）。星は見た目だけ。「自動」は 1 日を 4 分で進める。</li>
           <li>天気（くもり・雨・霧）は、雲の量・直射の光の弱まり・かすむ距離を見た目で決めた。雨のすじは見た目だけで、波には影響させていない。</li>
+          <li>地球儀: 陸の形は ETOPO1（NOAA）を 1°（約 110 km）ごとにしたもの（細い海峡や小さな島は出ない）。うねりは大円（球の上のまっすぐな道）にそって進み、陸に当たった向きは止まる。届く量の横の広がりは球の上の距離 Re·sin(R/Re)（地球の裏側の近くでは、また集まる）。陸や海の色・氷・星は見た目。太陽の向きは北緯 35° のまま（いる所を動かしても変えていない）。この場面のかすみは、地上の見通し 40 km・空気は高さ 8 km ごとにうすくなるとした（仮定）。</li>
           <li>遠くの嵐: 嵐の海は CEM の式（吹いた時間と嵐の広さの小さいほうで決まる）。その分布が、深い海の群速度（周期 T 秒の波は 1 秒に g·T/4π m）で道すじにそって進み、分布は保たれるとした（光の道すじと同じ考え方）。届く量は、いる所から見た嵐の幅の角度ぶんの向きの割合。長い旅で少しずつ弱まる分・惑星の丸みで道すじが集まる効果・ほかの風は入れていない（だから遠くでは実際より高めに出る）。表面には、そよ風（3 m/s・1 時間）のさざ波を重ねている。うねりの向きの広がりは、嵐の幅の角度から決めた。</li>
           <li>ミラーの惑星の 3D: 計算した水面（惑星のまわりの1本の線）を横に広げ、その上に風速 5 m/s・2 時間の小さな風の波を重ねている。惑星の丸み（半径 8300 km）で遠くは沈む。空気のかすみは 200 km（仮定）。「高さ×10」は大波の高さだけを 10 倍にして形を見せるもの（そのときは画面に書く）。浅い所の底の色・空は見た目（ブラックホールは空に描いていない）。カメラと物は水面に浮かんでいる。</li>
           <li>ミラーの惑星: 1 次元（惑星のまわりにそった1本の線）の浅い海の式。半径 8300 km（地球と同じ密度と仮定）、深い海と浅い棚（幅 1500 km・ふちの坂 300 km、どちらも仮定）。潮の力は 2 つのふくらみの形（sin 2ψ）で、1 時間で行き来する。はじめの 2 時間でゆれを大きくしていく。地球の自転のような力（コリオリ）・2 次元の広がり・波の分散（ソリトン）は入れていない（だから大波は「砕けた段」＝ボアとして進む。映画の波は砕けていなかった）。格子は 6.4 km ごとなので、波の前の面の細かい形は出ない。映画の「1 時間 = 地球の 7 年」は映画の設定。</li>
@@ -128,6 +132,7 @@
           <li>Hasselmann ほか (1973) JONSWAP（波の分布の形）</li>
           <li>Mitsuyasu ほか (1975)（向きの広がりの形）／<a href="https://www.pari.go.jp/en/1975/12/197512023001.html" target="_blank" rel="noopener">合田・鈴木 (1975) 港湾技研資料 No.230</a>（風の波の s<sub>max</sub> = 10）</li>
           <li>Tessendorf (2001) “Simulating Ocean Water”（FFT で海面を作る方法）</li>
+          <li>NOAA National Centers for Environmental Information: ETOPO1 Global Relief Model（陸の形。1°ごとに間引いた）</li>
           <li>Snodgrass ほか (1966) Phil. Trans. R. Soc. A 259:431–497 “Propagation of ocean swell across the Pacific”（ニュージーランドからアラスカまで、うねりは周期の長い波から順に届き、大洋を横切ってもあまり弱まらない）</li>
           <li>Kenyon (1969) J. Geophys. Res. 74:6991 “Stokes drift for random gravity waves”（流される速さ: 16π³/g ∫ f³ S(f) df）</li>
           <li>Cox &amp; Munk (1954) J. Opt. Soc. Am. 44:838（海面の傾きのばらつき σ² = 0.003 + 5.12×10⁻³ U: 太陽の照り返しのにじみ）</li>
@@ -158,5 +163,6 @@
 <script src="js/beach.js"></script>
 <script src="js/miller.js"></script>
 <script src="js/swell.js"></script>
+<script src="js/globe.js"></script>
 <script src="js/guide.js"></script>
 <script src="js/main.js"></script>

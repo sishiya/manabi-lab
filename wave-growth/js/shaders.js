@@ -133,12 +133,13 @@ void main(){
   D+=textureLod(dB,xz/Ls.y,lod(fp,Ls.y)).xyz*(1.-smoothstep(2500.,5000.,hor));
   D+=textureLod(dC,xz/Ls.z,lod(fp,Ls.z)).xyz*(1.-smoothstep(150.,400.,hor));
   vec3 p=vec3(xz.x,0,xz.y)+D;vBS=0.;vDep=1e4;
-  if(bigOn>0.){vec3 b=big(xz.x);p.y+=b.r;vBS=b.g;vDep=b.b;float dd=length(xz-cam.xz);p.y-=dd*dd/(2.*curvR);}   // 惑星の丸みで遠くは沈む
+  if(bigOn>0.){vec3 b=big(xz.x);p.y+=b.r;vBS=b.g;vDep=b.b;}
+  {float dd=length(xz-cam.xz);p.y-=dd*dd/(2.*curvR);}   // 星の丸みで遠くは沈む（地球の海は curvR = 地球の半径、ふだんは 1e9）
   vPos=p;vXZ=xz;vH=D.y;gl_Position=VP*vec4(p,1);
 }`;
 
   const FS_WATER = HEAD + SKYL + `
-uniform vec3 cam,L,sunC,Ls;uniform float sunI,expo,fogL,sss,rough0,disc;
+uniform vec3 cam,L,sunC,Ls;uniform float sunI,expo,fogL,sss,rough0,disc,fogH;
 uniform sampler2D sA,sB,sC;
 in vec3 vPos;in vec2 vXZ;in float vH,vBS,vDep;out vec4 o;
 float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
@@ -171,7 +172,10 @@ void main(){
   vec3 foamC=(sunC*sunI*max(dot(n,L),0.)*.3+amb*1.1)*.9;
   col=mix(col,foamC,fm*.9);
   vec3 hz=skyL(normalize(vec3(-V.x,0.,-V.z)),1.);
-  col=mix(col,hz,1.-exp(-dist/fogL));
+  // かすみ: fogH > 0 なら空気は高さ fogH ごとに 1/e にうすくなるとして、見下ろす道すじのぶんだけ（高い所から見ると海がよく見える）
+  float hc=max(cam.y-vPos.y,1.),fk=fogH>0.&&hc>10.?fogH/hc*(1.-exp(-hc/fogH)):1.;
+  float down=clamp(hc/dist,0.,1.);hz=mix(hz,amb*1.2,smoothstep(.05,.4,down)*step(0.,fogH-1.));   // 見下ろすときのかすみは空の青に近い
+  col=mix(col,hz,1.-exp(-dist*fk/fogL));
   float mu=dot(-V,L);col+=disc*sunC*sunI*(pow(max(mu,0.),1500.)*.6+pow(max(mu,0.),40.)*.04);
   o=vec4(tone(col*expo)+(h12(gl_FragCoord.xy)-.5)/255.,1);
 }`;
@@ -198,5 +202,29 @@ void main(){vec3 n=normalize(vN);vec3 amb=skyL(vec3(0,1,0),6.);
   col+=skyL(reflect(-V,n),(1.-gl)*6.)*F*gl*.45;
   col=mix(col,skyL(normalize(vec3(-V.x,0.,-V.z)),1.),1.-exp(-dist/fogL));
   o=vec4(tone(col*expo),1);}`;
-  return { VS_FULL, FS_SPEC, FS_FFT, FS_ASM, FS_SKYTEX, FS_SKY, VS_WATER, FS_WATER, VS_MESH, FS_MESH, FS_PROBE };
+  // 地球儀（段階D）: 画面の点ごとに光線を地球（中心 (0,−Re,0)）に当てる。M = 世界の向き → 地球の座標
+  const FS_GLOBE = HEAD + `
+uniform vec3 cf,cr,cu,cam,L;uniform float tx,ty,Re,alpha;uniform mat3 M;uniform sampler2D elevT;in vec2 vUv;out vec4 o;
+float h12(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
+float elevAt(vec3 e){float lat=degrees(asin(clamp(e.z,-1.,1.))),lon=degrees(atan(e.y,e.x));
+  float y=clamp(lat+90.,0.,179.999),x=mod(lon+180.,360.);ivec2 i=ivec2(floor(x),floor(y));vec2 f=vec2(x,y)-vec2(i);int j1=(i.x+1)%360;
+  float a=texelFetch(elevT,ivec2(i.x,i.y),0).r,b=texelFetch(elevT,ivec2(j1,i.y),0).r,c=texelFetch(elevT,ivec2(i.x,i.y+1),0).r,d=texelFetch(elevT,ivec2(j1,i.y+1),0).r;
+  return mix(mix(a,b,f.x),mix(c,d,f.x),f.y);}
+void main(){
+  vec3 d=normalize(cf+(vUv.x*2.-1.)*tx*cr+(vUv.y*2.-1.)*ty*cu);
+  vec3 oc=cam+vec3(0,Re,0);float b=dot(oc,d),c=cam.x*cam.x+cam.z*cam.z+cam.y*(cam.y+2.*Re),D=b*b-c;   // 引き算で桁が落ちないように
+  vec3 col=vec3(0);
+  vec2 sp=vec2(atan(d.z,d.x),asin(clamp(d.y,-1.,1.)))*160.;float hs=h12(floor(sp));col+=vec3(step(.996,hs)*(hs-.996)*200.)*.6;   // 星（見た目）
+  if(D>0.&&-b-sqrt(D)>0.){
+    float t=-b-sqrt(D);vec3 n=normalize(oc+d*t),e=M*n;float hg=elevAt(e),lat=asin(clamp(e.z,-1.,1.));
+    vec3 base=hg<0.?mix(vec3(.015,.07,.2),vec3(.03,.17,.33),clamp(1.+hg/4500.,0.,1.)):mix(vec3(.16,.3,.1),vec3(.42,.36,.24),clamp(hg/2500.,0.,1.));
+    float ice=hg<0.?smoothstep(radians(74.),radians(84.),abs(lat)):.6*smoothstep(radians(60.),radians(72.),abs(lat));base=mix(base,vec3(.72,.77,.82),ice);   // 氷・雪（緯度だけの目安）
+    float dl=dot(n,L);vec3 lit=base*(max(dl,0.)*1.15+.04);
+    if(hg<0.){vec3 hv=normalize(L-d);lit+=vec3(1.,.93,.8)*pow(max(dot(n,hv),0.),180.)*.5*step(0.,dl);}
+    float mu=max(dot(n,-d),0.);lit=mix(lit,vec3(.3,.5,.95)*max(dl+.25,0.),pow(1.-mu,3.)*.55);   // ふちは空気で青く
+    col=lit;
+  } else if(b<0.){float pd=sqrt(max(c+Re*Re-b*b,0.))-Re;col+=vec3(.3,.5,1.)*exp(-max(pd,0.)/70e3)*.6;}   // 地球のふちの空気の光
+  o=vec4(pow(clamp(col,0.,1.),vec3(1./2.2)),alpha);
+}`;
+  return { FS_GLOBE, VS_FULL, FS_SPEC, FS_FFT, FS_ASM, FS_SKYTEX, FS_SKY, VS_WATER, FS_WATER, VS_MESH, FS_MESH, FS_PROBE };
 })();
