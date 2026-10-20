@@ -15,7 +15,7 @@ const S = {
   t: 0,                                   // 風が吹きはじめてからの時間（秒）
   sched: [{ t: 0, U: 10 }],               // 風の記録（いつから何 m/s）
   play: true, speed: 0,                   // ▶ のとき 1 秒で進む時間（0 = おまかせ: つまみの目盛りで同じ速さ → はじめはゆっくり。72時間を1分で）
-  tod: 'morning', clock: 7, weather: 'clear', prop: true,
+  tod: 'morning', clock: 7, weather: 'clear', obj: 'human',
   simT: 0,                                // 画面の波の時計（ふつうの速さ）
   st: null,
 };
@@ -143,20 +143,23 @@ function drawRain(g, w, h, dt) {
     g.moveTo(d.x, d.y); g.lineTo(d.x + d.l * 0.12, d.y - d.l); }
   g.stroke();
 }
-const propMesh = ocean ? ocean.makeMesh(window.WGprops.geometry()) : null, buoyMesh = ocean ? ocean.makeMesh(window.WGprops.buoy()) : null;
-const FL = window.WGfloats;
-function setProp(on) { S.prop = on; const b = $('propBtn'); b.textContent = '人（身長 1.7 m）: ' + (on ? 'ON' : 'OFF'); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }
-$('propBtn').onclick = () => setProp(!S.prop);
-// 人の頭の上に「1.7 m」の札（画面に投げて）
+const PR = window.WGprops, FL = window.WGfloats;
+const buoyMesh = ocean ? ocean.makeMesh(PR.buoy()) : null, objMeshes = {};
+const OBJ_YAW = { human: 1.9, boat: 1.3, fishing: 1.3, ship: 1.3 };   // 人はこちら向き、船は斜め横（カメラは yaw 0.35 から見る）
+let objPose = null, wetRain = 0;
+function setObj(k) { S.obj = k; objPose = null;
+  if (k !== 'none' && ocean && !objMeshes[k]) objMeshes[k] = ocean.makeMesh(PR.TYPES[k].geo());
+  if (k !== 'none') guideApi.camTo({ dist: PR.TYPES[k].dist });
+  document.querySelectorAll('#objs button').forEach(b => b.classList.toggle('on', b.dataset.k === k)); }
+document.querySelectorAll('#objs button').forEach(b => b.onclick = () => setObj(b.dataset.k));
+// 物の上に「人 身長 1.7 m」などの札（画面に投げて）
 function drawPropLabel(g) {
-  if (!S.prop || !ocean || !ocean.VP || !SUN.meshes.length) return;
-  const M = SUN.meshes[0].M, P = ocean.VP, top = [M[12] + M[4] * 2.0, M[13] + M[5] * 2.0, M[14] + M[6] * 2.0];
-  const cx = P[0] * top[0] + P[4] * top[1] + P[8] * top[2] + P[12], cy = P[1] * top[0] + P[5] * top[1] + P[9] * top[2] + P[13], cw = P[3] * top[0] + P[7] * top[1] + P[11] * top[2] + P[15];
-  if (cw <= 0) return;
-  const r = ov.getBoundingClientRect(), x = (cx / cw * 0.5 + 0.5) * r.width, y = (0.5 - cy / cw * 0.5) * r.height;
-  if (x < -50 || x > r.width + 50 || y < -20 || y > r.height + 20) return;
+  if (S.obj === 'none' || !objPose || !ocean || !ocean.VP) return;
+  const T = PR.TYPES[S.obj], q = project([objPose.d[0], objPose.d[1] + T.labelY, objPose.d[2]]); if (!q) return;
+  const r = ov.getBoundingClientRect(), [x, y] = q; if (x < -60 || x > r.width + 60 || y < -20 || y > r.height + 20) return;
+  const text = T.name + ' ' + T.size;
   g.font = '12px ' + getComputedStyle(document.documentElement).getPropertyValue('--f-body'); g.textAlign = 'center';
-  g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(x - 30, y - 16, 60, 18); g.fillStyle = '#fff'; g.fillText('人 1.7 m', x, y - 3);
+  const tw = g.measureText(text).width + 12; g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(x - tw / 2, y - 16, tw, 18); g.fillStyle = '#fff'; g.fillText(text, x, y - 3);
 }
 
 // ブイの通った跡（画面に投げて。古いほどうすく）
@@ -217,12 +220,19 @@ function draw(dt) {
   const b = cam.basis();
   // 海面の傾きのばらつき（Cox & Munk 1954、きれいな海面）σ² = 0.003 + 5.12×10⁻³ U。描いている波の分を引いた残りで照り返しをにじませる
   // 物: 浮き台（点 0、さざ波は入れない）とブイ。前のコマに読んだ海面の動きで置く
-  const pr = ocean ? ocean.probe : [], off = S.prop ? 1 : 0;
+  // 物: 大きさくらべ（点を k こ）とブイ。前のコマに読んだ海面の動きで置き、大きい物ほどゆっくり追う
+  const pr = ocean ? ocean.probe : [], T = S.obj !== 'none' ? PR.TYPES[S.obj] : null, k = T ? T.pts.length : 0, yaw = T ? OBJ_YAW[S.obj] : 0;
   SUN.meshes = [];
-  if (S.prop && propMesh && pr[0]) SUN.meshes.push({ mesh: propMesh, M: window.WGprops.matrix(0, 0, pr[0], 0.6) });
-  FL.step(dt, S.simT, pr.slice(off), S.us || 0, WIND_ANG);
-  if (buoyMesh) FL.list.forEach(bu => { if (bu.p) SUN.meshes.push({ mesh: buoyMesh, M: window.WGprops.matrix(bu.x0 + bu.drift[0], bu.z0 + bu.drift[1], bu.p, 0) }); });
-  SUN.points = (S.prop ? [{ x: 0, z: 0, wc: 0 }] : []).concat(FL.points());
+  if (T) { const p = PR.pose(S.obj, pr.slice(0, k), yaw);
+    if (p) { if (!objPose) objPose = p; else { const a = 1 - Math.exp(-dt / T.tau);
+      for (let i = 0; i < 3; i++) objPose.d[i] += (p.d[i] - objPose.d[i]) * a; for (let i = 0; i < 2; i++) objPose.s[i] += (p.s[i] - objPose.s[i]) * a; }
+      if (objMeshes[S.obj]) SUN.meshes.push({ mesh: objMeshes[S.obj], M: PR.matrix(0, 0, objPose, yaw) }); } }
+  FL.step(dt, S.simT, pr.slice(k), S.us || 0, WIND_ANG);
+  if (buoyMesh) FL.list.forEach(bu => { if (bu.p) SUN.meshes.push({ mesh: buoyMesh, M: PR.matrix(bu.x0 + bu.drift[0], bu.z0 + bu.drift[1], bu.p, 0) }); });
+  SUN.points = (T ? PR.worldPts(S.obj, 0, 0, yaw) : []).concat(FL.points());
+  // 濡れ: 雨で全体が（10 秒ほどで濡れ、1 分ほどで乾く）、波が高いと下のほうがしぶきで（見た目の目安）
+  const wantRain = SUN.rain ? 1 : 0; wetRain += (wantRain - wetRain) * (1 - Math.exp(-dt / (wantRain > wetRain ? 10 : 60)));
+  SUN.wetRain = wetRain; SUN.wetSplash = (T ? T.splash : 0) * Math.min(1, Math.max(0, (S.st.Hm0 - 0.2) / 1.5));
   Object.assign(SUN, E.make(S.clock, S.weather));
   if (ocean) { const U = windAt(S.t), tot = S.st.Hm0 > 0 ? 0.003 + 5.12e-3 * U : 0;
     SUN.rough0 = Math.max(0.012, Math.sqrt(Math.max(tot - ocean.fftSlope, 0)));
@@ -241,7 +251,7 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 // はじめ: 朝の景色・人あり・風が吹く前から再生（案内は「つぎへ」で始まる）
-setTod('morning'); setWeather('clear'); setProp(true);
+setTod('morning'); setWeather('clear'); setObj('human');
 S.free = true; update();
 requestAnimationFrame(loop);
 

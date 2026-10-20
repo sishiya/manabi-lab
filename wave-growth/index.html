@@ -40,7 +40,7 @@
       <div id="viewBox" class="box">
         <div class="row"><span>時間帯</span><span id="tods"><button data-k="morning">朝</button><button data-k="noon">昼</button><button data-k="evening">夕方</button><button data-k="night">夜</button><button data-k="auto" title="1日を4分で">自動</button></span></div>
         <div class="row"><span>天気</span><span id="weathers"><button data-k="clear">晴れ</button><button data-k="cloudy">くもり</button><button data-k="rain">雨</button><button data-k="fog">霧</button></span></div>
-        <div class="row"><span>大きさくらべ</span><button id="propBtn" aria-pressed="true">人（身長 1.7 m）: ON</button></div>
+        <div class="row"><span>大きさくらべ</span><span id="objs"><button data-k="none">なし</button><button data-k="human">人</button><button data-k="boat">ボート</button><button data-k="fishing">漁船</button><button data-k="ship">大きな船</button></span></div>
         <div class="row"><span>ブイ</span><span><button id="secBtn">断面を見る</button> <button id="clearBtn">消す</button></span></div>
         <div class="sub">海をタップすると浮かべられます（6 こまで）。ブイをタップすると断面。</div>
       </div>
@@ -77,7 +77,8 @@
           <li>波長 20 cm より短い波は描いていない。くり返しのため、周期を 1000 秒で一周するように少しだけ丸めている。</li>
           <li>ブイは、その場の水の動き（3枚の海面の分）のとおりに動かし、風下へ流される分（ストークスドリフト。Kenyon 1969 の式）を足している。この版の分布は短い波が少ないので、流される速さは実際の海より小さめ（風速の 1〜1.5%。Kenyon は発達した海で 1.6〜3.6%）。</li>
           <li>断面は、同じ分布から作った「風の向きに進む1本の波の列」（上の海とは模様がちがう）。深い海の線形の波の理論（動きは深さとともに e<sup>kz</sup> で小さくなる）。</li>
-          <li>浮き台（一辺 2 m）は、そのまん中の水の動き（大きい波と中くらいの波の分）のとおりに動かしている。浮き台の重さ・水の押し返し・流されることは計算していない。</li>
+          <li>大きさくらべの物（浮き輪の人・ボート 4 m・漁船 15 m・大きな船 120 m）は、物の下の数か所の水の動きに平面を当てはめて浮き沈み・傾けている。大きい物ほど広い範囲でならし、ゆっくり追う（おくれの時間は見た目で決めた）。重さ・水の押し返し・流されることは計算していない。形はおおまかな模型。</li>
+          <li>濡れて見えるのは見た目の目安（雨で全体、波が高いと下のほうがしぶきで）。</li>
           <li>白い泡は「波の面が横に押しつぶされた所」の目安（しきい値は見た目で決めた）。水の色・波の山を抜ける光の強さ・遠くのかすみも見た目で決めた。</li>
           <li>太陽の向きは北緯 35°・春分の日の時刻から計算。月は満月（太陽の反対側）。夜は、目が暗さに慣れたくらいの明るさで見せている（本当の月の光は太陽の約 40 万分の 1）。星は見た目だけ。「自動」は 1 日を 4 分で進める。</li>
           <li>天気（くもり・雨・霧）は、雲の量・直射の光の弱まり・かすむ距離を見た目で決めた。雨のすじは見た目だけで、波には影響させていない。</li>

@@ -170,19 +170,25 @@ void main(){
 }`;
   // 海面の点の動きを読む（横 = 点の番号、縦 0 = 変位、1 = 傾き）。WC = 小さい海面（20 m）を入れる割合
   const FS_PROBE = HEAD + `
-uniform vec2 P[16];uniform float WC[16];uniform vec3 Ls;uniform sampler2D dA,dB,dC,sA,sB,sC;out vec4 o;
-void main(){int i=int(gl_FragCoord.x);vec2 xz=P[i];float w=WC[i];
-  if(gl_FragCoord.y<1.)o=vec4(textureLod(dA,xz/Ls.x,0.).xyz+textureLod(dB,xz/Ls.y,0.).xyz+w*textureLod(dC,xz/Ls.z,0.).xyz,0.);
-  else o=vec4(textureLod(sA,xz/Ls.x,0.).xy+textureLod(sB,xz/Ls.y,0.).xy+w*textureLod(sC,xz/Ls.z,0.).xy,0.,0.);}`;
+uniform vec2 P[16];uniform float WB[16],WC[16];uniform vec3 Ls;uniform sampler2D dA,dB,dC,sA,sB,sC;out vec4 o;
+void main(){int i=int(gl_FragCoord.x);vec2 xz=P[i];float wb=WB[i],w=WC[i];
+  if(gl_FragCoord.y<1.)o=vec4(textureLod(dA,xz/Ls.x,0.).xyz+wb*textureLod(dB,xz/Ls.y,0.).xyz+w*textureLod(dC,xz/Ls.z,0.).xyz,0.);
+  else o=vec4(textureLod(sA,xz/Ls.x,0.).xy+wb*textureLod(sB,xz/Ls.y,0.).xy+w*textureLod(sC,xz/Ls.z,0.).xy,0.,0.);}`;
   // 大きさくらべの物（人・浮き台）。色は頂点ごと、光は太陽＋空
   const VS_MESH = HEAD + `
-in vec3 aP,aN,aC;uniform mat4 VP,M;out vec3 vP,vN,vC;
-void main(){vec4 w=M*vec4(aP,1);vP=w.xyz;vN=mat3(M)*aN;vC=aC;gl_Position=VP*w;}`;
+in vec3 aP,aN,aC,aM;uniform mat4 VP,M;out vec3 vP,vN,vC,vM;out float vLy;
+void main(){vec4 w=M*vec4(aP,1);vP=w.xyz;vN=mat3(M)*aN;vC=aC;vM=aM;vLy=aP.y;gl_Position=VP*w;}`;
   const FS_MESH = HEAD + SKYL + `
-uniform vec3 cam,L,sunC;uniform float sunI,expo,fogL;in vec3 vP,vN,vC;out vec4 o;
+uniform vec3 cam,L,sunC;uniform float sunI,expo,fogL,wetRain,wetSplash;in vec3 vP,vN,vC,vM;in float vLy;out vec4 o;
+// vM = (つや, 濡れやすさ, 0)。濡れると色が暗く、つやが強くなる（見た目の目安）
 void main(){vec3 n=normalize(vN);vec3 amb=skyL(vec3(0,1,0),6.);
-  vec3 col=vC*(sunC*sunI*max(dot(n,L),0.)*.06+amb*(.55+.45*n.y));
-  float dist=length(cam-vP);vec3 V=(cam-vP)/dist;
+  float dist=length(cam-vP);vec3 V=(cam-vP)/dist;if(dot(n,V)<0.)n=-n;
+  float wet=clamp(max(wetRain,wetSplash*(1.-smoothstep(.15,1.4,vLy))),0.,1.)*vM.y;
+  vec3 alb=vC*(1.-.45*wet);float gl=mix(vM.x,.9,wet);
+  vec3 col=alb*(sunC*sunI*max(dot(n,L),0.)*.06+amb*(.55+.45*n.y));
+  vec3 h=normalize(L+V);float nv=max(dot(n,V),0.),F=.04+.96*pow(1.-nv,5.);
+  col+=sunC*sunI*pow(max(dot(n,h),0.),mix(10.,500.,gl))*gl*(.02+.25*F)*step(0.,dot(n,L));
+  col+=skyL(reflect(-V,n),(1.-gl)*6.)*F*gl*.45;
   col=mix(col,skyL(normalize(vec3(-V.x,0.,-V.z)),1.),1.-exp(-dist/fogL));
   o=vec4(tone(col*expo),1);}`;
   return { VS_FULL, FS_SPEC, FS_FFT, FS_ASM, FS_SKYTEX, FS_SKY, VS_WATER, FS_WATER, VS_MESH, FS_MESH, FS_PROBE };

@@ -77,12 +77,12 @@ window.WGocean = (() => {
       gridVAO.count = idx.length; }
     gl.bindVertexArray(null);
 
-    // ---- 物（人・浮き台）: 頂点 [x,y,z, nx,ny,nz, r,g,b] の並び ----
+    // ---- 物（人・船など）: 頂点 [x,y,z, nx,ny,nz, r,g,b, つや,濡れやすさ,0] の並び ----
     function makeMesh(data) {
       const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
       const vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vb); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
-      [['aP', 0], ['aN', 3], ['aC', 6]].forEach(([n, o]) => { const l = gl.getAttribLocation(pMesh, n); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, 3, gl.FLOAT, false, 36, o * 4); });
-      gl.bindVertexArray(null); return { vao, count: data.length / 9 };
+      [['aP', 0], ['aN', 3], ['aC', 6], ['aM', 9]].forEach(([n, o]) => { const l = gl.getAttribLocation(pMesh, n); if (l < 0) return; gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, 3, gl.FLOAT, false, 48, o * 4); });
+      gl.bindVertexArray(null); return { vao, count: data.length / 12 };
     }
 
     // ---- 海面の点の動きを読む（16 点まで） ----
@@ -90,7 +90,7 @@ window.WGocean = (() => {
     // GPU を待たないように、PBO に読ませて fence が終わったら受け取る（1〜2 コマおくれ。同時に 1 つだけ）
     const pProbe = prog(S.VS_FULL, S.FS_PROBE), MAXP = 16;
     const probeTex = tex(MAXP, 2, gl.RGBA32F, gl.NEAREST, false), probeF = fbo([probeTex]);
-    const probeBuf = new Float32Array(MAXP * 2 * 4), probeP = new Float32Array(MAXP * 2), probeW = new Float32Array(MAXP);
+    const probeBuf = new Float32Array(MAXP * 2 * 4), probeP = new Float32Array(MAXP * 2), probeW = new Float32Array(MAXP), probeB = new Float32Array(MAXP);
     const pbo = gl.createBuffer(); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo); gl.bufferData(gl.PIXEL_PACK_BUFFER, probeBuf.byteLength, gl.STREAM_READ); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
     let probeOut = [], pending = null;
     function runProbe(points) {
@@ -106,9 +106,9 @@ window.WGocean = (() => {
       }
       const n = Math.min(points.length, MAXP); if (!n) { probeOut = []; return; }
       if (pending) return;
-      for (let i = 0; i < n; i++) { probeP[2 * i] = points[i].x; probeP[2 * i + 1] = points[i].z; probeW[i] = points[i].wc; }
+      for (let i = 0; i < n; i++) { probeP[2 * i] = points[i].x; probeP[2 * i + 1] = points[i].z; probeW[i] = points[i].wc; probeB[i] = points[i].wb == null ? 1 : points[i].wb; }
       gl.bindFramebuffer(gl.FRAMEBUFFER, probeF); gl.viewport(0, 0, MAXP, 2); use(pProbe);
-      gl.uniform2fv(pProbe.u['P[0]'], probeP); gl.uniform1fv(pProbe.u['WC[0]'], probeW);
+      gl.uniform2fv(pProbe.u['P[0]'], probeP); gl.uniform1fv(pProbe.u['WC[0]'], probeW); gl.uniform1fv(pProbe.u['WB[0]'], probeB);
       setAll(pProbe, { Ls: CASC.map(c => c.L), dA: CASC[0].disp, dB: CASC[1].disp, dC: CASC[2].disp, sA: CASC[0].slope[cur], sB: CASC[1].slope[cur], sC: CASC[2].slope[cur] }); full();
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo); gl.readPixels(0, 0, MAXP, 2, gl.RGBA, gl.FLOAT, 0); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
       pending = { fence: gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0), n };
@@ -211,7 +211,7 @@ window.WGocean = (() => {
         dA: CASC[0].disp, dB: CASC[1].disp, dC: CASC[2].disp, sA: CASC[0].slope[cur], sB: CASC[1].slope[cur], sC: CASC[2].slope[cur] });
       gl.bindVertexArray(gridVAO); gl.drawElements(gl.TRIANGLES, gridVAO.count, gl.UNSIGNED_INT, 0); gl.bindVertexArray(null);
       // 物（海の中の部分は水にかくれる）
-      if (env.meshes && env.meshes.length) { use(pMesh); setAll(pMesh, { VP, cam: pos, L, sunC, sunI: keyI, expo: env.expo, fogL: env.fogL, skyT: skyTex });
+      if (env.meshes && env.meshes.length) { use(pMesh); setAll(pMesh, { VP, cam: pos, L, sunC, sunI: keyI, expo: env.expo, fogL: env.fogL, wetRain: env.wetRain || 0, wetSplash: env.wetSplash || 0, skyT: skyTex });
         for (const m of env.meshes) { set(pMesh, 'M', m.M); gl.bindVertexArray(m.mesh.vao); gl.drawArrays(gl.TRIANGLES, 0, m.mesh.count); }
         gl.bindVertexArray(null); }
       lastVP = VP; lastTxTy = [tx, ty];
