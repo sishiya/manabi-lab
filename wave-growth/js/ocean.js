@@ -15,7 +15,10 @@ window.WGocean = (() => {
     if (!gl) throw new Error('WebGL2 が使えません');
     if (!gl.getExtension('EXT_color_buffer_float')) throw new Error('EXT_color_buffer_float が使えません');
     const aniso = gl.getExtension('EXT_texture_filter_anisotropic');
-    const tq = gl.getExtension('EXT_disjoint_timer_query_webgl2');
+    // ソフトの GPU（SwiftShader など）では、GPU に問い合わせるたびに待たされるので、時間の計測をやめる
+    const dri = gl.getExtension('WEBGL_debug_renderer_info'), renderer = dri ? String(gl.getParameter(dri.UNMASKED_RENDERER_WEBGL)) : '';
+    const isSoft = /swiftshader|llvmpipe|software|basic render/i.test(renderer);
+    const tq = isSoft ? null : gl.getExtension('EXT_disjoint_timer_query_webgl2');
 
     function sh(type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
       if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
@@ -94,7 +97,7 @@ window.WGocean = (() => {
     const pbo = gl.createBuffer(); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo); gl.bufferData(gl.PIXEL_PACK_BUFFER, probeBuf.byteLength, gl.STREAM_READ); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
     let probeOut = [], pending = null;
     function runProbe(points) {
-      if (pending) {
+      if (pending && ++pending.age % 4 === 0) {   // 確かめるのは 4 コマに 1 回（問い合わせも GPU を待たせるため）
         const r = gl.clientWaitSync(pending.fence, 0, 0);
         if (r === gl.ALREADY_SIGNALED || r === gl.CONDITION_SATISFIED) {
           gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo); gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, probeBuf); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
@@ -111,7 +114,7 @@ window.WGocean = (() => {
       gl.uniform2fv(pProbe.u['P[0]'], probeP); gl.uniform1fv(pProbe.u['WC[0]'], probeW); gl.uniform1fv(pProbe.u['WB[0]'], probeB);
       setAll(pProbe, { Ls: CASC.map(c => c.L), dA: CASC[0].disp, dB: CASC[1].disp, dC: CASC[2].disp, sA: CASC[0].slope[cur], sB: CASC[1].slope[cur], sC: CASC[2].slope[cur] }); full();
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo); gl.readPixels(0, 0, MAXP, 2, gl.RGBA, gl.FLOAT, 0); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-      pending = { fence: gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0), n };
+      pending = { fence: gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0), n, age: 0 };
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
@@ -218,7 +221,7 @@ window.WGocean = (() => {
       cur = 1 - cur;
       if (q) { gl.endQuery(tq.TIME_ELAPSED_EXT); tqs.push(q); }
     }
-    return { setSea, frame, makeMesh, get probe() { return probeOut; }, get VP() { return lastVP; }, get txty() { return lastTxTy; }, skyChanged() { skyDirty = true; }, get gpuMs() { return gpuMs; }, get fftHs() { return 4 * Math.sqrt(fftVar); }, get fftSlope() { return fftSlope; } };
+    return { isSoft, setSea, frame, makeMesh, get probe() { return probeOut; }, get VP() { return lastVP; }, get txty() { return lastTxTy; }, skyChanged() { skyDirty = true; }, get gpuMs() { return gpuMs; }, get fftHs() { return 4 * Math.sqrt(fftVar); }, get fftSlope() { return fftSlope; } };
   }
   return { create, LOOP };
 })();

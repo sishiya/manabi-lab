@@ -32,6 +32,7 @@ function resize() {
   const k = Math.min(devicePixelRatio || 1, 2, cap) * rscale;
   cv.width = Math.max(1, Math.round(r.width * k)); cv.height = Math.max(1, Math.round(r.height * k));
 }
+if (ocean && ocean.isSoft) rscale = 0.5;   // ソフトの GPU では画素を半分から
 addEventListener('resize', resize); resize();
 
 // ---- 時間のつまみ（目盛りは平方根: はじめの数時間を見やすく） ----
