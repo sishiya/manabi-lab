@@ -25,19 +25,22 @@ export class Sim {
     this.view = d.createBuffer({ size: 48, usage: U.UNIFORM | U.COPY_DST });
     this.snap = d.createBuffer({ size: n * 64, usage: U.MAP_READ | U.COPY_DST });
     this.cntSnap = d.createBuffer({ size: 64, usage: U.MAP_READ | U.COPY_DST });
+    this.ev = d.createBuffer({ size: 4096, usage: U.STORAGE | U.COPY_SRC });
+    this.evSnap = d.createBuffer({ size: 4096, usage: U.MAP_READ | U.COPY_DST });
     const st = { type: 'storage' };
     const layout = d.createBindGroupLayout({ entries: [
       { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: st },
       { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
       { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: st },
       { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: st },
-      { binding: 4, visibility: GPUShaderStage.COMPUTE, buffer: st }] });
+      { binding: 4, visibility: GPUShaderStage.COMPUTE, buffer: st },
+      { binding: 5, visibility: GPUShaderStage.COMPUTE, buffer: st }] });
     const mod = d.createShaderModule({ code: computeWGSL });
     this.mod = mod;
     const pl = d.createPipelineLayout({ bindGroupLayouts: [layout] });
     const mk = name => d.createComputePipeline({ layout: pl, compute: { module: mod, entryPoint: name } });
     this.pipe = {}; for (const k of ['kick1', 'force', 'kick2', 'collide', 'heat', 'freeReset', 'freePush']) this.pipe[k] = mk(k);
-    this.bg = d.createBindGroup({ layout, entries: [this.bodies, this.params, this.partner, this.count, this.free].map((b, i) => ({ binding: i, resource: { buffer: b } })) });
+    this.bg = d.createBindGroup({ layout, entries: [this.bodies, this.params, this.partner, this.count, this.free, this.ev].map((b, i) => ({ binding: i, resource: { buffer: b } })) });
     this.wg = Math.ceil(n / 256); this.wgF = Math.ceil(n / 64);   // 重力だけ 64 個ずつ
     this.pv = new ArrayBuffer(96); this.pvU = new Uint32Array(this.pv); this.pvF = new Float32Array(this.pv);
     this.reading = false; this.F = 30; this.mMin = 0;
@@ -76,12 +79,12 @@ export class Sim {
     f[4] = DT; f[5] = G; f[6] = EPS2; f[7] = this.F;
     f[8] = this.mMin; f[9] = WORK_SCALE; f[10] = HEAT_SCALE; f[11] = cut2(this.F);
     const F = fin || { on: false };
-    f[12] = F.x || 0; f[13] = F.y || 0; f[14] = F.ux || 0; f[15] = F.uy || 0;
-    f[16] = F.r || 0.1; f[17] = F.invTau || 0; f[18] = F.on ? 1 : 0;
+    f[12] = F.x || 0; f[13] = F.y || 0; f[14] = F.vx || 0; f[15] = F.vy || 0;
+    f[16] = F.r || 0.1; f[17] = F.invTau || 0; f[18] = F.on ? 1 : 0; f[19] = F.vEdge || 0;
     f[20] = dtFrame; f[21] = t;
     this.dev.queue.writeBuffer(this.params, 0, this.pv);
   }
-  setView(v) { this.dev.queue.writeBuffer(this.view, 0, new Float32Array([v.sx, v.sy, v.cx, v.cy, v.pxx, v.pxy, v.base, v.R0, -1, 0, 0, 0])); }
+  setView(v) { this.dev.queue.writeBuffer(this.view, 0, new Float32Array([v.sx, v.sy, v.cx, v.cy, v.pxx, v.pxy, v.base, v.R0, v.tx, v.ty, v.rx, v.ry])); }
   // 1コマ: sub 歩の計算と描画。read = true なら状態を読み出す（前の読み出しが終わっていれば）
   frame(sub, { t, fin, read, clear }) {
     const d = this.dev;
@@ -108,17 +111,20 @@ export class Sim {
     if (read && !this.reading) {
       enc.copyBufferToBuffer(this.bodies, 0, this.snap, 0, this.n * 64);
       enc.copyBufferToBuffer(this.count, 0, this.cntSnap, 0, 64);
+      enc.copyBufferToBuffer(this.ev, 0, this.evSnap, 0, 4096);
       enc.clearBuffer(this.count, 0, 36);    // 0〜8 番の数え（9 空き・15 通し番号は残す）
+      enc.clearBuffer(this.count, 40, 4);    // 10 番 ぶつかった所の数
       job = true;
     }
     d.queue.submit([enc.finish()]);
     if (job) {
       this.reading = true;
-      return Promise.all([this.snap.mapAsync(GPUMapMode.READ), this.cntSnap.mapAsync(GPUMapMode.READ)]).then(() => {
+      return Promise.all([this.snap, this.cntSnap, this.evSnap].map(b => b.mapAsync(GPUMapMode.READ))).then(() => {
         const B = new Float32Array(this.snap.getMappedRange().slice(0));
         const C = new Int32Array(this.cntSnap.getMappedRange().slice(0));
-        this.snap.unmap(); this.cntSnap.unmap(); this.reading = false;
-        return { B, C };
+        const nev = Math.min(256, Math.max(0, C[10])), E = new Float32Array(this.evSnap.getMappedRange().slice(0, nev * 16));
+        this.snap.unmap(); this.cntSnap.unmap(); this.evSnap.unmap(); this.reading = false;
+        return { B, C, E };
       });
     }
     return null;
@@ -131,5 +137,5 @@ export class Sim {
     await run();
     const t0 = performance.now(); await run(); return (performance.now() - t0) / k;
   }
-  destroy() { for (const b of [this.bodies, this.partner, this.count, this.free, this.params, this.view, this.snap, this.cntSnap]) b.destroy(); }
+  destroy() { for (const b of [this.bodies, this.partner, this.count, this.free, this.params, this.view, this.snap, this.cntSnap, this.ev, this.evSnap]) b.destroy(); }
 }

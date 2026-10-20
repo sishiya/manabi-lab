@@ -137,7 +137,7 @@ export function collide(b1, b2, F, mMin, key) {
       heat = Eimp - KEf;
     }
   }
-  return { kind, lr, frags, dust, heat, e: (eIn + heat * V2SI) / M, qr, vimp2, vesc2 };
+  return { kind, lr, frags, dust, heat, e: (eIn + heat * V2SI) / M, qr, vimp2, vesc2, big: big.m };
 }
 
 // 冷え方: とけている間は表面からそのまま光を出す（ふた（地殻・大気）なし）。固まったら中から伝わる熱で R²/(π²κ)
@@ -168,7 +168,7 @@ export function stepCPU(S, F, mMin, stepIdx, tYr) {
     const j = partner[i]; if (j <= i || partner[j] !== i) continue;
     const g = q => { const o = q * 16; return { m: B[o + 3], R: B[o + 7], p: [B[o], B[o + 1], B[o + 2]], v: [B[o + 4], B[o + 5], B[o + 6]], e: B[o + 12] }; };
     const res = collide(g(i), g(j), F, mMin, (stepIdx * 2654435761 + i) >>> 0);
-    out.coll++; res.lr.m >= 0.9 * (res.lr.m + res.frags.reduce((s, f) => s + f.m, 0) + res.dust) ? out.merge++ : out.frag++;
+    out.coll++; res.lr.m >= res.big ? out.merge++ : out.frag++;   // 大きいほうより重くなれば「くっつく」
     const put = (q, b) => { const o = q * 16; B[o] = b.p[0]; B[o + 1] = b.p[1]; B[o + 2] = b.p[2]; B[o + 3] = b.m; B[o + 4] = b.v[0]; B[o + 5] = b.v[1]; B[o + 6] = b.v[2]; B[o + 7] = b.R; B[o + 12] = res.e; };
     put(i, res.lr); B[j * 16 + 3] = 0;
     res.frags.forEach((f, k) => { const q = k === 0 ? j : free.pop(); if (q === undefined) { out.dust += f.m; return; } put(q, f); });

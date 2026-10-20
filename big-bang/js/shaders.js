@@ -18,15 +18,16 @@ struct Params {
   n: u32, nTiles: u32, _a: u32, _b: u32,
   sim: vec4f,    // dt, G, eps², F（ぶつかる大きさの倍率）
   k: vec4f,      // mMin（かけらのいちばん小さい重さ）, 仕事の目盛り, 熱の目盛り, ぶつかりを調べる距離²
-  fin: vec4f,    // 指の位置 x, y、指の速さ ux, uy（AU/年）
-  fin2: vec4f,   // 指の半径, 1/τ, 指がふれているか, _
+  fin: vec4f,    // 指の位置 x, y、指そのものの速さ x, y（AU/年。カメラといっしょに回る分＋画面の上の動き）
+  fin2: vec4f,   // 指の半径, 1/τ, 指がふれているか, 真ん中へ引きよせる速さ（ふちで）
   th: vec4f,     // このコマで進んだ年, いまの年, _, _
 };
 @group(0) @binding(0) var<storage, read_write> B: array<Body>;
 @group(0) @binding(1) var<uniform> P: Params;
 @group(0) @binding(2) var<storage, read_write> partner: array<i32>;
-@group(0) @binding(3) var<storage, read_write> C: array<atomic<i32>, 16>;   // 数え: 0 ちり・1 太陽へ・2 とび出し・3 ぶつかり・4 くっつき・5 砕け・6/7 指の仕事 +/−・8 熱・9 空きの数・15 歩の通し番号
+@group(0) @binding(3) var<storage, read_write> C: array<atomic<i32>, 16>;   // 数え: 0 ちり・1 太陽へ・2 とび出し・3 ぶつかり・4 くっつき・5 砕け・6/7 指の仕事 +/−・8 熱・9 空きの数・10 ぶつかった所の数・15 歩の通し番号
 @group(0) @binding(4) var<storage, read_write> freeList: array<u32>;
+@group(0) @binding(5) var<storage, read_write> EV: array<vec4f, 256>;   // ぶつかった所（x, y, 1 くっつく／2 砕ける, 残った割合）。数は C[10]
 
 const PI = 3.14159265;
 const WG = 64u;
@@ -60,12 +61,16 @@ export const computeWGSL = common + /* wgsl */`
     let rr = dot(d, d) / (P.fin2.x * P.fin2.x);
     if (rr < 1.0) {
       let w = (1.0 - rr) * (1.0 - rr);
-      // 指は「その場所を円くまわる速さ」でいっしょにまわっていて、そこからの指の動きを足す
-      let rxy = max(0.05, length(b.p.xy));
-      let vcirc = sqrt(P.sim.y / rxy) * vec2f(-b.p.y, b.p.x) / rxy;
-      let dv = (vcirc + P.fin.zw - v.xy) * min(1.0, w * P.fin2.y * dt);
-      let dW = b.p.w * dot(v.xy + 0.5 * dv, dv);          // 指がした仕事 = 動きのエネルギーの増え
-      v = vec3f(v.xy + dv, v.z);
+      // 輪の中の岩を、指そのものの速さ（fin.zw。いっしょに回る分も入れて view.js で）にそろえ、
+      // さらに指の真ん中（円盤の面の上）へ引きよせる（どこでも fin2.w の速さ）。指を速く動かすほど強い（view.js）
+      // 上下（円盤の面からのずれ）も寄せないと、上から見て重なっても ふれない
+      let d3 = vec3f(d, b.p.z);
+      let dist = length(d3);
+      var pull = vec3f(0.0);
+      if (dist > 0.0) { pull = -d3 / dist * P.fin2.w; }   // 真ん中まで同じ速さ（ゆるめると、速く動かしてもやさしくぶつかるだけになる）
+      let dv = (vec3f(P.fin.zw, 0.0) + pull - v) * min(1.0, w * P.fin2.y * dt);
+      let dW = b.p.w * dot(v + 0.5 * dv, dv);          // 指がした仕事 = 動きのエネルギーの増え
+      v = v + dv;
       let q = i32(round(dW * P.k.y));
       if (q > 0) { atomicAdd(&C[6], q); } else if (q < 0) { atomicAdd(&C[7], -q); }
     }
@@ -168,7 +173,10 @@ var<workgroup> tv: array<vec4f, WG>;
     frag = true;
   }
   atomicAdd(&C[3], 1);
-  if (mlr < 0.9 * M) { atomicAdd(&C[5], 1); } else { atomicAdd(&C[4], 1); }   // 9割より多く残れば「くっつく（少し欠ける）」と数える
+  let broke = mlr < max(m1, m2);   // 残りが大きいほうの岩より重くなれば「くっつく」（論文の「部分的にくっつく」）、軽くなれば「砕ける」（削られる）
+  if (broke) { atomicAdd(&C[5], 1); } else { atomicAdd(&C[4], 1); }
+  let ek = atomicAdd(&C[10], 1);
+  if (ek < 256) { EV[ek] = vec4f(pc.xy, select(1.0, 2.0, broke), mlr / M); }
   let Rlr = radiusAU(mlr);
   let md = M - mlr;
   var nf = 0u; var heat = Eimp; var dust = 0.0;
@@ -251,7 +259,7 @@ var<workgroup> tv: array<vec4f, WG>;
 // 描画: 岩1つを四角1枚で。色は温度、大きさは半径に比例（※ 目印: 実際よりずっと大きく描く）
 export const renderWGSL = /* wgsl */`
 struct Body { p: vec4f, v: vec4f, a: vec4f, e: vec4f };
-struct View { sc: vec4f, px: vec4f, hi: vec4f };   // sc: AU→クリップ x, y, 中心 x, y ／ px: 1px→クリップ x, y, 基本の大きさ px, はじめの半径 ／ hi: 目立たせる番号, _, _, _
+struct View { sc: vec4f, px: vec4f, hi: vec4f };   // sc: AU→クリップ x, y, 中心 x, y ／ px: 1px→クリップ x, y, 基本の大きさ px, はじめの半径 ／ hi: 画面の右と上の向き（世界の座標で）
 @group(0) @binding(0) var<storage, read> B: array<Body>;
 @group(0) @binding(1) var<uniform> V: View;
 struct VO { @builtin(position) pos: vec4f, @location(0) uv: vec2f, @location(1) col: vec3f, @location(2) glow: f32 };
@@ -273,7 +281,8 @@ fn tcol(T: f32) -> vec3f {
   let T = tempOfE(b.e.x);
   let glow = clamp((T - 1200.0) / 1500.0, 0.0, 1.0);
   let sz = max(0.7, V.px.z * b.v.w / V.px.w) * (1.0 + 1.6 * glow);
-  let ctr = (b.p.xy - V.sc.zw) * V.sc.xy;
+  let d = b.p.xy - V.sc.zw;
+  let ctr = vec2f(dot(d, V.hi.xy), dot(d, V.hi.zw)) * V.sc.xy;   // 画面の右 = hi.xy（回る向き）、上 = hi.zw（太陽から外向き）
   o.pos = vec4f(ctr + c * sz * V.px.xy, 0.0, 1.0);
   o.uv = c; o.col = tcol(T); o.glow = glow;
   return o;

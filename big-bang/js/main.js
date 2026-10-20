@@ -58,8 +58,11 @@ function start() {
 }
 
 let lastT = performance.now(), fps = 60;
+// 1コマの歩数。近くで見るときは目で追える速さに（1コマ 0.4〜4 歩。端数はためておく）、全体は GPU の速さで決める
+let acc = 0;
 function subFor() {
   if (!S.play) return 0;
+  if (view.mode === 'near') { acc += { slow: 0.4, normal: 1.25, fast: 4 }[S.speed]; const k = Math.floor(acc); acc -= k; return k; }
   if (S.speed === 'slow') return 1;
   const budget = S.speed === 'fast' ? 14 : 8;
   return Math.max(1, Math.min(96, Math.floor(budget / S.msPerStep)));
@@ -67,16 +70,16 @@ function subFor() {
 function frame(now) {
   const dtr = Math.max(1, now - lastT); lastT = now; fps = 0.95 * fps + 0.05 * (1000 / dtr);
   if (sim) {
-    view.tick(); view.fingerRadius();
-    const sub = subFor(); S.sub = sub || S.sub; S.yps = sub * DT * fps;
+    const sub = subFor(); if (sub) S.sub = sub; S.yps = 0.97 * S.yps + 0.03 * sub * DT * fps;
+    view.setTime(S.t); view.tick(S.t);
     sim.setView(view.gpuView(S.R0, S.n0));
     const job = sim.frame(sub, { t: S.t, fin: view.fin, read: S.frame % 4 === 0 });
     S.t += sub * DT; S.frame++;
-    if (job) job.then(({ B, C }) => { ui.absorb(S, B, C); ui.ruler(S); if (S.frame % 16 < 4) ui.readout(S);
+    if (job) job.then(({ B, C, E }) => { ui.absorb(S, B, C); view.addEvents(E); ui.ruler(S); if (S.frame % 16 < 4) ui.readout(S);
       const b = ui.top[0]; view.hl = ui.step === 5 && b ? { x: b.x, y: b.y, label: 'いちばん大きい' } : null;
       if (ui.step >= 0 && (ui.step === 5 || ui.step === 0)) ui.say(S); });
   }
-  view.drawOverlay(sim && S.t < 3 && ui.step < 0 ? '図をなぞると、かきまぜられます' : '');
+  view.drawOverlay(sim && !view.fin.on && ui.step < 0 ? '図を押さえると岩が集まる・速く動かすと はげしくぶつかる' : '');
   requestAnimationFrame(frame);
 }
 
@@ -85,10 +88,11 @@ $('next').onclick = () => ui.next(S);
 $('play').onclick = () => { S.play = !S.play; $('play').textContent = S.play ? '❚❚ 止める' : '▶ 動かす'; };
 $('reset').onclick = () => start();
 for (const b of document.querySelectorAll('#speeds button')) b.onclick = () => { S.speed = b.dataset.sp; for (const x of document.querySelectorAll('#speeds button')) x.classList.toggle('on', x === b); };
-for (const b of document.querySelectorAll('#zoom button')) b.onclick = () => view.zoom(b.dataset.z === 'in' ? 0.8 : 1.25);
+for (const b of document.querySelectorAll('#zoom button[data-z]')) b.onclick = () => view.zoom(b.dataset.z === 'in' ? 0.8 : 1.25);
+for (const b of document.querySelectorAll('#modeB button')) b.onclick = () => { view.setMode(b.dataset.v); for (const x of document.querySelectorAll('#modeB button')) x.classList.toggle('on', x === b); ui.say(S); };
 for (const b of document.querySelectorAll('#nPick button')) b.onclick = () => { S.nPick = b.dataset.v; for (const x of document.querySelectorAll('#nPick button')) x.classList.toggle('on', x === b); start(); };
 for (const b of document.querySelectorAll('#fPick button')) b.onclick = () => { S.F = +b.dataset.v; for (const x of document.querySelectorAll('#fPick button')) x.classList.toggle('on', x === b); start(); };
-view.onStir = () => { if (ui.step < 0) { ui.step = 3; ui.say(S); } };
+view.onStir = () => { if (ui.step < 0) { ui.step = 2; ui.say(S); } };
 window.addEventListener('resize', () => view.resize());
 requestAnimationFrame(frame);
 boot().catch(e => { window.__bibaErr.push(String(e)); unsupported(String(e.message || e)); });

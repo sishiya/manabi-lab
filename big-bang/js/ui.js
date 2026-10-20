@@ -5,16 +5,16 @@ import { WORK_SCALE, HEAT_SCALE, MASS_SCALE } from './gpu.js';
 const ME = MEARTH / MSUN;
 const $ = id => document.getElementById(id);
 export const fmt = (x, d = 2) => x >= 100 ? Math.round(x).toLocaleString('ja-JP') : x > 0 && x < 0.01 ? x.toPrecision(2) : x.toFixed(d);
-const yrs = t => t < 1e4 ? `${Math.round(t).toLocaleString('ja-JP')} 年` : `${(t / 1e4).toFixed(1)} 万年`;
+const yrs = t => t < 10 ? `${t.toFixed(1)} 年` : t < 1e4 ? `${Math.round(t).toLocaleString('ja-JP')} 年` : `${(t / 1e4).toFixed(1)} 万年`;
 
 // 案内（1段に新しいもの1つ。図の下に1〜2行）
 export const TOUR = [
-  S => `太陽のまわりに、同じ大きさの岩が <b>${S.n0.toLocaleString('ja-JP')} 個</b>（直径 約${fmt(S.R0 * AU * 2 / 1000, 0)} km）。ぜんぶ合わせて地球の約 ${fmt(S.mTot / ME, 1)} 倍の重さです。`,
-  S => `どの岩も、ほかの<b>ぜんぶの岩</b>を重力で引いています。1歩ごとに ${fmt(S.n0 * S.n0 / 1e6, 0)} 百万組を GPU で計算。`,
-  () => `近づいた岩は<b>ぶつかる</b>。ゆっくりならくっつき、速いと砕けて、かけらが飛び散ります。`,
-  () => `図を<b>指でなぞって、かきまぜて</b>みよう。速くかきまぜるほど、くっつかずに砕けます。`,
-  () => `ぶつかると<b>熱くなる</b>（色）。とけた岩は表面から光を出して冷え、固まると中の熱はなかなか逃げません。`,
-  S => `くっつくほど重くなり、まわりの岩を引きよせてまた育つ。いちばん大きいのは<b>地球の ${fmt(S.big / ME, 3)} 倍</b>（光る輪）。`,
+  S => `地球のあたりを、岩と<b>いっしょに回りながら</b>近くで見ています。点の1つ1つが岩（直径 約${fmt(S.R0 * AU * 2 / 1000, 0)} km、円盤ぜんぶで ${S.n0.toLocaleString('ja-JP')} 個）。`,
+  () => `太陽に近いほど速くまわるので、<b>内側の岩は右へ追いこし、外側の岩は左へ遅れて</b>いきます。`,
+  () => `図を<b>指で押さえる</b>と、輪の中の岩が真ん中へ集まって<b class="g">くっつく</b>（緑の輪）。くっつくほど大きくなります。`,
+  () => `指を<b>速く動かす</b>ほど強く寄せるので、はげしくぶつかって<b>砕ける</b>（オレンジの線）。分かれ目は 寄せる速さ 秒速 1.5 km くらい（指の横に出ます）。`,
+  () => `ぶつかると<b>熱くなる</b>（赤 → オレンジ → 白）。とけた岩は表面から光を出して冷え、固まると中の熱はなかなか逃げません。`,
+  S => `くっつくほど重くなり、まわりの岩を引きよせてまた育つ。いちばん大きいのは<b>地球の ${fmt(S.big / ME, 3)} 倍</b>（光る輪。見えないときは「全体」で）。`,
   S => `本物は、地球ほどになるまで<b>数千万〜1億年</b>。ここでは早く進むよう、ぶつかる大きさを <b>×${S.F}</b> にしています。`,
 ];
 
@@ -23,7 +23,7 @@ export class UI {
   reset() { this.W = 0; this.Q = 0; this.dust = 0; this.sun = 0; this.lost = 0; this.coll = 0; this.merge = 0; this.frag = 0; this.top = []; }
   next(S) { this.step = (this.step + 1) % TOUR.length; this.say(S); }
   say(S) {
-    if (this.step < 0) { $('say').innerHTML = '太陽ができたばかりのころ、まわりをまわる岩。<b>「つぎへ」</b>で案内、図を<b>なぞるとかきまぜ</b>られます。'; return; }
+    if (this.step < 0) { $('say').innerHTML = '太陽ができたばかりのころ、地球のあたりの岩を近くで。図を<b>押さえる</b>と岩が集まって<b class="g">くっつき</b>、<b>速くかきまぜる</b>と<b>砕けます</b>。<b>「つぎへ」</b>で案内。'; return; }
     $('say').innerHTML = `<span class="n">${this.step + 1}/${TOUR.length}</span>` + TOUR[this.step](S);
   }
   // 読み出した状態から数える
