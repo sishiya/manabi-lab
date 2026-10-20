@@ -36,6 +36,12 @@ button:disabled{opacity:.45;cursor:default}
 #ruler{margin:4px 0 0;font-size:14px;line-height:1.6;color:var(--warm);min-height:1.6em}
 #ruler .big{font-family:var(--f-mono);font-size:17px}
 #ruler .bad{color:#ff9a8b}
+#tl{display:flex;align-items:center;gap:8px;padding-top:8px}
+#tlr{flex:1;min-width:0;accent-color:var(--acc);height:32px}
+#tlv{font-family:var(--f-mono);font-size:14px;min-width:72px;color:var(--warm)}
+#toEnd{font-weight:700}
+#branch{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:8px;font-size:14px;color:var(--green)}
+#branch b{color:var(--ink)}
 #bar{display:flex;align-items:center;gap:8px;padding-top:8px;flex-wrap:wrap}
 #play{min-width:96px;font-weight:700}
 
@@ -79,3 +85,14 @@ table#topList td{padding:2px 14px 2px 0}
   #speeds{flex-wrap:nowrap;gap:4px}
   #legend{font-size:11px;gap:0 8px}
 }
+
+/* 場面の帯（nav.js） */
+#scenes{display:flex;align-items:center;gap:2px 4px;flex-wrap:wrap;font-size:13px}
+#scenes i{color:var(--muted);font-style:normal}
+#scenes .sc{display:inline-flex;align-items:baseline;gap:4px;padding:3px 8px;border-radius:7px;border:1px solid var(--line);color:var(--ink);text-decoration:none;min-height:30px}
+#scenes .sc b{color:var(--acc)}
+#scenes .sc small{color:var(--muted);font-size:11px}
+#scenes a.sc:hover{border-color:var(--acc)}
+#scenes .sc.on{border-color:var(--acc);background:#2a2216}
+#scenes .sc.off{opacity:.45}
+@media (max-width:640px){#scenes{font-size:12px}#scenes .sc small{display:none}}

@@ -1,0 +1,84 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>大きな衝突 — ビッグバンから惑星まで</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230e1626'/><circle cx='32' cy='32' r='9' fill='%23ffb35a'/><ellipse cx='32' cy='32' rx='24' ry='8' fill='none' stroke='%23ffb35a' stroke-width='2.5'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <header id="top">
+    <h1>ビッグバンから惑星まで</h1>
+    <nav id="scenes" data-here="⑤"></nav>
+  </header>
+
+  <section id="pin">
+    <div id="stage">
+      <canvas id="cv"></canvas>
+      <canvas id="ov"></canvas>
+      <button id="next">つぎへ ▶</button>
+      <div id="zoom"><span class="seg" id="sliceB"><button data-v="0" class="on">全部</button><button data-v="1">断面</button></span><button data-z="out" title="引く">−</button><button data-z="in" title="寄る">＋</button></div>
+      <div id="legend"><span><i style="background:#8c9ebf"></i>鉄（芯）</span><span><i style="background:#c78c5c"></i>岩（マントル）</span><span><i style="background:#ffd98c"></i>とても熱い（1万 K くらい）</span><span>※ 点線の輪は目印</span></div>
+    </div>
+    <div id="caption"><p id="say">GPU の準備をしています…</p><p id="ruler"></p></div>
+    <div id="bar">
+      <button id="play" title="止める／動かす">❚❚ 止める</button>
+      <button id="toEnd">結末へ ▶▶</button>
+      <button id="reset" title="はじめから">もう一度ぶつける</button>
+    </div>
+  </section>
+
+  <main id="below">
+    <section class="box" id="try">
+      <h2>試す <small>（変えると、もう一度ぶつける）</small></h2>
+      <div class="row"><label>ぶつかる星</label><span class="seg" id="miB">
+        <button data-v="0.05">地球の 0.05 倍</button><button data-v="0.1" class="on">0.1 倍（火星くらい）</button><button data-v="0.2">0.2 倍</button></span></div>
+      <div class="row"><label>角度</label><span class="seg" id="thB">
+        <button data-v="0">正面</button><button data-v="30">30°</button><button data-v="45" class="on">45°</button><button data-v="60">60°</button></span></div>
+      <div class="row"><label>速さ</label><span class="seg" id="vB">
+        <button data-v="1" class="on">逃げる速さと同じ</button><button data-v="1.2">1.2 倍</button><button data-v="1.6">1.6 倍</button></span></div>
+      <div class="row"><label>粒の数</label><span class="seg" id="nB">
+        <button data-v="auto" class="on" id="nAuto">自動</button><button data-v="4096">4千</button><button data-v="8192">8千</button><button data-v="16384">1.6万</button></span></div>
+      <p class="hint">図をなぞると、粒を指の動きにそろえて動かせます（指が足したエネルギーは、結果に入ります）。</p>
+    </section>
+
+    <section class="box">
+      <h2>結果（いまの時点）</h2>
+      <div id="readout"></div>
+    </section>
+
+    <details class="box" id="more">
+      <summary>くわしく: どう計算しているか</summary>
+      <h3>粒の流体（SPH）</h3>
+      <p>星を数千〜1万6千個の粒に分け、粒の近くの重さから密度を、密度と熱から圧力を出し、圧力の差と重力で粒を動かします（Monaghan 1992 の SPH。近くの粒をさがす代わりに、重力と同じく全部の組を GPU で調べます）。ぶつかって押しつぶされた所は人工粘性で熱になります。</p>
+      <h3>岩と鉄の式</h3>
+      <p>圧力は Tillotson の式（岩は花こう岩、鉄は鉄の値）。はじめに鉄の芯（重さの 3 割）と岩のマントルを置き、少しのあいだ揺れを止めて落ち着かせてから、ぶつかる道すじにのせます。</p>
+      <h3>星・円盤・とび出し</h3>
+      <p>星の重心のまわりで、それぞれの粒の軌道を出し、表面より内に入るなら「星」、まわり続けるなら「円盤」、重力から逃げるなら「とび出し」とします（Canup 2004 などのやり方に似せた分け方）。円盤のうち、ロシュ限界（星の引っぱりで まとまれない境目）より外へまわる分が、のちに月にまとまれる材料です。</p>
+    </details>
+
+    <details class="box" id="about">
+      <summary>このアプリについて</summary>
+      <p>学習用に簡単にしています。</p>
+      <h3>簡単にしているところ</h3>
+      <ul>
+        <li>粒は数千〜1万6千個（研究は 10万〜数億個）。粒が少ないと、円盤の重さは大きく変わります。</li>
+        <li>Tillotson の式は蒸発をあつかわない。圧力は 0 より下げない（引っぱりの強さなし）。温度は 比エネルギー ÷ 比熱 の目安（比熱は推定）。蒸発の熱も、押し縮めた分のエネルギーも温度に数えるので、高めに出る（ぶつかったあとの まん中の値で 7000 K くらい）。</li>
+        <li>はじめの星は 圧力のない密度で並べて、短く落ち着かせただけ。自転はしていない。</li>
+        <li>月がまとまるところ（円盤の中の何年もの動き）は計算していない。</li>
+      </ul>
+      <h3>おもな出どころ</h3>
+      <ul>
+        <li>Canup, R. M. & Asphaug, E. (2001) Origin of the Moon in a giant impact near the end of the Earth's formation. <i>Nature</i> 412, 708（要旨: 地球ができあがるころの、火星くらいの星のななめの衝突で、鉄の少ない月ができる）</li>
+        <li>Canup, R. M. (2004) Simulations of a late lunar-forming impact. <i>Icarus</i> 168, 433（要旨: ぶつかる星は地球の 0.11〜0.14 倍）</li>
+        <li>Monaghan, J. J. (1992) Smoothed particle hydrodynamics. <i>ARA&amp;A</i> 30, 543</li>
+        <li>Tillotson の値: Benz ほか (1986, 1987)。Melosh (1989) <i>Impact Cratering</i> の表の形。値は Emsenhuber ほか <a href="https://arxiv.org/abs/2104.03559" target="_blank" rel="noopener">arXiv:2104.03559</a> の表2 で確認</li>
+      </ul>
+      <h3>使っているもの</h3>
+      <p>WebGPU。フォント: Google Fonts（SIL Open Font License）</p>
+    </details>
+  </main>
+</div>
+
+<script type="module" src="js/impact.js"></script>

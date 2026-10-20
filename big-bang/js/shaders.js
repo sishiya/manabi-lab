@@ -140,21 +140,14 @@ var<workgroup> tv: array<vec4f, WG>;
   B[i].v = vec4f(b.v.xyz + b.a.xyz * (0.5 * P.sim.x), b.v.w);
 }
 
-// ぶつかり（Leinhardt & Stewart 2012 の式28・23・5。正面として。おたがいに相手どうしの組だけ）
-@compute @workgroup_size(256) fn collide(@builtin(global_invocation_id) g: vec3u) {
-  let i = g.x;
-  if (i >= P.n) { return; }
-  let jj = partner[i];
-  if (jj < 0) { return; }
-  let j = u32(jj);
-  if (j <= i || j >= P.n) { return; }
-  if (partner[j] != i32(i)) { return; }
-  let b1 = B[i]; let b2 = B[j];
-  if (b1.p.w <= 0.0 || b2.p.w <= 0.0) { return; }
+// ぶつかり（Leinhardt & Stewart 2012 の式28・23・5。正面として）。結果だけを出す関数（collide と small が使う）
+struct Res { lr: Body, pc: vec3f, vc: vec3f, mf: f32, Rf: f32, d: f32, vej: f32, nf: u32, eNew: f32, dust: f32, heat: f32, broke: bool, frac: f32 };
+fn resolve(b1: Body, b2: Body) -> Res {
+  var o: Res;
   let Gc = P.sim.y; let F = P.sim.w;
   let m1 = b1.p.w; let m2 = b2.p.w; let M = m1 + m2; let mu = m1 * m2 / M;
-  let pc = (b1.p.xyz * m1 + b2.p.xyz * m2) / M;
-  let vc = (b1.v.xyz * m1 + b2.v.xyz * m2) / M;
+  o.pc = (b1.p.xyz * m1 + b2.p.xyz * m2) / M;
+  o.vc = (b1.v.xyz * m1 + b2.v.xyz * m2) / M;
   let w = b2.v.xyz - b1.v.xyz;
   let Rs = b1.v.w + b2.v.w;
   let vimp2 = dot(w, w) + 2.0 * Gc * M * (1.0 / Rs - 1.0 / (F * Rs));
@@ -172,56 +165,74 @@ var<workgroup> tv: array<vec4f, WG>;
     mlr = clamp(mlr, 0.0, M);
     frag = true;
   }
-  atomicAdd(&C[3], 1);
-  let broke = mlr < max(m1, m2);   // 残りが大きいほうの岩より重くなれば「くっつく」（論文の「部分的にくっつく」）、軽くなれば「砕ける」（削られる）
-  if (broke) { atomicAdd(&C[5], 1); } else { atomicAdd(&C[4], 1); }
-  let ek = atomicAdd(&C[10], 1);
-  if (ek < 256) { EV[ek] = vec4f(pc.xy, select(1.0, 2.0, broke), mlr / M); }
+  o.broke = mlr < max(m1, m2);   // 残りが大きいほうの岩より重くなれば「くっつく」（論文の「部分的にくっつく」）、軽くなれば「砕ける」（削られる）
+  o.frac = mlr / M;
   let Rlr = radiusAU(mlr);
   let md = M - mlr;
-  var nf = 0u; var heat = Eimp; var dust = 0.0;
-  var mf = 0.0; var Rf = 0.0; var d = 0.0; var vej = 0.0;
+  o.nf = 0u; o.heat = Eimp; o.dust = 0.0;
   if (frag) {
-    nf = min(MAXF, u32(floor(md / P.k.x)));
+    var nf = min(MAXF, u32(floor(md / P.k.x)));
     nf = nf - nf % 2u;
-    if (nf == 0u || mlr <= 0.0) { dust = md; nf = 0u; }
+    if (nf == 0u || mlr <= 0.0) { o.dust = md; }
     else {
-      mf = md / f32(nf); Rf = radiusAU(mf); d = 1.2 * F * (Rlr + 2.0 * Rf);
-      let fall = 2.0 * Gc * mlr * (1.0 / (Rlr + Rf) - 1.0 / d);
-      let KEmin = 0.5 * md * (1.44 * 2.0 * Gc * mlr / d + fall);
+      o.nf = nf; o.mf = md / f32(nf); o.Rf = radiusAU(o.mf); o.d = 1.2 * F * (Rlr + 2.0 * o.Rf);
+      let fall = 2.0 * Gc * mlr * (1.0 / (Rlr + o.Rf) - 1.0 / o.d);
+      let KEmin = 0.5 * md * (1.44 * 2.0 * Gc * mlr / o.d + fall);
       let KEf = min(Eimp, max(KEmin, ${f(ETA_KE)} * Eimp));
-      vej = sqrt(max(0.0, 2.0 * KEf / md - fall));
-      heat = Eimp - KEf;
+      o.vej = sqrt(max(0.0, 2.0 * KEf / md - fall));
+      o.heat = Eimp - KEf;
     }
   }
-  let eNew = (m1 * b1.e.x + m2 * b2.e.x + heat * V2SI) / M;
-  atomicAdd(&C[8], i32(min(2.0e9, heat * P.k.z)));
-  if (dust > 0.0) { atomicAdd(&C[0], i32(dust * 1e15)); }
-  B[i] = Body(vec4f(pc, mlr), vec4f(vc, Rlr), vec4f(b1.a.xyz, 0.0), vec4f(eNew, 0.0, b1.e.z, 0.0));
-  B[j].p = vec4f(b2.p.xyz, 0.0);
-  let key = u32(atomicLoad(&C[15])) * 2654435761u + i;
-  // かけらは立方体の角の向きを、でたらめに回して置く（physics.js の rotOf と同じ）
+  o.eNew = (m1 * b1.e.x + m2 * b2.e.x + o.heat * V2SI) / M;
+  o.lr = Body(vec4f(o.pc, mlr), vec4f(o.vc, Rlr), vec4f(b1.a.xyz, 0.0), vec4f(o.eNew, 0.0, b1.e.z, 0.0));
+  return o;
+}
+// かけら k 番目（2つずつ反対向き）。向きは立方体の角を でたらめに回したもの（physics.js の rotOf と同じ）
+fn fragOf(o: Res, k: u32, key: u32, slot: u32) -> Body {
   let ra = 2.0 * PI * rnd(key); let rb = acos(2.0 * rnd(key + 1u) - 1.0); let rc = 2.0 * PI * rnd(key + 2u);
   let s3 = 0.57735027;
   var cube = array<vec3f, 4>(vec3f(s3, s3, s3), vec3f(s3, s3, -s3), vec3f(s3, -s3, s3), vec3f(-s3, s3, s3));
-  for (var k = 0u; k < nf; k += 2u) {
-    let c0 = cube[k / 2u];
-    let x1 = cos(rc) * c0.x - sin(rc) * c0.y; let y1 = sin(rc) * c0.x + cos(rc) * c0.y;
-    let x2 = cos(rb) * x1 + sin(rb) * c0.z; let z2 = -sin(rb) * x1 + cos(rb) * c0.z;
-    let dir = vec3f(cos(ra) * x2 - sin(ra) * y1, sin(ra) * x2 + cos(ra) * y1, z2);
-    for (var s = 0u; s < 2u; s++) {
-      let sg = select(-1.0, 1.0, s == 0u);
-      var q = j;
-      if (k > 0u || s > 0u) {
-        let c = atomicSub(&C[9], 1);
-        if (c <= 0) { atomicAdd(&C[9], 1); atomicAdd(&C[0], i32(mf * 1e15)); continue; }
-        q = freeList[u32(c - 1)];
-      }
-      B[q] = Body(vec4f(pc + sg * dir * d, mf), vec4f(vc + sg * dir * vej, Rf), vec4f(0.0), vec4f(eNew, 0.0, f32(q), 0.0));
+  let c0 = cube[k / 2u];
+  let x1 = cos(rc) * c0.x - sin(rc) * c0.y; let y1 = sin(rc) * c0.x + cos(rc) * c0.y;
+  let x2 = cos(rb) * x1 + sin(rb) * c0.z; let z2 = -sin(rb) * x1 + cos(rb) * c0.z;
+  let dir = vec3f(cos(ra) * x2 - sin(ra) * y1, sin(ra) * x2 + cos(ra) * y1, z2);
+  let sg = select(-1.0, 1.0, k % 2u == 0u);
+  return Body(vec4f(o.pc + sg * dir * o.d, o.mf), vec4f(o.vc + sg * dir * o.vej, o.Rf), vec4f(0.0), vec4f(o.eNew, 0.0, f32(slot), 0.0));
+}
+fn tally(o: Res) {
+  atomicAdd(&C[3], 1);
+  if (o.broke) { atomicAdd(&C[5], 1); } else { atomicAdd(&C[4], 1); }
+  let ek = atomicAdd(&C[10], 1);
+  if (ek < 256) { EV[ek] = vec4f(o.pc.xy, select(1.0, 2.0, o.broke), o.frac); }
+  atomicAdd(&C[8], i32(min(2.0e9, o.heat * P.k.z)));
+  if (o.dust > 0.0) { atomicAdd(&C[0], i32(o.dust * 1e15)); }
+}
+// おたがいに相手どうしの組だけ
+@compute @workgroup_size(256) fn collide(@builtin(global_invocation_id) g: vec3u) {
+  let i = g.x;
+  if (i >= P.n) { return; }
+  let jj = partner[i];
+  if (jj < 0) { return; }
+  let j = u32(jj);
+  if (j <= i || j >= P.n) { return; }
+  if (partner[j] != i32(i)) { return; }
+  let b1 = B[i]; let b2 = B[j];
+  if (b1.p.w <= 0.0 || b2.p.w <= 0.0) { return; }
+  let o = resolve(b1, b2);
+  tally(o);
+  B[i] = o.lr;
+  B[j].p = vec4f(b2.p.xyz, 0.0);
+  let key = u32(atomicLoad(&C[15])) * 2654435761u + i;
+  for (var k = 0u; k < o.nf; k++) {
+    var q = j;
+    if (k > 0u) {
+      let c = atomicSub(&C[9], 1);
+      if (c <= 0) { atomicAdd(&C[9], 1); atomicAdd(&C[0], i32(o.mf * 1e15)); continue; }
+      q = freeList[u32(c - 1)];
     }
+    B[q] = fragOf(o, k, key, q);
   }
 }
-
 // 熱: 1コマに1回。とけている間は表面から光で、固まったら中から伝わる熱で冷える。アルミニウム26 の発熱
 @compute @workgroup_size(256) fn heat(@builtin(global_invocation_id) g: vec3u) {
   let i = g.x;
@@ -254,7 +265,91 @@ var<workgroup> tv: array<vec4f, WG>;
   if (i >= P.n) { return; }
   if (B[i].p.w <= 0.0) { let k = atomicAdd(&C[9], 1); freeList[u32(k)] = i; }
 }
-`;
+
+// 岩が 256 個以下のときの速い道: 1つのグループの中で、何歩もまとめて計算する（kick1・force・kick2・collide と同じ式。指は使わない）
+// 歩数は P._a。共有メモリに全部の岩を置き、歩ごとに そろえる
+var<workgroup> sp: array<vec4f, 256>;
+var<workgroup> sv: array<vec4f, 256>;
+var<workgroup> se: array<vec4f, 256>;
+var<workgroup> spart: array<i32, 256>;
+var<workgroup> sfree: array<u32, 256>;
+var<workgroup> nfree: atomic<u32>;
+var<workgroup> stake: atomic<u32>;
+@compute @workgroup_size(256) fn small(@builtin(local_invocation_index) i: u32) {
+  let n = P.n;
+  var b = Body(vec4f(0.0), vec4f(0.0), vec4f(0.0), vec4f(0.0));
+  if (i < n) { b = B[i]; }
+  let dt = P.sim.x; let eps2 = P.sim.z; let F = P.sim.w; let Gc = P.sim.y;
+  let base = u32(atomicLoad(&C[15]));
+  for (var s = 0u; s < P._a; s++) {
+    // 前半けり・進む
+    if (b.p.w > 0.0) {
+      let v = b.v.xyz + b.a.xyz * (0.5 * dt);
+      let p = b.p.xyz + v * dt; let r = length(p);
+      b.p = vec4f(p, b.p.w); b.v = vec4f(v, b.v.w);
+      if (r < SUN_EAT) { atomicAdd(&C[1], i32(b.p.w * 1e15)); b.p.w = 0.0; }
+      else if (r > LOST) { atomicAdd(&C[2], i32(b.p.w * 1e15)); b.p.w = 0.0; }
+    }
+    sp[i] = b.p; sv[i] = b.v; se[i] = b.e;
+    if (i == 0u) { atomicStore(&nfree, 0u); }
+    workgroupBarrier();
+    // 重力とぶつかる相手
+    var acc = vec3f(0.0); var pot = 0.0; var best = -1; var bestQ = 1.0;
+    if (b.p.w > 0.0) {
+      for (var k = 0u; k < n; k++) {
+        let pj = sp[k];
+        if (pj.w > 0.0 && k != i) {
+          let d = pj.xyz - b.p.xyz; let r2 = dot(d, d) + eps2; let inv = inverseSqrt(r2);
+          acc += d * (pj.w * inv * inv * inv); pot -= pj.w * inv;
+          if (r2 < P.k.w) {
+            let w = sv[k].xyz - b.v.xyz; let rc = F * (sv[k].w + b.v.w); let ww = dot(w, w);
+            var t = 0.0; if (ww > 0.0) { t = clamp(-dot(d, w) / ww, -dt, 0.0); }
+            let dm = d + w * t; let q = dot(dm, dm) / (rc * rc);
+            if (q < bestQ) { bestQ = q; best = i32(k); }
+          }
+        }
+      }
+      let r2 = dot(b.p.xyz, b.p.xyz) + eps2; let inv = inverseSqrt(r2);
+      acc -= b.p.xyz * (inv * inv * inv);
+      b.a = vec4f(acc * Gc, pot * Gc);
+      b.v = vec4f(b.v.xyz + b.a.xyz * (0.5 * dt), b.v.w);
+    } else if (i < n) {
+      let k = atomicAdd(&nfree, 1u); sfree[k] = i;
+    }
+    spart[i] = best; sp[i] = b.p; sv[i] = b.v;
+    if (i == 0u) { atomicStore(&stake, 0u); }
+    workgroupBarrier();
+    // ぶつかり（おたがいに相手どうし・番号の小さいほうが計算）。結果は共有メモリへ
+    var mine = true;
+    if (b.p.w > 0.0 && best > i32(i) && spart[u32(best)] == i32(i)) {
+      let j = u32(best);
+      let b2 = Body(sp[j], sv[j], vec4f(0.0), se[j]);
+      let o = resolve(b, b2);
+      tally(o);
+      b = o.lr;
+      sp[j] = vec4f(sp[j].xyz, 0.0);
+      let key = (base + s) * 2654435761u + i;
+      for (var k = 0u; k < o.nf; k++) {
+        var q = j;
+        if (k > 0u) {
+          let c = atomicAdd(&stake, 1u);
+          if (c >= atomicLoad(&nfree)) { atomicAdd(&C[0], i32(o.mf * 1e15)); continue; }
+          q = sfree[c];
+        }
+        let fb = fragOf(o, k, key, q);
+        sp[q] = fb.p; sv[q] = fb.v; se[q] = fb.e;
+      }
+    }
+    workgroupBarrier();
+    // 自分の席が書きかえられていたら読みなおす（ぶつけた側は自分で持っている）
+    if (i < n && !(b.p.w > 0.0 && best > i32(i) && spart[u32(max(best, 0))] == i32(i))) {
+      if (sp[i].w != b.p.w || any(sp[i].xyz != b.p.xyz)) { b = Body(sp[i], sv[i], vec4f(0.0), se[i]); }
+    }
+    workgroupBarrier();
+  }
+  if (i < n) { B[i] = b; }
+  if (i == 0u) { atomicAdd(&C[15], i32(P._a)); }
+}`;
 
 // 描画: 岩1つを四角1枚で。色は温度、大きさは半径に比例（※ 目印: 実際よりずっと大きく描く）
 export const renderWGSL = /* wgsl */`

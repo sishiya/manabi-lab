@@ -39,7 +39,7 @@ export class Sim {
     this.mod = mod;
     const pl = d.createPipelineLayout({ bindGroupLayouts: [layout] });
     const mk = name => d.createComputePipeline({ layout: pl, compute: { module: mod, entryPoint: name } });
-    this.pipe = {}; for (const k of ['kick1', 'force', 'kick2', 'collide', 'heat', 'freeReset', 'freePush']) this.pipe[k] = mk(k);
+    this.pipe = {}; for (const k of ['kick1', 'force', 'kick2', 'collide', 'heat', 'freeReset', 'freePush', 'small']) this.pipe[k] = mk(k);
     this.bg = d.createBindGroup({ layout, entries: [this.bodies, this.params, this.partner, this.count, this.free, this.ev].map((b, i) => ({ binding: i, resource: { buffer: b } })) });
     this.wg = Math.ceil(n / 256); this.wgF = Math.ceil(n / 64);   // 重力だけ 64 個ずつ
     this.pv = new ArrayBuffer(96); this.pvU = new Uint32Array(this.pv); this.pvF = new Float32Array(this.pv);
@@ -73,9 +73,9 @@ export class Sim {
     p.setBindGroup(0, this.bg); p.setPipeline(this.pipe.force); p.dispatchWorkgroups(this.wgF); p.end();
     this.dev.queue.submit([enc.finish()]);
   }
-  setParams({ dtFrame, t, fin }) {
+  setParams({ dtFrame, t, fin, steps = 0 }) {
     const u = this.pvU, f = this.pvF;
-    u[0] = this.n; u[1] = this.wgF;
+    u[0] = this.n; u[1] = this.wgF; u[2] = steps;
     f[4] = DT; f[5] = G; f[6] = EPS2; f[7] = this.F;
     f[8] = this.mMin; f[9] = WORK_SCALE; f[10] = HEAT_SCALE; f[11] = cut2(this.F);
     const F = fin || { on: false };
@@ -87,10 +87,15 @@ export class Sim {
   setView(v) { this.dev.queue.writeBuffer(this.view, 0, new Float32Array([v.sx, v.sy, v.cx, v.cy, v.pxx, v.pxy, v.base, v.R0, v.tx, v.ty, v.rx, v.ry])); }
   // 1コマ: sub 歩の計算と描画。read = true なら状態を読み出す（前の読み出しが終わっていれば）
   frame(sub, { t, fin, read, clear }) {
-    const d = this.dev;
-    this.setParams({ dtFrame: sub * DT, t, fin });
+    const d = this.dev, small = this.n <= 256 && !(fin && fin.on);   // 256 個以下: 1つのグループで何歩もまとめて（速い道）
+    this.setParams({ dtFrame: sub * DT, t, fin, steps: sub });
     const enc = d.createCommandEncoder();
-    if (sub > 0) {
+    if (sub > 0 && small) {
+      const p = enc.beginComputePass(); p.setBindGroup(0, this.bg);
+      p.setPipeline(this.pipe.small); p.dispatchWorkgroups(1);
+      p.setPipeline(this.pipe.heat); p.dispatchWorkgroups(this.wg);
+      p.end();
+    } else if (sub > 0) {
       const p = enc.beginComputePass(); p.setBindGroup(0, this.bg);
       p.setPipeline(this.pipe.freeReset); p.dispatchWorkgroups(1);
       p.setPipeline(this.pipe.freePush); p.dispatchWorkgroups(this.wg);

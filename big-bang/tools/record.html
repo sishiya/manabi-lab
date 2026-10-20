@@ -1,0 +1,59 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>big-bang 記録</title>
+<!-- 場面④ の記録を作るページ（tools/record.ps1 が GPU つきのヘッドレス Chrome で開く。公開ページではない）
+     ?n=岩の数&F=ぶつかる大きさの倍率&years=何年&frames=再生のコマ数&full=分かれるための完全な記録の数&seed= -->
+<pre id="log">準備中…</pre>
+<script type="module">
+import { initDisk, DT, G } from '../js/physics.js';
+import { getDevice, Sim, MASS_SCALE } from '../js/gpu.js';
+import { encodeFrame, encodeFull, compactBodies } from '../js/record-format.js';
+
+const q = new URLSearchParams(location.search);
+const n = +(q.get('n') || 4096), F = +(q.get('F') || 100), YEARS = +(q.get('years') || 1e5), NF = +(q.get('frames') || 600), NFULL = +(q.get('full') || 120), seed = +(q.get('seed') || 1);
+const log = s => { document.getElementById('log').textContent = s; };
+const R = window.__rec = { done: false, err: null, t: 0, steps: 0, ms: 0, frames: [], full: [], chunks: null };
+
+// 再生のコマの時刻: 0 と、1 年から YEARS まで同じ比で（はじめは細かく、あとは粗く）
+const T = [0]; for (let k = 0; k < NF - 1; k++) T.push(Math.pow(YEARS, k / (NF - 2)));
+const fullEvery = Math.max(1, Math.round(NF / NFULL));
+
+(async () => {
+  const r = await getDevice(); if (r.err) throw new Error(r.err);
+  const dev = r.device, d = initDisk(n, seed); let sim = new Sim(dev, null, n), seats = n;
+  sim.load(d.B, F, d.m0 * 0.5);
+  const tot = { coll: 0, merge: 0, frag: 0, dust: 0, sun: 0, lost: 0 };
+  let t = 0, step = 0; const t0 = performance.now();
+  for (let k = 0; k < T.length; k++) {
+    // つぎのコマの時刻まで進める（1 回の送りは 256 歩まで）
+    const target = Math.round(T[k] / DT);
+    while (step < target) {
+      const sub = Math.min(seats <= 256 ? 2048 : 256, target - step);   // 256 個以下は速い道（1回で何歩も）
+      sim.frame(sub, { t }); t += sub * DT; step += sub;
+      if (step % 4096 < sub) await dev.queue.onSubmittedWorkDone();
+    }
+    const { B, C } = await sim.frame(0, { t, read: true });
+    // 岩が席の 4 割より少なくなったら、つめて席をへらす（重力の計算は席の数の2乗）
+    let alive = 0; for (let i = 0; i < seats; i++) if (B[i * 16 + 3] > 0) alive++;
+    if (alive < 0.4 * seats && seats > 256) {
+      const s2 = Math.max(256, 1 << Math.ceil(Math.log2(alive * 1.6)));
+      sim.destroy(); sim = new Sim(dev, null, s2); sim.load(compactBodies(B, seats, s2), F, d.m0 * 0.5); seats = s2;
+    }
+    tot.dust += C[0] / MASS_SCALE; tot.sun += C[1] / MASS_SCALE; tot.lost += C[2] / MASS_SCALE; tot.coll += C[3]; tot.merge += C[4]; tot.frag += C[5];
+    const fr = encodeFrame(B, B.length / 16, t); fr.c = { ...tot }; R.frames.push(fr);
+    if (k % fullEvery === 0 || k === T.length - 1) R.full.push(encodeFull(B, B.length / 16, t));
+    R.t = t; R.steps = step; R.ms = performance.now() - t0;
+    log(`${k + 1}/${T.length} コマ  ${t.toFixed(1)} 年  岩 ${fr.n} 個（席 ${seats}）  ${(R.ms / 1000).toFixed(0)} 秒`); R.seats = seats; R.alive = fr.n;
+  }
+  // まとめ: 再生用（コマ）と、分かれる用（完全な記録）を1つずつの bin に
+  const cat = list => { const len = list.reduce((s, f) => s + f.bytes.length, 0), out = new Uint8Array(len); let o = 0;
+    for (const f of list) { f.off = o; out.set(f.bytes, o); o += f.bytes.length; } return out; };
+  const fb = cat(R.frames), ub = cat(R.full);
+  R.index = { n, F, years: YEARS, seed, dt: DT, made: new Date().toISOString().slice(0, 10), computeSec: Math.round(R.ms / 1000),
+    frames: R.frames.map(f => ({ t: +f.t.toFixed(4), off: f.off, n: f.n, big: f.big, c: f.c })),
+    full: R.full.map(f => ({ t: +f.t.toFixed(4), off: f.off, n: f.n })) };
+  const b64 = u => { let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+  R.bins = { frames: b64(fb), full: b64(ub) };
+  R.done = true; log(`できた ${R.ms / 1000} 秒`);
+})().catch(e => { R.err = String(e && e.stack || e); log(R.err); });
+</script>

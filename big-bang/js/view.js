@@ -18,6 +18,7 @@ export class View {
     this.fin = { on: false, x: 0, y: 0, ux: 0, uy: 0, r: 0.1, invTau: 1 / TAU_HAND };
     this.ptrs = new Map(); this.pinch0 = null; this.last = null; this.sp = null;
     this.hl = null; this.fx = [];
+    this.setTime(0);
     this.resize();
     const P = ov;
     P.addEventListener('pointerdown', e => this.down(e));
@@ -25,7 +26,7 @@ export class View {
     for (const k of ['pointerup', 'pointercancel', 'pointerleave']) P.addEventListener(k, e => this.up(e));
     P.addEventListener('wheel', e => { e.preventDefault(); this.zoom(Math.exp(e.deltaY * 0.0012)); }, { passive: false });
   }
-  setMode(m) { this.mode = m; this.half = m === 'near' ? 0.25 : 2.3; this.fx = []; }
+  setMode(m) { this.mode = m; this.half = m === 'near' ? 0.25 : 2.3; this.fx = []; this.setTime(this.tNow || 0); }
   resize() {
     const r = this.ov.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
     this.w = Math.max(1, r.width); this.h = Math.max(1, r.height); this.dpr = dpr;
@@ -34,6 +35,7 @@ export class View {
   }
   // 時刻 t（年）でのカメラ: 中心 c と、画面の右 tx,ty・上 rx,ry（世界の向き）
   setTime(t) {
+    this.tNow = t;
     if (this.mode === 'near') { this.th = Math.sqrt(G / A0 ** 3) * t; const c = Math.cos(this.th), s = Math.sin(this.th);
       Object.assign(this, { cx: A0 * c, cy: A0 * s, tx: -s, ty: c, rx: c, ry: s }); }
     else Object.assign(this, { cx: 0, cy: 0, tx: 1, ty: 0, rx: 0, ry: 1 });
@@ -101,6 +103,7 @@ export class View {
   drawOverlay(hint) {
     const g = this.g, w = this.w, h = this.h, now = performance.now(), near = this.mode === 'near';
     g.clearRect(0, 0, w, h);
+    if (this.under) this.under(g);   // 記録の再生の岩（replay.js）
     g.font = '12px "Zen Kaku Gothic New", sans-serif';
     // 軌道の目印（※ 目印）: 今の水星・金星・地球・火星
     const sun = this.toScreen(0, 0);

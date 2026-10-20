@@ -10,7 +10,7 @@
 <div id="app">
   <header id="top">
     <h1>ビッグバンから惑星まで</h1>
-    <span class="scene">場面④ ちりから惑星へ <small>（ほかの場面はこれから）</small></span>
+    <nav id="scenes" data-here="④"></nav>
   </header>
 
   <section id="pin">
@@ -22,6 +22,8 @@
       <div id="legend"><span><i style="background:#b3bfd1"></i>冷たい岩</span><span><i style="background:#cc4d29"></i>熱い</span><span><i style="background:#ff9433"></i>とけている</span><span><i style="background:#fff2d1"></i>とても熱い</span><span>※ 岩の大きさ・点線の軌道・ぶつかった印は目印</span></div>
     </div>
     <div id="caption"><p id="say">GPU の準備をしています…</p><p id="ruler"></p></div>
+    <div id="tl"><input type="range" id="tlr" min="0" max="1000" value="0" aria-label="時間（記録の再生）"><span id="tlv">0 年</span><button id="toEnd">結末へ ▶▶</button></div>
+    <div id="branch" hidden>あなたの宇宙（記録の <b id="fromT"></b> から分かれた）<button id="back">記録にもどる</button></div>
     <div id="bar">
       <button id="play" title="止める／動かす">❚❚ 止める</button>
       <span class="seg" id="speeds"><button data-sp="slow">ゆっくり</button><button data-sp="normal" class="on">ふつう</button><button data-sp="fast">はやく</button></span>
@@ -31,12 +33,12 @@
 
   <main id="below">
     <section class="box" id="try">
-      <h2>試す <small>（変えると最初から）</small></h2>
+      <h2>試す <small>（あなたの宇宙を、はじめから計算しなおす）</small></h2>
       <div class="row"><label>岩の数</label><span class="seg" id="nPick">
         <button data-v="auto" class="on" id="nAuto">自動</button><button data-v="2048">2千</button><button data-v="4096">4千</button><button data-v="8192">8千</button><button data-v="16384">1.6万</button></span></div>
       <p class="hint">数を増やしても全体の重さは同じ（1個が小さくなる）。自動は、この端末の GPU の速さをはかって決めます。</p>
       <div class="row"><label>ぶつかる大きさ</label><span class="seg" id="fPick">
-        <button data-v="1">本物（×1）</button><button data-v="10">×10</button><button data-v="30" class="on">×30</button></span></div>
+        <button data-v="1">本物（×1）</button><button data-v="10">×10</button><button data-v="30">×30</button><button data-v="100" class="on">×100</button></span></div>
       <p class="hint">本物の大きさだと、ぶつかるまで何千年もかかります。大きくするほど早く育ちますが、そのぶん本物からはなれます。</p>
     </section>
 
@@ -67,7 +69,8 @@
       <ul>
         <li>太陽は動かず、木星・土星・ガスの円盤は入れていない。岩はまっすぐ正面からぶつかるとして、ななめの衝突やすれちがい（ヒット・アンド・ラン）は入れていない。</li>
         <li>はじめから同じ大きさの岩（直径 数百〜千 km）。ちり → 岩の段階は計算していない。</li>
-        <li>ぶつかる大きさを ×30 にしている（変えられる）。見た目の大きさも目印（実際よりずっと大きく描く）。</li>
+        <li>ぶつかる大きさを ×100 にしている（あなたの宇宙では変えられる）。本物の大きさでは、地球ほどになるまで数千万〜1億年かかる。×100 は、ふれる距離が 重力でつかまえあう範囲（ヒル半径）の半分くらいまでで、そこまでなら動きは大きくは変わらないとみて選んだ（推定）。見た目の大きさも目印。</li>
+        <li>記録の再生: コマのあいだは、岩それぞれをその場所の円軌道の速さで回してうめている（近似）。</li>
         <li>熱: とけた表面にふた（地殻・大気）がないとして冷やすので、本物より早く冷える。比熱・とける温度とその熱・密度 3000 kg/m³ は推定。</li>
         <li>GPU は 32ビットの小数で計算するので、とても長い時間では軌道に少しずつずれがたまる。</li>
       </ul>

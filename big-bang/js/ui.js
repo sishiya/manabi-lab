@@ -9,8 +9,8 @@ const yrs = t => t < 10 ? `${t.toFixed(1)} 年` : t < 1e4 ? `${Math.round(t).toL
 
 // 案内（1段に新しいもの1つ。図の下に1〜2行）
 export const TOUR = [
-  S => `地球のあたりを、岩と<b>いっしょに回りながら</b>近くで見ています。点の1つ1つが岩（直径 約${fmt(S.R0 * AU * 2 / 1000, 0)} km、円盤ぜんぶで ${S.n0.toLocaleString('ja-JP')} 個）。`,
-  () => `太陽に近いほど速くまわるので、<b>内側の岩は右へ追いこし、外側の岩は左へ遅れて</b>いきます。`,
+  S => `太陽のまわりをまわる岩。点の1つ1つが岩です（はじめは直径 約${fmt(S.R0 * AU * 2 / 1000, 0)} km、円盤ぜんぶで ${S.n0.toLocaleString('ja-JP')} 個。※ 大きさは目印）。`,
+  () => `太陽に近いほど速くまわります。「近くで」（いっしょに回るカメラ）で見ると、<b>内側の岩は右へ追いこし、外側の岩は左へ遅れて</b>いきます。`,
   () => `図を<b>指で押さえる</b>と、輪の中の岩が真ん中へ集まって<b class="g">くっつく</b>（緑の輪）。くっつくほど大きくなります。`,
   () => `指を<b>速く動かす</b>ほど強く寄せるので、はげしくぶつかって<b>砕ける</b>（オレンジの線）。分かれ目は 寄せる速さ 秒速 1.5 km くらい（指の横に出ます）。`,
   () => `ぶつかると<b>熱くなる</b>（赤 → オレンジ → 白）。とけた岩は表面から光を出して冷え、固まると中の熱はなかなか逃げません。`,
@@ -22,9 +22,32 @@ export class UI {
   constructor() { this.step = -1; this.W = 0; this.Q = 0; this.dust = 0; this.sun = 0; this.lost = 0; this.coll = 0; this.merge = 0; this.frag = 0; this.top = []; }
   reset() { this.W = 0; this.Q = 0; this.dust = 0; this.sun = 0; this.lost = 0; this.coll = 0; this.merge = 0; this.frag = 0; this.top = []; }
   next(S) { this.step = (this.step + 1) % TOUR.length; this.say(S); }
+  yrs(t) { return yrs(t); }
   say(S) {
+    if (S.mode === 'replay' && this.step < 0) {
+      $('say').innerHTML = S.s >= 1 && this.end ? this.end
+        : `このPCで前もって計算した <b>${yrs(S.rpEnd || 0)}</b> を再生しています。<b>時間のつまみ</b>で好きな時へ、<b>「結末へ」</b>で最後へ。図を<b>押さえると</b>、その時から<b>あなたの宇宙</b>に分かれて計算がはじまります。`;
+      return;
+    }
     if (this.step < 0) { $('say').innerHTML = '太陽ができたばかりのころ、地球のあたりの岩を近くで。図を<b>押さえる</b>と岩が集まって<b class="g">くっつき</b>、<b>速くかきまぜる</b>と<b>砕けます</b>。<b>「つぎへ」</b>で案内。'; return; }
     $('say').innerHTML = `<span class="n">${this.step + 1}/${TOUR.length}</span>` + TOUR[this.step](S);
+  }
+  // 記録の再生から数える（コマの表と、そのコマの岩）
+  fromReplay(S, rp) {
+    const f = rp.info(S.t), top = rp.top(S.t, 6), c = f.c || {}; S.rpEnd = rp.end;
+    S.alive = f.n; S.big = top[0]?.m || 0; this.top = top;
+    const nBig = top.filter(b => b.m / ME >= 0.05).length;
+    this.end = `結末（${yrs(rp.end)}）: 岩 ${f.n.toLocaleString('ja-JP')} 個のうち、地球の 0.05 倍より大きい星が <b>${nBig} 個</b>（いちばん大きいのは地球の ${fmt(S.big / ME, 2)} 倍）。本物の研究では、約2億年で地球型の惑星が3〜4個（Chambers 2001）。ここは ぶつかる大きさ ×${rp.idx.F} で早めています。図を押さえると、ここから<b>あなたの宇宙</b>で続きを計算します。`;
+    $('ruler').innerHTML = `<span class="big">${yrs(S.t)}</span>　岩 ${f.n.toLocaleString('ja-JP')} 個　いちばん大きい 地球の ${fmt(S.big / ME, 3)} 倍　ぶつかり ${(c.coll || 0).toLocaleString('ja-JP')} 回`;
+    $('tlv').textContent = yrs(S.t);
+    if (S.frame % 24 === 0) {
+      const pct = x => (100 * x / S.mTot).toFixed(2) + '%';
+      $('readout').innerHTML = [`<b>記録の再生</b>（このPCで ${(rp.idx.computeSec / 60).toFixed(0)} 分かけて計算。岩 ${rp.idx.n.toLocaleString('ja-JP')} 個・ぶつかる大きさ ×${rp.idx.F}・${rp.idx.made}）`,
+        `ぶつかり <b>${(c.coll || 0).toLocaleString('ja-JP')}</b> 回（くっつく ${(c.merge || 0).toLocaleString('ja-JP')}・砕ける ${(c.frag || 0).toLocaleString('ja-JP')}）`,
+        `重さの行き先: ちり ${pct(c.dust || 0)}・太陽へ ${pct(c.sun || 0)}・とび出し ${pct(c.lost || 0)}`].map(s => `<span>${s}</span>`).join('');
+      $('topList').innerHTML = '<tr><th></th><th>重さ（地球＝1）</th><th>太陽からの距離</th><th>温度</th></tr>' +
+        top.map((b, k) => `<tr><td>${k + 1}</td><td>${fmt(b.m / ME, 4)}</td><td>${b.r.toFixed(2)} AU</td><td>${Math.round(b.T).toLocaleString('ja-JP')} K</td></tr>`).join('');
+    }
   }
   // 読み出した状態から数える
   absorb(S, B, C) {

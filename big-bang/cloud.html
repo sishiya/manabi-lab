@@ -1,0 +1,77 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>星のゆりかご — ビッグバンから惑星まで</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230e1626'/><circle cx='32' cy='32' r='9' fill='%23ffb35a'/><ellipse cx='32' cy='32' rx='24' ry='8' fill='none' stroke='%23ffb35a' stroke-width='2.5'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <header id="top">
+    <h1>ビッグバンから惑星まで</h1>
+    <nav id="scenes" data-here="③"></nav>
+  </header>
+
+  <section id="pin">
+    <div id="stage">
+      <canvas id="cv"></canvas>
+      <canvas id="ov"></canvas>
+      <button id="next">つぎへ ▶</button>
+      <div id="zoom"><button data-z="out" title="引く">−</button><button data-z="in" title="寄る">＋</button></div>
+      <div id="legend"><span><i style="background:#5a73bf"></i>うすいガス</span><span><i style="background:#ffd99a"></i>濃いガス</span><span><i style="background:#fff0b4"></i>光る星</span><span><i style="background:#c05233"></i>褐色矮星</span><span>※ 星の大きさは目印</span></div>
+    </div>
+    <div id="caption"><p id="say">GPU の準備をしています…</p><p id="ruler"></p></div>
+    <div id="bar">
+      <button id="play" title="止める／動かす">❚❚ 止める</button>
+      <button id="toEnd">結末へ ▶▶</button>
+      <button id="reset" title="はじめから">最初から</button>
+    </div>
+  </section>
+
+  <main id="below">
+    <section class="box" id="try">
+      <h2>試す <small>（変えると最初から）</small></h2>
+      <div class="row"><label>乱れの強さ</label><span class="seg" id="tB">
+        <button data-v="0.1" class="on">弱い（重力の 0.1 倍）</button><button data-v="0.3">0.3 倍</button><button data-v="1">重力と同じ（研究）</button></span></div>
+      <div class="row"><label>粒の数</label><span class="seg" id="nB">
+        <button data-v="auto" class="on" id="nAuto">自動</button><button data-v="4096">4千</button><button data-v="8192">8千</button><button data-v="16384">1.6万</button></span></div>
+      <p class="hint">研究（Bate ほか 2003）は「重力と同じ」。ここの粒の数では、乱れが強いと濃いかたまりを見分けられず星ができにくいので、はじめは弱くしてあります。図をなぞると、ガスを指の動きにそろえて動かせます（雲をかきまぜる）。</p>
+    </section>
+
+    <section class="box">
+      <h2>結果（いまの時点）</h2>
+      <div id="readout"></div>
+    </section>
+
+    <details class="box" id="more">
+      <summary>くわしく: どう計算しているか</summary>
+      <h3>ガスの粒（SPH）と重力</h3>
+      <p>雲を数千〜1万6千個の粒に分け、粒どうしの重力と、ガスの圧力で動かします（Monaghan 1992 の SPH。全部の組を GPU で）。</p>
+      <h3>温度（濃さで決める）</h3>
+      <p>うすいうちは 10 K のまま（光を出して冷えるので）。10⁻¹³ g/cm³ より濃くなると 光が逃げにくくなり、押しちぢめると温まる（断熱、γ = 7/5）。Bate ほか（2003）と同じ決まりです。</p>
+      <h3>星の種と、光るかどうか</h3>
+      <p>まわりよりいちばん濃く、決めた濃さをこえた粒を「星の種」にし、半径 200 AU の中に入ったガスを取りこみます。種が太陽の 0.08 倍より重ければ、のちに真ん中で核融合がはじまる「光る星」、軽ければ「褐色矮星」とします（核融合そのものは計算していない。決まり）。</p>
+    </details>
+
+    <details class="box" id="about">
+      <summary>このアプリについて</summary>
+      <p>学習用に簡単にしています。</p>
+      <h3>簡単にしているところ</h3>
+      <ul>
+        <li>粒は数千〜1万6千個（研究は 350万個）。そのため星の種ができる濃さを研究よりずっとうすく（約 10⁻¹⁴ g/cm³）、取りこむ半径を大きく（200 AU、研究は 5 AU）している。小さい星・褐色矮星は少なく出る。</li>
+        <li>乱れは、向きのそろった波を 240 個重ねて作った（研究と同じ k⁻⁴ の形）。強さは、はじめ 重力のエネルギーの 0.1 倍（研究は 1 倍。粒が少ないと 1 倍では星がほとんどできない）。磁場・星の光や風による加熱は入れていない。</li>
+        <li>温度は濃さだけで決める（Bate ほか 2003 の決まり。平均分子量 2.46 は推定）。</li>
+      </ul>
+      <h3>おもな出どころ</h3>
+      <ul>
+        <li>Bate, M. R., Bonnell, I. A. & Bromm, V. (2003) The formation of a star cluster: predicting the properties of stars and brown dwarfs. <i>MNRAS</i> 339, 577（雲 50 太陽の重さ・直径 0.375 pc・10 K・P(k) ∝ k⁻⁴・10⁻¹³ g/cm³ で断熱・1.40 倍のつぶれる時間で 星 23・褐色矮星 18）<a href="https://arxiv.org/abs/astro-ph/0212380" target="_blank" rel="noopener">arXiv</a></li>
+        <li>Monaghan, J. J. (1992) Smoothed particle hydrodynamics. <i>ARA&amp;A</i> 30, 543</li>
+      </ul>
+      <h3>使っているもの</h3>
+      <p>WebGPU。フォント: Google Fonts（SIL Open Font License）</p>
+    </details>
+  </main>
+</div>
+
+<script type="module" src="js/cloud.js"></script>
