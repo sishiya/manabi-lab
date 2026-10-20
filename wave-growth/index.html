@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="css/style.css">
 
 <div id="app">
-  <header id="top"><h1>波が育つまで</h1><span id="perf"></span></header>
+  <header id="top"><h1>波が育つまで</h1><span id="modes"><button data-m="earth">地球の海</button><button data-m="miller">ミラーの惑星</button></span><span id="perf"></span></header>
   <div id="wrap">
     <section id="pin">
       <div id="stage">
@@ -30,6 +30,17 @@
     </section>
 
     <section id="panel">
+      <div id="millerBox" class="box" hidden>
+        <div class="row"><b style="color:var(--ink);font:700 15px var(--f-body)">ミラーの惑星の大波</b><span><button id="mPlay">❚❚</button> <button id="mReset">はじめから</button></span></div>
+        <p class="note">映画「インターステラー」の水の惑星。ひざくらいの浅い海に、1 km をこえる大波が 1 時間ごとに来る。監修の物理学者 Kip Thorne は「惑星がブラックホールに同じ面を向けたまま少しゆれていて、その潮の力」と説明しています。それを浅い海の式で本当に計算します。</p>
+        <div class="row"><span>進む速さ</span><span id="mSpeeds">1秒で <button data-s="60">1分</button><button data-s="300">5分</button><button data-s="900">15分</button></span></div>
+        <div class="row"><span>ためす</span><span id="mPresets"><button data-p="film">深い海＋浅い棚</button><button data-p="shallow">ぜんぶ浅い海</button></span></div>
+        <label class="slider"><span>惑星のゆれの大きさ</span><b id="mZl"></b><input id="mZ" type="range" min="0" max="1000" step="1"></label>
+        <label class="slider"><span>深い海の深さ</span><b id="mDl"></b><input id="mD" type="range" min="0" max="1000" step="1"></label>
+        <label class="slider"><span>いる所（棚のふちから）</span><b id="mOl"></b><input id="mO" type="range" min="0" max="500" step="5"></label>
+        <div id="mNums"></div>
+        <p class="note">「ゆれの大きさ」= 水がすぐついていけたら上下する高さ（潮の力の強さ × 惑星のゆれの角度）。つまみを動かすと、はじめから計算しなおします。</p>
+      </div>
       <div id="timeBox" class="box">
         <div class="row"><span>風が吹きはじめてから</span><b id="tLabel">0 分</b></div>
         <input id="tSlider" type="range" min="0" max="1000" value="0" aria-label="風が吹きはじめてからの時間">
@@ -90,6 +101,7 @@
           <li>白い泡は「波の面が横に押しつぶされた所」の目安（しきい値は見た目で決めた）。水の色・波の山を抜ける光の強さ・遠くのかすみも見た目で決めた。</li>
           <li>太陽の向きは北緯 35°・春分の日の時刻から計算。月は満月（太陽の反対側）。夜は、目が暗さに慣れたくらいの明るさで見せている（本当の月の光は太陽の約 40 万分の 1）。星は見た目だけ。「自動」は 1 日を 4 分で進める。</li>
           <li>天気（くもり・雨・霧）は、雲の量・直射の光の弱まり・かすむ距離を見た目で決めた。雨のすじは見た目だけで、波には影響させていない。</li>
+          <li>ミラーの惑星: 1 次元（惑星のまわりにそった1本の線）の浅い海の式。半径 8300 km（地球と同じ密度と仮定）、深い海と浅い棚（幅 1500 km・ふちの坂 300 km、どちらも仮定）。潮の力は 2 つのふくらみの形（sin 2ψ）で、1 時間で行き来する。はじめの 2 時間でゆれを大きくしていく。地球の自転のような力（コリオリ）・2 次元の広がり・波の分散（ソリトン）は入れていない（だから大波は「砕けた段」＝ボアとして進む。映画の波は砕けていなかった）。格子は 6.4 km ごとなので、波の前の面の細かい形は出ない。映画の「1 時間 = 地球の 7 年」は映画の設定。</li>
           <li>空の色は大気の散乱の計算（1回散乱）。水平線のすぐ上は 2° の空で代用。</li>
           <li>照り返しのにじみ: Cox &amp; Munk の式の風速は高さ 12.5 m の値だが、10 m の風速をそのまま使っている。</li>
           <li>「なぜ止まるの？」の説明は考え方の目安です（くわしいしくみは研究が続いている）。</li>
@@ -104,6 +116,9 @@
           <li>Cox &amp; Munk (1954) J. Opt. Soc. Am. 44:838（海面の傾きのばらつき σ² = 0.003 + 5.12×10⁻³ U: 太陽の照り返しのにじみ）</li>
           <li>Nishita ほか (1993)（空の色: 大気の散乱）</li>
           <li>McCowan (1894) Phil. Mag.（砕ける目安 H = 0.78 h）／Miche (1944)（波の急さの限界 H/L = 0.142 tanh kh）／Goda (2010) Coastal Engineering Journal（砕ける高さは条件でかわる）</li>
+          <li>Thorne のインタビュー: Scientific American (2014) “Parsing the Science of Interstellar with Physicist Kip Thorne”（ミラーの惑星の大波は、ブラックホールに同じ面を向けた惑星の小さなゆれによる潮）</li>
+          <li>Luminet (2015) “The Warped Science of Interstellar” arXiv:1503.08305（重力 1.3 g・波長が水深よりずっと長いので浅い海の式）</li>
+          <li>Audusse ほか (2004) SIAM J. Sci. Comput. 25:2050（底の高さが変わる浅い海の式の解き方）</li>
           <li>気象庁「気象庁風力階級表」(2006)（風速の範囲・参考の波の高さ）／海のようすの短い説明は同じ表をもとに書いた</li>
         </ul>
         <h3>使っているもの</h3>
@@ -124,5 +139,6 @@
 <script src="js/floats.js"></script>
 <script src="js/section.js"></script>
 <script src="js/beach.js"></script>
+<script src="js/miller.js"></script>
 <script src="js/guide.js"></script>
 <script src="js/main.js"></script>

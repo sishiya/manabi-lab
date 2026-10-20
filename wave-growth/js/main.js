@@ -207,6 +207,33 @@ $('secMag').onclick = () => { secMag = secMag === 1 ? 3 : 1; $('secMag').classLi
 $('secBtn').onclick = () => { if (secOpen) { closeSection(); return; } if (!FL.list.length) FL.add(4, 2, S.simT); openSection(); };
 $('secClose').onclick = closeSection;
 
+// ---- ミラーの惑星（映画の水の惑星）の場面 ----
+const MI = window.WGmiller; let mode = 'earth', mPlay = true, mSpeed = 300;
+const zOf = v => 1000 * Math.pow(10, v / 1000 * 3), zTo = z => Math.round(Math.log10(z / 1000) / 3 * 1000);          // 1 km〜1000 km
+const dOf = v => 0.5 * Math.pow(10, v / 1000 * 4.2), dTo = d => Math.round(Math.log10(d / 0.5) / 4.2 * 1000);        // 0.5 m〜8 km
+function mLabels() { $('mZl').textContent = MI.fmtM(MI.S.Z); $('mDl').textContent = MI.fmtM(MI.S.hDeep); $('mOl').textContent = MI.S.obsKm + ' km';
+  $('mZ').value = zTo(MI.S.Z); $('mD').value = dTo(MI.S.hDeep); $('mO').value = MI.S.obsKm; }
+function mPreset(k) { if (k === 'film') Object.assign(MI.S, { Z: 2.5e5, hDeep: 4000, obsKm: 30 }); else Object.assign(MI.S, { hDeep: 0.5 });
+  MI.reset(); mLabels(); mNums(); document.querySelectorAll('#mPresets button').forEach(b => b.classList.toggle('on', b.dataset.p === k)); }
+$('mZ').addEventListener('input', () => { MI.S.Z = zOf(+$('mZ').value); MI.reset(); mLabels(); mNums(); });
+$('mD').addEventListener('input', () => { MI.S.hDeep = Math.max(MI.S.hShelf, dOf(+$('mD').value)); MI.reset(); mLabels(); mNums(); });
+$('mO').addEventListener('input', () => { MI.S.obsKm = +$('mO').value; MI.S.maxObs = 0; MI.S.maxSlope = 0; mLabels(); mNums(); });
+document.querySelectorAll('#mPresets button').forEach(b => b.onclick = () => mPreset(b.dataset.p));
+document.querySelectorAll('#mSpeeds button').forEach(b => b.onclick = () => { mSpeed = +b.dataset.s; document.querySelectorAll('#mSpeeds button').forEach(x => x.classList.toggle('on', x === b)); });
+$('mPlay').onclick = () => { mPlay = !mPlay; $('mPlay').textContent = mPlay ? '❚❚' : '▶'; };
+$('mReset').onclick = () => { MI.reset(); mNums(); };
+function mNums() { const S2 = MI.S, film = 1200;
+  const msg = S2.t < 2 * MI.P ? 'ゆれを大きくしているところ（はじめの 2 時間）' : S2.maxObs >= film * 0.8 ? '映画の大波くらいの高さになっています。深い海で育った潮が、浅い棚に押し寄せた「段」（ボア）です。' : S2.maxObs >= 50 ? '大きな段が来ますが、映画の大波（1 km あまり）にはとどきません。' : 'ほとんど何も来ません。浅い海だけでは、水の量が足りず、潮で高く積み上がりません。';
+  const deg = Math.atan(S2.maxSlope) * 180 / Math.PI;
+  $('mNums').innerHTML = `いる所の水面の最高（2 時間め以降）: <b>${MI.fmtM(S2.maxObs)}</b>（映画の大波の ${(S2.maxObs / film * 100).toFixed(S2.maxObs < film * 0.1 ? 2 : 0)}%）<br>深い海の水面の最高: <b>${MI.fmtM(S2.maxDeep)}</b><br>`
+    + `いる所のまわりの水面のいちばん急な所: <b>${deg < 0.1 ? deg.toFixed(3) : deg.toFixed(1)}°</b>（映画の波は切り立った壁。この計算では${deg < 5 ? 'ゆるい山として来る。格子 6.4 km の計算なので、本当はもう少し急になる所がありうる' : '急な前の面ができる'}）<br>${msg}`; }
+function setMode(m) { mode = m; document.body.classList.toggle('miller', m === 'miller');
+  document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+  $('millerBox').hidden = m !== 'miller';
+  if (m === 'miller') { closeSection(); closeBeach(); $('sec').hidden = false; if (!MI.S.hist.length) { MI.reset(); } mLabels(); }
+  else { $('sec').hidden = !(secOpen || beachOpen); } }
+document.querySelectorAll('#modes button').forEach(b => b.onclick = () => setMode(b.dataset.m));
+
 // ---- 案内 ----
 let camAnim = null;
 const guideApi = {
@@ -220,7 +247,7 @@ $('next').onclick = () => window.WGguide.next(guideApi);
 cv.addEventListener('pointerdown', () => { $('hint').classList.add('gone'); });
 
 // ---- ループ ----
-let last = performance.now(), fpsAcc = 0, fpsN = 0, slow = 0;
+let last = performance.now(), fpsAcc = 0, fpsN = 0, slow = 0, mNumsTick = 0;
 function step(dt) {
   S.simT += dt;
   if (S.tod === 'auto') S.clock = (S.clock + dt * 24 / DAY_SEC) % 24;
@@ -230,6 +257,7 @@ function step(dt) {
     if (camAnim.k >= 1) camAnim = null; }
 }
 function draw(dt) {
+  if (mode === 'miller') { if (mPlay) MI.advance(dt * mSpeed); MI.draw($('sec')); if (++mNumsTick % 10 === 0) mNums(); return; }
   syncSea();
   const b = cam.basis();
   // 海面の傾きのばらつき（Cox & Munk 1954、きれいな海面）σ² = 0.003 + 5.12×10⁻³ U。描いている波の分を引いた残りで照り返しをにじませる
@@ -266,10 +294,11 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 // はじめ: 朝の景色・人あり・風が吹く前から再生（案内は「つぎへ」で始まる）
-setTod('morning'); setWeather('clear'); setObj('human');
+setTod('morning'); setWeather('clear'); setObj('human'); setMode('earth');
+document.querySelector('#mSpeeds [data-s="300"]').classList.add('on');
 S.free = true; update();
 requestAnimationFrame(loop);
 
 // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）
-window.__wagr = { S, cam, get ocean() { return ocean; }, update,
+window.__wagr = { mNums: () => mNums(), S, cam, get ocean() { return ocean; }, update,
   simRun(sec, dt = 1 / 60) { for (let t = 0; t < sec; t += dt) { step(dt); draw(dt); } return S.st; } };   // 毎コマ描く（ブイは描いたコマの海面を読んで動くため）
