@@ -95,11 +95,11 @@ void main(){
 }`;
 
   const UNDER = `
-// 水の中（カメラが水面より下）: 光の吸収 KD・まっすぐ進む光の弱まり KC（吸収＋散乱、きれいな外洋の水の目安 /m。赤 > 緑 > 青）
-const vec3 KD=vec3(.35,.07,.03),KC=vec3(.40,.10,.06);
+// 水の光: 吸収 KD・まっすぐ進む光の弱まり KC（吸収＋散乱）/m、海の色 deepC（水の中から上がってくる光）。透明度のつまみから js/scene.js の waterOptics で
+uniform vec3 KD,KC,deepC;
 uniform float under,camD;
 // 水の中の光（向き d を見たとき）: 上から見た海の色（水面へ上がってくる光）を下向き 1 として、横 5・上 40 くらい（目安）。深さ camD まで弱まる
-vec3 ubg(vec3 d,vec3 amb,vec3 L,vec3 sunC,float sunI){vec3 Lu=vec3(.004,.028,.06)*(amb*.9+sunC*sunI*.04*max(L.y,0.));
+vec3 ubg(vec3 d,vec3 amb,vec3 L,vec3 sunC,float sunI){vec3 Lu=deepC*(amb*.9+sunC*sunI*.04*max(L.y,0.));
   float k=d.y<0.?mix(1.,5.,1.+d.y):mix(5.,40.,d.y*d.y);return Lu*k*exp(-KD*camD);}
 `;
   const CAUST = `
@@ -135,7 +135,7 @@ void main(){
   vec3 d=normalize(cf+(vUv.x*2.-1.)*tx*cr+(vUv.y*2.-1.)*ty*cu);
   if(under>0.){o=vec4(tone((ubg(d,skyL(vec3(0,1,0),6.),L,sunC,sunI)+shafts(cam,d,40.,sunC,sunI))*expo)+(h12(gl_FragCoord.xy)-.5)/255.,1);return;}   // 水の中: 空のかわりに水の中の光＋光芒
   vec3 c=skyL(d,0.);float mu=dot(d,L);
-  if(d.y<0.){float Fg=.02+.98*pow(1.-min(1.,-d.y*1.2),5.);c=mix(vec3(.004,.028,.06)*(skyL(vec3(0,1,0),6.)*.9+sunC*sunI*.04*max(L.y,0.)),skyL(vec3(d.x,-d.y,d.z),2.),Fg);}   // 水平線より下: 海の色の下地（網目が足りない所でも空にならないように）
+  if(d.y<0.){float Fg=.02+.98*pow(1.-min(1.,-d.y*1.2),5.);c=mix(deepC*(skyL(vec3(0,1,0),6.)*.9+sunC*sunI*.04*max(L.y,0.)),skyL(vec3(d.x,-d.y,d.z),2.),Fg);}   // 水平線より下: 海の色の下地（網目が足りない所でも空にならないように）
   c=mix(c,skyL(normalize(vec3(d.x,0.,d.z)),1.),fogSky*(1.-smoothstep(0.,.35,d.y)));   // 霧: 空の下のほうもかすむ
   float cvis=1.-textureLod(skyT,vec2(atan(d.z,d.x)/6.2831853+.5,sqrt(max(d.y,0.))),0.).a;   // この向きの雲のすきま
   {float ms=dot(d,Lsun);c+=disc*sunCd*sunI*(smoothstep(.99997,.99999,ms)*60.*cvis+pow(max(ms,0.),1500.)*.6*cvis+pow(max(ms,0.),40.)*.04*sunVis(Lsun));}   // 太陽の円盤（雲が前にあると見えない）
@@ -207,7 +207,7 @@ void main(){sunC=sunCu*sunVis(L);
   float Fh=.02+.98*pow(1.-max(dot(H,V),0.),5.);
   vec3 spec=sunC*sunI*Dg*Gs*Fh/(4.*nv*max(nl,1e-3))*nl;   // 太陽の照り返し
   vec3 amb=skyL(vec3(0,1,0),6.);
-  vec3 deep=vec3(.004,.028,.06),sc=vec3(.05,.33,.3);
+  vec3 deep=deepC,sc=vec3(.05,.33,.3);
   float k1=max(vH+.3,0.)*pow(max(dot(L,-V),0.),4.)*pow(.5-.5*dot(L,n),3.);
   float k2=pow(nv,2.)*.25;
   vec3 body=deep*(amb*.9+sunC*sunI*.04*max(L.y,0.))+sc*sunC*sunI*.012*(k1*3.*sss+k2);   // 水の中で散らばって出てくる光（見た目で決めた強さ）
@@ -219,7 +219,7 @@ void main(){sunC=sunCu*sunVis(L);
     if(dz<.99999){float zn=dz*2.-1.,zo=2.*nearP*farP/(farP+nearP-zn*(farP-nearP)),zw=dot(vPos-cam,cfw);
       if(zo<zw-.02)discard;   // 物のほうが手前
       float t=(zo-zw)/max(dot(-V,cfw),.2);vec2 uv2=clamp(uv+n.xz*.03*min(t,1.),0.,1.);float dz2=texture(bgD,uv2).r;if(dz2>=.99999)uv2=uv;
-      vec3 Tr=exp(-t*vec3(.45,.07,.04)*1.6);   // 吸収（外洋の水の目安 /m）
+      vec3 Tr=exp(-t*KC);   // 物までの水で弱まる分（吸収＋散乱、透明度のつまみ）
       body=texture(bgC,uv2).rgb*Tr+body*(1.-Tr);contact=smoothstep(.07,0.,t);}}   // 物の色はすでに見た目の色（トーンのあと）
   vec3 col=mix(body,refl,F)+spec;
   float fm=clamp(b.z*foamK+contact*.7+vBF,0.,1.);   // foamK = 0: 沖の白波の泡は描かない（2026-10-21 ユーザーと決めた。割合は数字で出す）   // 白波は中の海面の泡（割合を観測に合わせているのと同じもの）。vBF = 浜で砕けたあとの泡   // 水面と物がふれる所は細い泡

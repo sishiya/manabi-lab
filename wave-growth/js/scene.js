@@ -16,6 +16,23 @@ S.cloud = 0.3;
 function setWeather() { const c = $('cloud'); c.value = Math.round(S.cloud * 100); $('cloudL').textContent = Math.round(S.cloud * 100) + '%'; if (ocean) ocean.skyChanged(); }
 $('cloud').addEventListener('input', () => { S.cloud = +$('cloud').value / 100; setWeather(); });
 
+// ---- 水の透明度: 水の中にまざった物（植物プランクトン・細かい粒・とけた色）の量 m（きれいな外洋 = 1）から、光の吸われ方・散らばり方・海の色 ----
+// 純水の吸収（Pope & Fry 1997、赤 650・緑 550・青 450 nm）＋まざった物の吸収（青ほど強い）＋散乱。海の色は、後ろへ散らばる光の割合
+// R ≈ 0.33 b_b /(a + b_b)（Gordon ほか 1975）。見える深さ（透明度板）は ≈ 1.7 / K（Poole & Atkins 1929、K は緑と青の平均）。まざった物の量の係数は目安
+const A_W = [0.34, 0.057, 0.009], A_P = [0.01, 0.013, 0.021], B_P = [0.05, 0.03, 0.03], BB_W = [0.0003, 0.0009, 0.0024];
+function waterOptics(m) {
+  const KD = A_W.map((a, i) => a + m * A_P[i]), KC = KD.map((k, i) => k + m * B_P[i]);
+  const deepC = KD.map((a, i) => { const bb = BB_W[i] + m * 0.0025; return 1.3 * 0.33 * bb / (a + bb); });
+  return { KD, KC, deepC, secchi: 1.7 / ((KD[1] + KD[2]) / 2) };
+}
+const clarOf = v => 0.3 * Math.pow(100, v / 100), clarTo = m => Math.round(Math.log(m / 0.3) / Math.log(100) * 100);   // つまみ 0〜100 → m 0.3〜30
+S.murk = 1;
+function setClarity() { const w = SUN.water = waterOptics(S.murk), d = w.secchi;
+  $('clar').value = clarTo(S.murk);
+  $('clarL').textContent = `見える深さ 約 ${d < 10 ? d.toFixed(1) : d.toFixed(0)} m`;
+  $('clarD').textContent = d > 30 ? 'とても澄んだ外洋（南の島の沖のような）' : d > 15 ? 'ふつうの外洋' : d > 5 ? '岸に近い海（プランクトンや細かい砂がまざる）' : 'にごった湾・河口の近く'; }
+$('clar').addEventListener('input', () => { S.murk = clarOf(+$('clar').value); setClarity(); });
+
 // ---- 大きさくらべ（人）・ブイ・断面のボタン ----
 const buoyMesh = ocean ? ocean.makeMesh(PR.buoy()) : null, objMeshes = {};
 const OBJ_YAW = { human: 1.9, boat: 1.3, fishing: 1.3, ship: 1.3 };   // 人はこちら向き（カメラは yaw 0.35 から見る）
@@ -229,7 +246,7 @@ const gauss = () => { let u = 0; for (let i = 0; i < 6; i++) u += Math.random();
 
 // ---- 毎コマの絵 ----
 let wetRain = 0;
-function skyEnv() { Object.assign(SUN, E.make(S.clock, S.cloud, obsLL().lat, obsLL().lon)); }
+function skyEnv() { Object.assign(SUN, E.make(S.clock, S.cloud, obsLL().lat, obsLL().lon)); if (!SUN.water) SUN.water = waterOptics(S.murk); }
 function draw(dt) {
   if (beach3d && ocean) { drawBeach3d(dt); return; }
   syncSea();

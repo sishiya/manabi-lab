@@ -238,7 +238,8 @@ window.WGocean = (() => {
       const space = glb && glb.alpha >= 0.999;   // 宇宙から: 海と空は描かない
       if (!space) {
       const hasMesh = env.meshes && env.meshes.length > 0;
-      const cst = { cS1: CASC[1].slope[cur], cS2: CASC[2].slope[cur], cLs: CASC.map(c => c.L), cSun: Ls };   // コースティクス・光芒（太陽の向き）
+      const wo = env.water || { KD: [0.35, 0.07, 0.03], KC: [0.40, 0.10, 0.06], deepC: [0.004, 0.028, 0.06] };   // 水の光（透明度）
+      const cst = { cS1: CASC[1].slope[cur], cS2: CASC[2].slope[cur], cLs: CASC.map(c => c.L), cSun: Ls, KD: wo.KD, KC: wo.KC, deepC: wo.deepC };   // コースティクス・光芒（太陽の向き）・水の光
       const drawSky = () => { use(pSky); setAll(pSky, { cf, cr, cu, L, sunCu: sunC, Lsun: Ls, sunCd: sunCs, LmD: Lm, moonK, tx, ty, sunI: keyI, expo: env.expo, disc: env.disc, stars: env.stars, fogSky: Math.min(1, 600 / env.fogL), skyT: skyTex, under: env.under ? 1 : 0, camD: env.camD || 0, cam: pos, ...cst }); full(); };
       const drawMeshes = () => { use(pMesh); setAll(pMesh, { VP, cam: pos, L, sunCu: sunC, sunI: keyI, expo: env.expo, fogL: env.fogL, wetRain: env.wetRain || 0, wetSplash: env.wetSplash || 0, skyT: skyTex, under: env.under ? 1 : 0, camD: env.camD || 0, ...cst });
         const wl = pMesh.u['wetP[0]'];

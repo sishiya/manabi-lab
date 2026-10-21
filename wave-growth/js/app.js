@@ -64,7 +64,7 @@ const fmtLen = v => v < 0.1 ? (v * 100).toFixed(1) + ' cm' : v.toFixed(2) + ' m'
 let lastSea = { key: '', at: 0 }, bfRow = -1;
 // 風力階級の表（この計算の発達しきった海の高さは、その風速の範囲のまん中で）
 document.querySelector('#bfTable tbody').innerHTML = window.WGbeaufort.T.map(r => {
-  const mid = isFinite(r[2]) ? (r[1] + r[2]) / 2 : r[1], f = mid > 0.4 && r[0] <= 8 ? W.fullyDev(mid).Hm0 : 0;   // この計算の風は 20 m/s まで
+  const mid = isFinite(r[2]) ? (r[1] + r[2]) / 2 : r[1], f = mid > 0.4 && r[0] <= 11 ? W.fullyDev(mid).Hm0 : 0;   // この計算の風は 30 m/s まで（風力 11）
   const tb = r[4] == null ? '—' : r[4] + ' m' + (r[5] != null ? `（${r[5]}）` : '');
   return `<tr><td>${r[0]}</td><td>${r[1].toFixed(1)}〜${isFinite(r[2]) ? r[2].toFixed(1) : ''}</td><td>${r[3]}</td><td>${tb}</td><td>${f ? (f < 1 ? f.toFixed(2) : f.toFixed(1)) + ' m' : '—'}</td></tr>`; }).join('');
 function update() {
@@ -94,7 +94,8 @@ function update() {
     const swTxt = sw ? `遠くの嵐のうねり ${fmtLen(sw.Hm0)}（周期 ${sw.Tp.toFixed(0)} 秒）も届いています。` : '';
     $('cap').textContent = (st.Hm0 <= 0 ? (U > 0 ? '風が吹く前。' : '風がない。') + (sw ? '' : '海は鏡のように平ら。')
       : `風速 ${U.toFixed(U % 1 ? 1 : 0)} m/s の風が吹いて ${fmtTime(S.t)}。風の波の高さ ${$('nH').textContent}、いちばん多い波の長さ ${$('nL').textContent}。`
-        + (st.full ? 'もうこれ以上は育ちません。' : '') + (U >= 5 ? `白波（砕けた波の泡）は海面の約 ${(3.84e-4 * Math.pow(U, 3.41)).toFixed(U < 8 ? 1 : 0)}%（観測の式）。` : '')) + swTxt; }
+        + (st.full ? 'もうこれ以上は育ちません。' : '') + (U >= 5 ? (U <= 20 ? `白波（砕けた波の泡）は海面の約 ${(3.84e-4 * Math.pow(U, 3.41)).toFixed(U < 8 ? 1 : 0)}%（観測の式）。` : '白波が海面の大部分をおおう（観測の式は 20 m/s まで）。') : '')
+        + (U > 20 ? ' ※ 風速 20 m/s をこえる風（風力 9〜11）が広い海で何日も吹きつづけることは、実際にはまずありません（台風の中の風は数百 km の範囲で、嵐も動く）。ブイで測られた波の高さ（有義波高）の記録は約 19 m。' : '')) + swTxt; }
   window.WGgraph.draw($('graph'), Object.assign({ U }, st), S.sched, Math.min(S.t, 72 * HOUR));
 }
 // 海の分布を GPU へ: 風の波（CEM＋JONSWAP＋短い波）＋遠くの嵐のうねり（js/storm.js）。変わっていたら、続けて動かしているときは 90 ms に1回
@@ -148,7 +149,7 @@ function loop(now) {
 }
 function start() {
   // はじめ: 朝の景色・人あり・風が吹いて 2 時間の海から再生（案内は「つぎへ」で始まり、1 段めは吹く前の凪）
-  setTod('morning'); setWeather(); setObj('human'); setView('orbit');
+  setTod('morning'); setWeather(); setClarity(); setObj('human'); setView('orbit');
   S.free = true; update();
   requestAnimationFrame(loop);
   // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）
