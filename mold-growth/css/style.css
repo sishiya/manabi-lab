@@ -132,7 +132,7 @@ ul.sp{list-style:none;padding-left:0}
 .about details ul{font-size:11.5px;margin-top:6px}
 
 @media (max-width:1100px){ #panel{width:300px} #toolbar{width:150px} }
-@media (max-width:760px), (max-aspect-ratio:3/4){
+@media (max-width:760px) and (min-height:521px), (max-aspect-ratio:3/4){
   html,body{height:auto}
   #shell{height:auto}
   #topbar{flex-direction:column;align-items:stretch;gap:6px;padding:8px}
@@ -147,7 +147,7 @@ ul.sp{list-style:none;padding-left:0}
   #stage,#work,#viewWrap{display:contents}
   /* 見かたのボタン・壁・時間のバーを上に固定し、道具から下はページごとスクロール（RULES 9章。2026-10-18）。
      順に積んで貼る: #modes（44px）→ 凡例（高さ 0 で壁の上に重ねる）→ #world → #timebar */
-  #app{--wh:calc((100vw - 16px) * 0.6 + 60px)} /* 壁を幅いっぱいに描ける高さ（もとの高さのまま） */
+  #app{--wh:calc((100vw - 16px) * 0.6 + 16px)} /* 壁を幅いっぱいに描ける高さ（見かたのボタンは上にあるので、壁の上下は 8px ずつ） */
   #modes{order:0;position:sticky;top:0;z-index:7;height:44px;padding:0 8px;background:var(--bg);border-bottom:1px solid var(--line)}
   #moistLegend{order:1;position:sticky;top:52px;z-index:7;height:0;overflow:visible;max-width:none;margin:0 8px;padding:0;background:none;border:none;align-content:flex-start}
   #moistLegend>span{background:rgba(13,17,16,.86);border-radius:4px;padding:2px 6px}
@@ -169,6 +169,35 @@ ul.sp{list-style:none;padding-left:0}
   #pageZukan{padding:6px}
   .aboutPage{padding:14px 12px}
   .cando{grid-template-columns:1fr}
+}
+
+/* 横向きのスマホ（高さ 520px まで）: 左に見かたのボタンと壁を固定、右の列に時間・状況・道具・パネルを積んでスクロール（2026-10-22） */
+@media (orientation:landscape) and (max-height:520px){
+  :root{--tb:44px;--mh:40px;--lw:clamp(300px, calc((100vh - var(--tb) - var(--mh) - 16px) / 0.6 + 16px), 58vw)}
+  #topbar{height:var(--tb);padding:0 10px;gap:10px}
+  .brand>span{display:none}
+  .brand b{font-size:15px;white-space:nowrap}
+  #tabs button{padding:3px 10px}
+  #tabs button b{font-size:12.5px}
+  #tabs button small{display:none}
+  #app{display:flex;flex-direction:column;overflow-y:auto;padding-left:var(--lw)}
+  #stage,#work,#viewWrap{display:contents}
+  #modes{position:fixed;left:0;top:var(--tb);width:var(--lw);height:var(--mh);padding:0 8px;z-index:7;background:var(--bg);overflow-x:auto;scrollbar-width:none}
+  #modes button{padding:4px 8px;font-size:12px;white-space:nowrap}
+  #moistLegend{position:fixed;left:8px;top:calc(var(--tb) + var(--mh) + 6px);max-width:calc(var(--lw) - 16px);z-index:7}
+  #world{position:fixed;left:0;top:calc(var(--tb) + var(--mh));width:var(--lw);height:calc(100vh - var(--tb) - var(--mh));height:calc(100dvh - var(--tb) - var(--mh));z-index:6}
+  #timebar{order:0;position:sticky;top:0;z-index:5;gap:5px;padding:6px 8px;border-top:none;border-bottom:1px solid var(--line);border-left:1px solid var(--line)}
+  #timebar button{padding:4px 8px;font-size:12px}
+  .spacer{display:none}
+  #side{order:1;position:static;width:auto;padding:8px 8px 0;overflow:visible;border-left:1px solid var(--line)}
+  #toast:not(.on){display:none}
+  #toolbar{order:2;width:auto;border-right:none;border-left:1px solid var(--line);padding:8px;overflow:visible}
+  .tbtns{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:4px}
+  #tools button{padding:6px 5px;font-size:12px;gap:4px}
+  #tools button small{display:none}
+  #toolbar .brush{flex-direction:row;align-items:center;gap:8px}
+  #toolbar .brush input{flex:1}
+  #panel{order:3;width:auto;height:auto;flex:none;overflow:visible;border-top:1px solid var(--line)}
 }
 
 /* picture book (図鑑) */

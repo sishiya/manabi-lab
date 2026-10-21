@@ -37,8 +37,9 @@ function hash(i, k) { const s = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; re
 function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 
 // where the whole 100 x 60 mm wall fits on the canvas
-function layoutFrame(W_, H_, narrow, right) {   // right: width kept free for the side column (readout, magnifier)
-  const top = narrow ? 48 : 50, bot = narrow ? 8 : 12, side = narrow ? 8 : 16;   // top: room for the view buttons
+function layoutFrame(W_, H_, narrow, right, over = true) {   // right: width kept free for the side column (readout, magnifier)
+  // top: room for the view buttons when they sit on the picture (over); on phones they are above it
+  const top = !over ? 8 : narrow ? 48 : 50, bot = narrow ? 8 : 12, side = narrow ? 8 : 16;
   const k = Math.min((W_ - 2 * side - right) / BOX_W, (H_ - top - bot) / BOX_H);
   const w = BOX_W * k, h = BOX_H * k;
   return { x: (W_ - right - w) / 2, y: top + (H_ - top - bot - h) / 2, w, h, k };
@@ -221,7 +222,8 @@ function drawWorld(cv, clock, dt) {
   if (W_ < 100 || H_ < 80) return;
   if (cv.width !== Math.round(W_ * dpr) || cv.height !== Math.round(H_ * dpr)) { cv.width = Math.round(W_ * dpr); cv.height = Math.round(H_ * dpr); }
   const sideCol = getComputedStyle(document.getElementById('side')).position === 'absolute';
-  const F = VIEW.frame = layoutFrame(W_, H_, W_ < 560, sideCol ? 252 : 0);
+  const over = getComputedStyle(document.getElementById('modes')).position === 'absolute';
+  const F = VIEW.frame = layoutFrame(W_, H_, W_ < 560, sideCol ? 252 : 0, over);
   const b = VIEW.box = zoomedBox(F);
   if (!R.bg) { R.bg = buildBg(); R.grain = buildGrain(); }
   const g = cv.getContext('2d');
@@ -270,7 +272,10 @@ function drawWorld(cv, clock, dt) {
     g.font = '12px "Zen Kaku Gothic New", "Yu Gothic", sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'left';
     const tag = (txt, x, y) => { const w = g.measureText(txt).width; g.fillStyle = 'rgba(13,17,16,.6)'; rr(g, x - 4, y - 9, w + 8, 18, 4); g.fill(); g.fillStyle = '#eef2ea'; g.fillText(txt, x, y); };
     tag(L('タイル', 'Tile'), mmX(3), mmY(8));
-    tag(L('目地', 'Grout'), mmX(GROUT_X[1][1] + 2), mmY(GROUT_Y[0] + 1.5));
+    // on a small picture the fan (top right, fixed size) would cover this name: then put it by the first joint
+    const gw = g.measureText(L('目地', 'Grout')).width, gy = mmY(GROUT_Y[0] + 1.5);
+    const gx = mmX(GROUT_X[1][1] + 2) + gw + 4 > F.x + F.w - 82 && gy - 9 < F.y + 72 ? mmX(GROUT_X[0][1] + 2) : mmX(GROUT_X[1][1] + 2);
+    tag(L('目地', 'Grout'), gx, gy);
     tag(L('ゴムパッキン', 'Rubber seal'), mmX(3), mmY((GASKET_Y0 + GASKET_Y1) / 2));
     tag(L('浴そうのふち', 'Bathtub rim'), mmX(3), mmY(BOX_H - 3.3));
   }
