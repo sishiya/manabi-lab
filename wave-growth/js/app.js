@@ -10,7 +10,7 @@ const WIND_ANG = Math.PI + 0.5;          // 風の波が進む向き（左前か
 // 空・光（時刻と雲から js/env.js で毎コマ）。カメラははじめ +x（東）を見ている
 const SUN = { rough0: 0.012, meshes: [], points: [] };
 const DAY_SEC = 240;
-const START_T = 2 * HOUR;               // 開いたときは、風が吹きはじめて 2 時間の海から（凪の鏡は案内の 1 段めで見せる）                     // 「自動」のとき 1 日を 4 分で
+const START_T = 2 * 60;                 // 開いたときは、風が吹きはじめて 2 分の海から（さざ波が立ちはじめたところ。凪の鏡は案内の 1 段めで見せる）                     // 「自動」のとき 1 日を 4 分で
 
 // ---- 状態 ----
 const S = {
@@ -152,7 +152,7 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 function start() {
-  // はじめ: 朝の景色・人あり・風が吹いて 2 時間の海から再生（案内は「つぎへ」で始まり、1 段めは吹く前の凪）
+  // はじめ: 朝の景色・人あり・風が吹いて 2 分の海から再生（案内は「つぎへ」で始まり、1 段めは吹く前の凪）
   setTod('morning'); setWeather(); setClarity(); setObj('human'); setDepth(); setView('orbit');
   S.free = true; update();
   requestAnimationFrame(loop);
