@@ -8,11 +8,11 @@ function obsLL() { return GL.G.obs; }
 function setTod(k) { S.tod = k;
   if (k !== 'auto') { S.clock = E.timeOf(k, obsLL().lat, obsLL().lon);
     // 朝と夕方は太陽のほうへ向く（逆光のきらきら）
-    if ((k === 'morning' || k === 'evening') && view === 'orbit') { const L = E.make(S.clock, S.cloud, obsLL().lat, obsLL().lon).L; guideApi.camTo({ yaw: Math.atan2(L[2], L[0]) + 0.8 }); } }   // 少しななめ（真正面だと照り返しで海が一面に光る）
+    if ((k === 'morning' || k === 'evening') && view === 'orbit') { const Ls = E.make(S.clock, S.cloud, obsLL().lat, obsLL().lon).L; guideApi.camTo({ yaw: Math.atan2(Ls[2], Ls[0]) + 0.8 }); } }   // 少しななめ（真正面だと照り返しで海が一面に光る）
   if (ocean) ocean.skyChanged();
   document.querySelectorAll('#tods button').forEach(b => b.classList.toggle('on', b.dataset.k === k)); }
 document.querySelectorAll('#tods button').forEach(b => b.onclick = () => setTod(b.dataset.k));
-S.cloud = 0.3;
+S.cloud = 0.5;   // 雲の量のはじめ（2026-10-21 ユーザー「50% をデフォに」）
 function setWeather(fromSlider) { const c = $('cloud'); if (!fromSlider) c.value = Math.round(S.cloud * 100); $('cloudL').textContent = Math.round(S.cloud * 100) + '%'; if (ocean) ocean.skyChanged(); }
 $('cloud').addEventListener('input', () => { S.cloud = +$('cloud').value / 100; setWeather(true); });
 
@@ -29,8 +29,8 @@ const clarOf = v => 0.3 * Math.pow(100, v / 100), clarTo = m => Math.round(Math.
 S.murk = 1;
 function setClarity(fromSlider) { const w = SUN.water = waterOptics(S.murk), d = w.secchi;
   if (!fromSlider) $('clar').value = clarTo(S.murk);   // つまみを動かしている最中は、つまみの値を書きかえない
-  $('clarL').textContent = `見える深さ 約 ${d < 10 ? d.toFixed(1) : d.toFixed(0)} m`;
-  $('clarD').textContent = d > 30 ? 'とても澄んだ外洋（南の島の沖のような）' : d > 15 ? 'ふつうの外洋' : d > 5 ? '岸に近い海（プランクトンや細かい砂がまざる）' : 'にごった湾・河口の近く'; }
+  $('clarL').textContent = L(`見える深さ 約 ${d < 10 ? d.toFixed(1) : d.toFixed(0)} m`, `See down to about ${d < 10 ? d.toFixed(1) : d.toFixed(0)} m`);
+  $('clarD').textContent = d > 30 ? L('とても澄んだ外洋（南の島の沖のような）', 'Very clear open ocean (like off a tropical island)') : d > 15 ? L('ふつうの外洋', 'Ordinary open ocean') : d > 5 ? L('岸に近い海（プランクトンや細かい砂がまざる）', 'Coastal sea (plankton and fine sand mixed in)') : L('にごった湾・河口の近く', 'Murky bay or near a river mouth'); }
 $('clar').addEventListener('input', () => { S.murk = clarOf(+$('clar').value); setClarity(true); });
 // パネルの中で、文字や部品をつかんで動かす（ブラウザのドラッグ）が始まらないように（つまみを動かすと 🚫 になって止まっていた）
 $('panel').addEventListener('dragstart', e => e.preventDefault());
@@ -44,7 +44,7 @@ function bedGeo() { const v = [], R = 3000, put = (x, z) => v.push(x, 0, z, 0, 1
 function setDepth() { S.depth = depthOf(+$('depth').value); cam.floor = isFinite(S.depth) ? -S.depth : -1e9;
   if (isFinite(S.depth) && ocean && !bedMesh) bedMesh = ocean.makeMesh(bedGeo());
   if (isFinite(S.depth) && cam.fly && cam.pos[1] < cam.floor + 0.3) cam.pos[1] = cam.floor + 0.3;
-  $('depthL').textContent = isFinite(S.depth) ? `${S.depth < 10 ? S.depth.toFixed(1) : S.depth.toFixed(0)} m` : '深い海（底は見えない）'; lastSea.key = ''; update(); }
+  $('depthL').textContent = isFinite(S.depth) ? `${S.depth < 10 ? S.depth.toFixed(1) : S.depth.toFixed(0)} m` : L('深い海（底は見えない）', 'Deep sea (no bottom in sight)'); lastSea.key = ''; update(); }
 $('depth').addEventListener('input', setDepth);
 
 // ---- 大きさくらべ（人）・ブイ・断面のボタン ----
@@ -67,7 +67,7 @@ function resetProps() { HUMANS.length = 0; HUMANS.push({ x: 0, z: 0, pose: null 
 function refreshToggles() { const t2 = (b, on) => { b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); };
   document.querySelectorAll('#putSeg button').forEach(b => t2(b, b.dataset.p === S.put)); $('secChk').checked = secOpen;
   $('showHuman').checked = S.showHuman; $('showBuoy').checked = S.showBuoy;
-  $('propCount').textContent = `いま: 人 ${HUMANS.length}・ブイ ${FL.list.length}`; }
+  $('propCount').textContent = L(`いま: 人 ${HUMANS.length}・ブイ ${FL.list.length}`, `Now: ${HUMANS.length} people, ${FL.list.length} buoys`); }
 // 物の上に「人 身長 1.7 m」などの札（画面に投げて）
 function drawPropLabel(g) {
   objPose = HUMANS[0] ? HUMANS[0].pose : null;
@@ -90,9 +90,9 @@ cam.floatZoom = f => { const s = -Math.log(f) / 0.13 * 1.5; let x = FLOAT_AT[0] 
   for (const h of S.showHuman ? HUMANS : []) { const dx = x - h.x, dz = z - h.z, d = Math.hypot(dx, dz); if (d < 2.5) { const k = 2.5 / Math.max(d, 1e-3); x = h.x + dx * k; z = h.z + dz * k; } }   // 人の中は通りぬけない
   FLOAT_AT[0] = x; FLOAT_AT[1] = z; cam.target[0] = x; cam.target[2] = z; };
 const COARSE = matchMedia('(pointer: coarse)').matches;
-const VIEW_TXT = { orbit: ['上から見る', 'ドラッグ: 回す・ホイール／2本指: 近づく'], float: ['海面に浮かぶ', 'ドラッグ: 見回す・ホイール／2本指: 前へ・うしろへ'],
-  fly: ['自由に動く', COARSE ? 'ボタン: 動く・ドラッグ: 見回す' : 'W S: 向いている向きへ・A D: 横・Q E: 下 上・Shift: ゆっくり・ドラッグ: 見回す'],
-  beach: ['浜（浅い海）', 'ドラッグ: 回す・ホイール／2本指: 近づく'], beachSec: ['浜（浅い海）の断面図', '坂の急さを右下でえらべます'] };
+const VIEW_TXT = { orbit: [L('上から見る', 'From above'), L('ドラッグ: 回す・ホイール／2本指: 近づく', 'Drag: turn · Wheel / two fingers: closer')], float: [L('海面に浮かぶ', 'Floating at the surface'), L('ドラッグ: 見回す・ホイール／2本指: 前へ・うしろへ', 'Drag: look around · Wheel / two fingers: forward or back')],
+  fly: [L('自由に動く', 'Free move'), COARSE ? L('ボタン: 動く・ドラッグ: 見回す', 'Buttons: move · Drag: look around') : L('W S: 向いている向きへ・A D: 横・Q E: 下 上・Shift: ゆっくり・ドラッグ: 見回す', 'W S: where you face · A D: sideways · Q E: down, up · Shift: slow · Drag: look around')],
+  beach: [L('浜（浅い海）', 'Beach (shallow sea)'), L('ドラッグ: 回す・ホイール／2本指: 近づく', 'Drag: turn · Wheel / two fingers: closer')], beachSec: [L('浜（浅い海）の断面図', 'Beach (shallow sea) cross-section'), L('坂の急さを右下でえらべます', 'Choose the slope at the bottom right')] };
 function viewChip(k) { $('stView').textContent = VIEW_TXT[k][0]; $('stCtl').textContent = VIEW_TXT[k][1]; }
 function setView(v) {
   camAnim = null; if (secOpen) closeSection(); if (beachOpen) closeBeach();
@@ -203,7 +203,7 @@ document.querySelectorAll('#slopes button').forEach(b => b.onclick = () => setSl
 $('beachClose').onclick = () => setView('orbit'); setSlope(0.033);
 function openSection() { if (beachOpen || view !== 'orbit') setView('orbit'); secOpen = true; $('sec').hidden = false; $('secBar').hidden = false; $('next').hidden = true; $('stage').classList.add('sec'); }
 function closeSection() { secOpen = false; $('sec').hidden = true; $('secBar').hidden = true; $('next').hidden = false; $('stage').classList.remove('sec'); }
-$('secMag').onclick = () => { secMag = secMag === 1 ? 3 : 1; $('secMag').classList.toggle('on', secMag > 1); $('secMag').textContent = secMag > 1 ? '本当の大きさに' : '動きを3倍に'; };
+$('secMag').onclick = () => { secMag = secMag === 1 ? 3 : 1; $('secMag').classList.toggle('on', secMag > 1); $('secMag').textContent = secMag > 1 ? L('本当の大きさに', 'True size') : L('動きを3倍に', 'Motion × 3'); };
 $('secChk').onchange = () => { if (!$('secChk').checked) closeSection(); else { if (!FL.list.length) FL.add(4, 2, S.simT); S.showBuoy = true; openSection(); } refreshToggles(); };
 $('secClose').onclick = () => { closeSection(); refreshToggles(); };
 
@@ -224,14 +224,14 @@ function drawOverlay(b) {
   const r = ov.getBoundingClientRect(), g = ovCtx();
   stormOverlay(g, b, r); { const gv = !!(SUN.globe && SUN.globe.alpha > 0.4); if ($('globeBar').hidden === gv) $('globeBar').hidden = !gv; }
   drawSpray(g); if (S.showHuman) drawPropLabel(g); if (S.showBuoy) drawTrails(g);
-  if (flying) { const y = b.pos[1], t2 = SUN.under ? `水の中・深さ ${Math.max(0, SUN.camD).toFixed(1)} m` : `自由に動く・高さ ${y < 1000 ? y.toFixed(1) + ' m' : (y / 1000).toFixed(2) + ' km'}`; if ($('stView').textContent !== t2) $('stView').textContent = t2; }
-  else if (view === 'orbit') { const t2 = SUN.under ? `上から見る・水の中 ${Math.max(0, SUN.camD).toFixed(1)} m` : '上から見る'; if ($('stView').textContent !== t2) $('stView').textContent = t2; }
-  else if (camFloat) { const t2 = `海面に浮かぶ・目の高さ ${cam.eye.toFixed(1)} m`; if ($('stView').textContent !== t2) $('stView').textContent = t2; }
+  if (flying) { const y = b.pos[1], t2 = SUN.under ? L(`水の中・深さ ${Math.max(0, SUN.camD).toFixed(1)} m`, `Underwater · depth ${Math.max(0, SUN.camD).toFixed(1)} m`) : L(`自由に動く・高さ ${y < 1000 ? y.toFixed(1) + ' m' : (y / 1000).toFixed(2) + ' km'}`, `Free move · height ${y < 1000 ? y.toFixed(1) + ' m' : (y / 1000).toFixed(2) + ' km'}`); if ($('stView').textContent !== t2) $('stView').textContent = t2; }
+  else if (view === 'orbit') { const t2 = SUN.under ? L(`上から見る・水の中 ${Math.max(0, SUN.camD).toFixed(1)} m`, `From above · underwater ${Math.max(0, SUN.camD).toFixed(1)} m`) : L('上から見る', 'From above'); if ($('stView').textContent !== t2) $('stView').textContent = t2; }
+  else if (camFloat) { const t2 = L(`海面に浮かぶ・目の高さ ${cam.eye.toFixed(1)} m`, `Floating · eye height ${cam.eye.toFixed(1)} m`); if ($('stView').textContent !== t2) $('stView').textContent = t2; }
   g.font = '12px ' + fontB(); g.textAlign = 'left'; g.fillStyle = 'rgba(255,255,255,.8)';
-  g.fillText(E.clockText(S.clock, obsLL().lon) + (S.tod === 'auto' ? '（時間が進む）' : '') + '・月: ' + E.moonText(SUN.elong || 0) + (SUN.Lm && SUN.Lm[1] > 0 ? '' : '・沈んでいる'), 12, r.height - 14);
+  g.fillText(E.clockText(S.clock, obsLL().lon) + (S.tod === 'auto' ? L('（時間が進む）', ' (running)') : '') + L('・月: ', ' · Moon: ') + E.moonText(SUN.elong || 0) + (SUN.Lm && SUN.Lm[1] > 0 ? '' : L('・沈んでいる', ' · below the horizon')), 12, r.height - 14);
   const U = windAt(S.t);
-  if (U > 0 && S.st.Hm0 > 0) arrow(g, r.width - 40, 40, b, WIND_ANG, '#e8f0f4', '風 ' + U.toFixed(0) + ' m/s');
-  if (SW_OBS && SW_OBS.Hm0 > 0.02) arrow(g, r.width - 40, U > 0 && S.st.Hm0 > 0 ? 112 : 40, b, SW_ANG, '#ffc95a', 'うねり');
+  if (U > 0 && S.st.Hm0 > 0) arrow(g, r.width - 40, 40, b, WIND_ANG, '#e8f0f4', L('風 ', 'Wind ') + U.toFixed(0) + ' m/s');
+  if (SW_OBS && SW_OBS.Hm0 > 0.02) arrow(g, r.width - 40, U > 0 && S.st.Hm0 > 0 ? 112 : 40, b, SW_ANG, '#ffc95a', L('うねり', 'Swell'));
 }
 
 // ---- 濡れて、乾く（人・浮き輪・板） ----
@@ -309,5 +309,15 @@ function draw(dt) {
   if (secOpen) window.WGsection.draw($('sec'), S.st, S.simT, FL.list.length > 0, S.us || 0, secMag);
 }
 let camProbe = [0, 0];
+// 言語（I18N.md）: 題名・JP／EN・画面のボタンの文字と title
+document.title = L('波が育つまで', 'How Waves Grow');
+document.querySelectorAll('#langsw button').forEach(b => { b.setAttribute('aria-pressed', b.dataset.l === LANG); b.onclick = () => { if (b.dataset.l !== LANG) setLang(b.dataset.l); }; });
+$('secMag').textContent = L('動きを3倍に', 'Motion × 3'); $('secClose').textContent = L('× 断面をとじる', '× Close the section'); $('fpQ').textContent = L('下', 'Down'); $('fpE').textContent = L('上', 'Up');
+$('tSlider').setAttribute('aria-label', L('風が吹きはじめてからの時間', 'Time since the wind started')); $('wSlider').setAttribute('aria-label', L('風の速さ', 'Wind speed'));
+$('depth').setAttribute('aria-label', L('水深', 'Water depth')); $('clar').setAttribute('aria-label', L('水の透明度（にごり）', 'Water clarity')); $('cloud').setAttribute('aria-label', L('雲の量', 'Cloud cover'));
+$('spAuto').title = L('はじめはゆっくり、だんだん速く（72時間を1分で）', 'Slow at first, then faster (72 hours in 1 minute)');
+document.querySelector('#views [data-v=float]').title = L('海面に浮かんで見る', 'Float at the sea surface'); document.querySelector('#views [data-v=fly]').title = L('W A S D・Q E（スマホは画面のボタン）。水の中にも入れます', 'W A S D and Q E (buttons on phones). You can go underwater too');
+document.querySelector('#tods [data-k=now]').title = L('いる所のいまの時刻', 'The current time at this place'); document.querySelector('#tods [data-k=auto]').title = L('1日を4分で', 'One day in 4 minutes');
+$('flyPad').setAttribute('aria-label', L('自由に動くボタン', 'Free-move buttons'));
 cam.floatZoom0 = cam.floatZoom; cam.floatZoom = null;
 start();

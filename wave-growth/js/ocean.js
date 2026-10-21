@@ -12,8 +12,8 @@ window.WGocean = (() => {
 
   function create(cv) {
     const gl = cv.getContext('webgl2', { antialias: true, alpha: false });
-    if (!gl) throw new Error('WebGL2 が使えません');
-    if (!gl.getExtension('EXT_color_buffer_float')) throw new Error('EXT_color_buffer_float が使えません');
+    if (!gl) throw new Error(L('WebGL2 が使えません', 'WebGL2 is not available'));
+    if (!gl.getExtension('EXT_color_buffer_float')) throw new Error(L('EXT_color_buffer_float が使えません', 'EXT_color_buffer_float is not available'));
     const aniso = gl.getExtension('EXT_texture_filter_anisotropic');
     // ソフトの GPU（SwiftShader など）では、GPU に問い合わせるたびに待たされるので、時間の計測をやめる
     const dri = gl.getExtension('WEBGL_debug_renderer_info'), renderer = dri ? String(gl.getParameter(dri.UNMASKED_RENDERER_WEBGL)) : '';
@@ -45,7 +45,7 @@ window.WGocean = (() => {
     function fbo(ts) { const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f);
       ts.forEach((t, i) => gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0 + i, gl.TEXTURE_2D, t, 0));
       gl.drawBuffers(ts.map((_, i) => gl.COLOR_ATTACHMENT0 + i));
-      if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) throw new Error('framebuffer が作れません');
+      if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) throw new Error(L('framebuffer が作れません', 'cannot create a framebuffer'));
       return f; }
 
     const S = window.WGsh;

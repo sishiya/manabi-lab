@@ -39,7 +39,8 @@ $allow = @(
   'api.checklistbank.org','www.catalogueoflife.org','tree.opentreeoflife.org','query.wikidata.org','www.wikidata.org','ja.wikipedia.org','en.wikipedia.org','commons.wikimedia.org','upload.wikimedia.org','thumb.wikimedia.org','api.phylopic.org','images.phylopic.org','www.phylopic.org',
   'cesium.com','www.cesium.com','threejs.org','nasa.gov','www.nasa.gov','earthobservatory.nasa.gov','www.itu.int','www.ipcc.ch',
   'patents.google.com','edison.rutgers.edu','www.thehenryford.org','hub.catalogit.app','edisontinfoil.com','instructional-resources.physics.uiowa.edu','irene.cornell7.net','www.loc.gov','journal.smpte.org','earthref.org','www.princeton.edu',
-  'www.mod.go.jp','www.itmedia.co.jp'
+  'www.mod.go.jp','www.itmedia.co.jp',
+  'gml.noaa.gov','www.pari.go.jp'
 )
 
 # ---- which apps ----

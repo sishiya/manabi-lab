@@ -58,10 +58,10 @@ window.WGenv = (() => {
       stars: night * (1 - N) * (1 - 0.7 * moonUp * pb), glow: night * 0.035 * (1 - 0.5 * N),   // glow = 月のない夜の星あかり・大気の光（満月の夜の空の数 % の目安）
       expo: baseExpo(el) * (1 + 0.45 * N * N), el, phase: a };
   }
-  const MOON_NAMES = [[1.5, '新月'], [5.5, '三日月のころ'], [9.5, '上弦のころ'], [13.5, '満月の少し前'], [16.5, '満月'], [20.5, '満月の少しあと'], [24.5, '下弦のころ'], [28, '有明の月'], [30, '新月']];
-  function moonText(elong) { const age = elong / 360 * 29.53; return (MOON_NAMES.find(m => age < m[0]) || MOON_NAMES[0])[1] + `（月齢 ${age.toFixed(0)}）`; }
+  const MOON_NAMES = [[1.5, L('新月', 'new moon')], [5.5, L('三日月のころ', 'crescent')], [9.5, L('上弦のころ', 'first quarter')], [13.5, L('満月の少し前', 'just before full')], [16.5, L('満月', 'full moon')], [20.5, L('満月の少しあと', 'just after full')], [24.5, L('下弦のころ', 'last quarter')], [28, L('有明の月', 'waning crescent')], [30, L('新月', 'new moon')]];
+  function moonText(elong) { const age = elong / 360 * 29.53; return (MOON_NAMES.find(m => age < m[0]) || MOON_NAMES[0])[1] + L(`（月齢 ${age.toFixed(0)}）`, ` (day ${age.toFixed(0)})`); }
   function clockText(c, lon) { const day = Math.floor(c / 24), cc = c - day * 24, h = Math.floor(cc), m = Math.floor((cc - h) * 60);
     const dt = new Date(day0(lon) + zoneOf(lon) * 3600e3 + day * 86400e3);
-    return `${dt.getUTCMonth() + 1}月${dt.getUTCDate()}日 ${h}:${String(m).padStart(2, '0')}`; }
+    return L(`${dt.getUTCMonth() + 1}月${dt.getUTCDate()}日 ${h}:${String(m).padStart(2, '0')}`, `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dt.getUTCMonth()]} ${dt.getUTCDate()} ${h}:${String(m).padStart(2, '0')}`); }
   return { make, sunMoon, events, timeOf, moonText, clockText, zoneOf };
 })();

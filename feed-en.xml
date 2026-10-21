@@ -5,8 +5,32 @@
   <link href="https://sishiya.github.io/manabi-lab/?lang=en"/>
   <link rel="self" href="https://sishiya.github.io/manabi-lab/feed-en.xml"/>
   <id>https://sishiya.github.io/manabi-lab/feed-en.xml</id>
-  <updated>2026-10-17T00:00:00+09:00</updated>
+  <updated>2026-10-21T00:00:00+09:00</updated>
   <author><name>Shishiya</name></author>
+  <entry>
+    <title>How Waves Grow</title>
+    <link href="https://sishiya.github.io/manabi-lab/wave-growth/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/wave-growth/?lang=en</id>
+    <published>2026-10-20T00:00:00+09:00</published>
+    <updated>2026-10-21T00:00:00+09:00</updated>
+    <summary>From the moment the wind starts, watch a mirror-calm sea grow ripples, then big waves, until they stop growing, using formulas built from measurements at sea and a 3D sea of tens of thousands of waves. Change the depth, water clarity, time of day and clouds, float at the surface or dive underwater.</summary>
+  </entry>
+  <entry>
+    <title>How Mold Grows</title>
+    <link href="https://sishiya.github.io/manabi-lab/mold-growth/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/mold-growth/?lang=en</id>
+    <published>2026-10-06T00:00:00+09:00</published>
+    <updated>2026-10-20T00:00:00+09:00</updated>
+    <summary>A “mold garden” on a magnified bathroom wall. Spores sprout and spread by growing threads called hyphae. Try water, grime, mold remover and anti-mold agents with your finger to find out how to keep it away.</summary>
+  </entry>
+  <entry>
+    <title>Seeing WiFi at Home</title>
+    <link href="https://sishiya.github.io/manabi-lab/wifi-wave/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/wifi-wave/?lang=en</id>
+    <published>2026-10-04T00:00:00+09:00</published>
+    <updated>2026-10-20T00:00:00+09:00</updated>
+    <summary>See how WiFi signals travel through a home, with an electromagnetic wave simulation.</summary>
+  </entry>
   <entry>
     <title>Metronomes Falling into Step</title>
     <link href="https://sishiya.github.io/manabi-lab/metronome-sync/?lang=en"/>
@@ -120,14 +144,6 @@
     <summary>Evolve creatures made of joints and muscles with a genetic algorithm. Flat ground, slopes, ice, the Moon and water each give rise to different bodies and ways of moving.</summary>
   </entry>
   <entry>
-    <title>How Mold Grows</title>
-    <link href="https://sishiya.github.io/manabi-lab/mold-growth/?lang=en"/>
-    <id>https://sishiya.github.io/manabi-lab/mold-growth/?lang=en</id>
-    <published>2026-10-06T00:00:00+09:00</published>
-    <updated>2026-10-10T00:00:00+09:00</updated>
-    <summary>A “mold garden” on a magnified bathroom wall. Spores sprout and spread by growing threads called hyphae. Try water, grime, mold remover and anti-mold agents with your finger to find out how to keep it away.</summary>
-  </entry>
-  <entry>
     <title>God’s-Eye Map</title>
     <link href="https://sishiya.github.io/manabi-lab/god-view/?lang=en"/>
     <id>https://sishiya.github.io/manabi-lab/god-view/?lang=en</id>
@@ -142,14 +158,6 @@
     <published>2026-10-04T00:00:00+09:00</published>
     <updated>2026-10-10T00:00:00+09:00</updated>
     <summary>The double slit, tunneling, polarizers, entanglement and the uncertainty principle.</summary>
-  </entry>
-  <entry>
-    <title>Seeing WiFi at Home</title>
-    <link href="https://sishiya.github.io/manabi-lab/wifi-wave/?lang=en"/>
-    <id>https://sishiya.github.io/manabi-lab/wifi-wave/?lang=en</id>
-    <published>2026-10-04T00:00:00+09:00</published>
-    <updated>2026-10-10T00:00:00+09:00</updated>
-    <summary>See how WiFi signals travel through a home, with an electromagnetic wave simulation.</summary>
   </entry>
   <entry>
     <title>How Animals Sense the World</title>

@@ -1,109 +1,132 @@
+<!doctype html>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>波が育つまで</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230e2233'/><path d='M8 38 Q18 28 28 38 T48 38 T58 34' stroke='%237fd0e8' stroke-width='4' fill='none'/></svg>">
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
 <script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<!-- seo（検索・リンクカード。_dev/tools/seo.mjs が入口の APPS から作る。手で直さない） -->
+<meta name="description" content="風が吹きはじめてから、鏡のような凪の海がさざ波・大きな波へ育ち、もう育たなくなるまでを、海で測った記録から作られた式と、何万もの波を重ねた3Dの海で。水深・透明度・時刻・雲も変えられ、海面に浮かんだり、水の中へもぐったりできる。">
+<meta property="og:type" content="website"><meta property="og:site_name" content="まなびラボ"><meta property="og:locale" content="ja_JP"><meta property="og:locale:alternate" content="en_US">
+<meta property="og:title" content="波が育つまで｜まなびラボ"><meta property="og:description" content="風が吹きはじめてから、鏡のような凪の海がさざ波・大きな波へ育ち、もう育たなくなるまでを、海で測った記録から作られた式と、何万もの波を重ねた3Dの海で。水深・透明度・時刻・雲も変えられ、海面に浮かんだり、水の中へもぐったりできる。"><meta property="og:url" content="https://sishiya.github.io/manabi-lab/wave-growth/">
+<meta property="og:image" content="https://sishiya.github.io/manabi-lab/assets/thumbs/wave-growth.jpg"><meta property="og:image:width" content="640"><meta property="og:image:height" content="360">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@sishiya22">
+<link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/wave-growth/?lang=ja"><link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/wave-growth/?lang=en"><link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/wave-growth/">
+<!-- /seo -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=21">
 
 <div id="app">
-  <header id="top"><h1>波が育つまで</h1><span id="perf"></span></header>
+  <header id="top"><h1><span lang="ja">波が育つまで</span><span lang="en">How Waves Grow</span></h1><span id="perf"></span><div class="langsw" id="langsw" role="group" aria-label="言語 / Language"><button data-l="ja" title="日本語">JP</button><button data-l="en" title="English">EN</button></div></header>
   <div id="wrap">
     <section id="pin">
       <div id="stage">
         <canvas id="cv"></canvas><canvas id="ov"></canvas>
-        <canvas id="sec" hidden></canvas><div id="beachBar" hidden><span id="slopes"><button data-s="0.1">急な浜</button><button data-s="0.033">ふつう</button><button data-s="0.01">遠浅</button></span><span id="beachKinds"><button data-b="3d">3D</button><button data-b="sec">断面図</button></span><button id="beachClose" aria-label="浜をはなれる">× 上からにもどる</button></div><div id="secBar" hidden><button id="secMag">動きを3倍に</button><button id="secClose" aria-label="断面を閉じる">× 断面をとじる</button></div>
-        <div id="state"><b id="stView">上から見る</b> <span id="stCtl"></span><span id="stPause" hidden></span><span id="stStorm" hidden></span><span id="stMsg" hidden></span></div>
+        <canvas id="sec" hidden></canvas><div id="beachBar" hidden><span id="slopes"><button data-s="0.1">急な浜</button><button data-s="0.033">ふつう</button><button data-s="0.01">遠浅</button></span><span id="beachKinds"><button data-b="3d">3D</button><button data-b="sec">断面図</button></span><button id="beachClose">× 上からにもどる</button></div>
+        <div id="secBar" hidden><button id="secMag"></button><button id="secClose"></button></div>
+        <div id="state"><b id="stView"></b> <span id="stCtl"></span><span id="stPause" hidden></span><span id="stStorm" hidden></span><span id="stMsg" hidden></span></div>
         <div id="globeBar" hidden><span>タップで置く</span><button data-p="storm">嵐</button><button data-p="obs">いる所</button></div>
-        <div id="flyPad" hidden aria-label="自由に動くボタン"><button data-k="KeyQ" title="下へ（Q）">下</button><button data-k="KeyW" title="前へ（W）">▲</button><button data-k="KeyE" title="上へ（E）">上</button><button data-k="KeyA" title="左へ（A）">◀</button><button data-k="KeyS" title="うしろへ（S）">▼</button><button data-k="KeyD" title="右へ（D）">▶</button></div>
-        <button id="next">つぎへ ▶</button>
+        <div id="flyPad" hidden><button data-k="KeyQ" id="fpQ"></button><button data-k="KeyW">▲</button><button data-k="KeyE" id="fpE"></button><button data-k="KeyA">◀</button><button data-k="KeyS">▼</button><button data-k="KeyD">▶</button></div>
+        <button id="next"></button>
         <div id="glerr" hidden></div>
       </div>
       <div id="capRow"><span id="stepNo"></span><p id="cap"></p></div>
       <div id="nums">
-        <div><b id="nH">0</b><small>波の高さ<br>（有義波高）</small></div>
-        <div><b id="nT">—</b><small>いちばん多い<br>波の周期</small></div>
-        <div><b id="nL">—</b><small>その波長</small></div>
-        <div class="wide"><b id="nC">—</b><small>その波の速さ</small></div>
-        <div class="wide"><b id="nS">凪</b><small>いまの海</small></div>
-        <div class="wide"><b id="nB">—</b><small id="nBd">風力（気象庁）</small></div>
+        <div><b id="nH">0</b><small lang="ja">波の高さ<br>（有義波高）</small><small lang="en">Wave height<br>(significant)</small></div>
+        <div><b id="nT">—</b><small lang="ja">いちばん多い<br>波の周期</small><small lang="en">Peak<br>period</small></div>
+        <div><b id="nL">—</b><small lang="ja">その波長</small><small lang="en">Its wavelength</small></div>
+        <div class="wide"><b id="nC">—</b><small lang="ja">その波の速さ</small><small lang="en">Its speed</small></div>
+        <div class="wide"><b id="nS"></b><small lang="ja">いまの海</small><small lang="en">The sea now</small></div>
+        <div class="wide"><b id="nB">—</b><small id="nBd"></small></div>
       </div>
     </section>
 
     <section id="panel">
       <div id="timeBox" class="box">
-        <h2 class="bh">時間</h2>
-        <div class="row"><span>風が吹きはじめてから</span><b id="tLabel">0 分</b></div>
-        <input id="tSlider" type="range" min="0" max="1000" value="0" aria-label="風が吹きはじめてからの時間">
-        <div class="ticks"><span style="left:0">0</span><span style="left:11.8%">1時間</span><span style="left:28.9%">6</span><span style="left:57.7%">24</span><span style="left:100%">72時間</span></div>
+        <h2 class="bh"><span lang="ja">時間</span><span lang="en">Time</span></h2>
+        <div class="row"><span><span lang="ja">風が吹きはじめてから</span><span lang="en">Since the wind started</span></span><b id="tLabel"></b></div>
+        <input id="tSlider" type="range" min="0" max="1000" value="0">
+        <div class="ticks"><span style="left:0">0</span><span style="left:11.8%" lang="ja">1時間</span><span style="left:11.8%" lang="en">1 h</span><span style="left:28.9%">6</span><span style="left:57.7%">24</span><span style="left:100%" lang="ja">72時間</span><span style="left:100%" lang="en">72 h</span></div>
         <div class="row"><button id="play">▶</button>
-          <span id="speeds"><button data-s="0" title="はじめはゆっくり、だんだん速く（72時間を1分で）">おまかせ</button> 1秒で <button data-s="600">10分</button><button data-s="3600">1時間</button></span></div>
+          <span id="speeds"><button data-s="0" id="spAuto"><span lang="ja">おまかせ</span><span lang="en">Auto</span></button> <span lang="ja">1秒で</span><span lang="en">1 s =</span> <button data-s="600"><span lang="ja">10分</span><span lang="en">10 min</span></button><button data-s="3600"><span lang="ja">1時間</span><span lang="en">1 h</span></button></span></div>
       </div>
       <div id="windBox" class="box">
-        <h2 class="bh">海をつくる</h2>
-        <div class="row"><span>風の速さ</span><b id="wLabel">10 m/s</b></div>
-        <input id="wSlider" type="range" min="0" max="30" step="0.5" value="10" aria-label="風の速さ">
-        <p class="note">ずっと同じ風が吹きます。変えると、はじめからその風が吹いていたときの海に、すぐ変わります（時間はそのまま）。</p>
-        <label class="slider"><span>水深</span><b id="depthL"></b><input id="depth" type="range" min="0" max="100" step="1" value="100" aria-label="水深"></label>
-        <div class="ticks2"><span>浅い（2 m）</span><span>底が見えない深い海</span></div>
+        <h2 class="bh"><span lang="ja">海をつくる</span><span lang="en">Make the sea</span></h2>
+        <div class="row"><span><span lang="ja">風の速さ</span><span lang="en">Wind speed</span></span><b id="wLabel">10 m/s</b></div>
+        <input id="wSlider" type="range" min="0" max="30" step="0.5" value="10">
+        <p class="note" lang="ja">ずっと同じ風が吹きます。変えると、はじめからその風が吹いていたときの海に、すぐ変わります（時間はそのまま）。</p>
+        <p class="note" lang="en">The same wind keeps blowing. If you change it, the sea jumps to what it would be if that wind had blown from the start (the time stays).</p>
+        <p class="note" id="windNote"></p>
+        <label class="slider"><span><span lang="ja">水深</span><span lang="en">Water depth</span></span><b id="depthL"></b><input id="depth" type="range" min="0" max="100" step="1" value="100"></label>
+        <div class="ticks2"><span lang="ja">浅い（2 m）</span><span lang="en">Shallow (2 m)</span><span lang="ja">底が見えない深い海</span><span lang="en">Deep sea, no bottom in sight</span></div>
+        <label class="slider"><span><span lang="ja">水の透明度</span><span lang="en">Water clarity</span></span><b id="clarL"></b><input id="clar" type="range" min="0" max="100" step="1"></label>
+        <div class="ticks2"><span lang="ja">澄んだ</span><span lang="en">Clear</span><span lang="ja">にごった</span><span lang="en">Murky</span></div>
+        <div class="sub" id="clarD"></div>
         <details id="stormBox" class="inner" hidden>
           <summary>遠くの嵐 <span id="stormSum" class="note"></span></summary>
-        <div class="row" style="margin-top:6px"><span></span><button id="stormBtn">遠くで嵐を起こす</button></div>
-        <p class="note">何千 km も先で嵐が吹きはじめます（いまの時刻から）。育った波は「うねり」になって何日もかけて届き、この海の波に重なります。長い波ほど速いので先に着きます。</p>
-        <div id="stormMore">
-          <div id="swNums"></div>
-          <canvas id="swMap" style="width:100%;height:170px;display:block"></canvas>
-          <canvas id="swChart" style="width:100%;height:150px;display:block;margin-top:6px"></canvas>
-          <div class="row"><span>地球儀で置く</span><span id="swPlace" class="seg"><button data-p="storm">嵐</button><button data-p="obs">いる所</button><button id="globeBtn">地球儀を見る</button></span></div>
-          <p class="note">ホイール／2本指で引くと、宇宙から見た地球まで。地球儀をタップすると、えらんだほう（嵐・いる所）をそこへ置きます。いる所を動かすと、太陽と月の位置もその場所のものになります。</p>
-          <div class="row"><span>嵐までの距離（地球の上のまっすぐな道）</span><b id="swRl"></b></div><div id="swGeo" class="note"></div>
-          <label class="slider"><span>嵐の風の速さ</span><b id="swUl"></b><input id="swU" type="range" min="10" max="30" step="1"></label>
-          <label class="slider"><span>嵐が吹いた時間</span><b id="swDl"></b><input id="swD" type="range" min="6" max="96" step="6"></label>
-          <label class="slider"><span>嵐の広さ</span><b id="swLl"></b><input id="swL" type="range" min="300" max="2000" step="100"></label>
-        </div>
+          <div class="row" style="margin-top:6px"><span></span><button id="stormBtn"></button></div>
+          <div id="stormMore">
+            <div id="swNums"></div>
+            <canvas id="swMap" style="width:100%;height:170px;display:block"></canvas>
+            <canvas id="swChart" style="width:100%;height:150px;display:block;margin-top:6px"></canvas>
+            <div class="row"><span></span><span id="swPlace" class="seg"><button data-p="storm">嵐</button><button data-p="obs">いる所</button><button id="globeBtn">地球儀を見る</button></span></div>
+            <div class="row"><span></span><b id="swRl"></b></div><div id="swGeo" class="note"></div>
+            <label class="slider"><span></span><b id="swUl"></b><input id="swU" type="range" min="10" max="30" step="1"></label>
+            <label class="slider"><span></span><b id="swDl"></b><input id="swD" type="range" min="6" max="96" step="6"></label>
+            <label class="slider"><span></span><b id="swLl"></b><input id="swL" type="range" min="300" max="2000" step="100"></label>
+          </div>
         </details>
       </div>
       <div id="viewBox" class="box">
-        <h2 class="bh">見かた</h2>
-        <span id="views" class="seg"><button data-v="orbit">上から</button><button data-v="float" title="海面に浮かんで見る">海面から</button><button data-v="fly" title="W A S D・Q E（スマホは画面のボタン）。水の中にも入れます">自由に動く</button><button data-v="beach" title="浜（浅い海）" hidden>浜</button></span>
-        <div class="sub" id="viewSub">ドラッグで回す・見回す。ホイール／2本指で近づく。「自由に動く」は W A S D・Q E（スマホは画面のボタン）で、水の中にも入れます。</div>
+        <h2 class="bh"><span lang="ja">見かた</span><span lang="en">View</span></h2>
+        <span id="views" class="seg"><button data-v="orbit"><span lang="ja">上から</span><span lang="en">From above</span></button><button data-v="float"><span lang="ja">海面から</span><span lang="en">At the surface</span></button><button data-v="fly"><span lang="ja">自由に動く</span><span lang="en">Free move</span></button><button data-v="beach" hidden>浜</button></span>
+        <div class="sub" lang="ja">ドラッグで回す・見回す。ホイール／2本指で近づく。「自由に動く」は W A S D・Q E（スマホは画面のボタン）で、水の中にも入れます。</div>
+        <div class="sub" lang="en">Drag to turn or look around. Wheel / two fingers to move closer. In “Free move”, use W A S D and Q E (on phones, the on-screen buttons); you can go underwater too.</div>
       </div>
       <div id="skyBox" class="box">
-        <h2 class="bh">空</h2>
-        <div class="row"><span>時刻</span><span id="tods" class="seg"><button data-k="morning">朝</button><button data-k="noon">昼</button><button data-k="evening">夕方</button><button data-k="night">夜</button><button data-k="now" title="いる所のいまの時刻">いま</button><button data-k="auto" title="1日を4分で">進める</button></span></div>
-        <label class="slider"><span>雲の量</span><b id="cloudL">30%</b><input id="cloud" type="range" min="0" max="100" step="1" value="30" aria-label="雲の量"></label>
-        <div class="sub">太陽と月は、きょうの日付・時刻・いる所（北緯 33°・東経 140°）の、本当の位置（月の満ち欠けも）。日がさすかどうかは、太陽の前の雲で決まります。</div>
-        <label class="slider"><span>水の透明度</span><b id="clarL"></b><input id="clar" type="range" min="0" max="100" step="1" aria-label="水の透明度（にごり）"></label>
-        <div class="ticks2"><span>澄んだ</span><span>にごった</span></div>
-        <div class="sub" id="clarD"></div>
+        <h2 class="bh"><span lang="ja">空</span><span lang="en">Sky</span></h2>
+        <div class="row"><span><span lang="ja">時刻</span><span lang="en">Time of day</span></span><span id="tods" class="seg"><button data-k="morning"><span lang="ja">朝</span><span lang="en">Morning</span></button><button data-k="noon"><span lang="ja">昼</span><span lang="en">Noon</span></button><button data-k="evening"><span lang="ja">夕方</span><span lang="en">Evening</span></button><button data-k="night"><span lang="ja">夜</span><span lang="en">Night</span></button><button data-k="now"><span lang="ja">いま</span><span lang="en">Now</span></button><button data-k="auto"><span lang="ja">進める</span><span lang="en">Run</span></button></span></div>
+        <label class="slider"><span><span lang="ja">雲の量</span><span lang="en">Cloud cover</span></span><b id="cloudL">50%</b><input id="cloud" type="range" min="0" max="100" step="1" value="50"></label>
+        <div class="sub" lang="ja">太陽と月は、きょうの日付・時刻・いる所（北緯 33°・東経 140°）の、本当の位置（月の満ち欠けも）。日がさすかどうかは、太陽の前の雲で決まります。</div>
+        <div class="sub" lang="en">The sun and moon are at their real positions for today’s date, the time, and the place (33°N, 140°E), moon phase included. Whether sunlight gets through depends on the clouds in front of the sun.</div>
       </div>
       <div id="propBox" class="box">
-        <h2 class="bh">浮かべる物</h2>
-        <div class="row"><span>見せる</span><span class="chks"><label class="chk"><input type="checkbox" id="showHuman" checked> 人</label><label class="chk"><input type="checkbox" id="showBuoy" checked> ブイ</label></span></div>
-        <div class="row"><span>海をタップして置く</span><span id="putSeg" class="seg"><button data-p="human">人</button><button data-p="buoy">ブイ</button><button data-p="none">置かない</button></span></div>
-        <div class="row"><span class="sub" id="propCount"></span><button id="clearBtn">ぜんぶ消す</button></div>
-        <div class="sub">それぞれ 6 こまで（多くなると古いものから消えます）。ブイは、波が来ても進まず、その場で輪をえがきます。</div>
+        <h2 class="bh"><span lang="ja">浮かべる物</span><span lang="en">Floating things</span></h2>
+        <div class="row"><span><span lang="ja">見せる</span><span lang="en">Show</span></span><span class="chks"><label class="chk"><input type="checkbox" id="showHuman" checked> <span lang="ja">人</span><span lang="en">Person</span></label><label class="chk"><input type="checkbox" id="showBuoy" checked> <span lang="ja">ブイ</span><span lang="en">Buoy</span></label></span></div>
+        <div class="row"><span><span lang="ja">海をタップして置く</span><span lang="en">Tap the sea to place</span></span><span id="putSeg" class="seg"><button data-p="human"><span lang="ja">人</span><span lang="en">Person</span></button><button data-p="buoy"><span lang="ja">ブイ</span><span lang="en">Buoy</span></button><button data-p="none"><span lang="ja">置かない</span><span lang="en">Nothing</span></button></span></div>
+        <div class="row"><span class="sub" id="propCount"></span><button id="clearBtn"><span lang="ja">ぜんぶ消す</span><span lang="en">Remove all</span></button></div>
+        <div class="sub" lang="ja">それぞれ 6 こまで（多くなると古いものから消えます）。ブイは、波が来ても進まず、その場で輪をえがきます。</div>
+        <div class="sub" lang="en">Up to 6 of each (the oldest disappears first). A buoy does not travel with the waves; it moves in circles where it is.</div>
       </div>
       <div id="graphBox" class="box">
-        <h2 class="bh">図</h2>
-        <label class="chk"><input type="checkbox" id="secChk"> ブイの真下の断面（水の粒の動き）を見る</label>
-        <div class="row" style="margin-top:8px"><span>どの長さの波が、どれだけあるか</span></div>
+        <h2 class="bh"><span lang="ja">図</span><span lang="en">Diagrams</span></h2>
+        <label class="chk"><input type="checkbox" id="secChk"> <span lang="ja">ブイの真下の断面（水の粒の動き）を見る</span><span lang="en">Show the cross-section under the buoy (how the water moves)</span></label>
+        <div class="row" style="margin-top:8px"><span><span lang="ja">どの長さの波が、どれだけあるか</span><span lang="en">How much of each wave length there is</span></span></div>
         <canvas id="graph"></canvas>
-        <p class="note">色のついた山 = いま。点線 = この風で発達しきった海。細い線 = 1・3・6・12・24・48 時間のとき。</p>
+        <p class="note" lang="ja">色のついた山 = いま。点線 = この風で発達しきった海。細い線 = 1・3・6・12・24・48 時間のとき。</p>
+        <p class="note" lang="en">Colored hill = now. Dotted line = the fully developed sea for this wind. Thin lines = after 1, 3, 6, 12, 24 and 48 hours.</p>
       </div>
       <details class="box" id="bfBox">
-        <summary>風力階級の表（気象庁）と、この計算の波の高さ</summary>
-        <table id="bfTable"><thead><tr><th>風力</th><th>風速 m/s</th><th>海のようす</th><th>表の波の高さ</th><th>この計算（発達しきった海）</th></tr></thead><tbody></tbody></table>
-        <p class="note">表の波の高さは、陸から遠い外洋のおおよその目安（かっこ内はおおよその最大）。表は風が十分長く吹いた海のようすなので、この計算では「発達しきった海」の高さとくらべています（この計算の風は 30 m/s = 風力11 まで）。強い風ほど計算のほうが高く出るのは、発達しきるまでに何日も・何千 km も同じ風が吹きつづける必要があり、本当の嵐ではそこまで育たないため（表は実際の海の目安）。</p>
+        <summary><span lang="ja">風力階級の表（気象庁）と、この計算の波の高さ</span><span lang="en">Beaufort scale (Japan Meteorological Agency) and the wave heights here</span></summary>
+        <table id="bfTable"><thead><tr><th><span lang="ja">風力</span><span lang="en">Force</span></th><th><span lang="ja">風速 m/s</span><span lang="en">Wind m/s</span></th><th><span lang="ja">海のようす</span><span lang="en">Sea state</span></th><th><span lang="ja">表の波の高さ</span><span lang="en">Table wave height</span></th><th><span lang="ja">この計算（発達しきった海）</span><span lang="en">This model (fully developed)</span></th></tr></thead><tbody></tbody></table>
+        <p class="note" lang="ja">表の波の高さは、陸から遠い外洋のおおよその目安（かっこ内はおおよその最大）。表は風が十分長く吹いた海のようすなので、この計算では「発達しきった海」の高さとくらべています（この計算の風は 30 m/s = 風力11 まで）。強い風ほど計算のほうが高く出るのは、発達しきるまでに何日も・何千 km も同じ風が吹きつづける必要があり、本当の嵐ではそこまで育たないため（表は実際の海の目安）。</p>
+        <p class="note" lang="en">The table heights are rough guides for the open sea far from land (probable maximum in brackets). The table describes seas after the wind has blown long enough, so it is compared with the “fully developed sea” here (winds up to 30 m/s = force 11). For strong winds the model comes out higher: a sea needs days and thousands of km of the same wind to fully develop, which real storms do not provide (the table reflects real seas).</p>
       </details>
-      <details class="box">
+      <details class="box" lang="ja">
         <summary>なぜ波は育つの？ なぜ止まるの？</summary>
         <p>風は海面をこすり、押して、波にエネルギーをわたします。長い波ほど速く走るので（深い海では、周期 T 秒の波は 1 秒に約 1.56×T m 進む）、風に押されつづけると、多い波はだんだん長く・速くなります。</p>
         <p>いちばん多い波が風と同じくらいの速さになると、風はもうその波を押せません。これが「発達しきった海」です。強い風ほど、高い波に育つまで長くかかります（風速 10 m/s で約 30 時間、20 m/s で約 3 日）。</p>
         <p>ここの数字は、海で測った記録から作られた式（下の出どころ）で計算しています。海面の模様は、その分布どおりの何万もの波を FFT で重ねたものです。</p>
       </details>
-      <details id="about" class="box">
+      <details class="box" lang="en">
+        <summary>Why do waves grow? Why do they stop?</summary>
+        <p>The wind rubs and pushes the sea surface, handing energy to the waves. Longer waves travel faster (in deep water a wave with period T seconds moves about 1.56×T m per second), so as the wind keeps pushing, the most common waves get longer and faster.</p>
+        <p>When the most common waves move about as fast as the wind, the wind can no longer push them. This is the “fully developed sea”. The stronger the wind, the longer it takes to grow tall waves (about 30 hours at 10 m/s, about 3 days at 20 m/s).</p>
+        <p>The numbers come from formulas built from measurements at sea (see sources below). The sea surface is tens of thousands of waves added up with an FFT, following that distribution.</p>
+      </details>
+      <details id="about" class="box" lang="ja">
         <summary>このアプリについて</summary>
         <p>学習用に簡単にしています。</p>
         <h3>計算のしかた</h3>
@@ -111,31 +134,25 @@
           <li>風速 U（海面から 10 m の高さ）と吹いた時間 → 同じ育ち方をする距離 → 波の高さ（有義波高）とピークの周期（CEM の式）。発達しきった海で止まる。</li>
           <li>風は 30 m/s まで（それより強い風は、成長の式・海を押す力の式が観測と合わなくなるので入れない）。20 m/s をこえる風が広い海で何日も吹くことは実際にはまずないと、画面に書く。風は 72 時間ずっと同じ速さ（つまみで変えると、はじめからその風が吹いていたとして計算しなおす）。</li>
           <li>分布の形は JONSWAP（γ 3.3）を、その高さと周期に合わせる。向きの広がりは cos<sup>2s</sup>(θ/2)、s は周期によって変わり、いちばん多い波で 10。</li>
-          <li>海面: 分布どおりの波を 3 枚（1280 m・160 m・20 m）の FFT で重ねる。深い海の速さ（ω² = gk）で動く。</li>
+          <li>海面: 分布どおりの波を 3 枚（1280 m・160 m・20 m）の FFT で重ねる。</li>
+          <li>水深のある海: 波の分布は TMA（Bouws ほか 1985）= JONSWAP × 深さの係数 φ（Kitaigorodskii。浅いほど長い波のエネルギーに上限）。波の速さと長さは有限の水深の式 ω² = gk tanh kh、水面の横の動きは 1/tanh kh 倍（線形の波）。波が育つ速さそのものは深い海の式（CEM）のまま（浅い海の成長の図は使っていない）。底は平らな砂（反射率の目安 0.3〜0.5）。</li>
+          <li>水の透明度: 水にまざった物（植物プランクトン・細かい粒・とけた色）の量 m を、きれいな外洋 = 1 として 0.3〜30 倍。光の吸収 = 純水（Pope &amp; Fry 1997: 赤 650 nm 0.34・緑 550 nm 0.057・青 450 nm 0.009 /m）＋ m ×（0.010・0.013・0.021）、散乱 = m ×（0.05・0.03・0.03）/m。海の色は後ろへ散らばる光の割合 R ≈ 0.33 b<sub>b</sub>/(a + b<sub>b</sub>)（Gordon ほか 1975。b<sub>b</sub> = 水 ＋ m × 0.0025）。見える深さは 1.7 ÷（緑と青の光の弱まりの平均）（Poole &amp; Atkins 1929 の透明度板の目安）。まざった物の係数・色の分け方は目安（本当は、まざった物の種類で色がかわる）。</li>
+          <li>水の中: 水面を下から見ると、水 → 空気の屈折（スネルの法則、屈折率 1.33）で、真上の円（半分の角度 48.6°）の中だけ空が見え、その外は全反射で水の中が映る。窓を通った光は 1.33² 倍（放射輝度は屈折率の 2 乗に比例）。水の中の光の明るさは、上から見た海の色を下向き 1 として横 5・上 40 くらいにした（目安）。コースティクス（水の下の物や砂にゆらめく光）: 水面の傾きで曲がった太陽の光が深さ D で集まる所は明るい（明るさ = 1/|J|、J = det(I − D(1 − 1/1.33)·H)、H は水面の曲がり具合。小さい傾きでの光線の計算）。太陽の円盤の大きさで深いほどぼやけるのは exp(−D/8) の目安。光芒（水の中の光のすじ）: 見る向きの 10 点で、届く太陽の光（深さで弱まる × 集まり方）が前に強く散らばる分（ヘニー–グリーンスタイン g 0.9、散乱 0.03 /m の目安）を足した。</li>
+          <li>太陽と月: きょうの日付・時刻・いる所（北緯 33°・東経 140°の海）から計算した本当の向き。時刻は経度から決めたその場所の時刻（経度 15° ごとに 1 時間）。太陽は NOAA の簡単な式（誤差 0.01° ほど）、月は Meeus の主な項と、地上から見たずれ（視差 約 1°）（誤差 0.3° ほど）。月は本当の大きさ（半径 0.26°）の球で、計算した太陽の向きから照らすので、満ち欠けと欠け方の向きは本当のとおり。月の光の強さは満月で太陽の 2.5×10⁻⁶、満ち欠けで Allen の式のとおり弱まる。夜は、目が暗さに慣れたくらいに、光をまとめて約 2.8 万倍にして見せている。朝・夕方はその日の日の出の 1 時間後・日の入の 30 分前。星の並びは見た目だけ。「進める」は 1 日を 4 分で。</li>
+          <li>雲: 高さ 1500 m の層（形はゆらぎの重ね合わせで見た目）。日がさす量は、その時刻に太陽（夜は月）の前にある雲の濃さで決まる。雲が多いほど暗く、見通しが短くなる量は目安。</li>
+          <li>空の色は大気の散乱の計算（1回散乱）。水平線のすぐ上は 2° の空で代用。</li>
         </ul>
         <h3>簡単にしたところ・推定</h3>
         <ul>
-          <li>水深: 平らな底（2〜200 m、または底が見えない深い海）。風はずっと同じ向きで、場所によらない。遠くから来るうねりは入れていない。</li>
-          <li>波長 20 cm より短い波は描いていない。くり返しのため、周期を 1000 秒で一周するように少しだけ丸めている。</li>
+          <li>底は平らで、風はずっと同じ向き・場所によらない。遠くから来るうねりは入れていない。</li>
+          <li>波長 20 cm より短い波は描いていない（照り返しのにじみで表す）。くり返しのため、周期を 1000 秒で一周するように少しだけ丸めている。</li>
+          <li>短い波: 長い波の分布（JONSWAP）はピークより短い側をなだらかに打ち切り、風で強さが変わる短い波の部分を足した（Elfouhaily ほか 1997 の ECKV の形）。合計の海面の傾きは Cox &amp; Munk の観測に近い（10 m/s で 0.053 と 0.054）。</li>
+          <li>白波: 沖の白波の泡・風で引きのばされた泡のすじ・しぶきの粒は、本物らしく描けなかったので絵からは外した（白波の割合だけ、観測の式 Monahan &amp; O'Muircheartaigh 1980: 3.84×10⁻⁶ U<sup>3.41</sup>、10 m/s で約 1%・20 m/s で約 10% を、風のつまみの下に出す）。物のまわりの細い泡は描いている。</li>
           <li>ブイは、その場の水の動き（3枚の海面の分）のとおりに動かし、風下へ流される分（ストークスドリフト。Kenyon 1969 の式）を足している。この版の分布は短い波が少ないので、流される速さは実際の海より小さめ（風速の 1〜1.5%。Kenyon は発達した海で 1.6〜3.6%）。</li>
-          <li hidden>浜への断面: いちばん多い波（周期 Tp・高さ Hm0）1つが、まっすぐな坂の浜へまっすぐ進むとして、線形の波の式（ω² = gk tanh kh、エネルギーの流れが同じ）で高さ・長さ・速さを出す。砕けるのは水深の 0.78 倍（McCowan 1894）か波の急さの限界（Miche 1944）の早いほう。本当の砕ける高さは坂の急さや波の形でかわる（Goda 2010）。砕けたあとは高さ = 水深 × 0.78 として簡単にした。底との摩擦・波の向きが曲がること（屈折）は入れていない。</li>
-          <li>水深のある海: 波の分布は TMA（Bouws ほか 1985）= JONSWAP × 深さの係数 φ（Kitaigorodskii。浅いほど長い波のエネルギーに上限）。波の速さと長さは有限の水深の式 ω² = gk tanh kh、水面の横の動きは 1/tanh kh 倍（線形の波）。波が育つ速さそのものは深い海の式（CEM）のまま（浅い海の成長の図は使っていない）。底は平らな砂（反射率の目安 0.3〜0.5）で、底にとどく光は水の吸収で弱まり、コースティクスでゆらめく。ブイの真下の断面は深い海の式のまま。</li>
-          <li>水の透明度: 水にまざった物（植物プランクトン・細かい粒・とけた色）の量 m を、きれいな外洋 = 1 として 0.3〜30 倍。光の吸収 = 純水（Pope &amp; Fry 1997: 赤 650 nm 0.34・緑 550 nm 0.057・青 450 nm 0.009 /m）＋ m ×（0.010・0.013・0.021）、散乱 = m ×（0.05・0.03・0.03）/m。海の色は後ろへ散らばる光の割合 R ≈ 0.33 b<sub>b</sub>/(a + b<sub>b</sub>)（Gordon ほか 1975。b<sub>b</sub> = 水 ＋ m × 0.0025）。見える深さは 1.7 ÷（緑と青の光の弱まりの平均）（Poole &amp; Atkins 1929 の透明度板の目安）。まざった物の係数・色の分け方は目安（本当は、まざった物の種類で色がかわる）。</li>
-          <li>水の中: 水面を下から見ると、水 → 空気の屈折（スネルの法則、屈折率 1.33）で、真上の円（半分の角度 48.6°）の中だけ空が見え、その外は全反射で水の中が映る。窓を通った光は 1.33² 倍（放射輝度は屈折率の 2 乗に比例）。水の中の光の弱まりは「水の透明度」のつまみで決まる（下の項目）。水の中の光の明るさは、上から見た海の色を下向き 1 として横 5・上 40 くらいにした（目安）。泡の見え方も目安。コースティクス（水の下の物や砂にゆらめく光）: 水面の傾きで曲がった太陽の光が深さ D で集まる所は明るい（明るさ = 1/|J|、J = det(I − D(1 − 1/1.33)·H)、H は水面の曲がり具合。小さい傾きでの光線の計算）。太陽の円盤の大きさで深いほどぼやけるのは exp(−D/8) の目安。光芒（水の中の光のすじ）: 見る向きの 10 点で、届く太陽の光（深さで弱まる × 集まり方）が前に強く散らばる分（ヘニー–グリーンスタイン g 0.9、散乱 0.03 /m の目安）を足した。</li>
-          <li hidden>浜の 3D: 浜への断面の計算（いちばん多い波 1 つ）を、海岸と直角の向きの 1 本の線にして 3D の海に足した（海岸はまっすぐ、波はまっすぐ岸へ向かう、と仮定）。浅い所で山がとがるのはストークスの 2 次の波（有限の水深）。砕けたあとの泡・砂の色は見た目。小さな風の波（風速 4 m/s・1 時間）は、浅いほど弱める。海の底は水の厚みで見え方がかわる（水の吸収）。</li>
-          <li>断面は、同じ分布から作った「風の向きに進む1本の波の列」（上の海とは模様がちがう）。深い海の線形の波の理論（動きは深さとともに e<sup>kz</sup> で小さくなる）。</li>
-          <li>大きさくらべの人（大きな浮き輪に板をわたした台に立つ）は、物の下の数か所の水の動きに平面を当てはめて浮き沈み・傾けている。大きい物ほど広い範囲でならし、ゆっくり追う（おくれの時間は見た目で決めた）。重さ・水の押し返し・流されることは計算していない。形はおおまかな模型。</li>
-          <li>短い波: 長い波の分布（JONSWAP）はピークより短い側をなだらかに打ち切り、風で強さが変わる短い波の部分を足した（Elfouhaily ほか 1997 の ECKV の形）。合計の海面の傾きは Cox &amp; Munk の観測に近い（10 m/s で 0.053 と 0.054）。描いているのは波長 20 cm まで（それより短い分は照り返しのにじみで）。</li>
-          <li>白波: 沖の白波の泡は、本物らしく描けなかったので絵からは外した（割合だけ、観測の式 Monahan &amp; O'Muircheartaigh 1980: 3.84×10⁻⁶ U<sup>3.41</sup>、10 m/s で約 1%・20 m/s で約 10% をひとことに出す）。風で引きのばされた泡のすじ・しぶきの粒も、本物らしく見えなかったので外した（しぶきで人が濡れる計算は残す）。物のまわりの細い泡は描いている。</li>
-          <li>濡れて乾く: 人・浮き輪・板を高さ 15 cm ごとに見て、水がとどいた所まで濡らす。とどく高さ = 物より短い波（波長 3.2 m より短い。物といっしょに上下しない）がふちを洗う高さ（その波の分布の大きさから、ゆっくり変わる乱数）＋砕ける波頭をかぶる（白波の割合 ÷ 周期の回数で、波の高さの 3 割まで）＋風 13 m/s からのしぶき。乾くのは、うすい水の膜が風で蒸発する目安で約 4 分（時間のつまみが速く進むときは、進んだ時間で乾く）。濡れると色が暗く、つやが出る（見た目）。かぶる高さの割合・乾く速さは目安。</li>
+          <li>断面は、同じ分布から作った「風の向きに進む1本の波の列」（上の海とは模様がちがう）。深い海の線形の波の理論（動きは深さとともに e<sup>kz</sup> で小さくなる）。水深を変えても断面は深い海の式のまま。</li>
+          <li>大きさくらべの人（大きな浮き輪に板をわたした台に立つ）は、物の下の数か所の水の動きに平面を当てはめて浮き沈み・傾けている。おくれの時間は見た目で決めた。重さ・水の押し返し・流されることは計算していない。形はおおまかな模型。</li>
+          <li>濡れて乾く: 人・浮き輪・板を高さ 15 cm ごとに見て、水がとどいた所まで濡らす。とどく高さ = 物より短い波（波長 3.2 m より短い）がふちを洗う高さ（その波の分布の大きさから、ゆっくり変わる乱数）＋砕ける波頭をかぶる（白波の割合 ÷ 周期の回数で、波の高さの 3 割まで）＋風 13 m/s からのしぶき。乾くのは、うすい水の膜が風で蒸発する目安で約 4 分（時間のつまみが速く進むときは、進んだ時間で乾く）。濡れると色が暗く、つやが出る（見た目）。かぶる高さの割合・乾く速さは目安。</li>
           <li>水の色・波の山を抜ける光の強さ・遠くのかすみは見た目で決めた。</li>
-          <li>太陽と月: きょうの日付・時刻・いる所（北緯 33°・東経 140°の海）から計算した本当の向き。時刻は経度から決めたその場所の時刻（経度 15° ごとに 1 時間）。太陽は NOAA の簡単な式（誤差 0.01° ほど）、月は Meeus の主な項と、地上から見たずれ（視差 約 1°）（誤差 0.3° ほど）。月は本当の大きさ（半径 0.26°）の球で、計算した太陽の向きから照らすので、満ち欠けと欠け方の向きは本当のとおり。月の光の強さは満月で太陽の 2.5×10⁻⁶、満ち欠けで Allen の式のとおり弱まる。夜は、目が暗さに慣れたくらいに、光をまとめて約 2.8 万倍にして見せている。朝・夕方はその日の日の出の 1 時間後・日の入の 30 分前。星の並びは見た目だけ。「進める」は 1 日を 4 分で。</li>
-          <li>雲: 高さ 1500 m の層（形はゆらぎの重ね合わせで見た目）。日がさす量は、その時刻に太陽（夜は月）の前にある雲の濃さで決まる（流れる雲で、ひなたとかげがなめらかに入れかわる）。雲が多いほど暗く、見通しが短くなる量は目安。</li>
-          <li hidden>地球儀: 陸の形は ETOPO1（NOAA）を 1°（約 110 km）ごとにしたもの（細い海峡や小さな島は出ない）。うねりは大円（球の上のまっすぐな道）にそって進み、陸に当たった向きは止まる。届く量の横の広がりは球の上の距離 Re·sin(R/Re)（地球の裏側の近くでは、また集まる）。陸や海の色・氷・星は見た目。この場面のかすみは、地上の見通し 40 km・空気は高さ 8 km ごとにうすくなるとした（仮定）。</li>
-          <li hidden>遠くの嵐: 嵐の海は CEM の式（吹いた時間と嵐の広さの小さいほうで決まる）。その分布が、深い海の群速度（周期 T 秒の波は 1 秒に g·T/4π m）で道すじにそって進み、分布は保たれるとした（光の道すじと同じ考え方）。届く量は、いる所から見た嵐の幅の角度ぶんの向きの割合。長い旅で少しずつ弱まる分・惑星の丸みで道すじが集まる効果・ほかの風は入れていない（だから遠くでは実際より高めに出る）。いる所の海は、この風の波とうねりを足したもの（風を 0 にするとうねりだけ）。うねりの向きの広がりは、嵐の幅の角度から決めた。</li>
-          <li hidden>ミラーの惑星の 3D: 計算した水面（惑星のまわりの1本の線）を横に広げ、その上に風速 5 m/s・2 時間の小さな風の波を重ねている。惑星の丸み（半径 8300 km）で遠くは沈む。空気のかすみは 200 km（仮定）。「高さ×10」は大波の高さだけを 10 倍にして形を見せるもの（そのときは画面に書く）。浅い所の底の色・空は見た目（ブラックホールは空に描いていない）。カメラと物は水面に浮かんでいる。</li>
-          <li hidden>ミラーの惑星: 1 次元（惑星のまわりにそった1本の線）の浅い海の式。半径 8300 km（地球と同じ密度と仮定）、深い海と浅い棚（幅 1500 km・ふちの坂 300 km、どちらも仮定）。潮の力は 2 つのふくらみの形（sin 2ψ）で、1 時間で行き来する。はじめの 2 時間でゆれを大きくしていく。地球の自転のような力（コリオリ）・2 次元の広がり・波の分散（ソリトン）は入れていない（だから大波は「砕けた段」＝ボアとして進む。映画の波は砕けていなかった）。格子は 6.4 km ごとなので、波の前の面の細かい形は出ない。映画の「1 時間 = 地球の 7 年」は映画の設定。</li>
-          <li>空の色は大気の散乱の計算（1回散乱）。水平線のすぐ上は 2° の空で代用。</li>
           <li>照り返しのにじみ: Cox &amp; Munk の式の風速は高さ 12.5 m の値だが、10 m の風速をそのまま使っている。</li>
           <li>「なぜ止まるの？」の説明は考え方の目安です（くわしいしくみは研究が続いている）。</li>
         </ul>
@@ -145,45 +162,89 @@
           <li>Hasselmann ほか (1973) JONSWAP（波の分布の形）</li>
           <li>Mitsuyasu ほか (1975)（向きの広がりの形）／<a href="https://www.pari.go.jp/en/1975/12/197512023001.html" target="_blank" rel="noopener">合田・鈴木 (1975) 港湾技研資料 No.230</a>（風の波の s<sub>max</sub> = 10）</li>
           <li>Tessendorf (2001) “Simulating Ocean Water”（FFT で海面を作る方法）</li>
-          <li hidden>NOAA National Centers for Environmental Information: ETOPO1 Global Relief Model（陸の形。1°ごとに間引いた）</li>
-          <li hidden>Snodgrass ほか (1966) Phil. Trans. R. Soc. A 259:431–497 “Propagation of ocean swell across the Pacific”（ニュージーランドからアラスカまで、うねりは周期の長い波から順に届き、大洋を横切ってもあまり弱まらない）</li>
+          <li>Bouws, Günther, Rosenthal &amp; Vincent (1985) J. Geophys. Res. 90(C1):975 “Similarity of the wind wave spectrum in finite depth water”（TMA の分布）／Nelson (1994) Coastal Engineering 24:211（平らな底の上の波の高さの上限）</li>
           <li>Kenyon (1969) J. Geophys. Res. 74:6991 “Stokes drift for random gravity waves”（流される速さ: 16π³/g ∫ f³ S(f) df）</li>
           <li>Elfouhaily, Chapron, Katsaros &amp; Vandemark (1997) J. Geophys. Res. 102(C7):15781 “A unified directional spectrum for long and short wind-driven waves”（短い波の部分。式は Mobley の Ocean Optics Web Book の写しで確かめた）</li>
           <li>Monahan &amp; O'Muircheartaigh (1980) J. Phys. Oceanogr. 10:2094 “Optimal power-law description of oceanic whitecap coverage dependence on wind speed”（白波の割合）</li>
           <li>Cox &amp; Munk (1954) J. Opt. Soc. Am. 44:838（海面の傾きのばらつき σ² = 0.003 + 5.12×10⁻³ U: 太陽の照り返しのにじみ）</li>
-          <li>Nishita ほか (1993)（空の色: 大気の散乱）</li>
-          <li>Bouws, Günther, Rosenthal &amp; Vincent (1985) J. Geophys. Res. 90(C1):975 “Similarity of the wind wave spectrum in finite depth water”（TMA の分布）／Nelson (1994) Coastal Engineering 24:211（平らな底の上の波の高さの上限）</li>
           <li>Pope &amp; Fry (1997) Applied Optics 36:8710（純水の吸収）／Gordon ほか (1975) Applied Optics 14:417（海の色と後ろへ散らばる光）／Poole &amp; Atkins (1929) J. Mar. Biol. Assoc. UK 16:297（透明度板の見える深さ）</li>
+          <li>Nishita ほか (1993)（空の色: 大気の散乱）</li>
           <li><a href="https://gml.noaa.gov/grad/solcalc/calcdetails.html" target="_blank" rel="noopener">NOAA Global Monitoring Laboratory: Solar Calculation Details</a>（太陽の位置）／Meeus (1998) <i>Astronomical Algorithms</i> 2nd ed., Willmann-Bell（月の位置）</li>
           <li>Allen (1976) <i>Astrophysical Quantities</i> 3rd ed.（月の明るさと満ち欠けの角）</li>
-          <li hidden>McCowan (1894) Phil. Mag.（砕ける目安 H = 0.78 h）／Miche (1944)（波の急さの限界 H/L = 0.142 tanh kh）／Goda (2010) Coastal Engineering Journal（砕ける高さは条件でかわる）</li>
-          <li hidden>Thorne のインタビュー: Scientific American (2014) “Parsing the Science of Interstellar with Physicist Kip Thorne”（ミラーの惑星の大波は、ブラックホールに同じ面を向けた惑星の小さなゆれによる潮）</li>
-          <li hidden>Luminet (2015) “The Warped Science of Interstellar” arXiv:1503.08305（重力 1.3 g・波長が水深よりずっと長いので浅い海の式）</li>
-          <li hidden>Audusse ほか (2004) SIAM J. Sci. Comput. 25:2050（底の高さが変わる浅い海の式の解き方）</li>
           <li>気象庁「気象庁風力階級表」(2006)（風速の範囲・参考の波の高さ）／海のようすの短い説明は同じ表をもとに書いた</li>
         </ul>
         <h3>使っているもの</h3>
         <p>フォント: Google Fonts（SIL Open Font License）</p>
       </details>
+      <details id="aboutEn" class="box" lang="en">
+        <summary>About this app</summary>
+        <p>Simplified for learning.</p>
+        <h3>How it is calculated</h3>
+        <ul>
+          <li>Wind speed U (10 m above the sea) and the time it has blown → the equivalent fetch → wave height (significant wave height) and peak period, from the CEM formulas. Growth stops at the fully developed sea.</li>
+          <li>Winds up to 30 m/s (stronger winds are left out because the growth and wind-drag formulas no longer match measurements). Above 20 m/s the screen notes that such winds almost never blow for days over a wide ocean. The wind stays the same for all 72 hours (changing the slider recalculates as if that wind had blown from the start).</li>
+          <li>The spectrum is the JONSWAP shape (γ 3.3) fitted to that height and period. Directional spread is cos<sup>2s</sup>(θ/2), with s depending on period (10 at the peak).</li>
+          <li>Sea surface: waves following the spectrum, added up with FFTs on three tiles (1280 m, 160 m, 20 m).</li>
+          <li>Finite depth: the spectrum is TMA (Bouws et al. 1985) = JONSWAP × the depth factor φ (Kitaigorodskii; the shallower the water, the more the energy of long waves is capped). Wave speed and length use the finite-depth relation ω² = gk tanh kh, and sideways surface motion is 1/tanh kh times larger (linear waves). The growth rate itself is still the deep-water CEM formula (the CEM shallow-water growth charts are not used). The bottom is flat sand (reflectance roughly 0.3–0.5).</li>
+          <li>Water clarity: the amount m of material mixed in the water (phytoplankton, fine particles, dissolved color), from 0.3 to 30 times that of clear open ocean (= 1). Absorption = pure water (Pope &amp; Fry 1997: red 650 nm 0.34, green 550 nm 0.057, blue 450 nm 0.009 /m) + m × (0.010, 0.013, 0.021); scattering = m × (0.05, 0.03, 0.03) /m. Sea color is the fraction of light scattered back up, R ≈ 0.33 b<sub>b</sub>/(a + b<sub>b</sub>) (Gordon et al. 1975; b<sub>b</sub> = water + m × 0.0025). The visible depth is 1.7 ÷ (average of the green and blue attenuation) (Secchi disk rule of thumb, Poole &amp; Atkins 1929). The coefficients for the mixed-in material and the color split are rough guides (in reality the color depends on what is mixed in).</li>
+          <li>Underwater: looking up at the surface, refraction from water to air (Snell’s law, index 1.33) lets you see the sky only inside a circle overhead (half-angle 48.6°); outside it, total internal reflection mirrors the water. Light through the window is 1.33² times brighter (radiance scales with the square of the refractive index). The underwater brightness is set to about 1 downward : 5 sideways : 40 upward, relative to the sea color seen from above (rough guide). Caustics (the flickering light on sand and objects): sunlight bent by the surface slope gathers at depth D, brightness = 1/|J|, J = det(I − D(1 − 1/1.33)·H), H = surface curvature (small-slope ray calculation). Blurring with depth from the sun’s disk size uses exp(−D/8), a rough guide. Light shafts: along the view, 10 points add sunlight (dimmed with depth × focusing) scattered strongly forward (Henyey–Greenstein g 0.9, scattering 0.03 /m, a rough guide).</li>
+          <li>Sun and moon: real directions for today’s date, the time, and the place (the sea at 33°N, 140°E). The clock is local time from longitude (1 hour per 15°). Sun: NOAA’s simplified formulas (about 0.01° error). Moon: the main terms from Meeus plus parallax as seen from the ground (about 1°) (about 0.3° error). The moon is a sphere of its real size (radius 0.26°) lit from the calculated sun direction, so its phase and the side that is lit are real. Moonlight is 2.5×10⁻⁶ of sunlight at full moon and dims with phase following Allen’s formula. At night everything is brightened together by about 28,000 times, roughly how it looks once your eyes adjust. Morning and evening are 1 hour after sunrise and 30 minutes before sunset of that day. The star pattern is only for looks. “Run” passes one day in 4 minutes.</li>
+          <li>Clouds: a layer at 1500 m (their shapes are layered noise, for looks). Whether sunlight gets through depends on how thick the cloud is in front of the sun (or moon) at that moment. How much darker and hazier it gets with more cloud is a rough guide.</li>
+          <li>Sky color comes from an atmospheric scattering calculation (single scattering). Just above the horizon, the sky at 2° is used instead.</li>
+        </ul>
+        <h3>Simplifications and estimates</h3>
+        <ul>
+          <li>The bottom is flat, and the wind always blows from the same direction everywhere. Swell from far away is not included.</li>
+          <li>Waves shorter than 20 cm are not drawn (they show up as blurring of reflections). Periods are rounded slightly so the pattern repeats every 1000 seconds.</li>
+          <li>Short waves: the long-wave spectrum (JONSWAP) is tapered off on the short side of the peak, and a short-wave part whose strength depends on the wind is added (the ECKV form, Elfouhaily et al. 1997). The total surface slope is close to Cox &amp; Munk’s measurements (0.053 vs 0.054 at 10 m/s).</li>
+          <li>Whitecaps: foam on the open sea, wind-stretched foam streaks and spray droplets could not be drawn convincingly, so they are left out of the picture (only the whitecap coverage from Monahan &amp; O'Muircheartaigh 1980, 3.84×10⁻⁶ U<sup>3.41</sup> — about 1% at 10 m/s and 10% at 20 m/s — is shown under the wind slider). The thin foam around objects is drawn.</li>
+          <li>Buoys move with the local water motion (from the three tiles), plus the downwind drift (Stokes drift, Kenyon 1969). This spectrum has few short waves, so the drift is smaller than at real sea (1–1.5% of the wind speed; Kenyon gives 1.6–3.6% for developed seas).</li>
+          <li>The cross-section is “one train of waves travelling downwind” made from the same spectrum (its pattern differs from the 3D sea), using deep-water linear wave theory (motion shrinks with depth as e<sup>kz</sup>). It stays deep-water even when you change the depth.</li>
+          <li>The person (standing on a deck laid across a big swim ring) rises, sinks and tilts by fitting a plane to the water motion at a few points under it. The delay was chosen by eye. Weight, the water pushing back and drifting are not calculated. The shape is a rough model.</li>
+          <li>Getting wet and drying: the person, ring and deck are checked every 15 cm of height and get wet up to where water reaches. That height = waves shorter than the raft (under 3.2 m wavelength) washing its edge (a slowly changing random value from that part of the spectrum) + breaking crests washing over (rate = whitecap coverage ÷ period, up to 30% of the wave height) + spray from 13 m/s. Drying takes about 4 minutes, a rough guide for a thin water film evaporating in the wind (when the time slider runs fast, things dry with the time that passes). Wet surfaces look darker and shinier (for looks). The wash height fraction and drying speed are rough guides.</li>
+          <li>Water color, light shining through wave crests and the distant haze were set by eye.</li>
+          <li>Reflection blur: Cox &amp; Munk’s formula uses wind at 12.5 m height, but the 10 m wind is used as is.</li>
+          <li>The “Why do they stop?” explanation is a way of thinking about it (the detailed mechanism is still being studied).</li>
+        </ul>
+        <h3>Main sources</h3>
+        <ul>
+          <li>U.S. Army Corps of Engineers (2003) Coastal Engineering Manual, EM 1110-2-1100, Part II Chapter 2 “Meteorology and Wave Climate” (Eqs. II-2-36 to 38: growth, fully developed sea, duration conversion, drag coefficient)</li>
+          <li>Hasselmann et al. (1973) JONSWAP (spectral shape)</li>
+          <li>Mitsuyasu et al. (1975) (directional spreading) / <a href="https://www.pari.go.jp/en/1975/12/197512023001.html" target="_blank" rel="noopener">Goda &amp; Suzuki (1975) Technical Note of the Port and Harbour Research Institute No. 230</a> (in Japanese) (s<sub>max</sub> = 10 for wind waves)</li>
+          <li>Tessendorf (2001) “Simulating Ocean Water” (making the sea surface with FFTs)</li>
+          <li>Bouws, Günther, Rosenthal &amp; Vincent (1985) J. Geophys. Res. 90(C1):975 “Similarity of the wind wave spectrum in finite depth water” (TMA spectrum) / Nelson (1994) Coastal Engineering 24:211 (maximum wave height over a flat bottom)</li>
+          <li>Kenyon (1969) J. Geophys. Res. 74:6991 “Stokes drift for random gravity waves” (drift: 16π³/g ∫ f³ S(f) df)</li>
+          <li>Elfouhaily, Chapron, Katsaros &amp; Vandemark (1997) J. Geophys. Res. 102(C7):15781 “A unified directional spectrum for long and short wind-driven waves” (short-wave part; checked against the copy in Mobley’s Ocean Optics Web Book)</li>
+          <li>Monahan &amp; O'Muircheartaigh (1980) J. Phys. Oceanogr. 10:2094 “Optimal power-law description of oceanic whitecap coverage dependence on wind speed” (whitecap coverage)</li>
+          <li>Cox &amp; Munk (1954) J. Opt. Soc. Am. 44:838 (surface slope variance σ² = 0.003 + 5.12×10⁻³ U: blur of sun glitter)</li>
+          <li>Pope &amp; Fry (1997) Applied Optics 36:8710 (pure-water absorption) / Gordon et al. (1975) Applied Optics 14:417 (sea color and backscattered light) / Poole &amp; Atkins (1929) J. Mar. Biol. Assoc. UK 16:297 (Secchi depth)</li>
+          <li>Nishita et al. (1993) (sky color: atmospheric scattering)</li>
+          <li><a href="https://gml.noaa.gov/grad/solcalc/calcdetails.html" target="_blank" rel="noopener">NOAA Global Monitoring Laboratory: Solar Calculation Details</a> (sun position) / Meeus (1998) <i>Astronomical Algorithms</i> 2nd ed., Willmann-Bell (moon position)</li>
+          <li>Allen (1976) <i>Astrophysical Quantities</i> 3rd ed. (moon brightness vs phase angle)</li>
+          <li>Japan Meteorological Agency, Beaufort wind scale table (2006) (in Japanese) (wind ranges, reference wave heights); the short sea-state descriptions are based on the same table</li>
+        </ul>
+        <h3>Uses</h3>
+        <p>Fonts: Google Fonts (SIL Open Font License)</p>
+      </details>
     </section>
   </div>
 </div>
 
-<script src="js/growth.js"></script>
-<script src="js/shaders.js"></script>
-<script src="js/env.js"></script>
-<script src="js/beaufort.js"></script>
-<script src="js/ocean.js"></script>
-<script src="js/camera.js"></script>
-<script src="js/graph.js"></script>
-<script src="js/props.js"></script>
-<script src="js/floats.js"></script>
-<script src="js/section.js"></script>
-<script src="js/beach.js"></script>
-<script src="js/beach3d.js"></script>
-<script src="js/swell.js"></script>
-<script src="js/globe.js"></script>
-<script src="js/guide.js"></script>
-<script src="js/app.js"></script>
-<script src="js/storm.js"></script>
-<script src="js/scene.js"></script>
+<script src="js/growth.js?v=21"></script>
+<script src="js/shaders.js?v=21"></script>
+<script src="js/env.js?v=21"></script>
+<script src="js/beaufort.js?v=21"></script>
+<script src="js/ocean.js?v=21"></script>
+<script src="js/camera.js?v=21"></script>
+<script src="js/graph.js?v=21"></script>
+<script src="js/props.js?v=21"></script>
+<script src="js/floats.js?v=21"></script>
+<script src="js/section.js?v=21"></script>
+<script src="js/beach.js?v=21"></script>
+<script src="js/beach3d.js?v=21"></script>
+<script src="js/swell.js?v=21"></script>
+<script src="js/globe.js?v=21"></script>
+<script src="js/guide.js?v=21"></script>
+<script src="js/app.js?v=21"></script>
+<script src="js/storm.js?v=21"></script>
+<script src="js/scene.js?v=21"></script>

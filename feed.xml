@@ -5,8 +5,32 @@
   <link href="https://sishiya.github.io/manabi-lab/"/>
   <link rel="self" href="https://sishiya.github.io/manabi-lab/feed.xml"/>
   <id>https://sishiya.github.io/manabi-lab/feed.xml</id>
-  <updated>2026-10-17T00:00:00+09:00</updated>
+  <updated>2026-10-21T00:00:00+09:00</updated>
   <author><name>しし屋</name></author>
+  <entry>
+    <title>波が育つまで</title>
+    <link href="https://sishiya.github.io/manabi-lab/wave-growth/"/>
+    <id>https://sishiya.github.io/manabi-lab/wave-growth/</id>
+    <published>2026-10-20T00:00:00+09:00</published>
+    <updated>2026-10-21T00:00:00+09:00</updated>
+    <summary>風が吹きはじめてから、鏡のような凪の海がさざ波・大きな波へ育ち、もう育たなくなるまでを、海で測った記録から作られた式と、何万もの波を重ねた3Dの海で。水深・透明度・時刻・雲も変えられ、海面に浮かんだり、水の中へもぐったりできる。</summary>
+  </entry>
+  <entry>
+    <title>カビが育つまで</title>
+    <link href="https://sishiya.github.io/manabi-lab/mold-growth/"/>
+    <id>https://sishiya.github.io/manabi-lab/mold-growth/</id>
+    <published>2026-10-06T00:00:00+09:00</published>
+    <updated>2026-10-20T00:00:00+09:00</updated>
+    <summary>浴室の壁を拡大した「カビの箱庭」。胞子が芽を出し、菌糸をのばして増えていく。水・汚れ・カビ取り剤・防カビ剤を指で試して、どうすれば生えないかを探す。</summary>
+  </entry>
+  <entry>
+    <title>電波の見える部屋</title>
+    <link href="https://sishiya.github.io/manabi-lab/wifi-wave/"/>
+    <id>https://sishiya.github.io/manabi-lab/wifi-wave/</id>
+    <published>2026-10-04T00:00:00+09:00</published>
+    <updated>2026-10-20T00:00:00+09:00</updated>
+    <summary>WiFi の電波が家の中をどう伝わるかを、電磁波のシミュレーションで見る。</summary>
+  </entry>
   <entry>
     <title>メトロノームがそろうまで</title>
     <link href="https://sishiya.github.io/manabi-lab/metronome-sync/"/>
@@ -120,14 +144,6 @@
     <summary>関節と筋肉でできた生きものを、遺伝的アルゴリズムで進化させる。平地・坂・氷・月・水の中で、ちがう体と動き方が生まれる。</summary>
   </entry>
   <entry>
-    <title>カビが育つまで</title>
-    <link href="https://sishiya.github.io/manabi-lab/mold-growth/"/>
-    <id>https://sishiya.github.io/manabi-lab/mold-growth/</id>
-    <published>2026-10-06T00:00:00+09:00</published>
-    <updated>2026-10-10T00:00:00+09:00</updated>
-    <summary>浴室の壁を拡大した「カビの箱庭」。胞子が芽を出し、菌糸をのばして増えていく。水・汚れ・カビ取り剤・防カビ剤を指で試して、どうすれば生えないかを探す。</summary>
-  </entry>
-  <entry>
     <title>神の視点マップ</title>
     <link href="https://sishiya.github.io/manabi-lab/god-view/"/>
     <id>https://sishiya.github.io/manabi-lab/god-view/</id>
@@ -142,14 +158,6 @@
     <published>2026-10-04T00:00:00+09:00</published>
     <updated>2026-10-10T00:00:00+09:00</updated>
     <summary>二重スリット・トンネル効果・偏光板・量子もつれ・不確定性原理。</summary>
-  </entry>
-  <entry>
-    <title>電波の見える部屋</title>
-    <link href="https://sishiya.github.io/manabi-lab/wifi-wave/"/>
-    <id>https://sishiya.github.io/manabi-lab/wifi-wave/</id>
-    <published>2026-10-04T00:00:00+09:00</published>
-    <updated>2026-10-10T00:00:00+09:00</updated>
-    <summary>WiFi の電波が家の中をどう伝わるかを、電磁波のシミュレーションで見る。</summary>
   </entry>
   <entry>
     <title>いきものの感じる世界</title>

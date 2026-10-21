@@ -136,10 +136,10 @@ window.WGprops = (() => {
 
   // 種類: 形・海面を読む点（物の向きでの x, z）・読む海面（中 wb・小 wc）・動きのおくれ tau・札・カメラの距離・しぶきの濡れやすさ
   const TYPES = {
-    human:   { name: '人', size: '身長 1.7 m', geo: human, pts: [[0.8, 0], [-0.8, 0], [0, 0.8], [0, -0.8]], wb: 1, wc: 0.2, tau: 0.08, labelY: 2.3, dist: 8, splash: 1 },
-    boat:    { name: 'ボート', size: '長さ 4 m', geo: boat, pts: [[1.6, 0], [-1.6, 0], [0, 0.6], [0, -0.6]], wb: 1, wc: 0, tau: 0.4, labelY: 1.4, dist: 12, splash: 0.8 },
-    fishing: { name: '漁船', size: '長さ 15 m', geo: fishing, pts: [[6, 0], [-6, 0], [0, 2], [0, -2]], wb: 1, wc: 0, tau: 0.9, labelY: 10, dist: 34, splash: 0.4 },
-    ship:    { name: '大きな船', size: '長さ 120 m', geo: ship, pts: [[50, 0], [-50, 0], [0, 9], [0, -9], [0, 0]], wb: 0, wc: 0, tau: 2.5, labelY: 36, dist: 220, splash: 0.1 },
+    human:   { name: L('人', 'Person'), size: L('身長 1.7 m', '1.7 m tall'), geo: human, pts: [[0.8, 0], [-0.8, 0], [0, 0.8], [0, -0.8]], wb: 1, wc: 0.2, tau: 0.08, labelY: 2.3, dist: 8, splash: 1 },
+    boat:    { name: L('ボート', 'Boat'), size: L('長さ 4 m', '4 m long'), geo: boat, pts: [[1.6, 0], [-1.6, 0], [0, 0.6], [0, -0.6]], wb: 1, wc: 0, tau: 0.4, labelY: 1.4, dist: 12, splash: 0.8 },
+    fishing: { name: L('漁船', 'Fishing boat'), size: L('長さ 15 m', '15 m long'), geo: fishing, pts: [[6, 0], [-6, 0], [0, 2], [0, -2]], wb: 1, wc: 0, tau: 0.9, labelY: 10, dist: 34, splash: 0.4 },
+    ship:    { name: L('大きな船', 'Big ship'), size: L('長さ 120 m', '120 m long'), geo: ship, pts: [[50, 0], [-50, 0], [0, 9], [0, -9], [0, 0]], wb: 0, wc: 0, tau: 2.5, labelY: 36, dist: 220, splash: 0.1 },
   };
   // 読んだ点の動き ps から、物の置き方 {d:[横x,上下,横z], s:[傾きx,傾きz]}（点が1つならその傾き、複数なら平面を当てはめる）
   function pose(type, ps, yaw) {

@@ -26,7 +26,7 @@ const S = {
 const cv = $('cv'), ov = $('ov');
 let ocean = null;
 try { ocean = window.WGocean.create(cv); }
-catch (e) { $('glerr').hidden = false; $('glerr').textContent = 'この画面では海を描けません（' + e.message + '）。グラフと数字は使えます。'; }
+catch (e) { $('glerr').hidden = false; $('glerr').textContent = L('この画面では海を描けません（' + e.message + '）。グラフと数字は使えます。', 'This screen cannot draw the sea (' + e.message + '). The graph and numbers still work.'); }
 const cam = window.WGcamera.create(cv);
 let rscale = 1;
 function resize() {
@@ -55,18 +55,18 @@ function resetWind(U) { S.sched = [{ t: 0, U }]; }
 
 // ---- 数字・表示 ----
 function fmtTime(t) {
-  if (t > 72 * HOUR) { const d = t / DAY; return (d < 10 ? d.toFixed(1) : d.toFixed(0)) + ' 日'; }
-  const tm = Math.round(t / 60); if (tm < 60) return tm + ' 分';
+  if (t > 72 * HOUR) { const d = t / DAY; return (d < 10 ? d.toFixed(1) : d.toFixed(0)) + L(' 日', ' days'); }
+  const tm = Math.round(t / 60); if (tm < 60) return tm + L(' 分', ' min');
   const h = Math.floor(tm / 60), m = tm % 60;
-  return h + ' 時間' + (m && h < 10 ? ' ' + m + ' 分' : '');
+  return h + L(' 時間', ' h') + (m && h < 10 ? ' ' + m + L(' 分', ' min') : '');
 }
 const fmtLen = v => v < 0.1 ? (v * 100).toFixed(1) + ' cm' : v.toFixed(2) + ' m';
 let lastSea = { key: '', at: 0 }, bfRow = -1;
 // 風力階級の表（この計算の発達しきった海の高さは、その風速の範囲のまん中で）
 document.querySelector('#bfTable tbody').innerHTML = window.WGbeaufort.T.map(r => {
   const mid = isFinite(r[2]) ? (r[1] + r[2]) / 2 : r[1], f = mid > 0.4 && r[0] <= 11 ? W.fullyDev(mid).Hm0 : 0;   // この計算の風は 30 m/s まで（風力 11）
-  const tb = r[4] == null ? '—' : r[4] + ' m' + (r[5] != null ? `（${r[5]}）` : '');
-  return `<tr><td>${r[0]}</td><td>${r[1].toFixed(1)}〜${isFinite(r[2]) ? r[2].toFixed(1) : ''}</td><td>${r[3]}</td><td>${tb}</td><td>${f ? (f < 1 ? f.toFixed(2) : f.toFixed(1)) + ' m' : '—'}</td></tr>`; }).join('');
+  const tb = r[4] == null ? '—' : r[4] + ' m' + (r[5] != null ? L(`（${r[5]}）`, ` (${r[5]})`) : '');
+  return `<tr><td>${r[0]}</td><td>${r[1].toFixed(1)}${L('〜', '–')}${isFinite(r[2]) ? r[2].toFixed(1) : ''}</td><td>${r[3]}</td><td>${tb}</td><td>${f ? (f < 1 ? f.toFixed(2) : f.toFixed(1)) + ' m' : '—'}</td></tr>`; }).join('');
 function update() {
   // 深い海の成長（CEM）→ 水深 S.depth の海（TMA: 長い波のエネルギーに上限）。Hm0 = その水深の高さ、Hdeep = 深い海なら
   const st0 = W.stateAt(S.sched, S.t), U = windAt(S.t), dr = st0.Hm0 > 0 ? W.tmaRatio(st0.Hm0, st0.Tp, S.depth) : 1;
@@ -76,29 +76,35 @@ function update() {
   tSlider.value = t2v(S.t);
   $('tLabel').textContent = fmtTime(S.t);
   $('play').textContent = S.play ? '❚❚' : '▶';
-  const ps = $('stPause'); ps.hidden = S.play; ps.textContent = S.t >= TMAX ? '72 時間まで来ました（▶ でもう一度）' : S.t < 60 && !sw ? '止まっています（▶ で風が吹きはじめます）' : '一時停止中（▶ で進む）';
+  const ps = $('stPause'); ps.hidden = S.play; ps.textContent = S.t >= TMAX ? L('72 時間まで来ました（▶ でもう一度）', 'Reached 72 hours (▶ to play again)') : S.t < 60 && !sw ? L('止まっています（▶ で風が吹きはじめます）', 'Stopped (▶ to start the wind)') : L('一時停止中（▶ で進む）', 'Paused (▶ to continue)');
   document.querySelectorAll('#speeds button').forEach(b => b.classList.toggle('on', +b.dataset.s === S.speed));
   wSlider.value = U; $('wLabel').textContent = U.toFixed(1) + ' m/s';
   const wp = st.Tp > 0 ? 2 * Math.PI / st.Tp : 1, kp = W.kOfDepth(wp, S.depth), lam = 2 * Math.PI / kp, c = wp / kp;   // 水深の分散 ω² = gk tanh kh
   S.us = W.stokes(st.Hm0, st.Tp);
   $('nH').textContent = st.Hm0 > 0 ? fmtLen(st.Hm0) : '0';
-  $('nT').textContent = st.Tp > 0 ? st.Tp.toFixed(1) + ' 秒' : '—';
+  $('nT').textContent = st.Tp > 0 ? st.Tp.toFixed(1) + L(' 秒', ' s') : '—';
   $('nL').textContent = st.Tp > 0 ? (lam < 1 ? (lam * 100).toFixed(0) + ' cm' : lam.toFixed(lam < 10 ? 1 : 0) + ' m') : '—';
-  $('nC').textContent = st.Tp > 0 ? c.toFixed(1) + ' m/s' + (U > 0 ? `（風の ${(c / U).toFixed(2)} 倍）` : '') : '—';
-  $('nS').textContent = st.Hm0 <= 0 ? (U > 0 ? '風が吹く前' : '風がない') : st.full ? '発達しきった' : '育っている途中';
+  $('nC').textContent = st.Tp > 0 ? c.toFixed(1) + ' m/s' + (U > 0 ? L(`（風の ${(c / U).toFixed(2)} 倍）`, ` (${(c / U).toFixed(2)}×wind)`) : '') : '—';
+  $('nS').textContent = st.Hm0 <= 0 ? (U > 0 ? L('風が吹く前', 'Before the wind') : L('風がない', 'No wind')) : st.full ? L('発達しきった', 'Fully developed') : L('育っている途中', 'Still growing');
   if (!flying) cam.minY = 1.5 + 1.2 * Hall;   // 上から見るときはカメラを波の中に入れない（水の中・自由に動くときはそのまま）
   // 風力階級（気象庁）
-  const bf = window.WGbeaufort.at(U); $('nB').textContent = '風力 ' + bf[0]; $('nBd').textContent = bf[3];
+  const bf = window.WGbeaufort.at(U); $('nB').textContent = L('風力 ', 'Force ') + bf[0]; $('nBd').textContent = bf[3];
   if (bfRow !== bf[0]) { bfRow = bf[0]; document.querySelectorAll('#bfTable tbody tr').forEach((tr, i) => tr.classList.toggle('now', i === bf[0])); }
   refreshToggles();
   // 自分でつまみを動かしたら、案内の文のかわりに、いまの様子をひとことで
-  if (S.free) { window.WGguide.clear(); $('stepNo').textContent = '自由に見ている'; $('next').textContent = window.WGguide.index < 0 ? '案内をはじめる ▶' : '案内のつづき ▶';
-    const swTxt = sw ? `遠くの嵐のうねり ${fmtLen(sw.Hm0)}（周期 ${sw.Tp.toFixed(0)} 秒）も届いています。` : '';
-    $('cap').textContent = (st.Hm0 <= 0 ? (U > 0 ? '風が吹く前。' : '風がない。') + (sw ? '' : '海は鏡のように平ら。')
-      : `風速 ${U.toFixed(U % 1 ? 1 : 0)} m/s の風が吹いて ${fmtTime(S.t)}。風の波の高さ ${$('nH').textContent}、いちばん多い波の長さ ${$('nL').textContent}。`
-        + (st.full ? 'もうこれ以上は育ちません。' : '')
-        + (isFinite(S.depth) && dr < 0.97 ? `水深 ${S.depth.toFixed(S.depth < 10 ? 1 : 0)} m なので、長い波は底にふれて遅く・短くなり、高さは深い海の ${(dr * 100).toFixed(0)}%。` : '') + (U >= 5 ? (U <= 20 ? `白波（砕けた波の泡）は海面の約 ${(3.84e-4 * Math.pow(U, 3.41)).toFixed(U < 8 ? 1 : 0)}%（観測の式）。` : '白波が海面の大部分をおおう（観測の式は 20 m/s まで）。') : '')
-        + (U > 20 ? ' ※ 風速 20 m/s をこえる風（風力 9〜11）が広い海で何日も吹きつづけることは、実際にはまずありません（台風の中の風は数百 km の範囲で、嵐も動く）。ブイで測られた波の高さ（有義波高）の記録は約 19 m。' : '')) + swTxt; }
+  // 風のつまみの下の注意（白波の割合・水深・強い風）。ひとこと（cap）は短く（スマホで下のパネルが見えるように）
+  const notes = [];
+  if (U >= 5 && st.Hm0 > 0) notes.push(U <= 20 ? L(`白波（砕けた波の泡）は海面の約 ${(3.84e-4 * Math.pow(U, 3.41)).toFixed(U < 8 ? 1 : 0)}%（観測の式）。`, `Whitecaps (foam of breaking waves) cover about ${(3.84e-4 * Math.pow(U, 3.41)).toFixed(U < 8 ? 1 : 0)}% of the sea (measured formula).`)
+    : L('白波が海面の大部分をおおう（観測の式は 20 m/s まで）。', 'Whitecaps cover most of the sea (the measured formula only goes up to 20 m/s).'));
+  if (isFinite(S.depth) && dr < 0.97 && st.Hm0 > 0) notes.push(L(`水深 ${S.depth.toFixed(S.depth < 10 ? 1 : 0)} m なので、長い波は底にふれて遅く・短くなり、高さは深い海の ${(dr * 100).toFixed(0)}%。`, `At ${S.depth.toFixed(S.depth < 10 ? 1 : 0)} m depth, long waves feel the bottom and get slower and shorter; the height is ${(dr * 100).toFixed(0)}% of the deep-sea value.`));
+  if (U > 20) notes.push(L('※ 風速 20 m/s をこえる風（風力 9〜11）が広い海で何日も吹きつづけることは、実際にはまずありません（台風の中の風は数百 km の範囲で、嵐も動く）。ブイで測られた波の高さ（有義波高）の記録は約 19 m。', '※ Winds over 20 m/s (force 9–11) almost never blow for days over a wide ocean (typhoon winds cover a few hundred km and the storm moves). The highest significant wave height measured by a buoy is about 19 m.'));
+  $('windNote').textContent = notes.join(' '); $('windNote').hidden = !notes.length;
+  if (S.free) { window.WGguide.clear(); $('stepNo').textContent = L('自由に見ている', 'Exploring'); $('next').textContent = window.WGguide.index < 0 ? L('案内をはじめる ▶', 'Start the tour ▶') : L('案内のつづき ▶', 'Continue the tour ▶');
+    const swTxt = sw ? L(`遠くの嵐のうねり ${fmtLen(sw.Hm0)}（周期 ${sw.Tp.toFixed(0)} 秒）も届いています。`, `Swell from a distant storm (${fmtLen(sw.Hm0)}, period ${sw.Tp.toFixed(0)} s) is arriving too.`) : '';
+    $('cap').textContent = (st.Hm0 <= 0 ? (U > 0 ? L('風が吹く前。', 'Before the wind.') : L('風がない。', 'No wind.')) + (sw ? '' : L('海は鏡のように平ら。', 'The sea is flat as a mirror.'))
+      : L(`風速 ${U.toFixed(U % 1 ? 1 : 0)} m/s の風が吹いて ${fmtTime(S.t)}。波の高さ ${$('nH').textContent}・長さ ${$('nL').textContent}。`, `${U.toFixed(U % 1 ? 1 : 0)} m/s wind for ${fmtTime(S.t)}. Waves ${$('nH').textContent} high, ${$('nL').textContent} long.`)
+        + (st.full ? L('もうこれ以上は育ちません。', ' They will not grow any more.') : '')
+        ) + swTxt; }
   window.WGgraph.draw($('graph'), Object.assign({ U }, st), S.sched, Math.min(S.t, 72 * HOUR));
 }
 // 海の分布を GPU へ: 風の波（CEM＋JONSWAP＋短い波）＋遠くの嵐のうねり（js/storm.js）。変わっていたら、続けて動かしているときは 90 ms に1回
@@ -122,7 +128,7 @@ const guideApi = {
   camTo(c) { let yaw = c.yaw != null ? c.yaw : cam.yaw; yaw = cam.yaw + Math.atan2(Math.sin(yaw - cam.yaw), Math.cos(yaw - cam.yaw));   // 近い回りで
     camAnim = { from: { pitch: cam.pitch, dist: cam.dist, yaw: cam.yaw }, to: Object.assign({ pitch: cam.pitch, dist: cam.dist }, c, { yaw }), k: 0 }; },
   addBuoy() { if (!FL.list.length) FL.add(-6, -1.5, S.simT); S.showBuoy = true; refreshToggles(); }, section(on) { on ? openSection() : closeSection(); refreshToggles(); },
-  caption(text, step, last) { S.free = false; $('cap').textContent = text; $('stepNo').textContent = '案内 ' + step; $('next').textContent = last ? '案内をおわる' : 'つぎへ ▶'; },
+  caption(text, step, last) { S.free = false; $('cap').textContent = text; $('stepNo').textContent = L('案内 ', 'Tour ') + step; $('next').textContent = last ? L('案内をおわる', 'End the tour') : L('つぎへ ▶', 'Next ▶'); },
   // 案内をおわる: はじめの画面にもどす（風 10 m/s・吹く前から再生・上から・ブイと嵐は消す）
   finish() { if (secOpen) closeSection(); resetProps(); S.put = 'buoy'; S.showHuman = true; S.showBuoy = true; if (STORM.on) stopStorm(); setView('orbit'); resetWind(10); S.t = START_T; S.play = true; S.speed = 0; S.free = true; update(); },
 };
@@ -148,12 +154,12 @@ function loop(now) {
   fpsAcc += dt; fpsN++;
   if (fpsAcc > 0.5) { const ms = fpsAcc / fpsN * 1000; fpsAcc = 0; fpsN = 0; slow = ms > 22 ? slow + 1 : 0;
     if (slow >= 4 && rscale > 0.5) { rscale = Math.max(0.5, rscale * 0.85); resize(); slow = 0; }
-    $('perf').textContent = `1コマ ${ms.toFixed(1)} ms` + (ocean && ocean.gpuMs ? `（GPU ${ocean.gpuMs.toFixed(1)}）` : '') + `・${cv.width}×${cv.height}`; }
+    $('perf').textContent = L(`1コマ ${ms.toFixed(1)} ms`, `${ms.toFixed(1)} ms/frame`) + (ocean && ocean.gpuMs ? `（GPU ${ocean.gpuMs.toFixed(1)}）` : '') + L('・', ' · ') + `${cv.width}×${cv.height}`; }
   requestAnimationFrame(loop);
 }
 function start() {
   // はじめ: 朝の景色・人あり・風が吹いて 2 分の海から再生（案内は「つぎへ」で始まり、1 段めは吹く前の凪）
-  setTod('morning'); setWeather(); setClarity(); setObj('human'); setDepth(); setView('orbit');
+  setView('orbit'); setObj('human'); setTod('morning'); setWeather(); setClarity(); setDepth();   // 見かたを先に（あとだとカメラを太陽からななめに向ける動きが消える）
   S.free = true; update();
   requestAnimationFrame(loop);
   // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）

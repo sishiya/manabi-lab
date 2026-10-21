@@ -36,24 +36,24 @@ window.WGsection = (() => {
     g.fillStyle = 'rgba(14,34,51,.94)'; g.fillRect(0, 0, w, h);
     const css = getComputedStyle(document.documentElement), font = css.getPropertyValue('--f-body');
     g.font = '12px ' + font; g.fillStyle = '#e8f0f4'; g.textAlign = 'left';
-    if (!(st.Hm0 >= 0.05)) { g.fillText(st.Hm0 > 0 ? 'まだ波がとても小さい（高さ 5 cm 未満）。時間を進めてください。' : 'まだ波がない（風が吹く前）。水の粒は止まっています。', 16, 40); return; }
+    if (!(st.Hm0 >= 0.05)) { g.fillText(st.Hm0 > 0 ? L('まだ波がとても小さい（高さ 5 cm 未満）。時間を進めてください。', 'The waves are still tiny (under 5 cm). Move the time forward.') : L('まだ波がない（風が吹く前）。水の粒は止まっています。', 'No waves yet (before the wind). The water is still.'), 16, 40); return; }
     // 作りなおすのは高さか周期が 3% 以上かわったときと、倍率を変えたとき（跡も消える）
     if (!key || Math.abs(st.Hm0 / key.H - 1) > 0.03 || Math.abs(st.Tp / key.T - 1) > 0.03 || key.mag !== mag) { key = { H: st.Hm0, T: st.Tp, mag }; build(st.Hm0, st.Tp); }
     const dt = lastT == null ? 0 : Math.max(0, Math.min(0.1, t - lastT)); lastT = t;
     // 縮尺（縦横同じ。本当の形のまま）: 横は波長の 1.4 倍、深さは波長の 0.55 倍まで
-    const head = wrap(g, 'ブイの真下の断面（風の向きにそって・縦横同じ縮尺）' + (mag > 1 ? `　※ 水の動きを ${mag} 倍にして見せています` : ''), w - 32);
+    const head = wrap(g, L('ブイの真下の断面（風の向きにそって・縦横同じ縮尺）', 'Cross-section under the buoy (along the wind, same scale both ways)') + (mag > 1 ? L(`　※ 水の動きを ${mag} 倍にして見せています`, `  ※ water motion shown × ${mag}`) : ''), w - 32);
     g.font = '12px ' + font; const us = usG;
-    const foot = wrap(g, `黄色 = ブイの下の水。水は進まず円をえがき、少しずつ風下へ（水面で 1 秒に ${(us * 100).toFixed(1)} cm）。`, w - 32);
+    const foot = wrap(g, L(`黄色 = ブイの下の水。水は進まず円をえがき、少しずつ風下へ（水面で 1 秒に ${(us * 100).toFixed(1)} cm）。`, `Yellow = water under the buoy. It does not travel; it circles and slowly drifts downwind (${(us * 100).toFixed(1)} cm/s at the surface).`), w - 32);
     const top = 20 + head.length * 15 + 22, bot = 50 + foot.length * 15;
     const sc = Math.min((w - 70) / (1.4 * lam), (h - top - bot) / (0.62 * lam)), X0 = w / 2;
     const Y0 = top + Math.max(0, (h - top - bot - 0.62 * lam * sc) / 2) + 0.07 * lam * sc;
     const X = x => X0 + x * sc, Y = z => Y0 - z * sc;
     head.forEach((l, i) => g.fillText(l, 16, 20 + i * 15));
-    g.fillStyle = '#a3b4bf'; g.fillText(`いちばん多い波の長さ ${lam < 1 ? (lam * 100).toFixed(0) + ' cm' : lam.toFixed(1) + ' m'}`, 16, 20 + head.length * 15 + 2);
+    g.fillStyle = '#a3b4bf'; g.fillText(L(`いちばん多い波の長さ ${lam < 1 ? (lam * 100).toFixed(0) + ' cm' : lam.toFixed(1) + ' m'}`, `Most common wave length ${lam < 1 ? (lam * 100).toFixed(0) + ' cm' : lam.toFixed(1) + ' m'}`), 16, 20 + head.length * 15 + 2);
     // 深さの目盛り
     g.strokeStyle = 'rgba(163,180,191,.35)'; g.lineWidth = 1; g.textAlign = 'right';
-    for (const [fr, lab] of [[0.25, '波長の 1/4'], [0.5, '波長の 1/2']]) { const y = Y(-fr * lam); g.setLineDash([3, 4]); g.beginPath(); g.moveTo(30, y); g.lineTo(w - 10, y); g.stroke(); g.setLineDash([]);
-      g.fillStyle = '#a3b4bf'; g.fillText(`${lab}（${(fr * lam).toFixed(lam < 4 ? 2 : 1)} m）: 動き ${(Math.exp(-2 * Math.PI * fr) * 100).toFixed(0)}%`, w - 12, y - 4); }
+    for (const [fr, lab] of [[0.25, L('波長の 1/4', '1/4 wavelength')], [0.5, L('波長の 1/2', '1/2 wavelength')]]) { const y = Y(-fr * lam); g.setLineDash([3, 4]); g.beginPath(); g.moveTo(30, y); g.lineTo(w - 10, y); g.stroke(); g.setLineDash([]);
+      g.fillStyle = '#a3b4bf'; g.fillText(L(`${lab}（${(fr * lam).toFixed(lam < 4 ? 2 : 1)} m）: 動き ${(Math.exp(-2 * Math.PI * fr) * 100).toFixed(0)}%`, `${lab} (${(fr * lam).toFixed(lam < 4 ? 2 : 1)} m): motion ${(Math.exp(-2 * Math.PI * fr) * 100).toFixed(0)}%`), w - 12, y - 4); }
     // 水面（水面の粒をつないだ線）
     g.strokeStyle = '#7fd0e8'; g.lineWidth = 2; g.beginPath();
     for (let i = 0; i <= 160; i++) { const x0 = (-0.75 + 1.5 * i / 160) * lam, m = motion(x0, 0, t), x = X(x0 + mag * m[0]), y = Y(mag * m[1]); i ? g.lineTo(x, y) : g.moveTo(x, y); }

@@ -17,7 +17,7 @@ window.WGcamera = (() => {
       const dx = e.clientX - p[0], dy = e.clientY - p[1]; p[0] = e.clientX; p[1] = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
       if (ptr.size === 1) { const fr = C.free || C.fly; C.yaw += dx * 0.005 * (fr ? C.fovY : 1);
         const far = !fr && C.dist >= 3e4;   // 地球の大きさ: 地球のまん中のまわりをどこへでも回れる（裏側も）
-        const pmin = C.fly ? -1.55 : C.dive ? -1.5 : C.free ? -0.6 : C.dist < 900 ? -1.2 : far ? -1.55 : C.PMIN;   // 上から: 見上げると、カメラは見る点より下（水の中）へ回りこむ
+        const pmin = C.fly ? -1.55 : C.dive ? -1.5 : C.free ? -0.6 : far ? -1.55 : C.PMIN;   // 上から: いつも海の上から（2026-10-21 ユーザー「上からは潜らないように」。潜るのは自由に動くで）
         C.pitch = Math.min(C.fly || far ? 1.55 : C.PMAX, Math.max(pmin, C.pitch + dy * 0.004 * (fr ? C.fovY : 1))); }
       else if (ptr.size === 2 && pinch0 > 0) { const [a, b] = [...ptr.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
         C.zoom(pinch0 / Math.max(d, 1)); pinch0 = Math.max(d, 1); }
