@@ -5,7 +5,7 @@ window.__wagrErr = [];
 window.addEventListener('error', e => window.__wagrErr.push(String(e.message)));
 
 const $ = id => document.getElementById(id);
-const W = window.WGgrowth, HOUR = 3600, DAY = 86400, TMAX = 14 * DAY;
+const W = window.WGgrowth, HOUR = 3600, DAY = 86400, TMAX = 72 * HOUR;   // 遠くの嵐を入れていたときは 14 日（2026-10-21 嵐をいったん外して 72 時間にもどした）
 const WIND_ANG = Math.PI + 0.5;          // 風の波が進む向き（左前からこちらへ）
 // 空・光（時刻と雲から js/env.js で毎コマ）。カメラははじめ +x（東）を見ている
 const SUN = { rough0: 0.012, meshes: [], points: [] };
@@ -36,7 +36,7 @@ function resize() {
 if (ocean && ocean.isSoft) rscale = 0.5;   // ソフトの GPU では画素を半分から
 addEventListener('resize', resize); resize();
 
-// ---- 時間のつまみ（目盛りは平方根: はじめの数時間を見やすく。14 日まで） ----
+// ---- 時間のつまみ（目盛りは平方根: はじめの数時間を見やすく。72 時間まで） ----
 const tSlider = $('tSlider');
 const t2v = t => Math.round(Math.sqrt(t / TMAX) * 1000), v2t = v => TMAX * (v / 1000) ** 2;
 // つまみを動かすあいだだけ止め、はなしたら前の状態（再生中なら再生）にもどす
@@ -54,7 +54,7 @@ function resetWind(U) { S.sched = [{ t: 0, U }]; }
 
 // ---- 数字・表示 ----
 function fmtTime(t) {
-  if (t >= 2 * DAY) { const d = t / DAY; return (d < 10 ? d.toFixed(1) : d.toFixed(0)) + ' 日'; }
+  if (t > 72 * HOUR) { const d = t / DAY; return (d < 10 ? d.toFixed(1) : d.toFixed(0)) + ' 日'; }
   const tm = Math.round(t / 60); if (tm < 60) return tm + ' 分';
   const h = Math.floor(tm / 60), m = tm % 60;
   return h + ' 時間' + (m && h < 10 ? ' ' + m + ' 分' : '');
@@ -73,7 +73,7 @@ function update() {
   tSlider.value = t2v(S.t);
   $('tLabel').textContent = fmtTime(S.t);
   $('play').textContent = S.play ? '❚❚' : '▶';
-  const ps = $('stPause'); ps.hidden = S.play; ps.textContent = S.t >= TMAX ? '14 日まで来ました（▶ でもう一度）' : S.t < 60 && !sw ? '止まっています（▶ で風が吹きはじめます）' : '一時停止中（▶ で進む）';
+  const ps = $('stPause'); ps.hidden = S.play; ps.textContent = S.t >= TMAX ? '72 時間まで来ました（▶ でもう一度）' : S.t < 60 && !sw ? '止まっています（▶ で風が吹きはじめます）' : '一時停止中（▶ で進む）';
   document.querySelectorAll('#speeds button').forEach(b => b.classList.toggle('on', +b.dataset.s === S.speed));
   wSlider.value = U; $('wLabel').textContent = U.toFixed(1) + ' m/s';
   const lam = W.G * st.Tp ** 2 / (2 * Math.PI), c = W.G * st.Tp / (2 * Math.PI);
@@ -127,8 +127,8 @@ let last = performance.now(), fpsAcc = 0, fpsN = 0, slow = 0, tick = 0;
 function step(dt) {
   S.simT += dt;
   if (S.tod === 'auto') { S.clock += dt * 24 / DAY_SEC; if (tick % 30 === 0 && ocean) ocean.skyChanged(); }   // 24 をこえると次の日（月も動く）
-  // おまかせ: つまみの目盛りで 1 秒に 1/75（14 日を 75 秒、72 時間までは約 35 秒）
-  if (S.play) { S.t = Math.min(TMAX, S.speed ? S.t + dt * S.speed : v2t(Math.sqrt(S.t / TMAX) * 1000 + dt * 1000 / 75)); if (S.t >= TMAX) S.play = false; update(); }
+  // おまかせ: つまみの目盛りで 1 秒に 1/60（72 時間を 1 分）
+  if (S.play) { S.t = Math.min(TMAX, S.speed ? S.t + dt * S.speed : v2t(Math.sqrt(S.t / TMAX) * 1000 + dt * 1000 / 60)); if (S.t >= TMAX) S.play = false; update(); }
   else if (++tick % 20 === 0) stormDrawPanels();
   if (camAnim) { camAnim.k = Math.min(1, camAnim.k + dt / 1.2); const e = 1 - Math.pow(1 - camAnim.k, 3);
     cam.pitch = camAnim.from.pitch + (camAnim.to.pitch - camAnim.from.pitch) * e; cam.yaw = camAnim.from.yaw + (camAnim.to.yaw - camAnim.from.yaw) * e; cam.dist = camAnim.from.dist + (camAnim.to.dist - camAnim.from.dist) * e;

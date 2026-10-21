@@ -57,7 +57,8 @@ document.querySelectorAll('#swPlace button[data-p], #globeBar button').forEach(b
 let msgTimer = 0; function stageMsg(t) { const m = $('stMsg'); m.textContent = t; m.hidden = false; clearTimeout(msgTimer); msgTimer = setTimeout(() => { m.hidden = true; }, 3000); }
 const llText = ll => `${Math.abs(ll.lat).toFixed(0)}°${ll.lat >= 0 ? 'N' : 'S'} ${Math.abs(ll.lon).toFixed(0)}°${ll.lon >= 0 ? 'E' : 'W'}`;
 $('globeBtn').onclick = () => { if (view !== 'orbit') setView('orbit'); camAnim = null; guideApi.camTo({ dist: 1.6e7, pitch: 1.2, yaw: -Math.PI / 2 }); };   // 北を上に（カメラは南から北を向く）
-GL.load().then(() => { glbElev = GL.texture(); swGeo(); }).catch(e => window.__wagrErr.push('地形データ: ' + e));
+const STORM_UI = false;   // 2026-10-21 ユーザー「嵐の機能・地球規模の視点をいったん消して」。もどすときは true にして、index.html の stormBox の hidden を外し、scene.js の cam.DMAX を 2.6e7 に
+if (STORM_UI) GL.load().then(() => { glbElev = GL.texture(); swGeo(); }).catch(e => window.__wagrErr.push('地形データ: ' + e));
 setSwPlace('storm');
 
 // 地球儀をタップ: 嵐かいる所を置く（地球儀が見えているときだけ。置けたら true）

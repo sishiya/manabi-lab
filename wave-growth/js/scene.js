@@ -70,7 +70,7 @@ function setView(v) {
   if (v === 'float') { cam.free = true; cam.eye = 1.6; cam.dist = 0.01; cam.pitch = 0.05; cam.target = [FLOAT_AT[0], 0, FLOAT_AT[1]]; cam.yaw = Math.atan2(-FLOAT_AT[1], -FLOAT_AT[0]); }   // 人のほうを向く
   else if (v === 'fly') { cam.free = false; cam.pos = [b0.pos[0], Math.min(b0.pos[1], 60), b0.pos[2]]; cam.yaw = Math.atan2(b0.cf[2], b0.cf[0]); cam.pitch = Math.min(0.6, -Math.asin(b0.cf[1])); }   // いまの所から続けて
   else { cam.free = false; cam.eye = 3; cam.target = [0, 0, 0]; cam.dist = 16; cam.pitch = 0.12; }
-  cam.DMAX = v === 'orbit' ? 2.6e7 : 900;
+  cam.DMAX = 900;   // 地球の大きさまで引く（2.6e7）のは、いったん外した（js/storm.js の STORM_UI）
   if (v === 'beach') openBeach('3d');
   $('flyPad').hidden = !flying;
   document.querySelectorAll('#views button').forEach(b => { const on = b.dataset.v === v; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
