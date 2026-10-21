@@ -13,8 +13,8 @@ function setTod(k) { S.tod = k;
   document.querySelectorAll('#tods button').forEach(b => b.classList.toggle('on', b.dataset.k === k)); }
 document.querySelectorAll('#tods button').forEach(b => b.onclick = () => setTod(b.dataset.k));
 S.cloud = 0.3;
-function setWeather() { const c = $('cloud'); c.value = Math.round(S.cloud * 100); $('cloudL').textContent = Math.round(S.cloud * 100) + '%'; if (ocean) ocean.skyChanged(); }
-$('cloud').addEventListener('input', () => { S.cloud = +$('cloud').value / 100; setWeather(); });
+function setWeather(fromSlider) { const c = $('cloud'); if (!fromSlider) c.value = Math.round(S.cloud * 100); $('cloudL').textContent = Math.round(S.cloud * 100) + '%'; if (ocean) ocean.skyChanged(); }
+$('cloud').addEventListener('input', () => { S.cloud = +$('cloud').value / 100; setWeather(true); });
 
 // ---- 水の透明度: 水の中にまざった物（植物プランクトン・細かい粒・とけた色）の量 m（きれいな外洋 = 1）から、光の吸われ方・散らばり方・海の色 ----
 // 純水の吸収（Pope & Fry 1997、赤 650・緑 550・青 450 nm）＋まざった物の吸収（青ほど強い）＋散乱。海の色は、後ろへ散らばる光の割合
@@ -27,11 +27,13 @@ function waterOptics(m) {
 }
 const clarOf = v => 0.3 * Math.pow(100, v / 100), clarTo = m => Math.round(Math.log(m / 0.3) / Math.log(100) * 100);   // つまみ 0〜100 → m 0.3〜30
 S.murk = 1;
-function setClarity() { const w = SUN.water = waterOptics(S.murk), d = w.secchi;
-  $('clar').value = clarTo(S.murk);
+function setClarity(fromSlider) { const w = SUN.water = waterOptics(S.murk), d = w.secchi;
+  if (!fromSlider) $('clar').value = clarTo(S.murk);   // つまみを動かしている最中は、つまみの値を書きかえない
   $('clarL').textContent = `見える深さ 約 ${d < 10 ? d.toFixed(1) : d.toFixed(0)} m`;
   $('clarD').textContent = d > 30 ? 'とても澄んだ外洋（南の島の沖のような）' : d > 15 ? 'ふつうの外洋' : d > 5 ? '岸に近い海（プランクトンや細かい砂がまざる）' : 'にごった湾・河口の近く'; }
-$('clar').addEventListener('input', () => { S.murk = clarOf(+$('clar').value); setClarity(); });
+$('clar').addEventListener('input', () => { S.murk = clarOf(+$('clar').value); setClarity(true); });
+// パネルの中で、文字や部品をつかんで動かす（ブラウザのドラッグ）が始まらないように（つまみを動かすと 🚫 になって止まっていた）
+$('panel').addEventListener('dragstart', e => e.preventDefault());
 
 // ---- 水深と海の底（平らな砂）。つまみ 0〜99 → 2〜200 m（対数）、100 = 底が見えない深い海 ----
 // 波の計算も水深に合わせる（js/growth.js の TMA・分散、shaders.js の FS_SPEC）。砂の色は、海の底の砂の反射率の目安（約 0.3〜0.5）
