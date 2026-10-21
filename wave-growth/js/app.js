@@ -15,7 +15,7 @@ const START_T = 2 * HOUR;               // 開いたときは、風が吹きは�
 // ---- 状態 ----
 const S = {
   t: START_T,                             // 風が吹きはじめてからの時間（秒）。遠くの嵐もこの時計で進む
-  sched: [{ t: 0, U: 10 }],               // 風（ずっと同じ。graph.js・growth.js は区切りのある記録も読める）
+  sched: [{ t: 0, U: 10 }], depth: Infinity,   // depth = 水深（m、Infinity = 底が見えない深い海）               // 風（ずっと同じ。graph.js・growth.js は区切りのある記録も読める）
   play: true, speed: 0,                   // ▶ のとき 1 秒で進む時間（0 = おまかせ: つまみの目盛りで同じ速さ → はじめはゆっくり）
   tod: 'morning', clock: 7, weather: 'clear', obj: 'human',
   simT: 0,                                // 画面の波の時計（ふつうの速さ）
@@ -68,7 +68,9 @@ document.querySelector('#bfTable tbody').innerHTML = window.WGbeaufort.T.map(r =
   const tb = r[4] == null ? '—' : r[4] + ' m' + (r[5] != null ? `（${r[5]}）` : '');
   return `<tr><td>${r[0]}</td><td>${r[1].toFixed(1)}〜${isFinite(r[2]) ? r[2].toFixed(1) : ''}</td><td>${r[3]}</td><td>${tb}</td><td>${f ? (f < 1 ? f.toFixed(2) : f.toFixed(1)) + ' m' : '—'}</td></tr>`; }).join('');
 function update() {
-  const st = S.st = W.stateAt(S.sched, S.t), U = windAt(S.t);
+  // 深い海の成長（CEM）→ 水深 S.depth の海（TMA: 長い波のエネルギーに上限）。Hm0 = その水深の高さ、Hdeep = 深い海なら
+  const st0 = W.stateAt(S.sched, S.t), U = windAt(S.t), dr = st0.Hm0 > 0 ? W.tmaRatio(st0.Hm0, st0.Tp, S.depth) : 1;
+  const st = S.st = Object.assign({}, st0, { Hdeep: st0.Hm0, Hm0: st0.Hm0 * dr, depthR: dr });
   stormUpdate();                                            // 遠くの嵐のうねり（js/storm.js）: SW_OBS
   const sw = SW_OBS && SW_OBS.Hm0 > 0.02 ? SW_OBS : null, Hall = Math.hypot(st.Hm0, sw ? sw.Hm0 : 0);
   tSlider.value = t2v(S.t);
@@ -77,7 +79,7 @@ function update() {
   const ps = $('stPause'); ps.hidden = S.play; ps.textContent = S.t >= TMAX ? '72 時間まで来ました（▶ でもう一度）' : S.t < 60 && !sw ? '止まっています（▶ で風が吹きはじめます）' : '一時停止中（▶ で進む）';
   document.querySelectorAll('#speeds button').forEach(b => b.classList.toggle('on', +b.dataset.s === S.speed));
   wSlider.value = U; $('wLabel').textContent = U.toFixed(1) + ' m/s';
-  const lam = W.G * st.Tp ** 2 / (2 * Math.PI), c = W.G * st.Tp / (2 * Math.PI);
+  const wp = st.Tp > 0 ? 2 * Math.PI / st.Tp : 1, kp = W.kOfDepth(wp, S.depth), lam = 2 * Math.PI / kp, c = wp / kp;   // 水深の分散 ω² = gk tanh kh
   S.us = W.stokes(st.Hm0, st.Tp);
   $('nH').textContent = st.Hm0 > 0 ? fmtLen(st.Hm0) : '0';
   $('nT').textContent = st.Tp > 0 ? st.Tp.toFixed(1) + ' 秒' : '—';
@@ -94,7 +96,8 @@ function update() {
     const swTxt = sw ? `遠くの嵐のうねり ${fmtLen(sw.Hm0)}（周期 ${sw.Tp.toFixed(0)} 秒）も届いています。` : '';
     $('cap').textContent = (st.Hm0 <= 0 ? (U > 0 ? '風が吹く前。' : '風がない。') + (sw ? '' : '海は鏡のように平ら。')
       : `風速 ${U.toFixed(U % 1 ? 1 : 0)} m/s の風が吹いて ${fmtTime(S.t)}。風の波の高さ ${$('nH').textContent}、いちばん多い波の長さ ${$('nL').textContent}。`
-        + (st.full ? 'もうこれ以上は育ちません。' : '') + (U >= 5 ? (U <= 20 ? `白波（砕けた波の泡）は海面の約 ${(3.84e-4 * Math.pow(U, 3.41)).toFixed(U < 8 ? 1 : 0)}%（観測の式）。` : '白波が海面の大部分をおおう（観測の式は 20 m/s まで）。') : '')
+        + (st.full ? 'もうこれ以上は育ちません。' : '')
+        + (isFinite(S.depth) && dr < 0.97 ? `水深 ${S.depth.toFixed(S.depth < 10 ? 1 : 0)} m なので、長い波は底にふれて遅く・短くなり、高さは深い海の ${(dr * 100).toFixed(0)}%。` : '') + (U >= 5 ? (U <= 20 ? `白波（砕けた波の泡）は海面の約 ${(3.84e-4 * Math.pow(U, 3.41)).toFixed(U < 8 ? 1 : 0)}%（観測の式）。` : '白波が海面の大部分をおおう（観測の式は 20 m/s まで）。') : '')
         + (U > 20 ? ' ※ 風速 20 m/s をこえる風（風力 9〜11）が広い海で何日も吹きつづけることは、実際にはまずありません（台風の中の風は数百 km の範囲で、嵐も動く）。ブイで測られた波の高さ（有義波高）の記録は約 19 m。' : '')) + swTxt; }
   window.WGgraph.draw($('graph'), Object.assign({ U }, st), S.sched, Math.min(S.t, 72 * HOUR));
 }
@@ -103,9 +106,10 @@ function syncSea() {
   if (!ocean) return;
   const st = S.st, U = windAt(S.t), sw = SW_OBS && SW_OBS.Hm0 > 0.005 ? SW_OBS : null, now = performance.now();
   const q = (v, r) => Math.round(Math.log(Math.max(v, 1e-4)) / r);   // 0.4%（風の波）・1%（うねり）ごとに丸めて、変わったかを見る
-  const key = [U, st.Hm0 > 0 ? q(st.Hm0, 0.004) : 0, st.Tp > 0 ? q(st.Tp, 0.003) : 0, sw ? q(sw.Hm0, 0.01) : 0, sw ? q(sw.Tp, 0.01) : 0, SW_ANG.toFixed(3)].join('/');
+  const key = [U, S.depth, st.Hdeep > 0 ? q(st.Hdeep, 0.004) : 0, st.Tp > 0 ? q(st.Tp, 0.003) : 0, sw ? q(sw.Hm0, 0.01) : 0, sw ? q(sw.Tp, 0.01) : 0, SW_ANG.toFixed(3)].join('/');
   if (key === lastSea.key || now - lastSea.at < 90) return;
-  const ws = st.Hm0 > 0 ? W.makeSpecK(st.Hm0, st.Tp, WIND_ANG, 10, U) : null, ss = sw ? W.makeSpecKTable(SW.fs, sw.E, SW_ANG, sw.s) : null;
+  ocean.setDepth(S.depth);
+  const ws = st.Hdeep > 0 ? W.makeSpecK(st.Hdeep, st.Tp, WIND_ANG, 10, U, S.depth) : null, ss = sw ? W.makeSpecKTable(SW.fs, sw.E, SW_ANG, sw.s) : null;
   ocean.setSpec(ws && ss ? (kx, kz) => ws(kx, kz) + ss(kx, kz) : ws || ss || (() => 0));
   lastSea = { key, at: now };
 }
@@ -149,7 +153,7 @@ function loop(now) {
 }
 function start() {
   // はじめ: 朝の景色・人あり・風が吹いて 2 時間の海から再生（案内は「つぎへ」で始まり、1 段めは吹く前の凪）
-  setTod('morning'); setWeather(); setClarity(); setObj('human'); setView('orbit');
+  setTod('morning'); setWeather(); setClarity(); setObj('human'); setDepth(); setView('orbit');
   S.free = true; update();
   requestAnimationFrame(loop);
   // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）

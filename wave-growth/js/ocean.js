@@ -27,7 +27,7 @@ window.WGocean = (() => {
       p.u = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
       for (let i = 0; i < n; i++) { const a = gl.getActiveUniform(p, i); p.u[a.name] = gl.getUniformLocation(p, a.name); }
       return p; }
-    let unit = 0; const WET0 = new Float32Array(16);
+    let unit = 0, depthH = 1e5; const WET0 = new Float32Array(16);   // depthH = 水深（深い海は 1e5 m）
     function use(p) { gl.useProgram(p); unit = 0; return p; }
     function set(p, name, v) { const l = p.u[name]; if (l == null) return;
       if (v instanceof WebGLTexture) { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, v); gl.uniform1i(l, unit++); }
@@ -215,7 +215,7 @@ window.WGocean = (() => {
       const decay = Math.exp(-dt / 2.5);
       CASC.forEach(c => {
         gl.viewport(0, 0, N, N);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, PP[0].f); use(pSpec); setAll(pSpec, { h0: c.h0, L: c.L, t, N, w0: W0 }); full();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, PP[0].f); use(pSpec); setAll(pSpec, { h0: c.h0, L: c.L, t, N, w0: W0, depth: depthH }); full();
         let src = 0; use(pFFT);
         for (const dir of [1, 0]) for (let sub = 2; sub <= N; sub *= 2) {
           gl.bindFramebuffer(gl.FRAMEBUFFER, PP[1 - src].f); use(pFFT);
@@ -270,7 +270,7 @@ window.WGocean = (() => {
       cur = 1 - cur;
       if (q) { gl.endQuery(tq.TIME_ELAPSED_EXT); tqs.push(q); }
     }
-    return { isSoft, setSea, setSpec, frame, makeMesh, get probe() { return probeOut; }, get VP() { return lastVP; }, get txty() { return lastTxTy; }, skyChanged() { skyDirty = true; }, get gpuMs() { return gpuMs; }, get fftHs() { return 4 * Math.sqrt(fftVar); }, get fftSlope() { return fftSlope; }, get foam() { return { thr: foamThr, mean: foamMean, target: foamTarget }; },
+    return { isSoft, setSea, setSpec, setDepth(h) { depthH = isFinite(h) ? h : 1e5; }, frame, makeMesh, get probe() { return probeOut; }, get VP() { return lastVP; }, get txty() { return lastTxTy; }, skyChanged() { skyDirty = true; }, get gpuMs() { return gpuMs; }, get fftHs() { return 4 * Math.sqrt(fftVar); }, get fftSlope() { return fftSlope; }, get foam() { return { thr: foamThr, mean: foamMean, target: foamTarget }; },
       // 調べ用: 描いている海面（3 枚の FFT の高さ）の分散 → 有義波高。分布の式から出す値（fftHs）とくらべる
       debugSea() { let tot = 0; const per = []; CASC.forEach(c => { const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f);
           gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, c.disp, 0); const b = new Float32Array(N * N * 4); gl.readPixels(0, 0, N, N, gl.RGBA, gl.FLOAT, b);

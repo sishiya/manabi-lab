@@ -98,14 +98,22 @@
     return { kp, Om, am, us, cut, Bh, renorm: m0c > 0 ? m0 / m0c : 1 };
   }
   // 波数の面での密度 S(kx, kz) [m⁴]。windAng = 波が進む向き（ラジアン）、U = 風速（短い波を風で変えるとき）
-  function makeSpecK(Hm0, Tp, windAng, smax = 10, U = 0) {
+  // 水深 h の海（TMA: Bouws ほか 1985）: 分布 = JONSWAP × Kitaigorodskii の深さの係数 φ(ω_h)、ω_h = ω√(h/g)。
+  // φ = ω_h²/2（ω_h ≤ 1）、1 − (2 − ω_h)²/2（1〜2）、1（2 より上 = 深い海）。浅いほど長い波のエネルギーに上限がかかる
+  function tmaPhi(w, h) { if (!isFinite(h)) return 1; const x = w * Math.sqrt(h / G); return x <= 1 ? 0.5 * x * x : x < 2 ? 1 - 0.5 * (2 - x) * (2 - x) : 1; }
+  // 有限の水深の分散 ω² = g k tanh(kh) で、ω から k（ニュートン法）
+  function kOfDepth(w, h) { if (!isFinite(h)) return w * w / G; let k = w * w / G / Math.sqrt(Math.tanh(w * w * h / G)); for (let i = 0; i < 20; i++) { const t = Math.tanh(k * h), f = G * k * t - w * w, d = G * t + G * k * h * (1 - t * t); k -= f / d; } return k; }
+  // 水深 h で、深い海の高さ Hm0 が何倍になるか（TMA の面積の比の平方根）
+  function tmaRatio(Hm0, Tp, h) { if (!isFinite(h) || !(Hm0 > 0)) return 1; let a = 0, b = 0; const df = 0.002;
+    for (let f = df / 2; f < 3; f += df) { const e = Sf(f, Hm0, Tp); a += e * tmaPhi(2 * Math.PI * f, h); b += e; } return Math.sqrt(a / b); }
+  function makeSpecK(Hm0, Tp, windAng, smax = 10, U = 0, h = Infinity) {
     const fp = Tp > 0 ? 1 / Tp : 1, E = U > 0 && Hm0 > 0 ? eckvParts(Hm0, Tp, U) : null;
     return (kx, kz) => {
       const k = Math.hypot(kx, kz); if (k < 1e-9) return 0;
-      const w = Math.sqrt(G * k), f = w / (2 * Math.PI);
+      const th = isFinite(h) ? Math.tanh(k * h) : 1, w = Math.sqrt(G * k * th), f = w / (2 * Math.PI);   // 有限の水深の分散
       const s = Math.max(0.5, f < fp ? smax * Math.pow(f / fp, 5) : smax * Math.pow(f / fp, -2.5));
-      const dfdk = G / (2 * w) / (2 * Math.PI);
-      let Sk = Sf(f, Hm0, Tp) * dfdk;
+      const dfdk = (G * th + (isFinite(h) ? G * k * h * (1 - th * th) : 0)) / (2 * w) / (2 * Math.PI);
+      let Sk = Sf(f, Hm0, Tp) * tmaPhi(w, h) * dfdk;
       if (E) Sk = Sk * E.cut(k) * E.renorm + E.Bh(k) / (k * k * k);
       return Sk / k * spread(Math.atan2(kz, kx) - windAng, s);
     };
@@ -130,6 +138,6 @@
       return E * (G / (2 * w) / (2 * Math.PI)) / k * norm * Math.pow(Math.cos(th / 2), 2 * s); };
   }
 
-  const api = { eckvParts, G, stokes, ustar, fromFetch, fromDurationFetch, makeSpecKTable, jonswapShape, fullyDev, fromDuration, durationForH, stateAt, Sf, makeSpecK, spread, lgamma };
+  const api = { tmaPhi, kOfDepth, tmaRatio, eckvParts, G, stokes, ustar, fromFetch, fromDurationFetch, makeSpecKTable, jonswapShape, fullyDev, fromDuration, durationForH, stateAt, Sf, makeSpecK, spread, lgamma };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.WGgrowth = api;
 })(typeof window !== 'undefined' ? window : this);

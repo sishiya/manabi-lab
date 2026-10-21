@@ -39,6 +39,16 @@ console.log('\n■ 4. 深い海・浅い海の波（線形の波）');
 note('砕ける高さ: 水深の 0.78 倍（McCowan 1894）と Miche (1944) の急さの限界の早いほう。本当は坂と波の形でかわる（Goda 2010）。');
 { const k = 0.1, a = 1, kh = 50, r = k * a * a / 4 * Math.cosh(kh) * (2 + Math.cosh(2 * kh)) / Math.pow(Math.sinh(kh), 3); row('ストークス 2 次の深い海の極限 = k a²/2', r, k * a * a / 2, 1e-6, 'ストークスの波（深い海）'); }
 
+console.log('\n■ 4b. 水深のある海（TMA: Bouws ほか 1985・分散）');
+{ const w = 2 * Math.PI / 8, h = 10, k = W.kOfDepth(w, h), L0 = G * 64 / (2 * Math.PI), Lf = L0 * Math.pow(Math.tanh(Math.pow(w * w * h / G, 0.75)), 2 / 3);
+  row('kOfDepth: 周期 8 s・水深 10 m の波長', 2 * Math.PI / k, Lf, 0.02, 'Fenton & McKee (1990) の近似式'); }
+row('φ のつながり（ω_h = 1）', W.tmaPhi(Math.sqrt(G / 4), 4), 0.5, 1e-6, 'Kitaigorodskii の係数（ω_h ≤ 1 で ω_h²/2）');
+row('φ のつながり（ω_h = 2）', W.tmaPhi(2 * Math.sqrt(G / 4), 4), 1, 1e-6, '同じ（2 より上は 1 = 深い海）');
+{ const r = W.fromDuration(10, 30 * 3600); row('水深 1000 m では深い海と同じ高さ', W.tmaRatio(r.Hm0, r.Tp, 1000), 1, 0.005, '定義'); }
+{ const r = W.fromDuration(10, 30 * 3600), q = W.tmaRatio(r.Hm0, r.Tp, 3) * r.Hm0 / 3, ok = q > 0.3 && q <= 0.55; if (!ok) ng++;
+  console.log(`${ok ? 'OK ' : 'NG '} 水深 3 m の高さ ÷ 水深（10 m/s・30 時間）: ${q.toFixed(2)}（0.3〜0.55 なら OK）  ← Nelson (1994): 平らな底の上で波の高さ ÷ 水深は 0.55 をこえない`); }
+note('浅い海で波が「育つ速さ」そのものは、深い海の式（CEM）のまま。TMA で分布の形と上限だけを水深に合わせている。');
+
 console.log('\n■ 5. 流される速さ（ストークスドリフト）・うねり');
 { const f0 = 0.1, a = 0.5, mono = 2 * Math.PI * f0 * Math.pow(2 * Math.PI * f0, 2) / G * a * a, kenyon = 16 * Math.PI ** 3 / G * f0 ** 3 * (a * a / 2);
   row('Kenyon の式が波 1 つの ω k a² になる', kenyon, mono, 1e-9, 'Kenyon 1969（波 1 つのときの形）'); }

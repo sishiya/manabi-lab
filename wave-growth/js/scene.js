@@ -33,6 +33,18 @@ function setClarity() { const w = SUN.water = waterOptics(S.murk), d = w.secchi;
   $('clarD').textContent = d > 30 ? 'とても澄んだ外洋（南の島の沖のような）' : d > 15 ? 'ふつうの外洋' : d > 5 ? '岸に近い海（プランクトンや細かい砂がまざる）' : 'にごった湾・河口の近く'; }
 $('clar').addEventListener('input', () => { S.murk = clarOf(+$('clar').value); setClarity(); });
 
+// ---- 水深と海の底（平らな砂）。つまみ 0〜99 → 2〜200 m（対数）、100 = 底が見えない深い海 ----
+// 波の計算も水深に合わせる（js/growth.js の TMA・分散、shaders.js の FS_SPEC）。砂の色は、海の底の砂の反射率の目安（約 0.3〜0.5）
+const depthOf = v => v >= 100 ? Infinity : 2 * Math.pow(10, v / 99 * 2);
+let bedMesh = null;
+function bedGeo() { const v = [], R = 3000, put = (x, z) => v.push(x, 0, z, 0, 1, 0, 0.62, 0.56, 0.44, 0.12, 0.6, 0);   // 1 頂点 12 個（位置・上向き・砂の色・つや・濡れやすさ）
+  for (const [x, z] of [[-R, -R], [R, -R], [R, R], [-R, -R], [R, R], [-R, R]]) put(x, z); return v; }
+function setDepth() { S.depth = depthOf(+$('depth').value); cam.floor = isFinite(S.depth) ? -S.depth : -1e9;
+  if (isFinite(S.depth) && ocean && !bedMesh) bedMesh = ocean.makeMesh(bedGeo());
+  if (isFinite(S.depth) && cam.fly && cam.pos[1] < cam.floor + 0.3) cam.pos[1] = cam.floor + 0.3;
+  $('depthL').textContent = isFinite(S.depth) ? `${S.depth < 10 ? S.depth.toFixed(1) : S.depth.toFixed(0)} m` : '深い海（底は見えない）'; lastSea.key = ''; update(); }
+$('depth').addEventListener('input', setDepth);
+
 // ---- 大きさくらべ（人）・ブイ・断面のボタン ----
 const buoyMesh = ocean ? ocean.makeMesh(PR.buoy()) : null, objMeshes = {};
 const OBJ_YAW = { human: 1.9, boat: 1.3, fishing: 1.3, ship: 1.3 };   // 人はこちら向き（カメラは yaw 0.35 から見る）
@@ -262,6 +274,8 @@ function draw(dt) {
     if (objMeshes[S.obj]) SUN.meshes.push({ mesh: objMeshes[S.obj], M: PR.matrix(h.x, h.z, h.pose, yaw), wet: h.wet }); });
   lastWetT = S.t;
   FL.step(dt, S.simT, pr.slice(k), S.us || 0, WIND_ANG);
+  if (bedMesh && isFinite(S.depth)) { const sx = Math.round(b.pos[0] / 500) * 500, sz = Math.round(b.pos[2] / 500) * 500;   // 底はカメラの下についてくる（500 m ごと）
+    SUN.meshes.push({ mesh: bedMesh, M: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, sx, -S.depth, sz, 1]) }); }
   if (buoyMesh && S.showBuoy) FL.list.forEach(bu => { if (bu.p) SUN.meshes.push({ mesh: buoyMesh, M: PR.matrix(bu.x0 + bu.drift[0], bu.z0 + bu.drift[1], bu.p, 0) }); });
   // ほかに読む点: カメラの真下の水面（自由に動くときはカメラの所。水の上か中かを決める）・浮かべたカメラ・しぶきを出すか見る点（カメラの前に 5 つ）
   const nb = FL.list.length, iCam = k + nb, pc = pr[iCam];

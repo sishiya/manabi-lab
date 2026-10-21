@@ -3,7 +3,7 @@
 window.WGcamera = (() => {
   function create(el) {
     const C = { yaw: 0.35, pitch: 0.12, dist: 16, target: [0, 0, 0], minY: 2, fovY: 52 * Math.PI / 180,
-      DMIN: 3, DMAX: 900, PMIN: 0.02, PMAX: 1.45, free: false, eye: 3, dive: false, fly: false, pos: [0, 3, 0] };   // fly = 自由に動く（pos の位置から yaw・pitch の向きを見る。水の上でも中でも）   // dive = 水の中（eye は負 = 水面より下）   // free = 前を見る（ミラーの惑星の 3D）。eye = 水面からの目の高さ
+      DMIN: 3, DMAX: 900, PMIN: 0.02, PMAX: 1.45, free: false, eye: 3, dive: false, fly: false, pos: [0, 3, 0], floor: -1e9 };   // floor = 海の底の高さ（カメラはその 0.3 m 上より下へ行かない）   // fly = 自由に動く（pos の位置から yaw・pitch の向きを見る。水の上でも中でも）   // dive = 水の中（eye は負 = 水面より下）   // free = 前を見る（ミラーの惑星の 3D）。eye = 水面からの目の高さ
     const ptr = new Map(); let pinch0 = 0, moved = 0;
     // 近づく・遠ざかる（ホイールも 2 本指も同じ）: ふつう = 見る点からの距離、海面に浮かぶ = 目の高さ、水の中 = 深さ
     C.zoom = f => { if (C.free && C.floatZoom && !C.dive) { C.floatZoom(f); return; }   // 海面から: 人に近づく・はなれる（目の高さはそのまま）
@@ -28,7 +28,7 @@ window.WGcamera = (() => {
 
     // 位置と向き。カメラは波の中に入らない（minY より下なら持ち上げ、海の1点を見続ける）
     // 自由に動く: 位置を足す（高さ −200 m〜5 km）
-    C.move = v => { for (let i = 0; i < 3; i++) C.pos[i] += v[i]; C.pos[1] = Math.min(5000, Math.max(-200, C.pos[1])); };
+    C.move = v => { for (let i = 0; i < 3; i++) C.pos[i] += v[i]; C.pos[1] = Math.min(5000, Math.max(Math.max(-200, C.floor + 0.3), C.pos[1])); };
     C.basis = function () {
       const ch = Math.cos(C.pitch), fw = [Math.cos(C.yaw) * ch, -Math.sin(C.pitch), Math.sin(C.yaw) * ch];
       if (C.fly) { let cr = [-fw[2], 0, fw[0]]; const lr = Math.hypot(...cr) || 1; cr = cr.map(v => v / lr);
@@ -46,6 +46,7 @@ window.WGcamera = (() => {
       const pos = [tg[0] - fw[0] * de, tg[1] - fw[1] * de, tg[2] - fw[2] * de];
       // 波の中に入らない下限 minY は、海の近くで見下ろすときだけ（見上げるほどゆるめて、水の中へなめらかに）
       if (C.dist < 900) { const k = Math.min(1, Math.max(0, (C.pitch + 0.25) / 0.3)), w = k * k * (3 - 2 * k); if (pos[1] < C.minY) pos[1] += (C.minY - pos[1]) * w; }
+      if (pos[1] < C.floor + 0.3) pos[1] = C.floor + 0.3;   // 海の底より下へは回りこまない
       let cf = [tg[0] - pos[0], tg[1] - pos[1], tg[2] - pos[2]]; const l = Math.hypot(...cf); cf = cf.map(v => v / l);
       let cr = [cf[1] * 0 - cf[2] * 1, cf[2] * 0 - cf[0] * 0, cf[0] * 1 - cf[1] * 0]; const lr = Math.hypot(...cr); cr = cr.map(v => v / lr);
       const cu = [cr[1] * cf[2] - cr[2] * cf[1], cr[2] * cf[0] - cr[0] * cf[2], cr[0] * cf[1] - cr[1] * cf[0]];

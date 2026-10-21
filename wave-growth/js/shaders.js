@@ -6,7 +6,7 @@ window.WGsh = (() => {
 
   // h(k,t) と、横の変位・傾き・変位の微分を作る（実数の場を2つずつ複素数1つにつめる）
   const FS_SPEC = HEAD + `
-uniform sampler2D h0;uniform float L,t,N,w0;
+uniform sampler2D h0;uniform float L,t,N,w0,depth;
 layout(location=0) out vec4 o0;layout(location=1) out vec4 o1;
 vec2 cm(vec2 a,vec2 b){return vec2(a.x*b.x-a.y*b.y,a.x*b.y+a.y*b.x);}
 vec2 im(vec2 a){return vec2(-a.y,a.x);}
@@ -14,13 +14,15 @@ void main(){
   ivec2 ij=ivec2(gl_FragCoord.xy);vec2 n=vec2(ij);n-=N*step(N*.5,n);
   vec2 k=6.2831853*n/L;float kl=length(k);
   vec4 h=texelFetch(h0,ij,0);
-  float w=max(round(sqrt(9.81*kl)/w0),1.)*w0;   // 深い海の分散 w^2=gk（くり返しのため 2π/T の整数倍に丸める）
+  float th=tanh(min(kl*depth,20.));   // 水深 depth の分散 w² = g k tanh(kh)（深い海は 1）
+  float w=max(round(sqrt(9.81*kl*th)/w0),1.)*w0;   // くり返しのため 2π/T の整数倍に丸める
   float ph=mod(w*t,6.2831853);vec2 e=vec2(cos(ph),sin(ph));
   vec2 H=cm(h.xy,e)+cm(h.zw,vec2(e.x,-e.y));
   vec2 kn=kl>1e-6?k/kl:vec2(0);float ik=kl>1e-6?1./kl:0.;
-  vec2 Dx=cm(vec2(0,-kn.x),H),Dz=cm(vec2(0,-kn.y),H);
+  float cth=1./max(th,.33);   // 浅い海では水面の横の動きが大きい（線形の波: 横の振れ幅 = 高さの振れ幅 / tanh kh。3 倍まで）
+  vec2 Dx=cm(vec2(0,-kn.x),H)*cth,Dz=cm(vec2(0,-kn.y),H)*cth;
   vec2 Sx=cm(vec2(0,k.x),H),Sz=cm(vec2(0,k.y),H);
-  vec2 Dxx=H*k.x*k.x*ik,Dzz=H*k.y*k.y*ik,Dxz=H*k.x*k.y*ik;
+  vec2 Dxx=H*k.x*k.x*ik*cth,Dzz=H*k.y*k.y*ik*cth,Dxz=H*k.x*k.y*ik*cth;
   o0=vec4(H+im(Dx),Dz+im(Sx));o1=vec4(Sz+im(Dxx),Dzz+im(Dxz));
 }`;
 
