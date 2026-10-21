@@ -27,7 +27,7 @@ window.WGocean = (() => {
       p.u = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
       for (let i = 0; i < n; i++) { const a = gl.getActiveUniform(p, i); p.u[a.name] = gl.getUniformLocation(p, a.name); }
       return p; }
-    let unit = 0;
+    let unit = 0; const WET0 = new Float32Array(16);
     function use(p) { gl.useProgram(p); unit = 0; return p; }
     function set(p, name, v) { const l = p.u[name]; if (l == null) return;
       if (v instanceof WebGLTexture) { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, v); gl.uniform1i(l, unit++); }
@@ -241,7 +241,8 @@ window.WGocean = (() => {
       const cst = { cS1: CASC[1].slope[cur], cS2: CASC[2].slope[cur], cLs: CASC.map(c => c.L), cSun: Ls };   // コースティクス・光芒（太陽の向き）
       const drawSky = () => { use(pSky); setAll(pSky, { cf, cr, cu, L, sunCu: sunC, Lsun: Ls, sunCd: sunCs, LmD: Lm, moonK, tx, ty, sunI: keyI, expo: env.expo, disc: env.disc, stars: env.stars, fogSky: Math.min(1, 600 / env.fogL), skyT: skyTex, under: env.under ? 1 : 0, camD: env.camD || 0, cam: pos, ...cst }); full(); };
       const drawMeshes = () => { use(pMesh); setAll(pMesh, { VP, cam: pos, L, sunCu: sunC, sunI: keyI, expo: env.expo, fogL: env.fogL, wetRain: env.wetRain || 0, wetSplash: env.wetSplash || 0, skyT: skyTex, under: env.under ? 1 : 0, camD: env.camD || 0, ...cst });
-        for (const m of env.meshes) { set(pMesh, 'M', m.M); gl.bindVertexArray(m.mesh.vao); gl.drawArrays(gl.TRIANGLES, 0, m.mesh.count); } gl.bindVertexArray(null); };
+        const wl = pMesh.u['wetP[0]'];
+        for (const m of env.meshes) { set(pMesh, 'M', m.M); if (wl) gl.uniform1fv(wl, m.wet || WET0); gl.bindVertexArray(m.mesh.vao); gl.drawArrays(gl.TRIANGLES, 0, m.mesh.count); } gl.bindVertexArray(null); };
       if (hasMesh) {   // 空と物 → 画面の外の絵 → 画面へ写す
         ensureBg(W, H); gl.bindFramebuffer(gl.FRAMEBUFFER, bgF); gl.viewport(0, 0, W, H); gl.disable(gl.DEPTH_TEST); drawSky();
         gl.enable(gl.DEPTH_TEST); gl.clear(gl.DEPTH_BUFFER_BIT); drawMeshes(); gl.disable(gl.DEPTH_TEST);

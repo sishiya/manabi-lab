@@ -16,8 +16,9 @@ window.WGcamera = (() => {
       const p = ptr.get(e.pointerId); if (!p) return;
       const dx = e.clientX - p[0], dy = e.clientY - p[1]; p[0] = e.clientX; p[1] = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
       if (ptr.size === 1) { const fr = C.free || C.fly; C.yaw += dx * 0.005 * (fr ? C.fovY : 1);
-        const pmin = C.fly ? -1.55 : C.dive ? -1.5 : C.free ? -0.6 : C.dist < 900 ? -1.2 : C.PMIN;   // 上から: 見上げると、カメラは見る点より下（水の中）へ回りこむ
-        C.pitch = Math.min(C.fly ? 1.55 : C.PMAX, Math.max(pmin, C.pitch + dy * 0.004 * (fr ? C.fovY : 1))); }
+        const far = !fr && C.dist >= 3e4;   // 地球の大きさ: 地球のまん中のまわりをどこへでも回れる（裏側も）
+        const pmin = C.fly ? -1.55 : C.dive ? -1.5 : C.free ? -0.6 : C.dist < 900 ? -1.2 : far ? -1.55 : C.PMIN;   // 上から: 見上げると、カメラは見る点より下（水の中）へ回りこむ
+        C.pitch = Math.min(C.fly || far ? 1.55 : C.PMAX, Math.max(pmin, C.pitch + dy * 0.004 * (fr ? C.fovY : 1))); }
       else if (ptr.size === 2 && pinch0 > 0) { const [a, b] = [...ptr.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
         C.zoom(pinch0 / Math.max(d, 1)); pinch0 = Math.max(d, 1); }
     });
@@ -39,10 +40,13 @@ window.WGcamera = (() => {
         const cu = [cr[1] * fw[2] - cr[2] * fw[1], cr[2] * fw[0] - cr[0] * fw[2], cr[0] * fw[1] - cr[1] * fw[0]];
         return { pos, cf: fw, cr, cu, fovY: C.fovY };
       }
-      const pos = [C.target[0] - fw[0] * C.dist, C.target[1] - fw[1] * C.dist, C.target[2] - fw[2] * C.dist];
-      // 波の中に入らない下限 minY は、上から見下ろすときだけ（見上げるほどゆるめて、水の中へなめらかに）
-      { const k = Math.min(1, Math.max(0, (C.pitch + 0.25) / 0.3)), w = k * k * (3 - 2 * k); if (pos[1] < C.minY) pos[1] += (C.minY - pos[1]) * w; }
-      let cf = [C.target[0] - pos[0], C.target[1] - pos[1], C.target[2] - pos[2]]; const l = Math.hypot(...cf); cf = cf.map(v => v / l);
+      // 引くほど、見る点を地球のまん中へ移す（30 km〜3000 km でなめらかに）。距離は地球の半径ぶん足すので、高さは同じくらいのまま
+      const gk = (() => { const x = Math.min(1, Math.max(0, Math.log(C.dist / 3e4) / Math.log(100))); return x * x * (3 - 2 * x); })(), R = 6.371e6 * gk;
+      const tg = [C.target[0], C.target[1] - R, C.target[2]], de = C.dist + R;
+      const pos = [tg[0] - fw[0] * de, tg[1] - fw[1] * de, tg[2] - fw[2] * de];
+      // 波の中に入らない下限 minY は、海の近くで見下ろすときだけ（見上げるほどゆるめて、水の中へなめらかに）
+      if (C.dist < 900) { const k = Math.min(1, Math.max(0, (C.pitch + 0.25) / 0.3)), w = k * k * (3 - 2 * k); if (pos[1] < C.minY) pos[1] += (C.minY - pos[1]) * w; }
+      let cf = [tg[0] - pos[0], tg[1] - pos[1], tg[2] - pos[2]]; const l = Math.hypot(...cf); cf = cf.map(v => v / l);
       let cr = [cf[1] * 0 - cf[2] * 1, cf[2] * 0 - cf[0] * 0, cf[0] * 1 - cf[1] * 0]; const lr = Math.hypot(...cr); cr = cr.map(v => v / lr);
       const cu = [cr[1] * cf[2] - cr[2] * cf[1], cr[2] * cf[0] - cr[0] * cf[2], cr[0] * cf[1] - cr[1] * cf[0]];
       return { pos, cf, cr, cu, fovY: C.fovY };

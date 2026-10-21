@@ -52,11 +52,14 @@ function drawPropLabel(g) {
 // 上から: 海の 1 点のまわりを回る（引くと宇宙から見た地球まで）。海面から: 見つめる点がその場の水面と一緒に上下する。
 // 自由に動く: W A S D で前後左右・Q E で下と上（スマホは画面のボタン）。水面をこえると、そのまま水の中（カメラの真上の水面の高さで決める）。
 let view = 'orbit', camFloat = false, camWater = null, flying = false, diving = false; const FLOAT_AT = [-8, -3];   // 浮かべたカメラの場所（人から少しはなれた所）
-// 海面から: ホイール／2本指で人に近づく・はなれる（3〜80 m。水面に浮かんだまま、目の高さは 1.6 m）
-const FLOAT_DIR = [-8 / Math.hypot(8, 3), -3 / Math.hypot(8, 3)]; let floatD = Math.hypot(8, 3);
-cam.floatZoom = f => { floatD = Math.min(80, Math.max(3, floatD * f)); FLOAT_AT[0] = FLOAT_DIR[0] * floatD; FLOAT_AT[1] = FLOAT_DIR[1] * floatD; cam.target[0] = FLOAT_AT[0]; cam.target[2] = FLOAT_AT[1]; camWater = null; };
+// 海面から: ホイール／2本指で、向いている向きへ水面の上を進む・もどる（1 目盛り 1.5 m、まん中から 150 m まで）。
+// 高さはそこの水面に 0.2 秒でなめらかについていく（前は進むたびに高さを読みなおして、上下にとんでいた）
+cam.floatZoom = f => { const s = -Math.log(f) / 0.13 * 1.5; let x = FLOAT_AT[0] + Math.cos(cam.yaw) * s, z = FLOAT_AT[1] + Math.sin(cam.yaw) * s;
+  const r = Math.hypot(x, z); if (r > 150) { x *= 150 / r; z *= 150 / r; }
+  for (const h of S.showHuman ? HUMANS : []) { const dx = x - h.x, dz = z - h.z, d = Math.hypot(dx, dz); if (d < 2.5) { const k = 2.5 / Math.max(d, 1e-3); x = h.x + dx * k; z = h.z + dz * k; } }   // 人の中は通りぬけない
+  FLOAT_AT[0] = x; FLOAT_AT[1] = z; cam.target[0] = x; cam.target[2] = z; };
 const COARSE = matchMedia('(pointer: coarse)').matches;
-const VIEW_TXT = { orbit: ['上から見る', 'ドラッグ: 回す・ホイール／2本指: 近づく'], float: ['海面に浮かぶ', 'ドラッグ: 見回す・ホイール／2本指: 目の高さ'],
+const VIEW_TXT = { orbit: ['上から見る', 'ドラッグ: 回す・ホイール／2本指: 近づく'], float: ['海面に浮かぶ', 'ドラッグ: 見回す・ホイール／2本指: 前へ・うしろへ'],
   fly: ['自由に動く', COARSE ? 'ボタン: 動く・ドラッグ: 見回す' : 'W S: 向いている向きへ・A D: 横・Q E: 下 上・Shift: ゆっくり・ドラッグ: 見回す'],
   beach: ['浜（浅い海）', 'ドラッグ: 回す・ホイール／2本指: 近づく'], beachSec: ['浜（浅い海）の断面図', '坂の急さを右下でえらべます'] };
 function viewChip(k) { $('stView').textContent = VIEW_TXT[k][0]; $('stCtl').textContent = VIEW_TXT[k][1]; }
@@ -186,7 +189,7 @@ function arrow(g, cx, cy, b, ang, col, label) {
   g.font = '11px ' + fontB(); g.textAlign = 'center'; g.fillText(label, cx, cy + 36); }
 function drawOverlay(b) {
   const r = ov.getBoundingClientRect(), g = ovCtx();
-  stormOverlay(g, b, r);
+  stormOverlay(g, b, r); { const gv = !!(SUN.globe && SUN.globe.alpha > 0.4); if ($('globeBar').hidden === gv) $('globeBar').hidden = !gv; }
   drawSpray(g); if (S.showHuman) drawPropLabel(g); if (S.showBuoy) drawTrails(g);
   if (flying) { const y = b.pos[1], t2 = SUN.under ? `水の中・深さ ${Math.max(0, SUN.camD).toFixed(1)} m` : `自由に動く・高さ ${y < 1000 ? y.toFixed(1) + ' m' : (y / 1000).toFixed(2) + ' km'}`; if ($('stView').textContent !== t2) $('stView').textContent = t2; }
   else if (view === 'orbit') { const t2 = SUN.under ? `上から見る・水の中 ${Math.max(0, SUN.camD).toFixed(1)} m` : '上から見る'; if ($('stView').textContent !== t2) $('stView').textContent = t2; }
@@ -197,6 +200,30 @@ function drawOverlay(b) {
   if (U > 0 && S.st.Hm0 > 0) arrow(g, r.width - 40, 40, b, WIND_ANG, '#e8f0f4', '風 ' + U.toFixed(0) + ' m/s');
   if (SW_OBS && SW_OBS.Hm0 > 0.02) arrow(g, r.width - 40, U > 0 && S.st.Hm0 > 0 ? 112 : 40, b, SW_ANG, '#ffc95a', 'うねり');
 }
+
+// ---- 濡れて、乾く（人・浮き輪・板） ----
+// 物の高さ −0.3〜2.1 m を 16 段。水面より下はいつも濡れている。波がかかった高さまで濡れ（1）、そのあと乾く（うすい水の膜が風で蒸発する目安 4 分。
+// 時間のつまみが速く進むときは、進んだ時間で乾かす）。物より短い波（波長 3.2 m より短い）は物といっしょに上下しないので、ふちを洗う:
+// その高さは分布の短い波の部分の σ（JONSWAP の f > 0.7 Hz の面積の平方根）で、ゆっくり変わる乱数（時間の目安 0.7 秒）。砕ける波頭をかぶる・風 13 m/s からのしぶきでも濡れる
+const WET_N = 16, WET_Y0 = -0.3, WET_DY = 0.15, TAU_DRY = 240;
+let shortKey = '', shortSig = 0, lastWetT = 0;
+function stepWet(h, p, k1, pr0, dt, U) {
+  if (!h.wet) { h.wet = new Float32Array(WET_N); h.e = 0; }
+  const st = S.st, key = st.Hm0.toFixed(3) + '/' + st.Tp.toFixed(2);
+  if (key !== shortKey) { shortKey = key; let m = 0; if (st.Hm0 > 0) for (let f = 0.7; f < 4; f += 0.01) m += W.Sf(f, st.Hm0, st.Tp) * 0.01; shortSig = Math.sqrt(m); }
+  const a = Math.exp(-dt / 0.7); h.e = h.e * a + shortSig * Math.sqrt(1 - a * a) * gauss();
+  let mean = 0; for (let i = 0; i < k1; i++) mean += pr0[i] ? pr0[i].d[1] : 0; mean /= k1;
+  let level = (mean - h.pose.d[1]) + 1.5 * Math.abs(h.e);   // 物から見た水のとどく高さ
+  // 砕ける波頭（白波）にあたると、波の高さの 3 割くらいまで水をかぶる（あたる割合 = 白波の割合 ÷ 周期。高さの割合は目安）
+  if (st.Tp > 0 && Math.random() < dt * 3.84e-6 * Math.pow(U, 3.41) / st.Tp) h.wash = 1.2;
+  if (h.wash > 0) { h.wash -= dt; level = Math.max(level, Math.min(2, 0.3 * st.Hm0)); }
+  const dDry = Math.max(dt, Math.max(0, S.t - lastWetT)), dry = Math.exp(-dDry / TAU_DRY);
+  for (let i = 0; i < WET_N; i++) { const y = WET_Y0 + (i + 0.5) * WET_DY;
+    let w = y < 0 ? 1 : h.wet[i] * dry; if (y < level) w = 1;
+    if (U >= 13 && y < 1.6 && Math.random() < dt * (U - 12) / 8 * 0.6) w = Math.max(w, 0.7);
+    h.wet[i] = w; }
+}
+const gauss = () => { let u = 0; for (let i = 0; i < 6; i++) u += Math.random(); return (u - 3) * Math.SQRT2; };
 
 // ---- 毎コマの絵 ----
 let wetRain = 0;
@@ -212,12 +239,14 @@ function draw(dt) {
   if (T) HUMANS.forEach((h, j) => { const p = PR.pose(S.obj, pr.slice(j * k1, (j + 1) * k1), yaw); if (!p) return;
     if (!h.pose) h.pose = p; else { const a = 1 - Math.exp(-dt / T.tau);
       for (let i = 0; i < 3; i++) h.pose.d[i] += (p.d[i] - h.pose.d[i]) * a; for (let i = 0; i < 2; i++) h.pose.s[i] += (p.s[i] - h.pose.s[i]) * a; }
-    if (objMeshes[S.obj]) SUN.meshes.push({ mesh: objMeshes[S.obj], M: PR.matrix(h.x, h.z, h.pose, yaw) }); });
+    stepWet(h, p, k1, pr.slice(j * k1, (j + 1) * k1), dt, windAt(S.t) * (S.st.Hm0 > 0 ? 1 : 0));
+    if (objMeshes[S.obj]) SUN.meshes.push({ mesh: objMeshes[S.obj], M: PR.matrix(h.x, h.z, h.pose, yaw), wet: h.wet }); });
+  lastWetT = S.t;
   FL.step(dt, S.simT, pr.slice(k), S.us || 0, WIND_ANG);
   if (buoyMesh && S.showBuoy) FL.list.forEach(bu => { if (bu.p) SUN.meshes.push({ mesh: buoyMesh, M: PR.matrix(bu.x0 + bu.drift[0], bu.z0 + bu.drift[1], bu.p, 0) }); });
   // ほかに読む点: カメラの真下の水面（自由に動くときはカメラの所。水の上か中かを決める）・浮かべたカメラ・しぶきを出すか見る点（カメラの前に 5 つ）
   const nb = FL.list.length, iCam = k + nb, pc = pr[iCam];
-  const probeCam = flying || view === 'orbit';   // 上から・自由に動くは、カメラの真下の水面で水の上か中かを決める
+  const probeCam = flying || (view === 'orbit' && cam.dist < 900);   // 上から・自由に動くは、カメラの真下の水面で水の上か中かを決める
   if (probeCam && pc) camProbe = [b.pos[0] - pc.d[0], b.pos[2] - pc.d[2]];   // 海面の点は横にも動くので、動いたぶんをもどしてカメラの真下を読む
   if (camFloat && pc) { const wc = pr[iCam + 1] ? pr[iCam + 1].d[1] : pc.d[1]; camWater = camWater == null ? wc : camWater + (wc - camWater) * (1 - Math.exp(-dt / 0.2)); cam.target[1] = camWater; cam.minY = camWater + 1.2; }
   else if (!flying) cam.target[1] = 0;
@@ -229,13 +258,13 @@ function draw(dt) {
   const cp = probeCam ? camProbe : [0, 0];
   SUN.points = (T ? HUMANS.flatMap(h => PR.worldPts(S.obj, h.x, h.z, yaw)) : []).concat(FL.points(), [{ x: cp[0], z: cp[1], wb: 1, wc: 1 }, { x: FLOAT_AT[0], z: FLOAT_AT[1], wb: 1, wc: 0.5 }], Ueff >= 13 ? sprayPts : []);
   // 濡れ: 波が高いと下のほうがしぶきで（見た目の目安）
-  SUN.wetRain = 0; SUN.wetSplash = (T ? T.splash : 0) * Math.min(1, Math.max(0, (Math.hypot(st.Hm0, sw ? sw.Hm0 : 0) - 0.2) / 1.5));
+  SUN.wetRain = 0; SUN.wetSplash = 0;   // 濡れは物ごと（stepWet）
   skyEnv();
   SUN.windU = Ueff; SUN.windA = WIND_ANG; SUN.foamW = 3.84e-6 * Math.pow(Ueff, 3.41); SUN.foamStyle = 0; SUN.foamK = 0;   // 白波の割合（Monahan & O'Muircheartaigh 1980）は数字だけ（沖の泡の絵は外した）
   if (ocean) { const tot = (st.Hm0 > 0 || sw) ? 0.003 + 5.12e-3 * Ueff : 0;   // 海面の傾きのばらつき（Cox & Munk 1954）。描いている波の分を引いた残りで照り返しをにじませる
     SUN.rough0 = Math.max(0.012, Math.sqrt(Math.max(tot - ocean.fftSlope, 0)));
     SUN.globe = null; SUN.far = 0; SUN.curvR = 0; SUN.fogH = 0;
-    if (b.pos[1] > 300) stormGlobe(b, dt);   // 高く上がると地球の丸み・見通し・地球儀（js/storm.js）
+    if (Math.hypot(b.pos[0], b.pos[1] + GL.Re, b.pos[2]) - GL.Re > 300) stormGlobe(b, dt);   // 高く上がると地球の丸み・見通し・地球儀（js/storm.js）
     const wHere = probeCam && pc ? pc.d[1] : 0;
     SUN.under = probeCam && b.pos[1] < wHere; SUN.camD = Math.max(0, wHere - b.pos[1]);
     SUN.wideGrid = camFloat || flying || SUN.under || cam.pitch < 0.05 || Math.hypot(st.Hm0, sw ? sw.Hm0 : 0) > 2;   // 波のすぐそばでは網目を画面の外まで広く

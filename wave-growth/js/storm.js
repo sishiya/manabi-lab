@@ -51,9 +51,12 @@ function swGeo() { const G2 = GL.G, a = GL.angDist(G2.storm, G2.obs), pc = GL.pa
   const f = ll => `${Math.abs(ll.lat).toFixed(0)}°${ll.lat >= 0 ? 'N' : 'S'} ${Math.abs(ll.lon).toFixed(0)}°${ll.lon >= 0 ? 'E' : 'W'}`;
   $('swGeo').textContent = `嵐 ${f(G2.storm)} → いる所 ${f(G2.obs)}。` + (pc.clear ? '道はずっと海。' : `嵐から ${(pc.at / 1e3).toFixed(0)} km の所で陸にさえぎられて、うねりは届きません。`);
   if (ocean) ocean.skyChanged(); update(); stormDrawPanels(); }   // いる所が動くと太陽・月の位置もかわる
-function setSwPlace(k) { swPlace = k; document.querySelectorAll('#swPlace button').forEach(b => b.classList.toggle('on', b.dataset.p === k)); }
-document.querySelectorAll('#swPlace button').forEach(b => b.onclick = () => setSwPlace(b.dataset.p));
-$('globeBtn').onclick = () => { if (view !== 'orbit') setView('orbit'); camAnim = null; guideApi.camTo({ dist: 1.6e7, pitch: 1.42 }); };
+function setSwPlace(k) { swPlace = k; document.querySelectorAll('#swPlace button[data-p], #globeBar button').forEach(b => b.classList.toggle('on', b.dataset.p === k)); }
+document.querySelectorAll('#swPlace button[data-p], #globeBar button').forEach(b => b.onclick = () => setSwPlace(b.dataset.p));
+// 画面にひとこと（3 秒）
+let msgTimer = 0; function stageMsg(t) { const m = $('stMsg'); m.textContent = t; m.hidden = false; clearTimeout(msgTimer); msgTimer = setTimeout(() => { m.hidden = true; }, 3000); }
+const llText = ll => `${Math.abs(ll.lat).toFixed(0)}°${ll.lat >= 0 ? 'N' : 'S'} ${Math.abs(ll.lon).toFixed(0)}°${ll.lon >= 0 ? 'E' : 'W'}`;
+$('globeBtn').onclick = () => { if (view !== 'orbit') setView('orbit'); camAnim = null; guideApi.camTo({ dist: 1.6e7, pitch: 1.2, yaw: -Math.PI / 2 }); };   // 北を上に（カメラは南から北を向く）
 GL.load().then(() => { glbElev = GL.texture(); swGeo(); }).catch(e => window.__wagrErr.push('地形データ: ' + e));
 setSwPlace('storm');
 
@@ -63,17 +66,17 @@ function stormTap(px, py, r) {
   const b = cam.basis(), [tx, ty] = ocean.txty, nx = px / r.width * 2 - 1, ny = 1 - py / r.height * 2;
   const d0 = [0, 1, 2].map(i => b.cf[i] + nx * tx * b.cr[i] + ny * ty * b.cu[i]), l = Math.hypot(...d0), ll = GL.pick(b.pos, d0.map(v => v / l));
   if (!ll) return true;
-  if (!GL.isSea(ll.lat, ll.lon)) { $('swGeo').textContent = 'そこは陸です。海の上をえらんでください。'; $('stormBox').open = true; return true; }
+  if (!GL.isSea(ll.lat, ll.lon)) { stageMsg(`そこ（${llText(ll)}）は陸なので置けません。海の上をタップしてください`); return true; }
   if (swPlace === 'storm') GL.G.storm = ll; else GL.G.obs = ll;
+  stageMsg(`${swPlace === 'storm' ? '嵐' : 'いる所'}を ${llText(ll)} に置きました`);
   GL.moved(); swGeo(); return true;
 }
-// 高く引いたとき: 地球の丸み・見通し・地球儀（15〜80 km で重ねる）。高く引くほど真下を向く（20 km から、2000 km でほぼ真下）
+// 高く引いたとき: 地球の丸み・見通し・地球儀（15〜80 km で重ねる）。カメラは自由（いる所へ引きもどさない）
 function stormGlobe(b, dt) {
-  const alt = Math.max(1, b.pos[1]);
+  const alt = Math.max(1, Math.hypot(b.pos[0], b.pos[1] + GL.Re, b.pos[2]) - GL.Re);   // 地球の表面からの高さ（裏側にいても）
   SUN.curvR = GL.Re; SUN.far = Math.max(30000, Math.min(400e3, 1.3 * Math.sqrt(2 * GL.Re * alt) + 30000)); SUN.fogL = Math.max(SUN.fogL, 40000); SUN.fogH = 8000;   // 地上の見通し 40 km（晴れの日の目安）、空気は 8 km ごとにうすく
   const a = Math.min(1, Math.max(0, (alt - 15e3) / 65e3)), al = a * a * (3 - 2 * a);
   SUN.globe = al > 0 && glbElev ? { alpha: al, alt, Re: GL.Re, M: new Float32Array(GL.worldToEcef()), elev: glbElev } : null;
-  if (cam.dist > 20e3 && !camAnim) { const k = Math.min(1, Math.log(cam.dist / 20e3) / Math.log(100)), want = 0.15 + (1.42 - 0.15) * k; if (cam.pitch < want) cam.pitch += (want - cam.pitch) * Math.min(1, dt * 4); }
 }
 // 地球儀の上の線: うねりの前の面（周期ごと）・嵐からいる所への道・印
 function stormOverlay(g, b, r) {
@@ -81,5 +84,5 @@ function stormOverlay(g, b, r) {
   const age = Math.max(0, S.t - STORM.t0), fr = STORM.on ? [[20, '#ff8f6b'], [15, '#ffc95a'], [11, '#9be07c'], [8, '#7fd0e8']].map(([T, col]) => ({ col, pts: age > 0 ? GL.front((SW.cg(1 / T) * age + SW.P.Ls / 2) / GL.Re) : [] })) : [];
   g.globalAlpha = SUN.globe.alpha; GL.drawOverlay(g, project, b.pos, fr, [[GL.G.storm, '#ff6b5a', STORM.on ? '嵐' : '嵐を起こす所'], [GL.G.obs, '#ffc95a', 'いる所']]); g.globalAlpha = 1;
   g.font = '12px ' + getComputedStyle(document.documentElement).getPropertyValue('--f-body'); g.fillStyle = 'rgba(255,255,255,.85)'; g.textAlign = 'left';
-  g.fillText(STORM.on ? '線 = うねりの前の面（赤 20 秒・黄 15 秒・緑 11 秒・青 8 秒）' : 'タップで、えらんだほう（嵐・いる所）をそこへ置きます', 12, r.height - 30);
+  if (STORM.on) g.fillText('線 = うねりの前の面（赤 20 秒・黄 15 秒・緑 11 秒・青 8 秒）', 12, r.height - 76);
 }

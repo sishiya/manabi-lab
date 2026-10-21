@@ -261,11 +261,13 @@ void main(){int i=int(gl_FragCoord.x);vec2 xz=P[i];float wb=WB[i],w=WC[i];
 in vec3 aP,aN,aC,aM;uniform mat4 VP,M;out vec3 vP,vN,vC,vM;out float vLy;
 void main(){vec4 w=M*vec4(aP,1);vP=w.xyz;vN=mat3(M)*aN;vC=aC;vM=aM;vLy=aP.y;gl_Position=VP*w;}`;
   const FS_MESH = HEAD + SKYL + UNDER + CAUST + `
-uniform vec3 cam,L,sunCu;uniform float sunI,expo,fogL,wetRain,wetSplash;in vec3 vP,vN,vC,vM;in float vLy;out vec4 o;
+uniform vec3 cam,L,sunCu;uniform float sunI,expo,fogL,wetRain,wetSplash;uniform float wetP[16];in vec3 vP,vN,vC,vM;in float vLy;out vec4 o;
+// 濡れ方: 物の高さ −0.3 m から 0.15 m ごとの 16 段の濡れ（js/scene.js で、波がかかると 1、時間で乾く）
+float wetAt(float y){float f=clamp((y+.3)/.15-.5,0.,15.);int i0=int(floor(f));int i1=min(i0+1,15);return mix(wetP[i0],wetP[i1],fract(f));}
 // vM = (つや, 濡れやすさ, 0)。濡れると色が暗く、つやが強くなる（見た目の目安）
 void main(){sunC=sunCu*sunVis(L);vec3 n=normalize(vN);vec3 amb=skyL(vec3(0,1,0),6.);
   float dist=length(cam-vP);vec3 V=(cam-vP)/dist;if(dot(n,V)<0.)n=-n;
-  float wet=clamp(max(wetRain,wetSplash*(1.-smoothstep(.15,1.4,vLy))),0.,1.)*vM.y;
+  float wet=clamp(max(max(wetRain,wetSplash*(1.-smoothstep(.15,1.4,vLy))),wetAt(vLy)),0.,1.)*vM.y;
   vec3 alb=vC*(1.-.45*wet);float gl=mix(vM.x,.9,wet);
   float Dw=max(-vP.y,0.),cst=Dw>0.?caust(vP.xz,Dw):1.;vec3 att=exp(-KD*Dw);   // 水の下の所: 光は深さで弱まり、コースティクスでゆらめく
   vec3 col=alb*(sunC*sunI*max(dot(n,L),0.)*.06*att*cst+amb*(.55+.45*n.y)*att);
