@@ -1,0 +1,21 @@
+{
+  "file": "_dev/promo/out/wave-growth-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/wave-growth-short.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-01T20:05:00+09:00",
+  "captions": { "en": "_dev/promo/out/wave-growth-short.en.srt", "es": "_dev/promo/subs/wave-growth-short.es.srt", "ko": "_dev/promo/subs/wave-growth-short.ko.srt", "pt": "_dev/promo/subs/wave-growth-short.pt.srt", "zh-TW": "_dev/promo/subs/wave-growth-short.zh-TW.srt" },
+  "title": "凪の海は、風が吹いて約30時間で育ちきる ― 波が育つまで #Shorts",
+  "description": "風速 10 m/s の風が吹きはじめてから、鏡のような凪の海が、10分でさざ波、12時間で高さ 1.5 m、約30時間で「発達しきった海」（3.1 m）になるまでを、海で測った記録から作られた式と、何万もの波を重ねた 3D の海で。ブラウザのアプリ「波が育つまで」から。\n\nアプリ: https://sishiya.github.io/manabi-lab/wave-growth/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ: Coastal Engineering Manual（米国陸軍工兵隊 2003）、Hasselmann ほか (1973) JONSWAP、Tessendorf (2001) ほか（アプリの「このアプリについて」→「おもな出どころ」）。学習用に簡単にしています。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#波 #海 #物理 #まなびラボ",
+  "tags": ["波が育つまで", "波", "海", "風浪", "発達しきった海", "シミュレーション", "Shorts", "まなびラボ", "しし屋", "How Waves Grow", "ocean waves", "wind waves"],
+  "localizations": {
+    "en": {
+      "title": "A Calm Sea Grows Up in About 30 Hours of Wind ― How Waves Grow #Shorts",
+      "description": "A 10 m/s wind starts to blow over a mirror-calm sea: ripples after 10 minutes, 1.5 m waves after 12 hours, and a \"fully developed sea\" (3.1 m) after about 30 hours. Formulas built from measurements at sea, and a 3D sea of tens of thousands of waves. From \"How Waves Grow\", a browser app.\n\nApp (switch to English with the EN button): https://sishiya.github.io/manabi-lab/wave-growth/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMain sources: U.S. Army Corps of Engineers (2003) Coastal Engineering Manual, Hasselmann et al. (1973) JONSWAP, Tessendorf (2001), and others. Simplified for learning.\n\nMusic: original sounds synthesized by code.\n\n#Ocean #Waves #Physics"
+    }
+  },
+  "x": {
+    "text": "鏡のような凪の海に、風速 10 m/s の風。\n10分でさざ波、12時間で 1.5 m、約30時間で「発達しきった海」3.1 m。\n海で測った記録の式と、何万もの波を重ねた 3D の海で見るアプリです。\n#波 #海 #物理 #まなびラボ",
+    "en": "A calm sea grows up in about 30 hours of wind.",
+    "reply": "アプリ（ブラウザで無料・日本語/English）: https://sishiya.github.io/manabi-lab/wave-growth/"
+  }
+}

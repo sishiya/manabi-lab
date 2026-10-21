@@ -1,0 +1,16 @@
+{
+  "file": "_dev/promo/out/wave-growth-guide.mp4",
+  "thumbnail": "_dev/promo/thumbs/wave-growth-guide.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-01T20:00:00+09:00",
+  "captions": { "en": "_dev/promo/out/wave-growth-guide.en.srt", "es": "_dev/promo/subs/wave-growth-guide.es.srt", "ko": "_dev/promo/subs/wave-growth-guide.ko.srt", "pt": "_dev/promo/subs/wave-growth-guide.pt.srt", "zh-TW": "_dev/promo/subs/wave-growth-guide.zh-TW.srt" },
+  "title": "波が育つまで ― 使い方と見どころ（凪からさざ波・発達しきった海・ブイと断面・水の中・浅い海）",
+  "description": "風が吹きはじめてから、鏡のような凪の海がさざ波・大きな波へ育ち、もう育たなくなるまでを、海で測った記録から作られた式と、何万もの波を重ねた 3D の海で見るブラウザのアプリ「波が育つまで」の、使い方と見どころです。\n\n0:00 はじめに（風が吹く前の海）\n0:17 10分のさざ波と数字\n0:30 時間のつまみとグラフ\n0:52 発達しきった海・風の速さ\n1:10 ブイと断面（水の粒の円）\n1:32 見かた（海面から・水の中）\n1:52 空の時刻\n2:06 水深と砂の底\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/wave-growth/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nU.S. Army Corps of Engineers (2003) Coastal Engineering Manual, EM 1110-2-1100, Part II Chapter 2: 波の成長の式・発達しきった海\nHasselmann ほか (1973) JONSWAP: 波の分布の形\nBouws ほか (1985) TMA: 水深のある海の分布\nTessendorf (2001) Simulating Ocean Water: FFT で海面を作る方法\nCox と Munk (1954): 海面の傾きのばらつき（照り返し）\nKenyon (1969): ブイが流される速さ\nNOAA の太陽の位置の式、Meeus (1998): 月の位置\n（アプリの「このアプリについて」→「おもな出どころ」）\n\n学習用に簡単にしています。水の中の光・水の透明度などには目安の値があります（アプリに書いてあります）。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#波 #海 #物理 #まなびラボ",
+  "tags": ["波が育つまで", "波", "海", "風浪", "有義波高", "発達しきった海", "FFT", "シミュレーション", "使い方", "まなびラボ", "しし屋", "How Waves Grow", "ocean waves", "wind waves", "fully developed sea", "ocean simulation"],
+  "localizations": {
+    "en": {
+      "title": "How Waves Grow ― App Guide: Calm to Ripples, a Fully Developed Sea, Buoys, Underwater",
+      "description": "A guide to \"How Waves Grow\", a browser app that follows a mirror-calm sea as the wind starts to blow: ripples, big waves, and finally a sea that stops growing. It uses formulas built from measurements at sea and a 3D sea of tens of thousands of waves. Turn on English subtitles (CC).\n\n0:00 Intro (the sea before the wind)\n0:17 Ripples after 10 minutes, and the numbers\n0:30 Time slider and graph\n0:52 Fully developed sea, wind speed\n1:10 Buoy and cross-section (water moving in circles)\n1:32 Views (at the surface, underwater)\n1:52 Time of day\n2:06 Water depth and the sandy bottom\n\nTry the app (runs in your browser, PC or phone; switch to English with the EN button):\nhttps://sishiya.github.io/manabi-lab/wave-growth/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nMain sources:\nU.S. Army Corps of Engineers (2003) Coastal Engineering Manual, EM 1110-2-1100, Part II Chapter 2: wave growth and the fully developed sea\nHasselmann et al. (1973) JONSWAP: spectrum shape\nBouws et al. (1985) TMA: spectrum in finite depth\nTessendorf (2001) Simulating Ocean Water: building the surface with an FFT\nCox & Munk (1954): sea-surface slope statistics (sun glitter)\nKenyon (1969): how fast a buoy drifts\nNOAA solar position equations, Meeus (1998): moon position\n\nSimplified for learning. Some values (light underwater, water clarity) are rough estimates, as noted in the app.\n\nMusic: original sounds synthesized by code.\n\n#Ocean #Waves #Physics"
+    }
+  }
+}

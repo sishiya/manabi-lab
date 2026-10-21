@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="wave-common.js"></script>
+<script>
+'use strict';
+// 台本: 波が育つまで（ショート、40秒＋締め）。?short で縦長に録る
+// 見せ場: 凪の鏡 → 10分のさざ波 → 12時間 → 約30時間で発達しきった海（3.1 m）→ 海面に浮かんで（朝日の照り返し）
+const FLOAT_AT = 28.3;
+// 時刻 t → 風が吹きはじめてからの秒・カメラ（上から見る。太陽のほうを少しななめに）
+function stateAt(t) {
+  const st = t < 4.5 ? 0 : t < 7.5 ? wgLogT(20, 600, (t - 4.5) / 3) : t < 13.2 ? 600
+    : t < 21 ? wgLogT(600, 12 * WG_H, (t - 13.2) / 7.8) : t < 25 ? wgLogT(12 * WG_H, 34 * WG_H, (t - 21) / 4) : 34 * WG_H;
+  const K = [[0, 0.12, 16], [4.5, 0.12, 16], [7.5, 0.5, 8], [13.2, 0.5, 8], [21, 0.18, 30], [25, 0.1, 22], [28.3, 0.1, 20]];
+  let i = K.findIndex(k => k[0] > t); if (i < 0) i = K.length; i--;
+  const a = K[Math.max(0, i)], b = K[Math.min(K.length - 1, i + 1)], k = b[0] > a[0] ? ease((t - a[0]) / (b[0] - a[0])) : 0;
+  return { t: st, cam: { yaw: wgSunYaw + 0.8 - 0.006 * t, pitch: lerp(a[1], b[1], k), dist: lerp(a[2], b[2], k) } };
+}
+const CAPS = [
+  { a: 7, b: 13, main: '風速 10 m/s の風が吹いて10分', sub: 'さざ波が立つ（波長 約50cm）',
+    en: ['10 minutes after a 10 m/s wind starts', 'Ripples appear (about 50 cm long)'] },
+  { a: 13.5, b: 21, main: '風に押されつづけて、波は高く・長く', sub: '12時間で、高さ 1.5 m・波長 33 m',
+    en: ['Pushed by the wind, the waves grow taller and longer', 'After 12 hours: 1.5 m high, 33 m long'] },
+  { a: 21.5, b: 28, main: '約30時間で「発達しきった海」', sub: '高さ 3.1 m。いちばん多い波が風より速くなり、もう育たない',
+    en: ['After about 30 hours, a "fully developed sea"', '3.1 m high. The most common waves outrun the wind and stop growing'] },
+  { a: 28.5, b: 35, main: '海面に浮かんで見ると', sub: '海で測った記録の式と、何万もの波を重ねた 3D の海',
+    en: ['Floating at the surface', 'Formulas from measurements at sea, and a 3D sea of tens of thousands of waves'] },
+];
+const CREDIT = 'おもな出どころ: Coastal Engineering Manual（米国陸軍工兵隊 2003）、Hasselmann ほか（1973）JONSWAP、Tessendorf（2001）ほか';
+promoStart({
+  name: '波が育つまで', out: 'wave-growth', src: '../../wave-growth/index.html', iw: 1280, ih: 720, dur: SHORT_END + IDENT_CLOSE, peek: 18,
+  short: { iw: 720, ih: 1280 },
+  inject: { dpr: 2, raf: true, top: true },   // index.html は <head> がなく <header> があるので先頭に（README の inject.top）
+  music: { style: 'journey', root: 123, stopAt: SHORT_END, cues: [{ t: SHORT_END, type: 'jingle' }] },
+  ready: w => w.__wagr && w.__wagr.S.st,
+  setup(w) { wgSetup(w, PW * RES, PH * RES); return null; },
+  subs: shortSubs('波が育つまで', 'How Waves Grow', '風が吹きはじめてから、海が育ちきるまで', 'From the first breath of wind to a fully grown sea', CAPS,
+    'ブラウザで動かせます。風・時間・見かたを変えて試せます', 'Runs in your browser. Change the wind, the time and the view'),
+  renderAt(t, w) {
+    const s = stateAt(t), fl = t >= FLOAT_AT, v = w.eval('view');
+    if (fl && v !== 'float') clickEl(w, '#views [data-v="float"]');
+    if (!fl && v !== 'orbit') clickEl(w, '#views [data-v="orbit"]');
+    wgFrame(w, { t: s.t, U: 10, sim: 100 + t, cam: fl ? { pitch: 0.06, yaw: w.__wagr.cam.yaw } : s.cam, fov: isVert() ? 68 : 52 });
+  },
+  drawSource(g, w, OW, OH) { wgDraw(g, w, OW, OH, false); },   // 画面の文字（時刻・風の矢印）は縦長では小さすぎるので写さない
+  overlay(g, t, w) {
+    // 風が吹いてからの時間と波の高さ（左上、目印がはけてから）
+    const f = fade(t, 6, 35, 0.4);
+    if (f > 0) { const n = wgNums(w); prep(g); g.textAlign = 'left'; g.globalAlpha = f;
+      txt(g, '風が吹いて ' + n.time, 60, 230, 54, '#fff', true); txt(g, '波の高さ ' + n.H, 62, 300, 40, '#f2c79a', true); g.globalAlpha = 1; g.shadowBlur = 0; }
+    drawCaps(g, t, CAPS);
+    drawShortChrome(g, t, '波が育つまで', '風が吹きはじめてから、海が育ちきるまで', 'ブラウザで動かせます。風・時間・見かたを変えて試せます', CREDIT);
+  },
+  errors: w => (w.__wagrErr || []).map(String),
+});
+</script>
+</body>
+</html>

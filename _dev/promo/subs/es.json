@@ -346,5 +346,30 @@
 "Mueve el router al centro de la casa // y llega a las habitaciones lejanas",
 "5 GHz se debilita más tras las paredes // 2,4 GHz llega más lejos; 5 GHz es más rápido pero de menor alcance",
 "Ver el wifi en casa // Funciona en el navegador. Dibuja tus propias paredes y prueba"
+],
+"wave-growth-short": [
+"Cómo crecen las olas // Desde el primer soplo de viento hasta un mar plenamente formado",
+"10 minutos después de que empiece un viento de 10 m/s // Aparecen ondas pequeñas (de unos 50 cm)",
+"Empujadas por el viento, las olas crecen más altas y más largas // A las 12 horas: 1,5 m de alto y 33 m de largo",
+"Tras unas 30 horas, un «mar plenamente desarrollado» // 3,1 m de alto. Las olas más comunes superan al viento y dejan de crecer",
+"Flotando en la superficie // Fórmulas basadas en mediciones en el mar y un mar 3D de decenas de miles de olas",
+"Cómo crecen las olas // Funciona en el navegador. Cambia el viento, el tiempo y la vista"
+],
+"wave-growth-guide": [
+"Cómo crecen las olas // Cómo usar la app y qué mirar",
+"Antes del viento, el mar es liso como un espejo // Refleja el cielo. «Siguiente» inicia el recorrido",
+"10 minutos de viento a 10 m/s: pequeñas ondas // A la izquierda: altura de ola (significativa), periodo de pico, su longitud de onda y su velocidad",
+"El control de tiempo avanza hasta 72 horas y vuelve // 54 cm a las 3 horas, 1,5 m a las 12 horas",
+"La colina del gráfico se mueve a la izquierda, hacia olas más largas // El viento empuja y hace crecer las olas más lentas que él",
+"Tras unas 30 horas: un «mar plenamente desarrollado» (3,1 m) // Las olas más comunes van 1,22 veces más rápido que el viento y dejan de crecer",
+"Si cambias el viento, el mar pasa a ser el que ese viento habría formado // A 15 m/s, las mismas 34 horas dan 5,9 m, y aún sigue creciendo",
+"Toca el mar para poner una boya // Las olas avanzan, pero la boya solo gira en el sitio (la línea amarilla es su recorrido)",
+"Corta el mar bajo la boya: el agua también se mueve en círculos // Los círculos se encogen con la profundidad; a media longitud de onda, el agua casi no se mueve",
+"«Movimiento × 3» hace que los círculos se vean mejor // El agua se mueve 3 veces más que en la realidad. Misma escala en ambos ejes",
+"«En la superficie»: flota junto a la persona del flotador // Un mar plenamente desarrollado (3,1 m). La cámara sube y baja con las olas",
+"«Movimiento libre» usa W A S D y Q E, incluso bajo el agua // Mira hacia arriba: el cielo solo aparece en un círculo sobre ti (refracción, ventana de Snell)",
+"Puedes cambiar la hora del día y las nubes // El sol y la luna están en su posición real de hoy, a 33°N 140°E",
+"Si el agua es poco profunda, se ve el fondo de arena // Las olas largas tocan el fondo y se vuelven más lentas y cortas (a 3,5 m, el 42 % de la altura en aguas profundas)",
+"Cómo crecen las olas // Funciona en el navegador (PC o móvil). Cambia la app a inglés con el botón EN"
 ]
 }

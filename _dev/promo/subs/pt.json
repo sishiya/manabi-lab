@@ -346,5 +346,30 @@
 "Leve o roteador para o meio da casa // e ele chega aos quartos do fundo",
 "5 GHz enfraquece mais atrás das paredes // 2,4 GHz vai mais longe; 5 GHz é mais rápido, mas de alcance menor",
 "Vendo o Wi-Fi em casa // Roda no navegador. Desenhe suas próprias paredes e teste"
+],
+"wave-growth-short": [
+"Como as ondas crescem // Do primeiro sopro de vento até um mar totalmente formado",
+"10 minutos depois de começar um vento de 10 m/s // Surgem pequenas ondulações (cerca de 50 cm)",
+"Empurradas pelo vento, as ondas ficam mais altas e mais longas // Após 12 horas: 1,5 m de altura e 33 m de comprimento",
+"Após cerca de 30 horas, um «mar plenamente desenvolvido» // 3,1 m de altura. As ondas mais comuns passam o vento e param de crescer",
+"Flutuando na superfície // Fórmulas de medições no mar e um mar 3D com dezenas de milhares de ondas",
+"Como as ondas crescem // Funciona no navegador. Mude o vento, o tempo e a vista"
+],
+"wave-growth-guide": [
+"Como as ondas crescem // Como usar o app e o que observar",
+"Antes do vento, o mar é liso como um espelho // Ele reflete o céu. «Próximo» começa o tour",
+"10 minutos de vento a 10 m/s: pequenas ondulações // À esquerda: altura da onda (significativa), período de pico, seu comprimento de onda e velocidade",
+"O controle de tempo vai até 72 horas e volta // 54 cm após 3 horas, 1,5 m após 12 horas",
+"O morro do gráfico anda para a esquerda, rumo a ondas mais longas // O vento empurra e faz crescer as ondas mais lentas que ele",
+"Após cerca de 30 horas: um «mar plenamente desenvolvido» (3,1 m) // As ondas mais comuns correm 1,22 vez mais rápido que o vento e param de crescer",
+"Mude o vento, e o mar vira o que esse vento teria formado // A 15 m/s, as mesmas 34 horas dão 5,9 m, e ele ainda está crescendo",
+"Toque no mar para colocar uma boia // As ondas seguem em frente, mas a boia só gira no lugar (a linha amarela é o seu rastro)",
+"Corte o mar sob a boia: a água também se move em círculos // Os círculos diminuem com a profundidade; a meio comprimento de onda, a água quase não se move",
+"«Movimento × 3» deixa os círculos mais fáceis de ver // A água se move 3 vezes mais que na realidade. Mesma escala nos dois eixos",
+"«Na superfície»: flutue ao lado da pessoa na boia // Um mar plenamente desenvolvido (3,1 m). A câmera sobe e desce com as ondas",
+"«Movimento livre» usa W A S D e Q E, até debaixo da água // Olhe para cima: o céu só aparece num círculo acima (refração, janela de Snell)",
+"Dá para mudar a hora do dia e as nuvens // O sol e a lua estão na posição real de hoje, a 33°N 140°E",
+"Deixe a água rasa e o fundo de areia aparece // Ondas longas sentem o fundo e ficam mais lentas e curtas (a 3,5 m, 42 % da altura em águas profundas)",
+"Como as ondas crescem // Funciona no navegador (PC ou celular). Mude o app para inglês com o botão EN"
 ]
 }

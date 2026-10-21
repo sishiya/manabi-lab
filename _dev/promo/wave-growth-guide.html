@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="wave-common.js"></script>
+<script>
+'use strict';
+// 台本: 波が育つまで ― 使い方と見どころ（横長の説明動画、150秒）
+// 日本語の字幕は上に焼きこみ、下は英語の CC にあける。数字・グラフは左、ボタンとつまみの札は右（右下はライオン）
+const END = 150, DUR = END + IDENT_CLOSE;
+const H = WG_H;
+
+// ---- ボタンとつまみの札（アプリと同じ言葉）----
+const X = 1345, Y = 230;
+const CH = {
+  next: { x: X, y: Y, btns: ['つぎへ ▶'] },
+  put: { x: X, y: Y, title: '海をタップして置く', btns: ['人', 'ブイ', '置かない'] },
+  sec: { x: 1180, y: Y, title: '図', btns: ['ブイの真下の断面（水の粒の動き）を見る'] },
+  views: { x: X, y: Y, title: '見かた', btns: ['上から', '海面から', '自由に動く'] },
+  keys: { x: X, y: Y, title: '自由に動く（キー）', btns: ['W', 'A', 'S', 'D', 'Q', 'E'] },
+  tods: { x: X, y: Y, title: '時刻', btns: ['朝', '昼', '夕方', '夜'] },
+  mag: { x: X, y: Y, title: '断面', btns: ['動きを3倍に'] },
+};
+const SHOW = [
+  ['next', 13.5, 18.5, t => t >= 15.5 ? 0 : -1],
+  ['put', 69.8, 74, t => t >= 71 ? 1 : -1],
+  ['sec', 79.5, 83.5, t => t >= 81 ? 0 : -1],
+  ['mag', 84.5, 88.5, t => t >= MAG ? 0 : -1],
+  ['views', 91.6, 96.5, t => t >= 93 ? 1 : 0],
+  ['views', 101.6, 104.3, t => t >= 103 ? 2 : 1],
+  ['keys', 104.3, 112.5, t => t >= 104.6 && t < 107.6 ? 4 : -1],
+  ['views', 112.5, 115.6, t => t >= 114 ? 0 : 2],
+  ['tods', 115.6, 121, t => t >= 117 ? 2 : 0],
+  ['tods', 125, 128.6, t => t >= 126.5 ? 1 : 2],
+];
+const B = (k, i) => btnRect(CH[k], i);
+// つまみ: 時間（平方根の目盛り）・風の速さ（0〜30 m/s）・水深（0〜100、100 = 深い海）
+const SL = {
+  time: { x: X, y: Y, w: 520, title: '時間（風が吹きはじめてから）' },
+  wind: { x: X, y: Y, w: 520, title: '風の速さ' },
+  depth: { x: X, y: Y, w: 520, title: '水深' },
+};
+// つまみを動かす区間 [はじめ, おわり, 位置0, 位置1]（矢印もこれをなぞる）
+const TDRAG = [[31.5, 38.5, wgFrac(600), wgFrac(12 * H)], [42.5, 50, wgFrac(12 * H), wgFrac(24 * H)], [52.5, 56, wgFrac(24 * H), wgFrac(34 * H)]];
+const WDRAG = [[62, 64.5, 10 / 30, 15 / 30]];
+const DDRAG = [[128.5, 131.5, 1, 0.12]];
+function dragAt(D, t, v0) { let v = v0; for (const [a, b, f0, f1] of D) { if (t >= b) v = f1; else if (t >= a) v = lerp(f0, f1, (t - a) / (b - a)); } return v; }
+const timeFrac = t => dragAt(TDRAG, t, wgFrac(600));
+function dragKeys(p, D) { return D.flatMap(([a, b, f0, f1]) => [{ t: a - 0.7, ...wgKnob(p, f0) }, { t: a, ...wgKnob(p, f0), drag: true }, { t: b, ...wgKnob(p, f1) }, { t: b + 0.7, ...wgKnob(p, f1), hide: true }]); }
+
+// ---- 場面（風が吹きはじめてからの時間・風・見かた・空・水深・カメラ）----
+const MAG = 86, BUOY_T = 71.6, SEC = [81.5, 92], FLOAT = 93, FLY = 103, ORBIT2 = 114, EVE = 117, NOON = 126.5;
+const lerpC = (a, b, k) => [lerp(a[0], b[0], ease(k)), lerp(a[1], b[1], ease(k))];
+function gs(t) {
+  const o = { t: 34 * H, U: 10, view: 'orbit', tod: 'morning', depth: 100, buoy: false, sec: false, C: [0.1, 22], fly: null };
+  if (t < 17) { o.t = 0; o.C = [0.12, 16]; }
+  else if (t < 30) { o.t = wgLogT(20, 600, (t - 17) / 3); o.C = lerpC([0.12, 16], [0.5, 8], (t - 17) / 3); }
+  else if (t < 61) { o.t = wgTime(timeFrac(t)); o.C = t < 52 ? lerpC([0.5, 8], [0.18, 30], (t - 31) / 8) : lerpC([0.18, 30], [0.1, 22], (t - 52.5) / 4); }
+  else if (t < 70) { o.U = Math.round(dragAt(WDRAG, t, 1 / 3) * 60) / 2; }
+  else if (t < 92) { o.t = 12 * H; o.C = [0.25, 14]; o.buoy = t >= BUOY_T; o.sec = t >= SEC[0]; o.mag = t >= MAG; }
+  else if (t < ORBIT2) {
+    if (t >= FLY) { o.view = 'fly'; const d = ease((t - 104.6) / 3), u = ease((t - 108) / 3);
+      o.fly = { pos: [-8, lerp(2.5, -5, d), -3], pitch: lerp(0.3, -1.0, u) }; }
+    else if (t >= FLOAT) o.view = 'float';
+  }
+  else if (t < 126) { o.tod = t >= EVE ? 'evening' : 'morning'; o.C = [0.12, 20]; }
+  else { o.tod = t >= NOON ? 'noon' : 'evening'; o.depth = Math.round(dragAt(DDRAG, t, 1) * 100); o.C = [0.7, 14]; }
+  return o;
+}
+let curTod = null;
+function applyScene(w, o, t) {
+  const A = w.__wagr, v = w.eval('view');
+  if (o.tod !== curTod) { clickEl(w, `#tods [data-k="${o.tod}"]`); curTod = o.tod;
+    const L = w.eval('E.make(S.clock, S.cloud, obsLL().lat, obsLL().lon).L'); wgSunYaw = Math.atan2(L[2], L[0]); }
+  if (+qs(w, '#depth').value !== o.depth) setInput(w, '#depth', o.depth);
+  const nb = w.eval('FL.list.length');
+  if (o.buoy && !nb) w.eval('guideApi.addBuoy()');
+  if (!o.buoy && nb) w.eval('FL.clear()');
+  const so = w.eval('secOpen');
+  if (o.sec !== so) w.eval(`guideApi.section(${o.sec})`);
+  if (!!o.mag !== (w.eval('secMag') > 1)) clickEl(w, '#secMag');
+  if (v !== o.view) { clickEl(w, `#views [data-v="${o.view}"]`); if (o.view === 'fly') A.cam.yaw = Math.atan2(3, 8); }
+}
+// ブイを置く所（海の (-6, -1.5)）を、その時のカメラで動画の座標へ
+let buoyXY = { x: 700, y: 640 };
+
+// ---- マウスの矢印 ----
+const CUR = [
+  { t: 14.5, ...B('next', 0) }, { t: 15.5, ...B('next', 0), click: true }, { t: 16.6, ...B('next', 0), hide: true },
+  ...dragKeys(SL.time, TDRAG),
+  ...dragKeys(SL.wind, WDRAG),
+  { t: 70.4, ...B('put', 1) }, { t: 71, ...B('put', 1), click: true }, { t: 71.3, buoy: true, ...buoyXY }, { t: BUOY_T, buoy: true, ...buoyXY, click: true }, { t: 72.6, buoy: true, ...buoyXY, hide: true },
+  { t: 80.3, ...B('sec', 0) }, { t: 81, ...B('sec', 0), click: true }, { t: 82, ...B('sec', 0), hide: true },
+  { t: 85.3, ...B('mag', 0) }, { t: MAG, ...B('mag', 0), click: true }, { t: 87, ...B('mag', 0), hide: true },
+  { t: 92.3, ...B('views', 1) }, { t: 93, ...B('views', 1), click: true }, { t: 94, ...B('views', 1), hide: true },
+  { t: 102.3, ...B('views', 2) }, { t: 103, ...B('views', 2), click: true }, { t: 103.8, ...B('views', 2), hide: true },
+  { t: 107.6, x: 900, y: 640 }, { t: 108, x: 900, y: 640, drag: true }, { t: 111, x: 900, y: 420 }, { t: 111.6, x: 900, y: 420, hide: true },
+  { t: 113.3, ...B('views', 0) }, { t: 114, ...B('views', 0), click: true }, { t: 115, ...B('views', 0), hide: true },
+  { t: 116.3, ...B('tods', 2) }, { t: 117, ...B('tods', 2), click: true }, { t: 118, ...B('tods', 2), hide: true },
+  { t: 125.8, ...B('tods', 1) }, { t: 126.5, ...B('tods', 1), click: true }, { t: 127.2, ...B('tods', 1), hide: true },
+  ...dragKeys(SL.depth, DDRAG),
+];
+
+// ---- 字幕 ----
+const CAPS = [
+  { a: 7.3, b: 16.6, main: '風が吹く前の海は、鏡のように平ら', sub: '空がそのまま映っている。「つぎへ」で案内がはじまる',
+    en: ['Before the wind, the sea is flat as a mirror', 'It reflects the sky. "Next" starts the tour'] },
+  { a: 17.5, b: 29.6, main: '風速 10 m/s の風が吹いて10分。小さなさざ波', sub: '左の数字は、波の高さ（有義波高）・いちばん多い波の周期・その波長と速さ',
+    en: ['10 minutes of a 10 m/s wind: small ripples', 'On the left: wave height (significant), peak period, and its wavelength and speed'] },
+  { a: 30.5, b: 40.8, main: '時間のつまみで、72時間まで進める・もどせる', sub: '3時間で 高さ 54cm、12時間で 1.5 m',
+    en: ['The time slider goes up to 72 hours and back', '54 cm after 3 hours, 1.5 m after 12 hours'] },
+  { a: 41.3, b: 51.6, main: 'グラフの山が、左（長い波）へ動いていく', sub: '風は、自分より遅い波を押して育てる',
+    en: ['The hill in the graph moves left, toward longer waves', 'The wind pushes and grows waves that are slower than itself'] },
+  { a: 52.5, b: 60.6, main: '約30時間で「発達しきった海」（高さ 3.1 m）', sub: 'いちばん多い波が風の 1.22 倍の速さで走り、もう育たない',
+    en: ['After about 30 hours: a "fully developed sea" (3.1 m)', 'The most common waves run 1.22 times faster than the wind and stop growing'] },
+  { a: 61.3, b: 69.6, main: '風の速さを変えると、はじめからその風だったときの海に', sub: '15 m/s なら、同じ 34時間で 高さ 5.9 m（まだ育つ途中）',
+    en: ['Change the wind, and the sea becomes what that wind would have made', 'At 15 m/s, the same 34 hours gives 5.9 m, and it is still growing'] },
+  { a: 70.5, b: 80.6, main: '海をタップすると、ブイが浮かぶ', sub: '波は進むのに、ブイはその場で円をえがく（黄色い線が通った跡）',
+    en: ['Tap the sea to float a buoy', 'The waves travel on, but the buoy just circles in place (the yellow line is its track)'] },
+  { a: 81.5, b: 86, main: 'ブイの真下を切ると、水の粒も円をえがく', sub: '深くなるほど円は小さく、波長の半分の深さでは ほとんど動かない',
+    en: ['Cut the sea open under the buoy: the water moves in circles too', 'The circles shrink with depth; half a wavelength down, the water hardly moves'] },
+  { a: 86.4, b: 91.6, main: '「動きを3倍に」で、円が見やすくなる', sub: '画面の水の動きは、本当の3倍。縦と横は同じ縮尺',
+    en: ['"Motion × 3" makes the circles easier to see', 'The water moves 3 times as much as in reality. Same scale both ways'] },
+  { a: 92.5, b: 102.4, main: '「海面から」: 浮き輪の人のそばに浮かんで見る', sub: '発達しきった海（高さ 3.1 m）。カメラも波といっしょに上下する',
+    en: ['"At the surface": float next to the person on the ring', 'A fully developed sea (3.1 m). The camera rides up and down with the waves'] },
+  { a: 103.3, b: 112.6, main: '「自由に動く」は W A S D・Q E。水の中にも入れる', sub: '見上げると、空は真上の円の中だけ（屈折・スネルの窓）',
+    en: ['"Free move" uses W A S D and Q E, even underwater', 'Look up: the sky shows only in a circle overhead (refraction, Snell\'s window)'] },
+  { a: 115.5, b: 125.6, main: '空の時刻と雲の量も変えられる', sub: '太陽と月は、きょうの日付・北緯33°・東経140°の本当の位置',
+    en: ['You can change the time of day and the clouds', 'The sun and moon are at their real positions for today, at 33°N 140°E'] },
+  { a: 127, b: 141.6, main: '水深を浅くすると、砂の底が透けて見える', sub: '長い波は底にふれて遅く・短くなる（水深 3.5 m で、高さは深い海の 42%）',
+    en: ['Make the water shallow and the sandy bottom shows through', 'Long waves feel the bottom and get slower and shorter (at 3.5 m, 42% of the deep-sea height)'] },
+];
+
+const MUSIC = { style: 'journey', root: 123, stopAt: END, cues: [{ t: END, type: 'jingle' }] };
+// ---- 案内役のライオン（promo.js の lionSetup・drawLion）。表情の時刻 [秒, LION_XP の名前] ----
+const EXP = [[0, 'calm'], [7.3, 'smile'], [11, 'calm'], [18, 'wow'], [21, 'calm'], [31, 'think'], [36, 'calm'], [42, 'think'], [47, 'smile'], [50, 'calm'],
+  [53, 'wow'], [57, 'proud'], [60, 'calm'], [63, 'wow'], [67, 'calm'], [72, 'think'], [77, 'smile'], [80, 'calm'], [82, 'wow'], [86, 'think'], [90, 'calm'],
+  [93.5, 'smile'], [98, 'calm'], [105, 'wow'], [109, 'think'], [112, 'calm'], [117.5, 'smile'], [122, 'calm'], [130, 'wow'], [134, 'think'], [139, 'calm'],
+  [END - 7.6, 'smile']];
+const CREDIT = 'おもな出どころ: Coastal Engineering Manual（米国陸軍工兵隊 2003）、Hasselmann ほか（1973）JONSWAP、Tessendorf（2001）、Cox と Munk（1954）ほか';
+
+promoStart({
+  name: '波が育つまで（使い方）', out: 'wave-growth-guide', src: '../../wave-growth/index.html', iw: 960, ih: 540, dur: DUR, peek: 40,
+  inject: { dpr: 2, raf: true, top: true },   // index.html は <head> がなく <header> があるので先頭に（README の inject.top）
+  music: MUSIC,
+  ready: w => w.__wagr && w.__wagr.S.st,
+  async setup(w) {
+    wgSetup(w, PW * RES, PH * RES);
+    MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: CUR, exp: EXP, end: END, bye: END - 5.8 }));   // ライオンの表情としゃべり（声は標準の もごもご）
+    await lionOpen();
+    return null;
+  },
+  subs: guideSubs(END, '波が育つまで', 'How Waves Grow', CAPS, 'Runs in your browser (PC or phone). Switch the app to English with the EN button'),
+  renderAt(t, w) {
+    const o = gs(t);
+    applyScene(w, o, t);
+    const cam = o.view === 'orbit' ? { yaw: wgSunYaw + 0.8 - 0.004 * t, pitch: o.C[0], dist: o.C[1] } : o.fly ? { pos: o.fly.pos, pitch: o.fly.pitch, yaw: Math.atan2(3, 8) } : null;
+    wgFrame(w, { t: o.t, U: o.U, sim: 100 + t, cam });
+    if (t > 69 && t < 73) { const p = w.eval('project([-6, 0, -1.5])'); if (p) { buoyXY = { x: p[0] * PW / 960, y: p[1] * PH / 540 }; for (const k of CUR) if (k.buoy) Object.assign(k, buoyXY); } }
+  },
+  drawSource(g, w, OW, OH) { wgDraw(g, w, OW, OH); },
+  overlay(g, t, w) {
+    const n = wgNums(w);
+    // 数字（アプリでは海の下の欄）とグラフ（左）
+    drawPanel(g, 60, 230, 600, '数字（アプリでは海の下）', [`波の高さ ${n.H}・周期 ${n.T}`, `波長 ${n.L}・速さ ${n.C.replace(/（.*$/, '')}`, `いまの海: ${n.S}`], fade(t, 18, 69.6, 0.4));
+    const fg = fade(t, 41, 60.6, 0.4); if (fg > 0) drawInset(g, wgGraph(w), 60, 470, 600, 280, 'どの長さの波が、どれだけあるか', fg);
+    // つまみ（右）
+    wgSlider(g, SL.time, n.time, timeFrac(t), fade(t, 30, 60.6, 0.4));
+    wgSlider(g, SL.wind, n.wind, dragAt(WDRAG, t, 1 / 3), fade(t, 60.6, 69.6, 0.4));
+    wgSlider(g, SL.depth, wgText(w, '#depthL'), dragAt(DDRAG, t, 1), fade(t, 127.4, 141.6, 0.4));
+    for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawGuideChrome(g, t, END, '波が育つまで', CREDIT);
+    drawLion(g, t);   // 案内役のライオン（終わりの画面の上にも出す）
+  },
+  errors: w => (w.__wagrErr || []).map(String),
+});
+</script>
+</body>
+</html>

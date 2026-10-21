@@ -20,5 +20,6 @@ window.SHORT_THUMBS = {
   'wifi-wave':     { name: '電波の見える部屋', t: 29, focus: [0.3, 0.3], zoom: 1.9, kicker: 'WiFi の電波を見える化', big: '5 GHz', sub: 'は壁の向こうで弱くなる', c1: '#fff0d0', c2: '#ff9a2e' },
   'mold-growth':   { name: 'カビが育つまで', t: 29, focus: [0.5, 0.39], zoom: 1.7, kicker: 'お風呂のカビは', big: '8週間', sub: 'でここまで広がる', c1: '#f0ffd8', c2: '#9be04a' },
   'piano-hand':    { name: 'ピアノを弾く手', t: 21.6, focus: [0.62, 0.62], zoom: 1.35, kicker: '皮ふの下では', big: '骨と筋肉', sub: 'がこう動いている', c1: '#ffe6e0', c2: '#ff6b5c' },
-  'pitch-physics': { name: '変化球のしくみ', t: 31, focus: [0.5, 0.36], zoom: 1.45, wfocus: [0.5, 0.4], kicker: '同じねらいで投げても', big: 'ナックル', sub: '左右 38 cm・上下 47 cm ばらける', c1: '#fff6d8', c2: '#ffd166' }
+  'pitch-physics': { name: '変化球のしくみ', t: 31, focus: [0.5, 0.36], zoom: 1.45, wfocus: [0.5, 0.4], kicker: '同じねらいで投げても', big: 'ナックル', sub: '左右 38 cm・上下 47 cm ばらける', c1: '#fff6d8', c2: '#ffd166' },
+  'wave-growth':   { name: '波が育つまで', t: 31, focus: [0.5, 0.42], zoom: 1.3, kicker: '凪の海に風が吹いて', big: '約30時間', sub: 'で育ちきる。高さ 3.1 m', c1: '#fff3d6', c2: '#ffc46b' }
 };

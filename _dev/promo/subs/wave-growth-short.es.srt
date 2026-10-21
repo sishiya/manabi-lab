@@ -1,0 +1,29 @@
+1
+00:00:00,600 --> 00:00:05,600
+Cómo crecen las olas
+Desde el primer soplo de viento hasta un mar plenamente formado
+
+2
+00:00:07,000 --> 00:00:13,000
+10 minutos después de que empiece un viento de 10 m/s
+Aparecen ondas pequeñas (de unos 50 cm)
+
+3
+00:00:13,500 --> 00:00:21,000
+Empujadas por el viento, las olas crecen más altas y más largas
+A las 12 horas: 1,5 m de alto y 33 m de largo
+
+4
+00:00:21,500 --> 00:00:28,000
+Tras unas 30 horas, un «mar plenamente desarrollado»
+3,1 m de alto. Las olas más comunes superan al viento y dejan de crecer
+
+5
+00:00:28,500 --> 00:00:35,000
+Flotando en la superficie
+Fórmulas basadas en mediciones en el mar y un mar 3D de decenas de miles de olas
+
+6
+00:00:35,200 --> 00:00:40,000
+Cómo crecen las olas
+Funciona en el navegador. Cambia el viento, el tiempo y la vista

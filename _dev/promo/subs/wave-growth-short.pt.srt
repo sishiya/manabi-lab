@@ -1,0 +1,29 @@
+1
+00:00:00,600 --> 00:00:05,600
+Como as ondas crescem
+Do primeiro sopro de vento até um mar totalmente formado
+
+2
+00:00:07,000 --> 00:00:13,000
+10 minutos depois de começar um vento de 10 m/s
+Surgem pequenas ondulações (cerca de 50 cm)
+
+3
+00:00:13,500 --> 00:00:21,000
+Empurradas pelo vento, as ondas ficam mais altas e mais longas
+Após 12 horas: 1,5 m de altura e 33 m de comprimento
+
+4
+00:00:21,500 --> 00:00:28,000
+Após cerca de 30 horas, um «mar plenamente desenvolvido»
+3,1 m de altura. As ondas mais comuns passam o vento e param de crescer
+
+5
+00:00:28,500 --> 00:00:35,000
+Flutuando na superfície
+Fórmulas de medições no mar e um mar 3D com dezenas de milhares de ondas
+
+6
+00:00:35,200 --> 00:00:40,000
+Como as ondas crescem
+Funciona no navegador. Mude o vento, o tempo e a vista

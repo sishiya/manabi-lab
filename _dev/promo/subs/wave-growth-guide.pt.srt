@@ -1,0 +1,74 @@
+1
+00:00:00,600 --> 00:00:06,600
+Como as ondas crescem
+Como usar o app e o que observar
+
+2
+00:00:07,300 --> 00:00:16,600
+Antes do vento, o mar é liso como um espelho
+Ele reflete o céu. «Próximo» começa o tour
+
+3
+00:00:17,500 --> 00:00:29,600
+10 minutos de vento a 10 m/s: pequenas ondulações
+À esquerda: altura da onda (significativa), período de pico, seu comprimento de onda e velocidade
+
+4
+00:00:30,500 --> 00:00:40,800
+O controle de tempo vai até 72 horas e volta
+54 cm após 3 horas, 1,5 m após 12 horas
+
+5
+00:00:41,300 --> 00:00:51,600
+O morro do gráfico anda para a esquerda, rumo a ondas mais longas
+O vento empurra e faz crescer as ondas mais lentas que ele
+
+6
+00:00:52,500 --> 00:01:00,600
+Após cerca de 30 horas: um «mar plenamente desenvolvido» (3,1 m)
+As ondas mais comuns correm 1,22 vez mais rápido que o vento e param de crescer
+
+7
+00:01:01,300 --> 00:01:09,600
+Mude o vento, e o mar vira o que esse vento teria formado
+A 15 m/s, as mesmas 34 horas dão 5,9 m, e ele ainda está crescendo
+
+8
+00:01:10,500 --> 00:01:20,600
+Toque no mar para colocar uma boia
+As ondas seguem em frente, mas a boia só gira no lugar (a linha amarela é o seu rastro)
+
+9
+00:01:21,500 --> 00:01:26,000
+Corte o mar sob a boia: a água também se move em círculos
+Os círculos diminuem com a profundidade; a meio comprimento de onda, a água quase não se move
+
+10
+00:01:26,400 --> 00:01:31,600
+«Movimento × 3» deixa os círculos mais fáceis de ver
+A água se move 3 vezes mais que na realidade. Mesma escala nos dois eixos
+
+11
+00:01:32,500 --> 00:01:42,400
+«Na superfície»: flutue ao lado da pessoa na boia
+Um mar plenamente desenvolvido (3,1 m). A câmera sobe e desce com as ondas
+
+12
+00:01:43,300 --> 00:01:52,600
+«Movimento livre» usa W A S D e Q E, até debaixo da água
+Olhe para cima: o céu só aparece num círculo acima (refração, janela de Snell)
+
+13
+00:01:55,500 --> 00:02:05,600
+Dá para mudar a hora do dia e as nuvens
+O sol e a lua estão na posição real de hoje, a 33°N 140°E
+
+14
+00:02:07,000 --> 00:02:21,600
+Deixe a água rasa e o fundo de areia aparece
+Ondas longas sentem o fundo e ficam mais lentas e curtas (a 3,5 m, 42 % da altura em águas profundas)
+
+15
+00:02:22,200 --> 00:02:30,000
+Como as ondas crescem
+Funciona no navegador (PC ou celular). Mude o app para inglês com o botão EN
