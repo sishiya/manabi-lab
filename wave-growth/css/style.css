@@ -92,7 +92,7 @@ details summary{cursor:pointer}
 /* 見かた・浮かべる: 見出しを上に、ボタンは横いっぱいに並べる（スマホでも折り返しが読みやすいように） */
 #viewsRow,#putRow{display:block}
 #viewsRow>span:first-child,#putRow>span:first-child{display:block;font-size:13px;color:var(--muted);margin-bottom:2px}
-#views{display:grid;grid-template-columns:repeat(4,1fr)}
+#views{display:grid;grid-template-columns:repeat(3,1fr)}   /* 浜はいったん外した（hidden。もどすときは 4 に） */
 #views button{padding:6px 2px;font-size:13px}
 #putRow .seg{justify-content:flex-start}
 /* 自由に動くボタン（スマホ・マウスでも）: 画面の左下に 3×2 */

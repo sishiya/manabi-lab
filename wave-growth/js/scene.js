@@ -44,7 +44,7 @@ function drawPropLabel(g) {
 let view = 'orbit', camFloat = false, camWater = null, flying = false, diving = false; const FLOAT_AT = [-8, -3];   // 浮かべたカメラの場所（人から少しはなれた所）
 const COARSE = matchMedia('(pointer: coarse)').matches;
 const VIEW_TXT = { orbit: ['上から見る', 'ドラッグ: 回す・ホイール／2本指: 近づく'], float: ['海面に浮かぶ', 'ドラッグ: 見回す・ホイール／2本指: 目の高さ'],
-  fly: ['自由に動く', COARSE ? 'ボタン: 動く・ドラッグ: 見回す' : 'W A S D: 動く・Q E: 下 上・Shift: 速く・ドラッグ: 見回す'],
+  fly: ['自由に動く', COARSE ? 'ボタン: 動く・ドラッグ: 見回す' : 'W S: 向いている向きへ・A D: 横・Q E: 下 上・Shift: ゆっくり・ドラッグ: 見回す'],
   beach: ['浜（浅い海）', 'ドラッグ: 回す・ホイール／2本指: 近づく'], beachSec: ['浜（浅い海）の断面図', '坂の急さを右下でえらべます'] };
 function viewChip(k) { $('stView').textContent = VIEW_TXT[k][0]; $('stCtl').textContent = VIEW_TXT[k][1]; }
 function setView(v) {
@@ -73,10 +73,11 @@ document.querySelectorAll('#flyPad button').forEach(b => { const k = b.dataset.k
   for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(ev, () => keys.delete(k)); });
 function stepFly(dt) {
   if (!flying || !keys.size) return;
+  // W S = 向いている向きにまっすぐ（下を向いて W なら水の中へ）、A D = 横、Q E = 真下・真上
   const b = cam.basis(), h = Math.hypot(b.cf[0], b.cf[2]) || 1, fx = b.cf[0] / h, fz = b.cf[2] / h;
-  const sp = Math.min(800, Math.max(2, Math.abs(cam.pos[1]) * 0.6)) * (keys.has('Shift') ? 4 : 1) * dt;   // 速さは高さ・深さに合わせる（水面の近くは 2 m/s）
+  const sp = Math.min(3000, Math.max(8, Math.abs(cam.pos[1]) * 2.4)) * (keys.has('Shift') ? 0.15 : 1) * dt;   // ふだんは速く（水面の近くで 8 m/s、高さ・深さに合わせて速く）、Shift でゆっくり
   const f = (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0), r = (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0), u = (keys.has('KeyE') ? 1 : 0) - (keys.has('KeyQ') ? 1 : 0);
-  cam.move([(fx * f - fz * r) * sp, u * sp, (fz * f + fx * r) * sp]);
+  cam.move([(b.cf[0] * f - fz * r) * sp, (b.cf[1] * f + u) * sp, (b.cf[2] * f + fx * r) * sp]);
 }
 
 // ---- しぶき（風速 13 m/s から。波の山から風下へ飛ぶ白い粒。動きは見た目の目安: 風の 0.6 倍で流され、重力で落ちる） ----

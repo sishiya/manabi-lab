@@ -19,7 +19,7 @@ window.WGguide = (() => {
     { t: 12 * H, hl: '#stage', section: true,
       text: 'ブイの真下を切ってみると、水の粒も円をえがいています。深くなるほど円は小さく、波長の半分の深さではほとんど動きません。' },
     { t: null, hl: '#windBox', section: false, play: true,
-      text: '風の速さ・遠くの嵐・見かた（海面から・自由に動く・浜）を変えてみよう。時間のつまみで、いつにでも戻れます。' },
+      text: '風の速さ・遠くの嵐・見かた（海面から・自由に動く）を変えてみよう。時間のつまみで、いつにでも戻れます。' },
   ];
   let i = -1, hlEl = null;
   function show(k, api) {
