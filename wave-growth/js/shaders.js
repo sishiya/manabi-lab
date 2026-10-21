@@ -81,6 +81,7 @@ void main(){
   vec3 dd=normalize(vec3(d.x,max(d.y,.035),d.z));   // 1回散乱だけだと水平線が赤くなりすぎるので、2°より下は2°の空で代用
   vec3 col=atmo(dd,L,sunI)+vec3(.0008,.0012,.0024);   // 夜でも真っ黒にはしない（星あかり・大気の光の目安）
   if(moonI>0.)col+=atmo(dd,Lm,moonI);
+  float ca=0.;   // 雲の濃さ（a）: 太陽・月の円盤と、日がさす量に使う
   if(cover>0.){
     float t=1500./max(d.y,1e-3);vec2 p=d.xz*t+cOff;
     float n=fbm(p*.00035)*.75+fbm(p*.0021)*.25;
@@ -88,9 +89,9 @@ void main(){
     float mu=dot(d,L),hg=(1.-.36)/pow(1.+.36-1.2*mu,1.5)/12.566;
     vec3 sl=sunI*sunT(vec3(0,Re+1500.,0),L)*max(L.y+.05,0.)*1.4+moonI*sunT(vec3(0,Re+1500.,0),Lm)*max(Lm.y+.05,0.)*1.4;
     vec3 cc=(sl*(.05+hg*(1.4-a))+ambU*2.2)*cdark;
-    col=mix(col,cc,a*mix(exp(-t/30000.),1.,smoothstep(.8,.95,cover))*.95);
+    ca=a*mix(exp(-t/30000.),1.,smoothstep(.8,.95,cover))*.95;col=mix(col,cc,ca);
   }
-  o=vec4(col,1);
+  o=vec4(col,ca);
 }`;
 
   const UNDER = `
@@ -120,19 +121,27 @@ vec3 shafts(vec3 ro,vec3 rd,float maxT,vec3 sunC,float sunI){vec3 t=refract(-cSu
   const SKYL = `
 uniform sampler2D skyT;
 vec3 skyL(vec3 d,float lod){d.y=max(d.y,0.);float v=sqrt(d.y),u=atan(d.z,d.x)/6.2831853+.5;return textureLod(skyT,vec2(u,v),lod).rgb;}
+// 太陽（夜は月）の前に雲があるか: 空の絵の雲の濃さを、その向きで読む。日がさす量 = 1 − 濃さ（雲が流れると、ひなたとかげがなめらかに入れかわる）
+float sunVis(vec3 L){float v=sqrt(max(L.y,0.)),u=atan(L.z,L.x)/6.2831853+.5;return 1.-textureLod(skyT,vec2(u,v),1.).a;}
+vec3 sunC;   // 雲を通ったあとの光の色（main のはじめに sunCu × sunVis）
 vec3 tone(vec3 x){x=x*(2.51*x+.03)/(x*(2.43*x+.59)+.14);return pow(clamp(x,0.,1.),vec3(1./2.2));}
 float h12(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
 `;
 
   const FS_SKY = HEAD + SKYL + UNDER + CAUST + `
-uniform vec3 cf,cr,cu,L,sunC,cam;uniform float tx,ty,sunI,expo,disc,stars,fogSky;in vec2 vUv;out vec4 o;
+uniform vec3 cf,cr,cu,L,sunCu,cam,Lsun,sunCd,LmD,moonK;uniform float tx,ty,sunI,expo,disc,stars,fogSky;in vec2 vUv;out vec4 o;
 void main(){
+  sunC=sunCu*sunVis(L);
   vec3 d=normalize(cf+(vUv.x*2.-1.)*tx*cr+(vUv.y*2.-1.)*ty*cu);
   if(under>0.){o=vec4(tone((ubg(d,skyL(vec3(0,1,0),6.),L,sunC,sunI)+shafts(cam,d,40.,sunC,sunI))*expo)+(h12(gl_FragCoord.xy)-.5)/255.,1);return;}   // 水の中: 空のかわりに水の中の光＋光芒
   vec3 c=skyL(d,0.);float mu=dot(d,L);
   if(d.y<0.){float Fg=.02+.98*pow(1.-min(1.,-d.y*1.2),5.);c=mix(vec3(.004,.028,.06)*(skyL(vec3(0,1,0),6.)*.9+sunC*sunI*.04*max(L.y,0.)),skyL(vec3(d.x,-d.y,d.z),2.),Fg);}   // 水平線より下: 海の色の下地（網目が足りない所でも空にならないように）
   c=mix(c,skyL(normalize(vec3(d.x,0.,d.z)),1.),fogSky*(1.-smoothstep(0.,.35,d.y)));   // 霧: 空の下のほうもかすむ
-  c+=disc*sunC*sunI*(smoothstep(.99997,.99999,mu)*60.+pow(max(mu,0.),1500.)*.6+pow(max(mu,0.),40.)*.04);
+  float cvis=1.-textureLod(skyT,vec2(atan(d.z,d.x)/6.2831853+.5,sqrt(max(d.y,0.))),0.).a;   // この向きの雲のすきま
+  {float ms=dot(d,Lsun);c+=disc*sunCd*sunI*(smoothstep(.99997,.99999,ms)*60.*cvis+pow(max(ms,0.),1500.)*.6*cvis+pow(max(ms,0.),40.)*.04*sunVis(Lsun));}   // 太陽の円盤（雲が前にあると見えない）
+  // 月: 本当の大きさ（半径 0.26°）の球。太陽の向きから照らす（満ち欠けは計算のとおり）。明るさは月の表面の散らばり方（ロンメル–ゼーリガー）、満月で円盤の平均 = moonK
+  if(moonK.g>0.&&dot(d,LmD)>.99996){vec3 ax=normalize(cross(LmD,vec3(0,1,0))),ay=cross(ax,LmD);vec2 q=vec2(dot(d,ax),dot(d,ay))/.00454;float r2=dot(q,q);
+    if(r2<1.){float mu0=sqrt(1.-r2);vec3 nm=q.x*ax+q.y*ay-LmD*mu0;float i0=max(dot(nm,Lsun),0.);c+=moonK*2.*i0/(i0+mu0+1e-4)*cvis;}}
   if(stars>0.&&d.y>0.){vec2 sp=vec2(atan(d.z,d.x),asin(d.y))*180.;vec2 ci=floor(sp),f=fract(sp)-.5;float hs=h12(ci);
     float st=step(.993,hs)*smoothstep(.22,0.,length(f))*(hs-.993)*140.*smoothstep(0.,.15,d.y);c+=vec3(st)*stars*.02;}
   o=vec4(tone(c*expo)+(h12(gl_FragCoord.xy)-.5)/255.,1);
@@ -167,7 +176,7 @@ void main(){
 }`;
 
   const FS_WATER = HEAD + SKYL + UNDER + CAUST + `
-uniform vec3 cam,L,sunC,Ls,cfw;uniform float sunI,expo,fogL,sss,rough0,disc,fogH,windU,windA,hasBg,nearP,farP,foamStyle,sigB;uniform sampler2D dBt;uniform vec2 vpS;uniform sampler2D bgC,bgD;
+uniform vec3 cam,L,sunCu,Ls,cfw;uniform float sunI,expo,fogL,sss,rough0,disc,fogH,windU,windA,hasBg,nearP,farP,foamStyle,sigB,foamK;uniform sampler2D dBt;uniform vec2 vpS;uniform sampler2D bgC,bgD;
 uniform sampler2D sA,sB,sC;
 in vec3 vPos;in vec2 vXZ;in float vH,vBS,vDep,vBF;out vec4 o;
 float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
@@ -176,12 +185,12 @@ float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
 float foamCells(vec2 p){vec2 i=floor(p),f=fract(p);float d1=9.,d2=9.;
   for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++){vec2 g=vec2(x,y),o=vec2(h12(i+g),h12(i+g+17.3));float d=length(g+o-f);if(d<d1){d2=d1;d1=d;}else if(d<d2)d2=d;}
   return d2-d1;}
-void main(){
+void main(){sunC=sunCu*sunVis(L);
   vec4 a=texture(sA,vXZ/Ls.x),b=texture(sB,vXZ/Ls.y),c=texture(sC,vXZ/Ls.z);
   vec2 sl=a.xy+b.xy+c.xy;
   vec3 n=normalize(vec3(-sl.x-vBS,1.,-sl.y));
   vec3 V=cam-vPos;float dist=length(V);V/=dist;
-  if(under>0.){   // 水の中から水面を見る: 水 → 空気の屈折（スネルの窓）、窓の外は全反射。通った光は 1.33² 倍（放射輝度は n² に比例）。カメラまでは水のかすみ
+  if(under>0.){   // 水の中から水面を見る（カメラの真上の水面より下にいるとき）: 水 → 空気の屈折（スネルの窓）、窓の外は全反射。通った光は 1.33² 倍（放射輝度は n² に比例）。カメラまでは水のかすみ
     vec3 amb0=skyL(vec3(0,1,0),6.),I=-V,Nd=-n,Tt=refract(I,Nd,1.33);float F=1.;vec3 col0=vec3(0);
     if(dot(Tt,Tt)>0.){F=.02+.98*pow(1.-max(dot(Tt,n),0.),5.);col0=(skyL(Tt,rough0*4.)+sunC*sunI*pow(max(dot(Tt,L),0.),900.)*disc*.5)*(1.-F)*1.77;}
     col0+=F*ubg(reflect(I,Nd),amb0,L,sunC,sunI);
@@ -213,7 +222,7 @@ void main(){
       vec3 Tr=exp(-t*vec3(.45,.07,.04)*1.6);   // 吸収（外洋の水の目安 /m）
       body=texture(bgC,uv2).rgb*Tr+body*(1.-Tr);contact=smoothstep(.07,0.,t);}}   // 物の色はすでに見た目の色（トーンのあと）
   vec3 col=mix(body,refl,F)+spec;
-  float fm=clamp(b.z+contact*.7+vBF,0.,1.);   // 白波は中の海面の泡（割合を観測に合わせているのと同じもの）。vBF = 浜で砕けたあとの泡   // 水面と物がふれる所は細い泡
+  float fm=clamp(b.z*foamK+contact*.7+vBF,0.,1.);   // foamK = 0: 沖の白波の泡は描かない（2026-10-21 ユーザーと決めた。割合は数字で出す）   // 白波は中の海面の泡（割合を観測に合わせているのと同じもの）。vBF = 浜で砕けたあとの泡   // 水面と物がふれる所は細い泡
   vec2 wd=vec2(cos(windA),sin(windA)),q=vec2(dot(vXZ,wd),dot(vXZ,vec2(-wd.y,wd.x)));
   // 泡の形（見た目の目安）: 砕けたばかりの濃い泡は白くはっきり、波の山ほど出やすい。うすくなるにつれて、小さな泡の膜の境目のような細い網目だけが残って消えていく。強い風では風下にのびる
   // 泡の形の案（見比べ用）: 0 = A 細かく崩れた波頭（波の山の線にそって細長い）、1 = B 風下のすじ、2 = C 丸いかたまり
@@ -252,9 +261,9 @@ void main(){int i=int(gl_FragCoord.x);vec2 xz=P[i];float wb=WB[i],w=WC[i];
 in vec3 aP,aN,aC,aM;uniform mat4 VP,M;out vec3 vP,vN,vC,vM;out float vLy;
 void main(){vec4 w=M*vec4(aP,1);vP=w.xyz;vN=mat3(M)*aN;vC=aC;vM=aM;vLy=aP.y;gl_Position=VP*w;}`;
   const FS_MESH = HEAD + SKYL + UNDER + CAUST + `
-uniform vec3 cam,L,sunC;uniform float sunI,expo,fogL,wetRain,wetSplash;in vec3 vP,vN,vC,vM;in float vLy;out vec4 o;
+uniform vec3 cam,L,sunCu;uniform float sunI,expo,fogL,wetRain,wetSplash;in vec3 vP,vN,vC,vM;in float vLy;out vec4 o;
 // vM = (つや, 濡れやすさ, 0)。濡れると色が暗く、つやが強くなる（見た目の目安）
-void main(){vec3 n=normalize(vN);vec3 amb=skyL(vec3(0,1,0),6.);
+void main(){sunC=sunCu*sunVis(L);vec3 n=normalize(vN);vec3 amb=skyL(vec3(0,1,0),6.);
   float dist=length(cam-vP);vec3 V=(cam-vP)/dist;if(dot(n,V)<0.)n=-n;
   float wet=clamp(max(wetRain,wetSplash*(1.-smoothstep(.15,1.4,vLy))),0.,1.)*vM.y;
   vec3 alb=vC*(1.-.45*wet);float gl=mix(vM.x,.9,wet);

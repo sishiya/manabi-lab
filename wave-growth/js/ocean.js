@@ -207,6 +207,8 @@ window.WGocean = (() => {
       const sunCs = sunTrans(Math.max(el, -0.05)).map(v => v * (el > -0.05 ? 1 : 0)), moonC = sunTrans(Math.max(elm, 0.01)).map(v => v * (elm > 0 ? 1 : 0));
       const useMoon = sunI * sunCs[1] * Math.max(el, 0.0) < moonI * moonC[1] * Math.max(elm, 0);
       const L = useMoon ? Lm : Ls, keyI = useMoon ? moonI : sunI, sunC = (useMoon ? moonC.map((v, i) => v * [0.85, 0.92, 1][i]) : sunCs).map(v => v * env.dim);
+      // 月の円盤の明るさ（満月の円盤の平均の放射輝度 = 太陽の光 × 2.5×10⁻⁶ ÷ 月の見かけの大きさ 6.4×10⁻⁵ sr。夜は目が慣れた倍率 boost）
+      const moonK = moonC.map((v, i) => v * [0.95, 0.97, 1][i] * sunI * 2.5e-6 / 6.4e-5 * (env.boost || 1));
       cloudOff[0] += dt * 6; cloudOff[1] += dt * 2;
 
       gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
@@ -237,8 +239,8 @@ window.WGocean = (() => {
       if (!space) {
       const hasMesh = env.meshes && env.meshes.length > 0;
       const cst = { cS1: CASC[1].slope[cur], cS2: CASC[2].slope[cur], cLs: CASC.map(c => c.L), cSun: Ls };   // コースティクス・光芒（太陽の向き）
-      const drawSky = () => { use(pSky); setAll(pSky, { cf, cr, cu, L, sunC, tx, ty, sunI: keyI, expo: env.expo, disc: env.disc, stars: env.stars, fogSky: Math.min(1, 600 / env.fogL), skyT: skyTex, under: env.under ? 1 : 0, camD: env.camD || 0, cam: pos, ...cst }); full(); };
-      const drawMeshes = () => { use(pMesh); setAll(pMesh, { VP, cam: pos, L, sunC, sunI: keyI, expo: env.expo, fogL: env.fogL, wetRain: env.wetRain || 0, wetSplash: env.wetSplash || 0, skyT: skyTex, under: env.under ? 1 : 0, camD: env.camD || 0, ...cst });
+      const drawSky = () => { use(pSky); setAll(pSky, { cf, cr, cu, L, sunCu: sunC, Lsun: Ls, sunCd: sunCs, LmD: Lm, moonK, tx, ty, sunI: keyI, expo: env.expo, disc: env.disc, stars: env.stars, fogSky: Math.min(1, 600 / env.fogL), skyT: skyTex, under: env.under ? 1 : 0, camD: env.camD || 0, cam: pos, ...cst }); full(); };
+      const drawMeshes = () => { use(pMesh); setAll(pMesh, { VP, cam: pos, L, sunCu: sunC, sunI: keyI, expo: env.expo, fogL: env.fogL, wetRain: env.wetRain || 0, wetSplash: env.wetSplash || 0, skyT: skyTex, under: env.under ? 1 : 0, camD: env.camD || 0, ...cst });
         for (const m of env.meshes) { set(pMesh, 'M', m.M); gl.bindVertexArray(m.mesh.vao); gl.drawArrays(gl.TRIANGLES, 0, m.mesh.count); } gl.bindVertexArray(null); };
       if (hasMesh) {   // 空と物 → 画面の外の絵 → 画面へ写す
         ensureBg(W, H); gl.bindFramebuffer(gl.FRAMEBUFFER, bgF); gl.viewport(0, 0, W, H); gl.disable(gl.DEPTH_TEST); drawSky();
@@ -249,9 +251,10 @@ window.WGocean = (() => {
       if (big) { for (let i = 0; i < 4096; i++) { bigBuf[4 * i] = big.eta[i]; bigBuf[4 * i + 1] = big.slope[i]; bigBuf[4 * i + 2] = big.depth[i]; bigBuf[4 * i + 3] = big.foam ? big.foam[i] : 0; }
         gl.bindTexture(gl.TEXTURE_2D, bigTex); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, 1, gl.RGBA, gl.FLOAT, bigBuf); }
       use(pWater);
+      // 網目を投げる平面（planeY）はいつもカメラの向こう側（水の中なら上、水の上なら下）
       setAll(pWater, { cam: pos, cf, cr, cu, Ls: CASC.map(c => c.L), tx, ty, gx: env.wideGrid ? 2.6 : 1.6, y0: env.under ? Math.max(-1.2, horizonY - 0.15) : env.wideGrid ? -5.0 : -3.0, y1: env.under ? 3.0 : Math.min(horizonY + (big ? 0.4 : 0.12), 1.2), under: env.under ? 1 : 0, camD: env.camD || 0,
-        far: env.far || (big ? 300000 : 30000), planeY: big ? big.planeY : 0, bigOn: big ? 1 : 0, bigL: big ? big.L : 1, bigX0: big ? big.x0 : 0, bigWrap: big && big.noWrap ? 0 : 1, curvR: big ? big.R : env.curvR || 1e9, bigT: bigTex,
-        pixA: 2 * ty / H, VP, L, sunC, sunI: keyI, expo: env.expo, fogL: env.fogL, sss: 1, rough0: env.rough0, disc: env.disc, fogH: env.fogH || 0, windU: env.windU || 0, windA: env.windA || 0, foamStyle: env.foamStyle || 0, sigB, dBt: CASC[1].disp, skyT: skyTex, cfw: cf, hasBg: hasMesh ? 1 : 0, nearP: n, farP: f, vpS: [W, H], bgC: hasMesh ? bgColor : skyTex, bgD: hasMesh ? bgDepth : skyTex, ...cst,
+        far: env.far || (big ? 300000 : 30000), planeY: env.under ? Math.max(big ? big.planeY : 0, pos[1] + 0.5) : Math.min(big ? big.planeY : 0, pos[1] - 0.5), bigOn: big ? 1 : 0, bigL: big ? big.L : 1, bigX0: big ? big.x0 : 0, bigWrap: big && big.noWrap ? 0 : 1, curvR: big ? big.R : env.curvR || 1e9, bigT: bigTex,
+        pixA: 2 * ty / H, VP, L, sunCu: sunC, sunI: keyI, expo: env.expo, fogL: env.fogL, sss: 1, rough0: env.rough0, disc: env.disc, fogH: env.fogH || 0, windU: env.windU || 0, windA: env.windA || 0, foamStyle: env.foamStyle || 0, foamK: env.foamK == null ? 1 : env.foamK, sigB, dBt: CASC[1].disp, skyT: skyTex, cfw: cf, hasBg: hasMesh ? 1 : 0, nearP: n, farP: f, vpS: [W, H], bgC: hasMesh ? bgColor : skyTex, bgD: hasMesh ? bgDepth : skyTex, ...cst,
         dA: CASC[0].disp, dB: CASC[1].disp, dC: CASC[2].disp, sA: CASC[0].slope[cur], sB: CASC[1].slope[cur], sC: CASC[2].slope[cur] });
       gl.bindVertexArray(gridVAO); gl.drawElements(gl.TRIANGLES, gridVAO.count, gl.UNSIGNED_INT, 0); gl.bindVertexArray(null);
       }

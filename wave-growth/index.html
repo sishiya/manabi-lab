@@ -8,13 +8,14 @@
 <link rel="stylesheet" href="css/style.css">
 
 <div id="app">
-  <header id="top"><h1>波が育つまで</h1><span id="modes"><button data-m="earth">地球の海</button><button data-m="swell">遠くの嵐</button><button data-m="miller" hidden>ミラーの惑星</button></span><span id="perf"></span></header>
+  <header id="top"><h1>波が育つまで</h1><span id="perf"></span></header>
   <div id="wrap">
     <section id="pin">
       <div id="stage">
         <canvas id="cv"></canvas><canvas id="ov"></canvas>
         <canvas id="sec" hidden></canvas><div id="beachBar" hidden><span id="slopes"><button data-s="0.1">急な浜</button><button data-s="0.033">ふつう</button><button data-s="0.01">遠浅</button></span><span id="beachKinds"><button data-b="3d">3D</button><button data-b="sec">断面図</button></span><button id="beachClose" aria-label="浜をはなれる">× 上からにもどる</button></div><div id="secBar" hidden><button id="secMag">動きを3倍に</button><button id="secClose" aria-label="断面を閉じる">× 断面をとじる</button></div>
-        <div id="state"><b id="stView">上から見る</b> <span id="stCtl"></span><span id="stPause" hidden></span></div>
+        <div id="state"><b id="stView">上から見る</b> <span id="stCtl"></span><span id="stPause" hidden></span><span id="stStorm" hidden></span></div>
+        <div id="flyPad" hidden aria-label="自由に動くボタン"><button data-k="KeyQ" title="下へ（Q）">下</button><button data-k="KeyW" title="前へ（W）">▲</button><button data-k="KeyE" title="上へ（E）">上</button><button data-k="KeyA" title="左へ（A）">◀</button><button data-k="KeyS" title="うしろへ（S）">▼</button><button data-k="KeyD" title="右へ（D）">▶</button></div>
         <button id="next">つぎへ ▶</button>
         <div id="glerr" hidden></div>
       </div>
@@ -30,53 +31,41 @@
     </section>
 
     <section id="panel">
-      <div id="swellBox" class="box" hidden>
-        <div class="row"><b style="color:var(--ink);font:700 15px var(--f-body)">遠くの嵐から届くうねり</b><button id="swPlay">❚❚</button></div>
-        <p class="note">ここはそよ風（3 m/s）しか吹いていない海。何千 km も先の嵐で育った波が、何日もかけて届きます。長い波ほど速いので先に着き、周期がだんだん短くなっていきます。</p>
-        <label class="slider"><span>嵐が起きてから</span><b id="swTl"></b><input id="swT" type="range" min="0" max="1000" step="1"></label>
-        <div class="row"><span>進む速さ</span><span id="swSpeeds">1秒で <button data-s="3600">1時間</button><button data-s="21600">6時間</button></span></div>
-        <canvas id="swMap" style="width:100%;height:190px;display:block"></canvas>
-        <canvas id="swChart" style="width:100%;height:170px;display:block;margin-top:6px"></canvas>
-        <div id="swNums"></div>
-        <div class="row"><span>地球儀で置く</span><span id="swPlace"><button data-p="storm">嵐</button><button data-p="obs">いる所</button></span></div>
-        <p class="note">ホイール／2本指で、宇宙から見た地球まで引けます。地球儀をタップすると、えらんだほう（嵐・いる所）をそこへ置きます。</p>
-        <div class="row"><span>嵐までの距離（地球の上のまっすぐな道）</span><b id="swRl"></b></div><div id="swGeo" class="note"></div>
-        <input id="swR" type="range" min="500" max="10000" step="100" hidden>
-        <label class="slider"><span>嵐の風の速さ</span><b id="swUl"></b><input id="swU" type="range" min="10" max="30" step="1"></label>
-        <label class="slider"><span>嵐が吹いた時間</span><b id="swDl"></b><input id="swD" type="range" min="6" max="96" step="6"></label>
-        <label class="slider"><span>嵐の広さ</span><b id="swLl"></b><input id="swL" type="range" min="300" max="2000" step="100"></label>
-      </div>
-      <div id="millerBox" class="box" hidden>
-        <div class="row"><b style="color:var(--ink);font:700 15px var(--f-body)">ミラーの惑星の大波</b><span><button id="mPlay">❚❚</button> <button id="mReset">はじめから</button></span></div>
-        <p class="note">映画「インターステラー」の水の惑星。ひざくらいの浅い海に、1 km をこえる大波が 1 時間ごとに来る。監修の物理学者 Kip Thorne は「惑星がブラックホールに同じ面を向けたまま少しゆれていて、その潮の力」と説明しています。それを浅い海の式で本当に計算します。</p>
-        <div class="row"><span>見かた</span><span id="mViews"><button data-v="section">断面図</button><button data-v="3d">3D で見る</button> <button id="mTele" title="遠くを大きく（画角 12°）">望遠</button> <button id="mX10" title="大波の形を見やすく">高さ×10</button> <button id="mHold" title="カメラを空中の一か所に止める">カメラを止める</button></span></div>
-        <div class="row"><span>進む速さ</span><span id="mSpeeds">1秒で <button data-s="10">10秒</button><button data-s="60">1分</button><button data-s="300">5分</button><button data-s="900">15分</button></span></div>
-        <div class="row"><span>ためす</span><span id="mPresets"><button data-p="film">深い海＋浅い棚</button><button data-p="shallow">ぜんぶ浅い海</button></span></div>
-        <label class="slider"><span>惑星のゆれの大きさ</span><b id="mZl"></b><input id="mZ" type="range" min="0" max="1000" step="1"></label>
-        <label class="slider"><span>深い海の深さ</span><b id="mDl"></b><input id="mD" type="range" min="0" max="1000" step="1"></label>
-        <label class="slider"><span>いる所（棚のふちから）</span><b id="mOl"></b><input id="mO" type="range" min="0" max="500" step="5"></label>
-        <div id="mNums"></div>
-        <p class="note">「ゆれの大きさ」= 水がすぐついていけたら上下する高さ（潮の力の強さ × 惑星のゆれの角度）。つまみを動かすと、はじめから計算しなおします。</p>
-      </div>
       <div id="timeBox" class="box">
         <div class="row"><span>風が吹きはじめてから</span><b id="tLabel">0 分</b></div>
         <input id="tSlider" type="range" min="0" max="1000" value="0" aria-label="風が吹きはじめてからの時間">
-        <div class="ticks"><span style="left:0">0</span><span style="left:11.8%">1時間</span><span style="left:28.9%">6</span><span style="left:57.7%">24</span><span style="left:100%">72時間</span></div>
+        <div class="ticks"><span style="left:0">0</span><span style="left:5.5%">1時間</span><span style="left:13.4%">6</span><span style="left:26.7%">24</span><span style="left:46.3%">3日</span><span style="left:70.7%">7日</span><span style="left:100%">14日</span></div>
         <div class="row"><button id="play">▶</button>
-          <span id="speeds"><button data-s="0" title="はじめはゆっくり、だんだん速く（72時間を1分で）">おまかせ</button> 1秒で <button data-s="600">10分</button><button data-s="3600">1時間</button></span></div>
+          <span id="speeds"><button data-s="0" title="はじめはゆっくり、だんだん速く（14日を75秒で）">おまかせ</button> 1秒で <button data-s="600">10分</button><button data-s="3600">1時間</button></span></div>
       </div>
       <div id="windBox" class="box">
         <div class="row"><span>風の速さ</span><b id="wLabel">10 m/s</b></div>
         <input id="wSlider" type="range" min="0" max="20" step="0.5" value="10" aria-label="風の速さ">
-        <p class="note">72 時間ずっと同じ風が吹きます。変えると、はじめからその風が吹いていたときの海に、すぐ変わります（時間はそのまま）。</p>
+        <p class="note">ずっと同じ風が吹きます。変えると、はじめからその風が吹いていたときの海に、すぐ変わります（時間はそのまま）。0 にすると、うねりだけの海。</p>
+      </div>
+      <div id="stormBox" class="box">
+        <div class="row"><span>遠くの嵐</span><button id="stormBtn">遠くで嵐を起こす</button></div>
+        <p class="note">何千 km も先で嵐が吹きはじめます（いまの時刻から）。育った波は「うねり」になって何日もかけて届き、この海の波に重なります。長い波ほど速いので先に着きます。</p>
+        <details id="stormMore">
+          <summary>嵐のようす（地図・届く時刻・つまみ）</summary>
+          <div id="swNums"></div>
+          <canvas id="swMap" style="width:100%;height:170px;display:block"></canvas>
+          <canvas id="swChart" style="width:100%;height:150px;display:block;margin-top:6px"></canvas>
+          <div class="row"><span>地球儀で置く</span><span id="swPlace" class="seg"><button data-p="storm">嵐</button><button data-p="obs">いる所</button><button id="globeBtn">地球儀を見る</button></span></div>
+          <p class="note">ホイール／2本指で引くと、宇宙から見た地球まで。地球儀をタップすると、えらんだほう（嵐・いる所）をそこへ置きます。いる所を動かすと、太陽と月の位置もその場所のものになります。</p>
+          <div class="row"><span>嵐までの距離（地球の上のまっすぐな道）</span><b id="swRl"></b></div><div id="swGeo" class="note"></div>
+          <label class="slider"><span>嵐の風の速さ</span><b id="swUl"></b><input id="swU" type="range" min="10" max="30" step="1"></label>
+          <label class="slider"><span>嵐が吹いた時間</span><b id="swDl"></b><input id="swD" type="range" min="6" max="96" step="6"></label>
+          <label class="slider"><span>嵐の広さ</span><b id="swLl"></b><input id="swL" type="range" min="300" max="2000" step="100"></label>
+        </details>
       </div>
       <div id="viewBox" class="box">
-        <div class="row" id="viewsRow"><span>見かた</span><span id="views" class="seg"><button data-v="orbit">上から</button><button data-v="float" title="海面に浮かんで見る">海面から</button><button data-v="dive">水の中</button><button data-v="beach" title="浜（浅い海）">浜</button></span></div>
+        <div class="row" id="viewsRow"><span>見かた</span><span id="views" class="seg"><button data-v="orbit">上から</button><button data-v="float" title="海面に浮かんで見る">海面から</button><button data-v="fly" title="W A S D・Q E（スマホは画面のボタン）。水の中にも入れます">自由に動く</button><button data-v="beach" title="浜（浅い海）">浜</button></span></div>
         <div class="row" id="putRow"><span>浮かべる</span><span class="seg"><button id="humanBtn" aria-pressed="true">人</button><button id="buoyBtn" aria-pressed="false">ブイ</button><button id="secBtn" aria-pressed="false">ブイの真下の断面</button></span></div>
         <div class="sub" id="putSub">ブイは海をタップしても浮かべられます（6 こまで）。もう一度おすと消えます。</div>
-        <div class="row"><span>時間帯</span><span id="tods"><button data-k="morning">朝</button><button data-k="noon">昼</button><button data-k="evening">夕方</button><button data-k="night">夜</button><button data-k="auto" title="1日を4分で">自動</button></span></div>
-        <div class="row"><span>天気</span><span id="weathers"><button data-k="fine">快晴</button><button data-k="clear">晴れ</button><button data-k="cloudy">くもり</button><button data-k="rain">雨</button><button data-k="fog">霧</button></span></div>
-        <div class="row"><span>泡の形（見比べ）</span><span id="foamStyles"><button data-f="0">A 崩れた波頭</button><button data-f="1">B 風下のすじ</button><button data-f="2">C かたまり</button></span></div>
+        <div class="row"><span>時刻</span><span id="tods" class="seg"><button data-k="morning">朝</button><button data-k="noon">昼</button><button data-k="evening">夕方</button><button data-k="night">夜</button><button data-k="now" title="いる所のいまの時刻">いま</button><button data-k="auto" title="1日を4分で">進める</button></span></div>
+        <label class="slider"><span>雲の量</span><b id="cloudL">30%</b><input id="cloud" type="range" min="0" max="100" step="1" value="30" aria-label="雲の量"></label>
+        <div class="sub">太陽と月は、きょうの日付・時刻・いる所の、本当の位置（月の満ち欠けも）。日がさすかどうかは、太陽の前の雲で決まります。</div>
       </div>
       <div id="graphBox" class="box">
         <div class="row"><span>どの長さの波が、どれだけあるか</span></div>
@@ -106,7 +95,7 @@
         </ul>
         <h3>簡単にしたところ・推定</h3>
         <ul>
-          <li>深い海だけ。風はずっと同じ向きで、場所によらない。うねり（遠くから来る波）は入れていない。</li>
+          <li>深い海だけ。風はずっと同じ向きで、場所によらない。遠くから来るうねりは「遠くで嵐を起こす」ときだけ。</li>
           <li>波長 20 cm より短い波は描いていない。くり返しのため、周期を 1000 秒で一周するように少しだけ丸めている。</li>
           <li>ブイは、その場の水の動き（3枚の海面の分）のとおりに動かし、風下へ流される分（ストークスドリフト。Kenyon 1969 の式）を足している。この版の分布は短い波が少ないので、流される速さは実際の海より小さめ（風速の 1〜1.5%。Kenyon は発達した海で 1.6〜3.6%）。</li>
           <li>浜への断面: いちばん多い波（周期 Tp・高さ Hm0）1つが、まっすぐな坂の浜へまっすぐ進むとして、線形の波の式（ω² = gk tanh kh、エネルギーの流れが同じ）で高さ・長さ・速さを出す。砕けるのは水深の 0.78 倍（McCowan 1894）か波の急さの限界（Miche 1944）の早いほう。本当の砕ける高さは坂の急さや波の形でかわる（Goda 2010）。砕けたあとは高さ = 水深 × 0.78 として簡単にした。底との摩擦・波の向きが曲がること（屈折）は入れていない。</li>
@@ -115,13 +104,13 @@
           <li>断面は、同じ分布から作った「風の向きに進む1本の波の列」（上の海とは模様がちがう）。深い海の線形の波の理論（動きは深さとともに e<sup>kz</sup> で小さくなる）。</li>
           <li>大きさくらべの人（大きな浮き輪に板をわたした台に立つ）は、物の下の数か所の水の動きに平面を当てはめて浮き沈み・傾けている。大きい物ほど広い範囲でならし、ゆっくり追う（おくれの時間は見た目で決めた）。重さ・水の押し返し・流されることは計算していない。形はおおまかな模型。</li>
           <li>短い波: 長い波の分布（JONSWAP）はピークより短い側をなだらかに打ち切り、風で強さが変わる短い波の部分を足した（Elfouhaily ほか 1997 の ECKV の形）。合計の海面の傾きは Cox &amp; Munk の観測に近い（10 m/s で 0.053 と 0.054）。描いているのは波長 20 cm まで（それより短い分は照り返しのにじみで）。</li>
-          <li>白波: 泡になる「波の面のつぶれ」の境目を、白波の面積の割合が観測の式（Monahan &amp; O'Muircheartaigh 1980: 3.84×10⁻⁶ U<sup>3.41</sup>、10 m/s で約 1%・20 m/s で約 10%）に近づくよう自動で合わせている。泡の形・風下の細いすじ（風速 11〜18 m/s で現れる）・波頭の下の青緑（巻きこまれた気泡）・しぶき（風速 13 m/s から、波の山から風下へ飛ぶ白い粒）は見た目の目安（NOAA の風力階級の写真とくらべて決めた）。</li>
+          <li>白波: 沖の白波の泡は、本物らしく描けなかったので絵からは外した（割合だけ、観測の式 Monahan &amp; O'Muircheartaigh 1980: 3.84×10⁻⁶ U<sup>3.41</sup>、10 m/s で約 1%・20 m/s で約 10% をひとことに出す）。浜で砕けたあとの泡・物のまわりの細い泡・しぶき（風速 13 m/s から、波の山から風下へ飛ぶ白い粒。見た目の目安）は描いている。</li>
           <li>濡れて見えるのは見た目の目安（雨で全体、波が高いと下のほうがしぶきで）。</li>
-          <li>白い泡は「波の面が横に押しつぶされた所」の目安（しきい値は見た目で決めた）。水の色・波の山を抜ける光の強さ・遠くのかすみも見た目で決めた。</li>
-          <li>太陽の向きは北緯 35°・春分の日の時刻から計算。月は満月（太陽の反対側）。夜は、目が暗さに慣れたくらいの明るさで見せている（本当の月の光は太陽の約 40 万分の 1）。星は見た目だけ。「自動」は 1 日を 4 分で進める。</li>
-          <li>天気（快晴・晴れ＝雲まじり・くもり・雨・霧）は、雲の量・直射の光の弱まり・かすむ距離を見た目で決めた。雨のすじは見た目だけで、波には影響させていない。</li>
-          <li>地球儀: 陸の形は ETOPO1（NOAA）を 1°（約 110 km）ごとにしたもの（細い海峡や小さな島は出ない）。うねりは大円（球の上のまっすぐな道）にそって進み、陸に当たった向きは止まる。届く量の横の広がりは球の上の距離 Re·sin(R/Re)（地球の裏側の近くでは、また集まる）。陸や海の色・氷・星は見た目。太陽の向きは北緯 35° のまま（いる所を動かしても変えていない）。この場面のかすみは、地上の見通し 40 km・空気は高さ 8 km ごとにうすくなるとした（仮定）。</li>
-          <li>遠くの嵐: 嵐の海は CEM の式（吹いた時間と嵐の広さの小さいほうで決まる）。その分布が、深い海の群速度（周期 T 秒の波は 1 秒に g·T/4π m）で道すじにそって進み、分布は保たれるとした（光の道すじと同じ考え方）。届く量は、いる所から見た嵐の幅の角度ぶんの向きの割合。長い旅で少しずつ弱まる分・惑星の丸みで道すじが集まる効果・ほかの風は入れていない（だから遠くでは実際より高めに出る）。表面には、そよ風（3 m/s・1 時間）のさざ波を重ねている。うねりの向きの広がりは、嵐の幅の角度から決めた。</li>
+          <li>水の色・波の山を抜ける光の強さ・遠くのかすみは見た目で決めた。</li>
+          <li>太陽と月: きょうの日付・時刻・いる所（地球儀で動かせる。はじめは北緯 33°・東経 140°）から計算した本当の向き。時刻は経度から決めたその場所の時刻（経度 15° ごとに 1 時間）。太陽は NOAA の簡単な式（誤差 0.01° ほど）、月は Meeus の主な項と、地上から見たずれ（視差 約 1°）（誤差 0.3° ほど）。月は本当の大きさ（半径 0.26°）の球で、計算した太陽の向きから照らすので、満ち欠けと欠け方の向きは本当のとおり。月の光の強さは満月で太陽の 2.5×10⁻⁶、満ち欠けで Allen の式のとおり弱まる。夜は、目が暗さに慣れたくらいに、光をまとめて約 2.8 万倍にして見せている。朝・夕方はその日の日の出の 1 時間後・日の入の 30 分前。星の並びは見た目だけ。「進める」は 1 日を 4 分で。</li>
+          <li>雲: 高さ 1500 m の層（形はゆらぎの重ね合わせで見た目）。日がさす量は、その時刻に太陽（夜は月）の前にある雲の濃さで決まる（流れる雲で、ひなたとかげがなめらかに入れかわる）。雲が多いほど暗く、見通しが短くなる量は目安。</li>
+          <li>地球儀: 陸の形は ETOPO1（NOAA）を 1°（約 110 km）ごとにしたもの（細い海峡や小さな島は出ない）。うねりは大円（球の上のまっすぐな道）にそって進み、陸に当たった向きは止まる。届く量の横の広がりは球の上の距離 Re·sin(R/Re)（地球の裏側の近くでは、また集まる）。陸や海の色・氷・星は見た目。この場面のかすみは、地上の見通し 40 km・空気は高さ 8 km ごとにうすくなるとした（仮定）。</li>
+          <li>遠くの嵐: 嵐の海は CEM の式（吹いた時間と嵐の広さの小さいほうで決まる）。その分布が、深い海の群速度（周期 T 秒の波は 1 秒に g·T/4π m）で道すじにそって進み、分布は保たれるとした（光の道すじと同じ考え方）。届く量は、いる所から見た嵐の幅の角度ぶんの向きの割合。長い旅で少しずつ弱まる分・惑星の丸みで道すじが集まる効果・ほかの風は入れていない（だから遠くでは実際より高めに出る）。いる所の海は、この風の波とうねりを足したもの（風を 0 にするとうねりだけ）。うねりの向きの広がりは、嵐の幅の角度から決めた。</li>
           <li hidden>ミラーの惑星の 3D: 計算した水面（惑星のまわりの1本の線）を横に広げ、その上に風速 5 m/s・2 時間の小さな風の波を重ねている。惑星の丸み（半径 8300 km）で遠くは沈む。空気のかすみは 200 km（仮定）。「高さ×10」は大波の高さだけを 10 倍にして形を見せるもの（そのときは画面に書く）。浅い所の底の色・空は見た目（ブラックホールは空に描いていない）。カメラと物は水面に浮かんでいる。</li>
           <li hidden>ミラーの惑星: 1 次元（惑星のまわりにそった1本の線）の浅い海の式。半径 8300 km（地球と同じ密度と仮定）、深い海と浅い棚（幅 1500 km・ふちの坂 300 km、どちらも仮定）。潮の力は 2 つのふくらみの形（sin 2ψ）で、1 時間で行き来する。はじめの 2 時間でゆれを大きくしていく。地球の自転のような力（コリオリ）・2 次元の広がり・波の分散（ソリトン）は入れていない（だから大波は「砕けた段」＝ボアとして進む。映画の波は砕けていなかった）。格子は 6.4 km ごとなので、波の前の面の細かい形は出ない。映画の「1 時間 = 地球の 7 年」は映画の設定。</li>
           <li>空の色は大気の散乱の計算（1回散乱）。水平線のすぐ上は 2° の空で代用。</li>
@@ -141,6 +130,8 @@
           <li>Monahan &amp; O'Muircheartaigh (1980) J. Phys. Oceanogr. 10:2094 “Optimal power-law description of oceanic whitecap coverage dependence on wind speed”（白波の割合）</li>
           <li>Cox &amp; Munk (1954) J. Opt. Soc. Am. 44:838（海面の傾きのばらつき σ² = 0.003 + 5.12×10⁻³ U: 太陽の照り返しのにじみ）</li>
           <li>Nishita ほか (1993)（空の色: 大気の散乱）</li>
+          <li><a href="https://gml.noaa.gov/grad/solcalc/calcdetails.html" target="_blank" rel="noopener">NOAA Global Monitoring Laboratory: Solar Calculation Details</a>（太陽の位置）／Meeus (1998) <i>Astronomical Algorithms</i> 2nd ed., Willmann-Bell（月の位置）</li>
+          <li>Allen (1976) <i>Astrophysical Quantities</i> 3rd ed.（月の明るさと満ち欠けの角）</li>
           <li>McCowan (1894) Phil. Mag.（砕ける目安 H = 0.78 h）／Miche (1944)（波の急さの限界 H/L = 0.142 tanh kh）／Goda (2010) Coastal Engineering Journal（砕ける高さは条件でかわる）</li>
           <li hidden>Thorne のインタビュー: Scientific American (2014) “Parsing the Science of Interstellar with Physicist Kip Thorne”（ミラーの惑星の大波は、ブラックホールに同じ面を向けた惑星の小さなゆれによる潮）</li>
           <li hidden>Luminet (2015) “The Warped Science of Interstellar” arXiv:1503.08305（重力 1.3 g・波長が水深よりずっと長いので浅い海の式）</li>
@@ -166,8 +157,9 @@
 <script src="js/section.js"></script>
 <script src="js/beach.js"></script>
 <script src="js/beach3d.js"></script>
-<script src="js/miller.js"></script>
 <script src="js/swell.js"></script>
 <script src="js/globe.js"></script>
 <script src="js/guide.js"></script>
-<script src="js/main.js"></script>
+<script src="js/app.js"></script>
+<script src="js/storm.js"></script>
+<script src="js/scene.js"></script>

@@ -95,3 +95,14 @@ details summary{cursor:pointer}
 #views{display:grid;grid-template-columns:repeat(4,1fr)}
 #views button{padding:6px 2px;font-size:13px}
 #putRow .seg{justify-content:flex-start}
+/* 自由に動くボタン（スマホ・マウスでも）: 画面の左下に 3×2 */
+#flyPad{position:absolute;left:10px;bottom:30px;z-index:3;display:grid;grid-template-columns:repeat(3,44px);gap:4px;touch-action:none;user-select:none;-webkit-user-select:none}
+#flyPad button{height:40px;padding:0;background:rgba(14,34,51,.6);border-color:rgba(127,208,232,.5);font-size:14px}
+#flyPad button:active{background:#2f6a8c}
+#stStorm{background:rgba(90,40,20,.6)!important}
+#stormBox .row button.on{background:#7a3b2a;border-color:#ff8f6b}
+#stormMore summary{margin-top:6px;font-size:13px;color:var(--muted)}
+#swNums{font-size:13px;line-height:1.7;margin:6px 0}
+#swNums b{color:var(--acc);font-family:var(--f-mono)}
+#swPlace button.on{background:#2f6a8c;border-color:var(--acc)}
+#tods button.on{background:#2f6a8c;border-color:var(--acc)}
