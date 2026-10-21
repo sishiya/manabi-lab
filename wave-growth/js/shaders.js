@@ -233,7 +233,7 @@ void main(){sunC=sunCu*sunVis(L);
   float amt=fm*1.35+.18*crest;   // 波の山ほど泡が残りやすい
   float fresh=smoothstep(.42,.58,fm);   // 白く見える泡（面積の割合を観測に合わせているのと同じ境目 0.5）
   float edge=foamStyle<.5?.025:.06;if(foamStyle<.5)nz=mix(nz,vn(qs*4.1+9.)*.6+vn(qs*13.)*.4,.45);   // A はふちを細かく崩す
-  float fm0=b.z;fm=smoothstep(nz-edge,nz+edge,amt)*fresh;   // 白く見える泡だけ（うすい泡のもやは、灰色にくすんでうそくさいので描かない）
+  float fm0=b.z*foamK;fm=smoothstep(nz-edge,nz+edge,amt)*fresh;   // 白く見える泡だけ（うすい泡のもやは、灰色にくすんでうそくさいので描かない）
   // 本物の写真（NOAA の風力階級の写真）とくらべて足した（見た目の目安）: ①古い泡が風で引きのばされた細いすじ（風速 11〜18 m/s で現れる）
   // ②砕ける波頭の下の青緑（巻きこまれた気泡が光を散らす）
   float fsl=vn(q*vec2(.18,9.)+vec2(0,3.1))*.65+vn(q*vec2(.45,22.)+5.)*.35,sb=vn(q*vec2(.09,.9)+2.);   // 細いすじ × 途切れ

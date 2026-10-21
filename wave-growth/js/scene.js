@@ -97,6 +97,8 @@ function stepFly(dt) {
 }
 
 // ---- しぶき（風速 13 m/s から。波の山から風下へ飛ぶ白い粒。動きは見た目の目安: 風の 0.6 倍で流され、重力で落ちる） ----
+// 2026-10-21 ユーザー「しぶきがチープ」→ いったん外した（SPRAY = false。人が濡れるしぶきの計算は stepWet に残す）
+const SPRAY = false;
 const spray = [], sprayPts = [];
 function emitSpray(x, y, z, U) { const wx = Math.cos(WIND_ANG), wz = Math.sin(WIND_ANG);
   for (let n = 0; n < 8 && spray.length < 700; n++) spray.push({ p: [x + (Math.random() - .5) * 3, y + 0.2, z + (Math.random() - .5) * 3], v: [wx * U * (0.4 + 0.4 * Math.random()), 1 + Math.random() * 2.5, wz * U * (0.4 + 0.4 * Math.random())], life: 0.8 + Math.random() * 1.2 }); }
@@ -251,12 +253,12 @@ function draw(dt) {
   if (camFloat && pc) { const wc = pr[iCam + 1] ? pr[iCam + 1].d[1] : pc.d[1]; camWater = camWater == null ? wc : camWater + (wc - camWater) * (1 - Math.exp(-dt / 0.2)); cam.target[1] = camWater; cam.minY = camWater + 1.2; }
   else if (!flying) cam.target[1] = 0;
   const Ueff = st.Hm0 > 0 ? windAt(S.t) : 0;
-  if (Ueff >= 13 && !SUN.under && !(view === 'orbit' && cam.pitch < 0)) for (let j = 0; j < 5; j++) { const p = pr[iCam + 2 + j], sp = sprayPts[j]; if (p && sp && p.d[1] > 0.3 * st.Hm0 && Math.random() < dt * 6 * (Ueff - 12) / 8) emitSpray(sp.x + p.d[0], p.d[1], sp.z + p.d[2], Ueff); }
+  if (SPRAY && Ueff >= 13 && !SUN.under && !(view === 'orbit' && cam.pitch < 0)) for (let j = 0; j < 5; j++) { const p = pr[iCam + 2 + j], sp = sprayPts[j]; if (p && sp && p.d[1] > 0.3 * st.Hm0 && Math.random() < dt * 6 * (Ueff - 12) / 8) emitSpray(sp.x + p.d[0], p.d[1], sp.z + p.d[2], Ueff); }
   for (let j = 0; j < 5; j++) { const a = Math.random() * 2 * Math.PI, rr = 8 + Math.random() * 60, f = b.cf, fl = Math.hypot(f[0], f[2]) || 1;
     sprayPts[j] = { x: b.pos[0] + f[0] / fl * (rr + 10) + Math.cos(a) * rr * 0.6, z: b.pos[2] + f[2] / fl * (rr + 10) + Math.sin(a) * rr * 0.6, wb: 1, wc: 1 }; }
   stepSpray(dt);
   const cp = probeCam ? camProbe : [0, 0];
-  SUN.points = (T ? HUMANS.flatMap(h => PR.worldPts(S.obj, h.x, h.z, yaw)) : []).concat(FL.points(), [{ x: cp[0], z: cp[1], wb: 1, wc: 1 }, { x: FLOAT_AT[0], z: FLOAT_AT[1], wb: 1, wc: 0.5 }], Ueff >= 13 ? sprayPts : []);
+  SUN.points = (T ? HUMANS.flatMap(h => PR.worldPts(S.obj, h.x, h.z, yaw)) : []).concat(FL.points(), [{ x: cp[0], z: cp[1], wb: 1, wc: 1 }, { x: FLOAT_AT[0], z: FLOAT_AT[1], wb: 1, wc: 0.5 }], SPRAY && Ueff >= 13 ? sprayPts : []);
   // 濡れ: 波が高いと下のほうがしぶきで（見た目の目安）
   SUN.wetRain = 0; SUN.wetSplash = 0;   // 濡れは物ごと（stepWet）
   skyEnv();
