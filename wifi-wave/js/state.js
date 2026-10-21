@@ -58,7 +58,7 @@ const PRESETS=[
       'In Japanese apartments the router often sits in a wiring box near the entrance. The signal still reaches the living room because the waves flow along the hallway and through the doors. <b>Switch to 5 GHz, or drag the yellow router or the phone,</b> and watch how the signal changes.'),
     now:L('<b>2LDKマンション。</b>外側の壁はコンクリート、部屋の仕切りは石こうボード、冷蔵庫と玄関ドアは金属。左の洋室の窓とLDKのベランダ側はガラスです。',
       '<b>A 2-bedroom apartment (a Japanese “2LDK”).</b> The outer walls are concrete, the walls between rooms are gypsum board, and the fridge and front door are metal. The windows of the bedroom on the left and on the balcony side of the living room are glass.'),
-    labels:[[L('洋室1','Bedroom 1'),2.0,1.5],[L('洋室2','Bedroom 2'),2.0,4.5],[L('浴室','Bath'),4.0,1.15],[L('洗面','Washroom'),4.55,2.15],[L('トイレ・収納','Toilet / storage'),4.55,4.5],[L('廊下','Hall'),4.55,3.05],[L('玄関','Entrance'),L(1.35,2.05),3.25],[L('LDK','Living / kitchen'),7.3,2.6],[L('冷蔵庫','Fridge'),6.07,1.62],[L('ベランダ側の窓','Balcony windows'),8.35,5.2]],
+    labels:[[L('洋室1','Bedroom 1'),2.0,1.5],[L('洋室2','Bedroom 2'),2.0,4.5],[L('浴室','Bath'),4.0,1.15],[L('洗面','Washroom'),4.55,2.15],[L('トイレ・収納','Toilet / storage'),4.55,4.5],[L('廊下','Hall'),4.55,3.05],[L('玄関','Entrance'),L(1.75,2.05),3.25],[L('LDK','Living / kitchen'),7.3,2.6],[L('冷蔵庫','Fridge'),6.07,1.62],[L('ベランダ側の窓','Balcony windows'),8.35,5.2]],
     build(){
       // outer RC walls
       wallM('conc',.55,.55,9.05,.55); wallM('conc',.55,5.45,9.05,5.45);

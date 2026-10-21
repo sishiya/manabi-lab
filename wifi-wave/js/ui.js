@@ -106,10 +106,15 @@ function wallsBetween(){
   wallsKey=k;
   const [x0,y0]=S.router,[x1,y1]=S.phone,len=Math.hypot(x1-x0,y1-y0),n=Math.ceil(len*2);
   const cnt={}; let prev=0, lastExit={};
+  const at=i=>[Math.round(x0+(x1-x0)*i/n), Math.round(y0+(y1-y0)*i/n)];
+  // the air gap is a wall's own cavity (gypsum board: 2 boards + 7.5 cm gap) when the same material is on both sides of it along x or y;
+  // a line crossing the wall at a shallow angle has a long gap, so the distance along the line alone would count one wall twice
+  const hit=(x,y,dx,dy,id)=>{for(let k=1;k<=16;k++){const u=x+dx*k,v=y+dy*k;if(u<0||v<0||u>=W||v>=H)return false;if(ids[v*W+u]===id)return true;}return false;};
+  const cavity=(a,b,id)=>{const [x,y]=at((a+b)>>1);return (hit(x,y,1,0,id)&&hit(x,y,-1,0,id))||(hit(x,y,0,1,id)&&hit(x,y,0,-1,id));};
   for(let i=0;i<=n;i++){
-    const x=Math.round(x0+(x1-x0)*i/n), y=Math.round(y0+(y1-y0)*i/n), id=ids[y*W+x];
+    const [x,y]=at(i), id=ids[y*W+x];
     if(id!==prev){
-      if(id){ if(!(lastExit[id]!==undefined && i-lastExit[id]<=24)) cnt[id]=(cnt[id]||0)+1; }
+      if(id){ const le=lastExit[id]; if(!(le!==undefined && (i-le<=24 || cavity(le,i,id)))) cnt[id]=(cnt[id]||0)+1; }
       if(prev) lastExit[prev]=i;
       prev=id;
     }
