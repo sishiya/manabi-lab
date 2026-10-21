@@ -13,8 +13,8 @@
     <section id="pin">
       <div id="stage">
         <canvas id="cv"></canvas><canvas id="ov"></canvas>
-        <canvas id="sec" hidden></canvas><div id="beachBar" hidden><span id="slopes"><button data-s="0.1">急な浜</button><button data-s="0.033">ふつう</button><button data-s="0.01">遠浅</button></span><button id="beach3dBtn">3D で見る</button><button id="beachClose">× 海にもどる</button></div><div id="secBar" hidden><button id="secMag">動きを3倍に</button><button id="secClose" aria-label="断面を閉じる">× 海にもどる</button></div>
-        <div id="hint">ドラッグで回す・ホイール／2本指で近づく</div>
+        <canvas id="sec" hidden></canvas><div id="beachBar" hidden><span id="slopes"><button data-s="0.1">急な浜</button><button data-s="0.033">ふつう</button><button data-s="0.01">遠浅</button></span><span id="beachKinds"><button data-b="3d">3D</button><button data-b="sec">断面図</button></span><button id="beachClose" aria-label="浜をはなれる">× 上からにもどる</button></div><div id="secBar" hidden><button id="secMag">動きを3倍に</button><button id="secClose" aria-label="断面を閉じる">× 断面をとじる</button></div>
+        <div id="state"><b id="stView">上から見る</b> <span id="stCtl"></span><span id="stPause" hidden></span></div>
         <button id="next">つぎへ ▶</button>
         <div id="glerr" hidden></div>
       </div>
@@ -61,25 +61,22 @@
       <div id="timeBox" class="box">
         <div class="row"><span>風が吹きはじめてから</span><b id="tLabel">0 分</b></div>
         <input id="tSlider" type="range" min="0" max="1000" value="0" aria-label="風が吹きはじめてからの時間">
-        <canvas id="tl" aria-hidden="true"></canvas>
         <div class="ticks"><span style="left:0">0</span><span style="left:11.8%">1時間</span><span style="left:28.9%">6</span><span style="left:57.7%">24</span><span style="left:100%">72時間</span></div>
         <div class="row"><button id="play">▶</button>
           <span id="speeds"><button data-s="0" title="はじめはゆっくり、だんだん速く（72時間を1分で）">おまかせ</button> 1秒で <button data-s="600">10分</button><button data-s="3600">1時間</button></span></div>
       </div>
+      <div id="windBox" class="box">
+        <div class="row"><span>風の速さ</span><b id="wLabel">10 m/s</b></div>
+        <input id="wSlider" type="range" min="0" max="20" step="0.5" value="10" aria-label="風の速さ">
+        <p class="note">72 時間ずっと同じ風が吹きます。変えると、はじめからその風が吹いていたときの海に、すぐ変わります（時間はそのまま）。</p>
+      </div>
       <div id="viewBox" class="box">
+        <div class="row" id="viewsRow"><span>見かた</span><span id="views" class="seg"><button data-v="orbit">上から</button><button data-v="float" title="海面に浮かんで見る">海面から</button><button data-v="dive">水の中</button><button data-v="beach" title="浜（浅い海）">浜</button></span></div>
+        <div class="row" id="putRow"><span>浮かべる</span><span class="seg"><button id="humanBtn" aria-pressed="true">人</button><button id="buoyBtn" aria-pressed="false">ブイ</button><button id="secBtn" aria-pressed="false">ブイの真下の断面</button></span></div>
+        <div class="sub" id="putSub">ブイは海をタップしても浮かべられます（6 こまで）。もう一度おすと消えます。</div>
         <div class="row"><span>時間帯</span><span id="tods"><button data-k="morning">朝</button><button data-k="noon">昼</button><button data-k="evening">夕方</button><button data-k="night">夜</button><button data-k="auto" title="1日を4分で">自動</button></span></div>
         <div class="row"><span>天気</span><span id="weathers"><button data-k="fine">快晴</button><button data-k="clear">晴れ</button><button data-k="cloudy">くもり</button><button data-k="rain">雨</button><button data-k="fog">霧</button></span></div>
-        <div class="row"><span>大きさくらべ</span><span id="objs"><button data-k="none">なし</button><button data-k="human">人</button><button data-k="boat" hidden>ボート</button><button data-k="fishing" hidden>漁船</button><button data-k="ship" hidden>大きな船</button></span></div>
         <div class="row"><span>泡の形（見比べ）</span><span id="foamStyles"><button data-f="0">A 崩れた波頭</button><button data-f="1">B 風下のすじ</button><button data-f="2">C かたまり</button></span></div>
-        <div class="row"><span>カメラ</span><span><button id="floatBtn" aria-pressed="false">海面に浮かべる: OFF</button> <button id="diveBtn" aria-pressed="false">水の中へ</button></span></div>
-        <div class="row"><span>ブイ</span><span><button id="secBtn">断面を見る</button> <button id="clearBtn">消す</button></span></div>
-        <div class="sub">海をタップすると浮かべられます（6 こまで）。ブイをタップすると断面。</div>
-        <div class="row"><span>浅い海へ</span><button id="beachBtn">浜への断面を見る</button></div>
-      </div>
-      <div id="windBox" class="box">
-        <div class="row"><span>風の速さ（いまから先）</span><b id="wLabel">10 m/s</b></div>
-        <input id="wSlider" type="range" min="0" max="20" step="0.5" value="10" aria-label="風の速さ">
-        <p class="note">時間のつまみの位置から先の風が変わります（上の帯の色）。風を弱めても、この版では波は小さくなりません。</p>
       </div>
       <div id="graphBox" class="box">
         <div class="row"><span>どの長さの波が、どれだけあるか</span></div>
@@ -103,14 +100,13 @@
         <h3>計算のしかた</h3>
         <ul>
           <li>風速 U（海面から 10 m の高さ）と吹いた時間 → 同じ育ち方をする距離 → 波の高さ（有義波高）とピークの周期（CEM の式）。発達しきった海で止まる。</li>
-          <li>風を途中で変えたとき: 区間ごとに「いまの高さになるまで新しい風で何時間吹けばよいか」に置きかえて続きを計算（CEM・SPM のふつうのやり方）。</li>
+          <li>風は 72 時間ずっと同じ速さ（つまみで変えると、はじめからその風が吹いていたとして計算しなおす）。</li>
           <li>分布の形は JONSWAP（γ 3.3）を、その高さと周期に合わせる。向きの広がりは cos<sup>2s</sup>(θ/2)、s は周期によって変わり、いちばん多い波で 10。</li>
           <li>海面: 分布どおりの波を 3 枚（1280 m・160 m・20 m）の FFT で重ねる。深い海の速さ（ω² = gk）で動く。</li>
         </ul>
         <h3>簡単にしたところ・推定</h3>
         <ul>
           <li>深い海だけ。風はずっと同じ向きで、場所によらない。うねり（遠くから来る波）は入れていない。</li>
-          <li>風を弱めても波は小さくならない（本当はゆっくりうねりになって出ていく）。</li>
           <li>波長 20 cm より短い波は描いていない。くり返しのため、周期を 1000 秒で一周するように少しだけ丸めている。</li>
           <li>ブイは、その場の水の動き（3枚の海面の分）のとおりに動かし、風下へ流される分（ストークスドリフト。Kenyon 1969 の式）を足している。この版の分布は短い波が少ないので、流される速さは実際の海より小さめ（風速の 1〜1.5%。Kenyon は発達した海で 1.6〜3.6%）。</li>
           <li>浜への断面: いちばん多い波（周期 Tp・高さ Hm0）1つが、まっすぐな坂の浜へまっすぐ進むとして、線形の波の式（ω² = gk tanh kh、エネルギーの流れが同じ）で高さ・長さ・速さを出す。砕けるのは水深の 0.78 倍（McCowan 1894）か波の急さの限界（Miche 1944）の早いほう。本当の砕ける高さは坂の急さや波の形でかわる（Goda 2010）。砕けたあとは高さ = 水深 × 0.78 として簡単にした。底との摩擦・波の向きが曲がること（屈折）は入れていない。</li>

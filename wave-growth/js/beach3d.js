@@ -41,7 +41,7 @@ window.WGbeach3d = (() => {
   // 砂浜と海の底（物として描く。−x が沖）。頂点 [x,y,z, n, 色, つや・濡れやすさ]
   function sandMesh() {
     const v = [], { dx, xShore, land, slope } = M, nz = 1, Z = 3000;
-    const put = (x, y, z, c) => v.push(x, y, z, -slope * 0, 1, 0, ...c, 0.2, 1);
+    const put = (x, y, z, c) => v.push(x, y, z, 0, 1, 0, ...c, 0.2, 1, 0);   // 1 頂点 12 個（ocean.js の makeMesh。前は 11 個で、陸のほうの三角形がくずれていた）
     const step = 8;
     for (let i = 0; i + step < N; i += step) {
       const s0 = (i + 0.5) * dx, s1 = (i + step + 0.5) * dx, x0 = s0 - B.x0, x1 = s1 - B.x0, y0 = land[i], y1 = land[i + step];

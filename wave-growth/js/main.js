@@ -38,18 +38,18 @@ addEventListener('resize', resize); resize();
 // ---- 時間のつまみ（目盛りは平方根: はじめの数時間を見やすく） ----
 const tSlider = $('tSlider');
 const t2v = t => Math.round(Math.sqrt(t / TMAX) * 1000), v2t = v => TMAX * (v / 1000) ** 2;
-tSlider.addEventListener('input', () => { S.t = v2t(+tSlider.value); S.play = false; S.free = true; update(); });
+// つまみを動かすあいだだけ止め、はなしたら前の状態（再生中なら再生）にもどす
+tSlider.addEventListener('pointerdown', () => { if (S.resume == null) S.resume = S.play; });
+tSlider.addEventListener('input', () => { if (S.resume == null) S.resume = S.play; S.t = v2t(+tSlider.value); S.play = false; S.free = true; update(); });
+tSlider.addEventListener('change', () => { if (S.resume) S.play = true; S.resume = null; update(); });
 $('play').onclick = () => { if (S.t >= TMAX) S.t = 0; S.play = !S.play; S.free = true; update(); };
 document.querySelectorAll('#speeds button').forEach(b => b.onclick = () => { S.speed = +b.dataset.s; update(); });
 
-// ---- 風（ここから先の風を変える） ----
+// ---- 風（72 時間ずっと同じ。変えると、はじめからその風だったとして計算しなおす） ----
 const wSlider = $('wSlider');
 function windAt(t) { let U = 0; for (const e of S.sched) if (e.t <= t) U = e.U; return U; }
 wSlider.addEventListener('input', () => {
-  const U = +wSlider.value;
-  S.sched = S.sched.filter(e => e.t < S.t - 1); S.sched.push({ t: S.t, U });
-  if (S.sched[0].t > 0) S.sched.unshift({ t: 0, U });
-  S.free = true; update();
+  S.sched = [{ t: 0, U: +wSlider.value }]; S.free = true; update();
 });
 function resetWind(U) { S.sched = [{ t: 0, U }]; }
 
@@ -70,6 +70,7 @@ function update() {
   tSlider.value = t2v(S.t);
   $('tLabel').textContent = fmtTime(S.t);
   $('play').textContent = S.play ? '❚❚' : '▶';
+  const ps = $('stPause'); ps.hidden = S.play || mode !== 'earth'; ps.textContent = S.t >= TMAX ? '72 時間まで来ました（▶ でもう一度）' : S.t < 60 ? '止まっています（▶ で風が吹きはじめます）' : '一時停止中（▶ で進む）';
   document.querySelectorAll('#speeds button').forEach(b => b.classList.toggle('on', +b.dataset.s === S.speed));
   wSlider.value = U; $('wLabel').textContent = U.toFixed(1) + ' m/s';
   const lam = W.G * st.Tp ** 2 / (2 * Math.PI), c = W.G * st.Tp / (2 * Math.PI);
@@ -79,17 +80,17 @@ function update() {
   $('nL').textContent = st.Tp > 0 ? (lam < 1 ? (lam * 100).toFixed(0) + ' cm' : lam.toFixed(lam < 10 ? 1 : 0) + ' m') : '—';
   $('nC').textContent = st.Tp > 0 ? c.toFixed(1) + ' m/s' + (U > 0 ? `（風の ${(c / U).toFixed(2)} 倍）` : '') : '—';
   $('nS').textContent = st.Hm0 <= 0 ? '凪' : st.kept ? '前の強い風の波が残っている' : st.full ? '発達しきった' : '育っている途中';
-  cam.minY = 1.5 + 1.2 * st.Hm0;
+  if (!diving) cam.minY = 1.5 + 1.2 * st.Hm0;   // 水の中へ のときは持ち上げない（再生中は毎コマここを通るので、前は水の上へもどされていた）
   // 風力階級（気象庁）
   const bf = window.WGbeaufort.at(U); $('nB').textContent = '風力 ' + bf[0]; $('nBd').textContent = bf[3];
   if (bfRow !== bf[0]) { bfRow = bf[0]; document.querySelectorAll('#bfTable tbody tr').forEach((tr, i) => tr.classList.toggle('now', i === bf[0])); }
   // 自分でつまみを動かしたら、案内の文のかわりに、いまの様子をひとことで
-  if (S.free) { window.WGguide.clear(); $('stepNo').textContent = '';
+  refreshToggles();
+  if (S.free) { window.WGguide.clear(); $('stepNo').textContent = '自由に見ている'; $('next').textContent = window.WGguide.index < 0 ? '案内をはじめる ▶' : '案内のつづき ▶';
     $('cap').textContent = st.Hm0 <= 0 ? (U > 0 ? '風が吹く前。海は鏡のように平ら。' : '風がない。海は鏡のように平ら。')
       : `風速 ${U.toFixed(U % 1 ? 1 : 0)} m/s の風が吹いて ${fmtTime(S.t)}。波の高さ ${$('nH').textContent}、いちばん多い波の長さ ${$('nL').textContent}。`
         + (st.full ? 'もうこれ以上は育ちません。' : st.kept ? '前の強い風の波が残っています。' : ''); }
   window.WGgraph.draw($('graph'), Object.assign({ U }, st), S.sched, S.t);
-  drawTimeline();
 }
 // 海の分布を GPU へ（毎コマ見て、変わっていたら。続けて動かしているときは 90 ms に1回）
 function syncSea() {
@@ -97,16 +98,6 @@ function syncSea() {
   if (ocean && (windAt(S.t) !== lastSea.U || Math.abs(st.Hm0 - lastSea.H) > 0.004 * Math.max(st.Hm0, 0.01) || Math.abs(st.Tp - lastSea.T) > 0.003 * Math.max(st.Tp, 0.1)) && now - lastSea.at > 90) {
     ocean.setSea(st.Hm0, st.Tp, WIND_ANG, windAt(S.t)); lastSea = { H: st.Hm0, T: st.Tp, at: now, U: windAt(S.t) };
   }
-}
-// 風の記録の帯（つまみの下）
-function drawTimeline() {
-  const c = $('tl'), r = c.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
-  if (c.width !== Math.round(r.width * dpr)) { c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr); }
-  const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, r.width, r.height);
-  S.sched.forEach((e, i) => {
-    const x0 = Math.sqrt(e.t / TMAX) * r.width, x1 = Math.sqrt((i + 1 < S.sched.length ? S.sched[i + 1].t : TMAX) / TMAX) * r.width;
-    g.fillStyle = e.U > 0 ? `hsl(${205 - e.U * 2}, 70%, ${28 + e.U * 2.4}%)` : '#2a3a48'; g.fillRect(x0, 0, x1 - x0, r.height);
-  });
 }
 
 // 風の向きの矢印（画面の右上。カメラを回すと一緒に回る）
@@ -121,8 +112,8 @@ function drawOverlay(b, dt = 0) {
     g.font = '12px ' + getComputedStyle(document.documentElement).getPropertyValue('--f-body'); g.fillStyle = 'rgba(255,255,255,.85)'; g.textAlign = 'left';
     g.fillText('線 = うねりの前の面（赤 20 秒・黄 15 秒・緑 11 秒・青 8 秒）', 12, r.height - 30); }
   drawSpray(g); drawPropLabel(g); drawTrails(g);
-  if (diving) { const t2 = `水の中: 深さ ${(-cam.eye).toFixed(1)} m（ホイールで深さ・ドラッグで見上げる）`; g.font = '13px ' + getComputedStyle(document.documentElement).getPropertyValue('--f-body'); g.textAlign = 'left';
-    const tw = g.measureText(t2).width; g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(8, 30, tw + 10, 18); g.fillStyle = '#fff'; g.fillText(t2, 13, 43); }
+  if (diving) { const t2 = `水の中・深さ ${(-cam.eye).toFixed(1)} m`; if ($('stView').textContent !== t2) $('stView').textContent = t2; }
+  else if (camFloat) { const t2 = `海面に浮かぶ・目の高さ ${cam.eye.toFixed(1)} m`; if ($('stView').textContent !== t2) $('stView').textContent = t2; }
   g.font = '12px ' + getComputedStyle(document.documentElement).getPropertyValue('--f-body'); g.textAlign = 'left'; g.fillStyle = 'rgba(255,255,255,.8)';
   g.fillText(E.clockText(S.clock) + (S.tod === 'auto' ? '（時間が進む）' : ''), 12, r.height - 14);
   const U = mode === 'swell' ? -1 : windAt(S.t); if (!(U > 0) && mode !== 'swell') return;
@@ -165,9 +156,12 @@ const OBJ_YAW = { human: 1.9, boat: 1.3, fishing: 1.3, ship: 1.3 };   // 人は�
 let objPose = null, wetRain = 0;
 function setObj(k) { S.obj = k; objPose = null;
   if (k !== 'none' && ocean && !objMeshes[k]) objMeshes[k] = ocean.makeMesh(PR.TYPES[k].geo());
-  if (k !== 'none') guideApi.camTo({ dist: PR.TYPES[k].dist });
-  document.querySelectorAll('#objs button').forEach(b => b.classList.toggle('on', b.dataset.k === k)); }
-document.querySelectorAll('#objs button').forEach(b => b.onclick = () => setObj(b.dataset.k));
+  if (k !== 'none' && view === 'orbit') guideApi.camTo({ dist: PR.TYPES[k].dist });
+  refreshToggles(); }
+$('humanBtn').onclick = () => setObj(S.obj === 'human' ? 'none' : 'human');
+// 「浮かべる」の 3 つのボタンの ON/OFF を、いまの状態に合わせる（案内やタップで変わったときも）
+function refreshToggles() { const t = (id, on) => { const b = $(id); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); };
+  t('humanBtn', S.obj === 'human'); t('buoyBtn', FL.list.length > 0); t('secBtn', secOpen); }
 // 物の上に「人 身長 1.7 m」などの札（画面に投げて）
 function drawPropLabel(g) {
   if (S.obj === 'none' || !objPose || !ocean || !ocean.VP || (SUN.globe && SUN.globe.alpha > 0.3)) return;   // 3D のミラーの惑星でも同じ。地球儀のときは出さない
@@ -178,21 +172,26 @@ function drawPropLabel(g) {
   const tw = g.measureText(text).width + 12; g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(x - tw / 2, y - 16, tw, 18); g.fillStyle = '#fff'; g.fillText(text, x, y - 3);
 }
 
-// カメラを海面に浮かべる（地球の海）: 見つめる点がその場の水面と一緒に上下する
-let camFloat = false, camWater = null; const FLOAT_AT = [-8, -3];   // 浮かべたカメラの場所（人から少しはなれた所。真下の水面を読む）
-function setFloat(on) { camFloat = on; camWater = null; const b = $('floatBtn'); b.textContent = '海面に浮かべる: ' + (on ? 'ON' : 'OFF'); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
-  camAnim = null; if (on) { cam.free = true; cam.eye = 1.6; cam.dist = 0.01; cam.pitch = 0.05; cam.target = [FLOAT_AT[0], 0, FLOAT_AT[1]]; cam.yaw = Math.atan2(-FLOAT_AT[1], -FLOAT_AT[0]); }   // 人のほうを向く
-  else { cam.free = false; cam.target = [0, 0, 0]; cam.dist = 16; cam.pitch = 0.12; } }
-$('floatBtn').onclick = () => setFloat(!camFloat);
+// ---- 見かた（上から・海面に浮かぶ・水の中・浜）。どれもドラッグで回す／見回す、ホイール／2本指で近づく（高さ・深さ） ----
+// 海面に浮かぶ: 見つめる点がその場の水面と一緒に上下する。水の中: 平均の水面から eye（負）の深さ。波の谷が来るとカメラが水の外に出ることもある（そのときはふつうに描く）
+let view = 'orbit', camFloat = false, camWater = null, diving = false; const FLOAT_AT = [-8, -3];   // 浮かべたカメラの場所（人から少しはなれた所。真下の水面を読む）
+const VIEW_TXT = { orbit: ['上から見る', 'ドラッグ: 回す・ホイール／2本指: 近づく'], float: ['海面に浮かぶ', 'ドラッグ: 見回す・ホイール／2本指: 目の高さ'],
+  dive: ['水の中', 'ドラッグ: 見回す・ホイール／2本指: 深さ'], beach: ['浜（浅い海）', 'ドラッグ: 回す・ホイール／2本指: 近づく'], beachSec: ['浜（浅い海）の断面図', '坂の急さを右下でえらべます'] };
+function viewChip(k) { $('stView').textContent = VIEW_TXT[k][0]; $('stCtl').textContent = VIEW_TXT[k][1]; }
+function setView(v) {
+  if (mode !== 'earth') setMode('earth');
+  camAnim = null; if (secOpen) closeSection(); if (beachOpen) closeBeach();
+  view = v; camFloat = v === 'float'; diving = v === 'dive'; camWater = null; cam.dive = diving; cam.fovY = 52 * Math.PI / 180;
+  if (v === 'float') { cam.free = true; cam.eye = 1.6; cam.dist = 0.01; cam.pitch = 0.05; cam.target = [FLOAT_AT[0], 0, FLOAT_AT[1]]; cam.yaw = Math.atan2(-FLOAT_AT[1], -FLOAT_AT[0]); }   // 人のほうを向く
+  else if (v === 'dive') { cam.free = true; cam.eye = -4; cam.dist = 0.01; cam.pitch = -0.35; cam.minY = -1e9; cam.target = [0, 0, 0]; }
+  else { cam.free = false; cam.eye = 3; cam.target = [0, 0, 0]; cam.dist = 16; cam.pitch = 0.12; }
+  if (v === 'beach') openBeach('3d');
+  document.querySelectorAll('#views button').forEach(b => { const on = b.dataset.v === v; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+  viewChip(v === 'beach' && !beach3d ? 'beachSec' : v); }
+document.querySelectorAll('#views button').forEach(b => b.onclick = () => setView(b.dataset.v));
 // 泡の形（見比べ。白く見える泡の量は観測の式でどれも同じ）
 function setFoamStyle(k) { SUN.foamStyle = k; document.querySelectorAll('#foamStyles button').forEach(b => b.classList.toggle('on', +b.dataset.f === k)); }
 document.querySelectorAll('#foamStyles button').forEach(b => b.onclick = () => setFoamStyle(+b.dataset.f));
-// 水の中へ: 平均の水面から eye（負）の深さ。見上げられる。波の谷が来るとカメラが水の外に出ることもある（そのときはふつうに描く）
-let diving = false;
-function setDive(on) { diving = on; camAnim = null; const b = $('diveBtn'); b.textContent = on ? '水から出る' : '水の中へ'; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on);
-  if (on) { if (camFloat) setFloat(false); cam.free = true; cam.dive = true; cam.eye = -4; cam.dist = 0.01; cam.pitch = -0.35; cam.minY = -1e9; cam.target[1] = 0; }
-  else { cam.free = false; cam.dive = false; cam.eye = 3; cam.dist = 16; cam.pitch = 0.12; } }
-$('diveBtn').onclick = () => setDive(!diving);
 // しぶき（風速 13 m/s から。波の山から風下へ飛ぶ白い粒。動きは見た目の目安: 風の 0.6 倍で流され、重力で落ちる）
 const spray = [], sprayPts = [];
 function emitSpray(x, y, z, U) { const wx = Math.cos(WIND_ANG), wz = Math.sin(WIND_ANG);
@@ -229,26 +228,33 @@ cv.addEventListener('pointerup', e => {
   const d = [0, 1, 2].map(i => b.cf[i] + nx * tx * b.cr[i] + ny * ty * b.cu[i]);
   if (d[1] >= -1e-3) return;
   const t = -b.pos[1] / d[1]; if (t > 400) return;
-  FL.add(b.pos[0] + d[0] * t, b.pos[2] + d[2] * t, S.simT);
+  FL.add(b.pos[0] + d[0] * t, b.pos[2] + d[2] * t, S.simT); refreshToggles();
 });
-$('clearBtn').onclick = () => { FL.clear(); closeSection(); };   // ブイの真下の断面なので一緒に閉じる
+$('buoyBtn').onclick = () => { if (FL.list.length) { FL.clear(); closeSection(); } else { if (view !== 'orbit') setView('orbit'); FL.add(-6, -1.5, S.simT); } refreshToggles(); };   // 断面はブイの真下なので一緒に閉じる
 // 断面
 let secOpen = false;
 let secMag = 1, beachOpen = false, beachSlope = 0.033;
-function openBeach() { if (beachOpen) { closeBeach(); return; } closeSection(); $('beachBtn').textContent = '浜の断面をとじる'; beachOpen = true; $('sec').hidden = false; $('beachBar').hidden = false; $('next').hidden = true; $('stage').classList.add('sec'); }
+function openBeach(kind) { beachOpen = true; $('beachBar').hidden = false; $('next').hidden = true; setBeachKind(kind); }
 // 浜を 3D で（浅い海）
 let beach3d = false, sandMesh = null, sandKey = '';
-function setBeach3d(on) { beach3d = on; $('beach3dBtn').textContent = on ? '断面図にもどる' : '3D で見る'; $('beach3dBtn').classList.toggle('on', on);
-  $('sec').hidden = on || !beachOpen; camAnim = null; $('stage').classList.toggle('sec', !on && beachOpen);   // 3D のあいだは文字の層を出す
-  if (on) { cam.free = true; cam.eye = 1.6; cam.dist = 0.01; cam.pitch = 0.04; cam.yaw = Math.PI; cam.minY = -1e9;
-    if (ocean) { const r = W.fromDuration(4, HOUR); ocean.setSea(r.Hm0, r.Tp, WIND_ANG, 4); } }
-  else { cam.free = false; cam.target[1] = 0; cam.dist = 16; cam.pitch = 0.12; lastSea = { H: -1, T: -1, at: 0 }; } }
-$('beach3dBtn').onclick = () => setBeach3d(!beach3d);
+// 3D: 上からと同じ回るカメラ（岸と砕ける所のあいだを見る）。断面図: 横から見た図
+function setBeachKind(k) { beach3d = k === '3d'; camAnim = null;
+  document.querySelectorAll('#beachKinds button').forEach(b => b.classList.toggle('on', b.dataset.b === k));
+  $('sec').hidden = beach3d; $('stage').classList.toggle('sec', !beach3d);   // 3D のあいだは文字の層を出す
+  if (beach3d) { cam.free = false; cam.yaw = 0.6; cam.pitch = 0.3; cam.dist = 90; beachTx = null;
+    if (ocean) { const r = W.fromDuration(4, HOUR); ocean.setSea(r.Hm0, r.Tp, WIND_ANG, 4); } }   // 浜の 3D の小さな風の波（4 m/s・1 時間）
+  if (beachOpen) viewChip(beach3d ? 'beach' : 'beachSec'); }
+document.querySelectorAll('#beachKinds button').forEach(b => b.onclick = () => setBeachKind(b.dataset.b));
+let beachTx = null;
 function drawBeach3d(dt) {
-  const st = S.st; if (!(st.Hm0 > 0.02)) { setBeach3d(false); return; }
+  const st = S.st; if (!(st.Hm0 > 0.02)) { setBeachKind('sec'); return; }   // 波がほとんどないうちは断面図で
   const B = window.WGbeach3d.frame(st, S.simT, beachSlope), M2 = window.WGbeach3d.info(), k2 = st.Hm0.toFixed(3) + '/' + st.Tp.toFixed(3) + '/' + beachSlope;
   if (k2 !== sandKey && ocean) { sandKey = k2; sandMesh = ocean.makeMesh(window.WGbeach3d.sandMesh()); }
-  const ground = 12 * beachSlope; cam.target[1] = ground; const b = cam.basis();
+  // 見る点: 岸（x = −12）と砕ける所のまん中の水面。カメラは陸の上でも地面の下に入らない
+  const bi0 = M2.brkInfo, want = -12 - (bi0 ? (M2.X - bi0.x) / 2 : 20); beachTx = beachTx == null ? want : beachTx + (want - beachTx) * Math.min(1, dt * 3);
+  cam.target[0] = beachTx; cam.target[1] = 0; cam.target[2] = 0;
+  { const ch = Math.cos(cam.pitch), px = beachTx - Math.cos(cam.yaw) * ch * cam.dist; cam.minY = Math.max(0, px + 12) * beachSlope + 1.5 + 1.2 * st.Hm0; }
+  const b = cam.basis();
   Object.assign(SUN, E.make(S.clock, S.weather)); SUN.big = B; B.planeY = 0; SUN.far = 30000; SUN.curvR = 0; SUN.fogH = 0; SUN.globe = null;
   SUN.windU = 4; SUN.windA = WIND_ANG; SUN.foamW = 3.84e-6 * Math.pow(4, 3.41); SUN.rough0 = Math.sqrt(Math.max(0.003 + 5.12e-3 * 4 - ocean.fftSlope, 1.5e-4));
   SUN.meshes = sandMesh ? [{ mesh: sandMesh, M: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]) }] : []; SUN.points = []; SUN.wetRain = 0; SUN.wetSplash = 0;
@@ -257,20 +263,20 @@ function drawBeach3d(dt) {
   if (ov.width !== Math.round(r.width * dpr) || ov.height !== Math.round(r.height * dpr)) { ov.width = Math.round(r.width * dpr); ov.height = Math.round(r.height * dpr); }
   const g = ov.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, r.width, r.height); if (SUN.rain) drawRain(g, r.width, r.height, dt);
   const bi = M2.brkInfo, fmt = v => v < 1 ? (v * 100).toFixed(0) + ' cm' : v.toFixed(1) + ' m';
-  const lines = [`浜に立って沖を見ています（坂 1/${Math.round(1 / beachSlope)}）。沖の波 ${fmt(st.Hm0)}・周期 ${st.Tp.toFixed(1)} 秒`,
-    bi ? `砕ける所: 岸から ${(M2.X - bi.x).toFixed(0)} m・水深 ${fmt(bi.h)}・波の高さ ${fmt(bi.H)}` : '', 'ドラッグで見回す・ホイールで目の高さ'];
+  const lines = [`坂 1/${Math.round(1 / beachSlope)}・沖の波 ${fmt(st.Hm0)}・周期 ${st.Tp.toFixed(1)} 秒`,
+    bi ? `砕ける所: 岸から ${(M2.X - bi.x).toFixed(0)} m・水深 ${fmt(bi.h)}・波の高さ ${fmt(bi.H)}` : ''];
   g.font = '13px ' + getComputedStyle(document.documentElement).getPropertyValue('--f-body'); g.textAlign = 'left';
-  lines.filter(Boolean).forEach((l, i) => { const tw = g.measureText(l).width; g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(8, 8 + i * 20, tw + 10, 18); g.fillStyle = '#fff'; g.fillText(l, 13, 21 + i * 20); });
+  lines.filter(Boolean).forEach((l, i) => { const tw = g.measureText(l).width; g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(8, 36 + i * 20, tw + 10, 18); g.fillStyle = '#fff'; g.fillText(l, 13, 49 + i * 20); });   // 上の「見かた」の札の下
 }
-function closeBeach() { if (beach3d) setBeach3d(false); beachOpen = false; $('beachBtn').textContent = '浜への断面を見る'; $('beachBar').hidden = true; if (!secOpen) { $('sec').hidden = true; $('next').hidden = false; $('stage').classList.remove('sec'); } }
+function closeBeach() { const was3d = beach3d; beach3d = false; beachOpen = false; if (was3d) { cam.target = [0, 0, 0]; lastSea = { H: -1, T: -1, at: 0 }; } $('beachBar').hidden = true; if (!secOpen) { $('sec').hidden = true; $('next').hidden = false; $('stage').classList.remove('sec'); } }
 function setSlope(v) { beachSlope = v; document.querySelectorAll('#slopes button').forEach(b => b.classList.toggle('on', +b.dataset.s === v)); }
 document.querySelectorAll('#slopes button').forEach(b => b.onclick = () => setSlope(+b.dataset.s));
-$('beachBtn').onclick = openBeach; $('beachClose').onclick = closeBeach; setSlope(0.033);
-function openSection() { if (beachOpen) closeBeach(); secOpen = true; $('secBtn').textContent = '断面をとじる'; $('sec').hidden = false; $('secBar').hidden = false; $('next').hidden = true; $('stage').classList.add('sec'); }
-function closeSection() { secOpen = false; $('secBtn').textContent = '断面を見る'; $('sec').hidden = true; $('secBar').hidden = true; $('next').hidden = false; $('stage').classList.remove('sec'); }
+$('beachClose').onclick = () => setView('orbit'); setSlope(0.033);
+function openSection() { if (beachOpen || view !== 'orbit') setView('orbit'); secOpen = true; $('sec').hidden = false; $('secBar').hidden = false; $('next').hidden = true; $('stage').classList.add('sec'); }
+function closeSection() { secOpen = false; $('sec').hidden = true; $('secBar').hidden = true; $('next').hidden = false; $('stage').classList.remove('sec'); }
 $('secMag').onclick = () => { secMag = secMag === 1 ? 3 : 1; $('secMag').classList.toggle('on', secMag > 1); $('secMag').textContent = secMag > 1 ? '本当の大きさに' : '動きを3倍に'; };
-$('secBtn').onclick = () => { if (secOpen) { closeSection(); return; } if (!FL.list.length) FL.add(4, 2, S.simT); openSection(); };
-$('secClose').onclick = closeSection;
+$('secBtn').onclick = () => { if (secOpen) closeSection(); else { if (!FL.list.length) FL.add(4, 2, S.simT); openSection(); } refreshToggles(); };
+$('secClose').onclick = () => { closeSection(); refreshToggles(); };
 
 // ---- ミラーの惑星（映画の水の惑星）の場面 ----
 const MI = window.WGmiller; let mode = 'earth', mPlay = true, mSpeed = 300;
@@ -340,7 +346,7 @@ function swSyncSea() {
     const sw = o.Hm0 > 0.005 ? W.makeSpecKTable(SW.fs, o.E, SW_ANG, o.s) : null, br = W.fromDuration(3, HOUR), loc = W.makeSpecK(br.Hm0, br.Tp, SW_ANG + 0.9, 10, 3);
     ocean.setSpec(sw ? (kx, kz) => sw(kx, kz) + loc(kx, kz) : loc); swLast = { H: o.Hm0, T: o.Tp, at: now }; }
 }
-function setMode(m) { if (diving) setDive(false); mode = m; document.body.classList.toggle('miller', m === 'miller'); document.body.classList.toggle('swell', m === 'swell');
+function setMode(m) { if (m !== 'earth' && view !== 'orbit') setView('orbit'); mode = m; document.body.classList.toggle('miller', m === 'miller'); document.body.classList.toggle('swell', m === 'swell');
   $('swellBox').hidden = m !== 'swell'; cam.DMAX = m === 'swell' ? 2.6e7 : 900; if (m !== 'swell') cam.dist = Math.min(cam.dist, 900);
   if (m === 'swell') { cam.free = false; cam.target[1] = 0; swLast = { H: -1, T: -1, at: 0 }; swUpdate(); guideApi.camTo({ dist: 45, pitch: 0.15 }); }
   document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
@@ -382,14 +388,14 @@ function drawMiller3D(dt) {
 // ---- 案内 ----
 let camAnim = null;
 const guideApi = {
-  resetWind, setTime(t) { S.t = t; S.play = false; update(); },
+  resetWind, setTime(t) { S.t = t; S.play = t === 0; update(); },   // はじめの段は風が吹きはじめるところから再生（止めると波のない海のままになるので）
+  view(v) { if (view !== v || beachOpen) setView(v); }, play() { S.play = true; update(); },
   camTo(c) { let yaw = c.yaw != null ? c.yaw : cam.yaw; yaw = cam.yaw + Math.atan2(Math.sin(yaw - cam.yaw), Math.cos(yaw - cam.yaw));   // 近い回りで
     camAnim = { from: { pitch: cam.pitch, dist: cam.dist, yaw: cam.yaw }, to: Object.assign({ pitch: cam.pitch, dist: cam.dist }, c, { yaw }), k: 0 }; },
-  addBuoy() { if (!FL.list.length) FL.add(-6, -1.5, S.simT); }, section(on) { on ? openSection() : closeSection(); },
-  caption(text, step) { S.free = false; $('cap').textContent = text; $('stepNo').textContent = step; },
+  addBuoy() { if (!FL.list.length) FL.add(-6, -1.5, S.simT); refreshToggles(); }, section(on) { on ? openSection() : closeSection(); refreshToggles(); },
+  caption(text, step, last) { S.free = false; $('cap').textContent = text; $('stepNo').textContent = '案内 ' + step; $('next').textContent = last ? 'もう一度はじめから ▶' : 'つぎへ ▶'; },
 };
 $('next').onclick = () => window.WGguide.next(guideApi);
-cv.addEventListener('pointerdown', () => { $('hint').classList.add('gone'); });
 
 // ---- ループ ----
 let last = performance.now(), fpsAcc = 0, fpsN = 0, slow = 0, mNumsTick = 0;
@@ -446,7 +452,8 @@ function draw(dt) {
       SUN.curvR = GL.Re; SUN.far = Math.max(30000, Math.min(400e3, 1.3 * Math.sqrt(2 * GL.Re * alt) + 30000)); SUN.fogL = Math.max(SUN.fogL, 40000); SUN.fogH = 8000;   // 地上の見通し 40 km（晴れの日の目安）、空気は 8 km ごとにうすく
       const a = Math.min(1, Math.max(0, (alt - 15e3) / 65e3)), al = a * a * (3 - 2 * a);
       if (al > 0 && glbElev) SUN.globe = { alpha: al, alt, Re: GL.Re, M: new Float32Array(GL.worldToEcef()), elev: glbElev }; }
-    const wHere = pc ? pc.d[1] : 0; SUN.under = diving && b.pos[1] < wHere - 0.05; SUN.wideGrid = camFloat || diving || (S.st && S.st.Hm0 > 2);   // 波のすぐそばでは網目を画面の外まで広く SUN.camD = Math.max(0, wHere - b.pos[1]);
+    const wHere = pc ? pc.d[1] : 0; SUN.under = diving && b.pos[1] < wHere - 0.05; SUN.camD = Math.max(0, wHere - b.pos[1]);
+    SUN.wideGrid = camFloat || diving || (S.st && S.st.Hm0 > 2);   // 波のすぐそばでは網目を画面の外まで広く
     ocean.frame(dt, S.simT, b, SUN); SUN.under = false; }
   drawOverlay(b, dt);
   if (beachOpen && !beach3d) window.WGbeach.draw($('sec'), S.st, S.simT, beachSlope);
@@ -463,7 +470,7 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 // はじめ: 朝の景色・人あり・風が吹く前から再生（案内は「つぎへ」で始まる）
-setTod('morning'); setWeather('clear'); setObj('human'); setFoamStyle(0); setMode('earth'); setSwSpeed(3600); setSwPlace('storm');
+setTod('morning'); setWeather('clear'); setObj('human'); setFoamStyle(0); setMode('earth'); setView('orbit'); setSwSpeed(3600); setSwPlace('storm');
 setMSpeed(300);
 S.free = true; update();
 requestAnimationFrame(loop);
