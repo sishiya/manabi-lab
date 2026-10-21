@@ -9,11 +9,12 @@ const W = window.WGgrowth, HOUR = 3600, DAY = 86400, TMAX = 72 * HOUR;   // 遠�
 const WIND_ANG = Math.PI + 0.5;          // 風の波が進む向き（左前からこちらへ）
 // 空・光（時刻と雲から js/env.js で毎コマ）。カメラははじめ +x（東）を見ている
 const SUN = { rough0: 0.012, meshes: [], points: [] };
-const DAY_SEC = 240;                     // 「自動」のとき 1 日を 4 分で
+const DAY_SEC = 240;
+const START_T = 2 * HOUR;               // 開いたときは、風が吹きはじめて 2 時間の海から（凪の鏡は案内の 1 段めで見せる）                     // 「自動」のとき 1 日を 4 分で
 
 // ---- 状態 ----
 const S = {
-  t: 0,                                   // 風が吹きはじめてからの時間（秒）。遠くの嵐もこの時計で進む
+  t: START_T,                             // 風が吹きはじめてからの時間（秒）。遠くの嵐もこの時計で進む
   sched: [{ t: 0, U: 10 }],               // 風（ずっと同じ。graph.js・growth.js は区切りのある記録も読める）
   play: true, speed: 0,                   // ▶ のとき 1 秒で進む時間（0 = おまかせ: つまみの目盛りで同じ速さ → はじめはゆっくり）
   tod: 'morning', clock: 7, weather: 'clear', obj: 'human',
@@ -118,7 +119,7 @@ const guideApi = {
   addBuoy() { if (!FL.list.length) FL.add(-6, -1.5, S.simT); S.showBuoy = true; refreshToggles(); }, section(on) { on ? openSection() : closeSection(); refreshToggles(); },
   caption(text, step, last) { S.free = false; $('cap').textContent = text; $('stepNo').textContent = '案内 ' + step; $('next').textContent = last ? '案内をおわる' : 'つぎへ ▶'; },
   // 案内をおわる: はじめの画面にもどす（風 10 m/s・吹く前から再生・上から・ブイと嵐は消す）
-  finish() { if (secOpen) closeSection(); resetProps(); S.put = 'buoy'; S.showHuman = true; S.showBuoy = true; if (STORM.on) stopStorm(); setView('orbit'); resetWind(10); S.t = 0; S.play = true; S.speed = 0; S.free = true; update(); },
+  finish() { if (secOpen) closeSection(); resetProps(); S.put = 'buoy'; S.showHuman = true; S.showBuoy = true; if (STORM.on) stopStorm(); setView('orbit'); resetWind(10); S.t = START_T; S.play = true; S.speed = 0; S.free = true; update(); },
 };
 $('next').onclick = () => window.WGguide.next(guideApi);
 
@@ -146,7 +147,7 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 function start() {
-  // はじめ: 朝の景色・人あり・風が吹く前から再生（案内は「つぎへ」で始まる）
+  // はじめ: 朝の景色・人あり・風が吹いて 2 時間の海から再生（案内は「つぎへ」で始まり、1 段めは吹く前の凪）
   setTod('morning'); setWeather(); setObj('human'); setView('orbit');
   S.free = true; update();
   requestAnimationFrame(loop);
