@@ -19,19 +19,29 @@ $('cloud').addEventListener('input', () => { S.cloud = +$('cloud').value / 100; 
 // ---- 大きさくらべ（人）・ブイ・断面のボタン ----
 const buoyMesh = ocean ? ocean.makeMesh(PR.buoy()) : null, objMeshes = {};
 const OBJ_YAW = { human: 1.9, boat: 1.3, fishing: 1.3, ship: 1.3 };   // 人はこちら向き（カメラは yaw 0.35 から見る）
+// 人は何人でも（6 人まで）。はじめは 1 人がまん中に。S.put = 海をタップしたときに浮かべる物
+const HUMANS = [{ x: 0, z: 0, pose: null }]; S.put = 'buoy'; S.showHuman = true; S.showBuoy = true;   // 見せる（ON/OFF）と置く（タップ）は別
 let objPose = null;
 function setObj(k) { S.obj = k; objPose = null;
   if (k !== 'none' && ocean && !objMeshes[k]) objMeshes[k] = ocean.makeMesh(PR.TYPES[k].geo());
   if (k !== 'none' && view === 'orbit' && cam.dist < 900) guideApi.camTo({ dist: PR.TYPES[k].dist });
   refreshToggles(); }
-$('humanBtn').onclick = () => setObj(S.obj === 'human' ? 'none' : 'human');
+function setPut(k) { S.put = k; refreshToggles(); }
+document.querySelectorAll('#putSeg button').forEach(b => b.onclick = () => setPut(b.dataset.p));
+$('showHuman').onchange = () => { S.showHuman = $('showHuman').checked; refreshToggles(); };
+$('showBuoy').onchange = () => { S.showBuoy = $('showBuoy').checked; refreshToggles(); };
+$('clearBtn').onclick = () => { HUMANS.length = 0; FL.clear(); closeSection(); refreshToggles(); };
+function resetProps() { HUMANS.length = 0; HUMANS.push({ x: 0, z: 0, pose: null }); FL.clear(); }
 // 「浮かべる」の 3 つのボタンの ON/OFF を、いまの状態に合わせる（案内やタップで変わったときも）
-function refreshToggles() { const t = (id, on) => { const b = $(id); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); };
-  t('humanBtn', S.obj === 'human'); t('buoyBtn', FL.list.length > 0); t('secBtn', secOpen); }
+function refreshToggles() { const t2 = (b, on) => { b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); };
+  document.querySelectorAll('#putSeg button').forEach(b => t2(b, b.dataset.p === S.put)); $('secChk').checked = secOpen;
+  $('showHuman').checked = S.showHuman; $('showBuoy').checked = S.showBuoy;
+  $('propCount').textContent = `いま: 人 ${HUMANS.length}・ブイ ${FL.list.length}`; }
 // 物の上に「人 身長 1.7 m」などの札（画面に投げて）
 function drawPropLabel(g) {
-  if (S.obj === 'none' || !objPose || !ocean || !ocean.VP || (SUN.globe && SUN.globe.alpha > 0.3)) return;
-  const T = PR.TYPES[S.obj], q = project([objPose.d[0], objPose.d[1] + T.labelY, objPose.d[2]]); if (!q) return;
+  objPose = HUMANS[0] ? HUMANS[0].pose : null;
+  if (S.obj === 'none' || !objPose || !HUMANS.length || !ocean || !ocean.VP || (SUN.globe && SUN.globe.alpha > 0.3)) return;
+  const T = PR.TYPES[S.obj], q = project([HUMANS[0].x + objPose.d[0], objPose.d[1] + T.labelY, HUMANS[0].z + objPose.d[2]]); if (!q) return;
   const r = ov.getBoundingClientRect(), [x, y] = q; if (x < -60 || x > r.width + 60 || y < -20 || y > r.height + 20) return;
   const text = T.name + ' ' + T.size;
   g.font = '12px ' + fontB(); g.textAlign = 'center';
@@ -42,6 +52,9 @@ function drawPropLabel(g) {
 // 上から: 海の 1 点のまわりを回る（引くと宇宙から見た地球まで）。海面から: 見つめる点がその場の水面と一緒に上下する。
 // 自由に動く: W A S D で前後左右・Q E で下と上（スマホは画面のボタン）。水面をこえると、そのまま水の中（カメラの真上の水面の高さで決める）。
 let view = 'orbit', camFloat = false, camWater = null, flying = false, diving = false; const FLOAT_AT = [-8, -3];   // 浮かべたカメラの場所（人から少しはなれた所）
+// 海面から: ホイール／2本指で人に近づく・はなれる（3〜80 m。水面に浮かんだまま、目の高さは 1.6 m）
+const FLOAT_DIR = [-8 / Math.hypot(8, 3), -3 / Math.hypot(8, 3)]; let floatD = Math.hypot(8, 3);
+cam.floatZoom = f => { floatD = Math.min(80, Math.max(3, floatD * f)); FLOAT_AT[0] = FLOAT_DIR[0] * floatD; FLOAT_AT[1] = FLOAT_DIR[1] * floatD; cam.target[0] = FLOAT_AT[0]; cam.target[2] = FLOAT_AT[1]; camWater = null; };
 const COARSE = matchMedia('(pointer: coarse)').matches;
 const VIEW_TXT = { orbit: ['上から見る', 'ドラッグ: 回す・ホイール／2本指: 近づく'], float: ['海面に浮かぶ', 'ドラッグ: 見回す・ホイール／2本指: 目の高さ'],
   fly: ['自由に動く', COARSE ? 'ボタン: 動く・ドラッグ: 見回す' : 'W S: 向いている向きへ・A D: 横・Q E: 下 上・Shift: ゆっくり・ドラッグ: 見回す'],
@@ -50,7 +63,7 @@ function viewChip(k) { $('stView').textContent = VIEW_TXT[k][0]; $('stCtl').text
 function setView(v) {
   camAnim = null; if (secOpen) closeSection(); if (beachOpen) closeBeach();
   const b0 = cam.basis();
-  view = v; camFloat = v === 'float'; flying = v === 'fly'; camWater = null; cam.fly = flying; cam.dive = false; cam.fovY = 52 * Math.PI / 180;
+  view = v; camFloat = v === 'float'; flying = v === 'fly'; cam.floatZoom = camFloat ? cam.floatZoom0 : null; camWater = null; cam.fly = flying; cam.dive = false; cam.fovY = 52 * Math.PI / 180;
   if (v === 'float') { cam.free = true; cam.eye = 1.6; cam.dist = 0.01; cam.pitch = 0.05; cam.target = [FLOAT_AT[0], 0, FLOAT_AT[1]]; cam.yaw = Math.atan2(-FLOAT_AT[1], -FLOAT_AT[0]); }   // 人のほうを向く
   else if (v === 'fly') { cam.free = false; cam.pos = [b0.pos[0], Math.min(b0.pos[1], 60), b0.pos[2]]; cam.yaw = Math.atan2(b0.cf[2], b0.cf[0]); cam.pitch = Math.min(0.6, -Math.asin(b0.cf[1])); }   // いまの所から続けて
   else { cam.free = false; cam.eye = 3; cam.target = [0, 0, 0]; cam.dist = 16; cam.pitch = 0.12; }
@@ -104,15 +117,17 @@ cv.addEventListener('pointerup', e => {
   if (cam.wasDrag() || !ocean || beachOpen) return;
   const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
   if (stormTap(px, py, r)) return;
-  const hit = FL.list.find(bu => { const q = bu.pos && project(bu.pos); return q && Math.hypot(q[0] - px, q[1] - py) < 30; });
+  const hit = S.showBuoy && FL.list.find(bu => { const q = bu.pos && project(bu.pos); return q && Math.hypot(q[0] - px, q[1] - py) < 30; });
   if (hit) { openSection(); return; }
   const b = cam.basis(), [tx, ty] = ocean.txty, nx = px / r.width * 2 - 1, ny = 1 - py / r.height * 2;
   const d = [0, 1, 2].map(i => b.cf[i] + nx * tx * b.cr[i] + ny * ty * b.cu[i]);
-  if (b.pos[1] <= 0 || d[1] >= -1e-3) return;
+  if (b.pos[1] <= 0 || d[1] >= -1e-3 || SUN.under) return;
   const t = -b.pos[1] / d[1]; if (t > 400) return;
-  FL.add(b.pos[0] + d[0] * t, b.pos[2] + d[2] * t, S.simT); refreshToggles();
+  const x = b.pos[0] + d[0] * t, z = b.pos[2] + d[2] * t;
+  if (S.put === 'human') { if (HUMANS.length >= 6) HUMANS.shift(); HUMANS.push({ x, z, pose: null }); S.showHuman = true; }
+  else if (S.put === 'buoy') { FL.add(x, z, S.simT); S.showBuoy = true; }
+  refreshToggles();
 });
-$('buoyBtn').onclick = () => { if (FL.list.length) { FL.clear(); closeSection(); } else { if (view !== 'orbit') setView('orbit'); FL.add(-6, -1.5, S.simT); } refreshToggles(); };   // 断面はブイの真下なので一緒に閉じる
 
 // ---- 断面（ブイの真下）・浜（浅い海） ----
 let secOpen = false, secMag = 1, beachOpen = false, beachSlope = 0.033;
@@ -153,7 +168,7 @@ $('beachClose').onclick = () => setView('orbit'); setSlope(0.033);
 function openSection() { if (beachOpen || view !== 'orbit') setView('orbit'); secOpen = true; $('sec').hidden = false; $('secBar').hidden = false; $('next').hidden = true; $('stage').classList.add('sec'); }
 function closeSection() { secOpen = false; $('sec').hidden = true; $('secBar').hidden = true; $('next').hidden = false; $('stage').classList.remove('sec'); }
 $('secMag').onclick = () => { secMag = secMag === 1 ? 3 : 1; $('secMag').classList.toggle('on', secMag > 1); $('secMag').textContent = secMag > 1 ? '本当の大きさに' : '動きを3倍に'; };
-$('secBtn').onclick = () => { if (secOpen) closeSection(); else { if (!FL.list.length) FL.add(4, 2, S.simT); openSection(); } refreshToggles(); };
+$('secChk').onchange = () => { if (!$('secChk').checked) closeSection(); else { if (!FL.list.length) FL.add(4, 2, S.simT); S.showBuoy = true; openSection(); } refreshToggles(); };
 $('secClose').onclick = () => { closeSection(); refreshToggles(); };
 
 // ---- 画面の文字（風とうねりの向き・時刻・月） ----
@@ -172,8 +187,9 @@ function arrow(g, cx, cy, b, ang, col, label) {
 function drawOverlay(b) {
   const r = ov.getBoundingClientRect(), g = ovCtx();
   stormOverlay(g, b, r);
-  drawSpray(g); drawPropLabel(g); drawTrails(g);
+  drawSpray(g); if (S.showHuman) drawPropLabel(g); if (S.showBuoy) drawTrails(g);
   if (flying) { const y = b.pos[1], t2 = SUN.under ? `水の中・深さ ${Math.max(0, SUN.camD).toFixed(1)} m` : `自由に動く・高さ ${y < 1000 ? y.toFixed(1) + ' m' : (y / 1000).toFixed(2) + ' km'}`; if ($('stView').textContent !== t2) $('stView').textContent = t2; }
+  else if (view === 'orbit') { const t2 = SUN.under ? `上から見る・水の中 ${Math.max(0, SUN.camD).toFixed(1)} m` : '上から見る'; if ($('stView').textContent !== t2) $('stView').textContent = t2; }
   else if (camFloat) { const t2 = `海面に浮かぶ・目の高さ ${cam.eye.toFixed(1)} m`; if ($('stView').textContent !== t2) $('stView').textContent = t2; }
   g.font = '12px ' + fontB(); g.textAlign = 'left'; g.fillStyle = 'rgba(255,255,255,.8)';
   g.fillText(E.clockText(S.clock, obsLL().lon) + (S.tod === 'auto' ? '（時間が進む）' : '') + '・月: ' + E.moonText(SUN.elong || 0) + (SUN.Lm && SUN.Lm[1] > 0 ? '' : '・沈んでいる'), 12, r.height - 14);
@@ -190,26 +206,28 @@ function draw(dt) {
   syncSea();
   const b = cam.basis(), st = S.st, sw = SW_OBS && SW_OBS.Hm0 > 0.02 ? SW_OBS : null;
   // 物: 大きさくらべ（点を k こ）とブイ。前のコマに読んだ海面の動きで置き、大きい物ほどゆっくり追う
-  const pr = ocean ? ocean.probe : [], T = S.obj !== 'none' ? PR.TYPES[S.obj] : null, k = T ? T.pts.length : 0, yaw = T ? OBJ_YAW[S.obj] : 0;
+  const T = S.obj !== 'none' && HUMANS.length && S.showHuman ? PR.TYPES[S.obj] : null, k1 = T ? T.pts.length : 0, k = k1 * HUMANS.length, yaw = T ? OBJ_YAW[S.obj] : 0;
+  const pr = ocean ? ocean.probe : [];
   SUN.meshes = [];
-  if (T) { const p = PR.pose(S.obj, pr.slice(0, k), yaw);
-    if (p) { if (!objPose) objPose = p; else { const a = 1 - Math.exp(-dt / T.tau);
-      for (let i = 0; i < 3; i++) objPose.d[i] += (p.d[i] - objPose.d[i]) * a; for (let i = 0; i < 2; i++) objPose.s[i] += (p.s[i] - objPose.s[i]) * a; }
-      if (objMeshes[S.obj]) SUN.meshes.push({ mesh: objMeshes[S.obj], M: PR.matrix(0, 0, objPose, yaw) }); } }
+  if (T) HUMANS.forEach((h, j) => { const p = PR.pose(S.obj, pr.slice(j * k1, (j + 1) * k1), yaw); if (!p) return;
+    if (!h.pose) h.pose = p; else { const a = 1 - Math.exp(-dt / T.tau);
+      for (let i = 0; i < 3; i++) h.pose.d[i] += (p.d[i] - h.pose.d[i]) * a; for (let i = 0; i < 2; i++) h.pose.s[i] += (p.s[i] - h.pose.s[i]) * a; }
+    if (objMeshes[S.obj]) SUN.meshes.push({ mesh: objMeshes[S.obj], M: PR.matrix(h.x, h.z, h.pose, yaw) }); });
   FL.step(dt, S.simT, pr.slice(k), S.us || 0, WIND_ANG);
-  if (buoyMesh) FL.list.forEach(bu => { if (bu.p) SUN.meshes.push({ mesh: buoyMesh, M: PR.matrix(bu.x0 + bu.drift[0], bu.z0 + bu.drift[1], bu.p, 0) }); });
+  if (buoyMesh && S.showBuoy) FL.list.forEach(bu => { if (bu.p) SUN.meshes.push({ mesh: buoyMesh, M: PR.matrix(bu.x0 + bu.drift[0], bu.z0 + bu.drift[1], bu.p, 0) }); });
   // ほかに読む点: カメラの真下の水面（自由に動くときはカメラの所。水の上か中かを決める）・浮かべたカメラ・しぶきを出すか見る点（カメラの前に 5 つ）
   const nb = FL.list.length, iCam = k + nb, pc = pr[iCam];
-  if (flying && pc) camProbe = [b.pos[0] - pc.d[0], b.pos[2] - pc.d[2]];   // 海面の点は横にも動くので、動いたぶんをもどしてカメラの真下を読む
+  const probeCam = flying || view === 'orbit';   // 上から・自由に動くは、カメラの真下の水面で水の上か中かを決める
+  if (probeCam && pc) camProbe = [b.pos[0] - pc.d[0], b.pos[2] - pc.d[2]];   // 海面の点は横にも動くので、動いたぶんをもどしてカメラの真下を読む
   if (camFloat && pc) { const wc = pr[iCam + 1] ? pr[iCam + 1].d[1] : pc.d[1]; camWater = camWater == null ? wc : camWater + (wc - camWater) * (1 - Math.exp(-dt / 0.2)); cam.target[1] = camWater; cam.minY = camWater + 1.2; }
   else if (!flying) cam.target[1] = 0;
   const Ueff = st.Hm0 > 0 ? windAt(S.t) : 0;
-  if (Ueff >= 13 && !SUN.under) for (let j = 0; j < 5; j++) { const p = pr[iCam + 2 + j], sp = sprayPts[j]; if (p && sp && p.d[1] > 0.3 * st.Hm0 && Math.random() < dt * 6 * (Ueff - 12) / 8) emitSpray(sp.x + p.d[0], p.d[1], sp.z + p.d[2], Ueff); }
+  if (Ueff >= 13 && !SUN.under && !(view === 'orbit' && cam.pitch < 0)) for (let j = 0; j < 5; j++) { const p = pr[iCam + 2 + j], sp = sprayPts[j]; if (p && sp && p.d[1] > 0.3 * st.Hm0 && Math.random() < dt * 6 * (Ueff - 12) / 8) emitSpray(sp.x + p.d[0], p.d[1], sp.z + p.d[2], Ueff); }
   for (let j = 0; j < 5; j++) { const a = Math.random() * 2 * Math.PI, rr = 8 + Math.random() * 60, f = b.cf, fl = Math.hypot(f[0], f[2]) || 1;
     sprayPts[j] = { x: b.pos[0] + f[0] / fl * (rr + 10) + Math.cos(a) * rr * 0.6, z: b.pos[2] + f[2] / fl * (rr + 10) + Math.sin(a) * rr * 0.6, wb: 1, wc: 1 }; }
   stepSpray(dt);
-  const cp = flying ? camProbe : [0, 0];
-  SUN.points = (T ? PR.worldPts(S.obj, 0, 0, yaw) : []).concat(FL.points(), [{ x: cp[0], z: cp[1], wb: 1, wc: 1 }, { x: FLOAT_AT[0], z: FLOAT_AT[1], wb: 1, wc: 0.5 }], Ueff >= 13 ? sprayPts : []);
+  const cp = probeCam ? camProbe : [0, 0];
+  SUN.points = (T ? HUMANS.flatMap(h => PR.worldPts(S.obj, h.x, h.z, yaw)) : []).concat(FL.points(), [{ x: cp[0], z: cp[1], wb: 1, wc: 1 }, { x: FLOAT_AT[0], z: FLOAT_AT[1], wb: 1, wc: 0.5 }], Ueff >= 13 ? sprayPts : []);
   // 濡れ: 波が高いと下のほうがしぶきで（見た目の目安）
   SUN.wetRain = 0; SUN.wetSplash = (T ? T.splash : 0) * Math.min(1, Math.max(0, (Math.hypot(st.Hm0, sw ? sw.Hm0 : 0) - 0.2) / 1.5));
   skyEnv();
@@ -218,13 +236,14 @@ function draw(dt) {
     SUN.rough0 = Math.max(0.012, Math.sqrt(Math.max(tot - ocean.fftSlope, 0)));
     SUN.globe = null; SUN.far = 0; SUN.curvR = 0; SUN.fogH = 0;
     if (b.pos[1] > 300) stormGlobe(b, dt);   // 高く上がると地球の丸み・見通し・地球儀（js/storm.js）
-    const wHere = flying && pc ? pc.d[1] : 0;
-    SUN.under = flying && b.pos[1] < wHere; SUN.camD = Math.max(0, wHere - b.pos[1]);
-    SUN.wideGrid = camFloat || flying || Math.hypot(st.Hm0, sw ? sw.Hm0 : 0) > 2;   // 波のすぐそばでは網目を画面の外まで広く
+    const wHere = probeCam && pc ? pc.d[1] : 0;
+    SUN.under = probeCam && b.pos[1] < wHere; SUN.camD = Math.max(0, wHere - b.pos[1]);
+    SUN.wideGrid = camFloat || flying || SUN.under || cam.pitch < 0.05 || Math.hypot(st.Hm0, sw ? sw.Hm0 : 0) > 2;   // 波のすぐそばでは網目を画面の外まで広く
     ocean.frame(dt, S.simT, b, SUN); }
   drawOverlay(b);
   if (beachOpen && !beach3d) window.WGbeach.draw($('sec'), S.st, S.simT, beachSlope);
   if (secOpen) window.WGsection.draw($('sec'), S.st, S.simT, FL.list.length > 0, S.us || 0, secMag);
 }
 let camProbe = [0, 0];
+cam.floatZoom0 = cam.floatZoom; cam.floatZoom = null;
 start();

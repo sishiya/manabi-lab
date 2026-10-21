@@ -32,6 +32,7 @@
 
     <section id="panel">
       <div id="timeBox" class="box">
+        <h2 class="bh">時間</h2>
         <div class="row"><span>風が吹きはじめてから</span><b id="tLabel">0 分</b></div>
         <input id="tSlider" type="range" min="0" max="1000" value="0" aria-label="風が吹きはじめてからの時間">
         <div class="ticks"><span style="left:0">0</span><span style="left:5.5%">1時間</span><span style="left:13.4%">6</span><span style="left:26.7%">24</span><span style="left:46.3%">3日</span><span style="left:70.7%">7日</span><span style="left:100%">14日</span></div>
@@ -39,12 +40,12 @@
           <span id="speeds"><button data-s="0" title="はじめはゆっくり、だんだん速く（14日を75秒で）">おまかせ</button> 1秒で <button data-s="600">10分</button><button data-s="3600">1時間</button></span></div>
       </div>
       <div id="windBox" class="box">
+        <h2 class="bh">海をつくる</h2>
         <div class="row"><span>風の速さ</span><b id="wLabel">10 m/s</b></div>
         <input id="wSlider" type="range" min="0" max="20" step="0.5" value="10" aria-label="風の速さ">
         <p class="note">ずっと同じ風が吹きます。変えると、はじめからその風が吹いていたときの海に、すぐ変わります（時間はそのまま）。0 にすると、うねりだけの海。</p>
-      </div>
-      <details id="stormBox" class="box">
-        <summary>遠くの嵐 <span id="stormSum" class="note"></span></summary>
+        <details id="stormBox" class="inner">
+          <summary>遠くの嵐 <span id="stormSum" class="note"></span></summary>
         <div class="row" style="margin-top:6px"><span></span><button id="stormBtn">遠くで嵐を起こす</button></div>
         <p class="note">何千 km も先で嵐が吹きはじめます（いまの時刻から）。育った波は「うねり」になって何日もかけて届き、この海の波に重なります。長い波ほど速いので先に着きます。</p>
         <div id="stormMore">
@@ -58,17 +59,30 @@
           <label class="slider"><span>嵐が吹いた時間</span><b id="swDl"></b><input id="swD" type="range" min="6" max="96" step="6"></label>
           <label class="slider"><span>嵐の広さ</span><b id="swLl"></b><input id="swL" type="range" min="300" max="2000" step="100"></label>
         </div>
-      </details>
+        </details>
+      </div>
       <div id="viewBox" class="box">
-        <div class="row" id="viewsRow"><span>見かた</span><span id="views" class="seg"><button data-v="orbit">上から</button><button data-v="float" title="海面に浮かんで見る">海面から</button><button data-v="fly" title="W A S D・Q E（スマホは画面のボタン）。水の中にも入れます">自由に動く</button><button data-v="beach" title="浜（浅い海）" hidden>浜</button></span></div>
-        <div class="row" id="putRow"><span>浮かべる</span><span class="seg"><button id="humanBtn" aria-pressed="true">人</button><button id="buoyBtn" aria-pressed="false">ブイ</button><button id="secBtn" aria-pressed="false">ブイの真下の断面</button></span></div>
-        <div class="sub" id="putSub">ブイは海をタップしても浮かべられます（6 こまで）。もう一度おすと消えます。</div>
+        <h2 class="bh">見かた</h2>
+        <span id="views" class="seg"><button data-v="orbit">上から</button><button data-v="float" title="海面に浮かんで見る">海面から</button><button data-v="fly" title="W A S D・Q E（スマホは画面のボタン）。水の中にも入れます">自由に動く</button><button data-v="beach" title="浜（浅い海）" hidden>浜</button></span>
+        <div class="sub" id="viewSub">ドラッグで回す・見回す。ホイール／2本指で近づく。「自由に動く」は W A S D・Q E（スマホは画面のボタン）で、水の中にも入れます。</div>
+      </div>
+      <div id="skyBox" class="box">
+        <h2 class="bh">空</h2>
         <div class="row"><span>時刻</span><span id="tods" class="seg"><button data-k="morning">朝</button><button data-k="noon">昼</button><button data-k="evening">夕方</button><button data-k="night">夜</button><button data-k="now" title="いる所のいまの時刻">いま</button><button data-k="auto" title="1日を4分で">進める</button></span></div>
         <label class="slider"><span>雲の量</span><b id="cloudL">30%</b><input id="cloud" type="range" min="0" max="100" step="1" value="30" aria-label="雲の量"></label>
         <div class="sub">太陽と月は、きょうの日付・時刻・いる所の、本当の位置（月の満ち欠けも）。日がさすかどうかは、太陽の前の雲で決まります。</div>
       </div>
+      <div id="propBox" class="box">
+        <h2 class="bh">浮かべる物</h2>
+        <div class="row"><span>見せる</span><span class="chks"><label class="chk"><input type="checkbox" id="showHuman" checked> 人</label><label class="chk"><input type="checkbox" id="showBuoy" checked> ブイ</label></span></div>
+        <div class="row"><span>海をタップして置く</span><span id="putSeg" class="seg"><button data-p="human">人</button><button data-p="buoy">ブイ</button><button data-p="none">置かない</button></span></div>
+        <div class="row"><span class="sub" id="propCount"></span><button id="clearBtn">ぜんぶ消す</button></div>
+        <div class="sub">それぞれ 6 こまで（多くなると古いものから消えます）。ブイは、波が来ても進まず、その場で輪をえがきます。</div>
+      </div>
       <div id="graphBox" class="box">
-        <div class="row"><span>どの長さの波が、どれだけあるか</span></div>
+        <h2 class="bh">図</h2>
+        <label class="chk"><input type="checkbox" id="secChk"> ブイの真下の断面（水の粒の動き）を見る</label>
+        <div class="row" style="margin-top:8px"><span>どの長さの波が、どれだけあるか</span></div>
         <canvas id="graph"></canvas>
         <p class="note">色のついた山 = いま。点線 = この風で発達しきった海。細い線 = 1・3・6・12・24・48 時間のとき。</p>
       </div>

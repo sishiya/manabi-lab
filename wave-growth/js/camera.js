@@ -6,7 +6,8 @@ window.WGcamera = (() => {
       DMIN: 3, DMAX: 900, PMIN: 0.02, PMAX: 1.45, free: false, eye: 3, dive: false, fly: false, pos: [0, 3, 0] };   // fly = 自由に動く（pos の位置から yaw・pitch の向きを見る。水の上でも中でも）   // dive = 水の中（eye は負 = 水面より下）   // free = 前を見る（ミラーの惑星の 3D）。eye = 水面からの目の高さ
     const ptr = new Map(); let pinch0 = 0, moved = 0;
     // 近づく・遠ざかる（ホイールも 2 本指も同じ）: ふつう = 見る点からの距離、海面に浮かぶ = 目の高さ、水の中 = 深さ
-    C.zoom = f => { if (C.fly) { const s = -Math.log(f) / 0.13 * Math.max(0.6, Math.abs(C.pos[1]) * 0.2), b = C.basis(); C.move(b.cf.map(v => v * s)); return; }   // ホイール 1 目盛りで前へ（高い・深いほど大きく）
+    C.zoom = f => { if (C.free && C.floatZoom && !C.dive) { C.floatZoom(f); return; }   // 海面から: 人に近づく・はなれる（目の高さはそのまま）
+      if (C.fly) { const s = -Math.log(f) / 0.13 * Math.max(0.6, Math.abs(C.pos[1]) * 0.2), b = C.basis(); C.move(b.cf.map(v => v * s)); return; }   // ホイール 1 目盛りで前へ（高い・深いほど大きく）
       if (C.dive) C.eye = -Math.min(60, Math.max(0.3, -C.eye * f)); else if (C.free) C.eye = Math.min(3000, Math.max(1.2, C.eye * f)); else C.dist = Math.min(C.DMAX, Math.max(C.DMIN, C.dist * f)); };
     el.style.touchAction = 'none';
     el.addEventListener('pointerdown', e => { ptr.set(e.pointerId, [e.clientX, e.clientY]); el.setPointerCapture(e.pointerId); moved = 0;
@@ -15,7 +16,8 @@ window.WGcamera = (() => {
       const p = ptr.get(e.pointerId); if (!p) return;
       const dx = e.clientX - p[0], dy = e.clientY - p[1]; p[0] = e.clientX; p[1] = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
       if (ptr.size === 1) { const fr = C.free || C.fly; C.yaw += dx * 0.005 * (fr ? C.fovY : 1);
-        C.pitch = Math.min(C.fly ? 1.55 : C.PMAX, Math.max(C.fly ? -1.55 : C.dive ? -1.5 : C.free ? -0.6 : C.PMIN, C.pitch + dy * 0.004 * (fr ? C.fovY : 1))); }
+        const pmin = C.fly ? -1.55 : C.dive ? -1.5 : C.free ? -0.6 : C.dist < 900 ? -1.2 : C.PMIN;   // 上から: 見上げると、カメラは見る点より下（水の中）へ回りこむ
+        C.pitch = Math.min(C.fly ? 1.55 : C.PMAX, Math.max(pmin, C.pitch + dy * 0.004 * (fr ? C.fovY : 1))); }
       else if (ptr.size === 2 && pinch0 > 0) { const [a, b] = [...ptr.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
         C.zoom(pinch0 / Math.max(d, 1)); pinch0 = Math.max(d, 1); }
     });
@@ -38,7 +40,8 @@ window.WGcamera = (() => {
         return { pos, cf: fw, cr, cu, fovY: C.fovY };
       }
       const pos = [C.target[0] - fw[0] * C.dist, C.target[1] - fw[1] * C.dist, C.target[2] - fw[2] * C.dist];
-      if (pos[1] < C.minY) pos[1] = C.minY;
+      // 波の中に入らない下限 minY は、上から見下ろすときだけ（見上げるほどゆるめて、水の中へなめらかに）
+      { const k = Math.min(1, Math.max(0, (C.pitch + 0.25) / 0.3)), w = k * k * (3 - 2 * k); if (pos[1] < C.minY) pos[1] += (C.minY - pos[1]) * w; }
       let cf = [C.target[0] - pos[0], C.target[1] - pos[1], C.target[2] - pos[2]]; const l = Math.hypot(...cf); cf = cf.map(v => v / l);
       let cr = [cf[1] * 0 - cf[2] * 1, cf[2] * 0 - cf[0] * 0, cf[0] * 1 - cf[1] * 0]; const lr = Math.hypot(...cr); cr = cr.map(v => v / lr);
       const cu = [cr[1] * cf[2] - cr[2] * cf[1], cr[2] * cf[0] - cr[0] * cf[2], cr[0] * cf[1] - cr[1] * cf[0]];

@@ -115,10 +115,10 @@ const guideApi = {
   view(v) { if (view !== v || beachOpen) setView(v); }, play() { S.play = true; update(); }, storm(on) { if (!on && STORM.on) stopStorm(); },
   camTo(c) { let yaw = c.yaw != null ? c.yaw : cam.yaw; yaw = cam.yaw + Math.atan2(Math.sin(yaw - cam.yaw), Math.cos(yaw - cam.yaw));   // 近い回りで
     camAnim = { from: { pitch: cam.pitch, dist: cam.dist, yaw: cam.yaw }, to: Object.assign({ pitch: cam.pitch, dist: cam.dist }, c, { yaw }), k: 0 }; },
-  addBuoy() { if (!FL.list.length) FL.add(-6, -1.5, S.simT); refreshToggles(); }, section(on) { on ? openSection() : closeSection(); refreshToggles(); },
+  addBuoy() { if (!FL.list.length) FL.add(-6, -1.5, S.simT); S.showBuoy = true; refreshToggles(); }, section(on) { on ? openSection() : closeSection(); refreshToggles(); },
   caption(text, step, last) { S.free = false; $('cap').textContent = text; $('stepNo').textContent = '案内 ' + step; $('next').textContent = last ? '案内をおわる' : 'つぎへ ▶'; },
   // 案内をおわる: はじめの画面にもどす（風 10 m/s・吹く前から再生・上から・ブイと嵐は消す）
-  finish() { if (secOpen) closeSection(); FL.clear(); if (STORM.on) stopStorm(); setView('orbit'); resetWind(10); S.t = 0; S.play = true; S.speed = 0; S.free = true; update(); },
+  finish() { if (secOpen) closeSection(); resetProps(); S.put = 'buoy'; S.showHuman = true; S.showBuoy = true; if (STORM.on) stopStorm(); setView('orbit'); resetWind(10); S.t = 0; S.play = true; S.speed = 0; S.free = true; update(); },
 };
 $('next').onclick = () => window.WGguide.next(guideApi);
 
