@@ -101,7 +101,8 @@ details summary{cursor:pointer}
 #flyPad button:active{background:#2f6a8c}
 #stStorm{background:rgba(90,40,20,.6)!important}
 #stormBox .row button.on{background:#7a3b2a;border-color:#ff8f6b}
-#stormMore summary{margin-top:6px;font-size:13px;color:var(--muted)}
+#stormBox summary{font-weight:700}
+#stormSum{font-weight:400;margin-left:6px}
 #swNums{font-size:13px;line-height:1.7;margin:6px 0}
 #swNums b{color:var(--acc);font-family:var(--f-mono)}
 #swPlace button.on{background:#2f6a8c;border-color:var(--acc)}

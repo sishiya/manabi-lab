@@ -43,11 +43,11 @@
         <input id="wSlider" type="range" min="0" max="20" step="0.5" value="10" aria-label="風の速さ">
         <p class="note">ずっと同じ風が吹きます。変えると、はじめからその風が吹いていたときの海に、すぐ変わります（時間はそのまま）。0 にすると、うねりだけの海。</p>
       </div>
-      <div id="stormBox" class="box">
-        <div class="row"><span>遠くの嵐</span><button id="stormBtn">遠くで嵐を起こす</button></div>
+      <details id="stormBox" class="box">
+        <summary>遠くの嵐 <span id="stormSum" class="note"></span></summary>
+        <div class="row" style="margin-top:6px"><span></span><button id="stormBtn">遠くで嵐を起こす</button></div>
         <p class="note">何千 km も先で嵐が吹きはじめます（いまの時刻から）。育った波は「うねり」になって何日もかけて届き、この海の波に重なります。長い波ほど速いので先に着きます。</p>
-        <details id="stormMore">
-          <summary>嵐のようす（地図・届く時刻・つまみ）</summary>
+        <div id="stormMore">
           <div id="swNums"></div>
           <canvas id="swMap" style="width:100%;height:170px;display:block"></canvas>
           <canvas id="swChart" style="width:100%;height:150px;display:block;margin-top:6px"></canvas>
@@ -57,8 +57,8 @@
           <label class="slider"><span>嵐の風の速さ</span><b id="swUl"></b><input id="swU" type="range" min="10" max="30" step="1"></label>
           <label class="slider"><span>嵐が吹いた時間</span><b id="swDl"></b><input id="swD" type="range" min="6" max="96" step="6"></label>
           <label class="slider"><span>嵐の広さ</span><b id="swLl"></b><input id="swL" type="range" min="300" max="2000" step="100"></label>
-        </details>
-      </div>
+        </div>
+      </details>
       <div id="viewBox" class="box">
         <div class="row" id="viewsRow"><span>見かた</span><span id="views" class="seg"><button data-v="orbit">上から</button><button data-v="float" title="海面に浮かんで見る">海面から</button><button data-v="fly" title="W A S D・Q E（スマホは画面のボタン）。水の中にも入れます">自由に動く</button><button data-v="beach" title="浜（浅い海）">浜</button></span></div>
         <div class="row" id="putRow"><span>浮かべる</span><span class="seg"><button id="humanBtn" aria-pressed="true">人</button><button id="buoyBtn" aria-pressed="false">ブイ</button><button id="secBtn" aria-pressed="false">ブイの真下の断面</button></span></div>

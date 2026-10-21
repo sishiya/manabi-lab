@@ -5,7 +5,10 @@ const SW = window.WGswell, GL = window.WGglobe;
 const STORM = { on: false, t0: 0 };
 let SW_OBS = null, SW_ANG = Math.PI + 0.5, swPlace = 'obs', glbElev = null;
 
-function startStorm() { STORM.on = true; STORM.t0 = S.t; $('stormMore').open = true; S.free = true; if (!S.play && S.t < TMAX) S.play = true; update(); stormDrawPanels(); }
+// 時間の残りが、いちばん早いうねりが着いて 3 日たつまでより短いときは、時間をその分だけもどしてから起こす（時間のつまみが最後まで行っていると何も届かないので）
+function startStorm() { const need = SW.firstArrival().t + 3 * DAY; let msg = '';
+  if (S.t > TMAX - need) { const t1 = Math.max(0, TMAX - need); msg = `時間が足りないので、${fmtTime(t1)} にもどして嵐を起こしました。`; S.t = t1; }
+  STORM.on = true; STORM.t0 = S.t; STORM.msg = msg; $('stormBox').open = true; S.free = true; S.play = true; update(); stormDrawPanels(); }
 function stopStorm() { STORM.on = false; SW_OBS = null; update(); stormDrawPanels(); }
 $('stormBtn').onclick = () => STORM.on ? stopStorm() : startStorm();
 
@@ -14,6 +17,7 @@ function stormUpdate() {
   const age = S.t - STORM.t0; SW.P.t = Math.max(0, age);
   SW_OBS = STORM.on && age > 0 ? SW.obs(age) : null;
   const b = $('stormBtn'); b.textContent = STORM.on ? '嵐を消す' : '遠くで嵐を起こす'; b.classList.toggle('on', STORM.on);
+  $('stormSum').textContent = STORM.on ? (age < 0 ? '（まだ起きていない）' : `（起きてから ${SW.fmtT(age)}）`) : '（ひらくと嵐を起こせます）';
   // 画面の左上の札: 嵐の影響
   const chip = $('stStorm'); chip.hidden = !STORM.on;
   if (STORM.on) { const fa = SW.firstArrival(), o = SW_OBS;
@@ -25,15 +29,15 @@ function stormUpdate() {
 // 嵐の欄の地図・時刻×周期の図・数字（開いているときだけ）
 function stormDrawPanels() {
   swLabels();
-  const open = $('stormMore').open; if (!open || !STORM.on) { $('swNums').innerHTML = STORM.on ? '' : '「遠くで嵐を起こす」をおすと、いまの時刻に、遠くで嵐が吹きはじめます。'; if (!STORM.on) return; }
+  const open = $('stormBox').open; if (!open || !STORM.on) { $('swNums').innerHTML = STORM.on ? '' : '「遠くで嵐を起こす」をおすと、いまの時刻に、遠くで嵐が吹きはじめます。'; if (!STORM.on) return; }
   if (!open) return;
   SW.drawMap($('swMap')); SW.drawChart($('swChart'), TMAX);
   const o = SW_OBS || SW.obs(0), s2 = o.src, fa = SW.firstArrival(), lam = o.Tp > 0 ? W.G * o.Tp * o.Tp / (2 * Math.PI) : 0;
-  $('swNums').innerHTML = `嵐の海: 高さ <b>${s2.Hm0.toFixed(1)} m</b>・周期 <b>${s2.Tp.toFixed(1)} 秒</b><br>`
+  $('swNums').innerHTML = (STORM.msg ? STORM.msg + '<br>' : '') + `嵐の海: 高さ <b>${s2.Hm0.toFixed(1)} m</b>・周期 <b>${s2.Tp.toFixed(1)} 秒</b><br>`
     + `いちばん早い波（周期 ${fa.T.toFixed(0)} 秒）が着くのは、嵐から <b>${SW.fmtT(fa.t)}</b> 後<br>`
     + (SW.P.blocked ? '陸にさえぎられて、ここにはうねりが届きません。' : SW_OBS && o.Hm0 > 0.02 ? `いま届いているうねり: 高さ <b>${o.Hm0.toFixed(2)} m</b>・いちばん多い周期 <b>${o.Tp.toFixed(1)} 秒</b>（波長 ${lam.toFixed(0)} m・波の群れの速さ ${(SW.cg(1 / o.Tp) * 3.6).toFixed(0)} km/時）` : 'いまは、まだ（または、もう）うねりがほとんど届いていない');
 }
-$('stormMore').addEventListener('toggle', stormDrawPanels);
+$('stormBox').addEventListener('toggle', stormDrawPanels);
 function swLabels() { const P2 = SW.P;
   $('swRl').textContent = (P2.R / 1e3).toFixed(0) + ' km'; $('swUl').textContent = P2.U + ' m/s'; $('swU').value = P2.U;
   $('swDl').textContent = (P2.Ds / 3600).toFixed(0) + ' 時間'; $('swD').value = P2.Ds / 3600; $('swLl').textContent = (P2.Ls / 1e3).toFixed(0) + ' km'; $('swL').value = P2.Ls / 1e3; }
@@ -59,7 +63,7 @@ function stormTap(px, py, r) {
   const b = cam.basis(), [tx, ty] = ocean.txty, nx = px / r.width * 2 - 1, ny = 1 - py / r.height * 2;
   const d0 = [0, 1, 2].map(i => b.cf[i] + nx * tx * b.cr[i] + ny * ty * b.cu[i]), l = Math.hypot(...d0), ll = GL.pick(b.pos, d0.map(v => v / l));
   if (!ll) return true;
-  if (!GL.isSea(ll.lat, ll.lon)) { $('swGeo').textContent = 'そこは陸です。海の上をえらんでください。'; $('stormMore').open = true; return true; }
+  if (!GL.isSea(ll.lat, ll.lon)) { $('swGeo').textContent = 'そこは陸です。海の上をえらんでください。'; $('stormBox').open = true; return true; }
   if (swPlace === 'storm') GL.G.storm = ll; else GL.G.obs = ll;
   GL.moved(); swGeo(); return true;
 }
