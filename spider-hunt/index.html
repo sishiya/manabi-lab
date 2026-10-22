@@ -14,8 +14,9 @@
   <section id="pin">
     <div id="sceneBox"><canvas id="scene" aria-label="横から見た場面"></canvas></div>
     <div id="views">
-      <figure><canvas id="vFly"></canvas><figcaption><b class="fly">ハエの目</b>に映るクモ</figcaption></figure>
-      <figure><canvas id="vSpider"></canvas><figcaption><b class="sp">クモの目</b>に映るハエ</figcaption></figure>
+      <!-- 場面と同じ並び（左がクモ、右がハエ） -->
+      <figure><canvas id="vSpider"></canvas><figcaption><b class="sp">クモ</b>から見たところ<span class="ex">（ハエが映る）</span></figcaption></figure>
+      <figure><canvas id="vFly"></canvas><figcaption><b class="fly">ハエ</b>から見たところ<span class="ex">（クモが映る）</span></figcaption></figure>
     </div>
     <p id="status"></p>
   </section>

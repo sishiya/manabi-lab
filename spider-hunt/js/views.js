@@ -61,7 +61,7 @@ function fly(g, w, h, s, P, opt) {
     }
   }
   // 見出し: クモは個眼いくつぶんか
-  header(g, gone ? 'ハエの目' : `クモは個眼 約${Math.max(1, Math.round((2 * hw) / p * (2 * hh) / (p * 0.866)))}個ぶん`);
+  header(g, 'ハエの目｜' + (gone ? '飛び立った' : `クモは個眼 約${Math.max(1, Math.round((2 * hw) / p * (2 * hh) / (p * 0.866)))}個ぶん`));
   // 気づき（選んだしくみ）
   const es = pr.escape, val = P.model === 'size' ? (s.th * R2D) / es.toDeg : s.rate / es.rateTh;
   const bh = 16, by = h - bh;
@@ -120,7 +120,7 @@ function spider(g, w, h, s, P, opt) {
     if (fxp > w - 10) guideLabel(g, w - 34, cy, pr.name + ' →', C.fly);
     else guideLabel(g, Math.max(30, Math.min(w - 30, fxp)), Math.max(28, gyp - (pr.hgt + 2.4) * kmm - 6), pr.name, C.fly);
   }
-  header(g, s.sp === 'turn' ? '横の目で見つけて振り向く' : w < 240 ? 'くっきり＝点線の中だけ' : 'くっきり見えるのは点線の中だけ');
+  header(g, 'クモの目｜' + (s.sp === 'turn' ? '横の目で見つけて振り向く' : w < 240 ? 'くっきり＝点線の中' : 'くっきり見えるのは点線の中だけ'));
 }
 
 return { fly, spider, SPAN };

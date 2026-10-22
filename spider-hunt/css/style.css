@@ -61,6 +61,7 @@ h2{font-size:16px;margin:12px 0 6px}
   #views{gap:6px;margin-top:4px}
   #views canvas{height:118px}
   #views figcaption{font-size:11px}
+  #views figcaption .ex{display:none}
   #status{font-size:13px}
   #ctl,#explain,#graphBox,#about{padding:6px 12px}
   .lab{min-width:0;width:100%}
