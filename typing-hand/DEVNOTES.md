@@ -2,6 +2,7 @@
 
 ## 別セッションで続けるとき（まずここ）
 - いまの状態（2026-10-17）: **v011-entrance**。**入口に掲載・英語対応ずみ**（英語名 "Hands on the Keyboard"。ユーザーの指示で同じ日に保管庫から移した）。ゲーム判定は「ゲームではない」（GAMES.md）。**新しく文を足すときは英語も同じ変更で**（I18N.md 2.2）。
+- **残っている小さな直し**（2026-10-18 のスマホ点検 90b45a7 で気づいて、まだ直していない）: JP/EN の切りかえボタンが小さめ（約 24px。ほかのボタンはスマホで 32px にした）。
 - 次にやること: PLAN.md の段階C（使う指を少なくした打ち方とくらべる・US 配列・かな入力）か、ユーザーの感想しだい。気になっている所: 小指がホームでほぼのびきる（検査の「関節の限界」が 5〜20%。ホームの手首を4本の指の平均で合わせる試しはかえって悪くなった）。
 - 読む順: PLAN.md → このファイルの「ファイル構成」「しくみ」→ 関係するファイルだけ。手の中身（骨・皮ふ・筋肉の模型・IK）は piano-hand と同じなので、くわしくは `piano-hand/DEVNOTES.md` の「しくみ」。
 - 動かし方: サーバー apps（.claude/launch.json）で http://localhost:8765/typing-hand/ 。デバッグ用の窓口 `window.__tyha`（`simRun(秒)`・`setTime`・`setText(id)`・`nextTour()`・`setMode('watch'|'replay')`・`recKeyDown(code)`・`recKeyUp(code)`・`recPlayAll()`・`REC`・`checksAll()`・`sheet(times, cam)`）。プレビューのペインが隠れていると requestAnimationFrame が止まるので、確かめるときは `simRun(0)` をくり返し呼ぶ、エラーは `window.__tyhaErr`（配列）。
