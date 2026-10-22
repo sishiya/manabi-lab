@@ -1,6 +1,7 @@
 // ショートのサムネイル（1080×1920）の中身。描くのは short-thumb.html、作るのは _dev/tools/make-short-thumbs.ps1（RULES 8.7）
 // t: ショートの mp4 から取るコマの秒。focus: 絵の中で見せたい点（0〜1、左上が 0,0）、zoom: 寄せる倍率（1 = 横いっぱい）
 // kicker: 上の小さな一言、big: いちばん大きな言葉（数字や驚き）、sub: 下の言葉。c1・c2: big の色（上から下へ）
+// wmask: false で横長の絵のふちをぼかさない（くらべる絵の札が消えないように）
 // still: mp4 のコマのかわりに使う絵（2160×3840、stills/）。note: 右下の小さな注（※。絵の演出をことわる）
 // 数字は動画・アプリで出している値だけ（想像で盛らない）
 window.SHORT_THUMBS = {
@@ -18,7 +19,8 @@ window.SHORT_THUMBS = {
   'ga-creatures':  { name: '進化の箱庭', t: 26, focus: [0.64, 0.31], zoom: 3.6, kicker: 'でたらめな生きものが', big: '40世代', sub: 'で走り方を身につける', c1: '#e8ffe0', c2: '#5ee35e' },
   'god-view':      { name: '神の視点マップ', t: 12, focus: [0.5, 0.38], zoom: 1.5, wfocus: [0.5, 0.34], kicker: 'ホイールひとつで', big: '宇宙の果て', sub: 'からクォークまで', c1: '#e3f4ff', c2: '#5bb8ff' },
   'wifi-wave':     { name: '電波の見える部屋', t: 29, focus: [0.3, 0.3], zoom: 1.9, kicker: 'WiFi の電波を見える化', big: '5 GHz', sub: 'は壁の向こうで弱くなる', c1: '#fff0d0', c2: '#ff9a2e' },
-  'mold-growth':   { name: 'カビが育つまで', t: 29, focus: [0.5, 0.39], zoom: 1.7, kicker: 'お風呂のカビは', big: '8週間', sub: 'でここまで広がる', c1: '#f0ffd8', c2: '#9be04a' },
+  // 2026-10-22: 淡い壁に「8週間」で目を引かなかった → 同じ壁・同じ梅雨の8週間を2つの習慣でくらべる絵（mold-still.html で撮る。数はアプリの記録の表と同じ）
+  'mold-growth':   { name: 'カビが育つまで', t: 29, still: 'stills/mold-growth-compare.jpg', focus: [0.5, 0], zoom: 1, wzoom: 0.56, wfocus: [0.5, 0.25], wmask: false, kicker: 'お風呂のカビに効く習慣', big: '換気＋水切り', sub: '8週間でカビが 1/100以下', note: '※ 梅雨の浴室の壁（横10cm）を計算した、学習用シミュレーションの推定です', c1: '#f0ffd8', c2: '#9be04a' },
   'piano-hand':    { name: 'ピアノを弾く手', t: 21.6, focus: [0.62, 0.62], zoom: 1.35, kicker: '皮ふの下では', big: '骨と筋肉', sub: 'がこう動いている', c1: '#ffe6e0', c2: '#ff6b5c' },
   'pitch-physics': { name: '変化球のしくみ', t: 31, focus: [0.5, 0.36], zoom: 1.45, wfocus: [0.5, 0.4], kicker: '同じねらいで投げても', big: 'ナックル', sub: '左右 38 cm・上下 47 cm ばらける', c1: '#fff6d8', c2: '#ffd166' },
   'wave-growth':   { name: '波が育つまで', t: 31, focus: [0.5, 0.42], zoom: 1.3, kicker: '凪の海に風が吹いて', big: '約30時間', sub: 'で育ちきる。高さ 3.1 m', c1: '#fff3d6', c2: '#ffc46b' }

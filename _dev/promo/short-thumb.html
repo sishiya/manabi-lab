@@ -67,7 +67,9 @@
 const q = new URLSearchParams(location.search);
 const app = q.get('app') || 'evolution', wide = q.has('wide');
 if (wide) { document.documentElement.classList.add('wide'); document.body.classList.add('wide'); }
-const c = SHORT_THUMBS[app];
+const c = { ...SHORT_THUMBS[app] };
+// 文言の案を見くらべるとき: ?kicker=…&big=…&sub=… で表の言葉を差しかえる（表は変えない）
+for (const k of ['kicker', 'big', 'sub', 'note']) if (q.has(k)) c[k] = q.get(k);
 const root = document.documentElement.style;
 root.setProperty('--c1', c.c1); root.setProperty('--c2', c.c2); root.setProperty('--glow', c.c2 + '40');
 document.getElementById('kicker').textContent = c.kicker;
@@ -90,7 +92,7 @@ const bg = document.getElementById('bg');
 Object.assign(bg.style, { width: W + 'px', height: H + 'px', left: x0 + 'px', top: y0 + 'px' });
 bg.src = 'out/thumbsrc/' + app + '.jpg';
 // 横長: 左・上・下のふちをぼかす（アプリの上の小さな札や、ショートの字幕の端が見えないように）。マスクは絵の箱が基準なので画面の位置に直す
-if (wide) { const t = -y0, m = `linear-gradient(to right, transparent 0, #000 220px), linear-gradient(to bottom, transparent ${t}px, #000 ${t + 110}px, #000 ${t + 620}px, transparent ${t + 720}px)`;
+if (wide && c.wmask !== false) { const t = -y0, m = `linear-gradient(to right, transparent 0, #000 220px), linear-gradient(to bottom, transparent ${t}px, #000 ${t + 110}px, #000 ${t + 620}px, transparent ${t + 720}px)`;
   bg.style.webkitMaskImage = bg.style.maskImage = m; bg.style.maskComposite = 'intersect'; bg.style.webkitMaskComposite = 'source-in'; }
 if (wide) { const b2 = document.getElementById('bg2'), BH = 1400 * 16 / 9;
   Object.assign(b2.style, { width: '1400px', height: BH + 'px', left: '-60px', top: Math.min(-40, 360 - fy * BH) + 'px' }); b2.src = bg.src; }

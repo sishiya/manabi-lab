@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>カビ: サムネイル用の絵（くらべる）</title>
+<!-- サムネイル用の絵 stills/mold-growth-compare.jpg（2160×3840）を作るページ。http://localhost:8765/_dev/promo/mold-still.html を
+     ヘッドレスの Chrome で 2160×3840 に撮る（--virtual-time-budget で箱庭の計算を待つ）。
+     同じ浴室の壁・同じ乱数で、梅雨の8週間を2つの習慣で計算し、上下に並べる（上: 換気なし・そのまま、下: 24時間換気＋水を切る）。
+     short-thumb.html は上半分（y 0〜1920）だけをくっきり見せるので、2つの帯はそこに入れる。数はアプリの記録の表と同じ W.stats.visArea -->
+<style>
+  html, body { margin: 0; width: 2160px; height: 3840px; overflow: hidden; background: #0b0f10; font-family: 'Noto Sans JP', 'Yu Gothic', sans-serif; }
+  .band { position: absolute; left: 0; width: 2160px; height: 950px; overflow: hidden; }
+  .band iframe { position: absolute; left: 0; top: 0; width: 3240px; height: 1425px; border: 0; }
+  #b1 { top: 0; } #b2 { top: 970px; }
+  .tag { position: absolute; right: 50px; top: 50px; padding: 18px 34px; border-radius: 14px; background: rgba(8,12,14,0.82);
+    color: #fff; font-size: 64px; font-weight: 700; letter-spacing: 0.06em; display: flex; gap: 34px; align-items: baseline; }
+  .tag b { font-size: 76px; }
+  #b1 .tag b { color: #ffb0a0; } #b2 .tag b { color: #a8f0b0; }
+</style>
+</head>
+<body>
+<div class="band" id="b1"><iframe></iframe><div class="tag"><span>換気なし・そのまま</span><b></b></div></div>
+<div class="band" id="b2"><iframe></iframe><div class="tag"><span>24時間換気＋水を切る</span><b></b></div></div>
+<script>
+const SET = [{ id: 'b1', habits: { fan: 'none', after: 'none' } }, { id: 'b2', habits: { fan: 'h24', after: 'squeegee' } }];
+for (const s of SET) {
+  const f = document.querySelector('#' + s.id + ' iframe');
+  f.onload = () => {
+    const w = f.contentWindow, M = w.__mk;
+    const st = w.document.createElement('style');
+    st.textContent = '#world{position:fixed!important;left:0!important;top:0!important;width:3240px!important;height:1425px!important;max-width:none!important;z-index:999}';
+    w.document.head.append(st);
+    M.UI.playing = false;
+    Object.assign(M.W.habits, { season: 'rainy', clean: 'none' }, s.habits);
+    w.restart();
+    Object.assign(M.VIEW, { hidden: false, moist: false, labels: false, zoom: 1, cx: 50, cy: 30 });
+    M.run(56 * 24);
+    M.frame(2, 0.03);
+    // 壁の枠（VIEW.frame）を横いっぱいに広げ、上を少し切る（目地の交わりとゴムパッキンが入る高さ）
+    const F = M.VIEW.frame, k = 2160 / F.w, cut = Math.max(0, F.h * k - 950) * 0.55;
+    Object.assign(f.style, { transformOrigin: '0 0', transform: `translate(0px, ${-cut}px) scale(${k}) translate(${-F.x}px, ${-F.y}px)` });
+    document.querySelector('#' + s.id + ' .tag b').textContent = M.W.stats.visArea.toFixed(0) + ' mm²';
+  };
+  f.src = '../../mold-growth/index.html?lang=ja';
+}
+</script>
+</body>
+</html>
