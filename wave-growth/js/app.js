@@ -47,17 +47,7 @@ function setQualityPick(k) { qPick = k; try { localStorage.setItem('wagr.quality
 function qualNote() { const el = $('qualNote'); if (!el || !ocean) return; const n = { high: L('高', 'High'), mid: L('中', 'Medium'), low: L('低', 'Low') }[ocean.quality];
   el.textContent = qPick === 'auto' ? L(`いまは「${n}」`, `Now: ${n}`) : ''; }
 document.querySelectorAll('#quals button').forEach(b => b.onclick = () => setQualityPick(b.dataset.q));
-// ---- 白波の作り方の見くらべ（A・B・C。js/ocean.js の FOAM_MODES）。選んだものは覚えておく ----
-let fmPick = 1;
-try { const r = localStorage.getItem('wagr.foamMode'), v = +r; if (r !== null && r !== '' && (v === 0 || v === 1 || v === 2)) fmPick = v; } catch (e) {}   // 何もないとき +null = 0 にならないように
-function setFoamPick(m) { fmPick = m; try { localStorage.setItem('wagr.foamMode', m); } catch (e) {} if (ocean) ocean.setFoamMode(m);
-  document.querySelectorAll('#foamModes button').forEach(b => { const on = +b.dataset.fm === m; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }); foamNote(); }
-// 絵の白波の割合（1 km の地図で数えた値）と観測の式の値を並べる
-function foamNote() { if (!ocean) return; const f = ocean.foam, t = f.target * 100, m = f.mean[1] * 100, d = v => v < 1 ? v.toFixed(2) : v.toFixed(1);
-  const on = f.on && SUN.foamK > 0 && t > 0.005;
-  $('foamNote').textContent = on ? `いま: 絵の白波 ${d(m)}%・観測の式 ${d(t)}%` : ''; $('foamNoteEn').textContent = on ? `Now: drawn whitecaps ${d(m)}%, observed formula ${d(t)}%` : ''; }
-document.querySelectorAll('#foamModes button').forEach(b => b.onclick = () => setFoamPick(+b.dataset.fm));
-setFoamPick(fmPick);
+// 白波の作り方の見くらべ（A・B・C）は 2026-10-22 白波をやめたので外した（つなぎ方は git の 18509e3 の app.js）
 setQualityPick(qPick);
 addEventListener('resize', resize); resize();
 
@@ -85,7 +75,7 @@ function fmtTime(t) {
   return h + L(' 時間', ' h') + (m && h < 10 ? ' ' + m + L(' 分', ' min') : '');
 }
 const fmtLen = v => v < 0.1 ? (v * 100).toFixed(1) + ' cm' : v.toFixed(2) + ' m';
-let lastSea = { key: '', at: 0 }, bfRow = -1;
+let lastSea = { key: '', at: 0 }, bfRow = -1, seaFrames = 0;
 // 風力階級の表（この計算の発達しきった海の高さは、その風速の範囲のまん中で）
 document.querySelector('#bfTable tbody').innerHTML = window.WGbeaufort.T.map(r => {
   const mid = isFinite(r[2]) ? (r[1] + r[2]) / 2 : r[1], f = mid > 0.4 && r[0] <= 11 ? W.fullyDev(mid).Hm0 : 0;   // この計算の風は 30 m/s まで（風力 11）
@@ -139,7 +129,10 @@ function syncSea() {
   const st = S.st, U = windAt(S.t), sw = SW_OBS && SW_OBS.Hm0 > 0.005 ? SW_OBS : null, now = performance.now();
   const q = (v, r) => Math.round(Math.log(Math.max(v, 1e-4)) / r);   // 0.4%（風の波）・1%（うねり）ごとに丸めて、変わったかを見る
   const key = [ocean.Q.casc4 ? 4 : 3, U, S.depth, st.Hdeep > 0 ? q(st.Hdeep, 0.004) : 0, st.Tp > 0 ? q(st.Tp, 0.003) : 0, sw ? q(sw.Hm0, 0.01) : 0, sw ? q(sw.Tp, 0.01) : 0, SW_ANG.toFixed(3)].join('/');
-  if (key === lastSea.key || now - lastSea.at < 90) return;
+  // 作りなおしの間隔: 画質ごと（高 90・中 180・低 300 ms）で、6 コマに 1 回まで。分布を GPU へ送るたびに GPU の前の仕事を待つので、遅い端末で送りすぎると、さらに遅くなる（2026-10-22 ソフトの GPU で 30 秒止まった）
+  seaFrames++;
+  if (key === lastSea.key || now - lastSea.at < ({ high: 90, mid: 180, low: 300 }[ocean.quality] || 90) || (lastSea.key && seaFrames < 6)) return;
+  seaFrames = 0;
   ocean.setDepth(S.depth);
   const ws = st.Hdeep > 0 ? W.makeSpecK(st.Hdeep, st.Tp, WIND_ANG, 10, U, S.depth) : null, ss = sw ? W.makeSpecKTable(SW.fs, sw.E, SW_ANG, sw.s) : null;
   ocean.setSpec(ws && ss ? (kx, kz) => ws(kx, kz) + ss(kx, kz) : ws || ss || (() => 0));
@@ -185,7 +178,6 @@ function loop(now) {
       const d = devicePixelRatio || 1, k0 = Math.min(d, ocean.Q.px); ocean.setQuality(ocean.quality === 'high' ? 'mid' : 'low'); rscale = Math.min(1, rscale * k0 / Math.min(d, ocean.Q.px)); resize(); qualNote(); slow = 0; }
     else if (slow >= 4 && rscale > 0.5) { rscale = Math.max(0.5, rscale * 0.85); resize(); slow = 0; }
     if (ocean && ocean.foam.short !== foamShortShown) update();
-    foamNote();
     const sg = ocean && ocean.prof ? ocean.stage : null;   // ?prof=1 のとき段階ごと（波の FFT・泡の地図・海面の読み出し・空の絵・画面）
     $('perf').textContent = L(`1コマ ${ms.toFixed(1)} ms`, `${ms.toFixed(1)} ms/frame`) + (ocean && ocean.gpuMs ? `（GPU ${ocean.gpuMs.toFixed(1)}）` : '') + (sg ? L(`［波 ${sg.fft.toFixed(2)}・泡 ${sg.foam.toFixed(2)}・読み出し ${sg.probe.toFixed(2)}・空の絵 ${sg.skytex.toFixed(2)}・画面 ${sg.draw.toFixed(2)}］`, ` [waves ${sg.fft.toFixed(2)} · foam ${sg.foam.toFixed(2)} · probe ${sg.probe.toFixed(2)} · sky map ${sg.skytex.toFixed(2)} · screen ${sg.draw.toFixed(2)}]`) : '') + L('・', ' · ') + `${cv.width}×${cv.height}`; }
   requestAnimationFrame(loop);
@@ -198,5 +190,5 @@ function start() {
   requestAnimationFrame(loop);
   // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）
   window.__wagr = { S, cam, get ocean() { return ocean; }, update, STORM, startStorm, stopStorm,
-    simRun(sec, dt = 1 / 60) { for (let t = 0; t < sec; t += dt) { step(dt); draw(dt); } return S.st; } };   // 毎コマ描く（ブイは描いたコマの海面を読んで動くため）
+    simRun(sec, dt = 1 / 60) { for (let t = 0; t < sec; t += dt) { step(dt); draw(dt); if (ocean && ocean.isSoft) ocean.sync(); } return S.st; } };   // ソフトの GPU では 1 コマごとに GPU を待つ（積みすぎると、あとで 20 秒以上止まる。2026-10-22 smoke）   // 毎コマ描く（ブイは描いたコマの海面を読んで動くため）
 }

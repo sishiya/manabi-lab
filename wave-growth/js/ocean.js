@@ -22,7 +22,7 @@ window.WGocean = (() => {
     const gl = cv.getContext('webgl2', { antialias: true, alpha: false });
     if (!gl) throw new Error(L('WebGL2 が使えません', 'WebGL2 is not available'));
     if (!gl.getExtension('EXT_color_buffer_float')) throw new Error(L('EXT_color_buffer_float が使えません', 'EXT_color_buffer_float is not available'));
-    const aniso = gl.getExtension('EXT_texture_filter_anisotropic');
+    const aniso = gl.getExtension('EXT_texture_filter_anisotropic');   // ソフトの GPU では下で使わない（異方性フィルタはとても重い）
     // ソフトの GPU（SwiftShader など）では、GPU に問い合わせるたびに待たされるので、時間の計測をやめる
     const dri = gl.getExtension('WEBGL_debug_renderer_info'), renderer = dri ? String(gl.getParameter(dri.UNMASKED_RENDERER_WEBGL)) : '';
     const isSoft = /swiftshader|llvmpipe|software|basic render/i.test(renderer);
@@ -48,7 +48,7 @@ window.WGocean = (() => {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mip ? gl.LINEAR_MIPMAP_LINEAR : filter);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-      if (mip && aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, 8);
+      if (mip && aniso && !isSoft) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, 8);
       return t; }
     function fbo(ts) { const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f);
       ts.forEach((t, i) => gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0 + i, gl.TEXTURE_2D, t, 0));
@@ -122,7 +122,7 @@ window.WGocean = (() => {
     // 画質（はじめは端末から決める。js/app.js の自動で下げることもある）
     let qName = 'high', Q = QUALITY.high;
     function setQuality(name) { if (!QUALITY[name]) return; const was = Q; qName = name; Q = QUALITY[name]; skyDirty = true;
-      if (Q.foam > 0 && !isSoft) { foamInit(); if (was.foam === 0) FW.forEach(w => { w.snap = null; w.acc = 0; }); } }   // 泡の模様は選んだときに作る（はじめて描くコマで止まらないように）。地図なしから戻したら古い泡を使わない
+      if (Q.foam > 0 && !isSoft && foamWanted) { foamInit(); if (was.foam === 0) FW.forEach(w => { w.snap = null; w.acc = 0; }); } }   // 泡の模様は選んだときに作る（はじめて描くコマで止まらないように）。地図なしから戻したら古い泡を使わない
     // 端末から: ソフトの GPU は「低」、スマホ・タブレット（タッチだけで画面が小さい、またはスマホの GPU の名前）は「中」、ほかは「高」
     function autoQuality() { if (isSoft) return 'low';
       const iPad = /mac/i.test(navigator.platform || '') && navigator.maxTouchPoints > 1;   // iPad は Mac と名のる
@@ -152,7 +152,7 @@ window.WGocean = (() => {
     // 泡の作り方の案（2026-10-22 ユーザーと見くらべる）: A = web-ocean のとおり（波の横の動きを 1.25 倍 = choppiness。線形の波より山がとがる・物理を少し曲げる。3 枚のつぶれ・境目 0.68 で固定・じわっと gain 2・画素ごとの波頭の泡。量は観測と合わない）、
     // B = あいだ（A の形のまま（1.25 倍もそのまま）、境目を 0.6〜0.9 の中だけでゆっくり動かして量を観測に近づける）、C = 前の版（大・中だけ・くっきり gain 20・境目を 0.05〜1 で動かして量を観測に合わせる）
     const FOAM_MODES = [{ cOn: 1, gain: 2, fixed: true, thr: 0.68, lam: 1.25 }, { cOn: 1, gain: 2, lo: 0.6, hi: 0.9, rate: 0.5, lam: 1.25 }, { cOn: 0, gain: 20, lo: 0.05, hi: 1, rate: 1 }];
-    let foamMode = 1;
+    let foamMode = 1, foamWanted = false;   // foamWanted = 沖の白波を描くか（frame のはじめに env.foamK から）
     function setFoamMode(m) { if (!FOAM_MODES[m] || m === foamMode) return; foamMode = m; FW.forEach(w => { w.snap = null; w.thr = FOAM_MODES[m].fixed ? FOAM_MODES[m].thr : Math.min(FOAM_MODES[m].hi, Math.max(FOAM_MODES[m].lo, 0.7)); }); foamShort = false; }   // 切りかえたら地図をはじめから
     let foamTarget = 0, foamPend = null, foamTick = 0, foamLev = 0, foamShort = false; const foamBuf = new Float32Array(4), foamLastT = [0, 0];
     const foamPbo = gl.createBuffer(); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, foamPbo); gl.bufferData(gl.PIXEL_PACK_BUFFER, 16, gl.STREAM_READ); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
@@ -212,7 +212,7 @@ window.WGocean = (() => {
     function setSea(Hm0, Tp, windAng, U = 0) { setSpec(Hm0 > 0 ? window.WGgrowth.makeSpecK(Hm0, Tp, windAng, 10, U) : null); }   // U = いまの風（短い波が風で変わる）
     function setSpec(SK) {   // SK(kx, kz) = 波数の面の密度（null = 波なし）
       fftVar = 0; fftSlope = 0; fftSlopeD = 0; const Hm0 = SK ? 1 : 0;
-      CASC.forEach((c, ci) => {
+      CASC.forEach((c, ci) => { if (ci === 3 && !Q.casc4) return;   // 4 枚めは使うときだけ（送る texSubImage2D は GPU の前の仕事を待つので、送る数を減らす）
         const dk = 2 * Math.PI / c.L, amp = new Float32Array(N * N), d = new Float32Array(N * N * 4);
         if (Hm0 > 0) for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
           const n = i < N / 2 ? i : i - N, m = j < N / 2 ? j : j - N, kx = n * dk, kz = m * dk, k = Math.hypot(kx, kz);
@@ -265,6 +265,7 @@ window.WGocean = (() => {
       let q = null; if (tq && !prof && tqs.length < 8) { q = gl.createQuery(); gl.beginQuery(tq.TIME_ELAPSED_EXT, q); }
       if (sOpen) { gl.endQuery(tq.TIME_ELAPSED_EXT); gl.deleteQuery(sOpen.q); sOpen = null; }   // 前のコマが途中で止まったときの開いたままの問い合わせ
       if (prof && tq) { tPoll(); gpuMs = stage.fft + stage.foam + stage.probe + stage.skytex + stage.draw; }
+      foamWanted = (env.foamK == null ? 1 : env.foamK) > 0;
       const t = simT % LOOP;
       const W = cv.width, H = cv.height, ty = Math.tan(cam.fovY / 2), tx = ty * W / H;
       const { cf, cr, cu } = cam, P0 = cam.pos;
@@ -295,13 +296,13 @@ window.WGocean = (() => {
           gl.bindFramebuffer(gl.FRAMEBUFFER, PP[1 - src].f); use(pFFT);
           setAll(pFFT, { A: PP[src].a, B: PP[src].b, N, sub }); gl.uniform1i(pFFT.u.hz, dir); full(); src = 1 - src; }
         gl.bindFramebuffer(gl.FRAMEBUFFER, c.f[cur]); use(pAsm);
-        setAll(pAsm, { A: PP[src].a, B: PP[src].b, lam: FOAM_MODES[foamMode].lam || 1 }); full();   // 案 A・B は 1.25
+        setAll(pAsm, { A: PP[src].a, B: PP[src].b, lam: foamWanted && FOAM_MODES[foamMode].lam || 1 }); full();   // 白波を描くときの案 A・B だけ 1.25（描かないときは線形の波のまま 1）
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.bindTexture(gl.TEXTURE_2D, c.disp); gl.generateMipmap(gl.TEXTURE_2D);
         gl.bindTexture(gl.TEXTURE_2D, c.slope[cur]); gl.generateMipmap(gl.TEXTURE_2D);
         gl.bindTexture(gl.TEXTURE_2D, c.mom); gl.generateMipmap(gl.TEXTURE_2D);
       });
-      const foamOn = (env.foamK == null ? 1 : env.foamK) > 0;
+      const foamOn = foamWanted;
       tB('foam'); const mapOn = foamOn && Q.foam > 0 && !isSoft;   // ソフトの GPU では割合を合わせる読み出しが重いので、泡の地図ごと止める
       if (mapOn) foamInit();
       if (mapOn) foamUpdate(dt, simT, P0, env.windU || 0, env.windA || 0);
@@ -351,7 +352,10 @@ window.WGocean = (() => {
       cur = 1 - cur;
       tE(); if (q) { gl.endQuery(tq.TIME_ELAPSED_EXT); tqs.push(q); }
     }
-    return { isSoft, QUALITY, setQuality, setFoamMode, get foamMode() { return foamMode; }, autoQuality, get quality() { return qName; }, get Q() { return Q; },
+    // GPU の仕事が終わるまで待つ（画面の 1 画素を読む）。ソフトの GPU で simRun が何十コマも積むと、あとの読み出しで何十秒も止まるため
+    const syncPx = new Uint8Array(4);
+    function sync() { gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, syncPx); }
+    return { isSoft, sync, QUALITY, setQuality, setFoamMode, get foamMode() { return foamMode; }, autoQuality, get quality() { return qName; }, get Q() { return Q; },
       get prof() { return prof; }, set prof(v) { prof = !!v && !!tq; }, get stage() { return stage; }, setSea, setSpec, setDepth(h) { depthH = isFinite(h) ? h : 1e5; }, frame, makeMesh, get probe() { return probeOut; }, get VP() { return lastVP; }, get txty() { return lastTxTy; }, skyChanged() { skyDirty = true; }, get gpuMs() { return gpuMs; }, get fftHs() { return 4 * Math.sqrt(fftVar); }, get fftSlope() { return fftSlope + (Q.casc4 ? fftSlopeD : 0); }, get foam() { return { thr: FW.map(w => +w.thr.toFixed(3)), short: foamShort && qName !== 'low', on: Q.foam > 0 && !isSoft, mean: FW.map(w => w.mean), target: foamTarget, res: FW.map(w => w.res) }; },
       // 調べ用: 描いている海面（3 枚の FFT の高さ）の分散 → 有義波高。分布の式から出す値（fftHs）とくらべる
       debugSea() { let tot = 0; const per = []; CASC.forEach(c => { const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f);

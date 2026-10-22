@@ -268,7 +268,7 @@ void main(){sunC=sunCu*sunVis(L);
   // 白波の泡: 近く（128 m の地図）と遠く（1 km）を、地図の端の手前でまぜる。その先は画素のつぶれだけ
   vec2 dc=abs(vXZ-cam.xz);float cheb=max(dc.x,dc.y),w0=1.-smoothstep(.3*fL.x,.45*fL.x,cheb),w1=1.-smoothstep(.3*fL.y,.45*fL.y,cheb);
   if(fMap<.5){w0=0.;w1=0.;}   // 画質「低」: 泡の地図なし（画素のつぶれだけの目安）
-  vec4 fwl=mix(texture(fW1,vXZ/fL.y),texture(fW0,vXZ/fL.x),w0)*w1;
+  vec4 fwl=vec4(0);if(foamK>0.&&fMap>.5)fwl=mix(texture(fW1,vXZ/fL.y),texture(fW0,vXZ/fL.x),w0)*w1;   // 白波を描かないときは読まない（foamK・fMap は画面ぜんぶ同じなので、if の中でもミップは選べる。ソフトの GPU では読むだけで重い）
   float fresh=frOn*clamp((thrR-Jt)*2.5,0.,1.);   // 案 A・B: その画素の 3 枚のつぶれからも、いま砕けている波頭の泡（地図の外では、これだけ。web-ocean と同じ）
   float cover=clamp(max(fwl.r,fresh*(1.-w1*.7))+fwl.g*.6,0.,1.5)*foamK;
   if(under>0.){   // 水の中から水面を見る（カメラの真上の水面より下にいるとき）: 水 → 空気の屈折（スネルの窓）、窓の外は全反射。通った光は 1.33² 倍（放射輝度は n² に比例）。カメラまでは水のかすみ
@@ -304,8 +304,8 @@ void main(){sunC=sunCu*sunVis(L);
   // 浅い所（ミラーの惑星の棚）は底が見える（水深で色がうすれる。見た目の目安）
   vec3 sand=vec3(.42,.38,.3)*(sunC*sunI*max(L.y,0.)*.05+amb*.7);body=mix(sand,body,1.-exp(-vDep/1.5));
   // 水の下の物（大きさくらべの人など）: 物までの水の厚み t から、光が吸われる分（ベール–ランベルト。赤ほど早く吸われる）と水の中で散らばる分。少し屈折でずらす
-  float pat=texture(fTex,vXZ*.23+vec2(.013,0)*time).r*.78+texture(fTex,vXZ*.71+vec2(.37,.71)).g*.22,fwp=fwidth(pat)+.03;   // 遠くはミップでならす（地図の数え方は foamPat）   // 微分は discard より前で
-  vec2 dX=dFdx(vXZ),dY=dFdy(vXZ);   // 下の if の中ではミップを自動で選べないので、ここで微分しておく
+  float pat=0.,fwp=.03;vec2 dX=vec2(0),dY=vec2(0);
+  if(foamK>0.){pat=texture(fTex,vXZ*.23+vec2(.013,0)*time).r*.78+texture(fTex,vXZ*.71+vec2(.37,.71)).g*.22;fwp=fwidth(pat)+.03;dX=dFdx(vXZ);dY=dFdy(vXZ);}   // 泡の模様と微分（discard より前。泡を描かないときはとばす）
   float contact=0.;
   if(hasBg>0.){vec2 uv=gl_FragCoord.xy/vpS;float dz=texture(bgD,uv).r;
     if(dz<.99999){float zn=dz*2.-1.,zo=2.*nearP*farP/(farP+nearP-zn*(farP-nearP)),zw=dot(vPos-cam,cfw);

@@ -22,7 +22,7 @@ const SETUP = {
   // クモがハエをつかまえるまで: クモが跳んでいるところ（ハエが翅を上げた直後）。3つの視界が並ぶ
   'spider-hunt': async w => { await wait(800); w.__sphu.toEnd(); const e = w.__sphu.S.hist[w.__sphu.S.hist.length - 1].ev; w.__sphu.at(e.wr + 0.002); await wait(300); },
   // 波が育つまで: 風速 10 m/s が 12 時間吹いた海（逆光のきらきら）。WebGL2 の海なので、描けない環境では「描けません」の文になる
-  'wave-growth': async w => { await wait(1500); w.__wagr.S.t = 12 * 3600; w.__wagr.S.free = true; w.__wagr.update(); w.__wagr.simRun(1); await wait(500); },
+  'wave-growth': async w => { await wait(1500); w.__wagr.S.t = 12 * 3600; w.__wagr.S.free = true; w.__wagr.update(); w.__wagr.simRun(0.3); await wait(500); },   // 0.3 秒（ソフトの GPU では 1 コマ 0.5 秒ほどかかり、1 秒ぶんだと 30 秒こえて smoke が止まる。2026-10-22）
   // ビッグバンから惑星まで（WebGPU。ここは swiftshader で WebGPU が無いので「使えません」の画面になる。サムネイルは GPU つきで撮って手で切りぬいた: big-bang/DEVNOTES）
   'big-bang': async w => { await wait(1500); },
   // 心地よい音・いやな音: ツアー②（2つの音・半音で粗い。曲線と地図の点）。音は鳴らさない
