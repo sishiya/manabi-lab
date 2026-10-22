@@ -5,7 +5,7 @@ window.addEventListener('error', e => window.__sphuErr.push(String(e.message)));
 
 const $ = id => document.getElementById(id);
 const DT = 0.0005;                  // 計算の刻み（0.5ms）
-const P = { speed: 'dill', model: 'size', crouch: true, dir: 0, fastV: 30, prey: 'housefly' };
+const P = { speed: 'dill', model: 'size', crouch: true, dir: 0, fastV: 30, prey: 'housefly', lux: 300 };
 const S = { st: null, hist: [], view: 0, playing: true, rate: 'auto', camR: 95, rims: true, guide: true, paused: false };
 SD.setP(P);
 
@@ -43,20 +43,21 @@ function fit(c, g) {
   g.setTransform(dpr, 0, 0, dpr, 0, 0); return [Math.max(1, c.clientWidth), Math.max(1, c.clientHeight)];
 }
 function status(s) {
-  const vd = M.verdict(s, P), pr = M.prey(P).name;
+  const pr = M.prey(P), vd = M.verdict(s, P), nm = pr.short || pr.name, roach = pr.draw === 'roach';
+  const go = roach ? '走り出した' : '飛び立った', pct = vd && vd.p != null ? `<small>（つかまえる確率 約${Math.round(vd.p * 100)}%）</small>` : '';
   if (vd && M.done(s)) {
-    if (vd.k === 'early') return `<b class="escaped">${pr}が先に気づいて逃げた</b><small>（クモが跳ぶ前。あと ${s.D.toFixed(1)}mm）</small>`;
+    if (vd.k === 'early') return `<b class="escaped">${nm}が先に気づいて逃げた</b><small>（クモが跳ぶ前。あと ${s.D.toFixed(1)}mm）</small>`;
     const m = vd.m != null ? Math.abs(vd.m * 1000).toFixed(0) : '';
-    if (vd.k === 'close') return `<b class="close">きわどい</b>: ${pr}が飛び立って ${m}ms 後にクモがとどいた<small>（測った数のばらつき ±11ms より小さい差）</small>`;
-    if (vd.k === 'escaped') return `<b class="escaped">逃げた</b>: クモがとどく ${m}ms 前に飛び立った`;
-    return `<b class="caught">つかまった</b>${m ? `: 飛び立つ ${m}ms 前にとどいた` : ''}`;
+    if (vd.k === 'close') return `<b class="close">きわどい</b>: ${nm}が逃げはじめるのと、ほぼ同時に前脚がとどく（差 ${m}ms）${pct}`;
+    if (vd.k === 'escaped') return `<b class="escaped">逃げた</b>: クモがとどく ${m}ms 前に${go}${pct}`;
+    return `<b class="caught">つかまえた</b>${vd.m != null ? `: ${nm}が${roach ? '走り出す' : '飛び立つ'} ${m}ms 前にとどいた` : ''}${pct}`;
   }
-  if (s.sp === 'turn') return `クモが${pr}を見つけた<small>（${pr}が 5.5° に見える距離 ${s.D.toFixed(0)}mm）</small>`;
-  if (s.sp === 'stalk') return `${pr}は${s.fl === 'rest' ? 'まだ気づかない' : '気づいた'}<small>（クモ ${s.V.toFixed(1)}mm/s${s.outside ? '・測った範囲の外なので推定' : ''}）</small>`;
-  if (s.sp === 'prep') return `踏み切り ${(s.spT * 1000).toFixed(0)} / ${(M.DATA.jump.prep * 1000).toFixed(0)}ms` + (s.fl !== 'rest' ? `・${pr}が気づいた` : `・${pr}はまだ`);
-  if (s.sp === 'flight') return `跳んで ${((s.t - s.jump.t0) * 1000).toFixed(0)}ms` + (s.fl === 'air' ? `・${pr}は飛び立った` : s.fl === 'wing' ? `・${pr}が翅を上げた` : `・${pr}はまだ`);
-  if (s.sp === 'contact') return 'クモがとどいた' + (s.fl === 'air' ? `<small>（${pr}はもう飛び立っている）</small>` : '');
-  if (s.sp === 'stop') return `${pr}が飛び立ったので、クモは止まった`;
+  if (s.sp === 'turn') return `クモが${nm}を見つけた<small>（${nm}が 5.5° に見える距離 ${s.D.toFixed(0)}mm）</small>`;
+  if (s.sp === 'stalk') return `${nm}は${s.fl === 'rest' ? 'まだ気づかない' : '気づいた'}<small>（クモ ${s.V.toFixed(1)}mm/s${s.outside ? '・測った範囲の外なので推定' : ''}）</small>`;
+  if (s.sp === 'prep') return `踏み切り ${(s.spT * 1000).toFixed(0)} / ${(M.DATA.jump.prep * 1000).toFixed(0)}ms` + (s.fl !== 'rest' ? `・${nm}が気づいた` : `・${nm}はまだ`);
+  if (s.sp === 'flight') return `跳んで ${((s.t - s.jump.t0) * 1000).toFixed(0)}ms` + (s.fl === 'air' ? `・${nm}は${go}` : s.fl === 'wing' ? `・${nm}が${roach ? '向きを変えた' : '翅を上げた'}` : `・${nm}はまだ`);
+  if (s.sp === 'contact') return 'クモがとどいた' + (s.fl === 'air' ? `<small>（${nm}はもう${go}）</small>` : '');
+  if (s.sp === 'stop') return `${nm}が${go}ので、クモは止まった`;
   return '';
 }
 function draw() {
@@ -93,7 +94,8 @@ function seg(id, attr, fn) {
 seg('speed', 's', v => { P.speed = v; changed(); });
 seg('model', 'm', v => { P.model = v; changed(); });
 seg('dir', 'd', v => { P.dir = +v; changed(); });
-seg('prey', 'p', v => { P.prey = v; reset(); });
+seg('prey', 'p', v => { P.prey = v; $('modelRow').hidden = M.prey(P).escape.kind !== 'vision'; $('preyCap').textContent = M.prey(P).short || M.prey(P).name; reset(); });
+seg('light', 'l', v => { P.lux = +v; });
 seg('rate', 'r', v => { S.rate = v; });
 $('crouch').addEventListener('change', e => { P.crouch = e.target.checked; changed(); });
 $('rims').addEventListener('change', e => { S.rims = e.target.checked; });

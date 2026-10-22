@@ -23,22 +23,23 @@ const a = M.jumpAngle(11.6), v = M.DATA.jump.v, tf = 2 * v * Math.sin(a) / 9810,
 console.log(`跳躍: 角度 ${(a * 180 / Math.PI).toFixed(1)}°、飛んでいる時間 ${(tf * 1000).toFixed(1)}ms、届く距離 ${R.toFixed(2)}mm`);
 ok(Math.abs(R - 11.6) < 0.01, '放物線が跳ぶ距離 11.6mm に届く');
 
-// 3) 一覧
+// 3) 一覧（獲物 × 速さ × モデル）。p はつかまえる確率（獲物が動く時刻のばらつきから）
 const fmt = x => x == null ? '   —  ' : (x * 1000).toFixed(0).padStart(5) + 'ms';
-console.log('\n速さ    モデル  かがむ | 気づく距離  跳びつき  飛び立ち  とどく   結果');
-for (const speed of ['dill', 'const', 'fast']) for (const model of ['size', 'rate']) for (const crouch of [false, true]) {
-  const P = { speed, model, crouch, fastV: 30, prey: 'housefly' };
-  const st = M.run(P), ev = st.ev, vd = M.verdict(st, P);
-  // 気づいた距離をもう一度計算する（run は距離を残さないので、同じ条件で追う）
+console.log('\n獲物        速さ   モデル | 気づく距離  逃げる予定  とどく   結果');
+for (const prey of ['housefly', 'drosophila', 'roach']) for (const speed of ['dill', 'const', 'fast']) for (const model of (prey === 'roach' ? ['size'] : ['size', 'rate'])) {
+  const P = { speed, model, crouch: true, fastV: 30, prey };
   const s2 = M.newState(P); let dWr = null;
   while (!M.done(s2) && s2.t < 30) { M.step(s2, P, 0.0005); if (dWr == null && s2.ev.wr != null) dWr = s2.D; }
-  const t0 = ev.pounce || 0;
-  console.log(`${speed.padEnd(6)} ${model.padEnd(5)} ${crouch ? 'はい ' : 'いいえ'} | ${dWr == null ? '   —   ' : (dWr.toFixed(1) + 'mm').padStart(7)}  ${fmt(ev.pounce != null ? 0 : null)}  ${fmt(ev.to != null ? ev.to - t0 : null)}  ${fmt(ev.contact != null ? ev.contact - t0 : null)}  ${vd ? vd.k + (vd.m != null ? ' (' + (vd.m * 1000).toFixed(1) + 'ms)' : '') : '—'}`);
+  const ev = s2.ev, vd = M.verdict(s2, P), t0 = ev.pounce;
+  console.log(`${prey.padEnd(11)} ${speed.padEnd(6)} ${(prey === 'roach' ? 'wind' : model).padEnd(5)} | ${dWr == null ? '   —   ' : (dWr.toFixed(1) + 'mm').padStart(7)}  ${fmt(ev.toPlan != null && t0 != null ? ev.toPlan - t0 : null)}  ${fmt(ev.contact != null ? ev.contact - t0 : null)}  ${vd ? vd.k + ' p=' + vd.p.toFixed(2) : '—'}`);
 }
-console.log('（時刻は跳びつき（踏み切りの始まり）からの ms。結果の（）は「とどく − 飛び立ち」。正ならハエが先）');
+console.log('（時刻は跳びつき（踏み切りの始まり）から）');
 
 // 4) 大きさモデルでは、忍び寄りのあいだに気づかない（跳ぶ前に 49° に届かない）
-const st = M.run({ speed: 'dill', model: 'size' });
+const st = M.run({ speed: 'dill', model: 'size', crouch: true, prey: 'housefly' });
+const rr = M.run({ speed: 'dill', model: 'size', crouch: true, prey: 'roach' });
+ok(M.verdict(rr, { prey: 'roach' }).k === 'caught', 'ゴキブリ（風で気づく）は、跳躍が速すぎて間に合わない');
+ok(Math.abs(M.phi(0) - 0.5) < 1e-6 && Math.abs(M.phi(1.96) - 0.975) < 1e-3, '正規分布の累積の式');
 ok(st.ev.wr > st.ev.pounce, '大きさのモデルでは、ハエが気づくのはクモが跳んだあと');
 ok(M.angSize(7, 11.6) * 180 / Math.PI < 49, `跳びつく距離での見かけの大きさ ${(M.angSize(7, 11.6) * 180 / Math.PI).toFixed(1)}° は 49° より小さい`);
 

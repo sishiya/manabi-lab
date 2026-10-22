@@ -16,7 +16,7 @@
     <div id="views">
       <!-- 場面と同じ並び（左がクモ、右がハエ） -->
       <figure><canvas id="vSpider"></canvas><figcaption><b class="sp">クモ</b>から見たところ<span class="ex">（ハエが映る）</span></figcaption></figure>
-      <figure><canvas id="vFly"></canvas><figcaption><b class="fly">ハエ</b>から見たところ<span class="ex">（クモが映る）</span></figcaption></figure>
+      <figure><canvas id="vFly"></canvas><figcaption><b class="fly" id="preyCap">ハエ</b>から見たところ<span class="ex">（クモが映る）</span></figcaption></figure>
     </div>
     <p id="status"></p>
   </section>
@@ -28,17 +28,23 @@
       <button id="restart" aria-label="はじめから">↺</button>
     </div>
     <div class="row">
+      <span class="lab">獲物</span>
+      <div class="seg" id="prey"><button data-p="housefly" class="on">イエバエ</button><button data-p="drosophila">コバエ</button><button data-p="roach">小さなゴキブリ</button><button data-p="silverfish" disabled title="逃げ方を測った研究が見つからないため">シミ（準備中）</button></div>
+    </div>
+    <div class="row">
+      <span class="lab">部屋の明るさ</span>
+      <div class="seg" id="light"><button data-l="10000">昼の窓辺</button><button data-l="300" class="on">部屋の明かり</button><button data-l="30">夕方</button><button data-l="3">常夜灯</button><button data-l="0.3">月明かり</button></div>
+    </div>
+    <div class="row">
       <span class="lab">クモの近づき方</span>
       <div class="seg" id="speed"><button data-s="dill" class="on">近いほどゆっくり</button><button data-s="const">一定の速さ</button><button data-s="fast">急いで</button></div>
     </div>
-    <div class="row">
+    <div class="row" id="modelRow">
       <span class="lab">ハエが気づくのは</span>
       <div class="seg" id="model"><button data-m="size" class="on">大きく見えたら</button><button data-m="rate">急にふくらんだら</button></div>
     </div>
     <details id="more">
       <summary>くわしい設定</summary>
-      <div class="row"><span class="lab">獲物</span>
-        <div class="seg" id="prey"><button data-p="housefly" class="on">イエバエ</button><button data-p="silverfish" disabled>シミ（準備中）</button></div></div>
       <div class="row"><span class="lab">再生の速さ</span>
         <div class="seg" id="rate"><button data-r="auto" class="on">自動（跳ぶところだけ 1/50）</button><button data-r="1">ふつう</button><button data-r="0.1">1/10</button><button data-r="0.01">1/100</button></div></div>
       <div class="row"><span class="lab">クモが来る向き</span>
@@ -55,14 +61,15 @@
   <section id="explain">
     <h2>わかること</h2>
     <ul>
-      <li><b>忍び寄りのあいだ、ハエはほとんど気づけない。</b>クモは近いほどゆっくり進み、ハエの目に映る「ふくらみ方」をおさえます。跳ぶ距離（約12mm）でも、クモはハエの目に約34°。逃げのきっかけの54°より小さいままです。</li>
-      <li><b>最後の一手は、数ミリ秒の勝負。</b>跳び始めから約55msでとどきます。ハエが気づいて飛び立つのとの差は、測った数のばらつき（±11ms）と同じくらいです。</li>
-      <li><b>見え方がまるでちがう。</b>ハエにはクモが数個の個眼のかげ。クモは前の大きな目でハエの形までくっきり見ています（ただし、せまいブーメラン形の視野だけ）。</li>
+      <li><b>気づいても、間に合わない。</b>クモの跳躍は、踏み切りから約55msでとどきます。空中にいるのは約23ms。測られているいちばん速い反応でも、ハエ（ショウジョウバエ）が刺激から飛び立つまでに約25msかかります（明かりを消したとき）。跳んだ瞬間に気づいても、脚が台を離れるころには、クモの前脚がとどいています。</li>
+      <li><b>忍び寄りのあいだに気づかれないことが大事。</b>クモは近いほどゆっくり進みます。「大きく見えたら」のしくみでは、跳ぶ距離でもクモはしきい値（54°）より小さく見えたままです。「急にふくらんだら」のしくみでは、一定の速さや急いで近づくと、跳ぶ前に気づかれて逃げられます（どちらも借りた数での推定。忍び寄りの遅さは測った範囲の外です）。</li>
+      <li><b>見え方がまるでちがう。</b>ハエにはクモが数個の個眼のかげ。クモは前の大きな目で形まで見分けます。ただし、せまいブーメラン形の視野だけ。色は緑と紫外線の明るさだけで、赤は見えません。</li>
+      <li><b>獲物しだい。</b>コバエは小さいぶん、クモは少し遠く（約15mm）から跳びます。そのため、間に合うかどうかは五分五分になります。ゴキブリは目ではなく尾の毛で空気の動きを感じます。ただ、向きを変えてから走り出すまでが遅く（50ms以上）、間に合いません。</li>
     </ul>
-    <p class="note">「急にふくらんだら」は Dill が置いた仮説の数（0.3 rad/s）です。こちらでは、一定の速さや急いで近づくと、跳ぶ前に気づかれます。</p>
+    <p class="note">「つかまえる確率」は、逃げる時刻の測ったばらつきから出した目安です。暗さは「見え方」だけを変えます（暗いと反応が遅くなるかは、測った数が見つからないので入れていません。ハエトリグモは昼に狩りをするクモです）。</p>
   </section>
 
-  <details id="graphBox">
+  <details id="graphBox" open>
     <summary>グラフで見る（ハエの目に映るクモの大きさ・ふくらむ速さ）</summary>
     <canvas id="graph"></canvas>
     <p class="legend"><span class="k k1"></span>見かけの大きさ（°）　<span class="k k2"></span>ふくらむ速さ（rad/s）　<span class="k k3"></span>しきい値（※ 目印）</p>
@@ -72,9 +79,11 @@
     <summary>このアプリについて</summary>
     <p>学習用に簡単にしています。おもに簡単にしたところ:</p>
     <ul>
-      <li>クモはハエにまっすぐ近づきます。距離は「クモの前のはしから、ハエの体のはしまで」。</li>
+      <li>クモは獲物にまっすぐ近づきます。距離は「クモの前のはしから、獲物の頭（目）まで」。クモの前脚は体の前のはしより約2mm先までとどくとしました（目安）。</li>
       <li>ハエの逃げのしきい値と遅れは<b>ショウジョウバエ</b>の測定を借りています（イエバエの数は見つかりませんでした）。研究で使われた近づき方（l/|v| = 5〜80ms）より、忍び寄るクモはずっとゆっくりなので、そのあいだは推定です。</li>
-      <li>「つかまった・逃げた」は、ハエの脚が台から離れた時刻と、クモがとどいた時刻だけで決めています。飛び立ったあとのハエの動きは見た目だけです。</li>
+      <li>「つかまえた・逃げた」は、獲物が逃げはじめる時刻（飛び立つ・走り出す）と、クモの前脚がとどく時刻をくらべて決めています。逃げる時刻は「しきい値をこえて6ms後（Fotowat の式）」と「急な変化が始まってから25ms後（いちばん速い反応）」の遅いほう。飛び立ったあとの動きは見た目だけです。</li>
+      <li>ゴキブリ: 逃げのきっかけは空気の急な加速（二次資料の数）で、体を押し出す踏み切りで起きるとしました。ゆっくり一定の忍び寄りでは起きない（推定）。動き出すまで58ms、向きを変えてから走るまで50ms（Camhi ほか 1978、大きなワモンゴキブリの成虫の数を借りた）。もっと短い反応（11ms）という二次資料もありますが、それでも走り出しは間に合いません。</li>
+      <li>暗さ: 光の粒の数のゆらぎ（√N）で視界をざらつかせています。昼の窓辺で1回に受ける光の粒の数（ハエの個眼1万、クモの前の大きな目1千）は目安です。</li>
       <li>跳躍の数は別の種（<i>Phidippus regius</i>）のもの。踏み切りのあいだは止まっているとしました。</li>
       <li>クモの動き: 振り向く・忍び寄る・後半で体をふせる・命綱をつける・前脚を上げて後ろの脚で押す・前脚を斜め前に広げて跳ぶ、は研究の記述どおり。脚の運び・歩幅・振り向く時間・体をふせたときの大きさ（4.5mm）は目安です。進む速さはなめらかにしていて、実際のちょこちょこした止まり方は入れていません（測った数が見つからないため）。</li>
       <li>2つの視界はどちらも横 60° の広さ。ハエの個眼の間隔（3°）、クモの横の目のぼけ、前の大きな目の視野を動かす速さ、部屋の模様は目安です。来る向きは見え方だけを変えます。</li>
@@ -88,6 +97,8 @@
       <li>Nabawy, M. R. A. ほか (2018) Energy and time optimal trajectories in exploratory jumps of the spider <i>Phidippus regius</i>. Sci. Rep. 8: 7142（跳ぶ速さ 0.52m/s・踏み切り 31.6ms。前脚を上げ、第3・第4脚で押し、命綱をつける）</li>
       <li>De Agrò, M., Winsor, A. M., Walsh, W., Shamble, P. &amp; Jakob, E. (2025) Biological point-light displays scanning by the principal eyes of a jumping spider. bioRxiv（前の大きな目はブーメラン形の視野を前の約60°の中で動かして輪郭をなぞる。横の目で動きを見ると体ごと向く。Land 1969 ほかの引用）</li>
       <li>Shepeleva, I. P. (2022) A comparative analysis of the camera-like eyes of jumping spiders and humans. Vision 6: 2（前の大きな目の視野 横5°×縦20°、横の目の視野 約330°）</li>
+      <li>Camhi, J. M., Tom, W. &amp; Volman, S. (1978) The escape behavior of the cockroach <i>Periplaneta americana</i> II. Detection of natural predators by air displacement. J. Comp. Physiol. 128: 203–212（尾の毛で風を感じる、動き出すまで54〜58ms、向きを変えてから走るまで50〜75ms）</li>
+      <li>Nagata, T. ほか (2012) Depth perception from image defocus in a jumping spider. Science 335: 469–471（前の大きな目は緑と紫外線の受容体、4層の網膜）</li>
       <li>Holmqvist, M. H. &amp; Srinivasan, M. V. (1991) A visually evoked escape response of the housefly. J. Comp. Physiol. A 169: 451–459（イエバエは近づく黒い円で逃げる。要旨のみ確認）</li>
     </ul>
     <p>イエバエの個眼の向きの間隔（ここでは 3°）は目安です。論文の書誌を確かめきれていません。</p>

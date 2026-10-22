@@ -14,30 +14,60 @@ const DATA = {
     pounceD: 11.6,     // 跳びつく距離の平均（ハエの模型。Dill 1975）
     vFitMax: 26,       // 速さの式を測った範囲（9〜26mm。Dill 1975 図4）
     bodyLen: 9,
+    reach: 2,          // 跳ぶとき前脚を斜め前へ広げる（Dill 1975）。体の前のはしより前に届く長さ（目安）
     stride: 3,         // 歩幅（目安。体長の約1/3）
   },
   // 跳躍。Phidippus regius（15mm）。Nabawy ほか 2018, Sci. Rep. 8:7142（2体長の跳躍の値）
   jump: { v: 0.52 * 1000, prep: 0.0316 },
 };
 
-// 獲物（ハエトリグモが食べるもの）。いまはイエバエだけ。足すときはここに1つ足し、
-// spider-draw.js の DRAW_PREY と、views.js の見え方（目のつくり）を足す。
+// 獲物（ハエトリグモが食べるもの）。足すときはここに1つ足し、spider-draw.js の drawPrey と、
+// 逃げのきっかけ（kind: 'vision' 目で見て／'wind' 空気の流れで）を決める。
+// 逃げ: ショウジョウバエの測定。Fotowat ほか 2009, J. Neurophysiol. 102:875（図2）
+const FLY_ESCAPE = {
+  kind: 'vision',
+  wrDeg: 49,       // 翅を上げる見かけの大きさ（SD 4°）
+  toDeg: 54,       // 飛び立つ見かけの大きさ（SD 5°）
+  toDelay: 0.006,  // 54° から飛び立つ（脚が離れる）までの遅れ（SD 11ms）
+  toSD: 0.011,
+  minLat: 0.025,   // いちばん速い反応: 刺激が始まってから飛び立つまで 25ms（SD 2ms。明かりを消したとき。同じ Fotowat 2009）
+  minSD: 0.002,
+  lvMin: 0.005, lvMax: 0.080, // 測った近づき方の範囲（l/|v| = 5〜80ms）
+  rateTh: 0.3,     // ふくらむ速さのしきい値（Dill 1975 図4 の仮定。ハエで測った数ではない）
+};
 const PREY = {
   housefly: {
-    name: 'イエバエ', ready: true,
+    name: 'イエバエ', ready: true, draw: 'fly', borrowed: true, // 逃げの数はショウジョウバエから借りる
     len: 7, wid: 3, hgt: 3,  // 体長・幅・高さ（目安）
-    eye: { kind: 'compound', ommDeg: 3 }, // 個眼の向きの間隔（目安。2〜4°とする資料があるが、書誌を確かめきれていない）
-    // 逃げ: ショウジョウバエの測定を借りる。Fotowat ほか 2009, J. Neurophysiol. 102:875（図2）
+    pounceD: 11.6,           // ハエの模型（幅 7.1mm）への跳びつく距離（Dill 1975）
+    eye: { ommDeg: 3, label: 'ハエの目' }, // 個眼の向きの間隔（目安。2〜4°とする資料があるが、書誌を確かめきれていない）
+    escape: FLY_ESCAPE,
+  },
+  drosophila: {
+    name: 'コバエ（ショウジョウバエ）', short: 'コバエ', ready: true, draw: 'fly',
+    len: 2.5, wid: 1, hgt: 1, // 目安
+    pounceD: 14.5,           // 2.1mm の玉への跳びつく距離（Dill 1975。ゼブラハエトリはショウジョウバエで飼われていた）
+    eye: { ommDeg: 5, label: 'コバエの目' }, // 個眼の間隔（目安。イエバエより粗い）
+    escape: FLY_ESCAPE,      // 測ったのがショウジョウバエそのもの
+  },
+  roach: {
+    name: '小さなゴキブリ', short: 'ゴキブリ', ready: true, draw: 'roach', borrowed: true,
+    len: 6, wid: 3, hgt: 1.8, // チャバネゴキブリの若い幼虫くらい（目安）
+    pounceD: 11.6,           // ハエの模型と同じとした（推定）
+    eye: { ommDeg: 3, label: 'ゴキブリの目' }, // 目安。逃げには目を使わない（Camhi ほか 1978）
+    // 逃げ: 尾の毛（尾角）で空気の流れを感じる。ワモンゴキブリ（成虫）の測定を借りる。Camhi, Tom & Volman 1978, J. Comp. Physiol. 128:203
     escape: {
-      wrDeg: 49,       // 翅を上げる見かけの大きさ（SD 4°）
-      toDeg: 54,       // 飛び立つ見かけの大きさ（SD 5°）
-      toDelay: 0.006,  // 54° から飛び立つ（脚が離れる）までの遅れ（SD 11ms）
-      toSD: 0.011,
-      lvMin: 0.005, lvMax: 0.080, // 測った近づき方の範囲（l/|v| = 5〜80ms）
-      rateTh: 0.3,     // ふくらむ速さのしきい値（Dill 1975 図4 の仮定。ハエで測った数ではない）
+      kind: 'wind',
+      // クモが体を押し出しはじめる（踏み切り）と空気が急に動く。ゆっくり一定の忍び寄りは空気の加速がほぼなく、気づかれにくい
+      // （風の加速度で走り出す: Plummer & Camhi 1981 の二次資料。ゆっくりの接近が成功しやすい: Dangles ほか 2006）。風の強さそのものは計算しない
+      accTh: 600,      // 走り出しを起こす空気の加速度 mm/s²（二次資料。目安）
+      latency: 0.058,  // 風を受けてから動き出すまで（54〜58ms: Camhi ほか 1978。もっと短い 11ms という二次資料もある）
+      latMin: 0.011,
+      run: 0.050,      // 体の向きを変えはじめてから走り出すまで（50〜75ms のうち短いほう: Camhi ほか 1978）
+      toSD: 0.015,     // ばらつき（目安。論文は平均だけ）
     },
   },
-  silverfish: { name: 'シミ（紙魚）', ready: false }, // 準備中（目は小さな個眼の集まり。逃げのきっかけは調べてから）
+  silverfish: { name: 'シミ（紙魚）', ready: false }, // 準備中: 逃げのきっかけを測った研究が見つからない
 };
 const prey = P => PREY[P.prey] && PREY[P.prey].ready ? PREY[P.prey] : PREY.housefly;
 
@@ -67,8 +97,8 @@ function newState(P) {
     sp: 'turn', spT: 0, yaw: 1,       // turn（振り向く）→ stalk → prep → flight → contact／stop。yaw: 1＝横向き、0＝獲物の方
     fl: 'rest',                       // rest → wing → air
     jump: null,
-    ev: {},                           // できごとの時刻: stalk, pounce, contact, wr, to, size49, size54, rate
-    th: 0, rate: 0, S: DATA.spider.S, lv: 0, outside: false,
+    ev: {},                           // できごとの時刻: stalk, pounce, contact, wr, to, toPlan（飛び立つ予定）, size49, size54, rate, wind
+    th: 0, rate: 0, wind: 0, alert: 0, S: DATA.spider.S, lv: 0, outside: false,
   };
 }
 
@@ -85,7 +115,8 @@ function step(st, P, dt) {
     else {
       st.V = stalkV(P, st.D);
       st.D -= st.V * dt;
-      if (st.D <= sd.pounceD) { st.D = sd.pounceD; st.sp = 'prep'; st.spT = 0; ev.pounce = st.t; st.V = 0; }
+      const pd = prey(P).pounceD;
+      if (st.D <= pd) { st.D = pd; st.sp = 'prep'; st.spT = 0; ev.pounce = st.t; st.V = 0; }
     }
   } else if (st.sp === 'prep') {
     st.V = 0; st.spT += dt;
@@ -99,6 +130,7 @@ function step(st, P, dt) {
     st.V = j.vx;
     st.D = Math.max(0, j.D0 - j.vx * tau);
     st.h = Math.max(0, j.vy * tau - 0.5 * 9810 * tau * tau);
+    if (ev.reach == null && st.D <= sd.reach) ev.reach = st.t;                // 前脚が獲物にとどく
     if (st.D <= 0) { st.sp = 'contact'; st.V = 0; st.h = 0; ev.contact = st.t; }
   } else { st.V = 0; }
 
@@ -108,21 +140,39 @@ function step(st, P, dt) {
     st.rate = st.V > 0 ? angRate(st.S, st.D, st.V) : 0;
     st.lv = st.V > 0 ? (st.S / 2) / st.V : Infinity;  // 近づき方の速さ l/|v|（s）
   }
+  // クモの体の加速度（空気を急に動かすか）。踏み切り（体を押し出しはじめる）は急な加速とみなす
+  // 遠くの動きの風は獲物まで届かないので、近く（体長の約2倍＝20mm 以内。目安）だけ数える。歩き出しの速さのとびは計算の都合なので数えない
+  const near = st.D < 20;
+  st.acc = !near ? 0 : st.sp === 'prep' ? Infinity : st.sp === 'stalk' && st.Vprev ? Math.abs(st.V - st.Vprev) / dt : 0;
+  st.Vprev = st.sp === 'stalk' ? st.V : 0;
   const deg = st.th * 180 / Math.PI;
-  // 2つのモデルの「しきい値をこえた時刻」は、選んでいないほうも記録する
-  if (ev.size49 == null && deg >= es.wrDeg) ev.size49 = st.t;
-  if (ev.size54 == null && deg >= es.toDeg) { ev.size54 = st.t; ev.lv54 = st.lv; }
-  if (ev.rate == null && st.rate >= es.rateTh) { ev.rate = st.t; ev.lvRate = st.lv; }
-
-  // 獲物のふるまい（選んだモデルだけ）
-  if (st.fl !== 'air' && st.sp !== 'contact') {
-    const trig = P.model === 'size' ? ev.size54 : ev.rate;
-    const wr = P.model === 'size' ? ev.size49 : ev.rate;
-    if (wr != null && st.fl === 'rest') { st.fl = 'wing'; ev.wr = st.t; }
-    if (trig != null && st.t >= trig + es.toDelay) { st.fl = 'air'; ev.to = st.t; }
+  if (es.kind === 'vision') {
+    // 2つのモデルの「しきい値をこえた時刻」は、選んでいないほうも記録する
+    if (ev.size49 == null && deg >= es.wrDeg) ev.size49 = st.t;
+    if (ev.size54 == null && deg >= es.toDeg) { ev.size54 = st.t; ev.lv54 = st.lv; }
+    if (ev.rate == null && st.rate >= es.rateTh) { ev.rate = st.t; ev.lvRate = st.lv; }
+    st.alert = P.model === 'size' ? deg / es.toDeg : st.rate / es.rateTh;   // 警戒度（しきい値で 1）
+    const trig = P.model === 'size' ? ev.size54 : ev.rate, wr = P.model === 'size' ? ev.size49 : ev.rate;
+    if (wr != null && ev.wr == null && st.sp !== 'contact') { ev.wr = st.t; }
+    if (trig != null && ev.toPlan == null) {
+      // 体が反応できるいちばん早い時刻: 急な変化が始まった時刻（跳んでいるあいだに気づいたなら跳び始め）＋ 25ms
+      const onset = st.jump && trig >= st.jump.t0 ? st.jump.t0 : trig;
+      const fit = trig + es.toDelay, floor = onset + es.minLat;
+      ev.toPlan = Math.max(fit, floor); ev.floorBound = floor >= fit;
+    }
+  } else {
+    if (ev.wind == null && st.acc >= es.accTh) ev.wind = st.t;
+    st.alert = Math.min(2, st.acc / es.accTh);
+    if (ev.wind != null && ev.toPlan == null) { ev.wrPlan = ev.wind + es.latency; ev.toPlan = ev.wrPlan + es.run; }
+    if (ev.wrPlan != null && ev.wr == null && st.t >= ev.wrPlan && st.sp !== 'contact') ev.wr = st.t;   // 体の向きを変えはじめる
   }
-  // 測った近づき方の範囲（l/|v| 5〜80ms）の外か
-  st.outside = isFinite(st.lv) && (st.lv > es.lvMax || st.lv < es.lvMin);
+  // 獲物のふるまい（とどかれたあとは動かない）
+  if (st.fl !== 'air' && st.sp !== 'contact') {
+    if (ev.wr != null && st.fl === 'rest') st.fl = 'wing';
+    if (ev.toPlan != null && st.t >= ev.toPlan) { st.fl = 'air'; ev.to = st.t; }
+  }
+  // 測った近づき方の範囲（l/|v| 5〜80ms）の外か（目で見る獲物だけ）
+  st.outside = es.kind === 'vision' && isFinite(st.lv) && (st.lv > es.lvMax || st.lv < es.lvMin);
 }
 
 function done(st) {
@@ -131,16 +181,19 @@ function done(st) {
   return false;
 }
 
-// 結果: 'caught'／'escaped'／'close'（差が測った数のばらつき SD 11ms より小さい）／'early'（跳ぶ前に逃げた）
+// 正規分布の累積（つかまえる確率に使う）
+function phi(x) { const t = 1 / (1 + 0.3275911 * Math.abs(x) / Math.SQRT2), y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x / 2); return x >= 0 ? (1 + y) / 2 : (1 - y) / 2; }
+// 結果: p＝つかまえる確率（獲物が動く時刻のばらつき SD から。目安）。k: 'caught'（p ≥ 0.8）／'escaped'（p ≤ 0.2）／'close'／'early'（跳ぶ前に逃げた）
+// m＝前脚がとどく時刻 − 獲物が逃げる予定の時刻（正なら獲物が先）。逃げる時刻がいちばん速い反応で決まったときは、そのばらつき（2ms）を使う
 function verdict(st, P) {
-  const ev = st.ev, sd = prey(P || {}).escape.toSD;
-  if (ev.to != null && ev.contact != null) {
-    const m = ev.contact - ev.to;
-    if (Math.abs(m) < sd) return { k: 'close', m };
-    return { k: m > 0 ? 'escaped' : 'caught', m };
+  const ev = st.ev, es = prey(P || {}).escape, sd = ev.floorBound ? es.minSD : es.toSD;
+  if (ev.to != null && ev.pounce == null) return { k: 'early', m: null, p: 0 };
+  if (ev.contact != null) {
+    if (ev.toPlan == null) return { k: 'caught', m: null, p: 1 };
+    const m = (ev.reach != null ? ev.reach : ev.contact) - ev.toPlan, p = phi(-m / sd);
+    return { k: p >= 0.8 ? 'caught' : p <= 0.2 ? 'escaped' : 'close', m, p };
   }
-  if (ev.to != null && st.sp !== 'flight' && st.sp !== 'prep') return { k: ev.pounce == null ? 'early' : 'escaped', m: null };
-  if (ev.contact != null) return { k: 'caught', m: null };
+  if (ev.to != null && st.sp === 'stop') return { k: 'escaped', m: null, p: 0 };
   return null;
 }
 
@@ -151,7 +204,7 @@ function run(P, dt = 0.0005, tMax = 30) {
   return st;
 }
 
-const API = { DATA, PREY, prey, angSize, angRate, stalkV, jumpAngle, newState, step, done, verdict, run, V26 };
+const API = { DATA, PREY, prey, phi, angSize, angRate, stalkV, jumpAngle, newState, step, done, verdict, run, V26 };
 if (typeof module !== 'undefined' && module.exports) module.exports = API;
 else root.M = API;
 })(typeof window !== 'undefined' ? window : globalThis);

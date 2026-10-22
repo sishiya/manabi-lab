@@ -28,7 +28,17 @@ function header(g, txt) {
   g.fillStyle = 'rgba(11,18,27,.72)'; g.fillRect(0, 0, tw, 18); g.fillStyle = C.ink; g.fillText(txt, 5, 13);
 }
 
-// ---- ハエの目
+// ---- 明るさ（光の粒のゆらぎ）。1回に受ける光の粒の数 N は明るさに比例し、ゆらぎは √N（ポアソン分布。物理として確か）。
+// 昼の窓辺（10000 lx）で 1回あたり N0 個とした N0 は目安: ハエの個眼 1万個、クモの前の大きな目 1千個（前の大きな目は感度が低い: Shepeleva 2022）
+const N0 = { fly: 1e4, spider: 1e3 };
+function rnd(i, j) { let x = (i * 374761393 + j * 668265263) | 0; x = (x ^ (x >>> 13)) * 1274126177; x ^= x >>> 16; return ((x >>> 0) % 100000) / 100000; }
+function gauss(i, j) { const u = Math.max(1e-6, rnd(i, j)), v = rnd(j + 7, i + 3); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+const noisy = (v, N, i, j) => { const n = Math.max(1e-3, v * N); return Math.max(0, (n + Math.sqrt(n) * gauss(i, j)) / N); };
+function dimOf(lux) { return Math.max(0.25, Math.min(1, 0.4 + 0.15 * Math.log10(lux + 1))); }   // 画面の暗さ（見た目の目安）
+// 警戒度の色: 落ち着いている（青）→ 気づきかけ（黄）→ 気づいた（赤）
+function alertCol(a, fl) { if (fl !== 'rest') return '#ff8a7a'; return a < 0.5 ? 'rgba(143,211,255,.55)' : a < 0.85 ? '#ffc95a' : '#ff8a7a'; }
+
+// ---- 獲物の目
 function fly(g, w, h, s, P, opt) {
   const pr = M.prey(P), p = pr.eye.ommDeg, kx = w / SPAN, vSpan = h / kx;
   const eTop = vSpan * 0.5 + 4, R = p / Math.sqrt(3);
@@ -37,6 +47,7 @@ function fly(g, w, h, s, P, opt) {
   const Dist = Math.max(s.D, 0.2), elS = Math.atan2(s.h + 1.6 - 1.5, Dist) * R2D;
   const hw = Math.atan(s.S / 2 / Dist) * R2D, hh = Math.atan(s.S * 0.3 / Dist) * R2D;
   const gone = s.fl === 'air' && s.t - s.ev.to > 0.03;   // 飛び立ったあとは見え方を計算していない
+  const N = N0.fly * P.lux / 1e4, win = Math.floor(s.t / 0.01), dim = dimOf(P.lux); // 10ms ごとに新しい光の粒
   const lum = (a, e) => {
     if (!gone && s.D > 0 && ((a / hw) ** 2 + ((e - elS) / hh) ** 2) < 1) return 0.07;
     return room(a, e, false);
@@ -45,10 +56,12 @@ function fly(g, w, h, s, P, opt) {
   if (gone) { g.fillStyle = C.muted; g.font = '12px "Zen Kaku Gothic New",sans-serif'; g.textAlign = 'center'; g.fillText('飛び立ったあとの見え方は', w / 2, h / 2 - 8); g.fillText('計算していません', w / 2, h / 2 + 10); g.textAlign = 'left'; }
   else {
     const off = [[0, 0], [0.5, 0], [-0.5, 0], [0.25, 0.43], [-0.25, 0.43], [0.25, -0.43], [-0.25, -0.43]]; // 個眼の受けもつ範囲の中を7点で平均
+    let idx = 0;
     for (let row = 0, e = eTop; e > eTop - vSpan - 2 * R; e -= 1.5 * R, row++)
       for (let a = -SPAN / 2 - p + (row % 2) * p / 2; a < SPAN / 2 + p; a += p) {
         let v = 0; for (const [ox, oy] of off) v += lum(a + ox * p, e + oy * p); v /= off.length;
-        const c = Math.round(v * 255);
+        v = noisy(v, N, idx++, win);
+        const c = Math.round(Math.min(1, v * dim) * 255);
         g.fillStyle = `rgb(${c * 0.82 | 0},${c * 0.9 | 0},${c})`;
         g.beginPath(); for (let i = 0; i < 6; i++) { const t = Math.PI / 6 + i * Math.PI / 3; g.lineTo(X(a) + R * kx * Math.cos(t), Y(e) + R * kx * Math.sin(t)); } g.closePath(); g.fill();
         if (opt.rims) { g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 0.8; g.stroke(); }
@@ -61,18 +74,19 @@ function fly(g, w, h, s, P, opt) {
     }
   }
   // 見出し: クモは個眼いくつぶんか
-  header(g, 'ハエの目｜' + (gone ? '飛び立った' : `クモは個眼 約${Math.max(1, Math.round((2 * hw) / p * (2 * hh) / (p * 0.866)))}個ぶん`));
-  // 気づき（選んだしくみ）
-  const es = pr.escape, val = P.model === 'size' ? (s.th * R2D) / es.toDeg : s.rate / es.rateTh;
+  header(g, pr.eye.label + '｜' + (gone ? (pr.draw === 'roach' ? '走り出した' : '飛び立った') : `クモは個眼 約${Math.max(1, Math.round((2 * hw) / p * (2 * hh) / (p * 0.866)))}個ぶん`));
+  // 警戒度（選んだしくみの値 ÷ しきい値）。帯と、視界の枠の色で
+  const es = pr.escape, val = s.alert || 0, wind = es.kind === 'wind';
   const bh = 16, by = h - bh;
   g.fillStyle = 'rgba(11,18,27,.8)'; g.fillRect(0, by, w, bh);
   const bx = 44, bw = Math.max(30, w - bx - (w < 240 ? 62 : 80));
   g.fillStyle = '#26384c'; g.fillRect(bx, by + 5, bw, 6);
-  g.fillStyle = s.fl === 'rest' ? C.fly : C.warn; g.fillRect(bx, by + 5, bw * Math.min(1, val), 6);
-  g.font = '11px "Zen Kaku Gothic New",sans-serif'; g.fillStyle = C.muted; g.fillText('気づき', 6, by + 12);
-  const st = s.fl === 'rest' ? ['まだ', C.muted] : s.fl === 'wing' ? ['気づいた！', C.warn] : ['飛んだ', C.ok];
-  g.fillStyle = st[1]; g.fillText(st[0], bx + bw + 8, by + 12);
-  if (s.fl === 'wing') { g.strokeStyle = 'rgba(255,138,122,.8)'; g.lineWidth = 3; g.strokeRect(1.5, 1.5, w - 3, h - 3); }
+  g.fillStyle = alertCol(val, s.fl); g.fillRect(bx, by + 5, bw * Math.min(1, val), 6);
+  g.font = '11px "Zen Kaku Gothic New",sans-serif'; g.fillStyle = C.muted; g.fillText(wind ? '風' : '警戒', 6, by + 12);
+  const lab = s.fl === 'rest' ? (val < 0.5 ? ['平気', C.muted] : ['あやしい', C.acc]) : s.fl === 'wing' ? [wind ? '向きを変える' : '気づいた！', C.warn] : [wind ? '走った' : '飛んだ', C.ok];
+  g.fillStyle = lab[1]; g.fillText(lab[0], bx + bw + 8, by + 12);
+  g.strokeStyle = alertCol(val, s.fl); g.lineWidth = val >= 0.5 || s.fl !== 'rest' ? 3 : 2; g.strokeRect(1.5, 1.5, w - 3, h - 3);
+  if (wind) { g.font = '10px "Zen Kaku Gothic New",sans-serif'; g.fillStyle = C.muted; g.textAlign = 'right'; g.fillText('目ではなく尾の毛で風を感じる', w - 6, by - 4); g.textAlign = 'left'; }
 }
 
 // ---- クモの目
@@ -92,11 +106,21 @@ function spider(g, w, h, s, P, opt) {
     c.fillStyle = '#8899a8'; c.fillRect(w / 2 + (-22 + yawDeg) * kx, cy - 30 * kx, 18 * kx, 20 * kx);   // 窓（目安）
     c.strokeStyle = 'rgba(30,45,60,.35)'; c.lineWidth = 1;
     for (let i = 1; i < 8; i++) { const yy = gyp + (h - gyp) * (i / 8) ** 1.6; c.beginPath(); c.moveTo(0, yy); c.lineTo(w, yy); c.stroke(); } // 木目
-    if (!gone) SD.drawFly(c, fxp, gyp, kmm, face, s, { noAir: true });
+    if (!gone) SD.drawPrey(c, fxp, gyp, kmm, face, s, { noAir: true, solid: true });
   };
   if (!off || off.width !== g.canvas.width) { off = document.createElement('canvas'); }
   off.width = g.canvas.width; off.height = g.canvas.height; const oc = off.getContext('2d');
   const dpr = g.canvas.width / w; oc.setTransform(dpr, 0, 0, dpr, 0, 0); paintRoom(oc);
+  // クモの前の大きな目は緑と紫外線の受容体（Nagata ほか 2012）→ 赤は暗く、緑の明るさだけの絵にする。
+  // 緑の感度の重み（赤 0.1・緑 0.8・青 0.1）は目安。暗いときは光の粒のゆらぎを足す
+  const img = oc.getImageData(0, 0, off.width, off.height), d = img.data, Ns = N0.spider * P.lux / 1e4, win = Math.floor(s.t / 0.01), dim = dimOf(P.lux);
+  for (let i = 0, q = 0; i < d.length; i += 4, q++) {
+    let L = (0.1 * d[i] + 0.8 * d[i + 1] + 0.1 * d[i + 2]) / 255;
+    if (Ns < 2e3) L = noisy(L + 0.02, Ns, q, win);
+    L = Math.min(1, L * dim) * 255;
+    d[i] = L * 0.35; d[i + 1] = L; d[i + 2] = L * 0.5;
+  }
+  oc.putImageData(img, 0, 0);
   // 横の目: ぼんやり（2° ほどぼかす。目安）
   g.save(); g.filter = `blur(${Math.max(1.5, 2 * kx * 0.6)}px)`; g.drawImage(off, 0, 0, w, h); g.filter = 'none'; g.restore();
   g.fillStyle = 'rgba(14,22,32,.18)'; g.fillRect(0, 0, w, h);

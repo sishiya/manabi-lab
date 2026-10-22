@@ -121,7 +121,8 @@ function drawFly(g, cx, gy, k, face, s, opt = {}) {
   const ox = air ? Math.min(30, air * 260) : 0, oy = air ? Math.min(25, air * 200 + air * air * 300) : 0;
   g.save(); g.globalAlpha = opt.ghost ? 0.22 : 1;
   g.translate(cx + ox * k, gy - oy * k); g.lineJoin = 'round'; g.lineCap = 'round';
-  const L = pr.len, y0 = 1.3 + (air ? 0.4 : 0);
+  k *= pr.len / 7;   // 絵はイエバエ（7mm）の形。コバエは同じ形を小さく
+  const y0 = 1.3 + (air ? 0.4 : 0);
   if (face === 0) { drawFlyFront(g, k, s, y0, air); g.restore(); return; }
   g.scale(k * face, -k);    // 頭は +x 側に描いて、向きで反転（face −1 で頭が左＝クモの方）
   const legs = far => {
@@ -163,8 +164,54 @@ function drawFlyFront(g, k, s, y0, air) {
   g.beginPath(); g.ellipse(0, y0 + 2.6, 1.4, 1.0, 0, 0, 7); g.fill(); g.stroke();                         // 頭
   g.fillStyle = COL.eye; for (const sx of [-1, 1]) { g.beginPath(); g.ellipse(0.75 * sx, y0 + 2.7, 0.62, 0.8, 0, 0, 7); g.fill(); }
 }
+// ---- 小さなゴキブリ（横から）。平たい体・前胸の盾・長い触角・お尻の尾角（風を感じる毛）。
+// 気づくと体の向きを変え（wing）、走り出す（air）。走る速さは見た目だけ
+function drawRoach(g, cx, gy, k, face, s, opt = {}) {
+  const pr = M.prey(P_ || {}), run = s.fl === 'air' ? s.t - s.ev.to : 0, piv = s.fl !== 'rest';
+  const ox = run ? Math.min(40, run * 300) : 0;
+  g.save(); g.globalAlpha = opt.ghost ? 0.22 : 1; g.lineJoin = 'round'; g.lineCap = 'round';
+  g.translate(cx + ox * k * (face === 1 ? -1 : 1), gy);
+  if (face === 0) {   // 正面
+    g.scale(k, -k); g.strokeStyle = COL.fly; g.fillStyle = COL.flyFill; g.lineWidth = 0.15;
+    for (const sx of [-1, 1]) for (const [hx, fx] of [[0.6, 2.2], [0.9, 2.8], [0.7, 2.5]]) { const [kx, ky] = ik(hx * sx, 0.6, fx * sx, 0, 1.2, 1.5, true); g.beginPath(); g.moveTo(hx * sx, 0.6); g.lineTo(kx, ky); g.lineTo(fx * sx, 0); g.stroke(); }
+    g.beginPath(); g.ellipse(0, 0.9, 1.5, 0.75, 0, 0, 7); g.fill(); g.stroke();
+    g.beginPath(); g.ellipse(0, 0.7, 0.6, 0.45, 0, 0, 7); g.fill(); g.stroke();
+    for (const sx of [-1, 1]) { const w = 0.3 * Math.sin(s.t * 3 + sx); g.beginPath(); g.moveTo(0.3 * sx, 0.9); g.quadraticCurveTo(1.5 * sx, 2.5 + w, 3.2 * sx, 1.8 + w); g.stroke(); }
+    g.restore(); return;
+  }
+  g.scale(k * face, -k);  // 頭は +x 側に描く
+  if (piv) g.rotate(-0.08);
+  const L = pr.len, y0 = 0.55;
+  const legs = far => {
+    g.strokeStyle = far ? COL.flyFar : COL.fly; g.lineWidth = 0.14;
+    for (const [i, hx, fx] of [[0, 1.0, 2.6], [1, 0.1, 0.6], [2, -0.8, -2.8]]) {
+      let fX = fx + (far ? 0.3 : 0), fY = 0;
+      if (run) { const ph = Math.sin(run * 120 + i * 2 + (far ? Math.PI : 0)); fX += 0.8 * ph; fY = Math.max(0, 0.5 * ph); }
+      const [kx, ky] = ik(hx, y0 + 0.3, fX, fY, 1.3, 1.7, true);
+      g.beginPath(); g.moveTo(hx, y0 + 0.3); g.lineTo(kx, ky); g.lineTo(fX, fY); g.stroke();
+      if (!opt.ghost && !far) { g.lineWidth = 0.06; for (let q = 0.3; q < 1; q += 0.3) { const px = kx + (fX - kx) * q, py = ky + (fY - ky) * q; g.beginPath(); g.moveTo(px, py); g.lineTo(px + 0.2, py + 0.25); g.stroke(); } g.lineWidth = 0.14; }
+    }
+  };
+  legs(true);
+  g.fillStyle = COL.flyFill; g.strokeStyle = COL.fly; g.lineWidth = 0.16;
+  g.beginPath(); g.moveTo(-L / 2, y0 + 0.4); g.quadraticCurveTo(-L / 2 + 0.3, y0 + 1.4, 0, y0 + 1.25); g.quadraticCurveTo(L / 2 - 1.0, y0 + 1.2, L / 2 - 0.8, y0 + 0.5); g.lineTo(-L / 2, y0 + 0.2); g.closePath(); g.fill(); g.stroke(); // 胴（平たい）
+  if (!opt.ghost) { g.lineWidth = 0.07; for (let q = -L / 2 + 0.8; q < L / 2 - 1.5; q += 0.6) { g.beginPath(); g.moveTo(q, y0 + 0.3); g.lineTo(q + 0.15, y0 + 1.25); g.stroke(); } }  // 体節
+  g.lineWidth = 0.16; g.beginPath(); g.ellipse(L / 2 - 1.1, y0 + 0.95, 1.0, 0.45, -0.15, 0, 7); g.fill(); g.stroke();  // 前胸の盾
+  g.beginPath(); g.ellipse(L / 2 - 0.45, y0 + 0.35, 0.45, 0.4, 0.3, 0, 7); g.fill(); g.stroke();                         // 頭（盾の下）
+  // 触角（ゆれる）と尾角
+  const w = 0.25 * Math.sin(s.t * 3), dir = piv ? 0.8 : 0;
+  g.lineWidth = 0.1; g.beginPath(); g.moveTo(L / 2 - 0.2, y0 + 0.6); g.quadraticCurveTo(L / 2 + 1.8, y0 + 2.2 + w + dir, L / 2 + 4.0, y0 + 1.2 + w); g.stroke();
+  g.strokeStyle = s.fl === 'rest' ? COL.fly : '#ff8a7a'; g.lineWidth = 0.16;
+  g.beginPath(); g.moveTo(-L / 2 + 0.1, y0 + 0.5); g.lineTo(-L / 2 - 0.9, y0 + 0.75); g.stroke();   // 尾角（気づくと赤）
+  legs(false);
+  g.restore();
+}
+function drawPrey(g, cx, gy, k, face, s, opt) {
+  const d = M.prey(P_ || {}).draw;
+  return d === 'roach' ? drawRoach(g, cx, gy, k, face, s, opt) : drawFly(g, cx, gy, k, face, s, opt);
+}
 let P_ = null;  // 描くときの条件（獲物の種類を読むため）
 function setP(P) { P_ = P; }
 
-return { drawSpider, drawFly, spinneret, setP, COL, smooth };
+return { drawSpider, drawFly, drawPrey, spinneret, setP, COL, smooth };
 })();

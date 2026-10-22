@@ -4,12 +4,12 @@ const SC = (() => {
 const C = { bg: '#0e1620', line: '#2f4157', ink: '#e8f0f4', muted: '#a3b4bf', acc: '#ffc95a', fly: '#8fd3ff', warn: '#ff8a7a', ok: '#9be39b' };
 
 function phase(s, P) {
-  const pr = M.prey(P).name;
+  const pr = M.prey(P).short || M.prey(P).name;
   if (s.sp === 'turn') return '① 横の目で' + pr + 'を見つけ、体ごと振り向く';
   if (s.sp === 'stalk') return '② 忍び寄る' + (P.speed === 'dill' ? '（近いほどゆっくり）' : P.speed === 'const' ? '（一定の速さ）' : '（急いで）') + (P.crouch && s.D < M.DATA.spider.crouchBelow ? '・体をふせる' : '');
   if (s.sp === 'prep') return '③ 命綱をつけ、前脚を上げて踏み切る';
   if (s.sp === 'flight') return '④ 跳ぶ';
-  if (s.sp === 'stop') return pr + 'が先に飛んだ';
+  if (s.sp === 'stop') return pr + 'が先に逃げた';
   return '⑤ とどいた';
 }
 
@@ -48,9 +48,9 @@ function drawScene(g, w, h, hist, cur, P, camR, opt) {
       const q = hist[i];
       if (q.sp === 'flight' && q.t - lastT >= 0.003) { SD.drawSpider(g, X(-q.D - pr.len / 2), gy, k, q, P, { ghost: true }); lastT = q.t; }
     }
-    if (s.ev.to != null) { let lt = -1; for (let i = 0; i < cur; i++) { const q = hist[i]; if (q.fl === 'air' && q.t - lt >= 0.006) { SD.drawFly(g, X(0), gy, k, face, q, { ghost: true }); lt = q.t; } } }
+    if (s.ev.to != null) { let lt = -1; for (let i = 0; i < cur; i++) { const q = hist[i]; if (q.fl === 'air' && q.t - lt >= 0.006) { SD.drawPrey(g, X(0), gy, k, face, q, { ghost: true }); lt = q.t; } } }
   }
-  SD.drawFly(g, X(0), gy, k, face, s);
+  SD.drawPrey(g, X(0), gy, k, face, s);
   SD.drawSpider(g, front, gy, k, s, P);
 
   // 距離（クモの前から獲物のはしまで）
@@ -62,11 +62,14 @@ function drawScene(g, w, h, hist, cur, P, camR, opt) {
     const lbl = s.D.toFixed(1) + ' mm', tw = g.measureText(lbl).width + 8;
     g.fillStyle = '#152131'; g.fillRect((x1 + x2) / 2 - tw / 2, yy - 8, tw, 15); g.fillStyle = C.ink; g.fillText(lbl, (x1 + x2) / 2, yy + 4);
   }
+  // 部屋の暗さ（人の目の見た目。目安）
+  const dark = Math.max(0, Math.min(0.7, (2.5 - Math.log10(P.lux)) * 0.22));
+  if (dark > 0) { g.fillStyle = `rgba(3,6,10,${dark})`; g.fillRect(0, 0, w, h); }
   // ほんのりガイド（名前）
   if (opt.guide) {
     g.font = '11px "Zen Kaku Gothic New",sans-serif'; g.textAlign = 'center'; g.globalAlpha = 0.6;
     g.fillStyle = C.acc; g.fillText('ハエトリグモ', Math.max(40, front - 4.5 * k), gy - (5.2 + s.h) * k);
-    g.fillStyle = C.fly; if (s.fl !== 'air') g.fillText(pr.name, X(0), gy - 6.2 * k);
+    g.fillStyle = C.fly; if (s.fl !== 'air') g.fillText(pr.short || pr.name, X(0), gy - Math.max(4, pr.hgt + 3) * k);
     g.globalAlpha = 1;
   }
   // いまの段階（左上）とスローの札（右上）
