@@ -1,4 +1,6 @@
 // 波が育つまで — GLSL（海面の FFT・空・海の描画）。もとは自動収益化の試作4「海」。
+// 傾きの分布での照り返し・空の反射、白波の泡（地図・模様・描き方）、色の仕上げ AgX は web-ocean を GLSL に書きかえて使っている:
+//   web-ocean  https://github.com/Noniv/web-ocean  Copyright (c) 2026 Maksymilian Dendura  MIT License（全文は wave-growth/LICENSE-web-ocean.txt）
 'use strict';
 window.WGsh = (() => {
   const HEAD = '#version 300 es\nprecision highp float;precision highp int;precision highp sampler2D;\n';
@@ -15,7 +17,7 @@ void main(){
   vec2 k=6.2831853*n/L;float kl=length(k);
   vec4 h=texelFetch(h0,ij,0);
   float th=tanh(min(kl*depth,20.));   // 水深 depth の分散 w² = g k tanh(kh)（深い海は 1）
-  float w=max(round(sqrt(9.81*kl*th)/w0),1.)*w0;   // くり返しのため 2π/T の整数倍に丸める
+  float w=max(round(sqrt(9.81*kl*th+7.4e-5*kl*kl*kl)/w0),1.)*w0;   // ω² = g k tanh(kh) + (σ/ρ) k³（表面張力 σ/ρ = 7.4×10⁻⁵ m³/s²）。くり返しのため 2π/T の整数倍に丸める
   float ph=mod(w*t,6.2831853);vec2 e=vec2(cos(ph),sin(ph));
   vec2 H=cm(h.xy,e)+cm(h.zw,vec2(e.x,-e.y));
   vec2 kn=kl>1e-6?k/kl:vec2(0);float ik=kl>1e-6?1./kl:0.;
@@ -40,18 +42,77 @@ void main(){
   o0=ea+vec4(cm(tw,oa.xy),cm(tw,oa.zw));o1=eb+vec4(cm(tw,ob.xy),cm(tw,ob.zw));
 }`;
 
-  // 変位・ヤコビアン（つぶれ）・傾き・泡（泡は前のコマから少しずつ消える）
+  // 変位・ヤコビアン（つぶれ）・傾き・傾きの2乗（LEAN: ミップで平均すると、その広さの傾きのばらつきがわかる）
+  // o1 = (傾き x, 傾き z, Dxx, Dzz)、o2 = (sx², sz², sx·sz, Dxz)。D** は 3 枚を足して全体のつぶれ J を出すため（白波の泡）
   const FS_ASM = HEAD + `
-uniform sampler2D A,B,P;uniform float lam,thr,gain,decay,sig;
-layout(location=0) out vec4 o0;layout(location=1) out vec4 o1;
+uniform sampler2D A,B;uniform float lam;
+layout(location=0) out vec4 o0;layout(location=1) out vec4 o1;layout(location=2) out vec4 o2;
 void main(){
   ivec2 ij=ivec2(gl_FragCoord.xy);vec4 a=texelFetch(A,ij,0),b=texelFetch(B,ij,0);
   float h=a.x,Dx=a.y,Dz=a.z,hx=a.w,hz=b.x,Dxx=b.y,Dzz=b.z,Dxz=b.w;
   float jxx=1.-lam*Dxx,jzz=1.-lam*Dzz,jxz=-lam*Dxz,J=jxx*jzz-jxz*jxz;
-  float f=clamp((thr-J)*gain,0.,1.),pf=texelFetch(P,ij,0).z;
   o0=vec4(-lam*Dx,h,-lam*Dz,J);
-  float fo=max(pf*decay,f);o1=vec4(hx/max(jxx,.3),hz/max(jzz,.3),fo,smoothstep(.45,.55,fo));   // w = 白く見える泡（濃さ 0.5 以上）。ミップの平均 = その面積の割合
+  vec2 s=vec2(hx/max(jxx,.3),hz/max(jzz,.3));
+  o1=vec4(s,lam*Dxx,lam*Dzz);o2=vec4(s.x*s.x,s.y*s.y,s.x*s.y,lam*Dxz);
 }`;
+
+  // 泡の模様（はじめに 1 回だけ。512×512 でつながる）: r = 大きな膜と穴、g = 細かい泡の網、b = やわらかい濃淡、a = すじ
+  // web-ocean（Maksymilian Dendura、MIT ライセンス）の FOAM_TEX を GLSL に書きかえたもの
+  const NOISE = `
+uint pcg(uint v){uint s=v*747796405u+2891336453u;uint w=((s>>((s>>28u)+4u))^s)*277803737u;return (w>>22u)^w;}
+int imod(int a,int b){return a-b*int(floor(float(a)/float(b)));}
+vec2 hgrad(ivec2 i){uint h=pcg(uint(i.x)*1664525u+pcg(uint(i.y)+1013904223u));float a=float(h)*(6.28318530718/4294967296.);return vec2(cos(a),sin(a));}
+float pnoise(vec2 p,int per){ivec2 i=ivec2(floor(p));vec2 f=p-floor(p),u=f*f*f*(f*(f*6.-15.)+10.);
+  ivec2 i00=ivec2(imod(i.x,per),imod(i.y,per)),i11=ivec2(imod(i.x+1,per),imod(i.y+1,per));
+  float a=dot(hgrad(i00),f),b=dot(hgrad(ivec2(i11.x,i00.y)),f-vec2(1,0)),c=dot(hgrad(ivec2(i00.x,i11.y)),f-vec2(0,1)),d=dot(hgrad(i11),f-vec2(1));
+  return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);}
+float pfbm(vec2 p,int per,int oct){float s=0.,a=.5;for(int o=0;o<8;o++){if(o>=oct)break;s+=a*pnoise(p,per);p*=2.;per*=2;a*=.5;}return s;}
+`;
+  const FS_FOAMTEX = HEAD + NOISE + `
+out vec4 o;
+vec2 h2(ivec2 i,uint salt){uint h=pcg((uint(i.x)*73856093u)^pcg(uint(i.y)*19349663u+salt));uint g=pcg(h+0x9e3779b9u);return vec2(float(h>>8u),float(g>>8u))/16777216.;}
+// 穴のあいた泡の膜: 膜は 1、泡の中は 0（泡ごとに大きさがちがう）
+float bubbles(vec2 uv,int per,uint salt,float rmin,float rmax){
+  vec2 w=vec2(pfbm(uv*float(per)*.5,per/2,3),pfbm(uv*float(per)*.5+17.,per/2,3));vec2 p=uv*float(per)+w*.9;ivec2 ip=ivec2(floor(p));vec2 fp=p-floor(p);float v=9.;
+  for(int j=-1;j<=1;j++)for(int i=-1;i<=1;i++){ivec2 c=ivec2(imod(ip.x+i,per),imod(ip.y+j,per));vec2 r=vec2(i,j)+h2(c,salt)*.9+.05-fp;v=min(v,length(r)/mix(rmin,rmax,h2(c,salt+7u).x));}
+  return smoothstep(.8,1.25,v);}
+void main(){vec2 uv=gl_FragCoord.xy/512.;
+  vec2 w1=vec2(pfbm(uv*5.,5,3),pfbm(uv*5.+vec2(3.7,9.1),5,3));float m1=smoothstep(-.14,.06,pfbm(uv*10.+w1*1.4,10,5));
+  vec2 w2=vec2(pfbm(uv*12.+1.3,12,2),pfbm(uv*12.+7.9,12,2));float m2=smoothstep(-.16,.04,pfbm(uv*27.+w2*.9,27,4));
+  float b3=bubbles(uv,28,37u,.06,.45),b4=bubbles(uv,60,53u,.05,.42),   // 周期は偶数（ゆがみの周期 per/2 とつながるように。web-ocean は 29・61）
+    dens=pfbm(uv*4.,4,5)*.5+.5,fineD=pfbm(uv*16.,16,3)*.5+.5;
+  float big=m1*(.55+.45*m2)*(.75+.25*b3),fine=.45+.55*b3*(.7+.3*b4),streak=pfbm(uv*vec2(4,16),4,5)*.5+.5;
+  o=vec4(clamp(big*.6+dens*.4,0.,1.),clamp(fine*.8+fineD*.2,0.,1.),dens,streak);}`;
+
+  // 泡の白さ 0〜1（web-ocean の泡の描き方）: 泡の量 cover と模様 pat（fTex）をくらべる。多い所は白い膜、うすれると穴があき、古い泡は風下のすじ st に割れる。
+  // fk = できたばかりの割合、fg = 砕けたばかりの波頭、fw = 1 画素の幅。FS_WATER と泡の地図で同じ式（地図では白い面積を数えて観測に合わせる）
+  const FOAMF = `
+float foamPat(sampler2D t,vec2 xz,float time){return textureLod(t,xz*.23+vec2(.013,0)*time,0.).r*.78+textureLod(t,xz*.71+vec2(.37,.71),0.).g*.22;}
+float foamStreak(sampler2D t,vec2 xz,float wa){vec2 wd=vec2(cos(wa),sin(wa));return textureLod(t,vec2(dot(xz,wd),dot(xz,vec2(-wd.y,wd.x)))*vec2(.035,.11),0.).a;}
+float foamMask(float cover,float fk,float fg,float pat,float st,float fw){
+  cover*=mix(smoothstep(.25,.75,st)*1.5,1.,fk);
+  float soft=.04+.14*(1.-clamp(cover,0.,1.));   // 濃い泡はふちがくっきり、うすれた泡はふちがやわらかい
+  float m=clamp(smoothstep(1.-cover-fw-soft,1.-cover+fw+soft,pat)*smoothstep(0.,.5,cover),0.,1.)*(.68+.32*smoothstep(.3,.9,cover));
+  return max(m,smoothstep(.35,.9,fg)*smoothstep(.4,.6,pat)*.9);}   // 砕けたばかりの波頭: 白いが、泡の模様の穴は残す（web-ocean は .25〜.6 でほぼ全面。近くで平らな紙のように見えたので）
+`;
+  // 白波の泡の地図（カメラのまわり、世界に固定。端はつながっていてカメラについてずらす）: 3 枚の海面を足した全体のつぶれ J が thr より小さい所に泡が生まれ、
+  // 時間で消え（decay /s）、風下へ少し流される（drift m/s）。r = 泡の量、g = できたばかりの泡、b = J、a = 白く見える泡の面積（ミップの平均 = 割合。観測に合わせる）
+  // web-ocean の FOAM_UPDATE を GLSL に書きかえ、白く見える面積の列 a を足したもの
+  const FS_FOAMUPD = HEAD + FOAMF + `
+uniform sampler2D prev,sA,sB,mA,mB,fTex;uniform vec3 Ls;uniform ivec4 snap;uniform ivec2 shift;uniform float RES,ts,dt,decayR,thr,gain,growth,time,windA;
+layout(location=0) out vec4 o;
+int wrapI(int i,int lo,int R){int a=i-lo;return lo+a-R*int(floor(float(a)/float(R)));}   // % は負の数で決まっていないので floor で
+vec3 jac(sampler2D s,sampler2D m,vec2 p,float L){float lod=log2(max(ts/(L/256.),1.));if(lod>7.5)return vec3(0);vec2 uv=p/L;return vec3(textureLod(s,uv,lod).zw,textureLod(m,uv,lod).w);}
+void main(){int R=int(RES);ivec2 id=ivec2(gl_FragCoord.xy),lo=snap.xy-R/2,plo=snap.zw-R/2;
+  ivec2 g=ivec2(wrapI(id.x,lo.x,R),wrapI(id.y,lo.y,R));bool inPrev=all(greaterThanEqual(g,plo))&&all(lessThan(g,plo+R));
+  vec2 p=(vec2(g)+.5)*ts;vec3 d=jac(sA,mA,p,Ls.x)+jac(sB,mB,p,Ls.y);   // 泡を作るつぶれは大・中の海面（波長 2.9 m より長い波）だけ。近くの地図だけ細かい波で点々の泡にならないように
+  float J=(1.-d.x)*(1.-d.y)-d.z*d.z;
+  ivec2 q=id-shift;q-=R*ivec2(floor(vec2(q)/float(R)));vec4 pv=inPrev?texelFetch(prev,q,0):vec4(0);   // 風下へ流れた分（画素ずつ）
+  float inj=clamp((thr-J)*gain,0.,1.),f=max(pv.r*exp(-dt*decayR),inj);f=min(f+inj*dt*growth,1.6);
+  float fr=max(pv.g*exp(-dt*1.6),inj);if(f<.01)f=0.;if(fr<.01)fr=0.;   // ほとんど消えた泡は 0 に（描くときにとばせるように）
+  // 白さ: この点の模様で、絵と同じ式（模様は地図の画素よりずっと細かいので、地図ぜんぶの平均 = 泡の面積。うすい膜は濃さの分だけ数える）
+  float m=foamMask(min(f+fr*.6,1.5),clamp(fr*2.,0.,1.),fr,foamPat(fTex,p,time),foamStreak(fTex,p,windA),.03);
+  o=vec4(f,fr,J,m*.95*max(J,0.));}`;   // 絵の泡の面積: 白さ × 0.95（絵と同じ）× J（動かす前の面積を、動いたあとの面積へ）
 
   const ATMO = `
 const float Re=6360e3,Ra=6420e3;const vec3 bR=vec3(5.8e-6,13.5e-6,33.1e-6);const float bM=21e-6;
@@ -104,11 +165,11 @@ uniform float under,camD;
 vec3 ubg(vec3 d,vec3 amb,vec3 L,vec3 sunC,float sunI){vec3 Lu=deepC*(amb*.9+sunC*sunI*.04*max(L.y,0.));
   float k=d.y<0.?mix(1.,5.,1.+d.y):mix(5.,40.,d.y*d.y);return Lu*k*exp(-KD*camD);}
 `;
-  const CAUST = `
+  const CAUST_ = (a, b, decl) => `
 // コースティクス: 太陽の光は水面の傾きで曲がって進み、深さ D で集まる所は明るい。明るさ = 1/|J|、J = det(I − D(1 − 1/1.33)·H)（H = 水面の高さの 2 階微分、
 // 中と小の海面の傾きを差で微分）。太陽の円盤の大きさで深いほどぼやけるので exp(−D/8) で弱める（目安）
-uniform sampler2D cS1,cS2;uniform vec3 cLs,cSun;
-vec2 cslope(vec2 p){return textureLod(cS1,p/cLs.y,0.).xy+textureLod(cS2,p/cLs.z,0.).xy;}
+${decl ? 'uniform sampler2D cS1,cS2;' : ''}uniform vec3 cLs,cSun;
+vec2 cslope(vec2 p){return textureLod(${a},p/cLs.y,0.).xy+textureLod(${b},p/cLs.z,0.).xy;}
 float caust(vec2 xz,float D){if(D<=0.)return 1.;
   vec3 t=refract(-cSun,vec3(0,1,0),1./1.33);if(t.y>-.05)return 1.;vec2 xs=xz+t.xz/t.y*D;   // その点に届く光が水面を通った所
   const float e=.08;vec2 sx1=cslope(xs+vec2(e,0)),sx0=cslope(xs-vec2(e,0)),sz1=cslope(xs+vec2(0,e)),sz0=cslope(xs-vec2(0,e));
@@ -120,13 +181,21 @@ vec3 shafts(vec3 ro,vec3 rd,float maxT,vec3 sunC,float sunI){vec3 t=refract(-cSu
   for(int i=0;i<10;i++){vec3 p=ro+rd*(float(i)+.5)*dt;float D=-p.y;if(D<=0.)break;acc+=exp(-KD*D-KC*(float(i)+.5)*dt)*caust(p.xz,D)*dt;}
   return acc*sunC*sunI*.03*ph*.25;}   // 最後の .25 は見え方の目安（光芒の強さの合わせ）
 `;
+  const CAUST = CAUST_('cS1', 'cS2', true);
   const SKYL = `
 uniform sampler2D skyT;
 vec3 skyL(vec3 d,float lod){d.y=max(d.y,0.);float v=sqrt(d.y),u=atan(d.z,d.x)/6.2831853+.5;return textureLod(skyT,vec2(u,v),lod).rgb;}
 // 太陽（夜は月）の前に雲があるか: 空の絵の雲の濃さを、その向きで読む。日がさす量 = 1 − 濃さ（雲が流れると、ひなたとかげがなめらかに入れかわる）
 float sunVis(vec3 L){float v=sqrt(max(L.y,0.)),u=atan(L.z,L.x)/6.2831853+.5;return 1.-textureLod(skyT,vec2(u,v),1.).a;}
 vec3 sunC;   // 雲を通ったあとの光の色（main のはじめに sunCu × sunVis）
-vec3 tone(vec3 x){x=x*(2.51*x+.03)/(x*(2.43*x+.59)+.14);return pow(clamp(x,0.,1.),vec3(1./2.2));}
+// 色の仕上げ AgX（Sobotka の AgX を Wrensch の多項式で近似したもの。明るい所が白へなめらかに抜け、夕日が黄色くつぶれない）。式と look（彩度 1.05・強さ 1.06）は web-ocean の COMPOSITE
+// はじめに 1.3 倍: 前の ACES の近似＋ガンマと、中間の明るさ（0.18 の灰色）をそろえる
+vec3 tone(vec3 c){c*=1.3;   // web-ocean にある明るい所の脱色（0.7〜6 で灰色へ 55%）は、夕方の空と照り返しの金色をぬいてしまうので入れない（AgX そのものが明るい所を白へ寄せる）
+  vec3 x=mat3(.842479062253094,.0423282422610123,.0423756549057051,.0784335999999992,.878468636469772,.0784336,.0792237451477643,.0791661274605434,.879142973793104)*max(c,vec3(1e-10));
+  x=(clamp(log2(x),-12.47393,4.026069)+12.47393)/16.5;vec3 x2=x*x,x4=x2*x2;
+  x=15.5*x4*x2-40.14*x4*x+31.96*x4-6.868*x2*x+.4298*x2+.1191*x-.00232;
+  float l=dot(x,vec3(.2126,.7152,.0722));x=l+1.05*(pow(max(x,vec3(0)),vec3(1.06))-l);
+  return clamp(mat3(1.19687900512017,-.0528968517574562,-.0529716355144438,-.0980208811401368,1.15190312990417,-.0980434501171241,-.0990297440797205,-.0989611768448433,1.15107367264116)*x,0.,1.);}
 float h12(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
 `;
 
@@ -177,37 +246,55 @@ void main(){
   vPos=p;vXZ=xz;vH=D.y;gl_Position=VP*vec4(p,1);
 }`;
 
-  const FS_WATER = HEAD + SKYL + UNDER + CAUST + `
-uniform vec3 cam,L,sunCu,Ls,cfw;uniform float sunI,expo,fogL,sss,rough0,disc,fogH,windU,windA,hasBg,nearP,farP,foamStyle,sigB,foamK;uniform sampler2D dBt;uniform vec2 vpS;uniform sampler2D bgC,bgD;
-uniform sampler2D sA,sB,sC;
+  const FS_WATER = HEAD + SKYL + UNDER + 'uniform sampler2D sA,sB,sC,sD,mA,mB,mC,mD,fW0,fW1,fTex;' + CAUST_('sB', 'sC') + FOAMF + `
+uniform vec3 cam,L,sunCu,Ls,cfw;uniform float sunI,expo,fogL,sss,rough0,disc,fogH,windU,windA,hasBg,nearP,farP,foamK,foamW,time,dbg,fMap,LsD,dOn,pixF;uniform sampler2D fCdf;uniform vec2 vpS,fL;uniform sampler2D bgC,bgD;
 in vec3 vPos;in vec2 vXZ;in float vH,vBS,vDep,vBF;out vec4 o;
-float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
-  return mix(mix(h12(i),h12(i+vec2(1,0)),f.x),mix(h12(i+vec2(0,1)),h12(i+vec2(1,1)),f.x),f.y);}
-// 泡の網目: ばらばらに置いた点のいちばん近い 2 つへの距離の差（境目ほど 0）
-float foamCells(vec2 p){vec2 i=floor(p),f=fract(p);float d1=9.,d2=9.;
-  for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++){vec2 g=vec2(x,y),o=vec2(h12(i+g),h12(i+g+17.3));float d=length(g+o-f);if(d<d1){d2=d1;d1=d;}else if(d<d2)d2=d;}
-  return d2-d1;}
+// 傾きの分布（LEAN mapping。Olano & Baker 2010）: ミップで平均した傾き E[s] と傾きの2乗 E[s²] から、その画素の広さの中の傾きのばらつき（共分散）を出す
+vec3 slopeCov(vec4 s,vec4 m){return vec3(max(m.x-s.x*s.x,0.),max(m.y-s.y*s.y,0.),m.z-s.x*s.y);}
+// Smith のかくれる割合（傾きが正規分布のとき。向きで変わるばらつき）
+float lambdaS(vec3 w,vec3 cv){float q=max(dot(w.xz,w.xz),1e-8),il=inversesqrt(q);vec2 az=w.xz*il;
+  float s2=az.x*az.x*cv.x+az.y*az.y*cv.y+2.*az.x*az.y*cv.z,a=max(w.y*il,1e-3)/sqrt(2.*max(s2,1e-7));
+  return a>=1.6?0.:(1.-1.259*a+.396*a*a)/(3.535*a+2.181*a*a);}
 void main(){sunC=sunCu*sunVis(L);
-  vec4 a=texture(sA,vXZ/Ls.x),b=texture(sB,vXZ/Ls.y),c=texture(sC,vXZ/Ls.z);
+  vec2 uA=vXZ/Ls.x,uB=vXZ/Ls.y,uC=vXZ/Ls.z;
+  vec4 a=texture(sA,uA),b=texture(sB,uB),c=texture(sC,uC);
   vec2 sl=a.xy+b.xy+c.xy;
+  vec4 ma=texture(mA,uA),mb=texture(mB,uB),mc=texture(mC,uC);
+  vec3 cov=slopeCov(a,ma)+slopeCov(b,mb)+slopeCov(c,mc);
+  if(dOn>.5){vec2 uD=vXZ/LsD;vec4 d=texture(sD,uD);sl+=d.xy;cov+=slopeCov(d,texture(mD,uD));}   // 4 枚め（2.5 cm まで）: 傾きだけ（dOn は画質で決まり画面ぜんぶ同じなので、if の中のミップの自動選択も同じ）
+  float jz=ma.w+mb.w+mc.w,Jt=(1.-a.z-b.z-c.z)*(1.-a.w-b.w-c.w)-jz*jz;   // 3 枚を足したつぶれ（その画素の）
   vec3 n=normalize(vec3(-sl.x-vBS,1.,-sl.y));
   vec3 V=cam-vPos;float dist=length(V);V/=dist;
+  // 白波の泡: 近く（128 m の地図）と遠く（1 km）を、地図の端の手前でまぜる。その先は画素のつぶれだけ
+  vec2 dc=abs(vXZ-cam.xz);float cheb=max(dc.x,dc.y),w0=1.-smoothstep(.3*fL.x,.45*fL.x,cheb),w1=1.-smoothstep(.3*fL.y,.45*fL.y,cheb);
+  if(fMap<.5){w0=0.;w1=0.;}   // 画質「低」: 泡の地図なし（画素のつぶれだけの目安）
+  vec4 fwl=mix(texture(fW1,vXZ/fL.y),texture(fW0,vXZ/fL.x),w0)*w1;
+  float cover=clamp(fwl.r+fwl.g*.6,0.,1.5)*foamK,fresh=0.;
   if(under>0.){   // 水の中から水面を見る（カメラの真上の水面より下にいるとき）: 水 → 空気の屈折（スネルの窓）、窓の外は全反射。通った光は 1.33² 倍（放射輝度は n² に比例）。カメラまでは水のかすみ
     vec3 amb0=skyL(vec3(0,1,0),6.),I=-V,Nd=-n,Tt=refract(I,Nd,1.33);float F=1.;vec3 col0=vec3(0);
     if(dot(Tt,Tt)>0.){F=.02+.98*pow(1.-max(dot(Tt,n),0.),5.);col0=(skyL(Tt,rough0*4.)+sunC*sunI*pow(max(dot(Tt,L),0.),900.)*disc*.5)*(1.-F)*1.77;}
     col0+=F*ubg(reflect(I,Nd),amb0,L,sunC,sunI);
-    float fmU=clamp(texture(sB,vXZ/Ls.y).z+vBF,0.,1.);col0=mix(col0,amb0*.6,smoothstep(.2,.8,fmU)*.7);   // 泡は下から見ると白くくもる
+    float fmU=clamp(cover+vBF,0.,1.);col0=mix(col0,amb0*.6,smoothstep(.2,.8,fmU)*.7);   // 泡は下から見ると白くくもる
     vec3 Tr=exp(-KC*dist);col0=col0*Tr+ubg(I,amb0,L,sunC,sunI)*(1.-Tr)+shafts(cam,I,min(dist,40.),sunC,sunI);
     o=vec4(tone(col0*expo)+(h12(gl_FragCoord.xy)-.5)/255.,1);return;}
-  float nv=max(dot(n,V),1e-3);
-  float F=.02+.98*pow(1.-nv,5.);                         // フレネル（水の屈折率 1.33）
-  vec3 R=reflect(-V,n);R.y=abs(R.y);
-  float rough=rough0+.2*smoothstep(0.,4000.,dist);   // rough0 = 描けない細かい波の傾き（Cox & Munk 1954 から）。遠くは傾きがならされるぶん足す
-  vec3 refl=skyL(R,rough*6.);
-  vec3 H=normalize(V+L);float nh=max(dot(n,H),0.),nl=max(dot(n,L),0.),a2=rough*rough;
-  float c2=max(nh*nh,1e-4),Dg=exp(-(1.-c2)/(c2*a2))/(3.14159*a2*c2*c2),k=rough*.5,Gs=nl/(nl*(1.-k)+k)*nv/(nv*(1.-k)+k);   // 傾きは正規分布（Beckmann。Cox & Munk の観測と同じ形）
-  float Fh=.02+.98*pow(1.-max(dot(H,V),0.),5.);
-  vec3 spec=sunC*sunI*Dg*Gs*Fh/(4.*nv*max(nl,1e-3))*nl;   // 太陽の照り返し
+  // 描けない細かい波の傾き rough0（Cox & Munk 1954 の全体から、描いている波の分を引いた残り。rough0² = 2 方向の和）と、太陽の円盤の大きさ（半径 0.27°）
+  cov.xy+=rough0*rough0*.5+1.4e-6;
+  // 画面の 1 画素の中で傾きが変わるぶんも広げる（ちらつきを抑える。Kaplanyan 2016 の考え方）
+  {vec2 dx=dFdx(sl),dy=dFdy(sl);vec3 aa=vec3(dx.x*dx.x+dy.x*dy.x,dx.y*dx.y+dy.y*dy.y,dx.x*dx.y+dy.x*dy.y)*.5;cov+=aa*min(1.,.03/max(max(aa.x,aa.y),1e-8));}
+  // 太陽の照り返し: 傾きの分布（向きでちがう正規分布）のうち、太陽を目に返す傾きの割合
+  cov.z=clamp(cov.z,-.99*sqrt(cov.x*cov.y),.99*sqrt(cov.x*cov.y));   // 共分散が正定値になるように（RGBA16F の 2 乗の差で、まれにこわれる）
+  vec3 H=normalize(V+L);vec2 hs=-H.xz/max(H.y,1e-3),ds=hs-sl;float det=max(cov.x*cov.y-cov.z*cov.z,1e-10);
+  float e=(ds.x*ds.x*cov.y+ds.y*ds.y*cov.x-2.*ds.x*ds.y*cov.z)/det,hy2=H.y*H.y,Dm=exp(-.5*e)/(6.2831853*sqrt(det))/max(hy2*hy2,1e-6);
+  float G=1./(1.+lambdaS(V,cov)+lambdaS(L,cov)),Fh=.02+.98*pow(1.-max(dot(H,V),0.),5.);
+  vec3 spec=sunC*sunI*Fh*Dm*G/(4.*max(V.y,.02))*step(0.,L.y);
+  // 空の反射: 浅い角度では、見えている面は手前に傾いたものが多い（見える面積とかくれる面）→ 反射は少し上の空を見る
+  float sig=sqrt(max(cov.x+cov.y,1e-6)*.5);vec3 vh=normalize(vec3(V.x,0.,V.z)+vec3(1e-5,0,0));
+  float sigV=sqrt(max(vh.x*vh.x*cov.x+vh.z*vh.z*cov.y+2.*vh.x*vh.z*cov.z,1e-6)),aV=max(V.y,1e-3)/max(sqrt(1.-V.y*V.y),1e-3)/(1.4142*sigV);
+  vec3 nV=normalize(n+vh*.32*sigV*(1.-smoothstep(0.,2.5,aV)));
+  vec3 R=reflect(-V,nV);R.y=abs(R.y)*.4+max(R.y,0.)*.6;R=normalize(R);
+  vec3 refl=skyL(R,clamp(log2(max(2.*sig*81.5,1.)),0.,8.));   // 空の絵は横 512 画素で 1 周（1 ラジアン 81.5 画素）。ばらつきの幅でぼかす
+  float nv=max(dot(nV,V),1e-3);
+  float F=.02+.98*pow(1.-max(dot(normalize(mix(n,vec3(0,1,0),.45)),V),0.),5.);   // フレネル（水の屈折率 1.33）。細かい波はならした面で（浅い角度で見える面は反射が強いまま）
   vec3 amb=skyL(vec3(0,1,0),6.);
   vec3 deep=deepC,sc=vec3(.05,.33,.3);
   float k1=max(vH+.3,0.)*pow(max(dot(L,-V),0.),4.)*pow(.5-.5*dot(L,n),3.);
@@ -216,6 +303,8 @@ void main(){sunC=sunCu*sunVis(L);
   // 浅い所（ミラーの惑星の棚）は底が見える（水深で色がうすれる。見た目の目安）
   vec3 sand=vec3(.42,.38,.3)*(sunC*sunI*max(L.y,0.)*.05+amb*.7);body=mix(sand,body,1.-exp(-vDep/1.5));
   // 水の下の物（大きさくらべの人など）: 物までの水の厚み t から、光が吸われる分（ベール–ランベルト。赤ほど早く吸われる）と水の中で散らばる分。少し屈折でずらす
+  float pat=texture(fTex,vXZ*.23+vec2(.013,0)*time).r*.78+texture(fTex,vXZ*.71+vec2(.37,.71)).g*.22,fwp=fwidth(pat)+.03;   // 遠くはミップでならす（地図の数え方は foamPat）   // 微分は discard より前で
+  vec2 dX=dFdx(vXZ),dY=dFdy(vXZ);   // 下の if の中ではミップを自動で選べないので、ここで微分しておく
   float contact=0.;
   if(hasBg>0.){vec2 uv=gl_FragCoord.xy/vpS;float dz=texture(bgD,uv).r;
     if(dz<.99999){float zn=dz*2.-1.,zo=2.*nearP*farP/(farP+nearP-zn*(farP-nearP)),zw=dot(vPos-cam,cfw);
@@ -223,27 +312,29 @@ void main(){sunC=sunCu*sunVis(L);
       float t=(zo-zw)/max(dot(-V,cfw),.2);vec2 uv2=clamp(uv+n.xz*.03*min(t,1.),0.,1.);float dz2=texture(bgD,uv2).r;if(dz2>=.99999)uv2=uv;
       vec3 Tr=exp(-t*KC);   // 物までの水で弱まる分（吸収＋散乱、透明度のつまみ）
       body=texture(bgC,uv2).rgb*Tr+body*(1.-Tr);contact=smoothstep(.07,0.,t);}}   // 物の色はすでに見た目の色（トーンのあと）
+  // 泡の絵（web-ocean の泡の描き方を書きかえたもの。式は FOAMF の foamMask）
+  vec3 sssC=vec3(.035,.12,.085);
+  cover=clamp(cover+contact*.7+vBF,0.,1.5);   // vBF = 浜で砕けたあとの泡、contact = 水面と物がふれる所の細い泡
+  body+=(sssC*2.6*(sunC*sunI*.05+amb*.35)+vec3(.1,.32,.3)*amb*.35)*clamp(fwl.g*1.5+cover*.15,0.,1.)*foamK;   // 泡の下の水: 砕けたばかりの所は、巻きこまれた気泡が光を散らして青緑に明るい（古いうすい泡の下は少しだけ）
   vec3 col=mix(body,refl,F)+spec;
-  float fm=clamp(b.z*foamK+contact*.7+vBF,0.,1.);   // foamK = 0: 沖の白波の泡は描かない（2026-10-21 ユーザーと決めた。割合は数字で出す）   // 白波は中の海面の泡（割合を観測に合わせているのと同じもの）。vBF = 浜で砕けたあとの泡   // 水面と物がふれる所は細い泡
-  vec2 wd=vec2(cos(windA),sin(windA)),q=vec2(dot(vXZ,wd),dot(vXZ,vec2(-wd.y,wd.x)));
-  // 泡の形（見た目の目安）: 砕けたばかりの濃い泡は白くはっきり、波の山ほど出やすい。うすくなるにつれて、小さな泡の膜の境目のような細い網目だけが残って消えていく。強い風では風下にのびる
-  // 泡の形の案（見比べ用）: 0 = A 細かく崩れた波頭（波の山の線にそって細長い）、1 = B 風下のすじ、2 = C 丸いかたまり
-  vec2 qs=foamStyle<.5?q*vec2(1.6,.7)*1.8:foamStyle<1.5?q*vec2(.22,2.2):mix(vXZ,q*vec2(.45,1.6),smoothstep(8.,16.,windU));
-  // 泡の量 fm を、いくつかの大きさを重ねたゆらぎ nz と比べる: 多い所はほとんど白く、少ない所はゆらぎの高い所だけが島のように残る（穴のあいたまだら）
-  float nz=.45*vn(qs*1.1)+.3*vn(qs*3.3+3.7)+.17*vn(qs*9.7+1.3)+.08*(1.-foamCells(qs*6.))*1.2;
-  float crest=clamp(vH/(abs(vH)+1.5),-1.,1.);
-  float amt=fm*1.35+.18*crest;   // 波の山ほど泡が残りやすい
-  float fresh=smoothstep(.42,.58,fm);   // 白く見える泡（面積の割合を観測に合わせているのと同じ境目 0.5）
-  float edge=foamStyle<.5?.025:.06;if(foamStyle<.5)nz=mix(nz,vn(qs*4.1+9.)*.6+vn(qs*13.)*.4,.45);   // A はふちを細かく崩す
-  float fm0=b.z*foamK;fm=smoothstep(nz-edge,nz+edge,amt)*fresh;   // 白く見える泡だけ（うすい泡のもやは、灰色にくすんでうそくさいので描かない）
-  // 本物の写真（NOAA の風力階級の写真）とくらべて足した（見た目の目安）: ①古い泡が風で引きのばされた細いすじ（風速 11〜18 m/s で現れる）
-  // ②砕ける波頭の下の青緑（巻きこまれた気泡が光を散らす）
-  float fsl=vn(q*vec2(.18,9.)+vec2(0,3.1))*.65+vn(q*vec2(.45,22.)+5.)*.35,sb=vn(q*vec2(.09,.9)+2.);   // 細いすじ × 途切れ
-  float st=smoothstep(.78,.9,fsl)*smoothstep(.35,.7,sb)*smoothstep(.08,.35,fm0)*smoothstep(11.,18.,windU)*.5;
-  col+=vec3(.03,.16,.14)*(sunC*sunI*max(L.y,0.)*.06+amb*.9)*smoothstep(.4,.8,fm0+.15*crest)*(1.-F)*.5;
-  fm=max(fm,st);
-  vec3 foamC=(sunC*sunI*max(dot(n,L),0.)*.3+amb*1.1)*.9;
-  col=mix(col,foamC,fm*.9);
+  float fmk=0.;
+  if(cover+fwl.g*foamK>1e-3){   // 泡のない所はとばす（重さ）
+    vec2 wd=vec2(cos(windA),sin(windA)),wp=vec2(-wd.y,wd.x),k=vec2(.035,.11);
+    float st=textureGrad(fTex,vec2(dot(vXZ,wd),dot(vXZ,wp))*k,vec2(dot(dX,wd),dot(dX,wp))*k,vec2(dot(dY,wd),dot(dY,wp))*k).a;
+    fmk=foamMask(cover,clamp(fwl.g*2.+fresh,0.,1.),fwl.g*foamK,pat,st,fwp);
+    // 模様がミップでぼけると値が平均に集まり、白い所が減る → ぼけるほど、白さの期待値（模様の値の分布の表 fCdf で P(pat > 1 − cover)）へ移す。地図で数えた割合と画面の割合がそろう
+    float lodP=log2(max(max(length(dX),length(dY))*.23*512.,1.)),cs=cover*mix(smoothstep(.25,.75,st)*1.5,1.,clamp(fwl.g*2.,0.,1.));
+    float ex=max(textureLod(fCdf,vec2(clamp(1.-cs,0.,1.),.5),0.).r*smoothstep(0.,.5,cs)*(.68+.32*smoothstep(.3,.9,cs)),smoothstep(.35,.9,fwl.g*foamK)*textureLod(fCdf,vec2(.5,.5),0.).r*.9);
+    fmk=mix(fmk,ex,smoothstep(.5,2.5,lodP));
+    float bub=textureGrad(fTex,vXZ*1.9+vec2(.21,.53),dX*1.9,dY*1.9).g;vec3 fAlb=vec3(.82,.87,.92)*(.78+.3*bub);
+    vec3 fAmb=amb*.4+.15*(skyL(vec3(.94,.34,0),5.)+skyL(vec3(-.94,.34,0),5.)+skyL(vec3(0,.34,.94),5.)+skyL(vec3(0,.34,-.94),5.));   // 空全体からの光（泡は四方から照らされる）
+    fAmb=mix(fAmb,vec3(dot(fAmb,vec3(.2126,.7152,.0722))),.85);
+    vec3 foamC=fAlb*(sunC*sunI*max(dot(n,L),0.)*.318*.5+fAmb*1.55*(.8+.2*n.y));   // 白い面（低い日は泡の凸凹のかげで弱い。傾いた面は空の光が少し少ない）
+    col=mix(col,foamC,fmk*.95);}
+  else if(w1<1.&&foamW>0.&&dist*pixF/max(abs(V.y),.05)>1.){vec3 fA=amb*.4+.15*(skyL(vec3(.94,.34,0),5.)+skyL(vec3(-.94,.34,0),5.)+skyL(vec3(0,.34,.94),5.)+skyL(vec3(0,.34,-.94),5.));
+    fA=mix(fA,vec3(dot(fA,vec3(.2126,.7152,.0722))),.85);col=mix(col,vec3(.82,.87,.92)*(sunC*sunI*max(L.y,0.)*.318*.5+fA*1.55),foamW*(1.-w1)*smoothstep(1.,6.,dist*pixF/max(abs(V.y),.05)));}   // 地図より遠く: 1 画素（奥行きの伸びこみ）が白波（数 m）より大きい所から、泡の面積の割合（1 km の地図で数えた値）だけ泡の色をまぜる
+  if(dbg>1.5){o=vec4(Jt*.5,fwl.b*.5,fwl.r,1);return;}
+  if(dbg>.5){o=vec4(vec3(fmk),1);return;}   // 調べ用（window.__wgDbg = 1）: 泡の白さだけ
   vec3 hz=skyL(normalize(vec3(-V.x,0.,-V.z)),1.);
   // かすみ: fogH > 0 なら空気は高さ fogH ごとに 1/e にうすくなるとして、見下ろす道すじのぶんだけ（高い所から見ると海がよく見える）
   float hc=max(cam.y-vPos.y,1.),fk=fogH>0.&&hc>10.?fogH/hc*(1.-exp(-hc/fogH)):1.;
@@ -304,5 +395,5 @@ void main(){
   o=vec4(pow(clamp(col,0.,1.),vec3(1./2.2)),alpha);
 }`;
   const FS_COPY = HEAD + `uniform sampler2D T;in vec2 vUv;out vec4 o;void main(){o=texture(T,vUv);}`;
-  return { FS_COPY, FS_GLOBE, VS_FULL, FS_SPEC, FS_FFT, FS_ASM, FS_SKYTEX, FS_SKY, VS_WATER, FS_WATER, VS_MESH, FS_MESH, FS_PROBE };
+  return { FS_FOAMTEX, FS_FOAMUPD, FS_COPY, FS_GLOBE, VS_FULL, FS_SPEC, FS_FFT, FS_ASM, FS_SKYTEX, FS_SKY, VS_WATER, FS_WATER, VS_MESH, FS_MESH, FS_PROBE };
 })();

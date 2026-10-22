@@ -295,7 +295,7 @@ function draw(dt) {
   // 濡れ: 波が高いと下のほうがしぶきで（見た目の目安）
   SUN.wetRain = 0; SUN.wetSplash = 0;   // 濡れは物ごと（stepWet）
   skyEnv();
-  SUN.windU = Ueff; SUN.windA = WIND_ANG; SUN.foamW = 3.84e-6 * Math.pow(Ueff, 3.41); SUN.foamStyle = 0; SUN.foamK = 0;   // 白波の割合（Monahan & O'Muircheartaigh 1980）は数字だけ（沖の泡の絵は外した）
+  SUN.windU = Ueff; SUN.windA = WIND_ANG; SUN.foamW = 3.84e-6 * Math.pow(Ueff, 3.41); SUN.foamK = window.__noFoam ? 0 : 1;   // 白波の割合（Monahan & O'Muircheartaigh 1980）に泡の地図を合わせる（2026-10-22 web-ocean の泡の描き方で絵にもどした）
   if (ocean) { const tot = (st.Hm0 > 0 || sw) ? 0.003 + 5.12e-3 * Ueff : 0;   // 海面の傾きのばらつき（Cox & Munk 1954）。描いている波の分を引いた残りで照り返しをにじませる
     SUN.rough0 = Math.max(0.012, Math.sqrt(Math.max(tot - ocean.fftSlope, 0)));
     SUN.globe = null; SUN.far = 0; SUN.curvR = 0; SUN.fogH = 0;

@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="css/style.css?v=21">
+<link rel="stylesheet" href="css/style.css?v=22">
 
 <div id="app">
   <header id="top"><h1><span lang="ja">波が育つまで</span><span lang="en">How Waves Grow</span></h1><span id="perf"></span><div class="langsw" id="langsw" role="group" aria-label="言語 / Language"><button data-l="ja" title="日本語">JP</button><button data-l="en" title="English">EN</button></div></header>
@@ -84,6 +84,9 @@
         <span id="views" class="seg"><button data-v="orbit"><span lang="ja">上から</span><span lang="en">From above</span></button><button data-v="float"><span lang="ja">海面から</span><span lang="en">At the surface</span></button><button data-v="fly"><span lang="ja">自由に動く</span><span lang="en">Free move</span></button><button data-v="beach" hidden>浜</button></span>
         <div class="sub" lang="ja">ドラッグで回す・見回す。ホイール／2本指で近づく。「自由に動く」は W A S D・Q E（スマホは画面のボタン）で、水の中にも入れます。</div>
         <div class="sub" lang="en">Drag to turn or look around. Wheel / two fingers to move closer. In “Free move”, use W A S D and Q E (on phones, the on-screen buttons); you can go underwater too.</div>
+        <div class="row"><span><span lang="ja">画質</span><span lang="en">Quality</span> <span id="qualNote" class="note"></span></span><span id="quals" class="seg"><button data-q="auto"><span lang="ja">自動</span><span lang="en">Auto</span></button><button data-q="high"><span lang="ja">高</span><span lang="en">High</span></button><button data-q="mid"><span lang="ja">中</span><span lang="en">Medium</span></button><button data-q="low"><span lang="ja">低</span><span lang="en">Low</span></button></span></div>
+        <div class="sub" lang="ja">高: 2.5 cm までのさざ波・泡の地図を 1 秒に 30 回。中: 20 cm まで・泡は 1 秒に 15 回・画素を少なく。低: 白波なし・網目も粗く（動きがかくかくするときに）。自動は端末から決め、重いと下げます。</div>
+        <div class="sub" lang="en">High: ripples down to 2.5 cm, foam map updated 30 times a second. Medium: down to 20 cm, foam 15 times a second, fewer pixels. Low: no whitecaps, coarser mesh (if motion stutters). Auto picks from your device and steps down when slow.</div>
       </div>
       <div id="skyBox" class="box">
         <h2 class="bh"><span lang="ja">空</span><span lang="en">Sky</span></h2>
@@ -145,9 +148,11 @@
         <h3>簡単にしたところ・推定</h3>
         <ul>
           <li>底は平らで、風はずっと同じ向き・場所によらない。遠くから来るうねりは入れていない。</li>
-          <li>波長 20 cm より短い波は描いていない（照り返しのにじみで表す）。くり返しのため、周期を 1000 秒で一周するように少しだけ丸めている。</li>
+          <li>描く波の短さ: 画質「高」は波長 2.5 cm まで（4 枚めの海面。傾き＝照り返しだけに使い、形には入れない。2.5 cm の波は表面張力が効くので、分散は ω² = g k tanh(kh) + (σ/ρ) k³）。「中」「低」は 20 cm まで。それより短い波は照り返しのにじみで表す。くり返しのため、周期を 1000 秒で一周するように少しだけ丸めている。</li>
           <li>短い波: 長い波の分布（JONSWAP）はピークより短い側をなだらかに打ち切り、風で強さが変わる短い波の部分を足した（Elfouhaily ほか 1997 の ECKV の形）。合計の海面の傾きは Cox &amp; Munk の観測に近い（10 m/s で 0.053 と 0.054）。</li>
-          <li>白波: 沖の白波の泡・風で引きのばされた泡のすじ・しぶきの粒は、本物らしく描けなかったので絵からは外した（白波の割合だけ、観測の式 Monahan &amp; O'Muircheartaigh 1980: 3.84×10⁻⁶ U<sup>3.41</sup>、10 m/s で約 1%・20 m/s で約 10% を、風のつまみの下に出す）。物のまわりの細い泡は描いている。</li>
+          <li>白波: 大・中の海面（波長 2.9 m より長い波）を足した面のつぶれ（ヤコビアン J。波の山がとがると小さくなる）が境目より小さい所に泡が生まれ、時間で消え、風下へ流される。泡はカメラのまわり 128 m と 1 km の地図にためている（web-ocean の作り方）。境目は「いちばん押し縮められた所から順に、観測の割合（Monahan &amp; O'Muircheartaigh 1980: 3.84×10⁻⁶ U<sup>3.41</sup>、10 m/s で約 1%・20 m/s で約 10%）ぶんが白波になる」ように、絵と同じ式で泡の面積を数えて少しずつ合わせる（地図ごと。どこで砕けるかの物理ではなく、割合を観測に合わせた目安。量は風速だけから決め、海の育ち方は反映していない: 16 m/s なら吹きはじめ 1 時間の海も 20 時間の海も同じ割合）。線形の波の重ね合わせは本物ほど折れないので、「折れかけた所だけ」では 20 m/s でも 0.1% に届かなかった（2026-10-22 測った）。縮んでいない面（J ≥ 1）には作らず、届かないときは風のつまみの下にそう書く。1 km の地図より遠くは、1 画素（奥行きの伸びこみ）が数 m より大きくなる所から、数えた割合だけ泡の色をまぜる（その手前の 460 m 前後には白波がうすい）。遠くで泡の模様がぼけたら、模様の値の分布から白さの期待値を使い、画面の割合を数えた割合にそろえる。泡の模様・消える速さ（約 4.5 秒で 1/e）・流れる速さ（風速の 3%）・泡の色は見た目で決めた（web-ocean の値）。画質「低」とソフトの GPU では、合わせる計算をしないので白波は描かない。しぶきの粒は描いていない。物のまわりの細い泡も描いている。</li>
+          <li>照り返しと空の反射: 描いている波の傾きのばらつきを、画面の 1 画素に入る広さごとに平均して（LEAN mapping）、描けない細かい波の分（Cox &amp; Munk の全体から描いた分を引いた残り）と合わせ、向きでちがう正規分布として計算する。遠くほどきらめきがなめらかに広がる。浅い角度で見たときの反射の傾け方と、フレネルの面のならし方は web-ocean の目安。</li>
+          <li>色の仕上げ: AgX（Sobotka の AgX を Wrensch の多項式で近似したもの。明るい所が白へなめらかに抜ける）。式と色味（彩度 1.05・強さ 1.06）は web-ocean と同じ。前の ACES の近似と中間の明るさをそろえるため 1.3 倍してからかける。</li>
           <li>ブイは、その場の水の動き（3枚の海面の分）のとおりに動かし、風下へ流される分（ストークスドリフト。Kenyon 1969 の式）を足している。この版の分布は短い波が少ないので、流される速さは実際の海より小さめ（風速の 1〜1.5%。Kenyon は発達した海で 1.6〜3.6%）。</li>
           <li>断面は、同じ分布から作った「風の向きに進む1本の波の列」（上の海とは模様がちがう）。深い海の線形の波の理論（動きは深さとともに e<sup>kz</sup> で小さくなる）。水深を変えても断面は深い海の式のまま。</li>
           <li>大きさくらべの人（大きな浮き輪に板をわたした台に立つ）は、物の下の数か所の水の動きに平面を当てはめて浮き沈み・傾けている。おくれの時間は見た目で決めた。重さ・水の押し返し・流されることは計算していない。形はおおまかな模型。</li>
@@ -166,6 +171,7 @@
           <li>Kenyon (1969) J. Geophys. Res. 74:6991 “Stokes drift for random gravity waves”（流される速さ: 16π³/g ∫ f³ S(f) df）</li>
           <li>Elfouhaily, Chapron, Katsaros &amp; Vandemark (1997) J. Geophys. Res. 102(C7):15781 “A unified directional spectrum for long and short wind-driven waves”（短い波の部分。式は Mobley の Ocean Optics Web Book の写しで確かめた）</li>
           <li>Monahan &amp; O'Muircheartaigh (1980) J. Phys. Oceanogr. 10:2094 “Optimal power-law description of oceanic whitecap coverage dependence on wind speed”（白波の割合）</li>
+          <li>Olano &amp; Baker (2010) “LEAN mapping”, Proc. I3D 2010（傾きのばらつきをミップで平均する）／<a href="https://github.com/Noniv/web-ocean" target="_blank" rel="noopener">web-ocean</a>（Maksymilian Dendura、MIT ライセンス。白波の泡・照り返し・反射・AgX の作り方）</li>
           <li>Cox &amp; Munk (1954) J. Opt. Soc. Am. 44:838（海面の傾きのばらつき σ² = 0.003 + 5.12×10⁻³ U: 太陽の照り返しのにじみ）</li>
           <li>Pope &amp; Fry (1997) Applied Optics 36:8710（純水の吸収）／Gordon ほか (1975) Applied Optics 14:417（海の色と後ろへ散らばる光）／Poole &amp; Atkins (1929) J. Mar. Biol. Assoc. UK 16:297（透明度板の見える深さ）</li>
           <li>Nishita ほか (1993)（空の色: 大気の散乱）</li>
@@ -175,6 +181,7 @@
         </ul>
         <h3>使っているもの</h3>
         <p>フォント: Google Fonts（SIL Open Font License）</p>
+        <p>海の描き方の一部（白波の泡・照り返し・空の反射・色の仕上げ）: <a href="https://github.com/Noniv/web-ocean" target="_blank" rel="noopener">web-ocean</a>（Copyright (c) 2026 Maksymilian Dendura、MIT ライセンス）を WebGL 用に書きかえて使っています。<a href="LICENSE-web-ocean.txt" target="_blank" rel="noopener">ライセンスの全文</a></p>
       </details>
       <details id="aboutEn" class="box" lang="en">
         <summary>About this app</summary>
@@ -195,9 +202,11 @@
         <h3>Simplifications and estimates</h3>
         <ul>
           <li>The bottom is flat, and the wind always blows from the same direction everywhere. Swell from far away is not included.</li>
-          <li>Waves shorter than 20 cm are not drawn (they show up as blurring of reflections). Periods are rounded slightly so the pattern repeats every 1000 seconds.</li>
+          <li>How short the drawn waves go: on High quality, down to 2.5 cm wavelength (a fourth tile, used only for slopes, i.e. glitter, not for the shape; at 2.5 cm surface tension matters, so the dispersion is ω² = g k tanh(kh) + (σ/ρ) k³). On Medium and Low, down to 20 cm. Shorter waves show up as blurring of reflections. Periods are rounded slightly so the pattern repeats every 1000 seconds.</li>
           <li>Short waves: the long-wave spectrum (JONSWAP) is tapered off on the short side of the peak, and a short-wave part whose strength depends on the wind is added (the ECKV form, Elfouhaily et al. 1997). The total surface slope is close to Cox &amp; Munk’s measurements (0.053 vs 0.054 at 10 m/s).</li>
-          <li>Whitecaps: foam on the open sea, wind-stretched foam streaks and spray droplets could not be drawn convincingly, so they are left out of the picture (only the whitecap coverage from Monahan &amp; O'Muircheartaigh 1980, 3.84×10⁻⁶ U<sup>3.41</sup> — about 1% at 10 m/s and 10% at 20 m/s — is shown under the wind slider). The thin foam around objects is drawn.</li>
+          <li>Whitecaps: foam is born where the combined surface of the large and medium tiles (waves longer than 2.9 m) is squeezed (the Jacobian J drops below a threshold as crests sharpen), fades over time and drifts downwind. It is stored in maps of 128 m and 1 km around the camera (the web-ocean approach). The threshold is slowly adjusted, per map, so that “the most squeezed parts, in order, up to the observed coverage” become whitecaps (Monahan &amp; O'Muircheartaigh 1980: 3.84×10⁻⁶ U<sup>3.41</sup>, about 1% at 10 m/s and 10% at 20 m/s), counting the foam area with the same formula as the picture. This matches the fraction to observations; it is not the physics of where waves break. The amount comes from wind speed alone and does not reflect how developed the sea is (at 16 m/s, a 1-hour-old sea and a 20-hour-old sea get the same fraction). Linear superposition of waves does not fold as much as real waves, so “only nearly folding spots” gave under 0.1% even at 20 m/s (measured 2026-10-22). No foam is made where the surface is not squeezed (J ≥ 1); if the target cannot be reached, a note appears under the wind slider. Beyond the 1 km map, from where one pixel (stretched by distance) is larger than a few meters, the foam color is mixed in by the counted fraction (just past 460 m there are fewer whitecaps). Where the foam pattern blurs with distance, the expected whiteness from the pattern’s value distribution is used, so the on-screen fraction matches the counted one. The foam pattern, fading time (1/e in about 4.5 s), drift speed (3% of the wind) and foam color were set by eye (web-ocean’s values). On Low quality and on software GPUs the matching is not run, so whitecaps are not drawn. Spray droplets are not drawn. The thin foam around objects is drawn too.</li>
+          <li>Glitter and sky reflection: the spread of slopes of the drawn waves is averaged over the area each pixel covers (LEAN mapping) and combined with the waves too small to draw (Cox &amp; Munk’s total minus what is drawn), as a direction-dependent normal distribution. Glitter spreads smoothly with distance. How the reflection tilts at grazing angles and how the surface is smoothed for the Fresnel term are web-ocean’s rough guides.</li>
+          <li>Tone mapping: AgX (Sobotka’s AgX, approximated by Wrensch’s polynomial; bright areas roll off smoothly to white). The formula and look (saturation 1.05, power 1.06) are the same as web-ocean. The input is multiplied by 1.3 first so mid-tones match the earlier ACES approximation.</li>
           <li>Buoys move with the local water motion (from the three tiles), plus the downwind drift (Stokes drift, Kenyon 1969). This spectrum has few short waves, so the drift is smaller than at real sea (1–1.5% of the wind speed; Kenyon gives 1.6–3.6% for developed seas).</li>
           <li>The cross-section is “one train of waves travelling downwind” made from the same spectrum (its pattern differs from the 3D sea), using deep-water linear wave theory (motion shrinks with depth as e<sup>kz</sup>). It stays deep-water even when you change the depth.</li>
           <li>The person (standing on a deck laid across a big swim ring) rises, sinks and tilts by fitting a plane to the water motion at a few points under it. The delay was chosen by eye. Weight, the water pushing back and drifting are not calculated. The shape is a rough model.</li>
@@ -216,6 +225,7 @@
           <li>Kenyon (1969) J. Geophys. Res. 74:6991 “Stokes drift for random gravity waves” (drift: 16π³/g ∫ f³ S(f) df)</li>
           <li>Elfouhaily, Chapron, Katsaros &amp; Vandemark (1997) J. Geophys. Res. 102(C7):15781 “A unified directional spectrum for long and short wind-driven waves” (short-wave part; checked against the copy in Mobley’s Ocean Optics Web Book)</li>
           <li>Monahan &amp; O'Muircheartaigh (1980) J. Phys. Oceanogr. 10:2094 “Optimal power-law description of oceanic whitecap coverage dependence on wind speed” (whitecap coverage)</li>
+          <li>Olano &amp; Baker (2010) “LEAN mapping”, Proc. I3D 2010 (averaging the slope spread with mipmaps) / <a href="https://github.com/Noniv/web-ocean" target="_blank" rel="noopener">web-ocean</a> (Maksymilian Dendura, MIT License; how whitecap foam, glitter, reflection and AgX are done)</li>
           <li>Cox &amp; Munk (1954) J. Opt. Soc. Am. 44:838 (surface slope variance σ² = 0.003 + 5.12×10⁻³ U: blur of sun glitter)</li>
           <li>Pope &amp; Fry (1997) Applied Optics 36:8710 (pure-water absorption) / Gordon et al. (1975) Applied Optics 14:417 (sea color and backscattered light) / Poole &amp; Atkins (1929) J. Mar. Biol. Assoc. UK 16:297 (Secchi depth)</li>
           <li>Nishita et al. (1993) (sky color: atmospheric scattering)</li>
@@ -225,26 +235,27 @@
         </ul>
         <h3>Uses</h3>
         <p>Fonts: Google Fonts (SIL Open Font License)</p>
+        <p>Part of the sea rendering (whitecap foam, glitter, sky reflection, tone mapping): adapted for WebGL from <a href="https://github.com/Noniv/web-ocean" target="_blank" rel="noopener">web-ocean</a> (Copyright (c) 2026 Maksymilian Dendura, MIT License). <a href="LICENSE-web-ocean.txt" target="_blank" rel="noopener">Full license text</a></p>
       </details>
     </section>
   </div>
 </div>
 
-<script src="js/growth.js?v=21"></script>
-<script src="js/shaders.js?v=21"></script>
-<script src="js/env.js?v=21"></script>
-<script src="js/beaufort.js?v=21"></script>
-<script src="js/ocean.js?v=21"></script>
-<script src="js/camera.js?v=21"></script>
-<script src="js/graph.js?v=21"></script>
-<script src="js/props.js?v=21"></script>
-<script src="js/floats.js?v=21"></script>
-<script src="js/section.js?v=21"></script>
-<script src="js/beach.js?v=21"></script>
-<script src="js/beach3d.js?v=21"></script>
-<script src="js/swell.js?v=21"></script>
-<script src="js/globe.js?v=21"></script>
-<script src="js/guide.js?v=21"></script>
-<script src="js/app.js?v=21"></script>
-<script src="js/storm.js?v=21"></script>
-<script src="js/scene.js?v=21"></script>
+<script src="js/growth.js?v=22"></script>
+<script src="js/shaders.js?v=22"></script>
+<script src="js/env.js?v=22"></script>
+<script src="js/beaufort.js?v=22"></script>
+<script src="js/ocean.js?v=22"></script>
+<script src="js/camera.js?v=22"></script>
+<script src="js/graph.js?v=22"></script>
+<script src="js/props.js?v=22"></script>
+<script src="js/floats.js?v=22"></script>
+<script src="js/section.js?v=22"></script>
+<script src="js/beach.js?v=22"></script>
+<script src="js/beach3d.js?v=22"></script>
+<script src="js/swell.js?v=22"></script>
+<script src="js/globe.js?v=22"></script>
+<script src="js/guide.js?v=22"></script>
+<script src="js/app.js?v=22"></script>
+<script src="js/storm.js?v=22"></script>
+<script src="js/scene.js?v=22"></script>

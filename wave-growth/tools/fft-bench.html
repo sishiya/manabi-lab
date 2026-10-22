@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FFT の速さくらべ（波が育つまで・調べ用）</title>
+<style>
+body{font:14px/1.6 system-ui,sans-serif;background:#0b1a2e;color:#dfe8f3;margin:0;padding:16px;max-width:760px}
+h1{font-size:18px}button{font:inherit;padding:6px 14px;margin:4px 0}pre{white-space:pre-wrap;background:#06111f;padding:10px;border-radius:6px}
+.note{color:#9fb3c8;font-size:13px}
+</style>
+</head>
+<body>
+<h1>FFT の速さくらべ（調べ用）</h1>
+<p class="note">「波が育つまで」の海面の FFT（256×256 を 4 枚、h(k,t) → 逆 FFT 縦横 → 変位・傾き）を、いまの WebGL2（フラグメントで 1 段ずつ、1 枚 18 回の描画）と、WebGPU の計算シェーダー（共有メモリで 1 行ずつまとめて、全部で 3 回の dispatch）で同じだけ回してくらべる。WebGPU の結果を WebGL の絵に使うには CPU を通す（GPU → CPU → GPU）しかないので、その写す時間も測る。<br>WebGPU の FFT は web-ocean（Copyright (c) 2026 Maksymilian Dendura、MIT ライセンス、wave-growth/LICENSE-web-ocean.txt）の sim.js を短くしたもの。</p>
+<button id="go">はかる</button>
+<pre id="out">（まだ）</pre>
+<script src="../js/shaders.js"></script>
+<script>
+'use strict';
+const N = 256, NC = 4, IT = 200, Ls = [1280, 160, 20, 2.5];
+const out = document.getElementById('out'), log = s => { out.textContent += s + '\n'; };
+
+// ---- WebGL2: アプリと同じシェーダー（FS_SPEC・FS_FFT・FS_ASM） ----
+function benchGL() {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 4;
+  const gl = cv.getContext('webgl2'); if (!gl || !gl.getExtension('EXT_color_buffer_float')) return null;
+  const tq = gl.getExtension('EXT_disjoint_timer_query_webgl2'), S = window.WGsh;
+  const sh = (t, src) => { const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw gl.getShaderInfoLog(s); return s; };
+  const prog = fs => { const p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, S.VS_FULL)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p); p.u = n => gl.getUniformLocation(p, n); return p; };
+  const tex = (f, mip) => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texStorage2D(gl.TEXTURE_2D, mip ? 9 : 1, f, N, N);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); return t; };
+  const fbo = ts => { const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f); ts.forEach((t, i) => gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0 + i, gl.TEXTURE_2D, t, 0)); gl.drawBuffers(ts.map((_, i) => gl.COLOR_ATTACHMENT0 + i)); return f; };
+  const pSpec = prog(S.FS_SPEC), pFFT = prog(S.FS_FFT), pAsm = prog(S.FS_ASM), vao = gl.createVertexArray();
+  const PP = [0, 1].map(() => { const a = tex(gl.RGBA32F), b = tex(gl.RGBA32F); return { a, b, f: fbo([a, b]) }; });
+  const C = Ls.map(() => { const h0 = tex(gl.RGBA32F), d = tex(gl.RGBA16F, 1), s = tex(gl.RGBA16F, 1), m = tex(gl.RGBA16F, 1); return { h0, d, s, m, f: fbo([d, s, m]) }; });
+  const rnd = new Float32Array(N * N * 4).map(() => (Math.random() - 0.5) * 1e-3);
+  C.forEach(c => { gl.bindTexture(gl.TEXTURE_2D, c.h0); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, N, N, gl.RGBA, gl.FLOAT, rnd); });
+  const bind = (p, n, t, u) => { gl.activeTexture(gl.TEXTURE0 + u); gl.bindTexture(gl.TEXTURE_2D, t); gl.uniform1i(p.u(n), u); };
+  gl.bindVertexArray(vao); gl.viewport(0, 0, N, N);
+  function once(t) { C.forEach((c, ci) => {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, PP[0].f); gl.useProgram(pSpec); bind(pSpec, 'h0', c.h0, 0);
+    gl.uniform1f(pSpec.u('L'), Ls[ci]); gl.uniform1f(pSpec.u('t'), t); gl.uniform1f(pSpec.u('N'), N); gl.uniform1f(pSpec.u('w0'), 2 * Math.PI / 1000); gl.uniform1f(pSpec.u('depth'), 1e5); gl.drawArrays(gl.TRIANGLES, 0, 3);
+    let src = 0; gl.useProgram(pFFT); gl.uniform1f(pFFT.u('N'), N);
+    for (const dir of [1, 0]) for (let sub = 2; sub <= N; sub *= 2) { gl.bindFramebuffer(gl.FRAMEBUFFER, PP[1 - src].f); bind(pFFT, 'A', PP[src].a, 0); bind(pFFT, 'B', PP[src].b, 1);
+      gl.uniform1f(pFFT.u('sub'), sub); gl.uniform1i(pFFT.u('hz'), dir); gl.drawArrays(gl.TRIANGLES, 0, 3); src = 1 - src; }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, c.f); gl.useProgram(pAsm); bind(pAsm, 'A', PP[src].a, 0); bind(pAsm, 'B', PP[src].b, 1); gl.uniform1f(pAsm.u('lam'), 1); gl.drawArrays(gl.TRIANGLES, 0, 3);
+    for (const x of [c.d, c.s, c.m]) { gl.bindTexture(gl.TEXTURE_2D, x); gl.generateMipmap(gl.TEXTURE_2D); } }); }
+  for (let i = 0; i < 20; i++) once(i * 0.016); gl.finish();
+  let q = null; if (tq) { q = gl.createQuery(); gl.beginQuery(tq.TIME_ELAPSED_EXT, q); }
+  const t0 = performance.now(); for (let i = 0; i < IT; i++) once(i * 0.016); if (q) gl.endQuery(tq.TIME_ELAPSED_EXT);
+  const px = new Float32Array(4); gl.bindFramebuffer(gl.FRAMEBUFFER, PP[0].f); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, px);   // 終わるまで待つ
+  const wall = (performance.now() - t0) / IT;
+  return new Promise(res => { const poll = () => { if (!q) return res({ wall }); if (!gl.getQueryParameter(q, gl.QUERY_RESULT_AVAILABLE)) return setTimeout(poll, 10);
+    res({ wall, gpu: gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6 / IT }); }; poll(); });
+}
+
+// ---- WebGPU: web-ocean の FFT（共有メモリの基数 2、行 → 列）。h(k,t) を作る・行・列（変位・傾き・傾きの 2 乗を書く）の 3 回 ----
+const WG_COMMON = `const N:u32=${N}u;const LOGN:u32=8u;const PI:f32=3.14159265358979;
+var<workgroup> wa:array<vec4f,${N}>;var<workgroup> wb:array<vec4f,${N}>;
+fn cmul(a:vec2f,b:vec2f)->vec2f{return vec2f(a.x*b.x-a.y*b.y,a.x*b.y+a.y*b.x);}
+fn bitrev(i:u32)->u32{return reverseBits(i)>>(32u-LOGN);}
+fn butterflies(t:u32){for(var s=0u;s<LOGN;s++){let half=1u<<s;let pos=t&(half-1u);let i0=((t>>s)<<(s+1u))+pos;let i1=i0+half;
+  let ang=PI*f32(pos)/f32(half);let w=vec2f(cos(ang),sin(ang));let a0=wa[i0];let a1=wa[i1];let b0=wb[i0];let b1=wb[i1];
+  let ta=vec4f(cmul(a1.xy,w),cmul(a1.zw,w));let tb=vec4f(cmul(b1.xy,w),cmul(b1.zw,w));wa[i0]=a0+ta;wa[i1]=a0-ta;wb[i0]=b0+tb;wb[i1]=b0-tb;workgroupBarrier();}}`;
+const WG_EVOLVE = `const N:u32=${N}u;const PI:f32=3.14159265358979;
+struct U{L:vec4f,t:vec4f};@group(0)@binding(0) var<uniform> P:U;
+@group(0)@binding(1) var<storage,read> h0:array<vec4f>;@group(0)@binding(2) var<storage,read_write> A:array<vec4f>;@group(0)@binding(3) var<storage,read_write> B:array<vec4f>;
+fn cmul(a:vec2f,b:vec2f)->vec2f{return vec2f(a.x*b.x-a.y*b.y,a.x*b.y+a.y*b.x);}fn mulI(a:vec2f)->vec2f{return vec2f(-a.y,a.x);}
+@compute @workgroup_size(16,16,1) fn main(@builtin(global_invocation_id) id:vec3u){let c=id.z;let i=(c*N+id.y)*N+id.x;
+  let nx=select(i32(id.x),i32(id.x)-i32(N),id.x>=N/2u);let ny=select(i32(id.y),i32(id.y)-i32(N),id.y>=N/2u);
+  let k=vec2f(f32(nx),f32(ny))*(2.*PI/P.L[c]);let kl=max(length(k),1e-6);let w=sqrt(9.81*kl+7.4e-5*kl*kl*kl);let ph=w*P.t.x;let e=vec2f(cos(ph),sin(ph));
+  let H=h0[i];let h=cmul(H.xy,vec2f(e.x,-e.y))+cmul(H.zw,e);let ih=mulI(h);let ik=1./kl;
+  A[i]=vec4f(ih*(k.x*ik)+mulI(ih*(k.y*ik)),h+mulI(h*(-k.x*k.y*ik)));B[i]=vec4f(ih*k.x+mulI(ih*k.y),h*(-k.x*k.x*ik)+mulI(h*(-k.y*k.y*ik)));}`;
+const WG_ROWS = WG_COMMON + `
+@group(0)@binding(0) var<storage,read> iA:array<vec4f>;@group(0)@binding(1) var<storage,read> iB:array<vec4f>;@group(0)@binding(2) var<storage,read_write> oA:array<vec4f>;@group(0)@binding(3) var<storage,read_write> oB:array<vec4f>;
+@compute @workgroup_size(${N / 2}) fn main(@builtin(workgroup_id) wg:vec3u,@builtin(local_invocation_index) t:u32){let b=(wg.z*N+wg.x)*N;let e0=t;let e1=t+N/2u;
+  wa[bitrev(e0)]=iA[b+e0];wa[bitrev(e1)]=iA[b+e1];wb[bitrev(e0)]=iB[b+e0];wb[bitrev(e1)]=iB[b+e1];workgroupBarrier();butterflies(t);
+  oA[b+e0]=wa[e0];oA[b+e1]=wa[e1];oB[b+e0]=wb[e0];oB[b+e1]=wb[e1];}`;
+const WG_COLS = WG_COMMON + `
+@group(0)@binding(0) var<storage,read> iA:array<vec4f>;@group(0)@binding(1) var<storage,read> iB:array<vec4f>;
+@group(0)@binding(2) var dO:texture_storage_2d_array<rgba16float,write>;@group(0)@binding(3) var sO:texture_storage_2d_array<rgba16float,write>;@group(0)@binding(4) var mO:texture_storage_2d_array<rgba16float,write>;
+fn emit(x:u32,y:u32,c:u32,a:vec4f,b:vec4f){let p=vec2u(x,y);textureStore(dO,p,c,vec4f(a.x,a.z,a.y,a.w));textureStore(sO,p,c,b);textureStore(mO,p,c,vec4f(b.x*b.x,b.y*b.y,b.x*b.y,0.));}
+@compute @workgroup_size(${N / 2}) fn main(@builtin(workgroup_id) wg:vec3u,@builtin(local_invocation_index) t:u32){let x=wg.x;let c=wg.z;let e0=t;let e1=t+N/2u;let i0=(c*N+e0)*N+x;let i1=(c*N+e1)*N+x;
+  wa[bitrev(e0)]=iA[i0];wa[bitrev(e1)]=iA[i1];wb[bitrev(e0)]=iB[i0];wb[bitrev(e1)]=iB[i1];workgroupBarrier();butterflies(t);emit(x,e0,c,wa[e0],wb[e0]);emit(x,e1,c,wa[e1],wb[e1]);}`;
+async function benchGPU() {
+  if (!navigator.gpu) return { err: 'WebGPU が使えません（navigator.gpu なし）' };
+  const ad = await navigator.gpu.requestAdapter(); if (!ad) return { err: 'WebGPU のアダプタがありません' };
+  const dev = await ad.requestDevice(), GU = GPUBufferUsage, sz = NC * N * N * 16;
+  const buf = (u) => dev.createBuffer({ size: sz, usage: GU.STORAGE | u });
+  const h0 = buf(GU.COPY_DST), A = buf(0), B = buf(0), A2 = buf(0), B2 = buf(0);
+  dev.queue.writeBuffer(h0, 0, new Float32Array(NC * N * N * 4).map(() => (Math.random() - 0.5) * 1e-3));
+  const ub = dev.createBuffer({ size: 32, usage: GU.UNIFORM | GU.COPY_DST });
+  const tex = () => dev.createTexture({ size: [N, N, NC], format: 'rgba16float', usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC });
+  const tD = tex(), tS = tex(), tM = tex();
+  const pipe = code => dev.createComputePipeline({ layout: 'auto', compute: { module: dev.createShaderModule({ code }), entryPoint: 'main' } });
+  const pE = pipe(WG_EVOLVE), pR = pipe(WG_ROWS), pC = pipe(WG_COLS);
+  const bg = (p, rs) => dev.createBindGroup({ layout: p.getBindGroupLayout(0), entries: rs.map((r, i) => ({ binding: i, resource: r })) });
+  const v = t => t.createView({ dimension: '2d-array' });
+  const gE = bg(pE, [{ buffer: ub }, { buffer: h0 }, { buffer: A }, { buffer: B }]), gR = bg(pR, [{ buffer: A }, { buffer: B }, { buffer: A2 }, { buffer: B2 }]), gC = bg(pC, [{ buffer: A2 }, { buffer: B2 }, v(tD), v(tS), v(tM)]);
+  const U = new Float32Array(8); U.set(Ls, 0);
+  function once(t) { U[4] = t; dev.queue.writeBuffer(ub, 0, U); const e = dev.createCommandEncoder(), c = e.beginComputePass();
+    c.setPipeline(pE); c.setBindGroup(0, gE); c.dispatchWorkgroups(N / 16, N / 16, NC);
+    c.setPipeline(pR); c.setBindGroup(0, gR); c.dispatchWorkgroups(N, 1, NC);
+    c.setPipeline(pC); c.setBindGroup(0, gC); c.dispatchWorkgroups(N, 1, NC); c.end(); dev.queue.submit([e.finish()]); }
+  for (let i = 0; i < 20; i++) once(i * 0.016); await dev.queue.onSubmittedWorkDone();
+  const t0 = performance.now(); for (let i = 0; i < IT; i++) once(i * 0.016); await dev.queue.onSubmittedWorkDone();
+  const wall = (performance.now() - t0) / IT;
+  // WebGL で使うために CPU へ写す: 変位・傾き・2 乗の 3 枚 × 4（rgba16float = 8 バイト/画素）
+  const rb = dev.createBuffer({ size: NC * N * N * 8 * 3, usage: GU.COPY_DST | GU.MAP_READ });
+  const t1 = performance.now(); const RT = 20;
+  for (let i = 0; i < RT; i++) { once(i * 0.016); const e = dev.createCommandEncoder();
+    [tD, tS, tM].forEach((t, k) => e.copyTextureToBuffer({ texture: t }, { buffer: rb, offset: k * NC * N * N * 8, bytesPerRow: N * 8, rowsPerImage: N }, [N, N, NC]));
+    dev.queue.submit([e.finish()]); await rb.mapAsync(GPUMapMode.READ); rb.getMappedRange(); rb.unmap(); }
+  const readback = (performance.now() - t1) / RT;
+  return { wall, readback, adapter: (ad.info && (ad.info.description || ad.info.vendor)) || '' };
+}
+
+document.getElementById('go').onclick = async () => {
+  out.textContent = ''; log(`256×256 を ${NC} 枚、${IT} 回の平均（1 コマぶん）`);
+  try { const g = await benchGL(); log(g ? `WebGL2（いま）: GPU ${g.gpu ? g.gpu.toFixed(3) : '—'} ms／コマ、待ち時間こみ ${g.wall.toFixed(3)} ms` : 'WebGL2 が使えません'); } catch (e) { log('WebGL2 でエラー: ' + e); }
+  try { const w = await benchGPU(); if (w.err) log('WebGPU: ' + w.err); else { log(`WebGPU 計算シェーダー: 待ち時間こみ ${w.wall.toFixed(3)} ms／コマ（${w.adapter}）`); log(`  → WebGL の絵に使うため CPU へ写す（読むだけ）: ${w.readback.toFixed(2)} ms／コマ（このあと WebGL へ上げる時間も別にかかる）`); } } catch (e) { log('WebGPU でエラー: ' + e); }
+  window.__benchDone = out.textContent;
+};
+</script>
+</body>
+</html>
