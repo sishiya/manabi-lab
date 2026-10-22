@@ -47,6 +47,17 @@ function setQualityPick(k) { qPick = k; try { localStorage.setItem('wagr.quality
 function qualNote() { const el = $('qualNote'); if (!el || !ocean) return; const n = { high: L('高', 'High'), mid: L('中', 'Medium'), low: L('低', 'Low') }[ocean.quality];
   el.textContent = qPick === 'auto' ? L(`いまは「${n}」`, `Now: ${n}`) : ''; }
 document.querySelectorAll('#quals button').forEach(b => b.onclick = () => setQualityPick(b.dataset.q));
+// ---- 白波の作り方の見くらべ（A・B・C。js/ocean.js の FOAM_MODES）。選んだものは覚えておく ----
+let fmPick = 1;
+try { const r = localStorage.getItem('wagr.foamMode'), v = +r; if (r !== null && r !== '' && (v === 0 || v === 1 || v === 2)) fmPick = v; } catch (e) {}   // 何もないとき +null = 0 にならないように
+function setFoamPick(m) { fmPick = m; try { localStorage.setItem('wagr.foamMode', m); } catch (e) {} if (ocean) ocean.setFoamMode(m);
+  document.querySelectorAll('#foamModes button').forEach(b => { const on = +b.dataset.fm === m; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }); foamNote(); }
+// 絵の白波の割合（1 km の地図で数えた値）と観測の式の値を並べる
+function foamNote() { if (!ocean) return; const f = ocean.foam, t = f.target * 100, m = f.mean[1] * 100, d = v => v < 1 ? v.toFixed(2) : v.toFixed(1);
+  const on = f.on && SUN.foamK > 0 && t > 0.005;
+  $('foamNote').textContent = on ? `いま: 絵の白波 ${d(m)}%・観測の式 ${d(t)}%` : ''; $('foamNoteEn').textContent = on ? `Now: drawn whitecaps ${d(m)}%, observed formula ${d(t)}%` : ''; }
+document.querySelectorAll('#foamModes button').forEach(b => b.onclick = () => setFoamPick(+b.dataset.fm));
+setFoamPick(fmPick);
 setQualityPick(qPick);
 addEventListener('resize', resize); resize();
 
@@ -174,6 +185,7 @@ function loop(now) {
       const d = devicePixelRatio || 1, k0 = Math.min(d, ocean.Q.px); ocean.setQuality(ocean.quality === 'high' ? 'mid' : 'low'); rscale = Math.min(1, rscale * k0 / Math.min(d, ocean.Q.px)); resize(); qualNote(); slow = 0; }
     else if (slow >= 4 && rscale > 0.5) { rscale = Math.max(0.5, rscale * 0.85); resize(); slow = 0; }
     if (ocean && ocean.foam.short !== foamShortShown) update();
+    foamNote();
     const sg = ocean && ocean.prof ? ocean.stage : null;   // ?prof=1 のとき段階ごと（波の FFT・泡の地図・海面の読み出し・空の絵・画面）
     $('perf').textContent = L(`1コマ ${ms.toFixed(1)} ms`, `${ms.toFixed(1)} ms/frame`) + (ocean && ocean.gpuMs ? `（GPU ${ocean.gpuMs.toFixed(1)}）` : '') + (sg ? L(`［波 ${sg.fft.toFixed(2)}・泡 ${sg.foam.toFixed(2)}・読み出し ${sg.probe.toFixed(2)}・空の絵 ${sg.skytex.toFixed(2)}・画面 ${sg.draw.toFixed(2)}］`, ` [waves ${sg.fft.toFixed(2)} · foam ${sg.foam.toFixed(2)} · probe ${sg.probe.toFixed(2)} · sky map ${sg.skytex.toFixed(2)} · screen ${sg.draw.toFixed(2)}]`) : '') + L('・', ' · ') + `${cv.width}×${cv.height}`; }
   requestAnimationFrame(loop);

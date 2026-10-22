@@ -99,13 +99,13 @@ float foamMask(float cover,float fk,float fg,float pat,float st,float fw){
   // 時間で消え（decay /s）、風下へ少し流される（drift m/s）。r = 泡の量、g = できたばかりの泡、b = J、a = 白く見える泡の面積（ミップの平均 = 割合。観測に合わせる）
   // web-ocean の FOAM_UPDATE を GLSL に書きかえ、白く見える面積の列 a を足したもの
   const FS_FOAMUPD = HEAD + FOAMF + `
-uniform sampler2D prev,sA,sB,mA,mB,fTex;uniform vec3 Ls;uniform ivec4 snap;uniform ivec2 shift;uniform float RES,ts,dt,decayR,thr,gain,growth,time,windA;
+uniform sampler2D prev,sA,sB,sC,mA,mB,mC,fTex;uniform vec3 Ls;uniform ivec4 snap;uniform ivec2 shift;uniform float RES,ts,dt,decayR,thr,gain,growth,time,windA,cOn;
 layout(location=0) out vec4 o;
 int wrapI(int i,int lo,int R){int a=i-lo;return lo+a-R*int(floor(float(a)/float(R)));}   // % は負の数で決まっていないので floor で
 vec3 jac(sampler2D s,sampler2D m,vec2 p,float L){float lod=log2(max(ts/(L/256.),1.));if(lod>7.5)return vec3(0);vec2 uv=p/L;return vec3(textureLod(s,uv,lod).zw,textureLod(m,uv,lod).w);}
 void main(){int R=int(RES);ivec2 id=ivec2(gl_FragCoord.xy),lo=snap.xy-R/2,plo=snap.zw-R/2;
   ivec2 g=ivec2(wrapI(id.x,lo.x,R),wrapI(id.y,lo.y,R));bool inPrev=all(greaterThanEqual(g,plo))&&all(lessThan(g,plo+R));
-  vec2 p=(vec2(g)+.5)*ts;vec3 d=jac(sA,mA,p,Ls.x)+jac(sB,mB,p,Ls.y);   // 泡を作るつぶれは大・中の海面（波長 2.9 m より長い波）だけ。近くの地図だけ細かい波で点々の泡にならないように
+  vec2 p=(vec2(g)+.5)*ts;vec3 d=jac(sA,mA,p,Ls.x)+jac(sB,mB,p,Ls.y)+cOn*jac(sC,mC,p,Ls.z);   // 泡を作るつぶれ: 案 A・B は 3 枚とも（大きな波の山に小さな波のとがりが重なる所。web-ocean と同じ）、案 C は大・中だけ（波長 2.9 m より長い波）
   float J=(1.-d.x)*(1.-d.y)-d.z*d.z;
   ivec2 q=id-shift;q-=R*ivec2(floor(vec2(q)/float(R)));vec4 pv=inPrev?texelFetch(prev,q,0):vec4(0);   // 風下へ流れた分（画素ずつ）
   float inj=clamp((thr-J)*gain,0.,1.),f=max(pv.r*exp(-dt*decayR),inj);f=min(f+inj*dt*growth,1.6);
@@ -247,7 +247,7 @@ void main(){
 }`;
 
   const FS_WATER = HEAD + SKYL + UNDER + 'uniform sampler2D sA,sB,sC,sD,mA,mB,mC,mD,fW0,fW1,fTex;' + CAUST_('sB', 'sC') + FOAMF + `
-uniform vec3 cam,L,sunCu,Ls,cfw;uniform float sunI,expo,fogL,sss,rough0,disc,fogH,windU,windA,hasBg,nearP,farP,foamK,foamW,time,dbg,fMap,LsD,dOn,pixF;uniform sampler2D fCdf;uniform vec2 vpS,fL;uniform sampler2D bgC,bgD;
+uniform vec3 cam,L,sunCu,Ls,cfw;uniform float sunI,expo,fogL,sss,rough0,disc,fogH,windU,windA,hasBg,nearP,farP,foamK,foamW,time,dbg,fMap,LsD,dOn,pixF,thrR,frOn;uniform sampler2D fCdf;uniform vec2 vpS,fL;uniform sampler2D bgC,bgD;
 in vec3 vPos;in vec2 vXZ;in float vH,vBS,vDep,vBF;out vec4 o;
 // 傾きの分布（LEAN mapping。Olano & Baker 2010）: ミップで平均した傾き E[s] と傾きの2乗 E[s²] から、その画素の広さの中の傾きのばらつき（共分散）を出す
 vec3 slopeCov(vec4 s,vec4 m){return vec3(max(m.x-s.x*s.x,0.),max(m.y-s.y*s.y,0.),m.z-s.x*s.y);}
@@ -269,7 +269,8 @@ void main(){sunC=sunCu*sunVis(L);
   vec2 dc=abs(vXZ-cam.xz);float cheb=max(dc.x,dc.y),w0=1.-smoothstep(.3*fL.x,.45*fL.x,cheb),w1=1.-smoothstep(.3*fL.y,.45*fL.y,cheb);
   if(fMap<.5){w0=0.;w1=0.;}   // 画質「低」: 泡の地図なし（画素のつぶれだけの目安）
   vec4 fwl=mix(texture(fW1,vXZ/fL.y),texture(fW0,vXZ/fL.x),w0)*w1;
-  float cover=clamp(fwl.r+fwl.g*.6,0.,1.5)*foamK,fresh=0.;
+  float fresh=frOn*clamp((thrR-Jt)*2.5,0.,1.);   // 案 A・B: その画素の 3 枚のつぶれからも、いま砕けている波頭の泡（地図の外では、これだけ。web-ocean と同じ）
+  float cover=clamp(max(fwl.r,fresh*(1.-w1*.7))+fwl.g*.6,0.,1.5)*foamK;
   if(under>0.){   // 水の中から水面を見る（カメラの真上の水面より下にいるとき）: 水 → 空気の屈折（スネルの窓）、窓の外は全反射。通った光は 1.33² 倍（放射輝度は n² に比例）。カメラまでは水のかすみ
     vec3 amb0=skyL(vec3(0,1,0),6.),I=-V,Nd=-n,Tt=refract(I,Nd,1.33);float F=1.;vec3 col0=vec3(0);
     if(dot(Tt,Tt)>0.){F=.02+.98*pow(1.-max(dot(Tt,n),0.),5.);col0=(skyL(Tt,rough0*4.)+sunC*sunI*pow(max(dot(Tt,L),0.),900.)*disc*.5)*(1.-F)*1.77;}

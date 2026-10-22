@@ -149,6 +149,11 @@ window.WGocean = (() => {
     // 白波の割合を観測に合わせる（Monahan & O'Muircheartaigh 1980: W = 3.84e−6 U^3.41）。泡の地図ごとに白く見える泡の平均（1×1 のミップ）を読み、泡が生まれる境目 thr を少しずつ動かす
     // 泡が生まれる境目 thr（地図ごと。粗い 1 km の地図は短い波のつぶれがならされるので、同じ境目では泡が少なすぎる）: 海面のうち、いちばん押し縮められた所（J が小さい所）から順に、観測の割合ぶんが白波になるように合わせる（線形の波の重ね合わせは本物ほど折れないので、J < 0.7 のような「折れかけ」だけでは 20 m/s でも 0.1% に届かない。2026-10-22 測った）。
     // 上限 1（縮んでいない面には作らない）。届かないときは届かないまま = foamShort
+    // 泡の作り方の案（2026-10-22 ユーザーと見くらべる）: A = web-ocean のとおり（波の横の動きを 1.25 倍 = choppiness。線形の波より山がとがる・物理を少し曲げる。3 枚のつぶれ・境目 0.68 で固定・じわっと gain 2・画素ごとの波頭の泡。量は観測と合わない）、
+    // B = あいだ（A の形のまま（1.25 倍もそのまま）、境目を 0.6〜0.9 の中だけでゆっくり動かして量を観測に近づける）、C = 前の版（大・中だけ・くっきり gain 20・境目を 0.05〜1 で動かして量を観測に合わせる）
+    const FOAM_MODES = [{ cOn: 1, gain: 2, fixed: true, thr: 0.68, lam: 1.25 }, { cOn: 1, gain: 2, lo: 0.6, hi: 0.9, rate: 0.5, lam: 1.25 }, { cOn: 0, gain: 20, lo: 0.05, hi: 1, rate: 1 }];
+    let foamMode = 1;
+    function setFoamMode(m) { if (!FOAM_MODES[m] || m === foamMode) return; foamMode = m; FW.forEach(w => { w.snap = null; w.thr = FOAM_MODES[m].fixed ? FOAM_MODES[m].thr : Math.min(FOAM_MODES[m].hi, Math.max(FOAM_MODES[m].lo, 0.7)); }); foamShort = false; }   // 切りかえたら地図をはじめから
     let foamTarget = 0, foamPend = null, foamTick = 0, foamLev = 0, foamShort = false; const foamBuf = new Float32Array(4), foamLastT = [0, 0];
     const foamPbo = gl.createBuffer(); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, foamPbo); gl.bufferData(gl.PIXEL_PACK_BUFFER, 16, gl.STREAM_READ); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
     function foamControl() {
@@ -157,8 +162,9 @@ window.WGocean = (() => {
           gl.deleteSync(foamPend); foamPend = null; const w = FW[foamLev]; w.mean = foamBuf[3];   // 泡の面積の割合（絵と同じ式で数えた値）
           // 合わせる速さは 1 秒あたり（コマの速さによらない）。泡は数秒かけて消えるので、ゆっくり。128 m の地図は波群（カメラの下が山か谷か）でゆれるので、もっとゆっくり
           const now = performance.now() / 1000, el = Math.min(1, now - (foamLastT[foamLev] || now)); foamLastT[foamLev] = now;
-          const err = Math.log(foamTarget + 2e-4) - Math.log(w.mean + 2e-4); w.thr = Math.min(1, Math.max(0.05, w.thr * Math.exp((foamLev ? 0.09 : 0.03) * el * Math.max(-1, Math.min(1, err)))));
-          if (foamLev === 1) foamShort = foamShort ? !(w.mean > foamTarget * 0.8 || w.thr < 0.98) : w.thr >= 0.999 && w.mean < foamTarget * 0.6;   // 届かないかは 1 km の地図で、出す・消すに差をつけて
+          const err = Math.log(foamTarget + 2e-4) - Math.log(w.mean + 2e-4), FM = FOAM_MODES[foamMode];
+          w.thr = FM.fixed ? FM.thr : Math.min(FM.hi, Math.max(FM.lo, w.thr * Math.exp((foamLev ? 0.09 : 0.03) * FM.rate * el * Math.max(-1, Math.min(1, err)))));
+          if (foamLev === 1) foamShort = !FM.fixed && (foamShort ? !(w.mean > foamTarget * 0.8 || w.thr < FM.hi - 0.02) : w.thr >= FM.hi - 0.001 && w.mean < foamTarget * 0.6);   // 届かないかは 1 km の地図で、出す・消すに差をつけて
           foamLev = 1 - foamLev; } return; }
       if (++foamTick % 10) return;
       gl.bindFramebuffer(gl.READ_FRAMEBUFFER, FW[foamLev].top[FW[foamLev].cur]); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, foamPbo); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, 0);
@@ -174,7 +180,7 @@ window.WGocean = (() => {
         w.dr[0] += Math.cos(windA) * dr * st; w.dr[1] += Math.sin(windA) * dr * st; const sx = Math.trunc(w.dr[0] / w.ts), sz = Math.trunc(w.dr[1] / w.ts); w.dr[0] -= sx * w.ts; w.dr[1] -= sz * w.ts;
         gl.bindFramebuffer(gl.FRAMEBUFFER, w.f[w.cur]); gl.viewport(0, 0, w.res, w.res); unit = 0;
         setAll(pFoamU, { prev: w.t[1 - w.cur], sA: CASC[0].slope[cur], sB: CASC[1].slope[cur], sC: CASC[2].slope[cur], mA: CASC[0].mom, mB: CASC[1].mom, mC: CASC[2].mom, Ls: LS3,
-          RES: w.res, ts: w.ts, dt: st, decayR: 0.22, thr: w.thr, gain: 20, growth: 1, fTex: foamTex, time: simT % LOOP, windA });
+          RES: w.res, ts: w.ts, dt: st, decayR: 0.22, thr: w.thr, gain: FOAM_MODES[foamMode].gain, growth: 1, cOn: FOAM_MODES[foamMode].cOn, fTex: foamTex, time: simT % LOOP, windA });
         gl.uniform4i(pFoamU.u.snap, cx, cz, pv[0], pv[1]); gl.uniform2i(pFoamU.u.shift, sx, sz); full();
         gl.bindTexture(gl.TEXTURE_2D, w.t[w.cur]); gl.generateMipmap(gl.TEXTURE_2D); }
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -289,7 +295,7 @@ window.WGocean = (() => {
           gl.bindFramebuffer(gl.FRAMEBUFFER, PP[1 - src].f); use(pFFT);
           setAll(pFFT, { A: PP[src].a, B: PP[src].b, N, sub }); gl.uniform1i(pFFT.u.hz, dir); full(); src = 1 - src; }
         gl.bindFramebuffer(gl.FRAMEBUFFER, c.f[cur]); use(pAsm);
-        setAll(pAsm, { A: PP[src].a, B: PP[src].b, lam: 1.0 }); full();
+        setAll(pAsm, { A: PP[src].a, B: PP[src].b, lam: FOAM_MODES[foamMode].lam || 1 }); full();   // 案 A・B は 1.25
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.bindTexture(gl.TEXTURE_2D, c.disp); gl.generateMipmap(gl.TEXTURE_2D);
         gl.bindTexture(gl.TEXTURE_2D, c.slope[cur]); gl.generateMipmap(gl.TEXTURE_2D);
@@ -331,7 +337,7 @@ window.WGocean = (() => {
       // 網目を投げる平面（planeY）はいつもカメラの向こう側（水の中なら上、水の上なら下）
       setAll(pWater, { cam: pos, cf, cr, cu, Ls: LS3, tx, ty, gx: env.wideGrid ? 2.6 : 1.6, y0: env.under ? Math.max(-1.2, horizonY - 0.15) : env.wideGrid ? -5.0 : -3.0, y1: env.under ? 3.0 : Math.min(horizonY + (big ? 0.4 : 0.12), 1.2), under: env.under ? 1 : 0, camD: env.camD || 0,
         far: env.far || (big ? 300000 : 30000), planeY: env.under ? Math.max(big ? big.planeY : 0, pos[1] + 0.5) : Math.min(big ? big.planeY : 0, pos[1] - 0.5), bigOn: big ? 1 : 0, bigL: big ? big.L : 1, bigX0: big ? big.x0 : 0, bigWrap: big && big.noWrap ? 0 : 1, curvR: big ? big.R : env.curvR || 1e9, bigT: bigTex,
-        pixA: 2 * ty / H, VP, L, sunCu: sunC, sunI: keyI, expo: env.expo, fogL: env.fogL, sss: 1, rough0: env.rough0, disc: env.disc, fogH: env.fogH || 0, windU: env.windU || 0, windA: env.windA || 0, foamK: env.foamK == null ? 1 : env.foamK, foamW: mapOn ? FW[1].mean : 0, fMap: mapOn ? 1 : 0, fCdf: cdfTex, pixF: 2 * ty / H, LsD: CASC[3].L, dOn: Q.casc4 ? 1 : 0, time: t, dbg: window.__wgDbg || 0, fL: FLEV, fW0: FW[0].t[FW[0].cur], fW1: FW[1].t[FW[1].cur], fTex: foamTex, skyT: skyTex, cfw: cf, hasBg: hasMesh ? 1 : 0, nearP: n, farP: f, vpS: [W, H], bgC: hasMesh ? bgColor : skyTex, bgD: hasMesh ? bgDepth : skyTex, ...cst,
+        pixA: 2 * ty / H, VP, L, sunCu: sunC, sunI: keyI, expo: env.expo, fogL: env.fogL, sss: 1, rough0: env.rough0, disc: env.disc, fogH: env.fogH || 0, windU: env.windU || 0, windA: env.windA || 0, foamK: env.foamK == null ? 1 : env.foamK, foamW: mapOn ? FW[1].mean : 0, fMap: mapOn ? 1 : 0, thrR: FW[0].thr - 0.2, frOn: mapOn && FOAM_MODES[foamMode].cOn ? 1 : 0, fCdf: cdfTex, pixF: 2 * ty / H, LsD: CASC[3].L, dOn: Q.casc4 ? 1 : 0, time: t, dbg: window.__wgDbg || 0, fL: FLEV, fW0: FW[0].t[FW[0].cur], fW1: FW[1].t[FW[1].cur], fTex: foamTex, skyT: skyTex, cfw: cf, hasBg: hasMesh ? 1 : 0, nearP: n, farP: f, vpS: [W, H], bgC: hasMesh ? bgColor : skyTex, bgD: hasMesh ? bgDepth : skyTex, ...cst,
         dA: CASC[0].disp, dB: CASC[1].disp, dC: CASC[2].disp, sA: CASC[0].slope[cur], sB: CASC[1].slope[cur], sC: CASC[2].slope[cur], mA: CASC[0].mom, mB: CASC[1].mom, mC: CASC[2].mom, sD: CASC[3].slope[cur], mD: CASC[3].mom });
       const gv = grid(Q.grid); gl.bindVertexArray(gv); gl.drawElements(gl.TRIANGLES, gv.count, gl.UNSIGNED_INT, 0); gl.bindVertexArray(null);
       }
@@ -345,7 +351,7 @@ window.WGocean = (() => {
       cur = 1 - cur;
       tE(); if (q) { gl.endQuery(tq.TIME_ELAPSED_EXT); tqs.push(q); }
     }
-    return { isSoft, QUALITY, setQuality, autoQuality, get quality() { return qName; }, get Q() { return Q; },
+    return { isSoft, QUALITY, setQuality, setFoamMode, get foamMode() { return foamMode; }, autoQuality, get quality() { return qName; }, get Q() { return Q; },
       get prof() { return prof; }, set prof(v) { prof = !!v && !!tq; }, get stage() { return stage; }, setSea, setSpec, setDepth(h) { depthH = isFinite(h) ? h : 1e5; }, frame, makeMesh, get probe() { return probeOut; }, get VP() { return lastVP; }, get txty() { return lastTxTy; }, skyChanged() { skyDirty = true; }, get gpuMs() { return gpuMs; }, get fftHs() { return 4 * Math.sqrt(fftVar); }, get fftSlope() { return fftSlope + (Q.casc4 ? fftSlopeD : 0); }, get foam() { return { thr: FW.map(w => +w.thr.toFixed(3)), short: foamShort && qName !== 'low', on: Q.foam > 0 && !isSoft, mean: FW.map(w => w.mean), target: foamTarget, res: FW.map(w => w.res) }; },
       // 調べ用: 描いている海面（3 枚の FFT の高さ）の分散 → 有義波高。分布の式から出す値（fftHs）とくらべる
       debugSea() { let tot = 0; const per = []; CASC.forEach(c => { const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f);
