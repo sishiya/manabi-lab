@@ -43,5 +43,15 @@ ok(Math.abs(M.phi(0) - 0.5) < 1e-6 && Math.abs(M.phi(1.96) - 0.975) < 1e-3, '正
 ok(st.ev.wr > st.ev.pounce, '大きさのモデルでは、ハエが気づくのはクモが跳んだあと');
 ok(M.angSize(7, 11.6) * 180 / Math.PI < 49, `跳びつく距離での見かけの大きさ ${(M.angSize(7, 11.6) * 180 / Math.PI).toFixed(1)}° は 49° より小さい`);
 
+// 5) ぼけで距離を知るしくみ（Nagata 2012 の式）
+const O = require('../js/optics.js'), Ly = O.layers();
+ok(Math.abs(O.estimate(20, 'red') / 20 - 0.90) < 1e-9, '赤い光では 2cm を 0.90 倍に見積もる（f はこの比から逆算した推定）');
+ok(O.blur(11.6, O.OPT.Fg, Ly.L2) > O.blur(30, O.OPT.Fg, Ly.L2) && O.blur(30, O.OPT.Fg, Ly.L2) > O.blur(73, O.OPT.Fg, Ly.L2), '緑の光: 近いほど L2 のぼけが大きい');
+ok(O.Fr() > O.OPT.Fg, '赤のほうが焦点距離が長い（色収差）');
+const Pr = { speed: 'dill', model: 'size', crouch: true, prey: 'housefly', color: 'red' }, sr = M.run(Pr), Pw = Object.assign({}, Pr, { color: 'white' });
+console.log(`赤い光: ${sr.Dp.toFixed(2)}mm から跳び ${sr.short.toFixed(2)}mm 手前に着地。つかまえる割合 ${M.verdict(sr, Pr).p.toFixed(2)}（ふつう ${M.verdict(M.run(Pw), Pw).p.toFixed(2)}）`);
+ok(sr.Dp > 11.6 && sr.short > 0, '赤い光では遠くから跳び、手前に着地する');
+ok(M.verdict(sr, Pr).p < M.verdict(M.run(Pw), Pw).p, '赤い光ではつかまえる割合が下がる');
+
 console.log(ng ? `\nNG ${ng} 件` : '\nすべて OK');
 process.exit(ng ? 1 : 0);

@@ -5,7 +5,7 @@ window.addEventListener('error', e => window.__sphuErr.push(String(e.message)));
 
 const $ = id => document.getElementById(id);
 const DT = 0.0005;                  // 計算の刻み（0.5ms）
-const P = { speed: 'dill', model: 'size', crouch: true, dir: 0, fastV: 30, prey: 'housefly', lux: 300, look: 'simple' };
+const P = { speed: 'dill', model: 'size', crouch: true, dir: 0, fastV: 30, prey: 'housefly', lux: 300, look: 'simple', color: 'white' };
 const S = { st: null, hist: [], view: 0, playing: true, rate: 'auto', camR: 95, rims: true, guide: true, paused: false, seed: 1 };
 // 1回目は「つかまえた例」を見せる: 初期設定でつかまえる1回目の数の組（ばらつきの中の本物の1回）。2回目からは「もう1回」で別の組
 SD.setP(P);
@@ -35,7 +35,7 @@ function advance(real) {
 }
 
 // ---- 描画
-const cvs = { scene: $('scene'), fly: $('vFly'), spider: $('vSpider'), graph: $('graph') };
+const cvs = { scene: $('scene'), fly: $('vFly'), spider: $('vSpider'), graph: $('graph'), retina: $('retina') };
 const ctx = {}; for (const k in cvs) ctx[k] = cvs[k].getContext('2d');
 function fit(c, g) {
   const r = c.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -50,6 +50,7 @@ function status(s) {
   if (vd && vd.k && M.done(s)) {
     if (vd.k === 'early') return `<b class="escaped">${nm}が先に気づいて逃げた</b><small>（クモが跳ぶ前。あと ${s.D.toFixed(1)}mm）</small>`;
     const m = vd.m != null ? Math.abs(vd.m * 1000).toFixed(0) : null;
+    if (vd.k === 'miss') return `${ex}: <b class="escaped">届かなかった</b>（赤い光で距離を短く見積もり、${s.short.toFixed(1)}mm 手前に着地）${pct}`;
     if (vd.k === 'escaped') return `${ex}: <b class="escaped">逃げた</b>（前脚がとどく ${m}ms 前に${go}）${pct}`;
     return `${ex}: <b class="caught">つかまえた</b>${m ? `（${nm}が${roach ? '走り出す' : '飛び立つ'} ${m}ms 前に前脚がとどいた）` : `（${nm}は間に合わなかった）`}${pct}`;
   }
@@ -70,6 +71,7 @@ function draw() {
   SC.drawScene(ctx.scene, w, h, S.hist, S.view, P, S.camR, { slow, slowLabel: slow ? 'スロー 1/' + Math.round(1 / r) : '', guide: S.guide });
   [w, h] = fit(cvs.fly, ctx.fly); VW.fly(ctx.fly, w, h, s, P, { rims: S.rims, guide: S.guide });
   [w, h] = fit(cvs.spider, ctx.spider); VW.spider(ctx.spider, w, h, s, P, { guide: S.guide });
+  [w, h] = fit(cvs.retina, ctx.retina); RT.draw(ctx.retina, w, h, s, P);
   if ($('graphBox').open) { [w, h] = fit(cvs.graph, ctx.graph); GR.draw(ctx.graph, w, h, S.hist, S.view, P); }
   $('status').innerHTML = status(s);
   const ph = $('pin').offsetHeight; if (ph !== S.pinH) { S.pinH = ph; document.documentElement.style.setProperty('--pinH', ph + 'px'); }
@@ -98,6 +100,7 @@ seg('dir', 'd', v => { P.dir = +v; changed(); });
 seg('prey', 'p', v => { P.prey = v; $('modelRow').hidden = M.prey(P).escape.kind !== 'vision'; $('preyCap').textContent = M.prey(P).short || M.prey(P).name; reset(); });
 seg('light', 'l', v => { P.lux = +v; });
 seg('look', 'k', v => { P.look = v; });
+seg('color', 'c', v => { P.color = v; changed(); });
 seg('rate', 'r', v => { S.rate = v; });
 $('crouch').addEventListener('change', e => { P.crouch = e.target.checked; changed(); });
 $('rims').addEventListener('change', e => { S.rims = e.target.checked; });

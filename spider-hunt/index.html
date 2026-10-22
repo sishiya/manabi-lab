@@ -61,6 +61,15 @@
     </details>
   </section>
 
+  <section id="retinaBox">
+    <h2>クモの目の中: ぼけで距離を知る（と考えられている）</h2>
+    <p class="note">前の大きな目の網膜は4層。奥の2層（L1・L2）は緑を、手前の2層は紫外線を感じます。レンズは色によってピントの位置がずれるので、緑の光は L1 にピントが合い、L2 にはいつもぼけた像がうつります。そのぼけは、ものが近いほど大きくなります。ぼけの大きさで距離を知っている、という仮説です（Nagata ほか 2012。アダンソンハエトリの行動の実験から。神経でどう比べるかはまだわかっていません）。</p>
+    <div class="row"><span class="lab">光の色</span>
+      <div class="seg" id="color"><button data-c="white" class="on">ふつう</button><button data-c="red">赤い光だけ（Nagata の実験）</button></div></div>
+    <canvas id="retina"></canvas>
+    <p class="note">赤い光だけにすると、ピントの位置がもっと奥へずれ、L2 のぼけが「もっと近いもの」と同じになります。実験では、クモは実際の約0.9倍の距離しか跳ばず、届かないことがありました。このアプリでは、跳びはじめる距離と跳ぶ距離の両方がこの読みちがえで決まるとしました。赤い光の強さは、実験と同じくクモの緑の受容体に同じ明るさになるようにしたとして、見え方の明るさは変えていません。赤い光でのハエの見え方と反応は計算していません（ふつうの光の数のまま）。</p>
+  </section>
+
   <section id="explain">
     <h2>わかること</h2>
     <ul>
@@ -90,6 +99,7 @@
       <li>跳躍の数は別の種（<i>Phidippus regius</i>）のもの。踏み切りは、脚で台を押して体を一様に速めるあいだ（体は前へ進む）。押す距離は論文の速さと時間からの逆算（8〜9mm）を体の大きさに合わせて縮めた推定（5mm）です。ハエが気づく「急な変化の始まり」は踏み切りの始まりとしました。</li>
       <li>クモの動き: 振り向く・忍び寄る・後半で体をふせる・命綱をつける・前脚を上げて後ろの脚で押す・前脚を斜め前に広げて跳ぶ、は研究の記述どおり。脚の運び・歩幅・振り向く時間・体をふせたときの大きさ（4.5mm）は目安です。進む速さはなめらかにしていて、実際のちょこちょこした止まり方は入れていません（測った数が見つからないため）。</li>
       <li>クモの目: 前の大きな目の視野（横5°×縦20°）は別の種（<i>Metaphidippus</i>）の数、くっきり見える細かさは <i>Portia</i> などの数で、ゼブラハエトリの数ではありません。色は緑の明るさだけで表しています（紫外線は画面で表せない。緑の重みは目安）。横の目のぼけ（約1°）も目安です。</li>
+      <li>ぼけで距離を知るしくみ: 赤と緑の焦点距離のちがい（f）は、論文の付録の表が読めていないので、「約2cmで、跳ぶ距離が実際の0.90倍」から逆算した推定です（±30%の幅をふる）。論文の式（d′ = d/(1+f·d)）では、ずれの比は距離で変わり、11.6mm では約0.94倍になります。断面の図の焦点距離（0.5mm）・口径（0.3mm）・L1 と L2 の間（15µm）は図を描くための目安で、ぼけは相対の大きさだけ出しています。</li>
       <li>2つの視界はどちらも横 60° の広さ。ハエの個眼の間隔（3°）、クモの横の目のぼけ、前の大きな目の視野を動かす速さ、部屋の模様は目安です。来る向きは見え方だけを変えます。</li>
       <li>※ 目印: 個眼のふち、名前と点線の輪郭、ブーメラン形の点線、しきい値の線、距離の線、残像は、本物には見えません。</li>
     </ul>
@@ -102,7 +112,7 @@
       <li>De Agrò, M., Winsor, A. M., Walsh, W., Shamble, P. &amp; Jakob, E. (2025) Biological point-light displays scanning by the principal eyes of a jumping spider. bioRxiv（前の大きな目はブーメラン形の視野を前の約60°の中で動かして輪郭をなぞる。横の目で動きを見ると体ごと向く。Land 1969 ほかの引用）</li>
       <li>Shepeleva, I. P. (2022) A comparative analysis of the camera-like eyes of jumping spiders and humans. Vision 6: 2（前の大きな目の視野 横5°×縦20°、横の目の視野 約330°）</li>
       <li>Camhi, J. M., Tom, W. &amp; Volman, S. (1978) The escape behavior of the cockroach <i>Periplaneta americana</i> II. Detection of natural predators by air displacement. J. Comp. Physiol. 128: 203–212（尾の毛で風を感じる、動き出すまで54〜58ms、向きを変えてから走るまで50〜75ms）</li>
-      <li>Nagata, T. ほか (2012) Depth perception from image defocus in a jumping spider. Science 335: 469–471（前の大きな目は緑と紫外線の受容体、4層の網膜）</li>
+      <li>Nagata, T. ほか (2012) Depth perception from image defocus in a jumping spider. Science 335: 469–471（前の大きな目は4層の網膜で、L1・L2 は緑、L3・L4 は紫外線。緑は L1 にピントが合い L2 はぼける。赤い光では跳ぶ距離が約0.90倍。式 d′ = d/(1+f·d)）</li>
       <li>Holmqvist, M. H. &amp; Srinivasan, M. V. (1991) A visually evoked escape response of the housefly. J. Comp. Physiol. A 169: 451–459（イエバエは近づく黒い円で逃げる。要旨のみ確認）</li>
     </ul>
     <p>イエバエの個眼の向きの間隔（ここでは 3°）は目安です。論文の書誌を確かめきれていません。</p>
@@ -111,9 +121,11 @@
   </details>
 </div>
 
+<script src="js/optics.js"></script>
 <script src="js/model.js"></script>
 <script src="js/spider-draw.js"></script>
 <script src="js/scene.js"></script>
 <script src="js/views.js"></script>
 <script src="js/graph.js"></script>
+<script src="js/retina.js"></script>
 <script src="js/main.js"></script>

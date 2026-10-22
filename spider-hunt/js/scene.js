@@ -69,6 +69,7 @@ function drawScene(g, w, h, hist, cur, P, camR, opt) {
     const lbl = s.D.toFixed(1) + ' mm', tw = g.measureText(lbl).width + 8;
     g.fillStyle = '#152131'; g.fillRect((x1 + x2) / 2 - tw / 2, yy - 8, tw, 15); g.fillStyle = C.ink; g.fillText(lbl, (x1 + x2) / 2, yy + 4);
   }
+  if (P.color === 'red') { g.fillStyle = 'rgba(255,40,30,.16)'; g.fillRect(0, 0, w, h); }   // 赤い光だけの部屋（人の目の見た目）
   // 部屋の暗さ（人の目の見た目。目安）
   const dark = Math.max(0, Math.min(0.7, (2.5 - Math.log10(P.lux)) * 0.22));
   if (dark > 0) { g.fillStyle = `rgba(3,6,10,${dark})`; g.fillRect(0, 0, w, h); }

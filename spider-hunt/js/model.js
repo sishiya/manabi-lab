@@ -2,6 +2,7 @@
 // 長さは mm、時間は s。数の出どころは各行のコメントと PLAN.md 2章。
 'use strict';
 (function (root) {
+const OPm = typeof module !== 'undefined' && module.exports ? require('./optics.js') : root.OP;
 
 const DATA = {
   // ゼブラハエトリ（Salticus scenicus、オス 8〜10mm）。Dill 1975, Can. J. Zool. 53:1284
@@ -33,7 +34,8 @@ function sampleParams(seed) {
   const v = L(UNC.v), stroke = L(UNC.stroke);
   return { v, stroke, tp: 2 * stroke / v, reach: L(UNC.reach),
     wrDeg: 49 + 4 * G(), toDeg: 54 + 5 * G(), dly: Math.max(0, 0.006 + 0.011 * G()), lat: Math.max(0.015, 0.025 + 0.002 * G()),
-    latW: L([0.011, 0.058]), run: L([0.050, 0.075]) };
+    latW: L([0.011, 0.058]), run: L([0.050, 0.075]),
+    fK: L([0.7, 1.3]) };   // 赤い光での読みちがえの強さ（論文の比 0.90 からの逆算に ±30% の幅。目安）
 }
 
 // 獲物（ハエトリグモが食べるもの）。足すときはここに1つ足し、spider-draw.js の drawPrey と、
@@ -131,8 +133,12 @@ function step(st, P, dt) {
     else {
       st.V = stalkV(P, st.D);
       st.D -= st.V * dt;
-      const pd = prey(P).pounceD;
-      if (st.D <= pd) { st.D = pd; st.Dp = pd; st.sp = 'prep'; st.spT = 0; ev.pounce = st.t; st.V = 0; }
+      // 跳ぶかどうかも、跳ぶ距離も、主眼のぼけで見積もった距離で決まる（赤い光だけだと短く見積もる: Nagata ほか 2012 の仮説）
+      const pd = prey(P).pounceD, fr = P.color === 'red' ? OPm.OPT.fRG * st.prm.fK : 0, est = st.D / (1 + fr * st.D);
+      if (est <= pd) {
+        st.Dp = st.D; st.sp = 'prep'; st.spT = 0; ev.pounce = st.t; st.V = 0;
+        st.short = st.D - est;    // 見積もりの距離だけ跳ぶので、手前に着地する長さ
+      }
     }
   } else if (st.sp === 'prep') {
     // 踏み切り: 脚で押して一様に速める（体は前へ進む）
@@ -140,17 +146,18 @@ function step(st, P, dt) {
     st.spT += dt; const tau = Math.min(st.spT, J.tp);
     st.D = st.Dp - 0.5 * acc * tau * tau; st.V = acc * tau;
     if (st.spT >= J.tp) {
-      const a = jumpAngle(st.D, J.v);
+      const a = jumpAngle(Math.max(0.5, st.D - (st.short || 0)), J.v);
       st.jump = { a, R: st.D, vx: J.v * Math.cos(a), vy: J.v * Math.sin(a), t0: st.t, D0: st.D };
       st.sp = 'flight';
     }
   } else if (st.sp === 'flight') {
     const j = st.jump, tau = st.t - j.t0;
     st.V = j.vx;
-    st.D = Math.max(0, j.D0 - j.vx * tau);
+    const land = st.short || 0;                                                 // 着地する距離（ふつうは獲物のところ＝0）
+    st.D = Math.max(land, j.D0 - j.vx * tau);
     st.h = Math.max(0, j.vy * tau - 0.5 * 9810 * tau * tau);
     if (ev.reach == null && st.D <= st.prm.reach) ev.reach = st.t;                // 前脚が獲物にとどく
-    if (st.D <= 0) { st.sp = 'contact'; st.V = 0; st.h = 0; ev.contact = st.t; }
+    if (st.D <= land) { st.sp = 'contact'; st.V = 0; st.h = 0; ev.contact = st.t; if (ev.reach == null) ev.miss = st.t; }
   } else { st.V = 0; }
 
   // 獲物の目に映るクモ（振り向いているあいだは近づいていない）
@@ -195,7 +202,7 @@ function step(st, P, dt) {
 }
 
 function done(st) {
-  if (st.sp === 'contact') return st.t - st.ev.contact > 0.15;
+  if (st.sp === 'contact') return st.t - st.ev.contact > (st.ev.miss != null ? 0.4 : 0.15);
   if (st.fl === 'air') return st.t - st.ev.to > 0.4;
   return false;
 }
@@ -210,14 +217,16 @@ function race(P, st, N = 400) {
   let caught = 0;
   for (let n = 0; n < N; n++) {
     const q = sampleParams(1000 + n), acc = q.v * q.v / (2 * q.stroke), Sj = P.crouch ? sd.crouchS : sd.S;
+    const fr = P.color === 'red' ? OPm.OPT.fRG * q.fK : 0, Dp = pr.pounceD / (1 - fr * pr.pounceD), short = Dp - pr.pounceD; // 赤い光: 遠くから跳び、手前に着地
+    if (short > q.reach) { continue; }   // 手前に着地して前脚もとどかない＝つかまえられない
     let tTo = Infinity, tCon = Infinity;
     if (es.kind === 'wind') tTo = q.latW + q.run;
     else if (pre) tTo = Math.max(ev.trig - ev.pounce + q.dly, ev.trig - ev.pounce + q.lat);
     let trig = null;
     for (let t = 0; t < 0.2; t += 0.0002) {
       let D, V, S;
-      if (t < q.tp) { D = pr.pounceD - 0.5 * acc * t * t; V = acc * t; S = Sj; }
-      else { D = pr.pounceD - q.stroke - q.v * (t - q.tp); V = q.v; S = sd.S; }
+      if (t < q.tp) { D = Dp - 0.5 * acc * t * t; V = acc * t; S = Sj; }
+      else { D = Dp - q.stroke - q.v * (t - q.tp); V = q.v; S = sd.S; }
       if (D <= q.reach) { tCon = t; break; }
       if (es.kind === 'vision' && !pre && trig == null) {
         const hit = P.model === 'size' ? angSize(S, D) * 180 / Math.PI >= q.toDeg : angRate(S, D, V) >= es.rateTh;
@@ -238,6 +247,7 @@ function verdict(st, P) {
   const key = JSON.stringify(P);
   if (!st._race || st._raceKey !== key) { st._race = race(P, st); st._raceKey = key; }
   const p = st._race.p;
+  if (ev.miss != null && ev.reach == null) return { k: 'miss', m: null, p };
   if (ev.reach != null && (ev.to == null || ev.reach < ev.to)) return { k: 'caught', m: ev.to != null ? ev.reach - ev.to : null, p };
   if (ev.to != null) return { k: 'escaped', m: ev.reach != null ? ev.reach - ev.to : null, p };
   return { k: null, m: null, p, pending: true };
