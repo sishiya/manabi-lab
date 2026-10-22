@@ -121,10 +121,10 @@ function spider(g, w, h, s, P, opt) {
     d[i] = L * 0.35; d[i + 1] = L; d[i + 2] = L * 0.5;
   }
   oc.putImageData(img, 0, 0);
-  // 横の目: ぼんやり（2° ほどぼかす。目安）
-  g.save(); g.filter = `blur(${Math.max(1.5, 2 * kx * 0.6)}px)`; g.drawImage(off, 0, 0, w, h); g.filter = 'none'; g.restore();
+  // 横の目: ぼんやり（受容体の間隔 約1° とする記述が多い。目安）
+  g.save(); g.filter = `blur(${Math.max(1, 1 * kx * 0.6)}px)`; g.drawImage(off, 0, 0, w, h); g.filter = 'none'; g.restore();
   g.fillStyle = 'rgba(14,22,32,.18)'; g.fillRect(0, 0, w, h);
-  // 前の大きな目: ブーメラン形（横 5°×縦 20°、Metaphidippus）を2つ。輪郭をなぞるように動かす（速さは目安）
+  // 前の大きな目: ブーメラン形を左右の目で1つずつ。大きさ 横 5°×縦 20° は別の種（Metaphidippus）の数。輪郭をなぞるように動かす（速さは目安）
   const scanAmp = Math.min(25, Math.atan(pr.len / 2 / Dist) * R2D * 0.8), t = s.t;
   const fields = s.sp === 'turn' ? [[0, 0, 1], [0, 0, -1]] :
     [[yawDeg + scanAmp * Math.sin(2 * Math.PI * 0.7 * t), 0.45 * Math.sin(2 * Math.PI * 0.3 * t), 1],

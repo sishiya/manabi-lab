@@ -17,9 +17,24 @@ const DATA = {
     reach: 2,          // 跳ぶとき前脚を斜め前へ広げる（Dill 1975）。体の前のはしより前に届く長さ（目安）
     stride: 3,         // 歩幅（目安。体長の約1/3）
   },
-  // 跳躍。Phidippus regius（15mm）。Nabawy ほか 2018, Sci. Rep. 8:7142（2体長の跳躍の値）
-  jump: { v: 0.52 * 1000, prep: 0.0316 },
+  // 跳躍。Phidippus regius（15mm）。Nabawy ほか 2018, Sci. Rep. 8:7142（2体長の跳躍の値 0.52m/s）。
+  // 踏み切り＝脚で台を押して体を速めているあいだ（体は前へ進む）。押す距離（stroke）は論文に数がなく、速さと時間からの逆算（8〜9mm、
+  // P. regius 15mm）を体の大きさ 9mm に合わせて縮めた 5mm（推定）。一様に速めるとして、踏み切りの時間 = 2×stroke/v
+  jump: { v: 0.52 * 1000, stroke: 5 },
 };
+DATA.jump.prep = 2 * DATA.jump.stroke / DATA.jump.v;
+// 1回ごとにふる不確かさ。跳ぶ速さ・押す距離・前脚の届く長さは目安の幅、しきい値・遅れは論文の平均±SD
+const UNC = { v: [420, 620], stroke: [3, 7], reach: [1, 3] };
+function sampleParams(seed) {
+  let x = (seed * 2654435761) >>> 0 || 1;
+  const U = () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return (x % 1000003) / 1000003; };
+  const G = () => { const u = Math.max(1e-9, U()), v = U(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  const L = ([a, b]) => a + (b - a) * U();
+  const v = L(UNC.v), stroke = L(UNC.stroke);
+  return { v, stroke, tp: 2 * stroke / v, reach: L(UNC.reach),
+    wrDeg: 49 + 4 * G(), toDeg: 54 + 5 * G(), dly: Math.max(0, 0.006 + 0.011 * G()), lat: Math.max(0.015, 0.025 + 0.002 * G()),
+    latW: L([0.011, 0.058]), run: L([0.050, 0.075]) };
+}
 
 // 獲物（ハエトリグモが食べるもの）。足すときはここに1つ足し、spider-draw.js の drawPrey と、
 // 逃げのきっかけ（kind: 'vision' 目で見て／'wind' 空気の流れで）を決める。
@@ -30,7 +45,7 @@ const FLY_ESCAPE = {
   toDeg: 54,       // 飛び立つ見かけの大きさ（SD 5°）
   toDelay: 0.006,  // 54° から飛び立つ（脚が離れる）までの遅れ（SD 11ms）
   toSD: 0.011,
-  minLat: 0.025,   // いちばん速い反応: 刺激が始まってから飛び立つまで 25ms（SD 2ms。明かりを消したとき。同じ Fotowat 2009）
+  minLat: 0.025,   // いちばん速い反応: 刺激が始まってから飛び立つまで 25ms（SD 2ms）。明かりを消したときの値で、ふくらむ刺激でも同じとしたのは推定（同じ Fotowat 2009）
   minSD: 0.002,
   lvMin: 0.005, lvMax: 0.080, // 測った近づき方の範囲（l/|v| = 5〜80ms）
   rateTh: 0.3,     // ふくらむ速さのしきい値（Dill 1975 図4 の仮定。ハエで測った数ではない）
@@ -85,12 +100,12 @@ function stalkV(P, D) {
 }
 
 // 跳躍の放物線: 速さ v で、距離 R に届く低いほうの角度
-function jumpAngle(R) {
-  const g = 9810, s = g * R / (DATA.jump.v * DATA.jump.v);
+function jumpAngle(R, v = DATA.jump.v) {
+  const g = 9810, s = g * R / (v * v);
   return s >= 1 ? Math.PI / 4 : 0.5 * Math.asin(s);
 }
 
-function newState(P) {
+function newState(P, seed = 1) {
   const D0 = prey(P).len / 2 / Math.tan(DATA.spider.orientDeg / 2 * Math.PI / 180); // 獲物が 5.5° に見える距離（イエバエで約 73mm）
   return {
     t: 0, D: D0, D0, V: 0, h: 0,      // h: 跳んでいるときの高さ
@@ -99,6 +114,7 @@ function newState(P) {
     jump: null,
     ev: {},                           // できごとの時刻: stalk, pounce, contact, wr, to, toPlan（飛び立つ予定）, size49, size54, rate, wind
     th: 0, rate: 0, wind: 0, alert: 0, S: DATA.spider.S, lv: 0, outside: false,
+    seed, prm: sampleParams(seed),    // この1回の数
   };
 }
 
@@ -116,13 +132,16 @@ function step(st, P, dt) {
       st.V = stalkV(P, st.D);
       st.D -= st.V * dt;
       const pd = prey(P).pounceD;
-      if (st.D <= pd) { st.D = pd; st.sp = 'prep'; st.spT = 0; ev.pounce = st.t; st.V = 0; }
+      if (st.D <= pd) { st.D = pd; st.Dp = pd; st.sp = 'prep'; st.spT = 0; ev.pounce = st.t; st.V = 0; }
     }
   } else if (st.sp === 'prep') {
-    st.V = 0; st.spT += dt;
-    if (st.spT >= DATA.jump.prep) {
-      const a = jumpAngle(st.D);
-      st.jump = { a, R: st.D, vx: DATA.jump.v * Math.cos(a), vy: DATA.jump.v * Math.sin(a), t0: st.t, D0: st.D };
+    // 踏み切り: 脚で押して一様に速める（体は前へ進む）
+    const J = st.prm, acc = J.v * J.v / (2 * J.stroke);
+    st.spT += dt; const tau = Math.min(st.spT, J.tp);
+    st.D = st.Dp - 0.5 * acc * tau * tau; st.V = acc * tau;
+    if (st.spT >= J.tp) {
+      const a = jumpAngle(st.D, J.v);
+      st.jump = { a, R: st.D, vx: J.v * Math.cos(a), vy: J.v * Math.sin(a), t0: st.t, D0: st.D };
       st.sp = 'flight';
     }
   } else if (st.sp === 'flight') {
@@ -130,7 +149,7 @@ function step(st, P, dt) {
     st.V = j.vx;
     st.D = Math.max(0, j.D0 - j.vx * tau);
     st.h = Math.max(0, j.vy * tau - 0.5 * 9810 * tau * tau);
-    if (ev.reach == null && st.D <= sd.reach) ev.reach = st.t;                // 前脚が獲物にとどく
+    if (ev.reach == null && st.D <= st.prm.reach) ev.reach = st.t;                // 前脚が獲物にとどく
     if (st.D <= 0) { st.sp = 'contact'; st.V = 0; st.h = 0; ev.contact = st.t; }
   } else { st.V = 0; }
 
@@ -148,26 +167,26 @@ function step(st, P, dt) {
   const deg = st.th * 180 / Math.PI;
   if (es.kind === 'vision') {
     // 2つのモデルの「しきい値をこえた時刻」は、選んでいないほうも記録する
-    if (ev.size49 == null && deg >= es.wrDeg) ev.size49 = st.t;
-    if (ev.size54 == null && deg >= es.toDeg) { ev.size54 = st.t; ev.lv54 = st.lv; }
+    if (ev.size49 == null && deg >= st.prm.wrDeg) ev.size49 = st.t;
+    if (ev.size54 == null && deg >= st.prm.toDeg) { ev.size54 = st.t; ev.lv54 = st.lv; }
     if (ev.rate == null && st.rate >= es.rateTh) { ev.rate = st.t; ev.lvRate = st.lv; }
-    st.alert = P.model === 'size' ? deg / es.toDeg : st.rate / es.rateTh;   // 警戒度（しきい値で 1）
+    st.alert = P.model === 'size' ? deg / st.prm.toDeg : st.rate / es.rateTh;   // 警戒度（しきい値で 1）
     const trig = P.model === 'size' ? ev.size54 : ev.rate, wr = P.model === 'size' ? ev.size49 : ev.rate;
     if (wr != null && ev.wr == null && st.sp !== 'contact') { ev.wr = st.t; }
     if (trig != null && ev.toPlan == null) {
       // 体が反応できるいちばん早い時刻: 急な変化が始まった時刻（跳んでいるあいだに気づいたなら跳び始め）＋ 25ms
-      const onset = st.jump && trig >= st.jump.t0 ? st.jump.t0 : trig;
-      const fit = trig + es.toDelay, floor = onset + es.minLat;
-      ev.toPlan = Math.max(fit, floor); ev.floorBound = floor >= fit;
+      const onset = ev.pounce != null && trig >= ev.pounce ? ev.pounce : trig;   // 跳びはじめ（踏み切りの始まり）にそろえる
+      const fit = trig + st.prm.dly, floor = onset + st.prm.lat;
+      ev.toPlan = Math.max(fit, floor); ev.floorBound = floor >= fit; ev.trig = trig;
     }
   } else {
     if (ev.wind == null && st.acc >= es.accTh) ev.wind = st.t;
     st.alert = Math.min(2, st.acc / es.accTh);
-    if (ev.wind != null && ev.toPlan == null) { ev.wrPlan = ev.wind + es.latency; ev.toPlan = ev.wrPlan + es.run; }
+    if (ev.wind != null && ev.toPlan == null) { ev.trig = ev.wind; ev.wrPlan = ev.wind + st.prm.latW; ev.toPlan = ev.wrPlan + st.prm.run; }
     if (ev.wrPlan != null && ev.wr == null && st.t >= ev.wrPlan && st.sp !== 'contact') ev.wr = st.t;   // 体の向きを変えはじめる
   }
   // 獲物のふるまい（とどかれたあとは動かない）
-  if (st.fl !== 'air' && st.sp !== 'contact') {
+  if (st.fl !== 'air' && st.sp !== 'contact' && ev.reach == null) {
     if (ev.wr != null && st.fl === 'rest') st.fl = 'wing';
     if (ev.toPlan != null && st.t >= ev.toPlan) { st.fl = 'air'; ev.to = st.t; }
   }
@@ -181,30 +200,57 @@ function done(st) {
   return false;
 }
 
-// 正規分布の累積（つかまえる確率に使う）
+// 正規分布の累積（verify で使う）
 function phi(x) { const t = 1 / (1 + 0.3275911 * Math.abs(x) / Math.SQRT2), y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x / 2); return x >= 0 ? (1 + y) / 2 : (1 - y) / 2; }
-// 結果: p＝つかまえる確率（獲物が動く時刻のばらつき SD から。目安）。k: 'caught'（p ≥ 0.8）／'escaped'（p ≤ 0.2）／'close'／'early'（跳ぶ前に逃げた）
-// m＝前脚がとどく時刻 − 獲物が逃げる予定の時刻（正なら獲物が先）。逃げる時刻がいちばん速い反応で決まったときは、そのばらつき（2ms）を使う
-function verdict(st, P) {
-  const ev = st.ev, es = prey(P || {}).escape, sd = ev.floorBound ? es.minSD : es.toSD;
-  if (ev.to != null && ev.pounce == null) return { k: 'early', m: null, p: 0 };
-  if (ev.contact != null) {
-    if (ev.toPlan == null) return { k: 'caught', m: null, p: 1 };
-    const m = (ev.reach != null ? ev.reach : ev.contact) - ev.toPlan, p = phi(-m / sd);
-    return { k: p >= 0.8 ? 'caught' : p <= 0.2 ? 'escaped' : 'close', m, p };
+
+// 跳躍の勝負を、不確かな数をふって何度も計算する（N 回）。返り値は つかまえた割合 と、とどく・逃げる時刻の中央値（跳びはじめから）
+function race(P, st, N = 400) {
+  const pr = prey(P), es = pr.escape, sd = DATA.spider, ev = st.ev;
+  const pre = es.kind === 'vision' && ev.trig != null && ev.trig < ev.pounce; // 跳ぶ前にもう気づいていた
+  let caught = 0;
+  for (let n = 0; n < N; n++) {
+    const q = sampleParams(1000 + n), acc = q.v * q.v / (2 * q.stroke), Sj = P.crouch ? sd.crouchS : sd.S;
+    let tTo = Infinity, tCon = Infinity;
+    if (es.kind === 'wind') tTo = q.latW + q.run;
+    else if (pre) tTo = Math.max(ev.trig - ev.pounce + q.dly, ev.trig - ev.pounce + q.lat);
+    let trig = null;
+    for (let t = 0; t < 0.2; t += 0.0002) {
+      let D, V, S;
+      if (t < q.tp) { D = pr.pounceD - 0.5 * acc * t * t; V = acc * t; S = Sj; }
+      else { D = pr.pounceD - q.stroke - q.v * (t - q.tp); V = q.v; S = sd.S; }
+      if (D <= q.reach) { tCon = t; break; }
+      if (es.kind === 'vision' && !pre && trig == null) {
+        const hit = P.model === 'size' ? angSize(S, D) * 180 / Math.PI >= q.toDeg : angRate(S, D, V) >= es.rateTh;
+        if (hit) { trig = t; tTo = Math.max(t + q.dly, q.lat); }
+      }
+    }
+    if (tCon < tTo) caught++;
   }
-  if (ev.to != null && st.sp === 'stop') return { k: 'escaped', m: null, p: 0 };
-  return null;
+  return { p: caught / N };
+}
+
+// 結果: k＝この1回の結果（'caught'／'escaped'／'early' 跳ぶ前に逃げた）、p＝何度もくり返したときに、つかまえる割合
+// m＝前脚がとどく時刻 − 逃げはじめた時刻（この1回。正なら獲物が先）
+function verdict(st, P) {
+  const ev = st.ev;
+  if (ev.to != null && ev.pounce == null) return { k: 'early', m: null, p: 0 };
+  if (ev.pounce == null) return null;
+  const key = JSON.stringify(P);
+  if (!st._race || st._raceKey !== key) { st._race = race(P, st); st._raceKey = key; }
+  const p = st._race.p;
+  if (ev.reach != null && (ev.to == null || ev.reach < ev.to)) return { k: 'caught', m: ev.to != null ? ev.reach - ev.to : null, p };
+  if (ev.to != null) return { k: 'escaped', m: ev.reach != null ? ev.reach - ev.to : null, p };
+  return { k: null, m: null, p, pending: true };
 }
 
 // 最後まで計算する（verify 用）
-function run(P, dt = 0.0005, tMax = 30) {
-  const st = newState(P);
+function run(P, dt = 0.0005, tMax = 30, seed = 1) {
+  const st = newState(P, seed);
   while (!done(st) && st.t < tMax) step(st, P, dt);
   return st;
 }
 
-const API = { DATA, PREY, prey, phi, angSize, angRate, stalkV, jumpAngle, newState, step, done, verdict, run, V26 };
+const API = { DATA, PREY, prey, phi, race, UNC, sampleParams, angSize, angRate, stalkV, jumpAngle, newState, step, done, verdict, run, V26 };
 if (typeof module !== 'undefined' && module.exports) module.exports = API;
 else root.M = API;
 })(typeof window !== 'undefined' ? window : globalThis);

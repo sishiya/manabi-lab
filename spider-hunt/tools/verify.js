@@ -31,7 +31,7 @@ for (const prey of ['housefly', 'drosophila', 'roach']) for (const speed of ['di
   const s2 = M.newState(P); let dWr = null;
   while (!M.done(s2) && s2.t < 30) { M.step(s2, P, 0.0005); if (dWr == null && s2.ev.wr != null) dWr = s2.D; }
   const ev = s2.ev, vd = M.verdict(s2, P), t0 = ev.pounce;
-  console.log(`${prey.padEnd(11)} ${speed.padEnd(6)} ${(prey === 'roach' ? 'wind' : model).padEnd(5)} | ${dWr == null ? '   —   ' : (dWr.toFixed(1) + 'mm').padStart(7)}  ${fmt(ev.toPlan != null && t0 != null ? ev.toPlan - t0 : null)}  ${fmt(ev.contact != null ? ev.contact - t0 : null)}  ${vd ? vd.k + ' p=' + vd.p.toFixed(2) : '—'}`);
+  console.log(`${prey.padEnd(11)} ${speed.padEnd(6)} ${(prey === 'roach' ? 'wind' : model).padEnd(5)} | ${dWr == null ? '   —   ' : (dWr.toFixed(1) + 'mm').padStart(7)}  ${fmt(ev.toPlan != null && t0 != null ? ev.toPlan - t0 : null)}  ${fmt(ev.contact != null ? ev.contact - t0 : null)}  ${vd ? (vd.k || '?') + ' p=' + vd.p.toFixed(2) : '—'}`);
 }
 console.log('（時刻は跳びつき（踏み切りの始まり）から）');
 

@@ -6,11 +6,12 @@ window.addEventListener('error', e => window.__sphuErr.push(String(e.message)));
 const $ = id => document.getElementById(id);
 const DT = 0.0005;                  // 計算の刻み（0.5ms）
 const P = { speed: 'dill', model: 'size', crouch: true, dir: 0, fastV: 30, prey: 'housefly', lux: 300, look: 'simple' };
-const S = { st: null, hist: [], view: 0, playing: true, rate: 'auto', camR: 95, rims: true, guide: true, paused: false };
+const S = { st: null, hist: [], view: 0, playing: true, rate: 'auto', camR: 95, rims: true, guide: true, paused: false, seed: 1 };
+// 1回目は「つかまえた例」を見せる: 初期設定でつかまえる1回目の数の組（ばらつきの中の本物の1回）。2回目からは「もう1回」で別の組
 SD.setP(P);
 
 const snap = st => Object.assign({}, st, { ev: Object.assign({}, st.ev), jump: st.jump && Object.assign({}, st.jump) });
-function reset() { S.st = M.newState(P); S.hist = [snap(S.st)]; S.view = 0; S.playing = true; S.camR = 95; }
+function reset() { S.st = M.newState(P, S.seed); S.hist = [snap(S.st)]; S.view = 0; S.playing = true; S.camR = 95; }
 // とちゅうで条件を変えたら、いま見ている時刻から先を計算しなおす
 function changed() {
   S.hist.length = S.view + 1; S.st = snap(S.hist[S.view]);
@@ -44,17 +45,17 @@ function fit(c, g) {
 }
 function status(s) {
   const pr = M.prey(P), vd = M.verdict(s, P), nm = pr.short || pr.name, roach = pr.draw === 'roach';
-  const go = roach ? '走り出した' : '飛び立った', pct = vd && vd.p != null ? `<small>（つかまえる確率 約${Math.round(vd.p * 100)}%）</small>` : '';
-  if (vd && M.done(s)) {
+  const go = roach ? '走り出した' : '飛び立った', ex = S.seed === 1 ? 'この1回（つかまえた例）' : 'この1回';
+  const pct = vd && vd.p != null && vd.k !== 'early' ? `<small>　何百回くり返すと、つかまえるのは 約${Math.round(vd.p * 100)}%</small>` : '';
+  if (vd && vd.k && M.done(s)) {
     if (vd.k === 'early') return `<b class="escaped">${nm}が先に気づいて逃げた</b><small>（クモが跳ぶ前。あと ${s.D.toFixed(1)}mm）</small>`;
-    const m = vd.m != null ? Math.abs(vd.m * 1000).toFixed(0) : '';
-    if (vd.k === 'close') return `<b class="close">きわどい</b>: ${nm}が逃げはじめるのと、ほぼ同時に前脚がとどく（差 ${m}ms）${pct}`;
-    if (vd.k === 'escaped') return `<b class="escaped">逃げた</b>: クモがとどく ${m}ms 前に${go}${pct}`;
-    return `<b class="caught">つかまえた</b>${vd.m != null ? `: ${nm}が${roach ? '走り出す' : '飛び立つ'} ${m}ms 前にとどいた` : ''}${pct}`;
+    const m = vd.m != null ? Math.abs(vd.m * 1000).toFixed(0) : null;
+    if (vd.k === 'escaped') return `${ex}: <b class="escaped">逃げた</b>（前脚がとどく ${m}ms 前に${go}）${pct}`;
+    return `${ex}: <b class="caught">つかまえた</b>${m ? `（${nm}が${roach ? '走り出す' : '飛び立つ'} ${m}ms 前に前脚がとどいた）` : `（${nm}は間に合わなかった）`}${pct}`;
   }
   if (s.sp === 'turn') return `クモが${nm}を見つけた<small>（${nm}が 5.5° に見える距離 ${s.D.toFixed(0)}mm）</small>`;
   if (s.sp === 'stalk') return `${nm}は${s.fl === 'rest' ? 'まだ気づかない' : '気づいた'}<small>（クモ ${s.V.toFixed(1)}mm/s${s.outside ? '・測った範囲の外なので推定' : ''}）</small>`;
-  if (s.sp === 'prep') return `踏み切り ${(s.spT * 1000).toFixed(0)} / ${(M.DATA.jump.prep * 1000).toFixed(0)}ms` + (s.fl !== 'rest' ? `・${nm}が気づいた` : `・${nm}はまだ`);
+  if (s.sp === 'prep') return `踏み切り（脚で押して速める）${(s.spT * 1000).toFixed(0)} / ${(s.prm.tp * 1000).toFixed(0)}ms` + (s.fl !== 'rest' ? `・${nm}が気づいた` : `・${nm}はまだ`);
   if (s.sp === 'flight') return `跳んで ${((s.t - s.jump.t0) * 1000).toFixed(0)}ms` + (s.fl === 'air' ? `・${nm}は${go}` : s.fl === 'wing' ? `・${nm}が${roach ? '向きを変えた' : '翅を上げた'}` : `・${nm}はまだ`);
   if (s.sp === 'contact') return 'クモがとどいた' + (s.fl === 'air' ? `<small>（${nm}はもう${go}）</small>` : '');
   if (s.sp === 'stop') return `${nm}が${go}ので、クモは止まった`;
@@ -103,6 +104,7 @@ $('rims').addEventListener('change', e => { S.rims = e.target.checked; });
 $('guide').addEventListener('change', e => { S.guide = e.target.checked; });
 $('play').addEventListener('click', () => { if (!S.playing && M.done(S.hist[S.view]) && S.view === S.hist.length - 1) reset(); else S.playing = !S.playing; });
 $('restart').addEventListener('click', reset);
+$('again').addEventListener('click', () => { S.seed = 1 + Math.floor(Math.random() * 1e6); reset(); });
 $('tl').addEventListener('input', e => { S.view = +e.target.value; S.playing = false; });
 
 reset(); requestAnimationFrame(loop);
