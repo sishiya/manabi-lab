@@ -13,6 +13,11 @@ function ik(hx, hy, fx, fy, a, b, up) {
   const s = (up ? 1 : -1) * (fx >= hx ? 1 : -1);   // 前へのびる脚も後ろへのびる脚も、ひざが上に来るように
   return [hx + a * Math.cos(ang + s * c), hy + a * Math.sin(ang + s * c)];
 }
+// 見た目がリアルなとき（P.look === 'real'）の色。ゼブラハエトリ（黒地に白い毛のしま）、イエバエ（灰色の胸に黒いすじ・赤茶の複眼）、
+// チャバネゴキブリ（茶色・前胸に2本の黒いすじ）の図鑑の色の目安。形と動きはかんたん表示と同じ骨組みを使う
+const real = () => !!(P_ && P_.look === 'real');
+const RC = { sp: '#141414', spFar: '#2c2c2c', white: 'rgba(238,236,226,.92)', flyLeg: '#1a1a1a', roachDark: '#3b2412' };
+function grad(g, x, y, r, c0, c1) { const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, c0); gr.addColorStop(1, c1); return gr; }
 const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 // 脚: [付け根x, 足の家x, 腿, すね（膝から先）, 群（0/0.5）]。x は頭胸部の前のはしを 0 とした mm。
@@ -67,33 +72,56 @@ function drawSpider(g, x0, gy, k, s, P, opt = {}) {
   g.lineJoin = 'round'; g.lineCap = 'round';
   const y0 = pose.y0;
   const legs = far => {
-    g.strokeStyle = far ? COL.spFar : COL.sp;
+    const R = real();
+    g.strokeStyle = R ? (far ? RC.spFar : RC.sp) : far ? COL.spFar : COL.sp;
     for (let i = 0; i < 4; i++) {
       const [hx, , a, b] = LEGS[i], hy = y0 + 0.5;
       let [fx, fy] = footFor(i, far, s, pose); fx += far ? 0.35 : 0;
       const [kx, ky] = ik(hx, hy, fx, fy, a, b, true);
-      g.lineWidth = (i === 0 ? 0.55 : 0.38) * (far ? 0.8 : 1);
+      g.lineWidth = (i === 0 ? (R ? 0.62 : 0.55) : (R ? 0.42 : 0.38)) * (far ? 0.8 : 1);
       g.beginPath(); g.moveTo(hx, hy); g.lineTo(kx, ky); g.lineTo(fx, fy); g.stroke();
-      if (!opt.ghost && !far) { g.lineWidth = 0.12; for (let q = 0.3; q < 1; q += 0.25) { const px = kx + (fx - kx) * q, py = ky + (fy - ky) * q; g.beginPath(); g.moveTo(px, py); g.lineTo(px + 0.25, py + 0.3); g.stroke(); } } // 毛（目安）
+      if (R && !opt.ghost) {   // 脚の白い帯（関節のあたり）
+        g.strokeStyle = far ? 'rgba(238,236,226,.45)' : RC.white;
+        for (const q of [0.15, 0.55]) { g.beginPath(); g.moveTo(kx + (fx - kx) * q, ky + (fy - ky) * q); g.lineTo(kx + (fx - kx) * (q + 0.1), ky + (fy - ky) * (q + 0.1)); g.stroke(); }
+        g.beginPath(); g.moveTo(hx + (kx - hx) * 0.8, hy + (ky - hy) * 0.8); g.lineTo(kx, ky); g.stroke();
+        g.strokeStyle = far ? RC.spFar : RC.sp;
+      }
+      if (!opt.ghost && !far) { g.lineWidth = 0.12; if (R) g.strokeStyle = 'rgba(220,220,210,.6)'; for (let q = 0.3; q < 1; q += 0.25) { const px = kx + (fx - kx) * q, py = ky + (fy - ky) * q; g.beginPath(); g.moveTo(px, py); g.lineTo(px + 0.25, py + 0.3); g.stroke(); } } // 毛（目安）
     }
   };
   legs(true);
   // 腹（後ろ）
-  g.fillStyle = COL.spFill; g.strokeStyle = COL.sp; g.lineWidth = 0.22;
+  const R = real();
+  g.fillStyle = R ? grad(g, -6.2, y0 + 1.9, 3.2, '#3a3a3a', '#080808') : COL.spFill; g.strokeStyle = R ? '#000' : COL.sp; g.lineWidth = 0.22;
   g.beginPath(); g.ellipse(-6.7, y0 + 1.25, 2.7, 1.55, -0.05, 0, 7); g.fill(); g.stroke();
-  if (!opt.ghost) { g.lineWidth = 0.14; g.beginPath(); g.moveTo(-8.6, y0 + 1.6); g.quadraticCurveTo(-6.8, y0 + 2.3, -4.6, y0 + 1.7); g.moveTo(-8.8, y0 + 0.9); g.quadraticCurveTo(-6.8, y0 + 1.6, -4.4, y0 + 1.0); g.stroke(); } // しま模様
+  if (R && !opt.ghost) {   // 白い毛のしま（ゼブラ）とつや
+    g.save(); g.beginPath(); g.ellipse(-6.7, y0 + 1.25, 2.7, 1.55, -0.05, 0, 7); g.clip();
+    g.strokeStyle = RC.white; g.lineWidth = 0.38;
+    for (const dx of [-1.6, -0.2, 1.2]) { g.beginPath(); g.moveTo(-6.7 + dx - 0.6, y0 - 0.4); g.quadraticCurveTo(-6.7 + dx + 0.5, y0 + 1.3, -6.7 + dx - 0.4, y0 + 3.0); g.stroke(); }
+    g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.ellipse(-6.0, y0 + 2.2, 1.4, 0.4, -0.1, 0, 7); g.fill();
+    g.restore();
+  }
+  if (!opt.ghost && !R) { g.lineWidth = 0.14; g.beginPath(); g.moveTo(-8.6, y0 + 1.6); g.quadraticCurveTo(-6.8, y0 + 2.3, -4.6, y0 + 1.7); g.moveTo(-8.8, y0 + 0.9); g.quadraticCurveTo(-6.8, y0 + 1.6, -4.4, y0 + 1.0); g.stroke(); } // しま模様
   // 頭胸部（前が四角い）
   g.lineWidth = 0.24; g.beginPath();
   g.moveTo(0, y0 + 0.2); g.lineTo(0.05, y0 + 2.0); g.quadraticCurveTo(-0.1, y0 + 2.75, -0.9, y0 + 2.75);
   g.lineTo(-3.1, y0 + 2.6); g.quadraticCurveTo(-4.3, y0 + 2.2, -4.3, y0 + 1.1); g.quadraticCurveTo(-4.1, y0 + 0.2, -3.2, y0 + 0.1); g.closePath();
+  if (R) g.fillStyle = grad(g, -1.6, y0 + 2.4, 3.2, '#3c3c3c', '#0a0a0a');
   g.fill(); g.stroke();
+  if (R && !opt.ghost) {   // 頭胸部のふちの白い毛の帯と、こまかい毛
+    g.strokeStyle = RC.white; g.lineWidth = 0.32; g.beginPath(); g.moveTo(-0.3, y0 + 0.45); g.quadraticCurveTo(-2.2, y0 + 0.15, -4.0, y0 + 0.7); g.stroke();
+    g.lineWidth = 0.06; g.strokeStyle = 'rgba(230,230,220,.55)';
+    for (let q = -3.8; q < -0.4; q += 0.35) { g.beginPath(); g.moveTo(q, y0 + 2.55); g.lineTo(q - 0.12, y0 + 2.85); g.stroke(); }
+    g.strokeStyle = '#000'; g.lineWidth = 0.24;
+  }
   // 目（前の大きな目・横の目）
   if (!opt.ghost) {
-    g.fillStyle = 'rgba(14,22,32,.9)'; g.beginPath(); g.ellipse(-0.05, y0 + 1.45, 0.38, 0.62, 0, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = R ? grad(g, 0.05, y0 + 1.6, 0.7, '#4a5a3a', '#050505') : 'rgba(14,22,32,.9)'; g.beginPath(); g.ellipse(-0.05, y0 + 1.45, 0.38, 0.62, 0, 0, 7); g.fill(); g.stroke();
     g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.arc(0.02, y0 + 1.7, 0.12, 0, 7); g.fill();
     g.fillStyle = 'rgba(14,22,32,.9)'; for (const [ex, ey, r] of [[-0.8, y0 + 2.45, 0.22], [-2.6, y0 + 2.55, 0.2]]) { g.beginPath(); g.arc(ex, ey, r, 0, 7); g.fill(); g.stroke(); }
     // 触肢（ちょこちょこ動く。目安）
     const pw = s.sp === 'stalk' ? 0.25 * Math.sin(s.t * 18) : 0;
+    if (R) g.strokeStyle = RC.white;
     g.lineWidth = 0.3; g.beginPath(); g.moveTo(0, y0 + 0.4); g.lineTo(0.6, y0 + 0.1 + pw); g.lineTo(0.9, y0 - 0.25 + pw); g.stroke();
   }
   legs(false);
@@ -101,7 +129,7 @@ function drawSpider(g, x0, gy, k, s, P, opt = {}) {
   // 振り向く前は顔がこちらを向く（大きな前の目が2つ見える）
   if ((s.yaw || 0) > 0.55 && !opt.ghost) {
     g.save(); g.translate(x0 - 1.8 * k * sx, gy - (pose.y0 + 1.5) * k);
-    g.fillStyle = 'rgba(14,22,32,.95)'; g.strokeStyle = COL.sp; g.lineWidth = Math.max(1, 0.2 * k);
+    g.fillStyle = 'rgba(14,22,32,.95)'; g.strokeStyle = real() ? '#222' : COL.sp; g.lineWidth = Math.max(1, 0.2 * k);
     for (const dx of [-0.55, 0.55]) { g.beginPath(); g.arc(dx * k, 0, 0.5 * k, 0, 7); g.fill(); g.stroke(); }
     g.fillStyle = 'rgba(255,255,255,.75)'; for (const dx of [-0.45, 0.65]) { g.beginPath(); g.arc(dx * k, -0.18 * k, 0.13 * k, 0, 7); g.fill(); }
     g.restore();
@@ -125,8 +153,9 @@ function drawFly(g, cx, gy, k, face, s, opt = {}) {
   const y0 = 1.3 + (air ? 0.4 : 0);
   if (face === 0) { drawFlyFront(g, k, s, y0, air); g.restore(); return; }
   g.scale(k * face, -k);    // 頭は +x 側に描いて、向きで反転（face −1 で頭が左＝クモの方）
+  const R = real();
   const legs = far => {
-    g.strokeStyle = far ? COL.flyFar : COL.fly; g.lineWidth = 0.2;
+    g.strokeStyle = R ? (far ? '#333' : RC.flyLeg) : far ? COL.flyFar : COL.fly; g.lineWidth = R ? 0.22 : 0.2;
     const groom = s.fl === 'rest' && !air && Math.sin(s.t * 4) > 0.4; // ときどき前脚をこする（目安）
     for (const [hx, fx] of [[1.2, 2.6], [0.4, 0.4], [-0.4, -2.0]]) {
       let fX = fx + (far ? 0.3 : 0), fY = 0;
@@ -137,15 +166,26 @@ function drawFly(g, cx, gy, k, face, s, opt = {}) {
     }
   };
   legs(true);
-  g.fillStyle = COL.flyFill; g.strokeStyle = COL.fly; g.lineWidth = 0.2;
+  g.fillStyle = COL.flyFill; g.strokeStyle = R ? '#222' : COL.fly; g.lineWidth = R ? 0.08 : 0.2;
+  if (R) g.fillStyle = grad(g, -1.4, y0 + 1.4, 2.4, '#b8a98a', '#4a4232');
   g.beginPath(); g.ellipse(-1.6, y0 + 0.9, 2.0, 1.15, 0.12, 0, 7); g.fill(); g.stroke();  // 腹
+  if (R && !opt.ghost) { g.fillStyle = 'rgba(30,26,20,.55)'; for (const q of [-2.6, -1.5, -0.5]) { g.beginPath(); g.ellipse(q, y0 + 1.25, 0.35, 0.55, 0, 0, 7); g.fill(); } }
+  if (R) g.fillStyle = grad(g, 0.6, y0 + 2.0, 1.9, '#9a978e', '#3c3b37');
   g.beginPath(); g.ellipse(0.7, y0 + 1.3, 1.5, 1.35, 0, 0, 7); g.fill(); g.stroke();       // 胸
+  if (R && !opt.ghost) { g.strokeStyle = 'rgba(15,15,15,.75)'; g.lineWidth = 0.22; for (const dy of [0.55, 1.05]) { g.beginPath(); g.moveTo(-0.6, y0 + 1.3 + dy); g.quadraticCurveTo(0.7, y0 + 1.5 + dy, 2.0, y0 + 1.2 + dy); g.stroke(); } g.strokeStyle = '#222'; g.lineWidth = 0.08; } // 胸の黒いすじ
+  if (R) g.fillStyle = grad(g, 2.6, y0 + 1.6, 1.2, '#8a877e', '#3a3934');
   g.beginPath(); g.ellipse(2.6, y0 + 1.25, 0.8, 1.1, 0, 0, 7); g.fill(); g.stroke();       // 頭
-  g.fillStyle = COL.eye; g.beginPath(); g.ellipse(2.7, y0 + 1.45, 0.62, 0.85, 0, 0, 7); g.fill(); // 複眼
+  g.fillStyle = R ? grad(g, 2.85, y0 + 1.75, 0.95, '#c4543a', '#4d150c') : COL.eye; g.beginPath(); g.ellipse(2.7, y0 + 1.45, 0.62, 0.85, 0, 0, 7); g.fill(); // 複眼
+  if (R && !opt.ghost) { g.fillStyle = 'rgba(255,220,200,.18)'; for (let a = 0; a < 18; a++) { const u = (a * 0.618) % 1, v = (a * 0.381) % 1; g.fillRect(2.25 + u * 0.9, y0 + 0.75 + v * 1.4, 0.05, 0.05); } g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.ellipse(2.85, y0 + 1.95, 0.15, 0.1, 0, 0, 7); g.fill(); }
+  if (R) g.strokeStyle = '#111';
   if (!opt.ghost) { g.lineWidth = 0.08; for (let q = -0.5; q < 2; q += 0.45) { g.beginPath(); g.moveTo(q, y0 + 2.5); g.lineTo(q - 0.2, y0 + 3.0); g.stroke(); } } // 毛
   // 翅: 休み＝背中にたたむ／気づいた＝上げる／飛ぶ＝はばたき（ぶれ）
-  g.strokeStyle = COL.fly; g.fillStyle = 'rgba(200,230,255,.18)'; g.lineWidth = 0.14;
-  const wing = a => { g.save(); g.translate(0.4, y0 + 2.4); g.rotate(a); g.beginPath(); g.ellipse(-2.4, 0, 2.6, 0.75, 0, 0, 7); g.fill(); g.stroke(); g.restore(); };
+  g.strokeStyle = R ? 'rgba(60,60,60,.7)' : COL.fly; g.fillStyle = R ? 'rgba(220,225,235,.22)' : 'rgba(200,230,255,.18)'; g.lineWidth = R ? 0.06 : 0.14;
+  const wing = a => {
+    g.save(); g.translate(0.4, y0 + 2.4); g.rotate(a); g.beginPath(); g.ellipse(-2.4, 0, 2.6, 0.75, 0, 0, 7); g.fill(); g.stroke();
+    if (R && !opt.ghost) { g.beginPath(); for (const dy of [-0.35, 0, 0.3]) { g.moveTo(0, dy * 0.3); g.quadraticCurveTo(-2.4, dy, -4.8, dy * 0.6); } g.moveTo(-2.0, -0.6); g.lineTo(-2.3, 0.55); g.stroke(); } // 翅脈
+    g.restore();
+  };
   if (s.fl === 'rest') wing(0.08);
   else if (s.fl === 'wing') wing(-1.05);
   else { g.globalAlpha *= 0.5; for (const a of [-1.3, -0.5, 0.3]) wing(a); g.globalAlpha /= 0.5; }
@@ -153,7 +193,8 @@ function drawFly(g, cx, gy, k, face, s, opt = {}) {
   g.restore();
 }
 function drawFlyFront(g, k, s, y0, air) {
-  g.scale(k, -k); g.strokeStyle = COL.fly; g.fillStyle = COL.flyFill; g.lineWidth = 0.2;
+  const R = real();
+  g.scale(k, -k); g.strokeStyle = R ? '#1a1a1a' : COL.fly; g.fillStyle = R ? '#6e6b63' : COL.flyFill; g.lineWidth = 0.2;
   for (const sx of [-1, 1]) {                      // 脚
     for (const [hx, fx] of [[0.6, 2.4], [0.8, 3.0], [0.6, 2.6]]) { const [kx, ky] = ik(hx * sx, y0 + 0.6, (air ? 1.0 : fx) * sx, air ? -0.5 : 0, 1.4, 1.7, true); g.beginPath(); g.moveTo(hx * sx, y0 + 0.6); g.lineTo(kx, ky); g.lineTo((air ? 1.0 : fx) * sx, air ? -0.5 : 0); g.stroke(); }
   }
@@ -162,7 +203,7 @@ function drawFlyFront(g, k, s, y0, air) {
   for (const sx of [-1, 1]) { g.save(); g.translate(0.5 * sx, y0 + 2.0); g.rotate(-sx * wa); g.beginPath(); g.ellipse(0, s.fl === 'rest' ? 0.6 : 2.2, 0.45, s.fl === 'rest' ? 0.7 : 2.3, 0, 0, 7); g.fillStyle = 'rgba(200,230,255,.18)'; g.fill(); g.stroke(); g.restore(); }
   g.fillStyle = COL.flyFill; g.beginPath(); g.ellipse(0, y0 + 1.2, 1.5, 1.3, 0, 0, 7); g.fill(); g.stroke(); // 胸
   g.beginPath(); g.ellipse(0, y0 + 2.6, 1.4, 1.0, 0, 0, 7); g.fill(); g.stroke();                         // 頭
-  g.fillStyle = COL.eye; for (const sx of [-1, 1]) { g.beginPath(); g.ellipse(0.75 * sx, y0 + 2.7, 0.62, 0.8, 0, 0, 7); g.fill(); }
+  for (const sx of [-1, 1]) { g.fillStyle = R ? grad(g, 0.85 * sx, y0 + 2.95, 0.9, '#c4543a', '#4d150c') : COL.eye; g.beginPath(); g.ellipse(0.75 * sx, y0 + 2.7, 0.62, 0.8, 0, 0, 7); g.fill(); }
 }
 // ---- 小さなゴキブリ（横から）。平たい体・前胸の盾・長い触角・お尻の尾角（風を感じる毛）。
 // 気づくと体の向きを変え（wing）、走り出す（air）。走る速さは見た目だけ
@@ -181,9 +222,9 @@ function drawRoach(g, cx, gy, k, face, s, opt = {}) {
   }
   g.scale(k * face, -k);  // 頭は +x 側に描く
   if (piv) g.rotate(-0.08);
-  const L = pr.len, y0 = 0.55;
+  const L = pr.len, y0 = 0.55, R = real();
   const legs = far => {
-    g.strokeStyle = far ? COL.flyFar : COL.fly; g.lineWidth = 0.14;
+    g.strokeStyle = R ? (far ? '#5a3a1e' : '#7a5230') : far ? COL.flyFar : COL.fly; g.lineWidth = R ? 0.16 : 0.14;
     for (const [i, hx, fx] of [[0, 1.0, 2.6], [1, 0.1, 0.6], [2, -0.8, -2.8]]) {
       let fX = fx + (far ? 0.3 : 0), fY = 0;
       if (run) { const ph = Math.sin(run * 120 + i * 2 + (far ? Math.PI : 0)); fX += 0.8 * ph; fY = Math.max(0, 0.5 * ph); }
@@ -193,13 +234,20 @@ function drawRoach(g, cx, gy, k, face, s, opt = {}) {
     }
   };
   legs(true);
-  g.fillStyle = COL.flyFill; g.strokeStyle = COL.fly; g.lineWidth = 0.16;
+  g.fillStyle = R ? grad(g, 0, y0 + 1.3, L * 0.6, '#b7834c', '#4a2c14') : COL.flyFill; g.strokeStyle = R ? '#2a1708' : COL.fly; g.lineWidth = 0.16;
   g.beginPath(); g.moveTo(-L / 2, y0 + 0.4); g.quadraticCurveTo(-L / 2 + 0.3, y0 + 1.4, 0, y0 + 1.25); g.quadraticCurveTo(L / 2 - 1.0, y0 + 1.2, L / 2 - 0.8, y0 + 0.5); g.lineTo(-L / 2, y0 + 0.2); g.closePath(); g.fill(); g.stroke(); // 胴（平たい）
   if (!opt.ghost) { g.lineWidth = 0.07; for (let q = -L / 2 + 0.8; q < L / 2 - 1.5; q += 0.6) { g.beginPath(); g.moveTo(q, y0 + 0.3); g.lineTo(q + 0.15, y0 + 1.25); g.stroke(); } }  // 体節
-  g.lineWidth = 0.16; g.beginPath(); g.ellipse(L / 2 - 1.1, y0 + 0.95, 1.0, 0.45, -0.15, 0, 7); g.fill(); g.stroke();  // 前胸の盾
+  g.lineWidth = 0.16; if (R) g.fillStyle = grad(g, L / 2 - 1.1, y0 + 1.2, 1.2, '#c9965c', '#6a4220');
+  g.beginPath(); g.ellipse(L / 2 - 1.1, y0 + 0.95, 1.0, 0.45, -0.15, 0, 7); g.fill(); g.stroke();  // 前胸の盾
+  if (R && !opt.ghost) {   // 前胸の2本の黒いすじと、背中のつや
+    g.strokeStyle = RC.roachDark; g.lineWidth = 0.14; for (const dy of [0.85, 1.15]) { g.beginPath(); g.moveTo(L / 2 - 1.8, y0 + dy); g.lineTo(L / 2 - 0.4, y0 + dy - 0.15); g.stroke(); }
+    g.fillStyle = 'rgba(255,240,210,.22)'; g.beginPath(); g.ellipse(-0.6, y0 + 1.15, 1.6, 0.18, -0.05, 0, 7); g.fill();
+    g.strokeStyle = '#2a1708'; g.lineWidth = 0.16; g.fillStyle = grad(g, L / 2 - 1.1, y0 + 1.2, 1.2, '#c9965c', '#6a4220');
+  }
   g.beginPath(); g.ellipse(L / 2 - 0.45, y0 + 0.35, 0.45, 0.4, 0.3, 0, 7); g.fill(); g.stroke();                         // 頭（盾の下）
   // 触角（ゆれる）と尾角
   const w = 0.25 * Math.sin(s.t * 3), dir = piv ? 0.8 : 0;
+  if (R) g.strokeStyle = '#6a4220';
   g.lineWidth = 0.1; g.beginPath(); g.moveTo(L / 2 - 0.2, y0 + 0.6); g.quadraticCurveTo(L / 2 + 1.8, y0 + 2.2 + w + dir, L / 2 + 4.0, y0 + 1.2 + w); g.stroke();
   g.strokeStyle = s.fl === 'rest' ? COL.fly : '#ff8a7a'; g.lineWidth = 0.16;
   g.beginPath(); g.moveTo(-L / 2 + 0.1, y0 + 0.5); g.lineTo(-L / 2 - 0.9, y0 + 0.75); g.stroke();   // 尾角（気づくと赤）
@@ -213,5 +261,5 @@ function drawPrey(g, cx, gy, k, face, s, opt) {
 let P_ = null;  // 描くときの条件（獲物の種類を読むため）
 function setP(P) { P_ = P; }
 
-return { drawSpider, drawFly, drawPrey, spinneret, setP, COL, smooth };
+return { drawSpider, drawFly, drawPrey, spinneret, setP, COL, smooth, ik, spiderPose, footFor, LEGS };
 })();

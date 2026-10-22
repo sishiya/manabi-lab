@@ -5,7 +5,7 @@ window.addEventListener('error', e => window.__sphuErr.push(String(e.message)));
 
 const $ = id => document.getElementById(id);
 const DT = 0.0005;                  // 計算の刻み（0.5ms）
-const P = { speed: 'dill', model: 'size', crouch: true, dir: 0, fastV: 30, prey: 'housefly', lux: 300 };
+const P = { speed: 'dill', model: 'size', crouch: true, dir: 0, fastV: 30, prey: 'housefly', lux: 300, look: 'simple' };
 const S = { st: null, hist: [], view: 0, playing: true, rate: 'auto', camR: 95, rims: true, guide: true, paused: false };
 SD.setP(P);
 
@@ -96,6 +96,7 @@ seg('model', 'm', v => { P.model = v; changed(); });
 seg('dir', 'd', v => { P.dir = +v; changed(); });
 seg('prey', 'p', v => { P.prey = v; $('modelRow').hidden = M.prey(P).escape.kind !== 'vision'; $('preyCap').textContent = M.prey(P).short || M.prey(P).name; reset(); });
 seg('light', 'l', v => { P.lux = +v; });
+seg('look', 'k', v => { P.look = v; });
 seg('rate', 'r', v => { S.rate = v; });
 $('crouch').addEventListener('change', e => { P.crouch = e.target.checked; changed(); });
 $('rims').addEventListener('change', e => { S.rims = e.target.checked; });

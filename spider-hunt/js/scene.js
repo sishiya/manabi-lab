@@ -24,12 +24,19 @@ function drawScene(g, w, h, hist, cur, P, camR, opt) {
   // ぼんやりした明かり（獲物のあたり）
   const rg = g.createRadialGradient(fx, gy, 0, fx, gy, Math.max(w, h) * 0.6); rg.addColorStop(0, 'rgba(143,211,255,.08)'); rg.addColorStop(1, 'rgba(143,211,255,0)');
   g.fillStyle = rg; g.fillRect(0, 0, w, h);
-  // 台（面のつぶつぶは目安の模様）
+  // 台（面のつぶつぶは目安の模様）。リアルなときは木の台と壁の色
+  if (P.look === 'real') {
+    const wg = g.createLinearGradient(0, 0, 0, gy); wg.addColorStop(0, '#cfc6b4'); wg.addColorStop(1, '#a89e8a'); g.fillStyle = wg; g.fillRect(0, 0, w, gy);
+    const tg = g.createLinearGradient(0, gy, 0, h); tg.addColorStop(0, '#8a6440'); tg.addColorStop(1, '#5a3e26'); g.fillStyle = tg; g.fillRect(0, gy, w, h - gy);
+    g.strokeStyle = 'rgba(60,36,18,.35)'; g.lineWidth = 1;
+    for (let i = 1; i < 6; i++) { const yy = gy + (h - gy) * i / 6; g.beginPath(); g.moveTo(0, yy); for (let x = 0; x <= w; x += 20) g.lineTo(x, yy + 1.5 * Math.sin(x * 0.02 + i * 1.7)); g.stroke(); }
+  } else {
   g.fillStyle = '#152131'; g.fillRect(0, gy, w, h - gy);
   g.strokeStyle = C.line; g.lineWidth = 1; g.beginPath(); g.moveTo(0, gy + 0.5); g.lineTo(w, gy + 0.5); g.stroke();
   g.fillStyle = 'rgba(163,180,191,.12)';
   const step = Math.max(6, k * 1.5);
   for (let x = (X(0) % step) - step; x < w; x += step) for (let r = 1; r < 4; r++) { const yy = gy + r * (h - gy) / 4; g.fillRect(x + (r % 2) * step / 2, yy, 1.5, 1.5); }
+  }
 
   const pr = M.prey(P), face = P.dir === 0 ? -1 : P.dir === 180 ? 1 : 0;
   const front = X(-s.D - pr.len / 2);  // クモの前のはしの画面x（距離は獲物の体のはしまで）
@@ -67,17 +74,17 @@ function drawScene(g, w, h, hist, cur, P, camR, opt) {
   if (dark > 0) { g.fillStyle = `rgba(3,6,10,${dark})`; g.fillRect(0, 0, w, h); }
   // ほんのりガイド（名前）
   if (opt.guide) {
-    g.font = '11px "Zen Kaku Gothic New",sans-serif'; g.textAlign = 'center'; g.globalAlpha = 0.6;
-    g.fillStyle = C.acc; g.fillText('ハエトリグモ', Math.max(40, front - 4.5 * k), gy - (5.2 + s.h) * k);
-    g.fillStyle = C.fly; if (s.fl !== 'air') g.fillText(pr.short || pr.name, X(0), gy - Math.max(4, pr.hgt + 3) * k);
-    g.globalAlpha = 1;
+    g.font = '11px "Zen Kaku Gothic New",sans-serif'; g.textAlign = 'center';
+    const tag = (txt, x, y, col) => { const tw = g.measureText(txt).width + 8; g.globalAlpha = 0.7; g.fillStyle = 'rgba(11,18,27,.75)'; g.fillRect(x - tw / 2, y - 11, tw, 15); g.fillStyle = col; g.fillText(txt, x, y); g.globalAlpha = 1; };
+    tag('ハエトリグモ', Math.max(40, front - 4.5 * k), gy - (5.2 + s.h) * k, C.acc);
+    if (s.fl !== 'air') tag(pr.short || pr.name, X(0), gy - Math.max(4, pr.hgt + 3) * k, C.fly);
   }
   // いまの段階（左上）とスローの札（右上）
   g.textAlign = 'left'; g.font = (w < 500 ? '700 12px' : '700 14px') + ' "Zen Kaku Gothic New",sans-serif';
   const cap = phase(s, P);
   g.fillStyle = 'rgba(11,18,27,.6)'; g.fillRect(6, 6, g.measureText(cap).width + 14, 24);
   g.fillStyle = C.ink; g.fillText(cap, 13, 23);
-  if (opt.slowLabel) { g.font = '12px "Zen Kaku Gothic New",sans-serif'; g.textAlign = 'right'; g.fillStyle = C.acc; g.fillText(opt.slowLabel, w - 10, 22); }
+  if (opt.slowLabel) { g.font = '12px "Zen Kaku Gothic New",sans-serif'; g.textAlign = 'right'; const tw = g.measureText(opt.slowLabel).width + 10; g.fillStyle = 'rgba(11,18,27,.6)'; g.fillRect(w - 6 - tw, 8, tw, 20); g.fillStyle = C.acc; g.fillText(opt.slowLabel, w - 11, 22); }
   // 大きさの目盛り（5mm）
   g.textAlign = 'left'; g.strokeStyle = C.muted; g.lineWidth = 2; const sx0 = 10, sy0 = h - 8;
   g.beginPath(); g.moveTo(sx0, sy0); g.lineTo(sx0 + 5 * k, sy0); g.stroke(); g.fillStyle = C.muted; g.font = '10px "IBM Plex Mono",monospace'; g.fillText('5mm', sx0 + 5 * k + 4, sy0 + 3);

@@ -36,7 +36,7 @@ function gauss(i, j) { const u = Math.max(1e-6, rnd(i, j)), v = rnd(j + 7, i + 3
 const noisy = (v, N, i, j) => { const n = Math.max(1e-3, v * N); return Math.max(0, (n + Math.sqrt(n) * gauss(i, j)) / N); };
 function dimOf(lux) { return Math.max(0.25, Math.min(1, 0.4 + 0.15 * Math.log10(lux + 1))); }   // 画面の暗さ（見た目の目安）
 // 警戒度の色: 落ち着いている（青）→ 気づきかけ（黄）→ 気づいた（赤）
-function alertCol(a, fl) { if (fl !== 'rest') return '#ff8a7a'; return a < 0.5 ? 'rgba(143,211,255,.55)' : a < 0.85 ? '#ffc95a' : '#ff8a7a'; }
+function alertCol(a, fl) { if (fl !== 'rest' || a >= 1) return '#ff8a7a'; return a < 0.5 ? 'rgba(143,211,255,.55)' : a < 0.85 ? '#ffc95a' : '#ff8a7a'; }
 
 // ---- 獲物の目
 function fly(g, w, h, s, P, opt) {
@@ -76,14 +76,14 @@ function fly(g, w, h, s, P, opt) {
   // 見出し: クモは個眼いくつぶんか
   header(g, pr.eye.label + '｜' + (gone ? (pr.draw === 'roach' ? '走り出した' : '飛び立った') : `クモは個眼 約${Math.max(1, Math.round((2 * hw) / p * (2 * hh) / (p * 0.866)))}個ぶん`));
   // 警戒度（選んだしくみの値 ÷ しきい値）。帯と、視界の枠の色で
-  const es = pr.escape, val = s.alert || 0, wind = es.kind === 'wind';
+  const es = pr.escape, wind = es.kind === 'wind', felt = wind && s.ev.wind != null && s.t >= s.ev.wind, val = felt ? 1 : (s.alert || 0);
   const bh = 16, by = h - bh;
   g.fillStyle = 'rgba(11,18,27,.8)'; g.fillRect(0, by, w, bh);
   const bx = 44, bw = Math.max(30, w - bx - (w < 240 ? 62 : 80));
   g.fillStyle = '#26384c'; g.fillRect(bx, by + 5, bw, 6);
   g.fillStyle = alertCol(val, s.fl); g.fillRect(bx, by + 5, bw * Math.min(1, val), 6);
   g.font = '11px "Zen Kaku Gothic New",sans-serif'; g.fillStyle = C.muted; g.fillText(wind ? '風' : '警戒', 6, by + 12);
-  const lab = s.fl === 'rest' ? (val < 0.5 ? ['平気', C.muted] : ['あやしい', C.acc]) : s.fl === 'wing' ? [wind ? '向きを変える' : '気づいた！', C.warn] : [wind ? '走った' : '飛んだ', C.ok];
+  const lab = s.fl === 'rest' ? (felt ? ['風を感じた', C.warn] : val < 0.5 ? ['平気', C.muted] : ['あやしい', C.acc]) : s.fl === 'wing' ? [wind ? '向きを変える' : '気づいた！', C.warn] : [wind ? '走った' : '飛んだ', C.ok];
   g.fillStyle = lab[1]; g.fillText(lab[0], bx + bw + 8, by + 12);
   g.strokeStyle = alertCol(val, s.fl); g.lineWidth = val >= 0.5 || s.fl !== 'rest' ? 3 : 2; g.strokeRect(1.5, 1.5, w - 3, h - 3);
   if (wind) { g.font = '10px "Zen Kaku Gothic New",sans-serif'; g.fillStyle = C.muted; g.textAlign = 'right'; g.fillText('目ではなく尾の毛で風を感じる', w - 6, by - 4); g.textAlign = 'left'; }
