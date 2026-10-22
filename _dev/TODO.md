@@ -20,6 +20,7 @@
 - [ ] ショートを X に出すか（`x-post.ps1`、投稿はユーザー）。まだ決めていない。
 - [ ] 1日に上げられる本数の本当の上限はまだ不明（10/11 は 21本でも当たらなかった）。記録は `_dev/promo/upload-log.md`・`_dev/tools/out/yt-quota.csv`（`-Quota`）。
 - [ ] 古い mp4 `_dev/promo/out/body-dive-guide.before-lion.mp4`・`evolution-guide.before-rerec.mp4` は、上げた動画を確かめたら消してよい（Git に入らない）。
+- [ ] ライオンの声が BGM に埋もれている見込みの説明動画（10/12 の音量そろえのあとに音を作った: 46億年・体内ダイブ・いきもの・さなぎ・空気・進化の箱庭・カビ・変化球）。直すのは 305e5b6 の promo-audio で `record-promo.ps1 -AudioOnly` → 上げなおし（GO のあと）。2026-10-22 ユーザー「いまはそのままでいい」。
 
 ## 週のふり返り（weekly-report.ps1）— ユーザーの準備待ち
 - [ ] YouTube の視聴時間・どこから来たか: `youtube-upload.ps1 -Auth` のやり直し（チャンネル「しし屋」を選ぶ。分析を読む許可が足される）。
