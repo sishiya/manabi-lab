@@ -100,16 +100,17 @@ function babbleSound(ctx, out, c) {
 //         [{ t, type: 'babble', n, seed }] : 案内役のライオンのしゃべり（babbleSound）
 //   quiet [[a, b]]             : その間はアルペジオを止め、和音を暗くする
 async function makeAudio(dur, music = {}) {
-  // BGM と、声・目印の音を別々に書き出す（4ch: 0-1 が BGM、2-3 が声など）。あとで BGM だけ音量をそろえて混ぜる（loudMix）
-  const ctx = new OfflineAudioContext(4, SR * dur, SR);
+  // BGM と、声・目印の音を別々に書き出す（6ch: 0-1 が BGM、2-3 が目印など、4-5 がライオンのしゃべり）。あとで BGM だけ音量をそろえて混ぜる（loudMix）
+  // しゃべりは BGM と同じだけ上げ下げする（BGM との釣り合いのまま。2026-10-22: BGM だけ上げていたので、しゃべりが BGM の 24 dB 下に埋もれていた）
+  const ctx = new OfflineAudioContext(6, SR * dur, SR);
   ctx.destination.channelInterpretation = 'discrete';
-  const merger = ctx.createChannelMerger(4); merger.connect(ctx.destination);
+  const merger = ctx.createChannelMerger(6); merger.connect(ctx.destination);
   const stem = ch => {
     const g = ctx.createGain(); g.channelCount = 2; g.channelCountMode = 'explicit'; g.channelInterpretation = 'speakers';
     const sp = ctx.createChannelSplitter(2); g.connect(sp); sp.connect(merger, 0, ch); sp.connect(merger, 1, ch + 1);
     return g;
   };
-  const bgmOut = stem(0), voiceOut = stem(2);
+  const bgmOut = stem(0), voiceOut = stem(2), talkOut = stem(4);
   const master = ctx.createGain(); master.connect(bgmOut);
   master.gain.setValueAtTime(0, 0);
   master.gain.linearRampToValueAtTime(0.22, 3);
@@ -131,7 +132,10 @@ async function makeAudio(dur, music = {}) {
   const jverb = ctx.createConvolver(); jverb.buffer = ir; const jwet = ctx.createGain(); jwet.gain.value = 0.35;   // BGM を消しても響きは残す
   jbus.connect(jverb); jverb.connect(jwet); jwet.connect(voiceOut);
   for (const c of music.cues || []) if (c.type === 'jingle') identJingle(ctx, jbus, c.t, c.kind);
-  for (const c of music.cues || []) if (c.type === 'babble') babbleSound(ctx, jbus, c);   // 案内役のしゃべり（BGM の音量とは別）
+  // しゃべりの大きさ: BGM の約 4 dB 下（2026-10-22。0.35 だと 8 dB 下で聞こえにくく、0.7 だと全体が -18.7 LUFS と大きすぎた）
+  const tbus = ctx.createGain(); tbus.gain.value = 0.5; tbus.connect(talkOut);
+  const tverb = ctx.createConvolver(); tverb.buffer = ir; const twet = ctx.createGain(); twet.gain.value = 0.35; tbus.connect(tverb); tverb.connect(twet); twet.connect(talkOut);
+  for (const c of music.cues || []) if (c.type === 'babble') babbleSound(ctx, tbus, c);   // 案内役のしゃべり（BGM と同じ割合で上げ下げ）
   if (music.extra) await music.extra(ctx, voiceOut);   // 台本ごとの音（ピアノを弾く手のピアノの音など。BGM の音量とは別）
   if (music.style === 'none') {
     // BGM なし（目印の音だけ）
@@ -222,7 +226,7 @@ function lufs(chs, fs) {   // 積分ラウドネス（400 ms の窓・75% 重ね
   return L(g2.reduce((a, b) => a + b, 0) / g2.length);
 }
 function loudMix(b4, hasBgm) {
-  const len = b4.length, B = [b4.getChannelData(0), b4.getChannelData(1)], V = [b4.getChannelData(2), b4.getChannelData(3)];
+  const len = b4.length, B = [b4.getChannelData(0), b4.getChannelData(1)], V = [b4.getChannelData(2), b4.getChannelData(3)], T = [b4.getChannelData(4), b4.getChannelData(5)];
   const lb = hasBgm ? lufs(B, SR) : -Infinity;
   let gb = isFinite(lb) ? Math.pow(10, (LOUD.bgm - lb) / 20) : 1, gall = 1;
   if (!hasBgm) { const lv = lufs(V, SR); if (isFinite(lv)) gall = Math.pow(10, (LOUD.bgm - lv) / 20); }   // BGM のない台本（ピアノの音など）は全体をそろえる
@@ -230,7 +234,7 @@ function loudMix(b4, hasBgm) {
   let gp = 1, total = -Infinity;
   // 「ドン」などのピークを下げると全体も少し下がるので、足りなければ1回だけ BGM（BGM なしは全体）を上げて混ぜなおす
   for (let pass = 0; pass < 2; pass++) {
-    for (let c = 0; c < 2; c++) for (let i = 0; i < len; i++) O[c][i] = (B[c][i] * gb + V[c][i]) * gall;
+    for (let c = 0; c < 2; c++) for (let i = 0; i < len; i++) O[c][i] = ((B[c][i] + T[c][i]) * gb + V[c][i]) * gall;
     gp = limitPeaks(O, Math.pow(10, LOUD.peak / 20));
     total = lufs(O, SR);
     if (total >= LOUD.bgm - 0.7) break;
