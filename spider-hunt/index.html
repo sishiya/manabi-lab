@@ -10,16 +10,12 @@
 <div id="app">
   <header id="top"><h1>クモがハエをつかまえるまで</h1><p class="q">ハエは気づかないの？ 気づいても間に合わないの？</p></header>
 
-  <!-- 上に固定: 場面・気づきメーター・視界・結果 -->
+  <!-- 上に固定: 場面・2つの視界・いまの結果 -->
   <section id="pin">
-    <div id="sceneBox"><canvas id="scene"></canvas></div>
-    <div id="viewTabs" role="tablist">
-      <button data-v="human" class="on">人の目</button><button data-v="fly">ハエの目</button><button data-v="spider">クモの目</button>
-    </div>
+    <div id="sceneBox"><canvas id="scene" aria-label="横から見た場面"></canvas></div>
     <div id="views">
-      <figure data-v="human" class="on"><canvas id="vHuman"></canvas><figcaption>人の目（30cm はなれて）</figcaption></figure>
-      <figure data-v="fly"><canvas id="vFly"></canvas><figcaption>ハエの目（全周・個眼1つが1マス）</figcaption></figure>
-      <figure data-v="spider"><canvas id="vSpider"></canvas><figcaption>クモの目（上: 前の大きな目／下: 横の目）</figcaption></figure>
+      <figure><canvas id="vFly"></canvas><figcaption><b class="fly">ハエの目</b>に映るクモ</figcaption></figure>
+      <figure><canvas id="vSpider"></canvas><figcaption><b class="sp">クモの目</b>に映るハエ</figcaption></figure>
     </div>
     <p id="status"></p>
   </section>
@@ -28,65 +24,70 @@
     <div class="row time">
       <button id="play" aria-label="再生・一時停止">▶</button>
       <input id="tl" type="range" min="0" max="1000" value="0" aria-label="時間">
-      <span id="tnow" class="mono">0.000 s</span>
-    </div>
-    <div class="row">
-      <span class="lab">再生の速さ</span>
-      <div class="seg" id="rate"><button data-r="auto" class="on">自動（跳ぶところだけ 1/50）</button><button data-r="1">ふつう</button><button data-r="0.1">1/10</button><button data-r="0.01">1/100</button></div>
-      <button id="restart">はじめから</button>
+      <button id="restart" aria-label="はじめから">↺</button>
     </div>
     <div class="row">
       <span class="lab">クモの近づき方</span>
-      <div class="seg" id="speed"><button data-s="dill" class="on">研究のとおり（近いほどおそく）</button><button data-s="const">一定の速さ</button><button data-s="fast">急いで</button></div>
+      <div class="seg" id="speed"><button data-s="dill" class="on">近いほどゆっくり</button><button data-s="const">一定の速さ</button><button data-s="fast">急いで</button></div>
     </div>
     <div class="row">
-      <label class="chk"><input type="checkbox" id="crouch">近くでは低くかがむ（推定）</label>
-      <span class="lab">来る向き</span>
-      <div class="seg" id="dir"><button data-d="0">前から</button><button data-d="90" class="on">横から</button><button data-d="180">後ろから</button></div>
+      <span class="lab">ハエが気づくのは</span>
+      <div class="seg" id="model"><button data-m="size" class="on">大きく見えたら</button><button data-m="rate">急にふくらんだら</button></div>
     </div>
-    <div class="row">
-      <span class="lab">ハエが気づくしくみ</span>
-      <div class="seg" id="model"><button data-m="size" class="on">大きく見えたら（測った数）</button><button data-m="rate">急にふくらんだら（仮説）</button></div>
-    </div>
-    <div class="row"><label class="chk"><input type="checkbox" id="rims" checked>個眼のふちを見せる（※ 目印）</label></div>
-    <p class="hint">とちゅうで変えると、その時刻から先を計算しなおします。時間のつまみを戻してから変えることもできます。</p>
-  </section>
-
-  <section id="graphBox">
-    <h2>ハエの目に映るクモ</h2>
-    <canvas id="graph"></canvas>
-    <p class="legend"><span class="k k1"></span>見かけの大きさ（°）　<span class="k k2"></span>ふくらむ速さ（rad/s）　<span class="k k3"></span>しきい値（※ 目印）</p>
+    <details id="more">
+      <summary>くわしい設定</summary>
+      <div class="row"><span class="lab">獲物</span>
+        <div class="seg" id="prey"><button data-p="housefly" class="on">イエバエ</button><button data-p="silverfish" disabled>シミ（準備中）</button></div></div>
+      <div class="row"><span class="lab">再生の速さ</span>
+        <div class="seg" id="rate"><button data-r="auto" class="on">自動（跳ぶところだけ 1/50）</button><button data-r="1">ふつう</button><button data-r="0.1">1/10</button><button data-r="0.01">1/100</button></div></div>
+      <div class="row"><span class="lab">クモが来る向き</span>
+        <div class="seg" id="dir"><button data-d="0" class="on">前から</button><button data-d="90">横から</button><button data-d="180">後ろから</button></div></div>
+      <div class="row">
+        <label class="chk"><input type="checkbox" id="crouch" checked>近くでは体をふせる</label>
+        <label class="chk"><input type="checkbox" id="guide" checked>ガイド（名前と輪郭）</label>
+        <label class="chk"><input type="checkbox" id="rims" checked>個眼のふち</label>
+      </div>
+      <p class="hint">とちゅうで変えると、いま見ている時刻から先を計算しなおします。</p>
+    </details>
   </section>
 
   <section id="explain">
-    <h2>何が起きているか</h2>
-    <p>ハエトリグモは、ハエを見つけると向きを変え、<b>近づくほどおそく</b>忍び寄ります（Dill 1975 の測定）。ハエの目に映るクモの「ふくらむ速さ」をおさえるためだと考えられています。</p>
-    <p>ハエが逃げるきっかけには、2つの考え方があります。<b>大きく見えたら</b>（ショウジョウバエで、見かけの大きさが約49°で翅を上げ、約54°の6ms後に飛び立つ。Fotowat ほか 2009）と、<b>急にふくらんだら</b>（Dill が仮に置いた 0.3 rad/s。ハエで測った数ではありません）です。</p>
-    <p>最後の跳躍は、踏み切りに約32ms、飛ぶのに約23ms。人の目では一瞬です。再生の速さが「自動」のときは、跳ぶところから 1/50 のスローになり、ハエの飛び立ちとクモがとどくのとの差が見えます。</p>
-    <p>どちらのしくみでも、<b>忍び寄りのあいだにハエが気づくかどうか</b>が分かれ目です。「大きく見えたら」では、クモが跳びつく距離（11.6mm）でも見かけは約34°で、しきい値の54°に届きません。ハエが気づくのは跳んだあとで、勝負は数ミリ秒の差になります。「急にふくらんだら」では、一定の速さや急いで近づくと、跳ぶ前に気づかれて逃げられます。</p>
-    <p class="note">差が ±11ms より小さいときは「きわどい」と出します。飛び立つ時刻の測定のばらつき（SD 11ms）より小さく、どちらにもなりうるからです。</p>
+    <h2>わかること</h2>
+    <ul>
+      <li><b>忍び寄りのあいだ、ハエはほとんど気づけない。</b>クモは近いほどゆっくり進み、ハエの目に映る「ふくらみ方」をおさえます。跳ぶ距離（約12mm）でも、クモはハエの目に約34°。逃げのきっかけの54°より小さいままです。</li>
+      <li><b>最後の一手は、数ミリ秒の勝負。</b>跳び始めから約55msでとどきます。ハエが気づいて飛び立つのとの差は、測った数のばらつき（±11ms）と同じくらいです。</li>
+      <li><b>見え方がまるでちがう。</b>ハエにはクモが数個の個眼のかげ。クモは前の大きな目でハエの形までくっきり見ています（ただし、せまいブーメラン形の視野だけ）。</li>
+    </ul>
+    <p class="note">「急にふくらんだら」は Dill が置いた仮説の数（0.3 rad/s）です。こちらでは、一定の速さや急いで近づくと、跳ぶ前に気づかれます。</p>
   </section>
+
+  <details id="graphBox">
+    <summary>グラフで見る（ハエの目に映るクモの大きさ・ふくらむ速さ）</summary>
+    <canvas id="graph"></canvas>
+    <p class="legend"><span class="k k1"></span>見かけの大きさ（°）　<span class="k k2"></span>ふくらむ速さ（rad/s）　<span class="k k3"></span>しきい値（※ 目印）</p>
+  </details>
 
   <details id="about">
     <summary>このアプリについて</summary>
     <p>学習用に簡単にしています。おもに簡単にしたところ:</p>
     <ul>
-      <li>クモはハエにまっすぐ近づきます。距離は「ハエの目からクモの前まで」。</li>
-      <li>ハエの逃げのしきい値と遅れは<b>ショウジョウバエ</b>の測定を借りています（イエバエの数は見つかりませんでした）。研究で使われた近づき方（l/|v| = 5〜80ms）より、忍び寄るクモはずっとゆっくりなので、そのあいだは「測った範囲の外」と出します。</li>
-      <li>「つかまった・逃げた」は、ハエの脚が台から離れた時刻と、クモがハエの位置にとどいた時刻だけで決めています。飛び立ってからクモの脚の届く外へ出るまでの時間は入れていません。</li>
+      <li>クモはハエにまっすぐ近づきます。距離は「クモの前のはしから、ハエの体のはしまで」。</li>
+      <li>ハエの逃げのしきい値と遅れは<b>ショウジョウバエ</b>の測定を借りています（イエバエの数は見つかりませんでした）。研究で使われた近づき方（l/|v| = 5〜80ms）より、忍び寄るクモはずっとゆっくりなので、そのあいだは推定です。</li>
+      <li>「つかまった・逃げた」は、ハエの脚が台から離れた時刻と、クモがとどいた時刻だけで決めています。飛び立ったあとのハエの動きは見た目だけです。</li>
       <li>跳躍の数は別の種（<i>Phidippus regius</i>）のもの。踏み切りのあいだは止まっているとしました。</li>
-      <li>かがんだときの大きさ（4.5mm）、横の目の細かさ、ハエの視界の死角は推定です。来る向きは、視界での見え方だけを変えます（向きで気づきやすさが変わるかは、測った数が見つかりませんでした）。</li>
-      <li>※ 目印: 個眼のマスのふち、しきい値の線、クモの目の視野の枠は、本物には見えません。</li>
+      <li>クモの動き: 振り向く・忍び寄る・後半で体をふせる・命綱をつける・前脚を上げて後ろの脚で押す・前脚を斜め前に広げて跳ぶ、は研究の記述どおり。脚の運び・歩幅・振り向く時間・体をふせたときの大きさ（4.5mm）は目安です。進む速さはなめらかにしていて、実際のちょこちょこした止まり方は入れていません（測った数が見つからないため）。</li>
+      <li>2つの視界はどちらも横 60° の広さ。ハエの個眼の間隔（3°）、クモの横の目のぼけ、前の大きな目の視野を動かす速さ、部屋の模様は目安です。来る向きは見え方だけを変えます。</li>
+      <li>※ 目印: 個眼のふち、名前と点線の輪郭、ブーメラン形の点線、しきい値の線、距離の線、残像は、本物には見えません。</li>
     </ul>
     <h3>おもな出どころ</h3>
     <ul>
-      <li>Dill, L. M. (1975) Predatory behavior of the zebra spider, <i>Salticus scenicus</i>. Can. J. Zool. 53: 1284–1289（向きを変える角度 5.5°、忍び寄る速さの式、跳びつく距離、ふくらむ速さの式）</li>
+      <li>Dill, L. M. (1975) Predatory behavior of the zebra spider, <i>Salticus scenicus</i>. Can. J. Zool. 53: 1284–1289（向きを変える角度 5.5°、忍び寄る速さの式、跳びつく距離、ふくらむ速さの式、体をふせる・命綱・前脚を広げて跳ぶ）</li>
       <li>Fotowat, H., Fayyazuddin, A., Bellen, H. J. &amp; Gabbiani, F. (2009) A novel neuronal pathway for visually guided escape in <i>Drosophila melanogaster</i>. J. Neurophysiol. 102: 875–885（翅を上げる 49°・飛び立つ 54°＋6ms）</li>
       <li>Card, G. &amp; Dickinson, M. H. (2008) Visually mediated motor planning in the escape response of <i>Drosophila</i>. Curr. Biol. 18: 1300–1307（約200ms前から構え、刺激と反対へ跳ぶ）</li>
-      <li>Nabawy, M. R. A. ほか (2018) Energy and time optimal trajectories in exploratory jumps of the spider <i>Phidippus regius</i>. Sci. Rep. 8: 7142（跳ぶ速さ 0.52m/s・踏み切り 31.6ms）</li>
+      <li>Nabawy, M. R. A. ほか (2018) Energy and time optimal trajectories in exploratory jumps of the spider <i>Phidippus regius</i>. Sci. Rep. 8: 7142（跳ぶ速さ 0.52m/s・踏み切り 31.6ms。前脚を上げ、第3・第4脚で押し、命綱をつける）</li>
+      <li>De Agrò, M., Winsor, A. M., Walsh, W., Shamble, P. &amp; Jakob, E. (2025) Biological point-light displays scanning by the principal eyes of a jumping spider. bioRxiv（前の大きな目はブーメラン形の視野を前の約60°の中で動かして輪郭をなぞる。横の目で動きを見ると体ごと向く。Land 1969 ほかの引用）</li>
+      <li>Shepeleva, I. P. (2022) A comparative analysis of the camera-like eyes of jumping spiders and humans. Vision 6: 2（前の大きな目の視野 横5°×縦20°、横の目の視野 約330°）</li>
       <li>Holmqvist, M. H. &amp; Srinivasan, M. V. (1991) A visually evoked escape response of the housefly. J. Comp. Physiol. A 169: 451–459（イエバエは近づく黒い円で逃げる。要旨のみ確認）</li>
-      <li>Shepeleva, I. P. (2022) A comparative analysis of the camera-like eyes of jumping spiders and humans. Vision 6: 2（主眼の視野・細かさ、横の目の視野 約330°）</li>
-      <li>Zurek, D. B. ほか (2010) The role of the anterior lateral eyes in the vision-based behaviour of jumping spiders. J. Exp. Biol. 213: 2372–2378（横の目だけでも忍び寄りが起きる。要旨のみ確認）</li>
     </ul>
     <p>イエバエの個眼の向きの間隔（ここでは 3°）は目安です。論文の書誌を確かめきれていません。</p>
     <h3>使っているもの</h3>
@@ -95,6 +96,8 @@
 </div>
 
 <script src="js/model.js"></script>
+<script src="js/spider-draw.js"></script>
 <script src="js/scene.js"></script>
 <script src="js/views.js"></script>
+<script src="js/graph.js"></script>
 <script src="js/main.js"></script>

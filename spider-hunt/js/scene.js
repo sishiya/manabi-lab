@@ -1,120 +1,85 @@
-// クモがハエをつかまえるまで — 場面（横から見た断面）・気づきメーター・グラフ
+// クモがハエをつかまえるまで — 場面（横から見た断面）。いまの段階を1行、距離、命綱、スローのときは残像
 'use strict';
 const SC = (() => {
 const C = { bg: '#0e1620', line: '#2f4157', ink: '#e8f0f4', muted: '#a3b4bf', acc: '#ffc95a', fly: '#8fd3ff', warn: '#ff8a7a', ok: '#9be39b' };
-const L = M.DATA;
 
-// ハエ（横から）。x,y は足もと、k は px/mm、face: 1=左向き、-1=右向き、0=正面
-function drawFly(g, x, y, k, face, fl, tAir) {
-  const len = L.fly.len, lift = fl === 'air' ? Math.min(40, tAir * 120) : 0; // 飛んだ後の動きは見た目だけ
-  y -= lift * k;
-  g.save(); g.translate(x, y); g.lineWidth = Math.max(1, k * 0.25); g.strokeStyle = C.fly; g.fillStyle = 'rgba(143,211,255,.15)';
-  const bh = 2.6 * k;
-  if (face === 0) {
-    g.beginPath(); g.ellipse(0, -bh, 1.5 * k, 1.6 * k, 0, 0, 7); g.fill(); g.stroke();             // 頭（正面）
-    g.beginPath(); g.arc(-0.8 * k, -bh - 0.2 * k, 0.7 * k, 0, 7); g.arc(0.8 * k, -bh - 0.2 * k, 0.7 * k, 0, 7); g.stroke();
-    const up = fl === 'rest' ? 0.3 : 1.2;
-    g.beginPath(); g.moveTo(-1.2 * k, -bh - 0.8 * k); g.lineTo(-3.8 * k, -bh - up * 2.5 * k); g.moveTo(1.2 * k, -bh - 0.8 * k); g.lineTo(3.8 * k, -bh - up * 2.5 * k); g.stroke();
-  } else {
-    g.scale(face, 1);
-    g.beginPath(); g.ellipse(0.6 * k, -bh, len * 0.32 * k, 1.3 * k, 0, 0, 7); g.fill(); g.stroke();  // 胸と腹
-    g.beginPath(); g.ellipse(-len * 0.38 * k, -bh - 0.2 * k, 1.1 * k, 1.2 * k, 0, 0, 7); g.fill(); g.stroke(); // 頭
-    const wa = fl === 'rest' ? -0.12 : -1.0;                                                         // 翅（上げると立つ）
-    g.beginPath(); g.moveTo(-0.5 * k, -bh - 1 * k); g.lineTo(-0.5 * k + Math.cos(wa) * 4.5 * k * -(-1), -bh - 1 * k + Math.sin(wa) * 4.5 * k); g.stroke();
+function phase(s, P) {
+  const pr = M.prey(P).name;
+  if (s.sp === 'turn') return '① 横の目で' + pr + 'を見つけ、体ごと振り向く';
+  if (s.sp === 'stalk') return '② 忍び寄る' + (P.speed === 'dill' ? '（近いほどゆっくり）' : P.speed === 'const' ? '（一定の速さ）' : '（急いで）') + (P.crouch && s.D < M.DATA.spider.crouchBelow ? '・体をふせる' : '');
+  if (s.sp === 'prep') return '③ 命綱をつけ、前脚を上げて踏み切る';
+  if (s.sp === 'flight') return '④ 跳ぶ';
+  if (s.sp === 'stop') return pr + 'が先に飛んだ';
+  return '⑤ とどいた';
+}
+
+// hist・cur は記録と、いま見ている位置。rate は再生の速さ（スローの札に使う）
+function drawScene(g, w, h, hist, cur, P, camR, opt) {
+  const s = hist[cur];
+  // 背景（奥が少し明るい）
+  const bgG = g.createLinearGradient(0, 0, 0, h); bgG.addColorStop(0, '#132033'); bgG.addColorStop(1, '#0b121b');
+  g.fillStyle = bgG; g.fillRect(0, 0, w, h);
+  const fx = w * 0.76, gy = h * 0.8, k = Math.min((w * 0.68) / camR, gy / 12);
+  const X = mm => fx + mm * k;        // 獲物の中心を 0、クモの方が負
+  // ぼんやりした明かり（獲物のあたり）
+  const rg = g.createRadialGradient(fx, gy, 0, fx, gy, Math.max(w, h) * 0.6); rg.addColorStop(0, 'rgba(143,211,255,.08)'); rg.addColorStop(1, 'rgba(143,211,255,0)');
+  g.fillStyle = rg; g.fillRect(0, 0, w, h);
+  // 台（面のつぶつぶは目安の模様）
+  g.fillStyle = '#152131'; g.fillRect(0, gy, w, h - gy);
+  g.strokeStyle = C.line; g.lineWidth = 1; g.beginPath(); g.moveTo(0, gy + 0.5); g.lineTo(w, gy + 0.5); g.stroke();
+  g.fillStyle = 'rgba(163,180,191,.12)';
+  const step = Math.max(6, k * 1.5);
+  for (let x = (X(0) % step) - step; x < w; x += step) for (let r = 1; r < 4; r++) { const yy = gy + r * (h - gy) / 4; g.fillRect(x + (r % 2) * step / 2, yy, 1.5, 1.5); }
+
+  const pr = M.prey(P), face = P.dir === 0 ? -1 : P.dir === 180 ? 1 : 0;
+  const front = X(-s.D - pr.len / 2);  // クモの前のはしの画面x（距離は獲物の体のはしまで）
+
+  // 命綱（踏み切りの前につける）
+  if (s.ev.pounce != null && s.t >= s.ev.pounce && s.sp !== 'stop') {
+    const i0 = hist.findIndex(q => q.t >= s.ev.pounce), sp0 = hist[i0];
+    const ax = X(-sp0.D - pr.len / 2 - 9.3), [bx, by] = SD.spinneret(front, gy, k, s, P);
+    g.strokeStyle = 'rgba(240,248,255,.18)'; g.lineWidth = 4; g.beginPath(); g.moveTo(ax, gy); g.lineTo(bx, by); g.stroke();
+    g.strokeStyle = 'rgba(240,248,255,.85)'; g.lineWidth = 1; g.stroke();
   }
-  if (lift === 0) { g.beginPath(); for (const dx of [-1.6, 0.2, 2]) { g.moveTo(dx * k, -bh + 0.8 * k); g.lineTo((dx - 0.4) * k, 0); } g.stroke(); }
-  g.restore();
-}
-// クモ（横から、右向き）。x は前のはし
-function drawSpider(g, x, y, k, crouch, hgt, sp) {
-  g.save(); g.translate(x, y - hgt * k); g.strokeStyle = C.acc; g.fillStyle = 'rgba(255,201,90,.15)'; g.lineWidth = Math.max(1, k * 0.25);
-  const lo = crouch ? 0.65 : 1, fly = sp === 'flight';
-  const body = (cx, cy, rx, ry) => { g.beginPath(); g.ellipse(cx * k, cy * k, rx * k, ry * k, 0, 0, 7); g.fill(); g.stroke(); };
-  body(-2.2, -2.4 * lo, 2.2, 1.6 * lo);   // 頭胸部
-  body(-6.4, -2.6 * lo, 2.6, 1.9 * lo);   // 腹
-  g.beginPath(); g.arc(-0.6 * k, -2.8 * lo * k, 0.55 * k, 0, 7); g.stroke(); // 前の大きな目
-  g.beginPath();
-  for (const [ax, reach] of [[-1.2, 3.2], [-2, 1.6], [-2.8, -0.8], [-3.4, -2.8]]) {
-    const fx = (fly && reach > 2) ? ax + reach + 1.6 : ax + reach, fy = fly && reach > 2 ? -2.6 : 0;
-    g.moveTo(ax * k, -2 * lo * k); g.lineTo((ax + reach * 0.5) * k, (-3.4 * lo - (fly ? 0 : 0.6)) * k); g.lineTo(fx * k, fy * k);
+  // 残像（スローで見ているあいだ。跳躍は 3ms ごと、飛び立ったハエは 6ms ごと）
+  if (opt.slow) {
+    let lastT = -1;
+    for (let i = 0; i < cur; i++) {
+      const q = hist[i];
+      if (q.sp === 'flight' && q.t - lastT >= 0.003) { SD.drawSpider(g, X(-q.D - pr.len / 2), gy, k, q, P, { ghost: true }); lastT = q.t; }
+    }
+    if (s.ev.to != null) { let lt = -1; for (let i = 0; i < cur; i++) { const q = hist[i]; if (q.fl === 'air' && q.t - lt >= 0.006) { SD.drawFly(g, X(0), gy, k, face, q, { ghost: true }); lt = q.t; } } }
   }
-  g.stroke(); g.restore();
-}
+  SD.drawFly(g, X(0), gy, k, face, s);
+  SD.drawSpider(g, front, gy, k, s, P);
 
-function niceStep(r) { return r > 60 ? 10 : r > 25 ? 5 : 2; }
-
-// 横から見た場面と、気づきメーター
-function drawScene(g, w, h, st, P, camR) {
-  g.fillStyle = C.bg; g.fillRect(0, 0, w, h);
-  const fx = w * 0.82, gy = h * 0.78, k = Math.min((w * 0.74) / camR, gy / 11); // px/mm（高さは跳躍の高さを含めて約11mm入るように）
-  // 台
-  g.strokeStyle = C.line; g.lineWidth = 1; g.beginPath(); g.moveTo(0, gy); g.lineTo(w, gy); g.stroke();
-  // 目盛り（ハエからの距離）
-  const sp = niceStep(camR); g.fillStyle = C.muted; g.font = '10px "IBM Plex Mono",monospace'; g.textAlign = 'center';
-  for (let d = 0; d <= camR * 1.15; d += sp) {
-    const x = fx - d * k; if (x < 8) break;
-    g.beginPath(); g.moveTo(x, gy); g.lineTo(x, gy + (d % (sp * 2) ? 3 : 6)); g.stroke();
-    if (d % (sp * 2) === 0) g.fillText(d + (d === 0 ? '' : ''), x, gy + 16);
+  // 距離（クモの前から獲物のはしまで）
+  if (s.D > 0.3 && s.sp !== 'stop') {
+    const x1 = front + 2, x2 = X(-pr.len / 2) - 2, yy = gy + Math.min(18, (h - gy) * 0.55);
+    g.strokeStyle = 'rgba(232,240,244,.45)'; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(x1, yy); g.lineTo(x2, yy); g.moveTo(x1, yy - 4); g.lineTo(x1, yy + 4); g.moveTo(x2, yy - 4); g.lineTo(x2, yy + 4); g.stroke();
+    g.fillStyle = C.ink; g.font = '12px "IBM Plex Mono",monospace'; g.textAlign = 'center';
+    const lbl = s.D.toFixed(1) + ' mm', tw = g.measureText(lbl).width + 8;
+    g.fillStyle = '#152131'; g.fillRect((x1 + x2) / 2 - tw / 2, yy - 8, tw, 15); g.fillStyle = C.ink; g.fillText(lbl, (x1 + x2) / 2, yy + 4);
   }
-  g.textAlign = 'left'; g.fillText('mm（ハエからの距離）', 8, gy + 16 + 12 > h ? gy + 14 : gy + 28);
-  // 跳びつく距離の印（※ 目印）
-  const px = fx - L.spider.pounceD * k;
-  g.setLineDash([3, 3]); g.strokeStyle = 'rgba(255,201,90,.5)'; g.beginPath(); g.moveTo(px, gy - 26); g.lineTo(px, gy); g.stroke(); g.setLineDash([]);
-  g.fillStyle = 'rgba(255,201,90,.7)'; g.textAlign = 'center'; g.fillText('跳ぶ距離', px, gy - 30); g.textAlign = 'left';
-  // ハエとクモ
-  const face = P.dir === 0 ? 1 : P.dir === 180 ? -1 : 0;
-  drawFly(g, fx + (face === 1 ? 2.7 : face === -1 ? -2.7 : 0) * k, gy, k, face, st.fl, st.ev.to != null ? st.t - st.ev.to : 0);
-  drawSpider(g, fx - st.D * k, gy, k, st.S < L.spider.S, st.h, st.sp);
-  meter(g, w, h, st, P);
+  // ほんのりガイド（名前）
+  if (opt.guide) {
+    g.font = '11px "Zen Kaku Gothic New",sans-serif'; g.textAlign = 'center'; g.globalAlpha = 0.6;
+    g.fillStyle = C.acc; g.fillText('ハエトリグモ', Math.max(40, front - 4.5 * k), gy - (5.2 + s.h) * k);
+    g.fillStyle = C.fly; if (s.fl !== 'air') g.fillText(pr.name, X(0), gy - 6.2 * k);
+    g.globalAlpha = 1;
+  }
+  // いまの段階（左上）とスローの札（右上）
+  g.textAlign = 'left'; g.font = (w < 500 ? '700 12px' : '700 14px') + ' "Zen Kaku Gothic New",sans-serif';
+  const cap = phase(s, P);
+  g.fillStyle = 'rgba(11,18,27,.6)'; g.fillRect(6, 6, g.measureText(cap).width + 14, 24);
+  g.fillStyle = C.ink; g.fillText(cap, 13, 23);
+  if (opt.slowLabel) { g.font = '12px "Zen Kaku Gothic New",sans-serif'; g.textAlign = 'right'; g.fillStyle = C.acc; g.fillText(opt.slowLabel, w - 10, 22); }
+  // 大きさの目盛り（5mm）
+  g.textAlign = 'left'; g.strokeStyle = C.muted; g.lineWidth = 2; const sx0 = 10, sy0 = h - 8;
+  g.beginPath(); g.moveTo(sx0, sy0); g.lineTo(sx0 + 5 * k, sy0); g.stroke(); g.fillStyle = C.muted; g.font = '10px "IBM Plex Mono",monospace'; g.fillText('5mm', sx0 + 5 * k + 4, sy0 + 3);
+  g.textAlign = 'left';
 }
 
-// 気づきメーター（左上）
-function meter(g, w, h, st, P) {
-  const bw = Math.min(200, w * 0.42), x = 8, y = 8, deg = st.th * 180 / Math.PI;
-  g.font = '11px "Zen Kaku Gothic New",sans-serif';
-  const bar = (yy, label, v, max, th, on, txt) => {
-    g.fillStyle = on ? C.ink : C.muted; g.fillText(label, x, yy);
-    g.fillStyle = '#1d2a3b'; g.fillRect(x, yy + 4, bw, 8);
-    g.fillStyle = on ? (v >= th ? C.warn : C.fly) : '#4a5d72'; g.fillRect(x, yy + 4, bw * Math.min(1, v / max), 8);
-    g.strokeStyle = C.warn; g.setLineDash([2, 2]); g.beginPath(); g.moveTo(x + bw * th / max, yy + 1); g.lineTo(x + bw * th / max, yy + 15); g.stroke(); g.setLineDash([]);
-    g.fillStyle = C.muted; g.fillText(txt, x + bw + 6, yy + 12);
-  };
-  bar(y + 10, '見かけの大きさ', deg, 90, L.fly.toDeg, P.model === 'size', deg.toFixed(1) + '°');
-  bar(y + 36, 'ふくらむ速さ', st.rate, 1, L.fly.rateTh, P.model === 'rate', st.rate > 9.99 ? '>10' : st.rate.toFixed(2));
-  const fs = st.fl === 'rest' ? ['ハエ: まだ逃げない', C.muted] : st.fl === 'wing' ? ['ハエ: 気づいた（翅を上げた）', C.acc] : ['ハエ: 飛び立った', C.ok];
-  g.fillStyle = fs[1]; g.fillText(fs[0], x, y + 72);
-  if (st.outside && st.sp === 'stalk') { g.fillStyle = C.muted; g.fillText('※ 測った近づき方の範囲の外（推定）', x, y + 88); }
-}
-
-// グラフ: 横軸はハエからの距離（左が遠い）。Dill 1975 図4 と同じ向き
-function drawGraph(g, w, h, hist, cur, P) {
-  g.fillStyle = C.bg; g.fillRect(0, 0, w, h);
-  const l = 40, r = w - 44, t = 12, b = h - 30, D0 = hist.length ? hist[0].D : 75;
-  const X = d => l + (r - l) * (1 - d / D0), Y1 = v => b - (b - t) * Math.min(1, v / 90), Y2 = v => b - (b - t) * Math.min(1, v / 1);
-  g.strokeStyle = C.line; g.lineWidth = 1; g.strokeRect(l, t, r - l, b - t);
-  g.font = '10px "IBM Plex Mono",monospace'; g.fillStyle = C.muted; g.textAlign = 'center';
-  for (let d = 0; d <= D0; d += 10) { g.fillText(d, X(d), b + 12); }
-  g.fillText('ハエからの距離（mm）', (l + r) / 2, b + 25);
-  g.textAlign = 'right'; for (const v of [0, 30, 60, 90]) g.fillText(v + '°', l - 4, Y1(v) + 3);
-  g.textAlign = 'left'; for (const v of [0, 0.5, 1]) g.fillText(v, r + 4, Y2(v) + 3);
-  // しきい値（※ 目印）
-  g.setLineDash([4, 3]); g.strokeStyle = C.warn;
-  g.globalAlpha = P.model === 'size' ? 1 : 0.4; g.beginPath(); g.moveTo(l, Y1(L.fly.toDeg)); g.lineTo(r, Y1(L.fly.toDeg)); g.stroke();
-  g.globalAlpha = P.model === 'rate' ? 1 : 0.4; g.beginPath(); g.moveTo(l, Y2(L.fly.rateTh)); g.lineTo(r, Y2(L.fly.rateTh)); g.stroke();
-  g.globalAlpha = 1; g.setLineDash([]);
-  g.fillStyle = C.warn; g.fillText('54°', l + 4, Y1(L.fly.toDeg) - 3); g.textAlign = 'right'; g.fillText('0.3', r - 4, Y2(L.fly.rateTh) - 3); g.textAlign = 'left';
-  // 線（cur まで）
-  const line = (key, Y, col) => {
-    g.strokeStyle = col; g.lineWidth = 2; g.beginPath(); let started = false;
-    const n = Math.min(cur, hist.length - 1), stride = Math.max(1, Math.floor(n / 1500));
-    for (let i = 0; i <= n; i += stride) { const s = hist[i]; if (s.D <= 0) break; const x = X(s.D), y = Y(key === 'th' ? s.th * 180 / Math.PI : s.rate); started ? g.lineTo(x, y) : g.moveTo(x, y); started = true; }
-    const s = hist[n]; if (s && s.D > 0) g.lineTo(X(s.D), Y(key === 'th' ? s.th * 180 / Math.PI : s.rate));
-    g.stroke();
-  };
-  line('th', Y1, C.fly); line('rate', Y2, C.acc);
-  const s = hist[Math.min(cur, hist.length - 1)];
-  if (s) { g.strokeStyle = 'rgba(232,240,244,.5)'; g.beginPath(); g.moveTo(X(s.D), t); g.lineTo(X(s.D), b); g.stroke(); }
-}
-
-return { drawScene, drawGraph, drawFly, C };
+return { drawScene, C };
 })();

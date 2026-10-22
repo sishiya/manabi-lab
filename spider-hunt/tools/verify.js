@@ -27,8 +27,8 @@ ok(Math.abs(R - 11.6) < 0.01, '放物線が跳ぶ距離 11.6mm に届く');
 const fmt = x => x == null ? '   —  ' : (x * 1000).toFixed(0).padStart(5) + 'ms';
 console.log('\n速さ    モデル  かがむ | 気づく距離  跳びつき  飛び立ち  とどく   結果');
 for (const speed of ['dill', 'const', 'fast']) for (const model of ['size', 'rate']) for (const crouch of [false, true]) {
-  const P = { speed, model, crouch, fastV: 30 };
-  const st = M.run(P), ev = st.ev, vd = M.verdict(st);
+  const P = { speed, model, crouch, fastV: 30, prey: 'housefly' };
+  const st = M.run(P), ev = st.ev, vd = M.verdict(st, P);
   // 気づいた距離をもう一度計算する（run は距離を残さないので、同じ条件で追う）
   const s2 = M.newState(P); let dWr = null;
   while (!M.done(s2) && s2.t < 30) { M.step(s2, P, 0.0005); if (dWr == null && s2.ev.wr != null) dWr = s2.D; }
