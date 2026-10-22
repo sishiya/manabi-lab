@@ -7,6 +7,7 @@ const GREEN = '#7be38a', UV = '#b48cff', RED = '#ff6a5a';
 
 // 獲物の小さなかげ（像のタイル用）
 function preyIcon(g, cx, cy, sz, col) {
+  if (!(sz > 2)) return;   // 枠がとても小さいときは描かない（半径がマイナスになるのを防ぐ）
   g.fillStyle = col;
   g.beginPath(); g.ellipse(cx, cy, sz * 0.42, sz * 0.2, 0, 0, 7); g.fill();
   g.beginPath(); g.ellipse(cx + sz * 0.38, cy - sz * 0.02, sz * 0.13, sz * 0.15, 0, 0, 7); g.fill();
@@ -15,6 +16,7 @@ function preyIcon(g, cx, cy, sz, col) {
 
 function draw(g, w, h, s, P) {
   g.fillStyle = C.bg; g.fillRect(0, 0, w, h);
+  if (w < 60 || h < 60) return;   // 隠れている・小さすぎるときは描かない
   const red = P.color === 'red', L = OP.layers(), D = Math.max(1, s.D);
   const narrow = w < 520;
   // --- 断面（左、または上）
@@ -29,7 +31,7 @@ function draw(g, w, h, s, P) {
   g.textAlign = 'left';
   // レンズ
   g.strokeStyle = 'rgba(232,240,244,.7)'; g.fillStyle = 'rgba(232,240,244,.08)'; g.lineWidth = 1.5;
-  g.beginPath(); g.ellipse(lensX, cy, 7, ap * 1.05, 0, 0, 7); g.fill(); g.stroke();
+  g.beginPath(); g.ellipse(lensX, cy, 7, Math.max(1, ap * 1.05), 0, 0, 7); g.fill(); g.stroke();
   // 光の線: 獲物の1点から来た光がレンズで曲がり、どこで1点に集まるか
   const ray = (F, col) => {
     const xf = X(OP.imageDist(D, F));
@@ -59,6 +61,7 @@ function draw(g, w, h, s, P) {
   const Fuse = red ? OP.Fr() : OP.OPT.Fg, far = s.D0 || 73;
   const b1 = OP.blur(D, Fuse, L.L1), b2 = OP.blur(D, Fuse, L.L2), b2far = OP.blur(far, OP.OPT.Fg, L.L2);
   const tile = (x, lab, b) => {
+    if (tw < 8 || th < 8) return;
     g.fillStyle = '#0b1d10'; g.fillRect(x, ty, tw, th); g.strokeStyle = C.line; g.strokeRect(x + 0.5, ty + 0.5, tw - 1, th - 1);
     g.save(); g.beginPath(); g.rect(x, ty, tw, th); g.clip();
     g.filter = `blur(${Math.min(14, b / b2far * 2.2).toFixed(1)}px)`; preyIcon(g, x + tw / 2, ty + th / 2, Math.min(tw, th) * 0.8, GREEN); g.filter = 'none';

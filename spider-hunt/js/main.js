@@ -83,7 +83,8 @@ let last = performance.now();
 function loop(now) {
   const real = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now; /* 最初のコマは now が last より前のことがある */
   if (!S.paused) advance(real);
-  draw(); requestAnimationFrame(loop);
+  try { draw(); } catch (e) { window.__sphuErr.push(String(e && e.message || e)); }   // 描画のエラーでループを止めない
+  requestAnimationFrame(loop);
 }
 
 // ---- 操作
