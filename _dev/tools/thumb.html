@@ -19,6 +19,8 @@ const click = (w, sel) => { const e = w.document.querySelector(sel); if (e) e.cl
 
 // アプリごとの準備（w = アプリの window）
 const SETUP = {
+  // クモがハエをつかまえるまで: クモが跳んでいるところ（ハエが翅を上げた直後）。3つの視界が並ぶ
+  'spider-hunt': async w => { await wait(800); w.__sphu.toEnd(); const e = w.__sphu.S.hist[w.__sphu.S.hist.length - 1].ev; w.__sphu.at(e.wr + 0.002); await wait(300); },
   // 波が育つまで: 風速 10 m/s が 12 時間吹いた海（逆光のきらきら）。WebGL2 の海なので、描けない環境では「描けません」の文になる
   'wave-growth': async w => { await wait(1500); w.__wagr.S.t = 12 * 3600; w.__wagr.S.free = true; w.__wagr.update(); w.__wagr.simRun(1); await wait(500); },
   // ビッグバンから惑星まで（WebGPU。ここは swiftshader で WebGPU が無いので「使えません」の画面になる。サムネイルは GPU つきで撮って手で切りぬいた: big-bang/DEVNOTES）

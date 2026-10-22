@@ -1,0 +1,61 @@
+/* クモがハエをつかまえるまで */
+:root{--bg:#16202e;--bg2:#1d2a3b;--line:#2f4157;--ink:#e8f0f4;--muted:#a3b4bf;--acc:#ffc95a;--fly:#8fd3ff;--warn:#ff8a7a;--ok:#9be39b;
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+#app{max-width:1200px;margin:0 auto}
+#top{padding:10px 16px 4px}
+#top h1{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0}
+#top .q{margin:2px 0 0;color:var(--muted);font-size:14px}
+.mono{font-family:var(--f-mono)}
+
+/* 上に固定する部分 */
+#pin{position:sticky;top:0;z-index:5;background:var(--bg);padding:4px 16px 6px;border-bottom:1px solid var(--line)}
+#sceneBox{height:200px;position:relative}
+#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
+#viewTabs{display:none;gap:6px;margin:4px 0}
+#views{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+#views figure{margin:0;position:relative}
+#views canvas{width:100%;height:170px;display:block;background:#0e1620;border:1px solid var(--line);border-radius:6px}
+#views figcaption{font-size:12px;color:var(--muted);margin-top:2px}
+#status{margin:4px 0 0;font-size:15px;min-height:1.5em;line-height:1.5}
+#status b.caught{color:var(--warn)} #status b.escaped{color:var(--ok)} #status b.close{color:var(--acc)}
+
+/* 操作 */
+#ctl,#graphBox,#explain,#about{padding:8px 16px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0}
+.row.time{flex-wrap:nowrap}
+#tl{flex:1;min-width:0;accent-color:var(--acc);height:36px}
+#tnow{min-width:78px;text-align:right;font-size:13px;color:var(--muted)}
+.lab{font-size:13px;color:var(--muted)}
+button{font:inherit;font-size:14px;color:var(--ink);background:var(--bg2);border:1px solid var(--line);border-radius:6px;min-height:36px;padding:4px 10px;cursor:pointer}
+button.on{background:#3a3220;border-color:var(--acc);color:var(--acc)}
+#play{min-width:44px}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.chk{font-size:14px;display:flex;align-items:center;gap:6px;min-height:36px}
+.chk input{width:18px;height:18px;accent-color:var(--acc)}
+.hint{font-size:13px;color:var(--muted);margin:4px 0}
+h2{font-size:16px;margin:12px 0 6px}
+#graph{width:100%;height:220px;display:block;background:#0e1620;border:1px solid var(--line);border-radius:6px}
+.legend{font-size:12px;color:var(--muted)}
+.k{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:4px}
+.k1{background:var(--fly)} .k2{background:var(--acc)} .k3{background:repeating-linear-gradient(90deg,var(--warn) 0 4px,transparent 4px 7px)}
+#explain p{font-size:14px;line-height:1.8;margin:6px 0}
+#explain .note{color:var(--muted);font-size:13px}
+#about{color:var(--muted);font-size:14px;line-height:1.8;padding-bottom:32px}
+#about summary{cursor:pointer;color:var(--ink);min-height:36px}
+#about a{color:var(--acc)}
+
+/* スマホ: 視界は1つずつ切りかえ */
+@media (max-width:760px){
+  #top h1{font-size:19px}
+  #sceneBox{height:150px}
+  #viewTabs{display:flex}
+  #viewTabs button{flex:1}
+  #views{grid-template-columns:1fr}
+  #views figure{display:none}
+  #views figure.on{display:block}
+  #views canvas{height:130px}
+  #status{font-size:14px}
+}
