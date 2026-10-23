@@ -73,9 +73,12 @@ const UI = (() => {
   function buildEvents() {
     events = Story.events();
     const ol = $('events'); ol.innerHTML = '';
+    let prev = '';
     events.forEach(e => {
       const li = document.createElement('li');
-      li.innerHTML = `<button><span class="eu mono">${evLabel(e)}</span><b>${e.title}</b></button>`;
+      // 同じ区間がつづくときは、区間の名前を頭の1行だけに出す（毎行くり返さない）
+      const lab = evLabel(e), show = lab !== prev; prev = lab;
+      li.innerHTML = `<button><span class="eu mono">${show ? lab : ''}</span><b>${e.title}</b></button>`;
       li.querySelector('button').addEventListener('click', () => { go(e.u + 0.0005, e); });
       ol.appendChild(li);
     });
@@ -189,12 +192,12 @@ const UI = (() => {
     const inside = st.id === 'inside' || st.id === 'burst';
     let html = '';
     if (st.id === 'spread') { const cc = Story.colonyCounts(st.min - Story.M.tEnd); html = L(`<dl class="stat"><dt>ファージ</dt><dd>約${cc.phage.toLocaleString()}個 <small>目安</small></dd><dt>破れた細菌</dt><dd>${cc.burst} ／ ${cc.cells}</dd><dt>とりつかれて中で増えている</dt><dd>${cc.inf}</dd></dl>`, `<dl class="stat"><dt>Phages</dt><dd>about ${cc.phage.toLocaleString()} <small>rough guide</small></dd><dt>Burst bacteria</dt><dd>${cc.burst} / ${cc.cells}</dd><dt>Infected, phages multiplying</dt><dd>${cc.inf}</dd></dl>`); }
-    else if (!inside) html = L('<p class="small2">細菌の中に入ってから数える。</p>', "<p class=\"small2\">Counting starts once the DNA is inside the bacterium.</p>");
+    else if (!inside) html = '';
     else {
       const c = Story.counts(st.min), n = v => Math.round(v).toLocaleString();
       html = L(`<dl class="stat"><dt>T4 の DNA</dt><dd>約${n(c.genomes)}本ぶん <small>目安</small></dd><dt>細菌の DNA</dt><dd>${Math.round(Story.hostLeft(st.min) * 100)}% <small>目安</small></dd><dt>頭の殻 gp23</dt><dd>約${n(c.gp23)}個</dd><dt>さや gp18</dt><dd>約${n(c.gp18)}個</dd><dt>組み立て中の頭</dt><dd>${c.building + c.packing}個</dd><dt>完成</dt><dd>${c.done}個</dd></dl>`, `<dl class="stat"><dt>T4 DNA</dt><dd>about ${n(c.genomes)} copies <small>rough guide</small></dd><dt>Bacterial DNA</dt><dd>${Math.round(Story.hostLeft(st.min) * 100)}% <small>rough guide</small></dd><dt>Head shell gp23</dt><dd>about ${n(c.gp23)}</dd><dt>Sheath gp18</dt><dd>about ${n(c.gp18)}</dd><dt>Heads being built</dt><dd>${c.building + c.packing}</dd><dt>Finished</dt><dd>${c.done}</dd></dl>`);
     }
-    if (html !== lastCount) { $('counts').innerHTML = html; lastCount = html; }
+    if (html !== lastCount) { $('counts').innerHTML = html; lastCount = html; $('countBox').hidden = !html; }
   }
 
   // 言語: 切りかえボタンと、HTML の属性（title・aria-label）・ページの題名
