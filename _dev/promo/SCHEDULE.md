@@ -69,7 +69,7 @@
 | 2026-10-16 | さなぎの中で | `metamorphosis-time-driven-canvas` | 公開ずみ（Zenn 10/19 9:45・DEV は公開ずみ（10/16）） |
 | 2026-10-17 | 免疫のたたかい | `immune-ode-model-rk4` | 公開ずみ（Zenn 10/21 9:34・DEV は公開ずみ（10/22）） |
 | 2026-10-18 | 空気の流れの見える部屋 | `airflow-age-of-air-bicgstab` | 公開ずみ（Zenn 10/22 9:40・DEV は公開ずみ（10/22）） |
-| 2026-10-19 | 進化の箱庭 | `ga-creatures-spring-physics` | Zenn は 10/23 の朝に出す予定（1日1本）・DEV は公開ずみ（10/22） |
+| 2026-10-19 | 進化の箱庭 | `ga-creatures-spring-physics` | 公開ずみ（Zenn 10/23 9:45・DEV は公開ずみ（10/22）） |
 | 2026-10-20 | 神の視点マップ | `godview-tear-earth-sph-worker` | Zenn は 10/24 の朝に出す予定（1日1本）・DEV は公開ずみ（10/22） |
 | 2026-10-21 | 電波の見える部屋 | `wifi-fdtd-webgl2-grid-fix` | Zenn は 10/25 の朝に出す予定（1日1本）・DEV は公開ずみ（10/22） |
 | 2026-10-22 | カビが育つまで | `mold-growth-hyphae-grid` | Zenn は 10/26 の朝に出す予定（1日1本）・DEV は動画の日に |
