@@ -73,6 +73,9 @@ select{background:var(--raise);border:1px solid var(--line2);border-radius:8px;p
 .chk{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--muted);cursor:pointer}
 .chk input{accent-color:var(--accent)}
 
+details.more{display:flex;flex-direction:column;gap:8px}
+details.more>summary{cursor:pointer;color:var(--muted);font-size:12.5px}
+details.more[open]>summary{margin-bottom:8px}
 details.about{border-top:1px solid var(--line);padding-top:10px}
 details.about summary{cursor:pointer;color:var(--muted);font-size:13px;font-weight:700}
 details.about ol,details.about ul{padding-left:1.3em;margin:8px 0;font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:6px}

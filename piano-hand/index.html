@@ -47,8 +47,8 @@
         <h1><span lang="ja">ピアノを弾く手</span><span lang="en">Hands at the Piano</span> <small><span lang="ja">技術検証</span><span lang="en">Tech test</span></small></h1>
         <div class="langsw" id="langsw" role="group" aria-label="言語 / Language"><button data-l="ja" title="日本語">JP</button><button data-l="en" title="English">EN</button></div>
       </div>
-      <p lang="ja">譜面を人の手として無理のない動きで弾けるかを確かめる<b>検証用の試作</b>です。収録した曲は、教本や定番の版に書かれた<b>一般的な運指</b>で弾きます（出どころは曲ごとに表示）。「運指」を切りかえると、コンピュータが推定した運指で弾いて、ちがいをくらべられます。演奏の手本ではありません。両手・和音（片手で5音まで）。MIDI や MusicXML の楽譜も開けます。</p>
-      <p lang="en">This <b>test prototype</b> checks whether a human hand could really play the music with natural movements. The built-in pieces are played with the <b>standard fingering</b> printed in exercise books and well-known editions (the source is shown for each piece). Switch "Fingering" to play with the computer's own estimate and compare the two. Not a model for how to play. Both hands, chords (up to 5 notes per hand). You can also open MIDI and MusicXML scores.</p>
+      <p lang="ja">譜面を人の手として無理のない動きで弾けるかを確かめる<b>検証用の試作</b>です。曲は教本や定番の版に書かれた<b>一般的な運指</b>で弾きます。演奏の手本ではありません。</p>
+      <p lang="en">This <b>test prototype</b> checks whether a human hand could really play the music with natural movements. The pieces are played with the <b>standard fingering</b> printed in exercise books and well-known editions. Not a model for how to play.</p>
     </header>
 
     <section>
@@ -59,9 +59,9 @@
       </div>
       <select id="fgMode"></select>
       <p class="cap" id="fgNow"></p>
-      <p class="cap" lang="ja">MIDI と MusicXML（.mxl も）。ファイルはこの画面の中だけで読み、どこにも送りません。画面にドロップしても開けます。</p>
-      <p class="cap" lang="en">MIDI and MusicXML (.mxl too). The file is read only on this page and is not sent anywhere. You can also drop it on the screen.</p>
       <p class="cap" id="songWhy"></p>
+      <p class="cap" lang="ja">楽譜は MIDI・MusicXML（.mxl も）。ファイルはこの画面の中だけで読み、どこにも送りません（ドロップでも開けます）。</p>
+      <p class="cap" lang="en">Scores: MIDI or MusicXML (.mxl too). The file is read only on this page and is not sent anywhere (you can also drop it).</p>
     </section>
 
     <section>
@@ -69,6 +69,7 @@
       <select id="handLook"></select>
       <p class="cap" id="lookLegend" hidden><span lang="ja"><span style="color:#c0574e">■</span>筋肉 <span style="color:#a9bdd0">■</span>腱 <span style="color:#d9b14a">■</span>脂肪 <span style="color:#e6dcc6">■</span>骨</span><span lang="en"><span style="color:#c0574e">■</span>muscle <span style="color:#a9bdd0">■</span>tendon <span style="color:#d9b14a">■</span>fat <span style="color:#e6dcc6">■</span>bone</span></p>
       <div class="row"><select id="sceneSel"></select><select id="voiceSel"></select></div>
+      <details class="more"><summary><span lang="ja">表示の設定（ノーツ・音の名前・指の番号・エフェクト）</span><span lang="en">Display options (notes, note names, finger numbers, effects)</span></summary>
       <label class="chk"><input type="checkbox" id="optFx" checked> <span lang="ja">エフェクト（光のにじみ・光の粒・もや。動きが重いときは外す）</span><span lang="en">Effects (glow, sparks and mist; turn off if it runs slowly)</span></label>
       <label class="chk"><input type="checkbox" id="optNotes" checked> <span lang="ja">ノーツ（降ってくる光の帯）を見せる</span><span lang="en">Show the notes (falling bars of light)</span></label>
       <label class="chk"><input type="checkbox" id="optKeyLabels" checked> <span lang="ja">鍵盤に音の名前（ド4 など）</span><span lang="en">Note names on the keyboard (C4 and so on)</span></label>
@@ -76,15 +77,18 @@
       <label class="chk"><input type="checkbox" id="optFingerNums"> <span lang="ja">指先に指の番号</span><span lang="en">Finger numbers on fingertips</span></label>
       <label class="chk"><input type="checkbox" id="optFollow" checked> <span lang="ja">カメラが手について行く</span><span lang="en">Camera follows the hands</span></label>
       <label class="chk"><input type="checkbox" id="optTargets"> <span lang="ja">指先の目標点（IK でねらう場所）</span><span lang="en">Fingertip targets (where IK aims)</span></label>
+      </details>
     </section>
 
     <section>
       <h2><span lang="ja">手と弾き方</span><span lang="en">Hand and playing</span></h2>
       <select id="handModel"></select>
+      <details class="more"><summary><span lang="ja">弾き方（打鍵・指の構え・関節）と手の大きさ</span><span lang="en">Playing style (stroke, finger shape, joints) and hand size</span></summary>
       <select id="strokeSel"></select>
       <select id="postureSel"></select>
       <label class="chk"><input type="checkbox" id="optFlex" checked> <span lang="ja">関節をやわらかく（ストレッチした手の目安）</span><span lang="en">Flexible joints (a rough guide for a stretched hand)</span></label>
       <p class="cap" id="handInfo"></p>
+      </details>
     </section>
 
     <section class="card" id="checks">
@@ -96,12 +100,13 @@
     </section>
 
     <section>
-      <h2><span lang="ja">決まった運指</span><span lang="en">Chosen fingering</span></h2>
+      <details class="more"><summary><span lang="ja">決まった運指（音ごとの指・答え合わせ）</span><span lang="en">Chosen fingering (finger for each note, comparison)</span></summary>
       <p class="cap"><span lang="ja">運指の罰点の合計</span><span lang="en">Total fingering penalty</span> <b id="fgCost" class="mono"></b><span lang="ja">（小さいほど楽）</span><span lang="en"> (lower is easier)</span></p>
       <p class="cap" id="fgRef"></p>
       <button class="btn" id="btnVal"><span lang="ja">コンピュータの推定と一般的な運指の答え合わせをまとめて</span><span lang="en">Compare the computer's estimate with the standard fingering (all pieces)</span></button>
       <div id="valOut"></div>
       <div id="fgList"></div>
+      </details>
     </section>
 
     <details class="about" lang="ja">
