@@ -1,0 +1,33 @@
+{
+  "file": "_dev/promo/out/piano-hand-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/piano-hand-short.jpg",
+  "privacy": "private",
+  "publishAt": "2026-10-25T20:05:00+09:00",
+  "captions": { "en": "_dev/promo/out/piano-hand-short.en.srt" },
+  "title": "皮ふの下に骨と筋肉 ― 楽譜から計算して弾く3Dの手 #Shorts",
+  "description": "楽譜から両手の動きを計算して、3D の手がピアノを弾く。骨の長さは測った研究の値、皮ふは骨と筋肉の模型から作り、届かない音は「押せなかった」と正直に出す。ブラウザのアプリ「ピアノを弾く手」（技術検証）から。\n\nアプリ: https://sishiya.github.io/manabi-lab/piano-hand/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ: Parncutt ほか (1997) Music Perception 14(4)、Buryanov & Kotiuk (2010) International Journal of Morphology 28(3)、Zhu ほか (2013) ほか\n\n音楽: アプリの中で合成したピアノの音です。\n\n#ピアノ #運指 #3DCG #まなびラボ",
+  "tags": [
+    "ピアノを弾く手",
+    "ピアノ",
+    "運指",
+    "親指くぐり",
+    "3DCG",
+    "Shorts",
+    "まなびラボ",
+    "しし屋",
+    "Hands at the Piano",
+    "piano fingering",
+    "hand animation"
+  ],
+  "localizations": {
+    "en": {
+      "title": "Bones and muscles under the skin ― 3D hands that play from the score #Shorts",
+      "description": "3D hands play the piano with both-hand movements computed from the score. Bone lengths come from measured studies, the skin is built from a model of bones and muscles, and notes out of reach are honestly shown as \"could not press\". From \"Hands at the Piano\", a browser app (a tech demo).\n\nApp (switch the app to English with the EN button): https://sishiya.github.io/manabi-lab/piano-hand/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMain sources: Parncutt et al. (1997) Music Perception 14(4), Buryanov & Kotiuk (2010) International Journal of Morphology 28(3), Zhu et al. (2013), and others\n\nMusic: piano sounds synthesized in the app.\n\n#Piano #3DCG #Shorts"
+    }
+  },
+  "x": {
+    "text": "楽譜から両手の動きを計算して、3D の手がピアノを弾く。\n皮ふの下には骨と筋肉。届かない音は「押せなかった」と正直に出します。\n#ピアノ #運指 #3DCG #まなびラボ",
+    "en": "3D hands that play the piano from the score, with bones and muscles under the skin.",
+    "reply": "アプリ（ブラウザで無料・日本語/English）: https://sishiya.github.io/manabi-lab/piano-hand/"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "file": "_dev/promo/out/piano-hand-guide.mp4",
+  "thumbnail": "_dev/promo/thumbs/piano-hand-guide.jpg",
+  "privacy": "private",
+  "publishAt": "2026-10-25T20:00:00+09:00",
+  "captions": { "en": "_dev/promo/out/piano-hand-guide.en.srt" },
+  "title": "ピアノを弾く手 ― 使い方と見どころ（親指くぐり・骨と筋肉・運指の答え合わせ）",
+  "description": "楽譜から両手の動きを計算して、3D の手がピアノを弾くブラウザのアプリ「ピアノを弾く手」の、使い方と見どころです。骨の長さは測った研究の値、皮ふは骨と筋肉の模型から作り、届かない音は「押せなかった」とそのまま出します。どの指で弾くかは、教本に書かれた一般的な運指と、コンピュータの推定を切りかえてくらべられます。人の手で無理なく弾けるかを確かめる技術検証で、演奏の手本ではありません。\n\n0:00 はじめに\n0:15 曲を選んで再生\n0:22 自分の楽譜ファイルを開く\n0:30 見る向き・一人称\n0:46 指の番号と運指\n0:53 音階の親指くぐり\n1:00 教本の運指との答え合わせ\n1:08 皮ふを透かして骨・筋肉\n1:31 指の構えと打鍵\n1:48 超絶技巧の練習曲\n1:56 検査の結果\n2:07 シーンと音色\n2:13 手の大きさ\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/piano-hand/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nParncutt R ほか (1997) An ergonomic model of keyboard fingering for melodic fragments. Music Perception 14(4)\nZhu Y ほか (2013) A system for automatic animation of piano performances. Computer Animation and Virtual Worlds 24(5)\nBuryanov A, Kotiuk V (2010) Proportions of hand segments. International Journal of Morphology 28(3)（大人66人の X 線写真）\n河内まき子 (2012) AIST 日本人の手の寸法データ\nBoyle R ほか (2015) ピアニストの手の開きの調査（Australasian Piano Pedagogy Conference 2015）\nHäger-Ross C, Schieber MH (2000) Journal of Neuroscience 20(22)\nC.-L. Hanon (1873)『ヴィルトゥオーゾ・ピアニスト』の運指、ベートーヴェン「エリーゼのために」Henle 版の運指\nほかはアプリの「このアプリについて・おもな出どころ」に。\n曲はどれも著作権の切れたものか、このアプリで作ったものです。\n\n音楽: アプリの中で合成したピアノの音です。\n\n#ピアノ #運指 #3DCG #まなびラボ",
+  "tags": [
+    "ピアノを弾く手",
+    "ピアノ",
+    "運指",
+    "親指くぐり",
+    "手の骨",
+    "シミュレーション",
+    "3DCG",
+    "使い方",
+    "まなびラボ",
+    "しし屋",
+    "Hands at the Piano",
+    "piano fingering",
+    "hand animation",
+    "piano simulation"
+  ],
+  "localizations": {
+    "en": {
+      "title": "Hands at the Piano ― App Guide: Thumb-Under, Bones and Muscles, Checking the Fingering",
+      "description": "A guide to \"Hands at the Piano\", a browser app where 3D hands play the piano with both-hand movements computed from the score. Bone lengths come from measured studies, the skin is built from a model of bones and muscles, and notes the hand cannot reach are shown as \"could not press\". You can switch between the standard textbook fingering and the computer's own estimate to compare them. It is a tech demo that checks whether a human hand could play the music naturally, not a model for how to play. Turn on English subtitles (CC).\n\n0:00 Intro\n0:15 Choose a piece and play\n0:22 Open your own score file\n0:30 Camera views and POV\n0:46 Finger numbers and fingering\n0:53 The thumb passing under in scales\n1:00 Checking against textbook fingering\n1:08 Bones and muscles through the skin\n1:31 Finger shape and keystroke\n1:48 A virtuoso étude\n1:56 Check results\n2:07 Scenes and instrument sounds\n2:13 Hand sizes\n\nTry the app (runs in your browser, PC or phone; switch the app to English with the EN button):\nhttps://sishiya.github.io/manabi-lab/piano-hand/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nMain sources:\nParncutt R et al. (1997) An ergonomic model of keyboard fingering for melodic fragments. Music Perception 14(4)\nZhu Y et al. (2013) A system for automatic animation of piano performances. Computer Animation and Virtual Worlds 24(5)\nBuryanov A, Kotiuk V (2010) Proportions of hand segments. International Journal of Morphology 28(3) (X-rays of 66 adults)\nKouchi M (2012) AIST Japanese hand dimensions data\nBoyle R et al. (2015) A survey of pianists' hand spans (Australasian Piano Pedagogy Conference 2015)\nHäger-Ross C, Schieber MH (2000) Journal of Neuroscience 20(22)\nFingering from C.-L. Hanon (1873) The Virtuoso Pianist and the Henle edition of Beethoven's Für Elise\nMore in the app under \"About this app and main sources\".\nAll pieces are public domain or were made for this app.\n\nMusic: piano sounds synthesized in the app.\n\n#Piano #Fingering #3DCG"
+    }
+  }
+}
