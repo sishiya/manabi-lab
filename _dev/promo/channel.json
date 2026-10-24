@@ -1,12 +1,12 @@
 {
-  "title": "しし屋",
+  "title": "しし屋 | まなび あそび くらし",
   "banner": "",
   "keywords": "しし屋 まなびラボ あそびラボ くらしラボ 学び 理科 科学 シミュレーション 自由研究 地球の歴史 進化 恐竜 宇宙 ブラックホール 人体 生き物 物理 ブラウザで動く ブラウザゲーム ゲーム 教育 Claude",
-  "description": "しし屋は、ブラウザで動くアプリを作っています。無料・インストール不要で、スマホでも動きます。\n\n▶ まなびラボ … ふだん見えない「しくみ」を、動かして見る理科のアプリ（体の中・電波・量子・ブラックホール・進化 など）\nhttps://sishiya.github.io/manabi-lab/\n▶ あそびラボ … ブラウザで遊べる小さなゲーム\nhttps://sishiya.github.io/asobi-lab/\n▶ くらしラボ … 「なぜ」が見える、くらしの道具\nhttps://sishiya.github.io/kurashi-lab/\n\n動画は、アプリの使い方と見どころ（横長）と、ショートの紹介です。物理は曲げずに計算し、出どころはアプリの画面に書いています。アプリは Claude（AI）と一緒に作っています。",
+  "description": "しし屋は、ブラウザで動くアプリを作っています。無料・インストール不要で、スマホでも動きます。\n\n🦁 しし屋のトップ（3つのラボの入口）\nhttps://sishiya.github.io/\n\n▶ まなびラボ … ふだん見えない「しくみ」を、動かして見る理科のアプリ（体の中・電波・量子・ブラックホール・進化 など）\nhttps://sishiya.github.io/manabi-lab/\n▶ あそびラボ … ブラウザで遊べる小さなゲーム\nhttps://sishiya.github.io/asobi-lab/\n▶ くらしラボ … 「なぜ」が見える、くらしの道具\nhttps://sishiya.github.io/kurashi-lab/\n\n動画は、アプリの使い方と見どころ（横長）と、ショートの紹介です。物理は曲げずに計算し、出どころはアプリの画面に書いています。アプリは Claude（AI）と一緒に作っています。",
   "localizations": {
     "en_US": {
       "title": "Sishiya",
-      "description": "Sishiya makes apps that run in your browser: free, no install, and they work on phones too.\n\n▶ Manabi Lab … science apps that let you move things and see how they work (inside the body, WiFi, quantum, black holes, evolution and more)\nhttps://sishiya.github.io/manabi-lab/?lang=en\n▶ Asobi Lab … small games you can play in the browser\nhttps://sishiya.github.io/asobi-lab/\n▶ Kurashi Lab … everyday tools that show the \"why\"\nhttps://sishiya.github.io/kurashi-lab/\n\nVideos are app guides (landscape) and short intros. The physics is computed honestly, and sources are shown in each app. Made together with Claude (AI)."
+      "description": "Sishiya makes apps that run in your browser: free, no install, and they work on phones too.\n\n🦁 Sishiya home (the way into all three labs)\nhttps://sishiya.github.io/?lang=en\n\n▶ Manabi Lab … science apps that let you move things and see how they work (inside the body, WiFi, quantum, black holes, evolution and more)\nhttps://sishiya.github.io/manabi-lab/?lang=en\n▶ Asobi Lab … small games you can play in the browser\nhttps://sishiya.github.io/asobi-lab/\n▶ Kurashi Lab … everyday tools that show the \"why\"\nhttps://sishiya.github.io/kurashi-lab/\n\nVideos are app guides (landscape) and short intros. The physics is computed honestly, and sources are shown in each app. Made together with Claude (AI)."
     }
   }
 }
