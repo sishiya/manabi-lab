@@ -25,35 +25,44 @@ function detectScale(d, w, h) {
   return 1;
 }
 
-// file → Promise<{ pic, note }>
+// 読んだ画像（src: RGBA, w, h）を、元の1ドット＝k ピクセルとして小さくする。k を省くと自動で見つける
+function build(raw, k) {
+  const { src, w, h } = raw, auto = !k;
+  if (auto) k = detectScale(src, w, h);
+  let sx = k, nw = Math.floor(w / k), nh = Math.floor(h / k);
+  let note = auto
+    ? (k > 1 ? L(`${k}倍に拡大された絵とみて、${nw}×${nh} ドットに戻しました。`, `Looks enlarged ${k}×, so it was shrunk back to ${nw}×${nh} pixels.`) : L(`${nw}×${nh} ドット。`, `${nw}×${nh} pixels.`))
+    : L(`元の1ドット＝${k}ピクセルとして、${nw}×${nh} ドットに。`, `Treating ${k} pixels as one dot: ${nw}×${nh} pixels.`);
+  if (nw > MAXW || nh > MAXH) {   // 大きすぎる絵は、間引いて小さくする（ドット絵ではない写真などは、そのぶん本当の見え方から離れる）
+    const f = Math.ceil(Math.max(nw / MAXW, nh / MAXH));
+    sx = k * f; nw = Math.floor(w / sx); nh = Math.floor(h / sx);
+    note = L(`大きいので ${nw}×${nh} ドットに間引きました。ドットの大きさが合わないときは「元の1ドット」を選んでください。`, `It was large, so it was reduced to ${nw}×${nh} pixels. If the dots do not match, choose “one dot =” below.`);
+  }
+  const data = new Uint8ClampedArray(nw * nh * 4);
+  for (let y = 0; y < nh; y++) for (let x = 0; x < nw; x++) {
+    const a = ((y * sx + (sx >> 1)) * w + x * sx + (sx >> 1)) * 4, b = (y * nw + x) * 4;
+    const al = src[a + 3] / 255;
+    data[b] = src[a] * al; data[b + 1] = src[a + 1] * al; data[b + 2] = src[a + 2] * al; data[b + 3] = 255; // すきとおった所は黒に
+  }
+  return { pic: { w: nw, h: nh, data }, note, k: sx };
+}
+
+// file → Promise<{ raw, pic, note, k }>
 function load(file) {
   return new Promise((resolve, reject) => {
     if (!file || !/^image\//.test(file.type)) { reject(new Error(L('画像のファイルを選んでください', 'Please choose an image file'))); return; }
     const url = URL.createObjectURL(file), img = new Image();
     img.onload = () => {
       URL.revokeObjectURL(url);
-      let w = img.naturalWidth, h = img.naturalHeight;
+      const w = img.naturalWidth, h = img.naturalHeight;
       const c = document.createElement('canvas'); c.width = w; c.height = h;
       const g = c.getContext('2d', { willReadFrequently: true }); g.imageSmoothingEnabled = false; g.drawImage(img, 0, 0);
-      const src = g.getImageData(0, 0, w, h).data;
-      const k = detectScale(src, w, h);
-      let sx = k, nw = Math.floor(w / k), nh = Math.floor(h / k), note = k > 1 ? L(`${k}倍に拡大された絵とみて、${nw}×${nh} ドットに戻しました。`, `Looks enlarged ${k}×, so it was shrunk back to ${nw}×${nh} pixels.`) : L(`${nw}×${nh} ドット。`, `${nw}×${nh} pixels.`);
-      if (nw > MAXW || nh > MAXH) {   // 大きすぎる絵は、間引いて小さくする（ドット絵ではない写真などは、そのぶん本当の見え方から離れる）
-        const f = Math.ceil(Math.max(nw / MAXW, nh / MAXH));
-        sx = k * f; nw = Math.floor(w / sx); nh = Math.floor(h / sx);
-        note = L(`大きいので ${nw}×${nh} ドットに間引きました（ドット絵向きのアプリです）。`, `It was large, so it was reduced to ${nw}×${nh} pixels (this app is made for pixel art).`);
-      }
-      const data = new Uint8ClampedArray(nw * nh * 4);
-      for (let y = 0; y < nh; y++) for (let x = 0; x < nw; x++) {
-        const a = ((y * sx + (sx >> 1)) * w + x * sx + (sx >> 1)) * 4, b = (y * nw + x) * 4;
-        const al = src[a + 3] / 255;
-        data[b] = src[a] * al; data[b + 1] = src[a + 1] * al; data[b + 2] = src[a + 2] * al; data[b + 3] = 255; // すきとおった所は黒に
-      }
-      resolve({ pic: { w: nw, h: nh, data }, note });
+      const raw = { src: g.getImageData(0, 0, w, h).data, w, h };
+      resolve(Object.assign({ raw }, build(raw)));
     };
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error(L('この画像は読めませんでした', 'This image could not be read'))); };
     img.src = url;
   });
 }
-window.CRT_UPLOAD = { load, detectScale };
+window.CRT_UPLOAD = { load, build, detectScale };
 })();

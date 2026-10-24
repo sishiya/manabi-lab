@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="stylesheet" href="css/style.css?v=6">
 </head>
 <body>
 <div id="app">
@@ -31,19 +31,29 @@
       <div class="tag l"><span lang="ja">液晶（ドットそのまま）</span><span lang="en">LCD (pixels as they are)</span></div><div class="tag r"><span lang="ja">ブラウン管</span><span lang="en">CRT</span></div>
       <div id="divider"><button id="handle">◀▶</button></div>
       <div id="hud"></div>
-      <div id="zoom"><button data-z="in">+</button><button data-z="out">−</button><button data-z="fit"><span lang="ja">全体</span><span lang="en">All</span></button></div>
+      <div id="zoom"><button data-z="dots" class="dots"><span lang="ja">光る点</span><span lang="en">Dots</span></button><button data-z="in">+</button><button data-z="out">−</button><button data-z="fit"><span lang="ja">全体</span><span lang="en">All</span></button></div>
     </main>
     <p id="cap"></p>
   </div>
 
   <section id="panel">
+    <div class="row trial"><h2><span lang="ja">試験: 見え方の案</span><span lang="en">Trial: look options</span></h2>
+      <div class="seg" id="lookSeg"><button data-look="0">A</button><button data-look="1">B</button><button data-look="2">C</button></div>
+      <p class="note" lang="ja">A: 光る点を本物の大きさで（全体表示では細かすぎて消える）。B: 細かすぎるときは光る点を画面の3ピクセルに合わせる（近似。本物より少し粗い）。C: B＋明るいところのにじみを強く。決まったらこの切りかえは外します。</p>
+      <p class="note" lang="en">A: glowing dots at their real size (too fine to show at full view). B: when too fine, match the dots to 3 screen pixels (an approximation, a little coarser than real). C: B plus stronger bleeding of bright areas. This switch will be removed once one is chosen.</p>
+    </div>
     <div class="row"><h2><span lang="ja">絵</span><span lang="en">Picture</span></h2>
       <div class="seg" id="picSeg">
         <button data-pic="falls"><span lang="ja">滝のある風景</span><span lang="en">Waterfall</span></button><button data-pic="lion"><span lang="ja">ししの顔</span><span lang="en">Lion face</span></button><button data-pic="patterns"><span lang="ja">しま模様</span><span lang="en">Stripes</span></button>
         <label class="file"><span lang="ja">自分の画像…</span><span lang="en">Your image…</span><input type="file" id="file" accept="image/*"></label>
       </div>
       <p class="note" id="fileNote"></p>
-      <button class="focus" id="focusBtn"><span lang="ja">寄って光る点を見る</span><span lang="en">Zoom in to the glowing dots</span></button>
+      <div id="dotRow" hidden>
+        <h3><span lang="ja">元の1ドット＝</span><span lang="en">One dot =</span></h3>
+        <div class="seg" id="dotSeg"><button data-dot="auto"><span lang="ja">自動</span><span lang="en">Auto</span></button><button data-dot="1">1</button><button data-dot="2">2</button><button data-dot="3">3</button><button data-dot="4">4</button><button data-dot="5">5</button><button data-dot="6">6</button><button data-dot="8">8</button></div>
+        <p class="note" lang="ja">ピクセル。写真とならべた画像などでドットの大きさが自動で合わないときに。元の1ドットが走査線1本になります。</p>
+        <p class="note" lang="en">pixels. Use this when the dot size is not found automatically (for example, an image placed side by side with a photo). One original dot becomes one scan line.</p>
+      </div>
     </div>
 
     <div class="row"><h2><span lang="ja">画面</span><span lang="en">Screen</span></h2>
@@ -58,6 +68,11 @@
         <button data-link="rgb">RGB</button><button data-link="svideo"><span lang="ja">S端子</span><span lang="en">S-Video</span></button><button data-link="composite"><span lang="ja">ビデオ端子</span><span lang="en">Composite</span></button><button data-link="rf"><span lang="ja">アンテナ線</span><span lang="en">RF (antenna)</span></button>
       </div>
       <p class="note" id="linkNote"></p>
+    </div>
+    <div class="row"><h2><span lang="ja">ドットの形</span><span lang="en">Dot shape</span></h2>
+      <div class="seg" id="parSeg"><button data-par="tv"><span lang="ja">当時のテレビ（横長 8:7）</span><span lang="en">Old TV (wide, 8:7)</span></button><button data-par="sq"><span lang="ja">正方形</span><span lang="en">Square</span></button></div>
+      <p class="note" lang="ja">当時のテレビでは、1ドットは横がたての約 8/7 倍の横長に映りました（横 256 ドットを 4:3 の画面に映すため。NESdev Wiki）。液晶やエミュレータで正方形のまま映すと、絵は少し細長く見えます。描き手がこの横長に合わせて絵を描いたかは、ゲームによってちがい、はっきりしません。両側に同じ形を使うので、仕切りの左右はずれません。</p>
+      <p class="note" lang="en">On TVs of the time, each dot appeared about 8/7 as wide as it was tall (because 256 dots across were shown on a 4:3 screen; NESdev Wiki). Shown as squares on an LCD or emulator, pictures look a little narrow. Whether artists drew with this stretch in mind varies from game to game and is not clear. Both sides use the same shape, so the two halves stay lined up.</p>
     </div>
 
     <div class="row"><h2><span lang="ja">しくみを1つずつ</span><span lang="en">One effect at a time</span></h2>
@@ -91,6 +106,7 @@
         <li>YIQ の式（FCC の NTSC の値。ITU-R BT.470-6 より）— <a href="https://en.wikipedia.org/wiki/YIQ" target="_blank" rel="noopener">Wikipedia「YIQ」</a></li>
         <li>ブラウン管に合わせた明るさの曲がり（ガンマ 2.4）— ITU-R BT.1886（2011）</li>
         <li>1ドット＝色副搬送波の 8/12 周期、1行ごとに 4/12 ずれる（当時の機械の一例）— <a href="https://www.nesdev.org/wiki/NTSC_video" target="_blank" rel="noopener">NESdev Wiki「NTSC video」</a></li>
+        <li>1ドットの縦横比 8:7（同じ機械の例）— <a href="https://www.nesdev.org/wiki/Overscan" target="_blank" rel="noopener">NESdev Wiki「Overscan」</a></li>
       </ul>
       <h3>使っているもの</h3>
       <p>WebGL2。フォント: Google Fonts（SIL Open Font License）。</p>
@@ -108,6 +124,7 @@
         <li>YIQ equations (FCC NTSC values, from ITU-R BT.470-6) — <a href="https://en.wikipedia.org/wiki/YIQ" target="_blank" rel="noopener">Wikipedia “YIQ”</a></li>
         <li>Brightness curve matched to CRTs (gamma 2.4) — ITU-R BT.1886 (2011)</li>
         <li>One pixel = 8/12 of a color-subcarrier cycle, shifting 4/12 per line (one example of a machine of the time) — <a href="https://www.nesdev.org/wiki/NTSC_video" target="_blank" rel="noopener">NESdev Wiki “NTSC video”</a></li>
+        <li>Dot aspect ratio 8:7 (same machine, as an example) — <a href="https://www.nesdev.org/wiki/Overscan" target="_blank" rel="noopener">NESdev Wiki “Overscan”</a></li>
       </ul>
       <h3>What it uses</h3>
       <p>WebGL2. Fonts: Google Fonts (SIL Open Font License).</p>
@@ -115,11 +132,11 @@
   </section>
 </div>
 
-<script src="js/pictures.js?v=2"></script>
-<script src="js/ntsc.js?v=2"></script>
-<script src="js/crt-gl.js?v=2"></script>
-<script src="js/view.js?v=2"></script>
-<script src="js/upload.js?v=2"></script>
-<script src="js/main.js?v=3"></script>
+<script src="js/pictures.js?v=4"></script>
+<script src="js/ntsc.js?v=3"></script>
+<script src="js/crt-gl.js?v=6"></script>
+<script src="js/view.js?v=4"></script>
+<script src="js/upload.js?v=4"></script>
+<script src="js/main.js?v=8"></script>
 </body>
 </html>

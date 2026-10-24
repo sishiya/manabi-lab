@@ -3,23 +3,24 @@
 'use strict';
 (function () {
 window.CRT_VIEW = function (stage, canvas, handle, onChange) {
-  const V = { split: 0.5, z: 1, x: 0, y: 0, fitZ: 1, picW: 256, picH: 224 };
+  // par: 1ドットの横÷たて（当時のテレビは 8:7。z はたての大きさ、横は z×par）
+  const V = { split: 0.5, z: 1, x: 0, y: 0, fitZ: 1, picW: 256, picH: 224, par: 8 / 7 };
   const css = () => ({ w: canvas.clientWidth, h: canvas.clientHeight });
 
   function fit() {
     const { w, h } = css();
     // 全体を見るときは、1ドットが画面のピクセルのちょうど整数倍になる大きさにする。
     // 半端な倍率だと走査線のすきまがモアレになりやすい（2倍以上で、15% より小さくならないときだけ）
-    const dpr = canvas.width / Math.max(1, w), zd = Math.min(w / V.picW, h / V.picH) * 0.94 * dpr;
+    const dpr = canvas.width / Math.max(1, w), zd = Math.min(w / (V.picW * V.par), h / V.picH) * 0.94 * dpr;
     V.fitZ = (zd >= 2 && Math.floor(zd) / zd > 0.85 ? Math.floor(zd) : zd) / dpr;   // 小さくなりすぎるときは半端のまま（1ピクセルに3点の平均でならす）
     V.z = V.fitZ;
-    V.x = Math.round((w - V.picW * V.z) / 2 * dpr) / dpr; V.y = Math.round((h - V.picH * V.z) / 2 * dpr) / dpr;
+    V.x = Math.round((w - V.picW * V.par * V.z) / 2 * dpr) / dpr; V.y = Math.round((h - V.picH * V.z) / 2 * dpr) / dpr;
     onChange();
   }
   function clamp() {
     const { w, h } = css();
     V.z = Math.max(V.fitZ, Math.min(V.fitZ * 60, V.z));
-    const pw = V.picW * V.z, ph = V.picH * V.z;
+    const pw = V.picW * V.par * V.z, ph = V.picH * V.z;
     V.x = pw < w ? (w - pw) / 2 : Math.min(0, Math.max(w - pw, V.x));
     V.y = ph < h ? (h - ph) / 2 : Math.min(0, Math.max(h - ph, V.y));
   }
@@ -102,8 +103,9 @@ window.CRT_VIEW = function (stage, canvas, handle, onChange) {
       const vx = V.x * dpr, vy = V.y * dpr; V.x = Math.round(vx) / dpr; V.y = Math.round(vy) / dpr; onChange();
     },
     setPicture(w, h) { V.picW = w; V.picH = h; fit(); },
+    setPar(par) { V.par = par; fit(); },
     // 寄るところ（絵の座標）と倍率（全体の何倍か）を決める
-    focus(px, py, mult) { const { w, h } = css(); V.z = V.fitZ * mult; clamp(); V.x = w / 2 - px * V.z; V.y = h / 2 - py * V.z; clamp(); onChange(); }
+    focus(px, py, mult) { const { w, h } = css(); V.z = V.fitZ * mult; clamp(); V.x = w / 2 - px * V.par * V.z; V.y = h / 2 - py * V.z; clamp(); onChange(); }
   };
 };
 })();

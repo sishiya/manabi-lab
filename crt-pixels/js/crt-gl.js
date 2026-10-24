@@ -11,13 +11,15 @@ precision highp float;
 uniform sampler2D uOrig;   // もとのドット絵（NEAREST）
 uniform sampler2D uSig;    // テレビの中で戻した信号 E'（横 4点／ドット、LINEAR＋ミップマップ）
 uniform vec2 uPic;         // 絵の大きさ（ドット）
-uniform vec3 uView;        // 画面のピクセル → 絵の座標: pic = (frag - xy) / z
+uniform vec3 uView;        // 画面のピクセル → 絵の座標: pic = (frag - xy) / (z×par, z)
+uniform float uLook;       // 試験の案 0=A（本物の大きさ。細かすぎると消す） 1=B（細かすぎるときは画面の3ピクセルに合わせる） 2=C（B＋にじみ強め）
+uniform float uPar;        // 1ドットの横÷たて（当時のテレビは 8:7。正方形なら 1）
 uniform float uSplit;      // 仕切りの位置（画面のピクセル）。左が液晶
 uniform float uH;          // キャンバスの高さ（ピクセル。gl_FragCoord の上下を返す）
 uniform float uScan;       // 走査線 0/1
 uniform float uInter;      // 480i 0/1
 uniform float uMask;       // 0 なし 1 シャドウマスク 2 スロットマスク 3 アパーチャーグリル
-uniform float uTriads;     // 1ドットあたりの光る点の組（推定）
+uniform float uTriads;     // ドットのたての長さあたりの光る点の組（推定。画面の上の長さで数える）
 uniform float uGamma;      // ブラウン管のガンマ（2.4、切ると 2.2 ＝ いまの画面と同じ）
 uniform float uBloom;      // 光のにじみの強さ
 uniform float uCurve;      // 画面のふくらみ 0/1
@@ -31,15 +33,18 @@ vec3 sig(float x, float row){                 // 信号の1点（E'）
   if (uNoise > 0.0) c += (hash(vec2(floor(x * 4.0), row)) - 0.5) * uNoise * 2.0;
   return clamp(c, 0.0, 1.0);
 }
-// 1行ぶんのビームの、横の光（光の量＝ガンマをかけたあと）。ビームの点は横にも少し広がる（ガウス）
+// 1行ぶんのビームの、横の光（光の量＝ガンマをかけたあと）。ビームの点は横にも広がり（ガウス）、
+// 明るいところほど点が大きくなって、まわりの暗いところへにじみ出す（たての走査線の太り方と同じ考え。広がり方は推定。
+// 実機の写真でも、明るいハイライトがまわりへにじんでなじむ）。光の合計は保つ（重みを正規化しない）
 vec3 lineLight(float x, float row){
-  vec3 s = vec3(0.0); float ws = 0.0;
-  for (int k = -3; k <= 3; k++){
-    float dx = float(k) * 0.22;
-    float w = exp(-0.5 * dx * dx / (0.30 * 0.30));
-    s += pow(sig(x + dx, row), vec3(uGamma)) * w; ws += w;
+  vec3 s = vec3(0.0);
+  for (int k = -4; k <= 4; k++){
+    float dx = float(k) * 0.3;
+    vec3 c = pow(sig(x + dx, row), vec3(uGamma));
+    float sg = mix(0.24, uLook > 1.5 ? 0.55 : 0.42, sqrt(clamp(dot(c, vec3(0.30, 0.59, 0.11)), 0.0, 1.0)));
+    s += c * exp(-0.5 * dx * dx / (sg * sg)) * (0.3 / (sg * 2.5066));
   }
-  return s / ws;
+  return s;
 }
 // 光る点のならび（u は光る点の組の単位）。かえすのは赤緑青それぞれの通し方
 vec3 mask(vec2 u){
@@ -67,7 +72,7 @@ vec3 mask(vec2 u){
   return m;
 }
 // 絵の座標 p（ふくらみの前）のブラウン管の光（光の量。ガンマをかけたあと）。edge は画面のふちの丸み
-vec3 crtLight(vec2 p, out float edge){
+vec3 crtLight(vec2 p, vec2 frag, out float edge){
   edge = 1.0;
   if (uCurve > 0.5){
     vec2 q = p / uPic * 2.0 - 1.0;
@@ -86,7 +91,7 @@ vec3 crtLight(vec2 p, out float edge){
       if (row < 0.0 || row >= uPic.y) continue;
       vec3 c = lineLight(p.x, row);
       float lum = dot(c, vec3(0.30, 0.59, 0.11));
-      float sg = mix(0.15, 0.28, sqrt(clamp(lum, 0.0, 1.0)));
+      float sg = mix(0.15, uLook > 1.5 ? 0.40 : 0.32, sqrt(clamp(lum, 0.0, 1.0)));
       if (uInter > 0.5){
         // 480i: 2つのフィールドが半行ずれて交互に描く。目にはまざるので、帯が2倍細かく並ぶ
         for (int f = 0; f < 2; f++){
@@ -110,24 +115,46 @@ vec3 crtLight(vec2 p, out float edge){
     light = lineLight(p.x, clamp(floor(p.y), 0.0, uPic.y - 1.0));
   }
   if (uMask > 0.5){
-    // 光る点。画面のピクセルより細かいとモアレになるので、1組が 4〜8 ピクセルのあいだで薄めていく
     float cellPx = uView.z / uTriads;
-    float vis = smoothstep(4.0, 8.0, cellPx);
-    vec3 m = mask(p * uTriads);
-    // 本物の光る点は、すきまのぶんだけ強く光る。いまの画面はそこまで明るく光れないので、強める倍率はひかえめ（寄ると少し暗い）
-    light *= mix(vec3(1.0), m * 2.4 + 0.06, vis);
+    float mean = uMask > 2.5 ? 0.26 : (uMask > 1.5 ? 0.22 : 0.25);
+    vec3 m; float vis;
+    if (uLook > 0.5 && cellPx < 3.5){
+      // 案B・C: 本物の大きさでは画面のピクセルより細かいとき、光る点を画面の3ピクセルに合わせて描く（近似。本物より少し粗い）。
+      // たてじま（モニター）はそのまま、丸い点・細長い穴は、1列ごとに半分ずらした短いしまで代わりにする
+      vec2 f = floor(frag);
+      int ch = int(mod(f.x, 3.0));
+      float cut = 1.0;
+      if (uMask < 2.5) cut = mod(f.y + floor(f.x / 3.0) * 2.0, 4.0) < 0.5 ? 0.0 : 1.0;
+      m = vec3(0.0); m[ch] = cut;
+      mean = uMask < 2.5 ? 0.25 : 1.0 / 3.0;
+      vis = 1.0;
+    } else {
+      // 光る点。1ピクセルの中を横4点・たて2点とって平均する（細かい大きさでもモアレになりにくい）。
+      // 1組が 2.2〜3.5 ピクセルより小さいと描けないので薄める
+      vis = smoothstep(2.2, 3.5, cellPx);
+      vec2 u = vec2(p.x * uPar, p.y) * uTriads;   // 光る点は画面に固定（ドットが横長でも点の形は変わらない）
+      float fw = uTriads / uView.z;                // 1ピクセルの幅（光る点の組の単位）
+      m = vec3(0.0);
+      for (int a = 0; a < 4; a++) for (int b = 0; b < 2; b++)
+        m += mask(u + vec2((float(a) - 1.5) * 0.25, (float(b) - 0.5) * 0.5) * fw);
+      m /= 8.0;
+    }
+    // 本物の光る点は、すきまのぶんだけ強く光る。いまの画面はそこまで明るく光れないので、
+    // 平均の明るさを保つように強弱をつける（明るい所は光りきって頭打ちになる）
+    if (vis > 0.0) light *= mix(vec3(1.0), 1.0 + 0.75 * (m / mean - 1.0), vis);
   }
   if (uBloom > 0.0){
-    // 光のにじみ（ガラスの中で光が散る）: ぼかした絵を少し足す。ミップマップの粗い段で代用
-    vec3 b = textureLod(uSig, p / uPic, 4.0).rgb;
-    light += pow(b, vec3(uGamma)) * uBloom;
+    // 光のにじみ（ガラスの中で光が散る）: ぼかした絵を足す。ミップマップの粗い段で代用（近いにじみと遠いにじみ）
+    vec3 b1 = pow(textureLod(uSig, p / uPic, 3.0).rgb, vec3(uGamma));
+    vec3 b2 = pow(textureLod(uSig, p / uPic, 5.0).rgb, vec3(uGamma));
+    light += (b1 * 0.6 + b2 * 0.4) * uBloom;
   }
   // 明るすぎる所はなだらかに頭打ち（光る点が光りきる。いまの画面の白より明るくは出せない）
   return mix(light, 0.8 + 0.2 * (1.0 - exp(-(light - 0.8) / 0.2)), step(0.8, light));
 }
 void main(){
   vec2 frag = vec2(gl_FragCoord.x, uH - gl_FragCoord.y);
-  vec2 p = (frag - uView.xy) / uView.z;       // 絵の座標（ドット）
+  vec2 p = (frag - uView.xy) / (uView.z * vec2(uPar, 1.0));   // 絵の座標（ドット）
   if (frag.x < uSplit){
     // 液晶: 1ドットをそのまま四角く
     vec3 col = vec3(0.0);
@@ -138,10 +165,10 @@ void main(){
   vec3 light; float edge;
   if (uView.z < 6.0){
     float e1, e2, e3;
-    light = (crtLight(p + vec2(0.0, -0.333 / uView.z), e1) + crtLight(p, e2) + crtLight(p + vec2(0.0, 0.333 / uView.z), e3)) / 3.0;
+    light = (crtLight(p + vec2(0.0, -0.333 / uView.z), frag, e1) + crtLight(p, frag, e2) + crtLight(p + vec2(0.0, 0.333 / uView.z), frag, e3)) / 3.0;
     edge = (e1 + e2 + e3) / 3.0;
   } else {
-    light = crtLight(p, edge);
+    light = crtLight(p, frag, edge);
   }
   o = vec4(pow(clamp(light, 0.0, 1.0), vec3(1.0 / 2.2)) * edge, 1.0);   // いまの画面（ガンマ約2.2）へ
 }`;
@@ -163,7 +190,7 @@ window.CRT_GL = function (canvas) {
   const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
   const la = gl.getAttribLocation(pr, 'a'); gl.enableVertexAttribArray(la); gl.vertexAttribPointer(la, 2, gl.FLOAT, false, 0, 0);
-  const U = {}; ['uOrig', 'uSig', 'uPic', 'uView', 'uSplit', 'uH', 'uScan', 'uInter', 'uMask', 'uTriads', 'uGamma', 'uBloom', 'uCurve', 'uNoise', 'uSeed']
+  const U = {}; ['uOrig', 'uSig', 'uPic', 'uView', 'uSplit', 'uH', 'uScan', 'uInter', 'uMask', 'uTriads', 'uPar', 'uLook', 'uGamma', 'uBloom', 'uCurve', 'uNoise', 'uSeed']
     .forEach(n => U[n] = gl.getUniformLocation(pr, n));
   const tOrig = gl.createTexture(), tSig = gl.createTexture();
   gl.uniform1i(U.uOrig, 0); gl.uniform1i(U.uSig, 1);
@@ -188,7 +215,7 @@ window.CRT_GL = function (canvas) {
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.uniform2f(U.uPic, pw, ph); gl.uniform3f(U.uView, v.view[0], v.view[1], v.view[2]);
       gl.uniform1f(U.uSplit, v.split); gl.uniform1f(U.uH, canvas.height);
-      gl.uniform1f(U.uScan, v.scan); gl.uniform1f(U.uInter, v.inter); gl.uniform1f(U.uMask, v.mask); gl.uniform1f(U.uTriads, v.triads);
+      gl.uniform1f(U.uScan, v.scan); gl.uniform1f(U.uInter, v.inter); gl.uniform1f(U.uMask, v.mask); gl.uniform1f(U.uTriads, v.triads); gl.uniform1f(U.uPar, v.par || 1); gl.uniform1f(U.uLook, v.look || 0);
       gl.uniform1f(U.uGamma, v.gamma); gl.uniform1f(U.uBloom, v.bloom); gl.uniform1f(U.uCurve, v.curve);
       gl.uniform1f(U.uNoise, v.noise); gl.uniform1f(U.uSeed, v.seed || 0);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);

@@ -1,5 +1,6 @@
 // ブラウン管のドット絵 — 自作のドット絵（すべてコードで描く。実在のゲームの絵は使わない）
 // どの絵も 256×224（当時の家庭用ゲームによくあった大きさ）。{ w, h, data: Uint8ClampedArray RGBA }
+// 丸いものは、テレビでドットが横に 8/7 倍に広がるのに合わせて、横を 7/8 にちぢめて描く（正方形のドットで見ると少し細長い）
 'use strict';
 (function () {
 const W = 256, H = 224;
@@ -23,6 +24,7 @@ function canvas() {
   return { w: W, h: H, data, set, ramp };
 }
 const checker = (x, y) => ((x + y) & 1) === 0;
+const AX = 8 / 7;   // 横のちぢめ（ドットの横÷たて）
 
 // 小さなしし（16×16）。外側の線と、明るいところの1ドットまで手で置く
 const LION = [
@@ -101,7 +103,7 @@ function falls() {
   // 木（丸い葉を2色のディザで）
   const tree = (cx, cy, r) => {
     for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) {
-      const d = (x * x + y * y) / (r * r);
+      const d = ((x * AX) ** 2 + y * y) / (r * r);
       if (d <= 1) cv.ramp(cx + x, cy + y, grass, 0.95 - d * 0.5 - (x + y) / (r * 4) - hash(cx + x >> 1, cy + y >> 1) * 0.2);
     }
     for (let y = r - 2; y < r + 7; y++) for (let x = -1; x <= 1; x++) cv.set(cx + x, cy + y, rock[x < 1 ? 0 : 1]);
@@ -121,7 +123,7 @@ function lion() {
   const cx = 128, cy = 116;
   const lx = -0.6, ly = -0.8; // 左上から光
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const dx = x - cx, dy = y - cy, r = Math.hypot(dx, dy), th = Math.atan2(dy, dx);
+    const dx = (x - cx) * AX, dy = y - cy, r = Math.hypot(dx, dy), th = Math.atan2(dy, dx);
     cv.ramp(x, y, bg, 0.7 - r / 220);
     const R = 84 + 7 * Math.sin(th * 13) + 3 * Math.sin(th * 29);
     if (r < R) {
@@ -131,35 +133,35 @@ function lion() {
     }
   }
   // 耳
-  for (const ex of [-40, 40]) for (let y = -12; y <= 12; y++) for (let x = -12; x <= 12; x++) {
-    const d = (x * x + y * y) / 144;
+  for (const ex of [-35, 35]) for (let y = -12; y <= 12; y++) for (let x = -12; x <= 12; x++) {
+    const d = ((x * AX) ** 2 + y * y) / 144;
     if (d <= 1) cv.ramp(cx + ex + x, cy - 46 + y, face, d < 0.35 ? 0.1 : 0.6 - y / 40);
   }
   // 顔
   for (let y = -48; y <= 48; y++) for (let x = -52; x <= 52; x++) {
-    const d = (x / 50) ** 2 + (y / 46) ** 2;
+    const d = (x * AX / 50) ** 2 + (y / 46) ** 2;
     if (d > 1) continue;
-    const t = 0.75 - (x * lx + y * ly) / -150 - d * 0.35;
+    const t = 0.75 - (x * AX * lx + y * ly) / -150 - d * 0.35;
     cv.ramp(cx + x, cy + y, face, t);
     if (d > 0.93) cv.set(cx + x, cy + y, face[0]);
   }
   // 目（黒目に白の光を2×2と1ドット）
-  for (const ex of [-20, 20]) {
-    for (let y = -7; y <= 7; y++) for (let x = -6; x <= 6; x++) if ((x / 6) ** 2 + (y / 7) ** 2 <= 1) cv.set(cx + ex + x, cy - 8 + y, ink);
+  for (const ex of [-18, 18]) {
+    for (let y = -7; y <= 7; y++) for (let x = -6; x <= 6; x++) if ((x * AX / 6) ** 2 + (y / 7) ** 2 <= 1) cv.set(cx + ex + x, cy - 8 + y, ink);
     cv.set(cx + ex - 2, cy - 11, white); cv.set(cx + ex - 1, cy - 11, white); cv.set(cx + ex - 2, cy - 10, white); cv.set(cx + ex - 1, cy - 10, white);
     cv.set(cx + ex + 2, cy - 5, white);
-    for (let x = -8; x <= 8; x++) cv.set(cx + ex + x, cy - 19 + Math.round(Math.abs(x) / 3), face[0]); // まゆ
+    for (let x = -7; x <= 7; x++) cv.set(cx + ex + x, cy - 19 + Math.round(Math.abs(x) / 3), face[0]); // まゆ
   }
   // 口のまわり・鼻・口
-  for (const mx of [-11, 11]) for (let y = -11; y <= 11; y++) for (let x = -13; x <= 13; x++) {
-    const d = (x / 13) ** 2 + (y / 11) ** 2;
+  for (const mx of [-10, 10]) for (let y = -11; y <= 11; y++) for (let x = -12; x <= 12; x++) {
+    const d = (x * AX / 12) ** 2 + (y / 11) ** 2;
     if (d <= 1) cv.set(cx + mx + x, cy + 20 + y, d > 0.8 && checker(x, y) ? face[2] : muz);
   }
-  for (const [mx, my] of [[-15, 18], [-9, 22], [-15, 25], [15, 18], [9, 22], [15, 25]]) cv.set(cx + mx, cy + my, face[0]);
-  for (let y = 0; y < 8; y++) for (let x = -9 + y; x <= 9 - y; x++) cv.set(cx + x, cy + 6 + y, nose);
+  for (const [mx, my] of [[-13, 18], [-8, 22], [-13, 25], [13, 18], [8, 22], [13, 25]]) cv.set(cx + mx, cy + my, face[0]);
+  for (let y = 0; y < 8; y++) for (let x = -8 + y; x <= 8 - y; x++) cv.set(cx + x, cy + 6 + y, nose);
   cv.set(cx - 4, cy + 7, face[3]); cv.set(cx - 3, cy + 7, face[3]);
   for (let y = 14; y < 20; y++) cv.set(cx, cy + y, ink);
-  for (let x = 1; x < 9; x++) { cv.set(cx + x, cy + 20 + (x > 4 ? 1 : 0), ink); cv.set(cx - x, cy + 20 + (x > 4 ? 1 : 0), ink); }
+  for (let x = 1; x < 8; x++) { cv.set(cx + x, cy + 20 + (x > 4 ? 1 : 0), ink); cv.set(cx - x, cy + 20 + (x > 4 ? 1 : 0), ink); }
   return cv;
 }
 
