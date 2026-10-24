@@ -188,8 +188,134 @@ function patterns() {
   return cv;
 }
 
+// ---------- 4. 8ビットの冒険（当時の家庭用ゲーム機ふうの、少ない色・はっきりした輪郭・文字の画面。すべて自作） ----------
+// 色は当時の機械の色の表にありそうな、こい色だけ。夕焼けは帯で、帯のさかいだけチェック模様でつなぐ
+const FONT = {   // 5×7 の字
+  S: ['01111', '10000', '10000', '01110', '00001', '00001', '11110'], C: ['01110', '10001', '10000', '10000', '10000', '10001', '01110'],
+  O: ['01110', '10001', '10001', '10001', '10001', '10001', '01110'], R: ['11110', '10001', '10001', '11110', '10100', '10010', '10001'],
+  E: ['11111', '10000', '10000', '11110', '10000', '10000', '11111'], T: ['11111', '00100', '00100', '00100', '00100', '00100', '00100'],
+  I: ['01110', '00100', '00100', '00100', '00100', '00100', '01110'], M: ['10001', '11011', '10101', '10101', '10001', '10001', '10001'],
+  L: ['10000', '10000', '10000', '10000', '10000', '10000', '11111'], V: ['10001', '10001', '10001', '10001', '10001', '01010', '00100'],
+  0: ['01110', '10011', '10101', '10101', '11001', '10001', '01110'], 1: ['00100', '01100', '00100', '00100', '00100', '00100', '01110'],
+  2: ['01110', '10001', '00001', '00110', '01000', '10000', '11111'], 3: ['11110', '00001', '00001', '01110', '00001', '00001', '11110'],
+  4: ['00010', '00110', '01010', '10010', '11111', '00010', '00010'], 5: ['11111', '10000', '11110', '00001', '00001', '10001', '01110'],
+  6: ['00110', '01000', '10000', '11110', '10001', '10001', '01110'], 7: ['11111', '00001', '00010', '00100', '01000', '01000', '01000'],
+  8: ['01110', '10001', '10001', '01110', '10001', '10001', '01110'], 9: ['01110', '10001', '10001', '01111', '00001', '00010', '01100'],
+  '♥': ['01010', '11111', '11111', '11111', '01110', '00100', '00000']
+};
+function text(cv, str, x0, y0, col) {
+  [...str].forEach((ch, i) => { const g = FONT[ch]; if (g) g.forEach((row, y) => [...row].forEach((b, x) => { if (b === '1') cv.set(x0 + i * 6 + x, y0 + y, col); })); });
+}
+// ししの剣士（16×24）。o 輪郭・m たてがみ・M たてがみの影・f 顔・k 目・n 鼻・a よろい・A よろいの影・b くつ・s 剣・h つか
+const HERO = [
+  '......oooooo..os',
+  '....oommmmmmoosS',
+  '...ommmmmmmmmosS',
+  '..ommmMffffMmosS',
+  '..ommMffffffMosS',
+  '..omMffkffkffosS',
+  '..omMffkffkffosS',
+  '..omMffffffffosS',
+  '..ommMffnnffMosS',
+  '...ommMffffMmosS',
+  '....oommmmmooosS',
+  '.....oaaaaaoohhh',
+  '....oaAaaAaaofh.',
+  '...oaaAAAAaaof..',
+  '...ofoaaaaaoo...',
+  '...ofoaAAaao....',
+  '....ooaaaaao....',
+  '.....oAAoAAo....',
+  '.....oaaoaao....',
+  '.....oaaoaao....',
+  '....oaaaoaaao...',
+  '....obbbobbbo...',
+  '....obbbobbbo...',
+  '....ooooooooo...'];
+const BAT = [
+  'p...........p',
+  'pp...ppp...pp',
+  'ppp.pkpkp.ppp',
+  '.ppppppppppp.',
+  '..pp.ppp.pp..',
+  '.....p.p.....'];
+const GEM = ['..w..', '.wcc.', 'wcccC', '.cCC.', '..C..'];
+function retro() {
+  const cv = canvas();
+  const P = c => hex(c);
+  const sky = ['#0000a8', '#4428bc', '#940084', '#e40058', '#f83800', '#fc9838', '#fce0a8'].map(P);
+  const black = P('#000000'), white = P('#fcfcfc');
+  const HP = { o: black, m: P('#c84c0c'), M: P('#881400'), f: P('#fcb860'), k: black, n: P('#881400'),
+    a: P('#3cbcfc'), A: P('#0058f8'), b: P('#503000'), s: white, S: P('#a4e4fc'), h: P('#f8b800') };
+  const BP = { p: P('#6844fc'), k: P('#f83800') };
+  const GP = { w: white, c: P('#00e8d8'), C: P('#008888') };
+  const top = 16, horizon = 150, ground = 184;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (y < top) { cv.set(x, y, black); continue; }
+    // 夕焼けの帯（帯のさかいの2行だけチェックでまぜる）
+    const t = (y - top) / (horizon - top) * (sky.length - 1), k = Math.floor(t), f = t - k;
+    let c = sky[Math.min(sky.length - 1, k)];
+    if (f > 0.86 && k + 1 < sky.length && checker(x, y)) c = sky[k + 1];
+    cv.set(x, y, c);
+  }
+  // 沈む太陽（半分）
+  for (let y = -24; y <= 24; y++) for (let x = -26; x <= 26; x++) {   // 山にかくれかけた太陽
+    const d = (x * AX) ** 2 + y * y;
+    if (d <= 22 * 22) cv.set(66 + x, 122 + y, d < 15 * 15 ? sky[6] : P('#fcbc3c'));
+  }
+  // 雲（かたまりの形を3つ）
+  const cloud = (cx, cy, w) => {
+    for (let y = -6; y <= 6; y++) for (let x = -w; x <= w; x++) {
+      const bump = 3 * Math.sin(x * 0.45 + cx) + (y < 0 ? -2 : 0);
+      if (Math.abs(y) * 2.2 + Math.abs(x) * 6 / w < 13 + bump) cv.set(cx + x, cy + y, y > 2 ? P('#fca4e4') : white);
+    }
+  };
+  cloud(170, 42, 20); cloud(40, 64, 16); cloud(214, 84, 14);
+  // 遠くの山と城（影絵）
+  const shadow = P('#3c1450');
+  for (let x = 0; x < W; x++) {
+    const m = horizon - 18 - 14 * Math.abs(Math.sin(x * 0.021 + 0.8)) - 6 * Math.abs(Math.sin(x * 0.07));
+    for (let y = Math.round(m); y < ground; y++) cv.set(x, y, shadow);
+  }
+  const castle = (x0, y0) => {
+    const rect = (x, y, w, h) => { for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) cv.set(x0 + x + xx, y0 + y + yy, shadow); };
+    rect(0, 20, 52, 40); rect(-6, 4, 12, 56); rect(46, 4, 12, 56); rect(18, -10, 16, 70);
+    for (const [x, y] of [[-6, 0], [0, 0], [46, 0], [52, 0], [18, -14], [24, -14], [30, -14]]) rect(x, y, 4, 4);
+    for (const [x, y] of [[-2, 14], [50, 14], [24, 2], [10, 30], [36, 30], [24, 26]]) for (let yy = 0; yy < 4; yy++) for (let xx = 0; xx < 2; xx++) cv.set(x0 + x + xx, y0 + y + yy, P('#f8b800'));
+  };
+  castle(178, 96);
+  // 近くの丘
+  for (let x = 0; x < W; x++) {
+    const hgt = ground - 10 - 8 * Math.sin(x * 0.05 + 1.3);
+    for (let y = Math.round(hgt); y < ground; y++) cv.set(x, y, ((x >> 2) + (y >> 2)) % 5 === 0 ? P('#00a800') : P('#005800'));
+  }
+  // 地面: 草の帯とレンガ
+  for (let y = ground; y < H; y++) for (let x = 0; x < W; x++) {
+    let c;
+    if (y < ground + 4) c = (y === ground && x % 4 === 1) || (y === ground + 1 && x % 8 === 3) ? P('#b8f818') : P('#00a844');
+    else {
+      const by = y - ground - 4, row = by >> 3, bx = (x + (row % 2) * 8) % 16;
+      c = (by % 8 === 7 || bx === 15) ? P('#503000') : (by % 8 === 0 || bx === 0) ? P('#fc9838') : P('#ac7c00');
+    }
+    cv.set(x, y, c);
+  }
+  // 浮かぶ石の足場と、上の宝石
+  for (let i = 0; i < 6; i++) for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
+    const X = 132 + i * 8 + x, Y = 128 + y;
+    cv.set(X, Y, y === 0 || x === 0 ? white : (y === 7 || x === 7 ? P('#7c7c7c') : P('#bcbcbc')));
+  }
+  for (const gx of [140, 156, 172]) sprite(cv, GEM, GP, gx, 118);
+  sprite(cv, BAT, BP, 92, 74); sprite(cv, BAT, BP, 214, 120);
+  sprite(cv, HERO, HP, 119, ground - 24);
+  // 上の帯の文字
+  text(cv, 'SCORE 004250', 8, 5, white);
+  text(cv, '♥♥♥', 108, 5, P('#f83800'));
+  text(cv, 'TIME 245', 196, 5, white);
+  return cv;
+}
+
 const cache = {};
-const MAKERS = { falls, lion, patterns };
+const MAKERS = { retro, falls, lion, patterns };
 window.CRT_PICTURES = {
   names: Object.keys(MAKERS),
   get(name) { return cache[name] || (cache[name] = MAKERS[name]()); }

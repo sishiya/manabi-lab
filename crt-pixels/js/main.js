@@ -28,6 +28,7 @@ const MECH = [
   { id: 'curve', name: L('画面のふくらみ', 'Curved glass'), badge: L('推定', 'estimate'), text: L('ガラスの面が丸くふくらんでいて、はしが少し曲がって見えます。', 'The glass bulges outward, so the edges look slightly bent.') }
 ];
 const PICS = {
+  retro: { cap: L('当時の家庭用ゲーム機ふうの画面（自作）。細い文字や輪郭は、ビデオ端子だと色がにじみ、夕焼けの帯のさかいのチェック模様はまざって見えます。', 'A screen in the style of home game consoles of the time (drawn for this app). Thin letters and outlines smear into color over composite, and the checkerboard where the sunset bands meet blends together.'), focus: [127, 172] },
   falls: { cap: L('滝の両はしは、水と岩のチェック模様。液晶ではそのまま見え、ブラウン管ではまざって半透明のしぶきに見えます。', 'Both edges of the waterfall are a checkerboard of water and rock. On the LCD you see the checkerboard; on the CRT it blends into see-through spray.'), focus: [104, 112] },
   lion: { cap: L('目の白い1ドット、ふちの中間の色、ディザの影。ブラウン管では、ドットのあいだがやわらかくつながります。', 'The single white pixel in the eye, in-between colors on the edges, dithered shading. On the CRT the pixels join together softly.'), focus: [110, 106] },
   patterns: { cap: L('①白黒の1ドットじま（ビデオ端子だと色がつく）②2ドットじま ③白黒チェック（灰色にまざる）④赤青チェック（むらさきに）⑤横じま（信号では消えない）⑥ディザのグラデーション', '1 one-pixel black/white stripes (turn colored on composite) 2 two-pixel stripes 3 black/white checkerboard (blends to gray) 4 red/blue checkerboard (turns purple) 5 horizontal stripes (the signal cannot blur them) 6 dithered gradient'), focus: [20, 30] },
@@ -36,7 +37,7 @@ const PICS = {
 const FILE_NOTE = L('自分の画像（PNG など）はこの端末の中だけで計算し、どこにも送りません。拡大したスクリーンショットは元のドットに戻します。', 'Your own image (PNG etc.) is processed only on this device and never sent anywhere. Enlarged screenshots are shrunk back to their original pixels.');
 
 const S = {
-  pic: 'falls', screen: 'shadow', link: 'composite', inter: 0, frame: 'avg', par: 'tv',
+  pic: 'retro', screen: 'shadow', link: 'composite', inter: 0, frame: 'avg', par: 'tv',
   on: { scan: true, signal: true, mask: true, gamma: true, bloom: true, curve: true },
   userPic: null, current: null, sigKey: ''
 };
