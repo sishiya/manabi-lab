@@ -42,5 +42,12 @@ API で済ませたもの（YouTube のバナー・説明・英語の説明・�
 I build small apps that run in the browser: science sims (Manabi Lab — black holes, the human gut, viruses, waves) and small games (Asobi Lab). Physics stays honest and sources are on screen. JP/EN. Made with AI (Claude).
 ```
 
+## しし屋のトップ（https://sishiya.github.io/、2026-10-24 公開）
+- 済み: リポジトリ `sishiya/sishiya.github.io` を作って push、公開を確かめた
+- [ ] GitHub の Settings → Pages が「Deploy from a branch」・`main`・`/ (root)` か見る（公開はできているので、たぶんそうなっている）
+- [ ] Search Console: プロパティを追加 →「URL プレフィックス」`https://sishiya.github.io/` → 確認は「Google アナリティクス」→ 通ったら「サイトマップ」に `sitemap.xml`
+- [ ] X のウェブサイトの欄 → `https://sishiya.github.io/`（Zenn・note・DEV もウェブサイトの欄があれば）
+- YouTube の説明文にトップのリンクを足すのは Claude が API で（頼まれたら）
+
 ## 終わったら
 Claude に「名前を変えた」と言えば、文書（ARCHITECTURE.md のアカウントの表など）を「しし屋」に直す。
