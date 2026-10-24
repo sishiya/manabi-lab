@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ブラウン管のドット絵</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23101820'/><rect x='12' y='16' width='40' height='32' rx='8' fill='none' stroke='%237fe0a0' stroke-width='5'/><rect x='24' y='26' width='6' height='6' fill='%23ff6a6a'/><rect x='30' y='26' width='6' height='6' fill='%237fe0a0'/><rect x='36' y='26' width='6' height='6' fill='%236aa0ff'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css?v=1">
+</head>
+<body>
+<div id="app">
+  <div id="pin">
+    <header id="top"><h1>ブラウン管のドット絵</h1><span class="sub">同じ絵を、液晶とブラウン管で</span></header>
+    <main id="stage">
+      <canvas id="cv" aria-label="ドット絵を液晶とブラウン管で見くらべる画面"></canvas>
+      <div id="nogl" hidden>このブラウザでは WebGL2 が使えないため、ブラウン管の画面を計算できません。</div>
+      <div class="tag l">液晶（ドットそのまま）</div><div class="tag r">ブラウン管</div>
+      <div id="divider"><button id="handle" aria-label="仕切りを左右に動かす（矢印キーでも）">◀▶</button></div>
+      <div id="hud"></div>
+      <div id="zoom"><button data-z="in" aria-label="寄る">＋</button><button data-z="out" aria-label="離れる">−</button><button data-z="fit" aria-label="全体を見る">全体</button></div>
+    </main>
+    <p id="cap"></p>
+  </div>
+
+  <section id="panel">
+    <div class="row"><h2>絵</h2>
+      <div class="seg" id="picSeg">
+        <button data-pic="falls">滝のある風景</button><button data-pic="lion">ししの顔</button><button data-pic="patterns">しま模様</button>
+        <label class="file">自分の画像…<input type="file" id="file" accept="image/*"></label>
+      </div>
+      <p class="note" id="fileNote">自分の画像（PNG など）はこの端末の中だけで計算し、どこにも送りません。拡大したスクリーンショットは元のドットに戻します。</p>
+      <button class="focus" id="focusBtn">寄って光る点を見る</button>
+    </div>
+
+    <div class="row"><h2>画面</h2>
+      <div class="seg" id="scrSeg">
+        <button data-scr="shadow">家庭のテレビ（丸い点）</button><button data-scr="slot">家庭のテレビ（細長い穴）</button><button data-scr="grille">モニター（たてじま）</button>
+      </div>
+    </div>
+    <div class="row"><h2>つなぎ方</h2>
+      <div class="seg" id="linkSeg">
+        <button data-link="rgb">RGB</button><button data-link="svideo">S端子</button><button data-link="composite">ビデオ端子</button><button data-link="rf">アンテナ線</button>
+      </div>
+      <p class="note" id="linkNote"></p>
+    </div>
+
+    <div class="row"><h2>しくみを1つずつ</h2>
+      <p class="note">効き目の大きい順。「だけ」で、そのしくみだけを入れて見くらべます。</p>
+      <ul id="mech"></ul>
+      <button class="focus" id="allOn">全部入れる</button>
+    </div>
+
+    <details class="row" id="more"><summary>細かい設定</summary>
+      <h3>走査線の本数</h3>
+      <div class="seg" id="interSeg"><button data-inter="0">ゲーム（240本・すきまが見える）</button><button data-inter="1">放送（480本・2回に分けて）</button></div>
+      <p class="note">家庭用ゲームの多くは、同じ行を毎回なぞる 240本の描き方で、行のあいだに暗いすきまが残りました。テレビ放送は 480本を半分ずつ交互に描くので、すきまはほとんど見えません。</p>
+      <h3>ドットクロール（ビデオ端子・アンテナ線）</h3>
+      <div class="seg" id="frameSeg"><button data-frame="avg">目に見える平均</button><button data-frame="0">1コマ目</button><button data-frame="1">2コマ目</button></div>
+      <p class="note">色の波は1コマごとにずれるので、模様のふちの細かい点が 1秒に30回入れかわります（にじみのちらつき）。目にはまざって見えるので、ふだんは2コマの平均を出しています。1コマずつ切りかえて、ちがいを見られます。</p>
+    </details>
+
+    <details class="row" id="about">
+      <summary>このアプリについて</summary>
+      <p>昔のゲームのドット絵は、ブラウン管のテレビで見られることを前提に描かれていました。同じ絵を液晶で見ると、チェック模様や角がそのまま見えます。このアプリは、ブラウン管の見え方をしくみごとに計算して、ちがいを見くらべます。</p>
+      <p><b>計算していること</b>: ①テレビの信号（明るさと色を1本の線にまぜ、テレビの中で分け直す。数は NTSC の規格の値と、当時の機械の一例）②電子ビームの走査線（ガウスの帯）③赤・緑・青の光る点のならび ④明るさの曲がり（ガンマ）⑤光のにじみ ⑥画面のふくらみ。</p>
+      <p><b>簡単にしているところ</b>: 明るさと色の分け方は、いちばん簡単な「色の波1周期の平均」（くし形フィルタなし）。色を取り出すこし器は、どのテレビも同じ帯域にしています（家庭のテレビの値は推定）。ビームが明るさで太る割合・光る点の大きさ（14型くらいのテレビを想定）・光のにじみ・ふくらみの強さは推定です。アンテナ線のノイズは演出に近いものです。寄ったときは、いまの画面が本物の光る点ほど明るく光れないので、少し暗く見えます。左の液晶は、いま見ている画面に1ドットを四角く大きく写したものです。</p>
+      <p>実在のゲームの絵は使っていません（絵はすべてこのアプリで描いたもの）。</p>
+      <h3>おもな出どころ</h3>
+      <ul>
+        <li>Timothy Lottes「crt-lottes」（パブリックドメインの CRT シェーダー。走査線・ブルーム・マスク・ふくらみの考え方の土台）— <a href="https://github.com/libretro/glsl-shaders/blob/master/crt/shaders/crt-lottes.glsl" target="_blank" rel="noopener">libretro/glsl-shaders</a></li>
+        <li>NTSC: 色副搬送波 315/88 MHz（3.579545MHz）、放送の I 1.3MHz・Q 0.4MHz — <a href="https://en.wikipedia.org/wiki/NTSC" target="_blank" rel="noopener">Wikipedia「NTSC」</a></li>
+        <li>YIQ の式（FCC の NTSC の値。ITU-R BT.470-6 より）— <a href="https://en.wikipedia.org/wiki/YIQ" target="_blank" rel="noopener">Wikipedia「YIQ」</a></li>
+        <li>ブラウン管に合わせた明るさの曲がり（ガンマ 2.4）— ITU-R BT.1886（2011）</li>
+        <li>1ドット＝色副搬送波の 8/12 周期、1行ごとに 4/12 ずれる（当時の機械の一例）— <a href="https://www.nesdev.org/wiki/NTSC_video" target="_blank" rel="noopener">NESdev Wiki「NTSC video」</a></li>
+      </ul>
+      <h3>使っているもの</h3>
+      <p>WebGL2。フォント: Google Fonts（SIL Open Font License）。</p>
+    </details>
+  </section>
+</div>
+
+<script src="js/pictures.js?v=1"></script>
+<script src="js/ntsc.js?v=1"></script>
+<script src="js/crt-gl.js?v=1"></script>
+<script src="js/view.js?v=1"></script>
+<script src="js/upload.js?v=1"></script>
+<script src="js/main.js?v=1"></script>
+</body>
+</html>

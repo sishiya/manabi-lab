@@ -19,6 +19,8 @@ const click = (w, sel) => { const e = w.document.querySelector(sel); if (e) e.cl
 
 // アプリごとの準備（w = アプリの window）
 const SETUP = {
+  // ブラウン管のドット絵: 滝の絵で、仕切りを少し左に（ブラウン管の側を広く）。WebGL2 が無い環境では「使えません」の文になる
+  'crt-pixels': async w => { await wait(1200); w.__crpi.view.stopHint(); w.__crpi.view.V.split = 0.42; w.__crpi.simRun(0); await wait(200); },
   // クモがハエをつかまえるまで: クモが跳んでいるところ（ハエが翅を上げた直後）。3つの視界が並ぶ
   'spider-hunt': async w => { await wait(800); w.__sphu.toEnd(); const e = w.__sphu.S.hist[w.__sphu.S.hist.length - 1].ev; w.__sphu.at(e.wr + 0.002); await wait(300); },
   // 波が育つまで: 風速 10 m/s が 12 時間吹いた海（逆光のきらきら）。WebGL2 の海なので、描けない環境では「描けません」の文になる
