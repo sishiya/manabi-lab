@@ -36,6 +36,10 @@
 #       … 再生リスト（_dev/promo/playlist*.json。1ファイル1リスト: playlist.json＝説明動画、playlist-shorts.json＝ショート）を作る／名前・説明・英語を合わせ、match に当たる upload.json の動画のうち
 #         **公開ずみ**のものを publishAt の順に足す（予約中・非公開は足さない。もう入っているものは足さない）。何度走らせてもよい。
 #         作ったら playlist.json の playlistId に書く。-DryRun は読むだけ（足すものを出す）
+#         dir を書くと、そのフォルダ（ルートからの道すじ）の upload.json を見る（あそびラボ: "../ゲーム/_dev/promo"）
+#   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Channel [-DryRun]
+#       … チャンネルの説明・キーワード・英語の説明・バナーを _dev/promo/channel.json に合わせる（channels.update 50・バナーを上げると ＋50 ポイント）。
+#         チャンネルの名前は API では変えられないので Studio で。-DryRun は読むだけ（いまの値とのちがいを出す）
 #
 # 秘密の扱い（必ず守る）:
 #   - クライアントの秘密は $SecretDir\client_secret.json（プロジェクトの外）。このスクリプトだけが読み、中身は画面に出さない。
@@ -57,6 +61,7 @@ param(
   [switch]$Verify,
   [switch]$Playlist,
   [switch]$Captions,
+  [switch]$Channel,
   [string[]]$Lang,
   [switch]$DryRun,
   [string]$Date,
@@ -100,6 +105,8 @@ function Get-QuotaCost([string]$method, [string]$uri) {
     'videos' { if ($m -eq 'POST') { return @(1600, 'videos.insert') } elseif ($m -eq 'PUT') { return @(50, 'videos.update') } else { return @(1, 'videos.list') } }
     'captions' { if ($m -eq 'POST') { return @(400, 'captions.insert') } elseif ($m -eq 'PUT') { return @(450, 'captions.update') } else { return @(50, 'captions.list') } }
     'thumbnails' { return @(50, 'thumbnails.set') }
+    'channelBanners' { return @(50, 'channelBanners.insert') }
+    'channels' { if ($m -eq 'PUT') { return @(50, 'channels.update') } else { return @(1, 'channels.list') } }
     'playlists' { if ($m -eq 'GET') { return @(1, 'playlists.list') } else { return @(50, "playlists.$($m.ToLower())") } }
     'playlistItems' { if ($m -eq 'GET') { return @(1, 'playlistItems.list') } else { return @(50, "playlistItems.$($m.ToLower())") } }
     default { return @(1, "$res.list") }
@@ -622,7 +629,8 @@ function Invoke-Playlist {
 function Sync-Playlist([string]$pf) {
   $p = Get-Content -Raw -Encoding UTF8 $pf | ConvertFrom-Json
   # 足したい順: match に当たる upload.json を publishAt の順に（videoId のあるものだけ）
-  $want = @(Get-ChildItem (Join-Path $root '_dev/promo') -Filter $p.match | ForEach-Object {
+  $dir = if ($p.dir) { Join-Path $root $p.dir } else { Join-Path $root '_dev/promo' }
+  $want = @(Get-ChildItem $dir -Filter $p.match | ForEach-Object {
       $j = Get-Content -Raw -Encoding UTF8 $_.FullName | ConvertFrom-Json
       if ($j.videoId) { [pscustomobject]@{ name = $_.Name -replace '\.upload\.json$', ''; id = $j.videoId; at = "$($j.publishAt)" } } } | Sort-Object at, name)
   $at = Get-AccessToken; $h = @{ Authorization = "Bearer $at" }
@@ -683,5 +691,53 @@ function Sync-Playlist([string]$pf) {
   if ($plId) { Write-Host "通しで見る: https://www.youtube.com/playlist?list=$plId" }
 }
 
-try { if ($Quota) { Show-Quota } elseif ($Playlist) { Invoke-Playlist } elseif ($Verify) { Invoke-Verify } elseif ($Auth) { Invoke-Auth } elseif ($List) { Invoke-List } elseif ($Popular -and $Ga) { Invoke-GaPopular } elseif ($Stats -and $Ga) { Invoke-GaStats } elseif ($Stats) { Invoke-Stats } elseif ($Schedule) { Invoke-Schedule } elseif ($Thumb) { Invoke-Thumb } elseif ($Captions) { Invoke-Captions } elseif ($Update) { Invoke-Update } else { Invoke-Upload } }
+# ---- -Channel: チャンネルの説明・キーワード・英語・バナーを channel.json に合わせる ----
+# brandingSettings は送らなかった項目が消えるので、いまの値を読んで、変えるところだけ差しかえて送る
+function Invoke-Channel {
+  $c = Get-Content -Raw -Encoding UTF8 (Join-Path $root '_dev/promo/channel.json') | ConvertFrom-Json
+  $at = Get-AccessToken; $h = @{ Authorization = "Bearer $at" }
+  try { $ch = (Invoke-RestMethod -Headers $h -Uri 'https://www.googleapis.com/youtube/v3/channels?part=brandingSettings,localizations,snippet&mine=true').items | Select-Object -First 1 }
+  catch { throw "チャンネルを読めませんでした: $(Get-ErrText $_)" }
+  if (-not $ch) { throw 'チャンネルが見つかりません' }
+  $nl = { param($s) "$s" -replace "`r`n", "`n" }
+  $bc = $ch.brandingSettings.channel
+  Write-Host "チャンネル: $($ch.snippet.title)（名前は Studio で変える。channel.json の名前: $($c.title)）"
+  $diff = @()
+  if ((& $nl $bc.description) -ne (& $nl $c.description)) { $diff += '説明' }
+  if ("$($bc.keywords)" -ne "$($c.keywords)") { $diff += 'キーワード' }
+  foreach ($l in $c.localizations.PSObject.Properties) { $cur = $ch.localizations.($l.Name); if (-not $cur -or (& $nl $cur.description) -ne (& $nl $l.Value.description) -or $cur.title -ne $l.Value.title) { $diff += "翻訳 $($l.Name)" } }
+  Write-Host "ちがうところ: $(if ($diff) { $diff -join '・' } else { 'なし' })$(if ($c.banner) { '（バナーは毎回上げなおす）' })"
+  if ($DryRun) {
+    Write-Host "いまのキーワード: $($bc.keywords)"
+    if ($ch.localizations) { foreach ($p in $ch.localizations.PSObject.Properties) { Write-Host "いまの翻訳 $($p.Name): 名前「$($p.Value.title)」・説明 $("$($p.Value.description)".Length) 字" } }
+    Write-Host '（-DryRun）送らない'; return
+  }
+  $bs = @{ channel = @{} }
+  foreach ($p in $bc.PSObject.Properties) { $bs.channel[$p.Name] = $p.Value }
+  $bs.channel.description = $c.description; $bs.channel.keywords = $c.keywords; $bs.channel.defaultLanguage = 'ja'
+  if ($ch.brandingSettings.image) { $bs.image = @{}; foreach ($p in $ch.brandingSettings.image.PSObject.Properties) { $bs.image[$p.Name] = $p.Value } }
+  if ($c.banner) {
+    $bf = Join-Path $root $c.banner; $ct = if ($bf -match '\.png$') { 'image/png' } else { 'image/jpeg' }
+    try { $b = Invoke-RestMethod -Method Post -Uri 'https://www.googleapis.com/upload/youtube/v3/channelBanners/insert' -Headers $h -ContentType $ct -InFile $bf }
+    catch { throw "バナーを上げられませんでした: $(Get-ErrText $_)" }
+    if (-not $bs.image) { $bs.image = @{} }
+    $bs.image.bannerExternalUrl = $b.url
+    Write-Host "バナーを上げました: $($c.banner)"
+  }
+  $locs = @{}
+  if ($ch.localizations) { foreach ($p in $ch.localizations.PSObject.Properties) { $locs[$p.Name] = $p.Value } }
+  foreach ($p in $c.localizations.PSObject.Properties) { $locs[$p.Name] = $p.Value }
+  # brandingSettings はほかの part といっしょに送れない（400）ので、2回に分ける（channels.update 50 ×2）
+  $body = [Text.Encoding]::UTF8.GetBytes((@{ id = $ch.id; brandingSettings = $bs } | ConvertTo-Json -Depth 6))
+  try { $r = Invoke-RestMethod -Method Put -Headers $h -ContentType 'application/json; charset=UTF-8' -Body $body -Uri 'https://www.googleapis.com/youtube/v3/channels?part=brandingSettings' }
+  catch { throw "チャンネルを直せませんでした（403 なら -Auth をやり直してください）: $(Get-ErrText $_)" }
+  Write-Host "直しました: 説明 $("$($r.brandingSettings.channel.description)".Length) 字・キーワード「$($r.brandingSettings.channel.keywords)」$(if ($r.brandingSettings.image.bannerExternalUrl) { '・バナーあり' })"
+  $body = [Text.Encoding]::UTF8.GetBytes((@{ id = $ch.id; localizations = $locs } | ConvertTo-Json -Depth 6))
+  try { $r = Invoke-RestMethod -Method Put -Headers $h -ContentType 'application/json; charset=UTF-8' -Body $body -Uri 'https://www.googleapis.com/youtube/v3/channels?part=localizations' }
+  catch { throw "翻訳を直せませんでした: $(Get-ErrText $_)" }
+  Write-Host "翻訳: $(($r.localizations.PSObject.Properties.Name) -join ',')"
+  Write-Host "見る: https://www.youtube.com/channel/$($ch.id)"
+}
+
+try { if ($Quota) { Show-Quota } elseif ($Channel) { Invoke-Channel } elseif ($Playlist) { Invoke-Playlist } elseif ($Verify) { Invoke-Verify } elseif ($Auth) { Invoke-Auth } elseif ($List) { Invoke-List } elseif ($Popular -and $Ga) { Invoke-GaPopular } elseif ($Stats -and $Ga) { Invoke-GaStats } elseif ($Stats) { Invoke-Stats } elseif ($Schedule) { Invoke-Schedule } elseif ($Thumb) { Invoke-Thumb } elseif ($Captions) { Invoke-Captions } elseif ($Update) { Invoke-Update } else { Invoke-Upload } }
 catch { Write-Host "失敗: $($_.Exception.Message)"; exit 1 }

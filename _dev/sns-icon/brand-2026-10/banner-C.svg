@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 2560 1440" width="2560" height="1440">
+  <!-- 案C: いまの見た目のまま。題を「しし屋」にして、下に3つのラボ -->
+  <defs>
+    <pattern id="dot" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="14" cy="14" r="2" fill="#F1D7B3"/></pattern>
+    <symbol id="ic-manabi" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#2b6cb0"/><path d="M26 14h12M28 14v14L17 47a4 4 0 0 0 3.5 6h23a4 4 0 0 0 3.5-6L36 28V14" fill="none" stroke="#fff" stroke-width="3.5" stroke-linejoin="round"/><path d="M22 42h20l3 6H19z" fill="#fff"/></symbol>
+    <symbol id="ic-asobi" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#d9480f"/><rect x="10" y="19" width="44" height="24" rx="12" fill="#fff"/><path d="M22 25v12M16 31h12" stroke="#d9480f" stroke-width="4" stroke-linecap="round"/><circle cx="41" cy="28" r="3" fill="#d9480f"/><circle cx="47" cy="34" r="3" fill="#d9480f"/></symbol>
+    <symbol id="ic-kurashi" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#2f855a"/><g fill="none" stroke="#fff" stroke-width="3.5" stroke-linejoin="round"><rect x="11" y="25" width="42" height="25" rx="3"/><path d="M24 25v-5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5M11 36h42"/></g><rect x="28" y="32" width="8" height="8" rx="1.5" fill="#fff"/></symbol>
+    <symbol id="lion" viewBox="0 0 400 400">
+  <g transform="translate(0 -9)"><!-- たてがみの中心 (200,210) を画面の中心へ（見た目で 1px 下げた） -->
+  <defs><circle id="m" cx="200" cy="80" r="46" fill="#D9682B"/></defs>
+  <g>
+    <use href="#m"/><use href="#m" transform="rotate(30 200 210)"/><use href="#m" transform="rotate(60 200 210)"/>
+    <use href="#m" transform="rotate(90 200 210)"/><use href="#m" transform="rotate(120 200 210)"/><use href="#m" transform="rotate(150 200 210)"/>
+    <use href="#m" transform="rotate(180 200 210)"/><use href="#m" transform="rotate(210 200 210)"/><use href="#m" transform="rotate(240 200 210)"/>
+    <use href="#m" transform="rotate(270 200 210)"/><use href="#m" transform="rotate(300 200 210)"/><use href="#m" transform="rotate(330 200 210)"/>
+  </g>
+  <circle cx="200" cy="210" r="128" fill="#D9682B"/>
+  <circle cx="122" cy="128" r="26" fill="#F7C67E"/><circle cx="278" cy="128" r="26" fill="#F7C67E"/>
+  <circle cx="122" cy="128" r="13" fill="#E9A160"/><circle cx="278" cy="128" r="13" fill="#E9A160"/>
+  <circle cx="200" cy="215" r="102" fill="#F7C67E"/>
+  <ellipse cx="140" cy="240" rx="16" ry="10" fill="#F29A86" opacity=".7"/><ellipse cx="260" cy="240" rx="16" ry="10" fill="#F29A86" opacity=".7"/>
+  <circle cx="163" cy="196" r="9" fill="#3A2416"/><circle cx="237" cy="196" r="9" fill="#3A2416"/>
+  <circle cx="166" cy="193" r="3" fill="#fff"/><circle cx="240" cy="193" r="3" fill="#fff"/>
+  <g fill="none" stroke="#2B3A55" stroke-width="7">
+    <circle cx="163" cy="196" r="29"/><circle cx="237" cy="196" r="29"/>
+    <path d="M192 192 q8 -7 16 0"/><path d="M134 190 l-26 -8"/><path d="M266 190 l26 -8"/>
+  </g>
+  <ellipse cx="183" cy="258" rx="24" ry="19" fill="#FFF8EC"/><ellipse cx="217" cy="258" rx="24" ry="19" fill="#FFF8EC"/>
+  <path d="M186 236 h28 q4 0 1 5 l-11 12 q-4 4 -8 0 l-11 -12 q-3 -5 1 -5z" fill="#5A2E1A"/>
+  <path d="M200 255 v8 M188 272 q12 10 24 0" fill="none" stroke="#5A2E1A" stroke-width="4" stroke-linecap="round"/>
+</g>
+    </symbol>
+  </defs>
+  <rect width="2560" height="1440" fill="#FFF1DC"/>
+  <rect width="2560" height="1440" fill="url(#dot)"/>
+  <path d="M0 955 q75 -40 150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0" fill="none" stroke="#F6CFA0" stroke-width="6"/>
+  <path d="M0 485 q75 30 150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0" fill="none" stroke="#F6DDBC" stroke-width="5"/>
+  <!-- 左: 電波・DNA・イモムシ -->
+  <g transform="translate(330 760)" fill="none" stroke="#D9682B" stroke-linecap="round">
+    <circle r="12" fill="#D9682B" stroke="none"/>
+    <path d="M-40 -40 a56 56 0 0 1 80 0" stroke-width="10"/>
+    <path d="M-72 -72 a102 102 0 0 1 144 0" stroke-width="10" opacity=".7"/>
+    <path d="M-104 -104 a147 147 0 0 1 208 0" stroke-width="10" opacity=".4"/>
+  </g>
+  <g transform="translate(470 560)" stroke-linecap="round">
+    <path d="M0 0 c40 30 40 60 0 90 s-40 60 0 90" fill="none" stroke="#4A90C8" stroke-width="7"/>
+    <path d="M0 0 c-40 30 -40 60 0 90 s40 60 0 90" fill="none" stroke="#E36A6A" stroke-width="7"/>
+    <g stroke="#B9C6D6" stroke-width="5"><path d="M-22 22 h44 M-28 45 h56 M-22 68 h44 M-22 112 h44 M-28 135 h56 M-22 158 h44"/></g>
+  </g>
+  <g fill="#6BBF59" transform="translate(-280 470)">
+    <circle cx="470" cy="430" r="16"/><circle cx="496" cy="420" r="18"/><circle cx="524" cy="416" r="19"/><circle cx="553" cy="420" r="19"/>
+    <circle cx="582" cy="410" r="22" fill="#5AAE49"/>
+    <circle cx="588" cy="404" r="4" fill="#2B3A55"/>
+  </g>
+
+  <!-- 右: チョウ・地球・赤血球・原子 -->
+  <g transform="translate(2090 590) rotate(-15)">
+    <ellipse cx="-22" cy="-14" rx="24" ry="20" fill="#F5C02E"/><ellipse cx="22" cy="-14" rx="24" ry="20" fill="#F5C02E"/>
+    <ellipse cx="-16" cy="16" rx="16" ry="14" fill="#E9A160"/><ellipse cx="16" cy="16" rx="16" ry="14" fill="#E9A160"/>
+    <rect x="-4" y="-28" width="8" height="58" rx="4" fill="#3A2416"/>
+    <path d="M-2 -28 l-10 -16 M2 -28 l10 -16" stroke="#3A2416" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(2290 700)">
+    <ellipse rx="112" ry="30" fill="none" stroke="#E9A160" stroke-width="5" transform="rotate(-18)"/>
+    <circle r="72" fill="#4A90C8"/>
+    <path d="M-50 -38 q20 -20 40 -6 q10 16 -8 26 q-20 4 -18 22 q-18 2 -24 -18 q-4 -14 10 -24z" fill="#6BBF59"/>
+    <path d="M14 -6 q24 -10 40 6 q8 22 -8 40 q-18 14 -26 0 q-4 -20 -6 -46z" fill="#6BBF59"/>
+    <path d="M-30 44 q16 -6 28 6 q-6 14 -24 10z" fill="#6BBF59"/>
+    <circle cx="96" cy="-60" r="10" fill="#F5C02E"/>
+  </g>
+  <g transform="translate(130 470)">
+    <ellipse cx="1970" cy="395" rx="40" ry="30" fill="#D84545"/><ellipse cx="1970" cy="395" rx="20" ry="13" fill="#B83232"/>
+    <ellipse cx="2045" cy="440" rx="32" ry="24" fill="#E05A5A" transform="rotate(-20 2045 440)"/><ellipse cx="2045" cy="440" rx="15" ry="10" fill="#C23C3C" transform="rotate(-20 2045 440)"/>
+  </g>
+  <g transform="translate(2460 850)" fill="none" stroke="#2B3A55" stroke-width="5">
+    <ellipse rx="58" ry="20"/><ellipse rx="58" ry="20" transform="rotate(60)"/><ellipse rx="58" ry="20" transform="rotate(120)"/>
+    <circle r="11" fill="#D9682B" stroke="none"/>
+    <circle cx="58" cy="0" r="7" fill="#4A90C8" stroke="none"/><circle cx="-29" cy="-50" r="7" fill="#4A90C8" stroke="none"/>
+  </g>
+  <g font-family="'Yu Gothic','Meiryo',sans-serif" text-anchor="middle">
+    <text x="1280" y="705" font-weight="900" font-size="150" fill="#2B3A55" letter-spacing="14">しし屋</text>
+    <text x="1280" y="790" font-weight="700" font-size="38" fill="#D9682B">ふだん見えない「しくみ」を、動かして・遊んで・使って見る</text>
+    <g font-weight="700" font-size="34" fill="#2B3A55" text-anchor="start">
+      <use href="#ic-manabi" x="900" y="830" width="52" height="52"/><text x="964" y="868">まなびラボ</text>
+      <use href="#ic-asobi" x="1160" y="830" width="52" height="52"/><text x="1224" y="868">あそびラボ</text>
+      <use href="#ic-kurashi" x="1420" y="830" width="52" height="52"/><text x="1484" y="868">くらしラボ</text>
+    </g>
+  </g>
+</svg>

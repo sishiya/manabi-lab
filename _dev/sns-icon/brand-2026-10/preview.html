@@ -1,0 +1,26 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>バナーの案</title>
+<style>
+body{margin:0;padding:16px;background:#1b2333;color:#e8ecf3;font-family:'Yu Gothic','Meiryo',sans-serif}
+h2{font-size:18px;margin:28px 0 8px} p{margin:4px 0 10px;font-size:13px;color:#aab4c5}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.box{background:#0f1522;padding:8px;border-radius:8px} .box b{display:block;font-size:12px;margin-bottom:4px;color:#aab4c5}
+.crop{overflow:hidden;position:relative}
+.crop img{position:absolute;display:block}
+</style>
+<h1 style="font-size:20px">チャンネルのバナーの案（YouTube 2560×1440）</h1>
+<p>「パソコン」は横いっぱい×たて 424px、「スマホ」はまん中 1546×423 だけが見える。</p>
+<div id="list"></div>
+<script>
+const opts=[['A','しし屋が主役。下に3つのラボ。左は理科・右はゲームの絵'],['B','左半分まなびラボ・右半分あそびラボ、まん中にしし屋'],['C','いまの見た目のまま、題を「しし屋」に。下に3つのラボ']];
+const W=2560,s1=0.30,s2=0.42;
+let h='';
+for(const [k,t] of opts){
+  const f='banner-'+k+'.svg?'+Date.now();
+  h+=`<h2>案${k}</h2><p>${t}</p><div class="row">
+  <div class="box"><b>パソコン</b><div class="crop" style="width:${W*s1}px;height:${424*s1}px"><img src="${f}" style="width:${W*s1}px;top:${-508*s1}px;left:0"></div></div>
+  <div class="box"><b>スマホ</b><div class="crop" style="width:${1546*s1*0.62}px;height:${423*s1*0.62}px"><img src="${f}" style="width:${W*s1*0.62}px;top:${-508*s1*0.62}px;left:${-507*s1*0.62}px"></div></div>
+  </div>`;
+}
+document.getElementById('list').innerHTML=h;
+</script>

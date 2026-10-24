@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 2560 1440" width="2560" height="1440">
+  <!-- 案B: 左半分まなびラボ・右半分あそびラボ、まん中にしし屋 -->
+  <defs>
+    <pattern id="dot" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="14" cy="14" r="2" fill="#F1D7B3"/></pattern>
+    <symbol id="ic-manabi" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#2b6cb0"/><path d="M26 14h12M28 14v14L17 47a4 4 0 0 0 3.5 6h23a4 4 0 0 0 3.5-6L36 28V14" fill="none" stroke="#fff" stroke-width="3.5" stroke-linejoin="round"/><path d="M22 42h20l3 6H19z" fill="#fff"/></symbol>
+    <symbol id="ic-asobi" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#d9480f"/><rect x="10" y="19" width="44" height="24" rx="12" fill="#fff"/><path d="M22 25v12M16 31h12" stroke="#d9480f" stroke-width="4" stroke-linecap="round"/><circle cx="41" cy="28" r="3" fill="#d9480f"/><circle cx="47" cy="34" r="3" fill="#d9480f"/></symbol>
+    <symbol id="ic-kurashi" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#2f855a"/><g fill="none" stroke="#fff" stroke-width="3.5" stroke-linejoin="round"><rect x="11" y="25" width="42" height="25" rx="3"/><path d="M24 25v-5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5M11 36h42"/></g><rect x="28" y="32" width="8" height="8" rx="1.5" fill="#fff"/></symbol>
+    <symbol id="lion" viewBox="0 0 400 400">
+  <g transform="translate(0 -9)"><!-- たてがみの中心 (200,210) を画面の中心へ（見た目で 1px 下げた） -->
+  <defs><circle id="m" cx="200" cy="80" r="46" fill="#D9682B"/></defs>
+  <g>
+    <use href="#m"/><use href="#m" transform="rotate(30 200 210)"/><use href="#m" transform="rotate(60 200 210)"/>
+    <use href="#m" transform="rotate(90 200 210)"/><use href="#m" transform="rotate(120 200 210)"/><use href="#m" transform="rotate(150 200 210)"/>
+    <use href="#m" transform="rotate(180 200 210)"/><use href="#m" transform="rotate(210 200 210)"/><use href="#m" transform="rotate(240 200 210)"/>
+    <use href="#m" transform="rotate(270 200 210)"/><use href="#m" transform="rotate(300 200 210)"/><use href="#m" transform="rotate(330 200 210)"/>
+  </g>
+  <circle cx="200" cy="210" r="128" fill="#D9682B"/>
+  <circle cx="122" cy="128" r="26" fill="#F7C67E"/><circle cx="278" cy="128" r="26" fill="#F7C67E"/>
+  <circle cx="122" cy="128" r="13" fill="#E9A160"/><circle cx="278" cy="128" r="13" fill="#E9A160"/>
+  <circle cx="200" cy="215" r="102" fill="#F7C67E"/>
+  <ellipse cx="140" cy="240" rx="16" ry="10" fill="#F29A86" opacity=".7"/><ellipse cx="260" cy="240" rx="16" ry="10" fill="#F29A86" opacity=".7"/>
+  <circle cx="163" cy="196" r="9" fill="#3A2416"/><circle cx="237" cy="196" r="9" fill="#3A2416"/>
+  <circle cx="166" cy="193" r="3" fill="#fff"/><circle cx="240" cy="193" r="3" fill="#fff"/>
+  <g fill="none" stroke="#2B3A55" stroke-width="7">
+    <circle cx="163" cy="196" r="29"/><circle cx="237" cy="196" r="29"/>
+    <path d="M192 192 q8 -7 16 0"/><path d="M134 190 l-26 -8"/><path d="M266 190 l26 -8"/>
+  </g>
+  <ellipse cx="183" cy="258" rx="24" ry="19" fill="#FFF8EC"/><ellipse cx="217" cy="258" rx="24" ry="19" fill="#FFF8EC"/>
+  <path d="M186 236 h28 q4 0 1 5 l-11 12 q-4 4 -8 0 l-11 -12 q-3 -5 1 -5z" fill="#5A2E1A"/>
+  <path d="M200 255 v8 M188 272 q12 10 24 0" fill="none" stroke="#5A2E1A" stroke-width="4" stroke-linecap="round"/>
+</g>
+    </symbol>
+  </defs>
+  <rect width="2560" height="1440" fill="#FFF1DC"/>
+  <rect width="2560" height="1440" fill="url(#dot)"/>
+  <path d="M0 955 q75 -40 150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0" fill="none" stroke="#F6CFA0" stroke-width="6"/>
+  <path d="M0 485 q75 30 150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0 t150 0" fill="none" stroke="#F6DDBC" stroke-width="5"/>
+  <rect x="0" y="0" width="1280" height="1440" fill="#2b6cb0" opacity=".07"/>
+  <rect x="1280" y="0" width="1280" height="1440" fill="#d9480f" opacity=".07"/>
+  <!-- 左: 電波・DNA・イモムシ -->
+  <g transform="translate(330 760)" fill="none" stroke="#D9682B" stroke-linecap="round">
+    <circle r="12" fill="#D9682B" stroke="none"/>
+    <path d="M-40 -40 a56 56 0 0 1 80 0" stroke-width="10"/>
+    <path d="M-72 -72 a102 102 0 0 1 144 0" stroke-width="10" opacity=".7"/>
+    <path d="M-104 -104 a147 147 0 0 1 208 0" stroke-width="10" opacity=".4"/>
+  </g>
+  <g transform="translate(470 560)" stroke-linecap="round">
+    <path d="M0 0 c40 30 40 60 0 90 s-40 60 0 90" fill="none" stroke="#4A90C8" stroke-width="7"/>
+    <path d="M0 0 c-40 30 -40 60 0 90 s40 60 0 90" fill="none" stroke="#E36A6A" stroke-width="7"/>
+    <g stroke="#B9C6D6" stroke-width="5"><path d="M-22 22 h44 M-28 45 h56 M-22 68 h44 M-22 112 h44 M-28 135 h56 M-22 158 h44"/></g>
+  </g>
+  <g fill="#6BBF59" transform="translate(-280 470)">
+    <circle cx="470" cy="430" r="16"/><circle cx="496" cy="420" r="18"/><circle cx="524" cy="416" r="19"/><circle cx="553" cy="420" r="19"/>
+    <circle cx="582" cy="410" r="22" fill="#5AAE49"/>
+    <circle cx="588" cy="404" r="4" fill="#2B3A55"/>
+  </g>
+
+  <!-- 右: ゲームの絵（恐竜・サイコロ・コントローラー・星） -->
+  <g transform="translate(2190 640)" fill="#D9682B">
+    <path d="M-60 40 q10 -50 60 -50 q20 -40 55 -40 q25 0 25 18 q0 14 -22 14 h-10 q0 40 -30 60 l8 40 h-16 l-12 -32 h-30 l-8 32 h-16 l4 -36 q-30 -6 -58 6 q20 -10 50 -12z"/>
+    <circle cx="62" cy="-60" r="5" fill="#FFF1DC"/>
+  </g>
+  <g transform="translate(2400 660) rotate(12)">
+    <rect x="-55" y="-55" width="110" height="110" rx="20" fill="#FFF8EC" stroke="#2B3A55" stroke-width="6"/>
+    <g fill="#2B3A55"><circle cx="-26" cy="-26" r="10"/><circle r="10"/><circle cx="26" cy="26" r="10"/></g>
+  </g>
+  <g transform="translate(2440 850)">
+    <rect x="-80" y="-36" width="160" height="72" rx="36" fill="#d9480f"/>
+    <path d="M-44 -16v32M-60 0h32" stroke="#fff" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="34" cy="-10" r="9" fill="#fff"/><circle cx="52" cy="10" r="9" fill="#fff"/>
+  </g>
+  <g fill="#F5C02E" transform="translate(110 -10)"><path d="M2010 830 l12 26 28 4 -20 20 5 28 -25 -13 -25 13 5 -28 -20 -20 28 -4z"/></g>
+  <circle cx="1280" cy="640" r="118" fill="#FFF1DC"/>
+  <use href="#lion" x="1170" y="530" width="220" height="220"/>
+  <g font-family="'Yu Gothic','Meiryo',sans-serif" text-anchor="middle">
+    <rect x="1210" y="770" width="140" height="50" rx="25" fill="#2B3A55"/>
+    <text x="1280" y="807" font-weight="700" font-size="32" fill="#FFF6E8" letter-spacing="3">しし屋</text>
+    <use href="#ic-manabi" x="790" y="580" width="90" height="90"/>
+    <text x="835" y="750" font-weight="900" font-size="84" fill="#2b6cb0">まなびラボ</text>
+    <text x="835" y="815" font-weight="700" font-size="34" fill="#2B3A55">しくみを、動かして見る</text>
+    <use href="#ic-asobi" x="1680" y="580" width="90" height="90"/>
+    <text x="1725" y="750" font-weight="900" font-size="84" fill="#d9480f">あそびラボ</text>
+    <text x="1725" y="815" font-weight="700" font-size="34" fill="#2B3A55">ブラウザで遊べる小さなゲーム</text>
+    <text x="1280" y="895" font-family="'Segoe UI','Meiryo',sans-serif" font-size="27" fill="#8A7A66">無料 ・ インストール不要 ・ スマホでも　｜　くらしの道具は くらしラボ で</text>
+  </g>
+</svg>

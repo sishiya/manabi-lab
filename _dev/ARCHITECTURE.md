@@ -195,9 +195,12 @@ Zenn の順は YouTube の公開順。日付・状態の正は `zenn/README.md` 
 | GitHub | sishiya |
 | YouTube | 「しし屋」 @sishiya22 |
 | X | @sishiya22 |
-| note | note.com/sishiya（「しし屋 まなびラボ」） |
+| note | note.com/sishiya |
+| Zenn・DEV（プロフィール） | zenn.dev/sishiya・dev.to/sishiya |
 | Zenn・DEV | `zenn-articles` のリポジトリから（Zenn は GitHub 連携） |
 | Google | GA4（`G-E2VPYKV2Y9`）・Search Console・Google Cloud（YouTube・GA の API） |
+
+名前はどれも「しし屋」にそろえる（2026-10-24 決定。ラボはその中のシリーズ。名前の変更はユーザーが手で: `_dev/sns-icon/brand-2026-10/TODO-user.md`）。YouTube の説明・英語・キーワード・バナーは `_dev/promo/channel.json` → `youtube-upload.ps1 -Channel`。
 
 ---
 

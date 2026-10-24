@@ -1,0 +1,14 @@
+{
+  "playlistId": "PLX8RLH1Gpbn8",
+  "dir": "../ゲーム/_dev/promo",
+  "match": "*.upload.json",
+  "privacy": "public",
+  "title": "あそびラボ ― ゲームのあそびかた（通しで見る）",
+  "description": "しし屋 あそびラボの、ブラウザで遊べるゲームの動画（あそびかた・ショート）をまとめました。公開した順に1本ずつ足していきます。\n\nゲームはここから（インストール不要・無料）: https://sishiya.github.io/asobi-lab/",
+  "localizations": {
+    "en": {
+      "title": "Asobi Lab ― How to Play (play all)",
+      "description": "Videos for Asobi Lab by Sishiya: small games you can play in your browser (how-to-play guides and shorts). A new one is added each time it is published.\n\nPlay here (free, no install): https://sishiya.github.io/asobi-lab/"
+    }
+  }
+}
