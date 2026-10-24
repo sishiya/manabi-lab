@@ -5,8 +5,24 @@
   <link href="https://sishiya.github.io/manabi-lab/"/>
   <link rel="self" href="https://sishiya.github.io/manabi-lab/feed.xml"/>
   <id>https://sishiya.github.io/manabi-lab/feed.xml</id>
-  <updated>2026-10-21T00:00:00+09:00</updated>
+  <updated>2026-10-24T00:00:00+09:00</updated>
   <author><name>しし屋</name></author>
+  <entry>
+    <title>ブラウン管のドット絵</title>
+    <link href="https://sishiya.github.io/manabi-lab/crt-pixels/"/>
+    <id>https://sishiya.github.io/manabi-lab/crt-pixels/</id>
+    <published>2026-10-24T00:00:00+09:00</published>
+    <updated>2026-10-24T00:00:00+09:00</updated>
+    <summary>同じドット絵を、まんなかの仕切りで液晶とブラウン管に分けて見くらべる。テレビの信号のにじみ・電子ビームの走査線・赤緑青の光る点を計算して、昔のゲームの絵がやわらかく見えたわけを1つずつ確かめる。寄ると光る点まで見え、自分の画像も試せる。</summary>
+  </entry>
+  <entry>
+    <title>カビが育つまで</title>
+    <link href="https://sishiya.github.io/manabi-lab/mold-growth/"/>
+    <id>https://sishiya.github.io/manabi-lab/mold-growth/</id>
+    <published>2026-10-06T00:00:00+09:00</published>
+    <updated>2026-10-22T00:00:00+09:00</updated>
+    <summary>浴室の壁を拡大した「カビの箱庭」。胞子が芽を出し、菌糸をのばして増えていく。水・汚れ・カビ取り剤・防カビ剤を指で試して、どうすれば生えないかを探す。</summary>
+  </entry>
   <entry>
     <title>波が育つまで</title>
     <link href="https://sishiya.github.io/manabi-lab/wave-growth/"/>
@@ -14,14 +30,6 @@
     <published>2026-10-20T00:00:00+09:00</published>
     <updated>2026-10-21T00:00:00+09:00</updated>
     <summary>風が吹きはじめてから、鏡のような凪の海がさざ波・大きな波へ育ち、もう育たなくなるまでを、海で測った記録から作られた式と、何万もの波を重ねた3Dの海で。水深・透明度・時刻・雲も変えられ、海面に浮かんだり、水の中へもぐったりできる。</summary>
-  </entry>
-  <entry>
-    <title>カビが育つまで</title>
-    <link href="https://sishiya.github.io/manabi-lab/mold-growth/"/>
-    <id>https://sishiya.github.io/manabi-lab/mold-growth/</id>
-    <published>2026-10-06T00:00:00+09:00</published>
-    <updated>2026-10-20T00:00:00+09:00</updated>
-    <summary>浴室の壁を拡大した「カビの箱庭」。胞子が芽を出し、菌糸をのばして増えていく。水・汚れ・カビ取り剤・防カビ剤を指で試して、どうすれば生えないかを探す。</summary>
   </entry>
   <entry>
     <title>電波の見える部屋</title>

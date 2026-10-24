@@ -66,25 +66,16 @@ vec3 mask(vec2 u){
   }
   return m;
 }
-void main(){
-  vec2 frag = vec2(gl_FragCoord.x, uH - gl_FragCoord.y);
-  vec2 p = (frag - uView.xy) / uView.z;       // 絵の座標（ドット）
-  vec3 col;
-  if (frag.x < uSplit){
-    // 液晶: 1ドットをそのまま四角く
-    if (any(lessThan(p, vec2(0.0))) || any(greaterThanEqual(p, uPic))) col = vec3(0.0);
-    else col = textureLod(uOrig, (floor(p) + 0.5) / uPic, 0.0).rgb;
-    o = vec4(col, 1.0); return;
-  }
-  // ブラウン管
-  vec2 q = p / uPic * 2.0 - 1.0;
-  float edge = 1.0;
+// 絵の座標 p（ふくらみの前）のブラウン管の光（光の量。ガンマをかけたあと）。edge は画面のふちの丸み
+vec3 crtLight(vec2 p, out float edge){
+  edge = 1.0;
   if (uCurve > 0.5){
+    vec2 q = p / uPic * 2.0 - 1.0;
     q *= vec2(1.0 + q.y * q.y * 0.031, 1.0 + q.x * q.x * 0.041);   // ふくらみ（Lottes の既定値）
     vec2 a = abs(q) - (1.0 - 0.04); edge = 1.0 - smoothstep(0.0, 0.012, length(max(a, 0.0)) - 0.04 + min(max(a.x, a.y), 0.0));
     p = (q * 0.5 + 0.5) * uPic;
   }
-  if (any(lessThan(p, vec2(0.0))) || any(greaterThanEqual(p, uPic)) || edge <= 0.0){ o = vec4(0.0, 0.0, 0.0, 1.0); return; }
+  if (any(lessThan(p, vec2(0.0))) || any(greaterThanEqual(p, uPic)) || edge <= 0.0){ edge = 0.0; return vec3(0.0); }
 
   vec3 light = vec3(0.0);
   if (uScan > 0.5){
@@ -107,9 +98,10 @@ void main(){
         light += c * exp(-0.5 * d * d / (sg * sg)) / (sg * 2.5066);  // 帯の光の合計は行ごとに同じ（明るさは保つ）
       }
     }
-    // 1行が画面の数ピクセルより細いと、すきまがモアレ（波もよう）になる。そのときは帯をならす（寄ると見える）
+    // 1行が画面のピクセルにくらべて細すぎると、すきまがモアレ（波もよう）になる。そのときは帯をならす（寄ると見える）
+    // （1ピクセルに3点とって平均しているので、1行 2ピクセルくらいまでは描ける）
     float rowPx = uView.z * (uInter > 0.5 ? 0.5 : 1.0);
-    float vis = smoothstep(2.5, 4.5, rowPx);
+    float vis = smoothstep(1.5, 2.3, rowPx);
     if (vis < 1.0){
       vec3 even = lineLight(p.x, clamp(floor(p.y), 0.0, uPic.y - 1.0));
       light = mix(even, light, vis);
@@ -131,9 +123,27 @@ void main(){
     light += pow(b, vec3(uGamma)) * uBloom;
   }
   // 明るすぎる所はなだらかに頭打ち（光る点が光りきる。いまの画面の白より明るくは出せない）
-  light = mix(light, 0.8 + 0.2 * (1.0 - exp(-(light - 0.8) / 0.2)), step(0.8, light));
-  col = pow(clamp(light, 0.0, 1.0), vec3(1.0 / 2.2)) * edge;    // いまの画面（ガンマ約2.2）へ
-  o = vec4(col, 1.0);
+  return mix(light, 0.8 + 0.2 * (1.0 - exp(-(light - 0.8) / 0.2)), step(0.8, light));
+}
+void main(){
+  vec2 frag = vec2(gl_FragCoord.x, uH - gl_FragCoord.y);
+  vec2 p = (frag - uView.xy) / uView.z;       // 絵の座標（ドット）
+  if (frag.x < uSplit){
+    // 液晶: 1ドットをそのまま四角く
+    vec3 col = vec3(0.0);
+    if (!(any(lessThan(p, vec2(0.0))) || any(greaterThanEqual(p, uPic)))) col = textureLod(uOrig, (floor(p) + 0.5) / uPic, 0.0).rgb;
+    o = vec4(col, 1.0); return;
+  }
+  // ブラウン管。1行が小さいときは、1ピクセルの中のたてに3点とって平均する（走査線のモアレを減らす）
+  vec3 light; float edge;
+  if (uView.z < 6.0){
+    float e1, e2, e3;
+    light = (crtLight(p + vec2(0.0, -0.333 / uView.z), e1) + crtLight(p, e2) + crtLight(p + vec2(0.0, 0.333 / uView.z), e3)) / 3.0;
+    edge = (e1 + e2 + e3) / 3.0;
+  } else {
+    light = crtLight(p, edge);
+  }
+  o = vec4(pow(clamp(light, 0.0, 1.0), vec3(1.0 / 2.2)) * edge, 1.0);   // いまの画面（ガンマ約2.2）へ
 }`;
 
 function compile(gl, type, src) {

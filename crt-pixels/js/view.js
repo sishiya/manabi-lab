@@ -8,8 +8,12 @@ window.CRT_VIEW = function (stage, canvas, handle, onChange) {
 
   function fit() {
     const { w, h } = css();
-    V.fitZ = Math.min(w / V.picW, h / V.picH) * 0.94;
-    V.z = V.fitZ; V.x = (w - V.picW * V.z) / 2; V.y = (h - V.picH * V.z) / 2;
+    // 全体を見るときは、1ドットが画面のピクセルのちょうど整数倍になる大きさにする。
+    // 半端な倍率だと走査線のすきまがモアレになりやすい（2倍以上で、15% より小さくならないときだけ）
+    const dpr = canvas.width / Math.max(1, w), zd = Math.min(w / V.picW, h / V.picH) * 0.94 * dpr;
+    V.fitZ = (zd >= 2 && Math.floor(zd) / zd > 0.85 ? Math.floor(zd) : zd) / dpr;   // 小さくなりすぎるときは半端のまま（1ピクセルに3点の平均でならす）
+    V.z = V.fitZ;
+    V.x = Math.round((w - V.picW * V.z) / 2 * dpr) / dpr; V.y = Math.round((h - V.picH * V.z) / 2 * dpr) / dpr;
     onChange();
   }
   function clamp() {
@@ -28,7 +32,7 @@ window.CRT_VIEW = function (stage, canvas, handle, onChange) {
 
   // 仕切りの取っ手
   let dragSplit = null;
-  handle.addEventListener('pointerdown', e => { dragSplit = e.pointerId; handle.setPointerCapture(e.pointerId); e.stopPropagation(); e.preventDefault(); stopHint(); });
+  handle.addEventListener('pointerdown', e => { dragSplit = e.pointerId; try { handle.setPointerCapture(e.pointerId); } catch (_) { /* すでに離れた指 */ } e.stopPropagation(); e.preventDefault(); stopHint(); });
   handle.addEventListener('pointermove', e => {
     if (dragSplit !== e.pointerId) return;
     V.split = Math.max(0, Math.min(1, local(e)[0] / css().w)); onChange();
@@ -41,16 +45,15 @@ window.CRT_VIEW = function (stage, canvas, handle, onChange) {
   });
 
   // 絵の上: 移動・ピンチ
-  const pts = new Map(); let pinch = null, lastTap = 0;
+  const pts = new Map(); let pinch = null, tap = null, lastTap = null;
   canvas.addEventListener('pointerdown', e => {
-    canvas.setPointerCapture(e.pointerId); pts.set(e.pointerId, local(e)); stopHint();
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* すでに離れた指 */ } pts.set(e.pointerId, local(e)); stopHint();
     if (pts.size === 2) {
       const [a, b] = [...pts.values()];
       pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: V.z };
     }
-    const now = performance.now();
-    if (e.pointerType !== 'mouse' && pts.size === 1 && now - lastTap < 300) fit();
-    lastTap = now;
+    if (pts.size === 1) tap = { t: performance.now(), x: e.clientX, y: e.clientY, multi: false };
+    else if (tap) tap.multi = true;
   });
   canvas.addEventListener('pointermove', e => {
     if (!pts.has(e.pointerId)) return;
@@ -64,7 +67,15 @@ window.CRT_VIEW = function (stage, canvas, handle, onChange) {
       V.x += p[0] - prev[0]; V.y += p[1] - prev[1]; clamp(); onChange();
     }
   });
-  const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; };
+  // ダブルタップ: 動かさずに短く2回たたいたときだけ（ピンチや移動のあとは数えない）
+  const up = e => {
+    pts.delete(e.pointerId); if (pts.size < 2) pinch = null;
+    if (pts.size || !tap || e.pointerType === 'mouse') return;
+    const now = performance.now(), still = !tap.multi && now - tap.t < 250 && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 10;
+    if (still && lastTap && now - lastTap.t < 350 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 30) { fit(); lastTap = null; }
+    else lastTap = still ? { t: now, x: e.clientX, y: e.clientY } : null;
+    tap = null;
+  };
   canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
   canvas.addEventListener('dblclick', fit);
   canvas.addEventListener('wheel', e => { e.preventDefault(); const [x, y] = local(e); zoomAt(x, y, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
@@ -82,7 +93,14 @@ window.CRT_VIEW = function (stage, canvas, handle, onChange) {
 
   return {
     V, fit, clamp, hint, stopHint,
-    zoomBy(k) { const { w, h } = css(); zoomAt(w / 2, h / 2, k); },
+    // ＋−ボタンは、1ドットが整数ピクセルになる倍率へ（走査線がモアレにならない）
+    zoomBy(k) {
+      const { w, h } = css(), dpr = canvas.width / Math.max(1, w), zd = V.z * dpr;
+      let nd = Math.round(zd * k);
+      if (nd === Math.round(zd)) nd += k > 1 ? 1 : -1;
+      zoomAt(w / 2, h / 2, Math.max(1, nd) / dpr / V.z);
+      const vx = V.x * dpr, vy = V.y * dpr; V.x = Math.round(vx) / dpr; V.y = Math.round(vy) / dpr; onChange();
+    },
     setPicture(w, h) { V.picW = w; V.picH = h; fit(); },
     // 寄るところ（絵の座標）と倍率（全体の何倍か）を決める
     focus(px, py, mult) { const { w, h } = css(); V.z = V.fitZ * mult; clamp(); V.x = w / 2 - px * V.z; V.y = h / 2 - py * V.z; clamp(); onChange(); }

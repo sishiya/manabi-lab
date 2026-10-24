@@ -3,6 +3,10 @@
   --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
 [hidden]{display:none!important}
+:root[lang=en] [lang=ja],:root:not([lang=en]) [lang=en]{display:none!important}
+.langsw{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;align-self:center;margin-left:auto}
+.langsw button{border:0;background:none;padding:3px 8px;min-height:30px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--muted);cursor:pointer}
+.langsw button[aria-pressed="true"]{background:var(--acc);color:#0b1a12}
 button{font:inherit;color:inherit}
 
 /* 上に固定: 見出し・画面・ひとこと */
@@ -24,6 +28,18 @@ button{font:inherit;color:inherit}
 #zoom{position:absolute;right:8px;bottom:8px;display:flex;gap:6px}
 #zoom button{min-width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:rgba(16,24,32,.85);cursor:pointer;font-size:14px}
 #cap{margin:0;padding:8px 16px;font-size:14px;line-height:1.6;min-height:2.6em}
+/* スマホの横向き（高さが低い）: 左に画面を固定、右の列で操作をスクロール */
+@media (orientation:landscape) and (max-height:520px){
+  #app{display:grid;grid-template-columns:minmax(0,58%) minmax(0,42%);align-items:start}
+  #pin{height:100vh;height:100dvh;display:flex;flex-direction:column;border-bottom:0;border-right:1px solid var(--line)}
+  #top{padding:4px 12px 2px}
+  #top h1{font-size:15px}
+  #top .sub{display:none}
+  #stage{flex:1;height:auto;min-height:0}
+  #cap{font-size:12px;line-height:1.45;padding:4px 12px;min-height:0;max-height:4.5em;overflow:auto}
+  #panel{padding:4px 12px 32px;max-width:none}
+  #hud{font-size:11px}
+}
 @media (max-width:520px){
   #top .sub{display:none}
   #top h1{font-size:17px}

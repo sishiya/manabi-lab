@@ -1,0 +1,75 @@
+/* ブラウン管のドット絵 */
+:root{--bg:#101820;--panel:#16222c;--line:#2a3a48;--ink:#e8f0f4;--muted:#a3b4bf;--acc:#7fe0a0;
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+[hidden]{display:none!important}
+:root[lang=en] [lang=ja],:root:not([lang=en]) [lang=en]{display:none!important}
+.langsw{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;align-self:center;margin-left:auto}
+.langsw button{border:0;background:none;padding:3px 8px;min-height:30px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--muted);cursor:pointer}
+.langsw button[aria-pressed="true"]{background:var(--acc);color:#0b1a12}
+button{font:inherit;color:inherit}
+
+/* 上に固定: 見出し・画面・ひとこと */
+#pin{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+#top{display:flex;align-items:baseline;gap:12px;padding:8px 16px 4px;flex-wrap:wrap}
+#top h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0}
+#top .sub{color:var(--muted);font-size:13px}
+#stage{position:relative;height:min(64vh,calc(100vw * 0.875 + 8px));min-height:220px;background:#000;touch-action:none;overflow:hidden;user-select:none;-webkit-user-select:none}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab}
+#cv:active{cursor:grabbing}
+#nogl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:var(--muted)}
+.tag{position:absolute;top:8px;font-size:12px;padding:2px 8px;border-radius:10px;background:rgba(0,0,0,.6);pointer-events:none}
+.tag.l{left:8px}.tag.r{right:8px;color:var(--acc)}
+#divider{position:absolute;top:0;bottom:0;width:0;border-left:2px solid rgba(255,255,255,.75);pointer-events:none}
+#handle{position:absolute;top:50%;left:0;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;
+  border:2px solid #fff;background:rgba(16,24,32,.85);font-size:11px;letter-spacing:-2px;cursor:ew-resize;pointer-events:auto;touch-action:none}
+#handle:focus-visible{outline:3px solid var(--acc)}
+#hud{position:absolute;left:8px;bottom:8px;font-size:12px;line-height:1.5;padding:3px 8px;border-radius:8px;background:rgba(0,0,0,.6);pointer-events:none;max-width:60%}
+#zoom{position:absolute;right:8px;bottom:8px;display:flex;gap:6px}
+#zoom button{min-width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:rgba(16,24,32,.85);cursor:pointer;font-size:14px}
+#cap{margin:0;padding:8px 16px;font-size:14px;line-height:1.6;min-height:2.6em}
+/* スマホの横向き（高さが低い）: 左に画面を固定、右の列で操作をスクロール */
+@media (orientation:landscape) and (max-height:520px){
+  #app{display:grid;grid-template-columns:minmax(0,58%) minmax(0,42%);align-items:start}
+  #pin{height:100vh;height:100dvh;display:flex;flex-direction:column;border-bottom:0;border-right:1px solid var(--line)}
+  #top{padding:4px 12px 2px}
+  #top h1{font-size:15px}
+  #top .sub{display:none}
+  #stage{flex:1;height:auto;min-height:0}
+  #cap{font-size:12px;line-height:1.45;padding:4px 12px;min-height:0;max-height:4.5em;overflow:auto}
+  #panel{padding:4px 12px 32px;max-width:none}
+  #hud{font-size:11px}
+}
+@media (max-width:520px){
+  #top .sub{display:none}
+  #top h1{font-size:17px}
+  #hud{font-size:11px;max-width:52%}
+  #zoom button{min-width:38px;height:38px}
+  #cap{font-size:13px;line-height:1.5}
+}
+
+/* 下はスクロール */
+#panel{max-width:760px;margin:0 auto;padding:4px 16px 40px}
+.row{border-top:1px solid var(--line);padding:12px 0}
+.row:first-child{border-top:0}
+h2{font-size:15px;margin:0 0 8px}
+h3{font-size:14px;margin:14px 0 6px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button,.file,.focus{min-height:38px;padding:6px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-size:14px;display:inline-flex;align-items:center}
+.seg button.on{border-color:var(--acc);color:#0b1a12;background:var(--acc);font-weight:700}
+.file input{display:none}
+.focus{margin-top:8px}
+.note{color:var(--muted);font-size:13px;line-height:1.7;margin:6px 0 0}
+#mech{list-style:none;margin:8px 0 0;padding:0}
+#mech li{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:start;padding:8px 0;border-top:1px dashed var(--line)}
+#mech li:first-child{border-top:0}
+#mech label{display:flex;gap:8px;align-items:center;font-weight:700;cursor:pointer;min-height:36px}
+#mech input{width:20px;height:20px;accent-color:var(--acc)}
+#mech .badge{font-size:11px;font-weight:400;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:0 5px;margin-left:4px}
+#mech .only{min-height:36px;padding:4px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-size:13px}
+#mech p{grid-column:1/4;margin:0;color:var(--muted);font-size:13px;line-height:1.7}
+details summary{cursor:pointer;font-weight:700;min-height:32px;display:flex;align-items:center}
+#about{color:var(--muted);font-size:14px;line-height:1.8}
+#about summary{color:var(--ink)}
+#about a{color:var(--acc)}
+#about ul{padding-left:20px}

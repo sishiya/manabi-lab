@@ -44,7 +44,7 @@ const toYIQ = (r, g, b) => [0.30 * r + 0.59 * g + 0.11 * b, 0.599 * r - 0.2773 *
 // pic: { w, h, data RGBA }。frame: 0 か 1（ドットクロールの2コマ）。
 // かえすもの: 横 w*OUT × 縦 h の RGBA（Uint8ClampedArray、値はガンマのかかった信号 E'）
 function decodeFrame(pic, linkName, frame) {
-  const L = LINKS[linkName] || LINKS.rgb, W = pic.w, H = pic.h, N = W * SP, ow = W * OUT;
+  const lk = LINKS[linkName] || LINKS.rgb, W = pic.w, H = pic.h, N = W * SP, ow = W * OUT;
   const out = new Uint8ClampedArray(ow * H * 4);
   const ys = new Float32Array(N), cs = new Float32Array(N), is = new Float32Array(N), qs = new Float32Array(N), tmp = new Float32Array(N);
   for (let y = 0; y < H; y++) {
@@ -59,18 +59,18 @@ function decodeFrame(pic, linkName, frame) {
         cs[s] = I * COS[ph] + Q * SIN[ph];
       }
     }
-    if (L.kind === 'svideo') {
-      lowpass(ys, tmp, N, boxWidth(L.bwY));
-    } else if (L.kind === 'composite') {
+    if (lk.kind === 'svideo') {
+      lowpass(ys, tmp, N, boxWidth(lk.bwY));
+    } else if (lk.kind === 'composite') {
       // 2. 1本の信号から明るさを取り出す: 色副搬送波1周期（12点）の平均。色の波はここでちょうど消える
       for (let s = 0; s < N; s++) tmp[s] = ys[s] + cs[s];
       cs.set(tmp); box(cs, ys, N, PERIOD);
       for (let s = 0; s < N; s++) cs[s] = tmp[s] - ys[s];   // のこりが色（明るさの細かい模様もまざる → にせの色）
     }
-    if (L.kind !== 'rgb') {
+    if (lk.kind !== 'rgb') {
       // 3. 色を取り出す: 色副搬送波をかけて、ゆるいこし器
       for (let s = 0; s < N; s++) { const ph = (s + ph0) % PERIOD; is[s] = 2 * cs[s] * COS[ph]; qs[s] = 2 * cs[s] * SIN[ph]; }
-      lowpass(is, tmp, N, boxWidth(L.bwI)); lowpass(qs, tmp, N, boxWidth(L.bwQ));
+      lowpass(is, tmp, N, boxWidth(lk.bwI)); lowpass(qs, tmp, N, boxWidth(lk.bwQ));
     }
     // 4. Y・I・Q を RGB に戻して、1ドット4点にまとめる
     for (let o = 0; o < ow; o++) {
@@ -88,8 +88,8 @@ function decodeFrame(pic, linkName, frame) {
 
 // 目に見える平均（2コマを足して半分）。30回／秒の入れかわりは目にはまざって見える
 function decode(pic, linkName, view) {
-  const L = LINKS[linkName] || LINKS.rgb;
-  if (L.kind === 'rgb' || view === 0 || view === 1) return decodeFrame(pic, linkName, L.kind === 'rgb' ? 0 : view);
+  const lk = LINKS[linkName] || LINKS.rgb;
+  if (lk.kind === 'rgb' || view === 0 || view === 1) return decodeFrame(pic, linkName, lk.kind === 'rgb' ? 0 : view);
   const a = decodeFrame(pic, linkName, 0), b = decodeFrame(pic, linkName, 1);
   for (let i = 0; i < a.length; i++) a[i] = (a[i] + b[i] + 1) >> 1;
   return a;
