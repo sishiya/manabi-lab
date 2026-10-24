@@ -69,7 +69,26 @@ h3{font-size:14px;margin:14px 0 6px}
 #mech .only{min-height:36px;padding:4px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-size:13px}
 #mech p{grid-column:1/4;margin:0;color:var(--muted);font-size:13px;line-height:1.7}
 details summary{cursor:pointer;font-weight:700;min-height:32px;display:flex;align-items:center}
-#about{color:var(--muted);font-size:14px;line-height:1.8}
-#about summary{color:var(--ink)}
-#about a{color:var(--acc)}
-#about ul{padding-left:20px}
+#about,#aboutEn{color:var(--muted);font-size:14px;line-height:1.8}
+#about summary,#aboutEn summary{color:var(--ink)}
+#about a,#aboutEn a{color:var(--acc)}
+#about ul,#aboutEn ul{padding-left:20px}
+
+/* サムネイル撮影用（_dev/tools/thumb.html が body に .thumb をつける）: 画面だけを窓いっぱいに */
+.thumb #top,.thumb #cap,.thumb #panel,.thumb #hud,.thumb #zoom{display:none!important}
+.thumb #app{display:block!important;height:100vh}
+.thumb #pin{position:static;height:100vh;border:0}
+.thumb #stage{height:100vh!important}
+.thumb .tag{top:22px;font-size:26px;padding:6px 18px;border-radius:24px;background:rgba(0,0,0,.72)}
+.thumb .tag.l{left:24px}.thumb .tag.r{right:24px}
+.thumb #handle{width:64px;height:64px;font-size:16px}
+
+/* PC（横に広い画面）: 左に画面を大きく、右の列に操作（ほかのアプリと同じ並び）。右の列だけスクロール */
+@media (min-width:900px) and (min-aspect-ratio:1/1){
+  html,body{height:100%;overflow:hidden}
+  #app{display:grid;grid-template-columns:minmax(0,1fr) 380px;height:100vh;height:100dvh}
+  #pin{position:relative;height:100%;display:flex;flex-direction:column;border-bottom:0;border-right:1px solid var(--line)}
+  #stage{flex:1;height:auto;min-height:0}
+  #panel{height:100%;overflow-y:auto;max-width:none;margin:0;padding:8px 18px 40px;box-sizing:border-box}
+  #cap{min-height:0}
+}

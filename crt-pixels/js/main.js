@@ -65,13 +65,18 @@ function updateSignal() {
   dirty = true;
 }
 
+// 上に固定した画面の下に、フォーカスやページ内の移動でボタンが隠れないように
+// （左右2列のときは、画面は横にあるので要らない）。固定部分の大きさが変わるたびに測る
+function padPin() {
+  const pin = $('pin'), side = pin.offsetWidth < window.innerWidth * 0.9;
+  document.documentElement.style.scrollPaddingTop = side ? '0px' : (pin.offsetHeight + 8) + 'px';
+}
+if (window.ResizeObserver) new ResizeObserver(padPin).observe($('pin'));
+
 function resize() {
   const dpr = Math.min(2, window.devicePixelRatio || 1), r = cv.getBoundingClientRect();
   cv.width = Math.max(1, Math.round(r.width * dpr)); cv.height = Math.max(1, Math.round(r.height * dpr));
-  // 上に固定した画面の下に、フォーカスやページ内の移動でボタンが隠れないように
-  // （横向きで左右2列のときは、画面は横にあるので要らない）
-  const pin = $('pin'), side = pin.offsetWidth < window.innerWidth * 0.9;
-  document.documentElement.style.scrollPaddingTop = side ? '0px' : (pin.offsetHeight + 8) + 'px';
+  padPin();
   view.fit(); dirty = true;
 }
 
@@ -176,6 +181,11 @@ document.querySelectorAll('#langsw button').forEach(b => { b.setAttribute('aria-
 
 buildMech();
 window.addEventListener('resize', resize);
+// 窓の大きさが同じでも、並び（PC の2列・スマホの縦）が変わると画面の大きさが変わるので、それも見る
+if (window.ResizeObserver) {
+  let lastWH = '';
+  new ResizeObserver(() => { const k = stage.clientWidth + 'x' + stage.clientHeight; if (k !== lastWH) { lastWH = k; resize(); } }).observe(stage);
+}
 resize(); refresh(); requestAnimationFrame(loop);
 
 // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）
