@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 670" width="1280" height="670">
-  <!-- note のヘッダー（案A から）。1280×670。PC では上下が切れるので、中身は y 130〜470 のまん中の帯に -->
+  <!-- note のヘッダー（案A から）。1280×670。note はパソコンでまん中の細い帯しか見えない（幅の広い画面だと y 250〜420 くらい）。
+       文字はすべて y 262〜408 の1段に。上下の絵は、背の高い表示のときだけ見える -->
   <defs>
     <pattern id="dot" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="14" cy="14" r="2" fill="#F1D7B3"/></pattern>
     <symbol id="ic-manabi" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#2b6cb0"/><path d="M26 14h12M28 14v14L17 47a4 4 0 0 0 3.5 6h23a4 4 0 0 0 3.5-6L36 28V14" fill="none" stroke="#fff" stroke-width="3.5" stroke-linejoin="round"/><path d="M22 42h20l3 6H19z" fill="#fff"/></symbol>
@@ -33,49 +34,49 @@
   </defs>
   <rect width="1280" height="670" fill="#FFF1DC"/>
   <rect width="1280" height="670" fill="url(#dot)"/>
-  <path d="M0 540 q60 -30 120 0 t120 0 t120 0 t120 0 t120 0 t120 0 t120 0 t120 0 t120 0 t120 0 t120 0" fill="none" stroke="#F6CFA0" stroke-width="5"/>
-  <path d="M0 100 q60 24 120 0 t120 0 t120 0 t120 0 t120 0 t120 0 t120 0 t120 0 t120 0 t120 0 t120 0" fill="none" stroke="#F6DDBC" stroke-width="4"/>
+  <path d="M0 470 q60 -26 120 0 t120 0 t120 0 t120 0 t120 0 t120 0 t120 0 t120 0 t120 0 t120 0 t120 0" fill="none" stroke="#F6CFA0" stroke-width="5"/>
+  <path d="M0 205 q60 22 120 0 t120 0 t120 0 t120 0 t120 0 t120 0 t120 0 t120 0 t120 0 t120 0 t120 0" fill="none" stroke="#F6DDBC" stroke-width="4"/>
   <!-- 左: 電波・DNA・イモムシ -->
-  <g transform="translate(130 330) scale(.8)" fill="none" stroke="#D9682B" stroke-linecap="round">
+  <g transform="translate(110 175) scale(.6)" fill="none" stroke="#D9682B" stroke-linecap="round">
     <circle r="12" fill="#D9682B" stroke="none"/>
     <path d="M-40 -40 a56 56 0 0 1 80 0" stroke-width="10"/>
     <path d="M-72 -72 a102 102 0 0 1 144 0" stroke-width="10" opacity=".7"/>
     <path d="M-104 -104 a147 147 0 0 1 208 0" stroke-width="10" opacity=".4"/>
   </g>
-  <g transform="translate(300 175) scale(.8)" stroke-linecap="round">
+  <g transform="translate(1120 40) scale(.55)" stroke-linecap="round">
     <path d="M0 0 c40 30 40 60 0 90 s-40 60 0 90" fill="none" stroke="#4A90C8" stroke-width="7"/>
     <path d="M0 0 c-40 30 -40 60 0 90 s40 60 0 90" fill="none" stroke="#E36A6A" stroke-width="7"/>
     <g stroke="#B9C6D6" stroke-width="5"><path d="M-22 22 h44 M-28 45 h56 M-22 68 h44 M-22 112 h44 M-28 135 h56 M-22 158 h44"/></g>
   </g>
-  <g fill="#6BBF59" transform="translate(-370 30) scale(1)">
+  <g fill="#6BBF59" transform="translate(-300 120)">
     <circle cx="470" cy="430" r="13"/><circle cx="492" cy="422" r="15"/><circle cx="516" cy="418" r="16"/><circle cx="541" cy="422" r="16"/>
     <circle cx="566" cy="413" r="18" fill="#5AAE49"/><circle cx="571" cy="408" r="3.5" fill="#2B3A55"/>
   </g>
   <!-- 右: 恐竜・サイコロ・コントローラー・星 -->
-  <g transform="translate(1195 200) scale(.7)" fill="#D9682B">
+  <g transform="translate(1150 560) scale(.6)" fill="#D9682B">
     <path d="M-60 40 q10 -50 60 -50 q20 -40 55 -40 q25 0 25 18 q0 14 -22 14 h-10 q0 40 -30 60 l8 40 h-16 l-12 -32 h-30 l-8 32 h-16 l4 -36 q-30 -6 -58 6 q20 -10 50 -12z"/>
     <circle cx="62" cy="-60" r="5" fill="#FFF1DC"/>
   </g>
-  <g transform="translate(1195 395) rotate(12) scale(.6)">
+  <g transform="translate(250 560) rotate(12) scale(.5)">
     <rect x="-55" y="-55" width="110" height="110" rx="20" fill="#FFF8EC" stroke="#2B3A55" stroke-width="6"/>
     <g fill="#2B3A55"><circle cx="-26" cy="-26" r="10"/><circle r="10"/><circle cx="26" cy="26" r="10"/></g>
   </g>
-  <g transform="translate(1110 470) scale(.55)">
+  <g transform="translate(980 590) scale(.5)">
     <rect x="-80" y="-36" width="160" height="72" rx="36" fill="#d9480f"/>
     <path d="M-44 -16v32M-60 0h32" stroke="#fff" stroke-width="10" stroke-linecap="round"/>
     <circle cx="34" cy="-10" r="9" fill="#fff"/><circle cx="52" cy="10" r="9" fill="#fff"/>
   </g>
-  <g fill="#F5C02E" transform="translate(1015 150) scale(.6)"><path d="M0 -30 l12 26 28 4 -20 20 5 28 -25 -13 -25 13 5 -28 -20 -20 28 -4z"/></g>
-  <!-- 文字（ライオン＋しし屋＋3つのラボ） -->
-  <use href="#lion" x="400" y="140" width="180" height="180"/>
+  <g fill="#F5C02E" transform="translate(640 160) scale(.6)"><path d="M0 -30 l12 26 28 4 -20 20 5 28 -25 -13 -25 13 5 -28 -20 -20 28 -4z"/></g>
+  <!-- 文字（1段） -->
+  <use href="#lion" x="100" y="263" width="144" height="144"/>
   <g font-family="'Yu Gothic','Meiryo',sans-serif">
-    <text x="600" y="255" font-weight="900" font-size="112" fill="#2B3A55" letter-spacing="8">しし屋</text>
-    <text x="602" y="305" font-weight="700" font-size="30" fill="#D9682B">ブラウザで動く、「しくみ」の見えるアプリ</text>
-  </g>
-  <g font-family="'Yu Gothic','Meiryo',sans-serif" font-weight="700" font-size="30" fill="#2B3A55">
-    <use href="#ic-manabi" x="430" y="345" width="50" height="50"/><text x="490" y="381">まなびラボ</text>
-    <use href="#ic-asobi" x="670" y="345" width="50" height="50"/><text x="730" y="381">あそびラボ</text>
-    <use href="#ic-kurashi" x="910" y="345" width="50" height="50"/><text x="970" y="381">くらしラボ</text>
-    <text x="432" y="440" font-family="'Segoe UI','Meiryo',sans-serif" font-weight="400" font-size="22" fill="#8A7A66">無料 ・ インストール不要 ・ スマホでも</text>
+    <text x="262" y="372" font-weight="900" font-size="96" fill="#2B3A55" letter-spacing="6">しし屋</text>
+    <text x="640" y="302" font-weight="700" font-size="27" fill="#D9682B">ブラウザで動く、「しくみ」の見えるアプリ</text>
+    <g font-weight="700" font-size="26" fill="#2B3A55">
+      <use href="#ic-manabi" x="640" y="320" width="38" height="38"/><text x="686" y="348">まなびラボ</text>
+      <use href="#ic-asobi" x="840" y="320" width="38" height="38"/><text x="886" y="348">あそびラボ</text>
+      <use href="#ic-kurashi" x="1040" y="320" width="38" height="38"/><text x="1086" y="348">くらしラボ</text>
+    </g>
+    <text x="642" y="396" font-family="'Segoe UI','Meiryo',sans-serif" font-size="20" fill="#8A7A66">無料 ・ インストール不要 ・ スマホでも</text>
   </g>
 </svg>
