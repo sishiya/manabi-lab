@@ -12,7 +12,6 @@ uniform sampler2D uOrig;   // もとのドット絵（NEAREST）
 uniform sampler2D uSig;    // テレビの中で戻した信号 E'（横 4点／ドット、LINEAR＋ミップマップ）
 uniform vec2 uPic;         // 絵の大きさ（ドット）
 uniform vec3 uView;        // 画面のピクセル → 絵の座標: pic = (frag - xy) / (z×par, z)
-uniform float uLook;       // 試験の案 0=A（本物の大きさ。細かすぎると消す） 1=B（細かすぎるときは画面の3ピクセルに合わせる） 2=C（B＋にじみ強め）
 uniform float uPar;        // 1ドットの横÷たて（当時のテレビは 8:7。正方形なら 1）
 uniform float uSplit;      // 仕切りの位置（画面のピクセル）。左が液晶
 uniform float uH;          // キャンバスの高さ（ピクセル。gl_FragCoord の上下を返す）
@@ -41,7 +40,7 @@ vec3 lineLight(float x, float row){
   for (int k = -4; k <= 4; k++){
     float dx = float(k) * 0.3;
     vec3 c = pow(sig(x + dx, row), vec3(uGamma));
-    float sg = mix(0.24, uLook > 1.5 ? 0.55 : 0.42, sqrt(clamp(dot(c, vec3(0.30, 0.59, 0.11)), 0.0, 1.0)));
+    float sg = mix(0.24, 0.55, sqrt(clamp(dot(c, vec3(0.30, 0.59, 0.11)), 0.0, 1.0)));
     s += c * exp(-0.5 * dx * dx / (sg * sg)) * (0.3 / (sg * 2.5066));
   }
   return s;
@@ -91,7 +90,7 @@ vec3 crtLight(vec2 p, vec2 frag, out float edge){
       if (row < 0.0 || row >= uPic.y) continue;
       vec3 c = lineLight(p.x, row);
       float lum = dot(c, vec3(0.30, 0.59, 0.11));
-      float sg = mix(0.15, uLook > 1.5 ? 0.40 : 0.32, sqrt(clamp(lum, 0.0, 1.0)));
+      float sg = mix(0.15, 0.40, sqrt(clamp(lum, 0.0, 1.0)));
       if (uInter > 0.5){
         // 480i: 2つのフィールドが半行ずれて交互に描く。目にはまざるので、帯が2倍細かく並ぶ
         for (int f = 0; f < 2; f++){
@@ -118,8 +117,9 @@ vec3 crtLight(vec2 p, vec2 frag, out float edge){
     float cellPx = uView.z / uTriads;
     float mean = uMask > 2.5 ? 0.26 : (uMask > 1.5 ? 0.22 : 0.25);
     vec3 m; float vis;
-    if (uLook > 0.5 && cellPx < 3.5){
-      // 案B・C: 本物の大きさでは画面のピクセルより細かいとき、光る点を画面の3ピクセルに合わせて描く（近似。本物より少し粗い）。
+    if (cellPx < 3.5){
+      // 本物の大きさでは画面のピクセルより細かいとき、光る点を画面の3ピクセルに合わせて描く（近似。本物より少し粗い。
+      // 消してしまうより、実機の写真の見え方に近い。2026-10-24 に案 A・B・C を見くらべて決めた）。
       // たてじま（モニター）はそのまま、丸い点・細長い穴は、1列ごとに半分ずらした短いしまで代わりにする
       vec2 f = floor(frag);
       int ch = int(mod(f.x, 3.0));
@@ -130,8 +130,7 @@ vec3 crtLight(vec2 p, vec2 frag, out float edge){
       vis = 1.0;
     } else {
       // 光る点。1ピクセルの中を横4点・たて2点とって平均する（細かい大きさでもモアレになりにくい）。
-      // 1組が 2.2〜3.5 ピクセルより小さいと描けないので薄める
-      vis = smoothstep(2.2, 3.5, cellPx);
+      vis = 1.0;
       vec2 u = vec2(p.x * uPar, p.y) * uTriads;   // 光る点は画面に固定（ドットが横長でも点の形は変わらない）
       float fw = uTriads / uView.z;                // 1ピクセルの幅（光る点の組の単位）
       m = vec3(0.0);
@@ -190,7 +189,7 @@ window.CRT_GL = function (canvas) {
   const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
   const la = gl.getAttribLocation(pr, 'a'); gl.enableVertexAttribArray(la); gl.vertexAttribPointer(la, 2, gl.FLOAT, false, 0, 0);
-  const U = {}; ['uOrig', 'uSig', 'uPic', 'uView', 'uSplit', 'uH', 'uScan', 'uInter', 'uMask', 'uTriads', 'uPar', 'uLook', 'uGamma', 'uBloom', 'uCurve', 'uNoise', 'uSeed']
+  const U = {}; ['uOrig', 'uSig', 'uPic', 'uView', 'uSplit', 'uH', 'uScan', 'uInter', 'uMask', 'uTriads', 'uPar', 'uGamma', 'uBloom', 'uCurve', 'uNoise', 'uSeed']
     .forEach(n => U[n] = gl.getUniformLocation(pr, n));
   const tOrig = gl.createTexture(), tSig = gl.createTexture();
   gl.uniform1i(U.uOrig, 0); gl.uniform1i(U.uSig, 1);
@@ -215,7 +214,7 @@ window.CRT_GL = function (canvas) {
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.uniform2f(U.uPic, pw, ph); gl.uniform3f(U.uView, v.view[0], v.view[1], v.view[2]);
       gl.uniform1f(U.uSplit, v.split); gl.uniform1f(U.uH, canvas.height);
-      gl.uniform1f(U.uScan, v.scan); gl.uniform1f(U.uInter, v.inter); gl.uniform1f(U.uMask, v.mask); gl.uniform1f(U.uTriads, v.triads); gl.uniform1f(U.uPar, v.par || 1); gl.uniform1f(U.uLook, v.look || 0);
+      gl.uniform1f(U.uScan, v.scan); gl.uniform1f(U.uInter, v.inter); gl.uniform1f(U.uMask, v.mask); gl.uniform1f(U.uTriads, v.triads); gl.uniform1f(U.uPar, v.par || 1);
       gl.uniform1f(U.uGamma, v.gamma); gl.uniform1f(U.uBloom, v.bloom); gl.uniform1f(U.uCurve, v.curve);
       gl.uniform1f(U.uNoise, v.noise); gl.uniform1f(U.uSeed, v.seed || 0);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);

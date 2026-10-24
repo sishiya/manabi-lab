@@ -53,7 +53,6 @@ button{font:inherit;color:inherit}
 #panel{max-width:760px;margin:0 auto;padding:4px 16px 40px}
 .row{border-top:1px solid var(--line);padding:12px 0}
 .row:first-child{border-top:0}
-.row.trial{border:1px dashed var(--acc);border-radius:10px;padding:10px 12px;margin:8px 0}
 h2{font-size:15px;margin:0 0 8px}
 h3{font-size:14px;margin:14px 0 6px}
 .seg{display:flex;flex-wrap:wrap;gap:6px}

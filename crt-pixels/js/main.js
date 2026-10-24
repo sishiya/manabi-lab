@@ -36,7 +36,7 @@ const PICS = {
 const FILE_NOTE = L('自分の画像（PNG など）はこの端末の中だけで計算し、どこにも送りません。拡大したスクリーンショットは元のドットに戻します。', 'Your own image (PNG etc.) is processed only on this device and never sent anywhere. Enlarged screenshots are shrunk back to their original pixels.');
 
 const S = {
-  pic: 'falls', screen: 'shadow', link: 'composite', inter: 0, frame: 'avg', par: 'tv', look: '1',
+  pic: 'falls', screen: 'shadow', link: 'composite', inter: 0, frame: 'avg', par: 'tv',
   on: { scan: true, signal: true, mask: true, gamma: true, bloom: true, curve: true },
   userPic: null, current: null, sigKey: ''
 };
@@ -91,8 +91,7 @@ function draw() {
   const dprNow = cv.width / Math.max(1, w);
   const rowPx = V.z * dprNow * (S.inter ? 0.5 : 1);   // シェーダーと同じ境目（1行 2.3 ピクセルより細いと、ならしている）
   if (S.on.scan && rowPx < 2.3) hud += L('寄ると走査線が見えます', 'Zoom in to see the scan lines');
-  else if (S.on.mask && S.look !== '0' && cellCss * dprNow < 3.5) hud += L('光る点は画面のピクセルに合わせた近似', 'Glowing dots matched to screen pixels (approximation)');
-  else if (S.on.mask && cellCss * dprNow < 3.5) hud += L('もっと寄ると光る点が見えます', 'Zoom in more to see the glowing dots');
+  else if (S.on.mask && cellCss * dprNow < 3.5) hud += L('光る点は画面のピクセルに合わせた近似（寄ると本物の大きさ）', 'Dots matched to screen pixels (zoom in for real size)');
   else if (S.on.mask) hud += L(`1ドット＝光る点 ${(scr.triads * parValue()).toFixed(1)}組（推定）`, `1 pixel = ${(scr.triads * parValue()).toFixed(1)} sets of dots (estimate)`);
   $('hud').innerHTML = hud;
   if (!R) return;
@@ -100,7 +99,7 @@ function draw() {
   R.draw({
     view: [V.x * dpr, V.y * dpr, V.z * dpr], split: V.split * cv.width,
     scan: S.on.scan ? 1 : 0, inter: S.inter, mask: S.on.mask ? scr.mask : 0, triads: scr.triads,
-    par: parValue(), gamma: S.on.gamma ? 2.4 : 2.2, bloom: S.on.bloom ? (S.look === '2' ? 0.28 : 0.16) : 0, look: Number(S.look), curve: S.on.curve ? 1 : 0,
+    par: parValue(), gamma: S.on.gamma ? 2.4 : 2.2, bloom: S.on.bloom ? 0.28 : 0, curve: S.on.curve ? 1 : 0,
     noise: (S.on.signal && S.link === 'rf') ? window.CRT_NTSC.LINKS.rf.noise : 0, seed: 1.7
   });
 }
@@ -127,8 +126,7 @@ const paints = [
   segment('interSeg', 'inter', () => S.inter, v => { S.inter = Number(v); }),
   segment('frameSeg', 'frame', () => S.frame, v => { S.frame = v; }),
   segment('parSeg', 'par', () => S.par, v => { S.par = v; view.setPar(parValue()); }),
-  segment('dotSeg', 'dot', () => S.userK, v => { setUserK(v); }),
-  segment('lookSeg', 'look', () => S.look, v => { S.look = v; })
+  segment('dotSeg', 'dot', () => S.userK, v => { setUserK(v); })
 ];
 function buildMech() {
   $('mech').innerHTML = MECH.map(m => `<li><label><input type="checkbox" data-m="${m.id}" aria-label="${m.name}">${m.name}<span class="badge">${m.badge}</span></label><span></span>
