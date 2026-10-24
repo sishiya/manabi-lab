@@ -85,6 +85,7 @@ flowchart TB
 | `アプリ開発/` | `sishiya/manabi-lab`（Public） | https://sishiya.github.io/manabi-lab/ | まなびラボ（学習アプリ・入口・保管庫・道具・紹介動画の台本） |
 | `ゲーム/` | `sishiya/asobi-lab`（Public） | https://sishiya.github.io/asobi-lab/ | あそびラボ（ゲームのほう。決まりは `ゲーム/RULES.md`） |
 | `くらし/` | `sishiya/kurashi-lab`（Public） | https://sishiya.github.io/kurashi-lab/ | くらしラボ（仕事や生活に役立つツール。2026-10-19 に作った。方針は `くらし/CLAUDE.md`、案は `IDEAS.md` の「姉妹サイトのアイデア」。確認はまなびラボの launch.json の `kurashi`＝8800） |
+| `しし屋/` | `sishiya/sishiya.github.io`（Public。2026-10-24 に作った） | https://sishiya.github.io/ | しし屋のトップ（3つのラボへの案内・robots.txt・ラボをまとめたサイトマップ。方針は `しし屋/CLAUDE.md`。確認は `しし屋/.claude/launch.json` の `top`＝8810） |
 | `zenn/` | `sishiya/zenn-articles` | Zenn（`articles/`）・DEV（`dev/` を API で） | 技術記事。決まりは `zenn/README.md` |
 
 - push はどれもユーザーがチャットで頼んだときだけ（`MANABI_PUSH_OK=1`）。例外は `zenn-daily-publish` の zenn の push だけ（2026-10-16 にユーザーが頼んだ）。
