@@ -57,7 +57,7 @@ h2{font-size:15px;margin:0 0 8px}
 h3{font-size:14px;margin:14px 0 6px}
 .seg{display:flex;flex-wrap:wrap;gap:6px}
 .seg button,.file,.focus{min-height:38px;padding:6px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-size:14px;display:inline-flex;align-items:center}
-.seg button.on{border-color:var(--acc);color:#0b1a12;background:var(--acc);font-weight:700}
+.seg button.on,.seg .file.on{border-color:var(--acc);color:#0b1a12;background:var(--acc);font-weight:700}
 .file input{display:none}
 .focus{margin-top:8px}
 .note{color:var(--muted);font-size:13px;line-height:1.7;margin:6px 0 0}

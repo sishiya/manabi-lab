@@ -14,7 +14,7 @@ function pic(w, h, f) {
 }
 // 出力のまんなかあたり（はしの影響をさける）の平均と、ばらつき
 function stats(out, w, h) {
-  const ow = w * N.OUT, s = [0, 0, 0], s2 = [0, 0, 0]; let n = 0;
+  const ow = N.OUT_W, s = [0, 0, 0], s2 = [0, 0, 0]; let n = 0;
   for (let y = 2; y < h - 2; y++) for (let o = ow / 4; o < ow * 3 / 4; o++) {
     const i = (y * ow + o) * 4;
     for (let c = 0; c < 3; c++) { s[c] += out[i + c]; s2[c] += out[i + c] ** 2; }
@@ -23,7 +23,7 @@ function stats(out, w, h) {
   const m = s.map(v => v / n);
   return { mean: m, sd: s2.map((v, c) => Math.sqrt(Math.max(0, v / n - m[c] ** 2))) };
 }
-const W = 64, H = 12;
+const W = 256, H = 12;   // 横 256 ドット（1ドット＝色副搬送波の 8/12 周期になる大きさ）
 const near = (a, b, tol) => a.every((v, i) => Math.abs(v - b[i]) <= tol);
 
 // 1. 一色の面は、どのつなぎ方でもほぼ同じ色に戻る
@@ -54,5 +54,21 @@ ok(hs.sd[1] > 90, `1ドットの横じまは信号では消えない（ばらつ
 const c0 = N.decodeFrame(stripes, 'composite', 0), c1 = N.decodeFrame(stripes, 'composite', 1);
 let diff = 0; for (let i = 0; i < c0.length; i++) diff += Math.abs(c0[i] - c1[i]);
 ok(diff / c0.length > 3, `ドットクロール: 2コマの差 ${(diff / c0.length).toFixed(1)}`);
+// 6. こし器: 帯域の周波数の正弦波を通すと、振幅が 1/√2（−3dB）になる
+for (const f of [0.4, 0.6, 1.3, 4.2]) {
+  const n = 4096, buf = new Float32Array(n), tmp = new Float32Array(n);
+  for (let i = 0; i < n; i++) buf[i] = Math.sin(2 * Math.PI * f * i / N.FS);
+  N.lowpass(buf, tmp, n, N.boxWidth(f));
+  let mx = 0; for (let i = 1000; i < n - 1000; i++) mx = Math.max(mx, Math.abs(buf[i]));
+  ok(Math.abs(mx - Math.SQRT1_2) < 0.05, `こし器 ${f}MHz: その周波数で振幅 ${mx.toFixed(3)}（1/√2＝0.707 のはず）`);
+}
+// 7. 横 512 ドットの絵: 1行の長さは同じでドットが2倍速い。1ドットのたてじまの色は、256 ドットの2ドットじまに近い
+// 点ごとの色のこさの平均でくらべる（面の平均は、どちらも灰色になるので比べにならない）
+const chromaOf = out => { let c = 0, n = 0; for (let i = 0; i < out.length; i += 4) { c += Math.max(out[i], out[i + 1], out[i + 2]) - Math.min(out[i], out[i + 1], out[i + 2]); n++; } return c / n; };
+const c512 = chromaOf(N.decodeFrame(pic(512, H, x => ((x >> 1) & 1 ? [255, 255, 255] : [0, 0, 0])), 'composite', 0));
+const c256 = chromaOf(N.decodeFrame(pic(256, H, x => (x & 1 ? [255, 255, 255] : [0, 0, 0])), 'composite', 0));
+const c512b = chromaOf(N.decodeFrame(pic(512, H, x => (x & 1 ? [255, 255, 255] : [0, 0, 0])), 'composite', 0));
+ok(Math.abs(c512 - c256) < 3, `横 512 の2ドットじま と 横 256 の1ドットじま は同じ色のこさ（${c512.toFixed(0)} / ${c256.toFixed(0)}）`);
+ok(Math.abs(c512b - c256) > 10, `横 512 の1ドットじまは、横 256 の1ドットじまとちがう（${c512b.toFixed(0)} / ${c256.toFixed(0)}）`);
 console.log(ng ? `NG ${ng} 件` : 'すべて OK');
 process.exit(ng ? 1 : 0);

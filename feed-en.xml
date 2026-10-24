@@ -5,14 +5,14 @@
   <link href="https://sishiya.github.io/manabi-lab/?lang=en"/>
   <link rel="self" href="https://sishiya.github.io/manabi-lab/feed-en.xml"/>
   <id>https://sishiya.github.io/manabi-lab/feed-en.xml</id>
-  <updated>2026-10-24T00:00:00+09:00</updated>
+  <updated>2026-10-25T00:00:00+09:00</updated>
   <author><name>Shishiya</name></author>
   <entry>
     <title>Pixel Art on a CRT</title>
     <link href="https://sishiya.github.io/manabi-lab/crt-pixels/?lang=en"/>
     <id>https://sishiya.github.io/manabi-lab/crt-pixels/?lang=en</id>
     <published>2026-10-24T00:00:00+09:00</published>
-    <updated>2026-10-24T00:00:00+09:00</updated>
+    <updated>2026-10-25T00:00:00+09:00</updated>
     <summary>Compare the same pixel art on an LCD and a CRT TV, split by a divider in the middle. The TV signal blur, the scan lines of the electron beam and the red, green and blue glowing dots are calculated one by one, to see why old game pictures looked so soft. Zoom in all the way to the glowing dots, and try your own image too.</summary>
   </entry>
   <entry>

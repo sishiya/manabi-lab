@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="css/style.css?v=9">
+<link rel="stylesheet" href="css/style.css?v=11">
 </head>
 <body>
 <div id="app">
@@ -44,10 +44,10 @@
       </div>
       <p class="note" id="fileNote"></p>
       <div id="dotRow" hidden>
-        <h3><span lang="ja">元の1ドット＝</span><span lang="en">One dot =</span></h3>
+        <h3><span lang="ja">この画像の何ピクセルを、元の絵の1ドットにするか</span><span lang="en">How many pixels of this image make one dot of the original</span></h3>
         <div class="seg" id="dotSeg"><button data-dot="auto"><span lang="ja">自動</span><span lang="en">Auto</span></button><button data-dot="1">1</button><button data-dot="2">2</button><button data-dot="3">3</button><button data-dot="4">4</button><button data-dot="5">5</button><button data-dot="6">6</button><button data-dot="8">8</button></div>
-        <p class="note" lang="ja">ピクセル。写真とならべた画像などでドットの大きさが自動で合わないときに。元の1ドットが走査線1本になります。</p>
-        <p class="note" lang="en">pixels. Use this when the dot size is not found automatically (for example, an image placed side by side with a photo). One original dot becomes one scan line.</p>
+        <p class="note" lang="ja">拡大したスクリーンショットなら、その倍率（2倍なら 2）。ふつうは「自動」で見つけます。合っていないと、走査線やにじみが本物より細かくなります（元の1ドットが走査線1本になるように計算するため）。</p>
+        <p class="note" lang="en">For an enlarged screenshot, its zoom factor (2 for 2×). “Auto” usually finds it. If it is wrong, the scan lines and blur come out finer than real (the app makes one original dot into one scan line).</p>
       </div>
     </div>
 
@@ -57,8 +57,8 @@
       <div class="seg" id="scrSeg">
         <button data-scr="shadow"><span lang="ja">家庭のテレビ（丸い点）</span><span lang="en">Home TV (round dots)</span></button><button data-scr="slot"><span lang="ja">家庭のテレビ（細長い穴）</span><span lang="en">Home TV (slots)</span></button><button data-scr="grille"><span lang="ja">モニター（たてじま）</span><span lang="en">Monitor (stripes)</span></button>
       </div>
-      <p class="note" lang="ja">光る点の形のちがいは、寄ったときに見えます。全体の大きさでは本物の点が画面のピクセルより細かいので、画面の3ピクセルに合わせて描いています（近似。本物より少し粗い）。</p>
-      <p class="note" lang="en">The shapes of the glowing dots show up when you zoom in. At full view the real dots are finer than your screen's pixels, so they are drawn matched to 3 screen pixels (an approximation, a little coarser than real).</p>
+      <p class="note" lang="ja">光る点の形のちがいは、寄ったときに見えます。全体の大きさでは本物の点が画面のピクセルより細かいので、画面の3ピクセルに合わせて描いています（近似。本物より粗く、何倍の粗さかは画面の左下に出ます）。</p>
+      <p class="note" lang="en">The shapes of the glowing dots show up when you zoom in. At full view the real dots are finer than your screen's pixels, so they are drawn at 3 screen pixels (an approximation, coarser than real; the lower-left corner shows by how much).</p>
     </div>
     <div class="row"><h2><span lang="ja">つなぎ方</span><span lang="en">Connection</span></h2>
       <div class="seg" id="linkSeg">
@@ -67,9 +67,9 @@
       <p class="note" id="linkNote"></p>
     </div>
     <div class="row"><h2><span lang="ja">ドットの形</span><span lang="en">Dot shape</span></h2>
-      <div class="seg" id="parSeg"><button data-par="tv"><span lang="ja">当時のテレビ（横長 8:7）</span><span lang="en">Old TV (wide, 8:7)</span></button><button data-par="sq"><span lang="ja">正方形</span><span lang="en">Square</span></button></div>
-      <p class="note" lang="ja">当時のテレビでは、1ドットは横がたての約 8/7 倍の横長に映りました（横 256 ドットを 4:3 の画面に映すため。NESdev Wiki）。液晶やエミュレータで正方形のまま映すと、絵は少し細長く見えます。描き手がこの横長に合わせて絵を描いたかは、ゲームによってちがい、はっきりしません。両側に同じ形を使うので、仕切りの左右はずれません。</p>
-      <p class="note" lang="en">On TVs of the time, each dot appeared about 8/7 as wide as it was tall (because 256 dots across were shown on a 4:3 screen; NESdev Wiki). Shown as squares on an LCD or emulator, pictures look a little narrow. Whether artists drew with this stretch in mind varies from game to game and is not clear. Both sides use the same shape, so the two halves stay lined up.</p>
+      <div class="seg" id="parSeg"><button data-par="tv"><span lang="ja">当時のテレビ（横長）</span><span lang="en">Old TV (wide)</span></button><button data-par="sq"><span lang="ja">正方形</span><span lang="en">Square</span></button></div>
+      <p class="note" lang="ja">当時のテレビでは、1ドットは横長に映りました。横 256 ドット・240本の絵では、横がたての 8/7 倍です。1行の絵の部分（約 52.1 マイクロ秒）にこのドットの速さだと約 280 ドットが入り、それが 4:3 の画面の横はばになるためです（240×4/3÷280＝8/7。NESdev Wiki「Overscan」）。自分の画像は、横のドット数と行の数から同じように計算します。液晶やエミュレータで正方形のまま映すと、絵は少し細長く見えます。描き手がこの横長に合わせて絵を描いたかは、ゲームによってちがい、はっきりしません。両側に同じ形を使うので、仕切りの左右はずれません。</p>
+      <p class="note" lang="en">On TVs of the time, each dot appeared wider than tall. For a picture 256 dots wide with 240 lines, it is 8/7 as wide as tall: at this dot rate, about 280 dots fit in the picture part of a line (about 52.1 microseconds), and that spans the width of the 4:3 screen (240×4/3÷280 = 8/7; NESdev Wiki “Overscan”). For your own image, it is worked out the same way from its width and number of lines. Shown as squares on an LCD or emulator, pictures look a little narrow. Whether artists drew with this stretch in mind varies from game to game and is not clear. Both sides use the same shape, so the two halves stay lined up.</p>
     </div>
 
     <div class="row"><h2><span lang="ja">しくみを1つずつ</span><span lang="en">One effect at a time</span></h2>
@@ -81,9 +81,9 @@
 
     <details class="row" id="more"><summary><span lang="ja">細かい設定</span><span lang="en">More settings</span></summary>
       <h3><span lang="ja">走査線の本数</span><span lang="en">Number of scan lines</span></h3>
-      <div class="seg" id="interSeg"><button data-inter="0"><span lang="ja">ゲーム（240本・すきまが見える）</span><span lang="en">Games (240 lines, gaps show)</span></button><button data-inter="1"><span lang="ja">放送（480本・2回に分けて）</span><span lang="en">TV broadcast (480 lines, in two passes)</span></button></div>
-      <p class="note" lang="ja">家庭用ゲームの多くは、同じ行を毎回なぞる 240本の描き方で、行のあいだに暗いすきまが残りました。テレビ放送は 480本を半分ずつ交互に描くので、すきまはほとんど見えません。</p>
-      <p class="note" lang="en">Most home video games drew 240 lines, tracing the same lines every time, so dark gaps stayed between the lines. TV broadcasts drew 480 lines, half at a time in turns, so the gaps were hardly visible.</p>
+      <div class="seg" id="interSeg"><button data-inter="0"><span lang="ja">ゲーム（240本・すきまが見える）</span><span lang="en">Games (240 lines, gaps show)</span></button><button data-inter="1"><span lang="ja">同じ絵を 480i で（行は2回ずつ）</span><span lang="en">Same picture in 480i (each line twice)</span></button></div>
+      <p class="note" lang="ja">家庭用ゲームの多くは、同じ行を毎回なぞる 240本の描き方で、行のあいだに暗いすきまが残りました。テレビ放送は 480本を半分ずつ交互に描くので、すきまはほとんど見えません。右のボタンは、240 行の絵を 480i で映したらどうなるかで、同じ行を半行ずらして2回描きます（本物の 480 行の絵ではありません。1行だけの細い模様が 1秒に30回ちらつくことは省いています）。縦が 240 行をこえる自分の画像は、いつも 480本の描き方で計算します。</p>
+      <p class="note" lang="en">Most home video games drew 240 lines, tracing the same lines every time, so dark gaps stayed between the lines. TV broadcasts drew 480 lines, half at a time in turns, so the gaps were hardly visible. The right button shows a 240-line picture as it would look in 480i: each line is drawn twice, shifted by half a line (it is not a real 480-line picture, and the 30-times-a-second flicker of one-line-thin patterns is left out). Your own images taller than 240 lines are always computed with 480 lines.</p>
       <h3><span lang="ja">ドットクロール（ビデオ端子・アンテナ線）</span><span lang="en">Dot crawl (composite and RF)</span></h3>
       <div class="seg" id="frameSeg"><button data-frame="avg"><span lang="ja">目に見える平均</span><span lang="en">What the eye sees (average)</span></button><button data-frame="0"><span lang="ja">1コマ目</span><span lang="en">Frame 1</span></button><button data-frame="1"><span lang="ja">2コマ目</span><span lang="en">Frame 2</span></button></div>
       <p class="note" lang="ja">色の波は1コマごとにずれるので、模様のふちの細かい点が 1秒に30回入れかわります（にじみのちらつき）。目にはまざって見えるので、ふだんは2コマの平均を出しています。1コマずつ切りかえて、ちがいを見られます。</p>
@@ -93,15 +93,15 @@
     <details class="row" id="about" lang="ja">
       <summary>このアプリについて</summary>
       <p>昔のゲームのドット絵は、ブラウン管のテレビで見られることを前提に描かれていました。同じ絵を液晶で見ると、チェック模様や角がそのまま見えます。このアプリは、ブラウン管の見え方をしくみごとに計算して、ちがいを見くらべます。</p>
-      <p><b>計算していること</b>: ①テレビの信号（明るさと色を1本の線にまぜ、テレビの中で分け直す。数は NTSC の規格の値と、当時の機械の一例）②電子ビームの走査線（ガウスの帯）③赤・緑・青の光る点のならび ④明るさの曲がり（ガンマ）⑤光のにじみ ⑥画面のふくらみ。</p>
-      <p><b>簡単にしているところ</b>: 明るさと色の分け方は、いちばん簡単な「色の波1周期の平均」（くし形フィルタなし）。色を取り出すこし器は、どのテレビも同じ帯域にしています（家庭のテレビの値は推定）。ビームが明るさで（たても横も）太る割合・光る点の大きさ（14型くらいのテレビを想定）・光のにじみ・ふくらみの強さは推定で、実機の写真の見え方と見くらべて決めました。全体表示など光る点が画面のピクセルより細かいときは、画面の3ピクセルに合わせて描いています（本物より少し粗い）。アンテナ線のノイズは演出に近いものです。寄ったときは、いまの画面が本物の光る点ほど明るく光れないので、少し暗く見えます。左の液晶は、いま見ている画面に1ドットを四角く大きく写したものです。</p>
+      <p><b>計算していること</b>: ①テレビの信号（明るさと色を1本の線にまぜ、テレビの中で分け直す。色副搬送波の周波数・YIQ の式は NTSC の値、時間の刻みは当時の機械の一例）②電子ビームの走査線（明るいほど太るガウスの帯）③赤・緑・青の光る点のならび ④明るさの曲がり（ガンマ）⑤光のにじみ ⑥画面のふくらみ ⑦1ドットの形（ドットの速さから）。</p>
+      <p><b>簡単にしているところ</b>: 色の波は理想の正弦波です（当時の機械の多くは、決まった明るさの「四角い波」で色を作っていたので、にせの色は本物のほうが強く出ます）。明るさと色の分け方は、いちばん簡単な「色の波1周期の平均」（くし形フィルタなし）。色の信号を、取り出す前に帯域で切ることはしていません。S端子の色の帯域は放送の値（I 1.3・Q 0.4MHz）、ビデオ端子・アンテナ線の 0.6・0.5MHz は家庭のテレビを想定した推定です。ビームが明るさで（たても横も）太る割合・光る点の大きさ（14型くらいのテレビを想定）・光のにじみ（光の 12% が散る）・ふくらみの強さは推定で、実機の写真の見え方と見くらべて決めました。全体表示など光る点が画面のピクセルより細かいときは、画面の3ピクセルに合わせて描いています（本物より粗くなります。何倍の粗さかを画面の左下に出しています）。光る点の明暗は、いまの画面がそこまで明るく光れないので弱めていて（すきまも少し光る）、白は液晶の約半分の明るさになります。中くらいの明るさは約9割（ガンマのちがいのぶん）。アンテナ線のノイズは演出に近いものです。左の液晶は、いま見ている画面に1ドットを四角く大きく写したものです。</p>
       <p>実在のゲームの絵は使っていません（絵はすべてこのアプリで描いたもの）。自分の画像は、この端末の中だけで計算し、どこにも送らず、保存もしません。</p>
       <h3>おもな出どころ</h3>
       <ul>
         <li>Timothy Lottes「crt-lottes」（パブリックドメインの CRT シェーダー。走査線・ブルーム・マスク・ふくらみの考え方の土台）— <a href="https://github.com/libretro/glsl-shaders/blob/master/crt/shaders/crt-lottes.glsl" target="_blank" rel="noopener">libretro/glsl-shaders</a></li>
         <li>NTSC: 色副搬送波 315/88 MHz（3.579545MHz）、放送の I 1.3MHz・Q 0.4MHz — <a href="https://en.wikipedia.org/wiki/NTSC" target="_blank" rel="noopener">Wikipedia「NTSC」</a></li>
-        <li>YIQ の式（FCC の NTSC の値。ITU-R BT.470-6 より）— <a href="https://en.wikipedia.org/wiki/YIQ" target="_blank" rel="noopener">Wikipedia「YIQ」</a></li>
-        <li>ブラウン管に合わせた明るさの曲がり（ガンマ 2.4）— ITU-R BT.1886（2011）</li>
+        <li>YIQ の式（FCC の NTSC の値。一次資料の FCC の基準は読めていないので、Wikipedia の引用で確かめた）— <a href="https://en.wikipedia.org/wiki/YIQ" target="_blank" rel="noopener">Wikipedia「YIQ」</a></li>
+        <li>ブラウン管に似せた明るさの曲がりの基準（ガンマ 2.4）— ITU-R BT.1886（2011）</li>
         <li>1ドット＝色副搬送波の 8/12 周期、1行ごとに 4/12 ずれる（当時の機械の一例）— <a href="https://www.nesdev.org/wiki/NTSC_video" target="_blank" rel="noopener">NESdev Wiki「NTSC video」</a></li>
         <li>1ドットの縦横比 8:7（同じ機械の例）— <a href="https://www.nesdev.org/wiki/Overscan" target="_blank" rel="noopener">NESdev Wiki「Overscan」</a></li>
       </ul>
@@ -111,15 +111,15 @@
     <details class="row" id="aboutEn" lang="en">
       <summary>About this app</summary>
       <p>Pixel art in old video games was drawn to be seen on CRT (cathode-ray tube) TVs. On an LCD, the same picture shows its checkerboard patterns and sharp corners as they are. This app calculates how a CRT shows the picture, one mechanism at a time, so you can compare.</p>
-      <p><b>What it calculates</b>: (1) the TV signal (brightness and color mixed into one wire, then separated again inside the TV; the numbers are NTSC standard values and one example of a game machine of the time), (2) the scan lines of the electron beam (Gaussian bands), (3) the pattern of red, green and blue glowing dots, (4) the brightness curve (gamma), (5) glow, (6) the curved glass.</p>
-      <p><b>Simplifications</b>: brightness and color are separated in the simplest way, “average over one cycle of the color wave” (no comb filter). The color filter uses the same bandwidth for every TV (the home-TV values are estimates). How much the beam widens when bright (both up-down and sideways), the dot size (assuming a TV of about 14 inches), the glow and the curvature are estimates, chosen by comparing with photos of real CRTs. When the dots are finer than your screen's pixels (such as at full view), they are drawn matched to 3 screen pixels (a little coarser than real). The antenna noise is closer to a visual effect. When zoomed in, the picture looks a little darker, because your screen cannot shine as brightly as real glowing dots. The LCD side simply shows each pixel as a large square on your screen.</p>
+      <p><b>What it calculates</b>: (1) the TV signal (brightness and color mixed into one wire, then separated again inside the TV; the subcarrier frequency and YIQ equations are NTSC values, and the timing is one example of a machine of the time), (2) the scan lines of the electron beam (Gaussian bands that widen when bright), (3) the pattern of red, green and blue glowing dots, (4) the brightness curve (gamma), (5) glow, (6) the curved glass, (7) the shape of a dot (from the dot rate).</p>
+      <p><b>Simplifications</b>: the color wave is an ideal sine wave (many machines of the time made color with fixed-level “square waves”, so false colors are stronger on the real thing). Brightness and color are separated in the simplest way, “average over one cycle of the color wave” (no comb filter). The color signal is not band-limited before it is separated. S-Video uses the broadcast color bandwidths (I 1.3, Q 0.4 MHz); 0.6 and 0.5 MHz for composite and RF are estimates for home TVs. How much the beam widens when bright (both up-down and sideways), the dot size (assuming a TV of about 14 inches), the glow (12% of the light scatters) and the curvature are estimates, chosen by comparing with photos of real CRTs. When the dots are finer than your screen's pixels (such as at full view), they are drawn at 3 screen pixels (coarser than real; the lower-left corner shows by how much). The bright/dark contrast of the dots is reduced because your screen cannot shine that brightly (the gaps glow a little), so white comes out at about half the LCD brightness; mid tones at about 90% (the gamma difference). The antenna noise is closer to a visual effect. The LCD side simply shows each pixel as a large square on your screen.</p>
       <p>No pictures from real games are used (all pictures were drawn by this app). Your own image is processed only on this device; it is never sent anywhere or saved.</p>
       <h3>Main sources</h3>
       <ul>
         <li>Timothy Lottes, “crt-lottes” (a public-domain CRT shader; the basis for the scan lines, bloom, mask and curvature) — <a href="https://github.com/libretro/glsl-shaders/blob/master/crt/shaders/crt-lottes.glsl" target="_blank" rel="noopener">libretro/glsl-shaders</a></li>
         <li>NTSC: color subcarrier 315/88 MHz (3.579545 MHz), broadcast I 1.3 MHz and Q 0.4 MHz — <a href="https://en.wikipedia.org/wiki/NTSC" target="_blank" rel="noopener">Wikipedia “NTSC”</a></li>
-        <li>YIQ equations (FCC NTSC values, from ITU-R BT.470-6) — <a href="https://en.wikipedia.org/wiki/YIQ" target="_blank" rel="noopener">Wikipedia “YIQ”</a></li>
-        <li>Brightness curve matched to CRTs (gamma 2.4) — ITU-R BT.1886 (2011)</li>
+        <li>YIQ equations (FCC NTSC values; we could not read the original FCC rules, so this was checked against Wikipedia's citation) — <a href="https://en.wikipedia.org/wiki/YIQ" target="_blank" rel="noopener">Wikipedia “YIQ”</a></li>
+        <li>Reference brightness curve modeled on CRTs (gamma 2.4) — ITU-R BT.1886 (2011)</li>
         <li>One pixel = 8/12 of a color-subcarrier cycle, shifting 4/12 per line (one example of a machine of the time) — <a href="https://www.nesdev.org/wiki/NTSC_video" target="_blank" rel="noopener">NESdev Wiki “NTSC video”</a></li>
         <li>Dot aspect ratio 8:7 (same machine, as an example) — <a href="https://www.nesdev.org/wiki/Overscan" target="_blank" rel="noopener">NESdev Wiki “Overscan”</a></li>
       </ul>
@@ -130,10 +130,10 @@
 </div>
 
 <script src="js/pictures.js?v=7"></script>
-<script src="js/ntsc.js?v=3"></script>
-<script src="js/crt-gl.js?v=7"></script>
+<script src="js/ntsc.js?v=4"></script>
+<script src="js/crt-gl.js?v=8"></script>
 <script src="js/view.js?v=4"></script>
-<script src="js/upload.js?v=4"></script>
-<script src="js/main.js?v=11"></script>
+<script src="js/upload.js?v=7"></script>
+<script src="js/main.js?v=13"></script>
 </body>
 </html>

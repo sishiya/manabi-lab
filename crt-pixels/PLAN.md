@@ -86,7 +86,7 @@
 ## 出どころ（確かめたもの）
 
 - Timothy Lottes, crt-lottes（PUBLIC DOMAIN CRT STYLED SCAN-LINE SHADER）。libretro/glsl-shaders に収録。
-- 47 CFR §73.682（FCC のテレビ送信の基準。NTSC）／Wikipedia「NTSC」: 色副搬送波 315/88 MHz、I 1.3MHz・Q 0.4MHz。
-- SMPTE 170M「Composite Analog Video Signal – NTSC for Studio Applications」。
+- Wikipedia「NTSC」: 色副搬送波 315/88 MHz、I 1.3MHz・Q 0.4MHz。Wikipedia「YIQ」: YIQ の式。（47 CFR §73.682 の今の版にはアナログの式がなく、一次資料は読めていない。SMPTE 170M は読んでいない — 2026-10-25 に見直し）
+- NESdev Wiki「Overscan」: 1ドットの縦横比 8:7 の計算（240×4/3÷280）。
 - ITU-R BT.1886（2011）: ブラウン管に合わせた明るさの曲がり（ガンマ 2.4）。
 - NESdev Wiki「NTSC video」: 1ドット＝色副搬送波の 8/12 周期、1行ごとに 4/12 ずれる（当時の機械の一例として。コードは使わない）。

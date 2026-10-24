@@ -22,9 +22,9 @@ const LINK_NOTE = {
 const MECH = [
   { id: 'scan', name: L('走査線', 'Scan lines'), badge: L('推定あり', 'partly estimated'), text: L('電子ビームが1行ずつ横になぞります。1行は太さのある光の帯で、行のあいだに暗いすきま。明るい行ほど帯が太ります（太り方は推定）。', 'The electron beam traces the screen one line at a time. Each line is a band of light with thickness, with dark gaps between lines. Brighter lines get thicker (how much is estimated).') },
   { id: 'signal', name: L('信号のにじみ', 'Signal blur'), badge: L('規格＋推定', 'standard + estimate'), text: L('下の「つなぎ方」のにじみ。切るとRGBと同じになります。色は細かく送れないので横ににじみ、細かい模様は色にまちがえられます。', 'The blur from the “Connection” below. Turning it off is the same as RGB. Color cannot be sent in fine detail, so it smears sideways, and fine patterns are mistaken for color.') },
-  { id: 'mask', name: L('赤緑青の光る点', 'Red, green and blue dots'), badge: L('推定', 'estimate'), text: L('画面は赤・緑・青の小さな光る点の集まり。寄ると1つずつ見えます。大きさは14型くらいのテレビを想定した推定です。', 'The screen is made of tiny glowing red, green and blue dots. Zoom in to see them one by one. Their size is an estimate for a TV of about 14 inches.') },
-  { id: 'gamma', name: L('明るさの曲がり', 'Brightness curve'), badge: L('規格', 'standard'), text: L('ブラウン管は、暗いところがより暗く出ます（ガンマ約2.4。ITU-R BT.1886）。いまの画面は約2.2。', 'A CRT shows dark areas even darker (gamma about 2.4, ITU-R BT.1886). Screens today use about 2.2.') },
-  { id: 'bloom', name: L('光のにじみ', 'Glow'), badge: L('推定', 'estimate'), text: L('明るいところの光が前のガラスの中で散って、まわりがほんのり明るくなります。', 'Light from bright areas scatters inside the front glass, so the surroundings glow softly.') },
+  { id: 'mask', name: L('赤緑青の光る点', 'Red, green and blue dots'), badge: L('推定', 'estimate'), text: L('画面は赤・緑・青の小さな光る点の集まり。寄ると1つずつ見えます。大きさは14型くらいのテレビを想定した推定です。光る点の所は明るく、すきまは暗くしますが、いまの画面は本物ほど明るく光れないので、白は液晶の約半分の明るさになります（すきまも少し光らせています。本物はほぼ黒）。', 'The screen is made of tiny glowing red, green and blue dots. Zoom in to see them one by one. Their size is an estimate for a TV of about 14 inches. The dots are made brighter and the gaps darker, but your screen cannot shine as brightly as real dots, so white comes out at about half the LCD brightness (the gaps also glow a little; on a real CRT they are nearly black).') },
+  { id: 'gamma', name: L('明るさの曲がり', 'Brightness curve'), badge: L('基準＋推定', 'reference + estimate'), text: L('ブラウン管は、暗いところがより暗く出ます。ここではガンマ 2.4（ITU-R BT.1886。2011 年に決めた、ブラウン管に似せた基準の曲線）。当時の実物はテレビによってばらつきます。いまの画面は約2.2。', 'A CRT shows dark areas even darker. This uses gamma 2.4 (ITU-R BT.1886, a reference curve set in 2011 to match CRTs). Real sets of the time varied. Screens today use about 2.2.') },
+  { id: 'bloom', name: L('光のにじみ', 'Glow'), badge: L('推定', 'estimate'), text: L('明るいところの光が前のガラスの中で散って、まわりがほんのり明るくなります（光の 12% が散るとした推定。光の合計は変えない）。', 'Light from bright areas scatters inside the front glass, so the surroundings glow softly (an estimate: 12% of the light scatters; the total light stays the same).') },
   { id: 'curve', name: L('画面のふくらみ', 'Curved glass'), badge: L('推定', 'estimate'), text: L('ガラスの面が丸くふくらんでいて、はしが少し曲がって見えます。', 'The glass bulges outward, so the edges look slightly bent.') }
 ];
 const PICS = {
@@ -51,7 +51,16 @@ const view = window.CRT_VIEW(stage, cv, $('handle'), () => { dirty = true; });
 
 function picture() { return S.pic === 'user' ? S.userPic : window.CRT_PICTURES.get(S.pic); }
 function linkName() { return S.on.signal ? S.link : 'rgb'; }
-const parValue = () => (S.par === 'tv' ? 8 / 7 : 1);   // 1ドットの横÷たて（当時のテレビは 8:7。NESdev Wiki「Overscan」）
+// 絵の大きさから、テレビでの映り方を決める（当時のテレビのしくみどおり）:
+//  - 縦 240 行まで: 240本の描き方（同じ行を毎回なぞる）。241〜480 行: 480本（2回に分けて交互に）で、1行の高さは半分
+//  - 1行の長さ（時間）はいつも同じなので、横のドット数がふえると1ドットは細くなる（ドットの速さが上がる）
+//  - 1ドットの横÷たて: 横 256・240本で 8:7（NESdev Wiki「Overscan」: ドットの速さ 5.37MHz と正方形の画素の速さ 6.14MHz の比）。
+//    横 W ドット・1行の高さ h なら (8/7)×(256/W)÷h
+function geom(pic) {
+  const rowH = pic && pic.h > 240 ? 0.5 : 1, dotW = pic ? pic.w / 256 : 1;
+  return { rowH, dotW, parTV: (8 / 7) / dotW / rowH };
+}
+const parValue = () => (S.par === 'tv' ? geom(picture()).parTV : 1);
 
 // 信号の計算は重いので、絵・つなぎ方・コマが変わったときだけ
 function updateSignal() {
@@ -61,8 +70,8 @@ function updateSignal() {
   const t0 = performance.now();
   const fr = S.frame === 'avg' ? 'avg' : Number(S.frame);
   const sig = window.CRT_NTSC.decode(pic, linkName(), fr);
-  if (S.current !== pic) { R.setPicture(pic); S.current = pic; view.setPicture(pic.w, pic.h); }
-  R.setSignal(sig, pic.w * window.CRT_NTSC.OUT, pic.h);
+  if (S.current !== pic) { R.setPicture(pic); S.current = pic; view.V.par = parValue(); view.setPicture(pic.w, pic.h); }
+  R.setSignal(sig, window.CRT_NTSC.OUT_W, pic.h);
   S.sigKey = key; S.sigMs = performance.now() - t0;
   dirty = true;
 }
@@ -90,17 +99,21 @@ function draw() {
   const cellCss = V.z / scr.triads;
   let hud = `×${mult.toFixed(1)}  `;
   const dprNow = cv.width / Math.max(1, w);
-  const rowPx = V.z * dprNow * (S.inter ? 0.5 : 1);   // シェーダーと同じ境目（1行 2.3 ピクセルより細いと、ならしている）
+  const rowPx = V.z * dprNow * (S.inter && geom(picture()).rowH === 1 ? 0.5 : 1);   // シェーダーと同じ境目（1行 2.3 ピクセルより細いと、ならしている）
   if (S.on.scan && rowPx < 2.3) hud += L('寄ると走査線が見えます', 'Zoom in to see the scan lines');
-  else if (S.on.mask && cellCss * dprNow < 3.5) hud += L('光る点は画面のピクセルに合わせた近似（寄ると本物の大きさ）', 'Dots matched to screen pixels (zoom in for real size)');
-  else if (S.on.mask) hud += L(`1ドット＝光る点 ${(scr.triads * parValue()).toFixed(1)}組（推定）`, `1 pixel = ${(scr.triads * parValue()).toFixed(1)} sets of dots (estimate)`);
+  else if (S.on.mask && cellCss * dprNow / geom(picture()).rowH < 3.5) {
+    const k = 3 / (cellCss * dprNow / geom(picture()).rowH);   // 3ピクセルに合わせたことで、本物の何倍の粗さか
+    hud += L(`光る点は画面の3ピクセルに合わせた近似（本物の約${k.toFixed(1)}倍の粗さ。寄ると本物の大きさ）`, `Dots drawn at 3 screen pixels (about ${k.toFixed(1)}× coarser than real; zoom in for real size)`);
+  }
+  else if (S.on.mask) hud += L(`1ドットの横に光る点 ${(scr.triads * parValue() * geom(picture()).rowH).toFixed(1)}組（推定）`, `${(scr.triads * parValue() * geom(picture()).rowH).toFixed(1)} sets of dots across 1 pixel (estimate)`);
   $('hud').innerHTML = hud;
   if (!R) return;
   const dpr = cv.width / Math.max(1, w);
   R.draw({
     view: [V.x * dpr, V.y * dpr, V.z * dpr], split: V.split * cv.width,
-    scan: S.on.scan ? 1 : 0, inter: S.inter, mask: S.on.mask ? scr.mask : 0, triads: scr.triads,
-    par: parValue(), gamma: S.on.gamma ? 2.4 : 2.2, bloom: S.on.bloom ? 0.28 : 0, curve: S.on.curve ? 1 : 0,
+    scan: S.on.scan ? 1 : 0, inter: geom(picture()).rowH === 1 ? S.inter : 0, mask: S.on.mask ? scr.mask : 0, triads: scr.triads,
+    rowH: geom(picture()).rowH, dotW: geom(picture()).dotW,
+    par: parValue(), gamma: S.on.gamma ? 2.4 : 2.2, bloom: S.on.bloom ? 0.12 : 0, curve: S.on.curve ? 1 : 0,
     noise: (S.on.signal && S.link === 'rf') ? window.CRT_NTSC.LINKS.rf.noise : 0, seed: 1.7
   });
 }
@@ -145,8 +158,13 @@ function refresh() {
   $('mech').querySelectorAll('input[data-m]').forEach(i => { i.checked = S.on[i.dataset.m]; });
   $('linkNote').textContent = LINK_NOTE[S.link] + (S.on.signal ? '' : L('（いまは「信号のにじみ」を切っています）', ' (Signal blur is off right now.)'));
   $('cap').textContent = PICS[S.pic].cap;
-  $('dotRow').hidden = !(S.pic === 'user' && S.userRaw);
-  if (S.pic === 'user' && S.userNote) $('fileNote').textContent = S.userNote + L(' この端末の中だけで計算し、どこにも送りません。', ' Processed only on this device; never sent anywhere.');
+  // 自分の画像: えらんでいるときは「自分の画像…」を光らせ、何をしたかの説明と「1ドット＝」を出す。ほかの絵にしたら説明をもとに戻す
+  const isUser = S.pic === 'user' && !!S.userRaw;
+  document.querySelector('#picSeg .file').classList.toggle('on', isUser);
+  $('dotRow').hidden = !isUser;
+  $('fileNote').textContent = isUser ? S.userNote + L(' この端末の中だけで計算し、どこにも送りません。', ' Processed only on this device; never sent anywhere.') : FILE_NOTE;
+  const autoBtn = document.querySelector('#dotSeg [data-dot="auto"]');
+  if (autoBtn) autoBtn.textContent = S.userAutoK ? L(`自動（${S.userAutoK}）`, `Auto (${S.userAutoK})`) : L('自動', 'Auto');
   updateSignal();
   dirty = true;
 }
@@ -173,7 +191,7 @@ $('zoom').addEventListener('click', e => {
 async function useFile(file) {
   try {
     const r = await window.CRT_UPLOAD.load(file);
-    S.userRaw = r.raw; S.userK = 'auto'; S.userAutoK = r.k;
+    S.userRaw = r.raw; S.userK = 'auto'; S.userAutoK = r.autoK;
     S.userPic = r.pic; S.pic = 'user'; S.userNote = r.note;
     refresh();
   } catch (e) { $('fileNote').textContent = e.message; }
