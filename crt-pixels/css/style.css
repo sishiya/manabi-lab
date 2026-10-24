@@ -61,6 +61,7 @@ h3{font-size:14px;margin:14px 0 6px}
 .file input{display:none}
 .focus{margin-top:8px}
 .note{color:var(--muted);font-size:13px;line-height:1.7;margin:6px 0 0}
+.note.scope{border-top:1px solid var(--line);padding-top:10px;margin:0;color:var(--ink)}
 #mech{list-style:none;margin:8px 0 0;padding:0}
 #mech li{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:start;padding:8px 0;border-top:1px dashed var(--line)}
 #mech li:first-child{border-top:0}
@@ -76,7 +77,7 @@ details summary{cursor:pointer;font-weight:700;min-height:32px;display:flex;alig
 #about ul,#aboutEn ul{padding-left:20px}
 
 /* サムネイル撮影用（_dev/tools/thumb.html が body に .thumb をつける）: 画面だけを窓いっぱいに */
-.thumb #top,.thumb #cap,.thumb #panel,.thumb #hud,.thumb #zoom{display:none!important}
+.thumb #top,.thumb #cap,.thumb #panel,.thumb #hud,.thumb #zoom,.thumb .tag{display:none!important}
 .thumb #app{display:block!important;height:100vh}
 .thumb #pin{position:static;height:100vh;border:0}
 .thumb #stage{height:100vh!important}

@@ -19,8 +19,8 @@ const click = (w, sel) => { const e = w.document.querySelector(sel); if (e) e.cl
 
 // アプリごとの準備（w = アプリの window）
 const SETUP = {
-  // ブラウン管のドット絵: 画面だけを窓いっぱいに（.thumb）、ししの顔に寄って、まんなかで液晶｜ブラウン管に分ける
-  'crt-pixels': async w => { await wait(1200); const C = w.__crpi; w.document.body.classList.add('thumb'); w.dispatchEvent(new w.Event('resize')); await wait(200); C.view.stopHint(); C.set({ pic: 'lion' }); C.view.focus(116, 110, 2.6); C.view.V.split = 0.5; C.simRun(0); await wait(300); },
+  // ブラウン管のドット絵: 画面だけを窓いっぱいに（.thumb）、滝の風景の全体を、まんなかで液晶｜ブラウン管に分ける（2026-10-24 ユーザーが選んだ）
+  'crt-pixels': async w => { await wait(1200); const C = w.__crpi; w.document.body.classList.add('thumb'); w.dispatchEvent(new w.Event('resize')); await wait(200); C.view.stopHint(); C.set({ pic: 'falls' }); C.view.focus(128, 112, 1.06); C.view.V.split = 0.5; C.simRun(0); await wait(300); },
   // クモがハエをつかまえるまで: クモが跳んでいるところ（ハエが翅を上げた直後）。3つの視界が並ぶ
   'spider-hunt': async w => { await wait(800); w.__sphu.toEnd(); const e = w.__sphu.S.hist[w.__sphu.S.hist.length - 1].ev; w.__sphu.at(e.wr + 0.002); await wait(300); },
   // 波が育つまで: 風速 10 m/s が 12 時間吹いた海（逆光のきらきら）。WebGL2 の海なので、描けない環境では「描けません」の文になる
@@ -102,7 +102,7 @@ const SETUP = {
 // 動くサムネイル（make-motion-thumbs.ps1 が ?motion=1 で開く）: SETUP のあと、ここで動きはじめさせてから撮る。
 // ここにないアプリは SETUP のまま（もともと動いているもの）を撮る
 const MOTION = {
-  // ブラウン管のドット絵: 仕切りがししの顔を右から左へゆっくり横切る（液晶の絵がブラウン管の見え方に変わっていく）
+  // ブラウン管のドット絵: 仕切りが滝の風景を右から左へゆっくり横切る（液晶の絵がブラウン管の見え方に変わっていく）
   'crt-pixels': async w => { const C = w.__crpi; C.view.V.split = 0.85; C.simRun(0); return k => { C.view.V.split = 0.85 - 0.7 * Math.min(1, k / 59); C.simRun(0); }; },
   // 東京駅のまわりを、カメラがゆっくり回る（撮りはじめるまでは止めておく）
   'god-view': async w => {
