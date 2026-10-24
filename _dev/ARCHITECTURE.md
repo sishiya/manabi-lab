@@ -201,7 +201,7 @@ Zenn の順は YouTube の公開順。日付・状態の正は `zenn/README.md` 
 | Zenn・DEV | `zenn-articles` のリポジトリから（Zenn は GitHub 連携） |
 | Google | GA4（`G-E2VPYKV2Y9`）・Search Console・Google Cloud（YouTube・GA の API） |
 
-名前はどれも「しし屋」にそろえる（2026-10-24 決定。ラボはその中のシリーズ。名前の変更はユーザーが手で: `_dev/sns-icon/brand-2026-10/TODO-user.md`）。YouTube の説明・英語・キーワード・バナーは `_dev/promo/channel.json` → `youtube-upload.ps1 -Channel`。
+名前はどれも「しし屋」にそろえた（2026-10-24 決定・同じ日にユーザーが YouTube・X・Zenn・note・DEV を直した。ラボはその中のシリーズ。やったことは `_dev/sns-icon/brand-2026-10/TODO-user.md`）。プロフィールのリンクはトップ https://sishiya.github.io/ 。Search Console はトップ（`https://sishiya.github.io/`）とまなびラボ（`/manabi-lab/`）の2つのプロパティ。YouTube の説明・英語・キーワード・バナーは `_dev/promo/channel.json` → `youtube-upload.ps1 -Channel`。
 
 ---
 
