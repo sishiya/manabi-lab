@@ -86,7 +86,8 @@ function updateSignal() {
   const fr = S.frame === 'avg' ? 'avg' : Number(S.frame);
   const sig = window.CRT_NTSC.decode(pic, linkName(), fr, geom(pic).dotW);
   if (S.current !== pic) { R.setPicture(pic); S.current = pic; view.V.par = parValue(); view.setPicture(pic.w, pic.h); }
-  R.setSignal(sig, sig.w, pic.h);
+  const g = geom(pic);
+  R.setSignal(sig, sig.w, pic.h, pic.w * g.parTV * g.rowH, pic.h * g.rowH);   // にじみは画面の上の大きさで丸く（当時のテレビの形で）
   S.sigKey = key; S.sigMs = performance.now() - t0;
   dirty = true;
 }
