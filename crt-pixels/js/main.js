@@ -10,7 +10,7 @@ const cv = $('cv'), stage = $('stage');
 const SCREENS = {
   shadow: { mask: 1, triads: 1.5 },
   slot:   { mask: 2, triads: 1.5 },
-  grille: { mask: 3, triads: 2.6 }
+  grille: { mask: 3, triads: 1.5 }   // 3つとも同じ細かさ（たてじまは家庭のテレビにもあった。前はモニター用に 2.6 にしていた）
 };
 const LINK_NOTE = {
   rgb: L('赤・緑・青を別々の線で送る。信号のにじみはありません（モニターや一部のテレビ）。', 'Red, green and blue go on separate wires. No signal blur (monitors and some TVs).'),
