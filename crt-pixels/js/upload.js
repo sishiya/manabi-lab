@@ -29,7 +29,8 @@ function detectScale(d, w, h) {
 
 // 読んだ画像（src: RGBA, w, h）を、元の1ドット＝k ピクセルとして小さくする。k を省くと自動で見つける。
 // 大きすぎるとき（縦 480 行・横 512 ドットをこえるとき）は、さらに f×f をまとめて1ドットにする。
-// まとめるときは、その中の色の平均（1つだけ拾うと細い線や点が消えるため）
+// どの場合も、1ドットにする sx×sx ピクセルの色の平均を使う（自動で 4 になっても、自分で 4 を選んでも同じ結果になるように。
+// ほんとうに k 倍に拡大した絵なら、四角の中は同じ色なので、平均しても中心の色と同じ）
 function build(raw, k) {
   const { src, w, h } = raw, auto = !k;
   if (auto) k = detectScale(src, w, h);
@@ -40,25 +41,27 @@ function build(raw, k) {
   }
   const data = new Uint8ClampedArray(nw * nh * 4);
   for (let y = 0; y < nh; y++) for (let x = 0; x < nw; x++) {
-    // 元の1ドット（k×k）の中心の色を、f×f 個ぶん平均する（f＝1 なら中心の1つ）
-    let r = 0, g = 0, bl = 0;
-    for (let j = 0; j < f; j++) for (let i = 0; i < f; i++) {
-      const X = Math.min(w - 1, (x * f + i) * k + (k >> 1)), Y = Math.min(h - 1, (y * f + j) * k + (k >> 1));   // 画像の外は読まない
+    // sx×sx ピクセルの平均（画像のはしで足りないときは、ある分だけで）
+    let r = 0, g = 0, bl = 0, n = 0;
+    const x0 = Math.min(w - 1, x * sx), y0 = Math.min(h - 1, y * sx), x1 = Math.min(w, x0 + sx), y1 = Math.min(h, y0 + sx);
+    for (let Y = y0; Y < y1; Y++) for (let X = x0; X < x1; X++) {
       const a = (Y * w + X) * 4, al = src[a + 3] / 255;
-      r += src[a] * al; g += src[a + 1] * al; bl += src[a + 2] * al;   // すきとおった所は黒に
+      r += src[a] * al; g += src[a + 1] * al; bl += src[a + 2] * al; n++;   // すきとおった所は黒に
     }
-    const b = (y * nw + x) * 4, n = f * f;
+    const b = (y * nw + x) * 4;
     data[b] = r / n; data[b + 1] = g / n; data[b + 2] = bl / n; data[b + 3] = 255;
   }
   // 何をしたかを、数字といっしょにふつうの言葉で
   const size = L(`読みこんだ画像は ${w}×${h} ピクセル。`, `Your image is ${w}×${h} pixels. `);
   let note;
-  if (f > 1) note = size + L(
-    `このアプリで計算できる大きさ（縦 480・横 512 ドットまで）をこえるので、${sx}×${sx} ピクセルの色の平均を1ドットにして、${nw}×${nh} ドットに縮めています。` + (auto && k === 1 ? '同じ色の四角のくり返しは見つかりませんでした（写真や、なめらかに拡大した画像など）。' : ''),
-    `That is larger than this app can compute (up to 480 lines and 512 dots across), so each ${sx}×${sx} block is averaged into one dot: ${nw}×${nh} dots. ` + (auto && k === 1 ? 'No repeating same-color squares were found (a photo or a smoothly enlarged image, for example).' : ''));
-  else if (k > 1) note = size + L(`同じ色の ${k}×${k} ピクセルの四角が並んでいるので、${k}倍に拡大した絵とみて、${nw}×${nh} ドットに戻しています。`, `It is made of ${k}×${k} same-color squares, so it is treated as enlarged ${k}× and shrunk back to ${nw}×${nh} dots.`);
-  else note = size + L(`1ピクセルを1ドットとしています。`, `Each pixel is treated as one dot.`);
-  if (!auto) note = L(`「${k}」を選びました。`, `You chose ${k}. `) + note;
+  const what = auto
+    ? (k > 1 ? L(`同じ色の ${k}×${k} ピクセルの四角が並んでいたので、${k}倍に拡大した絵とみました。`, `It is made of ${k}×${k} same-color squares, so it was taken as enlarged ${k}×. `)
+             : L('同じ色の四角のくり返しは見つかりませんでした（拡大していない絵か、写真・なめらかに拡大した画像など）。', 'No repeating same-color squares were found (an unenlarged picture, or a photo or smoothly enlarged image). '))
+    : L(`「${k}」を選びました。`, `You chose ${k}. `);
+  const tooBig = f > 1 ? L(`このアプリで計算できる大きさ（縦 480・横 512 ドットまで）をこえるので、さらに ${f}×${f} をまとめました。`, `It was larger than this app can compute (up to 480 lines and 512 dots across), so ${f}×${f} more were combined. `) : '';
+  note = size + what + tooBig + (sx > 1
+    ? L(`${sx}×${sx} ピクセルの色の平均を1ドットにして、${nw}×${nh} ドットで計算しています。`, `Each ${sx}×${sx} block is averaged into one dot: ${nw}×${nh} dots.`)
+    : L(`1ピクセルを1ドットとして、${nw}×${nh} ドットで計算しています。`, `Each pixel is one dot: ${nw}×${nh} dots.`));
   return { pic: { w: nw, h: nh, data }, note, k: sx, autoK: auto ? sx : null };   // 自動のボタンには、じっさいに使った大きさ（まとめたぶんもふくむ）
 }
 
