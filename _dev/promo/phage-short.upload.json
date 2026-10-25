@@ -1,0 +1,33 @@
+{
+  "file": "_dev/promo/out/phage-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/phage-short.jpg",
+  "privacy": "private",
+  "publishAt": "2026-10-26T20:05:00+09:00",
+  "captions": { "en": "_dev/promo/out/phage-short.en.srt" },
+  "title": "細菌だけにとりつくウイルスは、注射器のように DNA を入れる #Shorts",
+  "description": "T4 ファージが大腸菌にくっついて DNA を入れ、細菌の中で増えて、約25分で100〜150個になって破れて出てくるまで。人のおなかから分子の大きさまで寄っていきます。ブラウザのアプリ「細菌にとりつくウイルス」から。\n\nアプリ: https://sishiya.github.io/manabi-lab/phage/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ: Miller ほか (2003) MMBR 67(1)、Yap と Rossmann (2014) Future Microbiology 9、Taylor ほか (2016) Nature 533 ほか。図は模式です。\n\n音楽: コードで合成した音です。\n\n#ウイルス #細菌 #生物 #まなびラボ",
+  "tags": [
+    "細菌にとりつくウイルス",
+    "バクテリオファージ",
+    "T4ファージ",
+    "ウイルス",
+    "大腸菌",
+    "Shorts",
+    "まなびラボ",
+    "しし屋",
+    "The Virus That Infects Bacteria",
+    "bacteriophage",
+    "T4 phage"
+  ],
+  "localizations": {
+    "en": {
+      "title": "The virus that infects only bacteria injects its DNA like a syringe #Shorts",
+      "description": "A T4 phage sticks to E. coli, injects its DNA, multiplies inside, and in about 25 minutes bursts out as 100–150 new phages. Zoom from the human gut down to molecules. From \"The Virus That Infects Bacteria\", a browser app.\n\nApp (switch the app to English with the EN button): https://sishiya.github.io/manabi-lab/phage/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMain sources: Miller et al. (2003) MMBR 67(1), Yap & Rossmann (2014) Future Microbiology 9, Taylor et al. (2016) Nature 533, and others. The drawings are schematic.\n\nMusic: synthesized in code.\n\n#Virus #Bacteria #Shorts"
+    }
+  },
+  "x": {
+    "text": "細菌だけにとりつくウイルス「T4 ファージ」は、注射器のように DNA を入れる。\n人のおなかから分子の大きさまで、時間のスライダー1本で寄っていけるアプリです。\n#ウイルス #細菌 #まなびラボ",
+    "en": "The T4 phage injects its DNA into bacteria like a syringe. Zoom from the human gut down to molecules.",
+    "reply": "アプリ（ブラウザで無料・日本語／English）: https://sishiya.github.io/manabi-lab/phage/"
+  }
+}

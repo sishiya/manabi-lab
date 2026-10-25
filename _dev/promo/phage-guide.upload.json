@@ -1,0 +1,31 @@
+{
+  "file": "_dev/promo/out/phage-guide.mp4",
+  "thumbnail": "_dev/promo/thumbs/phage-guide.jpg",
+  "privacy": "private",
+  "publishAt": "2026-10-26T20:00:00+09:00",
+  "captions": { "en": "_dev/promo/out/phage-guide.en.srt" },
+  "title": "細菌にとりつくウイルス ― 使い方と見どころ（T4 ファージ・人のからだから分子まで・注射器のように DNA を入れる）",
+  "description": "細菌だけにとりつくウイルス「T4 ファージ」が、大腸菌にくっついて DNA を入れ、細菌の中で増えて破れて出てくるまでを、時間のスライダー1本で見られるブラウザのアプリ「細菌にとりつくウイルス」の、使い方と見どころです。人のからだから大腸のかべ・粘液・大腸菌、そして分子の大きさまで、どこでも寄れます。研究の値・目安・模式を札で分けています。\n\n0:00 はじめに\n0:06 時間のスライダーとおまかせカメラ\n0:14 粘液の中の大腸菌\n0:20 ただよって近づく\n0:26 脚が OmpC をつかむ\n0:32 基盤が星形に、短い脚がくいこむ\n0:40 さやが縮んで針が刺さる\n0:48 DNA が入る\n0:55 細菌の工場の乗っとり\n1:02 細菌の DNA をこわして T4 の DNA をコピー\n1:10 頭の殻と DNA のつめこみ\n1:19 しっぽと脚が付く\n1:32 見た目: 本物に近い\n1:40 破れて出る\n1:48 となりの細菌へ\n1:58 ファージは人にうつらない・ファージ療法\n2:08 マウスを乗せると説明\n2:16 もしも\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/phage/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nMiller ES ほか (2003) Bacteriophage T4 genome. Microbiology and Molecular Biology Reviews 67(1)\nYap ML, Rossmann MG (2014) Structure and function of bacteriophage T4. Future Microbiology 9\nFokine A ほか (2004) Molecular architecture of the prolate head of bacteriophage T4. PNAS 101\nTaylor NMI ほか (2016) Structure of the T4 baseplate and its function in triggering sheath contraction. Nature 533\nHu B ほか (2015) Structural remodeling of bacteriophage T4 and host membranes during infection initiation. PNAS 112\nYu F, Mizushima S (1982) Journal of Bacteriology（OmpC と LPS）\nFuller DN ほか (2007) T4 の DNA をつめるモーター. PNAS 104\nLeiman PG ほか (2010) Morphogenesis of the T4 tail and tail fibers. Virology Journal 7\nほかはアプリの「このアプリについて・おもな出どころ」に。図は模式です。\n\n音楽: コードで合成した音です。\n\n#ウイルス #細菌 #生物 #まなびラボ",
+  "tags": [
+    "細菌にとりつくウイルス",
+    "バクテリオファージ",
+    "T4ファージ",
+    "ウイルス",
+    "大腸菌",
+    "生物",
+    "シミュレーション",
+    "使い方",
+    "まなびラボ",
+    "しし屋",
+    "The Virus That Infects Bacteria",
+    "bacteriophage",
+    "T4 phage",
+    "virus"
+  ],
+  "localizations": {
+    "en": {
+      "title": "The Virus That Infects Bacteria — App Guide: T4 Phage from the Human Body Down to Molecules",
+      "description": "A guide to \"The Virus That Infects Bacteria\", a browser app where one time slider takes you through a T4 phage sticking to E. coli, injecting its DNA, multiplying inside, and bursting out. Zoom in anywhere, from the human body to the gut wall, the mucus, the bacteria and down to molecules. Labels separate measured values, rough guides and schematics. Turn on English subtitles (CC).\n\n0:00 Intro\n0:06 The time slider and auto camera\n0:14 E. coli in the mucus\n0:20 Drifting closer\n0:26 Legs grab OmpC\n0:32 The baseplate opens, short legs dig in\n0:40 The sheath contracts, the needle pierces\n0:48 The DNA goes in\n0:55 Hijacking the factories\n1:02 Cutting host DNA, copying T4 DNA\n1:10 Head shells and DNA packing\n1:19 Tails and legs attach\n1:32 Look: realistic\n1:40 Bursting out\n1:48 On to the next bacteria\n1:58 Phages don't infect people; phage therapy\n2:08 Hover for explanations\n2:16 What if\n\nTry the app (runs in your browser, PC or phone; switch the app to English with the EN button):\nhttps://sishiya.github.io/manabi-lab/phage/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nMain sources:\nMiller ES et al. (2003) Bacteriophage T4 genome. Microbiology and Molecular Biology Reviews 67(1)\nYap ML, Rossmann MG (2014) Structure and function of bacteriophage T4. Future Microbiology 9\nFokine A et al. (2004) Molecular architecture of the prolate head of bacteriophage T4. PNAS 101\nTaylor NMI et al. (2016) Structure of the T4 baseplate and its function in triggering sheath contraction. Nature 533\nHu B et al. (2015) Structural remodeling of bacteriophage T4 and host membranes during infection initiation. PNAS 112\nYu F, Mizushima S (1982) Journal of Bacteriology (OmpC and LPS)\nFuller DN et al. (2007) The T4 DNA packaging motor. PNAS 104\nLeiman PG et al. (2010) Morphogenesis of the T4 tail and tail fibers. Virology Journal 7\nMore in the app under \"About this app\". The drawings are schematic.\n\nMusic: synthesized in code.\n\n#Virus #Bacteria #Biology"
+    }
+  }
+}

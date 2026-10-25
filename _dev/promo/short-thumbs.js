@@ -23,5 +23,6 @@ window.SHORT_THUMBS = {
   'mold-growth':   { name: 'カビが育つまで', t: 29, still: 'stills/mold-growth-compare.jpg', focus: [0.5, 0], zoom: 1, wzoom: 0.56, wfocus: [0.5, 0.25], wmask: false, kicker: 'お風呂のカビに効く習慣', big: '換気＋水切り', sub: '8週間でカビが 1/100以下', note: '※ 梅雨の浴室の壁（横10cm）を計算した、学習用シミュレーションの推定です', c1: '#f0ffd8', c2: '#9be04a' },
   'piano-hand':    { name: 'ピアノを弾く手', t: 21.6, focus: [0.62, 0.62], zoom: 1.35, kicker: '皮ふの下では', big: '骨と筋肉', sub: 'がこう動いている', c1: '#ffe6e0', c2: '#ff6b5c' },
   'pitch-physics': { name: '変化球のしくみ', t: 31, focus: [0.5, 0.36], zoom: 1.45, wfocus: [0.5, 0.4], kicker: '同じねらいで投げても', big: 'ナックル', sub: '左右 38 cm・上下 47 cm ばらける', c1: '#fff6d8', c2: '#ffd166' },
+  'phage':         { name: '細菌にとりつくウイルス', t: 12.15, focus: [0.5, 0.44], zoom: 1.7, wfocus: [0.5, 0.42], wzoom: 0.8, kicker: '細菌だけにとりつくウイルスは', big: '注射器', sub: 'のように DNA を入れる', c1: '#e0f2ff', c2: '#5bb8ff' },
   'wave-growth':   { name: '波が育つまで', t: 31, focus: [0.5, 0.42], zoom: 1.3, kicker: '凪の海に風が吹いて', big: '約30時間', sub: 'で育ちきる。高さ 3.1 m', c1: '#fff3d6', c2: '#ffc46b' }
 };
