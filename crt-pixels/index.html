@@ -44,6 +44,10 @@
       </div>
       <p class="note" id="fileNote"></p>
       <div id="dotRow" hidden>
+        <h3><span lang="ja">この画像は</span><span lang="en">This image is</span></h3>
+        <div class="seg" id="modeSeg"><button data-mode="part"><span lang="ja">画面の一部・切り抜き・ならべた画像</span><span lang="en">Part of a screen, a crop or a collage</span></button><button data-mode="screen"><span lang="ja">ゲーム画面まるごと</span><span lang="en">A whole game screen</span></button></div>
+        <p class="note" lang="ja">画面まるごとのときは、横のドット数と行の数から、ドットの速さ・形と 240本／480本を決めます（テレビでは絵の横はばがいつも同じ）。分からないときは「画面の一部」のままで。</p>
+        <p class="note" lang="en">For a whole screen, the dot rate, dot shape and 240/480 lines come from its width and number of lines (a TV picture is always the same width). If unsure, keep “Part of a screen”.</p>
         <h3><span lang="ja">この画像の何ピクセルを、元の絵の1ドットにするか</span><span lang="en">How many pixels of this image make one dot of the original</span></h3>
         <div class="seg" id="dotSeg"><button data-dot="auto"><span lang="ja">自動</span><span lang="en">Auto</span></button><button data-dot="1">1</button><button data-dot="2">2</button><button data-dot="3">3</button><button data-dot="4">4</button><button data-dot="5">5</button><button data-dot="6">6</button><button data-dot="8">8</button></div>
         <p class="note" lang="ja">拡大したスクリーンショットなら、その倍率（2倍なら 2）。ふつうは「自動」で見つけます。合っていないと、走査線やにじみが本物より細かくなります（元の1ドットが走査線1本になるように計算するため）。</p>
@@ -82,19 +86,20 @@
     <details class="row" id="more"><summary><span lang="ja">細かい設定</span><span lang="en">More settings</span></summary>
       <h3><span lang="ja">走査線の本数</span><span lang="en">Number of scan lines</span></h3>
       <div class="seg" id="interSeg"><button data-inter="0"><span lang="ja">ゲーム（240本・すきまが見える）</span><span lang="en">Games (240 lines, gaps show)</span></button><button data-inter="1"><span lang="ja">同じ絵を 480i で（行は2回ずつ）</span><span lang="en">Same picture in 480i (each line twice)</span></button></div>
+      <p class="note" id="interTall" hidden><span lang="ja">いまの絵は縦が 240 行をこえる「画面まるごと」なので、480本で描いています（この切りかえは使いません）。</span><span lang="en">This picture is a whole screen taller than 240 lines, so it is already drawn with 480 lines (this switch is not used).</span></p>
       <p class="note" lang="ja">家庭用ゲームの多くは、同じ行を毎回なぞる 240本の描き方で、行のあいだに暗いすきまが残りました。テレビ放送は 480本を半分ずつ交互に描くので、すきまはほとんど見えません。右のボタンは、240 行の絵を 480i で映したらどうなるかで、同じ行を半行ずらして2回描きます（本物の 480 行の絵ではありません。1行だけの細い模様が 1秒に30回ちらつくことは省いています）。縦が 240 行をこえる自分の画像は、いつも 480本の描き方で計算します。</p>
       <p class="note" lang="en">Most home video games drew 240 lines, tracing the same lines every time, so dark gaps stayed between the lines. TV broadcasts drew 480 lines, half at a time in turns, so the gaps were hardly visible. The right button shows a 240-line picture as it would look in 480i: each line is drawn twice, shifted by half a line (it is not a real 480-line picture, and the 30-times-a-second flicker of one-line-thin patterns is left out). Your own images taller than 240 lines are always computed with 480 lines.</p>
       <h3><span lang="ja">ドットクロール（ビデオ端子・アンテナ線）</span><span lang="en">Dot crawl (composite and RF)</span></h3>
       <div class="seg" id="frameSeg"><button data-frame="avg"><span lang="ja">目に見える平均</span><span lang="en">What the eye sees (average)</span></button><button data-frame="0"><span lang="ja">1コマ目</span><span lang="en">Frame 1</span></button><button data-frame="1"><span lang="ja">2コマ目</span><span lang="en">Frame 2</span></button></div>
-      <p class="note" lang="ja">色の波は1コマごとにずれるので、模様のふちの細かい点が 1秒に30回入れかわります（にじみのちらつき）。目にはまざって見えるので、ふだんは2コマの平均を出しています。1コマずつ切りかえて、ちがいを見られます。</p>
-      <p class="note" lang="en">The color wave shifts every frame, so the tiny dots at pattern edges swap 30 times a second (a crawling shimmer). Your eye blends them, so the app normally shows the average of the two frames. You can switch to each frame to see the difference.</p>
+      <p class="note" lang="ja">色の波は1コマごとにずれるので、模様のふちの細かい点が 60分の1秒ごとに入れかわり、1秒に30回くり返します（にじみのちらつき）。目にはまざって見えるので、ふだんは2コマの平均を出しています。1コマずつ切りかえて、ちがいを見られます。</p>
+      <p class="note" lang="en">The color wave shifts every frame, so the tiny dots at pattern edges swap every 1/60 second, repeating 30 times a second (a crawling shimmer). Your eye blends them, so the app normally shows the average of the two frames. You can switch to each frame to see the difference.</p>
     </details>
 
     <details class="row" id="about" lang="ja">
       <summary>このアプリについて</summary>
       <p>昔のゲームのドット絵は、ブラウン管のテレビで見られることを前提に描かれていました。同じ絵を液晶で見ると、チェック模様や角がそのまま見えます。このアプリは、ブラウン管の見え方をしくみごとに計算して、ちがいを見くらべます。</p>
       <p><b>計算していること</b>: ①テレビの信号（明るさと色を1本の線にまぜ、テレビの中で分け直す。色副搬送波の周波数・YIQ の式は NTSC の値、時間の刻みは当時の機械の一例）②電子ビームの走査線（明るいほど太るガウスの帯）③赤・緑・青の光る点のならび ④明るさの曲がり（ガンマ）⑤光のにじみ ⑥画面のふくらみ ⑦1ドットの形（ドットの速さから）。</p>
-      <p><b>簡単にしているところ</b>: 色の波は理想の正弦波です（当時の機械の多くは、決まった明るさの「四角い波」で色を作っていたので、にせの色は本物のほうが強く出ます）。明るさと色の分け方は、いちばん簡単な「色の波1周期の平均」（くし形フィルタなし）。色の信号を、取り出す前に帯域で切ることはしていません。S端子の色の帯域は放送の値（I 1.3・Q 0.4MHz）、ビデオ端子・アンテナ線の 0.6・0.5MHz は家庭のテレビを想定した推定です。ビームが明るさで（たても横も）太る割合・光る点の大きさ（14型くらいのテレビを想定）・光のにじみ（光の 12% が散る）・ふくらみの強さは推定で、実機の写真の見え方と見くらべて決めました。全体表示など光る点が画面のピクセルより細かいときは、画面の3ピクセルに合わせて描いています（本物より粗くなります。何倍の粗さかを画面の左下に出しています）。光る点の明暗は、いまの画面がそこまで明るく光れないので弱めていて（すきまも少し光る）、白は液晶の約半分の明るさになります。中くらいの明るさは約9割（ガンマのちがいのぶん）。アンテナ線のノイズは演出に近いものです。左の液晶は、いま見ている画面に1ドットを四角く大きく写したものです。</p>
+      <p><b>簡単にしているところ</b>: 色の波は理想の正弦波です。当時の機械の多くは、決まった明るさの「四角い波」で色を作っていました。四角い波でも計算して比べたところ、にせの色の強さのちがいは 1 割ほどまででした（機械ごとの明るさの段や色の表はまねていません）。ビデオ端子の明るさは、色の波のまわり（3.58MHz の ±1.0MHz。幅は推定）だけを落とす「トラップ」で取り出します（くし形フィルタなし）。色の帯域は、ビデオ端子 0.6MHz・アンテナ線 0.5MHz・S端子 1.0MHz で、どれも家庭のテレビを想定した推定です（放送の I 1.3・Q 0.4MHz は送る側の値で、受けるテレビの多くは同じ帯域で戻していました）。ビームが明るさで（たても横も）太る割合・光る点の大きさ（14型くらいのテレビを想定）・光のにじみ（光の 12% が散る）・ふくらみの強さは推定で、実機の写真の見え方と見くらべて決めました。全体表示など光る点が画面のピクセルより細かいときは、画面の3ピクセルに合わせて描いています（本物より粗くなります。何倍の粗さかを画面の左下に出しています）。光る点の明暗は、いまの画面がそこまで明るく光れないので弱めていて（すきまも少し光る）、白は光の量で液晶の約45%の明るさになります（1280×800 の全体表示で測った値）。中くらいの明るさは約9割（ガンマのちがいのぶん）。アンテナ線のノイズは演出に近いものです。左の液晶は、いま見ている画面に1ドットを四角く大きく写したものです。</p>
       <p>実在のゲームの絵は使っていません（絵はすべてこのアプリで描いたもの）。自分の画像は、この端末の中だけで計算し、どこにも送らず、保存もしません。</p>
       <h3>おもな出どころ</h3>
       <ul>
@@ -112,7 +117,7 @@
       <summary>About this app</summary>
       <p>Pixel art in old video games was drawn to be seen on CRT (cathode-ray tube) TVs. On an LCD, the same picture shows its checkerboard patterns and sharp corners as they are. This app calculates how a CRT shows the picture, one mechanism at a time, so you can compare.</p>
       <p><b>What it calculates</b>: (1) the TV signal (brightness and color mixed into one wire, then separated again inside the TV; the subcarrier frequency and YIQ equations are NTSC values, and the timing is one example of a machine of the time), (2) the scan lines of the electron beam (Gaussian bands that widen when bright), (3) the pattern of red, green and blue glowing dots, (4) the brightness curve (gamma), (5) glow, (6) the curved glass, (7) the shape of a dot (from the dot rate).</p>
-      <p><b>Simplifications</b>: the color wave is an ideal sine wave (many machines of the time made color with fixed-level “square waves”, so false colors are stronger on the real thing). Brightness and color are separated in the simplest way, “average over one cycle of the color wave” (no comb filter). The color signal is not band-limited before it is separated. S-Video uses the broadcast color bandwidths (I 1.3, Q 0.4 MHz); 0.6 and 0.5 MHz for composite and RF are estimates for home TVs. How much the beam widens when bright (both up-down and sideways), the dot size (assuming a TV of about 14 inches), the glow (12% of the light scatters) and the curvature are estimates, chosen by comparing with photos of real CRTs. When the dots are finer than your screen's pixels (such as at full view), they are drawn at 3 screen pixels (coarser than real; the lower-left corner shows by how much). The bright/dark contrast of the dots is reduced because your screen cannot shine that brightly (the gaps glow a little), so white comes out at about half the LCD brightness; mid tones at about 90% (the gamma difference). The antenna noise is closer to a visual effect. The LCD side simply shows each pixel as a large square on your screen.</p>
+      <p><b>Simplifications</b>: the color wave is an ideal sine wave. Many machines of the time made color with fixed-level “square waves”; computing it that way too, the false colors differed by about 10% at most (each machine's brightness steps and palette are not copied). On composite, brightness is taken out with a “trap” that removes only the band around the color wave (3.58 MHz ±1.0 MHz; the width is an estimate), with no comb filter. Color bandwidths are 0.6 MHz for composite, 0.5 MHz for RF and 1.0 MHz for S-Video, all estimates for home TVs (the broadcast I 1.3 / Q 0.4 MHz are the sender's values; most receiving TVs decoded both at the same bandwidth). How much the beam widens when bright (both up-down and sideways), the dot size (assuming a TV of about 14 inches), the glow (12% of the light scatters) and the curvature are estimates, chosen by comparing with photos of real CRTs. When the dots are finer than your screen's pixels (such as at full view), they are drawn at 3 screen pixels (coarser than real; the lower-left corner shows by how much). The bright/dark contrast of the dots is reduced because your screen cannot shine that brightly (the gaps glow a little), so white comes out at about 45% of the LCD brightness in amount of light (measured at full view, 1280×800); mid tones at about 90% (the gamma difference). The antenna noise is closer to a visual effect. The LCD side simply shows each pixel as a large square on your screen.</p>
       <p>No pictures from real games are used (all pictures were drawn by this app). Your own image is processed only on this device; it is never sent anywhere or saved.</p>
       <h3>Main sources</h3>
       <ul>
@@ -130,10 +135,10 @@
 </div>
 
 <script src="js/pictures.js?v=7"></script>
-<script src="js/ntsc.js?v=4"></script>
-<script src="js/crt-gl.js?v=8"></script>
-<script src="js/view.js?v=4"></script>
-<script src="js/upload.js?v=7"></script>
-<script src="js/main.js?v=13"></script>
+<script src="js/ntsc.js?v=7"></script>
+<script src="js/crt-gl.js?v=10"></script>
+<script src="js/view.js?v=5"></script>
+<script src="js/upload.js?v=9"></script>
+<script src="js/main.js?v=17"></script>
 </body>
 </html>

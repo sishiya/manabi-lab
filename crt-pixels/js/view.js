@@ -15,7 +15,18 @@ window.CRT_VIEW = function (stage, canvas, handle, onChange) {
     V.fitZ = (zd >= 2 && Math.floor(zd) / zd > 0.85 ? Math.floor(zd) : zd) / dpr;   // 小さくなりすぎるときは半端のまま（1ピクセルに3点の平均でならす）
     V.z = V.fitZ;
     V.x = Math.round((w - V.picW * V.par * V.z) / 2 * dpr) / dpr; V.y = Math.round((h - V.picH * V.z) / 2 * dpr) / dpr;
+    V.cw = w; V.ch = h;
     onChange();
+  }
+  // 画面の大きさが変わったとき（スマホのアドレスバーの出入り・回転など）: 寄った倍率と、まんなかに見ている所を保つ
+  function refit() {
+    const { w, h } = css();
+    if (!V.cw || !V.ch || V.z <= V.fitZ * 1.0001) { fit(); return; }
+    const px = (V.cw / 2 - V.x) / (V.z * V.par), py = (V.ch / 2 - V.y) / V.z, mult = V.z / V.fitZ;
+    const dpr = canvas.width / Math.max(1, w), zd = Math.min(w / (V.picW * V.par), h / V.picH) * 0.94 * dpr;
+    V.fitZ = (zd >= 2 && Math.floor(zd) / zd > 0.85 ? Math.floor(zd) : zd) / dpr;
+    V.z = V.fitZ * mult; V.x = w / 2 - px * V.z * V.par; V.y = h / 2 - py * V.z;
+    V.cw = w; V.ch = h; clamp(); onChange();
   }
   function clamp() {
     const { w, h } = css();
@@ -93,7 +104,7 @@ window.CRT_VIEW = function (stage, canvas, handle, onChange) {
   }
 
   return {
-    V, fit, clamp, hint, stopHint,
+    V, fit, refit, clamp, hint, stopHint,
     // ＋−ボタンは、1ドットが整数ピクセルになる倍率へ（走査線がモアレにならない）
     zoomBy(k) {
       const { w, h } = css(), dpr = canvas.width / Math.max(1, w), zd = V.z * dpr;

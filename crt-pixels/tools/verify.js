@@ -14,7 +14,7 @@ function pic(w, h, f) {
 }
 // 出力のまんなかあたり（はしの影響をさける）の平均と、ばらつき
 function stats(out, w, h) {
-  const ow = N.OUT_W, s = [0, 0, 0], s2 = [0, 0, 0]; let n = 0;
+  const ow = out.w, s = [0, 0, 0], s2 = [0, 0, 0]; let n = 0;
   for (let y = 2; y < h - 2; y++) for (let o = ow / 4; o < ow * 3 / 4; o++) {
     const i = (y * ow + o) * 4;
     for (let c = 0; c < 3; c++) { s[c] += out[i + c]; s2[c] += out[i + c] ** 2; }
@@ -70,5 +70,21 @@ const c256 = chromaOf(N.decodeFrame(pic(256, H, x => (x & 1 ? [255, 255, 255] : 
 const c512b = chromaOf(N.decodeFrame(pic(512, H, x => (x & 1 ? [255, 255, 255] : [0, 0, 0])), 'composite', 0));
 ok(Math.abs(c512 - c256) < 3, `横 512 の2ドットじま と 横 256 の1ドットじま は同じ色のこさ（${c512.toFixed(0)} / ${c256.toFixed(0)}）`);
 ok(Math.abs(c512b - c256) > 10, `横 512 の1ドットじまは、横 256 の1ドットじまとちがう（${c512b.toFixed(0)} / ${c256.toFixed(0)}）`);
+// 9. S端子・ビデオ端子とも、色は横ににじむ（赤と青の1ドットじまは、まざってむらさきに近づく）。RGB はそのまま
+{
+  const rb = pic(256, H, x => (x & 1 ? [255, 0, 0] : [0, 0, 255]));
+  const sdR = stats(N.decode(rb, 'rgb'), 256, H).sd[0];
+  for (const link of ['svideo', 'composite']) {
+    const sd = stats(N.decode(rb, link), 256, H).sd[0];
+    ok(sd < sdR * 0.6, `赤青の1ドットじま → ${link} で色がまざる（赤のばらつき ${sdR.toFixed(0)} → ${sd.toFixed(0)}）`);
+  }
+}
+// 8. 色の波を四角い波にしても（当時の機械の作り方）、にせの色の強さはほとんど変わらない（画面の文「ちがいは小さい」の確かめ）
+{
+  const pic2 = pic(256, H, (x, y) => ((x + y) & 1 ? [224, 32, 32] : [32, 64, 240]));
+  N.setSquare(false); const a = chromaOf(N.decodeFrame(pic2, 'composite', 0, 1));
+  N.setSquare(true); const b = chromaOf(N.decodeFrame(pic2, 'composite', 0, 1)); N.setSquare(false);
+  ok(Math.abs(b - a) / a < 0.15, `四角い波と正弦波のにせの色の強さの差 ${(100 * (b - a) / a).toFixed(0)}%（15% 未満）`);
+}
 console.log(ng ? `NG ${ng} 件` : 'すべて OK');
 process.exit(ng ? 1 : 0);

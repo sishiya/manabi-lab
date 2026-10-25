@@ -2,8 +2,9 @@
 // 拡大したスクリーンショットは、同じ色の四角のくり返しを見つけて元のドットに戻す。
 'use strict';
 (function () {
-// 上限: 縦 480 行（当時のテレビの 480本の描き方でいっぱい）・横 640 ドット（このアプリの上限。これより細かいドットは、どのつなぎ方でも信号で消える）
-const MAXW = 640, MAXH = 480;
+// 上限: 縦 480 行（当時のテレビの 480本の描き方でいっぱい）・横 512 ドット（信号のテクスチャの横はばを、WebGL2 がどの端末でも
+// 使える 2048 点におさめるため。ドットの速さ 1 で 1ドット＝8点、2点ずつまとめる）
+const MAXW = 512, MAXH = 480;
 
 // k×k の四角がどれも1色なら、k 倍に拡大した絵とみなす（JPEG などの小さなゆれは許す）
 function detectScale(d, w, h) {
@@ -27,22 +28,23 @@ function detectScale(d, w, h) {
 }
 
 // 読んだ画像（src: RGBA, w, h）を、元の1ドット＝k ピクセルとして小さくする。k を省くと自動で見つける。
-// 大きすぎるとき（縦 480 行・横 640 ドットをこえるとき）は、さらに f×f をまとめて1ドットにする。
+// 大きすぎるとき（縦 480 行・横 512 ドットをこえるとき）は、さらに f×f をまとめて1ドットにする。
 // まとめるときは、その中の色の平均（1つだけ拾うと細い線や点が消えるため）
 function build(raw, k) {
   const { src, w, h } = raw, auto = !k;
   if (auto) k = detectScale(src, w, h);
-  let sx = k, nw = Math.floor(w / k), nh = Math.floor(h / k), f = 1;
+  let sx = k, nw = Math.max(1, Math.floor(w / k)), nh = Math.max(1, Math.floor(h / k)), f = 1;   // 画像より大きい k を選んでも 1 ドットは残す
   if (nw > MAXW || nh > MAXH) {
     f = Math.ceil(Math.max(nw / MAXW, nh / MAXH));
-    sx = k * f; nw = Math.floor(w / sx); nh = Math.floor(h / sx);
+    sx = k * f; nw = Math.max(1, Math.floor(w / sx)); nh = Math.max(1, Math.floor(h / sx));
   }
   const data = new Uint8ClampedArray(nw * nh * 4);
   for (let y = 0; y < nh; y++) for (let x = 0; x < nw; x++) {
     // 元の1ドット（k×k）の中心の色を、f×f 個ぶん平均する（f＝1 なら中心の1つ）
     let r = 0, g = 0, bl = 0;
     for (let j = 0; j < f; j++) for (let i = 0; i < f; i++) {
-      const a = (((y * f + j) * k + (k >> 1)) * w + (x * f + i) * k + (k >> 1)) * 4, al = src[a + 3] / 255;
+      const X = Math.min(w - 1, (x * f + i) * k + (k >> 1)), Y = Math.min(h - 1, (y * f + j) * k + (k >> 1));   // 画像の外は読まない
+      const a = (Y * w + X) * 4, al = src[a + 3] / 255;
       r += src[a] * al; g += src[a + 1] * al; bl += src[a + 2] * al;   // すきとおった所は黒に
     }
     const b = (y * nw + x) * 4, n = f * f;
@@ -52,16 +54,10 @@ function build(raw, k) {
   const size = L(`読みこんだ画像は ${w}×${h} ピクセル。`, `Your image is ${w}×${h} pixels. `);
   let note;
   if (f > 1) note = size + L(
-    `当時のテレビで映せる大きさ（縦 480 行まで。横はこのアプリでは 640 ドットまで）をこえるので、${sx}×${sx} ピクセルの色の平均を1ドットにして、${nw}×${nh} ドットに縮めています。` + (auto && k === 1 ? '同じ色の四角のくり返しは見つかりませんでした（写真や、なめらかに拡大した画像など）。' : ''),
-    `That is more than an old TV could show (up to 480 lines; this app also caps the width at 640 dots), so each ${sx}×${sx} block is averaged into one dot: ${nw}×${nh} dots. ` + (auto && k === 1 ? 'No repeating same-color squares were found (a photo or a smoothly enlarged image, for example).' : ''));
+    `このアプリで計算できる大きさ（縦 480・横 512 ドットまで）をこえるので、${sx}×${sx} ピクセルの色の平均を1ドットにして、${nw}×${nh} ドットに縮めています。` + (auto && k === 1 ? '同じ色の四角のくり返しは見つかりませんでした（写真や、なめらかに拡大した画像など）。' : ''),
+    `That is larger than this app can compute (up to 480 lines and 512 dots across), so each ${sx}×${sx} block is averaged into one dot: ${nw}×${nh} dots. ` + (auto && k === 1 ? 'No repeating same-color squares were found (a photo or a smoothly enlarged image, for example).' : ''));
   else if (k > 1) note = size + L(`同じ色の ${k}×${k} ピクセルの四角が並んでいるので、${k}倍に拡大した絵とみて、${nw}×${nh} ドットに戻しています。`, `It is made of ${k}×${k} same-color squares, so it is treated as enlarged ${k}× and shrunk back to ${nw}×${nh} dots.`);
   else note = size + L(`1ピクセルを1ドットとしています。`, `Each pixel is treated as one dot.`);
-  // テレビでの映り方（大きさで決まる）
-  note += nh > 240
-    ? L(`縦が 240 行をこえるので、テレビは 480本の描き方（2回に分けて交互）で映します。`, ` It is taller than 240 lines, so the TV draws it with 480 lines (in two alternating passes).`)
-    : L(`240本の描き方（ゲームのふつうの描き方）で映します。`, ` The TV draws it with 240 lines (the usual way for games).`);
-  if (nw !== 256) note += L(`横が ${nw} ドットなので、ドットの速さは横 256 ドットのときの ${(nw / 256).toFixed(2)} 倍として計算します（1行の長さは同じ）。`, ` It is ${nw} dots wide, so the dot rate is ${(nw / 256).toFixed(2)}× that of a 256-dot picture (each line lasts the same time).`);
-  note += L('テレビでは絵の横はばがいつも同じ（1行の長さで決まる）なので、縦長・横長の画像は横にのびたりちぢんだりして映ります（「ドットの形」を正方形にすると、もとの形で見られます）。', ' On a TV the picture is always the same width (set by the length of a line), so tall or wide images are stretched or squeezed sideways (set “Dot shape” to Square to see the original shape).');
   if (!auto) note = L(`「${k}」を選びました。`, `You chose ${k}. `) + note;
   return { pic: { w: nw, h: nh, data }, note, k: sx, autoK: auto ? sx : null };   // 自動のボタンには、じっさいに使った大きさ（まとめたぶんもふくむ）
 }

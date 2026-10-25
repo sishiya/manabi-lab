@@ -9,7 +9,8 @@ in vec2 a; void main(){ gl_Position = vec4(a, 0.0, 1.0); }`;
 const FS = `#version 300 es
 precision highp float;
 uniform sampler2D uOrig;   // もとのドット絵（NEAREST）
-uniform sampler2D uSig;    // テレビの中で戻した信号 E'（横は絵の幅いっぱいに 1024 点、LINEAR）
+uniform sampler2D uSig;    // テレビの中で戻した信号 E'（横は絵の幅いっぱい、uSigW 点。LINEAR）
+uniform float uSigW;       // 信号のテクスチャの横の点の数
 uniform sampler2D uGlow;   // 同じ信号を光の量にしたもの（ミップマップ。光のにじみ用）
 uniform float uGlowLin;    // uGlow が光の量なら 1、使えず信号 E' のままなら 0
 uniform vec2 uPic;         // 絵の大きさ（ドット）
@@ -33,12 +34,16 @@ out vec4 o;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233)) + uSeed) * 43758.5453); }
 vec3 sig(float x, float row){                 // 信号の1点（E'）
   vec3 c = textureLod(uSig, vec2(x / uPic.x, (row + 0.5) / uPic.y), 0.0).rgb;
-  if (uNoise > 0.0) c += (hash(vec2(floor(x / uPic.x * 1024.0), row)) - 0.5) * uNoise * 2.0;
+  if (uNoise > 0.0) c += (hash(vec2(floor(x / uPic.x * uSigW), row)) - 0.5) * uNoise * 2.0;
   return clamp(c, 0.0, 1.0);
 }
 // 1行ぶんのビームの、横の光（光の量＝ガンマをかけたあと）。ビームの点は横にも広がり（ガウス）、
 // 明るいところほど点が大きくなって、まわりの暗いところへにじみ出す（たての走査線の太り方と同じ考え。広がり方は推定。
 // 実機の写真でも、明るいハイライトがまわりへにじんでなじむ）。光の合計は保つ（重みを正規化しない）
+float erfA(float x){   // 誤差関数（Abramowitz & Stegun 7.1.26。誤差 1.5e-7）
+  float t = 1.0 / (1.0 + 0.3275911 * x);
+  return 1.0 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * exp(-x * x);
+}
 vec3 lineLight(float x, float row){
   vec3 s = vec3(0.0);
   // 広がりは画面の上の長さで決まる（横 256 ドットの1ドットを単位にした値）。ドットが細かい絵では、ドットの数でかぞえて uDotW 倍
@@ -46,7 +51,8 @@ vec3 lineLight(float x, float row){
     float dx = float(k) * 0.3;                  // 256 ドットの1ドットを単位
     vec3 c = pow(sig(x + dx * uDotW, row), vec3(uGamma));
     float sg = mix(0.24, 0.55, sqrt(clamp(dot(c, vec3(0.30, 0.59, 0.11)), 0.0, 1.0)));
-    s += c * exp(-0.5 * dx * dx / (sg * sg)) * (0.3 / (sg * 2.5066));
+    // 9点（±1.2）では広いガウスのすそが少し欠けるので、欠けたぶん（erf で計算）で割って光の合計を保つ
+    s += c * exp(-0.5 * dx * dx / (sg * sg)) * (0.3 / (sg * 2.5066)) / erfA(1.35 / (sg * 1.4142));
   }
   return s;
 }
@@ -119,6 +125,26 @@ vec3 crtLight(vec2 p, vec2 frag, out float edge){
   } else {
     light = lineLight(p.x, clamp(floor(p.y), 0.0, uPic.y - 1.0));
   }
+  if (uBloom > 0.0){
+    // 光のにじみ（前のガラスの中で光が散る）: 光の量をぼかした絵を、光の合計を保つようにまぜる（にじんだぶん、もとの所は暗くなる）。
+    // 光る点の明暗と頭打ちの前にまぜるので、一様な面の明るさはにじみを入れても変わらない（変わったら、それはいまの画面の頭打ちのせい）。
+    // ミップマップの1点は、横は（画面の上の長さで）tx、たては1行の高さ。丸いにじみになるよう、横に n 点とって平均する。
+    // 480本の絵では1行が半分なので、段を1つ上げて、画面の上の広がりを同じにする
+    vec2 uv = p / uPic;
+    float up = log2(1.0 / uRowH);
+    float tx = uPic.x * uPar * uRowH / uSigW;          // 信号の1点の横はば（240本の1行の高さを1とした長さ）
+    int n = int(clamp(floor(uRowH / tx + 0.5), 1.0, 8.0));
+    vec3 g1 = vec3(0.0), g2 = vec3(0.0);
+    for (int i = 0; i < 8; i++){
+      if (i >= n) break;
+      float t = float(i) - 0.5 * float(n - 1);
+      g1 += textureLod(uGlow, uv + vec2(t * exp2(3.0 + up) / uSigW, 0.0), 3.0 + up).rgb;
+      g2 += textureLod(uGlow, uv + vec2(t * exp2(5.0 + up) / uSigW, 0.0), 5.0 + up).rgb;
+    }
+    vec3 glow = (g1 * 0.6 + g2 * 0.4) / float(n);
+    glow = uGlowLin > 0.5 ? pow(glow, vec3(uGamma / 2.4)) : pow(glow, vec3(uGamma));   // 光の量のテクスチャはガンマ 2.4 で作ってある
+    light = mix(light, glow, uBloom);
+  }
   if (uMask > 0.5){
     float cellPx = uView.z / uRowH / uTriads;   // 光る点の1組が画面の何ピクセルか
     float mean = uMask > 2.5 ? 0.26 : (uMask > 1.5 ? 0.22 : 0.25);
@@ -147,20 +173,6 @@ vec3 crtLight(vec2 p, vec2 frag, out float edge){
     // 本物の光る点は、すきまのぶんだけ強く光る。いまの画面はそこまで明るく光れないので、
     // 平均の明るさを保つように強弱をつける（明るい所は光りきって頭打ちになる）
     if (vis > 0.0) light *= mix(vec3(1.0), 1.0 + 0.75 * (m / mean - 1.0), vis);
-  }
-  if (uBloom > 0.0){
-    // 光のにじみ（前のガラスの中で光が散る）: 光の量をぼかした絵を、光の合計を保つようにまぜる（にじんだぶん、もとの所は暗くなる）。
-    // ミップマップは横 1024 点・たて 1 行ずつなので、横に4点とって丸いにじみに近づける（近いにじみと遠いにじみの2段）
-    vec2 uv = p / uPic;
-    vec3 g1 = vec3(0.0), g2 = vec3(0.0);
-    for (int i = 0; i < 4; i++){
-      float t = float(i) - 1.5;
-      g1 += textureLod(uGlow, uv + vec2(t * 8.0 / 1024.0, 0.0), 3.0).rgb;
-      g2 += textureLod(uGlow, uv + vec2(t * 32.0 / 1024.0, 0.0), 5.0).rgb;
-    }
-    vec3 glow = (g1 * 0.6 + g2 * 0.4) / 4.0;
-    if (uGlowLin < 0.5) glow = pow(glow, vec3(uGamma));
-    light = mix(light, glow, uBloom);
   }
   // 明るすぎる所はなだらかに頭打ち（光る点が光りきる。いまの画面の白より明るくは出せない）
   return mix(light, 0.8 + 0.2 * (1.0 - exp(-(light - 0.8) / 0.2)), step(0.8, light));
@@ -203,14 +215,14 @@ window.CRT_GL = function (canvas) {
   const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
   const la = gl.getAttribLocation(pr, 'a'); gl.enableVertexAttribArray(la); gl.vertexAttribPointer(la, 2, gl.FLOAT, false, 0, 0);
-  const U = {}; ['uOrig', 'uSig', 'uGlow', 'uGlowLin', 'uRowH', 'uDotW', 'uPic', 'uView', 'uSplit', 'uH', 'uScan', 'uInter', 'uMask', 'uTriads', 'uPar', 'uGamma', 'uBloom', 'uCurve', 'uNoise', 'uSeed']
+  const U = {}; ['uOrig', 'uSig', 'uSigW', 'uGlow', 'uGlowLin', 'uRowH', 'uDotW', 'uPic', 'uView', 'uSplit', 'uH', 'uScan', 'uInter', 'uMask', 'uTriads', 'uPar', 'uGamma', 'uBloom', 'uCurve', 'uNoise', 'uSeed']
     .forEach(n => U[n] = gl.getUniformLocation(pr, n));
   const tOrig = gl.createTexture(), tSig = gl.createTexture(), tGlow = gl.createTexture();
   gl.uniform1i(U.uOrig, 0); gl.uniform1i(U.uSig, 1); gl.uniform1i(U.uGlow, 2);
   // 光の量のテクスチャは 16 ビットの小数で。ミップマップを作るには、その形に描けること（拡張）が要る。なければ信号 E' のままで代わりにする
   const glowLin = !!(gl.getExtension('EXT_color_buffer_float') || gl.getExtension('EXT_color_buffer_half_float'));
   const LIN = new Float32Array(256); for (let i = 0; i < 256; i++) LIN[i] = Math.pow(i / 255, 2.4);
-  let pw = 1, ph = 1;
+  let pw = 1, ph = 1, sigW = 1024;
   return {
     gl,
     setPicture(pic) {
@@ -221,6 +233,7 @@ window.CRT_GL = function (canvas) {
       for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.NEAREST], [gl.TEXTURE_MAG_FILTER, gl.NEAREST], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
     },
     setSignal(data, w, h) {
+      sigW = w;
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, tSig);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(data.buffer, data.byteOffset, data.length));
       for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
@@ -241,7 +254,7 @@ window.CRT_GL = function (canvas) {
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.uniform2f(U.uPic, pw, ph); gl.uniform3f(U.uView, v.view[0], v.view[1], v.view[2]);
       gl.uniform1f(U.uSplit, v.split); gl.uniform1f(U.uH, canvas.height);
-      gl.uniform1f(U.uScan, v.scan); gl.uniform1f(U.uInter, v.inter); gl.uniform1f(U.uMask, v.mask); gl.uniform1f(U.uTriads, v.triads); gl.uniform1f(U.uPar, v.par || 1); gl.uniform1f(U.uRowH, v.rowH || 1); gl.uniform1f(U.uDotW, v.dotW || 1); gl.uniform1f(U.uGlowLin, glowLin ? 1 : 0);
+      gl.uniform1f(U.uScan, v.scan); gl.uniform1f(U.uInter, v.inter); gl.uniform1f(U.uMask, v.mask); gl.uniform1f(U.uTriads, v.triads); gl.uniform1f(U.uPar, v.par || 1); gl.uniform1f(U.uRowH, v.rowH || 1); gl.uniform1f(U.uDotW, v.dotW || 1); gl.uniform1f(U.uGlowLin, glowLin ? 1 : 0); gl.uniform1f(U.uSigW, sigW);
       gl.uniform1f(U.uGamma, v.gamma); gl.uniform1f(U.uBloom, v.bloom); gl.uniform1f(U.uCurve, v.curve);
       gl.uniform1f(U.uNoise, v.noise); gl.uniform1f(U.uSeed, v.seed || 0);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);

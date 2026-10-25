@@ -6,7 +6,7 @@ window.addEventListener('error', e => window.__crpiErr.push(String(e.message)));
 const $ = id => document.getElementById(id);
 const cv = $('cv'), stage = $('stage');
 
-// 画面の種類: マスクの形と、1ドットあたりの光る点の組（14型くらいを想定した推定）
+// 画面の種類: マスクの形と、240本の1行の高さあたりの光る点の組（14型くらいを想定した推定。出どころはない）
 const SCREENS = {
   shadow: { mask: 1, triads: 1.5 },
   slot:   { mask: 2, triads: 1.5 },
@@ -14,15 +14,15 @@ const SCREENS = {
 };
 const LINK_NOTE = {
   rgb: L('赤・緑・青を別々の線で送る。信号のにじみはありません（モニターや一部のテレビ）。', 'Red, green and blue go on separate wires. No signal blur (monitors and some TVs).'),
-  svideo: L('明るさと色を別の線で送る。色だけ横ににじみ、明るさはくっきり。', 'Brightness and color go on separate wires. Only the color blurs sideways; brightness stays sharp.'),
-  composite: L('明るさと色を1本の線にまぜて送る（黄色い端子）。色がにじみ、こまかい模様は色とまちがえられ、チェック模様はまざります。', 'Brightness and color are mixed into one wire (the yellow plug). Color blurs, fine patterns are mistaken for color, and checkerboards blend.'),
+  svideo: L('明るさと色を別の線で送る。色だけ横ににじみ、明るさはくっきり（帯域 4.2MHz）。', 'Brightness and color go on separate wires. Only the color blurs sideways; brightness stays sharp (4.2 MHz).'),
+  composite: L('明るさと色を1本の線にまぜて送る（黄色い端子）。色がにじみ、こまかい模様は色とまちがえられ、チェック模様はまざります。明るさも、色の波に近い細かさ（3.58MHz のまわり）は落ちます。', 'Brightness and color are mixed into one wire (the yellow plug). Color blurs, fine patterns are mistaken for color, and checkerboards blend. Brightness detail near the color wave (around 3.58 MHz) is also lost.'),
   rf: L('アンテナの線でテレビに送る。ビデオ端子よりさらににじみ、雪のようなノイズがのります（ノイズは演出に近い）。', 'Sent through the antenna cable. Even blurrier than composite, with snow-like noise (the noise is closer to a visual effect).')
 };
 // しくみ（効き目の大きい順）
 const MECH = [
   { id: 'scan', name: L('走査線', 'Scan lines'), badge: L('推定あり', 'partly estimated'), text: L('電子ビームが1行ずつ横になぞります。1行は太さのある光の帯で、行のあいだに暗いすきま。明るい行ほど帯が太ります（太り方は推定）。', 'The electron beam traces the screen one line at a time. Each line is a band of light with thickness, with dark gaps between lines. Brighter lines get thicker (how much is estimated).') },
   { id: 'signal', name: L('信号のにじみ', 'Signal blur'), badge: L('規格＋推定', 'standard + estimate'), text: L('下の「つなぎ方」のにじみ。切るとRGBと同じになります。色は細かく送れないので横ににじみ、細かい模様は色にまちがえられます。', 'The blur from the “Connection” below. Turning it off is the same as RGB. Color cannot be sent in fine detail, so it smears sideways, and fine patterns are mistaken for color.') },
-  { id: 'mask', name: L('赤緑青の光る点', 'Red, green and blue dots'), badge: L('推定', 'estimate'), text: L('画面は赤・緑・青の小さな光る点の集まり。寄ると1つずつ見えます。大きさは14型くらいのテレビを想定した推定です。光る点の所は明るく、すきまは暗くしますが、いまの画面は本物ほど明るく光れないので、白は液晶の約半分の明るさになります（すきまも少し光らせています。本物はほぼ黒）。', 'The screen is made of tiny glowing red, green and blue dots. Zoom in to see them one by one. Their size is an estimate for a TV of about 14 inches. The dots are made brighter and the gaps darker, but your screen cannot shine as brightly as real dots, so white comes out at about half the LCD brightness (the gaps also glow a little; on a real CRT they are nearly black).') },
+  { id: 'mask', name: L('赤緑青の光る点', 'Red, green and blue dots'), badge: L('推定', 'estimate'), text: L('画面は赤・緑・青の小さな光る点の集まり。寄ると1つずつ見えます。大きさは14型くらいのテレビを想定した推定です。光る点の所は明るく、すきまは暗くしますが、いまの画面は本物ほど明るく光れないので、白は光の量で液晶の約45%の明るさになります（すきまも少し光らせています。本物はほぼ黒）。', 'The screen is made of tiny glowing red, green and blue dots. Zoom in to see them one by one. Their size is an estimate for a TV of about 14 inches. The dots are made brighter and the gaps darker, but your screen cannot shine as brightly as real dots, so white comes out at about 45% of the LCD brightness in amount of light (the gaps also glow a little; on a real CRT they are nearly black).') },
   { id: 'gamma', name: L('明るさの曲がり', 'Brightness curve'), badge: L('基準＋推定', 'reference + estimate'), text: L('ブラウン管は、暗いところがより暗く出ます。ここではガンマ 2.4（ITU-R BT.1886。2011 年に決めた、ブラウン管に似せた基準の曲線）。当時の実物はテレビによってばらつきます。いまの画面は約2.2。', 'A CRT shows dark areas even darker. This uses gamma 2.4 (ITU-R BT.1886, a reference curve set in 2011 to match CRTs). Real sets of the time varied. Screens today use about 2.2.') },
   { id: 'bloom', name: L('光のにじみ', 'Glow'), badge: L('推定', 'estimate'), text: L('明るいところの光が前のガラスの中で散って、まわりがほんのり明るくなります（光の 12% が散るとした推定。光の合計は変えない）。', 'Light from bright areas scatters inside the front glass, so the surroundings glow softly (an estimate: 12% of the light scatters; the total light stays the same).') },
   { id: 'curve', name: L('画面のふくらみ', 'Curved glass'), badge: L('推定', 'estimate'), text: L('ガラスの面が丸くふくらんでいて、はしが少し曲がって見えます。', 'The glass bulges outward, so the edges look slightly bent.') }
@@ -51,27 +51,42 @@ const view = window.CRT_VIEW(stage, cv, $('handle'), () => { dirty = true; });
 
 function picture() { return S.pic === 'user' ? S.userPic : window.CRT_PICTURES.get(S.pic); }
 function linkName() { return S.on.signal ? S.link : 'rgb'; }
-// 絵の大きさから、テレビでの映り方を決める（当時のテレビのしくみどおり）:
-//  - 縦 240 行まで: 240本の描き方（同じ行を毎回なぞる）。241〜480 行: 480本（2回に分けて交互に）で、1行の高さは半分
-//  - 1行の長さ（時間）はいつも同じなので、横のドット数がふえると1ドットは細くなる（ドットの速さが上がる）
-//  - 1ドットの横÷たて: 横 256・240本で 8:7（NESdev Wiki「Overscan」: ドットの速さ 5.37MHz と正方形の画素の速さ 6.14MHz の比）。
-//    横 W ドット・1行の高さ h なら (8/7)×(256/W)÷h
+// テレビでの映り方を決める（当時のテレビのしくみどおり）。
+//  - 用意した絵と「画面の一部」の自分の画像（ふつう）: ドットは横 256 ドットの画面と同じ速さ・形（1ドットの横÷たて 8:7、240本）。
+//    切り抜きやならべた画像は、画面全体の大きさが分からないので、ドット1つずつを当時のテレビのドットとして計算する
+//  - 「画面まるごと」の自分の画像: 1行の長さ（時間）は同じなので、横のドット数がふえると1ドットは細く速くなる（dotW＝横/256）。
+//    縦 240 行まで＝240本、241〜480 行＝480本（2回に分けて交互。1行の高さ rowH＝0.5）
+//  - 1ドットの横÷たて: 横 256・240本で 8:7（NESdev Wiki「Overscan」: 240×4/3÷280）。一般には (8/7)÷dotW÷rowH
 function geom(pic) {
-  const rowH = pic && pic.h > 240 ? 0.5 : 1, dotW = pic ? pic.w / 256 : 1;
-  return { rowH, dotW, parTV: (8 / 7) / dotW / rowH };
+  const whole = S.pic === 'user' && S.userMode === 'screen' && pic;
+  const rowH = whole && pic.h > 240 ? 0.5 : 1, dotW = whole ? pic.w / 256 : 1;
+  return { rowH, dotW, parTV: (8 / 7) / dotW / rowH, whole: !!whole };
+}
+// 自分の画像の、テレビでの映り方の説明（ふつうの言葉と数字で）
+function geomNote(pic) {
+  if (!pic) return '';
+  const g = geom(pic);
+  if (!g.whole) {
+    const big = pic.w > 280 || pic.h > 240;
+    return L(`ドットは当時の家庭用ゲーム機と同じ形・速さ（横 256 ドットの画面と同じ）として計算しています。`, ` Each dot is computed with the shape and rate of home consoles of the time (the same as a 256-dot-wide screen).`)
+      + (big ? L(`${pic.w}×${pic.h} ドットは、テレビ1画面（このドットの速さで横 約 280・縦 240 行）より大きいので、本物のテレビには一度には映りません。部分ごとの見え方として見てください。`, ` At ${pic.w}×${pic.h} dots it is larger than one TV screen at this dot rate (about 280 across, 240 lines), so a real TV could not show it all at once; read it as how each part looks.`) : '');
+  }
+  return (pic.h > 240 ? L(`画面まるごととして: 縦が 240 行をこえるので、480本の描き方（2回に分けて交互）で映します。`, ` As a whole screen: taller than 240 lines, so it is drawn with 480 lines (two alternating passes).`)
+                      : L(`画面まるごととして: 240本の描き方で映します。`, ` As a whole screen: drawn with 240 lines.`))
+    + L(`横が ${pic.w} ドットなので、ドットの速さは横 256 ドットのときの ${g.dotW.toFixed(2)} 倍（1行の長さは同じ）。テレビでは絵の横はばがいつも同じなので、縦長・横長の画像はのびたりちぢんだりして映ります。`, ` It is ${pic.w} dots wide, so the dot rate is ${g.dotW.toFixed(2)}× that of a 256-dot screen (each line lasts the same time). A TV picture is always the same width, so tall or wide images are stretched or squeezed.`);
 }
 const parValue = () => (S.par === 'tv' ? geom(picture()).parTV : 1);
 
 // 信号の計算は重いので、絵・つなぎ方・コマが変わったときだけ
 function updateSignal() {
   const pic = picture(); if (!pic || !R) return;
-  const key = [S.pic, pic.w, pic.h, linkName(), S.frame].join('|');
+  const key = [S.pic, pic.w, pic.h, linkName(), S.frame, geom(pic).dotW].join('|');
   if (key === S.sigKey && S.current === pic) return;
   const t0 = performance.now();
   const fr = S.frame === 'avg' ? 'avg' : Number(S.frame);
-  const sig = window.CRT_NTSC.decode(pic, linkName(), fr);
+  const sig = window.CRT_NTSC.decode(pic, linkName(), fr, geom(pic).dotW);
   if (S.current !== pic) { R.setPicture(pic); S.current = pic; view.V.par = parValue(); view.setPicture(pic.w, pic.h); }
-  R.setSignal(sig, window.CRT_NTSC.OUT_W, pic.h);
+  R.setSignal(sig, sig.w, pic.h);
   S.sigKey = key; S.sigMs = performance.now() - t0;
   dirty = true;
 }
@@ -88,13 +103,15 @@ function resize() {
   const dpr = Math.min(2, window.devicePixelRatio || 1), r = cv.getBoundingClientRect();
   cv.width = Math.max(1, Math.round(r.width * dpr)); cv.height = Math.max(1, Math.round(r.height * dpr));
   padPin();
-  view.fit(); dirty = true;
+  view.refit(); dirty = true;
 }
 
 function draw() {
   const V = view.V, w = cv.clientWidth;
   $('divider').style.left = (V.split * w) + 'px';
-  $('zoom').querySelector('[data-z="dots"]').setAttribute('aria-pressed', String(dotsShown()));
+  const dotsBtn = $('zoom').querySelector('[data-z="dots"]');
+  dotsBtn.setAttribute('aria-pressed', String(dotsShown()));
+  dotsBtn.disabled = V.z <= V.fitZ * 1.0001 && dotsShown();   // 全体表示ですでに光る点が見える（小さい絵）ときは押せない
   const scr = SCREENS[S.screen], mult = V.z / V.fitZ;
   const cellCss = V.z / scr.triads;
   let hud = `×${mult.toFixed(1)}  `;
@@ -140,7 +157,8 @@ const paints = [
   segment('interSeg', 'inter', () => S.inter, v => { S.inter = Number(v); }),
   segment('frameSeg', 'frame', () => S.frame, v => { S.frame = v; }),
   segment('parSeg', 'par', () => S.par, v => { S.par = v; view.setPar(parValue()); }),
-  segment('dotSeg', 'dot', () => S.userK, v => { setUserK(v); })
+  segment('dotSeg', 'dot', () => S.userK, v => { setUserK(v); }),
+  segment('modeSeg', 'mode', () => S.userMode, v => { S.userMode = v; S.current = null; })
 ];
 function buildMech() {
   $('mech').innerHTML = MECH.map(m => `<li><label><input type="checkbox" data-m="${m.id}" aria-label="${m.name}">${m.name}<span class="badge">${m.badge}</span></label><span></span>
@@ -162,7 +180,13 @@ function refresh() {
   const isUser = S.pic === 'user' && !!S.userRaw;
   document.querySelector('#picSeg .file').classList.toggle('on', isUser);
   $('dotRow').hidden = !isUser;
-  $('fileNote').textContent = isUser ? S.userNote + L(' この端末の中だけで計算し、どこにも送りません。', ' Processed only on this device; never sent anywhere.') : FILE_NOTE;
+  // 480本で描く絵（画面まるごとで縦 240 行こえ）では、手動の 480i は使わない
+  const tall = geom(picture()).rowH < 1;
+  document.querySelectorAll('#interSeg button').forEach(b => { b.disabled = tall; });
+  $('interTall').hidden = !tall;
+  // 文をつなぐ（英語は文のあいだを空白1つに）
+  const join = parts => parts.map(t => t.trim()).filter(Boolean).join(L('', ' '));
+  $('fileNote').textContent = isUser ? join([S.userNote, geomNote(S.userPic), L('この端末の中だけで計算し、どこにも送りません。', 'Processed only on this device; never sent anywhere.')]) : FILE_NOTE;
   const autoBtn = document.querySelector('#dotSeg [data-dot="auto"]');
   if (autoBtn) autoBtn.textContent = S.userAutoK ? L(`自動（${S.userAutoK}）`, `Auto (${S.userAutoK})`) : L('自動', 'Auto');
   updateSignal();
@@ -191,7 +215,7 @@ $('zoom').addEventListener('click', e => {
 async function useFile(file) {
   try {
     const r = await window.CRT_UPLOAD.load(file);
-    S.userRaw = r.raw; S.userK = 'auto'; S.userAutoK = r.autoK;
+    S.userRaw = r.raw; S.userK = 'auto'; S.userAutoK = r.autoK; S.userMode = 'part';
     S.userPic = r.pic; S.pic = 'user'; S.userNote = r.note;
     refresh();
   } catch (e) { $('fileNote').textContent = e.message; }
