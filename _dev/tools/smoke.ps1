@@ -34,7 +34,9 @@ $indexHtml = [IO.File]::ReadAllText((Join-Path $root 'index.html'), [Text.Encodi
 $enApps = [regex]::Matches($indexHtml, "\{id:'([\w-]+)'[^\r\n]*?en:true") | ForEach-Object { $_.Groups[1].Value }
 if (-not $Apps) {
   $Apps = @('_root') + (Get-ChildItem $root -Directory | Where-Object {
-      $_.Name -notmatch '^[_.]|^assets$' -and (Test-Path (Join-Path $_.FullName 'index.html'))
+      $_.Name -notmatch '^[_.]|^assets$' -and (Test-Path (Join-Path $_.FullName 'index.html')) -and
+      # あそびラボへ移したアプリの旧 URL（RULES 8.3）は、移った先へ飛ぶだけのページなので調べない
+      ([IO.File]::ReadAllText((Join-Path $_.FullName 'index.html'), [Text.Encoding]::UTF8) -notmatch 'http-equiv="refresh"')
     } | ForEach-Object { $_.Name })
 }
 $Apps = $Apps | ForEach-Object { $_ -split ',' } | Where-Object { $_ }

@@ -502,7 +502,10 @@ function solveWrist(plan) {
   for (let it = 0; it < W_ITER; it++) {
     // 位置（いまの向きでの目安へ）
     for (let i = 0; i < N; i++) {
-      const psi = plan.wy[i] + B[i], k0 = 1e-3; // 何も押していないときは近い音の位置へゆるく
+      // 何も押していないときは近い音の位置へゆるく。はじめの音より前と終わりの音のあとは、その音の位置で構えておく（2026-10-25〜。ゆるいままだと、
+      // はじめの音のあとの動きの勢いが前へのびて、手首が逆がわから走ってきた。B♭ の音階で右手が 40mm 左から来て、両手の親指が 16mm 重なった）
+      const t = ta + i / W_HZ, k0 = ns.length && (t < ns[0].t0 - W_LEAD || t > plan.end + 0.05) ? W_PRE : 1e-3;
+      const psi = plan.wy[i] + B[i];
       const a0 = anchorAt(near[i], psi, sd);
       w[i] = k0; bx[i] = k0 * a0[0]; bz[i] = k0 * a0[1];
       for (const e of ent[i]) { const k = e.k * e.mul, a = anchorAt(e.n, psi, sd); w[i] += k; bx[i] += k * a[0]; bz[i] += k * a[1]; }

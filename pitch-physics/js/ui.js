@@ -68,7 +68,7 @@ function buildControls() {
     '<div class="sbh">' + L('測った記録を、放した瞬間の速さに直す', 'Convert a measured speed to release speed') + '</div>' +
     '<div class="conv"><input type="number" id="cvVal" value="100.8" step="0.1" min="40" max="200" aria-label="' + L('測った速さ', 'Measured speed') + '"><select id="cvUnit"><option value="mph">mph</option><option value="kmh">km/h</option></select>' +
     '<select id="cvWhere"><option value="y10">' + L('ホームの 10 ft 手前で', 'at 10 ft before the plate') + '</option><option value="plate">' + L('ホームで（終速）', 'at the plate (final speed)') + '</option><option value="y50">' + L('50 ft 地点で', 'at 50 ft') + '</option><option value="release">' + L('放した瞬間に', 'at release') + '</option></select>' +
-    '<button id="cvGo" class="act">' + L('直す', 'Convert') + '</button></div><p class="help" id="cvOut">' + L('例: 1974 年の大リーグで、ホームの約 10 ft 手前で 100.8 mph と測られた記録（Sports Illustrated 1974）。いまの投げ方・空気で計算します。', 'Example: a 1974 MLB pitch measured at 100.8 mph about 10 ft before the plate (Sports Illustrated 1974). Computed with the current pitch and air.') + '</p>';
+    '<button id="cvGo" class="act">' + L('直す', 'Convert') + '</button></div><p class="help" id="cvOut">' + L('例: 1974 年の大リーグで、ホームの約 10 ft 手前で 100.8 mph と測られた記録（SABR）。いまの投げ方・空気で計算します。', 'Example: a 1974 MLB pitch measured at 100.8 mph about 10 ft before the plate (SABR). Computed with the current pitch and air.') + '</p>';
   s2.appendChild(sp);
   sp.querySelector('#cvGo').addEventListener('click', () => {
     const v = Number($('cvVal').value), unit = $('cvUnit').value, where = $('cvWhere').value;
