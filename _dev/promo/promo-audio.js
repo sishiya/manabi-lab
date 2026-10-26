@@ -96,6 +96,8 @@ function babbleSound(ctx, out, c) {
 // music = { style, root, cues, quiet }
 //   style 'drone'   : 低い持続音（暗い・宇宙。root は低い音の Hz、既定 55）
 //   style 'journey' : 明るい和音＋アルペジオ（旅・歴史。root は和音のいちばん下の Hz、既定 130.8 = ド）
+//   style 'file'    : 曲のファイル（file: URL、offset: 曲の何秒目から）。おとライブラリ（Stable Audio 3）の曲を out/bgm/ に写して使う（2026-10-26〜）。
+//                     残響は足さない。音量は下の loudMix がほかの BGM と同じ -20 LUFS にそろえる
 //   cues  [{ t, type: 'boom' }] : その時刻に低い「ドン」
 //         [{ t, type: 'babble', n, seed }] : 案内役のライオンのしゃべり（babbleSound）
 //   quiet [[a, b]]             : その間はアルペジオを止め、和音を暗くする
@@ -113,9 +115,9 @@ async function makeAudio(dur, music = {}) {
   const bgmOut = stem(0), voiceOut = stem(2), talkOut = stem(4);
   const master = ctx.createGain(); master.connect(bgmOut);
   master.gain.setValueAtTime(0, 0);
-  master.gain.linearRampToValueAtTime(0.22, 3);
+  master.gain.linearRampToValueAtTime(0.22, music.style === 'file' ? 0.8 : 3);   // 曲は頭から聞こえるように早く上げる
   const stop = music.stopAt ?? dur;   // stopAt: 本編の終わり。ここで BGM を消す（締めの画面は目印の音だけ）
-  master.gain.setValueAtTime(0.22, Math.max(3, stop - (music.stopAt ? 1 : 4)));
+  master.gain.setValueAtTime(0.22, Math.max(music.style === 'file' ? 0.8 : 3, stop - (music.stopAt ? 1 : 4)));
   master.gain.linearRampToValueAtTime(0, music.stopAt ? stop + 0.3 : dur - 0.2);
   // 残響（減衰する雑音をたたみこむ）
   const ir = ctx.createBuffer(2, SR * 2.5, SR);
@@ -139,6 +141,10 @@ async function makeAudio(dur, music = {}) {
   if (music.extra) await music.extra(ctx, voiceOut);   // 台本ごとの音（ピアノを弾く手のピアノの音など。BGM の音量とは別）
   if (music.style === 'none') {
     // BGM なし（目印の音だけ）
+  } else if (music.style === 'file') {
+    const buf = await ctx.decodeAudioData(await (await fetch(music.file)).arrayBuffer());
+    const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;   // おとライブラリの BGM はループするように作ってある
+    src.connect(master); src.start(0, music.offset || 0);
   } else if ((music.style || 'drone') === 'drone') {
     const root = music.root || 55;
     const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.Q.value = 0.7; lp.connect(bus);

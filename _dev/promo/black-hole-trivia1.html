@@ -56,6 +56,7 @@ function drawTop(g, t, a, b, main, sub, big) {
 }
 const pickAt = t => PICKS.find(p => t >= p.a - 0.3 && t < p.b);
 let shown = null;   // いま図に出しているクリック
+const BGM = new URLSearchParams(location.search).get('bgm');
 promoStart({
   name: 'うんちく: ' + NAME, out: 'black-hole-trivia1', src: '../../black-hole/index.html', iw: 2270, ih: 1080, dur: SHORT_END + IDENT_CLOSE,
   subs: () => [
@@ -63,7 +64,8 @@ promoStart({
     ...capSubs(CAPS),
     { a: 35.2, b: SHORT_END, ja: NAME + '\nブラウザで動かせます。クリックした点の光の道すじも見られます', en: NAME_EN + '\nRuns in your browser. Click any point to see the path of its light' },
   ],
-  music: { style: 'drone', root: 55, stopAt: SHORT_END, cues: [{ t: SHORT_END, type: 'jingle' }] },
+  // BGM: ?bgm=<名前> でおとライブラリの曲（out/bgm/<名前>.ogg。聴きくらべ用）。なければこれまでの低い持続音
+  music: Object.assign(BGM ? { style: 'file', file: `out/bgm/${BGM}.ogg` } : { style: 'drone', root: 55 }, { stopAt: SHORT_END, cues: [{ t: SHORT_END, type: 'jingle' }] }),
   ready: w => w.__bh && w.__bh.R && w.__bh.R.gl && (w.__bh.R.levels.low || (w.__bh.renderNow(), w.__bh.R.levels.low)),
   setup(w) {
     // 光の道すじの図を 3 倍の細かさで描かせる（アプリは 640×400 として描く。文字の大きさはそのまま）
