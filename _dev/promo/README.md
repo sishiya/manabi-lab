@@ -22,6 +22,7 @@ YouTube に出す順番（ジャンル・サムネイルの色味が連日で重
 - 正しさ: 出どころのある話だけ。出どころは画面の終わりと説明欄に。推定・モデルの値は「推定」「モデルでは」と書く。数字はアプリで測った値を使い、台本に測った条件を書いておく。
 - ファイル名: 台本 `<app>-trivia<番号>.html`（`?short` で録る）、`<app>-trivia<番号>.upload.json`、サムネイル `thumbs/<app>-trivia<番号>.jpg`。`*-short`・`*-guide` の名前にしないので、ショートの再生リスト・入口の動画リンクの道具には入らない。
 - 音量・サムネイル・目印・英語の字幕・前日の確認は、ほかの動画と同じ決まり（下の「毎回まもること」）。上げる・予約はユーザーの GO のあと。
+- BGM はおとライブラリ（Stable Audio 3）の曲も使える: `music: { style: 'file', file: 'out/bgm/<id>.ogg' }`（曲は `../sound-library/bgm/` から `out/bgm/` に写す。Git に入れない）。台本に `?bgm=<id>` で切りかえを付けておくと、`__promoAudio()` で音だけ作って聴きくらべられる。説明欄に「BGM: Stable Audio 3（Stability AI）で生成」。うんちく用に `promo_trivia_clock`・`promo_trivia_pop` を作った（2026-10-26）。
 - 再生リスト「まなびラボ ― うんちく」: 1本目を上げるときに `playlist-trivia.json`（`match: "*-trivia*.upload.json"`）を足す。**先に置くと、毎晩の予約タスク（`-Playlist`）が空のリストを公開で作ってしまう**ので、ユーザーの GO まで置かない。
 - 予定と題材の候補は `SCHEDULE.md` の「うんちく動画」。
 
