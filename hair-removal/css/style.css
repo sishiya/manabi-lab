@@ -24,7 +24,7 @@ button:disabled{opacity:.4;cursor:default}
 #zoom button{min-height:30px;padding:2px 9px;font-size:14px;background:rgba(22,37,58,.85)}
 #siteBox{font-size:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 #siteBox label{display:flex;align-items:center;gap:4px}
-#siteBox select{max-width:190px;font-size:13px;padding:2px 6px}
+#siteBox select{max-width:100%;font-size:13px;padding:2px 6px}
 #tools{display:flex;gap:6px;padding:4px 14px}
 .tool{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-height:40px;font-weight:700}
 .tool .ic{font-size:17px}
@@ -42,11 +42,6 @@ button:disabled{opacity:.4;cursor:default}
 .step{padding:4px 10px}
 #day{font-family:var(--f-mono);margin-left:auto;min-width:64px;text-align:right}
 #undo{width:44px;padding:0;font-size:18px}
-#guide{display:flex;gap:10px;align-items:center;padding:2px 14px;min-height:48px}
-#gtext{flex:1;margin:0;font-size:14px;line-height:1.6}
-.gbtn{display:flex;align-items:center;gap:6px;flex-shrink:0}
-#gnum{font-family:var(--f-mono);font-size:12px;color:var(--muted);min-width:34px;text-align:center}
-#gnext{background:var(--acc);color:#2a1d1a;border-color:var(--acc);font-weight:700}
 
 /* スクロールする部分 */
 .sec{padding:10px 14px}
@@ -62,6 +57,9 @@ button:disabled{opacity:.4;cursor:default}
 .warn{border:1px solid #ff8fb1;background:rgba(255,143,177,.08);border-radius:8px;padding:8px 12px;font-size:13px;line-height:1.7;margin:4px 0 10px}
 .warn b{color:#ff8fb1}
 .cond{margin:4px 0;padding-left:1.2em}
+details.more{margin:2px 0 6px}
+details.more summary{cursor:pointer;color:var(--muted);font-size:13px;min-height:32px;display:flex;align-items:center}
+details.more summary:hover{color:var(--ink)}
 #about{color:var(--muted);font-size:14px;line-height:1.8;padding-bottom:28px}
 #about summary{cursor:pointer;color:var(--ink);min-height:36px;display:flex;align-items:center}
 #about a{color:var(--acc)}
@@ -76,12 +74,11 @@ button:disabled{opacity:.4;cursor:default}
   .tool{font-size:12px;gap:2px;padding:2px 3px;white-space:nowrap;min-height:38px}
   .tool .ic{font-size:13px}
   #hint{font-size:12px;margin:2px 10px 0}
-  #gtext{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
-  #gtext.open{display:block}
   .step{padding:4px 6px;font-size:13px}
-  #gtext{font-size:13px}
-  #guide{align-items:flex-start}
-  .gbtn{flex-direction:column-reverse;gap:2px}
   #status{font-size:12px;row-gap:0}
   #now{order:3;flex-basis:100%}   /* 1行目に 数と拡大ボタン、いま起きたことは2行目 */
+}
+/* スマホの横向き（高さが低い）: 上の固定部分だけで画面がうまり、下が読めなくなるので固定しない（2026-10-27） */
+@media (max-height:500px){
+  #pin{position:static}
 }

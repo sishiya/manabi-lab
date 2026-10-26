@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="css/style.css?v=016">
+<link rel="stylesheet" href="css/style.css?v=017">
 
 <div id="app">
   <!-- 上に固定: 道具・断面・いま起きたこと・時間（RULES 9章） -->
@@ -46,17 +46,25 @@
   <section class="sec">
     <h2><span lang="ja">毛穴ごとの周期</span><span lang="en">Each follicle’s cycle</span></h2>
     <canvas id="gr"></canvas>
-    <p class="hint" lang="ja">1段が1つの毛穴。ピンクの枠は、光でいたんだ日（×）から また のびはじめるまで。色は毛穴のようす（<span class="sw" style="background:#e57a7a"></span>のびる <span class="sw" style="background:#d7a28c"></span>ちぢむ <span class="sw" style="background:#7d6a62"></span>休む <span class="sw" style="background:#ffd166"></span>抜いたあと <span class="sw" style="background:#333"></span>止まった）、黒い線は表面に毛が出ている日。上の印は手入れ。いまより右は「このあと何もしない場合」の予想。いまの前後の2年を表示し、時間が進むとずれていきます。さわるとその日へ移ります。</p>
-    <p class="hint" lang="en">Each row is one follicle. A pink frame runs from the day light damaged it (×) until it starts growing again. Colors show the follicle’s state (<span class="sw" style="background:#e57a7a"></span>growing <span class="sw" style="background:#d7a28c"></span>shrinking <span class="sw" style="background:#7d6a62"></span>resting <span class="sw" style="background:#ffd166"></span>after plucking <span class="sw" style="background:#333"></span>stopped); the black line marks days when hair is out of the skin. Marks on top are treatments. Right of “now” is a forecast if you do nothing more. It shows two years around now and scrolls as time passes. Touch it to jump to that day.</p>
+    <!-- 2026-10-27 ブラッシュアップ（RULES 8.5）: いつも出すのは色の見方とさわり方だけ。ほかの読み方は「くわしく」へ -->
+    <p class="hint" lang="ja">1段が1つの毛穴。<span class="sw" style="background:#e57a7a"></span>のびる <span class="sw" style="background:#d7a28c"></span>ちぢむ <span class="sw" style="background:#7d6a62"></span>休む <span class="sw" style="background:#ffd166"></span>抜いたあと <span class="sw" style="background:#333"></span>止まった　黒い線＝表面に毛が出ている日。さわるとその日へ移ります。</p>
+    <p class="hint" lang="en">One row per follicle. <span class="sw" style="background:#e57a7a"></span>growing <span class="sw" style="background:#d7a28c"></span>shrinking <span class="sw" style="background:#7d6a62"></span>resting <span class="sw" style="background:#ffd166"></span>after plucking <span class="sw" style="background:#333"></span>stopped — the black line marks days when hair is out of the skin. Touch it to jump to that day.</p>
+    <details class="more"><summary><span lang="ja">グラフの読み方をくわしく</span><span lang="en">More on reading the chart</span></summary>
+      <p class="hint" lang="ja">上の印は手入れ。ピンクの枠は、光でいたんだ日（×）から また のびはじめるまで。いまより右は「このあと何もしない場合」の予想。いまの前後の2年を表示し、時間が進むとずれていきます。</p>
+      <p class="hint" lang="en">Marks on top are treatments. A pink frame runs from the day light damaged a follicle (×) until it starts growing again. Right of “now” is a forecast if you do nothing more. It shows two years around now and scrolls as time passes.</p>
+    </details>
     <label class="row"><span lang="ja">再生のはやさ</span><span lang="en">Playback speed</span> <select id="speed"></select></label>
   </section>
 
   <section class="sec" id="ctrl">
     <h2 id="siteH">部位と年齢</h2>
-    <div class="row" id="siteBox"><label><span lang="ja">部位</span><span lang="en">Body site</span> <select id="site"></select></label><label><span lang="ja">年齢</span><span lang="en">Age</span> <select id="age"></select></label></div>
+    <div class="row" id="siteBox"><label><select id="site"></select></label><label><span lang="ja">年齢</span><span lang="en">Age</span> <select id="age"></select></label></div>
+    <p class="hint" id="siteNote"></p>
     <div class="warn" lang="ja"><b>医療・美容の判断には使えません。</b>このアプリは、毛が生えかわるしくみと、光脱毛で一般に何が起きるかを学ぶためのシミュレーションです。効き目・安全性・肌に合うかどうかは人や機器によってちがいます。光脱毛器は説明書にしたがって使い、肌の異常や不安があれば医師に相談してください。</div>
     <div class="warn" lang="en"><b>Not for medical or beauty decisions.</b> This app is a simulation for learning how hair is replaced and what generally happens with light-based hair removal. How well it works, how safe it is and whether it suits your skin differ from person to person and device to device. Use any device as its manual says, and see a doctor if your skin has a problem or you are worried.</div>
-    <h2><span lang="ja">光の条件（この画面が想定していること）</span><span lang="en">Light conditions (what this screen assumes)</span></h2>
+    <p class="hint" lang="ja">結果を大きく左右する値（毛や肌のメラニンの量など）の多くは、測った値が見つからない推定です。数字は「このモデルではこうなる」という目安で、実際の温度や効き目ではありません。</p>
+    <p class="hint" lang="en">Many values that strongly change the results (such as melanin in the hair and skin) are estimates because no measured values were found. The numbers show what happens in this model, not real temperatures or real effects.</p>
+    <details class="more"><summary><span lang="ja">光の条件（この画面が想定していること）</span><span lang="en">Light conditions (what this screen assumes)</span></summary>
     <ul class="hint cond" lang="ja">
       <li>家庭用の光脱毛器の強めの設定: 面積あたり約 7.7 J/cm²（市販品の一例の販売情報の値。メーカーの公式の数値ではない）</li>
       <li>光の色（波長）600〜1100 nm、光る長さ 5 ms（どちらも推定。家庭用の機器は公表していないことが多い）</li>
@@ -69,13 +77,11 @@
       <li>Black hair, light skin, skin cooled before and after the flash</li>
       <li>Window 1.5 cm wide</li>
     </ul>
-    <p class="hint" lang="ja">毛のメラニンの量・肌のメラニンの量など、結果を大きく左右する値の多くは測った値が見つからない推定です（下の「このアプリについて」）。数字は「このモデルではこうなる」という目安で、実際の温度や効き目を表すものではありません。</p>
-    <p class="hint" lang="en">Many values that strongly change the results, such as how much melanin is in the hair and in the skin, are estimates because no measured values were found (see “About this app” below). The numbers are a rough guide to what happens in this model, not real temperatures or real effects.</p>
+    <p class="hint"><span lang="ja">推定の値は下の「このアプリについて」に全部並べています。</span><span lang="en">All estimated values are listed in “About this app” below.</span></p>
+    </details>
     <h2 id="grayH"><span lang="ja">白髪</span><span lang="en">Gray hair</span></h2>
     <label class="row" id="grayRow"><span lang="ja">白髪の出やすさ</span><span lang="en">How early hair turns gray</span> <select id="gray"></select></label>
     <p class="hint" id="grayNote"><span lang="ja">毛穴ごとに「色の幹細胞が毛球へ届かなくなる年齢」がばらついていて、その年齢をこえて始まった周期から毛が白くなります。ここで選ぶのはその平均（早め 52歳・ふつう 62歳・おそめ 72歳、ばらつき ±10歳）。人での数値は少なく、推定です。</span><span lang="en">Each follicle has its own age at which pigment stem cells stop reaching the bulb; cycles that start after that age make white hair. Here you choose the average (early 52, average 62, late 72, spread ±10 years). Human data are scarce, so these are estimates.</span></p>
-    <h2><span lang="ja">部位の値</span><span lang="en">Values for this site</span></h2>
-    <p class="hint" id="siteNote"></p>
   </section>
 
   <section class="sec">
@@ -115,10 +121,10 @@
   </details>
 </div>
 
-<script src="js/data.js?v=016"></script>
-<script src="js/model.js?v=016"></script>
-<script src="js/light.js?v=016"></script>
-<script src="js/draw.js?v=016"></script>
-<script src="js/graph.js?v=016"></script>
-<script src="js/ui.js?v=016"></script>
-<script src="js/main.js?v=016"></script>
+<script src="js/data.js?v=017"></script>
+<script src="js/model.js?v=017"></script>
+<script src="js/light.js?v=017"></script>
+<script src="js/draw.js?v=017"></script>
+<script src="js/graph.js?v=017"></script>
+<script src="js/ui.js?v=017"></script>
+<script src="js/main.js?v=017"></script>

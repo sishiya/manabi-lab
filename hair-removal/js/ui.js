@@ -36,7 +36,7 @@ function buildControls(S, on) {
 function syncControls(S) {
   $('site').value = S.site; if ($('age')) $('age').value = S.age; if ($('gray')) $('gray').value = S.gray;
   $('who').textContent = SITES[S.site].name.replace(/\s*[（(].*[）)]$/, '') + (FEATURES.gray ? L(`・${S.age}歳`, ` · age ${S.age}`) : '');
-  $('siteNote').textContent = SITES[S.site].name + ': ' + SITES[S.site].note;
+  $('siteNote').textContent = SITES[S.site].note;   // 部位の名前は すぐ上の選ぶ欄に出ている
   for (const T of TOOLS) $('tool-' + T.id).setAttribute('aria-checked', String(S.tool === T.id));
   $('hint').textContent = TOOLS.find(T => T.id === S.tool).hint;
   $('undo').disabled = !S.events.length;

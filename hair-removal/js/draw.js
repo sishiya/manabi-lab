@@ -88,6 +88,16 @@ function drawScene(g, w, h, sc, view) {
   for (let d = 0; d <= 8; d += step) { const y = Y(d); if (y > 6 && y < h - 6) g.fillText(String(d), 19, y); }
   g.save(); g.translate(7, Math.min(h - 30, Y(1.5))); g.rotate(-Math.PI / 2); g.textAlign = 'center'; g.fillText(L('深さ mm', 'depth mm'), 0, 0); g.restore();
 
+  // 光の結果の箱（短い字幕より先に描き、字幕が上に重なるように。字幕は数日で消える）
+  if (sc.flash && sc.since < 21 && !narrow) {
+    const F = sc.flash, lines = [F.nA ? L(`毛母 最高 ${F.Tm.toFixed(0)}°C`, `Matrix max ${F.Tm.toFixed(0)}°C`) : L('色のある毛球なし', 'No colored bulb'), L(`いたむ ${F.hit}/${F.nA}`, `Damaged ${F.hit}/${F.nA}`), L(`肌 ${F.Tepi.toFixed(0)}°C`, `Skin ${F.Tepi.toFixed(0)}°C`) + (F.omEpi >= 1 ? L(' やけど', ' burn') : F.omEpi >= 0.1 ? L(' 熱い', ' hot') : '')];
+    if (F.Thair) lines.push(L(`表の毛 ${Math.min(999, F.Thair).toFixed(0)}°C`, `Surface hair ${Math.min(999, F.Thair).toFixed(0)}°C`) + (F.charred ? L(' 焦げた', ' burnt') : ''), L(`根もとへの光 −${(F.shade * 100).toFixed(0)}%`, `Light to roots −${(F.shade * 100).toFixed(0)}%`));
+    g.font = '11px "Zen Kaku Gothic New", sans-serif'; g.textBaseline = 'top'; g.textAlign = 'left';
+    const bw = Math.max(...lines.map(t => g.measureText(t).width)) + 10, bh = lines.length * 15 + 6, bx = w - bw - 6, byy = 6;   // 右上（空気の中）に。下に置くと右はしの毛球が光で変わるのを隠していた
+    g.fillStyle = 'rgba(15,26,38,.85)'; g.fillRect(bx, byy, bw, bh);
+    lines.forEach((t, i) => { g.fillStyle = i === 2 && F.omEpi >= 1 ? '#ff8a7a' : '#e6edf3'; g.fillText(t, bx + 5, byy + 4 + i * 15); });
+    hit(bx + bw / 2, byy + bh / 2, Math.max(bw, bh) / 2, 'flashbox');
+  }
   // 毛穴の上の短い字幕（新しいものから、重なる分は出さない）
   g.font = '700 ' + (narrow ? 10 : 12) + 'px "Zen Kaku Gothic New", sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'center';
   const used = [];
@@ -106,16 +116,6 @@ function drawScene(g, w, h, sc, view) {
     g.globalAlpha = 1;
   }
   g.textAlign = 'left';
-  // 光の結果の箱
-  if (sc.flash && sc.since < 21 && !narrow) {
-    const F = sc.flash, lines = [F.nA ? L(`毛母 最高 ${F.Tm.toFixed(0)}°C`, `Matrix max ${F.Tm.toFixed(0)}°C`) : L('色のある毛球なし', 'No colored bulb'), L(`いたむ ${F.hit}/${F.nA}`, `Damaged ${F.hit}/${F.nA}`), L(`肌 ${F.Tepi.toFixed(0)}°C`, `Skin ${F.Tepi.toFixed(0)}°C`) + (F.omEpi >= 1 ? L(' やけど', ' burn') : F.omEpi >= 0.1 ? L(' 熱い', ' hot') : '')];
-    if (F.Thair) lines.push(L(`表の毛 ${Math.min(999, F.Thair).toFixed(0)}°C`, `Surface hair ${Math.min(999, F.Thair).toFixed(0)}°C`) + (F.charred ? L(' 焦げた', ' burnt') : ''), L(`根もとへの光 −${(F.shade * 100).toFixed(0)}%`, `Light to roots −${(F.shade * 100).toFixed(0)}%`));
-    g.font = '11px "Zen Kaku Gothic New", sans-serif'; g.textBaseline = 'top';
-    const bw = Math.max(...lines.map(t => g.measureText(t).width)) + 10, bh = lines.length * 15 + 6, bx = w - bw - 6, byy = h - bh - 6;
-    g.fillStyle = 'rgba(15,26,38,.85)'; g.fillRect(bx, byy, bw, bh);
-    lines.forEach((t, i) => { g.fillStyle = i === 2 && F.omEpi >= 1 ? '#ff8a7a' : '#e6edf3'; g.fillText(t, bx + 5, byy + 4 + i * 15); });
-    hit(bx + bw / 2, byy + bh / 2, Math.max(bw, bh) / 2, 'flashbox');
-  }
   if (view && Math.abs(view.z - 1) > 0.01) { g.fillStyle = C.label; g.font = '11px "IBM Plex Mono", monospace'; g.textBaseline = 'bottom'; g.fillText('×' + view.z.toFixed(1), 26, h - 4); }
 }
 const SHORT2 = { '熱でいたんだ': 'いたむ', '効かない': '効かず', '表面に出た': '出た', '下へのびる': 'のびる', 'ちぢみはじめ': 'ちぢむ', '抜け落ちた': '落ちた', '古い毛が抜けた': '抜けた', 'つまめない': 'つまめず', '毛がない': 'なし', '休みへ': '休む', '白い毛に': '白く', '色がうすく': 'うすく' };
