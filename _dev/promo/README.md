@@ -41,7 +41,7 @@ YouTube に出す順番（ジャンル・サムネイルの色味が連日で重
 - アプリを外から動かす: `clickEl(w, sel)`、`setInput(w, sel, 値)`（スライダー・チェックボックスに input と change を送る）、`runEvents(w, 表, t0, t)`。
 - 日本語で録る: アプリは `?lang=ja`（`langJa`）で開く。`inject` で開くときは、言語の記憶 `manabi-lang` をその iframe の中だけ `ja` に見せる。`inject.pre` で台本ごとの差しかえ（アプリより先に動く）。
 - 確かめ用のコマ: `__peekSheet([秒…], 'peek-名前')` で何コマかを縮めて1枚に並べ、`out/peek-名前.jpg` に保存する（見終わったら消す）。
-- アプリごとの部品は `<app>-common.js`（`quantum-common.js`・`wifi-common.js`・`animal-common.js`・`immune-common.js`・`metamorphosis-common.js`・`air-flow-common.js`・`ga-common.js`・`mold-common.js`・`god-view-common.js`・`piano-common.js`・`pitch-common.js`・`wave-common.js`・`phage-common.js`）。場面の表 `SC` と、とびとびの時刻（確かめ用のコマ）でも同じ絵になる進め方が入っている。
+- アプリごとの部品は `<app>-common.js`（`quantum-common.js`・`wifi-common.js`・`animal-common.js`・`immune-common.js`・`metamorphosis-common.js`・`air-flow-common.js`・`ga-common.js`・`mold-common.js`・`god-view-common.js`・`piano-common.js`・`pitch-common.js`・`wave-common.js`・`phage-common.js`・`hair-common.js`）。場面の表 `SC` と、とびとびの時刻（確かめ用のコマ）でも同じ絵になる進め方が入っている。
 - **ピアノを弾く手は BGM のかわりにピアノの音**（`piano-common.js`、2026-10-11）: アプリと同じ合成（`VOICES.piano`）で、画面の手が押す音を録画の音に入れる（`music.extra(ctx, 出口)` は台本ごとの音を足す口。`style: 'none'`）。3D の canvas だけを全画面にして開き、アプリの時計（performance.now）をこちらの時刻にする。縦長の一人称は手が画面の外に出るので使わない。
 - **`inject.top`**（2026-10-12〜）: `<head>` がなく `<header>` があるアプリでは、ふつうの差しかえが `<header>` の後ろ（body の中）に入り、それより前の相対パスの css が読めない。`inject: { top: true }` で先頭に入れる（変化球のしくみ）。録画ずみの台本は見た目を変えないよう、そのまま。
 - **神の視点マップだけは `inject` を使わない**: srcdoc で開くと Cesium の Worker（地形）が動かず、地図が出ない。普通に開いてから `requestAnimationFrame` を差しかえる（`gvInstallRaf`）。地図は1コマごとに読みこみを待つので、録画は通信が安定しているときに・時間がかかる（150秒で数十分の見込み）。「地球をちぎる」の描画ループは差しかえた requestAnimationFrame に乗らないことがあるので、1コマごとに `GV._tear.render()` で描かせる。粒の計算（Worker）は実時間で進むので、1コマのあいだだけ動かして止める。
@@ -86,4 +86,5 @@ YouTube に出す順番（ジャンル・サムネイルの色味が連日で重
 - 性的な内容・R18 をまぜない（RULES 9章）。出どころは説明文と終わりの画面に書く。
 - **公開の前日に、翌日公開の分を最終確認・デバッグする**（RULES 8.4。`youtube-upload.ps1 -Verify`・mp4 のコマ・公開中のアプリ。結果は `upload-log.md` の「公開前の確認」）。
 - commit の前に公開前チェック（`_dev/tools/check-public.ps1`）。`out/` は Git に入れない。
+- **脱毛のしくみ**（`hair-common.js`、2026-10-27）: アプリの描画ループは使わず、場面の表 `SC` から日 `S.t`・手入れの記録 `S.events`・道具・マウスの位置を決めて `__hare.draw()` を呼ぶ（`performance.now` は動画の時刻に差しかえ）。説明動画は `{ carry: true }` で前の場面の手入れを引きつぐ（1つの肌で続ける）、`reset: true` の場面から新しい肌。アプリに `<head>` がないので `inject.top`。アプリには小さく描かせて拡大（`ZOOM`。ショートは幅 600 より狭いとスマホの絵になる）。説明動画は上の字幕の帯 `TOP` の下に断面を置く（断面の上のはしの札と光の結果の箱が字幕に重ならないように）。数は `hrProbe(t)` で確かめてから字幕に書く。
 - **細菌にとりつくウイルス**（`phage-common.js`、2026-10-25）: アプリの描画ループは使わず、時刻 u を `KEYS` で決めて `UI.update`・`View.stepCam`・`Scene.draw` をこちらで呼ぶ（カメラはアプリのおまかせ）。とびとびの時刻は 0 秒からカメラだけ進めなおす。ヘッドレスの録画で canvas の変換が dpr 1 にもどり左上の 1/4 にしか描かれないことがあったので、描く前に毎回そろえる。確かめ用のコマ（`__peekSheet`）でも同じずれが出るので、絵は mp4 のコマで見る。

@@ -1,0 +1,34 @@
+{
+  "file": "_dev/promo/out/hair-removal-guide.mp4",
+  "thumbnail": "_dev/promo/thumbs/hair-removal-guide.jpg",
+  "privacy": "private",
+  "publishAt": "2026-10-28T20:00:00+09:00",
+  "captions": {
+    "en": "_dev/promo/out/hair-removal-guide.en.srt"
+  },
+  "title": "脱毛のしくみ ― 使い方と見どころ（剃る・抜く・光で毛穴の中に何が起きる？・光は伸びている毛にだけ効く）",
+  "description": "肌の断面に並んだ毛穴に、カミソリ・毛抜き・光（家庭用の光脱毛器）を好きなときに使って、毛穴の中で何が起きるかを時間で追う。毛はのびて・ちぢんで・休んでをくり返し、光は伸びている毛の根もとだけを熱でいためる。ブラウザのアプリ「脱毛のしくみ」の、使い方と見どころです。\n\n0:00 はじめに・一列10個の毛穴と時間のボタン\n0:21 毛穴ごとの周期のグラフ\n0:31 カミソリ\n0:44 毛抜き\n0:56 剃ってから光\n1:10 いたんだ毛が抜け落ちる\n1:22 休んでいる毛穴には効かない\n1:34 くり返しあてる\n1:48 剃らずに光をあてると\n1:58 拡大としらべる\n2:08 部位で周期がちがう・注意\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/hair-removal/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nClinicalTrials.gov NCT03945383（家庭用の光脱毛器の臨床試験の計画。部位ごとの周期と、2週ごと4回→4週ごとの予定）\nSeago SV, Ebling FJG (1985) The hair cycle on the human thigh and upper arm. Br J Dermatol 113\nPaus R, Cotsarelis G (1999) The biology of hair follicles. N Engl J Med 341\nLynfield YL, Macwilliams P (1970) Shaving and hair growth. J Invest Dermatol 55\nAltshuler GB ほか (2001) Extended theory of selective photothermolysis. Lasers Surg Med 29\nJacques SL (2013) Optical properties of biological tissues: a review. Phys Med Biol 58\nHenriques FC (1947) Studies of thermal injury. Arch Pathol 43\nほかはアプリの「このアプリについて・おもな出どころ」に。多くの値は推定で、医療・美容の判断には使えません。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#脱毛 #毛周期 #からだ #まなびラボ",
+  "tags": [
+    "脱毛のしくみ",
+    "脱毛",
+    "光脱毛",
+    "毛周期",
+    "毛穴",
+    "カミソリ",
+    "毛抜き",
+    "からだ",
+    "シミュレーション",
+    "使い方",
+    "まなびラボ",
+    "しし屋",
+    "How Hair Removal Works",
+    "hair removal",
+    "hair cycle"
+  ],
+  "localizations": {
+    "en": {
+      "title": "How Hair Removal Works — App Guide: Shaving, Plucking and Light Inside the Follicle",
+      "description": "A guide to \"How Hair Removal Works\", a browser app. Use a razor, tweezers or a home light-based hair removal device on a row of hair follicles whenever you like, and watch over time what happens inside. Hairs grow, shrink and rest in cycles, and the light only damages the roots of hairs that are growing. Turn on English subtitles (CC).\n\n0:00 Intro: ten follicles in a row, time buttons\n0:21 The cycle chart\n0:31 Razor\n0:44 Tweezers\n0:56 Shave, then light\n1:10 Damaged hairs fall out\n1:22 No effect on resting follicles\n1:34 Repeated sessions\n1:48 Light without shaving\n1:58 Zoom and Look\n2:08 Cycles differ by body site; a note of caution\n\nTry the app (runs in your browser, PC or phone; switch the app to English with the EN button):\nhttps://sishiya.github.io/manabi-lab/hair-removal/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nMain sources:\nClinicalTrials.gov NCT03945383 (plan of a clinical trial of a home IPL device: cycles by body site, and the every-2-weeks-four-times-then-every-4-weeks schedule)\nSeago SV, Ebling FJG (1985) The hair cycle on the human thigh and upper arm. Br J Dermatol 113\nPaus R, Cotsarelis G (1999) The biology of hair follicles. N Engl J Med 341\nLynfield YL, Macwilliams P (1970) Shaving and hair growth. J Invest Dermatol 55\nAltshuler GB et al. (2001) Extended theory of selective photothermolysis. Lasers Surg Med 29\nJacques SL (2013) Optical properties of biological tissues: a review. Phys Med Biol 58\nHenriques FC (1947) Studies of thermal injury. Arch Pathol 43\nMore in the app under \"About this app\". Many values are estimates; not for medical or beauty decisions.\n\nMusic: original sounds synthesized by code.\n\n#HairRemoval #HairCycle #Biology"
+    }
+  }
+}

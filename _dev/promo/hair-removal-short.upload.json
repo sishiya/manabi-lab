@@ -1,0 +1,29 @@
+{
+  "file": "_dev/promo/out/hair-removal-short.mp4",
+  "privacy": "private",
+  "publishAt": "2026-10-28T20:05:00+09:00",
+  "captions": {
+    "en": "_dev/promo/out/hair-removal-short.en.srt"
+  },
+  "title": "光脱毛の光は、毛の黒い色に吸われて熱になる #Shorts",
+  "description": "肌の断面に並んだ毛穴に、カミソリ・毛抜き・光（家庭用の光脱毛器）を好きなときに使って、毛穴の中で何が起きるかを時間で追う。毛はのびて・ちぢんで・休んでをくり返し、光は伸びている毛の根もとだけを熱でいためる。ブラウザのアプリ「脱毛のしくみ」から。\n\nアプリ: https://sishiya.github.io/manabi-lab/hair-removal/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ: NCT03945383（家庭用の光脱毛器の臨床試験の計画）、Seago と Ebling (1985) Br J Dermatol 113、Jacques (2013) Phys Med Biol 58、Henriques (1947) Arch Pathol 43 ほか。多くの値は推定で、医療・美容の判断には使えません。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#脱毛 #毛周期 #からだ #まなびラボ",
+  "tags": [
+    "脱毛のしくみ",
+    "脱毛",
+    "光脱毛",
+    "毛周期",
+    "毛穴",
+    "Shorts",
+    "まなびラボ",
+    "しし屋",
+    "How Hair Removal Works",
+    "hair removal"
+  ],
+  "localizations": {
+    "en": {
+      "title": "The Light in Hair Removal Turns Into Heat in the Dark Hair #Shorts",
+      "description": "From \"How Hair Removal Works\", a browser app. Use a razor, tweezers or a home light-based hair removal device on a row of hair follicles whenever you like, and watch over time what happens inside. Hairs grow, shrink and rest in cycles, and the light only damages the roots of hairs that are growing.\n\nApp (switch the app to English with the EN button): https://sishiya.github.io/manabi-lab/hair-removal/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMain sources: NCT03945383 (clinical trial plan of a home IPL device), Seago & Ebling (1985) Br J Dermatol 113, Jacques (2013) Phys Med Biol 58, Henriques (1947) Arch Pathol 43, and more. Many values are estimates; not for medical or beauty decisions.\n\nMusic: original sounds synthesized by code.\n\n#HairRemoval #HairCycle #Biology"
+    }
+  },
+  "thumbnail": "_dev/promo/thumbs/hair-removal-short.jpg"
+}

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="hair-common.js"></script>
+<script>
+'use strict';
+// 台本: 脱毛のしくみ（ショート、40秒＋締め）。?short で縦長に録る
+// 一列10個の毛穴（すね）→ のびる・ちぢむ・休む → カミソリ → 毛抜き → 剃ってから光 → 休んでいる毛穴には効かない
+// 毛抜きは毛の出ている 1・3 番（5 番は 160日目に古い毛が抜けて、つまむ毛がない）
+// 数（88°C・いたむ 3/4・抜け落ちるまで約2〜3週）は 2026-10-27 にアプリで計算した値（すね・200日目に剃ってから光）
+const V = new URLSearchParams(location.search).has('short');
+const BOX = V ? [0, 430, 1080, 760] : [0, 90, 1920, 900];
+const ZOOM = V ? 1.75 : 1.4;   // アプリには小さく描かせて拡大する（札の字を読める大きさに）
+const ALL = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+const SHAVE200 = [{ day: 199.75, type: 'shave', idx: ALL }];
+const LIGHT200 = SHAVE200.concat([{ day: 200, type: 'light', idx: ALL }]);
+const above = (w, i) => hrHole(w, i, -0.45);   // 表面から少し上（毛をつまむ所）
+const SC = [
+  { a: 0, b: 12, day: 30, speed: 7 },
+  { a: 12, b: 19, day: 118, speed: 2.5, tool: 'shave', razor: [0.6, 3.2, 0.03, 0.98] },
+  { a: 19, b: 26, day: 160, speed: 1.2, tool: 'pluck',
+    acts: [{ t: 20.6, type: 'pluck', idx: [0] }, { t: 23.2, type: 'pluck', idx: [2] }],
+    ptr: (lt, w) => { const k = clamp((lt - 2.2) / 1.2, 0, 1), a = above(w, 0), b = above(w, 2); return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k) }; } },
+  { a: 26, b: 30.5, day: 199.85, speed: 0.4, tool: 'light', pre: SHAVE200, acts: [{ t: 26.9, type: 'light', idx: ALL }],
+    ptr: (lt, w) => { const G = hrG(w); return { x: G.w / 2, y: G.y0 - 3 * G.s }; } },
+  { a: 30.5, b: SHORT_END + IDENT_CLOSE, day: 201.5, speed: 5, pre: LIGHT200 },
+];
+const CAPS = [
+  { a: 6.3, b: 11.8, main: '毛穴ごとに、のびる → ちぢむ → 休む をくり返す', sub: 'すねでは のびる約16週・休む約24週。毛穴ごとにばらばら',
+    en: ['Each follicle cycles: growing → shrinking → resting', 'On the shin: about 16 weeks growing, 24 resting, each on its own schedule'] },
+  { a: 12.3, b: 18.7, main: 'カミソリは、表面から出た毛を切るだけ', sub: '毛穴の中は変わらない。切り口は平らなまま、また出てくる',
+    en: ['A razor only cuts the hair above the skin', 'Nothing changes inside the follicle; the blunt tip grows back out'] },
+  { a: 19.3, b: 25.7, main: '毛抜きは、根もとごと引き抜く', sub: 'それでも毛穴は残り、しばらく待って新しい毛を作る',
+    en: ['Tweezers pull the hair out, root and all', 'But the follicle stays, and after a while it makes a new hair'] },
+  { a: 26.3, b: 30.3, main: '光は毛の黒い色に吸われて、熱になる', sub: '育っている毛の毛母が約88°Cになり、いたんで伸びなくなる',
+    en: ['Light is absorbed by the dark color of the hair and turns into heat', 'The matrix of growing hairs reaches about 88°C, is damaged, and stops growing'] },
+  { a: 30.8, b: 35, main: '休んでいる毛穴には効かない', sub: 'だから何回もあてる。いたんだ毛は2〜3週で抜け落ちる',
+    en: ['It does not work on resting follicles', 'That is why it takes many sessions. Damaged hairs fall out in 2–3 weeks'] },
+];
+promoStart({
+  name: '脱毛のしくみ', out: 'hair-removal', src: '../../hair-removal/index.html', iw: 1920, ih: 1080, dur: SHORT_END + IDENT_CLOSE, peek: 28,
+  inject: HR_INJECT,
+  music: { style: 'journey', root: 98, stopAt: SHORT_END, cues: [{ t: SHORT_END, type: 'jingle' }] },
+  ready: w => w.__hare && w.__hare.S && w.eval('typeof GEOM') === 'object',
+  setup(w) { hrSize(w, BOX[2] / ZOOM, BOX[3] / ZOOM); hrRender(w, SC, 0); return null; },
+  subs: shortSubs('脱毛のしくみ', 'How Hair Removal Works', '剃る・抜く・光。毛穴の中では何が起きる？', 'Shave, pluck, or light: what happens inside the follicle?', CAPS,
+    'ブラウザで動かせます。道具を指で試せます', 'Runs in your browser. Try the tools with your finger'),
+  renderAt(t, w) { hrRender(w, SC, t); },
+  drawSource(g, w) {
+    g.fillStyle = '#0f1a26'; g.fillRect(0, 0, PW * RES, PH * RES);
+    g.drawImage(qs(w, '#cv'), BOX[0] * RES, BOX[1] * RES, BOX[2] * RES, BOX[3] * RES);
+  },
+  overlay(g, t, w) {
+    const f = fade(t, IDENT_MINI + 0.3, 35, 0.4);
+    drawPanel(g, 30, V ? BOX[1] - 120 : 20, V ? 1020 : 900, '', [hrDayText(w) + '　' + hrCounts(w)], f);
+    drawCaps(g, t, CAPS);
+    drawShortChrome(g, t, '脱毛のしくみ', '剃る・抜く・光。毛穴の中では何が起きる？', 'ブラウザで動かせます。道具を指で試せます',
+      'おもな出どころ: NCT03945383（周期）、Jacques（2013）、Henriques（1947）ほか。推定をふくむ学習用の模型で、医療・美容の判断には使えません');
+  },
+  errors: w => (w.__hareErr || []).map(String),
+});
+</script>
+</body>
+</html>

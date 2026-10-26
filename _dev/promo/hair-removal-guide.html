@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="hair-common.js"></script>
+<script>
+'use strict';
+// 台本: 脱毛のしくみ ― 使い方と見どころ（横長の説明動画、150秒）
+// 1つの肌（すね）で時間を進めながら、カミソリ → 毛抜き → 剃ってから光 → くり返しあてる、と手入れを重ねる（前の場面の手入れを引きつぐ）。
+// 剃らずに光・拡大・部位の場面だけ、新しい肌（reset）。数は 2026-10-27 にアプリで計算した値（確かめ方は hrProbe）
+const END = 150, DUR = END + IDENT_CLOSE;
+const ZOOM = 1.4;   // アプリには 1371×646 で描かせて拡大する（札の字を読める大きさに）
+const TOP = 175;    // 上の字幕の帯。断面はその下に置く（断面の上のはしの短い札・光の結果の箱が字幕に重ならないように）
+const ALL = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+const center = (w, up = 3) => { const G = hrG(w); return { x: G.w / 2, y: G.y0 - up * G.s }; };
+const above = (w, i) => hrHole(w, i, -0.45);
+const path = (pts, lt) => (w) => { let k = pts.findIndex(p => p[0] > lt); if (k < 0) k = pts.length; if (k === 0) return above(w, pts[0][1]);
+  const [ta, ia] = pts[k - 1], [tb, ib] = pts[Math.min(k, pts.length - 1)], u = k >= pts.length ? 1 : clamp((lt - ta) / Math.max(0.01, tb - ta), 0, 1), a = above(w, ia), b = above(w, ib);
+  return { x: lerp(a.x, b.x, u), y: lerp(a.y, b.y, u) }; };
+// くり返しあてる（臨床試験の計画 NCT03945383 の「2週ごと4回 → 4週ごと」）: 光の前の日に剃る
+const SCH0 = 94, SCHDAY = 315, SCHSP = 12, SCH = [330, 344, 358, 372, 400, 428, 456];
+const schT = d => SCH0 + (d - SCHDAY) / SCHSP;
+const SC = [
+  { a: 0, b: 6, day: 20, speed: 5 },
+  { a: 6, b: 14, day: 50, speed: 5 },
+  { a: 14, b: 22, day: 90, speed: 2, jumps: [[3, 30]] },
+  { a: 22, b: 31, day: 136, speed: 4 },
+  { a: 31, b: 38, day: 172, speed: 0.6, tool: 'shave', razor: [1.6, 4.6, 0.03, 0.98] },
+  { a: 38, b: 44, day: 176.2, speed: 3 },
+  { a: 44, b: 50, day: 194.2, speed: 0.6, tool: 'pluck', acts: [{ t: 46.2, type: 'pluck', idx: [2] }, { t: 48.6, type: 'pluck', idx: [4] }],
+    ptr: (lt, w) => path([[0.6, 0], [1.8, 2], [3.4, 2], [4.2, 4]], lt)(w) },
+  { a: 50, b: 56, day: 197.8, speed: 2.5 },
+  { a: 56, b: 63, day: 212.8, speed: 0.5, tool: 'shave', razor: [1.4, 4.4, 0.03, 0.98] },
+  { a: 63, b: 70, day: 216.3, speed: 0.4, tool: 'light', acts: [{ t: 64.6, type: 'light', idx: ALL }], ptr: (lt, w) => center(w) },
+  { a: 70, b: 82, day: 219.1, speed: 2 },
+  { a: 82, b: 94, day: 243.1, speed: 6 },
+  { a: SCH0, b: 108, day: SCHDAY, speed: SCHSP, acts: SCH.flatMap(d => [{ t: schT(d - 0.25), type: 'shave', idx: ALL }, { t: schT(d), type: 'light', idx: ALL }]) },
+  { a: 108, b: 118, day: 199.85, speed: 0.4, reset: true, tool: 'light', acts: [{ t: 108.9, type: 'light', idx: ALL }], ptr: (lt, w) => center(w) },
+  { a: 118, b: 128, day: 236, speed: 0.6, reset: true, tool: 'look',
+    view: (lt, w) => { const k = clamp((lt - 1) / 2.5, 0, 1); return { z: 1 + 0.7 * k, cx: lerp(14.1 / 2, 0.8 + 4 * 1.3, k), cy: lerp(1.0, 1.6, k) }; } },   // 5番の毛穴（のびる）へ寄る
+  { a: 128, b: 137, day: 60, speed: 6, reset: true, site: 'lip' },
+  { a: 137, b: DUR, day: 120, speed: 5, reset: true },
+];
+const X = 60;
+const CH = {
+  time: { x: X, y: 860, title: '時間（図の下）', btns: ['▶', '+1日', '+1週', '+1か月'] },
+  tools: { x: X, y: 860, title: '道具（図の上）', btns: ['しらべる', 'カミソリ', '毛抜き', '光'] },
+  site: { x: X, y: 860, title: '部位（下の設定）', btns: ['すね', '太もも', '二の腕', '口のまわり'] },
+};
+const SHOW = [
+  ['time', 14.4, 21.6, t => t >= 17 ? 3 : 0],
+  ['tools', 31.2, 34.4, t => t >= 32.2 ? 1 : -1],
+  ['tools', 44.2, 47, t => t >= 45 ? 2 : 1],
+  ['tools', 56.2, 58.8, t => 1],
+  ['tools', 63.2, 66, t => t >= 64 ? 3 : 1],
+  ['tools', 118.2, 121, t => 0],
+  ['site', 128.2, 132, t => t >= 129.4 ? 3 : 0],
+];
+const B = (k, i) => btnRect(CH[k], i);
+const CUR = [
+  { t: 15.2, ...B('time', 0) }, { t: 16.2, ...B('time', 3) }, { t: 17, ...B('time', 3), click: true }, { t: 18.4, ...B('time', 3), hide: true },
+  { t: 31.4, ...B('tools', 1) }, { t: 32.2, ...B('tools', 1), click: true }, { t: 33.2, ...B('tools', 1), hide: true },
+  { t: 44.4, ...B('tools', 2) }, { t: 45, ...B('tools', 2), click: true }, { t: 46, ...B('tools', 2), hide: true },
+  { t: 63.4, ...B('tools', 3) }, { t: 64, ...B('tools', 3), click: true }, { t: 64.8, ...B('tools', 3), hide: true },
+  { t: 128.6, ...B('site', 3) }, { t: 129.4, ...B('site', 3), click: true }, { t: 130.4, ...B('site', 3), hide: true },
+];
+const CAPS = [
+  { a: 6, b: 13.6, main: '肌の断面に、毛穴が一列に10個（すね）', sub: '札は、いまのようす。のびる・ちぢむ・休む をくり返す',
+    en: ['A cross-section of skin with ten follicles in a row (shin)', 'The labels show what each one is doing: growing, shrinking or resting, over and over'] },
+  { a: 14.4, b: 21.6, main: '時間は ▶ で流れる。+1日・+1週・+1か月 でとばせる', sub: 'はじめは 1秒で1週間（下の「再生のはやさ」で変えられる）',
+    en: ['Time runs with ▶. Skip ahead with +1 day, +1 week or +1 month', 'By default one second is one week (change it under "Playback speed")'] },
+  { a: 22.4, b: 30.6, main: '下の「毛穴ごとの周期」。1段が1つの毛穴', sub: '色は毛穴のようす、黒い線は表面に毛が出ている日。さわるとその日へ',
+    en: ['Below, "Each follicle\'s cycle": one row per follicle', 'Colors show its state; the black line marks days with hair out of the skin. Touch it to jump there'] },
+  { a: 31.4, b: 37.6, main: 'カミソリ: 刃を肌にあてて、横にすべらせる', sub: '刃が通った毛穴の、表面から出た毛が切れる',
+    en: ['Razor: put the blade on the skin and slide it sideways', 'Wherever the blade passes, the hair above the skin is cut'] },
+  { a: 38.2, b: 43.6, main: '毛穴の中は変わらない。のびる毛は、平らな切り口のまま出てくる', sub: '休んでいる毛は、切ったまま止まる',
+    en: ['Nothing changes inside. Growing hairs come back out with a blunt tip', 'Resting hairs stay cut and do not grow'] },
+  { a: 44.4, b: 49.6, main: '毛抜き: いちばん近い毛が光る。クリックで1本', sub: 'のびている毛は、根もとの白いさやごと抜ける',
+    en: ['Tweezers: the nearest hair lights up. Click to pull one', 'A growing hair comes out with the white sheath around its root'] },
+  { a: 50.2, b: 55.6, main: '毛穴は残り、しばらく待って新しい毛を作りはじめる', sub: '待つ日数（平均 約1週）は推定',
+    en: ['The follicle remains, and after a while it starts a new hair', 'The waiting time (about a week on average) is an estimate'] },
+  { a: 56.4, b: 62.6, main: '光の前には、剃っておく（理由はあとで）', sub: '',
+    en: ['Shave before using light (more on why later)', ''] },
+  { a: 63.4, b: 69.6, main: '光: 照射口（幅1.5cm）をあてて、クリック', sub: '毛の黒い色が光を吸って熱に。右上に毛母の温度・肌の温度',
+    en: ['Light: place the 1.5 cm window and click', 'The dark color of the hair absorbs the light as heat. Top right: matrix and skin temperature'] },
+  { a: 70.2, b: 81.6, main: 'のびている毛の毛母がいたむ → 毛はのびず、2〜3週で抜け落ちる', sub: '札の ↻ は、また生えはじめるまでの日数',
+    en: ['The matrix of growing hairs is damaged: they stop and fall out in 2–3 weeks', 'The ↻ label counts the days until it starts growing again'] },
+  { a: 82.2, b: 93.6, main: '休んでいる毛穴は、毛球に色がないので効かない', sub: 'このモデルでは幹細胞（バルジ）はいたまず、休みのあと また生える',
+    en: ['Resting follicles have no color in the bulb, so light does not work on them', 'In this model the stem cells (bulge) are not harmed, so hair grows again after the rest'] },
+  { a: 94.2, b: 107.6, main: 'だから、くり返しあてる（2週ごとに4回、そのあと4週ごと）', sub: '家庭用の光脱毛器の臨床試験の計画の例。毛穴が順番に のびる時期に当たる',
+    en: ['That is why it is repeated: every 2 weeks four times, then every 4 weeks', 'An example from a clinical trial plan for a home device; follicles are hit in turn as they grow'] },
+  { a: 108.2, b: 117.6, main: '剃らずにあてると、表面の毛が焦げる', sub: '炭が光を吸い、根もとへの光が約2割へる（毛母 77°C）',
+    en: ['Without shaving, the hair on the surface gets burnt', 'The char absorbs light, so about 20% less reaches the roots (matrix 77°C)'] },
+  { a: 118.4, b: 127.6, main: 'ホイールで拡大。しらべる でドラッグして動かす', sub: 'さわった部分の説明が出る（毛球・毛乳頭・バルジ など）',
+    en: ['Zoom with the wheel. With "Look", drag to move around', 'Touch any part for an explanation (bulb, papilla, bulge, …)'] },
+  { a: 128.4, b: 136.6, main: '部位は6つ。周期の長さは部位でちがう', sub: '口のまわりは のびる・休む 約6週ずつ（すねは 約16週・24週）',
+    en: ['There are six body sites, each with its own cycle', 'Around the mouth: about 6 weeks growing and 6 resting (shin: about 16 and 24)'] },
+  { a: 137.2, b: 143.6, main: '医療・美容の判断には使えません', sub: '多くの値は推定。しくみを学ぶためのシミュレーションです',
+    en: ['Not for medical or beauty decisions', 'Many values are estimates; this is a simulation for learning how it works'] },
+];
+// ---- 案内役のライオン（promo.js の lionSetup・drawLion）。右下（x 1530〜、y 620〜）はライオンの場所 ----
+const MUSIC = { style: 'journey', root: 98, stopAt: END, cues: [{ t: END, type: 'jingle' }] };
+const EXP = [[0, 'calm'], [6.2, 'smile'], [10, 'calm'], [14.6, 'think'], [18, 'calm'], [22.6, 'think'], [27, 'calm'], [31.6, 'smile'], [35, 'calm'],
+  [38.4, 'think'], [42, 'calm'], [44.6, 'wow'], [48, 'calm'], [50.4, 'smile'], [54, 'calm'], [56.6, 'think'], [60, 'calm'], [63.6, 'wow'], [67, 'calm'],
+  [70.4, 'shock'], [75, 'calm'], [82.4, 'think'], [88, 'calm'], [94.4, 'proud'], [100, 'calm'], [108.4, 'shock'], [113, 'cold'], [116, 'calm'],
+  [118.6, 'smile'], [123, 'calm'], [128.6, 'wow'], [133, 'calm'], [137.4, 'sad'], [141, 'calm'], [END - 7.6, 'smile']];
+MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: CUR, exp: EXP, end: END, bye: END - 5.8 }));
+promoStart({
+  name: '脱毛のしくみ（使い方）', out: 'hair-removal-guide', src: '../../hair-removal/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 66,
+  inject: HR_INJECT,
+  music: MUSIC,
+  ready: w => !!LION.api && w.__hare && w.__hare.S && w.eval('typeof GEOM') === 'object',
+  setup(w) { hrSize(w, 1920 / ZOOM, (1080 - TOP) / ZOOM); hrRender(w, SC, 0, { carry: true }); return null; },
+  subs: guideSubs(END, '脱毛のしくみ', 'How Hair Removal Works', CAPS, 'Runs in your browser (PC or phone). Switch the app to English with the EN button'),
+  renderAt(t, w) { hrRender(w, SC, t, { carry: true }); },
+  drawSource(g, w, OW, OH) {
+    g.fillStyle = '#0f1a26'; g.fillRect(0, 0, OW, OH);
+    g.drawImage(qs(w, '#cv'), 0, TOP * RES, OW, OH - TOP * RES);
+  },
+  overlay(g, t, w) {
+    drawPanel(g, 40, 200, 620, '', [hrDayText(w) + '　' + hrCounts(w)], fade(t, 6, 143.6, 0.4));
+    const gf = Math.max(fade(t, 22.2, 30.8, 0.4), fade(t, 94.2, 107.8, 0.4), fade(t, 128.2, 136.8, 0.4));
+    if (gf > 0) drawInset(g, qs(w, '#gr'), 60, 600, 1000, 237, '毛穴ごとの周期（図の下）', gf);
+    if (t >= 120.5 && t < 127.8) drawPanel(g, 40, 280, 1100, 'しらべる の説明（例）', [hrPart(w, 'bulb').slice(0, 52), hrPart(w, 'bulge').slice(0, 52)], fade(t, 120.5, 127.6, 0.4));
+    for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawGuideChrome(g, t, END, '脱毛のしくみ',
+      'おもな出どころ: NCT03945383（周期・光の予定）、Seago と Ebling（1985）、Jacques（2013）、Henriques（1947）ほか（アプリの「おもな出どころ」）。推定をふくむ学習用の模型です');
+    drawLion(g, t);
+  },
+  errors: w => (w.__hareErr || []).map(String),
+});
+lionOpen();
+// 確かめ用: 動画の時刻 t のアプリのようす（毛穴ごとの期・できごと・光の結果）
+window.hrProbe = t => { const w = document.getElementById('app').contentWindow; hrRender(w, SC, t, { carry: true }); const S = w.__hare.S, sc = w.eval('sceneNow()');
+  return { day: S.t, ph: sc.fs.map(f => f.ph + (w.eval('follicleInfo')(f).visible ? '+' : '-')).join(' '), counts: hrCounts(w), now: hrNow(w), flash: sc.flash && { Tm: sc.flash.Tm, hit: sc.flash.hit, nA: sc.flash.nA, Tepi: sc.flash.Tepi, shade: sc.flash.shade } }; };
+</script>
+</body>
+</html>
