@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script>
+'use strict';
+// うんちく動画 う1: ブラックホールの「上の輪」は何？（40秒＋締め。縦で録る: ?short。README「うんちく動画」）
+// 画面の点をアプリの pickAt でクリックしたことにして、光の道すじの図（#rayCv）を上に重ねる。
+// 角度はアプリの計算の値（setup で測って字幕に入れる）。条件: 映画の角度（85°）・回転 0.6・円盤あり・映画版の色
+const deg = Math.PI / 180;
+// クリックする点（画面の −1〜1。縦長・カメラ 28×1.7 M で測った帯の位置）
+const PICKS = [
+  { a: 6.0, b: 13.0, nx: 0.03, ny: 0.34, zoom: 'all' },    // 穴の上の帯（0.25〜0.42）（向こう側の円盤の上の面）
+  { a: 13.5, b: 20.5, nx: 0.03, ny: -0.32, zoom: 'all' },  // 穴の下の帯（−0.25〜−0.38）（向こう側の円盤の下の面）
+  { a: 21.0, b: 28.0, nx: 0.03, ny: 0.232, zoom: 'near' }, // 影のふちの細い輪（0.230〜0.232 だけ。とても細い）（手前の円盤の下の面）
+];
+const BEND = [0, 0, 0];   // setup で測る（度）
+const CAPS = [
+  { a: 6.0, b: 13.0, main: '答え：真後ろにある円盤', sub: '', en: ['Answer: the disk directly behind it', ''] },
+  { a: 13.5, b: 20.5, main: '下の帯も、真後ろの円盤', sub: '', en: ['The lower band is the disk behind it, too', ''] },
+  { a: 21.0, b: 28.0, main: '影のふちの細い輪は、手前の円盤の裏', sub: '', en: ['The thin ring at the shadow’s edge is the underside of the near disk', ''] },
+  { a: 28.5, b: 35.0, main: '角度を変えて、自分で確かめられます', sub: 'クリックした点の光の道すじが見られます',
+    en: ['Change the angle and check it yourself', 'Click any point to see the path of its light'] },
+];
+function fillCaps() {   // 測った角度を字幕に入れる
+  CAPS[0].sub = `光が穴の上を回りこんで届いている（約 ${BEND[0]}° 曲がる）`;
+  CAPS[0].en[1] = `Its light bends over the top of the hole to reach us (bent about ${BEND[0]}°)`;
+  CAPS[1].sub = `しかも円盤の裏の面。光が穴の下をくぐってくる（約 ${BEND[1]}°）`;
+  CAPS[1].en[1] = `And it is the disk’s underside: the light passes under the hole (about ${BEND[1]}°)`;
+  CAPS[2].sub = `光が穴のまわりを約 ${BEND[2]}° まわって届く`;
+  CAPS[2].en[1] = `Its light swings about ${BEND[2]}° around the hole before reaching us`;
+}
+const NAME = 'ブラックホールの見え方', NAME_EN = 'How a Black Hole Looks';
+const Q = 'ブラックホールの上の輪、何だと思う？', Q_EN = 'What is the ring above a black hole?';
+function stateAt(t) {
+  const K = isVert() ? 1.7 : 1;   // 縦長は左右が狭いので、カメラを引いて円盤を収める（black-hole.html と同じ）
+  const s = { a: 0.6, r: 28 * K, th: 85 * deg, ph: -0.012 * t, real: false, disk: true, sky: 'stars' };
+  if (t >= 28) s.th = lerp(85, 62, ease((t - 28.5) / 6)) * deg;
+  return s;
+}
+// 文字は穴の上の空いている所（縦の 0〜520）に、図は下（帯より下）に置く。帯（y 560〜710・1210〜1330）は隠さない
+const TEXT_Y = 340;
+function drawTop(g, t, a, b, main, sub, big) {
+  const f = fade(t, a, b, big ? 0.8 : 0.5); if (f <= 0) return;
+  prep(g); g.globalAlpha = f;
+  drawBlock(g, [{ s: main, size: big ? 92 : 64, color: '#fff', bold: true }, { s: sub, size: big ? 40 : 38, color: '#f2c79a', gap: big ? 14 : 10 }], TEXT_Y, 'center');
+  g.globalAlpha = 1; g.shadowBlur = 0;
+}
+const pickAt = t => PICKS.find(p => t >= p.a - 0.3 && t < p.b);
+let shown = null;   // いま図に出しているクリック
+promoStart({
+  name: 'うんちく: ' + NAME, out: 'black-hole-trivia1', src: '../../black-hole/index.html', iw: 2270, ih: 1080, dur: SHORT_END + IDENT_CLOSE,
+  subs: () => [
+    { a: 0.6, b: 5.6, ja: Q + '\n【うんちく】' + NAME, en: Q_EN + '\nDid you know? / ' + NAME_EN },
+    ...capSubs(CAPS),
+    { a: 35.2, b: SHORT_END, ja: NAME + '\nブラウザで動かせます。クリックした点の光の道すじも見られます', en: NAME_EN + '\nRuns in your browser. Click any point to see the path of its light' },
+  ],
+  music: { style: 'drone', root: 55, stopAt: SHORT_END, cues: [{ t: SHORT_END, type: 'jingle' }] },
+  ready: w => w.__bh && w.__bh.R && w.__bh.R.gl && (w.__bh.R.levels.low || (w.__bh.renderNow(), w.__bh.R.levels.low)),
+  setup(w) {
+    // 光の道すじの図を 3 倍の細かさで描かせる（アプリは 640×400 として描く。文字の大きさはそのまま）
+    const cv = w.document.getElementById('rayCv'), P = w.HTMLCanvasElement.prototype;
+    Object.getOwnPropertyDescriptor(P, 'width').set.call(cv, 1920);
+    Object.getOwnPropertyDescriptor(P, 'height').set.call(cv, 1200);
+    Object.defineProperty(cv, 'width', { get: () => 640 });
+    Object.defineProperty(cv, 'height', { get: () => 400 });
+    cv.getContext('2d').setTransform(3, 0, 0, 3, 0, 0);
+    // 角度を測る（録画と同じ状態で）
+    Object.assign(w.__bh.S, stateAt(8));
+    PICKS.forEach((p, i) => {
+      const res = w.__bh.pickAt(p.nx, p.ny);
+      BEND[i] = Math.round(res.bend / deg / 10) * 10;   // 字幕は「約」で 10° 単位
+      console.log('pick', i, res.kind, res.fromTop, res.hitXYZ && res.hitXYZ[0].toFixed(1), BEND[i]);
+    });
+    w.__bh.S.pick = null; shown = null;
+    fillCaps();
+    return w.document.getElementById('view');
+  },
+  renderAt(t, w) {
+    const BH = w.__bh, st = stateAt(t), S = BH.S;
+    const geo = st.r !== S.r || st.th !== S.th || st.a !== S.a || st.disk !== S.disk || !BH.R.levels.high.ready;
+    Object.assign(S, st, { paused: true });
+    if (geo) S.geoDirty = true;
+    const p = pickAt(t);
+    if (p !== shown) {
+      shown = p;
+      if (p) { w.eval(`RAYV.view = 'side'; RAYV.zoom = '${p.zoom}'`); BH.pickAt(p.nx, p.ny); } else S.pick = null;
+    }
+    BH.renderNow(t * 8 + 40);   // 円盤の時間（アプリと同じ 1 秒で 8M）
+  },
+  overlay(g, t, w) {
+    drawTop(g, t, 0.6, 5.6, Q, '【うんちく】' + NAME, true);
+    const p = pickAt(t);
+    if (p) {
+      const f = fade(t, p.a, p.b, 0.4);
+      // クリックした点の印（アプリと同じ十字＋輪）
+      const x = (p.nx * 0.5 + 0.5) * PW, y = (0.5 - p.ny * 0.5) * PH, k = 1 + 0.6 * Math.max(0, 1 - (t - p.a) / 0.5);
+      g.shadowBlur = 0; g.globalAlpha = f; g.strokeStyle = '#fff'; g.lineWidth = 3;
+      g.beginPath(); g.arc(x, y, 16 * k, 0, 2 * Math.PI); g.stroke();
+      g.beginPath(); g.moveTo(x - 26, y); g.lineTo(x - 9, y); g.moveTo(x + 9, y); g.lineTo(x + 26, y);
+      g.moveTo(x, y - 26); g.lineTo(x, y - 9); g.moveTo(x, y + 9); g.lineTo(x, y + 26); g.stroke();
+      g.globalAlpha = 1;
+      drawInset(g, w.document.getElementById('rayCv'), 140, 1370, 800, 500,
+        p.zoom === 'near' ? 'この点に届いた光の道すじ（横から・穴の近く）' : 'この点に届いた光の道すじ（横から）', f);
+    }
+    for (const c of CAPS) drawTop(g, t, c.a, c.b, c.main, c.sub);
+    drawEnd(g, t, 35.2, NAME, 'ブラウザで動かせます。クリックした点の光の道すじも見られます',
+      '計算の式: James, von Tunzelmann, Franklin, Thorne (2015) Classical and Quantum Gravity 32, 065001 / Bardeen, Press, Teukolsky (1972)');
+    drawIdentMini(g, t, 0.3);
+    drawIdent(g, t, SHORT_END);
+  },
+  errors: w => w.__bh.err,
+  short: { iw: 1430, ih: 1920 },   // 右のパネル 350px を除いた絵が 1080×1920
+  hires(w, W, H) { w.resizeRender(W, H, Math.min(0.5, Math.sqrt(1.6e5 / (W * H))), 1); w.__bh.S.geoDirty = true; },
+});
+</script>
+</body>
+</html>
