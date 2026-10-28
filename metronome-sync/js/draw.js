@@ -15,9 +15,10 @@ const DRAW = (() => {
     const narrow = w < 560;
     const circR = narrow ? Math.min(46, h * 0.16) : Math.min(80, h * 0.22);
     const areaW = narrow ? w : w - circR * 2 - 60;
-    const b = Math.min(areaW * 0.86 / (n * 1.9 + 0.4), h * 0.26, 90);
-    const pxPerM = b / 0.05;
     const floorY = h * (narrow ? 0.9 : 0.86);
+    // せまい画面では、右上の位相の円とその下の字に棒の先が届かない大きさまで（棒の先は床から 2.33b）
+    const b = Math.min(areaW * 0.86 / (n * 1.9 + 0.4), h * 0.26, 90, narrow ? (floorY - (circR * 2 + 26 + 22)) / 2.33 : 1e9);
+    const pxPerM = b / 0.05;
     const canR = b * 0.32;
     const boardH = b * 0.12;
     const boardY = floorY - canR * 2 - boardH;

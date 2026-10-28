@@ -45,3 +45,5 @@ button.on{background:var(--acc);color:#1a1a1a;border-color:var(--acc)}
   .row .lab{width:100%}
   .row .note{padding-left:0}
 }
+/* スマホの横向き（高さがせまい）: 上に固定すると下が見えないので、固定しない */
+@media (max-height:500px){#pin{position:static}}
