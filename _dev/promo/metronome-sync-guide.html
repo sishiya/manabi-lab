@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="mesy-common.js"></script>
+<script>
+'use strict';
+// 台本: メトロノームがそろうまで ― 使い方と見どころ（横長の説明動画、150秒）。案内役のライオンつき
+// 上 0〜175 は字幕、その下にアプリの図（css 1100×330 を 1920 幅に）、下に ずれのグラフ（右下はライオンの場所）
+// 数（そろうまでの秒・板のゆれ・2 kg・ぬれた床・5台・10台）は setup でアプリに計算させて入れる
+const END = 150, DUR = END + IDENT_CLOSE, TOP = 175, CW = 1100, CHH = 330, ZOOM = 1920 / CW;
+const OPT = (o = {}) => Object.assign({ n: 2, start: 'anti', spread: 0.001, addMass: 0, damp: 0, esc: 'vdp' }, o);
+const SEG = [
+  { a: 0, b: 24, rate: 1, reset: true, opt: OPT() },
+  { a: 24, b: 36, rate: 4 },
+  { a: 36, b: 50, rate: 4, reset: true, pin: true, opt: OPT({ spread: 0.01 }), tag: '板をおさえた（ばらつき 1%）' },
+  { a: 50, b: 62, rate: 4, reset: true, opt: OPT({ addMass: 2 }), tag: '板に 2 kg' },
+  { a: 62, b: 76, rate: 16, reset: true, opt: OPT({ spread: 0, damp: 30 }), tag: 'ぬれた床' },
+  { a: 76, b: 92, rate: 4, reset: true, opt: OPT({ n: 5, start: 'rand', spread: 0.01 }), tag: '5台・ばらばらに・ばらつき 1%' },
+  { a: 92, b: 101, rate: 8, reset: true, opt: OPT({ n: 10, start: 'rand', spread: 0.01 }), tag: '10台' },
+  { a: 101, b: 110, rate: 1, pokes: [{ t: 102.6, i: 4, dir: 1 }], tag: '10台・つつく' },
+  // つついたあとは板がすべっていく（指の力が外から入り、運動量がふえる）ので、ここから そろえて始めなおす
+  { a: 110, b: END + IDENT_CLOSE, rate: 1, reset: true, opt: OPT({ n: 10, start: 'same', spread: 0.01 }), tag: '10台' },
+];
+// ---- ボタンの札とマウス ----
+const CH = {
+  hold: { x: 40, y: 190, title: '図の左上', btns: ['板をおさえる'] },
+  mass: { x: 40, y: 190, title: '板', btns: ['ふつう 58 g', '+2 kg'] },
+  floor: { x: 40, y: 190, title: '床', btns: ['ふつう', 'ぬれた床'] },
+  n: { x: 40, y: 190, title: '台数', btns: ['2台', '3台', '5台', '10台'] },
+  rows: { x: 40, y: 190, title: '下の操作の行', btns: ['台数', 'はじめ方', 'ばらつき', '板', '床', '押し方'], cols: 3 },
+  next: { x: 40, y: 190, title: '図の下の案内（6段）', btns: ['つぎへ'] },
+};
+const SHOW = [
+  ['hold', 34.6, 38.6, t => t < 36 ? -1 : 0],
+  ['mass', 48.6, 52.6, t => t < 50 ? 0 : 1],
+  ['floor', 60.6, 64.6, t => t < 62 ? 0 : 1],
+  ['n', 74.6, 78.6, t => t < 76 ? 0 : 2],
+  ['n', 90.6, 94.6, t => t < 92 ? 2 : 3],
+  ['rows', 118.4, 125.6, t => -1],
+  ['next', 126, 133.6, t => -1],
+];
+const B = (k, i) => btnRect(CH[k], i);
+let POKE = { x: 960, y: 450 };   // つつくメトロノームの場所（setup で決める）
+const CUR = [
+  { t: 34.2, ...B('hold', 0) }, { t: 36, ...B('hold', 0), click: true }, { t: 37.4, ...B('hold', 0), hide: true },
+  { t: 49.2, ...B('mass', 1) }, { t: 50, ...B('mass', 1), click: true }, { t: 51.4, ...B('mass', 1), hide: true },
+  { t: 61.2, ...B('floor', 1) }, { t: 62, ...B('floor', 1), click: true }, { t: 63.4, ...B('floor', 1), hide: true },
+  { t: 75.2, ...B('n', 2) }, { t: 76, ...B('n', 2), click: true }, { t: 77.4, ...B('n', 2), hide: true },
+  { t: 91.2, ...B('n', 3) }, { t: 92, ...B('n', 3), click: true }, { t: 93.4, ...B('n', 3), hide: true },
+  { t: 101.4, x: 1300, y: 600 }, { t: 102.4, get x() { return POKE.x; }, get y() { return POKE.y; } },
+  { t: 102.6, get x() { return POKE.x; }, get y() { return POKE.y; }, click: true }, { t: 104, get x() { return POKE.x; }, get y() { return POKE.y; }, hide: true },
+  { t: 127.4, ...B('next', 0) }, { t: 128.4, ...B('next', 0), click: true }, { t: 130, ...B('next', 0), hide: true },
+];
+// ---- 字幕（日本語は上に焼きこむ・英語は SRT）----
+const M = { two: 0, mm: 0, kg: 0, wet: 0, five: 0, ten: 0 };
+let CAPS = [];
+function makeCaps() {
+  CAPS = [
+    { a: 7, b: 13.6, main: '空き缶にのせた軽い板に、メトロノームを2台', sub: '重さと速さは実験の論文の値: 1台 94 g・板 58 g・1分に 104 往復',
+      en: ['Two metronomes on a light board resting on empty cans', 'Weights and speed from the paper\'s experiment: 94 g each, a 58 g board, 104 swings a minute'] },
+    { a: 14, b: 23.6, main: '振り子がふれると、そのはんどうで板がゆれる', sub: `そろうと 約${M.mm} mm（図では10倍に大きくして描いている）`,
+      en: ['Each swing pushes back on the board, so it sways', `About ${M.mm} mm once in step (drawn 10× larger)`] },
+    { a: 24.4, b: 35.6, main: '下のグラフは、1台目とのずれ', sub: `逆向き（いちばん下）から、行ったり来たりして 約${M.two}秒で 0 の線に（4倍の早送り）`,
+      en: ['The graph shows the offset from metronome 1', `From opposite (bottom), it overshoots back and forth and reaches 0 in about ${M.two} s (4× speed)`] },
+    { a: 36.4, b: 49.6, main: '板をおさえると、そろわない', sub: '板が動かないと、おたがいを感じられない。速さのちがい（ここでは1%）の分だけ、ずれていく',
+      en: ['Hold the board down, and they never line up', 'If the board cannot move they cannot feel each other; they drift by their speed difference (1% here)'] },
+    { a: 50.4, b: 61.6, main: '板に 2 kg のおもり（論文の実験と同じ）', sub: `板のゆれが小さくなり、そろうまで 約${M.kg}秒（ふつうは 約${M.two}秒）`,
+      en: ['A 2 kg weight on the board (as in the paper\'s experiment)', `The board sways less: about ${M.kg} s to fall into step (normally about ${M.two} s)`] },
+    { a: 62.4, b: 68.8, main: 'ぬれた床：缶が転がりにくく、板にブレーキ', sub: `逆向きから始めると、約${M.wet}°ずれたまま（16倍の早送り）`,
+      en: ['Wet floor: the cans roll less, braking the board', `Started opposite, they stay about ${M.wet}° apart (16× speed)`] },
+    { a: 69.2, b: 75.6, main: '論文の実験でも、ぬれた台では逆向きにそろった', sub: 'ただ、このモデルでは始め方しだいで同じ向きにもなる（どちらもありえる）',
+      en: ['In the paper\'s experiment, too, they ended up opposite on a wet table', 'But in this model, starting almost together keeps them together (both can happen)'] },
+    { a: 76.4, b: 83.6, main: '5台をばらばらに。右上の円は、リズムの位置', sub: '点が1か所に集まると、そろった。下の数字が そろい具合（1 でぴったり）',
+      en: ['Five metronomes, started scattered. The circle shows where each is in its rhythm', 'Dots gathering in one spot means in step; the number below is how in step (1 = exactly)'] },
+    { a: 84, b: 91.6, main: '速さが少しずつちがっても（ばらつき 1%）', sub: `約${M.five}秒で、1つのリズムに集まる（4倍の早送り）`,
+      en: ['Even with slightly different speeds (1% spread)', `They gather into one rhythm in about ${M.five} s (4× speed)`] },
+    { a: 92.4, b: 100.6, main: '10台でも、そろう', sub: `約${M.ten}秒（8倍の早送り）`,
+      en: ['Ten fall into step too', `About ${M.ten} s (8× speed)`] },
+    { a: 101.4, b: 109.6, main: 'メトロノームをさわると、振り子をつつける', sub: 'そろったあとに1台つついても、すぐもどってくる（グラフの1本だけがはねる）',
+      en: ['Touch a metronome to poke its pendulum', 'Poke one after they are in step, and it soon comes back (just one line on the graph jumps)'] },
+    { a: 110.4, b: 117.6, main: 'カチの音も鳴らせる（🔊 音）', sub: '振り子がまん中を通る瞬間に、台ごとに少しちがう高さで',
+      en: ['You can turn on the ticks too (🔊 Sound)', 'A tick each time a pendulum passes the middle, a slightly different pitch for each'] },
+    { a: 118.4, b: 125.6, main: '下のボタンで、条件を自由に変えられる', sub: '台数・はじめ方・ばらつき・板・床・押し方（論文の式／まん中で押す）',
+      en: ['Change the conditions freely with the buttons below', 'How many, how they start, spread, board, floor, and how the spring pushes'] },
+    { a: 126, b: 133.6, main: '図の下の「つぎへ」で、6段の案内', sub: 'いまの場面は、どれも案内の中にある。日本語と英語に対応',
+      en: ['"Next" under the picture walks you through 6 steps', 'Every scene in this video is one of the steps. Japanese and English'] },
+    { a: 134, b: 141.6, main: '動きは、板と振り子の運動方程式から計算', sub: '近似なしで 0.5 ミリ秒ずつ。値と押す力の式は Pantaleone（2002）の実験から',
+      en: ['The motion is computed from the equations of motion of the board and pendulums', 'No shortcuts, in 0.5 ms steps. Values and the drive formula from Pantaleone (2002)'] },
+  ];
+}
+const NAME = 'メトロノームがそろうまで';
+const CREDIT = 'おもな出どころ: Pantaleone (2002) American Journal of Physics 70, 992、Bennett ほか (2002)。ぬれた床の摩擦の大きさは推定';
+// ---- 案内役のライオン ----
+let TICKS = [];
+const MUSIC = { style: 'journey', root: 110, stopAt: END, cues: [{ t: END, type: 'jingle' }], extra: (ctx, out) => msTickAudio(TICKS)(ctx, out) };
+const EXP = [[0, 'calm'], [7.2, 'smile'], [10, 'calm'], [14.2, 'think'], [18, 'calm'], [24.6, 'think'], [28, 'calm'], [31, 'wow'], [34, 'calm'],
+  [36.6, 'think'], [40, 'calm'], [50.6, 'think'], [54, 'calm'], [62.6, 'wow'], [66, 'calm'], [69.4, 'think'], [73, 'calm'], [76.6, 'smile'], [80, 'calm'],
+  [84.2, 'wow'], [88, 'calm'], [92.6, 'proud'], [96, 'calm'], [101.6, 'smile'], [103, 'shock'], [106, 'calm'], [110.6, 'smile'], [114, 'calm'],
+  [118.6, 'smile'], [122, 'calm'], [126.2, 'smile'], [130, 'calm'], [134.2, 'think'], [138, 'calm'], [END - 7.6, 'smile']];
+promoStart({
+  name: NAME + '（使い方）', out: 'metronome-sync-guide', src: '../../metronome-sync/index.html', iw: 1280, ih: 720, dur: DUR, peek: 40,
+  inject: MS_INJECT,
+  music: MUSIC,
+  ready: w => !!LION.api && w.__mesy && w.__mesy.SIM.S.sys,
+  setup(w) {
+    msSize(w, CW, CHH, 900, 140);
+    M.two = Math.round(msSettle(w, OPT()) / 5) * 5;
+    M.mm = Math.round(msSway(w) * 10) / 10;
+    M.kg = Math.round(msSettle(w, OPT({ addMass: 2 })) / 5) * 5;
+    M.five = Math.round(msSettle(w, SEG[5].opt) / 5) * 5;
+    M.ten = Math.round(msSettle(w, SEG[6].opt) / 5) * 5;
+    const S = w.__mesy.SIM; S.reset(SEG[4].opt); S.S.sys.pinned = false; for (let i = 0; i < 24; i++) S.advance(10);
+    M.wet = Math.round(msDiffDeg(w) / 5) * 5;
+    console.log('measure', JSON.stringify(M));
+    makeCaps();
+    // つつくメトロノーム（4番）の場所: 10台の図を描かせて、アプリの当たり判定の場所から
+    msRender(w, SEG, 102.5);
+    POKE = { x: w.eval('DRAW.itemX(4)') * ZOOM, y: TOP + CHH * 0.62 * ZOOM };
+    TICKS = msTicks(w, SEG, END);
+    MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: CUR, exp: EXP, end: END, bye: END - 5.8 }));
+    return w.document.getElementById('cv');
+  },
+  subs: () => guideSubs(END, NAME, 'Metronomes Falling into Step', CAPS, 'Runs in your browser (PC or phone). The app has Japanese and English (EN button)'),
+  renderAt(t, w) { msRender(w, SEG, t); },
+  drawSource(g, w, OW, OH) {
+    const cv = w.document.getElementById('cv'), k = OW / 1920;
+    g.fillStyle = '#16202c'; g.fillRect(0, 0, OW, OH);
+    g.drawImage(cv, 0, TOP * k, OW, CHH * ZOOM * k);
+  },
+  overlay(g, t, w) {
+    const s = msSeg(SEG, t), gv = w.document.getElementById('gv');
+    drawInset(g, gv, 40, 770, 1440, 1420 * gv.height / gv.width + 10, '1台目とのずれ（0 の線に集まると、そろった。上下のはしは逆向き）', fade(t, 7, END - 8, 0.5));
+    // 早送り・条件の札（図とグラフのあいだ）
+    const lab = [s.rate > 1 ? `早送り ×${s.rate}` : '', s.tag || ''].filter(Boolean).join('・'), fl = fade(t, Math.max(s.a, 7), Math.min(s.b, END - 8), 0.3);
+    if (lab && fl > 0) {
+      g.shadowBlur = 0; g.globalAlpha = fl; setFont(g, 30, true); const tw = g.measureText(lab).width + 40, x = 1480 - tw, y = 728;
+      g.fillStyle = s.pin ? 'rgba(255,122,107,0.92)' : 'rgba(255,200,80,0.92)'; g.beginPath(); g.roundRect(x, y - 26, tw, 52, 26); g.fill();
+      g.fillStyle = '#111'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(lab, x + tw / 2, y + 1); g.globalAlpha = 1;
+    }
+    for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawGuideChrome(g, t, END, NAME, CREDIT);
+    drawLion(g, t);
+  },
+  errors: w => w.__mesyErr,
+});
+lionOpen();
+</script>
+</body>
+</html>

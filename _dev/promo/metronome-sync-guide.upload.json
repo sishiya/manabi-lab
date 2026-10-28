@@ -1,0 +1,32 @@
+{
+  "file": "_dev/promo/out/metronome-sync-guide.mp4",
+  "thumbnail": "_dev/promo/thumbs/metronome-sync-guide.jpg",
+  "privacy": "private",
+  "publishAt": "2026-10-29T20:00:00+09:00",
+  "captions": {
+    "en": "_dev/promo/out/metronome-sync-guide.en.srt"
+  },
+  "title": "メトロノームがそろうまで ― 使い方と見どころ（動く板の上で、ひとりでに同じリズムに・板をおさえるとそろわない）",
+  "description": "空き缶にのせた軽い板の上で、ばらばらに動かしたメトロノームが、ひとりでに同じリズムにそろう。板と振り子の運動方程式を近似なしで解き、実験の論文（Pantaleone 2002）の値で計算しています。板をおさえる・重くする・床をぬらすと、そろい方が変わります。ブラウザのアプリ「メトロノームがそろうまで」の、使い方と見どころです。\n\n0:00 はじめに・空き缶にのせた板と2台\n0:14 板のゆれ\n0:24 ずれのグラフ・そろうまで\n0:36 板をおさえると\n0:50 板に 2 kg のおもり\n1:02 ぬれた床\n1:16 5台と位相の円\n1:32 10台・つついてみる\n1:50 カチの音と操作のボタン\n2:06 つぎへの案内・計算のしかた\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/metronome-sync/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nPantaleone J (2002) Synchronization of metronomes. American Journal of Physics 70, 992–1000（メトロノームと板の値・押す力の式・実験の結果）\nBennett M, Schatz MF, Rockwood H, Wiesenfeld K (2002) Huygens's clocks. Proc R Soc Lond A 458, 563–579\nぬれた床の摩擦の大きさと「まん中で押す」形は、このアプリの推定です。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#メトロノーム #同期 #物理 #まなびラボ",
+  "tags": [
+    "メトロノームがそろうまで",
+    "メトロノーム",
+    "同期",
+    "シンクロ",
+    "振り子",
+    "物理",
+    "運動方程式",
+    "シミュレーション",
+    "使い方",
+    "まなびラボ",
+    "しし屋",
+    "Metronomes Falling into Step",
+    "metronome synchronization"
+  ],
+  "localizations": {
+    "en": {
+      "title": "Metronomes Falling into Step — App Guide: On a Moving Board They Line Up by Themselves",
+      "description": "A guide to \"Metronomes Falling into Step\", a browser app. Metronomes started out of step on a light board resting on empty cans fall into the same rhythm all by themselves. The app solves the equations of motion of the board and the pendulums without shortcuts, using the values from an experiment (Pantaleone 2002). Hold the board down, make it heavier, or wet the floor, and the way they fall into step changes. Turn on English subtitles (CC).\n\n0:00 Intro: two metronomes on a board on cans\n0:14 The board sways\n0:24 The offset graph: falling into step\n0:36 Holding the board down\n0:50 A 2 kg weight on the board\n1:02 A wet floor\n1:16 Five metronomes and the phase circle\n1:32 Ten metronomes, and a poke\n1:50 Tick sounds and the buttons\n2:06 The Next tour and how it is computed\n\nTry the app (runs in your browser, PC or phone; switch the app to English with the EN button):\nhttps://sishiya.github.io/manabi-lab/metronome-sync/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nMain sources:\nPantaleone J (2002) Synchronization of metronomes. American Journal of Physics 70, 992–1000 (values for the metronomes and the board, the drive formula, and the experiment)\nBennett M, Schatz MF, Rockwood H, Wiesenfeld K (2002) Huygens's clocks. Proc R Soc Lond A 458, 563–579\nThe size of the wet-floor friction and the \"push in the middle\" form are this app's own estimates.\n\nMusic: original sounds synthesized by code.\n\n#Metronome #Synchronization #Physics"
+    }
+  }
+}

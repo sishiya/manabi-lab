@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="mesy-common.js"></script>
+<script>
+'use strict';
+// 台本: メトロノームがそろうまで（ショート、40秒＋締め。縦で録る: ?short）
+// 2台を逆向きから → そろう → 板をおさえる → ぬれた床 → 10台。数（そろうまでの秒・板のゆれ・ぬれた床のずれ）は setup でアプリに計算させて入れる
+// 板をおさえる場面はばらつき 1%（0.1% だと ずれていくのがおそく、そろっていくように見えてしまう）
+const SEG = [
+  { a: 0, b: 6, rate: 1, reset: true, opt: { n: 2, start: 'anti', spread: 0.001, addMass: 0, damp: 0, esc: 'vdp' } },
+  { a: 6, b: 13, rate: 4 },
+  { a: 13, b: 20, rate: 4, reset: true, pin: true, opt: { n: 2, start: 'anti', spread: 0.01, addMass: 0, damp: 0, esc: 'vdp' } },
+  { a: 20, b: 27, rate: 16, reset: true, opt: { n: 2, start: 'anti', spread: 0, addMass: 0, damp: 30, esc: 'vdp' } },
+  { a: 27, b: 99, rate: 8, reset: true, opt: { n: 10, start: 'rand', spread: 0.01, addMass: 0, damp: 0, esc: 'vdp' } },
+];
+const LAB = ['', '', 'ばらつき 1%・板をおさえた', 'ぬれた床', '10台'];
+const M = { two: 0, mm: 0, wet: 0 };
+let CAPS = [];
+function makeCaps() {
+  CAPS = [
+    { a: 6.3, b: 12.8, main: 'ひとりでに、同じ向きにそろう', sub: `逆向きから、行ったり来たりして 約${M.two}秒で（4倍の早送り）`,
+      en: ['They fall into step on their own', `From opposite swings, overshooting back and forth: about ${M.two} s (4× speed)`] },
+    { a: 13.3, b: 19.8, main: '板をおさえると、そろわない', sub: '2台の速さのちがい（1%）の分だけ、ずれていく',
+      en: ['Hold the board still, and they never line up', 'They drift apart by their 1% speed difference'] },
+    { a: 20.3, b: 26.8, main: 'ぬれた床では、逆向きのまま', sub: `缶が転がりにくく、板にブレーキ。約${M.wet}°ずれたまま（このモデルの結果）`,
+      en: ['On a wet floor they stay opposite', `The cans roll less, braking the board: they stay about ${M.wet}° apart (in this model)`] },
+    { a: 27.3, b: 34.9, main: '10台でも、1つのリズムに', sub: `秘密は 板のゆれ 約${M.mm}mm。カチのたびに押し合う`,
+      en: ['Even ten fall into one rhythm', `The secret: the board sways about ${M.mm} mm, nudging them every swing`] },
+  ];
+}
+const NAME = 'メトロノームがそろうまで', NAME_EN = 'Metronomes Falling into Step';
+const Q = 'バラバラに動かすと、どうなる？', Q_EN = 'Start them out of step… then what?';
+const END_LINE = 'ブラウザで動かせます。板をおさえる・台数を変える', END_EN = 'Runs in your browser. Hold the board, change how many';
+let TICKS = [];
+promoStart({
+  name: NAME, out: 'metronome-sync', src: '../../metronome-sync/index.html', iw: 540, ih: 960, dur: SHORT_END + IDENT_CLOSE, peek: 10,
+  inject: MS_INJECT,
+  music: { style: 'journey', root: 110, stopAt: SHORT_END, cues: [{ t: SHORT_END, type: 'jingle' }], extra: (ctx, out) => msTickAudio(TICKS)(ctx, out) },
+  ready: w => w.__mesy && w.__mesy.SIM.S.sys,
+  setup(w) {
+    const base = SEG[0].opt;
+    M.two = Math.round(msSettle(w, base) / 5) * 5;
+    M.mm = Math.round(msSway(w) * 10) / 10;   // そろったあとの板のゆれ（300 秒たったところ）
+    const S = w.__mesy.SIM; S.reset(SEG[3].opt); S.S.sys.pinned = false; for (let i = 0; i < 12; i++) S.advance(10);
+    M.wet = Math.round(msDiffDeg(w) / 5) * 5;
+    console.log('measure', JSON.stringify(M));
+    makeCaps();
+    TICKS = msTicks(w, SEG, SHORT_END);
+    return w.document.getElementById('cv');
+  },
+  subs: () => shortSubs(NAME, NAME_EN, Q, Q_EN, CAPS, END_LINE, END_EN),
+  renderAt(t, w) { msRender(w, SEG, t); },
+  drawSource(g, w, OW, OH) {   // 上は文字の場所（0〜470）、まん中にアプリの図、下にずれのグラフ
+    const cv = w.document.getElementById('cv'), gv = w.document.getElementById('gv'), k = OW / 1080;
+    g.fillStyle = '#16202c'; g.fillRect(0, 0, OW, OH);
+    const h1 = 1080 * cv.height / cv.width;
+    g.drawImage(cv, 0, 470 * k, OW, h1 * k);
+    const gw = 1000, gh = gw * gv.height / gv.width, gy = 470 + h1 + 90;
+    g.drawImage(gv, 40 * k, gy * k, gw * k, gh * k);
+    g.fillStyle = '#b9bfcc'; g.font = `bold ${26 * k}px ${FONT}`; g.textAlign = 'left'; g.textBaseline = 'middle';
+    g.fillText('1台目とのずれ（0 の線に集まると、そろった）', 52 * k, (gy - 22) * k);
+  },
+  overlay(g, t, w) {
+    drawTop(g, t, 0.6, 5.6, NAME, Q, true);
+    for (const c of CAPS) drawTop(g, t, c.a, c.b, c.main, c.sub);
+    // 早送り・条件の札（図の上の空いている所）
+    const s = msSeg(SEG, t), lab = [s.rate > 1 ? `早送り ×${s.rate}` : '', LAB[SEG.indexOf(s)]].filter(Boolean).join('・');
+    if (lab && t < 35.2) {
+      g.shadowBlur = 0; setFont(g, 34, true); const tw = g.measureText(lab).width + 44, y = 640;
+      g.fillStyle = s.pin ? 'rgba(255,122,107,0.92)' : 'rgba(255,200,80,0.92)'; g.beginPath(); g.roundRect(PW / 2 - tw / 2, y - 30, tw, 60, 30); g.fill();
+      g.fillStyle = '#111'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(lab, PW / 2, y + 1);
+    }
+    drawEnd(g, t, 35.2, NAME, END_LINE, '値と式: Pantaleone (2002) American Journal of Physics 70, 992。動きは運動方程式から計算');
+    drawIdentMini(g, t, 0.3);
+    drawIdent(g, t, SHORT_END);
+  },
+  errors: w => w.__mesyErr,
+});
+// 文字は上の空き（0〜470）に
+function drawTop(g, t, a, b, main, sub, big) {
+  const f = fade(t, a, b, big ? 0.8 : 0.5); if (f <= 0 || (!main && !sub)) return;
+  prep(g); g.globalAlpha = f;
+  drawBlock(g, [{ s: main, size: big ? 80 : 62, color: '#fff', bold: true }, { s: sub, size: big ? 44 : 38, color: '#f2c79a', gap: big ? 14 : 10 }], big ? 300 : 270, 'center');
+  g.globalAlpha = 1; g.shadowBlur = 0;
+}
+</script>
+</body>
+</html>
