@@ -277,7 +277,8 @@ V3.guide = 'grid'; V.grid2d = true;
 //   スマホ: 下の板の高さ（--sheet-h）。PC: 右の欄の幅（--side-w）。上のつまみと、PC は左のふち（#edge）でも
 const app = document.getElementById('app'), grip = document.getElementById('grip'), edge = document.getElementById('edge'), side = document.getElementById('side');
 const isPC = () => window.matchMedia('(min-width: 900px)').matches;
-const SZ = { h0: 200, w0: 320, w1: 460 };
+// h0: スマホの横向き（高さ 500 未満）は、はじめの板を低く（樹形図を広く。2026-10-28 ブラッシュアップ）
+const SZ = { get h0() { return innerHeight < 500 ? Math.max(110, Math.round(innerHeight * 0.3)) : 200; }, w0: 320, w1: 460 };
 const maxSheet = () => Math.round(innerHeight - document.getElementById('top').getBoundingClientRect().height - 150);   // 樹形図を 150px は残す
 const h1 = () => Math.min(maxSheet(), Math.round(innerHeight * 0.72));
 let sheetH = SZ.h0, sideW = SZ.w0;

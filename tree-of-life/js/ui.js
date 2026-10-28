@@ -43,7 +43,6 @@ const UI = (() => {
     if (n.part) notes.push(L('COL ではこの中に入るまとまりのうち、いくつかは Open Tree の系統樹で別の場所にあります。ここに残っているのはその残り（種の数も残りの分）です。', 'Some groups that COL puts inside this one sit elsewhere on the Open Tree tree. What is left here is the rest (the species count is for the rest too).'));
     if (n.live) notes.push(L('この段は COL の分類（目・科・属・種）。ならびは種の数の多い順で、進化の枝分かれの順ではありません。', 'This level follows the COL classification (order, family, genus, species). It is sorted by number of species, not by the order of evolutionary branching.'));
     // すぐ下の名前のあるまとまり（名前のない分かれ目はくぐって数える）
-    const kidsNamed = (function cnt(m) { return m.kids.reduce((s, k) => s + (k.name ? 1 : k.more ? 0 : cnt(k)), 0); })(n);
     const rows = MAJOR.map(([r, label]) => {
       const m = line.filter(x => x.rank === r && x.name).pop();
       return m ? `<tr><th>${label}</th><td><button data-i="${m.i}">${esc(m.ja || m.name)}</button>${m.ja ? `<span class="s">${esc(m.name)}</span>` : ''}</td></tr>` : '';
@@ -62,13 +61,11 @@ const UI = (() => {
       <p class="credit" id="d-credit"></p>
       <div class="acts"><button class="act" data-act="share" title="${L('このページのリンクをコピー', 'Copy the link to this page')}">${L('リンク', 'Link')}</button><span class="copied" aria-hidden="true">${L('✓ コピーしました', '✓ Copied')}</span></div>
       ${rows ? `<h3>${L('分類', 'Classification')}</h3><table class="cls">${rows}</table>` : ''}
-      <h3>${L('しらべ', 'Facts')}</h3>
+      ${n.count || n.extinct ? `<h3>${L('しらべ', 'Facts')}</h3>
       <dl class="facts">
         ${n.count ? L(`<dt>種の数</dt><dd>${fmt(n.count)} 種 <small>（COL にのっている今の種と絶滅した種）</small></dd>`, `<dt>Species</dt><dd>${fmt(n.count)} <small>(living and extinct species listed in COL)</small></dd>`) : ''}
-        ${kidsNamed ? L(`<dt>すぐ下</dt><dd>${fmt(kidsNamed)} のまとまり${n.kids.some(k => k.more) ? '（まだ続きあり）' : ''}</dd>`, `<dt>Just below</dt><dd>${fmt(kidsNamed)} groups${n.kids.some(k => k.more) ? ' (more to load)' : ''}</dd>`) : ''}
         ${n.extinct ? L(`<dt>絶滅</dt><dd>絶滅した生きもの（COL の記録）</dd>`, `<dt>Extinct</dt><dd>An extinct living thing (COL record)</dd>`) : ''}
-        ${L(`<dt>位置</dt><dd>根もとから ${path.length} 段め</dd>`, `<dt>Position</dt><dd>Step ${path.length} from the root</dd>`)}
-      </dl>
+      </dl>` : ''}
       ${kidsHTML(n)}
       ${notes.map(s => `<p class="note">${esc(s)}</p>`).join('')}
       ${path.length ? `<details class="path"><summary>${L(`根もとからの道すじ（${path.length} 段）`, `Path from the root (${path.length} steps)`)}</summary><div class="path">${path.map(chip).join('<span class="arr">›</span>')}</div></details>` : ''}
