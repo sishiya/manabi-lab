@@ -84,7 +84,7 @@
 | 2026-10-20 | 神の視点マップ | `godview-tear-earth-sph-worker` | 公開ずみ（Zenn 10/24 9:51・DEV は公開ずみ（10/22）） |
 | 2026-10-21 | 電波の見える部屋 | `wifi-fdtd-webgl2-grid-fix` | 公開ずみ（Zenn 10/26 9:34・DEV は公開ずみ（10/22）） |
 | 2026-10-22 | カビが育つまで | `mold-growth-hyphae-grid` | 公開ずみ（Zenn 10/27 9:40・DEV は動画の日に） |
-| 2026-10-24 | 変化球のしくみ | `pitch-magnus-nathan-rk4` | Zenn は 10/26 の朝に出す予定（1日1本）・DEV は動画の日に |
+| 2026-10-24 | 変化球のしくみ | `pitch-magnus-nathan-rk4` | 公開ずみ（Zenn 10/28 9:45・DEV は動画の日に） |
 | 2026-10-25 | ピアノを弾く手 | `piano-hand-wrist-least-squares` | 下書き（2026-10-25 に書いた）。Zenn は変化球の次の朝・DEV（英語）はまだない |
 
 **Zenn には公開の数の上限がある**（10/15 に3本が止まった）。上限が戻ったら、動画の順に1本ずつ出す。下書きに `published_at` を書かない（デプロイ全体が止まる）。
