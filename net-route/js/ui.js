@@ -98,6 +98,7 @@ $('cv').addEventListener('click', e => {
 
 let uiAcc = 0;
 function updateUI(dt) {
+  $('pgt').textContent = pageTimeText();
   uiAcc += dt; if (uiAcc < 0.15) return; uiAcc = 0;
   const [t, b] = PHASES[SIM.phase]; $('capT').textContent = t; $('capB').textContent = SIM.phase === 'fail' ? SIM.failWhy : b;
   if (VIEW.sel && VIEW.sel.type === 'packet' && !$('info').hidden) {
@@ -110,6 +111,8 @@ function updateUI(dt) {
   const rows = [];
   rows.push(done != null ? `ページ（HTML 1つ・60KB の例）がそろうまで <b>${dur(done - SIM.marks.dns)}</b>` : SIM.phase === 'fail' ? `<span style="color:#ff6b6b">ページは開けなかった（${dur(SIM.marks.fail - SIM.marks.dns)} であきらめた）</span>` : SIM.phase === 'idle' ? '「ページを開く」を押してください' : `経過 <b>${dur(SIM.T)}</b>`);
   if (bd.length) rows.push(bd.map(x => `${PH_NAME[x.ph]} ${dur(x.ms)}`).join('・'));
+  const pm = SIM.marks, t0 = pm.dns, seen = [['paint', '画面に何か出た'], ['text', '文字が読めた'], ['img', '絵まで出た']].filter(([k]) => pm[k] != null);
+  if (seen.length) rows.push('スマホの画面: ' + seen.map(([k, n]) => `${n} <b>${dur(pm[k] - t0)}</b>`).join('・'));
   if (SIM.srtt != null) rows.push(`測った往復の時間 <b>${dur(SIM.srtt)}</b>`);
   if (SIM.pingSent) rows.push(`ping 送った ${SIM.pingSent}・返った ${SIM.pings.length}` + (SIM.pings.length ? `（往復 <b>${SIM.pings.slice(-3).map(dur).join('・')}</b>）` : ''));
   if (route) {
@@ -120,3 +123,6 @@ function updateUI(dt) {
   if (SIM.lost || SIM.resent) rows.push(`なくなった包み ${SIM.lost}・送り直し ${SIM.resent}`);
   $('nums').innerHTML = rows.map(r => `<li>${r}</li>`).join('');
 }
+
+// 仮のページ: タップで大きく・小さく
+$('vpage').addEventListener('click', () => $('vpage').classList.toggle('big'));

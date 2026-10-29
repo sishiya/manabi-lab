@@ -187,7 +187,7 @@ function drawGlobe(g) {
   // 時計と、どのくらい寄っているか（線と重なっても読めるよう下じきを敷く）
   g.fillStyle = 'rgba(16,28,44,0.8)'; g.fillRect(0, 0, Math.min(w - 120, 330), 42); if (GLOBE.zoom < 30 && (() => { const q = GNP(NODE.ix); return q[2] > 0 && q[0] > 0 && q[0] < w && q[1] > 0 && q[1] < h; })()) g.fillRect(0, 42, Math.min(w, 330), 18);
   g.textAlign = 'left'; g.textBaseline = 'top'; g.fillStyle = COL.ink; g.font = '500 15px "IBM Plex Mono", monospace';
-  g.fillText('いま ' + dur(SIM.T), 10, 8);
+  g.fillText('いま ' + dur(SIM.T), clockX(), 8);
   g.font = '11px "Zen Kaku Gothic New", sans-serif'; g.fillStyle = COL.muted;
   const wide = w / 2 < R ? '横はば 約' + fmtKm(2 * 6371 * Math.asin(w / 2 / R)) : '地球まるごと';   // 画面の横はばが何 km か（だいたい）
   g.fillText(wide, 10, 28);

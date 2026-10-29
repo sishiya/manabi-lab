@@ -40,7 +40,7 @@ const SIM = {
 
 function resetSim() {
   seed = 1;
-  Object.assign(SIM, { T: 0, packets: [], ghosts: [], nextId: 1, phase: 'idle', marks: {}, lost: 0, resent: 0, wait: null, srv: null, srtt: null, backoff: 1, recv: null, running: false, pings: [], pingSent: 0, failWhy: null });
+  Object.assign(SIM, { T: 0, packets: [], ghosts: [], nextId: 1, phase: 'idle', marks: {}, lost: 0, resent: 0, wait: null, srv: null, srtt: null, backoff: 1, recv: null, inorder: 0, running: false, pings: [], pingSent: 0, failWhy: null });
   LINKS.forEach(l => l.busy = {});
 }
 
@@ -107,9 +107,11 @@ function deliver(p) {
       w.got.add(p.seq);
       if (w.got.size === 3) { c.wait = null; setPhase('get'); sendGet(); }
     } else if (p.kind === 'data') {
-      if (w && w.what === 'data') { c.wait = null; setPhase('data'); c.recv = new Set(); }
+      if (w && w.what === 'data') { c.wait = null; setPhase('data'); c.recv = new Set(); c.inorder = 0; }
       if (!c.recv) return;
       c.recv.add(p.seq); send('dack', 'phone', S, p.seq);
+      while (c.recv.has(c.inorder)) c.inorder++;                       // ブラウザへ渡せるのは、抜けずにつながった所まで
+      pageProgress(c.inorder * MSS);
       if (c.recv.size === DATA_N && c.phase !== 'done') { setPhase('done'); c.running = false; }
     }
     return;

@@ -11,9 +11,10 @@ function resize() {
   cv.width = Math.max(1, Math.round(r.width * dpr)); cv.height = Math.max(1, Math.round(r.height * dpr));
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   layout(Math.max(1, r.width), Math.max(1, r.height));
+  document.getElementById('stage').classList.toggle('port', VIEW.portrait);
 }
 function step(dt) { stepSim(dt); stepGlobe(dt); updateUI(dt); }
-function draw() { VIEW.mode === 'globe' ? drawGlobe(g) : drawScene(g); }
+function draw() { VIEW.mode === 'globe' ? drawGlobe(g) : drawScene(g); drawPage(); }
 let last = performance.now();
 function loop(now) { step(Math.max(0, Math.min(0.05, (now - last) / 1000))); last = now; /* 最初のコマは now が last より前のことがある */ draw(); requestAnimationFrame(loop); }
 window.addEventListener('resize', resize);

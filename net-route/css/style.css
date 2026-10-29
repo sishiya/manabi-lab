@@ -23,7 +23,16 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-bod
 #gnav button[data-zoom]{min-width:34px;padding:3px 6px}
 #stage.globe #cv{touch-action:none;cursor:grab}
 #stage.globe #info{bottom:122px}
-#info{position:absolute;left:8px;right:8px;bottom:70px;max-width:420px;background:rgba(10,20,32,.94);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.6}
+/* 仮のページ（スマホの画面）。図ではスマホの点のそば、縦の図では右上のあいた所 */
+#vpage{position:absolute;left:8px;top:8px;width:96px;z-index:3;background:#0b1420;border:2px solid #4a6378;border-radius:10px;padding:4px 4px 2px;cursor:zoom-in}
+#vpage canvas{display:block;width:100%;aspect-ratio:9/16;border-radius:4px}
+#pgt{white-space:nowrap;overflow:hidden;text-align:center;font-size:12px;color:var(--ink);min-height:16px;line-height:16px}
+#vpage.big{width:min(200px,46%);cursor:zoom-out}
+#stage.port #vpage{left:auto;right:6px;top:44px;width:72px}
+#stage.port #pgt{font-size:9.5px;letter-spacing:-.3px}
+#stage.port #vpage.big{width:min(170px,48%)}
+#stage.globe #vpage{left:auto;right:8px;top:44px}
+#info{position:absolute;z-index:4;left:8px;right:8px;bottom:70px;max-width:420px;background:rgba(10,20,32,.94);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.6}
 #info .x{float:right;background:none;border:0;color:var(--muted);font-size:16px;min-height:auto;padding:0 4px}
 #info button.act{margin-top:6px}
 #panel{padding:10px 16px}

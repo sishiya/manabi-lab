@@ -13,7 +13,7 @@ function layout(w, h) { VIEW.w = w; VIEW.h = h; VIEW.portrait = h > w * 1.1 || w
 function P(u, v) {               // 図の座標（u=経路にそった向き、v=横）→ 画面
   const { w, h, portrait } = VIEW;
   if (portrait) { const padX = 34, padY = 44; return [padX + v * (w - padX - 90), padY + u * (h - padY - 26)]; }
-  const padX = 30, padY = 54; return [padX + u * (w - 2 * padX), padY + v * (h - padY - 30)];
+  const padL = 120, padR = 30, padY = 54; return [padL + u * (w - padL - padR), padY + v * (h - padY - 30)];   // 左は仮のページのぶんあける
 }
 function NP(n) { return P(n.x, n.y); }
 function packetXY(p) {
@@ -41,7 +41,7 @@ function drawScene(g) {
     if (i % 2) { g.fillStyle = 'rgba(255,255,255,0.025)'; portrait ? g.fillRect(0, y0, w, y1 - y0) : g.fillRect(x0, 0, x1 - x0, h); }
     g.fillStyle = COL.muted;
     g.textAlign = portrait ? 'right' : 'left';
-    portrait ? g.fillText(name, w - 8, y0 + 4) : g.fillText(name, x0 + 4, 34);
+    portrait ? g.fillText(name, w - 8, y1 - 16) : g.fillText(name, x0 + 4, 34);
   });
   // いまの道
   const route = shortest('phone', SIM.server);
@@ -73,7 +73,8 @@ function drawScene(g) {
     if (NET.jam[n.id]) { g.strokeStyle = COL.jam; g.beginPath(); g.arc(x, y, 12, 0, Math.PI * 2); g.stroke(); }
     g.fillStyle = n.kind === 'server' && !isSrv ? COL.muted : COL.ink;
     const label = n.space ? spaceText(n) : n.short + (NET.jam[n.id] ? '（混雑）' : '');
-    if (portrait) { g.textAlign = 'left'; g.fillText(label, x + 13, y); }
+    if (portrait && n.y > 0.8) { g.textAlign = 'center'; g.fillText(label, x, y + 17); }   // 右端は仮のページを置くので、名前は点の下に
+    else if (portrait) { g.textAlign = 'left'; g.fillText(label, x + 13, y); }
     else { g.textAlign = 'center'; g.fillText(label, x, y + 20); }
   }
   // 選んだパケットの通った道
@@ -100,7 +101,7 @@ function drawScene(g) {
   }
   // 時計
   g.textAlign = 'left'; g.textBaseline = 'top'; g.fillStyle = COL.ink; g.font = '500 15px "IBM Plex Mono", monospace';
-  g.fillText('いま ' + dur(SIM.T), 10, 8);
+  g.fillText('いま ' + dur(SIM.T), clockX(), 8);
 }
 
 // タップの当たり判定: パケット → 点 → 線

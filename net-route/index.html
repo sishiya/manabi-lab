@@ -13,6 +13,7 @@
     <canvas id="cv"></canvas>
     <div id="views" class="seg" role="group" aria-label="見かた"><button data-view="map" class="on">図</button><button data-view="globe">地球儀</button></div>
     <div id="gnav" hidden><button id="place" aria-label="サーバーを置く">置く</button><button data-go="tokyo">東京</button><button data-go="japan">日本</button><button data-go="pacific">太平洋</button><button data-zoom="1.6" aria-label="寄る">＋</button><button data-zoom="0.625" aria-label="引く">−</button></div>
+    <div id="vpage" title="スマホの画面（タップで大きく）"><canvas id="pgcv"></canvas><div id="pgt" class="mono"></div></div>
     <div id="info" hidden></div>
     <div id="cap"><div class="txt"><b id="capT"></b><span id="capB"></span></div><button id="open" class="main">ページを開く</button></div>
   </main>
@@ -89,6 +90,7 @@
       <li>道と陸揚げ局は<b>例</b>です（本物のケーブルの地図を写したものではありません）。地球儀では線を大円で描いていますが、本物の海底ケーブルは海の深さや地形をよけて曲がっています。家・プロバイダの位置は図のための仮の場所です。</li>
       <li>本物の道は、会社どうしの約束（BGP）で決まり、いちばん早い道とは限りません。ここでは各中継が「いまいちばん早い道」を選び、ケーブルが切れるとすぐ組み直します。本物は組み直しに数十秒〜数分かかることもあります。</li>
       <li>「受けとったよ」は1つずつ返し、送り直しは時間切れのときだけにしました（本物はもっと工夫があります）。あいさつ（SYN）は6回送り直して返事がなければ、約127秒であきらめます（Linux の初めの値）。待ち時間の下限は、RFC の1秒ではなく Linux と同じ0.2秒にしました。</li>
+      <li>左上（スマホの縦の図では右上）の<b>スマホの画面</b>は、60KB を「はじめの 1.5KB は head（まだ何も出ない）→ 見出しと文 → 絵（48KB）→ 残りの文」と割りふった例です。TCP はバイトを順番どおりにしかブラウザへ渡さないので、途中の包みが抜けると、後ろが届いていても画面は止まります。絵が上から順に出るのは、ふつうの JPEG が上から順に読めるのをまねたもの。本物のページは絵を別のファイルとして読みます。</li>
       <li>ページは HTML 1つ（60KB の例）だけ。本物のページは画像やスクリプトなど何十ものファイルを読みます。サーバーがページを作る時間・暗号の計算・光回線の上りの順番待ちなどは入れていないので、本物はもっとかかります。</li>
       <li>最近は、あいさつと暗号を1往復にまとめる HTTP/3（QUIC）や、2回目からの近道（つなぎっぱなし・TLS の再開）があり、いつも4〜5往復かかるわけではありません。ここは基本の形だけです。</li>
     </ul>
@@ -115,5 +117,6 @@
 <script src="js/draw.js"></script>
 <script src="js/globe.js"></script>
 <script src="js/play.js"></script>
+<script src="js/page.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>
