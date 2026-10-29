@@ -12,8 +12,9 @@
   <div id="pin"><!-- スマホ: 図とつぎへを上に固定。操作・説明はその下でスクロール -->
     <div id="cvwrap"><canvas id="cv"></canvas>
       <div id="hud">
-        <div class="big"><span class="lab">船</span> <b id="vBoat"></b> <span id="vBoatMs" class="sm"></span></div>
-        <div><span class="lab">風</span> <span id="vWind"></span>・<b id="ratio"></b></div>
+        <div class="bar"><span class="lab">風</span><span class="track"><i id="barW"></i></span><b id="vWind"></b></div>
+        <div class="bar"><span class="lab">船</span><span class="track"><i id="barB"></i></span><b id="vBoat"></b></div>
+        <div id="ratio"></div>
         <div class="sm"><span id="angle"></span>　<span id="aws"></span>　<span id="heel"></span></div>
         <div id="drift" class="warn" hidden>遅いので横へ流されています</div>
         <div id="nogo" class="warn" hidden>風上すぎて帆が働きません</div>
@@ -32,7 +33,7 @@
     <div class="row"><span class="lab">帆</span><button id="modeBtn"></button>
       <span class="note">「押されるだけの帆」は、揚力を 0 にして帆を風に直角に立てた板とみなした、比べるための仮想の帆です</span></div>
     <div class="row"><span class="lab">時間</span><button data-mul="1">×1</button><button data-mul="2">×2</button><button data-mul="4">×4</button><button id="pause"></button></div>
-    <div class="row"><span class="lab">図</span><button id="polarBtn">ポーラー図（向きごとの速さ）</button></div>
+    <div class="row"><span class="lab">図</span><button id="polarBtn">ポーラー図（向きごとの速さ）</button><button id="detailBtn">力をくわしく（揚力・抗力・キール）</button></div>
   </section>
   <details id="about" class="about">
     <summary>このアプリについて</summary>
@@ -56,7 +57,7 @@
       <li>前後の付加質量（船といっしょに動く水）は船の重さの 5% と推定しました。速さが変わる時間だけに効き、落ちついた速さには効きません。</li>
       <li>遅いときは、横流れが 6° をこえて横の力がつりあわないことがあります。そのときは横流れ 6° のまま前へ進む力を計算し、「横へ流されています」と出します。</li>
       <li>波・潮はありません。風は高さで変わります（ORC の式。表示の風は高さ 10 m）が、場所と時間のむらはありません。</li>
-      <li>船体・帆の形と帆の向き（ブームの角度）の絵は目安です（寸法は YD-41）。矢印の長さは力・風の大きさに比例しますが、見やすさのための目印です。風が 6 ノットより強いときは、画面に収まるよう力の矢印を（6 ÷ 風速）² 倍に縮めています。</li>
+      <li>船体・帆の形と帆の向き（ブームの角度）の絵は目安です（寸法は YD-41）。「帆が前へ引く力」は揚力と抗力の船首向きの分（傾きは無視）、「水の抵抗」はそれと計算した前へ進む力の余りの差で、どちらも目安です。矢印の長さは力・風の大きさに比例しますが、見やすさのための目印です。風が 6 ノットより強いときは、画面に収まるよう力の矢印を（6 ÷ 風速）² 倍に縮めています。</li>
     </ul>
     <h3>おもな出どころ</h3>
     <ul>

@@ -12,7 +12,14 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-bod
 #cvwrap{position:relative;height:min(58vh,520px);overflow:hidden}
 #cv{position:absolute;inset:0;width:100%;height:100%;display:block}
 #hud{position:absolute;left:10px;top:8px;font-size:13px;line-height:1.5;pointer-events:none;text-shadow:0 0 4px var(--bg),0 0 8px var(--bg)}
-#hud .big{font-size:15px}
+#hud .bar{display:flex;align-items:center;gap:6px;font-size:14px}
+#hud .track{display:inline-block;width:150px;height:10px;background:rgba(255,255,255,0.08);border-radius:5px;overflow:hidden}
+#hud .track i{display:block;height:100%;border-radius:5px}
+#barW{background:rgba(225,238,248,0.75)}
+#barB{background:var(--acc)}
+#hud .bar b{font-size:15px;min-width:56px}
+#ratio{font-size:13px;color:var(--muted)}
+#ratio.fast{color:#ffd166;font-weight:700}
 #hud b{font-family:var(--f-mono);font-weight:500;color:var(--acc)}
 #hud .big b{font-size:20px}
 #hud .lab{color:var(--muted)}
@@ -50,6 +57,7 @@ input[type=range]{width:180px;accent-color:var(--acc)}
   #top h1{font-size:19px}
   #cvwrap{height:46vh;min-height:260px}
   #hud{max-width:58%}   /* 右下のポーラー図と重ならない */
+  #hud .track{width:96px}
   #tour{padding:6px 12px;gap:8px}
   #tourText{font-size:13px;line-height:1.5}
   #controls,.about{padding-left:12px;padding-right:12px}

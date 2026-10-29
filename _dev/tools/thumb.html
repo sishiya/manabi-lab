@@ -97,8 +97,8 @@ const SETUP = {
     w.GV.applyBuildings();
     await gv.run(50, 200);
   },
-  // 真横の風で揚力とキールの矢印、右上にポーラー図（つぎへ 3 → 図を出して走らせる）
-  'sail-wind': async w => { await wait(1200); const h = w.__sawi; h.UI.go(2); h.Draw.polar = true; h.UI.sync(); h.simRun(60); await wait(300); },
+  // 真横の風で風より速く走るところ（つぎへ 2。棒が風をこえる）
+  'sail-wind': async w => { await wait(1200); const h = w.__sawi; h.UI.go(1); h.simRun(60); await wait(300); },
   // ページを開いて、データの包みが海底ケーブルを進んでいるところで止める
   'net-route': async w => { await wait(800); w.document.getElementById('open').click(); const S = w.__nero.SIM; while (S.T < 380) w.advance(S.T + 1); S.paused = true; await wait(400); },
 };
