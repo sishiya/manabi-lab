@@ -6,21 +6,20 @@ const fmt = (x, d = 1) => (Math.round(x * 10 ** d) / 10 ** d).toFixed(d);
 // つぎへ: 1歩に新しいもの1つ（その歩で増えた矢印は太く）
 const TOUR = [
   { text: '真後ろからの風（白い点線）。帆は押されて（抗力・赤）進み、青い水面の波が後ろへ流れて航跡がのびます。速くなるほど船の上で感じる風（見かけの風・水色）が弱まり、風の半分ほどで落ちつきます。',
-    set: { h: 180, twsKn: 6, mode: 'orc', v: 0 }, layers: ['tw', 'aw', 'drag'], add: 'aw' },
+    set: { h: 180, twsKn: 6, mode: 'orc', v: 0 }, layers: ['aw', 'drag'], add: 'aw' },
   { text: '真横からの風。帆は翼になり、見かけの風と直角の力（揚力・黄）が出ます。真後ろの約2倍の速さで、風よりも少し速くなります。',
-    set: { h: 90, twsKn: 6, mode: 'orc', v: 0 }, layers: ['tw', 'aw', 'drag', 'lift'], add: 'lift' },
+    set: { h: 90, twsKn: 6, mode: 'orc', v: 0 }, layers: ['aw', 'drag', 'lift'], add: 'lift' },
   { text: '帆の力は船を横にも引きます。水の中のキール（船底の板）がもう1枚の翼になって、横の力を受け止めます（緑）。',
-    set: { h: 90, twsKn: 6, mode: 'orc' }, layers: ['tw', 'aw', 'drag', 'lift', 'keel'], add: 'keel' },
+    set: { h: 90, twsKn: 6, mode: 'orc' }, layers: ['aw', 'drag', 'lift', 'keel'], add: 'keel' },
   { text: '帆を「押されるだけ」にすると（比べるための仮想の帆）、揚力がないので、真横の風ではほとんど進みません。',
-    set: { h: 90, twsKn: 6, mode: 'push', v: 0 }, layers: ['tw', 'aw', 'drag', 'lift', 'keel'] },
+    set: { h: 90, twsKn: 6, mode: 'push', v: 0 }, layers: ['aw', 'drag', 'lift', 'keel'] },
   { text: '風上へ。風に対して約 30° より内側では帆が働きません。左右にジグザグ（タック）して風上へ進みます。',
-    set: { h: 318, twsKn: 6, mode: 'orc', v: 2.5 }, layers: ['tw', 'aw', 'drag', 'lift', 'keel'], auto: { a: 42, every: 28 } },
+    set: { h: 318, twsKn: 6, mode: 'orc', v: 2.5 }, layers: ['aw', 'drag', 'lift', 'keel'], auto: { a: 42, every: 28 } },
   { text: 'すべての向きの速さ（右上・水色の線）。点線は、風上・風下へいちばん早く着く向きです。風上へは約 45° のジグザグ。風下へは、この帆（主帆とジブ）ではほぼ真後ろです。',
-    set: { h: 135, twsKn: 6, mode: 'orc' }, layers: ['tw', 'aw', 'drag', 'lift', 'keel'], polar: true },
+    set: { h: 135, twsKn: 6, mode: 'orc' }, layers: ['aw', 'drag', 'lift', 'keel'], polar: true },
   { text: '風を強く（秒速 8 m）。風は 6→16 ノットと約 2.7 倍でも、真横の速さは 7.0→10.6 ノットと 1.5 倍だけ。重い船体は、速くなるほど自分で作る波の抵抗が急に大きくなるためです（帆のせいではありません）。',
-    set: { h: 90, twsKn: 16, mode: 'orc' }, layers: ['tw', 'aw', 'drag', 'lift', 'keel'], polar: true },
+    set: { h: 90, twsKn: 16, mode: 'orc' }, layers: ['aw', 'drag', 'lift', 'keel'], polar: true },
 ];
-const LEGEND = { tw: ['本当の風', COL.tw], aw: ['見かけの風', COL.aw], drag: ['帆の抗力', COL.drag], lift: ['帆の揚力', COL.lift], keel: ['キールの力', COL.keel] };
 
 const UI = {
   step: -1,
@@ -67,9 +66,8 @@ const UI = {
     for (const b of document.querySelectorAll('[data-mul]')) b.classList.toggle('on', +b.dataset.mul === S.mul);
     $('pause').textContent = S.paused ? '動かす' : '止める';
     $('polarBtn').classList.toggle('on', Draw.polar);
-    // 1行目: 画面の背景（水・風・航跡）、2行目: 矢印
-    $('legend').innerHTML = '<div class="scene"><span><i class="rip"></i>水面（止まっている）</span><span><i class="wnd"></i>風（空気）</span><span><i class="wak"></i>航跡</span></div>' + Object.keys(LEGEND).filter(k => Draw.layers[k])
-      .map(k => `<span${k === this.added ? ' class="new"' : ''}><i style="background:${LEGEND[k][1]}"></i>${LEGEND[k][0]}</span>`).join('') + '<span class="mark">※ 矢印は目印</span>';
+    // 画面の背景（水・風・航跡）だけ。力の矢印は図の中で矢印の先に名前を書く（draw.js）
+    $('legend').innerHTML = '<div class="scene"><span><i class="rip"></i>水面（止まっている）</span><span><i class="wnd"></i>風（空気）</span><span><i class="wak"></i>航跡</span><span class="mark">※ 力の矢印の長さは目安</span></div>';
   },
   // 毎コマ: 速さの表示
   hud() {

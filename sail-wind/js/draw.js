@@ -1,5 +1,5 @@
 // 帆船が風で進むしくみ — 上から見た海・船・矢印・ポーラー図の描画
-// カメラは船について動く。水面のさざ波と航跡は水に止まっていて、船が進むと後ろへ流れる。風（点線＋矢じり）は本当の風の速さで北から南へ流れる。
+// カメラは船について動き、斜め上から見下ろす（北＝風上が奥）。水面のさざ波と航跡は水に止まっていて、船が進むと後ろへ流れる。風（点線＋矢じり）は本当の風の速さで北から南へ流れる。
 'use strict';
 const COL = {
   sea: '#0f2233', ripple: 'rgba(96,160,205,0.55)', wind: 'rgba(225,238,248,0.38)',
@@ -29,9 +29,9 @@ const Draw = {
   },
   wakeDraw(S) {
     this.wakeAdd(S);
-    const g = this.g, sc = this.sc, W = this.wake, T = Math.tan(19.5 * Math.PI / 180);
+    const g = this.g, sc = this.sc, ct = this.ct, W = this.wake, T = Math.tan(19.5 * Math.PI / 180);
     if (W.length < 2) return;
-    const P = (p, s) => { const o = (1.6 + (S.t - p.t) * p.v * T) * s; return [this.cx + (p.x + p.nx * o - S.x) * sc, this.cy + (p.y + p.ny * o - S.y) * sc]; };
+    const P = (p, s) => { const o = (1.6 + (S.t - p.t) * p.v * T) * s; return [this.cx + (p.x + p.nx * o - S.x) * sc, this.cy + (p.y + p.ny * o - S.y) * sc * ct]; };
     g.lineCap = 'round';
     for (let i = 1; i < W.length; i++) {
       const a = Math.max(0, 1 - (S.t - W[i].t) / 14);
@@ -57,77 +57,123 @@ const Draw = {
     g.lineTo(ox + dx - ux * hd - uy * hd * 0.5, oy + dy - uy * hd + ux * hd * 0.5);
     g.lineTo(ox + dx - ux * hd + uy * hd * 0.5, oy + dy - uy * hd - ux * hd * 0.5); g.closePath(); g.fill();
   },
+  // 矢印の先に力の名前（矢印の向きの先へ少し離して）
+  label(x, y, dx, dy, text, col, bold) {
+    const g = this.g, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
+    let X = x + ux * 10; const Y = y + uy * 10 + 4 + (uy > 0.6 ? 6 : uy < -0.6 ? -4 : 0);
+    g.font = `${bold ? 700 : 500} 12px "Zen Kaku Gothic New", sans-serif`;
+    const al = Math.abs(ux) < 0.35 ? 'center' : ux > 0 ? 'left' : 'right', tw = g.measureText(text).width;
+    const x0 = al === 'left' ? X : al === 'right' ? X - tw : X - tw / 2;   // 画面の外へ出ないように
+    X += Math.max(4 - x0, 0) - Math.max(x0 + tw - (this.w - 4), 0);
+    g.textAlign = al; g.lineWidth = 4; g.strokeStyle = 'rgba(15,34,51,0.9)'; g.lineJoin = 'round'; g.strokeText(text, X, Y);
+    g.fillStyle = col; g.fillText(text, X, Y);
+    g.textAlign = 'left';
+  },
   wrap(v, m) { return ((v % m) + m) % m; },
+  // 斜め上から見下ろす（北＝風上が奥。真上から TILT° 傾けた平行投影）: 画面 y = 南北 × cos − 高さ × sin
+  TILT: 50,
   frame(S, twa, dt) {
     const g = this.g, w = this.w, h = this.h;
-    this.sc = Math.min(w, h) / 36;   // 1 m = sc px（船 12.5 m が画面のせまいほうの 1/3 ほど）
-    const sc = this.sc;
+    this.ct = Math.cos(this.TILT * Math.PI / 180); this.st = Math.sin(this.TILT * Math.PI / 180);
+    this.sc = Math.min(w, h) / (this.polar && w < 640 ? 36 : 27);   // 1 m = sc px（マスト 19 m が画面の高さに収まるくらい。せまい画面でポーラー図を出すときは小さく）
+    const sc = this.sc, ct = this.ct;
     g.fillStyle = COL.sea; g.fillRect(0, 0, w, h);
-    // 船を置く場所（せまい画面でポーラー図を出すときは、左へ寄せて重ならないように）
-    this.cx = this.polar && w < 640 ? w * 0.27 : w / 2; this.cy = h / 2 + h * 0.04;
+    // 船を置く場所（帆が立つぶん下に。せまい画面でポーラー図を出すときは、左へ寄せて重ならないように）
+    this.cx = this.polar && w < 640 ? w * 0.3 : w / 2; this.cy = h * 0.7;
     // 水面のさざ波（水に止まっている。船が進むと後ろへ流れる。画面の大きさでくり返す）
     g.strokeStyle = COL.ripple; g.lineWidth = 1.5; g.lineCap = 'round';
     for (const d of this.dots) {
-      const X = this.wrap(d.x * sc * 4 - S.x * sc, w), Y = this.wrap(d.y * sc * 4 - S.y * sc, h), r = sc * d.r;
-      g.beginPath(); g.arc(X, Y + r, r, Math.PI * 1.2, Math.PI * 1.8); g.stroke();
+      const X = this.wrap((d.x * 4 - S.x) * sc, w), Y = this.wrap((d.y * 4 - S.y) * sc * ct, h), r = sc * d.r;
+      g.beginPath(); g.ellipse(X, Y + r * ct, r, r * ct, 0, Math.PI * 1.2, Math.PI * 1.8); g.stroke();
     }
     this.wakeDraw(S);
     // 風（空気の流れ。北から南へ、本当の風の速さで流れる）: 細い点線＋小さな矢じり
     const tws = S.twsKn * KN;
     g.strokeStyle = COL.wind; g.fillStyle = COL.wind; g.lineWidth = 1;
+    const pos = s => [this.wrap((s.x * 4 - S.x) * sc, w), this.wrap((s.y - S.y) * sc * ct, h)];
     g.setLineDash([3, 4]);
     for (const s of this.streaks) {
       s.y += tws * dt;
-      const X = this.wrap(s.x * sc * 4 - S.x * sc, w), Y = this.wrap(s.y * sc - S.y * sc, h), L = (14 + tws * 3) * s.l;
+      const [X, Y] = pos(s), L = (14 + tws * 3) * s.l * ct;
       g.beginPath(); g.moveTo(X, Y - L); g.lineTo(X, Y); g.stroke();
     }
     g.setLineDash([]);
-    for (const s of this.streaks) {
-      const X = this.wrap(s.x * sc * 4 - S.x * sc, w), Y = this.wrap(s.y * sc - S.y * sc, h);
-      g.beginPath(); g.moveTo(X, Y + 4); g.lineTo(X - 3, Y - 2); g.lineTo(X + 3, Y - 2); g.closePath(); g.fill();
-    }
+    for (const s of this.streaks) { const [X, Y] = pos(s); g.beginPath(); g.moveTo(X, Y + 4); g.lineTo(X - 3, Y - 2); g.lineTo(X + 3, Y - 2); g.closePath(); g.fill(); }
     this.boat(S, twa);
     if (this.polar) this.polarInset(S, twa);
   },
-  // 船と矢印。ベクトルは画面の向き（y は下が +）
+  // 船・帆・キールと力の矢印。船の中の座標（u = 右舷へ、v = 前へ、z = 上へ、m）を画面へ
   boat(S, twa) {
-    const g = this.g, sc = this.sc, cx = this.cx, cy = this.cy, f = S.f || {};
-    const hr = S.h * Math.PI / 180, side = twa >= 0 ? 1 : -1;     // side = +1: 風が左舷から
-    const F = { x: Math.sin(hr), y: -Math.cos(hr) };              // 船首の向き
+    const g = this.g, sc = this.sc, ct = this.ct, st = this.st, cx = this.cx, cy = this.cy, f = S.f || {};
+    const hr = S.h * Math.PI / 180, side = twa >= 0 ? 1 : -1;     // side = +1: 風が左舷から（風下は右舷）
+    const F = { x: Math.sin(hr), y: -Math.cos(hr) };              // 船首の向き（水平面）
     const Rt = { x: -F.y, y: F.x };                               // 右舷の向き
     const lee = { x: side * Rt.x, y: side * Rt.y };               // 風下の舷
-    const L = 12.5 * sc, B = 4.2 * sc;
-    g.save(); g.translate(cx, cy); g.rotate(hr);
-    g.strokeStyle = COL.hull; g.lineWidth = 2; g.lineJoin = 'round'; g.beginPath();
-    g.moveTo(0, -L / 2);
-    g.bezierCurveTo(B * 0.55, -L * 0.25, B * 0.5, L * 0.3, B * 0.36, L / 2);
-    g.lineTo(-B * 0.36, L / 2);
-    g.bezierCurveTo(-B * 0.5, L * 0.3, -B * 0.55, -L * 0.25, 0, -L / 2); g.stroke();
-    // 主帆のブーム: 風下の舷へ。翼の帆は見かけの風より迎え角ぶん内側、押されるだけの帆は見かけの風に直角（図の目安）
+    const heel = (f.heel || 0) * Math.PI / 180, sh = Math.sin(heel), chh = Math.cos(heel);
+    // 傾き: 高さ z の点は風下へ z·sinφ ずれ、z·cosφ の高さに
+    const P = (u, v, z = 0) => { const U = u + side * z * sh, Z = z * chh; return [cx + (U * Rt.x + v * F.x) * sc, cy + ((U * Rt.y + v * F.y) * ct - Z * st) * sc]; };
+    const V = (dx, dy) => [dx * sc, dy * sc * ct];                // 水平面の向き（m）→ 画面
+    const poly = (pts, fill, stroke, lw = 1.5) => {
+      g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath();
+      if (fill) { g.fillStyle = fill; g.fill(); }
+      if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw; g.lineJoin = 'round'; g.stroke(); }
+    };
+    const lay = this.layers;
+    // キール（水の中のひれ。YD-41 は深さ 1.9 m）: 水の中なのでうすく。キールの歩では緑に
+    const kp = [P(0, 0.9, 0), P(0, -0.8, 0), P(0, -0.9, -1.9), P(0, 0.1, -1.9)];
+    poly(kp, lay.keel ? 'rgba(123,224,168,0.35)' : 'rgba(150,190,215,0.18)', lay.keel ? 'rgba(123,224,168,0.8)' : 'rgba(150,190,215,0.35)', 1.2);
+    // 船体: 水線（z = 0）と甲板（z = 1）。半幅は船首 0 → 中ほど 2.1 m → 船尾 1.4 m（YD-41 の幅 4.2 m）
+    const hw = s => s < 0.55 ? 2.1 * Math.sin(s / 0.55 * Math.PI / 2) : 2.1 - 0.7 * ((s - 0.55) / 0.45) ** 2;
+    const N = 16, wl = [], dk = [];
+    for (const sd of [1, -1]) for (let i = 0; i <= N; i++) {
+      const s = sd > 0 ? i / N : 1 - i / N, v = 6.25 - s * 12.5;
+      wl.push(P(sd * hw(s) * 0.92, v, 0)); dk.push(P(sd * hw(s), v, 1));
+    }
+    poly(wl, '#1c3347', 'rgba(232,240,244,0.35)', 1);
+    for (let i = 0; i < dk.length; i++) { const j = (i + 1) % dk.length; poly([wl[i], wl[j], dk[j], dk[i]], '#22405a', null); }   // 横腹
+    poly(dk, '#2a4d6a', COL.hull, 2);
+    // 帆: 主帆（マストとブーム）とジブ（前の帆）。風下へふくらむ。押されるだけの帆は見かけの風に直角（絵の目安）
     const awaAbs = Math.abs(f.awa != null ? f.awa : twa);
     const boom = (S.mode === 'push' ? Math.max(0, Math.min(90, awaAbs - 90)) : Math.max(5, Math.min(85, awaAbs - 18))) * Math.PI / 180;
-    const bl = 5.6 * sc, my = -L * 0.08, ex = side * Math.sin(boom) * bl, ey = my + Math.cos(boom) * bl;
-    g.strokeStyle = COL.sail; g.lineWidth = 3;
-    g.beginPath(); g.moveTo(0, my); g.quadraticCurveTo(ex * 0.5 + side * Math.cos(boom) * bl * 0.12, (my + ey) / 2, ex, ey); g.stroke();   // 風下へふくらむ
-    g.fillStyle = COL.hull; g.beginPath(); g.arc(0, my, 3.2, 0, Math.PI * 2); g.fill();
-    g.restore();
+    const mv = 1.0, zb = 2.0, zt = 18.6;   // マストの位置（中央から前へ m）、ブームの高さ、マストの上（甲板 1 + BAD 1 + P 16.6）
+    const sailPath = (pts, fill, nu, nv) => {   // pts: [角, 辺, 角, 辺, 角, 辺]。辺は2つの角の中点を (nu, nv)·k だけ風下へ
+      const corner = [pts[0], pts[2], pts[4]], q = [];
+      for (let i = 0; i < 3; i++) {
+        const a = corner[i], b = corner[(i + 1) % 3], k = pts[i * 2 + 1];
+        q.push(P(...a), P((a[0] + b[0]) / 2 + nu * k, (a[1] + b[1]) / 2 + nv * k, (a[2] + b[2]) / 2));
+      }
+      g.beginPath(); g.moveTo(...q[0]);
+      for (let i = 1; i < 6; i += 2) g.quadraticCurveTo(q[i][0], q[i][1], q[(i + 1) % 6][0], q[(i + 1) % 6][1]);
+      g.closePath(); g.fillStyle = fill; g.fill(); g.strokeStyle = COL.sail; g.lineWidth = 1.5; g.lineJoin = 'round'; g.stroke();
+    };
+    // ジブ: 船首から前の支え（マストの上のほう）へ。主帆より少し内側
+    const jb = boom * 0.8, jt = [0, 6.0, 1.2], jh = [0, 6.0 + (mv - 6.0) * 0.9, 1.2 + 16.0 * 0.9], jc = [side * Math.sin(jb) * 5.4, 6.0 - Math.cos(jb) * 5.4, 1.4];
+    sailPath([jt, 0, jh, 0.5, jc, 0.3], 'rgba(236,244,249,0.72)', side * Math.cos(jb), Math.sin(jb));
+    const clew = [side * Math.sin(boom) * 5.6, mv - Math.cos(boom) * 5.6, zb];
+    sailPath([[0, mv, zb], 0, [0, mv, zt], 0.9, clew, 0.5], 'rgba(240,246,250,0.85)', side * Math.cos(boom), Math.sin(boom));
+    g.strokeStyle = COL.hull; g.lineWidth = 2.5; g.beginPath(); g.moveTo(...P(0, mv, 1)); g.lineTo(...P(0, mv, zt + 0.4)); g.stroke();   // マスト
+    const [hx, hy] = P(clew[0] * 0.25, mv + (clew[1] - mv) * 0.25, zb + (zt - zb) * 0.55);   // 「帆」の字を主帆の上に
+    g.font = '700 13px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center'; g.fillStyle = '#2b4a63'; g.fillText('帆', hx, hy); g.textAlign = 'left';
 
-    const lay = this.layers, a = (f.awa || 0) * Math.PI / 180;
-    // 力 1 N = fS px（風 6 ノットまでは 1000 N で 5 m ぶん）。力はほぼ風速の2乗で大きくなるので、
+    // 力の矢印（どれも水平の力。もとは甲板のマストの根もと）
+    const a = (f.awa || 0) * Math.PI / 180;
+    // 力 1 N = fS m（風 6 ノットまでは 1000 N で 5 m ぶん）。力はほぼ風速の2乗で大きくなるので、
     // それより強い風では (6 / 風速)² で縮めて画面に収める（同じ風の中の矢印どうしは比べられる）
-    const fS = sc * 0.005 * Math.min(1, (6 / S.twsKn) ** 2);
-    const ws = sc * 0.9;     // 風 1 m/s = ws px
+    const fS = 0.005 * Math.min(1, (6 / S.twsKn) ** 2);
     // 見かけの風が吹いていく向き = −（船首から風上の舷へ awa 回した向き）
     const aw = { x: -Math.cos(a) * F.x + Math.sin(a) * lee.x, y: -Math.cos(a) * F.y + Math.sin(a) * lee.y };
     // 揚力の向き = 見かけの風に直角で、真横の風なら前
     const lf = { x: Math.sin(a) * F.x + Math.cos(a) * lee.x, y: Math.sin(a) * F.y + Math.cos(a) * lee.y };
-    const ox = cx + F.x * L * 0.04, oy = cy + F.y * L * 0.04;
+    const [ox, oy] = P(0, mv, 1);
     const lw = k => (k === this.added ? 5 : 3);   // その歩で増えた矢印は太く
-    if (lay.tw) { const v = S.twsKn * KN * ws; this.arrow(Math.max(16, cx - L * 0.95), cy - v - L * 0.4, 0, v, COL.tw, lw('tw')); }
-    if (lay.aw && f.aws) { const v = f.aws * ws, d = L * 0.55; this.arrow(ox - aw.x * (v + d), oy - aw.y * (v + d), aw.x * v, aw.y * v, COL.aw, lw('aw')); }
-    if (lay.drag) this.arrow(ox, oy, aw.x * f.drag * fS, aw.y * f.drag * fS, COL.drag, lw('drag'));
-    if (lay.lift) this.arrow(ox, oy, lf.x * f.lift * fS, lf.y * f.lift * fS, COL.lift, lw('lift'));
-    if (lay.keel) { const k = f.keel * fS; this.arrow(cx + F.x * L * 0.1, cy + F.y * L * 0.1, -lee.x * k, -lee.y * k, COL.keel, lw('keel')); }
+    const arr = (x, y, d, col, k, text) => { this.arrow(x, y, d[0], d[1], col, lw(k)); this.label(x + d[0], y + d[1], d[0], d[1], text, col, k === this.added); };
+    if (lay.aw && f.aws) {   // 見かけの風: 帆のまんなかの高さへ吹きこむ（風 1 m/s = 0.9 m ぶん）
+      const v = f.aws * 0.9, d = 7, [mx, my] = P(0, mv, (zb + zt) / 2), s0 = V(aw.x * (v + d), aw.y * (v + d));
+      arr(mx - s0[0], my - s0[1], V(aw.x * v, aw.y * v), COL.aw, 'aw', '船で感じる風');
+    }
+    if (lay.drag) arr(ox, oy, V(aw.x * f.drag * fS, aw.y * f.drag * fS), COL.drag, 'drag', '風が押す力（抗力）');
+    if (lay.lift) arr(ox, oy, V(lf.x * f.lift * fS, lf.y * f.lift * fS), COL.lift, 'lift', '翼の力（揚力）');
+    if (lay.keel) { const [kx, ky] = P(0, -0.3, -1.2), k = f.keel * fS; arr(kx, ky, V(-lee.x * k, -lee.y * k), COL.keel, 'keel', 'キールが押し返す力'); }
     this.vecs = { F, aw, lf, lee };   // 確かめ用
   },
   // ポーラー図（右上に重ねる）: 計算した「落ちついた速さ」の線＋自分で走った点＋風上・風下へいちばん早く着く向き
