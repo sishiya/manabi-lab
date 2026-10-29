@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="tol-common.js"></script>
+<script>
+'use strict';
+// 台本: いのちの系統樹 ― 使い方と見どころ（横長の説明動画、150秒）。案内役のライオンつき
+// 上 0〜175 は字幕、その下に樹形図（css 1280×603 を 1920 幅に）。右上に詳細のカード（アプリの詳細の欄は DOM なので、こちらで描く）
+// 押す → 閉じる → 詳細 → 検索（ライオン）→ 3D → 2D → 検索（シイタケ）→ 全体 → 読みこみのしくみ → リンク・言語 → 出どころ
+// シルエット（PhyloPic）は crossOrigin で読む（tol-common.js）。読めない絵は出ない（はじめの哺乳類の目には出なかった）
+const END = 150, DUR = END + IDENT_CLOSE, TOP = 175, CW = 1280, CHH = 603, ZOOM = 1920 / CW;
+const LEO = '4CGXP', SHIITAKE = '3T5L6';   // COL の Panthera leo・Lentinula edodes
+const M = { all: 0, car: 0, pri: 0 };
+const node = (w, s) => w.__trofli.find(s) || w.__trofli.T.nodes.find(n => n.col === s);
+// 樹形図のふしの、動画の上の場所
+const at = (w, s) => { const n = node(w, s); if (!n) return { x: 700, y: 600 }; const [x, y] = w.__trofli.V.screenOf(n); return { x: (x + 30) * ZOOM, y: TOP + y * ZOOM }; };
+let W_ = null;   // カーソルの場所を決めるときに使う（setup で入れる）
+const onNode = (t, s, o = {}) => ({ t, get x() { return W_ ? at(W_, s).x : 700; }, get y() { return W_ ? at(W_, s).y : 600; }, ...o });
+// ---- ボタンの札とマウス ----
+const CH = {
+  search: { x: 40, y: 200, title: '上の検索', btns: ['ライオン'] },
+  search2: { x: 40, y: 200, title: '上の検索', btns: ['シイタケ'] },
+  d3: { x: 40, y: 200, title: '右下の道具', btns: ['3D', '全体'] },
+  d2: { x: 40, y: 200, title: '右下の道具', btns: ['2D', '全体'] },
+  fit: { x: 40, y: 200, title: '右下の道具', btns: ['3D', '全体'] },
+};
+const SHOW = [
+  ['search', 52.6, 57.6, t => t < 54 ? -1 : 0],
+  ['d3', 66.2, 70.6, t => t < 67 ? -1 : 0],
+  ['d2', 83.4, 87.4, t => t < 84.4 ? -1 : 0],
+  ['search2', 88.4, 93.4, t => t < 89.6 ? -1 : 0],
+  ['fit', 100.2, 104.6, t => t < 101 ? -1 : 1],
+];
+const B = (k, i) => btnRect(CH[k], i);
+const CUR = [
+  { t: 21.6, x: 900, y: 700 }, onNode(22.8, 'Carnivora'), onNode(23.4, 'Carnivora', { click: true }),
+  onNode(32.6, 'Carnivora'), onNode(33.2, 'Carnivora', { click: true }), onNode(34.4, 'Carnivora'),
+  onNode(40.6, 'Primates'), onNode(41.2, 'Primates', { click: true }), onNode(42.6, 'Primates', { hide: true }),
+  { t: 53.2, ...B('search', 0) }, { t: 54, ...B('search', 0), click: true }, { t: 55.4, ...B('search', 0), hide: true },
+  { t: 66.4, ...B('d3', 0) }, { t: 67, ...B('d3', 0), click: true }, { t: 68.2, x: 1000, y: 650 },
+  { t: 69, x: 1000, y: 650, drag: true }, { t: 82, x: 1300, y: 640 }, { t: 82.6, x: 1300, y: 640, hide: true },
+  { t: 83.8, ...B('d2', 0) }, { t: 84.4, ...B('d2', 0), click: true }, { t: 85.6, ...B('d2', 0), hide: true },
+  { t: 88.8, ...B('search2', 0) }, { t: 89.6, ...B('search2', 0), click: true }, { t: 90.8, ...B('search2', 0), hide: true },
+  { t: 100.4, ...B('fit', 1) }, { t: 101, ...B('fit', 1), click: true }, { t: 102.4, ...B('fit', 1), hide: true },
+];
+// ---- 出来事と、毎コマの動き ----
+let CAM0 = null, CAMF = null;
+const ACT = [
+  { t: 23.4, run: w => w.__trofli.press('Carnivora') },
+  { t: 33.2, run: w => w.__trofli.press('Carnivora') },          // もう一度押すと閉じる
+  { t: 41.2, run: w => w.__trofli.press('Primates'), wait: 4 },
+  { t: 54, run: w => w.__trofli.reveal(LEO), wait: 5 },
+  { t: 67, run: w => w.__trofli.set3d(true) },
+  { t: 84.4, run: w => w.__trofli.set3d(false), wait: 1.5 },
+  { t: 89.6, run: w => w.__trofli.reveal(SHIITAKE), wait: 5 },
+  { t: 101, run: w => { CAM0 = tolCamOf(w); CAMF = tolFitCam(w); }, wait: 0.2 },
+];
+const CAMS = [
+  { a: 69, b: 82, each: (w, u) => w.__trofli.V3.orbit(-1, u < 0.5 ? -0.2 : 0.2) },   // マウスの右ドラッグで回すのと同じ
+  { a: 101.1, b: 106, each: (w, u) => tolCamSet(w, tolCamLerp(CAM0, CAMF, u)) },
+];
+// ---- 字幕（日本語は上に焼きこむ・英語は SRT）----
+let CAPS = [];
+function makeCaps() {
+  const man = Math.round(M.all / 1e4);
+  CAPS = [
+    { a: 7, b: 13.6, main: `名前のついた生きもの 約${man}万種を、1本の木に`, sub: '枝分かれの形は Open Tree of Life、種と分類は Catalogue of Life（2026年9月版）',
+      en: [`About ${(M.all / 1e6).toFixed(2)} million named species on one tree`, 'The branching from Open Tree of Life; species and classification from the Catalogue of Life (Sept 2026)'] },
+    { a: 14, b: 21.6, main: 'はじめは哺乳類。目（もく）がならぶ', sub: '名札の色は分類の段。枝の太さと点の大きさは、種の数',
+      en: ['It opens on the mammals, with their orders lined up', 'Label colors show the rank; thicker branches and bigger dots mean more species'] },
+    { a: 22.4, b: 31.6, main: '名前を押すと、その先の枝が開く', sub: `ネコ目は ${M.car.toLocaleString()} 種。科がならぶ（和名は Wikidata から）`,
+      en: ['Tap a name and the branches beyond it open', `Carnivora: ${M.car.toLocaleString()} species, with its families (Japanese names from Wikidata)`] },
+    { a: 32.4, b: 39.6, main: 'もう一度押すと、閉じる', sub: '枝は、親のところへ吸いこまれていく',
+      en: ['Tap it again to close it', 'The branches get sucked back into the parent'] },
+    { a: 40.4, b: 51.6, main: '押した生きものは、右に図鑑の1ページ', sub: '写真（Wikimedia Commons）・学名・分類の表・種の数。写真の作者と条件もいっしょに',
+      en: ['The one you tapped gets a field-guide page on the right', 'Photo (Wikimedia Commons), scientific name, classification, species count, with the photo\'s author and license'] },
+    { a: 52.4, b: 65.6, main: '和名でも学名でも、さがせる', sub: '「ライオン」を選ぶと、ネコ目 → ネコ科 → ヒョウ属 まで一気に開く',
+      en: ['Search by common or scientific name', 'Pick "lion" and it opens straight down through Carnivora, Felidae and Panthera'] },
+    { a: 66.4, b: 74.6, main: '「3D」で、根もとから枝先をながめる', sub: '奥ほど、あとから分かれた（枝分かれの段の数。年代の目盛りではない）',
+      en: ['"3D" lets you look from the root to the tips', 'Farther back = split off later (counted in branching steps, not a time scale)'] },
+    { a: 75, b: 82.6, main: 'マウスは右ドラッグで回す・左ドラッグで動かす', sub: 'スマホは1本指で動かし、2本指を左右に動かすと回る',
+      en: ['With a mouse, right-drag to turn and left-drag to move', 'On a phone, drag one finger to move; move two fingers sideways to turn'] },
+    { a: 83.4, b: 87.6, main: '「2D」で、真上からの図にもどる', sub: '3D と 2D はつながっていて、真上まで起き上がってから切りかわる',
+      en: ['"2D" takes you back to the view from above', 'The two are connected: it rises to straight above, then switches'] },
+    { a: 88.4, b: 99.6, main: 'シイタケもさがしてみる', sub: 'キノコのなかま（菌界）は、植物よりも動物に近い（オピストコンタ）',
+      en: ['Now search for shiitake', 'Fungi are closer to animals than to plants (both are opisthokonts)'] },
+    { a: 100.4, b: 111.6, main: '「全体」で、開いた枝がぜんぶ入る', sub: 'ライオンとシイタケの道すじは、オピストコンタで分かれる',
+      en: ['"All" fits every open branch', 'The paths to the lion and the shiitake split at the opisthokonts'] },
+    { a: 112.4, b: 123.6, main: '綱より下は、開いたときに読みこむ', sub: `約${man}万種をはじめから持たず、Catalogue of Life の API からその場で（100件ずつ）`,
+      en: ['Below the classes, it loads as you open', `It doesn't carry all ${(M.all / 1e6).toFixed(2)} million up front; it asks the Catalogue of Life API on the spot (100 at a time)`] },
+    { a: 124.4, b: 133.6, main: '詳細の「リンク」で、見ている所を人に送れる', sub: '名前の右で動くのは PhyloPic のシルエット（動き方は演出）。日本語と英語に対応',
+      en: ['"Link" in the details sends the place you are looking at', 'The silhouettes moving beside the names are from PhyloPic (how they move is just for fun). Japanese and English'] },
+    { a: 134, b: 141.6, main: '出どころは画面の「このアプリについて」に', sub: '写真や本文は写さず、条件の合うものだけを、作者の名前といっしょに',
+      en: ['Sources are listed under "About this app"', 'No copied text; only pictures whose licenses allow it, shown with their authors'] },
+  ];
+}
+const NAME = 'いのちの系統樹';
+const CREDIT = 'おもな出どころ: Open Tree of Life（CC0）・Catalogue of Life（CC BY）・Wikidata（CC0）・Wikimedia Commons（写真ごとの条件）・PhyloPic（シルエット）';
+// ---- 詳細のカード（右上。ライオンの場所 y 620〜 にかけない）----
+const PHOTOS = new Map();
+function photoOf(w) {
+  const im = w.document.querySelector('#d-plate .thumb img'); if (!im || !/wikimedia/.test(im.src)) return null;
+  if (!PHOTOS.has(im.src)) { const p = new Image(); p.crossOrigin = 'anonymous'; p.referrerPolicy = 'no-referrer';
+    p.done = new Promise(r => { p.onload = r; p.onerror = r; setTimeout(r, 15000); }); p.src = im.src; PHOTOS.set(im.src, p); }
+  return PHOTOS.get(im.src);
+}
+const CARD = [[41.6, 65.6], [91, 99.6]];
+function drawCard(g, t, w) {
+  const seg = CARD.find(([a, b]) => t >= a - 0.4 && t <= b + 0.4); if (!seg) return;
+  const f = fade(t, seg[0], seg[1], 0.4), n = w.__trofli.V.selected; if (f <= 0 || !n) return;
+  const RJ = w.eval('RANK_JA'), x = 1480, y = 196, cw = 410, p = photoOf(w);
+  g.shadowBlur = 0; g.globalAlpha = f;
+  g.fillStyle = 'rgba(246,240,226,0.97)'; g.strokeStyle = 'rgba(60,50,30,0.35)'; g.lineWidth = 2;
+  g.beginPath(); g.roundRect(x, y, cw, 410, 14); g.fill(); g.stroke();
+  let yy = y + 14;
+  if (p && p.complete && p.naturalWidth) {
+    const ph = 170, k = Math.min((cw - 28) / p.naturalWidth, ph / p.naturalHeight), dw = p.naturalWidth * k, dh = p.naturalHeight * k;
+    g.drawImage(p, x + (cw - dw) / 2, yy + (ph - dh) / 2, dw, dh); yy += ph + 6;
+    const cr = (w.document.getElementById('d-credit') || {}).textContent || '';
+    setFont(g, 15, false); g.fillStyle = '#6a604c'; g.textAlign = 'left'; g.textBaseline = 'top'; g.fillText(cr.slice(0, 70), x + 14, yy, cw - 28); yy += 24;
+  }
+  g.textAlign = 'left'; g.textBaseline = 'top';
+  setFont(g, 22, true); g.fillStyle = '#8a3a2c'; g.fillText(RJ[n.rank] || n.rank || '', x + 16, yy); yy += 30;
+  setFont(g, 40, true); g.fillStyle = '#2b2418'; g.fillText(n.ja || n.name, x + 16, yy, cw - 32); yy += 50;
+  g.font = `italic 26px "EB Garamond", Georgia, serif`; g.fillStyle = '#5a5040'; g.fillText(n.name, x + 16, yy, cw - 32); yy += 36;
+  if (n.count) { setFont(g, 24, true); g.fillStyle = '#2b2418'; g.fillText(`${n.count.toLocaleString()} 種`, x + 16, yy); yy += 34; }
+  const path = w.__trofli.T.ancestors(n).filter(a => ['kingdom', 'phylum', 'class', 'order', 'family'].includes(a.rank)).map(a => a.ja || a.name).join(' › ');
+  setFont(g, 20, false); g.fillStyle = '#5a5040'; g.fillText(path, x + 16, yy, cw - 32);
+  g.globalAlpha = 1;
+}
+// ---- 案内役のライオン ----
+const MUSIC = { style: 'journey', root: 98, stopAt: END, cues: [{ t: END, type: 'jingle' }] };
+const EXP = [[0, 'calm'], [7.2, 'smile'], [10, 'calm'], [14.2, 'think'], [18, 'calm'], [22.6, 'smile'], [26, 'calm'], [32.6, 'wow'], [36, 'calm'],
+  [40.6, 'smile'], [44, 'calm'], [52.6, 'think'], [55.4, 'wow'], [59, 'calm'], [66.6, 'wow'], [70, 'calm'], [75.2, 'think'], [79, 'calm'],
+  [88.6, 'think'], [93, 'shock'], [96, 'calm'], [100.6, 'proud'], [104, 'calm'], [112.6, 'think'], [116, 'calm'], [124.6, 'smile'], [128, 'calm'],
+  [134.2, 'think'], [138, 'calm'], [END - 7.6, 'smile']];
+promoStart({
+  name: NAME + '（使い方）', out: 'tree-of-life-guide', src: '../../tree-of-life/index.html', iw: CW, ih: CHH, dur: DUR, peek: 40,
+  inject: TOL_INJECT,
+  music: MUSIC,
+  ready: w => !!LION.api && tolReady(w),
+  async setup(w) {
+    tolSize(w, CW, CHH);
+    W_ = w;
+    const X = w.__trofli;
+    M.all = X.T.root.count; M.car = X.find('Carnivora').count; M.pri = X.find('Primates').count;
+    console.log('measure', JSON.stringify(M));
+    makeCaps();
+    MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: CUR, exp: EXP, end: END, bye: END - 5.8 }));
+    return w.document.getElementById('cv');
+  },
+  subs: () => guideSubs(END, NAME, 'Tree of Life', CAPS, 'Runs in your browser (PC or phone). The app has Japanese and English (EN button)'),
+  async renderAt(t, w) {
+    await tolRender(w, ACT, CAMS, t, w => tolSize(w, CW, CHH));
+    if (CARD.some(([a, b]) => t >= a - 0.4 && t <= b + 0.4)) { const p = photoOf(w); if (p) await p.done; }
+  },
+  drawSource(g, w, OW, OH) {
+    const cv = w.document.getElementById('cv'), k = OW / 1920;
+    g.fillStyle = '#1b2620'; g.fillRect(0, 0, OW, OH);
+    g.fillStyle = tolPaper(w); g.fillRect(0, TOP * k, OW, CHH * ZOOM * k);
+    g.drawImage(cv, 0, TOP * k, OW, CHH * ZOOM * k);
+  },
+  overlay(g, t, w) {
+    // 全体にしたあと: ライオンとシイタケの場所に輪と札（小さくて名前が描かれないので）
+    const fr = fade(t, 106, 111.6, 0.5);
+    if (fr > 0) for (const [s, lab] of [[LEO, 'ライオン'], [SHIITAKE, 'シイタケ']]) {
+      const n = node(w, s); if (!n) continue;
+      const [sx, sy] = w.__trofli.V.screenOf(n), x = sx * ZOOM, y = TOP + sy * ZOOM, r = 20 + 5 * Math.sin(t * 5);
+      g.shadowBlur = 0; g.globalAlpha = fr; g.strokeStyle = '#d2453a'; g.lineWidth = 5; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke();
+      setFont(g, 30, true); const tw = g.measureText(lab).width + 30, bx = Math.min(1880 - tw, Math.max(20, x - tw / 2)), by = y - r - 58 < TOP + 8 ? y + r + 12 : y - r - 58;   // 上の字幕にかかるときは輪の下に
+      g.fillStyle = '#d2453a'; g.beginPath(); g.roundRect(bx, by, tw, 46, 23); g.fill();
+      g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(lab, bx + tw / 2, by + 24); g.globalAlpha = 1;
+    }
+    drawCard(g, t, w);
+    for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawGuideChrome(g, t, END, NAME, CREDIT);
+    drawLion(g, t);
+  },
+  errors: w => w.__trofliErr,
+});
+lionOpen();
+</script>
+</body>
+</html>

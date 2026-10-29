@@ -1,0 +1,30 @@
+{
+  "file": "_dev/promo/out/tree-of-life-short.mp4",
+  "privacy": "private",
+  "publishAt": "2026-10-30T20:05:00+09:00",
+  "captions": {
+    "en": "_dev/promo/out/tree-of-life-short.en.srt"
+  },
+  "title": "名前のついた生きもの225万種を、1本の木に。ヒトはどこ？ #Shorts",
+  "description": "名前のついている生きもの約225万種を、図鑑のような進化の枝分かれの図でたどる。名前を押すと枝が開き、「ヒト」をさがすとそこまで一気に開きます。3D で根もとから枝先までながめることも。ブラウザのアプリ「いのちの系統樹」から。\n\nアプリ: https://sishiya.github.io/manabi-lab/tree-of-life/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nBánki O ほか. Catalogue of Life（2026年9月版）doi:10.48580/dgz5n（CC BY 4.0。種と分類・種の数）\nOpen Tree of Life 合成系統樹と Open Tree Taxonomy（CC0。界〜綱の枝分かれの形）\nHinchliff CE ほか (2015) Synthesis of phylogeny and taxonomy into a comprehensive tree of life. PNAS 112, 12764–12769\nWikidata（CC0。和名）\n3D の奥行きは枝分かれの段の数で、年代の目盛りではありません。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#系統樹 #生きもの #進化 #まなびラボ",
+  "tags": [
+    "いのちの系統樹",
+    "系統樹",
+    "進化",
+    "生きもの",
+    "分類",
+    "図鑑",
+    "Shorts",
+    "まなびラボ",
+    "しし屋",
+    "Tree of Life",
+    "phylogenetic tree"
+  ],
+  "localizations": {
+    "en": {
+      "title": "2.25 Million Named Species on One Tree. Where Are Humans? #Shorts",
+      "description": "From \"Tree of Life\", a browser app. Follow about 2.25 million named species through a field-guide-style tree of evolutionary branching. Tap a name to open its branches, or search for \"human\" and it opens all the way there. You can also look from the root to the tips in 3D.\n\nApp (switch the app to English with the EN button): https://sishiya.github.io/manabi-lab/tree-of-life/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMain sources:\nBánki O et al. Catalogue of Life (September 2026) doi:10.48580/dgz5n (CC BY 4.0; species, classification and species counts)\nOpen Tree of Life synthetic tree and Open Tree Taxonomy (CC0; the branching from kingdoms to classes)\nHinchliff CE et al. (2015) Synthesis of phylogeny and taxonomy into a comprehensive tree of life. PNAS 112, 12764–12769\nWikidata (CC0; Japanese names)\nDepth in 3D counts branching steps; it is not a time scale.\n\nMusic: original sounds synthesized by code.\n\n#TreeOfLife #Evolution #Biology"
+    }
+  },
+  "thumbnail": "_dev/promo/thumbs/tree-of-life-short.jpg"
+}

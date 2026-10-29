@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="tol-common.js"></script>
+<script>
+'use strict';
+// 台本: いのちの系統樹（ショート、40秒＋締め。縦で録る: ?short）
+// はじめの画面（哺乳類の目とシルエット）→ サル目を開く → 「ヒト」をさがして一気に → 3D でまわす → 2D にもどして全体（約225万種の木の中のヒト）
+// 数（種の数・ヒトまでの段の数）は setup でアプリのデータから入れる
+const CW = 540, CHH = 700;   // アプリの樹形図（css px）。スマホの幅で、上 0〜470 は字幕
+const HUMAN = '6MB3T';       // COL の Homo sapiens
+const M = { all: 0, pri: 0, steps: 0 };
+let CAPS = [];
+function makeCaps() {
+  CAPS = [
+    { a: 6.3, b: 12.8, main: '名前を押すと、枝が開く', sub: `サル目（霊長類）は ${M.pri.toLocaleString()} 種。名札の色は 目・科・属…の段`,
+      en: ['Tap a name and its branches open', `Primates: ${M.pri.toLocaleString()} species. Label colors show the rank: order, family, genus…`] },
+    { a: 13.3, b: 20.8, main: '「ヒト」をさがすと、そこまで一気に', sub: `細胞をもつ生きもの から ${M.steps} 段`,
+      en: ['Search for "human" and it opens all the way there', `${M.steps} levels down from "cellular life"`] },
+    { a: 21.3, b: 27.8, main: '3D で、根もとから枝先へ', sub: '奥ほど、あとから分かれた（年代の目盛りではない）',
+      en: ['In 3D, from the root to the tips', 'Farther back = split off later (not a time scale)'] },
+    { a: 28.3, b: 34.9, main: 'ヒトは、この木の1枚の葉', sub: `名前のついた生きもの 約${Math.round(M.all / 1e4)}万種（Catalogue of Life）`,
+      en: ['Humans are one leaf on this tree', `About ${(M.all / 1e6).toFixed(2)} million named species (Catalogue of Life)`] },
+  ];
+}
+const NAME = 'いのちの系統樹', NAME_EN = 'Tree of Life';
+const Q = '生きもの 225万種を、1本の木に', Q_EN = '2.25 million species on one tree';
+const END_LINE = 'ブラウザで動かせます。和名でも学名でもさがせる', END_EN = 'Runs in your browser. Search by common or scientific name';
+// ---- 出来事と、毎コマの動き ----
+let CAM0 = null, CAMF = null;
+const ACT = [
+  { t: 6.5, run: w => w.__trofli.press('Primates') },
+  { t: 13.4, run: w => w.__trofli.reveal(HUMAN), wait: 4 },
+  { t: 21.2, run: w => w.__trofli.set3d(true) },
+  { t: 27.4, run: w => w.__trofli.set3d(false), wait: 1.5 },
+  { t: 28.6, run: w => { CAM0 = tolCamOf(w); CAMF = tolFitCam(w); }, wait: 0.2 },
+];
+const CAMS = [
+  { a: 22.3, b: 27.2, each: (w, u) => w.__trofli.V3.orbit(-2.4, 0) },          // ゆっくり回す（1コマ 2.4px ぶん）
+  { a: 28.7, b: 33.5, each: (w, u) => tolCamSet(w, tolCamLerp(CAM0, CAMF, u)) },
+];
+promoStart({
+  name: NAME, out: 'tree-of-life', src: '../../tree-of-life/index.html', iw: CW, ih: CHH, dur: SHORT_END + IDENT_CLOSE, peek: 10,
+  inject: TOL_INJECT,
+  music: { style: 'journey', root: 98, stopAt: SHORT_END, cues: [{ t: SHORT_END, type: 'jingle' }] },
+  ready: tolReady,
+  async setup(w) {
+    openApp(w);
+    const X = w.__trofli;
+    M.all = X.T.root.count; M.pri = X.find('Primates').count;
+    M.steps = 24;   // 細胞をもつ生きもの → ヒト属 の名前のある祖先 24（2026-10-29 にアプリの T.ancestors で数えた）。ホモ・サピエンスはその24段下
+    makeCaps();
+    return w.document.getElementById('cv');
+  },
+  subs: () => shortSubs(NAME, NAME_EN, Q, Q_EN, CAPS, END_LINE, END_EN),
+  async renderAt(t, w) {
+    await tolRender(w, ACT, CAMS, t, openApp);
+  },
+  drawSource(g, w, OW, OH) {   // 上は文字の場所（0〜470）、その下に樹形図
+    const cv = w.document.getElementById('cv'), k = OW / 1080;
+    const h = 1080 * cv.height / cv.width * k;
+    g.fillStyle = '#1b2620'; g.fillRect(0, 0, OW, OH);
+    g.fillStyle = tolPaper(w); g.fillRect(0, 470 * k, OW, h);   // 樹形図の紙（2D の canvas は透明で、紙の色は CSS の背景）
+    g.drawImage(cv, 0, 470 * k, OW, h);
+  },
+  overlay(g, t, w) {
+    drawTop(g, t, 0.6, 5.6, NAME, Q, true);
+    for (const c of CAPS) drawTop(g, t, c.a, c.b, c.main, c.sub);
+    // 全体にしたあと: ヒトの場所に輪と札（小さくて名前が描かれないので）
+    const fr = fade(t, 30.4, 34.9, 0.5), hn = fr > 0 && w.__trofli.T.nodes.find(n => n.col === HUMAN);
+    if (hn) {
+      const [sx, sy] = w.__trofli.V.screenOf(hn), x = sx * 1080 / CW, y = 470 + sy * 1080 / CW, r = 26 + 6 * Math.sin(t * 5);
+      g.shadowBlur = 0; g.globalAlpha = fr; g.strokeStyle = '#d2453a'; g.lineWidth = 6; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke();
+      setFont(g, 40, true); const tw = g.measureText('ヒト').width + 36, bx = Math.min(1060 - tw, Math.max(20, x - tw / 2)), by = y - r - 76;
+      g.fillStyle = '#d2453a'; g.beginPath(); g.roundRect(bx, by, tw, 58, 29); g.fill();
+      g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('ヒト', bx + tw / 2, by + 30); g.globalAlpha = 1;
+    }
+    drawEnd(g, t, 35.2, NAME, END_LINE, '形: Open Tree of Life（CC0）・種と分類: Catalogue of Life（CC BY）・和名: Wikidata（CC0）');
+    drawIdentMini(g, t, 0.3);
+    drawIdent(g, t, SHORT_END);
+  },
+  errors: w => w.__trofliErr,
+});
+// 樹形図だけにして、はじめの画面を少し寄せる（スマホの幅では名札が小さい）。左はしはそのまま。
+// さわった扱いにして、アプリが置きなおさないように。開きなおしたとき（tolRender）も同じに
+function openApp(w) {
+  tolSize(w, CW, CHH);
+  const V = w.__trofli.V, H = V.size[1];
+  w.eval('touched = true'); V.cam.x *= 1.3; V.cam.y = H / 2 - (H / 2 - V.cam.y) * 1.3; V.cam.k *= 1.3; V.draw();
+}
+function drawTop(g, t, a, b, main, sub, big) {
+  const f = fade(t, a, b, big ? 0.8 : 0.5); if (f <= 0 || (!main && !sub)) return;
+  prep(g); g.globalAlpha = f;
+  drawBlock(g, [{ s: main, size: big ? 80 : 62, color: '#fff', bold: true }, { s: sub, size: big ? 44 : 38, color: '#f2d79a', gap: big ? 14 : 10 }], big ? 300 : 270, 'center');
+  g.globalAlpha = 1; g.shadowBlur = 0;
+}
+</script>
+</body>
+</html>

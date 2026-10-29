@@ -1,0 +1,31 @@
+{
+  "file": "_dev/promo/out/tree-of-life-guide.mp4",
+  "thumbnail": "_dev/promo/thumbs/tree-of-life-guide.jpg",
+  "privacy": "private",
+  "publishAt": "2026-10-30T20:00:00+09:00",
+  "captions": {
+    "en": "_dev/promo/out/tree-of-life-guide.en.srt"
+  },
+  "title": "いのちの系統樹 ― 使い方と見どころ（225万種の木を開いて・さがして・3D でながめる）",
+  "description": "名前のついている生きもの約225万種を、図鑑のような進化の枝分かれの図でたどる。名前を押すと枝が開き、もう一度押すと閉じます。和名でも学名でもさがせて、3D で根もとから枝先までながめることもできます。ブラウザのアプリ「いのちの系統樹」の、使い方と見どころです。\n\n0:00 はじめに・225万種の木\n0:14 はじめの画面・押すと開く・閉じる\n0:40 図鑑の1ページ（詳細）\n0:52 さがす（ライオン）\n1:06 3D でながめる・2D にもどる\n1:28 シイタケは動物に近い\n1:40 全体を見わたす\n1:52 読みこみのしくみ・リンク・出どころ\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/tree-of-life/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nBánki O ほか. Catalogue of Life（2026年9月版）doi:10.48580/dgz5n（CC BY 4.0。種と分類・種の数）\nOpen Tree of Life 合成系統樹と Open Tree Taxonomy（CC0。界〜綱の枝分かれの形）\nHinchliff CE ほか (2015) Synthesis of phylogeny and taxonomy into a comprehensive tree of life. PNAS 112, 12764–12769\nWikidata（CC0。和名）\nWikimedia Commons（写真。作者・条件は動画の画面とアプリに）\n3D の奥行きは枝分かれの段の数で、年代の目盛りではありません。名前の右で動くシルエットは PhyloPic（作者・条件は絵ごとにアプリに）で、動き方は演出です。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#系統樹 #生きもの #進化 #まなびラボ",
+  "tags": [
+    "いのちの系統樹",
+    "系統樹",
+    "進化",
+    "生きもの",
+    "分類",
+    "図鑑",
+    "オピストコンタ",
+    "使い方",
+    "まなびラボ",
+    "しし屋",
+    "Tree of Life",
+    "phylogenetic tree"
+  ],
+  "localizations": {
+    "en": {
+      "title": "Tree of Life — App Guide: Open, Search and Look Around a Tree of 2.25 Million Species in 3D",
+      "description": "A guide to \"Tree of Life\", a browser app. Follow about 2.25 million named species through a field-guide-style tree of evolutionary branching. Tap a name to open its branches and tap again to close them. Search by common or scientific name, and look from the root to the tips in 3D. Turn on English subtitles (CC).\n\n0:00 Intro: a tree of 2.25 million species\n0:14 The opening view; tap to open and close\n0:40 A field-guide page (details)\n0:52 Search (lion)\n1:06 Look around in 3D, back to 2D\n1:28 Shiitake is closer to animals\n1:40 Seeing the whole tree\n1:52 How it loads, links and sources\n\nTry the app (runs in your browser, PC or phone; switch the app to English with the EN button):\nhttps://sishiya.github.io/manabi-lab/tree-of-life/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nMain sources:\nBánki O et al. Catalogue of Life (September 2026) doi:10.48580/dgz5n (CC BY 4.0; species, classification and species counts)\nOpen Tree of Life synthetic tree and Open Tree Taxonomy (CC0; the branching from kingdoms to classes)\nHinchliff CE et al. (2015) Synthesis of phylogeny and taxonomy into a comprehensive tree of life. PNAS 112, 12764–12769\nWikidata (CC0; Japanese names)\nWikimedia Commons (photos; authors and licenses shown in the video and in the app)\nDepth in 3D counts branching steps; it is not a time scale. The silhouettes moving beside the names come from PhyloPic (authors and licenses for each in the app); how they move is just for fun.\n\nMusic: original sounds synthesized by code.\n\n#TreeOfLife #Evolution #Biology"
+    }
+  }
+}
