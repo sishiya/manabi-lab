@@ -1,8 +1,8 @@
 // 帆船が風で進むしくみ — 上から見た海・船・矢印・ポーラー図の描画
-// カメラは船について動く。水の点は水に止まっていて、船が進むと後ろへ流れる。風の線は本当の風の速さで北から南へ流れる。
+// カメラは船について動く。水面のさざ波と航跡は水に止まっていて、船が進むと後ろへ流れる。風（点線＋矢じり）は本当の風の速さで北から南へ流れる。
 'use strict';
 const COL = {
-  sea: '#10202e', dot: '#2f5470', wind: 'rgba(200,225,240,0.32)',
+  sea: '#0f2233', ripple: 'rgba(96,160,205,0.55)', wind: 'rgba(225,238,248,0.38)',
   hull: '#e8f0f4', sail: '#e8f0f4',
   tw: '#c9d6de',      // 本当の風
   aw: '#7fd0ff',      // 見かけの風
@@ -15,8 +15,31 @@ const Draw = {
   streaks: [], dots: [],
   init(cv) {
     this.cv = cv; this.g = cv.getContext('2d');
-    for (let i = 0; i < 70; i++) this.streaks.push({ x: Math.random() * 200, y: Math.random() * 200, l: 0.4 + Math.random() * 0.6 });
-    for (let i = 0; i < 140; i++) this.dots.push({ x: Math.random() * 200, y: Math.random() * 200 });
+    for (let i = 0; i < 36; i++) this.streaks.push({ x: Math.random() * 200, y: Math.random() * 200, l: 0.5 + Math.random() * 0.5 });
+    for (let i = 0; i < 120; i++) this.dots.push({ x: Math.random() * 200, y: Math.random() * 200, r: 0.6 + Math.random() * 0.7 });
+  },
+  // 航跡: 船尾が通った点（水に止まっている）。両はしはケルビンの角（19.5°）で広がる＝ 年齢 × 船速 × tan 19.5°
+  wake: [],
+  wakeAdd(S) {
+    const W = this.wake, last = W[W.length - 1], hr = S.h * Math.PI / 180;
+    const sx = S.x - Math.sin(hr) * 6, sy = S.y + Math.cos(hr) * 6;   // 船尾（船の中心から 6 m 後ろ）
+    if (last && Math.hypot(sx - last.x, sy - last.y) > 60) W.length = 0;   // 最初からやり直した（位置がとんだ）
+    if (S.v > 0.05 && (!last || S.t - last.t >= 0.25)) W.push({ x: sx, y: sy, t: S.t, v: S.v, nx: Math.cos(hr), ny: Math.sin(hr) });
+    while (W.length && S.t - W[0].t > 14) W.shift();
+  },
+  wakeDraw(S) {
+    this.wakeAdd(S);
+    const g = this.g, sc = this.sc, W = this.wake, T = Math.tan(19.5 * Math.PI / 180);
+    if (W.length < 2) return;
+    const P = (p, s) => { const o = (1.6 + (S.t - p.t) * p.v * T) * s; return [this.cx + (p.x + p.nx * o - S.x) * sc, this.cy + (p.y + p.ny * o - S.y) * sc]; };
+    g.lineCap = 'round';
+    for (let i = 1; i < W.length; i++) {
+      const a = Math.max(0, 1 - (S.t - W[i].t) / 14);
+      g.strokeStyle = `rgba(230,242,250,${0.55 * a})`; g.lineWidth = 1 + 1.5 * a;
+      for (const s of [-1, 1]) { const [x0, y0] = P(W[i - 1], s), [x1, y1] = P(W[i], s); g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); }
+      g.strokeStyle = `rgba(230,242,250,${0.18 * a})`; g.lineWidth = 3;   // 船のすぐ後ろの泡の筋
+      const [x0, y0] = P(W[i - 1], 0), [x1, y1] = P(W[i], 0); g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+    }
   },
   resize() {
     const r = this.cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -40,26 +63,35 @@ const Draw = {
     this.sc = Math.min(w, h) / 36;   // 1 m = sc px（船 12.5 m が画面のせまいほうの 1/3 ほど）
     const sc = this.sc;
     g.fillStyle = COL.sea; g.fillRect(0, 0, w, h);
-    // 水の点（世界に止まっている。画面の大きさでくり返す）
-    g.fillStyle = COL.dot;
-    for (const d of this.dots) g.fillRect(this.wrap(d.x * sc * 4 - S.x * sc, w), this.wrap(d.y * sc * 4 - S.y * sc, h), 2, 2);
-    // 風の線（本当の風。世界で南へ流れる）
+    // 船を置く場所（せまい画面でポーラー図を出すときは、左へ寄せて重ならないように）
+    this.cx = this.polar && w < 640 ? w * 0.27 : w / 2; this.cy = h / 2 + h * 0.04;
+    // 水面のさざ波（水に止まっている。船が進むと後ろへ流れる。画面の大きさでくり返す）
+    g.strokeStyle = COL.ripple; g.lineWidth = 1.5; g.lineCap = 'round';
+    for (const d of this.dots) {
+      const X = this.wrap(d.x * sc * 4 - S.x * sc, w), Y = this.wrap(d.y * sc * 4 - S.y * sc, h), r = sc * d.r;
+      g.beginPath(); g.arc(X, Y + r, r, Math.PI * 1.2, Math.PI * 1.8); g.stroke();
+    }
+    this.wakeDraw(S);
+    // 風（空気の流れ。北から南へ、本当の風の速さで流れる）: 細い点線＋小さな矢じり
     const tws = S.twsKn * KN;
-    g.strokeStyle = COL.wind; g.lineWidth = 1.2;
+    g.strokeStyle = COL.wind; g.fillStyle = COL.wind; g.lineWidth = 1;
+    g.setLineDash([3, 4]);
     for (const s of this.streaks) {
       s.y += tws * dt;
-      const X = this.wrap(s.x * sc * 4 - S.x * sc, w), Y = this.wrap(s.y * sc - S.y * sc, h), L = (8 + tws * 3) * s.l;
+      const X = this.wrap(s.x * sc * 4 - S.x * sc, w), Y = this.wrap(s.y * sc - S.y * sc, h), L = (14 + tws * 3) * s.l;
       g.beginPath(); g.moveTo(X, Y - L); g.lineTo(X, Y); g.stroke();
+    }
+    g.setLineDash([]);
+    for (const s of this.streaks) {
+      const X = this.wrap(s.x * sc * 4 - S.x * sc, w), Y = this.wrap(s.y * sc - S.y * sc, h);
+      g.beginPath(); g.moveTo(X, Y + 4); g.lineTo(X - 3, Y - 2); g.lineTo(X + 3, Y - 2); g.closePath(); g.fill();
     }
     this.boat(S, twa);
     if (this.polar) this.polarInset(S, twa);
   },
   // 船と矢印。ベクトルは画面の向き（y は下が +）
   boat(S, twa) {
-    let cx = this.w / 2;
-    const g = this.g, sc = this.sc, cy = this.h / 2 + this.h * 0.04, f = S.f || {};
-    // せまい画面でポーラー図を出すときは、船を左へ寄せて重ならないように
-    if (this.polar && this.w < 640) cx = this.w * 0.27;
+    const g = this.g, sc = this.sc, cx = this.cx, cy = this.cy, f = S.f || {};
     const hr = S.h * Math.PI / 180, side = twa >= 0 ? 1 : -1;     // side = +1: 風が左舷から
     const F = { x: Math.sin(hr), y: -Math.cos(hr) };              // 船首の向き
     const Rt = { x: -F.y, y: F.x };                               // 右舷の向き

@@ -5,7 +5,7 @@ const fmt = (x, d = 1) => (Math.round(x * 10 ** d) / 10 ** d).toFixed(d);
 
 // つぎへ: 1歩に新しいもの1つ（その歩で増えた矢印は太く）
 const TOUR = [
-  { text: '真後ろからの風（秒速 3 m）。帆は風に押されて（抗力・赤）進みます。速くなるほど船の上で感じる風（見かけの風・水色）が弱まり、風の半分ほどで落ちつきます。',
+  { text: '真後ろからの風（白い点線）。帆は押されて（抗力・赤）進み、青い水面の波が後ろへ流れて航跡がのびます。速くなるほど船の上で感じる風（見かけの風・水色）が弱まり、風の半分ほどで落ちつきます。',
     set: { h: 180, twsKn: 6, mode: 'orc', v: 0 }, layers: ['tw', 'aw', 'drag'], add: 'aw' },
   { text: '真横からの風。帆は翼になり、見かけの風と直角の力（揚力・黄）が出ます。真後ろの約2倍の速さで、風よりも少し速くなります。',
     set: { h: 90, twsKn: 6, mode: 'orc', v: 0 }, layers: ['tw', 'aw', 'drag', 'lift'], add: 'lift' },
@@ -67,7 +67,8 @@ const UI = {
     for (const b of document.querySelectorAll('[data-mul]')) b.classList.toggle('on', +b.dataset.mul === S.mul);
     $('pause').textContent = S.paused ? '動かす' : '止める';
     $('polarBtn').classList.toggle('on', Draw.polar);
-    $('legend').innerHTML = Object.keys(LEGEND).filter(k => Draw.layers[k])
+    // 1行目: 画面の背景（水・風・航跡）、2行目: 矢印
+    $('legend').innerHTML = '<div class="scene"><span><i class="rip"></i>水面（止まっている）</span><span><i class="wnd"></i>風（空気）</span><span><i class="wak"></i>航跡</span></div>' + Object.keys(LEGEND).filter(k => Draw.layers[k])
       .map(k => `<span${k === this.added ? ' class="new"' : ''}><i style="background:${LEGEND[k][1]}"></i>${LEGEND[k][0]}</span>`).join('') + '<span class="mark">※ 矢印は目印</span>';
   },
   // 毎コマ: 速さの表示
