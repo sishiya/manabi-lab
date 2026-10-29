@@ -84,6 +84,8 @@ const Draw = {
   vec(dx, dy) { return [(dx * this.cr - dy * this.sr) * this.sc, (dx * this.sr + dy * this.cr) * this.ct * this.sc]; },
   frame(S, twa, dt) {
     const g = this.g, w = this.w, h = this.h;
+    this.trackAdd(S);
+    if (this.overview) return this.frameTop(S, twa, dt);   // 上から見わたす図（top.js）
     this.ct = Math.cos(this.TILT * Math.PI / 180); this.st = Math.sin(this.TILT * Math.PI / 180);
     const target = this.camMode === 'wind' ? 0 : 90 - this.HEAD - S.h;   // 'side': 船首（方位 h）が画面で −HEAD°（右・少し奥）を向く回し方
     if (this.cam == null) this.cam = target;
@@ -105,23 +107,27 @@ const Draw = {
       g.beginPath(); g.ellipse(X, Y + r * ct, r, r * ct, 0, Math.PI * 1.2, Math.PI * 1.8); g.stroke();
     }
     this.wakeDraw(S);
-    // 風（空気の流れ。北から南へ、本当の風の速さで流れる）: 細い点線＋小さな矢じり
+    this.windDraw(S, dt, PER, rel, inView);
+    for (const m of this.marks) this.mark(S, m);
+    this.boat(S, twa);
+    if (this.polar) this.polarInset(S, twa);
+  },
+  // 風（空気の流れ。北から南へ、本当の風の速さで流れる）: 細い点線＋小さな矢じり。s.x・s.y は PER を 200 とした単位
+  windDraw(S, dt, PER, rel, inView) {
+    const g = this.g, w = this.w, h = this.h;
     const tws = S.twsKn * KN, wd = this.vec(0, 1), wl = Math.hypot(wd[0], wd[1]) || 1, ux = wd[0] / wl, uy = wd[1] / wl;
     g.strokeStyle = COL.wind; g.fillStyle = COL.wind; g.lineWidth = 1;
     for (const s of this.streaks) {
-      s.y += tws * dt;
+      s.y = this.wrap(s.y + tws * dt * 200 / PER, 200);
       const [X, Y] = this.pr(rel(s.x / 200 * PER, S.x), rel(s.y / 200 * PER, S.y), 0), L = (14 + tws * 3) * s.l;
       if (!inView(X, Y)) continue;
       g.setLineDash([3, 4]); g.beginPath(); g.moveTo(X - ux * L, Y - uy * L); g.lineTo(X, Y); g.stroke(); g.setLineDash([]);
       g.beginPath(); g.moveTo(X + ux * 4, Y + uy * 4); g.lineTo(X - ux * 2 - uy * 3, Y - uy * 2 + ux * 3); g.lineTo(X - ux * 2 + uy * 3, Y - uy * 2 - ux * 3); g.closePath(); g.fill();
     }
-    // 「風」の向き（画面が船について回るので）。ふだんは右上、ポーラー図を出すときは左下（凡例の上）
-    { const L = 20, x0 = this.polar ? 34 : w - 34, y0 = this.polar ? h - 96 : 34; g.strokeStyle = COL.wind; g.lineWidth = 1; g.beginPath(); g.arc(x0, y0, L + 6, 0, Math.PI * 2); g.stroke();
-      this.arrow(x0 - ux * L, y0 - uy * L, ux * L * 2, uy * L * 2, 'rgba(225,238,248,0.9)', 2.5);
-      g.font = '700 12px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(225,238,248,0.9)'; g.fillText('風', x0 - L - 14, y0 + 4); g.textAlign = 'left'; }
-    for (const m of this.marks) this.mark(S, m);
-    this.boat(S, twa);
-    if (this.polar) this.polarInset(S, twa);
+    // 「風」の向き（画面が船について回るので）。ふだんは右上、ポーラー図を出すときは左下（「上から見る」ボタンの上）
+    const L = 20, x0 = this.polar ? 34 : w - 34, y0 = this.polar ? h - 128 : 34; g.strokeStyle = COL.wind; g.lineWidth = 1; g.beginPath(); g.arc(x0, y0, L + 6, 0, Math.PI * 2); g.stroke();
+    this.arrow(x0 - ux * L, y0 - uy * L, ux * L * 2, uy * L * 2, 'rgba(225,238,248,0.9)', 2.5);
+    g.font = '700 12px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(225,238,248,0.9)'; g.fillText('風', x0 - L - 14, y0 + 4); g.textAlign = 'left';
   },
   // ブイ（水に止まった目印）: 旗は風下へなびく。画面の外にあるときは、端にその向きと距離
   mark(S, m) {
@@ -197,6 +203,7 @@ const Draw = {
     const [hx, hy] = P(clew[0] * 0.25, mv + (clew[1] - mv) * 0.25, zb + (zt - zb) * 0.55);   // 「帆」の字を主帆の上に
     g.font = '700 13px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center'; g.fillStyle = '#2b4a63'; g.fillText('帆', hx, hy); g.textAlign = 'left';
 
+    if (this.overview) return;   // 上から見わたす図では船を大きめに描くので、力の矢印は出さない
     // 力の矢印（どれも水平の力。もとは甲板のマストの根もと）
     const a = (f.awa || 0) * Math.PI / 180;
     // 力 1 N = fS m（風 6 ノットまでは 1000 N で 5 m ぶん）。力はほぼ風速の2乗で大きくなるので、

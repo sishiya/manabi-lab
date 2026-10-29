@@ -21,8 +21,8 @@ const TOUR = [
     set: { h: 0, twsKn: 6, mode: 'orc', v: 0 }, layers: BASIC, cam: 'wind', marks: true },
   { text: '斜め前（風に対して 45°）に向けると…向かい風なのに、前へ進みます。帆が翼になって斜め前へ引くからです。スタートのブイから風上へ、どんどん離れていきます。',
     set: { h: 45, twsKn: 6, mode: 'orc', v: 0 }, layers: BASIC, add: 'drive', cam: 'wind', marks: true },
-  { text: '左右にジグザグ（タック）すれば、風の力だけで風上の目印までたどり着けます（×4 で早送り）。',
-    set: { h: 318, twsKn: 6, mode: 'orc', v: 2.5 }, layers: BASIC, auto: { a: 42, every: 28 }, cam: 'wind', marks: 300 },
+  { text: '左右にジグザグ（タック）すれば、風の力だけで風上の目印までたどり着けます。上から見わたすと、道すじがスタートの高さからどんどん上（風上）へ登ります（×4 で早送り）。',
+    set: { h: 318, twsKn: 6, mode: 'orc', v: 2.5 }, layers: BASIC, auto: { a: 42, every: 28 }, cam: 'wind', marks: 300, view: 'top' },
   { text: 'すべての向きの速さ（水色の線）。点線は、風上・風下へいちばん早く着く向きです。風上へは約 45° のジグザグ。風下へは、この帆（主帆とジブ）ではほぼ真後ろです。',
     set: { h: 135, twsKn: 6, mode: 'orc' }, layers: BASIC, polar: true },
   { text: '風を強く（秒速 8 m）。風は 6→16 ノットと約 2.7 倍でも、真横の速さは 7.0→10.6 ノットと 1.5 倍だけ。重い船体は、速くなるほど自分で作る波の抵抗が急に大きくなるためです（帆のせいではありません）。',
@@ -49,6 +49,7 @@ const UI = {
     $('pause').onclick = () => { Sim.S.paused = !Sim.S.paused; this.sync(); };
     $('polarBtn').onclick = () => { Draw.polar = !Draw.polar; this.sync(); };
     $('detailBtn').onclick = () => { Draw.detail = !Draw.detail; this.sync(); };
+    $('viewBtn').onclick = () => { Draw.overview = !Draw.overview; Draw.ov = null; this.sync(); };
     $('dirs').onclick = e => { const b = e.target.closest('button'); if (!b) return; Sim.S.auto = null; Sim.setHeading(+b.dataset.h); };
     this.go(0);
   },
@@ -62,6 +63,7 @@ const UI = {
     this.added = Draw.added = st.add || null;
     Draw.polar = !!st.polar; Draw.detail = false; Draw.cam = null;   // カメラはすぐ新しい向きへ
     Draw.camMode = st.cam || 'side';
+    Draw.overview = st.view === 'top'; Draw.ov = null; Draw.track = [];   // 上から見る図は、その歩で通った道すじから
     // 目印: いまの場所にスタートのブイ、marks が数なら、その m だけ風上（北）にもう1つ
     Draw.marks = st.marks ? [{ x: Sim.S.x, y: Sim.S.y, label: 'スタート' }] : [];
     if (typeof st.marks === 'number') Draw.marks.push({ x: Sim.S.x, y: Sim.S.y - st.marks, label: '風上の目印' });
@@ -80,8 +82,11 @@ const UI = {
     $('pause').textContent = S.paused ? '動かす' : '止める';
     $('polarBtn').classList.toggle('on', Draw.polar);
     $('detailBtn').classList.toggle('on', Draw.detail);
+    $('viewBtn').textContent = Draw.overview ? '船に寄る' : '上から見る';
     // 画面の背景（水・風・航跡）だけ。力の矢印は図の中で矢印の先に名前を書く（draw.js）
-    $('legend').innerHTML = '<div class="scene"><span><i class="rip"></i>水面（止まっている）</span><span><i class="wnd"></i>風（空気）</span><span><i class="wak"></i>航跡</span><span class="mark">※ 力の矢印の長さは目安</span></div>';
+    $('legend').innerHTML = Draw.overview
+      ? '<div class="scene"><span><i class="trk"></i>船が通った道すじ</span><span><i class="grd"></i>水に止まった方眼</span>' + (Draw.marks.length ? '<span><i class="stl"></i>スタートの高さ</span>' : '') + '<span><i class="wnd"></i>風</span><span class="mark">※ 船と目印は見やすく大きめ</span></div>'
+      : '<div class="scene"><span><i class="rip"></i>水面（止まっている）</span><span><i class="wnd"></i>風（空気）</span><span><i class="wak"></i>航跡</span><span class="mark">※ 力の矢印の長さは目安</span></div>';
   },
   // 毎コマ: 速さの表示
   hud() {
