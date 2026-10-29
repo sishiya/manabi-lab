@@ -17,8 +17,12 @@ const TOUR = [
     set: { h: 90, twsKn: 6, mode: 'orc' }, layers: ['aw', 'lift', 'drag'], add: 'lift' },
   { text: '翼の力は船を横にも引きます。水の中のキール（船底のひれ）が押し返すので、船は横へ流されずに前へ進みます。',
     set: { h: 90, twsKn: 6, mode: 'orc' }, layers: ['lift', 'keel'], add: 'keel' },
-  { text: '風上へ。風に対して約 30° より内側では帆が働かないので、左右にジグザグ（タック）して進みます。',
-    set: { h: 318, twsKn: 6, mode: 'orc', v: 2.5 }, layers: BASIC, auto: { a: 42, every: 28 } },
+  { text: 'では、風に向かって進めるでしょうか。まっすぐ風上へ向けると、帆は風にあおられるだけで力が出ず、少しも進めません（スタートのブイの旗がなびく向きが風下）。',
+    set: { h: 0, twsKn: 6, mode: 'orc', v: 0 }, layers: BASIC, cam: 'wind', marks: true },
+  { text: '斜め前（風に対して 45°）に向けると…向かい風なのに、前へ進みます。帆が翼になって斜め前へ引くからです。スタートのブイから風上へ、どんどん離れていきます。',
+    set: { h: 45, twsKn: 6, mode: 'orc', v: 0 }, layers: BASIC, add: 'drive', cam: 'wind', marks: true },
+  { text: '左右にジグザグ（タック）すれば、風の力だけで風上の目印までたどり着けます（×4 で早送り）。',
+    set: { h: 318, twsKn: 6, mode: 'orc', v: 2.5 }, layers: BASIC, auto: { a: 42, every: 28 }, cam: 'wind', marks: 300 },
   { text: 'すべての向きの速さ（水色の線）。点線は、風上・風下へいちばん早く着く向きです。風上へは約 45° のジグザグ。風下へは、この帆（主帆とジブ）ではほぼ真後ろです。',
     set: { h: 135, twsKn: 6, mode: 'orc' }, layers: BASIC, polar: true },
   { text: '風を強く（秒速 8 m）。風は 6→16 ノットと約 2.7 倍でも、真横の速さは 7.0→10.6 ノットと 1.5 倍だけ。重い船体は、速くなるほど自分で作る波の抵抗が急に大きくなるためです（帆のせいではありません）。',
@@ -57,6 +61,10 @@ const UI = {
     Draw.layers = {}; for (const l of st.layers) Draw.layers[l] = true;
     this.added = Draw.added = st.add || null;
     Draw.polar = !!st.polar; Draw.detail = false; Draw.cam = null;   // カメラはすぐ新しい向きへ
+    Draw.camMode = st.cam || 'side';
+    // 目印: いまの場所にスタートのブイ、marks が数なら、その m だけ風上（北）にもう1つ
+    Draw.marks = st.marks ? [{ x: Sim.S.x, y: Sim.S.y, label: 'スタート' }] : [];
+    if (typeof st.marks === 'number') Draw.marks.push({ x: Sim.S.x, y: Sim.S.y - st.marks, label: '風上の目印' });
     $('tourNum').textContent = (i + 1) + ' / ' + TOUR.length;
     $('tourText').textContent = st.text;
     $('next').textContent = i === TOUR.length - 1 ? '最初から' : 'つぎへ';
@@ -94,5 +102,9 @@ const UI = {
     const ar = (f.awa || 0) * Math.PI / 180, side = Math.abs(f.lift * Math.cos(ar) + f.drag * Math.sin(ar));
     $('drift').hidden = !(f.ok < 0.5 && f.fnet > 0 && side > 1.1 * f.keel + 50);
     $('nogo').hidden = !(twa < 30 && vKn < 1.5);
+    const m0 = Draw.marks[0], up = m0 ? m0.y - S.y : 0;   // スタートから風上（北）へ進んだ距離
+    $('upwind').hidden = !m0;
+    const m1 = Draw.marks[1], left = m1 ? Math.hypot(m1.x - S.x, m1.y - S.y) : 0;
+    if (m0) $('upwind').textContent = (up >= 0 ? '向かい風の中を、風上へ ' + Math.round(up) + ' m' : '風下へ ' + Math.round(-up) + ' m 流された') + (m1 ? '（目印まで ' + Math.round(left) + ' m）' : '');
   },
 };

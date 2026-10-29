@@ -75,6 +75,8 @@ const Draw = {
   // カメラ: 船のななめ横から斜め上に見下ろす平行投影。水平面は CAM だけ回し（船首が画面の右から HEAD° 奥へ）、
   // 真上から TILT° 傾ける: 画面 y = 奥行き × cos − 高さ × sin。cam は船の向きにゆっくりついていく
   TILT: 50, HEAD: 25, cam: null,
+  camMode: 'side',   // 'side' = 船のななめ横、'wind' = 風上が奥（風上へ登るのを見せる歩）
+  marks: [],         // 水に止まった目印（ブイ）{ x, y, label }
   pr(dx, dy, z) {   // 船からの水平のずれ（m、東・南）と高さ → 画面
     const X = dx * this.cr - dy * this.sr, Y = dx * this.sr + dy * this.cr;
     return [this.cx + X * this.sc, this.cy + (Y * this.ct - z * this.st) * this.sc];
@@ -83,7 +85,7 @@ const Draw = {
   frame(S, twa, dt) {
     const g = this.g, w = this.w, h = this.h;
     this.ct = Math.cos(this.TILT * Math.PI / 180); this.st = Math.sin(this.TILT * Math.PI / 180);
-    const target = 90 - this.HEAD - S.h;   // 船首（方位 h）が画面で −HEAD°（右・少し奥）を向く回し方
+    const target = this.camMode === 'wind' ? 0 : 90 - this.HEAD - S.h;   // 'side': 船首（方位 h）が画面で −HEAD°（右・少し奥）を向く回し方
     if (this.cam == null) this.cam = target;
     else { const d = ((target - this.cam) % 360 + 540) % 360 - 180; this.cam += d * Math.min(1, dt / 1.2); }
     this.cr = Math.cos(this.cam * Math.PI / 180); this.sr = Math.sin(this.cam * Math.PI / 180);
@@ -117,8 +119,30 @@ const Draw = {
     { const L = 20, x0 = this.polar ? 34 : w - 34, y0 = this.polar ? h - 96 : 34; g.strokeStyle = COL.wind; g.lineWidth = 1; g.beginPath(); g.arc(x0, y0, L + 6, 0, Math.PI * 2); g.stroke();
       this.arrow(x0 - ux * L, y0 - uy * L, ux * L * 2, uy * L * 2, 'rgba(225,238,248,0.9)', 2.5);
       g.font = '700 12px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(225,238,248,0.9)'; g.fillText('風', x0 - L - 14, y0 + 4); g.textAlign = 'left'; }
+    for (const m of this.marks) this.mark(S, m);
     this.boat(S, twa);
     if (this.polar) this.polarInset(S, twa);
+  },
+  // ブイ（水に止まった目印）: 旗は風下へなびく。画面の外にあるときは、端にその向きと距離
+  mark(S, m) {
+    const g = this.g, sc = this.sc, [X, Y] = this.pr(m.x - S.x, m.y - S.y, 0), w = this.w, h = this.h;
+    const dist = Math.hypot(m.x - S.x, m.y - S.y);
+    g.font = '700 12px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center';
+    if (X > 10 && X < w - 10 && Y > 30 && Y < h - 10) {
+      const [tx, ty] = this.pr(m.x - S.x, m.y - S.y, 3), [fx, fy] = this.pr(m.x - S.x, m.y - S.y + 1.6, 2.6), [bx, by] = this.pr(m.x - S.x, m.y - S.y, 2.2);
+      g.fillStyle = '#ff9a3c'; g.beginPath(); g.ellipse(X, Y, 0.8 * sc, 0.8 * sc * this.ct, 0, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = '#e8f0f4'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(X, Y); g.lineTo(tx, ty); g.stroke();
+      g.fillStyle = '#ff9a3c'; g.beginPath(); g.moveTo(tx, ty); g.lineTo(fx, fy); g.lineTo(bx, by); g.closePath(); g.fill();   // 旗（風下へ）
+      g.lineWidth = 4; g.strokeStyle = 'rgba(15,34,51,0.9)'; g.strokeText(m.label, tx, ty - 8); g.fillStyle = '#ffb978'; g.fillText(m.label, tx, ty - 8);
+    } else {
+      if (w < 560) return;   // せまい画面は HUD の文字で（ui.js）。端に出すと HUD か帆に重なる
+      const dx = X - this.cx, dy = Y - this.cy, k = Math.min((w / 2 - 40) / Math.abs(dx || 1e-9), (h / 2 - 40) / Math.abs(dy || 1e-9));
+      const ex = this.cx + dx * Math.min(1, k), ey = Math.max(46, Math.min(h - 46, this.cy + dy * Math.min(1, k))), L = Math.hypot(dx, dy) || 1;
+      this.arrow(ex - dx / L * 16, ey - dy / L * 16, dx / L * 16, dy / L * 16, '#ffb978', 2.5);
+      const t = m.label + ' ' + Math.round(dist) + ' m';
+      g.lineWidth = 4; g.strokeStyle = 'rgba(15,34,51,0.9)'; g.strokeText(t, ex - dx / L * 26, ey - dy / L * 26 + 4); g.fillStyle = '#ffb978'; g.fillText(t, ex - dx / L * 26, ey - dy / L * 26 + 4);
+    }
+    g.textAlign = 'left';
   },
   // 船・帆・キールと力の矢印。船の中の座標（u = 右舷へ、v = 前へ、z = 上へ、m）を画面へ
   boat(S, twa) {
@@ -184,7 +208,7 @@ const Draw = {
     const lf = { x: Math.sin(a) * F.x + Math.cos(a) * lee.x, y: Math.sin(a) * F.y + Math.cos(a) * lee.y };
     const [ox, oy] = P(0, mv, 1);
     const lw = k => (k === this.added ? 5 : 3);   // その歩で増えた矢印は太く
-    const arr = (x, y, d, col, k, text) => { this.arrow(x, y, d[0], d[1], col, lw(k)); this.label(x + d[0], y + d[1], d[0], d[1], text, col, k === this.added); };
+    const arr = (x, y, d, col, k, text) => { if (Math.hypot(d[0], d[1]) < 6) return; this.arrow(x, y, d[0], d[1], col, lw(k)); this.label(x + d[0], y + d[1], d[0], d[1], text, col, k === this.added); };
     if (lay.aw && f.aws) {   // 見かけの風: 帆のまんなかの高さへ吹きこむ（風 1 m/s = 0.9 m ぶん）
       const v = f.aws * 0.9, d = 7, [mx, my] = P(0, mv, (zb + zt) / 2), s0 = V(aw.x * (v + d), aw.y * (v + d));
       arr(mx - s0[0], my - s0[1], V(aw.x * v, aw.y * v), COL.aw, 'aw', '船で感じる風');

@@ -19,6 +19,7 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-bod
 #barB{background:var(--acc)}
 #hud .bar b{font-size:15px;min-width:56px}
 #ratio{font-size:13px;color:var(--muted)}
+#upwind{color:#ffb978;font-weight:700;font-size:14px}
 #ratio.fast{color:#ffd166;font-weight:700}
 #hud b{font-family:var(--f-mono);font-weight:500;color:var(--acc)}
 #hud .big b{font-size:20px}
