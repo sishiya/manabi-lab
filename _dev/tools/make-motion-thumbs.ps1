@@ -6,7 +6,7 @@
 # アプリの時計を止めて 1 コマずつ進めては撮り、ffmpeg で mp4 にする（重いアプリでも動画の中の速さは本物どおり）。
 # 開いたとき止まっているアプリは、thumb.html の MOTION で動きはじめさせる。
 param(
-  [string[]]$Apps = @('god-view','evolution','body-dive','urinary-dive','blood-dive','immune-battle','animal-senses','metamorphosis','ga-creatures','wifi-wave','air-flow','extreme','illusions','muscle-growth','mold-growth','ferrofluid','black-hole','brain-response','passkey','piano-hand','phage','eye-optics','pitch-physics','hair-removal','tiny-earth','house-dust','weed-growth','tree-of-life','metronome-sync','typing-hand','phonograph','railgun','snake-move','sound-feel','big-bang','wave-growth','spider-hunt','crt-pixels','quantum'),
+  [string[]]$Apps = @('god-view','evolution','body-dive','urinary-dive','blood-dive','immune-battle','animal-senses','metamorphosis','ga-creatures','wifi-wave','air-flow','extreme','illusions','muscle-growth','mold-growth','ferrofluid','black-hole','brain-response','passkey','piano-hand','phage','eye-optics','pitch-physics','hair-removal','tiny-earth','house-dust','weed-growth','tree-of-life','metronome-sync','typing-hand','phonograph','railgun','snake-move','sound-feel','big-bang','wave-growth','spider-hunt','crt-pixels','quantum','net-route'),
   [string]$Sheet = '',
   [string]$Probe = '',   # 確かめ用: 撮りはじめと撮り終わりに、この式をアプリの窓（w）で評価して表示（例: 'w.__ph.UI.state.u'）   # 指定すると、確かめ用に4コマを並べた png をこのフォルダに作る
   [double]$Sec = 4,

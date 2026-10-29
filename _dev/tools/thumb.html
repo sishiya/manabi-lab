@@ -97,6 +97,8 @@ const SETUP = {
     w.GV.applyBuildings();
     await gv.run(50, 200);
   },
+  // ページを開いて、データの包みが海底ケーブルを進んでいるところで止める
+  'net-route': async w => { await wait(800); w.document.getElementById('open').click(); const S = w.__nero.SIM; while (S.T < 380) w.advance(S.T + 1); S.paused = true; await wait(400); },
 };
 
 // 動くサムネイル（make-motion-thumbs.ps1 が ?motion=1 で開く）: SETUP のあと、ここで動きはじめさせてから撮る。

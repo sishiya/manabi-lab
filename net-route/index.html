@@ -1,0 +1,78 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>インターネットの経路</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23101c2c'/><circle cx='14' cy='32' r='6' fill='%236fd3ff'/><circle cx='50' cy='32' r='6' fill='%236fd3ff'/><path d='M14 32 Q32 12 50 32' stroke='%236fd3ff' stroke-width='3' fill='none'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <header id="top"><h1>インターネットの経路</h1><p class="sub">ページを1枚開くあいだの、データの旅を遅くして見る</p></header>
+  <main id="stage">
+    <canvas id="cv"></canvas>
+    <div id="info" hidden></div>
+    <div id="cap"><div class="txt"><b id="capT"></b><span id="capB"></span></div><button id="open" class="main">ページを開く</button></div>
+  </main>
+  <section id="panel">
+    <div class="row">
+      <button id="pause">一時停止</button>
+    </div>
+    <div class="row seg" role="group" aria-label="サーバー">
+      <span class="lbl">サーバー</span>
+      <button data-srv="dc" class="on">遠く（アメリカ西海岸）</button>
+      <button data-srv="cdn">近く（東京）</button>
+    </div>
+    <label class="row slow"><span class="lbl">時間</span><input id="slow" type="range" min="0" max="100" value="40"><span id="slowT" class="mono"></span></label>
+    <p class="hint">さわれるところ: <b>線</b>をタップ＝ケーブルを切る・つなぐ／<b>中継の点</b>＝混ませる／<b>動く四角</b>＝中身を見る。</p>
+    <div id="result">
+      <div id="bar"></div>
+      <ul id="nums"></ul>
+    </div>
+    <ul class="legend">
+      <li><i style="background:#ffd36a"></i>名前の問い合わせ（DNS）</li>
+      <li><i style="background:#f4f4f4"></i>あいさつ（TCP）</li>
+      <li><i style="background:#c59bff"></i>暗号（TLS）・ページをください</li>
+      <li><i style="background:#6fd3ff"></i>ページの中身</li>
+      <li><i style="background:#7fe0a0"></i>受けとったよ（ACK）</li>
+      <li><i class="re"></i>送り直したもの</li>
+      <li><i class="ln sea"></i>海底ケーブル　<i class="ln air"></i>WiFi（電波）</li>
+      <li>図の線の長さは本物と合っていません（線の数字が長さ）。四角が重ならないよう少しずらして描いています（※ 目印）。</li>
+    </ul>
+  </section>
+  <details id="about">
+    <summary>このアプリについて</summary>
+    <p>学習用に簡単にした<b>計算のモデル</b>です。ブラウザからは本物の経路を測れない（traceroute が打てない）ので、あなたの回線を測っているわけではありません。</p>
+    <h3>計算していること</h3>
+    <ul>
+      <li>光ファイバーの中の光の速さ＝真空の光の速さ ÷ 屈折率 1.4675（光の包みが進む速さを決める値・1310nm）＝ 約20万km/秒（1km で約4.9マイクロ秒）。WiFi は空気中なので真空とほぼ同じ。</li>
+      <li>線の長さ: 陸揚げ局などの緯度経度からいちばん短い道（大円距離）を出し、本物のケーブルは曲がっているので海は 1.1 倍・陸は 1.3 倍にした（推定）。家からプロバイダ・まちの中の長さは仮定。</li>
+      <li>中継ごとに、送り出す時間（大きさ ÷ 回線の速さ）と処理の時間（0.02ミリ秒・推定）。WiFi は順番待ち（平均2ミリ秒・推定）。混ませた中継は平均30ミリ秒待ち、8%が捨てられる（推定・演出に近い）。</li>
+      <li>流れ: 名前引き（DNS。プロバイダが答えを覚えている前提。返事が1秒来なければ聞き直す＝推定）→ TCP のあいさつ → TLS 1.3 のかぎ → ページをください → ページ（60KB を 1460 バイトずつ・42個）。</li>
+      <li>送る数は最初10個、「受けとったよ」が1つ返るたびに1つ増やす（スロースタート）。返事が来ないと待って送り直し、送る数を1にもどす。待ち時間は最初1秒、往復を測ったら往復の3倍（下限0.2秒）で、時間切れのたびに2倍にのばす。</li>
+    </ul>
+    <h3>簡単にしたところ</h3>
+    <ul>
+      <li>道と陸揚げ局は<b>例</b>です（本物のケーブルの地図を写したものではありません）。</li>
+      <li>本物の道は、会社どうしの約束（BGP）で決まり、いちばん早い道とは限りません。ここでは各中継が「いまいちばん早い道」を選び、ケーブルが切れるとすぐ組み直します。本物は組み直しに数十秒〜数分かかることもあります。</li>
+      <li>「受けとったよ」は1つずつ返し、送り直しは時間切れのときだけにしました（本物はもっと工夫があります）。待ち時間の下限は、RFC の1秒ではなく Linux と同じ0.2秒にしました。</li>
+      <li>ページは HTML 1つ（60KB の例）だけ。本物のページは画像やスクリプトなど何十ものファイルを読みます。サーバーがページを作る時間・暗号の計算・光回線の上りの順番待ちなどは入れていないので、本物はもっとかかります。</li>
+      <li>最近は、あいさつと暗号を1往復にまとめる HTTP/3（QUIC）や、2回目からの近道（つなぎっぱなし・TLS の再開）があり、いつも4〜5往復かかるわけではありません。ここは基本の形だけです。</li>
+    </ul>
+    <h3>おもな出どころ</h3>
+    <ul>
+      <li>光ファイバーの屈折率 1.4675（長い距離用のシングルモード光ファイバー・1310nm）: Chaudhry, Yanikomeroglu (2020) <a href="https://arxiv.org/abs/2010.03098" target="_blank" rel="noopener">Free Space Optics for Next-Generation Satellite Networks</a>（arXiv）。海底ケーブルでよく使う 1550nm でもほぼ同じ（ちがいは 0.1% より小さい）。</li>
+      <li>TCP: <a href="https://www.rfc-editor.org/rfc/rfc9293" target="_blank" rel="noopener">RFC 9293</a>（あいさつ）、<a href="https://www.rfc-editor.org/rfc/rfc6928" target="_blank" rel="noopener">RFC 6928</a>（最初に送る数 10）、<a href="https://www.rfc-editor.org/rfc/rfc5681" target="_blank" rel="noopener">RFC 5681</a>（スロースタート）、<a href="https://www.rfc-editor.org/rfc/rfc6298" target="_blank" rel="noopener">RFC 6298</a>（送り直しの待ち時間）</li>
+      <li>TLS 1.3: <a href="https://www.rfc-editor.org/rfc/rfc8446" target="_blank" rel="noopener">RFC 8446</a>。DNS: <a href="https://www.rfc-editor.org/rfc/rfc1034" target="_blank" rel="noopener">RFC 1034</a>・<a href="https://www.rfc-editor.org/rfc/rfc1035" target="_blank" rel="noopener">RFC 1035</a></li>
+      <li>道の組み直しに時間がかかること: Labovitz, Ahuja, Bose, Jahanian (2000) Delayed Internet Routing Convergence（ACM SIGCOMM）</li>
+    </ul>
+    <h3>使っているもの</h3>
+    <p>フォント: Google Fonts（SIL Open Font License）</p>
+  </details>
+</div>
+
+<script src="js/net.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>

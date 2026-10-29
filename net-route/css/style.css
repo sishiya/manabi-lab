@@ -1,0 +1,55 @@
+/* インターネットの経路 */
+:root{--bg:#101c2c;--panel:#16263a;--ink:#e8f0f4;--muted:#a3b4bf;--acc:#6fd3ff;--line:#2c4256;
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+#app{display:grid;grid-template-columns:1fr;min-height:100vh}
+#top{padding:10px 16px 4px}
+#top h1{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0}
+#top .sub{margin:2px 0 0;color:var(--muted);font-size:13px}
+/* 図は上に固定（スマホでも操作しながら見える。RULES 9章） */
+#stage{position:sticky;top:0;z-index:2;height:56vh;min-height:300px;background:var(--bg);border-bottom:1px solid var(--line)}
+#cv{position:absolute;inset:0 0 64px 0;width:100%;height:calc(100% - 64px);display:block;touch-action:manipulation;cursor:pointer}
+#cap{position:absolute;left:0;right:0;bottom:0;height:64px;padding:5px 10px 5px 12px;font-size:13px;line-height:1.4;display:flex;gap:8px;align-items:center;border-top:1px solid var(--line)}
+#cap .txt{flex:1;min-width:0;max-height:56px;overflow:hidden;font-size:12.5px}
+#cap .main{flex:none;white-space:nowrap}
+#cap b{display:block;color:var(--acc);font-weight:700}
+#cap span{color:var(--muted)}
+#info{position:absolute;left:8px;right:8px;bottom:70px;max-width:420px;background:rgba(10,20,32,.94);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.6}
+#info .x{float:right;background:none;border:0;color:var(--muted);font-size:16px;min-height:auto;padding:0 4px}
+#info button.act{margin-top:6px}
+#panel{padding:10px 16px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 10px}
+.lbl{color:var(--muted);font-size:13px;min-width:4.5em}
+button{font:inherit;font-size:14px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;min-height:38px;padding:6px 12px;cursor:pointer}
+button.main{background:var(--acc);color:#06202e;border-color:var(--acc);font-weight:700}
+.seg button.on{border-color:var(--acc);color:var(--acc)}
+.slow input{flex:1;min-width:120px}
+.mono{font-family:var(--f-mono);font-size:13px}
+.hint{font-size:13px;color:var(--muted);line-height:1.7;margin:4px 0 12px}
+.hint b{color:var(--ink)}
+#result{background:var(--panel);border-radius:10px;padding:10px 12px;margin-bottom:12px}
+#bar{display:flex;height:22px;border-radius:5px;overflow:hidden;background:#0c1724;margin-bottom:8px}
+#bar div{height:100%;font-size:11px;line-height:22px;padding-left:4px;color:#06202e;white-space:nowrap;overflow:hidden;min-width:2px}
+#nums{list-style:none;margin:0;padding:0;font-size:13px;line-height:1.8}
+#nums b{font-family:var(--f-mono);font-weight:500;color:var(--ink)}
+#nums li{color:var(--muted)}
+.legend{list-style:none;padding:0;margin:0 0 8px;font-size:12px;color:var(--muted);line-height:1.9}
+.legend i{display:inline-block;width:10px;height:10px;margin-right:6px;vertical-align:-1px}
+.legend i.re{outline:1.5px solid #ffa94d;outline-offset:1px;background:transparent}
+.legend i.ln{height:0;width:22px;border-top:2.5px solid #4f8fc0;vertical-align:3px}
+.legend i.ln.air{border-top:2px dotted #6fd3ff}
+#about{padding:8px 16px 32px;color:var(--muted);font-size:14px;line-height:1.8}
+#about summary{cursor:pointer;color:var(--ink);min-height:36px;line-height:36px}
+#about h3{color:var(--ink);font-size:14px;margin:14px 0 4px}
+#about ul{padding-left:1.2em;margin:0}
+#about a{color:var(--acc)}
+/* 広い画面: 図を左、操作を右 */
+@media (min-width:900px){
+  #app{grid-template-columns:minmax(0,1fr) 360px;grid-template-rows:auto calc(100vh - 64px) auto}
+  #top{grid-column:1/3}
+  #stage{grid-column:1;grid-row:2;height:auto;min-height:420px;position:relative;border-bottom:0;border-right:1px solid var(--line)}
+  #panel{grid-column:2;grid-row:2;overflow:auto}
+  #about{grid-column:1/3}
+}
