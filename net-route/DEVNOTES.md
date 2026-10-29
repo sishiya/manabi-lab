@@ -6,7 +6,7 @@
 - 読む順: PLAN.md → このファイルの「ファイル構成」→ 関係するファイルだけ。
 - 動かし方: サーバー apps（.claude/launch.json。使用中なら apps-2〜）で http://localhost:8765/net-route/ 。デバッグ用の窓口 `window.__nero`（`simRun(秒)`・`runPage('dc'|'cdn')` で1回ぶんを一気に計算して内訳を返す）、エラーは `window.__neroErr`。
 - 区切りごとの手順: 「確認のしかた」と smoke.ps1 → 「状態」に1行 → launcher.html の表 → 公開前チェック → commit（節目の版だけ versions/ へコピーしてカードに。RULES 3章）。
-- ユーザーの好み: （まだ反応なし）
+- ユーザーの好み: 「実際の地球儀でも見てみたい」「まなびラボならではの遊び」→ 選んだのは サーバーをどこにでも置く・衛星と伝書鳩・本当にあった切断（自分でケーブルを敷くは選ばなかった）。
 
 ## ファイル構成
 | ファイル | 中身 | 主な関数・変数 |
@@ -17,17 +17,21 @@
 | js/sim.js | パケットの出来事の列、DNS→TCP→TLS→GET→データ（cwnd）、送り直し | `SIM` `openPage` `advance(T)` `deliver` `pump` `onCut` `breakdown` `PHASES` |
 | js/draw.js | Canvas の図・パケットの位置・タップの当たり判定 | `VIEW` `layout` `P` `packetXY` `drawScene` `hitTest` |
 | js/globe.js | 地球儀（正射図法）・海岸線の読みこみ・大円・当たり判定・寄る／回す | `GLOBE` `HOME_POS` `proj` `slerpLL` `drawGlobe` `hitTestGlobe` `flyTo` `GLOBE_VIEWS` `zoomBy` `panBy` |
+| js/play.js | 遊び: サーバーを置く（逆の正射図法）・月と火星・家からの道（衛星・鳩）・本当にあった切断・時間の速さを自動で | `PLAY` `nodeShown` `linkShown` `setServer` `setMars` `setAccess` `EVENTS` `startEvent` `endEvent` `unproject` `placeServer` `autoSpeed` |
 | js/ui.js | ボタン・時間の遅さ・見かたの切りかえ・タップ／ドラッグ／ピンチ・説明・内訳 | `updateUI` `showInfo` `linkInfo` `packetInfo` |
 | data/coast.json | 海岸線（Natural Earth。0.001度の差分の列） | `tools/build-coast.mjs <50m.geojson> <10m.geojson>` で作る（geojson は nvkelso/natural-earth-vector の geojson/） |
 | js/main.js | ループ・デバッグの窓口 | `window.__nero` |
 
-読み込み順: net → sim → draw → globe → ui → main（グローバル関数で呼び合う）。
+読み込み順: net → sim → draw → globe → play → ui → main（グローバル関数で呼び合う）。
 
 ## しくみ
 - 時刻は `SIM.T`（ミリ秒）。画面の1秒で `SIM.msPerSec` ミリ秒進む（スライダー、1ミリ秒を 0.005〜0.5 秒）。
 - パケットは `node`（中継で待つ）→ `forward` で次の線へ（送り出しは線の向きごとに `busy` で順番、時間＝ビット数÷帯域）→ `fly` → `arrive`（処理・混雑の待ちと捨て）をくり返す。各中継がその時点の `shortest`（光の時間＋処理で最短）で次を選ぶので、切ると次の中継から道がかわる。
 - スマホ側は `SIM.wait`（待っている返事と期限）、サーバー側は `SIM.srv`（cwnd・ssthresh・未確認の番号と送った時刻）。時間切れで送り直す。
 - 図はスマホ縦（幅 560 未満か縦長）で縦向きに入れかえる（`P(u, v)`）。
+- 遊びの点（net.js の `opt: true`）はふだん描かない（`nodeShown`: サーバー・道の上・`PLAY.show`）。線は `off`（家からの道で切りかえ）・`via`（経由点。ルソン海峡）・`pref`（予備の道を後回しにする ms）・`loss`（鳩）・`ms`（鳩の片道は測った時間）・`alt`（衛星の高さ）・`space`（月・火星は画面のすみ）。
+- あきらめる決まり（sim.js）: SYN は6回送り直して約127秒（Linux）、名前引きは5秒×2回（glibc）→ `fail()`・`SIM.failWhy`。ping は `sendPing()`、往復は `SIM.pings`。
+- 時間のつまみは対数で、画面の1秒＝本当の 2ミリ秒〜500秒。片道が300ミリ秒をこえる道では `autoSpeed()` が片道を画面の約4秒にする。
 - 地球儀（`VIEW.mode === 'globe'`）: 同じ SIM を `drawGlobe` で描く。点の位置は net.js の lat/lon、家・プロバイダは `HOME_POS`（表示だけの仮の位置。長さは net.js の仮定の km のまま）。線・パケットは大円を slerp。寄りぐあい `GLOBE.zoom` が 30 未満では、IX に重なる点（`NEAR_IX`）を描かず、タップで東京へ寄る。
 
 ## 批判役（2026-10-29、段階A）と決めたこと
@@ -50,8 +54,10 @@
 5. 動く四角をタップ → 中身と通った中継の数が動きながら変わる。
 6. 幅 375px: 図が縦向き、横にはみ出さない（scrollWidth 375）、ボタンが押せる。
 7. 「地球儀」→ 太平洋に日本とアメリカ西海岸、ページを開くと包みが大円にそって飛ぶ。東京の点をタップ → 東京へ寄って ルーター・プロバイダ・IX・東京DC が分かれる。なぞって回す（そのあと説明が出ない）、＋−・ホイールで寄る。375px でも文字が重ならない。
+8. 遊び（コンソールで一気に）: 月 → 約12.9秒でそろう、火星（近い）→ 127秒で fail、静止衛星 → 約3.5秒、低い軌道 → 約0.57秒、伝書鳩 → 10秒で fail（ping は返ることがある）、台湾沖の地震 → 道が 釜山まわりにかわり約1.2秒（混雑は乱数。もとは約0.2秒）、トンガ → fail、元にもどす → サーバーが西海岸に戻り、手で切った線は切れたまま。地球儀の「置く」→ 大西洋をタップ → 置いた場所のボタンが出て、ページが開ける。
 
 ## 状態
 - 2026-10-29 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
 - 2026-10-29 段階A の試作: 11点・12本のグラフ、光の速さと大円距離から遅れ、DNS・TCP・TLS 1.3・スロースタート・送り直し、切る・混ませる・中身を見る。東京→米西海岸 往復約104ms・ページ約0.5秒、東京DC 約0.04秒。
 - 2026-10-29 地球儀で見る: 図と切りかえ。正射図法・大円・Natural Earth の海岸線（50m＋陸揚げ局まわり 10m）、回す・寄る・重なった点のタップで東京へ。
+- 2026-10-29 遊びを3つ: サーバーをどこにでも置く（月・火星も、TCP があきらめる・ping）、家からの道（静止衛星・低い軌道の衛星・伝書鳩）、本当にあった切断（2006 台湾沖・2022 トンガ）。

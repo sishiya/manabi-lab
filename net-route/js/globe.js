@@ -40,21 +40,44 @@ function slerpLL(a, b, t) {               // 大円にそって a→b の t の�
   const v = [A[0] * ka + B[0] * kb, A[1] * ka + B[1] * kb, A[2] * ka + B[2] * kb];
   return [Math.atan2(v[2], Math.hypot(v[0], v[1])) / RAD, Math.atan2(v[1], v[0]) / RAD];
 }
-function GNP(n) {                          // 点の画面位置（スマホはルーターのとなりに少しずらす）
+// 点の画面位置 [x, y, 見えるなら正, 画面に入らず寄せたなら true]
+function GNP(n) {
+  const { w, h } = VIEW;
+  if (n.space) return [w - 70, 92, 1];                      // 月・火星は画面のすみ（縮尺はちがう）
   const [la, lo] = nodeLL(n), p = proj(la, lo);
-  if (n.id === 'phone') p[0] -= 14;
+  if (n.alt) {                                                // 衛星は本当の高さに（地球の半径の何倍か）
+    const k = 1 + n.alt / R_EARTH, dx = (p[0] - PJ.cx) * k, dy = (p[1] - PJ.cy) * k;
+    const vis = p[2] > 0 || dx * dx + dy * dy > PJ.R * PJ.R ? 1 : -1;
+    let x = PJ.cx + dx, y = PJ.cy + dy, far = false;
+    const lim = (v, a, b) => v < a || v > b;
+    if (lim(x, 30, w - 30) || lim(y, 70, h - 30)) {          // 画面の外 → ふちに寄せる
+      let t = 1;
+      if (dx) t = Math.min(t, ((dx > 0 ? w - 30 : 30) - PJ.cx) / dx);
+      if (dy) t = Math.min(t, ((dy > 0 ? h - 30 : 70) - PJ.cy) / dy);
+      x = PJ.cx + dx * t; y = PJ.cy + dy * t; far = true;
+    }
+    return [x, y, vis, far];
+  }
+  if (n.id === 'phone') p[0] -= 14;                           // スマホはルーターのとなりに少しずらす
   return p;
 }
-function arcPts(l, N = 40) {               // 線を大円で描くための点（画面）
-  const a = nodeLL(NODE[l.a]), b = nodeLL(NODE[l.b]), out = [];
-  for (let i = 0; i <= N; i++) { const [la, lo] = slerpLL(a, b, i / N); out.push(proj(la, lo)); }
-  if (l.a === 'phone') out[0] = GNP(NODE.phone);
-  return out;
+const lerp3 = (s, e, f) => [s[0] + (e[0] - s[0]) * f, s[1] + (e[1] - s[1]) * f, Math.min(s[2], e[2])];
+// 線の上の位置（from から f）。大円、経由点（via）があれば2本の大円、衛星・宇宙・スマホはまっすぐ
+function linkPt(l, fromId, f) {
+  const A = NODE[l.a], B = NODE[l.b], t = fromId === l.a ? f : 1 - f;
+  if (A.alt || B.alt || A.space || B.space || l.a === 'phone' || l.b === 'phone') return lerp3(GNP(A), GNP(B), t);
+  const a = nodeLL(A), b = nodeLL(B);
+  if (l.via) {
+    const v = l.via, d1 = greatCircleKm({ lat: a[0], lon: a[1] }, { lat: v[0], lon: v[1] }), d2 = greatCircleKm({ lat: v[0], lon: v[1] }, { lat: b[0], lon: b[1] });
+    const s = t * (d1 + d2), [la, lo] = s < d1 ? slerpLL(a, v, s / d1) : slerpLL(v, b, (s - d1) / d2);
+    return proj(la, lo);
+  }
+  const [la, lo] = slerpLL(a, b, t); return proj(la, lo);
 }
+function arcPts(l, N = 40) { const out = []; for (let i = 0; i <= N; i++) out.push(linkPt(l, l.a, i / N)); return out; }
 function onArc(fromId, toId, f) {
-  const a = nodeLL(NODE[fromId]), b = nodeLL(NODE[toId]), [la, lo] = slerpLL(a, b, f), p = proj(la, lo);
-  if (fromId === 'phone' || toId === 'phone') { const s = GNP(NODE[fromId]), e = GNP(NODE[toId]); return [s[0] + (e[0] - s[0]) * f, s[1] + (e[1] - s[1]) * f, Math.min(s[2], e[2])]; }
-  return p;
+  const l = linkBetween(fromId, toId) || LINKS.find(x => (x.a === fromId && x.b === toId) || (x.a === toId && x.b === fromId));
+  return l ? linkPt(l, fromId, f) : GNP(NODE[fromId] || NODE.phone);
 }
 function packetGXY(p) {
   if (p.state === 'fly') {
@@ -106,9 +129,10 @@ function drawGlobe(g) {
   // 線（ケーブル）
   g.textBaseline = 'middle'; g.font = '10px "IBM Plex Mono", monospace';
   for (const l of LINKS) {
+    if (!linkShown(l)) continue;
     const pts = arcPts(l);
     g.setLineDash(l.cut ? [4, 5] : l.medium === 'air' ? [2, 3] : []);
-    g.strokeStyle = l.cut ? COL.cut : l.sea ? COL.sea : l.medium === 'air' ? COL.air : '#8aa3b5';
+    g.strokeStyle = l.cut ? COL.cut : l.medium === 'bird' ? COL.bird : l.sea ? COL.sea : l.medium === 'air' ? COL.air : '#8aa3b5';
     g.lineWidth = l.sea ? 2.5 : 1.6; strokePts(g, pts); g.setLineDash([]);
     const m = pts[pts.length >> 1], s = pts[0], e = pts[pts.length - 1];
     if (m[2] <= 0) continue;
@@ -116,7 +140,8 @@ function drawGlobe(g) {
     else if (Math.hypot(e[0] - s[0], e[1] - s[1]) > 70) { g.fillStyle = COL.muted; g.textAlign = 'center'; g.fillText(fmtKm(l.km), m[0], m[1] + (l.i % 2 ? 10 : -9)); }
   }
   // 点（近くて重なる名前は、だいじな順に1つだけ）
-  const order = [SIM.server, 'ix', 'chikura', 'shima', 'bandon', 'la', 'hawaii', 'dc', 'cdn', 'isp', 'router', 'phone'];
+  const order = [SIM.server, 'ix', 'chikura', 'shima', 'bandon', 'la', 'hawaii', 'dc', 'cdn', 'isp', 'router', 'phone', ...NODES.map(n => n.id)]
+    .filter((v, i, a) => a.indexOf(v) === i && NODE[v] && nodeShown(NODE[v]));
   const placed = [];
   g.font = '12px "Zen Kaku Gothic New", sans-serif';
   for (const id of order.filter((v, i, a) => a.indexOf(v) === i).reverse()) {
@@ -130,11 +155,13 @@ function drawGlobe(g) {
   }
   g.textAlign = 'left';
   for (const id of order) {
-    const n = NODE[id], [x, y, z] = GNP(n);
+    const n = NODE[id], [x, y, z, far] = GNP(n);
     if (z <= 0 || (GLOBE.zoom < 30 && NEAR_IX.includes(id) && id !== SIM.server) || placed.some(([px, py]) => Math.abs(px - x) < 50 && Math.abs(py - y) < 15)) continue;
     placed.push([x, y]);
     g.fillStyle = n.kind === 'server' && id !== SIM.server ? COL.muted : COL.ink;
-    g.fillText(n.short + (NET.jam[id] ? '（混雑）' : ''), x + 11, y);
+    if (n.space) { g.textAlign = 'right'; g.fillText(spaceText(n), x + 40, y + 20); g.textAlign = 'left'; continue; }
+    const t = n.short + (NET.jam[id] ? '（混雑）' : '') + (far ? '（本当はもっと遠く）' : '');
+    if (x + 11 + g.measureText(t).width > VIEW.w - 4) { g.textAlign = 'right'; g.fillText(t, x - 11, y); g.textAlign = 'left'; } else g.fillText(t, x + 11, y);
   }
   // 選んだパケットの通った道
   const sp = VIEW.sel && VIEW.sel.type === 'packet' ? VIEW.sel.p : null;
@@ -158,13 +185,14 @@ function drawGlobe(g) {
     g.globalAlpha = Math.max(0, 1 - gh.age / 1.5); g.fillStyle = COL.cut; g.fillText('✕', x, y - 14 - gh.age * 10); g.globalAlpha = 1;
   }
   // 時計と、どのくらい寄っているか（線と重なっても読めるよう下じきを敷く）
-  g.fillStyle = 'rgba(16,28,44,0.8)'; g.fillRect(0, 0, Math.min(w - 120, 330), 42); if (GLOBE.zoom < 30) g.fillRect(0, 42, Math.min(w, 330), 18);
+  g.fillStyle = 'rgba(16,28,44,0.8)'; g.fillRect(0, 0, Math.min(w - 120, 330), 42); if (GLOBE.zoom < 30 && (() => { const q = GNP(NODE.ix); return q[2] > 0 && q[0] > 0 && q[0] < w && q[1] > 0 && q[1] < h; })()) g.fillRect(0, 42, Math.min(w, 330), 18);
   g.textAlign = 'left'; g.textBaseline = 'top'; g.fillStyle = COL.ink; g.font = '500 15px "IBM Plex Mono", monospace';
-  g.fillText('いま ' + SIM.T.toFixed(1) + ' ミリ秒', 10, 8);
+  g.fillText('いま ' + dur(SIM.T), 10, 8);
   g.font = '11px "Zen Kaku Gothic New", sans-serif'; g.fillStyle = COL.muted;
   const wide = w / 2 < R ? '横はば 約' + fmtKm(2 * 6371 * Math.asin(w / 2 / R)) : '地球まるごと';   // 画面の横はばが何 km か（だいたい）
   g.fillText(wide, 10, 28);
-  if (GLOBE.zoom < 30) g.fillText('家のあたりは IX（東京）に重なっています。タップで寄る', 10, 44);
+  const ixp = GNP(NODE.ix), ixIn = ixp[2] > 0 && ixp[0] > 0 && ixp[0] < w && ixp[1] > 0 && ixp[1] < h;
+  if (GLOBE.zoom < 30 && ixIn) g.fillText('家のあたりは IX（東京）に重なっています。タップで寄る', 10, 44);
   // 出どころと、線の意味（画面のすみに）
   g.textBaseline = 'bottom'; g.fillStyle = 'rgba(163,180,191,0.8)'; g.font = '10px "Zen Kaku Gothic New", sans-serif';
   g.fillText('海岸線: Natural Earth（PD）／線は大円で、本物のケーブルの道ではない／家の位置は仮', 8, h - 6, w - 16);
@@ -175,11 +203,12 @@ function hitTestGlobe(x, y) {
   let best = null, bd = GLOBE.zoom < 30 ? 6 : 12;   // 引いているときは包みが集まるので、線や点を押しやすく
   for (const p of SIM.packets) { const [px, py, z] = packetGXY(p), d = Math.hypot(px - x, py - y); if (z > 0 && d < bd) { bd = d; best = { type: 'packet', p }; } }
   if (best) return best;
-  const near = NODES.filter(n => { const [nx, ny, z] = GNP(n); return z > 0 && Math.hypot(nx - x, ny - y) < 11; });
+  const near = NODES.filter(n => { if (!nodeShown(n)) return false; const [nx, ny, z] = GNP(n); return z > 0 && Math.hypot(nx - x, ny - y) < 11; });
   if (near.length > 1 && GLOBE.zoom < 50) return { type: 'cluster', nodes: near };
   if (near.length) return { type: 'node', n: near.sort((a, b) => Math.hypot(GNP(a)[0] - x, GNP(a)[1] - y) - Math.hypot(GNP(b)[0] - x, GNP(b)[1] - y))[0] };
   bd = 10;
   for (const l of LINKS) {
+    if (!linkShown(l)) continue;
     const pts = arcPts(l, 24);
     for (let i = 1; i < pts.length; i++) {
       const [x0, y0, z0] = pts[i - 1], [x1, y1, z1] = pts[i]; if (z0 <= 0 || z1 <= 0) continue;

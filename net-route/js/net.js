@@ -19,13 +19,23 @@ const NODES = [
   { id: 'bandon',  name: 'オレゴンの陸揚げ局', short: 'オレゴン',   x: 0.80, y: 0.22, kind: 'router', lat: 43.12, lon: -124.41 },
   { id: 'la',      name: 'ロサンゼルスの陸揚げ局', short: 'LA',     x: 0.82, y: 0.68, kind: 'router', lat: 33.86, lon: -118.40 },
   { id: 'dc',      name: '西海岸のデータセンター', short: '西海岸DC', x: 0.95, y: 0.46, kind: 'server', lat: 37.34, lon: -121.89 },
+  // ここから下は遊び（play.js）で使う点。opt＝ふだんは描かない（サーバーに選んだとき・道の上にあるとき・できごとのときだけ）
+  { id: 'geo',   name: '静止衛星（赤道の上 3万5786km）', short: '静止衛星', x: 0.16, y: 0.08, kind: 'router', opt: true, lat: 0, lon: 140, alt: 35786 },
+  { id: 'leo',   name: '低い軌道の衛星（上空 約550km）', short: '低軌道衛星', x: 0.16, y: 0.24, kind: 'router', opt: true, lat: 36.3, lon: 140.3, alt: 550 },
+  { id: 'usuda', name: '宇宙と話す大きなアンテナ（長野・佐久のあたり・例）', short: '佐久のアンテナ', x: 0.36, y: 0.12, kind: 'router', opt: true, lat: 36.13, lon: 138.36 },
+  { id: 'moon',  name: '月のサーバー', short: '月', x: 0.52, y: 0.04, kind: 'server', opt: true, space: true },
+  { id: 'mars',  name: '火星のサーバー', short: '火星', x: 0.52, y: 0.04, kind: 'server', opt: true, space: true },
+  { id: 'busan', name: '釜山の陸揚げ局', short: '釜山', x: 0.44, y: 0.06, kind: 'router', opt: true, lat: 35.10, lon: 129.04 },
+  { id: 'hk',    name: '香港のデータセンター', short: '香港', x: 0.60, y: 0.06, kind: 'server', opt: true, lat: 22.28, lon: 114.16 },
+  { id: 'fiji',  name: 'フィジー（スバ）', short: 'フィジー', x: 0.68, y: 0.97, kind: 'router', opt: true, lat: -18.14, lon: 178.44 },
+  { id: 'tonga', name: 'トンガのサーバー', short: 'トンガ', x: 0.80, y: 0.97, kind: 'server', opt: true, lat: -21.14, lon: -175.20 },
 ];
 const NODE = Object.fromEntries(NODES.map(n => [n.id, n]));
 
 // 線: km を書いたものは仮定の長さ。medium: air=空気（WiFi）, fiber。sea=海底ケーブル。bw は Gbps（推定）
 const LINKS = [
-  { a: 'phone', b: 'router', km: 0.01, medium: 'air', bw: 0.3, name: 'WiFi（電波）' },
-  { a: 'router', b: 'isp', km: 5, medium: 'fiber', bw: 1, name: '家からの光ファイバー（仮定 5km）' },
+  { a: 'phone', b: 'router', km: 0.01, medium: 'air', wifi: true, bw: 0.3, name: 'WiFi（電波）' },
+  { a: 'router', b: 'isp', km: 5, medium: 'fiber', bw: 1, name: '家からの光ファイバー（仮定 5km）', home: true },
   { a: 'isp', b: 'ix', km: 3, medium: 'fiber', bw: 100, name: 'まちの光ファイバー（仮定 3km）' },
   { a: 'ix', b: 'cdn', km: 1, medium: 'fiber', bw: 100, name: 'データセンターへ（仮定 1km）' },
   { a: 'ix', b: 'chikura', medium: 'fiber', bw: 100, name: '陸の光ファイバー' },
@@ -36,6 +46,23 @@ const LINKS = [
   { a: 'hawaii', b: 'la', medium: 'fiber', sea: true, bw: 100, name: '海底ケーブル（例）' },
   { a: 'bandon', b: 'dc', medium: 'fiber', bw: 100, name: '陸の光ファイバー' },
   { a: 'la', b: 'dc', medium: 'fiber', bw: 100, name: '陸の光ファイバー' },
+  // 遊び（play.js）。acc＝家からの道の選択で使う（選んでいないときは off）
+  { a: 'router', b: 'geo', medium: 'air', bw: 0.1, acc: 'geo', off: true, name: '電波（家のアンテナ → 静止衛星）' },
+  { a: 'geo', b: 'ix', medium: 'air', bw: 0.1, acc: 'geo', off: true, name: '電波（静止衛星 → 地上の局。局は IX においた）' },
+  { a: 'router', b: 'leo', km: 700, medium: 'air', bw: 0.2, acc: 'leo', off: true, name: '電波（家のアンテナ → 低い軌道の衛星。ななめに約700km・推定）' },
+  { a: 'leo', b: 'ix', km: 700, medium: 'air', bw: 0.2, acc: 'leo', off: true, name: '電波（衛星 → 地上の局。約700km・推定）' },
+  // 伝書鳩: Bergen の試験（2001）の ping 往復の平均 約87分（手わたしこみ）の半分を片道に。
+  // なくなる割合は往復で 55% → 片道 1−√0.45 ≒ 33%
+  { a: 'router', b: 'isp', km: 5, medium: 'bird', ms: 2611400, bw: 1, loss: 0.33, acc: 'bird', off: true, name: '伝書鳩（RFC 1149）' },
+  { a: 'ix', b: 'usuda', medium: 'fiber', bw: 10, name: '陸の光ファイバー' },
+  { a: 'usuda', b: 'moon', km: 384400, medium: 'air', bw: 0.01, space: true, name: '電波（月まで。平均の距離）' },
+  { a: 'usuda', b: 'mars', km: 55760000, medium: 'air', bw: 0.001, space: true, name: '電波（火星まで）' },
+  { a: 'shima', b: 'hk', medium: 'fiber', sea: true, bw: 100, via: [21.0, 121.4], strait: true, name: '海底ケーブル（ルソン海峡を通る・例）' },
+  { a: 'chikura', b: 'hk', medium: 'fiber', sea: true, bw: 100, via: [20.5, 120.9], strait: true, name: '海底ケーブル（ルソン海峡を通る・例）' },
+  { a: 'shima', b: 'busan', medium: 'fiber', sea: true, bw: 10, name: '海底ケーブル（例）' },
+  { a: 'busan', b: 'hk', medium: 'fiber', bw: 1, pref: 60, via: [32.0, 117.0], k: 1.1, name: '陸の光ファイバー（予備の道・例）' },
+  { a: 'fiji', b: 'hawaii', medium: 'fiber', sea: true, bw: 10, name: '海底ケーブル（例）' },
+  { a: 'tonga', b: 'fiji', km: 827, medium: 'fiber', sea: true, bw: 10, name: '海底ケーブル（トンガ〜フィジー 827km。外へはこの1本だけ）' },
 ];
 
 function greatCircleKm(p, q) {        // 大円距離（地球を半径 6371km の球として）
@@ -44,13 +71,23 @@ function greatCircleKm(p, q) {        // 大円距離（地球を半径 6371km �
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(p.lat * rad) * Math.cos(q.lat * rad) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(h));
 }
-LINKS.forEach((l, i) => {
-  l.i = i; l.cut = false;
-  if (l.km == null) { l.gc = greatCircleKm(NODE[l.a], NODE[l.b]); l.km = l.gc * (l.sea ? SEA_K : LAND_K); }
+function slantKm(p, alt, q) {          // 地上の点 q から、p の真上 alt km の衛星までのまっすぐの距離
+  const R = 6371, th = greatCircleKm(p, q) / R;
+  return Math.sqrt(R * R + (R + alt) ** 2 - 2 * R * (R + alt) * Math.cos(th));
+}
+function initLink(l, i) {
+  l.i = i; l.cut = l.cut || false;
+  const A = NODE[l.a], B = NODE[l.b];
+  if (l.km == null) {
+    if (A.alt || B.alt) { const s = A.alt ? A : B, g = A.alt ? B : A; l.km = slantKm(s, s.alt, g.lat != null ? g : NODE.ix); }
+    else if (l.via) { const v = { lat: l.via[0], lon: l.via[1] }; l.gc = greatCircleKm(A, v) + greatCircleKm(v, B); l.km = l.gc * (l.sea ? SEA_K : l.k || LAND_K); }
+    else { l.gc = greatCircleKm(A, B); l.km = l.gc * (l.sea ? SEA_K : l.k || LAND_K); }
+  }
   l.v = l.medium === 'air' ? C_KM_MS : V_FIBER;
-  l.prop = l.km / l.v;                 // 光が端から端まで進む時間（ミリ秒）
+  l.prop = l.ms != null ? l.ms : l.km / l.v;   // 端から端まで進む時間（ミリ秒）。鳩だけは測られた時間
   l.busy = {};                         // 向きごとに、送り出しが空く時刻
-});
+}
+LINKS.forEach(initLink);
 
 const NET = {
   hopProc: 0.02,      // 中継1つの処理（ミリ秒・推定）
@@ -61,7 +98,7 @@ const NET = {
   version: 0,         // 線を切ったら増える（道の組み直し）
 };
 
-function linkBetween(a, b) { return LINKS.find(l => (l.a === a && l.b === b) || (l.a === b && l.b === a)); }
+function linkBetween(a, b) { return LINKS.find(l => !l.off && ((l.a === a && l.b === b) || (l.a === b && l.b === a))); }
 function other(l, id) { return l.a === id ? l.b : l.a; }
 
 // いちばん早い道（光の時間＋中継の処理）。つながっていなければ null
@@ -79,8 +116,8 @@ function shortest(from, to) {
     // 端末（スマホ・サーバー）は、行き先でなければ中継しない
     if (u !== from && NODE[u].kind !== 'router') continue;
     for (const l of LINKS) {
-      if (l.cut || (l.a !== u && l.b !== u)) continue;
-      const v = other(l, u), d = dist[u] + l.prop + NET.hopProc;
+      if (l.cut || l.off || (l.a !== u && l.b !== u)) continue;
+      const v = other(l, u), d = dist[u] + l.prop + NET.hopProc + (l.pref || 0);   // pref＝ふだんは後回しにする予備の道（会社どうしの約束のかわり）
       if (d < dist[v]) { dist[v] = d; prev[v] = u; }
     }
   }
@@ -90,6 +127,8 @@ function shortest(from, to) {
 }
 function nextHop(at, to) { const p = shortest(at, to); return p && p.length > 1 ? p[1] : null; }
 function pathKm(path) { let s = 0; for (let i = 1; i < path.length; i++) s += linkBetween(path[i - 1], path[i]).km; return s; }
+function pathMs(path) { let s = 0; for (let i = 1; i < path.length; i++) s += linkBetween(path[i - 1], path[i]).prop; return s; }   // 進むだけの時間（片道）
 
-function toggleCut(l) { l.cut = !l.cut; NET.version++; for (const k in routeCache) delete routeCache[k]; }
+function netChanged() { NET.version++; for (const k in routeCache) delete routeCache[k]; }
+function toggleCut(l) { l.cut = !l.cut; netChanged(); }
 function toggleJam(id) { if (NODE[id].kind !== 'router') return; NET.jam[id] = !NET.jam[id]; }

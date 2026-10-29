@@ -18,7 +18,7 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-bod
 #cap span{color:var(--muted)}
 /* 見かたの切りかえ（図／地球儀）と、地球儀の寄る・回すボタン */
 #views{position:absolute;top:6px;right:8px;display:flex;gap:4px;z-index:3}
-#views button,#gnav button{min-height:32px;padding:3px 10px;font-size:13px;background:rgba(22,38,58,.92)}
+#views button,#gnav button{min-height:32px;padding:3px 9px;font-size:13px;background:rgba(22,38,58,.92)}
 #gnav{position:absolute;right:8px;bottom:84px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px;max-width:calc(100% - 16px);z-index:3}
 #gnav button[data-zoom]{min-width:34px;padding:3px 6px}
 #stage.globe #cv{touch-action:none;cursor:grab}
@@ -47,6 +47,8 @@ button.main{background:var(--acc);color:#06202e;border-color:var(--acc);font-wei
 .legend i.re{outline:1.5px solid #ffa94d;outline-offset:1px;background:transparent}
 .legend i.ln{height:0;width:22px;border-top:2.5px solid #4f8fc0;vertical-align:3px}
 .legend i.ln.air{border-top:2px dotted #6fd3ff}
+.legend i.ln.bird{border-top:2.5px solid #d9b38c}
+#place.on{border-color:#ffd36a;color:#ffd36a}
 #about{padding:8px 16px 32px;color:var(--muted);font-size:14px;line-height:1.8}
 #about summary{cursor:pointer;color:var(--ink);min-height:36px;line-height:36px}
 #about h3{color:var(--ink);font-size:14px;margin:14px 0 4px}

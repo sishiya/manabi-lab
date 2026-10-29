@@ -3,8 +3,8 @@
 
 const COL = {
   bg: '#101c2c', ink: '#e8f0f4', muted: '#7f93a3', line: '#3c5568', sea: '#4f8fc0', air: '#6fd3ff',
-  cut: '#ff6b6b', jam: '#ffa94d', route: 'rgba(111,211,255,0.16)', sel: '#ffffff',
-  kind: { dns: '#ffd36a', dnsans: '#ffd36a', syn: '#f4f4f4', synack: '#f4f4f4', hello: '#c59bff', shello: '#c59bff', get: '#c59bff', data: '#6fd3ff', dack: '#7fe0a0' },
+  cut: '#ff6b6b', bird: '#d9b38c', jam: '#ffa94d', route: 'rgba(111,211,255,0.16)', sel: '#ffffff',
+  kind: { ping: '#ff8fb1', pong: '#ff8fb1', dns: '#ffd36a', dnsans: '#ffd36a', syn: '#f4f4f4', synack: '#f4f4f4', hello: '#c59bff', shello: '#c59bff', get: '#c59bff', data: '#6fd3ff', dack: '#7fe0a0' },
 };
 const REGIONS = [[0, 0.16, '家'], [0.16, 0.46, '日本'], [0.46, 0.75, '太平洋'], [0.75, 1, 'アメリカ']];
 const VIEW = { w: 1, h: 1, portrait: false, sel: null };
@@ -27,7 +27,9 @@ function packetXY(p) {
   const [x, y] = NP(NODE[p.at]); return [x + 10, y - 12 - (p.id % 6) * 4];
 }
 
-function fmtKm(km) { return km < 10 ? (km < 1 ? Math.round(km * 1000) + 'm' : km.toFixed(0) + 'km') : Math.round(km).toLocaleString() + 'km'; }
+// 時間の書き方（ミリ秒が大きくなったら秒・分に）
+function dur(v) { return v < 1000 ? (v < 10 ? v.toFixed(2) : v.toFixed(1)) + ' ミリ秒' : v < 60000 ? (v / 1000).toFixed(2) + ' 秒' : Math.floor(v / 60000) + '分' + Math.floor(v % 60000 / 1000) + '秒'; }
+function fmtKm(km) { if (km >= 1e8) return (km / 1e8).toFixed(1) + '億km'; if (km >= 1e5) return Math.round(km / 1e4).toLocaleString() + '万km'; return km < 10 ? (km < 1 ? Math.round(km * 1000) + 'm' : km.toFixed(0) + 'km') : Math.round(km).toLocaleString() + 'km'; }
 
 function drawScene(g) {
   const { w, h, portrait } = VIEW;
@@ -50,9 +52,10 @@ function drawScene(g) {
   // 線
   g.textBaseline = 'middle'; g.font = '10px "IBM Plex Mono", monospace';
   for (const l of LINKS) {
+    if (!linkShown(l)) continue;
     const [x0, y0] = NP(NODE[l.a]), [x1, y1] = NP(NODE[l.b]);
     g.setLineDash(l.cut ? [4, 5] : l.medium === 'air' ? [2, 3] : []);
-    g.strokeStyle = l.cut ? COL.cut : l.sea ? COL.sea : l.medium === 'air' ? COL.air : COL.line;
+    g.strokeStyle = l.cut ? COL.cut : l.medium === 'bird' ? COL.bird : l.sea ? COL.sea : l.medium === 'air' ? COL.air : COL.line;
     g.lineWidth = l.sea ? 2.5 : 1.6; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); g.setLineDash([]);
     const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
     if (l.cut) { g.fillStyle = COL.cut; g.font = '14px sans-serif'; g.textAlign = 'center'; g.fillText('✕', mx, my); g.font = '10px "IBM Plex Mono", monospace'; }
@@ -61,6 +64,7 @@ function drawScene(g) {
   // 点
   g.textAlign = 'center'; g.font = '12px "Zen Kaku Gothic New", sans-serif';
   for (const n of NODES) {
+    if (!nodeShown(n)) continue;
     const [x, y] = NP(n), isSrv = n.id === SIM.server;
     g.lineWidth = 2; g.strokeStyle = NET.jam[n.id] ? COL.jam : isSrv ? COL.air : COL.ink; g.fillStyle = COL.bg;
     g.beginPath();
@@ -68,8 +72,9 @@ function drawScene(g) {
     g.fill(); g.stroke();
     if (NET.jam[n.id]) { g.strokeStyle = COL.jam; g.beginPath(); g.arc(x, y, 12, 0, Math.PI * 2); g.stroke(); }
     g.fillStyle = n.kind === 'server' && !isSrv ? COL.muted : COL.ink;
-    if (portrait) { g.textAlign = 'left'; g.fillText(n.short + (NET.jam[n.id] ? '（混雑）' : ''), x + 13, y); }
-    else { g.textAlign = 'center'; g.fillText(n.short + (NET.jam[n.id] ? '（混雑）' : ''), x, y + 20); }
+    const label = n.space ? spaceText(n) : n.short + (NET.jam[n.id] ? '（混雑）' : '');
+    if (portrait) { g.textAlign = 'left'; g.fillText(label, x + 13, y); }
+    else { g.textAlign = 'center'; g.fillText(label, x, y + 20); }
   }
   // 選んだパケットの通った道
   const sp = VIEW.sel && VIEW.sel.type === 'packet' ? VIEW.sel.p : null;
@@ -95,7 +100,7 @@ function drawScene(g) {
   }
   // 時計
   g.textAlign = 'left'; g.textBaseline = 'top'; g.fillStyle = COL.ink; g.font = '500 15px "IBM Plex Mono", monospace';
-  g.fillText('いま ' + SIM.T.toFixed(1) + ' ミリ秒', 10, 8);
+  g.fillText('いま ' + dur(SIM.T), 10, 8);
 }
 
 // タップの当たり判定: パケット → 点 → 線
@@ -103,9 +108,10 @@ function hitTest(x, y) {
   let best = null, bd = 12;
   for (const p of SIM.packets) { const [px, py] = packetXY(p), d = Math.hypot(px - x, py - y); if (d < bd) { bd = d; best = { type: 'packet', p }; } }
   if (best) return best;
-  for (const n of NODES) { const [nx, ny] = NP(n); if (Math.hypot(nx - x, ny - y) < 11) return { type: 'node', n }; }
+  for (const n of NODES) { if (!nodeShown(n)) continue; const [nx, ny] = NP(n); if (Math.hypot(nx - x, ny - y) < 11) return { type: 'node', n }; }
   bd = 12;
   for (const l of LINKS) {
+    if (!linkShown(l)) continue;
     const [x0, y0] = NP(NODE[l.a]), [x1, y1] = NP(NODE[l.b]), dx = x1 - x0, dy = y1 - y0;
     const t = Math.max(0, Math.min(1, ((x - x0) * dx + (y - y0) * dy) / (dx * dx + dy * dy || 1)));
     const d = Math.hypot(x0 + dx * t - x, y0 + dy * t - y);

@@ -12,21 +12,39 @@
   <main id="stage">
     <canvas id="cv"></canvas>
     <div id="views" class="seg" role="group" aria-label="見かた"><button data-view="map" class="on">図</button><button data-view="globe">地球儀</button></div>
-    <div id="gnav" hidden><button data-go="tokyo">東京へ</button><button data-go="japan">日本</button><button data-go="pacific">太平洋</button><button data-zoom="1.6" aria-label="寄る">＋</button><button data-zoom="0.625" aria-label="引く">−</button></div>
+    <div id="gnav" hidden><button id="place" aria-label="サーバーを置く">置く</button><button data-go="tokyo">東京</button><button data-go="japan">日本</button><button data-go="pacific">太平洋</button><button data-zoom="1.6" aria-label="寄る">＋</button><button data-zoom="0.625" aria-label="引く">−</button></div>
     <div id="info" hidden></div>
     <div id="cap"><div class="txt"><b id="capT"></b><span id="capB"></span></div><button id="open" class="main">ページを開く</button></div>
   </main>
   <section id="panel">
     <div class="row">
       <button id="pause">一時停止</button>
+      <button id="ping">ping を送る</button>
     </div>
     <div class="row seg" role="group" aria-label="サーバー">
       <span class="lbl">サーバー</span>
       <button data-srv="dc" class="on">遠く（アメリカ西海岸）</button>
       <button data-srv="cdn">近く（東京）</button>
+      <button data-srv="moon">月</button>
+      <button data-srv="mars-near">火星（近いとき）</button>
+      <button data-srv="mars-far">火星（遠いとき）</button>
+      <button data-srv="free" id="srvFree" hidden>置いた場所</button>
     </div>
-    <label class="row slow"><span class="lbl">時間</span><input id="slow" type="range" min="0" max="100" value="40"><span id="slowT" class="mono"></span></label>
-    <p class="hint">さわれるところ: <b>線</b>をタップ＝ケーブルを切る・つなぐ／<b>中継の点</b>＝混ませる／<b>動く四角</b>＝中身を見る。地球儀は、図の上をなぞって回す・ホイールや2本指で寄る（ページを動かすときは図の下をなぞる）。</p>
+    <div class="row seg" role="group" aria-label="家からの道">
+      <span class="lbl">家からの道</span>
+      <button data-acc="fiber" class="on">光ファイバー</button>
+      <button data-acc="geo">静止衛星</button>
+      <button data-acc="leo">低い軌道の衛星</button>
+      <button data-acc="bird">伝書鳩</button>
+    </div>
+    <div class="row seg" role="group" aria-label="本当にあった切断">
+      <span class="lbl">本当にあった切断</span>
+      <button data-ev="taiwan">2006 台湾沖の地震</button>
+      <button data-ev="tonga">2022 トンガの噴火</button>
+      <button id="evOff">元にもどす</button>
+    </div>
+    <label class="row slow"><span class="lbl">時間</span><input id="slow" type="range" min="0" max="100" value="78"><span id="slowT" class="mono"></span></label>
+    <p class="hint">さわれるところ: <b>線</b>をタップ＝ケーブルを切る・つなぐ／<b>中継の点</b>＝混ませる／<b>動く四角</b>＝中身を見る。地球儀: なぞって回す・2本指で寄る・「置く」→タップでそこにサーバー。</p>
     <div id="result">
       <div id="bar"></div>
       <ul id="nums"></ul>
@@ -37,8 +55,9 @@
       <li><i style="background:#c59bff"></i>暗号（TLS）・ページをください</li>
       <li><i style="background:#6fd3ff"></i>ページの中身</li>
       <li><i style="background:#7fe0a0"></i>受けとったよ（ACK）</li>
+      <li><i style="background:#ff8fb1"></i>ping（とどくか聞くだけ）</li>
       <li><i class="re"></i>送り直したもの</li>
-      <li><i class="ln sea"></i>海底ケーブル　<i class="ln air"></i>WiFi（電波）</li>
+      <li><i class="ln sea"></i>海底ケーブル　<i class="ln air"></i>電波　<i class="ln bird"></i>伝書鳩</li>
       <li>「図」の線の長さは本物と合っていません（線の数字が長さ）。「地球儀」は本当の緯度経度に置き、線は大円（いちばん短い道）で描いています。四角は重ならないよう少しずらしています。</li>
     </ul>
   </section>
@@ -50,14 +69,26 @@
       <li>光ファイバーの中の光の速さ＝真空の光の速さ ÷ 屈折率 1.4675（光の包みが進む速さを決める値・1310nm）＝ 約20万km/秒（1km で約4.9マイクロ秒）。WiFi は空気中なので真空とほぼ同じ。</li>
       <li>線の長さ: 陸揚げ局などの緯度経度からいちばん短い道（大円距離）を出し、本物のケーブルは曲がっているので海は 1.1 倍・陸は 1.3 倍にした（推定）。家からプロバイダ・まちの中の長さは仮定。</li>
       <li>中継ごとに、送り出す時間（大きさ ÷ 回線の速さ）と処理の時間（0.02ミリ秒・推定）。WiFi は順番待ち（平均2ミリ秒・推定）。混ませた中継は平均30ミリ秒待ち、8%が捨てられる（推定・演出に近い）。</li>
-      <li>流れ: 名前引き（DNS。プロバイダが答えを覚えている前提。返事が1秒来なければ聞き直す＝推定）→ TCP のあいさつ → TLS 1.3 のかぎ → ページをください → ページ（60KB を 1460 バイトずつ・42個）。</li>
+      <li>流れ: 名前引き（DNS。プロバイダが答えを覚えている前提。返事が5秒来なければもう1回、それでもだめならあきらめる＝glibc の初めの値）→ TCP のあいさつ → TLS 1.3 のかぎ → ページをください → ページ（60KB を 1460 バイトずつ・42個）。</li>
       <li>送る数は最初10個、「受けとったよ」が1つ返るたびに1つ増やす（スロースタート）。返事が来ないと待って送り直し、送る数を1にもどす。待ち時間は最初1秒、往復を測ったら往復の3倍（下限0.2秒）で、時間切れのたびに2倍にのばす。</li>
+    </ul>
+    <h3>遊びについて</h3>
+    <ul>
+      <li><b>サーバーを置く</b>: 置いた所から、いちばん近い2つの中継へ「いちばん短い道×1.2」の仮のケーブルでつなぎます（推定。本物のケーブルの地図ではありません）。</li>
+      <li><b>月・火星</b>のサーバーは仮のものです。長野（佐久のあたり）の大きなアンテナから電波で送ります（真空の光の速さ）。</li>
+      <li>距離は、月は平均 38万4400km。火星は 2003年の大接近 5576万km と、いちばん遠いとき 約4億100万km。</li>
+      <li>火星は往復が127秒をこえるので、ふつうの TCP はあいさつの途中であきらめます。本物の宇宙の通信は、返事を待たずに預けて運ぶしくみ（DTN）を使います。ping はあきらめる決まりがないので、往復ぶん待てば返事が来ます。</li>
+      <li><b>静止衛星</b>: 赤道の上 3万5786km。家のアンテナと地上の局（ここでは IX においた）から衛星までのまっすぐの距離を計算しました。<b>低い軌道の衛星</b>: 上空 約550km、ななめに約700km（推定）。どちらも電波が進む時間だけで、衛星の中の順番待ちなどは入れていません。</li>
+      <li><b>伝書鳩</b>: RFC 1149（1990年4月1日のじょうだんの決まり）。2001年にノルウェーのベルゲンで、本当に鳩で ping を送った試験がありました。</li>
+      <li>その試験では9つ送って4つ返り、往復の平均は約87分（約5km・手わたしの時間こみ）。ここでは片道をその半分、なくなる割合を片道 33% にしました。</li>
+      <li>鳩では名前引きが10秒であきらめるので、ページは開けません。ping は返ってくることがあります。</li>
+      <li><b>本当にあった切断</b>: 道とケーブルは例です。2006年の台湾沖の地震は「ルソン海峡を通る2本」を切り、のこった予備の道（釜山まわりの陸の道・例）は混む（推定）ことにしました。2022年のトンガは、外へつながる1本だけのケーブル（827km）を切ります。</li>
     </ul>
     <h3>簡単にしたところ</h3>
     <ul>
       <li>道と陸揚げ局は<b>例</b>です（本物のケーブルの地図を写したものではありません）。地球儀では線を大円で描いていますが、本物の海底ケーブルは海の深さや地形をよけて曲がっています。家・プロバイダの位置は図のための仮の場所です。</li>
       <li>本物の道は、会社どうしの約束（BGP）で決まり、いちばん早い道とは限りません。ここでは各中継が「いまいちばん早い道」を選び、ケーブルが切れるとすぐ組み直します。本物は組み直しに数十秒〜数分かかることもあります。</li>
-      <li>「受けとったよ」は1つずつ返し、送り直しは時間切れのときだけにしました（本物はもっと工夫があります）。待ち時間の下限は、RFC の1秒ではなく Linux と同じ0.2秒にしました。</li>
+      <li>「受けとったよ」は1つずつ返し、送り直しは時間切れのときだけにしました（本物はもっと工夫があります）。あいさつ（SYN）は6回送り直して返事がなければ、約127秒であきらめます（Linux の初めの値）。待ち時間の下限は、RFC の1秒ではなく Linux と同じ0.2秒にしました。</li>
       <li>ページは HTML 1つ（60KB の例）だけ。本物のページは画像やスクリプトなど何十ものファイルを読みます。サーバーがページを作る時間・暗号の計算・光回線の上りの順番待ちなどは入れていないので、本物はもっとかかります。</li>
       <li>最近は、あいさつと暗号を1往復にまとめる HTTP/3（QUIC）や、2回目からの近道（つなぎっぱなし・TLS の再開）があり、いつも4〜5往復かかるわけではありません。ここは基本の形だけです。</li>
     </ul>
@@ -67,6 +98,11 @@
       <li>TCP: <a href="https://www.rfc-editor.org/rfc/rfc9293" target="_blank" rel="noopener">RFC 9293</a>（あいさつ）、<a href="https://www.rfc-editor.org/rfc/rfc6928" target="_blank" rel="noopener">RFC 6928</a>（最初に送る数 10）、<a href="https://www.rfc-editor.org/rfc/rfc5681" target="_blank" rel="noopener">RFC 5681</a>（スロースタート）、<a href="https://www.rfc-editor.org/rfc/rfc6298" target="_blank" rel="noopener">RFC 6298</a>（送り直しの待ち時間）</li>
       <li>TLS 1.3: <a href="https://www.rfc-editor.org/rfc/rfc8446" target="_blank" rel="noopener">RFC 8446</a>。DNS: <a href="https://www.rfc-editor.org/rfc/rfc1034" target="_blank" rel="noopener">RFC 1034</a>・<a href="https://www.rfc-editor.org/rfc/rfc1035" target="_blank" rel="noopener">RFC 1035</a></li>
       <li>道の組み直しに時間がかかること: Labovitz, Ahuja, Bose, Jahanian (2000) Delayed Internet Routing Convergence（ACM SIGCOMM）</li>
+      <li>伝書鳩: <a href="https://www.rfc-editor.org/rfc/rfc1149" target="_blank" rel="noopener">RFC 1149</a>（Waitzman 1990）。ベルゲンの試験（2001年4月28日）: <a href="https://www.blug.linux.no/rfc1149" target="_blank" rel="noopener">Bergen Linux User Group</a> と、そのときの ping の結果の記録</li>
+      <li>あいさつの送り直しの回数: Linux の tcp(7) の tcp_syn_retries（初めの値 6・約127秒）。名前引き: resolv.conf(5) の timeout（5秒）・attempts（2回）</li>
+      <li>2006年の台湾沖の地震: <a href="https://www.submarinenetworks.com/en/nv/news/cables-cut-after-taiwan-earthquake-2006" target="_blank" rel="noopener">Submarine Networks</a>（8つのケーブル・18か所）、RIPE 54 の発表「Quaking」（ルソン海峡を両方の道が通っていた）</li>
+      <li>2022年のトンガ: AP・Reuters の報道（827km のケーブルのうち約90km を取りかえ、約5週間後に復旧）</li>
+      <li>月までの平均の距離 38万4400km、火星のいちばん近いとき（2003年）5576万km・いちばん遠いとき 約4億100万km: NASA。静止衛星の高さ 3万5786km</li>
       <li>地球儀の海岸線: <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a> 1:50m（パブリックドメイン）を間引いて使っています。</li>
     </ul>
     <h3>使っているもの</h3>
@@ -78,5 +114,6 @@
 <script src="js/sim.js"></script>
 <script src="js/draw.js"></script>
 <script src="js/globe.js"></script>
+<script src="js/play.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>

@@ -4,8 +4,9 @@
 
 const PAGE_BYTES = 60000, MSS = 1460;                   // ページの大きさ（例）・1つの包みに入る中身
 const DATA_N = Math.ceil(PAGE_BYTES / MSS);
-const SIZE = { dns: 80, dnsans: 120, syn: 60, synack: 60, hello: 600, shello: 1500, get: 400, data: 1500, dack: 60 };
+const SIZE = { ping: 84, pong: 84, dns: 80, dnsans: 120, syn: 60, synack: 60, hello: 600, shello: 1500, get: 400, data: 1500, dack: 60 };
 const KIND = {
+  ping: 'ping（とどくか聞くだけ）', pong: 'ping の返事',
   dns: '名前の問い合わせ（DNS）', dnsans: '名前の答え（住所）', syn: 'あいさつ SYN', synack: 'あいさつの返事 SYN-ACK',
   hello: 'ACK＋暗号のはじめ', shello: '暗号のかぎ・証明書', get: '暗号OK＋「ページをください」', data: 'ページの中身', dack: '受けとったよ（ACK）',
 };
@@ -17,7 +18,10 @@ const PHASES = {
   get: ['④「ページをください」', 'ここまで、ページはまだ1バイトも来ていません。'],
   data: ['⑤ ページが包みに分かれて届く', '最初は10個。返事が来るたび増やす。'],
   done: ['⑥ ページがそろった', '下の内訳で、時間のかかった所を見よう。'],
+  fail: ['× スマホがあきらめた', ''],                   // 2行めは SIM.failWhy
 };
+const SYN_RETRIES = 6;                 // Linux の tcp_syn_retries の初めの値（約127秒であきらめる）
+const DNS_TIMEOUT = 5000, DNS_ATTEMPTS = 2;   // glibc の resolv.conf の初めの値（5秒・2回）
 
 let seed = 1;
 function rnd() { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t ^= t + Math.imul(t ^ (t >>> 7), 61 | t); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
@@ -31,11 +35,12 @@ const SIM = {
   srv: null,             // サーバーの送り手の状態
   srtt: null,
   backoff: 1,            // 時間切れのたびに2倍（RFC 6298 の 5.5）
+  pings: [], failWhy: null,
 };
 
 function resetSim() {
   seed = 1;
-  Object.assign(SIM, { T: 0, packets: [], ghosts: [], nextId: 1, phase: 'idle', marks: {}, lost: 0, resent: 0, wait: null, srv: null, srtt: null, backoff: 1, recv: null, running: false });
+  Object.assign(SIM, { T: 0, packets: [], ghosts: [], nextId: 1, phase: 'idle', marks: {}, lost: 0, resent: 0, wait: null, srv: null, srtt: null, backoff: 1, recv: null, running: false, pings: [], pingSent: 0, failWhy: null });
   LINKS.forEach(l => l.busy = {});
 }
 
@@ -50,6 +55,8 @@ function send(kind, src, dst, seq = 0, resend = false) {
   if (resend) SIM.resent++;
   return p;
 }
+function fail(why) { SIM.wait = null; SIM.running = false; SIM.failWhy = why; setPhase('fail'); }
+function sendPing() { const p = send('ping', 'phone', SIM.server); p.pingT = SIM.T; SIM.pingSent = (SIM.pingSent || 0) + 1; }
 function lose(p, why) {
   p.state = 'lost'; SIM.lost++;
   SIM.ghosts.push({ p, why, x: null, y: null, age: 0, link: p.link, frac: null, at: p.at });
@@ -64,13 +71,14 @@ function forward(p) {
   const idle = (l.busy[dir] || 0) <= p.next;
   let start = Math.max(p.next, l.busy[dir] || 0);
   // WiFi の順番待ち（推定）。送っている最中に続く包みは、まとめて送るので待たない（簡単にした）
-  if (l.medium === 'air' && idle) start += expRnd(NET.wifiWait);
+  if (l.wifi && idle) start += expRnd(NET.wifiWait);
   const tx = p.size * 8 / (l.bw * 1e6);                              // 送り出す時間（ミリ秒）＝ビット数÷速さ
   l.busy[dir] = start + tx;
   Object.assign(p, { state: 'fly', link: l, from: p.at, to: hop, t0: start + tx, t1: start + tx + l.prop, next: start + tx + l.prop, waitFrom: p.next });
 }
 // 線の向こうに着いた
 function arrive(p) {
+  if (p.link.loss && rnd() < p.link.loss) { lose(p, '鳩が帰ってこなかった'); SIM.ghosts[SIM.ghosts.length - 1].frac = 0.9; Object.assign(SIM.ghosts[SIM.ghosts.length - 1], { from: p.from, to: p.to }); return; }
   p.at = p.to; p.hops++; p.path.push(p.at); p.link = null;
   let proc = NODE[p.at].kind === 'router' ? NET.hopProc : 0;
   if (NET.jam[p.at]) {
@@ -86,6 +94,8 @@ function waitFor(what, ms, resend) { SIM.wait = { what, deadline: SIM.T + ms, re
 // 行き先に着いたパケットの処理（スマホ・名前引き・サーバー）
 function deliver(p) {
   const S = SIM.server, c = SIM;
+  if (p.kind === 'ping' && p.dst === S) { send('pong', S, 'phone').pingT = p.pingT; return; }
+  if (p.kind === 'pong') { if (p.dst === 'phone') c.pings.push(c.T - p.pingT); return; }
   if (p.dst === 'isp' && p.kind === 'dns') { send('dnsans', 'isp', 'phone'); return; }
   if (p.dst === 'phone') {
     const w = c.wait;
@@ -131,8 +141,12 @@ function pump() {
 }
 
 function startTcp() {
-  setPhase('tcp');
-  const go = (re) => { send('syn', 'phone', SIM.server, 0, re); waitFor('synack', rto(), () => { go(true); SIM.wait.resent = true; }); };
+  setPhase('tcp'); SIM.backoff = 1;                                   // 名前引きの待ちは持ちこさない
+  let tries = 0;
+  const go = (re) => {
+    if (tries++ > SYN_RETRIES) { fail(`あいさつ（SYN）を${SYN_RETRIES}回送り直しても返事がないので、${Math.round((SIM.T - SIM.marks.tcp) / 1000)}秒であきらめた（Linux の初めの決まり）。`); return; }
+    send('syn', 'phone', SIM.server, 0, re); waitFor('synack', rto(), () => { go(true); if (SIM.wait) SIM.wait.resent = true; });
+  };
   go(false);
 }
 function sendHello(re = false) { send('hello', 'phone', SIM.server, 0, re); waitFor('shello', rto(), () => sendHello(true)); SIM.wait.got = new Set(); }
@@ -140,7 +154,11 @@ function sendGet(re = false) { send('get', 'phone', SIM.server, 0, re); waitFor(
 
 function openPage() {
   resetSim(); SIM.running = true; setPhase('dns');
-  const go = (re) => { send('dns', 'phone', 'isp', 0, re); waitFor('dnsans', 1000, () => go(true)); };   // 待ち 1秒（推定。画面にも書く）
+  let tries = 0;
+  const go = (re) => {   // 5秒待って、もう1回。それでもだめならあきらめる（glibc の初めの値）
+    if (tries++ >= DNS_ATTEMPTS) { fail(`名前の答えが${DNS_ATTEMPTS}回とも${DNS_TIMEOUT / 1000}秒で来ないので、あきらめた（名前引きの初めの決まり）。`); return; }
+    send('dns', 'phone', 'isp', 0, re); waitFor('dnsans', DNS_TIMEOUT, () => go(true));
+  };
   go(false);
 }
 
@@ -181,7 +199,7 @@ function advance(T) {
 }
 
 function stepSim(dtReal) {
-  if (SIM.paused || SIM.phase === 'idle') { SIM.ghosts.forEach(g => g.age += dtReal); SIM.ghosts = SIM.ghosts.filter(g => g.age < 1.5); return; }
+  if (SIM.paused) { SIM.ghosts.forEach(g => g.age += dtReal); SIM.ghosts = SIM.ghosts.filter(g => g.age < 1.5); return; }
   if (SIM.running || SIM.packets.length) advance(SIM.T + dtReal * SIM.msPerSec);   // そろったあとも、飛んでいる ACK は着くまで動かす
   SIM.ghosts.forEach(g => g.age += dtReal); SIM.ghosts = SIM.ghosts.filter(g => g.age < 1.5);
 }
@@ -196,6 +214,6 @@ function breakdown() {
   }
   return out;
 }
-function lightFloor() {          // 真空をまっすぐ光が往復したら（東京 → サーバー）
-  const s = NODE[SIM.server]; return 2 * greatCircleKm(NODE.ix, s) / C_KM_MS;
+function lightFloor() {          // 真空をまっすぐ光が往復したら（東京 → サーバー）。宇宙のサーバーは null
+  const s = NODE[SIM.server]; return s.lat == null ? null : 2 * greatCircleKm(NODE.ix, s) / C_KM_MS;
 }
