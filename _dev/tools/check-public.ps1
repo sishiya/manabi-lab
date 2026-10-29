@@ -31,6 +31,8 @@ $rules = @(
 )
 # GitHub's no-reply commit address is meant to be public (it is on every commit anyway)
 $allow = @('(?i)@example\.(com|org|net)$', '(?i)^noreply@', '(?i)@users\.noreply\.github\.com$')
+# 数値だけの .bin で、たまたま 12 字以上の文字に見える並びがあり、目で確かめて付加情報ではなかったもの（ファイル = 見えた並び）
+$allowBin = @{ 'sail-wind\data\yd41-push.bin' = 'YDT&U"UK8#nY' }   # int16 の力の表（2026-10-29）
 
 $private = @()
 $pw = Join-Path $root '.private-words.txt'
@@ -93,7 +95,8 @@ foreach ($f in $files) {
     # 数値だけのデータ（例: tiny-earth/data/etopo1deg.bin の高さの表）: 長い文字列（作者名・場所などの付加情報）がまざっていないか
     $bytes = [IO.File]::ReadAllBytes($f)
     $ascii = [Text.Encoding]::GetEncoding(28591).GetString($bytes)   # Latin-1（ASCII だと 128 以上が「?」になって文字に見える)
-    if ($ascii -match '[\x20-\x7e]{12,}') { [void]$hits.Add("$rel : bin に文字列がまざっている（中身を確認）") }
+    $runs = @([regex]::Matches($ascii, '[\x20-\x7e]{12,}') | ForEach-Object { $_.Value } | Where-Object { $_ -ne $allowBin[$rel] })
+    if ($runs.Count) { [void]$hits.Add("$rel : bin に文字列がまざっている（中身を確認）: $($runs[0])") }
     continue
   }
   if ($midiExt -contains $ext) {

@@ -6,7 +6,7 @@
 # thumb.html が各アプリの準備（開始ボタン・カメラ移動など）を終えて document.title を 'ready' にしたら撮る。
 # （--screenshot だけだと読み込み直後に撮ってしまい、地図などの読み込みを待てないため）
 param(
-  [string[]]$Apps = @('god-view','evolution','body-dive','urinary-dive','blood-dive','immune-battle','animal-senses','metamorphosis','ga-creatures','wifi-wave','air-flow','extreme','illusions','muscle-growth','mold-growth','ferrofluid','black-hole','brain-response','passkey','piano-hand','phage','eye-optics','pitch-physics','hair-removal','tiny-earth','house-dust','weed-growth','tree-of-life','metronome-sync','typing-hand','phonograph','railgun','snake-move','sound-feel','big-bang','wave-growth','spider-hunt','crt-pixels','quantum','net-route'),
+  [string[]]$Apps = @('god-view','evolution','body-dive','urinary-dive','blood-dive','immune-battle','animal-senses','metamorphosis','ga-creatures','wifi-wave','air-flow','extreme','illusions','muscle-growth','mold-growth','ferrofluid','black-hole','brain-response','passkey','piano-hand','phage','eye-optics','pitch-physics','hair-removal','tiny-earth','house-dust','weed-growth','tree-of-life','metronome-sync','typing-hand','phonograph','railgun','snake-move','sound-feel','big-bang','wave-growth','spider-hunt','crt-pixels','sail-wind','net-route','quantum'),
   [int]$Port = 8765,
   [int]$DebugPort = 9333,
   [int]$TimeoutSec = 150

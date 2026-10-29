@@ -1,0 +1,56 @@
+/* 帆船が風で進むしくみ */
+:root{--bg:#10202e;--panel:#182c3c;--line:#2c4253;--ink:#e8f0f4;--muted:#a3b4bf;--acc:#7fd0ff;--warn:#ffc95a;
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+[hidden]{display:none!important}
+#app{max-width:1100px;margin:0 auto}
+#top{padding:12px 16px 4px;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px}
+#top h1{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0}
+#top .sub{color:var(--muted);font-size:13px}
+/* 上に固定する部分（図＋つぎへ） */
+#pin{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+#cvwrap{position:relative;height:min(58vh,520px);overflow:hidden}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+#hud{position:absolute;left:10px;top:8px;font-size:13px;line-height:1.5;pointer-events:none;text-shadow:0 0 4px var(--bg),0 0 8px var(--bg)}
+#hud .big{font-size:15px}
+#hud b{font-family:var(--f-mono);font-weight:500;color:var(--acc)}
+#hud .big b{font-size:20px}
+#hud .lab{color:var(--muted)}
+#hud .sm{color:var(--muted);font-size:12px}
+#hud .warn{color:var(--warn);font-size:12px}
+#legend{position:absolute;left:10px;right:10px;bottom:6px;display:flex;flex-wrap:wrap;gap:2px 10px;font-size:11px;color:var(--muted);pointer-events:none;text-shadow:0 0 4px var(--bg)}
+#legend i{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:4px;vertical-align:middle}
+#legend .new{color:var(--ink);font-weight:700}
+#legend .new i{height:5px}
+#tour{display:flex;align-items:center;gap:10px;padding:8px 16px}
+#tourNum{font-family:var(--f-mono);color:var(--acc);font-size:13px;white-space:nowrap}
+#tourText{margin:0;flex:1;font-size:14px;line-height:1.6}
+button{font:inherit;font-size:14px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;min-height:36px;padding:4px 12px;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+button:hover{border-color:var(--muted)}
+button.on{background:var(--acc);color:#10202e;border-color:var(--acc)}
+#next{background:var(--acc);color:#10202e;border-color:var(--acc);font-weight:700;white-space:nowrap}
+button.wide{min-width:96px;min-height:44px}
+/* スクロールする部分 */
+#controls{padding:10px 16px;display:flex;flex-direction:column;gap:10px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.row .lab{width:6.5em;color:var(--muted);font-size:13px}
+.row .val{font-size:13px}
+.row .note{color:var(--muted);font-size:12px;flex-basis:100%;padding-left:calc(6.5em + 6px)}
+input[type=range]{width:180px;accent-color:var(--acc)}
+.about{padding:8px 16px 32px;color:var(--muted);font-size:14px;line-height:1.8}
+.about summary{cursor:pointer;color:var(--ink);font-size:15px}
+.about h3{color:var(--ink);font-size:15px;margin:14px 0 4px}
+.about b{color:var(--ink)}
+.about a{color:var(--acc)}
+@media (max-width:560px){
+  #top h1{font-size:19px}
+  #cvwrap{height:46vh;min-height:260px}
+  #hud{max-width:58%}   /* 右下のポーラー図と重ならない */
+  #tour{padding:6px 12px;gap:8px}
+  #tourText{font-size:13px;line-height:1.5}
+  #controls,.about{padding-left:12px;padding-right:12px}
+  .row .lab{width:100%}
+  .row .note{padding-left:0}
+}
+/* スマホの横向き（高さがせまい）: 上に固定すると下が見えないので、固定しない */
+@media (max-height:500px){#pin{position:static}}

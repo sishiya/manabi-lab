@@ -1,0 +1,76 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>帆船が風で進むしくみ</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2310202e'/><path d='M32 10 L32 46 L14 46 Z' fill='none' stroke='%237fd0ff' stroke-width='3'/><path d='M12 50 L52 50 L46 56 L18 56 Z' fill='%237fd0ff'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <header id="top"><h1>帆船が風で進むしくみ</h1><span class="sub">帆は風に押されるだけでなく、翼として船を引っぱる</span></header>
+  <div id="pin"><!-- スマホ: 図とつぎへを上に固定。操作・説明はその下でスクロール -->
+    <div id="cvwrap"><canvas id="cv"></canvas>
+      <div id="hud">
+        <div class="big"><span class="lab">船</span> <b id="vBoat"></b> <span id="vBoatMs" class="sm"></span></div>
+        <div><span class="lab">風</span> <span id="vWind"></span>・<b id="ratio"></b></div>
+        <div class="sm"><span id="angle"></span>　<span id="aws"></span>　<span id="heel"></span></div>
+        <div id="drift" class="warn" hidden>遅いので横へ流されています</div>
+        <div id="nogo" class="warn" hidden>風上すぎて帆が働きません</div>
+      </div>
+      <div id="legend"></div>
+    </div>
+    <div id="tour"><span id="tourNum"></span><p id="tourText"></p><button id="next">つぎへ</button></div>
+  </div>
+  <section id="controls">
+    <div class="row"><span class="lab">かじ</span><button id="left" class="wide">◀ 左へ</button><button id="right" class="wide">右へ ▶</button>
+      <span class="note">押しているあいだ向きが変わります（パソコンは ← → キーでも）</span></div>
+    <div class="row" id="dirs"><span class="lab">向きを選ぶ</span>
+      <button data-h="40">風上 40°</button><button data-h="90">真横</button><button data-h="135">斜め後ろ</button><button data-h="180">真後ろ</button></div>
+    <div class="row"><span class="lab">風の強さ</span><input id="wind" type="range" min="4" max="20" step="2"><span id="windVal" class="val"></span>
+      <span class="note">高さ 10 m の風。計算した範囲（4〜20 ノット）だけ</span></div>
+    <div class="row"><span class="lab">帆</span><button id="modeBtn"></button>
+      <span class="note">「押されるだけの帆」は、揚力を 0 にして帆を風に直角に立てた板とみなした、比べるための仮想の帆です</span></div>
+    <div class="row"><span class="lab">時間</span><button data-mul="1">×1</button><button data-mul="2">×2</button><button data-mul="4">×4</button><button id="pause"></button></div>
+    <div class="row"><span class="lab">図</span><button id="polarBtn">ポーラー図（向きごとの速さ）</button></div>
+  </section>
+  <details id="about" class="about">
+    <summary>このアプリについて</summary>
+    <p>帆には2つの働きがあります。風に<b>押される</b>力（抗力）と、飛行機の翼のように風と直角に<b>持ち上げる</b>力（揚力）です。真後ろからの風では、帆はほとんど押されるだけです。船が速くなるほど、船の上で感じる風（見かけの風＝本当の風から船の速さを引いたもの）が弱まり、押す力も小さくなるので、風の速さには届きません。横からの風では、帆は翼になります。船が速くなっても見かけの風は前に回って強くなるので、帆は働き続け、条件によっては風より速く走れます。</p>
+    <p>帆の揚力は船を横にも引きます。水の中のキール（船底の板）と船体が、水の中の翼として同じ大きさの力で押し返すので、船は横にはほとんど流れず、前に進みます。風上へは、風に対して約 30° より内側では帆が働かないので、左右にジグザグ（タック）して進みます。</p>
+    <p>揚力の説明に「翼の上を通る空気は遠回りなので速くなる」（同じ時間で後ろに着く、という説）がよく使われますが、これはまちがいです。風洞で煙を流すと、上を通る空気のほうがずっと早く後ろに着きます（Babinsky 2003）。</p>
+    <h3>計算のしかた</h3>
+    <p>船は全長 12.5 m・重さ 6.5 トンのヨット YD-41（Python-VPP に入っている例の船）で、帆は主帆とジブ（前の帆）です。帆の揚力・抗力の係数（見かけの風の角度ごと、風洞と実船の測定から決めた表）と、船体の抵抗（デルフト工科大学の水槽実験の式・水との摩擦・キールの抵抗）は、ヨットレースの国際団体 ORC の速度予測の式で、オープンソースの Python-VPP（M. Lauber ほか）がそのまま組んだものを使っています。</p>
+    <p>船の速さ・風の角度・風の強さごとに、傾き・横流れ・帆の平らさ・帆を小さくする量を動かして、「横の力と傾ける力がつりあう中で、前へ進む力がいちばん大きくなる」調整を Python-VPP で計算し、表にしました（tools/build-table.py）。アプリはこの表を引いて、前後の速さだけ運動方程式（質量 ×（1＋付加質量）× 加速度 ＝ 前へ進む力 − 抵抗）で時間を進めます。止まったときの速さは、Python-VPP が直接計算した速さと 1% 以内で合うことを確かめています（tools/verify.js）。</p>
+    <h3>計算で分かったこと（YD-41、主帆＋ジブ）</h3>
+    <ul>
+      <li>同じ風なら、真横の風は真後ろの風の約2倍の速さ（風 4 ノットで 2.4 倍、16 ノットで 1.4 倍）。</li>
+      <li>弱い風（4〜6 ノット）の真横では、風より速い（約 1.2 倍）。</li>
+      <li>真後ろの風では、風の半分ほど（0.5 倍前後）。</li>
+      <li>風が強いと、風との比は下がります。重い船体は自分で作る波の抵抗が速さとともに急に大きくなるためで、帆のせいではありません。船体の抵抗がずっと小さい氷上ヨットや、水中翼で浮く船は、風の何倍もの速さで走ります。</li>
+    </ul>
+    <h3>簡単にしているところ</h3>
+    <ul>
+      <li>帆はいつも最適に調整されている前提です（ORC の係数表がそう作られています）。帆は主帆とジブだけで、風下用の大きな帆（スピネーカー）は使っていません。</li>
+      <li>傾き・横流れは、その瞬間ごとのつりあいとみなしています（実際には数秒おくれます）。向きを変える速さは決めた値（毎秒 8°）で、かじの力学は入れていません。</li>
+      <li>前後の付加質量（船といっしょに動く水）は船の重さの 5% と推定しました。速さが変わる時間だけに効き、落ちついた速さには効きません。</li>
+      <li>遅いときは、横流れが 6° をこえて横の力がつりあわないことがあります。そのときは横流れ 6° のまま前へ進む力を計算し、「横へ流されています」と出します。</li>
+      <li>波・潮はありません。風は高さで変わります（ORC の式。表示の風は高さ 10 m）が、場所と時間のむらはありません。</li>
+      <li>帆の向き（ブームの角度）の絵は目安です。矢印の長さは力・風の大きさに比例しますが、見やすさのための目印です。風が 6 ノットより強いときは、画面に収まるよう力の矢印を（6 ÷ 風速）² 倍に縮めています。</li>
+    </ul>
+    <h3>おもな出どころ</h3>
+    <ul>
+      <li>M. Lauber, O. Villani, T. Dickson, Python-VPP（MIT ライセンス）. <a href="https://github.com/marinlauber/Python-VPP" target="_blank" rel="noopener">github.com/marinlauber/Python-VPP</a>（commit 141ea66 で計算）</li>
+      <li>Offshore Racing Congress, ORC VPP Documentation（Python-VPP が従う式。帆の係数は Python-VPP の注記で 2026 年版の表 5.2・5.5）</li>
+      <li>H. Babinsky, “How do wings work?”, Physics Education 38, 497–503 (2003). <a href="https://doi.org/10.1088/0031-9120/38/6/001" target="_blank" rel="noopener">doi:10.1088/0031-9120/38/6/001</a></li>
+    </ul>
+    <h3>使っているもの</h3>
+    <p>計算の表: Python-VPP（MIT ライセンス）で作成。フォント: Google Fonts（SIL Open Font License）</p>
+  </details>
+</div>
+
+<script src="js/table.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/draw.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>

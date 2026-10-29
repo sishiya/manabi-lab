@@ -1,0 +1,55 @@
+# 帆船が風で進むしくみ 開発メモ
+
+## 別セッションで続けるとき（まずここ）
+- いまの状態: v002-stage-a（段階A）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。
+- 次にやること: ユーザーに見てもらう → PLAN.md の段階B（氷上ヨット・β の式、スピネーカー、帆の出し入れは Cl(α) の出どころが確かめられたら）。
+- 読む順: PLAN.md → このファイルの「ファイル構成」「しくみ」→ 関係するファイルだけ。
+- 動かし方: サーバー apps（.claude/launch.json）で http://localhost:8765/sail-wind/ （data/ を fetch するので file:// では動かない）。デバッグ用の窓口 `window.__sawi`（`simRun(秒)`・`steady(twa, twsKn, mode)`・`Sim`・`Draw`・`UI`）、エラーは `window.__sawiErr`。
+- 区切りごとの手順: 「確認のしかた」と smoke.ps1 → 「状態」に1行 → launcher.html の表 → 公開前チェック → commit（節目の版だけ versions/ へコピーしてカードに。RULES 3章）。
+- ユーザーの好み: 研究データに基づく正確さ。「常識とちがう」ところ（真後ろより横が速い、風より速い）を見たい。
+
+## ファイル構成
+| ファイル | 中身 | 主な関数・変数 |
+|---|---|---|
+| index.html | 骨組み・HUD・操作・このアプリについて（出どころ） | |
+| css/style.css | 見た目（上に固定 #pin、375px） | |
+| js/table.js | 力の表を読む・3軸の線形補間・落ちついた速さ | `loadTable`・`makeTable`→`T.lookup(mode,twsKn,twa,vKn)`・`T.steady` |
+| js/sim.js | 船の時間の進め方 | `Sim.S`・`Sim.update(dt)`・`Sim.twa()`・`MASS`・`K_ADDED`・`TURN_RATE` |
+| js/draw.js | 上から見た海・船・矢印・ポーラー図 | `Draw.frame`・`Draw.boat`・`Draw.polarInset`・`COL` |
+| js/ui.js | つぎへ（`TOUR`）・操作・HUD・凡例 | `UI.go(i)`・`UI.sync`・`UI.hud` |
+| js/main.js | 読み込み・ループ・デバッグの窓口 | `window.__sawi` |
+| data/yd41.json・yd41-orc.bin・yd41-push.bin | 力の表（int16、`meta.scale` をかける） | 並び [tws][twa][v][channel] |
+| tools/build-table.py | 表と基準を Python-VPP で作る（Python-VPP を入れた Python で） | `--ref` で tools/ref-vpp.json |
+| tools/verify.js | 物理の確かめ（`node tools/verify.js`） | |
+
+読み込み順: table.js → sim.js → draw.js → ui.js → main.js（`KN`・`COL`・`Sim`・`Draw` を後ろが使う）。
+
+## しくみ
+- 力のモデルはすべて Python-VPP（MIT、commit 141ea66）: ORC の帆の係数表（主帆・ジブ、見かけの風の角度ごとの Cl・Cd、平らさ flat・リーフ）、ORC の船体抵抗（Delft の残差抵抗の面・摩擦・付加物・誘導抵抗）、傾きの復原モーメント。船は runVPP.py の YD-41、帆は主帆＋ジブだけ。
+- 表: 風速 4〜20 kt（2 kt おき）× TWA 0〜180°（5° おき）× V 0〜13 kt（0.5 kt おき）。各点で [heel, leeway, flat, red] を動かし、横の力と傾きのモーメントのつりあいを制約に、前へ進む力の余り fnet を最大化（SLSQP）。fnet = 0 の速さは VPP の「つりあいの中で速さ最大」と同じ答え。
+- 遅いとき（横流れ 6° でも横の力が足りない）は、横の力のつりあいを外して λ = 6° の解（ok = 0）と比べ、fnet の大きいほうをとる。実際の船は横へ流されながら帆いっぱいで加速するため。画面に「横へ流されています」。
+- 押されるだけの帆: Sail の cl_data = 0、cd_data = ORC の表の 180° の値（主帆 1.34483、ジブ 0.90）を全部の向きで。誘導抵抗の項は Cl² なので 0。
+- 時間: m(1+k) dV/dt = fnet（m = 6500 kg、k = 0.05 推定）。向きは毎秒 8°（決めた値）。進む向きは船首から風下へ leeway。
+- 描画: 矢印の長さは力 1000 N = 5 m ぶん（風 6 kt より強いときは (6/風速)² 倍に縮める）、風 1 m/s = 0.9 m ぶん。揚力は見かけの風に直角、抗力は見かけの風の向き、キールは風上の舷へ（大きさ = 表の keel）。ブームの角度は絵の目安（翼の帆は awa − 18°、押されるだけは awa − 90°）。
+
+## ハマったところ
+- results.json（Python-VPP のリポジトリにある出力）は最新のコードより古い版のもの。基準は `--ref` で同じ版から作り直した。results.json の船速は kt（風速は m/s で入っている）。
+- 表を作るとき、遅い速さでは横の力をつりあわせるために帆を大きくゆるめた解（fnet が小さい）しか見つからず、速さに対して fnet がでこぼこになった → λ = 上限の解と比べて大きいほう（上の「しくみ」）。
+- 風が強く風上寄り・遅いところ（4点: TWS 16〜20 kt・TWA 25〜65°・V 1〜3.5 kt）は傾きのモーメントもつりあわない → モーメントの残りが最小の調整をとる（ok = 0）。落ちつく速さには出てこない。
+- 押されるだけの帆は真横で 0 kt（抗力が真横を向くので前へ進む力がない）。正しい。
+- ok = 0 は V = 0 では必ず（船体の横の力が 0）。真後ろ近くで「横へ流されています」が出ないよう、帆の横の力 > キールの力 × 1.1 のときだけ出す（ui.js）。
+- 外のコード（Python-VPP）を動かすのは自動の許可で止められた → ユーザーの許可を得てから scratchpad の venv で（2026-10-29）。
+
+## 確認のしかた（変更のたびに）
+1. `node tools/verify.js` が「すべて OK」（Python-VPP との差 1% 以内・時間を進めた速さ・真後ろ < 風・押されるだけの帆）。
+2. http://localhost:8765/sail-wind/ を開き、つぎへ 1〜7 を順に。1: 真後ろで約 3 kt に落ちつく、2: 真横で約 7 kt（風の 1.17 倍）、3: 緑の矢印、4: 押されるだけで真横はほとんど進まない、5: ジグザグ、6: 右上にポーラー図と点線、7: 風 16 kt。`__sawiErr` が空。
+3. かじ（◀ ▶・← →キー）、向きのボタン、風のスライダー、帆の切りかえ、×1/×2/×4、止める、ポーラー図。
+4. 幅 375px: 横にはみ出さない（`scrollWidth`）、図とつぎへが上に固定、ポーラー図と HUD が重ならない。
+5. `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/smoke.ps1 -Apps sail-wind`（例外・読み込みの失敗・外への通信）
+
+## 批判役（2026-10-29、企画）
+PLAN.md の「批判役と決めたこと」。10件すべて直した。
+
+## 状態
+- 2026-10-29 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
+- 2026-10-29 v002-stage-a: 段階A。Python-VPP で力の表、時間を進める船、つぎへ 7歩、ポーラー図、出どころ。
