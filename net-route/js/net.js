@@ -12,7 +12,7 @@ const NODES = [
   { id: 'router',  name: '家のルーター',       short: 'ルーター',   x: 0.12, y: 0.50, kind: 'router' },
   { id: 'isp',     name: 'プロバイダの局',     short: 'プロバイダ', x: 0.20, y: 0.50, kind: 'router' },
   { id: 'ix',      name: 'IX（東京・大手町）', short: 'IX',         x: 0.28, y: 0.50, kind: 'router', lat: 35.687, lon: 139.766 },
-  { id: 'cdn',     name: '東京のデータセンター', short: '東京DC',   x: 0.28, y: 0.84, kind: 'server', lat: 35.65, lon: 139.75 },
+  { id: 'cdn',     name: '東京のデータセンター', short: '東京DC',   x: 0.28, y: 0.84, kind: 'server', lat: 35.681, lon: 139.759 },   // IX から約1km（線の仮定に合わせた位置）
   { id: 'chikura', name: '千倉の陸揚げ局',     short: '千倉',       x: 0.38, y: 0.32, kind: 'router', lat: 34.95, lon: 139.95 },
   { id: 'shima',   name: '志摩の陸揚げ局',     short: '志摩',       x: 0.38, y: 0.68, kind: 'router', lat: 34.30, lon: 136.85 },
   { id: 'hawaii',  name: 'ハワイ（オアフ島）', short: 'ハワイ',     x: 0.60, y: 0.86, kind: 'router', lat: 21.40, lon: -158.0 },

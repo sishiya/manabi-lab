@@ -11,6 +11,8 @@
   <header id="top"><h1>インターネットの経路</h1><p class="sub">ページを1枚開くあいだの、データの旅を遅くして見る</p></header>
   <main id="stage">
     <canvas id="cv"></canvas>
+    <div id="views" class="seg" role="group" aria-label="見かた"><button data-view="map" class="on">図</button><button data-view="globe">地球儀</button></div>
+    <div id="gnav" hidden><button data-go="tokyo">東京へ</button><button data-go="japan">日本</button><button data-go="pacific">太平洋</button><button data-zoom="1.6" aria-label="寄る">＋</button><button data-zoom="0.625" aria-label="引く">−</button></div>
     <div id="info" hidden></div>
     <div id="cap"><div class="txt"><b id="capT"></b><span id="capB"></span></div><button id="open" class="main">ページを開く</button></div>
   </main>
@@ -24,7 +26,7 @@
       <button data-srv="cdn">近く（東京）</button>
     </div>
     <label class="row slow"><span class="lbl">時間</span><input id="slow" type="range" min="0" max="100" value="40"><span id="slowT" class="mono"></span></label>
-    <p class="hint">さわれるところ: <b>線</b>をタップ＝ケーブルを切る・つなぐ／<b>中継の点</b>＝混ませる／<b>動く四角</b>＝中身を見る。</p>
+    <p class="hint">さわれるところ: <b>線</b>をタップ＝ケーブルを切る・つなぐ／<b>中継の点</b>＝混ませる／<b>動く四角</b>＝中身を見る。地球儀は、図の上をなぞって回す・ホイールや2本指で寄る（ページを動かすときは図の下をなぞる）。</p>
     <div id="result">
       <div id="bar"></div>
       <ul id="nums"></ul>
@@ -37,7 +39,7 @@
       <li><i style="background:#7fe0a0"></i>受けとったよ（ACK）</li>
       <li><i class="re"></i>送り直したもの</li>
       <li><i class="ln sea"></i>海底ケーブル　<i class="ln air"></i>WiFi（電波）</li>
-      <li>図の線の長さは本物と合っていません（線の数字が長さ）。四角が重ならないよう少しずらして描いています（※ 目印）。</li>
+      <li>「図」の線の長さは本物と合っていません（線の数字が長さ）。「地球儀」は本当の緯度経度に置き、線は大円（いちばん短い道）で描いています。四角は重ならないよう少しずらしています。</li>
     </ul>
   </section>
   <details id="about">
@@ -53,7 +55,7 @@
     </ul>
     <h3>簡単にしたところ</h3>
     <ul>
-      <li>道と陸揚げ局は<b>例</b>です（本物のケーブルの地図を写したものではありません）。</li>
+      <li>道と陸揚げ局は<b>例</b>です（本物のケーブルの地図を写したものではありません）。地球儀では線を大円で描いていますが、本物の海底ケーブルは海の深さや地形をよけて曲がっています。家・プロバイダの位置は図のための仮の場所です。</li>
       <li>本物の道は、会社どうしの約束（BGP）で決まり、いちばん早い道とは限りません。ここでは各中継が「いまいちばん早い道」を選び、ケーブルが切れるとすぐ組み直します。本物は組み直しに数十秒〜数分かかることもあります。</li>
       <li>「受けとったよ」は1つずつ返し、送り直しは時間切れのときだけにしました（本物はもっと工夫があります）。待ち時間の下限は、RFC の1秒ではなく Linux と同じ0.2秒にしました。</li>
       <li>ページは HTML 1つ（60KB の例）だけ。本物のページは画像やスクリプトなど何十ものファイルを読みます。サーバーがページを作る時間・暗号の計算・光回線の上りの順番待ちなどは入れていないので、本物はもっとかかります。</li>
@@ -65,6 +67,7 @@
       <li>TCP: <a href="https://www.rfc-editor.org/rfc/rfc9293" target="_blank" rel="noopener">RFC 9293</a>（あいさつ）、<a href="https://www.rfc-editor.org/rfc/rfc6928" target="_blank" rel="noopener">RFC 6928</a>（最初に送る数 10）、<a href="https://www.rfc-editor.org/rfc/rfc5681" target="_blank" rel="noopener">RFC 5681</a>（スロースタート）、<a href="https://www.rfc-editor.org/rfc/rfc6298" target="_blank" rel="noopener">RFC 6298</a>（送り直しの待ち時間）</li>
       <li>TLS 1.3: <a href="https://www.rfc-editor.org/rfc/rfc8446" target="_blank" rel="noopener">RFC 8446</a>。DNS: <a href="https://www.rfc-editor.org/rfc/rfc1034" target="_blank" rel="noopener">RFC 1034</a>・<a href="https://www.rfc-editor.org/rfc/rfc1035" target="_blank" rel="noopener">RFC 1035</a></li>
       <li>道の組み直しに時間がかかること: Labovitz, Ahuja, Bose, Jahanian (2000) Delayed Internet Routing Convergence（ACM SIGCOMM）</li>
+      <li>地球儀の海岸線: <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a> 1:50m（パブリックドメイン）を間引いて使っています。</li>
     </ul>
     <h3>使っているもの</h3>
     <p>フォント: Google Fonts（SIL Open Font License）</p>
@@ -74,5 +77,6 @@
 <script src="js/net.js"></script>
 <script src="js/sim.js"></script>
 <script src="js/draw.js"></script>
+<script src="js/globe.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>

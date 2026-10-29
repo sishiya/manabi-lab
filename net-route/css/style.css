@@ -16,6 +16,13 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-bod
 #cap .main{flex:none;white-space:nowrap}
 #cap b{display:block;color:var(--acc);font-weight:700}
 #cap span{color:var(--muted)}
+/* 見かたの切りかえ（図／地球儀）と、地球儀の寄る・回すボタン */
+#views{position:absolute;top:6px;right:8px;display:flex;gap:4px;z-index:3}
+#views button,#gnav button{min-height:32px;padding:3px 10px;font-size:13px;background:rgba(22,38,58,.92)}
+#gnav{position:absolute;right:8px;bottom:84px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px;max-width:calc(100% - 16px);z-index:3}
+#gnav button[data-zoom]{min-width:34px;padding:3px 6px}
+#stage.globe #cv{touch-action:none;cursor:grab}
+#stage.globe #info{bottom:122px}
 #info{position:absolute;left:8px;right:8px;bottom:70px;max-width:420px;background:rgba(10,20,32,.94);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.6}
 #info .x{float:right;background:none;border:0;color:var(--muted);font-size:16px;min-height:auto;padding:0 4px}
 #info button.act{margin-top:6px}

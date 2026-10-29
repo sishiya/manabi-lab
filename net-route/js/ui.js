@@ -41,9 +41,36 @@ function packetInfo(p) {
   return `<b>${content}</b>${p.resend ? '（送り直し）' : ''}<br>出したところ ${NODE[p.src].short} → 宛先 ${NODE[p.dst].short}<br>大きさ ${p.size} バイト・通った中継 ${p.hops}<br>いま: ${st}<br>出してから ${ms(SIM.T - p.born)} ミリ秒`;
 }
 
+// 見かた: 図／地球儀
+VIEW.mode = 'map';
+document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => {
+  VIEW.mode = b.dataset.view; closeInfo();
+  document.querySelectorAll('[data-view]').forEach(x => x.classList.toggle('on', x === b));
+  $('stage').classList.toggle('globe', VIEW.mode === 'globe'); $('gnav').hidden = VIEW.mode !== 'globe';
+}));
+document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => flyTo(GLOBE_VIEWS[b.dataset.go])));
+document.querySelectorAll('[data-zoom]').forEach(b => b.addEventListener('click', () => zoomBy(+b.dataset.zoom)));
+
+// 地球儀: なぞって回す・2本指やホイールで寄る（動かしたあとのタップは無視）
+const ptrs = new Map(); let dragged = false, pinch0 = 0, down0 = null;
+$('cv').addEventListener('pointerdown', e => { if (VIEW.mode !== 'globe') return; ptrs.set(e.pointerId, [e.clientX, e.clientY]); if (ptrs.size === 1) { dragged = false; down0 = [e.clientX, e.clientY]; } pinch0 = 0; $('cv').setPointerCapture(e.pointerId); });
+$('cv').addEventListener('pointermove', e => {
+  if (VIEW.mode !== 'globe' || !ptrs.has(e.pointerId)) return;
+  const [px, py] = ptrs.get(e.pointerId), dx = e.clientX - px, dy = e.clientY - py;
+  ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  if (ptrs.size === 1) { if (dx || dy) panBy(dx, dy); if (down0 && Math.hypot(e.clientX - down0[0], e.clientY - down0[1]) > 6) dragged = true; }   // 押したところから合計 6px で「なぞった」
+  else { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch0) zoomBy(d / pinch0); pinch0 = d; dragged = true; }
+});
+const ptrEnd = e => { ptrs.delete(e.pointerId); pinch0 = 0; };
+$('cv').addEventListener('pointerup', ptrEnd); $('cv').addEventListener('pointercancel', ptrEnd);
+$('cv').addEventListener('wheel', e => { if (VIEW.mode !== 'globe') return; e.preventDefault(); zoomBy(Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
+
 $('cv').addEventListener('click', e => {
-  const r = $('cv').getBoundingClientRect(), h = hitTest(e.clientX - r.left, e.clientY - r.top);
+  if (VIEW.mode === 'globe' && dragged) { dragged = false; return; }
+  const r = $('cv').getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  const h = VIEW.mode === 'globe' ? hitTestGlobe(x, y) : hitTest(x, y);
   if (!h) { closeInfo(); return; }
+  if (h.type === 'cluster') { flyTo(GLOBE_VIEWS.tokyo); showInfo(`<b>東京のあたり</b><br>${h.nodes.map(n => n.short).join('・')} が重なっているので寄ります。`, true); return; }
   VIEW.sel = h;
   if (h.type === 'link') { toggleCut(h.l); onCut(h.l); showInfo(linkInfo(h.l), true); }
   else if (h.type === 'node') {
