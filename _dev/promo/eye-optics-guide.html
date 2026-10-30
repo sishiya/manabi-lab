@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="eye-common.js"></script>
+<script>
+'use strict';
+// 台本: 目のなかの光の道 ― 使い方と見どころ（横長の説明動画、150秒）。案内役のライオンつき
+// アプリの「つぎへ」の案内（15段）を順に。上 0〜175 は字幕、その下にアプリの図（css 1280×520 を 幅 1500 に）、右に見え方と状態、下に時間のグラフ（右下はライオンの場所）
+// 数（調節・くっきりまでの秒・近視の度・メガネの度・暗さで見えはじめる分・乱視のぼけ）は setup でアプリに計算させて入れる
+const END = 150, DUR = END + IDENT_CLOSE, TOP = 175, CW = 1280, CHH = 520, ZOOM = 1500 / CW;
+const SEG = [
+  { a: 0, b: 13, tour: 0 },
+  { a: 13, b: 20, tour: 1 },
+  { a: 20, b: 27, tour: 2 },
+  { a: 27, b: 36, tour: 3 },
+  { a: 36, b: 48, tour: 4, tag: 'スロー 1/4' },
+  { a: 48, b: 55, tour: 5 },
+  { a: 55, b: 62, tour: 6 },
+  { a: 62, b: 68, tour: 7 },
+  { a: 68, b: 82, tour: 8, tag: '早送り ×4' },
+  { a: 82, b: 89, tour: 9, tag: 'スロー 1/4' },
+  { a: 89, b: 107, tour: 10, tag: '早送り ×60（1秒で1分）' },
+  // 見つめる 15 秒だけ ×4（動画 3.75 秒）、白い面にしてからは ふつうの速さ（残像が消えていくのを見せる）
+  { a: 107, b: 119, tour: 11, speed: 4, tag: '早送り ×4', tagEnd: 110.75, ev: [{ t: 110.75, set: { speed: 1 } }] },
+  { a: 119, b: 127, tour: 12 },
+  { a: 127, b: 134, tour: 13 },
+  { a: 134, b: DUR, tour: 14 },
+];
+// ---- ボタンの札とマウス（「つぎへ」1つで進む）----
+const CH = { next: { x: 40, y: 190, title: '図の上の案内（15段）', btns: ['つぎへ'] } };
+const B = i => btnRect(CH.next, i);
+const CUR = [];
+for (const s of SEG.slice(1)) CUR.push({ t: s.a - 0.8, ...B(0) }, { t: s.a, ...B(0), click: true }, { t: s.a + 1, ...B(0), hide: true });
+const chipF = t => Math.max(...SEG.slice(1).map(s => fade(t, s.a - 1.2, s.a + 1.2, 0.3)));
+// ---- 字幕（日本語は上に焼きこむ・英語は SRT）----
+const M = { a0: 0, a1: 0, sharp: 0, err: '', gl: '', dark: 0, bv: 0, bh: 0 };
+let CAPS = [];
+function makeCaps() {
+  CAPS = [
+    { a: 7, b: 12.6, main: '目を横から切った図。光の道すじを1本ずつ計算', sub: '本物の目の寸法の模型（Navarro 1985）。右上は、そのとき見えるようす',
+      en: ['The eye cut in half, seen from the side. Every ray is calculated', 'A model with a real eye’s sizes (Navarro 1985). Top right: what the eye sees'] },
+    { a: 13.4, b: 19.6, main: '光をいちばん曲げるのは、表面の角膜', sub: '空気との境目で大きく曲がる。奥の水晶体は、ピントの細かい調整係',
+      en: ['The cornea on the front bends light the most', 'Light bends most where air meets it. The lens inside does the fine focusing'] },
+    { a: 20.4, b: 26.6, main: '網膜にうつる像は、上下さかさま', sub: '物の上の端から来た光（水色）は、網膜の下の側へ',
+      en: ['The image on the retina is upside down', 'Light from the top of the object (light blue) lands low on the retina'] },
+    { a: 27.4, b: 35.6, main: '物を近づけると、水晶体がふくらむ（調節）', sub: `3 m → 20 cm で 調節 ${M.a0} → ${M.a1} D。物は自分でドラッグしても動かせる`,
+      en: ['Bring the object closer, and the lens rounds up (accommodation)', `3 m → 20 cm: focusing ${M.a0} → ${M.a1} D. You can drag the object yourself too`] },
+    { a: 36.4, b: 41.8, main: 'ピント合わせには、時間がかかる', sub: '遠く 5 m → 近く 30 cm。はじめの 0.3 秒は何も起きない（遅れ）',
+      en: ['Focusing takes time', 'Far 5 m → near 30 cm. For the first 0.3 s nothing happens (the delay)'] },
+    { a: 42.2, b: 47.6, main: '下のグラフ: ねらい（点線）を、実際（実線）が追いかける', sub: `切りかえて 約${M.sharp}秒でくっきり（測られた遅れと速さ）`,
+      en: ['Graph below: the actual value (solid) chases the target (dotted)', `Sharp about ${M.sharp} s after the switch (measured delay and speed)`] },
+    { a: 48.4, b: 54.6, main: '60歳: 水晶体がかたくなり、近くがぼける（老眼）', sub: '30 cm の物の像が、網膜のうしろにずれる',
+      en: ['Age 60: the lens has stiffened, so near things blur (presbyopia)', 'The image of something 30 cm away falls behind the retina'] },
+    { a: 55.4, b: 61.6, main: '目が 1 mm 長いだけで、遠くがぼける（近視）', sub: `この模型で ${M.err}。像が網膜の手前にできる`,
+      en: ['An eye just 1 mm too long blurs far things (nearsightedness)', `${M.err} in this model: the image forms in front of the retina`] },
+    { a: 62.4, b: 67.6, main: `凹レンズのメガネ（${M.gl}）で、くっきり`, sub: '光を少し広げてから入れると、像が網膜まで届く',
+      en: [`Minus-lens glasses (${M.gl}) make it sharp`, 'Spreading the light a little first lets the image reach the retina'] },
+    { a: 68.4, b: 75, main: '晴れた屋外から、街灯のない夜道へ（早送り ×4）', sub: 'ひとみは 20 秒ほどかけて、ゆっくり開く（グラフの「ひとみ」）',
+      en: ['From sunny outdoors to an unlit night road (×4)', 'The pupil slowly opens over about 20 s (see “Pupil” in the graph)'] },
+    { a: 75.4, b: 81.6, main: 'でも、まだ何も見えない', sub: '網膜が暗さに慣れていないから（慣れるのは、あとの段で）',
+      en: ['But you still see nothing', 'The retina is not used to the dark yet (that comes in a later step)'] },
+    { a: 82.4, b: 88.6, main: '明るい部屋へ（スロー 1/4）: ひとみはすばやく縮む', sub: '0.2 秒ほどの遅れのあと、約1秒で。開くのはゆっくり、縮むのはすばやい',
+      en: ['Into a bright room (1/4 slow): the pupil shrinks fast', 'After about 0.2 s, it takes about 1 s. Opening is slow; shrinking is fast'] },
+    { a: 89.4, b: 97.6, main: '暗さに慣れる（早送り ×60: 1秒で1分）', sub: '晴れた屋外 → 街灯のない夜道。まず錐体（明るい所の細胞）が数分で頭打ち',
+      en: ['Getting used to the dark (×60: 1 s = 1 min)', 'Sunny outdoors → unlit night road. First the cones (bright-light cells) level off within minutes'] },
+    { a: 98, b: 106.6, main: `約${M.dark}分で、桿体（暗い所の細胞）に切りかわる`, sub: 'うす暗く見えはじめるが、まん中がぬける（中心窩には桿体がない）',
+      en: [`After about ${M.dark} min, the rods (dim-light cells) take over`, 'Things dimly appear, but the middle is missing (the fovea has no rods)'] },
+    { a: 107.4, b: 110.6, main: '残像: 図を15秒見つめる（早送り ×4）', sub: '網膜の神経細胞が慣れて（順応）、色が少しずつうすれる',
+      en: ['Afterimages: stare at the figure for 15 s (×4)', 'Nerve cells in the retina get used to it (adaptation), and the colors fade'] },
+    { a: 111, b: 118.6, main: '白い面にすると、反対の色が見える', sub: '赤 → 青緑。右の図: 「入ってくる − 慣れ」が脳へ送られる',
+      en: ['Switch to a white surface, and the opposite colors appear', 'Red → blue-green. The diagram: “incoming − adaptation” goes to the brain'] },
+    { a: 119.4, b: 126.6, main: '乱視: 角膜の丸みが、縦と横で少しちがう', sub: `縦が 1.5 D 強い目。ぼけは 縦 ${M.bv} 分・横 ${M.bh} 分で、ある向きの線だけぼやける`,
+      en: ['Astigmatism: the cornea is curved differently up-and-down and side-to-side', `1.5 D stronger vertically: blur ${M.bv}′ vertical, ${M.bh}′ horizontal, so lines in one direction blur`] },
+    { a: 127.4, b: 133.6, main: '縦と横で度のちがうメガネ（円柱レンズ）', sub: '縦も横も網膜に集まって、どの向きの線もくっきり',
+      en: ['Glasses with different powers in the two directions (a cylinder lens)', 'Both directions land on the retina, so lines in every direction look sharp'] },
+    { a: 134.4, b: 141.6, main: 'ここからは自由に', sub: '物をドラッグ・下のボタンで年齢・目の長さ・乱視・メガネ・明るさ。日本語と英語に対応',
+      en: ['Then explore freely', 'Drag the object; buttons below change age, eye length, astigmatism, glasses and light. Japanese and English'] },
+  ];
+}
+const NAME = '目のなかの光の道';
+const CREDIT = 'おもな出どころ: Navarro ほか (1985) の目の模型、Bharadwaj & Schor (2006)、Mathôt (2018)、Patryas ほか (2013)、Lamb & Pugh (2004)、Zaidi ほか (2012)。ひとみの速さ・残像の強さの一部は推定';
+const q4 = v => { v = Math.round(v * 4) / 4; return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(2) + ' D'; };
+// ---- 案内役のライオン ----
+const MUSIC = { style: 'journey', root: 123, stopAt: END, cues: [{ t: END, type: 'jingle' }] };
+const EXP = [[0, 'calm'], [7.2, 'smile'], [10, 'calm'], [13.6, 'think'], [17, 'calm'], [20.6, 'wow'], [24, 'calm'], [27.6, 'smile'], [31, 'calm'],
+  [36.6, 'think'], [40, 'calm'], [42.4, 'think'], [46, 'calm'], [48.6, 'sad'], [52, 'calm'], [55.6, 'think'], [59, 'calm'], [62.6, 'smile'], [66, 'calm'],
+  [68.6, 'think'], [72, 'calm'], [75.6, 'shock'], [79, 'calm'], [82.6, 'wow'], [86, 'calm'], [89.6, 'sleepy'], [94, 'calm'], [98.2, 'wow'], [102, 'calm'],
+  [107.6, 'think'], [111, 'calm'], [113.2, 'wow'], [117, 'calm'], [119.6, 'think'], [123, 'calm'], [127.6, 'smile'], [131, 'calm'],
+  [134.6, 'proud'], [138, 'calm'], [END - 7.6, 'smile']];
+promoStart({
+  name: NAME + '（使い方）', out: 'eye-optics-guide', src: '../../eye-optics/index.html', iw: 1280, ih: 1100, dur: DUR, peek: 40,
+  inject: EO_INJECT,
+  music: MUSIC,
+  ready: w => !!LION.api && w.__eyop && w.__eyop.S.res,
+  setup(w) {
+    eoSize(w, CW, CHH, 290, 190, 1230, 177);
+    const S = w.__eyop.S, k = i => SEG.findIndex(s => s.tour === i);
+    eoStart(w, SEG, k(3)); M.a0 = S.A.toFixed(1);   // 3 m で合わせた目（物を近づける前）
+    eoRender(w, SEG, SEG[k(3)].b - 0.1); M.a1 = S.A.toFixed(1);
+    const t4 = eoUntil(w, SEG, k(4), S => S.d === 300 && S.A > 1 && S.res.state === 'ok');
+    M.sharp = t4 === null ? '?' : (t4 * 0.25 - 0.5).toFixed(1);
+    eoRender(w, SEG, SEG[k(6)].a + 2); M.err = q4(S.err);
+    eoRender(w, SEG, SEG[k(7)].a + 2); M.gl = q4(S.P);
+    const t10 = eoUntil(w, SEG, k(10), S => S.res.see.who !== 'none' && S.light === 'night');
+    M.dark = t10 === null ? '?' : Math.round(t10 - 0.5);   // ×60 なので動画の1秒 ＝ 1分、切りかえは 30 秒（0.5 分）
+    eoRender(w, SEG, SEG[k(12)].a + 3); M.bv = (S.res.diamS * 3437.75).toFixed(1); M.bh = (S.res.diamW * 3437.75).toFixed(1);
+    console.log('measure', JSON.stringify(M));
+    makeCaps();
+    eoK = -1;
+    MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: CUR, exp: EXP, end: END, bye: END - 5.8 }));
+    return w.document.getElementById('cv');
+  },
+  subs: () => guideSubs(END, NAME, 'Light’s Path Inside the Eye', CAPS, 'Runs in your browser (PC or phone). The app has Japanese and English (EN button)'),
+  renderAt(t, w) { eoRender(w, SEG, t); },
+  drawSource(g, w, OW, OH) {
+    const cv = w.document.getElementById('cv'), k = OW / 1920;
+    g.fillStyle = '#0f1a26'; g.fillRect(0, 0, OW, OH);
+    g.drawImage(cv, 0, TOP * k, 1500 * k, CHH * ZOOM * k);
+  },
+  overlay(g, t, w) {
+    const s = eoSeg(SEG, t), f = fade(t, 7, END - 8, 0.5);
+    const y1 = eoChart(g, w, 1515, 185, 330, f, '見え方');
+    eoState(g, w, 1515, y1 + 12, 370, f, 26);
+    drawInset(g, w.document.getElementById('tl'), 40, 795, 1460, 220, '時間の流れ（ぼけ・調節・ひとみ・暗さ慣れ・残像）', f);
+    eoTag(g, s, 1490, 215, fade(t, Math.max(s.a, 7), Math.min(s.tagEnd || s.b, END - 8), 0.3), true);
+    drawChip(g, CH.next, -1, chipF(t));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawGuideChrome(g, t, END, NAME, CREDIT);
+    drawLion(g, t);
+  },
+  errors: w => w.__eyopErr,
+});
+lionOpen();
+</script>
+</body>
+</html>

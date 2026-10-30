@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="eye-common.js"></script>
+<script>
+'use strict';
+// 台本: 目のなかの光の道（ショート、40秒＋締め。縦で録る: ?short）
+// 近づける（調節）→ 0.3 秒の遅れ（スロー）→ 60歳（老眼）→ 1 mm 長い目（近視）とメガネ。数（調節・くっきりまでの秒・近視の度・メガネの度）は setup でアプリに計算させて入れる
+// アプリの図はスマホの形（幅 540 の図: 目が右、物が左、拡大鏡が下）
+const SEG = [
+  { a: 0, b: 6, tour: 0 },
+  { a: 6, b: 13, tour: 3 },
+  { a: 13, b: 20, tour: 4, go: [{ at: 0.2, d: 300 }], tag: 'スロー 1/4' },
+  { a: 20, b: 27, tour: 5 },
+  { a: 27, b: 99, tour: 6, ev: [{ t: 30.6, set: { glasses: 'far' } }] },
+];
+const M = { a0: 0, a1: 0, sharp: 0, err: '', gl: '' };
+let CAPS = [];
+function makeCaps() {
+  CAPS = [
+    { a: 6.3, b: 12.8, main: '近くを見ると、水晶体がふくらむ', sub: `調節 ${M.a0} → ${M.a1} D。光を強く曲げて、網膜にピントを合わせる`,
+      en: ['Look at something close, and the lens rounds up', `Focusing ${M.a0} → ${M.a1} D: it bends light harder to focus on the retina`] },
+    { a: 13.3, b: 19.8, main: 'ピント合わせには、0.3 秒の遅れ', sub: `遠く→近く。はじめは何も起きず、約${M.sharp}秒でくっきり（スロー 1/4）`,
+      en: ['Focusing starts 0.3 s late', `Far → near: nothing happens at first, then it is sharp in about ${M.sharp} s (1/4 slow motion)`] },
+    { a: 20.3, b: 26.8, main: '60歳: 水晶体がかたく、近くがぼける', sub: '30 cm の物の像が、網膜のうしろにずれる（老眼）',
+      en: ['Age 60: the lens has stiffened, so near things blur', 'The image of something 30 cm away falls behind the retina (presbyopia)'] },
+    { a: 27.3, b: 34.9, main: '目が 1 mm 長いだけで、遠くがぼける', sub: `近視 ${M.err}。凹レンズのメガネで光を広げると、くっきり`,
+      en: ['An eye just 1 mm too long blurs far things', `Nearsighted, ${M.err}. Minus-lens glasses (${M.gl}) spread the light, and it is sharp again`] },
+  ];
+}
+const NAME = '目のなかの光の道', NAME_EN = 'Light’s Path Inside the Eye';
+const Q = '光は、目のなかでどう曲がる？', Q_EN = 'How does light bend inside your eye?';
+const END_LINE = 'ブラウザで動かせます。年齢・近視・乱視・暗さも', END_EN = 'Runs in your browser. Try age, nearsightedness, astigmatism and darkness';
+const CW = 540, CHH = 520;   // アプリの図（css px）。動画では幅 1080 に
+const q4 = v => { v = Math.round(v * 4) / 4; return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(2) + ' D'; };
+promoStart({
+  name: NAME, out: 'eye-optics', src: '../../eye-optics/index.html', iw: 540, ih: 960, dur: SHORT_END + IDENT_CLOSE, peek: 10,
+  inject: EO_INJECT,
+  music: { style: 'journey', root: 123, stopAt: SHORT_END, cues: [{ t: SHORT_END, type: 'jingle' }] },
+  ready: w => w.__eyop && w.__eyop.S.res,
+  setup(w) {
+    eoSize(w, CW, CHH, 290, 190, 500, 180);
+    const S = w.__eyop.S;
+    eoStart(w, SEG, 0); M.a0 = S.A.toFixed(1);
+    eoRender(w, SEG, 12.9); M.a1 = S.A.toFixed(1);
+    // 近くへ切りかえて（シミュレーション 0.2 秒）から「くっきり」になるまで（シミュレーションの秒）
+    const tv = eoUntil(w, SEG, 2, S => S.t > 0 && S.res.state === 'ok' && S.d === 300 && S.A > 1);
+    M.sharp = tv === null ? '?' : (Math.round((tv * 0.25 - 0.2) * 10) / 10).toFixed(1);
+    eoRender(w, SEG, 28); M.err = q4(S.err);
+    eoRender(w, SEG, 33); M.gl = q4(S.P);
+    console.log('measure', JSON.stringify(M), S.res.state);
+    makeCaps();
+    eoK = -1;
+    return w.document.getElementById('cv');
+  },
+  subs: () => shortSubs(NAME, NAME_EN, Q, Q_EN, CAPS, END_LINE, END_EN),
+  renderAt(t, w) { eoRender(w, SEG, t); },
+  drawSource(g, w, OW, OH) {   // 上は文字の場所（0〜470）、まん中にアプリの図、下に見え方と状態
+    const cv = w.document.getElementById('cv'), k = OW / 1080;
+    g.fillStyle = '#0f1a26'; g.fillRect(0, 0, OW, OH);
+    g.drawImage(cv, 0, 470 * k, OW, 1080 * cv.height / cv.width * k);
+  },
+  overlay(g, t, w) {
+    const f = fade(t, 0.3, 35.2, 0.4);
+    const y0 = 470 + 1080 * CHH / CW + 20;
+    eoChart(g, w, 40, y0, 470, f, '見え方');
+    eoState(g, w, 550, y0, 490, f, 30);
+    drawTop(g, t, 0.6, 5.6, NAME, Q, true);
+    for (const c of CAPS) drawTop(g, t, c.a, c.b, c.main, c.sub);
+    const s = eoSeg(SEG, t);
+    eoTag(g, s, PW / 2 - 90, 500, fade(t, s.a, Math.min(s.b, 35.2), 0.3));
+    drawEnd(g, t, 35.2, NAME, END_LINE, '目の模型: Navarro (1985)。光線は1本ずつ計算。ピントの遅れ: Bharadwaj & Schor (2006)');
+    drawIdentMini(g, t, 0.3);
+    drawIdent(g, t, SHORT_END);
+  },
+  errors: w => w.__eyopErr,
+});
+// 文字は上の空き（0〜470）に
+function drawTop(g, t, a, b, main, sub, big) {
+  const f = fade(t, a, b, big ? 0.8 : 0.5); if (f <= 0 || (!main && !sub)) return;
+  prep(g); g.globalAlpha = f;
+  drawBlock(g, [{ s: main, size: big ? 80 : 62, color: '#fff', bold: true }, { s: sub, size: big ? 44 : 38, color: '#f2c79a', gap: big ? 14 : 10 }], big ? 300 : 270, 'center');
+  g.globalAlpha = 1; g.shadowBlur = 0;
+}
+</script>
+</body>
+</html>

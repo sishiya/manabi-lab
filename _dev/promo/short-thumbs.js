@@ -26,6 +26,7 @@ window.SHORT_THUMBS = {
   'phage':         { name: '細菌にとりつくウイルス', t: 12.15, focus: [0.5, 0.44], zoom: 1.7, wfocus: [0.5, 0.42], wzoom: 0.8, kicker: '細菌だけにとりつくウイルスは', big: '注射器', sub: 'のように DNA を入れる', c1: '#e0f2ff', c2: '#5bb8ff' },
   'hair-removal':  { name: '脱毛のしくみ', t: 28.5, focus: [0.5, 0.4], zoom: 1.5, kicker: '光脱毛の光は', big: '毛の黒い色', sub: 'に吸われて熱になる', c1: '#ffe6ee', c2: '#ff8fb1' },
   'metronome-sync': { name: 'メトロノームがそろうまで', t: 12.95, focus: [0.5, 0.42], zoom: 1.5, wfocus: [0.5, 0.43], kicker: 'バラバラのメトロノームが', big: 'ひとりでに', sub: 'そろう。動く板の上で', c1: '#fff6d8', c2: '#ffc95a' },
+  'eye-optics':    { name: '目のなかの光の道', t: 29.5, focus: [0.62, 0.42], zoom: 1.4, wfocus: [0.62, 0.47], kicker: '目が', big: '1 mm', sub: '長いだけで、遠くがぼける', c1: '#fff3d0', c2: '#ffd36b' },
   'tree-of-life':  { name: 'いのちの系統樹', t: 33, focus: [0.62, 0.5], zoom: 1.25, kicker: '名前のついた生きもの', big: '225万種', sub: 'の木で、ヒトはどこ？', c1: '#fff6e0', c2: '#ffb45a' },
   'wave-growth':   { name: '波が育つまで', t: 31, focus: [0.5, 0.42], zoom: 1.3, kicker: '凪の海に風が吹いて', big: '約30時間', sub: 'で育ちきる。高さ 3.1 m', c1: '#fff3d6', c2: '#ffc46b' }
 };

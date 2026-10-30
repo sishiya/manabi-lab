@@ -1,0 +1,34 @@
+{
+  "videoId": "lDZ78VHZWhw",
+  "file": "_dev/promo/out/eye-optics-guide.mp4",
+  "thumbnail": "_dev/promo/thumbs/eye-optics-guide.jpg",
+  "privacy": "private",
+  "publishAt": "2026-10-31T20:00:00+09:00",
+  "captions": {
+    "en": "_dev/promo/out/eye-optics-guide.en.srt"
+  },
+  "title": "目のなかの光の道 ― 使い方と見どころ（ピントの遅れ・老眼と近視・暗さに慣れる）",
+  "description": "光が角膜と水晶体で曲がり、網膜に像を結ぶまでを、本物の目の寸法の模型で光線を1本ずつ計算。ピントやひとみが追いつくまでの時間、暗さに慣れていく時間、老眼・近視・乱視とメガネも、測られた値で。ブラウザのアプリ「目のなかの光の道」の、使い方と見どころです。\n\n0:00 はじめに・目を横から切った図\n0:13 角膜・さかさまの像\n0:27 近くを見る（調節）・ピントの遅れ\n0:48 老眼・近視とメガネ\n1:08 ひとみが開く・縮む\n1:29 暗さに慣れる\n1:47 残像\n1:59 乱視と円柱レンズ\n2:14 ここからは自由に・出どころ\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/eye-optics/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nNavarro R, Santamaría J, Bescós J (1985) Accommodation-dependent model of the human eye with aspherics. JOSA A 2(8):1273–1281（目の寸法・屈折率・調節の式）\nBharadwaj SR, Schor CM (2006) Vision Research 46:1019–1037（ピント合わせの遅れと速さ）\nMathôt S (2018) Pupillometry. Journal of Cognition 1(1):16（ひとみの遅れと速さ）\nPatryas L ほか (2013) Graefe's Archive 251:1821–1827、Lamb TD, Pugh EN (2004) Progress in Retinal and Eye Research 23:307–380（暗さに慣れる時間）\nCurcio CA ほか (1990) J Comp Neurol 292:497–523（中心窩の桿体のない所）\nZaidi Q ほか (2012) Current Biology 22:220–224（残像は網膜の神経節細胞の順応）\nひとみの開く速さ・残像の強さなどの一部は、測られた値をもとにした推定です。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#目 #光 #からだのしくみ #まなびラボ",
+  "tags": [
+    "目のなかの光の道",
+    "目",
+    "水晶体",
+    "ピント",
+    "老眼",
+    "近視",
+    "乱視",
+    "暗順応",
+    "残像",
+    "使い方",
+    "まなびラボ",
+    "しし屋",
+    "Light’s Path Inside the Eye",
+    "eye optics"
+  ],
+  "localizations": {
+    "en": {
+      "title": "Light’s Path Inside the Eye — App Guide: Focus Delay, Presbyopia, Myopia, Dark Adaptation",
+      "description": "A guide to \"Light’s Path Inside the Eye\", a browser app. Follow light as the cornea and lens bend it into an image on the retina, ray by ray, with a model of a real eye's sizes. See how long focusing and the pupil take to catch up, how the eye gets used to the dark, and presbyopia, nearsightedness, astigmatism and glasses, all from measured values. Turn on English subtitles (CC).\n\n0:00 Intro: the eye cut in half\n0:13 The cornea and the upside-down image\n0:27 Looking near (accommodation) and the focusing delay\n0:48 Presbyopia, nearsightedness and glasses\n1:08 The pupil opens and shrinks\n1:29 Getting used to the dark\n1:47 Afterimages\n1:59 Astigmatism and cylinder lenses\n2:14 Explore freely, sources\n\nTry the app (runs in your browser, PC or phone; switch the app to English with the EN button):\nhttps://sishiya.github.io/manabi-lab/eye-optics/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nMain sources:\nNavarro R, Santamaría J, Bescós J (1985) Accommodation-dependent model of the human eye with aspherics. JOSA A 2(8):1273–1281 (eye sizes, refractive indices, accommodation)\nBharadwaj SR, Schor CM (2006) Vision Research 46:1019–1037 (delay and speed of focusing)\nMathôt S (2018) Pupillometry. Journal of Cognition 1(1):16 (pupil delay and speed)\nPatryas L et al. (2013) Graefe's Archive 251:1821–1827; Lamb TD, Pugh EN (2004) Progress in Retinal and Eye Research 23:307–380 (dark adaptation)\nCurcio CA et al. (1990) J Comp Neurol 292:497–523 (the rod-free fovea)\nZaidi Q et al. (2012) Current Biology 22:220–224 (afterimages come from adaptation of retinal ganglion cells)\nSome values, such as how fast the pupil opens and how strong afterimages are, are estimates based on measurements.\n\nMusic: original sounds synthesized by code.\n\n#Eye #Optics #Biology"
+    }
+  }
+}
