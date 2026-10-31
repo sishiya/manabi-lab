@@ -56,7 +56,7 @@ export async function createTerrain(scene, renderer, low) {
 
   const R = rng(7);
   // 草: 1本1本の葉（細い三角の帯）を GPU で並べ、風でゆらす（根もとは動かず、先ほど大きく。※ 演出の風）
-  const blades = low ? 30000 : 110000, bg = new THREE.PlaneGeometry(0.06, 1, 1, 4);
+  const blades = low ? 15000 : 110000, bg = new THREE.PlaneGeometry(0.06, 1, 1, 4);
   { const p = bg.attributes.position; for (let i = 0; i < p.count; i++) { const v = p.getY(i) + 0.5; p.setX(i, p.getX(i) * (1 - v * 0.9)); p.setY(i, v); } }
   const wind = { value: 0 };
   const gmat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, side: THREE.DoubleSide });
@@ -138,7 +138,7 @@ export async function createTerrain(scene, renderer, low) {
       if (R() > dens * Math.min(1, (r - FIELD * 1.75) / 40)) continue;
       const sc = (ti ? 2.6 : 2.2) * (0.8 + R() * 0.5);   // 高さ 9〜15 m ほど（※ 元の木を大きくして使う）
       m.compose(p3.set(x, height(x, z), z), q.identity(), s.set(sc, sc, sc)); trees.setMatrixAt(k, m);
-      yaw[k] = R() * 6.28; k++;
+      yaw[k] = 0; k++;   // 回さない（木の絵は決まった日の向きで撮ってあるので、回すと日の当たる側がばらばらになる）
     }
     trees.count = k; trees.geometry.setAttribute('yaw', new THREE.InstancedBufferAttribute(yaw, 1));
     trees.frustumCulled = false; scene.add(trees); forest.push(trees);

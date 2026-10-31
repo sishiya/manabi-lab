@@ -16,9 +16,9 @@ const TINT = { w: new THREE.Color(0xe8ecf2), b: new THREE.Color(0x8a1c1c) };
 const load = url => new Promise((ok, ng) => new GLTFLoader().load(url, ok, undefined, ng));
 const rnd = (a, b) => a + Math.random() * (b - a);
 
-export async function createCrowd(scene, cap = 160) {
+export async function createCrowd(scene, low, cap = 160) {
   const models = { peasant: await load('assets/soldier-peasant.glb'), ranger: await load('assets/soldier-ranger.glb') };
-  const shadow = window.innerWidth >= 600;   // スマホ（幅 600px 未満）では兵の影を切る
+  const shadow = !low;   // スマホでは兵の影を切る
   const meshes = {}, pools = {}, mixers = [], faints = {}, FAINT_N = 24, tmpM = new THREE.Matrix4();
   let NB = 0, faintDur = 1;
   for (const [name, g] of Object.entries(models)) {
@@ -50,8 +50,8 @@ export async function createCrowd(scene, cap = 160) {
     }
     for (const side of ['w', 'b', 'wf', 'bf']) {
       const mat = src.material.clone(), fallen = side.length > 1;
-      mat.transparent = fallen; mat.opacity = fallen ? 0.35 : 1; mat.alphaTest = 0.5; mat.roughness = 0.85; mat.metalness = 0;
-      if (fallen) mat.depthWrite = false;
+      // 気絶した兵: 半透明（※ 見やすさのため）。alphaTest を残すと「アルファ×0.35 < 0.5」で全部捨てられて消えていた（批判役の指摘）
+      mat.transparent = fallen; mat.opacity = fallen ? 0.4 : 1; mat.alphaTest = fallen ? 0 : 0.5; mat.roughness = 0.85; mat.metalness = 0;
       mat.onBeforeCompile = sh => {
         sh.uniforms.uTint = { value: TINT[side[0]] };
         sh.fragmentShader = 'uniform vec3 uTint;\n' + sh.fragmentShader.replace('#include <map_fragment>',
@@ -68,7 +68,7 @@ export async function createCrowd(scene, cap = 160) {
       im.addInstances(cap, o => { o.position.set(0, -50, 0); });
       for (let i = 0; i < cap; i++) im.instances[i].visible = false;
       scene.add(im);
-      meshes[name + side] = { im, used: 0, free: [] };
+      meshes[name + side] = { im, used: 0, free: [], fallen };
     }
   }
 
@@ -76,7 +76,7 @@ export async function createCrowd(scene, cap = 160) {
   const soldiers = new Set();
   function add(side, model, x, z, h) {
     const M = meshes[model + side], idx = M.free.length ? M.free.pop() : M.used++;
-    if (idx >= cap) throw new Error('兵が多すぎる');
+    if (idx >= cap) { window.__chbaErr && window.__chbaErr.push('兵が多すぎる: ' + model + side); return null; }
     const inst = M.im.instances[idx]; inst.visible = true;
     const s = { side, model, M, idx, inst, x, z, vx: 0, vz: 0, h, tx: x, tz: z, max: 1.4, face: h, stance: 'idle', attack: 0, k: (Math.random() * POOL) | 0, clip: A.idle, pace: rnd(0.92, 1.1), alive: true };
     soldiers.add(s); return s;
@@ -92,7 +92,7 @@ export async function createCrowd(scene, cap = 160) {
   function faint(s, delay = 0) { s.faintIn = delay; }
   function lay(side, model, x, z, h, frame = FAINT_N - 1) {   // 倒れた姿のまま置く（スライダーで飛んだとき・倒れきったとき）
     const M = meshes[model + side + 'f'], idx = M.used++;
-    if (idx >= cap) return;
+    if (idx >= cap) { window.__chbaErr && window.__chbaErr.push('気絶した兵が多すぎる: ' + model + side); return; }
     const inst = M.im.instances[idx]; inst.visible = true;
     inst.position.set(x, height(x, z), z); inst.quaternion.setFromAxisAngle(up, h); inst.updateMatrix();
     M.im.boneTexture._data.set(faints[model][frame], idx * NB * 16); M.im.boneTexture.enqueueUpdate(idx);
@@ -142,7 +142,7 @@ export async function createCrowd(scene, cap = 160) {
     const goal = sp > 0.6 ? Math.atan2(s.vx, s.vz) : s.face;
     const dh = Math.atan2(Math.sin(goal - s.h), Math.cos(goal - s.h)); s.h += Math.max(-TURN * dt, Math.min(TURN * dt, dh));
     // 動きの絵: 速さで選ぶ（止まっているときは構え・剣・ふつう）
-    const clip = s.attack > 0 ? A.attack : sp < 0.15 ? (s.stance === 'ready' ? A.ready : A.idle) :   /* 少しでも動くなら歩く絵（立った絵のまますべらない） */ sp < 2.3 ? A.walk : sp < 4.6 ? A.jog : A.sprint;
+    const clip = s.attack > 0 ? A.attack : sp < (s.clip <= A.ready ? 0.3 : 0.1) ? (s.stance === 'ready' ? A.ready : A.idle) :   /* 止まる↔歩くのしきい値に幅（よけ合いの速さのゆれで絵がちらつかない） */ sp < 2.3 ? A.walk : sp < 4.6 ? A.jog : A.sprint;
     if (clip !== s.clip) { s.clip = clip; s.k = (Math.random() * POOL) | 0; }
     if (s.attack > 0) s.attack -= dt;
     if (sp > 4.2 && Math.random() < dt * 3) dust(s.x, s.z, 1);
@@ -202,7 +202,7 @@ export async function createCrowd(scene, cap = 160) {
     }
     rebuildGrid();
     for (const s of [...soldiers]) stepSoldier(s, dt);
-    for (const M of meshList) M.im.boneTexture.enqueueUpdate(0);   // partialUpdate=false なので全部送る
+    for (const M of meshList) if (!M.fallen) M.im.boneTexture.enqueueUpdate(0);   // partialUpdate=false なので全部送る（気絶用は置いたときに1回だけ）
     for (let i = 0; i < DN; i++) if (dage[i] < 9) dage[i] += dt;
     dgeo.attributes.age.needsUpdate = true; dgeo.attributes.position.needsUpdate = true;
     stepArrows(dt);

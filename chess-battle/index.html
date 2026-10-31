@@ -46,7 +46,7 @@
         <tr><td>ナイト</td><td>騎兵（6人。いまは走る兵）</td><td>L 字。ほかの部隊を回りこむ</td></tr>
         <tr><td>ポーン</td><td>歩兵の小隊（10人）</td><td>前へ1マス（取るときはななめ前）</td></tr>
       </table>
-      <p>旗の印が、その部隊がどの駒かを表します。1マスは約8m、兵は人の速さ（歩く 1.4 m/s・小走り 3.5 m/s・全力 6 m/s）で動き、画面では2倍速で見せます。取るときは相手の陣地へ突撃してぶつかり合い、取られた隊はその場で気絶します。気絶した兵は、どこで何が起きたかがわかるように薄く表示して残します（※ 見やすさのため。現実には薄くなりません）。にらみ合っている隊（棋譜の局面で、相手を取れる位置にいる隊）のあいだでは、小ぜり合いや矢がいつも続きます（演出）。矢は人に当てず、手前の地面に落ちます。</p>
+      <p>旗の印が、その部隊がどの駒かを表します。1マスは約8m、兵は人の速さ（歩く 1.4 m/s・小走り 3.5 m/s・全力 6 m/s ほど。兵ごとに1割ほどちがう）で動き、画面では2倍速で見せます。取るときは相手の陣地へ突撃してぶつかり合い、取られた隊はその場で気絶します。気絶した兵は、どこで何が起きたかがわかるように薄く表示して残します（※ 見やすさのため。現実には薄くなりません）。にらみ合っている隊（棋譜の局面で、相手を取れる位置にいる隊）のあいだでは、小ぜり合いや矢がいつも続きます（演出）。矢は弓兵の隊（ビショップ）から飛び、人に当てず手前の地面に落ちます。</p>
       <p><b>駒はもともと部隊だった</b>: チェスのもとは6〜7世紀ごろのインドの「チャトランガ」と言われ、名前は軍の4つの兵種（歩兵・騎兵・象の隊・戦車の隊）を指します。ポーン・ナイト・ビショップ（もとは象）・ルーク（もとは戦車）は部隊、キングとクイーン（もとは大臣）は1人の人でした。</p>
     </details>
     <details id="about">
@@ -58,7 +58,7 @@
       <h3>使っているもの</h3>
       <ul>
         <li>chess.js 1.4.0（棋譜を読み、局面を作る。BSD-2-Clause、Jeff Hlywa）</li>
-        <li>three.js 0.185.1（3D。MIT）、InstancedMesh2（@three.ez/instanced-mesh。たくさんの兵をまとめて描く。MIT、Andrea Gargaro）</li>
+        <li>three.js 0.185.1（3D。MIT）、InstancedMesh2（@three.ez/instanced-mesh。たくさんの兵をまとめて描く。MIT、Andrea Gargaro）と、それが使う bvh.js（MIT、Andrea Gargaro）</li>
         <li>兵士の体・服・動き: Quaternius「Universal Base Characters」「Modular Character Outfits - Fantasy」「Universal Animation Library」（CC0。<a href="https://quaternius.com/" target="_blank" rel="noopener">quaternius.com</a>）をこのアプリ用にまとめなおしたもの</li>
         <li>空・地面・木: Poly Haven「kloofendal_48d_partly_cloudy_puresky」（空の写真）「aerial_grass_rock」（地面の質感）「island_tree_01・02」（木。8方向から撮った絵にし、高さ9〜15m ほどに大きくして使っている）（CC0。<a href="https://polyhaven.com/" target="_blank" rel="noopener">polyhaven.com</a>）</li>
         <li>草・もや・土ぼこり・光のにじみは、このアプリで作った演出です</li>

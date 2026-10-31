@@ -19,16 +19,16 @@ export async function createWorld(canvas) {
   const camera = new THREE.PerspectiveCamera(40, 1, 0.3, 1400);
   camera.position.set(0, 30, 70);
 
-  const low = window.innerWidth < 600;   // スマホ: 草を減らし、画面の仕上げ（光のにじみ・周辺の暗さ）を切る
+  const low = window.innerWidth < 600 || matchMedia('(pointer: coarse)').matches;   // 触れる画面（スマホ・タブレット）も軽く   // スマホ: 草を減らし、画面の仕上げ（光のにじみ・周辺の暗さ）を切る
   scene.add(new THREE.HemisphereLight(0xdfe9f0, 0x5a4a32, 0.6));
   const sun = new THREE.DirectionalLight(0xfff2dc, 3.2);
   sun.position.copy(SUN_DIR).multiplyScalar(110); sun.castShadow = true;   // 日の向きは空の絵の太陽に合わせる
-  sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
+  sun.shadow.mapSize.set(low ? 1024 : 2048, low ? 1024 : 2048); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
   Object.assign(sun.shadow.camera, { left: -60, right: 60, top: 60, bottom: -60, near: 10, far: 260 });
   scene.add(sun);
 
   const terrain = await createTerrain(scene, renderer, low);
-  const crowd = await createCrowd(scene);
+  const crowd = await createCrowd(scene, low);
   const battle = createBattle(scene, crowd);
 
   // 動いたマスの目印（マス目を出しているときだけ）

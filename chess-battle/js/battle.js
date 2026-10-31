@@ -61,6 +61,7 @@ export function createBattle(scene, crowd) {
       const col = i % C.cols, row = Math.floor(i / C.cols);
       const sl = { sx: (col - (C.cols - 1) / 2) * 1.25 + rnd(-0.15, 0.15), sz: (row - (rows - 1) / 2) * 1.5 + rnd(-0.15, 0.15), wx: 0, wz: 0 };
       const p = slotXZ(U, sl, false), s = crowd.add(u.color, C.model, p.x, p.z, U.face);
+      if (!s) continue;   // 兵が足りない（__chbaErr に出る）
       Object.assign(s, sl, { unit: U, nextWob: rnd(1, 8) }); U.soldiers.push(s);
     }
     U.bearer = U.soldiers[C.cols - 1];   // 旗を持つ兵（前の列の右はし）
@@ -77,7 +78,9 @@ export function createBattle(scene, crowd) {
       if (u.sq) { units.set(u.id, makeUnit(u, sqXZ(u.sq))); continue; }
       if (!u.lostAt) continue;
       const C = COMP[u.type], c = sqXZ(u.lostAt), cols = C.cols, rows = Math.ceil(C.n / cols);
-      for (let i = 0; i < C.n; i++) crowd.lay(u.color, C.model, c.x + ((i % cols) - (cols - 1) / 2) * 1.4 + rnd(-0.4, 0.4), c.z + (Math.floor(i / cols) - (rows - 1) / 2) * 1.6 + rnd(-0.4, 0.4), rnd(0, 6.28));
+      let seed = [...u.id].reduce((a, ch) => a * 31 + ch.charCodeAt(0), 7) >>> 0;   // 倒れる位置は id から決まる乱数（毎回同じ）
+      const r = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+      for (let i = 0; i < C.n; i++) crowd.lay(u.color, C.model, c.x + ((i % cols) - (cols - 1) / 2) * 1.4 + (r() - 0.5) * 0.8, c.z + (Math.floor(i / cols) - (rows - 1) / 2) * 1.6 + (r() - 0.5) * 0.8, r() * 6.28);
     }
   }
 
@@ -126,7 +129,8 @@ export function createBattle(scene, crowd) {
     if (U.mode === 'settle') {   // 着いたら前を向いて並びなおす
       U.face += Math.max(-1.6 * dt, Math.min(1.6 * dt, ang(U.face, facing(U.color))));
       let far = 0; for (const s of U.soldiers) { const p = slotXZ(U, s, false); s.tx = p.x; s.tz = p.z; s.max = 1.6; if (Math.hypot(p.x - s.x, p.z - s.z) > 0.8) far++; }
-      if (Math.abs(ang(U.face, facing(U.color))) < 0.05 && far <= U.soldiers.length * 0.2) U.mode = 'hold';
+      U.settleT = (U.settleT || 0) + dt;
+      if ((Math.abs(ang(U.face, facing(U.color))) < 0.05 && far <= U.soldiers.length * 0.2) || U.settleT > 8) { U.mode = 'hold'; U.settleT = 0; }   // 並びなおしは長くても 8 秒
       return;
     }
     if (U.mode === 'brace') {   // 攻められる隊: 攻めてくる隊を向いて構える
@@ -148,7 +152,7 @@ export function createBattle(scene, crowd) {
 
   // ぶつかり合い: 攻める兵は相手の兵の前まで走り、剣をふる。守る兵は構える。少しして守る隊が気絶する
   function startClash(U) {
-    const V = active.V; U.mode = 'clash'; U.clashT = 0; U.downed = false;
+    const V = active.V; U.mode = 'clash'; U.clashT = 0; U.downed = false; U.contactT = 0;   // 2回目の突撃で前の値が残らないように
     const foes = V.soldiers;
     U.soldiers.forEach((s, i) => { s.foe = foes[i % foes.length]; s.max = SPEED.sprint * 1.1; s.stance = 'ready'; s.swing = rnd(0, 0.6); });
     for (const s of foes) s.stance = 'ready';
@@ -197,14 +201,14 @@ export function createBattle(scene, crowd) {
             if (s && f) s.sortie = { f, t: 0, home: null };
           }
           t = rnd(4, 8);
-        } else {   // 矢
+        } else if (Aa.type === 'b') {   // 矢（弓兵の隊＝ビショップだけ）
           const dx = D.ax - Aa.ax, dz = D.az - Aa.az, d = Math.hypot(dx, dz);
           for (let n = 0; n < 4; n++) {
             const s = Aa.soldiers[(Math.random() * Aa.soldiers.length) | 0], short = rnd(3, 6);
             crowd.arrow(s.x, s.z, D.ax - dx / d * short + rnd(-2, 2), D.az - dz / d * short + rnd(-2, 2));
           }
           t = rnd(4, 9);
-        }
+        } else t = rnd(4, 9);   // 弓兵でない離れた隊は、にらみ合って構えるだけ
       }
       skirmish.set(k, t);
     }

@@ -88,6 +88,7 @@ function stepCam(dt) {
     S.camGoal.set(0, h, 0.01); S.look.lerp(new THREE.Vector3(0, 0, asp < 1 ? 6 : 3), 1 - Math.exp(-dt * 4));
   } else {
     const f = W.focus();
+    S.idleT = f ? 0 : (S.idleT || 0) + dt;
     if (f) {
       fwd.set(Math.sin(f.face), 0, Math.cos(f.face));
       const at = new THREE.Vector3(f.x, height(f.x, f.z), f.z);
@@ -98,7 +99,7 @@ function stepCam(dt) {
       const goal = at.clone().addScaledVector(side, (f.clash ? 17 : 14) * k); goal.y += (f.clash ? 6 : 6.5) * k;
       goal.x += 5 * Math.sin(S.t * 0.15);
       S.camGoal.lerp(goal, 1 - Math.exp(-dt * 3));
-    } else {
+    } else if (S.idleT > 4 || S.ply === 0) {   // 長く止まったときだけ白の側から全体へ引く（手ごとに引くと区切れて見える）
       S.look.lerp(new THREE.Vector3(0, 1, -4), 1 - Math.exp(-dt * 0.8));
       S.camGoal.set(Math.sin(S.t * 0.05) * 26, 26 * k, 66 * k);
     }
