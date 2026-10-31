@@ -4,7 +4,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Chess } from '../../lib/chess.js@1.4.0/dist/esm/chess.js';
 import { GAMES } from './games.js';
 import { build } from './record.js';
-import { createWorld, TIME, height } from './world.js';
+import { createWorld, height } from './world.js';
 import { drawMini, setMaterial, buildSlider, buildMoves, markMove } from './ui.js';
 window.__chbaErr = window.__chbaErr || [];
 window.addEventListener('error', e => window.__chbaErr.push(String(e.message)));
@@ -16,11 +16,20 @@ const rec = build(game, Chess);
 
 // S.ply = いま見えている局面（0 = 初め）。queue = これから動かす手
 const S = { ply: 0, queue: [], playing: null, minWait: 0, cam: 'auto', t: 0, look: new THREE.Vector3(), camGoal: new THREE.Vector3(), ready: false, auto: false, autoWait: 0 };
-const PNAME = { p: 'ポーン（砲艇）', n: 'ナイト（潜水艦）', b: 'ビショップ（帆船）', r: 'ルーク（蒸気船）', q: 'クイーン（帆と蒸気の艦）', k: 'キング（旗艦）' };
+// 見立て: ?theme=bugs で虫の版、ほかは海戦。切りかえはページを読みなおす（?ply= でいまの手を引きつぐ）
+const Q = new URLSearchParams(location.search), THEME = Q.get('theme') === 'bugs' ? 'bugs' : 'sea';
+document.documentElement.dataset.theme = THEME;
+const PNAME = THEME === 'bugs'
+  ? { p: 'ポーン（働きアリ）', n: 'ナイト（バッタ）', b: 'ビショップ（ヨコバイ）', r: 'ルーク（カブトムシ）', q: 'クイーン（トンボ）', k: 'キング（女王アリ）' }
+  : { p: 'ポーン（砲艇）', n: 'ナイト（潜水艦）', b: 'ビショップ（帆船）', r: 'ルーク（蒸気船）', q: 'クイーン（帆と蒸気の艦）', k: 'キング（旗艦）' };
+const MOVER = THEME === 'bugs' ? '虫の動き' : '船の動き';
+for (const b of document.querySelectorAll('#theme button')) {
+  b.classList.toggle('on', b.dataset.theme === THEME);
+  b.addEventListener('click', () => { if (b.dataset.theme === THEME) return; const u = new URL(location.href); u.searchParams.set('theme', b.dataset.theme); u.searchParams.set('ply', S.ply); location.href = u.toString(); });
+}
 
 $('gameTitle').textContent = `${game.title}（${game.date.slice(0, 5)}）`;
 $('players').textContent = `白: ${game.white}　黒: ${game.black}。${game.place}。${game.how}。`;
-$('speed').textContent = `船の動き ×${TIME}`;   // 波・煙・水しぶきは本当の速さ
 for (const s of game.sources) {
   const li = document.createElement('li'), a = document.createElement('a');
   a.href = s.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = s.text; li.appendChild(a); $('sources').appendChild(li);
@@ -28,9 +37,11 @@ for (const s of game.sources) {
 
 let W = null, controls = null;
 try {
-  W = await createWorld($('cv'), (n, all) => { $('loading').textContent = `艦隊を集めています… ${n} / ${all}`; });
-} catch (e) { window.__chbaErr.push('読みこみ: ' + e); $('loading').textContent = '船のモデルを読みこめませんでした。'; throw e; }
+  W = await createWorld($('cv'), (n, all) => { $('loading').textContent = `${THEME === 'bugs' ? '虫を集めています' : '艦隊を集めています'}… ${n} / ${all}`; }, THEME);
+} catch (e) { window.__chbaErr.push('読みこみ: ' + e); $('loading').textContent = 'モデルを読みこめませんでした。'; throw e; }
 $('loading').hidden = true;
+const TIME = W.TIME;
+$('speed').textContent = `${MOVER} ×${TIME}`;   // 波・煙・水しぶき・脚の動きは本当の速さ
 controls = new OrbitControls(W.camera, $('cv'));
 controls.enabled = false; controls.maxPolarAngle = Math.PI * 0.48; controls.minDistance = 8; controls.maxDistance = 1200;
 const U = W.SQ / 8;   // カメラの距離の倍率（1マスの広さに合わせる。海戦は 1マス 40 m）
@@ -176,7 +187,7 @@ function mateText(p) {
   return (hit.length ? `王の逃げ道（${hit.join('・')}）はすべてねらわれ` : '王は動けず') + (own.length ? `、${own.join('・')} は味方の船でふさがっている` : '') + `。${win}の勝ち`;
 }
 // スロー（見せ場）: 船の動きを ×6 → ×2 に。画面の表示もいっしょに変える
-function slowMo(on) { W.setSlow(on ? 1 / 3 : 1); $('speed').textContent = on ? `船の動き ×${TIME / 3}（見せ場はゆっくり）` : `船の動き ×${TIME}`; }
+function slowMo(on) { W.setSlow(on ? 1 / 3 : 1); $('speed').textContent = on ? `${MOVER} ×${+(TIME / 3).toFixed(1)}（見せ場はゆっくり）` : `${MOVER} ×${TIME}`; }
 $('learn').addEventListener('click', () => { const d = $('map'); d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
 buildSlider(rec, seek); buildMoves(rec, seek);
 
@@ -200,7 +211,7 @@ function measure(dt) {
 function loop(now) { const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); step(dt); measure((now - last) / 1000); last = now; /* 最初のコマは now が last より前のことがある */ W.renderer.info.reset(); W.render(); requestAnimationFrame(loop); }
 window.addEventListener('resize', resize);
 new ResizeObserver(resize).observe($('cv'));
-seek(0); S.look.set(0, U, -4 * U); W.camera.position.set(0, 16 * U, 66 * U);
+seek(Math.max(0, Math.min(rec.plies.length, +(Q.get('ply') || 0))), false); S.look.set(0, U, -4 * U); W.camera.position.set(0, 16 * U, 66 * U);
 resize(); requestAnimationFrame(loop);
 
 // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）

@@ -20,6 +20,8 @@
 | js/naval.js | 海戦: 1駒＝1隻。`SHIP`（駒→船・速さ・向きを変える速さ）。進む・舷側を向ける（aim）・砲撃（fire。3回の一斉射撃、煙・光・水柱）・降伏（gone。白旗・半透明・陣の側へ流される）・潜る（潜水艦）・前線の撃ち合い・旗の印・航跡と煙突の煙 | `createNaval`・`SQ`（40 m）・`TIME`（6）・`playPly`・`setState`・`busy`・`focus` |
 | assets/ship-*.glb・ships.json・sky.jpg | 船（Poly Haven の 17 世紀のオランダ船をもとに build-ships.py で）・空（build-env.py） | |
 | bugs.html・js/bugs.js・js/insects.js | 虫の版の見本（アプリにはつないでいない）。insects.js は虫を組む（女王アリ・働きアリ・カブトムシ・バッタ・ヨコバイ・トンボ。体長は実物のおよそに合わせる、三脚歩行、トンボの羽ばたきはゆっくり ※）。bugs.js は庭の地面・小石・草・ぼけ（BokehPass） | `window.__bugs`（look(i)） |
+| js/garden.js | 虫の版の舞台: 土の地面（手で作った模様）・小石（盤の中は小粒）・盤からはなれた草むら（風でゆれる）・空 | `createGarden` |
+| js/insectwar.js | 虫の版の戦い（naval.js と同じ口）。`BUG`（駒→虫・速さ・動き方 walk/side/jump/fly）。1マス 6 cm・×3。飛びかかる（strike）・ひっくり返って消える（down）・キャスリングは外側を回る | `createInsectWar`・`SQ`・`TIME` |
 | js/world.js | まとめ役（描く道具・光・影・トーンマップ・マスの目印・王をねらう線と逃げ道の輪）。時間は TIME×slow 倍 | `createWorld`・`showMarks`・`setGrid`・`showNet`・`setSlow`・`setMarkers`・`setTeam` |
 | tools/build-env.py | Blender で空（2k HDRI → sky.jpg）と木のインポスター（tree_01/02.webp・trees.json）を作る。素材は `../3d-library/polyhaven/`（CC0） | `blender -b -P chess-battle/tools/build-env.py` |
 | js/ui.js | 隅の小さな盤・点数の帯・スライダーの印・手の一覧 | `drawMini`・`setMaterial`・`buildSlider`・`buildMoves`・`markMove` |
@@ -94,6 +96,7 @@
 - サムネイル（_dev/tools/thumb.html の SETUP は new-app.ps1 が足せなかった。B で見た目が決まってから撮る）。
 
 ## 状態
+- 2026-10-31 虫の版をアプリにつないだ: 見出しの「見立て 海戦／虫」で切りかえ（?theme=bugs、?ply= で手を引きつぐ。ページを読みなおす）。world.js は theme で ocean+naval か garden+insectwar を読む（同じ口）。対応表は見立てごと（.only-sea・.only-bugs）。通して見るで虫 22場面・約1分40秒、海戦 約6分半、どちらも最後の位置が局面どおり・12が消える／沈む。375px OK。
 - 2026-10-31 虫を作りこみ（ユーザー「素材は使わず、組んだ虫をできるだけ作りこんで」）: 足がすべらない歩き方（足先を地面に置いたまま、2本の骨の IK で関節を曲げる三脚歩行）、輪郭を回して作る体（ハート形の頭・3つの節の胸・腹の節の帯）、毛（剛毛）、複眼の六角形、カブトムシのなめらかな角と二股・背中の合わせ目、バッタの縦長の顔と後脚の矢羽の模様・まだらの羽、トンボの見る角度で色が変わる羽と翅脈、ヨコバイの羽の先の黒い斑。中くらいの距離ではカブトムシなどが見分けられるが、寄ると脚が棒でおもちゃっぽさが残る（海戦の船ほどの本物らしさには届いていない）。
 - 2026-10-31 虫の版の見本（ユーザー「虫バージョンもみてみたい」）: CC0 で本物らしい虫の 3D がなく、形も歩き方も組んだ。見た目は海戦の船より明らかにおもちゃっぽい（脚の長い虫がクモのように見える）。本物らしくするには、実物スキャンの 3D（スミソニアンの CC0 や CC BY）が要る。
 - 2026-10-31 軽く: 船の glb を Draco で圧縮（Blender の書き出し。gltf-transform は npx が自動の判定で止められたので使わない）→ 船 15 MB → 約 6.2 MB（全部で約 6.6 MB）。DRACOLoader と解く部品を lib/ に。`?fps=1` で 1秒のコマ数・解像度・三角形・描く回数を出す。20 fps 未満が 3 秒続いたら解像度を 0.5 ずつ下げる（perf）。実機ではまだ測っていない（公開版をスマホで ?fps=1 で開いて測る）。
