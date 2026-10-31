@@ -2,7 +2,7 @@
 
 ## 別セッションで続けるとき（まずここ）
 - いまの状態: 段階A（骨組み）ができた。オペラ座の一局（1858）を、平らな大地の箱の部隊で場面ごとに動かす。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。
-- 次にやること: PLAN.md の段階B。**はじめに絵柄の方向を見本2案（写実寄り／いつもの紺と線の図寄り）で選んでもらう**。B に入る条件（部隊あたりの兵の数の上限、幅375px の端末で 30fps）も先に決める。
+- 次にやること: 段階B（PLAN の「見せ方の芯」）。ユーザーは「コマをリアルに・移動もリアルに」「盤の上でチマチマ動かす見た目にしない＝頭の中の戦場」を選んだ（2026-10-31）。兵士の glb はできた（`assets/`、`tools/build-soldiers.py`）。つぎは ①1人を1枚の絵にまとめて描く回数を減らす（いま1人5回）②同じ部隊の動きの計算を分け合う ③馬の glb ④地形（マス目なし）に部隊を布陣して行軍・突撃・退く。速さは `tools/crowd-test.html?n=250&close=1` で測る（250人で1コマ約42ms だった）。
 - 読む順: PLAN.md → このファイルの「ファイル構成」→ 関係するファイルだけ。
 - 動かし方: サーバー apps（.claude/launch.json）で http://localhost:8765/chess-battle/ 。デバッグ用の窓口 `window.__chba`（`next()`・`prev()`・`seek(ply)`・`setCam('auto'|'free'|'top')`・`simRun(秒)`・`rec`・`S`）、エラーは `window.__chbaErr`。
 - 区切りごとの手順: 「確認のしかた」と smoke.ps1 → 「状態」に1行 → launcher.html の表 → 公開前チェック → commit（節目の版だけ versions/ へコピーしてカードに。RULES 3章）。
@@ -18,6 +18,9 @@
 | js/world.js | three.js の戦場（大地・マス・箱の部隊・旗・待機所・動き） | `createWorld`・`sqPos`・`playPly`・`setState`・`step` |
 | js/ui.js | 隅の小さな盤・点数の帯・スライダーの印・手の一覧 | `drawMini`・`setMaterial`・`buildSlider`・`buildMoves`・`markMove` |
 | js/main.js | つなぎ役（場面の再生・カメラ・窓口） | `S`・`next`・`prev`・`seek`・`stepCam`・`window.__chba` |
+| tools/build-soldiers.py | Blender 5.2 で兵士の glb を作る（頭は体から・首から下は服・8つの動き・5000 三角形・テクスチャ 512px）。素材はリポジトリの外 `../3d-library/quaternius/`（CC0） | `blender -b -P chess-battle/tools/build-soldiers.py` |
+| tools/crowd-test.html | 兵士を N 人並べて歩かせ速さを測る（公開しない道具） | `?n=250&anim=Walk_Loop&close=1` |
+| assets/soldier-peasant.glb・soldier-ranger.glb | 兵士（農民・レンジャーの服）。動き: Idle_Loop・Walk_Loop・Jog_Fwd_Loop・Sprint_Loop・Sword_Idle・Sword_Attack・Hit_Chest・Sitting_Idle_Loop | |
 | tools/verify.mjs | 棋譜の確かめ（手数・詰み・特別な手・最後の局面・部隊の追跡・場面のつながり） | `node chess-battle/tools/verify.mjs` |
 
 読み込み: three.js r128 と OrbitControls はふつうの script（lib/three@0.128.0）、chess.js と自分の js は ES モジュール（lib/chess.js@1.4.0）。r128 を選んだのは、lib/ にあって examples/js（GLTFLoader もある）がふつうの script で使えるため。
@@ -36,6 +39,9 @@
 - 真上のカメラは真下を向くと上の向きが決まらず、盤が回って見えた → 真上のときだけ `camera.up=(0,0,-1)`。
 - 同じポート 8765 のサーバーがほかのセッションで動いていると preview_start が失敗する → そのまま navigate で開ける。
 
+- Blender で兵士を作るとき: ①体のメッシュの名前は `SuperHero_Male`（データ名が `…Retopology…`）②見えない補助の形（Icosphere）が混ざっていて join が失敗する ③顔の表情の形（シェイプキー）があると Decimate を適用できない → それぞれ build-soldiers.py で処理ずみ。
+- itch.io の無料ダウンロード: 内蔵ブラウザで「No thanks」→ Download。ページを移ると `~/Downloads` に `<uuid>.tmp` のまま残ることがある（中身は完全。unzip -t で確かめて名前を付ける）。
+
 ## 確認のしかた（変更のたびに）
 1. `node chess-battle/tools/verify.mjs` がすべて OK。
 2. `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/smoke.ps1 -Apps chess-battle`（例外・読み込みの失敗・外への通信）
@@ -51,3 +57,4 @@
 ## 状態
 - 2026-10-31 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
 - 2026-10-31 段階A: 企画（批判役の指摘10件を入れた）、chess.js 1.4.0 と OrbitControls を lib/ に、棋譜の確かめ verify.mjs（すべて OK）、箱の部隊・場面ごとのつぎへ・もどる・スライダー・手の一覧・隅の盤・点数の帯・カメラ3つ。
+- 2026-10-31 段階Bのはじめ: 見せ方を「頭の中の戦場」に決めなおした（PLAN）。Quaternius の CC0 素材4つ（約424MB）をリポジトリの外へ。Blender で兵士の glb 2種（5000 三角形・8つの動き）、試験ページで250人が歩くのを確かめた（1コマ約42ms、これから軽くする）。アプリの画面はまだ段階Aのまま。

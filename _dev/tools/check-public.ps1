@@ -99,7 +99,14 @@ foreach ($f in $files) {
     if ($runs.Count) { [void]$hits.Add("$rel : bin に文字列がまざっている（中身を確認）: $($runs[0])") }
     continue
   }
-  if ($midiExt -contains $ext) {
+  if ($ext -eq '.glb') {
+    # 3D のモデル（例: chess-battle/assets/ の兵士。Blender で書き出し）: 先頭の JSON の部分（名前・作った道具・extras）を文字として調べる。
+    # 中の画像は Blender が書きなおした JPEG（撮影情報なし）。2026-10-31〜
+    $bytes = [IO.File]::ReadAllBytes($f)
+    $len = [BitConverter]::ToUInt32($bytes, 12)
+    $lines = @([Text.Encoding]::UTF8.GetString($bytes, 20, $len) -split '[,{}]')
+    if ($lines -match '"extras"') { [void]$hits.Add("$rel : glb に extras（付加情報）がある（中身を確認）") }
+  } elseif ($midiExt -contains $ext) {
     $txt = [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($f))
     $lines = @([regex]::Matches($txt, '[\x20-\x7e　-鿿＀-￯]{3,}') | ForEach-Object { $_.Value })
   } elseif ($textExt -notcontains $ext) { [void]$hits.Add("$rel : テキスト以外のファイル（画像なら撮影情報・写り込みを目で確認）"); continue }
