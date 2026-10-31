@@ -19,6 +19,7 @@
 | js/ocean.js | 海・空・霧: 空の写真（Poly Haven）を背景と光に、ゲルストナー波 5 本（頂点で動かす。※ 演出）＋細かい乱れの法線の絵2枚。`seaHeight(x,z)` で船を浮かべる | `createOcean`・`seaHeight`・`SUN_DIR` |
 | js/naval.js | 海戦: 1駒＝1隻。`SHIP`（駒→船・速さ・向きを変える速さ）。進む・舷側を向ける（aim）・砲撃（fire。3回の一斉射撃、煙・光・水柱）・降伏（gone。白旗・半透明・陣の側へ流される）・潜る（潜水艦）・前線の撃ち合い・旗の印・航跡と煙突の煙 | `createNaval`・`SQ`（40 m）・`TIME`（6）・`playPly`・`setState`・`busy`・`focus` |
 | assets/ship-*.glb・ships.json・sky.jpg | 船（Poly Haven の 17 世紀のオランダ船をもとに build-ships.py で）・空（build-env.py） | |
+| bugs.html・js/bugs.js・js/insects.js | 虫の版の見本（アプリにはつないでいない）。insects.js は虫を組む（女王アリ・働きアリ・カブトムシ・バッタ・ヨコバイ・トンボ。体長は実物のおよそに合わせる、三脚歩行、トンボの羽ばたきはゆっくり ※）。bugs.js は庭の地面・小石・草・ぼけ（BokehPass） | `window.__bugs`（look(i)） |
 | js/world.js | まとめ役（描く道具・光・影・トーンマップ・マスの目印・王をねらう線と逃げ道の輪）。時間は TIME×slow 倍 | `createWorld`・`showMarks`・`setGrid`・`showNet`・`setSlow`・`setMarkers`・`setTeam` |
 | tools/build-env.py | Blender で空（2k HDRI → sky.jpg）と木のインポスター（tree_01/02.webp・trees.json）を作る。素材は `../3d-library/polyhaven/`（CC0） | `blender -b -P chess-battle/tools/build-env.py` |
 | js/ui.js | 隅の小さな盤・点数の帯・スライダーの印・手の一覧 | `drawMini`・`setMaterial`・`buildSlider`・`buildMoves`・`markMove` |
@@ -93,6 +94,7 @@
 - サムネイル（_dev/tools/thumb.html の SETUP は new-app.ps1 が足せなかった。B で見た目が決まってから撮る）。
 
 ## 状態
+- 2026-10-31 虫の版の見本（ユーザー「虫バージョンもみてみたい」）: CC0 で本物らしい虫の 3D がなく、形も歩き方も組んだ。見た目は海戦の船より明らかにおもちゃっぽい（脚の長い虫がクモのように見える）。本物らしくするには、実物スキャンの 3D（スミソニアンの CC0 や CC BY）が要る。
 - 2026-10-31 軽く: 船の glb を Draco で圧縮（Blender の書き出し。gltf-transform は npx が自動の判定で止められたので使わない）→ 船 15 MB → 約 6.2 MB（全部で約 6.6 MB）。DRACOLoader と解く部品を lib/ に。`?fps=1` で 1秒のコマ数・解像度・三角形・描く回数を出す。20 fps 未満が 3 秒続いたら解像度を 0.5 ずつ下げる（perf）。実機ではまだ測っていない（公開版をスマホで ?fps=1 で開いて測る）。
 - 2026-10-31 見せ場の演出: 捨て駒（船の動き ×2 にゆっくり・「捨て駒！」の札・王をねらう線）、詰み（線・逃げ道の輪・「チェックメイト」の札・王のまわりを回るカメラ）。船の上の駒の印（※ 目印、出し入れ）、色分けのスイッチ（白＝青白・黒＝赤に光る）。倒された船は沈む。通して見るモード。つぎへは計算を早送り・着いた船は向き直さない。record.js の kingNet（王とまわりのマスをどの駒がねらうか）。通して見るで 22 場面・約6分半、沈没12隻、最後の位置が局面どおり。
 - 2026-10-31 海戦へ切りかえ: 駒ごとの船6種（build-ships.py。帆と蒸気の艦・砲艇・潜水艦を足した）、ocean.js・naval.js、画面の文を船に。人の兵・地形・木・草のファイルと、InstancedMesh2・bvh.js・r128 の部品を外した（git の履歴に残る）。通しで22場面・最後の居場所が局面と一致（4 m 以内）・降伏12隻（取られた駒の数と同じ）。
