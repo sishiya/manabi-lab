@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Chess } from '../../lib/chess.js@1.4.0/dist/esm/chess.js';
-import { GAMES } from './games.js';
+import { GAMES, THEME_SOURCES } from './games.js';
 import { build } from './record.js';
 import { createWorld, height } from './world.js';
 import { drawMini, setMaterial, buildSlider, buildMoves, markMove } from './ui.js';
@@ -25,12 +25,16 @@ const PNAME = THEME === 'bugs'
 const MOVER = THEME === 'bugs' ? '虫の動き' : '船の動き';
 for (const b of document.querySelectorAll('#theme button')) {
   b.classList.toggle('on', b.dataset.theme === THEME);
-  b.addEventListener('click', () => { if (b.dataset.theme === THEME) return; const u = new URL(location.href); u.searchParams.set('theme', b.dataset.theme); u.searchParams.set('ply', S.ply); location.href = u.toString(); });
+  b.addEventListener('click', () => { if (b.dataset.theme === THEME) return; const u = new URL(location.href); u.searchParams.set('theme', b.dataset.theme); u.searchParams.set('ply', S.ply); if (S.auto) u.searchParams.set('auto', '1'); else u.searchParams.delete('auto'); location.href = u.toString(); });
+}
+if (THEME === 'bugs') {   // 見立てごとの文
+  $('gridBtn').title = 'マス目を地面に出す（※ 目印）'; $('markBtn').title = '虫の上に駒の印を出す（※ 目印）'; $('teamBtn').title = '虫の足もとに軍の色の輪を出す（白＝クリーム色、黒＝赤。※ 目印）';
+  $('loading').textContent = '虫を集めています…';
 }
 
 $('gameTitle').textContent = `${game.title}（${game.date.slice(0, 5)}）`;
 $('players').textContent = `白: ${game.white}　黒: ${game.black}。${game.place}。${game.how}。`;
-for (const s of game.sources) {
+for (const s of [...game.sources, ...THEME_SOURCES[THEME]]) {
   const li = document.createElement('li'), a = document.createElement('a');
   a.href = s.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = s.text; li.appendChild(a); $('sources').appendChild(li);
 }
@@ -43,8 +47,8 @@ $('loading').hidden = true;
 const TIME = W.TIME;
 $('speed').textContent = `${MOVER} ×${TIME}`;   // 波・煙・水しぶき・脚の動きは本当の速さ
 controls = new OrbitControls(W.camera, $('cv'));
-controls.enabled = false; controls.maxPolarAngle = Math.PI * 0.48; controls.minDistance = 8; controls.maxDistance = 1200;
-const U = W.SQ / 8;   // カメラの距離の倍率（1マスの広さに合わせる。海戦は 1マス 40 m）
+controls.enabled = false; controls.maxPolarAngle = Math.PI * 0.48; controls.minDistance = 8 * W.SQ / 40; controls.maxDistance = 1200 * W.SQ / 40;
+const U = W.SQ / 8, OV = THEME === 'bugs' ? 0.72 : 1;   // OV: 全体を見るときの引き（虫は小さいので近めに）   // カメラの距離の倍率（1マスの広さに合わせる。海戦は 1マス 40 m）
 
 function caption(p) {
   $('capMove').textContent = p ? `${p.num} ${p.san}${p.mark}` : '';
@@ -148,7 +152,7 @@ function stepCam(dt) {
       S.camGoal.lerp(goal, 1 - Math.exp(-dt * 3));
     } else if (S.idleT > 4 || S.ply === 0) {   // 長く止まったときだけ白の側から全体へ引く（手ごとに引くと区切れて見える）
       S.look.lerp(new THREE.Vector3(0, U, -4 * U), 1 - Math.exp(-dt * 0.8));
-      S.camGoal.set(Math.sin(S.t * 0.05) * 26 * U, 16 * k * U, 66 * k * U);
+      S.camGoal.set(Math.sin(S.t * 0.05) * 26 * U * OV, 16 * k * U * OV, 66 * k * U * OV);
     }
   }
   c.position.lerp(S.camGoal, 1 - Math.exp(-dt * (S.cam === 'top' ? 4 : 1.6)));
@@ -184,7 +188,7 @@ const SQN = sq => sq;
 function mateText(p) {
   const n = p.net, hit = n.escapes.filter(e => e.attacked && !e.blocked).map(e => SQN(e.sq)), own = n.escapes.filter(e => e.blocked).map(e => SQN(e.sq));
   const win = p.color === 'w' ? '白' : '黒';
-  return (hit.length ? `王の逃げ道（${hit.join('・')}）はすべてねらわれ` : '王は動けず') + (own.length ? `、${own.join('・')} は味方の船でふさがっている` : '') + `。${win}の勝ち`;
+  return (hit.length ? `王の逃げ道（${hit.join('・')}）はすべてねらわれ` : '王は動けず') + (own.length ? `、${own.join('・')} は味方の${THEME === 'bugs' ? '虫' : '船'}でふさがっている` : '') + `。${win}の勝ち`;
 }
 // スロー（見せ場）: 船の動きを ×6 → ×2 に。画面の表示もいっしょに変える
 function slowMo(on) { W.setSlow(on ? 1 / 3 : 1); $('speed').textContent = on ? `${MOVER} ×${+(TIME / 3).toFixed(1)}（見せ場はゆっくり）` : `${MOVER} ×${TIME}`; }
@@ -211,7 +215,9 @@ function measure(dt) {
 function loop(now) { const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); step(dt); measure((now - last) / 1000); last = now; /* 最初のコマは now が last より前のことがある */ W.renderer.info.reset(); W.render(); requestAnimationFrame(loop); }
 window.addEventListener('resize', resize);
 new ResizeObserver(resize).observe($('cv'));
-seek(Math.max(0, Math.min(rec.plies.length, +(Q.get('ply') || 0))), false); S.look.set(0, U, -4 * U); W.camera.position.set(0, 16 * U, 66 * U);
+const ply0 = parseInt(Q.get('ply'), 10);
+seek(Number.isFinite(ply0) ? Math.max(0, Math.min(rec.plies.length, ply0)) : 0, false); S.look.set(0, U, -4 * U); W.camera.position.set(0, 16 * U, 66 * U);
+if (Q.get('auto') === '1') setAuto(true);   // 見立てを切りかえる前に通し見をしていたら続ける
 resize(); requestAnimationFrame(loop);
 
 // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）

@@ -50,9 +50,23 @@ export const GAMES = [
       33: '白のルークが d8 へ。g5 のビショップが支えていて、黒のキングはどこへも逃げられない。チェックメイト。',
     },
     sources: [
-      { text: 'Wikipedia「History of submarines」（英語）— Drebbel の潜水艇（1620〜1624）、Brandtaucher（1851）、H. L. Hunley が初めて軍艦を沈めた（1864）', url: 'https://en.wikipedia.org/wiki/History_of_submarines' },
-      { text: 'Wikipedia「Point of sail」（英語）— 風上へ進めない範囲（風に対して 30〜50°）、横風・追い風での進み方', url: 'https://en.wikipedia.org/wiki/Point_of_sail' },
       { text: 'Wikipedia「Opera Game」（英語）— 棋譜・日時・場所の照合。同じページは当時の資料として Löwenthal『Morphy\'s Games of Chess』（1860）などを挙げている', url: 'https://en.wikipedia.org/wiki/Opera_Game' },
     ],
   },
 ];
+
+// 見立てごとの出どころ（どの局でも同じ）
+export const THEME_SOURCES = {
+  sea: [
+    { text: 'Wikipedia「History of submarines」（英語）— Drebbel の潜水艇（1620〜1624）、Brandtaucher（1851）、H. L. Hunley が初めて軍艦を沈めた（1864）', url: 'https://en.wikipedia.org/wiki/History_of_submarines' },
+    { text: 'Wikipedia「Point of sail」（英語）— 風上へ進めない範囲（風に対して 30〜50°）、横風・追い風での進み方', url: 'https://en.wikipedia.org/wiki/Point_of_sail' },
+  ],
+  bugs: [
+    { text: 'Wikipedia「オニヤンマ」— 頭から腹の先まで 9〜11 cm、パトロールの速さは平均で毎秒約 2 m', url: 'https://ja.wikipedia.org/wiki/%E3%82%AA%E3%83%8B%E3%83%A4%E3%83%B3%E3%83%9E' },
+    { text: 'Wikipedia「クロオオアリ」— 働きアリの体長 6〜16 mm', url: 'https://ja.wikipedia.org/wiki/%E3%82%AF%E3%83%AD%E3%82%AA%E3%82%AA%E3%82%A2%E3%83%AA' },
+    { text: 'Wikipedia「トノサマバッタ」— 体長 35〜65 mm', url: 'https://ja.wikipedia.org/wiki/%E3%83%88%E3%83%8E%E3%82%B5%E3%83%9E%E3%83%90%E3%83%83%E3%82%BF' },
+    { text: 'Wikipedia「ツマグロヨコバイ」— 体長 4〜6 mm', url: 'https://ja.wikipedia.org/wiki/%E3%83%84%E3%83%9E%E3%82%B0%E3%83%AD%E3%83%A8%E3%82%B3%E3%83%90%E3%82%A4' },
+    { text: 'Wikipedia「ヨコバイ科」— 横にずれながら歩くので「横這い」。平らな面ではななめ前に歩くように見える', url: 'https://ja.wikipedia.org/wiki/%E3%83%A8%E3%82%B3%E3%83%90%E3%82%A4%E7%A7%91' },
+    { text: 'Wikipedia「カブトムシ」— オスの体長（角を除く）19〜57 mm', url: 'https://ja.wikipedia.org/wiki/%E3%82%AB%E3%83%96%E3%83%88%E3%83%A0%E3%82%B7' },
+  ],
+};

@@ -21,7 +21,7 @@ export async function createGarden(scene, renderer, low, SQ) {
   const R = (() => { let s = 11; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); })();
   const half = SQ * 4, m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), c = new THREE.Color();
   // 小石: 盤の中は小さな粒だけ（虫の道をふさがない）、外は大きめも
-  const sg = new THREE.SphereGeometry(1, 20, 14), sp = sg.attributes.position;
+  const sg = new THREE.SphereGeometry(1, 10, 7), sp = sg.attributes.position;
   for (let i = 0; i < sp.count; i++) { const v = new THREE.Vector3().fromBufferAttribute(sp, i), f = 0.8 + 0.25 * Math.sin(v.x * 3.1 + v.y * 2.3) * Math.cos(v.z * 2.7); sp.setXYZ(i, v.x * f, v.y * f * 0.6, v.z * f); }
   sg.computeVertexNormals();
   const N = low ? 500 : 1100, stones = new THREE.InstancedMesh(sg, new THREE.MeshStandardMaterial({ color: 0x9a9083, roughness: 0.85 }), N);
@@ -44,6 +44,6 @@ export async function createGarden(scene, renderer, low, SQ) {
     m.compose(new THREE.Vector3(x, 0, z), q, s.set(0.4 + R() * 0.4, h, 1)); grass.setMatrixAt(i, m);
     grass.setColorAt(i, c.setHSL(0.24 + R() * 0.06, 0.45, 0.22 + R() * 0.12));
   }
-  grass.castShadow = true; grass.receiveShadow = true; scene.add(grass);
+  grass.receiveShadow = true;   // 草は影のカメラの外なので影は落とさない scene.add(grass);
   return { step: dt => { wind.value += dt; } };
 }

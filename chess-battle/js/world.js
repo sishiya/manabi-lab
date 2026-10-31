@@ -24,7 +24,7 @@ export async function createWorld(canvas, onProgress, theme = 'sea') {
   scene.add(new THREE.HemisphereLight(0xdfe9f0, 0x2a3a44, 0.5));
   const sun = new THREE.DirectionalLight(0xfff2dc, 3.0);
   sun.position.copy(SUN_DIR).multiplyScalar(500 * k); sun.castShadow = !low;   // 日の向きは空の絵の太陽に合わせる
-  sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.05;
+  sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.05 * k;
   Object.assign(sun.shadow.camera, { left: -230 * k, right: 230 * k, top: 230 * k, bottom: -230 * k, near: 100 * k, far: 1100 * k }); sun.shadow.bias = bugsTheme ? -0.0002 : -0.0005;
   scene.add(sun, sun.target);
 

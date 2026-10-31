@@ -25,11 +25,13 @@ const facets = () => canvasTex('facets', 256, 256, (g, w, h) => {   // 複眼の
     g.fillStyle = '#c8c8c8'; g.fill(); g.strokeStyle = '#3a3a3a'; g.lineWidth = 1; g.stroke();
   }
 }, 4);
+let LOW = false;   // 軽くする端末: 殻は MeshStandard、毛なし
 function chitin(color, o = {}) {
+  if (LOW) return new THREE.MeshStandardMaterial({ color, roughness: o.rough ?? 0.45, bumpMap: pits(), bumpScale: o.bump ?? 0.5, map: o.map || null, metalness: 0 });
   return new THREE.MeshPhysicalMaterial({ color, roughness: o.rough ?? 0.45, roughnessMap: pits(), bumpMap: pits(), bumpScale: o.bump ?? 0.5, map: o.map || null,
     clearcoat: o.coat ?? 0.6, clearcoatRoughness: 0.3, sheen: 0.25, sheenColor: new THREE.Color(0x998877), metalness: 0 });
 }
-function eyeMat(color) { return new THREE.MeshPhysicalMaterial({ color, roughness: 0.18, bumpMap: facets(), bumpScale: 1.2, clearcoat: 1, clearcoatRoughness: 0.05 }); }
+function eyeMat(color) { return new (LOW ? THREE.MeshStandardMaterial : THREE.MeshPhysicalMaterial)(LOW ? { color, roughness: 0.18, bumpMap: facets(), bumpScale: 1.2 } : { color, roughness: 0.18, bumpMap: facets(), bumpScale: 1.2, clearcoat: 1, clearcoatRoughness: 0.05 }); }
 
 // ---------- 形 ----------
 const UP = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
@@ -57,9 +59,11 @@ function taper(parent, mat, pts, r0, r1, seg = 24) {   // 点を通るなめら�
     for (let j = 0; j <= 12; j++) { const k = i * 13 + j, v = new THREE.Vector3().fromBufferAttribute(p, k).sub(c); p.setXYZ(k, c.x + v.x * r, c.y + v.y * r, c.z + v.z * r); } }
   g.computeVertexNormals(); const m = new THREE.Mesh(g, mat); m.castShadow = true; parent.add(m); return m;
 }
-function ball(parent, r, mat, at) { const m = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), mat); if (Array.isArray(r)) m.scale.set(...r); else m.scale.setScalar(r); m.position.set(...at); m.castShadow = true; parent.add(m); return m; }
+const SPH = new THREE.SphereGeometry(1, 16, 12);   // 関節・目の玉は1つの形を使い回す
+function ball(parent, r, mat, at) { const m = new THREE.Mesh(SPH, mat); if (Array.isArray(r)) m.scale.set(...r); else m.scale.setScalar(r); m.position.set(...at); m.castShadow = true; parent.add(m); return m; }
 // 毛（剛毛）: 形の表面からまばらに、うしろへ寝かせて生やす（細い線）
 function hairs(mesh, n, len, color = 0xb89a6a, opacity = 0.35) {
+  if (LOW) return null;
   const g = mesh.geometry, p = g.attributes.position, nr = g.attributes.normal, arr = [];
   for (let i = 0; i < n; i++) {
     const k = (Math.random() * p.count) | 0, v = new THREE.Vector3().fromBufferAttribute(p, k), nn = new THREE.Vector3().fromBufferAttribute(nr, k);
@@ -78,17 +82,18 @@ function makeLeg(parent, mat, hip, rest, L1, L2, tars, r, grp) {
   const hipM = ball(parent, r * 1.25, mat, hip.toArray());
   const fem = stick(parent, mat, r * 1.1, r * 0.85), tib = stick(parent, mat, r * 0.75, r * 0.55), tar = stick(parent, mat, r * 0.45, r * 0.3);
   const kneeB = ball(parent, r * 0.8, mat, [0, 0, 0]), ankB = ball(parent, r * 0.5, mat, [0, 0, 0]);   // 関節は目立たない大きさ
-  const foot = rest.clone(), knee = new THREE.Vector3(), ank = new THREE.Vector3();
+  const foot = rest.clone(), knee = new THREE.Vector3(), ank = new THREE.Vector3(), d = new THREE.Vector3(), dn = new THREE.Vector3(), bend = new THREE.Vector3();
+  const side = new THREE.Vector3(hip.x, 0, 0).normalize();   // 毎コマ作らない
   return {
     hip, rest, foot, grp, lift: 0,
     pose() {
       // ふ節は足先から体の方へ少しのびて地面に寝る。すねの先（ankle）を IK の目標にする
       const toHip = tmpV.subVectors(hip, foot).setY(0); const dh = toHip.length() || 1;
       ank.set(foot.x + toHip.x / dh * tars * 0.8, foot.y + tars * 0.45, foot.z + toHip.z / dh * tars * 0.8);
-      const d = new THREE.Vector3().subVectors(ank, hip), D = Math.min(d.length(), (L1 + L2) * 0.999), dn = d.clone().normalize();
+      d.subVectors(ank, hip); const D = Math.min(d.length(), (L1 + L2) * 0.999); dn.copy(d).normalize();
       const a = (L1 * L1 - L2 * L2 + D * D) / (2 * D), hgt = Math.sqrt(Math.max(0, L1 * L1 - a * a));
       // ひざは「上＋外」へ曲げる
-      const side = new THREE.Vector3(hip.x, 0, 0).normalize(), bend = UP.clone().multiplyScalar(0.55).addScaledVector(side, 1.0);   // ひざは外へ開き、少し上（体の高さくらい）
+      bend.copy(UP).multiplyScalar(0.55).addScaledVector(side, 1.0);   // ひざは外へ開き、少し上（体の高さくらい）
       const perp = bend.addScaledVector(dn, -bend.dot(dn)).normalize();
       knee.copy(hip).addScaledVector(dn, a).addScaledVector(perp, hgt);
       fem(hip, knee); tib(knee, ank); tar(ank, foot); kneeB.position.copy(knee); ankB.position.copy(ank);
@@ -101,7 +106,8 @@ function walk(legs, dt, v, dirX, dirZ, st) {
   if (period) st.ph = (st.ph + dt / period) % 1;
   for (const L of legs) {
     const ph = (st.ph + (L.grp ? 0.5 : 0)) % 1;   // 2つの組は半周ずれる
-    if (!period) { L.foot.lerp(L.rest, 1 - Math.exp(-dt * 6)); L.foot.y = 0; L.pose(); continue; }
+    if (!period) { if (L.foot.distanceToSquared(L.rest) < 1e-8) continue;   // 止まって足がそろったら IK を飛ばす
+      L.foot.lerp(L.rest, 1 - Math.exp(-dt * 6)); L.foot.y = 0; L.pose(); continue; }
     if (ph < 0.5) {   // 立ち脚: 地面に置いたまま、体が進むぶん後ろへ（すべらない）
       L.foot.x -= dirX * v * dt; L.foot.z -= dirZ * v * dt; L.foot.y = 0;
     } else {          // うき脚: いまの場所から「休む場所＋歩幅の半分だけ前」へ、持ち上げて運ぶ
@@ -126,7 +132,8 @@ const veinTex = () => canvasTex('veins', 512, 96, (g, w, h) => {   // 翅脈（�
 });
 
 // ---------- 虫の種類 ----------
-export function makeInsect(kind, team = 'w') {
+export function makeInsect(kind, team = 'w', low = false) {
+  LOW = low;
   const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
   const legs = [], antennae = [], wings = [];
   const dark = team === 'b';
@@ -216,17 +223,29 @@ export function makeInsect(kind, team = 'w') {
   body.scale.setScalar(sc);
   for (const Lg of legs) Lg.pose();
   const st = { ph: 0, stride, lift: liftH };
-  let t = 0;
+  const top = box.max.y * sc;   // 背中（いちばん高いところ）までの高さ。ひっくり返ったとき、この分だけ持ち上げる
+  const mats = []; body.traverse(m => { if (m.material && !mats.includes(m.material)) mats.push(m.material); });   // この虫だけの材質（輪・印は入れない）
+  for (const m of mats) m.userData.op = m.opacity;
+  let t = 0, faded = false;
   return {
-    root, kind, len,
+    root, kind, len, top,
+    fade(f) {   // うすれる（1 = もとのまま）。透明にするのは最初の1回だけ（シェーダーを作りなおす）
+      if (f < 1 && !faded) { faded = true; for (const m of mats) { m.userData.tr = m.transparent; m.transparent = true; m.depthWrite = false; m.needsUpdate = true; } }
+      if (f >= 1 && faded) { faded = false; for (const m of mats) { m.transparent = m.userData.tr; m.depthWrite = m.userData.tr ? m.depthWrite : true; m.needsUpdate = true; } }
+      for (const m of mats) m.opacity = m.userData.op * f;
+    },
+    reset() { for (const Lg of legs) { Lg.foot.copy(Lg.rest); Lg.pose(); } body.position.y = 0; body.rotation.x = 0; this.fade(1); },
     // speed: cm/s（体の前へ）。opt.side = 1 なら横へ這う（ヨコバイ）。opt.fly = トンボの高さの倍率
     update(dt, speed = 0, opt = {}) {
       t += dt;
       const v = speed / sc;                                   // 体の中の単位の速さ
       const dx = opt.side ? 1 : 0, dz = opt.side ? 0 : 1;
-      if (legs.length) walk(legs, dt, Math.abs(v), dx, dz, st);
+      if (opt.kick) {   // あおむけで脚をばたつかせる（気絶して起きあがれない。※ 見立て）
+        legs.forEach((Lg, i) => { Lg.foot.set(Lg.rest.x * 0.7, st.lift * 2.5 * (0.6 + 0.4 * Math.sin(t * 9 + i * 1.7)), Lg.rest.z * 0.8 + Math.sin(t * 7 + i) * stride * 0.3); Lg.pose(); });
+      } else if (legs.length) walk(legs, dt, Math.abs(v), dx, dz, st);
+      body.rotation.x += ((opt.mated ? 0.12 : 0) - body.rotation.x) * Math.min(1, dt * 3);   // 詰み: 女王アリが頭を下げてうずくまる
       body.position.y = legs.length && speed > 0.01 ? Math.abs(Math.sin(st.ph * Math.PI * 2)) * 0.012 * len : 0;
-      for (const a of antennae) a.rotation.set(Math.sin(t * 3.1 + a.userData.s) * 0.12, Math.sin(t * 2.3 + a.userData.s * 2) * 0.15, 0);
+      for (const a of antennae) a.rotation.set(opt.mated ? 0.6 : Math.sin(t * 3.1 + a.userData.s) * 0.12 + (opt.alert ? -0.25 : 0), opt.mated ? 0 : Math.sin(t * (opt.alert ? 6 : 2.3) + a.userData.s * 2) * 0.15, 0);   // ねらい合うと触角を前へ立てて速くふる
       if (kind === 'dragonfly') {   // 羽ばたき（本物は 1 秒に 30 回ほど。そのままだと止まって見えるので、ゆっくりにした ※ 演出）
         for (const w of wings) w.rotation.z = w.userData.s * Math.sin(t * 24 + (w.userData.front ? 0 : 1.7)) * 0.5;
         body.position.y = (opt.fly ?? 1) * (2.6 + Math.sin(t * 2) * 0.25) / 1;
