@@ -5,11 +5,21 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { InstancedMesh2 } from '@three.ez/instanced-mesh';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { height } from './terrain.js';
 
 const CLIPS = ['Idle_Loop', 'Sword_Idle', 'Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Sword_Attack'];
 export const A = { idle: 0, ready: 1, walk: 2, jog: 3, sprint: 4, attack: 5 };
 const POOL = 6;   // 位相をずらした見本の数（同じ動きの兵がそろって見えないように）
+const BLEND = 0.25;   // 動きの絵が切りかわるとき、前の姿勢からまぜる時間（秒）
+// 武器の持たせ方（手の骨から見た位置 m・回転 rad）。window.__chbaArms で画面を見ながら合わせられる
+export const ARMS = {
+  sword: { hand: 'r', p: [0, 0.08, 0.02], r: [0, 0, 1.5708] },
+  spear: { hand: 'r', p: [0, 0.08, 0.02], r: [0, 0, 1.5708] },
+  bow: { hand: 'l', p: [0, 0.08, 0.02], r: [0, 0, 1.5708] },
+  shield: { hand: 'l', p: [0, 0.05, 0.12], r: [0, 0, 0] },
+};
+const SHIELD = { w: new THREE.Color(0xd9dde6), b: new THREE.Color(0x7a1a1a) };
 // 軍の色（服のところだけ塗りかえる。明るさは残す）
 const TINT = { w: new THREE.Color(0xe8ecf2), b: new THREE.Color(0x8a1c1c) };
 
@@ -20,7 +30,7 @@ export async function createCrowd(scene, low, cap = 160) {
   const models = { peasant: await load('assets/soldier-peasant.glb'), ranger: await load('assets/soldier-ranger.glb') };
   const shadow = !low;   // スマホでは兵の影を切る
   const meshes = {}, pools = {}, mixers = [], faints = {}, FAINT_N = 24, tmpM = new THREE.Matrix4();
-  let NB = 0, faintDur = 1;
+  let NB = 0, faintDur = 1, HR = -1, HL = -1;
   for (const [name, g] of Object.entries(models)) {
     let src = null; g.scene.traverse(m => { if (m.isSkinnedMesh) src = m; });
     NB = src.skeleton.bones.length;
@@ -32,7 +42,7 @@ export async function createCrowd(scene, low, cap = 160) {
         const o = SkeletonUtils.clone(g.scene), mx = new THREE.AnimationMixer(o);
         mx.clipAction(clip).play(); mx.update(clip.duration * k / POOL); mixers.push(mx);
         let sk = null; o.traverse(m => { if (m.isSkinnedMesh) sk = m.skeleton; });
-        pools[name].push({ o, sk, data: new Float32Array(NB * 16) });
+        pools[name].push({ o, sk, data: new Float32Array(NB * 16), hr: new THREE.Matrix4(), hl: new THREE.Matrix4() });
       }
     }
     // 気絶（素材の Death01。1回だけの動きなので、時刻をずらした止まった姿勢を FAINT_N 枚。最後の1枚で倒れたまま）
@@ -47,6 +57,7 @@ export async function createCrowd(scene, low, cap = 160) {
       const data = new Float32Array(NB * 16);
       for (let i = 0; i < NB; i++) tmpM.multiplyMatrices(sk.bones[i].matrixWorld, sk.boneInverses[i]).toArray(data, i * 16);
       faints[name].push(data);
+      if (k === 0) { HR = sk.bones.findIndex(b => b.name === 'hand_r'); HL = sk.bones.findIndex(b => b.name === 'hand_l'); }
     }
     for (const side of ['w', 'b', 'wf', 'bf']) {
       const mat = src.material.clone(), fallen = side.length > 1;
@@ -72,13 +83,49 @@ export async function createCrowd(scene, low, cap = 160) {
     }
   }
 
-  // 兵: { x, z, vx, vz, h（向き）, tx, tz（行き先）, max（速さの上限）, face（止まったら向く向き。null なら行き先へ）, stance, attack, k, ... }
+  // 武器（剣・槍・弓・盾）: 形ごとに InstancedMesh。毎コマ「兵の場所 × その姿勢の手の骨 × 持たせ方」で置く。気絶したら地面に落ちて残る
+  const metal = new THREE.MeshStandardMaterial({ color: 0xb8bcc4, metalness: 0.85, roughness: 0.35 });
+  const wood = new THREE.MeshStandardMaterial({ color: 0x6b4a2e, roughness: 0.8 });
+  const g = (geo, x, y, z) => geo.translate(x, y, z);
+  const WGEO = {   // どれも握るところが原点、+Y の向きにのびる
+    sword: mergeGeometries([g(new THREE.BoxGeometry(0.045, 0.78, 0.01), 0, 0.5, 0), g(new THREE.BoxGeometry(0.2, 0.03, 0.035), 0, 0.1, 0), g(new THREE.CylinderGeometry(0.018, 0.018, 0.16, 6), 0, 0.02, 0)]),
+    spear: mergeGeometries([g(new THREE.CylinderGeometry(0.018, 0.018, 2.5, 6), 0, 0.45, 0), g(new THREE.ConeGeometry(0.035, 0.22, 6), 0, 1.81, 0)]),
+    bow: new THREE.TorusGeometry(0.62, 0.014, 4, 18, Math.PI * 0.75).rotateZ(Math.PI * 0.625).translate(-0.62 * Math.cos(Math.PI) * 0, 0, 0),
+    shield: new THREE.CylinderGeometry(0.34, 0.34, 0.04, 20).rotateX(Math.PI / 2),
+  };
+  { const b = WGEO.bow; b.computeBoundingBox(); const c = b.boundingBox.getCenter(new THREE.Vector3()); b.translate(-b.boundingBox.min.x, -c.y, 0); }   // 弓は握りが原点
+  const wmesh = {}, WCAP = cap * 4;
+  for (const [k, geo] of Object.entries(WGEO)) {
+    const mat = k === 'shield' ? new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, metalness: 0.2 }) : k === 'sword' ? metal : wood;
+    const m = new THREE.InstancedMesh(geo, mat, WCAP); m.count = 0; m.castShadow = shadow; m.frustumCulled = false;
+    if (k === 'shield') m.setColorAt(0, SHIELD.w);
+    scene.add(m); wmesh[k] = { m, used: 0 };
+  }
+  window.__chbaArms = ARMS;
+  const offs = {}, eul = new THREE.Euler(), one = new THREE.Vector3(1, 1, 1), hp = new THREE.Vector3(), hq = new THREE.Quaternion(), hs = new THREE.Vector3();
+  function armOffset(k) { const a = ARMS[k]; return (offs[k] || (offs[k] = new THREE.Matrix4())).compose(hp.set(...a.p), hq.setFromEuler(eul.set(...a.r)), one); }
+  function takeArm(k, side) {
+    const W = wmesh[k], i = W.used++;
+    if (i >= WCAP) return -1;
+    W.m.count = Math.max(W.m.count, i + 1);
+    if (k === 'shield') W.m.setColorAt(i, SHIELD[side]);
+    return i;
+  }
+  const dropM = new THREE.Matrix4(), dropQ = new THREE.Quaternion(), dropP = new THREE.Vector3();
+  function dropArm(k, i, x, z) {   // 地面に横たえる
+    dropQ.setFromEuler(eul.set(Math.PI / 2, rnd(0, 6.28), 0, 'YXZ'));
+    const ox = x + rnd(-0.6, 0.6), oz = z + rnd(-0.6, 0.6);
+    wmesh[k].m.setMatrixAt(i, dropM.compose(dropP.set(ox, height(ox, oz) + 0.04, oz), dropQ, one));
+  }
+
+  // 兵: { x, z, vx, vz, h（向き）, tx, tz（行き先）, max（速さの上限）, face（止まったら向く向き。null なら行き先へ）, stance, attack, k, arms, ... }
   const soldiers = new Set();
-  function add(side, model, x, z, h) {
+  function add(side, model, x, z, h, arms = []) {
     const M = meshes[model + side], idx = M.free.length ? M.free.pop() : M.used++;
     if (idx >= cap) { window.__chbaErr && window.__chbaErr.push('兵が多すぎる: ' + model + side); return null; }
     const inst = M.im.instances[idx]; inst.visible = true;
-    const s = { side, model, M, idx, inst, x, z, vx: 0, vz: 0, h, tx: x, tz: z, max: 1.4, face: h, stance: 'idle', attack: 0, k: (Math.random() * POOL) | 0, clip: A.idle, pace: rnd(0.92, 1.1), alive: true };
+    const s = { side, model, M, idx, inst, x, z, vx: 0, vz: 0, h, tx: x, tz: z, max: 1.4, face: h, stance: 'idle', attack: 0, k: (Math.random() * POOL) | 0, clip: A.idle, pace: rnd(0.92, 1.1), alive: true, bt: BLEND, from: null };
+    s.arms = arms.map(k => ({ k, i: takeArm(k, side) })).filter(a => a.i >= 0);
     soldiers.add(s); return s;
   }
   function remove(s) { if (!s.alive) return; s.alive = false; s.inst.visible = false; s.M.free.push(s.idx); soldiers.delete(s); }
@@ -86,11 +133,13 @@ export async function createCrowd(scene, low, cap = 160) {
     for (const s of [...soldiers]) remove(s);
     for (const f of fallen) f.inst.visible = false; fallen.length = 0;
     for (const M of Object.values(meshes)) { M.used = 0; M.free = []; }
+    for (const W of Object.values(wmesh)) { W.used = 0; W.m.count = 0; }
   }
   // 気絶: delay 秒後に倒れはじめ、倒れきったら半透明（※ 見やすさのため薄く表示）にしてその場に残す
   const fallen = [];
   function faint(s, delay = 0) { s.faintIn = delay; }
-  function lay(side, model, x, z, h, frame = FAINT_N - 1) {   // 倒れた姿のまま置く（スライダーで飛んだとき・倒れきったとき）
+  function lay(side, model, x, z, h, frame = FAINT_N - 1, arms = null) {   // 倒れた姿のまま置く（スライダーで飛んだとき・倒れきったとき）。arms があれば落ちた武器も
+    if (arms) for (const k of arms) { const i = takeArm(k, side); if (i >= 0) dropArm(k, i, x, z); }
     const M = meshes[model + side + 'f'], idx = M.used++;
     if (idx >= cap) { window.__chbaErr && window.__chbaErr.push('気絶した兵が多すぎる: ' + model + side); return; }
     const inst = M.im.instances[idx]; inst.visible = true;
@@ -116,6 +165,7 @@ export async function createCrowd(scene, low, cap = 160) {
     if (s.faintIn !== undefined) {   // 気絶: 待つ → 倒れる（その場で）→ 倒れきったら半透明の描き分けへ移す
       s.faintIn -= dt;
       if (s.faintIn <= 0) {
+        if (!s.ft) for (const a of s.arms) dropArm(a.k, a.i, s.x, s.z);   // 倒れはじめに武器を落とす
         s.ft = (s.ft || 0) + dt;
         const f = Math.min(FAINT_N - 1, Math.floor(s.ft / faintDur * (FAINT_N - 1)));
         s.vx *= 0.8; s.vz *= 0.8; s.x += s.vx * dt; s.z += s.vz * dt;
@@ -143,14 +193,33 @@ export async function createCrowd(scene, low, cap = 160) {
     const dh = Math.atan2(Math.sin(goal - s.h), Math.cos(goal - s.h)); s.h += Math.max(-TURN * dt, Math.min(TURN * dt, dh));
     // 動きの絵: 速さで選ぶ（止まっているときは構え・剣・ふつう）
     const clip = s.attack > 0 ? A.attack : sp < (s.clip <= A.ready ? 0.3 : 0.1) ? (s.stance === 'ready' ? A.ready : A.idle) :   /* 止まる↔歩くのしきい値に幅（よけ合いの速さのゆれで絵がちらつかない） */ sp < 2.3 ? A.walk : sp < 4.6 ? A.jog : A.sprint;
-    if (clip !== s.clip) { s.clip = clip; s.k = (Math.random() * POOL) | 0; }
+    if (clip !== s.clip) { s.from = pools[s.model][s.clip * POOL + s.k]; s.bt = 0; s.clip = clip; s.k = (Math.random() * POOL) | 0; }
     if (s.attack > 0) s.attack -= dt;
     if (sp > 4.2 && Math.random() < dt * 3) dust(s.x, s.z, 1);
     s.inst.position.set(s.x, height(s.x, s.z), s.z);
     s.inst.quaternion.setFromAxisAngle(up, s.h);
     s.inst.updateMatrix();
-    s.M.im.boneTexture._data.set(pools[s.model][s.clip * POOL + s.k].data, s.idx * NB * 16);
+    // 姿勢: 切りかわってから BLEND 秒は、前の姿勢とまぜる（絵が1コマで飛ばない）
+    const P = pools[s.model][s.clip * POOL + s.k], dst = s.M.im.boneTexture._data, o = s.idx * NB * 16;
+    let w = 1;
+    if (s.bt < BLEND && s.from) {
+      s.bt += dt; w = Math.min(1, s.bt / BLEND); w = w * w * (3 - 2 * w);
+      const A0 = s.from.data, B0 = P.data;
+      for (let i = 0, n = NB * 16; i < n; i++) dst[o + i] = A0[i] + (B0[i] - A0[i]) * w;
+    } else dst.set(P.data, o);
+    // 武器: 兵の場所 × 手の骨（まぜている間は前の手とまぜる）× 持たせ方
+    if (s.arms.length) {
+      sm.compose(sp3.set(s.x, s.inst.position.y, s.z), s.inst.quaternion, one);
+      for (const a of s.arms) {
+        const hand = ARMS[a.k].hand === 'r' ? 'hr' : 'hl';
+        hm.copy(P[hand]);
+        if (w < 1) { const e = hm.elements, f = s.from[hand].elements; for (let i = 0; i < 16; i++) e[i] = f[i] + (e[i] - f[i]) * w; }
+        wm.multiplyMatrices(sm, hm).multiply(armOffset(a.k));
+        wmesh[a.k].m.setMatrixAt(a.i, wm);
+      }
+    }
   }
+  const sm = new THREE.Matrix4(), hm = new THREE.Matrix4(), wm = new THREE.Matrix4(), sp3 = new THREE.Vector3();
 
   // 土ぼこり（※ 演出）: 柔らかい点がふくらんで消える
   const DN = 400, dpos = new Float32Array(DN * 3), dage = new Float32Array(DN).fill(9);
@@ -176,7 +245,7 @@ export async function createCrowd(scene, low, cap = 160) {
     arrows.push({ x0, y0: height(x0, z0) + 1.6, z0, x1, z1, y1: height(x1, z1), t: 0, flight, peak: Math.min(14, flight * 6) });
     if (arrows.length > AN) arrows.shift();
   }
-  const am = new THREE.Matrix4(), ap = new THREE.Vector3(), av = new THREE.Vector3(), aq = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), fwd = new THREE.Vector3(0, 0, 1);
+  const am = new THREE.Matrix4(), ap = new THREE.Vector3(), av = new THREE.Vector3(), aq = new THREE.Quaternion(), fwd = new THREE.Vector3(0, 0, 1);
   function stepArrows(dt) {
     let n = 0;
     for (let i = arrows.length - 1; i >= 0; i--) {
@@ -199,9 +268,12 @@ export async function createCrowd(scene, low, cap = 160) {
       p.o.updateMatrixWorld(true);
       const b = p.sk.bones, inv = p.sk.boneInverses;
       for (let i = 0; i < NB; i++) tmpM.multiplyMatrices(b[i].matrixWorld, inv[i]).toArray(p.data, i * 16);
+      // 手の骨（武器を持たせる）。大きさの倍率は外す（武器の大きさは m のまま）
+      for (const [key, bi] of [['hr', HR], ['hl', HL]]) { b[bi].matrixWorld.decompose(hp, hq, hs); p[key].compose(hp, hq, one); }
     }
     rebuildGrid();
     for (const s of [...soldiers]) stepSoldier(s, dt);
+    for (const W of Object.values(wmesh)) { W.m.instanceMatrix.needsUpdate = true; if (W.m.instanceColor) W.m.instanceColor.needsUpdate = true; }
     for (const M of meshList) if (!M.fallen) M.im.boneTexture.enqueueUpdate(0);   // partialUpdate=false なので全部送る（気絶用は置いたときに1回だけ）
     for (let i = 0; i < DN; i++) if (dage[i] < 9) dage[i] += dt;
     dgeo.attributes.age.needsUpdate = true; dgeo.attributes.position.needsUpdate = true;
