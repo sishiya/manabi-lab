@@ -33,14 +33,16 @@ controls = new THREE.OrbitControls(W.camera, $('cv'));
 controls.enabled = false; controls.maxPolarAngle = Math.PI * 0.48; controls.minDistance = 4; controls.maxDistance = 220;
 
 function caption(p) {
-  $('capMove').textContent = p ? `${p.num} ${p.san}${p.sac ? '!' : ''}` : '';
+  $('capMove').textContent = p ? `${p.num} ${p.san}${p.mark}` : '';
   $('capText').textContent = p ? p.note : `${game.title} — 白: ${game.white}／黒: ${game.black}。「つぎへ」で始まります。`;
   $('caption').classList.toggle('sac', !!(p && p.sac));
   $('caption').classList.toggle('mate', !!(p && p.mate));
 }
-function showPly(ply) {   // 文字・隅の盤・帯を ply の局面に合わせる
-  const p = rec.plies[ply - 1] || null;
-  caption(p); drawMini($('mini'), rec.states[ply], p); setMaterial(rec.material[ply]); markMove(ply); W.showMarks(p);
+function showPly(ply, moving = false) {   // 文字・隅の盤・帯を ply の局面に合わせる（動いているあいだ、隅の盤は動く前の局面に from→to を光らせる）
+  const p = rec.plies[ply - 1] || null, st = moving ? ply - 1 : ply;
+  caption(p); drawMini($('mini'), rec.states[st], p); setMaterial(rec.material[st]); markMove(ply); W.showMarks(p);
+  const m = rec.material[st], d = m.w - m.b;
+  $('matChip').textContent = `駒の点数 白 ${m.w} : 黒 ${m.b}` + (d < 0 ? `（白 ${d}）` : d > 0 ? `（白 +${d}）` : '');
   $('where').textContent = `${ply} / ${rec.plies.length} 手`;
   $('next').textContent = ply >= rec.plies.length ? 'はじめから' : 'つぎへ';
   $('prev').disabled = ply === 0 && !S.playing;
@@ -59,17 +61,17 @@ function next() {
   const [a, b] = rec.scenes[sceneIndex(S.ply + 1)];
   for (let k = Math.max(a, S.ply + 1); k <= b; k++) S.queue.push(k);
 }
-function prev() {
-  if (S.playing || S.queue.length) { seek(S.ply); return; }
+function prev() {   // ひとつ前の場面の初めへ（再生中なら、いまの場面の初めへ）
+  if (S.playing || S.queue.length) { seek(rec.scenes[sceneIndex(S.ply)][0] - 1); return; }
   const i = sceneIndex(S.ply);
-  seek(i <= 0 ? 0 : rec.scenes[i][0] - 1 === S.ply ? rec.scenes[i - 1][0] - 1 : rec.scenes[i][0] - 1);
+  seek(i <= 0 ? 0 : rec.scenes[i][0] - 1);
 }
 
 function stepPlay(dt) {
   if (!S.playing && S.queue.length) {
     const k = S.queue.shift(), p = rec.plies[k - 1];
     S.playing = p; S.minWait = 0.4; W.playPly(p, rec.states[k - 1], rec.states[k]);
-    S.ply = k; showPly(k);
+    S.ply = k; showPly(k, true);
   }
   W.step(dt);
   if (S.playing) { S.minWait -= dt; if (S.minWait <= 0 && !W.busy()) { S.playing = null; if (!S.queue.length) showPly(S.ply); } }

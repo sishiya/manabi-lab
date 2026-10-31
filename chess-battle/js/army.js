@@ -44,6 +44,12 @@ export async function createArmy(scene) {
     }
   }
   const skels = Object.values(tpl).flatMap(t => Object.values(t).flat());
+  // 兵の形の球（骨で動いたあとも入る大きさ）。視野の外の兵を描かないため。スマホ（幅 600px 未満）では兵の影を切る
+  const SHADOW = window.innerWidth >= 600;
+  for (const g of Object.values(gl)) g.scene.traverse(m => { if (m.isSkinnedMesh) m.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 1, 0), 1.8); });
+  // 動いている隊の足もとの輪（※ 目印。隅の盤の光るマスと同じ色）
+  const ring = new THREE.Mesh(new THREE.RingGeometry(3.6, 4.0, 48), new THREE.MeshBasicMaterial({ color: 0xffd65a, transparent: true, opacity: 0.55, depthWrite: false }));
+  ring.rotation.x = -Math.PI / 2; ring.visible = false; scene.add(ring);
   // 材質: 服のところ（uv の左上 1/4）だけ両軍の色に染める
   const mats = {};
   for (const [name, g] of Object.entries(gl)) {
@@ -75,9 +81,12 @@ export async function createArmy(scene) {
     const grp = new THREE.Group(), big = type === 'k' || type === 'q', h = big ? 5.5 : 4.2;
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, h, 6), new THREE.MeshLambertMaterial({ color: 0x5b4a33 }));
     pole.position.y = h / 2; pole.castShadow = true; grp.add(pole);
-    const cloth = new THREE.Mesh(new THREE.PlaneGeometry(big ? 1.5 : 1.1, big ? 1.9 : 1.4), new THREE.MeshLambertMaterial({ map: bannerTex[key], side: THREE.DoubleSide }));
-    cloth.geometry.translate((big ? 0.75 : 0.55), 0, 0);
-    cloth.position.y = h - (big ? 1.0 : 0.75); cloth.castShadow = true; grp.add(cloth);
+    // 布は表と裏の2枚（1枚の両面だと、裏から見た印が左右反対になる）
+    const w = big ? 1.5 : 1.1, fg = new THREE.PlaneGeometry(w, big ? 1.9 : 1.4).translate(w / 2, 0, 0.01);
+    const bg = new THREE.PlaneGeometry(w, big ? 1.9 : 1.4).translate(-w / 2, 0, 0.01).rotateY(Math.PI);
+    const mat = new THREE.MeshLambertMaterial({ map: bannerTex[key] });
+    const cloth = new THREE.Group(); cloth.add(new THREE.Mesh(fg, mat), new THREE.Mesh(bg, mat));
+    cloth.position.y = h - (big ? 1.0 : 0.75); cloth.children.forEach(m => { m.castShadow = true; }); grp.add(cloth);
     grp.userData = { cloth, top: h - (big ? 1.0 : 0.75) };
     scene.add(grp); return grp;
   }
@@ -88,7 +97,7 @@ export async function createArmy(scene) {
     for (let i = 0; i < C.n; i++) {
       const col = i % C.cols, row = Math.floor(i / C.cols);
       const mesh = new THREE.SkinnedMesh(src.geometry, mats[C.model][u.color]);
-      mesh.bindMode = 'detached'; mesh.castShadow = true; mesh.frustumCulled = false;
+      mesh.bindMode = 'detached'; mesh.castShadow = SHADOW;   // 視野の外の兵は描かない（形の球は src に手で入れてある）
       const k = (i * 7 + u.id.length * 3) % POOL;
       mesh.bind(tpl[C.model][CLIP.idle][k], src.bindMatrix);
       scene.add(mesh);
@@ -130,43 +139,55 @@ export async function createArmy(scene) {
   function path(p) {
     const a = sqPos(p.from), b = sqPos(p.to);
     if (p.piece !== 'n') return [b];
-    // 騎兵（ナイト）は L 字に回りこむ: 長い向きに進んでから曲がる
-    const df = b.x - a.x, dr = b.z - a.z;
-    const mid = Math.abs(df) > Math.abs(dr) ? new THREE.Vector3(b.x, 0, a.z) : new THREE.Vector3(a.x, 0, b.z);
-    mid.y = height(mid.x, mid.z); return [mid, b];
+    // 騎兵（ナイト）は L 字に回りこむ: マスのさかい（隊と隊のあいだ）を通って、長い向きに進んでから曲がる
+    const df = b.x - a.x, dr = b.z - a.z, long = Math.abs(df) > Math.abs(dr);
+    const p1 = long ? new THREE.Vector3(a.x, 0, a.z + Math.sign(dr) * SQ / 2) : new THREE.Vector3(a.x + Math.sign(df) * SQ / 2, 0, a.z);
+    const p2 = long ? new THREE.Vector3(b.x, 0, p1.z) : new THREE.Vector3(p1.x, 0, b.z);
+    for (const q of [p1, p2]) q.y = height(q.x, q.z);
+    return [p1, p2, b];
   }
+  const halfDepth = U => (Math.ceil(U.C.n / U.C.cols) - 1) / 2 * 1.7 + 0.5;
   function playPly(p, toState) {
     const M = units.get(p.mover), to = new Map(toState.map(u => [u.id, u]));
-    const pts = path(p), gait = M.C.gait;
+    const pts = path(p), gait = M.C.gait, settle = [{ kind: 'face', to: facing(M) }, { kind: 'act', clip: 'idle', dur: 0 }];
     if (p.victim) {
       const V = units.get(p.victim), last = pts[pts.length - 1], prev = pts.length > 1 ? pts[pts.length - 2] : M.pos.clone();
-      const dir = tmp.copy(last).sub(prev).setY(0).normalize(), stop = last.clone().addScaledVector(dir, -3.2);
+      // 前の列どうしが触れない距離で止まる（2つの隊の奥行き＋1.5 m）
+      const dir = last.clone().sub(prev).setY(0).normalize(), stop = last.clone().addScaledVector(dir, -(halfDepth(M) + halfDepth(V) + 1.5));
       const charge = Math.max(0, last.distanceTo(prev) - SQ * 1.2);   // 最後の 1マスぶんは全力で突撃
       const leg = pts.slice(0, -1);
       if (charge > 0) leg.push(prev.clone().addScaledVector(dir, charge));
+      V.struck = false;
       M.tasks = [
         ...leg.map(q => ({ kind: 'move', to: q, gait })),
         { kind: 'move', to: stop, gait: 'sprint' },
-        { kind: 'act', clip: 'attack', dur: 1.6 },
-        { kind: 'wait', until: () => V.lowered > 0.5 },
-        { kind: 'move', to: last, gait: 'walk' },
-        { kind: 'face', to: facing(M) }, { kind: 'act', clip: 'idle', dur: 0 },
+        { kind: 'act', clip: 'attack', dur: 1.6, at: 0.5, fn: () => { V.struck = true; } },
+        { kind: 'wait', until: () => V.pos.distanceTo(last) > SQ * 1.1, max: 8 },   // 相手が 1マスぶん離れてから陣地に入る
+        { kind: 'move', to: last, gait: 'walk' }, ...settle,
       ];
-      const r = to.get(p.victim);
+      // 取られる隊: 攻める隊（止まる位置）を向いて構える → 打ちこまれたら旗を下ろす（降参）→ いったん後ろへ下がってから戦場の外へ
+      // 打たれる・倒れる動きは使わない（子ども向けの線引き。PLAN）
+      const r = to.get(p.victim), back = V.pos.clone().addScaledVector(dir, SQ * 0.9), res = reservePos(V.color, r.out);
       V.tasks = [
-        { kind: 'face', to: Math.atan2(M.pos.x - V.pos.x, M.pos.z - V.pos.z) }, { kind: 'act', clip: 'ready', dur: 0 },
-        { kind: 'wait', until: () => M.tasks.length && M.tasks[0].kind === 'act' && M.tasks[0].clip === 'attack' && M.tasks[0].t > 0.5 },
-        { kind: 'act', clip: 'hit', dur: 0.9 },
+        { kind: 'face', to: Math.atan2(stop.x - V.pos.x, stop.z - V.pos.z) }, { kind: 'act', clip: 'ready', dur: 0 },
+        { kind: 'wait', until: () => V.struck, max: 12 },
         { kind: 'lower' },
-        { kind: 'move', to: reservePos(V.color, r.out), gait: 'walk', retreat: true },
-        { kind: 'face', to: facing(V) + Math.PI }, { kind: 'act', clip: 'idle', dur: 0 },
+        { kind: 'move', to: back, gait: 'walk', retreat: true },
+        { kind: 'move', to: new THREE.Vector3(res.x, 0, back.z), gait: 'walk', retreat: true },
+        { kind: 'move', to: res, gait: 'walk', retreat: true },
+        { kind: 'face', to: facing(V) + Math.PI, retreat: true }, { kind: 'act', clip: 'idle', dur: 0, retreat: true },
       ];
     } else {
-      M.tasks = [...pts.map(q => ({ kind: 'move', to: q, gait })), { kind: 'face', to: facing(M) }, { kind: 'act', clip: 'idle', dur: 0 }];
+      M.tasks = [...pts.map(q => ({ kind: 'move', to: q, gait })), ...settle];
     }
-    if (p.castle) {
+    if (p.castle) {   // キャスリング: ルークが先に動き、キングは少しおくれて出る（道が交わるため）
       const R = units.get(p.rook);
-      R.tasks = [{ kind: 'move', to: sqPos(p.castle.to), gait: 'walk' }, { kind: 'face', to: facing(R) }, { kind: 'act', clip: 'idle', dur: 0 }];
+      R.tasks = [{ kind: 'move', to: sqPos(p.castle.to), gait: 'jog' }, { kind: 'face', to: facing(R) }, { kind: 'act', clip: 'idle', dur: 0 }];
+      M.tasks.unshift({ kind: 'act', clip: 'idle', dur: 4.5 });
+    }
+    if (p.mate) {   // 詰み: 攻めが終わったら、詰まされた王の旗が下りる
+      const K = [...units.values()].find(U => U.type === 'k' && U.color !== p.color);
+      K.tasks = [{ kind: 'wait', until: () => !M.tasks.length, max: 30 }, { kind: 'act', clip: 'ready', dur: 1.2 }, { kind: 'lower' }];
     }
   }
 
@@ -185,8 +206,8 @@ export async function createArmy(scene) {
       const v = SPEED[T.gait] * (aligned ? 1 : 0.35);   // 向きを変えながらはゆっくり
       U.pos.addScaledVector(d.normalize(), Math.min(dist, v * dt));
     } else if (T.kind === 'face') { setClip(U, 'idle'); if (turn(U, T.to, dt)) U.tasks.shift(); }
-    else if (T.kind === 'act') { setClip(U, T.clip); if (T.t >= T.dur) U.tasks.shift(); }
-    else if (T.kind === 'wait') { if (T.until()) U.tasks.shift(); }
+    else if (T.kind === 'act') { setClip(U, T.clip); if (T.fn && T.t >= T.at) { T.fn(); T.fn = null; } if (T.t >= T.dur) { if (T.fn) T.fn(); U.tasks.shift(); } }
+    else if (T.kind === 'wait') { if (T.until() || T.t > (T.max || 20)) U.tasks.shift(); }   // 待ちには上限（止まったままにならない）
     else if (T.kind === 'lower') { U.lowered = Math.min(1, U.lowered + dt * 1.5); if (U.lowered >= 1) U.tasks.shift(); }
   }
   function step(dtReal) {
@@ -200,12 +221,21 @@ export async function createArmy(scene) {
       B.cloth.rotation.y = Math.sin(performance.now() * 0.002 + U.id.length) * 0.25;
       B.cloth.position.y = B.top * (1 - 0.7 * U.lowered);
     }
+    const f = focus();
+    ring.visible = !!f;
+    if (f) ring.position.set(f.pos.x, height(f.pos.x, f.pos.z) + 0.08, f.pos.z);
   }
   // 動いている部隊（退く部隊は待たない）
   function busy() { for (const U of units.values()) if (U.tasks.length && !U.tasks.some(t => t.retreat)) return true; return false; }
+  // カメラが追う隊: 進んでいる隊 → 何かしている隊（退く隊はのぞく）
   function focus() {
-    for (const U of units.values()) if (U.tasks.length && !U.tasks.some(t => t.retreat)) return { pos: U.pos, face: U.face, unit: U };
-    return null;
+    let any = null;
+    for (const U of units.values()) {
+      if (!U.tasks.length || U.tasks.some(t => t.retreat)) continue;
+      if (U.tasks[0].kind === 'move' || U.tasks[0].clip === 'attack') return { pos: U.pos, face: U.face, unit: U };
+      if (!any && U.tasks[0].kind !== 'wait') any = { pos: U.pos, face: U.face, unit: U };
+    }
+    return any;
   }
   return { units, setState, playPly, step, busy, focus, count: () => [...units.values()].reduce((n, U) => n + U.soldiers.length, 0) };
 }

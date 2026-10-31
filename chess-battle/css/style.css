@@ -53,11 +53,14 @@ details a{color:var(--acc)}
 @media (max-width:600px){
   #stage{height:52vh}
   #mini{width:90px;height:90px}
-  #speed{top:104px}
   #cam button{font-size:12px;padding:0 7px}
   #caption{font-size:13px;padding:6px 8px}
   #top h1{font-size:19px}
 }
 #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(26,31,22,.85);font-size:15px;color:var(--muted)}
-#speed{position:absolute;right:8px;top:126px;font-family:var(--f-mono);font-size:12px;color:#fff;background:rgba(0,0,0,.45);padding:2px 6px;border-radius:4px}
+#realLbl{position:absolute;right:8px;top:122px;width:110px;text-align:center;font-size:11px;color:#fff;text-shadow:0 1px 2px #000}
+#matChip{position:absolute;right:8px;top:166px;font-size:12px;color:#fff;background:rgba(0,0,0,.45);padding:2px 6px;border-radius:4px}
+#mindLbl{position:absolute;left:8px;top:52px;font-size:11px;color:#fff;text-shadow:0 1px 2px #000;opacity:.85}
+#speed{position:absolute;right:8px;top:142px;font-family:var(--f-mono);font-size:12px;color:#fff;background:rgba(0,0,0,.45);padding:2px 6px;border-radius:4px}
 #cam #gridBtn.on{border-color:var(--acc);color:var(--acc)}
+@media (max-width:600px){#realLbl{top:100px;width:90px}#speed{top:118px}#matChip{top:142px;font-size:11px}#mindLbl{top:48px}}

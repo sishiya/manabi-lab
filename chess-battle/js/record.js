@@ -1,7 +1,7 @@
 // 棋譜 → 手の一覧・部隊の居場所・場面（画面にもブラウザにも依存しない。tools/verify.mjs からも使う）
 export const VALUE = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
 export const NAME = { p: 'ポーン', n: 'ナイト', b: 'ビショップ', r: 'ルーク', q: 'クイーン', k: 'キング' };
-export const UNIT = { p: '歩兵', n: '騎兵', b: '弓兵', r: '盾の重い兵', q: '大部隊', k: '指揮官' };
+export const UNIT = { p: '歩兵の小隊', n: '騎兵', b: '斜めに進む隊', r: '重い兵の隊', q: '大臣と護衛', k: '王と護衛' };   // 画面の対応表（index.html）と同じ名前
 const SIDE = { w: '白', b: '黒' };
 
 // 初めの局面の駒に名前（id）を付けて、手ごとにどのマスにいるかを追う
@@ -44,7 +44,7 @@ export function build(game, Chess) {
       captured: m.captured || null, mover: mover.id, victim: victim ? victim.id : null, rook: rook ? rook.id : null,
       castle: rook ? { from: m.flags.includes('k') ? 'h' + m.from[1] : 'a' + m.from[1], to: rook.sq } : null,
       check: replay.inCheck(), mate: replay.isCheckmate(), fen: replay.fen(),
-      sac: (game.sac || []).includes(ply), key: (game.key || []).includes(ply),
+      sac: (game.sac || []).includes(ply), key: (game.key || []).includes(ply), mark: (game.marks || {})[ply] || '',
       num: Math.ceil(ply / 2) + (m.color === 'w' ? '.' : '...'),
     };
     ply_.note = (game.notes || {})[ply] || autoNote(ply_);
