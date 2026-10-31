@@ -95,7 +95,7 @@ function stepBugs(dt) {
       const dx = g.x - g.home.x, dz = g.z - g.home.z; if (Math.hypot(dx, dz) > 5) g.h = Math.atan2(-dx, -dz);   // 家の近くにもどる
     }
     g.b.root.position.x = g.x; g.b.root.position.z = g.z; g.b.root.rotation.y = g.h;
-    g.b.update(dt, v);
+    g.b.update(dt, v, { side });
   }
 }
 
@@ -106,14 +106,16 @@ if (!low) {   // ピントのぼけ（マクロ撮影のように。※ 演出�
   composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, camera));
   bokeh = new BokehPass(scene, camera, { focus: 30, aperture: 0.0025, maxblur: 0.006 }); composer.addPass(bokeh); composer.addPass(new OutputPass());
 }
-let last = performance.now();
+let last = performance.now(), follow = null; const followOff = new THREE.Vector3(1.4, 0.8, 1.6);
 function loop(now) {
   const dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
-  stepBugs(dt); controls.update();
+  stepBugs(dt);
+  if (follow) { const g = follow, y = g.k === 'dragonfly' ? 2.6 : 0.25 * g.b.len; controls.target.set(g.b.root.position.x, y, g.b.root.position.z); camera.position.set(g.b.root.position.x + followOff.x * g.b.len, y + followOff.y * g.b.len, g.b.root.position.z + followOff.z * g.b.len); }
+  controls.update();
   if (bokeh) bokeh.uniforms.focus.value = camera.position.distanceTo(controls.target);
   composer ? composer.render() : renderer.render(scene, camera);
   requestAnimationFrame(loop);
 }
 function resize() { const w = cv.clientWidth, h = cv.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); if (composer) composer.setSize(w, h); }
 addEventListener('resize', resize); resize(); document.getElementById('loading').hidden = true; requestAnimationFrame(loop);
-window.__bugs = { bugs, camera, controls, renderer, scene, stepBugs, look(i) { const g = bugs[i]; controls.target.set(g.x, 0.6 * g.b.len, g.z); camera.position.set(g.x + 3 * g.b.len, 1.8 * g.b.len, g.z + 3 * g.b.len); controls.update(); } };
+window.__bugs = { follow(i, ox = 1.4, oy = 0.8, oz = 1.6) { follow = i == null ? null : bugs[i]; followOff.set(ox, oy, oz); }, bugs, camera, controls, renderer, scene, stepBugs, look(i) { const g = bugs[i]; controls.target.set(g.x, 0.6 * g.b.len, g.z); camera.position.set(g.x + 3 * g.b.len, 1.8 * g.b.len, g.z + 3 * g.b.len); controls.update(); } };
