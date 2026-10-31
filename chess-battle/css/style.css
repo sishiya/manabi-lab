@@ -1,0 +1,59 @@
+/* 名局の戦場 */
+:root{--bg:#1a1f16;--panel:#232a1e;--ink:#eef0e6;--muted:#b0b8a4;--acc:#e8c46a;--sac:#ff9a6a;--line:#3a4430;
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;background:#2f3828;border:1px solid var(--line);border-radius:8px;min-height:36px;padding:0 12px;cursor:pointer}
+button:disabled{opacity:.4;cursor:default}
+button.main{background:var(--acc);color:#1a1f16;border-color:var(--acc);font-weight:700;min-width:110px}
+#app{max-width:1100px;margin:0 auto}
+#top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:10px 16px 6px}
+#top h1{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0}
+#gameTitle{color:var(--muted);font-size:14px}
+
+/* 上に固定: 戦場・隅の盤・いまの手・つぎへ（RULES 9章） */
+#pin{position:sticky;top:0;z-index:5;background:var(--bg)}
+#stage{position:relative;height:min(62vh,600px)}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#mini{position:absolute;top:8px;right:8px;width:110px;height:110px;border:1px solid rgba(0,0,0,.5);border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+#cam{position:absolute;top:8px;left:8px;display:flex;gap:4px}
+#cam button{background:rgba(26,31,22,.78);font-size:13px;padding:0 9px}
+#cam button.on{border-color:var(--acc);color:var(--acc)}
+#caption{position:absolute;left:8px;right:8px;bottom:8px;background:rgba(20,24,17,.82);border-left:3px solid var(--acc);border-radius:6px;padding:7px 10px;font-size:14px;line-height:1.55}
+#caption b{font-family:var(--f-mono);margin-right:8px;color:var(--acc)}
+#caption.sac{border-left-color:var(--sac)} #caption.sac b{color:var(--sac)}
+#caption.mate{border-left-color:#fff}
+#bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 16px;border-bottom:1px solid var(--line)}
+#where{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+
+/* 下でスクロール */
+#below{padding:10px 16px 32px}
+#mat .row{display:flex;align-items:center;gap:8px;font-size:13px;margin:3px 0}
+#mat .row i{display:block;height:10px;border-radius:3px;transition:width .4s}
+#mat .row:first-child i{background:#e6dfcc} #mat .row:last-child i{background:#9a2f2f}
+#mat b{font-family:var(--f-mono);font-weight:500}
+#sl{position:relative;margin:14px 0 4px}
+#slider{width:100%;margin:0;accent-color:var(--acc)}
+#ticks{position:relative;height:10px}
+.tick{position:absolute;top:0;width:4px;height:10px;margin-left:-2px;background:var(--acc);border-radius:2px}
+.tick.sac{background:var(--sac)}
+.hint{color:var(--muted);font-size:12px;margin:2px 0 10px}
+#moves{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px;padding:0;margin:0 0 12px;list-style:none}
+#moves li{display:flex;gap:4px}
+#moves button{flex:1;font-family:var(--f-mono);font-size:13px;padding:0 6px;text-align:left}
+#moves button.sac{color:var(--sac)}
+#moves button.now{border-color:var(--acc);background:#3d4630}
+#players{color:var(--muted);font-size:13px;line-height:1.7}
+details{border-top:1px solid var(--line);padding:8px 0;color:var(--muted);font-size:14px;line-height:1.8}
+details summary{cursor:pointer;color:var(--ink);min-height:32px;display:flex;align-items:center}
+details a{color:var(--acc)}
+#map table{border-collapse:collapse;font-size:13px;width:100%}
+#map td,#map th{border-bottom:1px solid var(--line);padding:4px 6px;text-align:left}
+
+@media (max-width:600px){
+  #stage{height:52vh}
+  #mini{width:90px;height:90px}
+  #cam button{font-size:12px;padding:0 7px}
+  #caption{font-size:13px;padding:6px 8px}
+  #top h1{font-size:19px}
+}

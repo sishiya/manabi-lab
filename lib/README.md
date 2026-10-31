@@ -11,6 +11,8 @@
 |---|---|---|---|---|
 | three.js（`build/three.min.js`） | r128（0.128.0） | MIT（`three@0.128.0/LICENSE`） | 体内ダイブ・尿の旅・血管の旅・ヒトへの46億年・いきものの感じる世界・磁性流体・ピアノを弾く手・神の視点マップ（`god-view/js/micro.js`・`space.js`） | cdnjs `three.js/r128/three.min.js`（jsDelivr の `three@0.128.0/build/three.min.js` と同じファイル。SHA-256 で確認） |
 | three.js のおまけ（`examples/js/` のブルーム一式6本） | 0.128.0 | MIT（同上） | ピアノを弾く手 | jsDelivr `three@0.128.0/examples/js/…` |
+| chess.js（`dist/esm/chess.js`。ES モジュール） | 1.4.0 | BSD-2-Clause（`chess.js@1.4.0/LICENSE`） | 名局の戦場（アプリと `chess-battle/tools/verify.mjs` の両方で読む） | jsDelivr `chess.js@1.4.0/dist/esm/chess.js`（2026-10-31） |
+| three.js の OrbitControls（`examples/js/controls/OrbitControls.js`） | 0.128.0 | MIT（`three@0.128.0/LICENSE`） | 名局の戦場（自由カメラ） | jsDelivr `three@0.128.0/examples/js/controls/OrbitControls.js`（2026-10-31） |
 | mp4-muxer（`build/mp4-muxer.min.js`） | 5.1.3 | MIT（`mp4-muxer@5.1.3/LICENSE`） | 紹介動画の台本 `_dev/promo/*.html`（29本。mp4 を作りなおすのに必要） | jsDelivr `mp4-muxer@5.1.3/build/mp4-muxer.min.js` |
 
 ## CDN のままのもの（理由つき）

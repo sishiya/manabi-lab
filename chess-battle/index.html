@@ -1,0 +1,64 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>名局の戦場</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%231a1f16'/><path d='M24 46h16l-2-6h-12zM28 40l-2-14h12l-2 14zM26 26l6-10 6 10z' fill='%23e8c46a'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+<div id="app">
+  <header id="top"><h1>名局の戦場</h1><span id="gameTitle"></span></header>
+  <section id="pin">
+    <div id="stage">
+      <canvas id="cv"></canvas>
+      <canvas id="mini" aria-label="いまの局面（ふつうの盤）"></canvas>
+      <div id="cam" role="group" aria-label="カメラ">
+        <button data-cam="auto" class="on">おまかせ</button><button data-cam="free">自由</button><button data-cam="top">真上</button>
+      </div>
+      <div id="caption"><b id="capMove"></b><span id="capText"></span></div>
+    </div>
+    <div id="bar">
+      <button id="prev" aria-label="ひとつ前の場面へ">もどる</button>
+      <span id="where"></span>
+      <button id="next" class="main">つぎへ</button>
+    </div>
+  </section>
+  <section id="below">
+    <div id="mat" aria-label="駒の点数"><div class="row"><span>白</span><i id="matW"></i><b id="matWn"></b></div><div class="row"><span>黒</span><i id="matB"></i><b id="matBn"></b></div></div>
+    <div id="sl"><input type="range" id="slider" min="0" value="0" step="1" aria-label="何手目か"><div id="ticks"></div></div>
+    <p class="hint">印は見せ場（捨て駒・キャスリング・詰み）。スライダーで好きな手へ飛べます。</p>
+    <ol id="moves"></ol>
+    <p id="players"></p>
+    <details id="map">
+      <summary>駒と部隊の対応</summary>
+      <table>
+        <tr><th>駒</th><th>部隊</th><th>動き（棋譜のとおり）</th></tr>
+        <tr><td>キング</td><td>指揮官と大きな旗</td><td>まわり1マス</td></tr>
+        <tr><td>クイーン</td><td>いちばん大きな部隊</td><td>たて・よこ・ななめにどこまでも</td></tr>
+        <tr><td>ルーク</td><td>盾をならべた重い兵</td><td>たて・よこにどこまでも</td></tr>
+        <tr><td>ビショップ</td><td>弓兵の隊</td><td>ななめにどこまでも</td></tr>
+        <tr><td>ナイト</td><td>騎兵</td><td>ほかの部隊を飛びこえる</td></tr>
+        <tr><td>ポーン</td><td>歩兵の小隊</td><td>前へ1マス（取るときはななめ前）</td></tr>
+      </table>
+      <p>どの部隊も、取るときは相手のマスへ攻めこみます（離れたところから取ることはしません）。取られた部隊は旗を下ろして、盤の外の待機所へ歩いて出ます。</p>
+    </details>
+    <details id="about">
+      <summary>このアプリについて</summary>
+      <p><b>棋譜は本物の記録です。戦いのようすは演出（想像）です。</b>部隊が動くマスは棋譜のとおりで、見た目のために手やマスを変えていません。</p>
+      <p>地面のマスのさかいと光る四角は、見やすくするための目印です（※ 目印。本物の戦場には無い線）。駒の点数（ポーン1・ナイト3・ビショップ3・ルーク5・クイーン9）は、よく使われる目安です。解説の文はこのアプリで書いたものです。</p>
+      <h3>おもな出どころ</h3>
+      <ul id="sources"></ul>
+      <h3>使っているもの</h3>
+      <ul>
+        <li>chess.js 1.4.0（棋譜を読み、局面を作る。BSD-2-Clause、Jeff Hlywa）</li>
+        <li>three.js r128（3D。MIT）</li>
+        <li>フォント: Google Fonts（SIL Open Font License）</li>
+      </ul>
+    </details>
+  </section>
+</div>
+
+<script src="../lib/three@0.128.0/build/three.min.js"></script>
+<script src="../lib/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script type="module" src="js/main.js"></script>

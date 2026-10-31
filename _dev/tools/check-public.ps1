@@ -30,7 +30,7 @@ $rules = @(
   @{ n = 'Artifact の URL（PUBLISH.local.md に書く）'; r = 'claude\.ai/(code/)?artifacts?/[A-Za-z0-9-]{8,}' }
 )
 # GitHub's no-reply commit address is meant to be public (it is on every commit anyway)
-$allow = @('(?i)@example\.(com|org|net)$', '(?i)^noreply@', '(?i)@users\.noreply\.github\.com$')
+$allow = @('(?i)@example\.(com|org|net)$', '(?i)^noreply@', '(?i)@users\.noreply\.github\.com$', '^jhlywa@gmail\.com$')   # jhlywa = lib/chess.js@1.4.0 の作者（BSD の著作権表示。消せない）
 # 数値だけの .bin で、たまたま 12 字以上の文字に見える並びがあり、目で確かめて付加情報ではなかったもの（ファイル = 見えた並び）
 $allowBin = @{ 'sail-wind\data\yd41-push.bin' = 'YDT&U"UK8#nY' }   # int16 の力の表（2026-10-29）
 
