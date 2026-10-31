@@ -68,6 +68,12 @@ def add_steam(parts, info, paddles=True):
     bpy.ops.object.join(); f.name = 'steam_parts'
     parts['steam'] = f
 
+def thin(o, ratio):
+    # 三角形を減らす（32隻並ぶので。遠目では見えない細かさ）。帆綱・帆は細いので減らさない
+    bpy.context.view_layer.objects.active = o
+    m = o.modifiers.new('dec', 'DECIMATE'); m.ratio = ratio
+    bpy.ops.object.modifier_apply(modifier='dec')
+
 def export(parts, name, info):
     bpy.ops.object.select_all(action='DESELECT')
     for o in parts.values(): o.select_set(True)
@@ -80,7 +86,7 @@ def export(parts, name, info):
 def gunboat():
     p = load('dutch_ship_medium')
     for k in ('sails', 'rigging'): bpy.data.objects.remove(p.pop(k))
-    info = orient(p)
+    info = orient(p); thin(p['hull'], 0.15)   # 砲艇は16隻並ぶので船体を大きく減らす
     for o in p.values(): o.data.transform(mathutils.Matrix.Scale(0.6, 4))
     info = {k: round(v * 0.6, 1) for k, v in info.items()}
     before = set(bpy.data.objects)
@@ -129,12 +135,12 @@ def submarine():
     return {'hull': h, 'tower': t, 'mast': m, 'prop': pr}, {'length': 9.2, 'beam': 2.4, 'height': 1.6, 'draft': 1.5}
 
 meta = {}
-p = load('dutch_ship_medium'); meta['ship-sail'] = export(p, 'ship-sail', orient(p))
-p = load('dutch_ship_large_01'); meta['ship-flag'] = export(p, 'ship-flag', orient(p))
+p = load('dutch_ship_medium'); info = orient(p); thin(p['hull'], 0.6); meta['ship-sail'] = export(p, 'ship-sail', info)
+p = load('dutch_ship_large_01'); info = orient(p); thin(p['hull'], 0.4); meta['ship-flag'] = export(p, 'ship-flag', info)
 p = load('dutch_ship_large_02')
 for k in ('sails', 'rigging'): bpy.data.objects.remove(p.pop(k))
-info = orient(p); add_steam(p, info); meta['ship-steam'] = export(p, 'ship-steam', info)
-p = load('dutch_ship_large_02'); info = orient(p); add_steam(p, info, paddles=False); meta['ship-hybrid'] = export(p, 'ship-hybrid', info)
+info = orient(p); thin(p['hull'], 0.4); add_steam(p, info); meta['ship-steam'] = export(p, 'ship-steam', info)
+p = load('dutch_ship_large_02'); info = orient(p); thin(p['hull'], 0.4); add_steam(p, info, paddles=False); meta['ship-hybrid'] = export(p, 'ship-hybrid', info)
 p, info = gunboat(); meta['ship-gun'] = export(p, 'ship-gun', info)
 p, info = submarine(); meta['ship-sub'] = export(p, 'ship-sub', info)
 with open(os.path.join(OUT, 'ships.json'), 'w') as f: json.dump(meta, f, indent=1)

@@ -10,7 +10,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 export { SQ, TIME };
 export const height = () => 0;   // 海面（カメラの高さの目安）
 
-export async function createWorld(canvas) {
+export async function createWorld(canvas, onProgress) {
   const low = window.innerWidth < 600 || matchMedia('(pointer: coarse)').matches;   // スマホ・タブレットは軽く
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(low ? 1.5 : 2, window.devicePixelRatio || 1));
@@ -27,7 +27,7 @@ export async function createWorld(canvas) {
   scene.add(sun, sun.target);
 
   const ocean = await createOcean(scene, renderer, low);
-  const naval = await createNaval(scene, low);
+  const naval = await createNaval(scene, low, onProgress);
 
   // マス目（※ 目印。見たい人だけ）: 海面の少し上に、いつも見える細い線
   const pts = [];
@@ -63,9 +63,9 @@ export async function createWorld(canvas) {
   }
   return {
     scene, camera, renderer, naval, ocean, SQ,
-    setState: (s, tens) => naval.setState(s, tens),
-    playPly: (p, nextTension) => naval.playPly(p, nextTension),
-    step: dtReal => { const dt = dtReal * TIME; ocean.step(dtReal); naval.step(dt); },
+    setState: (s, tens, mated) => naval.setState(s, tens, mated),
+    playPly: (p, nextTension, toState) => naval.playPly(p, nextTension, toState),
+    step: dtReal => { const dt = dtReal * TIME; ocean.step(dtReal); naval.step(dt, dtReal); },   // ×TIME は船の動きだけ（波・煙・水しぶきは本当の時間）
     busy: () => naval.busy(), focus: () => naval.focus(), showMarks, setGrid, resize,
     render: () => composer ? composer.render() : renderer.render(scene, camera),
   };

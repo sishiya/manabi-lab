@@ -43,6 +43,8 @@ export const GAMES = [
       33: '白のルークが d8 へ。g5 のビショップが支えていて、黒のキングはどこへも逃げられない。チェックメイト。',
     },
     sources: [
+      { text: 'Wikipedia「History of submarines」（英語）— Drebbel の潜水艇（1620〜1624）、Brandtaucher（1851）、H. L. Hunley が初めて軍艦を沈めた（1864）', url: 'https://en.wikipedia.org/wiki/History_of_submarines' },
+      { text: 'Wikipedia「Point of sail」（英語）— 風上へ進めない範囲（風に対して 30〜50°）、横風・追い風での進み方', url: 'https://en.wikipedia.org/wiki/Point_of_sail' },
       { text: 'Wikipedia「Opera Game」（英語）— 棋譜・日時・場所の照合。同じページは当時の資料として Löwenthal『Morphy\'s Games of Chess』（1860）などを挙げている', url: 'https://en.wikipedia.org/wiki/Opera_Game' },
     ],
   },

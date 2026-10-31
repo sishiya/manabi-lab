@@ -19,7 +19,7 @@ const S = { ply: 0, queue: [], playing: null, minWait: 0, cam: 'auto', t: 0, loo
 
 $('gameTitle').textContent = `${game.title}（${game.date.slice(0, 5)}）`;
 $('players').textContent = `白: ${game.white}　黒: ${game.black}。${game.place}。${game.how}。`;
-$('speed').textContent = `×${TIME} 倍速`;
+$('speed').textContent = `船の動き ×${TIME}`;   // 波・煙・水しぶきは本当の速さ
 for (const s of game.sources) {
   const li = document.createElement('li'), a = document.createElement('a');
   a.href = s.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = s.text; li.appendChild(a); $('sources').appendChild(li);
@@ -27,7 +27,7 @@ for (const s of game.sources) {
 
 let W = null, controls = null;
 try {
-  W = await createWorld($('cv'));
+  W = await createWorld($('cv'), (n, all) => { $('loading').textContent = `艦隊を集めています… ${n} / ${all}`; });
 } catch (e) { window.__chbaErr.push('読みこみ: ' + e); $('loading').textContent = '船のモデルを読みこめませんでした。'; throw e; }
 $('loading').hidden = true;
 controls = new OrbitControls(W.camera, $('cv'));
@@ -55,7 +55,8 @@ const sceneIndex = ply => rec.scenes.findIndex(s => s[0] <= ply && ply <= s[1]);
 function seek(ply) {
   S.queue = []; S.playing = null;
   S.ply = Math.max(0, Math.min(rec.plies.length, ply));
-  W.setState(rec.states[S.ply], rec.tension[S.ply]); showPly(S.ply);
+  const lastP = rec.plies[S.ply - 1];
+  W.setState(rec.states[S.ply], rec.tension[S.ply], lastP && lastP.mate ? (lastP.color === 'w' ? 'b' : 'w') : null); showPly(S.ply);
 }
 function next() {
   if (S.playing || S.queue.length) { seek(S.queue.length ? S.queue[S.queue.length - 1] : S.playing.ply); return; }   // 動いている途中なら場面の終わりまで飛ばす
@@ -72,7 +73,7 @@ function prev() {   // ひとつ前の場面の初めへ（再生中なら、い
 function stepPlay(dt) {
   if (!S.playing && S.queue.length) {
     const k = S.queue.shift(), p = rec.plies[k - 1];
-    S.playing = p; S.minWait = 0.4; W.playPly(p, rec.tension[k]);
+    S.playing = p; S.minWait = 0.4; W.playPly(p, rec.tension[k], rec.states[k]);
     S.ply = k; showPly(k, true);
   }
   W.step(dt);
