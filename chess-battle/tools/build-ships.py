@@ -78,7 +78,8 @@ def export(parts, name, info):
     bpy.ops.object.select_all(action='DESELECT')
     for o in parts.values(): o.select_set(True)
     path = os.path.join(OUT, name + '.glb')
-    bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_image_format='WEBP', export_image_quality=82, export_yup=True)
+    bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_image_format='WEBP', export_image_quality=82, export_yup=True,
+                              export_draco_mesh_compression_enable=True, export_draco_mesh_compression_level=7)   # 形のデータを Draco で圧縮（three の DRACOLoader で読む）
     tris = sum(len(p.vertices) - 2 for o in parts.values() for p in o.data.polygons)
     print('BUILT', name, os.path.getsize(path) // 1024, 'KB', 'tris', tris, info)
     return info

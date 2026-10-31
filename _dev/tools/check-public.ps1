@@ -91,6 +91,10 @@ foreach ($f in $files) {
     if ($extra.Count) { [void]$hits.Add("$rel : mp4 に付加情報がある（$($extra -join ', ')）") }
     continue
   }
+  if ($ext -eq '.wasm' -and $rel -like 'lib\*') {
+    # 外のライブラリの wasm（例: lib/three@0.185.1/examples/jsm/libs/draco/gltf/draco_decoder.wasm。CDN から取ったまま。2026-10-31〜）: 中身はプログラムなので文字は調べない
+    continue
+  }
   if ($ext -eq '.bin') {
     # 数値だけのデータ（例: tiny-earth/data/etopo1deg.bin の高さの表）: 長い文字列（作者名・場所などの付加情報）がまざっていないか
     $bytes = [IO.File]::ReadAllBytes($f)

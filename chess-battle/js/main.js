@@ -186,11 +186,22 @@ function step(dt) {
 }
 function resize() { W.resize(); drawMini($('mini'), rec.states[S.ply], rec.plies[S.ply - 1]); }
 let last = performance.now();
-function loop(now) { step(Math.max(0, Math.min(0.05, (now - last) / 1000))); last = now; /* 最初のコマは now が last より前のことがある */ W.render(); requestAnimationFrame(loop); }
+// 速さ: 1秒あたりのコマ数を数える。?fps=1 で画面に出す（スマホで測る用）。重い端末（20 コマ未満が続く）は解像度を下げる
+const perf = { fps: 0, n: 0, acc: 0, lowFor: 0, ratio: W.renderer.getPixelRatio(), show: new URLSearchParams(location.search).has('fps') };
+if (perf.show) $('fpsBox').hidden = false;
+W.renderer.info.autoReset = false;   // 画面の仕上げで何回も描くので、1コマぶんをまとめて数える
+function measure(dt) {
+  perf.n++; perf.acc += dt;
+  if (perf.acc < 1) return;
+  perf.fps = perf.n / perf.acc; perf.n = 0; perf.acc = 0;
+  if (perf.fps < 20 && perf.ratio > 1) { if (++perf.lowFor >= 3) { perf.ratio = Math.max(1, perf.ratio - 0.5); W.renderer.setPixelRatio(perf.ratio); W.resize(); perf.lowFor = 0; } } else perf.lowFor = 0;
+  if (perf.show) { const i = W.renderer.info.render; $('fpsBox').textContent = `${perf.fps.toFixed(0)} fps・解像度 ×${perf.ratio}・三角形 ${(i.triangles / 1e3).toFixed(0)}k・描く回数 ${i.calls}`; }
+}
+function loop(now) { const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); step(dt); measure((now - last) / 1000); last = now; /* 最初のコマは now が last より前のことがある */ W.renderer.info.reset(); W.render(); requestAnimationFrame(loop); }
 window.addEventListener('resize', resize);
 new ResizeObserver(resize).observe($('cv'));
 seek(0); S.look.set(0, U, -4 * U); W.camera.position.set(0, 16 * U, 66 * U);
 resize(); requestAnimationFrame(loop);
 
 // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）
-window.__chba = { S, rec, W, seek, next, prev, setCam, setAuto, fastForward, simRun(sec, dt = 1 / 60) { for (let t = 0; t < sec; t += dt) step(dt); W.render(); } };
+window.__chba = { S, rec, W, perf, seek, next, prev, setCam, setAuto, fastForward, simRun(sec, dt = 1 / 60) { for (let t = 0; t < sec; t += dt) step(dt); W.render(); } };

@@ -2,6 +2,7 @@
 // 船の形は Poly Haven（CC0）の 17 世紀のオランダ船をもとに tools/build-ships.py で作ったもの（assets/ship-*.glb）
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { seaHeight } from './ocean.js';
 
 export const SQ = 40;      // 1マス = 40 m（30 m の船が向きを変えられる広さ）
@@ -23,7 +24,9 @@ export const WIND = new THREE.Vector2(0, 1).multiplyScalar(4);   // 風: 盤の�
 const ang = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 
 export async function createNaval(scene, low, onProgress) {
-  const loader = new GLTFLoader(), meta = await (await fetch('assets/ships.json')).json();
+  // 船の形は Draco で圧縮してある（tools/build-ships.py）。解く部品は lib/ の three に同梱のもの（Apache-2.0）
+  const draco = new DRACOLoader().setDecoderPath('../lib/three@0.185.1/examples/jsm/libs/draco/gltf/');
+  const loader = new GLTFLoader().setDRACOLoader(draco), meta = await (await fetch('assets/ships.json')).json();
   const src = {};
   let got = 0;
   await Promise.all(Object.values(SHIP).map(async S => { src[S.file] = await loader.loadAsync(`assets/${S.file}.glb`); onProgress && onProgress(++got, 6); }));

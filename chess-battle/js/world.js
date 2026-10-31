@@ -15,7 +15,7 @@ export async function createWorld(canvas, onProgress) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(low ? 1.5 : 2, window.devicePixelRatio || 1));
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
-  renderer.shadowMap.enabled = !low; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.enabled = !low; renderer.shadowMap.type = THREE.PCFShadowMap;   // three 0.185 では PCFSoft は PCF と同じ（非推奨）
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(38, 1, 0.5, 8000);
 
