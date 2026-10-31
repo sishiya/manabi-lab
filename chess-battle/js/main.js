@@ -28,10 +28,11 @@ for (const s of game.sources) {
 let W = null, controls = null;
 try {
   W = await createWorld($('cv'));
-} catch (e) { window.__chbaErr.push('読みこみ: ' + e); $('loading').textContent = '兵士のモデルを読みこめませんでした。'; throw e; }
+} catch (e) { window.__chbaErr.push('読みこみ: ' + e); $('loading').textContent = '船のモデルを読みこめませんでした。'; throw e; }
 $('loading').hidden = true;
 controls = new OrbitControls(W.camera, $('cv'));
-controls.enabled = false; controls.maxPolarAngle = Math.PI * 0.48; controls.minDistance = 4; controls.maxDistance = 220;
+controls.enabled = false; controls.maxPolarAngle = Math.PI * 0.48; controls.minDistance = 8; controls.maxDistance = 1200;
+const U = W.SQ / 8;   // カメラの距離の倍率（1マスの広さに合わせる。海戦は 1マス 40 m）
 
 function caption(p) {
   $('capMove').textContent = p ? `${p.num} ${p.san}${p.mark}` : '';
@@ -84,24 +85,24 @@ function stepCam(dt) {
   const c = W.camera, asp = c.aspect || 1, k = 1 / Math.min(1, asp * 1.15);
   if (S.cam === 'free') { controls.update(); return; }
   if (S.cam === 'top') {
-    const h = (64 + 14) / (2 * Math.tan(c.fov * Math.PI / 360) * Math.min(1, asp));
-    S.camGoal.set(0, h, 0.01); S.look.lerp(new THREE.Vector3(0, 0, asp < 1 ? 6 : 3), 1 - Math.exp(-dt * 4));
+    const h = (64 + 14) * U / (2 * Math.tan(c.fov * Math.PI / 360) * Math.min(1, asp));
+    S.camGoal.set(0, h, 0.01); S.look.lerp(new THREE.Vector3(0, 0, (asp < 1 ? 6 : 3) * U), 1 - Math.exp(-dt * 4));
   } else {
     const f = W.focus();
     S.idleT = f ? 0 : (S.idleT || 0) + dt;
     if (f) {
       fwd.set(Math.sin(f.face), 0, Math.cos(f.face));
       const at = new THREE.Vector3(f.x, height(f.x, f.z), f.z);
-      const tgt = at.clone().addScaledVector(fwd, f.clash ? 0 : 5); tgt.y += 1.4;
+      const tgt = at.clone().addScaledVector(fwd, (f.clash ? 0 : 5) * U); tgt.y += 1.4 * U;
       S.look.lerp(tgt, 1 - Math.exp(-dt * 2.5));
       // ぶつかり合いは横から低く、行軍はうしろから
       const side = f.clash ? new THREE.Vector3(fwd.z, 0, -fwd.x) : fwd.clone().negate();
-      const goal = at.clone().addScaledVector(side, (f.clash ? 17 : 14) * k); goal.y += (f.clash ? 6 : 6.5) * k;
+      const goal = at.clone().addScaledVector(side, (f.clash ? 17 : 12) * k * U); goal.y += (f.clash ? 5 : 4) * k * U;
       goal.x += 5 * Math.sin(S.t * 0.15);
       S.camGoal.lerp(goal, 1 - Math.exp(-dt * 3));
     } else if (S.idleT > 4 || S.ply === 0) {   // 長く止まったときだけ白の側から全体へ引く（手ごとに引くと区切れて見える）
-      S.look.lerp(new THREE.Vector3(0, 1, -4), 1 - Math.exp(-dt * 0.8));
-      S.camGoal.set(Math.sin(S.t * 0.05) * 26, 26 * k, 66 * k);
+      S.look.lerp(new THREE.Vector3(0, U, -4 * U), 1 - Math.exp(-dt * 0.8));
+      S.camGoal.set(Math.sin(S.t * 0.05) * 26 * U, 16 * k * U, 66 * k * U);
     }
   }
   c.position.lerp(S.camGoal, 1 - Math.exp(-dt * (S.cam === 'top' ? 4 : 1.6)));
@@ -127,7 +128,7 @@ let last = performance.now();
 function loop(now) { step(Math.max(0, Math.min(0.05, (now - last) / 1000))); last = now; /* 最初のコマは now が last より前のことがある */ W.render(); requestAnimationFrame(loop); }
 window.addEventListener('resize', resize);
 new ResizeObserver(resize).observe($('cv'));
-seek(0); S.look.set(0, 1, -4); W.camera.position.set(0, 30, 70);
+seek(0); S.look.set(0, U, -4 * U); W.camera.position.set(0, 16 * U, 66 * U);
 resize(); requestAnimationFrame(loop);
 
 // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）

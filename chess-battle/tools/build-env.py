@@ -1,4 +1,4 @@
-# 空・木の絵を作る（Blender 5.2 で: blender -b -P chess-battle/tools/build-env.py）
+# 空の絵を作る（木のインポスターの作り方 tree() も残してある）（Blender 5.2 で: blender -b -P chess-battle/tools/build-env.py）
 # 素材はリポジトリの外 ../3d-library/polyhaven/（どれも CC0。Poly Haven）:
 #   空 = kloofendal_48d_partly_cloudy_puresky（2k の HDRI → 見たままの明るさの JPG。空の背景と光の両方に使う）
 #   木 = island_tree_01・island_tree_02（1本 170万〜370万三角形あるので、8方向から撮って1枚の絵にする＝インポスター）
@@ -72,5 +72,4 @@ def tree(name):
 
 os.makedirs(OUT, exist_ok=True)
 sky()
-meta = {n.replace('island_', ''): tree(n) for n in ('island_tree_01', 'island_tree_02')}
-with open(os.path.join(OUT, 'trees.json'), 'w') as f: json.dump(meta, f, indent=1)
+# 木のインポスター（tree()）は人の兵の戦場で使っていた。海戦では使わないので作らない（2026-10-31）

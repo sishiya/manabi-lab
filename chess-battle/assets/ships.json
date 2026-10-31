@@ -16,5 +16,23 @@
   "beam": 8.4,
   "height": 7.0,
   "draft": 5.0
+ },
+ "ship-hybrid": {
+  "length": 30.4,
+  "beam": 8.4,
+  "height": 7.0,
+  "draft": 5.0
+ },
+ "ship-gun": {
+  "length": 13.2,
+  "beam": 3.1,
+  "height": 2.8,
+  "draft": 2.0
+ },
+ "ship-sub": {
+  "length": 9.2,
+  "beam": 2.4,
+  "height": 1.6,
+  "draft": 1.5
  }
 }

@@ -1,8 +1,8 @@
 # 名局の戦場 開発メモ
 
 ## 別セッションで続けるとき（まずここ）
-- いまの状態: 段階Bの作りなおしの途中。three 0.185.1＋InstancedMesh2（importmap）。大きな画面＝頭の中の戦場（マス目なし）、右上＝本当の盤。兵は1人ずつ（crowd.js。約300人）、隊の作戦は battle.js。行軍・突撃・ぶつかり合い・その場で気絶（薄く残す）・ねらい合う隊の小ぜり合いと矢。オペラ座の一局を最後まで通せる。保管庫に掲載。入口には載せない。
-- 次にやること: **海戦へ切りかえるかをユーザーが見本（fleet.html）で決める**（2026-10-31。PLAN「人から海戦へ」）。決まったら: 駒ごとの船（砲艇・潜水艦・帆と蒸気の艦）、1マスを約40m、船の LOD（32隻）、大砲の煙・水しぶき・白旗、蒸気船の形（いまは17世紀の船体に煙突と外輪）。人の兵の作り（crowd.js・battle.js）は海戦にしたら使わない。
+- いまの状態: **海戦**（2026-10-31 に人の兵から切りかえた。PLAN「人から海戦へ」）。1駒＝1隻（旗艦・帆と蒸気の艦・蒸気船・帆船・潜水艦・砲艇）、1マス 40 m、×6 倍速。取る＝舷側を向けて砲撃→相手は白旗で降伏し半透明で残る。ナイトは潜って L 字。取らない手は道の 6 割でつぎの手を重ねて始める。オペラ座の一局を最後まで通せる。保管庫に掲載。
+- 次にやること: ユーザーに見てもらう。そのあと 船の LOD（32隻・スマホ）、航跡の泡を小さく、蒸気船の形（17世紀の船体に煙突と外輪で不自然）、チェック・詰みの演出、カメラのカット、棋譜ファイルの読みこみ。
 - 読む順: PLAN.md → このファイルの「ファイル構成」→ 関係するファイルだけ。
 - 動かし方: サーバー apps（.claude/launch.json）で http://localhost:8765/chess-battle/ 。デバッグ用の窓口 `window.__chba`（`next()`・`prev()`・`seek(ply)`・`setCam('auto'|'free'|'top')`・`simRun(秒)`・`rec`・`S`）、エラーは `window.__chbaErr`。
 - 区切りごとの手順: 「確認のしかた」と smoke.ps1 → 「状態」に1行 → launcher.html の表 → 公開前チェック → commit（節目の版だけ versions/ へコピーしてカードに。RULES 3章）。
@@ -15,21 +15,15 @@
 | css/style.css | 見た目（600px 以下でスマホの配置） | |
 | js/games.js | 名局のデータ（棋譜・解説の文・見せ場・出どころ・verify の期待値） | `GAMES` |
 | js/record.js | 棋譜 → 手の一覧・部隊の居場所・場面・駒の点数（DOM なし。verify からも使う） | `build`・`scenes`・`material`・`autoNote` |
+| js/ocean.js | 海・空・霧: 空の写真（Poly Haven）を背景と光に、ゲルストナー波 5 本（頂点で動かす。※ 演出）＋細かい乱れの法線の絵2枚。`seaHeight(x,z)` で船を浮かべる | `createOcean`・`seaHeight`・`SUN_DIR` |
+| js/naval.js | 海戦: 1駒＝1隻。`SHIP`（駒→船・速さ・向きを変える速さ）。進む・舷側を向ける（aim）・砲撃（fire。3回の一斉射撃、煙・光・水柱）・降伏（gone。白旗・半透明・陣の側へ流される）・潜る（潜水艦）・前線の撃ち合い・旗の印・航跡と煙突の煙 | `createNaval`・`SQ`（40 m）・`TIME`（6）・`playPly`・`setState`・`busy`・`focus` |
+| assets/ship-*.glb・ships.json・sky.jpg | 船（Poly Haven の 17 世紀のオランダ船をもとに build-ships.py で）・空（build-env.py） | |
 | js/world.js | まとめ役（描く道具・光・影・トーンマップ・マスの目印）。時間は TIME 倍 | `createWorld`・`showMarks`・`setGrid` |
-| js/crowd.js | 兵1人1人: 行き先へ自分の速さで・よけ合い（2 m の升目）・速さで動きの絵を選ぶ・気絶（Death01 を 24 枚の姿勢で）・土ぼこり・矢。InstancedMesh2 をモデル×軍（＋気絶用の半透明）ごとに | `createCrowd`・`add`・`faint`・`lay`・`arrow`・`dust`・`step` |
-| js/battle.js | 部隊（駒）の作戦: 行軍（隊の中心を道にそって動かし、兵は並びの場所を追う）・突撃（1.5 マス手前から兵それぞれが相手の兵へ）・ぶつかり合い（2.2 秒で相手が気絶）・前線（ねらい合いの組でとなり＝小ぜり合い、はなれ＝矢）・チェック（王の隊が構える）・詰み（王の旗が倒れる） | `createBattle`・`COMP`・`TIME`・`playPly`・`setState`・`focus`・`busy` |
-| js/terrain.js | 地形（盤のまわりはゆるい起伏、外は丘の谷あい）・空の写真で照らす（PMREM）・もや（FogExp2）・地面の質感×色のむら・草（1本ずつ InstancedMesh、風は頂点で）・木（インポスター: 8方向の絵から見る向きの1枚を、カメラへ向く板に）・マス目（※ 目印） | `SQ`（8 m）・`height(x,z)`・`SUN_DIR`・`createTerrain` |
 | tools/build-env.py | Blender で空（2k HDRI → sky.jpg）と木のインポスター（tree_01/02.webp・trees.json）を作る。素材は `../3d-library/polyhaven/`（CC0） | `blender -b -P chess-battle/tools/build-env.py` |
-| assets/sky.jpg・ground_diff.jpg・ground_nor.jpg・tree_01.webp・tree_02.webp・trees.json | 空・地面・木（Poly Haven、CC0） | |
 | js/ui.js | 隅の小さな盤・点数の帯・スライダーの印・手の一覧 | `drawMini`・`setMaterial`・`buildSlider`・`buildMoves`・`markMove` |
 | js/main.js | つなぎ役（場面の再生・カメラ・窓口） | `S`・`next`・`prev`・`seek`・`stepCam`・`window.__chba` |
-| tools/build-soldiers.py | Blender 5.2 で兵士の glb を作る（頭は体から・首から下は服・8つの動き・5000 三角形・色の絵を1枚 1024px にまとめ材質1つ・WebP）。素材はリポジトリの外 `../3d-library/quaternius/`（CC0） | `blender -b -P chess-battle/tools/build-soldiers.py` |
-| fleet.html・js/fleet.js | 海戦の見本（アプリにはまだつないでいない）。ゲルストナー波5本の海（頂点で動かし、細かい乱れは法線の絵を2枚流す）・空の写真の映りこみ・船を4点の海面の高さで上下・縦ゆれ・横ゆれ・煙 | `window.__fleet`（ships・setAuto・step） |
 | tools/build-ships.py | Blender で船の glb（帆船 dutch_ship_medium・旗艦 large_01・蒸気船 large_02＋煙突と外輪の覆い）。船首 +Z・喫水線が原点。素材は `../3d-library/polyhaven/`（CC0） | `blender -b -P chess-battle/tools/build-ships.py` |
 | assets/ship-*.glb・ships.json | 船（Poly Haven、CC0。17世紀のオランダ船） | |
-| tools/crowd-test2.html | three 0.185.1＋InstancedMesh2 で兵を N 人（公開しない道具）。骨の行列は「動き×位相」の見本ごとに1回計算して兵の場所へ写す | `?n=1000`・`shadow=0`・`close=1`、窓口 `bench()` |
-| tools/crowd-test.html | 兵士を N 人並べて歩かせ速さを測る（公開しない道具） | `?n=250&close=1&mode=bind`（骨組みを共有）／`share=0`（1人ずつ） |
-| assets/soldier-peasant.glb・soldier-ranger.glb | 兵士（農民・レンジャーの服）。動き: Idle_Loop・Walk_Loop・Jog_Fwd_Loop・Sprint_Loop・Sword_Idle・Sword_Attack・Hit_Chest・Sitting_Idle_Loop | |
 | tools/verify.mjs | 棋譜の確かめ（手数・詰み・特別な手・最後の局面・部隊の追跡・場面のつながり） | `node chess-battle/tools/verify.mjs` |
 
 読み込み: すべて ES モジュール。index.html の importmap で three（lib/three@0.185.1）・three/addons・@three.ez/instanced-mesh・bvh.js を指す。chess.js は lib/chess.js@1.4.0 を直接。
@@ -89,6 +83,7 @@
 - サムネイル（_dev/tools/thumb.html の SETUP は new-app.ps1 が足せなかった。B で見た目が決まってから撮る）。
 
 ## 状態
+- 2026-10-31 海戦へ切りかえ: 駒ごとの船6種（build-ships.py。帆と蒸気の艦・砲艇・潜水艦を足した）、ocean.js・naval.js、画面の文を船に。人の兵・地形・木・草のファイルと、InstancedMesh2・bvh.js・r128 の部品を外した（git の履歴に残る）。通しで22場面・最後の居場所が局面と一致（4 m 以内）・降伏12隻（取られた駒の数と同じ）。
 - 2026-10-31 海戦の見本: ユーザーと「人→帆と蒸気の時代の海戦」に振り切る案を決め、fleet.html を作った（Poly Haven の船3隻・ゲルストナー波の海・煙）。3隻で描く約 9〜10ms（この PC、375px も）。蒸気船は組み合わせた形でまだ不自然。
 - 2026-10-31 光と空気・草・木: 本物の空の写真（Poly Haven の HDRI）を背景と光に、日の向きを空の太陽に合わせた。もや、地面の写真の質感、草 11万本（スマホ 3万）を風でゆらす、写真の木をインポスターで約1000本。パソコンだけ光のにじみと周辺の暗さ。InstancedMesh2 の骨が送られず兵が固まっていたのを直した（ユーザーの「直立不動」の指摘）。
 - 2026-10-31 作りなおし: ユーザーの指摘（隊がかたまる・ターン制・チープ・のんびり退場）で、three 0.185.1＋InstancedMesh2 へ。兵1人ずつ（crowd.js）、隊の作戦（battle.js）、ねらい合い（record.js `tensionOf`）。取られた隊はユーザーの指示で「その場で気絶・薄く残す」。通しで22場面・最後の居場所が局面と一致・気絶106人。375px で計算 3.0ms・描く 2.8ms（この PC）。兵ごとの視野の判定は切った（見える兵が消えた）。
