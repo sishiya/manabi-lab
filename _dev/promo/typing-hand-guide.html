@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="typing-common.js"></script>
+<script>
+'use strict';
+// 台本: タイピングする手 ― 使い方と見どころ（横長の説明動画、ライオンつき。2026-10-31）
+// 日本語の字幕は上に焼きこみ、下は YouTube の字幕（CC。英語）にあける。アプリの 3D を画面いっぱいに、ボタンは「札」でアプリと同じ側に
+// 音は BGM ではなく、アプリと同じ打鍵の合成（画面の手が押すキーの音）と、ライオンのしゃべり
+// アプリの順（つぎへの5段）をなぞってから、右のパネル（文・速さ・見え方・キーボード）、世界記録の速さと検査、自分で打つ、の順
+const END = 148, DUR = END + IDENT_CLOSE;
+const TILT = { th: 0.35, ph: 0.85, d: 600, tg: [0, 0, -45] }, TOP = { th: 0, ph: 0.02, d: 640, tg: [0, 0, -40] }, SIDE = { th: 1.35, ph: 1.2, d: 480, tg: [0, 20, -40] };
+// 自分で打つの例: 動画のための例の打鍵（打つ間隔はアプリの推定のモデル）。実際に人が打った記録ではない
+const DEMO = { id: 'demo', keys: 'shishiya no manabi lab', show: 'shishiya no manabi lab' };
+const SC = [
+  { a: 0, b: 15, text: 'ame', kpm: 400, s0: 0.2, opt: { fingerMap: true }, cam: camLerp({ th: 0.5, ph: 0.88, d: 700, tg: [0, 0, -45] }, TILT, 15) },
+  { a: 15, b: 30, text: 'home', kpm: 120, s0: 0.2, opt: { fingerMap: true }, cam: camLerp(TOP, { th: 0, ph: 0.25, d: 560, tg: [0, 0, -40] }, 15) },
+  { a: 30, b: 45, text: 'tenki', kpm: 120, s0: 0.3, opt: { fingerNums: true }, cam: camLerp({ th: -0.3, ph: 0.8, d: 430, tg: [20, 0, -45] }, { th: -0.45, ph: 0.85, d: 400, tg: [20, 0, -45] }, 15) },
+  { a: 45, b: 60, text: 'tenki', kpm: 400, s0: 0.2, speed: 0.8, cam: camLerp(TILT, { th: 0.2, ph: 0.8, d: 560, tg: [0, 0, -45] }, 15) },
+  { a: 60, b: 68, text: 'fox', kpm: 400, s0: 0.2, speed: 0.7, cam: camLerp(SIDE, { th: 1.25, ph: 1.15, d: 440, tg: [0, 20, -40] }, 8) },
+  { a: 68, b: 76, text: 'fox', kpm: 400, s0: 2.2, speed: 0.7, cam: 'pov' },
+  { a: 76, b: 84, text: 'fox', kpm: 400, s0: 0.2, speed: 0.6, look: 'xraymus', cam: camLerp({ th: 0.5, ph: 0.85, d: 420, tg: [0, 10, -40] }, { th: 0.3, ph: 0.8, d: 400, tg: [0, 10, -40] }, 8) },
+  { a: 84, b: 92, text: 'fox', kpm: 400, s0: 2.2, speed: 0.6, look: 'bones', cam: camLerp({ th: 0.3, ph: 0.8, d: 400, tg: [0, 10, -40] }, { th: 0.15, ph: 0.78, d: 390, tg: [0, 10, -40] }, 8) },
+  { a: 92, b: 99, text: 'tenki', kpm: 300, kb: 'laptop', s0: 0.2, cam: camLerp(TILT, { th: 0.2, ph: 0.82, d: 580, tg: [0, 0, -45] }, 7) },
+  { a: 99, b: 106, text: 'fox', kpm: 300, kb: 'split', s0: 0.2, cam: camLerp({ th: 0.1, ph: 0.6, d: 700, tg: [0, 0, -45] }, { th: 0, ph: 0.5, d: 680, tg: [0, 0, -45] }, 7) },
+  { a: 106, b: 114, text: 'fox', kpm: 300, kb: 'typewriter', s0: 0.2, cam: camLerp({ th: 0.4, ph: 0.85, d: 680, tg: [0, 20, -60] }, { th: 0.25, ph: 0.8, d: 640, tg: [0, 20, -60] }, 8) },
+  { a: 114, b: 126, text: 'fox', kpm: 1080, s0: 0.2, speed: 0.4, scene: 'stage', opt: { fingerMap: true }, cam: camLerp({ th: -0.15, ph: 0.8, d: 600, tg: [-70, 0, -45] }, { th: 0.15, ph: 0.82, d: 570, tg: [-70, 0, -45] }, 12) },
+  { a: 126, b: 140, text: DEMO, kpm: 150, s0: -1.5, opt: { fingerMap: true }, cam: camLerp(TILT, { th: 0.15, ph: 0.8, d: 560, tg: [0, 0, -45] }, 14) },
+  { a: 140, b: DUR, text: 'ame', kpm: 300, s0: 0.2, scene: 'dusk', cam: camLerp({ th: 0.3, ph: 0.85, d: 620, tg: [0, 0, -45] }, { th: 0.55, ph: 0.9, d: 700, tg: [0, 0, -45] }, 13) },
+];
+const DEMO_SC = SC[12], REC_LAG = 1.5;
+
+// ---- ボタンの札（アプリと同じ言葉・同じ側。見る向きは絵の左上、つぎへ・再生は絵の下、ほかは右のパネル）。右下はライオンの場所 ----
+const CH = {
+  next: { x: 40, y: 820, title: '', btns: ['つぎへ ▶'] },
+  text: { x: 1240, y: 240, title: '打つ文（右のパネル）', btns: ['今日はいい天気ですね。', '打つ速さ: 1分に 400 キー'], cols: 1 },
+  view: { x: 40, y: 240, title: '見る向き（絵の左上）', btns: ['ななめ', '真上', '正面', '横', '一人称'] },
+  look: { x: 1240, y: 240, title: '見え方（右のパネル）', btns: ['手: 皮ふ', '手: 皮ふを透かして骨と筋肉', '手: 骨だけ'], cols: 1 },
+  kb: { x: 1240, y: 240, title: 'キーボード（右のパネル）', btns: ['ノートパソコン', '左右に分かれたキーボード', '手動のタイプライター'], cols: 1 },
+  speed: { x: 1240, y: 240, title: '打つ文（右のパネル）', btns: ['打つ速さ: 1分に 1080 キー（世界記録の速さ）'], cols: 1 },
+  mode: { x: 1240, y: 240, title: 'モード（右のパネル）', btns: ['ながめる', '自分で打つ（再現する）'] },
+  scene: { x: 1240, y: 240, title: 'くわしい設定（右のパネル）', btns: ['シーン: 夕暮れの部屋'], cols: 1 },
+};
+const SHOW = [
+  ['next', 15, 22, t => t < 16 ? -1 : 0],
+  ['text', 45.3, 53, t => t < 46.5 ? -1 : 1],
+  ['view', 60, 75.5, t => t < 60.8 ? 0 : t < 68 ? 3 : 4],
+  ['look', 76, 91.5, t => t < 76.6 ? 0 : t < 84 ? 1 : 2],
+  ['kb', 92, 113.5, t => t < 99 ? 0 : t < 106 ? 1 : 2],
+  ['speed', 114, 119, t => t < 114.6 ? -1 : 0],
+  ['mode', 126, 132, t => t < 126.8 ? 0 : 1],
+  ['scene', 140, 145, t => t < 140.6 ? -1 : 0],
+];
+const B = (k, i) => btnRect(CH[k], i);
+const CUR = [
+  { t: 15.2, x: 600, y: 700 },
+  { t: 16, ...B('next', 0), click: true },
+  { t: 45.6, ...B('text', 1) }, { t: 46.5, ...B('text', 1), click: true },
+  { t: 52.5, x: 1000, y: 700, hide: true },
+  { t: 60.2, ...B('view', 3) }, { t: 60.8, ...B('view', 3), click: true },
+  { t: 62.5, x: 900, y: 600 }, { t: 63, x: 900, y: 600, drag: true }, { t: 65, x: 780, y: 560 },
+  { t: 67.2, ...B('view', 4) }, { t: 68, ...B('view', 4), click: true },
+  { t: 76.1, ...B('look', 1) }, { t: 76.6, ...B('look', 1), click: true },
+  { t: 83.3, ...B('look', 2) }, { t: 84, ...B('look', 2), click: true },
+  { t: 92.1, ...B('kb', 0) }, { t: 92.6, ...B('kb', 0), click: true },
+  { t: 98.3, ...B('kb', 1) }, { t: 99, ...B('kb', 1), click: true },
+  { t: 105.3, ...B('kb', 2) }, { t: 106, ...B('kb', 2), click: true },
+  { t: 114.1, ...B('speed', 0) }, { t: 114.6, ...B('speed', 0), click: true },
+  { t: 118.5, x: 1000, y: 700, hide: true },
+  { t: 126.1, ...B('mode', 1) }, { t: 126.8, ...B('mode', 1), click: true },
+  { t: 131.5, x: 1000, y: 700, hide: true },
+  { t: 140.1, ...B('scene', 0) }, { t: 140.6, ...B('scene', 0), click: true },
+  { t: 144.5, x: 1000, y: 700, hide: true },
+];
+
+// ---- 字幕（日本語は上に焼きこむ・英語は SRT）。数は setup でアプリに計算させて入れる ----
+let MISS = '', CHK = [];
+const CAPS_F = () => [
+  { a: 6.5, b: 14.5, main: 'キーボードを打つ両手を、コンピュータが計算する', sub: '指の動きは測ったものではなく、骨の長さと関節の範囲から計算したシミュレーション',
+    en: ['A computer works out how two hands type', 'The finger motion is not measured; it is a simulation from bone lengths and joint ranges'] },
+  { a: 16.3, b: 23, main: '「つぎへ ▶」を押すと、順に見られる', sub: 'まずはホームポジション：人さし指を F と J に置く',
+    en: ['Press "Next ▶" to see it step by step', 'First, the home position: index fingers on F and J'] },
+  { a: 23.3, b: 29.8, main: 'キーの色は、どの指で打つかの割り当て', sub: 'タッチタイピングで教えられる標準の割り当て（人によってちがう）',
+    en: ['Key colors show which finger types each key', 'The standard touch-typing assignment (people differ)'] },
+  { a: 30.3, b: 37.3, main: '指先の番号：1 が親指、5 が小指', sub: '「今日はいい天気ですね。」をローマ字で、ゆっくり（1分に 120 キー）',
+    en: ['Finger numbers: 1 is the thumb, 5 the little finger', '"Kyou wa ii tenki desu ne." in romaji, slowly (120 keys a minute)'] },
+  { a: 37.6, b: 44.6, main: '打たない指もキーの上で休み、次のキーへ先回り', sub: '手首は、押す指が届くように少しずつ動く',
+    en: ['Idle fingers rest on the keys and move ahead to the next key', 'The wrist shifts a little so the pressing finger can reach'] },
+  { a: 45.5, b: 52.5, main: '右のパネルで、打つ文と速さを選ぶ', sub: '雨ニモマケズ・英語の文・寿限無など。速さは 1分に 60〜1080 キー',
+    en: ['Choose the text and speed in the right panel', 'Ame ni mo makezu, English sentences, Jugemu and more; 60 to 1080 keys a minute'] },
+  { a: 52.8, b: 59.7, main: '速さは平均。キーごとの間隔は運指で変わる（推定）', sub: '左右交互は短く、同じ指で別のキーへは長く。論文の傾向から',
+    en: ['The speed is an average; the gap before each key depends on the fingers (estimate)', 'Shorter when hands take turns, longer for the same finger; from trends in research'] },
+  { a: 60.3, b: 67.7, main: '見る向きは5つ。ドラッグで回して、ホイールで寄る', sub: '横から見ると、指の関節の曲がり方とキーの沈み方がわかる',
+    en: ['Five views; drag to turn and scroll to zoom', 'From the side you can see the finger joints bend and the keys go down'] },
+  { a: 68.3, b: 75.7, main: '一人称：打つ人の目の高さから', sub: '体は、打っている方へゆっくり寄る',
+    en: ['POV: from the typist\'s eye level', 'The body leans slowly toward where the hands are typing'] },
+  { a: 76.3, b: 83.7, main: '皮ふを透かして、骨と筋肉', sub: '骨の長さは「ピアノを弾く手」と同じ、測った研究の値（筋肉・腱の模型は目安）',
+    en: ['Bones and muscles, seen through the skin', 'Bone lengths are measured values, as in "Hands at the Piano" (the muscle model is a rough guide)'] },
+  { a: 84.3, b: 91.7, main: '骨だけ', sub: 'キーを押すたびに、指の3つの関節がどう曲がるかが見える',
+    en: ['Bones only', 'With each key you can see how the three finger joints bend'] },
+  { a: 92.8, b: 98.7, main: 'キーボードは7種類：ノートパソコン', sub: '押しこみ 1.5mm のうすいキー。打鍵の音も変わる',
+    en: ['Seven keyboards: a laptop', 'Thin keys that go down 1.5 mm; the key sound changes too'] },
+  { a: 99.3, b: 105.7, main: '左右に分かれたキーボード', sub: '左右を 70mm はなし、10 度ずつ内へまわした形（目安）',
+    en: ['A split keyboard', 'Halves 70 mm apart, each turned 10° inward (a rough guide)'] },
+  { a: 106.3, b: 113.7, main: '手動のタイプライター', sub: '丸いキーを 10mm 押しこむ。活字がローラーを打つ音も合成',
+    en: ['A manual typewriter', 'Round keys pressed 10 mm; the sound of type bars hitting the roller is synthesized too'] },
+  { a: 114.8, b: 120.2, main: '世界記録の速さ：1分に 1080 キー（スロー ×0.4）', sub: '1946 年のタイプライターの記録（1分に 216 語）から',
+    en: ['World-record speed: 1080 keys a minute (slow motion ×0.4)', 'From a 1946 typewriter record (216 words a minute)'] },
+  { a: 120.4, b: 125.7, main: MISS ? `関節の速さが間に合わないキー（${MISS}）は「押せなかった」と出す` : '関節の速さの上限ぎりぎりで打つ', sub: '検査の結果は右のパネルに。物理を曲げて帳尻を合わせない',
+    en: [MISS ? `Keys the joints can't reach in time (${MISS}) are marked as missed` : 'Typing right at the joint speed limit', 'Check results are in the right panel; physics is never bent to make it work'] },
+  { a: 127, b: 133.5, main: '自分で打つ：打ったキーを、1.5 秒おくれて画面の手が打つ', sub: 'スマホは画面のキーボードで。読むのはキーの位置と時刻だけ（保存・送信しない）',
+    en: ['Type yourself: the hands on screen type your keys 1.5 s later', 'On a phone use the on-screen keyboard; only which key and when is read (nothing saved or sent)'] },
+  { a: 133.8, b: 139.7, main: 'どの指で打つかは、あなたの指ではなく標準の割り当て', sub: '動画の打鍵は例（打つ間隔はアプリの推定）',
+    en: ['The finger used is the standard one for each key, not yours', 'The keystrokes in this video are an example (timing from the app\'s estimate)'] },
+  { a: 140.8, b: 147, main: 'シーン・手の大きさ・指の構えも変えられる', sub: '「くわしい設定」から。タイプの練習の前に、ながめてみてください',
+    en: ['You can also change the scene, hand size and finger posture', 'From "More settings"; have a look before your typing practice'] },
+];
+let CAPS = [];
+// 自分で打つ場面: 打ったキー（画面の手より 1.5 秒先）を札に出す
+function demoLines(t) {
+  const plan = tyPlan(DEMO_SC), s = tySongT(DEMO_SC, t), typed = plan.notes.filter(n => n.t0 <= s + REC_LAG).map(n => n.ch).join(''), done = plan.notes.filter(n => n.t0 <= s).map(n => n.ch).join('');
+  return [`あなたが打ったキー:  ${typed.replace(/ /g, '␣')}`, `画面の手（1.5 秒おくれ）:  ${done.replace(/ /g, '␣')}`];
+}
+
+// 打鍵音は山が鋭く、AAC にするとトゥルーピークが上がる（-1.5 で -0.6 dBTP になった）→ この台本だけ、サンプルのピークの上限を下げる
+LOUD.peak = -2.1;
+const MUSIC = { style: 'none', cues: [{ t: END, type: 'jingle' }] };
+const EXP = [[0, 'calm'], [6.8, 'smile'], [10.5, 'calm'], [16.4, 'smile'], [19.5, 'calm'], [23.5, 'think'], [27, 'calm'], [30.5, 'smile'], [34, 'calm'], [37.8, 'wow'], [41, 'calm'],
+  [45.7, 'smile'], [49, 'calm'], [53, 'think'], [57, 'calm'], [60.5, 'think'], [64, 'calm'], [68.5, 'wow'], [72, 'smile'], [75.5, 'calm'], [76.5, 'wow'], [80, 'calm'], [84.5, 'shock'], [87.5, 'smile'], [91, 'calm'],
+  [93, 'smile'], [96, 'calm'], [99.5, 'wow'], [103, 'calm'], [106.5, 'proud'], [110, 'smile'], [113.5, 'calm'], [115, 'wow'], [118, 'calm'], [120.6, 'think'], [124, 'proud'], [126, 'calm'],
+  [127.2, 'smile'], [131, 'calm'], [134, 'think'], [138, 'calm'], [141, 'smile'], [END - 7.6, 'smile']];
+// lionSetup は字幕の時刻でしゃべるので、字幕の文は先に仮で作る（数の入った文は setup で入れかえる。時刻は同じ）
+MUSIC.cues.push(...lionSetup({ caps: CAPS_F(), cur: CUR, exp: EXP, end: END, bye: END - 5.8 }));
+promoStart({
+  name: 'タイピングする手（使い方）', out: 'typing-hand-guide', src: '../../typing-hand/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 70,
+  inject: TY_INJECT,
+  music: MUSIC,
+  ready: w => !!LION.api && tyReady(w),
+  setup(w) {
+    tySetup(w, SC);
+    const R = tyChecks(SC[11]); MISS = R.miss.map(n => n.ch).join('・'); CHK = R.lines;
+    CAPS = CAPS_F();
+    MUSIC.extra = tyAudio(w, SC, 0.8);
+    return w.document.getElementById('view');
+  },
+  subs: () => guideSubs(END, 'タイピングする手', 'Hands on the Keyboard', CAPS),
+  renderAt(t, w) { tyRender(w, SC, t); },
+  overlay(g, t) {
+    for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
+    drawPanel(g, 40, 240, 760, '検査の結果（右のパネル・1分に 1080 キー）', CHK, fade(t, 120.2, 125.8, 0.5));
+    if (t >= DEMO_SC.a && t < DEMO_SC.b) drawPanel(g, 40, 780, 900, '自分で打つ（例）', demoLines(t), fade(t, 128, 139.8, 0.5));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawGuideChrome(g, t, END, 'タイピングする手',
+      'おもな出どころ: Dhakal ほか（2018）打つ間隔の傾向、Asonov・Agrawal（2004）打鍵の音、Buryanov・Kotiuk（2010）骨の長さ、Guinness World Records（1946 年の記録）ほか。指の動きは計算したシミュレーション');
+    drawLion(g, t);
+  },
+  errors: w => (w.__tyhaErr || []).map(String),
+});
+lionOpen();
+</script>
+</body>
+</html>

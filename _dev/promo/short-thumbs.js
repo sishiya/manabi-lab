@@ -28,5 +28,6 @@ window.SHORT_THUMBS = {
   'metronome-sync': { name: 'メトロノームがそろうまで', t: 12.95, focus: [0.5, 0.42], zoom: 1.5, wfocus: [0.5, 0.43], kicker: 'バラバラのメトロノームが', big: 'ひとりでに', sub: 'そろう。動く板の上で', c1: '#fff6d8', c2: '#ffc95a' },
   'eye-optics':    { name: '目のなかの光の道', t: 29.5, focus: [0.62, 0.42], zoom: 1.4, wfocus: [0.62, 0.47], kicker: '目が', big: '1 mm', sub: '長いだけで、遠くがぼける', c1: '#fff3d0', c2: '#ffd36b' },
   'tree-of-life':  { name: 'いのちの系統樹', t: 33, focus: [0.62, 0.5], zoom: 1.25, kicker: '名前のついた生きもの', big: '225万種', sub: 'の木で、ヒトはどこ？', c1: '#fff6e0', c2: '#ffb45a' },
+  'typing-hand':   { name: 'タイピングする手', t: 18, focus: [0.5, 0.36], zoom: 1.35, kicker: 'キーを打つとき、皮ふの下で', big: '骨と筋肉', sub: 'はこう動く（計算した動き）', c1: '#fff0e6', c2: '#ff8a5c' },
   'wave-growth':   { name: '波が育つまで', t: 31, focus: [0.5, 0.42], zoom: 1.3, kicker: '凪の海に風が吹いて', big: '約30時間', sub: 'で育ちきる。高さ 3.1 m', c1: '#fff3d6', c2: '#ffc46b' }
 };

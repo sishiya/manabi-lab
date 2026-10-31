@@ -1,0 +1,30 @@
+{
+  "videoId": "63zRvzo8fZU",
+  "file": "_dev/promo/out/typing-hand-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/typing-hand-short.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-02T20:05:00+09:00",
+  "captions": {
+    "en": "_dev/promo/out/typing-hand-short.en.srt"
+  },
+  "title": "キーを打つ指、皮ふの下ではこう動く。骨から計算したタイピング #Shorts",
+  "description": "キーボードを打つ両手を3Dで。どのキーをどの指で打つか、手首と指の関節がどう動くかを、骨の長さと関節の範囲からコンピュータが計算したシミュレーション。皮ふを透かした骨と筋肉、7種類のキーボード（手動のタイプライターも）、世界記録の速さ、自分で打ったキーを画面の手が打ち直すモードも。ブラウザのアプリ「タイピングする手」から。\n\nアプリ: https://sishiya.github.io/manabi-lab/typing-hand/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nDhakal V, Feit AM, Kristensson PO, Oulasvirta A (2018) Observations on Typing from 136 Million Keystrokes. CHI 2018（打つ間隔の傾向。論文の本文に書かれた傾向だけを使い、データは使っていません）\nAsonov D, Agrawal R (2004) Keyboard Acoustic Emanations. IEEE Symposium on Security and Privacy（打鍵の音の形）\nBuryanov A, Kotiuk V (2010) Proportions of hand segments. International Journal of Morphology 28(3)（指の骨の長さ）\nHäger-Ross C, Schieber MH (2000) Journal of Neuroscience 20(22)（となりの指がついてくる割合）\nGuinness World Records「Fastest typist on an electronic typewriter」（1946 年、1分に 216 語）\n指の動きは、測ったものではなく、コンピュータが計算したシミュレーションです。どの指でどのキーを打つかは標準のタッチタイピングの割り当て、打つ間隔は推定です。\n\n音楽: BGM はなく、キーの音はプログラムで合成したオリジナルの音です。\n\n#タイピング #キーボード #からだのしくみ #まなびラボ",
+  "tags": [
+    "タイピングする手",
+    "タイピング",
+    "キーボード",
+    "タッチタイピング",
+    "ホームポジション",
+    "Shorts",
+    "まなびラボ",
+    "しし屋",
+    "Hands on the Keyboard",
+    "typing"
+  ],
+  "localizations": {
+    "en": {
+      "title": "How Fingers Move Under the Skin When You Type: A Simulation from the Bones #Shorts",
+      "description": "From \"Hands on the Keyboard\", a browser app. Two 3D hands typing on a keyboard. Which finger types each key, and how the wrist and finger joints move, are worked out by the computer from bone lengths and joint ranges: a simulation, not a measurement. See the bones and muscles through the skin, seven keyboards (a manual typewriter too), world-record speed, and a mode where the hands on screen retype the keys you type.\n\nApp (switch the app to English with the EN button): https://sishiya.github.io/manabi-lab/typing-hand/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMain sources:\nDhakal V, Feit AM, Kristensson PO, Oulasvirta A (2018) Observations on Typing from 136 Million Keystrokes. CHI 2018 (timing trends; only the trends described in the paper are used, not the data)\nAsonov D, Agrawal R (2004) Keyboard Acoustic Emanations. IEEE Symposium on Security and Privacy (the shape of keystroke sounds)\nBuryanov A, Kotiuk V (2010) Proportions of hand segments. International Journal of Morphology 28(3) (finger bone lengths)\nHäger-Ross C, Schieber MH (2000) Journal of Neuroscience 20(22) (how much neighboring fingers follow)\nGuinness World Records, \"Fastest typist on an electronic typewriter\" (1946, 216 words a minute)\nThe finger movements are not measured; they are a simulation worked out by the computer. Which finger types each key follows the standard touch-typing assignment, and the timing is an estimate.\n\nMusic: no background music; the key sounds are original sounds synthesized by code.\n\n#Typing #Keyboard #Anatomy"
+    }
+  }
+}
