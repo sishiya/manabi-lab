@@ -1,0 +1,20 @@
+{
+ "ship-sail": {
+  "length": 22.0,
+  "beam": 5.2,
+  "height": 4.6,
+  "draft": 3.3
+ },
+ "ship-flag": {
+  "length": 30.4,
+  "beam": 8.4,
+  "height": 7.0,
+  "draft": 5.0
+ },
+ "ship-steam": {
+  "length": 30.4,
+  "beam": 8.4,
+  "height": 7.0,
+  "draft": 5.0
+ }
+}

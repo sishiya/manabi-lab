@@ -2,7 +2,7 @@
 
 ## 別セッションで続けるとき（まずここ）
 - いまの状態: 段階Bの作りなおしの途中。three 0.185.1＋InstancedMesh2（importmap）。大きな画面＝頭の中の戦場（マス目なし）、右上＝本当の盤。兵は1人ずつ（crowd.js。約300人）、隊の作戦は battle.js。行軍・突撃・ぶつかり合い・その場で気絶（薄く残す）・ねらい合う隊の小ぜり合いと矢。オペラ座の一局を最後まで通せる。保管庫に掲載。入口には載せない。
-- 次にやること: ユーザーに見てもらって直す（チープさ）。そのあと ⑤光と空気・草・木を本物らしく・遠くの兵を軽い形 ⑥棋譜ファイルの読みこみ。馬・兜・武器も。批判役にもう一度見てもらう（作りなおしのあとまだ）。
+- 次にやること: **海戦へ切りかえるかをユーザーが見本（fleet.html）で決める**（2026-10-31。PLAN「人から海戦へ」）。決まったら: 駒ごとの船（砲艇・潜水艦・帆と蒸気の艦）、1マスを約40m、船の LOD（32隻）、大砲の煙・水しぶき・白旗、蒸気船の形（いまは17世紀の船体に煙突と外輪）。人の兵の作り（crowd.js・battle.js）は海戦にしたら使わない。
 - 読む順: PLAN.md → このファイルの「ファイル構成」→ 関係するファイルだけ。
 - 動かし方: サーバー apps（.claude/launch.json）で http://localhost:8765/chess-battle/ 。デバッグ用の窓口 `window.__chba`（`next()`・`prev()`・`seek(ply)`・`setCam('auto'|'free'|'top')`・`simRun(秒)`・`rec`・`S`）、エラーは `window.__chbaErr`。
 - 区切りごとの手順: 「確認のしかた」と smoke.ps1 → 「状態」に1行 → launcher.html の表 → 公開前チェック → commit（節目の版だけ versions/ へコピーしてカードに。RULES 3章）。
@@ -24,6 +24,9 @@
 | js/ui.js | 隅の小さな盤・点数の帯・スライダーの印・手の一覧 | `drawMini`・`setMaterial`・`buildSlider`・`buildMoves`・`markMove` |
 | js/main.js | つなぎ役（場面の再生・カメラ・窓口） | `S`・`next`・`prev`・`seek`・`stepCam`・`window.__chba` |
 | tools/build-soldiers.py | Blender 5.2 で兵士の glb を作る（頭は体から・首から下は服・8つの動き・5000 三角形・色の絵を1枚 1024px にまとめ材質1つ・WebP）。素材はリポジトリの外 `../3d-library/quaternius/`（CC0） | `blender -b -P chess-battle/tools/build-soldiers.py` |
+| fleet.html・js/fleet.js | 海戦の見本（アプリにはまだつないでいない）。ゲルストナー波5本の海（頂点で動かし、細かい乱れは法線の絵を2枚流す）・空の写真の映りこみ・船を4点の海面の高さで上下・縦ゆれ・横ゆれ・煙 | `window.__fleet`（ships・setAuto・step） |
+| tools/build-ships.py | Blender で船の glb（帆船 dutch_ship_medium・旗艦 large_01・蒸気船 large_02＋煙突と外輪の覆い）。船首 +Z・喫水線が原点。素材は `../3d-library/polyhaven/`（CC0） | `blender -b -P chess-battle/tools/build-ships.py` |
+| assets/ship-*.glb・ships.json | 船（Poly Haven、CC0。17世紀のオランダ船） | |
 | tools/crowd-test2.html | three 0.185.1＋InstancedMesh2 で兵を N 人（公開しない道具）。骨の行列は「動き×位相」の見本ごとに1回計算して兵の場所へ写す | `?n=1000`・`shadow=0`・`close=1`、窓口 `bench()` |
 | tools/crowd-test.html | 兵士を N 人並べて歩かせ速さを測る（公開しない道具） | `?n=250&close=1&mode=bind`（骨組みを共有）／`share=0`（1人ずつ） |
 | assets/soldier-peasant.glb・soldier-ranger.glb | 兵士（農民・レンジャーの服）。動き: Idle_Loop・Walk_Loop・Jog_Fwd_Loop・Sprint_Loop・Sword_Idle・Sword_Attack・Hit_Chest・Sitting_Idle_Loop | |
@@ -86,6 +89,7 @@
 - サムネイル（_dev/tools/thumb.html の SETUP は new-app.ps1 が足せなかった。B で見た目が決まってから撮る）。
 
 ## 状態
+- 2026-10-31 海戦の見本: ユーザーと「人→帆と蒸気の時代の海戦」に振り切る案を決め、fleet.html を作った（Poly Haven の船3隻・ゲルストナー波の海・煙）。3隻で描く約 9〜10ms（この PC、375px も）。蒸気船は組み合わせた形でまだ不自然。
 - 2026-10-31 光と空気・草・木: 本物の空の写真（Poly Haven の HDRI）を背景と光に、日の向きを空の太陽に合わせた。もや、地面の写真の質感、草 11万本（スマホ 3万）を風でゆらす、写真の木をインポスターで約1000本。パソコンだけ光のにじみと周辺の暗さ。InstancedMesh2 の骨が送られず兵が固まっていたのを直した（ユーザーの「直立不動」の指摘）。
 - 2026-10-31 作りなおし: ユーザーの指摘（隊がかたまる・ターン制・チープ・のんびり退場）で、three 0.185.1＋InstancedMesh2 へ。兵1人ずつ（crowd.js）、隊の作戦（battle.js）、ねらい合い（record.js `tensionOf`）。取られた隊はユーザーの指示で「その場で気絶・薄く残す」。通しで22場面・最後の居場所が局面と一致・気絶106人。375px で計算 3.0ms・描く 2.8ms（この PC）。兵ごとの視野の判定は切った（見える兵が消えた）。
 - 2026-10-31 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
