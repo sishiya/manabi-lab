@@ -2,7 +2,7 @@
 
 ## 別セッションで続けるとき（まずここ）
 - いまの状態: 段階Bの途中。大きな画面＝指している人の頭の中の戦場（マス目なしの谷あいの野原・森）、右上の小さな盤＝現実の盤。1コマ＝4〜9人の部隊（CC0 の人のモデル）が人の速さ×2倍速で行軍・突撃・退く。オペラ座の一局（1858）を最後まで通せる。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。
-- 次にやること: 段階Bの残り — 馬（騎兵）、兜・武器・盾（いまは剣を持たずに剣の動き）、木をもっと本物らしく、実際のスマホで速さを測る。そのあと段階C（カメラの演出・捨て駒の前に王をねらう線・音）。
+- 次にやること（2026-10-31 ユーザーの指摘で作りなおし。PLAN の「段階Bの途中のユーザーの指摘」）: ①three 0.185.1＋InstancedMesh2 に移す（試験 `tools/crowd-test2.html` で千人 OK）②兵を1人ずつ動かす（群れ・隊形のくずれ・散らばった小ぜり合い）③戦場がいつも動いている（ねらい合う前線）④取られた隊は敗走 ⑤光と空気・草・LOD ⑥棋譜ファイルの読みこみ。画面の質は「チープに見える」と言われたので、区切りごとにスクリーンショットで見せる。
 - 読む順: PLAN.md → このファイルの「ファイル構成」→ 関係するファイルだけ。
 - 動かし方: サーバー apps（.claude/launch.json）で http://localhost:8765/chess-battle/ 。デバッグ用の窓口 `window.__chba`（`next()`・`prev()`・`seek(ply)`・`setCam('auto'|'free'|'top')`・`simRun(秒)`・`rec`・`S`）、エラーは `window.__chbaErr`。
 - 区切りごとの手順: 「確認のしかた」と smoke.ps1 → 「状態」に1行 → launcher.html の表 → 公開前チェック → commit（節目の版だけ versions/ へコピーしてカードに。RULES 3章）。
@@ -21,6 +21,7 @@
 | js/ui.js | 隅の小さな盤・点数の帯・スライダーの印・手の一覧 | `drawMini`・`setMaterial`・`buildSlider`・`buildMoves`・`markMove` |
 | js/main.js | つなぎ役（場面の再生・カメラ・窓口） | `S`・`next`・`prev`・`seek`・`stepCam`・`window.__chba` |
 | tools/build-soldiers.py | Blender 5.2 で兵士の glb を作る（頭は体から・首から下は服・8つの動き・5000 三角形・色の絵を1枚 1024px にまとめ材質1つ・WebP）。素材はリポジトリの外 `../3d-library/quaternius/`（CC0） | `blender -b -P chess-battle/tools/build-soldiers.py` |
+| tools/crowd-test2.html | three 0.185.1＋InstancedMesh2 で兵を N 人（公開しない道具）。骨の行列は「動き×位相」の見本ごとに1回計算して兵の場所へ写す | `?n=1000`・`shadow=0`・`close=1`、窓口 `bench()` |
 | tools/crowd-test.html | 兵士を N 人並べて歩かせ速さを測る（公開しない道具） | `?n=250&close=1&mode=bind`（骨組みを共有）／`share=0`（1人ずつ） |
 | assets/soldier-peasant.glb・soldier-ranger.glb | 兵士（農民・レンジャーの服）。動き: Idle_Loop・Walk_Loop・Jog_Fwd_Loop・Sprint_Loop・Sword_Idle・Sword_Attack・Hit_Chest・Sitting_Idle_Loop | |
 | tools/verify.mjs | 棋譜の確かめ（手数・詰み・特別な手・最後の局面・部隊の追跡・場面のつながり） | `node chess-battle/tools/verify.mjs` |
@@ -43,6 +44,13 @@
 - 段階Cへ: 捨て駒の前に止めて王への線を見せる、チェックの合図、詰みでビショップとルークを順に映す、カメラの向きの扇形を隅の盤に、隅の盤のマスを押すとその隊へ寄る。
 - 直さない: doctype（このリポジトリのアプリは doctype なしで作る決まり。new-app.ps1）。
 - **ユーザーに決めてもらう**: 剣をふる動き（いまは素手で空を切る。相手には当たらない）でよいか。
+
+## 速さの記録（この PC、1024×768）
+| やり方 | 人数 | 計算 | 描く | 描く回数 |
+|---|---|---|---|---|
+| r128・1人ずつ SkinnedMesh・部品5つ | 250 | 7.4ms | 34ms | 1376 |
+| r128・絵を1枚に＋骨組みを共有（いまのアプリ） | 250 | 0.9ms | 16.8ms | 251 |
+| three 0.185.1＋InstancedMesh2（crowd-test2） | 1000 | 1.3ms | 17.3ms（影つき・約590万三角形） | 3 |
 
 ## ハマったところ
 - 企画の段階で「キャスリングは 10手目」と書いていたが、棋譜では **12.O-O-O**（verify で確かめた）。手の番号は記憶で書かず verify で。
