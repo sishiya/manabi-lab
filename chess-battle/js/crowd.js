@@ -60,6 +60,8 @@ export async function createCrowd(scene, cap = 160) {
       mat.customProgramCacheKey = () => 'tint';
       const im = new InstancedMesh2(src.geometry, mat, { capacity: cap, createEntities: true });
       im.initSkeleton(src.skeleton);
+      // 骨の情報は毎コマ全部送る（InstancedMesh2 は enqueueUpdate しないと送らない。needsUpdate では送られず、兵が最初の姿勢のまま固まっていた）
+      im.boneTexture.partialUpdate = false;
       im.castShadow = shadow && !fallen; im.receiveShadow = true;
       // 兵ごとの視野の外の判定は切る（骨で動いた兵の範囲を計れず、見えるはずの兵が消えた。300人ほどなので全部描く）
       im.perObjectFrustumCulled = false; im.frustumCulled = false;
@@ -93,7 +95,7 @@ export async function createCrowd(scene, cap = 160) {
     if (idx >= cap) return;
     const inst = M.im.instances[idx]; inst.visible = true;
     inst.position.set(x, height(x, z), z); inst.quaternion.setFromAxisAngle(up, h); inst.updateMatrix();
-    M.im.boneTexture._data.set(faints[model][frame], idx * NB * 16); M.im.boneTexture.needsUpdate = true;
+    M.im.boneTexture._data.set(faints[model][frame], idx * NB * 16); M.im.boneTexture.enqueueUpdate(idx);
     fallen.push({ inst });
   }
 
@@ -140,7 +142,7 @@ export async function createCrowd(scene, cap = 160) {
     const goal = sp > 0.6 ? Math.atan2(s.vx, s.vz) : s.face;
     const dh = Math.atan2(Math.sin(goal - s.h), Math.cos(goal - s.h)); s.h += Math.max(-TURN * dt, Math.min(TURN * dt, dh));
     // 動きの絵: 速さで選ぶ（止まっているときは構え・剣・ふつう）
-    const clip = s.attack > 0 ? A.attack : sp < 0.35 ? (s.stance === 'ready' ? A.ready : A.idle) : sp < 2.3 ? A.walk : sp < 4.6 ? A.jog : A.sprint;
+    const clip = s.attack > 0 ? A.attack : sp < 0.15 ? (s.stance === 'ready' ? A.ready : A.idle) :   /* 少しでも動くなら歩く絵（立った絵のまますべらない） */ sp < 2.3 ? A.walk : sp < 4.6 ? A.jog : A.sprint;
     if (clip !== s.clip) { s.clip = clip; s.k = (Math.random() * POOL) | 0; }
     if (s.attack > 0) s.attack -= dt;
     if (sp > 4.2 && Math.random() < dt * 3) dust(s.x, s.z, 1);
@@ -200,7 +202,7 @@ export async function createCrowd(scene, cap = 160) {
     }
     rebuildGrid();
     for (const s of [...soldiers]) stepSoldier(s, dt);
-    for (const M of meshList) M.im.boneTexture.needsUpdate = true;
+    for (const M of meshList) M.im.boneTexture.enqueueUpdate(0);   // partialUpdate=false なので全部送る
     for (let i = 0; i < DN; i++) if (dage[i] < 9) dage[i] += dt;
     dgeo.attributes.age.needsUpdate = true; dgeo.attributes.position.needsUpdate = true;
     stepArrows(dt);

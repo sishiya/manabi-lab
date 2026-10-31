@@ -37,7 +37,7 @@ for (const c of CLIPS) for (let k = 0; k < POOL; k++) {
 }
 const NB = src.skeleton.bones.length, poses = tpls.map(() => new Float32Array(NB * 16)), tmpM = new THREE.Matrix4();
 const im = new InstancedMesh2(src.geometry, src.material, { capacity: N });
-im.initSkeleton(src.skeleton);
+im.initSkeleton(src.skeleton); im.boneTexture.partialUpdate = false;   // needsUpdate では送られない（enqueueUpdate で）
 im.castShadow = true; im.receiveShadow = false;
 const cols = Math.ceil(Math.sqrt(N)), who = [];
 im.addInstances(N, (o, i) => {
@@ -52,7 +52,7 @@ function poseUpdate(dt) {
   for (const m of mixers) m.update(dt);
   tpls.forEach(({ o, sk }, t) => { o.updateMatrixWorld(true); const P = poses[t]; for (let b = 0; b < NB; b++) tmpM.multiplyMatrices(sk.bones[b].matrixWorld, sk.boneInverses[b]).toArray(P, b * 16); });
   for (let i = 0; i < N; i++) data.set(poses[who[i]], i * NB * 16);
-  im.boneTexture.needsUpdate = true;
+  im.boneTexture.enqueueUpdate(0);
 }
 let last = performance.now(), t = 0;
 window.bench = () => { const T = (fn, n = 20) => { const a = performance.now(); for (let i = 0; i < n; i++) fn(); return ((performance.now() - a) / n).toFixed(1); }; const gl = renderer.getContext(); return { pose: T(() => poseUpdate(1 / 60)), render: T(() => { renderer.render(scene, cam); gl.finish(); }), calls: renderer.info.render.calls, tris: renderer.info.render.triangles }; };
