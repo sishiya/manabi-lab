@@ -53,24 +53,28 @@ function showPly(ply, moving = false) {   // 文字・隅の盤・帯を ply の
 const sceneIndex = ply => rec.scenes.findIndex(s => s[0] <= ply && ply <= s[1]);
 
 // スライダー・手の一覧・もどる: 動きを止めてその局面に置く
-function seek(ply) {
-  S.queue = []; S.playing = null; W.setSlow(1); W.showNet(null); banner(null);
+function seek(ply, byUser = true) {
+  if (byUser && S.auto) setAuto(false);   // 自分で飛んだら、通し見は止める
+  S.queue = []; S.playing = null; slowMo(false); W.showNet(null); banner(null);
   S.ply = Math.max(0, Math.min(rec.plies.length, ply));
   const lastP = rec.plies[S.ply - 1];
   W.setState(rec.states[S.ply], rec.tension[S.ply], lastP && lastP.mate ? (lastP.color === 'w' ? 'b' : 'w') : null); showPly(S.ply);
 }
 function next() {
   if (S.playing || S.queue.length) { fastForward(); return; }   // 動いている途中なら、場面の終わりまで計算を早送り（置きなおすと船の向きが前へ戻ってしまう）
-  if (S.ply >= rec.plies.length) { seek(0); return; }
+  if (S.ply >= rec.plies.length) { seek(0, false); return; }
   const [a, b] = rec.scenes[sceneIndex(S.ply + 1)];
   for (let k = Math.max(a, S.ply + 1); k <= b; k++) S.queue.push(k);
 }
 // 動いている途中の場面を、描かずに計算だけで終わりまで進める（船の向きと位置はつながったまま）
 function fastForward() {
-  for (let i = 0; i < 6000 && (S.playing || S.queue.length); i++) stepPlay(0.1);
-  W.setSlow(1);
+  let i = 0;
+  for (; i < 6000 && (S.playing || S.queue.length); i++) stepPlay(0.1);
+  if (i >= 6000) window.__chbaErr.push('早送りが終わらない: ' + S.ply);
+  slowMo(false);
 }
-function prev() {   // ひとつ前の場面の初めへ（再生中なら、いまの場面の初めへ）
+function prev() {   // ひとつ前の場面の初めへ（再生中なら、いまの場面の初めへ）。通し見は止める
+  if (S.auto) setAuto(false);
   if (S.playing || S.queue.length) { seek(rec.scenes[sceneIndex(S.ply)][0] - 1); return; }
   const i = sceneIndex(S.ply);
   seek(i <= 0 ? 0 : rec.scenes[i][0] - 1);
@@ -82,9 +86,9 @@ function stepPlay(dt) {
     S.playing = p; S.minWait = 0.4; W.playPly(p, rec.tension[k], rec.states[k]);
     S.ply = k; showPly(k, true);
     // 見せ場: 捨て駒と詰みは、ゆっくり（船の動き ×2）・王をねらう線・大きな札
-    W.showNet(p.sac || p.mate ? p.net : null, p.mate);
-    if (p.sac || p.mate) W.setSlow(0.35);
-    if (p.sac) banner('捨て駒！', `${PNAME[p.piece]}を差し出す。取られても、王をねらう道が開く`);
+    W.showNet(p.sac && p.sacLines ? { king: p.net.king, lines: p.sacLines, escapes: [] } : null);   // 捨て駒は「開く道」だけ
+    slowMo(p.sac || p.mate);
+    if (p.sac) banner('捨て駒！', `${PNAME[p.piece]}を差し出す。${p.sacText}`);
     else banner(null);
   }
   W.step(dt);
@@ -92,8 +96,8 @@ function stepPlay(dt) {
     S.minWait -= dt;
     if (S.minWait <= 0 && !W.busy()) {
       const p = S.playing; S.playing = null; if (!S.queue.length) showPly(S.ply);
-      if (p.mate) banner('チェックメイト', '王の逃げ道（d7・d8・e7）はすべてねらわれ、f7・f8 は味方の船でふさがっている。白の勝ち', true);
-      else W.setSlow(1);
+      slowMo(false);
+      if (p.mate) { W.showNet(p.net); banner('チェックメイト', mateText(p), 'mate'); }
     }
   }
   // 通して見る: 場面が終わったら少し間をおいて、つぎの場面へ
@@ -115,10 +119,13 @@ function stepCam(dt) {
     const f = W.focus(), lastP = rec.plies[S.ply - 1];
     S.idleT = f ? 0 : (S.idleT || 0) + dt;
     if (!f && lastP && lastP.mate && lastP.net) {   // 詰み: 王のまわりをゆっくり回り、王とねらう船が一度に入るように
-      const kq = W.sqXZ(lastP.net.king), R = 26 * U * k, a = S.t * 0.06;
+      const kq = W.sqXZ(lastP.net.king), R = 26 * U * k;
+      if (S.mateA0 === undefined) { S.mateA0 = Math.atan2(W.camera.position.x - kq.x, W.camera.position.z - kq.z); S.mateT0 = S.t; }   // いまのカメラの向きから回りはじめる（急に反対側へ跳ばない）
+      const a = S.mateA0 + (S.t - S.mateT0) * 0.06;
       S.look.lerp(new THREE.Vector3(kq.x, 2 * U, kq.z + 1.5 * U), 1 - Math.exp(-dt * 1.5));
       S.camGoal.set(kq.x + Math.sin(a) * R, 11 * U * k, kq.z + Math.cos(a) * R);
     } else if (f) {
+      S.mateA0 = undefined;
       fwd.set(Math.sin(f.face), 0, Math.cos(f.face));
       const at = new THREE.Vector3(f.x, height(f.x, f.z), f.z);
       const tgt = at.clone().addScaledVector(fwd, (f.clash ? 0 : 5) * U); tgt.y += 1.4 * U;
@@ -150,19 +157,33 @@ for (const b of document.querySelectorAll('#cam button[data-cam]')) b.addEventLi
 $('gridBtn').addEventListener('click', () => { const on = !$('gridBtn').classList.contains('on'); $('gridBtn').classList.toggle('on', on); W.setGrid(on); });
 $('teamBtn').addEventListener('click', () => { const on = !$('teamBtn').classList.contains('on'); $('teamBtn').classList.toggle('on', on); W.setTeam(on); });
 $('markBtn').addEventListener('click', () => { const on = !$('markBtn').classList.contains('on'); $('markBtn').classList.toggle('on', on); W.setMarkers(on); });
-function setAuto(on) { S.auto = on; S.autoWait = 0.3; $('autoBtn').textContent = on ? '■ とめる' : '▶ 通して見る'; $('autoBtn').classList.toggle('on', on); if (on && S.ply >= rec.plies.length) seek(0); }
+function setAuto(on) { S.auto = on; S.autoWait = 0.3; $('autoBtn').textContent = on ? '■ とめる' : '▶ 通して見る'; $('autoBtn').classList.toggle('on', on); if (on && S.ply >= rec.plies.length) seek(0, false); }
 $('autoBtn').addEventListener('click', () => setAuto(!S.auto));
 // 見せ場の札（画面の真ん中に大きく。数秒で消える）
 let bannerT = 0;
-function banner(title, sub, stay = false) {
+function banner(title, sub, kind = '') {
   const b = $('banner');
-  if (!title) { b.classList.remove('show'); return; }
+  if (!title) { b.classList.remove('show', 'small'); $('learn').hidden = true; return; }
   b.querySelector('b').textContent = title; b.querySelector('span').textContent = sub || '';
-  b.classList.toggle('mate', title === 'チェックメイト'); b.classList.add('show'); bannerT = stay ? 1e9 : 5;
+  b.classList.toggle('mate', kind === 'mate'); b.classList.remove('small'); b.classList.add('show'); bannerT = 6;
+  $('learn').hidden = kind !== 'mate';
 }
+// 詰みの札の文: 局面から作る（どの局でも正しく）
+const SQN = sq => sq;
+function mateText(p) {
+  const n = p.net, hit = n.escapes.filter(e => e.attacked && !e.blocked).map(e => SQN(e.sq)), own = n.escapes.filter(e => e.blocked).map(e => SQN(e.sq));
+  const win = p.color === 'w' ? '白' : '黒';
+  return (hit.length ? `王の逃げ道（${hit.join('・')}）はすべてねらわれ` : '王は動けず') + (own.length ? `、${own.join('・')} は味方の船でふさがっている` : '') + `。${win}の勝ち`;
+}
+// スロー（見せ場）: 船の動きを ×6 → ×2 に。画面の表示もいっしょに変える
+function slowMo(on) { W.setSlow(on ? 1 / 3 : 1); $('speed').textContent = on ? `船の動き ×${TIME / 3}（見せ場はゆっくり）` : `船の動き ×${TIME}`; }
+$('learn').addEventListener('click', () => { const d = $('map'); d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
 buildSlider(rec, seek); buildMoves(rec, seek);
 
-function step(dt) { S.t += dt; stepPlay(dt); stepCam(dt); if (bannerT > 0 && (bannerT -= dt) <= 0) banner(null); }
+function step(dt) {
+  S.t += dt; stepPlay(dt); stepCam(dt);
+  if (bannerT > 0 && (bannerT -= dt) <= 0) { const b = $('banner'); if (b.classList.contains('mate')) b.classList.add('small'); else banner(null); }   // 詰みの札は小さくして上へ（王にかぶさらない）
+}
 function resize() { W.resize(); drawMini($('mini'), rec.states[S.ply], rec.plies[S.ply - 1]); }
 let last = performance.now();
 function loop(now) { step(Math.max(0, Math.min(0.05, (now - last) / 1000))); last = now; /* 最初のコマは now が last より前のことがある */ W.render(); requestAnimationFrame(loop); }

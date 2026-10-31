@@ -79,3 +79,6 @@ details a{color:var(--acc)}
   #bar button{padding:0 10px}
   #next.main{min-width:96px}
 }
+#banner{pointer-events:none}
+#banner.small{top:16%;transform:translate(-50%,-50%) scale(.6)}
+#banner #learn{pointer-events:auto;margin-top:12px;background:var(--acc);color:#1a1f16;border-color:var(--acc);font-weight:700}

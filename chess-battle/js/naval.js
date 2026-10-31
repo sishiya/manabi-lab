@@ -1,4 +1,4 @@
-// 海戦: 1つの駒＝1隻。進む・舷側（船の横）を向けて砲撃・降伏（白旗。半透明で残す）・潜る（潜水艦）・前線の撃ち合い
+// 海戦: 1つの駒＝1隻。進む・舷側（船の横）を向けて砲撃・取られた船は沈む・潜る（潜水艦）・前線の撃ち合い
 // 船の形は Poly Haven（CC0）の 17 世紀のオランダ船をもとに tools/build-ships.py で作ったもの（assets/ship-*.glb）
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -20,8 +20,6 @@ export const sqXZ = sq => ({ x: ('abcdefgh'.indexOf(sq[0]) - 3.5) * SQ, z: (3.5 
 const facing = c => c === 'w' ? Math.PI : 0;   // 白は奥（-z）へ、黒は手前（+z）へ船首を向ける（船首は +Z）
 const rnd = (a, b) => a + Math.random() * (b - a);
 export const WIND = new THREE.Vector2(0, 1).multiplyScalar(4);   // 風: 盤の縦（黒の側から白の側へ）に約 4 m/s（帆船＝ビショップの見立てのもと。煙・旗もこの風で）
-// 降伏した船を曳いていく先（拿捕した船の列）: 白の船は盤の左の外、黒の船は右の外に、取られた順。再生とスライダーで同じ場所
-export const prizePos = (color, i) => { const s = color === 'w' ? -1 : 1; return { x: s * (4 * SQ + 50 + Math.floor(i / 6) * 40), z: s * (2.5 - (i % 6)) * SQ * 0.9 }; };
 const ang = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 
 export async function createNaval(scene, low, onProgress) {
@@ -29,7 +27,7 @@ export async function createNaval(scene, low, onProgress) {
   const src = {};
   let got = 0;
   await Promise.all(Object.values(SHIP).map(async S => { src[S.file] = await loader.loadAsync(`assets/${S.file}.glb`); onProgress && onProgress(++got, 6); }));
-  // 軍ごとの材質: 黒の軍は帆を茶色に（タンニンで染めた帆のつもり。※ 演出）・船体を少し暗く。降伏した船は半透明
+  // 軍ごとの材質: 黒の軍は帆を茶色に（タンニンで染めた帆のつもり。※ 演出）・船体を少し暗く
   const matCache = new Map();
   function styled(m, side, gone) {
     const key = m.uuid + side + gone;
@@ -80,13 +78,13 @@ export async function createNaval(scene, low, onProgress) {
       const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
       markTex[key] = new THREE.SpriteMaterial({ map: t, depthTest: false, sizeAttenuation: false, fog: false });
     }
-    const sp = new THREE.Sprite(markTex[key]); sp.scale.set(0.05, 0.05, 1); sp.renderOrder = 10; return sp;
+    const sp = new THREE.Sprite(markTex[key]); sp.scale.set(0.038, 0.038, 1); sp.renderOrder = 10; return sp;
   }
   let markersOn = true, teamOn = false;
-  const teamCache = new Map(), TEAM = { w: new THREE.Color(0x9cc8ff), b: new THREE.Color(0xff3020) };
+  const teamCache = new Map(), TEAM = { w: new THREE.Color(0xfff0c8), b: new THREE.Color(0x5a0c08) };   // 白＝象牙色、黒＝黒い鉄に赤み（控えめに光らせ、光と影は残す）
   function teamMat(base, side) {
     const key = base.uuid + side;
-    if (!teamCache.has(key)) { const c = base.clone(); c.emissive = TEAM[side].clone(); c.emissiveIntensity = side === 'w' ? 0.55 : 0.6; if (side === 'b') c.color = new THREE.Color(0.35, 0.18, 0.16); teamCache.set(key, c); }
+    if (!teamCache.has(key)) { const c = base.clone(); c.emissive = TEAM[side].clone(); c.emissiveIntensity = side === 'w' ? 0.28 : 0.5; c.color = side === 'w' ? new THREE.Color(1.15, 1.1, 1.0) : new THREE.Color(0.22, 0.16, 0.16); teamCache.set(key, c); }
     return teamCache.get(key);
   }
   let ships = new Map(), tension = [], actives = [], clock = 0;
@@ -103,7 +101,10 @@ export async function createNaval(scene, low, onProgress) {
     return s;
   }
   function surrenderLook(s, instant) { s.gone = true; s.wf.visible = true; s.en.grp.visible = false; }
-  function sink(s) { s.gone = true; s.mode = 'sink'; s.sinkT = 0; s.mk.visible = false; s.roll = (Math.random() < 0.5 ? -1 : 1) * rnd(0.25, 0.5); }
+  function sink(s) {
+    s.gone = true; s.mode = 'sink'; s.sinkT = 0; s.mk.visible = false; s.roll = (Math.random() < 0.5 ? -1 : 1) * rnd(0.25, 0.5);
+    s.body.traverse(m => { if (m.isMesh) m.material = m.userData.base; });   // 沈む船は色分けをやめて元の色に
+  }
 
   // 効果（※ 演出）: 大砲の煙・水柱・航跡の泡・煙突の煙・潜水艦の泡
   function particles(n, vs, fs) {
@@ -147,7 +148,7 @@ export async function createNaval(scene, low, onProgress) {
       fx.emit(p.x, p.y, p.z, 0, 0, 0, 4);
       for (let k = 0; k < 6; k++) fx.emit(p.x, p.y, p.z, ox / ol * rnd(2, 6), rnd(0.2, 1.2), oz / ol * rnd(2, 6), 0);
       const sx = tx + rnd(-12, 12), sz = tz + rnd(-12, 12);
-      setTimeout(() => splash(sx, sz), 0);
+      splash(sx, sz);   // その場で（setTimeout だと早送りのあとにまとめて立ち、もどったあとにも出た）
     }
   }
   function splash(x, z, big = 1) { for (let k = 0; k < 24 * big; k++) fx.emit(x + rnd(-1.5, 1.5) * big, 0.3, z + rnd(-1.5, 1.5) * big, rnd(-1.5, 1.5), rnd(6, 13) * Math.sqrt(big), rnd(-1.5, 1.5), 1); }
@@ -181,8 +182,7 @@ export async function createNaval(scene, low, onProgress) {
       const tgt = sqXZ(p.to), last = M.path[M.path.length - 1], prev = M.path.length > 1 ? M.path[M.path.length - 2] : { x: M.x, z: M.z };
       const dx = tgt.x - prev.x, dz = tgt.z - prev.z, d = Math.hypot(dx, dz) || 1, stand = p.piece === 'n' ? 30 : SQ * 0.95;
       M.path[M.path.length - 1] = { x: last.x - dx / d * stand, z: last.z - dz / d * stand };
-      const out = toState && toState.find(u => u.id === p.victim);
-      M.attack = { V, tgt }; V.prize = prizePos(V.color, out ? out.out : 0);
+      M.attack = { V, tgt };
       if (V.mode !== 'move') V.mode = 'brace';   // 動いている途中なら、そのまま自分のマスへ向かう（棋譜のマスに着く）
     }
     if (p.castle) {   // キャスリング: ルークは盤の外側の海を回る（キングと道が交わらない）。キングは少しおくれて
@@ -300,6 +300,6 @@ export async function createNaval(scene, low, onProgress) {
     return { x: U.x, z: U.z, face: U.h };
   }
   function setMarkers(on) { markersOn = on; for (const s of ships.values()) s.mk.visible = on && !s.gone; }
-  function setTeam(on) { teamOn = on; for (const s of ships.values()) s.body.traverse(m => { if (m.isMesh) m.material = on ? teamMat(m.userData.base, s.color) : m.userData.base; }); }
+  function setTeam(on) { teamOn = on; for (const s of ships.values()) if (!s.gone) s.body.traverse(m => { if (m.isMesh) m.material = on ? teamMat(m.userData.base, s.color) : m.userData.base; }); }
   return { setState, playPly, step, busy, focus, setMarkers, setTeam, ships: () => ships };
 }

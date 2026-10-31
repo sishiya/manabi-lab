@@ -45,6 +45,7 @@ export function build(game, Chess) {
       castle: rook ? { from: m.flags.includes('k') ? 'h' + m.from[1] : 'a' + m.from[1], to: rook.sq } : null,
       check: replay.inCheck(), mate: replay.isCheckmate(), fen: replay.fen(),
       sac: (game.sac || []).includes(ply), key: (game.key || []).includes(ply), mark: (game.marks || {})[ply] || '',
+      sacText: (game.sacText || {})[ply] || '', sacLines: (game.sacLines || {})[ply] || null,
       num: Math.ceil(ply / 2) + (m.color === 'w' ? '.' : '...'),
     };
     ply_.net = kingNet(replay, m.color);
@@ -74,11 +75,12 @@ export function kingNet(chess, by) {
   const k = board.find(c => c.type === 'k' && c.color === foe);
   if (!k) return null;
   const f = k.square.charCodeAt(0), r = +k.square[1], lines = [], escapes = [];
+  const free = new chess.constructor(chess.fen()); free.remove(k.square);   // 王がいないものとして（王が動いた先も王手の線の上なら逃げられない）
   for (let df = -1; df <= 1; df++) for (let dr = -1; dr <= 1; dr++) {
     const ff = f + df, rr = r + dr;
     if (ff < 97 || ff > 104 || rr < 1 || rr > 8) continue;
     const sq = String.fromCharCode(ff) + rr, own = chess.get(sq);
-    const from = chess.attackers(sq, by);
+    const from = (df || dr) ? free.attackers(sq, by) : chess.attackers(sq, by);
     for (const a of from) lines.push([a, sq]);
     if (df || dr) escapes.push({ sq, attacked: from.length > 0, blocked: !!(own && own.color === foe) });
   }
