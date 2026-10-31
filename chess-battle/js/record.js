@@ -47,6 +47,7 @@ export function build(game, Chess) {
       sac: (game.sac || []).includes(ply), key: (game.key || []).includes(ply), mark: (game.marks || {})[ply] || '',
       num: Math.ceil(ply / 2) + (m.color === 'w' ? '.' : '...'),
     };
+    ply_.net = kingNet(replay, m.color);
     ply_.note = (game.notes || {})[ply] || autoNote(ply_);
     plies.push(ply_);
     states.push(clone(units));
@@ -64,6 +65,24 @@ export function tensionOf(chess, units) {
     for (const sq of chess.attackers(d.sq, foe)) { const a = bySq.get(sq); if (a) out.push([a.id, d.id]); }
   }
   return out;
+}
+
+// 王をねらう線: 手を指した側が、相手の王のマスとそのまわり（逃げ道）をどの駒からねらっているか
+// → { king, lines: [[から, へ]], escapes: [{ sq, attacked, blocked }] }（捨て駒・詰みの場面で海の上に光らせる。※ 目印）
+export function kingNet(chess, by) {
+  const foe = by === 'w' ? 'b' : 'w', board = chess.board().flat().filter(Boolean);
+  const k = board.find(c => c.type === 'k' && c.color === foe);
+  if (!k) return null;
+  const f = k.square.charCodeAt(0), r = +k.square[1], lines = [], escapes = [];
+  for (let df = -1; df <= 1; df++) for (let dr = -1; dr <= 1; dr++) {
+    const ff = f + df, rr = r + dr;
+    if (ff < 97 || ff > 104 || rr < 1 || rr > 8) continue;
+    const sq = String.fromCharCode(ff) + rr, own = chess.get(sq);
+    const from = chess.attackers(sq, by);
+    for (const a of from) lines.push([a, sq]);
+    if (df || dr) escapes.push({ sq, attacked: from.length > 0, blocked: !!(own && own.color === foe) });
+  }
+  return { king: k.square, lines, escapes };
 }
 
 export function autoNote(p) {

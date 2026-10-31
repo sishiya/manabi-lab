@@ -67,22 +67,43 @@ export async function createNaval(scene, low, onProgress) {
   const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf4f4f0, roughness: 0.9, side: THREE.DoubleSide });
   function whiteFlag(info) { const m = new THREE.Mesh(whiteGeo, whiteMat); m.position.set(0, info.height + 9, info.length * 0.15); m.rotation.y = -Math.PI / 2; m.visible = false; return m; }
 
+  const markTex = {};
+  function marker(color, type) {
+    const key = color + type;
+    if (!markTex[key]) {
+      const c = document.createElement('canvas'); c.width = c.height = 128;
+      const g = c.getContext('2d');
+      g.beginPath(); g.arc(64, 64, 58, 0, Math.PI * 2); g.fillStyle = color === 'w' ? 'rgba(240,236,224,0.92)' : 'rgba(120,28,28,0.92)'; g.fill();
+      g.lineWidth = 6; g.strokeStyle = color === 'w' ? '#22344d' : '#f2e2c4'; g.stroke();
+      g.font = '84px "Segoe UI Symbol","Noto Sans Symbols 2",serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillStyle = color === 'w' ? '#22344d' : '#f2e2c4'; g.fillText(GLYPH[type] + '\uFE0E', 64, 70);
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+      markTex[key] = new THREE.SpriteMaterial({ map: t, depthTest: false, sizeAttenuation: false, fog: false });
+    }
+    const sp = new THREE.Sprite(markTex[key]); sp.scale.set(0.05, 0.05, 1); sp.renderOrder = 10; return sp;
+  }
+  let markersOn = true, teamOn = false;
+  const teamCache = new Map(), TEAM = { w: new THREE.Color(0x9cc8ff), b: new THREE.Color(0xff3020) };
+  function teamMat(base, side) {
+    const key = base.uuid + side;
+    if (!teamCache.has(key)) { const c = base.clone(); c.emissive = TEAM[side].clone(); c.emissiveIntensity = side === 'w' ? 0.55 : 0.6; if (side === 'b') c.color = new THREE.Color(0.35, 0.18, 0.16); teamCache.set(key, c); }
+    return teamCache.get(key);
+  }
   let ships = new Map(), tension = [], actives = [], clock = 0;
   function makeShip(u, at, gone = false) {
     const S = SHIP[u.type], info = meta[S.file], body = src[S.file].scene.clone(true);
-    body.traverse(m => { if (m.isMesh) { m.material = styled(m.material, u.color, gone); m.castShadow = !low && !gone; m.receiveShadow = true; } });
+    body.traverse(m => { if (m.isMesh) { m.userData.base = styled(m.material, u.color, gone); m.material = teamOn ? teamMat(m.userData.base, u.color) : m.userData.base; m.castShadow = !low && !gone; m.receiveShadow = true; } });
     const root = new THREE.Group(); root.add(body);
     const en = ensign(u.color, u.type, info); root.add(en.grp);
     const wf = whiteFlag(info); root.add(wf);
+    const mk = marker(u.color, u.type); mk.position.set(0, info.height + (u.type === 'n' ? 8 : u.type === 'p' ? 16 : 30), 0); mk.visible = markersOn; root.add(mk);
     scene.add(root);
-    const s = { id: u.id, color: u.color, type: u.type, S, info, root, body, en, wf, x: at.x, z: at.z, h: facing(u.color), v: 0, mode: 'hold', path: [], depth: 0, gone, fire: 0 };
+    const s = { mk, id: u.id, color: u.color, type: u.type, S, info, root, body, en, wf, x: at.x, z: at.z, h: facing(u.color), v: 0, mode: 'hold', path: [], depth: 0, gone, fire: 0 };
     if (gone) surrenderLook(s, true);
     return s;
   }
-  function surrenderLook(s, instant) {
-    s.gone = true; s.wf.visible = true; s.en.grp.visible = false;
-    if (!instant) s.body.traverse(m => { if (m.isMesh) { m.material = styled(m.material, s.color, true); m.castShadow = false; } });
-  }
+  function surrenderLook(s, instant) { s.gone = true; s.wf.visible = true; s.en.grp.visible = false; }
+  function sink(s) { s.gone = true; s.mode = 'sink'; s.sinkT = 0; s.mk.visible = false; s.roll = (Math.random() < 0.5 ? -1 : 1) * rnd(0.25, 0.5); }
 
   // 効果（※ 演出）: 大砲の煙・水柱・航跡の泡・煙突の煙・潜水艦の泡
   function particles(n, vs, fs) {
@@ -137,8 +158,7 @@ export async function createNaval(scene, low, onProgress) {
     for (const u of state) {
       if (u.sq) { ships.set(u.id, makeShip(u, sqXZ(u.sq))); continue; }
       if (!u.lostAt) continue;
-      // 降伏した船: 拿捕した船の列（盤の外）に
-      const s = makeShip(u, prizePos(u.color, u.out), true); s.h = 0; s.mode = 'prize'; ships.set(u.id + '#gone', s);
+      // 取られた船は沈んだので置かない
     }
     if (mated) { const K = [...ships.values()].find(s => s.type === 'k' && s.color === mated && !s.gone); if (K) { K.wf.visible = true; K.en.grp.visible = false; } }
   }
@@ -198,29 +218,28 @@ export async function createNaval(scene, low, onProgress) {
         const side = Math.sign(Math.sin(ang(s.h, Math.atan2(A.V.x - s.x, A.V.z - s.z)))) || 1;
         broadside(s, side, A.V.x, A.V.z, s.type === 'p' ? 2 : 5); s.volleys++;
       }
-      if (s.fireT > (s.type === 'n' ? 6 : 22) && A.V.mode !== 'gone' && A.V.mode !== 'prize' && A.V.mode !== 'move') { A.V.mode = 'gone'; surrenderLook(A.V); A.V.drift = 0; }
-      if ((A.V.mode === 'gone' || A.V.mode === 'prize') && A.V.drift > 14) { s.path = [A.tgt]; s.mode = 'move'; s.attack = null; }
-    } else if (s.mode === 'settle') {   // 着いたら船首を前へ（ゆっくり）
-      const err = ang(s.h, facing(s.color)); s.h += Math.max(-S.turn * dt, Math.min(S.turn * dt, err)); s.v *= Math.exp(-dt * 0.4);
-      s.x += Math.sin(s.h) * s.v * dt; s.z += Math.cos(s.h) * s.v * dt;
-      if (Math.abs(err) < 0.05) s.mode = 'hold';
+      if (s.fireT > (s.type === 'n' ? 6 : 22) && !A.V.gone && A.V.mode !== 'move') sink(A.V);
+      if (A.V.mode === 'sunk' || (A.V.mode === 'sink' && A.V.sinkT > 40)) { s.path = [A.tgt]; s.mode = 'move'; s.attack = null; }
+    } else if (s.mode === 'settle') {   // 着いたら、進んできた向きのまま止まる（前へ向き直さない。本物の船はその場で回れない。ユーザーの指摘 2026-10-31）
+      s.v *= Math.exp(-dt * 1.2);
+      if (s.v < 0.15) { s.v = 0; s.mode = 'hold'; }
     } else if (s.mode === 'brace') { s.v *= Math.exp(-dt * 0.5); }
-    else if (s.mode === 'gone' || s.mode === 'prize') {   // 降伏: 白旗を上げて少し待ち、拿捕した船の列へ曳かれていく（マスをあける）
-      s.drift = (s.drift || 0) + dt;
-      if (s.mode === 'gone' && s.drift > 3 && s.prize) {
-        const dx = s.prize.x - s.x, dz = s.prize.z - s.z, d = Math.hypot(dx, dz);
-        if (d > 2) { s.h += Math.max(-0.3 * dt, Math.min(0.3 * dt, ang(s.h, Math.atan2(dx, dz)))); const v = Math.min(3, d * 0.2); s.x += Math.sin(s.h) * v * dt; s.z += Math.cos(s.h) * v * dt; }
-        else s.mode = 'prize';
-      }
-    } else s.v *= Math.exp(-dt * 0.3);
+    else if (s.mode === 'sink') {   // 沈む: 傾きながら沈み、泡が出て、見えなくなる（人は描かない）
+      s.sinkT += dt; s.v *= Math.exp(-dt * 0.5);
+      if (s.sinkT > 70) { s.mode = 'sunk'; s.root.visible = false; }
+    } else if (s.mode === 'sunk') return;
+    else s.v *= Math.exp(-dt * 0.3);
     // 潜る・浮く
     const dive = s.mode === 'move' && s.dive ? 1 : 0; s.depth += (dive * 4.5 - s.depth) * (1 - Math.exp(-dt * 0.8));
     // 波に浮かべる（船首・船尾・左右の海面の高さ）
     const L = s.info.length * 0.42, B = s.info.beam * 0.5, fx_ = Math.sin(s.h), fz = Math.cos(s.h), rx = Math.cos(s.h), rz = -Math.sin(s.h);
     const hb = seaHeight(s.x + fx_ * L, s.z + fz * L), hs = seaHeight(s.x - fx_ * L, s.z - fz * L), hr = seaHeight(s.x + rx * B, s.z + rz * B), hl = seaHeight(s.x - rx * B, s.z - rz * B);
-    const y = (hb + hs + hr + hl) / 4 - s.depth - (s.gone ? 0.8 : 0);
+    const sk = s.mode === 'sink' ? Math.max(0, s.sinkT - 6) : 0;   // 6 秒たってから沈みはじめる
+    const y = (hb + hs + hr + hl) / 4 - s.depth - sk * sk * 0.012;
     s.root.position.set(s.x, s.root.position.y + (y - s.root.position.y) * 0.25, s.z);
-    e.set(-Math.atan2(hb - hs, 2 * L) * 0.8, s.h, Math.atan2(hr - hl, 2 * B) * 0.8 + (s.gone ? 0.08 : 0));
+    const tilt = s.mode === 'sink' ? Math.min(1, s.sinkT / 40) : 0;
+    e.set(-Math.atan2(hb - hs, 2 * L) * 0.8 + tilt * 0.35, s.h, Math.atan2(hr - hl, 2 * B) * 0.8 + tilt * (s.roll || 0));
+    if (s.mode === 'sink' && Math.random() < dtR * 25) fx.emit(s.x + rnd(-1, 1) * s.info.length * 0.4, 0.2, s.z + rnd(-1, 1) * s.info.length * 0.4, rnd(-0.3, 0.3), rnd(0.3, 1.0), rnd(-0.3, 0.3), 3);
     s.root.quaternion.slerp(qq.setFromEuler(e), 0.2);
     { const v = wv.set(WIND.x, 0, WIND.y).applyAxisAngle(UP, -s.h); s.en.grp.rotation.y = Math.atan2(-v.z, v.x); }   // 旗は風下へなびく
     for (const c of s.en.cloth) c.rotation.y = Math.sin(realClock * 1.7 + s.x) * 0.2;
@@ -262,7 +281,7 @@ export async function createNaval(scene, low, onProgress) {
       // 残りの道（取らない手は 4 割を切ったら、つぎの手を重ねて始める＝ターン制に見えないように）
       let rem = 0; if (M.mode === 'move') M.path.forEach((q, i) => { rem += Math.hypot(q.x - (i ? M.path[i - 1].x : M.x), q.z - (i ? M.path[i - 1].z : M.z)); });
       // 取る手は、攻めた船が相手のマスへ入りかけてから（棋譜のマスに着いてからつぎの手で相手になれるように）
-      const ready = A.V ? (A.V.mode === 'gone' || A.V.mode === 'prize') && !M.attack && (M.mode !== 'move' || rem < SQ * 0.35) : (M.mode !== 'move' || rem < A.total * 0.4);
+      const ready = A.V ? A.V.gone && !M.attack && (M.mode !== 'move' || rem < SQ * 0.35) : (M.mode !== 'move' || rem < A.total * 0.4);
       if (!A.ready && ready && (!A.R || A.R.mode !== 'move' || A.t > 60)) {
         A.ready = true;
         const K = [...ships.values()].find(s => s.type === 'k' && s.color !== A.p.color && !s.gone);
@@ -280,5 +299,7 @@ export async function createNaval(scene, low, onProgress) {
     const U = A.R && M.delay > 0 ? A.R : M;
     return { x: U.x, z: U.z, face: U.h };
   }
-  return { setState, playPly, step, busy, focus, ships: () => ships };
+  function setMarkers(on) { markersOn = on; for (const s of ships.values()) s.mk.visible = on && !s.gone; }
+  function setTeam(on) { teamOn = on; for (const s of ships.values()) s.body.traverse(m => { if (m.isMesh) m.material = on ? teamMat(m.userData.base, s.color) : m.userData.base; }); }
+  return { setState, playPly, step, busy, focus, setMarkers, setTeam, ships: () => ships };
 }

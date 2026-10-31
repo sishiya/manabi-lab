@@ -45,6 +45,25 @@ export async function createWorld(canvas, onProgress) {
   }
   function setGrid(on) { grid.visible = on; showMarks(lastMark); }
 
+  // 王をねらう線（捨て駒・詰み。※ 目印）: ねらう船のマス → ねらわれるマス を、海の上に光る帯で。逃げ道の印: ねらわれている＝赤い輪、味方でふさがる＝灰色の輪
+  const netGroup = new THREE.Group(); netGroup.renderOrder = 6; scene.add(netGroup);
+  const netMat = new THREE.MeshBasicMaterial({ color: 0xffc94a, transparent: true, opacity: 0.75, depthTest: false, depthWrite: false, fog: false, blending: THREE.AdditiveBlending });
+  const ringMat = { hit: new THREE.MeshBasicMaterial({ color: 0xff4a3a, transparent: true, opacity: 0.85, depthTest: false, fog: false }), block: new THREE.MeshBasicMaterial({ color: 0x9aa4ad, transparent: true, opacity: 0.6, depthTest: false, fog: false }), king: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, depthTest: false, fog: false }) };
+  const ringGeo = new THREE.RingGeometry(SQ * 0.36, SQ * 0.42, 40).rotateX(-Math.PI / 2);
+  function showNet(net) {
+    for (const c of [...netGroup.children]) { netGroup.remove(c); if (c.geometry !== ringGeo) c.geometry.dispose(); }
+    if (!net) return;
+    for (const [a, b] of net.lines) {
+      const p = sqXZ(a), q = sqXZ(b), dx = q.x - p.x, dz = q.z - p.z, L = Math.hypot(dx, dz);
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(2.2, L).rotateX(-Math.PI / 2), netMat);
+      m.position.set((p.x + q.x) / 2, 1.6, (p.z + q.z) / 2); m.rotation.y = Math.atan2(dx, dz); m.renderOrder = 6; netGroup.add(m);
+    }
+    const ring = (sq, mat) => { const v = sqXZ(sq), m = new THREE.Mesh(ringGeo, mat); m.position.set(v.x, 1.7, v.z); m.renderOrder = 7; netGroup.add(m); };
+    ring(net.king, ringMat.king);
+    for (const e of net.escapes) if (e.attacked && !e.blocked) ring(e.sq, ringMat.hit); else if (e.blocked) ring(e.sq, ringMat.block);
+  }
+  let slow = 1;
+
   // 画面の仕上げ（パソコンだけ）: 明るいところが少しにじむ・まわりを少し暗く（※ 演出）
   let composer = null;
   if (!low) {
@@ -65,7 +84,8 @@ export async function createWorld(canvas, onProgress) {
     scene, camera, renderer, naval, ocean, SQ,
     setState: (s, tens, mated) => naval.setState(s, tens, mated),
     playPly: (p, nextTension, toState) => naval.playPly(p, nextTension, toState),
-    step: dtReal => { const dt = dtReal * TIME; ocean.step(dtReal); naval.step(dt, dtReal); },   // ×TIME は船の動きだけ（波・煙・水しぶきは本当の時間）
+    step: dtReal => { const dt = dtReal * TIME * slow; ocean.step(dtReal); naval.step(dt, dtReal); netMat.opacity = 0.55 + 0.25 * Math.sin(performance.now() * 0.004); },
+    setSlow: f => { slow = f; }, showNet, sqXZ, setMarkers: on => naval.setMarkers(on), setTeam: on => naval.setTeam(on),   // ×TIME は船の動きだけ（波・煙・水しぶきは本当の時間）
     busy: () => naval.busy(), focus: () => naval.focus(), showMarks, setGrid, resize,
     render: () => composer ? composer.render() : renderer.render(scene, camera),
   };
