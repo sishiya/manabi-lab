@@ -1,5 +1,5 @@
 // 地形・空・森（マス目は見せない。盤の 8×8 は、谷あいの野原の上の見えない陣地）
-const THREE = window.THREE;
+import * as THREE from 'three';
 export const SQ = 8;   // 1マス = 8 m（数人〜十人の部隊が並べる広さ）
 const FIELD = SQ * 4;  // 盤の半分の幅（32 m）
 
@@ -15,14 +15,14 @@ export function height(x, z) {
 }
 
 export function createTerrain(scene) {
-  // 空: 上は青、地平線は白っぽい（霧と同じ色）。空のシェーダーは色をそのまま出すので sRGB の値、霧は線形の値
+  // 空: 上は青、地平線は白っぽい（霧と同じ色）。three 0.185 は色を線形で持ち、空のシェーダーの最後で画面の色に変える
   const HORIZON = new THREE.Color(0xc9d6dc), TOP = new THREE.Color(0x4a78a8);
-  scene.fog = new THREE.Fog(HORIZON.clone().convertSRGBToLinear(), 90, 420);
+  scene.fog = new THREE.Fog(HORIZON, 90, 420);
   const sky = new THREE.Mesh(new THREE.SphereGeometry(600, 32, 16), new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false,
     uniforms: { top: { value: TOP }, hor: { value: HORIZON } },
     vertexShader: 'varying vec3 vp; void main(){ vp = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-    fragmentShader: 'uniform vec3 top; uniform vec3 hor; varying vec3 vp; void main(){ float h = clamp(normalize(vp).y * 2.2, 0.0, 1.0); gl_FragColor = vec4(mix(hor, top, pow(h, 0.7)), 1.0); }',
+    fragmentShader: 'uniform vec3 top; uniform vec3 hor; varying vec3 vp; void main(){ float h = clamp(normalize(vp).y * 2.2, 0.0, 1.0); gl_FragColor = vec4(mix(hor, top, pow(h, 0.7)), 1.0);\n#include <colorspace_fragment>\n}',
   }));
   scene.add(sky);
 
@@ -40,7 +40,6 @@ export function createTerrain(scene) {
     c.lerp(dark, slope * 0.6);
     const mid = Math.max(0, 1 - Math.hypot(x, z) / (FIELD * 1.15));   // 盤のあたりは踏まれて土がのぞく
     c.lerp(dirt, mid * mid * 0.35 * (0.6 + 0.4 * n));
-    c.convertSRGBToLinear();   // 頂点の色は線形で（出力が sRGB なので、そのままだと白っぽくなる）
     col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
   }
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
@@ -64,7 +63,7 @@ export function createTerrain(scene) {
     q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), R() * 6.28);
     m.compose(p.set(x, y - 0.2, z), q, s.set(1, h * 0.45, 1)); trunks.setMatrixAt(k, m);
     m.compose(p.set(x, y + h * 0.3, z), q, s.set(h * 0.28, h * 0.8, h * 0.28)); leaves.setMatrixAt(k, m);
-    leaves.setColorAt(k, lc.setHSL(0.27 + R() * 0.06, 0.35, 0.18 + R() * 0.1).convertSRGBToLinear());
+    leaves.setColorAt(k, lc.setHSL(0.27 + R() * 0.06, 0.35, 0.18 + R() * 0.1)); 
     k++;
   }
   trunks.count = leaves.count = k; trunks.castShadow = leaves.castShadow = true;

@@ -1,8 +1,8 @@
 # 名局の戦場 開発メモ
 
 ## 別セッションで続けるとき（まずここ）
-- いまの状態: 段階Bの途中。大きな画面＝指している人の頭の中の戦場（マス目なしの谷あいの野原・森）、右上の小さな盤＝現実の盤。1コマ＝4〜9人の部隊（CC0 の人のモデル）が人の速さ×2倍速で行軍・突撃・退く。オペラ座の一局（1858）を最後まで通せる。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。
-- 次にやること（2026-10-31 ユーザーの指摘で作りなおし。PLAN の「段階Bの途中のユーザーの指摘」）: ①three 0.185.1＋InstancedMesh2 に移す（試験 `tools/crowd-test2.html` で千人 OK）②兵を1人ずつ動かす（群れ・隊形のくずれ・散らばった小ぜり合い）③戦場がいつも動いている（ねらい合う前線）④取られた隊は敗走 ⑤光と空気・草・LOD ⑥棋譜ファイルの読みこみ。画面の質は「チープに見える」と言われたので、区切りごとにスクリーンショットで見せる。
+- いまの状態: 段階Bの作りなおしの途中。three 0.185.1＋InstancedMesh2（importmap）。大きな画面＝頭の中の戦場（マス目なし）、右上＝本当の盤。兵は1人ずつ（crowd.js。約300人）、隊の作戦は battle.js。行軍・突撃・ぶつかり合い・その場で気絶（薄く残す）・ねらい合う隊の小ぜり合いと矢。オペラ座の一局を最後まで通せる。保管庫に掲載。入口には載せない。
+- 次にやること: ユーザーに見てもらって直す（チープさ）。そのあと ⑤光と空気・草・木を本物らしく・遠くの兵を軽い形 ⑥棋譜ファイルの読みこみ。馬・兜・武器も。批判役にもう一度見てもらう（作りなおしのあとまだ）。
 - 読む順: PLAN.md → このファイルの「ファイル構成」→ 関係するファイルだけ。
 - 動かし方: サーバー apps（.claude/launch.json）で http://localhost:8765/chess-battle/ 。デバッグ用の窓口 `window.__chba`（`next()`・`prev()`・`seek(ply)`・`setCam('auto'|'free'|'top')`・`simRun(秒)`・`rec`・`S`）、エラーは `window.__chbaErr`。
 - 区切りごとの手順: 「確認のしかた」と smoke.ps1 → 「状態」に1行 → launcher.html の表 → 公開前チェック → commit（節目の版だけ versions/ へコピーしてカードに。RULES 3章）。
@@ -15,9 +15,10 @@
 | css/style.css | 見た目（600px 以下でスマホの配置） | |
 | js/games.js | 名局のデータ（棋譜・解説の文・見せ場・出どころ・verify の期待値） | `GAMES` |
 | js/record.js | 棋譜 → 手の一覧・部隊の居場所・場面・駒の点数（DOM なし。verify からも使う） | `build`・`scenes`・`material`・`autoNote` |
-| js/world.js | まとめ役（描く道具・光・影・マスの目印） | `createWorld`・`showMarks`・`setGrid` |
+| js/world.js | まとめ役（描く道具・光・影・トーンマップ・マスの目印）。時間は TIME 倍 | `createWorld`・`showMarks`・`setGrid` |
+| js/crowd.js | 兵1人1人: 行き先へ自分の速さで・よけ合い（2 m の升目）・速さで動きの絵を選ぶ・気絶（Death01 を 24 枚の姿勢で）・土ぼこり・矢。InstancedMesh2 をモデル×軍（＋気絶用の半透明）ごとに | `createCrowd`・`add`・`faint`・`lay`・`arrow`・`dust`・`step` |
+| js/battle.js | 部隊（駒）の作戦: 行軍（隊の中心を道にそって動かし、兵は並びの場所を追う）・突撃（1.5 マス手前から兵それぞれが相手の兵へ）・ぶつかり合い（2.2 秒で相手が気絶）・前線（ねらい合いの組でとなり＝小ぜり合い、はなれ＝矢）・チェック（王の隊が構える）・詰み（王の旗が倒れる） | `createBattle`・`COMP`・`TIME`・`playPly`・`setState`・`focus`・`busy` |
 | js/terrain.js | 地形（盤のまわりはゆるい起伏、外は丘の谷あい）・空・森・マス目（※ 目印。ふだんは消す） | `SQ`（8 m）・`height(x,z)`・`createTerrain` |
-| js/army.js | 部隊（コマごとの人数・旗・服の色）と、行軍・突撃・ぶつかり・退くの「すること」の列。兵は見本の骨組みを共有 | `createArmy`・`playPly`・`setState`・`step`・`busy`・`focus`・`TIME`・`SPEED`・`COMP` |
 | js/ui.js | 隅の小さな盤・点数の帯・スライダーの印・手の一覧 | `drawMini`・`setMaterial`・`buildSlider`・`buildMoves`・`markMove` |
 | js/main.js | つなぎ役（場面の再生・カメラ・窓口） | `S`・`next`・`prev`・`seek`・`stepCam`・`window.__chba` |
 | tools/build-soldiers.py | Blender 5.2 で兵士の glb を作る（頭は体から・首から下は服・8つの動き・5000 三角形・色の絵を1枚 1024px にまとめ材質1つ・WebP）。素材はリポジトリの外 `../3d-library/quaternius/`（CC0） | `blender -b -P chess-battle/tools/build-soldiers.py` |
@@ -26,7 +27,7 @@
 | assets/soldier-peasant.glb・soldier-ranger.glb | 兵士（農民・レンジャーの服）。動き: Idle_Loop・Walk_Loop・Jog_Fwd_Loop・Sprint_Loop・Sword_Idle・Sword_Attack・Hit_Chest・Sitting_Idle_Loop | |
 | tools/verify.mjs | 棋譜の確かめ（手数・詰み・特別な手・最後の局面・部隊の追跡・場面のつながり） | `node chess-battle/tools/verify.mjs` |
 
-読み込み: three.js r128 と OrbitControls はふつうの script（lib/three@0.128.0）、chess.js と自分の js は ES モジュール（lib/chess.js@1.4.0）。r128 を選んだのは、lib/ にあって examples/js（GLTFLoader もある）がふつうの script で使えるため。
+読み込み: すべて ES モジュール。index.html の importmap で three（lib/three@0.185.1）・three/addons・@three.ez/instanced-mesh・bvh.js を指す。chess.js は lib/chess.js@1.4.0 を直接。
 
 ## しくみ
 - 部隊の id は初めの局面の駒から（`wNb`＝白の b のナイト、`wK`＝白のキング）。手ごとに from→to で動かし、取られた部隊は `sq=null`・`out`＝取られた順。キャスリングはルークも動かす。追跡が chess.js の局面と全手で同じことを verify で確かめる。
@@ -76,6 +77,7 @@
 - サムネイル（_dev/tools/thumb.html の SETUP は new-app.ps1 が足せなかった。B で見た目が決まってから撮る）。
 
 ## 状態
+- 2026-10-31 作りなおし: ユーザーの指摘（隊がかたまる・ターン制・チープ・のんびり退場）で、three 0.185.1＋InstancedMesh2 へ。兵1人ずつ（crowd.js）、隊の作戦（battle.js）、ねらい合い（record.js `tensionOf`）。取られた隊はユーザーの指示で「その場で気絶・薄く残す」。通しで22場面・最後の居場所が局面と一致・気絶106人。375px で計算 3.0ms・描く 2.8ms（この PC）。兵ごとの視野の判定は切った（見える兵が消えた）。
 - 2026-10-31 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
 - 2026-10-31 段階A: 企画（批判役の指摘10件を入れた）、chess.js 1.4.0 と OrbitControls を lib/ に、棋譜の確かめ verify.mjs（すべて OK）、箱の部隊・場面ごとのつぎへ・もどる・スライダー・手の一覧・隅の盤・点数の帯・カメラ3つ。
 - 2026-10-31 段階Bのはじめ: 見せ方を「頭の中の戦場」に決めなおした（PLAN）。Quaternius の CC0 素材4つ（約424MB）をリポジトリの外へ。Blender で兵士の glb 2種（5000 三角形・8つの動き）、試験ページで250人が歩くのを確かめた（1コマ約42ms、これから軽くする）。アプリの画面はまだ段階Aのまま。

@@ -22,7 +22,7 @@ export function build(game, Chess) {
   const moves = c.history({ verbose: true });
   const replay = new Chess();
   let units = initialUnits(replay);
-  const states = [clone(units)], plies = [], outCount = { w: 0, b: 0 };
+  const states = [clone(units)], plies = [], outCount = { w: 0, b: 0 }, tension = [tensionOf(replay, units)];
   moves.forEach((m, i) => {
     const ply = i + 1;
     const at = sq => units.find(u => u.sq === sq);
@@ -30,7 +30,7 @@ export function build(game, Chess) {
     let victim = null;
     if (m.flags.includes('e')) victim = at(m.to[0] + m.from[1]);   // アンパッサン（いまの局では出ない）
     else if (m.captured) victim = at(m.to);
-    if (victim) { victim.sq = null; victim.out = outCount[victim.color]++; }
+    if (victim) { victim.lostAt = victim.sq; victim.sq = null; victim.out = outCount[victim.color]++; }   // lostAt = 取られたマス（気絶して残る場所）
     mover.sq = m.to;
     if (m.promotion) mover.type = m.promotion;
     let rook = null;
@@ -50,8 +50,20 @@ export function build(game, Chess) {
     ply_.note = (game.notes || {})[ply] || autoNote(ply_);
     plies.push(ply_);
     states.push(clone(units));
+    tension.push(tensionOf(replay, units));
   });
-  return { plies, states, scenes: scenes(plies), material: states.map(material) };
+  return { plies, states, tension, scenes: scenes(plies), material: states.map(material) };
+}
+
+// ねらい合い: その局面で、どの部隊がどの敵の部隊をねらっている（取れる位置にいる）か → [攻める id, ねらわれる id]
+// 戦場の「いつも続く小ぜり合い・矢」に使う（演出。どの組かは棋譜の局面から計算）
+export function tensionOf(chess, units) {
+  const bySq = new Map(units.filter(u => u.sq).map(u => [u.sq, u])), out = [];
+  for (const d of bySq.values()) {
+    const foe = d.color === 'w' ? 'b' : 'w';
+    for (const sq of chess.attackers(d.sq, foe)) { const a = bySq.get(sq); if (a) out.push([a.id, d.id]); }
+  }
+  return out;
 }
 
 export function autoNote(p) {

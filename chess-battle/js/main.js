@@ -1,14 +1,15 @@
 // 名局の戦場 — メイン（棋譜を読み、場面ごとに部隊を動かす。デバッグ用の窓口 window.__chba）
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Chess } from '../../lib/chess.js@1.4.0/dist/esm/chess.js';
 import { GAMES } from './games.js';
 import { build } from './record.js';
-import { createWorld, TIME } from './world.js';
+import { createWorld, TIME, height } from './world.js';
 import { drawMini, setMaterial, buildSlider, buildMoves, markMove } from './ui.js';
 window.__chbaErr = window.__chbaErr || [];
 window.addEventListener('error', e => window.__chbaErr.push(String(e.message)));
 window.addEventListener('unhandledrejection', e => window.__chbaErr.push(String(e.reason)));
 
-const THREE = window.THREE;
 const $ = id => document.getElementById(id);
 const game = GAMES[0];
 const rec = build(game, Chess);
@@ -29,7 +30,7 @@ try {
   W = await createWorld($('cv'));
 } catch (e) { window.__chbaErr.push('読みこみ: ' + e); $('loading').textContent = '兵士のモデルを読みこめませんでした。'; throw e; }
 $('loading').hidden = true;
-controls = new THREE.OrbitControls(W.camera, $('cv'));
+controls = new OrbitControls(W.camera, $('cv'));
 controls.enabled = false; controls.maxPolarAngle = Math.PI * 0.48; controls.minDistance = 4; controls.maxDistance = 220;
 
 function caption(p) {
@@ -53,7 +54,7 @@ const sceneIndex = ply => rec.scenes.findIndex(s => s[0] <= ply && ply <= s[1]);
 function seek(ply) {
   S.queue = []; S.playing = null;
   S.ply = Math.max(0, Math.min(rec.plies.length, ply));
-  W.setState(rec.states[S.ply]); showPly(S.ply);
+  W.setState(rec.states[S.ply], rec.tension[S.ply]); showPly(S.ply);
 }
 function next() {
   if (S.playing || S.queue.length) { seek(S.queue.length ? S.queue[S.queue.length - 1] : S.playing.ply); return; }   // 動いている途中なら場面の終わりまで飛ばす
@@ -70,7 +71,7 @@ function prev() {   // ひとつ前の場面の初めへ（再生中なら、い
 function stepPlay(dt) {
   if (!S.playing && S.queue.length) {
     const k = S.queue.shift(), p = rec.plies[k - 1];
-    S.playing = p; S.minWait = 0.4; W.playPly(p, rec.states[k - 1], rec.states[k]);
+    S.playing = p; S.minWait = 0.4; W.playPly(p, rec.tension[k]);
     S.ply = k; showPly(k, true);
   }
   W.step(dt);
@@ -89,9 +90,12 @@ function stepCam(dt) {
     const f = W.focus();
     if (f) {
       fwd.set(Math.sin(f.face), 0, Math.cos(f.face));
-      const tgt = f.pos.clone().addScaledVector(fwd, 5); tgt.y += 1.6;
+      const at = new THREE.Vector3(f.x, height(f.x, f.z), f.z);
+      const tgt = at.clone().addScaledVector(fwd, f.clash ? 0 : 5); tgt.y += 1.4;
       S.look.lerp(tgt, 1 - Math.exp(-dt * 2.5));
-      const goal = f.pos.clone().addScaledVector(fwd, -14 * k); goal.y += 6.5 * k;
+      // ぶつかり合いは横から低く、行軍はうしろから
+      const side = f.clash ? new THREE.Vector3(fwd.z, 0, -fwd.x) : fwd.clone().negate();
+      const goal = at.clone().addScaledVector(side, (f.clash ? 17 : 14) * k); goal.y += (f.clash ? 6 : 6.5) * k;
       goal.x += 5 * Math.sin(S.t * 0.15);
       S.camGoal.lerp(goal, 1 - Math.exp(-dt * 3));
     } else {
