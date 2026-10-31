@@ -18,7 +18,9 @@
 | js/world.js | まとめ役（描く道具・光・影・トーンマップ・マスの目印）。時間は TIME 倍 | `createWorld`・`showMarks`・`setGrid` |
 | js/crowd.js | 兵1人1人: 行き先へ自分の速さで・よけ合い（2 m の升目）・速さで動きの絵を選ぶ・気絶（Death01 を 24 枚の姿勢で）・土ぼこり・矢。InstancedMesh2 をモデル×軍（＋気絶用の半透明）ごとに | `createCrowd`・`add`・`faint`・`lay`・`arrow`・`dust`・`step` |
 | js/battle.js | 部隊（駒）の作戦: 行軍（隊の中心を道にそって動かし、兵は並びの場所を追う）・突撃（1.5 マス手前から兵それぞれが相手の兵へ）・ぶつかり合い（2.2 秒で相手が気絶）・前線（ねらい合いの組でとなり＝小ぜり合い、はなれ＝矢）・チェック（王の隊が構える）・詰み（王の旗が倒れる） | `createBattle`・`COMP`・`TIME`・`playPly`・`setState`・`focus`・`busy` |
-| js/terrain.js | 地形（盤のまわりはゆるい起伏、外は丘の谷あい）・空・森・マス目（※ 目印。ふだんは消す） | `SQ`（8 m）・`height(x,z)`・`createTerrain` |
+| js/terrain.js | 地形（盤のまわりはゆるい起伏、外は丘の谷あい）・空の写真で照らす（PMREM）・もや（FogExp2）・地面の質感×色のむら・草（1本ずつ InstancedMesh、風は頂点で）・木（インポスター: 8方向の絵から見る向きの1枚を、カメラへ向く板に）・マス目（※ 目印） | `SQ`（8 m）・`height(x,z)`・`SUN_DIR`・`createTerrain` |
+| tools/build-env.py | Blender で空（2k HDRI → sky.jpg）と木のインポスター（tree_01/02.webp・trees.json）を作る。素材は `../3d-library/polyhaven/`（CC0） | `blender -b -P chess-battle/tools/build-env.py` |
+| assets/sky.jpg・ground_diff.jpg・ground_nor.jpg・tree_01.webp・tree_02.webp・trees.json | 空・地面・木（Poly Haven、CC0） | |
 | js/ui.js | 隅の小さな盤・点数の帯・スライダーの印・手の一覧 | `drawMini`・`setMaterial`・`buildSlider`・`buildMoves`・`markMove` |
 | js/main.js | つなぎ役（場面の再生・カメラ・窓口） | `S`・`next`・`prev`・`seek`・`stepCam`・`window.__chba` |
 | tools/build-soldiers.py | Blender 5.2 で兵士の glb を作る（頭は体から・首から下は服・8つの動き・5000 三角形・色の絵を1枚 1024px にまとめ材質1つ・WebP）。素材はリポジトリの外 `../3d-library/quaternius/`（CC0） | `blender -b -P chess-battle/tools/build-soldiers.py` |
@@ -79,6 +81,7 @@
 - サムネイル（_dev/tools/thumb.html の SETUP は new-app.ps1 が足せなかった。B で見た目が決まってから撮る）。
 
 ## 状態
+- 2026-10-31 光と空気・草・木: 本物の空の写真（Poly Haven の HDRI）を背景と光に、日の向きを空の太陽に合わせた。もや、地面の写真の質感、草 11万本（スマホ 3万）を風でゆらす、写真の木をインポスターで約1000本。パソコンだけ光のにじみと周辺の暗さ。InstancedMesh2 の骨が送られず兵が固まっていたのを直した（ユーザーの「直立不動」の指摘）。
 - 2026-10-31 作りなおし: ユーザーの指摘（隊がかたまる・ターン制・チープ・のんびり退場）で、three 0.185.1＋InstancedMesh2 へ。兵1人ずつ（crowd.js）、隊の作戦（battle.js）、ねらい合い（record.js `tensionOf`）。取られた隊はユーザーの指示で「その場で気絶・薄く残す」。通しで22場面・最後の居場所が局面と一致・気絶106人。375px で計算 3.0ms・描く 2.8ms（この PC）。兵ごとの視野の判定は切った（見える兵が消えた）。
 - 2026-10-31 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
 - 2026-10-31 段階A: 企画（批判役の指摘10件を入れた）、chess.js 1.4.0 と OrbitControls を lib/ に、棋譜の確かめ verify.mjs（すべて OK）、箱の部隊・場面ごとのつぎへ・もどる・スライダー・手の一覧・隅の盤・点数の帯・カメラ3つ。
