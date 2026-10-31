@@ -42,6 +42,7 @@ export const GAMES = [
       33: '白のルークが d8 へ。g5 のビショップが支えていて、黒のキングはどこへも逃げられない。チェックメイト。',
     },
     sources: [
+      { text: 'Wikipedia「Chaturanga」（英語）— 駒のもとが軍の4つの兵種であること・クイーンのもとが大臣であること', url: 'https://en.wikipedia.org/wiki/Chaturanga' },
       { text: 'Wikipedia「Opera Game」（英語）— 棋譜・日時・場所の照合。同じページは当時の資料として Löwenthal『Morphy\'s Games of Chess』（1860）などを挙げている', url: 'https://en.wikipedia.org/wiki/Opera_Game' },
     ],
   },

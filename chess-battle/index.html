@@ -14,8 +14,10 @@
       <canvas id="cv"></canvas>
       <canvas id="mini" aria-label="いまの局面（ふつうの盤）"></canvas>
       <div id="cam" role="group" aria-label="カメラ">
-        <button data-cam="auto" class="on">おまかせ</button><button data-cam="free">自由</button><button data-cam="top">真上</button>
+        <button data-cam="auto" class="on">おまかせ</button><button data-cam="free">自由</button><button data-cam="top">真上</button><button id="gridBtn" title="マス目を地面に出す（※ 目印）">マス目</button>
       </div>
+      <div id="loading">兵士を集めています…</div>
+      <span id="speed"></span>
       <div id="caption"><b id="capMove"></b><span id="capText"></span></div>
     </div>
     <div id="bar">
@@ -34,25 +36,27 @@
       <summary>駒と部隊の対応</summary>
       <table>
         <tr><th>駒</th><th>部隊</th><th>動き（棋譜のとおり）</th></tr>
-        <tr><td>キング</td><td>指揮官と大きな旗</td><td>まわり1マス</td></tr>
-        <tr><td>クイーン</td><td>いちばん大きな部隊</td><td>たて・よこ・ななめにどこまでも</td></tr>
-        <tr><td>ルーク</td><td>盾をならべた重い兵</td><td>たて・よこにどこまでも</td></tr>
-        <tr><td>ビショップ</td><td>弓兵の隊</td><td>ななめにどこまでも</td></tr>
-        <tr><td>ナイト</td><td>騎兵</td><td>ほかの部隊を飛びこえる</td></tr>
-        <tr><td>ポーン</td><td>歩兵の小隊</td><td>前へ1マス（取るときはななめ前）</td></tr>
+        <tr><td>キング</td><td>王とその護衛（7人）</td><td>まわり1マス</td></tr>
+        <tr><td>クイーン</td><td>王の大臣とその護衛（5人）</td><td>たて・よこ・ななめにどこまでも</td></tr>
+        <tr><td>ルーク</td><td>重い兵の隊（9人）</td><td>たて・よこにどこまでも</td></tr>
+        <tr><td>ビショップ</td><td>斜めに進む隊（6人）</td><td>ななめにどこまでも</td></tr>
+        <tr><td>ナイト</td><td>騎兵（4人。いまは走る兵）</td><td>L 字。ほかの部隊を回りこむ</td></tr>
+        <tr><td>ポーン</td><td>歩兵の小隊（6人）</td><td>前へ1マス（取るときはななめ前）</td></tr>
       </table>
-      <p>どの部隊も、取るときは相手のマスへ攻めこみます（離れたところから取ることはしません）。取られた部隊は旗を下ろして、盤の外の待機所へ歩いて出ます。</p>
+      <p>旗の印が、その部隊がどの駒かを表します。1マスは約8m、兵は人の速さ（歩く 1.4 m/s・小走り 3.5 m/s・全力 6 m/s）で動き、画面では2倍速で見せます。取るときは相手の陣地へ攻めこみ、取られた部隊は旗を下ろして戦場の外へ歩いて退きます。</p>
+      <p><b>駒はもともと部隊だった</b>: チェスのもとは6〜7世紀ごろのインドの「チャトランガ」と言われ、名前は軍の4つの兵種（歩兵・騎兵・象の隊・戦車の隊）を指します。ポーン・ナイト・ビショップ（もとは象）・ルーク（もとは戦車）は部隊、キングとクイーン（もとは大臣）は1人の人でした。</p>
     </details>
     <details id="about">
       <summary>このアプリについて</summary>
-      <p><b>棋譜は本物の記録です。戦いのようすは演出（想像）です。</b>部隊が動くマスは棋譜のとおりで、見た目のために手やマスを変えていません。</p>
-      <p>地面のマスのさかいと光る四角は、見やすくするための目印です（※ 目印。本物の戦場には無い線）。駒の点数（ポーン1・ナイト3・ビショップ3・ルーク5・クイーン9）は、よく使われる目安です。解説の文はこのアプリで書いたものです。</p>
+      <p><b>棋譜は本物の記録です。戦場は、指している人の頭の中の想像（演出）です。</b>部隊がいる陣地は棋譜のマスのとおりで、見た目のために手やマスを変えていません。右上の小さな盤が、実際の盤です。</p>
+      <p>「マス目」で出す線と光る四角は、見やすくするための目印です（※ 目印。本物の戦場には無い線）。兵の服の色・旗・地形は想像です。戦いは、血や倒れる場面のない形にしています。駒の点数（ポーン1・ナイト3・ビショップ3・ルーク5・クイーン9）は、よく使われる目安です。解説の文はこのアプリで書いたものです。</p>
       <h3>おもな出どころ</h3>
       <ul id="sources"></ul>
       <h3>使っているもの</h3>
       <ul>
         <li>chess.js 1.4.0（棋譜を読み、局面を作る。BSD-2-Clause、Jeff Hlywa）</li>
         <li>three.js r128（3D。MIT）</li>
+        <li>兵士の体・服・動き: Quaternius「Universal Base Characters」「Modular Character Outfits - Fantasy」「Universal Animation Library」（CC0。<a href="https://quaternius.com/" target="_blank" rel="noopener">quaternius.com</a>）をこのアプリ用にまとめなおしたもの</li>
         <li>フォント: Google Fonts（SIL Open Font License）</li>
       </ul>
     </details>
@@ -61,4 +65,6 @@
 
 <script src="../lib/three@0.128.0/build/three.min.js"></script>
 <script src="../lib/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="../lib/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="../lib/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 <script type="module" src="js/main.js"></script>

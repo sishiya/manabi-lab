@@ -13,7 +13,7 @@ OUTFITS = os.path.join(LIB, 'Modular Character Outfits - Fantasy[Standard]', 'Ex
 ANIM = os.path.join(LIB, 'Universal Animation Library[Standard]', 'Unreal-Godot', 'UAL1_Standard.glb')
 KEEP = ['Idle_Loop', 'Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Sword_Idle', 'Sword_Attack', 'Hit_Chest', 'Sitting_Idle_Loop']
 HEAD_BONES = {'Head', 'neck_01'}
-TEX = 512   # テクスチャの一辺（スマホでも軽く）
+ATLAS = 1024   # 1枚にまとめた絵の一辺（服・肌・顔が 512、目・眉が 256）
 TRIS = 5000   # 1人の三角形の数のめやす
 
 def clear():
@@ -43,6 +43,49 @@ def rebind(mesh_obj, arm):
         if m.type == 'ARMATURE': m.object = arm
     mat = mesh_obj.matrix_world.copy()
     mesh_obj.parent = arm; mesh_obj.matrix_world = mat
+
+def base_image(mat):
+    # 材質の色の絵（法線・ORM・粗さの絵は使わない。遠目なので色だけ）
+    imgs = [n.image for n in mat.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image]
+    for key in ('BaseColor', 'Dark', 'Eye_Brown'):
+        for im in imgs:
+            if key in im.name and 'Normal' not in im.name: return im
+    return imgs[0] if imgs else None
+
+def atlas(obj):
+    # 材質ごとの色の絵を1枚（ATLAS 四方）に並べ、UV をつけかえて材質を1つにする（描く回数を 1/5 に）
+    import numpy as np
+    A, half, q = ATLAS, ATLAS // 2, ATLAS // 4
+    cells, slot_cell, free = {}, {}, [(0, 0, half), (half, 0, half), (0, half, half), (half, half, q), (half + q, half, q), (half, half + q, q), (half + q, half + q, q)]
+    mats = [s.material for s in obj.material_slots]
+    # 並びを固定: 服（左下＝glTF の uv では u<0.5・v>0.5。ブラウザで服だけ両軍の色に染める）→ 肌 → 顔 → 目 → 眉
+    rank = lambda n: 1 if 'Regular' in n else 2 if 'Superhero' in n else 3 if 'Eye' in n else 4 if 'Hair' in n else 0
+    order = sorted({base_image(m).name: base_image(m) for m in mats}.values(), key=lambda im: rank(im.name))
+    pix = np.zeros((A, A, 4), np.float32); pix[..., 3] = 1
+    for im in order:
+        x0, y0, s = free.pop(0)
+        c = im.copy(); c.scale(s, s)
+        p = np.empty(s * s * 4, np.float32); c.pixels.foreach_get(p); p = p.reshape(s, s, 4)
+        if 'Hair' not in im.name: p[..., 3] = 1   # 眉だけ透ける
+        pix[y0:y0 + s, x0:x0 + s] = p
+        cells[im.name] = (x0, y0, s); bpy.data.images.remove(c)
+    for i, m in enumerate(mats): slot_cell[i] = cells[base_image(m).name]
+    me = obj.data; uv = me.uv_layers.active.data
+    for poly in me.polygons:
+        x0, y0, s = slot_cell[poly.material_index]
+        for li in poly.loop_indices:
+            u, v = uv[li].uv
+            u = min(1, max(0, u)); v = min(1, max(0, v))
+            uv[li].uv = ((x0 + 2 + u * (s - 4)) / A, (y0 + 2 + v * (s - 4)) / A)   # 2px 内側（にじみ止め）
+        poly.material_index = 0
+    img = bpy.data.images.new('atlas', A, A, alpha=True); img.pixels.foreach_set(pix.ravel())
+    mat = bpy.data.materials.new('Soldier'); mat.use_nodes = True
+    nt = mat.node_tree; bsdf = nt.nodes['Principled BSDF']; tex = nt.nodes.new('ShaderNodeTexImage'); tex.image = img
+    nt.links.new(tex.outputs['Color'], bsdf.inputs['Base Color']); nt.links.new(tex.outputs['Alpha'], bsdf.inputs['Alpha'])
+    bsdf.inputs['Roughness'].default_value = 0.8
+    if hasattr(mat, 'surface_render_method'): mat.surface_render_method = 'DITHERED'   # glTF では alphaMode=MASK に
+    mat.blend_method = 'CLIP' if hasattr(mat, 'blend_method') else None
+    obj.data.materials.clear(); obj.data.materials.append(mat)
 
 def build(outfit, name):
     clear()
@@ -82,12 +125,11 @@ def build(outfit, name):
     dec = obj.modifiers.new('dec', 'DECIMATE'); dec.ratio = min(1.0, TRIS / tris0)
     bpy.ops.object.modifier_move_to_index(modifier='dec', index=0)
     bpy.ops.object.modifier_apply(modifier='dec')
-    for img in bpy.data.images:
-        if img.size[0] > TEX: img.scale(TEX, TEX)
+    atlas(obj)
     os.makedirs(OUT, exist_ok=True)
     path = os.path.join(OUT, name + '.glb')
     bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', export_animation_mode='NLA_TRACKS',
-                              export_image_format='JPEG', export_jpeg_quality=80, export_yup=True, use_selection=False)
+                              export_image_format='WEBP', export_image_quality=82, export_yup=True, use_selection=False)
     tris = sum(len(p.vertices) - 2 for o in bpy.data.objects if o.type == 'MESH' for p in o.data.polygons)
     print(f'BUILT {name}: {os.path.getsize(path)//1024} KB, tris {tris}, anims {[t.name for t in arm.animation_data.nla_tracks]}')
 

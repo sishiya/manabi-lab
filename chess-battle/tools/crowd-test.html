@@ -22,12 +22,37 @@ const g = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshLamber
 const mixers = [];
 const files = ['soldier-peasant', 'soldier-ranger'];
 Promise.all(files.map(f => new Promise((ok, ng) => new THREE.GLTFLoader().load(`../assets/${f}.glb`, ok, undefined, ng)))).then(gl => {
-  const cols = Math.ceil(Math.sqrt(N));
+  const cols = Math.ceil(Math.sqrt(N)), SHARE = q.get('share') !== '0';
+  for (const g of gl) g.scene.traverse(m => { if (m.isMesh) { m.material.transparent = false; m.material.alphaTest = 0.5; m.material.depthWrite = true; } });
+  // 見本の姿勢（モデルごとに位相をずらして6つ）。兵は見本の骨の向きを写すだけ（?share=0 で1人ずつ計算）
+  const POOL = 6, pools = gl.map(src => Array.from({ length: POOL }, (_, k) => {
+    const o = THREE.SkeletonUtils.clone(src.scene), mx = new THREE.AnimationMixer(o);
+    mx.clipAction(THREE.AnimationClip.findByName(src.animations, ANIM)).play(); mx.update(k * 0.37); mixers.push(mx);
+    const bones = []; o.traverse(b => { if (b.isBone) bones.push(b); }); return bones;
+  }));
+  window.copies = [];
+  if (q.get('mode') === 'bind') {   // 兵は骨を持たず、見本の骨組みをそのまま使う（bindMode detached）。見本は原点に置いて骨の位置だけ計算
+    window.templates = [];
+    const tpl = gl.map(src => Array.from({ length: POOL }, (_, k) => {
+      const o = THREE.SkeletonUtils.clone(src.scene), mx = new THREE.AnimationMixer(o);
+      mx.clipAction(THREE.AnimationClip.findByName(src.animations, ANIM)).play(); mx.update(k * 0.37); mixers.push(mx);
+      let sk = null; o.traverse(m => { if (m.isSkinnedMesh) sk = m.skeleton; }); templates.push(o); return sk;
+    }));
+    for (let i = 0; i < N; i++) {
+      let srcMesh = null; gl[i % 2].scene.traverse(m => { if (m.isSkinnedMesh) srcMesh = m; });
+      const s = new THREE.SkinnedMesh(srcMesh.geometry, srcMesh.material);
+      s.bindMode = 'detached'; s.bind(tpl[i % 2][i % POOL], srcMesh.bindMatrix); s.castShadow = true; s.frustumCulled = false;
+      s.position.set((i % cols - cols / 2) * 1.4 + Math.random() * 0.3, 0, (Math.floor(i / cols) - cols / 2) * 1.6);
+      scene.add(s);
+    }
+    hud.textContent = `bind: 兵士 ${N} 人`; return;
+  }
   for (let i = 0; i < N; i++) {
     const src = gl[i % 2], o = THREE.SkeletonUtils.clone(src.scene);
     o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; } });
     o.position.set((i % cols - cols / 2) * 1.4 + Math.random() * 0.3, 0, (Math.floor(i / cols) - cols / 2) * 1.6);
     scene.add(o);
+    if (SHARE) { const bones = []; o.traverse(b => { if (b.isBone) bones.push(b); }); copies.push([bones, pools[i % 2][i % POOL]]); continue; }
     const mx = new THREE.AnimationMixer(o), clip = THREE.AnimationClip.findByName(src.animations, ANIM);
     mx.clipAction(clip).play(); mx.update(Math.random() * 2); mixers.push(mx);
   }
@@ -37,6 +62,8 @@ let last = performance.now(), frames = 0, acc = 0, t = 0;
 function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now; t += dt;
   for (const m of mixers) m.update(dt);
+  for (const o of (window.templates || [])) o.updateMatrixWorld(true);
+  for (const [bs, src] of (window.copies || [])) for (let k = 0; k < bs.length; k++) { bs[k].position.copy(src[k].position); bs[k].quaternion.copy(src[k].quaternion); }
   const close = q.get('close');
   cam.position.set(Math.sin(t * 0.1) * (close ? 6 : 30), close ? 2.2 : 14, Math.cos(t * 0.1) * (close ? 6 : 30)); cam.lookAt(0, close ? 1.2 : 0, 0);
   renderer.render(scene, cam);
