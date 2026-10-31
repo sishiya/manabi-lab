@@ -199,3 +199,18 @@ button:disabled,select:disabled,input:disabled{opacity:.45;cursor:default}
   #toolbar .chk{min-height:36px;padding:0 4px}
   #toolbar .chk input{width:20px;height:20px;margin:0}
 }
+/* ブラッシュアップ（2026-10-31）: 手の見え方と指の構えは横に（文・速さは長いので縦のまま）、ほかは「詳細」にしまう */
+.pair{display:flex;gap:8px}
+.pair select{flex:1 1 0;min-width:0}
+details.more{display:block;border-top:1px solid var(--line);padding-top:4px}
+details.more>:not(summary){display:block;margin-top:8px}
+details.more>label.chk{display:flex}
+details.more>select,details.more>canvas{width:100%}
+details.more summary,#checks summary{cursor:pointer;min-height:36px;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;font-weight:700}
+details.more summary,#checks summary{list-style:none}
+details.more summary::-webkit-details-marker,#checks summary::-webkit-details-marker{display:none}
+#checks summary{justify-content:space-between}
+details.more summary::before,#checks summary .lbl::before{content:'▸ ';color:var(--dim)}
+details.more[open] summary::before,#checks[open] summary .lbl::before{content:'▾ '}
+#checks[open]>table{margin-top:6px}
+@media (max-width:820px),(orientation:portrait) and (max-width:1000px){.langsw button{min-height:32px;min-width:36px;font-size:12px}}

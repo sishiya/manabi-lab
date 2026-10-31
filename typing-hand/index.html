@@ -69,56 +69,64 @@
       <p class="cap" lang="en">When you type on your keyboard, the hands on screen type the same keys <b>1.5 s later</b>. On a phone or tablet, use the on-screen keyboard under the picture. Only <b>which key you pressed and when</b> is read, and nothing is saved or sent anywhere. Please do not type passwords or anything private.</p>
       <p class="cap" lang="ja">画面の手がどの指で打つかは、<b>あなたの指ではなく標準の割り当て</b>です（キーの位置と時刻しかわからないため）。日本語入力がオンでも、そのまま打てます。</p>
       <p class="cap" lang="en">The finger the hands use is the <b>standard finger for that key, not the finger you used</b> (only the key and the time are known). It also works with a Japanese input method turned on.</p>
-      <p class="cap" lang="ja">通して再生すると、打ったもの全体（最大 300 キー）で手の動きを計算しなおし、時刻のつまみと検査の結果が使えます。</p>
-      <p class="cap" lang="en">“Play it all back” works out the hand movements again for everything you typed (up to 300 keys), and then the time slider and the check results can be used.</p>
+      <p class="cap" lang="ja">「通して再生」で、打ったもの全体（最大 300 キー）を計算しなおし、検査の結果も出ます。</p>
+      <p class="cap" lang="en">“Play it all back” works out everything you typed again (up to 300 keys) and shows the check results.</p>
     </section>
 
+    <!-- 2026-10-31 ブラッシュアップ（RULES 8.5）: いつも出すのは 文・速さ・見え方・キーボード。打つ間隔・細かい設定・検査は「詳細」にしまう -->
     <section id="secWatch">
       <h2><span lang="ja">打つ文</span><span lang="en">Text to type</span></h2>
       <select id="textSel"></select>
       <select id="kpmSel"></select>
-      <select id="timingSel"></select>
-      <canvas id="ikiChart"></canvas>
-      <p class="cap" id="ikiLegend" lang="ja"><span class="kd alt">■</span>左右交互 <span class="kd hand">■</span>同じ手 <span class="kd finger">■</span>同じ指 <span class="kd repeat">■</span>同じキー2回 ― 点線は平均（選んだ速さ）</p>
-      <p class="cap" lang="en"><span class="kd alt">■</span>other hand <span class="kd hand">■</span>same hand <span class="kd finger">■</span>same finger <span class="kd repeat">■</span>same key twice — the dotted line is the average (the speed you chose)</p>
-      <p class="cap" lang="ja">打つ速さは<b>平均</b>の速さです。キーごとの間隔は、左右の手を交互に打つ組は短く、同じ指で別のキーへ動く組は長く（遠いほど長く）、語の頭（空白のあと）は長くし、毎回少しゆらしています。どれも論文に書かれた傾向をもとにした<b>推定</b>で、人の打鍵を測ったデータではありません。日本語はローマ字入力で打ち、スペースで変換、Enter で確定します（変換の候補を選ぶ所は入れていません）。</p>
-      <p class="cap" lang="en">The speed is the <b>average</b> speed. The gap before each key is shorter when the hands take turns, longer when the same finger moves to another key (longer for farther keys), longer at the start of a word (after a space), and wobbles a little every time. All of this is an <b>estimate</b> based on trends described in research papers, not measured keystroke data. Japanese is typed in romaji (Latin letters); Space converts to Japanese characters and Enter confirms (choosing between conversion options is not included). Capital letters are typed as small letters (Shift is not used yet).</p>
+      <p class="cap" lang="ja">速さは<b>平均</b>です。日本語はローマ字で打ち、スペースで変換、Enter で確定します。</p>
+      <p class="cap" lang="en">The speed is the <b>average</b>. Japanese is typed in romaji (Latin letters); Space converts and Enter confirms. Capital letters are typed as small letters.</p>
+      <details class="more" id="ikiMore">
+        <summary><span lang="ja">キーごとの打つ間隔（推定）</span><span lang="en">Gap before each key (estimate)</span></summary>
+        <select id="timingSel"></select>
+        <canvas id="ikiChart"></canvas>
+        <p class="cap" id="ikiLegend" lang="ja"><span class="kd alt">■</span>左右交互 <span class="kd hand">■</span>同じ手 <span class="kd finger">■</span>同じ指 <span class="kd repeat">■</span>同じキー2回 ― 点線は平均</p>
+        <p class="cap" lang="en"><span class="kd alt">■</span>other hand <span class="kd hand">■</span>same hand <span class="kd finger">■</span>same finger <span class="kd repeat">■</span>same key twice — the dotted line is the average</p>
+        <p class="cap" lang="ja">左右交互は短く、同じ指で別のキーへは長く、語の頭は長く、毎回少しゆらします。論文に書かれた傾向をもとにした<b>推定</b>で、人の打鍵を測ったデータではありません（くわしくは「しくみ」6）。</p>
+        <p class="cap" lang="en">Shorter when the hands take turns, longer for the same finger on another key and at the start of a word, with a little wobble each time. This is an <b>estimate</b> from trends described in research papers, not measured keystroke data (see “How it works” 6).</p>
+      </details>
     </section>
 
     <section>
       <h2><span lang="ja">見え方</span><span lang="en">Look</span></h2>
-      <select id="handLook"></select>
+      <div class="pair"><select id="handLook"></select><select id="postureSel"></select></div>
       <p class="cap" id="lookLegend" hidden><span lang="ja"><span style="color:#c0574e">■</span>筋肉 <span style="color:#a9bdd0">■</span>腱 <span style="color:#d9b14a">■</span>脂肪 <span style="color:#e6dcc6">■</span>骨</span><span lang="en"><span style="color:#c0574e">■</span>muscle <span style="color:#a9bdd0">■</span>tendon <span style="color:#d9b14a">■</span>fat <span style="color:#e6dcc6">■</span>bone</span></p>
       <label class="chk"><input type="checkbox" id="optFingerMap" checked> <span><span lang="ja">どの指で打つキーかを色で（<span style="color:#ff6b6b">親指</span>・<span style="color:#ffa94d">人さし指</span>・<span style="color:#69db7c">中指</span>・<span style="color:#4dabf7">薬指</span>・<span style="color:#b197fc">小指</span>）</span><span lang="en">Color the keys by finger (<span style="color:#ff6b6b">thumb</span>, <span style="color:#ffa94d">index</span>, <span style="color:#69db7c">middle</span>, <span style="color:#4dabf7">ring</span>, <span style="color:#b197fc">little</span>)</span></span></label>
       <label class="chk"><input type="checkbox" id="optFingerNums"> <span><span lang="ja">指先に指の番号（1 親指 〜 5 小指）</span><span lang="en">Finger numbers on the fingertips (1 thumb to 5 little finger)</span></span></label>
-      <label class="chk"><input type="checkbox" id="optFollow"> <span><span lang="ja">カメラが手について行く</span><span lang="en">Camera follows the hands</span></span></label>
-      <label class="chk"><input type="checkbox" id="optTargets"> <span><span lang="ja">指先の目標点（IK でねらう場所）</span><span lang="en">Fingertip targets (where the joint calculation aims)</span></span></label>
-      <div class="row"><select id="sceneSel"></select></div>
-      <label class="chk"><input type="checkbox" id="optFx"> <span><span lang="ja">エフェクト（光のにじみ・もや。動きが重いときは外す）</span><span lang="en">Effects (glow and haze; turn off if it runs slowly)</span></span></label>
     </section>
 
     <section>
       <h2><span lang="ja">キーボード</span><span lang="en">Keyboard</span></h2>
       <select id="kbSel"></select>
+      <details class="more">
+        <summary><span lang="ja">キーボードの寸法について</span><span lang="en">About the keyboard sizes</span></summary>
       <p class="cap" lang="ja">キーの並び・押しこみの深さ・段の高さが変わります（寸法はどれも一般的な値と目安で、特定の製品ではありません）。文字のキーをどの指で打つかは、どれも同じ標準の割り当てです。左右に分かれたキーボードは、左右を 70mm はなし、それぞれ指先が内向きになる向きに 10 度まわしました（目安）。手動のタイプライターは丸いキーがレバーの先にあり、段の差が大きく（1段 12mm）、押しこみが深い形です（目安）。打鍵の音も種類ごとに変わります（タイプライターは、活字の棒が紙のうしろのローラーを打つ音と、紙を送る音）。</p>
       <p class="cap" lang="en">The key layout, how deep the keys press and the height of each row change (all sizes are typical values and rough guides, not any particular product). The letter keys use the same standard fingers on every keyboard. The split keyboard has its halves 70 mm apart, each turned 10° so the fingers point slightly inward (a rough guide). The manual typewriter has round keys on levers, big steps between rows (12 mm) and deep key travel (rough guides). The key sound also changes with the keyboard (on the typewriter: the type bar striking the roller behind the paper, then the paper moving along).</p>
+      </details>
     </section>
 
-    <section>
-      <h2><span lang="ja">手</span><span lang="en">Hands</span></h2>
-      <select id="handModel"></select>
-      <select id="postureSel"></select>
-      <label class="chk"><input type="checkbox" id="optFlex"> <span><span lang="ja">関節をやわらかく（指を横に開く範囲と、付け根をそらす範囲を 10° ずつ広げる。ストレッチした手の目安）</span><span lang="en">Flexible joints (spread the fingers and bend the base joints back 10° more; a rough guide for a stretched hand)</span></span></label>
-      <p class="cap" lang="ja">手の大きさ・骨の長さ・関節の範囲は「ピアノを弾く手」と同じ（大人の手の測定値と目安）です。</p>
-      <p class="cap" lang="en">Hand size, bone lengths and joint ranges are the same as in “Hands at the Piano” (measurements of adult hands and rough guides).</p>
-    </section>
-
-    <section class="card" id="checks">
-      <div class="ro-top"><span class="lbl"><span lang="ja">検査の結果</span><span lang="en">Check results</span></span><span class="ro-tag" id="chkSum"></span></div>
+    <details class="card" id="checks">
+      <summary class="ro-top"><span class="lbl"><span lang="ja">検査の結果</span><span lang="en">Check results</span></span><span class="ro-tag" id="chkSum"></span></summary>
       <table id="chkTable"></table>
       <p class="ro-note" lang="ja">行を押すと、いちばん悪かった時刻へ跳びます。◯△✕ の境目は「ピアノを弾く手」で決めた目安です。</p>
       <p class="ro-note" lang="en">Click a row to jump to the worst moment. The ◯ △ ✕ limits are rough guides made for “Hands at the Piano.”</p>
-    </section>
+    </details>
+
+    <details class="more" id="moreSet">
+      <summary><span lang="ja">くわしい設定（手・カメラ・シーン・重いとき）</span><span lang="en">More settings (hands, camera, scene, if it runs slowly)</span></summary>
+      <select id="handModel"></select>
+      <label class="chk"><input type="checkbox" id="optFlex"> <span><span lang="ja">関節をやわらかく（指を横に開く範囲と、付け根をそらす範囲を 10° ずつ広げる。ストレッチした手の目安）</span><span lang="en">Flexible joints (spread the fingers and bend the base joints back 10° more; a rough guide for a stretched hand)</span></span></label>
+      <p class="cap" lang="ja">手の大きさ・骨の長さ・関節の範囲は「ピアノを弾く手」と同じ（大人の手の測定値と目安）です。</p>
+      <p class="cap" lang="en">Hand size, bone lengths and joint ranges are the same as in “Hands at the Piano” (measurements of adult hands and rough guides).</p>
+      <label class="chk"><input type="checkbox" id="optFollow"> <span><span lang="ja">カメラが手について行く</span><span lang="en">Camera follows the hands</span></span></label>
+      <label class="chk"><input type="checkbox" id="optTargets"> <span><span lang="ja">指先の目標点（IK でねらう場所）</span><span lang="en">Fingertip targets (where the joint calculation aims)</span></span></label>
+      <select id="sceneSel"></select>
+      <label class="chk"><input type="checkbox" id="optFx"> <span><span lang="ja">エフェクト（光のにじみ・もや。動きが重いときは外す）</span><span lang="en">Effects (glow and haze; turn off if it runs slowly)</span></span></label>
+    </details>
 
     <details class="about" lang="ja">
       <summary>しくみ</summary>

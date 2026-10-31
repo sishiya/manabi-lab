@@ -40,6 +40,7 @@ function renderChecks() {
   const miss = S.plan.notes.filter(n => n.miss).length;
   const sum = { ok: [L('破綻なし', 'No breakdowns'), 'ok'], warn: [L('ぎりぎりの所あり', 'Some close calls'), 'warn'], ng: [L('破綻あり', 'Breakdowns found'), 'ng'] }[worst];
   $('chkSum').textContent = sum[0] + (miss ? L(`・押せなかったキー ${miss}`, ` · keys not pressed: ${miss}`) : ''); $('chkSum').className = 'ro-tag ' + (miss ? 'ng' : sum[1]);
+  if (miss || worst === 'ng') $('checks').open = true; // 破綻があるときは、しまわずに見せる
 }
 
 // 打った文字の行: 打ちおえた文字は明るく、いま押しているキーは指の色
@@ -200,6 +201,7 @@ function initUI() {
   document.querySelectorAll('#modeSeg button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.m)));
   $('btnRecClear').addEventListener('click', () => { recClear(); S.t = 0; S.prevT = 0; });
   $('btnRecPlay').addEventListener('click', recPlayAll);
+  $('ikiMore').addEventListener('toggle', () => { S.ikiPlan = null; }); // しまっているあいだは幅 0 なので、開いたら描きなおす
   makeScreenKeyboard();
   $('timingSel').innerHTML = [['model', L('打つ間隔: 運指で変えて、ゆらぎも（推定）', 'Timing: varies by finger, with wobble (estimate)')], ['pair', L('打つ間隔: 運指で変える（ゆらぎなし）', 'Timing: varies by finger (no wobble)')], ['even', L('打つ間隔: いつも同じ', 'Timing: always the same')]].map(([k, t]) => `<option value="${k}">${t}</option>`).join('');
   $('timingSel').value = TIMING;
