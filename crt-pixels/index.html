@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="css/style.css?v=11">
+<link rel="stylesheet" href="css/style.css?v=12">
 </head>
 <body>
 <div id="app">
@@ -55,35 +55,36 @@
       </div>
     </div>
 
-    <p class="note scope" lang="ja">ここから下の設定は、右のブラウン管にだけ効きます（左の液晶はドットのまま）。「ドットの形」だけは、見くらべやすいように左右そろえます。</p>
-    <p class="note scope" lang="en">The settings below change only the CRT on the right (the LCD on the left keeps the plain pixels). Only “Dot shape” is applied to both sides so they stay easy to compare.</p>
-    <div class="row"><h2><span lang="ja">画面</span><span lang="en">Screen</span></h2>
-      <div class="seg" id="scrSeg">
-        <button data-scr="shadow"><span lang="ja">丸い点（シャドウマスク）</span><span lang="en">Round dots (shadow mask)</span></button><button data-scr="slot"><span lang="ja">細長い穴（スロットマスク）</span><span lang="en">Slots (slot mask)</span></button><button data-scr="grille"><span lang="ja">たてじま（アパーチャーグリル）</span><span lang="en">Stripes (aperture grille)</span></button>
-      </div>
-      <p class="note" lang="ja">光る点のならび方の3種類です（家庭のテレビにも3つともありました）。細かさは3つとも 14型くらいのテレビを想定した同じ推定です。光る点の形のちがいは、寄ったときに見えます。全体の大きさでは本物の点が画面のピクセルより細かいので、画面の3ピクセルに合わせて描いています（近似。本物より粗く、何倍の粗さかは画面の左下に出ます）。</p>
-      <p class="note" lang="en">Three ways the glowing dots were arranged (home TVs used all three). All three use the same estimated fineness for a TV of about 14 inches. The shapes of the glowing dots show up when you zoom in. At full view the real dots are finer than your screen's pixels, so they are drawn at 3 screen pixels (an approximation, coarser than real; the lower-left corner shows by how much).</p>
-    </div>
+    <p class="note scope" lang="ja">ここから下は、右のブラウン管だけに効きます（左の液晶はドットのまま）。</p>
+    <p class="note scope" lang="en">Everything below changes only the CRT on the right (the LCD on the left keeps the plain pixels).</p>
     <div class="row"><h2><span lang="ja">つなぎ方</span><span lang="en">Connection</span></h2>
       <div class="seg" id="linkSeg">
         <button data-link="rgb">RGB</button><button data-link="svideo"><span lang="ja">S端子</span><span lang="en">S-Video</span></button><button data-link="composite"><span lang="ja">ビデオ端子</span><span lang="en">Composite</span></button><button data-link="rf"><span lang="ja">アンテナ線</span><span lang="en">RF (antenna)</span></button>
       </div>
       <p class="note" id="linkNote"></p>
     </div>
-    <div class="row"><h2><span lang="ja">ドットの形</span><span lang="en">Dot shape</span></h2>
-      <div class="seg" id="parSeg"><button data-par="tv"><span lang="ja">当時のテレビ（横長）</span><span lang="en">Old TV (wide)</span></button><button data-par="sq"><span lang="ja">正方形</span><span lang="en">Square</span></button></div>
-      <p class="note" lang="ja">当時のテレビでは、1ドットは横長に映りました。横 256 ドット・240本の絵では、横がたての 8/7 倍です。1行の絵の部分（約 52.1 マイクロ秒）にこのドットの速さだと約 280 ドットが入り、それが 4:3 の画面の横はばになるためです（240×4/3÷280＝8/7。NESdev Wiki「Overscan」）。自分の画像は、横のドット数と行の数から同じように計算します。液晶やエミュレータで正方形のまま映すと、絵は少し細長く見えます。描き手がこの横長に合わせて絵を描いたかは、ゲームによってちがい、はっきりしません。両側に同じ形を使うので、仕切りの左右はずれません。</p>
-      <p class="note" lang="en">On TVs of the time, each dot appeared wider than tall. For a picture 256 dots wide with 240 lines, it is 8/7 as wide as tall: at this dot rate, about 280 dots fit in the picture part of a line (about 52.1 microseconds), and that spans the width of the 4:3 screen (240×4/3÷280 = 8/7; NESdev Wiki “Overscan”). For your own image, it is worked out the same way from its width and number of lines. Shown as squares on an LCD or emulator, pictures look a little narrow. Whether artists drew with this stretch in mind varies from game to game and is not clear. Both sides use the same shape, so the two halves stay lined up.</p>
-    </div>
 
     <div class="row"><h2><span lang="ja">しくみを1つずつ</span><span lang="en">One effect at a time</span></h2>
       <p class="note" lang="ja">効き目の大きい順。「だけ」で、そのしくみだけを入れて見くらべます。</p>
       <p class="note" lang="en">Biggest effect first. “Only” turns on just that one effect so you can compare.</p>
       <ul id="mech"></ul>
-      <button class="focus" id="allOn"><span lang="ja">全部入れる</span><span lang="en">Turn all on</span></button>
+      <button class="focus" id="allOn" hidden><span lang="ja">全部入れる</span><span lang="en">Turn all on</span></button>
+    </div>
+    <div class="row"><h2><span lang="ja">画面</span><span lang="en">Screen</span></h2>
+      <div class="seg" id="scrSeg">
+        <button data-scr="shadow"><span lang="ja">丸い点（シャドウマスク）</span><span lang="en">Round dots (shadow mask)</span></button><button data-scr="slot"><span lang="ja">細長い穴（スロットマスク）</span><span lang="en">Slots (slot mask)</span></button><button data-scr="grille"><span lang="ja">たてじま（アパーチャーグリル）</span><span lang="en">Stripes (aperture grille)</span></button>
+      </div>
+      <p class="note" lang="ja">光る点のならび方の3種類です（家庭のテレビにも3つともありました）。細かさは3つとも 14型くらいのテレビを想定した推定。形のちがいは「光る点」で寄ると見えます。</p>
+      <p class="note" lang="en">Three ways the glowing dots were arranged (home TVs used all three). All three use the same estimated fineness for a TV of about 14 inches. Press “Dots” to zoom in and see the shapes.</p>
     </div>
 
     <details class="row" id="more"><summary><span lang="ja">細かい設定</span><span lang="en">More settings</span></summary>
+      <h3><span lang="ja">ドットの形</span><span lang="en">Dot shape</span></h3>
+      <p class="note" lang="ja"><b>これだけは左の液晶にも効きます</b>（見くらべやすいように左右そろえます）。</p>
+      <p class="note" lang="en"><b>This one also changes the LCD on the left</b> (both sides match so they are easy to compare).</p>
+      <div class="seg" id="parSeg"><button data-par="tv"><span lang="ja">当時のテレビ（横長）</span><span lang="en">Old TV (wide)</span></button><button data-par="sq"><span lang="ja">正方形</span><span lang="en">Square</span></button></div>
+      <p class="note" lang="ja">当時のテレビでは、1ドットは横長に映りました。横 256 ドット・240本の絵では、横がたての 8/7 倍です。1行の絵の部分（約 52.1 マイクロ秒）にこのドットの速さだと約 280 ドットが入り、それが 4:3 の画面の横はばになるためです（240×4/3÷280＝8/7。NESdev Wiki「Overscan」）。自分の画像は、横のドット数と行の数から同じように計算します。液晶やエミュレータで正方形のまま映すと、絵は少し細長く見えます。描き手がこの横長に合わせて絵を描いたかは、ゲームによってちがい、はっきりしません。両側に同じ形を使うので、仕切りの左右はずれません。</p>
+      <p class="note" lang="en">On TVs of the time, each dot appeared wider than tall. For a picture 256 dots wide with 240 lines, it is 8/7 as wide as tall: at this dot rate, about 280 dots fit in the picture part of a line (about 52.1 microseconds), and that spans the width of the 4:3 screen (240×4/3÷280 = 8/7; NESdev Wiki “Overscan”). For your own image, it is worked out the same way from its width and number of lines. Shown as squares on an LCD or emulator, pictures look a little narrow. Whether artists drew with this stretch in mind varies from game to game and is not clear. Both sides use the same shape, so the two halves stay lined up.</p>
       <h3><span lang="ja">走査線の本数</span><span lang="en">Number of scan lines</span></h3>
       <div class="seg" id="interSeg"><button data-inter="0"><span lang="ja">ゲーム（240本・すきまが見える）</span><span lang="en">Games (240 lines, gaps show)</span></button><button data-inter="1"><span lang="ja">同じ絵を 480i で（行は2回ずつ）</span><span lang="en">Same picture in 480i (each line twice)</span></button></div>
       <p class="note" id="interTall" hidden><span lang="ja">いまの絵は縦が 240 行をこえる「画面まるごと」なので、480本で描いています（この切りかえは使いません）。</span><span lang="en">This picture is a whole screen taller than 240 lines, so it is already drawn with 480 lines (this switch is not used).</span></p>
@@ -139,6 +140,6 @@
 <script src="js/crt-gl.js?v=11"></script>
 <script src="js/view.js?v=5"></script>
 <script src="js/upload.js?v=12"></script>
-<script src="js/main.js?v=19"></script>
+<script src="js/main.js?v=21"></script>
 </body>
 </html>

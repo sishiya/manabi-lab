@@ -18,14 +18,14 @@ const LINK_NOTE = {
   composite: L('明るさと色を1本の線にまぜて送る（黄色い端子）。色がにじみ、こまかい模様は色とまちがえられ、チェック模様はまざります。明るさも、色の波に近い細かさ（3.58MHz のまわり）は落ちます。', 'Brightness and color are mixed into one wire (the yellow plug). Color blurs, fine patterns are mistaken for color, and checkerboards blend. Brightness detail near the color wave (around 3.58 MHz) is also lost.'),
   rf: L('アンテナの線でテレビに送る。ビデオ端子よりさらににじみ、雪のようなノイズがのります（ノイズは演出に近い）。', 'Sent through the antenna cable. Even blurrier than composite, with snow-like noise (the noise is closer to a visual effect).')
 };
-// しくみ（効き目の大きい順）
+// しくみ（効き目の大きい順）。short はいつも出す1行、text は最後にさわった項目だけ開く
 const MECH = [
-  { id: 'scan', name: L('走査線', 'Scan lines'), badge: L('推定あり', 'partly estimated'), text: L('電子ビームが1行ずつ横になぞります。1行は太さのある光の帯で、行のあいだに暗いすきま。明るい行ほど帯が太ります（太り方は推定）。', 'The electron beam traces the screen one line at a time. Each line is a band of light with thickness, with dark gaps between lines. Brighter lines get thicker (how much is estimated).') },
-  { id: 'signal', name: L('信号のにじみ', 'Signal blur'), badge: L('規格＋推定', 'standard + estimate'), text: L('下の「つなぎ方」のにじみ。切るとRGBと同じになります。色は細かく送れないので横ににじみ、細かい模様は色にまちがえられます。', 'The blur from the “Connection” below. Turning it off is the same as RGB. Color cannot be sent in fine detail, so it smears sideways, and fine patterns are mistaken for color.') },
-  { id: 'mask', name: L('赤緑青の光る点', 'Red, green and blue dots'), badge: L('推定', 'estimate'), text: L('画面は赤・緑・青の小さな光る点の集まり。寄ると1つずつ見えます。大きさは14型くらいのテレビを想定した推定です。光る点の所は明るく、すきまは暗くしますが、いまの画面は本物ほど明るく光れないので、白は光の量で液晶の約45%の明るさになります（すきまも少し光らせています。本物はほぼ黒）。', 'The screen is made of tiny glowing red, green and blue dots. Zoom in to see them one by one. Their size is an estimate for a TV of about 14 inches. The dots are made brighter and the gaps darker, but your screen cannot shine as brightly as real dots, so white comes out at about 45% of the LCD brightness in amount of light (the gaps also glow a little; on a real CRT they are nearly black).') },
-  { id: 'gamma', name: L('明るさの曲がり', 'Brightness curve'), badge: L('基準＋推定', 'reference + estimate'), text: L('ブラウン管は、暗いところがより暗く出ます。ここではガンマ 2.4（ITU-R BT.1886。2011 年に決めた、ブラウン管に似せた基準の曲線）。当時の実物はテレビによってばらつきます。いまの画面は約2.2。', 'A CRT shows dark areas even darker. This uses gamma 2.4 (ITU-R BT.1886, a reference curve set in 2011 to match CRTs). Real sets of the time varied. Screens today use about 2.2.') },
-  { id: 'bloom', name: L('光のにじみ', 'Glow'), badge: L('推定', 'estimate'), text: L('明るいところの光が前のガラスの中で散って、まわりがほんのり明るくなります（光の 12% が散るとした推定。光の合計は変えない）。', 'Light from bright areas scatters inside the front glass, so the surroundings glow softly (an estimate: 12% of the light scatters; the total light stays the same).') },
-  { id: 'curve', name: L('画面のふくらみ', 'Curved glass'), badge: L('推定', 'estimate'), text: L('ガラスの面が丸くふくらんでいて、はしが少し曲がって見えます。', 'The glass bulges outward, so the edges look slightly bent.') }
+  { id: 'scan', short: L('1行ずつなぞる光の帯と、そのあいだの暗いすきま（太り方は推定）。', 'Bands of light, one per line, with dark gaps (how they widen is estimated).'), name: L('走査線', 'Scan lines'), badge: L('推定あり', 'partly estimated'), text: L('電子ビームが1行ずつ横になぞります。1行は太さのある光の帯で、行のあいだに暗いすきま。明るい行ほど帯が太ります（太り方は推定）。', 'The electron beam traces the screen one line at a time. Each line is a band of light with thickness, with dark gaps between lines. Brighter lines get thicker (how much is estimated).') },
+  { id: 'signal', short: L('つなぎ方による色のにじみ。切ると RGB と同じ（帯域は推定）。', 'Color blur from the connection. Off is the same as RGB (bandwidths estimated).'), name: L('信号のにじみ', 'Signal blur'), badge: L('規格＋推定', 'standard + estimate'), text: L('上の「つなぎ方」のにじみ。切るとRGBと同じになります。色は細かく送れないので横ににじみ、細かい模様は色にまちがえられます。', 'The blur from the “Connection” above. Turning it off is the same as RGB. Color cannot be sent in fine detail, so it smears sideways, and fine patterns are mistaken for color.') },
+  { id: 'mask', short: L('赤・緑・青の小さな光る点。寄ると見えます（大きさは推定。液晶より暗く見えます）。', 'Tiny red, green and blue dots. Zoom in to see them (size estimated; looks darker than the LCD).'), name: L('赤緑青の光る点', 'Red, green and blue dots'), badge: L('推定', 'estimate'), text: L('画面は赤・緑・青の小さな光る点の集まり。寄ると1つずつ見えます。大きさは14型くらいのテレビを想定した推定です。光る点の所は明るく、すきまは暗くしますが、いまの画面は本物ほど明るく光れないので、白は光の量で液晶の約45%の明るさになります（すきまも少し光らせています。本物はほぼ黒）。', 'The screen is made of tiny glowing red, green and blue dots. Zoom in to see them one by one. Their size is an estimate for a TV of about 14 inches. The dots are made brighter and the gaps darker, but your screen cannot shine as brightly as real dots, so white comes out at about 45% of the LCD brightness in amount of light (the gaps also glow a little; on a real CRT they are nearly black).') },
+  { id: 'gamma', short: L('暗いところがより暗く出ます（ガンマ 2.4）。', 'Dark areas come out darker (gamma 2.4).'), name: L('明るさの曲がり', 'Brightness curve'), badge: L('基準＋推定', 'reference + estimate'), text: L('ブラウン管は、暗いところがより暗く出ます。ここではガンマ 2.4（ITU-R BT.1886。2011 年に決めた、ブラウン管に似せた基準の曲線）。当時の実物はテレビによってばらつきます。いまの画面は約2.2。', 'A CRT shows dark areas even darker. This uses gamma 2.4 (ITU-R BT.1886, a reference curve set in 2011 to match CRTs). Real sets of the time varied. Screens today use about 2.2.') },
+  { id: 'bloom', short: L('明るいところのまわりがほんのり光ります（強さは推定）。', 'A soft glow around bright areas (strength estimated).'), name: L('光のにじみ', 'Glow'), badge: L('推定', 'estimate'), text: L('明るいところの光が前のガラスの中で散って、まわりがほんのり明るくなります（光の 12% が散るとした推定。光の合計は変えない）。', 'Light from bright areas scatters inside the front glass, so the surroundings glow softly (an estimate: 12% of the light scatters; the total light stays the same).') },
+  { id: 'curve', short: L('ガラスがふくらみ、はしが少し曲がって見えます（強さは推定）。', 'The glass bulges, so the edges bend a little (strength estimated).'), name: L('画面のふくらみ', 'Curved glass'), badge: L('推定', 'estimate'), text: L('ガラスの面が丸くふくらんでいて、はしが少し曲がって見えます。', 'The glass bulges outward, so the edges look slightly bent.') }
 ];
 const PICS = {
   retro: { cap: L('当時の家庭用ゲーム機ふうの画面（自作）。細い文字や輪郭は、ビデオ端子だと色がにじみ、夕焼けの帯のさかいのチェック模様はまざって見えます。', 'A screen in the style of home game consoles of the time (drawn for this app). Thin letters and outlines smear into color over composite, and the checkerboard where the sunset bands meet blends together.'), focus: [127, 172] },
@@ -39,7 +39,7 @@ const FILE_NOTE = L('自分の画像（PNG など）はこの端末の中だけ�
 const S = {
   pic: 'retro', screen: 'shadow', link: 'composite', inter: 0, frame: 'avg', par: 'tv',
   on: { scan: true, signal: true, mask: true, gamma: true, bloom: true, curve: true },
-  userPic: null, current: null, sigKey: ''
+  userPic: null, current: null, sigKey: '', mechOpen: null
 };
 
 let R = null;
@@ -121,7 +121,7 @@ function draw() {
   if (S.on.scan && rowPx < 2.3) hud += L('寄ると走査線が見えます', 'Zoom in to see the scan lines');
   else if (S.on.mask && cellCss * dprNow / geom(picture()).rowH < 3.5) {
     const k = 3 / (cellCss * dprNow / geom(picture()).rowH);   // 3ピクセルに合わせたことで、本物の何倍の粗さか
-    hud += L(`光る点は画面の3ピクセルに合わせた近似（本物の約${k.toFixed(1)}倍の粗さ。寄ると本物の大きさ）`, `Dots drawn at 3 screen pixels (about ${k.toFixed(1)}× coarser than real; zoom in for real size)`);
+    hud += L(`光る点は近似・本物の約${k.toFixed(1)}倍の粗さ`, `Dots approximated, ~${k.toFixed(1)}× coarser than real`);
   }
   else if (S.on.mask) hud += L(`1ドットの横に光る点 ${(scr.triads * parValue() * geom(picture()).rowH).toFixed(1)}組（推定）`, `${(scr.triads * parValue() * geom(picture()).rowH).toFixed(1)} sets of dots across 1 pixel (estimate)`);
   $('hud').innerHTML = hud;
@@ -153,7 +153,7 @@ function segment(id, attr, get, set) {
 }
 const paints = [
   segment('picSeg', 'pic', () => S.pic, v => { S.pic = v; }),
-  segment('scrSeg', 'scr', () => S.screen, v => { S.screen = v; }),
+  segment('scrSeg', 'scr', () => S.screen, v => { S.screen = v; S.on.mask = true; }),   // 光る点を切ったままだと変わらないので入れる
   segment('linkSeg', 'link', () => S.link, v => { S.link = v; S.on.signal = true; }),
   segment('interSeg', 'inter', () => S.inter, v => { S.inter = Number(v); }),
   segment('frameSeg', 'frame', () => S.frame, v => { S.frame = v; }),
@@ -163,18 +163,26 @@ const paints = [
 ];
 function buildMech() {
   $('mech').innerHTML = MECH.map(m => `<li><label><input type="checkbox" data-m="${m.id}" aria-label="${m.name}">${m.name}<span class="badge">${m.badge}</span></label><span></span>
-    <button class="only" data-only="${m.id}">${L('だけ', 'Only')}</button><p>${m.text}</p></li>`).join('');
-  $('mech').addEventListener('change', e => { const k = e.target.dataset.m; if (k) { S.on[k] = e.target.checked; refresh(); } });
+    <button class="only" data-only="${m.id}">${L('だけ', 'Only')}</button><p class="short">${m.short}</p><p class="full">${m.text}</p></li>`).join('');
+  // 長い説明の開閉で、押した行が指の下からずれないように位置を保つ（PC は右の列、スマホはページがスクロールする）
+  const keep = (el, fn) => {
+    const y0 = el.getBoundingClientRect().top; fn();
+    const d = el.getBoundingClientRect().top - y0; if (!d) return;
+    const pn = $('panel'); if (pn.scrollHeight > pn.clientHeight + 1 && getComputedStyle(pn).overflowY === 'auto') pn.scrollTop += d; else window.scrollBy(0, d);
+  };
+  $('mech').addEventListener('change', e => { const k = e.target.dataset.m; if (k) keep(e.target.closest('li'), () => { S.on[k] = e.target.checked; S.mechOpen = k; refresh(); }); });
   $('mech').addEventListener('click', e => {
     const k = e.target.dataset.only; if (!k) return;
-    for (const m of MECH) S.on[m.id] = m.id === k;
-    refresh();
+    keep(e.target.closest('li'), () => { for (const m of MECH) S.on[m.id] = m.id === k; S.mechOpen = k; refresh(); });
   });
-  $('allOn').addEventListener('click', () => { for (const m of MECH) S.on[m.id] = true; refresh(); });
+  // 押すと自分が消えるので、フォーカスを最初の項目へ移す
+  $('allOn').addEventListener('click', () => { for (const m of MECH) S.on[m.id] = true; $('mech').querySelector('input').focus(); refresh(); });
 }
 function refresh() {
   paints.forEach(p => p());
   $('mech').querySelectorAll('input[data-m]').forEach(i => { i.checked = S.on[i.dataset.m]; });
+  $('mech').querySelectorAll('li').forEach(li => { li.classList.toggle('open', li.querySelector('[data-m]').dataset.m === S.mechOpen); });
+  $('allOn').hidden = MECH.every(m => S.on[m.id]);   // 1つでも切っているときだけ
   $('linkNote').textContent = LINK_NOTE[S.link] + (S.on.signal ? '' : L('（いまは「信号のにじみ」を切っています）', ' (Signal blur is off right now.)'));
   $('cap').textContent = PICS[S.pic].cap;
   // 自分の画像: えらんでいるときは「自分の画像…」を光らせ、何をしたかの説明と「1ドット＝」を出す。ほかの絵にしたら説明をもとに戻す
