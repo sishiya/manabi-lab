@@ -63,11 +63,13 @@
     return (normCache = s);
   }
   // 周波数の分布 S(f) [m²/Hz]
+  let sfT = NaN, sfD = 0;   // 前と同じ Tp なら分母を覚えた値で（値は同じ）
   function Sf(f, Hm0, Tp) {
     if (!(Hm0 > 0) || !(Tp > 0)) return 0;
     const fp = 1 / Tp, m0 = Hm0 * Hm0 / 16;
     // ∫ shape(f, fp) df = fp^-4 × shapeIntegral()
-    return m0 * jonswapShape(f, fp) / (Math.pow(fp, -4) * shapeIntegral());
+    if (Tp !== sfT) { sfT = Tp; sfD = Math.pow(fp, -4) * shapeIntegral(); }
+    return m0 * jonswapShape(f, fp) / sfD;
   }
 
   // 向きの広がり cos^{2s}(θ/2)（Mitsuyasu の形。s_max = 10 は風の波: Goda & Suzuki 1975）
@@ -77,9 +79,12 @@
     x -= 1; let a = c[0]; const t = x + 7.5; for (let i = 1; i < 9; i++) a += c[i] / (x + i);
     return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
   }
+  // 係数（s だけで決まる）は、前と同じ s なら覚えた値を使う（短い波では s が 0.5 に張りついて同じ値が続く。値は同じ）
+  let spS = NaN, spN = 0;
   function spread(th, s) {
     th = Math.atan2(Math.sin(th), Math.cos(th));
-    return Math.exp(lgamma(s + 1) - lgamma(s + 0.5)) / (2 * Math.sqrt(Math.PI)) * Math.pow(Math.cos(th / 2), 2 * s);
+    if (s !== spS) { spS = s; spN = Math.exp(lgamma(s + 1) - lgamma(s + 0.5)) / (2 * Math.sqrt(Math.PI)); }
+    return spN * Math.pow(Math.cos(th / 2), 2 * s);
   }
   // 短い波（Elfouhaily ほか 1997「ECKV」）: 長い波の分布はピークより短い側を exp[−(Ω/√10)(√(k/kp) − 1)] でなだらかに打ち切り、
   // 風で強さが変わる短い波の曲率 B_h = 0.5 α_m (c_m/c) F_m を足す。α_m = 0.01[1 + ln(u*/c_m)]（u* ≤ c_m）／0.01[1 + 3 ln(u*/c_m)]、

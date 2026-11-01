@@ -2,6 +2,9 @@
 'use strict';
 
 const $ = id => document.getElementById(id);
+// 同じ内容なら書きかえない（書きかえると、毎コマ配置の計算がやりなおしになる。できる画面は同じ）
+const setText = (el, s) => { if (el.textContent !== s) el.textContent = s; };
+const setHTML = (el, s) => { if (el.__html !== s) { el.__html = s; el.innerHTML = s; } };
 const SPEEDS = [
   { v: 1, label: '実際' }, { v: 10, label: '10倍' }, { v: 60, label: '1分<span class="ps">/秒</span>' }, { v: 600, label: '10分<span class="ps">/秒</span>' }, { v: 3600, label: '1時間<span class="ps">/秒</span>' },
 ];
@@ -125,15 +128,15 @@ function syncUI(S) {
 // 毎コマの数字
 let lastPlaces = 0;
 function updateReadout(S) {
-  $('clock').textContent = fmtClock(S.t);
+  setText($('clock'), fmtClock(S.t));
   const a = airborne();
-  $('roFine').textContent = fmtNum(a.fine);
-  $('roCoarse').textContent = fmtNum(a.coarse);
+  setText($('roFine'), fmtNum(a.fine));
+  setText($('roCoarse'), fmtNum(a.coarse));
   const bp = byPlace();
   const pl = bp[S.selPlace] || bp['床'];
-  $('roPlace').textContent = S.selPlace || '床';
-  $('roGm2').textContent = pl ? fmtNum(pl.gm2, 2) : '–';
-  $('roMix').innerHTML = pl ? mixHTML(pl.src) : '';
+  setText($('roPlace'), S.selPlace || '床');
+  setText($('roGm2'), pl ? fmtNum(pl.gm2, 2) : '–');
+  setHTML($('roMix'), pl ? mixHTML(pl.src) : '');
   // ルーペの中の数
   const lc = $('loupe');
   const f = S.sel && S.sel.f >= 0 ? S.sel.f : -1;
@@ -143,11 +146,11 @@ function updateReadout(S) {
     for (const it of L.items) cnt[it.k] = (cnt[it.k] || 0) + it.n;
     const parts = [['fiber', '繊維'], ['skin', '皮ふ'], ['soil', '土'], ['pollen', '花粉']].map(([k, n]) => cnt[k] >= 0.5 ? `${n} ${cnt[k] < 10 ? Math.round(cnt[k]) : Math.round(cnt[k]).toLocaleString()}` : '').filter(Boolean);
     const all = ['fiber', 'skin', 'soil', 'pollen'].reduce((a, k) => a + (cnt[k] || 0), 0) * 100 / (LOUPE_MM * LOUPE_MM);
-    $('roCount').textContent = parts.length ? `ルーペ（1mm四方）の中: ${parts.join('・')} こ。1cm四方なら 約${Math.round(all).toLocaleString()}こ` : 'ルーペの中: まだ粒はない';
-  } else $('roCount').textContent = '';
+    setText($('roCount'), parts.length ? `ルーペ（1mm四方）の中: ${parts.join('・')} こ。1cm四方なら 約${Math.round(all).toLocaleString()}こ` : 'ルーペの中: まだ粒はない');
+  } else setText($('roCount'), '');
   // 顕微鏡の絵の説明
   const mc = $('mcap'), on = microAlpha() > 0.3;
-  mc.hidden = !on; if (on && lastPlaces % 4 === 0) mc.innerHTML = microCaption() + '<br><small>' + (VIEW.note && performance.now() - VIEW.noteT < 3000 ? VIEW.note : '粒にさわると名前が出る') + '</small>';
+  mc.hidden = !on; if (on && lastPlaces % 4 === 0) setHTML(mc, microCaption() + '<br><small>' + (VIEW.note && performance.now() - VIEW.noteT < 3000 ? VIEW.note : '粒にさわると名前が出る') + '</small>');
   $('zhint').hidden = VIEW.z > 1.5;
   $('mjump').hidden = !on;
   // 場所の表（重いので 4コマに1回）
@@ -157,8 +160,8 @@ function updateReadout(S) {
     const wall = wallish.length ? wallish.reduce((s, o) => ({ m: s.m + o.m, n: s.n + o.n, src: s.src.map((v, i) => v + o.src[i]) }), { m: 0, n: 0, src: new Float64Array(NS) }) : null;
     let html = rows.map(([k, o]) => `<div class="pl${k === S.selPlace ? ' sel' : ''}" data-p="${k}"><span>${k}</span><div class="mix">${mixHTML(o.src)}</div><b>${fmtNum(o.gm2, 2)}</b></div>`).join('');
     if (wall) html += `<div class="pl" data-p="壁"><span>壁・天井</span><div class="mix">${mixHTML(wall.src)}</div><b>${fmtNum(wall.m * 1e-6 / (wall.n * FACE_AREA), 2)}</b></div>`;
-    $('places').innerHTML = html + '<p class="cap">単位 g/m²。色は出どころの割合（重さ）。</p>';
-    $('now').innerHTML = nowText(S, a);
+    setHTML($('places'), html + '<p class="cap">単位 g/m²。色は出どころの割合（重さ）。</p>');
+    setHTML($('now'), nowText(S, a));
   }
 }
 

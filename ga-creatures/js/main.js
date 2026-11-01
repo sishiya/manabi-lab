@@ -121,7 +121,8 @@ function render() {
     const v = fitCanvas($('view'));
     drawScene(v.ctx, v.w, v.h, VIEW);
     const S = VIEW.sim;
-    $('wLabel').textContent = VIEW.label + L('・', ' · ') + spName(speciesKey(VIEW.g)) + (VIEW.later ? L(`（いまは第${POP.gen}世代。走り終えたら最新の1位へ）`, ` (now gen ${POP.gen}; switches to the latest best after this run)`) : '');
+    const wl = VIEW.label + L('・', ' · ') + spName(speciesKey(VIEW.g)) + (VIEW.later ? L(`（いまは第${POP.gen}世代。走り終えたら最新の1位へ）`, ` (now gen ${POP.gen}; switches to the latest best after this run)`) : '');
+    if ($('wLabel').textContent !== wl) $('wLabel').textContent = wl;   // 同じなら書きかえない（配置の計算のやりなおしを減らす）
     $('wTime').textContent = L(`${Math.min(TRIAL, S.t).toFixed(1)} / ${TRIAL} 秒　${fm(centerX(S) - S.x0)}`, `${Math.min(TRIAL, S.t).toFixed(1)} / ${TRIAL} s  ${fm(centerX(S) - S.x0)}`);
     const gq = fitCanvas($('genome'));
     drawGenome(gq.ctx, gq.w, gq.h, VIEW.g, wrap1(S.t / VIEW.g.period), S.contract, VIEW.color);

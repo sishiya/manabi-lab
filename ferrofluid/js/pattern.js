@@ -90,30 +90,57 @@ function updateField(src, f) {
 }
 
 // ---- FFT（2 のべき乗、複素数、その場で）----
-function fft1(re, im, off, stride, n, inv) {
+// 入れかえの組と回転因子は、毎回の計算と同じ手順（回転因子は掛けて進める漸化式）で一度だけ表にしておく。
+// 数も計算の順もまえと同じなので、結果はビット単位で同じ（2026-11-01 に軽くした。前は毎回その場で計算していた）。
+const fftTab = {};
+function fftTables(n, inv) {
+  const key = n + (inv ? 'i' : 'f');
+  if (fftTab[key]) return fftTab[key];
+  const sw = [];
   for (let i = 1, j = 0; i < n; i++) {
     let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit;
-    if (i < j) {
-      const a = off + i * stride, b = off + j * stride;
-      let t = re[a]; re[a] = re[b]; re[b] = t; t = im[a]; im[a] = im[b]; im[b] = t;
-    }
+    if (i < j) sw.push(i, j);
   }
+  const twr = new Float64Array(n), twi = new Float64Array(n);   // len ごとに len/2 個、len = 2, 4, … の順に並べる（合計 n−1 個）
+  let o = 0;
   for (let len = 2; len <= n; len <<= 1) {
     const ang = (inv ? 2 : -2) * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+    let cr = 1, ci = 0;
+    for (let k = 0; k < len / 2; k++) {
+      twr[o + k] = cr; twi[o + k] = ci;
+      const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t;
+    }
+    o += len / 2;
+  }
+  return (fftTab[key] = { sw: Int32Array.from(sw), twr, twi });
+}
+// off から続けて n 個（stride 1）
+function fft1(re, im, off, n, inv) {
+  const { sw, twr, twi } = fftTables(n, inv);
+  for (let q = 0; q < sw.length; q += 2) {
+    const a = off + sw[q], b = off + sw[q + 1];
+    let t = re[a]; re[a] = re[b]; re[b] = t; t = im[a]; im[a] = im[b]; im[b] = t;
+  }
+  for (let len = 2, o = 0; len <= n; o += len >> 1, len <<= 1) {
+    const h = len >> 1;
     for (let i = 0; i < n; i += len) {
-      let cr = 1, ci = 0;
-      for (let k = 0; k < len / 2; k++) {
-        const a = off + (i + k) * stride, b = off + (i + k + len / 2) * stride;
+      for (let k = 0; k < h; k++) {
+        const a = off + i + k, b = a + h, cr = twr[o + k], ci = twi[o + k];
         const xr = re[b] * cr - im[b] * ci, xi = re[b] * ci + im[b] * cr;
         re[b] = re[a] - xr; im[b] = im[a] - xi; re[a] += xr; im[a] += xi;
-        const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t;
       }
     }
   }
 }
+const colRe = new Float64Array(N), colIm = new Float64Array(N);
 function fft2(re, im, inv) {
-  for (let j = 0; j < N; j++) fft1(re, im, j * N, 1, N, inv);
-  for (let i = 0; i < N; i++) fft1(re, im, i, N, N, inv);
+  for (let j = 0; j < N; j++) fft1(re, im, j * N, N, inv);
+  // 縦の列は、いったん連続した配列に写して計算し、もどす（飛び飛びに読むより速い。値は同じ）
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) { colRe[j] = re[j * N + i]; colIm[j] = im[j * N + i]; }
+    fft1(colRe, colIm, 0, N, inv);
+    for (let j = 0; j < N; j++) { re[j * N + i] = colRe[j]; im[j * N + i] = colIm[j]; }
+  }
   if (inv) { const s = 1 / NN; for (let k = 0; k < NN; k++) { re[k] *= s; im[k] *= s; } }
 }
 
@@ -138,11 +165,13 @@ function setupLin(f) {
   }
   linFor = f;
 }
+// 皿のふちからの重み（場所だけで決まるので一度だけ計算しておく）
+const EDGE = new Float64Array(NN);
+for (let k = 0; k < NN; k++) EDGE[k] = Math.min(1, Math.max(0, (DISH.R - Math.hypot(gx(k % N), gx((k / N) | 0))) / 3));
 function epsEff(k) {
   let e = F.eps[k]; if (e > SH.EPSMAX) e = SH.EPSMAX;
   // 液がない所・皿のふちの近くはトゲが立たない（ふちから 3 mm でなめらかに）
-  const r = Math.hypot(gx(k % N), gx((k / N) | 0));
-  const edge = Math.min(1, Math.max(0, (DISH.R - r) / 3));
+  const edge = EDGE[k];
   const wet = Math.min(1, F.h0[k] / 0.4);
   const m = edge * wet * Math.max(0, 1 - F.dent[k] / 1.5);   // 指で押さえている所はトゲが立たない
   return e * m + (-1) * (1 - m);

@@ -42,11 +42,14 @@ function stageSub(t) {
   return s.sub;
 }
 
+// 同じ内容なら書きかえない（書きかえると、毎コマ配置の計算がやりなおしになる。できる画面は同じ）
+const setText = (el, s) => { if (el.textContent !== s) el.textContent = s; };
+const setHTML = (el, s) => { if (el.__html !== s) { el.__html = s; el.innerHTML = s; } };
 function updatePanel(t) {
   const st = stageAt(t);
-  $('stageName').innerHTML = `<b>${st.name}</b><span>${stageSub(t)}</span>`;
-  $('clock').textContent = fmtClock(t);
-  $('time').value = Math.round(UI.u * 1000);
+  setHTML($('stageName'), `<b>${st.name}</b><span>${stageSub(t)}</span>`);
+  setText($('clock'), fmtClock(t));
+  const tv = String(Math.round(UI.u * 1000)); if ($('time').value !== tv) $('time').value = tv;
   // what is happening now
   const evs = EVENTS.filter(e => t >= e.t0 && t <= e.t1);
   const key = evs.map(e => e.title).join('|');

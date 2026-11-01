@@ -32,7 +32,14 @@ function header(g, txt) {
 // 昼の窓辺（10000 lx）で 1回あたり N0 個とした N0 は目安: ハエの個眼 1万個、クモの前の大きな目 1千個（前の大きな目は感度が低い: Shepeleva 2022）
 const N0 = { fly: 1e4, spider: 1e3 };
 function rnd(i, j) { let x = (i * 374761393 + j * 668265263) | 0; x = (x ^ (x >>> 13)) * 1274126177; x ^= x >>> 16; return ((x >>> 0) % 100000) / 100000; }
-function gauss(i, j) { const u = Math.max(1e-6, rnd(i, j)), v = rnd(j + 7, i + 3); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+function gauss0(i, j) { const u = Math.max(1e-6, rnd(i, j)), v = rnd(j + 7, i + 3); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+// 同じ (i, j) は同じ値なので覚えておく（j は 10ms ごとの番号。止めているとき・スローのときは同じ j が続き、毎コマの計算がいらない）
+let gC = new Float64Array(0), gJ = new Float64Array(0);
+function gauss(i, j) {
+  if (i >= gC.length) { const n = Math.max(i + 1, gC.length * 2, 4096); const c = new Float64Array(n), s = new Float64Array(n).fill(NaN); c.set(gC); s.set(gJ); gC = c; gJ = s; }
+  if (gJ[i] === j) return gC[i];
+  gJ[i] = j; return (gC[i] = gauss0(i, j));
+}
 const noisy = (v, N, i, j) => { const n = Math.max(1e-3, v * N); return Math.max(0, (n + Math.sqrt(n) * gauss(i, j)) / N); };
 function dimOf(lux) { return Math.max(0.25, Math.min(1, 0.4 + 0.15 * Math.log10(lux + 1))); }   // 画面の暗さ（見た目の目安）
 // 警戒度の色: 落ち着いている（青）→ 気づきかけ（黄）→ 気づいた（赤）
