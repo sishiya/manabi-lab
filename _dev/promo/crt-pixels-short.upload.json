@@ -1,0 +1,32 @@
+{
+  "file": "_dev/promo/out/crt-pixels-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/crt-pixels-short.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-03T20:05:00+09:00",
+  "captions": {
+    "en": "_dev/promo/out/crt-pixels-short.en.srt"
+  },
+  "title": "同じドット絵、ブラウン管だとこう見えた。走査線と光る点を計算 #Shorts",
+  "description": "同じドット絵を、まんなかの仕切りで液晶とブラウン管に分けて見くらべる。テレビの信号のにじみ・電子ビームの走査線・赤緑青の光る点・明るさの曲がり・光のにじみ・画面のふくらみを、しくみごとに計算します。つなぎ方（RGB・S端子・ビデオ端子・アンテナ線）や画面の種類を切りかえ、しくみを1つずつ入り切りでき、自分の画像もこの端末の中だけで試せます。ブラウザのアプリ「ブラウン管のドット絵」から。\n\nアプリ: https://sishiya.github.io/manabi-lab/crt-pixels/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nTimothy Lottes「crt-lottes」（パブリックドメインの CRT シェーダー。走査線・ブルーム・マスク・ふくらみの考え方の土台。コードは書き直した）https://github.com/libretro/glsl-shaders/blob/master/crt/shaders/crt-lottes.glsl\nWikipedia「NTSC」（色副搬送波 3.579545MHz、放送の I 1.3MHz・Q 0.4MHz）\nWikipedia「YIQ」（FCC の NTSC の式。一次資料の FCC の基準は読めていないので、Wikipedia の引用で確かめた）\nITU-R BT.1886（2011）ブラウン管に似せた明るさの曲がりの基準（ガンマ 2.4）\nNESdev Wiki「NTSC video」「Overscan」（1ドットの時間の刻み・1ドットの縦横比 8:7。当時の機械の一例）\n絵はすべてこのアプリで描いたもので、実在のゲームの絵は使っていません。光る点の大きさ（14型くらいのテレビを想定）・光のにじみの強さ・信号の帯域の一部は推定です。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#ブラウン管 #ドット絵 #レトロゲーム #まなびラボ",
+  "tags": [
+    "ブラウン管のドット絵",
+    "ブラウン管",
+    "ドット絵",
+    "レトロゲーム",
+    "走査線",
+    "CRT",
+    "NTSC",
+    "ビデオ端子",
+    "Shorts",
+    "まなびラボ",
+    "しし屋",
+    "Pixel Art on a CRT",
+    "CRT shader"
+  ],
+  "localizations": {
+    "en": {
+      "title": "The Same Pixel Art on a CRT: Scan Lines and Glowing Dots, Calculated #Shorts",
+      "description": "From \"Pixel Art on a CRT\", a browser app. The same pixel art, split by a divider into an LCD and a CRT. Signal blur, the electron beam's scan lines, the red, green and blue glowing dots, the brightness curve, the glow and the curved glass are each calculated. Switch connections (RGB, S-Video, composite, RF) and screen types, turn each effect on and off, and try your own image, processed only on your device.\n\nApp (switch the app to English with the EN button): https://sishiya.github.io/manabi-lab/crt-pixels/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMain sources:\nTimothy Lottes, \"crt-lottes\" (a public-domain CRT shader; the basis for the scan lines, bloom, mask and curvature; the code was rewritten) https://github.com/libretro/glsl-shaders/blob/master/crt/shaders/crt-lottes.glsl\nWikipedia, \"NTSC\" (color subcarrier 3.579545 MHz; broadcast I 1.3 MHz, Q 0.4 MHz)\nWikipedia, \"YIQ\" (FCC NTSC equations; we could not read the original FCC rules, so this was checked against Wikipedia's citation)\nITU-R BT.1886 (2011), a reference brightness curve modeled on CRTs (gamma 2.4)\nNESdev Wiki, \"NTSC video\" and \"Overscan\" (pixel timing and the 8:7 pixel aspect ratio; one example of a machine of the time)\nAll pictures were drawn for this app; no pictures from real games are used. The size of the glowing dots (for a TV of about 14 inches), the strength of the glow and some signal bandwidths are estimates.\n\nMusic: original sounds synthesized by code.\n\n#CRT #PixelArt #RetroGaming"
+    }
+  }
+}
