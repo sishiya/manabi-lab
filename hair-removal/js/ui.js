@@ -2,6 +2,10 @@
 'use strict';
 
 const $ = id => document.getElementById(id);
+// 同じ内容なら書きかえない（書きかえると、毎コマ配置の計算がやりなおしになる。できる画面は同じ）
+const putText = (el, s) => { s = String(s); const c = el.firstChild; if (s ? !(c && c === el.lastChild && c.nodeType === 3 && c.data === s) : el.firstChild) { el.__html = null; el.textContent = s; } };
+const putHTML = (el, s) => { s = String(s); if (el.__html !== s) { el.__html = s; el.innerHTML = s; } };
+const putVal = (el, v) => { v = String(v); if (el.value !== v) el.value = v; };
 
 function buildControls(S, on) {
   const site = $('site');

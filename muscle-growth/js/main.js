@@ -1,6 +1,10 @@
 // Panel, time bar, loop, debug handle (window.__mg).
 
 const $ = id => document.getElementById(id);
+// 同じ内容なら書きかえない（書きかえると、毎コマ配置の計算がやりなおしになる。できる画面は同じ）
+const putText = (el, s) => { s = String(s); const c = el.firstChild; if (s ? !(c && c === el.lastChild && c.nodeType === 3 && c.data === s) : el.firstChild) { el.__html = null; el.textContent = s; } };
+const putHTML = (el, s) => { s = String(s); if (el.__html !== s) { el.__html = s; el.innerHTML = s; } };
+const putVal = (el, v) => { v = String(v); if (el.value !== v) el.value = v; };
 const UI = { t: 0, playing: false, speed: 24, lastNowKey: '', cond: { ...DEFAULT_COND }, R: null, ghost: null, prevSum: null, err: undefined };
 const SPEEDS = [['6時間', 6], ['1日', 24], ['1週', 168]]; // hours per second
 const TAG = { sure: '確か', est: '推定', art: '演出' };
@@ -38,9 +42,9 @@ function draw() {
 
 function updatePanel(t) {
   const R = UI.R, st = stageText(R, t);
-  $('stageName').innerHTML = `<b>${st.name}</b><span>${st.sub}</span>`;
-  $('clock').textContent = fmtClock(t);
-  $('time').value = t;
+  putHTML($('stageName'), `<b>${st.name}</b><span>${st.sub}</span>`);
+  putText($('clock'), fmtClock(t));
+  putVal($('time'), t);
   const evs = nowEvents(R, t);
   const key = evs.map(e => e.title + e.text).join('|');
   if (key !== UI.lastNowKey) {

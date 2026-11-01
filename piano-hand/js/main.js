@@ -1,6 +1,10 @@
 // 画面の操作と、毎フレームの更新。デバッグ用の窓口は window.__ph（例外は window.__phErr）
 'use strict';
 const $ = id => document.getElementById(id);
+// 同じ内容なら書きかえない（書きかえると、毎コマ配置の計算がやりなおしになる。できる画面は同じ）
+const putText = (el, s) => { s = String(s); const c = el.firstChild; if (s ? !(c && c === el.lastChild && c.nodeType === 3 && c.data === s) : el.firstChild) { el.__html = null; el.textContent = s; } };
+const putHTML = (el, s) => { s = String(s); if (el.__html !== s) { el.__html = s; el.innerHTML = s; } };
+const putVal = (el, v) => { v = String(v); if (el.value !== v) el.value = v; };
 const TOUCH = matchMedia('(pointer:coarse)').matches; // タッチ端末では、キー・ホイールの案内を出さない
 const S = { plan: null, checks: null, t: -1, playing: false, speed: 1, lastNow: 0, prevT: -1, extra: [] };
 const OPT = { notes: true, keyLabels: true, noteNums: true, fingerNums: false, targets: false, ghost: false, bones: false, xray: false, muscles: false };
@@ -277,8 +281,8 @@ function step() {
   renderPose(plan, poses, OPT);
   // 表示
   const span = tEnd() - tStart();
-  if (document.activeElement !== $('time')) $('time').value = Math.round(1000 * (t - tStart()) / span);
-  $('clock').textContent = t.toFixed(2) + L(' 秒', ' s');
+  if (document.activeElement !== $('time')) putVal($('time'), Math.round(1000 * (t - tStart()) / span));
+  putText($('clock'), t.toFixed(2) + L(' 秒', ' s'));
   document.querySelectorAll('#fgList span').forEach(el => { const t0 = +el.dataset.t; el.classList.toggle('now', t0 <= t + 0.001 && t0 > t - 0.25); });
   const lims = [], far = [], msgs = [];
   poses.forEach((pose, hi) => {
@@ -294,8 +298,8 @@ function step() {
   if (far.length) msgs.unshift(L('届かない: ', "Can't reach: ") + '<b>' + far.join(L('、', ', ')) + '</b>');
   if (lims.length) msgs.push(L('関節の限界: ', 'Joint limit: ') + '<b>' + lims.join(L('、', ', ')) + '</b>');
   // 再生中は「この瞬間」の知らせを出さない（一瞬で切りかわって読めず、行数が変わって画面ががたついた）。止めたとき・1コマずつのときに出す
-  $('hint').innerHTML = msgs.length && !S.playing ? L('この瞬間 — ', 'Right now — ') + msgs.join(L(' ／ ', ' / ')) : TOUCH ? L('ドラッグで向きを変え、2本指のピンチで寄れます（一人称では体を前後に）。時刻のつまみで1コマずつ、速さは再生ボタンの横で変えられます。', "Drag to turn, pinch with two fingers to zoom (in POV it leans you forward and back). Step with the time slider; set the speed next to Play.")
-    : L('ドラッグで向きを変え、ホイールや2本指のピンチで寄れます（一人称では体を前後に）。時刻のつまみ・矢印キーで1コマずつ、[ ] キーで速さを変えられます。', "Drag to turn the view, use the wheel or a two-finger pinch to zoom (in POV, the pianist's view, it leans you forward and back). Step frame by frame with the time slider or arrow keys, and change the speed with the [ and ] keys.");
+  putHTML($('hint'), msgs.length && !S.playing ? L('この瞬間 — ', 'Right now — ') + msgs.join(L(' ／ ', ' / ')) : TOUCH ? L('ドラッグで向きを変え、2本指のピンチで寄れます（一人称では体を前後に）。時刻のつまみで1コマずつ、速さは再生ボタンの横で変えられます。', "Drag to turn, pinch with two fingers to zoom (in POV it leans you forward and back). Step with the time slider; set the speed next to Play.")
+    : L('ドラッグで向きを変え、ホイールや2本指のピンチで寄れます（一人称では体を前後に）。時刻のつまみ・矢印キーで1コマずつ、[ ] キーで速さを変えられます。', "Drag to turn the view, use the wheel or a two-finger pinch to zoom (in POV, the pianist's view, it leans you forward and back). Step frame by frame with the time slider or arrow keys, and change the speed with the [ and ] keys."));
 }
 
 function setPlaying(on) {

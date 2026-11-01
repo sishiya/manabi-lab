@@ -125,13 +125,13 @@ function draw() {
   drawCycles(gg, gw, gh, S.full.rows, S.events, S.t, from, to, S.full.hits);
   S.gWin = [from, to];
   const c = countLane(sc.fs);
-  $('counts').textContent = L(`出ている毛 ${c.vis}/${SIM.N}`, `Hairs out ${c.vis}/${SIM.N}`);
+  putText($('counts'), L(`出ている毛 ${c.vis}/${SIM.N}`, `Hairs out ${c.vis}/${SIM.N}`));
   const last = S.full.log.filter(n => n.t <= S.t + 1e-9 && n.kind !== 'safe' && n.kind !== 'cut').pop();
-  $('now').textContent = last && S.t - last.t < 5 ? L(`${Math.floor(last.t)}日目${last.i == null ? '' : ' 毛穴' + (last.i + 1)}: ${last.text}`, `Day ${Math.floor(last.t)}${last.i == null ? '' : ', follicle ' + (last.i + 1)}: ${last.text}`) : '';
+  putText($('now'), last && S.t - last.t < 5 ? L(`${Math.floor(last.t)}日目${last.i == null ? '' : ' 毛穴' + (last.i + 1)}: ${last.text}`, `Day ${Math.floor(last.t)}${last.i == null ? '' : ', follicle ' + (last.i + 1)}: ${last.text}`) : '');
   const dd = Math.floor(S.t), yy = Math.floor(dd / 365);
-  $('day').textContent = yy ? L(yy + '年' + Math.floor((dd % 365) / 30.4) + 'か月', yy + ' y ' + Math.floor((dd % 365) / 30.4) + ' mo') : L(dd + '日目', 'Day ' + dd);
+  putText($('day'), yy ? L(yy + '年' + Math.floor((dd % 365) / 30.4) + 'か月', yy + ' y ' + Math.floor((dd % 365) / 30.4) + ' mo') : L(dd + '日目', 'Day ' + dd));
   $('day').title = L(dd + '日目', 'day ' + dd) + (FEATURES.gray ? L('・' + (S.age + S.t / 365).toFixed(1) + '歳', ' · age ' + (S.age + S.t / 365).toFixed(1)) : '');
-  $('play').textContent = S.playing ? '❚❚' : '▶';
+  putText($('play'), S.playing ? '❚❚' : '▶');
   const lk = S.key + '|' + Math.floor(S.t * 4);
   if (lk !== _logKey) { _logKey = lk; renderLog(S.full.log, S.t); }
 }

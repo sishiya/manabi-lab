@@ -3,6 +3,10 @@
 
 const UI = (() => {
   const $ = id => document.getElementById(id);
+// 同じ内容なら書きかえない（書きかえると、毎コマ配置の計算がやりなおしになる。できる画面は同じ）
+const putText = (el, s) => { s = String(s); const c = el.firstChild; if (s ? !(c && c === el.lastChild && c.nodeType === 3 && c.data === s) : el.firstChild) { el.__html = null; el.textContent = s; } };
+const putHTML = (el, s) => { s = String(s); if (el.__html !== s) { el.__html = s; el.innerHTML = s; } };
+const putVal = (el, v) => { v = String(v); if (el.value !== v) el.value = v; };
   const KIND = { sure: L('研究の値', "measured"), est: L('目安', "rough guide"), art: L('模式', "schematic") };
   const state = { u: 0, playing: false, speed: 1, tab: 'view' };
   // ふつう（×1）の速さ。区間の長さ（Story の dur）の2倍の速さで進む（2026-10-12 ユーザーの希望で、前の ×2 をふつうに）
@@ -175,7 +179,7 @@ const UI = (() => {
   // 毎フレーム: 説明・見どころの印・数
   let lastEv = null, lastCount = '';
   function update(st) {
-    $('tlabel').textContent = st.label;
+    putText($('tlabel'), st.label);
     if (!sliding && Math.abs(slider.value - st.u * 1000) > 0.5) slider.value = Math.round(st.u * 1000);
     const ev = currentEvent(st.u);
     if (ev !== lastEv) {

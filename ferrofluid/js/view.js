@@ -141,32 +141,54 @@ function placeCamera() {
   c.lookAt(0, o.ty, 0);
 }
 
+// 網目の点ごとの、格子からおぎなう場所と重み（場所だけで決まるので一度だけ。sampleGrid と同じ計算で、値も同じ）
+let MS = null;
+function meshSamples() {
+  const n = RM * RM, K = new Int32Array(n), U = new Float64Array(n), U1 = new Float64Array(n), W = new Float64Array(n), W1 = new Float64Array(n);
+  for (let j = 0; j < RM; j++) {
+    const y = -RSPAN / 2 + j * RD;
+    for (let i = 0; i < RM; i++) {
+      const x = -RSPAN / 2 + i * RD, m = j * RM + i;
+      const r2 = x * x + y * y;
+      // 皿のふちでは、少し内側の値を使う（外の「液なし」とまざって、ふちがギザギザになるのを防ぐ）
+      const rr = Math.sqrt(r2), rin = DISH.R - 1.2, sc = rr > rin ? rin / rr : 1, qx = x * sc, qy = y * sc;
+      let fx = (qx + SPAN / 2) / DXG - 0.5, fy = (qy + SPAN / 2) / DXG - 0.5;
+      if (fx < 0) fx = 0; if (fy < 0) fy = 0; if (fx > N - 1.001) fx = N - 1.001; if (fy > N - 1.001) fy = N - 1.001;
+      const gi = fx | 0, gj = fy | 0, u = fx - gi, v = fy - gj;
+      K[m] = gj * N + gi; U[m] = u; U1[m] = 1 - u; W[m] = v; W1[m] = 1 - v;
+    }
+  }
+  return { K, U, U1, W, W1 };
+}
+
 // 液の形を網目に写す。返す値は表示用の量（トゲの高さなど）
 function updateFluidMesh(f) {
   const pos = V.fluidGeo.attributes.position.array, nor = V.fluidGeo.attributes.normal.array, wet = V.fluidGeo.attributes.wet.array;
   const H = V.hgt, R2 = DISH.R * DISH.R;
   let spMax = 0, spMin = 1e9;
   const es = ampSH(EPS_SUB);
+  if (!MS) MS = meshSamples();
+  const { K, U, U1, W, W1 } = MS;
   for (let j = 0; j < RM; j++) {
     const y = -RSPAN / 2 + j * RD;
     for (let i = 0; i < RM; i++) {
       const x = -RSPAN / 2 + i * RD, k = j * RM + i, o = k * 3;
       const r2 = x * x + y * y;
-      // 皿のふちでは、少し内側の値を使う（外の「液なし」とまざって、ふちがギザギザになるのを防ぐ）
-      const rr = Math.sqrt(r2), rin = DISH.R - 1.2, sc = rr > rin ? rin / rr : 1, qx = x * sc, qy = y * sc;
-      let base = sampleGrid(F.h0, qx, qy) - sampleGrid(F.dent, qx, qy);
+      const g = K[k], u = U[k], u1 = U1[k], v = W[k], v1 = W1[k];
+      const sampleGrid = a => (a[g] * u1 + a[g + 1] * u) * v1 + (a[g + N] * u1 + a[g + N + 1] * u) * v;
+      let base = sampleGrid(F.h0) - sampleGrid(F.dent);
       let h = base, tx = 0, ty = 0, w = 0;
       if (f.magnetic && r2 < R2) {
-        const e = sampleGrid(F.eps, qx, qy), ee = Math.min(e, SH.EPSMAX);
+        const e = sampleGrid(F.eps), ee = Math.min(e, SH.EPSMAX);
         const A = Math.min(HCAL * ampPhys(Math.max(e, EPS_SUB), f), 12, 2.5 * Math.max(base, 0) + 1.5);
         const den = 9 * Math.max(ampSH(Math.max(ee, EPS_SUB)), es);
-        const s = Math.max(0, sampleGrid(F.u, qx, qy) / den + 1 / 3);
+        const s = Math.max(0, sampleGrid(F.u) / den + 1 / 3);
         const sp = A * (Math.pow(Math.min(s, 1.4), SHARP) - SH0);
         h += sp;
         if (sp > 0) {   // トゲは磁場の向きに傾く
-          const bz = sampleGrid(F.Bz, qx, qy);
+          const bz = sampleGrid(F.Bz);
           if (bz > 1e-5) {
-            tx = sampleGrid(F.Bx, qx, qy) / bz * sp; ty = sampleGrid(F.By, qx, qy) / bz * sp;
+            tx = sampleGrid(F.Bx) / bz * sp; ty = sampleGrid(F.By) / bz * sp;
             const l = Math.hypot(tx, ty), lm = 0.5 * sp; if (l > lm) { tx *= lm / l; ty *= lm / l; }
           }
         }

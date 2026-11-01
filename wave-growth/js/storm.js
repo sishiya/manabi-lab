@@ -17,7 +17,7 @@ function stormUpdate() {
   const age = S.t - STORM.t0; SW.P.t = Math.max(0, age);
   SW_OBS = STORM.on && age > 0 ? SW.obs(age) : null;
   const b = $('stormBtn'); b.textContent = STORM.on ? '嵐を消す' : '遠くで嵐を起こす'; b.classList.toggle('on', STORM.on);
-  $('stormSum').textContent = STORM.on ? (age < 0 ? '（まだ起きていない）' : `（起きてから ${SW.fmtT(age)}）`) : '（ひらくと嵐を起こせます）';
+  putText($('stormSum'), STORM.on ? (age < 0 ? '（まだ起きていない）' : `（起きてから ${SW.fmtT(age)}）`) : '（ひらくと嵐を起こせます）');
   // 画面の左上の札: 嵐の影響
   const chip = $('stStorm'); chip.hidden = !STORM.on;
   if (STORM.on) { const fa = SW.firstArrival(), o = SW_OBS;

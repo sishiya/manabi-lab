@@ -5,6 +5,10 @@ window.__wagrErr = [];
 window.addEventListener('error', e => window.__wagrErr.push(String(e.message)));
 
 const $ = id => document.getElementById(id);
+// 同じ内容なら書きかえない（書きかえると、毎コマ配置の計算がやりなおしになる。できる画面は同じ）
+const putText = (el, s) => { s = String(s); const c = el.firstChild; if (s ? !(c && c === el.lastChild && c.nodeType === 3 && c.data === s) : el.firstChild) { el.__html = null; el.textContent = s; } };
+const putHTML = (el, s) => { s = String(s); if (el.__html !== s) { el.__html = s; el.innerHTML = s; } };
+const putVal = (el, v) => { v = String(v); if (el.value !== v) el.value = v; };
 const W = window.WGgrowth, HOUR = 3600, DAY = 86400, TMAX = 72 * HOUR;   // 遠くの嵐を入れていたときは 14 日（2026-10-21 嵐をいったん外して 72 時間にもどした）
 const WIND_ANG = Math.PI + 0.5;          // 風の波が進む向き（左前からこちらへ）
 // 空・光（時刻と雲から js/env.js で毎コマ）。カメラははじめ +x（東）を見ている
@@ -88,8 +92,8 @@ function update() {
   stormUpdate();                                            // 遠くの嵐のうねり（js/storm.js）: SW_OBS
   const sw = SW_OBS && SW_OBS.Hm0 > 0.02 ? SW_OBS : null, Hall = Math.hypot(st.Hm0, sw ? sw.Hm0 : 0);
   tSlider.value = t2v(S.t);
-  $('tLabel').textContent = fmtTime(S.t);
-  $('play').textContent = S.play ? '❚❚' : '▶';
+  putText($('tLabel'), fmtTime(S.t));
+  putText($('play'), S.play ? '❚❚' : '▶');
   const ps = $('stPause'); ps.hidden = S.play; ps.textContent = S.t >= TMAX ? L('72 時間まで来ました（▶ でもう一度）', 'Reached 72 hours (▶ to play again)') : S.t < 60 && !sw ? L('止まっています（▶ で風が吹きはじめます）', 'Stopped (▶ to start the wind)') : L('一時停止中（▶ で進む）', 'Paused (▶ to continue)');
   document.querySelectorAll('#speeds button').forEach(b => b.classList.toggle('on', +b.dataset.s === S.speed));
   wSlider.value = U; $('wLabel').textContent = U.toFixed(1) + ' m/s';

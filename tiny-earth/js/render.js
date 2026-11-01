@@ -1,7 +1,7 @@
 // ちいさな地球 — 描画（three.js r128）。星の半径を 1 として描く。
 'use strict';
 const VIEW = (() => {
-  let hemi, halo, vapor, rTop, wCol, wWet, wVal, wColD, rTopD, wLast = 0, wSnap = true, renderer, scene, camera, planet, landV, waterV, treeMesh, shell, sun, cv;
+  let hemi, halo, vapor, rTop, wCol, wWet, wVal, wColD, rTopD, wLast = 0, wSnap = true, wGeo = null, wPrev = null, renderer, scene, camera, planet, landV, waterV, treeMesh, shell, sun, cv;
   let C, rFloor;          // ボクセルのマス目・柱の床（陸の上の面）の半径
   let M, TR, O;           // 網・地形・海
   const st = { light: 'day', honest: null, ex: 100, az: 0.6, el: 0.35, alt: 2.2, treeShown: 0, treeReal: 0 };
@@ -293,11 +293,24 @@ uniform float uTime, uAmp, uS;
   // 水の柱: 床（段々の地面）から水面まで。乾いたマスは床の少し下へ隠す（高さ 0 の柱の上の面が床と重なって見えないように）
   function writeWater() {
     for (let i = 0; i < M.N; i++) wVal[i] = wWet[i] || rTopD[i] > rFloor[i] + 1e-5 ? Math.max(rFloor[i] - 1e-4, rTopD[i]) : rFloor[i] - 1e-4;
+    // 前に書いたときと同じ値の柱は書きなおさない（できる形・色は同じ。止まっている海・乾いた所の分の計算がいらない）
+    // GPU へ送るのも、書きなおした柱の範囲だけ（pLo〜pHi・cLo〜cHi は頂点の番号）
+    if (wGeo !== waterV.geometry) { wGeo = waterV.geometry; wPrev = new Float32Array(M.N * 5).fill(NaN); }
+    let pLo = Infinity, pHi = -1, cLo = Infinity, cHi = -1;
     for (let i = 0; i < M.N; i++) {
-      VOXEL.setCol(waterV.geometry, M, C, i, wVal[i], wVal[i] > rFloor[i] ? rFloor[i] : wVal[i]);
-      VOXEL.setColorRGB(waterV.geometry, C, i, wColD[i * 3], wColD[i * 3 + 1], wColD[i * 3 + 2], 0.85);
+      const top = wVal[i], bot = wVal[i] > rFloor[i] ? rFloor[i] : wVal[i], p = i * 5;
+      const v0 = C.start[i], v1 = v0 + 1 + 5 * (C.cs[i + 1] - C.cs[i]);
+      if (top !== wPrev[p] || bot !== wPrev[p + 1]) { VOXEL.setCol(waterV.geometry, M, C, i, top, bot); wPrev[p] = top; wPrev[p + 1] = bot; if (v0 < pLo) pLo = v0; if (v1 > pHi) pHi = v1; }
+      const r = wColD[i * 3], g = wColD[i * 3 + 1], b = wColD[i * 3 + 2];
+      if (r !== wPrev[p + 2] || g !== wPrev[p + 3] || b !== wPrev[p + 4]) { VOXEL.setColorRGB(waterV.geometry, C, i, r, g, b, 0.85); wPrev[p + 2] = r; wPrev[p + 3] = g; wPrev[p + 4] = b; if (v0 < cLo) cLo = v0; if (v1 > cHi) cHi = v1; }
     }
-    const wv = waterV.geometry.attributes; wv.position.needsUpdate = true; wv.color.needsUpdate = true;
+    // まだ GPU へ送っていない範囲（描く前にもう一度ここへ来たとき。three は送ると count を −1 にもどす）があれば合わせる
+    const send = (a, lo, hi) => { const u = a.updateRange;
+      if (u.count !== -1) { const e = Math.max(u.offset + u.count, hi * 3); u.offset = Math.min(u.offset, lo * 3); u.count = e - u.offset; } else { u.offset = lo * 3; u.count = (hi - lo) * 3; }
+      a.needsUpdate = true; };
+    const wv = waterV.geometry.attributes;
+    if (pHi >= 0) send(wv.position, pLo, pHi);
+    if (cHi >= 0) send(wv.color, cLo, cHi);
   }
 
   // カメラ: 星のまわりをまわる（星と一緒に自転する）。近づくと地平線の方を向く

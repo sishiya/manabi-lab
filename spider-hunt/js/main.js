@@ -4,6 +4,10 @@ window.__sphuErr = [];
 window.addEventListener('error', e => window.__sphuErr.push(String(e.message)));
 
 const $ = id => document.getElementById(id);
+// 同じ内容なら書きかえない（書きかえると、毎コマ配置の計算がやりなおしになる。できる画面は同じ）
+const putText = (el, s) => { s = String(s); const c = el.firstChild; if (s ? !(c && c === el.lastChild && c.nodeType === 3 && c.data === s) : el.firstChild) { el.__html = null; el.textContent = s; } };
+const putHTML = (el, s) => { s = String(s); if (el.__html !== s) { el.__html = s; el.innerHTML = s; } };
+const putVal = (el, v) => { v = String(v); if (el.value !== v) el.value = v; };
 const DT = 0.0005;                  // 計算の刻み（0.5ms）
 const P = { speed: 'dill', model: 'size', crouch: true, dir: 0, fastV: 30, prey: 'housefly', lux: 300, look: 'simple', color: 'white' };
 const S = { st: null, hist: [], view: 0, playing: true, rate: 'auto', camR: 95, rims: true, guide: true, paused: false, seed: 1 };
@@ -73,10 +77,10 @@ function draw() {
   [w, h] = fit(cvs.spider, ctx.spider); VW.spider(ctx.spider, w, h, s, P, { guide: S.guide });
   [w, h] = fit(cvs.retina, ctx.retina); RT.draw(ctx.retina, w, h, s, P);
   if ($('graphBox').open) { [w, h] = fit(cvs.graph, ctx.graph); GR.draw(ctx.graph, w, h, S.hist, S.view, P); }
-  $('status').innerHTML = status(s);
+  putHTML($('status'), status(s));
   const ph = $('pin').offsetHeight; if (ph !== S.pinH) { S.pinH = ph; document.documentElement.style.setProperty('--pinH', ph + 'px'); }
-  $('tl').max = Math.max(1, S.hist.length - 1); $('tl').value = S.view;
-  $('play').textContent = S.playing ? '❚❚' : '▶';
+  $('tl').max = Math.max(1, S.hist.length - 1); putVal($('tl'), S.view);
+  putText($('play'), S.playing ? '❚❚' : '▶');
 }
 
 let last = performance.now();

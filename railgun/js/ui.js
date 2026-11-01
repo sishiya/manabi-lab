@@ -4,6 +4,10 @@
 'use strict';
 (function () {
   const $ = id => document.getElementById(id);
+// 同じ内容なら書きかえない（書きかえると、毎コマ配置の計算がやりなおしになる。できる画面は同じ）
+const putText = (el, s) => { s = String(s); const c = el.firstChild; if (s ? !(c && c === el.lastChild && c.nodeType === 3 && c.data === s) : el.firstChild) { el.__html = null; el.textContent = s; } };
+const putHTML = (el, s) => { s = String(s); if (el.__html !== s) { el.__html = s; el.innerHTML = s; } };
+const putVal = (el, v) => { v = String(v); if (el.value !== v) el.value = v; };
   const S = SIM.S;
 
   // たとえに使う身近な値（画面の出どころに書く）
@@ -154,13 +158,13 @@
   function refresh() {
     const o = SIM.sample(S.t), s = TOUR[step];
     const tEnd = S.phase === 'done' ? S.tEnd : Math.max(S.tEnd, S.t);
-    $('time').value = Math.round(S.t / (tEnd || 1) * 1000);
+    putVal($('time'), Math.round(S.t / (tEnd || 1) * 1000));
     $('time').disabled = S.phase !== 'done';
-    $('tlabel').textContent = `${(S.t * 1e3).toFixed(2)} ms`;
-    $('play').textContent = S.phase === 'ready' ? '▶ おまかせで撃つ' : (S.phase === 'done' ? '↺ もう一回' : (S.paused ? '▶ つづき' : '❚❚ とめる'));
-    $('bPol').textContent = S.pol > 0 ? '＋− 入れかえ' : '＋− もとにもどす';
+    putText($('tlabel'), `${(S.t * 1e3).toFixed(2)} ms`);
+    putText($('play'), S.phase === 'ready' ? '▶ おまかせで撃つ' : (S.phase === 'done' ? '↺ もう一回' : (S.paused ? '▶ つづき' : '❚❚ とめる')));
+    putText($('bPol'), S.pol > 0 ? '＋− 入れかえ' : '＋− もとにもどす');
     $('bPol').disabled = S.phase === 'live' || S.phase === 'after';
-    $('bHold').textContent = S.hold ? '止め板を外す' : '止め板を置く';
+    putText($('bHold'), S.hold ? '止め板を外す' : '止め板を置く');
     $('bHold').classList.toggle('on', S.hold);
     const note = performance.now() < msgUntil ? `<span class="note2">${msg}</span><br>` : '';
     const html = note + (s && s.ruler ? s.ruler(o) : '');

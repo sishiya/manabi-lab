@@ -1,6 +1,10 @@
 // 帆船が風で進むしくみ — 操作・つぎへ・表示（速さ・凡例）
 'use strict';
 const $ = id => document.getElementById(id);
+// 同じ内容なら書きかえない（書きかえると、毎コマ配置の計算がやりなおしになる。できる画面は同じ）
+const putText = (el, s) => { s = String(s); const c = el.firstChild; if (s ? !(c && c === el.lastChild && c.nodeType === 3 && c.data === s) : el.firstChild) { el.__html = null; el.textContent = s; } };
+const putHTML = (el, s) => { s = String(s); if (el.__html !== s) { el.__html = s; el.innerHTML = s; } };
+const putVal = (el, v) => { v = String(v); if (el.value !== v) el.value = v; };
 const fmt = (x, d = 1) => (Math.round(x * 10 ** d) / 10 ** d).toFixed(d);
 
 // つぎへ: 1歩に新しいもの1つ（その歩で増えた矢印は太く）。ふだんの矢印は「船で感じる風」「帆が前へ引く力」「水の抵抗」の3本だけ。
@@ -94,14 +98,14 @@ const UI = {
     // 風と船の速さの棒（同じものさし）。船の棒が風の棒をこえたら「風より速い」
     const top = Math.max(S.twsKn, vKn, 1) * 1.1;
     $('barW').style.width = (S.twsKn / top * 100) + '%'; $('barB').style.width = (vKn / top * 100) + '%';
-    $('vBoat').textContent = fmt(vKn) + ' kt';
-    $('vWind').textContent = S.twsKn + ' kt';
+    putText($('vBoat'), fmt(vKn) + ' kt');
+    putText($('vWind'), S.twsKn + ' kt');
     const r = vKn / S.twsKn;
-    $('ratio').textContent = '船は風の ' + fmt(r, 2) + ' 倍' + (r > 1.005 ? '（風より速い）' : '');
+    putText($('ratio'), '船は風の ' + fmt(r, 2) + ' 倍' + (r > 1.005 ? '（風より速い）' : ''));
     $('ratio').classList.toggle('fast', r > 1.005);
-    $('angle').textContent = '風に対して ' + Math.round(twa) + '°';
-    $('aws').textContent = f.aws != null ? '見かけの風 ' + fmt(f.aws / KN) + ' kt・' + Math.round(Math.abs(f.awa)) + '°' : '';
-    $('heel').textContent = f.heel != null ? '傾き ' + Math.round(f.heel) + '°' : '';
+    putText($('angle'), '風に対して ' + Math.round(twa) + '°');
+    putText($('aws'), f.aws != null ? '見かけの風 ' + fmt(f.aws / KN) + ' kt・' + Math.round(Math.abs(f.awa)) + '°' : '');
+    putText($('heel'), f.heel != null ? '傾き ' + Math.round(f.heel) + '°' : '');
     // 横の力がつりあわない表の点（ok = 0）でも、真後ろ近くは帆が横へ押す力がほぼないので出さない。
     // 帆の横の力（揚力と抗力の横向き）が、横流れ 6° のキールの力を 1 割以上こえるときだけ
     const ar = (f.awa || 0) * Math.PI / 180, side = Math.abs(f.lift * Math.cos(ar) + f.drag * Math.sin(ar));

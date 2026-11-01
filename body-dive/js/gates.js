@@ -172,12 +172,12 @@ function updateSigns(rc){
       if(d<6.5&&o.tube===undefined){const L=locate(o.v);o.tube=L.score<.5?L.tube:null;}
       if(d<6.5&&d>.25&&(d<2.5||!loc||o.tube===loc.tube)){_pv.copy(o.v).project(rc);if(_pv.z<1&&Math.abs(_pv.x)<1.1&&Math.abs(_pv.y)<1.1){vis=true;
         o.el.style.transform=`translate(${Math.round((_pv.x*.5+.5)*W)}px,${Math.round((-_pv.y*.5+.5)*H)}px) translate(-50%,-100%)`;o.el.style.opacity=clamp((6.5-d)/2.5,0,1);}}}
-    o.el.hidden=!vis;
+    if(o.el.hidden===vis)o.el.hidden=!vis; // 変わるときだけ書く（同じ値でも書くと毎コマ数千回スタイルを計算しなおしていた）
   }
   for(const o of ORBIT_LABELS){
     let vis=false;
     if(orbitOn){_pv.copy(o.v).project(rc);if(_pv.z<1){vis=true;o.el.style.transform=`translate(${Math.round((_pv.x*.5+.5)*W)}px,${Math.round((-_pv.y*.5+.5)*H)}px) translate(-50%,-100%)`;}}
-    o.el.hidden=!vis;
+    if(o.el.hidden===vis)o.el.hidden=!vis; // 変わるときだけ書く（同じ値でも書くと毎コマ数千回スタイルを計算しなおしていた）
   }
 }
 /* この先に何があるか */

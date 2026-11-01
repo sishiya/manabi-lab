@@ -85,12 +85,12 @@ function updateSigns(rc){
       if(d<4&&o.tube===undefined){const L=locate(o.v);o.tube=L.score<.4?L.tube:null;}
       if(d<4&&d>.12&&(d<1.2||!loc||o.tube===loc.tube)){_pv.copy(o.v).project(rc);if(_pv.z<1&&Math.abs(_pv.x)<1.1&&Math.abs(_pv.y)<1.1){vis=true;
         o.el.style.transform=`translate(${(_pv.x*.5+.5)*W}px,${(-_pv.y*.5+.5)*H}px) translate(-50%,-100%)`;o.el.style.opacity=clamp((4-d)/1.5,0,1);}}}
-    o.el.hidden=!vis;
+    if(o.el.hidden===vis)o.el.hidden=!vis; // 変わるときだけ書く（同じ値でも書くと毎コマ数千回スタイルを計算しなおしていた）
   }
   for(const o of ORBIT_LABELS){
     let vis=false;
     if(orbitOn&&(!o.sex||o.sex===sex)){_pv.copy(o.v).project(rc);if(_pv.z<1){vis=true;o.el.style.transform=`translate(${(_pv.x*.5+.5)*W}px,${(-_pv.y*.5+.5)*H}px) translate(-50%,-100%)`;}}
-    o.el.hidden=!vis;
+    if(o.el.hidden===vis)o.el.hidden=!vis; // 変わるときだけ書く（同じ値でも書くと毎コマ数千回スタイルを計算しなおしていた）
   }
 }
 function aheadInfo(){

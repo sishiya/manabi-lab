@@ -3,6 +3,10 @@
 window.__tyhaErr = [];
 window.addEventListener('error', e => window.__tyhaErr.push(String(e.message)));
 const $ = id => document.getElementById(id);
+// 同じ内容なら書きかえない（書きかえると、毎コマ配置の計算がやりなおしになる。できる画面は同じ）
+const putText = (el, s) => { s = String(s); const c = el.firstChild; if (s ? !(c && c === el.lastChild && c.nodeType === 3 && c.data === s) : el.firstChild) { el.__html = null; el.textContent = s; } };
+const putHTML = (el, s) => { s = String(s); if (el.__html !== s) { el.__html = s; el.innerHTML = s; } };
+const putVal = (el, v) => { v = String(v); if (el.value !== v) el.value = v; };
 const S = { mode: 'watch', live: false, plan: null, checks: null, text: null, t: 0, playing: false, speed: 1, lastNow: 0, prevT: 0 };
 const OPT = { fingerMap: true, fingerNums: false, targets: false, ghost: false, bones: false, xray: false, muscles: false };
 const SPEEDS = [0.25, 0.5, 1, 1.5, 2];
@@ -46,7 +50,7 @@ function renderChecks() {
 // 打った文字の行: 打ちおえた文字は明るく、いま押しているキーは指の色
 function renderTyped(t) {
   const rp = S.mode === 'replay';
-  $('typedShow').textContent = rp ? L('自分で打ったキー（キーの位置と時刻だけ。どこにも保存・送信しません）', 'Keys you typed (only which key and when; nothing is saved or sent)') : (LANG === 'en' && S.text.show_en || S.text.show);
+  putText($('typedShow'), rp ? L('自分で打ったキー（キーの位置と時刻だけ。どこにも保存・送信しません）', 'Keys you typed (only which key and when; nothing is saved or sent)') : (LANG === 'en' && S.text.show_en || S.text.show));
   // 「再現する」では打った順のキー（最後の 60 個）。手の計算の結果（miss）は計算した音と時刻で合わせる
   const list = rp ? REC.notes.slice(-60).map(n => Object.assign({}, n, { f: KEYS[n.m].f, miss: S.plan && S.plan.notes.some(o => o.miss && o.m === n.m && Math.abs(o.t0 - n.t0) < 1e-6) })) : S.plan.notes;
   let html = '';
@@ -110,17 +114,17 @@ function step() {
   updateCam(poses);
   renderPose(disp, poses, OPT);
   $('toolbar').hidden = $('hint').hidden = S.live; // 打っているあいだは再生の操作を隠す（画面のキーボードの場所をあける）
-  if (!S.live && document.activeElement !== $('time')) $('time').value = Math.round(1000 * (t - tStart()) / (tEnd() - tStart()));
-  $('clock').textContent = t.toFixed(2) + L(' 秒', ' s');
+  if (!S.live && document.activeElement !== $('time')) putVal($('time'), Math.round(1000 * (t - tStart()) / (tEnd() - tStart())));
+  putText($('clock'), t.toFixed(2) + L(' 秒', ' s'));
   renderTyped(t);
   if (S.mode === 'watch') { let ci = -1; notes.forEach((n, i) => { if (n.t0 <= t + 1e-6) ci = i; }); if (ci !== S.ikiCur || S.ikiPlan !== plan) { S.ikiCur = ci; S.ikiPlan = plan; drawIki(ci); } }
   // 止めているときだけ、この瞬間の様子（どの指でどのキーか）
-  if (S.live) $('hint').textContent = REC.notes.length ? L(`打ったキーを、${REC_LAG} 秒おくれて画面の手が打ちます。`, `The hands on screen type your keys ${REC_LAG} s later.`) : L('キーボードを打つか、下の画面のキーボードを押してください。', 'Type on your keyboard, or tap the on-screen keyboard below.');
+  if (S.live) putText($('hint'), REC.notes.length ? L(`打ったキーを、${REC_LAG} 秒おくれて画面の手が打ちます。`, `The hands on screen type your keys ${REC_LAG} s later.`) : L('キーボードを打つか、下の画面のキーボードを押してください。', 'Type on your keyboard, or tap the on-screen keyboard below.'));
   else if (!S.playing) {
     const now = notes.filter(n => t >= n.t0 - 0.02 && t <= n.t1 + 0.02);
-    $('hint').innerHTML = now.length ? L('この瞬間 — ', 'Right now — ') + now.map(n => L(`<b>${noteName(n.m)}</b> を${HAND_OF(n.hand === 'R' ? 1 : -1)}${FINGERS[n.f].name}で${n.iki ? `（前のキーから ${Math.round(n.iki * 1000)}ms・${KIND_JA[n.kind] || ''}）` : ''}`, `<b>${noteName(n.m)}</b> with the ${HAND_OF(n.hand === 'R' ? 1 : -1)}${FINGERS[n.f].name}${n.iki ? ` (${Math.round(n.iki * 1000)} ms after the last key, ${KIND_JA[n.kind] || ''})` : ''}`)).join(L('、', '; '))
-      : L('ドラッグで向きを変え、ホイールや2本指のピンチで寄れます。時刻のつまみ・矢印キーで1コマずつ動かせます。', 'Drag to turn the view, and use the wheel or a two-finger pinch to zoom. Step frame by frame with the time slider or the arrow keys.');
-  } else $('hint').textContent = '';
+    putHTML($('hint'), now.length ? L('この瞬間 — ', 'Right now — ') + now.map(n => L(`<b>${noteName(n.m)}</b> を${HAND_OF(n.hand === 'R' ? 1 : -1)}${FINGERS[n.f].name}で${n.iki ? `（前のキーから ${Math.round(n.iki * 1000)}ms・${KIND_JA[n.kind] || ''}）` : ''}`, `<b>${noteName(n.m)}</b> with the ${HAND_OF(n.hand === 'R' ? 1 : -1)}${FINGERS[n.f].name}${n.iki ? ` (${Math.round(n.iki * 1000)} ms after the last key, ${KIND_JA[n.kind] || ''})` : ''}`)).join(L('、', '; '))
+      : L('ドラッグで向きを変え、ホイールや2本指のピンチで寄れます。時刻のつまみ・矢印キーで1コマずつ動かせます。', 'Drag to turn the view, and use the wheel or a two-finger pinch to zoom. Step frame by frame with the time slider or the arrow keys.'));
+  } else putText($('hint'), '');
 }
 function setPlaying(on) {
   if (S.live) on = false;

@@ -39,7 +39,7 @@ const chrome = [process.env.ProgramFiles + '\\Google\\Chrome\\Application\\chrom
 const proc = spawn(chrome, ['--headless=new', ...(GPU ? ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist'] : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']),
   '--disable-accelerated-2d-canvas', '--disable-gpu-rasterization', '--deterministic-mode',
   '--hide-scrollbars', '--mute-audio', '--window-size=1280,720', '--disable-background-timer-throttling', '--disable-renderer-backgrounding',
-  `--remote-debugging-port=${DBG}`, `--user-data-dir=${path.join(os.tmpdir(), 'manabi-same')}`, '--no-first-run', '--no-default-browser-check', 'about:blank'], { stdio: 'ignore' });
+  `--remote-debugging-port=${DBG}`, `--user-data-dir=${path.join(os.tmpdir(), 'manabi-same-' + DBG)}`, '--no-first-run', '--no-default-browser-check', 'about:blank'], { stdio: 'ignore' });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let ok = false;
 for (let i = 0; i < 50 && !ok; i++) { try { await fetch(`http://127.0.0.1:${DBG}/json/version`); ok = true; } catch { await sleep(200); } }
@@ -66,7 +66,7 @@ try {
   for (let f = 0; f <= FRAMES; f += EVERY) {
     if (f) await ev(`window.__sameStep(${EVERY}, ${MS})`);
     const g = JSON.parse(await ev(grab));
-    fp.push({ frame: f, canvas: g.c.map(sha), text: sha(g.t), expr: EXPR ? sha(g.x) : null, err: g.err ? g.err.slice(0, 2) : null });
+    fp.push({ frame: f, canvas: g.c.map(sha), text: sha(g.t), expr: EXPR ? (argv.includes('--raw') ? g.x : sha(g.x)) : null, err: g.err ? g.err.slice(0, 2) : null });
   }
   if (exc.length) fp.push({ exceptions: exc.slice(0, 3) });
   ws.close();

@@ -2,6 +2,10 @@
 'use strict';
 
 const $ = id => document.getElementById(id);
+// 同じ内容なら書きかえない（書きかえると、毎コマ配置の計算がやりなおしになる。できる画面は同じ）
+const putText = (el, s) => { s = String(s); const c = el.firstChild; if (s ? !(c && c === el.lastChild && c.nodeType === 3 && c.data === s) : el.firstChild) { el.__html = null; el.textContent = s; } };
+const putHTML = (el, s) => { s = String(s); if (el.__html !== s) { el.__html = s; el.innerHTML = s; } };
+const putVal = (el, v) => { v = String(v); if (el.value !== v) el.value = v; };
 const PH_COL = { dns: '#ffd36a', tcp: '#f4f4f4', tls: '#c59bff', get: '#a98ae0', data: '#6fd3ff' };
 const PH_NAME = { dns: '名前', tcp: 'あいさつ', tls: '暗号', get: 'ください', data: 'ページ' };
 const ms = v => v < 10 ? v.toFixed(2) : v < 100 ? v.toFixed(1) : Math.round(v).toLocaleString();
@@ -98,7 +102,7 @@ $('cv').addEventListener('click', e => {
 
 let uiAcc = 0;
 function updateUI(dt) {
-  $('pgt').textContent = pageTimeText();
+  putText($('pgt'), pageTimeText());
   uiAcc += dt; if (uiAcc < 0.15) return; uiAcc = 0;
   const [t, b] = PHASES[SIM.phase]; $('capT').textContent = t; $('capB').textContent = SIM.phase === 'fail' ? SIM.failWhy : b;
   if (VIEW.sel && VIEW.sel.type === 'packet' && !$('info').hidden) {
