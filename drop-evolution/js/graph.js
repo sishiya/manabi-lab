@@ -75,9 +75,20 @@ export class Graph {
 
   drawTree(world, selClade) {
     const g = this.g, w = this.w, h = this.h, pad = 6;
-    // 少しでも増えた系統と、生きている系統だけ
+    // いま数の多い系統（8つと選んだ系統）と、それらが枝分かれした祖先・いちばん上の祖先だけ（全部だと何百本も重なって読めない。RELEASE.md 4章）
+    const tops = [...world.clades.values()].filter(c => c.n > 0).sort((a, b) => b.n - a.n).slice(0, 8);
+    const sc = world.clades.get(selClade);
+    if (sc && !tops.includes(sc)) tops.push(sc);
+    const via = new Map();   // 祖先 → その下で、上位の系統へ続く子
+    let root = null;
+    for (const t of tops) {
+      let c = t, prev = 0;
+      while (c) { if (!via.has(c.id)) via.set(c.id, new Set()); if (prev) via.get(c.id).add(prev); prev = c.id; root = c; c = world.clades.get(c.parent); }
+    }
     const show = new Map();
-    for (const c of world.clades.values()) if (c.peak >= 4 || c.n > 0) show.set(c.id, c);
+    for (const c of tops) show.set(c.id, c);
+    for (const [id, ks] of via) if (ks.size >= 2) show.set(id, world.clades.get(id));
+    if (root) show.set(root.id, root);
     // 見せない親をとばして、見せる祖先につなぐ
     const up = c => { let p = world.clades.get(c.parent); while (p && !show.has(p.id)) p = world.clades.get(p.parent); return p ? p.id : 0; };
     const kids = new Map();
@@ -95,8 +106,10 @@ export class Graph {
       const y = rowY.get(c.id), x0 = X(c.born), x1 = X(c.died ?? T);
       const p = up(c);
       if (p && rowY.has(p)) {
+        // 見せない途中の系統を通ってつながる: 祖先の線の終わりから、子が分かれた時刻まで薄くのばしてから下ろす
+        const pc = show.get(p), px = Math.min(x0, X(pc.died ?? T));
         g.strokeStyle = 'rgba(110,210,255,0.3)'; g.lineWidth = 1;
-        g.beginPath(); g.moveTo(x0, rowY.get(p)); g.lineTo(x0, y); g.stroke();
+        g.beginPath(); g.moveTo(px, rowY.get(p)); g.lineTo(x0, rowY.get(p)); g.lineTo(x0, y); g.stroke();
       }
       const alive = c.n > 0;
       g.strokeStyle = cladeColor(c, alive ? 0.95 : 0.45);
