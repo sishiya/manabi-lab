@@ -4,7 +4,8 @@ import { founderBody } from './body.js';
 import { Renderer, drawBodyDiagram } from './render.js';
 import { Graph, cladeColor, fmtT } from './graph.js';
 import { makeSim } from './simlink.js';
-import { get as getSave } from './save.js';
+import { get as getSave, put as putSave } from './save.js';
+import { PAGES, START, shapeOf, startShape, drawShape } from './book.js';
 import { PRESETS } from './presets.js';
 
 const $ = id => document.getElementById(id);
@@ -143,7 +144,7 @@ document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
   document.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('on', x === b));
 });
 addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT' || $('menu').open || $('help').open || $('extinct').open || !$('gate').hidden) return;
+  if (e.target.tagName === 'INPUT' || $('book').open || $('menu').open || $('help').open || $('extinct').open || !$('gate').hidden) return;
   if (e.code === 'Space') { e.preventDefault(); setPlaying(!playing); }
   else if (e.key === '1') setSpeed(1); else if (e.key === '2') setSpeed(4); else if (e.key === '3') setSpeed(16);
   else if (e.key === '4') setSpeed(256); else if (e.key === '5') setSpeed(1024);
@@ -179,7 +180,7 @@ $('menu').addEventListener('close', () => { if (!$('help').open && $('gate').hid
 $('menuBtn').onclick = openMenu;
 $('mResume').onclick = () => $('menu').close();
 // メニューと「このアプリについて」は、外（うしろの暗い所）を押したら閉じる
-for (const id of ['menu', 'help', 'extinct']) $(id).addEventListener('click', e => {
+for (const id of ['menu', 'help', 'extinct', 'book']) $(id).addEventListener('click', e => {
   if (e.target !== $(id)) return;
   const r = $(id).getBoundingClientRect();
   if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) $(id).close();
@@ -247,7 +248,7 @@ function onWorld() {
   extinctShown = false;
   ren.ghosts = []; ren.prev.clear();
   ren.cam.x = W / 2; ren.cam.y = H / 2; ren.cam.z = Math.max(ren.fitZoom(), Math.min(1.3, Math.min(ren.w, ren.h) / 500)); clampCam();
-  select(null); lastEvent = 0; seen = null;
+  select(null); lastEvent = 0; seen = null; book = new Map();
 }
 function startWorld(msg) {
   playingBeforeMenu = true; fromTitle = false;
@@ -307,37 +308,63 @@ function renderCard(full) {
 }
 
 // ── できごとの知らせ: 進化の節目の「はじめて」と、一滴のできごとだけ（系統が分かれた・絶えたは数秒ごとに出て意味が読めないので、グラフの中だけ。RELEASE.md 4章） ──
-// 節目は画面の側で、いまいる生き物を見て決める（決まりは増やさない）。読みこんだ一滴にもうあるものは、知らせずに見たことにする
-const FIRSTS = [
-  ['legs4', o => (o.bp?.n || 0) >= 4, '節が4つある形が現れた'],
-  ['hunt', o => o.prey > 0, 'ほかの生き物を食べる者（狩る者）が現れた'],
-  ['anch', o => o.anch, '砂つぶにくっついて、水を流してエサを待つ者がふえてきた', 0.05],   // たまたま1匹がくっつくのは数秒で起きるので、ふえたら
-  ['col4', o => o.colN >= 4, '分かれた子とくっついたまま、4細胞の群体になった'],
-  ['sym', o => o.sym > 0, '藍藻を消化せずに、体の中で飼う者が現れた（葉緑体のはじまり）'],
-  ['col16', o => o.colN >= 16, '16細胞の群体になった'],
-  ['fiss3', o => o.g && Math.round(o.g[GI.fiss]) >= 3, '大きく育ってから続けて3回分かれ、一度に8つの子になる者が現れた（多分裂）'],
-  ['col64', o => o.colN >= 64, '64細胞の大きな群体になった'],
-];
+// 節目（js/book.js の PAGES）は画面の側で、いまいる生き物を見て決め、その形を図鑑に写す。読みこんだ一滴にもうあるものは、知らせずに「のぞいたときにもういた」として写す
 let seen = null;   // 見た節目（一滴ごと。null は「次に見たものを知らせずに覚える」）
-let lastEvent = 0, tickerT = 0;
-function tick(text, first) {
+let book = new Map();   // 図鑑: かぎ → { t, gen, shape, pre }
+let lastEvent = 0, tickerT = 0, tickerPage = null;
+function tick(text, page) {
   $('ticker').textContent = text;
-  $('ticker').classList.toggle('first', first);
-  $('ticker').classList.remove('fade'); tickerT = first ? 10 : 6;
+  $('ticker').classList.toggle('first', !!page); tickerPage = page;
+  $('ticker').classList.remove('fade'); tickerT = page ? 10 : 6;
 }
 function showEvents() {
   const quiet = !seen;
-  if (quiet) seen = new Set();
-  for (const [k, test, text, share = 0] of FIRSTS) {
-    if (seen.has(k) || (share ? world.orgs.filter(test).length < Math.max(1, share * world.orgs.length) : !world.orgs.some(test))) continue;
+  if (quiet) seen = new Set(book.keys());
+  for (const [k, test, , text, , share = 0] of PAGES) {
+    if (seen.has(k)) continue;
+    const hit = world.orgs.filter(test);
+    if (!hit.length || hit.length < (share ? Math.max(1, share * world.orgs.length) : 1)) continue;
     seen.add(k);
-    if (!quiet) tick(`${fmtT(world.t)}　はじめて、${text}`, true);
+    // その節目がいちばんよくわかる形を写す: あてはまる中で、いちばん小さなかたまり（群体の節目なら、ちょうどその大きさ）
+    const o = hit.reduce((a, b) => (b.colN || 1) < (a.colN || 1) ? b : a);
+    book.set(k, { t: world.t, gen: o.gen + 1, shape: shapeOf(o), pre: quiet });
+    if (!quiet) tick(`${fmtT(world.t)}　はじめて、${text}`, k);
   }
+  $('bookN').textContent = book.size + 1;
   const ev = world.events;
-  for (let i = ev.length - 1; i >= lastEvent; i--) if (!ev[i].clade) { tick(`${fmtT(ev[i].t)}　${ev[i].text}`, false); break; }
+  for (let i = ev.length - 1; i >= lastEvent; i--) if (!ev[i].clade) { tick(`${fmtT(ev[i].t)}　${ev[i].text}`, null); break; }
   lastEvent = ev.length;
   if (world.events.length > 400) { world.events.splice(0, 200); lastEvent = world.events.length; }
 }
+// 図鑑を開く: ページの一覧（まだのページは名前だけ）と、選んだページの形・時刻・本物では
+$('ticker').onclick = () => { if (tickerPage) openBook(tickerPage); };
+$('bookBtn').onclick = () => openBook();
+let bookSel = '';
+function openBook(k) {
+  playingBeforeMenu = playing; setPlaying(false);
+  bookSel = k ?? ([...book.keys()].pop() || '');
+  $('book').showModal(); drawBook();
+}
+$('book').addEventListener('close', () => setPlaying(playingBeforeMenu));
+function drawBook() {
+  const all = [['', null, START.name], ...PAGES];
+  $('bookGrid').innerHTML = all.map(([k, , name]) => {
+    const has = !k || book.has(k);
+    return `<button type="button" data-page="${k}" class="${k === bookSel ? 'on' : ''}"${has ? '' : ' disabled'} aria-pressed="${k === bookSel}">${has ? '<canvas></canvas>' : '<i>？</i>'}<span>${name}</span></button>`;
+  }).join('');
+  $('bookGrid').querySelectorAll('[data-page]').forEach(b => {
+    const k = b.dataset.page, cv = b.querySelector('canvas');
+    if (cv) drawShape(cv, k ? book.get(k).shape : startShape());
+    b.onclick = () => { bookSel = k; drawBook(); };
+  });
+  const p = PAGES.find(x => x[0] === bookSel), e = book.get(bookSel);
+  $('bookName').textContent = p ? p[2] : START.name;
+  $('bookWhen').textContent = !p ? 'はじまり' : e.pre ? 'のぞいたときに、もういた' : `${fmtT(e.t)}・${e.gen} 代目`;
+  $('bookNote').textContent = p ? p[4] : START.note;
+  drawShape($('bookBig'), p ? e.shape : startShape());
+  $('bookCount').textContent = `${book.size + 1} / ${PAGES.length + 1}`;
+}
+const saveBook = () => putSave('book', [...book]).catch(() => {});
 let toastT = 0;
 function toast(s) { $('toast').textContent = s; $('toast').hidden = false; toastT = 3; }
 
@@ -469,6 +496,7 @@ $('gateCont').onclick = async () => {
   const ok = await sim.load().catch(() => false);
   $('gateCont').disabled = false;
   if (!ok) { toast('前の一滴を読みこめませんでした'); return; }
+  book = new Map(await getSave('book').catch(() => null) || []);
   hideTitle(); setPlaying(true); toast('つづきから');
 };
 // はじめから: 消える一滴がない（つづきからがない）ときは、たずねずにすぐ始める。タイトルの間は一滴は止まっているので、うしろの一滴がそのまま「はじまり」（RELEASE.md 4章）
@@ -481,11 +509,11 @@ $('gateBack').onclick = () => { if (history.length > 1 && document.referrer) his
 if (q.has('nogate') || q.has('test')) $('gate').hidden = true;
 else showTitle();
 // メニューの「タイトルにもどる」: いまの一滴を保存して止め、タイトルを出す
-$('mTitle').onclick = () => { $('menu').close(); showTitle(); if (world) Promise.resolve(sim.save()).then(refreshCont); };
+$('mTitle').onclick = () => { $('menu').close(); showTitle(); if (world) { saveBook(); Promise.resolve(sim.save()).then(refreshCont); } };
 // 30 秒ごとと、タブを閉じる・ほかのタブに移るときに、いまの一滴を保存する（このブラウザの中だけ）
-setInterval(() => { if (!title && world && playing) sim.save(); }, 30000);
-addEventListener('visibilitychange', () => { if (document.hidden && !title && world) sim.save(); });
-addEventListener('pagehide', () => { if (!title && world) sim.save(); });
+setInterval(() => { if (!title && world && playing) { sim.save(); saveBook(); } }, 30000);
+addEventListener('visibilitychange', () => { if (document.hidden && !title && world) { sim.save(); saveBook(); } });
+addEventListener('pagehide', () => { if (!title && world) { sim.save(); saveBook(); } });
 
 
 // タイトル: はじまりの2本毛を 5 匹だけ、まん中に置く。砂なし。カメラは 5 匹のまん中をゆっくり追う（群れや群体は出さない。2026-11-01 ユーザー「数匹をクローズアップしてゆったり泳いでいる様子を（グロくない範囲で）」）
@@ -511,4 +539,4 @@ addEventListener('resize', () => { if (title) title.r.resize(innerWidth, innerHe
 
 // 確かめ用（tools から）
 window.__sim = sim;
-window.__drop = { get world() { return world; }, get sel() { return sel; }, ren, select, setSpeed, setPlaying };
+window.__drop = { get world() { return world; }, get sel() { return sel; }, get book() { return book; }, ren, select, setSpeed, setPlaying, openBook };

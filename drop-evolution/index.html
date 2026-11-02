@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/no-quirks.css"><script src="js/no-quirks.js" defer></script>
-<link rel="stylesheet" href="css/style.css?v=69">
+<link rel="stylesheet" href="css/style.css?v=70">
 </head>
 <body>
 <canvas id="view" aria-label="顕微鏡の視野"></canvas>
@@ -41,6 +41,7 @@
     <span id="sTampered" class="tampered" hidden title="決まりの外から生き物を足した一滴">手を加えた一滴</span>
   </div>
   <div class="topRight">
+    <button type="button" id="bookBtn" class="pill book" title="形の図鑑">図鑑 <b id="bookN">1</b></button>
     <button type="button" id="aboutBtn" class="round" aria-label="このアプリについて" title="このアプリについて">?</button>
     <button type="button" id="menuBtn" class="round" aria-label="メニュー" title="メニュー">☰</button>
   </div>
@@ -127,6 +128,17 @@
   <button type="button" id="exNew" class="primary">はじめから</button>
   <button type="button" id="exWatch" class="ghost">このまま眺める</button>
 </dialog>
+<!-- 形の図鑑: 進化の節目の形がはじめて現れたら、自動で写す（js/book.js） -->
+<dialog id="book" aria-labelledby="bookTitle">
+  <div class="bookHead"><h2 id="bookTitle">形の図鑑</h2><span id="bookCount"></span></div>
+  <div class="bookPage">
+    <canvas id="bookBig" aria-label="形"></canvas>
+    <div><b id="bookName"></b><small id="bookWhen"></small><p id="bookNote"></p></div>
+  </div>
+  <div id="bookGrid"></div>
+  <p class="bookFoot">進化の節目の形がはじめて現れると、ここに写します。</p>
+  <form method="dialog"><button class="ghost">とじる</button></form>
+</dialog>
 <dialog id="help">
   <h2>このアプリについて</h2>
   <p>顕微鏡でのぞいた海の水の一滴です。青緑のつぶは藍藻（らんそう）。光と、水に溶けた栄養塩で、どんどん分かれて増えます。生き物はそれを食べてためると2つに分かれ、そのたびに少しだけ変わります。だれも「よい個体」を選びません。<b>エサにありついて分かれられた者だけが子を残します。</b></p>
@@ -148,6 +160,7 @@
   <h3>はじまりと、本物とのちがい</h3>
   <p>はじまりの生き物は、すべての真核生物（動物・植物・菌・原生生物）の最後の共通祖先、LECA（約15〜20億年前）にならっています。鞭毛は2本、細胞の中にはもうミトコンドリアがあり、ときどき仲間と遺伝子を混ぜます。その前の、古細菌が細菌を取りこんでミトコンドリアにした出来事は、1回しか起きておらず、くわしいことがまだわかっていないので、ここでは描きません。</p>
   <p>右上の ☰ の「新しく始める」では、はじまりの2本毛のほかに、<b>進化の節目の一滴</b>（群体が育ったころなど）からも始められます。どれも、はじまりの2本毛から同じ決まりで何時間も回して保存したものです。</p>
+  <p>右上の<b>図鑑</b>には、進化の節目の形（狩る者・群体・多分裂など）がはじめて現れたときに、その形と時刻を自動で写します。下に出る「はじめて」の知らせを押しても開きます。</p>
   <p>一滴の上で右クリック（スマホは長押し）すると、<b>砂つぶを落とせます</b>。外から運ばれてきた砂つぶとして、ほかの砂と同じに扱います。</p>
   <p>本物より速くしている所があります。一滴の数百匹で海の何百万匹のかわりをするため、形の突然変異は3倍。何億年もかかる変化を、時間を縮めて見せています。縮めるのは時間だけで、藍藻と原生生物が分かれる速さの比、ウイルスや大きな捕食者に殺される割合は本物に合わせています。緑の点1つは、藍藻の細胞1つではなく小さなかたまりです。食べる所は、LECA にならって前からななめ横のくぼみ（腹の溝）から始まり、場所も遺伝子で変わります。</p>
   <p>栄養塩はまわりの海から一滴のふちへしみこみ、ゆっくり広がります。藍藻は光が強いほど速く増えます。藍藻も海から流れこみます。泳ぎ方・触手・狩る者は決まりにありません。部品の組み合わせから生まれます。</p>
@@ -167,6 +180,6 @@
 </dialog>
 
 <div id="perf"><span id="perfText"></span><button type="button" id="perfSave">ログを保存</button></div>
-<script type="module" src="js/main.js?v=69"></script>
+<script type="module" src="js/main.js?v=70"></script>
 </body>
 </html>
