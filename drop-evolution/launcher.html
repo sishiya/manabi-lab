@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>ひとしずくの進化 過去の版</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23e9dec2'/%3E%3Cellipse cx='16' cy='16' rx='9' ry='6' fill='%23c9a46a' stroke='%23574428' stroke-width='1.6'/%3E%3Ccircle cx='14' cy='17' r='2.4' fill='%237a6038'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<style>
+/* 1段組み: 節目の版はカード、ほかの版は表 */
+:root{--bg:#efe7d4;--ink:#2f2a22;--muted:#7a6f5c;--line:#d8ccb2;--panel:#faf5e8;--acc:#8a6a3a}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Zen Kaku Gothic New',system-ui,sans-serif}
+main{max-width:760px;margin:0 auto;padding:48px 16px 64px;display:flex;flex-direction:column;gap:28px}
+.eyebrow{font-size:11px;letter-spacing:.2em;color:var(--muted)}
+h1{font:600 34px 'Shippori Mincho',serif;margin:6px 0 0}
+h2{font-size:12px;letter-spacing:.18em;color:var(--muted);font-weight:700;margin:0 0 10px}
+.cards{display:flex;flex-direction:column;gap:12px}
+.card{display:grid;grid-template-columns:auto 1fr auto;gap:6px 18px;align-items:start;padding:16px 18px;background:var(--panel);border:1px solid var(--line);border-radius:12px;text-decoration:none;color:inherit}
+.card:hover,.latest{border-color:var(--acc)}
+.ver{font-size:13px;color:var(--acc);padding-top:3px;font-weight:700}
+.card b{font-size:17px}
+.card p{margin:4px 0 0;font-size:13px;line-height:1.75;color:var(--muted)}
+.date{font-size:11px;color:var(--muted);white-space:nowrap;padding-top:4px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td{padding:8px 6px;border-top:1px solid var(--line);vertical-align:top}
+td:first-child{color:var(--muted);white-space:nowrap}
+td a,.foot a{color:var(--ink)}
+.foot{font-size:13px;display:flex;gap:16px}
+@media (max-width:520px){.card{grid-template-columns:1fr}.date{padding:0}h1{font-size:28px}}
+</style>
+</head>
+<body>
+<main>
+  <header><div class="eyebrow">DROP-EVOLUTION · VERSIONS</div><h1>ひとしずくの進化</h1></header>
+  <section>
+    <h2>ターニングポイント</h2>
+    <div class="cards">
+      <a class="card latest" href="index.html"><span class="ver">最新</span><div><b>いまの版</b><p>作業フォルダにある index.html。</p></div><span class="date">—</span></a>
+      <a class="card" href="versions/v018-drop/index.html"><span class="ver">v018</span><div><b>タイトル・節目の一滴・群体の道</b>
+        <p>タイトルと注意書き（つづきから・はじめから）。祖先から進めて保存した「節目の一滴」を選べる。多分裂・分裂面（糸）・体の外で消化・大きさの逃げ場で、緑の群体と群体で狩る者が自力で出てくる。光は膜の外にもれる輪、寒天質と押し合う膜。WebGL と Web Worker で軽く。右クリックで砂つぶを落とせる。</p></div><span class="date">2026-11-01</span></a>
+      <a class="card" href="versions/v005-abyss/index.html"><span class="ver">v005</span><div><b>深海の発光・2本毛から群体へ</b>
+        <p>造形を「深海の発光」に（紺の水に生き物が青く光る・泳いだあとの光の糸・真上からのやわらかい光）。はじまりを LECA の2本毛に。接合・砂つぶ・群体・藍藻を飼う・群体の中の働きの分かれ・合図・多分裂。海とは網ごしに入れかわり、ウイルスは増えた者ほど殺し、代謝と死にやすさは重さで決まる。</p></div><span class="date">2026-11-01</span></a>
+      <a class="card" href="versions/v004-phosphor/index.html"><span class="ver">v004</span><div><b>燐光の見た目・海の一滴</b>
+        <p>造形を「燐光」に（黒地に緑に光る線、動きの残像。琥珀色は選んだものだけ）。舞台を海に。原生生物の補い（数が減るとはじまりの生き物が入る）と、生き物の色素を外した。</p></div><span class="date">2026-10-30</span></a>
+      <a class="card" href="versions/v003-blueprint/index.html"><span class="ver">v003</span><div><b>設計図の見た目・めぐる池</b>
+        <p>造形を機械的な「設計図」に（紺の紙・白い細線・四角い関節）。エサは光と栄養塩で増える藍藻、栄養塩は池・ふん・死んだ体からめぐる。色素は反対の色の光を吸う。死ぬとバラバラになってかけらもエサに。光の色のフィルター、テスト用の ×256・×1024（?test）。</p></div><span class="date">2026-10-30</span></a>
+      <a class="card" href="versions/v002-parts/index.html"><span class="ver">v002</span><div><b>部品と決まりで組み直し</b>
+        <p>遺伝子の数を減らし、部品3つ（細胞・節・感覚）と決まり6つ（水・打つ・曲がる・食べる・使う／作る・分かれる）だけに。はじまりはうしろに1本の毛。節が生え・のび・左右にそろって、むち毛・触手・狩る者が組み合わせから生まれる。札にからだの図、新しい一滴はメニューから。</p></div><span class="date">2026-10-30</span></a>
+      <a class="card" href="versions/v001-first/index.html"><span class="ver">v001</span><div><b>はじめの試作（段階A）</b>
+        <p>顕微鏡の明視野でのぞく水の一滴。細菌の雲の中で単細胞の生き物が泳ぎ、食べ、分裂のたびに遺伝子が少し変わる。点をつけず、分かれられた者だけが残る。系統・系統樹・からだの変化のグラフ、1匹を追いかける札、エサと光。</p></div><span class="date">2026-10-30</span></a>
+    </div>
+  </section>
+  <section>
+    <h2>すべての版</h2>
+    <table>
+      <tr><td>v018-drop</td><td><a href="versions/v018-drop/index.html">右クリック（長押し）で砂つぶを落とす・?test で生き物を置く（手を加えた一滴の印）・すべていなくなっても自動でやり直さない</a></td></tr>
+      <tr><td>v017-greenball</td><td>節目の一滴「大きな緑の群体」（8時間・最大 260 細胞）</td></tr>
+      <tr><td>v016-sharedigest</td><td>群体で体の外で消化した獲物は、まわりの仲間みんなで吸う</td></tr>
+      <tr><td>v015-continue</td><td>タイトルを毎回・つづきから（このブラウザの中に保存）・はじめから</td></tr>
+      <tr><td>v014-backtitle</td><td>メニューに「タイトルにもどる」</td></tr>
+      <tr><td>v013-title</td><td>タイトルと注意書き・はじめの数を選べる・速さと環境はたたむ・右上に ？ とメニュー・1刻み 1/20 秒・藍藻は丸く淡く</td></tr>
+      <tr><td>v012-tick</td><td>計算のコアが空回りしないように（MessageChannel）</td></tr>
+      <tr><td>v011-worker</td><td>計算を Web Worker で（画面のこまと並べて動く。?noworker で前の形）</td></tr>
+      <tr><td>v010-layer</td><td>WebGL の絵を画面にうつさず上に重ねる・引いて見るときは膜をふつうの輪で</td></tr>
+      <tr><td>v009-webgl</td><td>光の輪とくっきりの線を WebGL でまとめて描く（?nogl で前の描き方）</td></tr>
+      <tr><td>v008-measure</td><td>計測ログに計算と描くの内わけ</td></tr>
+      <tr><td>v007-turns</td><td>節目の一滴を選べる・体の外で消化・本物らしい見た目（光の輪・寒天質・押し合う膜）・計測ログ</td></tr>
+      <tr><td>v006-filament</td><td>分裂面（糸・立つ藻）・こして食べる・大きさの逃げ場・到達点の試験</td></tr>
+      <tr><td>v005-abyss</td><td><a href="versions/v005-abyss/index.html">深海の発光・2本毛から群体へ</a></td></tr>
+      <tr><td>v004-phosphor</td><td><a href="versions/v004-phosphor/index.html">燐光の見た目・海の一滴</a></td></tr>
+      <tr><td>v003-blueprint</td><td><a href="versions/v003-blueprint/index.html">設計図の見た目・めぐる池</a></td></tr>
+      <tr><td>v002-parts</td><td><a href="versions/v002-parts/index.html">部品と決まりで組み直し</a></td></tr>
+      <tr><td>v001-first</td><td><a href="versions/v001-first/index.html">はじめの試作（段階A）</a></td></tr>
+    </table>
+  </section>
+  <p class="foot"><a href="index.html">アプリへ</a><a href="../archive.html">まなびラボの保管庫へ</a></p>
+</main>
+</body>
+</html>

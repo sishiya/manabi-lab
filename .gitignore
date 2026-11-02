@@ -32,3 +32,7 @@ _dev/promo/out/
 
 # smoke test results (_dev/tools/smoke.ps1)
 _dev/tools/out/
+
+# ひとしずくの進化: 見くらべのページと確かめの出力は手元だけ（あそびラボから移した。2026-11-02）
+drop-evolution/look/
+_dev/drop-evolution/

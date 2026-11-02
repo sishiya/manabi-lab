@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23e9dec2'/%3E%3Cellipse cx='16' cy='16' rx='9' ry='6' fill='%23c9a46a' stroke='%23574428' stroke-width='1.6'/%3E%3Ccircle cx='14' cy='17' r='2.4' fill='%237a6038'/%3E%3C/svg%3E">
+<title>ひとしずくの進化</title>
+<meta name="description" content="顕微鏡でのぞいた水の一滴。単細胞の生き物がエサを探し、食べ、分裂するたびに少しずつ変わり、系統に分かれていく。点をつけない、終わりのない進化を眺める試作。">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/no-quirks.css"><script src="../../../assets/no-quirks.js" defer></script>
+<link rel="stylesheet" href="css/style.css?v=6">
+</head>
+<body>
+<canvas id="view" aria-label="顕微鏡の視野"></canvas>
+
+<!-- 上: いまの状態 -->
+<header id="top">
+  <h1>ひとしずくの進化</h1>
+  <div class="stats">
+    <span><b id="sTime">0秒</b><em id="sRate"></em></span>
+    <span>生き物 <b id="sPop">0</b></span>
+    <span>系統 <b id="sClades">0</b></span>
+    <span class="pred">狩る者 <b id="sPred">0</b></span>
+  </div>
+  <button type="button" id="menuBtn" class="round" aria-label="メニュー">☰</button>
+</header>
+
+<!-- 左: 環境 -->
+<aside id="env">
+  <label><span>海の栄養</span><input type="range" id="food" min="0.3" max="2" step="0.05" value="1"><output id="foodOut">ふつう</output></label>
+  <label><span>光</span><input type="range" id="light" min="0" max="1" step="0.05" value="0.6"><output id="lightOut">ふつう</output></label>
+  <div class="lamps" role="group" aria-label="光の色">
+    <button type="button" data-lamp="white" class="on" aria-label="白い光"></button><button type="button" data-lamp="red" aria-label="赤い光"></button><button type="button" data-lamp="green" aria-label="緑の光"></button><button type="button" data-lamp="blue" aria-label="青い光"></button>
+  </div>
+</aside>
+
+<!-- 右: 選んだ1匹 -->
+<aside id="card" hidden>
+  <button type="button" id="cardClose" class="round small" aria-label="とじる">×</button>
+  <div class="who"><i id="cSwatch"></i><div><b id="cName"></b><small id="cMeta"></small></div></div>
+  <dl id="cStats"></dl>
+  <canvas id="cBody" aria-label="からだの形"></canvas>
+  <p class="bodyline" id="cBodyLine"></p>
+  <div id="cGenes"></div>
+  <p class="hint" id="cHint"></p>
+</aside>
+
+<!-- 下: 時間とグラフ -->
+<footer id="bottom">
+  <div class="transport">
+    <button type="button" id="play" class="round big" aria-label="止める">❚❚</button>
+    <div class="speeds" role="group" aria-label="はやさ">
+      <button type="button" data-speed="1">×1</button><button type="button" data-speed="4" class="on">×4</button><button type="button" data-speed="16">×16</button><button type="button" data-speed="256" class="test">×256</button><button type="button" data-speed="1024" class="test">×1024</button>
+    </div>
+  </div>
+  <div class="graphbox">
+    <div class="tabs" role="tablist">
+      <button type="button" data-mode="pop" class="on">数</button><button type="button" data-mode="tree">系統樹</button><button type="button" data-mode="traits">からだ</button>
+    </div>
+    <canvas id="graph"></canvas>
+  </div>
+  <p id="ticker" aria-live="polite"></p>
+</footer>
+
+<div id="scale"><i></i><span>100 µm</span></div>
+<div id="toast" hidden></div>
+
+<dialog id="menu" aria-label="メニュー">
+  <div id="menuMain">
+    <h2>ひとしずくの進化</h2>
+    <p class="seed" id="menuSeed"></p>
+    <button type="button" id="mResume" class="primary">つづける</button>
+    <button type="button" id="mHelp" class="ghost">しくみ</button>
+    <button type="button" id="mNew" class="ghost">新しい一滴</button>
+  </div>
+  <div id="menuConfirm" hidden>
+    <h2>新しい一滴にしますか？</h2>
+    <p>いまの一滴の生き物と記録は消えて、はじまりの1本毛から始まります。</p>
+    <button type="button" id="mNewYes" class="danger">新しい一滴にする</button>
+    <button type="button" id="mNewNo" class="ghost">やめる</button>
+  </div>
+</dialog>
+
+<dialog id="help">
+  <h2>しくみ</h2>
+  <p>顕微鏡でのぞいた海の水の一滴です。青緑のつぶは藍藻（らんそう）。光と、水に溶けた栄養塩で、どんどん分かれて増えます。生き物はそれを食べてためると2つに分かれ、そのたびに少しだけ変わります。だれも「よい個体」を選びません。<b>エサにありついて分かれられた者だけが子を残します。</b></p>
+  <h3>部品は3つ</h3>
+  <ul>
+    <li><b>細胞</b>: 丸い体。大きさ。</li>
+    <li><b>節</b>: 細胞や、ほかの節の先から生える棒。長さ・向き・筋のふれ幅・リズムのずれ。</li>
+    <li><b>感覚</b>: 感じる範囲と、エサへ・小さい相手へ・大きい相手から 向かう強さ。</li>
+  </ul>
+  <h3>決まりは6つ</h3>
+  <ol>
+    <li><b>水</b>: 小さな生き物はすぐ止まる。節を動かすと、水の抵抗で体が動く。</li>
+    <li><b>打つ</b>: 節の先は、うしろへ振るときだけ水を強くかく。</li>
+    <li><b>曲がる</b>: 感じた左右の差の向きへ曲がる。</li>
+    <li><b>食べる</b>: ふれた部分（細胞・節の先）より小さいものを食べる。のみこんでいる間は次を食べない。</li>
+    <li><b>使う・作る</b>: 重いほど、速く打つほど使う。使った分はふんになり、水の栄養塩にもどる。</li>
+    <li><b>分かれる</b>: 体をもう1つ作れるだけためたら分かれる。節が生える・のびる・左右にそろう・なくなる。飢えて死ぬと体はバラバラになり、かけらもエサになる。</li>
+  </ol>
+  <p>栄養塩はまわりの海から一滴のふちへしみこみ、ゆっくり広がります。藍藻は青緑の色素で、赤い光をよく使います（光の色で増え方が変わる）。藍藻も海から流れこみます。泳ぎ方・触手・狩る者は決まりにありません。部品の組み合わせから生まれます。</p>
+  <p class="ops">ドラッグで動かす・ホイールで寄る・生き物を押すと追いかける。スペースで止める。</p>
+  <form method="dialog"><button class="ghost">とじる</button></form>
+</dialog>
+
+<script type="module" src="js/main.js?v=6"></script>
+</body>
+</html>

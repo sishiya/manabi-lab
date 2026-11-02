@@ -1,0 +1,12 @@
+/* あそびラボ（asobi-lab）の assets/no-quirks.css を写したもの（2026-11-02 まなびラボへ移したとき）。 */
+/* あそびラボの各ゲームで共通: スマホのブラウザのくせが遊びのじゃまをしないように（2026-10-25 ユーザー「ブラウザ固有の誤動作をしないように」）。
+   ゲームの css より先に読む（ゲームごとの決まりがあとから上書きできる）。
+   - ダブルタップの拡大をしない（指2本で広げる拡大はできる。読みにくい人のため）
+   - 引っぱって再読みこみ・はねかえりをしない（遊んでいる途中でページが消えない）
+   - 横にしたときに字が勝手に大きくならない
+   - 押したところの青いハイライトを出さない・ボタンを続けて押しても字がえらばれない
+   - 絵（canvas）は長押しで画像のメニューや文字えらびを出さない */
+html{touch-action:manipulation;overscroll-behavior:none;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+button,a,label,[role="button"],canvas{-webkit-tap-highlight-color:transparent}
+button,[role="button"]{-webkit-user-select:none;user-select:none}
+canvas{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}

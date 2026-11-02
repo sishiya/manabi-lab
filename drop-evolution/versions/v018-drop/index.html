@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23e9dec2'/%3E%3Cellipse cx='16' cy='16' rx='9' ry='6' fill='%23c9a46a' stroke='%23574428' stroke-width='1.6'/%3E%3Ccircle cx='14' cy='17' r='2.4' fill='%237a6038'/%3E%3C/svg%3E">
+<title>ひとしずくの進化</title>
+<meta name="description" content="顕微鏡でのぞいた水の一滴。単細胞の生き物がエサを探し、食べ、分裂するたびに少しずつ変わり、系統に分かれていく。点をつけない、終わりのない進化を眺める試作。">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/no-quirks.css"><script src="../../../assets/no-quirks.js" defer></script>
+<link rel="stylesheet" href="css/style.css?v=67">
+</head>
+<body>
+<canvas id="view" aria-label="顕微鏡の視野"></canvas>
+<!-- はじめの注意書き（虫や、小さなものがたくさん集まった様子が苦手な人が、見る前に引き返せるように。2026-11-01 ユーザー） -->
+<div id="gate" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+  <canvas id="gateView" aria-hidden="true"></canvas>
+  <div class="gateBox">
+    <h2 id="gateTitle">ひとしずくの進化</h2>
+    <p class="gateLead">海の水の一滴を、顕微鏡でのぞきます</p>
+    <div class="gateBtns">
+      <button type="button" id="gateCont" class="gatePrimary" hidden>つづきから<small id="gateContSub"></small></button>
+      <button type="button" id="gateNew" class="gatePrimary">はじめから</button>
+    </div>
+    <p class="gateNote"><b>ご注意</b>小さな生き物がたくさん集まって泳いだり、細胞がびっしり並んだかたまりになったりします。虫や、小さなものが集まった様子が苦手な方は、ここで引き返してください。</p>
+    <button type="button" id="gateBack" class="gateBack">もどる</button>
+  </div>
+  </div>
+</div>
+
+<!-- 上: いまの状態 -->
+<header id="top">
+  <h1>ひとしずくの進化</h1>
+  <div class="stats">
+    <span><b id="sTime">0秒</b><em id="sRate"></em></span>
+    <span>生き物 <b id="sPop">0</b></span>
+    <span>系統 <b id="sClades">0</b></span>
+    <span class="pred">狩る者 <b id="sPred">0</b></span>
+    <span id="sTampered" class="tampered" hidden title="決まりの外から生き物を足した一滴">手を加えた一滴</span>
+  </div>
+  <div class="topRight">
+    <button type="button" id="aboutBtn" class="round" aria-label="このアプリについて" title="このアプリについて">?</button>
+    <button type="button" id="menuBtn" class="round" aria-label="メニュー" title="メニュー">☰</button>
+  </div>
+</header>
+
+<!-- 左下: 環境（「環境」のボタンで開く。ふだんはたたむ） -->
+<aside id="env" aria-label="環境">
+  <label><span>海の栄養</span><input type="range" id="food" min="0.2" max="3" step="0.05" value="1"><output id="foodOut">ふつう</output></label>
+  <label><span>光</span><input type="range" id="light" min="0" max="1" step="0.05" value="0.6"><output id="lightOut">ふつう</output></label>
+  <label><span>海の流れ</span><input type="range" id="flow" min="0" max="2" step="0.05" value="1"><output id="flowOut">ふつう</output></label>
+</aside>
+
+<!-- 右: 選んだ1匹 -->
+<aside id="card" hidden>
+  <button type="button" id="cardClose" class="round small" aria-label="とじる">×</button>
+  <div class="who"><i id="cSwatch"></i><div><b id="cName"></b><small id="cMeta"></small></div></div>
+  <dl id="cStats"></dl>
+  <canvas id="cBody" aria-label="からだの形"></canvas>
+  <p class="bodyline" id="cBodyLine"></p>
+  <div id="cGenes"></div>
+  <p class="hint" id="cHint"></p>
+</aside>
+
+<!-- 下: 時間とグラフ -->
+<footer id="bottom">
+  <div class="transport" id="transport">
+    <button type="button" id="play" class="round big" aria-label="止める">❚❚</button>
+    <button type="button" id="speedBtn" class="pill" aria-haspopup="true" aria-expanded="false" title="はやさ">×4</button>
+    <button type="button" id="envBtn" class="pill" aria-haspopup="true" aria-expanded="false" title="海の栄養・光・海の流れ">環境</button>
+    <div class="speeds" role="group" aria-label="はやさ">
+      <button type="button" data-speed="1">×1</button><button type="button" data-speed="4" class="on">×4</button><button type="button" data-speed="16">×16</button><button type="button" data-speed="256" class="test">×256</button><button type="button" data-speed="1024" class="test">×1024</button>
+    </div>
+  </div>
+  <div class="graphbox">
+    <div class="tabs" role="tablist">
+      <button type="button" data-mode="pop" class="on">数</button><button type="button" data-mode="tree">系統樹</button><button type="button" data-mode="traits">からだ</button>
+    </div>
+    <canvas id="graph"></canvas>
+  </div>
+  <p id="ticker" aria-live="polite"></p>
+</footer>
+
+<div id="scale"><i></i><span>100 µm</span></div>
+<div id="toast" hidden></div>
+
+<dialog id="menu" aria-label="メニュー">
+  <div id="menuMain">
+    <h2>ひとしずくの進化</h2>
+    <p class="seed" id="menuSeed"></p>
+    <button type="button" id="mResume" class="primary">つづける</button>
+    <button type="button" id="mNew" class="ghost">新しく始める</button>
+    <button type="button" id="mTitle" class="ghost">タイトルにもどる</button>
+  </div>
+  <div id="menuConfirm" hidden>
+    <h2>新しく始めますか？</h2>
+    <p id="newNote">いまの一滴の生き物と記録は消えて、はじまりの2本毛（すべての真核生物の祖先）から始まります。大きさ・砂つぶ・はじめの数も選べます。</p>
+    <div class="sizes starts" id="starts" role="radiogroup" aria-label="どこから始めるか"></div>
+    <div id="newShape">
+    <div class="sizes" role="radiogroup" aria-label="一滴の大きさ">
+      <button type="button" data-size="s" role="radio">小さい<small>1 × 0.7 mm</small></button><button type="button" data-size="m" role="radio">ふつう<small>2 × 1.4 mm</small></button><button type="button" data-size="l" role="radio">大きい<small>2.8 × 2 mm</small></button>
+    </div>
+    <div class="sizes" role="radiogroup" aria-label="砂つぶ">
+      <button type="button" data-sand="0" role="radio">砂なし<small>水だけ</small></button><button type="button" data-sand="1" role="radio">砂 少し<small>ところどころ</small></button><button type="button" data-sand="2" role="radio">砂 多い<small>すきまだらけ</small></button>
+    </div>
+    <div class="sizes" role="radiogroup" aria-label="はじめの数">
+      <button type="button" data-pop="1" role="radio">1匹<small>1つから</small></button><button type="button" data-pop="10" role="radio">10匹<small>少し</small></button><button type="button" data-pop="50" role="radio">50匹<small>ほどほど</small></button><button type="button" data-pop="150" role="radio">150匹<small>ふつう</small></button>
+    </div>
+    </div>
+    <button type="button" id="mNewYes" class="danger">新しく始める</button>
+    <button type="button" id="mNewNo" class="ghost">やめる</button>
+  </div>
+</dialog>
+
+<!-- 置くメニュー（右クリック・指の長押し） -->
+<div id="ctx" role="menu" hidden>
+  <p>砂つぶを落とす</p>
+  <button type="button" data-grain="30">小さい</button><button type="button" data-grain="55">ふつう</button><button type="button" data-grain="95">大きい</button>
+  <div id="ctxOrgs" hidden></div>
+</div>
+<!-- すべていなくなったとき（自動でやり直さない。はじめからか、このまま眺めるかを選ぶ） -->
+<dialog id="extinct" aria-labelledby="exTitle">
+  <h2 id="exTitle">すべていなくなりました</h2>
+  <p id="exText"></p>
+  <button type="button" id="exNew" class="primary">はじめから</button>
+  <button type="button" id="exWatch" class="ghost">このまま眺める</button>
+</dialog>
+<dialog id="help">
+  <h2>このアプリについて</h2>
+  <p>顕微鏡でのぞいた海の水の一滴です。青緑のつぶは藍藻（らんそう）。光と、水に溶けた栄養塩で、どんどん分かれて増えます。生き物はそれを食べてためると2つに分かれ、そのたびに少しだけ変わります。だれも「よい個体」を選びません。<b>エサにありついて分かれられた者だけが子を残します。</b></p>
+  <h3>部品は3つ</h3>
+  <ul>
+    <li><b>細胞</b>: 丸い体。大きさ。</li>
+    <li><b>節</b>: 細胞や、ほかの節の先から生える棒。長さ・向き・筋のふれ幅・リズムのずれ。</li>
+    <li><b>感覚</b>: 感じる範囲と、エサへ・小さい相手へ・大きい相手から 向かう強さ。</li>
+  </ul>
+  <h3>決まりは6つ</h3>
+  <ol>
+    <li><b>水</b>: 小さな生き物はすぐ止まる。節を動かすと、水の抵抗で体が動く。海の水はゆっくり渦を巻いて流れ、なにもかも運ぶ。一滴は、上下の面が目の細かい網の箱。生き物は出られず、水と栄養塩と小さな藍藻だけが海と入れかわる。底の砂つぶは、水を通さない。生き物はふれると表面にそってすべり、しばらく押しつけられると上をこえる。すきまには小さな者だけが入れる。</li>
+    <li><b>打つ</b>: 節の先は、うしろへ振るときだけ水を強くかく。</li>
+    <li><b>曲がる</b>: 体の前の左右で感じたにおい（藍藻・自分がのみこめる相手・自分をのみこむ相手）の差の向きへ曲がる。においは水ににじんで広がる。</li>
+    <li><b>食べる</b>: 細胞の食べる所（くぼみ。はじめはななめ前）・節の先にふれた、それより小さいものを食べる。のみこんでいる間は次を食べない。</li>
+    <li><b>使う・作る</b>: 重いほど、速く打つほど使う。食べた物の3割は消化できず、うしろからふんとして捨てる（細菌に分解されて栄養塩にもどる）。使った分は水に溶けて出す。</li>
+    <li><b>分かれる</b>: 体をもう1つ作れるだけためたら分かれる。節が生える・のびる・左右にそろう・なくなる。飢えて死ぬと体はバラバラになり、かけらもエサになる。ふれた同じ種類の仲間と、くっついて遺伝子を混ぜることもある（接合。群体に入っていない単細胞だけ。数はふえず、30秒ほど泳げない。混ぜた遺伝子は次に分かれるときから。混ぜるかどうかも遺伝子しだい）。食べた藍藻を消化せずに飼うこともある（中でも光で作って半分を渡し、ゆっくり分かれる。葉緑体のはじまり）。分かれた子が、くっついたまま離れないこともある泳ぎ方も遺伝子で変わる: エサのにおいの中でゆるめる・のみこむ間は休む・前でぶつかると下がる・砂つぶにくっついて止まり、水を流してエサを待つ（襟鞭毛虫の柄。群体ごと止まることもある＝海綿の道）。（群体。何細胞まで1つに保つかも遺伝子で、それより先の子は1つの細胞で離れて新しい群体を始める。細胞は寒天質でとなりどうしつながって向きがそろい、打つ力は足し合わさり、かたまりが大きいと口に入らない）。群体の仲間が感じたことを、合図として受けとることもできる。群体の中では、仲間に囲まれた内の細胞と外の細胞で、遺伝子の出し方を変えられる（内は打たずに休む・外は分かれずに仲間へ渡す・ためた分を分けあう・節を外だけ／内だけに作る＝細胞の種類）。</li>
+  </ol>
+  <h3>はじまりと、本物とのちがい</h3>
+  <p>はじまりの生き物は、すべての真核生物（動物・植物・菌・原生生物）の最後の共通祖先、LECA（約15〜20億年前）にならっています。鞭毛は2本、細胞の中にはもうミトコンドリアがあり、ときどき仲間と遺伝子を混ぜます。その前の、古細菌が細菌を取りこんでミトコンドリアにした出来事は、1回しか起きておらず、くわしいことがまだわかっていないので、ここでは描きません。</p>
+  <p>右上の ☰ の「新しく始める」では、はじまりの2本毛のほかに、<b>進化の節目の一滴</b>（群体が育ったころなど）からも始められます。どれも、はじまりの2本毛から同じ決まりで何時間も回して保存したものです。</p>
+  <p>一滴の上で右クリック（スマホは長押し）すると、<b>砂つぶを落とせます</b>。外から運ばれてきた砂つぶとして、ほかの砂と同じに扱います。</p>
+  <p>本物より速くしている所があります。一滴の数百匹で海の何百万匹のかわりをするため、形の突然変異は3倍。何億年もかかる変化を、時間を縮めて見せています。縮めるのは時間だけで、藍藻と原生生物が分かれる速さの比、ウイルスや大きな捕食者に殺される割合は本物に合わせています。緑の点1つは、藍藻の細胞1つではなく小さなかたまりです。食べる所は、LECA にならって前からななめ横のくぼみ（腹の溝）から始まり、場所も遺伝子で変わります。</p>
+  <p>栄養塩はまわりの海から一滴のふちへしみこみ、ゆっくり広がります。藍藻は光が強いほど速く増えます。藍藻も海から流れこみます。泳ぎ方・触手・狩る者は決まりにありません。部品の組み合わせから生まれます。</p>
+  <p class="ops">ドラッグで動かす・ホイールで寄る・生き物を押すと追いかける。スペースで止める。</p>
+  <form method="dialog"><button class="ghost">とじる</button></form>
+</dialog>
+
+<div id="perf"><span id="perfText"></span><button type="button" id="perfSave">ログを保存</button></div>
+<script type="module" src="js/main.js?v=67"></script>
+</body>
+</html>
