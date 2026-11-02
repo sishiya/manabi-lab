@@ -29,12 +29,9 @@
   function scene(g, s, cam, o) {
     const N = GROUND.N, p = s.p;
     g.fillStyle = C.ground; g.fillRect(0, 0, cam.w, cam.h);
-    // 地面のつぶつぶ（地面に止まっている目印。1 cm ごと）
-    const step = cam.s * 0.01 >= 7 ? 0.01 : 0.02;
-    const x0 = cam.x - cam.w / 2 / cam.s, x1 = cam.x + cam.w / 2 / cam.s, y0 = cam.y - cam.h / 2 / cam.s, y1 = cam.y + cam.h / 2 / cam.s;
-    g.fillStyle = C.dot;
-    for (let x = Math.floor(x0 / step) * step; x <= x1; x += step)
-      for (let y = Math.floor(y0 / step) * step; y <= y1; y += step) { const q = W(cam, x, y); g.fillRect(q[0] - 1, q[1] - 1, 2, 2); }
+    // 地面（砂つぶと小石。地面に止まっている目印。並びは場所から決まる乱数で、毎回同じ）
+    groundTex(g, cam);
+    if (o.ruler) ruler(g, cam);
     // 坂の向き
     if (p.slope) {
       g.fillStyle = C.muted; g.font = '13px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center';
@@ -46,11 +43,20 @@
       o.trail.forEach((q, k) => { const w = W(cam, q[0], q[1]); k ? g.lineTo(w[0], w[1]) : g.moveTo(w[0], w[1]); });
       g.stroke(); g.setLineDash([]);
     }
-    // 地面に残った跡（横ばい: ふれた所）
+    // 地面に残った跡（ふれた所。古いほどうすく）
     if (o.tracks) {
-      g.fillStyle = '#6a5638';
-      const r = Math.max(1.5, BODY_D * cam.s * 0.35);
-      for (const q of o.tracks) { const w = W(cam, q[0], q[1]); if (w[0] > -9 && w[0] < cam.w + 9 && w[1] > -9 && w[1] < cam.h + 9) { g.beginPath(); g.arc(w[0], w[1], r, 0, 7); g.fill(); } }
+      const r = Math.max(1.2, BODY_D * cam.s * (o.thinTracks ? 0.12 : 0.35)), n = o.tracks.length, a0 = o.thinTracks ? 0.35 : 0.85;
+      // 古さで5つの組に分けて、組ごとにまとめて描く
+      for (let b = 0; b < 5; b++) {
+        g.fillStyle = `rgba(150,120,78,${(a0 * (0.3 + 0.7 * (b + 0.5) / 5)).toFixed(2)})`;
+        g.beginPath();
+        for (let k = Math.floor(n * b / 5); k < Math.floor(n * (b + 1) / 5); k++) {
+          const q = o.tracks[k], w = W(cam, q[0], q[1]);
+          if (w[0] < -9 || w[0] > cam.w + 9 || w[1] < -9 || w[1] > cam.h + 9) continue;
+          g.moveTo(w[0] + r, w[1]); g.arc(w[0], w[1], r, 0, 6.2832);
+        }
+        g.fill();
+      }
     }
     const P = []; for (let i = 0; i < N; i++) P.push(W(cam, s.x[i], s.y[i]));
     const w0 = p.mass * 9.81 / p.L;
@@ -75,6 +81,13 @@
           g.beginPath(); g.moveTo(P[i][0], P[i][1]); g.lineTo(P[i + 1][0], P[i + 1][1]); g.stroke();
         }
       }
+    }
+    // 背中の模様（体に固定。体が自分の線にそって前へ流れるのが見える）
+    g.fillStyle = 'rgba(20,40,28,.55)';
+    for (let i = 3; i < N - 3; i += 4) {
+      const r = radius(i, N, cam), tx = s.tx[i], ty = -s.ty[i];
+      g.save(); g.translate(P[i][0], P[i][1]); g.rotate(Math.atan2(ty, tx));
+      g.beginPath(); g.ellipse(0, 0, r * 0.55, r * 0.8, 0, 0, 7); g.fill(); g.restore();
     }
     // 頭（目）
     const hx = P[N - 1][0], hy = P[N - 1][1], tx = s.tx[N - 1], ty = -s.ty[N - 1];
@@ -120,6 +133,49 @@
     }
     if (o.ring) ring(g, o.ring, o.time);
     if (o.scaleAt != null) inset(g, s, cam, o.scaleAt);
+  }
+
+  // 場所から決まる乱数（0〜1）
+  function hash(i, j, k) {
+    let h = (i * 374761393 + j * 668265263 + k * 2147483647) | 0;
+    h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  }
+  // 砂つぶ・小石（1.5 cm のます目ごとに0〜3つ。大きさ・明るさ・位置はばらばら）
+  function groundTex(g, cam) {
+    const cell = cam.s * 0.015 >= 6 ? 0.015 : 0.03;
+    const x0 = cam.x - cam.w / 2 / cam.s, x1 = cam.x + cam.w / 2 / cam.s, y0 = cam.y - cam.h / 2 / cam.s, y1 = cam.y + cam.h / 2 / cam.s;
+    // 砂つぶは明るさで3つの組に分けて、組ごとにまとめて描く。小石は輪郭つきで別に
+    const grains = [[], [], []], pebbles = [];
+    for (let i = Math.floor(x0 / cell) - 1; i <= x1 / cell; i++)
+      for (let j = Math.floor(y0 / cell) - 1; j <= y1 / cell; j++) {
+        const n = Math.floor(hash(i, j, 1) * 4);
+        for (let k = 0; k < n; k++) {
+          const q = W(cam, (i + hash(i, j, 2 + k)) * cell, (j + hash(i, j, 7 + k)) * cell), a = hash(i, j, 12 + k);
+          if (k === 0 && hash(i, j, 20) < 0.06) pebbles.push([q[0], q[1], (0.003 + 0.004 * a) * cam.s, a]);
+          else grains[Math.min(2, Math.floor(a * 3))].push(q[0], q[1], Math.max(0.8, (0.0006 + 0.0012 * a) * cam.s));
+        }
+      }
+    grains.forEach((L, b) => {
+      g.fillStyle = `rgba(190,215,195,${(0.15 + 0.07 * b).toFixed(2)})`; g.beginPath();
+      for (let k = 0; k < L.length; k += 3) { g.moveTo(L[k] + L[k + 2], L[k + 1]); g.arc(L[k], L[k + 1], L[k + 2], 0, 6.2832); }
+      g.fill();
+    });
+    g.strokeStyle = 'rgba(170,200,180,.32)'; g.lineWidth = 1.2; g.fillStyle = 'rgba(60,80,70,.35)'; g.beginPath();
+    for (const [x, y, r, a] of pebbles) { g.moveTo(x + r, y); g.ellipse(x, y, r, r * (0.6 + 0.3 * a), a * 6, 0, 6.2832); }
+    g.fill(); g.stroke();
+  }
+  // 地面に固定した目盛り（10 cm ごと。下のふち）
+  function ruler(g, cam) {
+    const x0 = cam.x - cam.w / 2 / cam.s, x1 = cam.x + cam.w / 2 / cam.s, y = cam.h - 30;
+    g.strokeStyle = 'rgba(232,240,244,.45)'; g.fillStyle = 'rgba(232,240,244,.6)'; g.lineWidth = 1;
+    g.font = '11px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center';
+    g.beginPath(); g.moveTo(0, y); g.lineTo(cam.w, y); g.stroke();
+    for (let k = Math.ceil(x0 / 0.02); k * 0.02 <= x1; k++) {
+      const X = W(cam, k * 0.02, 0)[0], big = k % 5 === 0;
+      g.beginPath(); g.moveTo(X, y); g.lineTo(X, y - (big ? 8 : 4)); g.stroke();
+      if (big) g.fillText(`${k * 2} cm`, X, y - 11);
+    }
   }
 
   // 見るところを示す枠（ゆっくり明るさが変わる。1秒に1回より遅い）

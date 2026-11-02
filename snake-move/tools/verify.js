@@ -43,7 +43,7 @@ else if (mode === 'tree') {
   show('ななめ 45°', { slope: 45 });
   let lo = 0.5, hi = 4;
   for (let i = 0; i < 14; i++) { const m = (lo + hi) / 2; if (TR.measure({ safety: m }).fellAt) lo = m; else hi = m; }
-  console.log(`落ちない締めつけの余裕（4 cm の幹）: ${hi.toFixed(2)} 倍以上`);
+  console.log(`落ちない締めつけの余裕（${TR.make().p.D * 100} cm の幹）: ${hi.toFixed(2)} 倍以上`);
   for (const dt of [0.008, 0.004, 0.002]) show(`dt ${dt}`, { }, dt);
 }
 else if (mode === 'stones') {

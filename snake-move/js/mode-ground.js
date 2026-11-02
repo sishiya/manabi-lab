@@ -14,7 +14,17 @@ window.MODES = window.MODES || {};
       reset() { M.make(); },
       baseScale: c => Math.min(c.w * 0.6, c.h * 0.95) / M.s.p.L,
       snap(c) { c.x = M.s.X; c.y = M.s.Y; },
-      follow(c, k) { c.x += (M.s.X - c.x) * k; c.y += (M.s.Y - c.y) * k; },
+      follow(c, k) {
+        if (!c.fix) { c.x += (M.s.X - c.x) * k; c.y += (M.s.Y - c.y) * k; return; }
+        // 地面に固定: ヘビが画面のはしへ近づいたら、進む向きの先へカメラを動かす（動かないあいだは地面が止まって見える）
+        const vw = c.w / c.s, vh = c.h / c.s, th = M.dir != null ? M.dir : M.s.TH;
+        if (!c.pan && (Math.abs(M.s.X - c.x) > vw * 0.2 || Math.abs(M.s.Y - c.y) > vh * 0.22))
+          c.pan = [M.s.X + Math.cos(th) * vw * 0.16, M.s.Y + Math.sin(th) * vh * 0.16];
+        if (c.pan) {
+          c.x += (c.pan[0] - c.x) * k * 0.5; c.y += (c.pan[1] - c.y) * k * 0.5;
+          if (Math.hypot(c.pan[0] - c.x, c.pan[1] - c.y) < vw * 0.01) c.pan = null;
+        }
+      },
       advance(dt, A) {
         const s = M.s, h = s.p.tau / 200;
         let left = dt;
@@ -23,11 +33,11 @@ window.MODES = window.MODES || {};
           M.eng().step(s, d); left -= d;
           M.hist.push([s.t, s.X, s.Y]);
           if (opts.tracks) {
-            // 地面にふれている所の跡（横ばいの平行な線。ふれた所に点を残す）
+            // 地面にふれている所の跡（横ばいは平行な線、うねりはこすれた帯。ふれた所に点を残す）
             M.stampT -= d;
             if (M.stampT <= 0) {
               M.stampT = s.p.tau / 40;
-              for (let i = 0; i < GROUND.N; i += 2) if (s.nu[i] > 0.3 * s.p.mass * 9.81 / s.p.L) M.tracks.push([s.x[i], s.y[i]]);
+              for (let i = 0; i < GROUND.N; i += 2) if (s.nu[i] > (id === 'ground' ? 0.8 : 0.3) * s.p.mass * 9.81 / s.p.L) M.tracks.push([s.x[i], s.y[i]]);
               if (M.tracks.length > 6000) M.tracks.splice(0, M.tracks.length - 6000);
             }
           }
@@ -45,7 +55,7 @@ window.MODES = window.MODES || {};
         if (Math.hypot(s.X, s.Y) > 6) { M.reset(); A.snapCam(); A.note('はじめの場所へもどした'); }
       },
       draw(g, c, A) {
-        DRAWG.scene(g, M.s, c, { layers: A.layers, trail: M.trail, tracks: opts.tracks ? M.tracks : null, wave: A.wave, ring: M.ring(A), time: A.time, scaleAt: A.scaleOn && id === 'ground' ? A.scaleAt : null });
+        DRAWG.scene(g, M.s, c, { layers: A.layers, trail: M.trail, tracks: opts.tracks ? M.tracks : null, thinTracks: id === 'ground', ruler: true, wave: A.wave, ring: M.ring(A), time: A.time, scaleAt: A.scaleOn && id === 'ground' ? A.scaleAt : null });
         if (opts.after) opts.after(g, c, A);
       },
       ring(A) {
@@ -82,8 +92,9 @@ window.MODES = window.MODES || {};
   // ---------- 地面をうねる ----------
   const GP = { surf: 'cloth', lift: true, slope: 0, pick: 'cloth', dig: false };
   const ground = groundMode('ground', {
+    tracks: true,
     params: () => ({ surf: GP.surf, lift: GP.lift, slope: GP.slope }),
-    legend: C => [[C.press, '地面を押す'], [C.push, '前へ押す力'], [C.drag, '引きずる力'], [C.slip, 'すべる向き']],
+    legend: C => [[C.press, '地面を押す'], [C.push, '前へ押す力'], [C.drag, '引きずる力'], [C.slip, 'すべる向き'], ['#96784e', 'こすれた跡']],
   });
   Object.assign(ground, {
     layers: { press: true, force: true, slip: false, trail: true },
@@ -93,7 +104,7 @@ window.MODES = window.MODES || {};
       { say: '<b>おなかのウロコ</b>は、前へはすべりやすく、横へはすべりにくい（横は前の約1.7倍）。右下が拡大。', scale: true, layers: { press: false, force: false, slip: true, trail: false } },
       { say: '黄色い線が<b>地面を押している所</b>。強く曲がった所は少し浮かせ（明るい所・影）、まっすぐな所で押す。', ring: 'press', layers: { press: true, force: false, slip: false, trail: false } },
       { say: '矢印は<b>地面からの力（摩擦）</b>。体を横へ押すと地面が押し返す。その<b>前向きの分（緑）</b>で進む。赤は引きずる分。', ring: 'push', layers: { press: false, force: true, slip: false, trail: false } },
-      { say: '青い矢印は<b>その点が地面の上をすべる向き</b>。ほとんど体にそって前へ。どの点も、頭が通った跡（点線）をなぞる。', layers: { press: false, force: false, slip: true, trail: true } },
+      { say: '青い矢印は<b>その点が地面の上をすべる向き</b>。前だけでなく<b>横へもすべる</b>（茶色のこすれた跡）。平らな布の上では本物もこう: 波が送る分の約半分しか進まない（Hu 2009）。草や石があると横すべりが止まる →「石のあいだ」。', layers: { press: false, force: false, slip: true, trail: true } },
       { say: '<b>試してみよう</b>: ウロコの向きの差をなくして、摩擦をどの向きも同じにすると…（全部べったりにすると、もっとはっきり）', act: [['どの向きも同じにする', () => UI.set('surf', 'same')], ['全部べったりも', () => { UI.set('surf', 'same'); UI.set('lift', '0'); }], ['もとにもどす', () => { UI.set('surf', 'cloth'); UI.set('lift', '1'); }]], layers: { press: true, force: true, slip: false, trail: true } },
     ],
     init() {

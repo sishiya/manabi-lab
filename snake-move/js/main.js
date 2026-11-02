@@ -10,7 +10,7 @@ const tipEl = document.getElementById('tip');
 const APP = {
   mode: 'ground', play: true, speed: 1, time: 0,
   layers: {}, step: {}, scaleOn: false, scaleAt: Math.round(GROUND.N * 0.55), wave: false, ringKind: null,
-  cam: { x: 0, y: 0, z: 0.5, s: 1000, w: 1, h: 1, zoom: {} },
+  cam: { x: 0, y: 0, z: 0.5, s: 1000, w: 1, h: 1, zoom: {}, fix: true, pan: null },
   tipI: -1, msg: '', msgT: 0,
 };
 for (const id in MODES) { APP.step[id] = 0; APP.cam.zoom[id] = 1; MODES[id].make(); }
@@ -31,7 +31,7 @@ APP.setMode = m => {
   tipEl.hidden = true; APP.tipI = -1;
   UI.setStep(0); APP.snapCam(); legend(); UI.refresh();
 };
-APP.snapCam = () => { APP.cam.s = cur().baseScale(APP.cam) * APP.cam.zoom[APP.mode]; cur().snap(APP.cam); };
+APP.snapCam = () => { APP.cam.pan = null; APP.cam.s = cur().baseScale(APP.cam) * APP.cam.zoom[APP.mode]; cur().snap(APP.cam); };
 APP.note = t => { APP.msg = t; APP.msgT = 2.5; };
 
 function updateCam(dt) {
@@ -79,6 +79,8 @@ cv.addEventListener('pointerup', e => {
 cv.addEventListener('wheel', e => { e.preventDefault(); zoomBy(e.deltaY < 0 ? 1.15 : 1 / 1.15); }, { passive: false });
 function zoomBy(k) { const z = APP.cam.zoom; z[APP.mode] = Math.max(0.5, Math.min(3, z[APP.mode] * k)); }
 document.querySelectorAll('#zoom [data-z]').forEach(b => b.onclick = () => zoomBy(b.dataset.z === 'in' ? 1.3 : 1 / 1.3));
+const camB = document.getElementById('bCam');
+camB.onclick = () => { APP.cam.fix = !APP.cam.fix; APP.cam.pan = null; camB.classList.toggle('on', APP.cam.fix); camB.textContent = APP.cam.fix ? '地面に固定' : 'ヘビを追う'; };
 document.getElementById('bScale').onclick = () => { APP.scaleOn = !APP.scaleOn; document.getElementById('bScale').classList.toggle('on', APP.scaleOn); };
 const playB = document.getElementById('play');
 function setPlay(on) { APP.play = on; playB.textContent = on ? '❚❚ 止める' : '▶ 動かす'; }

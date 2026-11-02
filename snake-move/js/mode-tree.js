@@ -6,7 +6,7 @@ window.MODES = window.MODES || {};
   const f1 = x => x.toFixed(1), f0 = x => x.toFixed(0);
   const PHASE = ['', '① 下でつかんで、まん中をのばす（頭が上へ）', '② 上を巻いてつかむ', '③ 下をゆるめて、ほどく', '④ 上でつかんで、まん中をちぢめる（下が上へ）', '⑤ 下を巻いてつかむ', '⑥ 上をゆるめて、ほどく'];
   const PHASE_W = ['', '① 下でつかんで、まん中をのばす（頭が上へ）', '② 下を先にゆるめて、ほどく', '③ 上を巻いてつかむ', '④ 上でつかんで、まん中をちぢめる（下が上へ）', '⑤ 下を巻いてつかむ', '⑥ 上をゆるめて、ほどく'];
-  const TP = { D: 0.04, slope: 90, safety: 4, scales: 'dig', order: 'right' };
+  const TP = { D: 0.02, slope: 90, safety: 4, scales: 'dig', order: 'right' };
   const midZ = s => (s.z[0] + s.z[TREE.N - 1]) / 2;   // 尾の先と頭のまん中
 
   const M = {
@@ -14,12 +14,12 @@ window.MODES = window.MODES || {};
     layers: { stuck: true, tforce: true, move: true },
     intro: '<b>つぎへ ▶</b> で順に見る。体をタップすると、そこの説明。下の「試す」で幹の太さや順番を変えられる。',
     tour: [
-      { say: '幹に<b>2か所、体を巻きつけて</b>いる。緑の線の所は、幹に<b>止まっている</b>（つかんでいる）。', layers: { stuck: true, tforce: false, move: false } },
+      { say: '細い幹に<b>2か所、らせんに巻きつけて</b>いる（右の窓が拡大。奥を通る所は幹にかくれる）。緑の線の所は、幹に<b>止まっている</b>（つかんでいる）。', layers: { stuck: true, tforce: false, move: false } },
       { say: '<b>下でつかんだまま、まん中をのばす</b>と、頭が上へ。青い矢印が動いている所（幹の上をすべる）。', ring: 'mid', layers: { stuck: true, tforce: false, move: true } },
       { say: '<b>上で巻いてつかんでから、下を放す</b>。いつも、どこかが止まっている。', ring: 'front', layers: { stuck: true, tforce: false, move: true } },
       { say: '<b>上でつかんだまま、まん中をちぢめる</b>と、下が引き上がる。これをくり返して登る。', ring: 'rear', layers: { stuck: true, tforce: false, move: true } },
       { say: '赤は重さ、緑は止まっている所が<b>支える摩擦</b>、黄色は<b>締めつけ</b>。落ちないのに要る力の4倍くらい締めつけている（本物のヘビの測定から）。', layers: { stuck: true, tforce: true, move: false } },
-      { say: '<b>試してみよう</b>: 下を先に放すと…／幹を太くすると…', act: [['下を先に放す', () => UI.set('order', 'wrong')], ['幹を 6 cm に', () => UI.setSlider('dia', 6)], ['もとにもどす', () => { UI.set('order', 'right'); UI.setSlider('dia', 4); }]], layers: { stuck: true, tforce: true, move: true } },
+      { say: '<b>試してみよう</b>: 下を先に放すと…／幹を太くすると…', act: [['下を先に放す', () => UI.set('order', 'wrong')], ['幹を 6 cm に', () => UI.setSlider('dia', 6)], ['もとにもどす', () => { UI.set('order', 'right'); UI.setSlider('dia', 2); }]], layers: { stuck: true, tforce: true, move: true } },
     ],
     make() { M.s = TREE.make(Object.assign({}, TP)); M.hist = []; M.speed = null; },
     reset() { M.make(); },
@@ -45,7 +45,7 @@ window.MODES = window.MODES || {};
       return { z: (z0 + z1) / 2, rz: (z1 - z0) / 2 + 0.03, rx: s.p.D + 0.03 };
     },
     hit: (px, py, A) => DRAWT.hitTest(M.s, A.cam, px, py),
-    tipPos: (i, A) => [A.cam.w / 2, A.cam.h / 2 - (M.s.z[i] - A.cam.z) * A.cam.s],
+    tipPos: (i, A) => [A.cam.w / 2 + (A.cam.ox || 0), A.cam.h / 2 - (M.s.z[i] - A.cam.z) * A.cam.s],
     tip(i) {
       const s = M.s, z = s.zone[i], v = s.v[i];
       const name = ['尾', '下のつかみ', 'まん中（のび縮みする所）', '上のつかみ', '頭'][z];
