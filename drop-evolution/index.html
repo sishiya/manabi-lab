@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/no-quirks.css"><script src="js/no-quirks.js" defer></script>
-<link rel="stylesheet" href="css/style.css?v=67">
+<link rel="stylesheet" href="css/style.css?v=68">
 </head>
 <body>
 <canvas id="view" aria-label="顕微鏡の視野"></canvas>
@@ -36,7 +36,7 @@
   <div class="stats">
     <span><b id="sTime">0秒</b><em id="sRate"></em></span>
     <span>生き物 <b id="sPop">0</b></span>
-    <span>系統 <b id="sClades">0</b></span>
+    <span hidden>系統 <b id="sClades">0</b></span><!-- 系統の数は分け方の線しだいで読めないので出さない（RELEASE.md 4章）。数はグラフの系統樹に -->
     <span class="pred">狩る者 <b id="sPred">0</b></span>
     <span id="sTampered" class="tampered" hidden title="決まりの外から生き物を足した一滴">手を加えた一滴</span>
   </div>
@@ -167,6 +167,6 @@
 </dialog>
 
 <div id="perf"><span id="perfText"></span><button type="button" id="perfSave">ログを保存</button></div>
-<script type="module" src="js/main.js?v=67"></script>
+<script type="module" src="js/main.js?v=68"></script>
 </body>
 </html>

@@ -75,6 +75,7 @@ body.test .speeds .test { display: block; min-width: 52px; }
 #graph { flex: 1; width: 100%; min-height: 0; display: block; }
 #ticker { grid-column: 1 / -1; grid-row: 1; justify-self: center; margin: 0; font-size: 13px; color: var(--ink); text-shadow: 0 1px 4px #020a14, 0 0 8px #020a14; min-height: 1.2em; transition: opacity .6s; }
 #ticker.fade { opacity: 0; }
+#ticker.first { color: #bff4ff; font-size: 14px; }   /* 進化の節目の「はじめて」は少し明るく大きく */
 
 #scale { position: fixed; right: 24px; bottom: 172px; color: var(--ink); font: 11px var(--mono); text-align: center; pointer-events: none; }
 #scale i { display: block; height: 6px; border: 1px solid var(--ink); border-top: 0; margin-bottom: 3px; }

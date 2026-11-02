@@ -247,7 +247,7 @@ function onWorld() {
   extinctShown = false;
   ren.ghosts = []; ren.prev.clear();
   ren.cam.x = W / 2; ren.cam.y = H / 2; ren.cam.z = Math.max(ren.fitZoom(), Math.min(1.3, Math.min(ren.w, ren.h) / 500)); clampCam();
-  select(null); lastEvent = 0;
+  select(null); lastEvent = 0; seen = null;
 }
 function startWorld(msg) {
   playingBeforeMenu = true; fromTitle = false;
@@ -306,16 +306,36 @@ function renderCard(full) {
   }
 }
 
-// ── できごとの知らせ ──
+// ── できごとの知らせ: 進化の節目の「はじめて」と、一滴のできごとだけ（系統が分かれた・絶えたは数秒ごとに出て意味が読めないので、グラフの中だけ。RELEASE.md 4章） ──
+// 節目は画面の側で、いまいる生き物を見て決める（決まりは増やさない）。読みこんだ一滴にもうあるものは、知らせずに見たことにする
+const FIRSTS = [
+  ['legs4', o => (o.bp?.n || 0) >= 4, '節が4つある形が現れた'],
+  ['hunt', o => o.prey > 0, 'ほかの生き物を食べる者（狩る者）が現れた'],
+  ['anch', o => o.anch, '砂つぶにくっついて、水を流してエサを待つ者がふえてきた', 0.05],   // たまたま1匹がくっつくのは数秒で起きるので、ふえたら
+  ['col4', o => o.colN >= 4, '分かれた子とくっついたまま、4細胞の群体になった'],
+  ['sym', o => o.sym > 0, '藍藻を消化せずに、体の中で飼う者が現れた（葉緑体のはじまり）'],
+  ['col16', o => o.colN >= 16, '16細胞の群体になった'],
+  ['fiss3', o => o.g && Math.round(o.g[GI.fiss]) >= 3, '大きく育ってから続けて3回分かれ、一度に8つの子になる者が現れた（多分裂）'],
+  ['col64', o => o.colN >= 64, '64細胞の大きな群体になった'],
+];
+let seen = null;   // 見た節目（一滴ごと。null は「次に見たものを知らせずに覚える」）
 let lastEvent = 0, tickerT = 0;
+function tick(text, first) {
+  $('ticker').textContent = text;
+  $('ticker').classList.toggle('first', first);
+  $('ticker').classList.remove('fade'); tickerT = first ? 10 : 6;
+}
 function showEvents() {
-  const ev = world.events;
-  if (ev.length > lastEvent) {
-    const e = ev[ev.length - 1];
-    lastEvent = ev.length;
-    $('ticker').textContent = `${fmtT(e.t)}　${e.text}`;
-    $('ticker').classList.remove('fade'); tickerT = 6;
+  const quiet = !seen;
+  if (quiet) seen = new Set();
+  for (const [k, test, text, share = 0] of FIRSTS) {
+    if (seen.has(k) || (share ? world.orgs.filter(test).length < Math.max(1, share * world.orgs.length) : !world.orgs.some(test))) continue;
+    seen.add(k);
+    if (!quiet) tick(`${fmtT(world.t)}　はじめて、${text}`, true);
   }
+  const ev = world.events;
+  for (let i = ev.length - 1; i >= lastEvent; i--) if (!ev[i].clade) { tick(`${fmtT(ev[i].t)}　${ev[i].text}`, false); break; }
+  lastEvent = ev.length;
   if (world.events.length > 400) { world.events.splice(0, 200); lastEvent = world.events.length; }
 }
 let toastT = 0;
@@ -451,7 +471,11 @@ $('gateCont').onclick = async () => {
   if (!ok) { toast('前の一滴を読みこめませんでした'); return; }
   hideTitle(); setPlaying(true); toast('つづきから');
 };
-$('gateNew').onclick = () => { fromTitle = true; openMenu(); openNew(); };
+// はじめから: 消える一滴がない（つづきからがない）ときは、たずねずにすぐ始める。タイトルの間は一滴は止まっているので、うしろの一滴がそのまま「はじまり」（RELEASE.md 4章）
+$('gateNew').onclick = () => {
+  if ($('gateCont').hidden) { hideTitle(); setPlaying(true); return; }
+  fromTitle = true; openMenu(); openNew();
+};
 // もどる: ブラウザの前のページへ（前のページがなければ保管庫へ）
 $('gateBack').onclick = () => { if (history.length > 1 && document.referrer) history.back(); else location.href = '../archive.html'; };
 if (q.has('nogate') || q.has('test')) $('gate').hidden = true;

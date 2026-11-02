@@ -18,4 +18,4 @@ for (let s = 1200; s <= secs; s += 1200) {
   console.log(`${String(s / 60).padStart(4)} ${String(os.length).padStart(5)} ${String(os.filter(o => o.g[GI.small] > 0.5).length).padStart(4)} ${String(os.filter(o => o.colN > 1).length).padStart(9)} ${String(Math.max(0, ...cols.values())).padStart(8)} ${String(f.filter(x => x > 1).length).padStart(8)} ${String(Math.max(...f)).padStart(8)} ${String(os.filter(o => o.sym > 0).length).padStart(5)}` +
     ['fiss', 'stick', 'keep', 'colMax', 'outDiv', 'plane', 'exDig', 'signal'].map(k => avg(os, o => o.g[GI[k]]).toFixed(2).padStart(7)).join('') + String(Math.max(...os.map(o => o.gen))).padStart(6));
 }
-console.log(`計算 ${((Date.now() - t0) / 1000).toFixed(0)}s`);
+console.log(`驚き ${w.stats.alarms || 0} 回・伝わった ${w.stats.relays || 0} 回  計算 ${((Date.now() - t0) / 1000).toFixed(0)}s`);
