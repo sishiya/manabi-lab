@@ -27,7 +27,7 @@ function hudText() {
     L('毎分 <b>' + rpm.toFixed(0) + '</b> 回転　' + (S.x / circ + 1).toFixed(1).padStart(4) + ' 周目', '<b>' + rpm.toFixed(0) + '</b> rpm  turn ' + (S.x / circ + 1).toFixed(1)),
     S.mode === 'up' ? '' : L('針の深さ <b>', 'Needle depth <b>') + (S.z * 1e3).toFixed(3) + '</b> mm' + (S.contact ? '' : L('　', '  ') + '<span class="rec">' + L('はねている', 'jumping') + '</span>'),
     S.mode === 'rec' ? L('入れた音 <b>', 'Input <b>') + dBof(S.pIn) + '</b> dB' : S.mode === 'play' ? L('耳もと 30 cm <b>', 'At 30 cm <b>') + dBof(S.pOut) + '</b> dB' : ''];
-  if (performance.now() - clipT < 800) lines.push('<span class="rec">' + L('スピーカーで割れています（音量を下げて）', 'The speaker is clipping (turn it down)') + '</span>');
+  if (performance.now() - clipT < 800) lines.push(L('大きい音をスピーカーの手前で小さくしています', 'Loud sound is being turned down before the speaker'));
   if (!Audio.ready) lines.push(Audio.err ? '<span class="rec">' + L('音が使えません: ', 'Sound is not available: ') + Audio.err + '</span>' : '');
   hud.innerHTML = lines.filter(Boolean).join('\n');
 }

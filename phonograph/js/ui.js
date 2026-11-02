@@ -2,15 +2,16 @@
 'use strict';
 const UI = (() => {
   const $ = id => document.getElementById(id), S = () => window.__ph.S;
-  const st = { act: null, needle: false, recEnd: 0, recDur: 0, recKind: '', rpm: 60, src: 'mary', dB: 105, vol: 0, plays: 0, drag: null, Z: 1, Zt: 1, cont: 0, contN: 0, bounced: false };
+  const st = { act: null, needle: false, recEnd: 0, recDur: 0, recKind: '', rpm: 60, src: 'mary', dB: 105, vol: 10, plays: 0, drag: null, Z: 1, Zt: 1, cont: 0, contN: 0, bounced: false };
   const omOf = r => r * 2 * Math.PI / 60;
   const send = m => Audio.send(m);
 
   // ---------- 筒の回り方 ----------
   // 手で筒をつかんでいるあいだは手の動きどおり（逆回し・押さえて止めるもできる）。離すと、録音・再生の途中なら設定の速さへもどり、
-  // そうでなければはずみ車で回りつづける
+  // そうでなければはずみ車で回りつづける。筒とはずみ車には重さがあるので、手の速さに 0.06 秒でおいつく（推定）
+  const TAU_GRAB = 0.06, HAND_MAX = 180;
   function crank() {
-    if (st.drag) return send({ t: 'crank', hand: true, om: st.drag.om, tau: 0.02 });
+    if (st.drag) return send({ t: 'crank', hand: true, om: st.drag.om, tau: TAU_GRAB });
     const motor = !!st.act && st.act.kind !== 'orig';
     send({ t: 'crank', hand: motor, om: omOf(st.act && st.act.rpm || st.rpm) });
   }
@@ -46,7 +47,7 @@ const UI = (() => {
   async function needle(on) {   // 再生の針を、いつでもおろす・上げる。おろしたまま筒を手で回すと、その速さで鳴る
     await Audio.start();
     if (st.act && st.act.kind === 'rec') return;
-    st.needle = on;
+    st.needle = on; if (on && !st.act) send({ t: 'rewind' });   // 針は溝のはじめにおろす（止まっている所が録った所の先だと、回しても鳴らない）
     if (!on && st.act && st.act.kind === 'play') return stop();
     if (!st.act || st.act.kind === 'orig') rest();
     sync();
@@ -63,7 +64,7 @@ const UI = (() => {
   }
   function tick(now) {   // main.js が毎コマよぶ
     banner(now);
-    if (st.drag && !st.drag.still && now - st.drag.t > 60) { st.drag.om = 0; st.drag.still = true; crank(); }   // 手が止まったら筒も止まる
+    if (st.drag && now - st.drag.t > 40) dragSample(now, st.drag.a);   // 手が止まっていても、止まった所を足して速さを出しなおす（止まれば筒も止まる）
     const a = st.act; if (!a) return;
     if (a.kind === 'rec' && (now - a.t0 > a.maxSec * 1000 || S().atEnd)) stop();
     if (a.kind === 'orig' && now - a.t0 > (a.sec + 2) * 1000) stop();   // 終わりの知らせが来なかったとき
@@ -84,7 +85,8 @@ const UI = (() => {
     $('bRec').classList.toggle('on', !!a && a.kind === 'rec'); $('bPlay').classList.toggle('on', !!a && a.kind === 'play'); $('bOrig').classList.toggle('on', !!a && a.kind === 'orig');
     $('bOrig').disabled = !a && st.src === 'mic' && st.recKind !== 'mic';
     $('bPlay').disabled = !st.recEnd && !a; $('bStop').disabled = !a && !st.needle;
-    $('bNeedle').textContent = st.needle ? L('針を上げる', 'Lift needle') : L('針をおろす', 'Lower needle');
+    $('bNeedleT').textContent = st.needle ? L('✋ 針を上げる', '✋ Lift needle') : L('✋ 針をおろす', '✋ Lower needle');
+    Draw.grab = st.needle && !a;   // 針がおりていて止まっているあいだは、図に「つかんで回す」の矢印
     $('bNeedle').classList.toggle('on', st.needle); $('bNeedle').disabled = !!a && a.kind === 'rec';
     $('rpmV').textContent = L('毎分 ' + st.rpm + ' 回転', st.rpm + ' rpm'); $('rpmReset').disabled = st.rpm === 60; $('lvlV').textContent = st.dB + ' dB';
     const gv = Math.pow(10, st.vol / 20); $('volV').textContent = '×' + (gv < 10 ? gv.toFixed(1) : Math.round(gv));
@@ -99,7 +101,7 @@ const UI = (() => {
       txt = st.src === 'mic' ? L('● 録音中　マイクに話してください　あと ' + left + ' 秒', '● Recording  Speak into the mic  ' + left + ' s left')
         : L('● 録音中　あと ' + left + ' 秒', '● Recording  ' + left + ' s left');
     } else if (a.kind === 'play') { frac = a.armed ? S().x / a.end : 0; cls = 'play'; txt = L('▶ 再生中（溝から計算した音）　', '▶ Playing (sound computed from the groove)  ') + Math.round(Math.max(0, Math.min(1, frac)) * 100) + '%'; }
-    else { const el = (now - a.t0) / 1000; frac = el / Math.max(0.1, a.sec); cls = 'orig'; txt = L('♪ 入れる音（蓄音機を通さない音）', '♪ Input sound (not through the phonograph)'); }
+    else { const el = (now - a.t0) / 1000; frac = el / Math.max(0.1, a.sec); cls = 'orig'; txt = L('♪ 元の音（蓄音機を通さない音）', '♪ Original sound (not through the phonograph)'); }
     bn.hidden = false; bn.className = cls;
     $('bnText').textContent = txt; $('bnBar').style.width = (Math.max(0, Math.min(1, frac)) * 100).toFixed(1) + '%';
     const lv = $('bnLv');
@@ -149,12 +151,24 @@ const UI = (() => {
     const x = Math.min(r.width - 280, e.clientX - r.left + 14), y = Math.min(r.height - 120, e.clientY - r.top + 14);
     tip.style.left = Math.max(4, x) + 'px'; tip.style.top = Math.max(4, y) + 'px';
   }
-  function axisAngle(e) { const r = cv.getBoundingClientRect(); return Math.atan2(Draw.wy(e.clientY - r.top), Draw.wx(e.clientX - r.left)); }
+  // 筒の軸から見た指の向き。軸のすぐ近くは向きが大きく飛ぶので使わない（null）
+  function axisAngle(e) { const r = cv.getBoundingClientRect(), X = Draw.wx(e.clientX - r.left), Y = Draw.wy(e.clientY - r.top); return Math.hypot(X, Y) < Draw.R * 0.3 ? null : Math.atan2(Y, X); }
+  // 手の速さ: 最近 0.1 秒の指の角度に直線をあてはめた傾き（1コマごとの差だと、イベントの時刻のばらつきで速さがガタガタになり、雑音になる）
+  function dragSample(t, a) {
+    const d = st.drag; if (a == null) return; if (d.a == null) { d.a = a; return; }
+    let da = a - d.a; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI;
+    d.un += da; d.a = a; d.t = t; d.h.push([t / 1000, d.un]);
+    while (d.h.length > 2 && t / 1000 - d.h[0][0] > 0.1) d.h.shift();
+    const n = d.h.length; let mt = 0, ma = 0; for (const [ti, ai] of d.h) { mt += ti; ma += ai; } mt /= n; ma /= n;
+    let num = 0, den = 0; for (const [ti, ai] of d.h) { num += (ti - mt) * (ai - ma); den += (ti - mt) ** 2; }
+    const om = den > 1e-9 ? -num / den : 0;   // 筒の回る向き（図で時計まわり）が正、逆回しは負
+    d.om = Math.max(-omOf(HAND_MAX), Math.min(omOf(HAND_MAX), om)); crank();
+  }
   cv.addEventListener('pointerdown', e => {
-    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); cv.setPointerCapture(e.pointerId);
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); try { cv.setPointerCapture(e.pointerId); } catch (_) { }
     const r = cv.getBoundingClientRect(), k = Draw.hit(e.clientX - r.left, e.clientY - r.top);
     if (GRAB[k] && ptrs.size === 1) {   // 筒をつかむ（さわった瞬間に止まる。音の準備は待たない）
-      st.drag = { a: axisAngle(e), t: performance.now(), om: 0 }; tip.hidden = true; cv.style.cursor = 'grabbing'; Audio.start(); crank();
+      const a0 = axisAngle(e), t0 = performance.now(); st.drag = { a: a0, un: 0, t: t0, om: 0, h: [[t0 / 1000, 0]] }; tip.hidden = true; cv.style.cursor = 'grabbing'; Audio.start(); crank();
     } else if (e.pointerType !== 'mouse') { showTip(e); clearTimeout(tipT); tipT = setTimeout(() => { tip.hidden = true; }, 4000); }   // 指でふれた説明は 4 秒で消す
   });
   cv.addEventListener('pointermove', e => {
@@ -166,10 +180,10 @@ const UI = (() => {
       if (d0 > 0) setZoom(st.Zt * d1 / d0, true); return;
     }
     if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (st.drag) {   // 筒の回る向き（図で時計まわり）が正、逆回しは負
-      const a = axisAngle(e), now = performance.now(); let da = a - st.drag.a; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI;
-      const dt = Math.max(4, now - st.drag.t) / 1000, om = Math.max(-omOf(240), Math.min(omOf(240), -da / dt));
-      st.drag.om = st.drag.om * 0.4 + om * 0.6; st.drag.a = a; st.drag.t = now; st.drag.still = false; crank(); return;
+    if (st.drag) {   // まとめて届いた細かい動きも全部使う（時刻はイベントのもの）
+      const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+      for (const c of evs.length ? evs : [e]) dragSample(c.timeStamp || performance.now(), axisAngle(c));
+      return;
     }
     if (e.pointerType === 'mouse') showTip(e);
   });
@@ -187,28 +201,34 @@ const UI = (() => {
   const T = (t, btn, go) => ({ t, btn, go });
   const tourZ = () => (innerWidth < 560 ? 1 : 1.6);   // スマホは引いて、マウスピースの右に音の出どころの絵が入るように
   const TOUR = [
-    T(L('1878年のすず箔の蓄音機（筒の軸の向きから見た図）。「メリーさんのひつじ」の声（計算で作った声）をマウスピースに入れながら筒を回し、針で箔に溝を刻みます（1曲 14秒。録音中は、入れている声がそのまま聞こえます）。',
-      'A tin-foil phonograph from 1878, seen along the axis of the drum. We sing "Mary Had a Little Lamb" (a computer-made voice) into the mouthpiece while the drum turns, and the needle presses a groove into the foil (the whole song, 14 s; you hear the voice while it records).'),
-      L('● 録音する', '● Record'), async () => { setZoom(tourZ()); await setSrc('mary'); st.rpm = 60; $('rpm').value = 60; sync(); await record(); }),
-    T(L('録れました。筒のふちの明るい所が、声の刻まれた溝です。はじめにもどして、針で溝をなぞります。聞こえるのは、溝の形だけから計算した音です。',
-      'Recorded. The bright part on the rim of the drum is the groove with the voice in it. Now we go back to the start and let the needle trace the groove. What you hear is computed only from the shape of the groove.'),
+    T(L('1878年のすず箔の蓄音機（筒の軸の向きから見た図）。マウスピースに歌を入れながら筒を回し、針で箔に溝を刻みます。',
+      'A tin-foil phonograph from 1878, seen along the axis of the drum. We sing into the mouthpiece while the drum turns, and the needle presses a groove into the foil.'),
+      L('● 録音する（14秒）', '● Record (14 s)'), async () => { setZoom(tourZ()); await setSrc('mary'); st.rpm = 60; $('rpm').value = 60; sync(); await record(); }),
+    T(L('録れました。筒のふちの明るい所が声の溝です。はじめにもどして、針で溝をなぞります（音は溝の形だけから計算）。',
+      'Recorded. The bright part on the rim is the groove with the song in it. Now the needle traces it from the start (the sound is computed only from the groove).'),
       L('▶ 再生する', '▶ Play'), async () => { await play(); }),
-    T(L('いまのが、溝の形から計算した音です。くらべるために、マウスピースに入れた元の音を聴きます（大きさは、いまの再生にそろえます）。',
-      'That was the sound computed from the groove. To compare, listen to the original sound we put into the mouthpiece (at the same loudness as the playback).'),
-      L('♪ 元の音を聴く', '♪ Hear the original'), async () => { await orig(); }),
-    T(L('こもって聞こえるのは、振動板の共振（700 Hz あたり）と、針の先の丸みのため。つぎは針の先に寄って、もう一度なぞります。',
-      'The playback sounds muffled because of the diaphragm resonance (around 700 Hz) and the round needle tip. Next, we zoom in to the needle tip and trace the groove again.'),
+    T(L('くらべるために、マウスピースに入れた元の歌を聴きます（大きさはいまの再生にそろえます）。',
+      'To compare, listen to the original song we put into the mouthpiece (at the same loudness).'),
+      L('♪ 元の歌を聴く', '♪ Hear the original'), async () => { await orig(); }),
+    T(L('こもるのは、振動板の共振（700 Hz あたり）と針の先の丸みのため。針の先に寄って、もう一度なぞります。',
+      'It sounds muffled because of the diaphragm resonance (around 700 Hz) and the round needle tip. Let\'s zoom in to the tip and trace again.'),
       L('🔍 針の先に寄って再生', '🔍 Zoom in and play'), async () => { setZoom(400); await play(); }),
-    T(L('いまのが本当の大きさ: 溝の深さは約 0.05 mm、針の先は半径 0.15 mm。つぎは2倍の速さで回して再生します。',
-      'That was the real size: the groove is about 0.05 mm deep and the needle tip has a radius of 0.15 mm. Next, we play it turning twice as fast.'),
+    T(L('溝の深さは約 0.05 mm、針の先は半径 0.15 mm（本当の大きさ）。つぎは2倍の速さで回します。',
+      'The groove is about 0.05 mm deep; the needle tip has a 0.15 mm radius (true size). Next, twice as fast.'),
       L('⏩ 2倍の速さで再生', '⏩ Play at 2× speed'), async () => { setZoom(tourZ()); await play(120); }),
-    T(L('速く回すと、1オクターブ高い声になりました。再生中でも、筒をつかんで回すと速さが変わります（逆回しも）。つぎは、マイクで自分の声を録ってみましょう（マイクの音はこのページの中だけで覚え、保存も送信もしません）。',
-      'Turning faster made the voice one octave higher. Even during playback, you can grab the drum and turn it to change the speed (backward too). Next, record your own voice with the microphone (the sound stays only on this page; it is not saved or sent).'),
+    T(L('1オクターブ高くなりました。こんどは、あなたの手で筒を回してみます。',
+      'One octave higher. Now you turn the drum with your own hand.'),
+      L('✋ 針をおろす', '✋ Lower the needle'), async () => { setZoom(tourZ()); await needle(true); }),
+    T(L('矢印のあたり（筒のどこでも）をつかんで、ぐるっと回してください。速いと高く、遅いと低く、逆にも回せます。',
+      'Grab the drum where the arrow is (anywhere on it) and turn it. Faster is higher, slower is lower; it turns backward too.'),
+      L('つぎへ（針を上げる）', 'Next (lift the needle)'), async () => { await needle(false); }),
+    T(L('マイクで自分の声を録ってみましょう（声はこのページの中だけ。保存も送信もしません）。',
+      'Record your own voice with the microphone (it stays on this page only; never saved or sent).'),
       L('🎤 自分の声を録る（6秒）', '🎤 Record your voice (6 s)'), async () => { await setSrc('mic'); if (st.src !== 'mic') return; await record(); }),
     T(L('録れました。聴いてみましょう。', 'Recorded. Let\'s listen.'), L('▶ 再生する', '▶ Play'), async () => { await play(); }),
     T(L('自分の元の声とくらべてみましょう。', 'Compare it with your original voice.'), L('♪ 元の声を聴く', '♪ Hear your original voice'), async () => { await orig(); }),
-    T(L('あとは下の「自由に試す」で。「針をおろす」で針をおろしたまま、筒をつかんで好きな速さで回すと鳴ります。声が大きすぎると、再生で針が溝から跳ねて、ガリガリという雑音になります。',
-      'Now try things freely below. With "Lower needle", the needle stays down, and you can grab the drum and turn it at any speed to play. If the voice is too loud, the needle jumps out of the groove on playback and makes a scratchy noise.'),
+    T(L('あとは下の「自由に試す」で。声が大きすぎると、再生で針が溝から跳ねてガリガリ鳴ります。',
+      'Now try things freely below. If the voice is too loud, the needle jumps out of the groove on playback and scratches.'),
       L('はじめから', 'Start over'), async () => { ti = -1; }),
   ];
   let ti = 0, busy = false;
@@ -237,6 +257,7 @@ const UI = (() => {
   if (LANG === 'en') document.querySelectorAll('option[data-en]').forEach(o => { o.textContent = o.dataset.en; });   // iPhone は option を CSS で隠せないので、文字を入れかえる
   document.querySelectorAll('#langsw button').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.l === LANG)); b.onclick = () => { if (b.dataset.l !== LANG) setLang(b.dataset.l); }; });
   send({ t: 'gain', g: Math.pow(10, st.vol / 20) }); send({ t: 'level', dB: st.dB }); send({ t: 'src', kind: st.src });
+  $('vol').value = st.vol;
   tourShow(); sync();
   return { st, sync, record, play, orig, origEnd, needle, stop, tick, onSnap, status, setSrc, setZoom, tour: TOUR };
 })();

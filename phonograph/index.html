@@ -18,32 +18,45 @@
       <div id="zoom"><button id="zin">+</button><button id="zout">−</button></div>
       <div id="tip" hidden></div>
     </div>
-    <div id="banner" hidden><div id="bnText"></div><div class="bar"><div id="bnBar"></div></div><div id="bnLv" hidden><div class="bar lv"><i class="mark"></i><div id="bnLvBar"></div></div><div id="bnLvTxt"></div></div></div>
+    <div id="banner" hidden><div class="bnTop"><div id="bnText"></div><button id="bStop"><span lang="ja">■ 止める</span><span lang="en">■ Stop</span></button></div><div class="bar"><div id="bnBar"></div></div><div id="bnLv" hidden><div class="bar lv"><i class="mark"></i><div id="bnLvBar"></div></div><div id="bnLvTxt"></div></div></div>
     <div id="tour"><span id="tourNum"></span><p id="tourText"></p><button id="next"></button></div>
   </div>
   <section id="controls">
     <h2 class="sec"><span lang="ja">自由に試す</span><span lang="en">Try it freely</span></h2>
-    <div class="row"><button id="bRec" class="big"><span lang="ja">● 録音</span><span lang="en">● Record</span></button><button id="bPlay" class="big"><span lang="ja">▶ 再生</span><span lang="en">▶ Play</span></button><button id="bNeedle" class="big"></button><button id="bStop" class="big"><span lang="ja">■ 止める</span><span lang="en">■ Stop</span></button></div>
-    <p class="hint" lang="ja">録音: 新しい箔に、入れる音を刻みます（メリーさんのひつじは1曲ぶん 14秒、マイクは6秒、ほかは4〜10秒。途中で止めてもかまいません）。再生: はじめにもどして、録った所の終わりまでなぞります。針: おろしたまま、図の筒をつかんで回すと、その速さで鳴ります（押さえれば止まり、逆回しもできます）。再生中も、筒をつかめば速さが変わります。</p>
-    <p class="hint" lang="en">Record: presses the input sound into fresh foil ("Mary Had a Little Lamb" is the whole song, 14 s; the microphone 6 s; others 4–10 s; you can stop early). Play: goes back to the start and traces up to the end of the recording. Needle: with the needle down, grab the drum in the picture and turn it; it plays at that speed (hold it to stop, or turn it backward). During playback, grabbing the drum changes the speed too.</p>
+    <div class="acts">
+      <button id="bRec" class="act"><b><span lang="ja">● 録音</span><span lang="en">● Record</span></b><small><span lang="ja">新しい箔に刻む</span><span lang="en">into fresh foil</span></small></button>
+      <button id="bPlay" class="act"><b><span lang="ja">▶ 再生</span><span lang="en">▶ Play</span></b><small><span lang="ja">溝をなぞって鳴らす</span><span lang="en">trace the groove</span></small></button>
+      <button id="bOrig" class="act"><b><span lang="ja">♪ 元の音</span><span lang="en">♪ Original</span></b><small><span lang="ja">蓄音機を通さない</span><span lang="en">without the machine</span></small></button>
+      <button id="bNeedle" class="act"><b id="bNeedleT"></b><small><span lang="ja">筒を手で回して鳴らす</span><span lang="en">turn the drum by hand</span></small></button>
+    </div>
     <div class="row"><span class="lab"><span lang="ja">入れる音</span><span lang="en">Input sound</span></span><select id="src">
-      <option value="mary" data-en="Mary Had a Little Lamb (computer-made voice)">メリーさんのひつじ（計算で作った声）</option>
+      <option value="mary" data-en="Mary Had a Little Lamb (computer-sung)">メリーさんのひつじ（英語の元の詞・計算で作った歌声）</option>
       <option value="vowel" data-en="Voice &quot;aaah&quot; (computer-made voice)">声「あー」（計算で作った声）</option>
       <option value="whistle" data-en="Whistle-like tone">口笛のような音</option>
       <option value="sweep" data-en="Low to high sweep (to see how the machine responds)">低い音から高い音へ（機械の特性を見る）</option>
       <option value="mic" data-en="Microphone (your voice)">マイク（自分の声）</option>
-    </select><button id="bOrig"><span lang="ja">♪ 聴く</span><span lang="en">♪ Listen</span></button>
-      <span class="note" lang="ja">「♪ 聴く」は、選んだ音を蓄音機を通さずにそのまま鳴らします（録音しなくても聴けます。マイクは録音した声を。大きさは、さっきの再生にそろえます）。マイクの音は、振動板を押す力にするのと、「♪ 聴く」でくらべるために、このページを開いているあいだだけ覚えておきます（保存も送信もしません。つぎに録音すると消えます）。録音中、計算で作った音はスピーカーからも鳴らします。マイクのときは鳴らしません（スピーカーの音がマイクに戻るため）。</span>
-      <span class="note" lang="en">"♪ Listen" plays the chosen sound as it is, without the phonograph (no recording needed; for the microphone it plays your recorded voice; the loudness matches the last playback). The microphone sound is used only to push the diaphragm and to compare with "♪ Listen", and it is kept only while this page is open (never saved or sent; the next recording replaces it). While recording, computer-made sounds also come out of the speaker. Microphone sound does not (the speaker sound would go back into the mic).</span></div>
+    </select></div>
     <div class="row"><span class="lab"><span lang="ja">声の大きさ</span><span lang="en">Voice level</span></span><input id="lvl" type="range" min="90" max="125" step="1" value="105"><span id="lvlV" class="val"></span>
-      <span class="note" lang="ja">マウスピースの中の音の大きさ（推定の目安）。110 dB をこえると溝が深く刻まれすぎて、再生のとき針が溝から跳ね、ガリガリという雑音になります（これも計算の結果です）。</span>
-      <span class="note" lang="en">How loud the sound is inside the mouthpiece (a rough estimate). Above 110 dB the groove is cut too deep, and on playback the needle jumps out of the groove and makes a scratchy noise (this is also a result of the calculation).</span></div>
-    <div class="row"><span class="lab"><span lang="ja">回す速さ</span><span lang="en">Turning speed</span></span><input id="rpm" type="range" min="30" max="120" step="1" value="60"><span id="rpmV" class="val"></span><button id="rpmReset"><span lang="ja">毎分60回転にもどす</span><span lang="en">Back to 60 rpm</span></button>
+      <span class="note" lang="ja">110 dB をこえると、再生で針が溝から跳ねてガリガリ鳴ります（これも計算の結果）。</span>
+      <span class="note" lang="en">Above 110 dB the needle jumps out of the groove on playback and scratches (also a result of the calculation).</span></div>
+    <div class="row"><span class="lab"><span lang="ja">回す速さ</span><span lang="en">Turning speed</span></span><input id="rpm" type="range" min="30" max="120" step="1" value="60"><span id="rpmV" class="val"></span><button id="rpmReset"><span lang="ja">60 にもどす</span><span lang="en">Back to 60</span></button>
       <span class="note" lang="ja">録音と再生で速さを変えると、音の高さが変わります。</span>
-      <span class="note" lang="en">If you record and play at different speeds, the pitch changes.</span></div>
-    <div class="row"><span class="lab"><span lang="ja">スピーカー</span><span lang="en">Speaker</span></span><input id="vol" type="range" min="-10" max="40" step="1" value="0"><span id="volV" class="val"></span>
-      <span class="note" lang="ja">計算した耳もとの音を、あなたのスピーカーで何倍にして鳴らすか。本当の大きさは図の左上の dB です。</span>
-      <span class="note" lang="en">How many times louder your speaker plays the computed sound at the ear. The true loudness is the dB at the top left of the picture.</span></div>
+      <span class="note" lang="en">Recording and playing at different speeds changes the pitch.</span></div>
+    <div class="row"><span class="lab"><span lang="ja">スピーカー</span><span lang="en">Speaker</span></span><input id="vol" type="range" min="-10" max="40" step="1" value="10"><span id="volV" class="val"></span>
+      <span class="note" lang="ja">計算した耳もとの音を何倍にして鳴らすか（本当の大きさは図の左上の dB）。</span>
+      <span class="note" lang="en">How much louder your speaker plays the computed sound (the true loudness is the dB at the top left).</span></div>
+    <details class="more"><summary><span lang="ja">くわしく（ボタンのこと・マイクの音のあつかい）</span><span lang="en">Details (buttons, microphone sound)</span></summary>
+      <p class="hint" lang="ja">● 録音: 新しい箔に、入れる音を刻みます（メリーさんのひつじは1曲ぶん 14秒、マイクは6秒、ほかは4〜10秒。図の帯の ■ で途中で止められます）。録音中、計算で作った音はスピーカーからも鳴らします（マイクのときは鳴らしません。スピーカーの音がマイクに戻るため）。</p>
+      <p class="hint" lang="ja">▶ 再生: はじめにもどして、録った所の終わりまでなぞります。聞こえるのは溝の形だけから計算した音です。再生中も、筒をつかめば速さが変わります。</p>
+      <p class="hint" lang="ja">♪ 元の音: 選んだ音を、蓄音機を通さずにそのまま鳴らします（録音しなくても聴けます。マイクは録音した声。大きさは、さっきの再生にそろえます）。</p>
+      <p class="hint" lang="ja">✋ 針をおろす: 針をおろしたまま、図の筒（どこでも）をつかんで回すと、その速さで鳴ります。押さえれば止まり、逆回しもできます。筒には重さがあるので、手の動きに少しおくれてついてきます。</p>
+      <p class="hint" lang="ja">マイクの音は、振動板を押す力にするのと「♪ 元の音」でくらべるために、このページを開いているあいだだけ覚えておきます（保存も送信もしません。つぎに録音すると消えます）。音が大きすぎる所は、スピーカーの手前で自動で小さくします（割れてバリバリ鳴らないように。計算した音そのものは変えません）。</p>
+      <p class="hint" lang="en">● Record: presses the input sound into fresh foil ("Mary Had a Little Lamb" is the whole song, 14 s; the microphone 6 s; others 4–10 s; stop early with ■ in the banner). While recording, computer-made sounds also come out of the speaker (not the microphone, since the speaker sound would go back into the mic).</p>
+      <p class="hint" lang="en">▶ Play: goes back to the start and traces to the end of the recording. You hear sound computed only from the groove shape. Grabbing the drum during playback changes the speed.</p>
+      <p class="hint" lang="en">♪ Original: plays the chosen sound as it is, without the phonograph (no recording needed; for the microphone, your recorded voice; at the loudness of the last playback).</p>
+      <p class="hint" lang="en">✋ Lower needle: with the needle down, grab the drum anywhere in the picture and turn it; it plays at that speed. Hold it to stop, or turn it backward. The drum is heavy, so it follows your hand with a short delay.</p>
+      <p class="hint" lang="en">The microphone sound is used only to push the diaphragm and for "♪ Original", and it is kept only while this page is open (never saved or sent; the next recording replaces it). Very loud moments are turned down automatically just before the speaker (so they do not crackle; the computed sound itself is not changed).</p>
+    </details>
   </section>
   <section id="graphs">
     <div class="ghead"><b><span lang="ja">入れた音と出た音</span><span lang="en">Sound in and sound out</span></b><span class="gnote"><span lang="ja">赤は最後に録ったときに入れた音、青は溝から計算して出た音</span><span lang="en">Red: the sound put in at the last recording. Blue: the sound computed from the groove</span></span></div>
@@ -54,7 +67,7 @@
   <details id="about" class="about" lang="ja">
     <summary>このアプリについて</summary>
     <p>1877年にエジソンが作った蓄音機は、手で回す筒に、すず箔を巻いたものでした。マウスピースに向かって話すと、うすい振動板がふるえ、まん中についた針が箔を押して、らせんの溝に「深い・浅い」の形を刻みます。はじめにもどして針で溝をなぞると、振動板がふるえて、また声になります。</p>
-    <p>このアプリは、マイクや計算で作った音を「マウスピースの中の空気の圧力」として入れるだけです。そこから先の、振動板のふるえ → 針が箔を押す → 箔が凹んで溝になる → 針の先が溝をなぞる → 振動板がふるえる → 空気を押す、をすべて計算しています。「▶ 再生」で聞こえる音は、溝の形だけから計算したものです。マイクで入れた声は「♪ 聴く」でくらべるために、ページを開いているあいだだけ覚えておきます（保存も送信もしません）。</p>
+    <p>このアプリは、マイクや計算で作った音を「マウスピースの中の空気の圧力」として入れるだけです。そこから先の、振動板のふるえ → 針が箔を押す → 箔が凹んで溝になる → 針の先が溝をなぞる → 振動板がふるえる → 空気を押す、をすべて計算しています。「▶ 再生」で聞こえる音は、溝の形だけから計算したものです。マイクで入れた声は「♪ 元の音」でくらべるために、ページを開いているあいだだけ覚えておきます（保存も送信もしません）。</p>
     <h3>計算していること</h3>
     <ul>
       <li><b>振動板</b>: ふちを留めた雲母の円板（直径 50 mm）。板の曲げの式の、まん中が動く形（軸対称のモード）を5つ。いちばん低い共振は約 600 Hz（針が箔にふれていないとき）。</li>
@@ -75,6 +88,8 @@
     </ul>
     <h3>簡単にしているところ・推定</h3>
     <ul>
+      <li>入れる歌声は、声帯の息の脈を口の響き（フォルマント）5つに通して作った合成の声です（Klatt 1980 の形）。歌詞は、エジソンが吹きこんだ英語の元の詞（1830年）です。歌詞の母音・子音で口の形を変え、息の音とビブラートを足しています。本物の人の声ではありません。</li>
+      <li>手で回すとき、筒とはずみ車の重さで、筒は手の速さに約 0.06 秒おくれてついてくるとしました（推定）。スピーカーの手前では、大きすぎる音だけを自動で小さくします（割れて鳴るのを防ぐため。計算した音そのものは変えません）。</li>
       <li>振動板の厚み（0.1 mm）・減衰・針の重さ（30 mg）・針の先の丸み（半径 0.15 mm）・箔の下のすきまの幅（0.5 mm）は、記録が見つからなかったので推定です。</li>
       <li>箔の凹み方は、すずが流れ出す強さ（10 MPa）を使った簡単な模型です（曲げ＋のび）。実験に合わせた値ではありません。</li>
       <li>押しこみのねじは、録音の溝の深さが約 0.05 mm になるように合わせています（1878年のすず箔を光で測った研究の、ふつうの溝の深さ）。再生はそれより軽く押します。</li>
@@ -86,6 +101,7 @@
     </ul>
     <h3>おもな出どころ</h3>
     <ul>
+      <li>D. H. Klatt, Software for a cascade/parallel formant synthesizer, J. Acoust. Soc. Am. 67, 971（1980）（合成の声の形）。母音の響きの値は Peterson &amp; Barney（1952）ほかのおよその平均</li>
       <li>T. A. Edison, Improvement in Phonograph or Speaking Machines, 米国特許 200,521（1878）. <a href="https://patents.google.com/patent/US200521" target="_blank" rel="noopener">Google Patents</a></li>
       <li>Thomas A. Edison Papers（Rutgers 大学）, <a href="https://edison.rutgers.edu/life-of-edison/biographical-essays/tinfoil-phonograph/inventing-sound-recording" target="_blank" rel="noopener">Inventing Sound Recording</a>（最初の機械はねじのピッチ 1インチに10山・手回し）</li>
       <li>The Henry Ford, <a href="https://www.thehenryford.org/collections/explore/artifact/76722" target="_blank" rel="noopener">Tinfoil Phonograph, 1878</a>（筒の直径 約 5.55 in）</li>
@@ -104,7 +120,7 @@
   <details id="about-en" class="about" lang="en">
     <summary>About this app</summary>
     <p>The phonograph Edison made in 1877 was a hand-turned drum wrapped in tin foil. When you speak into the mouthpiece, a thin diaphragm shakes, and the needle at its center presses into the foil, leaving a "deep and shallow" pattern along a spiral groove. Go back to the start and let the needle trace the groove, and the diaphragm shakes again and becomes a voice.</p>
-    <p>This app only puts in the sound from the microphone or the computer as "the air pressure inside the mouthpiece". Everything after that is computed: the diaphragm shakes → the needle presses the foil → the foil dents into a groove → the needle tip traces the groove → the diaphragm shakes → it pushes the air. The sound you hear with "▶ Play" is computed only from the shape of the groove. Your microphone voice is kept only while this page is open, so you can compare it with "♪ Listen" (it is never saved or sent).</p>
+    <p>This app only puts in the sound from the microphone or the computer as "the air pressure inside the mouthpiece". Everything after that is computed: the diaphragm shakes → the needle presses the foil → the foil dents into a groove → the needle tip traces the groove → the diaphragm shakes → it pushes the air. The sound you hear with "▶ Play" is computed only from the shape of the groove. Your microphone voice is kept only while this page is open, so you can compare it with "♪ Original" (it is never saved or sent).</p>
     <h3>What is computed</h3>
     <ul>
       <li><b>Diaphragm</b>: a mica disk held at its rim (50 mm across). Five modes of the plate bending equation in which the center moves (axisymmetric modes). Its lowest resonance is about 600 Hz (when the needle is not touching the foil).</li>
@@ -125,6 +141,8 @@
     </ul>
     <h3>What is simplified or estimated</h3>
     <ul>
+      <li>The singing voice put in is synthesized: glottal pulses through five mouth resonances (formants, after Klatt 1980). The mouth shape follows the vowels and consonants of the lyrics, with breath noise and vibrato. It is not a real human voice.</li>
+      <li>When you turn by hand, the heavy drum and flywheel follow your hand with a delay of about 0.06 s (an estimate). Just before the speaker, only sounds that are too loud are turned down automatically (to avoid crackling; the computed sound itself is not changed).</li>
       <li>The diaphragm thickness (0.1 mm), its damping, the needle mass (30 mg), the tip radius (0.15 mm) and the width of the gap under the foil (0.5 mm) are estimates, because no records were found.</li>
       <li>How the foil dents is a simple model using the stress at which tin starts to flow (10 MPa), with bending plus stretching. It is not fitted to experiments.</li>
       <li>The needle screw is set so the recorded groove is about 0.05 mm deep (the usual groove depth measured optically on an 1878 tin foil). Playback presses more lightly.</li>
@@ -136,6 +154,7 @@
     </ul>
     <h3>Main sources</h3>
     <ul>
+      <li>D. H. Klatt, Software for a cascade/parallel formant synthesizer, J. Acoust. Soc. Am. 67, 971 (1980) (synthetic voice). Vowel formant values: rough averages from Peterson &amp; Barney (1952) and others</li>
       <li>T. A. Edison, Improvement in Phonograph or Speaking Machines, US Patent 200,521 (1878). <a href="https://patents.google.com/patent/US200521" target="_blank" rel="noopener">Google Patents</a></li>
       <li>Thomas A. Edison Papers (Rutgers University), <a href="https://edison.rutgers.edu/life-of-edison/biographical-essays/tinfoil-phonograph/inventing-sound-recording" target="_blank" rel="noopener">Inventing Sound Recording</a> (the first machine had a screw of 10 threads per inch and was hand-turned)</li>
       <li>The Henry Ford, <a href="https://www.thehenryford.org/collections/explore/artifact/76722" target="_blank" rel="noopener">Tinfoil Phonograph, 1878</a> (drum about 5.55 in across)</li>

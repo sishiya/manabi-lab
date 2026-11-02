@@ -148,11 +148,24 @@ const Draw = (() => {
     }
     g.restore();
   }
+  // 針がおりて止まっているあいだ: 筒のまわりに「つかんで回す」の矢印（時計まわり＝回る向き）。ゆっくり流れる
+  function grabHint() {
+    if (!Draw.grab || cam.k >= 40) return;
+    const g = Draw.g, t = performance.now() / 1000, rr = (R + 9) * cam.k, cx = sx(0), cy = sy(0), a = 0.5 + 0.35 * Math.sin(t * 3);
+    g.save(); g.strokeStyle = col.play; g.fillStyle = col.play; g.lineWidth = 4; g.globalAlpha = a; g.setLineDash([10, 8]); g.lineDashOffset = -t * 30;
+    const a0 = -Math.PI * 0.78, a1 = -Math.PI * 0.32;   // 画面の左上から右上へ（canvas の角度は時計まわりが正）
+    g.beginPath(); g.arc(cx, cy, rr, a0, a1); g.stroke(); g.setLineDash([]);
+    const hx = cx + rr * Math.cos(a1), hy = cy + rr * Math.sin(a1), tx = -Math.sin(a1), ty = Math.cos(a1), nx = Math.cos(a1), ny = Math.sin(a1);
+    g.beginPath(); g.moveTo(hx + tx * 12, hy + ty * 12); g.lineTo(hx - tx * 2 + nx * 8, hy - ty * 2 + ny * 8); g.lineTo(hx - tx * 2 - nx * 8, hy - ty * 2 - ny * 8); g.closePath(); g.fill();
+    g.globalAlpha = 0.95; g.font = '700 14px ' + getComputedStyle(document.body).fontFamily; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(L('✋ 筒をつかんで回す', '✋ Grab the drum and turn'), cx, cy - R * cam.k * 0.35);
+    g.restore();
+  }
   function frame(g, w, h, S, Z) {
     Draw.g = g; camera(w, h, Z);
     g.fillStyle = '#16140f'; g.fillRect(0, 0, w, h);
     Draw.lastG = geom(S);
-    machine(S); micro(S); scaleBar(); source(S);
+    machine(S); micro(S); grabHint(); scaleBar(); source(S);
   }
-  return { frame, hit, cam, wx, wy, sx, sy, col, R, knob: null, g: null, lastG: null };
+  return { frame, hit, cam, wx, wy, sx, sy, col, R, knob: null, g: null, lastG: null, grab: false };
 })();

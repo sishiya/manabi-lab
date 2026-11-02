@@ -9,6 +9,7 @@ class PhonoProc extends AudioWorkletProcessor {
     super();
     this.ph = new Phono(sampleRate);
     this.kind = 'mary'; this.src = new Source(sampleRate, 'mary'); this.dB = 105; this.gain = 1;
+    this.gLim = 1; this.lim = 0;   // スピーカーの手前の音量の自動調整（大きすぎる所だけ下げる。音が割れてバリバリ鳴るのを防ぐ。計算した音には手を入れない）
     this.pin = new Float32Array(128); this.pout = new Float32Array(128);
     this.half = 400; this.win = new Float32Array(2 * this.half + 1);
     this.ringN = 4096; this.rIn = new Float32Array(this.ringN); this.rOut = new Float32Array(this.ringN); this.ri = 0; this.qi = 0;
@@ -59,7 +60,11 @@ class PhonoProc extends AudioWorkletProcessor {
       }
       if (rec && this.recN < this.recBuf.length) { this.recBuf[this.recN++] = pin[i]; this.ssRec += pin[i] * pin[i]; }
       if (ph.mode === 'play') { this.ssPlay += pout[i] * pout[i]; this.nPlay++; }
-      if (y > 1) { y = 1; clip = 1; } else if (y < -1) { y = -1; clip = 1; }
+      // スピーカーの手前: 0.5 をこえそうな所だけ、すぐ下げて 0.3 秒でもどす（それでもこえた分はなめらかに丸める）
+      const ay = Math.abs(y) * this.gLim;
+      if (ay > 0.5) this.gLim *= 0.5 / ay; else this.gLim += (1 - this.gLim) * 7e-5;
+      y *= this.gLim; if (this.gLim < 0.7) clip = 1;
+      if (y > 0.8) y = 0.8 + 0.2 * Math.tanh((y - 0.8) / 0.2); else if (y < -0.8) y = -0.8 - 0.2 * Math.tanh((-y - 0.8) / 0.2);
       out[i] = y;
       if (rec) { this.rIn[this.qi] = pin[i]; this.qi = (this.qi + 1) % this.ringN; } else { this.rOut[this.ri] = pout[i]; this.ri = (this.ri + 1) % this.ringN; }   // 入れた音は録音中だけ、出た音は録音中でないときだけ書く
       this.ssIn += pin[i] * pin[i]; this.ssOut += pout[i] * pout[i];
