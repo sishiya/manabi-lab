@@ -71,7 +71,54 @@ function pose(o, time) {
   return { pts: PTS, wob: A.w + (Bf.w - A.w) * k };
 }
 
+// 分かれるところ: 決まりでは1こまで2つになり、親と子が左右へ跳ぶ（パーンと弾けて見えた）。
+// 本物の二つ割りは、体のまん中がくびれて8の字になり、細い首でつながったあと離れる（ゾウリムシで数十分）。
+// 描くときだけ、2つを重ねた所から少しずつ離し（SPLIT_T 秒）、ふれている間は間の膜を平らな仕切りに、離れたら細い首を描いて切る。
+// 決まりは変えない（子の数がふえた生き物と、新しく現れた生き物を前のこまとくらべるだけ。食胞と同じ）
+const SPLIT_T = 1.2, SPLIT_S0 = 0.3, SPLIT_MAX = SPLIT_T + 1.5;   // SPLIT_S0: はじめの2つの間（半径の和に対して）
+function splitPose(ren, world, time) {
+  const prev = ren.kidsPrev, now = new Map(), pairs = ren.splits || (ren.splits = []);
+  for (const o of world.orgs) now.set(o.id, o.kids);
+  if (prev) {
+    const fresh = world.orgs.filter(o => !prev.has(o.id));
+    if (fresh.length && pairs.length < 400) for (const o of world.orgs) {
+      const k = prev.get(o.id);
+      for (let n = o.kids - (k ?? o.kids); n > 0 && fresh.length; n--) {
+        let bi = -1, bd = (o.r * 4) ** 2;
+        fresh.forEach((c, i) => { const d = (c.x - o.x) ** 2 + (c.y - o.y) ** 2; if (d < bd) { bd = d; bi = i; } });
+        if (bi < 0) break;
+        pairs.push({ p: o, c: fresh.splice(bi, 1)[0], t0: time });
+      }
+    }
+  }
+  ren.kidsPrev = now;
+  const undo = [];
+  let k = 0;
+  for (const s of pairs) {
+    const { p, c } = s, age = time - s.t0;
+    if (p.dead || c.dead || age > SPLIT_MAX || age < 0) continue;
+    // 2つの間の距離に上限: はじめは大きく重ね、SPLIT_T 秒でくびれて首が切れるところまで、そのあとは本当の距離へなめらかに追いつく
+    // （決まりでは、重なって生まれた2つが押しあいで一気に離れる。それがパーンと見えた）
+    const vx = c.x - p.x, vy = c.y - p.y, Dt = Math.hypot(vx, vy) || 1e-6, sR = p.r + c.r, Dn = sR + 0.6 * Math.min(p.r, c.r);
+    const u = Math.min(1, age / SPLIT_T), D0 = SPLIT_S0 * sR;
+    const Dd = age < SPLIT_T ? Math.min(Dt, D0 + (Dn - D0) * u * u * (3 - 2 * u)) : Math.min(Dt, Dn + (Dt - Dn) * (1 - Math.exp(-(age - SPLIT_T) / 0.25)));
+    pairs[k++] = s;
+    const h = (Dt - Dd) / 2 / Dt;
+    for (const [o, sg] of [[p, 1], [c, -1]]) { undo.push([o, o.x, o.y, o.links, o.spl]); o.spl = true; o.x += vx * h * sg; o.y += vy * h * sg; }
+    // 離れるまでは、つながっているのと同じ描き方（ふれた面の膜が平らな仕切り、離れたら細い首）。少し離れたら首が切れる
+    const d = Math.hypot(c.x - p.x, c.y - p.y);
+    if (!p.links.includes(c) && d < Dn - 0.05 * sR) { p.links = [...p.links, c]; c.links = [...c.links, p]; }
+  }
+  pairs.length = k;
+  return () => { for (let i = undo.length - 1; i >= 0; i--) { const [o, x, y, l, f] = undo[i]; o.x = x; o.y = y; o.links = l; o.spl = f; } };
+}
+
 export function drawAbyss(ren, world, sel, time) {
+  const undo = splitPose(ren, world, time);   // 描いたら、本当の場所とつながりにもどす
+  try { drawScene(ren, world, sel, time); } finally { undo(); }
+}
+
+function drawScene(ren, world, sel, time) {
   // 確かめ用: 部分ごとの描く時間（ms、なめらかにした値）。?test の計測ログに出す
   const PF = ren.prof || (ren.prof = {}); let lapT = performance.now();
   const lap = k => { const n = performance.now(); PF[k] = (PF[k] || 0) * 0.9 + (n - lapT) * 0.1; lapT = n; };
@@ -291,7 +338,7 @@ export function drawAbyss(ren, world, sel, time) {
     const mm = a + o.g[GI.mouth], rp = rimP[b];
     // 群体で押し合っている細胞は、ふれた面で膜が平らになる（重なった分だけ。面の場所は2つの丸の半径から）
     const cuts = [];
-    if (r * z >= 10) for (const q of o.links) { const dx = q.x - o.x, dy = q.y - o.y, d = Math.hypot(dx, dy) || 1; if (d < r + q.r) cuts.push(dx / d, dy / d, (d * d + r * r - q.r * q.r) / (2 * d)); }   // 画面で小さいときは平らな面は見えないので、ふつうの輪
+    if (r * z >= 10 || o.spl) for (const q of o.links) { const dx = q.x - o.x, dy = q.y - o.y, d = Math.hypot(dx, dy) || 1; if (d < r + q.r) cuts.push(dx / d, dy / d, (d * d + r * r - q.r * q.r) / (2 * d)); }   // 画面で小さいときは平らな面は見えないので、ふつうの輪（分かれている最中の2つは、小さくても仕切りにする。輪が交わって見えるので）
     if (!cuts.length) { rp.moveTo(o.x + Math.cos(mm + 0.5) * r, o.y + Math.sin(mm + 0.5) * r); rp.arc(o.x, o.y, r, mm + 0.5, mm - 0.5 + TAU); }
     else for (let k = 0; k <= 28; k++) {
       const t = mm + 0.5 + (TAU - 1) * k / 28;
@@ -498,7 +545,7 @@ function crispGL(gC, ren, world, vis, glow, poses, sel, time, tl, br) {
     if (r * z < 3) continue;
     const mm = a + o.g[GI.mouth];
     const cuts = [];
-    if (r * z >= 10) for (const q of o.links) { const dx = q.x - o.x, dy = q.y - o.y, d = Math.hypot(dx, dy) || 1; if (d < r + q.r) cuts.push(dx / d, dy / d, (d * d + r * r - q.r * q.r) / (2 * d)); }   // 画面で小さいときは平らな面は見えないので、ふつうの輪
+    if (r * z >= 10 || o.spl) for (const q of o.links) { const dx = q.x - o.x, dy = q.y - o.y, d = Math.hypot(dx, dy) || 1; if (d < r + q.r) cuts.push(dx / d, dy / d, (d * d + r * r - q.r * q.r) / (2 * d)); }   // 画面で小さいときは平らな面は見えないので、ふつうの輪（分かれている最中の2つは、小さくても仕切りにする。輪が交わって見えるので）
     if (!cuts.length) gC.ring(o.x, o.y, r, rw, mm, 0.5, rimC[b]);
     else {
       let lx = 0, ly = 0;
