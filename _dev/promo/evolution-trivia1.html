@@ -11,11 +11,12 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
 <script>
 'use strict';
 // うんちく evolution-1（型H 当ててみて）「恐竜が絶滅した日、季節は？」。台本は trivia/evolution.md、直しは trivia/REVIEW.md。?short で録る
 // 出どころ: During ほか (2022) Nature 603, 91–94（タニスの魚の骨の季節の線・エラのガラスの粒）。DePalma 2021 は並べない（REVIEW）
-// 骨の断面・成長のグラフ・エラの図は形のイメージ（論文の図を写していない）
+// 骨の断面・成長のグラフ・エラの図は形のイメージ（論文の図を写していない）。見た目は「図鑑の版画」（trivia-plate.js、2026-11-03）
 const DUR = 30;
 const subs = [
   { a: 0.0, b: 2.0, ja: '恐竜が絶滅した、あの隕石の日。季節はいつ？', en: 'The day the asteroid ended the dinosaurs. What season was it?', noBurn: true },
@@ -33,91 +34,223 @@ const cues = [
   { t: 22.6, type: 'pop' }, { t: 25.0, type: 'whoosh' }, { t: 26.4, type: 'ding' },
 ];
 const SEASONS = ['春', '夏', '秋', '冬'];
+// 絵は「図鑑の版画」（trivia-plate.js の PL.*）。主役はみな PL.tint ＋ PL.hatch ＋ PL.ink で描く（PL.STYLE のつまみで別のルックにも変わる）
+// 光はいつも右上から。斜線は左下のかげの側だけ。2行の字幕のときは帯が y=1180 まで上がるので、注は帯の上（y≈1135）に置く
 
-// 骨の断面（年輪のような線）。n 本目まで描く。last は最後の線の太さ 0〜1
-function boneSection(g, cx, cy, sc, rings, prog) {
-  g.save(); g.translate(cx, cy); g.scale(sc, sc);
-  // 外形（魚の背びれの骨の断面のイメージ: 少しつぶれた楕円）
-  g.fillStyle = 'rgba(240,226,190,0.10)'; g.strokeStyle = 'rgba(240,226,190,0.8)'; g.lineWidth = 5;
-  const rr = k => [60 + k * 260, 40 + k * 170];
-  // 1年 = 太い明るい帯（夏）＋細い暗い線（冬）
-  for (let i = 0; i < rings; i++) {
-    const k0 = i / rings, k1 = (i + 1) / rings, show = clamp(prog * rings - i, 0, 1);
-    if (show <= 0) break;
-    const [ax, ay] = rr(k0 + (k1 - k0) * show);
-    g.strokeStyle = 'rgba(240,226,190,0.30)'; g.lineWidth = 3;
-    g.beginPath(); g.ellipse(0, 0, ax, ay, 0, 0, Math.PI * 2); g.stroke();
-    if (show >= 1) {   // 冬の線（濃い）
-      g.strokeStyle = 'rgba(255,207,74,0.9)'; g.lineWidth = 7;
-      g.beginPath(); g.ellipse(0, 0, ax, ay, 0, 0, Math.PI * 2); g.stroke();
-    }
-  }
+// ---- 道を作る小道具 ----
+// なめらかな閉じた道（点の3つめが 1 の所は角）
+const smooth = pts => g => {
+  const n = pts.length, mid = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2], m0 = mid(pts[n - 1], pts[0]);
+  g.moveTo(m0[0], m0[1]);
+  for (let i = 0; i < n; i++) { const p = pts[i], m = mid(p, pts[(i + 1) % n]); if (p[2]) { g.lineTo(p[0], p[1]); g.lineTo(m[0], m[1]); } else g.quadraticCurveTo(p[0], p[1], m[0], m[1]); }
+  g.closePath();
+};
+const xf = (pts, ox, oy, s) => pts.map(p => [ox + p[0] * s, oy + p[1] * s, p[2]]);
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+// ---- 0〜2: 6600万年前の地球のふち と 近づく隕石 ----
+const ROCK = (() => { seed = 3; return Array.from({ length: 11 }, (_, i) => { const a = i / 11 * Math.PI * 2, r = 1 + (rnd() - 0.5) * 0.45; return [Math.cos(a) * r, Math.sin(a) * r * 0.8]; }); })();
+function earthLimb(g, f) {
+  const cx = 540, cy = 1800, r = 960, c = PL.circle(cx, cy, r);
+  g.save(); g.globalAlpha *= f;
+  PL.tint(g, c, PL.T.sea, 0.5);
+  PL.hatch(g, c, { angle: 0.55, gap: 14, w: 2.6, not: PL.circle(cx + 160, cy - 40, r), cx, cy });
+  PL.hatch(g, c, { angle: -0.5, gap: 14, w: 2.2, not: PL.circle(cx + 70, cy - 15, r), cx, cy });
+  g.save(); g.beginPath(); c(g); g.clip(); g.strokeStyle = PL.INK; g.lineWidth = 2;
+  for (let k = 1; k <= 5; k++) { const yy = cy - r + k * 70, rx = Math.sqrt(Math.max(0, r * r - (yy - cy) ** 2)); g.beginPath(); g.ellipse(cx, yy, rx, rx * 0.1, 0, 0, Math.PI); g.stroke(); }
+  g.restore();
+  PL.ink(g, c, 9);
   g.restore();
 }
-// 魚の線画（横向き）。エラの線つき
-function fish(g, cx, cy, s, f = 1) {
-  g.save(); g.globalAlpha *= f; g.translate(cx, cy); g.scale(s, s);
-  g.strokeStyle = '#cfe0ff'; g.lineWidth = 6; g.lineJoin = 'round'; g.lineCap = 'round';
-  g.beginPath();
-  g.moveTo(-300, 0); g.bezierCurveTo(-220, -150, 150, -150, 260, -10);
-  g.lineTo(380, -110); g.lineTo(360, 0); g.lineTo(380, 110); g.lineTo(260, 10);
-  g.bezierCurveTo(150, 150, -220, 150, -300, 0); g.stroke();
-  g.fillStyle = '#cfe0ff'; g.beginPath(); g.arc(-220, -30, 14, 0, Math.PI * 2); g.fill();
-  // エラ（3本の弧）
-  g.strokeStyle = TK.C.acc2; g.lineWidth = 5;
-  for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(-170 + i * 26, 0, 85 - i * 6, -1.1, 1.1); g.stroke(); }
+function asteroid(g, x, y, s, f) {
+  const p = smooth(ROCK.map(([a, b]) => [x + a * s, y + b * s]));
+  g.save(); g.globalAlpha *= f;
+  for (let i = -2; i <= 2; i++) {   // うしろの速さの線（墨の細い線）
+    const dx = 0.66, dy = -0.75, len = 260 - Math.abs(i) * 60, ox = x - dy * i * s * 0.35, oy = y + dx * i * s * 0.35;
+    PL.ink(g, gg => { gg.moveTo(ox + dx * s * 1.3, oy + dy * s * 1.3); gg.lineTo(ox + dx * (s * 1.3 + len), oy + dy * (s * 1.3 + len)); }, 3);
+  }
+  PL.tint(g, p, PL.T.gray, 0.7);
+  PL.hatch(g, p, { angle: 0.6, gap: 8, w: 2.2, not: PL.circle(x + s * 0.35, y - s * 0.35, s), cx: x, cy: y });
+  PL.hatch(g, p, { angle: -0.5, gap: 8, w: 2.2, not: PL.circle(x + s * 0.2, y - s * 0.2, s * 1.05), cx: x, cy: y });
+  PL.ink(g, gg => { gg.moveTo(x - s * 0.3, y + s * 0.05); gg.arc(x - s * 0.3, y + s * 0.05, s * 0.18, 0, Math.PI * 2); }, 3);   // くぼみ
+  PL.ink(g, p, 6);
   g.restore();
+}
+
+// ---- 7〜14: 魚の骨の断面（年ごとに外へのびる。のびの中心は少し左下にずれる） ----
+const BONE = { cx: 600, cy: 630, S: 360, D: [-0.28, 0.14] };
+const boneR = th => 1 + 0.11 * Math.cos(3 * th + 0.5) + 0.07 * Math.cos(th - 0.3) + 0.03 * Math.sin(5 * th);
+function bonePt(k, th) { const r = boneR(th); return [BONE.cx + (BONE.D[0] * (1 - k) + k * r * Math.cos(th) * 1.25) * BONE.S, BONE.cy + (BONE.D[1] * (1 - k) + k * r * Math.sin(th) * 0.85) * BONE.S]; }
+const boneRing = (k, dx = 0, dy = 0) => g => { for (let i = 0; i <= 120; i++) { const [x, y] = bonePt(k, i / 120 * Math.PI * 2); i ? g.lineTo(x + dx, y + dy) : g.moveTo(x + dx, y + dy); } g.closePath(); };
+const LAGS = [0.27, 0.45, 0.61, 0.75, 0.88];   // 冬の線（のびのおそい所）の位置
+const CANALS = (() => { seed = 11; return Array.from({ length: 70 }, () => [0.15 + rnd() * 0.75, rnd() * Math.PI * 2, 3 + rnd() * 5]); })();
+function boneSection(g, prog) {
+  const kc = 0.12 + 0.88 * prog, edge = boneRing(kc);
+  PL.tint(g, edge, PL.T.sand, 0.75);
+  // 夏の帯（よくのびる所）は少しこく
+  for (let i = 0; i < LAGS.length; i++) {
+    const k0 = (i ? LAGS[i - 1] : 0.12) + 0.02, k1 = Math.min(kc, LAGS[i] - 0.025); if (k1 <= k0) break;
+    g.save(); g.beginPath(); boneRing(k1)(g); boneRing(k0)(g); g.clip('evenodd'); PL.tint(g, PL.rect(0, 0, PW, PH), PL.T.wood, 0.4); g.restore();
+  }
+  // 骨の中の細い管（観察すると点のように見える）
+  g.save(); g.fillStyle = PL.INK;
+  for (const [k, th, r] of CANALS) if (k < kc - 0.03) { const [x, y] = bonePt(k, th); g.globalAlpha *= 1; g.beginPath(); g.ellipse(x, y, r, r * 0.6, th, 0, Math.PI * 2); g.fill(); }
+  g.restore();
+  // かげ（左下）
+  PL.hatch(g, edge, { angle: 0.6, gap: 13, w: 2.4, not: boneRing(kc, 70, -60), cx: BONE.cx, cy: BONE.cy });
+  PL.hatch(g, edge, { angle: -0.5, gap: 13, w: 2.0, not: boneRing(kc, 30, -26), cx: BONE.cx, cy: BONE.cy });
+  // まん中の穴
+  const hole = boneRing(0.1);
+  PL.tint(g, hole, PL.T.brown, 0.8); PL.hatch(g, hole, { angle: 0.6, gap: 7, w: 2, cx: BONE.cx, cy: BONE.cy }); PL.ink(g, hole, 4);
+  // 冬の線（墨の太い線＋細い線）
+  for (const k of LAGS) if (k <= kc) { PL.ink(g, boneRing(k), 7); PL.ink(g, boneRing(k - 0.018), 2); }
+  PL.ink(g, edge, 9);
+}
+
+// ---- 14〜20: 1年の「のび」のグラフ ----
+const GR = { x0: 120, x1: 980, yb: 960, H: 580 };
+const growY = u => GR.yb - GR.H * (0.16 + 0.84 * Math.pow(Math.max(0, Math.sin(Math.PI * u)), 1.6));   // u: 0 冬→0.5 夏→1 冬
+const growX = u => GR.x0 + (GR.x1 - GR.x0) * u;
+
+// ---- 20〜25: タニスの魚（チョウザメのなかま。とがった鼻・背中のうろこの板・上が長い尾びれ） ----
+const FISH = [[0, 8], [40, -8], [110, -38], [200, -70], [300, -92], [420, -102], [540, -96], [640, -80], [720, -60], [800, -40], [860, -42], [930, -95], [1015, -175, 1],
+  [985, -120], [955, -55], [935, -5], [915, 62, 1], [880, 34], [820, 28], [740, 50], [640, 76], [520, 96], [400, 106], [290, 100], [200, 80], [120, 54], [60, 34], [18, 20]];
+const FINS = [[[255, 88], [345, 160, 1], [350, 98]], [[565, 90], [615, 136, 1], [640, 84]], [[745, 50], [800, 102, 1], [815, 38]], [[655, -78], [720, -140, 1], [775, -56]]];
+const backY = x => { for (let i = 1; i < 12; i++) { const [ax, ay] = FISH[i - 1], [bx, by] = FISH[i]; if (x <= bx) return ay + (by - ay) * (x - ax) / (bx - ax); } return -40; };
+const bellyY = x => { const v = FISH.slice(16).reverse(); for (let i = 1; i < v.length; i++) { const [ax, ay] = v[i - 1], [bx, by] = v[i]; if (x <= bx) return ay + (by - ay) * (x - ax) / (bx - ax); } return 30; };
+const F = { ox: 40, oy: 520, s: 1.25 };
+const fp = (x, y) => [F.ox + x * F.s, F.oy + y * F.s];
+const BEADS = (() => { seed = 5; return Array.from({ length: 16 }, () => [175 + rnd() * 60, -40 + rnd() * 95, 60 + rnd() * 700]); })();   // 落ちつく所（魚の中）と落ちはじめの x
+function fishDraw(g, t) {
+  const body = smooth(xf(FISH, F.ox, F.oy, F.s));
+  PL.tint(g, body, PL.T.gray, 0.55);
+  g.save(); g.beginPath(); body(g); g.clip(); PL.tint(g, smooth(xf(FISH, F.ox, F.oy + 70, F.s)), PL.T.sand, 0.45); g.restore();   // おなかは明るい色
+  PL.hatch(g, body, { angle: 0.6, gap: 12, w: 2.4, not: smooth(xf(FISH, F.ox, F.oy - 52, F.s)), cx: F.ox, cy: F.oy });
+  PL.hatch(g, body, { angle: -0.5, gap: 12, w: 2.0, not: smooth(xf(FISH, F.ox, F.oy - 26, F.s)), cx: F.ox, cy: F.oy });
+  // うろこの板（背中と横に1列ずつ）
+  const dia = (x, y, w, h) => PL.poly([[x - w, y], [x, y - h], [x + w, y], [x, y + h]]);
+  for (let x = 200; x <= 820; x += 52) { const [px, py] = fp(x, backY(x) + 10); const d = dia(px, py, 17, 10); PL.tint(g, d, PL.T.wood, 0.7); PL.ink(g, d, 3); }
+  for (let x = 290; x <= 860; x += 46) { const [px, py] = fp(x, (backY(x) + bellyY(x)) / 2 - 4); const d = dia(px, py, 14, 9); PL.tint(g, d, PL.T.wood, 0.6); PL.ink(g, d, 2.6); }
+  PL.ink(g, body, 8);
+  for (const fin of FINS) { const p = smooth(xf(fin, F.ox, F.oy, F.s)); PL.tint(g, p, PL.T.brown, 0.5); PL.hatch(g, p, { angle: 1.3, gap: 9, w: 2, cx: F.ox, cy: F.oy }); PL.ink(g, p, 5); }
+  // 頭: 目・エラぶた・口・ひげ
+  const [ex, ey] = fp(100, -24); g.save(); g.fillStyle = PL.INK; g.beginPath(); g.arc(ex, ey, 10, 0, Math.PI * 2); g.fill(); g.restore();
+  PL.ink(g, gg => { const a = fp(210, -62), b = fp(262, 6), c = fp(222, 76); gg.moveTo(a[0], a[1]); gg.quadraticCurveTo(b[0], b[1], c[0], c[1]); }, 6);
+  PL.ink(g, gg => { const a = fp(180, -50), b = fp(220, 4), c = fp(190, 66); gg.moveTo(a[0], a[1]); gg.quadraticCurveTo(b[0], b[1], c[0], c[1]); }, 2.5);
+  PL.ink(g, gg => { const a = fp(118, 52), b = fp(160, 60); gg.moveTo(a[0], a[1]); gg.lineTo(b[0], b[1]); }, 4);
+  for (let i = 0; i < 4; i++) PL.ink(g, gg => { const a = fp(55 + i * 9, 30), b = fp(50 + i * 11, 62); gg.moveTo(a[0], a[1]); gg.lineTo(b[0], b[1]); }, 3);
+  // 隕石が飛ばしたガラスの粒が、上から落ちてエラに入る
+  BEADS.forEach(([lx, ly, sx], i) => {
+    const k = TK.out((t - 20.3 - i * 0.07) / 1.3); if (k <= 0) return;
+    const [ex2, ey2] = fp(lx, ly), x = lerp(sx, ex2, k), y = lerp(120, ey2, k), b = PL.circle(x, y, 7);
+    PL.tint(g, b, PL.T.sky, 0.9); PL.ink(g, b, 2.5);
+    if (k < 0.95) PL.ink(g, gg => { gg.moveTo(x - (ex2 - sx) * 0.06, y - 50); gg.lineTo(x - (ex2 - sx) * 0.02, y - 16); }, 2);
+  });
+}
+// 虫めがねの中（エラの細いひだの間に、粒がはさまっている）
+const LOUPE = { x: 330, y: 925, r: 165 };
+const GILLB = (() => { seed = 9; return Array.from({ length: 9 }, () => [-0.7 + rnd() * 1.4, -0.65 + rnd() * 1.0, 13 + rnd() * 9]); })();
+function loupe(g, f) {
+  const { x, y, r } = LOUPE, c = PL.circle(x, y, r);
+  g.save(); g.globalAlpha *= f;
+  g.fillStyle = PL.PAPER; g.beginPath(); c(g); g.fill();
+  g.save(); g.beginPath(); c(g); g.clip();
+  PL.tint(g, c, PL.T.rose, 0.35);
+  for (let i = -7; i <= 7; i++) {   // エラのひだ（下のエラの弓から上へ）
+    const bx = x + i * 26, by = y + r * 0.75 + Math.abs(i) * 4, tx = bx + i * 6, ty = y - r * 0.9;
+    const fil = PL.poly([[bx - 10, by], [tx - 3, ty], [tx + 3, ty], [bx + 10, by]]);
+    PL.tint(g, fil, PL.T.rose, 0.6); PL.hatch(g, fil, { angle: 0.6, gap: 7, w: 1.6, not: PL.rect(bx + 2, ty - 10, 40, by - ty + 20), cx: x, cy: y }); PL.ink(g, fil, 2.5);
+  }
+  const arch = PL.rect(x - r, y + r * 0.68, 2 * r, r);
+  PL.tint(g, arch, PL.T.rust, 0.6); PL.hatch(g, arch, { angle: 0.6, gap: 8, w: 2, cx: x, cy: y }); PL.ink(g, gg => { gg.moveTo(x - r, y + r * 0.68); gg.lineTo(x + r, y + r * 0.68); }, 4);
+  for (const [dx, dy, br] of GILLB) {
+    const bx = x + dx * r, by = y + dy * r, b = PL.circle(bx, by, br);
+    PL.tint(g, b, PL.T.sky, 0.95);
+    PL.ink(g, gg => { gg.moveTo(bx - br * 0.75, by + br * 0.1); gg.arc(bx, by, br * 0.75, Math.PI * 0.9, Math.PI * 1.6, true); }, 2.4);   // かげの側に三日月の線
+    PL.ink(g, b, 3);
+  }
+  g.restore();
+  PL.ink(g, c, 9); PL.ink(g, PL.circle(x, y, r - 12), 2);
+  g.restore();
+}
+
+// ---- 25〜30: 地球の北＝春、南＝秋 ----
+const GL = { cx: 610, cy: 630, r: 390 };
+function leaf(g, x, y, s, rot, color) {   // 卵形の葉（主脈と側脈）
+  g.save(); g.translate(x, y); g.rotate(rot);
+  const p = gg => { gg.moveTo(0, 0); gg.bezierCurveTo(s * 0.45, -s * 0.35, s * 0.85, -s * 0.2, s, 0); gg.bezierCurveTo(s * 0.85, s * 0.2, s * 0.45, s * 0.35, 0, 0); gg.closePath(); };
+  PL.tint(g, p, color, 0.8); PL.hatch(g, p, { angle: 0.6, gap: 6, w: 1.6, not: gg => { gg.rect(-10, -s, s + 20, s); }, cx: 0, cy: 0 });
+  PL.ink(g, p, 3.5);
+  PL.ink(g, gg => { gg.moveTo(0, 0); gg.lineTo(s * 0.95, 0); for (let i = 1; i <= 4; i++) { const u = i * 0.19 * s; gg.moveTo(u, 0); gg.lineTo(u + s * 0.12, -s * 0.14); gg.moveTo(u, 0); gg.lineTo(u + s * 0.12, s * 0.14); } }, 1.8);
+  g.restore();
+}
+function globe(g, t) {
+  const { cx, cy, r } = GL;
+  PL.sphere(g, cx, cy, r, PL.T.sea, {
+    a: 0.45, light: [0.7, -0.7], lw: 2.6, ow: 9,
+    inside: gg => { gg.save(); gg.beginPath(); PL.circle(cx, cy, r)(gg); gg.clip(); PL.tint(gg, gg2 => { gg2.rect(cx - r, cy - r, 2 * r, r); }, PL.T.leaf, 0.5); PL.tint(gg, gg2 => { gg2.rect(cx - r, cy, 2 * r, r); }, PL.T.rust, 0.5); gg.restore(); },
+  });
+  g.save(); g.setLineDash([22, 14]); PL.ink(g, gg => { gg.moveTo(cx - r, cy); gg.ellipse(cx, cy, r, r * 0.1, 0, Math.PI, 0, true); }, 6); g.restore();   // 赤道
+  PL.label(g, '赤道', cx + r - 70, cy - 34, 34, { bold: false });
+  // タニス（北緯46度ほど）
+  const tx = cx - r * Math.cos(46 * Math.PI / 180) * Math.sin(0.5), ty = cy - r * Math.sin(46 * Math.PI / 180);
+  const k = fade(t, 25.6, 31, 0.3);
+  if (k > 0) { g.save(); g.globalAlpha *= k; PL.leader(g, tx, ty, 700, 225, PL.RED); PL.ink(g, PL.circle(tx, ty, 14), 4, PL.RED); PL.label(g, 'タニス（化石の場所）', 760, 196, 40, { color: PL.RED }); g.restore(); }
 }
 
 function draw(g, t) {
-  // 0〜7: 4つの札（当ててみて）
-  if (t < 7.0) {
-    TK.hook(g, t, 0.0, 2.0, '恐竜が絶滅した日\n季節は？', { y: 240, size: 110 });
-    if (t >= 2.0) { g.save(); g.globalAlpha = fade(t, 2.0, 7.0, 0.3); TK.text(g, '6600万年前、隕石の日', PW / 2, 190, 56, { color: TK.C.sub }); g.restore(); }
-    const shake = t > 1.5 && t < 4.2 ? Math.sin(t * 22) * 4 : 0;
+  // 0〜2: フック（6600万年前の地球に、隕石が近づく）
+  if (t < 2.4) {
+    const f = fade(t, -1, 2.4, 0.35), k = clamp(t / 2.4, 0, 1);
+    earthLimb(g, f);
+    asteroid(g, lerp(1060, 820, k), lerp(90, 330, k), 85, f);
+    TK.hook(g, t, 0.0, 2.0, '恐竜が絶滅した日\n季節は？', { y: 560, size: 110 });
+  }
+  // 2〜7: 4つの札（当ててみて）
+  if (t >= 2.0 && t < 7.0) {
+    g.save(); g.globalAlpha = fade(t, 2.0, 7.0, 0.3); PL.label(g, '6600万年前、隕石の日', 80, 170, 54, { align: 'left' }); PL.ink(g, gg => { gg.moveTo(80, 212); gg.lineTo(640, 212); }, 3); g.restore();
+    const shake = t > 2.2 && t < 4.2 ? Math.sin(t * 22) * 4 : 0;
     g.save(); g.translate(shake, 0);
-    TK.choices(g, t, 0.15, 7.0, SEASONS, { y: 430, h: 150, gap: 22, size: 84, reveal: 4.2, answer: 0, think: [1.5, 4.2] });
+    TK.choices(g, t, 2.0, 7.0, SEASONS, { y: 470, h: 150, gap: 22, size: 84, reveal: 4.2, answer: 0, think: [2.2, 4.2] });
     g.restore();
-    if (t > 4.6) { g.save(); g.globalAlpha = fade(t, 4.6, 7.0, 0.3); TK.text(g, '（北半球）', PW / 2 + 170, 430 + 75, 48, { color: TK.C.acc }); g.restore(); }
+    if (t > 4.6) { g.save(); g.globalAlpha = fade(t, 4.6, 7.0, 0.3); PL.label(g, '（[北半球]）', 380, 470 + 75, 52, { align: 'left' }); g.restore(); }
   }
   // 7〜14: 魚の骨の断面に、季節の線が1本ずつ
   if (t >= 7.0 && t < 14.0) {
     const f = fade(t, 7.0, 14.0, 0.3);
     g.save(); g.globalAlpha = f;
-    TK.text(g, '魚の骨の断面', PW / 2, 220, 64, { color: TK.C.sub });
-    boneSection(g, PW / 2, 600, 1.25, 5, clamp((t - 7.6) / 5.0, 0, 1));
+    PL.label(g, '魚の骨の断面', 70, 170, 62, { align: 'left' });
+    boneSection(g, clamp((t - 7.4) / 4.6, 0, 1));
     if (t > 9.5) {
       g.globalAlpha = f * fade(t, 9.5, 14, 0.3);
-      TK.text(g, '[黄色の線]＝冬（のびがおそい）', PW / 2, 930, 50, { color: TK.C.sub });
-      TK.text(g, 'あいだの広い帯＝夏（よくのびる）', PW / 2, 1000, 44, { color: TK.C.sub, bold: false });
+      const [wx, wy] = bonePt(LAGS[3], 2.2), [sx, sy] = bonePt((LAGS[2] + LAGS[3]) / 2, -1.2);
+      PL.leader(g, sx, sy, 640, 250); PL.label(g, '夏の帯（よくのびる）', 650, 232, 44, { align: 'left' });
+      PL.leader(g, wx, wy, 300, 1035, PL.RED); PL.label(g, '[冬の線]（のびがおそい）', 70, 1065, 46, { align: 'left' });
     }
     g.restore();
   }
   // 14〜20: 1年の「のび」のグラフ。最後の線は夏の山の手前で止まる
   if (t >= 14.0 && t < 20.0) {
-    const f = fade(t, 14.0, 20.0, 0.3);
+    const f = fade(t, 14.0, 20.0, 0.3), { x0, x1, yb, H } = GR;
     g.save(); g.globalAlpha = f;
-    TK.text(g, '骨ののびる速さ（1年）', PW / 2, 220, 60, { color: TK.C.sub });
-    const x0 = 120, x1 = 960, yb = 900, H = 420;
-    const yOf = u => yb - H * (0.18 + 0.82 * Math.pow(Math.max(0, Math.sin(Math.PI * u)), 1.6));   // u: 0 冬→0.5 夏→1 冬
-    g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 3; g.beginPath(); g.moveTo(x0, yb); g.lineTo(x1, yb); g.stroke();
-    // 季節の目もり（冬・春・夏・秋・冬）
-    ['冬', '春', '夏', '秋', '冬'].forEach((s, i) => TK.text(g, s, x0 + (x1 - x0) * i / 4, yb + 50, 46, { color: TK.C.sub }));
-    // うすい1年分の形
-    g.setLineDash([10, 12]); g.strokeStyle = 'rgba(160,190,255,0.45)'; g.lineWidth = 4; g.beginPath();
-    for (let i = 0; i <= 100; i++) { const u = i / 100, x = x0 + (x1 - x0) * u; i ? g.lineTo(x, yOf(u)) : g.moveTo(x, yOf(u)); }
-    g.stroke(); g.setLineDash([]);
-    // 実際の線（春のおわりで止まる: u=0.36）
+    PL.label(g, '骨ののびる速さ（1年）', 70, 170, 58, { align: 'left' });
+    PL.label(g, 'はやい', x0 + 14, yb - H - 30, 34, { align: 'left', bold: false });
+    PL.ink(g, gg => { gg.moveTo(x0, yb - H - 60); gg.lineTo(x0, yb); gg.lineTo(x1 + 20, yb); }, 5);
+    ['冬', '春', '夏', '秋', '冬'].forEach((s, i) => { const x = growX(i / 4); PL.ink(g, gg => { gg.moveTo(x, yb); gg.lineTo(x, yb + 18); }, 4); PL.label(g, s, x, yb + 56, 46); });
+    PL.dots(g, Array.from({ length: 101 }, (_, i) => [growX(i / 100), growY(i / 100)]), { color: PL.INK, w: 5, dash: [2, 14] });   // ふつうの1年の形
     const stop = 0.36, k = clamp((t - 14.6) / 2.8, 0, 1), uEnd = stop * k;
-    g.strokeStyle = TK.C.acc; g.lineWidth = 9; g.beginPath();
-    for (let i = 0; i <= 80; i++) { const u = uEnd * i / 80, x = x0 + (x1 - x0) * u; i ? g.lineTo(x, yOf(u)) : g.moveTo(x, yOf(u)); }
-    g.stroke();
+    if (uEnd > 0.002) {
+      const area = gg => { gg.moveTo(growX(0), yb); for (let i = 0; i <= 60; i++) { const u = uEnd * i / 60; gg.lineTo(growX(u), growY(u)); } gg.lineTo(growX(uEnd), yb); gg.closePath(); };
+      PL.tint(g, area, PL.T.gold, 0.6);
+      PL.ink(g, gg => { for (let i = 0; i <= 60; i++) { const u = uEnd * i / 60; i ? gg.lineTo(growX(u), growY(u)) : gg.moveTo(growX(u), growY(u)); } }, 8);
+      PL.ink(g, gg => { gg.moveTo(growX(uEnd), growY(uEnd)); gg.lineTo(growX(uEnd), yb); }, 4);
+    }
     if (k >= 1) {
-      const x = x0 + (x1 - x0) * stop, y = yOf(stop);
-      g.fillStyle = TK.C.red; g.beginPath(); g.arc(x, y, 18, 0, Math.PI * 2); g.fill();
+      const x = growX(stop), y = growY(stop);
+      PL.ink(g, PL.circle(x, y, 16), 6, PL.RED);
       g.globalAlpha = f * fade(t, 17.6, 20, 0.25);
-      TK.text(g, 'ここで止まった', x + 150, y + 120, 54, { color: TK.C.red });
-      TK.text(g, 'のびざかり', x0 + (x1 - x0) * 0.5, yOf(0.5) - 60, 44, { color: TK.C.sub });
+      PL.leader(g, x + 12, y - 12, 520, 330, PL.RED); PL.label(g, 'ここで[止まった]', 530, 305, 58, { align: 'left' });
+      PL.leader(g, growX(0.5), growY(0.5) + 4, growX(0.55), growY(0.5) + 120); PL.label(g, 'のびざかり', growX(0.56), growY(0.5) + 140, 44, { align: 'left', bold: false });
     }
     g.restore();
   }
@@ -125,40 +258,38 @@ function draw(g, t) {
   if (t >= 20.0 && t < 25.0) {
     const f = fade(t, 20.0, 25.0, 0.3);
     g.save(); g.globalAlpha = f;
-    fish(g, PW / 2 - 20, 640, 1.15);
-    // 粒（上から降って、エラにとまる）
-    for (let i = 0; i < 14; i++) {
-      const sx = 220 + (i * 137) % 560, ex = PW / 2 - 205 + (i % 5) * 18, ey = 600 + ((i * 53) % 90);
-      const k = TK.out((t - 20.3 - i * 0.08) / 1.3);
-      const x = lerp(sx, ex, k), y = lerp(260, ey, k);
-      g.fillStyle = 'rgba(95,212,255,0.95)'; g.shadowColor = TK.C.acc2; g.shadowBlur = 14 * RES;
-      g.beginPath(); g.arc(x, y, 9, 0, Math.PI * 2); g.fill();
+    fishDraw(g, t);
+    PL.label(g, 'タニスの魚', 70, 170, 58, { align: 'left' });
+    if (t > 21.0) {
+      const k = fade(t, 21.0, 25, 0.3), [gx, gy] = fp(215, 10);
+      g.save(); g.globalAlpha *= k;
+      PL.ink(g, gg => { gg.moveTo(gx, gy + 40); gg.lineTo(LOUPE.x, LOUPE.y - LOUPE.r); }, 3);
+      loupe(g, 1);
+      PL.leader(g, LOUPE.x + GILLB[0][0] * LOUPE.r, LOUPE.y + GILLB[0][1] * LOUPE.r, 560, 900, PL.RED);
+      PL.label(g, '隕石が飛ばした', 570, 880, 46, { align: 'left' });
+      PL.label(g, '[ガラスの粒]', 570, 950, 62, { align: 'left' });
+      PL.label(g, 'エラの中', LOUPE.x + LOUPE.r + 20, LOUPE.y + LOUPE.r - 20, 38, { align: 'left', bold: false });
+      g.restore();
     }
-    g.shadowBlur = 0;
-    TK.card(g, 200, 180, 680, 110, { r: 55 });
-    TK.text(g, '隕石が飛ばした[ガラスの粒]', PW / 2, 237, 54);
-    if (t > 22.6) { g.globalAlpha = f * fade(t, 22.6, 25, 0.3); TK.text(g, '「1時間たたずに埋まった」は論文の考え', PW / 2, 1000, 42, { color: TK.C.sub, bold: false }); }
+    if (t > 22.6) { g.globalAlpha = f * fade(t, 22.6, 25, 0.3); PL.label(g, '「1時間たたずに埋まった」は論文の考え', PW / 2, 1140, 40, { bold: false }); }
     g.restore();
   }
   // 25〜30: 地球の北＝春、南＝秋
   if (t >= 25.0) {
-    const f = fade(t, 25.0, 31, 0.3), cx = PW / 2, cy = 650, r = 300;
+    const f = fade(t, 25.0, 31, 0.3);
     g.save(); g.globalAlpha = f;
-    g.save(); g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.clip();
-    g.fillStyle = '#2b8f63'; g.fillRect(cx - r, cy - r, 2 * r, r);
-    g.fillStyle = '#b8642a'; g.fillRect(cx - r, cy, 2 * r, r);
+    globe(g, t);
+    PL.label(g, '北は[春]', 70, 190, 84, { align: 'left' });
+    leaf(g, 270, 300, 90, -0.9, PL.T.leaf); leaf(g, 250, 300, 70, -2.3, PL.T.leaf);   // 芽ぶいた若葉
+    PL.ink(g, gg => { gg.moveTo(200, 380); gg.quadraticCurveTo(240, 330, 262, 302); }, 5);
+    PL.label(g, '南は[秋]', 70, 1060, 84, { align: 'left' });
+    const fall = (t - 25) * 30;
+    leaf(g, 440, 1015 + Math.sin(t * 2) * 8, 80, 0.5 + Math.sin(t * 1.6) * 0.3, PL.T.rust); leaf(g, 120, 930 + fall * 0.3, 64, 2.2 + fall * 0.01, PL.T.gold);   // 落ち葉
     g.restore();
-    g.strokeStyle = '#fff'; g.lineWidth = 5; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();
-    g.setLineDash([12, 10]); g.beginPath(); g.moveTo(cx - r, cy); g.lineTo(cx + r, cy); g.stroke(); g.setLineDash([]);
-    TK.text(g, '北半球  春', cx, cy - 110, 80, { color: '#d8ffe8' });
-    TK.text(g, '南半球  秋', cx, cy + 140, 80, { color: '#ffe2c4' });
-    TK.text(g, 'タニス（化石の場所）', cx - 60, cy - r - 50, 40, { color: TK.C.acc, bold: false });
-    g.fillStyle = TK.C.acc; g.beginPath(); g.arc(cx - 60, cy - r * 0.72, 14, 0, Math.PI * 2); g.fill();
-    g.restore();
-    TK.note(g, t, 26.0, 28.4, '「南が生きのこりやすかった」は著者の仮説', { size: 32 });
+    TK.note(g, t, 26.0, 28.4, '「南が生きのこりやすかった」は著者の仮説', { size: 32, y: 1140 });
   }
-  if (t >= 7.0 && t < 20.0) TK.note(g, t, 7.0, 20.0, '化石はアメリカ・ノースダコタ州タニスの1か所。\n隕石の日と結びつけることを疑う研究者もいる', { size: 30 });
-  if (t >= 28.2) TK.note(g, t, 28.2, 30.0, '出どころ: During ほか (2022) Nature 603, 91–94\n図は形のイメージ', { size: 30 });
+  if (t >= 7.0 && t < 20.0) TK.note(g, t, 7.0, 20.0, '化石はアメリカ・ノースダコタ州タニスの1か所。\n隕石の日と結びつけることを疑う研究者もいる', { size: 29, y: 1132 });
+  if (t >= 28.2) TK.note(g, t, 28.2, 30.0, '出どころ: During ほか (2022) Nature 603, 91–94\n図は形のイメージ', { size: 29, y: 1132 });
 }
 
 triviaStart({ out: 'evolution-trivia1', voice: 'auto', dur: DUR, draw, subs, cues, peek: 1.5 });

@@ -277,7 +277,7 @@ function triviaStart(cfg) {
     overlay(g, t) {
       if (t < END) {
         TK.bg(g, t, cfg.bgOpts || {});
-        cfg.draw(g, t);
+        if (TK.drawArt) TK.drawArt(g, t, cfg.draw); else cfg.draw(g, t);   // ルックによっては絵だけ別の層に描いて影をつける（trivia-looks.js）
         TK.subtitle(g, t, subs);
         if (cfg.voiceCredit) TK.credit(g, '声: ' + cfg.voiceCredit);
         if (cfg.progress !== false) TK.progress(g, t, END);

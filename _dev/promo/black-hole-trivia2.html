@@ -11,6 +11,7 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
 <script>
 'use strict';
 // うんちく black-hole-2（型A ぜんぶ逆）「大きなブラックホールは、平均すると空気より軽い」。台本は trivia/black-hole.md。?short で録る
@@ -36,27 +37,111 @@ const cues = [
   { t: 26.0, type: 'pop' }, { t: 28.0, type: 'thud' },
 ];
 
-// ブラックホール（黒い丸＋光の輪）。r は地平線の半径の絵の大きさ
+// ---- 絵（図鑑の版画。PL.tint ＋ PL.hatch ＋ PL.ink で描く）----
+const TAU = Math.PI * 2;
+const seeded = n => { let s = n; return () => (s = (s * 16807) % 2147483647) / 2147483647; };
+const ringC = (x, y, ro, ri) => gg => { gg.moveTo(x + ro, y); gg.arc(x, y, ro, 0, TAU); gg.moveTo(x + ri, y); gg.arc(x, y, ri, TAU, 0, true); };
+const ringE = (x, y, rxo, ryo, rxi, ryi, rot) => gg => {
+  gg.moveTo(x + Math.cos(rot) * rxo, y + Math.sin(rot) * rxo); gg.ellipse(x, y, rxo, ryo, rot, 0, TAU);
+  gg.moveTo(x + Math.cos(rot) * rxi, y + Math.sin(rot) * rxi); gg.ellipse(x, y, rxi, ryi, rot, TAU, 0, true);
+};
+// 円盤の長い軸で分けた半分（side=1 が手前＝下がわ）
+const half = (x, y, rot, side) => gg => {
+  const dx = Math.cos(rot), dy = Math.sin(rot), nx = -dy * side, ny = dx * side, L = 4000;
+  gg.moveTo(x - dx * L, y - dy * L); gg.lineTo(x + dx * L, y + dy * L); gg.lineTo(x + dx * L + nx * L, y + dy * L + ny * L); gg.lineTo(x - dx * L + nx * L, y - dy * L + ny * L); gg.closePath();
+};
+const clipTo = (g, path, fn) => { g.save(); g.beginPath(); path(g); g.clip(); fn(); g.restore(); };
+// ゆがんだ丸（黒点など）
+const blob = (cx, cy, rad, seed) => { const rnd = seeded(seed), n = 10, pts = Array.from({ length: n }, (_, i) => { const a = i / n * TAU, k = 0.78 + rnd() * 0.4; return [cx + Math.cos(a) * rad * k, cy + Math.sin(a) * rad * k]; });
+  return gg => { const m = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]; let s = m(pts[n - 1], pts[0]); gg.moveTo(s[0], s[1]); for (let i = 0; i < n; i++) { const e = m(pts[i], pts[(i + 1) % n]); gg.quadraticCurveTo(pts[i][0], pts[i][1], e[0], e[1]); } gg.closePath(); }; };
+
+// 降着円盤（ガスの輪）。ほぼ真横から見る。左が近づくがわ（明るい）、右が遠ざかるがわ（暗い＝斜線）。同心の線のかたまりがまわる
+const ROT = -0.12, DO = [2.35, 0.4], DI = [1.12, 0.17];
+function disk(g, x, y, r, t, w, ow) {
+  const dk = ringE(x, y, DO[0] * r, DO[1] * r, DI[0] * r, DI[1] * r, ROT);
+  PL.tint(g, dk, PL.T.gold, 0.6);
+  PL.tint(g, ringE(x, y, DO[0] * r, DO[1] * r, 1.9 * r, 0.31 * r, ROT), PL.T.rust, 0.45);
+  PL.hatch(g, dk, { angle: 1.15, gap: Math.max(5, r / 15), w, not: PL.circle(x - r * 1.2, y, r * 2.0), cx: x, cy: y });
+  PL.hatch(g, dk, { angle: -0.35, gap: Math.max(6, r / 12), w: w * 0.9, not: PL.circle(x - r * 0.6, y, r * 2.3), cx: x, cy: y });
+  const N = clamp(Math.round(r / 18), 4, 11);
+  for (let i = 1; i < N; i++) {
+    const u = i / N, rx = lerp(DI[0], DO[0], u) * r, ry = lerp(DI[1], DO[1], u) * r;
+    g.save();
+    if (i % 2) { g.setLineDash([r * 0.42, r * 0.2]); g.lineDashOffset = -t * r * 1.6 / Math.sqrt(rx / r); }
+    PL.ink(g, PL.ellipse(x, y, rx, ry, ROT), w * (1.4 - 0.7 * u));
+    g.restore();
+  }
+  PL.ink(g, PL.ellipse(x, y, DO[0] * r, DO[1] * r, ROT), ow * 0.75);
+  PL.ink(g, PL.ellipse(x, y, DI[0] * r, DI[1] * r, ROT), ow * 0.6);
+}
+// 地平線の影（墨のべた）
+function shadow(g, x, y, r) { const sh = PL.circle(x, y, r); PL.tint(g, sh, PL.INK, 1); PL.tint(g, sh, PL.INK, 0.8); PL.ink(g, sh, Math.max(3, r / 42)); }
+// 重力で曲がって見える、円盤のおくがわの光（影の上にかぶさる太い弧と、下の細い弧）
+function lensed(g, x, y, r, w) {
+  const oc = k => [x, y - 0.16 * r * k, r * (1.02 + 0.44 * k)];   // k=0 が内がわ（影のすぐ外）、k=1 が外がわ。上が厚く下がうすい
+  const band = gg => { const [ox, oy, orr] = oc(1); gg.moveTo(ox + orr, oy); gg.arc(ox, oy, orr, 0, TAU); gg.moveTo(x + r * 1.02, y); gg.arc(x, y, r * 1.02, TAU, 0, true); };
+  PL.tint(g, band, PL.T.gold, 0.55);
+  PL.tint(g, ringC(x, y, r * 1.08, r), PL.T.rust, 0.5);   // 影のすぐ外の細い光の輪
+  PL.hatch(g, band, { angle: 1.1, gap: Math.max(5, r / 16), w, not: PL.circle(x - r * 1.5, y - r * 0.2, r * 2.0), cx: x, cy: y });
+  [0, 0.14, 0.3, 0.48, 0.68, 0.86, 1].forEach((k, i) => { const [ox, oy, orr] = oc(k); PL.ink(g, PL.circle(ox, oy, orr), w * (i === 6 ? 1.6 : 1.4 - k * 0.6)); });
+}
+// ブラックホール（古い天文書の銅版画のように）。r は地平線の半径の絵の大きさ
 function hole(g, x, y, r, t, f = 1) {
   g.save(); g.globalAlpha *= f;
-  const gl = g.createRadialGradient(x, y, r * 0.9, x, y, r * 1.9);
-  gl.addColorStop(0, 'rgba(255,170,80,0.85)'); gl.addColorStop(0.35, 'rgba(255,120,40,0.35)'); gl.addColorStop(1, 'rgba(255,120,40,0)');
-  g.fillStyle = gl; g.beginPath(); g.arc(x, y, r * 1.9, 0, Math.PI * 2); g.fill();
-  g.lineWidth = Math.max(2, r * 0.08); g.strokeStyle = 'rgba(255,214,150,0.9)';
-  g.beginPath(); g.arc(x, y, r * 1.12, 0, Math.PI * 2); g.stroke();
-  g.fillStyle = '#000'; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  const w = Math.max(1.3, r / 95), ow = Math.max(3, r / 42);
+  clipTo(g, half(x, y, ROT, -1), () => disk(g, x, y, r, t, w, ow));   // 円盤のおくの半分（影にかくれる）
+  lensed(g, x, y, r, w);
+  shadow(g, x, y, r);
+  clipTo(g, half(x, y, ROT, 1), () => disk(g, x, y, r, t, w, ow));    // 手前の半分（影の前を横ぎる）
   g.restore();
 }
-function balloon(g, x, y, s, t) {
-  const by = y + Math.sin(t * 2.2) * 10 * s;
-  g.save();
-  g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 4; g.beginPath(); g.moveTo(x, by + 95 * s);
-  g.bezierCurveTo(x - 20 * s, by + 160 * s, x + 20 * s, by + 220 * s, x, by + 290 * s); g.stroke();
-  const gr = g.createRadialGradient(x - 25 * s, by - 30 * s, 5, x, by, 100 * s);
-  gr.addColorStop(0, '#ffd2d2'); gr.addColorStop(1, '#e94b5a');
-  g.fillStyle = gr; g.beginPath(); g.ellipse(x, by, 78 * s, 95 * s, 0, 0, Math.PI * 2); g.fill();
-  g.beginPath(); g.moveTo(x - 10 * s, by + 100 * s); g.lineTo(x + 10 * s, by + 100 * s); g.lineTo(x, by + 88 * s); g.fill();
+// 太陽（線彫りの丸・つぶつぶ・ふちの暗さ・黒点）
+function sun(g, x, y, r, f = 1) {
+  g.save(); g.globalAlpha *= f;
+  const c = PL.circle(x, y, r), w = Math.max(1.2, r / 170);
+  PL.tint(g, c, PL.T.gold, 0.62);
+  const rnd = seeded(7), n = Math.round(clamp(r * r / 120, 30, 1500));
+  g.save(); g.beginPath(); c(g); g.clip(); g.fillStyle = PL.INK; g.globalAlpha *= 0.2;
+  for (let i = 0; i < n; i++) { const a = rnd() * TAU, d = Math.sqrt(rnd()) * r, s = Math.max(1, r / 220) * (0.6 + rnd()); g.fillRect(x + Math.cos(a) * d, y + Math.sin(a) * d, s, s); }
   g.restore();
+  const limb = ringC(x, y, r, r * 0.86);   // ふちが暗い（周辺減光）
+  PL.hatch(g, limb, { angle: 0.7, gap: Math.max(4, r / 36), w, cx: x, cy: y });
+  PL.hatch(g, ringC(x, y, r, r * 0.94), { angle: -0.6, gap: Math.max(4, r / 40), w: w * 0.8, cx: x, cy: y });
+  [0.9, 0.94, 0.97].forEach(k => PL.ink(g, PL.circle(x, y, r * k), w * 0.8));
+  [[-0.3, -0.14, 0.055, 3], [0.2, 0.2, 0.04, 5], [0.29, 0.13, 0.022, 8], [-0.06, 0.4, 0.03, 11], [0.42, -0.36, 0.02, 13]].forEach(([dx, dy, s, sd]) => {
+    const sx = x + dx * r, sy = y + dy * r, ur = s * r, pen = blob(sx, sy, ur * 2.2, sd), um = blob(sx, sy, ur, sd + 1);
+    PL.tint(g, pen, PL.T.rust, 0.55);
+    PL.hatch(g, pen, { angle: 1.3, gap: Math.max(3, ur / 3.5), w: w * 0.8, cx: sx, cy: sy });
+    for (let j = 0; j < 14; j++) { const a = j / 14 * TAU; PL.ink(g, gg => { gg.moveTo(sx + Math.cos(a) * ur, sy + Math.sin(a) * ur); gg.lineTo(sx + Math.cos(a) * ur * 1.9, sy + Math.sin(a) * ur * 1.9); }, w * 0.7); }
+    PL.tint(g, um, PL.INK, 0.92); PL.ink(g, pen, w * 1.2);
+  });
+  PL.ink(g, c, Math.max(4, r / 55));
+  g.restore();
+}
+// 風船（空気）。上が広く下へすぼまる胴・ゴムのつなぎ目の線・結び目・ひも・光沢
+function balloon(g, x, y, s, t) {
+  const by = y + Math.sin(t * 2.2) * 10 * s, W = 80 * s, H = 100 * s;
+  const body = gg => { gg.moveTo(x, by - H); gg.bezierCurveTo(x + W * 1.32, by - H, x + W * 1.15, by + H * 0.45, x + W * 0.1, by + H * 0.95); gg.lineTo(x - W * 0.1, by + H * 0.95); gg.bezierCurveTo(x - W * 1.15, by + H * 0.45, x - W * 1.32, by - H, x, by - H); gg.closePath(); };
+  const knot = gg => { gg.moveTo(x - W * 0.1, by + H * 0.95); gg.lineTo(x - W * 0.2, by + H * 1.08); gg.quadraticCurveTo(x, by + H * 1.14, x + W * 0.2, by + H * 1.08); gg.lineTo(x + W * 0.1, by + H * 0.95); gg.closePath(); };
+  PL.ink(g, gg => { gg.moveTo(x, by + H * 1.1); gg.bezierCurveTo(x - 24 * s, by + H * 1.6, x + 26 * s, by + H * 2.2, x + 6 * s, by + H * 2.85); }, 3);
+  PL.tint(g, body, PL.T.rose, 0.85);
+  PL.hatch(g, body, { angle: 0.75, gap: Math.max(7, 9 * s), w: 2.2, not: PL.ellipse(x - W * 0.3, by - H * 0.32, W * 1.02, H * 1.08), cx: x, cy: by });
+  PL.hatch(g, body, { angle: -0.6, gap: Math.max(7, 10 * s), w: 2, not: PL.ellipse(x - W * 0.42, by - H * 0.42, W * 1.12, H * 1.2), cx: x, cy: by });
+  clipTo(g, body, () => [-0.62, -0.3, 0.3, 0.62].forEach(k => PL.ink(g, gg => { gg.moveTo(x, by - H); gg.bezierCurveTo(x + k * W * 1.35, by - H * 0.6, x + k * W * 1.1, by + H * 0.55, x, by + H * 0.95); }, 1.5)));
+  const gl = PL.ellipse(x - W * 0.46, by - H * 0.48, W * 0.13, H * 0.27, 0.45);   // 光沢（紙の地のまま残す）
+  g.save(); g.fillStyle = PL.PATCH; g.beginPath(); gl(g); g.fill(); g.restore(); PL.ink(g, gl, 1.5);
+  PL.tint(g, knot, PL.T.rust, 0.8); PL.hatch(g, knot, { angle: 0.9, gap: 5, w: 1.5, cx: x, cy: by }); PL.ink(g, knot, 3.5);
+  PL.ink(g, body, 6);
+}
+// 1cm の立方体（右の面がかげ）
+function cube(g, x, y, s) {
+  const q = 0.87 * s, top = PL.poly([[x, y - s], [x + q, y - s * 0.5], [x, y], [x - q, y - s * 0.5]]),
+    lf = PL.poly([[x - q, y - s * 0.5], [x, y], [x, y + s], [x - q, y + s * 0.5]]), rt = PL.poly([[x, y], [x + q, y - s * 0.5], [x + q, y + s * 0.5], [x, y + s]]);
+  [top, lf, rt].forEach(p => PL.tint(g, p, PL.T.gray, 0.55));
+  PL.hatch(g, lf, { angle: 1.2, gap: 12, w: 1.8, cx: x, cy: y });
+  PL.hatch(g, rt, { angle: 0.5, gap: 7, w: 2, cx: x, cy: y }); PL.hatch(g, rt, { angle: -0.8, gap: 9, w: 1.8, cx: x, cy: y });
+  [top, lf, rt].forEach(p => PL.ink(g, p, 4));
+  PL.label(g, '1 cm', x - q * 0.55, y + s * 0.95, 26, { bold: false, rot: 0.52 });
 }
 // 重さ（太陽の何倍、log10）を時刻で
 function logM(t) {
@@ -66,86 +151,109 @@ function logM(t) {
   if (t < 26.0) return lerp(8.1324, Math.log10(6.5e9), ease((t - 19.4) / 2.2));
   return Math.log10(6.5e9);
 }
-// 密度のものさし（右がわ、縦、対数）。10^20 〜 10^-1 kg/m³
-const GX = 870, GY0 = 260, GY1 = 1060;
+// 密度の計器（右がわ、縦、対数の目盛り）。10^20 〜 10^-1 kg/m³
+const GX = 915, GY0 = 300, GY1 = 1080;
 const gaugeY = lr => lerp(GY0, GY1, (20 - lr) / 21);
 function gauge(g, t, rho, f) {
   g.save(); g.globalAlpha *= f;
-  g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 6; g.beginPath(); g.moveTo(GX, GY0); g.lineTo(GX, GY1); g.stroke();
+  const tube = PL.rect(GX - 13, GY0 - 14, 26, GY1 - GY0 + 28);
+  PL.tint(g, tube, PL.T.sand, 0.6);
+  PL.hatch(g, tube, { angle: 1.0, gap: 7, w: 1.6, not: PL.rect(GX - 40, GY0 - 40, 44, GY1 - GY0 + 80), cx: GX, cy: GY0 });
+  PL.ink(g, tube, 5);
+  for (let lr = 20; lr >= -1; lr--) {
+    const y = gaugeY(lr), big = lr % 5 === 0;
+    PL.ink(g, gg => { gg.moveTo(GX + 13, y); gg.lineTo(GX + (big ? 34 : 24), y); gg.moveTo(GX - 13, y); gg.lineTo(GX - (big ? 30 : 20), y); }, big ? 3.5 : 1.8);
+    if (big && lr > 0) PL.label(g, '10' + sup(lr), GX + 40, y, 28, { align: 'left', bold: false });
+  }
   [[3, '水', TK.C.acc2], [Math.log10(1.225), '空気', TK.C.green]].forEach(([lr, s, c]) => {
     const y = gaugeY(lr);
-    g.strokeStyle = c; g.lineWidth = 4; g.beginPath(); g.moveTo(GX - 40, y); g.lineTo(GX + 40, y); g.stroke();
-    TK.text(g, s, GX - 54, y, 40, { align: 'right', color: c });
+    PL.ink(g, gg => { gg.moveTo(GX - 24, y); gg.lineTo(GX + 36, y); }, 4, c);
+    PL.label(g, s, GX + 42, y, 36, { align: 'left', color: c });
   });
-  const y = gaugeY(clamp(Math.log10(rho), -1, 20));
-  g.fillStyle = TK.C.acc; g.beginPath(); g.moveTo(GX + 14, y); g.lineTo(GX + 50, y - 22); g.lineTo(GX + 50, y + 22); g.fill();
-  TK.text(g, '平均の密度', GX, GY0 - 50, 36, { color: TK.C.sub, bold: false });
+  const y = gaugeY(clamp(Math.log10(rho), -1, 20)), nd = PL.poly([[GX - 17, y], [GX - 58, y - 18], [GX - 50, y], [GX - 58, y + 18]]);   // 針
+  PL.tint(g, nd, PL.RED, 0.85); PL.ink(g, nd, 3);
+  PL.label(g, '平均の密度', GX + 10, 222, 36);
+  PL.label(g, 'kg/m³', GX + 10, 262, 26, { bold: false });
   g.restore();
 }
 
 function draw(g, t) {
-  // 0〜2.6: フック
+  // 0〜2.6: フック（ブラックホールと風船をならべる）
   if (t < 2.6) {
-    hole(g, 330, 760, 150, t);
-    balloon(g, 760, 690, 1.15, t);
-    TK.hook(g, t, 0.0, 2.6, '平均すると、\n空気より[すかすか]', { y: 330, size: 118 });
-    TK.text(g, 'ブラックホール', 330, 1010, 46, { color: TK.C.sub });
-    TK.text(g, '空気', 760, 1010, 46, { color: TK.C.sub });
+    hole(g, 330, 640, 180, t);
+    balloon(g, 890, 560, 1.2, t);
+    TK.hook(g, t, 0.0, 2.6, '平均すると、\n空気より[すかすか]', { y: PL.SUBY, size: 118 });   // 絵と重ねないよう、字幕の帯の所に
+    PL.leader(g, 330, 840, 330, 950);
+    PL.label(g, "ブラックホール", 330, 990, 46);
+    PL.label(g, "空気", 896, 990, 46);
   }
   // 2.6〜8: 太陽が縮んで直径6km
   if (t >= 2.6 && t < 8.0) {
-    const k = ease((t - 2.8) / 1.6);
-    if (k < 1) {
-      g.save(); const r = lerp(380, 60, k);
-      const gr = g.createRadialGradient(540, 700, 0, 540, 700, r); gr.addColorStop(0, '#fff6c8'); gr.addColorStop(0.7, '#ffc24a'); gr.addColorStop(1, 'rgba(255,140,40,0.2)');
-      g.fillStyle = gr; g.globalAlpha = 1 - k * 0.6; g.beginPath(); g.arc(540, 700, r, 0, Math.PI * 2); g.fill(); g.restore();
-    }
-    if (k > 0.6) hole(g, 540, 700, 60, t, clamp((k - 0.6) / 0.4, 0, 1));
-    TK.card(g, 170, 200, 740, 150);
-    TK.text(g, k < 1 ? '太陽' : '太陽の重さのブラックホール', PW / 2, 275, 60);
+    const k = ease((t - 2.8) / 1.6), X = 560, Y = 640, HR = 105;
+    if (k < 1) sun(g, X, Y, lerp(420, 80, k), 1 - k * 0.5);
+    if (k > 0.6) hole(g, X, Y, HR, t, clamp((k - 0.6) / 0.4, 0, 1));
+    PL.label(g, k < 0.8 ? '太陽' : '太陽の重さのブラックホール', 80, 255, 64, { align: 'left', maxw: 920 });
+    PL.ink(g, gg => { gg.moveTo(80, 300); gg.lineTo(k < 0.8 ? 260 : 900, 300); }, 3);
     if (t > 3.8) {
       g.save(); g.globalAlpha = fade(t, 3.8, 8.0, 0.3);
-      TK.text(g, '直径 [5.9 km]', PW / 2, 900, 80);
+      const dy = Y + HR * 1.6;   // 地平線の直径の寸法線
+      PL.ink(g, gg => { gg.moveTo(X - HR, Y + HR * 0.5); gg.lineTo(X - HR, dy + 14); gg.moveTo(X + HR, Y + HR * 0.5); gg.lineTo(X + HR, dy + 14); }, 1.6);
+      PL.ink(g, gg => { gg.moveTo(X - HR, dy); gg.lineTo(X + HR, dy); gg.moveTo(X - HR + 14, dy - 9); gg.lineTo(X - HR, dy); gg.lineTo(X - HR + 14, dy + 9); gg.moveTo(X + HR - 14, dy - 9); gg.lineTo(X + HR, dy); gg.lineTo(X + HR - 14, dy + 9); }, 3, PL.RED);
+      PL.label(g, '直径 [5.9 km]', X, 880, 80);
       g.restore();
     }
     if (t > 5.2) {
       g.save(); g.globalAlpha = fade(t, 5.2, 8.0, 0.3);
-      TK.text(g, '1cm³ あたり [180億トン]', PW / 2, 1030, 72);
+      cube(g, 190, 1050, 62);
+      PL.label(g, '1cm³ あたり [180億トン]', 290, 1050, 60, { align: 'left', maxw: 740 });
       g.restore();
     }
   }
   // 8〜26: 重くすると、球が大きく、密度が下がる
   if (t >= 8.0 && t < 26.0) {
     const lm = logM(t), M = Math.pow(10, lm), rho = RHO_SUN / (M * M);
-    const f = fade(t, 8.0, 26.0, 0.3);
-    const r = 40 + 22 * lm;   // 絵は対数（本当は重さに比例）
-    hole(g, 420, 660, r, t, f);
-    g.save(); g.globalAlpha = f;
-    TK.card(g, 90, 180, 660, 130);
-    TK.text(g, '重さ: 太陽の [' + jaNum(M) + '] 倍', 420, 245, 62, { maxw: 620 });
-    TK.text(g, sci(rho) + ' kg/m³' + (t >= 23.0 ? ' ＜ 空気 1.2' : ''), 400, 1025, 62, { maxw: 560, color: rho < 1.225 ? TK.C.green : rho < 1500 ? TK.C.acc2 : '#fff' });
-    g.restore();
+    const f = fade(t, 8.0, 26.0, 0.3), X = 360, Y = 720;
+    const r = 44 + 17 * lm;   // 絵は対数（本当は重さに比例）
+    hole(g, X, Y, r, t, f);
     gauge(g, t, rho, f);
+    g.save(); g.globalAlpha = f;
+    PL.label(g, '重さ: 太陽の [' + jaNum(M) + '] 倍', 80, 255, 62, { align: 'left', maxw: 700 });
+    PL.ink(g, gg => { gg.moveTo(80, 298); gg.lineTo(780, 298); }, 3);
+    PL.leader(g, X - r * 0.35, Y + r * 0.55, 230, 1062);
+    PL.label(g, sci(rho) + ' kg/m³' + (t >= 23.0 ? ' ＜ 空気 1.2' : ''), 80, 1110, 58, { align: 'left', maxw: 780, color: rho < 1.225 ? TK.C.green : rho < 1500 ? TK.C.acc2 : PL.INK });
+    g.restore();
     if (t >= 9.5 && t < 15.0) {
       g.save(); g.globalAlpha = fade(t, 9.5, 15.0, 0.3);
-      TK.text(g, '重さ ×10 → 半径 ×10 → 体積 ×1000', 420, 350, 40, { color: TK.C.sub, maxw: 640 });
+      PL.label(g, '重さ ×10 → 半径 ×10 → 体積 ×1000', 80, 345, 40, { align: 'left', color: TK.C.sub, maxw: 720 });
       g.restore();
     }
-    if (t >= 15.4 && t < 19.0) { g.save(); g.globalAlpha = fade(t, 15.4, 19.0, 0.3); TK.text(g, '[水]と同じ', 420, 355, 64); g.restore(); }
+    if (t >= 15.4 && t < 19.0) { g.save(); g.globalAlpha = fade(t, 15.4, 19.0, 0.3); PL.label(g, '[水]と同じ', 80, 352, 60, { align: 'left' }); g.restore(); }
     if (t >= 21.6) {
       g.save(); g.globalAlpha = fade(t, 21.6, 26.0, 0.3);
-      TK.text(g, 'M87*（初めて写されたブラックホール）', 420, 350, 40, { color: TK.C.sub, maxw: 640 });
+      PL.label(g, 'M87*（初めて写されたブラックホール）', 80, 345, 40, { align: 'left', color: TK.C.sub, maxw: 720 });
       g.restore();
     }
     TK.note(g, t, 8.0, 26.0, '重さを、地平線の大きさのふつうの球の体積で割った目安／絵の大きさは桁で', { size: 30 });
   }
-  // 26〜30: まとめ
+  // 26〜30: まとめ（光の道すじが地平線に吸いこまれる）
   if (t >= 26.0) {
-    hole(g, 540, 650, 230, t);
+    const X = 470, Y = 760, R = 250;
+    hole(g, X, Y, R, t);
+    const s = clamp((t - 26.6) / 1.4, 0, 1);
+    if (s > 0) {
+      g.save(); g.beginPath(); g.rect(0, 0, PW, PH); g.arc(X, Y, R, 0, TAU); g.clip('evenodd');
+      [[1040, 380, 1.25], [1050, 1000, 1.0], [1060, 560, 1.6]].forEach(([sx, sy, turn]) => {
+        const R0 = Math.hypot(sx - X, sy - Y), th0 = Math.atan2(sy - Y, sx - X), pts = [];
+        for (let u = 0; u <= s + 1e-6; u += 0.02) { const rr = lerp(R0, R * 0.9, Math.pow(u, 1.3)), th = th0 + turn * u * u; pts.push([X + Math.cos(th) * rr, Y + Math.sin(th) * rr]); }
+        PL.dots(g, pts, { w: 6, dash: [3, 14] });
+      });
+      g.restore();
+      PL.label(g, '光', 1000, 330, 44);
+    }
     g.save(); g.globalAlpha = fade(t, 26.0, 31, 0.3);
-    TK.lines(g, '重いほど、すかすか\n（平均すると）', PW / 2, 260, 84, { lh: 1.25 });
+    TK.lines(g, '重いほど、すかすか\n（平均すると）', PW / 2, 240, 84, { lh: 1.25 });
     g.restore();
-    TK.note(g, t, 27.4, 30.0, '出どころ: EHT Collaboration (2019) ApJL 875 L6・r = 2GM/c²（一般相対論）\n空気 1.225 kg/m³（国際標準大気）', { size: 28 });
+    TK.note(g, t, 27.4, 30.0, '出どころ: EHT Collaboration (2019) ApJL 875 L6・r = 2GM/c²（一般相対論）\n空気 1.225 kg/m³（国際標準大気）', { size: 28, y: 1135 });   // 2行なので字幕の帯の上に
   }
 }
 

@@ -11,14 +11,16 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
 <script>
 'use strict';
 // うんちく spider-hunt-1（型H 当ててみて）「赤い光の中で跳ぶと、どうなる？」。台本は trivia/spider-hunt.md。?short で録る
 // Nagata ほか 2012（Science）・2013（Biophysics, PMC4629671）: 主眼の網膜は4層。緑（約520nm）は第1層（いちばん奥）でくっきり、
 // 第2層ではいつもぼける。そのぼけの大きさで距離をはかる。赤（約630nm）では目当てより有意に短く跳ぶ。6倍明るい赤でも同じ。
-// こわがらせない: クモは横から見た線の小さな模式だけ（顔・牙は描かない）。どれだけ手前かは描かない（数は論文の図だけで読めていない）。
+// こわがらせない: クモは横から見た図だけ（顔・牙は描かない）。どれだけ手前かは描かない（数は論文の図だけで読めていない）。
+// 絵は「図鑑の版画」（trivia-plate.js の PL.*）。主役は PL.tint＋PL.hatch＋PL.ink で描く（PL.STYLE のつまみでほかのルックにも変わる）
 const DUR = 35;
-const GREEN = '#59e39a', RED = '#ff6b6b';
+const GREEN = PL.GREEN, RED = PL.RED;
 const subs = [
   { a: 0.0, b: 3.4, ja: 'ハエトリグモを赤い光の中に置くと、ジャンプはどうなる？', en: 'Put a jumping spider under red light. What happens to its jump?', noBurn: true },
   { a: 3.4, b: 8.0, ja: 'ぴったり？ 跳びすぎ？\n手前に落ちる？', en: 'Spot on? Too far? Or short?' },
@@ -35,94 +37,283 @@ const cues = [
   { t: 21.0, type: 'whoosh' }, { t: 27.0, type: 'rise' }, { t: 30.0, type: 'buzz' }, { t: 32.4, type: 'thud' },
 ];
 
-// ---- 横から見た場面（線の模式）----
-// クモ: 丸い頭胸部＋腹部、脚4本の線（こちら向きの顔や牙は描かない）
-function spider(g, x, y, s = 1, color = '#e8eefc', crouch = 0) {
-  g.save(); g.translate(x, y); g.scale(s, s);
-  g.strokeStyle = color; g.fillStyle = 'rgba(232,238,252,0.18)'; g.lineWidth = 4; g.lineCap = 'round'; g.lineJoin = 'round';
-  const by = -26 + crouch * 8;
-  // 脚（ひざが上に出る形）
-  for (let i = 0; i < 4; i++) {
-    const hx = -8 + i * 8, kx = -34 + i * 22, fx = -46 + i * 30;
-    g.beginPath(); g.moveTo(hx, by); g.lineTo(kx, by - 18 + crouch * 6); g.lineTo(fx, 0); g.stroke();
-  }
-  g.beginPath(); g.ellipse(-26, by - 4, 24, 18, -0.2, 0, Math.PI * 2); g.fill(); g.stroke();   // 腹
-  g.beginPath(); g.ellipse(12, by - 6, 20, 15, 0, 0, Math.PI * 2); g.fill(); g.stroke();        // 頭胸部
-  g.restore();
+// ---- 形を作る道具 ----
+// ローカル座標（右向き・足もとが y=0）から画面へ写す。dir=-1 で左向き
+const TAU = Math.PI * 2;
+function mapper(x0, y0, s, rot = 0, dir = 1) {
+  const c = Math.cos(rot), n = Math.sin(rot);
+  return (x, y) => { x *= dir; return [x0 + s * (x * c - y * n), y0 + s * (x * n + y * c)]; };
 }
-// ハエ（的）: 体の楕円と羽2枚
-function fly(g, x, y, s = 1) {
-  g.save(); g.translate(x, y); g.scale(s, s);
-  g.strokeStyle = '#e8eefc'; g.lineWidth = 3.5; g.fillStyle = 'rgba(232,238,252,0.18)';
-  g.beginPath(); g.ellipse(-4, -18, 16, 22, -0.5, 0, Math.PI * 2); g.fill(); g.stroke();
-  g.beginPath(); g.ellipse(0, -14, 22, 11, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-  g.beginPath(); g.arc(22, -16, 8, 0, Math.PI * 2); g.fill(); g.stroke();
-  g.beginPath(); g.moveTo(-10, -4); g.lineTo(-14, 2); g.moveTo(6, -4); g.lineTo(8, 2); g.moveTo(16, -6); g.lineTo(20, 2); g.stroke();
-  g.restore();
-}
-// 1つの場面（台・クモ・ハエ・跳ぶ道すじ）。land: 着地の x（的は x1）。u: 0〜1 の跳躍の進み
-function scene(g, y0, col, land, u, label) {
-  const x0 = 200, x1 = 800;
-  // 光の色
-  g.save();
-  const gr = g.createRadialGradient(540, y0 - 150, 40, 540, y0 - 120, 520);
-  gr.addColorStop(0, col + '40'); gr.addColorStop(1, col + '00');
-  g.fillStyle = gr; g.fillRect(60, y0 - 360, 900, 420);
-  g.restore();
-  // 地面
-  g.strokeStyle = 'rgba(200,215,255,0.55)'; g.lineWidth = 4;
-  g.beginPath(); g.moveTo(90, y0); g.lineTo(950, y0); g.stroke();
-  fly(g, x1, y0, 2.1);
-  // 道すじ（点線）
-  const peak = 170;
-  const path = k => [lerp(x0, land, k), y0 - 4 * peak * k * (1 - k)];
-  g.save(); g.setLineDash([12, 14]); g.strokeStyle = col; g.lineWidth = 4; g.globalAlpha = 0.85;
-  g.beginPath(); for (let i = 0; i <= 40; i++) { const k = i / 40 * u, [x, y] = path(k); i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); g.restore();
-  const [sx, sy] = path(u);
-  spider(g, sx, sy, 2.1, '#e8eefc', u <= 0 ? 1 : 0);
-  if (u >= 1) {
-    g.strokeStyle = col; g.lineWidth = 5;
-    if (Math.abs(land - x1) < 5) { g.beginPath(); g.arc(x1, y0 - 36, 90, 0, Math.PI * 2); g.stroke(); }
-    else { g.beginPath(); g.moveTo(land - 26, y0 + 30); g.lineTo(land + 26, y0 + 80); g.moveTo(land + 26, y0 + 30); g.lineTo(land - 26, y0 + 80); g.stroke(); }
+// cmds: [['M',x,y], ['L',x,y], ['Q',cx,cy,x,y], ['Z']]。dx, dy はローカルでずらす（かげを抜く形に使う）
+const pathOf = (m, cmds, dx = 0, dy = 0) => g => {
+  for (const c of cmds) {
+    const p = []; for (let i = 1; i < c.length; i += 2) p.push(...m(c[i] + dx, c[i + 1] + dy));
+    if (c[0] === 'M') g.moveTo(...p); else if (c[0] === 'L') g.lineTo(...p); else if (c[0] === 'Q') g.quadraticCurveTo(...p); else g.closePath();
   }
-  if (label) TK.text(g, label, 110, y0 - 300, 54, { align: 'left', color: col });
+};
+const ellCmds = (cx, cy, rx, ry, rot = 0, n = 40) => {
+  const a = [];
+  for (let i = 0; i < n; i++) { const t = i / n * TAU, x = Math.cos(t) * rx, y = Math.sin(t) * ry; a.push([i ? 'L' : 'M', cx + x * Math.cos(rot) - y * Math.sin(rot), cy + x * Math.sin(rot) + y * Math.cos(rot)]); }
+  a.push(['Z']); return a;
+};
+const rnd = i => { const v = Math.sin(i * 12.9898 + 78.233) * 43758.5453; return v - Math.floor(v); };
+const lerpP = (a, b, k) => [lerp(a[0], b[0], k), lerp(a[1], b[1], k)];
+// 関節の点の列 → こまかく分けて、太さを少しずつ変える（関節は少しふくらむ）
+function chain(pts, ws, sub = 5) {
+  const P = [], W = [];
+  for (let i = 0; i < pts.length - 1; i++) for (let k = 0; k < sub; k++) {
+    const t = k / sub; P.push(lerpP(pts[i], pts[i + 1], t)); W.push(lerp(ws[i], ws[i + 1], t) * (k === 0 && i > 0 ? 1.1 : 1) * (i === 0 && pts.length > 3 ? 1 + 0.28 * Math.sin(Math.PI * t) : 1));
+  }
+  P.push(pts[pts.length - 1]); W.push(ws[ws.length - 1]); return [P, W];
+}
+// 太さのある帯（脚）の道。上がわ・下がわの縁の点も返す
+function ribbon(P, W) {
+  const U = [], D = [], N = [];
+  P.forEach((p, i) => {
+    const a = P[Math.max(0, i - 1)], b = P[Math.min(P.length - 1, i + 1)];
+    let dx = b[0] - a[0], dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+    let nx = -dy, ny = dx; if (ny > 0) { nx = -nx; ny = -ny; }   // 上むきの法線
+    const w = W[i] / 2; U.push([p[0] + nx * w, p[1] + ny * w]); D.push([p[0] - nx * w, p[1] - ny * w]); N.push([nx, ny, dx, dy]);
+  });
+  const cmds = [['M', ...U[0]], ...U.slice(1).map(p => ['L', ...p]), ...D.slice().reverse().map(p => ['L', ...p]), ['Z']];
+  return { cmds, U, D, N };
 }
 
-// ---- 目の断面（模式）----
+// ---- ハエトリグモ（横から。顔・牙・目は描かない）----
+// 頭胸部は前が高い四角っぽい箱（体の半分近く）、腹柄はとても細く短い、腹部は頭胸部と同じくらいの卵形。
+// 脚は8本ぜんぶ頭胸部から。太く短め、第1脚がいちばん太い。ひざは体の高さより下（アリやザトウムシのように高く上げない）
+const CARAP = [['M', 2, -58], ['Q', 6, -98, 40, -110], ['L', 92, -114], ['Q', 103, -114, 103, -102], ['L', 102, -58], ['Q', 101, -47, 90, -46], ['L', 16, -45], ['Q', 3, -46, 2, -58], ['Z']];
+const AB = [-54, -66, 50, 33], ABD = ellCmds(AB[0], AB[1], AB[2], AB[3], -0.05);
+const PED = [['M', 5, -63], ['L', -6, -62], ['L', -6, -56], ['L', 5, -55], ['Z']];
+const SPIN = [['M', -101, -70], ['L', -112, -64], ['L', -102, -59], ['Z']];
+// 脚: 付け根 → ひざ → くるぶし → 足先（第1〜第4脚）
+const POSE = {
+  stand: [[[86, -50], [122, -80], [152, -26], [186, -2]], [[68, -48], [100, -74], [122, -24], [150, -2]], [[44, -47], [14, -76], [-6, -26], [-34, -2]], [[24, -47], [-26, -72], [-50, -26], [-86, -2]]],
+  leap: [[[86, -50], [128, -80], [168, -74], [202, -64]], [[68, -48], [108, -68], [146, -58], [174, -46]], [[44, -47], [10, -34], [-26, -14], [-56, 4]], [[24, -47], [-20, -30], [-60, -8], [-96, 12]]],   // 前の脚は前へ、後ろの脚はけり出したまま
+};
+const LEGW = [[18, 17, 11, 7], [14, 13, 9, 6], [13, 12, 8.5, 5.5], [14, 13, 9, 6]];
+const FARSH = [[[4, -3], [10, -7], [16, -4], [18, 0]], [[4, -3], [10, -7], [16, -4], [18, 0]], [[-4, -3], [-10, -7], [-16, -4], [-18, 0]], [[-4, -3], [-10, -7], [-16, -4], [-18, 0]]];
+function drawLeg(g, m, pts, ws, s, o = {}) {
+  const [P, W] = chain(pts, ws), r = ribbon(P, W), path = pathOf(m, r.cmds), sub = 5;
+  g.save(); if (o.far) g.globalAlpha *= 0.5;
+  PL.tint(g, path, PL.T.wood, 0.75);
+  for (let i = 0; i < 2; i++) {   // 輪の模様（ひざとくるぶしの手前が濃い）
+    const [p2, w2] = chain([lerpP(pts[i], pts[i + 1], 0.68), pts[i + 1]], [lerp(ws[i], ws[i + 1], 0.68) * 1.02, ws[i + 1] * 1.02], 3);
+    PL.tint(g, pathOf(m, ribbon(p2, w2).cmds), PL.T.brown, 0.85);
+  }
+  const lit = pathOf(m, ribbon(P.map(([x, y]) => [x + 2, y - 5]), W).cmds);
+  PL.hatch(g, path, { angle: 0.75, gap: Math.max(5, 3.4 * s), w: Math.max(1.2, 1.1 * s), not: lit });
+  PL.ink(g, path, o.far ? Math.max(2, 1.8 * s) : Math.max(2.6, 2.8 * s));
+  // 関節の線・毛・とげ
+  PL.ink(g, gg => {
+    [sub, sub * 2].forEach(j => { pathOf(m, [['M', ...r.U[j]], ['L', ...r.D[j]]])(gg); });
+    for (let j = 1; j < P.length - 1; j++) {   // 上がわの毛（足先へ向かって寝る）
+      const [nx, ny, dx, dy] = r.N[j], q = r.U[j], l = 6 + rnd(j * 7 + o.seed) * 4;
+      pathOf(m, [['M', ...q], ['L', q[0] + (nx * 0.6 + dx) * l, q[1] + (ny * 0.6 + dy) * l]])(gg);
+      if (j % 2) { const d = r.D[j], l2 = 4 + rnd(j * 3 + o.seed) * 3; pathOf(m, [['M', ...d], ['L', d[0] + (-nx * 0.6 + dx) * l2, d[1] + (-ny * 0.6 + dy) * l2]])(gg); }
+    }
+  }, Math.max(1.1, 1.1 * Math.min(s, 1.8)));
+  if (o.spines) PL.ink(g, gg => {   // 第1・第2脚のすねの下がわのとげ
+    for (let j = sub + 1; j < sub * 2; j++) { const [nx, ny, dx, dy] = r.N[j], d = r.D[j]; pathOf(m, [['M', ...d], ['L', d[0] + (-nx * 0.9 + dx * 0.7) * 9, d[1] + (-ny * 0.9 + dy * 0.7) * 9]])(gg); }
+  }, Math.max(1.6, 1.7 * Math.min(s, 1.8)));
+  const f = pts[3], tuft = pathOf(m, ellCmds(f[0], f[1] - 1, ws[3] * 0.75, ws[3] * 0.5));   // 足先の毛のふさ
+  PL.tint(g, tuft, PL.T.brown, 0.9); PL.ink(g, tuft, Math.max(1.4, 1.4 * s));
+  g.restore();
+}
+// x, y は足もと（まん中あたり）。o: dir, rot, pose（stand / crouch / leap）, alpha, shadow
+function spider(g, x, y, s, o = {}) {
+  const dir = o.dir ?? 1, pose = o.pose || 'stand', m = mapper(x, y, s, o.rot || 0, dir);
+  const dy = pose === 'crouch' ? 12 : 0, base = pose === 'leap' ? POSE.leap : POSE.stand;
+  const L = base.map(leg => leg.map(([px, py], j) => [px, py + dy * [1, 0.5, 0.1, 0][j]]));
+  const ow = Math.max(3, 3.3 * s), gap = Math.max(5.5, 4 * s), hw = Math.max(1.1, 1.15 * Math.min(s, 1.8));
+  g.save(); g.globalAlpha *= o.alpha ?? 1;
+  if (o.shadow) PL.hatch(g, PL.ellipse(x + dir * 30 * s, y + 3, 150 * s, 9 * s), { angle: 0.15, gap: 5, w: 1.6 });   // 地面の影
+  // 向こうがわの4本（うすく）
+  L.forEach((leg, i) => drawLeg(g, m, leg.map(([px, py], j) => [px + FARSH[i][j][0], py + FARSH[i][j][1]]), LEGW[i].map(w => w * 0.82), s, { far: true, seed: i * 31 + 5 }));
+  const abd = pathOf(m, ABD, 0, dy), carap = pathOf(m, CARAP, 0, dy), ped = pathOf(m, PED, 0, dy), spin = pathOf(m, SPIN, 0, dy);
+  const hairs = (path, x0, x1, y0, y1, hx, hy, seed) => {   // 体の毛並み（短い斜線。後ろへ寝る）
+    g.save(); g.beginPath(); path(g); g.clip();
+    PL.ink(g, gg => {
+      let k = seed;
+      for (let yy = y0; yy < y1; yy += 8) for (let xx = x0; xx < x1; xx += 8) {
+        const px = xx + rnd(++k) * 6, py = yy + rnd(++k) * 6 + dy, l = 0.7 + rnd(++k) * 0.5;
+        pathOf(m, [['M', px, py], ['L', px + hx * l, py + hy * l]])(gg);
+      }
+    }, hw);
+    g.restore();
+  };
+  // 腹部（卵形。ななめの帯の模様）
+  PL.tint(g, abd, PL.T.wood, 0.7);
+  g.save(); g.beginPath(); abd(g); g.clip();
+  const fol = [['M', -112, -120], ['L', 2, -120], ['L', 2, -76]];   // 背中の濃い模様（ふちがぎざぎざ）
+  for (let k = 0; k <= 9; k++) fol.push(['L', -6 - k * 11.5, -76 + (k % 2 ? 7 : -2) + k * 0.6]);
+  fol.push(['Z']); PL.tint(g, pathOf(m, fol, 0, dy), PL.T.brown, 0.95);
+  [[-30, -86], [-52, -88], [-74, -84]].forEach(([a, b]) => PL.tint(g, pathOf(m, ellCmds(a, b, 4.5, 3), 0, dy), PL.T.sand, 0.9));
+  g.restore();
+  hairs(abd, -106, -2, -100, -32, -7, 1.5, 100);
+  PL.hatch(g, abd, { angle: 0.7, gap, w: Math.max(1.4, 1.2 * s), not: pathOf(m, ABD, 10, dy - 22) });
+  PL.hatch(g, abd, { angle: -0.55, gap: gap * 1.2, w: Math.max(1.2, 1.1 * s), not: pathOf(m, ABD, 6, dy - 12) });
+  PL.ink(g, abd, ow);
+  PL.tint(g, spin, PL.T.brown, 0.9); PL.ink(g, spin, ow * 0.6);
+  PL.tint(g, ped, PL.T.brown, 0.9); PL.ink(g, ped, ow * 0.6);
+  // 頭胸部（前が高い箱）
+  PL.tint(g, carap, PL.T.brown, 0.85);
+  hairs(carap, 2, 104, -116, -45, -7, -2.2, 300);
+  PL.hatch(g, carap, { angle: 0.7, gap, w: Math.max(1.4, 1.2 * s), not: pathOf(m, CARAP, 10, dy - 22) });
+  PL.hatch(g, carap, { angle: -0.55, gap: gap * 1.2, w: Math.max(1.2, 1.1 * s), not: pathOf(m, CARAP, 6, dy - 12) });
+  PL.ink(g, carap, ow);
+  // ふちの毛（頭胸部の上・腹部の上）
+  PL.ink(g, gg => {
+    for (let xx = 6; xx < 99; xx += 6) {
+      const yt = xx < 40 ? -58 - 52 * Math.sin((xx - 2) / 38 * Math.PI / 2) : -113, l = 5 + rnd(xx) * 4;
+      pathOf(m, [['M', xx, yt + dy], ['L', xx - l * 0.8, yt - l * 0.7 + dy]])(gg);
+    }
+    for (let k = 0; k < 22; k++) {
+      const t = Math.PI * (1.05 + k / 22 * 0.95), cx = AB[0] + Math.cos(t) * AB[2], cy = AB[1] + Math.sin(t) * AB[3], nx = Math.cos(t) / AB[2], ny = Math.sin(t) / AB[3], nl = Math.hypot(nx, ny), l = 5 + rnd(k + 40) * 4;
+      pathOf(m, [['M', cx, cy + dy], ['L', cx + (nx / nl - 0.6) * l, cy + (ny / nl) * l + dy]])(gg);
+    }
+  }, hw);
+  // こちらがわの4本（第1脚がいちばん太い）
+  L.forEach((leg, i) => drawLeg(g, m, leg, LEGW[i], s, { seed: i * 17, spines: i < 2 }));
+  // 触肢（前の小さな脚。顔の前に短く）
+  const palp = pose === 'leap' ? [[96, -56 + dy], [112, -58 + dy], [124, -48 + dy], [132, -42 + dy]] : [[96, -56 + dy], [112, -56 + dy], [122, -42 + dy], [130, -34 + dy]];
+  const [pp, pw] = chain(palp, [5.5, 5, 4.5, 5], 3), pr = pathOf(m, ribbon(pp, pw).cmds);
+  PL.tint(g, pr, PL.T.wood, 0.85); PL.ink(g, pr, Math.max(1.6, 1.8 * s));
+  g.restore();
+}
+
+// ---- ハエ（的）。左向き・横から。羽の脈と体の節 ----
+function fly(g, x, y, s, dir = 1) {
+  const m = mapper(x, y, s, 0, dir), ow = Math.max(2.2, 2.4 * s), lw = Math.max(1, 0.9 * s);
+  const wing = [['M', -4, -44], ['Q', 26, -61, 62, -45], ['Q', 38, -33, 0, -39], ['Z']];
+  const legs = [[[-14, -22], [-24, -14], [-30, -6], [-37, 0]], [[-6, -20], [-5, -10], [-1, -1], [5, 0]], [[4, -20], [18, -14], [26, -4], [33, 0]]];
+  const legInk = (sh, w) => PL.ink(g, gg => legs.forEach(l => pathOf(m, [['M', ...l[0]], ...l.slice(1).map(p => ['L', p[0], p[1]])], sh, 0)(gg)), w);
+  g.save(); g.globalAlpha *= 0.45; legInk(6, Math.max(2, 2.4 * s)); PL.tint(g, pathOf(m, wing, 7, -5), PL.T.sky, 0.4); PL.ink(g, pathOf(m, wing, 7, -5), ow * 0.6); g.restore();
+  const ab = pathOf(m, ellCmds(22, -26, 22, 12.5, 0.12)), th = pathOf(m, ellCmds(-6, -31, 17, 15)), hd = pathOf(m, ellCmds(-28, -30, 11, 13)), eye = pathOf(m, ellCmds(-29, -32, 8.5, 10.5, 0.2));
+  [[ab, PL.T.gray], [th, PL.T.gray], [hd, PL.T.sand]].forEach(([p, c], i) => {
+    PL.tint(g, p, c, 0.8);
+    PL.hatch(g, p, { angle: 0.8, gap: Math.max(4.5, 3 * s), w: lw * 1.2, not: i === 0 ? pathOf(m, ellCmds(24, -33, 22, 12.5, 0.12)) : i === 1 ? pathOf(m, ellCmds(-3, -38, 17, 15)) : pathOf(m, ellCmds(-26, -36, 11, 13)) });
+  });
+  // 腹の節（輪の線）と胸の縞
+  g.save(); g.beginPath(); ab(g); g.clip();
+  PL.ink(g, gg => [10, 19, 28, 36].forEach(sx => pathOf(m, [['M', sx, -40], ['Q', sx + 4, -26, sx, -12]])(gg)), lw * 1.4);
+  g.restore();
+  PL.tint(g, eye, PL.T.rust, 0.9);   // 大きな複眼（こまかい格子）
+  PL.hatch(g, eye, { angle: 0.8, gap: Math.max(3, 2 * s), w: lw * 0.7 }); PL.hatch(g, eye, { angle: -0.8, gap: Math.max(3, 2 * s), w: lw * 0.7 });
+  [ab, th, hd].forEach(p => PL.ink(g, p, ow)); PL.ink(g, eye, ow * 0.6);
+  PL.ink(g, gg => {   // 胸の剛毛・触角・口
+    for (let k = 0; k < 9; k++) { const t = Math.PI * (1.15 + k / 9 * 0.7), cx = -6 + Math.cos(t) * 17, cy = -31 + Math.sin(t) * 15; pathOf(m, [['M', cx, cy], ['L', cx + Math.cos(t) * 5 + 3, cy + Math.sin(t) * 6]])(gg); }
+    pathOf(m, [['M', -34, -41], ['L', -38, -47], ['L', -41, -46]])(gg);
+    pathOf(m, [['M', -30, -18], ['L', -32, -10], ['L', -35, -8]])(gg);
+  }, lw * 1.3);
+  legInk(0, Math.max(2.2, 2.8 * s));
+  PL.ink(g, gg => legs.forEach(l => { for (let k = 1; k < 3; k++) { const [a, b] = [l[k], l[k + 1]]; for (let q = 0.3; q < 1; q += 0.35) { const p = lerpP(a, b, q); pathOf(m, [['M', ...p], ['L', p[0] + 3, p[1] - 3]])(gg); } } }), lw);
+  // 羽（すけて見える）と脈
+  const wp = pathOf(m, wing); PL.tint(g, wp, PL.T.sky, 0.45);
+  PL.ink(g, gg => { [[60, -46], [52, -38], [40, -35.5], [30, -35]].forEach(([ex, ey], i) => pathOf(m, [['M', -2, -41], ['Q', 24, -48 + i * 3, ex, ey]])(gg)); pathOf(m, [['M', 30, -44], ['L', 32, -39]])(gg); pathOf(m, [['M', 44, -43], ['L', 45, -38]])(gg); }, lw * 1.1);
+  PL.ink(g, wp, ow * 0.8);
+  const hal = pathOf(m, ellCmds(7, -27, 2.6, 2.6)); PL.ink(g, gg => pathOf(m, [['M', 4, -32], ['L', 7, -27]])(gg), lw); PL.tint(g, hal, PL.T.sand, 0.9); PL.ink(g, hal, lw);   // 平均棍
+  g.restore();
+}
+
+// ---- 横から見た場面（板・クモ・ハエ・跳ぶ道すじ）----
+function board(g, x0, x1, y0) {
+  const top = PL.rect(x0, y0, x1 - x0, 12), face = PL.rect(x0, y0 + 12, x1 - x0, 34);
+  PL.tint(g, top, PL.T.wood, 0.4); PL.tint(g, face, PL.T.wood, 0.75);
+  PL.hatch(g, face, { angle: 0.9, gap: 10, w: 2 });
+  PL.ink(g, gg => { for (let k = 0; k < 2; k++) { const yy = y0 + 22 + k * 12; gg.moveTo(x0, yy); for (let x = x0; x <= x1; x += 30) gg.lineTo(x, yy + Math.sin(x * 0.011 + k * 2.3) * 3); } }, 1.4);
+  PL.ink(g, gg => { top(gg); face(gg); }, 6);
+}
+// o: y0（板の上）, top（光の色の上はし）, col, short（赤＝手前に落ちる）, u（0〜1 の跳躍）, label, s, x0, x1（ハエ）, ghost（緑ならの道すじをうすく）
+function scene(g, o) {
+  const { y0, s } = o, fs = s * 1.3, x0 = o.x0, x1 = o.x1, peak = o.peak || 150;
+  PL.tint(g, PL.rect(30, o.top, PW - 60, y0 - o.top), o.col === GREEN ? PL.T.leaf : PL.T.rose, 0.26);   // 光の色
+  board(g, 30, PW - 30, y0);
+  fly(g, x1, y0, fs);
+  const hit = x1 - 40 * fs - 172 * s, land = o.short ? x0 + 0.6 * (hit - x0) : hit;
+  const path = k => [lerp(x0, land, k), y0 - 4 * peak * k * (1 - k)];
+  const pts = n => Array.from({ length: n + 1 }, (_, i) => path(i / n * o.u));
+  if (o.ghost) { g.save(); g.globalAlpha *= 0.45; PL.dots(g, Array.from({ length: 41 }, (_, i) => [lerp(x0, hit, i / 40), y0 - 4 * peak * (i / 40) * (1 - i / 40)]), { color: GREEN, w: 5 }); g.restore(); PL.leader(g, hit, y0 - 12, hit + 70, y0 - 250, GREEN); PL.label(g, '緑の光なら', hit + 70, y0 - 282, 40, { color: GREEN }); }
+  if (o.u > 0) PL.dots(g, pts(40), { color: o.col, w: 6 });
+  const [sx, sy] = path(o.u), air = o.u > 0 && o.u < 1;
+  const slope = -4 * peak * (1 - 2 * o.u) / Math.max(1, land - x0), rot = air ? Math.atan(slope) * 0.55 : 0;
+  if (o.u > 0) {   // しおり糸（跳ぶ前に足場につける命綱）
+    const m = mapper(sx, sy, s, rot), sp = m(-114, -64);
+    PL.ink(g, gg => { gg.moveTo(x0 - 80 * s, y0); gg.quadraticCurveTo(lerp(x0 - 80 * s, sp[0], 0.5), Math.min(y0, sp[1]) + 30, sp[0], sp[1]); }, 1.4, 'rgba(35,28,21,0.55)');
+  }
+  spider(g, sx, sy, s, { pose: o.u <= 0 ? (o.crouch ? 'crouch' : 'stand') : air ? 'leap' : 'stand', rot, shadow: !air });
+  if (o.u >= 1) {
+    if (!o.short) { PL.leader(g, x1 - 20 * fs, y0 - 62 * fs, x1 - 20 * fs, y0 - 62 * fs - 70, o.col); PL.label(g, 'ぴったり', x1 - 20 * fs, y0 - 62 * fs - 105, 48, { color: o.col }); }
+    else {
+      const fx = land + 180 * s;   // クモの前の足先とハエのあいだ（長さは描かない）
+      PL.ink(g, gg => { gg.moveTo(fx + 14, y0 - 14); gg.lineTo(fx + 42, y0 + 14); gg.moveTo(fx + 42, y0 - 14); gg.lineTo(fx + 14, y0 + 14); }, 6, o.col);
+      PL.leader(g, fx + 28, y0 - 20, fx + 28, y0 - 120 * s, o.col); PL.label(g, '手前に落ちる', fx + 28, y0 - 120 * s - 34, 46, { color: o.col });
+    }
+  }
+  if (o.label) PL.label(g, o.label, 80, o.top + 52, 54, { align: 'left', color: o.col });
+}
+
+// ---- 目の断面（図鑑の解剖図のように）----
 const LX = 190, LY = 660, AP = 120;            // レンズの中心と、光の入る高さの半分
 const LAYERS = [880, 820, 760, 700];            // 第1層（いちばん奥）〜第4層の x
+const LW = [26, 22, 12, 12];                    // 層の厚み（第1・第2層が厚い）
+const LCOL = [PL.T.rust, PL.T.gold, PL.T.rose, PL.T.sand];
+const band = (x, h) => g => { g.moveTo(x - 14 - h, LY - 200); g.quadraticCurveTo(x + 14 - h, LY, x - 14 - h, LY + 200); g.lineTo(x - 14 + h, LY + 200); g.quadraticCurveTo(x + 14 + h, LY, x - 14 + h, LY - 200); g.closePath(); };
+const tubeOut = [[LX + 10, LY - 205], [600, LY - 245], [966, LY - 262, 966, LY], [966, LY + 262, 600, LY + 245], [LX + 10, LY + 205]];
+const tubeIn = [[LX + 32, LY - 180], [600, LY - 216], [936, LY - 232, 936, LY], [936, LY + 232, 600, LY + 216], [LX + 32, LY + 180]];
+const tubePath = (q, rev) => g => { if (!rev) { g.moveTo(...q[0]); g.lineTo(...q[1]); g.quadraticCurveTo(...q[2]); g.quadraticCurveTo(...q[3]); g.lineTo(...q[4]); } else { g.lineTo(...q[4]); g.lineTo(...q[3].slice(2)); g.quadraticCurveTo(q[3][0], q[3][1], q[2][2], q[2][3]); g.quadraticCurveTo(q[2][0], q[2][1], ...q[1]); g.lineTo(...q[0]); } };
+const wall = g => { tubePath(tubeOut)(g); tubePath(tubeIn, true)(g); g.closePath(); };
+const inner = g => { tubePath(tubeIn)(g); g.closePath(); };
+const cuticle = k => PL.poly([[140, LY + k * 340], [244, LY + k * 340], [244, LY + k * 207], [LX + 6, LY + k * 176], [140, LY + k * 190]]);
 function eyeBase(g, f = 1, hi = -1) {
   g.save(); g.globalAlpha *= f;
-  // 目の筒
-  g.strokeStyle = 'rgba(200,215,255,0.45)'; g.lineWidth = 4;
-  g.beginPath(); g.moveTo(LX + 20, LY - 190); g.lineTo(620, LY - 230); g.quadraticCurveTo(940, LY - 250, 940, LY); g.quadraticCurveTo(940, LY + 250, 620, LY + 230); g.lineTo(LX + 20, LY + 190); g.stroke();
-  // レンズ
-  g.fillStyle = 'rgba(95,212,255,0.18)'; g.strokeStyle = TK.C.acc2; g.lineWidth = 4;
-  g.beginPath(); g.ellipse(LX, LY, 46, 175, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-  // 網膜の4層
+  PL.tint(g, inner, PL.T.sky, 0.22);                       // 目の中（すきとおった所）
+  PL.tint(g, wall, PL.T.brown, 0.75);                       // 色素のかべ
+  PL.hatch(g, wall, { angle: 0.8, gap: 9, w: 2, not: PL.rect(0, 0, PW, LY + 40) });
+  PL.ink(g, wall, 6);
+  // 視神経（奥から外へ）
+  const nerve = PL.poly([[930, LY - 34], [1100, LY - 22], [1100, LY + 22], [930, LY + 34]]);
+  PL.tint(g, nerve, PL.T.sand, 0.8);
+  PL.ink(g, gg => { for (let k = -2; k <= 2; k++) { gg.moveTo(905, LY + k * 14); for (let x = 905; x <= 1100; x += 15) gg.lineTo(x, LY + k * (14 - (x - 905) * 0.02) + Math.sin(x * 0.08 + k) * 2.5); } }, 1.6);
+  PL.ink(g, gg => { gg.moveTo(930, LY - 34); gg.lineTo(1100, LY - 22); gg.moveTo(930, LY + 34); gg.lineTo(1100, LY + 22); }, 4);
+  // 頭のかべ（外骨格）と、表面の毛
+  [-1, 1].forEach(k => {
+    const c = cuticle(k); PL.tint(g, c, PL.T.brown, 0.9);
+    PL.hatch(g, c, { angle: 0.8, gap: 8, w: 2 }); PL.ink(g, c, 6);
+    PL.ink(g, gg => { for (let yy = 196; yy < 336; yy += 12) { const y = LY + k * yy; gg.moveTo(140, y); gg.lineTo(124, y - 6); } }, 1.6);
+  });
+  // レンズ（角膜レンズ）。かげは右下
+  const lens = PL.ellipse(LX, LY, 46, 175);
+  PL.tint(g, lens, PL.T.sky, 0.55);
+  PL.hatch(g, lens, { angle: -0.7, gap: 9, w: 1.6, not: PL.ellipse(LX - 16, LY - 40, 46, 175) });
+  PL.ink(g, lens, 6, TK.C.acc2);
+  // 網膜の4層（層ごとに手彩色。中の細い線は光を受ける細胞の並び）
   LAYERS.forEach((x, i) => {
-    const on = hi === i;
-    g.strokeStyle = on ? TK.C.acc : 'rgba(200,215,255,0.55)'; g.lineWidth = on ? 9 : 6;
-    g.beginPath(); g.moveTo(x - 14, LY - 200); g.quadraticCurveTo(x + 14, LY, x - 14, LY + 200); g.stroke();
+    const on = hi === i, b = band(x, LW[i] / 2);
+    PL.tint(g, b, LCOL[i], on ? 1 : 0.65);
+    g.save(); g.beginPath(); b(g); g.clip();
+    PL.ink(g, gg => { for (let y = LY - 205; y < LY + 205; y += 7) { const cx = x - 14 + 28 * (1 - ((y - LY) / 200) ** 2) * 0.5; gg.moveTo(cx - 16, y); gg.lineTo(cx + 16, y); } }, 1.2, '#4a3f33');
+    g.restore();
+    PL.ink(g, b, on ? 6 : 3, on ? PL.RED : PL.INK);
   });
   g.restore();
 }
-// 光の束: レンズから焦点 fx へ集まる。ぼけの大きさ（その層での半分の高さ）を返す
+// 光の束: レンズから焦点 fx へ集まる
 function rays(g, fx, col, f = 1) {
-  g.save(); g.globalAlpha *= f; g.strokeStyle = col; g.lineWidth = 3.5;
-  for (let i = -2; i <= 2; i++) {
-    const y = LY + i / 2 * AP;
-    g.beginPath(); g.moveTo(40, y); g.lineTo(LX, y);
-    const ex = Math.min(930, fx + 60), ey = y + (LY - y) * (ex - LX) / (fx - LX);
-    g.lineTo(ex, ey); g.stroke();
-  }
-  g.fillStyle = col; g.beginPath(); g.arc(fx, LY, 9, 0, Math.PI * 2); g.fill();
+  g.save(); g.globalAlpha *= f;
+  PL.ink(g, gg => {
+    for (let i = -2; i <= 2; i++) {
+      const y = LY + i / 2 * AP, ex = Math.min(930, fx + 60), ey = y + (LY - y) * (ex - LX) / (fx - LX);
+      gg.moveTo(30, y); gg.lineTo(LX, y); gg.lineTo(ex, ey);
+    }
+  }, 4, col);
+  PL.ink(g, gg => { gg.moveTo(fx - 9, LY - 9); gg.lineTo(fx + 9, LY + 9); gg.moveTo(fx + 9, LY - 9); gg.lineTo(fx - 9, LY + 9); }, 4, col);   // 焦点
   g.restore();
 }
 const blurAt = (fx, x) => AP * Math.abs(fx - x) / (fx - LX);
-function blurMark(g, x, b, col) {
-  g.save(); g.strokeStyle = col; g.lineWidth = 10; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(x + 2, LY - Math.max(4, b)); g.lineTo(x + 2, LY + Math.max(4, b)); g.stroke(); g.restore();
+function blurMark(g, x, b, col) {   // その層でのぼけの幅（かぎの線）
+  const h = Math.max(4, b), X = x - 2;
+  PL.ink(g, gg => { gg.moveTo(X + 12, LY - h); gg.lineTo(X, LY - h); gg.lineTo(X, LY + h); gg.lineTo(X + 12, LY + h); }, 7, col);
 }
 
 function draw(g, t) {
@@ -130,7 +321,7 @@ function draw(g, t) {
   if (t < 3.4) {
     const k = clamp((t - 1.0) / 0.6, 0, 1), col = k < 0.5 ? GREEN : RED;
     g.save(); g.globalAlpha = fade(t, -1, 3.4, 0.3);
-    scene(g, 960, col, 800, 0, k < 0.5 ? '緑の光' : '赤の光');
+    scene(g, { y0: 1100, top: 560, col, u: 0, crouch: true, s: 1.9, x0: 250, x1: 905, label: k < 0.5 ? '緑の光' : '赤の光' });
     g.restore();
     TK.hook(g, t, 0.0, 3.4, '赤い光だと\nジャンプは [どうなる？]', { y: 380, size: 116 });
   }
@@ -142,30 +333,35 @@ function draw(g, t) {
   if (t >= 8.0 && t < 13.0) {
     const u1 = clamp((t - 8.6) / 1.2, 0, 1), u2 = clamp((t - 9.6) / 1.2, 0, 1);
     g.save(); g.globalAlpha = fade(t, 8, 13, 0.3);
-    scene(g, 500, GREEN, 800, u1, '緑の光');
-    scene(g, 940, RED, 610, u2, '赤の光');
+    scene(g, { y0: 540, top: 205, col: GREEN, u: u1, s: 1.1, x0: 190, x1: 890, label: '緑の光' });
+    scene(g, { y0: 1030, top: 630, col: RED, u: u2, short: true, s: 1.1, x0: 190, x1: 890, label: '赤の光' });
     g.restore();
-    TK.note(g, t, 8.6, 13.0, '模式の絵（どれだけ手前かは描いていません）\n赤を6倍明るくしても、短いまま＝明るさではなく色のせい', { size: 32 });
+    TK.note(g, t, 8.6, 13.0, '模式の絵（どれだけ手前かは描いていません）\n赤を6倍明るくしても、短いまま＝明るさではなく色のせい', { size: 32, y: 1128 });
   }
   // 13〜21: 目の断面。4層、緑は第1層でくっきり、第2層でぼける
   if (t >= 13.0 && t < 21.0) {
     const f = fade(t, 13, 21, 0.3);
-    TK.text(g, 'クモの前の目（断面の模式）', PW / 2, 250, 54, { color: TK.C.sub });
+    g.save(); g.globalAlpha = f;
+    PL.label(g, 'クモの前の目（断面の模式）', 80, 250, 50, { align: 'left', color: TK.C.sub });
+    g.restore();
     const hi = t < 17 ? Math.floor(clamp((t - 13.6) / 0.6, 0, 3.99)) : (t < 18.6 ? 0 : 1);
     eyeBase(g, f, t < 15.6 ? 3 - hi : (t < 17 ? -1 : hi));
     if (t < 17) {
       g.save(); g.globalAlpha = f;
-      LAYERS.forEach((x, i) => { if (t > 13.6 + (3 - i) * 0.6) TK.text(g, String(i + 1), x, LY + 250, 50, { color: TK.C.acc }); });
-      if (t > 15.6) TK.text(g, '網膜が [4段]（人は1段）', PW / 2, 1000, 64);
-      TK.text(g, '光 →', 90, LY - 240, 44, { color: TK.C.sub });
-      TK.text(g, '奥', 900, LY - 280, 44, { color: TK.C.sub });
+      spider(g, 830, 345, 0.62, { dir: -1 });   // どの目か（この向きで、光は左から入る）
+      LAYERS.forEach((x, i) => { if (t > 13.6 + (3 - i) * 0.6) PL.label(g, String(i + 1), x - 4, LY + 300, 52, { color: PL.RED }); });
+      if (t > 15.6) PL.label(g, '網膜が [4段]（人は1段）', PW / 2, 1060, 64);
+      PL.label(g, '光 →', 26, LY - 160, 44, { align: 'left', color: TK.C.sub });
+      PL.label(g, '奥', 1010, LY - 270, 44, { color: TK.C.sub });
       g.restore();
     } else {
       rays(g, LAYERS[0], GREEN, f * clamp((t - 17) / 0.5, 0, 1));
-      if (t > 17.2) { g.save(); g.globalAlpha = f; TK.text(g, '第1層 くっきり', 640, 360, 50, { color: GREEN }); g.restore(); }
+      if (t > 17.2) { g.save(); g.globalAlpha = f; PL.leader(g, LAYERS[0], LY - 30, 760, 395, GREEN); PL.label(g, '第1層 くっきり', 640, 360, 50, { color: GREEN }); g.restore(); }
       if (t > 18.6) {
-        g.save(); g.globalAlpha = f; blurMark(g, LAYERS[1], blurAt(LAYERS[0], LAYERS[1]), TK.C.acc);
-        TK.text(g, '第2層 いつもぼける', 640, 930, 50, { color: TK.C.acc }); g.restore();
+        const b = blurAt(LAYERS[0], LAYERS[1]);
+        g.save(); g.globalAlpha = f; blurMark(g, LAYERS[1], b, PL.RED);
+        PL.leader(g, LAYERS[1] - 2, LY + b + 4, 720, 935, PL.RED);
+        PL.label(g, '第2層 いつもぼける', 600, 970, 50, { color: PL.RED }); g.restore();
       }
     }
   }
@@ -176,17 +372,17 @@ function draw(g, t) {
     const fx = LAYERS[0] + 50 * near;
     eyeBase(g, f * 0.85, 1); rays(g, fx, GREEN, f);
     const b = blurAt(fx, LAYERS[1]);
-    g.save(); g.globalAlpha = f; blurMark(g, LAYERS[1], b, TK.C.acc);
-    // 上: ハエの近さと、第2層のぼけの丸
-    TK.card(g, 120, 190, 840, 200);
-    const fxIcon = lerp(780, 380, near);
-    fly(g, fxIcon, 330, 1.1);
-    g.strokeStyle = TK.C.sub; g.lineWidth = 3; g.beginPath(); g.moveTo(190, 340); g.lineTo(860, 340); g.stroke();
-    spider(g, 230, 340, 0.8);
-    TK.text(g, near > 0.5 ? 'ハエが近い' : 'ハエが遠い', 540, 230, 42, { color: TK.C.sub });
-    TK.text(g, 'ぼけ', 760, 960, 44, { color: TK.C.acc });
-    g.fillStyle = 'rgba(255,207,74,0.25)'; g.strokeStyle = TK.C.acc; g.lineWidth = 4;
-    g.beginPath(); g.arc(900, 1000, 6 + b * 1.6, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.save(); g.globalAlpha = f; blurMark(g, LAYERS[1], b, PL.RED);
+    // 上: 小枝の上のクモ（右）と、近づいたり遠ざかったりするハエ（左）
+    const twig = PL.rect(280, 372, 760, 14);
+    PL.tint(g, twig, PL.T.wood, 0.75); PL.hatch(g, twig, { angle: 0.9, gap: 7, w: 1.6, not: PL.rect(280, 366, 760, 12) }); PL.ink(g, twig, 4);
+    spider(g, 900, 372, 0.7, { dir: -1, shadow: true });
+    fly(g, lerp(360, 660, near), 372, 0.95, -1);
+    PL.label(g, near > 0.5 ? 'ハエが近い' : 'ハエが遠い', 470, 250, 46, { color: TK.C.sub });
+    // ぼけの丸（第2層に映る形）
+    const r = 8 + b * 3, ring = PL.circle(930, 1075, r);
+    PL.tint(g, ring, PL.T.gold, 0.7); PL.hatch(g, ring, { angle: 0.8, gap: 6, w: 1.4, cx: 930, cy: 1075 }); PL.ink(g, ring, 4, PL.RED);
+    PL.label(g, 'ぼけ（第2層）', 860, 1075, 44, { align: 'right', color: PL.RED });
     g.restore();
     TK.note(g, t, 21.6, 27, '近い物ほど、ピントが奥へずれて、第2層のぼけが大きくなる', { size: 32 });
   }
@@ -198,18 +394,19 @@ function draw(g, t) {
     const fr = LAYERS[0] + 45 * k;
     rays(g, fr, RED, f * clamp((t - 27.4) / 0.4, 0, 1));
     g.save(); g.globalAlpha = f;
-    blurMark(g, LAYERS[1], blurAt(fr, LAYERS[1]), RED);
-    TK.text(g, '緑', 620, 360, 50, { color: GREEN });
-    TK.text(g, '赤', 720, 360, 50, { color: RED });
-    if (t > 29.2) TK.text(g, 'ぼけが大きい ＝ “[もっと近い]”？', PW / 2, 1000, 62);
+    const b = blurAt(fr, LAYERS[1]);
+    blurMark(g, LAYERS[1], b, RED);
+    PL.label(g, '緑', 620, 380, 54, { color: GREEN });
+    PL.label(g, '赤', 720, 380, 54, { color: RED });
+    if (t > 29.2) { PL.leader(g, LAYERS[1] - 2, LY + b + 4, 760, 1000, RED); PL.label(g, 'ぼけが大きい ＝ “[もっと近い]”？', PW / 2, 1060, 62); }
     g.restore();
     TK.note(g, t, 27.6, 32, 'ずれの大きさは推定（赤と緑の焦点のちがいはアプリの推定値）', { size: 32 });
   }
   // 32〜35: 赤の中で手前に落ちる
   if (t >= 32.0) {
     const u = clamp((t - 32.2) / 1.2, 0, 1);
-    scene(g, 900, RED, 610, u, '赤の光');
-    TK.note(g, t, 32.2, 35.0, 'アダンソンハエトリ（大阪市立大学ほかの研究）\n出どころ: Nagata ほか (2012) Science／Nagata ほか (2013) Biophysics', { size: 30 });
+    scene(g, { y0: 1040, top: 400, col: RED, u, short: true, s: 1.5, x0: 110, x1: 900, peak: 200, label: '赤の光', ghost: true });
+    TK.note(g, t, 32.2, 35.0, 'アダンソンハエトリ（大阪市立大学ほかの研究）\n出どころ: Nagata ほか (2012) Science／Nagata ほか (2013) Biophysics', { size: 30, y: 1135 });
   }
 }
 

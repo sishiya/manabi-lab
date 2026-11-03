@@ -30,7 +30,11 @@ PL.paper = function (g) {
   g.drawImage(PL._paper, 0, 0, PW, PH);
 };
 // 形の道（path(g) が g に道を作る）の中を平行線でぬる。not(g): その形の外だけ（光の当たる所を抜く）
+// スタイルのつまみ（ルックの見本で変える。trivia-looks.js）: hatch 斜線を引くか・tintA 手彩色のこさの倍率・flat 手彩色をべたにするか・
+// outline 太い輪郭（6px より太い）を引くか。ページの絵を PL.* で描いておけば、つまみだけで版画・地球儀・切り絵・リソグラフに変わる
+PL.STYLE = { hatch: true, tintA: 1, flat: false, outline: true };
 PL.hatch = function (g, path, o = {}) {
+  if (!PL.STYLE.hatch) return;
   g.save(); g.beginPath(); path(g); g.clip();
   if (o.not) { g.beginPath(); g.rect(-50, -50, PW + 100, PH + 100); o.not(g); g.clip('evenodd'); }
   const ang = o.angle ?? 0.6, gap = o.gap ?? 13, L = 2400, ca = Math.cos(ang), sa = Math.sin(ang), cx = o.cx ?? PW / 2, cy = o.cy ?? PH / 2;
@@ -40,11 +44,12 @@ PL.hatch = function (g, path, o = {}) {
 };
 // うすい手彩色（紙のむらを重ねて、ぬった感じに）
 PL.tint = function (g, path, color, a = 0.5) {
-  g.save(); g.beginPath(); path(g); g.clip(); g.globalAlpha *= a; g.fillStyle = color; g.fillRect(-50, -50, PW + 100, PH + 100);
-  g.globalAlpha *= 0.5; g.globalCompositeOperation = 'multiply'; if (PL._paper) g.drawImage(PL._paper, 0, 0, PW, PH); g.restore();
+  g.save(); g.beginPath(); path(g); g.clip(); g.globalAlpha *= PL.STYLE.flat ? 1 : Math.min(1, a * PL.STYLE.tintA); g.fillStyle = color; g.fillRect(-50, -50, PW + 100, PH + 100);
+  if (!PL.STYLE.flat) { g.globalAlpha *= 0.5; g.globalCompositeOperation = 'multiply'; if (PL._paper) g.drawImage(PL._paper, 0, 0, PW, PH); }
+  g.restore();
 };
 // 墨の輪郭
-PL.ink = function (g, path, w = 8, color = PL.INK) { g.save(); g.strokeStyle = color; g.lineWidth = w; g.lineJoin = 'round'; g.lineCap = 'round'; g.beginPath(); path(g); g.stroke(); g.restore(); };
+PL.ink = function (g, path, w = 8, color = PL.INK) { if (!PL.STYLE.outline && w > 6) return; g.save(); g.strokeStyle = color; g.lineWidth = w; g.lineJoin = 'round'; g.lineCap = 'round'; g.beginPath(); path(g); g.stroke(); g.restore(); };
 // 道を作る部品（g に足すだけ。beginPath はしない）
 PL.circle = (x, y, r) => g => { g.moveTo(x + r, y); g.arc(x, y, r, 0, Math.PI * 2); };
 PL.ellipse = (x, y, rx, ry, rot = 0) => g => { g.moveTo(x + Math.cos(rot) * rx, y + Math.sin(rot) * rx); g.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2); };

@@ -164,7 +164,10 @@ TL.LOOKS = {
     TL.pixels(x, R, (la, lo, s) => { const h = TL.elev(la, lo), dx = TL.elev(la, lo + 1) - TL.elev(la, lo - 1), dy = TL.elev(la + 1, lo) - TL.elev(la - 1, lo), hill = h > 0 ? clamp(1 - (dx * 0.6 - dy * 0.5) / 4000, 0.7, 1.25) : 1, k = (0.45 + 0.6 * s) * hill, c = pal(h); return [c[0] * k * 1.05, c[1] * k * 1.02, c[2] * k * 0.95, 255]; });
     x.save(); x.globalCompositeOperation = 'multiply'; x.globalAlpha = 0.35; x.fillStyle = '#e9d7a8'; x.beginPath(); x.arc(0, 0, R, 0, TAU2); x.fill(); x.restore();
     TL.graticule(x, R, 1.4, PL.INK, 0.45); TL.coast(x, R, 1.8, PL.INK); TL.ring(x, R, 8, PL.INK);
-  }), apply() { PL.walker = plateWalker; } },
+  }), apply() {   // ほかのページ: 手彩色を濃く、全体にニスの黄ばみ
+    PL.walker = plateWalker; PL.STYLE.tintA = 1.8;
+    TK.finish = function (g) { const c = g.canvas; g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'multiply'; g.globalAlpha = 0.22; g.fillStyle = '#d9b97a'; g.fillRect(0, 0, c.width, c.height); g.restore(); };
+  } },
   // ⑤ 銅版画（細い線を3方向に重ねる。陸はさらに横線）
   copper: { planet: TL.place('copper', (x, R) => {
     TL.pixels(x, R, (la, lo) => land(la, lo) ? [176, 160, 120, 60] : [150, 170, 175, 40]);
@@ -204,6 +207,13 @@ TL.LOOKS = {
     sh(() => x.drawImage(c, -R, -R, R * 2, R * 2), 6, 2, 4);
   }), apply() {
     PL.INK = '#f3efe2'; PL.RED = '#f4d35e'; PL.MIN = BIZ; PL.PATCH = 'rgba(45,62,107,0.92)'; PL.walker = TL.paperPerson;
+    Object.assign(PL.STYLE, { hatch: false, flat: true, outline: false });
+    TK.drawArt = function (g, t, draw) {   // 絵を別の層に描き、紙のきめをのせて、影を落として重ねる
+      const c = g.canvas; if (!TL._art) { TL._art = document.createElement('canvas'); TL._art.width = c.width; TL._art.height = c.height; TL._grain = TL.bgCanvas('rgba(0,0,0,0)', 0.12); }
+      const a = TL._art.getContext('2d'); a.setTransform(1, 0, 0, 1, 0, 0); a.clearRect(0, 0, c.width, c.height); a.setTransform(RES, 0, 0, RES, 0, 0); a.globalAlpha = g.globalAlpha; draw(a, t);
+      a.setTransform(1, 0, 0, 1, 0, 0); a.globalCompositeOperation = 'source-atop'; a.drawImage(TL._grain, 0, 0); a.globalCompositeOperation = 'source-over';
+      g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.shadowColor = 'rgba(0,0,0,0.4)'; g.shadowBlur = 14 * RES; g.shadowOffsetX = 5 * RES; g.shadowOffsetY = 9 * RES; g.drawImage(TL._art, 0, 0); g.restore();
+    };
     const bg = TL.bgCanvas('#2d3e6b', 0.07, p => { tlSeed = 9; p.fillStyle = '#e9e2c8'; for (let i = 0; i < 60; i++) { p.beginPath(); p.arc(tlRnd() * PW, tlRnd() * PH, 3 + tlRnd() * 4, 0, TAU2); p.fill(); } });
     TK.bg = TL.useBg(bg);
     TK.subtitle = function (g, t, subs) {   // 白い紙のテープ
@@ -237,16 +247,15 @@ TL.LOOKS = {
   // ⑨ 前の紺（比べる用）
   navy: { planet: navyPlanet, apply() { TL.navy(); } },
   // ⑩ 学校のプリント（リソグラフ）: 紺の絵を、紙に2色のインクで刷ったように
-  riso: { planet: navyPlanet, apply() {
-    TL.navy(KYO);
+  riso: { planet: null, apply() {
+    PL.walker = plateWalker; LOOK.planet = TL.LOOKS.line.planet; PL.MIN = KYO;
     TK.finish = TL.pixelFinish((out, w, h) => {
       const px = out.slice();   // 版ずれで前の画素を読むので、書きかえる前の写しから読む
-      const P = [244, 242, 236], I1 = [0, 120, 191], I2 = [255, 72, 176], f = 2 * Math.PI / (4.2 * RES), c1a = Math.cos(0.26), s1a = Math.sin(0.26), c2a = Math.cos(1.31), s2a = Math.sin(1.31), off = 2 * RES * 4 + w * RES * 4;
+      const P = [246, 244, 238], I1 = [0, 120, 191], I2 = [255, 72, 176], f = 2 * Math.PI / (4.2 * RES), c1a = Math.cos(0.26), s1a = Math.sin(0.26), c2a = Math.cos(1.31), s2a = Math.sin(1.31), off = 2 * RES * 4 + w * RES * 4;
+      const cov = (k) => { const d = 1 - lum(px[k], px[k + 1], px[k + 2]), mx = Math.max(px[k], px[k + 1], px[k + 2]), mn = Math.min(px[k], px[k + 1], px[k + 2]), sat = (mx - mn) / 255, warm = clamp((px[k] - px[k + 2]) / 90, 0, 1) * clamp(sat * 3, 0, 1);
+        const a = clamp((d - 0.16) / 0.75, 0, 1) + sat * 0.35; return [clamp(a * (1 - warm * 0.9), 0, 1), clamp(a * warm * 1.2, 0, 1)]; };
       for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-        const i = (y * w + x) * 4, j = Math.max(0, i - off);
-        const L1 = clamp((lum(px[i], px[i + 1], px[i + 2]) - 0.14) / 0.8, 0, 1), w1 = clamp((px[i] - px[i + 2]) / 140, 0, 1);
-        const L2 = clamp((lum(px[j], px[j + 1], px[j + 2]) - 0.14) / 0.8, 0, 1), w2 = clamp((px[j] - px[j + 2]) / 140, 0, 1);
-        const a1 = L1 * (1 - w1 * 0.85), a2 = L2 * w2, gr = (TL.noise(x, y) - 0.5) * 0.1, mot = (TL.mottle(x, y) - 0.5) * 0.18;
+        const i = (y * w + x) * 4, j = Math.max(0, i - off), a1 = cov(i)[0], a2 = cov(j)[1], gr = (TL.noise(x, y) - 0.5) * 0.1, mot = (TL.mottle(x, y) - 0.5) * 0.18;
         const t1 = (Math.cos((x * c1a + y * s1a) * f) + Math.cos((-x * s1a + y * c1a) * f)) * 0.25 + 0.5, t2 = (Math.cos((x * c2a + y * s2a) * f) + Math.cos((-x * s2a + y * c2a) * f)) * 0.25 + 0.5;
         const ink = (c, th) => c < 0.06 ? 0 : clamp(Math.min(1, c * 1.25) * (0.8 + 0.4 * (c > 0.5 ? 0.5 : 1 - th)) + gr, 0, 1) * (0.9 + mot);
         const k1 = ink(a1, t1), k2 = ink(a2, t2), pg = 1 + (TL.noise(x * 3, y * 7) - 0.5) * 0.05;
@@ -301,6 +310,7 @@ TL.run = async function (base) {
   TL.ELEV = new Int16Array(buf);
   if (LOOK.apply) LOOK.apply();
   let code = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).pop();
-  code = code.replace(`out: '${base}'`, `out: 'tiny-earth-look-${id}', voiceOut: '${base}'`);
+  const out = location.pathname.split('/').pop().replace(/\.html$/, '');   // 入口ページの名前が、そのまま動画の名前
+  code = code.replace(`out: '${base}'`, `out: '${out}', voiceOut: '${base}'`);
   new Function(code)();
 };
