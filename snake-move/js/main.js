@@ -51,6 +51,7 @@ function draw() {
   if (APP.tipI >= 0) placeTip();
 }
 
+APP.legend = () => legend();
 function legend() {
   const items = cur().legend(APP.mode === 'tree' ? DRAWT.C : DRAWG.C);
   document.getElementById('legend').innerHTML = items.map(([col, t]) => `<span><i style="background:${col}"></i>${t}</span>`).join('') + '<span>※ 矢印の長さは目印</span>';

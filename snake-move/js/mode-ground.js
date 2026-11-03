@@ -55,7 +55,7 @@ window.MODES = window.MODES || {};
         if (Math.hypot(s.X, s.Y) > 6) { M.reset(); A.snapCam(); A.note('はじめの場所へもどした'); }
       },
       draw(g, c, A) {
-        DRAWG.scene(g, M.s, c, { layers: A.layers, trail: M.trail, tracks: opts.tracks ? M.tracks : null, thinTracks: id === 'ground', ruler: true, wave: A.wave, ring: M.ring(A), time: A.time, scaleAt: A.scaleOn && id === 'ground' ? A.scaleAt : null });
+        DRAWG.scene(g, M.s, c, { look: opts.look ? opts.look(M.s) : 'sand', layers: A.layers, trail: M.trail, tracks: opts.tracks ? M.tracks : null, thinTracks: id === 'ground', ruler: true, wave: A.wave, ring: M.ring(A), time: A.time, scaleAt: A.scaleOn && id === 'ground' ? A.scaleAt : null });
         if (opts.after) opts.after(g, c, A);
       },
       ring(A) {
@@ -93,6 +93,7 @@ window.MODES = window.MODES || {};
   const GP = { surf: 'cloth', lift: true, slope: 0, pick: 'cloth', dig: false };
   const ground = groundMode('ground', {
     tracks: true,
+    look: s => ({ cloth: 'cloth', grip: 'cloth', board: 'board', same: 'mat' })[s.p.surf] || 'sand',
     params: () => ({ surf: GP.surf, lift: GP.lift, slope: GP.slope }),
     legend: C => [[C.press, '地面を押す'], [C.push, '前へ押す力'], [C.drag, '引きずる力'], [C.slip, 'すべる向き'], ['#96784e', 'こすれた跡']],
   });
@@ -143,6 +144,7 @@ window.MODES = window.MODES || {};
       ? { contact: SP.c3, Av: SP.av, sink: SP.ground3 === 'sand' ? 0.004 : 0.001 }
       : { gait: 'side', L: 0.48, mass: 0.098, tau: 2, k: 4, alpha: 18, surf: SP.surf, delta: SP.delta * Math.PI / 180, contact: SP.contact, lift: true },
     tracks: true, sideways: true,
+    look: () => SP.dim === '3d' ? (SP.ground3 === 'sand' ? 'sand' : 'hard') : (SP.surf === 'cloth' ? 'cloth' : 'sand'),   // 平面の版の「どの向きも同じ」は砂とみなした地面
     legend: C => [[C.press, 'ふれている（地面を押す）'], [C.slip, 'すべる向き'], ['#6a5638', '地面に残った跡']],
     after: (g, c) => { if (SP.dim === '3d') elevation(g, c, side.s); },
   });

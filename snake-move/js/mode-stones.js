@@ -10,43 +10,49 @@ window.MODES = window.MODES || {};
   const SP = { surf: 'board', preset: 'scatter' };
   const W = (c, x, y) => DRAWG.toScreen(c, x, y);
 
+  // はじめは石のない、なめらかな板（地面をうねるのと同じ計算 js/ground.js）。1段目で石を立てる（js/stones.js）
   const M = {
-    id: 'stones', s: null,
+    id: 'stones', s: null, phase: 'board', b: null, bTracks: [], bHist: [], bSpeed: null, stampT: 0,
     layers: { spush: true, sdrag: true, path: true },
-    intro: '<b>つぎへ ▶</b> で順に見る。なめらかな板に石（くい）を立てた所。地面をタップすると石を置く・石をタップすると取る。',
+    intro: 'なめらかな板の上。石がないと、体をうねらせても<b>横へすべって、あまり進まない</b>（茶色はこすれた跡）。<b>つぎへ ▶</b> で石（くい）を立てる。',
+    enterIntro(A) { if (M.phase !== 'board') { M.phase = 'board'; M.makeBoard(); A.snapCam(); A.legend(); } },
     tour: [
-      { say: 'なめらかな板の上でも、<b>石があれば進める</b>。頭が左右かわるがわるに石を選び、体はその道（黄色の点線）をなぞる。石の位置がばらばらなので、曲がりの大きさも毎回ちがう。', layers: { spush: false, sdrag: false, path: true } },
+      { say: '<b>石（くい）を立てると</b>、同じ板の上でもすいすい進める。頭が左右かわるがわるに石を選び、体はその道（黄色の点線）をなぞる。地面をタップすると石を置く・石をタップすると取る。',
+        enter: A => { if (M.phase !== 'stones') { M.phase = 'stones'; M.make(); A.snapCam(); A.legend(); A.note('石を立てた'); } }, layers: { spush: false, sdrag: false, path: true } },
       { say: '緑の矢印は、<b>石が体を押す力</b>。体が曲がりの外がわで石を押し、押し返された力の前向きの分で進む。', ring: 'push', layers: { spush: true, sdrag: false, path: true } },
       { say: '赤い矢印は地面の摩擦（体にそって後ろ向き）。<b>石が押す力の合計が、この摩擦とつりあう</b>。回そうとする力もつりあう。', layers: { spush: true, sdrag: true, path: true } },
       { say: '<b>止まっているのは「道」</b>。曲がった形は地面に止まったままで、体がその中を列車のようにすべっていく。石が横すべりを止めるので、どの点もほぼ頭の通った所を通る（本物の自然の地面でも同じ）。', layers: { spush: false, sdrag: false, path: true } },
       { say: '<b>試してみよう</b>: 石を減らすと…（押せる石が足りないと、前へ押せない）', act: [['石を減らす', () => UI.set('preset', 'half')], ['もとにもどす', () => UI.set('preset', 'scatter')]], layers: { spush: true, sdrag: true, path: true } },
     ],
-    make() { M.s = STONES.make({ surf: SP.surf, preset: SP.preset }); },
-    reset() { M.make(); },
+    make() { M.s = STONES.make({ surf: SP.surf, preset: SP.preset }); if (!M.b) M.makeBoard(); },
+    makeBoard() { M.b = GROUND.make({ surf: 'board' }); M.bTracks = []; M.bHist = []; M.bSpeed = null; },
+    reset() { if (M.phase === 'board') M.makeBoard(); else M.make(); },
     baseScale: c => Math.min(c.w * 0.6, c.h * 1.6) / M.s.p.L,
-    snap(c) { c.x = M.s.cx; c.y = 0; },
-    follow(c, k) { c.x += (M.s.cx - c.x) * k; c.y += (0 - c.y) * k; },
+    snap(c) { if (M.phase === 'board') { c.x = M.b.X; c.y = M.b.Y; } else { c.x = M.s.cx; c.y = 0; } },
+    follow(c, k) {
+      const X = M.phase === 'board' ? M.b.X : M.s.cx, Y = M.phase === 'board' ? M.b.Y : 0;
+      if (!c.fix) { c.x += (X - c.x) * k; c.y += (Y - c.y) * k; return; }
+      // 地面に固定: ヘビがはしへ近づいたら、前（+x）へカメラを動かす
+      const vw = c.w / c.s, vh = c.h / c.s;
+      if (!c.pan && (Math.abs(X - c.x) > vw * 0.2 || Math.abs(Y - c.y) > vh * 0.22)) c.pan = [X + vw * 0.16, Y];
+      if (c.pan) { c.x += (c.pan[0] - c.x) * k * 0.5; c.y += (c.pan[1] - c.y) * k * 0.5; if (Math.hypot(c.pan[0] - c.x, c.pan[1] - c.y) < vw * 0.01) c.pan = null; }
+    },
     advance(dt, A) {
+      if (M.phase === 'board') return boardAdvance(dt, A);
       const s = M.s;
       let left = dt;
       while (left > 1e-9) { const d = Math.min(0.01, left); STONES.step(s, d); left -= d; }
       if (s.cx > 6) { M.reset(); A.snapCam(); A.note('はじめの場所へもどした'); }
     },
     draw(g, c, A) {
+      if (M.phase === 'board') {
+        DRAWG.scene(g, M.b, c, { look: 'board', layers: { press: false, force: true, slip: true, trail: false }, trail: [], tracks: M.bTracks, thinTracks: true, ruler: true, time: A.time });
+        return;
+      }
       const s = M.s, N = STONES.N, p = s.p;
       g.fillStyle = C.board; g.fillRect(0, 0, c.w, c.h);
       const x0 = c.x - c.w / 2 / c.s, x1 = c.x + c.w / 2 / c.s, y0 = c.y - c.h / 2 / c.s, y1 = c.y + c.h / 2 / c.s;
-      // 板の木目（板に止まっている目印。横に長いすじ。並びは場所から決まる）
-      g.strokeStyle = 'rgba(170,200,220,.10)'; g.lineWidth = 1;
-      for (let j = Math.floor(y0 / 0.006); j * 0.006 <= y1; j++) {
-        const h = Math.sin(j * 12.9898) * 43758.5453, f = h - Math.floor(h);
-        if (f < 0.45) continue;
-        const seg = 0.08 + 0.2 * f, ph = f * 0.37;
-        for (let x = Math.floor((x0 - ph) / seg) * seg + ph; x <= x1; x += seg) {
-          const a = W(c, x, j * 0.006 + 0.001 * Math.sin(x * 40 + j)), b = W(c, x + seg * 0.7, j * 0.006 + 0.001 * Math.sin((x + seg * 0.7) * 40 + j));
-          g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke();
-        }
-      }
+      DRAWG.boardTex(g, c);   // 板の木目（板に止まっている目印）
       // 道（体がなぞる S 字。目印）
       if (A.layers.path) {
         g.strokeStyle = C.path; g.lineWidth = 2; g.setLineDash([5, 6]); g.beginPath();
@@ -120,6 +126,7 @@ window.MODES = window.MODES || {};
       return { x: q[0], y: q[1], r: 30 };
     },
     hit(px, py, A) {
+      if (M.phase === 'board') { const i = DRAWG.hitTest(M.b, A.cam, px, py); if (i >= 0) return i; UI.setStep(1); return -1; }   // 板をタップしたら石を立てる
       const c = A.cam, wx = c.x + (px - c.w / 2) / c.s, wy = c.y - (py - c.h / 2) / c.s, s = M.s;
       // 石の上 → 取る、体の上 → 説明、ほか → 石を置く
       for (const st of s.stones) if (Math.hypot(st.x - wx, st.y - wy) < st.r + 6 / c.s) { STONES.toggleStone(s, wx, wy, 6 / c.s); A.note('石を取った'); return -1; }
@@ -129,18 +136,28 @@ window.MODES = window.MODES || {};
       STONES.toggleStone(s, wx, wy, 0); A.note('石を置いた');
       return -1;
     },
-    tipPos: (i, A) => W(A.cam, M.s.x[i], M.s.y[i]),
+    tipPos: (i, A) => M.phase === 'board' ? W(A.cam, M.b.x[i], M.b.y[i]) : W(A.cam, M.s.x[i], M.s.y[i]),
     tip(i) {
+      if (M.phase === 'board') { const b = M.b, sp = Math.hypot(b.vx[i], b.vy[i]), ut = (b.vx[i] * b.tx[i] + b.vy[i] * b.ty[i]) / (sp || 1), ang = Math.acos(Math.max(-1, Math.min(1, ut))) * 180 / Math.PI;
+        return `<b>${i < GROUND.N * 0.15 ? '尾のあたり' : i > GROUND.N * 0.85 ? '頭のあたり' : 'まん中のあたり'}</b><br>板の上を 秒速 ${f1(sp * 100)} cm、体の向きから ${f0(ang)}° の向きへすべる<br>石がないので、横へすべるのを止めるものがない`; }
       const s = M.s, W0 = s.p.mass * 9.81;
       const ct = s.contacts.find(k => Math.abs(k.i - i) <= 2);
       return `<b>${i < STONES.N * 0.15 ? '尾のあたり' : i > STONES.N * 0.85 ? '頭のあたり' : 'まん中のあたり'}</b><br>${s.U > 0 ? `道にそって前へすべっている（秒速 ${f1(s.U * 100)} cm、横すべりはほとんどない）` : '止まっている'}<br>${ct ? (ct.N > 0 ? `<span style="color:var(--push)">石に押されている</span>: 体重の ${f2(ct.N / W0)} 倍` : '石にふれているが、いまは押していない') : '地面の摩擦だけ（後ろ向き）'}`;
     },
-    legend: () => [[C.push, '石が押す力（数字は体重の何倍）'], [C.drag, '地面の摩擦'], [C.path, '体がなぞる道']],
+    legend: () => M.phase === 'board' ? [[DRAWG.C.push, '前へ押す力'], [DRAWG.C.drag, '引きずる力'], [DRAWG.C.slip, 'すべる向き'], ['#96784e', 'こすれた跡']] : [[C.push, '石が押す力（数字は体重の何倍）'], [C.drag, '地面の摩擦'], [C.path, '体がなぞる道']],
     init() {
       UI.seg('tsurf', v => { SP.surf = v; M.s.p.surf = v; STONES.replan(M.s); });
       UI.seg('preset', v => { SP.preset = v; STONES.placePreset(M.s, v); });
     },
     refresh(A) {
+      if (M.phase === 'board') {
+        const U = M.bSpeed, sf = GROUND.SURF.board;
+        $('ruler').innerHTML = U == null ? '' : `進む速さ 秒速 <span class="big">${f1(Math.abs(U) * 100)}</span> cm（石があると 秒速 ${f1(M.s.U0 * 100)} cm）・横へすべっている`;
+        $('result').textContent = `なめらかな板: ウロコが引っかからず、摩擦は前 ${sf.mf}・横 ${sf.mt} とほとんど同じ。体で横へ押しても、押し返す力の前向きの分が小さく、横へすべる。（本物のヘビは、この計算よりもっと進めなかった。Hu 2009）`;
+        $('result').classList.add('bad');
+        $('readout').innerHTML = `<span>石 <b>なし</b></span><span>摩擦 前 <b>${sf.mf}</b> 後ろ <b>${sf.mb}</b> 横 <b>${sf.mt}</b></span><span>体長 <b>30 cm</b>・重さ <b>15 g</b></span>`;
+        return;
+      }
       const r = $('ruler'), res = $('result'), s = M.s, Wt = s.p.mass * 9.81;
       const used = s.contacts.filter(k => k.N > 0).length;
       r.innerHTML = s.ok ? `進む速さ 秒速 <span class="big">${f1(s.U * 100)}</span> cm・石が押す力の合計 体重の <span class="big">${f2(s.Nsum / Wt)}</span> 倍（${used} つの石）` : `<span class="bad">止まっている</span>: ${s.why}`;
@@ -151,5 +168,22 @@ window.MODES = window.MODES || {};
       $('readout').innerHTML = `<span>ふれている石 <b>${s.contacts.length}</b></span><span>押している石 <b>${used}</b></span><span>地面の摩擦の合計 体重の <b>${f2(s.drag / Wt)}</b> 倍</span><span>地面の横の摩擦 <b>${f0((s.latUse || 0) * 100)}%</b>（上限に対して）</span>`;
     },
   };
+  // 石のない板の上の動き（地面をうねるのと同じ計算。こすれた跡・1周期の速さも同じ測り方）
+  function boardAdvance(dt, A) {
+    const b = M.b, h = b.p.tau / 200;
+    for (let left = dt; left > 1e-9; left -= h) {
+      const d = Math.min(h, left); GROUND.step(b, d);
+      M.bHist.push([b.t, b.X, b.Y]);
+      M.stampT -= d;
+      if (M.stampT <= 0) {
+        M.stampT = b.p.tau / 40;
+        for (let i = 0; i < GROUND.N; i += 2) if (b.nu[i] > 0.8 * b.p.mass * 9.81 / b.p.L) M.bTracks.push([b.x[i], b.y[i]]);
+        if (M.bTracks.length > 6000) M.bTracks.splice(0, M.bTracks.length - 6000);
+      }
+    }
+    while (M.bHist.length && M.bHist[0][0] < b.t - b.p.tau) M.bHist.shift();
+    if (M.bHist.length > 10 && b.t > b.p.tau) { const a = M.bHist[0], z = M.bHist[M.bHist.length - 1]; M.bSpeed = Math.hypot(z[1] - a[1], z[2] - a[2]) / (z[0] - a[0]); }
+    if (Math.hypot(b.X, b.Y) > 6) { M.makeBoard(); A.snapCam(); }
+  }
   MODES.stones = M;
 })();
