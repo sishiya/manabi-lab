@@ -168,21 +168,37 @@
     g.fill(); g.stroke();
   }
   const LOOK_BG = { sand: '#17251f', cloth: '#1d2a33', board: '#1b2530', mat: '#1f2227', hard: '#24221d' };
-  // 布（Hu 2009 の実験も布の上）: 3 mm のます目ごとに、たて糸・よこ糸がかわるがわる上に出る織り目
+  // 布・どの向きも同じ は、細かい模様を毎コマ描くと重いので、小さなタイルを1枚作ってくり返し貼る（地面に止まっている＝タイルの位置は地面の座標に合わせる）
+  const TILE = {};
+  function tiled(g, cam, key, period, paint) {
+    const px = Math.max(8, Math.round(period * cam.s)), id = key + px;
+    let t = TILE[id];
+    if (!t) {
+      const cv = document.createElement('canvas'); cv.width = cv.height = px;
+      paint(cv.getContext('2d'), px);
+      t = TILE[id] = { cv, pat: null };
+    }
+    t.pat = t.pat || g.createPattern(t.cv, 'repeat');
+    const o = W(cam, 0, 0), k = period * cam.s / px;
+    t.pat.setTransform(new DOMMatrix([k, 0, 0, k, o[0], o[1]]));
+    g.fillStyle = t.pat; g.fillRect(0, 0, cam.w, cam.h);
+  }
+  // 布（Hu 2009 の実験も布の上）: 3 mm のます目ごとに、たて糸・よこ糸がかわるがわる上に出る織り目（16 ます目でくり返す）
   function clothTex(g, cam) {
-    const cell = cam.s * 0.003 >= 4 ? 0.003 : 0.006;
-    const x0 = cam.x - cam.w / 2 / cam.s, x1 = cam.x + cam.w / 2 / cam.s, y0 = cam.y - cam.h / 2 / cam.s, y1 = cam.y + cam.h / 2 / cam.s;
-    const pv = [new Path2D(), new Path2D()], pc = cell * cam.s * 0.38;
-    for (let i = Math.floor(x0 / cell); i <= x1 / cell; i++)
-      for (let j = Math.floor(y0 / cell); j <= y1 / cell; j++) {
-        const q = W(cam, (i + 0.5) * cell, (j + 0.5) * cell), b = hash(i, j, 61) < 0.5 ? 0 : 1;
-        if ((i + j) & 1) { pv[b].moveTo(q[0] - pc, q[1]); pv[b].lineTo(q[0] + pc, q[1]); }
-        else { pv[b].moveTo(q[0], q[1] - pc); pv[b].lineTo(q[0], q[1] + pc); }
+    const n = 16, cell = 0.003;
+    tiled(g, cam, 'cloth', n * cell, (q, px) => {
+      const c = px / n, pc = c * 0.38;
+      q.lineWidth = Math.max(1, c * 0.3); q.lineCap = 'round';
+      for (let b = 0; b < 2; b++) {
+        q.strokeStyle = b ? 'rgba(170,200,220,.2)' : 'rgba(170,200,220,.13)'; q.beginPath();
+        for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+          if ((hash(i, j, 61) < 0.5 ? 0 : 1) !== b) continue;
+          const x = (i + 0.5) * c, y = (j + 0.5) * c;
+          if ((i + j) & 1) { q.moveTo(x - pc, y); q.lineTo(x + pc, y); } else { q.moveTo(x, y - pc); q.lineTo(x, y + pc); }
+        }
+        q.stroke();
       }
-    g.lineWidth = Math.max(1, cell * cam.s * 0.3); g.lineCap = 'round';
-    g.strokeStyle = 'rgba(170,200,220,.13)'; g.stroke(pv[0]);
-    g.strokeStyle = 'rgba(170,200,220,.2)'; g.stroke(pv[1]);
-    g.lineCap = 'butt';
+    });
   }
   // なめらかな板: 横に長い木目のすじ（並びは場所から決まる）
   function boardTex(g, cam) {
@@ -199,39 +215,15 @@
     }
     g.stroke();
   }
-  // どの向きも同じ（仮の地面）: 向きのない細かいつぶ
+  // どの向きも同じ（仮の地面）: 向きのない細かいつぶ（4 mm に1つ。6 cm でくり返す）
   function matTex(g, cam) {
-    const cell = 0.004, x0 = cam.x - cam.w / 2 / cam.s, x1 = cam.x + cam.w / 2 / cam.s, y0 = cam.y - cam.h / 2 / cam.s, y1 = cam.y + cam.h / 2 / cam.s;
-    g.fillStyle = 'rgba(200,205,215,.16)'; g.beginPath();
-    const r = Math.max(0.8, cam.s * 0.0005);
-    for (let i = Math.floor(x0 / cell); i <= x1 / cell; i++)
-      for (let j = Math.floor(y0 / cell); j <= y1 / cell; j++) {
-        const q = W(cam, (i + hash(i, j, 81)) * cell, (j + hash(i, j, 82)) * cell);
-        g.moveTo(q[0] + r, q[1]); g.arc(q[0], q[1], r, 0, 6.2832);
-      }
-    g.fill();
-  }
-
-  // かたい地面（ふみかためた土）: 細いひび割れと、まばらな小さな粒
-  function hardTex(g, cam) {
-    const cell = 0.03, x0 = cam.x - cam.w / 2 / cam.s, x1 = cam.x + cam.w / 2 / cam.s, y0 = cam.y - cam.h / 2 / cam.s, y1 = cam.y + cam.h / 2 / cam.s;
-    g.strokeStyle = 'rgba(10,8,5,.55)'; g.lineWidth = 1.2; g.beginPath();
-    for (let i = Math.floor(x0 / cell) - 1; i <= x1 / cell; i++)
-      for (let j = Math.floor(y0 / cell) - 1; j <= y1 / cell; j++) {
-        // ます目ごとに1本、折れ曲がったひび
-        let x = (i + hash(i, j, 91)) * cell, y = (j + hash(i, j, 92)) * cell, a = hash(i, j, 93) * 6.28;
-        let q = W(cam, x, y); g.moveTo(q[0], q[1]);
-        for (let k = 0; k < 3; k++) { a += (hash(i, j, 94 + k) - 0.5) * 1.6; x += Math.cos(a) * cell * 0.35; y += Math.sin(a) * cell * 0.35; q = W(cam, x, y); g.lineTo(q[0], q[1]); }
-      }
-    g.stroke();
-    g.fillStyle = 'rgba(205,190,160,.22)'; g.beginPath();
-    for (let i = Math.floor(x0 / 0.008); i <= x1 / 0.008; i++)
-      for (let j = Math.floor(y0 / 0.008); j <= y1 / 0.008; j++) {
-        if (hash(i, j, 98) < 0.6) continue;
-        const q = W(cam, (i + hash(i, j, 99)) * 0.008, (j + hash(i, j, 100)) * 0.008), r = Math.max(0.8, cam.s * 0.0006);
-        g.moveTo(q[0] + r, q[1]); g.arc(q[0], q[1], r, 0, 6.2832);
-      }
-    g.fill();
+    const n = 15, cell = 0.004;
+    tiled(g, cam, 'mat', n * cell, (q, px) => {
+      const c = px / n, r = Math.max(0.8, px / (n * cell) * 0.0005);
+      q.fillStyle = 'rgba(200,205,215,.16)'; q.beginPath();
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const x = (i + hash(i, j, 81)) * c, y = (j + hash(i, j, 82)) * c; q.moveTo(x + r, y); q.arc(x, y, r, 0, 6.2832); }
+      q.fill();
+    });
   }
 
   // 地面に固定した目盛り（10 cm ごと。下のふち）

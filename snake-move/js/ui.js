@@ -36,7 +36,7 @@
     A.step[A.mode] = k;
     $('next').textContent = k === 0 ? 'つぎへ ▶' : k === T.length ? 'おわり ▶' : `つぎへ ▶ ${k}/${T.length}`;
     const st = k ? T[k - 1] : null;
-    // 段に入るときの動き（石のあいだ: はじめは石のない板、1段目で石を立てる）
+    // 段に入るときの動き（モードが enterIntro・段の enter を持っていれば呼ぶ）
     if (k === 0 && M.enterIntro) M.enterIntro(A);
     if (st && st.enter) st.enter(A);
     Object.assign(A.layers, st && st.layers ? st.layers : M.layers);

@@ -105,7 +105,7 @@ window.MODES = window.MODES || {};
       { say: '<b>おなかのウロコ</b>は、前へはすべりやすく、横へはすべりにくい（横は前の約1.7倍）。右下が拡大。', scale: true, layers: { press: false, force: false, slip: true, trail: false } },
       { say: '黄色い線が<b>地面を押している所</b>。強く曲がった所は少し浮かせ（明るい所・影）、まっすぐな所で押す。', ring: 'press', layers: { press: true, force: false, slip: false, trail: false } },
       { say: '矢印は<b>地面からの力（摩擦）</b>。体を横へ押すと地面が押し返す。その<b>前向きの分（緑）</b>で進む。赤は引きずる分。', ring: 'push', layers: { press: false, force: true, slip: false, trail: false } },
-      { say: '青い矢印は<b>その点が地面の上をすべる向き</b>。前だけでなく<b>横へもすべる</b>（茶色のこすれた跡）。平らな布の上では本物もこう: 波が送る分の約半分しか進まない（Hu 2009）。草や石があると横すべりが止まる →「石のあいだ」。', layers: { press: false, force: false, slip: true, trail: true } },
+      { say: '青い矢印は<b>その点が地面の上をすべる向き</b>。前だけでなく<b>横へもすべる</b>（茶色のこすれた跡）。平らな布の上では本物もこう: 波が送る分の約半分しか進まない（Hu 2009）。草や石があると、それを押して横すべりが止まり、体は頭の通った道をなぞる（Gray 1946・Jayne 2020）。', layers: { press: false, force: false, slip: true, trail: true } },
       { say: '<b>試してみよう</b>: ウロコの向きの差をなくして、摩擦をどの向きも同じにすると…（全部べったりにすると、もっとはっきり）', act: [['どの向きも同じにする', () => UI.set('surf', 'same')], ['全部べったりも', () => { UI.set('surf', 'same'); UI.set('lift', '0'); }], ['もとにもどす', () => { UI.set('surf', 'cloth'); UI.set('lift', '1'); }]], layers: { press: true, force: true, slip: false, trail: true } },
     ],
     init() {
@@ -124,7 +124,7 @@ window.MODES = window.MODES || {};
       const sf = p.surf;
       let t;
       if (sf === 'same') t = p.lift ? 'どの向きも同じ摩擦: 横へ押しても前向きの分が小さく、布のときの半分も進まない（浮かせ方のちがいで少しだけ進む）。「全部べったり」にすると、前へ進めず少し後ろへ下がる。' : 'どの向きも同じ摩擦・全部べったり: 前へ押す力より引きずる力が勝って、前へ進めず少し後ろへ下がる（波が流れる向きへ押される）。';
-      else if (sf === 'board') t = 'なめらかな板: ウロコが引っかからず、前 0.14・横 0.16 とほとんど同じ。進みにくい。（石があると進める →「石のあいだ」）';
+      else if (sf === 'board') t = 'なめらかな板: ウロコが引っかからず、前 0.14・横 0.16 とほとんど同じ。進みにくい（本物のヘビも、なめらかな板ではうまく進めなかった）。石や草があれば、それを押して進める（Gray 1946）。';
       else if (p.slope > 0) t = `坂 ${p.slope}°: 重さが後ろへ引く。${sf === 'grip' ? 'ウロコを立てて摩擦を上げている（布の約2.7倍）。' : '布の摩擦だけでは、すぐに後ろへすべる。'}`;
       else if (p.slope < 0) t = `下り坂 ${-p.slope}°: 重さが前へ引く。`;
       else if (!p.lift) t = '全部べったり: 曲がった所も地面を押すので、横へすべる摩擦が増え、少し遅くなる。';

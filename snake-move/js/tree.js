@@ -28,6 +28,9 @@
       order: 'right',          // 'right' = 上をつかんでから下を放す、'wrong' = 下を先に放す
       fold: 0.7,               // 折りたたんだ所の、たての長さの割合（推定）
       tailLen: 0.19, headLen: 0.05,   // 尾 = 全長 − 胴 106 cm（同）
+      horiz: false,            // 水平な枝（js/branch.js）: つかむ所は巻きつけず、左右のループで枝の上をまたぐ。締めつけない
+      gripH: 0.30,             // 水平な枝での、つかむ（止まる）所1か所の長さ（推定。Astley & Jayne 2007「止まった区間はしばしば胴の 0.25 倍より長い」）
+      cLoop: 0.6,              // 水平な枝で、ループにした所のたての（枝にそった）長さの割合（推定）
     }, o);
     const s = {
       p, t: 0, Z: 0.4, V: 0,          // Z = 尾の先の高さ（m）、V = その速さ
@@ -54,13 +57,13 @@
     const p = s.p, circ = Math.PI * (p.D + p.d);
     const free = p.L - p.tailLen - p.headLen;
     const minM = 0.05;                         // まん中は少なくとも 5 cm
-    const lg = Math.min(circ, p.grip, (free - minM) / 2);
+    const lg = p.horiz ? Math.min(p.gripH, (free - minM) / 2) : Math.min(circ, p.grip, (free - minM) / 2);
     s.lg = lg; s.lm = free - 2 * lg; s.circ = circ;
-    s.wrapDeg = lg / ((p.D + p.d) / 2) * 180 / Math.PI;
-    s.encircle = s.wrapDeg > 180;              // 180° より多く巻けないと締めつけられない
-    // 巻いた所の、たての長さの割合（らせんのピッチを体の太さの2倍とした。推定）
+    s.wrapDeg = p.horiz ? 0 : lg / ((p.D + p.d) / 2) * 180 / Math.PI;
+    s.encircle = !p.horiz && s.wrapDeg > 180;  // 180° より多く巻けないと締めつけられない（水平な枝では巻かない）
+    // 巻いた所の、たての長さの割合（らせんのピッチを体の太さの2倍とした。推定）。水平な枝ではループの割合
     const pitch = 2 * p.d;
-    s.cw = pitch / Math.hypot(circ, pitch);
+    s.cw = p.horiz ? p.cLoop : pitch / Math.hypot(circ, pitch);
     const ds = p.L / N;
     for (let i = 0; i < N; i++) {
       const si = (i + 0.5) * ds;
@@ -116,7 +119,8 @@
     const sn = Math.sin(p.slope * Math.PI / 180), cs = Math.cos(p.slope * Math.PI / 180);
     // 下へすべらないのに必要な締めつけ: 重さの坂の分 m g sinθ と、ほかの所が幹の上をすべる摩擦を、つかみ1か所の静止摩擦だけで支える
     s.need = Math.max(0, p.mass * G * sn + mu.fk * rho * G * cs * (p.L - s.lg) - mu.bs * rho * G * cs * s.lg) / (mu.bs * s.lg);
-    s.sqN = s.encircle ? p.safety * s.need : 0;
+    // 締めつけ: 立った幹では 180° より多く巻いた所だけ。水平な枝では、左右のループで枝をはさむ（腹がわへ曲げてつかむ。Astley & Jayne 2007 の考察）として、余裕は同じ safety（推定）
+    s.sqN = s.encircle || p.horiz ? p.safety * s.need : 0;
     for (let i = 0; i < N; i++) {
       const z = s.zone[i];
       const sq = z === 1 ? s.sqR : z === 3 ? s.sqF : 0;

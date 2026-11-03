@@ -15,7 +15,7 @@
       <button data-mode="side">横ばい</button>
       <button data-mode="straight">まっすぐ</button>
       <button data-mode="tree">木を登る</button>
-      <button data-mode="stones">石のあいだ</button>
+      <button data-mode="branch">枝をわたる</button>
     </div>
   </header>
 
@@ -23,7 +23,7 @@
     <div id="stage">
       <canvas id="cv"></canvas>
       <button id="next">つぎへ ▶</button>
-      <div id="zoom"><button id="bCam" class="on" title="カメラを地面に止めるか、ヘビについていくか" data-m="ground side straight stones">地面に固定</button><button id="bScale" title="おなかのウロコを見る" data-m="ground">ウロコ</button><button data-z="out" title="引く">−</button><button data-z="in" title="寄る">＋</button></div>
+      <div id="zoom"><button id="bCam" class="on" title="カメラを地面に止めるか、ヘビについていくか" data-m="ground side straight branch">地面に固定</button><button id="bScale" title="おなかのウロコを見る" data-m="ground">ウロコ</button><button data-z="out" title="引く">−</button><button data-z="in" title="寄る">＋</button></div>
       <div id="legend"></div>
       <div id="tip" hidden></div>
     </div>
@@ -48,12 +48,13 @@
         <div class="row"><label>ウロコ</label><span class="seg" id="dig">
           <button data-v="0" class="on">ふつう</button><button data-v="1">坂でウロコを立てる</button></span></div>
       </div>
-      <div data-m="stones" hidden>
-        <div class="row"><label>地面</label><span class="seg" id="tsurf">
-          <button data-v="board" class="on">なめらかな板</button><button data-v="cloth">布</button><button data-v="same">摩擦をどの向きも同じに</button></span></div>
-        <div class="row"><label>石</label><span class="seg" id="preset">
-          <button data-v="scatter" class="on">ばらばら</button><button data-v="every">きれいに並べる</button><button data-v="half">3つに1つ取る</button><button data-v="none">ぜんぶ取る</button></span></div>
-        <p class="hint">図の地面をタップすると石を置く（道の近くなら体にふれる所へ）。石をタップすると取る。</p>
+      <div data-m="branch" hidden>
+        <div class="row"><label>枝の太さ</label><input type="range" id="bdia" min="1.5" max="21" step="0.5" value="3" aria-label="枝の太さ"><span id="bdiaV">3 cm</span></div>
+        <div class="row"><label>垂らし方</label><span class="seg" id="bside">
+          <button data-v="both" class="on">左右交互に</button><button data-v="one">片がわだけ</button></span></div>
+        <div class="row"><label>ループの大きさ</label><input type="range" id="bloop" min="2" max="8" step="0.5" value="4" aria-label="ループが枝の真上から左右へ回りこむ長さ（枝の表面にそって）"><span id="bloopV">4 cm</span></div>
+        <div class="row"><label>つかみ方</label><span class="seg" id="bpinch">
+          <button data-v="1" class="on">ループで枝をはさむ</button><button data-v="0">はさまない</button></span></div>
       </div>
       <div data-m="side" hidden>
         <div class="row"><label>計算</label><span class="seg" id="sdim">
@@ -93,10 +94,9 @@
         <label><input type="checkbox" data-l="slip"> すべる向き</label>
         <label data-m="ground"><input type="checkbox" data-l="trail" checked> 頭の通った跡</label>
       </div>
-      <div class="chips" data-m="stones" hidden>
-        <label><input type="checkbox" data-l="spush" checked> 石が押す力</label>
-        <label><input type="checkbox" data-l="sdrag" checked> 地面の摩擦</label>
-        <label><input type="checkbox" data-l="path" checked> 体がなぞる道</label>
+      <div class="chips" data-m="branch" hidden>
+        <label><input type="checkbox" data-l="bstuck" checked> 止まっている所</label>
+        <label><input type="checkbox" data-l="btorque" checked> 回そうとする力</label>
       </div>
       <div class="chips" data-m="straight" hidden>
         <label><input type="checkbox" data-l="skin" checked> おなかの皮</label>
@@ -135,14 +135,14 @@
           <li><b>ウロコを立てる</b>: 起きているヘビはウロコを立てて引っかけ、静止摩擦を約2倍にする。立てないと、同じだけ支えるのに強く締めつけなければならない。</li>
         </ol>
       </section>
-      <section data-m="stones" hidden>
-        <h3>石のあいだ（押す点を使う横うねり）</h3>
+      <section data-m="branch" hidden>
+        <h3>枝をわたる（水平な枝の上のアコーディオン）</h3>
         <ol>
-          <li><b>押すのは石</b>: 体が曲がりの外がわで石を押すと、石が体を押し返す（石の表面はなめらかで、押す力は体に直角）。その力の前向きの分で進む（Gray 1946。くいを立てた板の上のヨーロッパヤマカガシ）。</li>
-          <li><b>3つの石</b>: 押す力は押すだけで引けない。前へ・横へ・回る向きの3つをつりあわせるには、ふつう3つの石がいる。このアプリは、押す力の合計がいちばん小さくなる石の組を探している。</li>
-          <li><b>どこを押すか</b>: 曲がりの頂上ちょうどの石は、押す向きが真横で前へ押す分がない。曲がりの外がわの、体が進んでくる側の斜面を押すと前へ押せる。</li>
-          <li><b>止まっているのは形</b>: 体は道にそってすべるだけで、横へはすべらない。S 字の形が地面に止まっていて、体がその中を通っていく。だから、ウロコの向きの差がなくても進める。</li>
-          <li>石が足りないときは止める（本物はウロコの摩擦の横うねりにもどる。このアプリでは入れていない）。</li>
+          <li><b>進み方</b>: 水平な枝の上では、どの太さ（1.6〜21 cm）でもアコーディオンのように進む。体を左右に曲げたループが枝の上をまたぎ、そこで止まってつかむ（Astley & Jayne 2007 のコーンスネーク）。枝にそった動きは「木を登る」と同じ計算（重さが前後にかからない所だけちがう）。</li>
+          <li><b>転がらないつりあい</b>: 体のそれぞれの所の重さは、枝の軸のまわりに体を回そうとする。左右に垂らせば打ち消しあい、片がわにかたよると回そうとする力が残る。</li>
+          <li><b>おさえる力</b>: 止まっている所の摩擦が、回るのをおさえる。上限は「摩擦の係数 0.28（実物の腹で測った値）× 枝を押す力 × 枝の半径」。枝を押す力は、体の重さと、ループで枝をはさむ力。前へ進むのにも摩擦を使うので、その分まわりの向きに使える分は減る。</li>
+          <li><b>こえたら回る</b>: 回そうとする力が上限をこえると、体全体が枝のまわりに回りだす（勢いと、すべりの摩擦つき）。重心が枝の軸より上にあると、回るほど回そうとする力が増える。</li>
+          <li><b>細い枝ほど</b>: 回るのをおさえる摩擦は枝の表面にかかるので、てこの腕は枝の半径。細い枝ほど、おさえる力の上限が小さい。だから片よりがあると、細い枝ほど回りやすく、はさむ力が効く（回す力の腕は、むしろ太い枝のほうが少し長い）。</li>
         </ol>
       </section>
       <section data-m="side" hidden>
@@ -179,14 +179,14 @@
       <p>ヘビが足を使わずに進むしくみを、体の形と摩擦の式で計算して見せる学習用のアプリです。体の形の動き（うねり・巻きつき）は決めて与え、体全体がどこへどれだけ動くかは、力のつりあいで毎コマ計算しています。</p>
       <h3>記録・推定・目印</h3>
       <ul>
-        <li><b>記録（論文の値）</b>: 布・なめらかな板の摩擦、うねりの形（波長 0.4 体長・ふれはば 0.1 体長・2秒に1回。これに合うよう曲がりの波を α 12・k 3.6 にした）、ミルクヘビの長さと重さ（Hu ほか 2009）。幹の上のウロコの摩擦（立てる／立てない）、押す力の余裕（Marvi & Hu 2012）。木の上のコーンスネークの長さ 125 cm・重さ 421 g・太さ 2.1 cm、180° より多く巻くと強く締めつけられること（Astley & Jayne 2007）。つかむには幹のまわりくらいの長さがいること、上をつかんでから下を放す順番（Savidge ほか 2021）。石を押す力は体に直角で、押すだけ（Gray 1946）。石のあいだの道の形（波長 0.4 体長・ふれはば 0.1 体長。Hu ほか 2009 の実測）。背骨は一定の速さ・皮は止まっては進む（Lissmann 1950）。ボアの長さと重さ・波長・波の速さ・皮のずれ 19 mm・止まる時間 42%（Newman & Jayne 2018）。ヨコバイガラガラヘビの長さと重さ、2つの波のずれ 1.51 rad、いつも2か所でふれる、跡の角度 33 ± 8°、砂に 1.4 cm めりこむ（Marvi ほか 2014）。止まっている所 体の 44%（Astley ほか 2015）。</li>
-        <li><b>推定</b>: 持ち上げのときの重さの配り方（曲がりの強さの2乗で減らした。Hu ほか 2009 は「曲がりが 0 の所に重さをかける」とだけ書いている）。坂でウロコを立てた摩擦（Hu ほか 2009 が坂の実測に合うとした μf 0.3 と比）。木の上の動きの順番と時間（1回 4 秒）、つかみ1か所で巻ける長さ 11 cm（4.1 cm の柱は登れて 5.7 cm は登れない、という実測に合わせた）、巻きつけのらせんの間かく（体の太さの2倍）、折りたたんだ長さの割合、締めつけは巻きつけた所に一様。幹の摩擦は発泡スチロールの上の値で、本物の木の皮とはちがう。石の置き場所（曲がりの頂上の 0.08 波長手前）と石の大きさ。ボアの体の太さ・1回の歩幅 4.5 cm（皮のずれ 19 mm から）・皮の動き方の形。横ばいの波1回 2 秒・砂を「どの向きも同じ摩擦」とみなしたこと。立体の版: アーチの左右のふくらみ 2.2 rad・上下の傾き 1.0 rad・ふれる長さ 40%（跡の角度と止まる所に合わせた）、地面のやわらかさ。平面の版: 曲がりの強さ α 18・ふれる長さ 30%。</li>
-        <li><b>目印</b>: 力の矢印の長さ（見やすい倍率）、地面のつぶつぶ・目もり、ウロコの拡大図（形は模式図）、止まっている所の緑の線、波の印、体がなぞる道の点線、石の色、背骨の点と皮の目もり、横ばいの跡の点。</li>
+        <li><b>記録（論文の値）</b>: 布・なめらかな板の摩擦、うねりの形（波長 0.4 体長・ふれはば 0.1 体長・2秒に1回。これに合うよう曲がりの波を α 12・k 3.6 にした）、ミルクヘビの長さと重さ（Hu ほか 2009）。幹の上のウロコの摩擦（立てる／立てない）、押す力の余裕（Marvi & Hu 2012）。木の上のコーンスネークの長さ 125 cm・重さ 421 g・太さ 2.1 cm、180° より多く巻くと強く締めつけられること（Astley & Jayne 2007）。つかむには幹のまわりくらいの長さがいること、上をつかんでから下を放す順番（Savidge ほか 2021）。水平な枝ではどの太さでもアコーディオン・腹の静止摩擦 0.28・止まった区間はしばしば胴の 0.25 倍より長い（Astley & Jayne 2007）。背骨は一定の速さ・皮は止まっては進む（Lissmann 1950）。ボアの長さと重さ・波長・波の速さ・皮のずれ 19 mm・止まる時間 42%（Newman & Jayne 2018）。ヨコバイガラガラヘビの長さと重さ、2つの波のずれ 1.51 rad、いつも2か所でふれる、跡の角度 33 ± 8°、砂に 1.4 cm めりこむ（Marvi ほか 2014）。止まっている所 体の 44%（Astley ほか 2015）。</li>
+        <li><b>推定</b>: 持ち上げのときの重さの配り方（曲がりの強さの2乗で減らした。Hu ほか 2009 は「曲がりが 0 の所に重さをかける」とだけ書いている）。坂でウロコを立てた摩擦（Hu ほか 2009 が坂の実測に合うとした μf 0.3 と比）。木の上の動きの順番と時間（1回 4 秒）、つかみ1か所で巻ける長さ 11 cm（4.1 cm の柱は登れて 5.7 cm は登れない、という実測に合わせた）、巻きつけのらせんの間かく（体の太さの2倍）、折りたたんだ長さの割合、締めつけは巻きつけた所に一様。幹の摩擦は発泡スチロールの上の値で、本物の木の皮とはちがう。水平な枝では、まわりの向きの摩擦 0.28（Astley & Jayne 2007 がダクトテープの上で測った腹の値）と、枝にそった向きの摩擦（Marvi & Hu 2012 の発泡スチロールの上の値）を、出どころのちがう値のまま組み合わせている。ボアの体の太さ・1回の歩幅 4.5 cm（皮のずれ 19 mm から）・皮の動き方の形。横ばいの波1回 2 秒・砂を「どの向きも同じ摩擦」とみなしたこと。立体の版: アーチの左右のふくらみ 2.2 rad・上下の傾き 1.0 rad・ふれる長さ 40%（跡の角度と止まる所に合わせた）、地面のやわらかさ。平面の版: 曲がりの強さ α 18・ふれる長さ 30%。</li>
+        <li><b>目印</b>: 力の矢印の長さ（見やすい倍率）、地面のつぶつぶ・目もり、ウロコの拡大図（形は模式図）、止まっている所の緑の線、波の印、枝のうしろの体の点線、枝を尾のほうから見た窓、背骨の点と皮の目もり、横ばいの跡の点。</li>
       </ul>
       <h3>簡単にしているところ</h3>
       <ul>
         <li>地面: 体は平らな面の上の線。勢い（慣性）は体全体の重心と回転だけに入れた。摩擦の大きさは速さによらない（すべる向きだけで決まる）。尾が細くなることは入れていない。石や草に体を押しつけて進むこと（本物ではよく使う）は入れていない。</li>
-        <li>石のあいだ: 体は決めた道を横すべりせずになぞる。石の表面の摩擦は 0。押せる石が足りないと止める（本物はウロコの摩擦の横うねりにもどる）。体を曲げる筋肉の力は計算していない。</li>
+        <li>枝をわたる: 体の枝のまわりの角度（ループの左右の幅 4 cm・折りたたむ所 2 cm）、つかむ所の長さ 30 cm、ループにした所の長さの割合 0.6、はさむ力の余裕 4倍は推定。枝を押す力の配り方（重さ全体とつりあうように、真上ほど強く）も推定。体全体を1つのかたまりとして回す（本物は所ごとにねじれる）。枝にそった摩擦は、体が枝の上にいるとして計算する。逆さまになったら止める（本物は逆さまのまま進むこともある）。</li>
         <li>まっすぐ: 背骨は曲がらない1本の棒、皮が地面を押す重さは一様、静止摩擦と動摩擦は同じ（Hu ほか 2009 と同じ仮定）。</li>
         <li>横ばい（立体）: 体の形は左右・上下の向きで決め、ねじれ（体が軸のまわりに回ること）は入れていない。地面はめりこむ深さに比例するばね、摩擦はどの向きも同じ。傾きは小さいとして計算。横ばい（平面）: 地面をうねるときと同じ摩擦の式に、上下の波で重さの配り方を変えただけ。</li>
         <li>木: 体を幹にそった1本の線（上下だけ）で考えた。巻きつけた所は幹を一様に押す。幹から横へ落ちる・ねじれることは入れていない。</li>
@@ -197,7 +197,7 @@
       <p>体の形・大きさ・時間を実物の測定に合わせて入れ、計算で出てきた動きを、論文の実物の測定とくらべた。</p>
       <ul>
         <li><b>地面をうねる</b>: 速さ 1回のうねりで体長の 0.22（実物 0.22 ± 0.08 ◯）。波の効率（速さ÷波の速さ）0.54（実物 0.55 ◯）。坂はウロコを立てた値で 6° まで登り 8° で下がる（実物 7 ± 2° ◯）。なめらかな板では布の半分の速さで進む（実物はうまく進めなかった ✕）。</li>
-        <li><b>石のあいだ</b>: 押す石はたいてい3つ（Gray 1946 の考えと同じ ◯）。頭が石を選んで曲がりを変える（実物も決まった波ではなく、石に合わせて曲がりを変える ◯。2026-11-02）。石がばらばらすぎると止まる（実物はもっとうまく道を選べる ✕。この計算は「曲がりごとに石を1つ」選ぶだけ）。体が道から少しずれて出る横の摩擦（ずれ 20° まで。推定）も使えるが、ほとんど使わない。速さ・押す力の大きさは実物と比べていない（測定が見つからない）。</li>
+        <li><b>枝をわたる</b>（2026-11-03）: 左右交互に垂らしてはさむと、太さ 1.6〜21 cm のどれでも落ちない（実物も全員が渡れた ◯）。速さ 秒速 約3 cm ＝ 1秒に胴の 3%（実物「胴の 10% をこえることはまれ」◯）。速さが太さで変わらない（実物は太いほど遅い ✕）。はさまないと、体が枝の上を後ろへすべり（秒速 約0.6 cm）、回り落ちる（実物のラットスネークも、つかむ所が少ないまま前へのばすと細い針金のまわりに回った ◯。Jayne & Herrmann 2011）。</li>
         <li><b>横ばい（立体）</b>: 跡と進む向きの角度 33°・止まっている所 体の 45%（実物 33 ± 8°・44%。アーチの大きさをこの2つに合わせたので合って当然）。ふれている所のすべり 体の速さの 5%（実物「すべらない」◯。合わせていない数）。持ち上げを小さくするとすべる（実物の「持ち上げが足りないとすべる」◯）。めりこみ 約1.2 cm（実物の砂 1.4 ± 1.3 cm ◯。地面のやわらかさをこれに合わせた）。</li>
         <li><b>横ばい（平面・前の版）</b>: 跡の角度 34°（合わせた）。ふれている所のすべり 1割・止まっている所 16%（✕）。</li>
         <li><b>まっすぐ</b>: 速さ 秒速 1.5 cm（実物 0.7〜2.6 cm ◯）。止まる時間 42% で皮が少しすべる（実物も遅いときに歩幅の 7% すべる ◯）。</li>
@@ -210,8 +210,9 @@
         <li>H. C. Astley, B. C. Jayne, "Effects of perch diameter and incline on the kinematics, performance and modes of arboreal locomotion of corn snakes (<i>Elaphe guttata</i>)", <i>J. Exp. Biol.</i> 210, 3862–3872 (2007)（<a href="https://doi.org/10.1242/jeb.009050" target="_blank" rel="noopener">論文</a>。枝の上のアコーディオン・太くて傾いた枝は登れない）</li>
         <li>J. A. Savidge, T. F. Seibert, M. Kastner, B. C. Jayne, "Lasso locomotion expands the climbing repertoire of snakes", <i>Current Biology</i> 31, R7–R8 (2021)（<a href="https://doi.org/10.1016/j.cub.2020.11.050" target="_blank" rel="noopener">論文</a>。上をつかんでから下を放す・まわりくらいの長さ・投げなわ）</li>
         <li>H. C. Astley ほか, "Modulation of orthogonal body waves enables high maneuverability in sidewinding locomotion", <i>PNAS</i> 112, 6200–6205 (2015)（<a href="https://doi.org/10.1073/pnas.1418965112" target="_blank" rel="noopener">論文</a>。2つの波・止まっている所 44%）</li>
-        <li>J. Gray, "The mechanism of locomotion in snakes", <i>J. Exp. Biol.</i> 23, 101–120 (1946)（<a href="https://doi.org/10.1242/jeb.23.2.101" target="_blank" rel="noopener">論文</a>。くいを押して進む・押す力は体に直角・3つのくい）</li>
-        <li>B. C. Jayne, "What defines different modes of snake locomotion?", <i>Integr. Comp. Biol.</i> 60(1), 156–170 (2020)（<a href="https://doi.org/10.1093/icb/icaa017" target="_blank" rel="noopener">論文</a>。石のあいだでは体が頭の道をなぞる・くいは曲がりのわきに当たる）</li>
+        <li>J. Gray, "The mechanism of locomotion in snakes", <i>J. Exp. Biol.</i> 23, 101–120 (1946)（<a href="https://doi.org/10.1242/jeb.23.2.101" target="_blank" rel="noopener">論文</a>。くいを押して進む・押す力は体に直角）</li>
+        <li>B. C. Jayne, M. P. Herrmann, "Perch size and structure have species-dependent effects on the arboreal locomotion of rat snakes and boa constrictors", <i>J. Exp. Biol.</i> 214, 2189–2201 (2011)（<a href="https://doi.org/10.1242/jeb.055293" target="_blank" rel="noopener">論文</a>。細い枝のまわりに回る・垂らしてつりあう）</li>
+        <li>B. C. Jayne, "What defines different modes of snake locomotion?", <i>Integr. Comp. Biol.</i> 60(1), 156–170 (2020)（<a href="https://doi.org/10.1093/icb/icaa017" target="_blank" rel="noopener">論文</a>。石や草のあいだでは体が頭の道をなぞる）</li>
         <li>H. W. Lissmann, "Rectilinear locomotion in a snake (<i>Boa occidentalis</i>)", <i>J. Exp. Biol.</i> 26, 368–379 (1950)（<a href="https://doi.org/10.1242/jeb.26.4.368" target="_blank" rel="noopener">論文</a>。背骨は一定・皮は止まっては進む・波2つ・1回 2〜3 cm）</li>
         <li>S. J. Newman, B. C. Jayne, "Crawling without wiggling: muscular mechanisms and kinematics of rectilinear locomotion in boa constrictors", <i>J. Exp. Biol.</i> 221 (2018)（<a href="https://doi.org/10.1242/jeb.166199" target="_blank" rel="noopener">論文</a>。止まった皮を足場に筋肉が背骨を引く・速くするときは止まる時間を短く）</li>
         <li>H. Marvi ほか, "Sidewinding with minimal slip: Snake and robot ascent of sandy slopes", <i>Science</i> 346, 224–229 (2014)（<a href="https://doi.org/10.1126/science.1255718" target="_blank" rel="noopener">論文</a>。48 cm・98 g・2つの波のずれ 1.51 rad・2か所でふれる・跡の角度 33°・坂でふれる長さが 41% 増える）</li>
@@ -224,14 +225,14 @@
 
 <script src="js/ground.js?v=4"></script>
 <script src="js/tree.js?v=4"></script>
-<script src="js/stones.js?v=4"></script>
 <script src="js/rect.js?v=4"></script>
 <script src="js/side3d.js?v=4"></script>
 <script src="js/draw-ground.js?v=4"></script>
 <script src="js/draw-tree.js?v=4"></script>
 <script src="js/ui.js?v=4"></script>
 <script src="js/mode-ground.js?v=4"></script>
-<script src="js/mode-stones.js?v=4"></script>
+<script src="js/branch.js?v=4"></script>
+<script src="js/mode-branch.js?v=4"></script>
 <script src="js/mode-rect.js?v=4"></script>
 <script src="js/mode-tree.js?v=4"></script>
 <script src="js/main.js?v=4"></script>

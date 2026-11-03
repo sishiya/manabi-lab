@@ -3,7 +3,7 @@
 // slope : 坂の上り。Hu 2009 の実験では 7 ± 2° をこえると後ろへすべる
 // dt    : 刻みを変えても答えが変わらないか
 // tree  : 木の幹（太さ・順番・締めつけの余裕・ウロコ）。ぎりぎりの余裕も探す
-// stones: 石のあいだ（Gray 1946）。押す力・止まるかどうか
+// branch: 枝をわたる（Astley & Jayne 2007）。太さ・垂らし方・はさむかどうかで、落ちるか
 // rect  : まっすぐ（Lissmann 1950）。止まる時間の割合と地面ですべるか
 // side  : 横ばい（Marvi ほか 2014・Astley ほか 2015）。平面の版と立体の版（side3d.js）。跡の角度 33 ± 8°・止まっている所 44%・ふれている所のすべり
 'use strict';
@@ -46,12 +46,14 @@ else if (mode === 'tree') {
   console.log(`落ちない締めつけの余裕（${TR.make().p.D * 100} cm の幹）: ${hi.toFixed(2)} 倍以上`);
   for (const dt of [0.008, 0.004, 0.002]) show(`dt ${dt}`, { }, dt);
 }
-else if (mode === 'stones') {
-  const ST = require('../js/stones.js');
-  for (const o of [{}, { surf: 'cloth' }, { surf: 'same' }, { preset: 'half' }, { ahead: 0 }, { ahead: 0.04 }, { ahead: 0.12 }]) {
-    const r = ST.measure(o, 6);
-    console.log(`${JSON.stringify(o).padEnd(18)} 速さ ${(r.speed * 100).toFixed(2)} cm/s  押す力の合計 体重の ${r.Navg.toFixed(3)} 倍  1つの最大 ${r.Nmax.toFixed(3)}  止まった時間 ${(r.stopFrac * 100).toFixed(0)}%  押した石 最大 ${r.kmax}  地面の摩擦 ${r.drag.toFixed(3)}`);
+else if (mode === 'branch') {
+  const BR = require('../js/branch.js');
+  console.log('実物（Astley & Jayne 2007、コーンスネーク 125 cm）: 水平な円柱 1.6・2.9・4.1・5.7・8.9・15.9・21.0 cm を全員が渡れた。速さは胴の 10%/秒 をめったにこえない');
+  for (const D of [0.016, 0.029, 0.041, 0.057, 0.089, 0.159, 0.21]) for (const o of [{}, { side: 'one' }, { pinch: false }]) {
+    const r = BR.measure(Object.assign({ D }, o));
+    console.log(`枝 ${(D * 100).toFixed(1).padStart(4)} cm ${JSON.stringify(o).padEnd(16)} 速さ ${(r.speed * 100).toFixed(2)} cm/s  ${r.fellAt ? `${r.fellAt.toFixed(2)} 秒で回り落ちる` : '落ちない'}  回す力 上限の最大 ${(r.useMax * 100).toFixed(0)}%  回った最大 ${r.phiMax.toFixed(1)}°`);
   }
+  for (const dt of [0.008, 0.004, 0.002]) { const r = BR.measure({}, 16, dt); console.log(`dt ${dt}  速さ ${(r.speed * 100).toFixed(2)} cm/s  回す力 上限の最大 ${(r.useMax * 100).toFixed(0)}%`); }
 } else if (mode === 'rect') {
   const RC = require('../js/rect.js');
   for (const surf of ['cloth', 'board']) for (const duty of [0.35, 0.4, 0.44, 0.5, 0.6]) {
