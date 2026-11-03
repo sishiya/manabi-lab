@@ -187,19 +187,39 @@ TK.sfx = function (ctx, out, c) {
     case 'thud': osc('sine', 120, 45, 0.4, 0.9); break;
   }
 };
-// 軽い拍の BGM（4つ打ちの低い音＋短い和音。コードで合成）
-TK.pulseBgm = function (ctx, out, dur, stop) {
+// 軽い拍の BGM（4つ打ちの低い音＋短い和音。コードで合成）。o で調・テンポ・和音の進み方・音色を変える（TK.BGM の型）
+// 型を選ぶのは TK.BGM_STYLE（全部の動画で同じにする。試聴は trivia/bgm-lab.html）
+TK.BGM = {
+  pulse: {},   // いまの: A の短調、112 BPM、三角波の短い和音
+  bright: { bpm: 116, root: 130.81, prog: [[0, 4, 7], [-5, -1, 2], [-3, 0, 4], [-7, -3, 0]], chordOct: 12, bass: true },   // C の長調 I–V–vi–IV
+  calm: { bpm: 92, root: 146.83, prog: [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [-2, 2, 5]], chordOct: 0, chordGain: 0.04, chordDecay: 0.9, kickGain: 0.35, chordEvery: 1 },   // D の短調、ゆったり
+  marimba: { bpm: 108, root: 174.61, prog: [[0, 4, 7], [-3, 0, 4], [-7, -3, 0], [-5, -1, 2]], chordGain: 0.03, arp: { oct: 12, gain: 0.07, decay: 0.28, harm: 4 }, kickGain: 0.4 },   // F の長調、木琴のアルペジオ
+  clock: { bpm: 104, root: 164.81, prog: [[0, 3, 7], [5, 8, 12], [-4, 0, 3], [-5, -1, 2]], chordOct: 0, tick: true, kickGain: 0.45 },   // E の短調、時計の音
+  musicbox: { bpm: 96, root: 196.0, prog: [[0, 4, 7], [5, 9, 12], [-3, 0, 4], [-5, -1, 2]], chord: false, arp: { oct: 24, gain: 0.06, decay: 0.7, harm: 3 }, kickGain: 0.25, kickEvery: 2 },   // G の長調、オルゴール
+  dorian: { bpm: 120, root: 110, prog: [[0, 3, 7, 10], [5, 9, 12, 15]], barBeats: 8, bass: { off: true }, tick: { off: true }, chordOct: 12 },   // A のドリアン、はずむベース
+};
+TK.BGM_STYLE = 'pulse';
+TK.pulseBgm = function (ctx, out, dur, stop, o = TK.BGM[TK.BGM_STYLE] || {}) {
   const bus = ctx.createGain(); bus.gain.value = 0.9; bus.connect(out);
-  const beat = 60 / 112, hz = s => 110 * Math.pow(2, s / 12), prog = [[0, 7, 15], [-4, 3, 12], [-7, 0, 8], [-2, 5, 14]];
+  const bpm = o.bpm || 112, beat = 60 / bpm, root = o.root || 110, hz = s => root * Math.pow(2, s / 12);
+  const prog = o.prog || [[0, 7, 15], [-4, 3, 12], [-7, 0, 8], [-2, 5, 14]], bar = o.barBeats || 8;
+  const tone = (type, f, t, g, att, dec) => { const p = ctx.createOscillator(); p.type = type; p.frequency.value = f; const e = ctx.createGain(); e.gain.setValueAtTime(0, t); e.gain.linearRampToValueAtTime(g, t + att); e.gain.exponentialRampToValueAtTime(0.0005, t + dec); p.connect(e); e.connect(bus); p.start(t); p.stop(t + dec + 0.05); };
+  let noiseBuf = null;
+  const tick = (t, g) => { if (!noiseBuf) { noiseBuf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * 0.04), ctx.sampleRate); const x = noiseBuf.getChannelData(0); for (let i = 0; i < x.length; i++) x[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.008)); }
+    const s = ctx.createBufferSource(); s.buffer = noiseBuf; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2600; bp.Q.value = 4; const e = ctx.createGain(); e.gain.value = g; s.connect(bp); bp.connect(e); e.connect(bus); s.start(t); };
   for (let k = 0, t = 0.2; t < stop; k++, t += beat) {
-    const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.18);
-    const e = ctx.createGain(); e.gain.setValueAtTime(0.5, t); e.gain.exponentialRampToValueAtTime(0.001, t + 0.25); o.connect(e); e.connect(bus); o.start(t); o.stop(t + 0.3);
-    if (k % 2 === 1) {
-      const ch = prog[Math.floor(k / 8) % 4];
-      ch.forEach(s => { const p = ctx.createOscillator(); p.type = 'triangle'; p.frequency.value = hz(s + 12);
-        const pe = ctx.createGain(); pe.gain.setValueAtTime(0, t); pe.gain.linearRampToValueAtTime(0.05, t + 0.01); pe.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-        p.connect(pe); pe.connect(bus); p.start(t); p.stop(t + 0.4); });
+    const ch = prog[Math.floor(k / bar) % prog.length];
+    if (k % (o.kickEvery || 1) === 0) {   // 低い拍
+      const p = ctx.createOscillator(); p.type = 'sine'; p.frequency.setValueAtTime(110, t); p.frequency.exponentialRampToValueAtTime(45, t + 0.18);
+      const e = ctx.createGain(); e.gain.setValueAtTime(o.kickGain ?? 0.5, t); e.gain.exponentialRampToValueAtTime(0.001, t + 0.25); p.connect(e); e.connect(bus); p.start(t); p.stop(t + 0.3);
     }
+    if (o.chord !== false && k % 2 === (o.chordEvery ?? 1) % 2) ch.forEach(s => tone(o.chordWave || 'triangle', hz(s + (o.chordOct ?? 12)), t, o.chordGain ?? 0.05, 0.01, o.chordDecay ?? 0.35));   // 和音
+    if (o.bass) { const bt = o.bass.off ? t + beat / 2 : t; tone('triangle', hz(ch[0] - 12), bt, 0.22, 0.008, 0.3); }   // ベース
+    if (o.arp) for (let h = 0; h < 2; h++) {   // 8分のアルペジオ（木琴・オルゴール。倍音を足して叩いた音に）
+      const n = ch[(k * 2 + h) % ch.length] + o.arp.oct, at = t + h * beat / 2;
+      tone('sine', hz(n), at, o.arp.gain, 0.004, o.arp.decay); tone('sine', hz(n) * o.arp.harm, at, o.arp.gain * 0.25, 0.002, o.arp.decay * 0.35);
+    }
+    if (o.tick) { if (!o.tick.off) tick(t, 0.09); tick(t + beat / 2, 0.06); }   // 時計の音（8分）
   }
 };
 

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>うんちくショートの BGM 試聴</title>
+<style>
+  body { margin: 0; padding: 16px; background: #111418; color: #f2f2f2; font-family: "Yu Gothic UI", "Meiryo", sans-serif; }
+  h1 { font-size: 18px; margin: 0 0 6px; } p { font-size: 13px; color: #aab4c0; margin: 0 0 12px; }
+  .it { display: flex; gap: 10px; align-items: center; background: #1d2229; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  button { font: inherit; font-size: 15px; background: #ffcf4a; color: #111; border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer; min-width: 4.5em; }
+  .it b { font-size: 15px; } .it span { font-size: 13px; color: #aab4c0; display: block; }
+</style>
+</head>
+<body>
+<h1>うんちくショートの BGM 試聴（コードで合成）</h1>
+<p>いまの拍（pulse）をもとに、調・テンポ・和音の進み方・音色を変えたもの。決めたら trivia-kit.js の TK.BGM_STYLE を変えると、全部の動画がその曲になる。</p>
+<div id="list"></div>
+<script src="../../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="../promo.js"></script>
+<script src="../promo-audio.js"></script>
+<script src="../trivia-kit.js"></script>
+<script>
+'use strict';
+const NOTE = {
+  pulse: ['いまの', 'A の短調・112 BPM。低い拍と三角波の短い和音'],
+  bright: ['明るい長調', 'C の長調・116 BPM。I–V–vi–IV の進み方とはずむベース'],
+  calm: ['ゆったり短調', 'D の短調・92 BPM。拍を弱く、和音を長くのばす'],
+  marimba: ['木琴', 'F の長調・108 BPM。叩いた音の8分のアルペジオ'],
+  clock: ['時計じかけ', 'E の短調・104 BPM。8分で時計のカチカチ'],
+  musicbox: ['オルゴール', 'G の長調・96 BPM。高い音のアルペジオ、拍は2つに1つ'],
+  dorian: ['ドリアン', 'A のドリアン・120 BPM。裏拍のベースと時計の音で軽くはずむ'],
+};
+const LEN = 25;
+let live = null;
+function play(id, btn) {
+  if (live) { live.ctx.close(); live.btn.textContent = '▶ 聞く'; const same = live.id === id; live = null; if (same) return; }
+  const ctx = new AudioContext(), g = ctx.createGain(); g.gain.value = 0.8; g.connect(ctx.destination);
+  TK.pulseBgm(ctx, g, LEN, LEN - 0.5, TK.BGM[id]); live = { ctx, btn, id }; btn.textContent = '■ 止める';
+}
+// 書き出し用（Playwright から）: 25 秒を描いて WAV（16bit・ステレオ）の base64 を返す
+window.__render = async function (id) {
+  const ctx = new OfflineAudioContext(2, 48000 * LEN, 48000), g = ctx.createGain(); g.gain.value = 0.8; g.connect(ctx.destination);
+  TK.pulseBgm(ctx, g, LEN, LEN - 0.5, TK.BGM[id]);
+  const b = await ctx.startRendering(), n = b.length, buf = new ArrayBuffer(44 + n * 4), v = new DataView(buf);
+  const w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  w(0, 'RIFF'); v.setUint32(4, 36 + n * 4, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 2, true); v.setUint32(24, 48000, true); v.setUint32(28, 48000 * 4, true); v.setUint16(32, 4, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 4, true);
+  const L = b.getChannelData(0), R = b.getChannelData(1); for (let i = 0; i < n; i++) { v.setInt16(44 + i * 4, clamp(L[i], -1, 1) * 32767, true); v.setInt16(46 + i * 4, clamp(R[i], -1, 1) * 32767, true); }
+  let s = ''; const u = new Uint8Array(buf); for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s);
+};
+const list = document.getElementById('list');
+for (const id of Object.keys(TK.BGM)) {
+  const d = document.createElement('div'); d.className = 'it';
+  const b = document.createElement('button'); b.textContent = '▶ 聞く'; b.onclick = () => play(id, b);
+  const t = document.createElement('div'); t.innerHTML = '<b></b><span></span>'; t.querySelector('b').textContent = (NOTE[id] || [id])[0] + '（' + id + '）'; t.querySelector('span').textContent = (NOTE[id] || ['', ''])[1];
+  d.append(b, t); list.appendChild(d);
+}
+</script>
+</body>
+</html>
