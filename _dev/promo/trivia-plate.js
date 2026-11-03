@@ -11,6 +11,8 @@ PL.MIN = '"Yu Mincho", "游明朝", "YuMincho", serif';
 PL.KYO = '"UD Digi Kyokasho NK", "UD デジタル 教科書体 NK", "UD Digi Kyokasho N", "Yu Gothic UI", sans-serif';
 // 手彩色の色（うすく下にしく）
 PL.T = { sea: '#7fb0c8', land: '#9cbc78', leaf: '#6f9a5a', wood: '#c89a62', sand: '#e3c98d', rust: '#c9774a', brown: '#8a6a4a', sky: '#b9d3df', rose: '#d99a8a', gold: '#e0b04a', gray: '#a9a49a' };
+PL.ORIG = Object.assign({}, TK); PL.ORIG_C = Object.assign({}, TK.C);   // 置きかえる前（ほかのルックで元に戻すため）
+PL.PATCH = 'rgba(239,230,210,0.92)';   // 見出しの下にしく紙
 TK.C = Object.assign(TK.C, { fg: PL.INK, sub: '#4a3f33', acc: PL.RED, acc2: '#2f5f7a', red: PL.RED, green: PL.GREEN, dim: 'rgba(35,28,21,0.6)', line: 'rgba(35,28,21,0.08)' });
 
 // 紙（むら・繊維・四すみを少し暗く）。1回だけ作る

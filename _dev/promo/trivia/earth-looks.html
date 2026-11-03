@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>うんちくショートの星の描き方（見くらべ）</title>
+<style>
+  :root { --bg: #111418; --card: #1d2229; --fg: #f2f2f2; --sub: #aab4c0; --acc: #ffcf4a; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: "Yu Gothic UI", "Meiryo", sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; background: rgba(17,20,24,0.96); padding: 10px 16px; border-bottom: 1px solid #2c333d; }
+  h1 { font-size: 17px; margin: 0 0 6px; }
+  p { margin: 0; font-size: 13px; color: var(--sub); }
+  .bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+  button { font: inherit; font-size: 14px; background: var(--card); color: var(--fg); border: 1px solid #3a4452; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+  input[type=range] { flex: 1; min-width: 160px; }
+  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; padding: 14px 16px; }
+  figure { margin: 0; background: var(--card); border-radius: 12px; overflow: hidden; }
+  figure canvas { width: 100%; aspect-ratio: 9 / 16; display: block; background: #000; }
+  figcaption { padding: 8px 10px 10px; font-size: 13px; color: var(--sub); }
+  figcaption b { color: var(--fg); font-size: 15px; display: block; margin-bottom: 2px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>星の描き方 見くらべ（tiny-earth-1 の 20〜26 秒）</h1>
+  <p>チープに見える元を4つに分けて、それぞれを変えた: ①陸が楕円・人が棒（形が作りもの）②斜線が同じ太さ・同じ間隔（機械的）③画面にものが1つだけ（情報が少ない）④1色のベタぬり。陸は本物の地形（ETOPO1、NOAA、パブリックドメイン。tiny-earth/data）。</p>
+  <div class="bar"><button id="play">▶ 再生</button><input id="time" type="range" min="0" max="1" step="0.005" value="0.12"></div>
+</header>
+<div id="grid"></div>
+<script src="../../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="../promo.js"></script>
+<script src="../promo-audio.js"></script>
+<script src="../trivia-kit.js"></script>
+<script src="../trivia-plate.js"></script>
+<script>
+'use strict';
+PW = 1080; PH = 1920;
+const W = 540, H = 960, S = W / PW, D2R = Math.PI / 180;
+let ELEV = null;   // 181×360（緯度 -90→90・経度 -180→179）、m
+const elev = (lat, lon) => {   // 1°の格子を線形にならす
+  const y = clamp(lat + 90, 0, 180), x = ((lon + 180) % 360 + 360) % 360, y0 = Math.min(179, Math.floor(y)), x0 = Math.floor(x) % 360, x1 = (x0 + 1) % 360, fy = y - y0, fx = x - Math.floor(x);
+  const a = ELEV[y0 * 360 + x0], b = ELEV[y0 * 360 + x1], c = ELEV[(y0 + 1) * 360 + x0], d = ELEV[(y0 + 1) * 360 + x1];
+  return (a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + d * fx) * fy;
+};
+let seed = 1; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+// ---- 星の見え方（正射影）。lon0: まん中の経度、LAT0: 少し北から見る ----
+const LAT0 = 18 * D2R, LIGHT = (() => { const v = [0.62, 0.42, 0.66], n = Math.hypot(...v); return v.map(x => x / n); })();   // 光は右上手前から
+function proj(lat, lon, lon0) {   // → [nx, ny（上が正）, nz（手前が正）]
+  const cl = Math.cos(lat), dl = lon - lon0;
+  return [cl * Math.sin(dl), Math.cos(LAT0) * Math.sin(lat) - Math.sin(LAT0) * cl * Math.cos(dl), Math.sin(LAT0) * Math.sin(lat) + Math.cos(LAT0) * cl * Math.cos(dl)];
+}
+function unproj(nx, ny, lon0) {   // 円の中の点 → [lat, lon]（度）
+  const nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
+  const lat = Math.asin(clamp(ny * Math.cos(LAT0) + nz * Math.sin(LAT0), -1, 1)), lon = lon0 + Math.atan2(nx, nz * Math.cos(LAT0) - ny * Math.sin(LAT0));
+  return [lat / D2R, lon / D2R, nz];
+}
+const lightAt = (nx, ny, nz) => Math.max(0, nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2]);
+// 1画素ずつ色を決めて円に描く（f(lat, lon, light, nx, ny) → [r, g, b, a]）
+function pixels(g, cx, cy, R, lon0, f) {
+  const n = Math.ceil(R * 2), c = document.createElement('canvas'); c.width = c.height = n; const x = c.getContext('2d'), im = x.createImageData(n, n);
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+    const nx = (i + 0.5 - R) / R, ny = -(j + 0.5 - R) / R; if (nx * nx + ny * ny > 1) continue;
+    const [la, lo, nz] = unproj(nx, ny, lon0), col = f(la, lo, lightAt(nx, ny, nz), nx, ny), k = (j * n + i) * 4;
+    im.data[k] = col[0]; im.data[k + 1] = col[1]; im.data[k + 2] = col[2]; im.data[k + 3] = col[3] ?? 255;
+  }
+  x.putImageData(im, 0, 0); g.drawImage(c, cx - R, cy - R, n, n);
+}
+// 海岸線（高さ 0 m の線、1°の格子を四角ごとに）
+function coast(g, cx, cy, R, lon0, w = 3) {
+  g.save(); g.strokeStyle = PL.INK; g.lineWidth = w; g.lineCap = 'round'; g.beginPath();
+  const P = (la, lo) => { const [x, y, z] = proj(la * D2R, lo * D2R, lon0); return z > 0 ? [cx + x * R, cy - y * R] : null; };
+  for (let la = -89; la < 89; la++) for (let lo = -180; lo < 180; lo++) {
+    const v = [elev(la, lo), elev(la, lo + 1), elev(la + 1, lo + 1), elev(la + 1, lo)], pts = [];
+    const e = [[0, 1, [la, lo], [la, lo + 1]], [1, 2, [la, lo + 1], [la + 1, lo + 1]], [2, 3, [la + 1, lo + 1], [la + 1, lo]], [3, 0, [la + 1, lo], [la, lo]]];
+    for (const [a, b, A, B] of e) if ((v[a] > 0) !== (v[b] > 0)) { const k = v[a] / (v[a] - v[b]); pts.push([A[0] + (B[0] - A[0]) * k, A[1] + (B[1] - A[1]) * k]); }
+    for (let q = 0; q + 1 < pts.length; q += 2) { const p1 = P(...pts[q]), p2 = P(...pts[q + 1]); if (p1 && p2) { g.moveTo(...p1); g.lineTo(...p2); } }
+  }
+  g.stroke(); g.restore();
+}
+function graticule(g, cx, cy, R, lon0, w = 1.4, alpha = 0.55) {   // 経線・緯線（30°ごと）
+  g.save(); g.strokeStyle = PL.INK; g.globalAlpha *= alpha; g.lineWidth = w; g.beginPath();
+  const P = (la, lo) => { const [x, y, z] = proj(la * D2R, lo * D2R, lon0); return [cx + x * R, cy - y * R, z]; };
+  for (let la = -60; la <= 60; la += 30) { let on = false; for (let lo = -180; lo <= 180; lo += 2) { const [x, y, z] = P(la, lo); if (z > 0) { on ? g.lineTo(x, y) : g.moveTo(x, y); on = true; } else on = false; } }
+  for (let lo = -180; lo < 180; lo += 30) { let on = false; for (let la = -90; la <= 90; la += 2) { const [x, y, z] = P(la, lo); if (z > 0) { on ? g.lineTo(x, y) : g.moveTo(x, y); on = true; } else on = false; } }
+  g.stroke(); g.restore();
+}
+
+// ---- 人（影絵。頭・胴・ひじ・ひざのある形）----
+function person(g, x, y, ang, ph, s) {
+  g.save(); g.translate(x, y); g.rotate(ang); g.scale(s, s); g.fillStyle = PL.INK; g.strokeStyle = PL.INK; g.lineCap = 'round'; g.lineJoin = 'round';
+  const limb = (pts, w0, w1) => { for (let i = 0; i + 1 < pts.length; i++) { g.lineWidth = lerp(w0, w1, i / (pts.length - 1)); g.beginPath(); g.moveTo(...pts[i]); g.lineTo(...pts[i + 1]); g.stroke(); } };
+  const sw = Math.sin(ph) * 0.55;
+  const leg = k => { const a = sw * k; return [[0, -92], [Math.sin(a) * 46, -48 + Math.abs(a) * 4], [Math.sin(a) * 46 - (a < 0 ? 0 : 14), 0]]; };
+  limb(leg(-1), 24, 16); limb(leg(1), 24, 16);
+  [[-1], [1]].forEach(([k]) => { const sx = Math.sin(sw * k) * 46 - (sw * k < 0 ? 0 : 14); g.beginPath(); g.ellipse(sx + 8, -2, 15, 7, 0, 0, Math.PI * 2); g.fill(); });   // くつ
+  g.beginPath(); g.moveTo(-17, -94); g.quadraticCurveTo(-20, -150, -14, -178); g.lineTo(14, -178); g.quadraticCurveTo(20, -150, 17, -94); g.closePath(); g.fill();   // 胴
+  const arm = k => { const a = -sw * k; return [[0, -170], [Math.sin(a) * 34, -132], [Math.sin(a) * 40 + 12, -98]]; };
+  limb(arm(-1), 15, 11); limb(arm(1), 15, 11);
+  g.lineWidth = 14; g.beginPath(); g.moveTo(0, -178); g.lineTo(0, -192); g.stroke();   // 首
+  g.beginPath(); g.ellipse(2, -212, 21, 24, 0.1, 0, Math.PI * 2); g.fill();   // 頭
+  g.restore();
+}
+// ---- 共通の書きこみ（道すじ・人・数字・時計・字幕）----
+const ORB = th => 1.0 + 0.2 * (1 - Math.cos(th)) / 2;   // 近い所が地面、遠い所が 1.2 倍
+function common(g, cx, cy, R, u, o = {}) {
+  g.save(); g.setLineDash([5, 16]); g.lineCap = 'round'; g.strokeStyle = PL.RED; g.lineWidth = 6; g.beginPath();
+  for (let i = 0; i <= 160; i++) { const th = i / 160 * Math.PI * 2, r = R * ORB(th); i ? g.lineTo(cx + Math.sin(th) * r, cy - Math.cos(th) * r) : g.moveTo(cx + Math.sin(th) * r, cy - Math.cos(th) * r); }
+  g.stroke(); g.restore();
+  const th = u * Math.PI * 2, r = R * ORB(th);
+  person(g, cx + Math.sin(th) * r, cy - Math.cos(th) * r, th, u * 40, 0.62);
+  if (!o.noLabel) {
+    PL.label(g, '秒速 [1.24 m] で進むだけ', 90, 190, 64, { align: 'left' });
+    PL.label(g, '歩くより、少しおそい', 92, 262, 40, { align: 'left', bold: false });
+  }
+  PL.watch(g, PW - 170, 380, 80, u); PL.label(g, '1周 [' + Math.round(u * 84) + ' 分]', PW - 170, 505, 54);
+  TK.subtitle(g, 1, [{ a: 0, b: 2, ja: 'この速さで地面すれすれを進むと\n足がはなれて、[星を1周]（84分）' }]);
+  TK.note(g, 1, 0, 2, '1000倍の早送り／人は大きく描いています');
+  TK.credit(g, '声: VOICEVOX:冥鳴ひまり');
+}
+
+// ---- 描き方 ----
+const LOOKS = [
+  {
+    name: '① 線彫り（紙幣や銅版のような線）',
+    note: '緯線にそった線を1本ずつ引き、暗い所ほど太く。陸は太め、海は細め。線の太さだけで丸みと陸と海を出す。色はごくうすく。',
+    draw(g, u) {
+      PL.paper(g); const cx = 540, cy = 760, R = 330, lon0 = (100 + u * 40) * D2R;
+      pixels(g, cx, cy, R, lon0, (la, lo) => elev(la, lo) > 0 ? [156, 188, 120, 70] : [127, 176, 200, 60]);
+      g.save(); g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.clip(); g.strokeStyle = PL.INK; g.lineCap = 'round';
+      for (let la = -88; la <= 88; la += 1.7) {
+        let prev = null;
+        for (let lo = -180; lo <= 180; lo += 1.2) {
+          const [x, y, z] = proj(la * D2R, lo * D2R, lon0); if (z <= 0) { prev = null; continue; }
+          const p = [cx + x * R, cy - y * R], s = lightAt(x, y, z), land = elev(la, lo) > 0;
+          const w = (land ? 3.2 : 1.4) * (0.25 + 1.0 * (1 - s)) + (land ? 0.6 : 0);
+          if (prev) { g.lineWidth = w; g.beginPath(); g.moveTo(...prev); g.lineTo(...p); g.stroke(); }
+          prev = p;
+        }
+      }
+      g.restore();
+      coast(g, cx, cy, R, lon0, 3.2); PL.ink(g, PL.circle(cx, cy, R), 9);
+      common(g, cx, cy, R, u);
+    },
+  },
+  {
+    name: '② 点描（理科の図鑑の挿絵）',
+    note: '点の多さだけで、かげと陸を出す（科学の挿絵でよく使う描き方）。海はうすい点、陸はこい点。輪郭と海岸線は細いペン。',
+    draw(g, u) {
+      PL.paper(g); const cx = 540, cy = 760, R = 330, lon0 = (100 + u * 40) * D2R;
+      pixels(g, cx, cy, R, lon0, (la, lo) => elev(la, lo) > 0 ? [190, 170, 120, 55] : [127, 176, 200, 45]);
+      seed = 7; g.fillStyle = PL.INK; const st = 4.2;
+      for (let j = -R; j < R; j += st) for (let i = -R; i < R; i += st) {
+        const px = i + rnd() * st, py = j + rnd() * st, nx = px / R, ny = -py / R; if (nx * nx + ny * ny > 0.995) continue;
+        const [la, lo, nz] = unproj(nx, ny, lon0), s = lightAt(nx, ny, nz), land = elev(la, lo) > 0;
+        const tone = land ? 0.38 + 0.6 * (1 - s) : 0.05 + 0.5 * Math.pow(1 - s, 1.5);
+        if (rnd() < tone) { g.beginPath(); g.arc(cx + px, cy + py, land ? 1.9 : 1.5, 0, Math.PI * 2); g.fill(); }
+      }
+      coast(g, cx, cy, R, lon0, 2.4); PL.ink(g, PL.circle(cx, cy, R), 5);
+      common(g, cx, cy, R, u);
+    },
+  },
+  {
+    name: '③ 図鑑の1ページ（情報を足す）',
+    note: '①の星に、経線・緯線、図の番号とわく、縮尺の物差し、番号つきの引き出し線と凡例を足した。1画面の中の情報を増やす。',
+    draw(g, u) {
+      PL.paper(g); const cx = 560, cy = 760, R = 300, lon0 = (100 + u * 40) * D2R;
+      g.save(); g.strokeStyle = PL.INK; g.lineWidth = 4; g.strokeRect(46, 330, PW - 92, 830); g.lineWidth = 1.5; g.strokeRect(58, 342, PW - 116, 806); g.restore();
+      PL.label(g, '第 1 図　半径 1 km の地球', 70, 300, 44, { align: 'left' });
+      LOOKS[0].globe(g, cx, cy, R, lon0);
+      graticule(g, cx, cy, R, lon0, 1.6, 0.6);
+      // 縮尺の物差し（半径 1 km → 0〜500 m）
+      const sx = 110, sy = 1100, L = R / 2;
+      for (let i = 0; i < 5; i++) { const seg = PL.rect(sx + i * L / 5, sy, L / 5, 14); if (i % 2 === 0) { g.fillStyle = PL.INK; g.fillRect(sx + i * L / 5, sy, L / 5, 14); } PL.ink(g, seg, 2); }
+      PL.label(g, '0', sx, sy + 40, 30); PL.label(g, '500 m', sx + L, sy + 40, 30);
+      common(g, cx, cy, R, u, { noLabel: true });
+      const th = u * Math.PI * 2, r = R * ORB(th), hx = cx + Math.sin(th) * (r + 120), hy = cy - Math.cos(th) * (r + 120);
+      PL.leader(g, cx + Math.sin(th) * r, cy - Math.cos(th) * r, hx, hy); PL.label(g, '①', hx + 26, hy - 6, 44, { color: PL.RED });
+      PL.leader(g, cx + Math.sin(2.3) * R * ORB(2.3), cy - Math.cos(2.3) * R * ORB(2.3), cx + 330, cy + 300); PL.label(g, '②', cx + 360, cy + 300, 44, { color: PL.RED });
+      PL.label(g, '① 人　秒速 [1.24 m]（歩くより少しおそい）', 70, 190, 40, { align: 'left', bold: false });
+      PL.label(g, '② 道すじ　地面から最高 200 m', 70, 245, 40, { align: 'left', bold: false });
+    },
+  },
+  {
+    name: '④ 古い地球儀（色の起伏）',
+    note: '高さと深さで色を変え、山や海溝の起伏にかげをつけた、古い地球儀のような色。上にうすく経線・緯線と墨の輪郭。ベタぬりの1色をやめる。',
+    draw(g, u) {
+      PL.paper(g); const cx = 540, cy = 760, R = 340, lon0 = (100 + u * 40) * D2R;
+      const pal = h => h < -4000 ? [70, 120, 140] : h < -200 ? [104, 156, 170] : h < 0 ? [150, 192, 196] : h < 200 ? [150, 178, 112] : h < 800 ? [184, 186, 122] : h < 2000 ? [196, 162, 102] : [170, 128, 90];
+      pixels(g, cx, cy, R, lon0, (la, lo, s) => {
+        const h = elev(la, lo), dx = elev(la, lo + 1) - elev(la, lo - 1), dy = elev(la + 1, lo) - elev(la - 1, lo);
+        const hill = h > 0 ? clamp(1 - (dx * 0.6 - dy * 0.5) / 4000, 0.7, 1.25) : 1, k = (0.45 + 0.6 * s) * hill, c = pal(h);
+        return [c[0] * k * 1.05, c[1] * k * 1.02, c[2] * k * 0.95, 255];
+      });
+      g.save(); g.globalCompositeOperation = 'multiply'; g.globalAlpha = 0.5; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.clip(); PL.paper(g); g.restore();   // ニスの黄ばみ
+      graticule(g, cx, cy, R, lon0, 1.4, 0.45); coast(g, cx, cy, R, lon0, 1.8); PL.ink(g, PL.circle(cx, cy, R), 8);
+      common(g, cx, cy, R, u);
+    },
+  },
+];
+LOOKS[0].globe = function (g, cx, cy, R, lon0) {   // ③でも使う（①の描き方の星だけ）
+  pixels(g, cx, cy, R, lon0, (la, lo) => elev(la, lo) > 0 ? [156, 188, 120, 70] : [127, 176, 200, 60]);
+  g.save(); g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.clip(); g.strokeStyle = PL.INK; g.lineCap = 'round';
+  for (let la = -88; la <= 88; la += 1.9) { let prev = null; for (let lo = -180; lo <= 180; lo += 1.3) { const [x, y, z] = proj(la * D2R, lo * D2R, lon0); if (z <= 0) { prev = null; continue; } const p = [cx + x * R, cy - y * R], s = lightAt(x, y, z), land = elev(la, lo) > 0; if (prev) { g.lineWidth = (land ? 3 : 1.3) * (0.25 + (1 - s)) + (land ? 0.5 : 0); g.beginPath(); g.moveTo(...prev); g.lineTo(...p); g.stroke(); } prev = p; } }
+  g.restore(); coast(g, cx, cy, R, lon0, 3); PL.ink(g, PL.circle(cx, cy, R), 9);
+};
+
+const grid = document.getElementById('grid'), figs = [];
+for (const lk of LOOKS) {
+  const f = document.createElement('figure'), c = document.createElement('canvas'); c.width = W; c.height = H;
+  const cap = document.createElement('figcaption'); cap.innerHTML = '<b></b><span></span>';
+  cap.querySelector('b').textContent = lk.name; cap.querySelector('span').textContent = lk.note;
+  f.append(c, cap); grid.appendChild(f); figs.push([lk, c]);
+}
+function draw() {
+  if (!ELEV) return;
+  const u = +document.getElementById('time').value;
+  for (const [lk, c] of figs) { const g = c.getContext('2d'); g.setTransform(S, 0, 0, S, 0, 0); g.globalAlpha = 1; lk.draw(g, u); }
+}
+let playing = false, last = 0;
+document.getElementById('play').onclick = e => { playing = !playing; e.target.textContent = playing ? '❚❚ 止める' : '▶ 再生'; last = performance.now(); if (playing) requestAnimationFrame(tick); };
+function tick(now) { if (!playing) return; const el = document.getElementById('time'); let u = +el.value + (now - last) / 5000; last = now; if (u > 1) u = 0; el.value = u; draw(); requestAnimationFrame(tick); }
+document.getElementById('time').oninput = draw;
+Promise.all([fetch('../../../tiny-earth/data/etopo1deg.bin').then(r => r.arrayBuffer()), document.fonts.ready]).then(([b]) => { ELEV = new Int16Array(b); draw(); });
+</script>
+</body>
+</html>

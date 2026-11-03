@@ -35,7 +35,8 @@ const cues = [
 
 // 歩く人は PL.walker（図鑑の版画の影絵）。前の棒の人と同じ背の高さにそろえる
 function person(g, x, y, ang, phase, s = 1) { PL.walker(g, x, y, ang, phase, s * 0.42); }
-function planet(g, cx, cy, r, f = 1) {   // 図鑑の版画の星: 手彩色の海と陸、光と反対がわに斜線、緯線
+function planet(g, cx, cy, r, f = 1) {   // 図鑑の版画の星（ほかのルックの見本では LOOK.planet に差しかえる）
+  if (window.LOOK && LOOK.planet) return LOOK.planet(g, cx, cy, r, f);   // 手彩色の海と陸、光と反対がわに斜線、緯線
   g.save(); g.globalAlpha *= f;
   const land = [[-0.3, -0.2, 0.32, 0.22, -0.3], [0.35, 0.25, 0.25, 0.17, 0.35], [0.1, -0.55, 0.18, 0.12, 0.1]];   // 陸（形はかざり）
   PL.sphere(g, cx, cy, r, PL.T.sea, { inside: gg => { const p = gg2 => land.forEach(([dx, dy, rx, ry, rot]) => PL.ellipse(cx + dx * r, cy + dy * r, rx * r, ry * r, rot)(gg2)); PL.tint(gg, p, PL.T.land, 0.8); PL.ink(gg, p, Math.max(3, r / 60)); } });
@@ -65,7 +66,7 @@ function draw(g, t) {
     const k = ease((t - 3.6) / 3.2), r = lerp(1500, R, k);
     planet(g, CX, CY + (1 - k) * 900, r, 1);
     const km = Math.exp(lerp(Math.log(6371), 0, k));
-    g.fillStyle = 'rgba(239,230,210,0.92)'; g.fillRect(60, 190, 700, 225);   // 見出しの下は紙（星のふちと重ねない）
+    g.fillStyle = PL.PATCH; g.fillRect(60, 190, 700, 225);   // 見出しの下は紙（星のふちと重ねない）
     PL.label(g, '半径 ' + (km >= 10 ? Math.round(km).toLocaleString('ja-JP') : km.toFixed(1)) + ' km', 90, 270, 96, { align: 'left', color: k > 0.98 ? PL.RED : PL.INK });
     PL.label(g, '密度は地球と同じ（5.5 g/cm³）', 92, 350, 40, { align: 'left', bold: false });
     PL.ink(g, gg => { gg.moveTo(90, 395); gg.lineTo(700, 395); }, 3);

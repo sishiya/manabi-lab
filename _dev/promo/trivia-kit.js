@@ -234,7 +234,7 @@ TK.fitVoice = function (cfg, lines) {
 
 function triviaStart(cfg) {
   if (cfg.voice === 'auto') {   // 声の一覧を先に読んでから始める（なければ字幕だけ）
-    fetch(`out/voice/${cfg.out}/voice.json`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null).then(j => {
+    fetch(`out/voice/${cfg.voiceOut || cfg.out}/voice.json`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null).then(j => {
       const lines = Array.isArray(j) ? j : (j && j.lines) || [];
       triviaStart(Object.assign({}, cfg, TK.fitVoice(cfg, lines), { voiceCredit: cfg.voiceCredit || (j && j.credit) || (lines.length ? 'VOICEVOX' : '') }));
     });
@@ -282,6 +282,7 @@ function triviaStart(cfg) {
         if (cfg.voiceCredit) TK.credit(g, '声: ' + cfg.voiceCredit);
         if (cfg.progress !== false) TK.progress(g, t, END);
         drawIdentMini(g, t, 0.3, 0.8);
+        if (TK.finish) TK.finish(g, t);   // ルックの仕上げ（絵全体にかける。trivia-looks.js）
       } else {
         g.globalAlpha = 1; g.fillStyle = '#000'; g.fillRect(0, 0, PW, PH);
         drawIdent(g, t, END);
