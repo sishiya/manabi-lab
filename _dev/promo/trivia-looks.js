@@ -297,20 +297,31 @@ TL.LOOKS = {
 // 色ごとに「どのインクを何割のせれば近いか」を前もって表（LUT、1辺 24）にしておき、インクごとに角度の違う網点・版ずれで刷る。
 // 暗い無彩色（字・輪郭）は1色目のインクだけで刷る（読みやすく）。mainOnly: 主役の絵（TK.drawArt の層）だけ全部のインク、ほかは最初の2色
 TL.RISO_INK = { blue: [0, 120, 191], pink: [255, 72, 176], yellow: [255, 232, 0], green: [0, 169, 92], red: [241, 80, 96], federal: [61, 85, 136], scarlet: [214, 70, 52], mustard: [214, 164, 40] };
-TL.risoLUT = function (inks, sat) {
-  const N = 24, K = inks.length, T = inks.map(c => c.map(v => v / 255)), P = [0.965, 0.957, 0.933], lv = K <= 3 ? [0, 0.2, 0.4, 0.6, 0.8, 1] : [0, 0.33, 0.66, 1];
-  const combos = []; (function rec(i, cur) { if (i === K) { combos.push(cur.slice()); return; } for (const v of lv) { cur[i] = v; rec(i + 1, cur); } })(0, []);
-  const out = combos.map(c => [0, 1, 2].map(ch => { let r = P[ch]; for (let k = 0; k < K; k++) r *= 1 - c[k] * (1 - T[k][ch]); return r; }));
+TL.risoLUT = function (inks, sat) {   // インクの量を連続の計算で出す（段階から選ぶと、フェードの途中で組み合わせが飛んでちらつく）
+  // インクの濃さ（-log 透過）は重ねると足し算になるとみなし、目当ての濃さに近いインクの量を、少しだけ量を控える最小二乗で解く
+  const N = 33, K = inks.length, P = [0.965, 0.957, 0.933];
+  const A = inks.map(c => c.map(v => -Math.log(Math.max(0.04, v / 255))));   // K×3
+  const lam = 0.02, M = [];   // M = (A Aᵀ + λI)⁻¹ A
+  const AAt = A.map((a, i) => A.map((b, j) => a.reduce((s, v, ch) => s + v * b[ch], 0) + (i === j ? lam : 0)));
+  const inv = (m) => { const n = m.length, a = m.map((r, i) => [...r, ...m.map((_, j) => i === j ? 1 : 0)]); for (let i = 0; i < n; i++) { let p = i; for (let r = i + 1; r < n; r++) if (Math.abs(a[r][i]) > Math.abs(a[p][i])) p = r; [a[i], a[p]] = [a[p], a[i]]; const d = a[i][i]; for (let c = 0; c < 2 * n; c++) a[i][c] /= d; for (let r = 0; r < n; r++) if (r !== i) { const f = a[r][i]; for (let c = 0; c < 2 * n; c++) a[r][c] -= f * a[i][c]; } } return a.map(r => r.slice(n)); };
+  const Ii = inv(AAt); for (let i = 0; i < K; i++) M.push([0, 1, 2].map(ch => Ii[i].reduce((s, v, j) => s + v * A[j][ch], 0)));
   const lut = new Float32Array(N * N * N * K);
   for (let r = 0; r < N; r++) for (let g = 0; g < N; g++) for (let b = 0; b < N; b++) {
     let t = [r / (N - 1), g / (N - 1), b / (N - 1)];
-    const m = (t[0] + t[1] + t[2]) / 3; t = t.map(v => clamp(m + (v - m) * sat, 0, 1)).map((v, i) => v * P[i]);   // 彩度を上げてから
-    let best = 0, bd = 1e9;
-    for (let q = 0; q < combos.length; q++) { const o = out[q]; let d = (o[0] - t[0]) ** 2 + (o[1] - t[1]) ** 2 + (o[2] - t[2]) ** 2; for (const v of combos[q]) d += v * 0.004; if (d < bd) { bd = d; best = q; } }
-    lut.set(combos[best], ((r * N + g) * N + b) * K);
+    const m = (t[0] + t[1] + t[2]) / 3; t = t.map(v => clamp(m + (v - m) * sat, 0.02, 1));   // 彩度を上げてから
+    const D = t.map(v => -Math.log(v)), base = ((r * N + g) * N + b) * K;
+    for (let k = 0; k < K; k++) lut[base + k] = clamp(M[k][0] * D[0] + M[k][1] * D[1] + M[k][2] * D[2], 0, 1);
   }
   return { N, K, lut };
 };
+// 表の間をなめらかにつなぐ（三方向の線形補間）
+TL.lutAt = function (T, r, g, b, out) {
+  const N = T.N, K = T.K, x = r * (N - 1), y = g * (N - 1), z = b * (N - 1), x0 = Math.min(N - 2, x | 0), y0 = Math.min(N - 2, y | 0), z0 = Math.min(N - 2, z | 0), fx = x - x0, fy = y - y0, fz = z - z0;
+  for (let k = 0; k < K; k++) out[k] = 0;
+  for (let c = 0; c < 8; c++) { const dx = c & 1, dy = (c >> 1) & 1, dz = (c >> 2) & 1, w = (dx ? fx : 1 - fx) * (dy ? fy : 1 - fy) * (dz ? fz : 1 - fz); if (w === 0) continue; const base = (((x0 + dx) * N + y0 + dy) * N + z0 + dz) * K; for (let k = 0; k < K; k++) out[k] += T.lut[base + k] * w; }
+  return out;
+};
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 TL.risoMulti = function (o) {
   const inks = o.inks.map(n => TL.RISO_INK[n]), K = inks.length, full = TL.risoLUT(inks, o.sat ?? 1.6), two = o.mainOnly ? TL.risoLUT(inks.slice(0, 2), o.sat ?? 1.6) : null;
   const ang = [0.26, 1.31, 0.0, 0.79, 1.05].slice(0, K), offs = [[0, 0], [2, 1], [-1, 2], [1, -2], [-2, -1]].slice(0, K), P = [246, 244, 238];
@@ -320,21 +331,21 @@ TL.risoMulti = function (o) {
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0); const im = g.getImageData(0, 0, w, h), px = im.data;
     const mask = o.mainOnly && TL._art ? TL._art.getContext('2d').getImageData(0, 0, w, h).data : null;
     if (!cov || cov.length !== n * K) cov = new Float32Array(n * K);
-    const pr = 239, pg = 230, pb = 210;   // 版画の紙の色 → 白い紙とみなす
+    const pr = 239, pg = 230, pb = 210, tmp = new Float32Array(K);   // 版画の紙の色 → 白い紙とみなす
     for (let i = 0; i < n; i++) {
       const r = Math.min(1, px[i * 4] / pr), gg = Math.min(1, px[i * 4 + 1] / pg), b = Math.min(1, px[i * 4 + 2] / pb), L = 0.2126 * r + 0.7152 * gg + 0.0722 * b, s = Math.max(r, gg, b) - Math.min(r, gg, b);
-      if (L < 0.32 && s < 0.22) { for (let k = 0; k < K; k++) cov[i * K + k] = k === 0 ? clamp((0.5 - L) * 2.2, 0.6, 1) : 0; continue; }   // 字・輪郭は1色目だけ
-      const T = mask && mask[i * 4 + 3] < 128 ? two : full, N = T.N, base = ((Math.round(r * (N - 1)) * N + Math.round(gg * (N - 1))) * N + Math.round(b * (N - 1))) * T.K;
-      for (let k = 0; k < K; k++) cov[i * K + k] = k < T.K ? T.lut[base + k] : 0;
+      const T = mask && mask[i * 4 + 3] < 128 ? two : full; TL.lutAt(T, r, gg, b, tmp);
+      const key = smooth(0.07, 0.025, s);   // 色みのない所（字・輪郭と、それがフェードでうすくなった灰色）は、明るさによらず1色目だけ（境目は少しずつ混ぜる）
+      for (let k = 0; k < K; k++) cov[i * K + k] = lerp(k < T.K ? tmp[k] : 0, k === 0 ? clamp((1 - L) * 1.6, 0, 1) : 0, key);
     }
     const f = 2 * Math.PI / (4.2 * RES), ca = ang.map(Math.cos), sa = ang.map(Math.sin), oi = offs.map(([dx, dy]) => (dy * RES * w + dx * RES));
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       const i = y * w + x, gr = (TL.noise(x, y) - 0.5) * 0.1, mot = (TL.mottle(x, y) - 0.5) * 0.16, pgn = 1 + (TL.noise(x * 3, y * 7) - 0.5) * 0.05;
       let R = P[0] * pgn, G = P[1] * pgn, B = P[2] * pgn;
       for (let k = 0; k < K; k++) {
-        const j = clamp(i - oi[k], 0, n - 1), cv = cov[j * K + k]; if (cv < 0.05) continue;
+        const j = clamp(i - oi[k], 0, n - 1), cv = cov[j * K + k]; if (cv < 0.01) continue;
         const th = (Math.cos((x * ca[k] + y * sa[k]) * f) + Math.cos((-x * sa[k] + y * ca[k]) * f)) * 0.25 + 0.5;
-        const a = clamp(Math.min(1, cv * 1.2) * (0.8 + 0.4 * (cv > 0.55 ? 0.5 : 1 - th)) + gr, 0, 1) * (0.9 + mot), ink = inks[k];
+        const a = clamp(Math.min(1, cv * 1.2) * (0.8 + 0.4 * lerp(1 - th, 0.5, smooth(0.45, 0.65, cv))) + gr, 0, 1) * (0.9 + mot) * smooth(0.01, 0.07, cv), ink = inks[k];   // 網点のかけ方も量に合わせて少しずつ
         R *= 1 - a * (1 - ink[0] / 255); G *= 1 - a * (1 - ink[1] / 255); B *= 1 - a * (1 - ink[2] / 255);
       }
       px[i * 4] = R; px[i * 4 + 1] = G; px[i * 4 + 2] = B;
