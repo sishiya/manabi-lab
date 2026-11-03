@@ -33,6 +33,7 @@
   <div class="bar" style="margin-top:6px">
     <select id="sort"><option value="rank">批評の順</option><option value="app">アプリ順</option><option value="type">型の順</option></select>
     <button id="only">選んだものだけ</button>
+    <button id="voiced">声つきだけ</button>
     <button id="copy">選んだものを書き出す</button>
   </div>
   <textarea id="out" rows="3" readonly></textarea>
@@ -47,7 +48,7 @@ const APPS = ['tiny-earth', 'brain-response', 'evolution', 'ga-creatures', 'tree
 const RANK = ['tiny-earth-1', 'brain-response-1', 'evolution-1', 'ga-creatures-1', 'tree-of-life-1', 'black-hole-2', 'metamorphosis-1', 'extreme-1', 'god-view-3', 'body-dive-1', 'net-route-3', 'phage-1', 'illusions-1', 'pitch-physics-1', 'house-dust-1'];
 const TYPES = { A: 'ぜんぶ逆', B: 'もしも計算', C: 'あなたの体で、いま', D: '3つ目がいちばん', E: 'ズームで桁', F: 'かけあい', G: '15秒ループ', H: '当ててみて' };
 const store = { get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } } };
-let picks = new Set(store.get('trivia-picks', [])), filt = store.get('trivia-type', ''), onlyPicked = false, items = [];
+let picks = new Set(store.get('trivia-picks', [])), filt = store.get('trivia-type', ''), onlyPicked = false, onlyVoiced = false, items = [];
 const rankOf = id => { const i = RANK.indexOf(id.replace(/^brain-(\d)/, 'brain-response-$1')); return i < 0 ? 99 : i; };
 
 async function load() {
@@ -63,7 +64,7 @@ async function load() {
 }
 function render() {
   const sort = document.getElementById('sort').value;
-  let list = items.filter(x => (!filt || x.type === filt) && (!onlyPicked || picks.has(x.id)));
+  let list = items.filter(x => (!filt || x.type === filt) && (!onlyPicked || picks.has(x.id)) && (!onlyVoiced || x.mp4_subs));
   list.sort((a, b) => sort === 'rank' ? rankOf(a.id) - rankOf(b.id) || a.id.localeCompare(b.id) : sort === 'type' ? a.type.localeCompare(b.type) || a.id.localeCompare(b.id) : a.id.localeCompare(b.id));
   document.getElementById('n').textContent = list.length;
   const grid = document.getElementById('grid'); grid.innerHTML = '';
@@ -71,20 +72,27 @@ function render() {
     const d = document.createElement('div'); d.className = 'it' + (picks.has(x.id) ? ' picked' : '');
     const r = rankOf(x.id);
     d.innerHTML = `<video src="../${x.mp4}" controls preload="metadata" playsinline></video>
-      <div class="meta">${r < 99 ? `<span class="tag rank">${r + 1}位</span>` : ''}<span class="tag">${x.type} ${TYPES[x.type] || ''}</span><span class="tag">${x.dur || '?'}秒</span>
+      <div class="meta">${r < 99 ? `<span class="tag rank">${r + 1}位</span>` : ''}<span class="tag">${x.type} ${TYPES[x.type] || ''}</span><span class="tag">${x.dur || '?'}秒</span>${x.mp4_subs ? '<span class="tag rank">声つき</span>' : ''}
       <b></b><span class="id"></span>
       <details><summary>メモ</summary><div class="nt"></div></details>
       <button class="pick">${picks.has(x.id) ? '★ 選んだ' : '☆ 選ぶ'}</button></div>`;
     d.querySelector('b').textContent = x.title; d.querySelector('.id').textContent = x.id + '（' + x.page + '）';
     d.querySelector('.nt').textContent = [x.voice && '声: ' + x.voice, x.app_footage ? 'アプリの録画あり' : '', x.notes].filter(Boolean).join(' ／ ');
     const v = d.querySelector('video');
+    if (x.mp4_subs) {   // 声つきのものは、字幕だけの版と切りかえられる
+      const sw = document.createElement('button'); sw.className = 'pick alt'; sw.textContent = '字幕だけの版を見る';
+      let alt = false;
+      sw.onclick = () => { alt = !alt; v.src = '../' + (alt ? x.mp4_subs : x.mp4); sw.textContent = alt ? '声つきの版を見る' : '字幕だけの版を見る'; };
+      d.querySelector('.meta').insertBefore(sw, d.querySelector('.pick:not(.alt)'));
+    }
     v.onerror = () => { v.replaceWith(Object.assign(document.createElement('div'), { className: 'missing', textContent: 'まだ録画がありません' })); };
-    d.querySelector('.pick').onclick = () => { picks.has(x.id) ? picks.delete(x.id) : picks.add(x.id); store.set('trivia-picks', [...picks]); render(); };
+    d.querySelector('.pick:not(.alt)').onclick = () => { picks.has(x.id) ? picks.delete(x.id) : picks.add(x.id); store.set('trivia-picks', [...picks]); render(); };
     grid.appendChild(d);
   }
 }
 document.getElementById('sort').onchange = render;
 document.getElementById('only').onclick = e => { onlyPicked = !onlyPicked; e.target.className = onlyPicked ? 'on' : ''; render(); };
+document.getElementById('voiced').onclick = e => { onlyVoiced = !onlyVoiced; e.target.className = onlyVoiced ? 'on' : ''; render(); };
 document.getElementById('copy').onclick = () => {
   const o = document.getElementById('out'); o.style.display = 'block';
   o.value = '選んだ: ' + [...picks].join(', '); o.select();

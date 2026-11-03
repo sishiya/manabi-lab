@@ -7,7 +7,8 @@
 //   draw: 1コマの絵（座標は 1080×1920。背景は描いてある）。字幕・目印・締めはここで描かなくてよい
 //   subs: 焼きこむ字幕＝CC（英語）の字幕。ja の「[ ]」でかこんだ所は色を変える（CC では外す）
 //   cues: 効果音 pop・tick・whoosh・ding・buzz・rise・thud（ドン）。jingle は締めに自動で入る
-//   voice: [{ t, file }] 読み上げの wav（VOICEVOX など。まだ使っていない。ファイルがあれば鳴らす）
+//   voice: [{ t, file }] 読み上げの wav。'auto' なら out/voice/<out>/voice.json（_dev/tools/voicevox-lines.mjs で作る）を読み、
+//          声のあいだは BGM を下げ、画面の下に「VOICEVOX:名前」のクレジットを出す（キャラの規約で必要）
 //   bgm: 'pulse'（既定。軽い拍）・'drone'（低い持続音）・'none'・おとライブラリの 'out/bgm/<id>.ogg'
 //   close: false にすると締めの画面（しし屋の目印）を入れない（15秒ループの型の見くらべ用。決まりでは入れる）
 'use strict';
@@ -200,7 +201,43 @@ TK.pulseBgm = function (ctx, out, dur, stop) {
   }
 };
 
+// 声が字幕の行より長いとき、その行のあいだだけ絵の時間をゆっくり進めて、声が入りきるようにする。
+// 台本の時刻 → 動画の時刻の折れ線を作り、字幕・効果音・声を動画の時刻に、draw には台本の時刻を渡す
+TK.fitVoice = function (cfg, lines) {
+  const subs = cfg.subs || [], need = {};
+  for (const l of lines) if (l.i != null) need[l.i] = (l.dur || 0) + 0.3;
+  const K = [[0, 0]]; let shift = 0;
+  subs.forEach((s, i) => {
+    const len = s.b - s.a, want = Math.max(len, need[i] || 0);
+    K.push([s.a, s.a + shift]); shift += want - len; K.push([s.b, s.b + shift]);
+  });
+  K.push([Math.max(cfg.dur, K[K.length - 1][0]), Math.max(cfg.dur, K[K.length - 1][0]) + shift]);
+  const map = (x, from, to) => {
+    for (let k = 1; k < K.length; k++) {
+      const [p0, p1] = [K[k - 1], K[k]];
+      if (x <= p1[from] || k === K.length - 1) { const d = p1[from] - p0[from]; return d > 1e-9 ? p0[to] + (x - p0[from]) / d * (p1[to] - p0[to]) : p1[to]; }
+    }
+    return x;
+  };
+  const toReal = x => map(x, 0, 1), toScript = x => map(x, 1, 0);
+  return {
+    dur: +toReal(cfg.dur).toFixed(2),
+    subs: subs.map(s => Object.assign({}, s, { a: toReal(s.a), b: toReal(s.b) })),
+    cues: (cfg.cues || []).map(c => Object.assign({}, c, { t: toReal(c.t) })),
+    voice: lines.map(l => Object.assign({}, l, { t: (l.i != null && subs[l.i] ? toReal(subs[l.i].a) : toReal(l.t)) + 0.05 })),
+    draw: (g, t) => cfg.draw(g, toScript(t)),
+    stretch: +shift.toFixed(2),
+  };
+};
+
 function triviaStart(cfg) {
+  if (cfg.voice === 'auto') {   // 声の一覧を先に読んでから始める（なければ字幕だけ）
+    fetch(`out/voice/${cfg.out}/voice.json`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null).then(j => {
+      const lines = Array.isArray(j) ? j : (j && j.lines) || [];
+      triviaStart(Object.assign({}, cfg, TK.fitVoice(cfg, lines), { voiceCredit: cfg.voiceCredit || (j && j.credit) || (lines.length ? 'VOICEVOX' : '') }));
+    });
+    return;
+  }
   const END = cfg.dur;   // 本編の終わり（締めの画面はこのあと 5 秒）
   const DUR = cfg.close === false ? cfg.dur : cfg.dur + IDENT_CLOSE;
   const subs = cfg.subs || [];
@@ -210,7 +247,15 @@ function triviaStart(cfg) {
   else if (bgm.endsWith && bgm.endsWith('.ogg')) { music.style = 'file'; music.file = bgm; }
   else music.style = 'none';
   music.extra = async (ctx, out) => {
-    if (bgm === 'pulse') { const b = ctx.createGain(); b.gain.value = 0.55; b.connect(out); TK.pulseBgm(ctx, b, DUR, END); }
+    if (bgm === 'pulse') {
+      const b = ctx.createGain(); b.gain.value = 0.55; b.connect(out); TK.pulseBgm(ctx, b, DUR, END);
+      const vs = (cfg.voice || []).slice().sort((x, y) => x.t - y.t);
+      vs.forEach((v, i) => {   // 声のあいだは BGM を下げる（次の声まで 0.6 秒ないときは下げたまま）
+        const end = v.t + (v.dur || 2), nx = vs[i + 1];
+        b.gain.setTargetAtTime(0.22, Math.max(0, v.t - 0.08), 0.04);
+        if (!nx || nx.t > end + 0.6) b.gain.setTargetAtTime(0.55, end + 0.15, 0.25);
+      });
+    }
     for (const c of cfg.cues || []) TK.sfx(ctx, out, c);
     for (const v of cfg.voice || []) {   // 読み上げ（あれば）
       try { const buf = await ctx.decodeAudioData(await (await fetch(v.file)).arrayBuffer()); const s = ctx.createBufferSource(); s.buffer = buf; s.connect(out); s.start(v.t); } catch (e) { }
@@ -229,6 +274,7 @@ function triviaStart(cfg) {
         TK.bg(g, t, cfg.bgOpts || {});
         cfg.draw(g, t);
         TK.subtitle(g, t, subs);
+        if (cfg.voiceCredit) { g.save(); g.globalAlpha = 0.7; TK.text(g, '声: ' + cfg.voiceCredit, PW / 2, 1430, 26, { color: TK.C.sub, bold: false }); g.restore(); }
         if (cfg.progress !== false) TK.progress(g, t, END);
         drawIdentMini(g, t, 0.3, 0.8);
       } else {

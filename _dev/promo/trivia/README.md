@@ -27,7 +27,11 @@
 | 15 | house-dust-1 | A | ほこりの大半は皮ふ、はあやしい |
 
 ## 声（しゃべりを入れるなら）
-- **VOICEVOX**（無料・この PC の GPU で動く・商用可）。条件: 動画内か説明欄に「VOICEVOX:キャラ名」。キャラごとの規約あり（例: ずんだもんは、うそ・誤解をまねく内容、政治・宗教への利用が禁止）。ずんだもんは雑学ショートでとても多く使われていて「よくあるやつ」に見えやすいので、使うなら別のキャラがよい。**まだ入れていない（入れるのはユーザーの OK のあと）**。
+- **VOICEVOX**（無料・商用可）。条件: 動画内か説明欄に「VOICEVOX:キャラ名」。キャラごとの規約あり（例: ずんだもんは、うそ・誤解をまねく内容、政治・宗教への利用が禁止。No.7 は商用に事前の確認が要る）。ずんだもんは雑学ショートでとても多く使われていて「よくあるやつ」に見えやすいので使わない。
+  - **2026-11-03 に入れた**（ユーザーの OK）。ENGINE だけ（画面なし）、GPU 版 0.26.0 を `%USERPROFILE%\tools\voicevox-nv\windows-nvidia\run.exe`（Git の外。公式 GitHub の配布）。CPU 版（`tools\voicevox`）は1行に1〜2分かかって遅いので使わない。
+  - 起動: `run.exe --host 127.0.0.1 --port 50021 --use_gpu`。声を作る: `node _dev/tools/voicevox-lines.mjs <ページ名>`（subs の who ごとに話す人を変えて out/voice/<ページ名>/ に wav と voice.json）。ページは `triviaStart({ ..., voice: 'auto' })`。
+  - 声が字幕の行より長いと、その行のあいだだけ絵の時間をゆっくりにして合わせる（TK.fitVoice。動画が数秒のびる）。声のあいだは BGM を下げ、画面の下にクレジット。
+  - いまの組み合わせ: 聞き手＝春日部つむぎ（8）、答える人＝冥鳴ひまり（14）。どちらも「VOICEVOX:名前」のクレジットで商用可（冥鳴ひまりは公序良俗に反すること・特定の思想や団体に結びつくこと・第三者への害を禁止。収益化の届け出は不要）。別のキャラは `--q` `--a` で番号を変える。
 - AivisSpeech も候補。ただし音声モデルごとにライセンスがちがい、ACML-NC（非営利だけ）のモデルは使えない（[[no-noncommercial-sources]]）。
 - からだ・健康の話は AI の声にしない（YouTube の収益化の決まり 2026-07）。字幕だけか、ユーザーの声。
 
@@ -36,6 +40,9 @@
 - 見くらべ: サーバー（`apps` など）で `http://localhost:<port>/_dev/promo/trivia/gallery.html`。型でしぼる・☆で選ぶ・「選んだものを書き出す」で番号の一覧になる。
 - ページは `_dev/promo/<app>-trivia<番号>.html`、動画は `out/<名前>-short.mp4`（Git に入れない）。記録・確かめ残しは `proto/<app>.json` の notes。部品は `_dev/promo/trivia-kit.js`、作り方は `PROTO-BRIEF.md`。
 - metronome-sync-1 の試作は `metronome-sync-trivia2`、metronome-sync-2 は `trivia4`（trivia1 はもとからある別の話）。
+
+### 声つき（2026-11-03）
+かけあいの型のうち6本（ga-creatures-1・metamorphosis-1・net-route-3・phage-3・metronome-sync-2・ferrofluid-2）を VOICEVOX の声つきで録りなおした。字幕だけの版は `out/<名前>-short.subs-only.mp4` に残し、見くらべページの「字幕だけの版を見る」で切りかえられる。eye-optics-1 は目（からだ）の話なので AI の声にしない（字幕だけのまま）。
 
 ### 出す前に決めること（試作で見つかったもの）
 - extreme-1: 題名の深さを「8,400 m より下」と「8,200 m」のどちらにそろえるか（画面は両方を別の線で出している）。

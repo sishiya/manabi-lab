@@ -20,18 +20,18 @@
 const DUR = 40;
 const Q = TK.C.acc, SKY = '#5fd4ff', VERM = '#ff7a4a', ODOR = '#c79bff';
 const subs = [
-  { a: 0.0, b: 2.4, ja: 'ドロドロになっても、記憶は残る？', en: 'Turned to goo — does the memory survive?', noBurn: true },
-  { a: 2.4, b: 5.0, ja: '[さなぎの中って、ぜんぶドロドロでしょ？\nじゃあ、記憶も消える？]', en: '“Isn’t a pupa just goo inside?\nThen the memory is gone, right?”' },
-  { a: 5.0, b: 8.6, ja: '2008年の実験。イモムシに\nあるにおいのあと、[弱い電気]を感じさせる', en: 'A 2008 experiment: caterpillars smelled an odor,\nthen felt a mild shock' },
-  { a: 8.6, b: 12.0, ja: 'これを[8回]くり返す', en: 'Eight times in a row' },
-  { a: 12.0, b: 16.0, ja: 'するとイモムシは\nそのにおいを[さける]ようになった', en: 'The caterpillars learned to avoid that odor' },
-  { a: 16.0, b: 19.0, ja: '[でも、さなぎで体は\nつくりかえるんでしょ？]', en: '“But the pupa rebuilds the whole body, right?”' },
-  { a: 19.0, b: 22.0, ja: 'そう。でも脳と神経は\n[ぜんぶは]こわれない', en: 'Yes — but the brain and nerves\nare not all torn down' },
-  { a: 22.0, b: 26.0, ja: 'ガになってから\n同じ通路に入れると…', en: 'After they became moths,\nthey went into the same maze…' },
-  { a: 26.0, b: 30.0, ja: '[77%]が、においをさけた', en: '77% avoided the odor' },
-  { a: 30.0, b: 32.6, ja: '[体ににおいが\n残ってただけじゃない？]', en: '“Maybe the odor just stuck to their bodies?”' },
-  { a: 32.6, b: 36.0, ja: 'さなぎを洗っても、残った。\n教えていないさなぎに においをつけても、さけなかった', en: 'Washed pupae still remembered.\nUntrained pupae with the odor on them did not avoid it', size: 54 },
-  { a: 36.0, b: 40.0, ja: 'ただし、[若すぎるころ]に覚えたことは\nガになると、消えていた', en: 'But what they learned too young\nwas gone in the moth' },
+  { who: 'a', a: 0.0, b: 2.4, ja: 'ドロドロになっても、記憶は残る？', en: 'Turned to goo — does the memory survive?', noBurn: true },
+  { who: 'q', a: 2.4, b: 5.0, ja: '[さなぎの中って、ぜんぶドロドロでしょ？\nじゃあ、記憶も消える？]', en: '“Isn’t a pupa just goo inside?\nThen the memory is gone, right?”' },
+  { who: 'a', a: 5.0, b: 8.6, ja: '2008年の実験。イモムシに\nあるにおいのあと、[弱い電気]を感じさせる', en: 'A 2008 experiment: caterpillars smelled an odor,\nthen felt a mild shock' },
+  { who: 'a', a: 8.6, b: 12.0, ja: 'これを[8回]くり返す', en: 'Eight times in a row' },
+  { who: 'a', a: 12.0, b: 16.0, ja: 'するとイモムシは\nそのにおいを[さける]ようになった', en: 'The caterpillars learned to avoid that odor' },
+  { who: 'q', a: 16.0, b: 19.0, ja: '[でも、さなぎで体は\nつくりかえるんでしょ？]', en: '“But the pupa rebuilds the whole body, right?”' },
+  { who: 'a', a: 19.0, b: 22.0, ja: 'そう。でも脳と神経は\n[ぜんぶは]こわれない', en: 'Yes — but the brain and nerves\nare not all torn down' },
+  { who: 'a', a: 22.0, b: 26.0, ja: 'ガになってから\n同じ通路に入れると…', en: 'After they became moths,\nthey went into the same maze…' },
+  { who: 'a', a: 26.0, b: 30.0, ja: '[77%]が、においをさけた', en: '77% avoided the odor' },
+  { who: 'q', a: 30.0, b: 32.6, ja: '[体ににおいが\n残ってただけじゃない？]', en: '“Maybe the odor just stuck to their bodies?”' },
+  { who: 'a', a: 32.6, b: 36.0, ja: 'さなぎを洗っても、残った。\n教えていないさなぎに においをつけても、さけなかった', en: 'Washed pupae still remembered.\nUntrained pupae with the odor on them did not avoid it', size: 54 },
+  { who: 'a', a: 36.0, b: 40.0, ja: 'ただし、[若すぎるころ]に覚えたことは\nガになると、消えていた', en: 'But what they learned too young\nwas gone in the moth' },
 ];
 const cues = [
   { t: 0.05, type: 'pop' }, { t: 1.0, type: 'pop' }, { t: 1.8, type: 'pop' }, { t: 2.4, type: 'whoosh' },
@@ -307,7 +307,7 @@ function draw(g, t) {
   if (t >= 37.0) TK.note(g, t, 37.0, 40.0, '出どころ: Blackiston, Silva Casey & Weiss (2008)\nPLoS ONE 3(3): e1736', { size: 30 });
 }
 
-triviaStart({ out: 'metamorphosis-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+triviaStart({ out: 'metamorphosis-trivia1', dur: DUR, draw, subs, cues, peek: 1.5, voice: 'auto' });
 </script>
 </body>
 </html>
