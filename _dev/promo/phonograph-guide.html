@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="../../phonograph/js/physics.js"></script>
+<script src="../../phonograph/js/sources.js"></script>
+<script src="phono-common.js"></script>
+<script>
+'use strict';
+// 台本: エジソンの蓄音機 ― 使い方と見どころ（横長の説明動画、ライオンつき。2026-11-03）
+// 日本語の字幕は上に焼きこみ、下は YouTube の字幕（CC。英語）にあける。図（筒の軸の向きから見た機械）を画面いっぱいに、
+// アプリの「自由に試す」のボタンは「札」で左に。アプリの順（録音 → 再生 → 寄る → 元の音 → 手で回す → 速さ）をなぞる。
+// 音は BGM なし。録音中の歌・溝からの音・元の歌がそのまま聞こえる（音が鳴っているあいだはライオンはしゃべらない）
+const END = 124, DUR = END + IDENT_CLOSE;
+// 録るのは歌1曲（14 秒、約 6.2 m の溝）
+const SEG = [
+  { t: 0, motor: 0 },
+  { t: 14.2, motor: 60 },
+  { t: 14.6, rec: true },
+  { t: 28.7, up: true },
+  { t: 28.8, back: true, backRpm: 420 },
+  { t: 31.2, motor: 60 },
+  { t: 31.5, play: true },
+  { t: 45.6, back: true, backRpm: 420 },
+  { t: 48.0, motor: 0 },
+  { t: 48.6, orig: [0, 7.0] },
+  { t: 55.6, motor: 60 },
+  { t: 55.8, play: true },
+  { t: 62.9, back: true, backRpm: 420 },
+  { t: 64.6, motor: 0, tau: 0.06 },
+  { t: 65.0, play: true },
+  // 手で回す（66〜76 秒）: 60 → 110（高く）→ 35（低く）→ 止める → 逆に回す
+  { t: 66.0, motor: u => u < 1.5 ? 60 * ease(u / 0.5) : u < 3 ? 60 + 50 * ease((u - 1.5) / 1.2) : u < 4.2 ? 110 : u < 5.4 ? 110 - 75 * ease((u - 4.2) / 1.2) : u < 7 ? 35 : u < 7.6 ? 35 * (1 - ease((u - 7) / 0.6)) : u < 8.2 ? 0 : u < 10 ? -55 * ease((u - 8.2) / 0.6) : 0 },
+  { t: 76.2, back: true, backRpm: 420 },
+  { t: 78.6, motor: 120 },
+  { t: 79.0, play: true },
+  { t: 86.2, back: true, backRpm: 420 },
+  { t: 88.6, motor: 0 },
+  { t: 102.8, motor: 60 },
+  { t: 103.0, play: true },
+  { t: 116.4, up: true },
+  { t: 116.6, motor: 15, tau: 2 },
+];
+const SOUND = [[14.4, 28.8], [31.4, 45.8], [48.4, 63], [65.8, 76.4], [78.8, 86.4], [102.8, 116.6]];   // 音が鳴っているあいだ（ライオンはしゃべらない）
+// 寄り: 再生の途中で溝（40 倍）→ 針の先（400 倍）→ もどる
+const Z1 = 1;
+const zoom = t => {
+  const zs = [[36, Z1], [38.5, 40], [39.6, 40], [41.6, 400], [45.4, 400], [47.4, Z1]];
+  if (t <= zs[0][0] || t >= zs[zs.length - 1][0]) return Z1;
+  for (let i = 1; i < zs.length; i++) if (t <= zs[i][0]) { const [t0, a] = zs[i - 1], [t1, b] = zs[i]; return Math.exp(Math.log(a) + (Math.log(b) - Math.log(a)) * ease((t - t0) / (t1 - t0))); }
+  return Z1;
+};
+const grab = t => t > 65.2 && t < 66.2;   // 針をおろした直後は、図に「✋ 筒をつかんで回す」の矢印（アプリと同じ）
+
+// ---- ボタンの札（アプリでは図の下の「自由に試す」。ここでは左に）----
+const CH = {
+  acts: { x: 40, y: 300, title: '自由に試す（図の下）', btns: ['● 録音', '▶ 再生', '♪ 元の音', '✋ 針をおろす'], cols: 2 },
+  rpm: { x: 40, y: 300, title: '回す速さ', btns: ['毎分 60 回転', '毎分 120 回転'], cols: 1 },
+  src: { x: 40, y: 300, title: '入れる音', btns: ['メリーさんのひつじ（歌声）', '声「あー」', '口笛のような音', '低い音から高い音へ', 'マイク（自分の声）'], cols: 1 },
+  next: { x: 40, y: 300, title: '図の下', btns: ['つぎへ'], cols: 1 },
+};
+const SHOW = [
+  ['acts', 13.2, 30.5, t => t < 14.4 ? -1 : 0],
+  ['acts', 30.5, 47.6, t => t < 31.3 ? -1 : 1],
+  ['acts', 47.6, 55.6, t => t < 48.4 ? -1 : 2],
+  ['acts', 55.6, 62.9, t => 1],
+  ['acts', 63.6, 76, t => t < 64.9 ? -1 : 3],
+  ['rpm', 77.2, 86.2, t => t < 78.4 ? 0 : 1],
+  ['src', 89.4, 96.8, t => -1],
+  ['next', 104, 109.6, t => -1],
+];
+const B = (k, i) => btnRect(CH[k], i);
+let CUR = [];
+
+const CAPS = [
+  { a: 6.8, b: 13.0, main: '1878年のすず箔の蓄音機（筒の軸の向きから見た図）', sub: '左は手で回す筒（すず箔を巻いてある）、右はマウスピースと振動板・針',
+    en: ['A tin-foil phonograph from 1878, seen along the axis of the drum', 'Left: the hand-turned drum wrapped in tin foil. Right: the mouthpiece, diaphragm and needle'] },
+  { a: 14.6, b: 21.2, main: '● 録音: マウスピースに歌を入れながら、筒を回す', sub: '振動板がふるえ、まん中の針が箔を押して、らせんの溝を刻む',
+    en: ['● Record: sing into the mouthpiece while the drum turns', 'The diaphragm shakes and the needle in its center presses a spiral groove into the foil'] },
+  { a: 21.5, b: 28.6, main: '入れているのは「メリーさんのひつじ」', sub: 'エジソンが吹きこんだ英語の元の詞を、コンピュータで作った歌声で',
+    en: ['The song is "Mary Had a Little Lamb"', 'The original English words Edison recorded, sung by a computer-made voice'] },
+  { a: 31.6, b: 36.0, main: '▶ 再生: はじめにもどして、針で溝をなぞる', sub: '聞こえるのは、溝の形だけから計算した音（録った音は使わない）',
+    en: ['▶ Play: go back to the start and trace the groove with the needle', 'You hear sound computed only from the groove\'s shape (the recording itself is not used)'] },
+  { a: 36.2, b: 39.6, main: '寄ると、溝の深い・浅いが歌の形', sub: '動きと深さは 20 倍に',
+    en: ['Zoom in: the deep and shallow parts of the groove are the song', 'Motion and depth shown ×20'] },
+  { a: 39.9, b: 45.5, main: '本当の大きさ: 溝の深さは約 0.05 mm', sub: '丸い針の先（半径 0.15 mm、推定）は、細かい波の底まで入れない',
+    en: ['True size: the groove is about 0.05 mm deep', 'The round needle tip (0.15 mm radius, estimated) cannot reach the bottom of fine waves'] },
+  { a: 48.6, b: 55.5, main: '♪ 元の音: 蓄音機を通さない、入れたままの歌', sub: '大きさは、さっきの再生にそろえる',
+    en: ['♪ Original: the song as it went in, not through the machine', 'At the same loudness as the playback'] },
+  { a: 55.8, b: 62.8, main: 'もう一度、蓄音機の音', sub: 'こもるのは、振動板の共振（700 Hz あたり）と針の先の丸みのため',
+    en: ['The phonograph again', 'It sounds muffled because of the diaphragm resonance (around 700 Hz) and the round tip'] },
+  { a: 64.9, b: 69.0, main: '✋ 針をおろして、筒をつかんで回す', sub: '筒のどこをつかんでもよい（スマホは指で）',
+    en: ['✋ Lower the needle, grab the drum and turn it', 'Grab it anywhere (with your finger on a phone)'] },
+  { a: 69.2, b: 73.2, main: '速いと高く、ゆっくりだと低く', sub: '筒には重さがあるので、手に少しおくれてついてくる',
+    en: ['Faster is higher, slower is lower', 'The drum is heavy, so it follows your hand with a short delay'] },
+  { a: 73.4, b: 76.2, main: '押さえれば止まり、逆にも回せる', sub: '',
+    en: ['Hold it to stop, or turn it backward', ''] },
+  { a: 79.1, b: 86.2, main: '回す速さを毎分 120 回転（2倍）にして再生', sub: '録音と再生で速さを変えると、1オクターブ高い声に',
+    en: ['Play at 120 rpm (twice as fast)', 'Recording and playing at different speeds: one octave higher'] },
+  { a: 89.6, b: 96.6, main: '入れる音は5つ。マイクで自分の声も', sub: 'マイクの声はこのページの中だけ（保存も送信もしない）',
+    en: ['Five input sounds, including your own voice', 'The microphone sound stays on this page only (never saved or sent)'] },
+  { a: 96.9, b: 102.6, main: '声が大きすぎる（110 dB より上）と、再生で針が溝から跳ねる', sub: 'ガリガリという雑音も、計算の結果',
+    en: ['If the voice is too loud (above 110 dB), the needle jumps out of the groove on playback', 'The scratchy noise is also a result of the calculation'] },
+  { a: 104.0, b: 109.6, main: 'はじめての人は「つぎへ」を押していくだけ', sub: '録音 → 再生 → くらべる → 手で回す → マイク の順に',
+    en: ['First time? Just keep pressing "Next" (つぎへ)', 'Record → play → compare → turn by hand → microphone'] },
+  { a: 109.8, b: 116.0, main: '振動板（5つのモード）・針・すず箔の凹み・空気まで計算', sub: '1秒を 192,000 回に分けて。振動板の厚み・針の重さなどは推定',
+    en: ['The diaphragm (5 modes), needle, tin-foil dents and the air are all computed', '192,000 steps per second; some values like the diaphragm thickness are estimates'] },
+];
+
+const MUSIC = { style: 'none', stopAt: END, cues: [{ t: END, type: 'jingle' }], extra: phExtra };
+const EXP = [[0, 'calm'], [7, 'smile'], [11, 'calm'], [14.8, 'wow'], [18, 'calm'], [21.6, 'smile'], [26, 'calm'], [31.8, 'think'], [36.4, 'wow'], [40, 'shock'], [43, 'calm'],
+  [48.8, 'smile'], [53, 'calm'], [56, 'think'], [60, 'calm'], [65, 'smile'], [69.4, 'wow'], [72, 'calm'], [73.6, 'smile'], [79.2, 'wow'], [83, 'calm'], [89.8, 'smile'], [94, 'calm'],
+  [97, 'shock'], [101, 'calm'], [104.2, 'smile'], [108, 'calm'], [110, 'proud'], [114, 'calm'], [END - 7.6, 'smile']];
+promoStart({
+  name: 'エジソンの蓄音機（使い方）', out: 'phonograph-guide', src: '../../phonograph/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 40,
+  inject: PH_INJECT,
+  music: MUSIC,
+  ready: w => !!LION.api && phReady(w),
+  setup(w) {
+    w.dispatchEvent(new w.Event('resize'));
+    phBuild(SEG, DUR);
+    const hand = phHandKeys(w, 66.0, 75.8, zoom);
+    CUR = [
+      { t: 13.4, x: 700, y: 700 },
+      { t: 14.0, ...B('acts', 0) }, { t: 14.4, ...B('acts', 0), click: true },
+      { t: 16, x: 500, y: 760, hide: true },
+      { t: 30.6, x: 400, y: 760 }, { t: 31.0, ...B('acts', 1) }, { t: 31.3, ...B('acts', 1), click: true },
+      { t: 33, x: 500, y: 760, hide: true },
+      { t: 47.6, x: 400, y: 760 }, { t: 48.0, ...B('acts', 2) }, { t: 48.4, ...B('acts', 2), click: true },
+      { t: 50, x: 500, y: 760, hide: true },
+      { t: 63.8, x: 400, y: 760 }, { t: 64.5, ...B('acts', 3) }, { t: 64.9, ...B('acts', 3), click: true },
+      { t: 65.4, x: hand[0].x - 120, y: hand[0].y + 140 },
+      ...hand,
+      { t: 76.4, x: hand[hand.length - 1].x, y: hand[hand.length - 1].y, hide: true },
+      { t: 77.4, x: 400, y: 700 }, { t: 78.0, ...B('rpm', 1) }, { t: 78.4, ...B('rpm', 1), click: true },
+      { t: 80, x: 500, y: 760, hide: true },
+      { t: 104.2, x: 500, y: 700 }, { t: 105, ...B('next', 0) }, { t: 109.4, ...B('next', 0), hide: true },
+    ];
+    // ライオン: 音が鳴っているあいだはしゃべらない（歌と溝の音を聞かせる）
+    const talk = lionSetup({ caps: CAPS, cur: CUR, exp: EXP, end: END, bye: END - 5.8 }).filter(c => !SOUND.some(([a, b]) => c.t > a - 1.5 && c.t < b));
+    LION.talk = talk; MUSIC.cues.push(...talk);
+    return w.document.getElementById('cv');
+  },
+  subs: () => guideSubs(END, 'エジソンの蓄音機', "Edison's Phonograph", CAPS),
+  renderAt(t, w) { phRender(w, t, zoom, grab); },
+  drawSource: phDrawSource,
+  overlay(g, t, w) {
+    phStatus(g, t, 245, t < END ? 1 : 0, 40);
+    for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawGuideChrome(g, t, END, 'エジソンの蓄音機',
+      'おもな出どころ: エジソンの米国特許 200,521（1878）、Edison Papers（Rutgers 大学）、The Henry Ford・Edisonium（機械の大きさ）、Haber ほか「St. Louis」のすず箔の復元（溝の深さ 0.05 mm）、Klatt（1980、合成の声）。振動板の厚み・減衰、針の重さと先の丸みは推定');
+    drawLion(g, t);
+  },
+  errors: w => (w.__phErr || []).map(String),
+});
+lionOpen();
+</script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+{
+  "videoId": "wnGvW76kPDo",
+  "file": "_dev/promo/out/phonograph-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/phonograph-short.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-04T20:05:00+09:00",
+  "captions": {
+    "en": "_dev/promo/out/phonograph-short.en.srt"
+  },
+  "title": "1878年の蓄音機で歌を録って、溝からまた鳴らす。全部計算で #Shorts",
+  "description": "1878年のすず箔の蓄音機に歌を入れると、振動板がふるえ、針が箔に溝を刻みます。その溝を針でなぞると、また歌にもどります。振動板・針・すず箔の凹み・空気まで、ここまでを全部計算で。録った音は使わず、溝の形だけから鳴らします。筒を手で回すと、速さで声の高さが変わります。ブラウザのアプリ「エジソンの蓄音機」から。\n\nアプリ: https://sishiya.github.io/manabi-lab/phonograph/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nエジソン「Improvement in Phonograph or Speaking Machines」米国特許 200,521（1878）\nThomas A. Edison Papers（Rutgers 大学）「Inventing Sound Recording」\nThe Henry Ford「Tinfoil Phonograph, 1878」・Edisonium「Bergmann Exhibition Tinfoil」（機械の大きさ・雲母の振動板 直径 50 mm）\nedisontinfoil.com（すず箔の厚み・ねじのピッチ）\nC. Haber, E. Cornell ほか「Restoring the 1878 \"St. Louis\" Edison Tinfoil Recording」（縦の溝、溝の深さ 0.05 mm）\nUniversity of Iowa「Edison's Phonograph」（物理の演示資料）\nD. H. Klatt（1980）フォルマント合成（合成の歌声の形）\n歌詞は Sarah Josepha Hale（1830）の英語の元の詞（パブリックドメイン）。振動板の厚み・減衰、針の重さと先の丸み、箔の下のすきまは推定です。\n\n音: アプリと同じ計算で作った音（歌声・溝から計算した音）。BGM はなし。最後の合図の音はプログラムで合成したオリジナルの音です。\n\n#蓄音機 #エジソン #まなびラボ",
+  "tags": [
+    "エジソンの蓄音機",
+    "蓄音機",
+    "エジソン",
+    "すず箔",
+    "フォノグラフ",
+    "録音",
+    "音のしくみ",
+    "シミュレーション",
+    "物理",
+    "まなびラボ",
+    "しし屋",
+    "Edison's Phonograph",
+    "tinfoil phonograph",
+    "Shorts"
+  ],
+  "localizations": {
+    "en": {
+      "title": "Recording a Song on an 1878 Phonograph and Playing It Back from the Groove, All Computed #Shorts",
+      "description": "From \"Edison's Phonograph\", a browser app. Sing into a tin-foil phonograph from 1878: the diaphragm shakes and the needle presses a groove into the foil. Trace the groove with the needle and it sings again. The diaphragm, the needle, the dents in the tin foil and the air are all computed, and the sound comes only from the shape of the groove, not from a recording. Turn the drum by hand and the pitch follows the speed.\n\nApp (switch the app to English with the EN button): https://sishiya.github.io/manabi-lab/phonograph/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMain sources:\nT. A. Edison, \"Improvement in Phonograph or Speaking Machines\", US Patent 200,521 (1878)\nThomas A. Edison Papers (Rutgers University), \"Inventing Sound Recording\"\nThe Henry Ford, \"Tinfoil Phonograph, 1878\"; Edisonium, \"Bergmann Exhibition Tinfoil\" (machine size; 50 mm mica diaphragm)\nedisontinfoil.com (foil thickness, screw pitch)\nC. Haber, E. Cornell et al., \"Restoring the 1878 'St. Louis' Edison Tinfoil Recording\" (vertical groove, 0.05 mm deep)\nUniversity of Iowa, \"Edison's Phonograph\" (physics demonstration notes)\nD. H. Klatt (1980), formant synthesis (the synthetic singing voice)\nLyrics: Sarah Josepha Hale's original English words (1830, public domain). The diaphragm thickness and damping, the needle mass and tip radius, and the gap under the foil are estimates.\n\nSound: computed by the same code as the app (the singing voice and the sound computed from the groove). No background music. The closing jingle is an original sound synthesized by code.\n\n#phonograph #Edison #physics"
+    }
+  }
+}

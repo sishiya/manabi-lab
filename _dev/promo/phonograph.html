@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="../../phonograph/js/physics.js"></script>
+<script src="../../phonograph/js/sources.js"></script>
+<script src="phono-common.js"></script>
+<script>
+'use strict';
+// 台本: エジソンの蓄音機（ショート、40秒＋締め）。?short で縦長に録る
+// 歌を録る → はじめにもどしてなぞる（針の先へ寄る）→ 手で回して速さを変える → 元の歌と蓄音機の音をくらべる
+const V = new URLSearchParams(location.search).has('short');
+const DUR = SHORT_END + IDENT_CLOSE;
+if (V) PH_DY = 330;   // 縦長: 機械を上へ（下の字幕と重ならないように）
+// 録るのは 5.6 秒（約 2.5 m の溝）。手で回す・2倍の速さは、その中に収まる長さで（先の白い箔へ行くと鳴らない）
+const SEG = [
+  { t: 0, motor: 60 },
+  { t: 0.4, rec: true },
+  { t: 6.0, up: true },
+  { t: 6.1, back: true },
+  { t: 7.3, motor: 60 },
+  { t: 7.5, play: true },
+  { t: 13.4, back: true },
+  { t: 14.8, motor: 60 },
+  // 手で回す: 60 → 100（高く）→ 40（低く）。毎分の回転 × 秒の合計が約 320（録った溝の長さの中）
+  { t: 15.0, play: true, motor: u => u < 0.8 ? 60 : u < 2.0 ? 60 + 40 * ease((u - 0.8) / 1.2) : u < 2.8 ? 100 : u < 4.0 ? 100 - 60 * ease((u - 2.8) / 1.2) : 40 },
+  { t: 19.6, back: true },
+  { t: 20.9, motor: 0 },
+  { t: 21.2, orig: [0, 3.0] },
+  { t: 24.2, motor: 60 },
+  { t: 24.4, play: true },
+  { t: 27.6, back: true },
+  { t: 28.6, motor: 120 },
+  { t: 28.8, play: true },
+  { t: 31.4, back: true },
+  { t: 32.6, motor: 60 },
+  { t: 32.8, play: true },   // 締めまで、もう一度ふつうの速さで鳴らす
+  { t: 39.8, up: true },
+  { t: 40.0, motor: 15, tau: 1.5 },
+];
+// 寄り: 再生の途中で針の先へ（400 倍）、もどる
+const Z1 = V ? 1 : 1.3;
+const zoom = t => {
+  const k = t < 9.6 ? 0 : t < 11.6 ? ease((t - 9.6) / 2) : t < 13.2 ? 1 : t < 14.6 ? 1 - ease((t - 13.2) / 1.4) : 0;
+  return Math.exp(Math.log(Z1) + (Math.log(400) - Math.log(Z1)) * k);
+};
+const CAPS = [
+  { a: 6.2, b: 9.6, main: '溝をなぞると、また歌になる', sub: '聞こえるのは、溝の形だけから計算した音',
+    en: ['Trace the groove and it sings again', 'What you hear is computed only from the groove’s shape'] },
+  { a: 10.0, b: 14.6, main: '本当の大きさ: 溝の深さは約 0.05 mm', sub: '丸い針の先（半径 0.15 mm、推定）が凹みをなぞる',
+    en: ['True size: the groove is about 0.05 mm deep', 'The round needle tip (0.15 mm radius, estimated) traces the dents'] },
+  { a: 15.2, b: 19.6, main: '筒を手で回すと、速さで声の高さが変わる', sub: '速いと高く、ゆっくりだと低く',
+    en: ['Turn the drum by hand and the pitch follows the speed', 'Faster is higher, slower is lower'] },
+  { a: 21.1, b: 24.2, main: 'くらべる: 入れた元の歌', sub: 'コンピュータで作った歌声（蓄音機を通さない）',
+    en: ['Compare: the original song we put in', 'A computer-made singing voice (not through the machine)'] },
+  { a: 24.4, b: 27.8, main: '蓄音機の音', sub: 'こもるのは、振動板の共振（700 Hz あたり）と針の丸みのため',
+    en: ['The phonograph’s sound', 'It is muffled by the diaphragm resonance (around 700 Hz) and the round tip'] },
+  { a: 28.8, b: 31.6, main: '2倍の速さで回すと、1オクターブ高く', sub: '',
+    en: ['Twice as fast: one octave higher', ''] },
+  { a: 31.9, b: 35.0, main: '声 → 溝 → 声を、ぜんぶ計算', sub: '振動板・針・すず箔の凹み・空気まで',
+    en: ['Voice → groove → voice, all computed', 'The diaphragm, needle, tin-foil dents and the air'] },
+];
+let HAND = [];
+promoStart({
+  name: 'エジソンの蓄音機', out: 'phonograph', src: '../../phonograph/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 16,
+  inject: PH_INJECT,
+  music: { style: 'none', stopAt: SHORT_END, cues: [{ t: SHORT_END, type: 'jingle' }], extra: phExtra },
+  ready: phReady,
+  setup(w) {
+    w.dispatchEvent(new w.Event('resize'));
+    phBuild(SEG, DUR);
+    HAND = phHandKeys(w, 15.4, 19.4, zoom);
+    HAND.unshift({ t: 15.0, x: HAND[0].x + 120, y: HAND[0].y + 160 });
+    HAND.push({ t: 19.8, x: HAND[HAND.length - 1].x, y: HAND[HAND.length - 1].y, hide: true });
+    return w.document.getElementById('cv');
+  },
+  subs: () => shortSubs('エジソンの蓄音機', "Edison's Phonograph", '歌が溝になり、溝がまた歌になる', 'A song becomes a groove, and the groove sings again', CAPS,
+    'ブラウザで、自分の声も録れます', 'Record your own voice in the browser too'),
+  renderAt(t, w) { phRender(w, t, zoom); },
+  drawSource: phDrawSource,
+  overlay(g, t, w) {
+    phStatus(g, t, V ? 250 : 70, t > 5.8 && t < SHORT_END ? 1 : 0);
+    drawCursor(g, HAND, t);
+    drawCaps(g, t, CAPS);
+    drawShortChrome(g, t, 'エジソンの蓄音機', '歌が溝になり、溝がまた歌になる', 'ブラウザで、自分の声も録れます',
+      'おもな出どころ: エジソンの米国特許 200,521（1878）、Edison Papers（Rutgers 大学）、Haber ほか「St. Louis」のすず箔の復元、Klatt（1980、合成の声）。振動板の厚み・針の重さと先の丸みは推定');
+  },
+  errors: w => (w.__phErr || []).map(String),
+  short: { iw: 1080, ih: 1920 },
+});
+</script>
+</body>
+</html>

@@ -30,5 +30,6 @@ window.SHORT_THUMBS = {
   'tree-of-life':  { name: 'いのちの系統樹', t: 33, focus: [0.62, 0.5], zoom: 1.25, kicker: '名前のついた生きもの', big: '225万種', sub: 'の木で、ヒトはどこ？', c1: '#fff6e0', c2: '#ffb45a' },
   'typing-hand':   { name: 'タイピングする手', t: 18, focus: [0.5, 0.36], zoom: 1.35, kicker: 'キーを打つとき、皮ふの下で', big: '骨と筋肉', sub: 'はこう動く（計算した動き）', c1: '#fff0e6', c2: '#ff8a5c' },
   'wave-growth':   { name: '波が育つまで', t: 31, focus: [0.5, 0.42], zoom: 1.3, kicker: '凪の海に風が吹いて', big: '約30時間', sub: 'で育ちきる。高さ 3.1 m', c1: '#fff3d6', c2: '#ffc46b' },
-  'crt-pixels':    { name: 'ブラウン管のドット絵', t: 14.35, focus: [0.5, 0.44], zoom: 1.2, wmask: false, kicker: '同じドット絵、左は液晶', big: 'ブラウン管', sub: 'だと、こう見えた（計算で再現）', c1: '#e8fff0', c2: '#7fe0a0' }
+  'crt-pixels':    { name: 'ブラウン管のドット絵', t: 14.35, focus: [0.5, 0.44], zoom: 1.2, wmask: false, kicker: '同じドット絵、左は液晶', big: 'ブラウン管', sub: 'だと、こう見えた（計算で再現）', c1: '#e8fff0', c2: '#7fe0a0' },
+  'phonograph':    { name: 'エジソンの蓄音機', t: 20.3, focus: [0.45, 0.31], zoom: 1.3, kicker: '歌が刻まれた溝は深さ', big: '0.05 mm', sub: 'なぞると、また歌に（全部計算）', c1: '#fff3d6', c2: '#e8b860' }
 };
