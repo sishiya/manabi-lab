@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく immune-2（型B もしも計算）「もしも体が、ウイルスをまったく止めなかったら」。台本は trivia/immune-battle.md。?short で録る
+// 数字: Baccam ほか (2006) J Virol 80:7590（大人の実験感染 H1N1 に合わせたモデル）。約6時間後からウイルスを作る、R₀ 約22（体の中の細胞→細胞）。
+// 22 を5回かけると 約515万（もしもの計算。実際には起きない）。1世代の時間は言い切らない。薬のすすめにしない。
+const DUR = 35;
+const subs = [
+  { a: 0.0, b: 3.0, ja: 'インフルエンザにかかった\n細胞[1個]', en: 'One cell infected with flu' },
+  { a: 3.0, b: 8.0, ja: '6時間ほどたつと、ウイルスを作って\n[外へ出し]はじめる', en: 'After about 6 hours, it starts\nmaking and releasing virus' },
+  { a: 8.0, b: 13.0, ja: '1個の細胞から、新しく感染する細胞は\n[約22個]', en: 'One cell goes on to infect\nabout 22 new cells' },
+  { a: 13.0, b: 22.0, ja: 'もしも体が何もしなかったら\n5回くりかえすだけで[500万個]', en: 'If the body did nothing,\nfive rounds would make 5 million' },
+  { a: 22.0, b: 28.0, ja: '実際には、のどの細胞が足りなくなるのと\n[インターフェロン]の合図で止まる', en: 'In reality it stops: the throat runs short of cells,\nand interferon signals kick in' },
+  { a: 28.0, b: 33.0, ja: '研究者の結論:\n薬は、[できるだけ早く]', en: 'The researchers’ conclusion:\nantivirals work best when started early' },
+  { a: 33.0, b: 35.0, ja: '数字は、大人の実験感染に合わせた[モデルの値]', en: 'Numbers come from a model fitted to adult infections' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 3.0, type: 'tick' }, { t: 5.6, type: 'ding' }, { t: 8.0, type: 'whoosh' }, { t: 9.4, type: 'pop' },
+  { t: 13.6, type: 'pop' }, { t: 15.0, type: 'pop' }, { t: 16.4, type: 'pop' }, { t: 17.8, type: 'pop' }, { t: 19.2, type: 'rise' },
+  { t: 22.0, type: 'whoosh' }, { t: 28.0, type: 'ding' },
+];
+// 六角形の細胞の並び（中心から近い順）
+const HR = 30, CX = 540, CY = 650, cells = [];
+for (let q = -14; q <= 14; q++) for (let r = -14; r <= 14; r++) {
+  const x = CX + HR * 1.5 * q, y = CY + HR * Math.sqrt(3) * (r + q / 2);
+  if (x < 70 || x > 1010 || y < 330 || y > 1000) continue;
+  cells.push({ x, y, d: Math.hypot(x - CX, y - CY) + ((q * 7 + r * 13) % 5) * 6 });
+}
+cells.sort((a, b) => a.d - b.d);
+function hex(g, x, y, r) { g.beginPath(); for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; i ? g.lineTo(x + r * Math.cos(a), y + r * Math.sin(a)) : g.moveTo(x + r * Math.cos(a), y + r * Math.sin(a)); } g.closePath(); }
+// n 個を赤く（n 個以上は全部）。grey: 灰色になった（使いきった）割合
+function grid(g, n, o = {}) {
+  cells.forEach((c, i) => {
+    hex(g, c.x, c.y, HR - 3);
+    const on = i < n;
+    g.fillStyle = on ? (o.used && i < o.used ? 'rgba(140,150,170,0.45)' : 'rgba(255,107,107,0.75)') : 'rgba(95,212,255,0.10)';
+    g.strokeStyle = on ? 'rgba(255,160,160,0.9)' : 'rgba(160,190,255,0.25)'; g.lineWidth = 2;
+    g.fill(); g.stroke();
+  });
+}
+const fmtJa = v => v >= 10000 ? (v >= 1e6 ? Math.round(v / 10000).toLocaleString('ja-JP') + '万' : (v / 10000).toFixed(v < 1e5 ? 1 : 0) + '万') : Math.round(v).toLocaleString('ja-JP');
+
+function draw(g, t) {
+  // 0〜8: 1個 → ウイルスを出しはじめる
+  if (t < 8.0) {
+    grid(g, 1);
+    const p = 0.5 + 0.5 * Math.sin(t * 5);
+    g.save(); g.strokeStyle = `rgba(255,107,107,${0.4 + 0.5 * p})`; g.lineWidth = 6; g.beginPath(); g.arc(CX, CY, 46 + 8 * p, 0, Math.PI * 2); g.stroke(); g.restore();
+    TK.text(g, t < 3 ? '[1個] → ？' : '', PW / 2, 220, 100);
+    if (t >= 3.0) {
+      const hrs = Math.min(6, (t - 3.2) / 2.4 * 6);
+      TK.card(g, 290, 160, 500, 120, { r: 60 });
+      TK.text(g, Math.max(0, Math.floor(hrs)) + ' 時間後', PW / 2, 222, 70, { color: hrs >= 6 ? TK.C.acc : '#fff' });
+      if (hrs >= 6) {   // ウイルスの粒が外へ
+        for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 + i, d = 40 + ((t - 5.6) * 140 + i * 23) % 260; g.fillStyle = TK.C.acc; g.beginPath(); g.arc(CX + Math.cos(a) * d, CY + Math.sin(a) * d, 7, 0, Math.PI * 2); g.fill(); }
+      }
+    }
+  }
+  // 8〜13: 1 → 22
+  if (t >= 8.0 && t < 13.0) {
+    const n = 1 + Math.round(21 * ease((t - 8.4) / 1.2));
+    grid(g, n);
+    TK.card(g, 290, 160, 500, 120, { r: 60 });
+    TK.text(g, '1 → [' + n + ']', PW / 2, 222, 80);
+    TK.note(g, t, 9.0, 13, '人から人ではなく、体の中の「細胞から細胞」の数', { size: 30 });
+  }
+  // 13〜22: もしも止まらなかったら
+  if (t >= 13.0 && t < 22.0) {
+    const gens = [22, 484, 10648, 234256, 5153632];
+    const gi = clamp(Math.floor((t - 13.6) / 1.4), 0, 4), v = gens[gi];
+    const frac = Math.log(v) / Math.log(gens[4]);
+    grid(g, Math.round(cells.length * clamp(frac * frac * 1.02, 0, 1)));
+    TK.card(g, 130, 140, 820, 160, { r: 40, fill: 'rgba(11,20,48,0.92)' });
+    TK.lines(g, 'もしも\n' + (gi + 1) + '回目', 250, 220, 46, { color: TK.C.sub });
+    TK.text(g, '[' + fmtJa(v) + ']個', 640, 220, 92);
+    TK.note(g, t, 13.6, 22, 'もしもの計算（絵の細胞の数は目安）', { size: 32 });
+  }
+  // 22〜28: 実際には止まる（細胞が足りない・インターフェロン）
+  if (t >= 22.0 && t < 28.0) {
+    const k = ease((t - 22.3) / 2.0);
+    grid(g, cells.length, { used: Math.round(cells.length * k) });
+    // インターフェロンの合図（青い波が広がる）
+    for (let i = 0; i < 4; i++) {
+      const r = ((t - 22.5) * 260 + i * 160) % 640; if (t < 22.5) break;
+      g.save(); g.strokeStyle = `rgba(95,212,255,${0.7 * (1 - r / 640)})`; g.lineWidth = 8; g.beginPath(); g.arc(CX, CY, r, 0, Math.PI * 2); g.stroke(); g.restore();
+    }
+    TK.card(g, 130, 140, 820, 160, { r: 40, fill: 'rgba(11,20,48,0.92)' });
+    TK.lines(g, '細胞が足りなくなる\n＋ [インターフェロン]の合図', PW / 2, 220, 52);
+    TK.note(g, t, 22.5, 28, 'モデルの中のしくみをイメージした絵', { size: 30 });
+  }
+  // 28〜35: 結論
+  if (t >= 28.0) {
+    const f = fade(t, 28, 36, 0.3); g.save(); g.globalAlpha = f;
+    TK.card(g, 110, 330, 860, 420);
+    TK.lines(g, '研究者の結論\n抗ウイルス薬は\n[できるだけ早く]', PW / 2, 540, 80);
+    g.restore();
+    TK.note(g, t, 29.5, 35, 'モデルの値（大人の実験感染 H1N1 に合わせた計算）\n出どころ: Baccam ほか (2006) J Virol 80:7590', { size: 30 });
+  }
+}
+
+triviaStart({ out: 'immune-battle-trivia2', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

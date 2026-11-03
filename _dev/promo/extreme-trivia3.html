@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく extreme-3（型H 当ててみて）「37℃のお湯が沸くのはどこ？」。台本は trivia/extreme.md。?short で録る
+// 計算（台本と同じ）: 気圧は U.S. Standard Atmosphere 1976（0〜20 km、ジオポテンシャル高度）、水の沸く温度は Wagner & Pruss (2002) の飽和蒸気圧の式を逆に解く。
+// 富士山頂 3,776 m → 87.4℃、10 km → 66.3℃、19.2 km → 37℃（6,282 Pa ＝ 地上の 1/16）。
+// 台本の最後の「アームストロング限界」は出どころの PDF を読めていない（台本の注: 確かめられなければ外す）ので外した
+const DUR = 30;
+const subs = [
+  { a: 0.0, b: 5.0, ja: '37℃のお湯が[沸とう]するのは、どこ？', en: 'Where does 37 °C water boil?', noBurn: true },
+  { a: 5.0, b: 10.0, ja: '富士山の頂上では、水は[87℃]で沸く。', en: 'At the top of Mt. Fuji, water boils at 87 °C.' },
+  { a: 10.0, b: 15.0, ja: '旅客機の高さでは、[66℃]。', en: 'At airliner altitude: 66 °C.' },
+  { a: 15.0, b: 21.0, ja: '答えは③。高さ19 kmで、[37℃]。\nぬるいお湯が、ぐつぐつ。', en: 'The answer is 3: at 19 km, 37 °C.\nLukewarm water, boiling away.' },
+  { a: 21.0, b: 27.0, ja: '空気の重さが地上の[16分の1]になると、\n水は体温くらいで沸く。', en: 'When air pressure drops to 1/16 of sea level,\nwater boils at about body temperature.' },
+  { a: 27.0, b: 30.0, ja: 'エベレストの頂上なら、何℃だと思う？', en: 'What about the top of Everest?' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 0.25, type: 'pop' }, { t: 0.45, type: 'pop' }, { t: 3.0, type: 'tick' }, { t: 4.0, type: 'tick' },
+  { t: 5.0, type: 'whoosh' }, { t: 8.0, type: 'ding' }, { t: 10.0, type: 'whoosh' }, { t: 13.0, type: 'ding' },
+  { t: 15.0, type: 'rise' }, { t: 18.6, type: 'ding' }, { t: 21.0, type: 'whoosh' }, { t: 27.0, type: 'pop' },
+];
+const OPTS = ['富士山の頂上', '旅客機の高さ（10 km）', '高さ 19 km'];
+
+// 標準大気（0〜20 km）
+function pressure(z) {
+  const h = 6356766 * z / (6356766 + z);
+  return h <= 11000 ? 101325 * Math.pow(1 - 0.0065 * h / 288.15, 5.25588) : 22632 * Math.exp(-1.5769e-4 * (h - 11000));
+}
+// 飽和蒸気圧（Wagner & Pruss 2002）→ 沸く温度（℃）
+function psat(T) {
+  const Tc = 647.096, pc = 22.064e6, a = [-7.85951783, 1.84408259, -11.7866497, 22.6807411, -15.9618719, 1.80122502], tau = 1 - T / Tc;
+  return pc * Math.exp(Tc / T * (a[0] * tau + a[1] * Math.pow(tau, 1.5) + a[2] * tau ** 3 + a[3] * Math.pow(tau, 3.5) + a[4] * tau ** 4 + a[5] * Math.pow(tau, 7.5)));
+}
+function boil(p) { let lo = 273.16, hi = 400; for (let i = 0; i < 50; i++) { const m = (lo + hi) / 2; if (psat(m) < p) lo = m; else hi = m; } return (lo + hi) / 2 - 273.15; }
+
+// 高さのものさし（0〜20 km）
+const RX = 210, RY0 = 1020, RY1 = 350, ZMAX = 20000;
+const zy = z => RY0 + (RY1 - RY0) * z / ZMAX;
+function ruler(g) {
+  const gr = g.createLinearGradient(0, RY0, 0, RY1);
+  gr.addColorStop(0, 'rgba(95,170,255,0.35)'); gr.addColorStop(1, 'rgba(10,15,40,0.4)');
+  g.fillStyle = gr; g.fillRect(RX, RY1, PW - 120 - RX, RY0 - RY1);
+  g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 4; g.beginPath(); g.moveTo(RX, RY0); g.lineTo(RX, RY1); g.stroke();
+  for (let z = 0; z <= 20000; z += 5000) { g.beginPath(); g.moveTo(RX - 24, zy(z)); g.lineTo(RX, zy(z)); g.stroke(); TK.text(g, z / 1000 + ' km', RX - 34, zy(z), 36, { align: 'right', color: TK.C.sub, bold: false }); }
+  // 富士山（線）
+  g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 4; g.beginPath(); g.moveTo(RX + 10, RY0); g.lineTo(RX + 170, zy(3776)); g.lineTo(RX + 330, RY0); g.stroke();
+}
+// コップ（湯気・泡つき）。bub: 0〜1 で泡の多さ
+function cup(g, x, y, temp, bub, t) {
+  g.save(); g.strokeStyle = '#fff'; g.lineWidth = 5;
+  g.fillStyle = 'rgba(95,212,255,0.35)'; g.beginPath(); g.moveTo(x - 50, y - 90); g.lineTo(x - 40, y); g.lineTo(x + 40, y); g.lineTo(x + 50, y - 90); g.closePath(); g.fill(); g.stroke();
+  for (let i = 0; i < Math.round(14 * bub); i++) { const ph = (t * 1.5 + i * 0.37) % 1, bx = x - 30 + ((i * 37) % 60); g.fillStyle = 'rgba(255,255,255,0.8)'; g.beginPath(); g.arc(bx, y - 10 - ph * 70, 5 + 3 * ph, 0, Math.PI * 2); g.fill(); }
+  g.restore();
+  TK.text(g, temp, x + 90, y - 50, 44, { align: 'left', color: TK.C.acc });
+}
+
+function draw(g, t) {
+  // 0〜5: 3択と考える時間
+  if (t < 5.0) {
+    cup(g, 470, 300, '37℃', 0, t);
+    TK.text(g, 'このお湯が、[ぐつぐつ]沸くのは？', PW / 2, 400, 62);
+    TK.choices(g, t, 0.0, 5.0, OPTS, { y: 700, h: 140, gap: 30, think: [3.0, 5.0], size: 60 });
+  }
+  // 5〜21: コップが上へ。沸く温度が下がる
+  if (t >= 5.0 && t < 21.0) {
+    ruler(g);
+    let z;
+    if (t < 10) z = lerp(0, 3776, ease((t - 5.3) / 2.4));
+    else if (t < 15) z = lerp(3776, 10000, ease((t - 10.2) / 2.4));
+    else z = lerp(10000, 19185, ease((t - 15.2) / 2.8));
+    const T = boil(pressure(z));
+    TK.card(g, 340, 150, 600, 160, { r: 40 });
+    TK.text(g, '水が沸く温度', 640, 195, 40, { color: TK.C.sub });
+    TK.text(g, T.toFixed(0) + ' ℃', 640, 260, 84, { color: T < 38 ? TK.C.acc : '#fff' });
+    cup(g, 620, zy(z) + 45, '', T < 38 ? 1 : 0.15, t);
+    TK.text(g, (z / 1000).toFixed(1) + ' km', 720, zy(z) - 20, 44, { align: 'left' });
+    [[3776, '富士山 87℃', 5.5], [10000, '旅客機 66℃', 12.8]].forEach(([zz, s, a]) => { if (t > a) { g.strokeStyle = 'rgba(255,255,255,0.35)'; g.setLineDash([8, 8]); g.lineWidth = 3; g.beginPath(); g.moveTo(RX, zy(zz)); g.lineTo(PW - 120, zy(zz)); g.stroke(); g.setLineDash([]); TK.text(g, s, PW - 140, zy(zz) + 30, 36, { align: 'right', color: TK.C.sub }); } });
+    if (t > 18.4) { const p = clamp(TK.pop(t, 18.4, 0.35), 0, 1.2); g.save(); g.globalAlpha = clamp(p, 0, 1); TK.card(g, 260, 520, 280, 120, { fill: 'rgba(255,207,74,0.85)', stroke: TK.C.acc, r: 30 }); TK.text(g, '答え ③', 400, 580, 64, { color: '#0b1430', blur: 0 }); g.restore(); }
+    TK.note(g, t, 5.3, 21, '標準大気の気圧で計算（その日の天気で少し変わる）', { size: 32 });
+  }
+  // 21〜27: 気圧が地上の16分の1
+  if (t >= 21.0 && t < 27.0) {
+    TK.text(g, '空気の重さ（気圧）', PW / 2, 250, 60, { color: TK.C.sub });
+    TK.bars(g, t, 21.2, 27.0, [
+      { label: '地上', v: 1, color: TK.C.acc2, text: '1013 hPa' },
+      { label: '高さ 19 km', v: 1 / 16.1, color: TK.C.acc, text: '' },
+    ], { y: 400, gap: 240, stagger: 0.9 });
+    TK.text(g, '63 hPa', 110, 800, 44, { align: 'left', color: TK.C.acc });
+    if (t > 23.4) { g.save(); g.globalAlpha = fade(t, 23.4, 27, 0.3); TK.text(g, '地上の [16分の1]', PW / 2, 960, 84); g.restore(); }
+  }
+  // 27〜30: コメントの問い
+  if (t >= 27.0) {
+    cup(g, 470, 560, '？℃', 0.5, t);
+    TK.text(g, 'エベレストの頂上（8,849 m）なら？', PW / 2, 330, 58);
+    TK.note(g, t, 27.2, 30, '出どころ: Wagner & Pruss (2002) J. Phys. Chem. Ref. Data（IAPWS-95）\nU.S. Standard Atmosphere 1976（NOAA・NASA・USAF）', { size: 28 });
+  }
+}
+
+triviaStart({ out: 'extreme-trivia3', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

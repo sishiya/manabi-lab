@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく spider-hunt-2（型G 15秒ループ）「ハエは、飛ぶ0.2秒前に向きを決めている」。台本は trivia/spider-hunt.md。?short で録る
+// Card & Dickinson 2008（Current Biology、PubMed の要旨）: 飛び立つ約200ms前から脚で構えを直しはじめ、それが逃げる向きを決める。
+// 重心を、脚をのばすとふくらむ影から遠ざかる所へ置く。研究はショウジョウバエ（字幕では種を言わず「ハエ」）。絵はすべて模式。
+const DUR = 15;
+const subs = [
+  { a: 0.0, b: 2.2, ja: 'ハエは、飛び立つ0.2秒前に、もう逃げる向きを決めている', en: 'A fly picks its escape direction 0.2 s before it takes off', noBurn: true },
+  { a: 2.2, b: 7.0, ja: '脚で体をずらし\n重心を“[影と反対]”へ', en: 'It shifts its body with its legs,\nmoving its center of mass away from the shadow' },
+  { a: 7.0, b: 11.0, ja: 'だから、脚をのばしたとたん\n[影から遠ざかる向き]に飛べる', en: 'So the moment it pushes off,\nit flies away from the shadow' },
+  { a: 11.0, b: 15.0, ja: 'つまり、ハエは…', en: 'In other words, a fly…' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 0.4, type: 'rise' }, { t: 2.2, type: 'whoosh' }, { t: 3.0, type: 'tick' }, { t: 4.0, type: 'tick' }, { t: 5.0, type: 'tick' }, { t: 6.0, type: 'tick' },
+  { t: 7.0, type: 'whoosh' }, { t: 7.1, type: 'pop' }, { t: 9.2, type: 'ding' }, { t: 11.0, type: 'rise' },
+];
+
+// ハエの目の視界（六角形の個眼）に影がふくらむ。k: 0〜1 の影の大きさ
+function flyEye(g, cx, cy, R, k, f = 1) {
+  g.save(); g.globalAlpha *= f;
+  g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.clip();
+  g.fillStyle = 'rgba(120,170,255,0.12)'; g.fillRect(cx - R, cy - R, 2 * R, 2 * R);
+  const s = 34, h = s * Math.sqrt(3) / 2, sx = cx - R * 0.35, sy = cy - R * 0.1, sr = 20 + k * R * 1.1;
+  for (let row = -Math.ceil(R / h) - 1; row <= Math.ceil(R / h) + 1; row++) {
+    for (let col = -Math.ceil(R / s) - 1; col <= Math.ceil(R / s) + 1; col++) {
+      const x = cx + col * s * 1.5, y = cy + row * h * 2 + (col & 1 ? h : 0);
+      const dark = Math.hypot(x - sx, y - sy) < sr;
+      g.beginPath();
+      for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; g.lineTo(x + Math.cos(a) * s * 0.96, y + Math.sin(a) * s * 0.96); }
+      g.closePath();
+      g.fillStyle = dark ? 'rgba(5,8,20,0.92)' : 'rgba(160,200,255,0.10)'; g.fill();
+      g.strokeStyle = 'rgba(160,200,255,0.35)'; g.lineWidth = 2; g.stroke();
+    }
+  }
+  g.restore();
+  g.strokeStyle = 'rgba(200,215,255,0.6)'; g.lineWidth = 5; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.stroke();
+}
+// 横から見たハエ（頭は左）。lean: 重心を右へずらす量（0〜1）、push: 脚ののび（0〜1）
+function flySide(g, x, y, lean, push, s = 1) {
+  g.save(); g.translate(x, y); g.scale(s, s);
+  g.strokeStyle = '#e8eefc'; g.fillStyle = 'rgba(232,238,252,0.16)'; g.lineWidth = 4; g.lineCap = 'round'; g.lineJoin = 'round';
+  const bx = lean * 26, by = -70 - push * 40 + lean * 6;
+  // 脚3本（先は地面の同じ所。体が動くと角度が変わる）
+  [[-40, -24], [0, -6], [40, 14]].forEach(([fx, hx]) => {
+    const kx = (fx + hx + bx) / 2 + 6, ky = by + 10 - (1 - push) * 24;
+    g.beginPath(); g.moveTo(hx + bx, by + 22); g.lineTo(kx, ky + 20); g.lineTo(fx, 0); g.stroke();
+  });
+  // 羽（たたんだ形）
+  g.beginPath(); g.ellipse(bx + 40, by - 26, 62, 16, -0.25, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.beginPath(); g.ellipse(bx + 34, by + 4, 52, 26, 0.08, 0, Math.PI * 2); g.fill(); g.stroke();   // 腹
+  g.beginPath(); g.ellipse(bx - 14, by - 2, 32, 28, 0, 0, Math.PI * 2); g.fill(); g.stroke();     // 胸
+  g.beginPath(); g.arc(bx - 56, by - 6, 20, 0, Math.PI * 2); g.fill(); g.stroke();                // 頭
+  // 重心の点
+  g.fillStyle = TK.C.acc; g.beginPath(); g.arc(bx + 6, by + 4, 11, 0, Math.PI * 2); g.fill();
+  g.restore();
+  return [x + (bx + 6) * s, y + (by + 4) * s];
+}
+function shadowBlob(g, x, y, r, f = 1) {
+  g.save(); g.globalAlpha *= f;
+  const gr = g.createRadialGradient(x, y, r * 0.3, x, y, r);
+  gr.addColorStop(0, 'rgba(0,0,0,0.85)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = 'rgba(200,215,255,0.35)'; g.setLineDash([10, 12]); g.lineWidth = 3; g.beginPath(); g.arc(x, y, r * 0.7, 0, Math.PI * 2); g.stroke();
+  g.restore();
+}
+function arrow(g, x0, y0, x1, y1, col, w = 10) {
+  const a = Math.atan2(y1 - y0, x1 - x0);
+  g.save(); g.strokeStyle = col; g.fillStyle = col; g.lineWidth = w; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1 - Math.cos(a) * w * 2, y1 - Math.sin(a) * w * 2); g.stroke();
+  g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 - Math.cos(a - 0.45) * w * 4, y1 - Math.sin(a - 0.45) * w * 4); g.lineTo(x1 - Math.cos(a + 0.45) * w * 4, y1 - Math.sin(a + 0.45) * w * 4); g.closePath(); g.fill();
+  g.restore();
+}
+function timer(g, s, hot) {
+  TK.card(g, 300, 170, 480, 130, { r: 65, stroke: hot ? TK.C.acc : undefined, lw: hot ? 6 : 3 });
+  TK.text(g, (s <= -0.005 ? '−' : '') + Math.abs(s).toFixed(2) + ' 秒', PW / 2, 236, 80, { color: hot ? TK.C.acc : '#fff' });
+}
+
+function draw(g, t) {
+  // 0〜2.2: フック。ハエの目に影がふくらむ
+  if (t < 2.2) {
+    flyEye(g, PW / 2, 800, 330, clamp(t / 2.2, 0, 1) * 0.55, fade(t, -1, 2.2, 0.25));
+    TK.hook(g, t, 0.0, 2.2, '飛び立つ [0.2秒前]に\n向きは決まっている', { y: 300, size: 104 });
+    TK.note(g, t, 0.3, 2.2, 'ハエの目に映る影（模式）', { size: 32 });
+  }
+  const GY = 940, FX = 470;
+  // 2.2〜7: 構えの直し（−0.20 → 0 秒）
+  if (t >= 2.2 && t < 7.0) {
+    const f = fade(t, 2.2, 7.0, 0.25), k = clamp((t - 2.6) / 4.2, 0, 1), s = -0.2 + 0.2 * k;
+    g.save(); g.globalAlpha = f;
+    shadowBlob(g, 180, 620, 120 + k * 90);
+    g.strokeStyle = 'rgba(200,215,255,0.55)'; g.lineWidth = 4; g.beginPath(); g.moveTo(100, GY); g.lineTo(960, GY); g.stroke();
+    const [mx, my] = flySide(g, FX, GY, TK.ease ? ease(k) : k, 0, 2.2);
+    if (k > 0.15) arrow(g, mx, my - 130, mx + 60 + 120 * ease(k), my - 130, TK.C.acc, 8);
+    TK.text(g, '重心', mx, my - 190, 46, { color: TK.C.acc });
+    TK.text(g, '影', 180, 400, 50, { color: TK.C.sub });
+    timer(g, s, false);
+    g.restore();
+  }
+  // 7〜11: 脚をのばして跳ぶ。向きは影と反対
+  if (t >= 7.0 && t < 11.0) {
+    const f = fade(t, 7.0, 11.0, 0.25), u = clamp((t - 7.1) / 1.6, 0, 1);
+    g.save(); g.globalAlpha = f;
+    shadowBlob(g, 180, 620, 210);
+    g.strokeStyle = 'rgba(200,215,255,0.55)'; g.lineWidth = 4; g.beginPath(); g.moveTo(100, GY); g.lineTo(960, GY); g.stroke();
+    const push = clamp(u * 4, 0, 1), fly = TK.out(clamp((u - 0.2) / 0.8, 0, 1));
+    if (u > 0.3) arrow(g, FX - 60, GY - 120, FX + 160, GY - 420, TK.C.green, 12);
+    flySide(g, FX + fly * 220, GY - fly * 300, 1, push, 2.2 - fly * 0.5);
+    timer(g, Math.min(0.2, (t - 7.0) * 0.1) * 0, true);
+    TK.text(g, '飛び立ち', PW / 2, 350, 52, { color: TK.C.acc });
+    g.restore();
+  }
+  // 11〜15: もう一度、影がふくらみはじめる（最初へつながる）
+  if (t >= 11.0) {
+    flyEye(g, PW / 2, 800, 330, clamp((t - 11.0) / 4.0, 0, 1) * 0.35, fade(t, 11.0, 16, 0.4));
+  }
+  TK.note(g, t, 2.6, 11.0, '模式の絵（ショウジョウバエの研究。脚の形はかんたんにしています）', { size: 30 });
+  TK.note(g, t, 12.0, 15.0, '出どころ: Card & Dickinson (2008) Current Biology 18:1300', { size: 30 });
+}
+
+triviaStart({ out: 'spider-hunt-trivia2', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

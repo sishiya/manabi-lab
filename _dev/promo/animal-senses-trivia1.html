@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく animal-senses-1（型A ぜんぶ逆）「色センサー12種類のシャコは、色の見分けがヘタ」。台本は trivia/animal-senses.md。?short で録る
+// 出どころ: Thoen, How, Chiou & Marshall (2014) Science 343:411–413（12種類・300〜720 nm・見分けはおどろくほど悪い）。
+// nm の値（約12〜25 nm）は報道・解説の値（台本の注意）。人の約1 nm は Wright & Pitt (1934) の解説。感度の山の形は模式
+const DUR = 30;
+const subs = [
+  { a: 0.0, b: 3.0, ja: 'シャコは人よりすごい色が見える。…じつは[ウソ]', en: 'Mantis shrimp see colors far better than us. …Actually, no.', noBurn: true },
+  { a: 3.0, b: 9.0, ja: '人の目の色センサーは[3種類]。\nシャコは[12種類]。ここまでは本当', en: 'Humans have 3 kinds of color receptors.\nMantis shrimp have 12. That part is true' },
+  { a: 9.0, b: 13.0, ja: 'でも実験で、2つの色を\n見分けさせると…', en: 'But when tested on telling two colors apart…' },
+  { a: 13.0, b: 17.0, ja: 'シャコは[12〜25 nm]はなれないと区別できない。\n人は場所によって[1 nm]', en: 'Mantis shrimp need 12–25 nm of difference.\nHumans, in places, just 1 nm', size: 58 },
+  { a: 17.0, b: 21.0, ja: '[オレンジと黄色]くらいの差がないと\n同じ色に見えるらしい', en: 'Unless it’s as different as orange and yellow,\nit seems to look the same' },
+  { a: 21.0, b: 24.0, ja: '細かく見分けるかわりに\n目を動かして[なでるように]見る', en: 'Instead of fine comparison,\nthey sweep their eyes across the scene' },
+  { a: 24.0, b: 27.0, ja: '「これは[赤のなかま]」とすぐ決める。\nそういう別のやり方、という説', en: '“That’s in the red group” — decided fast.\nA different strategy, researchers suggest' },
+  { a: 27.0, b: 30.0, ja: 'センサーが多い ＝ よく見える、\n[じゃなかった]', en: 'More sensors did not mean sharper color vision' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 1.0, type: 'buzz' }, { t: 1.6, type: 'pop' }, { t: 3.0, type: 'whoosh' }, { t: 4.0, type: 'pop' }, { t: 6.0, type: 'rise' },
+  { t: 9.0, type: 'whoosh' }, { t: 12.2, type: 'buzz' }, { t: 13.0, type: 'ding' }, { t: 17.0, type: 'whoosh' },
+  { t: 21.0, type: 'whoosh' }, { t: 24.4, type: 'pop' }, { t: 27.0, type: 'ding' },
+];
+
+// 波長（nm）→ 色（おおよそ。紫外線は紫で代用）
+function wl(l, a = 1) {
+  let r = 0, g = 0, b = 0;
+  if (l < 380) { r = 0.45; g = 0.2; b = 0.9; }
+  else if (l < 440) { r = -(l - 440) / 60; b = 1; }
+  else if (l < 490) { g = (l - 440) / 50; b = 1; }
+  else if (l < 510) { g = 1; b = -(l - 510) / 20; }
+  else if (l < 580) { r = (l - 510) / 70; g = 1; }
+  else if (l < 645) { r = 1; g = -(l - 645) / 65; }
+  else r = 1;
+  const f = l > 700 ? 0.3 + 0.7 * (750 - l) / 50 : l < 420 && l >= 380 ? 0.3 + 0.7 * (l - 380) / 40 : 1;
+  const c = x => Math.round(255 * Math.pow(clamp(x * f, 0, 1), 0.8));
+  return `rgba(${c(r)},${c(g)},${c(b)},${a})`;
+}
+const L0 = 300, L1 = 720, AX0 = 120, AX1 = 960;
+const lx = l => AX0 + (AX1 - AX0) * (l - L0) / (L1 - L0);
+function spectrumAxis(g, y) {
+  for (let l = L0; l < L1; l += 2) { g.fillStyle = wl(l); g.fillRect(lx(l), y, lx(l + 2) - lx(l) + 1, 22); }
+  for (const l of [300, 400, 500, 600, 700]) TK.text(g, l + '', lx(l), y + 56, 34, { color: TK.C.sub, bold: false });
+  TK.text(g, 'nm（光の波長）', AX1, y + 100, 32, { color: TK.C.dim, bold: false, align: 'right' });
+}
+function hump(g, peak, w, y, h, k, a = 1) {
+  g.save(); g.strokeStyle = wl(peak, a); g.fillStyle = wl(peak, 0.18 * a); g.lineWidth = 5;
+  g.beginPath(); g.moveTo(lx(L0), y);
+  for (let l = L0; l <= L1; l += 3) g.lineTo(lx(l), y - h * k * Math.exp(-0.5 * Math.pow((l - peak) / w, 2)));
+  g.lineTo(lx(L1), y); g.fill(); g.stroke(); g.restore();
+}
+const MANTIS = [315, 340, 380, 410, 440, 470, 500, 530, 560, 600, 640, 690];
+function redX(g, x, y, r, k) {
+  if (k <= 0) return;
+  g.save(); g.strokeStyle = TK.C.red; g.lineWidth = r * 0.16; g.lineCap = 'round'; g.globalAlpha *= clamp(k, 0, 1);
+  const s = r * (0.7 + 0.3 * TK.back(k));
+  g.beginPath(); g.moveTo(x - s, y - s); g.lineTo(x + s, y + s); g.moveTo(x + s, y - s); g.lineTo(x - s, y + s); g.stroke();
+  g.restore();
+}
+// シャコ（横から、線画）
+function shrimp(g, x, y, s, t) {
+  g.save(); g.translate(x, y); g.scale(s, s);
+  g.strokeStyle = '#7ff0c8'; g.fillStyle = 'rgba(60,180,140,0.35)'; g.lineWidth = 5; g.lineJoin = 'round';
+  for (let i = 0; i < 6; i++) { g.beginPath(); g.ellipse(-40 - i * 42, 4 * Math.sin(t * 3 + i), 30, 36 - i * 2, 0, 0, Math.PI * 2); g.fill(); g.stroke(); }
+  g.beginPath(); g.ellipse(20, 0, 46, 34, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  // 柄の先の目
+  for (const [dx, dy] of [[40, -70], [64, -60]]) {
+    g.beginPath(); g.moveTo(30, -26); g.lineTo(dx, dy + 14); g.stroke();
+    g.fillStyle = '#ffcf4a'; g.beginPath(); g.ellipse(dx, dy, 13, 18, 0.3, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.strokeStyle = '#ff7a4a'; g.lineWidth = 3; g.beginPath(); g.moveTo(dx - 12, dy); g.lineTo(dx + 12, dy); g.stroke(); g.strokeStyle = '#7ff0c8'; g.lineWidth = 5;   // 中央の帯
+  }
+  // 捕脚
+  g.beginPath(); g.moveTo(50, 20); g.lineTo(100, 50); g.lineTo(80, 80); g.stroke();
+  g.restore();
+}
+function eyeIcon(g, x, y, r) {
+  g.save(); g.strokeStyle = '#fff'; g.lineWidth = 5;
+  g.beginPath(); g.moveTo(x - r, y); g.quadraticCurveTo(x, y - r * 0.8, x + r, y); g.quadraticCurveTo(x, y + r * 0.8, x - r, y); g.stroke();
+  g.fillStyle = '#5fd4ff'; g.beginPath(); g.arc(x, y, r * 0.3, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+
+function draw(g, t) {
+  // 0〜3: フック
+  if (t < 3.0) {
+    g.save(); g.globalAlpha = fade(t, -1, 3.0, 0.3);
+    shrimp(g, 600, 1010, 1.6, t);
+    g.restore();
+    TK.hook(g, t, 0.0, 3.0, 'シャコは人より\n色が見える', { y: 420, size: 120 });
+    if (t > 1.0) redX(g, 540, 420, 200, (t - 1.0) / 0.3);
+    if (t > 1.6) { g.save(); g.globalAlpha = TK.pop(t, 1.6) * fade(t, 1.6, 3.0, 0.25); TK.text(g, '[ウソ]', 540, 760, 130, { stroke: 'rgba(0,0,0,0.6)' }); g.restore(); }
+  }
+  // 3〜9: センサーの数 3 と 12
+  if (t >= 3.0 && t < 9.0) {
+    g.save(); g.globalAlpha = fade(t, 3.0, 9.0, 0.3);
+    eyeIcon(g, 170, 260, 50);
+    TK.text(g, '人の目 [3種類]', 250, 260, 60, { align: 'left' });
+    const k1 = TK.out((t - 3.3) / 1.0);
+    hump(g, 420, 28, 540, 200, k1); hump(g, 534, 42, 540, 200, k1); hump(g, 564, 45, 540, 200, k1);
+    if (t > 5.5) {
+      shrimp(g, 210, 660, 0.55, t);
+      TK.text(g, 'シャコ [12種類]', 280, 650, 60, { align: 'left' });
+      MANTIS.forEach((p, i) => { const k = TK.out((t - 5.8 - i * 0.12) / 0.6); if (k > 0) hump(g, p, 9, 960, 220, k); });
+    }
+    spectrumAxis(g, 975);
+    g.restore();
+  }
+  // 9〜17: 2つの色がだんだん近づく
+  if (t >= 9.0 && t < 17.0) {
+    g.save(); g.globalAlpha = fade(t, 9.0, 17.0, 0.3);
+    // 差: 60 nm → 1 nm（9.5〜15 秒で）
+    const k = clamp((t - 9.5) / 5.0, 0, 1), d = 60 * Math.pow(1 / 60, k), c0 = 560;
+    TK.text(g, 'この2つの色、ちがう？', PW / 2, 220, 60, { color: TK.C.sub });
+    const pw = 360, py = 290, ph = 300;
+    g.fillStyle = wl(c0 - d / 2); g.beginPath(); g.roundRect(PW / 2 - pw - 20, py, pw, ph, 24); g.fill();
+    g.fillStyle = wl(c0 + d / 2); g.beginPath(); g.roundRect(PW / 2 + 20, py, pw, ph, 24); g.fill();
+    TK.text(g, '差 ' + (d >= 10 ? Math.round(d) : d.toFixed(1)) + ' nm', PW / 2, 670, 80, { color: TK.C.acc });
+    // 人とシャコの答え
+    const hy = 820, sy = 990;
+    eyeIcon(g, 200, hy, 50);
+    TK.text(g, '人', 290, hy, 56, { align: 'left' });
+    TK.text(g, d > 1.2 ? 'ちがう！' : 'ぎりぎり', 700, hy, 60, { color: TK.C.green });
+    shrimp(g, 200, sy + 30, 0.6, t);
+    TK.text(g, 'シャコ', 290, sy, 56, { align: 'left' });
+    const sameS = d < 20;
+    TK.text(g, sameS ? '同じ…？' : 'ちがう！', 700, sy, 60, { color: sameS ? TK.C.red : TK.C.green });
+    g.restore();
+  }
+  // 17〜21: オレンジと黄色くらい
+  if (t >= 17.0 && t < 21.0) {
+    g.save(); g.globalAlpha = fade(t, 17.0, 21.0, 0.3);
+    TK.text(g, 'シャコが見分けられるのは、このくらいの差から', PW / 2, 220, 46, { color: TK.C.sub });
+    const pw = 360, py = 300, ph = 360;
+    g.fillStyle = wl(580); g.beginPath(); g.roundRect(PW / 2 - pw - 20, py, pw, ph, 30); g.fill();
+    g.fillStyle = wl(602); g.beginPath(); g.roundRect(PW / 2 + 20, py, pw, ph, 30); g.fill();
+    TK.text(g, '黄色', PW / 2 - pw / 2 - 20, py + ph + 60, 56);
+    TK.text(g, 'オレンジ', PW / 2 + pw / 2 + 20, py + ph + 60, 56);
+    TK.text(g, '（差 約20 nm）', PW / 2, py + ph + 140, 44, { color: TK.C.sub });
+    g.restore();
+  }
+  // 21〜27: 帯でなでるように見る → おおまかな仲間に決める
+  if (t >= 21.0 && t < 27.0) {
+    g.save(); g.globalAlpha = fade(t, 21.0, 27.0, 0.3);
+    const x0 = 120, x1 = 960, y0 = 260, y1 = 860;
+    // 花だん（なめらかな色）。24秒からは12の仲間に丸める
+    const q = clamp((t - 24.2) / 0.6, 0, 1);
+    const cell = 30;
+    for (let y = y0; y < y1; y += cell) for (let x = x0; x < x1; x += cell) {
+      const u = (x - x0) / (x1 - x0), v = (y - y0) / (y1 - y0);
+      const l = 420 + 260 * (0.5 + 0.35 * Math.sin(u * 5 + v * 3) + 0.15 * Math.cos(v * 7 - u * 2));
+      let near = MANTIS[0]; for (const p of MANTIS) if (Math.abs(p - l) < Math.abs(near - l)) near = p;
+      g.fillStyle = wl(l + (near - l) * q); g.fillRect(x, y, cell + 1, cell + 1);
+    }
+    // 目の帯が上下に走る
+    const sy = y0 + (y1 - y0) * (0.5 + 0.45 * Math.sin((t - 21) * 2.2));
+    g.fillStyle = 'rgba(11,20,48,0.45)'; g.fillRect(x0, y0, x1 - x0, sy - 30 - y0); g.fillRect(x0, sy + 30, x1 - x0, y1 - sy - 30);
+    g.strokeStyle = TK.C.acc; g.lineWidth = 5; g.strokeRect(x0, sy - 30, x1 - x0, 60);
+    g.strokeStyle = 'rgba(160,190,255,0.5)'; g.lineWidth = 3; g.strokeRect(x0, y0, x1 - x0, y1 - y0);
+    TK.text(g, q > 0.5 ? '12の「なかま」に すぐ分ける' : '目の帯で なでるように見る', PW / 2, 200, 54, { color: TK.C.acc });
+    TK.text(g, '（シャコの見え方の想像図）', PW / 2, 910, 40, { color: TK.C.sub, bold: false });
+    g.restore();
+  }
+  // 27〜30: まとめ
+  if (t >= 27.0) {
+    g.save(); g.globalAlpha = fade(t, 27.0, 30.5, 0.3);
+    TK.text(g, 'たくさん', 300, 520, 100, { color: '#fff' });
+    TK.text(g, '≠', 540, 520, 120, { color: TK.C.red });
+    TK.text(g, 'くわしい', 780, 520, 100, { color: TK.C.acc });
+    shrimp(g, 600, 820, 1.1, t);
+    g.restore();
+  }
+  if (t >= 3.0 && t < 9.0) TK.note(g, t, 3.0, 9.0, '感度の山の形は模式（シャコは 300〜720 nm に12種類）', { size: 30 });
+  if (t >= 9.0 && t < 21.0) TK.note(g, t, 9.0, 21.0, '約12〜25 nm は1種類のシャコ・1つの課題の結果（報道・解説の値）\n人の約1 nm は 490・590 nm あたり（Wright & Pitt 1934）', { size: 28 });
+  if (t >= 21.0 && t < 27.0) TK.note(g, t, 21.0, 27.0, '「なでて、すぐ決める」しくみは著者の説', { size: 30 });
+  if (t >= 27.0) TK.note(g, t, 27.0, 30.0, '出どころ: Thoen, How, Chiou & Marshall (2014)\nScience 343: 411–413', { size: 30 });
+}
+
+triviaStart({ out: 'animal-senses-trivia1', dur: DUR, draw, subs, cues, peek: 1.0 });
+</script>
+</body>
+</html>

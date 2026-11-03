@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく evolution-1（型H 当ててみて）「恐竜が絶滅した日、季節は？」。台本は trivia/evolution.md、直しは trivia/REVIEW.md。?short で録る
+// 出どころ: During ほか (2022) Nature 603, 91–94（タニスの魚の骨の季節の線・エラのガラスの粒）。DePalma 2021 は並べない（REVIEW）
+// 骨の断面・成長のグラフ・エラの図は形のイメージ（論文の図を写していない）
+const DUR = 30;
+const subs = [
+  { a: 0.0, b: 2.0, ja: '恐竜が絶滅した、あの隕石の日。季節はいつ？', en: 'The day the asteroid ended the dinosaurs. What season was it?', noBurn: true },
+  { a: 2.0, b: 4.2, ja: '考えてみて。', en: 'Take a guess.' },
+  { a: 4.2, b: 7.0, ja: '答えは、北半球の[春]。', en: 'The answer: spring, in the Northern Hemisphere.' },
+  { a: 7.0, b: 14.0, ja: 'わかったのは、[魚の骨]から。\n骨には木の年輪みたいに、季節の線が残る。', en: 'We know from fish bones.\nLike tree rings, bones keep a line for each season.' },
+  { a: 14.0, b: 20.0, ja: '最後の線は、夏の[のびざかりの前]で\n止まっていた。', en: 'The last line stopped\nbefore the summer growth spurt.' },
+  { a: 20.0, b: 22.6, ja: 'その魚のエラには、隕石が飛ばした\n[ガラスの粒]が入ったまま。', en: 'Its gills still held glass beads\nthrown up by the impact.' },
+  { a: 22.6, b: 25.0, ja: '衝突から[1時間たたずに]埋まった、\nと論文は考えている。', en: 'The paper suggests it was buried\nwithin an hour of the impact.' },
+  { a: 25.0, b: 30.0, ja: '北は春、南は秋。生きのこったのは\n冬じたくをしていた[南の生きもの]が多かったのかも。', en: 'Spring in the north, autumn in the south.\nMaybe southern life, ready for winter, fared better.' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 2.2, type: 'tick' }, { t: 3.2, type: 'tick' }, { t: 4.2, type: 'ding' },
+  { t: 7.0, type: 'whoosh' }, { t: 14.0, type: 'pop' }, { t: 17.6, type: 'buzz' }, { t: 20.0, type: 'whoosh' }, { t: 21.0, type: 'tick' },
+  { t: 22.6, type: 'pop' }, { t: 25.0, type: 'whoosh' }, { t: 26.4, type: 'ding' },
+];
+const SEASONS = ['春', '夏', '秋', '冬'];
+
+// 骨の断面（年輪のような線）。n 本目まで描く。last は最後の線の太さ 0〜1
+function boneSection(g, cx, cy, sc, rings, prog) {
+  g.save(); g.translate(cx, cy); g.scale(sc, sc);
+  // 外形（魚の背びれの骨の断面のイメージ: 少しつぶれた楕円）
+  g.fillStyle = 'rgba(240,226,190,0.10)'; g.strokeStyle = 'rgba(240,226,190,0.8)'; g.lineWidth = 5;
+  const rr = k => [60 + k * 260, 40 + k * 170];
+  // 1年 = 太い明るい帯（夏）＋細い暗い線（冬）
+  for (let i = 0; i < rings; i++) {
+    const k0 = i / rings, k1 = (i + 1) / rings, show = clamp(prog * rings - i, 0, 1);
+    if (show <= 0) break;
+    const [ax, ay] = rr(k0 + (k1 - k0) * show);
+    g.strokeStyle = 'rgba(240,226,190,0.30)'; g.lineWidth = 3;
+    g.beginPath(); g.ellipse(0, 0, ax, ay, 0, 0, Math.PI * 2); g.stroke();
+    if (show >= 1) {   // 冬の線（濃い）
+      g.strokeStyle = 'rgba(255,207,74,0.9)'; g.lineWidth = 7;
+      g.beginPath(); g.ellipse(0, 0, ax, ay, 0, 0, Math.PI * 2); g.stroke();
+    }
+  }
+  g.restore();
+}
+// 魚の線画（横向き）。エラの線つき
+function fish(g, cx, cy, s, f = 1) {
+  g.save(); g.globalAlpha *= f; g.translate(cx, cy); g.scale(s, s);
+  g.strokeStyle = '#cfe0ff'; g.lineWidth = 6; g.lineJoin = 'round'; g.lineCap = 'round';
+  g.beginPath();
+  g.moveTo(-300, 0); g.bezierCurveTo(-220, -150, 150, -150, 260, -10);
+  g.lineTo(380, -110); g.lineTo(360, 0); g.lineTo(380, 110); g.lineTo(260, 10);
+  g.bezierCurveTo(150, 150, -220, 150, -300, 0); g.stroke();
+  g.fillStyle = '#cfe0ff'; g.beginPath(); g.arc(-220, -30, 14, 0, Math.PI * 2); g.fill();
+  // エラ（3本の弧）
+  g.strokeStyle = TK.C.acc2; g.lineWidth = 5;
+  for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(-170 + i * 26, 0, 85 - i * 6, -1.1, 1.1); g.stroke(); }
+  g.restore();
+}
+
+function draw(g, t) {
+  // 0〜7: 4つの札（当ててみて）
+  if (t < 7.0) {
+    TK.hook(g, t, 0.0, 2.0, '恐竜が絶滅した日\n季節は？', { y: 240, size: 110 });
+    if (t >= 2.0) { g.save(); g.globalAlpha = fade(t, 2.0, 7.0, 0.3); TK.text(g, '6600万年前、隕石の日', PW / 2, 190, 56, { color: TK.C.sub }); g.restore(); }
+    const shake = t > 1.5 && t < 4.2 ? Math.sin(t * 22) * 4 : 0;
+    g.save(); g.translate(shake, 0);
+    TK.choices(g, t, 0.15, 7.0, SEASONS, { y: 430, h: 150, gap: 22, size: 84, reveal: 4.2, answer: 0, think: [1.5, 4.2] });
+    g.restore();
+    if (t > 4.6) { g.save(); g.globalAlpha = fade(t, 4.6, 7.0, 0.3); TK.text(g, '（北半球）', PW / 2 + 170, 430 + 75, 48, { color: TK.C.acc }); g.restore(); }
+  }
+  // 7〜14: 魚の骨の断面に、季節の線が1本ずつ
+  if (t >= 7.0 && t < 14.0) {
+    const f = fade(t, 7.0, 14.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    TK.text(g, '魚の骨の断面', PW / 2, 220, 64, { color: TK.C.sub });
+    boneSection(g, PW / 2, 600, 1.25, 5, clamp((t - 7.6) / 5.0, 0, 1));
+    if (t > 9.5) {
+      g.globalAlpha = f * fade(t, 9.5, 14, 0.3);
+      TK.text(g, '[黄色の線]＝冬（のびがおそい）', PW / 2, 930, 50, { color: TK.C.sub });
+      TK.text(g, 'あいだの広い帯＝夏（よくのびる）', PW / 2, 1000, 44, { color: TK.C.sub, bold: false });
+    }
+    g.restore();
+  }
+  // 14〜20: 1年の「のび」のグラフ。最後の線は夏の山の手前で止まる
+  if (t >= 14.0 && t < 20.0) {
+    const f = fade(t, 14.0, 20.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    TK.text(g, '骨ののびる速さ（1年）', PW / 2, 220, 60, { color: TK.C.sub });
+    const x0 = 120, x1 = 960, yb = 900, H = 420;
+    const yOf = u => yb - H * (0.18 + 0.82 * Math.pow(Math.max(0, Math.sin(Math.PI * u)), 1.6));   // u: 0 冬→0.5 夏→1 冬
+    g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 3; g.beginPath(); g.moveTo(x0, yb); g.lineTo(x1, yb); g.stroke();
+    // 季節の目もり（冬・春・夏・秋・冬）
+    ['冬', '春', '夏', '秋', '冬'].forEach((s, i) => TK.text(g, s, x0 + (x1 - x0) * i / 4, yb + 50, 46, { color: TK.C.sub }));
+    // うすい1年分の形
+    g.setLineDash([10, 12]); g.strokeStyle = 'rgba(160,190,255,0.45)'; g.lineWidth = 4; g.beginPath();
+    for (let i = 0; i <= 100; i++) { const u = i / 100, x = x0 + (x1 - x0) * u; i ? g.lineTo(x, yOf(u)) : g.moveTo(x, yOf(u)); }
+    g.stroke(); g.setLineDash([]);
+    // 実際の線（春のおわりで止まる: u=0.36）
+    const stop = 0.36, k = clamp((t - 14.6) / 2.8, 0, 1), uEnd = stop * k;
+    g.strokeStyle = TK.C.acc; g.lineWidth = 9; g.beginPath();
+    for (let i = 0; i <= 80; i++) { const u = uEnd * i / 80, x = x0 + (x1 - x0) * u; i ? g.lineTo(x, yOf(u)) : g.moveTo(x, yOf(u)); }
+    g.stroke();
+    if (k >= 1) {
+      const x = x0 + (x1 - x0) * stop, y = yOf(stop);
+      g.fillStyle = TK.C.red; g.beginPath(); g.arc(x, y, 18, 0, Math.PI * 2); g.fill();
+      g.globalAlpha = f * fade(t, 17.6, 20, 0.25);
+      TK.text(g, 'ここで止まった', x + 150, y + 120, 54, { color: TK.C.red });
+      TK.text(g, 'のびざかり', x0 + (x1 - x0) * 0.5, yOf(0.5) - 60, 44, { color: TK.C.sub });
+    }
+    g.restore();
+  }
+  // 20〜25: エラにガラスの粒
+  if (t >= 20.0 && t < 25.0) {
+    const f = fade(t, 20.0, 25.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    fish(g, PW / 2 - 20, 640, 1.15);
+    // 粒（上から降って、エラにとまる）
+    for (let i = 0; i < 14; i++) {
+      const sx = 220 + (i * 137) % 560, ex = PW / 2 - 205 + (i % 5) * 18, ey = 600 + ((i * 53) % 90);
+      const k = TK.out((t - 20.3 - i * 0.08) / 1.3);
+      const x = lerp(sx, ex, k), y = lerp(260, ey, k);
+      g.fillStyle = 'rgba(95,212,255,0.95)'; g.shadowColor = TK.C.acc2; g.shadowBlur = 14 * RES;
+      g.beginPath(); g.arc(x, y, 9, 0, Math.PI * 2); g.fill();
+    }
+    g.shadowBlur = 0;
+    TK.card(g, 200, 180, 680, 110, { r: 55 });
+    TK.text(g, '隕石が飛ばした[ガラスの粒]', PW / 2, 237, 54);
+    if (t > 22.6) { g.globalAlpha = f * fade(t, 22.6, 25, 0.3); TK.text(g, '「1時間たたずに埋まった」は論文の考え', PW / 2, 1000, 42, { color: TK.C.sub, bold: false }); }
+    g.restore();
+  }
+  // 25〜30: 地球の北＝春、南＝秋
+  if (t >= 25.0) {
+    const f = fade(t, 25.0, 31, 0.3), cx = PW / 2, cy = 650, r = 300;
+    g.save(); g.globalAlpha = f;
+    g.save(); g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.clip();
+    g.fillStyle = '#2b8f63'; g.fillRect(cx - r, cy - r, 2 * r, r);
+    g.fillStyle = '#b8642a'; g.fillRect(cx - r, cy, 2 * r, r);
+    g.restore();
+    g.strokeStyle = '#fff'; g.lineWidth = 5; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();
+    g.setLineDash([12, 10]); g.beginPath(); g.moveTo(cx - r, cy); g.lineTo(cx + r, cy); g.stroke(); g.setLineDash([]);
+    TK.text(g, '北半球  春', cx, cy - 110, 80, { color: '#d8ffe8' });
+    TK.text(g, '南半球  秋', cx, cy + 140, 80, { color: '#ffe2c4' });
+    TK.text(g, 'タニス（化石の場所）', cx - 60, cy - r - 50, 40, { color: TK.C.acc, bold: false });
+    g.fillStyle = TK.C.acc; g.beginPath(); g.arc(cx - 60, cy - r * 0.72, 14, 0, Math.PI * 2); g.fill();
+    g.restore();
+    TK.note(g, t, 26.0, 28.4, '「南が生きのこりやすかった」は著者の仮説', { size: 32 });
+  }
+  if (t >= 7.0 && t < 20.0) TK.note(g, t, 7.0, 20.0, '化石はアメリカ・ノースダコタ州タニスの1か所。\n隕石の日と結びつけることを疑う研究者もいる', { size: 30 });
+  if (t >= 28.2) TK.note(g, t, 28.2, 30.0, '出どころ: During ほか (2022) Nature 603, 91–94\n図は形のイメージ', { size: 30 });
+}
+
+triviaStart({ out: 'evolution-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

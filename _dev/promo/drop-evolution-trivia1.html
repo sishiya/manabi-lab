@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく drop-evolution-1（型G 15〜20秒ループ）「地球でいちばん多い光合成の生きものは、1988年まで見つかっていなかった」。台本は trivia/drop-evolution.md
+// 出どころ: Flombaum ほか (2013) PNAS 110（年平均 2.9×10²⁷ 個）・Chisholm ほか (1988) Nature 334・MIT Technology Review (2015)（0.6µm、赤い光がノイズと思われた話）
+// 髪の毛の太さは 60µm として絵にした（台本の「100分の1ほど」に合わせた目安）。機械の画面は形のイメージ
+const DUR = 20;
+const subs = [
+  { a: 0.0, b: 2.0, ja: '地球でいちばん数の多い、光合成の生きもの。', en: 'The most numerous photosynthesizer on Earth.', noBurn: true },
+  { a: 2.0, b: 6.0, ja: 'その数、およそ[3000じょ個]（3×10の27乗）。', en: 'About 3×10²⁷ of them.' },
+  { a: 6.0, b: 10.0, ja: '大きさは1000分の0.6ミリ。\n髪の毛の太さの[100分の1]ほど。', en: '0.6 thousandths of a millimeter:\nabout 1/100 the width of a hair.' },
+  { a: 10.0, b: 15.0, ja: '小さすぎて、測る機械に出た光は、\nはじめは[「ノイズ」]だと思われた。', en: 'So small that its glow on the instruments\nwas first dismissed as noise.' },
+  { a: 15.0, b: 20.0, ja: '名前がついたのは、つい最近。[プロクロロコッカス]。\n地球でいちばん多い、光合成の生きもの。', en: 'It was named only recently: Prochlorococcus.\nEarth’s most numerous photosynthesizer.' },
+];
+const cues = [{ t: 0.05, type: 'pop' }, { t: 2.0, type: 'rise' }, { t: 3.4, type: 'ding' }, { t: 6.0, type: 'whoosh' }, { t: 7.6, type: 'pop' },
+  { t: 10.0, type: 'whoosh' }, { t: 12.4, type: 'buzz' }, { t: 15.0, type: 'thud' }, { t: 17.0, type: 'pop' }];
+
+const rnd = (i, k = 0) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
+// しずくの形
+function dropPath(g, cx, cy, s) {
+  g.beginPath(); g.moveTo(cx, cy - 330 * s);
+  g.bezierCurveTo(cx + 60 * s, cy - 200 * s, cx + 260 * s, cy - 40 * s, cx + 260 * s, cy + 110 * s);
+  g.arc(cx, cy + 110 * s, 260 * s, 0, Math.PI);
+  g.bezierCurveTo(cx - 260 * s, cy - 40 * s, cx - 60 * s, cy - 200 * s, cx, cy - 330 * s); g.closePath();
+}
+function drop(g, t, cx, cy, s, n) {
+  g.save(); dropPath(g, cx, cy, s);
+  g.fillStyle = 'rgba(40,110,200,0.25)'; g.fill(); g.strokeStyle = '#7fb8ff'; g.lineWidth = 6; g.stroke(); g.clip();
+  for (let i = 0; i < n; i++) {
+    const x = cx + (rnd(i, 1) - 0.5) * 540 * s + Math.sin(t * 0.7 + i) * 6, y = cy - 300 * s + rnd(i, 2) * 680 * s + Math.cos(t * 0.6 + i) * 6;
+    g.fillStyle = `rgba(89,227,154,${0.5 + 0.4 * rnd(i, 3)})`; g.beginPath(); g.arc(x, y, 5 + rnd(i, 4) * 3, 0, 7); g.fill();
+  }
+  g.restore();
+}
+
+function draw(g, t) {
+  // 0〜2・15〜20 のおわりはしずく（ループで最初に戻る）
+  if (t < 2.0) {
+    drop(g, t, PW / 2, 700, 1.0, 600);
+    TK.hook(g, t, 0.0, 2.0, '地球でいちばん多い\n[光合成の生きもの]', { y: 230, size: 96 });
+  }
+  if (t >= 2.0 && t < 6.0) {
+    const f = fade(t, 2.0, 6.0, 0.3);
+    g.save(); g.globalAlpha = f * 0.35; drop(g, t, PW / 2, 700, 1.0, 600); g.restore();
+    const k = TK.out((t - 2.2) / 1.2), e = Math.round(lerp(3, 27, k));
+    g.save(); g.globalAlpha = f;
+    TK.card(g, 120, 440, 840, 400, { r: 40, fill: 'rgba(11,20,48,0.85)' });
+    TK.text(g, 'およそ', PW / 2, 520, 56, { color: TK.C.sub });
+    // 3×10^e
+    setFont(g, 190, true); const w1 = g.measureText('3×10').width; setFont(g, 100, true); const w2 = g.measureText(String(e)).width;
+    let x = PW / 2 - (w1 + w2) / 2; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillStyle = TK.C.acc;
+    setFont(g, 190, true); g.fillText('3×10', x, 670); setFont(g, 100, true); g.fillText(String(e), x + w1, 600);
+    if (t > 3.4) { g.globalAlpha = f * TK.pop(t, 3.4, 0.35); TK.text(g, '＝ 3000じょ 個', PW / 2, 790, 64, { color: '#fff' }); }
+    g.restore();
+    TK.note(g, t, 2.4, 6.0, '海全体の年平均の推定（Flombaum ほか 2013）', { size: 32 });
+  }
+  if (t >= 6.0 && t < 10.0) {
+    const f = fade(t, 6.0, 10.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    // 髪の毛（60µm）を 600px の帯に。細胞 0.6µm は 6px
+    const hw = 600, x0 = PW / 2 - hw / 2;
+    g.fillStyle = 'rgba(150,110,80,0.55)'; g.fillRect(x0, 300, hw, 640);
+    g.strokeStyle = 'rgba(220,180,140,0.9)'; g.lineWidth = 4; g.strokeRect(x0, 300, hw, 640);
+    for (let i = 0; i < 6; i++) { g.strokeStyle = 'rgba(220,180,140,0.35)'; g.beginPath(); g.moveTo(x0, 360 + i * 110); g.lineTo(x0 + hw, 340 + i * 110); g.stroke(); }
+    TK.text(g, '髪の毛の太さ', PW / 2, 250, 52, { color: '#e8c9a8' });
+    const k = TK.pop(t, 7.6, 0.4);
+    g.fillStyle = TK.C.green; g.shadowColor = TK.C.green; g.shadowBlur = 12 * RES; g.beginPath(); g.arc(PW / 2, 620, 3 + 3 * k, 0, 7); g.fill(); g.shadowBlur = 0;
+    if (t > 7.6) {
+      g.strokeStyle = TK.C.acc; g.lineWidth = 4; g.beginPath(); g.arc(PW / 2, 620, 50, 0, 7); g.stroke();
+      g.beginPath(); g.moveTo(PW / 2 + 35, 655); g.lineTo(PW / 2 + 120, 760); g.stroke();
+      TK.card(g, PW / 2 + 40, 760, 330, 110, { r: 30, fill: 'rgba(11,20,48,0.9)' });
+      TK.text(g, '0.6 µm', PW / 2 + 205, 815, 64, { color: TK.C.acc });
+    }
+    g.restore();
+    TK.note(g, t, 6.4, 10.0, '髪の毛は太さ 約60µm として、同じ縮尺で描いています', { size: 30 });
+  }
+  if (t >= 10.0 && t < 15.0) {
+    const f = fade(t, 10.0, 15.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    TK.text(g, '測る機械の画面（イメージ）', PW / 2, 220, 50, { color: TK.C.sub });
+    const x0 = 160, y0 = 980, W = 760, H = 640;
+    g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 4; g.beginPath(); g.moveTo(x0, y0 - H); g.lineTo(x0, y0); g.lineTo(x0 + W, y0); g.stroke();
+    TK.text(g, '粒の大きさ →', x0 + W - 120, y0 + 40, 36, { color: TK.C.sub, bold: false });
+    TK.text(g, '赤い光 ↑', x0 + 70, y0 - H - 30, 36, { color: TK.C.sub, bold: false });
+    // ふつうの粒（大きい・はっきり）
+    for (let i = 0; i < 70; i++) { const x = x0 + 300 + rnd(i, 1) * 420, y = y0 - 250 - rnd(i, 2) * 330; g.fillStyle = 'rgba(95,212,255,0.8)'; g.beginPath(); g.arc(x, y, 6, 0, 7); g.fill(); }
+    // かどの小さく弱い点（ノイズと思われた）
+    const k = clamp((t - 12.4) / 0.4, 0, 1);
+    for (let i = 0; i < 90; i++) { const x = x0 + 20 + rnd(i, 5) * 150, y = y0 - 20 - rnd(i, 6) * 140; g.fillStyle = `rgba(255,107,107,${0.85 - 0.5 * k})`; g.beginPath(); g.arc(x, y, 4, 0, 7); g.fill(); }
+    g.strokeStyle = TK.C.red; g.lineWidth = 4; g.setLineDash([10, 8]); g.strokeRect(x0 + 8, y0 - 175, 190, 168); g.setLineDash([]);
+    TK.text(g, '「ノイズ」？', x0 + 290, y0 - 200, 50, { color: TK.C.red });
+    if (k > 0) { g.globalAlpha = f * k; g.strokeStyle = TK.C.red; g.lineWidth = 8; g.beginPath(); g.moveTo(x0 + 8, y0 - 175); g.lineTo(x0 + 198, y0 - 7); g.moveTo(x0 + 198, y0 - 175); g.lineTo(x0 + 8, y0 - 7); g.stroke(); }
+    g.restore();
+  }
+  if (t >= 15.0) {
+    const f = fade(t, 15.0, 21, 0.3), k = clamp((t - 17.0) / 1.5, 0, 1);
+    g.save(); g.globalAlpha = f * (1 - k);
+    TK.text(g, '論文', PW / 2, 450, 60, { color: TK.C.sub });
+    TK.text(g, '1988', PW / 2, 640, 260, { color: TK.C.acc });
+    g.restore();
+    if (k > 0) { g.save(); g.globalAlpha = f * k; drop(g, t, PW / 2, 700, 1.0, 600); g.restore(); }
+    if (t < 17.4) TK.note(g, t, 15.4, 17.4, '見つけた観測は 1985〜86年、論文が 1988年', { size: 32 });
+  }
+  if (t >= 17.4) TK.note(g, t, 17.4, 20.0, '出どころ: Flombaum ほか (2013) PNAS 110・Chisholm ほか (1988) Nature 334\nMIT Technology Review (2015)', { size: 30 });
+}
+
+triviaStart({ out: 'drop-evolution-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

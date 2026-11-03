@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく evolution-2（型G ループ）「1日が19時間半のまま10億年」。台本は trivia/evolution.md
+// 出どころ: Wu, Murray, Menou, Lee, Leconte (2023) Why the day is 24 hours long, Science Advances（トロント大学の発表: 19.5時間・20億〜6億年前・60時間超・大気の共鳴）
+// 1日の長さの線は形のイメージ（数字は 19.5 時間と 24 時間だけ）。60時間超は「モデルでは」（論文のモデルは 65 時間）
+const DUR = 18;
+const subs = [
+  { a: 0.0, b: 2.0, ja: '1日は19時間半。それが、10億年以上つづいた。', en: 'A day lasted 19.5 hours, for over a billion years.', noBurn: true },
+  { a: 2.0, b: 6.0, ja: '月は、地球の回転に[ブレーキ]をかける。\nだから1日はのびていく。', en: 'The Moon brakes Earth’s spin,\nso days keep getting longer.' },
+  { a: 6.0, b: 11.0, ja: 'でも20億年前ごろ、太陽にあたためられた大気の波が、\nちょうど[逆向きに]押した。', en: 'But about 2 billion years ago, sun-warmed\natmospheric tides pushed the other way.' },
+  { a: 11.0, b: 15.0, ja: 'ブレーキとアクセルがつりあって、\n1日の長さが[止まった]。', en: 'Brake and accelerator balanced,\nand the day stopped growing.' },
+  { a: 15.0, b: 18.0, ja: 'この力がなかったら、いまの1日は[60時間]をこえていた。\n…だから、1日は19時間半。', en: 'Without it, a day would now exceed 60 hours.\n…So, a day was 19.5 hours.' },
+];
+const cues = [{ t: 0.05, type: 'pop' }, { t: 2.0, type: 'whoosh' }, { t: 3.0, type: 'thud' }, { t: 6.0, type: 'whoosh' }, { t: 7.4, type: 'rise' },
+  { t: 11.0, type: 'pop' }, { t: 13.0, type: 'ding' }, { t: 15.0, type: 'whoosh' }, { t: 17.0, type: 'pop' }];
+
+// 19.5時間で1周する時計
+function clock(g, t, cx, cy, r, f = 1) {
+  g.save(); g.globalAlpha *= f;
+  g.fillStyle = 'rgba(20,34,72,0.9)'; g.strokeStyle = '#cfe0ff'; g.lineWidth = 8; g.beginPath(); g.arc(cx, cy, r, 0, 7); g.fill(); g.stroke();
+  for (let h = 0; h < 19.5; h += 0.5) {
+    const a = -Math.PI / 2 + h / 19.5 * Math.PI * 2, big = h % 1 === 0, r0 = r * (big ? 0.84 : 0.9);
+    g.strokeStyle = big ? '#fff' : 'rgba(255,255,255,0.4)'; g.lineWidth = big ? 5 : 3;
+    g.beginPath(); g.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); g.lineTo(cx + Math.cos(a) * r * 0.96, cy + Math.sin(a) * r * 0.96); g.stroke();
+    if (big && h % 3 === 0 && h > 0) TK.text(g, String(h), cx + Math.cos(a) * r * 0.68, cy + Math.sin(a) * r * 0.68, r * 0.13, { color: TK.C.sub });
+  }
+  // 19.5 の所に印（12時の位置＝0 と 19.5 が重なる）
+  TK.text(g, '19.5 | 0', cx, cy - r * 0.66, r * 0.12, { color: TK.C.acc });
+  const a = -Math.PI / 2 + (t * 0.25 % 1) * Math.PI * 2;
+  g.strokeStyle = TK.C.acc; g.lineWidth = 10; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * r * 0.75, cy + Math.sin(a) * r * 0.75); g.stroke();
+  g.fillStyle = TK.C.acc; g.beginPath(); g.arc(cx, cy, 14, 0, 7); g.fill();
+  g.restore();
+}
+function earth(g, cx, cy, r, t) {
+  g.save();
+  g.fillStyle = 'rgba(95,168,255,0.35)'; g.beginPath(); g.ellipse(cx, cy, r * 1.12, r * 0.95, 0.35, 0, 7); g.fill();   // 潮のふくらみ
+  const gr = g.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r); gr.addColorStop(0, '#5fa8ff'); gr.addColorStop(1, '#1d4fa3');
+  g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, r, 0, 7); g.fill();
+  // 回る向き（左回りの矢印）
+  g.strokeStyle = '#fff'; g.lineWidth = 6; g.beginPath(); g.arc(cx, cy, r * 0.6, -0.4 - t, 1.6 - t); g.stroke();
+  g.restore();
+}
+function arrow(g, x1, y1, x2, y2, c, w = 14) {
+  const a = Math.atan2(y2 - y1, x2 - x1);
+  g.save(); g.strokeStyle = c; g.fillStyle = c; g.lineWidth = w; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2 - Math.cos(a) * w * 2, y2 - Math.sin(a) * w * 2); g.stroke();
+  g.beginPath(); g.moveTo(x2, y2); g.lineTo(x2 - Math.cos(a - 0.45) * w * 3.2, y2 - Math.sin(a - 0.45) * w * 3.2); g.lineTo(x2 - Math.cos(a + 0.45) * w * 3.2, y2 - Math.sin(a + 0.45) * w * 3.2); g.closePath(); g.fill();
+  g.restore();
+}
+
+function draw(g, t) {
+  if (t < 2.0 || t >= 17.0) {
+    const f = t < 2 ? fade(t, -1, 2.0, 0.25) : clamp((t - 17.0) / 0.5, 0, 1);
+    clock(g, t, PW / 2, 700, 300, f);
+    if (t < 2.0) TK.hook(g, t, 0.0, 2.0, '1日＝[19時間半]\n10億年以上', { y: 220, size: 100 });
+    else { g.save(); g.globalAlpha = f; TK.text(g, '1日＝[19時間半]', PW / 2, 260, 100); g.restore(); }
+  }
+  if (t >= 2.0 && t < 11.0) {
+    const f = fade(t, 2.0, 11.0, 0.3), cx = PW / 2, cy = 640;
+    g.save(); g.globalAlpha = f;
+    earth(g, cx, cy, 190, t * 0.8);
+    // 月（右）
+    g.fillStyle = '#d8d8e0'; g.beginPath(); g.arc(920, 330, 50, 0, 7); g.fill();
+    TK.text(g, '月', 920, 420, 44, { color: TK.C.sub });
+    if (t > 3.0) { g.globalAlpha = f * TK.pop(t, 3.0, 0.35); arrow(g, cx + 160, cy - 220, cx - 120, cy - 260, TK.C.red); TK.text(g, 'ブレーキ', cx + 30, cy - 330, 60, { color: TK.C.red }); }
+    if (t > 6.0) {
+      g.globalAlpha = f * fade(t, 6.0, 11.0, 0.3);
+      // 太陽（左下）と大気
+      g.fillStyle = TK.C.acc; g.shadowColor = TK.C.acc; g.shadowBlur = 30 * RES; g.beginPath(); g.arc(130, 930, 60, 0, 7); g.fill(); g.shadowBlur = 0;
+      TK.text(g, '太陽', 130, 1025, 40, { color: TK.C.sub });
+      g.strokeStyle = 'rgba(255,207,74,0.5)'; g.lineWidth = 10; g.beginPath(); g.arc(cx, cy, 225, 0, 7); g.stroke();
+      if (t > 7.4) { g.globalAlpha = f * TK.pop(t, 7.4, 0.35); arrow(g, cx - 160, cy + 250, cx + 120, cy + 290, TK.C.green); TK.text(g, 'アクセル（大気の波）', cx, cy + 370, 56, { color: TK.C.green }); }
+    }
+    g.restore();
+  }
+  if (t >= 11.0 && t < 17.0) {
+    const f = fade(t, 11.0, 17.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    TK.text(g, '1日の長さ', PW / 2, 230, 60, { color: TK.C.sub });
+    const x0 = 140, x1 = 920, yb = 900, yOf = h => yb - (h - 10) * 34, xOf = ga => lerp(x0, x1, (40 - ga) / 40);   // ga: 億年前
+    g.strokeStyle = 'rgba(255,255,255,0.4)'; g.lineWidth = 4; g.beginPath(); g.moveTo(x0, 330); g.lineTo(x0, yb); g.lineTo(x1, yb); g.stroke();
+    TK.text(g, '40億年前', x0 + 20, yb + 45, 36, { color: TK.C.sub, bold: false }); TK.text(g, 'いま', x1, yb + 45, 36, { color: TK.C.sub, bold: false });
+    const pts = [[40, 12], [30, 15.5], [20, 19.5], [6, 19.5], [0, 24]];
+    const k = clamp((t - 11.2) / 2.0, 0, 1), tot = pts.length - 1;
+    g.strokeStyle = TK.C.acc2; g.lineWidth = 8; g.beginPath();
+    for (let i = 0; i <= 100; i++) { const u = k * i / 100 * tot, s = Math.min(tot - 1, Math.floor(u)), w = u - s; const ga = lerp(pts[s][0], pts[s + 1][0], w), h = lerp(pts[s][1], pts[s + 1][1], w); i ? g.lineTo(xOf(ga), yOf(h)) : g.moveTo(xOf(ga), yOf(h)); }
+    g.stroke();
+    if (t > 13.0) {
+      g.globalAlpha = f * TK.pop(t, 13.0, 0.35);
+      g.strokeStyle = TK.C.acc; g.lineWidth = 14; g.beginPath(); g.moveTo(xOf(20), yOf(19.5)); g.lineTo(xOf(6), yOf(19.5)); g.stroke();
+      TK.text(g, '19.5時間のまま', (xOf(20) + xOf(6)) / 2, yOf(19.5) - 60, 52, { color: TK.C.acc });
+      TK.text(g, '20億〜6億年前', (xOf(20) + xOf(6)) / 2, yOf(19.5) + 50, 38, { color: TK.C.sub, bold: false });
+      TK.text(g, '24', xOf(0) - 30, yOf(24) - 40, 44, { color: '#fff' });
+    }
+    if (t > 15.0) {
+      g.globalAlpha = f * TK.pop(t, 15.0, 0.35);
+      g.setLineDash([12, 10]); g.strokeStyle = TK.C.red; g.lineWidth = 6; g.beginPath(); g.moveTo(xOf(20), yOf(19.5)); g.lineTo(xOf(0), 300); g.stroke(); g.setLineDash([]);
+      TK.text(g, 'この力がないと 60時間超', 600, 330, 46, { color: TK.C.red });
+    }
+    g.restore();
+    TK.note(g, t, 11.4, 16.4, '線の形はイメージ（数字は19.5時間と24時間）。60時間超はモデルの値\n始まりは資料で22億〜20億年前と幅がある', { size: 30 });
+  }
+  if (t >= 16.4) TK.note(g, t, 16.4, 18.0, '出どころ: Wu ほか (2023) Science Advances', { size: 30 });
+}
+
+triviaStart({ out: 'evolution-trivia2', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

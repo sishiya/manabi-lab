@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく phage-2（型H）「ウイルスの頭の中は、シャンパンの10倍の圧力」。台本は trivia/phage.md
+// 出どころ: Smith ほか (2001) Nature 413, 748–752（ファージ φ29）。UC バークレーの発表 (2001-10-18): 約60気圧・シャンパンの約10倍・57〜60pN・ミオシン約5pN
+// 測ったのは φ29（アプリの T4 とは別）と画面に。最後の「流れこむ」は圧力だけで説明しきれるか議論があるので「いきおいよく」まで
+const DUR = 25;
+const subs = [
+  { a: 0.0, b: 2.0, ja: 'シャンパンの瓶と、ウイルスの頭。中の圧力が高いのは？', en: 'A champagne bottle or a virus head: which has higher pressure inside?', noBurn: true },
+  { a: 4.2, b: 8.0, ja: 'ウイルス。およそ[60気圧]。シャンパンの約10倍。', en: 'The virus. About 60 atmospheres, ~10x champagne.' },
+  { a: 8.0, b: 15.0, ja: 'ファージは、自分の長いDNAを、\n[モーター]で頭に押しこむ。', en: 'A phage crams its long DNA\ninto its head with a motor.' },
+  { a: 15.0, b: 21.0, ja: 'その力は、筋肉を動かす分子のモーターの\n[10倍以上]。', en: 'That’s over 10x the force\nof the motor that moves muscle.' },
+  { a: 21.0, b: 25.0, ja: 'だから刺さった瞬間、DNAが[いきおいよく]流れこむ。', en: 'So when it pierces a cell, the DNA rushes in.' },
+];
+const cues = [{ t: 0.05, type: 'pop' }, { t: 2.2, type: 'tick' }, { t: 3.2, type: 'tick' }, { t: 4.2, type: 'ding' }, { t: 8.0, type: 'whoosh' },
+  { t: 15.0, type: 'pop' }, { t: 17.4, type: 'rise' }, { t: 21.0, type: 'whoosh' }, { t: 22.0, type: 'thud' }];
+
+function phage(g, x, y, s, legs = 1, c = '#5fd4ff', fill = 'rgba(95,212,255,0.15)') {
+  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = c; g.lineWidth = 5; g.lineJoin = 'round'; g.lineCap = 'round';
+  g.fillStyle = fill;
+  g.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; g.lineTo(Math.cos(a) * 40, -150 + Math.sin(a) * 46); } g.closePath(); g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(0, -104); g.lineTo(0, -30); g.stroke();
+  g.strokeRect(-12, -30, 24, 12);
+  for (const sd of [-1, 1]) for (const k of [0.5, 1]) { g.beginPath(); g.moveTo(sd * 10, -20); g.lineTo(sd * (20 + 30 * k * legs), -10); g.lineTo(sd * (24 + 36 * k * legs), 0); g.stroke(); }
+  g.restore();
+}
+function bottle(g, x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = '#9fe0a8'; g.lineWidth = 6; g.lineJoin = 'round'; g.fillStyle = 'rgba(89,227,154,0.12)';
+  g.beginPath(); g.moveTo(-18, -150); g.lineTo(-18, -90); g.quadraticCurveTo(-55, -60, -55, -20); g.lineTo(-55, 90); g.quadraticCurveTo(-55, 100, -45, 100);
+  g.lineTo(45, 100); g.quadraticCurveTo(55, 100, 55, 90); g.lineTo(55, -20); g.quadraticCurveTo(55, -60, 18, -90); g.lineTo(18, -150); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#e8c9a8'; g.fillRect(-20, -172, 40, 24);
+  g.restore();
+}
+
+function draw(g, t) {
+  if (t < 8.0) {
+    const f = fade(t, -1, 8.0, 0.3);
+    TK.hook(g, t, 0.0, 2.0, '中の圧力、高いのは？', { y: 190, size: 96 });
+    g.save(); g.globalAlpha = f;
+    bottle(g, 230, 420, 1.0); phage(g, 850, 520, 1.3);
+    g.restore();
+    TK.choices(g, t, 0.15, 8.0, ['シャンパンの瓶', '同じくらい', 'ウイルスの頭'], { y: 620, h: 140, gap: 22, size: 70, reveal: 4.2, answer: 2, think: [1.4, 4.2] });
+    if (t > 4.6) { g.save(); g.globalAlpha = fade(t, 4.6, 8.0, 0.3); TK.text(g, '約60気圧', 760, 620 + 2 * 162 + 70, 56, { color: '#fff' }); g.restore(); }
+  }
+  // 8〜15: DNA のひもがモーターで頭へ
+  if (t >= 8.0 && t < 15.0) {
+    const f = fade(t, 8.0, 15.0, 0.3), k = clamp((t - 8.4) / 5.5, 0, 1), cx = PW / 2, hy = 470;
+    g.save(); g.globalAlpha = f;
+    // 頭（大きく）
+    g.strokeStyle = TK.C.acc2; g.lineWidth = 7; g.fillStyle = 'rgba(95,212,255,0.10)';
+    g.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; g.lineTo(cx + Math.cos(a) * 230, hy + Math.sin(a) * 260); } g.closePath(); g.fill(); g.stroke();
+    // 中のDNA（ぐるぐる、k で増える）
+    g.save(); g.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; g.lineTo(cx + Math.cos(a) * 220, hy + Math.sin(a) * 250); } g.clip();
+    g.strokeStyle = TK.C.acc; g.lineWidth = 5; g.beginPath();
+    const n = Math.floor(600 * k); for (let i = 0; i < n; i++) { const a = i * 0.21, r = 200 - (i / 600) * 180; const x = cx + Math.cos(a) * r, y = hy + Math.sin(a) * r * 1.05; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+    g.restore();
+    // 入口のモーター（輪）と、外のひも
+    const my = hy + 260;
+    g.strokeStyle = TK.C.red; g.lineWidth = 12; g.beginPath(); g.ellipse(cx, my + 20, 60, 22, 0, 0, 7); g.stroke();
+    TK.text(g, 'モーター', cx + 190, my + 20, 50, { color: TK.C.red });
+    const len = 420 * (1 - k);
+    g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.beginPath();
+    for (let i = 0; i <= 60; i++) { const u = i / 60, y = my + 30 + u * len; const x = cx + Math.sin(u * 14 + t * 6) * 40 * u; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+    TK.text(g, 'DNA', cx - 120, my + 120, 50, { color: TK.C.acc });
+    g.restore();
+  }
+  // 15〜21: 力くらべ
+  if (t >= 15.0 && t < 21.0) {
+    TK.text(g, '押す力（ピコニュートン）', PW / 2, 320, 54, { color: TK.C.sub });
+    TK.bars(g, t, 15.0, 21.0, [
+      { label: '筋肉を動かす分子のモーター（ミオシン）', v: 5 / 64, color: TK.C.acc2, text: '' },
+      { label: 'ファージ φ29 のモーター', v: 60 / 64, color: TK.C.acc, text: '57〜60' },
+    ], { y: 470, gap: 280, stagger: 1.2, size: 46 });
+    if (t > 15.6) { g.save(); g.globalAlpha = fade(t, 15.6, 21, 0.3); TK.text(g, '約5', 260, 470 + 72 + 0, 44, { color: '#fff', align: 'left' }); g.restore(); }
+    if (t > 17.4) { g.save(); g.globalAlpha = fade(t, 17.4, 21, 0.3); TK.text(g, '[10倍以上]', PW / 2, 940, 96); g.restore(); }
+  }
+  // 21〜25: 細菌に刺さって、DNA が流れこむ
+  if (t >= 21.0) {
+    const f = fade(t, 21.0, 26, 0.3), k = clamp((t - 22.0) / 1.6, 0, 1), cx = PW / 2;
+    g.save(); g.globalAlpha = f;
+    g.fillStyle = 'rgba(89,227,154,0.15)'; g.strokeStyle = TK.C.green; g.lineWidth = 7;
+    g.beginPath(); g.roundRect(120, 760, 840, 300, 150); g.fill(); g.stroke();
+    TK.text(g, '細菌', 820, 990, 48, { color: TK.C.green });
+    const drop = TK.out((t - 21.0) / 0.9);
+    phage(g, cx, lerp(500, 770, drop), 2.0, clamp((t - 21.8) / 0.3, 0, 1), TK.C.acc2, k > 0 ? `rgba(95,212,255,${0.15 * (1 - k)})` : 'rgba(95,212,255,0.15)');
+    if (k > 0) {   // DNA が中へ
+      g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.beginPath();
+      for (let i = 0; i <= 80; i++) { const u = i / 80 * k, y = 790 + u * 200, x = cx + Math.sin(u * 20) * 120 * u; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+    }
+    g.restore();
+  }
+  if (t >= 4.4 && t < 21.0) TK.note(g, t, 4.4, 21.0, '測ったのはファージ φ29（Smith ほか 2001）。絵は形のイメージ', { size: 30 });
+  if (t >= 23.0) TK.note(g, t, 23.0, 25.0, '出どころ: Smith ほか (2001) Nature 413, 748–752\nUC Berkeley の発表 (2001-10-18)', { size: 30 });
+}
+
+triviaStart({ out: 'phage-trivia2', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

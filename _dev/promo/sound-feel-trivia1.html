@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく sound-feel-1（型H 当ててみて）「悲鳴が無視できない理由は？」。台本は trivia/sound-feel.md。?short で録る
+// 数字は Arnal ほか (2015) Current Biology 25(15): 悲鳴は音の大きさが 1秒に 30〜150回 ゆれる（粗さ）、人工の警報も同じ帯、
+//   ゆれを足しただけの音でも扁桃体が強く働き、左右の判断が速く正確。話し声のゆれ 4〜5回/秒 は報道の解説（AIP Inside Science）の値。
+// 悲鳴の録音は使わない。音は、このページで合成した「ゆれる音」を小さく鳴らすだけ（TK.sfx をこのページの中で足した）
+const DUR = 30;
+const subs = [
+  { a: 0.0, b: 4.0, ja: '悲鳴が無視できない理由は？', en: 'Why can’t we ignore a scream?', noBurn: true },
+  { a: 4.0, b: 6.0, ja: '…', en: '…' },
+  { a: 6.0, b: 12.0, ja: '答えは C。悲鳴は、音の大きさが\n1秒に[30〜150回]ゆれる。これが「粗さ」', en: 'C. A scream’s loudness flutters 30–150 times a second.\nThat’s “roughness”' },
+  { a: 12.0, b: 17.0, ja: 'ふつうの話し声のゆれは、1秒に[4〜5回]くらい。\n悲鳴は、まったく別の場所にいる', en: 'Normal speech flutters about 4–5 times a second.\nScreams live somewhere else entirely', size: 58 },
+  { a: 17.0, b: 23.0, ja: 'おどろくのは、人が作った\n[警報や目覚まし]も、同じ帯に入っていたこと', en: 'Surprise: man-made alarms\nsit in the very same band' },
+  { a: 23.0, b: 30.0, ja: 'ゆれを足しただけの音でも、危険を判断する\n脳の場所が強く働き、[どっちから聞こえたか]も速く当てられた', en: 'Adding flutter alone made the brain’s danger hub fire harder,\nand people located the sound faster', size: 52 },
+];
+// 「ゆれる音」（このページだけの効果音）: am＝440 Hz を fm 回/秒でゆらす
+const baseSfx = TK.sfx;
+TK.sfx = function (ctx, out, c) {
+  if (c.type !== 'am') return baseSfx(ctx, out, c);
+  const t = c.t, d = c.d || 1.2, o = ctx.createOscillator(), lfo = ctx.createOscillator(), depth = ctx.createGain(), amp = ctx.createGain(), env = ctx.createGain();
+  o.type = 'sawtooth'; o.frequency.value = c.f || 440; lfo.type = 'sine'; lfo.frequency.value = c.fm;
+  amp.gain.value = 0.5; depth.gain.value = 0.5; lfo.connect(depth); depth.connect(amp.gain);
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200;
+  env.gain.setValueAtTime(0, t); env.gain.linearRampToValueAtTime(0.10 * (c.v ?? 1), t + 0.05); env.gain.setValueAtTime(0.10 * (c.v ?? 1), t + d - 0.15); env.gain.linearRampToValueAtTime(0, t + d);
+  o.connect(lp); lp.connect(amp); amp.connect(env); env.connect(out);
+  o.start(t); lfo.start(t); o.stop(t + d + 0.05); lfo.stop(t + d + 0.05);
+};
+const cues = [
+  { t: 0.05, type: 'am', fm: 70, d: 1.0, v: 0.8 }, { t: 1.2, type: 'pop' }, { t: 4.0, type: 'tick' }, { t: 5.0, type: 'tick' }, { t: 6.0, type: 'ding' },
+  { t: 8.0, type: 'am', fm: 70, d: 1.4 }, { t: 12.4, type: 'am', fm: 4.5, d: 1.6, f: 220 }, { t: 14.6, type: 'am', fm: 70, d: 1.2 },
+  { t: 17.0, type: 'whoosh' }, { t: 19.0, type: 'am', fm: 60, d: 1.2, f: 880, v: 0.7 }, { t: 23.0, type: 'whoosh' }, { t: 25.0, type: 'rise' },
+];
+
+// 1秒ぶんの波形（音の大きさのゆれ fm 回/秒）を x0〜x1 に。振幅 A。ゆれの包絡を塗る＋細い中身
+function wave(g, x0, x1, y, A, fm, t, o = {}) {
+  const N = Math.round(x1 - x0), m = o.m ?? 0.9;
+  const env = u => (1 - m / 2) + (m / 2) * Math.sin(2 * Math.PI * fm * u + t * (o.drift ?? 6));
+  g.save();
+  g.fillStyle = o.fill || 'rgba(95,212,255,0.30)'; g.beginPath();
+  for (let i = 0; i <= N; i++) { const u = i / N; g.lineTo(x0 + i, y - A * env(u)); }
+  for (let i = N; i >= 0; i--) { const u = i / N; g.lineTo(x0 + i, y + A * env(u)); }
+  g.closePath(); g.fill();
+  g.strokeStyle = o.color || TK.C.acc2; g.lineWidth = 2; g.beginPath();
+  for (let i = 0; i <= N; i += 1) { const u = i / N, c = Math.sin(i * 1.7 + t * 40); g.lineTo(x0 + i, y + A * env(u) * c); }
+  g.stroke();
+  g.lineWidth = 4; g.beginPath(); for (let i = 0; i <= N; i += 2) { const u = i / N; g.lineTo(x0 + i, y - A * env(u)); } g.stroke();
+  g.restore();
+}
+// ゆれの速さの横軸（対数、1〜1000 回/秒）
+const AX = { x0: 110, x1: 960, y: 760 };
+const fx = f => AX.x0 + (AX.x1 - AX.x0) * Math.log10(f) / 3;
+function axis(g) {
+  g.save(); g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 4;
+  g.beginPath(); g.moveTo(AX.x0, AX.y); g.lineTo(AX.x1, AX.y); g.stroke();
+  for (const f of [1, 10, 100, 1000]) { g.beginPath(); g.moveTo(fx(f), AX.y - 14); g.lineTo(fx(f), AX.y + 14); g.stroke(); TK.text(g, String(f), fx(f), AX.y + 50, 40, { color: TK.C.sub, bold: false }); }
+  TK.text(g, '音の大きさが 1秒に ゆれる回数', PW / 2, AX.y + 120, 44, { color: TK.C.sub });
+  g.restore();
+}
+function band(g, f0, f1, y, h, color, label, k = 1) {
+  g.save(); g.globalAlpha *= k;
+  g.fillStyle = color; g.beginPath(); g.roundRect(fx(f0), y, Math.max(24, fx(f1) - fx(f0)), h, 16); g.fill();
+  TK.text(g, label, (fx(f0) + fx(f1)) / 2, y - 36, 44, { color: '#fff' });
+  g.restore();
+}
+// 頭の横の線画と、扁桃体の位置（だいたいの場所）
+function brain(g, t, k) {
+  const cx = 540, cy = 640;
+  g.save(); g.strokeStyle = '#cfe0ff'; g.lineWidth = 6;
+  g.beginPath(); g.ellipse(cx, cy, 300, 220, 0, Math.PI * 0.95, Math.PI * 2.05); g.stroke();   // 大脳の上
+  g.beginPath(); g.moveTo(cx - 297, cy + 30); g.quadraticCurveTo(cx - 280, cy + 180, cx - 120, cy + 190); g.quadraticCurveTo(cx + 40, cy + 200, cx + 120, cy + 150); g.quadraticCurveTo(cx + 250, cy + 170, cx + 300, cy + 20); g.stroke();
+  g.beginPath(); g.moveTo(cx + 40, cy + 190); g.quadraticCurveTo(cx + 60, cy + 240, cx + 50, cy + 270); g.stroke();   // 脳幹
+  g.lineWidth = 3; g.strokeStyle = 'rgba(207,224,255,0.4)';
+  for (let i = 0; i < 5; i++) { g.beginPath(); g.arc(cx - 160 + i * 80, cy - 40 + (i % 2) * 40, 60, Math.PI * 1.1, Math.PI * 1.9); g.stroke(); }
+  // 扁桃体
+  const ax = cx - 60, ay = cy + 110, r = 26 + 6 * Math.sin(t * 8) * k;
+  const gr = g.createRadialGradient(ax, ay, 0, ax, ay, r * 4);
+  gr.addColorStop(0, `rgba(255,107,107,${0.9 * k})`); gr.addColorStop(1, 'rgba(255,107,107,0)');
+  g.fillStyle = gr; g.beginPath(); g.arc(ax, ay, r * 4, 0, Math.PI * 2); g.fill();
+  g.fillStyle = k > 0.1 ? TK.C.red : 'rgba(255,255,255,0.5)'; g.beginPath(); g.ellipse(ax, ay, r, r * 0.7, 0.3, 0, Math.PI * 2); g.fill();
+  g.restore();
+  TK.text(g, '扁桃体（危ないかどうかを決める所）', PW / 2, 950, 42, { color: TK.C.red });
+}
+
+function draw(g, t) {
+  // 0〜12: 3択（4〜6 は考える時間、6 で答え）
+  if (t < 12.0) {
+    if (t < 6.0) {
+      wave(g, 110, 960, 320, 60 + 8 * Math.sin(t * 30), 70, t, { m: 1 });
+      TK.hook(g, t, 0.0, 6.0, '悲鳴が [耳に刺さる] 理由は？', { y: 175, size: 72 });
+    }
+    TK.choices(g, t, 0.6, 9.0, ['高いから', '大きいから', 'ザラザラだから'], { y: 620, h: 130, gap: 28, think: [4.0, 6.0], reveal: 6.0, answer: 2 });
+    if (t >= 9.0) {
+      g.save(); g.globalAlpha = fade(t, 9.0, 12.0, 0.3);
+      TK.text(g, '悲鳴の「音の大きさ」のゆれ（1秒ぶん）', PW / 2, 330, 46, { color: TK.C.sub });
+      wave(g, 110, 960, 560, 150, 70, t, { m: 1, color: TK.C.acc, fill: 'rgba(255,207,74,0.25)' });
+      TK.text(g, '1秒に [30〜150回]', PW / 2, 860, 90, { stroke: 'rgba(0,0,0,0.5)' });
+      g.restore();
+    }
+  }
+  // 12〜17: 話し声とくらべる
+  if (t >= 12.0 && t < 17.0) {
+    g.save(); g.globalAlpha = fade(t, 12.0, 17.0, 0.3);
+    TK.text(g, 'ふつうの話し声（1秒ぶん）', PW / 2, 260, 48, { color: TK.C.sub });
+    wave(g, 110, 960, 430, 110, 4.5, t, { m: 1, drift: 1 });
+    TK.text(g, '1秒に 4〜5回', PW / 2, 600, 56, { color: TK.C.acc2 });
+    if (t > 14.4) {
+      g.save(); g.globalAlpha *= fade(t, 14.4, 17.0, 0.3);
+      TK.text(g, '悲鳴（1秒ぶん）', PW / 2, 710, 48, { color: TK.C.sub });
+      wave(g, 110, 960, 870, 110, 70, t, { m: 1, color: TK.C.acc, fill: 'rgba(255,207,74,0.25)' });
+      TK.text(g, '1秒に 30〜150回', PW / 2, 1040, 56, { color: TK.C.acc });
+      g.restore();
+    }
+    g.restore();
+  }
+  // 17〜23: 帯（話し声・悲鳴・警報）
+  if (t >= 17.0 && t < 23.0) {
+    g.save(); g.globalAlpha = fade(t, 17.0, 23.0, 0.3);
+    TK.text(g, 'ゆれの速さの地図', PW / 2, 260, 60, { color: TK.C.sub });
+    axis(g);
+    band(g, 4, 5, 640, 70, 'rgba(95,212,255,0.85)', '話し声', 1);
+    band(g, 30, 150, 640, 70, 'rgba(255,207,74,0.85)', '悲鳴', 1);
+    if (t > 18.6) {
+      const k = TK.pop(t, 18.6);
+      band(g, 30, 150, 470, 70, 'rgba(255,107,107,0.85)', '警報・目覚まし', k);
+    }
+    g.restore();
+  }
+  // 23〜30: 脳
+  if (t >= 23.0) {
+    g.save(); g.globalAlpha = fade(t, 23.0, 30.5, 0.3);
+    TK.text(g, 'ゆれを [足しただけ] の音でも', PW / 2, 260, 64);
+    brain(g, t, clamp((t - 24.6) / 0.6, 0, 1));
+    if (t > 26.5) { g.save(); g.globalAlpha *= TK.pop(t, 26.5); TK.text(g, '左右どっちから？ → 速く・正確に', PW / 2, 1050, 48, { color: TK.C.acc }); g.restore(); }
+    g.restore();
+  }
+  if (t >= 12.0 && t < 23.0) TK.note(g, t, 12.0, 23.0, '話し声の 4〜5回 は報道の解説の値（AIP Inside Science）。波形は合成した模式図', { size: 28 });
+  if (t >= 27.0) TK.note(g, t, 27.0, 30.0, '出どころ: Arnal, Flinker, Kleinschmidt, Giraud & Poeppel (2015)\nCurrent Biology 25(15): 2051–2056', { size: 30 });
+}
+
+triviaStart({ out: 'sound-feel-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

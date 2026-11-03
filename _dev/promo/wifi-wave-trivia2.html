@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく wifi-wave-2（型E 桁）「スマホに届くのは、ルーターの10億分の1」。台本は trivia/wifi-wave.md。?short で録る
+// 自由空間の損失 L = 32.4 + 20 log f(MHz) + 20 log d(km)（ITU-R P.525）、f = 2437MHz（ch6）:
+// 1m → 40.1dB（約1万分の1）、10m → 60.1dB（約100万分の1）。ルーター 20dBm（0.1W）と壁ごし −70dBm は目安 → 90dB = 10億分の1（0.1nW）
+const DUR = 35;
+const subs = [
+  { a: 0.0, b: 2.5, ja: 'スマホに届く WiFi は、ルーターが出した電波の…10億分の1', en: 'The WiFi your phone receives is one billionth\nof what the router sends.', noBurn: true },
+  { a: 2.5, b: 7.0, ja: 'ルーターが出すのは、だいたい[0.1ワット]', en: 'A router puts out about 0.1 watts.' },
+  { a: 7.0, b: 13.0, ja: '1m はなれただけで、[1万分の1]', en: 'Just 1 meter away: one ten-thousandth.' },
+  { a: 13.0, b: 19.0, ja: '10m で、[100万分の1]。ここまで、壁なしで', en: 'At 10 meters: one millionth. And that’s with no walls.' },
+  { a: 19.0, b: 26.0, ja: '壁を何枚か通ると、[10億分の1]', en: 'Through a few walls: one billionth.' },
+  { a: 26.0, b: 32.0, ja: '10億円のうち、[1円]ぶん。\nそれでも動画が見られる', en: 'Like 1 yen out of a billion yen.\nAnd you can still stream video.' },
+  { a: 32.0, b: 35.0, ja: 'スマホの耳は、[すごくいい]', en: 'Your phone has amazing ears.' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 2.5, type: 'whoosh' }, { t: 3.2, type: 'pop' }, { t: 7.0, type: 'whoosh' }, { t: 8.4, type: 'ding' },
+  { t: 13.0, type: 'whoosh' }, { t: 14.4, type: 'ding' }, { t: 19.0, type: 'whoosh' }, { t: 20.0, type: 'thud' }, { t: 21.0, type: 'thud' }, { t: 22.0, type: 'thud' }, { t: 23.2, type: 'ding' },
+  { t: 26.0, type: 'pop' }, { t: 28.0, type: 'tick' }, { t: 32.0, type: 'rise' },
+];
+
+function router(g, x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = '#e8f0ff'; g.lineWidth = 6;
+  g.beginPath(); g.roundRect(-70, -20, 140, 50, 12); g.moveTo(-40, -20); g.lineTo(-55, -80); g.moveTo(40, -20); g.lineTo(55, -80); g.stroke();
+  g.fillStyle = TK.C.green; g.beginPath(); g.arc(-30, 5, 6, 0, Math.PI * 2); g.arc(-10, 5, 6, 0, Math.PI * 2); g.fill(); g.restore();
+}
+function phone(g, x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = '#e8f0ff'; g.lineWidth = 5;
+  g.beginPath(); g.roundRect(-34, -64, 68, 128, 14); g.stroke(); g.beginPath(); g.moveTo(-10, 50); g.lineTo(10, 50); g.stroke(); g.restore();
+}
+function rings(g, cx, cy, t, maxR, alpha = 0.8) {
+  for (let i = 0; i < 6; i++) {
+    const r = ((t * 150 + i * maxR / 6) % maxR);
+    g.save(); g.strokeStyle = TK.C.acc2; g.globalAlpha = Math.max(0, 1 - r / maxR) * alpha; g.lineWidth = 5; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke(); g.restore();
+  }
+}
+function frac(g, t, a, s, y) {
+  g.save(); g.globalAlpha = TK.pop(t, a, 0.4);
+  TK.card(g, 150, y - 80, 660, 160, { r: 40, fill: 'rgba(255,207,74,0.16)', stroke: TK.C.acc });
+  TK.text(g, s, PW / 2 - 60, y, 88, { color: TK.C.acc });
+  g.restore();
+}
+
+function draw(g, t) {
+  // 0〜2.5: フック
+  if (t < 2.5) {
+    TK.hook(g, t, 0.0, 2.5, '[10億分の1]', { y: 380, size: 150 });
+    TK.text(g, '1 / 1,000,000,000', PW / 2 - 60, 560, 64, { color: TK.C.sub });
+    g.save(); g.globalAlpha = TK.pop(t, 0.6, 0.4); phone(g, PW / 2 - 60, 820, 0.35); g.restore();
+  }
+  // 2.5〜7: ルーター 0.1W
+  if (t >= 2.5 && t < 7.0) {
+    rings(g, PW / 2 - 60, 640, t, 420);
+    router(g, PW / 2 - 60, 640, 1.8);
+    TK.count(g, t, 3.2, 7.0, 0, 0.1, { y: 290, size: 140, dur: 0.8, fmt: v => v.toFixed(2).replace(/0$/, '') + ' W', label: 'ルーターが出す電波（目安）' });
+  }
+  // 7〜19: 1m・10m の輪（何もない空間）
+  if (t >= 7.0 && t < 19.0) {
+    const cx = 200, cy = 600, ten = t >= 13.0, k = ten ? TK.out((t - 13.2) / 1.0) : 0;
+    const r1 = lerp(330, 66, k), r10 = lerp(3300, 660, k);   // 1m の輪 → 10m の輪へ引く
+    rings(g, cx, cy, t, Math.min(700, ten ? r10 : r1 * 1.2), 0.5);
+    router(g, cx, cy, 1.1);
+    g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.setLineDash([16, 12]);
+    g.beginPath(); g.arc(cx, cy, r1, -1.2, 1.2); g.stroke();
+    if (ten) { g.beginPath(); g.arc(cx, cy, r10, -0.55, 0.55); g.stroke(); }
+    g.restore();
+    phone(g, cx + (ten ? r10 : r1), cy, 0.9);
+    TK.text(g, '1 m', cx + r1, cy - 120 - (ten ? 0 : 20), 48, { color: TK.C.acc });
+    if (ten) TK.text(g, '10 m', cx + r10 - 30, cy - 160, 48, { color: TK.C.acc, align: 'right' });
+    if (!ten) frac(g, t, 8.4, '1万分の1', 260); else frac(g, t, 14.4, '100万分の1', 260);
+    TK.note(g, t, 8, 19, '何もない空間の計算（ITU-R P.525、2.437GHz）\n本当の部屋は反射で強くも弱くもなる', { size: 30 });
+  }
+  // 19〜26: 壁を通るたびに暗く
+  if (t >= 19.0 && t < 26.0) {
+    const walls = [380, 560, 740];
+    const y = 600;
+    router(g, 160, y, 1.1);
+    // 波の帯（壁を通るたびにうすく）
+    for (let x = 230; x < 880; x += 6) {
+      const n = walls.filter(w => x > w).length, on = (t - 19.5) * 500 > x - 230;
+      if (!on) continue;
+      const a = Math.pow(0.35, n) * (0.5 + 0.5 * Math.sin((x - t * 300) / 20));
+      g.save(); g.fillStyle = TK.C.acc2; g.globalAlpha = 0.15 + 0.85 * a * Math.pow(1, 1); g.fillRect(x, y - 110 * Math.pow(0.6, n), 4, 220 * Math.pow(0.6, n)); g.restore();
+    }
+    walls.forEach((w, i) => { g.save(); g.globalAlpha = TK.pop(t, 20 + i, 0.3); g.fillStyle = 'rgba(200,210,230,0.55)'; g.fillRect(w - 12, y - 220, 24, 440); g.restore(); });
+    phone(g, 860, y, 0.9);
+    TK.text(g, '壁', 380, y + 270, 44, { color: TK.C.sub });
+    if (t > 23.2) frac(g, t, 23.2, '10億分の1', 260);
+    TK.note(g, t, 19.5, 26, 'ルーター 0.1W・壁ごし −70dBm は目安\n（0.1W → 0.0000000001W）', { size: 30 });
+  }
+  // 26〜32: 10億円のうち1円
+  if (t >= 26.0 && t < 32.0) {
+    const k = TK.pop(t, 26.2, 0.4);
+    g.save(); g.globalAlpha = clamp(k, 0, 1);
+    // 1万円札の束を積んだ山（10億円＝10万枚）のたとえ: 大きな四角
+    TK.card(g, 130, 230, 700, 560, { r: 20, fill: 'rgba(89,227,154,0.14)', stroke: TK.C.green });
+    TK.text(g, '10億円', PW / 2 - 60, 510, 120, { color: TK.C.green });
+    g.restore();
+    if (t > 28.0) {
+      g.save(); g.globalAlpha = TK.pop(t, 28.0, 0.3);
+      g.fillStyle = TK.C.acc; g.beginPath(); g.arc(800, 760, 12, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = TK.C.acc; g.lineWidth = 4; g.beginPath(); g.moveTo(790, 770); g.lineTo(720, 880); g.stroke();
+      TK.text(g, 'このうち 1円', 720, 920, 56, { color: TK.C.acc, align: 'right' });
+      g.restore();
+    }
+  }
+  // 32〜35: スマホの耳
+  if (t >= 32.0) {
+    phone(g, PW / 2 - 60, 560, 2.6);
+    for (let i = 0; i < 3; i++) { g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 8; g.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(t * 4 - i)); g.beginPath(); g.arc(PW / 2 - 60, 560, 220 + i * 50, -2.6, -0.55); g.stroke(); g.restore(); }
+    TK.note(g, t, 32.2, 35, '出どころ: ITU-R P.525-5（2024）自由空間の式\nIEEE 802.11（チャンネル6 = 2437MHz）', { size: 30 });
+  }
+}
+
+triviaStart({ out: 'wifi-wave-trivia2', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

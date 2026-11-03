@@ -1,0 +1,24 @@
+[
+  {
+    "id": "sail-wind-1",
+    "page": "sail-wind-trivia1",
+    "mp4": "out/sail-wind-trivia1-short.mp4",
+    "type": "H",
+    "title": "真後ろの風だけで、風の2.8倍の速さで走った乗り物",
+    "dur": 40,
+    "voice": "(2) VOICEVOX。いまは字幕だけ",
+    "app_footage": false,
+    "notes": "アプリの録画（押されるだけの帆）の代わりに、帆の車が風に近づいて押す力が0になる絵を Canvas で（形だけ、数値なし）。プロペラの車・車から見た地面と空気は線画。台本の「アメリカの干上がった湖」は、出どころのページで 2.8倍の記録の場所が確かめられていない（El Mirage は 51.4 mph の別の記録）ので、画面は「2010年7月 アメリカ」だけにした。REVIEW: 有名な動画で取り上げずみ（d が弱い）。check-loudness: -20.3 LUFS OK。"
+  },
+  {
+    "id": "sail-wind-2",
+    "page": "sail-wind-trivia2",
+    "mp4": "out/sail-wind-trivia2-short.mp4",
+    "type": "A",
+    "title": "ヨットがいちばん速いのは追い風じゃない",
+    "dur": 30,
+    "voice": "(2) VOICEVOX。いまは字幕だけ",
+    "app_footage": false,
+    "notes": "アプリの録画（4 kt、180° と 88°）の代わりに、上から見た船・帆・風の線、帆の断面と流れ（形だけ）、キールの力の矢印を Canvas で。数字は台本の 0.58 / 1.26 倍のまま。真横の風の場面は、船を回さず風の向きを回して見せた。REVIEW: sail-wind の3本は全部「追い風」の話なので、sail-wind-1 と間をあけて出す。check-loudness: -20.4 LUFS OK。"
+  }
+]

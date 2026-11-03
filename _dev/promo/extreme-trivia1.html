@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく extreme-1（型A ぜんぶ逆）「深海魚は、水圧でつぶれない」。台本は trivia/extreme.md。?short で録る
+// 数字は Yancey ほか 2014（PNAS）: TMAO 0 m 40・4,850 m 261・7,000 m 386 mmol/kg、体のこさ 浅い魚 約350・7,000 m 991、海水 1,100 mOsmol/kg、
+// 8,200 m で海水と同じこさになる予想、いちばん深い 25%（8,400〜11,000 m）に魚なし。撮影の記録 8,336 m（NHM 2023）。
+// 魚・タンパク質の絵は線の模式図（写真なし）。こさの線は 0 → 7,000 m を直線でつなぎ、その先を点線でのばした（見せ方。論文の予想の線そのものではない）
+const DUR = 40;
+const subs = [
+  { a: 0.0, b: 3.0, ja: '海のいちばん深い所に、魚はいない。\nつぶれるから…じゃない。', en: 'There are no fish at the very bottom of the ocean.\nAnd it’s not because they’d be crushed.', noBurn: true },
+  { a: 3.0, b: 9.0, ja: '魚の体は、ほとんど[水]。\n水はほとんど縮まないから、つぶれない。', en: 'A fish is mostly water, and water barely compresses,\nso deep-sea fish don’t get crushed.' },
+  { a: 9.0, b: 15.0, ja: '困るのは、体の中の[小さな部品]。\n圧力でゆがむのを、[TMAO]という分子で守る。', en: 'The trouble is the tiny parts inside the body.\nFish protect them from pressure with a molecule called TMAO.' },
+  { a: 15.0, b: 22.0, ja: '深くすむ魚ほど、[TMAO]が多い。', en: 'The deeper a fish lives, the more TMAO it has.' },
+  { a: 22.0, b: 30.0, ja: 'でも TMAO をふやすほど、体は[こく]なる。\n[8,200 m]で、体のこさが海水と同じになる計算。', en: 'But more TMAO makes the body fluids more concentrated.\nAt 8,200 m, they’d match seawater, by the calculation.' },
+  { a: 30.0, b: 36.0, ja: 'それより深くすむには、\n体のしくみを[丸ごと]変えないといけない。', en: 'To live any deeper,\na fish would need a whole new body chemistry.' },
+  { a: 36.0, b: 40.0, ja: '見つかったいちばん深い魚は[8,336 m]。\n予想の線の、すぐ近く。', en: 'The deepest fish ever filmed: 8,336 m.\nRight next to the predicted line.' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 1.4, type: 'buzz' }, { t: 3.0, type: 'whoosh' }, { t: 7.0, type: 'ding' },
+  { t: 9.0, type: 'whoosh' }, { t: 10.6, type: 'thud' }, { t: 12.4, type: 'pop' }, { t: 13.0, type: 'pop' }, { t: 13.6, type: 'pop' },
+  { t: 15.0, type: 'whoosh' }, { t: 15.6, type: 'tick' }, { t: 16.3, type: 'tick' }, { t: 17.0, type: 'tick' },
+  { t: 22.0, type: 'whoosh' }, { t: 23.0, type: 'rise' }, { t: 26.6, type: 'ding' },
+  { t: 30.0, type: 'whoosh' }, { t: 31.5, type: 'buzz' }, { t: 36.0, type: 'pop' }, { t: 37.0, type: 'ding' },
+];
+
+// ---- 海のものさし（縦） ----
+const RX = 230, RY0 = 190, RY1 = 1080, DMAX = 11000;
+const dy = d => RY0 + d / DMAX * (RY1 - RY0);
+function ruler(g, f = 1, o = {}) {
+  g.save(); g.globalAlpha *= f;
+  // 水の色（深いほど暗い）
+  const gr = g.createLinearGradient(0, RY0, 0, RY1);
+  gr.addColorStop(0, 'rgba(60,140,220,0.45)'); gr.addColorStop(1, 'rgba(10,20,50,0.6)');
+  g.fillStyle = gr; g.fillRect(RX, RY0, PW - 120 - RX, RY1 - RY0);
+  // 魚がいない帯 8,400〜10,920 m
+  if (o.zone !== false) {
+    g.fillStyle = 'rgba(0,0,0,0.72)'; g.fillRect(RX, dy(8400), PW - 120 - RX, dy(10920) - dy(8400));
+    g.strokeStyle = TK.C.red; g.lineWidth = 3; g.setLineDash([12, 10]);
+    g.beginPath(); g.moveTo(RX, dy(8400)); g.lineTo(PW - 120, dy(8400)); g.stroke(); g.setLineDash([]);
+    TK.text(g, '魚 [0]', 640, (dy(8400) + dy(10920)) / 2 - 14, 92, { acc: TK.C.red });
+    TK.text(g, '8,400〜10,920 m', 640, (dy(8400) + dy(10920)) / 2 + 66, 40, { color: TK.C.sub, bold: false });
+  }
+  // 海の底
+  g.fillStyle = '#3a3f55'; g.fillRect(RX, dy(10920), PW - 120 - RX, RY1 + 30 - dy(10920));
+  // 目もり
+  g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 4;
+  g.beginPath(); g.moveTo(RX, RY0); g.lineTo(RX, RY1); g.stroke();
+  for (let d = 0; d <= 10000; d += 2000) {
+    g.beginPath(); g.moveTo(RX - 24, dy(d)); g.lineTo(RX, dy(d)); g.stroke();
+    TK.text(g, (d / 1000) + ' km', RX - 36, dy(d), 36, { align: 'right', color: TK.C.sub, bold: false });
+  }
+  g.restore();
+}
+// 魚（線の絵）。x, y が体の中心、s が大きさ
+function fish(g, x, y, s = 1, color = '#fff', f = 1) {
+  g.save(); g.globalAlpha *= f; g.translate(x, y); g.scale(s, s);
+  g.strokeStyle = color; g.lineWidth = 5 / s; g.lineJoin = 'round'; g.lineCap = 'round';
+  g.fillStyle = 'rgba(255,255,255,0.10)';
+  g.beginPath();   // クサウオのような、頭の大きいおたまじゃくし形
+  g.moveTo(-70, 0); g.bezierCurveTo(-70, -42, -10, -48, 20, -28); g.bezierCurveTo(50, -10, 80, -8, 110, -16);
+  g.lineTo(104, 0); g.lineTo(110, 16); g.bezierCurveTo(80, 8, 50, 10, 20, 28); g.bezierCurveTo(-10, 48, -70, 42, -70, 0);
+  g.fill(); g.stroke();
+  g.fillStyle = color; g.beginPath(); g.arc(-42, -10, 6, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.moveTo(-20, 22); g.quadraticCurveTo(-4, 44, 14, 30); g.stroke();   // ひれ
+  g.restore();
+}
+// タンパク質（くねくねの鎖）。warp 0〜1 でゆがむ
+function protein(g, cx, cy, warp, f = 1) {
+  g.save(); g.globalAlpha *= f; g.strokeStyle = TK.C.acc2; g.lineWidth = 12; g.lineCap = 'round'; g.lineJoin = 'round';
+  g.beginPath();
+  for (let i = 0; i <= 140; i++) {
+    const u = i / 140, a = u * Math.PI * 6;
+    const r = 150 * (0.35 + 0.65 * Math.sin(u * Math.PI)) * (1 - 0.45 * warp * (0.5 + 0.5 * Math.sin(a * 1.7 + 1)));
+    const x = cx + Math.cos(a) * r + warp * 60 * Math.sin(u * 13), y = cy + Math.sin(a) * r * (1 - 0.4 * warp) + (u - 0.5) * 60;
+    i ? g.lineTo(x, y) : g.moveTo(x, y);
+  }
+  g.stroke(); g.restore();
+}
+
+// こさのグラフ（22〜36秒）
+const GX0 = 200, GX1 = 900, GY0 = 930, GY1 = 330;   // 横: 深さ 0〜10,000 m、縦: こさ 300〜1,200
+const gx = d => GX0 + d / 10000 * (GX1 - GX0), gy = c => GY0 + (c - 300) / 900 * (GY1 - GY0);
+function osmoGraph(g, t, a) {
+  g.save();
+  g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 4;
+  g.beginPath(); g.moveTo(GX0, GY1 - 20); g.lineTo(GX0, GY0); g.lineTo(GX1 + 20, GY0); g.stroke();
+  for (let d = 0; d <= 10000; d += 2000) TK.text(g, (d / 1000) + '', gx(d), GY0 + 38, 34, { color: TK.C.sub, bold: false });
+  TK.text(g, '深さ（km）', GX1 + 20, GY0 + 84, 36, { align: 'right', color: TK.C.sub, bold: false });
+  TK.text(g, '体の中の「こさ」', GX0 + 10, GY1 - 50, 40, { align: 'left', color: TK.C.sub });
+  // 海水の線
+  const k0 = TK.out((t - a - 0.2) / 0.8);
+  g.strokeStyle = TK.C.acc2; g.lineWidth = 7;
+  g.beginPath(); g.moveTo(GX0, gy(1100)); g.lineTo(GX0 + (GX1 - GX0) * k0, gy(1100)); g.stroke();
+  if (k0 > 0.5) TK.text(g, '海水 1,100', GX0 + 20, gy(1100) - 40, 40, { align: 'left', color: TK.C.acc2 });
+  // 魚の線（0 m 350 → 7,000 m 991 の点、その先は点線）
+  const k1 = clamp((t - a - 1.0) / 2.0, 0, 1), dEnd = 7000 * k1;
+  const c = d => 350 + (991 - 350) * d / 7000;
+  g.strokeStyle = TK.C.acc; g.lineWidth = 7;
+  g.beginPath(); g.moveTo(gx(0), gy(c(0))); g.lineTo(gx(dEnd), gy(c(dEnd))); g.stroke();
+  g.fillStyle = TK.C.acc;
+  [[0, 350], [7000, 991]].forEach(([d, v]) => { if (dEnd >= d - 1) { g.beginPath(); g.arc(gx(d), gy(v), 13, 0, Math.PI * 2); g.fill(); } });
+  if (k1 > 0.1) TK.text(g, '魚 350', gx(0) + 24, gy(350) - 36, 38, { align: 'left', color: TK.C.acc });
+  if (k1 >= 1) TK.text(g, '991', gx(7000) - 20, gy(991) + 46, 40, { color: TK.C.acc });
+  const k2 = clamp((t - a - 3.2) / 1.2, 0, 1);
+  if (k2 > 0) {
+    g.setLineDash([14, 12]); g.beginPath(); g.moveTo(gx(7000), gy(991)); const d2 = 7000 + 2000 * k2; g.lineTo(gx(d2), gy(c(d2))); g.stroke(); g.setLineDash([]);
+  }
+  // 交わる所 8,200 m
+  if (t > a + 4.4) {
+    const p = TK.pop(t, a + 4.4, 0.4);
+    g.strokeStyle = TK.C.red; g.lineWidth = 5; g.setLineDash([8, 8]);
+    g.beginPath(); g.moveTo(gx(8200), gy(1100)); g.lineTo(gx(8200), GY0); g.stroke(); g.setLineDash([]);
+    g.fillStyle = TK.C.red; g.beginPath(); g.arc(gx(8200), gy(1100), 18 * p, 0, Math.PI * 2); g.fill();
+    TK.text(g, '[8,200 m]', gx(8200), gy(1100) - 100, 64 * p, { acc: TK.C.red });
+  }
+  g.restore();
+}
+
+function draw(g, t) {
+  // 0〜3: フック。ものさしと「魚 0」
+  if (t < 3.0) {
+    ruler(g, fade(t, -1, 3, 0.3));
+    fish(g, 560, dy(2500), 1.3, '#fff', 0.9);
+    TK.hook(g, t, 0.0, 3.0, 'つぶれるから、\n[じゃない]。', { y: 520, size: 120 });
+  }
+  // 3〜9: 魚を 8,000 m まで下げる。形は変わらない
+  if (t >= 3.0 && t < 9.0) {
+    ruler(g, 1);
+    const d = lerp(200, 8000, ease((t - 3.4) / 3.6));
+    fish(g, 600, dy(d), 1.3);
+    TK.card(g, 380, 180, 520, 110, { r: 55 });
+    TK.text(g, '深さ ' + Math.round(d / 10) * 10 + ' m', 640, 236, 60, { color: d > 7990 ? TK.C.acc : '#fff' });
+    if (t > 7.0) { g.save(); g.globalAlpha = fade(t, 7, 9, 0.3); TK.card(g, 300, dy(8000) - 250, 640, 120, { r: 30 }); TK.text(g, '形は [そのまま]', 620, dy(8000) - 190, 64); g.restore(); }
+    TK.note(g, t, 3.5, 9, '海の底でも、水が縮むのは約4%（Tait の式）', { size: 32 });
+  }
+  // 9〜15: タンパク質の模式図。圧力でゆがむ → TMAO が支える
+  if (t >= 9.0 && t < 15.0) {
+    const press = ease((t - 9.6) / 1.2), help = ease((t - 12.2) / 1.6), warp = press * (1 - help);
+    // 圧力の矢印
+    g.save(); g.globalAlpha = press * (1 - 0.6 * help); g.strokeStyle = TK.C.red; g.lineWidth = 10; g.lineCap = 'round';
+    for (let i = 0; i < 8; i++) {
+      const a = i / 8 * Math.PI * 2, r0 = 400, r1 = 300 + 20 * Math.sin(t * 6 + i);
+      const x0 = 540 + Math.cos(a) * r0, y0 = 640 + Math.sin(a) * r0 * 0.9, x1 = 540 + Math.cos(a) * r1, y1 = 640 + Math.sin(a) * r1 * 0.9;
+      g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+      const ang = Math.atan2(y1 - y0, x1 - x0);
+      g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 - 26 * Math.cos(ang - 0.5), y1 - 26 * Math.sin(ang - 0.5)); g.moveTo(x1, y1); g.lineTo(x1 - 26 * Math.cos(ang + 0.5), y1 - 26 * Math.sin(ang + 0.5)); g.stroke();
+    }
+    g.restore();
+    protein(g, 540, 640, warp);
+    // TMAO（小さな玉）がまわりに集まる
+    if (help > 0) {
+      for (let i = 0; i < 14; i++) {
+        const a = i / 14 * Math.PI * 2 + t * 0.4, r = lerp(420, 215, TK.out((t - 12.2 - i * 0.05) / 0.9));
+        const x = 540 + Math.cos(a) * r, y = 640 + Math.sin(a) * r * 0.85;
+        g.save(); g.globalAlpha = clamp((t - 12.2 - i * 0.05) / 0.4, 0, 1);
+        g.fillStyle = TK.C.green; g.beginPath(); g.arc(x, y, 20, 0, Math.PI * 2); g.fill(); g.restore();
+      }
+      g.save(); g.globalAlpha = fade(t, 12.6, 15, 0.3); TK.text(g, '[TMAO]', 540, 1020, 72, { acc: TK.C.green }); g.restore();
+    }
+    TK.text(g, press < 0.5 ? 'タンパク質（体の中の部品）' : help < 0.3 ? '圧力で、[ゆがむ]' : '支えて、[元の形]', 540, 220, 64, { acc: help < 0.3 ? TK.C.red : TK.C.green });
+    TK.note(g, t, 9.2, 15, '模式図（形はかざり）', { size: 32 });
+  }
+  // 15〜22: TMAO の量の棒
+  if (t >= 15.0 && t < 22.0) {
+    TK.text(g, '魚の筋肉の [TMAO]', PW / 2, 250, 64, { acc: TK.C.green });
+    TK.bars(g, t, 15.2, 22.0, [
+      { label: '浅い海（0 m）', v: 40 / 420, color: TK.C.green, text: '40' },
+      { label: '4,850 m', v: 261 / 420, color: TK.C.green, text: '261' },
+      { label: '7,000 m（クサウオ）', v: 386 / 420, color: TK.C.green, text: '386' },
+    ], { y: 380, gap: 220, stagger: 0.7 });
+    TK.text(g, '単位: mmol/kg', 860, 1060, 34, { align: 'right', color: TK.C.dim, bold: false });
+    TK.note(g, t, 15.5, 22, '深さごとに、とれた魚の平均（Yancey ほか 2014）', { size: 32 });
+  }
+  // 22〜30: こさのグラフ。8,200 m で海水と同じ
+  if (t >= 22.0 && t < 30.0) {
+    osmoGraph(g, t, 22.0);
+    TK.note(g, t, 22.5, 30, '研究の[説]（計算の予想）。点線は先へのばした目安', { size: 32 });
+  }
+  // 30〜36: これより深いと、水の入る向きが逆
+  if (t >= 30.0 && t < 36.0) {
+    const k = ease((t - 31.2) / 0.8);
+    TK.text(g, k < 0.5 ? '8,200 m より浅い' : '8,200 m より[深い]（予想）', PW / 2, 240, 64, { acc: TK.C.red });
+    // 体の箱と海水
+    TK.card(g, 110, 330, 860, 580, { fill: 'rgba(40,90,170,0.35)', r: 40 });
+    TK.text(g, '海水', 190, 400, 44, { color: TK.C.acc2, align: 'left' });
+    g.save(); g.fillStyle = 'rgba(255,207,74,0.18)'; g.strokeStyle = TK.C.acc; g.lineWidth = 6;
+    g.beginPath(); g.ellipse(540, 630, 230, 170, 0, 0, Math.PI * 2); g.fill(); g.stroke(); g.restore();
+    TK.text(g, '魚の体', 540, 630, 56, { color: TK.C.acc });
+    TK.text(g, k < 0.5 ? '体 < 海水' : '体 [>] 海水', 540, 710, 44, { color: TK.C.sub, acc: TK.C.red });
+    // 水の動く向きの矢印（はじめは外へ、あとは中へ）
+    g.save(); g.strokeStyle = TK.C.acc2; g.lineWidth = 9; g.lineCap = 'round';
+    for (let i = 0; i < 6; i++) {
+      const a = i / 6 * Math.PI * 2 + 0.3, inner = 260, outer = 360;
+      const dir = lerp(1, -1, k), m = (t * 0.8 + i * 0.17) % 1;
+      const r = dir > 0 ? lerp(inner, outer, m) : lerp(outer, inner, m);
+      const x = 540 + Math.cos(a) * r, y = 630 + Math.sin(a) * r * 0.74;
+      const ang = a + (dir > 0 ? 0 : Math.PI);
+      g.globalAlpha = Math.sin(m * Math.PI) * Math.abs(dir);
+      g.beginPath(); g.moveTo(x - Math.cos(ang) * 30, y - Math.sin(ang) * 22); g.lineTo(x + Math.cos(ang) * 30, y + Math.sin(ang) * 22); g.stroke();
+      g.beginPath(); g.arc(x + Math.cos(ang) * 30, y + Math.sin(ang) * 22, 9, 0, Math.PI * 2); g.fillStyle = TK.C.acc2; g.fill();
+    }
+    g.restore();
+    TK.text(g, k < 0.5 ? '水は、体から外へ少しずつ' : '水の向きが[逆]になる', PW / 2, 990, 58, { acc: TK.C.red });
+    TK.note(g, t, 30.5, 36, '模式図。浅い海の魚は、ふつう体の方がうすい', { size: 32 });
+  }
+  // 36〜40: 撮影された記録 8,336 m
+  if (t >= 36.0) {
+    ruler(g, 1);
+    g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 5; g.setLineDash([14, 10]);
+    g.beginPath(); g.moveTo(RX, dy(8200)); g.lineTo(PW - 120, dy(8200)); g.stroke(); g.setLineDash([]); g.restore();
+    TK.text(g, '予想 8,200 m', PW - 140, dy(8200) - 34, 40, { align: 'right', color: TK.C.acc });
+    const p = TK.pop(t, 36.6, 0.5);
+    fish(g, 520, dy(8336) - 6, 0.8 * p, TK.C.acc);
+    TK.card(g, 300, 220, 600, 150, { r: 40 });
+    TK.text(g, '撮影の記録', 600, 262, 40, { color: TK.C.sub });
+    TK.text(g, '[8,336 m]', 600, 322, 74);
+    TK.note(g, t, 37.2, 40, '出どころ: Yancey ほか (2014) PNAS 111:4461・Natural History Museum (2023)\n伊豆・小笠原海溝のクサウオの仲間', { size: 28 });
+  }
+}
+
+triviaStart({ out: 'extreme-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

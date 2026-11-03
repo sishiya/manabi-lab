@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく net-route-3（型F 会話）「ハトでインターネット、本当にやった」。台本は trivia/net-route.md。?short で録る
+// 数字は Bergen Linux User Group の報告と ping のログ（2001-04-28）: 9個送って4個、55% loss、
+// 往復 3,211.9〜6,388.7 秒（53.5〜106.5分）、返ってきた順 icmp_seq 0・4・2・1。RFC 1149 は 1990-04-01。
+// 声はまだ（2人の会話。字幕の上に「聞き手」「答える人」の札を出す）。最後の並べなおしの図は「たとえ」（TCP のしくみ）
+const DUR = 40;
+const subs = [
+  { a: 0.0, b: 3.0, who: 'q', ja: 'ping が 53分？ 壊れてるでしょ', en: 'Q: A 53-minute ping? That must be broken.', noBurn: true },
+  { a: 3.0, b: 8.0, who: 'a', ja: 'ハトで送ったのよ。\nもともとは[エイプリルフール]の決まりごと', en: 'A: It went by pigeon.\nIt started as an April Fools’ standard.' },
+  { a: 8.0, b: 10.5, who: 'q', ja: '…本当にやったの？', en: 'Q: ...Someone actually did it?' },
+  { a: 10.5, b: 14.0, who: 'a', ja: 'ベルゲンの Linux の集まりが、[本当に]', en: 'A: A Linux user group in Bergen really did.' },
+  { a: 14.0, b: 20.0, who: 'a', ja: '包みを紙に印刷して、ハトの足に。\n着いたら読み取って、返事もハトで', en: 'A: Packets printed on paper, tied to a pigeon’s leg.\nScanned on arrival, and the reply came back by pigeon too.' },
+  { a: 20.0, b: 22.0, who: 'q', ja: '結果は？', en: 'Q: And the result?' },
+  { a: 22.0, b: 27.0, who: 'a', ja: '9個送って、返ってきたのは[4個]。\n往復 [53分から106分]', en: 'A: 9 sent, 4 came back.\nRound trip: 53 to 106 minutes.' },
+  { a: 27.0, b: 31.0, who: 'a', ja: 'しかも返事の順番はバラバラ。\n0番、4番、2番、1番', en: 'A: And out of order:\nnumber 0, 4, 2, then 1.' },
+  { a: 31.0, b: 34.0, who: 'q', ja: 'ネットの包みって、\n順番ばらばらでも大丈夫なの？', en: 'Q: Is the internet OK\nwith packets out of order?' },
+  { a: 34.0, b: 40.0, who: 'a', ja: 'ふだんのネットの多くも同じ。\n番号で[並べなおして]、そろってから描ける', en: 'A: Much of the everyday internet works the same way:\nit reorders by number, then draws the page.' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 0.9, type: 'buzz' }, { t: 3.0, type: 'whoosh' }, { t: 4.0, type: 'ding' },
+  { t: 8.0, type: 'pop' }, { t: 10.5, type: 'whoosh' }, { t: 14.0, type: 'pop' }, { t: 15.5, type: 'tick' }, { t: 17.0, type: 'whoosh' }, { t: 18.6, type: 'tick' },
+  { t: 20.0, type: 'pop' }, { t: 22.3, type: 'tick' }, { t: 23.1, type: 'tick' }, { t: 23.9, type: 'buzz' }, { t: 24.8, type: 'ding' },
+  { t: 27.4, type: 'pop' }, { t: 28.2, type: 'pop' }, { t: 29.0, type: 'pop' }, { t: 29.8, type: 'pop' },
+  { t: 34.5, type: 'whoosh' }, { t: 37.2, type: 'ding' },
+];
+
+// ハトの線画（右向き）。x, y は胴の中心。flap は羽ばたきの位相、paper で足に紙
+function pigeon(g, x, y, s, flap, o = {}) {
+  g.save(); g.translate(x, y); g.scale(s * (o.flip ? -1 : 1), s);
+  g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = 5 / s * s;
+  g.strokeStyle = '#e8f0ff'; g.fillStyle = 'rgba(160,190,255,0.18)';
+  // 胴
+  g.beginPath(); g.ellipse(0, 0, 70, 38, -0.12, 0, Math.PI * 2); g.fill(); g.stroke();
+  // しっぽ
+  g.beginPath(); g.moveTo(-62, 4); g.lineTo(-118, -6); g.lineTo(-112, 22); g.closePath(); g.fill(); g.stroke();
+  // 頭とくちばし
+  g.beginPath(); g.arc(70, -34, 24, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.fillStyle = TK.C.acc; g.beginPath(); g.moveTo(92, -38); g.lineTo(114, -30); g.lineTo(92, -26); g.closePath(); g.fill();
+  g.fillStyle = '#e8f0ff'; g.beginPath(); g.arc(76, -40, 4, 0, Math.PI * 2); g.fill();
+  // 羽（上下に）
+  const w = Math.sin(flap);
+  g.fillStyle = 'rgba(95,212,255,0.22)'; g.strokeStyle = TK.C.acc2;
+  g.beginPath(); g.moveTo(-20, -18); g.quadraticCurveTo(-10, -18 - 90 * w, 40, -24 - 110 * w); g.quadraticCurveTo(30, -20 - 40 * w, 26, -12); g.closePath(); g.fill(); g.stroke();
+  // 足と紙
+  g.strokeStyle = '#e8f0ff';
+  g.beginPath(); g.moveTo(10, 34); g.lineTo(4, 62); g.moveTo(26, 32); g.lineTo(24, 60); g.stroke();
+  if (o.paper !== false) {
+    g.fillStyle = '#fff'; g.strokeStyle = TK.C.acc; g.lineWidth = 3;
+    g.beginPath(); g.roundRect(-4, 44, 22, 34, 4); g.fill(); g.stroke();
+  }
+  g.restore();
+}
+// 紙の包み（16進の行を印刷した紙）
+function paper(g, x, y, w, h, k = 1, label) {
+  g.save(); g.globalAlpha *= k;
+  g.fillStyle = '#f4f7ff'; g.beginPath(); g.roundRect(x, y, w, h, 10); g.fill();
+  g.fillStyle = '#8796b8';
+  for (let i = 0; i < 6; i++) for (let j = 0; j < 4; j++) g.fillRect(x + 18 + j * (w - 36) / 4, y + 22 + i * (h - 40) / 6, (w - 36) / 4 - 12, 8);
+  if (label) TK.text(g, label, x + w / 2, y + h + 34, 34, { color: TK.C.sub, bold: false });
+  g.restore();
+}
+function tag(g, t) {
+  const s = subs.find(x => t >= x.a && t < x.b && !x.noBurn); if (!s) return;
+  const q = s.who === 'q', f = fade(t, s.a, s.b, 0.12);
+  g.save(); g.globalAlpha = f;
+  const lines = s.ja.split('\n').length, y = PH * 0.615 - (lines - 1) * 42 - 82;
+  const w = 210, x = PW / 2 - w / 2;
+  TK.card(g, x, y - 30, w, 60, { r: 30, fill: q ? 'rgba(95,212,255,0.25)' : 'rgba(255,207,74,0.25)', stroke: q ? TK.C.acc2 : TK.C.acc });
+  TK.text(g, q ? '聞き手' : '答える人', PW / 2, y + 2, 34, { color: q ? TK.C.acc2 : TK.C.acc });
+  g.restore();
+}
+
+function draw(g, t) {
+  // 0〜3: フック「ping 53分」
+  if (t < 3.0) {
+    TK.card(g, 70, 170, PW - 260, 120, { r: 18, fill: 'rgba(5,10,24,0.92)' });
+    g.save(); g.globalAlpha = clamp((t - 0.2) / 0.3, 0, 1);
+    const line = '$ ping … icmp_seq=0 time=3211900.8 ms';
+    TK.text(g, line.slice(0, Math.floor(clamp((t - 0.2) / 1.2, 0, 1) * line.length)), 110, 230, 38, { align: 'left', color: TK.C.green, bold: false, blur: 0 });
+    g.restore();
+    pigeon(g, lerp(-160, PW + 160, t / 3.0), 860 - Math.sin(t * 2.2) * 40, 1.6, t * 14);
+    TK.hook(g, t, 0.3, 3.0, 'ping [53分]？', { y: 520, size: 170 });
+  }
+  // 3〜8: RFC 1149
+  if (t >= 3.0 && t < 8.0) {
+    const k = TK.pop(t, 3.2, 0.4);
+    TK.card(g, 140, 220, PW - 400, 420);
+    g.save(); g.globalAlpha = k;
+    TK.text(g, 'RFC 1149', PW / 2 - 60, 330, 110, { color: TK.C.acc });
+    TK.text(g, '1990年4月1日', PW / 2 - 60, 450, 64);
+    TK.text(g, '「ハトで IP の包みを送る決まり」', PW / 2 - 60, 560, 44, { color: TK.C.sub, bold: false });
+    g.restore();
+    if (t > 4.0) { g.save(); g.globalAlpha = fade(t, 4.0, 8.0, 0.3); TK.card(g, 280, 730, 400, 90, { r: 45, fill: 'rgba(255,107,107,0.2)', stroke: TK.C.red }); TK.text(g, 'エイプリルフール', 480, 776, 46, { color: TK.C.red }); g.restore(); }
+    pigeon(g, 760, 940, 1.1, t * 3, { paper: false });
+  }
+  // 8〜14: 2001年 ベルゲン
+  if (t >= 8.0 && t < 14.0) {
+    const k = TK.pop(t, 8.1, 0.4);
+    g.save(); g.globalAlpha = k;
+    TK.text(g, '2001年4月28日', PW / 2 - 60, 260, 96, { color: TK.C.acc });
+    TK.text(g, 'ノルウェー・ベルゲン', PW / 2 - 60, 380, 64);
+    g.restore();
+    // かんたんな町の線（家と山）
+    g.save(); g.strokeStyle = 'rgba(160,190,255,0.55)'; g.lineWidth = 4; g.beginPath();
+    g.moveTo(80, 900); g.lineTo(260, 640); g.lineTo(420, 820); g.lineTo(560, 600); g.lineTo(760, 880); g.lineTo(900, 900); g.stroke();
+    for (let i = 0; i < 6; i++) { const x = 150 + i * 120, h = 70 + (i % 3) * 20; g.strokeRect(x, 900 - h, 80, h); g.beginPath(); g.moveTo(x - 6, 900 - h); g.lineTo(x + 40, 860 - h); g.lineTo(x + 86, 900 - h); g.stroke(); }
+    g.beginPath(); g.moveTo(60, 900); g.lineTo(940, 900); g.stroke(); g.restore();
+    if (t > 10.5) pigeon(g, lerp(120, 820, clamp((t - 10.5) / 3.5, 0, 1)), 540 - Math.sin((t - 10.5) * 2) * 30, 1.0, t * 14);
+  }
+  // 14〜20: 紙 → 足 → 飛ぶ → 読み取り
+  if (t >= 14.0 && t < 20.0) {
+    const steps = [
+      { a: 14.2, s: '印刷' }, { a: 15.5, s: '足に' }, { a: 17.0, s: '飛ぶ' }, { a: 18.6, s: '読み取り' },
+    ];
+    steps.forEach((st, i) => {
+      const k = TK.pop(t, st.a, 0.35), x = 150 + i * 230;
+      g.save(); g.globalAlpha = k;
+      TK.card(g, x - 95, 230, 190, 80, { r: 40, fill: i === 3 ? 'rgba(89,227,154,0.2)' : 'rgba(20,34,72,0.9)' });
+      TK.text(g, (i + 1) + ' ' + st.s, x, 272, 40, { color: i === 3 ? TK.C.green : '#fff' });
+      if (i < 3) { g.strokeStyle = TK.C.dim; g.lineWidth = 4; g.beginPath(); g.moveTo(x + 100, 270); g.lineTo(x + 130, 270); g.stroke(); }
+      g.restore();
+    });
+    if (t < 15.5) paper(g, 340, 450, 300, 380, TK.pop(t, 14.2, 0.4), 'IP の包み（16進の数字）');
+    else if (t < 17.0) { const k = ease((t - 15.5) / 1.2); paper(g, lerp(340, 485, k), lerp(450, 760, k), lerp(300, 30, k), lerp(380, 44, k), 1); pigeon(g, 470, 700, 1.6, 0, { paper: k > 0.98 }); }
+    else if (t < 18.6) { const k = (t - 17.0) / 1.6; pigeon(g, lerp(470, PW + 200, k), 700 - k * 260, 1.6, t * 16); }
+    else {
+      const k = clamp((t - 18.6) / 1.2, 0, 1);
+      paper(g, 340, 450, 300, 380, 1);
+      g.save(); g.strokeStyle = TK.C.green; g.lineWidth = 8; g.shadowColor = TK.C.green; g.shadowBlur = 20;
+      const y = 450 + 380 * k; g.beginPath(); g.moveTo(320, y); g.lineTo(660, y); g.stroke(); g.restore();
+      TK.text(g, '→ コンピューターへ', PW / 2 - 60, 940, 48, { color: TK.C.green });
+    }
+  }
+  // 20〜27: 結果
+  if (t >= 20.0 && t < 27.0) {
+    TK.text(g, '結果', PW / 2 - 60, 220, 64, { color: TK.C.sub });
+    const rows = [
+      { a: 22.3, l: '送った', v: '9 個', c: '#fff' },
+      { a: 23.1, l: '返ってきた', v: '4 個', c: TK.C.green },
+      { a: 23.9, l: 'なくなった', v: '55 %', c: TK.C.red },
+      { a: 24.8, l: '往復', v: '53〜106 分', c: TK.C.acc },
+    ];
+    rows.forEach((r, i) => {
+      const k = TK.pop(t, r.a, 0.35), y = 330 + i * 170;
+      g.save(); g.globalAlpha = k;
+      TK.card(g, 90, y - 65, PW - 300, 130, { r: 26, fill: i === 3 ? 'rgba(255,207,74,0.18)' : 'rgba(20,34,72,0.9)', stroke: i === 3 ? TK.C.acc : undefined });
+      TK.text(g, r.l, 140, y, 52, { align: 'left', color: TK.C.sub });
+      TK.text(g, r.v, PW - 260, y, 76, { align: 'right', color: r.c });
+      g.restore();
+    });
+    TK.note(g, t, 25.0, 27.0, 'ふつうの ping は 数〜数十ミリ秒（目安）\nなくなったのは、ハトのかごの閉め忘れなど（報告より）', { size: 32 });
+  }
+  // 27〜34: 返ってきた順番
+  if (t >= 27.0 && t < 34.0) {
+    TK.text(g, '返ってきた順', PW / 2 - 60, 240, 60, { color: TK.C.sub });
+    const order = [0, 4, 2, 1];
+    order.forEach((n, i) => {
+      const a = 27.4 + i * 0.8, k = TK.out((t - a) / 0.5), x = 150 + i * 200;
+      if (t < a) return;
+      g.save(); g.globalAlpha = clamp(k * 2, 0, 1);
+      const y = lerp(140, 470, k);
+      TK.card(g, x - 75, y - 90, 150, 180, { r: 20, fill: 'rgba(244,247,255,0.95)', stroke: TK.C.acc });
+      TK.text(g, String(n), x, y, 110, { color: '#0b1430', blur: 0 });
+      TK.text(g, (i + 1) + '番目', x, y + 140, 36, { color: TK.C.sub, bold: false });
+      g.restore();
+    });
+    if (t > 31.0) {
+      g.save(); g.globalAlpha = fade(t, 31.0, 34.0, 0.3);
+      TK.text(g, '0 → [4] → [2] → [1]', PW / 2 - 60, 820, 72);
+      g.restore();
+    }
+  }
+  // 34〜40: 番号で並べなおしてから描く（たとえの図）
+  if (t >= 34.0) {
+    // スマホの形
+    const px = 230, py = 170, pw = 500, ph = 700;
+    TK.card(g, px, py, pw, ph, { r: 50, fill: 'rgba(5,10,24,0.9)', stroke: 'rgba(200,220,255,0.6)', lw: 6 });
+    const arrive = [{ n: 0, a: 34.4 }, { n: 4, a: 34.9 }, { n: 2, a: 35.4 }, { n: 1, a: 35.9 }, { n: 3, a: 37.2 }];
+    const done = t >= 37.2;
+    for (let n = 0; n < 5; n++) {
+      const ar = arrive.find(x => x.n === n), got = t >= ar.a, y = py + 60 + n * 120;
+      const blocked = !done && got && arrive.filter(x => x.n < n).some(x => t < x.a);
+      g.save();
+      if (got) {
+        g.globalAlpha = clamp((t - ar.a) / 0.3, 0, 1) * (blocked ? 0.35 : 1);
+        g.fillStyle = blocked ? 'rgba(160,190,255,0.35)' : (n % 2 ? 'rgba(95,212,255,0.55)' : 'rgba(89,227,154,0.55)');
+        g.beginPath(); g.roundRect(px + 40, y, pw - 80, 100, 14); g.fill();
+        TK.text(g, n + '番', px + 80, y + 50, 40, { align: 'left', color: '#fff' });
+      } else {
+        g.setLineDash([12, 10]); g.strokeStyle = TK.C.red; g.lineWidth = 4;
+        g.beginPath(); g.roundRect(px + 40, y, pw - 80, 100, 14); g.stroke();
+        TK.text(g, n + '番を待っている…', px + pw / 2, y + 50, 38, { color: TK.C.red, bold: false });
+      }
+      g.restore();
+    }
+    if (done) { g.save(); g.globalAlpha = fade(t, 37.2, 40, 0.3); TK.text(g, 'そろった！', PW / 2 - 60, py + ph + 55, 56, { color: TK.C.green }); g.restore(); }
+    TK.note(g, t, 34.2, 37.0, 'たとえの図。並べなおすのは TCP のしくみ（ping そのものではない）', { size: 30 });
+  }
+  if (t >= 37.0) TK.note(g, t, 37.0, 40.0, '出どころ: Bergen Linux User Group の報告と ping のログ（2001）\nD. Waitzman, RFC 1149（1990）', { size: 30 });
+  tag(g, t);
+}
+
+triviaStart({ out: 'net-route-trivia3', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

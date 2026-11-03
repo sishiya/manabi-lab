@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく pitch-physics-1（型A ぜんぶ逆）「ナックルは揺れていない」。台本は trivia/pitch-physics.md。?short で録る
+// 研究の数字: Nathan (2012) Baseball Prospectus。なめらかな線からのずれ ふつうの球 0.30 in・ナックル 0.33 in、道具の精度 約0.3 in（2011年の4試合・投手2人）。
+// 10球の道すじは pitch-physics/js/physics.js の simulate をそのまま node で計算した値（2026-11-03）:
+// ナックルボーラーのナックル 112 km/h・25 回/分・回転軸 0°、放す所 x0 −0.55・z0 1.80・ext 1.80、θ0 = 20° でホームの真ん中（高さ 0.75 m）に aim、θ0 = 16〜25° を 1° ずつ。
+// ホームで x = +8.0 〜 −10.7 cm（1° でほぼ 2 cm）。高さはどれも 0.75 m。点のちらばり（7〜13秒）はイメージ（平均のずれの比だけ合わせた）
+const DUR = 35;
+const KY=[16.64,16.21,15.77,15.34,14.91,14.48,14.05,13.62,13.19,12.76,12.34,11.91,11.49,11.07,10.65,10.23,9.81,9.39,8.97,8.55,8.14,7.72,7.31,6.89,6.48,6.07,5.66,5.25,4.84,4.43,4.02,3.62,3.21,2.81,2.4,2,1.6,1.2,0.8,0.43,0.03,-0.37];
+const KZ=[1.8,1.809,1.815,1.82,1.823,1.824,1.823,1.82,1.816,1.809,1.801,1.79,1.778,1.763,1.747,1.729,1.709,1.688,1.664,1.639,1.611,1.582,1.551,1.518,1.484,1.447,1.409,1.368,1.326,1.282,1.237,1.189,1.14,1.089,1.036,0.981,0.924,0.866,0.806,0.749,0.685,0.62];
+const KX=[[-0.55,-0.537,-0.523,-0.508,-0.492,-0.475,-0.456,-0.437,-0.417,-0.396,-0.375,-0.353,-0.33,-0.308,-0.285,-0.262,-0.24,-0.218,-0.196,-0.175,-0.155,-0.135,-0.116,-0.099,-0.082,-0.066,-0.051,-0.038,-0.025,-0.013,-0.002,0.009,0.019,0.028,0.037,0.046,0.054,0.063,0.071,0.08,0.089,0.099],[-0.55,-0.537,-0.523,-0.508,-0.492,-0.474,-0.456,-0.437,-0.417,-0.396,-0.375,-0.353,-0.331,-0.309,-0.287,-0.265,-0.243,-0.221,-0.2,-0.18,-0.16,-0.142,-0.124,-0.107,-0.091,-0.076,-0.062,-0.05,-0.038,-0.026,-0.016,-0.006,0.003,0.011,0.02,0.028,0.036,0.044,0.053,0.061,0.07,0.08],[-0.55,-0.537,-0.523,-0.508,-0.491,-0.474,-0.456,-0.437,-0.417,-0.397,-0.376,-0.354,-0.332,-0.31,-0.289,-0.267,-0.246,-0.225,-0.205,-0.185,-0.167,-0.149,-0.132,-0.116,-0.101,-0.087,-0.074,-0.062,-0.051,-0.041,-0.031,-0.023,-0.014,-0.006,0.002,0.009,0.017,0.025,0.033,0.041,0.05,0.06],[-0.55,-0.537,-0.523,-0.508,-0.491,-0.474,-0.456,-0.437,-0.417,-0.397,-0.376,-0.355,-0.334,-0.312,-0.291,-0.27,-0.25,-0.229,-0.21,-0.191,-0.174,-0.157,-0.141,-0.126,-0.112,-0.099,-0.087,-0.076,-0.066,-0.056,-0.047,-0.039,-0.032,-0.024,-0.017,-0.01,-0.002,0.005,0.013,0.021,0.03,0.039],[-0.55,-0.537,-0.523,-0.508,-0.491,-0.474,-0.456,-0.437,-0.418,-0.398,-0.377,-0.356,-0.336,-0.315,-0.294,-0.274,-0.254,-0.234,-0.216,-0.198,-0.181,-0.165,-0.15,-0.136,-0.123,-0.111,-0.1,-0.09,-0.081,-0.072,-0.064,-0.057,-0.05,-0.043,-0.036,-0.029,-0.022,-0.015,-0.007,0,0.009,0.018],[-0.55,-0.537,-0.523,-0.508,-0.491,-0.474,-0.456,-0.438,-0.418,-0.399,-0.378,-0.358,-0.338,-0.317,-0.297,-0.278,-0.258,-0.24,-0.222,-0.205,-0.189,-0.174,-0.16,-0.147,-0.135,-0.124,-0.114,-0.105,-0.096,-0.089,-0.081,-0.075,-0.068,-0.062,-0.056,-0.049,-0.043,-0.036,-0.028,-0.021,-0.012,-0.003],[-0.55,-0.537,-0.523,-0.508,-0.492,-0.474,-0.457,-0.438,-0.419,-0.4,-0.38,-0.36,-0.34,-0.32,-0.301,-0.282,-0.264,-0.246,-0.229,-0.213,-0.198,-0.184,-0.171,-0.159,-0.148,-0.138,-0.129,-0.12,-0.113,-0.106,-0.099,-0.093,-0.087,-0.081,-0.075,-0.07,-0.063,-0.057,-0.049,-0.042,-0.034,-0.024],[-0.55,-0.537,-0.523,-0.508,-0.492,-0.475,-0.457,-0.439,-0.42,-0.401,-0.381,-0.362,-0.343,-0.324,-0.305,-0.287,-0.269,-0.252,-0.236,-0.221,-0.207,-0.194,-0.182,-0.171,-0.161,-0.152,-0.144,-0.136,-0.129,-0.123,-0.117,-0.112,-0.106,-0.101,-0.096,-0.09,-0.084,-0.078,-0.071,-0.064,-0.055,-0.046],[-0.55,-0.537,-0.523,-0.508,-0.492,-0.475,-0.458,-0.439,-0.421,-0.402,-0.383,-0.364,-0.346,-0.327,-0.309,-0.292,-0.275,-0.259,-0.244,-0.23,-0.217,-0.205,-0.194,-0.184,-0.175,-0.166,-0.159,-0.152,-0.146,-0.141,-0.136,-0.131,-0.126,-0.121,-0.116,-0.111,-0.105,-0.099,-0.092,-0.085,-0.077,-0.067],[-0.55,-0.537,-0.523,-0.508,-0.492,-0.475,-0.458,-0.44,-0.422,-0.404,-0.385,-0.367,-0.349,-0.331,-0.314,-0.297,-0.281,-0.266,-0.252,-0.239,-0.227,-0.216,-0.206,-0.197,-0.189,-0.181,-0.175,-0.169,-0.164,-0.159,-0.154,-0.15,-0.146,-0.141,-0.137,-0.132,-0.126,-0.12,-0.113,-0.106,-0.098,-0.089]];
+const NP = KY.findIndex(y => y < 0.44);   // ホームの前の端の点（y = 0.43）
+const subs = [
+  { a: 0.0, b: 2.2, ja: 'ナックルボールは、揺れていない。', en: 'The knuckleball doesn’t actually wobble.', noBurn: true },
+  { a: 2.2, b: 7.0, ja: '試合でボールの位置を追いかける記録を、\n[1球ずつ]調べた人がいる。', en: 'Someone checked the ball-tracking data from games,\none pitch at a time.' },
+  { a: 7.0, b: 13.0, ja: 'なめらかな線からのずれは\nふつうの球 [0.30インチ]、ナックル [0.33インチ]。', en: 'Deviation from a smooth curve:\n0.30 inch for normal pitches, 0.33 for knuckleballs.' },
+  { a: 13.0, b: 17.0, ja: 'ずれは、[測る道具の誤差]くらいしかない。', en: 'That’s about the size of the measurement error.' },
+  { a: 17.0, b: 25.0, ja: 'じゃあ、なぜ打てない？\n縫い目の向きが少しちがうだけで、[曲がる先]が変わる。', en: 'So why can’t anyone hit it? A tiny change in seam angle\nchanges where it ends up.' },
+  { a: 25.0, b: 31.0, ja: '縫い目の向きが[1°]ちがうと、約[2 cm]ずれる。\n投げた本人にも読めない。', en: 'One degree of seam angle shifts it about 2 cm.\nNot even the pitcher can predict it.' },
+  { a: 31.0, b: 35.0, ja: '研究者のまとめ: ナックルは\n「チョウより、[弾丸]に近い」。', en: 'As the researcher put it: knuckleballs are\n“more like bullets than butterflies.”' },
+];
+const cues = [
+  { t: 0.05, type: 'whoosh' }, { t: 0.9, type: 'buzz' }, { t: 2.2, type: 'pop' },
+  { t: 7.0, type: 'whoosh' }, { t: 7.4, type: 'ding' }, { t: 9.2, type: 'ding' }, { t: 13.0, type: 'pop' },
+  { t: 17.0, type: 'whoosh' }, { t: 18.0, type: 'rise' }, { t: 25.0, type: 'pop' }, { t: 27.0, type: 'tick' },
+  { t: 31.0, type: 'whoosh' }, { t: 31.8, type: 'ding' },
+];
+
+// 横から見た道すじ（投手 → 捕手、左 → 右）
+const SX0 = 110, SX1 = 970;
+const sx = y => SX0 + (16.64 - y) / 16.64 * (SX1 - SX0), sz = (z, base) => base - z * 260;
+function ground(g, base) {
+  g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 4;
+  g.beginPath(); g.moveTo(80, base); g.lineTo(1000, base); g.stroke();
+  g.fillStyle = 'rgba(255,255,255,0.6)'; g.fillRect(sx(16.64) - 40, base - 6, 60, 6);
+  g.fillRect(sx(0.43) - 6, base - 8, sx(0) - sx(0.43) + 16, 8);
+  TK.text(g, '投手', sx(16.64), base + 40, 36, { color: TK.C.sub, bold: false });
+  TK.text(g, 'ホーム', sx(0.2), base + 40, 36, { color: TK.C.sub, bold: false });
+}
+function ball(g, x, y, r = 16, color = '#fff') { g.fillStyle = color; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
+
+// 7〜13秒のずれの点（イメージ。乱数は固定）
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const DEV = [Array.from({ length: 28 }, () => rnd() * 2 - 1), Array.from({ length: 28 }, () => rnd() * 2 - 1)];
+
+// 捕手の目（遠近）
+const CAMY = -1.2, CAMZ = 0.95, FOC = 2000, CCX = 600, CCY = 520;
+const proj = (x, y, z) => { const d = y - CAMY; return [CCX + FOC * x / d, CCY - FOC * (z - CAMZ) / d]; };
+
+function draw(g, t) {
+  // 0〜2.2: フック。ジグザグに描かれがちな道すじに ×
+  if (t < 2.2) {
+    const base = 760;
+    ground(g, base);
+    const k = clamp(t / 0.8, 0, 1);
+    g.save(); g.setLineDash([16, 14]); g.strokeStyle = TK.C.acc2; g.lineWidth = 7; g.beginPath();
+    for (let i = 0; i <= 80 * k; i++) { const u = i / 80, x = lerp(sx(16.2), sx(0.6), u), y = base - 420 + u * 200 + Math.sin(u * Math.PI * 7) * 60; i ? g.lineTo(x, y) : g.moveTo(x, y); }
+    g.stroke(); g.restore();
+    TK.text(g, 'よく描かれる、ナックルの絵', PW / 2, 240, 44, { color: TK.C.sub, bold: false });
+    if (t > 0.9) {
+      const p = clamp(TK.pop(t, 0.9, 0.3), 0, 1.2);
+      g.save(); g.strokeStyle = TK.C.red; g.lineWidth = 30; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(540 - 200 * p, 480 - 200 * p); g.lineTo(540 + 200 * p, 480 + 200 * p); g.moveTo(540 + 200 * p, 480 - 200 * p); g.lineTo(540 - 200 * p, 480 + 200 * p); g.stroke(); g.restore();
+    }
+    TK.hook(g, t, 0.0, 2.2, 'ナックルは、\n[揺れてない]。', { y: 960, size: 120 });
+    if (t > 0.6) { g.save(); g.globalAlpha = fade(t, 0.6, 2.2, 0.2); TK.text(g, '（記録の精度の中では）', PW / 2, 1150, 44, { color: TK.C.sub, bold: false }); g.restore(); }
+  }
+  // 2.2〜7: 1/60 秒ごとの点が並ぶ（横から。計算した道すじ）
+  if (t >= 2.2 && t < 7.0) {
+    const base = 900;
+    ground(g, base);
+    const n = Math.floor(clamp((t - 2.6) / 2.8, 0, 1) * 32);
+    for (let i = 0; i <= n; i++) {
+      const j = Math.min(NP, Math.round(i / 60 / 0.545 * NP));
+      ball(g, sx(KY[j]), sz(KZ[j], base), 12, i === n ? TK.C.acc : 'rgba(255,255,255,0.85)');
+    }
+    TK.text(g, '1/60 秒ごとの [ボールの位置]', PW / 2, 300, 62);
+    TK.text(g, '112 km/h のナックル（図はモデルの道すじ）', PW / 2, 380, 38, { color: TK.C.sub, bold: false });
+    TK.note(g, t, 2.6, 7, 'ひとつの調べ: 2011年の4試合・投手2人の記録', { size: 34 });
+  }
+  // 7〜13: なめらかな線からのずれ（拡大）
+  if (t >= 7.0 && t < 13.0) {
+    const rows = [{ name: 'ふつうの球', v: 0.30, a: 7.3, y: 420 }, { name: 'ナックル', v: 0.33, a: 9.1, y: 760 }];
+    TK.text(g, 'なめらかな線からの[ずれ]', PW / 2, 220, 64);
+    rows.forEach((r, ri) => {
+      if (t < r.a) return;
+      g.save(); g.globalAlpha = clamp((t - r.a) / 0.4, 0, 1);
+      TK.card(g, 90, r.y - 130, 900, 300, { r: 30 });
+      TK.text(g, r.name, 130, r.y - 80, 46, { align: 'left', color: TK.C.sub });
+      TK.text(g, '平均 [' + r.v.toFixed(2) + ' インチ]', 950, r.y - 80, 50, { align: 'right' });
+      g.strokeStyle = TK.C.acc2; g.lineWidth = 4; g.beginPath(); g.moveTo(130, r.y + 50); g.lineTo(950, r.y + 50); g.stroke();
+      DEV[ri].forEach((d, i) => ball(g, 150 + i * 29, r.y + 50 + d * 90 * r.v / 0.33, 9, '#fff'));
+      g.restore();
+    });
+    if (t > 11.0) { g.save(); g.globalAlpha = fade(t, 11, 13, 0.3); TK.text(g, 'ほぼ [同じ]', PW / 2, 1000, 76); g.restore(); }
+    TK.note(g, t, 7.3, 13, '縦を大きく拡大したイメージ（点の位置は作図）', { size: 32 });
+  }
+  // 13〜17: 0.3 インチ ≒ 7.6 mm
+  if (t >= 13.0 && t < 17.0) {
+    const S = 26, k = TK.out((t - 13.3) / 0.8);   // 1 mm = 30 px
+    TK.text(g, '0.3 インチ ≒ [7.6 mm]', PW / 2, 250, 80);
+    g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 4; g.beginPath(); g.arc(540, 650, 10 * S, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = TK.C.acc; g.fillRect(540, 640, 7.6 * S * k, 20);
+    g.beginPath(); g.arc(540, 650, 10, 0, Math.PI * 2); g.fill();
+    TK.text(g, '1円玉（直径 2 cm）', 540, 345, 40, { color: TK.C.sub, bold: false });
+    TK.text(g, '7.6 mm', 540 + 7.6 * S / 2, 600, 44, { color: TK.C.acc });
+    if (t > 14.6) { g.save(); g.globalAlpha = fade(t, 14.6, 17, 0.3); TK.text(g, '＝ 測る道具の [誤差] と同じくらい', PW / 2, 1050, 56); g.restore(); }
+    TK.note(g, t, 13.3, 17, '実物大ではありません', { size: 32 });
+  }
+  // 17〜25: 捕手の目。10球の道すじ
+  if (t >= 17.0 && t < 25.0) {
+    const [zx0, zy0] = proj(-0.215, 0.43, 1.05), [zx1, zy1] = proj(0.215, 0.43, 0.48);
+    g.strokeStyle = 'rgba(255,255,255,0.45)'; g.lineWidth = 4; g.strokeRect(zx0, zy0, zx1 - zx0, zy1 - zy0);
+    TK.text(g, 'ストライクゾーン', (zx0 + zx1) / 2, zy0 - 30, 34, { color: TK.C.dim, bold: false });
+    const prog = clamp((t - 17.8) / 3.0, 0, 1);
+    KX.forEach((xs, b) => {
+      const m = Math.floor(clamp(prog * 1.6 - b * 0.06, 0, 1) * NP);
+      g.strokeStyle = `hsla(${200 - b * 18},90%,65%,0.9)`; g.lineWidth = 4; g.beginPath();
+      for (let i = 0; i <= m; i++) { const [x, y] = proj(xs[i], KY[i], KZ[i]); i ? g.lineTo(x, y) : g.moveTo(x, y); }
+      g.stroke();
+      if (m > 0) { const [x, y] = proj(xs[m], KY[m], KZ[m]); g.lineWidth = 4; g.strokeStyle = '#fff'; g.beginPath(); g.arc(x, y, Math.max(4, FOC * 0.037 / (KY[m] - CAMY)), 0, Math.PI * 2); g.stroke(); }
+    });
+    TK.text(g, '捕手の目から（[10球]）', PW / 2, 220, 60);
+    TK.text(g, '縫い目の向きだけ 1° ずつ変えた（16〜25°）', PW / 2, 300, 38, { color: TK.C.sub, bold: false });
+    TK.note(g, t, 17.5, 25, 'モデルでは（Watts & Sawyer 1975 の縫い目の力）', { size: 32 });
+  }
+  // 25〜31: ホームでの10点
+  if (t >= 25.0 && t < 31.0) {
+    const S = 34;   // 1 cm = 34 px
+    TK.text(g, 'ホームに着いた所（捕手の目から）', PW / 2, 230, 50);
+    g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 3; g.beginPath(); g.moveTo(80, 620); g.lineTo(1000, 620); g.stroke();
+    KX.forEach((xs, b) => {
+      const x = 540 + xs[NP] * 100 * S;
+      g.save(); g.globalAlpha = clamp(TK.pop(t, 25.3 + b * 0.12, 0.3), 0, 1);
+      ball(g, x, 620, 18, `hsl(${200 - b * 18},90%,65%)`);
+      TK.text(g, (16 + b) + '°', x, b % 2 ? 680 : 560, 30, { color: TK.C.sub, bold: false });
+      g.restore();
+    });
+    if (t > 27.0) {
+      g.save(); g.globalAlpha = fade(t, 27, 31, 0.3);
+      const xa = 540 + KX[0][NP] * 100 * S, xb = 540 + KX[9][NP] * 100 * S;
+      g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.beginPath(); g.moveTo(xb, 800); g.lineTo(xa, 800); g.stroke();
+      g.fillStyle = TK.C.acc;
+      g.beginPath(); g.moveTo(xa, 800); g.lineTo(xa - 24, 784); g.lineTo(xa - 24, 816); g.fill();
+      g.beginPath(); g.moveTo(xb, 800); g.lineTo(xb + 24, 784); g.lineTo(xb + 24, 816); g.fill();
+      TK.text(g, '約 [19 cm]', 540, 880, 72);
+      TK.text(g, '同じ投げ方・同じねらいの10球', 540, 980, 40, { color: TK.C.sub, bold: false });
+      g.restore();
+    }
+    TK.note(g, t, 25.3, 31, 'モデルの計算（1° でほぼ 2 cm）', { size: 32 });
+  }
+  // 31〜35: 研究者のまとめ
+  if (t >= 31.0) {
+    const p = clamp(TK.pop(t, 31.2, 0.4), 0, 1);
+    g.save(); g.globalAlpha = 0.6 * p; g.strokeStyle = TK.C.sub; g.lineWidth = 5;
+    g.beginPath(); g.ellipse(270, 520, 70, 40, -0.6, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.ellipse(330, 520, 70, 40, 0.6, 0, Math.PI * 2); g.stroke();
+    g.restore();
+    g.save(); g.globalAlpha = p; g.fillStyle = TK.C.acc; g.beginPath(); g.moveTo(660, 490); g.lineTo(860, 490); g.quadraticCurveTo(950, 520, 860, 550); g.lineTo(660, 550); g.closePath(); g.fill(); g.restore();
+    TK.text(g, 'チョウ', 300, 660, 52, { color: TK.C.sub });
+    TK.text(g, '弾丸', 790, 660, 52, { color: TK.C.acc });
+    TK.text(g, 'より', 540, 525, 56, { color: TK.C.sub });
+    TK.text(g, '“more like bullets than butterflies”', PW / 2, 860, 42, { color: TK.C.sub, bold: false });
+    TK.note(g, t, 32.0, 35, '出どころ: A. M. Nathan (2012) Baseball Prospectus「The Knuckleball Mystique」\n縫い目の力: Watts & Sawyer (1975) Am. J. Phys. 43', { size: 28 });
+  }
+}
+
+triviaStart({ out: 'pitch-physics-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

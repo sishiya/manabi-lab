@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく illusions-1（型H 当ててみて）「ジグザグの線は何本？」（曲がり盲）。台本は trivia/illusions.md。?short で録る
+// 絵は Takahashi (2017) i-Perception 8(6) の図1 にならって描く: 灰色の背景に、白と黒の半波長ずつの区切りでできた、ゆるい正弦波。
+//   上の6本: 明るさの切りかわりが「山と谷の間」（なめらかに見える）
+//   下の6本: 切りかわりが「山と谷のてっぺん」（ジグザグに見える）
+// 錯視は、ゆるい曲がり（振幅が波長にくらべ小さい）・太い線・灰色の背景で強く出る。白い背景にすると消える（論文の図と同じ）。
+// 線の太さ・振幅・波長は、スマホで見たとき（1080 → 約 400 px）にも消えないよう、peek（縮小）で確かめて決めた
+const DUR = 20;
+const WAVE = { x0: 70, x1: 950, lam: 168, A: 17, lw: 15, top: 400, gap: 56, n: 6, split: 56 };
+const subs = [
+  { a: 0.0, b: 4.0, ja: 'ジグザグの線は何本？', en: 'How many of these lines are zigzags?', noBurn: true },
+  { a: 4.0, b: 7.0, ja: '数えて…', en: 'Count them…' },
+  { a: 7.0, b: 10.0, ja: '答えは[0本]。\nぜんぶ同じ、なめらかな波', en: 'Zero. They are all the same smooth wave' },
+  { a: 10.0, b: 14.0, ja: '背景を白にすると…\nほら、[波]', en: 'Make the background white… see? Waves' },
+  { a: 14.0, b: 16.4, ja: '線の明るさが、[波のてっぺん]で\n入れかわると', en: 'When the line switches from light to dark\nright at the peaks' },
+  { a: 16.4, b: 18.0, ja: '脳は「[角]だ」と思ってしまう\n（という説）', en: 'the brain reads it as a corner\n(one explanation)' },
+  { a: 18.0, b: 20.0, ja: '2017年に見つかった「[曲がり盲]」\n…もう一度。何本？', en: '“Curvature blindness,” found in 2017.\nOnce more: how many?' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 4.0, type: 'tick' }, { t: 5.0, type: 'tick' }, { t: 6.0, type: 'tick' },
+  { t: 7.0, type: 'ding' }, { t: 10.2, type: 'whoosh' }, { t: 14.0, type: 'whoosh' }, { t: 14.8, type: 'pop' }, { t: 16.4, type: 'buzz' }, { t: 18.0, type: 'pop' },
+];
+
+// 1本の波。zig: true で切りかわりがてっぺん。first: 最初の区切りの色（0=白、1=黒）
+function waveRow(g, y, zig, first) {
+  const { x0, x1, lam, A, lw } = WAVE, half = lam / 2;
+  const off = zig ? lam / 4 : 0;   // 区切りの位置（x0 から）。0 なら山と谷の間（0 交差）、λ/4 ならてっぺん
+  g.save(); g.lineWidth = lw; g.lineCap = 'butt'; g.lineJoin = 'round';
+  let k = 0;
+  for (let s = x0 - half + off; s < x1; s += half, k++) {
+    const a = Math.max(s, x0), b = Math.min(s + half, x1);
+    if (b <= a) continue;
+    g.strokeStyle = (k + first) % 2 ? '#000' : '#fff';
+    g.beginPath();
+    for (let x = a; x <= b + 0.01; x += 2) { const yy = y - A * Math.sin(2 * Math.PI * (x - x0) / lam); x === a ? g.moveTo(x, yy) : g.lineTo(x, yy); }
+    g.stroke();
+  }
+  g.restore();
+}
+const rowY = i => WAVE.top + i * WAVE.gap + (i >= WAVE.n ? WAVE.split : 0);
+// 切りかわる所（下の6本ではてっぺん）に印
+function marks(g, t, a) {
+  const { x0, x1, lam, A } = WAVE, k = clamp((t - a) / 0.4, 0, 1);
+  g.save(); g.globalAlpha *= k; g.strokeStyle = TK.C.acc; g.lineWidth = 5;
+  for (let i = WAVE.n; i < WAVE.n + 2; i++) {
+    const y = rowY(i);
+    for (let x = x0 + lam / 4; x < x1; x += lam / 2) {
+      const yy = y - A * Math.sin(2 * Math.PI * (x - x0) / lam), r = 17 + 3 * Math.sin(t * 6);
+      g.beginPath(); g.arc(x, yy, r, 0, Math.PI * 2); g.stroke();
+    }
+  }
+  g.restore();
+}
+
+function draw(g, t) {
+  // 背景: 灰色（10〜14 秒だけ白へ）
+  const w = t < 10.0 ? 0 : t < 11.2 ? ease((t - 10.0) / 1.2) : t < 14.0 ? 1 : t < 14.8 ? 1 - ease((t - 14.0) / 0.8) : 0;
+  const v = Math.round(128 + 127 * w);
+  g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(0, 0, PW, PH);
+  for (let i = 0; i < 2 * WAVE.n; i++) waveRow(g, rowY(i), i >= WAVE.n, i % 2);
+  // 下の字幕・注の所は、いつもの紺（灰色の上だと注が読めないので）
+  { const gr = g.createLinearGradient(0, 1105, 0, PH); gr.addColorStop(0, TK.C.bg1); gr.addColorStop(1, TK.C.bg0); g.fillStyle = gr; g.fillRect(0, 1105, PW, PH - 1105); }
+  if (t >= 14.6 && t < 18.0) {
+    g.save(); g.globalAlpha = fade(t, 14.6, 18.0, 0.3); marks(g, t, 14.8); g.restore();
+  }
+  // 上の文字（線にかからない所）
+  const dark = w > 0.5 ? '#0b1430' : '#fff';
+  if (t < 4.0) TK.hook(g, t, 0.0, 4.0, '[ジグザグ]の線は\n何本？', { y: 255, size: 92 });
+  if (t >= 4.0 && t < 7.0) {
+    // 考える時間の輪（3秒）
+    const k = clamp((t - 4.0) / 3.0, 0, 1), cx = PW / 2, cy = 225, r = 74;
+    g.save(); g.lineWidth = 16; g.strokeStyle = 'rgba(0,0,0,0.25)'; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();
+    g.strokeStyle = TK.C.acc; g.beginPath(); g.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - k)); g.stroke(); g.restore();
+    TK.text(g, String(Math.max(1, Math.ceil(7.0 - t))), cx, cy + 4, 84, { stroke: 'rgba(0,0,0,0.5)' });
+  }
+  if (t >= 7.0 && t < 10.4) {
+    g.save(); g.globalAlpha = fade(t, 7.0, 10.4, 0.25);
+    const k = TK.pop(t, 7.0, 0.4); g.translate(PW / 2, 225); g.scale(0.6 + 0.4 * k, 0.6 + 0.4 * k); g.translate(-PW / 2, -225);
+    TK.text(g, '答え  [0本]', PW / 2, 225, 120, { stroke: 'rgba(0,0,0,0.6)' });
+    g.restore();
+  }
+  if (t >= 10.4 && t < 14.0) {
+    g.save(); g.globalAlpha = fade(t, 10.4, 14.0, 0.3);
+    TK.text(g, '背景を 白に', PW / 2, 225, 96, { color: dark, blur: 0 });
+    g.restore();
+  }
+  if (t >= 14.6 && t < 18.0) {
+    g.save(); g.globalAlpha = fade(t, 14.6, 18.0, 0.3);
+    TK.lines(g, '白 ⇄ 黒 が\n[てっぺん]で入れかわる', PW / 2, 225, 70, { stroke: 'rgba(0,0,0,0.6)' });
+    g.restore();
+  }
+  if (t >= 18.0) {
+    g.save(); g.globalAlpha = fade(t, 18.0, 20.5, 0.3);
+    TK.text(g, '曲がり盲（2017）', PW / 2, 225, 100, { stroke: 'rgba(0,0,0,0.6)' });
+    g.restore();
+  }
+  if (t >= 14.6 && t < 18.0) TK.note(g, t, 14.6, 18.0, '「角に見える」理由は著者の説（ゆるいカーブを見るしくみより、角を見るしくみが勝つ）', { size: 28 });
+  if (t >= 18.0) TK.note(g, t, 18.0, 20.0, '出どころ: Takahashi K. (2017) Curvature Blindness Illusion\ni-Perception 8(6)　絵は論文の図にならってプログラムで描いた', { size: 28 });
+}
+
+triviaStart({ out: 'illusions-trivia1', dur: DUR, draw, subs, cues, peek: 1.5, bgOpts: { grid: false } });
+</script>
+</body>
+</html>

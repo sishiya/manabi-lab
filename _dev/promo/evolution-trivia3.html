@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく evolution-3（型A ぜんぶ逆）「恐竜の時代に草はなかった、はまちがい」。台本は trivia/evolution.md。?short で録る
+// 出どころ: Prasad, Strömberg, Alimohammadian, Sahni (2005) Science 310, 1177–1180（インドの恐竜のふんの化石から草のプラントオパール）
+// 景色・恐竜・ふん・粒・インドの形は、どれも形のイメージ（論文の図を写していない）。粒の大きさは画面に出さない（台本の注意）
+const DUR = 25;
+const subs = [
+  { a: 0.0, b: 2.0, ja: '恐竜の絵に、草が生えていない。あれ、じつはまちがい。', en: 'Dinosaur pictures never show grass. That’s actually wrong.', noBurn: true },
+  { a: 2.0, b: 7.0, ja: '草の化石は、恐竜がいなくなってから\n[1000万年あと]のものしかなかった。', en: 'The oldest grass fossils known were from\n10 million years after the dinosaurs.' },
+  { a: 7.0, b: 14.0, ja: 'ところがインドで、6500万年前の\n[恐竜のふん]の化石から…', en: 'Then in India, from fossil dinosaur dung\n65 million years old…' },
+  { a: 14.0, b: 19.0, ja: '草の細胞にしかできない形の、[ガラスの小さな粒]が\n出てきた。それも[5種類]の草。', en: 'came tiny glassy grains with shapes only grass cells make,\nfrom five kinds of grass.' },
+  { a: 19.0, b: 25.0, ja: '恐竜は、[草を食べていた]。\n博物館のジオラマにも、草を足さないと。', en: 'Dinosaurs ate grass.\nMuseum dioramas need some grass, too.' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 0.7, type: 'buzz' }, { t: 2.0, type: 'whoosh' }, { t: 3.6, type: 'pop' }, { t: 5.0, type: 'pop' },
+  { t: 7.0, type: 'whoosh' }, { t: 9.0, type: 'thud' }, { t: 11.4, type: 'pop' }, { t: 14.0, type: 'whoosh' }, { t: 15.4, type: 'ding' },
+  { t: 19.0, type: 'rise' }, { t: 21.0, type: 'pop' }, { t: 22.4, type: 'ding' },
+];
+
+// シダ（地面から生える葉）
+function fern(g, x, y, s, sway) {
+  g.save(); g.translate(x, y); g.scale(s, s); g.rotate(sway);
+  g.strokeStyle = '#3f9c6a'; g.lineWidth = 4; g.lineCap = 'round';
+  for (const sd of [-1, 1]) {
+    g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(sd * 40, -90, sd * 110, -150); g.stroke();
+    for (let i = 1; i < 7; i++) {
+      const u = i / 7, px = sd * (110 * u * u + 20 * u), py = -150 * u;
+      g.beginPath(); g.moveTo(px, py); g.lineTo(px + sd * 26 * (1 - u * 0.5), py - 22); g.stroke();
+      g.beginPath(); g.moveTo(px, py); g.lineTo(px - sd * 6, py - 30 * (1 - u * 0.4)); g.stroke();
+    }
+  }
+  g.restore();
+}
+// 草のひとかたまり（k: 0〜1 で伸びる）
+function grassTuft(g, x, y, s, k) {
+  if (k <= 0) return;
+  g.save(); g.translate(x, y); g.scale(s, s);
+  g.strokeStyle = '#9be36a'; g.lineWidth = 4; g.lineCap = 'round';
+  for (let i = -3; i <= 3; i++) {
+    const h = (60 + 25 * Math.cos(i * 1.3)) * k;
+    g.beginPath(); g.moveTo(i * 6, 0); g.quadraticCurveTo(i * 10, -h * 0.6, i * 18, -h); g.stroke();
+  }
+  g.restore();
+}
+// 首の長い恐竜（ティタノサウルス類のイメージ。線画）
+function sauropod(g, x, y, s, neck = 0) {
+  g.save(); g.translate(x, y); g.scale(s, s);
+  g.strokeStyle = '#cfe0ff'; g.fillStyle = 'rgba(207,224,255,0.10)'; g.lineWidth = 5; g.lineJoin = 'round'; g.lineCap = 'round';
+  // からだ
+  g.beginPath(); g.ellipse(0, -150, 170, 85, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  // しっぽ
+  g.beginPath(); g.moveTo(160, -170); g.quadraticCurveTo(320, -160, 420, -90); g.quadraticCurveTo(320, -125, 165, -125); g.stroke();
+  // 首と頭（neck: 0 上を向く → 1 地面へ下ろす）
+  const hx = lerp(-330, -300, neck), hy = lerp(-420, -40, neck);
+  g.beginPath(); g.moveTo(-140, -200); g.quadraticCurveTo(lerp(-300, -260, neck), lerp(-300, -170, neck), hx, hy); g.stroke();
+  g.beginPath(); g.moveTo(-110, -150); g.quadraticCurveTo(lerp(-240, -230, neck), lerp(-250, -120, neck), hx + 10, hy + 26); g.stroke();
+  g.beginPath(); g.ellipse(hx - 22, hy + 10, 34, 20, lerp(-0.2, 0.9, neck), 0, Math.PI * 2); g.fill(); g.stroke();
+  // 足
+  for (const lx of [-110, -50, 60, 120]) { g.beginPath(); g.moveTo(lx, -90); g.lineTo(lx + 6, 0); g.stroke(); }
+  g.restore();
+}
+// 景色（地面 y=gy）。grassK で草が生える
+function scene(g, t, gy, grassK, neck) {
+  g.strokeStyle = 'rgba(184,100,42,0.8)'; g.lineWidth = 5; g.beginPath(); g.moveTo(60, gy); g.lineTo(PW - 60, gy); g.stroke();
+  g.fillStyle = 'rgba(184,100,42,0.12)'; g.fillRect(60, gy, PW - 120, 90);
+  const fx = [130, 300, 790, 900];
+  fx.forEach((x, i) => fern(g, x, gy, 1.0 + 0.2 * (i % 2), Math.sin(t * 1.2 + i) * 0.04));
+  sauropod(g, 560, gy, 1.0, neck);
+  for (let i = 0; i < 11; i++) grassTuft(g, 100 + i * 85 + (i % 3) * 12, gy, 0.8 + 0.3 * ((i * 7) % 3) / 2, clamp(grassK * 11 - i * 0.6, 0, 1));
+}
+// ふんの化石（でこぼこの塊）
+function coprolite(g, cx, cy, s) {
+  g.save(); g.translate(cx, cy); g.scale(s, s);
+  g.fillStyle = 'rgba(160,112,70,0.55)'; g.strokeStyle = '#d9a874'; g.lineWidth = 5;
+  g.beginPath();
+  for (let i = 0; i <= 40; i++) { const a = i / 40 * Math.PI * 2, r = 1 + 0.08 * Math.sin(a * 5) + 0.05 * Math.cos(a * 9); g.lineTo(Math.cos(a) * 170 * r, Math.sin(a) * 105 * r); }
+  g.closePath(); g.fill(); g.stroke();
+  g.strokeStyle = 'rgba(217,168,116,0.5)'; g.lineWidth = 3;
+  for (let i = 0; i < 4; i++) { g.beginPath(); g.arc(-60 + i * 45, -10 + (i % 2) * 30, 20 + i * 4, 0.3, 2.4); g.stroke(); }
+  g.restore();
+}
+// インドのかたち（ざっくりのイメージ）
+function india(g, cx, cy, s) {
+  const P = [[-0.35, -1], [0.05, -0.95], [0.25, -0.7], [0.55, -0.6], [0.85, -0.55], [0.7, -0.35], [0.45, -0.25], [0.35, 0.05], [0.12, 0.45], [0.0, 0.95], [-0.15, 0.55], [-0.35, 0.1], [-0.45, -0.25], [-0.75, -0.35], [-0.6, -0.6], [-0.4, -0.7]];
+  g.save(); g.translate(cx, cy); g.scale(s, s);
+  g.fillStyle = 'rgba(95,212,255,0.10)'; g.strokeStyle = TK.C.acc2; g.lineWidth = 4 / s; g.lineJoin = 'round';
+  g.beginPath(); P.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); g.fill(); g.stroke();
+  g.restore();
+}
+// プラントオパール（草の細胞の形をしたガラスの粒）。5つの形
+function phytolith(g, kind, x, y, s, rot) {
+  g.save(); g.translate(x, y); g.rotate(rot); g.scale(s, s);
+  g.strokeStyle = 'rgba(220,245,255,0.95)'; g.fillStyle = 'rgba(160,220,255,0.22)'; g.lineWidth = 3 / s;
+  g.shadowColor = TK.C.acc2; g.shadowBlur = 12 * RES;
+  g.beginPath();
+  if (kind === 0) { g.moveTo(-1, -0.5); g.quadraticCurveTo(0, -0.1, 1, -0.5); g.lineTo(1, 0.5); g.quadraticCurveTo(0, 0.1, -1, 0.5); g.closePath(); }   // くら形
+  else if (kind === 1) { g.ellipse(-0.55, 0, 0.5, 0.4, 0, 0, Math.PI * 2); g.moveTo(1.05, 0); g.ellipse(0.55, 0, 0.5, 0.4, 0, 0, Math.PI * 2); }   // ふたこぶ
+  else if (kind === 2) { g.moveTo(-0.7, 0.6); g.lineTo(-0.45, -0.6); g.lineTo(0.45, -0.6); g.lineTo(0.7, 0.6); g.closePath(); }   // 台形
+  else if (kind === 3) { for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; g.ellipse(Math.cos(a) * 0.5, Math.sin(a) * 0.5, 0.36, 0.36, 0, 0, Math.PI * 2); } }   // 十字
+  else { g.moveTo(-0.9, 0.2); g.quadraticCurveTo(-0.2, -0.9, 0.9, -0.3); g.quadraticCurveTo(0.4, 0.7, -0.9, 0.2); g.closePath(); }   // おうぎ
+  g.fill(); g.stroke();
+  g.restore();
+}
+// 赤いバツ
+function cross(g, cx, cy, r, k) {
+  g.save(); g.strokeStyle = TK.C.red; g.lineWidth = 26; g.lineCap = 'round'; g.globalAlpha *= clamp(k * 2, 0, 1);
+  const a = r * clamp(k * 2, 0, 1), b = r * clamp(k * 2 - 1, 0, 1);
+  g.beginPath(); g.moveTo(cx - r, cy - r); g.lineTo(cx - r + 2 * a, cy - r + 2 * a); g.stroke();
+  if (b > 0) { g.beginPath(); g.moveTo(cx + r, cy - r); g.lineTo(cx + r - 2 * b, cy - r + 2 * b); g.stroke(); }
+  g.restore();
+}
+
+function draw(g, t) {
+  // 0〜2: シダだけの恐竜の景色に「×」
+  if (t < 2.0) {
+    const f = fade(t, 0, 2.0, 0.2);
+    g.save(); g.globalAlpha = f; scene(g, t, 900, 0, 0); g.restore();
+    cross(g, PW / 2, 640, 170, (t - 0.5) / 0.5);
+    TK.hook(g, t, 0.0, 2.0, '恐竜の時代に草はない\n…は[ウソ]', { y: 260, size: 104 });
+  }
+  // 2〜7: 年表。恐竜の時代 → 草の化石は 5500万年前
+  if (t >= 2.0 && t < 7.0) {
+    const f = fade(t, 2.0, 7.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    TK.text(g, '2005年までの年表', PW / 2, 220, 60, { color: TK.C.sub });
+    const x0 = 120, x1 = 960, y = 640;
+    const xOf = ma => x0 + (x1 - x0) * (76 - ma) / 32;   // 7600万年前〜4400万年前
+    const k = TK.out((t - 2.2) / 1.0);
+    g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 6; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(x0, y); g.lineTo(lerp(x0, x1, k), y); g.stroke();
+    // 恐竜の時代の帯
+    g.fillStyle = 'rgba(255,107,107,0.22)'; g.fillRect(x0, y - 70, (xOf(66) - x0) * k, 140);
+    TK.text(g, '恐竜の時代', (x0 + xOf(66)) / 2, y - 120, 54, { color: TK.C.red });
+    g.strokeStyle = TK.C.red; g.lineWidth = 5; g.beginPath(); g.moveTo(xOf(66), y - 90); g.lineTo(xOf(66), y + 90); g.stroke();
+    TK.text(g, '6600万年前', xOf(66) - 14, y + 130, 46, { color: TK.C.sub, align: 'right' });
+    // 草の化石
+    if (t > 3.6) {
+      const p = TK.pop(t, 3.6, 0.4), gx = xOf(55);
+      g.save(); g.globalAlpha = f * clamp(p, 0, 1);
+      grassTuft(g, gx, y - 10, 1.4, p);
+      g.fillStyle = TK.C.green; g.beginPath(); g.arc(gx, y, 16, 0, Math.PI * 2); g.fill();
+      TK.text(g, '草の化石', gx, y - 170, 54, { color: TK.C.green });
+      TK.text(g, '5500万年前', gx + 14, y + 130, 46, { color: TK.C.green, align: 'left' });
+      g.restore();
+    }
+    if (t > 5.0) {
+      g.globalAlpha = f * fade(t, 5.0, 7.0, 0.25);
+      const a = xOf(66), b = xOf(55);
+      g.strokeStyle = TK.C.acc; g.lineWidth = 5; g.beginPath(); g.moveTo(a + 10, y + 220); g.lineTo(b - 10, y + 220); g.stroke();
+      g.fillStyle = TK.C.acc; for (const [px, d] of [[a + 10, 1], [b - 10, -1]]) { g.beginPath(); g.moveTo(px, y + 220); g.lineTo(px + d * 24, y + 206); g.lineTo(px + d * 24, y + 234); g.fill(); }
+      TK.text(g, '[約1000万年]のすきま', PW / 2, y + 290, 56);
+    }
+    g.restore();
+  }
+  // 7〜14: インドの恐竜のふんの化石
+  if (t >= 7.0 && t < 14.0) {
+    const f = fade(t, 7.0, 14.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    india(g, 330, 470, 240);
+    g.fillStyle = TK.C.acc; g.beginPath(); g.arc(330 + 0.05 * 240, 470 - 0.25 * 240, 14, 0, Math.PI * 2); g.fill();
+    TK.text(g, 'インド', 330, 210, 56, { color: TK.C.acc2 });
+    sauropod(g, 790, 620, 0.62, 0.2);
+    TK.text(g, '首の長い恐竜', 760, 290, 44, { color: TK.C.sub });
+    TK.text(g, '（ティタノサウルス類）', 760, 345, 36, { color: TK.C.sub, bold: false });
+    if (t > 9.0) {
+      const p = TK.pop(t, 9.0, 0.5);
+      g.save(); g.translate(PW / 2, 860); g.scale(p, p); g.translate(-PW / 2, -860);
+      coprolite(g, PW / 2, 860, 1.0);
+      g.restore();
+      TK.text(g, '恐竜のふんの化石', PW / 2, 1010, 52, { color: '#ffd9b0' });
+    }
+    if (t > 11.4) { g.globalAlpha = f * fade(t, 11.4, 14.0, 0.25); TK.text(g, '約[6500万年前]', PW / 2 + 260, 720, 52); }
+    g.restore();
+  }
+  // 14〜19: 顕微鏡の中の粒（プラントオパール）5種類
+  if (t >= 14.0 && t < 19.0) {
+    const f = fade(t, 14.0, 19.0, 0.3), cx = PW / 2, cy = 630, R = 360;
+    g.save(); g.globalAlpha = f;
+    TK.text(g, '顕微鏡でのぞくと', PW / 2, 210, 56, { color: TK.C.sub });
+    g.save(); g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.clip();
+    g.fillStyle = 'rgba(80,58,40,0.55)'; g.fillRect(cx - R, cy - R, 2 * R, 2 * R);
+    for (let i = 0; i < 60; i++) { g.fillStyle = 'rgba(217,168,116,0.25)'; g.beginPath(); g.arc(cx - R + (i * 389) % (2 * R), cy - R + (i * 241) % (2 * R), 6 + (i % 4) * 3, 0, Math.PI * 2); g.fill(); }
+    const pos = [[-170, -150], [140, -170], [0, 10], [-180, 170], [170, 160]];
+    pos.forEach(([dx, dy], i) => { const p = TK.pop(t, 14.4 + i * 0.25, 0.35); if (p > 0) phytolith(g, i, cx + dx, cy + dy, 62 * p, 0.3 * Math.sin(i * 2 + t * 0.4)); });
+    g.restore();
+    g.strokeStyle = '#cfe0ff'; g.lineWidth = 8; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.stroke();
+    if (t > 15.4) {
+      g.globalAlpha = f * fade(t, 15.4, 19.0, 0.25);
+      TK.card(g, 240, 1010 - 52, 600, 104, { r: 52 });
+      TK.text(g, '草の粒が [5種類]', PW / 2, 1010, 58);
+    }
+    g.restore();
+    TK.note(g, t, 14.6, 19.0, 'プラントオパール: 植物の細胞にできるガラス質の粒。\n草にしかない形のものがある', { size: 30 });
+  }
+  // 19〜25: 景色の地面に草が生える
+  if (t >= 19.0) {
+    const f = fade(t, 19.0, 26, 0.3);
+    g.save(); g.globalAlpha = f;
+    scene(g, t, 900, clamp((t - 19.4) / 2.2, 0, 1), clamp((t - 20.6) / 1.2, 0, 1));
+    if (t > 21.0) { g.globalAlpha = f * TK.pop(t, 21.0, 0.4); TK.text(g, '恐竜は[草も]食べていた', PW / 2, 280, 82, { stroke: 'rgba(0,0,0,0.6)' }); }
+    g.restore();
+    TK.note(g, t, 21.4, 23.2, '草原はまだない。草は食べたもののほんの一部\n（歯は草をすりつぶす形ではない）', { size: 30 });
+  }
+  if (t >= 23.2) TK.note(g, t, 23.2, 25.0, '出どころ: Prasad ほか (2005) Science 310, 1177–1180\n絵は形のイメージ', { size: 30 });
+}
+
+triviaStart({ out: 'evolution-trivia3', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

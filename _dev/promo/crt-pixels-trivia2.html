@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく crt-pixels-2（型A ぜんぶ逆）「ブラウン管は“絵”を映していない」。台本は trivia/crt-pixels.md。?short で録る
+// 行 = 4.5MHz ÷ 286 = 15,734Hz（R. Hoffner, TV Technology 2008）。1行 63.56µs、21型 4:3 の横幅 42.7cm → 秒速 6.7km 以上
+// （1行の時間をまるごと使ったので「以上」）。ISS 約7.66km/s（NASA の目安）。光の消え方（残光）は数字を言わず、絵は推定。
+// 動くのは「光る場所」で、電子が横に飛ぶのではない。最後の絵は自作のハートのドット絵（実在のゲームの絵は使わない）
+const DUR = 30;
+const subs = [
+  { a: 0.0, b: 3.0, ja: 'ブラウン管は、絵を映していない。\nビームが当たっているのは、いつも1つの点だけ', en: 'A CRT never shows a whole picture.\nThe beam only ever hits a single dot.', noBurn: true },
+  { a: 3.0, b: 10.0, ja: 'その[光る点]が、1行ずつ画面をぬっていく', en: 'That glowing dot paints the screen, one line at a time.' },
+  { a: 10.0, b: 16.0, ja: '1秒に、[1万5千行]あまり', en: 'Over 15,000 lines every second.' },
+  { a: 16.0, b: 23.0, ja: '21型なら、点が横切る速さは[秒速6.7km]以上。\n国際宇宙ステーションに近い速さ', en: 'On a 21-inch screen, the dot crosses at over 6.7 km/s,\nclose to the speed of the Space Station.' },
+  { a: 23.0, b: 30.0, ja: '1行ずつの光の帯。そのすきまが、\nドット絵を[やわらかく]見せていた', en: 'Bands of light, line by line. The gaps between them\nmade pixel art look soft.' },
+];
+const cues = [
+  { t: 0.05, type: 'whoosh' }, { t: 1.2, type: 'pop' }, { t: 3.0, type: 'whoosh' }, { t: 3.5, type: 'tick' }, { t: 5.5, type: 'tick' }, { t: 7.5, type: 'tick' },
+  { t: 10.0, type: 'pop' }, { t: 11.2, type: 'ding' }, { t: 16.0, type: 'whoosh' }, { t: 17.0, type: 'rise' }, { t: 19.6, type: 'ding' },
+  { t: 23.0, type: 'whoosh' }, { t: 24.2, type: 'pop' },
+];
+const SX = 90, SY = 200, SW = 780, SH = 585;   // 画面（4:3）
+
+// 光る点が行をぬる。s は「何行目まで進んだか」（小数）、rows は行の数、decay は何行ぶんで消えるか（推定の絵）
+function scan(g, s, rows, decay) {
+  g.save();
+  g.fillStyle = '#05070f'; g.fillRect(SX, SY, SW, SH);
+  g.strokeStyle = 'rgba(200,220,255,0.6)'; g.lineWidth = 4; g.strokeRect(SX, SY, SW, SH);
+  const lh = SH / rows, cur = Math.floor(s), fx = s - cur;
+  for (let k = 0; k <= decay * 4; k++) {
+    const j = cur - k; if (j < 0 && j + rows < 0) break;
+    const row = ((j % rows) + rows) % rows, y = SY + (row + 0.5) * lh;
+    const age = Math.max(0, s - (j + 1)), a = k === 0 ? 1 : Math.exp(-age / decay);
+    if (a < 0.02) continue;
+    const x1 = SX + SW * (k === 0 ? fx : 1);
+    const gr = g.createLinearGradient(SX, 0, x1, 0);
+    gr.addColorStop(0, `rgba(95,212,255,${0.05 * a})`); gr.addColorStop(1, `rgba(150,230,255,${0.75 * a})`);
+    g.fillStyle = k === 0 ? gr : `rgba(95,212,255,${0.55 * a})`;
+    g.fillRect(SX, y - lh * 0.32, x1 - SX, lh * 0.64);
+  }
+  const y = SY + ((cur % rows) + 0.5) * lh, x = SX + SW * fx;
+  g.fillStyle = '#fff'; g.shadowColor = '#bff0ff'; g.shadowBlur = 40;
+  g.beginPath(); g.arc(x, y, Math.max(10, lh * 0.45), 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+const HEART = ['..XX...XX..', '.XXXX.XXXX.', 'XXXXXXXXXXX', 'XXXXXXXXXXX', '.XXXXXXXXX.', '..XXXXXXX..', '...XXXXX...', '....XXX....', '.....X.....'];
+
+function draw(g, t) {
+  // 0〜3: 速い走査（点が1つだけ）
+  if (t < 3.0) {
+    scan(g, t * 33, 30, 4);
+    TK.hook(g, t, 1.2, 3.0, '光っているのは [1つの点] だけ', { y: 900, size: 72 });
+  }
+  // 3〜10: スローモーション
+  if (t >= 3.0 && t < 10.0) {
+    scan(g, (t - 3.0) * 2.4, 16, 2.5);
+    TK.text(g, 'スローモーション', SX, SY - 50, 44, { align: 'left', color: TK.C.sub });
+    TK.note(g, t, 3.5, 10, '動いているのは「光る場所」（電子は奥から画面へ飛ぶ）\n光の消え方は、かんたんにした推定の絵', { size: 30 });
+  }
+  // 10〜16: 1秒に 15,734 行
+  if (t >= 10.0 && t < 16.0) {
+    scan(g, t * 33, 30, 4);
+    g.save(); g.fillStyle = 'rgba(11,20,48,0.55)'; g.fillRect(SX, SY, SW, SH); g.restore();
+    TK.count(g, t, 10.2, 16.0, 0, 15734, { y: SY + SH / 2, size: 170, dur: 1.0, unit: '行／秒' });
+    TK.note(g, t, 11, 16, '4.5MHz ÷ 286 ＝ 15,734 Hz（カラーの NTSC。日本・アメリカなど）', { size: 30 });
+  }
+  // 16〜23: 横切る速さ
+  if (t >= 16.0 && t < 23.0) {
+    const u = ((t - 16.0) / 1.2) % 1;
+    g.save(); g.strokeStyle = 'rgba(200,220,255,0.6)'; g.lineWidth = 4; g.strokeRect(SX, 230, SW, 260); g.restore();
+    g.save(); g.fillStyle = '#fff'; g.shadowColor = '#bff0ff'; g.shadowBlur = 40; g.beginPath(); g.arc(SX + SW * u, 360, 16, 0, Math.PI * 2); g.fill(); g.restore();
+    g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 4; g.beginPath(); g.moveTo(SX, 530); g.lineTo(SX + SW, 530); g.moveTo(SX, 510); g.lineTo(SX, 550); g.moveTo(SX + SW, 510); g.lineTo(SX + SW, 550); g.stroke(); g.restore();
+    TK.text(g, '21型の横幅 約43cm を 0.0000636秒 で', PW / 2 - 60, 590, 42, { color: TK.C.acc });
+    TK.bars(g, t, 17.0, 23.0, [
+      { label: '光る点が横切る（21型）', v: 6.7 / 8, color: TK.C.acc, text: '6.7 km/秒 以上' },
+      { label: '国際宇宙ステーション', v: 7.66 / 8, color: TK.C.acc2, text: '約7.7 km/秒' },
+    ], { y: 670, gap: 170, stagger: 0.6, size: 42 });
+    TK.note(g, t, 17.5, 23, '1行の時間をまるごと使った計算（本当はもっと速い）\n21型 4:3 の横幅は対角 53.3cm からの目安', { size: 30 });
+  }
+  // 23〜30: 液晶 ⇔ ブラウン管（自作のハート）
+  if (t >= 23.0) {
+    const px = 60, w = HEART[0].length, h = HEART.length, x0 = PW / 2 - 60 - w * px / 2, y0 = 260;
+    const split = PW / 2 - 60 + Math.sin((t - 23) * 1.1) * 220;
+    g.save(); g.fillStyle = '#05070f'; g.fillRect(x0 - 40, y0 - 40, w * px + 80, h * px + 80); g.restore();
+    HEART.forEach((row, r) => [...row].forEach((c, k) => {
+      if (c !== 'X') return;
+      const x = x0 + k * px, y = y0 + r * px;
+      // 左＝液晶（くっきりした四角）
+      g.save(); g.beginPath(); g.rect(0, 0, split, PH); g.clip();
+      g.fillStyle = '#ff5a7a'; g.fillRect(x, y, px, px); g.restore();
+      // 右＝ブラウン管（行の帯とすきま、にじみ）
+      g.save(); g.beginPath(); g.rect(split, 0, PW, PH); g.clip();
+      g.fillStyle = '#ff5a7a'; g.shadowColor = '#ff5a7a'; g.shadowBlur = 26;
+      for (let i = 0; i < 3; i++) g.fillRect(x - 4, y + i * px / 3 + 3, px + 8, px / 3 - 9);
+      g.restore();
+    }));
+    g.save(); g.strokeStyle = '#fff'; g.lineWidth = 4; g.beginPath(); g.moveTo(split, y0 - 60); g.lineTo(split, y0 + h * px + 60); g.stroke(); g.restore();
+    TK.text(g, '液晶', x0 - 10, y0 + h * px + 110, 48, { align: 'left', color: TK.C.sub });
+    TK.text(g, 'ブラウン管', x0 + w * px + 10, y0 + h * px + 110, 48, { align: 'right', color: TK.C.sub });
+    TK.note(g, t, 27, 30, '出どころ: R. Hoffner, TV Technology（2008）\n国際宇宙ステーションの速さ 約7.66km/s（NASA）', { size: 30 });
+  }
+}
+
+triviaStart({ out: 'crt-pixels-trivia2', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

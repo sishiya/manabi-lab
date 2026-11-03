@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく quantum-1（型A ぜんぶ逆）「太陽の中心は、核融合には熱さが足りない」。台本は trivia/quantum.md。?short で録る
+// 太陽の中心 1.571e7 K（NASA Sun Fact Sheet）。1fm での反発 1.44 MeV → T = 2U/3k ≈ 1.1e10 K（見つもり。教科書で 1e9〜1e10 の幅）
+// 「太陽は熱いから光っている」は正しい。足りないのは「ふつうの物理で核融合を起こす」熱さ（REVIEW 3-5）
+const DUR = 28;
+const subs = [
+  { a: 0.0, b: 2.6, ja: '太陽の中心は1570万度。\nそれでも、[核融合には]熱さが足りません', en: 'The Sun’s core is 15.7 million degrees.\nStill not hot enough for fusion', noBurn: true },
+  { a: 2.6, b: 7.0, ja: '太陽の熱は、水素の原子核どうしがくっつく[核融合]で生まれる\nでも原子核はプラスどうし。強く[反発]します', en: 'The Sun’s heat comes from fusing hydrogen nuclei.\nBut both are positive, so they push each other away' },
+  { a: 7.0, b: 13.0, ja: 'ふつうの物理で、この壁をこえるのに要る温度は[約100億度]\n太陽の中心は1570万度。[数百倍]も足りません', en: 'Classically, getting over that wall takes about 10 billion degrees.\nThe core is hundreds of times too cool' },
+  { a: 13.0, b: 21.0, ja: 'それでも光るのは、粒が"波"でもあるから\n波は壁を、ほんの少しだけすり抜けます。[トンネル効果]です', en: 'It still shines because particles are also waves.\nA wave can leak through the wall a little: quantum tunneling' },
+  { a: 21.0, b: 26.0, ja: 'トンネル効果がなければ\n太陽の中心で、核融合は[ほとんど起きない]', en: 'Without tunneling,\nalmost no fusion would happen in the Sun’s core' },
+  { a: 26.0, b: 28.0, ja: '太陽の中心は、核融合には熱さが足りない…', en: 'The Sun’s core is not hot enough for fusion...' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 2.6, type: 'whoosh' }, { t: 4.4, type: 'buzz' }, { t: 7.0, type: 'pop' }, { t: 8.5, type: 'rise' }, { t: 11.0, type: 'buzz' },
+  { t: 13.0, type: 'whoosh' }, { t: 16.2, type: 'ding' }, { t: 21.0, type: 'pop' }, { t: 26.0, type: 'whoosh' },
+];
+
+function sun(g, x, y, r, t, f = 1) {
+  g.save(); g.globalAlpha *= f;
+  const gl = g.createRadialGradient(x, y, r * 0.8, x, y, r * 1.5); gl.addColorStop(0, 'rgba(255,190,80,0.5)'); gl.addColorStop(1, 'rgba(255,140,40,0)');
+  g.fillStyle = gl; g.beginPath(); g.arc(x, y, r * 1.5, 0, Math.PI * 2); g.fill();
+  const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, '#fffbe0'); gr.addColorStop(0.5, '#ffd25a'); gr.addColorStop(1, '#f08a24');
+  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+function thermo(g, x, y, h, k, label) {   // 温度計（k: 0〜1 の高さ）
+  g.save();
+  g.fillStyle = 'rgba(255,255,255,0.15)'; g.strokeStyle = '#fff'; g.lineWidth = 5;
+  g.beginPath(); g.roundRect(x - 22, y - h, 44, h, 22); g.fill(); g.stroke();
+  g.beginPath(); g.arc(x, y + 20, 40, 0, Math.PI * 2); g.fillStyle = TK.C.red; g.fill(); g.stroke();
+  g.fillStyle = TK.C.red; g.fillRect(x - 12, y - h * k, 24, h * k + 10);
+  if (label) TK.text(g, label, x, y + 100, 44, { color: TK.C.sub });
+  g.restore();
+}
+function proton(g, x, y, r = 46) {
+  g.save();
+  const gr = g.createRadialGradient(x - r * 0.3, y - r * 0.3, 4, x, y, r); gr.addColorStop(0, '#ffb3b3'); gr.addColorStop(1, '#d9434f');
+  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  TK.text(g, '＋', x, y + 2, r * 1.2, { blur: 0 });
+  g.restore();
+}
+// 波束が壁に当たり、大部分ははね返り、少しだけ向こうへ（鏡の像の考え方で描く。形は説明用）
+function wave(g, t) {
+  const y0 = 640, xb = 600, w = 50, x0 = 140, v = 120, tau = t - 13.4;
+  const xc = x0 + v * Math.max(0, tau), xr = 2 * xb - xc, xt = xc + w, sig = 70, k = 0.09;
+  const env = d => Math.exp(-(d * d) / (2 * sig * sig));
+  // 壁
+  g.save();
+  g.fillStyle = 'rgba(255,107,107,0.25)'; g.strokeStyle = TK.C.red; g.lineWidth = 4;
+  g.fillRect(xb, y0 - 260, w, 360); g.strokeRect(xb, y0 - 260, w, 360);
+  TK.text(g, '反発の壁', xb + w / 2, y0 - 300, 44, { color: TK.C.red });
+  g.strokeStyle = 'rgba(255,255,255,0.25)'; g.lineWidth = 2; g.beginPath(); g.moveTo(60, y0); g.lineTo(980, y0); g.stroke();
+  g.strokeStyle = TK.C.acc2; g.lineWidth = 6; g.beginPath();
+  let first = true;
+  for (let x = 60; x <= 980; x += 3) {
+    let a = 0;
+    if (x < xb) a = env(x - xc) * Math.cos(k * (x - xc) - t * 6) + 0.92 * env(x - xr) * Math.cos(k * (x - xr) + t * 6);
+    else if (x > xb + w) a = 0.28 * env(x - xt) * Math.cos(k * (x - xt) - t * 6);
+    else a = 0;
+    const y = y0 - a * 150;
+    if (x >= xb && x <= xb + w) { first = true; continue; }
+    first ? g.moveTo(x, y) : g.lineTo(x, y); first = false;
+  }
+  g.stroke();
+  if (xt > xb + w + 60) { g.globalAlpha = clamp((xt - xb - w - 60) / 80, 0, 1); TK.lines(g, '少しだけ\n[向こうへ]', 830, y0 + 210, 50); }
+  g.restore();
+}
+
+function draw(g, t) {
+  // 0〜2.6 と 26〜28（ループ）: 太陽と温度計
+  if (t < 2.6 || t >= 26.0) {
+    const f = t < 2.6 ? 1 : fade(t, 26.0, 30, 0.3);
+    sun(g, 470, 720, 280, t, f);
+    g.save(); g.globalAlpha = f; thermo(g, 880, 840, 420, 0.25, ''); TK.text(g, '1570万度', 880, 960, 48, { color: TK.C.sub }); g.restore();
+    TK.hook(g, t >= 26.0 ? t - 26.0 : t, 0.0, 2.6, '核融合には\n[熱さが足りない]', { y: 260, size: 116 });
+  }
+  // 2.6〜7: 陽子どうしが近づいて、はね返る
+  if (t >= 2.6 && t < 7.0) {
+    const f = fade(t, 2.6, 7.0, 0.3), u = (t - 3.0) / 1.4;
+    const gap = u < 1 ? lerp(380, 70, ease(u)) : lerp(70, 380, ease((u - 1) * 0.7));
+    g.save(); g.globalAlpha = f;
+    proton(g, 540 - gap, 620); proton(g, 540 + gap, 620);
+    if (u > 0.85 && u < 1.6) { g.globalAlpha = f * (1 - Math.abs(u - 1.1) / 0.6); g.strokeStyle = TK.C.red; g.lineWidth = 8; g.setLineDash([16, 12]); g.beginPath(); g.moveTo(540, 450); g.lineTo(540, 790); g.stroke(); g.setLineDash([]); }
+    g.globalAlpha = f;
+    TK.text(g, '水素の原子核（陽子）', PW / 2, 260, 60, { color: TK.C.sub });
+    if (t > 4.4) TK.text(g, 'プラスどうし → [反発]', PW / 2, 920, 70);
+    g.restore();
+  }
+  // 7〜13: 要る温度と、太陽の中心
+  if (t >= 7.0 && t < 13.0) {
+    TK.text(g, '温度（ふつうの物理の見つもり）', PW / 2, 250, 52, { color: TK.C.sub });
+    g.save(); g.globalAlpha = fade(t, 7.0, 13.0, 0.3);
+    [[400, '壁をこえるのに要る温度', 1, TK.C.red, 7.3], [640, '太陽の中心（同じ目もりで）', 1.571e7 / 1e10, TK.C.acc, 8.5]].forEach(([y, s, v, c, a0]) => {
+      TK.text(g, s, 110, y, 52, { align: 'left', color: TK.C.sub });
+      g.fillStyle = 'rgba(255,255,255,0.10)'; g.beginPath(); g.roundRect(110, y + 40, 860, 64, 12); g.fill();
+      const k = TK.out((t - a0) / 0.9); g.fillStyle = c; g.fillRect(110, y + 40, Math.max(4, 860 * v * k), 64);
+    });
+    if (t > 7.9) TK.text(g, '約100億度', 950, 472, 46, { align: 'right', color: '#0b1430', blur: 0 });
+    g.restore();
+    if (t > 8.8) { g.save(); g.globalAlpha = fade(t, 8.8, 13.0, 0.3); TK.text(g, '← 1570万度（0.16%）', 140, 712, 52, { align: 'left', color: TK.C.acc }); g.restore(); }
+    if (t > 10.4) { g.save(); g.globalAlpha = fade(t, 10.4, 13.0, 0.3); TK.text(g, '[数百倍]も足りない', PW / 2, 930, 86); g.restore(); }
+    TK.note(g, t, 7.0, 13.0, '原子核が 1fm（1000兆分の1m）まで近づく熱さの目安。教科書で10億〜100億度の幅', { size: 28 });
+  }
+  // 13〜21: トンネル効果
+  if (t >= 13.0 && t < 21.0) {
+    g.save(); g.globalAlpha = fade(t, 13.0, 21.0, 0.3);
+    TK.text(g, '粒は"[波]"でもある', PW / 2, 220, 74);
+    wave(g, t);
+    g.restore();
+    TK.note(g, t, 13.0, 21.0, 'すり抜けるのは確率の話（ほんの一部だけ）。波の形は説明のための絵', { size: 30 });
+  }
+  // 21〜26: 太陽にもどる
+  if (t >= 21.0 && t < 26.0) {
+    const f = fade(t, 21.0, 26.0, 0.3);
+    sun(g, 540, 650, 300, t, f);
+    g.save(); g.globalAlpha = f;
+    TK.card(g, 120, 180, 840, 150);
+    TK.text(g, 'トンネル効果がなければ', PW / 2, 255, 64);
+    g.restore();
+    TK.note(g, t, 22.0, 26.0, '出どころ: NASA Sun Fact Sheet（中心 1.571×10⁷ K）・van Kerkwijk, AST221 講義資料 L7-4（トロント大学）\nトンネル効果: Gamow (1928)、星への応用: Atkinson & Houtermans (1929)', { size: 26 });
+  }
+}
+
+triviaStart({ out: 'quantum-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

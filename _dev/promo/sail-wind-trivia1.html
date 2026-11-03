@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく sail-wind-1（型H 当ててみて）「追い風だけで、風より速く走れる？」。台本は trivia/sail-wind.md。?short で録る
+// 数字: NALSA（北米陸上帆走協会）の Downwind 記録 2010-07-02、持続した 10 mph（16 km/h）の風で 27.7 mph（45 km/h）、比 ほぼ 2.8。
+// 押されるだけの帆の絵（5〜10秒）は形だけ: 押す力 ∝（風 − 速さ）² で、速さは風に近づくだけ（数値は出さない）。
+// 乗り物の名前・作った人の名前・写真は出さない（線画）
+const DUR = 40;
+const subs = [
+  { a: 0.0, b: 5.0, ja: '真後ろからの風だけで、[風より速く]走れる？', en: 'With only the wind directly behind you, can you go faster than the wind?', noBurn: true },
+  { a: 5.0, b: 10.0, ja: 'ふつうはムリ。帆が押されて進むなら、\n風と同じ速さで、[押す風がなくなる]。', en: 'Normally, no. If the wind just pushes a sail,\nthe push disappears once you match the wind.' },
+  { a: 10.0, b: 14.0, ja: 'でも、[できた]乗り物がある。', en: 'But one vehicle did it.' },
+  { a: 14.0, b: 20.0, ja: '帆のかわりに[プロペラ]。車輪がプロペラを回して、\nプロペラが空気を後ろへ押す。', en: 'A propeller instead of a sail. The wheels turn the propeller,\nand the propeller pushes air backward.' },
+  { a: 20.0, b: 27.0, ja: '風より速くても、[地面]はいつも後ろへ流れている。\n地面から力をもらって、空気をけって進む。', en: 'Even faster than the wind, the ground still streams backward.\nIt takes power from the ground and pushes off the air.' },
+  { a: 27.0, b: 34.0, ja: '2010年、16 km/h の追い風で、時速 45 km。\n風の[2.8倍]。陸の帆走の協会が記録と認めた。', en: 'In 2010: a 16 km/h tailwind, and 45 km/h on the cart.\n2.8× the wind, recognized as a record.' },
+  { a: 34.0, b: 40.0, ja: '専門家どうしでも[大論争]に。エネルギーの出どころは、\n風と地面の速さの差。', en: 'Even experts argued about it. The energy comes from\nthe speed difference between the wind and the ground.' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 0.25, type: 'pop' }, { t: 3.0, type: 'tick' }, { t: 4.0, type: 'tick' },
+  { t: 5.0, type: 'whoosh' }, { t: 8.4, type: 'buzz' }, { t: 10.2, type: 'ding' }, { t: 14.0, type: 'whoosh' },
+  { t: 20.0, type: 'whoosh' }, { t: 27.0, type: 'pop' }, { t: 28.6, type: 'rise' }, { t: 30.2, type: 'ding' }, { t: 34.0, type: 'whoosh' },
+];
+const OPTS = ['ムリ', 'できる'];
+
+// 風の線（左 → 右へ流れる）。speed は 1 秒に動く px
+function windLines(g, t, speed, y0, y1, color = 'rgba(95,212,255,0.55)') {
+  g.save(); g.strokeStyle = color; g.lineWidth = 5; g.lineCap = 'round';
+  for (let i = 0; i < 9; i++) {
+    const y = y0 + (y1 - y0) * (i + 0.5) / 9, x = ((t * speed + i * 237) % 1300) - 150;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + 110, y); g.lineTo(x + 92, y - 12); g.moveTo(x + 110, y); g.lineTo(x + 92, y + 12); g.stroke();
+  }
+  g.restore();
+}
+function arrow(g, x0, y0, x1, y1, color, w = 10) {
+  g.save(); g.strokeStyle = color; g.fillStyle = color; g.lineWidth = w; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+  const a = Math.atan2(y1 - y0, x1 - x0), h = w * 3;
+  g.beginPath(); g.moveTo(x1 + Math.cos(a) * h * 0.5, y1 + Math.sin(a) * h * 0.5); g.lineTo(x1 - Math.cos(a - 0.5) * h, y1 - Math.sin(a - 0.5) * h); g.lineTo(x1 - Math.cos(a + 0.5) * h, y1 - Math.sin(a + 0.5) * h); g.fill();
+  g.restore();
+}
+// 帆の車（押されるだけ）
+function sailCart(g, x, y) {
+  g.save(); g.strokeStyle = '#fff'; g.lineWidth = 5;
+  g.strokeRect(x - 90, y - 30, 180, 30);
+  [x - 60, x + 60].forEach(cx => { g.beginPath(); g.arc(cx, y + 10, 22, 0, Math.PI * 2); g.stroke(); });
+  g.beginPath(); g.moveTo(x, y - 30); g.lineTo(x, y - 300); g.stroke();
+  g.fillStyle = 'rgba(255,207,74,0.25)'; g.strokeStyle = TK.C.acc;
+  g.beginPath(); g.moveTo(x, y - 290); g.quadraticCurveTo(x + 70, y - 170, x, y - 50); g.closePath(); g.fill(); g.stroke();
+  g.restore();
+}
+// プロペラの車（線画）。spin は回転の角度、wheel は車輪の角度
+function propCart(g, x, y, s, spin, wheel) {
+  g.save(); g.translate(x, y); g.scale(s, s);
+  g.strokeStyle = '#fff'; g.lineWidth = 5 / s * 1.2; g.lineJoin = 'round';
+  g.beginPath(); g.moveTo(-170, -40); g.lineTo(150, -40); g.lineTo(190, -10); g.lineTo(-170, -10); g.closePath(); g.stroke();   // 車体
+  [[-120, 0], [130, 0]].forEach(([cx, cy]) => {
+    g.beginPath(); g.arc(cx, cy + 20, 34, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); for (let k = 0; k < 3; k++) { const a = wheel + k * Math.PI * 2 / 3; g.moveTo(cx, cy + 20); g.lineTo(cx + Math.cos(a) * 34, cy + 20 + Math.sin(a) * 34); } g.stroke();
+  });
+  g.beginPath(); g.moveTo(-20, -40); g.lineTo(-20, -420); g.stroke();   // 柱
+  // チェーン（車輪 → プロペラ）
+  g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.setLineDash([14, 10]); g.lineDashOffset = -wheel * 40;
+  g.beginPath(); g.moveTo(-120, 20); g.lineTo(-30, -410); g.moveTo(-110, 30); g.lineTo(-10, -410); g.stroke(); g.restore();
+  // プロペラ（横から見た2枚。回ると長さが変わる）
+  const L = 190 * Math.cos(spin);
+  g.strokeStyle = TK.C.acc2; g.lineWidth = 16; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(-20, -420 - L); g.lineTo(-20, -420 + L); g.stroke();
+  g.fillStyle = '#fff'; g.beginPath(); g.arc(-20, -420, 14, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+
+function draw(g, t) {
+  // 0〜5: 2択＋考える時間
+  if (t < 5.0) {
+    windLines(g, t, 300, 110, 200);
+    TK.text(g, '真後ろの風だけで', PW / 2, 260, 70);
+    TK.text(g, '[風より速く] 走れる？', PW / 2, 360, 84);
+    TK.choices(g, t, 0.0, 5.0, OPTS, { y: 640, h: 170, think: [3.0, 5.0], size: 72 });
+  }
+  // 5〜10: 押されるだけの帆。速さが風に近づくと、押す力が 0 に
+  if (t >= 5.0 && t < 10.0) {
+    const tau = t - 5.2, v = 1 - 1 / (1 + Math.max(0, tau) * 1.1);   // 風に近づく（形だけ）
+    windLines(g, t, 420, 420, 860, 'rgba(95,212,255,0.4)');
+    const x = 300 + 280 * v;
+    g.save(); g.translate(x, 900); g.scale(1.7, 1.7); sailCart(g, 0, 0); g.restore();
+    const F = Math.pow(1 - v, 2);
+    if (F > 0.02) arrow(g, x - 60, 620, x - 60 + 300 * F, 620, TK.C.red, 14);
+    TK.text(g, '押す力', x - 90, 620, 48, { color: TK.C.red, align: 'right' });
+    // 速さの棒
+    TK.text(g, '風', 120, 230, 44, { align: 'left', color: TK.C.acc2 });
+    g.fillStyle = TK.C.acc2; g.fillRect(220, 214, 760, 30);
+    TK.text(g, '車', 120, 290, 44, { align: 'left', color: TK.C.acc });
+    g.fillStyle = TK.C.acc; g.fillRect(220, 274, 760 * v, 30);
+    if (t > 8.2) { g.save(); g.globalAlpha = fade(t, 8.2, 10, 0.3); TK.text(g, '風に [追いつけない]', PW / 2, 1040, 64, { acc: TK.C.red }); g.restore(); }
+  }
+  // 10〜14: 答え
+  if (t >= 10.0 && t < 14.0) {
+    TK.text(g, '答え', PW / 2, 500, 60, { color: TK.C.sub });
+    TK.choices(g, t, 10.0, 14.0, OPTS, { y: 640, h: 170, reveal: 10.2, answer: 1, size: 72 });
+  }
+  // 14〜20: プロペラの車のしくみ
+  if (t >= 14.0 && t < 20.0) {
+    const ground = 900;
+    g.strokeStyle = 'rgba(255,255,255,0.4)'; g.lineWidth = 4; g.beginPath(); g.moveTo(60, ground + 52); g.lineTo(1020, ground + 52); g.stroke();
+    propCart(g, 560, ground, 1.15, t * 14, t * 5);
+    const labels = [{ s: '① 車輪が回る', x: 330, y: 1020, at: 14.6 }, { s: '② チェーン', x: 240, y: 620, at: 15.6 }, { s: '③ プロペラが回る', x: 720, y: 200, at: 16.6 }];
+    labels.forEach(l => { if (t > l.at) { g.save(); g.globalAlpha = fade(t, l.at, 20, 0.3); TK.text(g, l.s, l.x, l.y, 50, { color: TK.C.acc }); g.restore(); } });
+    if (t > 17.6) { g.save(); g.globalAlpha = fade(t, 17.6, 20, 0.3); arrow(g, 440, 350, 160, 350, TK.C.acc2, 12); TK.text(g, '空気を後ろへ', 300, 290, 44, { color: TK.C.acc2 }); g.restore(); }
+    TK.note(g, t, 14.4, 20, '線画（形はおおまか）', { size: 32 });
+  }
+  // 20〜27: 車から見ると、地面は速く、空気はゆっくり後ろへ
+  if (t >= 20.0 && t < 27.0) {
+    const ground = 820;
+    // 車から見た地面（2.8 の速さ）と空気（1.8 の速さ）が後ろ（左）へ
+    g.save(); g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 6;
+    for (let i = 0; i < 12; i++) { const x = 1100 - ((t * 2.8 * 260 + i * 100) % 1200); g.beginPath(); g.moveTo(x, ground + 60); g.lineTo(x - 40, ground + 90); g.stroke(); }
+    g.beginPath(); g.moveTo(40, ground + 56); g.lineTo(1040, ground + 56); g.stroke();
+    g.restore();
+    g.save(); g.strokeStyle = 'rgba(95,212,255,0.45)'; g.lineWidth = 5;
+    for (let i = 0; i < 8; i++) { const y = 230 + i * 34, x = 1100 - ((t * 1.8 * 260 + i * 173) % 1200); g.beginPath(); g.moveTo(x, y); g.lineTo(x - 90, y); g.stroke(); }
+    g.restore();
+    propCart(g, 640, ground, 1.0, t * 16, -t * 8);
+    TK.card(g, 70, 470, 420, 190, { r: 30 });
+    TK.text(g, '車から見ると', 280, 510, 36, { color: TK.C.sub, bold: false });
+    TK.text(g, '地面 ← [速い]', 280, 565, 50);
+    TK.text(g, '空気 ← ゆっくり', 280, 625, 46, { color: TK.C.acc2 });
+    TK.text(g, 'ちがう速さの2つの間で、エネルギーをもらう', PW / 2, 1060, 40, { color: TK.C.sub, bold: false });
+    TK.note(g, t, 20.4, 27, '風の 2.8 倍で走っているときの見え方（線の速さは目安）', { size: 32 });
+  }
+  // 27〜34: 記録の数字
+  if (t >= 27.0 && t < 34.0) {
+    TK.text(g, '2010年7月 アメリカ', PW / 2, 220, 48, { color: TK.C.sub });
+    TK.bars(g, t, 27.2, 34.0, [
+      { label: '追い風', v: 16 / 50, color: TK.C.acc2, text: '16 km/h' },
+      { label: 'プロペラの車', v: 45 / 50, color: TK.C.acc, text: '45 km/h' },
+    ], { y: 340, gap: 240, stagger: 1.2 });
+    if (t > 30.0) { const p = clamp(TK.pop(t, 30.0, 0.4), 0, 1.3); g.save(); g.globalAlpha = clamp(p, 0, 1); TK.text(g, '風の [2.8倍]', PW / 2, 920, 110 * Math.min(1, p)); g.restore(); }
+    TK.note(g, t, 27.5, 34, '突風ではなく、ずっと吹いていた風での比（協会の記録）', { size: 32 });
+  }
+  // 34〜40: 論争とエネルギーの出どころ
+  if (t >= 34.0) {
+    const p = clamp(TK.pop(t, 34.2, 0.4), 0, 1.2);
+    g.save(); g.globalAlpha = clamp(p, 0, 1);
+    TK.card(g, 120, 220, 840, 200, { r: 36 });
+    TK.text(g, '専門家どうしでも', PW / 2, 280, 50, { color: TK.C.sub });
+    TK.text(g, '「ありえない」と[大論争]', PW / 2, 360, 66);
+    g.restore();
+    if (t > 35.6) {
+      g.save(); g.globalAlpha = fade(t, 35.6, 40, 0.3);
+      TK.text(g, 'エネルギーの出どころ', PW / 2, 600, 52, { color: TK.C.sub });
+      TK.text(g, '[風] と [地面] の速さの差', PW / 2, 700, 80);
+      g.restore();
+    }
+    TK.note(g, t, 36.5, 40, '出どころ: NALSA（北米陸上帆走協会）Downwind の記録（2010-07-02）', { size: 30 });
+  }
+}
+
+triviaStart({ out: 'sail-wind-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

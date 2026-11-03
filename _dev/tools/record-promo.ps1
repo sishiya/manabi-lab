@@ -40,7 +40,8 @@ $out = $Script + $(if ($Short) { '-short' } else { '' })
 $url = "http://localhost:$Port/_dev/promo/$Script.html" + $(if ($Short) { '?short' } else { '' })
 try { Invoke-WebRequest -UseBasicParsing $url -TimeoutSec 10 | Out-Null } catch { throw "$url を開けません。サーバー apps を起動してから（ポートが違えば -Port）" }
 
-$cdp = Start-CdpChrome -Name 'manabi-record' -Port $DebugPort -Visible:$Visible -Gpu:(-not $Soft) -Size '1400,900'
+# プロフィールは DebugPort ごとに分ける（同時に何本も録るとき、ほかの録画の Chrome を止めないように。2026-11-03）
+$cdp = Start-CdpChrome -Name "manabi-record-$DebugPort" -Port $DebugPort -Visible:$Visible -Gpu:(-not $Soft) -Size '1400,900'
 $t0 = Get-Date
 function Elapsed { $d = (Get-Date) - $t0; '{0}:{1:mm\:ss}' -f [int][Math]::Floor($d.TotalHours), $d }   # 1時間をこえても時の桁を出す
 function Show-Log($ws) { $l = Invoke-CdpEval $ws "document.getElementById('log') ? document.getElementById('log').textContent : ''"; if ($l) { Write-Host ($l.TrimEnd()) } }

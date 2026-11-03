@@ -1,0 +1,24 @@
+[
+  {
+    "id": "ferrofluid-1",
+    "page": "ferrofluid-trivia1",
+    "mp4": "out/ferrofluid-trivia1-short.mp4",
+    "type": "A",
+    "title": "磁性流体のトゲの間かくは、磁石では決まらない",
+    "dur": 35,
+    "voice": "(2) VOICEVOX。いまは字幕だけ",
+    "app_footage": false,
+    "notes": "アプリの録画の代わりに、六角形にならべた円すいの模式図を Canvas で（間かくの縮尺だけ 1 mm = 7 px でそろえ、地球 9.98 mm → 月 24.6 mm を同じ縮尺で広げる）。トゲの高さ・形はかざり。式の画面に U 字の磁石と ×。REVIEW の「前提が要る（トゲの間かく）」は、最初の1秒でトゲの皿を見せて補った。check-loudness: -20.0 LUFS OK。"
+  },
+  {
+    "id": "ferrofluid-2",
+    "page": "ferrofluid-trivia2",
+    "mp4": "out/ferrofluid-trivia2-short.mp4",
+    "type": "F",
+    "title": "磁性流体はロケットの燃料のために作られた。でも一度も使われなかった",
+    "dur": 35,
+    "voice": "(2) VOICEVOX 2人（聞き手・答える人）。いまは字幕だけ（札は net-route-trivia3 の書き方）",
+    "app_footage": false,
+    "notes": "アプリの録画の代わりに、トゲの皿は ferrofluid-trivia1 の模式図を小さくして使った。タンク・燃料・電磁石・仕切り板・スピーカー・回る軸のシールはすべて線画の模式図。台本の22〜30秒の「半導体の工場」のアイコンは、確かめた出どころ（NASA の記事）にスピーカーと回る軸のシールしか書いていないので入れなかった（入れるなら出どころを足してから）。最後に「ロケットの燃料に使われた回数 0回」の札（台本の「へぇ」の数字）。「液がタンクの真ん中に集まる」は台本（NASA の記事）どおり。発明者名は出していない。check-loudness: -20.4 LUFS OK。"
+  }
+]

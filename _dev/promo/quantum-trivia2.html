@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく quantum-2（型H 当ててみて）「光をさえぎる板を1枚ふやすと明るくなる」。台本は trivia/quantum.md。?short で録る
+// 理想の偏光板。ふつうの光 → 0° で 50%、→ 45° で ×cos²45°=25%、→ 90° で ×cos²45°=12.5%。45° がなければ 50%×cos²90°=0%
+// 光は上から下へ。板は正面から見た丸（線の向き＝通す向き）
+const DUR = 22;
+const X = 470, YS = [420, 650, 880], PR = 95;   // 板の位置と半径
+const subs = [
+  { a: 0.0, b: 3.0, ja: '偏光板を直角に2枚。光は[0%]', en: 'Two polarizers at right angles. 0% of the light gets through', noBurn: true },
+  { a: 3.0, b: 6.0, ja: 'あいだに、ななめの[3枚目]を入れると？', en: 'Now slip a third one, at 45°, in between...' },
+  { a: 6.0, b: 9.4, ja: 'A 0%のまま　B もっと暗い　C 明るくなる', en: 'A: still 0%   B: even darker   C: brighter' },
+  { a: 9.4, b: 14.0, ja: '答えは [C]\n光の[8分の1]が通ります', en: 'The answer is C.\nOne eighth of the light gets through' },
+  { a: 14.0, b: 20.0, ja: '板は光を"止める"だけでなく、通った光の向きを\nその板の向きに"[そろえ直す]"から', en: 'A filter doesn’t just block light.\nIt re-aligns what passes through to its own angle' },
+  { a: 20.0, b: 22.0, ja: 'さえぎるものを、[ふやした]のに', en: 'Even though we added another blocker' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 3.0, type: 'whoosh' }, { t: 6.0, type: 'pop' }, { t: 6.6, type: 'tick' }, { t: 7.6, type: 'tick' }, { t: 8.6, type: 'tick' },
+  { t: 9.4, type: 'ding' }, { t: 10.2, type: 'rise' }, { t: 14.0, type: 'pop' }, { t: 15.5, type: 'pop' }, { t: 17.0, type: 'pop' }, { t: 20.0, type: 'ding' },
+];
+
+function plate(g, x, y, deg, f = 1) {
+  g.save(); g.globalAlpha *= f;
+  g.fillStyle = 'rgba(150,175,215,0.22)'; g.strokeStyle = 'rgba(200,220,255,0.75)'; g.lineWidth = 5;
+  g.beginPath(); g.arc(x, y, PR, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.save(); g.beginPath(); g.arc(x, y, PR - 4, 0, Math.PI * 2); g.clip();
+  g.translate(x, y); g.rotate(deg * Math.PI / 180);
+  g.strokeStyle = 'rgba(220,235,255,0.45)'; g.lineWidth = 3;
+  for (let d = -PR; d <= PR; d += 22) { g.beginPath(); g.moveTo(d, -PR); g.lineTo(d, PR); g.stroke(); }
+  g.restore();
+  TK.text(g, deg + '°', x - PR - 30, y, 46, { align: 'right', color: TK.C.sub });
+  g.restore();
+}
+// 光の帯（上から下）。a: 明るさ 0〜1、pol: 向き（度。null はばらばら）
+function beam(g, y0, y1, a, pol, t) {
+  if (a <= 0.001) return;
+  g.save();
+  g.fillStyle = `rgba(255,230,140,${0.12 + 0.6 * Math.sqrt(a)})`; g.fillRect(X - 34, y0, 68, y1 - y0);
+  const ym = (y0 + y1) / 2, L = 46;
+  g.strokeStyle = `rgba(255,255,255,${0.4 + 0.6 * Math.sqrt(a)})`; g.lineWidth = 6; g.lineCap = 'round';
+  const arrow = deg => { const r = deg * Math.PI / 180, dx = Math.sin(r) * L, dy = -Math.cos(r) * L; g.beginPath(); g.moveTo(X + 110 - dx, ym - dy); g.lineTo(X + 110 + dx, ym + dy); g.stroke(); };
+  if (pol === null) [0, 45, 90, 135].forEach(arrow); else arrow(pol);
+  g.restore();
+}
+const pctText = v => (v === 12.5 ? '12.5' : String(Math.round(v))) + '%';
+
+function draw(g, t) {
+  const inK = t < 9.4 ? (t < 3.0 ? 0 : 0.55 * ease((t - 3.0) / 1.6)) : lerp(0.55, 1, ease((t - 9.4) / 0.8));   // 3枚目の入り具合（1 で光の通り道に）
+  const third = inK >= 0.999;
+  const showPlates = !(t >= 6.0 && t < 9.4);
+  if (showPlates) {
+    const f = t < 6.0 ? 1 : fade(t, 9.4, 30, 0.3);
+    g.save(); g.globalAlpha = f;
+    // 光
+    const ys = [235, YS[0] - PR, YS[0] + PR, YS[1] - PR, YS[1] + PR, YS[2] - PR, YS[2] + PR, 1080];
+    beam(g, ys[0], ys[1], 1, null, t);
+    if (third) { beam(g, ys[2], ys[3], 0.5, 0, t); beam(g, ys[4], ys[5], 0.25, 45, t); }
+    else beam(g, ys[2], ys[5], 0.5, 0, t);   // 1枚目のあと、90° の板まで
+    const out = third ? 0.125 * ease((t - 10.2) / 0.6) : 0;
+    beam(g, ys[6], ys[7], out, 90, t);
+    // 板
+    plate(g, X, YS[0], 0);
+    if (inK > 0) plate(g, lerp(-200, X, inK), YS[1], 45);
+    plate(g, X, YS[2], 90);
+    // 出口の明るさ
+    const pv = third ? 12.5 * ease((t - 10.2) / 0.6) : 0;
+    TK.text(g, pv >= 12.4 ? '12.5%' : pv.toFixed(1).replace('.0', '') + '%', X + 250, 1040, 80, { color: third ? TK.C.acc : TK.C.red });
+    g.restore();
+    // 14〜20: 板ごとの割合
+    if (t >= 14.0 && t < 20.0) {
+      const items = [[(ys[2] + ys[3]) / 2, '50%', 14.0], [(ys[4] + ys[5]) / 2, '25%', 15.5]];
+      items.forEach(([y, s, a]) => { if (t > a) { g.save(); g.globalAlpha = fade(t, a, 20, 0.3); TK.text(g, s, X + 250, y, 62, { color: TK.C.acc }); g.restore(); } });
+      TK.note(g, t, 14.0, 20.0, '光の粒1個ずつでも、同じ割合で通る（どれが通るかは確率）', { size: 30 });
+    }
+  }
+  // 0〜3: フック
+  if (t < 3.0) TK.hook(g, t, 0.0, 3.0, '2枚で[真っ暗]', { y: 175, size: 96 });
+  if (t >= 3.0 && t < 6.0) { g.save(); g.globalAlpha = fade(t, 3.0, 6.0, 0.3); TK.text(g, 'あいだに [もう1枚] 足すと？', PW / 2, 175, 74); g.restore(); }
+  // 6〜9.4: 3択
+  TK.choices(g, t, 6.0, 9.4, ['0%のまま', 'もっと暗い', '明るくなる'], { y: 520, h: 170, think: [6.4, 9.4] });
+  if (t >= 9.4 && t < 14.0) { g.save(); g.globalAlpha = fade(t, 9.4, 14.0, 0.3); TK.text(g, '答えは [C] 明るくなる', PW / 2, 175, 74); g.restore(); }
+  if (t >= 14.0 && t < 20.0) { g.save(); g.globalAlpha = fade(t, 14.0, 20.0, 0.3); TK.text(g, '通るたびに、向きが[45°]回る', PW / 2, 175, 70); g.restore(); }
+  if (t >= 20.0) {
+    g.save(); g.globalAlpha = fade(t, 20.0, 23, 0.3); TK.text(g, 'ふやすと、[明るくなる]', PW / 2, 175, 84); g.restore();
+    TK.note(g, t, 20.4, 22.0, '理想の板での値（本物の板は少し吸う）\n出どころ: HyperPhysics「Crossed Polarizers」・マリュスの法則（Hecht『Optics』）', { size: 28 });
+  }
+}
+
+triviaStart({ out: 'quantum-trivia2', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

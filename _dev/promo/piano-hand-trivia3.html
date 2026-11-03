@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく piano-hand-3（型A ぜんぶ逆）「指は1本ずつ動かせる…じゃない」。台本は trivia/piano-hand.md。?short で録る
+// Häger-Ross & Schieber 2000（J. Neurosci.、要旨）: 1本ずつ動かしても、ほかの指もつられる。いちばん独立は親指・人さし指・小指、
+// いちばんつられるのは中指と薬指（10人）。値は読めていないので、絵は「大・小」の段だけ。
+// 深指屈筋は人さし指への腱だけ早く分かれる（Loyola Gross Anatomy Dissector）。わけは筋肉だけではない（要旨の3つ）ので「わけの1つ」。
+const DUR = 30;
+const subs = [
+  { a: 0.0, b: 3.0, ja: '指は、1本ずつは動かせません', en: 'You can’t really move your fingers one at a time', noBurn: true },
+  { a: 3.0, b: 7.0, ja: '手をパーにして\n[薬指だけ]曲げてみて', en: 'Spread your hand\nand bend just your ring finger' },
+  { a: 7.0, b: 13.0, ja: '1本だけ動かすつもりでも、ほかの指もいっしょに動く\nいちばんつられるのは[中指と薬指]', en: 'Try to move one, and others move too.\nThe middle and ring fingers get dragged the most' },
+  { a: 13.0, b: 17.0, ja: 'わけの1つ：指先を曲げる筋肉は\n中指・薬指・小指で、[ほとんど1つ]', en: 'One reason: the muscle that bends the fingertips\nis nearly one muscle for the middle, ring and little fingers' },
+  { a: 17.0, b: 21.0, ja: '人さし指の腱だけ\n[早く分かれている]', en: 'Only the index finger’s tendon\nsplits off early' },
+  { a: 21.0, b: 26.0, ja: 'ピアノで薬指を練習するのは\nこの“[つながり]”とのたたかい', en: 'Training the ring finger at the piano\nis a fight against this link' },
+  { a: 26.0, b: 30.0, ja: 'だから、指は1本ずつは動かせない', en: 'That’s why fingers don’t move one at a time' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 1.0, type: 'buzz' }, { t: 3.0, type: 'whoosh' }, { t: 4.5, type: 'pop' }, { t: 7.0, type: 'whoosh' }, { t: 8.0, type: 'rise' },
+  { t: 13.0, type: 'whoosh' }, { t: 14.4, type: 'pop' }, { t: 17.0, type: 'ding' }, { t: 21.0, type: 'whoosh' }, { t: 22.4, type: 'thud' }, { t: 26.0, type: 'pop' },
+];
+
+// 手の甲を上から（模式）。bend[i]: 0〜1（i = 0 親指 … 4 小指）。右手
+const FING = [{ dx: -190, L: 150, ang: -0.7, w: 62 }, { dx: -105, L: 230, ang: -0.08, w: 54 }, { dx: -15, L: 260, ang: 0, w: 56 }, { dx: 75, L: 240, ang: 0.07, w: 54 }, { dx: 158, L: 185, ang: 0.17, w: 48 }];
+function hand(g, cx, cy, bend, o = {}) {
+  g.save();
+  g.lineCap = 'round';
+  FING.forEach((F, i) => {
+    const b = bend[i] || 0, L = F.L * (1 - 0.55 * b), bx = cx + F.dx, by = cy - (i === 0 ? 40 : 150);
+    const ex = bx + Math.sin(F.ang) * L, ey = by - Math.cos(F.ang) * L;
+    g.strokeStyle = o.col && o.col[i] ? o.col[i] : (b > 0.05 ? 'rgba(207,224,255,0.65)' : '#cfe0ff'); g.lineWidth = F.w;
+    g.beginPath(); g.moveTo(bx, by); g.lineTo(ex, ey); g.stroke();
+    if (o.ripple && o.ripple[i]) {
+      const r = o.ripple[i], ph = (o.t * 1.4 + i * 0.13) % 1;
+      g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 6;
+      for (let k = 0; k < 2; k++) { const p = (ph + k * 0.5) % 1; g.globalAlpha = (1 - p) * 0.9; g.beginPath(); g.arc(ex, ey, 30 + p * r, 0, Math.PI * 2); g.stroke(); }
+      g.restore();
+    }
+  });
+  g.fillStyle = 'rgba(207,224,255,0.9)';
+  g.beginPath(); g.roundRect(cx - 230, cy - 170, 450, 300, 110); g.fill();
+  g.restore();
+}
+function crossX(g, x, y, s, k) {
+  g.save(); g.globalAlpha *= k; g.strokeStyle = TK.C.red; g.lineWidth = 22; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x - s, y - s); g.lineTo(x + s, y + s); g.moveTo(x + s, y - s); g.lineTo(x - s, y + s); g.stroke(); g.restore();
+}
+
+function draw(g, t) {
+  // 0〜3: フック
+  if (t < 3.0) {
+    g.save(); g.globalAlpha = fade(t, -1, 3, 0.3); hand(g, PW / 2, 900, [0, 0, 0, 0, 0]); g.restore();
+    TK.hook(g, t, 0.0, 3.0, '指は [1本ずつ]\n動かせない', { y: 300, size: 120 });
+  }
+  // 3〜7: やってみて（薬指が曲がり、つられて中指・小指も少し）
+  if (t >= 3.0 && t < 7.0) {
+    const b = 0.5 - 0.5 * Math.cos(clamp((t - 4.0) / 2.4, 0, 1) * Math.PI * 2);
+    g.save(); g.globalAlpha = fade(t, 3, 7, 0.3);
+    hand(g, PW / 2, 860, [0, 0, b * 0.25, b, b * 0.3], { col: [0, 0, 0, TK.C.acc, 0] });
+    TK.text(g, '薬指', PW / 2 + 75 + 20, 330, 56, { color: TK.C.acc });
+    g.restore();
+  }
+  // 7〜13: つられ方の波紋（大・小の2段。値ではない）
+  if (t >= 7.0 && t < 13.0) {
+    g.save(); g.globalAlpha = fade(t, 7, 13, 0.3);
+    hand(g, PW / 2, 900, [0, 0, 0, 0, 0], { t, ripple: t > 7.6 ? [40, 40, 110, 110, 40] : null });
+    TK.card(g, 200, 180, 680, 110, { r: 55 });
+    TK.text(g, 'つられやすさ　[大]＝中指・薬指', PW / 2, 236, 50);
+    g.restore();
+    TK.note(g, t, 7.6, 13, '10人を測った研究（Häger-Ross & Schieber 2000）\n波紋は「大・小」の2段の模式で、測った値ではありません', { size: 30 });
+  }
+  // 13〜21: 前腕の筋肉と腱（模式）
+  if (t >= 13.0 && t < 21.0) {
+    const f = fade(t, 13, 21, 0.3);
+    g.save(); g.globalAlpha = f;
+    // 前腕（下）から指先（上）へ。指先の位置
+    const tips = [[330, 230], [470, 200], [610, 220], [740, 270]], names = ['人さし指', '中指', '薬指', '小指'];
+    g.strokeStyle = 'rgba(207,224,255,0.25)'; g.lineWidth = 6; g.beginPath(); g.roundRect(300, 600, 480, 470, 120); g.stroke();
+    TK.text(g, '前腕', 860, 820, 44, { color: TK.C.sub, align: 'left' });
+    // 筋肉のかたまり: 中・薬・小は1つ（黄）、人さし指はべつ（青）
+    const k1 = clamp((t - 13.6) / 0.6, 0, 1), k2 = clamp((t - 17.2) / 0.6, 0, 1);
+    g.fillStyle = `rgba(255,207,74,${0.25 + 0.45 * k1})`; g.strokeStyle = TK.C.acc; g.lineWidth = 4;
+    g.beginPath(); g.ellipse(600, 870, 140, 170, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.fillStyle = `rgba(95,212,255,${0.2 + 0.5 * k2})`; g.strokeStyle = TK.C.acc2;
+    g.beginPath(); g.ellipse(400, 880, 70, 150, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+    // 腱
+    g.lineCap = 'round';
+    tips.forEach(([x, y], i) => {
+      const from = i === 0 ? [400, 730] : [560 + (i - 1) * 40, 700];
+      g.strokeStyle = i === 0 ? TK.C.acc2 : TK.C.acc; g.lineWidth = 9;
+      g.beginPath(); g.moveTo(from[0], from[1]); g.quadraticCurveTo(i === 0 ? 380 : 560 + (i - 1) * 50, 470, x, y); g.stroke();
+      g.fillStyle = '#cfe0ff'; g.beginPath(); g.arc(x, y, 22, 0, Math.PI * 2); g.fill();
+      TK.text(g, names[i], x, y - 60, 38, { color: TK.C.sub });
+    });
+    if (t > 17.2) { g.strokeStyle = TK.C.acc2; g.lineWidth = 5; g.setLineDash([10, 10]); g.beginPath(); g.arc(400, 720, 60, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
+      TK.text(g, '早く分かれる', 400, 640, 40, { color: TK.C.acc2 }); }
+    g.restore();
+    TK.note(g, t, 13.6, 21, '指先を曲げる筋肉（深指屈筋）の模式。色ぬり・形はかんたんにしています\nつられるわけは、ほかにも（指どうしのつながり・脳の動かし方）', { size: 30 });
+  }
+  // 21〜26: 鍵盤を薬指で押す
+  if (t >= 21.0 && t < 26.0) {
+    const f = fade(t, 21, 26, 0.3), p = clamp((t - 22.0) / 0.4, 0, 1) * (1 - clamp((t - 23.4) / 0.4, 0, 1));
+    g.save(); g.globalAlpha = f;
+    const kx = 120, kw = 840 / 7;
+    // 鍵盤は奥（上）に。黒鍵は奥がわ
+    for (let i = 0; i < 7; i++) { g.fillStyle = i === 4 && p > 0.5 ? TK.C.acc : 'rgba(235,240,255,0.92)'; g.fillRect(kx + i * kw + 3, 300, kw - 6, 300); }
+    g.fillStyle = '#0b1430'; [0, 1, 3, 4, 5].forEach(i => g.fillRect(kx + (i + 1) * kw - kw * 0.3, 300, kw * 0.6, 170));
+    hand(g, PW / 2 - 70, 900, [0, 0, p * 0.2, p * 0.6, p * 0.25], { col: [0, 0, 0, TK.C.acc, 0] });
+    g.restore();
+  }
+  // 26〜30: 最初の手
+  if (t >= 26.0) {
+    hand(g, PW / 2, 900, [0, 0, 0, 0, 0]);
+    TK.text(g, '指は 1本ずつ 動かせない', PW / 2, 300, 72);
+    TK.note(g, t, 26.4, 30, '出どころ: Häger-Ross & Schieber (2000) J. Neurosci. 20:8542\nLoyola Univ. Chicago Gross Anatomy Dissector「Flexor digitorum profundus」', { size: 30 });
+  }
+}
+
+triviaStart({ out: 'piano-hand-trivia3', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

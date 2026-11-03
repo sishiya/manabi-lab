@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく metronome-sync-3（型H 当ててみて）「拍手がそろうと、音は？」。台本は trivia/metronome-sync.md。?short で録る
+// 研究: Néda ほか 2000（Nature 403:849）。劇場の天井のマイク、そろうと平均の音の強さが下がる、そろうときたたく周期が急に2倍、速くするとそろいが消える。
+// 絵の拍手の波形・間かくのグラフは、論文の結果を形で見せる模式図（論文に Hz の数字がないので、間かくの値は目安。画面に「模式図」）
+const DUR = 30;
+const subs = [
+  { a: 0.0, b: 5.0, ja: '拍手がそろうと、会場の音は？', en: 'When applause falls into sync, does the hall get louder or quieter?', noBurn: true },
+  { a: 5.0, b: 9.0, ja: '答えは②。そろうと、[平均の音]は小さくなる。', en: 'Quieter. In sync, the average sound level drops.' },
+  { a: 9.0, b: 15.0, ja: 'ルーマニアとハンガリーの劇場で、\n天井にマイクを置いて測った研究。', en: 'A study measured it with microphones\non theater ceilings in Romania and Hungary.' },
+  { a: 15.0, b: 21.0, ja: 'そろう瞬間、みんな、たたく速さを[半分]に落としていた。\nゆっくりだと、ばらつきが小さくて、そろえやすい。', en: 'As it syncs, everyone halves their clapping rate.\nSlower clapping varies less, so it’s easier to sync.' },
+  { a: 21.0, b: 26.0, ja: 'でも、もっと盛り上げたくて速くたたくと、\nまた[ばらばら]に。', en: 'But clap faster to make more noise,\nand it falls apart again.' },
+  { a: 26.0, b: 30.0, ja: 'だから拍手は、そろって、くずれて、\n[またそろう]。', en: 'So applause syncs, breaks up,\nand syncs again.' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 0.25, type: 'pop' }, { t: 3.0, type: 'tick' }, { t: 4.0, type: 'tick' },
+  { t: 5.2, type: 'ding' }, { t: 9.0, type: 'whoosh' }, { t: 15.0, type: 'whoosh' }, { t: 17.0, type: 'pop' },
+  { t: 21.0, type: 'whoosh' }, { t: 26.0, type: 'rise' },
+];
+const OPTS = ['大きくなる', '小さくなる'];
+
+// 拍手の音（模式）: N 人の手。ばらばら（速い・ばらつき大）とそろう（間かく2倍・ばらつき小）
+let seed = 3; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const N = 60, PHS = Array.from({ length: N }, () => rnd()), JIT = Array.from({ length: N }, () => rnd() - 0.5), FR = Array.from({ length: N }, () => 0.85 + 0.3 * rnd());
+// 時刻 s（波形の中の時間）での音の強さ。sync 0〜1
+function level(s, sync) {
+  let a = 0;
+  for (let i = 0; i < N; i++) {
+    const per = lerp(0.26 * FR[i], 0.52, sync), ph = lerp(PHS[i], 0.5 + JIT[i] * 0.08, sync);
+    const u = ((s / per + ph) % 1 + 1) % 1, d = Math.min(u, 1 - u) * per;
+    a += Math.exp(-d * d / (2 * 0.012 * 0.012));
+  }
+  return a;
+}
+function wave(g, t, sync, y, h, label) {
+  const x0 = 90, x1 = 990;
+  g.save(); g.strokeStyle = TK.C.acc2; g.lineWidth = 3; g.beginPath();
+  let sum = 0, n = 0;
+  for (let x = x0; x <= x1; x += 3) { const s = t * 0.8 + (x - x0) / (x1 - x0) * 2.2, v = level(s, sync); sum += v; n++; const yy = y - Math.min(1, v / 20) * h; x === x0 ? g.moveTo(x, yy) : g.lineTo(x, yy); }
+  g.stroke();
+  const avg = sum / n, ay = y - Math.min(1, avg / 20) * h;
+  g.strokeStyle = TK.C.acc; g.lineWidth = 5; g.setLineDash([16, 10]); g.beginPath(); g.moveTo(x0, ay); g.lineTo(x1, ay); g.stroke(); g.setLineDash([]);
+  g.restore();
+  g.strokeStyle = 'rgba(255,255,255,0.4)'; g.lineWidth = 3; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke();
+  TK.text(g, label, x0, y - h - 30, 44, { align: 'left', color: TK.C.sub });
+  TK.text(g, '平均', x1, ay - 26, 36, { align: 'right', color: TK.C.acc });
+}
+
+function draw(g, t) {
+  // 0〜5: 2択
+  if (t < 5.0) {
+    TK.text(g, '拍手が[そろう]と、', PW / 2, 300, 76);
+    TK.text(g, '会場の音は？', PW / 2, 400, 76);
+    TK.choices(g, t, 0.0, 5.0, OPTS, { y: 700, h: 170, think: [3.0, 5.0], size: 72 });
+  }
+  // 5〜9: 答え
+  if (t >= 5.0 && t < 9.0) {
+    TK.text(g, '答え', PW / 2, 500, 60, { color: TK.C.sub });
+    TK.choices(g, t, 5.0, 9.0, OPTS, { y: 640, h: 170, reveal: 5.2, answer: 1, size: 72 });
+  }
+  // 9〜15: 天井のマイクの音（ばらばら → そろう）
+  if (t >= 9.0 && t < 15.0) {
+    const sync = ease((t - 11.0) / 1.5);
+    TK.text(g, '天井のマイクの音', PW / 2, 230, 60);
+    wave(g, t, sync, 760, 380, sync < 0.5 ? 'ばらばら' : 'そろった');
+    TK.text(g, sync < 0.5 ? '音がとぎれない' : '山は高いけど、[すきま]があく', PW / 2, 1000, 50, { color: '#fff' });
+    TK.note(g, t, 9.4, 15, '模式図（Néda ほか 2000 の結果を形で）', { size: 32 });
+  }
+  // 15〜21: 1人がたたく間かく → そろう瞬間 2倍
+  if (t >= 15.0 && t < 26.0) {
+    const x0 = 140, x1 = 960, yb = 900, yt = 400;
+    TK.text(g, '1人がたたく [間かく]', PW / 2, 230, 64);
+    g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 3; g.beginPath(); g.moveTo(x0, yt - 20); g.lineTo(x0, yb); g.lineTo(x1, yb); g.stroke();
+    TK.text(g, '時間 →', x1, yb + 40, 36, { align: 'right', color: TK.C.sub, bold: false });
+    // 間かくの線: 短い → 急に2倍 → だんだん短く → くずれる（形だけ）
+    const iv = u => u < 0.3 ? 1 : u < 0.62 ? 2 : lerp(2, 1.05, (u - 0.62) / 0.38);
+    const show = clamp((t - 15.2) / 10.0, 0, 1);
+    g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 7; g.beginPath();
+    for (let k = 0; k <= 200 * show; k++) { const u = k / 200, x = lerp(x0, x1, u), y = yb - iv(u) * 220 + (u < 0.3 || u > 0.85 ? Math.sin(k * 1.7) * 10 : 0); k ? g.lineTo(x, y) : g.moveTo(x, y); }
+    g.stroke(); g.restore();
+    if (show > 0.33) TK.text(g, '[2倍]（ゆっくり）→ そろう', lerp(x0, x1, 0.46), yb - 2 * 220 - 50, 44);
+    if (t > 21.0 && show > 0.7) TK.text(g, '速くすると [くずれる]', lerp(x0, x1, 0.72), yb - 60, 44, { acc: TK.C.red });
+    TK.note(g, t, 15.4, 26, '模式図（論文に Hz の数字はないので、高さは目安）', { size: 32 });
+  }
+  // 26〜30: そろう ↔ くずれる をくり返す
+  if (t >= 26.0) {
+    const x0 = 100, x1 = 980, y = 700;
+    TK.text(g, 'そろい具合', 100, 360, 44, { align: 'left', color: TK.C.sub });
+    g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 7; g.beginPath();
+    const k = clamp((t - 26.1) / 2.5, 0, 1);
+    for (let i = 0; i <= 300 * k; i++) { const u = i / 300, x = lerp(x0, x1, u), s = 0.5 + 0.5 * Math.tanh(4 * Math.sin(u * Math.PI * 6 - 1)), yy = y - s * 280; i ? g.lineTo(x, yy) : g.moveTo(x, yy); }
+    g.stroke(); g.restore();
+    TK.text(g, 'そろう', x1, y - 310, 40, { align: 'right', color: TK.C.green });
+    TK.text(g, 'くずれる', x1, y + 40, 40, { align: 'right', color: TK.C.red });
+    TK.note(g, t, 26.4, 30, '出どころ: Néda, Ravasz, Brechet, Vicsek, Barabási (2000) Nature 403:849\n「The sound of many hands clapping」', { size: 28 });
+  }
+}
+
+triviaStart({ out: 'metronome-sync-trivia3', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく muscle-1（型H 当ててみて）「右腕だけ鍛えたら、左腕は？」。台本は trivia/muscle-growth.md。?short で録る
+// 数字: Munn, Herbert, Gandevia (2004) J Appl Physiol 96:1861（13の研究のまとめ）。鍛えていない腕 ＋7.8%（4.1〜11.6%）＝鍛えた腕の伸びの 35.1%。
+// 「神経のほうが変わる」は考えられているしくみ（言い切らない）。トレーニングのすすめにしない。
+const DUR = 30;
+const subs = [
+  { a: 0.0, b: 3.0, ja: '[右腕だけ]鍛えたら\n左腕はどうなる？', en: 'Train only your right arm.\nWhat happens to the left?' },
+  { a: 3.0, b: 5.0, ja: '（考えてみて）', en: '(Take a guess)' },
+  { a: 5.0, b: 9.0, ja: '答え: 鍛えていない左腕も\n[強くなる]', en: 'Answer: the untrained left arm\ngets stronger too' },
+  { a: 9.0, b: 15.0, ja: '平均で、はじめの力の[約8%]', en: 'On average, by about 8% of its starting strength' },
+  { a: 15.0, b: 20.0, ja: '鍛えた腕の伸びの、[約3分の1]', en: 'About a third of the trained arm’s gain' },
+  { a: 20.0, b: 26.0, ja: '左は動かしていないのに。変わったのは\n[命令を出す神経]のほう…と考えられている', en: 'The left arm never moved. The change is thought\nto be in the nerves that send the commands' },
+  { a: 26.0, b: 30.0, ja: '[13の研究]をまとめた結果です', en: 'That’s from pooling 13 studies' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 3.0, type: 'tick' }, { t: 4.0, type: 'tick' }, { t: 5.0, type: 'ding' }, { t: 9.0, type: 'whoosh' }, { t: 9.6, type: 'rise' },
+  { t: 15.0, type: 'pop' }, { t: 20.0, type: 'whoosh' }, { t: 26.0, type: 'pop' },
+];
+
+// 正面の人（上半身）。curl 0〜1 で右腕（画面の左）がダンベルを上げる。glowL で左腕（画面の右）が光る
+function body(g, cx, cy, s, curl, glowL, o = {}) {
+  g.save(); g.translate(cx, cy); g.scale(s, s);
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  g.strokeStyle = 'rgba(207,224,255,0.9)'; g.fillStyle = 'rgba(30,50,100,0.6)'; g.lineWidth = 8;
+  g.beginPath(); g.arc(0, -150, 55, 0, Math.PI * 2); g.fill(); g.stroke();   // 頭
+  g.beginPath(); g.moveTo(-110, -70); g.lineTo(110, -70); g.lineTo(80, 140); g.lineTo(-80, 140); g.closePath(); g.fill(); g.stroke();   // 胴
+  // 右腕（画面の左）: 肩 → ひじ → 手。curl で前腕が上がる
+  const sh = [-110, -60], el = [-160, 50], a = lerp(Math.PI / 2, 1.5 * Math.PI - 0.5, curl), hand = [el[0] + Math.cos(a) * 110, el[1] + Math.sin(a) * 110];
+  g.lineWidth = 26; g.strokeStyle = 'rgba(95,212,255,0.85)';
+  g.beginPath(); g.moveTo(...sh); g.lineTo(...el); g.lineTo(...hand); g.stroke();
+  // ダンベル
+  g.save(); g.translate(...hand); g.strokeStyle = '#fff'; g.lineWidth = 10; g.beginPath(); g.moveTo(-45, 0); g.lineTo(45, 0); g.stroke();
+  g.fillStyle = '#cfe0ff'; g.fillRect(-62, -26, 18, 52); g.fillRect(44, -26, 18, 52); g.restore();
+  // 左腕（画面の右）: 休み
+  g.lineWidth = 26; g.strokeStyle = glowL > 0 ? `rgba(255,207,74,${0.5 + 0.5 * glowL})` : 'rgba(207,224,255,0.55)';
+  g.beginPath(); g.moveTo(110, -60); g.lineTo(160, 50); g.lineTo(165, 160); g.stroke();
+  // 神経の線（脳 → 両腕）
+  if (o.nerve > 0) {
+    g.globalAlpha = o.nerve; g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.setLineDash([14, 12]); g.lineDashOffset = -o.t * 60;
+    g.beginPath(); g.moveTo(0, -150); g.quadraticCurveTo(-40, -40, -160, 50); g.moveTo(0, -150); g.quadraticCurveTo(40, -40, 160, 50); g.stroke();
+    g.setLineDash([]); g.fillStyle = TK.C.acc; g.beginPath(); g.arc(0, -160, 22, 0, Math.PI * 2); g.fill();
+  }
+  g.restore();
+}
+
+function draw(g, t) {
+  const curl = 0.5 + 0.5 * Math.sin(t * 3.2);
+  // 0〜9: 人＋3択
+  if (t < 9.0) {
+    const f = t < 8.6 ? 1 : fade(t, -1, 9, 0.3);
+    g.save(); g.globalAlpha = f;
+    body(g, PW / 2, 330, 1.1, curl, t >= 5.0 ? 0.6 + 0.4 * Math.sin(t * 6) : 0);
+    TK.text(g, '右腕', PW / 2 - 260, 170, 50, { color: TK.C.acc2 });
+    TK.text(g, '左腕', PW / 2 + 260, 170, 50, { color: t >= 5 ? TK.C.acc : TK.C.sub });
+    g.restore();
+    TK.choices(g, t, 0.2, 9.0, ['弱る', '変わらない', '強くなる'], { y: 620, h: 130, gap: 24, size: 64, reveal: 5.0, answer: 2 });
+    if (t >= 3.0 && t < 5.0) {   // 考える時間の輪（人の右上に）
+      const k = (t - 3.0) / 2.0, cx = 900, cy = 250, r = 64;
+      g.lineWidth = 14; g.strokeStyle = 'rgba(255,255,255,0.15)'; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();
+      g.strokeStyle = TK.C.acc; g.beginPath(); g.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - k)); g.stroke();
+      TK.text(g, String(Math.max(1, Math.ceil(2 - (t - 3.0)))), cx, cy + 4, 64);
+    }
+  }
+  // 9〜15: ＋7.8%
+  if (t >= 9.0 && t < 15.0) {
+    TK.count(g, t, 9.0, 15.0, 0, 7.8, { y: 560, size: 230, dur: 1.4, label: '鍛えていない左腕の力', unit: 'はじめの力に対して（平均）', fmt: v => '+' + v.toFixed(1) + '%' });
+    TK.note(g, t, 9.6, 15, '13の研究をまとめた値（幅 4.1〜11.6%）', { size: 32 });
+  }
+  // 15〜20: 2本の棒
+  if (t >= 15.0 && t < 20.0) {
+    TK.text(g, '力の伸び（くらべ）', PW / 2, 280, 60, { color: TK.C.sub });
+    TK.bars(g, t, 15.0, 20.0, [
+      { label: '鍛えた右腕', v: 1.0, color: TK.C.acc2, text: '' },
+      { label: '鍛えていない左腕', v: 0.351, color: TK.C.acc, text: '約3分の1' },
+    ], { y: 420, gap: 260, stagger: 0.8 });
+  }
+  // 20〜26: 命令を出す神経
+  if (t >= 20.0 && t < 26.0) {
+    const f = fade(t, 20, 26, 0.3); g.save(); g.globalAlpha = f;
+    body(g, PW / 2, 560, 1.35, curl, 0.6, { nerve: clamp((t - 20.4) / 0.6, 0, 1), t });
+    TK.card(g, 150, 130, 780, 120, { r: 60 });
+    TK.text(g, '変わったのは [神経]？', PW / 2, 190, 64);
+    g.restore();
+    TK.note(g, t, 20.5, 26, '考えられているしくみ（まだ言い切れない）', { size: 32 });
+  }
+  // 26〜30
+  if (t >= 26.0) {
+    const f = fade(t, 26, 30.5, 0.3); g.save(); g.globalAlpha = f;
+    TK.card(g, 110, 330, 860, 400);
+    TK.lines(g, '右腕だけでも\n[左腕も強くなる]\n（13の研究のまとめ）', PW / 2, 530, 76);
+    g.restore();
+    TK.note(g, t, 27.0, 30, '出どころ: Munn, Herbert, Gandevia (2004)\nJ Appl Physiol 96:1861', { size: 30 });
+  }
+}
+
+triviaStart({ out: 'muscle-growth-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

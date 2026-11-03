@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく muscle-2（型A ぜんぶ逆）「筋肉痛がひどい日、筋肉はまだ育っていない」。台本は trivia/muscle-growth.md。?short で録る
+// 出どころ: Damas ほか (2016) J Physiol 594:5209（重水で毎日の合成を10週、はじめ・3週・10週。はじめは傷も合成もいちばん高いが太さと関係なし、3週・10週は関係あり）。
+// はかったのは「筋肉の傷」で「筋肉痛の強さ」ではない → 画面で「傷（筋肉痛が出るような）」と言いかえる。グラフの形はイメージ（数字は出さない）。
+const DUR = 35;
+const subs = [
+  { a: 0.0, b: 2.0, ja: '「筋肉痛は、育っている証拠」…\nじつは、[ちがいます]', en: '“Sore muscles mean they’re growing”…\nNot quite', noBurn: true },
+  { a: 2.0, b: 8.0, ja: '筋トレのはじめは\n筋線維が[あちこち傷つく]', en: 'Early in training,\nmuscle fibers get damaged here and there' },
+  { a: 8.0, b: 15.0, ja: '筋肉の材料を作る速さは\n[最初がいちばん高い]。なのに…', en: 'Muscle builds protein fastest\nat the very start. And yet…' },
+  { a: 15.0, b: 21.0, ja: 'その材料は、ほとんど[修理]に使われて\n太さにつながらなかった', en: 'that protein went mostly to repairs,\nnot to bigger muscles' },
+  { a: 21.0, b: 28.0, ja: '傷が減ってきた[3週目]からやっと\n作った分が太さになる', en: 'Only from week 3, as damage fades,\ndoes new protein turn into size' },
+  { a: 28.0, b: 33.0, ja: '10週間、材料を作る量を\n[毎日はかった]研究でわかりました', en: 'A study that measured protein building\nevery day for 10 weeks' },
+  { a: 33.0, b: 35.0, ja: '傷は、育つための条件ではない\n（同じ研究者のまとめ）', en: 'Damage isn’t required for growth\n(the same researchers’ review)' },
+];
+const cues = [
+  { t: 0.05, type: 'thud' }, { t: 0.5, type: 'buzz' }, { t: 2.0, type: 'whoosh' }, { t: 3.6, type: 'buzz' }, { t: 8.0, type: 'pop' }, { t: 9.0, type: 'rise' },
+  { t: 15.0, type: 'pop' }, { t: 21.0, type: 'whoosh' }, { t: 23.0, type: 'ding' }, { t: 28.0, type: 'pop' }, { t: 33.0, type: 'pop' },
+];
+
+// 筋線維の縦の断面（サルコメア）。dmg 0〜1 で Z線が乱れ、すき間（むくみ）が出る
+function fibers(g, x0, y0, w, h, dmg, t) {
+  g.save();
+  const rows = 5, rh = h / rows, cols = 9, cw = w / cols;
+  for (let r = 0; r < rows; r++) {
+    const y = y0 + r * rh;
+    g.fillStyle = 'rgba(255,140,140,0.18)'; g.fillRect(x0, y + 6, w, rh - 12);
+    for (let c = 0; c <= cols; c++) {
+      const hit = ((r * 7 + c * 3) % 5 === 0) && c > 0 && c < cols;
+      const jx = hit ? dmg * 22 * Math.sin(r * 2 + c) : 0, x = x0 + c * cw;
+      g.strokeStyle = hit && dmg > 0.3 ? `rgba(255,107,107,${0.6 + 0.4 * dmg})` : 'rgba(207,224,255,0.85)'; g.lineWidth = 6;
+      g.beginPath();
+      if (hit && dmg > 0) { g.moveTo(x + jx, y + 8); g.lineTo(x - jx, y + rh * 0.35); g.lineTo(x + jx * 1.4, y + rh * 0.65); g.lineTo(x - jx, y + rh - 8); }
+      else { g.moveTo(x, y + 8); g.lineTo(x, y + rh - 8); }
+      g.stroke();
+      // 太いフィラメント（Z線のあいだの短い帯）
+      if (c < cols) { g.fillStyle = 'rgba(255,170,150,0.5)'; g.fillRect(x + cw * 0.25 + (hit ? jx * 0.5 : 0), y + rh * 0.3, cw * 0.5, rh * 0.4); }
+    }
+    // むくみ（すき間に水色の点）
+    if (dmg > 0.4 && r < rows - 1) { g.fillStyle = `rgba(95,212,255,${0.5 * (dmg - 0.4) / 0.6})`; for (let i = 0; i < 6; i++) { g.beginPath(); g.arc(x0 + (i * 151 + r * 67) % w, y + rh, 8 + 4 * Math.sin(t * 3 + i), 0, Math.PI * 2); g.fill(); } }
+  }
+  g.restore();
+}
+// 週ごとのグラフ（0〜10週）。syn: 作る速さ、thick: 太さ（どちらも形はイメージ）
+const GX0 = 130, GX1 = 950, GY = 900, GH = 520;
+const gx = w => GX0 + (GX1 - GX0) * w / 10;
+const syn = w => 0.35 + 0.6 * Math.exp(-Math.pow((w - 0.7) / 0.9, 2)) + 0.12 * clamp((w - 1.5) / 2, 0, 1);
+const thick = w => 0.12 + 0.55 * clamp((w - 2.2) / 7.8, 0, 1) * (0.6 + 0.4 * clamp((w - 2.2) / 7.8, 0, 1));
+function graph(g, upto, o = {}) {
+  g.save();
+  g.strokeStyle = 'rgba(207,224,255,0.6)'; g.lineWidth = 4; g.beginPath(); g.moveTo(GX0, GY - GH); g.lineTo(GX0, GY); g.lineTo(GX1, GY); g.stroke();
+  for (const w of [1, 3, 10]) { const x = gx(w); g.beginPath(); g.moveTo(x, GY - 10); g.lineTo(x, GY + 10); g.stroke(); TK.text(g, w + '週', x, GY + 44, 38, { color: TK.C.sub, bold: false }); }
+  const line = (f, color, lw) => { g.strokeStyle = color; g.lineWidth = lw; g.lineJoin = 'round'; g.beginPath(); for (let w = 0; w <= upto; w += 0.05) { const x = gx(w), y = GY - GH * f(w); w ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); };
+  line(syn, TK.C.acc, 9);
+  if (o.thick) line(thick, TK.C.green, 9);
+  TK.text(g, '材料を作る速さ', GX0 + 20, GY - GH - 90, 42, { align: 'left', color: TK.C.acc });
+  if (o.thick) { const u = Math.min(upto, 10), right = u > 6; TK.text(g, '筋肉の太さ', right ? GX1 : gx(u) + 20, GY - GH * thick(u) - (right ? 50 : 0), 42, { align: right ? 'right' : 'left', color: TK.C.green }); }
+  g.restore();
+}
+
+function draw(g, t) {
+  // 0〜2: 「筋肉痛＝育ってる証拠」に ×
+  if (t < 2.0) {
+    TK.card(g, 110, 520, 860, 220);
+    const k = TK.pop(t, 0.35, 0.3);
+    if (t > 0.35) { g.save(); g.strokeStyle = 'rgba(255,107,107,0.8)'; g.lineWidth = 34; g.lineCap = 'round'; g.globalAlpha = clamp(k, 0, 1); const r = 260 * k; g.beginPath(); g.moveTo(PW / 2 - r * 1.5, 630 - r); g.lineTo(PW / 2 + r * 1.5, 630 + r); g.moveTo(PW / 2 + r * 1.5, 630 - r); g.lineTo(PW / 2 - r * 1.5, 630 + r); g.stroke(); g.restore(); }
+    TK.text(g, '筋肉痛 ＝ 育ってる証拠', PW / 2, 630, 78, { stroke: 'rgba(0,0,0,0.8)' });
+  }
+  // 2〜8: 筋線維の傷
+  if (t >= 2.0 && t < 8.0) {
+    const f = fade(t, 2, 8, 0.3); g.save(); g.globalAlpha = f;
+    const dmg = ease((t - 3.4) / 1.6);
+    TK.text(g, '筋線維（縦の断面）', PW / 2, 250, 48, { color: TK.C.sub, bold: false });
+    fibers(g, 110, 330, 860, 620, dmg, t);
+    if (dmg > 0.9) { TK.text(g, '[傷]（筋肉痛が出るような）', PW / 2, 1020, 56); }
+    g.restore();
+    TK.note(g, t, 2.4, 8, '赤い線＝乱れた Z線、水色＝むくみ（イメージ）', { size: 30 });
+  }
+  // 8〜28: グラフ
+  if (t >= 8.0 && t < 28.0) {
+    const f = fade(t, 8, 28, 0.3); g.save(); g.globalAlpha = f;
+    const upto = t < 15 ? 1.6 * ease((t - 8.4) / 2.0) : t < 21 ? 1.6 : 1.6 + 8.4 * ease((t - 21.4) / 3.5);
+    graph(g, upto, { thick: t >= 15 });
+    if (t >= 9.6 && t < 21) { const x = gx(0.7), y = GY - GH * syn(0.7); g.fillStyle = TK.C.acc; g.beginPath(); g.arc(x, y, 16, 0, Math.PI * 2); g.fill(); TK.text(g, 'いちばん高い', x + 50, y - 10, 44, { align: 'left', color: TK.C.acc }); }
+    if (t >= 15.4 && t < 21) {
+      const k = TK.pop(t, 15.4, 0.35); g.save(); g.translate(gx(1), GY - GH * 0.5); g.scale(k, k);
+      TK.card(g, -120, -60, 240, 110, { r: 30, fill: 'rgba(95,212,255,0.25)', stroke: TK.C.acc2, lw: 5 }); TK.text(g, '修理', 0, -4, 64, { color: '#fff' }); g.restore();
+      TK.text(g, '太さは、まだ動かない', PW / 2, GY + 120, 50, { color: TK.C.green });
+    }
+    if (t >= 23.0) {
+      g.save(); g.globalAlpha *= fade(t, 23, 28, 0.3);
+      g.strokeStyle = TK.C.green; g.lineWidth = 4; g.setLineDash([10, 10]); for (const w of [3, 10]) { g.beginPath(); g.moveTo(gx(w), GY); g.lineTo(gx(w), GY - GH); g.stroke(); } g.setLineDash([]);
+      TK.text(g, 'ここから [作った分が太さに]', PW / 2, GY + 120, 50);
+      g.restore();
+    }
+    g.restore();
+    TK.note(g, t, 8.4, 28, 'グラフの形はイメージ（はかったのは はじめ・3週・10週）', { size: 30 });
+  }
+  // 28〜35: 研究 → まとめ
+  if (t >= 28.0) {
+    const f = fade(t, 28, 36, 0.3); g.save(); g.globalAlpha = f;
+    TK.card(g, 110, 300, 860, 460);
+    if (t < 33.0) TK.lines(g, '10週間\n材料を作る量を\n[毎日はかった]', PW / 2, 530, 80);
+    else TK.lines(g, '傷は\n育つための\n[条件ではない]', PW / 2, 530, 84);
+    g.restore();
+    TK.note(g, t, 29.0, 35, '傷をはかった研究で、筋肉痛の強さは、はかっていません\n出どころ: Damas ほか (2016) J Physiol 594:5209・Damas ほか (2018) Eur J Appl Physiol', { size: 28 });
+  }
+}
+
+triviaStart({ out: 'muscle-growth-trivia2', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

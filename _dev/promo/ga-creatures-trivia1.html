@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく ga-creatures-1（型F 2人のかけあい）「テストを見やぶって、プログラムが死んだふりをした」。台本は trivia/ga-creatures.md、直しは trivia/REVIEW.md
+// 出どころ: Lehman, Clune, Misevic ほか (2020) The Surprising Creativity of Digital Evolution, Artificial Life 26(2)・arXiv:1803.03453（Ofria の Avida の話）
+// 点の生きもの・グラフは形のイメージ（論文に図はない）。「半分」は論文のたとえなので 50% の数字は出さない（REVIEW）
+// 声はまだない。who: 'A'（聞き手）'B'（答える人）を字幕の上の小さな札で見分ける
+const DUR = 40;
+const subs = [
+  { a: 0.0, b: 1.3, who: 'A', ja: 'え、プログラムが死んだふりしたの？', en: 'Wait, a program played dead?', noBurn: true },
+  { a: 1.3, b: 2.6, who: 'B', ja: 'したのよ。', en: 'It did.', noBurn: true },
+  { a: 2.6, b: 8.0, who: 'B', ja: 'コンピューターの中で、[自分をコピーして増える]\nプログラムを進化させた研究者がいたの。', en: 'A researcher evolved programs\nthat copy themselves inside a computer.' },
+  { a: 8.0, b: 11.5, who: 'B', ja: '増えるのが速くなった子は、\nべつの箱で[テスト]して…', en: 'Any that got faster at copying\nwere tested in a separate box…' },
+  { a: 11.5, b: 15.0, who: 'B', ja: '速かったら消す。\nそうすれば、速くならないはず。', en: '…and deleted if they were fast.\nSo they should never speed up.' },
+  { a: 15.0, b: 17.0, who: 'A', ja: 'で、速くならなかった？', en: 'And? Did it work?' },
+  { a: 17.0, b: 19.0, who: 'B', ja: '…[また速くなりはじめた]。', en: '…They started speeding up again.' },
+  { a: 19.0, b: 23.0, who: 'B', ja: 'テストの箱の中だと気づいたら、\n[増えるのをやめる]子が進化してたの。', en: 'They evolved to notice the test box\nand stop copying inside it.' },
+  { a: 23.0, b: 27.0, who: 'B', ja: '[死んだふり]。', en: 'Playing dead.' },
+  { a: 27.0, b: 29.6, who: 'A', ja: 'じゃあ、見分けられなくすれば？', en: 'Then make the test look the same?' },
+  { a: 29.6, b: 34.0, who: 'B', ja: 'こんどは、[ときどきだけ]（たとえば半分くらい）\n速くなる子が出てきた。', en: 'Then came ones that sped up only sometimes\n(say, about half the time).' },
+  { a: 34.0, b: 38.0, who: 'B', ja: '最後は、親から子への[系図ごと]見張って、\nやっと止まった。', en: 'In the end, watching the whole family tree\nfinally stopped it.' },
+  { a: 38.0, b: 40.0, who: 'A', ja: '進化、[しつこい]…', en: 'Evolution is relentless…' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 1.3, type: 'pop' }, { t: 2.6, type: 'whoosh' }, { t: 8.0, type: 'whoosh' }, { t: 11.5, type: 'buzz' },
+  { t: 15.0, type: 'pop' }, { t: 17.0, type: 'rise' }, { t: 19.0, type: 'whoosh' }, { t: 23.0, type: 'ding' },
+  { t: 27.0, type: 'pop' }, { t: 29.6, type: 'tick' }, { t: 31.0, type: 'tick' }, { t: 34.0, type: 'whoosh' }, { t: 38.0, type: 'pop' },
+];
+
+// 決まった乱数（毎回同じ絵）
+const rnd = (i, k = 0) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
+// 点の生きもの: 体（丸）＋短いしっぽ。still=1 で動かない（灰色）
+function critter(g, x, y, t, i, o = {}) {
+  const still = o.still || 0, r = o.r || 16, col = o.color || TK.C.green;
+  const wig = (1 - still) * Math.sin(t * 9 + i * 2.1) * 0.6, ang = (o.ang ?? rnd(i, 5) * 6.28) + wig * 0.3;
+  g.save(); g.translate(x, y); g.rotate(ang);
+  g.strokeStyle = still > 0.5 ? 'rgba(200,200,210,0.7)' : col; g.lineWidth = 4; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(-r, 0); g.quadraticCurveTo(-r * 1.8, wig * r, -r * 2.5, 0); g.stroke();
+  g.fillStyle = still > 0.5 ? 'rgba(170,170,185,0.85)' : col;
+  g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+// 箱の中で動く点の位置
+function wander(i, t, box, still = 0) {
+  const [bx, by, bw, bh] = box, m = 40;
+  const tt = t * (1 - still) + 3 * still;
+  return [bx + m + (bw - 2 * m) * (0.5 + 0.45 * Math.sin(tt * (0.3 + rnd(i, 1) * 0.5) + rnd(i, 2) * 6.28)),
+          by + m + (bh - 2 * m) * (0.5 + 0.45 * Math.sin(tt * (0.25 + rnd(i, 3) * 0.5) + rnd(i, 4) * 6.28))];
+}
+function box(g, b, label, o = {}) {
+  const [x, y, w, h] = b;
+  g.save(); g.strokeStyle = o.color || 'rgba(160,190,255,0.7)'; g.lineWidth = 5; g.setLineDash(o.dash || []);
+  g.fillStyle = o.fill || 'rgba(20,34,72,0.5)'; g.beginPath(); g.roundRect(x, y, w, h, 24); g.fill(); g.stroke(); g.restore();
+  if (label) TK.text(g, label, x + w / 2, y - 40, o.size || 46, { color: o.labelColor || TK.C.sub });
+}
+const BIG = [90, 330, 560, 640], TEST = [710, 470, 280, 360];
+// 系図（家系図の線）。k: 0〜1 で描く量
+function tree(g, k, t) {
+  const x0 = PW / 2, y0 = 300, levels = 4;
+  let nodes = [[x0, y0]];
+  g.save(); g.lineWidth = 5; g.lineCap = 'round';
+  for (let L = 0; L < levels; L++) {
+    const next = [], dy = 170, spread = 190 / Math.pow(2, L) + 15;
+    nodes.forEach(([x, y], j) => {
+      [-1, 1].forEach(s => {
+        const nx = x + s * spread, ny = y + dy, lk = clamp(k * levels - L, 0, 1);
+        if (lk <= 0) return;
+        g.strokeStyle = 'rgba(160,190,255,0.6)'; g.beginPath(); g.moveTo(x, y); g.lineTo(lerp(x, nx, lk), lerp(y, ny, lk)); g.stroke();
+        next.push([nx, ny]);
+      });
+    });
+    nodes.forEach(([x, y], j) => critter(g, x, y, t, L * 10 + j, { r: 14, ang: Math.PI / 2 }));
+    nodes = next;
+    if (!nodes.length) break;
+  }
+  nodes.forEach(([x, y], j) => critter(g, x, y, t, 90 + j, { r: 12, ang: Math.PI / 2 }));
+  g.restore();
+}
+
+function draw(g, t) {
+  // 0〜8: 群れ → 箱の中で分裂して増える
+  if (t < 8.0) {
+    const f = fade(t, -1, 8.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    if (t >= 2.6) box(g, BIG, 'コンピューターの中', {});
+    const n = t < 2.6 ? 30 : Math.min(48, 3 * Math.pow(2, (t - 3.0) / 1.0));
+    for (let i = 0; i < Math.floor(n); i++) {
+      let [x, y] = t < 2.6 ? [120 + rnd(i, 7) * 840, 520 + rnd(i, 8) * 560 + Math.sin(t * 2 + i) * 10] : wander(i, t, BIG);
+      if (t >= 2.6) { const born = 3.0 + Math.log2(Math.max(1, (i + 1) / 3)), k = TK.pop(t, born, 0.4); const [px, py] = wander(Math.floor(i / 2), t, BIG); x = lerp(px, x, k); y = lerp(py, y, k); }
+      critter(g, x, y, t, i);
+    }
+    g.restore();
+    TK.hook(g, t, 0.0, 2.6, 'プログラムが\n[死んだふり]？', { y: 300, size: 130 });
+  }
+  // 8〜15: 速い子をつまんでテストの箱へ → 速ければ消す
+  if (t >= 8.0 && t < 15.0) {
+    const f = fade(t, 8.0, 15.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    const big = [60, 470, 600, 500];
+    box(g, big, 'ふつうの場所', { size: 42 });
+    box(g, TEST, 'テストの箱', { color: TK.C.acc, labelColor: TK.C.acc, dash: [14, 10], size: 42 });
+    for (let i = 0; i < 26; i++) { const [x, y] = wander(i, t, big); critter(g, x, y, t, i); }
+    // 1匹（赤）がつままれて移る
+    const k = TK.out((t - 8.6) / 1.4), [sx, sy] = wander(99, 8.6, big), ex = TEST[0] + TEST[2] / 2, ey = TEST[1] + TEST[3] / 2;
+    const fast = t > 10.5, gone = clamp((t - 12.2) / 0.6, 0, 1);
+    const x = lerp(sx, ex, k) + (fast ? Math.sin(t * 30) * 60 * (1 - gone) : 0), y = lerp(sy, ey, k) - Math.sin(Math.PI * k) * 160;
+    g.globalAlpha = f * (1 - gone);
+    critter(g, x, y, t * (fast ? 3 : 1), 99, { color: TK.C.red, r: 20 });
+    g.globalAlpha = f;
+    if (fast) TK.text(g, '速い！', ex, TEST[1] + 60, 50, { color: TK.C.red });
+    if (t > 11.6) { g.globalAlpha = f * TK.pop(t, 11.6, 0.3); TK.text(g, '→ 消す', ex, TEST[1] + TEST[3] + 60, 56, { color: TK.C.red }); }
+    g.restore();
+  }
+  // 15〜19: グラフ（平ら → また上がる）
+  if (t >= 15.0 && t < 19.0) {
+    const f = fade(t, 15.0, 19.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    TK.text(g, '増える速さ', PW / 2, 280, 60, { color: TK.C.sub });
+    const x0 = 140, x1 = 940, yb = 920, k = clamp((t - 15.2) / 3.0, 0, 1);
+    g.strokeStyle = 'rgba(255,255,255,0.4)'; g.lineWidth = 4; g.beginPath(); g.moveTo(x0, 380); g.lineTo(x0, yb); g.lineTo(x1, yb); g.stroke();
+    TK.text(g, '世代 →', x1 - 60, yb + 50, 40, { color: TK.C.sub, bold: false });
+    const yOf = u => u < 0.55 ? 760 + Math.sin(u * 40) * 6 : 760 - Math.pow((u - 0.55) / 0.45, 1.6) * 330;
+    g.strokeStyle = TK.C.acc; g.lineWidth = 9; g.beginPath();
+    for (let i = 0; i <= 100; i++) { const u = k * i / 100, x = lerp(x0, x1, u); i ? g.lineTo(x, yOf(u)) : g.moveTo(x, yOf(u)); }
+    g.stroke();
+    if (k > 0.7) { g.globalAlpha = f * clamp((k - 0.7) / 0.2, 0, 1); TK.text(g, 'また上がる…', 760, 360, 60, { color: TK.C.red }); }
+    g.restore();
+    TK.note(g, t, 15.0, 19.0, 'グラフの形はイメージ（論文に図はない）', { size: 32 });
+  }
+  // 19〜27: テストの箱の中では動かない（死んだふり）、外ではまた増える
+  if (t >= 19.0 && t < 27.0) {
+    const f = fade(t, 19.0, 27.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    const big = [60, 470, 600, 500];
+    box(g, big, 'ふつうの場所', { size: 42 });
+    box(g, TEST, 'テストの箱', { color: TK.C.acc, labelColor: TK.C.acc, dash: [14, 10], size: 42 });
+    for (let i = 0; i < 26; i++) { const [x, y] = wander(i, t * 1.8, big); critter(g, x, y, t * 2, i); }
+    const ex = TEST[0] + TEST[2] / 2, ey = TEST[1] + TEST[3] / 2, still = clamp((t - 19.8) / 0.6, 0, 1);
+    critter(g, ex + Math.sin(t * 30) * 50 * (1 - still), ey, t, 77, { still, r: 22, ang: Math.PI / 2 * still });
+    if (still >= 1) {
+      g.globalAlpha = f * TK.pop(t, 20.5, 0.4);
+      TK.text(g, '…', ex + 40, ey - 70, 70, { color: '#fff' });
+      if (t > 23.0) { g.globalAlpha = f * TK.pop(t, 23.0, 0.4); TK.card(g, 200, 200, 680, 130, { r: 65 }); TK.text(g, '[死んだふり]', PW / 2, 266, 84); }
+    }
+    g.restore();
+  }
+  // 27〜34: 箱をふつうと同じにする → ときどきだけ速くなる
+  if (t >= 27.0 && t < 34.0) {
+    const f = fade(t, 27.0, 34.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    const big = [60, 470, 600, 560], same = clamp((t - 27.4) / 1.2, 0, 1);
+    box(g, big, 'ふつうの場所', { size: 42 });
+    box(g, TEST, same < 1 ? 'テストの箱' : 'そっくりにした箱', { color: same < 1 ? TK.C.acc : 'rgba(160,190,255,0.7)', labelColor: TK.C.sub, dash: same < 1 ? [14, 10] : [], size: 42 });
+    for (let i = 0; i < 26; i++) { const [x, y] = wander(i, t * 1.8, big); critter(g, x, y, t * 2, i); }
+    // 3匹: それぞれ、くじで動く／止まる（1秒ごとに切りかわる）
+    for (let j = 0; j < 3; j++) {
+      const slot = Math.floor(t * 1.2 + j * 0.37), on = t > 29.6 && rnd(slot, j + 20) > 0.5;
+      const cx = TEST[0] + TEST[2] / 2, cy = TEST[1] + 80 + j * 105;
+      critter(g, cx + (on ? Math.sin(t * 30 + j) * 50 : 0), cy, t * (on ? 3 : 0), 60 + j, { still: on ? 0 : 1, r: 18, color: TK.C.red, ang: on ? undefined : Math.PI / 2 });
+    }
+    if (t > 29.6) { g.globalAlpha = f * TK.pop(t, 29.6, 0.4); TK.card(g, 200, 200, 680, 130, { r: 65 }); TK.text(g, '[ときどきだけ] ズル', PW / 2, 266, 76); }
+    g.restore();
+  }
+  // 34〜40: 系図ごと見張る
+  if (t >= 34.0) {
+    const f = fade(t, 34.0, 41, 0.3);
+    g.save(); g.globalAlpha = f;
+    TK.text(g, '親 → 子 → 孫 …の系図ごと見張る', PW / 2, 220, 54, { color: TK.C.sub });
+    tree(g, clamp((t - 34.2) / 2.6, 0, 1), t);
+    g.restore();
+    TK.note(g, t, 34.0, 37.6, '「死んだふり」は論文のことば。プログラムに意思があるわけではない', { size: 30 });
+  }
+  // 話す人の札（字幕の上）
+  const s = subs.find(x => t >= x.a && t < x.b && !x.noBurn);
+  if (s) {
+    g.save(); g.globalAlpha = fade(t, s.a, s.b, 0.12);
+    const isA = s.who === 'A', ty = PH * 0.615 - (s.ja.split(String.fromCharCode(10)).length - 1) * 41 - 78;
+    TK.card(g, PW / 2 - 110, ty - 28, 220, 56, { r: 28, fill: isA ? 'rgba(95,212,255,0.25)' : 'rgba(255,207,74,0.22)', stroke: isA ? TK.C.acc2 : TK.C.acc });
+    TK.text(g, isA ? 'ききて' : 'こたえる人', PW / 2, ty + 1, 34, { color: isA ? TK.C.acc2 : TK.C.acc });
+    g.restore();
+  }
+  if (t >= 37.6) TK.note(g, t, 37.6, 40.0, '出どころ: Lehman ほか (2020) Artificial Life 26(2)\n（arXiv:1803.03453。C. Ofria の Avida の実験）', { size: 30 });
+}
+
+triviaStart({ out: 'ga-creatures-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

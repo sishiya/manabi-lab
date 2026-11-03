@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく metamorphosis-1（型F かけあい）「イモムシのときの記憶、ガになっても残る？」。台本は trivia/metamorphosis.md。?short で録る
+// 数字は Blackiston, Silva Casey & Weiss (2008) PLoS ONE 3(3):e1736: 酢酸エチルのあと弱い電気を8回、5齢 78%・成虫 77% がさけた、
+// 3齢で教えると 5齢では 81% 覚えていたが成虫では覚えていなかった、洗った蛹でも残る・においをつけた（教えていない）蛹はさけない。
+// 聞き手のセリフは字幕を黄色（[ ] でかこむ）。電気はいたそうに描かない（小さな稲妻の印だけ）
+const DUR = 40;
+const Q = TK.C.acc, SKY = '#5fd4ff', VERM = '#ff7a4a', ODOR = '#c79bff';
+const subs = [
+  { a: 0.0, b: 2.4, ja: 'ドロドロになっても、記憶は残る？', en: 'Turned to goo — does the memory survive?', noBurn: true },
+  { a: 2.4, b: 5.0, ja: '[さなぎの中って、ぜんぶドロドロでしょ？\nじゃあ、記憶も消える？]', en: '“Isn’t a pupa just goo inside?\nThen the memory is gone, right?”' },
+  { a: 5.0, b: 8.6, ja: '2008年の実験。イモムシに\nあるにおいのあと、[弱い電気]を感じさせる', en: 'A 2008 experiment: caterpillars smelled an odor,\nthen felt a mild shock' },
+  { a: 8.6, b: 12.0, ja: 'これを[8回]くり返す', en: 'Eight times in a row' },
+  { a: 12.0, b: 16.0, ja: 'するとイモムシは\nそのにおいを[さける]ようになった', en: 'The caterpillars learned to avoid that odor' },
+  { a: 16.0, b: 19.0, ja: '[でも、さなぎで体は\nつくりかえるんでしょ？]', en: '“But the pupa rebuilds the whole body, right?”' },
+  { a: 19.0, b: 22.0, ja: 'そう。でも脳と神経は\n[ぜんぶは]こわれない', en: 'Yes — but the brain and nerves\nare not all torn down' },
+  { a: 22.0, b: 26.0, ja: 'ガになってから\n同じ通路に入れると…', en: 'After they became moths,\nthey went into the same maze…' },
+  { a: 26.0, b: 30.0, ja: '[77%]が、においをさけた', en: '77% avoided the odor' },
+  { a: 30.0, b: 32.6, ja: '[体ににおいが\n残ってただけじゃない？]', en: '“Maybe the odor just stuck to their bodies?”' },
+  { a: 32.6, b: 36.0, ja: 'さなぎを洗っても、残った。\n教えていないさなぎに においをつけても、さけなかった', en: 'Washed pupae still remembered.\nUntrained pupae with the odor on them did not avoid it', size: 54 },
+  { a: 36.0, b: 40.0, ja: 'ただし、[若すぎるころ]に覚えたことは\nガになると、消えていた', en: 'But what they learned too young\nwas gone in the moth' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 1.0, type: 'pop' }, { t: 1.8, type: 'pop' }, { t: 2.4, type: 'whoosh' },
+  { t: 5.0, type: 'whoosh' }, { t: 6.6, type: 'tick' }, { t: 7.6, type: 'tick' }, { t: 8.6, type: 'tick' }, { t: 9.2, type: 'tick' }, { t: 9.8, type: 'tick' }, { t: 10.4, type: 'tick' }, { t: 11.0, type: 'tick' }, { t: 11.6, type: 'tick' },
+  { t: 14.0, type: 'ding' }, { t: 16.0, type: 'whoosh' }, { t: 17.0, type: 'rise' }, { t: 22.0, type: 'whoosh' }, { t: 26.0, type: 'ding' },
+  { t: 30.0, type: 'pop' }, { t: 33.0, type: 'ding' }, { t: 34.6, type: 'buzz' }, { t: 36.0, type: 'whoosh' }, { t: 38.2, type: 'buzz' },
+];
+
+// ---- 線画 ----
+// イモムシ（横向き。x, y は頭、dir=1 で右向き）。mem: 記憶の点の明るさ 0〜1
+function cater(g, x, y, s, t, o = {}) {
+  const dir = o.dir ?? 1, n = 9, sp = 26 * s;
+  g.save(); g.lineWidth = 4 * s;
+  for (let i = n - 1; i >= 0; i--) {
+    const px = x - dir * i * sp, py = y + Math.sin(t * 6 - i * 0.8) * 4 * s * (o.wig ?? 1);
+    const r = (i === 0 ? 20 : 17 + 3 * Math.sin(Math.PI * i / n)) * s;
+    g.fillStyle = i === 0 ? '#2f8f5f' : '#3fbf7f'; g.strokeStyle = '#9ff0c4';
+    g.beginPath(); g.arc(px, py, r, 0, Math.PI * 2); g.fill(); g.stroke();
+    if (i === n - 1) { g.beginPath(); g.moveTo(px - dir * r * 0.4, py - r * 0.8); g.lineTo(px - dir * r * 1.1, py - r * 1.9); g.stroke(); }   // しっぽの角
+  }
+  if (o.mem != null) memDot(g, x + dir * 2 * s, y - 4 * s, s, t, o.mem);
+  g.restore();
+}
+// さなぎ（横向き）
+function pupa(g, x, y, s, t, o = {}) {
+  g.save(); g.lineWidth = 4 * s; g.fillStyle = '#7a4f2a'; g.strokeStyle = '#e0b07a';
+  g.beginPath(); g.ellipse(x, y, 90 * s, 38 * s, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.lineWidth = 2.5 * s;
+  for (let i = 1; i < 6; i++) { const xx = x - 70 * s + i * 24 * s; g.beginPath(); g.moveTo(xx, y - 30 * s); g.quadraticCurveTo(xx + 6 * s, y, xx, y + 30 * s); g.stroke(); }
+  if (o.mem != null) memDot(g, x + 70 * s, y - 6 * s, s, t, o.mem);
+  g.restore();
+}
+// ガ（上から見た形）
+function moth(g, x, y, s, t, o = {}) {
+  g.save(); g.lineWidth = 4 * s; g.strokeStyle = '#d8c8a8';
+  const fl = o.flap ? Math.sin(t * 10) * 0.12 : 0;
+  for (const sd of [-1, 1]) {
+    g.save(); g.translate(x, y); g.scale(sd * (1 - Math.abs(fl)), 1);
+    g.fillStyle = 'rgba(150,120,90,0.85)';
+    g.beginPath(); g.moveTo(6 * s, -20 * s); g.quadraticCurveTo(80 * s, -70 * s, 120 * s, -40 * s); g.quadraticCurveTo(90 * s, 0, 8 * s, 6 * s); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = 'rgba(120,95,75,0.85)';
+    g.beginPath(); g.moveTo(8 * s, 6 * s); g.quadraticCurveTo(80 * s, 20 * s, 70 * s, 55 * s); g.quadraticCurveTo(30 * s, 60 * s, 6 * s, 30 * s); g.closePath(); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(3 * s, -38 * s); g.quadraticCurveTo(14 * s, -60 * s, 30 * s, -66 * s); g.stroke();   // 触角
+    g.restore();
+  }
+  g.fillStyle = '#6b5440'; g.beginPath(); g.ellipse(x, y + 10 * s, 11 * s, 48 * s, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  if (o.mem != null) memDot(g, x, y - 30 * s, s, t, o.mem);
+  g.restore();
+}
+function memDot(g, x, y, s, t, k) {
+  if (k <= 0) { g.save(); g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 3; g.setLineDash([4, 4]); g.beginPath(); g.arc(x, y, 9 * s, 0, Math.PI * 2); g.stroke(); g.restore(); return; }
+  g.save();
+  const r = (8 + 2 * Math.sin(t * 5)) * s;
+  const gr = g.createRadialGradient(x, y, 0, x, y, r * 3.2);
+  gr.addColorStop(0, `rgba(255,230,120,${0.9 * k})`); gr.addColorStop(1, 'rgba(255,207,74,0)');
+  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r * 3.2, 0, Math.PI * 2); g.fill();
+  g.fillStyle = `rgba(255,250,210,${k})`; g.beginPath(); g.arc(x, y, r * 0.8, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+function arrow(g, x0, y0, x1, y1, c = 'rgba(255,255,255,0.6)', w = 6) {
+  const a = Math.atan2(y1 - y0, x1 - x0);
+  g.save(); g.strokeStyle = c; g.fillStyle = c; g.lineWidth = w; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1 - Math.cos(a) * 20, y1 - Math.sin(a) * 20); g.stroke();
+  g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 - Math.cos(a - 0.45) * 30, y1 - Math.sin(a - 0.45) * 30); g.lineTo(x1 - Math.cos(a + 0.45) * 30, y1 - Math.sin(a + 0.45) * 30); g.closePath(); g.fill();
+  g.restore();
+}
+// 弱い電気の印（小さな稲妻。いたそうに描かない）
+function spark(g, x, y, k) {
+  if (k <= 0) return;
+  g.save(); g.globalAlpha *= k; g.strokeStyle = '#fff3a0'; g.lineWidth = 6; g.lineJoin = 'round';
+  g.beginPath(); g.moveTo(x - 6, y - 34); g.lineTo(x + 10, y - 6); g.lineTo(x - 8, y + 2); g.lineTo(x + 6, y + 32); g.stroke();
+  g.restore();
+}
+
+// Y字の通路。左の腕ににおい。p: 通路のうえの位置（0=下はし、1=分かれ目、2=腕のはし）、side: -1 左／1 右
+const YM = { cx: 540, base: 1030, jy: 790, ay: 510, ax: 230 };
+function maze(g, t, o = {}) {
+  const { cx, base, jy, ay, ax } = YM;
+  const path = () => { g.beginPath(); g.moveTo(cx, base); g.lineTo(cx, jy); g.lineTo(cx - ax, ay); g.moveTo(cx, jy); g.lineTo(cx + ax, ay); };
+  g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
+  path(); g.strokeStyle = 'rgba(160,190,255,0.55)'; g.lineWidth = 150; g.stroke();
+  path(); g.strokeStyle = '#122045'; g.lineWidth = 138; g.stroke();
+  g.restore();
+  // においの雲（左の腕）
+  if (o.odor !== false) {
+    g.save();
+    for (let i = 0; i < 26; i++) {
+      const u = ((i * 0.137 + t * 0.12) % 1), px = cx - ax * (0.25 + 0.85 * u) + Math.sin(i * 7.1 + t) * 26, py = jy - (jy - ay) * (0.25 + 0.85 * u) + Math.cos(i * 3.3 + t * 1.3) * 26;
+      g.fillStyle = `rgba(199,155,255,${0.55 * Math.sin(Math.PI * u)})`; g.beginPath(); g.arc(px, py, 10 + (i % 3) * 4, 0, Math.PI * 2); g.fill();
+    }
+    g.restore();
+    TK.text(g, 'におい', cx - ax - 20, ay - 110, 46, { color: ODOR });
+    TK.text(g, 'なし', cx + ax + 20, ay - 110, 46, { color: TK.C.sub });
+  }
+}
+function mazePos(p, side) {
+  const { cx, base, jy, ay, ax } = YM;
+  if (p <= 1) return [cx, lerp(base, jy, p), -Math.PI / 2];
+  const u = Math.min(p - 1, 1); return [cx + side * ax * u, lerp(jy, ay, u), Math.atan2(ay - jy, side * ax)];
+}
+// 通路の中の虫（イモムシは頭の向きに合わせて回す）
+function bugInMaze(g, t, p, side, kind, mem) {
+  const [x, y, ang] = mazePos(p, side);
+  g.save(); g.translate(x, y); g.rotate(ang);
+  if (kind === 'cater') cater(g, 0, 0, 1.0, t, { mem });
+  else { g.rotate(Math.PI / 2); moth(g, 0, 0, 0.75, t, { mem, flap: true }); }
+  g.restore();
+}
+// 結果の大きな数字（通路の上）
+function bigPct(g, t, a, b, v, label) {
+  TK.count(g, t, a, b, 0, v, { y: 200, size: 150, dur: 1.0, fmt: x => Math.round(x) + '%' });
+  if (t > a + 0.6 && t < b) { g.save(); g.globalAlpha = fade(t, a + 0.6, b, 0.25); TK.text(g, label, PW / 2, 310, 46, { color: TK.C.sub }); g.restore(); }
+}
+
+// さなぎの中（断面の模式図）。k: 0→1 で筋肉がこわれ、神経がのびる
+function pupaInside(g, t, k) {
+  const cx = 540, cy = 640, rx = 400, ry = 190;
+  g.save();
+  g.fillStyle = 'rgba(122,79,42,0.35)'; g.strokeStyle = '#e0b07a'; g.lineWidth = 6;
+  g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); g.clip();
+  // 筋肉（朱色の帯）→ かけらになって散る
+  for (let i = 0; i < 7; i++) {
+    const x0 = cx - 300 + i * 90, y0 = cy - 120;
+    for (let j = 0; j < 6; j++) {
+      const sd = Math.sin(i * 12.9 + j * 78.2) * 43758.5, r = sd - Math.floor(sd);
+      const dx = (r - 0.5) * 160 * k, dy = (Math.cos(i * 3 + j) * 0.5 + 0.3) * 160 * k;
+      g.globalAlpha = 1 - 0.75 * k;
+      g.fillStyle = VERM;
+      g.save(); g.translate(x0 + dx, y0 + j * 14 + dy); g.rotate(k * (r - 0.5) * 3);
+      g.fillRect(-36 + 30 * k, -6, 72 - 60 * k, 11); g.restore();
+    }
+  }
+  g.globalAlpha = 1;
+  // 脳と神経（空色）は残る。腹の神経の索と神経節、枝がのびる
+  const ny = cy + 95;
+  g.strokeStyle = SKY; g.fillStyle = SKY; g.lineWidth = 9; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(cx + 300, cy - 20); g.quadraticCurveTo(cx + 260, ny, cx + 180, ny); g.lineTo(cx - 330, ny); g.stroke();
+  g.beginPath(); g.ellipse(cx + 300, cy - 40, 46, 36, 0, 0, Math.PI * 2); g.fill();   // 脳
+  for (let i = 0; i < 7; i++) {
+    const gx = cx + 150 - i * 75;
+    g.beginPath(); g.arc(gx, ny, 15, 0, Math.PI * 2); g.fill();
+    const L = 30 + 70 * k;
+    g.lineWidth = 4;
+    g.beginPath(); g.moveTo(gx, ny); g.lineTo(gx - L * 0.5, ny - L); g.moveTo(gx, ny); g.lineTo(gx + L * 0.4, ny - L * 0.9); g.stroke();
+    g.lineWidth = 9;
+  }
+  g.restore();
+  // 凡例
+  const ly = 960;
+  g.fillStyle = VERM; g.fillRect(150, ly - 16, 60, 32);
+  TK.text(g, 'こわれて材料に（筋肉など）', 230, ly, 44, { align: 'left' });
+  g.fillStyle = SKY; g.fillRect(150, ly + 64, 60, 32);
+  TK.text(g, '残って作りかえ（脳・神経）', 230, ly + 80, 44, { align: 'left' });
+}
+
+function draw(g, t) {
+  // 0〜5: イモムシ → さなぎ → ガ。記憶の点が光ったまま
+  if (t < 5.0) {
+    const y = 800, f = fade(t, -1, 5.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    if (t > 0.0) { g.save(); g.globalAlpha *= TK.pop(t, 0.0); cater(g, 300, y, 1.1, t, { mem: 1 }); g.restore(); }
+    if (t > 0.8) { arrow(g, 335, y, 395, y); }
+    if (t > 1.0) { g.save(); g.globalAlpha *= TK.pop(t, 1.0); pupa(g, 520, y, 1.25, t, { mem: 1 }); g.restore(); }
+    if (t > 1.6) { arrow(g, 640, y, 700, y); }
+    if (t > 1.8) { g.save(); g.globalAlpha *= TK.pop(t, 1.8); moth(g, 835, y - 10, 1.1, t, { mem: t > 2.6 ? 0.5 + 0.5 * Math.sin(t * 4) : 1, flap: true }); g.restore(); }
+    if (t > 2.4) TK.text(g, '？', 835, y - 170, 120, { color: Q });
+    g.restore();
+    TK.hook(g, t, 0.0, 2.4, 'ドロドロになっても\n[記憶は残る？]', { y: 360, size: 112 });
+    if (t > 2.4) { g.save(); g.globalAlpha = fade(t, 2.4, 5.0, 0.3); TK.text(g, 'タバコスズメガ', PW / 2, 1000, 48, { color: TK.C.sub }); g.restore(); }
+  }
+  // 5〜12: 教える（におい → 弱い電気、8回）
+  if (t >= 5.0 && t < 12.0) {
+    const f = fade(t, 5.0, 12.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    // まっすぐな管の中のイモムシ。においが流れてきて、すこしあとに弱い電気
+    const y = 640;
+    g.lineCap = 'round';
+    g.strokeStyle = 'rgba(160,190,255,0.55)'; g.lineWidth = 210; g.beginPath(); g.moveTo(190, y); g.lineTo(900, y); g.stroke();
+    g.strokeStyle = '#122045'; g.lineWidth = 196; g.stroke();
+    const rep = t < 8.6 ? (t - 5.0) / 3.6 : ((t - 8.6) % 0.45) / 0.45;   // 1回目はゆっくり、あとは速く
+    for (let i = 0; i < 14; i++) {
+      const u = clamp(rep * 1.6 - i * 0.04, 0, 1), px = 200 + u * 600 + Math.sin(i * 5) * 20, py = y + Math.cos(i * 3.1 + t * 2) * 34;
+      if (u > 0 && u < 1) { g.fillStyle = `rgba(199,155,255,${0.6 * Math.sin(Math.PI * u)})`; g.beginPath(); g.arc(px, py, 12, 0, Math.PI * 2); g.fill(); }
+    }
+    cater(g, 800, y, 1.5, t, { mem: clamp((t - 6.5) / 5, 0.15, 1) });
+    spark(g, 680, y - 110, rep > 0.7 ? 1 - (rep - 0.7) / 0.3 : 0);
+    TK.text(g, '① におい', 330, 420, 54, { color: ODOR });
+    TK.text(g, '② 弱い電気', 700, 420, 54, { color: '#fff3a0' });
+    g.restore();
+    TK.text(g, 'におい: 酢酸エチル（接着剤や除光液にも使われる）', PW / 2, 830, 34, { color: TK.C.sub, bold: false });
+    if (t >= 8.6) {
+      const n = Math.min(8, 1 + Math.floor((t - 8.6) / 0.45) + 1);
+      g.save(); g.globalAlpha = fade(t, 8.6, 12, 0.2);
+      TK.text(g, '× ' + n + ' 回', PW / 2, 260, 120, { color: n >= 8 ? TK.C.acc : '#fff' });
+      g.restore();
+    }
+  }
+  // 12〜16: イモムシで試す → 78%
+  if (t >= 12.0 && t < 16.0) {
+    maze(g, t);
+    const p = clamp((t - 12.3) / 1.7, 0, 1) * 2;
+    bugInMaze(g, t, p, 1, 'cater', 1);
+    if (t > 14.0) bigPct(g, t, 14.0, 16.0, 78, 'イモムシの 78% が「におい」をさけた');
+  }
+  // 16〜22: さなぎの中
+  if (t >= 16.0 && t < 22.0) {
+    const k = ease(clamp((t - 17.0) / 4.0, 0, 1));
+    g.save(); g.globalAlpha = fade(t, 16.0, 22.0, 0.3);
+    TK.text(g, 'さなぎの中（模式図）', PW / 2, 280, 60, { color: TK.C.sub });
+    pupaInside(g, t, k);
+    if (t > 19.0) memDot(g, 840, 600, 1.4, t, 1);
+    g.restore();
+  }
+  // 22〜30: ガで試す → 77%（何もしないガはほぼ半々）
+  if (t >= 22.0 && t < 26.0) {
+    maze(g, t);
+    const p = clamp((t - 22.6) / 2.4, 0, 1) * 2;
+    bugInMaze(g, t, p, 1, 'moth', 1);
+  }
+  if (t >= 26.0 && t < 30.0) {
+    g.save(); g.globalAlpha = fade(t, 26.0, 30.0, 0.3);
+    moth(g, 540, 930, 1.0, t, { mem: 1, flap: true });
+    g.restore();
+    bigPct(g, t, 26.0, 30.0, 77, 'ガの 77% が「におい」をさけた');
+    TK.bars(g, t, 26.6, 30.0, [
+      { label: 'イモムシのとき教えたガ', v: 0.77, color: TK.C.acc, text: '77%' },
+      { label: '何も教えていないガ', v: 0.5, color: 'rgba(200,215,255,0.7)', text: 'ほぼ半々' },
+    ], { y: 440, gap: 170, size: 44, stagger: 0.5 });
+  }
+  // 30〜36: においが残っていただけ？ → 2つの確かめ
+  if (t >= 30.0 && t < 36.0) {
+    const f = fade(t, 30.0, 36.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    const cards = [
+      { x: 70, a: 30.4, title: '教えたさなぎを\n洗う', res: 'それでも さけた', ok: true, r: 33.0 },
+      { x: 560, a: 31.0, title: '教えていないさなぎに\nにおいをつける', res: 'さけなかった', ok: false, r: 34.6 },
+    ];
+    for (const c of cards) {
+      if (t < c.a) continue;
+      g.save(); g.globalAlpha *= TK.pop(t, c.a);
+      TK.card(g, c.x, 200, 450, 820);
+      TK.lines(g, c.title, c.x + 225, 300, 44, { maxw: 410 });
+      pupa(g, c.x + 225, 560, 1.4, t, { mem: c.ok ? 1 : 0 });
+      if (c.ok) { for (let i = 0; i < 7; i++) { const u = (t * 0.8 + i / 7) % 1; g.fillStyle = `rgba(95,212,255,${0.8 * (1 - u)})`; g.beginPath(); g.ellipse(c.x + 90 + i * 45, 420 + u * 80, 7, 11, 0, 0, Math.PI * 2); g.fill(); } }
+      else { for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2 + t * 0.6; g.fillStyle = 'rgba(199,155,255,0.55)'; g.beginPath(); g.arc(c.x + 225 + Math.cos(a) * 170, 560 + Math.sin(a) * 85, 9, 0, Math.PI * 2); g.fill(); } }
+      if (t > c.r) {
+        g.save(); g.globalAlpha *= TK.pop(t, c.r);
+        TK.text(g, c.ok ? '○' : '×', c.x + 225, 770, 150, { color: c.ok ? TK.C.green : TK.C.red });
+        TK.text(g, c.res, c.x + 225, 930, 50, { color: c.ok ? TK.C.green : TK.C.red });
+        g.restore();
+      }
+      g.restore();
+    }
+    g.restore();
+  }
+  // 36〜40: 若すぎるころ（3齢）に教えると
+  if (t >= 36.0) {
+    const f = fade(t, 36.0, 40.5, 0.3);
+    g.save(); g.globalAlpha = f;
+    TK.text(g, '3齢（若いころ）に教えると', PW / 2, 260, 64, { color: TK.C.sub });
+    cater(g, 380, 560, 0.95, t, { mem: 1 });
+    TK.text(g, 'イモムシのうちは', 270, 680, 42, { color: TK.C.sub });
+    TK.text(g, '81% 覚えていた', 270, 750, 56, { color: TK.C.acc });
+    arrow(g, 520, 600, 620, 600);
+    const k = clamp((t - 37.4) / 0.8, 0, 1);
+    moth(g, 800, 560, 1.05, t, { mem: k < 1 ? 1 - k : 0, flap: true });
+    if (t > 38.0) { g.save(); g.globalAlpha *= TK.pop(t, 38.0); TK.text(g, 'ガでは', 800, 700, 42, { color: TK.C.sub }); TK.text(g, '覚えていなかった', 800, 770, 56, { color: TK.C.red }); g.restore(); }
+    g.restore();
+  }
+  if (t >= 5.0 && t < 12.0) TK.note(g, t, 5.0, 12.0, '電気は、ごく弱いもの', { size: 32 });
+  if (t >= 16.0 && t < 22.0) TK.note(g, t, 16.0, 22.0, '器官ごとの色わけの模式図（細胞1つずつではない）', { size: 32 });
+  if (t >= 37.0) TK.note(g, t, 37.0, 40.0, '出どころ: Blackiston, Silva Casey & Weiss (2008)\nPLoS ONE 3(3): e1736', { size: 30 });
+}
+
+triviaStart({ out: 'metamorphosis-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

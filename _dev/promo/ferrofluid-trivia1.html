@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく ferrofluid-1（型A ぜんぶ逆）「トゲの間かくを決めるのは、磁石じゃない」。台本は trivia/ferrofluid.md。?short で録る
+// 数字: Gollwitzer ほか 2007（J. Fluid Mech. 571:455）の液 APG512a。σ 30.57 mN/m・ρ 1236 kg/m³ → k_c = √(ρg/σ) = 0.630 /mm、λ = 2π/k_c = 9.98 mm。
+// 月（g 1.62）は同じ式で重力だけ変えた計算: λ = 9.98 × √(9.81/1.62) = 24.6 mm（推定。月で実験した人はいない）。
+// トゲの絵は六角形にならべた円すいの模式図（高さ・形はかざり。間かくだけ縮尺をそろえた: 1 mm = 7 px）
+const DUR = 35;
+const LE = 9.98, LM = 9.98 * Math.sqrt(9.81 / 1.62), PXMM = 7;
+const subs = [
+  { a: 0.0, b: 2.2, ja: 'このトゲの間かく、[磁石]と関係ない。', en: 'The spacing of these spikes has nothing to do with the magnet.', noBurn: true },
+  { a: 2.2, b: 8.0, ja: '研究で使われた液では、\nトゲとトゲの間は[9.98 mm]。', en: 'In the fluid used in one study,\nthe spikes were 9.98 mm apart.' },
+  { a: 8.0, b: 14.0, ja: '磁石を強くすると、トゲは高くなる。\nでも、間かくは[ほとんど変わらない]。', en: 'A stronger magnet makes the spikes taller,\nbut the spacing barely changes.' },
+  { a: 14.0, b: 21.0, ja: '間かくを決めるのは、液の表面張力と、重さと、[重力]。\n磁石は入っていない。', en: 'The spacing is set by surface tension, density and gravity.\nThe magnet isn’t in the formula.' },
+  { a: 21.0, b: 29.0, ja: 'だから月でやると、重力が6分の1になって\n間かくは約2.5倍、[24.6 mm]に広がる。', en: 'So on the Moon, with 1/6 gravity,\nthe spacing would grow about 2.5×, to 24.6 mm.' },
+  { a: 29.0, b: 35.0, ja: 'トゲを並べているのは、磁石じゃなく、\n[地球の重力]。', en: 'What lines up the spikes isn’t the magnet,\nit’s Earth’s gravity.' },
+];
+const cues = [
+  { t: 0.05, type: 'rise' }, { t: 1.0, type: 'pop' }, { t: 2.2, type: 'whoosh' }, { t: 3.6, type: 'ding' },
+  { t: 8.0, type: 'rise' }, { t: 11.0, type: 'tick' }, { t: 14.0, type: 'whoosh' }, { t: 16.5, type: 'ding' }, { t: 18.0, type: 'buzz' },
+  { t: 21.0, type: 'whoosh' }, { t: 23.0, type: 'rise' }, { t: 26.0, type: 'ding' }, { t: 29.0, type: 'whoosh' },
+];
+
+// トゲの皿（ななめ上から）。lam: 間かく（mm）、H: 高さ（px）
+const CX = 540, CY = 720, RX = 440, RY = 190;
+function dish(g, lam, H, o = {}) {
+  const L = lam * PXMM, sq = RY / RX;
+  // 皿と液
+  g.save();
+  g.fillStyle = '#0a0d18'; g.strokeStyle = 'rgba(200,220,255,0.6)'; g.lineWidth = 4;
+  g.beginPath(); g.ellipse(CX, CY, RX, RY, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  const pts = [];
+  const rows = Math.ceil(RX / (L * 0.866)) + 1, cols = Math.ceil(RX / L) + 1;
+  for (let j = -rows; j <= rows; j++) for (let i = -cols; i <= cols; i++) {
+    const X = (i + (j & 1) * 0.5) * L, Y = j * L * 0.866;
+    if ((X * X) / ((RX - L * 0.4) ** 2) + (Y * Y) / ((RX - L * 0.4) ** 2) > 1) continue;
+    pts.push([X, Y]);
+  }
+  pts.sort((a, b) => a[1] - b[1]);
+  for (const [X, Y] of pts) {
+    const x = CX + X, y = CY + Y * sq, w = L * 0.42, h = H * (o.hk ? o.hk(X, Y) : 1);
+    if (h < 1) continue;
+    const gr = g.createLinearGradient(x - w, 0, x + w, 0);
+    gr.addColorStop(0, '#121a30'); gr.addColorStop(0.55, '#33476e'); gr.addColorStop(0.7, '#8fb0e8'); gr.addColorStop(1, '#0d1222');
+    g.fillStyle = gr;
+    g.beginPath(); g.moveTo(x - w, y); g.quadraticCurveTo(x - w * 0.25, y - h * 0.35, x, y - h); g.quadraticCurveTo(x + w * 0.25, y - h * 0.35, x + w, y);
+    g.ellipse(x, y, w, w * sq, 0, 0, Math.PI); g.fill();
+  }
+  g.restore();
+  return pts;
+}
+// 間かくのものさし（手前の2本のあいだ）
+function measure(g, lam, H, label, color = TK.C.acc) {
+  const L = lam * PXMM, y = CY + RY + 50;
+  g.save(); g.strokeStyle = color; g.fillStyle = color; g.lineWidth = 5;
+  g.beginPath(); g.moveTo(CX - L / 2, y); g.lineTo(CX + L / 2, y); g.stroke();
+  [CX - L / 2, CX + L / 2].forEach(x => { g.beginPath(); g.moveTo(x, y - 18); g.lineTo(x, y + 18); g.stroke(); });
+  g.restore();
+  TK.text(g, label, CX, y + 58, 60, { color });
+}
+
+function draw(g, t) {
+  // 0〜2.2: フック。トゲが立つ
+  if (t < 2.2) {
+    dish(g, LE, 130 * ease(t / 1.0));
+    TK.hook(g, t, 0.3, 2.2, 'この間かく、\n[磁石]と関係ない。', { y: 300, size: 100 });
+  }
+  // 2.2〜8: ものさし 9.98 mm
+  if (t >= 2.2 && t < 8.0) {
+    dish(g, LE, 130);
+    if (t > 3.2) measure(g, LE, 130, '9.98 mm');
+    TK.text(g, 'トゲとトゲの間', PW / 2, 300, 62);
+    TK.note(g, t, 2.6, 8, 'ある研究の液（APG512a）が、トゲの出はじめるとき。模式図', { size: 32 });
+  }
+  // 8〜14: 磁石を強く → 高くなるが、間かくはほぼ同じ
+  if (t >= 8.0 && t < 14.0) {
+    const k = ease((t - 8.4) / 3.0), H = lerp(70, 230, k);
+    dish(g, LE, H);
+    measure(g, LE, H, '≒ 10 mm のまま');
+    // 磁石の強さのメーター
+    TK.text(g, '磁石の強さ', 140, 230, 44, { align: 'left', color: TK.C.sub });
+    g.fillStyle = 'rgba(255,255,255,0.12)'; g.beginPath(); g.roundRect(400, 208, 560, 44, 22); g.fill();
+    g.fillStyle = TK.C.red; g.beginPath(); g.roundRect(400, 208, Math.max(44, 560 * (0.35 + 0.65 * k)), 44, 22); g.fill();
+    TK.note(g, t, 8.4, 14, '強い磁場では間かくが少し変わることも測られている', { size: 32 });
+  }
+  // 14〜21: 式
+  if (t >= 14.0 && t < 21.0) {
+    TK.text(g, 'トゲの間かく', PW / 2, 300, 60, { color: TK.C.sub });
+    const p = clamp(TK.pop(t, 14.4, 0.4), 0, 1.2);
+    g.save(); g.globalAlpha = clamp(p, 0, 1);
+    TK.text(g, '＝ 2π ×', 160, 520, 76, { align: 'left' });
+    TK.text(g, '√', 560, 520, 150);
+    g.strokeStyle = '#fff'; g.lineWidth = 5; g.beginPath(); g.moveTo(600, 440); g.lineTo(1000, 440); g.stroke();
+    TK.text(g, '表面張力', 800, 480, 60);
+    g.beginPath(); g.moveTo(640, 525); g.lineTo(960, 525); g.stroke();
+    TK.text(g, '密度 × [重力]', 800, 580, 60);
+    g.restore();
+    if (t > 16.4) {
+      g.save(); g.globalAlpha = fade(t, 16.4, 21, 0.3);
+      // 磁石（U 字）に ×
+      const mx = 540, my = 830;
+      g.strokeStyle = TK.C.red; g.lineWidth = 34; g.lineCap = 'butt';
+      g.beginPath(); g.arc(mx, my, 80, Math.PI, 0, true); g.stroke();
+      g.strokeStyle = '#ddd'; g.beginPath(); g.moveTo(mx - 80, my); g.lineTo(mx - 80, my + 40); g.moveTo(mx + 80, my); g.lineTo(mx + 80, my + 40); g.stroke();
+      if (t > 17.8) { g.strokeStyle = TK.C.red; g.lineWidth = 16; g.lineCap = 'round'; g.beginPath(); g.moveTo(mx - 140, my - 100); g.lineTo(mx + 140, my + 120); g.moveTo(mx + 140, my - 100); g.lineTo(mx - 140, my + 120); g.stroke(); }
+      TK.text(g, '磁石は、式に[入っていない]', PW / 2, 1040, 56, { acc: TK.C.red });
+      g.restore();
+    }
+    TK.note(g, t, 14.4, 21, 'トゲが出はじめるときの式（Rosensweig の解析）', { size: 32 });
+  }
+  // 21〜29: 月では 24.6 mm
+  if (t >= 21.0 && t < 29.0) {
+    const k = ease((t - 22.4) / 3.0), lam = lerp(LE, LM, k);
+    dish(g, lam, 150);
+    measure(g, lam, 150, lam.toFixed(1) + ' mm', k > 0.98 ? TK.C.acc : '#fff');
+    TK.card(g, 260, 190, 560, 130, { r: 60 });
+    TK.text(g, k < 0.5 ? '地球（重力 9.8）' : '[月]（重力 1.6）', PW / 2, 255, 60);
+    TK.note(g, t, 21.4, 29, '計算では（重力だけ変えた。月で実験した人はいない）', { size: 32 });
+  }
+  // 29〜35: 地球にもどる
+  if (t >= 29.0) {
+    const k = ease((t - 29.0) / 1.2), lam = lerp(LM, LE, k);
+    dish(g, lam, 150);
+    TK.text(g, '並べているのは', PW / 2, 250, 56, { color: TK.C.sub });
+    TK.text(g, '[地球の重力]', PW / 2, 340, 90);
+    TK.note(g, t, 31.5, 35, '出どころ: Gollwitzer ほか (2007) J. Fluid Mech. 571:455（arXiv:nlin/0604009）\n月の重力: NASA Moon Fact Sheet', { size: 28 });
+  }
+}
+
+triviaStart({ out: 'ferrofluid-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく body-dive-1（型A ぜんぶ逆）「腸の広さ＝テニスコート、はまちがい」。台本は trivia/body-dive.md。?short で録る
+// 数字: Helander & Fändriks 2014（全体 約32 m²、大腸 約2 m²、ひだ・絨毛・微絨毛で 60〜120倍）。
+// コートは同じ縮尺で描く（テニス ダブルス 23.77×10.97 m＝約261 m²、バドミントン ダブルスの半面 6.70×6.10 m＝約41 m²）。畳は 1畳＝約1.62 m²。
+const DUR = 30;
+const subs = [
+  { a: 0.0, b: 2.0, ja: '「腸を広げるとテニスコート」…\nじつは、[ちがいます]', en: '“Spread out, your gut covers a tennis court”…\nActually, no', noBurn: true },
+  { a: 2.0, b: 7.0, ja: '長いあいだ教科書には\n[200〜300 m²] くらいと書かれてきました', en: 'For decades, textbooks said\nabout 200–300 m²' },
+  { a: 7.0, b: 13.0, ja: '2014年、スウェーデンの研究者が\n[測りなおす]と…', en: 'In 2014, researchers in Sweden\nmeasured it again…' },
+  { a: 13.0, b: 19.0, ja: '口からおしりまで、ぜんぶで[約32 m²]\nバドミントンコートの半分でした', en: 'Mouth to bottom: about 32 m² in total,\nhalf a badminton court' },
+  { a: 19.0, b: 24.0, ja: '畳でいうと[約20枚]\n6畳の部屋なら3つ分ちょっと', en: 'About 20 tatami mats,\na bit over three small rooms' },
+  { a: 24.0, b: 28.0, ja: 'それでも、ひだと毛のおかげで\n平らな管の[60〜120倍]', en: 'Still, folds and tiny “hairs” make it\n60–120 times a flat tube' },
+  { a: 28.0, b: 30.0, ja: '教科書には、最大で[約10倍]\n大きく書かれていました', en: 'Textbooks had it up to\nabout 10 times too big' },
+];
+const cues = [
+  { t: 0.05, type: 'thud' }, { t: 0.5, type: 'buzz' }, { t: 2.0, type: 'whoosh' }, { t: 7.0, type: 'pop' }, { t: 10.5, type: 'tick' },
+  { t: 13.0, type: 'whoosh' }, { t: 14.0, type: 'rise' }, { t: 16.2, type: 'ding' }, { t: 19.0, type: 'pop' }, { t: 24.0, type: 'whoosh' }, { t: 28.0, type: 'ding' },
+];
+const PX = 33;   // 1 m あたりの画素（コートの絵）
+const CCX = 540, CCY = 680;   // コートの中心
+
+// コートの線画（縦向き）。L×W m、中に線を何本か。color で色
+function court(g, L, W, o = {}) {
+  const h = L * PX, w = W * PX, x = CCX - w / 2, y = CCY - h / 2;
+  g.save();
+  g.fillStyle = o.fill || 'rgba(95,212,255,0.10)'; g.strokeStyle = o.color || 'rgba(207,224,255,0.9)'; g.lineWidth = o.lw || 5;
+  g.fillRect(x, y, w, h); g.strokeRect(x, y, w, h);
+  if (o.tennis) {   // シングルスの線・サービスライン・ネット
+    const s = 1.37 * PX * (w / (10.97 * PX));
+    g.lineWidth = 3; g.beginPath();
+    g.moveTo(x + s, y); g.lineTo(x + s, y + h); g.moveTo(x + w - s, y); g.lineTo(x + w - s, y + h);
+    const sv = 6.40 / 23.77 * h; g.moveTo(x + s, CCY - sv); g.lineTo(x + w - s, CCY - sv); g.moveTo(x + s, CCY + sv); g.lineTo(x + w - s, CCY + sv);
+    g.moveTo(CCX, CCY - sv); g.lineTo(CCX, CCY + sv); g.stroke();
+    g.lineWidth = 7; g.strokeStyle = '#fff'; g.beginPath(); g.moveTo(x - 20, CCY); g.lineTo(x + w + 20, CCY); g.stroke();
+  }
+  g.restore();
+  return { x, y, w, h };
+}
+
+function draw(g, t) {
+  // 0〜2: テニスコートに大きな ×
+  if (t < 2.0) {
+    court(g, 23.77, 10.97, { tennis: true });
+    const k = TK.pop(t, 0.35, 0.3);
+    if (t > 0.35) {
+      g.save(); g.strokeStyle = TK.C.red; g.lineWidth = 46; g.lineCap = 'round'; g.globalAlpha = clamp(k, 0, 1);
+      const r = 300 * k; g.beginPath(); g.moveTo(CCX - r, CCY - r); g.lineTo(CCX + r, CCY + r); g.moveTo(CCX + r, CCY - r); g.lineTo(CCX - r, CCY + r); g.stroke(); g.restore();
+    }
+    TK.card(g, 120, 1010, 840, 210, { fill: 'rgba(11,20,48,0.92)' });
+    TK.lines(g, '腸の広さ＝テニスコート\nは、[まちがい]', PW / 2, 1115, 78, { stroke: 'rgba(0,0,0,0.6)' });
+  }
+  // 2〜7: 教科書の数字がコートに重なる
+  if (t >= 2.0 && t < 7.0) {
+    const f = fade(t, 2, 7, 0.3); g.save(); g.globalAlpha = f;
+    const r = court(g, 23.77, 10.97, { tennis: true });
+    const k = ease((t - 2.6) / 1.2);
+    g.fillStyle = `rgba(255,207,74,${0.35 * k})`; g.fillRect(r.x, r.y, r.w, r.h * k);
+    TK.card(g, 110, 120, 860, 140, { r: 40 });
+    TK.text(g, '教科書  [200〜300 m²] くらい', PW / 2, 190, 62);
+    g.restore();
+    TK.note(g, t, 3, 7, 'テニスコート（ダブルス）は約260 m²', { size: 32 });
+  }
+  // 7〜13: 2014年に測りなおした（論文の名前の文字だけ）
+  if (t >= 7.0 && t < 13.0) {
+    const f = fade(t, 7, 13, 0.3); g.save(); g.globalAlpha = f;
+    const k = TK.pop(t, 7.2, 0.4);
+    g.translate(PW / 2, 600); g.scale(0.85 + 0.15 * k, 0.85 + 0.15 * k); g.translate(-PW / 2, -600);
+    TK.card(g, 130, 330, 820, 560, { fill: 'rgba(240,244,255,0.95)', stroke: 'rgba(160,190,255,0.6)' });
+    TK.text(g, 'Surface area of the', PW / 2, 450, 56, { color: '#132247', blur: 0 });
+    TK.text(g, 'digestive tract', PW / 2, 525, 56, { color: '#132247', blur: 0 });
+    TK.text(g, '– revisited', PW / 2, 600, 56, { color: '#132247', blur: 0 });
+    TK.text(g, 'Helander & Fändriks, 2014', PW / 2, 700, 40, { color: '#3a4a70', bold: false, blur: 0 });
+    g.fillStyle = 'rgba(19,34,71,0.15)'; for (let i = 0; i < 3; i++) g.fillRect(220, 760 + i * 32, 640 - i * 120, 14);
+    g.restore();
+    if (t > 10.0) { g.save(); g.globalAlpha = fade(t, 10, 13, 0.3); TK.text(g, '（腸の広さを）[測りなおした]', PW / 2, 230, 64); g.restore(); }
+  }
+  // 13〜19: コートが縮んで、バドミントンコートの半分に
+  if (t >= 13.0 && t < 19.0) {
+    const f = fade(t, 13, 19, 0.3); g.save(); g.globalAlpha = f;
+    const k = ease((t - 13.6) / 2.4);
+    // もとのテニスコートの輪郭（点線で残す）
+    g.save(); g.setLineDash([14, 12]); g.strokeStyle = 'rgba(207,224,255,0.35)'; g.lineWidth = 3;
+    g.strokeRect(CCX - 10.97 * PX / 2, CCY - 23.77 * PX / 2, 10.97 * PX, 23.77 * PX); g.restore();
+    const L = lerp(23.77, 6.70, k), W = lerp(10.97, 6.10, k);
+    const r = court(g, L, W, { fill: 'rgba(255,207,74,0.25)', color: TK.C.acc, lw: 6 });
+    if (k >= 1) {
+      // 32 m² を、半面の中に（同じ縮尺）
+      const a = Math.sqrt(32), s = a * PX;
+      g.fillStyle = 'rgba(89,227,154,0.45)'; g.fillRect(CCX - s / 2, CCY - s / 2, s, s);
+      TK.text(g, 'バドミントンコートの半分', PW / 2, r.y + r.h + 70, 48, { color: TK.C.acc });
+    }
+    TK.card(g, 240, 110, 600, 140, { r: 40 });
+    const v = lerp(260, 32, k);
+    TK.text(g, '約 ' + Math.round(v) + ' m²', PW / 2, 180, 80, { color: k >= 1 ? TK.C.green : '#fff' });
+    g.restore();
+    TK.note(g, t, 13.6, 19, '絵は同じ縮尺／人によってちがう、平均の値', { size: 32 });
+  }
+  // 19〜24: 畳 20 枚（4×5、1枚 0.91×1.82 m）
+  if (t >= 19.0 && t < 24.0) {
+    const f = fade(t, 19, 24, 0.3); g.save(); g.globalAlpha = f;
+    const tw = 180, th = 90, x0 = CCX - 2.5 * tw, y0 = 280;   // 横向きの畳を 5列×4段（ずらさずに並べる）
+    for (let i = 0; i < 20; i++) {
+      const c = i % 5, rr = Math.floor(i / 5), k = TK.pop(t, 19.3 + i * 0.08, 0.3);
+      if (k <= 0) continue;
+      const x = x0 + c * tw, y = y0 + rr * (th + 6) * 2;
+      g.save(); g.globalAlpha = f * clamp(k, 0, 1);
+      g.fillStyle = 'rgba(89,227,154,0.22)'; g.strokeStyle = 'rgba(160,230,190,0.85)'; g.lineWidth = 4;
+      g.fillRect(x + 4, y, tw - 8, th * 2 - 8); g.strokeRect(x + 4, y, tw - 8, th * 2 - 8);
+      g.restore();
+    }
+    TK.card(g, 240, 100, 600, 140, { r: 40 });
+    TK.text(g, '畳 [約20枚]', PW / 2, 170, 74);
+    g.restore();
+  }
+  // 24〜28: 平らな管 → ひだ＋毛（絨毛）で 60〜120倍
+  if (t >= 24.0 && t < 28.0) {
+    const f = fade(t, 24, 28, 0.3); g.save(); g.globalAlpha = f;
+    const k = ease((t - 24.4) / 1.6);
+    TK.text(g, '腸の内側（断面のイメージ）', PW / 2, 220, 44, { color: TK.C.sub, bold: false });
+    // 上: 平らな管の壁
+    g.strokeStyle = 'rgba(207,224,255,0.8)'; g.lineWidth = 6; g.beginPath(); g.moveTo(110, 400); g.lineTo(970, 400); g.stroke();
+    TK.text(g, '平らな管', 110, 350, 44, { align: 'left', color: TK.C.sub });
+    // 下: ひだ＋絨毛
+    g.strokeStyle = TK.C.acc; g.lineWidth = 5; g.beginPath();
+    const base = 860;
+    for (let x = 110; x <= 970; x += 4) {
+      const fold = Math.max(0, Math.sin((x - 110) / 860 * Math.PI * 4)) * 150 * k;
+      const vil = Math.pow(Math.max(0, Math.sin((x - 110) / 860 * Math.PI * 60)), 3) * 60 * k;
+      const y = base - fold - vil; x === 110 ? g.moveTo(x, y) : g.lineTo(x, y);
+    }
+    g.stroke();
+    TK.text(g, 'ひだ＋毛（絨毛）', 110, 560, 44, { align: 'left', color: TK.C.acc });
+    if (k > 0.8) TK.text(g, '[60〜120倍] の広さ', PW / 2, 990, 66);
+    g.restore();
+  }
+  // 28〜30: 最大で約10倍
+  if (t >= 28.0) {
+    const f = fade(t, 28, 30.5, 0.3); g.save(); g.globalAlpha = f;
+    TK.card(g, 110, 330, 860, 420);
+    TK.lines(g, '教科書の値は\n最大で [約10倍]\n大きかった', PW / 2, 540, 86);
+    g.restore();
+  }
+  if (t >= 26.8) TK.note(g, t, 26.8, 30, '約10倍＝300÷32 の計算（200 なら約6倍）\n出どころ: Helander & Fändriks (2014) Scand J Gastroenterol 49:681', { size: 30 });
+}
+
+triviaStart({ out: 'body-dive-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

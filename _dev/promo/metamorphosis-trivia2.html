@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく metamorphosis-2（型A ぜんぶ逆）「さなぎの中は『ぜんぶドロドロ』じゃない」。台本は trivia/metamorphosis.md。?short で録る
+// 出どころ: Truman & Schwartz (1984) J Neurosci 4(1):274–280（羽化のあと、腹の介在・運動ニューロンの約50%が決まった予定で死ぬ。合図はエクジステロイドの低下）、
+// Levine & Truman (1985) J Neurosci（幼虫の運動ニューロンの多くは生き残り、成虫の筋肉へつなぎ直す）。どちらも要旨で確認（台本の記録）。
+// REVIEW: 題名に「死ぬ」を使わない。「羽化のときにしか使わなかった神経」→「羽化のころの仕事を終えた神経（と考えられている）」
+const DUR = 35;
+const SKY = '#5fd4ff', VERM = '#ff7a4a', TEAL = '#3fe0c0';
+const subs = [
+  { a: 0.0, b: 4.0, ja: 'さなぎの中はドロドロのスープ。…[半分ウソ]', en: 'A pupa is just soup inside. …Half wrong.', noBurn: true },
+  { a: 4.0, b: 8.0, ja: 'たしかに、イモムシの筋肉の多くは', en: 'True, most caterpillar muscles' },
+  { a: 8.0, b: 12.0, ja: 'こわれて、[材料]になる', en: 'break down into raw material' },
+  { a: 12.0, b: 16.0, ja: 'でも、体を動かす神経の細胞は\n[ほとんどが]生き残る', en: 'But most of the nerve cells that move the body survive' },
+  { a: 16.0, b: 20.0, ja: 'つなぐ先を、イモムシの筋肉から\n[ガの筋肉]へ切りかえる', en: 'They rewire — from caterpillar muscles\nto moth muscles' },
+  { a: 20.0, b: 24.0, ja: '翅や脚は、小さな芽から\n[新しく]作る', en: 'Wings and legs grow new\nfrom tiny buds' },
+  { a: 24.0, b: 28.0, ja: 'そしてガになったあと。お腹の神経の\n[約半分]が、決まった順に死ぬ', en: 'Then, after the moth emerges,\nabout half the belly neurons die on schedule' },
+  { a: 28.0, b: 32.0, ja: '羽化のころの仕事を終えた神経\n（と考えられている）', en: 'Neurons whose emergence-time job is done\n(so it is thought)' },
+  { a: 32.0, b: 35.0, ja: 'スープじゃなくて、[順番どおりの工事]', en: 'Not soup — construction, in order' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 1.6, type: 'buzz' }, { t: 2.3, type: 'pop' }, { t: 4.0, type: 'whoosh' },
+  { t: 6.0, type: 'rise' }, { t: 12.0, type: 'whoosh' }, { t: 13.2, type: 'ding' }, { t: 16.5, type: 'tick' }, { t: 18.0, type: 'ding' },
+  { t: 20.0, type: 'whoosh' }, { t: 21.0, type: 'pop' }, { t: 21.5, type: 'pop' }, { t: 24.0, type: 'whoosh' },
+  { t: 26.5, type: 'tick' }, { t: 27.0, type: 'tick' }, { t: 27.5, type: 'tick' }, { t: 28.0, type: 'tick' }, { t: 29.0, type: 'ding' },
+  { t: 32.0, type: 'ding' },
+];
+
+// ---- 線画（metamorphosis-trivia1 と同じ形） ----
+function pupa(g, x, y, s) {
+  g.save(); g.lineWidth = 4 * s; g.fillStyle = '#7a4f2a'; g.strokeStyle = '#e0b07a';
+  g.beginPath(); g.ellipse(x, y, 90 * s, 38 * s, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.lineWidth = 2.5 * s;
+  for (let i = 1; i < 6; i++) { const xx = x - 70 * s + i * 24 * s; g.beginPath(); g.moveTo(xx, y - 30 * s); g.quadraticCurveTo(xx + 6 * s, y, xx, y + 30 * s); g.stroke(); }
+  g.restore();
+}
+function moth(g, x, y, s, t) {
+  g.save(); g.lineWidth = 4 * s; g.strokeStyle = '#d8c8a8';
+  const fl = Math.sin(t * 10) * 0.12;
+  for (const sd of [-1, 1]) {
+    g.save(); g.translate(x, y); g.scale(sd * (1 - Math.abs(fl)), 1);
+    g.fillStyle = 'rgba(150,120,90,0.85)';
+    g.beginPath(); g.moveTo(6 * s, -20 * s); g.quadraticCurveTo(80 * s, -70 * s, 120 * s, -40 * s); g.quadraticCurveTo(90 * s, 0, 8 * s, 6 * s); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = 'rgba(120,95,75,0.85)';
+    g.beginPath(); g.moveTo(8 * s, 6 * s); g.quadraticCurveTo(80 * s, 20 * s, 70 * s, 55 * s); g.quadraticCurveTo(30 * s, 60 * s, 6 * s, 30 * s); g.closePath(); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(3 * s, -38 * s); g.quadraticCurveTo(14 * s, -60 * s, 30 * s, -66 * s); g.stroke();
+    g.restore();
+  }
+  g.fillStyle = '#6b5440'; g.beginPath(); g.ellipse(x, y + 10 * s, 11 * s, 48 * s, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.restore();
+}
+// 赤い×（共通にない部品）
+function redX(g, x, y, r, k) {
+  if (k <= 0) return;
+  g.save(); g.strokeStyle = TK.C.red; g.lineWidth = r * 0.16; g.lineCap = 'round'; g.globalAlpha *= clamp(k, 0, 1);
+  const s = r * (0.7 + 0.3 * TK.back(k));
+  g.beginPath(); g.moveTo(x - s, y - s); g.lineTo(x + s, y + s); g.moveTo(x + s, y - s); g.lineTo(x - s, y + s); g.stroke();
+  g.restore();
+}
+function arrow(g, x0, y0, x1, y1, c = 'rgba(255,255,255,0.6)', w = 6) {
+  const a = Math.atan2(y1 - y0, x1 - x0);
+  g.save(); g.strokeStyle = c; g.fillStyle = c; g.lineWidth = w; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1 - Math.cos(a) * 20, y1 - Math.sin(a) * 20); g.stroke();
+  g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 - Math.cos(a - 0.45) * 30, y1 - Math.sin(a - 0.45) * 30); g.lineTo(x1 - Math.cos(a + 0.45) * 30, y1 - Math.sin(a + 0.45) * 30); g.closePath(); g.fill();
+  g.restore();
+}
+const rnd = (i, j = 0) => { const s = Math.sin(i * 12.9898 + j * 78.233) * 43758.5453; return s - Math.floor(s); };
+
+// さなぎの断面。km: 筋肉がこわれる 0→1、kn: 神経の枝がのびる 0→1、kb: 翅・脚の芽が育つ 0→1
+function pupaInside(g, t, km, kn, kb) {
+  const cx = 540, cy = 640, rx = 410, ry = 200;
+  g.save();
+  g.fillStyle = 'rgba(122,79,42,0.35)'; g.strokeStyle = '#e0b07a'; g.lineWidth = 6;
+  g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); g.clip();
+  // 筋肉（朱色の帯）→ かけら → 溶けて材料に
+  for (let i = 0; i < 7; i++) {
+    const x0 = cx - 300 + i * 90, y0 = cy - 130;
+    for (let j = 0; j < 6; j++) {
+      const r = rnd(i, j);
+      const dx = (r - 0.5) * 170 * km, dy = (Math.cos(i * 3 + j) * 0.5 + 0.3) * 150 * km;
+      g.globalAlpha = 1 - 0.8 * km;
+      g.fillStyle = VERM;
+      g.save(); g.translate(x0 + dx, y0 + j * 14 + dy); g.rotate(km * (r - 0.5) * 3);
+      g.fillRect(-36 + 30 * km, -6, 72 - 60 * km, 11); g.restore();
+    }
+  }
+  // 材料の粒（うすい）
+  if (km > 0.4) {
+    g.globalAlpha = (km - 0.4) / 0.6 * 0.5;
+    for (let i = 0; i < 60; i++) { g.fillStyle = '#ffb38a'; g.beginPath(); g.arc(cx - 360 + rnd(i, 3) * 720, cy - 150 + rnd(i, 5) * 260 + Math.sin(t + i) * 6, 4, 0, Math.PI * 2); g.fill(); }
+  }
+  g.globalAlpha = 1;
+  // 翅・脚の芽（青緑）
+  if (kb > 0) {
+    g.fillStyle = TEAL; g.strokeStyle = '#bff8ec'; g.lineWidth = 3;
+    const w = 40 + 170 * kb;
+    g.beginPath(); g.ellipse(cx + 40, cy - 40, w, 26 + 50 * kb, -0.35, 0, Math.PI * 2); g.fill(); g.stroke();
+    for (let i = 0; i < 3; i++) { const lx = cx + 140 + i * 50; g.beginPath(); g.roundRect(lx, cy + 120, 18, 20 + 50 * kb, 9); g.fill(); g.stroke(); }
+  }
+  // 脳と神経（空色）は残る
+  const ny = cy + 95;
+  g.strokeStyle = SKY; g.fillStyle = SKY; g.lineWidth = 9; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(cx + 300, cy - 20); g.quadraticCurveTo(cx + 260, ny, cx + 180, ny); g.lineTo(cx - 330, ny); g.stroke();
+  g.beginPath(); g.ellipse(cx + 300, cy - 40, 46, 36, 0, 0, Math.PI * 2); g.fill();
+  for (let i = 0; i < 7; i++) {
+    const gx = cx + 150 - i * 75;
+    g.beginPath(); g.arc(gx, ny, 15, 0, Math.PI * 2); g.fill();
+    const L = 30 + 70 * kn;
+    g.lineWidth = 4;
+    g.beginPath(); g.moveTo(gx, ny); g.lineTo(gx - L * 0.5, ny - L); g.moveTo(gx, ny); g.lineTo(gx + L * 0.4, ny - L * 0.9); g.stroke();
+    g.lineWidth = 9;
+  }
+  g.restore();
+}
+function legend(g, items, y) {
+  items.forEach(([c, s], i) => { g.fillStyle = c; g.fillRect(150, y + i * 76 - 16, 60, 32); TK.text(g, s, 230, y + i * 76, 44, { align: 'left' }); });
+}
+
+// 1つの運動ニューロンのつなぎ直し（12〜20秒）
+function rewire(g, t) {
+  const bx = 220, by = 640;
+  const kOld = clamp((t - 14.0) / 1.2, 0, 1);    // イモムシの筋肉が消える
+  const kNew = clamp((t - 15.4) / 1.6, 0, 1);    // ガの筋肉ができる
+  const kAx = clamp((t - 16.4) / 1.6, 0, 1);     // 軸索がのび直す
+  // イモムシの筋肉（上）
+  g.save(); g.globalAlpha *= 1 - 0.85 * kOld;
+  g.fillStyle = VERM; g.beginPath(); g.roundRect(660, 400, 280, 90, 45); g.fill();
+  g.restore();
+  TK.text(g, 'イモムシの筋肉', 800, 340, 44, { color: VERM });
+  if (kOld > 0.5) redX(g, 800, 445, 60, (kOld - 0.5) * 2);
+  // ガの筋肉（下）
+  if (kNew > 0) {
+    g.save(); g.globalAlpha *= kNew; g.fillStyle = TEAL;
+    g.beginPath(); g.roundRect(660, 790, 280 * kNew, 90, 45); g.fill();
+    g.restore();
+    TK.text(g, 'ガの筋肉', 800, 940, 44, { color: TEAL });
+  }
+  // 軸索: はじめは上の筋肉へ。切れたあと、下へのび直す
+  g.save(); g.strokeStyle = SKY; g.lineWidth = 10; g.lineCap = 'round';
+  if (kOld < 0.6) { const L = 1 - kOld / 0.6; g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(450, by - 30, bx + (660 - bx) * L, by + (445 - by) * L); g.stroke(); }
+  else if (kAx > 0) {
+    const ex = bx + (660 - bx) * kAx, ey = by + (835 - by) * kAx;
+    g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(bx + (450 - bx) * kAx, by + 20 * kAx, ex, ey); g.stroke();
+    g.fillStyle = SKY; g.beginPath(); g.arc(ex, ey, 14, 0, Math.PI * 2); g.fill();
+  }
+  // 細胞体（ずっと光ったまま）
+  const gl = g.createRadialGradient(bx, by, 0, bx, by, 110);
+  gl.addColorStop(0, 'rgba(95,212,255,0.55)'); gl.addColorStop(1, 'rgba(95,212,255,0)');
+  g.fillStyle = gl; g.beginPath(); g.arc(bx, by, 110, 0, Math.PI * 2); g.fill();
+  g.fillStyle = SKY; g.beginPath(); g.arc(bx, by, 46, 0, Math.PI * 2); g.fill();
+  g.restore();
+  TK.text(g, '神経の細胞', bx, by + 100, 44, { color: SKY });
+  TK.text(g, '生き残る', bx, by + 160, 50, { color: TK.C.green });
+  if (kAx >= 1) { g.save(); g.globalAlpha *= TK.pop(t, 18.0); TK.text(g, 'つなぎ直し', 450, 900, 52, { color: TK.C.acc }); g.restore(); }
+}
+
+// 羽化のあと、お腹の神経節の細胞が約半分消える（24〜32秒）
+const GANG = [];
+for (let gi = 0; gi < 4; gi++) for (let j = 0; j < 12; j++) GANG.push({ gi, j, die: false, r: rnd(gi * 13 + j, 9) });
+{ // 神経節ごとにちょうど半分を選ぶ（模式）
+  for (let gi = 0; gi < 4; gi++) { const ns = GANG.filter(n => n.gi === gi).sort((a, b) => a.r - b.r); ns.slice(0, 6).forEach((n, k) => { n.die = true; n.order = gi * 0.35 + k * 0.25; }); }
+}
+function neuronDeath(g, t) {
+  moth(g, 540, 380, 1.4, t);
+  TK.text(g, 'ガ（羽化のあと）', 540, 220, 46, { color: TK.C.sub });
+  // お腹の神経のくさり
+  const y = 760;
+  g.save(); g.strokeStyle = SKY; g.lineWidth = 8;
+  g.beginPath(); g.moveTo(120, y); g.lineTo(940, y); g.stroke(); g.restore();
+  const kd = (t - 26.4);
+  let alive = 0;
+  for (let gi = 0; gi < 4; gi++) {
+    const gx = 220 + gi * 210;
+    TK.card(g, gx - 90, y - 110, 180, 220, { r: 60, fill: 'rgba(20,34,72,0.9)', stroke: 'rgba(95,212,255,0.6)' });
+    for (const n of GANG.filter(n => n.gi === gi)) {
+      const px = gx - 55 + (n.j % 4) * 37, py = y - 70 + Math.floor(n.j / 4) * 70;
+      const k = n.die ? clamp((kd - n.order) / 0.5, 0, 1) : 0;
+      if (k < 1) alive++;
+      if (k >= 1) { g.save(); g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 3; g.setLineDash([4, 4]); g.beginPath(); g.arc(px, py, 13, 0, Math.PI * 2); g.stroke(); g.restore(); }
+      else { g.fillStyle = `rgba(95,212,255,${1 - k})`; g.beginPath(); g.arc(px, py, 13 * (1 - 0.4 * k), 0, Math.PI * 2); g.fill(); }
+    }
+  }
+  TK.text(g, 'お腹の神経のかたまり（模式）', 540, 920, 40, { color: TK.C.sub });
+  // 日にち（羽化から 0 → 2 日）
+  const day = clamp((t - 25.0) / 4.0, 0, 1) * 2;
+  TK.card(g, 340, 510, 400, 100, { r: 50 });
+  TK.text(g, '羽化から ' + day.toFixed(1) + ' 日', 540, 562, 52);
+  if (t > 29.0) { g.save(); g.globalAlpha *= TK.pop(t, 29.0); TK.text(g, '約 50% が消える', 540, 1040, 72, { color: TK.C.acc }); g.restore(); }
+}
+
+function draw(g, t) {
+  // 0〜4: フック。「ドロドロのスープ」に半分だけ×
+  if (t < 4.0) {
+    const f = fade(t, -1, 4.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    TK.hook(g, t, 0.0, 4.0, 'さなぎの中は\nドロドロのスープ', { y: 420, size: 108 });
+    if (t > 1.6) {
+      // 右半分にだけ ×（半分ウソ）
+      redX(g, 760, 500, 90, (t - 1.6) / 0.3);
+      g.save(); g.globalAlpha *= TK.pop(t, 2.3); TK.text(g, '…[半分ウソ]', PW / 2, 700, 110, { stroke: 'rgba(0,0,0,0.6)' }); g.restore();
+    }
+    // さなぎの断面：左はドロドロ、右は神経が残る
+    if (t > 0.6) {
+      g.save(); g.globalAlpha *= TK.pop(t, 0.6);
+      const cx = 540, cy = 980;
+      g.fillStyle = 'rgba(122,79,42,0.45)'; g.strokeStyle = '#e0b07a'; g.lineWidth = 6;
+      g.beginPath(); g.ellipse(cx, cy, 330, 140, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+      g.save(); g.beginPath(); g.ellipse(cx, cy, 330, 140, 0, 0, Math.PI * 2); g.clip();
+      for (let i = 0; i < 30; i++) { g.fillStyle = 'rgba(255,170,120,0.5)'; g.beginPath(); g.arc(cx - 300 + rnd(i) * 300, cy - 110 + rnd(i, 2) * 220 + Math.sin(t * 2 + i) * 8, 10 + rnd(i, 4) * 14, 0, Math.PI * 2); g.fill(); }
+      g.strokeStyle = SKY; g.lineWidth = 8; g.beginPath(); g.moveTo(cx - 20, cy + 40); g.lineTo(cx + 300, cy + 40); g.stroke();
+      g.fillStyle = SKY; for (let i = 0; i < 4; i++) { g.beginPath(); g.arc(cx + 40 + i * 70, cy + 40, 13, 0, Math.PI * 2); g.fill(); }
+      g.restore(); g.restore();
+    }
+    g.restore();
+  }
+  // 4〜12: 筋肉がこわれて材料に
+  if (t >= 4.0 && t < 12.0) {
+    const km = ease(clamp((t - 5.0) / 5.5, 0, 1));
+    g.save(); g.globalAlpha = fade(t, 4.0, 12.0, 0.3);
+    TK.text(g, 'さなぎの中（模式図）', PW / 2, 300, 60, { color: TK.C.sub });
+    pupaInside(g, t, km, 0, 0);
+    legend(g, [[VERM, 'こわれて材料に（筋肉の多く）']], 960);
+    g.restore();
+  }
+  // 12〜20: 神経の細胞は生き残って、つなぎ直す
+  if (t >= 12.0 && t < 20.0) {
+    g.save(); g.globalAlpha = fade(t, 12.0, 20.0, 0.3);
+    TK.text(g, '体を動かす神経（運動ニューロン）', PW / 2, 240, 54, { color: TK.C.sub });
+    rewire(g, t);
+    g.restore();
+  }
+  // 20〜24: 翅・脚の芽が育つ
+  if (t >= 20.0 && t < 24.0) {
+    const kb = ease(clamp((t - 20.5) / 3.0, 0, 1));
+    g.save(); g.globalAlpha = fade(t, 20.0, 24.0, 0.3);
+    TK.text(g, 'さなぎの中（模式図）', PW / 2, 300, 60, { color: TK.C.sub });
+    pupaInside(g, t, 1, 1, kb);
+    legend(g, [[SKY, '残って作りかえ（脳・神経）'], [TEAL, '新しく作る（翅・脚）']], 960);
+    g.restore();
+  }
+  // 24〜32: 羽化のあと、神経の約半分が消える
+  if (t >= 24.0 && t < 32.0) {
+    g.save(); g.globalAlpha = fade(t, 24.0, 32.0, 0.3);
+    neuronDeath(g, t);
+    g.restore();
+  }
+  // 32〜35: まとめ
+  if (t >= 32.0) {
+    g.save(); g.globalAlpha = fade(t, 32.0, 35.5, 0.3);
+    const steps = [['こわす', VERM], ['残して\nつなぎ直す', SKY], ['新しく作る', TEAL], ['片づける', '#c9d4ff']];
+    steps.forEach(([s, c], i) => {
+      const a = 32.1 + i * 0.35; if (t < a) return;
+      const y = 330 + i * 190;
+      g.save(); g.globalAlpha *= TK.pop(t, a);
+      TK.card(g, 240, y - 75, 600, 150, { stroke: c, lw: 5 });
+      TK.text(g, (i + 1) + '', 310, y, 72, { color: c });
+      TK.lines(g, s, 580, y, 54, { color: '#fff' });
+      g.restore();
+      if (i < 3) arrow(g, 540, y + 78, 540, y + 112, 'rgba(255,255,255,0.5)', 5);
+    });
+    g.restore();
+  }
+  if (t >= 4.0 && t < 12.0) TK.note(g, t, 4.0, 12.0, '器官ごとの色わけの模式図（細胞1つずつではない）', { size: 32 });
+  if (t >= 12.0 && t < 20.0) TK.note(g, t, 12.0, 20.0, 'Levine & Truman (1985) J Neurosci', { size: 32 });
+  if (t >= 24.0 && t < 32.0) TK.note(g, t, 24.0, 32.0, '点の数は模式。日にちは要旨からの目安', { size: 32 });
+  if (t >= 32.0) TK.note(g, t, 32.0, 35.0, '出どころ: Truman & Schwartz (1984) J Neurosci 4(1):274–280\nLevine & Truman (1985) J Neurosci', { size: 30 });
+}
+
+triviaStart({ out: 'metamorphosis-trivia2', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

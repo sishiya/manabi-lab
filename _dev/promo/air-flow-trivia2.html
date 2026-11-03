@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく air-flow-2（型C）「寝ているあいだ、寝室の CO₂ はどこまで上がる？」。台本は trivia/air-flow.md。?short で録る
+// 1部屋のバランス: 容積 23 m³、2人 × 0.003 L/s（Persily & de Jonge 2017 の式からの目安）、換気 11.7 m³/h、外 420 ppm。
+// C(h) = 420 + G/Q × (1 − e^(−Q h / V))（ドアのすき間は考えない）。メーターはこの式で計算した値を出す
+const DUR = 35;
+const V = 23, G = 2 * 0.003 * 3.6, Q = 11.7, C0 = 420;   // G: m³/h
+const co2 = h => C0 + G / Q * 1e6 * (1 - Math.exp(-Q * h / V));
+const subs = [
+  { a: 0.0, b: 1.6, ja: 'ドアを閉めて寝たら？', en: 'What if you sleep with the door shut?', noBurn: true },
+  { a: 1.6, b: 3.5, ja: '6畳の寝室。2人で、ドアを閉めて寝る', en: 'A small bedroom. Two people, door closed' },
+  { a: 3.5, b: 9.0, ja: '眠っている人も、息で二酸化炭素を出す。\n1人 1時間に約[10リットル]', en: 'Even asleep, we breathe out CO₂ —\nabout 10 litres an hour each' },
+  { a: 9.0, b: 14.0, ja: '入れかえるのは、24時間換気の\n[1時間に0.5回]だけ、とすると…', en: 'If the only fresh air is 24-hour ventilation\nat half a room per hour…' },
+  { a: 14.0, b: 19.0, ja: '1時間ほどで[1000ppm]\n（ビルの空気の基準）をこえ', en: 'Within about an hour it passes 1,000 ppm\n(the standard for office buildings)' },
+  { a: 19.0, b: 24.0, ja: '朝には、約[2300ppm]', en: 'and by morning it’s about 2,300 ppm' },
+  { a: 24.0, b: 30.0, ja: '[毒になる濃さではない]。でも\n「朝、部屋がむっとする」の正体のひとつ', en: 'Not a toxic level. But it’s one reason\nthe room feels stuffy in the morning' },
+  { a: 30.0, b: 35.0, ja: 'ちなみに、この動画の35秒で\nあなたも約[0.1リットル]出しました', en: 'By the way, in these 35 seconds\nyou breathed out about 0.1 litres too' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 3.5, type: 'whoosh' }, { t: 9.0, type: 'pop' }, { t: 14.0, type: 'rise' },
+  { t: 15.1, type: 'buzz' }, { t: 23.6, type: 'ding' }, { t: 24.0, type: 'whoosh' }, { t: 30.0, type: 'pop' }, { t: 33.5, type: 'ding' },
+];
+const CO = '#ff9f45', AIR = '#5fd4ff';
+const rnd = (i, k = 1) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
+const hours = t => t < 14 ? 0 : 8 * clamp((t - 14.2) / 9.4, 0, 1);
+const RX0 = 120, RX1 = 960, RY0 = 300, RY1 = 680;
+function room(g, t, C, open) {
+  g.strokeStyle = '#cfe0ff'; g.lineWidth = 7; g.strokeRect(RX0, RY0, RX1 - RX0, RY1 - RY0);
+  // 給気口・ドア
+  g.fillStyle = TK.C.bg0; g.fillRect(RX0 - 6, RY0 + 30, 12, 60);
+  TK.text(g, '給気口', RX0 + 70, RY0 - 30, 38, { color: AIR });
+  const dw = open * 150; g.fillStyle = TK.C.bg0; g.fillRect(RX1 - 6, RY1 - 240, 12, 240 * open);
+  g.strokeStyle = '#d9b77a'; g.lineWidth = 10; g.beginPath(); g.moveTo(RX1, RY1 - 240); g.lineTo(RX1 - dw, RY1 - 240 + 240 * (1 - open)); g.stroke();
+  TK.text(g, open > 0.5 ? 'ドア（あけた）' : 'ドア（閉めた）', RX1 - 120, RY1 + 36, 38, { color: '#d9b77a' });
+  // ベッドと2人
+  g.fillStyle = '#3a4f86'; g.fillRect(260, 560, 460, 90); g.fillStyle = '#e6ecff';
+  [340, 470].forEach(x => { g.beginPath(); g.arc(x, 545, 26, 0, Math.PI * 2); g.fill(); });
+  g.fillStyle = '#5b72b0'; g.fillRect(380, 548, 330, 30);
+  // CO₂ の点（外より多いぶんに比例）
+  const n = Math.round((C - C0) / 2300 * 260);
+  for (let i = 0; i < n; i++) {
+    const x = RX0 + 20 + rnd(i) * (RX1 - RX0 - 40) + Math.sin(t + i) * 8, y = RY0 + 20 + rnd(i, 2) * (RY1 - RY0 - 40) + Math.cos(t * 0.8 + i) * 8;
+    g.fillStyle = CO; g.globalAlpha = 0.85; g.beginPath(); g.arc(x, y, 8, 0, Math.PI * 2); g.fill();
+  }
+  g.globalAlpha = 1;
+  // 寝息
+  [340, 470].forEach((x, j) => { const p = (t * 0.5 + j * 0.5) % 1; g.globalAlpha = 1 - p; g.fillStyle = CO; g.beginPath(); g.arc(x + 20 + p * 40, 520 - p * 60, 10, 0, Math.PI * 2); g.fill(); });
+  g.globalAlpha = 1;
+}
+function meter(g, C) {
+  const x0 = 130, x1 = 950, y = 870, X = c => lerp(x0, x1, clamp(c / 2500, 0, 1));
+  g.fillStyle = 'rgba(255,255,255,0.1)'; g.beginPath(); g.roundRect(x0, y - 34, x1 - x0, 68, 34); g.fill();
+  g.fillStyle = C > 1000 ? CO : AIR; g.beginPath(); g.roundRect(x0, y - 34, Math.max(68, X(C) - x0), 68, 34); g.fill();
+  g.strokeStyle = TK.C.red; g.lineWidth = 6; g.beginPath(); g.moveTo(X(1000), y - 60); g.lineTo(X(1000), y + 60); g.stroke();
+  TK.text(g, '1000（ビルの基準）', X(1000), y + 92, 34, { color: TK.C.red });
+  TK.text(g, 'CO₂ ' + Math.round(C).toLocaleString('ja-JP') + ' ppm', PW / 2, y - 90, 66, { color: C > 1000 ? CO : '#fff' });
+}
+function clockCard(g, h) {
+  const m = Math.round((23 * 60 + h * 60)) % (24 * 60);
+  TK.card(g, 330, 140, 420, 110, { r: 55 });
+  TK.text(g, String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'), PW / 2, 196, 72);
+}
+
+function draw(g, t) {
+  if (t >= 30.0) {   // あなたの分
+    const L = t * 0.003;
+    TK.text(g, 'この動画で、あなたが出した CO₂', PW / 2, 420, 56, { color: TK.C.sub });
+    TK.text(g, '約 ' + L.toFixed(2) + ' L', PW / 2, 580, 140, { color: CO });
+    TK.note(g, t, 30, 35, '出どころ: Persily & de Jonge (2017) Indoor Air 27:868・建築物衛生法の基準・滋賀県', { size: 28 });
+    return;
+  }
+  const h = hours(t);
+  let C = co2(h), open = 0;
+  if (t >= 24.0) { open = clamp((t - 24.6) / 0.8, 0, 1); C = lerp(co2(8), 900, ease((t - 25.0) / 4.5)); }
+  room(g, t, C, open);
+  clockCard(g, h);
+  meter(g, C);
+  if (t < 1.6) TK.hook(g, t, 0, 1.6, 'ドアを閉めて\n寝たら？', { y: 480, size: 110 });
+  if (t >= 3.5 && t < 9.0) { TK.card(g, 260, 330, 560, 90, { r: 45 }); TK.text(g, '1人 1時間に 約10 L', PW / 2, 375, 50); }
+  if (t >= 9.0 && t < 14.0) { TK.card(g, 260, 330, 560, 90, { r: 45 }); TK.text(g, '換気 1時間に 0.5回', PW / 2, 375, 50, { color: AIR }); }
+  if (t >= 3.5 && t < 24) TK.note(g, t, 3.5, 24, 'モデルの値: 6畳・2人・24時間換気がきちんと働く・ドアのすき間なし', { size: 30 });
+  if (t >= 24) TK.note(g, t, 24, 30, 'ドアをあけたあとの下がり方は、計算ではなく飾りです', { size: 30 });
+}
+
+triviaStart({ out: 'air-flow-trivia2', dur: DUR, draw, subs, cues, peek: 1.0 });
+</script>
+</body>
+</html>

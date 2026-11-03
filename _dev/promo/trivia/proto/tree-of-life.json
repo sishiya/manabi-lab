@@ -1,0 +1,24 @@
+[
+  {
+    "id": "tree-of-life-1",
+    "page": "tree-of-life-trivia1",
+    "mp4": "out/tree-of-life-trivia1-short.mp4",
+    "type": "A",
+    "title": "ヒトデは、タコや虫より「ヒトの親せき」",
+    "dur": 28,
+    "voice": "(2) VOICEVOX → いまは字幕だけ",
+    "app_footage": false,
+    "notes": "Canvas だけ（線画のヒトデ・タコ・ヒト、カメラの目の断面、L字の系統樹、胚のくぼみ）。REVIEW のとおりヒトデの丸は 1.0 秒から（0.8 秒は考えさせる）。注: 『多くの研究で支持される分け方（疑う解析も一部にある）』『後口動物の多くは（例外もある）』『タコの目は収れん』。アプリの系統樹の録画は使っていない。出どころの UCMP は英語名で表示。"
+  },
+  {
+    "id": "tree-of-life-2",
+    "page": "tree-of-life-trivia2",
+    "mp4": "out/tree-of-life-trivia2-short.mp4",
+    "type": "H",
+    "title": "ワニの親せきは、トカゲじゃない",
+    "dur": 25,
+    "voice": "(2) VOICEVOX → いまは字幕だけ",
+    "app_footage": false,
+    "notes": "Canvas だけ（線画のワニと3択・ワニ＋鳥（主竜類）→カメ→トカゲ・ヘビと枝が足される系統樹、恐竜は点線）。8〜14秒は枝が2本だけで画面の下半分が少しさびしい（恐竜の影などを足す余地）。カメの位置の論争と 1,145 か所を注に。アプリの Open Tree の並びとの照合はしていない。tree-of-life-3 は REVIEW の『捨てていいもの』なので作らない。"
+  }
+]

@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく net-route-2（型A ぜんぶ逆）「海底ケーブルを切るのはサメ…じゃない」。台本は trivia/net-route.md。?short で録る
+// ICPC の分析（業界紙 Fibre Systems・Lightwave 2015 の報道による）: 2007〜2014 は魚・サメの故障 0件、1959〜2006 は全体の 0.5%、
+// いかりと漁が 65〜75%。サメは自分で描いた単純な線画（こわがらせない）。最後の遠回りは Canvas の網の図
+const DUR = 30;
+const subs = [
+  { a: 0.0, b: 3.0, ja: 'インターネットの海底ケーブル。\n切るのはサメ…じゃない', en: 'Undersea internet cables.\nThe culprit isn’t sharks.', noBurn: true },
+  { a: 3.0, b: 10.0, ja: '2007年から2014年、\n魚やサメにかまれた故障は、[0件]', en: 'From 2007 to 2014,\nfaults from fish or shark bites: zero.' },
+  { a: 10.0, b: 15.0, ja: 'その前の50年でも、全体の[0.5%]', en: 'Even in the 50 years before that, just 0.5%.' },
+  { a: 15.0, b: 23.0, ja: '本当の犯人は、[船のいかり]と[漁の網]。\n故障の3分の2から4分の3', en: 'The real culprits: ship anchors and fishing gear.\nTwo-thirds to three-quarters of all faults.' },
+  { a: 23.0, b: 30.0, ja: '切れても、包みは別の道をさがして、\n[遠回り]で届く', en: 'Even when one is cut, packets find\nanother route and arrive the long way.' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 1.3, type: 'buzz' }, { t: 3.0, type: 'whoosh' }, { t: 4.4, type: 'ding' },
+  { t: 10.0, type: 'whoosh' }, { t: 11.2, type: 'tick' }, { t: 15.0, type: 'whoosh' }, { t: 15.8, type: 'rise' }, { t: 18.0, type: 'pop' }, { t: 18.6, type: 'pop' },
+  { t: 23.0, type: 'whoosh' }, { t: 24.6, type: 'buzz' }, { t: 25.6, type: 'whoosh' }, { t: 28.0, type: 'ding' },
+];
+
+// サメ（丸い線画。こわくしない）
+function shark(g, x, y, s, t) {
+  g.save(); g.translate(x, y); g.scale(s, s); g.rotate(Math.sin(t * 2) * 0.04);
+  g.strokeStyle = '#cfe0ff'; g.fillStyle = 'rgba(160,190,255,0.16)'; g.lineWidth = 6; g.lineJoin = 'round';
+  g.beginPath(); g.moveTo(-170, 0); g.quadraticCurveTo(-40, -90, 150, -10); g.quadraticCurveTo(170, 10, 140, 25); g.quadraticCurveTo(-20, 70, -170, 0); g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(-20, -50); g.lineTo(10, -120); g.lineTo(50, -42); g.stroke();   // 背びれ
+  const w = Math.sin(t * 5) * 20;
+  g.beginPath(); g.moveTo(-165, 0); g.lineTo(-230, -60 + w); g.lineTo(-215, 0); g.lineTo(-230, 55 + w); g.closePath(); g.fill(); g.stroke();   // 尾
+  g.fillStyle = '#cfe0ff'; g.beginPath(); g.arc(100, -14, 7, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.moveTo(40, 30); g.lineTo(10, 70); g.lineTo(70, 34); g.stroke();   // 胸びれ
+  g.restore();
+}
+function cable(g, y, t, cut = -1) {
+  g.save(); g.strokeStyle = '#7c8fb8'; g.lineWidth = 16; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(60, y); g.lineTo(900, y); g.stroke();
+  g.fillStyle = TK.C.acc;
+  for (let i = 0; i < 5; i++) { const x = 60 + ((t * 300 + i * 170) % 840); g.beginPath(); g.arc(x, y, 7, 0, Math.PI * 2); g.fill(); }
+  g.restore();
+}
+function cross(g, cx, cy, r, k) {
+  g.save(); g.strokeStyle = TK.C.red; g.lineWidth = 22; g.lineCap = 'round'; g.globalAlpha *= k;
+  g.beginPath(); g.moveTo(cx - r, cy - r); g.lineTo(cx + r, cy + r); g.moveTo(cx + r, cy - r); g.lineTo(cx - r, cy + r); g.stroke(); g.restore();
+}
+function anchor(g, x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = '#e8f0ff'; g.lineWidth = 8; g.lineCap = 'round';
+  g.beginPath(); g.arc(0, -70, 16, 0, Math.PI * 2); g.moveTo(0, -54); g.lineTo(0, 60); g.moveTo(-36, -30); g.lineTo(36, -30);
+  g.moveTo(-60, 20); g.quadraticCurveTo(-50, 70, 0, 70); g.quadraticCurveTo(50, 70, 60, 20); g.stroke(); g.restore();
+}
+function net(g, x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = '#e8f0ff'; g.lineWidth = 4;
+  g.beginPath(); g.moveTo(-70, -60); g.quadraticCurveTo(0, -90, 70, -60); g.lineTo(40, 60); g.quadraticCurveTo(0, 80, -40, 60); g.closePath(); g.stroke();
+  for (let i = 1; i < 5; i++) { g.beginPath(); g.moveTo(lerp(-70, -40, i / 5), lerp(-60, 60, i / 5)); g.lineTo(lerp(70, 40, i / 5), lerp(-60, 60, i / 5)); g.stroke(); g.beginPath(); g.moveTo(lerp(-70, 70, i / 5), -65); g.lineTo(lerp(-40, 40, i / 5), 66); g.stroke(); }
+  g.restore();
+}
+
+function draw(g, t) {
+  // 0〜3: フック
+  if (t < 3.0) {
+    cable(g, 760, t);
+    shark(g, 500, 520, 1.3, t);
+    g.save(); g.globalAlpha = TK.pop(t, 0.2, 0.3); TK.text(g, 'ケーブルを切る犯人？', 480, 250, 84, { color: '#fff' }); g.restore();
+    cross(g, 480, 520, 180, TK.pop(t, 1.3, 0.3));
+  }
+  // 3〜10: 0件
+  if (t >= 3.0 && t < 10.0) {
+    TK.text(g, '2007〜2014年（8年間）', PW / 2 - 60, 250, 60, { color: TK.C.sub });
+    TK.text(g, '魚・サメにかまれた故障', PW / 2 - 60, 340, 56);
+    g.save(); g.globalAlpha = TK.pop(t, 4.4, 0.4); TK.text(g, '0 件', PW / 2 - 60, 560, 260, { color: TK.C.acc, stroke: 'rgba(0,0,0,0.5)' }); g.restore();
+    shark(g, 480, 900, 0.7, t);
+  }
+  // 10〜15: 0.5%（100マスのうち半マス）
+  if (t >= 10.0 && t < 15.0) {
+    TK.text(g, '1959〜2006年', PW / 2 - 60, 230, 60, { color: TK.C.sub });
+    const n = 10, sz = 58, x0 = PW / 2 - 60 - n * sz / 2, y0 = 300;
+    for (let i = 0; i < 100; i++) {
+      const k = clamp((t - 10.2 - i * 0.008) / 0.2, 0, 1), x = x0 + (i % n) * sz, y = y0 + Math.floor(i / n) * sz;
+      g.save(); g.globalAlpha = k; g.fillStyle = 'rgba(160,190,255,0.18)'; g.fillRect(x + 4, y + 4, sz - 8, sz - 8); g.restore();
+    }
+    if (t > 11.2) { g.save(); g.fillStyle = TK.C.red; g.globalAlpha = 0.5 + 0.5 * Math.sin(t * 8) ** 2; g.fillRect(x0 + 4, y0 + 4, (sz - 8) / 2, sz - 8); g.restore(); TK.text(g, '魚にかまれた故障 [0.5%]', PW / 2 - 60, 960, 62); }
+  }
+  // 15〜23: 円グラフ
+  if (t >= 15.0 && t < 23.0) {
+    const cx = 330, cy = 530, r = 230, k = TK.out((t - 15.6) / 1.4);
+    g.save();
+    g.fillStyle = 'rgba(255,255,255,0.1)'; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
+    g.fillStyle = TK.C.acc; g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * 0.65 * k); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,207,74,0.45)'; g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, r, -Math.PI / 2 + Math.PI * 2 * 0.65 * k, -Math.PI / 2 + Math.PI * 2 * 0.75 * k); g.closePath(); g.fill();
+    g.restore();
+    if (k > 0.9) TK.text(g, 'いかりと網 [65〜75%]', PW / 2 - 60, 930, 68);
+    if (t > 18.0) { g.save(); g.globalAlpha = TK.pop(t, 18.0, 0.35); anchor(g, 720, 400, 1.1); TK.text(g, '船のいかり', 720, 520, 48); g.restore(); }
+    if (t > 18.6) { g.save(); g.globalAlpha = TK.pop(t, 18.6, 0.35); net(g, 720, 700, 1.0); TK.text(g, '漁の網', 720, 820, 48); g.restore(); }
+    TK.text(g, 'ケーブルの故障のうち', PW / 2 - 60, 220, 48, { color: TK.C.sub });
+    TK.note(g, t, 16, 23, '割合は資料・年で幅がある（ITU は8割以上とも）', { size: 32 });
+  }
+  // 23〜30: 切れても遠回り（網の図）
+  if (t >= 23.0) {
+    const N = [[150, 400], [420, 300], [700, 380], [850, 640], [600, 820], [300, 760], [470, 560]];
+    const E = [[0, 1], [1, 2], [2, 3], [0, 5], [5, 4], [4, 3], [1, 6], [6, 4], [0, 6]];
+    const cutE = 2;   // 2→3 を切る（a: 0→1→2→3 の道、b: 0→5→4→3）
+    const cut = t > 24.6;
+    g.save(); g.lineCap = 'round';
+    E.forEach(([a, b], i) => {
+      g.strokeStyle = i === cutE && cut ? 'rgba(255,107,107,0.8)' : '#7c8fb8'; g.lineWidth = 10;
+      if (i === cutE && cut) { const [x1, y1] = N[a], [x2, y2] = N[b], mx = (x1 + x2) / 2, my = (y1 + y2) / 2; g.beginPath(); g.moveTo(x1, y1); g.lineTo(mx - 14, my - 20); g.moveTo(mx + 14, my + 20); g.lineTo(x2, y2); g.stroke(); }
+      else { g.beginPath(); g.moveTo(...N[a]); g.lineTo(...N[b]); g.stroke(); }
+    });
+    N.forEach(([x, y], i) => { g.fillStyle = i === 0 || i === 3 ? TK.C.acc2 : '#e8f0ff'; g.beginPath(); g.arc(x, y, i === 0 || i === 3 ? 30 : 20, 0, Math.PI * 2); g.fill(); });
+    g.restore();
+    TK.text(g, '出発', 150, 330, 44, { color: TK.C.acc2 }); TK.text(g, 'とうちゃく', 850, 710, 44, { color: TK.C.acc2, align: 'right' });
+    // 包みが進む
+    const path = cut ? [0, 5, 4, 3] : [0, 1, 2, 3], st = cut ? 25.6 : 23.2, u = ((t - st) / 2.2) % 1;
+    if (t >= st && (cut || t < 24.6)) {
+      const segs = path.length - 1, p = u * segs, i = Math.min(segs - 1, Math.floor(p)), f = p - i;
+      const [x1, y1] = N[path[i]], [x2, y2] = N[path[i + 1]];
+      g.save(); g.fillStyle = TK.C.acc; g.shadowColor = TK.C.acc; g.shadowBlur = 25; g.beginPath(); g.arc(lerp(x1, x2, f), lerp(y1, y2, f), 22, 0, Math.PI * 2); g.fill(); g.restore();
+    }
+    if (cut) { g.save(); g.globalAlpha = TK.pop(t, 24.6, 0.3); TK.text(g, 'ここが切れた', 810, 480, 40, { color: TK.C.red, align: 'right' }); g.restore(); }
+    TK.note(g, t, 26.5, 30, '出どころ: ICPC の分析（Fibre Systems・Lightwave 2015 の報道による）\n網の図はたとえ', { size: 30 });
+  }
+}
+
+triviaStart({ out: 'net-route-trivia2', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

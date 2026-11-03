@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく crt-pixels-1（型H 当ててみて）「ブラウン管の中の電子、どれくらい速い？」。台本は trivia/crt-pixels.md。?short で録る
+// 25kV（The Physics Factbook, Hong 2000）、電子の静止エネルギー 511keV（CODATA）。
+// 相対論: γ = 1 + 25/511 = 1.0489、β = 0.302 → 90,500 km/s（地球1周 0.44秒）。ふつうの式: β = √(2×25/511) = 0.313。ずれ 約3%
+// 実在のゲームの絵・機種名は出さない。最後のアプリの録画（光る点の組）は Canvas の赤緑青の点の図に
+const DUR = 30;
+const subs = [
+  { a: 0.0, b: 3.0, ja: 'ブラウン管テレビの中を飛ぶ電子。\nどれくらい速い？', en: 'Electrons flying inside an old CRT TV.\nHow fast are they?', noBurn: true },
+  { a: 5.0, b: 11.0, ja: '答えは C。光の速さの[約3割]、\n1秒で地球を[2周以上]', en: 'The answer is C: about 30% of light speed,\nmore than twice around the Earth per second.' },
+  { a: 11.0, b: 18.0, ja: 'カラーテレビは、およそ[2万5千ボルト]で\n電子を押し出していた', en: 'Color TVs pushed electrons\nwith about 25,000 volts.' },
+  { a: 18.0, b: 25.0, ja: 'ここまで速いと、ふつうの式では少しずれる。\nアインシュタインの式で、[約3%]なおす', en: 'At that speed the everyday formula is a bit off.\nEinstein’s formula corrects it by about 3%.' },
+  { a: 25.0, b: 30.0, ja: 'その電子が当たって光ったのが、\nあのにじんだ[ドット絵]', en: 'Those electrons hitting the screen\nmade the soft, glowing pixel art.' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 0.3, type: 'pop' }, { t: 0.5, type: 'pop' }, { t: 0.7, type: 'pop' }, { t: 3.0, type: 'tick' }, { t: 4.0, type: 'tick' }, { t: 5.0, type: 'ding' },
+  { t: 7.6, type: 'whoosh' }, { t: 11.0, type: 'whoosh' }, { t: 11.6, type: 'rise' }, { t: 18.0, type: 'pop' }, { t: 18.6, type: 'pop' }, { t: 19.2, type: 'pop' }, { t: 21.5, type: 'ding' },
+  { t: 25.0, type: 'whoosh' },
+];
+
+// ブラウン管の横から見た線画。x, y は首の左はし、s は大きさ。電子の点を飛ばす
+function tube(g, x, y, s, t, o = {}) {
+  g.save(); g.translate(x, y); g.scale(s, s);
+  g.strokeStyle = '#cfe0ff'; g.lineWidth = 5 / s * 1.2; g.fillStyle = 'rgba(160,190,255,0.08)';
+  g.beginPath(); g.moveTo(0, -30); g.lineTo(220, -30); g.lineTo(560, -230); g.quadraticCurveTo(600, 0, 560, 230); g.lineTo(220, 30); g.lineTo(0, 30); g.closePath(); g.fill(); g.stroke();
+  // 電子銃
+  g.fillStyle = '#9fb3d9'; g.fillRect(20, -16, 70, 32);
+  // 画面（蛍光面）
+  g.strokeStyle = TK.C.acc2; g.lineWidth = 8 / s; g.beginPath(); g.moveTo(560, -230); g.quadraticCurveTo(600, 0, 560, 230); g.stroke();
+  // 電子（だんだん速く）
+  g.fillStyle = TK.C.acc; g.shadowColor = TK.C.acc; g.shadowBlur = 20;
+  for (let i = 0; i < 6; i++) {
+    const p = ((t * (o.speed || 0.9) + i / 6) % 1), q = p * p, xx = lerp(95, 570, q), yy = Math.sin(i * 2.3) * 140 * q;
+    g.beginPath(); g.arc(xx, yy, 9 / s * 1.4, 0, Math.PI * 2); g.fill();
+  }
+  g.restore();
+}
+function earth(g, cx, cy, r, t) {
+  g.save();
+  g.fillStyle = 'rgba(95,168,255,0.35)'; g.strokeStyle = '#5fa8ff'; g.lineWidth = 4; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill(); g.stroke();
+  const a = -Math.PI / 2 + t * Math.PI * 2 * 2.26;
+  g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.globalAlpha = 0.6; g.beginPath(); g.arc(cx, cy, r + 26, a - 1.2, a); g.stroke(); g.globalAlpha = 1;
+  g.fillStyle = TK.C.acc; g.shadowColor = TK.C.acc; g.shadowBlur = 20; g.beginPath(); g.arc(cx + Math.cos(a) * (r + 26), cy + Math.sin(a) * (r + 26), 14, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+
+function draw(g, t) {
+  // 0〜7.5: 3択
+  if (t < 7.5) {
+    tube(g, 200, 230, 0.45, t, { speed: 1.4 });
+    if (t < 3.0) { g.save(); g.globalAlpha = TK.pop(t, 0.1, 0.4) * fade(t, 0, 3.0, 0.25); TK.text(g, 'この[点]、どれくらい速い？', PW / 2 - 60, 420, 68, { stroke: 'rgba(0,0,0,0.6)' }); g.restore(); }
+    TK.choices(g, t, 0.2, 7.5, ['新幹線くらい', '音の100倍', '光の速さの3割'], { y: 520, h: 160, gap: 30, answer: 2, reveal: 5.0, think: [3.0, 5.0], size: 62 });
+  }
+  // 7.5〜11: 秒速9万km、地球を2周以上
+  if (t >= 7.5 && t < 11.0) {
+    TK.count(g, t, 7.6, 11.0, 0, 90500, { y: 330, size: 150, dur: 1.0, label: '秒速', unit: 'km', fmt: v => '約' + Math.round(v / 10000) + '万' });
+    earth(g, PW / 2 - 60, 760, 150, t - 7.6);
+    TK.text(g, '1秒で地球を 2周以上', PW / 2 - 60, 990, 50, { color: TK.C.sub });
+  }
+  // 11〜18: 2万5千ボルトで押し出す
+  if (t >= 11.0 && t < 18.0) {
+    tube(g, 90, 600, 1.15, t, { speed: 1.2 });
+    g.save(); g.globalAlpha = TK.pop(t, 11.6, 0.4);
+    TK.card(g, 150, 190, 660, 130, { r: 30, fill: 'rgba(255,207,74,0.18)', stroke: TK.C.acc });
+    TK.text(g, '約 [2万5千] ボルト', PW / 2 - 60, 255, 72);
+    g.restore();
+    TK.text(g, '電子銃', 150, 900, 40, { color: TK.C.sub }); TK.text(g, '画面（光る面）', 800, 900, 40, { color: TK.C.acc2, align: 'right' });
+    TK.note(g, t, 12, 18, '電圧はテレビの大きさ・年代で 1万7千〜3万5千ボルトくらい\nこの動画の数字は 2万5千ボルトのとき', { size: 30 });
+  }
+  // 18〜25: 2つの式
+  if (t >= 18.0 && t < 25.0) {
+    TK.text(g, '光の速さの何%？', PW / 2 - 60, 240, 60, { color: TK.C.sub });
+    TK.bars(g, t, 18.2, 25.0, [
+      { label: 'ふつうの式（ニュートン）', v: 0.313 / 0.34, color: TK.C.acc2, text: '31.3%' },
+      { label: 'アインシュタインの式', v: 0.302 / 0.34, color: TK.C.acc, text: '30.2%' },
+    ], { y: 360, gap: 230, stagger: 0.6, size: 50 });
+    if (t > 21.5) { g.save(); g.globalAlpha = TK.pop(t, 21.5, 0.4); TK.text(g, 'ずれは 約[3%]', PW / 2 - 60, 900, 84); g.restore(); }
+  }
+  // 25〜30: 赤緑青の光る点と、ビームの帯
+  if (t >= 25.0) {
+    const cols = ['#ff4a4a', '#46ff7a', '#4a7dff'], s = 48, x0 = 110, y0 = 250, bandY = lerp(y0 - 60, y0 + 12 * s * 0.88 + 60, ((t - 25) / 2.4) % 1);
+    for (let r = 0; r < 12; r++) for (let c = 0; c < 16; c++) {
+      const x = x0 + c * s + (r % 2) * s / 2, y = y0 + r * s * 0.88, d = Math.abs(y - bandY);
+      const glow = Math.exp(-d * d / 1800);
+      g.save(); g.fillStyle = cols[(c + r) % 3]; g.globalAlpha = 0.18 + 0.82 * glow; if (glow > 0.3) { g.shadowColor = cols[(c + r) % 3]; g.shadowBlur = 24; }
+      g.beginPath(); g.arc(x, y, 16, 0, Math.PI * 2); g.fill(); g.restore();
+    }
+    TK.text(g, '寄って見ると、赤・緑・青の光る点', PW / 2 - 60, 190, 46, { color: TK.C.sub });
+    TK.note(g, t, 27, 30, '出どころ: The Physics Factbook（M. Hong 2000）\n電子の静止エネルギー 511 keV（CODATA）', { size: 30 });
+  }
+}
+
+triviaStart({ out: 'crt-pixels-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

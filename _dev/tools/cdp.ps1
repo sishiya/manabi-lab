@@ -25,7 +25,7 @@ function Start-CdpChrome([string]$Name, [int]$Port, [switch]$Visible, [switch]$G
     $cargs = @('--headless=new') + $(if ($Gpu) { @('--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist') } else { @('--use-angle=swiftshader', '--enable-unsafe-swiftshader') }) + $cargs
   }
   $p = Start-Process -FilePath $chrome -PassThru -WindowStyle $(if ($Visible) { 'Normal' } else { 'Hidden' }) -ArgumentList $cargs
-  for ($i = 0; $i -lt 50; $i++) { try { Invoke-RestMethod "http://127.0.0.1:$Port/json/version" | Out-Null; break } catch { Start-Sleep -Milliseconds 200 } }
+  for ($i = 0; $i -lt 150; $i++) { try { Invoke-RestMethod "http://127.0.0.1:$Port/json/version" | Out-Null; break } catch { Start-Sleep -Milliseconds 200 } }
   return [pscustomobject]@{ Name = $Name; Port = $Port; Proc = $p }
 }
 function Stop-CdpChrome($cdp) {

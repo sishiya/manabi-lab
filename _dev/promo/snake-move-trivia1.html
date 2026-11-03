@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく snake-move-1（型A ぜんぶ逆）「ヘビは、ろっ骨で歩く…じゃない」。台本は trivia/snake-move.md。?short で録る
+// Lissmann 1950（J. Exp. Biol. 26:368）: Home (1812) の「ろっ骨で進む」説を否定。ろっ骨の先は背骨に対して同じ位置のまま、
+// おなかの皮（鉛の円板の印）がろっ骨の先の上をすべる。伸びた所はちぢんだときより ろっ骨6本ぶん長い。138年 = 1950 − 1812。
+// こわがらせない: 横から見た1本の体の線（顔・口・ウロコの写実なし）。皮の動きは「背骨は一定の速さ、皮は止まる・進む」の模式。
+const DUR = 35;
+const subs = [
+  { a: 0.0, b: 3.0, ja: 'ヘビは、ろっ骨で歩いている…わけではありません', en: 'Snakes don’t actually walk on their ribs', noBurn: true },
+  { a: 3.0, b: 8.0, ja: '[1812年]、イギリスの学者が\n“ろっ骨を足のように使って進む”と考えた', en: 'In 1812, a British scientist proposed\nthat snakes use their ribs like legs' },
+  { a: 8.0, b: 14.0, ja: 'まっすぐ進むときのヘビ\n体は曲げないのに、前へ', en: 'A snake crawling in a straight line:\nit moves forward without bending' },
+  { a: 14.0, b: 18.0, ja: '[1950年]、おなかの皮に印を付けて\n写真で追った研究', en: 'In 1950, a study marked the belly skin\nand tracked it on film' },
+  { a: 18.0, b: 22.0, ja: 'ろっ骨の先は、背骨に対して\n[まったく動いていなかった]', en: 'The rib tips didn’t move at all\nrelative to the backbone' },
+  { a: 22.0, b: 26.0, ja: '動いていたのは[皮]\n伸びた所は、ろっ骨[6本ぶん]長い', en: 'It was the skin that moved.\nStretched parts spanned six more ribs' },
+  { a: 26.0, b: 29.5, ja: '皮が、ろっ骨の上を[すべっていた]', en: 'The skin was sliding over the ribs' },
+  { a: 29.5, b: 35.0, ja: '[138年]かかって、ろっ骨の“足”は\n皮の“くつ下”だったとわかった', en: 'After 138 years, the rib “legs”\nturned out to be skin “socks”' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 1.0, type: 'buzz' }, { t: 3.0, type: 'whoosh' }, { t: 3.8, type: 'pop' }, { t: 8.0, type: 'whoosh' },
+  { t: 14.0, type: 'pop' }, { t: 15.2, type: 'tick' }, { t: 18.0, type: 'ding' }, { t: 22.0, type: 'pop' }, { t: 26.0, type: 'whoosh' },
+  { t: 29.5, type: 'rise' }, { t: 31.0, type: 'ding' },
+];
+
+// ---- 横から見た体（まっすぐ）----
+const BODY = { len: 700, h: 74 };
+const RIB = 32;                         // ろっ骨の間かく（絵）
+// 体の輪郭。x0: しっぽの先、yb: おなかの線（地面）
+function body(g, x0, yb, o = {}) {
+  const L = BODY.len, H = BODY.h, top = yb - H;
+  g.save();
+  g.fillStyle = o.fill || 'rgba(120,200,170,0.16)'; g.strokeStyle = o.stroke || '#cfe8de'; g.lineWidth = 5; g.lineJoin = 'round';
+  g.beginPath();
+  g.moveTo(x0, yb - 8);
+  g.quadraticCurveTo(x0 + 120, top + 10, x0 + 240, top);      // しっぽ側は細く
+  g.lineTo(x0 + L - 50, top);
+  g.quadraticCurveTo(x0 + L + 30, top + 4, x0 + L + 30, yb - H / 2); // 頭は丸く（顔は描かない）
+  g.quadraticCurveTo(x0 + L + 26, yb, x0 + L - 40, yb);
+  g.lineTo(x0 + 40, yb);
+  g.closePath(); g.fill(); g.stroke();
+  // 背骨
+  if (o.spine !== false) { g.strokeStyle = 'rgba(207,224,255,0.45)'; g.lineWidth = 4; g.beginPath(); g.moveTo(x0 + 150, top + 18); g.lineTo(x0 + L - 30, top + 18); g.stroke(); }
+  g.restore();
+}
+// ろっ骨（背骨から おなかへ）。先の点の x を返す
+function ribs(g, x0, yb, o = {}) {
+  const top = yb - BODY.h, xs = [];
+  g.save(); g.strokeStyle = o.color || 'rgba(207,224,255,0.55)'; g.lineWidth = 3;
+  for (let x = x0 + 240; x < x0 + BODY.len - 60; x += RIB) {
+    g.beginPath(); g.moveTo(x, top + 18); g.quadraticCurveTo(x + 10, top + 40, x + 4, yb - 8); g.stroke();
+    xs.push(x + 4);
+  }
+  if (o.tips) { g.fillStyle = TK.C.acc2; xs.forEach(x => { g.beginPath(); g.arc(x, yb - 8, 5, 0, Math.PI * 2); g.fill(); }); }
+  g.restore();
+  return xs;
+}
+function ground(g, y, x0 = 80, x1 = 960, off = 0) {
+  g.strokeStyle = 'rgba(200,215,255,0.5)'; g.lineWidth = 4; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke();
+  g.strokeStyle = 'rgba(200,215,255,0.22)'; g.lineWidth = 2;
+  for (let x = x0 + (((off % 40) + 40) % 40); x < x1; x += 40) { g.beginPath(); g.moveTo(x, y + 4); g.lineTo(x - 16, y + 22); g.stroke(); }
+}
+// 皮の印: 背骨は一定の速さ V、皮は「止まる → すべって前へ」（波は頭からしっぽへ）
+const V = 34, W = 2 * Math.PI * 0.55, KW = 2 * Math.PI / 260;
+const skinX = (u, t) => u + V * t + (V / W) * Math.sin(W * t + KW * u);     // u: 印のもとの位置（体にそって）
+const skinV = (u, t) => V * (1 + Math.cos(W * t + KW * u));                  // 0 〜 2V（0 = 地面に止まっている）
+
+function crossX(g, x, y, s, k) {
+  g.save(); g.globalAlpha *= k; g.strokeStyle = TK.C.red; g.lineWidth = 22; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x - s, y - s); g.lineTo(x + s, y + s); g.moveTo(x + s, y - s); g.lineTo(x - s, y + s); g.stroke(); g.restore();
+}
+
+function draw(g, t) {
+  const YB = 820;
+  // 0〜3: フック
+  if (t < 3.0) {
+    g.save(); g.globalAlpha = fade(t, -1, 3, 0.3);
+    ground(g, YB); body(g, 140, YB); ribs(g, 140, YB);
+    g.restore();
+    TK.hook(g, t, 0.0, 3.0, 'ろっ骨で\n[歩く]？', { y: 380, size: 140 });
+    crossX(g, 540, 380, 170, clamp((t - 1.0) / 0.25, 0, 1));
+  }
+  // 3〜8: 1812年の考え（ろっ骨が足のように前後にふれる。点線・うすい色）
+  if (t >= 3.0 && t < 8.0) {
+    const f = fade(t, 3, 8, 0.3);
+    g.save(); g.globalAlpha = f;
+    TK.card(g, 100, 180, 880, 760, { fill: 'rgba(60,52,30,0.35)', stroke: 'rgba(255,207,74,0.45)', r: 18 });
+    TK.text(g, '1812年', PW / 2, 270, 96, { color: TK.C.acc });
+    TK.text(g, '昔の考え（Home の説）', PW / 2, 360, 46, { color: TK.C.sub });
+    const x0 = 150 + (t - 3) * 18;
+    body(g, x0, 700, { fill: 'rgba(200,190,150,0.10)', stroke: 'rgba(240,225,180,0.75)' });
+    g.setLineDash([10, 10]); g.strokeStyle = 'rgba(255,207,74,0.85)'; g.lineWidth = 5; g.lineCap = 'round';
+    let i = 0;
+    for (let x = x0 + 260; x < x0 + BODY.len - 60; x += RIB * 2, i++) {
+      const a = Math.sin(t * 7 + i * 1.3) * 0.5;
+      g.beginPath(); g.moveTo(x, 690); g.lineTo(x + Math.sin(a) * 60, 690 + Math.cos(a) * 70); g.stroke();
+    }
+    g.setLineDash([]);
+    TK.text(g, 'ろっ骨が“足”？', PW / 2, 870, 58);
+    g.restore();
+  }
+  // 8〜14: まっすぐ進む（地面に固定のカメラ）
+  if (t >= 8.0 && t < 14.0) {
+    const f = fade(t, 8, 14, 0.3), x0 = 60 + (t - 8) * 20;
+    g.save(); g.globalAlpha = f;
+    ground(g, YB); body(g, x0, YB); ribs(g, x0, YB);
+    // 皮の印（まだ説明しない。止まる所だけ うすく光る）
+    for (let u = 250; u < BODY.len - 60; u += RIB) {
+      const x = x0 + (skinX(u, t - 8) - u - V * (t - 8)), still = skinV(u, t - 8) < V * 0.25;
+      g.fillStyle = still ? 'rgba(89,227,154,0.9)' : 'rgba(207,224,255,0.25)';
+      g.fillRect(x + u - 6, YB - 4, 12, 8);
+    }
+    arrow(g, 620, 560, 860, 560, TK.C.acc);
+    TK.text(g, '体は まっすぐのまま', PW / 2, 300, 60);
+    g.restore();
+    TK.note(g, t, 8.5, 14, '緑 ＝ 地面に止まっている皮（模式）', { size: 32 });
+  }
+  // 14〜29.5: 皮の印とろっ骨の先の印
+  if (t >= 14.0 && t < 29.5) {
+    const f = fade(t, 14, 29.5, 0.3), tt = t - 14, x0 = 120;   // 背骨に固定のカメラ（地面が左へ流れる）
+    const tw = tt * 0.6;   // 少しゆっくり
+    g.save(); g.globalAlpha = f;
+    const Z = 2.4;   // おなかの一部を大きく
+    g.save(); g.translate(540, YB); g.scale(Z, Z); g.translate(-(x0 + 470), -YB);
+    ground(g, YB, x0 + 200, x0 + 760, -tt * V * 0.6);
+    body(g, x0, YB);
+    const tips = ribs(g, x0, YB, { tips: t > 15.0 });
+    // 皮の印（体に対する位置 = skinX − 背骨の動き）
+    const marks = [];
+    for (let u = 250; u < BODY.len - 60; u += RIB) marks.push(x0 + u + (V / W) * Math.sin(W * tw + KW * u));
+    if (t > 15.0) {
+      for (let i = 0; i < marks.length; i++) {
+        if (t > 22.0 && i < marks.length - 1 && marks[i + 1] - marks[i] > RIB * 1.18) {
+          g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.beginPath(); g.moveTo(marks[i], YB + 14); g.lineTo(marks[i + 1], YB + 14); g.stroke();
+        }
+      }
+      g.fillStyle = TK.C.red; marks.forEach(x => { g.beginPath(); g.roundRect(x - 6, YB - 1, 12, 9, 3); g.fill(); });
+    }
+    g.restore();
+    if (t > 15.0) {
+      TK.card(g, 150, 220, 780, 170, { r: 30 });
+      g.fillStyle = TK.C.acc2; g.beginPath(); g.arc(220, 270, 13, 0, Math.PI * 2); g.fill();
+      TK.text(g, 'ろっ骨の先', 250, 270, 46, { align: 'left', color: TK.C.acc2 });
+      g.fillStyle = TK.C.red; g.beginPath(); g.roundRect(208, 328, 24, 18, 4); g.fill();
+      TK.text(g, 'おなかの皮の印', 250, 338, 46, { align: 'left', color: TK.C.red });
+      TK.text(g, t < 22 ? '背骨と[いっしょ]' : '背骨と いっしょ', 900, 270, 42, { align: 'right' });
+      TK.text(g, t < 22 ? '止まる・すべる' : '[止まる・すべる]', 900, 338, 42, { align: 'right' });
+    }
+    if (t > 22.0 && t < 26.0) TK.text(g, '伸びた所（黄）', PW / 2, 1010, 52, { color: TK.C.acc });
+    g.restore();
+    TK.note(g, t, 15.0, 29.5, 'ボアの「まっすぐ進む」動き（Lissmann 1950）。おなかの一部を拡大\n体といっしょに動くカメラ（地面が流れる）。印の動きの大きさは模式', { size: 30 });
+  }
+  // 29.5〜35: 138年
+  if (t >= 29.5) {
+    const f = fade(t, 29.5, 36, 0.3);
+    g.save(); g.globalAlpha = f;
+    ground(g, YB + 60); body(g, 140, YB + 60); ribs(g, 140, YB + 60);
+    g.restore();
+    TK.count(g, t, 29.7, 35.1, 1812, 1950, { y: 330, size: 150, dur: 1.4, fmt: v => Math.round(v) + '年', label: '1812年 →' });
+    if (t > 31.0) { g.save(); g.globalAlpha = fade(t, 31, 36, 0.3); TK.text(g, '[138年]', PW / 2, 560, 110); g.restore(); }
+    TK.note(g, t, 32.0, 35.0, '出どころ: Lissmann (1950) J. Exp. Biol. 26:368／Newman & Jayne (2018) J. Exp. Biol.', { size: 30 });
+  }
+}
+function arrow(g, x0, y0, x1, y1, col, w = 10) {
+  const a = Math.atan2(y1 - y0, x1 - x0);
+  g.save(); g.strokeStyle = col; g.fillStyle = col; g.lineWidth = w; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1 - Math.cos(a) * w * 2, y1 - Math.sin(a) * w * 2); g.stroke();
+  g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 - Math.cos(a - 0.45) * w * 4, y1 - Math.sin(a - 0.45) * w * 4); g.lineTo(x1 - Math.cos(a + 0.45) * w * 4, y1 - Math.sin(a + 0.45) * w * 4); g.closePath(); g.fill();
+  g.restore();
+}
+
+triviaStart({ out: 'snake-move-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+[
+  {
+    "id": "ga-creatures-1",
+    "page": "ga-creatures-trivia1",
+    "mp4": "out/ga-creatures-trivia1-short.mp4",
+    "type": "F",
+    "title": "テストを見やぶって、プログラムが死んだふりをした",
+    "dur": 40,
+    "voice": "(2) VOICEVOX 2人 → いまは字幕だけ（字幕の上に「ききて／こたえる人」の小さな札）",
+    "app_footage": false,
+    "notes": "Canvas だけ（点の生きもの・ふつうの場所とテストの箱・平ら→上がるグラフ・系図）。台本の『最後にアプリの録画2秒』は入れていない。「半分」は（たとえば半分くらい）と字幕だけ、50% の数字は出さない（REVIEW）。グラフはイメージ、『死んだふり』は論文のことばで意思はない、と注。共通にしたい部品: 型F の話す人の札（字幕の行数に合わせて上に置く）を TK.subtitle に who として足すとよい。"
+  },
+  {
+    "id": "ga-creatures-3",
+    "page": "ga-creatures-trivia3",
+    "mp4": "out/ga-creatures-trivia3-short.mp4",
+    "type": "A",
+    "title": "どこにもつながっていないのに、ないと動かない回路",
+    "dur": 35,
+    "voice": "(2) VOICEVOX → いまは字幕だけ",
+    "app_footage": false,
+    "notes": "REVIEW の次点。Canvas だけ（10×10 のマス・32マスの点灯・世代 0→5000・灰色のマスを 0 に固定すると出力がこわれる・しみ出しの波紋・電球と窓）。使ったマスの並び・灰色のマスの位置はイメージ（論文の図を写していない）と注。1 kHz／10 kHz は台本の『1000分の1秒と1万分の1秒』から。『止める』＝出力を固定、『しみ出し』は論文でも『おそらく』と注。音量は -20.7 LUFS（ピークを 5.4 dB 下げた。thud と buzz が重なる所）。"
+  }
+]

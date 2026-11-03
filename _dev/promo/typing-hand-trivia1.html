@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく typing-hand-1（型H 当ててみて）「キーを押している時間、速い人と遅い人でどれだけちがう？」。台本は trivia/typing-hand.md。?short で録る
+// Dhakal ほか 2018（CHI、表3）: 押している長さ 速い人（上位10%）104.49ms・遅い人（下位10%）128.99ms。
+// キーとキーの間（IKI）速い人 121.70ms・遅い人 481.03ms。データそのものは使わない（論文の本文の値だけ）。
+// アプリの手は使わない（Canvas だけ）ので「指の動きは計算です」の注は要らない。帯の並びは平均に合わせた模式。
+const DUR = 30;
+const subs = [
+  { a: 0.0, b: 3.0, ja: 'キーを押している時間。速い人と遅い人で、どれだけちがう？', en: 'How long is a key held down? How different are fast and slow typists?', noBurn: true },
+  { a: 3.0, b: 8.0, ja: '考えてみて', en: 'Take a guess' },
+  { a: 8.0, b: 12.5, ja: '答え：[ほぼ同じ]\nどちらも 約0.1秒', en: 'Answer: about the same.\nRoughly 0.1 s for both' },
+  { a: 12.5, b: 18.5, ja: 'では、何がちがう？ キーとキーの“[すきま]”\n速い人 0.12秒、遅い人 0.48秒', en: 'So what differs? The gap between keys:\n0.12 s for fast typists, 0.48 s for slow ones' },
+  { a: 18.5, b: 24.0, ja: 'しかも速い人は、前のキーを離す前に\n[次のキーを押している]', en: 'And fast typists often press the next key\nbefore releasing the last one' },
+  { a: 24.0, b: 30.0, ja: '押す速さは、みんな同じ\n差がつくのは、[押していない時間]', en: 'Everyone presses about the same.\nThe difference is the time between presses' },
+];
+// 打鍵の音（帯が出るたび）
+const cues = [{ t: 0.05, type: 'pop' }, { t: 3.0, type: 'pop' }, { t: 7.6, type: 'ding' }, { t: 8.3, type: 'whoosh' }, { t: 12.5, type: 'whoosh' }, { t: 18.5, type: 'pop' }, { t: 24.0, type: 'whoosh' }];
+
+// 帯の並び（模式）: 間かくの平均を論文の値に合わせ、ばらつきは絵のため
+const FAST_GAP = [0.10, 0.15, 0.09, 0.14, 0.11, 0.16, 0.08, 0.13, 0.12, 0.10, 0.14, 0.12, 0.09];   // 平均 ≈ 0.12
+const SLOW_GAP = [0.42, 0.55, 0.47];                                                                   // 平均 ≈ 0.48
+const TXT = 'THE QUICK BROWN';
+function seq(gaps, dur) { let s = 0.05; const out = []; for (let i = 0; i <= gaps.length; i++) { out.push({ a: s, b: s + dur, k: TXT[i] || '' }); s += gaps[i] || 0; } return out; }
+const FAST = seq(FAST_GAP, 0.104), SLOW = seq(SLOW_GAP, 0.129);
+const TL = { x0: 110, x1: 950, span: 1.0 };
+const tx = s => TL.x0 + (TL.x1 - TL.x0) * s / TL.span;
+const PLAY = [12.8, 17.6];   // 再生の線が 0 → 1.6 秒を動く時刻
+for (const b of FAST.concat(SLOW)) cues.push({ t: PLAY[0] + (PLAY[1] - PLAY[0]) * b.a / TL.span, type: 'tick' });
+
+// キー1つ（上から見た模式）。down: 0〜1 の沈み
+function key(g, cx, cy, size, ch, down, col) {
+  const d = down * size * 0.06;
+  g.save();
+  g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.roundRect(cx - size / 2, cy - size / 2 + size * 0.08, size, size, size * 0.14); g.fill();
+  g.fillStyle = down > 0.5 ? 'rgba(95,212,255,0.30)' : 'rgba(30,48,96,0.95)'; g.strokeStyle = col || 'rgba(200,215,255,0.7)'; g.lineWidth = 5;
+  g.beginPath(); g.roundRect(cx - size / 2, cy - size / 2 + d, size, size, size * 0.14); g.fill(); g.stroke();
+  TK.text(g, ch, cx, cy + d, size * 0.42, { color: '#fff', blur: 0 });
+  g.restore();
+}
+function row(g, t, y, list, label, col, upto, showOverlap) {
+  TK.text(g, label, TL.x0, y - 110, 50, { align: 'left', color: col });
+  g.strokeStyle = 'rgba(200,215,255,0.35)'; g.lineWidth = 3; g.beginPath(); g.moveTo(TL.x0, y + 66); g.lineTo(TL.x1, y + 66); g.stroke();
+  list.forEach((b, i) => {
+    if (b.a > upto) return;
+    const lane = i % 2;   // 重なりが見えるよう、1つおきに少しずらす
+    const x = tx(b.a), w = tx(Math.min(b.b, upto)) - x, yy = y - 60 + lane * 56;
+    g.fillStyle = col; g.globalAlpha = 0.85; g.beginPath(); g.roundRect(x, yy, Math.max(4, w), 56, 10); g.fill(); g.globalAlpha = 1;
+    if (b.k.trim() && w > 30) TK.text(g, b.k, x + w / 2, yy + 28, 40, { color: '#0b1430', blur: 0 });
+  });
+  if (showOverlap) list.forEach((b, i) => {
+    if (i > 0 && list[i - 1].b > b.a && b.a <= upto) {
+      const x = tx(b.a), w = tx(list[i - 1].b) - x;
+      g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.globalAlpha = 0.7 + 0.3 * Math.sin(t * 8);
+      g.beginPath(); g.roundRect(x - 4, y - 70, w + 8, 132, 8); g.stroke(); g.restore();
+    }
+  });
+}
+
+function draw(g, t) {
+  // 0〜3: フック（キーが押されて、離れる）
+  if (t < 3.0) {
+    const ph = (t * 1.6) % 1, down = ph < 0.25 ? 1 : 0;
+    g.save(); g.globalAlpha = fade(t, -1, 3, 0.3); key(g, PW / 2, 800, 330, 'K', down); g.restore();
+    TK.hook(g, t, 0.0, 3.0, '速い人と遅い人\n押している時間の[ちがい]は？', { y: 340, size: 100 });
+  }
+  // 3〜8: 当ててみて
+  if (t >= 3.0 && t < 8.0) {
+    TK.choices(g, t, 3.0, 8.0, ['5倍ちがう', '2倍ちがう', 'ほぼ同じ'], { y: 420, answer: 2, reveal: 7.6, think: [4.0, 7.5] });
+  }
+  // 8〜12.5: 押している長さの棒
+  if (t >= 8.0 && t < 12.5) {
+    TK.text(g, 'キーを押している長さ（平均）', PW / 2, 300, 56, { color: TK.C.sub });
+    TK.bars(g, t, 8.0, 12.5, [
+      { label: '速い人（上位10%）', v: 0.104 / 0.15, color: TK.C.acc2, text: '0.104 秒' },
+      { label: '遅い人（下位10%）', v: 0.129 / 0.15, color: TK.C.green, text: '0.129 秒' },
+    ], { y: 440, gap: 260, stagger: 0.5 });
+  }
+  // 12.5〜24: 時間の線に帯
+  if (t >= 12.5 && t < 24.0) {
+    const f = fade(t, 12.5, 24.0, 0.3), upto = clamp((t - PLAY[0]) / (PLAY[1] - PLAY[0]), 0, 1) * TL.span;
+    g.save(); g.globalAlpha = f;
+    TK.text(g, '押している間 ＝ 帯', PW / 2, 220, 50, { color: TK.C.sub });
+    row(g, t, 470, FAST, '速い人', TK.C.acc2, upto, t > 18.5);
+    row(g, t, 800, SLOW, '遅い人', TK.C.green, upto, false);
+    // 目もり
+    for (let s = 0; s <= TL.span + 1e-6; s += 0.25) { TK.text(g, s.toFixed(2) + '秒', tx(s), 920, 30, { color: TK.C.dim, bold: false }); }
+    if (upto < TL.span) { g.strokeStyle = TK.C.acc; g.lineWidth = 4; g.beginPath(); g.moveTo(tx(upto), 330); g.lineTo(tx(upto), 880); g.stroke(); }
+    if (t > 18.8) TK.text(g, '重なり ＝ 離す前に次を押した', PW / 2, 1010, 50, { color: TK.C.acc });
+    g.restore();
+    TK.note(g, t, 13, 24, '帯の並びは模式（間かくの平均を論文の値に合わせた）', { size: 32 });
+  }
+  // 24〜30: キーにもどる
+  if (t >= 24.0) {
+    const ph = (t * 1.6) % 1, down = ph < 0.25 ? 1 : 0;
+    key(g, PW / 2, 620, 300, 'K', down);
+    TK.note(g, t, 25.0, 30.0, '英文を写して打つオンラインのテスト・16万人あまり（自分から参加した人）\n出どころ: Dhakal, Feit, Kristensson & Oulasvirta (2018) CHI', { size: 30 });
+  }
+}
+
+triviaStart({ out: 'typing-hand-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

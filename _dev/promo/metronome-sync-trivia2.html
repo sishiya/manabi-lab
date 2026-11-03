@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく metronome-sync-1（型A ぜんぶ逆）「橋がゆれたから、人がそろった」。台本は trivia/metronome-sync.md。?short で録る
+// （metronome-sync-trivia1.html は前に作った別の話「う2」なので、台本1をこの trivia2 にした）
+// 数字: Taylor（Taylor Devices）の報告 2000-06-10 開通・横の加速度 最大 0.25 g・6/12 通行止め。試験の人数 約160人（phys.org 2005、資料で 156〜166）。
+// 人と橋の動きは Strogatz ほか 2005（Nature 438:43）のモデルをページを開いたときに計算する:
+//   M X'' + B X' + K X = G Σ sin Θi、 Θi' = Ωi + C A sin(Ψ − Θi + α)
+//   M 113,000 kg・K 4,730,000 N/m・B 11,000 kg/s・G 30 N・C 16 /(m s)・α = π/2・Ωi は平均 √(K/M)・ばらつき 0.63 rad/s（論文の値として覚えていたもの。本文の表で確かめなおしていない）
+//   人数を 0 → 300 に少しずつふやす（1,000 秒）。このモデルでは約200人でそろいはじめた → 画面に人数の数字は出さず、試験の約160人は別に出す
+const DUR = 40;
+const subs = [
+  { a: 0.0, b: 2.2, ja: '橋がゆれた原因と結果は、逆だった。', en: 'The cause and effect of the bridge wobble were the other way round.', noBurn: true },
+  { a: 2.2, b: 7.0, ja: '2000年、ロンドンに新しい歩道橋ができた。\n開通の日、橋は[横に]ゆれはじめた。', en: 'In 2000, London opened a new footbridge.\nOn opening day, it began to sway sideways.' },
+  { a: 7.0, b: 12.0, ja: '横ゆれは最大で[重力の4分の1]。\n2日後には、通行止めに。', en: 'The sideways acceleration reached a quarter of gravity.\nTwo days later, it was closed.' },
+  { a: 12.0, b: 17.0, ja: '「みんなが[足並みをそろえた]から、ゆれた」\n…と思うよね。', en: '“Everyone marched in step, so it shook”…\nThat’s what you’d think.' },
+  { a: 17.0, b: 25.0, ja: 'でも、はじめはみんなばらばら。人数がある数をこえた瞬間、\nほんの少しゆれた橋に、[人のほうが]歩き方を合わせた。', en: 'But at first, everyone walked out of step. Past a certain crowd size,\npeople adjusted their gait to the slightly swaying bridge.' },
+  { a: 25.0, b: 31.0, ja: 'そろうから、ゆれる。ゆれるから、そろう。\nどっちが先でもない、[ひとつの輪]。', en: 'In step, so it sways. It sways, so they fall in step.\nNeither came first: it’s one loop.' },
+  { a: 31.0, b: 36.0, ja: '試験では、[160人]くらいをこえたところで、\n急にはじまった。', en: 'In tests, it started suddenly\nonce about 160 people were on it.' },
+  { a: 36.0, b: 40.0, ja: '板の上のメトロノームと、同じしくみ。\n人も、[振り子]だった。', en: 'Same as metronomes on a moving board.\nPeople were pendulums too.' },
+];
+const cues = [
+  { t: 0.05, type: 'whoosh' }, { t: 0.8, type: 'buzz' }, { t: 2.2, type: 'pop' }, { t: 7.0, type: 'pop' }, { t: 8.4, type: 'ding' }, { t: 10.0, type: 'thud' },
+  { t: 12.0, type: 'whoosh' }, { t: 17.0, type: 'rise' }, { t: 21.5, type: 'ding' }, { t: 25.0, type: 'whoosh' }, { t: 26.0, type: 'tick' }, { t: 27.5, type: 'tick' }, { t: 29.0, type: 'tick' },
+  { t: 31.0, type: 'pop' }, { t: 31.8, type: 'ding' }, { t: 36.0, type: 'whoosh' },
+];
+
+// ---- モデルの計算（ページを開いたとき1回）----
+const SIM = (() => {
+  const M = 113000, K = 4730000, B = 11000, G = 30, C = 16, AL = Math.PI / 2, SG = 0.63, OM = Math.sqrt(K / M);
+  let s = 12345; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  const gauss = () => Math.sqrt(-2 * Math.log(r())) * Math.cos(2 * Math.PI * r());
+  const NMAX = 300, T = 1100, RAMP = 1000, dt = 0.01, EVERY = 4;
+  const om = [], th = [], pos = [];
+  for (let i = 0; i < NMAX; i++) { om.push(OM + SG * gauss()); th.push(2 * Math.PI * r()); pos.push([r(), r()]); }
+  let X = 0, V = 0; const snaps = [];
+  for (let k = 0; k * dt < T; k++) {
+    const t = k * dt, N = Math.min(NMAX, Math.floor(NMAX * t / RAMP));
+    const A = Math.hypot(X, V / OM), Psi = Math.atan2(X, V / OM);
+    let F = 0; for (let i = 0; i < N; i++) F += Math.sin(th[i]);
+    V += (G * F - B * V - K * X) / M * dt; X += V * dt;
+    for (let i = 0; i < N; i++) th[i] += (om[i] + C * A * Math.sin(Psi - th[i] + AL)) * dt;
+    if (k % Math.round(EVERY / dt) === 0) {
+      let cr = 0, ci = 0; for (let i = 0; i < N; i++) { cr += Math.cos(th[i]); ci += Math.sin(th[i]); }
+      snaps.push({ N, A, R: N ? Math.hypot(cr, ci) / N : 0, rel: Float32Array.from(th, x => x - Psi) });
+    }
+  }
+  const amax = Math.max(...snaps.map(x => x.A));
+  return { snaps, pos, amax, OM };
+})();
+const snapAt = u => SIM.snaps[Math.min(SIM.snaps.length - 1, Math.max(0, Math.round(u * (SIM.snaps.length - 1))))];
+
+// 橋（上から）。人は点、色は足の位相（同じ色＝足並みがそろっている）
+function deckTop(g, t, snap, o = {}) {
+  const x0 = 90, x1 = 990, cy = o.y ?? 640, w = 220;
+  const ph = SIM.OM * t * 0.5;   // 見やすいよう半分の速さで
+  const sway = (o.sway ?? (snap.A / SIM.amax)) * 46 * Math.sin(ph);
+  g.save(); g.translate(0, sway);
+  g.fillStyle = 'rgba(160,190,255,0.12)'; g.strokeStyle = 'rgba(200,220,255,0.7)'; g.lineWidth = 5;
+  g.beginPath(); g.rect(x0, cy - w / 2, x1 - x0, w); g.fill(); g.stroke();
+  for (let i = 0; i < snap.N; i++) {
+    const p = SIM.pos[i], rel = snap.rel[i] + ph;
+    const x = x0 + 20 + ((p[0] + t * 0.02 * (i % 2 ? 1 : -1)) % 1 + 1) % 1 * (x1 - x0 - 40), y = cy - w / 2 + 18 + p[1] * (w - 36) + Math.sin(rel) * 7;
+    g.fillStyle = `hsl(${((rel / (2 * Math.PI)) % 1 + 1) % 1 * 360},85%,65%)`;
+    g.beginPath(); g.arc(x, y, 8, 0, Math.PI * 2); g.fill();
+  }
+  g.restore();
+  // 横ゆれの矢印
+  if (o.arrows !== false) {
+    g.save(); g.globalAlpha = 0.5 + 0.5 * Math.abs(Math.sin(ph)); g.strokeStyle = TK.C.acc; g.lineWidth = 8; g.lineCap = 'round';
+    [140, 940].forEach(x => { g.beginPath(); g.moveTo(x, cy - w / 2 - 90); g.lineTo(x, cy - w / 2 - 30); g.moveTo(x - 14, cy - w / 2 - 76); g.lineTo(x, cy - w / 2 - 92); g.lineTo(x + 14, cy - w / 2 - 76);
+      g.moveTo(x, cy + w / 2 + 30); g.lineTo(x, cy + w / 2 + 90); g.moveTo(x - 14, cy + w / 2 + 76); g.lineTo(x, cy + w / 2 + 92); g.lineTo(x + 14, cy + w / 2 + 76); g.stroke(); });
+    g.restore();
+  }
+}
+// 橋（横から）の線画
+function bridgeSide(g, t, y, amp = 0) {
+  const sw = Math.sin(t * 4) * amp;
+  g.save(); g.strokeStyle = 'rgba(200,220,255,0.85)'; g.lineWidth = 6; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(70, y); g.lineTo(1010, y); g.stroke();   // 床
+  [[300, 70], [780, 70]].forEach(([x, h]) => { g.beginPath(); g.moveTo(x - 30, y - h); g.lineTo(x, y + 120); g.lineTo(x + 30, y - h); g.stroke(); });   // Y 形の柱
+  g.lineWidth = 3; g.strokeStyle = 'rgba(200,220,255,0.55)';   // 低いケーブル
+  g.beginPath(); g.moveTo(70, y - 20); g.quadraticCurveTo(185, y - 4, 300, y - 70); g.quadraticCurveTo(540, y + 10, 780, y - 70); g.quadraticCurveTo(895, y - 4, 1010, y - 20); g.stroke();
+  g.strokeStyle = 'rgba(95,212,255,0.35)'; g.lineWidth = 3;   // 川
+  for (let k = 0; k < 3; k++) { g.beginPath(); for (let x = 70; x <= 1010; x += 20) { const yy = y + 160 + k * 30 + Math.sin(x * 0.03 + t * 2 + k) * 6; x === 70 ? g.moveTo(x, yy) : g.lineTo(x, yy); } g.stroke(); }
+  g.restore();
+  return sw;
+}
+// メトロノーム（36〜40秒）
+function metronome(g, x, y, ang, color) {
+  g.save(); g.translate(x, y);
+  g.strokeStyle = 'rgba(200,220,255,0.8)'; g.lineWidth = 4;
+  g.beginPath(); g.moveTo(-50, 0); g.lineTo(-24, -190); g.lineTo(24, -190); g.lineTo(50, 0); g.closePath(); g.stroke();
+  g.rotate(ang); g.strokeStyle = color; g.lineWidth = 6; g.beginPath(); g.moveTo(0, -20); g.lineTo(0, -170); g.stroke();
+  g.fillStyle = color; g.fillRect(-12, -140, 24, 18);
+  g.restore();
+}
+
+function draw(g, t) {
+  // 0〜2.2: フック
+  if (t < 2.2) {
+    deckTop(g, t + 30, snapAt(1), { y: 620 });
+    TK.hook(g, t, 0.0, 2.2, '原因と結果が、\n[逆]。', { y: 1010, size: 120 });
+    TK.text(g, '上から見た歩道橋', PW / 2, 300, 44, { color: TK.C.sub, bold: false });
+  }
+  // 2.2〜7: 2000年 ロンドン
+  if (t >= 2.2 && t < 7.0) {
+    bridgeSide(g, t, 700);
+    TK.card(g, 150, 210, 780, 230, { r: 36 });
+    TK.text(g, '2000年 [6月10日]', PW / 2, 280, 72);
+    TK.text(g, 'ロンドン・テムズ川の新しい歩道橋', PW / 2, 370, 46, { color: TK.C.sub });
+    TK.text(g, '開通の日', PW / 2, 1040, 50, { color: TK.C.sub });
+    TK.note(g, t, 2.6, 7, '線画（形はおおまか）', { size: 32 });
+  }
+  // 7〜12: 0.25 g、2日後に通行止め
+  if (t >= 7.0 && t < 12.0) {
+    TK.count(g, t, 7.0, 12.0, 0, 0.25, { y: 440, size: 190, dur: 1.4, label: '横の揺れ（最大）', fmt: v => v.toFixed(2) + ' g' });
+    TK.text(g, '＝ 重力の [4分の1]', PW / 2, 640, 64);
+    if (t > 9.8) {
+      const p = clamp(TK.pop(t, 9.8, 0.35), 0, 1.2);
+      g.save(); g.globalAlpha = clamp(p, 0, 1);
+      g.translate(PW / 2, 880); g.rotate(-0.06); g.scale(p, p);
+      TK.card(g, -330, -80, 660, 160, { fill: 'rgba(255,107,107,0.2)', stroke: TK.C.red, lw: 8, r: 20 });
+      TK.text(g, '2日後に [通行止め]', 0, 0, 70, { acc: TK.C.red });
+      g.restore();
+    }
+  }
+  // 12〜17: ばらばらに歩く（少ない人数）
+  if (t >= 12.0 && t < 17.0) {
+    const s = snapAt(0.12);
+    deckTop(g, t, s, { y: 620, sway: 0, arrows: false });
+    TK.text(g, '足並みを [そろえた] から？', PW / 2, 300, 70);
+    TK.text(g, '点＝人。色＝足を出すタイミング', PW / 2, 920, 40, { color: TK.C.sub, bold: false });
+    TK.note(g, t, 12.4, 17, '人と橋の動きは Strogatz ほか（2005）のモデル', { size: 32 });
+  }
+  // 17〜25: 人数をふやす → ある所で、ゆれとそろいが同時に
+  if (t >= 17.0 && t < 25.0) {
+    const u = clamp((t - 17.3) / 7.2, 0, 1), s = snapAt(u * 0.98);
+    deckTop(g, t, s, { y: 600 });
+    // 人数と、そろい具合のメーター
+    const bar = (y, label, v, color) => {
+      TK.text(g, label, 110, y, 40, { align: 'left', color: TK.C.sub });
+      g.fillStyle = 'rgba(255,255,255,0.12)'; g.beginPath(); g.roundRect(380, y - 22, 580, 44, 22); g.fill();
+      g.fillStyle = color; g.beginPath(); g.roundRect(380, y - 22, Math.max(44, 580 * v), 44, 22); g.fill();
+    };
+    bar(220, '人数', s.N / 300, TK.C.acc2);
+    bar(290, 'そろい具合', s.R, TK.C.acc);
+    bar(940, '橋のゆれ', s.A / SIM.amax, TK.C.red);
+    TK.note(g, t, 17.3, 25, 'Strogatz ほか（2005）のモデルで計算。ゆれは大きく描いています', { size: 32 });
+  }
+  // 25〜31: ひとつの輪
+  if (t >= 25.0 && t < 31.0) {
+    const cx = PW / 2, cy = 620, R = 290;
+    const items = [{ a: -Math.PI / 2, s: '橋が[ゆれる]', at: 25.6 }, { a: Math.PI / 6, s: '人が[そろう]', at: 26.6 }, { a: Math.PI * 5 / 6, s: 'もっと[ゆれる]', at: 28.1 }];
+    g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 10; g.lineCap = 'round';
+    const k = clamp((t - 25.4) / 3.2, 0, 1), spin = t * 0.6;
+    g.beginPath(); g.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * k); g.stroke();
+    if (k >= 1) { for (let i = 0; i < 3; i++) { const a = spin + i * Math.PI * 2 / 3, x = cx + Math.cos(a) * R, y = cy + Math.sin(a) * R;
+      g.save(); g.translate(x, y); g.rotate(a + Math.PI / 2); g.fillStyle = TK.C.acc; g.beginPath(); g.moveTo(22, 0); g.lineTo(-14, -18); g.lineTo(-14, 18); g.fill(); g.restore(); } }
+    g.restore();
+    items.forEach(it => { if (t < it.at) return; const p = clamp(TK.pop(t, it.at, 0.35), 0, 1.2);
+      const x = cx + Math.cos(it.a) * R, y = cy + Math.sin(it.a) * R;
+      g.save(); g.globalAlpha = clamp(p, 0, 1); TK.card(g, x - 190, y - 60, 380, 120, { r: 60 }); TK.text(g, it.s, x, y, 56); g.restore(); });
+  }
+  // 31〜36: 試験 約160人
+  if (t >= 31.0 && t < 36.0) {
+    TK.count(g, t, 31.0, 36.0, 0, 160, { y: 520, size: 230, dur: 1.2, label: '試験（2000年12月）', fmt: v => '約' + Math.round(v) + '人' });
+    if (t > 32.6) { g.save(); g.globalAlpha = fade(t, 32.6, 36, 0.3); TK.text(g, 'それより少ないと、[何も起きない]', PW / 2, 820, 56); g.restore(); }
+    TK.note(g, t, 31.5, 36, '人数は資料により 156〜166人', { size: 32 });
+  }
+  // 36〜40: 板の上のメトロノーム（そろっていく線画）
+  if (t >= 36.0) {
+    const k = clamp((t - 36.2) / 2.0, 0, 1), ph0 = [0, 2.1, 4.0, 1.2, 3.1];
+    g.save(); g.translate(Math.sin(t * 6) * 6 * k, 0);
+    g.strokeStyle = 'rgba(200,220,255,0.8)'; g.lineWidth = 6; g.beginPath(); g.moveTo(100, 760); g.lineTo(980, 760); g.stroke();
+    for (let i = 0; i < 5; i++) { const ph = t * 6 + ph0[i] * (1 - k); metronome(g, 180 + i * 180, 750, 0.45 * Math.sin(ph), `hsl(${((ph / (2 * Math.PI)) % 1) * 360},85%,65%)`); }
+    g.restore();
+    [260, 820].forEach(x => { g.strokeStyle = 'rgba(200,220,255,0.5)'; g.lineWidth = 4; g.beginPath(); g.arc(x, 790, 26, 0, Math.PI * 2); g.stroke(); });
+    TK.text(g, '動く板の上のメトロノーム', PW / 2, 320, 54, { color: TK.C.sub });
+    TK.note(g, t, 36.5, 40, '出どころ: Strogatz ほか (2005) Nature 438:43・D. P. Taylor「Damper Retrofit of the London\nMillennium Footbridge」（Taylor Devices）・phys.org (2005)', { size: 28 });
+  }
+}
+
+triviaStart({ out: 'metronome-sync-trivia2', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

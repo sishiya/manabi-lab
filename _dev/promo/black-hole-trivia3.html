@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく black-hole-3（型H 当ててみて）「大きいブラックホールほど、落ちてもちぎれない」。台本は trivia/black-hole.md。?short で録る
+// 身長 L=2m の頭と足の引っぱりの差 Δa = 2GM·L/r³（地平線 r=2GM/c²）。太陽10倍 2.06e8 m/s²（2000万G）、
+// いて座A*（4.0e6 太陽、EHT 2022）1.29e-3 m/s²（約1万分の1G）。Δa は重さの2乗に反比例
+const DUR = 25;
+const subs = [
+  { a: 0.0, b: 3.0, ja: '地平線まで落ちたとき\n体が[引きちぎられる]のはどっち？', en: 'Falling to the event horizon,\nwhich one tears your body apart?', noBurn: true },
+  { a: 3.0, b: 6.0, ja: 'A 小さい　B 大きい', en: 'A: small   B: big' },
+  { a: 6.0, b: 12.0, ja: '答えは [A]\n地平線で、頭と足の引っぱりの差は[2000万G]', en: 'The answer is A.\nAt the horizon, head and feet are pulled apart by 20 million g' },
+  { a: 12.0, b: 18.0, ja: '天の川のまん中のブラックホールなら[1万分の1G]\n気づかずに地平線をこえる', en: 'At the center of the Milky Way: just 1/10,000 g.\nYou cross the horizon without noticing' },
+  { a: 18.0, b: 23.0, ja: '大きいほど地平線が遠く\n引っぱりの"[差]"が小さくなるから', en: 'The bigger it is, the farther the horizon,\nand the smaller the difference in pull' },
+  { a: 23.0, b: 25.0, ja: 'ただし、どちらも[二度と出られない]', en: 'But from either one, you never come back' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 1.6, type: 'whoosh' }, { t: 3.0, type: 'tick' }, { t: 4.0, type: 'tick' }, { t: 5.0, type: 'tick' },
+  { t: 6.0, type: 'ding' }, { t: 7.0, type: 'rise' }, { t: 12.0, type: 'whoosh' }, { t: 13.5, type: 'pop' },
+  { t: 18.0, type: 'pop' }, { t: 23.0, type: 'thud' },
+];
+
+function hole(g, x, y, r, f = 1) {
+  g.save(); g.globalAlpha *= f;
+  const gl = g.createRadialGradient(x, y, r * 0.9, x, y, r * 1.8);
+  gl.addColorStop(0, 'rgba(255,170,80,0.8)'); gl.addColorStop(0.4, 'rgba(255,120,40,0.3)'); gl.addColorStop(1, 'rgba(255,120,40,0)');
+  g.fillStyle = gl; g.beginPath(); g.arc(x, y, r * 1.8, 0, Math.PI * 2); g.fill();
+  g.lineWidth = Math.max(3, r * 0.07); g.strokeStyle = 'rgba(255,214,150,0.9)'; g.beginPath(); g.arc(x, y, r * 1.1, 0, Math.PI * 2); g.stroke();
+  g.fillStyle = '#000'; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+// 足から落ちる棒の人。stretch: 縦に何倍のびるか、thin: 横の細さ
+function faller(g, x, y, s, stretch = 1, thin = 1, color = '#fff') {
+  g.save(); g.translate(x, y); g.scale(s * thin, s * stretch);
+  g.strokeStyle = color; g.lineWidth = 7 / Math.max(thin, 0.3); g.lineCap = 'round';
+  g.beginPath(); g.moveTo(0, -40); g.lineTo(-14, 0); g.moveTo(0, -40); g.lineTo(14, 0); g.moveTo(0, -40); g.lineTo(0, -82);
+  g.moveTo(0, -74); g.lineTo(-24, -100); g.moveTo(0, -74); g.lineTo(24, -100); g.stroke();
+  g.fillStyle = color; g.beginPath(); g.ellipse(0, -100, 14, 14, 0, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+
+function draw(g, t) {
+  // 0〜1.6: フック（小さい穴と大きい穴、まん中に人）
+  if (t < 1.8) {
+    const f = fade(t, -1, 1.8, 0.3);
+    hole(g, 230, 780, 70, f); hole(g, 760, 820, 190, f);
+    faller(g, 470, 760, 1.6);
+    TK.hook(g, t, 0.0, 1.8, '地平線で\n[引きちぎられる]のは？', { y: 330, size: 120 });
+  }
+  // 1.6〜6: 2択（考える時間 3〜6）
+  TK.choices(g, t, 1.6, 6.8, ['太陽の[10倍]の\nブラックホール', '太陽の[400万倍]\n（天の川のまん中）'].map(s => s.replace('\n', ' ')), { y: 560, h: 200, reveal: 6.0, answer: 0, think: [3.0, 6.0], size: 58 });
+  if (t >= 1.6 && t < 6.8) { g.save(); g.globalAlpha = fade(t, 1.6, 6.8, 0.3); TK.text(g, '引きちぎられるのは？', PW / 2, 230, 70); g.restore(); }
+  // 6.8〜12: A のびる人
+  if (t >= 6.8 && t < 12.0) {
+    const f = fade(t, 6.8, 12.0, 0.3), k = ease((t - 7.0) / 3.5);
+    hole(g, 540, 1010, 90, f);
+    g.save(); g.globalAlpha = f;
+    faller(g, 540, lerp(600, 900, k), 1.8, 1 + 1.3 * k, 1 - 0.7 * k);
+    TK.text(g, 'A 太陽の10倍', PW / 2, 230, 64, { color: TK.C.sub });
+    TK.card(g, 140, 300, 800, 130);
+    TK.text(g, '頭と足の差 [2000万 G]', PW / 2, 365, 70);
+    g.restore();
+  }
+  // 12〜18: B ふつうに通過
+  if (t >= 12.0 && t < 18.0) {
+    const f = fade(t, 12.0, 18.0, 0.3), k = ease((t - 12.4) / 4.5);
+    hole(g, 540, 2350, 1400, f);   // 大きすぎて、ふちだけ見える
+    g.save(); g.globalAlpha = f;
+    faller(g, 540, lerp(640, 1020, k), 1.8);
+    TK.text(g, 'B 太陽の400万倍（天の川のまん中）', PW / 2, 230, 54, { color: TK.C.sub });
+    TK.card(g, 140, 300, 800, 130);
+    TK.text(g, '頭と足の差 [1万分の1 G]', PW / 2, 365, 70);
+    g.restore();
+  }
+  // 18〜23: なぜ
+  if (t >= 18.0 && t < 23.0) {
+    const f = fade(t, 18.0, 23.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    const rows = [['地平線の大きさ', '重さに比例'], ['引っぱりの差', '距離の3乗で弱まる'], ['地平線での差', '[重さの2乗]で弱まる']];
+    rows.forEach(([a, b], i) => {
+      const k = TK.pop(t, 18.3 + i * 1.0, 0.35); if (k <= 0) return;
+      g.save(); g.globalAlpha = f * clamp(k, 0, 1);
+      const y = 330 + i * 230;
+      TK.card(g, 110, y - 85, 860, 170, i === 2 ? { stroke: TK.C.acc, lw: 6 } : {});
+      TK.text(g, a, PW / 2, y - 32, 50, { color: TK.C.sub });
+      TK.text(g, b, PW / 2, y + 36, 66);
+      if (i < 2) TK.text(g, '↓', PW / 2, y + 115, 50, { color: TK.C.dim });
+      g.restore();
+    });
+    TK.text(g, '重さ 40万倍 → 差は 1600億分の1', PW / 2, 1010, 44, { color: TK.C.sub, bold: false });
+    g.restore();
+  }
+  // 23〜25: でも出られない
+  if (t >= 23.0) {
+    hole(g, 540, 650, 260);
+    TK.note(g, t, 23.0, 25.0, '出どころ: EHT Collaboration (2022) First Sgr A* Results I・IV（約400万倍）\nΔa ≈ 2GM·L / r³（ニュートンの近似）', { size: 28 });
+  }
+  if (t >= 6.8 && t < 23.0) TK.note(g, t, 6.8, 23.0, '身長2mの人が、足から落ちたときの目安', { size: 32 });
+}
+
+triviaStart({ out: 'black-hole-trivia3', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

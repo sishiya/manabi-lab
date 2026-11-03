@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく animal-senses-2（型H 当ててみて）「コウモリの声、どれくらい大きい？」。台本は trivia/animal-senses.md。?short で録る
+// 出どころ: Surlykke & Kalko (2008) PLoS ONE 3(4):e2036（パナマの11種、122〜134 dB SPL（口から10 cm）、Noctilio は最大140超。水面の反射で約6 dB 大きめかも → 「推定」）。
+// 台本の注意どおり: 3択は数字だけ（図書館・電車の目安は出どころを取っていないので出さない）。「ジェット機なみ」は使わない。人に聞こえる高さの数字も出さない
+const DUR = 25;
+const subs = [
+  { a: 0.0, b: 1.6, ja: 'この声、何デシベル？', en: 'How loud is this call?', noBurn: true },
+  { a: 1.6, b: 4.0, ja: 'コウモリの超音波、\n口の[10 cm]先で何デシベル？', en: 'A bat’s ultrasonic call —\nhow many decibels, 10 cm from its mouth?' },
+  { a: 4.0, b: 6.0, ja: '考えて…', en: 'Think…' },
+  { a: 6.0, b: 11.0, ja: '答えは [C]。122〜134 dB。\nいちばん大きい種は[140]をこえた', en: 'The answer is C: 122–134 dB.\nThe loudest species topped 140' },
+  { a: 11.0, b: 16.0, ja: 'デシベルは10上がるごとに強さが10倍。\n130は、40の[10億倍]の強さ', en: 'Every 10 dB is 10 times the intensity.\n130 dB is a billion times 40 dB', size: 58 },
+  { a: 16.0, b: 21.0, ja: 'でも高すぎて、人の耳には\nまったく聞こえない。だから夜の庭は静か', en: 'But it is too high-pitched for human ears.\nSo the night garden stays quiet' },
+  { a: 21.0, b: 25.0, ja: 'そんな大声を出すのは\n遠くの小さな虫の[こだま]を拾うため', en: 'It shouts that loud to catch the faint echo\nof a small insect far away' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 1.6, type: 'pop' }, { t: 1.78, type: 'pop' }, { t: 1.96, type: 'pop' },
+  { t: 4.0, type: 'tick' }, { t: 5.0, type: 'tick' }, { t: 6.0, type: 'ding' }, { t: 6.6, type: 'rise' }, { t: 9.0, type: 'pop' },
+  { t: 11.0, type: 'whoosh' }, ...Array.from({ length: 9 }, (_, i) => ({ t: 11.6 + i * 0.32, type: 'tick' })), { t: 14.8, type: 'ding' },
+  { t: 16.0, type: 'whoosh' }, { t: 21.0, type: 'whoosh' }, { t: 23.2, type: 'pop' },
+];
+
+// コウモリ（正面、線画）
+function bat(g, x, y, s, t) {
+  const f = Math.sin(t * 9) * 0.25;
+  g.save(); g.translate(x, y); g.scale(s, s);
+  g.fillStyle = 'rgba(30,40,80,0.95)'; g.strokeStyle = '#a9c4ff'; g.lineWidth = 4; g.lineJoin = 'round';
+  for (const sd of [-1, 1]) {
+    g.save(); g.scale(sd, 1); g.rotate(-f * 0.6);
+    g.beginPath(); g.moveTo(10, -20); g.lineTo(80, -60); g.lineTo(150, -40); g.lineTo(200, -10);
+    g.quadraticCurveTo(170, 0, 160, 30); g.quadraticCurveTo(130, 10, 110, 34); g.quadraticCurveTo(80, 14, 60, 36); g.quadraticCurveTo(40, 16, 12, 30); g.closePath();
+    g.fill(); g.stroke();
+    g.restore();
+  }
+  g.beginPath(); g.ellipse(0, 0, 26, 42, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(-18, -34); g.lineTo(-26, -66); g.lineTo(-6, -40); g.moveTo(18, -34); g.lineTo(26, -66); g.lineTo(6, -40); g.fill(); g.stroke();
+  g.fillStyle = '#fff'; g.beginPath(); g.arc(-9, -24, 4, 0, Math.PI * 2); g.arc(9, -24, 4, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+function moth(g, x, y, s, a = 1) {
+  g.save(); g.globalAlpha *= a; g.translate(x, y); g.scale(s, s); g.fillStyle = 'rgba(216,200,168,0.9)';
+  for (const sd of [-1, 1]) { g.beginPath(); g.ellipse(sd * 22, -6, 26, 16, sd * 0.5, 0, Math.PI * 2); g.fill(); g.beginPath(); g.ellipse(sd * 16, 14, 16, 11, -sd * 0.4, 0, Math.PI * 2); g.fill(); }
+  g.fillStyle = '#6b5440'; g.beginPath(); g.ellipse(0, 4, 6, 22, 0, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+// 音の大きさの目盛り（縦、0〜150 dB）
+const MY0 = 1060, MY1 = 330, dbY = d => MY0 - (MY0 - MY1) * d / 150;
+function meter(g, t, lvl) {
+  const x = 230, w = 110;
+  g.fillStyle = 'rgba(255,255,255,0.08)'; g.beginPath(); g.roundRect(x, MY1, w, MY0 - MY1, 20); g.fill();
+  const gr = g.createLinearGradient(0, MY0, 0, MY1); gr.addColorStop(0, '#59e39a'); gr.addColorStop(0.6, '#ffcf4a'); gr.addColorStop(1, '#ff6b6b');
+  g.fillStyle = gr; g.beginPath(); g.roundRect(x, dbY(lvl), w, MY0 - dbY(lvl), 20); g.fill();
+  for (let d = 0; d <= 150; d += 10) {
+    g.strokeStyle = 'rgba(255,255,255,0.4)'; g.lineWidth = 2; g.beginPath(); g.moveTo(x - 20, dbY(d)); g.lineTo(x, dbY(d)); g.stroke();
+    if (d % 20 === 0 || d === 130) TK.text(g, d + '', x - 30, dbY(d), 34, { align: 'right', color: TK.C.sub, bold: false });
+  }
+  TK.text(g, 'dB', x + w / 2, MY1 - 40, 40, { color: TK.C.sub });
+}
+
+function draw(g, t) {
+  // 0〜6: 当ててみて
+  if (t < 6.3) {
+    g.save(); g.globalAlpha = fade(t, -1, 6.3, 0.3);
+    bat(g, 540, t < 1.6 ? 900 : 230, t < 1.6 ? 1.6 : 0.7, t);
+    g.restore();
+    TK.hook(g, t, 0.0, 1.6, 'この声、\n[何デシベル？]', { y: 450, size: 120 });
+    TK.choices(g, t, 1.6, 6.3, ['40 dB', '80 dB', '130 dB 以上'], { y: 560, h: 130, gap: 22, size: 70, reveal: 6.0, answer: 2, think: [4.0, 6.0] });
+  }
+  // 6〜11: 目盛りがのびる
+  if (t >= 6.0 && t < 11.0) {
+    g.save(); g.globalAlpha = fade(t, 6.0, 11.0, 0.3);
+    const lvl = t < 9.0 ? 128 * TK.out((t - 6.3) / 2.0) : 128 + 13 * TK.out((t - 9.0) / 0.8);
+    meter(g, t, lvl);
+    // 122〜134 の帯
+    if (t > 8.0) {
+      g.save(); g.globalAlpha *= clamp((t - 8.0) / 0.4, 0, 1);
+      g.fillStyle = 'rgba(255,207,74,0.25)'; g.fillRect(380, dbY(134), 560, dbY(122) - dbY(134));
+      TK.text(g, '11種の多くが 122〜134', 400, (dbY(134) + dbY(122)) / 2, 46, { align: 'left', color: TK.C.acc });
+      g.restore();
+    }
+    if (t > 9.0) {
+      g.save(); g.globalAlpha *= TK.pop(t, 9.0);
+      g.strokeStyle = TK.C.red; g.lineWidth = 4; g.setLineDash([10, 8]); g.beginPath(); g.moveTo(380, dbY(140)); g.lineTo(940, dbY(140)); g.stroke(); g.setLineDash([]);
+      TK.text(g, 'いちばん大きい種 140 こえ（推定）', 400, dbY(140) - 50, 42, { align: 'left', color: TK.C.red });
+      g.restore();
+    }
+    bat(g, 700, 820, 0.9, t);
+    g.restore();
+  }
+  // 11〜16: 10 dB ごとに10倍
+  if (t >= 11.0 && t < 16.0) {
+    g.save(); g.globalAlpha = fade(t, 11.0, 16.0, 0.3);
+    TK.text(g, '10 dB 上がるごとに 強さ ×10', PW / 2, 210, 58, { color: TK.C.sub });
+    const n = clamp(Math.floor((t - 11.6) / 0.32) + 1, 0, 9);
+    for (let i = 0; i < 9; i++) {
+      const y = 1040 - i * 72, on = i < n;
+      g.fillStyle = on ? `rgba(255,207,74,${0.35 + 0.07 * i})` : 'rgba(255,255,255,0.06)';
+      g.beginPath(); g.roundRect(300, y - 32, 480, 64, 18); g.fill();
+      TK.text(g, (40 + i * 10) + ' → ' + (50 + i * 10), 330, y, 38, { align: 'left', color: on ? '#fff' : TK.C.dim, bold: false });
+      if (on) TK.text(g, '×10', 750, y, 46, { align: 'right', color: '#fff' });
+    }
+    if (t > 14.8) { g.save(); g.globalAlpha *= TK.pop(t, 14.8); TK.text(g, '[10億倍]', PW / 2, 340, 110, { stroke: 'rgba(0,0,0,0.6)' }); g.restore(); }
+    g.restore();
+  }
+  // 16〜21: 音の高さ。人に聞こえる範囲の外
+  if (t >= 16.0 && t < 21.0) {
+    g.save(); g.globalAlpha = fade(t, 16.0, 21.0, 0.3);
+    TK.text(g, '音の高さ', PW / 2, 260, 58, { color: TK.C.sub });
+    const y = 620, x0 = 110, x1 = 960, xm = 620;
+    g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 4; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke();
+    TK.text(g, '低い', x0, y + 60, 40, { align: 'left', color: TK.C.sub });
+    TK.text(g, '高い', x1, y + 60, 40, { align: 'right', color: TK.C.sub });
+    // 人に聞こえる高さ
+    g.fillStyle = 'rgba(89,227,154,0.35)'; g.beginPath(); g.roundRect(x0, y - 150, xm - x0, 110, 20); g.fill();
+    TK.text(g, '人に聞こえる高さ', (x0 + xm) / 2, y - 95, 46, { color: TK.C.green });
+    // コウモリの声
+    const k = TK.out((t - 16.6) / 0.8);
+    if (k > 0) {
+      g.save(); g.globalAlpha *= k; g.fillStyle = 'rgba(255,107,107,0.35)'; g.beginPath(); g.roundRect(xm + 40, y + 110, x1 - xm - 40, 110, 20); g.fill();
+      TK.text(g, 'コウモリの声', (xm + 40 + x1) / 2, y + 165, 44, { color: TK.C.red });
+      g.restore();
+    }
+    // 静かな夜の庭
+    if (t > 18.0) {
+      g.save(); g.globalAlpha *= clamp((t - 18.0) / 0.5, 0, 1);
+      g.strokeStyle = 'rgba(160,190,255,0.5)'; g.lineWidth = 3;
+      for (let i = 0; i < 7; i++) { const gx = 160 + i * 120; g.beginPath(); g.moveTo(gx, 1050); g.quadraticCurveTo(gx - 20, 980, gx + 10, 930); g.stroke(); }
+      bat(g, 760 + Math.sin(t) * 60, 930, 0.45, t);
+      TK.text(g, 'しーん…', 300, 920, 52, { color: TK.C.sub });
+      g.restore();
+    }
+    g.restore();
+  }
+  // 21〜25: こだまで虫を見つける
+  if (t >= 21.0) {
+    g.save(); g.globalAlpha = fade(t, 21.0, 25.5, 0.3);
+    const bx = 250, by = 640, mx = 860, my = 520;
+    bat(g, bx, by, 0.8, t);
+    // 出ていく音の輪
+    for (let i = 0; i < 4; i++) {
+      const r = ((t - 21.0) * 260 - i * 140); if (r <= 0 || r > 700) continue;
+      g.strokeStyle = `rgba(255,207,74,${0.7 * (1 - r / 700)})`; g.lineWidth = 6;
+      g.beginPath(); g.arc(bx + 90, by - 20, r, -0.6, 0.4); g.stroke();
+    }
+    // こだま（もどってくる小さな輪）
+    const ek = t - 23.0;
+    if (ek > 0) {
+      for (let i = 0; i < 3; i++) {
+        const r = ek * 260 - i * 90; if (r <= 0 || r > 600) continue;
+        g.strokeStyle = `rgba(95,212,255,${0.8 * (1 - r / 600)})`; g.lineWidth = 4;
+        g.beginPath(); g.arc(mx, my, r, Math.PI - 0.4, Math.PI + 0.5); g.stroke();
+      }
+    }
+    moth(g, mx, my, 0.9, ek > 0 ? 1 : 0.35);
+    if (t > 23.2) { g.save(); g.globalAlpha *= TK.pop(t, 23.2); TK.text(g, 'こだま', mx - 60, my + 120, 54, { color: TK.C.acc2 }); g.restore(); }
+    TK.text(g, '大声 → 小さな虫のこだま', PW / 2, 280, 58, { color: TK.C.sub });
+    g.restore();
+  }
+  if (t >= 6.0 && t < 11.0) TK.note(g, t, 6.0, 11.0, 'どれも口から 10 cm の値（パナマの11種）。\n140 こえは水面の反射で大きめかもしれない（推定）', { size: 30 });
+  if (t >= 16.0 && t < 21.0) TK.note(g, t, 16.0, 21.0, '高さの帯は模式（目盛りなし）', { size: 30 });
+  if (t >= 21.0) TK.note(g, t, 21.0, 25.0, '出どころ: Surlykke & Kalko (2008)\nPLoS ONE 3(4): e2036', { size: 30 });
+}
+
+triviaStart({ out: 'animal-senses-trivia2', dur: DUR, draw, subs, cues, peek: 1.0 });
+</script>
+</body>
+</html>

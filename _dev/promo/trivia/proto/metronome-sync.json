@@ -1,0 +1,35 @@
+[
+  {
+    "id": "metronome-sync-1",
+    "page": "metronome-sync-trivia2",
+    "mp4": "out/metronome-sync-trivia2-short.mp4",
+    "type": "A",
+    "title": "人が足並みをそろえて橋をゆらした…は逆だった",
+    "dur": 40,
+    "voice": "(2) VOICEVOX。いまは字幕だけ",
+    "app_footage": false,
+    "notes": "metronome-sync-trivia1.html は前に作った別の話（う2）なので、台本1をページ trivia2 にした。人と橋は Strogatz ほか 2005 のモデルをページで計算（人数 0→300 をゆっくりふやす）。係数（M 113,000・K 4.73e6・B 11,000・G 30・C 16・α π/2・ばらつき 0.63 rad/s）は記憶の値で、論文の表で確かめなおしていない。このモデルの計算では約200人でそろいはじめ、試験の約160人と合わないので、モデルの場面では人数の数字を出さず棒だけにした（31〜36秒で試験の約160人を別に出す）。公開前に係数を論文で確かめ、合えば人数の数字を出したい。最後のメトロノームはアプリの録画ではなく線画のアニメ（モデルではなく絵）。橋の線画は形おおまか（写真なし）。check-loudness: -20.5 LUFS OK。"
+  },
+  {
+    "id": "metronome-sync-3",
+    "page": "metronome-sync-trivia3",
+    "mp4": "out/metronome-sync-trivia3-short.mp4",
+    "type": "H",
+    "title": "拍手がそろうと、会場の音は大きくなる？小さくなる？",
+    "dur": 30,
+    "voice": "(1) 字幕だけ（拍手の効果音はまだ。いまは共通の効果音だけ）",
+    "app_footage": false,
+    "notes": "波形・間かくのグラフは Néda ほか 2000 の結果を形で見せる模式図（60人の手の拍を足した波形。そろうと周期2倍・ばらつき小で、平均の線が下がる）。論文に Hz の数字がないので、高さ・間かくは目安と画面に。そろった波形の山は上で切れている（見た目だけ）。台本の「拍手の効果音つき」は未対応（TK.sfx に拍手の音がない → 共通部品に 'clap' を足す提案）。注意: ページで const PH を使うと promo.js の PH（画面の高さ）とぶつかってページが止まる（録画が「開いた」のまま進まない）。check-loudness: -20.1 LUFS OK。"
+  },
+  {
+    "id": "metronome-sync-2",
+    "page": "metronome-sync-trivia4",
+    "mp4": "out/metronome-sync-trivia4-short.mp4",
+    "type": "F",
+    "title": "振り子がそろうのを見つけた人は、ベッドで寝こんでいた",
+    "dur": 35,
+    "voice": "(2) VOICEVOX 2人（聞き手・答える人）。いまは字幕だけ（札は net-route-trivia3 の書き方）",
+    "app_footage": false,
+    "notes": "metronome-sync-trivia1〜3 がもうあるので台本2をページ trivia4 にした。アプリの録画の代わりに、梁にかけた振り子時計2つの線画（逆向きの位相をそのまま描く絵で、モデルの計算ではない）。ずらして30分で戻る所は3秒にちぢめ、時計の長い針を30分進めて「絵の時間はちぢめてある」と注。梁のゆれは大げさに描いたと注。寝ている人は頭の丸だけ（病名は言わない・「なぜベッドにいたかは手紙に書かれていない」と注）。再現で止まってしまう場合もあった（ScienceDaily）を注に。字幕の長い行は3行に分けた。check-loudness: -20.3 LUFS OK。"
+  }
+]

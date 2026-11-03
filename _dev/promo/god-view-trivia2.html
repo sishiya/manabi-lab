@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく god-view-2（型B もしも計算）「人類のエネルギーで地球をこなごなにするには何年？」。台本は trivia/god-view.md。?short で録る
+// 一様な球の重力の結びつきのエネルギー U = 3GM²/(5R) = 2.24e32 J（NASA Earth Fact Sheet の M・R）。PREM なら約 2.49e32 J
+// 人類の1年分 約600 EJ = 6e20 J（Energy Institute 2026）→ 3.7e11〜4.15e11 年 →「約4000億年」＝宇宙の年齢 138億年の約30倍
+// 太陽の光 3.828e26 W → 6.8〜7.5 日 →「約1週間」
+const DUR = 28;
+const subs = [
+  { a: 0.0, b: 3.0, ja: '地球をこなごなにして、かけらを\n二度と集まらないところまでとばす', en: 'Smash Earth to pieces and fling them\nso far they never come back together', noBurn: true },
+  { a: 3.0, b: 9.0, ja: 'ちぎっても、地球は自分の重力でかけらを引きもどす\nそれに勝つエネルギーは、[約2×10³²ジュール]', en: 'Break it, and its own gravity pulls the pieces back.\nBeating that takes about 2×10³² joules' },
+  { a: 9.0, b: 16.0, ja: '人類が1年に使うエネルギーを\nぜんぶつぎこんだら、[何年]かかる？', en: 'If we poured in all the energy humanity uses each year,\nhow many years would it take?' },
+  { a: 16.0, b: 22.0, ja: '答えは[約4000億年]\n宇宙ができてから今までの、[約30倍]', en: 'About 400 billion years:\nroughly 30 times the age of the universe' },
+  { a: 22.0, b: 28.0, ja: 'でも、太陽が出す光なら…[約1週間]ぶん\n太陽って、ほんとうに桁ちがい', en: 'But the Sun’s light? About one week’s worth.\nThe Sun is on another level' },
+];
+const cues = [
+  { t: 0.05, type: 'thud' }, { t: 0.3, type: 'whoosh' }, { t: 3.0, type: 'rise' }, { t: 6.0, type: 'pop' }, { t: 7.0, type: 'ding' },
+  { t: 9.0, type: 'pop' }, { t: 10.0, type: 'tick' }, { t: 11.0, type: 'tick' }, { t: 12.0, type: 'tick' }, { t: 13.0, type: 'tick' }, { t: 14.0, type: 'tick' }, { t: 15.0, type: 'tick' },
+  { t: 16.0, type: 'ding' }, { t: 18.0, type: 'pop' }, { t: 22.0, type: 'whoosh' }, { t: 24.0, type: 'ding' },
+];
+
+// 地球のかけら（扇形）。s: 0 で集まった地球、1 で遠くへ
+const CX = 540, CY = 640, ER = 210;
+const SHARDS = [];
+for (let ring = 0; ring < 2; ring++) for (let i = 0; i < (ring ? 18 : 9); i++) {
+  const n = ring ? 18 : 9, r = Math.sin((i + ring * 40) * 33.7) * 1e4, u = r - Math.floor(r);
+  SHARDS.push({ a0: i / n * Math.PI * 2, a1: (i + 1) / n * Math.PI * 2, r0: ring ? 0.55 : 0, r1: ring ? 1 : 0.55, sp: (ring ? 1.0 : 0.55) * (0.7 + 0.6 * u), spin: (u - 0.5) * 2, col: ring ? (i % 3 ? '#3d7fd6' : '#59c08a') : '#c96a4a' });
+}
+function shards(g, s, f = 1) {
+  g.save(); g.globalAlpha *= f;
+  // まん中の芯（とけた鉄）
+  const cg = g.createRadialGradient(CX, CY, 0, CX, CY, ER * 0.3); cg.addColorStop(0, '#fff0b0'); cg.addColorStop(1, '#ff8a3a');
+  for (const p of SHARDS) {
+    const am = (p.a0 + p.a1) / 2, rm = ER * (p.r0 + p.r1) / 2, d = s * p.sp * 520;
+    const ox = CX + Math.cos(am) * (rm + d), oy = CY + Math.sin(am) * (rm + d);
+    g.save(); g.translate(ox, oy); g.rotate(s * p.spin * 2); g.translate(-Math.cos(am) * rm, -Math.sin(am) * rm);
+    g.fillStyle = p.col; g.strokeStyle = 'rgba(11,20,48,0.9)'; g.lineWidth = 3;
+    g.beginPath(); g.arc(0, 0, ER * p.r1, p.a0, p.a1); g.arc(0, 0, ER * p.r0, p.a1, p.a0, true); g.closePath(); g.fill(); g.stroke();
+    g.restore();
+  }
+  g.fillStyle = cg; g.globalAlpha *= clamp(1 - s * 3, 0, 1); g.beginPath(); g.arc(CX, CY, ER * 0.3, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+function sun(g, x, y, r) {
+  const gl = g.createRadialGradient(x, y, r * 0.8, x, y, r * 1.6); gl.addColorStop(0, 'rgba(255,190,80,0.5)'); gl.addColorStop(1, 'rgba(255,140,40,0)');
+  g.fillStyle = gl; g.beginPath(); g.arc(x, y, r * 1.6, 0, Math.PI * 2); g.fill();
+  const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, '#fffbe0'); gr.addColorStop(0.5, '#ffd25a'); gr.addColorStop(1, '#f08a24');
+  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+}
+
+function draw(g, t) {
+  // 0〜3: ちぎれて散る
+  if (t < 3.0) {
+    shards(g, TK.out((t - 0.5) / 2.0) * 0.7);
+    TK.hook(g, t, 0.0, 3.0, 'これに要る\n[エネルギー]は？', { y: 270, size: 100 });
+  }
+  // 3〜9: 重力で引きもどす → それに勝つエネルギー
+  if (t >= 3.0 && t < 9.0) {
+    const f = fade(t, 3.0, 9.0, 0.3);
+    const s = t < 5.5 ? lerp(0.7, 0.04, ease((t - 3.0) / 2.5)) : 0.04 + 0.02 * Math.sin(t * 6);
+    shards(g, s, f);
+    g.save(); g.globalAlpha = f;
+    if (t < 6.0) {
+      g.strokeStyle = TK.C.acc2; g.lineWidth = 6;
+      for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2, r1 = 470, r2 = 330; g.beginPath(); g.moveTo(CX + Math.cos(a) * r1, CY + Math.sin(a) * r1); g.lineTo(CX + Math.cos(a) * r2, CY + Math.sin(a) * r2); g.stroke(); }
+      TK.text(g, '自分の重力で、引きもどす', PW / 2, 230, 64);
+    } else {
+      TK.card(g, 150, 170, 780, 150);
+      TK.text(g, '約 [2×10³²] ジュール', PW / 2, 245, 80);
+    }
+    g.restore();
+    TK.note(g, t, 6.0, 9.0, 'かけらを全部、無限に遠くへとばす最低のエネルギー（一様な球の計算 3GM²/5R）', { size: 28 });
+  }
+  // 9〜16: 人類の1年分で何年？（数字が回る）
+  if (t >= 9.0 && t < 16.0) {
+    const f = fade(t, 9.0, 16.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    TK.text(g, '人類が1年に使うエネルギー', PW / 2, 260, 56, { color: TK.C.sub });
+    TK.text(g, '約 [600] エクサジュール', PW / 2, 360, 76);
+    TK.text(g, '＝ 6×10²⁰ ジュール', PW / 2, 450, 48, { color: TK.C.sub, bold: false });
+    TK.text(g, 'ぜんぶつぎこむと…', PW / 2, 640, 60);
+    const n = Math.floor(Math.abs(Math.sin(Math.floor(t * 12) * 12.9898) * 43758.5453) % 9000) + 1000;
+    TK.text(g, n.toLocaleString('ja-JP') + ' 億年？', PW / 2, 820, 130, { color: TK.C.dim });
+    g.restore();
+    TK.note(g, t, 9.0, 16.0, 'いまのペースで（2025年の世界のエネルギー供給）', { size: 30 });
+  }
+  // 16〜22: 約4000億年 ＝ 宇宙の年齢の約30倍
+  if (t >= 16.0 && t < 22.0) {
+    TK.count(g, t, 16.0, 22.0, 0, 4000, { y: 380, size: 170, dur: 0.9, fmt: v => '約' + Math.round(v).toLocaleString('ja-JP') + '億年' });
+    TK.bars(g, t, 17.6, 22.0, [
+      { label: '宇宙の年齢', v: 138 / 4000, color: TK.C.acc2 },
+      { label: 'こなごなにするまで', v: 1, color: TK.C.acc, text: '約30倍' },
+    ], { y: 640, gap: 190, stagger: 0.6 });
+    if (t > 17.6) { g.save(); g.globalAlpha = fade(t, 17.6, 22.0, 0.3); TK.text(g, '138億年', 210, 718, 42, { align: 'left', color: TK.C.sub }); g.restore(); }
+  }
+  // 22〜28: 太陽なら約1週間
+  if (t >= 22.0) {
+    const f = fade(t, 22.0, 30, 0.3);
+    g.save(); g.globalAlpha = f;
+    sun(g, 540, 560, 220);
+    TK.text(g, '太陽が出す光なら', PW / 2, 220, 64);
+    if (t > 23.6) TK.text(g, '[約1週間]ぶん', PW / 2, 920, 110);
+    g.restore();
+    TK.note(g, t, 26.0, 28.0, '出どころ: NASA Earth Fact Sheet・NASA Sun Fact Sheet（光の強さ 3.828×10²⁶ W）\nEnergy Institute (2026) Statistical Review of World Energy', { size: 28 });
+  }
+}
+
+triviaStart({ out: 'god-view-trivia2', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

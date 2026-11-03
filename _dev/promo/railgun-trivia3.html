@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく railgun-3（型E 桁）「レールガンの弾は、何Gで押される？」。台本は trivia/railgun.md。?short で録る
+// 防衛装備庁 2025 の資料（初速 2,300m/s 以上・全長 約6m）から、一定の加速として a = v²/(2L) = 440,800 m/s² ≈ 4.5万G（推定の平均。
+// 砲身は全長より短いので本当はもっと大きい →「少なくとも」）。1円玉 1.0g（造幣局）→ 45kg ぶん。t = 5.2ms、2,300 ÷ 340 = 6.8
+const DUR = 30;
+const subs = [
+  { a: 0.0, b: 3.0, ja: 'レールガンの中では、\n1円玉が[45kg]の重さになる', en: 'Inside a railgun,\na 1-yen coin would weigh 45 kg.', noBurn: true },
+  { a: 3.0, b: 8.0, ja: 'いま、あなたにかかっているのが[1G]', en: 'Right now, you feel 1 g.' },
+  { a: 8.0, b: 13.0, ja: '戦闘機のパイロットでも、[9G]くらい', en: 'Even fighter pilots top out around 9 g.' },
+  { a: 13.0, b: 22.0, ja: 'レールガンの弾は、\n[少なくとも] 4万5千G', en: 'A railgun round feels\nat least 45,000 g.' },
+  { a: 22.0, b: 30.0, ja: '0.005秒で、止まっているところから\n[秒速2.3km]。音の約7倍', en: 'In 0.005 seconds, from standstill\nto 2.3 km/s, about 7 times the speed of sound.' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 1.0, type: 'thud' }, { t: 3.0, type: 'whoosh' }, { t: 3.5, type: 'pop' }, { t: 8.0, type: 'whoosh' }, { t: 8.6, type: 'pop' },
+  { t: 13.0, type: 'whoosh' }, { t: 13.6, type: 'tick' }, { t: 14.6, type: 'tick' }, { t: 15.6, type: 'tick' }, { t: 16.6, type: 'tick' }, { t: 17.8, type: 'thud' },
+  { t: 22.0, type: 'whoosh' }, { t: 22.6, type: 'rise' }, { t: 24.2, type: 'ding' },
+];
+
+// 1円玉の線画（数字と丸だけ。デザインは写さない）
+function coin(g, x, y, r) {
+  g.save(); g.fillStyle = 'rgba(220,228,240,0.9)'; g.strokeStyle = '#fff'; g.lineWidth = 5;
+  g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.strokeStyle = 'rgba(11,20,48,0.35)'; g.lineWidth = 3; g.beginPath(); g.arc(x, y, r * 0.82, 0, Math.PI * 2); g.stroke();
+  TK.text(g, '1', x, y + 2, r * 1.1, { color: '#0b1430', blur: 0 });
+  g.restore();
+}
+// はかり（針の角度 0〜1）
+function scale(g, x, y, w, k, label) {
+  g.save();
+  TK.card(g, x - w / 2, y, w, w * 0.62, { r: 30 });
+  const cx = x, cy = y + w * 0.42, r = w * 0.32;
+  g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 6; g.beginPath(); g.arc(cx, cy, r, Math.PI * 1.15, Math.PI * 1.85); g.stroke();
+  const a = Math.PI * (1.15 + 0.7 * k);
+  g.strokeStyle = TK.C.red; g.lineWidth = 8; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * r * 0.95, cy + Math.sin(a) * r * 0.95); g.stroke();
+  if (label) TK.text(g, label, cx, cy + 70, 64, { color: TK.C.acc });
+  g.restore();
+}
+function person(g, x, y, s, o = {}) {
+  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = '#fff'; g.lineWidth = 7; g.lineCap = 'round';
+  g.beginPath();
+  if (o.sit) { g.moveTo(0, -38); g.lineTo(30, -38); g.lineTo(30, 0); g.moveTo(0, -38); g.lineTo(0, -80); g.moveTo(0, -68); g.lineTo(26, -50); }
+  else { g.moveTo(0, -38); g.lineTo(-14, 0); g.moveTo(0, -38); g.lineTo(14, 0); g.moveTo(0, -38); g.lineTo(0, -80); g.moveTo(0, -70); g.lineTo(-18, -44); g.moveTo(0, -70); g.lineTo(18, -44); }
+  g.stroke(); g.fillStyle = '#fff'; g.beginPath(); g.arc(0, -96, 14, 0, Math.PI * 2); g.fill();
+  if (o.sit) { g.strokeStyle = TK.C.acc2; g.lineWidth = 5; g.beginPath(); g.moveTo(-14, -110); g.lineTo(-14, -30); g.lineTo(40, -30); g.stroke(); }
+  g.restore();
+}
+function down(g, x, y, len, c, w = 12) {
+  g.save(); g.strokeStyle = c; g.lineWidth = w; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + len); g.moveTo(x - 24, y + len - 26); g.lineTo(x, y + len); g.lineTo(x + 24, y + len - 26); g.stroke(); g.restore();
+}
+
+function draw(g, t) {
+  // 0〜3: フック
+  if (t < 3.0) {
+    const k = TK.out((t - 0.8) / 0.5);
+    coin(g, PW / 2 - 60, 440 + 70 * k, 90);
+    scale(g, PW / 2 - 60, 600, 520, k, k > 0.9 ? '45 kg' : '');
+    TK.hook(g, t, 0.0, 3.0, '1円玉が [45kg]', { y: 280, size: 130 });
+  }
+  // 3〜8: 1G
+  if (t >= 3.0 && t < 8.0) {
+    const k = TK.pop(t, 3.3, 0.4);
+    g.save(); g.globalAlpha = k; person(g, PW / 2 - 60, 820, 3.2); down(g, PW / 2 + 140, 480, 200 * k, TK.C.acc2); g.restore();
+    TK.count(g, t, 3.4, 8.0, 1, 1, { y: 330, size: 170, fmt: () => '1 G' });
+    TK.text(g, '（いまのあなた）', PW / 2 - 60, 920, 48, { color: TK.C.sub, bold: false });
+  }
+  // 8〜13: 9G
+  if (t >= 8.0 && t < 13.0) {
+    const k = TK.pop(t, 8.3, 0.4);
+    g.save(); g.globalAlpha = k; person(g, PW / 2 - 100, 820, 3.0, { sit: true }); for (let i = 0; i < 3; i++) down(g, PW / 2 + 120 + i * 50, 440, 260 * k, TK.C.acc, 10); g.restore();
+    TK.count(g, t, 8.4, 13.0, 1, 9, { y: 330, size: 170, dur: 0.9, fmt: v => Math.round(v) + ' G' });
+    TK.text(g, '（戦闘機のパイロット・目安）', PW / 2 - 60, 920, 48, { color: TK.C.sub, bold: false });
+  }
+  // 13〜22: 桁のはしご（10倍ずつ）
+  if (t >= 13.0 && t < 22.0) {
+    const rows = [
+      { g: '10 G', w: '10 g', a: 13.6 }, { g: '100 G', w: '100 g', a: 14.6 }, { g: '1,000 G', w: '1 kg', a: 15.6 },
+      { g: '1万 G', w: '10 kg', a: 16.6 }, { g: '4.5万 G', w: '45 kg', a: 17.8, hot: true },
+    ];
+    TK.text(g, '1円玉の重さは', 640, 190, 40, { color: TK.C.sub, bold: false });
+    rows.forEach((r, i) => {
+      if (t < r.a) return;
+      const k = TK.pop(t, r.a, 0.35), y = 860 - i * 140;
+      g.save(); g.globalAlpha = k;
+      TK.card(g, 90, y - 55, 780, 110, { r: 24, fill: r.hot ? 'rgba(255,207,74,0.25)' : 'rgba(20,34,72,0.9)', stroke: r.hot ? TK.C.acc : undefined, lw: r.hot ? 6 : 3 });
+      TK.text(g, r.g, 140, y, r.hot ? 72 : 58, { align: 'left', color: r.hot ? TK.C.acc : '#fff' });
+      TK.text(g, '→ ' + r.w, 820, y, r.hot ? 66 : 52, { align: 'right', color: r.hot ? TK.C.acc : TK.C.sub });
+      g.restore();
+    });
+    TK.note(g, t, 18.2, 22, '推定の平均（初速 2,300m/s・全長 約6m を一定の加速として）\nレールは全長より短いので、本当はもっと大きい', { size: 30 });
+  }
+  // 22〜30: 0.005秒で秒速2.3km
+  if (t >= 22.0) {
+    const u = clamp((t - 22.6) / 1.6, 0, 1);
+    TK.card(g, 150, 190, 660, 120, { r: 30 });
+    TK.text(g, (0.0052 * u).toFixed(4) + ' 秒', PW / 2 - 60, 252, 76, { color: u >= 1 ? TK.C.acc : '#fff' });
+    TK.count(g, t, 22.6, 30, 0, 2300, { y: 470, size: 160, dur: 1.6, unit: 'メートル／秒', label: '速さ', fmt: v => Math.round(v).toLocaleString('ja-JP') });
+    TK.bars(g, t, 24.2, 30, [
+      { label: '音（空気の中）', v: 340 / 2300, color: TK.C.acc2, text: '' },
+      { label: '弾', v: 1, color: TK.C.acc, text: '約6.8倍' },
+    ], { y: 660, gap: 170, stagger: 0.4, size: 44 });
+    TK.note(g, t, 27.0, 30, '出どころ: 防衛装備庁 技術シンポジウム2025「電磁加速システムの洋上射撃試験」\n1円玉 1.0g は造幣局の公表値', { size: 28 });
+  }
+}
+
+triviaStart({ out: 'railgun-trivia3', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

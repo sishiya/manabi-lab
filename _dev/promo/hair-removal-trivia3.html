@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく hair-3（型H 当ててみて）「毛を剃ると、濃くなる？」。台本は trivia/hair-removal.md。?short で録る
+// 出どころ: Lynfield & MacWilliams (1970) J Invest Dermatol 55:170（5人の男性、片足だけ毎週・数か月、重さ・太さ・伸びる速さに差なし。要旨の引用で確認）。
+// 「切り口が平らで濃く見える」は見た目の説明（測った値ではない）。棒は「差がない」ことを示すだけで、長さに数字の意味はない。
+const DUR = 25;
+const subs = [
+  { a: 0.0, b: 2.0, ja: '毛を[剃り続ける]と、どうなる？', en: 'Keep shaving your hair. What happens?' },
+  { a: 2.0, b: 4.0, ja: '（考えてみて）', en: '(Take a guess)' },
+  { a: 4.0, b: 9.0, ja: '答え: [変わらない]', en: 'Answer: nothing changes' },
+  { a: 9.0, b: 15.0, ja: '5人の男性が、[片足だけ]\n毎週剃り続けた実験', en: 'Five men shaved just one leg\nevery week' },
+  { a: 15.0, b: 19.0, ja: '毛の量も、太さも、伸びる速さも\n[差はなかった]', en: 'Amount, thickness, growth speed:\nno difference' },
+  { a: 19.0, b: 25.0, ja: '濃く見えるのは、切り口が平らで\n[先の細いところ]がないから', en: 'It looks thicker because the cut end is blunt,\nwithout the thin tapered tip' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 2.0, type: 'tick' }, { t: 3.0, type: 'tick' }, { t: 4.0, type: 'ding' },
+  { t: 9.0, type: 'whoosh' }, { t: 15.0, type: 'pop' }, { t: 19.0, type: 'whoosh' }, { t: 21.0, type: 'pop' },
+];
+const LINE = 'rgba(207,224,255,0.9)', HAIRC = 'rgba(30,20,10,0.95)';
+
+// すね2本（左を剃る）。cut 0〜1 で左の毛が短くなる
+function legs(g, cx, cy, s, cut, o = {}) {
+  g.save(); g.translate(cx, cy); g.scale(s, s);
+  [-1, 1].forEach(sd => {
+    const x = sd * 120;
+    g.fillStyle = 'rgba(255,200,170,0.22)'; g.strokeStyle = LINE; g.lineWidth = 6 / s;
+    g.beginPath(); g.moveTo(x - 55, -200); g.lineTo(x + 55, -200); g.quadraticCurveTo(x + 70, -40, x + 40, 160); g.lineTo(x - 40, 160); g.quadraticCurveTo(x - 70, -40, x - 55, -200); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(x - 40, 160); g.lineTo(x - 50, 200); g.lineTo(x + sd * 70, 200); g.lineTo(x + 40, 160); g.stroke();   // 足
+    // 毛（短い線）
+    const len = sd < 0 ? lerp(18, 4, cut) : 18;
+    g.strokeStyle = 'rgba(207,224,255,0.75)'; g.lineWidth = 3 / s;
+    for (let i = 0; i < 26; i++) { const hx = x - 40 + (i * 37) % 80, hy = -180 + (i * 53) % 320; g.beginPath(); g.moveTo(hx, hy); g.lineTo(hx + len * 0.5, hy - len); g.stroke(); }
+  });
+  if (o.razor) {   // カミソリ（左の足に）
+    const y = -120 + 200 * ((o.t * 0.8) % 1);
+    g.save(); g.translate(-120 - 90, y); g.strokeStyle = TK.C.acc2; g.lineWidth = 8 / s; g.beginPath(); g.moveTo(0, 0); g.lineTo(-80, 50); g.stroke(); g.fillStyle = TK.C.acc2; g.fillRect(-10, -20, 60, 22); g.restore();
+  }
+  g.restore();
+}
+
+function draw(g, t) {
+  if (t < 9.0) {
+    const f = t < 8.6 ? 1 : fade(t, -1, 9, 0.3); g.save(); g.globalAlpha = f;
+    legs(g, PW / 2, 360, 1.0, clamp(t / 2, 0, 1), { razor: true, t });
+    TK.text(g, '剃る', PW / 2 - 120, 130, 50, { color: TK.C.acc2 }); TK.text(g, '剃らない', PW / 2 + 120, 130, 50, { color: TK.C.sub });
+    g.restore();
+    TK.choices(g, t, 0.2, 9.0, ['濃くなる', '変わらない', 'うすくなる'], { y: 620, h: 130, gap: 24, size: 64, reveal: 4.0, answer: 1 });
+    if (t >= 2.0 && t < 4.0) {
+      const k = (t - 2.0) / 2.0, cx = 900, cy = 250, r = 64;
+      g.lineWidth = 14; g.strokeStyle = 'rgba(255,255,255,0.15)'; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();
+      g.strokeStyle = TK.C.acc; g.beginPath(); g.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - k)); g.stroke();
+      TK.text(g, String(Math.max(1, Math.ceil(2 - (t - 2.0)))), cx, cy + 4, 64);
+    }
+  }
+  // 9〜15: 実験（5人・片足だけ・毎週・数か月）
+  if (t >= 9.0 && t < 15.0) {
+    const f = fade(t, 9, 15, 0.3); g.save(); g.globalAlpha = f;
+    for (let i = 0; i < 5; i++) { const k = TK.pop(t, 9.3 + i * 0.15, 0.3); g.save(); g.globalAlpha *= clamp(k, 0, 1); legs(g, 140 + i * 200, 420, 0.42, 1); g.restore(); }
+    TK.text(g, '5人', PW / 2, 210, 80, { color: TK.C.acc });
+    // カレンダーの週の印
+    const weeks = Math.floor(clamp((t - 10.5) / 3.5, 0, 1) * 16);
+    for (let w = 0; w < 16; w++) { const x = 150 + (w % 8) * 100, y = 700 + Math.floor(w / 8) * 100; TK.card(g, x - 40, y - 40, 80, 80, { r: 14, fill: w < weeks ? 'rgba(95,212,255,0.35)' : 'rgba(20,34,72,0.85)' }); if (w < weeks) TK.text(g, '✓', x, y, 44, { color: '#fff' }); }
+    TK.text(g, '毎週、片足だけ剃る（数か月）', PW / 2, 960, 48, { color: TK.C.sub });
+    g.restore();
+    TK.note(g, t, 9.4, 15, '5人の小さな実験（週の数は絵の目安）', { size: 30 });
+  }
+  // 15〜19: 3つの棒（左右で同じ）
+  if (t >= 15.0 && t < 19.0) {
+    const f = fade(t, 15, 19, 0.3); g.save(); g.globalAlpha = f;
+    const items = ['毛の重さ', '太さ', '伸びる速さ'];
+    items.forEach((s, i) => {
+      const x = 220 + i * 320, k = ease((t - 15.3 - i * 0.3) / 0.8), H = 400 * k;
+      g.fillStyle = TK.C.acc2; g.fillRect(x - 90, 820 - H, 80, H);
+      g.fillStyle = 'rgba(207,224,255,0.7)'; g.fillRect(x + 10, 820 - H, 80, H);
+      TK.text(g, s, x, 880, 46, { color: TK.C.sub });
+      if (k > 0.9) TK.text(g, '＝', x, 820 - H - 50, 64, { color: TK.C.acc });
+    });
+    g.fillStyle = TK.C.acc2; g.fillRect(260, 250, 40, 40); TK.text(g, '剃った足', 320, 270, 40, { align: 'left', color: TK.C.sub });
+    g.fillStyle = 'rgba(207,224,255,0.7)'; g.fillRect(600, 250, 40, 40); TK.text(g, '剃らない足', 660, 270, 40, { align: 'left', color: TK.C.sub });
+    g.restore();
+    TK.note(g, t, 15.4, 19, '棒は「差がない」ことを表す絵（長さは数字ではありません）', { size: 30 });
+  }
+  // 19〜25: 毛の先（剃った平らな切り口 と 自然なとがった先）
+  if (t >= 19.0) {
+    const f = fade(t, 19, 25.5, 0.3); g.save(); g.globalAlpha = f;
+    const draw1 = (x, flat) => {
+      g.fillStyle = 'rgba(207,224,255,0.85)';
+      g.beginPath(); g.moveTo(x - 50, 950);
+      if (flat) { g.lineTo(x - 50, 420); g.lineTo(x + 50, 420); }
+      else { g.lineTo(x - 50, 620); g.quadraticCurveTo(x - 30, 380, x, 260); g.quadraticCurveTo(x + 30, 380, x + 50, 620); }
+      g.lineTo(x + 50, 950); g.closePath(); g.fill();
+    };
+    const k = ease((t - 19.3) / 0.8);
+    g.save(); g.globalAlpha *= k; draw1(320, true); draw1(760, false); g.restore();
+    TK.text(g, '剃ったあと', 320, 200, 52, { color: TK.C.acc2 });
+    TK.text(g, '剃っていない毛', 760, 200, 52, { color: TK.C.sub });
+    if (t > 21.0) { TK.text(g, '[平ら]', 320, 360, 64); TK.text(g, '細い先', 830, 300, 48, { color: TK.C.acc, align: 'left' }); }
+    TK.text(g, '（毛を大きくした断面）', PW / 2, 1020, 40, { color: TK.C.dim, bold: false });
+    g.restore();
+    TK.note(g, t, 19.4, 25, '見た目の説明（測った値ではありません）\n出どころ: Lynfield & MacWilliams (1970) J Invest Dermatol 55:170', { size: 28 });
+  }
+}
+
+triviaStart({ out: 'hair-removal-trivia3', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

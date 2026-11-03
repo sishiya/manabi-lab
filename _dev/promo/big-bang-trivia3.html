@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく big-bang-3（型H 当ててみて）「太陽系でいちばん年上の惑星は？」。台本は trivia/big-bang.md。?short で録る
+// 木星の芯（地球の約20倍）: 太陽系ができて100万年以内（Kruijer ほか 2017 PNAS）。火星: 200万年以内に今の半分（Dauphas & Pourmand 2011）
+// 地球のできあがり（月ができたころ）: 約3千万年（Kleine ほか 2002）。研究で3千万〜1億年の幅 → 字幕は「何千万年もあと」
+// 46億年を1年にすると 1時間 ≈ 52.5万年 → 木星の芯は元日の午前2時ごろ、地球は1月3日ごろ
+const DUR = 24;
+const subs = [
+  { a: 0.0, b: 3.0, ja: '太陽系で、いちばん先にできた惑星は？', en: 'Which planet in our Solar System formed first?', noBurn: true },
+  { a: 3.0, b: 6.6, ja: 'A 地球　B 火星　C 木星', en: 'A: Earth   B: Mars   C: Jupiter' },
+  { a: 6.6, b: 12.0, ja: '答えは [C]、木星\n太陽系ができて[100万年]たたないうちに、地球20個分の芯が', en: 'The answer is C, Jupiter.\nWithin a million years, it had a core of 20 Earth masses' },
+  { a: 12.0, b: 17.0, ja: '火星は200万年で半分の大きさ\n地球ができあがったのは、それより[何千万年もあと]', en: 'Mars reached half its size in 2 million years.\nEarth was finished tens of millions of years later' },
+  { a: 17.0, b: 22.0, ja: '先に生まれた木星の重力が、まわりの岩をかきまぜて\n外と内を分けた、と考えられています', en: 'The early Jupiter’s gravity is thought to have stirred the rocks\nand split the inner and outer Solar System' },
+  { a: 22.0, b: 24.0, ja: 'なんでわかるか？　隕石の中の[原子の時計]で', en: 'How do we know? From atomic clocks inside meteorites' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 1.6, type: 'whoosh' }, { t: 3.6, type: 'tick' }, { t: 4.6, type: 'tick' }, { t: 5.6, type: 'tick' },
+  { t: 6.6, type: 'ding' }, { t: 8.0, type: 'pop' }, { t: 12.0, type: 'whoosh' }, { t: 13.0, type: 'pop' }, { t: 14.6, type: 'pop' },
+  { t: 17.0, type: 'rise' }, { t: 22.0, type: 'tick' },
+];
+
+function earthP(g, x, y, r) {
+  const gr = g.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r); gr.addColorStop(0, '#6fb4ff'); gr.addColorStop(1, '#1d4fa3');
+  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  g.fillStyle = 'rgba(89,227,154,0.7)'; g.beginPath(); g.ellipse(x - r * 0.25, y - r * 0.1, r * 0.35, r * 0.25, 0.4, 0, Math.PI * 2); g.fill();
+}
+function marsP(g, x, y, r) {
+  const gr = g.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r); gr.addColorStop(0, '#f09a6a'); gr.addColorStop(1, '#a8401a');
+  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+}
+function jupiterP(g, x, y, r) {
+  g.save(); g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.clip();
+  g.fillStyle = '#e8c9a0'; g.fillRect(x - r, y - r, 2 * r, 2 * r);
+  ['#c98c5a', '#b07448', '#d9a877', '#c98c5a'].forEach((c, i) => { g.fillStyle = c; g.fillRect(x - r, y - r * 0.7 + i * r * 0.42, 2 * r, r * 0.16); });
+  const sh = g.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.2, x, y, r); sh.addColorStop(0, 'rgba(255,255,255,0.15)'); sh.addColorStop(1, 'rgba(0,0,0,0.35)');
+  g.fillStyle = sh; g.fillRect(x - r, y - r, 2 * r, 2 * r);
+  g.restore();
+}
+// 時間の帯（x0〜x1 が 0〜span 年）
+function timeline(g, t, span, items, y, f, label) {
+  const x0 = 110, x1 = 950;
+  g.save(); g.globalAlpha = f;
+  g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 6; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke();
+  TK.text(g, '0', x0, y + 50, 40, { color: TK.C.sub }); TK.text(g, label, x1, y + 50, 40, { color: TK.C.sub, align: 'right' });
+  TK.text(g, '（太陽系の誕生）', x0 + 40, y + 50, 34, { color: TK.C.dim, align: 'left', bold: false });
+  for (const it of items) {
+    if (t < it.at) continue;
+    const k = TK.pop(t, it.at, 0.35), x = lerp(x0, x1, it.v / span);
+    g.save(); g.globalAlpha = f * clamp(k, 0, 1);
+    g.strokeStyle = it.c; g.lineWidth = 5; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - it.h); g.stroke();
+    it.draw(g, x, y - it.h - 50);
+    TK.lines(g, it.s, x + (it.dx || 0), y - it.h - 50 + (it.dy || 0), 40, { align: it.align || 'center' });
+    g.restore();
+  }
+  g.restore();
+}
+const rocks = Array.from({ length: 90 }, (_, i) => { const a = Math.sin(i * 45.1) * 1e4, b = Math.sin(i * 17.9) * 1e4; return { th: (a - Math.floor(a)) * Math.PI * 2, r: 0.25 + (b - Math.floor(b)) * 0.75 }; });
+
+function draw(g, t) {
+  // 0〜1.6: フック（3つの惑星）
+  if (t < 1.8) {
+    const f = fade(t, -1, 1.8, 0.3);
+    g.save(); g.globalAlpha = f;
+    earthP(g, 220, 700, 80); marsP(g, 470, 700, 55); jupiterP(g, 780, 700, 190);
+    g.restore();
+    TK.hook(g, t, 0.0, 1.8, 'いちばん[年上]は？', { y: 330, size: 116 });
+  }
+  TK.choices(g, t, 1.6, 6.6, ['地球', '火星', '木星'], { y: 520, h: 170, think: [3.0, 6.0], reveal: 6.0, answer: 2 });
+  if (t >= 1.6 && t < 6.6) { g.save(); g.globalAlpha = fade(t, 1.6, 6.6, 0.3); TK.text(g, 'いちばん先にできた惑星は？', PW / 2, 210, 62); g.restore(); }
+  // 6.6〜12: 100万年まで
+  if (t >= 6.6 && t < 12.0) {
+    const f = fade(t, 6.6, 12.0, 0.3);
+    g.save(); g.globalAlpha = f; TK.text(g, '答えは [木星]', PW / 2, 230, 84); g.restore();
+    timeline(g, t, 1e6, [{ v: 0.9e6, at: 8.0, h: 260, c: TK.C.acc, s: '木星の芯\n[地球20個分]', dx: -80, align: 'right', draw: (g, x, y) => jupiterP(g, x, y, 60) }], 950, f, '100万年');
+  }
+  // 12〜17: 4000万年まで
+  if (t >= 12.0 && t < 17.0) {
+    const f = fade(t, 12.0, 17.0, 0.3);
+    timeline(g, t, 4e7, [
+      { v: 0.9e6, at: 12.0, h: 520, c: TK.C.acc, s: '木星の芯', dx: 70, align: 'left', draw: (g, x, y) => jupiterP(g, x, y, 50) },
+      { v: 2e6, at: 13.0, h: 300, c: TK.C.red, s: '火星（半分の大きさ）', dx: 50, align: 'left', draw: (g, x, y) => marsP(g, x, y, 30) },
+      { v: 3e7, at: 14.6, h: 160, c: TK.C.acc2, s: '地球\n[何千万年もあと]', dx: -10, dy: -110, draw: (g, x, y) => earthP(g, x, y, 40) },
+    ], 950, f, '4000万年');
+    if (t > 15.5) { g.save(); g.globalAlpha = fade(t, 15.5, 17.0, 0.3); TK.text(g, '46億年を1年にすると: 木星の芯は元日の午前2時、地球は1月3日ごろ', PW / 2, 220, 34, { color: TK.C.sub, bold: false }); g.restore(); }
+  }
+  // 17〜22: 木星がかきまぜる
+  if (t >= 17.0 && t < 22.0) {
+    const f = fade(t, 17.0, 22.0, 0.3), cx = 540, cy = 640, RJ = 300, k = ease((t - 17.5) / 3.0);
+    g.save(); g.globalAlpha = f;
+    const sg = g.createRadialGradient(cx, cy, 0, cx, cy, 60); sg.addColorStop(0, '#fff6c8'); sg.addColorStop(0.6, '#ffc24a'); sg.addColorStop(1, 'rgba(255,140,40,0)');
+    g.fillStyle = sg; g.beginPath(); g.arc(cx, cy, 60, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,0.25)'; g.setLineDash([10, 12]); g.lineWidth = 3; g.beginPath(); g.arc(cx, cy, RJ, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
+    const ja = t * 0.5; jupiterP(g, cx + Math.cos(ja) * RJ, cy + Math.sin(ja) * RJ, 46);
+    for (const rk of rocks) {   // 木星の通り道の近くの岩が、内と外へ分かれていく（説明の絵）
+      let rr = 110 + rk.r * 330;
+      if (rr > 200 && rr < 400) rr = rr < RJ ? lerp(rr, 200, k) : lerp(rr, 400, k);
+      const th = rk.th + t * 0.8 * Math.pow(200 / rr, 1.5);
+      g.fillStyle = rr < RJ ? '#c9b8a6' : '#9fc6ff'; g.beginPath(); g.arc(cx + Math.cos(th) * rr, cy + Math.sin(th) * rr, 6, 0, Math.PI * 2); g.fill();
+    }
+    TK.text(g, '木星が、[内と外]を分けた', PW / 2, 220, 70);
+    g.restore();
+    TK.note(g, t, 17.0, 22.0, '論文の「いちばんありそうな説明」。上から見た説明の絵', { size: 30 });
+  }
+  // 22〜24: 隕石の時計
+  if (t >= 22.0) {
+    g.save(); g.globalAlpha = fade(t, 22.0, 26, 0.3);
+    g.fillStyle = '#6b6560'; g.beginPath();
+    [[-170, -60], [-90, -150], [60, -140], [180, -40], [150, 100], [10, 160], [-140, 110]].forEach(([dx, dy], i) => i ? g.lineTo(540 + dx, 620 + dy) : g.moveTo(540 + dx, 620 + dy)); g.closePath(); g.fill();
+    g.strokeStyle = '#fff'; g.lineWidth = 8; g.beginPath(); g.arc(540, 620, 80, 0, Math.PI * 2); g.stroke();
+    const a = t * 4; g.beginPath(); g.moveTo(540, 620); g.lineTo(540 + Math.cos(a) * 60, 620 + Math.sin(a) * 60); g.moveTo(540, 620); g.lineTo(540, 570); g.stroke();
+    TK.text(g, '隕石の中の"[原子の時計]"', PW / 2, 260, 70);
+    g.restore();
+    TK.note(g, t, 22.0, 24.0, '出どころ: Kruijer ほか (2017) PNAS 114, 6712・Dauphas & Pourmand (2011) Nature 473, 489\nKleine ほか (2002) Nature 418, 952', { size: 28 });
+  }
+  if (t >= 6.6 && t < 17.0) TK.note(g, t, 6.6, 17.0, '隕石の同位体からの推定（と考えられています）', { size: 30 });
+}
+
+triviaStart({ out: 'big-bang-trivia3', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

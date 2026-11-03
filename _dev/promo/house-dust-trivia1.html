@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく house-dust-1（型A ぜんぶ逆）「アメリカの家では、ほこりの6割は外から」。台本は trivia/house-dust.md。?short で録る
+// REVIEW の直し: 「アメリカ（土足）の家のモデル」を大きめに・「根拠がない」→「確かめた研究が見つからない」・最後の「玄関」は「かも」まで。
+// 6割以上は Layton & Beamer (2009) のアメリカ中西部の家のコンピューターのモデル（ScienceDaily の紹介）。円グラフは 60:40 で描き、字は「以上／以下」
+const DUR = 30;
+const subs = [
+  { a: 0.0, b: 1.8, ja: 'ほこりの8割は人の皮ふ？', en: 'Is 80% of house dust dead skin?', noBurn: true },
+  { a: 1.8, b: 4.0, ja: 'よく聞くけど、\n[確かめた研究]が見つからない', en: 'You hear it a lot, but no study seems to back it up' },
+  { a: 4.0, b: 10.0, ja: '2009年、アメリカの研究。土足の家のほこりが\nどこから来るかを、[計算で]追いかけた', en: 'A 2009 US study used a computer model to trace\nwhere dust comes from in homes where people wear shoes' },
+  { a: 10.0, b: 14.5, ja: '答え: [6割以上は、外]から。\n靴の土と、窓やすき間から入る空気の粒', en: 'Answer: over 60% comes from outdoors —\nsoil on shoes and particles in outside air' },
+  { a: 14.5, b: 18.0, ja: '靴をぬぐ日本の家では、\n外の分は[もっと少ない]かも', en: 'In Japanese homes, where shoes come off,\nthe outdoor share may be smaller' },
+  { a: 18.0, b: 25.0, ja: '皮ふも入っている。\nでも、[主役じゃない]', en: 'Skin is in there too.\nBut it isn’t the main ingredient' },
+  { a: 25.0, b: 30.0, ja: 'ほこりを減らす近道は…\n[玄関]、かも', en: 'The shortcut to less dust…\nmight be your front door' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 0.9, type: 'buzz' }, { t: 4.0, type: 'whoosh' }, { t: 5.2, type: 'tick' }, { t: 6.4, type: 'tick' },
+  { t: 10.0, type: 'rise' }, { t: 11.2, type: 'ding' }, { t: 14.5, type: 'pop' }, { t: 18.0, type: 'whoosh' },
+  { t: 19.0, type: 'pop' }, { t: 20.0, type: 'pop' }, { t: 21.0, type: 'pop' }, { t: 22.0, type: 'pop' }, { t: 23.0, type: 'pop' },
+  { t: 25.0, type: 'whoosh' }, { t: 26.6, type: 'ding' },
+];
+const rnd = (i, k = 1) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
+const SOIL = '#c99a5b', AIR = '#9fb4c8', SKIN = '#f3d6c4', FIBER = '#b28cff', POLLEN = '#ffcf4a', SOOT = '#555c66';
+
+// 「アメリカ（土足）の家のモデル」の札（大きめ。消さない）
+function modelTag(g, y, a = 1) {
+  g.save(); g.globalAlpha *= a;
+  TK.card(g, 110, y - 62, PW - 220, 124, { fill: 'rgba(255,207,74,0.16)', stroke: TK.C.acc, lw: 5, r: 30 });
+  TK.text(g, '[アメリカ（土足）]の家のモデル', PW / 2, y, 70);
+  g.restore();
+}
+// 棚とほこり
+function shelf(g, t, y) {
+  g.fillStyle = '#6b5236'; g.fillRect(170, y, 740, 34);
+  g.fillStyle = '#4f3b26'; g.fillRect(200, y + 34, 26, 160); g.fillRect(854, y + 34, 26, 160);
+  for (let i = 0; i < 160; i++) {
+    const x = 190 + rnd(i) * 700, h = 2 + rnd(i, 2) * 12, c = [SOIL, AIR, SKIN, FIBER, SOOT][i % 5];
+    g.fillStyle = c; g.globalAlpha = 0.8; g.beginPath(); g.arc(x, y - h * 0.5, 3 + rnd(i, 3) * 5, 0, Math.PI * 2); g.fill();
+  }
+  g.globalAlpha = 1;
+}
+// 家の断面（玄関・窓・すき間）。k は外の粒の流れこみの進み
+function house(g, t, k) {
+  const L = 150, R = 930, T = 560, B = 1060;
+  g.save();
+  g.strokeStyle = '#cfe0ff'; g.lineWidth = 8; g.lineJoin = 'round';
+  g.beginPath(); g.moveTo(L - 40, T); g.lineTo(PW / 2, T - 170); g.lineTo(R + 40, T); g.stroke();   // 屋根
+  g.beginPath(); g.moveTo(L, T); g.lineTo(L, 740); g.moveTo(L, 960); g.lineTo(L, B); g.lineTo(R, B); g.lineTo(R, T); g.lineTo(L, T); g.stroke();
+  // 玄関（左の口）・窓（右）
+  g.strokeStyle = TK.C.acc2; g.lineWidth = 6; g.strokeRect(R - 4, 700, 8, 150);
+  g.fillStyle = 'rgba(95,212,255,0.18)'; g.fillRect(R - 4, 700, 8, 150);
+  TK.text(g, '玄関', L + 70, 700, 40, { color: TK.C.sub });
+  TK.text(g, '窓・すき間', R - 110, 660, 40, { color: TK.C.sub });
+  g.fillStyle = 'rgba(255,255,255,0.08)'; g.fillRect(L + 4, B - 20, R - L - 8, 16);   // 床
+  // 靴（入ってくる）
+  const sx = lerp(30, 330, ease((t - 4.6) / 3)), sy = B - 40;
+  g.fillStyle = '#e8e8e8'; g.beginPath(); g.roundRect(sx - 60, sy - 34, 110, 40, 14); g.fill();
+  g.fillStyle = SOIL; g.fillRect(sx - 60, sy + 4, 110, 10);
+  g.restore();
+  // 粒: 靴から土、窓から空気の粒。床に積もる
+  for (let i = 0; i < 70; i++) {
+    const p = clamp(k * 1.4 - rnd(i) * 0.4, 0, 1); if (p <= 0) continue;
+    let x, y, c;
+    if (i % 2 === 0) { x = lerp(L - 20, L + 80 + rnd(i, 4) * 640, p); y = lerp(B - 30, B - 26 - rnd(i, 5) * 6, p); c = SOIL; }
+    else { x = lerp(R + 120, L + 60 + rnd(i, 6) * 680, p); y = lerp(760 + rnd(i, 7) * 80, B - 26 - rnd(i, 8) * 6, ease(p)); c = AIR; }
+    g.fillStyle = c; g.beginPath(); g.arc(x, y, 7, 0, Math.PI * 2); g.fill();
+  }
+  // 矢印
+  const arrow = (x0, y0, x1, y1, c) => {
+    g.save(); g.strokeStyle = c; g.fillStyle = c; g.lineWidth = 10; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+    const a = Math.atan2(y1 - y0, x1 - x0); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 - 30 * Math.cos(a - 0.5), y1 - 30 * Math.sin(a - 0.5)); g.lineTo(x1 - 30 * Math.cos(a + 0.5), y1 - 30 * Math.sin(a + 0.5)); g.fill(); g.restore();
+  };
+  if (t > 5.0) { g.globalAlpha = fade(t, 5.0, 10, 0.3); arrow(40, 900, 260, 900, SOIL); TK.text(g, '靴の土', 140, 850, 44, { color: SOIL }); g.globalAlpha = 1; }
+  if (t > 6.2) { g.globalAlpha = fade(t, 6.2, 10, 0.3); arrow(1060, 775, 830, 775, AIR); TK.text(g, '外の空気の粒', 760, 840, 44, { color: AIR }); g.globalAlpha = 1; }
+}
+// 円グラフ（外 60・中 40 として描く）
+function pie(g, t, cx, cy, r) {
+  const k = TK.out((t - 10.4) / 1.6), aO = Math.PI * 2 * 0.6 * k, a0 = -Math.PI / 2;
+  g.fillStyle = 'rgba(255,255,255,0.08)'; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
+  g.fillStyle = SOIL; g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, r, a0, a0 + aO); g.closePath(); g.fill();
+  if (k > 0.98) {
+    const k2 = TK.out((t - 12.0) / 1.0);
+    g.fillStyle = SKIN; g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, r, a0 + aO, a0 + aO + Math.PI * 2 * 0.4 * k2); g.closePath(); g.fill();
+    if (k2 > 0.5) {
+      g.globalAlpha = clamp((k2 - 0.5) * 3, 0, 1);
+      TK.lines(g, '外\n[6割以上]', cx + r * 0.42, cy + r * 0.25, 62, { color: '#2a1a08', acc: '#2a1a08', blur: 0 });
+      TK.lines(g, '中\n4割以下', cx - r * 0.45, cy - r * 0.28, 50, { color: '#3a2a20', blur: 0 });
+      g.globalAlpha = 1;
+    }
+  }
+  if (t > 13) {
+    g.globalAlpha = fade(t, 13, 18, 0.3);
+    TK.text(g, '外 = 靴の土 ＋ 外の空気の粒', PW / 2, cy + r + 60, 44, { color: TK.C.sub });
+    TK.text(g, '中 = 皮ふ・服や家具の繊維 など', PW / 2, cy + r + 115, 44, { color: TK.C.sub });
+    g.globalAlpha = 1;
+  }
+}
+// ルーペの中（積もったほこり）
+function loupe(g, t) {
+  const cx = PW / 2, cy = 680, r = 360;
+  g.save(); g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.clip();
+  g.fillStyle = '#1b2a4e'; g.fillRect(cx - r, cy - r, r * 2, r * 2);
+  const kinds = [
+    { c: SOIL, n: 'つち', s: 'rock', x: -170, y: -130 }, { c: SOOT, n: 'すす', s: 'dot', x: 150, y: -170 },
+    { c: POLLEN, n: '花粉', s: 'pollen', x: 180, y: 110 }, { c: FIBER, n: '繊維', s: 'fiber', x: -40, y: 20 },
+    { c: SKIN, n: '皮ふ', s: 'flake', x: -170, y: 190 },
+  ];
+  // 背景の小さな粒
+  for (let i = 0; i < 90; i++) { g.fillStyle = [SOIL, AIR, SOOT, SKIN, FIBER][i % 5]; g.globalAlpha = 0.35; g.beginPath(); g.arc(cx - r + rnd(i, 9) * r * 2, cy - r + rnd(i, 10) * r * 2, 5 + rnd(i, 11) * 6, 0, Math.PI * 2); g.fill(); }
+  g.globalAlpha = 1;
+  kinds.forEach((q, i) => {
+    const k = TK.pop(t, 19 + i, 0.4); if (k <= 0) return;
+    const x = cx + q.x, y = cy + q.y;
+    g.save(); g.translate(x, y); g.scale(k, k); g.fillStyle = q.c; g.strokeStyle = q.c; g.lineWidth = 10; g.lineCap = 'round';
+    if (q.s === 'rock') { g.beginPath(); g.moveTo(-50, -20); g.lineTo(-10, -55); g.lineTo(45, -30); g.lineTo(55, 25); g.lineTo(0, 50); g.lineTo(-45, 30); g.closePath(); g.fill(); }
+    if (q.s === 'dot') { for (let j = 0; j < 7; j++) { g.beginPath(); g.arc(Math.cos(j) * 26, Math.sin(j * 1.7) * 22, 16, 0, Math.PI * 2); g.fill(); } }
+    if (q.s === 'pollen') { g.beginPath(); g.arc(0, 0, 40, 0, Math.PI * 2); g.fill(); g.fillStyle = '#c99a1a'; for (let j = 0; j < 12; j++) { const a = j / 12 * Math.PI * 2; g.beginPath(); g.arc(Math.cos(a) * 40, Math.sin(a) * 40, 8, 0, Math.PI * 2); g.fill(); } }
+    if (q.s === 'fiber') { g.beginPath(); g.moveTo(-130, -40); g.bezierCurveTo(-40, 60, 40, -80, 140, 30); g.stroke(); }
+    if (q.s === 'flake') { g.globalAlpha = 0.85; g.beginPath(); g.moveTo(-50, -10); g.lineTo(0, -35); g.lineTo(55, -5); g.lineTo(20, 30); g.lineTo(-40, 25); g.closePath(); g.fill(); }
+    g.restore();
+    g.globalAlpha = clamp(k, 0, 1); TK.text(g, q.n, x, y + 85, 50, { color: q.c === SOOT ? '#d0d6e0' : q.c }); g.globalAlpha = 1;
+  });
+  g.restore();
+  g.strokeStyle = '#cfe0ff'; g.lineWidth = 16; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();
+  g.lineWidth = 34; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx + r * 0.72, cy + r * 0.72); g.lineTo(cx + r * 0.72 + 120, cy + r * 0.72 + 120); g.stroke();
+}
+// 玄関マット
+function doorMat(g, t) {
+  const L = 150, R = 930, B = 1060;
+  g.strokeStyle = '#cfe0ff'; g.lineWidth = 8; g.beginPath(); g.moveTo(L, 520); g.lineTo(L, 760); g.moveTo(L, 960); g.lineTo(L, B); g.lineTo(R, B); g.stroke();
+  g.fillStyle = '#3a6b5a'; g.fillRect(L + 30, B - 40, 300, 26);
+  const k = fade(t, 26.2, 30, 0.4), p = 0.5 + 0.5 * Math.sin(t * 4);
+  g.save(); g.globalAlpha = k; g.strokeStyle = TK.C.acc; g.lineWidth = 6 + 4 * p; g.setLineDash([22, 14]);
+  g.strokeRect(L + 10, 760, 340, B - 760 + 20); g.restore();
+  TK.text(g, '玄関', L + 180, 720, 56, { color: TK.C.acc });
+  g.fillStyle = '#e8e8e8'; g.beginPath(); g.roundRect(L + 400, B - 70, 110, 40, 14); g.fill();
+  g.beginPath(); g.roundRect(L + 530, B - 70, 110, 40, 14); g.fill();
+}
+
+function draw(g, t) {
+  // 0〜4: フック
+  if (t < 4.0) {
+    shelf(g, t, 920);
+    const k = TK.pop(t, 0.0, 0.4);
+    g.save(); g.globalAlpha = fade(t, -1, 4, 0.3);
+    TK.text(g, 'ほこりの[8割]は人の皮ふ？', PW / 2, 330, 92 * (0.6 + 0.4 * k), { stroke: 'rgba(0,0,0,0.6)' });
+    if (t > 0.9) {   // 赤い×
+      const x = TK.out((t - 0.9) / 0.25);
+      g.strokeStyle = TK.C.red; g.lineWidth = 26; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(PW / 2 - 300, 230); g.lineTo(PW / 2 - 300 + 600 * x, 230 + 200 * x);
+      if (x > 0.5) { const y = (x - 0.5) * 2; g.moveTo(PW / 2 + 300, 230); g.lineTo(PW / 2 + 300 - 600 * y, 230 + 200 * y); }
+      g.stroke();
+    }
+    if (t > 1.2) {
+      g.globalAlpha *= clamp((t - 1.2) / 0.3, 0, 1);
+      TK.text(g, '→ 6割は [外] から', PW / 2, 560, 88);
+      modelTag(g, 700);
+    }
+    g.restore();
+  }
+  // 4〜10: 家の断面
+  if (t >= 4.0 && t < 10.0) {
+    modelTag(g, 230, fade(t, 4, 30, 0.3));
+    house(g, t, clamp((t - 5.0) / 4.5, 0, 1));
+  }
+  // 10〜18: 円グラフ
+  if (t >= 10.0 && t < 18.0) {
+    modelTag(g, 230);
+    pie(g, t, PW / 2, 570, 250);
+    if (t > 14.5) { g.save(); g.globalAlpha = fade(t, 14.5, 18, 0.3); TK.text(g, '日本の家（靴をぬぐ）は、たしかめた数字なし', PW / 2, 1060, 40, { color: TK.C.sub, bold: false }); g.restore(); }
+  }
+  // 18〜25: ルーペ
+  if (t >= 18.0 && t < 25.0) { TK.text(g, '積もったほこりの中', PW / 2, 230, 60, { color: TK.C.sub }); loupe(g, t); }
+  // 25〜30: 玄関
+  if (t >= 25.0) { doorMat(g, t); if (t < 27.8) TK.note(g, t, 25.2, 27.8, '研究の結論ではなく、そこからの思いつきです', { size: 32 }); }
+  if (t >= 4 && t < 18) TK.note(g, t, 4, 18, 'アメリカ中西部の家のコンピューターのモデル（推定）。家・季節・土足かどうかで変わります', { size: 30 });
+  if (t >= 27.8) TK.note(g, t, 27.8, 30.0, '出どころ: Layton & Beamer (2009) Environ. Sci. Technol. 43:8199', { size: 30 });
+}
+
+triviaStart({ out: 'house-dust-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

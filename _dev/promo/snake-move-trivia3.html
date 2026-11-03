@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく snake-move-3（型D 3つ）「ヘビのおかしな話、3つ目がいちばんおかしい」。台本は trivia/snake-move.md。?short で録る
+// ① Hu ほか 2009（PNAS）: 摩擦の力は勢い（慣性）の力より1けた大きい。低いレイノルズ数の微生物の進み方と同じ特徴（ミルクスネーク 30cm）。
+// ② 同: 布の坂で登れるのは 7 ± 2° まで。より急だと後ろへすべる。
+// ③ Byrnes & Jayne 2014（Biol. Lett.、要旨）: 木を登るヘビ（5種）は、体重を支えるのに要る押す力の 3倍より大きい力をよく出した。
+// こわがらせない: 体は線（顔・口なし）。③の数はアプリの計算ではなく研究の測定。
+const DUR = 40;
+const subs = [
+  { a: 0.0, b: 3.0, ja: 'ヘビの進み方、おかしな話を3つ', en: 'Three odd facts about how snakes move', noBurn: true },
+  { a: 3.0, b: 8.0, ja: '1つ目。ヘビは“勢い”をほとんど使っていない\n摩擦が、勢いの[約10倍]も大きい', en: '1. Snakes barely use momentum:\nfriction is about ten times bigger' },
+  { a: 8.0, b: 13.0, ja: '動きを止めたら、[すぐ止まる]\n水の中の微生物と同じ“勢いの効かない”進み方', en: 'Stop moving, and it stops at once,\nlike microbes swimming in water' },
+  { a: 13.0, b: 18.0, ja: '2つ目。布の坂なら\n[7度]くらいで、もう登れない', en: '2. On a cloth slope,\nabout 7 degrees is already too steep' },
+  { a: 18.0, b: 24.0, ja: 'うねっても、[後ろへずり落ちる]', en: 'It wriggles, but slides backward' },
+  { a: 24.0, b: 30.0, ja: '3つ目。木を登るときは、落ちないのに必要な力の\n[3倍以上]でしめつけることが多い', en: '3. Climbing trees, they often squeeze\nwith over three times the force they need' },
+  { a: 30.0, b: 36.0, ja: '損をしてでも、[落ちないほう]をえらぶ', en: 'Wasting effort, but never falling' },
+  { a: 36.0, b: 40.0, ja: 'ゆっくり・慎重\nそれがヘビの進み方', en: 'Slow and careful:\nthat’s how snakes move' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 0.5, type: 'tick' }, { t: 0.7, type: 'tick' }, { t: 0.9, type: 'tick' }, { t: 3.0, type: 'whoosh' }, { t: 9.0, type: 'thud' },
+  { t: 13.0, type: 'whoosh' }, { t: 14.0, type: 'rise' }, { t: 19.0, type: 'buzz' }, { t: 24.0, type: 'whoosh' }, { t: 26.0, type: 'pop' }, { t: 27.2, type: 'pop' },
+  { t: 30.0, type: 'ding' }, { t: 36.0, type: 'pop' },
+];
+const BODYC = '#cfe8de';
+
+// 上から見たヘビ（うねる線）。s: 進んだ道のり（px）
+function slither(g, x0, y0, len, s, amp = 60) {
+  const k = 2 * Math.PI / 300;
+  g.save(); g.strokeStyle = BODYC; g.lineCap = 'round'; g.lineJoin = 'round';
+  const pts = [];
+  for (let u = 0; u <= len; u += 6) { const a = amp * Math.min(1, u / 120, (len - u) / 60 + 0.3); pts.push([x0 + u, y0 + a * Math.sin(k * (u + s))]); }
+  for (let i = 1; i < pts.length; i++) {
+    const u = (i / pts.length);
+    g.lineWidth = 8 + 30 * Math.min(1, u * 2.2);
+    g.beginPath(); g.moveTo(pts[i - 1][0], pts[i - 1][1]); g.lineTo(pts[i][0], pts[i][1]); g.stroke();
+  }
+  const [hx, hy] = pts[pts.length - 1];
+  g.fillStyle = BODYC; g.beginPath(); g.ellipse(hx + 12, hy, 30, 22, 0, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+function arrow(g, x0, y0, x1, y1, col, w = 10) {
+  const a = Math.atan2(y1 - y0, x1 - x0);
+  g.save(); g.strokeStyle = col; g.fillStyle = col; g.lineWidth = w; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1 - Math.cos(a) * w * 2, y1 - Math.sin(a) * w * 2); g.stroke();
+  g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 - Math.cos(a - 0.45) * w * 4, y1 - Math.sin(a - 0.45) * w * 4); g.lineTo(x1 - Math.cos(a + 0.45) * w * 4, y1 - Math.sin(a + 0.45) * w * 4); g.closePath(); g.fill();
+  g.restore();
+}
+function numCards(g, t, a, y, hi) {
+  [0, 1, 2].forEach(i => {
+    const k = TK.pop(t, a + i * 0.2), x = 250 + i * 290;
+    g.save(); g.globalAlpha *= k;
+    TK.card(g, x - 110, y - 110, 220, 220, { fill: i === hi ? 'rgba(255,207,74,0.5)' : 'rgba(20,34,72,0.9)', stroke: i === 2 ? TK.C.acc : undefined, lw: i === 2 ? 7 : 3 });
+    TK.text(g, String(i + 1), x, y, 130, { color: i === 2 ? TK.C.acc : '#fff' });
+    g.restore();
+  });
+}
+
+function draw(g, t) {
+  // 0〜3: フック
+  if (t < 3.0) {
+    TK.hook(g, t, 0.0, 3.0, 'ヘビの話\n[3つ目]が いちばん おかしい', { y: 330, size: 100 });
+    numCards(g, t, 0.5, 780, -1);
+  }
+  // 3〜13: ① 勢いを使わない（止めると、すぐ止まる）
+  if (t >= 3.0 && t < 13.0) {
+    const f = fade(t, 3, 13, 0.3), STOP = 9.0;
+    g.save(); g.globalAlpha = f;
+    TK.text(g, '①', 120, 230, 90, { color: TK.C.acc });
+    TK.text(g, '上から見たヘビ（模式）', 200, 230, 44, { align: 'left', color: TK.C.sub });
+    // ヘビ: STOP までうねって進み、そこでぴたっと止まる
+    const tt = Math.min(t, STOP) - 3.4, s = Math.max(0, tt) * 60;
+    slither(g, 90 + s * 0.35, 500, 520, s);
+    if (t > STOP) { TK.text(g, 'ぴたっ', 700, 380, 60, { color: TK.C.acc }); }
+    // くらべ: 勢いのある物（すべる円盤）。押すのを止めてもすべっていく
+    const y2 = 860, sp = 260;
+    let x2;
+    if (t < STOP) x2 = 110 + Math.max(0, t - 3.4) * sp * 0.35;
+    else { const d = t - STOP; x2 = 110 + (STOP - 3.4) * sp * 0.35 + sp * 0.35 * (1 - Math.exp(-d * 0.5)) / 0.5; }
+    g.strokeStyle = 'rgba(200,215,255,0.35)'; g.lineWidth = 3; g.beginPath(); g.moveTo(90, y2 + 40); g.lineTo(960, y2 + 40); g.stroke();
+    g.fillStyle = 'rgba(95,212,255,0.35)'; g.strokeStyle = TK.C.acc2; g.lineWidth = 4;
+    g.beginPath(); g.ellipse(x2, y2 + 22, 50, 18, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+    TK.text(g, 'くらべ: 氷の上の円盤（勢いで すべりつづける）', 540, y2 - 50, 38, { color: TK.C.acc2, bold: false });
+    if (t > STOP) TK.text(g, '止めた', 540, 640, 50, { color: TK.C.red });
+    g.restore();
+    TK.note(g, t, 3.4, 13, 'ミルクスネーク（30cm）の測定（Hu ほか 2009）。このくらいのヘビでの話', { size: 30 });
+  }
+  // 13〜24: ② 布の坂（7°）
+  if (t >= 13.0 && t < 24.0) {
+    const f = fade(t, 13, 24, 0.3);
+    const ang = Math.min(9, Math.max(0, (t - 13.6) / 4.4 * 9));   // 0 → 9°（本当の角度で描く）
+    const slide = t > 18.0 ? Math.min(1, (t - 18.0) / 3.0) : 0;
+    const climb = t < 18 ? (t - 13) * 18 : 90;
+    g.save(); g.globalAlpha = f;
+    TK.text(g, '②', 120, 230, 90, { color: TK.C.acc });
+    TK.text(g, '横から見た 布の坂', 200, 230, 44, { align: 'left', color: TK.C.sub });
+    const px = 120, py = 900, L = 820, a = -ang * Math.PI / 180;
+    g.save(); g.translate(px, py); g.rotate(a);
+    g.fillStyle = 'rgba(200,215,255,0.12)'; g.fillRect(0, 0, L, 40);
+    g.strokeStyle = 'rgba(200,215,255,0.7)'; g.lineWidth = 5; g.beginPath(); g.moveTo(0, 0); g.lineTo(L, 0); g.stroke();
+    // ヘビ（横から見た体）。登る → ずり落ちる
+    const bx = 160 + climb - slide * 160;
+    g.fillStyle = 'rgba(120,200,170,0.25)'; g.strokeStyle = BODYC; g.lineWidth = 5;
+    g.beginPath(); g.roundRect(bx, -54, 380, 50, 25); g.fill(); g.stroke();
+    if (t < 18.0) arrow(g, bx + 400, -90, bx + 520, -90, TK.C.green, 8);
+    else arrow(g, bx + 260, -90, bx + 100, -90, TK.C.red, 8);
+    g.restore();
+    // 水平の線と角度
+    g.setLineDash([10, 10]); g.strokeStyle = 'rgba(200,215,255,0.4)'; g.lineWidth = 3; g.beginPath(); g.moveTo(px, py); g.lineTo(px + L, py); g.stroke(); g.setLineDash([]);
+    TK.card(g, 330, 330, 420, 150, { r: 40, stroke: ang >= 7 ? TK.C.red : undefined, lw: ang >= 7 ? 6 : 3 });
+    TK.text(g, '坂 ' + ang.toFixed(1) + '°', PW / 2, 405, 90, { color: ang >= 7 ? TK.C.red : '#fff' });
+    g.restore();
+    TK.note(g, t, 13.6, 24, '布の面・ミルクスネーク。登れる限界は 7 ± 2°（Hu ほか 2009）。角度は本当の傾きで描いています', { size: 28 });
+  }
+  // 24〜36: ③ 木を登る（必要な力の3倍以上）
+  if (t >= 24.0 && t < 36.0) {
+    const f = fade(t, 24, 36, 0.3);
+    g.save(); g.globalAlpha = f;
+    TK.text(g, '③', 120, 230, 90, { color: TK.C.acc });
+    TK.text(g, '木を登る', 200, 230, 44, { align: 'left', color: TK.C.sub });
+    // 幹と、まきついた体（前はふつうの線、うしろは点線）
+    const tx0 = 170, tw = 130;
+    g.fillStyle = 'rgba(200,170,120,0.18)'; g.strokeStyle = 'rgba(230,205,160,0.7)'; g.lineWidth = 4;
+    g.beginPath(); g.roundRect(tx0, 320, tw, 700, 20); g.fill(); g.stroke();
+    g.lineCap = 'round';
+    for (let i = 0; i < 5; i++) {
+      const y = 420 + i * 120;
+      g.strokeStyle = BODYC; g.lineWidth = 28; g.setLineDash([]);
+      g.beginPath(); g.moveTo(tx0 - 14, y + 50); g.lineTo(tx0 + tw + 14, y); g.stroke();
+      g.strokeStyle = 'rgba(207,232,222,0.35)'; g.lineWidth = 20; g.setLineDash([12, 14]);
+      g.beginPath(); g.moveTo(tx0 + tw + 14, y); g.lineTo(tx0 - 14, y - 70); g.stroke();
+    }
+    g.setLineDash([]);
+    g.fillStyle = BODYC; g.beginPath(); g.ellipse(tx0 + tw / 2 - 10, 360, 26, 20, -0.4, 0, Math.PI * 2); g.fill();
+    // 力の棒（縦）: 必要な力 = 1、出している力 = 3 より大きい
+    const k1 = TK.out((t - 25.6) / 0.8), k2 = TK.out((t - 26.8) / 1.4), base = 930, unit = 160;
+    g.fillStyle = 'rgba(255,255,255,0.08)'; g.fillRect(430, base - unit * 3.6, 500, unit * 3.6);
+    g.fillStyle = TK.C.acc2; g.beginPath(); g.roundRect(480, base - unit * k1, 160, unit * k1, 12); g.fill();
+    g.fillStyle = TK.C.acc; g.beginPath(); g.roundRect(720, base - unit * 3.3 * k2, 160, unit * 3.3 * k2, 12); g.fill();
+    g.setLineDash([10, 10]); g.strokeStyle = TK.C.acc2; g.lineWidth = 4; g.beginPath(); g.moveTo(450, base - unit); g.lineTo(910, base - unit); g.stroke(); g.setLineDash([]);
+    TK.lines(g, '落ちないのに\n必要な力', 560, base + 60, 34, { color: TK.C.acc2 });
+    TK.lines(g, 'しめつけて\nいる力', 800, base + 60, 34, { color: TK.C.acc });
+    if (k2 > 0.9) TK.text(g, '[3倍以上]', 800, base - unit * 3.3 - 50, 56);
+    g.restore();
+    TK.note(g, t, 24.6, 36, '研究の測定（木に登るヘビ5種、Byrnes & Jayne 2014）。棒は「3倍以上」を見せる模式\nアプリの計算の値ではありません', { size: 28 });
+  }
+  // 36〜40: まとめ
+  if (t >= 36.0) {
+    numCards(g, t, 36.0, 520, -1);
+    TK.text(g, 'ゆっくり・[慎重]', PW / 2, 820, 90);
+    TK.note(g, t, 36.4, 40, '出どころ: Hu, Nirody, Scott & Shelley (2009) PNAS 106:10081\nByrnes & Jayne (2014) Biology Letters 10:20140434', { size: 30 });
+  }
+}
+
+triviaStart({ out: 'snake-move-trivia3', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

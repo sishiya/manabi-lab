@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく metronome-sync-2（型F 会話）「ホイヘンスは、寝こんでいた」。台本は trivia/metronome-sync.md。?short で録る
+// （metronome-sync-trivia1〜3 はもうあるので、台本2をこの trivia4 にした）
+// 数字・話: Pikovsky ほか 2001（Synchronization, 付録 A1）: 1665-02-26 の父への手紙、数日ベッドにいた、ずらしても30分でそろいにもどる、空気の動きのせいと考えた。
+// 梁の目に見えない動き: Scientific American 2000-09-11。再現の時計がいつも逆向きにそろった: ScienceDaily 2000-09-21（Bennett ほか 2002）。
+// 振り子の絵はモデルではなく絵（逆向きの位相をそのまま描く。ずれが戻る時間はちぢめてある）。病名は言わない。
+// 声はまだ（2人の会話。字幕の上に「聞き手」「答える人」の札を出す。札は net-route-trivia3 の書き方）
+const DUR = 35;
+const subs = [
+  { a: 0.0, b: 1.7, who: 'q', ja: '振り子がひとりでにそろうって、だれが見つけたの？', en: 'Q: Who discovered that pendulums fall in step on their own?', noBurn: true },
+  { a: 1.7, b: 3.0, who: 'a', ja: '[寝こんでた]人。', en: 'A: Someone stuck in bed.' },
+  { a: 3.0, b: 9.0, who: 'a', ja: '1665年、オランダの[ホイヘンス]。\n数日ベッドから出られなくて、\n部屋の時計2つをずっと見てたの。', en: 'A: Huygens, in the Netherlands, 1665. He couldn’t leave his bed for days,\nso he kept watching the two clocks in his room.' },
+  { a: 9.0, b: 10.6, who: 'q', ja: 'ひまだね。', en: 'Q: Sounds boring.' },
+  { a: 10.6, b: 15.0, who: 'a', ja: 'そしたら、2つの振り子が、\n[ぴったりそろってる]。', en: 'A: Then he noticed the two pendulums\nswinging perfectly in step.' },
+  { a: 15.0, b: 19.6, who: 'a', ja: 'わざとずらしても、\n[30分]たつと、また元どおり。', en: 'A: Even when he threw them off on purpose,\nwithin 30 minutes they were back in step.' },
+  { a: 19.6, b: 21.0, who: 'q', ja: 'こわい。', en: 'Q: Creepy.' },
+  { a: 21.0, b: 24.6, who: 'a', ja: '本人ははじめ、振り子が起こす\n[空気の流れ]のせいだと思った。', en: 'A: At first he blamed the air currents\nstirred up by the pendulums.' },
+  { a: 24.6, b: 28.0, who: 'a', ja: 'でも本当は、時計をかけた木が、\n目に見えないくらい動いて、[つないでいた]。', en: 'A: But really, the wooden beam holding the clocks moved, too slightly to see,\nand linked them.' },
+  { a: 28.0, b: 32.4, who: 'a', ja: '340年後に同じ時計を作った実験でも、\nやっぱりそろった。いつも、[逆向きに]。', en: 'A: About 340 years later, replica clocks synced too.\nAlways in opposite directions.' },
+  { a: 32.4, b: 35.0, who: 'q', ja: '寝こむのも、[むだじゃない]ね。', en: 'Q: So being stuck in bed wasn’t a waste.' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 1.7, type: 'ding' }, { t: 3.0, type: 'whoosh' }, { t: 3.4, type: 'pop' },
+  { t: 9.0, type: 'pop' }, { t: 10.6, type: 'rise' }, { t: 12.0, type: 'ding' },
+  { t: 15.6, type: 'thud' }, { t: 16.5, type: 'tick' }, { t: 17.5, type: 'tick' }, { t: 18.5, type: 'tick' }, { t: 19.3, type: 'ding' }, { t: 19.6, type: 'pop' },
+  { t: 21.0, type: 'whoosh' }, { t: 22.4, type: 'buzz' }, { t: 24.6, type: 'whoosh' }, { t: 25.6, type: 'ding' },
+  { t: 28.0, type: 'whoosh' }, { t: 29.0, type: 'pop' }, { t: 32.4, type: 'pop' },
+];
+
+// 振り子の見た目の動き（絵）。周期 1.4 秒・ふれはば 0.3 rad。2本目は逆向き（π ずれ）＋ d（ずらした分）
+const WS = 2 * Math.PI / 1.4, AMP = 0.3;
+function shiftAt(t) {   // ずらした量（15.6 で 1.5 rad、16.4〜19.3 で 0 へ。本当は 30 分 → ちぢめてある）
+  if (t < 15.6 || t > 21.0) return 0;
+  if (t < 16.4) return 1.5 * ease((t - 15.6) / 0.25);
+  return 1.5 * (1 - ease((t - 16.4) / 2.9));
+}
+function angs(t) { return [AMP * Math.sin(WS * t), AMP * Math.sin(WS * t + Math.PI + shiftAt(t))]; }
+
+// 振り子時計の線画。x, y はかけた所（上のまん中）。s: 大きさ、ang: 振り子の角度、min: 長い針（分）
+function pclock(g, x, y, s, ang, o = {}) {
+  g.save(); g.translate(x, y); g.scale(s, s);
+  g.lineJoin = 'round'; g.lineCap = 'round';
+  // 箱
+  g.fillStyle = 'rgba(20,34,72,0.85)'; g.strokeStyle = 'rgba(200,220,255,0.75)'; g.lineWidth = 5;
+  g.beginPath(); g.moveTo(-70, 20); g.lineTo(0, -20); g.lineTo(70, 20); g.lineTo(85, 20); g.lineTo(85, 460); g.lineTo(-85, 460); g.lineTo(-85, 20); g.closePath(); g.fill(); g.stroke();
+  // 文字盤
+  g.fillStyle = '#0a0f20'; g.beginPath(); g.arc(0, 90, 58, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.strokeStyle = 'rgba(200,220,255,0.6)'; g.lineWidth = 3;
+  for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; g.beginPath(); g.moveTo(Math.sin(a) * 46, 90 - Math.cos(a) * 46); g.lineTo(Math.sin(a) * 54, 90 - Math.cos(a) * 54); g.stroke(); }
+  const mn = (o.min ?? 10) / 60 * Math.PI * 2, hr = ((o.hour ?? 3) + (o.min ?? 10) / 60) / 12 * Math.PI * 2;
+  g.strokeStyle = '#fff'; g.lineWidth = 5; g.beginPath(); g.moveTo(0, 90); g.lineTo(Math.sin(hr) * 30, 90 - Math.cos(hr) * 30); g.stroke();
+  g.strokeStyle = o.minColor || '#fff'; g.lineWidth = 4; g.beginPath(); g.moveTo(0, 90); g.lineTo(Math.sin(mn) * 48, 90 - Math.cos(mn) * 48); g.stroke();
+  // 振り子の窓
+  g.strokeStyle = 'rgba(200,220,255,0.35)'; g.lineWidth = 3; g.strokeRect(-70, 165, 140, 280);
+  g.translate(0, 172); g.rotate(ang);
+  g.strokeStyle = o.color || TK.C.acc; g.lineWidth = 5; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 225); g.stroke();
+  g.fillStyle = o.color || TK.C.acc; g.beginPath(); g.arc(0, 235, 24, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+// 木の梁（時計をかける横木）。dx: 横のずれ（大げさに）
+function beam(g, y, dx = 0, o = {}) {
+  g.save();
+  g.fillStyle = 'rgba(190,140,80,0.35)'; g.strokeStyle = o.hi ? TK.C.acc : 'rgba(230,190,140,0.85)'; g.lineWidth = o.hi ? 6 : 4;
+  g.beginPath(); g.roundRect(110 + dx, y - 28, PW - 340, 56, 8); g.fill(); g.stroke();
+  g.strokeStyle = 'rgba(230,190,140,0.35)'; g.lineWidth = 2;
+  for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(140 + dx, y - 12 + i * 12); g.bezierCurveTo(360 + dx, y - 20 + i * 12, 560 + dx, y - 2 + i * 12, 830 + dx, y - 10 + i * 12); g.stroke(); }
+  g.restore();
+}
+// ベッドの線画（寝ている人は頭の丸だけ）
+function bed(g, x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s);
+  g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = 'rgba(200,220,255,0.75)'; g.lineWidth = 5;
+  g.fillStyle = 'rgba(20,34,72,0.85)';
+  g.beginPath(); g.roundRect(-380, -150, 40, 230, 10); g.fill(); g.stroke();             // 頭の板
+  g.beginPath(); g.roundRect(-340, -20, 700, 60, 10); g.fill(); g.stroke();              // ふとん台
+  g.beginPath(); g.moveTo(-340, 40); g.lineTo(-340, 80); g.moveTo(360, 40); g.lineTo(360, 80); g.stroke();
+  g.fillStyle = 'rgba(95,212,255,0.18)'; g.strokeStyle = TK.C.acc2;
+  g.beginPath(); g.moveTo(-190, -20); g.bezierCurveTo(-120, -90, 220, -90, 350, -24); g.lineTo(350, -20); g.closePath(); g.fill(); g.stroke();   // 掛けぶとん
+  g.fillStyle = 'rgba(244,247,255,0.9)'; g.strokeStyle = 'rgba(200,220,255,0.9)';
+  g.beginPath(); g.ellipse(-280, -40, 55, 22, 0, 0, Math.PI * 2); g.fill(); g.stroke();   // まくら
+  g.fillStyle = 'rgba(20,34,72,0.95)'; g.beginPath(); g.arc(-245, -70, 36, 0, Math.PI * 2); g.fill(); g.stroke();   // 頭
+  g.restore();
+}
+function tag(g, t) {
+  const s = subs.find(x => t >= x.a && t < x.b && !x.noBurn); if (!s) return;
+  const q = s.who === 'q', f = fade(t, s.a, s.b, 0.12);
+  g.save(); g.globalAlpha = f;
+  const lines = s.ja.split('\n').length, y = PH * 0.615 - (lines - 1) * 42 - 82;
+  const w = 210, x = PW / 2 - w / 2;
+  TK.card(g, x, y - 30, w, 60, { r: 30, fill: q ? 'rgba(95,212,255,0.25)' : 'rgba(255,207,74,0.25)', stroke: q ? TK.C.acc2 : TK.C.acc });
+  TK.text(g, q ? '聞き手' : '答える人', PW / 2, y + 2, 34, { color: q ? TK.C.acc2 : TK.C.acc });
+  g.restore();
+}
+// 2つの時計を梁にかけた場面
+const BY = 400, X1 = 330, X2 = 690;
+function twoClocks(g, t, o = {}) {
+  const [a1, a2] = angs(t), dx = o.wob ? 7 * Math.sin(WS * t) : 0;
+  beam(g, BY, dx, o);
+  pclock(g, X1 + dx, BY + 20, o.s || 1, a1, { color: TK.C.acc, min: o.min, hour: o.hour });
+  pclock(g, X2 + dx, BY + 20, o.s || 1, a2, { color: TK.C.acc2, min: o.min, hour: o.hour, minColor: o.minColor });
+}
+
+function draw(g, t) {
+  // 0〜3: フック。時計2つ＋ベッド「1665年2月」
+  if (t < 3.0) {
+    const [a1, a2] = angs(t + 9);
+    TK.text(g, '[1665年2月]', PW / 2 - 60, 290, 80);
+    beam(g, 400);
+    pclock(g, X1, 420, 0.68, a1, { color: TK.C.acc });
+    pclock(g, X2, 420, 0.68, a2, { color: TK.C.acc2 });
+    bed(g, 520, 960, 1.0);
+    TK.hook(g, t, 0.15, 1.7, 'だれが\n見つけた？', { y: 1130, size: 110 });
+  }
+  // 3〜9: 父への手紙
+  if (t >= 3.0 && t < 9.0) {
+    const k = TK.pop(t, 3.3, 0.4);
+    g.save(); g.globalAlpha = clamp(k, 0, 1);
+    TK.card(g, 120, 220, PW - 360, 300, { r: 36 });
+    TK.text(g, '1665年 [2月26日]', PW / 2 - 60, 300, 76);
+    TK.text(g, 'ホイヘンス（オランダ）', PW / 2 - 60, 390, 54);
+    TK.text(g, '父への手紙より', PW / 2 - 60, 465, 44, { color: TK.C.sub, bold: false });
+    g.restore();
+    const [a1, a2] = angs(t + 9);
+    pclock(g, 300, 550, 0.5, a1, { color: TK.C.acc });
+    pclock(g, 560, 550, 0.5, a2, { color: TK.C.acc2 });
+    bed(g, 520, 895, 0.85);
+    TK.note(g, t, 3.6, 9, 'なぜベッドにいたのかは、手紙に書かれていない', { size: 32 });
+  }
+  // 9〜15: 逆向きにそろう
+  if (t >= 9.0 && t < 15.0) {
+    TK.text(g, '2つの振り子', PW / 2 - 60, 280, 60, { color: TK.C.sub });
+    twoClocks(g, t);
+    if (t > 11.6) {
+      g.save(); g.globalAlpha = fade(t, 11.6, 15, 0.3);
+      TK.card(g, 260, 905, 440, 90, { r: 45, fill: 'rgba(255,207,74,0.18)', stroke: TK.C.acc });
+      TK.text(g, '[逆向き]にそろう', PW / 2 - 60, 951, 50);
+      g.restore();
+    }
+  }
+  // 15〜21: ずらす → 30分 → また元どおり
+  if (t >= 15.0 && t < 21.0) {
+    const k = clamp((t - 16.4) / 2.9, 0, 1), m = Math.round(30 * ease(k));
+    twoClocks(g, t, { min: 10 + 30 * ease(k), hour: 3, minColor: TK.C.red });
+    if (t > 15.4 && t < 16.4) {   // 押した印
+      g.save(); g.globalAlpha = fade(t, 15.4, 16.4, 0.15);
+      g.strokeStyle = TK.C.red; g.fillStyle = TK.C.red; g.lineWidth = 8; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(X2 + 230, 820); g.lineTo(X2 + 120, 820); g.stroke();
+      g.beginPath(); g.moveTo(X2 + 100, 820); g.lineTo(X2 + 135, 798); g.lineTo(X2 + 135, 842); g.closePath(); g.fill();
+      TK.text(g, 'ずらす', X2 + 170, 770, 44, { color: TK.C.red });
+      g.restore();
+    }
+    TK.card(g, 290, 200, 380, 120, { r: 60 });
+    TK.text(g, t < 16.4 ? 'ずれた！' : (k < 1 ? m + ' 分' : '[30分]で元どおり'), PW / 2 - 60, 262, k < 1 ? 64 : 52, { color: k < 1 ? '#fff' : TK.C.acc });
+    TK.note(g, t, 16.4, 21, '絵の時間はちぢめてある（本当は 30 分）', { size: 32, y: 1000 });
+  }
+  // 21〜28: 空気？ × → 木の梁 ○
+  if (t >= 21.0 && t < 28.0) {
+    const air = t < 24.6;
+    twoClocks(g, t, { wob: !air, hi: !air });
+    if (air) {
+      // 空気の流れ（波線）
+      g.save(); g.globalAlpha = fade(t, 21.2, 24.6, 0.3) * 0.8; g.strokeStyle = TK.C.acc2; g.lineWidth = 4;
+      for (let i = 0; i < 4; i++) {
+        const y = 700 + i * 50; g.beginPath();
+        for (let x = 420; x <= 600; x += 6) { const yy = y + 12 * Math.sin((x - 420) / 22 + t * 5 + i); x === 420 ? g.moveTo(x, yy) : g.lineTo(x, yy); }
+        g.stroke();
+      }
+      g.restore();
+      TK.card(g, 240, 200, 480, 120, { r: 60 });
+      TK.text(g, '空気の流れ？', PW / 2 - 60, 262, 60);
+      if (t > 22.4) {
+        g.save(); g.globalAlpha = fade(t, 22.4, 24.6, 0.2); g.strokeStyle = TK.C.red; g.lineWidth = 16; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(420, 660); g.lineTo(600, 880); g.moveTo(600, 660); g.lineTo(420, 880); g.stroke(); g.restore();
+      }
+    } else {
+      TK.card(g, 150, 200, 660, 120, { r: 60, fill: 'rgba(89,227,154,0.18)', stroke: TK.C.green });
+      TK.text(g, '[木の梁]が ほんの少し動く', PW / 2 - 60, 262, 54);
+      if (t > 25.6) {   // ○
+        g.save(); g.globalAlpha = fade(t, 25.6, 28, 0.2); g.strokeStyle = TK.C.green; g.lineWidth = 14;
+        g.beginPath(); g.ellipse(PW / 2 - 60, BY, 420, 80, 0, 0, Math.PI * 2); g.stroke(); g.restore();
+      }
+      TK.note(g, t, 24.8, 28, '梁の動きは大げさに描いた（本当は目に見えないほど）', { size: 32, y: 1000 });
+    }
+  }
+  // 28〜35: 340年後の再現
+  if (t >= 28.0) {
+    const k = TK.pop(t, 28.3, 0.4);
+    g.save(); g.globalAlpha = clamp(k, 0, 1);
+    TK.card(g, 150, 190, PW - 420, 160, { r: 40 });
+    TK.text(g, '約340年後', PW / 2 - 60, 250, 64, { color: TK.C.acc });
+    TK.text(g, '同じつくりの時計で再現', PW / 2 - 60, 315, 44, { color: TK.C.sub, bold: false });
+    g.restore();
+    twoClocks(g, t, { s: 0.9 });
+    if (t > 29.6) {
+      g.save(); g.globalAlpha = fade(t, 29.6, 35, 0.3);
+      TK.card(g, 240, 880, 480, 90, { r: 45, fill: 'rgba(255,207,74,0.18)', stroke: TK.C.acc });
+      TK.text(g, 'いつも [逆向き]', PW / 2 - 60, 926, 50);
+      g.restore();
+    }
+    TK.note(g, t, 29.6, 31.6, '再現でも、そろわずに止まってしまうこともあった', { size: 32 });
+    TK.note(g, t, 31.8, 35, '出どころ: Pikovsky ほか (2001) Synchronization 付録A1（1665年の手紙）\nBennett ほか (2002) Proc. R. Soc. A 458:563・Scientific American (2000)', { size: 28 });
+  }
+  tag(g, t);
+}
+
+triviaStart({ out: 'metronome-sync-trivia4', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

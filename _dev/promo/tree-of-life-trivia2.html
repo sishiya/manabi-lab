@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく tree-of-life-2（型H）「ワニにいちばん近い、いまの生きものは？」。台本は trivia/tree-of-life.md
+// 出どころ: Crawford ほか (2012) Biology Letters 8, 783–786（カメは主竜類の姉妹群、1,145 か所）。ワニと鳥が主竜類の生きのこりは教科書どおり（UCMP など）
+// 生きものは線画（形はイメージ）。アプリの Open Tree の並びとの照合はしていない
+const DUR = 25;
+const subs = [
+  { a: 0.0, b: 2.0, ja: 'ワニにいちばん近い、いまの生きものは？', en: 'What living animal is closest to a crocodile?', noBurn: true },
+  { a: 2.0, b: 4.2, ja: 'トカゲ？カメ？ハト？', en: 'A lizard? A turtle? A pigeon?' },
+  { a: 4.2, b: 8.0, ja: '答えは、[ハト]。鳥。', en: 'The answer: the pigeon. A bird.' },
+  { a: 8.0, b: 14.0, ja: 'ワニと鳥は、恐竜をふくむ同じ枝の、\n[最後の生きのこり]。', en: 'Crocodiles and birds are the last survivors\nof the branch that includes dinosaurs.' },
+  { a: 14.0, b: 20.0, ja: 'じゃあ2番目は？\nこれもトカゲじゃない。[カメ]。', en: 'And second closest?\nNot the lizard either. The turtle.' },
+  { a: 20.0, b: 25.0, ja: '見た目がいちばん似ているトカゲが、\n[いちばん遠い]。', en: 'The lizard, which looks most alike,\nis the farthest.' },
+];
+const cues = [{ t: 0.05, type: 'pop' }, { t: 2.2, type: 'tick' }, { t: 3.2, type: 'tick' }, { t: 4.2, type: 'ding' }, { t: 8.0, type: 'whoosh' },
+  { t: 9.4, type: 'pop' }, { t: 14.0, type: 'whoosh' }, { t: 15.8, type: 'pop' }, { t: 20.0, type: 'whoosh' }, { t: 21.4, type: 'buzz' }];
+
+function st(g, c, w = 6) { g.strokeStyle = c; g.lineWidth = w; g.lineJoin = 'round'; g.lineCap = 'round'; }
+function croc(g, x, y, s, c = '#9fe0a8') {
+  g.save(); g.translate(x, y); g.scale(s, s); st(g, c, 6); g.fillStyle = 'rgba(89,227,154,0.10)';
+  g.beginPath(); g.moveTo(-260, 0); g.quadraticCurveTo(-200, -40, -60, -40); g.lineTo(120, -36); g.lineTo(250, -14); g.lineTo(250, 4); g.lineTo(120, 14);
+  g.quadraticCurveTo(-60, 30, -180, 20); g.quadraticCurveTo(-240, 14, -260, 0); g.closePath(); g.fill(); g.stroke();
+  for (let i = 0; i < 7; i++) { g.beginPath(); g.moveTo(-150 + i * 30, -40); g.lineTo(-135 + i * 30, -56); g.lineTo(-120 + i * 30, -40); g.stroke(); }   // 背のでこぼこ
+  [[-110, 20], [40, 16]].forEach(([lx, ly]) => { g.beginPath(); g.moveTo(lx, ly); g.lineTo(lx - 14, ly + 36); g.lineTo(lx + 6, ly + 36); g.stroke(); });
+  g.fillStyle = c; g.beginPath(); g.arc(100, -32, 7, 0, 7); g.fill();
+  g.restore();
+}
+// 系統樹（葉: トカゲ・ヘビ／カメ／ワニ／鳥）
+const LEAF = { liz: 190, tur: 410, cro: 630, bird: 840 }, YL = 400;
+const NODE = { arch: [735, 620], turt: [572, 780], root: [381, 930] };
+function vline(g, x, y1, y2, k) { g.beginPath(); g.moveTo(x, y1); g.lineTo(x, lerp(y1, y2, k)); g.stroke(); }
+function tree(g, t) {
+  const k1 = clamp((t - 8.3) / 0.8, 0, 1), k2 = clamp((t - 14.3) / 0.8, 0, 1), k3 = clamp((t - 20.2) / 0.8, 0, 1);
+  // ワニ＋鳥（主竜類）
+  st(g, TK.C.acc, 8); vline(g, LEAF.cro, YL, NODE.arch[1], k1); vline(g, LEAF.bird, YL, NODE.arch[1], k1);
+  if (k1 >= 1) { g.beginPath(); g.moveTo(LEAF.cro, NODE.arch[1]); g.lineTo(LEAF.bird, NODE.arch[1]); g.stroke(); }
+  TK.text(g, 'ワニ', LEAF.cro, YL - 50, 58, { color: '#c8f5cf' }); TK.text(g, '鳥', LEAF.bird, YL - 50, 58, { color: TK.C.acc });
+  if (t > 9.4) {   // 恐竜（いまはいない）の枝
+    g.save(); g.globalAlpha *= clamp((t - 9.4) / 0.5, 0, 1); g.setLineDash([12, 10]); st(g, 'rgba(255,255,255,0.45)', 6);
+    g.beginPath(); g.moveTo(NODE.arch[0], NODE.arch[1]); g.lineTo(NODE.arch[0], 500); g.stroke(); g.setLineDash([]);
+    TK.card(g, NODE.arch[0] - 170, 446, 340, 52, { r: 26, fill: 'rgba(11,20,48,0.92)', stroke: 'rgba(255,255,255,0.25)', lw: 2 });
+    TK.text(g, '恐竜（鳥以外は絶滅）', NODE.arch[0], 472, 34, { color: '#fff', bold: false });
+    TK.text(g, '主竜類', NODE.arch[0], NODE.arch[1] + 45, 40, { color: TK.C.acc, bold: false });
+    g.restore();
+  }
+  if (t < 14.0) return;
+  st(g, '#ffb07a', 8); vline(g, LEAF.tur, YL, NODE.turt[1], k2); vline(g, NODE.arch[0], NODE.arch[1], NODE.turt[1], k2);
+  if (k2 >= 1) { g.beginPath(); g.moveTo(LEAF.tur, NODE.turt[1]); g.lineTo(NODE.arch[0], NODE.turt[1]); g.stroke(); }
+  TK.text(g, 'カメ', LEAF.tur, YL - 50, 58, { color: '#ffe2c4' });
+  if (t < 20.0) return;
+  st(g, '#c9a6ff', 8); vline(g, LEAF.liz, YL, NODE.root[1], k3); vline(g, NODE.turt[0], NODE.turt[1], NODE.root[1], k3);
+  if (k3 >= 1) { g.beginPath(); g.moveTo(LEAF.liz, NODE.root[1]); g.lineTo(NODE.turt[0], NODE.root[1]); g.stroke(); }
+  TK.text(g, 'トカゲ・ヘビ', LEAF.liz, YL - 50, 54, { color: '#e2d4ff' });
+  if (t > 21.4) { g.save(); g.globalAlpha *= TK.pop(t, 21.4, 0.35); TK.text(g, 'いちばん遠い', 290, 990, 52, { color: TK.C.red }); g.restore(); }
+}
+
+function draw(g, t) {
+  if (t < 8.0) {
+    const f = fade(t, -1, 8.0, 0.3);
+    TK.hook(g, t, 0.0, 2.0, 'ワニにいちばん近い\nいまの生きものは？', { y: 210, size: 92 });
+    g.save(); g.globalAlpha = f; croc(g, PW / 2, 440, 1.2); g.restore();
+    TK.choices(g, t, 0.15, 8.0, ['トカゲ', 'カメ', 'ハト（鳥）'], { y: 640, h: 140, gap: 22, size: 76, reveal: 4.2, answer: 2, think: [1.4, 4.2] });
+  }
+  if (t >= 8.0) {
+    const f = fade(t, 8.0, 26, 0.3);
+    g.save(); g.globalAlpha = f;
+    TK.text(g, 'いまいる生きものの系統（形は簡略）', PW / 2, 200, 46, { color: TK.C.sub });
+    tree(g, t);
+    g.restore();
+  }
+  if (t >= 14.0 && t < 22.6) TK.note(g, t, 14.0, 22.6, 'カメの位置は、形の研究とDNAの研究で長く意見が分かれていた\n（いまは DNA の結論が主流。1,145 か所の DNA で確かめた研究）', { size: 30 });
+  if (t >= 22.6) TK.note(g, t, 22.6, 25.0, '出どころ: Crawford ほか (2012) Biology Letters 8, 783–786', { size: 30 });
+}
+
+triviaStart({ out: 'tree-of-life-trivia2', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

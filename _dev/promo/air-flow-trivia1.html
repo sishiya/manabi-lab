@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく air-flow-1（型A ぜんぶ逆）「24時間換気は2時間で全部入れかわる…じゃない」。台本は trivia/air-flow.md。?short で録る
+// よく混ざる部屋（完全混合）: 前の空気の残り = e^(−0.5×時間)。2時間 37%・4時間 14%・6時間 5%（8時間 1.8%）
+// 粒の色は「残りの割合」に合わせて決めているだけ（粒の動きを計算したものではない）
+const DUR = 30;
+const subs = [
+  { a: 0.0, b: 2.2, ja: '「2時間で全部入れかわる」…はウソ', en: '“All the air is replaced in 2 hours” — not true', noBurn: true },
+  { a: 2.2, b: 4.6, ja: '2003年からの家は、\n[24時間換気]が決まり', en: 'Homes built since 2003 in Japan\nmust have 24-hour ventilation' },
+  { a: 4.6, b: 7.0, ja: '1時間に、部屋の[半分]ぶんの\n空気を入れかえる', en: 'Each hour it swaps in\nhalf the room’s volume of air' },
+  { a: 7.0, b: 12.0, ja: '名前どおりなら、\n2時間で全部入れかわるはず', en: 'By that logic, all the air\nshould be new after 2 hours' },
+  { a: 12.0, b: 16.0, ja: 'でも、入ってきた空気は[すぐ混ざる]。\n出ていくのは、新しい空気もまじった空気', en: 'But new air mixes in right away,\nso some of it leaves again too' },
+  { a: 16.0, b: 20.0, ja: '2時間たっても、\n前の空気が[37%]のこる', en: 'After 2 hours,\n37% of the old air is still there' },
+  { a: 20.0, b: 26.0, ja: '4時間で[14%]、\n6時間でやっと[5%]', en: '14% after 4 hours,\nand only down to 5% after 6' },
+  { a: 26.0, b: 30.0, ja: 'よく混ざる部屋では、前の空気は\n[ゼロには ならない]', en: 'In a well-mixed room,\nthe old air never quite reaches zero' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 0.8, type: 'buzz' }, { t: 2.2, type: 'whoosh' }, { t: 4.6, type: 'pop' },
+  { t: 7.0, type: 'whoosh' }, { t: 11.6, type: 'ding' }, { t: 12.0, type: 'buzz' }, { t: 19.4, type: 'ding' },
+  { t: 21.6, type: 'tick' }, { t: 23.8, type: 'tick' }, { t: 26.0, type: 'rise' },
+];
+const OLD = '#ff9f45', NEW = '#5fd4ff';
+const rnd = (i, k = 1) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
+const RX0 = 120, RX1 = 960, RY0 = 230, RY1 = 600;   // 部屋
+const GX0 = 190, GX1 = 940, GY0 = 700, GY1 = 1040;  // グラフ（0〜8時間・0〜100%）
+const remain = h => Math.exp(-0.5 * h);
+// 動画の時刻 → 部屋の中の時間（時間）
+function hours(t) {
+  if (t < 12) return 0;
+  if (t < 20) return lerp(0, 2, ease((t - 12.4) / 7));
+  if (t < 26) return lerp(2, 6, clamp((t - 20.2) / 5, 0, 1));
+  return lerp(6, 8, clamp((t - 26) / 3, 0, 1));
+}
+
+function room(g, t, mode, h) {
+  g.strokeStyle = '#cfe0ff'; g.lineWidth = 7; g.strokeRect(RX0, RY0, RX1 - RX0, RY1 - RY0);
+  // 給気口（左上）・換気扇（右下）
+  g.fillStyle = TK.C.bg0; g.fillRect(RX0 - 6, RY0 + 30, 12, 70); g.fillRect(RX1 - 6, RY1 - 110, 12, 70);
+  TK.text(g, '給気口', RX0 + 80, RY0 - 34, 40, { color: NEW });
+  TK.text(g, '換気扇', RX1 - 80, RY1 + 40, 40, { color: OLD });
+  const fan = t * 6; g.save(); g.translate(RX1 + 40, RY1 - 75); g.rotate(fan); g.strokeStyle = '#cfe0ff'; g.lineWidth = 6;
+  for (let j = 0; j < 3; j++) { g.rotate(Math.PI * 2 / 3); g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 28); g.stroke(); } g.restore();
+  // 粒
+  const n = 260, front = mode === 'plug' ? lerp(RX0, RX1, clamp((t - 7.6) / 3.8, 0, 1)) : -1, fr = remain(h);
+  for (let i = 0; i < n; i++) {
+    const x = RX0 + 20 + ((rnd(i) * (RX1 - RX0 - 40) + Math.sin(t * 0.8 + i) * 14 * (mode === 'mix' ? 2 : 0.5)) + (RX1 - RX0 - 40)) % (RX1 - RX0 - 40);
+    const y = RY0 + 20 + rnd(i, 2) * (RY1 - RY0 - 40) + Math.cos(t * 0.7 + i * 1.3) * 10;
+    let old = true;
+    if (mode === 'plug') old = x > front;
+    else if (mode === 'mix') old = rnd(i, 3) < fr;
+    g.fillStyle = old ? OLD : NEW; g.beginPath(); g.arc(x, y, 9, 0, Math.PI * 2); g.fill();
+  }
+  if (mode === 'plug') { g.strokeStyle = NEW; g.lineWidth = 6; g.setLineDash([16, 12]); g.beginPath(); g.moveTo(front, RY0); g.lineTo(front, RY1); g.stroke(); g.setLineDash([]); }
+}
+function legend(g, y) {
+  g.fillStyle = OLD; g.beginPath(); g.arc(300, y, 16, 0, Math.PI * 2); g.fill(); TK.text(g, '前の空気', 330, y, 44, { align: 'left', color: OLD });
+  g.fillStyle = NEW; g.beginPath(); g.arc(620, y, 16, 0, Math.PI * 2); g.fill(); TK.text(g, '外の空気', 650, y, 44, { align: 'left', color: NEW });
+}
+function graph(g, t, h, showNaive) {
+  const X = hh => lerp(GX0, GX1, hh / 8), Y = p => lerp(GY1, GY0, p);
+  g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 4; g.beginPath(); g.moveTo(GX0, GY0); g.lineTo(GX0, GY1); g.lineTo(GX1, GY1); g.stroke();
+  [0, 2, 4, 6, 8].forEach(v => TK.text(g, v + '時間', X(v), GY1 + 36, 32, { color: TK.C.dim, bold: false }));
+  TK.text(g, '100%', GX0 - 18, Y(1), 32, { align: 'right', color: TK.C.dim, bold: false });
+  TK.text(g, '0%', GX0 - 18, Y(0), 32, { align: 'right', color: TK.C.dim, bold: false });
+  TK.text(g, '前の空気の残り', GX0 + 20, GY0 - 34, 40, { align: 'left', color: OLD });
+  if (showNaive) {   // 名前どおりの直線
+    g.save(); g.strokeStyle = 'rgba(255,255,255,0.55)'; g.setLineDash([14, 12]); g.lineWidth = 5;
+    g.beginPath(); g.moveTo(X(0), Y(1)); g.lineTo(X(2), Y(0)); g.stroke(); g.restore();
+    TK.text(g, '名前どおりなら', X(0.15), Y(0.2), 34, { align: 'left', color: TK.C.dim });
+  }
+  if (h > 0) {
+    g.strokeStyle = OLD; g.lineWidth = 9; g.lineJoin = 'round'; g.beginPath();
+    for (let i = 0; i <= 120; i++) { const hh = h * i / 120; i ? g.lineTo(X(hh), Y(remain(hh))) : g.moveTo(X(hh), Y(remain(hh))); }
+    g.stroke();
+    g.fillStyle = OLD; g.beginPath(); g.arc(X(h), Y(remain(h)), 14, 0, Math.PI * 2); g.fill();
+  }
+  [[2, '37%', 19.2], [4, '14%', 21.6], [6, '5%', 23.8]].forEach(([hh, s, a]) => {
+    if (t < a || h < hh - 0.01) return;
+    g.save(); g.globalAlpha = clamp((t - a) / 0.3, 0, 1);
+    g.strokeStyle = 'rgba(255,207,74,0.6)'; g.lineWidth = 3; g.setLineDash([8, 8]); g.beginPath(); g.moveTo(X(hh), GY1); g.lineTo(X(hh), Y(remain(hh))); g.stroke(); g.setLineDash([]);
+    TK.text(g, s, X(hh) + 10, Y(remain(hh)) - 46, 56, { color: TK.C.acc });
+    g.restore();
+  });
+}
+
+function draw(g, t) {
+  // 0〜2.2: フック
+  if (t < 2.2) {
+    TK.hook(g, t, 0, 2.2, '2時間で、空気が\n[全部]入れかわる', { y: 420, size: 112 });
+    if (t > 0.8) {
+      const x = TK.out((t - 0.8) / 0.25);
+      g.strokeStyle = TK.C.red; g.lineWidth = 28; g.lineCap = 'round'; g.beginPath();
+      g.moveTo(170, 300); g.lineTo(170 + 740 * x, 300 + 240 * x);
+      if (x > 0.5) { const y = (x - 0.5) * 2; g.moveTo(910, 300); g.lineTo(910 - 740 * y, 300 + 240 * y); }
+      g.stroke();
+    }
+    if (t > 1.1) { g.save(); g.globalAlpha = clamp((t - 1.1) / 0.3, 0, 1); TK.text(g, '→ 2時間後も [37%] は前の空気', PW / 2, 760, 64); g.restore(); }
+    return;
+  }
+  // 2.2〜7: 24時間換気の家
+  if (t < 7.0) {
+    room(g, t, 'none', 0); legend(g, 700);
+    TK.card(g, 240, 780, 600, 150, { r: 40 });
+    TK.text(g, '1時間に [0.5回]', PW / 2, 830, 72);
+    TK.text(g, '（部屋の空気の半分ぶん）', PW / 2, 895, 38, { color: TK.C.sub, bold: false });
+    return;
+  }
+  const h = hours(t);
+  if (t < 12.0) { room(g, t, 'plug', 0); TK.text(g, '名前どおりなら…（押し出すだけ）', PW / 2, RY0 - 100, 46, { color: TK.C.sub }); }
+  else room(g, t, 'mix', h);
+  if (t >= 12.0) {
+    TK.card(g, 330, 120, 420, 90, { r: 45 });
+    TK.text(g, h.toFixed(1) + ' 時間後', PW / 2, 166, 54, { color: '#fff' });
+  }
+  graph(g, t, h, t >= 7.0);
+  if (t >= 26.0) { g.save(); g.globalAlpha = fade(t, 26.2, 30, 0.3); TK.text(g, '0% には [ならない]', 660, GY0 + 110, 56); g.restore(); }
+  if (t >= 12 && t < 27.6) TK.note(g, t, 12, 27.6, 'よく混ざる部屋（完全混合）のモデルの値。実際の部屋はよどみで場所ごとにちがいます', { size: 30 });
+  if (t >= 27.6) TK.note(g, t, 27.6, 30, '出どころ: 滋賀県「シックハウス対策について」・Sandberg & Sjöberg (1983)', { size: 30 });
+}
+
+triviaStart({ out: 'air-flow-trivia1', dur: DUR, draw, subs, cues, peek: 1.0 });
+</script>
+</body>
+</html>

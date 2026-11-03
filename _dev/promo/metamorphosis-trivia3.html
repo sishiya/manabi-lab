@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく metamorphosis-3（型B もしも）「イモムシは数週間で1万倍。人の赤ちゃんなら？」。台本は trivia/metamorphosis.md。?short で録る
+// 出どころ: Woods (2013) Functional Ecology のデータの説明（数週間で1万倍以上、0.001 g → 12〜15 g の5齢）、
+// Grunert ほか (2015) PLoS ONE 10(5):e0127988（重さの増加の約90%は5齢）。米つぶの重さは出どころがないので使わない（台本の注意）。
+// 3 kg × 1万 = 30 t はただのかけ算。イモムシの絵の長さは、重さ1万倍の立方根（約22倍）に合わせた
+const DUR = 25;
+const subs = [
+  { a: 0.0, b: 1.8, ja: '数週間で、1万倍', en: '10,000 times heavier in a few weeks', noBurn: true },
+  { a: 1.8, b: 5.0, ja: 'タマゴから出たばかりのイモムシは\n[1ミリグラム]', en: 'A caterpillar fresh from the egg weighs 1 milligram' },
+  { a: 5.0, b: 10.0, ja: '数週間後、[12〜15グラム]。\n1万倍以上', en: 'A few weeks later: 12–15 grams.\nOver 10,000 times more' },
+  { a: 10.0, b: 14.0, ja: 'しかも増える重さの[約9割]は\n最後の1回の脱皮のあと', en: 'And about 90% of that gain comes\nafter the last molt' },
+  { a: 14.0, b: 18.0, ja: 'もし 3キロの赤ちゃんが\n1万倍になったら（ただのかけ算）', en: 'If a 3 kg baby grew 10,000 times\n(just multiplication)' },
+  { a: 18.0, b: 22.0, ja: '[30トン]。大型トラックくらい', en: '30 tonnes. About a big truck' },
+  { a: 22.0, b: 25.0, ja: 'そして、その体を\nさなぎの中で作りかえる', en: 'Then it rebuilds that body inside the pupa' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 0.5, type: 'rise' }, { t: 1.8, type: 'whoosh' }, { t: 5.0, type: 'rise' }, { t: 8.6, type: 'ding' },
+  { t: 10.0, type: 'whoosh' }, { t: 11.4, type: 'ding' }, { t: 14.0, type: 'whoosh' }, { t: 16.0, type: 'rise' }, { t: 18.0, type: 'thud' }, { t: 18.8, type: 'ding' },
+  { t: 22.0, type: 'whoosh' }, { t: 23.0, type: 'pop' },
+];
+
+function cater(g, x, y, s, t) {
+  const n = 9, sp = 26 * s;
+  g.save(); g.lineWidth = Math.max(1.5, 4 * s);
+  for (let i = n - 1; i >= 0; i--) {
+    const px = x - i * sp, py = y + Math.sin(t * 6 - i * 0.8) * 4 * s;
+    const r = (i === 0 ? 20 : 17 + 3 * Math.sin(Math.PI * i / n)) * s;
+    g.fillStyle = i === 0 ? '#2f8f5f' : '#3fbf7f'; g.strokeStyle = '#9ff0c4';
+    g.beginPath(); g.arc(px, py, r, 0, Math.PI * 2); g.fill(); g.stroke();
+    if (i === n - 1) { g.beginPath(); g.moveTo(px - r * 0.4, py - r * 0.8); g.lineTo(px - r * 1.1, py - r * 1.9); g.stroke(); }
+  }
+  g.restore();
+}
+function pupa(g, x, y, s) {
+  g.save(); g.lineWidth = 4 * s; g.fillStyle = '#7a4f2a'; g.strokeStyle = '#e0b07a';
+  g.beginPath(); g.ellipse(x, y, 90 * s, 38 * s, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.lineWidth = 2.5 * s;
+  for (let i = 1; i < 6; i++) { const xx = x - 70 * s + i * 24 * s; g.beginPath(); g.moveTo(xx, y - 30 * s); g.quadraticCurveTo(xx + 6 * s, y, xx, y + 30 * s); g.stroke(); }
+  g.restore();
+}
+// 赤ちゃん（線画）。足もとを (x, y) に
+function baby(g, x, y, s) {
+  g.save(); g.strokeStyle = '#ffd9c0'; g.fillStyle = 'rgba(255,217,192,0.25)'; g.lineWidth = 5 * s; g.lineCap = 'round';
+  g.beginPath(); g.arc(x, y - 150 * s, 42 * s, 0, Math.PI * 2); g.fill(); g.stroke();                 // 頭
+  g.beginPath(); g.ellipse(x, y - 65 * s, 40 * s, 45 * s, 0, 0, Math.PI * 2); g.fill(); g.stroke();   // 胴
+  g.beginPath(); g.moveTo(x - 36 * s, y - 85 * s); g.lineTo(x - 70 * s, y - 60 * s); g.moveTo(x + 36 * s, y - 85 * s); g.lineTo(x + 70 * s, y - 60 * s); g.stroke();
+  g.beginPath(); g.moveTo(x - 18 * s, y - 25 * s); g.lineTo(x - 26 * s, y); g.moveTo(x + 18 * s, y - 25 * s); g.lineTo(x + 26 * s, y); g.stroke();
+  g.restore();
+}
+// 大型トラック（線画）。左下を (x, y) に、幅 w
+function truck(g, x, y, w) {
+  const s = w / 800;
+  g.save(); g.strokeStyle = '#cfe0ff'; g.lineWidth = 5; g.fillStyle = 'rgba(160,190,255,0.15)'; g.lineJoin = 'round';
+  g.beginPath(); g.rect(x, y - 300 * s, 570 * s, 240 * s); g.fill(); g.stroke();                // 荷台
+  g.beginPath(); g.moveTo(x + 590 * s, y - 60 * s); g.lineTo(x + 590 * s, y - 260 * s); g.lineTo(x + 720 * s, y - 260 * s); g.lineTo(x + 790 * s, y - 160 * s); g.lineTo(x + 790 * s, y - 60 * s); g.closePath(); g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(x + 620 * s, y - 230 * s); g.lineTo(x + 705 * s, y - 230 * s); g.lineTo(x + 755 * s, y - 165 * s); g.lineTo(x + 620 * s, y - 165 * s); g.closePath(); g.stroke();   // 窓
+  g.fillStyle = '#0b1430';
+  for (const wx of [90, 190, 480, 680]) { g.beginPath(); g.arc(x + wx * s, y - 40 * s, 42 * s, 0, Math.PI * 2); g.fill(); g.stroke(); }
+  g.restore();
+}
+
+function draw(g, t) {
+  // 0〜10: 点がふくらんで終齢のイモムシに（長さで約22倍＝重さで約1万倍）
+  if (t < 10.0) {
+    const f = fade(t, -1, 10.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    const k = t < 5.0 ? 0 : ease(clamp((t - 5.0) / 3.4, 0, 1));
+    const s = 0.09 * Math.pow(1.95 / 0.09, k);
+    const y = 800, len = 8 * 26 * s;
+    if (t < 1.8) {
+      // フックではちょっとふくらんで見せる（予告）
+      const kk = TK.out((t - 0.4) / 1.2);
+      cater(g, 540 + 0.5 * 8 * 26 * (0.09 + 1.2 * kk), y, 0.09 + 1.2 * kk, t);
+    } else {
+      cater(g, 540 + len / 2, y, s, t);
+      if (k === 0) {
+        g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 4; g.beginPath(); g.arc(540, y, 70, 0, Math.PI * 2); g.stroke(); g.restore();
+        g.save(); g.globalAlpha *= TK.pop(t, 2.0); TK.text(g, '1 ミリグラム', 540, y + 130, 64, { color: TK.C.acc }); TK.text(g, '（0.001 g）', 540, y + 200, 44, { color: TK.C.sub }); g.restore();
+      }
+      if (t >= 5.0) {
+        const w = 0.001 * Math.pow(13500, k);
+        TK.text(g, w < 1 ? w.toFixed(3) + ' g' : w < 10 ? w.toFixed(1) + ' g' : (t > 8.4 ? '12〜15 g' : Math.round(w) + ' g'), 540, 1020, 88, { color: TK.C.acc });
+        if (t > 8.6) { g.save(); g.globalAlpha *= TK.pop(t, 8.6); TK.text(g, '[1万倍]以上', 540, 330, 120, { stroke: 'rgba(0,0,0,0.6)' }); g.restore(); }
+      }
+    }
+    g.restore();
+    TK.hook(g, t, 0.0, 1.8, '数週間で\n[1万倍]', { y: 380, size: 130 });
+  }
+  // 10〜14: 増えた重さの約9割は5齢（最後のイモムシ）で
+  if (t >= 10.0 && t < 14.0) {
+    g.save(); g.globalAlpha = fade(t, 10.0, 14.0, 0.3);
+    TK.text(g, '増えた重さ、どこで増えた？', PW / 2, 280, 60, { color: TK.C.sub });
+    g.restore();
+    TK.bars(g, t, 10.2, 14.0, [
+      { label: '1〜4齢（4回の脱皮まで）', v: 0.10, color: 'rgba(200,215,255,0.7)', text: '約1割' },
+      { label: '5齢（最後の脱皮のあと）', v: 0.90, color: TK.C.acc, text: '約9割' },
+    ], { y: 470, gap: 230, size: 50, stagger: 0.7, min: 150 });
+    g.save(); g.globalAlpha = fade(t, 10.0, 14.0, 0.3); cater(g, 700, 960, 1.1, t); g.restore();
+  }
+  // 14〜22: もしも 3 kg の赤ちゃんが1万倍なら
+  if (t >= 14.0 && t < 22.0) {
+    g.save(); g.globalAlpha = fade(t, 14.0, 22.0, 0.3);
+    TK.text(g, 'もしも…（ただのかけ算）', PW / 2, 250, 56, { color: TK.C.sub });
+    const by = 900;
+    const hb = 1 - clamp((t - 18.3) / 0.4, 0, 1);   // トラックが出たら赤ちゃんの絵は消す
+    g.save(); g.globalAlpha *= hb;
+    baby(g, 220, by, 1.0);
+    TK.text(g, '3 kg', 220, by + 60, 56, { color: TK.C.acc });
+    g.restore();
+    if (t > 15.0 && t < 18.0) { g.save(); g.globalAlpha *= TK.pop(t, 15.0); TK.text(g, '× 10,000', 540, 560, 96, { color: '#fff' }); g.restore(); }
+    if (t > 16.0) {
+      const k = TK.out((t - 16.0) / 2.0);
+      g.save(); g.globalAlpha *= clamp((t - 16.0) / 0.4, 0, 1) * hb;
+      // 大きくなった赤ちゃんの影（頭だけ見える大きさ）
+      baby(g, 700, by, 0.6 + 1.8 * k);
+      g.restore();
+    }
+    if (t > 18.0) {
+      g.save(); g.globalAlpha *= TK.pop(t, 18.0);
+      TK.text(g, '[30 トン]', 540, 400, 140, { stroke: 'rgba(0,0,0,0.6)' });
+      g.restore();
+    }
+    if (t > 18.6) {
+      g.save(); g.globalAlpha *= clamp((t - 18.6) / 0.5, 0, 1);
+      g.fillStyle = 'rgba(11,20,48,0.75)'; g.fillRect(0, 640, PW, 400);
+      truck(g, 140, 1000, 800);
+      TK.text(g, '大型トラック くらい', 540, 1070, 54, { color: TK.C.sub });
+      g.restore();
+    }
+    g.restore();
+  }
+  // 22〜25: 大きな体 → さなぎ
+  if (t >= 22.0) {
+    g.save(); g.globalAlpha = fade(t, 22.0, 25.5, 0.3);
+    const k = clamp((t - 22.8) / 0.6, 0, 1);
+    g.save(); g.globalAlpha *= 1 - k; cater(g, 760, 700, 1.6, t); g.restore();
+    if (k > 0) { g.save(); g.globalAlpha *= k; pupa(g, 540, 700, 2.6); g.restore(); }
+    TK.text(g, '終齢のイモムシ → さなぎ', PW / 2, 330, 60, { color: TK.C.sub });
+    g.restore();
+  }
+  if (t >= 5.0 && t < 10.0) TK.note(g, t, 5.0, 10.0, '絵の長さは重さに合わせた（重さ1万倍 ＝ 長さ約22倍）\nえさの期間は条件で 12〜45日', { size: 30 });
+  if (t >= 14.0 && t < 22.0) TK.note(g, t, 14.0, 22.0, '3 kg × 1万 のかけ算だけ（人の育ち方とはくらべていない）\nトラックの重さは目安', { size: 30 });
+  if (t >= 22.0) TK.note(g, t, 22.0, 25.0, '出どころ: Woods (2013) Functional Ecology のデータ\nGrunert ほか (2015) PLoS ONE 10(5): e0127988', { size: 30 });
+}
+
+triviaStart({ out: 'metamorphosis-trivia3', dur: DUR, draw, subs, cues, peek: 1.0 });
+</script>
+</body>
+</html>

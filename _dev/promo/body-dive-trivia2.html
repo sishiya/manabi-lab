@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく body-dive-2（型H 当ててみて）「ゾウとイヌ、おしっこが長いのは？」。台本は trivia/body-dive.md。?short で録る
+// 数字: Yang, Pham, Choo, Hu (2014) PNAS 111:11932。3kgより重いほ乳類は平均 21秒（±13秒）、膀胱 100 mL〜100 L、小さい動物 0.01〜2秒。
+// 画面の動物は「3kgより重いほ乳類の例」（この研究でイヌを測ったとは書かない）。
+const DUR = 25;
+const subs = [
+  { a: 0.0, b: 2.0, ja: 'おしっこが長いのは、どっち？', en: 'Who pees longer?', noBurn: true },
+  { a: 2.0, b: 4.0, ja: '（考えてみて）', en: '(Take a guess)' },
+  { a: 4.0, b: 8.0, ja: '答えは[「だいたい同じ」]', en: 'The answer: about the same' },
+  { a: 8.0, b: 14.0, ja: '膀胱の大きさは[1000倍]ちがうのに', en: 'Even though their bladders differ 1000-fold' },
+  { a: 14.0, b: 19.0, ja: '3kgより重いほ乳類は\n平均[約21秒]で出しきる', en: 'Mammals over 3 kg empty in\nabout 21 seconds on average' },
+  { a: 19.0, b: 23.0, ja: '体が大きいほど尿道も長く太く\n[重力]で速く流れるから', en: 'Bigger animals have longer, wider urethras,\nso gravity speeds the flow' },
+  { a: 23.0, b: 25.0, ja: '小さい動物は、ぽたぽたと[一瞬]', en: 'Small animals: a few quick drops' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 2.0, type: 'tick' }, { t: 3.0, type: 'tick' }, { t: 4.0, type: 'ding' }, { t: 6.4, type: 'ding' },
+  { t: 8.0, type: 'whoosh' }, { t: 14.0, type: 'pop' }, { t: 19.0, type: 'whoosh' }, { t: 23.0, type: 'pop' },
+];
+const LINE = 'rgba(207,224,255,0.9)', FILL = 'rgba(30,50,100,0.6)';
+
+function elephant(g, x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = LINE; g.fillStyle = FILL; g.lineWidth = 6 / s; g.lineJoin = 'round'; g.lineCap = 'round';
+  for (const lx of [-80, -30, 40, 85]) { g.beginPath(); g.roundRect(lx - 20, 30, 40, 110, 10); g.fill(); g.stroke(); }
+  g.beginPath(); g.ellipse(0, 0, 130, 85, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.beginPath(); g.arc(-135, -30, 60, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.beginPath(); g.ellipse(-110, -30, 38, 55, 0.2, 0, Math.PI * 2); g.fill(); g.stroke();   // 耳
+  g.beginPath(); g.moveTo(-185, -10); g.quadraticCurveTo(-230, 60, -195, 120); g.lineWidth = 22 / s; g.stroke();   // 鼻
+  g.lineWidth = 6 / s; g.beginPath(); g.moveTo(128, -10); g.lineTo(150, 40); g.stroke();   // しっぽ
+  g.fillStyle = LINE; g.beginPath(); g.arc(-150, -45, 6, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+function dog(g, x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = LINE; g.fillStyle = FILL; g.lineWidth = 6 / s; g.lineJoin = 'round'; g.lineCap = 'round';
+  for (const lx of [-55, -30, 35, 60]) { g.beginPath(); g.roundRect(lx - 9, 15, 18, 75, 8); g.fill(); g.stroke(); }
+  g.beginPath(); g.ellipse(0, 0, 85, 40, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.beginPath(); g.ellipse(-95, -50, 38, 32, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.beginPath(); g.ellipse(-135, -40, 26, 16, 0, 0, Math.PI * 2); g.fill(); g.stroke();   // 鼻先
+  g.beginPath(); g.ellipse(-80, -82, 12, 26, 0.4, 0, Math.PI * 2); g.fill(); g.stroke();   // 耳
+  g.beginPath(); g.moveTo(80, -10); g.quadraticCurveTo(120, -40, 115, -80); g.stroke();   // しっぽ
+  g.fillStyle = LINE; g.beginPath(); g.arc(-105, -58, 5, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+function mouse(g, x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = LINE; g.fillStyle = FILL; g.lineWidth = 5 / s;
+  g.beginPath(); g.ellipse(0, 0, 60, 34, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.beginPath(); g.arc(-40, -32, 18, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(58, 5); g.quadraticCurveTo(110, 20, 120, -20); g.stroke();
+  g.fillStyle = LINE; g.beginPath(); g.arc(-48, -6, 4, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+// タイマー（秒）
+function timer(g, x, y, sec, done) {
+  TK.card(g, x - 150, y - 60, 300, 120, { r: 60, stroke: done ? TK.C.acc : 'rgba(160,190,255,0.4)', lw: done ? 6 : 3 });
+  TK.text(g, '0:' + String(Math.floor(sec)).padStart(2, '0'), x, y + 4, 72, { color: done ? TK.C.acc : '#fff' });
+}
+
+function draw(g, t) {
+  // 0〜8: ゾウとイヌ → 2つのタイマー
+  if (t < 8.0) {
+    const f = t < 7.6 ? 1 : fade(t, -1, 8, 0.3); g.save(); g.globalAlpha = f;
+    elephant(g, 300, 640, 1.15); dog(g, 820, 690, 1.15);
+    if (t < 4.0) TK.text(g, '？', PW / 2 + 20, 480, 150, { color: TK.C.acc });
+    if (t >= 4.0) {
+      const sec = Math.min(21, (t - 4.2) / 2.2 * 21), done = sec >= 21;
+      timer(g, 300, 930, Math.max(0, sec), done); timer(g, 820, 930, Math.max(0, sec), done);
+      if (done) TK.text(g, '[ほぼ同じ]', PW / 2, 330, 96);
+    }
+    g.restore();
+    if (t < 2.0) TK.hook(g, t, 0, 2.0, 'おしっこが長いのは\nどっち？', { y: 280, size: 96 });
+    if (t >= 2.0 && t < 4.0) {
+      const k = (t - 2.0) / 2.0, cx = PW / 2, cy = 300, r = 70;
+      g.lineWidth = 14; g.strokeStyle = 'rgba(255,255,255,0.15)'; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();
+      g.strokeStyle = TK.C.acc; g.beginPath(); g.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - k)); g.stroke();
+      TK.text(g, String(Math.max(1, Math.ceil(2 - (t - 2.0)))), cx, cy + 4, 72);
+    }
+    if (t >= 4.0) TK.note(g, t, 4.0, 8, '3kgより重いほ乳類の例として描いています（10倍の早送り）', { size: 30 });
+  }
+  // 8〜14: 膀胱の大きさ（1000倍）
+  if (t >= 8.0 && t < 14.0) {
+    const f = fade(t, 8, 14, 0.3); g.save(); g.globalAlpha = f;
+    TK.text(g, '膀胱の大きさ', PW / 2, 220, 60, { color: TK.C.sub });
+    const k = ease((t - 8.4) / 1.6);
+    // 体積を面積で: 100 L の円と 100 mL の円（半径は体積の 1/2 乗でなく、見やすさのため面積比＝体積比）
+    const R1 = 290 * k, R2 = R1 / Math.sqrt(1000);
+    g.fillStyle = 'rgba(255,207,74,0.35)'; g.strokeStyle = TK.C.acc; g.lineWidth = 5;
+    g.beginPath(); g.arc(PW / 2 + 60, 660, R1, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.fillStyle = 'rgba(95,212,255,0.6)'; g.strokeStyle = TK.C.acc2;
+    g.beginPath(); g.arc(150, 660, Math.max(4, R2), 0, Math.PI * 2); g.fill(); g.stroke();
+    if (k > 0.9) {
+      TK.text(g, '100 mL', 150, 580, 46, { color: TK.C.acc2 });
+      TK.text(g, '100 L', PW / 2 + 60, 660, 72, { color: '#fff' });
+      TK.text(g, '[1000倍]', PW / 2, 1060, 80);
+    }
+    g.restore();
+    TK.note(g, t, 8.6, 14, '面積を量にあわせて描いています', { size: 30 });
+  }
+  // 14〜19: 体重の線と 21秒
+  if (t >= 14.0 && t < 19.0) {
+    const f = fade(t, 14, 19, 0.3); g.save(); g.globalAlpha = f;
+    const y = 800, x0 = 100, x1 = 980, lx = w => x0 + (x1 - x0) * (Math.log10(w) + 2) / 6;   // 0.01 kg〜10 t（対数）
+    g.strokeStyle = 'rgba(207,224,255,0.6)'; g.lineWidth = 4; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke();
+    [[0.01, '10g'], [1, '1kg'], [100, '100kg'], [10000, '10t']].forEach(([w, s]) => { const x = lx(w); g.beginPath(); g.moveTo(x, y - 12); g.lineTo(x, y + 12); g.stroke(); TK.text(g, s, x, y + 50, 36, { color: TK.C.dim, bold: false }); });
+    TK.text(g, '体重（目もりは100倍ずつ）', x1, y + 110, 36, { align: 'right', color: TK.C.sub, bold: false });
+    const x3 = lx(3);
+    g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.setLineDash([12, 10]); g.beginPath(); g.moveTo(x3, 300); g.lineTo(x3, y); g.stroke(); g.setLineDash([]);
+    TK.text(g, '3kg', x3, 270, 50, { color: TK.C.acc });
+    const k = ease((t - 14.4) / 1.0);
+    g.fillStyle = `rgba(255,207,74,${0.25 * k})`; g.fillRect(x3, 400, (x1 - x3) * k, 300);
+    if (k > 0.8) { TK.text(g, '平均 [約21秒]', (x3 + x1) / 2, 520, 70); TK.text(g, '（±13秒）', (x3 + x1) / 2, 610, 46, { color: TK.C.sub, bold: false }); }
+    mouse(g, lx(0.03), 700, 0.6); dog(g, lx(20), 740, 0.45); elephant(g, lx(4000), 720, 0.33);
+    g.restore();
+    TK.note(g, t, 14.4, 19, 'ばらつきが大きい、平均の値', { size: 30 });
+  }
+  // 19〜23: 尿道の長さ・太さと重力
+  if (t >= 19.0 && t < 23.0) {
+    const f = fade(t, 19, 23, 0.3); g.save(); g.globalAlpha = f;
+    const flow = (x, y0, len, w, sp) => {
+      g.strokeStyle = LINE; g.lineWidth = 5; g.beginPath(); g.moveTo(x - w / 2, y0); g.lineTo(x - w / 2, y0 + len); g.moveTo(x + w / 2, y0); g.lineTo(x + w / 2, y0 + len); g.stroke();
+      g.fillStyle = 'rgba(255,207,74,0.75)';
+      for (let i = 0; i < 8; i++) { const yy = y0 + ((t * sp + i * len / 8) % len); g.beginPath(); g.ellipse(x, yy, w * 0.3, 10, 0, 0, Math.PI * 2); g.fill(); }
+    };
+    flow(330, 300, 180, 26, 120); flow(750, 300, 620, 70, 420);
+    TK.text(g, '小さい体', 330, 540, 48, { color: TK.C.sub }); TK.text(g, '大きい体', 750, 1000, 48, { color: TK.C.sub });
+    g.strokeStyle = TK.C.acc; g.lineWidth = 8; g.beginPath(); g.moveTo(960, 380); g.lineTo(960, 700); g.stroke();
+    g.fillStyle = TK.C.acc; g.beginPath(); g.moveTo(935, 690); g.lineTo(985, 690); g.lineTo(960, 740); g.closePath(); g.fill();
+    TK.text(g, '重力', 960, 340, 44, { color: TK.C.acc });
+    g.restore();
+    TK.note(g, t, 19.4, 23, '尿道を縦の管にした、イメージの図', { size: 30 });
+  }
+  // 23〜25: ネズミ
+  if (t >= 23.0) {
+    const f = fade(t, 23, 25.5, 0.3); g.save(); g.globalAlpha = f;
+    mouse(g, PW / 2, 600, 2.2);
+    TK.text(g, '[0.01〜2秒]', PW / 2, 330, 90);
+    g.restore();
+    TK.note(g, t, 23.0, 25, '出どころ: Yang, Pham, Choo, Hu (2014) PNAS 111:11932', { size: 30 });
+  }
+}
+
+triviaStart({ out: 'body-dive-trivia2', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

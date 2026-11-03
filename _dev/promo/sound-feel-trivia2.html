@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく sound-feel-2（型A ぜんぶ逆）「黒板の音がいやなのは、高い音のせいじゃない」。台本は trivia/sound-feel.md。?short で録る
+// 出どころ: Halpern, Blake & Hillenbrand (1986) Perception & Psychophysics 39(2):77–80（高い所を除いても不快さは減らず、中を除くと減った）、
+// Reuter & Oehler (2011) 米国音響学会の発表（2000〜4000 Hz、「音楽」と言われると不快さが下がる）。
+// 台本の注意どおり: 18–24 秒の「耳の感度」の段は出どころがないので削って 30 秒に。黒板の音そのものは流さない。2011年は学会発表と小さく
+const DUR = 30;
+const subs = [
+  { a: 0.0, b: 4.0, ja: '黒板をひっかく音、いやなのは高い音だから。…じつは[ちがう]', en: 'Chalkboard screech is awful because it’s high-pitched. …Not quite.', noBurn: true },
+  { a: 4.0, b: 8.0, ja: '1986年の実験。[高い音]を消しても\nいやなまま', en: 'A 1986 experiment: remove the high frequencies —\nstill awful' },
+  { a: 8.0, b: 12.0, ja: '[まん中あたり]の音を消すと\nぐっと楽に', en: 'Remove the middle frequencies —\nmuch more bearable' },
+  { a: 12.0, b: 18.0, ja: '2011年のくわしい実験では、いちばん効いていたのは\n[2000〜4000 ヘルツ]', en: 'A detailed 2011 study found the key range:\n2,000–4,000 Hz', size: 58 },
+  { a: 18.0, b: 22.0, ja: 'しかも、同じ音を「[現代音楽]です」と\n言って聞かせると', en: 'And when people were told the same sound\nwas “contemporary music”…' },
+  { a: 22.0, b: 26.0, ja: 'いやさが[下がった]', en: '…they found it less unpleasant' },
+  { a: 26.0, b: 30.0, ja: 'いやな音は、[耳]と[頭の中]の\n両方で決まる', en: 'How awful a sound is depends on\nboth your ears and your mind' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 1.8, type: 'buzz' }, { t: 2.4, type: 'pop' }, { t: 4.0, type: 'whoosh' },
+  { t: 5.2, type: 'thud' }, { t: 6.4, type: 'buzz' }, { t: 9.0, type: 'thud' }, { t: 10.2, type: 'ding' },
+  { t: 12.0, type: 'whoosh' }, { t: 13.2, type: 'rise' }, { t: 18.0, type: 'whoosh' }, { t: 22.2, type: 'ding' }, { t: 26.0, type: 'ding' },
+];
+
+function redX(g, x, y, r, k) {
+  if (k <= 0) return;
+  g.save(); g.strokeStyle = TK.C.red; g.lineWidth = r * 0.16; g.lineCap = 'round'; g.globalAlpha *= clamp(k, 0, 1);
+  const s = r * (0.7 + 0.3 * TK.back(k));
+  g.beginPath(); g.moveTo(x - s, y - s); g.lineTo(x + s, y + s); g.moveTo(x + s, y - s); g.lineTo(x - s, y + s); g.stroke();
+  g.restore();
+}
+// 顔（m: -1 いや 〜 +1 平気）
+function face(g, x, y, r, m) {
+  g.save();
+  const c = m < 0 ? TK.C.red : TK.C.green;
+  g.strokeStyle = c; g.lineWidth = r * 0.08; g.fillStyle = 'rgba(20,34,72,0.9)';
+  g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.fillStyle = c;
+  if (m < -0.3) {   // ぎゅっとつぶった目
+    g.lineCap = 'round';
+    for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(x + sd * r * 0.5, y - r * 0.38); g.lineTo(x + sd * r * 0.25, y - r * 0.25); g.lineTo(x + sd * r * 0.5, y - r * 0.12); g.stroke(); }
+  } else { for (const sd of [-1, 1]) { g.beginPath(); g.arc(x + sd * r * 0.35, y - r * 0.25, r * 0.09, 0, Math.PI * 2); g.fill(); } }
+  g.beginPath(); g.moveTo(x - r * 0.42, y + r * 0.38); g.quadraticCurveTo(x, y + r * 0.38 + m * r * 0.35, x + r * 0.42, y + r * 0.38); g.stroke();
+  g.restore();
+}
+// 音の高さの帯（3つ）。cut: どの帯を消したか（0〜1 のふたつ）
+const BAND = [{ n: '低い', c: '#5fd4ff' }, { n: 'まん中', c: '#ffcf4a' }, { n: '高い', c: '#c79bff' }];
+function bands(g, t, y, cutHi, cutMid) {
+  const x0 = 110, w = 860 / 3;
+  BAND.forEach((b, i) => {
+    const cut = i === 2 ? cutHi : i === 1 ? cutMid : 0;
+    const x = x0 + i * w;
+    g.save(); g.globalAlpha *= 1 - 0.8 * cut;
+    g.fillStyle = b.c;
+    for (let j = 0; j < 14; j++) {
+      const bx = x + 10 + j * (w - 20) / 14, h = 60 + 140 * Math.abs(Math.sin(j * 1.7 + i * 2.3 + t * 7 * (1 + j % 3) * 0.3));
+      g.fillRect(bx, y - h, (w - 20) / 14 - 4, h);
+    }
+    g.restore();
+    TK.text(g, b.n, x + w / 2, y + 50, 48, { color: cut > 0.5 ? TK.C.dim : b.c });
+    if (cut > 0) {   // はさみの線
+      g.save(); g.strokeStyle = TK.C.red; g.lineWidth = 6; g.setLineDash([16, 10]); g.globalAlpha *= clamp(cut * 2, 0, 1);
+      g.strokeRect(x + 4, y - 230, w - 8, 240); g.restore();
+      if (cut > 0.6) TK.text(g, '消した', x + w / 2, y - 270, 44, { color: TK.C.red });
+    }
+  });
+  g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 3; g.beginPath(); g.moveTo(110, y); g.lineTo(970, y); g.stroke();
+}
+// 周波数の軸（対数、100〜10000 Hz）
+const FX0 = 120, FX1 = 960, fx = f => FX0 + (FX1 - FX0) * (Math.log10(f) - 2) / 2;
+
+function draw(g, t) {
+  // 0〜4: フック
+  if (t < 4.0) {
+    TK.hook(g, t, 0.0, 4.0, '黒板の音がいやなのは\n高いから', { y: 420, size: 100 });
+    if (t > 1.8) redX(g, 540, 420, 190, (t - 1.8) / 0.3);
+    if (t > 2.4) { g.save(); g.globalAlpha = TK.pop(t, 2.4) * fade(t, 2.4, 4.0, 0.25); TK.text(g, '[ちがう]', 540, 720, 130, { stroke: 'rgba(0,0,0,0.6)' }); g.restore(); }
+    g.save(); g.globalAlpha = fade(t, -1, 4.0, 0.3);
+    // 黒板（線画。音は流さない）
+    g.fillStyle = '#1f4a3a'; g.strokeStyle = '#a07a50'; g.lineWidth = 14;
+    g.beginPath(); g.roundRect(200, 860, 680, 260, 10); g.fill(); g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 4;
+    for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(330 + i * 40, 900); g.lineTo(480 + i * 40, 1080); g.stroke(); }
+    g.restore();
+  }
+  // 4〜12: 帯を消す実験
+  if (t >= 4.0 && t < 12.0) {
+    g.save(); g.globalAlpha = fade(t, 4.0, 12.0, 0.3);
+    TK.text(g, '1986年の実験', PW / 2, 220, 56, { color: TK.C.sub });
+    const cutHi = t < 8.0 ? clamp((t - 5.2) / 0.5, 0, 1) : 0;
+    const cutMid = t >= 8.0 ? clamp((t - 9.0) / 0.5, 0, 1) : 0;
+    bands(g, t, 640, cutHi, cutMid);
+    if (t > 6.4 && t < 8.0) { g.save(); g.globalAlpha *= TK.pop(t, 6.4); face(g, 400, 880, 90, -1); TK.text(g, 'いやなまま', 640, 880, 64, { color: TK.C.red }); g.restore(); }
+    if (t > 10.2) { g.save(); g.globalAlpha *= TK.pop(t, 10.2); face(g, 400, 880, 90, 0.8); TK.text(g, 'ぐっと楽に', 640, 880, 64, { color: TK.C.green }); g.restore(); }
+    g.restore();
+  }
+  // 12〜18: 2000〜4000 Hz
+  if (t >= 12.0 && t < 18.0) {
+    g.save(); g.globalAlpha = fade(t, 12.0, 18.0, 0.3);
+    TK.text(g, '2011年の実験', PW / 2, 220, 56, { color: TK.C.sub });
+    const y = 680;
+    const k = TK.out((t - 12.8) / 1.0);
+    g.fillStyle = `rgba(255,207,74,${0.35 * k})`; g.fillRect(fx(2000), y - 300, fx(4000) - fx(2000), 300);
+    g.strokeStyle = TK.C.acc; g.lineWidth = 4; g.globalAlpha *= 1; g.strokeRect(fx(2000), y - 300, fx(4000) - fx(2000), 300 * k);
+    g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 3; g.beginPath(); g.moveTo(FX0, y); g.lineTo(FX1, y); g.stroke();
+    for (const [f, s] of [[100, '100'], [1000, '1000'], [10000, '10000']]) { g.beginPath(); g.moveTo(fx(f), y); g.lineTo(fx(f), y + 16); g.stroke(); TK.text(g, s, fx(f), y + 50, 36, { color: TK.C.sub, bold: false }); }
+    TK.text(g, 'Hz（音の高さ）', FX1, y + 100, 34, { color: TK.C.dim, bold: false, align: 'right' });
+    if (k > 0.3) TK.text(g, '2000〜4000 Hz', (fx(2000) + fx(4000)) / 2, y - 340, 52, { color: TK.C.acc });
+    // ピアノの右はし
+    if (t > 14.5) {
+      g.save(); g.globalAlpha *= clamp((t - 14.5) / 0.5, 0, 1);
+      const ky = 815, kw = 26, n = 30;
+      for (let i = 0; i < n; i++) { const x = 1000 - 120 - (n - i) * kw; g.fillStyle = '#f2f2f2'; g.fillRect(x, ky, kw - 3, 150); }
+      for (let i = 0; i < n; i++) { if ([1, 3, 6, 8, 10].includes(i % 12)) { const x = 1000 - 120 - (n - i) * kw + kw * 0.6; g.fillStyle = '#111'; g.fillRect(x, ky, kw * 0.7, 92); } }
+      g.fillStyle = 'rgba(255,207,74,0.6)'; g.fillRect(1000 - 120 - 13 * kw, ky, 12 * kw, 150);
+      TK.text(g, 'ピアノの右はし近く（いちばん上の音 約4186 Hz）', PW / 2, ky + 190, 38, { color: TK.C.sub });
+      g.restore();
+    }
+    g.restore();
+  }
+  // 18〜26: 言い方で変わる
+  if (t >= 18.0 && t < 26.0) {
+    g.save(); g.globalAlpha = fade(t, 18.0, 26.0, 0.3);
+    TK.text(g, '同じ音を聞かせる', PW / 2, 220, 56, { color: TK.C.sub });
+    const cards = [{ x: 70, s: '「黒板の音です」', m: -1 }, { x: 560, s: '「現代音楽です」', m: 0.4 }];
+    for (const c of cards) {
+      TK.card(g, c.x, 300, 450, 700);
+      TK.text(g, c.s, c.x + 225, 380, 50, { maxw: 410 });
+      const m = t < 21.5 ? 0 : c.m * TK.out((t - 21.5) / 0.6);
+      face(g, c.x + 225, 620, 130, m);
+      if (t > 22.2) {
+        g.save(); g.globalAlpha *= TK.pop(t, 22.2);
+        TK.text(g, c.m < 0 ? 'いや' : 'いやさが 下がった', c.x + 225, 880, c.m < 0 ? 64 : 50, { color: c.m < 0 ? TK.C.red : TK.C.green });
+        g.restore();
+      }
+    }
+    g.restore();
+  }
+  // 26〜30: 耳 ＋ 頭の中
+  if (t >= 26.0) {
+    g.save(); g.globalAlpha = fade(t, 26.0, 30.5, 0.3);
+    // 耳（線画）
+    g.strokeStyle = '#5fd4ff'; g.lineWidth = 12; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(330, 470); g.bezierCurveTo(200, 420, 170, 700, 300, 740); g.bezierCurveTo(330, 760, 330, 820, 290, 840); g.stroke();
+    g.beginPath(); g.moveTo(300, 540); g.bezierCurveTo(240, 560, 250, 660, 300, 650); g.stroke();
+    TK.text(g, '耳', 270, 940, 72, { color: '#5fd4ff' });
+    TK.text(g, '＋', 540, 650, 110, { color: '#fff' });
+    // 頭の中（考えのふきだし）
+    g.strokeStyle = TK.C.acc; g.lineWidth = 10;
+    g.beginPath(); g.ellipse(800, 620, 170, 130, 0, 0, Math.PI * 2); g.stroke();
+    for (const [x, y, r] of [[690, 790, 26], [660, 850, 16]]) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke(); }
+    TK.text(g, '？', 800, 620, 110, { color: TK.C.acc });
+    TK.text(g, '頭の中', 820, 940, 72, { color: TK.C.acc });
+    g.restore();
+  }
+  if (t >= 4.0 && t < 12.0) TK.note(g, t, 4.0, 12.0, '帯の分け方は模式。Halpern, Blake & Hillenbrand (1986)', { size: 30 });
+  if (t >= 12.0 && t < 26.0) TK.note(g, t, 12.0, 26.0, '2011年は学会での発表（Reuter & Oehler、米国音響学会）', { size: 30 });
+  if (t >= 26.0) TK.note(g, t, 26.0, 30.0, '出どころ: Halpern ほか (1986) Percept Psychophys 39(2): 77–80\nReuter & Oehler (2011) 米国音響学会の発表', { size: 30 });
+}
+
+triviaStart({ out: 'sound-feel-trivia2', dur: DUR, draw, subs, cues, peek: 1.0 });
+</script>
+</body>
+</html>

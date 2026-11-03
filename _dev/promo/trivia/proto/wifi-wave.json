@@ -1,0 +1,4 @@
+[
+  { "id": "wifi-wave-1", "page": "wifi-wave-trivia1", "mp4": "out/wifi-wave-trivia1-short.mp4", "type": "A", "title": "電子レンジの電波は「水がいちばん好きな周波数」…じゃない", "dur": 30, "voice": "(1) 字幕だけ", "app_footage": false, "notes": "吸収の山（対数の周波数軸、5〜100GHz をうすく）と断面の温まり方はどちらも模式図と注に。アプリの録画（2.4GHz の波）はルーターから広がる輪の線画に。健康の話は入れていない。REVIEW では『よくある雑学（電子レンジ）』の指摘あり。" },
+  { "id": "wifi-wave-2", "page": "wifi-wave-trivia2", "mp4": "out/wifi-wave-trivia2-short.mp4", "type": "E", "title": "あなたのスマホは、ルーターの電波の10億分の1で動いている", "dur": 35, "voice": "(1) か (2)（いまは字幕だけ）", "app_footage": false, "notes": "1m → 10m は輪を10分の1に引くズーム。アプリの録画（壁の向こうで暗くなる）は壁3枚を通るたびに波の帯がうすくなる線画に（うすくなる割合は絵のため。計算ではない）。0.1W と −70dBm は目安と注に。『10億円』の箱はたとえ。" }
+]

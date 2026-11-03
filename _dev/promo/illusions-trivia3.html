@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく illusions-3（型G 15秒ループ）「見つめると消える」（トロクスラー効果）。台本は trivia/illusions.md。?short で録る
+// うすい灰色の上に、ふちの大きくぼけた低いコントラストの色のにじみ4つ＋まん中の＋。3〜12秒は絵を一切動かさない
+// （上の進み具合の線もこのあいだは出さない）。動画の圧縮でにじみが段になって崩れないよう、ぼけは大きめ。
+// 出どころ: Martinez-Conde ほか (2006) Neuron 49(2)（Troxler 1804 の再発見・マイクロサッカード）
+const DUR = 20;
+const FX = 540, FY = 630;   // ＋の位置（13秒で少しずらす）
+const BG = [196, 196, 196];
+const BLOBS = [[-250, -250, [222, 178, 190]], [250, -250, [176, 214, 184]], [-250, 250, [178, 196, 228]], [250, 250, [224, 214, 168]]];
+const subs = [
+  { a: 0.0, b: 3.0, ja: '＋だけを見て。目を動かさないで', en: 'Look only at the +. Don’t move your eyes', noBurn: true },
+  { a: 6.0, b: 12.0, ja: '…まわりの色、消えてきた？\n画面は[1ミリも]変わっていません', en: '…Are the colors fading?\nThe picture hasn’t changed at all' },
+  { a: 12.0, b: 16.0, ja: '目が動くと、[戻る]', en: 'Move your eyes, and they come back' },
+  { a: 16.0, b: 20.0, ja: '止まった物は、脳が「もう知ってる」と消してしまう。\n1804年、トロクスラーが気づいた。…＋だけを見て', en: 'The brain drops what never changes.\nTroxler noticed in 1804. …Look at the +', size: 52 },
+];
+const cues = [{ t: 0.05, type: 'pop' }, { t: 12.4, type: 'whoosh' }, { t: 16.0, type: 'ding' }];
+
+function stimulus(g, fx, fy) {
+  g.fillStyle = `rgb(${BG})`; g.fillRect(0, 0, PW, 1105);
+  for (const [dx, dy, c] of BLOBS) {
+    const x = FX + dx, y = FY + dy, gr = g.createRadialGradient(x, y, 0, x, y, 210);
+    gr.addColorStop(0, `rgba(${c},1)`); gr.addColorStop(0.35, `rgba(${c},0.85)`); gr.addColorStop(1, `rgba(${c},0)`);
+    g.fillStyle = gr; g.beginPath(); g.arc(x, y, 210, 0, Math.PI * 2); g.fill();
+  }
+  g.strokeStyle = '#222'; g.lineWidth = 6; g.beginPath(); g.moveTo(fx - 22, fy); g.lineTo(fx + 22, fy); g.moveTo(fx, fy - 22); g.lineTo(fx, fy + 22); g.stroke();
+}
+
+function draw(g, t) {
+  // ＋は 12.4〜13.4 秒だけ少しずれる（目を動かさせる）
+  const j = t > 12.4 && t < 13.4 ? 1 : 0;
+  stimulus(g, FX + j * 140, FY - j * 90);
+  // 下の字幕の所は紺
+  { const gr = g.createLinearGradient(0, 1105, 0, PH); gr.addColorStop(0, TK.C.bg1); gr.addColorStop(1, TK.C.bg0); g.fillStyle = gr; g.fillRect(0, 1105, PW, PH - 1105); }
+  if (t < 3.0) TK.hook(g, t, 0.0, 3.0, '＋だけを見て', { y: 200, size: 96 });
+  if (t >= 16.0) { g.save(); g.globalAlpha = fade(t, 16.0, 20.5, 0.3); TK.text(g, 'トロクスラー効果（1804）', PW / 2, 200, 70, { stroke: 'rgba(0,0,0,0.5)' }); g.restore(); }
+  if (t >= 12.0 && t < 16.0) TK.note(g, t, 12.0, 16.0, '消えない人もいます（画面の大きさ・見る距離で変わる）', { size: 30 });
+  if (t >= 16.0) TK.note(g, t, 16.0, 20.0, 'しくみ（目か脳か）は、まだ研究中\n出どころ: Martinez-Conde ほか (2006) Neuron 49(2)', { size: 28 });
+}
+
+triviaStart({ out: 'illusions-trivia3', dur: DUR, draw, subs, cues, peek: 1.5, progress: false, bgOpts: { grid: false } });
+</script>
+</body>
+</html>

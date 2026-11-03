@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく tiny-earth-1（型B もしも計算）「歩いたら人工衛星」。台本は trivia/tiny-earth.md。?short で録る
+// 数字（地球 R=6371km・g=9.820・脱出 11.186km/s、NASA Earth Fact Sheet）: 半径1kmなら g'=1.54e-3、周回 1.24 m/s、脱出 1.76 m/s、1周 84.4分。
+// 秒速1.3mで水平に進むと楕円（近い所＝地面、遠い所＝地面から約200m）。人は大きく描いている（画面に注）
+const DUR = 32;
+const CX = 540, CY = 760, R = 250;   // 星（半径1km）の絵
+const subs = [
+  { a: 0.0, b: 3.0, ja: '歩いただけで、[人工衛星]になる星', en: 'A planet where just walking puts you in orbit', noBurn: true },
+  { a: 3.0, b: 8.0, ja: '地球を、[同じ材料のまま]\n半径1kmに縮めたら', en: 'Shrink Earth to a 1 km radius, made of the same stuff' },
+  { a: 8.0, b: 13.0, ja: '重力は、地球の[6400分の1]', en: 'Gravity drops to 1/6400 of Earth’s' },
+  { a: 13.0, b: 20.0, ja: '地面すれすれを回る速さは[秒速1.24m]\nふつうに歩くより、少しおそい', en: 'Orbiting at ground level takes 1.24 m/s,\nslightly slower than walking' },
+  { a: 20.0, b: 26.0, ja: 'この速さで地面すれすれを進むと\n足がはなれて、[星を1周]（84分）', en: 'Move that fast along the ground and you lift off,\ncircling the planet in 84 minutes' },
+  { a: 26.0, b: 32.0, ja: 'ジャンプはダメ。\n秒速1.76mをこえて、[二度と戻れない]', en: 'But don’t jump: above 1.76 m/s\nyou never come back' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 3.0, type: 'whoosh' }, { t: 4.2, type: 'rise' }, { t: 8.0, type: 'pop' }, { t: 9.2, type: 'ding' },
+  { t: 13.0, type: 'whoosh' }, { t: 14.6, type: 'tick' }, { t: 15.6, type: 'tick' }, { t: 20.0, type: 'pop' }, { t: 21.6, type: 'rise' },
+  { t: 26.0, type: 'pop' }, { t: 27.4, type: 'whoosh' }, { t: 29.0, type: 'buzz' },
+];
+
+// 棒の人（足を交互に）。x, y は足もと、ang は「上」の向き
+function person(g, x, y, ang, phase, s = 1, color = '#fff') {
+  g.save(); g.translate(x, y); g.rotate(ang); g.scale(s, s);
+  g.strokeStyle = color; g.lineWidth = 7; g.lineCap = 'round';
+  const sw = Math.sin(phase) * 0.5;
+  g.beginPath();
+  g.moveTo(0, -38); g.lineTo(Math.sin(sw) * 22, 0); g.moveTo(0, -38); g.lineTo(-Math.sin(sw) * 22, 0);   // 足
+  g.moveTo(0, -38); g.lineTo(0, -80);   // 胴
+  g.moveTo(0, -70); g.lineTo(-Math.sin(sw) * 20, -48); g.moveTo(0, -70); g.lineTo(Math.sin(sw) * 20, -48);   // 腕
+  g.stroke();
+  g.fillStyle = color; g.beginPath(); g.arc(0, -96, 14, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+function planet(g, cx, cy, r, f = 1) {
+  g.save(); g.globalAlpha *= f;
+  const gr = g.createRadialGradient(cx - r * 0.35, cy - r * 0.35, r * 0.1, cx, cy, r);
+  gr.addColorStop(0, '#5fa8ff'); gr.addColorStop(1, '#1d4fa3');
+  g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
+  g.fillStyle = 'rgba(89,227,154,0.75)';   // 陸（形はかざり）
+  [[-0.3, -0.2, 0.32], [0.35, 0.25, 0.25], [0.1, -0.55, 0.18]].forEach(([dx, dy, rr]) => { g.beginPath(); g.ellipse(cx + dx * r, cy + dy * r, rr * r, rr * r * 0.7, dx, 0, Math.PI * 2); g.fill(); });
+  g.restore();
+}
+// 楕円の道すじ（近い所が地面、遠い所が 1.2 倍）。θ は星の中心から見た角度
+const ECC = 0.2 / 2.2, SEMI = (1 + 1.2) / 2;
+const orbitR = th => SEMI * (1 - ECC * ECC) / (1 + ECC * Math.cos(th));
+// 1周 84分を 5秒で（×1000）。ケプラーの式で時間 → 角度
+function orbitTheta(u) {   // u: 0〜1（1周の割合）
+  const M = 2 * Math.PI * u; let E = M; for (let i = 0; i < 8; i++) E = E - (E - ECC * Math.sin(E) - M) / (1 - ECC * Math.cos(E));
+  return 2 * Math.atan2(Math.sqrt(1 + ECC) * Math.sin(E / 2), Math.sqrt(1 - ECC) * Math.cos(E / 2));
+}
+const onPlanet = (th, r) => [CX + Math.sin(th) * R * r, CY - Math.cos(th) * R * r];
+
+function draw(g, t) {
+  // 0〜3: フック（星の上を歩く人が、ふわっと浮く）
+  if (t < 3.0) {
+    planet(g, CX, CY, R, fade(t, -1, 3, 0.3));
+    const th = t * 0.35, lift = ease((t - 1.0) / 1.6) * 0.12;
+    const [x, y] = onPlanet(th, 1 + lift);
+    person(g, x, y, th, t * 9, 2.0);
+    TK.hook(g, t, 0.0, 3.0, '歩いたら、\n[人工衛星]。', { y: 300, size: 130 });
+  }
+  // 3〜8: 地球が縮む
+  if (t >= 3.0 && t < 8.0) {
+    const k = ease((t - 3.6) / 3.2), r = lerp(1500, R, k);
+    planet(g, CX, CY + (1 - k) * 900, r, 1);
+    const km = Math.exp(lerp(Math.log(6371), 0, k));
+    TK.card(g, 180, 190, 720, 170);
+    TK.text(g, '半径 ' + (km >= 10 ? Math.round(km).toLocaleString('ja-JP') : km.toFixed(1)) + ' km', PW / 2, 252, 84, { color: k > 0.98 ? TK.C.acc : '#fff' });
+    TK.text(g, '密度は地球と同じ（5.5 g/cm³）', PW / 2, 318, 38, { color: TK.C.sub, bold: false });
+  }
+  // 8〜13: 重力
+  if (t >= 8.0 && t < 13.0) {
+    planet(g, CX, CY + 120, R * 0.8, 0.35);
+    TK.count(g, t, 8.0, 13.0, 9.8, 0.00154, { y: 520, size: 170, dur: 1.4, label: '重力（m/s²）', fmt: v => v > 0.1 ? v.toFixed(1) : v.toFixed(4) });
+    if (t > 9.6) { g.save(); g.globalAlpha = fade(t, 9.6, 13, 0.3); TK.text(g, '地球の [6400分の1]', PW / 2, 820, 76); g.restore(); }
+  }
+  // 13〜20: 速さのくらべ
+  if (t >= 13.0 && t < 20.0) {
+    TK.text(g, '速さ（秒速）', PW / 2, 270, 60, { color: TK.C.sub });
+    TK.bars(g, t, 13.2, 20.0, [
+      { label: '地面すれすれを回る（人工衛星）', v: 1.24 / 1.6, color: TK.C.acc, text: '1.24 m' },
+      { label: 'ふつうに歩く（おとな）', v: 1.40 / 1.6, color: TK.C.acc2, text: '1.3〜1.5 m' },
+    ], { y: 420, gap: 260, stagger: 1.0 });
+    if (t > 16.5) { g.save(); g.globalAlpha = fade(t, 16.5, 20, 0.3); TK.text(g, '歩く方が、[はやい]', PW / 2, 1000, 84); g.restore(); }
+  }
+  // 20〜26: 進むと浮いて、1周
+  if (t >= 20.0 && t < 26.0) {
+    planet(g, CX, CY, R);
+    const u = clamp((t - 21.0) / 5.0, 0, 1);
+    // 道すじ（点線）
+    g.save(); g.globalAlpha = fade(t, 21, 26, 0.4) * 0.6; g.setLineDash([10, 14]); g.strokeStyle = TK.C.acc; g.lineWidth = 4; g.beginPath();
+    for (let i = 0; i <= 120; i++) { const th = i / 120 * Math.PI * 2, [x, y] = onPlanet(th, orbitR(th)); i ? g.lineTo(x, y) : g.moveTo(x, y); }
+    g.stroke(); g.restore();
+    let th, rr;
+    if (t < 21.0) { th = -0.4 + (t - 20) * 0.4; rr = 1; } else { th = orbitTheta(u); rr = orbitR(th); }
+    const [x, y] = onPlanet(th, rr);
+    person(g, x, y, th, t < 21.0 ? t * 9 : 0, 1.6);
+    TK.card(g, 290, 220, 500, 120, { r: 60 });
+    TK.text(g, '1周 ' + Math.round(u * 84) + ' 分', PW / 2, 280, 70, { color: u >= 1 ? TK.C.acc : '#fff' });
+    TK.note(g, t, 21, 26, '1000倍の早送り／人は大きく描いています', { size: 32 });
+  }
+  // 26〜32: ジャンプすると戻れない
+  if (t >= 26.0) {
+    planet(g, CX, CY, R);
+    const th = 0, j = Math.max(0, t - 27.2);
+    const rr = 1 + (j > 0 ? j * 0.28 + j * j * 0.04 : 0);
+    const [x, y] = onPlanet(th, rr);
+    person(g, x, y, Math.sin(j * 2) * 0.4, 0, Math.max(0.6, 1.8 - j * 0.25));
+    TK.card(g, 200, 220, 680, 140, { r: 40 });
+    TK.text(g, 'もどれない速さ  秒速 [1.76 m]', PW / 2, 290, 58);
+    if (t > 29.0) { g.save(); g.globalAlpha = fade(t, 29, 32, 0.3); TK.text(g, '地球で30cm跳ぶ人の踏み切り＝秒速2.4m', PW / 2, 1000, 40, { color: TK.C.sub, bold: false }); g.restore(); }
+  }
+  if (t >= 3 && t < 20) TK.note(g, t, 3, 20, '空気・山・でこぼこのない、理想の計算', { size: 32 });
+  if (t >= 30.0) TK.note(g, t, 30.0, 32.0, '出どころ: NASA Earth Fact Sheet・Bohannon (1997) Age and Ageing', { size: 30 });
+}
+
+triviaStart({ out: 'tiny-earth-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

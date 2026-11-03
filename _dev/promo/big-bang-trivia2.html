@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく big-bang-2（型C あなたの体で）「あなたの体の原子、半分以上が宇宙のはじめの数分から」。台本は trivia/big-bang.md。?short で録る
+// 体の原子の数の割合: H 62%・O 24%・C 12%・N ほか 2%（Composition of the human body の表。文献で H 60〜65%）。重さでは H 約10%
+// 「138億年もの」は水素の原子核（陽子）のこと。からだの話なので字幕だけ（AI の声にしない）
+const DUR = 25;
+const subs = [
+  { a: 0.0, b: 3.0, ja: 'いまあなたの体にある原子。\n数えると、[6割以上]が水素', en: 'The atoms in your body right now.\nBy count, over 60% are hydrogen', noBurn: true },
+  { a: 3.0, b: 9.0, ja: '水も、脂肪も、たんぱく質も、水素だらけ\n軽いので重さでは1割だけど、[数ではいちばん多い]', en: 'Water, fat, protein: all full of hydrogen.\nIt is light, only 10% by weight, but the most by count' },
+  { a: 9.0, b: 16.0, ja: 'その水素の芯（原子核）は\n[宇宙のはじめの数分]でできたもの', en: 'The cores of those hydrogen atoms (their nuclei)\nwere made in the first few minutes of the universe' },
+  { a: 16.0, b: 22.0, ja: '炭素や酸素は、あとで[星の中]でできた\nでも水素は、ビッグバンのときのまま', en: 'Carbon and oxygen were made later, inside stars.\nBut hydrogen is left over from the Big Bang' },
+  { a: 22.0, b: 25.0, ja: 'いま画面をさわっているその指の\n原子の6割は、[138億年もの]', en: 'The finger touching your screen:\n60% of its atoms are 13.8 billion years old' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 1.0, type: 'rise' }, { t: 3.0, type: 'whoosh' }, { t: 4.4, type: 'pop' }, { t: 6.0, type: 'pop' },
+  { t: 9.0, type: 'whoosh' }, { t: 10.5, type: 'ding' }, { t: 16.0, type: 'pop' }, { t: 18.0, type: 'pop' }, { t: 22.0, type: 'rise' }, { t: 23.5, type: 'ding' },
+];
+
+// 人の形（線の形）に点をしきつめる。種類は 62:24:12:2 の割合
+const BODY = new Path2D();
+BODY.arc(540, 330, 85, 0, Math.PI * 2);
+BODY.roundRect(420, 430, 240, 330, 60);
+BODY.roundRect(330, 450, 80, 290, 40); BODY.roundRect(670, 450, 80, 290, 40);
+BODY.roundRect(430, 740, 100, 330, 45); BODY.roundRect(550, 740, 100, 330, 45);
+const DOTS = (() => {
+  const c = document.createElement('canvas').getContext('2d'), out = [];
+  let i = 0;
+  for (let y = 250; y < 1080; y += 26) for (let x = 320; x < 760; x += 26) {
+    const xx = x + ((y / 26) % 2) * 13;
+    if (!c.isPointInPath(BODY, xx, y)) continue;
+    const r = Math.sin(i * 12.9898 + 4.1) * 43758.5453, u = r - Math.floor(r); i++;
+    out.push({ x: xx, y, k: u < 0.62 ? 'H' : u < 0.86 ? 'O' : u < 0.98 ? 'C' : 'N', d: u });
+  }
+  return out;
+})();
+const COL = { H: '#ffcf4a', O: '#ff6b6b', C: '#a9b4c8', N: '#5fd4ff' };
+function body(g, t, lit, litCO = 0, f = 1) {
+  g.save(); g.globalAlpha *= f;
+  g.translate(540, 1070); g.scale(0.9, 0.9); g.translate(-540, -1070);
+  g.strokeStyle = 'rgba(160,190,255,0.35)'; g.lineWidth = 3; g.stroke(BODY);
+  for (const d of DOTS) {
+    let a = 0.3, col = 'rgba(200,215,255,0.5)', r = 7;
+    if (d.k === 'H' && lit > d.d / 0.62) { col = COL.H; a = 1; r = 8 + Math.sin(t * 4 + d.d * 30) * 1.2; }
+    if ((d.k === 'O' || d.k === 'C' || d.k === 'N') && litCO > 0) { col = COL[d.k]; a = litCO; }
+    g.globalAlpha = f * a; g.fillStyle = col; g.beginPath(); g.arc(d.x, d.y, r, 0, Math.PI * 2); g.fill();
+  }
+  g.restore();
+}
+function atom(g, x, y, r, kind, glow) {
+  g.save();
+  if (glow) { const gl = g.createRadialGradient(x, y, r * 0.5, x, y, r * 2.2); gl.addColorStop(0, 'rgba(255,207,74,0.6)'); gl.addColorStop(1, 'rgba(255,207,74,0)'); g.fillStyle = gl; g.beginPath(); g.arc(x, y, r * 2.2, 0, Math.PI * 2); g.fill(); }
+  g.fillStyle = COL[kind]; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  TK.text(g, kind, x, y + 2, r * 1.0, { color: '#0b1430', blur: 0 });
+  g.restore();
+}
+
+function draw(g, t) {
+  // 0〜3 と 22〜25: 体の点（水素が光る）
+  if (t < 3.0) {
+    body(g, t, ease((t - 0.6) / 1.4));
+    TK.hook(g, t, 0.0, 3.0, 'この光ってる原子、\n[138億年もの]', { y: 225, size: 74 });
+  }
+  if (t >= 22.0) {
+    body(g, t, 1, 0.5);
+    g.save(); g.globalAlpha = fade(t, 22.0, 27, 0.3); TK.text(g, '[138億年]もの', PW / 2, 170, 96); g.restore();
+    TK.note(g, t, 23.0, 25.0, '出どころ: Composition of the human body（元素の表）・NASA WMAP「Tests of Big Bang」\nHyperPhysics「Big Bang Nucleosynthesis」', { size: 28 });
+  }
+  // 3〜9: 分子と、数・重さ
+  if (t >= 3.0 && t < 9.0) {
+    const f = fade(t, 3.0, 9.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    TK.text(g, '水（H₂O）', PW / 2, 230, 60, { color: TK.C.sub });
+    atom(g, 540, 400, 80, 'O', false); atom(g, 420, 480, 50, 'H', true); atom(g, 660, 480, 50, 'H', true);
+    g.restore();
+    TK.bars(g, t, 4.2, 9.0, [
+      { label: '水素: 原子の数で', v: 0.62, color: TK.C.acc, text: '62%' },
+      { label: '水素: 重さで', v: 0.10, color: TK.C.dim, text: '' },
+    ], { y: 640, gap: 190, stagger: 1.4 });
+    if (t > 6.6) { g.save(); g.globalAlpha = fade(t, 6.6, 9.0, 0.3); TK.text(g, '約10%', 200, 1022, 48, { align: 'left', color: TK.C.sub }); g.restore(); }
+  }
+  // 9〜16: 宇宙のはじめの数分
+  if (t >= 9.0 && t < 16.0) {
+    const f = fade(t, 9.0, 16.0, 0.3), k = clamp((t - 9.6) / 4.5, 0, 1);
+    g.save(); g.globalAlpha = f;
+    const gr = g.createRadialGradient(540, 640, 0, 540, 640, 420); gr.addColorStop(0, `rgba(255,220,150,${0.5 * (1 - k)})`); gr.addColorStop(1, 'rgba(255,220,150,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(540, 640, 420, 0, Math.PI * 2); g.fill();
+    for (let i = 0; i < 60; i++) {   // 陽子（水素の芯）が散らばる
+      const a = i * 2.39996, rr = 40 + (i * 37 % 330) * (0.4 + 0.6 * k);
+      atom(g, 540 + Math.cos(a + t * 0.2) * rr, 640 + Math.sin(a + t * 0.2) * rr * 0.9, 16, 'H', false);
+    }
+    TK.card(g, 240, 180, 600, 130, { r: 65 });
+    TK.text(g, 'はじめの ' + Math.min(3, Math.floor(k * 3.99)) + ' 分', PW / 2, 245, 70, { color: k >= 1 ? TK.C.acc : '#fff' });
+    g.restore();
+    TK.note(g, t, 9.0, 16.0, '「138億年もの」は水素の芯（原子核＝陽子）のこと。電子がついて原子になったのは約38万年後', { size: 28 });
+  }
+  // 16〜22: 炭素・酸素は星の中で
+  if (t >= 16.0 && t < 22.0) {
+    const f = fade(t, 16.0, 22.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    const sg = g.createRadialGradient(540, 520, 0, 540, 520, 200); sg.addColorStop(0, '#fff6c8'); sg.addColorStop(0.5, '#ffc24a'); sg.addColorStop(1, 'rgba(255,140,40,0)');
+    g.fillStyle = sg; g.beginPath(); g.arc(540, 520, 200, 0, Math.PI * 2); g.fill();
+    TK.text(g, '星の中', 540, 520, 60, { color: '#0b1430', blur: 0 });
+    const k = ease((t - 16.6) / 1.5);
+    atom(g, lerp(540, 300, k), lerp(520, 820, k), 48, 'C', false); atom(g, lerp(540, 540, k), lerp(520, 880, k), 54, 'O', false);
+    g.restore();
+    if (t > 18.0) {
+      const k2 = ease((t - 18.0) / 0.8);
+      g.save(); g.globalAlpha = f * k2;
+      atom(g, 800, 840, 40, 'H', true);
+      TK.lines(g, 'ビッグバンの\nときのまま', 800, 980, 44, { color: TK.C.acc });
+      g.restore();
+    }
+    g.save(); g.globalAlpha = f; TK.text(g, '炭素・酸素は、あとで[星の中]で', PW / 2, 230, 64); g.restore();
+  }
+}
+
+triviaStart({ out: 'big-bang-trivia2', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

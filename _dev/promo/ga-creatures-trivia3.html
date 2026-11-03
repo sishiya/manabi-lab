@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく ga-creatures-3（型A）「どこにもつながっていないのに、ないと動かない回路」。台本は trivia/ga-creatures.md
+// 出どころ: Thompson (1997) An Evolved Circuit, Intrinsic in Silicon, Entwined with Physics, ICES96, LNCS 1259
+// 10×10 のマス・クロックなし・5000世代・32マス・つながりのない灰色のマス・電球と夜の窓の温度試験。
+// どのマスが使われたか・灰色のマスの位置と数は図にしない（論文の図のみ）→ ここの並びはイメージ。灰色は1つだけ見せる
+const DUR = 35;
+const subs = [
+  { a: 0.0, b: 2.0, ja: 'どこにもつながっていない部品。消しても平気…のはず。', en: 'A part connected to nothing. Safe to remove… right?', noBurn: true },
+  { a: 2.0, b: 5.5, ja: '1996年、2つの音を聞き分ける回路を、\nチップの上で進化させた実験。', en: 'In 1996, a circuit that tells two tones apart\nwas evolved on a chip.' },
+  { a: 5.5, b: 9.0, ja: 'しかも、[時計（クロック）なし]で。', en: 'With no clock at all.' },
+  { a: 9.0, b: 15.0, ja: '5000世代で、100マスのうち[32マス]だけで、\nちゃんと聞き分けるようになった。', en: 'After 5,000 generations, just 32 of 100 cells\ncould tell them apart.' },
+  { a: 15.0, b: 23.0, ja: 'ところが、どこにもつながっていないマスを止めると、\n[うまく動かなくなった]。', en: 'But fix a cell that was connected to nothing,\nand it stopped working properly.' },
+  { a: 23.0, b: 30.0, ja: '電線じゃなく、となりへの電気のしみ出しのような、\n[チップそのものの物理]を使っていたらしい。', en: 'It seems to have used the chip’s own physics,\nlike signals leaking to neighbors, not wires.' },
+  { a: 30.0, b: 35.0, ja: 'だから温度に弱い。電球を近づけたり、\n夜に窓を開けたりすると、[聞き分けがずれた]。', en: 'So it was sensitive to heat: a lamp nearby\nor an open window at night threw it off.' },
+];
+const cues = [{ t: 0.05, type: 'pop' }, { t: 2.0, type: 'whoosh' }, { t: 5.5, type: 'pop' }, { t: 9.0, type: 'rise' }, { t: 13.6, type: 'ding' },
+  { t: 15.0, type: 'pop' }, { t: 17.6, type: 'thud' }, { t: 18.0, type: 'buzz' }, { t: 23.0, type: 'whoosh' }, { t: 30.0, type: 'pop' }, { t: 32.2, type: 'buzz' }];
+
+const rnd = (i, k = 0) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
+const N = 10, CS = 62, GAP = 7, GX = 540 - (N * (CS + GAP) - GAP) / 2, GY = 240;
+const cell = (i, j) => [GX + i * (CS + GAP), GY + j * (CS + GAP)];
+const GREY = [8, 8];
+// 使ったマス 32 個（イメージ）。左の入口から右の出口へ、ゆるい帯
+const USED = (() => { const u = []; for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { if (i === GREY[0] && j === GREY[1]) continue; const d = Math.abs(j - (4.5 + Math.sin(i * 0.8) * 2)); if (d < 1.6 + rnd(i * 10 + j) * 0.8 && u.length < 32) u.push([i, j]); } while (u.length < 32) { const i = Math.floor(rnd(u.length, 3) * 10), j = Math.floor(rnd(u.length, 4) * 10); if (!u.some(c => c[0] === i && c[1] === j) && !(i === GREY[0] && j === GREY[1])) u.push([i, j]); } return u; })();
+const USEDSET = new Set(USED.map(([i, j]) => i + ',' + j));
+// 配線: 使ったマスの、となりの使ったマスへ
+const WIRES = []; USED.forEach(([i, j]) => { [[1, 0], [0, 1]].forEach(([di, dj]) => { if (USEDSET.has((i + di) + ',' + (j + dj)) && rnd(i * 13 + j, di) > 0.25) WIRES.push([i, j, i + di, j + dj]); }); });
+
+function grid(g, t, o) {
+  const lit = o.lit ?? 1, nUsed = Math.round(32 * lit);
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const [x, y] = cell(i, j);
+    g.fillStyle = 'rgba(255,255,255,0.05)'; g.strokeStyle = 'rgba(160,190,255,0.25)'; g.lineWidth = 2;
+    g.beginPath(); g.roundRect(x, y, CS, CS, 8); g.fill(); g.stroke();
+  }
+  // 配線
+  g.strokeStyle = 'rgba(95,212,255,0.7)'; g.lineWidth = 5;
+  WIRES.forEach(([a, b, c, d], k) => { if (k / WIRES.length > lit) return; const [x1, y1] = cell(a, b), [x2, y2] = cell(c, d); g.beginPath(); g.moveTo(x1 + CS / 2, y1 + CS / 2); g.lineTo(x2 + CS / 2, y2 + CS / 2); g.stroke(); });
+  USED.slice(0, nUsed).forEach(([i, j]) => { const [x, y] = cell(i, j); g.fillStyle = 'rgba(95,212,255,0.45)'; g.strokeStyle = TK.C.acc2; g.lineWidth = 3; g.beginPath(); g.roundRect(x, y, CS, CS, 8); g.fill(); g.stroke(); });
+  // 灰色のマス
+  const [gx, gy] = cell(...GREY), pulse = o.greyHi ? 0.5 + 0.5 * Math.abs(Math.sin(t * 4)) : 0;
+  g.fillStyle = o.clamped ? 'rgba(255,107,107,0.6)' : 'rgba(170,170,185,0.75)'; g.strokeStyle = o.greyHi ? `rgba(255,207,74,${0.5 + 0.5 * pulse})` : 'rgba(220,220,230,0.8)'; g.lineWidth = o.greyHi ? 6 : 3;
+  g.beginPath(); g.roundRect(gx, gy, CS, CS, 8); g.fill(); g.stroke();
+  if (o.clamped) TK.text(g, '0', gx + CS / 2, gy + CS / 2 + 2, 44, { color: '#fff' });
+  // 入口・出口
+  TK.text(g, '音 →', GX - 10, GY + 4.5 * (CS + GAP) + CS / 2, 34, { align: 'right', color: TK.C.sub });
+}
+// 出力の表示（低い音 → 0、高い音 → 1）。bad: 0〜1 でこわれる
+function output(g, t, bad, y = 1000) {
+  TK.text(g, '出力', 150, y, 40, { color: TK.C.sub, align: 'left' });
+  const x0 = 270, x1 = 930;
+  g.strokeStyle = bad > 0.3 ? TK.C.red : TK.C.green; g.lineWidth = 6; g.beginPath();
+  for (let i = 0; i <= 160; i++) {
+    const u = i / 160, x = lerp(x0, x1, u), seg = Math.floor(u * 4 + t * 0.5) % 2;
+    let v = seg ? 1 : 0; v += bad * (Math.sin(u * 90 + t * 20) * 0.45 + (rnd(i, Math.floor(t * 8)) - 0.5) * 0.6);
+    const yy = y + 30 - clamp(v, -0.2, 1.2) * 60; i ? g.lineTo(x, yy) : g.moveTo(x, yy);
+  }
+  g.stroke();
+}
+// 音の波（周期がちがう2つ）
+function waves(g, t, f) {
+  g.save(); g.globalAlpha = f;
+  const rows = [['低い音（1 kHz）', 1, 420], ['高い音（10 kHz）', 10, 760]];
+  rows.forEach(([s, k, y]) => {
+    TK.text(g, s, 540, y - 120, 50, { color: TK.C.sub });
+    g.strokeStyle = k > 1 ? TK.C.acc : TK.C.acc2; g.lineWidth = 5; g.beginPath();
+    for (let i = 0; i <= 400; i++) { const x = 120 + i * 2.1; const yy = y - Math.sin((i / 400) * Math.PI * 2 * 2 * k - t * 6) * 70; i ? g.lineTo(x, yy) : g.moveTo(x, yy); }
+    g.stroke();
+  });
+  g.restore();
+}
+
+function draw(g, t) {
+  if (t < 2.0) {
+    grid(g, t, { lit: 1, greyHi: true });
+    TK.hook(g, t, 0.0, 2.0, '消しても平気？', { y: 990, size: 110 });
+  }
+  if (t >= 2.0 && t < 9.0) {
+    const f = fade(t, 2.0, 9.0, 0.3);
+    waves(g, t, f);
+    if (t > 5.5) {
+      g.save(); g.globalAlpha = f * TK.pop(t, 5.5, 0.35);
+      const cx = 540, cy = 980; g.strokeStyle = '#fff'; g.lineWidth = 6; g.beginPath(); g.arc(cx, cy, 55, 0, 7); g.stroke();
+      g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx, cy - 35); g.moveTo(cx, cy); g.lineTo(cx + 25, cy + 10); g.stroke();
+      g.strokeStyle = TK.C.red; g.lineWidth = 10; g.beginPath(); g.moveTo(cx - 70, cy - 70); g.lineTo(cx + 70, cy + 70); g.stroke();
+      g.restore();
+    }
+  }
+  if (t >= 9.0 && t < 15.0) {
+    const f = fade(t, 9.0, 15.0, 0.3), k = clamp((t - 9.3) / 4.2, 0, 1);
+    g.save(); g.globalAlpha = f;
+    grid(g, t, { lit: k });
+    TK.card(g, 290, 110, 500, 100, { r: 50 }); TK.text(g, '世代 ' + Math.round(5000 * k).toLocaleString('ja-JP'), 540, 162, 60, { color: k >= 1 ? TK.C.acc : '#fff' });
+    output(g, t, 1 - k);
+    g.restore();
+  }
+  if (t >= 15.0 && t < 23.0) {
+    const f = fade(t, 15.0, 23.0, 0.3), cl = t > 17.6;
+    g.save(); g.globalAlpha = f;
+    grid(g, t, { lit: 1, greyHi: !cl, clamped: cl });
+    const [gx, gy] = cell(...GREY);
+    if (!cl) TK.text(g, 'どこにもつながっていない', gx + CS / 2 - 60, gy - 40, 36, { color: TK.C.acc });
+    output(g, t, cl ? clamp((t - 17.8) / 0.6, 0, 1) : 0);
+    if (cl) { g.globalAlpha = f * TK.pop(t, 18.0, 0.3); TK.text(g, '[✕] うまく動かない', 540, 160, 60, { acc: TK.C.red }); }
+    g.restore();
+    TK.note(g, t, 17.6, 23.0, '「止める」＝出力を 0 か 1 に固定すること。マスの並びはイメージ', { size: 30 });
+  }
+  if (t >= 23.0 && t < 30.0) {
+    const f = fade(t, 23.0, 30.0, 0.3);
+    g.save(); g.globalAlpha = f;
+    grid(g, t, { lit: 1, greyHi: true });
+    const [gx, gy] = cell(...GREY), cx = gx + CS / 2, cy = gy + CS / 2;
+    for (let r = 0; r < 4; r++) { const ph = ((t - 23) * 0.8 + r / 4) % 1; g.strokeStyle = `rgba(255,207,74,${0.8 * (1 - ph)})`; g.lineWidth = 5; g.beginPath(); g.arc(cx, cy, 30 + ph * 220, 0, 7); g.stroke(); }
+    output(g, t, 0);
+    g.restore();
+    TK.note(g, t, 23.4, 30.0, '「となりへのしみ出し」は論文でも「おそらく」の説明', { size: 30 });
+  }
+  if (t >= 30.0) {
+    const f = fade(t, 30.0, 36, 0.3), heat = clamp((t - 31.6) / 1.0, 0, 1);
+    g.save(); g.globalAlpha = f;
+    grid(g, t, { lit: 1 });
+    // 電球
+    const bx = 860, by = 170, glow = heat;
+    g.fillStyle = `rgba(255,207,74,${0.3 + 0.6 * glow})`; g.shadowColor = TK.C.acc; g.shadowBlur = 30 * glow * RES;
+    g.beginPath(); g.arc(bx, by, 45, 0, 7); g.fill(); g.shadowBlur = 0;
+    g.fillStyle = '#aab'; g.fillRect(bx - 20, by + 40, 40, 30);
+    // 窓
+    g.strokeStyle = '#cfe0ff'; g.lineWidth = 5; g.strokeRect(150, 110, 130, 120); g.beginPath(); g.moveTo(215, 110); g.lineTo(215, 230); g.stroke();
+    g.fillStyle = '#cfe0ff'; g.beginPath(); g.arc(250, 145, 12, 0, 7); g.fill();
+    TK.text(g, '温度', 540, 170, 54, { color: heat > 0.5 ? TK.C.red : TK.C.sub });
+    output(g, t, heat * 0.55);
+    g.restore();
+  }
+  if (t >= 33.2) TK.note(g, t, 33.2, 35.0, '出どころ: Thompson, A. (1997) An Evolved Circuit, Intrinsic in Silicon,\nEntwined with Physics. ICES96, LNCS 1259', { size: 30 });
+}
+
+triviaStart({ out: 'ga-creatures-trivia3', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script src="../../eye-optics/js/optics.js"></script>
+<script>
+'use strict';
+// うんちく eye-optics-1（型F かけあい）「水の中でぼやける本当の理由」。台本は trivia/eye-optics.md。?short で録る
+// 光線はアプリの目の模型（Navarro 1985、eye-optics/js/optics.js を読むだけ。変えない）で本当に追う。
+// 水の中は、角膜の前の屈折率を 1.333 にして同じ計算。ゴーグルは角膜の前を空気（1.0）に戻す。
+// 数字は Gislén ほか (2003) Current Biology 13(10): 角膜が空気中の屈折の約2/3、水中の見分け 6.06 対 2.95 cycles/度、ひとみ 1.96 対 2.50 mm。
+// 聞き手のセリフは字幕を黄色（[ ] でかこむ）
+const DUR = 35;
+const SC = 34, X0 = 140, Y0 = 720;   // 1 mm = 34 px。角膜の頂点が (X0, Y0)
+const px = p => [X0 + p.z * SC, Y0 - p.y * SC];
+const WATER = 'rgba(95,180,255,0.20)';
+const subs = [
+  { a: 0.0, b: 2.6, ja: '水の中で、ぼやける理由', en: 'Why everything blurs underwater', noBurn: true },
+  { a: 2.6, b: 5.0, ja: '[プールで目をあけると\nぼやけるの、なんで？]', en: '“Why is it blurry when I open my eyes in a pool?”' },
+  { a: 5.0, b: 9.0, ja: '目でいちばん光を曲げるのは、レンズじゃなく\n表面の[角膜]。曲げる力の[約3分の2]', en: 'The eye’s strongest bender of light isn’t the lens —\nit’s the cornea: about two-thirds of the focusing', size: 58 },
+  { a: 9.0, b: 13.0, ja: '角膜と水は、光の曲がりやすさが[ほぼ同じ]。\n水に入ると、角膜がほとんど働かない', en: 'Cornea and water bend light almost equally,\nso underwater the cornea nearly stops working', size: 58 },
+  { a: 13.0, b: 16.0, ja: '[だから、ゴーグルだと見えるのか]', en: '“So that’s why goggles work!”' },
+  { a: 16.0, b: 20.0, ja: 'でも、海で暮らす[モーケン]の人たちの子どもは', en: 'But the children of the Moken, who live on the sea,' },
+  { a: 20.0, b: 24.0, ja: 'もぐったまま、海の底の\n小さな貝を見つける', en: 'spot tiny shells on the seabed while diving' },
+  { a: 24.0, b: 30.0, ja: '水の中の視力は\nヨーロッパの子どもの[2倍以上]', en: 'Their underwater vision is more than\ntwice as sharp as European children’s' },
+  { a: 30.0, b: 35.0, ja: 'ひとみを[ぎゅっと小さく]して\nピントを人の限界まで合わせる。練習で身につくらしい', en: 'They shrink their pupils and focus as hard as humans can.\nIt seems to be learnable', size: 56 },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 1.2, type: 'whoosh' }, { t: 2.6, type: 'pop' }, { t: 5.0, type: 'ding' }, { t: 9.0, type: 'whoosh' }, { t: 10.2, type: 'buzz' },
+  { t: 13.0, type: 'pop' }, { t: 13.8, type: 'ding' }, { t: 16.0, type: 'whoosh' }, { t: 24.0, type: 'pop' }, { t: 26.0, type: 'ding' }, { t: 30.0, type: 'whoosh' }, { t: 32.0, type: 'ding' },
+];
+
+// 目と光線。front: 角膜の前の屈折率、A: 調節（D）、stopR: ひとみの半径（mm）
+function makeEye(front, A, stopR) { const e = buildEye(A, 0, stopR); e.surfs[0].n1 = front; return e; }
+function rays(eye, n) {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const h = (i / (n - 1) * 2 - 1) * eye.stopR * 0.98;
+    const tr = traceRay(eye, { d: Infinity, ang: 0 }, h, null);
+    if (tr.blocked) continue;
+    // 網膜のあとも、まだ集まっていなければ点線で先へ
+    const L = tr.last, far = [];
+    for (let z = tr.retina.z; z < tr.retina.z + 8; z += 0.5) far.push(toZ(L, z));
+    out.push({ pts: tr.pts.slice(1), retina: tr.retina, far });
+  }
+  return out;
+}
+function drawEye(g, eye, o = {}) {
+  g.save();
+  // 白目（球）と網膜
+  const [cx, cy] = px({ z: eye.retinaC, y: 0 });
+  g.strokeStyle = 'rgba(200,215,255,0.55)'; g.lineWidth = 4;
+  g.beginPath(); g.arc(cx, cy, OPT.retinaR * SC, 0.9, 2.62); g.stroke(); g.beginPath(); g.arc(cx, cy, OPT.retinaR * SC, -2.62, -0.9); g.stroke();
+  g.strokeStyle = '#ff9a7a'; g.lineWidth = 8;
+  g.beginPath(); g.arc(cx, cy, OPT.retinaR * SC, -0.9, 0.9); g.stroke();
+  // 角膜（前の面）
+  const s0 = eye.surfs[0], s1 = eye.surfs[1];
+  g.beginPath();
+  for (let y = -5.6; y <= 5.6; y += 0.2) { const [x, yy] = px({ z: sag(s0, y), y }); y === -5.6 ? g.moveTo(x, yy) : g.lineTo(x, yy); }
+  for (let y = 5.6; y >= -5.6; y -= 0.2) { const [x, yy] = px({ z: s1.z + sag(s1, y), y }); g.lineTo(x, yy); }
+  g.closePath();
+  g.fillStyle = o.corneaGlow ? `rgba(255,207,74,${0.35 + 0.25 * o.corneaGlow})` : 'rgba(180,220,255,0.25)';
+  g.fill(); g.strokeStyle = o.corneaGlow ? TK.C.acc : 'rgba(210,240,255,0.9)'; g.lineWidth = 4; g.stroke();
+  // 水晶体
+  const l1 = eye.surfs[2], l2 = eye.surfs[3];
+  g.beginPath();
+  for (let y = -4.2; y <= 4.2; y += 0.2) { const [x, yy] = px({ z: l1.z + sag(l1, y), y }); y === -4.2 ? g.moveTo(x, yy) : g.lineTo(x, yy); }
+  for (let y = 4.2; y >= -4.2; y -= 0.2) { const [x, yy] = px({ z: l2.z + sag(l2, y), y }); g.lineTo(x, yy); }
+  g.closePath(); g.fillStyle = 'rgba(160,220,255,0.30)'; g.fill(); g.strokeStyle = 'rgba(210,240,255,0.85)'; g.lineWidth = 3; g.stroke();
+  // 虹彩（ひとみのふち）
+  const [ix] = px({ z: eye.stopZ, y: 0 });
+  g.strokeStyle = '#8a6a4a'; g.lineWidth = 12; g.lineCap = 'butt';
+  g.beginPath(); g.moveTo(ix, Y0 - eye.stopR * SC); g.lineTo(ix, Y0 - 5.4 * SC); g.moveTo(ix, Y0 + eye.stopR * SC); g.lineTo(ix, Y0 + 5.4 * SC); g.stroke();
+  g.restore();
+}
+function drawRays(g, rs, o = {}) {
+  g.save(); g.lineWidth = 3.5; g.strokeStyle = o.color || '#ffe38a'; g.globalAlpha *= 0.95;
+  for (const r of rs) {
+    g.beginPath(); const s = toZ({ z: r.pts[0].z, y: r.pts[0].y, dz: 1, dy: 0 }, -3.5); let [x, y] = px(s); g.moveTo(x, y);
+    for (const p of r.pts) { [x, y] = px(p); g.lineTo(x, y); }
+    g.stroke();
+    if (o.far) { g.save(); g.setLineDash([8, 10]); g.globalAlpha *= 0.6; g.beginPath(); [x, y] = px(r.far[0]); g.moveTo(x, y); for (const p of r.far) { [x, y] = px(p); g.lineTo(x, y); } g.stroke(); g.restore(); }
+  }
+  // 網膜の上の当たる幅（ぼけ）
+  const ys = rs.map(r => r.retina.y), lo = Math.min(...ys), hi = Math.max(...ys);
+  const [rx] = px(rs[0].retina);
+  g.fillStyle = 'rgba(255,240,170,0.9)'; g.fillRect(rx - 6, Y0 - hi * SC - 4, 14, Math.max(8, (hi - lo) * SC + 8));
+  g.restore();
+}
+function waterFront(g, k) {   // 目の前の水
+  if (k <= 0) return;
+  g.save(); g.globalAlpha *= k; g.fillStyle = WATER;
+  g.beginPath(); g.moveTo(0, 380); g.lineTo(X0 + 4, 380); g.lineTo(X0 + 4, 1060); g.lineTo(0, 1060); g.fill();
+  g.strokeStyle = 'rgba(140,200,255,0.6)'; g.lineWidth = 3; g.beginPath();
+  for (let x = 0; x <= X0; x += 6) g.lineTo(x, 380 + Math.sin(x * 0.08 + performanceT * 3) * 6); g.stroke();
+  g.restore();
+}
+let performanceT = 0;
+
+// 計算しておく（光線は時刻で変わらない）
+const EYE_AIR = makeEye(1.0, 0, 2.0), EYE_W = makeEye(1.333, 0, 2.0);
+const R_AIR = rays(EYE_AIR, 7), R_W = rays(EYE_W, 7);
+
+function eyeScene(g, t, water, o = {}) {
+  const eye = water > 0.5 ? EYE_W : EYE_AIR;
+  waterFront(g, water);
+  drawEye(g, eye, o);
+  drawRays(g, water > 0.5 ? R_W : R_AIR, { far: water > 0.5 });
+}
+
+function draw(g, t) {
+  performanceT = t;
+  // 0〜2.6: フック（空気 → 水がながれこむ）
+  if (t < 5.0) {
+    const w = t < 1.2 ? 0 : t < 2.4 ? ease((t - 1.2) / 1.2) : t < 3.0 ? 1 : t < 3.6 ? 1 - ease((t - 3.0) / 0.6) : 0;
+    eyeScene(g, t, w);
+    TK.hook(g, t, 0.0, 2.6, '水の中で\n[ぼやける理由]', { y: 195, size: 92 });
+    if (t >= 2.6) { g.save(); g.globalAlpha = fade(t, 2.6, 5.0, 0.3); TK.text(g, '空気の中の目（模型の計算）', PW / 2, 220, 52, { color: TK.C.sub }); g.restore(); }
+  }
+  // 5〜9: 角膜が光る。曲げる力の約2/3
+  if (t >= 5.0 && t < 9.0) {
+    eyeScene(g, t, 0, { corneaGlow: 0.5 + 0.5 * Math.sin(t * 5) });
+    g.save(); g.globalAlpha = fade(t, 5.0, 9.0, 0.3);
+    // 帯: 角膜 2/3 ＋ 水晶体 1/3
+    const x = 130, y = 200, W = 820, k = TK.out((t - 5.3) / 0.9);
+    g.fillStyle = TK.C.acc; g.beginPath(); g.roundRect(x, y, W * 2 / 3 * k, 70, 20); g.fill();
+    g.fillStyle = 'rgba(160,220,255,0.6)'; g.beginPath(); g.roundRect(x + W * 2 / 3, y, W / 3 * k, 70, 20); g.fill();
+    if (k > 0.8) { TK.text(g, '角膜 約2/3', x + W / 3, y + 36, 46, { color: '#0b1430', blur: 0 }); TK.text(g, '水晶体', x + W * 5 / 6, y + 36, 40, { color: '#0b1430', blur: 0 }); }
+    TK.text(g, '光を曲げる力（空気の中）', PW / 2, y - 50, 44, { color: TK.C.sub });
+    g.restore();
+  }
+  // 9〜13: 水に入ると
+  if (t >= 9.0 && t < 13.0) {
+    const w = ease(clamp((t - 9.3) / 0.8, 0, 1));
+    eyeScene(g, t, w);
+    g.save(); g.globalAlpha = fade(t, 9.0, 13.0, 0.3);
+    TK.text(g, '屈折率  角膜 1.376 ／ 水 1.333', PW / 2, 220, 50, { color: TK.C.sub });
+    if (w > 0.6) TK.text(g, 'ピントは 網膜の ずっと後ろ →', 1010, 288, 44, { color: TK.C.acc, align: 'right' });
+    g.restore();
+  }
+  // 13〜16: ゴーグル（目の前に空気を戻す）
+  if (t >= 13.0 && t < 16.0) {
+    g.save(); g.globalAlpha = fade(t, 13.0, 16.0, 0.3);
+    g.fillStyle = WATER; g.fillRect(0, 380, X0 - 75, 680);
+    g.strokeStyle = '#cfe0ff'; g.lineWidth = 8; g.beginPath(); g.moveTo(X0 - 75, 440); g.lineTo(X0 - 75, 1000); g.stroke();   // ゴーグルの板
+    TK.text(g, '水', 32, 350, 40, { color: '#9fd0ff' }); TK.text(g, '空気', X0 - 20, 350, 34, { color: TK.C.sub });
+    drawEye(g, EYE_AIR); drawRays(g, R_AIR);
+    TK.text(g, 'ゴーグル＝目の前に [空気] を戻す', PW / 2, 220, 56);
+    g.restore();
+  }
+  // 16〜24: 海の底の貝（地図の写真は使わない。線の図だけ）
+  if (t >= 16.0 && t < 24.0) {
+    g.save(); g.globalAlpha = fade(t, 16.0, 24.0, 0.3);
+    TK.card(g, 120, 190, 840, 150);
+    TK.text(g, 'モーケンの人たち', PW / 2, 245, 64, { color: TK.C.acc });
+    TK.text(g, 'タイ・ミャンマーの海（アンダマン海）で暮らす', PW / 2, 305, 38, { color: TK.C.sub, bold: false });
+    // 水面・海の底・小さな貝
+    g.strokeStyle = 'rgba(140,200,255,0.7)'; g.lineWidth = 4; g.beginPath();
+    for (let x = 60; x <= 1020; x += 8) g.lineTo(x, 430 + Math.sin(x * 0.03 + t * 2) * 10); g.stroke();
+    g.fillStyle = 'rgba(95,180,255,0.12)'; g.fillRect(60, 440, 960, 560);
+    g.strokeStyle = '#c9b48a'; g.lineWidth = 5; g.beginPath();
+    for (let x = 60; x <= 1020; x += 10) g.lineTo(x, 960 + Math.sin(x * 0.012) * 18); g.stroke();
+    for (const [x, s] of [[300, 1], [620, 0.8], [820, 1.1]]) {
+      const k = TK.pop(t, 19.5 + x / 1000);
+      g.save(); g.translate(x, 940); g.scale(s * k, s * k); g.strokeStyle = '#ffe3c0'; g.lineWidth = 3; g.fillStyle = 'rgba(255,227,192,0.25)';
+      g.beginPath(); g.moveTo(-22, 8); g.quadraticCurveTo(0, -30, 22, 8); g.closePath(); g.fill(); g.stroke();
+      for (let i = -2; i <= 2; i++) { g.beginPath(); g.moveTo(0, 6); g.lineTo(i * 9, -14 + Math.abs(i) * 4); g.stroke(); }
+      g.restore();
+      if (k > 0.5) { g.strokeStyle = 'rgba(255,207,74,0.8)'; g.lineWidth = 4; g.beginPath(); g.arc(x, 935, 44 + 4 * Math.sin(t * 5), 0, Math.PI * 2); g.stroke(); }
+    }
+    g.restore();
+  }
+  // 24〜30: 棒グラフ
+  if (t >= 24.0 && t < 30.0) {
+    TK.text(g, '水の中で見分けられる しまの細かさ', PW / 2, 280, 52, { color: TK.C.sub });
+    TK.bars(g, t, 24.2, 30.0, [
+      { label: 'ヨーロッパの子ども', v: 2.95 / 6.5, color: TK.C.acc2, text: '2.95' },
+      { label: 'モーケンの子ども', v: 6.06 / 6.5, color: TK.C.acc, text: '6.06' },
+    ], { y: 420, gap: 230, stagger: 0.9 });
+    if (t > 26.0) { g.save(); g.globalAlpha = fade(t, 26.0, 30.0, 0.3); TK.text(g, '[2倍以上]', PW / 2, 930, 120, { stroke: 'rgba(0,0,0,0.5)' }); TK.text(g, '単位: 1度あたりの しまの数', PW / 2, 1040, 36, { color: TK.C.dim, bold: false }); g.restore(); }
+  }
+  // 30〜35: ひとみが 2.50 → 1.96 mm
+  if (t >= 30.0) {
+    const k = ease(clamp((t - 30.6) / 1.6, 0, 1)), d = lerp(2.50, 1.96, k);
+    g.save(); g.globalAlpha = fade(t, 30.0, 35.5, 0.3);
+    // 正面から見たひとみ
+    const cx = PW / 2, cy = 600, sc = 150;
+    g.fillStyle = '#6a4e36'; g.beginPath(); g.arc(cx, cy, 330, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = 'rgba(255,220,180,0.25)'; g.lineWidth = 3;
+    for (let i = 0; i < 48; i++) { const a = i / 48 * Math.PI * 2; g.beginPath(); g.moveTo(cx + Math.cos(a) * d / 2 * sc * 1.1, cy + Math.sin(a) * d / 2 * sc * 1.1); g.lineTo(cx + Math.cos(a) * 320, cy + Math.sin(a) * 320); g.stroke(); }
+    g.fillStyle = '#05070d'; g.beginPath(); g.arc(cx, cy, d / 2 * sc, 0, Math.PI * 2); g.fill();
+    g.restore();
+    TK.card(g, 290, 190, 500, 110, { r: 55 });
+    TK.text(g, 'ひとみ ' + d.toFixed(2) + ' mm', PW / 2, 246, 64, { color: k >= 1 ? TK.C.acc : '#fff' });
+    if (t > 32.2) { g.save(); g.globalAlpha = fade(t, 32.2, 35, 0.3); TK.text(g, 'ヨーロッパの子ども 2.50 mm → モーケンの子ども 1.96 mm', PW / 2, 1010, 36, { color: TK.C.sub, bold: false }); TK.text(g, '（えんぴつの芯くらい）', PW / 2, 1060, 36, { color: TK.C.sub, bold: false }); g.restore(); }
+  }
+  if (t >= 2.6 && t < 13.0) TK.note(g, t, 2.6, 13.0, '光線は目の模型（Navarro 1985）で計算。ひとみは 4 mm で描いた', { size: 30 });
+  if (t >= 24.0 && t < 33.0) TK.note(g, t, 24.0, 33.0, '2003年の子どもの測定（いまの子も同じとは限らない）', { size: 32 });
+  if (t >= 33.0) TK.note(g, t, 33.0, 35.0, '出どころ: Gislén ほか (2003) Current Biology 13(10)\n練習で伸びる: Gislén ほか (2006) Vision Research', { size: 30 });
+}
+
+triviaStart({ out: 'eye-optics-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

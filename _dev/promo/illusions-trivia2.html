@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく illusions-2（型A ぜんぶ逆）「この錯覚、効かない人たちがいる」。台本は trivia/illusions.md。?short で録る
+// 数字は Henrich, Heine & Norenzayan (2010) BBS 33 の図2（もとは Segall, Campbell & Herskovits 1966 の16の社会）:
+//   PSE＝「片方を何%長くすると同じに見えるか」。アメリカの大学生 約1/5（約20%）、カラハリのサンの人たち 0 と区別できない。
+// 途中の14の社会の値は図から読まないと出せないので、棒は2本だけにした（数字を作らない）。
+// 実在の人々の話なので「目が劣る／すぐれる」と言わない。写真は使わない。原因（直角の多い環境）は説で、反論もある
+const DUR = 35;
+const subs = [
+  { a: 0.0, b: 2.6, ja: '同じ長さ。でも、全員がだまされるわけじゃない', en: 'Same length. But not everyone is fooled', noBurn: true },
+  { a: 2.6, b: 5.0, ja: 'この2本、[同じ長さ]。\n教科書でおなじみ', en: 'These two lines are the same length.\nA textbook classic' },
+  { a: 5.0, b: 8.0, ja: '錯覚は人類みんな同じ…\n[じゃなかった]', en: 'Illusions work the same on everyone…\nor not' },
+  { a: 8.0, b: 12.0, ja: '1960年代、世界の[16の社会]で', en: 'In the 1960s, in 16 societies around the world,' },
+  { a: 12.0, b: 16.0, ja: '同じに見えるまで\n長さを合わせてもらった', en: 'people adjusted one line\nuntil both looked equal' },
+  { a: 16.0, b: 19.5, ja: 'アメリカの大学生は、片方を\n[約2割]長くしないと同じに見えなかった', en: 'US college students needed one line\nabout 20% longer to look equal' },
+  { a: 19.5, b: 23.0, ja: 'カラハリ砂漠で暮らすサンの人たちは\n[ほぼ0]。だまされていない', en: 'The San foragers of the Kalahari: about zero.\nNot fooled' },
+  { a: 23.0, b: 30.0, ja: '研究者の説: [まっすぐな壁と直角の角]に\n囲まれて育つと、目がそれに合わせてしまう', en: 'One theory: growing up among straight walls\nand right angles tunes how we see', size: 58 },
+  { a: 30.0, b: 35.0, ja: 'あなたは何%、だまされた？', en: 'How much were you fooled?' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 2.6, type: 'whoosh' }, { t: 3.4, type: 'tick' }, { t: 5.0, type: 'pop' }, { t: 6.4, type: 'buzz' },
+  { t: 8.0, type: 'whoosh' }, { t: 12.0, type: 'tick' }, { t: 16.0, type: 'pop' }, { t: 17.2, type: 'ding' }, { t: 19.5, type: 'pop' }, { t: 20.6, type: 'ding' },
+  { t: 23.0, type: 'whoosh' }, { t: 30.0, type: 'pop' },
+];
+
+// ミュラー・リヤーの線。fins: -1 内向き（矢じり）、+1 外向き（矢羽）。L: 軸の長さ
+function ml(g, cx, y, L, fins, o = {}) {
+  const a = 0.62, f = o.fin || 95, x0 = cx - L / 2, x1 = cx + L / 2;
+  g.save(); g.strokeStyle = o.color || '#fff'; g.lineWidth = o.lw || 10; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y);
+  for (const [x, s] of [[x0, -1], [x1, 1]]) {
+    const dx = -s * fins * Math.cos(a) * f;
+    g.moveTo(x, y); g.lineTo(x + dx, y - Math.sin(a) * f); g.moveTo(x, y); g.lineTo(x + dx, y + Math.sin(a) * f);
+  }
+  g.stroke(); g.restore();
+}
+function pair(g, t, o = {}) {
+  ml(g, 540, o.y1 ?? 470, 520, 1, o);
+  ml(g, 540, o.y2 ?? 760, o.L2 ?? 520, -1, o);
+}
+function guides(g, k, y1, y2) {   // 同じ長さを示す点線
+  if (k <= 0) return;
+  g.save(); g.globalAlpha *= k; g.strokeStyle = TK.C.acc; g.lineWidth = 4; g.setLineDash([12, 12]);
+  for (const x of [280, 800]) { g.beginPath(); g.moveTo(x, y1 - 120); g.lineTo(x, y2 + 120); g.stroke(); }
+  g.restore();
+}
+// 16の社会（点の並び。地図の代わり。どこかは示さない）
+function dots16(g, t, a) {
+  for (let i = 0; i < 16; i++) {
+    const k = TK.pop(t, a + i * 0.08, 0.3), x = 210 + (i % 4) * 220, y = 440 + Math.floor(i / 4) * 140;
+    g.save(); g.globalAlpha *= k; g.fillStyle = i === 15 ? TK.C.acc : TK.C.acc2;
+    g.beginPath(); g.arc(x, y, 30 * k, 0, Math.PI * 2); g.fill(); g.restore();
+  }
+}
+// 四角い部屋（直角だらけ）と、丸い家（線画）
+function boxRoom(g, cx, cy, s) {
+  g.save(); g.strokeStyle = '#cfe0ff'; g.lineWidth = 5;
+  const w = 180 * s, h = 150 * s, d = 70 * s;
+  g.strokeRect(cx - w / 2, cy - h / 2, w, h);
+  g.beginPath(); g.moveTo(cx - w / 2, cy - h / 2); g.lineTo(cx - w / 2 - d, cy - h / 2 - d); g.moveTo(cx + w / 2, cy - h / 2); g.lineTo(cx + w / 2 + d, cy - h / 2 - d);
+  g.moveTo(cx - w / 2, cy + h / 2); g.lineTo(cx - w / 2 - d, cy + h / 2 + d); g.moveTo(cx + w / 2, cy + h / 2); g.lineTo(cx + w / 2 + d, cy + h / 2 + d); g.stroke();
+  g.strokeStyle = TK.C.acc; g.lineWidth = 6;   // 角のところ（矢羽の形に見える）
+  g.beginPath(); g.moveTo(cx - w / 2, cy - h / 2 - 1); g.lineTo(cx - w / 2, cy + h / 2 + 1); g.stroke();
+  g.restore();
+}
+function roundHut(g, cx, cy, s) {
+  g.save(); g.strokeStyle = '#e6d2a8'; g.lineWidth = 5;
+  g.beginPath(); g.ellipse(cx, cy + 40 * s, 140 * s, 30 * s, 0, 0, Math.PI * 2); g.stroke();
+  g.beginPath(); g.moveTo(cx - 140 * s, cy + 40 * s); g.quadraticCurveTo(cx - 120 * s, cy - 110 * s, cx, cy - 120 * s); g.quadraticCurveTo(cx + 120 * s, cy - 110 * s, cx + 140 * s, cy + 40 * s); g.stroke();
+  g.beginPath(); g.ellipse(cx, cy - 4 * s, 40 * s, 44 * s, 0, Math.PI, 0); g.stroke();
+  g.restore();
+}
+
+function draw(g, t) {
+  // 0〜5: 2本の線。3.2秒に同じ長さの点線
+  if (t < 5.0) {
+    pair(g, t);
+    guides(g, clamp((t - 3.2) / 0.4, 0, 1), 470, 760);
+    TK.hook(g, t, 0.0, 2.6, '同じ長さ。でも\n[全員]がだまされるわけじゃない', { y: 210, size: 74 });
+    if (t >= 3.2) { g.save(); g.globalAlpha = fade(t, 3.2, 5.0, 0.3); TK.text(g, 'どちらも 同じ長さ', PW / 2, 1000, 56, { color: TK.C.acc }); g.restore(); }
+  }
+  // 5〜8: 「錯覚は人類共通」に ×
+  if (t >= 5.0 && t < 8.0) {
+    g.save(); g.globalAlpha = fade(t, 5.0, 8.0, 0.25) * 0.35; pair(g, t); g.restore();
+    g.save(); g.globalAlpha = fade(t, 5.0, 8.0, 0.25);
+    TK.card(g, 140, 520, 800, 180);
+    TK.text(g, '錯覚は 人類共通', PW / 2, 610, 84);
+    if (t > 6.4) {
+      const k = TK.pop(t, 6.4, 0.3); g.strokeStyle = TK.C.red; g.lineWidth = 22; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(540 - 170 * k, 610 - 170 * k); g.lineTo(540 + 170 * k, 610 + 170 * k); g.moveTo(540 + 170 * k, 610 - 170 * k); g.lineTo(540 - 170 * k, 610 + 170 * k); g.stroke();
+    }
+    g.restore();
+  }
+  // 8〜12: 16の社会
+  if (t >= 8.0 && t < 12.0) {
+    g.save(); g.globalAlpha = fade(t, 8.0, 12.0, 0.3);
+    TK.text(g, '1960年代  [16の社会]で測った', PW / 2, 270, 62);
+    dots16(g, t, 8.3);
+    TK.text(g, 'そのうち14は、小さな伝統社会', PW / 2, 1020, 44, { color: TK.C.sub });
+    g.restore();
+  }
+  // 12〜16: 長さを合わせる（下の線を短く・長く。同じに見えた所で止める）
+  if (t >= 12.0 && t < 16.0) {
+    const u = clamp((t - 12.3) / 3.0, 0, 1), L2 = 520 + Math.sin(u * Math.PI * 1.5) * 90 * (1 - u) - 90 * ease(u) * 0;
+    g.save(); g.globalAlpha = fade(t, 12.0, 16.0, 0.3);
+    TK.text(g, '下の線の長さを、同じに見えるまで動かす', PW / 2, 270, 46, { color: TK.C.sub });
+    pair(g, t, { L2 });
+    g.fillStyle = TK.C.acc;
+    for (const s of [-1, 1]) { g.beginPath(); const x = 540 + s * (L2 / 2 + 130); g.moveTo(x, 760); g.lineTo(x - s * 40, 735); g.lineTo(x - s * 40, 785); g.fill(); }
+    g.restore();
+  }
+  // 16〜23: 棒グラフ（2本だけ）
+  if (t >= 16.0 && t < 23.0) {
+    TK.text(g, '同じに見えるのに 何%長くした？', PW / 2, 270, 56, { color: TK.C.sub });
+    TK.bars(g, t, 16.2, 23.0, [
+      { label: 'アメリカの大学生', v: 0.2 / 0.25, color: TK.C.acc, text: '約20%' },
+    ], { y: 420 });
+    if (t >= 19.5) TK.bars(g, t, 19.5, 23.0, [
+      { label: 'カラハリ砂漠のサンの人たち', v: 0.0, color: TK.C.acc2, text: '' },
+    ], { y: 680 });
+    if (t >= 20.4) { g.save(); g.globalAlpha = fade(t, 20.4, 23.0, 0.3); TK.text(g, '[ほぼ 0%]', 640, 752, 64, { align: 'left' }); g.restore(); }
+    TK.note(g, t, 16.2, 23.0, '値は Henrich ほか (2010) の図2（16の社会）から。ほかの14の社会はこの間', { size: 30, y: 1030 });
+  }
+  // 23〜30: 直角の部屋 ／ 丸い家
+  if (t >= 23.0 && t < 30.0) {
+    g.save(); g.globalAlpha = fade(t, 23.0, 30.0, 0.3);
+    TK.text(g, '研究者の[説]', PW / 2, 260, 70);
+    g.save(); g.globalAlpha *= TK.pop(t, 23.3); boxRoom(g, 290, 600, 1.0); g.restore();
+    g.save(); g.globalAlpha *= TK.pop(t, 24.6); roundHut(g, 790, 620, 1.0); g.restore();
+    TK.text(g, 'まっすぐな壁・直角の角', 290, 860, 40, { color: TK.C.sub });
+    TK.text(g, '丸い家・ひらけた土地', 790, 860, 40, { color: TK.C.sub });
+    if (t > 26.0) { g.save(); g.globalAlpha *= fade(t, 26.0, 30, 0.3); TK.text(g, '部屋のすみの線は、矢羽の形', PW / 2, 990, 46, { color: TK.C.acc }); g.restore(); }
+    g.restore();
+  }
+  // 30〜35: 最初の2本に戻る
+  if (t >= 30.0) {
+    pair(g, t);
+    g.save(); g.globalAlpha = fade(t, 30.0, 35.5, 0.3);
+    TK.text(g, 'あなたは [何%] だまされた？', PW / 2, 230, 74, { stroke: 'rgba(0,0,0,0.5)' });
+    g.restore();
+  }
+  if (t >= 8.0 && t < 16.0) TK.note(g, t, 8.0, 16.0, '測ったのは60年前（Segall ほか 1966）。いまの人が同じとは限らない', { size: 30 });
+  if (t >= 23.0 && t < 30.0) TK.note(g, t, 23.0, 30.0, '原因は説。「文化のせいとは言い切れない」という反論もある（2025）', { size: 30 });
+  if (t >= 32.0) TK.note(g, t, 32.0, 35.0, '出どころ: Henrich, Heine & Norenzayan (2010) Behavioral and Brain Sciences 33\nSegall, Campbell & Herskovits (1966)', { size: 28 });
+}
+
+triviaStart({ out: 'illusions-trivia2', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

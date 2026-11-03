@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく piano-hand-1（型H 当ててみて）「1秒に何音？」。台本は trivia/piano-hand.md。?short で録る
+// Münte, Altenmüller & Jäncke 2002（Nat. Rev. Neurosci.、図1の説明）: リスト「パガニーニ練習曲 第6番」第11変奏は 1分に1800音を求める（楽譜が求める数）。
+// Dhakal ほか 2018（CHI、表3）: 打つ間隔の平均 238.66ms ≈ 1秒に約4回、速い人（上位10%）121.70ms ≈ 約8回。
+// アプリの手は使わない（Canvas だけ）。鍵盤の光り方は「1秒に30」を見せる模式（曲の音ではない）。
+const DUR = 26;
+const subs = [
+  { a: 0.0, b: 3.0, ja: 'ピアノで、1秒に何音ひける？', en: 'How many notes can a pianist play in one second?', noBurn: true },
+  { a: 3.0, b: 6.5, ja: '考えてみて', en: 'Take a guess' },
+  { a: 6.5, b: 10.0, ja: '答え：[30音]\n1分で 1800音', en: 'Answer: 30 notes.\n1,800 notes a minute' },
+  { a: 10.0, b: 15.0, ja: 'リストの『パガニーニ練習曲 第6番』第11変奏\n[楽譜どおりにひくと]、この速さ', en: 'Liszt’s Paganini Étude No. 6, Variation 11:\nplayed as written, this is the speed' },
+  { a: 15.0, b: 20.0, ja: 'キーボードを打つ人の平均は 1秒に[約4回]\n速い人でも[約8回]', en: 'Typists average about 4 keys a second.\nFast ones, about 8' },
+  { a: 20.0, b: 23.0, ja: '10本で分けても、1本が1秒に[3回]\nそれを左右で、まちがえずに', en: 'Even split over ten fingers, that’s 3 per finger,\nevery second, with no mistakes' },
+  { a: 23.0, b: 26.0, ja: '1秒に30音\nあなたは何音だと思った？', en: '30 notes a second.\nWhat was your guess?' },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 3.0, type: 'pop' }, { t: 3.8, type: 'tick' }, { t: 4.8, type: 'tick' }, { t: 5.8, type: 'tick' }, { t: 6.4, type: 'ding' },
+  { t: 6.6, type: 'rise' }, { t: 10.0, type: 'whoosh' }, { t: 15.0, type: 'whoosh' }, { t: 20.0, type: 'pop' }, { t: 23.0, type: 'ding' },
+];
+// 鍵盤の打鍵の音（細かい tick を 1秒に30。耳で速さがわかるように。音量は小さく）
+for (let s = 10.4; s < 14.4; s += 1 / 30) cues.push({ t: s, type: 'tick', v: 0.35 });
+
+// 鍵盤（白鍵 N 本）。lit: 光っている白鍵の番号の集合
+function keyboard(g, x0, y0, w, h, n, lit) {
+  const kw = w / n;
+  for (let i = 0; i < n; i++) {
+    g.fillStyle = lit.has(i) ? TK.C.acc : 'rgba(235,240,255,0.92)';
+    g.fillRect(x0 + i * kw + 2, y0, kw - 4, h);
+  }
+  g.fillStyle = '#0b1430';
+  for (let i = 0; i < n - 1; i++) { if ([2, 6].includes(i % 7)) continue; g.fillRect(x0 + (i + 1) * kw - kw * 0.3, y0, kw * 0.6, h * 0.6); }
+}
+function smallCard(g, x, y, s, k, hit) {
+  g.save(); g.globalAlpha *= k;
+  TK.card(g, x - 130, y - 80, 260, 160, { fill: hit ? 'rgba(255,207,74,0.55)' : 'rgba(20,34,72,0.9)', stroke: hit ? TK.C.acc : undefined, lw: hit ? 8 : 3 });
+  TK.text(g, s, x, y, 76, { color: hit ? '#fff' : TK.C.acc2 });
+  g.restore();
+}
+
+function draw(g, t) {
+  // 0〜3: フック
+  if (t < 3.0) {
+    TK.hook(g, t, 0.0, 3.0, '1秒に\n[何音]？', { y: 380, size: 170 });
+    [['5音', 250], ['12音', 540], ['30音', 830]].forEach(([s, x], i) => smallCard(g, x, 820, s, TK.pop(t, 0.5 + i * 0.15) * fade(t, -1, 3, 0.3), false));
+  }
+  // 3〜6.5: 当ててみて
+  if (t >= 3.0 && t < 6.5) {
+    TK.choices(g, t, 3.0, 6.5, ['1秒に 5音', '1秒に 12音', '1秒に 30音'], { y: 420, answer: 2, reveal: 6.35, think: [3.4, 6.3] });
+  }
+  // 6.5〜10: 1分で1800
+  if (t >= 6.5 && t < 10.0) {
+    TK.text(g, '1秒に [30音]', PW / 2, 330, 110);
+    TK.count(g, t, 6.9, 10.0, 0, 1800, { y: 640, size: 220, dur: 1.6, label: '1分で', unit: '音' });
+  }
+  // 10〜15: 鍵盤が1秒に30回光る（模式）＋1秒の時計
+  if (t >= 10.0 && t < 15.0) {
+    const f = fade(t, 10, 15, 0.3), s = t - 10.4, n = s >= 0 ? Math.floor(s * 30) : -1;
+    g.save(); g.globalAlpha = f;
+    // 30個の点が1秒でうまる
+    const k = s >= 0 ? (n % 30) + 1 : 0, cx = PW / 2, cy = 420, r = 170;
+    for (let i = 0; i < 30; i++) {
+      const a = -Math.PI / 2 + i / 30 * Math.PI * 2;
+      g.fillStyle = i < k ? TK.C.acc : 'rgba(255,255,255,0.15)';
+      g.beginPath(); g.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 16, 0, Math.PI * 2); g.fill();
+    }
+    TK.text(g, '1秒', cx, cy - 20, 70, { color: TK.C.sub });
+    TK.text(g, k + ' 音', cx, cy + 50, 64, { color: TK.C.acc });
+    const lit = new Set(); if (n >= 0) { const p = n % 28; lit.add(p < 14 ? 4 + p : 4 + 28 - p); lit.add((p < 14 ? 4 + p : 4 + 28 - p) + 1); }
+    keyboard(g, 100, 760, 860, 260, 22, lit);
+    g.restore();
+    TK.note(g, t, 10.4, 15, '30音は楽譜が求める数（だれかを測った数ではない）\n鍵盤の光り方は速さを見せる模式で、曲の音ではありません', { size: 30 });
+  }
+  // 15〜20: 棒でくらべる
+  if (t >= 15.0 && t < 20.0) {
+    TK.text(g, '1秒に押す回数', PW / 2, 260, 60, { color: TK.C.sub });
+    TK.bars(g, t, 15.0, 20.0, [
+      { label: 'キーボード（平均）', v: 4.2 / 30, color: TK.C.acc2, text: '約4' },
+      { label: 'キーボード（速い人・上位10%）', v: 8.2 / 30, color: TK.C.green, text: '約8' },
+      { label: 'この曲（楽譜どおり）', v: 1, color: TK.C.acc, text: '30' },
+    ], { y: 380, gap: 220, stagger: 0.6 });
+    TK.note(g, t, 15.5, 20, 'キーボードは英文を写して打つオンラインのテスト（16万人あまり）', { size: 30 });
+  }
+  // 20〜23: 10本の指に3回ずつ
+  if (t >= 20.0 && t < 23.0) {
+    const f = fade(t, 20, 23, 0.3);
+    g.save(); g.globalAlpha = f;
+    [[300, -1], [780, 1]].forEach(([hx, sgn], h) => {
+      TK.text(g, h ? '右手' : '左手', hx, 300, 50, { color: TK.C.sub });
+      for (let i = 0; i < 5; i++) {
+        const k = TK.pop(t, 20.2 + (h * 5 + i) * 0.08), x = hx + (i - 2) * 82;
+        const fi = h ? i : 4 - i, L = [120, 190, 210, 195, 150][fi];
+        const y1 = 760, y0 = y1 - L - (fi === 0 ? -60 : 0);
+        g.save(); g.globalAlpha *= k;
+        g.strokeStyle = '#cfe0ff'; g.lineWidth = 50; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(x, y1); g.lineTo(x, y0); g.stroke();
+        TK.text(g, '3', x, y0 - 70, 60, { color: TK.C.acc });
+        g.restore();
+      }
+      TK.card(g, hx - 200, 760, 400, 160, { r: 60, fill: 'rgba(207,224,255,0.18)', stroke: 'rgba(207,224,255,0.6)' });
+    });
+    TK.text(g, '1本あたり 1秒に[約3回]', PW / 2, 1010, 64);
+    g.restore();
+  }
+  // 23〜26: 30にもどる
+  if (t >= 23.0) {
+    TK.text(g, '1秒に', PW / 2, 330, 80, { color: TK.C.sub });
+    TK.text(g, '[30]音', PW / 2, 560, 260);
+    TK.note(g, t, 23.2, 26, '出どころ: Münte, Altenmüller & Jäncke (2002) Nat. Rev. Neurosci. 3:473\nDhakal ほか (2018) CHI', { size: 30 });
+  }
+}
+
+triviaStart({ out: 'piano-hand-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

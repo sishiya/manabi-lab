@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく wifi-wave-1（型A ぜんぶ逆）「電子レンジは“水の周波数”じゃない」。台本は trivia/wifi-wave.md。?short で録る
+// C. Baird（West Texas A&M, 2014）: 水の共振ではない・周波数は規制で割り当て。H. Föll（Kiel 大）: 水の損失の山は およそ 5〜100GHz、
+// 2.45GHz はそれより下で中まで入る。吸収の山と断面の温まり方は模式図（計算ではない）。健康の話はしない。WiFi ch6 = 2437MHz
+const DUR = 30;
+const subs = [
+  { a: 0.0, b: 2.5, ja: '電子レンジは、水がいちばんふるえる周波数…じゃない', en: 'Microwave ovens are not tuned to water’s favorite frequency.', noBurn: true },
+  { a: 2.5, b: 8.0, ja: '水が電波から[いちばん熱をもらう]のは、\nもっと高い周波数', en: 'Water absorbs the most heat from radio waves\nat much higher frequencies.' },
+  { a: 8.0, b: 15.0, ja: 'もしその周波数にしたら、\n[表面だけ]焼けて、中は冷たいまま', en: 'At that frequency, food would burn on the surface\nand stay cold inside.' },
+  { a: 15.0, b: 22.0, ja: '2.45GHz に決まったのは、\n物理より「[電波の決まり]」の都合', en: '2.45 GHz was chosen less for physics\nthan for radio regulations.' },
+  { a: 22.0, b: 28.0, ja: 'そして、同じ帯を使っているのが…[WiFi]', en: 'And who shares that same band? WiFi.' },
+  { a: 28.0, b: 30.0, ja: 'レンジと WiFi、[おとなりさん]', en: 'Microwaves and WiFi: next-door neighbors.', noBurn: true },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 1.0, type: 'buzz' }, { t: 2.5, type: 'whoosh' }, { t: 3.4, type: 'rise' }, { t: 5.6, type: 'ding' },
+  { t: 8.0, type: 'whoosh' }, { t: 9.0, type: 'pop' }, { t: 11.0, type: 'pop' }, { t: 15.0, type: 'whoosh' }, { t: 16.2, type: 'ding' },
+  { t: 22.0, type: 'whoosh' }, { t: 23.5, type: 'rise' }, { t: 28.0, type: 'ding' },
+];
+// 周波数の軸（対数、1〜1000 GHz）
+const AX0 = 110, AX1 = 860, fx = f => AX0 + (Math.log10(f) / 3) * (AX1 - AX0);
+const absorb = f => Math.exp(-((Math.log10(f) - 1.35) ** 2) / 0.35);   // 模式の山（形はたとえ）
+
+function cross(g, cx, cy, rx, ry, k) {
+  g.save(); g.strokeStyle = TK.C.red; g.lineWidth = 20; g.lineCap = 'round'; g.globalAlpha *= k;
+  g.beginPath(); g.moveTo(cx - rx, cy - ry); g.lineTo(cx + rx, cy + ry); g.moveTo(cx + rx, cy - ry); g.lineTo(cx - rx, cy + ry); g.stroke(); g.restore();
+}
+function axis(g, y, h, k) {
+  g.save();
+  g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 4; g.beginPath(); g.moveTo(AX0, y); g.lineTo(AX1, y); g.stroke();
+  for (const [f, l] of [[1, '1'], [10, '10'], [100, '100'], [1000, '1000']]) { g.beginPath(); g.moveTo(fx(f), y); g.lineTo(fx(f), y + 16); g.stroke(); TK.text(g, l, fx(f), y + 48, 38, { color: TK.C.sub, bold: false }); }
+  TK.text(g, '周波数（GHz）', AX1, y + 100, 38, { align: 'right', color: TK.C.sub, bold: false });
+  // 山（5〜100GHz をうすく）
+  g.fillStyle = 'rgba(95,212,255,0.12)'; g.fillRect(fx(5), y - h, fx(100) - fx(5), h);
+  g.strokeStyle = TK.C.acc2; g.lineWidth = 7; g.beginPath();
+  const n = Math.floor(200 * k);
+  for (let i = 0; i <= n; i++) { const f = Math.pow(10, 3 * i / 200), x = fx(f), yy = y - h * 0.9 * absorb(f); i ? g.lineTo(x, yy) : g.moveTo(x, yy); }
+  g.stroke();
+  g.restore();
+}
+function food(g, cx, cy, r, inner) {   // 断面: 外側だけ熱い（inner=0）か、中まで（inner=1）
+  g.save();
+  const gr = g.createRadialGradient(cx, cy, 0, cx, cy, r);
+  if (inner) { gr.addColorStop(0, 'rgba(255,120,80,0.85)'); gr.addColorStop(1, 'rgba(255,90,70,0.95)'); }
+  else { gr.addColorStop(0, 'rgba(95,168,255,0.7)'); gr.addColorStop(0.78, 'rgba(95,168,255,0.7)'); gr.addColorStop(0.9, 'rgba(255,90,70,0.95)'); gr.addColorStop(1, 'rgba(255,60,40,1)'); }
+  g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = '#fff'; g.lineWidth = 4; g.stroke(); g.restore();
+}
+function router(g, x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = '#e8f0ff'; g.lineWidth = 6;
+  g.beginPath(); g.roundRect(-70, -20, 140, 50, 12); g.moveTo(-40, -20); g.lineTo(-55, -80); g.moveTo(40, -20); g.lineTo(55, -80); g.stroke();
+  g.fillStyle = TK.C.green; g.beginPath(); g.arc(-30, 5, 6, 0, Math.PI * 2); g.arc(-10, 5, 6, 0, Math.PI * 2); g.fill(); g.restore();
+}
+
+function draw(g, t) {
+  // 0〜2.5: フック
+  if (t < 2.5) {
+    g.save(); g.globalAlpha = TK.pop(t, 0.1, 0.4);
+    TK.card(g, 110, 300, 740, 220); TK.text(g, '電子レンジ ＝ 水の共振', PW / 2 - 60, 410, 74); g.restore();
+    cross(g, PW / 2 - 60, 410, 320, 90, TK.pop(t, 1.0, 0.3));
+    TK.text(g, '2.45GHz', PW / 2 - 60, 600, 56, { color: TK.C.sub });
+    TK.hook(g, t, 1.1, 2.5, '水の周波数…[じゃない]', { y: 820, size: 96 });
+  }
+  // 2.5〜8: 吸収の山（模式図）
+  if (t >= 2.5 && t < 8.0) {
+    TK.text(g, '水が電波から熱をもらう度合い', PW / 2 - 60, 230, 50, { color: TK.C.sub });
+    axis(g, 760, 420, clamp((t - 3.4) / 1.6, 0, 1));
+    g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.setLineDash([14, 10]); g.beginPath(); g.moveTo(fx(2.45), 330); g.lineTo(fx(2.45), 760); g.stroke(); g.restore();
+    TK.text(g, 'レンジ 2.45', fx(2.45) + 14, 310, 40, { align: 'left', color: TK.C.acc });
+    if (t > 5.6) { g.save(); g.globalAlpha = TK.pop(t, 5.6, 0.4); TK.text(g, 'いちばんの山は、もっと右', fx(20), 980, 54, { color: TK.C.acc2 }); g.restore(); }
+    TK.note(g, t, 3, 8, '模式図。山の位置は教科書によって幅あり（数GHz〜100GHz のあたり）', { size: 30 });
+  }
+  // 8〜15: 断面
+  if (t >= 8.0 && t < 15.0) {
+    const k1 = TK.pop(t, 9.0, 0.4), k2 = TK.pop(t, 11.0, 0.4);
+    g.save(); g.globalAlpha = clamp(k1, 0, 1); food(g, 260, 520, 170 * Math.min(1, k1), 0); TK.text(g, 'もし山の上なら', 260, 780, 46); TK.text(g, '表面だけ熱い', 260, 850, 42, { color: TK.C.red }); g.restore();
+    g.save(); g.globalAlpha = clamp(k2, 0, 1); food(g, 700, 520, 170 * Math.min(1, k2), 1); TK.text(g, '2.45GHz', 700, 780, 46, { color: TK.C.acc }); TK.text(g, '中まで温まる', 700, 850, 42, { color: TK.C.sub }); g.restore();
+    TK.note(g, t, 8.5, 15, '模式図（計算ではない）', { size: 32 });
+  }
+  // 15〜22: 電波の決まりの帯
+  if (t >= 15.0 && t < 22.0) {
+    const x0 = 110, x1 = 850, f0 = 2.3, f1 = 2.6, X = f => x0 + (f - f0) / (f1 - f0) * (x1 - x0), y = 820;
+    g.save(); g.fillStyle = 'rgba(255,207,74,0.25)'; g.fillRect(X(2.4), y - 260, X(2.5) - X(2.4), 260);
+    g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 4; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke();
+    for (const f of [2.3, 2.4, 2.5, 2.6]) { g.beginPath(); g.moveTo(X(f), y); g.lineTo(X(f), y + 16); g.stroke(); TK.text(g, f.toFixed(1), X(f), y + 50, 38, { color: TK.C.sub, bold: false }); }
+    g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.beginPath(); g.moveTo(X(2.45), y - 300); g.lineTo(X(2.45), y); g.stroke();
+    g.restore();
+    TK.text(g, '2.45', X(2.45), y - 330, 48, { color: TK.C.acc });
+    TK.text(g, 'GHz', x1, y + 100, 38, { align: 'right', color: TK.C.sub, bold: false });
+    g.save(); g.globalAlpha = TK.pop(t, 16.2, 0.4);
+    TK.text(g, '電子レンジなどに使ってよい帯', PW / 2 - 60, 230, 54);
+    TK.text(g, '2.4〜2.5GHz（電波の決まり）', PW / 2 - 60, 300, 44, { color: TK.C.acc });
+    g.restore();
+  }
+  // 22〜30: WiFi も同じ帯
+  if (t >= 22.0) {
+    const cx = PW / 2 - 60, cy = 560;
+    for (let i = 0; i < 6; i++) {
+      const r = ((t - 22) * 160 + i * 90) % 540;
+      g.save(); g.strokeStyle = TK.C.acc2; g.globalAlpha = Math.max(0, 1 - r / 540) * 0.8; g.lineWidth = 5; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke(); g.restore();
+    }
+    router(g, cx, cy, 1.6);
+    g.save(); g.globalAlpha = TK.pop(t, 23.5, 0.4);
+    TK.card(g, 140, 200, 680, 130, { r: 30 });
+    TK.text(g, 'WiFi も [2.4GHz 帯]', cx, 265, 66);
+    g.restore();
+    if (t >= 28.0) TK.hook(g, t, 28.0, 30.0, 'レンジと WiFi、\n[おとなりさん]', { y: 930, size: 92 });
+    else TK.text(g, 'チャンネル6 ＝ 2.437GHz', cx, 900, 44, { color: TK.C.sub, bold: false });
+    TK.note(g, t, 26.5, 30, '出どころ: C. Baird（West Texas A&M, 2014）・H. Föll（Kiel 大）\nIEEE 802.11（チャンネル6）', { size: 30 });
+  }
+}
+
+triviaStart({ out: 'wifi-wave-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>

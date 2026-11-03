@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>うんちく試作の見くらべ</title>
+<style>
+  :root { --bg: #0b1430; --card: #132247; --fg: #fff; --sub: #cfe0ff; --acc: #ffcf4a; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: "Yu Gothic UI", "Meiryo", sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; background: rgba(11,20,48,0.96); padding: 12px 16px; border-bottom: 1px solid #2a3a66; }
+  h1 { font-size: 18px; margin: 0 0 8px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  button, select { font: inherit; font-size: 14px; background: var(--card); color: var(--fg); border: 1px solid #3a4f88; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+  button.on { background: var(--acc); color: #0b1430; border-color: var(--acc); }
+  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; padding: 16px; }
+  .it { background: var(--card); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+  .it.picked { outline: 3px solid var(--acc); }
+  video { width: 100%; aspect-ratio: 9 / 16; background: #000; display: block; }
+  .meta { padding: 8px 10px 10px; font-size: 13px; color: var(--sub); }
+  .meta b { color: var(--fg); font-size: 14px; display: block; margin: 2px 0 4px; }
+  .tag { display: inline-block; background: #2a3a66; border-radius: 6px; padding: 1px 6px; margin-right: 4px; color: #fff; }
+  .tag.rank { background: var(--acc); color: #0b1430; }
+  .meta details { margin-top: 4px; }
+  .pick { margin-top: 6px; width: 100%; }
+  #out { width: 100%; box-sizing: border-box; margin-top: 8px; font: 13px monospace; background: #050a1a; color: #fff; border: 1px solid #3a4f88; border-radius: 8px; padding: 6px; display: none; }
+  .missing { padding: 40px 10px; text-align: center; color: #889; aspect-ratio: 9 / 16; }
+</style>
+</head>
+<body>
+<header>
+  <h1>うんちくショート 試作の見くらべ（<span id="n">0</span> 本）</h1>
+  <div class="bar" id="types"></div>
+  <div class="bar" style="margin-top:6px">
+    <select id="sort"><option value="rank">批評の順</option><option value="app">アプリ順</option><option value="type">型の順</option></select>
+    <button id="only">選んだものだけ</button>
+    <button id="copy">選んだものを書き出す</button>
+  </div>
+  <textarea id="out" rows="3" readonly></textarea>
+</header>
+<div id="grid"></div>
+<script>
+'use strict';
+// 試作の一覧（proto/<app>.json）。動画は ../out/<page>-short.mp4。選んだものはこの端末に覚える
+const APPS = ['tiny-earth', 'brain-response', 'evolution', 'ga-creatures', 'tree-of-life', 'black-hole', 'metamorphosis', 'extreme', 'god-view', 'body-dive', 'net-route', 'phage', 'illusions', 'pitch-physics', 'house-dust',
+  'railgun', 'spider-hunt', 'quantum', 'immune-battle', 'muscle-growth', 'hair-removal', 'eye-optics', 'animal-senses', 'sound-feel', 'drop-evolution', 'big-bang', 'wifi-wave', 'passkey', 'crt-pixels', 'phonograph',
+  'air-flow', 'mold-growth', 'weed-growth', 'wave-growth', 'metronome-sync', 'sail-wind', 'ferrofluid', 'piano-hand', 'typing-hand', 'snake-move'];
+const RANK = ['tiny-earth-1', 'brain-response-1', 'evolution-1', 'ga-creatures-1', 'tree-of-life-1', 'black-hole-2', 'metamorphosis-1', 'extreme-1', 'god-view-3', 'body-dive-1', 'net-route-3', 'phage-1', 'illusions-1', 'pitch-physics-1', 'house-dust-1'];
+const TYPES = { A: 'ぜんぶ逆', B: 'もしも計算', C: 'あなたの体で、いま', D: '3つ目がいちばん', E: 'ズームで桁', F: 'かけあい', G: '15秒ループ', H: '当ててみて' };
+const store = { get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } } };
+let picks = new Set(store.get('trivia-picks', [])), filt = store.get('trivia-type', ''), onlyPicked = false, items = [];
+const rankOf = id => { const i = RANK.indexOf(id.replace(/^brain-(\d)/, 'brain-response-$1')); return i < 0 ? 99 : i; };
+
+async function load() {
+  const all = await Promise.all(APPS.map(a => fetch(`proto/${a}.json`, { cache: 'no-store' }).then(r => r.ok ? r.json() : []).catch(() => [])));
+  items = all.flatMap((arr, i) => arr.map(x => Object.assign({ app: APPS[i] }, x)));
+  const tb = document.getElementById('types');
+  tb.innerHTML = '';
+  [['', 'すべて'], ...Object.entries(TYPES)].forEach(([k, v]) => {
+    const b = document.createElement('button'); b.textContent = k ? `${k} ${v}` : v; b.className = filt === k ? 'on' : '';
+    b.onclick = () => { filt = k; store.set('trivia-type', k); load(); }; tb.appendChild(b);
+  });
+  render();
+}
+function render() {
+  const sort = document.getElementById('sort').value;
+  let list = items.filter(x => (!filt || x.type === filt) && (!onlyPicked || picks.has(x.id)));
+  list.sort((a, b) => sort === 'rank' ? rankOf(a.id) - rankOf(b.id) || a.id.localeCompare(b.id) : sort === 'type' ? a.type.localeCompare(b.type) || a.id.localeCompare(b.id) : a.id.localeCompare(b.id));
+  document.getElementById('n').textContent = list.length;
+  const grid = document.getElementById('grid'); grid.innerHTML = '';
+  for (const x of list) {
+    const d = document.createElement('div'); d.className = 'it' + (picks.has(x.id) ? ' picked' : '');
+    const r = rankOf(x.id);
+    d.innerHTML = `<video src="../${x.mp4}" controls preload="metadata" playsinline></video>
+      <div class="meta">${r < 99 ? `<span class="tag rank">${r + 1}位</span>` : ''}<span class="tag">${x.type} ${TYPES[x.type] || ''}</span><span class="tag">${x.dur || '?'}秒</span>
+      <b></b><span class="id"></span>
+      <details><summary>メモ</summary><div class="nt"></div></details>
+      <button class="pick">${picks.has(x.id) ? '★ 選んだ' : '☆ 選ぶ'}</button></div>`;
+    d.querySelector('b').textContent = x.title; d.querySelector('.id').textContent = x.id + '（' + x.page + '）';
+    d.querySelector('.nt').textContent = [x.voice && '声: ' + x.voice, x.app_footage ? 'アプリの録画あり' : '', x.notes].filter(Boolean).join(' ／ ');
+    const v = d.querySelector('video');
+    v.onerror = () => { v.replaceWith(Object.assign(document.createElement('div'), { className: 'missing', textContent: 'まだ録画がありません' })); };
+    d.querySelector('.pick').onclick = () => { picks.has(x.id) ? picks.delete(x.id) : picks.add(x.id); store.set('trivia-picks', [...picks]); render(); };
+    grid.appendChild(d);
+  }
+}
+document.getElementById('sort').onchange = render;
+document.getElementById('only').onclick = e => { onlyPicked = !onlyPicked; e.target.className = onlyPicked ? 'on' : ''; render(); };
+document.getElementById('copy').onclick = () => {
+  const o = document.getElementById('out'); o.style.display = 'block';
+  o.value = '選んだ: ' + [...picks].join(', '); o.select();
+  try { navigator.clipboard.writeText(o.value); } catch (e) { }
+};
+load();
+</script>
+</body>
+</html>

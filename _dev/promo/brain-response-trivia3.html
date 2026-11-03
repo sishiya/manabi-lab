@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="trivia-kit.js"></script>
+<script>
+'use strict';
+// うんちく brain-3（型G ループ）「痛みは2回やってくる」。台本は trivia/brain-response.md。?short で録る
+// 数字: C線維の脳の波 負の山 806 ms・正の山 1033 ms（Azevedo ほか 2016、手の甲などへのレーザー）。
+// 1回目（Aδ）の時刻は確かめていないので、数字は出さず「速い」とだけ（山の位置は目安）。
+const DUR = 16;
+const subs = [
+  { a: 0.0, b: 2.0, ja: '痛みは、[2回]やってくる', en: 'Pain arrives twice', noBurn: true },
+  { a: 2.0, b: 6.0, ja: '1回目は[速い神経]\nチクッ、と場所がわかる', en: 'First, the fast nerves:\na sharp prick that tells you where' },
+  { a: 6.0, b: 11.0, ja: '2回目は[遅い神経]\n約1秒おくれて、ジーン', en: 'Then the slow nerves:\nabout a second later, a dull ache' },
+  { a: 11.0, b: 14.0, ja: 'ぶつけたあとの「あの間」は\n[遅い神経]を待つ時間', en: 'That pause after you stub your toe?\nYou’re waiting for the slow nerves' },
+  { a: 14.0, b: 16.0, ja: 'だから、痛みは[2回]やってくる', en: 'That’s why pain arrives twice', noBurn: true },
+];
+const cues = [
+  { t: 0.05, type: 'pop' }, { t: 2.3, type: 'tick' }, { t: 6.0, type: 'whoosh' }, { t: 7.4, type: 'thud' }, { t: 11.0, type: 'pop' }, { t: 11.6, type: 'tick' }, { t: 12.6, type: 'thud' }, { t: 14.0, type: 'pop' },
+];
+const FAST = '#5fd4ff', SLOW = '#ff8a6b';
+const AX0 = 120, AX1 = 940, AMAX = 1.5;   // 時間の線（0〜1.5 秒）
+const sx = s => AX0 + (AX1 - AX0) * s / AMAX;
+
+// 時間の線と、2つの山。k1・k2 は山の出る具合（0〜1）、cut は描く時刻の上限
+function timeline(g, y, k1, k2, cut, o = {}) {
+  g.save();
+  g.strokeStyle = 'rgba(207,224,255,0.6)'; g.lineWidth = 4; g.beginPath(); g.moveTo(AX0, y); g.lineTo(AX1, y); g.stroke();
+  if (o.ticks !== false) for (const s of [0, 0.5, 1.0, 1.5]) { const x = sx(s); g.beginPath(); g.moveTo(x, y - 10); g.lineTo(x, y + 10); g.stroke(); TK.text(g, s.toFixed(1) + '秒', x, y + 215, 34, { color: TK.C.dim, bold: false }); }
+  // 波（1回目は目安の位置、2回目は 0.806 s の負の山と 1.033 s の正の山）
+  const wave = s => {
+    const a = k1 * 220 * Math.exp(-Math.pow((s - 0.30) / 0.05, 2));
+    const b = k2 * (250 * Math.exp(-Math.pow((s - 0.806) / 0.07, 2)) - 170 * Math.exp(-Math.pow((s - 1.033) / 0.08, 2)));
+    return a + b;
+  };
+  g.lineWidth = 8; g.lineJoin = 'round';
+  g.beginPath();
+  for (let s = 0; s <= Math.min(cut, AMAX); s += 0.005) { const x = sx(s), yy = y - wave(s); s === 0 ? g.moveTo(x, yy) : g.lineTo(x, yy); }
+  g.strokeStyle = '#fff'; g.stroke();
+  g.restore();
+}
+// 足の線画（横から）。toe の所に箱。hit 0〜1 で光る
+function foot(g, x, y, s, hit) {
+  g.save(); g.translate(x, y); g.scale(s, s);
+  g.strokeStyle = 'rgba(207,224,255,0.9)'; g.fillStyle = 'rgba(30,50,100,0.6)'; g.lineWidth = 6 / s; g.lineJoin = 'round';
+  g.beginPath(); g.moveTo(-60, -260); g.lineTo(-60, -60); g.quadraticCurveTo(-70, 0, -10, 0); g.lineTo(220, 0);
+  g.quadraticCurveTo(260, 0, 255, -30); g.quadraticCurveTo(250, -55, 180, -70); g.quadraticCurveTo(60, -100, 40, -160); g.lineTo(40, -260); g.fill(); g.stroke();
+  // 箱（たんすの角）
+  g.fillStyle = 'rgba(160,120,80,0.6)'; g.strokeStyle = 'rgba(230,200,160,0.9)'; g.fillRect(262, -140, 120, 140); g.strokeRect(262, -140, 120, 140);
+  if (hit > 0) { g.globalAlpha = hit; g.strokeStyle = TK.C.acc; g.lineWidth = 6 / s; for (let i = 0; i < 6; i++) { const a = -Math.PI / 2 + (i - 2.5) * 0.4; g.beginPath(); g.moveTo(255 + Math.cos(a) * 50, -40 + Math.sin(a) * 50); g.lineTo(255 + Math.cos(a) * 95, -40 + Math.sin(a) * 95); g.stroke(); } }
+  g.restore();
+}
+
+function draw(g, t) {
+  if (t < 2.0) {
+    timeline(g, 880, 1, 1, AMAX, { ticks: false });
+    TK.hook(g, t, 0, 2.0, '痛みは、\n[2回]やってくる', { y: 470, size: 130 });
+  }
+  if (t >= 2.0 && t < 11.0) {
+    const f = fade(t, 2, 11, 0.3); g.save(); g.globalAlpha = f;
+    const cut = t < 6 ? clamp((t - 2.2) / 0.6, 0, 1) * 0.55 : 0.55 + clamp((t - 6.2) / 1.4, 0, 1) * 0.95;
+    timeline(g, 700, 1, t >= 6 ? 1 : 0, cut);
+    TK.text(g, '脳の波（つついてから）', PW / 2, 150, 44, { color: TK.C.sub, bold: false });
+    if (t >= 2.8) {
+      TK.card(g, sx(0.30) - 150, 220, 300, 150, { stroke: FAST, lw: 5 });
+      TK.lines(g, '1回目\n[チクッ]', sx(0.30), 295, 52, { acc: FAST });
+    }
+    if (t >= 7.4) {
+      TK.card(g, sx(0.92) - 140, 210, 320, 170, { stroke: SLOW, lw: 5 });
+      TK.lines(g, '2回目\n[ジーン]', sx(0.92) + 20, 295, 56, { acc: SLOW });
+      TK.text(g, '約 1 秒おくれ', sx(0.92), 1010, 54, { color: SLOW });
+    }
+    if (t >= 3.0 && t < 6.0) TK.text(g, '速い神経', sx(0.30), 1010, 54, { color: FAST });
+    g.restore();
+    if (t >= 7.4) TK.note(g, t, 7.4, 11, '2回目の波 0.81秒・1.03秒（手の甲などへのレーザーで測定）\n1回目の時刻は目安の位置', { size: 30 });
+  }
+  if (t >= 11.0 && t < 14.0) {
+    const f = fade(t, 11, 14, 0.3); g.save(); g.globalAlpha = f;
+    const k = ease((t - 11.0) / 0.6);
+    foot(g, 150 + 60 * k, 860, 1.8, t > 11.6 ? clamp(1 - (t - 11.6) / 0.5, 0, 1) : 0);
+    if (t > 11.6) TK.text(g, 'チクッ', 420, 330, 80, { color: FAST });
+    if (t > 12.6) { const kk = TK.pop(t, 12.6, 0.35); g.save(); g.translate(720, 470); g.scale(kk, kk); TK.text(g, 'ジーン…', 0, 0, 96, { color: SLOW }); g.restore(); }
+    g.restore();
+    TK.note(g, t, 11.2, 14, '足の小指は、たとえの絵です', { size: 30 });
+  }
+  if (t >= 14.0) {
+    timeline(g, 880, 1, 1, AMAX, { ticks: false });
+    TK.hook(g, t, 14.0, 16.0, '痛みは、\n[2回]やってくる', { y: 470, size: 130 });
+    TK.note(g, t, 14.0, 16, '出どころ: Azevedo ほか (2016) Arq Neuropsiquiatr 74:223\nKandel ほか『Principles of Neural Science』第5版', { size: 30 });
+  }
+}
+
+triviaStart({ out: 'brain-response-trivia3', dur: DUR, draw, subs, cues, peek: 1.5 });
+</script>
+</body>
+</html>
