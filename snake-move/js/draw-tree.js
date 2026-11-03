@@ -88,6 +88,8 @@
         g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke();
       }
     }
+    // 幹にかくれた体を、幹の上にうっすら（らせんが一続きに見えるように）
+    ghost(g, P, dep, rad);
     // 手前を通る体
     body(g, P, dep, rad, true);
     // 頭の目
@@ -192,6 +194,7 @@
         g.beginPath(); g.moveTo(cx + u, yy); g.lineTo(cx + u, yy - (0.003 + 0.004 * (0.5 + 0.5 * Math.sin(kz * 3.1 + j))) * k); g.stroke();
       }
     }
+    ghost(g, P, dep, rad);
     body(g, P, dep, rad, true);
     if (s.zone[N - 1] && Math.abs(s.z[N - 1] - zc) < 0.07) { g.fillStyle = '#0b141c'; g.beginPath(); g.arc(P[N - 1][0] + rad * 0.3, P[N - 1][1] + rad * 0.2, Math.max(1.5, rad * 0.3), 0, 7); g.fill(); }
     g.restore();
@@ -220,6 +223,17 @@
         g.lineCap = 'round';
       }
     }
+  }
+  // 幹のうしろを通る所だけを、うすい線で（幹の上に重ねる）
+  function ghost(g, P, dep, rad) {
+    g.save(); g.globalAlpha = 0.4; g.lineCap = 'round';
+    g.strokeStyle = '#a6e07a'; g.lineWidth = Math.max(1.5, rad * 1.4); g.setLineDash([Math.max(3, rad), Math.max(3, rad * 0.8)]);
+    g.beginPath();
+    for (let i = 0; i < P.length - 1; i++) {
+      if (0.5 * (dep[i] + dep[i + 1]) >= 0) continue;
+      g.moveTo(P[i][0], P[i][1]); g.lineTo(P[i + 1][0], P[i + 1][1]);
+    }
+    g.stroke(); g.restore();
   }
   function mixc(a, b, t) {
     const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);

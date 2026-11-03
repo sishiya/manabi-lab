@@ -14,6 +14,7 @@ const APP = {
   tipI: -1, msg: '', msgT: 0,
 };
 for (const id in MODES) { APP.step[id] = 0; APP.cam.zoom[id] = 1; MODES[id].make(); }
+APP.cam.zoom.tree = 1 / 1.3;   // 木を登る: はじめは「−」を1回押した広さ（幹の上下が見えるように。2026-11-03 ユーザー）
 const cur = () => MODES[APP.mode];
 
 function resize() {
