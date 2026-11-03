@@ -364,6 +364,38 @@ const risoLook = (o) => ({ planet: null, apply() {
   TK.bg = g => { g.fillStyle = PL.PAPER; g.fillRect(0, 0, PW, PH); };   // 紙は平らに（四すみを暗くすると、黄のインクで刷られてしまう）
   TK.finish = TL.risoMulti(o);
 } });
+// ---- 筆（墨の線・かすれ・和紙ににじむ淡彩）。字は Yuji Syuku（Google Fonts、OFL）----
+TL.LOOKS.brush = { planet: TL.place('brush', (x, R) => {
+  tlSeed = 41;
+  const wash = (mask, color, a, blur, n) => { const c = document.createElement('canvas'); c.width = c.height = mask.width; const y = c.getContext('2d'); y.fillStyle = color; y.fillRect(0, 0, c.width, c.height); y.globalCompositeOperation = 'destination-in'; y.drawImage(mask, 0, 0);
+    x.save(); x.filter = `blur(${blur * RES}px)`; for (let i = 0; i < n; i++) { x.globalAlpha = a; x.drawImage(c, -R + tlRs(3), -R + tlRs(3), R * 2, R * 2); } x.restore(); };
+  wash(TL.mask(R, () => true), '#7d98a8', 0.22, 5, 5);   // 海: うすい藍のにじみ
+  wash(TL.mask(R, (la, lo, s) => 1 - s > 0.45), '#3d4a52', 0.12, 9, 4);   // かげ: 墨のぼかし
+  wash(TL.mask(R, land), '#8a9a5e', 0.5, 2.5, 4);   // 陸: 淡い緑
+  TL.coast(x, R, 2.2, 'rgba(30,26,22,0.8)', 0.8);
+  x.save(); x.lineCap = 'round'; for (let p = 0; p < 3; p++) { x.strokeStyle = `rgba(25,22,18,${0.75 - p * 0.2})`; x.lineWidth = 12 - p * 4; x.beginPath(); const a0 = -0.6 + tlRs(0.2), a1 = a0 + TAU2 * (0.93 + tlRnd() * 0.05); for (let i = 0; i <= 80; i++) { const a = lerp(a0, a1, i / 80), r = R + Math.sin(i * 0.7) * 1.5 + tlRs(1); x.lineTo(Math.cos(a) * r, Math.sin(a) * r); } x.stroke(); } x.restore();
+}), apply() {
+  const FUDE = '"Yuji Syuku", "Yu Mincho", serif';
+  PL.INK = '#1e1a16'; PL.RED = '#b5322a'; PL.MIN = FUDE; PL.KYO = FUDE; PL.PATCH = 'rgba(244,239,226,0.9)'; PL.walker = TL.silhouette(() => 'rgba(30,26,22,0.9)');
+  TK.bg = TL.useBg(TL.bgCanvas('#f4efe2', 0.04, p => { tlSeed = 13; p.lineCap = 'round'; for (let i = 0; i < 1400; i++) { const x0 = tlRnd() * PW, y0 = tlRnd() * PH, a = tlRnd() * TAU2, l = 6 + tlRnd() * 26; p.strokeStyle = `rgba(150,130,100,${0.05 + tlRnd() * 0.08})`; p.lineWidth = 0.6 + tlRnd(); p.beginPath(); p.moveTo(x0, y0); p.quadraticCurveTo(x0 + Math.cos(a + 0.5) * l / 2, y0 + Math.sin(a + 0.5) * l / 2, x0 + Math.cos(a) * l, y0 + Math.sin(a) * l); p.stroke(); } }));   // 和紙の繊維
+  PL.ink = function (g, path, w = 8, color = PL.INK) {   // 筆の線: 太い主線＋ずらした細い穂先の線（かすれ）
+    g.save(); g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = color;
+    g.globalAlpha *= 0.85; g.lineWidth = w * 1.25; g.beginPath(); path(g); g.stroke();
+    g.globalAlpha *= 0.55; g.lineWidth = Math.max(1, w * 0.35); g.setLineDash([w * 3, w * 0.8, w * 1.5, w * 0.5]);
+    g.translate(w * 0.25, -w * 0.2); g.beginPath(); path(g); g.stroke(); g.restore();
+  };
+  PL.tint = function (g, path, color, a = 0.5) {   // にじむ淡彩: ぼかしてぬり、色は少し墨に寄せる
+    g.save(); g.filter = `blur(${2.5}px)`; g.globalAlpha *= Math.min(1, a * 0.75); g.fillStyle = color; g.beginPath(); path(g); g.fill();
+    g.globalAlpha *= 0.35; g.fillStyle = '#5a5248'; g.filter = 'blur(6px)'; g.fill(); g.restore();
+  };
+  PL.hatch = function (g, path, o = {}) {   // かげは斜線でなく、数本の太い筆の払い（かすれ）
+    g.save(); g.beginPath(); path(g); g.clip();
+    if (o.not) { g.beginPath(); g.rect(-50, -50, PW + 100, PH + 100); o.not(g); g.clip('evenodd'); }
+    const ang = o.angle ?? 0.6, gap = (o.gap ?? 13) * 3.2, L = 2400, ca = Math.cos(ang), sa = Math.sin(ang), cx = o.cx ?? PW / 2, cy = o.cy ?? PH / 2;
+    g.strokeStyle = 'rgba(40,36,30,0.16)'; g.lineCap = 'round'; g.lineWidth = gap * 0.55; g.setLineDash([gap * 4, gap * 0.6]);
+    g.beginPath(); for (let d = -L; d <= L; d += gap) { g.moveTo(cx - ca * L - sa * d, cy - sa * L + ca * d); g.lineTo(cx + ca * L - sa * d, cy + sa * L + ca * d); } g.stroke(); g.restore();
+  };
+}, fonts: ['40px "Yuji Syuku"'], head: '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&display=block">' };
 TL.LOOKS.riso3 = risoLook({ inks: ['blue', 'pink', 'yellow'] });
 TL.LOOKS.riso4 = risoLook({ inks: ['blue', 'red', 'yellow', 'green'] });
 TL.LOOKS.rmain = risoLook({ inks: ['blue', 'pink', 'yellow', 'green'], mainOnly: true });
@@ -384,6 +416,7 @@ TL.run = async function (base) {
   if (!LOOK) { document.body.textContent = 'ルックが見つからない: ' + id; return; }
   const [buf, html] = await Promise.all([fetch('../../tiny-earth/data/etopo1deg.bin').then(r => r.arrayBuffer()), fetch(base + '.html', { cache: 'no-store' }).then(r => r.text()), document.fonts.ready]);
   TL.ELEV = new Int16Array(buf);
+  if (LOOK.fonts) await Promise.all(LOOK.fonts.map(f => document.fonts.load(f)));   // ルック専用の字（読みこみ待ち）
   if (LOOK.apply) LOOK.apply();
   let code = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).pop();
   const out = location.pathname.split('/').pop().replace(/\.html$/, '');   // 入口ページの名前が、そのまま動画の名前
