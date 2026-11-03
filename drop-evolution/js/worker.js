@@ -14,7 +14,7 @@ const idOf = obj => { let i = ids.get(obj); if (!i) { i = nextId++; ids.set(obj,
 let sentClade = new Map(), sentHist = 0, sentHistEvery = 0, sentEvents = 0;
 
 // 1匹ぶんの数（この順で詰める）
-const OF = ['id', 'x', 'y', 'a', 'r', 'e', 'eS', 'colN', 'colR', 'inner', 'anch', 'colAnch', 'ax', 'ay', 'sym', 'mateT', 'mate', 'clade', 'hue', 'gen', 'ate', 'prey', 'kids', 'mixes', 'age', 'bId', 'xbId', 'gId', 'nLinks'];
+const OF = ['id', 'x', 'y', 'a', 'r', 'e', 'eS', 'colN', 'colR', 'inner', 'anch', 'colAnch', 'ax', 'ay', 'sym', 'mateT', 'mate', 'clade', 'hue', 'gen', 'ate', 'prey', 'kids', 'mixes', 'age', 'bId', 'xbId', 'gId', 'nLinks', 'burst'];   // simlink.js の OF と同じ並び
 
 function reset(world) {
   w = world; acc = 0;
@@ -49,7 +49,7 @@ function frame() {
   let k = 0, li = 0;
   for (const o of os) {
     const v = [o.id, o.x, o.y, o.a, o.r, o.e, o.eS, o.colN, o.colR, o.inner ? 1 : 0, o.anch ? 1 : 0, o.colAnch ? 1 : 0, o.ax ?? NaN, o.ay ?? NaN, o.sym, o.mateT,
-      o.mate && !o.mate.dead ? o.mate.id : 0, o.clade, o.hue, o.gen, o.ate, o.prey, o.kids, o.mixes, o.age, idOf(o.b), idOf(o.xb), idOf(o.g), o.links.length];
+      o.mate && !o.mate.dead ? o.mate.id : 0, o.clade, o.hue, o.gen, o.ate, o.prey, o.kids, o.mixes, o.age, idOf(o.b), idOf(o.xb), idOf(o.g), o.links.length, o.burst || 0];
     for (let j = 0; j < F; j++) O[k++] = v[j];
     for (const q of o.links) L[li++] = q.id;
   }
@@ -98,7 +98,7 @@ onmessage = e => {
   else if (d.type === 'eatenBy') { const o = w && w.orgs.find(x => x.id === d.id); postMessage({ type: 'eatenBy', id: d.id, by: o ? 0 : (lastDead.get(d.id) || 0) }); }
 };
 
-// 食べられた生き物と、食べた相手（選んだ1匹が食べられたとき、食べたほうを追いかけるため）
+// 食べられた生き物と、食べた相手（選んだ1匹が食べられたのか、エネルギーが尽きたのかを知らせるため）
 const lastDead = new Map();
 const kill0 = World.prototype.kill;
 World.prototype.kill = function (o, starved) {

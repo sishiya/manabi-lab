@@ -430,13 +430,13 @@ function frame(now) {
   const simMs = sim.usesWorker ? sim.stepMs * sim.simRate / DT / Math.max(1, perf.fps) : sim.lastMs || 0;
   perf.sim = perf.sim * 0.9 + simMs * 0.1;
   if (sel && sel.dead && !selGone) {
-    // 食べられたなら、食べたほうを追いかける（Worker のときは答えを待つ）
+    // 死んだら、その場で追うのをやめる（ほかの1匹へ移すと、カメラが急に飛んだ。2026-11-03 ユーザー）。食べられたかどうかだけ知らせる（Worker のときは答えを待つ）
     const gone = sel; selGone = true;
     sim.eatenBy(gone, by => {
       selGone = false;
       if (sel !== gone) return;
-      toast(by ? L('この1匹は食べられた。食べたほうを追いかけます', 'This one was eaten. Now following the eater') : L('この1匹はエネルギーが尽きた', 'This one ran out of energy'));
-      if (by) select(by); else { const same = world.orgs.find(o => o.clade === gone.clade); same ? select(same) : select(null); }
+      toast(by ? L('この1匹は食べられた', 'This one was eaten') : L('この1匹はエネルギーが尽きた', 'This one ran out of energy'));
+      select(null);
     });
   }
   if (intro) stepIntro(fdt);

@@ -6,7 +6,7 @@ import { saveWorld, get } from './save.js';
 import { analyze } from './body.js';
 import { PRESETS } from './presets.js';
 
-const OF = ['id', 'x', 'y', 'a', 'r', 'e', 'eS', 'colN', 'colR', 'inner', 'anch', 'colAnch', 'ax', 'ay', 'sym', 'mateT', 'mate', 'clade', 'hue', 'gen', 'ate', 'prey', 'kids', 'mixes', 'age', 'bId', 'xbId', 'gId', 'nLinks'];
+const OF = ['id', 'x', 'y', 'a', 'r', 'e', 'eS', 'colN', 'colR', 'inner', 'anch', 'colAnch', 'ax', 'ay', 'sym', 'mateT', 'mate', 'clade', 'hue', 'gen', 'ate', 'prey', 'kids', 'mixes', 'age', 'bId', 'xbId', 'gId', 'nLinks', 'burst'];
 const BOOL = new Set(['inner', 'anch', 'colAnch']);
 
 // 一滴の写し（描く・札・グラフが読む分だけ）

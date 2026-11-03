@@ -3,7 +3,7 @@
 // 真上から見ているので、太陽の光は見る向きと同じ向きに降りる。水面のうねりが集めた大きな明るいむらがゆっくり動く。明るさは「光」の強さで変わる。
 // 軽くするしくみ: ぼかし（filter）は使わない。航跡（1/2）・光のにじみ（1/4・1/8）・光の筋（1/8）は小さい紙に描き、1/2 の「光の紙」にまとめてから
 // 画面へは1回だけ引きのばして足す。水の色とふちの暗さは作り置きの絵。光る丸も作り置きの絵。くっきりの線は明るさ4段でまとめて引く
-import { W, H, GI } from './sim.js';
+import { W, H, GI, MATE_T } from './sim.js';
 import { FRAMES } from './body.js';
 import { makeGL, rgba } from './glbatch.js';
 
@@ -57,6 +57,8 @@ function paper(ren, name, k) {
 }
 function toWorld(ren, g, s) { const c = ren.cam; g.setTransform(s * c.z, 0, 0, s * c.z, s * (ren.w / 2 - c.x * c.z), s * (ren.h / 2 - c.y * c.z)); }
 // 元気の光: 腹ぺこは暗く、満ちると明るく、ゆっくり息づく
+// 分かれる前にのびた体: 軸の向きに str 倍、横に 1/str 倍
+function stretch(px, py, o) { const ux = Math.cos(o.sax), uy = Math.sin(o.sax), al = (px * ux + py * uy) * o.str, pe = (py * ux - px * uy) / o.str; return [al * ux - pe * uy, al * uy + pe * ux]; }
 function glowOf(o, time) { const e = Math.min(1, o.e / o.eS); return Math.pow(e, 1.6) * (0.65 + 0.35 * Math.sin(time * 1.1 + o.x * 0.031 + o.y * 0.017)); }
 
 // 節のいまのこま（打つ動きは 1 秒に 2.5 回までに落として描く）
@@ -71,14 +73,26 @@ function pose(o, time) {
   return { pts: PTS, wob: A.w + (Bf.w - A.w) * k };
 }
 
-// 分かれるところ: 決まりでは1こまで2つになり、親と子が左右へ跳ぶ（パーンと弾けて見えた）。
-// 本物の二つ割りは、体のまん中がくびれて8の字になり、細い首でつながったあと離れる（ゾウリムシで数十分）。
-// 描くときだけ、2つを重ねた所から少しずつ離し（SPLIT_T 秒）、ふれている間は間の膜を平らな仕切りに、離れたら細い首を描いて切る。
-// 決まりは変えない（子の数がふえた生き物と、新しく現れた生き物を前のこまとくらべるだけ。食胞と同じ）
-const SPLIT_T = 1.2, SPLIT_S0 = 0.3, SPLIT_MAX = SPLIT_T + 1.5;   // SPLIT_S0: はじめの2つの間（半径の和に対して）
-function splitPose(ren, world, time) {
-  const prev = ren.kidsPrev, now = new Map(), pairs = ren.splits || (ren.splits = []);
-  for (const o of world.orgs) now.set(o.id, o.kids);
+// 体の動きの描き方（決まりは変えない。描く間だけ場所・向き・形を変え、描いたら本当の値にもどす）
+// 1. 二つ割り: 決まりでは1こまで2つになり、重なって生まれた2つが押しあいで一気に離れる（パーンと弾けて見えた）。
+//    本物は体のまん中がくびれて8の字になり、細い首でつながったあと離れる（ゾウリムシで数十分）。
+//    2つの距離に上限をつけ、重ねた所から少しずつ離す（SPLIT_T 秒）。ふれている間は間の膜を平らな仕切りに、離れたら細い首を描いて切る
+// 2. 分かれる前にのびる: 本物は、くびれる前に体が細長くなる。分かれる手前（ためた量が 85〜100%）で、体を軸の向きに少しのばす。
+//    分かれたら、のびた向きから本当の向きへ回しながら離す（決まりは分かれる向きをそのとき決めるので）
+// 3. 多分裂: 本物のクラミドモナスは、鞭毛をしまって丸くなり、自分の殻の中で 2→4→8 と分かれてから、殻を破っていっせいに泳ぎ出す。
+//    決まりでは1秒おきに外で分かれるので、分かれている間は子を母の殻の中につめて描き（鞭毛なし）、終わったら殻が破れて出ていく
+// 4. 接合: 本物のゾウリムシは、口の側をぴったり合わせてくっつき、小さな核を1つずつ交換して、離れる。
+//    くっついた面を平らにし、口を向かい合わせ、まん中のころに小さな核（琥珀の点）が相手へ渡る
+// 子の数がふえた生き物と、新しく現れた近くの生き物を前のこまとくらべて組にする（食胞と同じ）
+const SPLIT_T = 1.2, SPLIT_S0 = 0.5, SPLIT_MAX = SPLIT_T + 1.5;   // SPLIT_S0: 分かれた瞬間の2つの間（半径の和に対して）
+const STRETCH = 0.2;                  // 分かれる直前にのびる割合（長さ 1.2 倍・幅 1/1.2）
+const HATCH = 0.9, BROOD_MAX = 30;    // 殻が破れて出ていく秒・多分裂を描く長さの上限
+const ease = u => u * u * (3 - 2 * u);
+const turn = (a, b, u) => a + (Math.atan2(Math.sin(b - a), Math.cos(b - a))) * u;   // a から b へ近い回りで u だけ
+function bodyPose(ren, world, time) {
+  const prev = ren.kidsPrev, rPrev = ren.rPrev || new Map(), rNow = ren.rPrev = new Map(), now = new Map(), pairs = ren.splits || (ren.splits = []), broods = ren.broods || (ren.broods = []);
+  const broodOf = ren.broodOf || (ren.broodOf = new Map());
+  for (const o of world.orgs) { now.set(o.id, o.kids); rNow.set(o.id, o.r); }
   if (prev) {
     const fresh = world.orgs.filter(o => !prev.has(o.id));
     if (fresh.length && pairs.length < 400) for (const o of world.orgs) {
@@ -87,35 +101,112 @@ function splitPose(ren, world, time) {
         let bi = -1, bd = (o.r * 4) ** 2;
         fresh.forEach((c, i) => { const d = (c.x - o.x) ** 2 + (c.y - o.y) ** 2; if (d < bd) { bd = d; bi = i; } });
         if (bi < 0) break;
-        pairs.push({ p: o, c: fresh.splice(bi, 1)[0], t0: time });
+        const c = fresh.splice(bi, 1)[0];
+        let B = broodOf.get(o.id);
+        if (B || o.burst > 0 || c.burst > 0) {   // 多分裂の途中: 子も同じ殻の中へ
+          if (!B) { B = { m: [o], t0: time, hatch: -1, R: Math.max(rPrev.get(o.id) || 0, Math.hypot(o.r, c.r) * 1.05), a0: o.a }; broods.push(B); broodOf.set(o.id, B); }
+          B.m.push(c); broodOf.set(c.id, B);   // 殻は分かれる前の母の大きさ（前のこまの半径）
+        } else pairs.push({ p: o, c, t0: time, a0: o.a });
       }
     }
   }
   ren.kidsPrev = now;
-  const undo = [];
+  const undo = [], hold = o => undo.push([o, o.x, o.y, o.a, o.r, o.links, o.spl, o.nofl, o.str, o.sax]);
+  const link = (p, c) => { if (!p.links.includes(c)) { p.links = [...p.links, c]; c.links = [...c.links, p]; } };
+  // 多分裂: 殻の中につめる → 殻が破れて出ていく
+  const walls = ren.walls = [];
   let k = 0;
+  for (const B of broods) {
+    B.m = B.m.filter(o => !o.dead);
+    if (!B.m.length || time - B.t0 > BROOD_MAX) { for (const o of B.m) broodOf.delete(o.id); continue; }
+    if (B.hatch < 0 && !B.m.some(o => o.burst > 0)) B.hatch = time;
+    const h = B.hatch < 0 ? 0 : (time - B.hatch) / HATCH;
+    if (h >= 1) { for (const o of B.m) broodOf.delete(o.id); continue; }
+    broods[k++] = B;
+    const n = B.m.length, e = ease(h);
+    let cx = 0, cy = 0, rr = 0;
+    for (const o of B.m) { cx += o.x; cy += o.y; rr += o.r * o.r; }
+    cx /= n; cy /= n; B.R = Math.max(B.R, Math.sqrt(rr) * 1.05);
+    const R = B.R, rk = R * 0.9 / Math.sqrt(n) / (n > 1 ? 1.1 : 1);   // つめた子の半径（殻いっぱいに、すこし押しあう）
+    B.m.forEach((o, i) => {
+      hold(o);
+      const d = n === 1 ? 0 : (R - rk) * Math.sqrt((i + 0.5) / n) * 1.05, t = B.a0 + i * 2.39996;
+      const px = cx + Math.cos(t) * d, py = cy + Math.sin(t) * d, r1 = Math.min(o.r, rk);
+      o.x = px + (o.x - px) * e; o.y = py + (o.y - py) * e; o.r = r1 + (o.r - r1) * e; o.spl = true;
+      o.nofl = h < 0.35;   // 殻の中では鞭毛をしまう。出ていくときに生える
+    });
+    if (h < 0.5) for (let i = 0; i < n && n <= 64; i++) for (let j = i + 1; j < n; j++) { const p = B.m[i], q = B.m[j]; if (Math.hypot(q.x - p.x, q.y - p.y) < p.r + q.r) link(p, q); }   // 押しあった面は平らに
+    walls.push({ x: cx, y: cy, R: R * (1 + 0.25 * e), A: 1 - e, gap: e, a: B.a0 });
+  }
+  broods.length = k;
+  // 二つ割り
+  k = 0;
   for (const s of pairs) {
     const { p, c } = s, age = time - s.t0;
-    if (p.dead || c.dead || age > SPLIT_MAX || age < 0) continue;
+    if (p.dead || c.dead || age > SPLIT_MAX || age < 0 || broodOf.has(p.id)) continue;
+    pairs[k++] = s;
     // 2つの間の距離に上限: はじめは大きく重ね、SPLIT_T 秒でくびれて首が切れるところまで、そのあとは本当の距離へなめらかに追いつく
-    // （決まりでは、重なって生まれた2つが押しあいで一気に離れる。それがパーンと見えた）
+    // 向き: のびていた体の軸から、本当に分かれた向きへ回していく
     const vx = c.x - p.x, vy = c.y - p.y, Dt = Math.hypot(vx, vy) || 1e-6, sR = p.r + c.r, Dn = sR + 0.6 * Math.min(p.r, c.r);
     const u = Math.min(1, age / SPLIT_T), D0 = SPLIT_S0 * sR;
-    const Dd = age < SPLIT_T ? Math.min(Dt, D0 + (Dn - D0) * u * u * (3 - 2 * u)) : Math.min(Dt, Dn + (Dt - Dn) * (1 - Math.exp(-(age - SPLIT_T) / 0.25)));
-    pairs[k++] = s;
-    const h = (Dt - Dd) / 2 / Dt;
-    for (const [o, sg] of [[p, 1], [c, -1]]) { undo.push([o, o.x, o.y, o.links, o.spl]); o.spl = true; o.x += vx * h * sg; o.y += vy * h * sg; }
-    // 離れるまでは、つながっているのと同じ描き方（ふれた面の膜が平らな仕切り、離れたら細い首）。少し離れたら首が切れる
-    const d = Math.hypot(c.x - p.x, c.y - p.y);
-    if (!p.links.includes(c) && d < Dn - 0.05 * sR) { p.links = [...p.links, c]; c.links = [...c.links, p]; }
+    const Dd = age < SPLIT_T ? Math.min(Dt, D0 + (Dn - D0) * ease(u)) : Math.min(Dt, Dn + (Dt - Dn) * (1 - Math.exp(-(age - SPLIT_T) / 0.25)));
+    const at = Math.atan2(vy, vx), ax = Math.cos(at - s.a0) >= 0 ? s.a0 : s.a0 + Math.PI, ad = turn(ax, at, ease(u));
+    const mx = (p.x + c.x) / 2, my = (p.y + c.y) / 2, ux = Math.cos(ad) * Dd / 2, uy = Math.sin(ad) * Dd / 2;
+    hold(p); hold(c);
+    // 本当の場所との差は、離れきるほど小さく（そのあとは本当の場所そのまま）
+    const w = age < SPLIT_T ? 1 : Math.exp(-(age - SPLIT_T) / 0.25);
+    p.x = p.x + (mx - ux - p.x) * w; p.y = p.y + (my - uy - p.y) * w; c.x = c.x + (mx + ux - c.x) * w; c.y = c.y + (my + uy - c.y) * w;
+    p.spl = c.spl = true;
+    if (Math.hypot(c.x - p.x, c.y - p.y) < Dn - 0.05 * sR) link(p, c);   // 離れるまでは仕切り、離れたら細い首、少し離れたら切れる
   }
   pairs.length = k;
-  return () => { for (let i = undo.length - 1; i >= 0; i--) { const [o, x, y, l, f] = undo[i]; o.x = x; o.y = y; o.links = l; o.spl = f; } };
+  // 分かれる前にのびる（ひとりの細胞だけ。群体の外の細胞は分かれずにためたままになることがあるので、のばさない）
+  for (const o of world.orgs) {
+    if (o.colN > 1 || o.burst > 0 || o.mateT > 0 || !o.eS || broodOf.has(o.id) || Math.round(o.g[GI.fiss]) > 1) continue;
+    const q = (o.e / o.eS - 0.85) / 0.15;
+    if (q <= 0) continue;
+    hold(o); o.str = 1 + STRETCH * ease(Math.min(1, q)); o.sax = o.a;
+  }
+  // 接合: 口を向かい合わせて、くっついた面を平らに
+  const mating = ren.mating = [];
+  for (const o of world.orgs) {
+    const q = o.mate;
+    if (!q || q.dead || o.mateT <= 0 || o.id > q.id) continue;
+    const u = 1 - o.mateT / MATE_T, f = ease(Math.min(1, u / 0.08, (1 - u) / 0.08));   // はじめと終わりに口を向ける・もどす
+    for (const [x, y] of [[o, q], [q, o]]) { hold(x); x.a = turn(x.a, Math.atan2(y.y - x.y, y.x - x.x) - x.g[GI.mouth], f); x.spl = true; }
+    link(o, q);
+    mating.push({ o, q, u });
+  }
+  return () => { for (let i = undo.length - 1; i >= 0; i--) { const [o, x, y, a, r, l, sp, nf, st, sx] = undo[i]; o.x = x; o.y = y; o.a = a; o.r = r; o.links = l; o.spl = sp; o.nofl = nf; o.str = st; o.sax = sx; } };
+}
+
+// 殻（多分裂の母の細胞壁）と、接合で渡る小さな核。くっきりの線のあと、2D の紙に重ねる
+function drawPoseMarks(ren, g, time) {
+  const z = ren.cam.z;
+  toWorld(ren, g, ren.dpr);
+  for (const w of ren.walls || []) {
+    if (w.R * z < 2) continue;
+    // 破れるほど、殻の輪に切れ目が広がり、ふくらんで薄れる
+    const gap = w.gap * Math.PI * 1.2;
+    g.strokeStyle = `rgba(190,245,255,${(0.55 * w.A).toFixed(2)})`; g.lineWidth = Math.max(1 / z, w.R * 0.06);
+    g.beginPath(); g.arc(w.x, w.y, w.R, w.a + gap / 2, w.a + TAU - gap / 2); g.stroke();
+  }
+  g.fillStyle = 'rgba(255,200,97,0.9)';
+  for (const { o, q, u } of ren.mating || []) {
+    if (o.r * z < 3) continue;
+    // 小さな核: はじめはそれぞれの体の中（相手側）、まん中のころ相手へ渡り、そのあとは相手の体の中
+    const v = ease(Math.min(1, Math.max(0, (u - 0.4) / 0.2)));
+    for (const [a, b] of [[o, q], [q, o]]) {
+      const ax = a.x + (b.x - a.x) * 0.25, ay = a.y + (b.y - a.y) * 0.25, bx = b.x + (a.x - b.x) * 0.25, by = b.y + (a.y - b.y) * 0.25;
+      const x = ax + (bx - ax) * v, y = ay + (by - ay) * v, s = Math.max(0.9 / z, a.r * 0.12);
+      g.beginPath(); g.arc(x, y, s, 0, TAU); g.fill();
+    }
+  }
 }
 
 export function drawAbyss(ren, world, sel, time) {
-  const undo = splitPose(ren, world, time);   // 描いたら、本当の場所とつながりにもどす
-  try { drawScene(ren, world, sel, time); } finally { undo(); }
+  const undo = bodyPose(ren, world, time);   // 描いたら、本当の場所・向き・つながりにもどす
+  try { drawScene(ren, world, sel, time); drawPoseMarks(ren, ren.cx, time); } finally { undo(); }
 }
 
 function drawScene(ren, world, sel, time) {
@@ -205,7 +296,7 @@ function drawScene(ren, world, sel, time) {
   const ptips = ren.wakeTips || new Map(), ntips = new Map();
   const poses = new Map();
   for (const o of vis) {
-    const P = pose(o, time); if (!P) continue;
+    const P = o.nofl ? null : pose(o, time); if (!P) continue;
     poses.set(o, { pts: Float32Array.from(P.pts.subarray(0, o.bp.n * 4)), wob: P.wob });
     if (o.anch || o.r * z < 3) continue;
     const a = o.a + P.wob, ca = Math.cos(a), sa = Math.sin(a), r = o.r;
@@ -339,11 +430,12 @@ function drawScene(ren, world, sel, time) {
     // 群体で押し合っている細胞は、ふれた面で膜が平らになる（重なった分だけ。面の場所は2つの丸の半径から）
     const cuts = [];
     if (r * z >= 10 || o.spl) for (const q of o.links) { const dx = q.x - o.x, dy = q.y - o.y, d = Math.hypot(dx, dy) || 1; if (d < r + q.r) cuts.push(dx / d, dy / d, (d * d + r * r - q.r * q.r) / (2 * d)); }   // 画面で小さいときは平らな面は見えないので、ふつうの輪（分かれている最中の2つは、小さくても仕切りにする。輪が交わって見えるので）
-    if (!cuts.length) { rp.moveTo(o.x + Math.cos(mm + 0.5) * r, o.y + Math.sin(mm + 0.5) * r); rp.arc(o.x, o.y, r, mm + 0.5, mm - 0.5 + TAU); }
+    if (!cuts.length && !o.str) { rp.moveTo(o.x + Math.cos(mm + 0.5) * r, o.y + Math.sin(mm + 0.5) * r); rp.arc(o.x, o.y, r, mm + 0.5, mm - 0.5 + TAU); }
     else for (let k = 0; k <= 28; k++) {
       const t = mm + 0.5 + (TAU - 1) * k / 28;
       let px = Math.cos(t) * r, py = Math.sin(t) * r;
       for (let c = 0; c < cuts.length; c += 3) { const over = px * cuts[c] + py * cuts[c + 1] - cuts[c + 2]; if (over > 0) { px -= cuts[c] * over; py -= cuts[c + 1] * over; } }
+      if (o.str) [px, py] = stretch(px, py, o);
       k ? rp.lineTo(o.x + px, o.y + py) : rp.moveTo(o.x + px, o.y + py);
     }
     // 核
@@ -368,15 +460,6 @@ function drawScene(ren, world, sel, time) {
     for (let k = 0; k < n; k++) { const a = o.a + k * 2.39996 + o.id, d = o.r * 0.7 * Math.sqrt((k + 0.5) / n), x = o.x + Math.cos(a) * d, y = o.y + Math.sin(a) * d; symP.moveTo(x + ds / 2, y); symP.arc(x, y, ds / 2, 0, TAU); }
   }
   g.fill(symP);
-  // 接合している2匹: 間を結ぶ光の橋（ゆっくり明滅）
-  g.strokeStyle = 'rgba(255,220,150,0.8)'; g.lineWidth = Math.max(1.2 / z, 1.5);
-  for (const o of vis) {
-    const q = o.mate;
-    if (!q || q.dead || o.mateT <= 0 || o.id > q.id) continue;
-    g.globalAlpha = 0.45 + 0.35 * Math.sin(time * 3 + o.id);
-    g.beginPath(); g.moveTo(o.x, o.y); g.lineTo(q.x, q.y); g.stroke();
-  }
-  g.globalAlpha = 1;
   }
 
   lap('crisp');
@@ -546,13 +629,14 @@ function crispGL(gC, ren, world, vis, glow, poses, sel, time, tl, br) {
     const mm = a + o.g[GI.mouth];
     const cuts = [];
     if (r * z >= 10 || o.spl) for (const q of o.links) { const dx = q.x - o.x, dy = q.y - o.y, d = Math.hypot(dx, dy) || 1; if (d < r + q.r) cuts.push(dx / d, dy / d, (d * d + r * r - q.r * q.r) / (2 * d)); }   // 画面で小さいときは平らな面は見えないので、ふつうの輪（分かれている最中の2つは、小さくても仕切りにする。輪が交わって見えるので）
-    if (!cuts.length) gC.ring(o.x, o.y, r, rw, mm, 0.5, rimC[b]);
+    if (!cuts.length && !o.str) gC.ring(o.x, o.y, r, rw, mm, 0.5, rimC[b]);
     else {
       let lx = 0, ly = 0;
       for (let k = 0; k <= 28; k++) {
         const t = mm + 0.5 + (TAU - 1) * k / 28;
         let px = Math.cos(t) * r, py = Math.sin(t) * r;
         for (let j = 0; j < cuts.length; j += 3) { const over = px * cuts[j] + py * cuts[j + 1] - cuts[j + 2]; if (over > 0) { px -= cuts[j] * over; py -= cuts[j + 1] * over; } }
+        if (o.str) [px, py] = stretch(px, py, o);
         if (k) gC.seg(o.x + lx, o.y + ly, o.x + px, o.y + py, rw, rimC[b], true);
         lx = px; ly = py;
       }
@@ -566,13 +650,6 @@ function crispGL(gC, ren, world, vis, glow, poses, sel, time, tl, br) {
     if (!o.sym) continue;
     const n = Math.min(40, o.sym);
     for (let k = 0; k < n; k++) { const a = o.a + k * 2.39996 + o.id, d = o.r * 0.7 * Math.sqrt((k + 0.5) / n); gC.disc(o.x + Math.cos(a) * d, o.y + Math.sin(a) * d, ds / 2, sc); }
-  }
-  // 接合している2匹の橋
-  const wm = Math.max(1.2 / z, 1.5);
-  for (const o of vis) {
-    const q = o.mate;
-    if (!q || q.dead || o.mateT <= 0 || o.id > q.id) continue;
-    gC.seg(o.x, o.y, q.x, q.y, wm, [1, 0.863, 0.588, 0.8 * (0.45 + 0.35 * Math.sin(time * 3 + o.id))]);
   }
   sub('crisp_build');
   gC.flush(false);
