@@ -264,20 +264,26 @@ function triviaStart(cfg) {
   const close = cfg.close === true;
   const END = cfg.dur;
   const DUR = close ? cfg.dur + IDENT_CLOSE : cfg.dur;
+  const isFile0 = !!((cfg.bgm || TK.BGM_FILE || '').endsWith && (cfg.bgm || TK.BGM_FILE || '').endsWith('.ogg'));
   const subs = cfg.subs || [];
-  const bgm = cfg.bgm || 'pulse';
+  // TK.BGM_FILE: 曲のファイル（out/bgm/*.ogg）を全部の動画の BGM にする。TK.BGM_CREDIT はその曲のクレジット（画面の下に小さく）
+  const bgm = cfg.bgm || TK.BGM_FILE || 'pulse';
   const music = { stopAt: END, cues: close ? [{ t: END, type: 'jingle' }] : [] };
   if (bgm === 'drone') music.style = 'drone';
-  else if (bgm.endsWith && bgm.endsWith('.ogg')) { music.style = 'file'; music.file = bgm; }
+  else if (bgm.endsWith && bgm.endsWith('.ogg')) music.style = 'none';   // 曲のファイルも下の extra で鳴らす（声のあいだに下げるため）
   else music.style = 'none';
   music.extra = async (ctx, out) => {
-    if (bgm === 'pulse') {
-      const b = ctx.createGain(); b.gain.value = 0.55; b.connect(out); TK.pulseBgm(ctx, b, DUR, END);
+    const isFile = bgm.endsWith && bgm.endsWith('.ogg');
+    if (bgm === 'pulse' || isFile) {
+      const hi = isFile ? 0.16 : 0.55, lo = isFile ? 0.065 : 0.22;   // 曲のファイルは音が大きく作ってあるので、拍と同じくらいの釣り合いに下げる
+      const b = ctx.createGain(); b.gain.value = hi; b.connect(out);
+      if (isFile) { try { const s = ctx.createBufferSource(); s.buffer = await ctx.decodeAudioData(await (await fetch(bgm)).arrayBuffer()); s.connect(b); s.start(0); s.stop(END + 0.5); } catch (e) { } }
+      else TK.pulseBgm(ctx, b, DUR, END);
       const vs = (cfg.voice || []).slice().sort((x, y) => x.t - y.t);
       vs.forEach((v, i) => {   // 声のあいだは BGM を下げる（次の声まで 0.6 秒ないときは下げたまま）
         const end = v.t + (v.dur || 2), nx = vs[i + 1];
-        b.gain.setTargetAtTime(0.22, Math.max(0, v.t - 0.08), 0.04);
-        if ((!nx || nx.t > end + 0.6) && (close || end + 0.15 < END - 1.2)) b.gain.setTargetAtTime(0.55, end + 0.15, 0.25);
+        b.gain.setTargetAtTime(lo, Math.max(0, v.t - 0.08), 0.04);
+        if ((!nx || nx.t > end + 0.6) && (close || end + 0.15 < END - 1.2)) b.gain.setTargetAtTime(hi, end + 0.15, 0.25);
       });
       if (!close) b.gain.setTargetAtTime(0, Math.max(0, END - 1.2), 0.3);   // 締めがないので、終わりで BGM をすっと消す
     }
@@ -299,7 +305,7 @@ function triviaStart(cfg) {
         TK.bg(g, t, cfg.bgOpts || {});
         if (TK.drawArt) TK.drawArt(g, t, cfg.draw); else cfg.draw(g, t);   // ルックによっては絵だけ別の層に描いて影をつける（trivia-looks.js）
         TK.subtitle(g, t, subs);
-        if (cfg.voiceCredit) TK.credit(g, '声: ' + cfg.voiceCredit);
+        const credit = [cfg.voiceCredit && '声: ' + cfg.voiceCredit, isFile0 && TK.BGM_CREDIT].filter(Boolean).join('　'); if (credit) TK.credit(g, credit);
         if (cfg.progress !== false) TK.progress(g, t, END);
         drawIdentMini(g, t, 0.3, 0.8);
         if (TK.finish) TK.finish(g, t);   // ルックの仕上げ（絵全体にかける。trivia-looks.js）

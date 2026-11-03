@@ -397,6 +397,10 @@ TL.LOOKS.brush = { planet: TL.place('brush', (x, R) => {
   };
 }, fonts: ['40px "Yuji Syuku"'], head: '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&display=block">' };
 TL.LOOKS.riso3 = risoLook({ inks: ['blue', 'pink', 'yellow'] });
+// BGM の試し: 3色のリソグラフ＋Kevin MacLeod の曲（incompetech、CC BY 4.0。曲は Git の外 out/bgm/）
+const withBgm = (look, file, credit) => Object.assign({}, look, { apply() { look.apply.call(this); TK.BGM_FILE = file; TK.BGM_CREDIT = credit; } });
+TL.LOOKS['riso3-sneaky'] = withBgm(TL.LOOKS.riso3, 'out/bgm/kevin-sneaky-snitch.ogg', 'BGM: "Sneaky Snitch" Kevin MacLeod (incompetech.com) CC BY 4.0');
+TL.LOOKS['riso3-monkeys'] = withBgm(TL.LOOKS.riso3, 'out/bgm/kevin-monkeys-spinning-monkeys.ogg', 'BGM: "Monkeys Spinning Monkeys" Kevin MacLeod (incompetech.com) CC BY 4.0');
 TL.LOOKS.riso4 = risoLook({ inks: ['blue', 'red', 'yellow', 'green'] });
 TL.LOOKS.rmain = risoLook({ inks: ['blue', 'pink', 'yellow', 'green'], mainOnly: true });
 TL.LOOKS.rmuted = risoLook({ inks: ['federal', 'scarlet', 'mustard'], sat: 1.4 });
