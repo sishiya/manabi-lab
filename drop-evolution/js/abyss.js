@@ -333,7 +333,7 @@ export function drawAbyss(ren, world, sel, time) {
   }
 
   lap('crisp');
-  // 食べた瞬間: 食べた数がふえた生き物の口に、小さな光の輪（藍藻は緑、生き物を狩ったら琥珀）。札の数を前のこまとくらべるだけ（決まりは増やさない。RELEASE.md 4章の6）
+  // 食べた瞬間: 食べた数がふえた生き物の口から、エサが食胞になって体の中へ入り、消化されて薄れる（下の eatFlash）。札の数を前のこまとくらべるだけ（決まりは増やさない。RELEASE.md 4章の6）
   eatFlash(ren, g, vis, time, z);
   // ── 選んだ1匹（琥珀）と、感じる範囲 ──
   if (sel && !sel.dead) {
@@ -409,28 +409,42 @@ function motes(ren, g, time, rayAt) {
   }
 }
 
+// 食胞: 本物の鞭毛虫・繊毛虫は、口のくぼみからエサをのみこむと、膜の袋（食胞）にくるんで体の中をめぐらせ、消化して小さく・茶色っぽくしていく
+// （ゾウリムシに墨の粒を食べさせて見る食胞と同じ）。食べた数がふえた生き物の口から点が中へ入り、体の中をゆっくり回りながら薄れて消える。
+// 藍藻は緑の小さな食胞、狩った相手は琥珀色の大きな食胞。飼っている藍藻（明るい緑の四角・消えない）とまぎれないよう、くすんだ丸にする
+const VAC_IN = 0.35, VAC_DIGEST = { alga: 6, prey: 9 };
 function eatFlash(ren, g, vis, time, z) {
-  const prev = ren.eatPrev || (ren.eatPrev = new Map()), fl = ren.flashes || (ren.flashes = []), now = new Map();
+  const prev = ren.eatPrev || (ren.eatPrev = new Map()), vs = ren.flashes || (ren.flashes = []), now = new Map();
   for (const o of vis) {
     const p = prev.get(o.id);
-    if (p && (o.ate > p[0] || o.prey > p[1]) && fl.length < 400) {
-      const ma = o.a + o.g[GI.mouth];
-      fl.push({ o, x: Math.cos(ma) * o.r, y: Math.sin(ma) * o.r, r: o.r, t0: time, hunt: o.prey > p[1] });
+    if (p && vs.length < 900) {
+      const hunt = o.prey > p[1], n = Math.min(3, hunt ? 1 : o.ate - p[0]);
+      for (let i = 0; i < n; i++) vs.push({ o, t0: time + i * 0.12, hunt, ma: o.g[GI.mouth], spin: (o.id % 2 ? 1 : -1) * (0.25 + (o.id % 5) * 0.05), d: 0.35 + ((o.id * 7 + vs.length) % 10) / 40 });
     }
     now.set(o.id, [o.ate, o.prey]);
   }
   ren.eatPrev = now;
   let k = 0;
-  for (const f of fl) {
-    const u = (time - f.t0) / 0.7;
-    if (u < 0 || u >= 1 || f.o.dead) continue;
-    fl[k++] = f;
-    const x = f.o.x + f.x, y = f.o.y + f.y, R = Math.max(1.5 / z, f.r * (0.35 + 0.5 * u));
-    g.strokeStyle = f.hunt ? `rgba(255,200,97,${(1 - u) * 0.9})` : `rgba(${ABYSS.sym},${(1 - u) * 0.8})`;
-    g.lineWidth = Math.max(1 / z, f.r * 0.1) * (f.hunt ? 1.6 : 1);
-    g.beginPath(); g.arc(x, y, R, 0, TAU); g.stroke();
+  for (const v of vs) {
+    const o = v.o, age = time - v.t0, life = VAC_IN + VAC_DIGEST[v.hunt ? 'prey' : 'alga'];
+    if (o.dead || age >= life) continue;
+    vs[k++] = v;
+    if (age < 0 || o.r * z < 3) continue;
+    // 体に対する場所: 口の外 → 口の内側 → 体の中をゆっくり回る（原形質流動）
+    let ang, rad;
+    if (age < VAC_IN) { const u = age / VAC_IN, e = u * u * (3 - 2 * u); ang = v.ma; rad = 1.15 - (1.15 - v.d) * e; }
+    else { const t = age - VAC_IN; ang = v.ma + v.spin * t; rad = v.d * (1 - 0.25 * Math.min(1, t / 3)); }
+    const a = o.a + ang, x = o.x + Math.cos(a) * o.r * rad, y = o.y + Math.sin(a) * o.r * rad;
+    // 消化: だんだん小さく、緑（琥珀）から茶色へ、最後は消える
+    const dig = Math.max(0, age - VAC_IN) / VAC_DIGEST[v.hunt ? 'prey' : 'alga'];
+    const R = o.r * (v.hunt ? 0.3 : 0.16) * (1 - 0.55 * dig), A = (age < VAC_IN ? 0.9 : 0.75) * (1 - dig * dig);
+    const c0 = v.hunt ? [255, 200, 97] : [140, 225, 120], c1 = [150, 115, 70];
+    const c = c0.map((q, j) => Math.round(q + (c1[j] - q) * Math.min(1, dig * 1.4)));
+    g.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${(A * 0.55).toFixed(2)})`;
+    g.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},${A.toFixed(2)})`; g.lineWidth = Math.max(0.6 / z, R * 0.18);
+    g.beginPath(); g.arc(x, y, Math.max(0.8 / z, R), 0, TAU); g.fill(); g.stroke();
   }
-  fl.length = k;
+  vs.length = k;
 }
 // くっきりの光を WebGL で（2D の描き方と同じ形・同じ色。上の if (!gC) の中と対になっている）
 function crispGL(gC, ren, world, vis, glow, poses, sel, time, tl, br) {
