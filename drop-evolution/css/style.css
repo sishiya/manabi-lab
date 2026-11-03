@@ -224,3 +224,4 @@ dialog#book form { text-align: right; }
 .gateLang { position: fixed; top: 16px; right: 16px; z-index: 3; background: rgba(2,10,20,.6); }
 .helpLang { float: right; margin-left: 12px; }
 :root[lang=en] .gateBox h2 { letter-spacing: .06em; }
+dialog#menu .sizes[hidden], dialog#menu #newShape[hidden] { display: none; }   /* 「新しく始める」と「途中からのぞく」で、使わないほうの選ぶ欄を隠す */
