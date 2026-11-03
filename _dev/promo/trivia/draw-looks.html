@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>うんちくショートの絵の描き方見くらべ</title>
+<style>
+  :root { --bg: #111418; --card: #1d2229; --fg: #f2f2f2; --sub: #aab4c0; --acc: #ffcf4a; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: "Yu Gothic UI", "Meiryo", sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; background: rgba(17,20,24,0.96); padding: 10px 16px; border-bottom: 1px solid #2c333d; }
+  h1 { font-size: 17px; margin: 0 0 6px; }
+  p { margin: 0; font-size: 13px; color: var(--sub); }
+  .bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+  button { font: inherit; font-size: 14px; background: var(--card); color: var(--fg); border: 1px solid #3a4452; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+  button.on { background: var(--acc); color: #111; border-color: var(--acc); }
+  input[type=range] { flex: 1; min-width: 160px; }
+  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; padding: 14px 16px; }
+  #grid.one { grid-template-columns: minmax(260px, 440px); justify-content: center; }
+  figure { margin: 0; background: var(--card); border-radius: 12px; overflow: hidden; }
+  figure canvas { width: 100%; aspect-ratio: 9 / 16; display: block; background: #000; }
+  figcaption { padding: 8px 10px 10px; font-size: 13px; color: var(--sub); }
+  figcaption b { color: var(--fg); font-size: 15px; display: block; margin-bottom: 2px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>うんちくショートの絵の描き方 見くらべ（試作）</h1>
+  <p>同じ場面（tiny-earth-1「歩くと人工衛星」の 20〜26 秒）を、絵の描き方だけ変えて描いた。並べ方も描き方ごとに変えている。</p>
+  <div class="bar">
+    <button id="play">▶ 再生</button>
+    <input id="time" type="range" min="0" max="1" step="0.005" value="0.35">
+  </div>
+  <div class="bar" id="looks"></div>
+</header>
+<div id="grid"></div>
+<script>
+'use strict';
+// 絵の描き方の見くらべ（2026-11-03）。うんちくの絵は「丸・四角・角の丸い札・まん中の大きな数字・平らなぬり」になりがちで、
+// それが AI の描いた絵のくせに見える。ここでは同じ中身を、描き方（線・ぬり・紙・並べ方）からちがう5通りで描く。
+// 手描きの線と斜線のぬりは rough.js（MIT）と同じ考え方（線を2回ずらして引く・形の中を平行線でぬる）を、ここで小さく書いた
+const PW = 1080, PH = 1920, W = 540, H = 960, S = W / PW;
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const TAU = Math.PI * 2;
+let seed = 1;
+const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const rs = (a) => (rnd() * 2 - 1) * a;   // -a〜a
+const setSeed = s => { seed = (s * 7919 + 13) % 2147483647 || 1; };
+
+// ---- 中身（どの描き方でも同じ数字）----
+const STORY = {
+  sub: ['この速さで地面すれすれを進むと', '足がはなれて、星を1周（84分）'],
+  v1: { label: '地面すれすれを回る', v: 1.24, text: '秒速 1.24 m' },
+  v2: { label: 'ふつうに歩く（おとな）', v: 1.4, text: '秒速 1.3〜1.5 m' },
+  src: '出どころ: NASA Earth Fact Sheet・Bohannon (1997)',
+};
+// 星の上の道すじ（近い所が地面、遠い所が 1.2 倍の楕円）。u: 0〜1
+const ECC = 0.2 / 2.2, SEMI = 1.1;
+const orbitR = th => SEMI * (1 - ECC * ECC) / (1 + ECC * Math.cos(th));
+function orbitTheta(u) {
+  const M = TAU * u; let E = M; for (let i = 0; i < 8; i++) E = E - (E - ECC * Math.sin(E) - M) / (1 - ECC * Math.cos(E));
+  return 2 * Math.atan2(Math.sqrt(1 + ECC) * Math.sin(E / 2), Math.sqrt(1 - ECC) * Math.cos(E / 2));
+}
+
+// ---- 手描きの道具 ----
+// ゆれる線（2回引く）。rough: ずれの大きさ
+function sLine(g, x1, y1, x2, y2, o = {}) {
+  const rough = o.rough ?? 2, passes = o.passes ?? 2, len = Math.hypot(x2 - x1, y2 - y1);
+  g.strokeStyle = o.color || '#222'; g.lineWidth = o.w || 3; g.lineCap = 'round';
+  for (let p = 0; p < passes; p++) {
+    const r = rough * (0.6 + len / 600);
+    g.beginPath(); g.moveTo(x1 + rs(r), y1 + rs(r));
+    g.bezierCurveTo(lerp(x1, x2, 0.3) + rs(r * 1.5), lerp(y1, y2, 0.3) + rs(r * 1.5), lerp(x1, x2, 0.7) + rs(r * 1.5), lerp(y1, y2, 0.7) + rs(r * 1.5), x2 + rs(r), y2 + rs(r));
+    g.stroke();
+  }
+}
+// ゆれる丸（少し行きすぎて閉じる）
+function sCircle(g, cx, cy, rx, ry, o = {}) {
+  const rough = o.rough ?? 2, passes = o.passes ?? 2;
+  g.strokeStyle = o.color || '#222'; g.lineWidth = o.w || 3; g.lineCap = 'round';
+  for (let p = 0; p < passes; p++) {
+    const a0 = rnd() * TAU, n = 48, over = 0.15 + rnd() * 0.2, dr = rs(rough * 1.5);
+    g.beginPath();
+    for (let i = 0; i <= n; i++) {
+      const a = a0 + (i / n) * (TAU + over), k = 1 + (Math.sin(a * 2 + p) * rough * 0.004) + dr / Math.max(rx, 1);
+      const x = cx + Math.cos(a) * rx * k + rs(rough * 0.4), y = cy + Math.sin(a) * ry * k + rs(rough * 0.4);
+      i ? g.lineTo(x, y) : g.moveTo(x, y);
+    }
+    g.stroke();
+  }
+}
+// 形の中を平行線でぬる（path: g に道を作る関数）
+function hatch(g, path, o = {}) {
+  const ang = o.angle ?? -0.7, gap = o.gap ?? 14, b = o.box || [0, 0, PW, PH];
+  g.save(); path(g); g.clip(o.rule || 'nonzero');
+  if (o.not) { g.beginPath(); g.rect(-50, -50, PW + 100, PH + 100); o.not(g, true); g.clip('evenodd'); }   // この形の外だけ
+  const [bx, by, bw, bh] = b, cx = bx + bw / 2, cy = by + bh / 2, L = Math.hypot(bw, bh) / 2 + 20;
+  const ca = Math.cos(ang), sa = Math.sin(ang);
+  for (let d = -L; d <= L; d += gap) {
+    const x1 = cx + ca * -L - sa * d, y1 = cy + sa * -L + ca * d, x2 = cx + ca * L - sa * d, y2 = cy + sa * L + ca * d;
+    if (o.rough === 0) { g.strokeStyle = o.color; g.lineWidth = o.w || 2; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); }
+    else sLine(g, x1, y1, x2, y2, { color: o.color, w: o.w || 2.5, rough: o.rough ?? 3, passes: 1 });
+  }
+  g.restore();
+}
+// 紙のむら（決まった乱数で1回だけ作る）
+function paper(w, h, base, amount, scale, s0) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+  g.fillStyle = base; g.fillRect(0, 0, w, h);
+  setSeed(s0);
+  for (let i = 0; i < w * h / (scale * 2); i++) { const v = rnd() < 0.5 ? 0 : 255; g.fillStyle = `rgba(${v},${v},${v},${rnd() * amount})`; g.fillRect(rnd() * w, rnd() * h, scale * (0.5 + rnd()), scale * (0.5 + rnd())); }
+  return c;
+}
+// 歩く人（手描きの線で）。x, y は足もと、ang は「上」の向き
+function person(g, x, y, ang, phase, s, line) {
+  g.save(); g.translate(x, y); g.rotate(ang); g.scale(s, s);
+  const sw = 0.25 + Math.sin(phase) * 0.35;   // 足と腕を開く（0 だと重なって1本の線に見える）
+  line(0, -38, Math.sin(sw) * 26, 0); line(0, -38, -Math.sin(sw) * 26, 0);
+  line(0, -38, 0, -80); line(0, -70, -Math.sin(sw) * 30, -44); line(0, -70, Math.sin(sw) * 30, -44);
+  g.restore();
+}
+const font = (g, size, fam, bold = true) => { g.font = (bold ? 'bold ' : '') + Math.round(size) + 'px ' + fam; };
+const KYO = '"UD Digi Kyokasho NK", "UD デジタル 教科書体 NK", "Yu Gothic UI", sans-serif';
+const MIN = '"Yu Mincho", "游明朝", "YuMincho", serif';
+const GOTH = '"BIZ UDPGothic", "Yu Gothic UI", sans-serif';
+function text(g, s, x, y, size, fam, color, o = {}) {
+  font(g, size, fam, o.bold !== false); g.fillStyle = color; g.textAlign = o.align || 'center'; g.textBaseline = 'middle';
+  if (o.stroke) { g.lineJoin = 'round'; g.lineWidth = size * 0.18; g.strokeStyle = o.stroke; g.strokeText(s, x, y); }
+  g.fillText(s, x, y);
+}
+
+// ---- 描き方 ----
+const LOOKS = [
+  {
+    id: 'now', name: 'いまの（平らな図形）', note: '丸・四角・角の丸い札・まん中の数字。比べるための今の描き方。',
+    draw(g, u) {
+      const gr = g.createLinearGradient(0, 0, 0, PH); gr.addColorStop(0, '#132247'); gr.addColorStop(1, '#0b1430'); g.fillStyle = gr; g.fillRect(0, 0, PW, PH);
+      g.strokeStyle = 'rgba(160,190,255,0.10)'; g.lineWidth = 1.5; g.beginPath();
+      for (let x = 45; x < PW; x += 90) { g.moveTo(x, 0); g.lineTo(x, PH); } for (let y = 0; y < PH; y += 90) { g.moveTo(0, y); g.lineTo(PW, y); } g.stroke();
+      const CX = 540, CY = 760, R = 250;
+      const p = g.createRadialGradient(CX - 90, CY - 90, 25, CX, CY, R); p.addColorStop(0, '#5fa8ff'); p.addColorStop(1, '#1d4fa3');
+      g.fillStyle = p; g.beginPath(); g.arc(CX, CY, R, 0, TAU); g.fill();
+      g.fillStyle = 'rgba(89,227,154,0.75)'; [[-0.3, -0.2, 0.32], [0.35, 0.25, 0.25], [0.1, -0.55, 0.18]].forEach(([dx, dy, rr]) => { g.beginPath(); g.ellipse(CX + dx * R, CY + dy * R, rr * R, rr * R * 0.7, dx, 0, TAU); g.fill(); });
+      g.save(); g.setLineDash([10, 14]); g.strokeStyle = 'rgba(255,207,74,0.6)'; g.lineWidth = 4; g.beginPath();
+      for (let i = 0; i <= 120; i++) { const th = i / 120 * TAU, r = orbitR(th) * R; i ? g.lineTo(CX + Math.sin(th) * r, CY - Math.cos(th) * r) : g.moveTo(CX + Math.sin(th) * r, CY - Math.cos(th) * r); } g.stroke(); g.restore();
+      const th = orbitTheta(u), r = orbitR(th) * R;
+      g.strokeStyle = '#fff'; g.lineWidth = 7; g.lineCap = 'round';
+      person(g, CX + Math.sin(th) * r, CY - Math.cos(th) * r, th, 0, 1.6, (a, b, c, d) => { g.beginPath(); g.moveTo(a, b); g.lineTo(c, d); g.stroke(); });
+      g.save(); g.translate(CX + Math.sin(th) * r, CY - Math.cos(th) * r); g.rotate(th); g.fillStyle = '#fff'; g.beginPath(); g.arc(0, -96 * 1.6, 14 * 1.6, 0, TAU); g.fill(); g.restore();
+      g.fillStyle = 'rgba(20,34,72,0.88)'; g.strokeStyle = 'rgba(160,190,255,0.35)'; g.lineWidth = 3; g.beginPath(); g.roundRect(290, 220, 500, 120, 60); g.fill(); g.stroke();
+      text(g, '1周 ' + Math.round(u * 84) + ' 分', PW / 2, 280, 70, '"Yu Gothic UI", sans-serif', '#fff');
+      text(g, STORY.sub[0], PW / 2, 1140, 64, '"Yu Gothic UI", sans-serif', '#fff', { stroke: 'rgba(0,0,0,0.7)' });
+      text(g, STORY.sub[1], PW / 2, 1222, 64, '"Yu Gothic UI", sans-serif', '#fff', { stroke: 'rgba(0,0,0,0.7)' });
+      text(g, '1000倍の早送り／人は大きく描いています', PW / 2, 1367, 32, '"Yu Gothic UI", sans-serif', 'rgba(255,255,255,0.55)', { bold: false });
+    },
+  },
+  {
+    id: 'note', name: '理科ノート（手描き）',
+    note: '方眼ノートにペンと色えんぴつで描いた図。線は少しゆれ、ぬりは斜線。数字は図の横に矢印で書きこむ。線が小さく震える（1秒に8回描きなおす）。',
+    bg: null,
+    draw(g, u, t) {
+      if (!this.bg) this.bg = paper(PW, PH, '#f7f6f1', 0.05, 3, 5);
+      g.drawImage(this.bg, 0, 0);
+      g.strokeStyle = 'rgba(80,140,200,0.22)'; g.lineWidth = 1.5; g.beginPath();   // 方眼ノート
+      for (let x = 30; x < PW; x += 60) { g.moveTo(x, 0); g.lineTo(x, PH); } for (let y = 30; y < PH; y += 60) { g.moveTo(0, y); g.lineTo(PW, y); } g.stroke();
+      g.strokeStyle = 'rgba(220,80,80,0.5)'; g.lineWidth = 3; g.beginPath(); g.moveTo(110, 0); g.lineTo(110, PH); g.stroke();   // 左の赤い線
+      setSeed(Math.floor(t * 8));   // 線のふるえ
+      const INK = '#1f2a44', BLUE = '#2f6fb3', GREEN = '#3d9a5b', RED = '#d2453b';
+      // 見出し（手書きふう）
+      text(g, '半径1kmの地球', 150, 150, 54, KYO, INK, { align: 'left' });
+      sLine(g, 150, 190, 560, 186, { color: RED, w: 5, rough: 2 });
+      // 星（左下に大きく。ふちは2回引き、海は青の斜線、陸は緑の斜線）
+      const CX = 470, CY = 830, R = 280;
+      hatch(g, gg => { gg.beginPath(); gg.arc(CX, CY, R, 0, TAU); }, { color: BLUE, gap: 13, angle: -0.8, w: 3, rough: 2.5 });
+      [[-0.35, -0.15, 0.3], [0.3, 0.3, 0.24], [0.15, -0.55, 0.16]].forEach(([dx, dy, rr], i) => {
+        const path = gg => { gg.beginPath(); gg.ellipse(CX + dx * R, CY + dy * R, rr * R, rr * R * 0.7, dx, 0, TAU); };
+        g.save(); g.fillStyle = '#f7f6f1'; path(g); g.fill(); g.restore();
+        hatch(g, path, { color: GREEN, gap: 10, angle: 0.6, w: 3, rough: 2 });
+        sCircle(g, CX + dx * R, CY + dy * R, rr * R, rr * R * 0.7, { color: GREEN, w: 3, rough: 2 });
+      });
+      sCircle(g, CX, CY, R, R, { color: INK, w: 5, rough: 3 });
+      // 道すじ（えんぴつの点線）
+      g.save(); g.setLineDash([16, 18]); g.strokeStyle = 'rgba(31,42,68,0.55)'; g.lineWidth = 3.5; g.beginPath();
+      for (let i = 0; i <= 90; i++) { const th = i / 90 * TAU, r = orbitR(th) * R; const x = CX + Math.sin(th) * r + rs(1.5), y = CY - Math.cos(th) * r + rs(1.5); i ? g.lineTo(x, y) : g.moveTo(x, y); }
+      g.stroke(); g.restore();
+      const th = orbitTheta(u), r = orbitR(th) * R, px = CX + Math.sin(th) * r, py = CY - Math.cos(th) * r;
+      person(g, px, py, th, 0, 1.4, (a, b, c, d) => sLine(g, a, b, c, d, { color: INK, w: 6, rough: 1.5 }));
+      g.save(); g.translate(px, py); g.rotate(th); sCircle(g, 0, -96 * 1.4, 18, 18, { color: INK, w: 5, rough: 1.5 }); g.restore();
+      // 書きこみ（矢印と数字）
+      const lx = 700, ly = 420;
+      text(g, '秒速 1.24 m で', lx, ly, 52, KYO, RED, { align: 'left' });
+      text(g, '進むだけ！', lx, ly + 62, 52, KYO, RED, { align: 'left' });
+      sLine(g, lx + 60, ly + 105, px + 40, py - 120, { color: RED, w: 4, rough: 3 });
+      text(g, '1周 ' + Math.round(u * 84) + ' 分', 760, 1180, 60, KYO, INK, { align: 'left' });
+      sCircle(g, 865, 1180, 135, 52, { color: RED, w: 4, rough: 4 });
+      text(g, '（歩く速さ 1.3〜1.5 m より、ちょっとおそい）', 150, 1290, 34, KYO, '#5a6680', { align: 'left', bold: false });
+      // 字幕は付箋に
+      g.save(); g.translate(PW / 2, 1460); g.rotate(-0.015);
+      g.fillStyle = '#fff3a8'; g.shadowColor = 'rgba(0,0,0,0.18)'; g.shadowBlur = 14; g.shadowOffsetY = 6; g.fillRect(-470, -95, 940, 190); g.restore();
+      text(g, STORY.sub[0], PW / 2, 1420, 54, KYO, INK);
+      text(g, STORY.sub[1], PW / 2, 1495, 54, KYO, INK);
+      text(g, '1000倍の早送り／人は大きく描いています', PW / 2 + 40, 1600, 28, KYO, '#7a8499', { bold: false });
+    },
+  },
+  {
+    id: 'plate', name: '図鑑の銅版画',
+    note: '古い図鑑の挿絵。かげは線の重ね（ハッチング）で、明るい所は紙のまま。図にわくと番号をつけ、説明は下の凡例に。字は明朝。',
+    bg: null,
+    draw(g, u) {
+      if (!this.bg) this.bg = paper(PW, PH, '#efe7d6', 0.06, 2, 9);
+      g.drawImage(this.bg, 0, 0);
+      const INK = '#2a2118', RED = '#8a2a1c';
+      setSeed(3);
+      // 図のわく（二重線）と番号
+      g.strokeStyle = INK; g.lineWidth = 4; g.strokeRect(70, 150, PW - 140, 1080); g.lineWidth = 1.5; g.strokeRect(84, 164, PW - 168, 1052);
+      text(g, '第 1 図', PW / 2, 115, 40, MIN, INK);
+      text(g, '半径 一キロメートルの地球と、その上を回る人', PW / 2, 1270, 40, MIN, INK);
+      const CX = 540, CY = 690, R = 300, L = [-0.55, -0.6];   // 光は左上から
+      const circ = gg => { gg.beginPath(); gg.arc(CX, CY, R, 0, TAU); };
+      // かげ: 3段の線の重ね。暗い所ほど線が多い（光と反対がわの三日月）
+      // 光の当たる所を抜いた形（星の円の中で、光の方へずらした円の外）
+      const lit = (k, rr) => (gg, keep) => { if (!keep) gg.beginPath(); gg.arc(CX + L[0] * R * k, CY + L[1] * R * k, R * rr, 0, TAU); };
+      hatch(g, circ, { color: INK, gap: 11, angle: 0.5, w: 1.5, rough: 0, not: lit(0.42, 0.36) });
+      hatch(g, circ, { color: INK, gap: 9, angle: -0.6, w: 1.6, rough: 0, not: lit(0.35, 1.0) });
+      hatch(g, circ, { color: INK, gap: 7, angle: 1.3, w: 1.8, rough: 0, not: lit(0.18, 1.0) });
+      // 緯度の線（形にそって曲がる）
+      g.save(); circ(g); g.clip(); g.strokeStyle = INK; g.lineWidth = 1.4;
+      for (let k = -4; k <= 4; k++) { const y = CY + k * R * 0.21; const rx = Math.sqrt(Math.max(0, R * R - (y - CY) ** 2)); g.beginPath(); g.ellipse(CX, y, rx, rx * 0.18, 0, 0, Math.PI); g.stroke(); }
+      g.restore();
+      g.strokeStyle = INK; g.lineWidth = 4; g.beginPath(); g.arc(CX, CY, R, 0, TAU); g.stroke();
+      // 道すじ（細い点線）と記号 A・B
+      g.save(); g.setLineDash([3, 9]); g.strokeStyle = INK; g.lineWidth = 2.2; g.beginPath();
+      for (let i = 0; i <= 160; i++) { const th = i / 160 * TAU, r = orbitR(th) * R; const x = CX + Math.sin(th) * r, y = CY - Math.cos(th) * r; i ? g.lineTo(x, y) : g.moveTo(x, y); }
+      g.stroke(); g.restore();
+      const th = orbitTheta(u), r = orbitR(th) * R, px = CX + Math.sin(th) * r, py = CY - Math.cos(th) * r;
+      g.lineCap = 'round'; g.strokeStyle = INK; g.lineWidth = 4;
+      person(g, px, py, th, 0, 1.15, (a, b, c, d) => { g.beginPath(); g.moveTo(a, b); g.lineTo(c, d); g.stroke(); });
+      g.save(); g.translate(px, py); g.rotate(th); g.fillStyle = INK; g.beginPath(); g.arc(0, -96 * 1.15, 14, 0, TAU); g.fill(); g.restore();
+      const ap = [CX + Math.sin(th) * (r + 70), CY - Math.cos(th) * (r + 70)];
+      text(g, 'A', ap[0], ap[1], 46, MIN, RED);
+      text(g, 'B', CX + R * 1.18, CY + 30, 46, MIN, RED);
+      // 凡例
+      const y0 = 1360;
+      g.strokeStyle = INK; g.lineWidth = 1.5; g.beginPath(); g.moveTo(120, y0 - 40); g.lineTo(PW - 120, y0 - 40); g.stroke();
+      text(g, 'A　回る人。秒速 1.24 メートル（歩くより少しおそい）', 120, y0, 36, MIN, INK, { align: 'left', bold: false });
+      text(g, 'B　道すじ。一周 ' + Math.round(u * 84) + ' 分（全部で 84 分）', 120, y0 + 56, 36, MIN, INK, { align: 'left', bold: false });
+      // 字幕
+      text(g, STORY.sub[0], PW / 2, 1520, 56, MIN, INK);
+      text(g, STORY.sub[1], PW / 2, 1596, 56, MIN, INK);
+    },
+  },
+  {
+    id: 'cut', name: '切り絵（紙を重ねる）',
+    note: '色紙を切って重ねた絵。ふちは少しガタガタで、紙ごとに影が落ちる。星は画面の下に大きく、地平線のように。札のかわりに紙のラベル。',
+    bg: null, tex: null,
+    draw(g, u) {
+      if (!this.bg) { this.bg = paper(PW, PH, '#2d3e6b', 0.07, 4, 21); this.tex = paper(PW, PH, 'rgba(0,0,0,0)', 0.09, 3, 33); }
+      g.drawImage(this.bg, 0, 0);
+      setSeed(5);
+      const jag = (pts) => pts.map(([x, y]) => [x + rs(2.5), y + rs(2.5)]);
+      const piece = (pts, color, sh = 1) => {
+        g.save(); g.shadowColor = 'rgba(0,0,0,0.35)'; g.shadowBlur = 16 * sh; g.shadowOffsetX = 5 * sh; g.shadowOffsetY = 8 * sh;
+        g.fillStyle = color; g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); g.fill(); g.restore();
+        g.save(); g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); g.clip(); g.drawImage(this.tex, 0, 0); g.restore();
+      };
+      const ell = (cx, cy, rx, ry, n = 90, a0 = 0) => jag(Array.from({ length: n }, (_, i) => { const a = a0 + i / n * TAU; return [cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]; }));
+      // 星たち（小さな紙の点）
+      for (let i = 0; i < 40; i++) piece(ell(rnd() * PW, rnd() * 900, 4 + rnd() * 5, 4 + rnd() * 5, 6), '#e9e2c8', 0.3);
+      // 星（下に大きく）
+      const CX = 540, CY = 1500, R = 760;
+      piece(ell(CX, CY, R, R, 160), '#2f8f9d', 1.4);
+      piece(ell(CX - 260, CY - 520, 230, 110, 40, 0.3), '#7cc46a');
+      piece(ell(CX + 330, CY - 600, 160, 70, 30, 0.1), '#7cc46a');
+      piece(ell(CX + 40, CY - 700, 120, 45, 30), '#a7d77f');
+      // 木（三角の紙を重ねる）
+      const tree = (x, y, s) => { piece(jag([[x - 8 * s, y], [x + 8 * s, y], [x + 8 * s, y - 40 * s], [x - 8 * s, y - 40 * s]]), '#7a4b2a', 0.6); piece(jag([[x - 50 * s, y - 30 * s], [x + 50 * s, y - 30 * s], [x, y - 140 * s]]), '#2f6b3a'); piece(jag([[x - 38 * s, y - 80 * s], [x + 38 * s, y - 80 * s], [x, y - 170 * s]]), '#3f8a4a'); };
+      tree(250, 860, 1.1); tree(860, 820, 0.8);
+      // 道すじ（白い紙のテープの点線）と人
+      const ox = CX, oy = CY, OR = R;
+      for (let i = 0; i < 26; i++) { const th = -0.75 + i / 25 * 1.5, rr = OR * (1.18 - 0.08 * Math.cos(th * 2)); const x = ox + Math.sin(th) * rr, y = oy - Math.cos(th) * rr; piece(ell(x, y, 10, 6, 8, th), '#f3efe2', 0.4); }
+      const th = -0.75 + u * 1.5, rr = OR * (1.18 - 0.08 * Math.cos(th * 2)), px = ox + Math.sin(th) * rr, py = oy - Math.cos(th) * rr;
+      g.save(); g.translate(px, py); g.rotate(th);
+      piece(jag([[-22, -150], [22, -150], [28, -60], [-28, -60]]), '#e8573e');   // 体
+      piece(jag([[-24, -62], [-6, -62], [-14, 0], [-30, 0]]), '#2b2f4a'); piece(jag([[6, -62], [24, -62], [30, 0], [14, 0]]), '#2b2f4a');   // 足
+      piece(ell(0, -182, 30, 30, 24), '#f2c9a0');   // 顔
+      g.restore();
+      // ラベル（紙の札。少しかたむける）
+      const label = (x, y, w, h, rot, color, lines) => {
+        g.save(); g.translate(x, y); g.rotate(rot); piece(jag([[-w / 2, -h / 2], [w / 2, -h / 2], [w / 2, h / 2], [-w / 2, h / 2]]), color, 0.8);
+        lines.forEach(([s, size, c], i) => text(g, s, 0, (i - (lines.length - 1) / 2) * size * 1.25, size, GOTH, c));
+        g.restore();
+      };
+      label(330, 300, 520, 200, -0.04, '#f4d35e', [['秒速 1.24 m', 74, '#2b2f4a'], ['歩くより少しおそい', 38, '#2b2f4a']]);
+      label(800, 520, 330, 120, 0.05, '#f3efe2', [['1周 ' + Math.round(u * 84) + ' 分', 58, '#2b2f4a']]);
+      // 字幕（地面の上に白い紙のテープ）
+      label(PW / 2, 1290, 1000, 200, -0.01, '#f3efe2', [[STORY.sub[0], 52, '#2b2f4a'], [STORY.sub[1], 52, '#2b2f4a']]);
+      text(g, '1000倍の早送り／人は大きく描いています', PW / 2, 1440, 30, GOTH, 'rgba(255,255,255,0.75)', { bold: false });
+    },
+  },
+  {
+    id: 'water', name: '水彩とペン',
+    note: '紙ににじむ水彩のぬり（形を少しずつ崩した色を何十枚もうすく重ねる）に、細いペンの線。白い紙の余白を多く。',
+    bg: null, wash: null,
+    draw(g, u) {
+      if (!this.bg) this.bg = paper(PW, PH, '#fbfaf6', 0.05, 2, 41);
+      g.drawImage(this.bg, 0, 0);
+      const CX = 540, CY = 760, R = 270, INK = '#2b3340';
+      if (!this.wash) {   // 水彩は重いので1回だけ描いておく
+        const c = document.createElement('canvas'); c.width = PW; c.height = PH; const w = c.getContext('2d');
+        setSeed(77);
+        const blob = (cx, cy, rx, ry, color, layers, wob) => {   // 多角形を少しずつ崩して、うすく何十枚も重ねる
+          const base = Array.from({ length: 24 }, (_, i) => { const a = i / 24 * TAU; return [cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]; });
+          const deform = (pts, d) => { const out = []; pts.forEach((p, i) => { const q = pts[(i + 1) % pts.length]; out.push(p); out.push([(p[0] + q[0]) / 2 + rs(d), (p[1] + q[1]) / 2 + rs(d)]); }); return out; };
+          let b = base; for (let k = 0; k < 2; k++) b = deform(b, wob);
+          for (let l = 0; l < layers; l++) {
+            let p = b; for (let k = 0; k < 3; k++) p = deform(p, wob * 0.5);
+            w.fillStyle = color; w.globalAlpha = 0.045; w.beginPath(); p.forEach(([x, y], i) => i ? w.lineTo(x, y) : w.moveTo(x, y)); w.closePath(); w.fill();
+          }
+          w.globalAlpha = 1;
+        };
+        blob(CX, CY, R * 1.02, R * 1.02, '#3d7cc9', 40, 26);
+        blob(CX - 30, CY - 40, R * 0.75, R * 0.7, '#6fb0e8', 30, 30);
+        blob(CX - 80, CY - 50, R * 0.3, R * 0.22, '#5aa865', 34, 20);
+        blob(CX + 95, CY + 70, R * 0.25, R * 0.17, '#5aa865', 34, 18);
+        blob(CX + 30, CY - 150, R * 0.16, R * 0.1, '#7cbf6e', 30, 14);
+        blob(CX + 300, CY - 520, 150, 60, '#f0b84a', 30, 30);   // 札のかわりの色だまり
+        blob(CX - 10, 1300, 470, 120, '#e7e1f2', 30, 30);   // 字幕の下
+        this.wash = c;
+      }
+      g.drawImage(this.wash, 0, 0);
+      setSeed(8);
+      // ペンの線（細く、少しだけゆれる）
+      sCircle(g, CX, CY, R, R, { color: INK, w: 2.5, rough: 1.2, passes: 1 });
+      g.save(); g.setLineDash([2, 10]); g.strokeStyle = INK; g.lineWidth = 2.5; g.lineCap = 'round'; g.beginPath();
+      for (let i = 0; i <= 160; i++) { const th = i / 160 * TAU, r = orbitR(th) * R; const x = CX + Math.sin(th) * r, y = CY - Math.cos(th) * r; i ? g.lineTo(x, y) : g.moveTo(x, y); }
+      g.stroke(); g.restore();
+      const th = orbitTheta(u), r = orbitR(th) * R, px = CX + Math.sin(th) * r, py = CY - Math.cos(th) * r;
+      person(g, px, py, th, 0, 1.3, (a, b, c, d) => sLine(g, a, b, c, d, { color: INK, w: 4, rough: 0.8, passes: 1 }));
+      g.save(); g.translate(px, py); g.rotate(th); sCircle(g, 0, -96 * 1.3, 15, 15, { color: INK, w: 3.5, rough: 0.8, passes: 1 }); g.restore();
+      text(g, '秒速 1.24 m', CX + 300, 220, 60, KYO, INK);
+      text(g, '歩くより、少しおそい', CX + 300, 290, 34, KYO, '#5b6472', { bold: false });
+      sLine(g, CX + 230, 330, px + 30, py - 130, { color: INK, w: 2, rough: 2, passes: 1 });
+      text(g, '1周 ' + Math.round(u * 84) + ' 分', 230, 200, 56, KYO, INK);
+      text(g, STORY.sub[0], PW / 2, 1262, 54, KYO, INK);
+      text(g, STORY.sub[1], PW / 2, 1338, 54, KYO, INK);
+      text(g, '1000倍の早送り／人は大きく描いています', PW / 2, 1450, 28, KYO, '#8a909a', { bold: false });
+    },
+  },
+];
+
+const grid = document.getElementById('grid'), figs = [];
+let only = null;
+function build() {
+  grid.innerHTML = ''; figs.length = 0; grid.className = only ? 'one' : '';
+  for (const lk of LOOKS) {
+    if (only && lk.id !== only) continue;
+    const f = document.createElement('figure'), c = document.createElement('canvas'); c.width = W; c.height = H;
+    const cap = document.createElement('figcaption'); cap.innerHTML = '<b></b><span></span>';
+    cap.querySelector('b').textContent = lk.name; cap.querySelector('span').textContent = lk.note;
+    f.append(c, cap); grid.appendChild(f); figs.push([lk, c]);
+  }
+}
+let T = 0;
+function draw() {
+  const u = +document.getElementById('time').value;
+  for (const [lk, c] of figs) {
+    const g = c.getContext('2d'); g.setTransform(S, 0, 0, S, 0, 0); g.globalAlpha = 1;
+    lk.draw(g, u, T);
+    // 左上の小さな目印のかわり（見くらべでは灰色の丸だけ）と、上の進み具合の線
+    g.setTransform(S, 0, 0, S, 0, 0); g.fillStyle = 'rgba(128,128,128,0.35)'; g.beginPath(); g.arc(70, 60, 26, 0, TAU); g.fill();
+  }
+}
+const lb = document.getElementById('looks');
+[['', 'ぜんぶ並べる'], ...LOOKS.map(l => [l.id, l.name])].forEach(([id, name]) => {
+  const b = document.createElement('button'); b.textContent = name; b.dataset.id = id;
+  b.onclick = () => { only = id || null; lb.querySelectorAll('button').forEach(x => x.className = x.dataset.id === id ? 'on' : ''); build(); draw(); };
+  lb.appendChild(b);
+});
+lb.firstChild.className = 'on';
+let playing = false, last = 0;
+document.getElementById('play').onclick = e => { playing = !playing; e.target.textContent = playing ? '❚❚ 止める' : '▶ 再生'; last = performance.now(); if (playing) requestAnimationFrame(tick); };
+function tick(now) {
+  if (!playing) return;
+  const el = document.getElementById('time'), dt = (now - last) / 1000; last = now; T += dt;
+  let u = +el.value + dt / 5; if (u > 1) u = 0; el.value = u; draw(); requestAnimationFrame(tick);
+}
+document.getElementById('time').oninput = draw;
+document.fonts.ready.then(() => { build(); draw(); });
+</script>
+</body>
+</html>
