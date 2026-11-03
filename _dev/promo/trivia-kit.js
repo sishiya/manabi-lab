@@ -275,8 +275,10 @@ function triviaStart(cfg) {
   music.extra = async (ctx, out) => {
     const isFile = bgm.endsWith && bgm.endsWith('.ogg');
     if (bgm === 'pulse' || isFile) {
-      const hi = isFile ? 0.16 : 0.55, lo = isFile ? 0.065 : 0.22;   // 曲のファイルは音が大きく作ってあるので、拍と同じくらいの釣り合いに下げる
-      const b = ctx.createGain(); b.gain.value = hi; b.connect(out);
+      // 曲のファイルは音が大きく作ってあるので、拍と同じくらいの釣り合いに下げる。TK.BGM_MIX = { hi, lo, eq } で声との釣り合いを変える（eq: 声と重なる 2 kHz あたりを何 dB 削るか）
+      const mix = TK.BGM_MIX || {}, hi = mix.hi ?? (isFile ? 0.16 : 0.55), lo = mix.lo ?? (isFile ? 0.065 : 0.22);
+      const b = ctx.createGain(); b.gain.value = hi;
+      if (mix.eq) { const pk = ctx.createBiquadFilter(); pk.type = 'peaking'; pk.frequency.value = 2200; pk.Q.value = 0.8; pk.gain.value = -mix.eq; b.connect(pk); pk.connect(out); } else b.connect(out);
       if (isFile) { try { const s = ctx.createBufferSource(); s.buffer = await ctx.decodeAudioData(await (await fetch(bgm)).arrayBuffer()); s.connect(b); s.start(0); s.stop(END + 0.5); } catch (e) { } }
       else TK.pulseBgm(ctx, b, DUR, END);
       const vs = (cfg.voice || []).slice().sort((x, y) => x.t - y.t);
