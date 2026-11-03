@@ -1,6 +1,26 @@
 [
-  { "id": "spider-hunt-1", "page": "spider-hunt-trivia1", "mp4": "out/spider-hunt-trivia1-short.mp4", "type": "H", "title": "ハエトリグモは、赤い光の中だとジャンプが届かない", "dur": 35, "voice": "(2)（いまは字幕だけ）", "app_footage": false,
-    "notes": "Canvas だけ。クモは横から見た線の小さな模式（顔・牙なし）。緑と赤の跳躍は上下に並べ、どれだけ手前かは描かない（注に明記）。目の断面は模式で、赤のピントのずれの大きさは推定と注。台本にない『赤を6倍明るくしても短いまま』を 8〜13 秒の注に小さく入れた（台本の『へぇ』の欄の数）。題名は REVIEW の指摘で【うんちく】を外した。確かめ残し: 4層の網膜の番号（奥が第1層）の向きを論文の図と見くらべていない。" },
-  { "id": "spider-hunt-2", "page": "spider-hunt-trivia2", "mp4": "out/spider-hunt-trivia2-short.mp4", "type": "G", "title": "ハエは飛び立つ0.2秒前に、逃げる向きを決めている", "dur": 15, "voice": "(1)", "app_footage": false,
-    "notes": "15秒ループ（最後の『つまり、ハエは…』→ 最初へ）。締めの画面は決まりどおり入れたので、ループのつながりは締めで切れる（見くらべなら close:false の版も）。ハエの目（六角形）・横から見たハエ・重心の点・タイマーは Canvas の模式。重心のずれの量・脚の形は絵の都合（注に『模式』）。REVIEW では上位・次点の外（捨ての外）。" }
+  {
+    "id": "spider-hunt-1",
+    "page": "spider-hunt-trivia1",
+    "mp4": "out/spider-hunt-trivia1-short.mp4",
+    "type": "H",
+    "title": "ハエトリグモは、赤い光の中だとジャンプが届かない",
+    "dur": 37,
+    "voice": "(2) VOICEVOX:冥鳴ひまり（語り）",
+    "app_footage": false,
+    "notes": "声つき（2026-11-03）: 声に合わせて +1.7 秒。Canvas だけ。クモは横から見た線の小さな模式（顔・牙なし）。緑と赤の跳躍は上下に並べ、どれだけ手前かは描かない（注に明記）。目の断面は模式で、赤のピントのずれの大きさは推定と注。台本にない『赤を6倍明るくしても短いまま』を 8〜13 秒の注に小さく入れた（台本の『へぇ』の欄の数）。題名は REVIEW の指摘で【うんちく】を外した。確かめ残し: 4層の網膜の番号（奥が第1層）の向きを論文の図と見くらべていない。",
+    "mp4_subs": "out/spider-hunt-trivia1-short.subs-only.mp4"
+  },
+  {
+    "id": "spider-hunt-2",
+    "page": "spider-hunt-trivia2",
+    "mp4": "out/spider-hunt-trivia2-short.mp4",
+    "type": "G",
+    "title": "ハエは飛び立つ0.2秒前に、逃げる向きを決めている",
+    "dur": 17,
+    "voice": "(2) VOICEVOX:冥鳴ひまり（語り）",
+    "app_footage": false,
+    "notes": "声つき（2026-11-03）: 声に合わせて +1.8 秒。15秒ループ（最後の『つまり、ハエは…』→ 最初へ）。締めの画面は決まりどおり入れたので、ループのつながりは締めで切れる（見くらべなら close:false の版も）。ハエの目（六角形）・横から見たハエ・重心の点・タイマーは Canvas の模式。重心のずれの量・脚の形は絵の都合（注に『模式』）。REVIEW では上位・次点の外（捨ての外）。",
+    "mp4_subs": "out/spider-hunt-trivia2-short.subs-only.mp4"
+  }
 ]

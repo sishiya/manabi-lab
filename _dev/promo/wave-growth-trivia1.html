@@ -141,7 +141,7 @@ function draw(g, t) {
   if (t >= 25 && t < 31) TK.note(g, t, 25, 31, '速さ: 33秒の波 秒速26.5m・14秒の波 秒速11.4m', { y: PH * 0.712 + 44, size: 30 });
 }
 
-triviaStart({ out: 'wave-growth-trivia1', dur: DUR, draw, subs, cues, peek: 1.0 });
+triviaStart({ out: 'wave-growth-trivia1', voice: 'auto', dur: DUR, draw, subs, cues, peek: 1.0 });
 </script>
 </body>
 </html>

@@ -48,6 +48,8 @@
 
 ### 声つき（2026-11-03）
 かけあいの型のうち6本（ga-creatures-1・metamorphosis-1・net-route-3・phage-3・metronome-sync-2・ferrofluid-2）を VOICEVOX の声つきで録りなおした。字幕だけの版は `out/<名前>-short.subs-only.mp4` に残し、見くらべページの「字幕だけの版を見る」で切りかえられる。eye-optics-1 は目（からだ）の話なので AI の声にしない（字幕だけのまま）。
+- 同じ日に、ユーザーの指示で残りも声つきに（68本）。かけあいでない型は、語り手＝冥鳴ひまり1人が字幕を全部読む。読み方は道具の表（単位・〜・×・英字）で直し、`--dry` のカナで全行を確かめた。
+- からだ・健康の話の15本は字幕だけのまま: body-dive-1・2、brain-response-1・3、eye-optics-1・2、hair-removal-1・2・3、muscle-growth-1・2、immune-battle-1・2、house-dust-3（皮ふ）、mold-growth-2（胞子をすいこむ）。
 
 ### 出す前に決めること（試作で見つかったもの）
 - extreme-1: 題名の深さを「8,400 m より下」と「8,200 m」のどちらにそろえるか（画面は両方を別の線で出している）。

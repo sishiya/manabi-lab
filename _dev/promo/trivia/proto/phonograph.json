@@ -1,4 +1,26 @@
 [
-  { "id": "phonograph-1", "page": "phonograph-trivia1", "mp4": "out/phonograph-trivia1-short.mp4", "type": "H", "title": "エジソンは蓄音機を「音楽の機械」だと思っていなかった", "dur": 35, "voice": "(2) VOICEVOX か (1)（いまは字幕だけ）", "app_footage": false, "notes": "リストは文字を自分で組み「本文に書かれた順」（番号はない、と注）。アプリの録画（声→振動板→溝、すり減る）は Canvas の線画に。すり減りは回数を言わず「推定の絵」と注に。考える時間の輪（3〜5秒）が上の札の下はしに少しかかる（TK.choices の輪の位置 y0-150 が固定のため。輪の位置を o.ringY で変えられると楽）。" },
-  { "id": "phonograph-2", "page": "phonograph-trivia2", "mp4": "out/phonograph-trivia2-short.mp4", "type": "A", "title": "最古の録音はエジソンより17年前。しかも“聴けない”録音だった", "dur": 35, "voice": "(1) 字幕だけ", "app_footage": false, "notes": "すすの紙と線は自分で描いたたとえ（本物の紙の写真・復元音は使わない）。「いまわかっている最古の録音の一つ」を注に。曲名・歌詞は出していない。アプリの録画（溝の形から再生）は「線の形→数→音の波」の3段の図に。REVIEW では『よくある雑学（1860年の録音）』の指摘あり。" }
+  {
+    "id": "phonograph-1",
+    "page": "phonograph-trivia1",
+    "mp4": "out/phonograph-trivia1-short.mp4",
+    "type": "H",
+    "title": "エジソンは蓄音機を「音楽の機械」だと思っていなかった",
+    "dur": 38,
+    "voice": "(2) VOICEVOX:冥鳴ひまり（語り）",
+    "app_footage": false,
+    "notes": "声つき（2026-11-03）: 声に合わせて +2.9 秒。リストは文字を自分で組み「本文に書かれた順」（番号はない、と注）。アプリの録画（声→振動板→溝、すり減る）は Canvas の線画に。すり減りは回数を言わず「推定の絵」と注に。考える時間の輪（3〜5秒）が上の札の下はしに少しかかる（TK.choices の輪の位置 y0-150 が固定のため。輪の位置を o.ringY で変えられると楽）。",
+    "mp4_subs": "out/phonograph-trivia1-short.subs-only.mp4"
+  },
+  {
+    "id": "phonograph-2",
+    "page": "phonograph-trivia2",
+    "mp4": "out/phonograph-trivia2-short.mp4",
+    "type": "A",
+    "title": "最古の録音はエジソンより17年前。しかも“聴けない”録音だった",
+    "dur": 35,
+    "voice": "(2) VOICEVOX:冥鳴ひまり（語り）",
+    "app_footage": false,
+    "notes": "声つき（2026-11-03）: 声に合わせて +0.1 秒。すすの紙と線は自分で描いたたとえ（本物の紙の写真・復元音は使わない）。「いまわかっている最古の録音の一つ」を注に。曲名・歌詞は出していない。アプリの録画（溝の形から再生）は「線の形→数→音の波」の3段の図に。REVIEW では『よくある雑学（1860年の録音）』の指摘あり。",
+    "mp4_subs": "out/phonograph-trivia2-short.subs-only.mp4"
+  }
 ]

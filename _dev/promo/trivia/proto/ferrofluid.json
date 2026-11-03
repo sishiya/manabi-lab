@@ -6,9 +6,10 @@
     "type": "A",
     "title": "磁性流体のトゲの間かくは、磁石では決まらない",
     "dur": 35,
-    "voice": "(2) VOICEVOX。いまは字幕だけ",
+    "voice": "(2) VOICEVOX:冥鳴ひまり（語り）",
     "app_footage": false,
-    "notes": "アプリの録画の代わりに、六角形にならべた円すいの模式図を Canvas で（間かくの縮尺だけ 1 mm = 7 px でそろえ、地球 9.98 mm → 月 24.6 mm を同じ縮尺で広げる）。トゲの高さ・形はかざり。式の画面に U 字の磁石と ×。REVIEW の「前提が要る（トゲの間かく）」は、最初の1秒でトゲの皿を見せて補った。check-loudness: -20.0 LUFS OK。"
+    "notes": "声つき（2026-11-03）: 声に合わせて +0.4 秒。アプリの録画の代わりに、六角形にならべた円すいの模式図を Canvas で（間かくの縮尺だけ 1 mm = 7 px でそろえ、地球 9.98 mm → 月 24.6 mm を同じ縮尺で広げる）。トゲの高さ・形はかざり。式の画面に U 字の磁石と ×。REVIEW の「前提が要る（トゲの間かく）」は、最初の1秒でトゲの皿を見せて補った。check-loudness: -20.0 LUFS OK。",
+    "mp4_subs": "out/ferrofluid-trivia1-short.subs-only.mp4"
   },
   {
     "id": "ferrofluid-2",
