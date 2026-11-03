@@ -10,7 +10,7 @@
 //   voice: [{ t, file }] 読み上げの wav。'auto' なら out/voice/<out>/voice.json（_dev/tools/voicevox-lines.mjs で作る）を読み、
 //          声のあいだは BGM を下げ、画面の下に「VOICEVOX:名前」のクレジットを出す（キャラの規約で必要）
 //   bgm: 'pulse'（既定。軽い拍）・'drone'（低い持続音）・'none'・おとライブラリの 'out/bgm/<id>.ogg'
-//   close: false にすると締めの画面（しし屋の目印）を入れない（15秒ループの型の見くらべ用。決まりでは入れる）
+//   close: true のときだけ締めの画面（しし屋の目印・ジングル）を入れる（うんちくは締めなしが決まり。2026-11-03 ユーザー）
 'use strict';
 const TK = {};
 TK.C = { bg0: '#0b1430', bg1: '#132247', line: 'rgba(160,190,255,0.10)', fg: '#ffffff', sub: '#cfe0ff', acc: '#ffcf4a', acc2: '#5fd4ff', red: '#ff6b6b', green: '#59e39a', dim: 'rgba(255,255,255,0.55)' };
@@ -238,11 +238,13 @@ function triviaStart(cfg) {
     });
     return;
   }
-  const END = cfg.dur;   // 本編の終わり（締めの画面はこのあと 5 秒）
-  const DUR = cfg.close === false ? cfg.dur : cfg.dur + IDENT_CLOSE;
+  // うんちくは締めの画面なし（2026-11-03 ユーザー。はじまりの小さな目印だけ）。close: true のときだけ本編のあと 5 秒の締め
+  const close = cfg.close === true;
+  const END = cfg.dur;
+  const DUR = close ? cfg.dur + IDENT_CLOSE : cfg.dur;
   const subs = cfg.subs || [];
   const bgm = cfg.bgm || 'pulse';
-  const music = { stopAt: END, cues: cfg.close === false ? [] : [{ t: END, type: 'jingle' }] };
+  const music = { stopAt: END, cues: close ? [{ t: END, type: 'jingle' }] : [] };
   if (bgm === 'drone') music.style = 'drone';
   else if (bgm.endsWith && bgm.endsWith('.ogg')) { music.style = 'file'; music.file = bgm; }
   else music.style = 'none';
@@ -253,8 +255,9 @@ function triviaStart(cfg) {
       vs.forEach((v, i) => {   // 声のあいだは BGM を下げる（次の声まで 0.6 秒ないときは下げたまま）
         const end = v.t + (v.dur || 2), nx = vs[i + 1];
         b.gain.setTargetAtTime(0.22, Math.max(0, v.t - 0.08), 0.04);
-        if (!nx || nx.t > end + 0.6) b.gain.setTargetAtTime(0.55, end + 0.15, 0.25);
+        if ((!nx || nx.t > end + 0.6) && (close || end + 0.15 < END - 1.2)) b.gain.setTargetAtTime(0.55, end + 0.15, 0.25);
       });
+      if (!close) b.gain.setTargetAtTime(0, Math.max(0, END - 1.2), 0.3);   // 締めがないので、終わりで BGM をすっと消す
     }
     for (const c of cfg.cues || []) TK.sfx(ctx, out, c);
     for (const v of cfg.voice || []) {   // 読み上げ（あれば）
