@@ -228,7 +228,7 @@ document.querySelectorAll('[data-sand]').forEach(b => b.onclick = () => { newSan
 // どこから始めるか: はじまりの2本毛か、進化の節目の一滴（data/turns.json。祖先から決まりどおりに回して保存したもの）
 let turns = [], newTurn = '';
 // 並びは進化の時間の順（祖先から回した時間、同じなら代の数）
-fetch('data/turns.json').then(r => r.ok ? r.json() : []).then(t => { turns = t.sort((a, b) => (a.hours - b.hours) || (a.gen - b.gen)); showStarts(); }).catch(() => {});
+fetch('data/turns.json').then(r => r.ok ? r.json() : []).then(t => { turns = t.sort((a, b) => (a.hours - b.hours) || (a.gen - b.gen)); showStarts(); $('gatePeek').hidden = !turns.length; }).catch(() => {});
 function showStarts() {
   const box = $('starts');
   box.hidden = !turns.length;
@@ -236,9 +236,14 @@ function showStarts() {
     `<button type="button" role="radio" data-turn="${t.id}" class="${t.id === newTurn ? 'on' : ''}" aria-checked="${t.id === newTurn}">${t.title}<small>${t.sub}</small></button>`).join('');
   box.querySelectorAll('[data-turn]').forEach(b => b.onclick = () => { newTurn = b.dataset.turn; showStarts(); });
   $('newShape').hidden = !!newTurn;
+  // タイトルの「途中からのぞく」から開いたときは、消える一滴があるときだけ「消えます」と書く
+  const gone = !(fromTitle && $('gateCont').hidden) ? 'いまの一滴の生き物と記録は消えて、' : '';
   $('newNote').textContent = newTurn
-    ? 'いまの一滴の生き物と記録は消えて、はじまりの2本毛から決まりどおりに進んだ一滴の、その時点から続きを見ます。'
-    : 'いまの一滴の生き物と記録は消えて、はじまりの2本毛（すべての真核生物の祖先）から始まります。大きさ・砂つぶ・はじめの数も選べます。';
+    ? `${gone}はじまりの2本毛から同じ決まりで何時間も回して保存した一滴の、その時点から続きを見ます。`
+    : `${gone}はじまりの2本毛（すべての真核生物の祖先）から始まります。大きさ・砂つぶ・はじめの数も選べます。`;
+  $('newTitle').textContent = newTurn ? 'どこからのぞきますか？' : '新しく始めますか？';
+  $('mNewYes').textContent = newTurn ? 'のぞく' : '新しく始める';
+  $('mNewYes').className = fromTitle && $('gateCont').hidden ? 'primary' : 'danger';
 }
 function openNew() { newSize = size; showSize(); newSand = sand; showSand(); newPop = pop; showPop(); newTurn = ''; showStarts(); $('menuMain').hidden = true; $('menuConfirm').hidden = false; $('mNewNo').focus(); }
 $('mNew').onclick = () => { fromTitle = false; openNew(); };
@@ -531,6 +536,8 @@ $('gateNew').onclick = () => {
   if ($('gateCont').hidden) { hideTitle(); setPlaying(true); startIntro(); return; }
   fromTitle = true; openMenu(); openNew();
 };
+// 途中からのぞく: 節目の一滴を選ぶ窓（「新しく始める」と同じ窓で、はじめから節目の一滴を選んでおく。RELEASE.md 4章の8）
+$('gatePeek').onclick = () => { fromTitle = true; openMenu(); openNew(); newTurn = turns[0]?.id || ''; showStarts(); };
 // もどる: ブラウザの前のページへ（前のページがなければ保管庫へ）
 $('gateBack').onclick = () => { if (history.length > 1 && document.referrer) history.back(); else location.href = '../archive.html'; };
 if (q.has('nogate') || q.has('test')) $('gate').hidden = true;

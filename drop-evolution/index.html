@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/no-quirks.css"><script src="js/no-quirks.js" defer></script>
-<link rel="stylesheet" href="css/style.css?v=72">
+<link rel="stylesheet" href="css/style.css?v=73">
 </head>
 <body>
 <canvas id="view" aria-label="顕微鏡の視野"></canvas>
@@ -23,6 +23,7 @@
     <div class="gateBtns">
       <button type="button" id="gateCont" class="gatePrimary" hidden>つづきから<small id="gateContSub"></small></button>
       <button type="button" id="gateNew" class="gatePrimary">はじめから</button>
+      <button type="button" id="gatePeek" class="gateGhost" hidden>途中からのぞく<small>群体が育ったころなど</small></button>
     </div>
     <p class="gateNote"><b>ご注意</b>小さな生き物がたくさん集まって泳いだり、細胞がびっしり並んだかたまりになったりします。虫や、小さなものが集まった様子が苦手な方は、ここで引き返してください。</p>
     <button type="button" id="gateBack" class="gateBack">もどる</button>
@@ -97,7 +98,7 @@
     <button type="button" id="mTitle" class="ghost">タイトルにもどる</button>
   </div>
   <div id="menuConfirm" hidden>
-    <h2>新しく始めますか？</h2>
+    <h2 id="newTitle">新しく始めますか？</h2>
     <p id="newNote">いまの一滴の生き物と記録は消えて、はじまりの2本毛（すべての真核生物の祖先）から始まります。大きさ・砂つぶ・はじめの数も選べます。</p>
     <div class="sizes starts" id="starts" role="radiogroup" aria-label="どこから始めるか"></div>
     <div id="newShape">
@@ -182,6 +183,6 @@
 </dialog>
 
 <div id="perf"><span id="perfText"></span><button type="button" id="perfSave">ログを保存</button></div>
-<script type="module" src="js/main.js?v=71"></script>
+<script type="module" src="js/main.js?v=73"></script>
 </body>
 </html>
