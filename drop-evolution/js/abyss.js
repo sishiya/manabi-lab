@@ -446,8 +446,8 @@ function eatFlash(ren, g, vis, time, z) {
     const r0 = v.hunt ? o.r * 0.3 : algaD(z) / 2, rc = r0 * (1 - 0.6 * dig);
     g.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${(A * 0.8).toFixed(2)})`;
     g.beginPath(); g.arc(x, y, rc, 0, TAU); g.fill();
-    // 膜の輪（中身より少し大きい。入ったあとに見える）
-    if (age >= VAC_IN * 0.6) {
+    // 膜の輪（中身より少し大きい。入ったあとに見える）。飼っている藍藻と見分けるための印なので、藍藻だけ（狩った相手は色で見分けられ、本物でも膜は獲物にぴったり沿う）
+    if (!v.hunt && age >= VAC_IN * 0.6) {
       g.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},${(A * 0.45).toFixed(2)})`; g.lineWidth = Math.max(0.4 / z, r0 * 0.12);
       g.beginPath(); g.arc(x, y, r0 * 1.5, 0, TAU); g.stroke();
     }
