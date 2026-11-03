@@ -1,0 +1,39 @@
+{
+  "videoId": "TQHTh0q2guU",
+  "file": "_dev/promo/out/drop-evolution-guide.mp4",
+  "thumbnail": "_dev/promo/thumbs/drop-evolution-guide.jpg",
+  "privacy": "private",
+  "captions": {
+    "en": "_dev/promo/out/drop-evolution-guide.en.srt",
+    "es": "_dev/promo/subs/drop-evolution-guide.es.srt",
+    "ko": "_dev/promo/subs/drop-evolution-guide.ko.srt",
+    "pt": "_dev/promo/subs/drop-evolution-guide.pt.srt",
+    "zh-TW": "_dev/promo/subs/drop-evolution-guide.zh-TW.srt"
+  },
+  "title": "ひとしずくの進化 ― 使い方と見どころ（一滴をのぞく・はやさ・1匹を追う・系統樹・環境・砂つぶ・図鑑）",
+  "description": "海の水の一滴を顕微鏡でのぞくと、深海の生き物のように青く光る小さな命。すべての真核生物の祖先にならった2本毛の細胞から、食べて分かれるたびに少しずつ変わり、狩る者や群体が生まれていくブラウザのアプリ「ひとしずくの進化」の、使い方と見どころです。\n\n0:00 はじめに・一滴をのぞく\n0:19 泳ぐ・食べる・分かれる\n0:32 はやさ\n0:46 1匹を追う（狩る者）\n1:02 グラフ（数・系統樹・からだ）\n1:18 環境（海の栄養・光・海の流れ）\n1:32 砂つぶを落とす\n1:44 途中からのぞく（何時間も回した一滴）\n1:58 形の図鑑\n2:12 さいごに\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/drop-evolution/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nBurki ほか（2020）Trends in Ecology & Evolution 35: 真核生物の系統と共通祖先（LECA）\nBoraas ほか（1998）Evolutionary Ecology 12: 捕食者がいると群体が選ばれる\nHerron ほか（2019）Scientific Reports 9: 同上\n（アプリの「このアプリについて」→「おもな出どころ」）\n\n学習用の簡単なシミュレーションです。一滴の数百匹で海の何百万匹のかわりをするため、時間を縮め、形の突然変異を本物より多くしています。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#進化 #微生物 #シミュレーション #まなびラボ",
+  "tags": [
+    "進化",
+    "微生物",
+    "単細胞",
+    "群体",
+    "多細胞",
+    "シミュレーション",
+    "顕微鏡",
+    "系統樹",
+    "原生生物",
+    "使い方",
+    "まなびラボ",
+    "しし屋",
+    "evolution",
+    "microbes",
+    "multicellularity",
+    "simulation"
+  ],
+  "localizations": {
+    "en": {
+      "title": "Evolution in a Drop ― App Guide: Speed, Following One, Family Tree, Sea, Sand and Field Guide",
+      "description": "A guide to \"Evolution in a Drop\", a browser app where you look into a drop of seawater under a microscope. Starting from two-flagella cells modeled on the ancestor of all eukaryotes, creatures change a little each time they eat and divide, and hunters and colonies appear. Turn on English subtitles (CC).\n\n0:00 Intro: looking into the drop\n0:19 Swim, eat, divide\n0:32 Speed\n0:46 Following one (a hunter)\n1:02 Graphs (numbers, family tree, body)\n1:18 Sea (nutrients, light, current)\n1:32 Dropping sand\n1:44 Looking in partway (drops run for hours)\n1:58 The field guide of shapes\n2:12 Wrapping up\n\nTry the app (runs in your browser, PC or phone; switch to English with the EN button):\nhttps://sishiya.github.io/manabi-lab/drop-evolution/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nMain sources:\nBurki et al. (2020) Trends in Ecology & Evolution 35: the eukaryote tree and LECA\nBoraas et al. (1998) Evolutionary Ecology 12: predators select for colonies\nHerron et al. (2019) Scientific Reports 9: the same\n\nA simplified learning simulation. A few hundred creatures in one drop stand in for millions in the sea, so time is squeezed and shape mutations are more common than in nature.\n\nMusic: original sounds synthesized by code.\n\n#Evolution #Microbes"
+    }
+  }
+}

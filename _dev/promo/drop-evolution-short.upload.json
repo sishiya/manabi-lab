@@ -1,0 +1,34 @@
+{
+  "videoId": "heBdeFoBfcg",
+  "file": "_dev/promo/out/drop-evolution-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/drop-evolution-short.jpg",
+  "privacy": "private",
+  "captions": {
+    "en": "_dev/promo/out/drop-evolution-short.en.srt",
+    "es": "_dev/promo/subs/drop-evolution-short.es.srt",
+    "ko": "_dev/promo/subs/drop-evolution-short.ko.srt",
+    "pt": "_dev/promo/subs/drop-evolution-short.pt.srt",
+    "zh-TW": "_dev/promo/subs/drop-evolution-short.zh-TW.srt"
+  },
+  "title": "1つの細胞から、8時間で群体へ ― 海の一滴の進化 #Shorts",
+  "description": "海の水の一滴を顕微鏡でのぞき、すべての真核生物の祖先にならった2本毛の細胞から、狩る者や群体が生まれていくのを見るブラウザのアプリ「ひとしずくの進化」から。\n\nアプリ: https://sishiya.github.io/manabi-lab/drop-evolution/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ: Burki ほか（2020）、Boraas ほか（1998）、Herron ほか（2019）ほか（アプリの「このアプリについて」→「おもな出どころ」）。学習用の簡単なシミュレーションです。一滴の数百匹で海の何百万匹のかわりをするため、時間を縮め、形の突然変異を本物より多くしています。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#進化 #微生物 #まなびラボ",
+  "tags": [
+    "進化",
+    "微生物",
+    "群体",
+    "シミュレーション",
+    "顕微鏡",
+    "Shorts",
+    "まなびラボ",
+    "しし屋",
+    "evolution",
+    "microbes",
+    "multicellularity"
+  ],
+  "localizations": {
+    "en": {
+      "title": "From One Cell to Colonies in 8 Hours ― Evolution in a Drop of Seawater #Shorts",
+      "description": "From \"Evolution in a Drop\", a browser app where you look into a drop of seawater and watch hunters and colonies arise from two-flagella cells modeled on the ancestor of all eukaryotes.\n\nApp (switch to English with the EN button): https://sishiya.github.io/manabi-lab/drop-evolution/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMain sources: Burki et al. (2020); Boraas et al. (1998); Herron et al. (2019); and others. A simplified learning simulation. A few hundred creatures in one drop stand in for millions in the sea, so time is squeezed and shape mutations are more common than in nature.\n\nMusic: original sounds synthesized by code.\n\n#Evolution #Microbes"
+    }
+  }
+}

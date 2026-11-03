@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="drop-common.js"></script>
+<script>
+'use strict';
+// 台本: ひとしずくの進化 ― 使い方と見どころ（横長の説明動画、150秒）
+// 顕微鏡の視野を画面いっぱいに、ボタンの札・選んだ1匹・グラフ・図鑑は右と左下に重ねる。日本語の字幕は上。右下は案内役のライオン
+// 一滴の時計: はじめの一滴はシード 23（out/drop/）、節目の一滴はアプリの data/ のもの。同じ一滴は「同じ所から何秒すすめたか」で決まる
+const END = 150, DUR = END + IDENT_CLOSE;
+const big = W => W.orgs.reduce((a, o) => !a || o.colN > a.colN ? o : a, null);
+const hunter = W => W.orgs.filter(o => o.prey > 0 && o.colN === 1).reduce((a, o) => !a || o.prey + o.bp.n > a.prey + a.bp.n ? o : a, null);
+const colHunter = W => W.orgs.filter(o => o.colN > 3 && o.prey > 0).reduce((a, o) => !a || o.colN > a.colN ? o : a, null) || big(W);
+const center = W => dpNear(W, 1000, 700);
+const VIEW = { x: 960, y: 540 };   // 追う1匹は画面のまん中
+const SC = [
+  { a: 0, b: 7, from: 'green-ball', rate: 2, cam: lt => ({ x: lerp(900, 1100, lt / 7), y: 700, z: 1.05 }) },
+  { a: 7, b: 19, from: 'promo-anc', rate: 1, pick: center, cam: (lt, W, D, o) => dpAt(o, lerp(7, 9, lt / 12)) },
+  { a: 19, b: 32, from: 'promo-anc', simT: lt => 12 + lt, pick: center, cam: (lt, W, D, o) => dpAt(o, 9) },
+  // はやさ: ×1 で2秒 → ×16（2026-11-03 の軽くした計算で、ふつうのパソコンなら出る）。一滴全体へ引く
+  { a: 32, b: 46, from: 'promo-anc', simT: lt => 25 + (lt < 3 ? lt : 3 + (lt - 3) * 16), cam: lt => ({ x: 1000, y: 700, z: lerp(3, 0.92, ease((lt - 3) / 6)) }) },
+  { a: 46, b: 62, from: 'promo-anc-10m', rate: 1, pick: hunter, cam: (lt, W, D, o) => dpAt(o, 5.5),
+    ev: [{ t: 2.4, run: w => dpPick && w.__drop.select(dpPick) }] },
+  { a: 62, b: 78, from: 'promo-anc-10m', simT: lt => 16 + lt * 4, cam: lt => ({ x: 1000, y: 700, z: 0.92 }),
+    ev: [{ t: 0.1, run: w => clickEl(w, '[data-mode="pop"]') }, { t: 3.6, run: w => clickEl(w, '[data-mode="tree"]') }, { t: 10, run: w => clickEl(w, '[data-mode="traits"]') }] },
+  { a: 78, b: 92, from: 'green-ball', rate: 1, pick: big, cam: (lt, W, D, o) => dpAt(o, lerp(2.2, 3, lt / 14)) },
+  { a: 92, b: 104, from: 'promo-anc-10m', simT: lt => 40 + lt * 2, cam: lt => ({ x: 1000, y: 700, z: 1.6 }),
+    ev: [{ t: 3.2, run: w => { qs(w, '#view').dispatchEvent(new w.MouseEvent('contextmenu', { clientX: 960, clientY: 540, bubbles: true, cancelable: true })); } },
+      { t: 4.4, run: w => clickEl(w, '[data-grain="55"]') }] },
+  { a: 104, b: 118, from: 'hunt-colony', rate: 1, pick: colHunter, cam: (lt, W, D, o) => dpAt(o, lerp(1.6, 2.6, ease(lt / 8))) },
+  { a: 118, b: 132, from: 'hunt-big', rate: 1, pick: big, cam: (lt, W, D, o) => dpAt(o, 2),
+    ev: [{ t: 1.2, run: w => w.__drop.openBook() }] },
+  { a: 132, b: DUR, from: 'green-ball', simT: lt => 20 + lt * 2, cam: lt => ({ x: lerp(1100, 900, lt / 23), y: 700, z: 1.05 }) },
+];
+const X = 1345;
+const CH = {
+  speed: { x: X, y: 230, title: 'はやさ（左下）', btns: ['×1', '×4', '×16'] },
+  tabs: { x: X, y: 230, title: 'グラフ（下）', btns: ['数', '系統樹', 'からだ'] },
+  env: { x: X, y: 230, title: '環境（左下）', btns: ['海の栄養', '光', '海の流れ'], cols: 1 },
+  sand: { x: X, y: 230, title: '右クリック（スマホは長押し）', btns: ['小さい', 'ふつう', '大きい'] },
+  peek: { x: X, y: 230, title: 'メニュー → 途中からのぞく', btns: ['群体で狩る者', '大きな緑の群体', '大きな群体で狩る者'], cols: 1 },
+  book: { x: X, y: 230, title: '右上', btns: ['図鑑'] },
+};
+const SHOW = [
+  ['speed', 32.3, 45.6, t => t >= 35 ? 2 : 0],
+  ['tabs', 62.3, 77.6, t => t >= 72 ? 2 : t >= 65.6 ? 1 : 0],
+  ['env', 78.3, 91.6, t => t >= 81 ? 1 : -1],
+  ['sand', 95, 103.6, t => t >= 96.4 ? 1 : -1],
+  ['peek', 104.3, 110.6, t => t >= 106 ? 0 : -1],
+  ['book', 118.3, 120.6, t => t >= 119.2 ? 0 : -1],
+];
+const B = (k, i) => btnRect(CH[k], i);
+const CUR = [
+  { t: 34, ...B('speed', 2) }, { t: 35, ...B('speed', 2), click: true }, { t: 36, ...B('speed', 2), hide: true },
+  { t: 47, x: 1180, y: 700 }, { t: 48.4, ...VIEW, click: true }, { t: 49.2, ...VIEW, hide: true },
+  { t: 64.8, ...B('tabs', 1) }, { t: 65.6, ...B('tabs', 1), click: true }, { t: 71.4, ...B('tabs', 2) }, { t: 72, ...B('tabs', 2), click: true }, { t: 73, ...B('tabs', 2), hide: true },
+  { t: 80.2, ...B('env', 1) }, { t: 81, ...B('env', 1), click: true }, { t: 82, ...B('env', 1), hide: true },
+  { t: 94.4, ...VIEW }, { t: 95.2, ...VIEW, click: true }, { t: 95.8, ...B('sand', 1) }, { t: 96.4, ...B('sand', 1), click: true }, { t: 97.4, ...B('sand', 1), hide: true },
+  { t: 105.2, ...B('peek', 0) }, { t: 106, ...B('peek', 0), click: true }, { t: 107, ...B('peek', 0), hide: true },
+  { t: 118.6, ...B('book', 0) }, { t: 119.2, ...B('book', 0), click: true }, { t: 120, ...B('book', 0), hide: true },
+];
+const CAPS = [
+  { a: 7.3, b: 18.6, main: '海の水の一滴（2 × 1.4 mm）を、顕微鏡でのぞく', sub: 'はじまりは、すべての真核生物の祖先にならった2本毛の細胞',
+    en: ['Look into a drop of seawater (2 × 1.4 mm) under a microscope', 'It starts with two-flagella cells, modeled on the ancestor of all eukaryotes'] },
+  { a: 19.3, b: 31.6, main: '泳いで、食べて、ためて、分かれる', sub: '分かれるとき、ときどき遺伝子とからだの形が変わる',
+    en: ['They swim, eat, store energy and divide', 'When they divide, genes and body shape sometimes change'] },
+  { a: 32.3, b: 45.6, main: '左下の「はやさ」で ×1・×4・×16', sub: '×16 なら、一滴の1時間が4分足らず',
+    en: ['"Speed" at the bottom left: ×1, ×4, ×16', 'At ×16, an hour in the drop takes under 4 minutes'] },
+  { a: 46.3, b: 53.6, main: '生き物を押すと、その1匹を追う', sub: '右に、食べた数・子の数・からだの形・遺伝子',
+    en: ['Tap a creature to follow it', 'On the right: what it ate, its young, body shape and genes'] },
+  { a: 54, b: 61.6, main: 'ほかの生き物を食べる「狩る者」', sub: '形も狩り方も、だれも決めていない。選ばれて残った',
+    en: ['A "hunter" that eats other creatures', 'Nobody designed its shape or hunting. It was selected'] },
+  { a: 62.3, b: 71.6, main: '下のグラフは「数」「系統樹」「からだ」', sub: '系統樹で、栄えた系統と絶えた系統が見える',
+    en: ['The graph below: "Numbers", "Family tree", "Body"', 'The family tree shows which lineages thrived and which died out'] },
+  { a: 72, b: 77.6, main: '「からだ」は、節の数・速さ・大きさの移り変わり', sub: '',
+    en: ['"Body" shows how segments, speed and size changed over time', ''] },
+  { a: 78.3, b: 91.6, main: '「環境」で、海の栄養・光・海の流れを変えられる', sub: '光の強い海では、藍藻を飼う緑の群体が育った（8時間）',
+    en: ['"Sea" lets you change nutrients, light and current', 'In a bright sea, green colonies that keep algae grew (8 hours)'] },
+  { a: 92.3, b: 103.6, main: '右クリック（スマホは長押し）で、砂つぶを落とせる', sub: '砂が多いと、くっついて待つ者がふえやすい',
+    en: ['Right-click (long-press on a phone) to drop a grain of sand', 'With more sand, creatures that stick and wait tend to spread'] },
+  { a: 104.3, b: 110.6, main: 'メニューの「途中からのぞく」で、何時間も回した一滴へ', sub: 'どれも、はじまりの2本毛から同じ決まりで回したもの',
+    en: ['"Look in partway" in the menu jumps to drops run for hours', 'All were run from the first two-flagella cell under the same rules'] },
+  { a: 111, b: 117.6, main: '群体で狩る者（4時間）', sub: '本物でも、捕食者のいる水槽で、細胞がくっついた群体が選ばれた',
+    en: ['Colony hunters (4 hours)', 'In real experiments too, predators selected for cells that stick together'] },
+  { a: 118.3, b: 131.6, main: '進化の節目の形が現れると、右上の「図鑑」に写る', sub: '本物では、どの生き物にあたるのかも',
+    en: ['When a milestone shape appears, it goes into the "Guide" at the top right', 'with the real creatures it resembles'] },
+  { a: 132.3, b: 141.6, main: '一滴ごとに、ちがう進化をする', sub: '学習用の簡単なシミュレーション。時間は縮めている',
+    en: ['Every drop evolves differently', 'A simplified learning simulation. Time is squeezed'] },
+];
+// ---- 案内役のライオン（promo.js の lionSetup・drawLion）。右下（x 1530〜、y 620〜）はライオンの場所 ----
+const MUSIC = { style: 'journey', root: 98, stopAt: END, cues: [{ t: END, type: 'jingle' }] };
+const EXP = [[0, 'calm'], [7.5, 'wow'], [11, 'calm'], [19.5, 'smile'], [23, 'calm'], [32.5, 'think'], [36, 'wow'], [40, 'calm'], [46.5, 'smile'], [50, 'calm'], [54.2, 'shock'], [57.5, 'think'], [61, 'calm'],
+  [62.5, 'think'], [66, 'wow'], [69, 'calm'], [72.2, 'smile'], [76, 'calm'], [78.5, 'smile'], [84, 'wow'], [88, 'calm'], [92.5, 'think'], [97, 'smile'], [100, 'calm'],
+  [104.5, 'smile'], [111.2, 'wow'], [114, 'proud'], [117, 'calm'], [118.5, 'smile'], [124, 'proud'], [128, 'calm'], [132.5, 'think'], [136, 'smile'], [140, 'calm'], [END - 7.6, 'smile']];
+MUSIC.cues.push(...lionSetup({ caps: CAPS, cur: CUR, exp: EXP, end: END, bye: END - 5.8 }));
+const short = (s, n) => s.length > n ? s.slice(0, n - 1) + '…' : s;
+promoStart({
+  name: 'ひとしずくの進化（使い方）', out: 'drop-evolution-guide', src: '../../drop-evolution/index.html', iw: 1920, ih: 1080, dur: DUR, peek: 50,
+  inject: DP_INJECT,
+  music: MUSIC,
+  ready: w => !!LION.api && dpReady(w),
+  setup(w) {   // 下のグラフは横長の細い帯なので、録るときだけ大きく描かせて重ねる（画面の DOM は録画に写らない）
+    const st = w.document.createElement('style');
+    st.textContent = '.graphbox{position:fixed!important;left:0!important;top:0!important;width:1000px!important;height:380px!important}';
+    w.document.head.append(st); w.dispatchEvent(new w.Event('resize'));
+    return null;
+  },
+  subs: guideSubs(END, 'ひとしずくの進化', 'Evolution in a Drop', CAPS, 'Runs in your browser (PC or phone). Switch the app to English with the EN button'),
+  renderAt(t, w) { return dpRender(w, SC, t); },
+  drawSource(g, w, OW, OH) { g.drawImage(qs(w, '#view'), 0, 0, OW, OH); },
+  overlay(g, t, w) {
+    drawPanel(g, 40, 205, 820, '', [dpStats(w)], fade(t, 7.3, 141.6, 0.4) * (t >= 118 && t < 132 ? 0 : 1));
+    // 選んだ1匹（アプリでは右）
+    const fc = fade(t, 48.6, 61.6, 0.4);
+    if (fc > 0 && w.__drop.sel) {
+      drawPanel(g, X, 230, 540, '選んだ1匹（右）', [short(dpText(w, '#cName'), 15), short(dpText(w, '#cMeta'), 17),
+        [...w.document.querySelectorAll('#cStats div')].map(d => d.textContent.trim().replace(/^(\D+)/, '$1 ')).join('　')], fc);
+      drawInset(g, qs(w, '#cBody'), X, 470, 300, 220 * qs(w, '#cBody').height / Math.max(1, qs(w, '#cBody').width) * 300 / 220, 'からだの形', fc);
+    }
+    // グラフ（アプリでは下）
+    const gf = fade(t, 62.3, 77.6, 0.4), gc = qs(w, '#graph');
+    if (gf > 0 && gc.width) drawInset(g, gc, 40, 300, 1000, 1000 * gc.height / gc.width, 'グラフ（下）', gf);
+    // 図鑑
+    const bf = fade(t, 120, 131.6, 0.4), bc = qs(w, '#bookBig');
+    if (bf > 0 && bc.width) {
+      drawInset(g, bc, 60, 230, 420, 420 * bc.height / bc.width, '形の図鑑', bf);
+      drawPanel(g, 520, 230, 960, dpText(w, '#bookCount'), [dpText(w, '#bookName'), dpText(w, '#bookWhen'),
+        ...dpText(w, '#bookNote').match(/.{1,26}/g).slice(0, 3)], bf);
+    }
+    for (const [k, a, b, on] of SHOW) drawChip(g, CH[k], on(t), fade(t, a, b, 0.4));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawGuideChrome(g, t, END, 'ひとしずくの進化',
+      'おもな出どころ: Burki ほか（2020）、Boraas ほか（1998）、Herron ほか（2019）ほか。学習用の簡単なシミュレーションで、時間は縮めている');
+    drawLion(g, t);
+  },
+});
+lionOpen();
+</script>
+</body>
+</html>

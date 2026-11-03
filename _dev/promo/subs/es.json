@@ -405,5 +405,30 @@
 "Hazlo en el orden inverso y se resbala hacia abajo // Por un momento nada está quieto, así que nada sostiene el peso",
 "Con un tronco de 6 cm no puede trepar // En este cálculo, una vuelta no pasa de 180° (una estimación)",
 "Cómo se mueven las serpientes // Funciona en tu navegador (PC o móvil). Por ahora el texto de la app está en japonés"
+],
+"drop-evolution-guide": [
+"Evolución en una gota // Cómo usar la app y qué observar",
+"Mira una gota de agua de mar (2 × 1,4 mm) al microscopio // Empieza con células de dos flagelos, inspiradas en el antepasado de todos los eucariotas",
+"Nadan, comen, guardan energía y se dividen // Al dividirse, a veces cambian los genes y la forma del cuerpo",
+"La velocidad (はやさ), abajo a la izquierda: ×1, ×4, ×16 // A ×16, una hora en la gota dura menos de 4 minutos",
+"Toca un ser vivo para seguirlo // A la derecha: lo que comió, sus crías, su forma y sus genes",
+"Un \"cazador\" que se come a otros seres // Nadie diseñó su forma ni su caza. Fue seleccionado",
+"El gráfico de abajo: números (数), árbol (系統樹) y cuerpo (からだ) // El árbol muestra qué linajes prosperaron y cuáles se extinguieron",
+"Cuerpo (からだ): cómo cambiaron los segmentos, la velocidad y el tamaño",
+"Con el entorno (環境) cambias los nutrientes, la luz y la corriente // En un mar con mucha luz crecieron colonias verdes que guardan algas (8 horas)",
+"Clic derecho (en el móvil, mantén pulsado) para soltar un grano de arena // Con más arena, se extienden los que se pegan y esperan",
+"Mirar a mitad de camino (途中からのぞく), en el menú, lleva a gotas de muchas horas // Todas salieron de la primera célula de dos flagelos con las mismas reglas",
+"Cazadores en colonia (4 horas) // También en experimentos reales, los depredadores favorecieron a las células que se unen",
+"Cuando aparece una forma clave, se guarda en la guía (図鑑), arriba a la derecha // junto con los seres reales a los que se parece",
+"Cada gota evoluciona de forma distinta // Una simulación sencilla para aprender. El tiempo está comprimido",
+"Evolución en una gota // Funciona en el navegador (PC o móvil). Cambia la app al inglés con el botón EN"
+],
+"drop-evolution-short": [
+"Evolución en una gota // Una gota de agua de mar al microscopio",
+"Empieza con una célula de dos flagelos // inspirada en el antepasado de todos los eucariotas",
+"Comer, dividirse y a veces cambiar // Nada más. En 10 minutos aparecen formas nuevas",
+"Hasta \"cazadores\" que se comen a otros // Nadie diseñó su forma ni cómo nadan",
+"En 8 horas: colonias de más de cien células // Cada gota evoluciona de forma distinta",
+"Evolución en una gota // Funciona en el navegador. Una evolución distinta cada vez"
 ]
 }
