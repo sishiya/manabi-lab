@@ -8,8 +8,9 @@ window.MODES = window.MODES || {};
   const C = { sky: '#14202c', bark: '#5c4734', barkD: '#241a12', line: 'rgba(20,12,6,.55)', body: '#3d6b4d', back: '#24392d', edge: '#a6e07a',
     stuck: '#a6e07a', move: '#7fd4ff', grav: '#ff8a7a', com: '#ffc95a', ink: '#e8f0f4', muted: '#a3b4bf' };
   const BP = { D: 0.03, side: 'both', loop: 0.04, pinch: true };
-  const EL = 35 * Math.PI / 180;   // 横から見る図は、少し上から見下ろす（枝の上の左右のループが見えるように）
-  // 枝のまわりの角度 a の所の、画面の上向きの高さ（枝の軸から）と、見えるか（手前を向いているか）
+  // 見下ろす角度: 横から（35°。枝の上の左右のループも見える）／上から（90°。真上から、左右のループの形がそのまま）
+  let EL = 35 * Math.PI / 180;
+  // 枝のまわりの角度 a の所の、画面の上向きの高さ（枝の軸から）と、見えるか（こちらを向いているか）
   const upOf = (R, a) => R * (Math.cos(a) * Math.cos(EL) - Math.sin(a) * Math.sin(EL));
   const depOf = a => Math.sin(a + EL);
   const PHASE = ['', '① 後ろでつかんで、まん中をのばす（頭が前へ）', '② 前でつかむ', '③ 後ろをゆるめる', '④ 前でつかんで、まん中をちぢめる（後ろが前へ）', '⑤ 後ろでつかむ', '⑥ 前をゆるめる'];
@@ -119,6 +120,8 @@ window.MODES = window.MODES || {};
     },
     legend: () => [[C.stuck, '止まっている'], [C.com, '重心'], [C.grav, '回そうとする力']],
     init() {
+      const vb = $('bView');
+      vb.onclick = () => { const top = EL < 1; EL = (top ? 90 : 35) * Math.PI / 180; vb.classList.toggle('on', top); vb.textContent = top ? '横から' : '上から'; };
       UI.slider('bdia', v => v + ' cm', v => { BP.D = v / 100; M.make(); });
       UI.seg('bside', v => { BP.side = v; M.s.p.side = v; });
       UI.slider('bloop', v => v + ' cm', v => { BP.loop = v / 100; M.s.p.loop = v / 100; });
