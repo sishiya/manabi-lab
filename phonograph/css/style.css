@@ -103,3 +103,16 @@ input[type=range]{width:180px;accent-color:var(--acc)}
   .acts{grid-template-columns:repeat(2,minmax(0,1fr))}
   #bStop{min-height:38px}
 }
+/* スマホの横向きなど、低くて広い画面: 図を左、つぎへ・帯を右に並べて、上に固定する部分を低くする */
+@media (max-height:520px) and (min-width:561px){
+  #top{padding:6px 16px 2px}
+  #top h1{font-size:17px}
+  #pin{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,34%);grid-template-rows:auto 1fr;align-items:start}
+  #cvwrap{grid-column:1;grid-row:1 / span 2;height:62vh;min-height:200px}
+  #banner{grid-column:2;grid-row:1;position:static;transform:none;min-width:0;max-width:none;margin:6px 10px 0;padding:6px 10px}
+  #bnText{font-size:13px;white-space:normal}
+  #tour{grid-column:2;grid-row:2;flex-direction:column;align-items:stretch;gap:6px;padding:6px 10px}
+  #tourText{font-size:12px;line-height:1.5}
+  #next{min-height:40px;font-size:14px;white-space:normal}
+  #pin.acting #tourText{display:none}
+}

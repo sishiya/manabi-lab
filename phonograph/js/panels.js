@@ -24,25 +24,33 @@ const Panels = (() => {
   function waves(cv, fs) {
     const [g, w, h] = prep(cv); g.clearRect(0, 0, w, h);
     if (!spec.wIn) { txt(g, L('回すと、ここに波と成分が出ます', 'Turn the drum to see the waves and their parts here'), 10, 10, col.dim); return; }
-    const hw = Math.round(h * 0.42), n = Math.round(fs * 0.03), a0 = N - n;
-    const tr = (x, y0, hh, c, lab) => {
+    // 上から: 見出し → 入れた音の波 → 見出し → 出た音の波 → 見出し → 成分。文字は線と重ならないよう、それぞれの行に置く
+    const LH = 16, th = Math.max(34, Math.round(h * 0.15)), n = Math.round(fs * 0.03), a0 = N - n, narrow = w < 480;
+    const tr = (x, y0, c, lab) => {
       let mx = 0; for (let i = a0; i < N; i++) mx = Math.max(mx, Math.abs(x[i]));
-      g.strokeStyle = col.line; g.beginPath(); g.moveTo(0, y0 + hh / 2); g.lineTo(w, y0 + hh / 2); g.stroke();
-      g.beginPath(); for (let i = a0; i < N; i++) { const X = (i - a0) / n * w, Y = y0 + hh / 2 - (mx > 0 ? x[i] / mx : 0) * hh * 0.45; i === a0 ? g.moveTo(X, Y) : g.lineTo(X, Y); }
+      txt(g, lab + L('　いちばん大きい所 ' + fmtPa(mx), '  peak ' + fmtPa(mx)), 4, y0 + 1, c);
+      const yc = y0 + LH + th / 2;
+      g.strokeStyle = col.line; g.lineWidth = 1; g.beginPath(); g.moveTo(0, yc); g.lineTo(w, yc); g.stroke();
+      g.beginPath(); for (let i = a0; i < N; i++) { const X = (i - a0) / n * w, Y = yc - (mx > 0 ? x[i] / mx : 0) * th * 0.46; i === a0 ? g.moveTo(X, Y) : g.lineTo(X, Y); }
       g.strokeStyle = c; g.lineWidth = 1.3; g.stroke();
-      txt(g, lab + L('（いちばん大きい所 ' + fmtPa(mx) + '）', ' (peak ' + fmtPa(mx) + ')'), 8, y0 + 2, c);
+      return y0 + LH + th;
     };
-    tr(spec.wIn, 0, hw / 2, col.voice, L('入れた音（最後に録ったとき）: マウスピースの中の圧力', 'Sound in (last recording): pressure in the mouthpiece'));
-    tr(spec.wOut, hw / 2, hw / 2, col.play, L('出た音（いま・最後に聴いたとき）: 耳もと 30 cm の圧力', 'Sound out (now or last playback): pressure at 30 cm'));
-    txt(g, L('30 ミリ秒', '30 ms'), w - 8, hw - 16, col.dim, 'right');
-    // 成分（横は対数 50 Hz〜10 kHz、たては dB）
-    const y0 = hw + 10, hh = h - y0 - 18, fx = f => Math.log(f / 50) / Math.log(200) * w, lo = 0, hi = 130, fy = d => y0 + hh * (1 - (d - lo) / (hi - lo));
+    if (!narrow) txt(g, L('← 横は 30 ミリ秒 →', '← 30 ms across →'), w - 4, 1, col.dim, 'right');
+    let y = tr(spec.wIn, 0, col.voice, narrow ? L('入れた音（マウスピースの中）', 'Sound in (mouthpiece)') : L('入れた音（最後に録ったとき）: マウスピースの中の圧力', 'Sound in (last recording): pressure in the mouthpiece'));
+    y = tr(spec.wOut, y + 4, col.play, narrow ? L('出た音（耳もと 30 cm）', 'Sound out (at 30 cm)') : L('出た音（いま・最後に聴いたとき）: 耳もと 30 cm の圧力', 'Sound out (now or last playback): pressure at 30 cm'));
+    // 成分（横は対数 50 Hz〜10 kHz、たては dB）。入れた音はうすく塗り、出た音は線で（重なっても両方見える）
+    const yL = y + 6; txt(g, L('成分（Hz ごとの大きさ）', 'Parts (loudness at each Hz)'), 4, yL, col.muted);
+    g.font = '12px "Zen Kaku Gothic New",sans-serif'; const lIn = L('入れた音', 'in'), lOut = L('出た音', 'out'), wOut = g.measureText(lOut).width, wIn = g.measureText(lIn).width;
+    let lx = w - 4 - wOut; txt(g, lOut, lx, yL, col.play); lx -= 16; g.fillStyle = col.play; g.fillRect(lx, yL + 7, 12, 2);
+    lx -= 12 + wIn; txt(g, lIn, lx, yL, col.voice); lx -= 16; g.fillStyle = col.voice; g.globalAlpha = 0.35; g.fillRect(lx, yL + 4, 12, 8); g.globalAlpha = 1;
+    const y0 = yL + LH + 2, hh = h - y0 - 16, fx = f => Math.log(f / 50) / Math.log(200) * w, lo = 0, hi = 130, fy = d => y0 + hh * (1 - (d - lo) / (hi - lo));
     g.strokeStyle = col.line; g.lineWidth = 1;
-    for (const f of [100, 200, 500, 1000, 2000, 5000, 10000]) { g.beginPath(); g.moveTo(fx(f), y0); g.lineTo(fx(f), y0 + hh); g.stroke(); txt(g, f >= 1000 ? f / 1000 + 'k' : String(f), fx(f), y0 + hh + 2, col.dim, 'center'); }
+    for (const f of [100, 200, 500, 1000, 2000, 5000, 10000]) { g.beginPath(); g.moveTo(fx(f), y0); g.lineTo(fx(f), y0 + hh); g.stroke(); txt(g, f >= 1000 ? f / 1000 + 'k' : String(f), Math.min(w - 8, fx(f)), y0 + hh + 2, col.dim, 'center'); }
     for (const d of [40, 80, 120]) { g.beginPath(); g.moveTo(0, fy(d)); g.lineTo(w, fy(d)); g.stroke(); txt(g, d + ' dB', 4, fy(d) + 1, col.dim); }
-    const line = (s, c) => { g.beginPath(); let st = false; for (let k = 2; k < N / 2; k++) { const f = k * fs / N; if (f < 50 || f > 10000) continue; const X = fx(f), Y = Math.max(y0, Math.min(y0 + hh, fy(s[k]))); st ? g.lineTo(X, Y) : (g.moveTo(X, Y), st = true); } g.strokeStyle = c; g.lineWidth = 1.3; g.stroke(); };
-    line(spec.in, col.voice); line(spec.out, col.play);
-    txt(g, L('成分（Hz ごとの大きさ）', 'Parts (loudness at each Hz)'), w - 8, y0 + 2, col.muted, 'right');
+    const path = s => { const pts = []; for (let k = 2; k < N / 2; k++) { const f = k * fs / N; if (f < 50 || f > 10000) continue; pts.push([fx(f), Math.max(y0, Math.min(y0 + hh, fy(s[k])))]); } return pts; };
+    const pin = path(spec.in); g.beginPath(); g.moveTo(pin[0][0], y0 + hh); for (const [X, Y] of pin) g.lineTo(X, Y); g.lineTo(pin[pin.length - 1][0], y0 + hh); g.closePath();
+    g.fillStyle = col.voice; g.globalAlpha = 0.28; g.fill(); g.globalAlpha = 1;
+    g.beginPath(); path(spec.out).forEach(([X, Y], i) => i ? g.lineTo(X, Y) : g.moveTo(X, Y)); g.strokeStyle = col.play; g.lineWidth = 1.6; g.stroke();
   }
   function fmtPa(p) { return p >= 1 ? p.toFixed(1) + ' Pa' : p >= 0.001 ? (p * 1000).toFixed(1) + ' mPa' : (p * 1e6).toFixed(0) + ' µPa'; }
   function foil(cv, S) {   // 箔をひろげた図: たてが周（1周目が上）、横が筒のまわり

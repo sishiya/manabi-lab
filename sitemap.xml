@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://sishiya.github.io/manabi-lab/</loc>
-    <lastmod>2026-10-25</lastmod>
+    <lastmod>2026-11-03</lastmod>
     <xhtml:link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/?lang=ja"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/?lang=en"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/"/>
@@ -160,5 +160,12 @@
     <xhtml:link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/crt-pixels/?lang=ja"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/crt-pixels/?lang=en"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/crt-pixels/"/>
+  </url>
+  <url>
+    <loc>https://sishiya.github.io/manabi-lab/phonograph/</loc>
+    <lastmod>2026-11-03</lastmod>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/phonograph/?lang=ja"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/phonograph/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/phonograph/"/>
   </url>
 </urlset>

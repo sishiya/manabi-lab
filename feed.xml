@@ -5,8 +5,16 @@
   <link href="https://sishiya.github.io/manabi-lab/"/>
   <link rel="self" href="https://sishiya.github.io/manabi-lab/feed.xml"/>
   <id>https://sishiya.github.io/manabi-lab/feed.xml</id>
-  <updated>2026-10-25T00:00:00+09:00</updated>
+  <updated>2026-11-03T00:00:00+09:00</updated>
   <author><name>しし屋</name></author>
+  <entry>
+    <title>エジソンの蓄音機</title>
+    <link href="https://sishiya.github.io/manabi-lab/phonograph/"/>
+    <id>https://sishiya.github.io/manabi-lab/phonograph/</id>
+    <published>2026-10-18T00:00:00+09:00</published>
+    <updated>2026-11-03T00:00:00+09:00</updated>
+    <summary>1878年のすず箔の蓄音機に歌を入れると、振動板がふるえ、針が箔に溝を刻む。その溝を針でなぞると、また声にもどる。ここまでを全部計算で。録った音は使わず、溝の形だけから鳴らす。筒を手で回すと、速さで声の高さが変わる。</summary>
+  </entry>
   <entry>
     <title>ブラウン管のドット絵</title>
     <link href="https://sishiya.github.io/manabi-lab/crt-pixels/"/>

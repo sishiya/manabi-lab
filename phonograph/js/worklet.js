@@ -1,7 +1,7 @@
 // エジソンの蓄音機 — AudioWorklet（音の計算はここで。機械の再生は溝からだけ計算する。
 // 入れた音は「元の音」とくらべるために、このページが開いているあいだだけメモリに覚える。保存も送信もしない）
-import './physics.js';
-import './sources.js';
+import './physics.js?v=2';
+import './sources.js?v=2';
 const { Phono } = globalThis.PhonoPhys, { Source } = globalThis.PhonoSrc;
 
 class PhonoProc extends AudioWorkletProcessor {

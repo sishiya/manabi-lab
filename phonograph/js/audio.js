@@ -9,7 +9,7 @@ const Audio = {
       try {
         const AC = window.AudioContext || window.webkitAudioContext;
         this.ctx = new AC({ latencyHint: 'interactive', sampleRate: 48000 });
-        await this.ctx.audioWorklet.addModule('js/worklet.js');
+        await this.ctx.audioWorklet.addModule('js/worklet.js?v=2');
         this.node = new AudioWorkletNode(this.ctx, 'phono', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1] });
         this.node.port.onmessage = e => { if (this.onSnap) this.onSnap(e.data); };
         this.node.connect(this.ctx.destination);

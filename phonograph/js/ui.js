@@ -60,6 +60,7 @@ const UI = (() => {
     const a = st.act; if (!a) { if (!quiet) { st.needle = false; rest(); sync(); } return; }
     if (a.kind === 'rec') { st.recEnd = Math.max(0.05, S().x); st.recDur = (performance.now() - a.t0) / 1000; st.recKind = st.src; }
     if (a.kind === 'play') { st.bounced = st.contN > 10 && st.cont / st.contN < 0.85; st.needle = false; }
+    if (a.kind === 'orig') send({ t: 'orig', on: false });   // 元の音を途中で止める（worklet にも知らせる）
     st.act = null; if (a.kind !== 'orig') rest(); crank(); sync(); a.done();
   }
   function tick(now) {   // main.js が毎コマよぶ

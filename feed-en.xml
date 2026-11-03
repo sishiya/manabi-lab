@@ -5,8 +5,16 @@
   <link href="https://sishiya.github.io/manabi-lab/?lang=en"/>
   <link rel="self" href="https://sishiya.github.io/manabi-lab/feed-en.xml"/>
   <id>https://sishiya.github.io/manabi-lab/feed-en.xml</id>
-  <updated>2026-10-25T00:00:00+09:00</updated>
+  <updated>2026-11-03T00:00:00+09:00</updated>
   <author><name>Shishiya</name></author>
+  <entry>
+    <title>Edison's Phonograph</title>
+    <link href="https://sishiya.github.io/manabi-lab/phonograph/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/phonograph/?lang=en</id>
+    <published>2026-10-18T00:00:00+09:00</published>
+    <updated>2026-11-03T00:00:00+09:00</updated>
+    <summary>Sing into a tin-foil phonograph from 1878: the diaphragm shakes and the needle presses a groove into the foil. Trace the groove with the needle and it turns back into a voice. Every step is computed, and the sound comes only from the shape of the groove, not from a recording. Turn the drum by hand and the pitch changes with the speed.</summary>
+  </entry>
   <entry>
     <title>Pixel Art on a CRT</title>
     <link href="https://sishiya.github.io/manabi-lab/crt-pixels/?lang=en"/>
