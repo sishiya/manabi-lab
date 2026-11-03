@@ -143,6 +143,8 @@ TK.note = function (g, t, a, b, s, o = {}) {
   TK.lines(g, s, PW / 2, o.y ?? PH * 0.712, o.size || 34, { color: TK.C.dim, bold: false, blur: 8 });
   g.restore();
 };
+// 声のクレジット（キャラの規約で必要）。小さく下に
+TK.credit = function (g, s) { g.save(); g.globalAlpha = 0.7; TK.text(g, s, PW / 2, 1430, 26, { color: TK.C.sub, bold: false }); g.restore(); };
 // 上のはしの進み具合の線（最後まで見てもらう目安）
 TK.progress = function (g, t, end) {
   if (t > end) return;
@@ -277,7 +279,7 @@ function triviaStart(cfg) {
         TK.bg(g, t, cfg.bgOpts || {});
         cfg.draw(g, t);
         TK.subtitle(g, t, subs);
-        if (cfg.voiceCredit) { g.save(); g.globalAlpha = 0.7; TK.text(g, '声: ' + cfg.voiceCredit, PW / 2, 1430, 26, { color: TK.C.sub, bold: false }); g.restore(); }
+        if (cfg.voiceCredit) TK.credit(g, '声: ' + cfg.voiceCredit);
         if (cfg.progress !== false) TK.progress(g, t, END);
         drawIdentMini(g, t, 0.3, 0.8);
       } else {

@@ -4,6 +4,8 @@
 // 避けること（AI の絵のくせ）: 丸と四角の平らなぬり・角の丸い札・光る丸・まん中の大きな数字の札・グラデーションの球
 'use strict';
 const PL = {};
+// 字幕の帯の高さ（下の YouTube の表示の少し上）。注とクレジットは帯のすぐ下に小さくまとめ、帯より上はぜんぶ絵に使う
+PL.SUBY = 1330;
 PL.INK = '#231c15'; PL.RED = '#b33a22'; PL.PAPER = '#efe6d2'; PL.GREEN = '#3f7a4a';
 PL.MIN = '"Yu Mincho", "游明朝", "YuMincho", serif';
 PL.KYO = '"UD Digi Kyokasho NK", "UD デジタル 教科書体 NK", "UD Digi Kyokasho N", "Yu Gothic UI", sans-serif';
@@ -198,7 +200,7 @@ TK.clock = function (g, t, a, b, o = {}) {   // 経った時間（右上）。�
 TK.note = function (g, t, a, b, s, o = {}) {
   if (t < a || t > b) return;
   g.save(); g.globalAlpha *= fade(t, a, b, 0.3) * 0.9;
-  TK.lines(g, s, PW / 2, o.y ?? PH * 0.712, o.size || 32, { color: '#4a3f33', bold: false, font: PL.KYO });
+  TK.lines(g, s, PW / 2, o.y ?? PL.SUBY + 135, o.size || 30, { color: '#4a3f33', bold: false, font: PL.KYO });
   g.restore();
 };
 TK.progress = function (g, t, end) {   // 上のはしの細い墨の線
@@ -208,7 +210,7 @@ TK.progress = function (g, t, end) {   // 上のはしの細い墨の線
 };
 TK.subtitle = function (g, t, subs) {   // 字幕は紙の帯（上下に罫線）。字は教科書体
   const s = subs.find(x => t >= x.a && t < x.b && !x.noBurn); if (!s) return;
-  const f = fade(t, s.a, s.b, 0.12), y = PH * 0.615, n = String(s.ja).split('\n').length, hh = 70 + n * 40;
+  const f = fade(t, s.a, s.b, 0.12), y = PL.SUBY, n =String(s.ja).split('\n').length, hh = 70 + n * 40;
   g.save(); g.globalAlpha *= f;
   g.fillStyle = 'rgba(239,230,210,0.94)'; g.fillRect(0, y - hh, PW, hh * 2);
   PL.ink(g, gg => { gg.moveTo(60, y - hh + 10); gg.lineTo(PW - 60, y - hh + 10); gg.moveTo(60, y + hh - 10); gg.lineTo(PW - 60, y + hh - 10); }, 3);
@@ -216,3 +218,4 @@ TK.subtitle = function (g, t, subs) {   // 字幕は紙の帯（上下に罫線�
   TK.lines(g, s.ja, PW / 2, y, s.size || 62, { font: PL.KYO, lh: 1.25 });
   g.restore();
 };
+TK.credit = function (g, s) { g.save(); g.globalAlpha *= 0.75; TK.text(g, s, PW / 2, PL.SUBY + 172, 24, { color: '#4a3f33', bold: false, font: PL.KYO }); g.restore(); };   // 注の下に小さく

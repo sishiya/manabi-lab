@@ -18,7 +18,7 @@
 // 数字（地球 R=6371km・g=9.820・脱出 11.186km/s、NASA Earth Fact Sheet）: 半径1kmなら g'=1.54e-3、周回 1.24 m/s、脱出 1.76 m/s、1周 84.4分。
 // 秒速1.3mで水平に進むと楕円（近い所＝地面、遠い所＝地面から約200m）。人は大きく描いている（画面に注）
 const DUR = 32;
-const CX = 540, CY = 690, R = 280;   // 星（半径1km）の絵
+const CX = 540, CY = 740, R = 320;   // 星（半径1km）の絵
 const subs = [
   { a: 0.0, b: 3.0, ja: '歩いただけで、[人工衛星]になる星', en: 'A planet where just walking puts you in orbit', noBurn: true },
   { a: 3.0, b: 8.0, ja: '地球を、[同じ材料のまま]\n半径1kmに縮めたら', en: 'Shrink Earth to a 1 km radius, made of the same stuff' },
@@ -58,7 +58,7 @@ function draw(g, t) {
     const th = t * 0.35, lift = ease((t - 1.0) / 1.6) * 0.12;
     const [x, y] = onPlanet(th, 1 + lift);
     person(g, x, y, th, t * 9, 2.0);
-    TK.hook(g, t, 0.0, 3.0, '歩いたら、\n[人工衛星]。', { y: 1130, size: 130 });   // 星の上の人と重ねないよう、星の下に
+    TK.hook(g, t, 0.0, 3.0, '歩いたら、\n[人工衛星]。', { y: PL.SUBY, size: 120 });   // 星の上の人と重ねないよう、字幕の帯の所に
   }
   // 3〜8: 地球が縮む
   if (t >= 3.0 && t < 8.0) {
@@ -72,18 +72,18 @@ function draw(g, t) {
   }
   // 8〜13: 重力
   if (t >= 8.0 && t < 13.0) {
-    planet(g, CX, CY + 380, R * 0.7, 0.35);
+    planet(g, CX, CY + 300, R * 0.6, 0.35);
     TK.count(g, t, 8.0, 13.0, 9.8, 0.00154, { y: 520, size: 170, dur: 1.4, label: '重力（m/s²）', fmt: v => v > 0.1 ? v.toFixed(1) : v.toFixed(4) });
     if (t > 9.6) { g.save(); g.globalAlpha = fade(t, 9.6, 13, 0.3); TK.text(g, '地球の [6400分の1]', PW / 2, 820, 76); g.restore(); }
   }
   // 13〜20: 速さのくらべ
   if (t >= 13.0 && t < 20.0) {
-    TK.text(g, '速さ（秒速）', PW / 2, 270, 60, { color: TK.C.sub });
+    TK.text(g, '速さ（秒速）', PW / 2, 360, 64, { color: TK.C.sub });
     TK.bars(g, t, 13.2, 20.0, [
       { label: '地面すれすれを回る（人工衛星）', v: 1.24 / 1.6, text: '1.24 m' },
       { label: 'ふつうに歩く（おとな）', v: 1.40 / 1.6, text: '1.3〜1.5 m' },
-    ], { y: 420, gap: 260, stagger: 1.0 });
-    if (t > 16.5) { g.save(); g.globalAlpha = fade(t, 16.5, 20, 0.3); TK.text(g, '歩く方が、[はやい]', PW / 2, 1000, 84); g.restore(); }
+    ], { y: 520, gap: 320, stagger: 1.0 });
+    if (t > 16.5) { g.save(); g.globalAlpha = fade(t, 16.5, 20, 0.3); TK.text(g, '歩く方が、[はやい]', PW / 2, 1120, 84); g.restore(); }
   }
   // 20〜26: 進むと浮いて、1周
   if (t >= 20.0 && t < 26.0) {
@@ -111,7 +111,7 @@ function draw(g, t) {
     PL.label(g, 'もどれない速さ', 90, 240, 56, { align: 'left' });
     PL.label(g, '秒速 [1.76 m]', 90, 330, 96, { align: 'left' });
     if (j > 0) PL.leader(g, x + 40, y - 60, 560, 360, PL.RED);
-    if (t > 29.0) { g.save(); g.globalAlpha = fade(t, 29, 32, 0.3); TK.text(g, '地球で30cm跳ぶ人の踏み切り＝秒速2.4m', PW / 2, 1000, 40, { color: TK.C.sub, bold: false }); g.restore(); }
+    if (t > 29.0) { g.save(); g.globalAlpha = fade(t, 29, 32, 0.3); TK.text(g, '地球で30cm跳ぶ人の踏み切り＝秒速2.4m', PW / 2, 1150, 40, { color: TK.C.sub, bold: false }); g.restore(); }
   }
   if (t >= 3 && t < 20) TK.note(g, t, 3, 20, '空気・山・でこぼこのない、理想の計算', { size: 32 });
   if (t >= 30.0) TK.note(g, t, 30.0, 32.0, '出どころ: NASA Earth Fact Sheet・Bohannon (1997) Age and Ageing', { size: 30 });
