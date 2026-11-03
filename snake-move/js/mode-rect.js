@@ -7,7 +7,7 @@ window.MODES = window.MODES || {};
   const C = { sky: '#14202c', ground: '#2a3326', line: '#55664c', body: '#3d6b4d', edge: '#a6e07a', bone: '#7fd4ff', skin: '#ffc95a', stuck: '#a6e07a',
     push: '#a6e07a', drag: '#ff8a7a', ink: '#e8f0f4', muted: '#a3b4bf' };
   const BODY_H = 0.05;      // 体の太さ（推定）
-  const RP = { surf: 'cloth', duty: 0.5 };
+  const RP = { surf: 'cloth', duty: 0.42 };   // 止まる時間 42%（Newman & Jayne 2018 の平均）
   const MARK = 60;          // 印をつける区切り（まん中あたり）
 
   const M = {
@@ -17,10 +17,10 @@ window.MODES = window.MODES || {};
     tour: [
       { say: '体はうねらない。<b>青い点（背骨）</b>は同じ速さで進む。ボアなど太いヘビの進み方。', layers: { skin: false, rforce: false, plot: false } },
       { say: '下の黄色い線は<b>おなかの皮</b>（ウロコ）。皮だけが背骨に対して前後にずれ、<b>縮んだ所が地面に止まる</b>（緑）。', layers: { skin: true, rforce: false, plot: false } },
-      { say: '縮む波は<b>頭から尾へ</b>流れる（体に2つ）。止まった皮を足場にして、筋肉が背骨を前へ引く。', ring: 'stuck', layers: { skin: true, rforce: false, plot: false } },
+      { say: '縮む波は<b>頭から尾へ</b>流れる（体に3つ近く）。止まった皮を足場にして、筋肉が背骨を前へ引く。', ring: 'stuck', layers: { skin: true, rforce: false, plot: false } },
       { say: '上のグラフ: 背骨の印（青）はなめらかに、皮の印（黄）は<b>止まっては進む</b>（1回 4.5 cm）。', layers: { skin: true, rforce: false, plot: true } },
       { say: '緑は止まった皮が受ける<b>前向きの摩擦</b>、赤は前へすべる皮の<b>引きずる摩擦</b>。止まっている所が足りると、すべらずに進める。', layers: { skin: true, rforce: true, plot: false } },
-      { say: '<b>試してみよう</b>: 皮が止まっている時間を短くすると（速く進もうとすると）…', act: [['止まる時間 35%', () => UI.setSlider('duty', 0.35)], ['なめらかな板にも', () => { UI.setSlider('duty', 0.4); UI.set('rsurf', 'board'); }], ['もとにもどす', () => { UI.setSlider('duty', 0.5); UI.set('rsurf', 'cloth'); }]], layers: { skin: true, rforce: true, plot: true } },
+      { say: '<b>試してみよう</b>: 皮が止まっている時間を短くすると…（この計算では歩幅と回数を変えないので、速くはならない）', act: [['止まる時間 35%', () => UI.setSlider('duty', 0.35)], ['なめらかな板にも', () => { UI.setSlider('duty', 0.4); UI.set('rsurf', 'board'); }], ['もとにもどす', () => { UI.setSlider('duty', 0.42); UI.set('rsurf', 'cloth'); }]], layers: { skin: true, rforce: true, plot: true } },
     ],
     make() { M.s = RECT.make({ surf: RP.surf, duty: RP.duty }); M.hist = []; M.speed = null; M.plot = []; },
     reset() { M.make(); },

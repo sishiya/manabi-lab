@@ -15,7 +15,7 @@
       tau: 2,                   // 波1回の時間（推定）
       lam: 0.5,                 // 波長（体長あたり。ロボットの 0.5 L。体に2波 → いつも2か所でふれる）
       Ah: 2.2, Av: 1.0,         // アーチの左右のふくらみ・上下の傾き（rad。推定: 跡の角度 33°・止まる所 44% に合うよう選んだ）
-      delta: 1.51,              // 2つの波のずれ（Marvi ほか 2014: 1.51 ± 0.17 rad）
+      delta: 1.51,              // 2つの波のずれ（Marvi ほか 2014: 1.51 ± 0.17 rad）。'wave' の形だけで使う。'arch'（既定）では、ずれはアーチの形に含まれる（実質 90°）
       sink: 0.004,              // 体を平らに置いたときのめりこみ（m。地面のやわらかさ。0.004 で、ふれている所が約 1.2 cm めりこむ = 砂の実測 1.4 ± 1.3 cm（Marvi ほか 2014））
       mu: 0.5, aniso: 1, shape: 'arch', contact: 0.4, inert: 1,   // 'arch' = ふれる所はまっすぐ・持ち上げた所はアーチ、'wave' = なめらかな2つの波（くらべる用）        // 摩擦（どの向きも同じ。大きさは動き方に効かない）
     }, o);
@@ -155,7 +155,7 @@
       R.push([rx, ry]); D.push([c * dsh.bx[i] - sn * dsh.by[i], sn * dsh.bx[i] + c * dsh.by[i]]); Wn.push(p.mu * s.nu[i] * ds);
     }
     const m = p.mass * p.inert, Iz = m / p.L * I;
-    let x = [s.U, s.V, s.W];
+    let x = [s.U, s.V, s.W], conv = false;
     for (let it = 0; it < 60; it++) {
       const A = [[m / inr.dt, 0, 0], [0, m / inr.dt, 0], [0, 0, Iz / inr.dt]], b = [m / inr.dt * inr.U, m / inr.dt * inr.V, Iz / inr.dt * inr.W];
       for (let j = 0; j < R.length; j++) {
@@ -170,10 +170,10 @@
       if (!nx) break;
       const ch = Math.abs(nx[0] - x[0]) + Math.abs(nx[1] - x[1]) + Math.abs(nx[2] - x[2]) * p.L;
       x = nx;
-      if (ch < 1e-7) break;
+      if (ch < 1e-7) { conv = true; break; }
     }
     s.U = x[0]; s.V = x[1]; s.W = x[2];
-    return true;
+    return conv;   // 60 回で収まらなかったら false（そのコマは最後の値を使う）
   }
 
   const A1 = {}, A2 = {};
@@ -182,7 +182,7 @@
     const dsh = s._dsh || (s._dsh = { bx: new Float64Array(N), by: new Float64Array(N) });
     for (let i = 0; i < N; i++) { dsh.bx[i] = (sh2.bx[i] - sh.bx[i]) / h; dsh.by[i] = (sh2.by[i] - sh.by[i]) / h; }
     support(s, sh);
-    if (dt > 0) s.ok = solve(s, sh, dsh, { U: s.U, V: s.V, W: s.W, dt });
+    if (dt > 0) { s.ok = solve(s, sh, dsh, { U: s.U, V: s.V, W: s.W, dt }); if (!s.ok) s.bad = (s.bad || 0) + 1; }
     // 体の中の向きの変化を shapeAt の結果から取り出すため、毎回作りなおす
     s._sh = { bx: Float64Array.from(sh.bx), by: Float64Array.from(sh.by), bt: Float64Array.from(sh.bt), kh: Float64Array.from(sh.kh) };
     resid(s, s._sh, dsh, s.U, s.V, s.W, [0, 0, 0], true, null);
@@ -220,7 +220,7 @@
     const ang = d => { let a = Math.abs(d * 180 / Math.PI) % 180; return a > 90 ? 180 - a : a; };
     const kk = s.p.mass * G / (s.p.L * s.p.sink);
     return { speed: v, perCycle: v * s.p.tau / s.p.L, track: ang(dir - Math.atan2(cy, cx) / 2), body: ang(dir - s.TH),
-      still: still / tot, contact: cont / n, slip: sl / sw / v, contacts: ncont / samples.length, sinkMax: sink / kk, lift: zmax, ok: s.ok };
+      still: still / tot, contact: cont / n, slip: sl / sw / v, contacts: ncont / samples.length, sinkMax: sink / kk, lift: zmax, ok: !s.bad, bad: s.bad || 0 };
   }
 
   // しらべる用: ふれている所の速さを全部 0 にできる体の動きがあるか（重みつき最小二乗。のこりのすべり / 体の速さ）

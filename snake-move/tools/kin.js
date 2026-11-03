@@ -32,6 +32,6 @@ function kin(o, label) {
 }
 module.exports = kin;
 if (require.main === module) {
-  kin({}, 'いま（α7 k2 持ち上げ）');
+  kin({}, 'いま（α12 k3.6 持ち上げ）');
   kin({ lift: false }, 'いま（持ち上げなし）');
 }
