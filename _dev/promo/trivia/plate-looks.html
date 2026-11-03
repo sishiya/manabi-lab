@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>うんちくショートの図鑑の版画（試作）</title>
+<style>
+  :root { --bg: #111418; --card: #1d2229; --fg: #f2f2f2; --sub: #aab4c0; --acc: #ffcf4a; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: "Yu Gothic UI", "Meiryo", sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; background: rgba(17,20,24,0.96); padding: 10px 16px; border-bottom: 1px solid #2c333d; }
+  h1 { font-size: 17px; margin: 0 0 6px; }
+  p { margin: 0; font-size: 13px; color: var(--sub); }
+  .bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+  button { font: inherit; font-size: 14px; background: var(--card); color: var(--fg); border: 1px solid #3a4452; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+  button.on { background: var(--acc); color: #111; border-color: var(--acc); }
+  input[type=range] { flex: 1; min-width: 160px; }
+  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 420px)); gap: 14px; padding: 14px 16px; justify-content: center; }
+  figure { margin: 0; background: var(--card); border-radius: 12px; overflow: hidden; }
+  figure canvas { width: 100%; aspect-ratio: 9 / 16; display: block; background: #000; }
+  figcaption { padding: 8px 10px 10px; font-size: 13px; color: var(--sub); }
+  figcaption b { color: var(--fg); font-size: 15px; display: block; margin-bottom: 2px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>図鑑の版画（太い線）＋構図の見本</h1>
+  <p>批評役のすすめ: 線を太く・かげだけ斜線・絵を画面の6割以上・数字は絵の中に書きこむ・まん中に置かずにはみ出させる。手で色をさした古い図鑑の挿絵のように、うすい色を下にしく。</p>
+  <div class="bar">
+    <button id="play">▶ 再生</button>
+    <input id="time" type="range" min="0" max="1" step="0.005" value="0.55">
+  </div>
+</header>
+<div id="grid"></div>
+<script>
+'use strict';
+// 図鑑の版画の見本（2026-11-03）。A＝コードだけで描いた版。B（rough.js などの道具と、古い図版を使う版）はあとで並べる
+const PW = 1080, PH = 1920, W = 540, H = 960, S = W / PW, TAU = Math.PI * 2;
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+let seed = 1;
+const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const rs = a => (rnd() * 2 - 1) * a;
+const setSeed = s => { seed = (s * 7919 + 13) % 2147483647 || 1; };
+
+const INK = '#231c15', RED = '#b33a22', PAPER = '#efe6d2';
+const MIN = '"Yu Mincho", "游明朝", serif', KYO = '"UD Digi Kyokasho NK", "UD デジタル 教科書体 NK", "Yu Gothic UI", sans-serif';
+function text(g, s, x, y, size, fam, color, o = {}) {
+  g.font = (o.bold === false ? '' : 'bold ') + Math.round(size) + 'px ' + fam; g.fillStyle = color;
+  g.textAlign = o.align || 'center'; g.textBaseline = 'middle';
+  if (o.rot) { g.save(); g.translate(x, y); g.rotate(o.rot); g.fillText(s, 0, 0); g.restore(); } else g.fillText(s, x, y);
+}
+// 紙（むらと繊維。1回だけ作る）
+let paperC = null;
+function paper(g) {
+  if (!paperC) {
+    paperC = document.createElement('canvas'); paperC.width = PW; paperC.height = PH; const p = paperC.getContext('2d');
+    p.fillStyle = PAPER; p.fillRect(0, 0, PW, PH); setSeed(9);
+    for (let i = 0; i < 90000; i++) { const v = rnd() < 0.5 ? 60 : 255; p.fillStyle = `rgba(${v},${v - 10},${v - 25},${rnd() * 0.07})`; p.fillRect(rnd() * PW, rnd() * PH, 1 + rnd() * 2.5, 1 + rnd() * 2.5); }
+    const v = p.createRadialGradient(PW / 2, PH / 2, PH * 0.3, PW / 2, PH / 2, PH * 0.75); v.addColorStop(0, 'rgba(120,90,40,0)'); v.addColorStop(1, 'rgba(120,90,40,0.18)'); p.fillStyle = v; p.fillRect(0, 0, PW, PH);
+  }
+  g.drawImage(paperC, 0, 0);
+}
+// 形の中を平行線でぬる。not: その形の外だけ（光の当たる所を抜く）
+function hatch(g, path, o) {
+  g.save(); path(g); g.clip();
+  if (o.not) { g.beginPath(); g.rect(-50, -50, PW + 100, PH + 100); o.not(g); g.clip('evenodd'); }
+  const ang = o.angle, gap = o.gap, L = 2400, ca = Math.cos(ang), sa = Math.sin(ang), cx = o.cx ?? PW / 2, cy = o.cy ?? PH / 2;
+  g.strokeStyle = o.color || INK; g.lineWidth = o.w || 3; g.lineCap = 'round';
+  for (let d = -L; d <= L; d += gap) { g.beginPath(); g.moveTo(cx - ca * L - sa * d, cy - sa * L + ca * d); g.lineTo(cx + ca * L - sa * d, cy + sa * L + ca * d); g.stroke(); }
+  g.restore();
+}
+const disc = (x, y, r) => gg => { gg.beginPath(); gg.arc(x, y, r, 0, TAU); };
+const discAdd = (x, y, r) => gg => { gg.moveTo(x + r, y); gg.arc(x, y, r, 0, TAU); };
+const ellAdd = (x, y, rx, ry, rot = 0) => gg => { gg.moveTo(x + Math.cos(rot) * rx, y + Math.sin(rot) * rx); gg.ellipse(x, y, rx, ry, rot, 0, TAU); };
+// やわらかい手彩色（うすい色をむらに）
+function tint(g, path, color, a = 0.45) { g.save(); path(g); g.clip(); g.globalAlpha = a; g.fillStyle = color; g.fill(); g.globalAlpha = a * 0.5; g.globalCompositeOperation = 'multiply'; g.drawImage(paperC, 0, 0); g.restore(); }
+// 引き出し線（点と線）
+function leader(g, x1, y1, x2, y2, color = INK) {
+  g.strokeStyle = color; g.lineWidth = 3; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+  g.fillStyle = color; g.beginPath(); g.arc(x1, y1, 7, 0, TAU); g.fill();
+}
+// 字幕は紙の帯（上下に罫線）
+function caption(g, lines, y) {
+  g.save(); g.fillStyle = 'rgba(239,230,210,0.94)'; g.fillRect(0, y - 110, PW, 220); g.restore();
+  g.strokeStyle = INK; g.lineWidth = 3; g.beginPath(); g.moveTo(60, y - 100); g.lineTo(PW - 60, y - 100); g.moveTo(60, y + 100); g.lineTo(PW - 60, y + 100); g.stroke();
+  g.lineWidth = 1.2; g.beginPath(); g.moveTo(60, y - 90); g.lineTo(PW - 60, y - 90); g.moveTo(60, y + 90); g.lineTo(PW - 60, y + 90); g.stroke();
+  lines.forEach((s, i) => text(g, s, PW / 2, y + (i - (lines.length - 1) / 2) * 76, 60, KYO, INK));
+}
+
+// ---- 場面1: 半径1kmの地球（はみ出す大きな星・歩く人・数字は道すじに書きこむ）----
+function sceneEarth(g, u) {
+  paper(g);
+  const CX = 400, CY = 1560, R = 720;
+  const planet = disc(CX, CY, R);
+  // 手彩色: 海は青、陸は緑
+  tint(g, planet, '#7fb0c8', 0.55);
+  setSeed(4);
+  const land = [[-0.25, -0.86, 0.32, 0.12, -0.2], [0.42, -0.74, 0.22, 0.09, 0.4], [-0.62, -0.6, 0.16, 0.08, -0.6]];
+  const landPath = gg => { gg.beginPath(); land.forEach(([dx, dy, rx, ry, rot]) => ellAdd(CX + dx * R, CY + dy * R, rx * R, ry * R, rot)(gg)); };
+  tint(g, landPath, '#9cbc78', 0.75);
+  // かげ（光は右上から。左下ほど線を重ねる）と、形にそった緯線
+  const lit = (k, rr) => discAdd(CX + 0.8 * R * k, CY + 0.6 * R * k, R * rr);   // 光は右から。見えている上の左がわが暗い
+  hatch(g, planet, { angle: 0.55, gap: 15, w: 3.2, not: lit(0.22, 1.0) });
+  hatch(g, planet, { angle: -0.5, gap: 12, w: 3.2, not: lit(0.1, 1.0) });
+  hatch(g, planet, { angle: 1.35, gap: 10, w: 3, not: lit(0.04, 1.0) });
+  g.save(); planet(g); g.clip(); g.strokeStyle = INK; g.lineWidth = 2.4;
+  for (let k = 1; k <= 7; k++) { const y = CY - R + k * R * 0.11; const rx = Math.sqrt(Math.max(0, R * R - (y - CY) ** 2)); g.beginPath(); g.ellipse(CX, y, rx, rx * 0.12, 0, Math.PI, TAU); g.stroke(); }
+  g.restore();
+  g.strokeStyle = INK; g.lineWidth = 5; g.beginPath(); land.forEach(([dx, dy, rx, ry, rot]) => ellAdd(CX + dx * R, CY + dy * R, rx * R, ry * R, rot)(g)); g.stroke();
+  g.lineWidth = 10; g.beginPath(); g.arc(CX, CY, R, 0, TAU); g.stroke();
+  // 木（大きさのくらべ）
+  const tree = (th, h) => {
+    g.save(); g.translate(CX + Math.sin(th) * R, CY - Math.cos(th) * R); g.rotate(th);
+    const crown = gg => { gg.beginPath(); gg.moveTo(0, -h); gg.lineTo(h * 0.32, -h * 0.25); gg.lineTo(-h * 0.32, -h * 0.25); gg.closePath(); };
+    tint(g, crown, '#6f9a5a', 0.7); hatch(g, crown, { angle: 1.2, gap: 9, w: 2.4, cx: 0, cy: -h / 2 });
+    g.strokeStyle = INK; g.lineWidth = 6; crown(g); g.stroke(); g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -h * 0.25); g.stroke();
+    g.restore();
+  };
+  tree(-0.42, 150); tree(-0.3, 110); tree(0.5, 130);
+  // 道すじ（星のまわり、少しふくらむ）と人
+  const orbitAt = th => [CX + Math.sin(th) * R * (1.0 + 0.16 * clamp((th + 0.15) / 0.5, 0, 1)), CY - Math.cos(th) * R * (1.0 + 0.16 * clamp((th + 0.15) / 0.5, 0, 1))];
+  g.save(); g.setLineDash([4, 18]); g.lineCap = 'round'; g.strokeStyle = RED; g.lineWidth = 7; g.beginPath();
+  for (let i = 0; i <= 120; i++) { const th = -0.15 + i / 120 * 1.3; const [x, y] = orbitAt(th); i ? g.lineTo(x, y) : g.moveTo(x, y); }
+  g.stroke(); g.restore();
+  const th = -0.15 + u * 1.2, [px, py] = orbitAt(th);
+  g.save(); g.translate(px, py); g.rotate(th);   // 歩く人（影絵）。足を開いて、手をふる
+  const ph = u * 22, sw = Math.sin(ph) * 0.45;
+  g.strokeStyle = INK; g.lineCap = 'round'; g.lineWidth = 22;
+  g.beginPath(); g.moveTo(0, -95); g.lineTo(Math.sin(sw) * 50, 0); g.moveTo(0, -95); g.lineTo(-Math.sin(sw) * 50, 0); g.stroke();
+  g.lineWidth = 30; g.beginPath(); g.moveTo(0, -95); g.lineTo(0, -190); g.stroke();
+  g.lineWidth = 16; g.beginPath(); g.moveTo(0, -175); g.lineTo(-Math.sin(sw) * 55, -115); g.moveTo(0, -175); g.lineTo(Math.sin(sw) * 55, -115); g.stroke();
+  g.fillStyle = INK; g.beginPath(); g.arc(0, -228, 30, 0, TAU); g.fill();
+  g.restore();
+  // 数字は道すじに書きこむ
+  const [lx, ly] = orbitAt(0.62);
+  leader(g, lx, ly, 800, 240, RED);
+  text(g, '秒速 1.24 m', 800, 120, 80, MIN, RED);
+  text(g, '歩くより、少しおそい', 800, 190, 40, MIN, INK);
+  // 見出しと時計（左上）
+  text(g, '半径 1 km の地球', 90, 300, 76, MIN, INK, { align: 'left' });
+  text(g, '同じ材料のまま、縮めたら', 92, 380, 42, MIN, INK, { align: 'left', bold: false });
+  g.strokeStyle = INK; g.lineWidth = 3; g.beginPath(); g.moveTo(90, 425); g.lineTo(640, 425); g.stroke();
+  const dx = 190, dy = 590, dr = 95;   // 懐中時計（1周 84分）
+  tint(g, disc(dx, dy, dr), '#e3c98d', 0.6);
+  g.lineWidth = 8; g.beginPath(); g.arc(dx, dy, dr, 0, TAU); g.stroke();
+  for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; g.lineWidth = i % 3 ? 3 : 6; g.beginPath(); g.moveTo(dx + Math.sin(a) * dr * 0.78, dy - Math.cos(a) * dr * 0.78); g.lineTo(dx + Math.sin(a) * dr * 0.92, dy - Math.cos(a) * dr * 0.92); g.stroke(); }
+  g.strokeStyle = RED; g.lineWidth = 9; g.beginPath(); g.moveTo(dx, dy); g.lineTo(dx + Math.sin(u * TAU) * dr * 0.7, dy - Math.cos(u * TAU) * dr * 0.7); g.stroke();
+  text(g, '1周', dx + dr + 30, dy - 30, 42, MIN, INK, { align: 'left' }); text(g, Math.round(u * 84) + ' 分', dx + dr + 30, dy + 35, 58, MIN, RED, { align: 'left' });
+  caption(g, ['この速さで地面すれすれを進むと', '足がはなれて、星を1周（84分）'], 1210);
+  text(g, '1000倍の早送り／人と木は大きく描いています', PW / 2, 1360, 30, KYO, INK, { bold: false });
+}
+
+// ---- 場面2: ハエトリグモの跳躍（横から。顔・牙は描かない）----
+function spider(g, x, y, s, rot) {
+  // 右向き・横から。足もとが y=0。頭胸部は前が高い箱形、腹部は後ろの楕円。脚は 膝が上 → 足先が下 の山形
+  g.save(); g.translate(x, y); g.rotate(rot); g.scale(s, s);
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  const leg = (ax, dx, kneeH, w, a) => {   // 付け根 (ax, -52) → 膝 → 足先 (ax+dx, 0)
+    g.globalAlpha = a; g.strokeStyle = INK; g.lineWidth = w;
+    g.beginPath(); g.moveTo(ax, -52); g.lineTo(ax + dx * 0.45, -kneeH); g.lineTo(ax + dx * 0.85, -18); g.lineTo(ax + dx, 0); g.stroke();
+    g.fillStyle = INK; g.beginPath(); g.arc(ax + dx * 0.45, -kneeH, w * 0.6, 0, TAU); g.fill(); g.globalAlpha = 1;
+  };
+  [[14, -82, 96], [32, -40, 100], [50, 22, 98], [70, 70, 108]].forEach(([ax, dx, kh]) => leg(ax + 8, dx * 0.9, kh - 6, 6, 0.45));   // 向こうがわの脚（うすく）
+  const carap = gg => { gg.beginPath(); gg.moveTo(0, -50); gg.lineTo(8, -88); gg.quadraticCurveTo(40, -104, 74, -98); gg.quadraticCurveTo(92, -90, 90, -62); gg.lineTo(84, -48); gg.quadraticCurveTo(40, -40, 0, -50); gg.closePath(); };
+  const abd = gg => { gg.beginPath(); gg.ellipse(-48, -64, 54, 37, 0.12, 0, TAU); };
+  tint(g, abd, '#7a5a3e', 0.8); tint(g, carap, '#5e4a38', 0.85);
+  hatch(g, abd, { angle: 1.15, gap: 8, w: 2.4, cx: -48, cy: -64, not: discAdd(-40, -86, 30) });
+  hatch(g, carap, { angle: -0.5, gap: 8, w: 2.4, cx: 45, cy: -70, not: discAdd(50, -100, 26) });
+  g.fillStyle = 'rgba(239,230,210,0.92)'; [[-78, -66], [-56, -78], [-30, -72]].forEach(([a, b]) => { g.beginPath(); g.ellipse(a, b, 10, 5, 0.3, 0, TAU); g.fill(); });   // 腹の白い斑
+  g.strokeStyle = INK; g.lineWidth = 6; abd(g); g.stroke(); carap(g); g.stroke();
+  [[14, -82, 96], [32, -40, 100], [50, 22, 98], [70, 70, 108]].forEach(([ax, dx, kh], i) => leg(ax, dx, kh, i === 3 ? 13 : 10, 1));   // こちらがわの脚（前の脚が太い）
+  g.restore();
+}
+function fly(g, x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s);
+  const wing = ellAdd(-10, -55, 55, 18, -0.35);
+  tint(g, gg => { gg.beginPath(); wing(gg); }, '#cfe0e6', 0.6);
+  g.strokeStyle = INK; g.lineWidth = 3; g.beginPath(); wing(g); g.stroke();
+  g.lineWidth = 1.6; for (let i = -2; i <= 2; i++) { g.beginPath(); g.moveTo(-50, -40 + i * 2); g.quadraticCurveTo(-10, -55 + i * 7, 35, -70 + i * 5); g.stroke(); }
+  const body = gg => { gg.beginPath(); ellAdd(0, -18, 40, 18)(gg); ellAdd(38, -22, 16, 15)(gg); };
+  tint(g, body, '#5a6a50', 0.7); hatch(g, body, { angle: 0.9, gap: 7, w: 2, cx: 0, cy: -18 });
+  g.lineWidth = 5; body(g); g.stroke();
+  g.lineWidth = 5; [[-10, 0, -22, 22], [10, 0, 6, 24], [25, 0, 34, 24]].forEach(([a, b, c, d]) => { g.beginPath(); g.moveTo(a, b); g.lineTo(c, d); g.stroke(); });
+  g.restore();
+}
+function sceneSpider(g, u) {
+  paper(g);
+  // 台（左の板・右の茎）。木目の線
+  const plank = gg => { gg.beginPath(); gg.rect(-20, 1010, 360, 120); };
+  tint(g, plank, '#c89a62', 0.6); hatch(g, plank, { angle: 0.04, gap: 14, w: 2.4 });
+  g.strokeStyle = INK; g.lineWidth = 7; plank(g); g.stroke();
+  const stem = gg => { gg.beginPath(); gg.moveTo(880, PH); gg.quadraticCurveTo(900, 1150, 870, 980); gg.lineTo(900, 980); gg.quadraticCurveTo(930, 1150, 915, PH); gg.closePath(); };
+  tint(g, stem, '#88a86a', 0.7); hatch(g, stem, { angle: 1.4, gap: 9, w: 2.2 }); g.lineWidth = 6; stem(g); g.stroke();
+  fly(g, 885, 975, 1.3);
+  // 2つの跳ぶ道すじ: 緑の光＝ぴったり、赤い光＝手前に落ちる
+  const arc = (x0, x1, top, k) => [lerp(x0, x1, k), 1005 - Math.sin(Math.PI * k) * top];
+  const path = (x1, color, dash) => { g.save(); g.setLineDash(dash); g.lineCap = 'round'; g.strokeStyle = color; g.lineWidth = 7; g.beginPath(); for (let i = 0; i <= 60; i++) { const [x, y] = arc(250, x1, 380, i / 60); i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); g.restore(); };
+  path(860, '#3f7a4a', [2, 16]); path(650, RED, [26, 14]);
+  const [sx, sy] = arc(250, 650, 380, u);
+  spider(g, sx, sy, 1.7, lerp(-0.45, 0.45, u));
+  // 書きこみ（道すじのそばに）
+  text(g, '緑の光 … ぴったり', 790, 740, 50, MIN, '#3f7a4a');
+  text(g, '赤い光 … 手前に落ちる', 560, 1075, 50, MIN, RED);
+  g.strokeStyle = RED; g.lineWidth = 6; g.beginPath(); g.moveTo(630, 985); g.lineTo(670, 1025); g.moveTo(670, 985); g.lineTo(630, 1025); g.stroke();   // 落ちた所
+  // 左上のルーペ: 前の目の網膜は4段
+  const lx = 840, ly = 400, lr = 150;
+  g.save(); disc(lx, ly, lr)(g); g.clip(); g.fillStyle = '#f4ecd9'; g.fillRect(lx - lr, ly - lr, lr * 2, lr * 2);
+  for (let k = 0; k < 4; k++) { const band = gg => { gg.beginPath(); gg.ellipse(lx + 40, ly + 300, 330 - k * 50, 330 - k * 50, 0, Math.PI * 1.15, Math.PI * 1.85); gg.ellipse(lx + 40, ly + 300, 305 - k * 50, 305 - k * 50, 0, Math.PI * 1.85, Math.PI * 1.15, true); gg.closePath(); };
+    tint(g, band, ['#d9a35a', '#c98a4a', '#b8784a', '#a8664a'][k], 0.8); g.strokeStyle = INK; g.lineWidth = 3; band(g); g.stroke(); }
+  g.restore();
+  g.strokeStyle = INK; g.lineWidth = 9; g.beginPath(); g.arc(lx, ly, lr, 0, TAU); g.stroke();
+  g.lineWidth = 16; g.beginPath(); g.moveTo(lx + lr * 0.72, ly + lr * 0.72); g.lineTo(lx + lr * 1.0, ly + lr * 1.0); g.stroke();
+  text(g, '前の目の網膜は 4 段', lx - 60, ly + lr + 50, 42, MIN, INK);
+  text(g, '赤い光の中で跳ぶと？', PW / 2, 180, 68, MIN, INK);
+  caption(g, ['答え：手前に落ちる', '緑の光ではぴったりなのに'], 1450 - 200);
+  text(g, '道すじは模式（どれだけ手前かは描いていない）', PW / 2, 1400, 30, KYO, INK, { bold: false });
+}
+
+const SCENES = [
+  { name: 'A 地球（コードだけ）', note: '星を画面の下に大きく。かげは2方向の斜線と緯線、色はうすく手でさしたように。数字は道すじに沿って書きこみ、時計は懐中時計の線画に。', draw: sceneEarth },
+  { name: 'A 生き物（コードだけ）', note: 'ハエトリグモを横から（顔と牙は描かない決まり）。脚は関節で折れる太い線。答えの2本の道すじに書きこみ、網膜はルーペで寄って見せる。生き物はコードだけだと形がまだ記号っぽい。', draw: sceneSpider },
+];
+const grid = document.getElementById('grid'), figs = [];
+for (const sc of SCENES) {
+  const f = document.createElement('figure'), c = document.createElement('canvas'); c.width = W; c.height = H;
+  const cap = document.createElement('figcaption'); cap.innerHTML = '<b></b><span></span>';
+  cap.querySelector('b').textContent = sc.name; cap.querySelector('span').textContent = sc.note;
+  f.append(c, cap); grid.appendChild(f); figs.push([sc, c]);
+}
+function draw() {
+  const u = +document.getElementById('time').value;
+  for (const [sc, c] of figs) { const g = c.getContext('2d'); g.setTransform(S, 0, 0, S, 0, 0); g.globalAlpha = 1; sc.draw(g, u); }
+}
+let playing = false, last = 0;
+document.getElementById('play').onclick = e => { playing = !playing; e.target.textContent = playing ? '❚❚ 止める' : '▶ 再生'; last = performance.now(); if (playing) requestAnimationFrame(tick); };
+function tick(now) { if (!playing) return; const el = document.getElementById('time'); let u = +el.value + (now - last) / 4000; last = now; if (u > 1) u = 0; el.value = u; draw(); requestAnimationFrame(tick); }
+document.getElementById('time').oninput = draw;
+document.fonts.ready.then(draw);
+</script>
+</body>
+</html>
