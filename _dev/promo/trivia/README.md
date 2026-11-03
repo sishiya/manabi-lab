@@ -43,6 +43,7 @@
 ## 試作（2026-11-03）
 - 捨てていい31本をのぞく **89 本を全部、動画にした**（Canvas だけ。アプリの録画は使っていない。声はまだなく字幕だけ。音量はすべて OK）。
 - 見くらべ: サーバー（`apps` など）で `http://localhost:<port>/_dev/promo/trivia/gallery.html`。型でしぼる・☆で選ぶ・「選んだものを書き出す」で番号の一覧になる。
+  - 再生するのは軽い版 `out/preview/<名前>.mp4`（540x960）。録った・録りなおしたら `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/promo/trivia/make-previews.ps1`（新しいものだけ作る。ポスターもいっしょに）。軽い版がなければ元の 4K を読む。開いておく動画は1本だけ（ほかは外してポスターに戻す）。確認用サーバー（`.claude/serve.ps1`）は動画を 4MB ずつ返す（丸ごと返すと、そのあいだ2本目の要求が待たされて再生できなかった。2026-11-03）。
   - 軽くするため、はじめはポスター画像（`out/poster/<ページ名>.jpg`、幅360）だけ出し、押したときに動画を読みこむ。録りなおしたらポスターも作りなおす: `out/` で `ffmpeg -y -ss 1.5 -i <ページ名>-short.mp4 -frames:v 1 -vf scale=360:-2 -q:v 5 poster/<ページ名>.jpg`。
 - ページは `_dev/promo/<app>-trivia<番号>.html`、動画は `out/<名前>-short.mp4`（Git に入れない）。記録・確かめ残しは `proto/<app>.json` の notes。部品は `_dev/promo/trivia-kit.js`、作り方は `PROTO-BRIEF.md`。
 - metronome-sync-1 の試作は `metronome-sync-trivia2`、metronome-sync-2 は `trivia4`（trivia1 はもとからある別の話）。

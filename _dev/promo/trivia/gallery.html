@@ -65,7 +65,9 @@ async function load() {
   });
   render();
 }
+let current = null;   // いま開いている動画を外す関数
 function render() {
+  if (current) { current(); current = null; }
   const sort = document.getElementById('sort').value;
   let list = items.filter(x => (!filt || x.type === filt) && (!onlyPicked || picks.has(x.id)) && (!onlyVoiced || x.mp4_subs));
   list.sort((a, b) => sort === 'rank' ? rankOf(a.id) - rankOf(b.id) || a.id.localeCompare(b.id) : sort === 'type' ? a.type.localeCompare(b.type) || a.id.localeCompare(b.id) : a.id.localeCompare(b.id));
@@ -81,19 +83,27 @@ function render() {
       <button class="pick">${picks.has(x.id) ? '★ 選んだ' : '☆ 選ぶ'}</button></div>`;
     d.querySelector('b').textContent = x.title; d.querySelector('.id').textContent = x.id + '（' + x.page + '）';
     d.querySelector('.nt').textContent = [x.voice && '声: ' + x.voice, x.app_footage ? 'アプリの録画あり' : '', x.notes].filter(Boolean).join(' ／ ');
-    // 軽くするため、動画は押したときに読みこむ（それまでは小さなポスター画像。out/poster/ は ffmpeg で作る、README）
-    let v = null, alt = false;
-    const src = () => '../' + (alt ? x.mp4_subs : x.mp4);
+    // 軽くするため、動画は押したときに読みこむ（それまでは小さなポスター画像）。読むのは軽い版 out/preview/（540x960、
+    // make-previews.ps1 で作る）。なければ元の 4K。開いている動画は1本だけ: 前のは止めるだけでなく外してポスターに戻す
+    // （止めただけの動画は読みこみと4Kの復号を続け、何本目かから再生できなくなっていた）
+    let v = null, alt = false, full = false;
+    const poster = d.querySelector('.poster');
+    const src = () => { const m = alt ? x.mp4_subs : x.mp4; return '../' + (full ? m : m.replace(/^out\//, 'out/preview/')); };
+    const unload = () => { if (!v) return; v.onerror = null; v.pause(); v.removeAttribute('src'); v.load(); v.replaceWith(poster); v = null; };
     const play = () => {
+      if (current && current !== unload) current();
+      current = unload;
       if (!v) {
         v = Object.assign(document.createElement('video'), { controls: true, autoplay: true, playsInline: true, preload: 'auto' });
-        v.onerror = () => { v.replaceWith(Object.assign(document.createElement('div'), { className: 'missing', textContent: 'まだ録画がありません' })); };
-        d.querySelector('.poster').replaceWith(v);
+        v.onerror = () => {
+          if (!full) { full = true; v.src = src(); return; }   // 軽い版がまだなければ元の動画で
+          v.replaceWith(Object.assign(document.createElement('div'), { className: 'missing', textContent: 'まだ録画がありません' })); v = null;
+        };
+        poster.replaceWith(v);
       }
-      v.src = src();
-      document.querySelectorAll('video').forEach(o => { if (o !== v) o.pause(); });   // 鳴るのは1本だけ
+      full = false; v.src = src();
     };
-    d.querySelector('.poster').onclick = play;
+    poster.onclick = play;
     d.querySelector('.poster img').onerror = e => { e.target.remove(); };
     if (x.mp4_subs) {   // 声つきのものは、字幕だけの版と切りかえられる
       const sw = document.createElement('button'); sw.className = 'pick alt'; sw.textContent = '字幕だけの版を見る';
