@@ -1,6 +1,6 @@
 // 一滴をまるごと書き出す・もとにもどす（進化の節目の一滴を、画面ですぐ見られるように）
 // 砂は同じシードから同じ形に作りなおせるので書かない。生き物どうしのつながり（群体・糸・接合の相手）は番号にして、もどすときにつなぎなおす
-import { World } from './sim.js';
+import { World, orgBox } from './sim.js';
 import { analyze, expressBody } from './body.js';
 
 const ORG_REFS = ['links', 'fr', 'col', 'mate'];
@@ -62,7 +62,7 @@ export function restore(d) {
   }
   const byId = new Map();
   w.orgs = d.orgs.map(s => {
-    const o = { sL: 0, sR: 0, pL: 0, pR: 0, dL: 0, dR: 0, dead: false, ...s, b: d.bodies[s.b], next: s.next ? { g: s.next.g, b: d.bodies[s.next.b] } : null };   // 書かなかった一時の値は 0 から（次の感じるこまで作りなおす）
+    const o = Object.assign(orgBox(), s, { b: d.bodies[s.b], next: s.next ? { g: s.next.g, b: d.bodies[s.next.b] } : null });   // 書かなかった一時の値は 0 から（次の感じるこまで作りなおす）。入れ物の形は sim.js の orgBox にそろえる
     o.xb = expressBody(o.b, o.inner); o.bp = analyze(o.xb);
     byId.set(o.id, o);
     return o;

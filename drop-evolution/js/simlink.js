@@ -8,6 +8,7 @@ import { PRESETS } from './presets.js';
 
 const OF = ['id', 'x', 'y', 'a', 'r', 'e', 'eS', 'colN', 'colR', 'inner', 'anch', 'colAnch', 'ax', 'ay', 'sym', 'mateT', 'mate', 'clade', 'hue', 'gen', 'ate', 'prey', 'kids', 'mixes', 'age', 'bId', 'xbId', 'gId', 'nLinks', 'burst'];
 const BOOL = new Set(['inner', 'anch', 'colAnch']);
+const MIRROR0 = Object.fromEntries([...OF.slice(1), 'b', 'g', 'xb', 'bp', 'linkIds', 'spl', 'nofl', 'str', 'sax'].map(k => [k, undefined]));
 
 // 一滴の写し（描く・札・グラフが読む分だけ）
 class Mirror {
@@ -27,7 +28,7 @@ class Mirror {
     for (let n = 0, li = 0; n < N; n++) {
       const id = O[n * F];
       let o = this.byId.get(id);
-      if (!o) { o = { id, dead: false, links: [] }; this.byId.set(id, o); }
+      if (!o) { o = { id, dead: false, links: [], ...MIRROR0 }; this.byId.set(id, o); }   // 入れ物の形をそろえる（sim.js の orgBox と同じわけ）
       for (let j = 1; j < F; j++) { const v = O[n * F + j]; o[OF[j]] = BOOL.has(OF[j]) ? v > 0 : v; }
       if (Number.isNaN(o.ax)) o.ax = undefined;
       o.b = this.defs.get(o.bId); o.g = this.defs.get(o.gId);

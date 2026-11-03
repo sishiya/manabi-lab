@@ -105,6 +105,22 @@ export function rng(seed) {
 
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 
+// 生き物の入れ物。持ち物はぜんぶ、ここで決まった順に作る（2026-11-03）。前はあとから思い思いの順に足していて、
+// 千匹の入れ物の形が 300 通りにばらけ、ブラウザが1匹ずつ形を調べなおすので計算が何倍も遅かった。決まりは変わらない
+export function orgBox() {
+  return {
+    id: 0, g: null, b: null, xb: null, bp: null, hue: 0, bph: 0, clade: 0, parent: 0, x: 0, y: 0, a: 0, e: 0, eS: 0, age: 0, gen: 0,
+    r: 0, m: 0, sL: 0, sR: 0, pL: 0, pR: 0, dL: 0, dR: 0,
+    ate: 0, prey: 0, full: 0, kids: 0, dead: false, gained: 0, spent: 0, poo: 0,
+    sym: 0, symE: 0, inner: false,   // 飼っている藍藻の数と、分かれるためにためている分・群体の中で仲間に囲まれている（3つ以上とふれている）
+    mate: null, mateT: 0, next: null, mixes: 0,   // 接合の相手・のこり時間・混ぜてできた次の遺伝子（次に分かれるときから使う）
+    links: [], fr: null, col: null, colN: 1, colR: 0, colAnch: false, seenAt: 0, touch: 0,   // くっついている仲間・糸の前のとなり・群体のまとめ役と数と半径
+    anch: false, ax: undefined, ay: undefined, over: false, press: 0, bump: false, rev: 0, vx: 0, vy: 0,   // 柄でくっつく・砂つぶ・ぶつかる・自分の泳ぐ速さ
+    burst: 0, burstT: 0, eatenBy: 0, tp: null, tpN: -1, tpX: 0, tpY: 0,   // 多分裂・食べた相手・節の先の置き場
+    spl: undefined, nofl: undefined, str: undefined, sax: undefined,   // 画面だけの仮の形（abyss.js の bodyPose。描くあいだだけ入れる）
+  };
+}
+
 // 飼える藍藻の数は細胞の大きさに比例（多分裂の母のように大人より大きく育つ細胞は、育ったぶん多く飼える。本物の葉緑体も細胞の体積に合わせて増える）
 // 死にやすさは重さの −0.25 乗（本物の海の生き物の自然の死亡率。代謝の 0.75 乗と同じ根っこ。Peterson & Wroblewski 1984）。
 // 群体は群体ごと食べられるので、群体全体の重さで。はじまりの大人（半径 8 µm）で 1
@@ -247,14 +263,9 @@ export class World {
   }
 
   addOrg(g, clade, x, y, e, gen, b) {
-    const o = {
-      id: this.nextId++, g, b, xb: expressBody(b, false), hue: this.clades.get(clade).hue, bp: analyze(expressBody(b, false)), bph: this.r(), clade, x, y, eS: eSplit(g, b),
-      a: this.r() * Math.PI * 2, e, age: 0, gen,
-      r: 0, m: 0, sL: 0, sR: 0, pL: 0, pR: 0, dL: 0, dR: 0,
-      ate: 0, prey: 0, full: 0, kids: 0, dead: false, gained: 0, spent: 0, poo: 0,
-      sym: 0, symE: 0, inner: false,   // inner: 群体の中で仲間に囲まれている（3つ以上とふれている）   // 飼っている藍藻の数と、その藍藻が分かれるためにためている分
-      mate: null, mateT: 0, next: null, mixes: 0, links: [], colN: 1, colR: 0,   // くっついている仲間・群体の数と半径   // 接合の相手・のこり時間・混ぜてできた次の遺伝子（次に分かれるときから使う）
-    };
+    const o = orgBox();
+    o.id = this.nextId++; o.g = g; o.b = b; o.xb = expressBody(b, false); o.hue = this.clades.get(clade).hue; o.bp = analyze(expressBody(b, false)); o.bph = this.r();
+    o.clade = clade; o.x = x; o.y = y; o.eS = eSplit(g, b); o.a = this.r() * Math.PI * 2; o.e = e; o.gen = gen;
     this.grow(o);
     o.col = o; o.colR = o.r;
     this.orgs.push(o);
