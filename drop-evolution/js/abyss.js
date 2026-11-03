@@ -240,7 +240,7 @@ export function drawAbyss(ren, world, sel, time) {
   toWorld(ren, g, dpr);
   if (!gC) {
   // 藍藻: またたく小さな火花（明るさを4段にまとめて描く）
-  const ss = Math.max(1.6, 1.8 / z);
+  const ss = algaD(z);
   for (let b = 0; b < 4; b++) {
     g.fillStyle = `rgba(${ABYSS.food},${(0.34 + b * 0.1).toFixed(2)})`; g.beginPath();
     for (let i = 0; i < world.fn; i++) {
@@ -311,14 +311,14 @@ export function drawAbyss(ren, world, sel, time) {
     g.strokeStyle = `rgba(190,245,255,${(0.2 + 0.6 * I).toFixed(2)})`; g.lineWidth = Math.max(lw, 1.1 / z); g.stroke(rimP[b]);
   }
   g.fillStyle = 'rgba(210,250,255,0.75)'; g.fill(dotP);
-  // 飼っている藍藻: 細胞の中の緑の点
+  // 飼っている藍藻: 細胞の中の緑の点（外にただよう藍藻・食胞の中身と同じ大きさの丸。同じ藍藻なので）
   g.fillStyle = `rgba(${ABYSS.sym},0.7)`;
-  const ds = Math.max(1.2, 1.4 / z);
+  const ds = algaD(z);
   const symP = new Path2D();
   for (const o of vis) {
     if (!o.sym) continue;
     const n = Math.min(40, o.sym);
-    for (let k = 0; k < n; k++) { const a = o.a + k * 2.39996 + o.id, d = o.r * 0.7 * Math.sqrt((k + 0.5) / n); symP.rect(o.x + Math.cos(a) * d - ds / 2, o.y + Math.sin(a) * d - ds / 2, ds, ds); }
+    for (let k = 0; k < n; k++) { const a = o.a + k * 2.39996 + o.id, d = o.r * 0.7 * Math.sqrt((k + 0.5) / n), x = o.x + Math.cos(a) * d, y = o.y + Math.sin(a) * d; symP.moveTo(x + ds / 2, y); symP.arc(x, y, ds / 2, 0, TAU); }
   }
   g.fill(symP);
   // 接合している2匹: 間を結ぶ光の橋（ゆっくり明滅）
@@ -411,7 +411,9 @@ function motes(ren, g, time, rayAt) {
 
 // 食胞: 本物の鞭毛虫・繊毛虫は、口のくぼみからエサをのみこむと、膜の袋（食胞）にくるんで体の中をめぐらせ、消化して小さく・茶色っぽくしていく
 // （ゾウリムシに墨の粒を食べさせて見る食胞と同じ）。食べた数がふえた生き物の口から点が中へ入り、体の中をゆっくり回りながら薄れて消える。
-// 藍藻は緑の小さな食胞、狩った相手は琥珀色の大きな食胞。飼っている藍藻（明るい緑の四角・消えない）とまぎれないよう、くすんだ丸にする
+// 藍藻の食胞は、中身が外の藍藻と同じ大きさの点で、まわりにうすい膜の輪（食胞は中身より少し大きい）。狩った相手は琥珀色の大きな食胞。
+// 飼っている藍藻（明るい緑・消えない・膜なし）とは、くすんだ色と膜の輪で見分ける
+const algaD = z => Math.max(1.6, 1.8 / z);   // 藍藻のつぶの直径（µm。引いたときは画面で見える最小の大きさ）
 const VAC_IN = 0.35, VAC_DIGEST = { alga: 6, prey: 9 };
 function eatFlash(ren, g, vis, time, z) {
   const prev = ren.eatPrev || (ren.eatPrev = new Map()), vs = ren.flashes || (ren.flashes = []), now = new Map();
@@ -437,12 +439,18 @@ function eatFlash(ren, g, vis, time, z) {
     const a = o.a + ang, x = o.x + Math.cos(a) * o.r * rad, y = o.y + Math.sin(a) * o.r * rad;
     // 消化: だんだん小さく、緑（琥珀）から茶色へ、最後は消える
     const dig = Math.max(0, age - VAC_IN) / VAC_DIGEST[v.hunt ? 'prey' : 'alga'];
-    const R = o.r * (v.hunt ? 0.3 : 0.16) * (1 - 0.55 * dig), A = (age < VAC_IN ? 0.9 : 0.75) * (1 - dig * dig);
+    const A = (age < VAC_IN ? 0.9 : 0.75) * (1 - dig * dig);
     const c0 = v.hunt ? [255, 200, 97] : [140, 225, 120], c1 = [150, 115, 70];
     const c = c0.map((q, j) => Math.round(q + (c1[j] - q) * Math.min(1, dig * 1.4)));
-    g.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${(A * 0.55).toFixed(2)})`;
-    g.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},${A.toFixed(2)})`; g.lineWidth = Math.max(0.6 / z, R * 0.18);
-    g.beginPath(); g.arc(x, y, Math.max(0.8 / z, R), 0, TAU); g.fill(); g.stroke();
+    // 中身: 藍藻は外の藍藻と同じ大きさから、消化で小さく。狩った相手は体の 0.3
+    const r0 = v.hunt ? o.r * 0.3 : algaD(z) / 2, rc = r0 * (1 - 0.6 * dig);
+    g.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${(A * 0.8).toFixed(2)})`;
+    g.beginPath(); g.arc(x, y, rc, 0, TAU); g.fill();
+    // 膜の輪（中身より少し大きい。入ったあとに見える）
+    if (age >= VAC_IN * 0.6) {
+      g.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},${(A * 0.45).toFixed(2)})`; g.lineWidth = Math.max(0.4 / z, r0 * 0.12);
+      g.beginPath(); g.arc(x, y, r0 * 1.5, 0, TAU); g.stroke();
+    }
   }
   vs.length = k;
 }
@@ -452,7 +460,7 @@ function crispGL(gC, ren, world, vis, glow, poses, sel, time, tl, br) {
   const sub = k => { const n = performance.now(); PF[k] = (PF[k] || 0) * 0.9 + (n - t0) * 0.1; t0 = n; };
   gC.begin(cv.width, cv.height, c.x, c.y, z * ren.dpr);
   // 藍藻: またたく小さな火花
-  const ss = Math.max(1.6, 1.8 / z);
+  const ss = algaD(z);
   for (let i = 0; i < world.fn; i++) {
     const x = world.fx[i], y = world.fy[i];
     if (x < tl.x || x > br.x || y < tl.y || y > br.y || world.fage[i] >= 1e8) continue;
@@ -506,11 +514,11 @@ function crispGL(gC, ren, world, vis, glow, poses, sel, time, tl, br) {
     if (P && r * z > 5) for (const i of o.bp.tips) { const q = i * 4; gC.disc(o.x + (ca * P.pts[q + 2] - sa * P.pts[q + 3]) * r, o.y + (sa * P.pts[q + 2] + ca * P.pts[q + 3]) * r, Math.max(0.8 / z, r * 0.08), dotC); }
   }
   // 飼っている藍藻
-  const ds = Math.max(1.2, 1.4 / z), sc = rgba(ABYSS.sym, 0.7);
+  const ds = algaD(z), sc = rgba(ABYSS.sym, 0.7);
   for (const o of vis) {
     if (!o.sym) continue;
     const n = Math.min(40, o.sym);
-    for (let k = 0; k < n; k++) { const a = o.a + k * 2.39996 + o.id, d = o.r * 0.7 * Math.sqrt((k + 0.5) / n); gC.square(o.x + Math.cos(a) * d, o.y + Math.sin(a) * d, ds, sc); }
+    for (let k = 0; k < n; k++) { const a = o.a + k * 2.39996 + o.id, d = o.r * 0.7 * Math.sqrt((k + 0.5) / n); gC.disc(o.x + Math.cos(a) * d, o.y + Math.sin(a) * d, ds / 2, sc); }
   }
   // 接合している2匹の橋
   const wm = Math.max(1.2 / z, 1.5);
