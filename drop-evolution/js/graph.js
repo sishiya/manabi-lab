@@ -4,15 +4,15 @@ import { GI, GENES } from './sim.js';
 // [名前, 色, 記録からの値（0..1 にそろえる）]
 const gene = k => s => (s.mean[GI[k]] - GENES[GI[k]][1]) / (GENES[GI[k]][2] - GENES[GI[k]][1]);
 const TRAITS = [
-  ['節の数', '#ffc861', s => (s.segs || 0) / 10],
-  ['速さ', '#7dffc8', s => (s.speed || 0) / 300],
-  ['とどく', '#4fc3a0', s => (s.reach || 0) / 150],
-  ['感じる範囲', '#a6e8ff', gene('range')],
-  ['獲物へ', '#ff8a6a', gene('small')],
-  ['大きさ', '#d8ffe2', gene('size')],
-  ['混ぜる', '#e7a6ff', gene('mix')],
-  ['くっつく', '#ff7ad9', gene('stick')],
-  ['飼う', '#5fd66f', gene('keep')],
+  [L('節の数', 'Segments'), '#ffc861', s => (s.segs || 0) / 10],
+  [L('速さ', 'Speed'), '#7dffc8', s => (s.speed || 0) / 300],
+  [L('とどく', 'Reach'), '#4fc3a0', s => (s.reach || 0) / 150],
+  [L('感じる範囲', 'Sensing'), '#a6e8ff', gene('range')],
+  [L('獲物へ', 'To prey'), '#ff8a6a', gene('small')],
+  [L('大きさ', 'Size'), '#d8ffe2', gene('size')],
+  [L('混ぜる', 'Mixing'), '#e7a6ff', gene('mix')],
+  [L('くっつく', 'Sticking'), '#ff7ad9', gene('stick')],
+  [L('飼う', 'Keeping algae'), '#5fd66f', gene('keep')],
 ];
 
 export class Graph {
@@ -34,7 +34,7 @@ export class Graph {
     g.setTransform(this.d, 0, 0, this.d, 0, 0);
     g.clearRect(0, 0, this.w, this.h);
     const hist = world.history;
-    if (hist.length < 2) { this.note('記録をあつめています…'); return; }
+    if (hist.length < 2) { this.note(L('記録をあつめています…', 'Collecting records…')); return; }
     if (this.mode === 'pop') this.drawPop(world, hist, selClade);
     else if (this.mode === 'tree') this.drawTree(world, selClade);
     else this.drawTraits(hist);
@@ -69,7 +69,7 @@ export class Graph {
     for (let i = 0; i < hist.length; i++) { const x = X(hist[i].t), y = Y(hist[i].n); i ? g.lineTo(x, y) : g.moveTo(x, y); }
     g.strokeStyle = 'rgba(190,240,255,0.7)'; g.lineWidth = 1; g.stroke();
     g.fillStyle = 'rgba(150,215,240,.7)'; g.font = '11px "Zen Kaku Gothic New", sans-serif';
-    g.fillText(`${maxN} 匹`, pad + 2, 12);
+    g.fillText(L(`${maxN} 匹`, `${maxN}`), pad + 2, 12);
     g.textAlign = 'right'; g.fillText(fmtT(t1), w - pad, 12); g.textAlign = 'left';
   }
 
@@ -123,7 +123,7 @@ export class Graph {
       this.hits.push({ y0: y - rh / 2, y1: y + rh / 2, x0: x0 - 4, x1: x1 + 4, id: c.id });
     }
     g.fillStyle = 'rgba(150,215,240,.7)'; g.font = '11px "Zen Kaku Gothic New", sans-serif';
-    g.fillText('むかし', pad, h - pad); g.textAlign = 'right'; g.fillText('いま ' + fmtT(T), w - pad, h - pad); g.textAlign = 'left';
+    g.fillText(L('むかし', 'Past'), pad, h - pad); g.textAlign = 'right'; g.fillText(L('いま ', 'Now ') + fmtT(T), w - pad, h - pad); g.textAlign = 'left';
   }
 
   drawTraits(hist) {
@@ -156,5 +156,5 @@ export function cladeColor(c, a = 1) { return `hsla(${c.hue},55%,62%,${a})`; }
 export function fmtT(t) {
   t = Math.floor(t);
   const h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, s = t % 60;
-  return h ? `${h}時間${m}分` : m ? `${m}分${String(s).padStart(2, '0')}秒` : `${s}秒`;
+  return L(h ? `${h}時間${m}分` : m ? `${m}分${String(s).padStart(2, '0')}秒` : `${s}秒`, h ? `${h}h ${m}m` : m ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`);
 }

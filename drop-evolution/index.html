@@ -5,45 +5,54 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23e9dec2'/%3E%3Cellipse cx='16' cy='16' rx='9' ry='6' fill='%23c9a46a' stroke='%23574428' stroke-width='1.6'/%3E%3Ccircle cx='14' cy='17' r='2.4' fill='%237a6038'/%3E%3C/svg%3E">
 <script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
+<!-- seo（検索・リンクカード。_dev/tools/seo.mjs が入口の APPS から作る。手で直さない） -->
+<meta name="description" content="海の水の一滴を顕微鏡でのぞくと、深海の生き物のように青く光る小さな命。はじまりは、すべての真核生物の祖先とされる2本の毛の細胞。食べて分かれるたびに遺伝子と体の形が少し変わり、だれも「よい個体」を選ばないまま、狩る者・藍藻を飼う者・糸・大きな緑の群体が自力で生まれてくる。はじめて現れた形は図鑑に残る。">
+<meta property="og:type" content="website"><meta property="og:site_name" content="まなびラボ"><meta property="og:locale" content="ja_JP"><meta property="og:locale:alternate" content="en_US">
+<meta property="og:title" content="ひとしずくの進化｜まなびラボ"><meta property="og:description" content="海の水の一滴を顕微鏡でのぞくと、深海の生き物のように青く光る小さな命。はじまりは、すべての真核生物の祖先とされる2本の毛の細胞。食べて分かれるたびに遺伝子と体の形が少し変わり、だれも「よい個体」を選ばないまま、狩る者・藍藻を飼う者・糸・大きな緑の群体が自力で生まれてくる。はじめて現れた形は図鑑に残る。"><meta property="og:url" content="https://sishiya.github.io/manabi-lab/drop-evolution/">
+<meta property="og:image" content="https://sishiya.github.io/manabi-lab/assets/thumbs/drop-evolution.jpg"><meta property="og:image:width" content="640"><meta property="og:image:height" content="360">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@sishiya22">
+<link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/drop-evolution/?lang=ja"><link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/drop-evolution/?lang=en"><link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/drop-evolution/">
+<!-- /seo -->
 <title>ひとしずくの進化</title>
-<meta name="description" content="顕微鏡でのぞいた水の一滴。単細胞の生き物がエサを探し、食べ、分裂するたびに少しずつ変わり、系統に分かれていく。点をつけない、終わりのない進化を眺める試作。">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/no-quirks.css"><script src="js/no-quirks.js" defer></script>
-<link rel="stylesheet" href="css/style.css?v=73">
+<link rel="stylesheet" href="css/style.css?v=75">
 </head>
 <body>
 <canvas id="view" aria-label="顕微鏡の視野"></canvas>
 <!-- はじめの注意書き（虫や、小さなものがたくさん集まった様子が苦手な人が、見る前に引き返せるように。2026-11-01 ユーザー） -->
 <div id="gate" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
   <canvas id="gateView" aria-hidden="true"></canvas>
+  <div class="langsw gateLang" role="group" aria-label="言語 / Language"><button type="button" data-l="ja" title="日本語">JP</button><button type="button" data-l="en" title="English">EN</button></div>
   <div class="gateBox">
-    <h2 id="gateTitle">ひとしずくの進化</h2>
-    <p class="gateLead">海の水の一滴を、顕微鏡でのぞきます</p>
+    <h2 id="gateTitle"><span lang="ja">ひとしずくの進化</span><span lang="en">Evolution in a Drop</span></h2>
+    <p class="gateLead"><span lang="ja">海の水の一滴を、顕微鏡でのぞきます</span><span lang="en">Look into a drop of seawater under a microscope</span></p>
     <div class="gateBtns">
-      <button type="button" id="gateCont" class="gatePrimary" hidden>つづきから<small id="gateContSub"></small></button>
-      <button type="button" id="gateNew" class="gatePrimary">はじめから</button>
-      <button type="button" id="gatePeek" class="gateGhost" hidden>途中からのぞく<small>群体が育ったころなど</small></button>
+      <button type="button" id="gateCont" class="gatePrimary" hidden><span lang="ja">つづきから</span><span lang="en">Continue</span><small id="gateContSub"></small></button>
+      <button type="button" id="gateNew" class="gatePrimary"><span lang="ja">はじめから</span><span lang="en">Start from the beginning</span></button>
+      <button type="button" id="gatePeek" class="gateGhost" hidden><span lang="ja">途中からのぞく</span><span lang="en">Look in partway</span><small><span lang="ja">群体が育ったころなど</span><span lang="en">such as when colonies have grown</span></small></button>
     </div>
-    <p class="gateNote"><b>ご注意</b>小さな生き物がたくさん集まって泳いだり、細胞がびっしり並んだかたまりになったりします。虫や、小さなものが集まった様子が苦手な方は、ここで引き返してください。</p>
-    <button type="button" id="gateBack" class="gateBack">もどる</button>
+    <p class="gateNote"><b><span lang="ja">ご注意</span><span lang="en">Please note</span></b><span lang="ja">小さな生き物がたくさん集まって泳いだり、細胞がびっしり並んだかたまりになったりします。虫や、小さなものが集まった様子が苦手な方は、ここで引き返してください。</span><span lang="en">Many tiny creatures swim in crowds, and cells pack tightly into clumps. If you are uncomfortable with insects or with many small things gathered together, please turn back here.</span></p>
+    <button type="button" id="gateBack" class="gateBack"><span lang="ja">もどる</span><span lang="en">Back</span></button>
   </div>
   </div>
 </div>
 
 <!-- 上: いまの状態 -->
 <header id="top">
-  <h1>ひとしずくの進化</h1>
+  <h1><span lang="ja">ひとしずくの進化</span><span lang="en">Evolution in a Drop</span></h1>
   <div class="stats">
     <span><b id="sTime">0秒</b></span>
-    <span class="gen" title="いまいる生き物の、はじまりから数えた代の平均"><i>平均 </i><b id="sGen">1</b> 代</span>
-    <span>生き物 <b id="sPop">0</b></span>
+    <span class="gen" title="いまいる生き物の、はじまりから数えた代の平均"><i><span lang="ja">平均 </span><span lang="en">avg. </span></i><span lang="en">gen </span><b id="sGen">1</b><span lang="ja"> 代</span></span>
+    <span><span lang="ja">生き物 </span><span lang="en">Creatures </span><b id="sPop">0</b></span>
     <span hidden>系統 <b id="sClades">0</b></span><!-- 系統の数は分け方の線しだいで読めないので出さない（RELEASE.md 4章）。数はグラフの系統樹に -->
-    <span class="pred">狩る者 <b id="sPred">0</b></span>
-    <span id="sTampered" class="tampered" hidden title="決まりの外から生き物を足した一滴">手を加えた一滴</span>
+    <span class="pred"><span lang="ja">狩る者 </span><span lang="en">Hunters </span><b id="sPred">0</b></span>
+    <span id="sTampered" class="tampered" hidden title="決まりの外から生き物を足した一滴"><span lang="ja">手を加えた一滴</span><span lang="en">Changed by hand</span></span>
   </div>
   <div class="topRight">
-    <button type="button" id="bookBtn" class="pill book" title="形の図鑑">図鑑 <b id="bookN">1</b></button>
+    <button type="button" id="bookBtn" class="pill book" title="形の図鑑"><span lang="ja">図鑑 </span><span lang="en">Guide </span><b id="bookN">1</b></button>
     <button type="button" id="aboutBtn" class="round" aria-label="このアプリについて" title="このアプリについて">?</button>
     <button type="button" id="menuBtn" class="round" aria-label="メニュー" title="メニュー">☰</button>
   </div>
@@ -51,9 +60,9 @@
 
 <!-- 左下: 環境（「環境」のボタンで開く。ふだんはたたむ） -->
 <aside id="env" aria-label="環境">
-  <label><span>海の栄養</span><input type="range" id="food" min="0.2" max="3" step="0.05" value="1"><output id="foodOut">ふつう</output></label>
-  <label><span>光</span><input type="range" id="light" min="0" max="1" step="0.05" value="0.6"><output id="lightOut">ふつう</output></label>
-  <label><span>海の流れ</span><input type="range" id="flow" min="0" max="2" step="0.05" value="1"><output id="flowOut">ふつう</output></label>
+  <label><span><span lang="ja">海の栄養</span><span lang="en">Sea nutrients</span></span><input type="range" id="food" min="0.2" max="3" step="0.05" value="1"><output id="foodOut">ふつう</output></label>
+  <label><span><span lang="ja">光</span><span lang="en">Light</span></span><input type="range" id="light" min="0" max="1" step="0.05" value="0.6"><output id="lightOut">ふつう</output></label>
+  <label><span><span lang="ja">海の流れ</span><span lang="en">Sea current</span></span><input type="range" id="flow" min="0" max="2" step="0.05" value="1"><output id="flowOut">ふつう</output></label>
 </aside>
 
 <!-- 右: 選んだ1匹 -->
@@ -72,14 +81,14 @@
   <div class="transport" id="transport">
     <button type="button" id="play" class="round big" aria-label="止める">❚❚</button>
     <button type="button" id="speedBtn" class="pill" aria-haspopup="true" aria-expanded="false" title="はやさ">×4</button>
-    <button type="button" id="envBtn" class="pill" aria-haspopup="true" aria-expanded="false" title="海の栄養・光・海の流れ">環境</button>
+    <button type="button" id="envBtn" class="pill" aria-haspopup="true" aria-expanded="false" title="海の栄養・光・海の流れ"><span lang="ja">環境</span><span lang="en">Sea</span></button>
     <div class="speeds" role="group" aria-label="はやさ">
       <button type="button" data-speed="1">×1</button><button type="button" data-speed="4" class="on">×4</button><button type="button" data-speed="16">×16</button><button type="button" data-speed="256" class="test">×256</button><button type="button" data-speed="1024" class="test">×1024</button>
     </div>
   </div>
   <div class="graphbox">
     <div class="tabs" role="tablist">
-      <button type="button" data-mode="pop" class="on">数</button><button type="button" data-mode="tree">系統樹</button><button type="button" data-mode="traits">からだ</button>
+      <button type="button" data-mode="pop" class="on"><span lang="ja">数</span><span lang="en">Numbers</span></button><button type="button" data-mode="tree"><span lang="ja">系統樹</span><span lang="en">Family tree</span></button><button type="button" data-mode="traits"><span lang="ja">からだ</span><span lang="en">Bodies</span></button>
     </div>
     <canvas id="graph"></canvas>
   </div>
@@ -91,57 +100,59 @@
 
 <dialog id="menu" aria-label="メニュー">
   <div id="menuMain">
-    <h2>ひとしずくの進化</h2>
+    <h2><span lang="ja">ひとしずくの進化</span><span lang="en">Evolution in a Drop</span></h2>
     <p class="seed" id="menuSeed"></p>
-    <button type="button" id="mResume" class="primary">つづける</button>
-    <button type="button" id="mNew" class="ghost">新しく始める</button>
-    <button type="button" id="mTitle" class="ghost">タイトルにもどる</button>
+    <button type="button" id="mResume" class="primary"><span lang="ja">つづける</span><span lang="en">Resume</span></button>
+    <button type="button" id="mNew" class="ghost"><span lang="ja">新しく始める</span><span lang="en">Start new</span></button>
+    <button type="button" id="mTitle" class="ghost"><span lang="ja">タイトルにもどる</span><span lang="en">Back to title</span></button>
   </div>
   <div id="menuConfirm" hidden>
     <h2 id="newTitle">新しく始めますか？</h2>
-    <p id="newNote">いまの一滴の生き物と記録は消えて、はじまりの2本毛（すべての真核生物の祖先）から始まります。大きさ・砂つぶ・はじめの数も選べます。</p>
+    <p id="newNote"></p>
     <div class="sizes starts" id="starts" role="radiogroup" aria-label="どこから始めるか"></div>
     <div id="newShape">
     <div class="sizes" role="radiogroup" aria-label="一滴の大きさ">
-      <button type="button" data-size="s" role="radio">小さい<small>1 × 0.7 mm</small></button><button type="button" data-size="m" role="radio">ふつう<small>2 × 1.4 mm</small></button><button type="button" data-size="l" role="radio">大きい<small>2.8 × 2 mm</small></button>
+      <button type="button" data-size="s" role="radio"><span lang="ja">小さい</span><span lang="en">Small</span><small>1 × 0.7 mm</small></button><button type="button" data-size="m" role="radio"><span lang="ja">ふつう</span><span lang="en">Normal</span><small>2 × 1.4 mm</small></button><button type="button" data-size="l" role="radio"><span lang="ja">大きい</span><span lang="en">Large</span><small>2.8 × 2 mm</small></button>
     </div>
     <div class="sizes" role="radiogroup" aria-label="砂つぶ">
-      <button type="button" data-sand="0" role="radio">砂なし<small>水だけ</small></button><button type="button" data-sand="1" role="radio">砂 少し<small>ところどころ</small></button><button type="button" data-sand="2" role="radio">砂 多い<small>すきまだらけ</small></button>
+      <button type="button" data-sand="0" role="radio"><span lang="ja">砂なし</span><span lang="en">No sand</span><small><span lang="ja">水だけ</span><span lang="en">water only</span></small></button><button type="button" data-sand="1" role="radio"><span lang="ja">砂 少し</span><span lang="en">Some sand</span><small><span lang="ja">ところどころ</span><span lang="en">here and there</span></small></button><button type="button" data-sand="2" role="radio"><span lang="ja">砂 多い</span><span lang="en">Lots of sand</span><small><span lang="ja">すきまだらけ</span><span lang="en">full of gaps</span></small></button>
     </div>
     <div class="sizes" role="radiogroup" aria-label="はじめの数">
-      <button type="button" data-pop="1" role="radio">1匹<small>1つから</small></button><button type="button" data-pop="10" role="radio">10匹<small>少し</small></button><button type="button" data-pop="50" role="radio">50匹<small>ほどほど</small></button><button type="button" data-pop="150" role="radio">150匹<small>ふつう</small></button>
+      <button type="button" data-pop="1" role="radio"><span lang="ja">1匹</span><span lang="en">1</span><small><span lang="ja">1つから</span><span lang="en">just one</span></small></button><button type="button" data-pop="10" role="radio"><span lang="ja">10匹</span><span lang="en">10</span><small><span lang="ja">少し</span><span lang="en">a few</span></small></button><button type="button" data-pop="50" role="radio"><span lang="ja">50匹</span><span lang="en">50</span><small><span lang="ja">ほどほど</span><span lang="en">some</span></small></button><button type="button" data-pop="150" role="radio"><span lang="ja">150匹</span><span lang="en">150</span><small><span lang="ja">ふつう</span><span lang="en">normal</span></small></button>
     </div>
     </div>
     <button type="button" id="mNewYes" class="danger">新しく始める</button>
-    <button type="button" id="mNewNo" class="ghost">やめる</button>
+    <button type="button" id="mNewNo" class="ghost"><span lang="ja">やめる</span><span lang="en">Cancel</span></button>
   </div>
 </dialog>
 
 <!-- 置くメニュー（右クリック・指の長押し） -->
 <div id="ctx" role="menu" hidden>
-  <p>砂つぶを落とす</p>
-  <button type="button" data-grain="30">小さい</button><button type="button" data-grain="55">ふつう</button><button type="button" data-grain="95">大きい</button>
+  <p><span lang="ja">砂つぶを落とす</span><span lang="en">Drop a grain of sand</span></p>
+  <button type="button" data-grain="30"><span lang="ja">小さい</span><span lang="en">Small</span></button><button type="button" data-grain="55"><span lang="ja">ふつう</span><span lang="en">Normal</span></button><button type="button" data-grain="95"><span lang="ja">大きい</span><span lang="en">Large</span></button>
   <div id="ctxOrgs" hidden></div>
 </div>
 <!-- すべていなくなったとき（自動でやり直さない。はじめからか、このまま眺めるかを選ぶ） -->
 <dialog id="extinct" aria-labelledby="exTitle">
-  <h2 id="exTitle">すべていなくなりました</h2>
+  <h2 id="exTitle"><span lang="ja">すべていなくなりました</span><span lang="en">Every creature is gone</span></h2>
   <p id="exText"></p>
-  <button type="button" id="exNew" class="primary">はじめから</button>
-  <button type="button" id="exWatch" class="ghost">このまま眺める</button>
+  <button type="button" id="exNew" class="primary"><span lang="ja">はじめから</span><span lang="en">Start over</span></button>
+  <button type="button" id="exWatch" class="ghost"><span lang="ja">このまま眺める</span><span lang="en">Keep watching</span></button>
 </dialog>
 <!-- 形の図鑑: 進化の節目の形がはじめて現れたら、自動で写す（js/book.js） -->
 <dialog id="book" aria-labelledby="bookTitle">
-  <div class="bookHead"><h2 id="bookTitle">形の図鑑</h2><span id="bookCount"></span></div>
+  <div class="bookHead"><h2 id="bookTitle"><span lang="ja">形の図鑑</span><span lang="en">Field guide of shapes</span></h2><span id="bookCount"></span></div>
   <div class="bookPage">
     <canvas id="bookBig" aria-label="形"></canvas>
     <div><b id="bookName"></b><small id="bookWhen"></small><p id="bookNote"></p></div>
   </div>
   <div id="bookGrid"></div>
-  <p class="bookFoot">進化の節目の形がはじめて現れると、ここに写します。</p>
-  <form method="dialog"><button class="ghost">とじる</button></form>
+  <p class="bookFoot"><span lang="ja">進化の節目の形がはじめて現れると、ここに写します。</span><span lang="en">When a milestone shape first appears, it is recorded here.</span></p>
+  <form method="dialog"><button class="ghost"><span lang="ja">とじる</span><span lang="en">Close</span></button></form>
 </dialog>
 <dialog id="help">
+  <div class="langsw helpLang" role="group" aria-label="言語 / Language"><button type="button" data-l="ja" title="日本語">JP</button><button type="button" data-l="en" title="English">EN</button></div>
+  <div lang="ja">
   <h2>このアプリについて</h2>
   <p>顕微鏡でのぞいた海の水の一滴です。青緑のつぶは藍藻（らんそう）。光と、水に溶けた栄養塩で、どんどん分かれて増えます。生き物はそれを食べてためると2つに分かれ、そのたびに少しだけ変わります。だれも「よい個体」を選びません。<b>エサにありついて分かれられた者だけが子を残します。</b></p>
   <h3>部品は3つ</h3>
@@ -179,10 +190,50 @@
   <h3>使っているもの</h3>
   <p>文字に Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）。</p>
   <p class="ops">ドラッグで動かす・ホイールで寄る・生き物を押すと追いかける。スペースで止める。</p>
-  <form method="dialog"><button class="ghost">とじる</button></form>
+  </div>
+  <div lang="en">
+  <h2>About this app</h2>
+  <p>This is a drop of seawater seen through a microscope. The blue-green specks are cyanobacteria (blue-green algae). With light and the nutrients dissolved in the water, they divide and multiply. The creatures eat them, and when they have stored enough they split in two, changing a little each time. Nobody picks the “best” ones. <b>Only those that find food and manage to divide leave young.</b></p>
+  <h3>3 parts</h3>
+  <ul>
+    <li><b>Cell</b>: a round body, with a size.</li>
+    <li><b>Segment</b>: a rod growing from the cell or from the tip of another segment. Length, angle, how far the muscle swings it, and the timing of its beat.</li>
+    <li><b>Senses</b>: how far it can sense, and how strongly it turns toward food, toward smaller prey and away from bigger ones.</li>
+  </ul>
+  <h3>6 rules</h3>
+  <ol>
+    <li><b>Water</b>: tiny creatures stop at once. Moving a segment pushes on the water, and the body moves. Seawater flows in slow swirls and carries everything along. The drop is a box whose top and bottom are fine mesh: creatures cannot get out, but water, nutrients and small algae swap with the sea. Sand grains on the bottom let no water through. A creature that touches one slides along its surface, and after pressing on it for a while climbs over. Only small ones fit into the gaps.</li>
+    <li><b>Beat</b>: a segment tip pushes the water hard only when it swings backward.</li>
+    <li><b>Turn</b>: a creature turns toward the side where it smells more on the left or right of its front (algae, things small enough to swallow, things that could swallow it). Smells spread through the water.</li>
+    <li><b>Eat</b>: it eats smaller things that touch its mouth (a groove, at first toward the front-side) or the tips of its segments. While swallowing, it does not eat the next one.</li>
+    <li><b>Use and make</b>: being heavier and beating faster use more energy. A third of what it eats cannot be digested and is left behind as waste (bacteria break it down into nutrients again). Used energy dissolves into the water.</li>
+    <li><b>Divide</b>: when it has stored enough to build a second body, it divides. Segments can sprout, grow longer, pair up left and right, or disappear. A creature that starves falls apart, and the pieces become food too. It may stick to a touching partner of the same kind and mix genes (mating; only single cells not in a colony; their number does not grow, they cannot swim for about 30 s, and the mixed genes are used from the next division; whether it mixes also depends on its genes). It may keep eaten algae alive instead of digesting them (they make food with light inside and hand over half; they divide slowly; the start of chloroplasts). Its young may stay stuck to it (a colony; how many cells it keeps together is also in its genes, and young beyond that leave as a single cell to start a new colony; cells are joined to their neighbors by jelly, so they face the same way, their beats add up, and a big clump does not fit in a mouth). How it swims also changes with its genes: slowing down in the smell of food, resting while swallowing, backing up when bumped in front, or sticking to a sand grain and pulling water past itself to wait for food (like the stalk of a choanoflagellate; a whole colony can stop like this, the road to sponges). A colony can take what its members sense as a signal. In a colony, inner cells surrounded by others and outer cells can use their genes differently (inner cells rest without beating, outer cells pass food to the others instead of dividing, stored food is shared, segments grow only outside or only inside: kinds of cells).</li>
+  </ol>
+  <h3>The beginning, and how this differs from the real thing</h3>
+  <p>The first creature is modeled on LECA, the last common ancestor of all eukaryotes (animals, plants, fungi and protists), about 1.5 to 2 billion years ago. It has 2 flagella, already has mitochondria inside, and sometimes mixes genes with others. The event before that, when an archaeon took in a bacterium that became the mitochondrion, happened only once and is still not well understood, so it is not shown here.</p>
+  <p>From “Start new” in the ☰ menu, you can begin not only from the first two-flagella cell but also from a <b>milestone drop</b> (such as when colonies have grown). Each was run for hours from the first two-flagella cell under the same rules, then saved.</p>
+  <p>The small ring that flashes at a mouth is the moment of eating (green for algae, amber for hunting another creature). “avg. gen N” at the top is the average number of generations since the beginning for the creatures alive now. Evolution moves by generations, not by time.</p>
+  <p>The <b>Guide</b> at the top right records a milestone shape (hunters, colonies, multiple fission and more) with its time, the first time it appears. You can also open it by tapping the “First” message at the bottom.</p>
+  <p>Right-click on the drop (long-press on a phone) to <b>drop a grain of sand</b>. It is treated like the other sand, as a grain carried in from outside.</p>
+  <p>Some things run faster than in real life. A few hundred creatures in one drop stand in for millions in the sea, so shape mutations are 3 times as common. Changes that took hundreds of millions of years are shown with time squeezed. Only time is squeezed: how fast algae and protists divide compared with each other, and how many are killed by viruses and by bigger predators, follow the real numbers. One green dot is a small clump of algae, not a single cell. The mouth starts, as in LECA, as a groove on the front-side (the ventral groove), and its place also changes with the genes.</p>
+  <p>Nutrients soak in from the sea at the edges of the drop and spread slowly. Algae grow faster in stronger light, and some also flow in from the sea. Swimming styles, tentacles and hunters are not in the rules. They come from combinations of the parts.</p>
+  <h3>Sources</h3>
+  <ul>
+    <li>The eukaryote tree and their common ancestor (LECA): Burki et al. (2020) The new tree of eukaryotes. Trends in Ecology &amp; Evolution 35: 43–55</li>
+    <li>Predators select for colonies: Boraas et al. (1998) Evolutionary Ecology 12: 153–164 / Herron et al. (2019) Scientific Reports 9: 2328</li>
+    <li>Body cells and reproductive cells in Volvox, multiple fission: Kirk (1998) Volvox. Cambridge University Press</li>
+    <li>Energy use scales with mass to the 0.75 power: Kleiber (1932) Hilgardia 6: 315–353</li>
+    <li>How algae grow (the Monod equation): Monod (1949) Annual Review of Microbiology 3: 371–394</li>
+    <li>The more a species grows, the more viruses kill it: Thingstad (2000) Limnology and Oceanography 45: 1320–1328</li>
+  </ul>
+  <h3>What this app uses</h3>
+  <p>Fonts: Zen Kaku Gothic New and IBM Plex Mono (SIL Open Font License).</p>
+  <p class="ops">Drag to move, use the wheel to zoom, tap a creature to follow it. Space to pause.</p>
+  </div>
+  <form method="dialog"><button class="ghost"><span lang="ja">とじる</span><span lang="en">Close</span></button></form>
 </dialog>
 
-<div id="perf"><span id="perfText"></span><button type="button" id="perfSave">ログを保存</button></div>
-<script type="module" src="js/main.js?v=73"></script>
+<div id="perf"><span id="perfText"></span><button type="button" id="perfSave"><span lang="ja">ログを保存</span><span lang="en">Save log</span></button></div>
+<script type="module" src="js/main.js?v=75"></script>
 </body>
 </html>

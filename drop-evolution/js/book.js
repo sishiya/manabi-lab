@@ -4,26 +4,40 @@ import { GI } from './sim.js';
 import { founderBody, analyze } from './body.js';
 import { drawBodyDiagram } from './render.js';
 
-// [かぎ, 見つけ方, 図鑑の名前, 知らせの文, 本物では, 全体のうち何割いたら（たまたま1匹は数秒で起きるもの）]
+// [かぎ, 見つけ方, 図鑑の名前, 知らせの文, 本物では, 全体のうち何割いたら（たまたま1匹は数秒で起きるもの）, 知らせの文（英語）]。英語の名前と本物では、は下の EN
 export const PAGES = [
   ['legs4', o => (o.bp?.n || 0) >= 4, '節が4つ', '節が4つある形が現れた',
-    '鞭毛のふえた原生生物はたくさんいる。緑藻のピラミモナスは4本、ジアルジアは8本。'],
+    '鞭毛のふえた原生生物はたくさんいる。緑藻のピラミモナスは4本、ジアルジアは8本。', 0, 'a body with 4 segments appeared'],
   ['hunt', o => o.prey > 0, '狩る者', 'ほかの生き物を食べる者（狩る者）が現れた',
-    '原生生物を食べる原生生物。ディディニウムはゾウリムシを丸のみにする。'],
+    '原生生物を食べる原生生物。ディディニウムはゾウリムシを丸のみにする。', 0, 'a hunter that eats other creatures appeared'],
   ['anch', o => o.anch, '砂にくっつく者', '砂つぶにくっついて、水を流してエサを待つ者がふえてきた',
-    '襟鞭毛虫には、柄で物にくっつき、鞭毛で水を流してエサを集めるものがいる。動物にいちばん近い単細胞。', 0.05],
+    '襟鞭毛虫には、柄で物にくっつき、鞭毛で水を流してエサを集めるものがいる。動物にいちばん近い単細胞。', 0.05, 'more creatures stick to sand and wait, pulling water past them for food'],
   ['col4', o => o.colN >= 4, '4細胞の群体', '分かれた子とくっついたまま、4細胞の群体になった',
-    '緑藻のシアワセモ（テトラバエナ）は4細胞の群体。ここから多細胞の道が始まる。'],
+    '緑藻のシアワセモ（テトラバエナ）は4細胞の群体。ここから多細胞の道が始まる。', 0, 'offspring stayed stuck together in a 4-cell colony'],
   ['sym', o => o.sym > 0, '藍藻を飼う者', '藍藻を消化せずに、体の中で飼う者がふえてきた（葉緑体のはじまり）',
-    '藍藻を飼った細胞が、植物や藻の祖先になった（葉緑体）。いまもパウリネラという原生生物が、べつに藍藻を飼いはじめている。', 0.05],   // 1匹がたまたま飼うのは数秒で起きる
+    '藍藻を飼った細胞が、植物や藻の祖先になった（葉緑体）。いまもパウリネラという原生生物が、べつに藍藻を飼いはじめている。', 0.05, 'more creatures keep algae alive inside instead of digesting them (the start of chloroplasts)'],   // 1匹がたまたま飼うのは数秒で起きる
   ['col16', o => o.colN >= 16, '16細胞の群体', '16細胞の群体になった',
-    '緑藻のゴニウムは16細胞の平たい群体、パンドリナは16細胞のまり。'],
+    '緑藻のゴニウムは16細胞の平たい群体、パンドリナは16細胞のまり。', 0, 'a 16-cell colony formed'],
   ['fiss3', o => o.g && Math.round(o.g[GI.fiss]) >= 3, '多分裂', '大きく育ってから続けて3回分かれ、一度に8つの子になる者が現れた（多分裂）',
-    'クラミドモナスは大きく育ってから続けて分かれ、一度に4〜16の子になる。群体の藻はみなこの分かれ方。'],
+    'クラミドモナスは大きく育ってから続けて分かれ、一度に4〜16の子になる。群体の藻はみなこの分かれ方。', 0, 'a creature grows big, then divides 3 times in a row into 8 young at once (multiple fission)'],
   ['col64', o => o.colN >= 64, '64細胞の群体', '64細胞の大きな群体になった',
-    '緑藻のユードリナは32〜64細胞。オオヒゲマワリ（ボルボックス）は数千の細胞で、体の細胞と子になる細胞が分かれている。'],
+    '緑藻のユードリナは32〜64細胞。オオヒゲマワリ（ボルボックス）は数千の細胞で、体の細胞と子になる細胞が分かれている。', 0, 'a big 64-cell colony formed'],
 ];
-export const START = { name: 'はじまりの2本毛', note: 'すべての真核生物（動物・植物・菌・原生生物）の最後の共通祖先 LECA にならった形。鞭毛は2本。' };
+// 英語の図鑑の名前と「本物では」（I18N.md: 文の多い表は、同じ鍵に英語を上書き）
+const EN = {
+  legs4: ['4 segments', 'Many protists have more flagella. The green alga Pyramimonas has 4, and Giardia has 8.'],
+  hunt: ['Hunter', 'Protists that eat other protists. Didinium swallows a whole Paramecium.'],
+  anch: ['Sand sticker', 'Some choanoflagellates stick to things with a stalk and beat a flagellum to pull food-filled water past them. They are the single cells closest to animals.'],
+  col4: ['4-cell colony', 'The green alga Tetrabaena is a 4-cell colony. The road to many-celled life starts here.'],
+  sym: ['Algae keeper', 'Cells that kept cyanobacteria became the ancestors of plants and algae (chloroplasts). Today a protist called Paulinella has started keeping them again, on its own.'],
+  col16: ['16-cell colony', 'The green alga Gonium is a flat 16-cell colony, and Pandorina is a 16-cell ball.'],
+  fiss3: ['Multiple fission', 'Chlamydomonas grows big, then divides again and again into 4 to 16 young at once. All colonial green algae divide this way.'],
+  col64: ['64-cell colony', 'The green alga Eudorina has 32 to 64 cells. Volvox has thousands, with body cells and cells that become young split apart.'],
+};
+if (globalThis.LANG === 'en') for (const p of PAGES) { const e = EN[p[0]]; p[2] = e[0]; p[4] = e[1]; }
+export const START = globalThis.LANG === 'en'
+  ? { name: 'First two-flagella cell', note: 'Modeled on LECA, the last common ancestor of all eukaryotes (animals, plants, fungi and protists). It has 2 flagella.' }
+  : { name: 'はじまりの2本毛', note: 'すべての真核生物（動物・植物・菌・原生生物）の最後の共通祖先 LECA にならった形。鞭毛は2本。' };
 
 // 1匹の形を写す: 群体ならつながりをたどって、かたまりの細胞の位置と節を（多すぎる群体は 160 細胞まで）
 const bpCopy = P => ({ n: P.n, tips: P.tips, fwd: P.fwd, frames: P.frames.map(f => ({ pts: f.pts.slice() })) });

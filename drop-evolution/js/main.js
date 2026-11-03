@@ -1,5 +1,5 @@
 // ひとしずくの進化 — 画面と操作
-import { World, DT, GI, GENES, eSplit, speedOf, W, H, founderGenome } from './sim.js';
+import { World, DT, GI, GENES, eSplit, speedOf, W, H, founderGenome, cladeNameEn } from './sim.js';
 import { founderBody } from './body.js';
 import { Renderer, drawBodyDiagram } from './render.js';
 import { Graph, cladeColor, fmtT } from './graph.js';
@@ -9,6 +9,22 @@ import { PAGES, START, shapeOf, startShape, drawShape } from './book.js';
 import { PRESETS } from './presets.js';
 
 const $ = id => document.getElementById(id);
+// 系統の呼び名: 日本語は記録された名前、英語は遺伝子と体から作る（Worker から届く写しには name_en）
+const nameOf = c => LANG !== 'en' ? c.name : c.name_en || (c.g && c.b ? cladeNameEn(c.g, c.b) : c.name);
+// 言語: JP／EN のボタン（押すと読み直す）と、英語のときの題名・aria-label・title（HTML は日本語で書いてある）
+document.querySelectorAll('.langsw button').forEach(b => { b.classList.toggle('on', b.dataset.l === LANG); b.onclick = () => setLang(b.dataset.l); });
+if (LANG === 'en') {
+  document.title = 'Evolution in a Drop';
+  for (const [sel, attr, v] of [
+    ['#view', 'aria-label', 'Microscope view'], ['#cardClose', 'aria-label', 'Close'], ['#cBody', 'aria-label', 'Body shape'], ['#bookBig', 'aria-label', 'Shape'],
+    ['#aboutBtn', 'aria-label', 'About this app'], ['#aboutBtn', 'title', 'About this app'], ['#menuBtn', 'aria-label', 'Menu'], ['#menuBtn', 'title', 'Menu'], ['#menu', 'aria-label', 'Menu'],
+    ['#bookBtn', 'title', 'Field guide of shapes'], ['#env', 'aria-label', 'Sea'], ['#envBtn', 'title', 'Sea nutrients, light and current'], ['#speedBtn', 'title', 'Speed'], ['.speeds', 'aria-label', 'Speed'],
+    ['.stats .gen', 'title', 'Average generation of the creatures alive now, counted from the beginning'], ['#sTampered', 'title', 'A drop where creatures were added from outside the rules'],
+    ['#starts', 'aria-label', 'Where to start'], ['[aria-label="一滴の大きさ"]', 'aria-label', 'Size of the drop'], ['[aria-label="砂つぶ"]', 'aria-label', 'Sand grains'], ['[aria-label="はじめの数"]', 'aria-label', 'Number at the start'],
+  ]) document.querySelectorAll(sel).forEach(e => e.setAttribute(attr, v));
+  for (const id of ['foodOut', 'lightOut', 'flowOut']) $(id).textContent = 'normal';
+  $('sTime').textContent = '0s';
+}
 const q = new URLSearchParams(location.search);
 let seed = +(q.get('seed') || (Date.now() % 100000));
 let size = ['s', 'm', 'l'].includes(q.get('size')) ? q.get('size') : 'm';   // 一滴の大きさ
@@ -59,8 +75,8 @@ addEventListener('pointerdown', e => { if (!$('ctx').hidden && !e.target.closest
 $('ctx').querySelectorAll('[data-grain]').forEach(b => b.onclick = () => { sim.addGrain(ctxAt.x, ctxAt.y, +b.dataset.grain); closeCtx(); });
 if (q.has('test')) {
   $('ctxOrgs').hidden = false;
-  $('ctxOrgs').innerHTML = '<p>生き物（確かめ用）</p>' + PRESETS.map(p => `<button type="button" data-spawn="${p.id}">${p.name}</button>`).join('');
-  $('ctxOrgs').querySelectorAll('[data-spawn]').forEach(b => b.onclick = () => { sim.spawn(b.dataset.spawn, ctxAt.x, ctxAt.y, 3); closeCtx(); toast('この一滴は「手を加えた一滴」になりました'); });
+  $('ctxOrgs').innerHTML = `<p>${L('生き物（確かめ用）', 'Creatures (for testing)')}</p>` + PRESETS.map(p => `<button type="button" data-spawn="${p.id}">${L(p.name, p.name_en)}</button>`).join('');
+  $('ctxOrgs').querySelectorAll('[data-spawn]').forEach(b => b.onclick = () => { sim.spawn(b.dataset.spawn, ctxAt.x, ctxAt.y, 3); closeCtx(); toast(L('この一滴は「手を加えた一滴」になりました', 'This drop is now marked as “changed by hand”')); });
 }
 
 // ── 見る操作（ドラッグ・ホイール・指2本） ──
@@ -149,12 +165,12 @@ $('graph').addEventListener('click', e => {
   if (!id) return;
   const live = world.orgs.filter(o => o.clade === id);
   if (live.length) select(live.reduce((a, b) => a.age > b.age ? a : b));
-  else { const c = world.clades.get(id); if (!c) return; selClade = id; toast(`「${c.name}」(系統 ${c.id}) は ${fmtT(c.died)} に絶えた`); }
+  else { const c = world.clades.get(id); if (!c) return; selClade = id; toast(L(`「${c.name}」(系統 ${c.id}) は ${fmtT(c.died)} に絶えた`, `“${nameOf(c)}” (lineage ${c.id}) died out at ${fmtT(c.died)}`)); }
 });
 
 // ── 下の操作 ──
 $('play').onclick = () => setPlaying(!playing);
-function setPlaying(p) { playing = p; sim.run(speed, playing); $('play').textContent = p ? '❚❚' : '▶'; $('play').setAttribute('aria-label', p ? '止める' : '動かす'); }
+function setPlaying(p) { playing = p; sim.run(speed, playing); $('play').textContent = p ? '❚❚' : '▶'; $('play').setAttribute('aria-label', p ? L('止める', 'Pause') : L('動かす', 'Play')); }
 document.querySelectorAll('[data-speed]').forEach(b => b.onclick = () => setSpeed(+b.dataset.speed));
 function setSpeed(s) { speed = s; sim.run(speed, playing); $('speedBtn').textContent = `×${s}`; $('speedBtn').classList.remove('slow'); openPop(null); document.querySelectorAll('[data-speed]').forEach(b => b.classList.toggle('on', +b.dataset.speed === s)); if (!playing) setPlaying(true); }
 document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
@@ -180,18 +196,18 @@ $('speedBtn').onclick = () => openPop('speed');
 $('envBtn').onclick = () => openPop('env');
 addEventListener('pointerdown', e => { if (!e.target.closest('.transport, #env')) openPop(null); });
 // ── 環境 ──
-const level = (v, lo, hi) => v < lo ? '少ない' : v > hi ? '多い' : 'ふつう';
+const level = (v, lo, hi, few = L('少ない', 'low'), many = L('多い', 'high')) => v < lo ? few : v > hi ? many : L('ふつう', 'normal');
 $('food').oninput = e => { const v = +e.target.value; sim.set('foodRate', v); $('foodOut').textContent = level(v, 0.6, 1.5); };
 if (q.has('food')) { $('food').value = q.get('food'); $('food').oninput({ target: $('food') }); }   // URL の ?food= で海の栄養をはじめから
-$('light').oninput = e => { const v = +e.target.value; sim.set('light', v); $('lightOut').textContent = v < 0.05 ? 'まっくら' : level(v, 0.4, 0.8).replace('少ない', '弱い').replace('多い', '強い'); };
+$('light').oninput = e => { const v = +e.target.value; sim.set('light', v); $('lightOut').textContent = v < 0.05 ? L('まっくら', 'dark') : level(v, 0.4, 0.8, L('弱い', 'weak'), L('強い', 'strong')); };
 if (q.has('light')) { $('light').value = q.get('light'); $('light').oninput({ target: $('light') }); }   // URL の ?light= で光をはじめから
-$('flow').oninput = e => { const v = +e.target.value; sim.set('flow', v); $('flowOut').textContent = v < 0.05 ? 'とまる' : level(v, 0.6, 1.4).replace('少ない', '弱い').replace('多い', '強い'); };
+$('flow').oninput = e => { const v = +e.target.value; sim.set('flow', v); $('flowOut').textContent = v < 0.05 ? L('とまる', 'still') : level(v, 0.6, 1.4, L('弱い', 'weak'), L('強い', 'strong')); };
 // ── メニュー（新しく始めるのはここからだけ。もう一度たずねる） ──
 let playingBeforeMenu = true;
 function openMenu() {
   playingBeforeMenu = playing; setPlaying(false);
   $('menuMain').hidden = false; $('menuConfirm').hidden = true;
-  $('menuSeed').textContent = `一滴の番号 ${seed}・${fmtT(world ? world.t : 0)}`;
+  $('menuSeed').textContent = L(`一滴の番号 ${seed}・${fmtT(world ? world.t : 0)}`, `Drop no. ${seed} · ${fmtT(world ? world.t : 0)}`);
   $('menu').showModal();
 }
 $('menu').addEventListener('close', () => { if (!$('help').open && $('gate').hidden) setPlaying(playingBeforeMenu); });   // タイトルにもどったときは止めたまま
@@ -208,7 +224,7 @@ let extinctShown = false, exWasPlaying = true;
 function checkExtinct() {
   if (extinctShown || title || !world || world.orgs.length || world.t < 1) return;
   extinctShown = true;
-  $('exText').textContent = `${fmtT(world.t)} に、さいごの生き物がいなくなりました。はじめから始めるか、生き物のいない一滴をこのまま眺めるかを選べます。`;
+  $('exText').textContent = L(`${fmtT(world.t)} に、さいごの生き物がいなくなりました。はじめから始めるか、生き物のいない一滴をこのまま眺めるかを選べます。`, `At ${fmtT(world.t)}, the last creature was gone. You can start over, or keep watching the empty drop.`);
   exWasPlaying = playing; setPlaying(false);   // 選ぶまで止める
   $('extinct').showModal(); $('exNew').focus();
 }
@@ -232,17 +248,19 @@ fetch('data/turns.json').then(r => r.ok ? r.json() : []).then(t => { turns = t.s
 function showStarts() {
   const box = $('starts');
   box.hidden = !turns.length;
-  box.innerHTML = [{ id: '', title: 'はじまりの2本毛から', sub: 'すべての真核生物の祖先' }, ...turns].map(t =>
-    `<button type="button" role="radio" data-turn="${t.id}" class="${t.id === newTurn ? 'on' : ''}" aria-checked="${t.id === newTurn}">${t.title}<small>${t.sub}</small></button>`).join('');
+  box.innerHTML = [{ id: '', title: L('はじまりの2本毛から', 'From the first two-flagella cell'), sub: L('すべての真核生物の祖先', 'The ancestor of all eukaryotes') }, ...turns].map(t =>
+    `<button type="button" role="radio" data-turn="${t.id}" class="${t.id === newTurn ? 'on' : ''}" aria-checked="${t.id === newTurn}">${L(t.title, t.title_en || t.title)}<small>${L(t.sub, t.sub_en || t.sub)}</small></button>`).join('');
   box.querySelectorAll('[data-turn]').forEach(b => b.onclick = () => { newTurn = b.dataset.turn; showStarts(); });
   $('newShape').hidden = !!newTurn;
   // タイトルの「途中からのぞく」から開いたときは、消える一滴があるときだけ「消えます」と書く
-  const gone = !(fromTitle && $('gateCont').hidden) ? 'いまの一滴の生き物と記録は消えて、' : '';
+  const gone = !(fromTitle && $('gateCont').hidden);
   $('newNote').textContent = newTurn
-    ? `${gone}はじまりの2本毛から同じ決まりで何時間も回して保存した一滴の、その時点から続きを見ます。`
-    : `${gone}はじまりの2本毛（すべての真核生物の祖先）から始まります。大きさ・砂つぶ・はじめの数も選べます。`;
-  $('newTitle').textContent = newTurn ? 'どこからのぞきますか？' : '新しく始めますか？';
-  $('mNewYes').textContent = newTurn ? 'のぞく' : '新しく始める';
+    ? L(`${gone ? 'いまの一滴の生き物と記録は消えて、' : ''}はじまりの2本毛から同じ決まりで何時間も回して保存した一滴の、その時点から続きを見ます。`,
+      `${gone ? 'The creatures and records in this drop will be erased. ' : ''}These drops were run for hours from the first two-flagella cell under the same rules, then saved. You watch on from that point.`)
+    : L(`${gone ? 'いまの一滴の生き物と記録は消えて、' : ''}はじまりの2本毛（すべての真核生物の祖先）から始まります。大きさ・砂つぶ・はじめの数も選べます。`,
+      `${gone ? 'The creatures and records in this drop will be erased. ' : ''}It starts again from the first two-flagella cell (the ancestor of all eukaryotes). You can also choose the size, the sand grains and how many to start with.`);
+  $('newTitle').textContent = newTurn ? L('どこからのぞきますか？', 'Where do you want to look in?') : L('新しく始めますか？', 'Start a new drop?');
+  $('mNewYes').textContent = newTurn ? L('のぞく', 'Look in') : L('新しく始める', 'Start new');
   $('mNewYes').className = fromTitle && $('gateCont').hidden ? 'primary' : 'danger';
 }
 function openNew() { newSize = size; showSize(); newSand = sand; showSand(); newPop = pop; showPop(); newTurn = ''; showStarts(); $('menuMain').hidden = true; $('menuConfirm').hidden = false; $('mNewNo').focus(); }
@@ -252,18 +270,18 @@ $('mNewYes').onclick = async () => {
   if (newTurn) {
     const t = turns.find(x => x.id === newTurn);
     let d;
-    try { d = await (await fetch(`data/${newTurn}.json`)).json(); } catch { toast('その一滴を読みこめませんでした'); return; }
+    try { d = await (await fetch(`data/${newTurn}.json`)).json(); } catch { toast(L('その一滴を読みこめませんでした', 'Could not load that drop')); return; }
     sim.restoreWorld(d);
     ({ seed, size, sand } = d.opt);
     for (const [id, v] of [['food', d.opt.foodRate], ['light', d.opt.light], ['flow', d.opt.flow]]) { $(id).value = v; $(id).oninput({ target: $(id) }); }
-    startWorld(`「${t.title}」をのぞいています`);
+    startWorld(L(`「${t.title}」をのぞいています`, `Looking into “${t.title_en || t.title}”`));
     return;
   }
   seed = (seed * 7919 + 13) % 100000;
   size = newSize; sand = newSand; pop = newPop;
   introNext = true;   // 画面側で回すときは、次の行の中ですぐ onWorld が呼ばれる
   sim.newWorld({ seed, size, sand, founders: pop === 150 ? undefined : pop, foodRate: +$('food').value, light: +$('light').value, flow: +$('flow').value });
-  startWorld('新しく始めました');
+  startWorld(L('新しく始めました', 'Started a new drop'));
 };
 // 新しい一滴が届いたとき（画面側で回すときはすぐ、Worker のときは少しあと）: 見え方を初めにもどす
 function onWorld() {
@@ -285,27 +303,27 @@ $('cardClose').onclick = () => select(null);
 
 // ── 選んだ1匹の札 ──
 const LABELS = {
-  size: ['大きさ', v => `${v.toFixed(0)} µm`],
-  range: ['感じる範囲', v => `${v.toFixed(0)} µm`],
-  food: ['エサへ', v => v.toFixed(1)],
-  kinesis: ['エサの中でゆるめる', v => v.toFixed(2)],
-  eatRest: ['のみこむ間は休む', v => v.toFixed(2)],
-  backup: ['ぶつかると下がる', v => v.toFixed(2)],
-  attach: ['砂つぶにくっつく', v => v.toFixed(2)],
-  mouth: ['食べる所の場所', v => v < 0.35 ? '前' : v < 1.1 ? 'ななめ前' : '横'],
-  small: ['小さい相手へ', v => v.toFixed(1)],
-  big: ['大きい相手から', v => v.toFixed(1)],
-  mix: ['仲間と混ぜる', v => v.toFixed(2)],
-  stick: ['子とくっつく', v => v.toFixed(2)],
-  keep: ['藍藻を飼う', v => v.toFixed(2)],
-  colMax: ['群体の大きさ', v => `${Math.round(2 ** v)} 細胞`],
-  fiss: ['続けて分かれる回数', v => `${Math.max(1, Math.round(v))} 回`],
-  plane: ['一列にのびる', v => v.toFixed(2)],
-  exDig: ['体の外で消化', v => v.toFixed(2)],
-  share: ['仲間と分けあう', v => v.toFixed(2)],
-  signal: ['仲間の合図を聞く', v => v.toFixed(2)],
-  inBeat: ['内の細胞が打つ', v => v.toFixed(2)],
-  outDiv: ['外の細胞が分かれる', v => v.toFixed(2)],
+  size: [L('大きさ', 'Size'), v => `${v.toFixed(0)} µm`],
+  range: [L('感じる範囲', 'Sensing range'), v => `${v.toFixed(0)} µm`],
+  food: [L('エサへ', 'Toward food'), v => v.toFixed(1)],
+  kinesis: [L('エサの中でゆるめる', 'Slow down in food'), v => v.toFixed(2)],
+  eatRest: [L('のみこむ間は休む', 'Rest while swallowing'), v => v.toFixed(2)],
+  backup: [L('ぶつかると下がる', 'Back up on bumping'), v => v.toFixed(2)],
+  attach: [L('砂つぶにくっつく', 'Stick to sand'), v => v.toFixed(2)],
+  mouth: [L('食べる所の場所', 'Mouth position'), v => v < 0.35 ? L('前', 'front') : v < 1.1 ? L('ななめ前', 'front-side') : L('横', 'side')],
+  small: [L('小さい相手へ', 'Toward smaller prey'), v => v.toFixed(1)],
+  big: [L('大きい相手から', 'Away from bigger ones'), v => v.toFixed(1)],
+  mix: [L('仲間と混ぜる', 'Mix genes'), v => v.toFixed(2)],
+  stick: [L('子とくっつく', 'Stay with offspring'), v => v.toFixed(2)],
+  keep: [L('藍藻を飼う', 'Keep algae'), v => v.toFixed(2)],
+  colMax: [L('群体の大きさ', 'Colony size'), v => L(`${Math.round(2 ** v)} 細胞`, `${Math.round(2 ** v)} cells`)],
+  fiss: [L('続けて分かれる回数', 'Divisions in a row'), v => L(`${Math.max(1, Math.round(v))} 回`, `${Math.max(1, Math.round(v))}×`)],
+  plane: [L('一列にのびる', 'Grow in a line'), v => v.toFixed(2)],
+  exDig: [L('体の外で消化', 'Digest outside'), v => v.toFixed(2)],
+  share: [L('仲間と分けあう', 'Share food'), v => v.toFixed(2)],
+  signal: [L('仲間の合図を聞く', 'Listen to signals'), v => v.toFixed(2)],
+  inBeat: [L('内の細胞が打つ', 'Inner cells beat'), v => v.toFixed(2)],
+  outDiv: [L('外の細胞が分かれる', 'Outer cells divide'), v => v.toFixed(2)],
 };
 let hintOnce = false;
 function renderCard(full) {
@@ -313,22 +331,23 @@ function renderCard(full) {
   const o = sel, c = world.clades.get(o.clade);
   if (!c || !o.g) return;   // Worker のとき、系統の知らせがまだ届いていないことがある
   $('cSwatch').style.background = cladeColor(c);
-  $('cName').textContent = c.name;
-  $('cMeta').textContent = `系統 ${c.id}・${o.gen + 1} 代目` + (o.anch || o.colAnch ? '・くっついて待つ' : '') + (o.sym ? `・藍藻 ${o.sym} を飼う` : '') + (o.colN > 1 ? `・${o.colN} 細胞の群体の${o.inner ? '内' : '外'}` : '') + (o.mateT > 0 ? '・接合中' : o.mixes ? `・混ぜた ${o.mixes} 回` : '');
+  $('cName').textContent = nameOf(c);
+  $('cMeta').textContent = L(`系統 ${c.id}・${o.gen + 1} 代目` + (o.anch || o.colAnch ? '・くっついて待つ' : '') + (o.sym ? `・藍藻 ${o.sym} を飼う` : '') + (o.colN > 1 ? `・${o.colN} 細胞の群体の${o.inner ? '内' : '外'}` : '') + (o.mateT > 0 ? '・接合中' : o.mixes ? `・混ぜた ${o.mixes} 回` : ''),
+    `Lineage ${c.id} · generation ${o.gen + 1}` + (o.anch || o.colAnch ? ' · stuck, waiting' : '') + (o.sym ? ` · keeps ${o.sym} algae` : '') + (o.colN > 1 ? ` · ${o.inner ? 'inner' : 'outer'} cell of a ${o.colN}-cell colony` : '') + (o.mateT > 0 ? ' · mating' : o.mixes ? ` · mixed genes ${o.mixes}×` : ''));
   const pct = Math.round(Math.min(1, o.e / eSplit(o.g, o.b)) * 100);
-  $('cStats').innerHTML = `<div><dt>食べた</dt><dd>${o.ate}</dd></div><div><dt>狩った</dt><dd>${o.prey}</dd></div><div><dt>子</dt><dd>${o.kids}</dd></div><div><dt>おなか</dt><dd>${pct}%</dd></div>`;
+  $('cStats').innerHTML = `<div><dt>${L('食べた', 'Ate')}</dt><dd>${o.ate}</dd></div><div><dt>${L('狩った', 'Hunted')}</dt><dd>${o.prey}</dd></div><div><dt>${L('子', 'Young')}</dt><dd>${o.kids}</dd></div><div><dt>${L('おなか', 'Full')}</dt><dd>${pct}%</dd></div>`;
   if (full) {
     const P = o.bp;
     drawBodyDiagram($('cBody'), o);
     $('cBodyLine').textContent = P.n
-      ? `節 ${P.n}・1秒に ${(1 / o.b.T).toFixed(0)} 回打つ・速さ ${speedOf(o.g, o.b).toFixed(0)} µm/s・とどく ${(P.reach * o.g[GI.size]).toFixed(0)} µm`
-      : '節がない（泳げない）';
+      ? L(`節 ${P.n}・1秒に ${(1 / o.b.T).toFixed(0)} 回打つ・速さ ${speedOf(o.g, o.b).toFixed(0)} µm/s・とどく ${(P.reach * o.g[GI.size]).toFixed(0)} µm`, `${P.n} segments · beats ${(1 / o.b.T).toFixed(0)}×/s · speed ${speedOf(o.g, o.b).toFixed(0)} µm/s · reach ${(P.reach * o.g[GI.size]).toFixed(0)} µm`)
+      : L('節がない（泳げない）', 'No segments (cannot swim)');
     $('cGenes').innerHTML = Object.entries(LABELS).map(([k, [lab, f]]) => {
       const i = GI[k], [, lo, hi, init] = GENES[i];
       const v = o.g[i], w = (v - lo) / (hi - lo) * 100, s = (init - lo) / (hi - lo) * 100;
-      return `<div class="gene"><span>${lab}</span><span class="bar"><i style="width:${w}%;background:${cladeColor(c, 0.9)}"></i><u style="left:${s}%" title="はじまり"></u></span><em>${f(v)}</em></div>`;
+      return `<div class="gene"><span>${lab}</span><span class="bar"><i style="width:${w}%;background:${cladeColor(c, 0.9)}"></i><u style="left:${s}%" title="${L('はじまり', 'At the start')}"></u></span><em>${f(v)}</em></div>`;
     }).join('');
-    $('cHint').textContent = '点線は、ひと打ちの間に節の先が通る道。琥珀色の線は、はじまりの値。';
+    $('cHint').textContent = L('点線は、ひと打ちの間に節の先が通る道。琥珀色の線は、はじまりの値。', 'The dotted line is the path of the segment tips in one beat. The amber line is the starting value.');
   }
 }
 
@@ -345,7 +364,7 @@ function tick(text, page) {
 function showEvents() {
   const quiet = !seen;
   if (quiet) seen = new Set(book.keys());
-  for (const [k, test, , text, , share = 0] of PAGES) {
+  for (const [k, test, , text, , share = 0, text_en] of PAGES) {
     if (seen.has(k)) continue;
     const hit = world.orgs.filter(test);
     if (!hit.length || hit.length < (share ? Math.max(1, share * world.orgs.length) : 1)) continue;
@@ -353,11 +372,11 @@ function showEvents() {
     // その節目がいちばんよくわかる形を写す: あてはまる中で、いちばん小さなかたまり（群体の節目なら、ちょうどその大きさ）
     const o = hit.reduce((a, b) => (b.colN || 1) < (a.colN || 1) ? b : a);
     book.set(k, { t: world.t, gen: o.gen + 1, shape: shapeOf(o), pre: quiet });
-    if (!quiet) tick(`${fmtT(world.t)}　はじめて、${text}`, k);
+    if (!quiet) tick(L(`${fmtT(world.t)}　はじめて、${text}`, `${fmtT(world.t)}  First: ${text_en}`), k);
   }
   $('bookN').textContent = book.size + 1;
   const ev = world.events;
-  for (let i = ev.length - 1; i >= lastEvent; i--) if (!ev[i].clade) { tick(`${fmtT(ev[i].t)}　${ev[i].text}`, null); break; }
+  for (let i = ev.length - 1; i >= lastEvent; i--) if (!ev[i].clade) { tick(`${fmtT(ev[i].t)}　${L(ev[i].text, ev[i].text_en || ev[i].text)}`, null); break; }
   lastEvent = ev.length;
   if (world.events.length > 400) { world.events.splice(0, 200); lastEvent = world.events.length; }
 }
@@ -375,7 +394,7 @@ function drawBook() {
   const all = [['', null, START.name], ...PAGES];
   $('bookGrid').innerHTML = all.map(([k, , name]) => {
     const has = !k || book.has(k);
-    return `<button type="button" data-page="${k}" class="${k === bookSel ? 'on' : ''}"${has ? '' : ' disabled'} aria-pressed="${k === bookSel}">${has ? '<canvas></canvas>' : '<i>？</i>'}<span>${name}</span></button>`;
+    return `<button type="button" data-page="${k}" class="${k === bookSel ? 'on' : ''}"${has ? '' : ' disabled'} aria-pressed="${k === bookSel}">${has ? '<canvas></canvas>' : '<i>?</i>'}<span>${name}</span></button>`;
   }).join('');
   $('bookGrid').querySelectorAll('[data-page]').forEach(b => {
     const k = b.dataset.page, cv = b.querySelector('canvas');
@@ -384,7 +403,7 @@ function drawBook() {
   });
   const p = PAGES.find(x => x[0] === bookSel), e = book.get(bookSel);
   $('bookName').textContent = p ? p[2] : START.name;
-  $('bookWhen').textContent = !p ? 'はじまり' : e.pre ? 'のぞいたときに、もういた' : `${fmtT(e.t)}・${e.gen} 代目`;
+  $('bookWhen').textContent = !p ? L('はじまり', 'The beginning') : e.pre ? L('のぞいたときに、もういた', 'Already there when you looked in') : L(`${fmtT(e.t)}・${e.gen} 代目`, `${fmtT(e.t)} · generation ${e.gen}`);
   $('bookNote').textContent = p ? p[4] : START.note;
   drawShape($('bookBig'), p ? e.shape : startShape());
   $('bookCount').textContent = `${book.size + 1} / ${PAGES.length + 1}`;
@@ -414,7 +433,7 @@ function frame(now) {
     sim.eatenBy(gone, by => {
       selGone = false;
       if (sel !== gone) return;
-      toast(by ? 'この1匹は食べられた。食べたほうを追いかけます' : 'この1匹はエネルギーが尽きた');
+      toast(by ? L('この1匹は食べられた。食べたほうを追いかけます', 'This one was eaten. Now following the eater') : L('この1匹はエネルギーが尽きた', 'This one ran out of energy'));
       if (by) select(by); else { const same = world.orgs.find(o => o.clade === gone.clade); same ? select(same) : select(null); }
     });
   }
@@ -441,7 +460,7 @@ function frame(now) {
     const slow = playing && simRate < speed * 0.8;
     $('speedBtn').textContent = `×${slow ? Math.max(1, Math.round(simRate)) : speed}`;
     $('speedBtn').classList.toggle('slow', slow);
-    $('speedBtn').title = slow ? `×${speed} を選んでいますが、計算が追いつかず いまは ×${Math.max(1, Math.round(simRate))} です` : 'はやさ';
+    $('speedBtn').title = slow ? L(`×${speed} を選んでいますが、計算が追いつかず いまは ×${Math.max(1, Math.round(simRate))} です`, `×${speed} is selected, but the computer can only keep up at ×${Math.max(1, Math.round(simRate))} now`) : L('はやさ', 'Speed');
     $('sPop').textContent = world.orgs.length;
     if (perfLog) $('perfText').textContent = `計算${sim.usesWorker ? '（別のコア）' : ''} ${perf.sim.toFixed(1)} ms ・ 1刻み ${sim.stepMs.toFixed(1)} ms ・ 描く ${perf.draw.toFixed(1)} ms ・ ${Math.round(perf.fps)} こま/秒 ・ ${world.orgs.length} 匹`;
     $('sClades').textContent = world.liveClades().length;
@@ -503,7 +522,7 @@ function updateScale() {
 
 sim.newWorld({ seed, size, sand, founders: pop === 150 ? undefined : pop, foodRate: +$('food').value, light: +$('light').value, flow: +$('flow').value });
 requestAnimationFrame(frame);
-setTimeout(() => { if (!hintOnce) toast('生き物を押すと、追いかけて遺伝子を見られます'); }, 2500);
+setTimeout(() => { if (!hintOnce) toast(L('生き物を押すと、追いかけて遺伝子を見られます', 'Tap a creature to follow it and see its genes')); }, 2500);
 
 // ── タイトル: 開くたびに出す（?nogate・?test では出さない）。「つづきから」「はじめから」・注意書き・「もどる」。どちらかを選ぶまで一滴は止めておく ──
 let title = null;   // タイトルのうしろで泳ぐ数匹（本番とは別の小さな一滴）
@@ -518,7 +537,7 @@ function showTitle() {
 function refreshCont() {
   getSave('meta').then(m => {
     if (!m || $('gate').hidden) return;
-    $('gateContSub').textContent = `${fmtT(m.t)}・${m.n} 匹`;
+    $('gateContSub').textContent = L(`${fmtT(m.t)}・${m.n} 匹`, `${fmtT(m.t)} · ${m.n} creatures`);
     $('gateCont').hidden = false; $('gateNew').className = 'gateGhost'; $('gateCont').focus();
   }).catch(() => {});
 }
@@ -527,9 +546,9 @@ $('gateCont').onclick = async () => {
   $('gateCont').disabled = true;
   const ok = await sim.load().catch(() => false);
   $('gateCont').disabled = false;
-  if (!ok) { toast('前の一滴を読みこめませんでした'); return; }
+  if (!ok) { toast(L('前の一滴を読みこめませんでした', 'Could not load the last drop')); return; }
   book = new Map(await getSave('book').catch(() => null) || []);
-  hideTitle(); setPlaying(true); toast('つづきから');
+  hideTitle(); setPlaying(true); toast(L('つづきから', 'Continuing'));
 };
 // はじめから: 消える一滴がない（つづきからがない）ときは、たずねずにすぐ始める。タイトルの間は一滴は止まっているので、うしろの一滴がそのまま「はじまり」（RELEASE.md 4章）
 $('gateNew').onclick = () => {

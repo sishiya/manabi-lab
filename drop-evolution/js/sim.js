@@ -162,6 +162,25 @@ export function cladeName(g, b) {
   if (P.n && speedOf(g, b) < 5) adj.push('ただよう');
   return adj.slice(0, 2).join('') + noun;
 }
+// 同じ呼び名の英語（画面が英語のとき。記録には日本語の呼び名を残す）
+export function cladeNameEn(g, b) {
+  const P = analyze(b), size = g[GI.size];
+  let roots = 0, depth = 0;
+  const dep = new Array(P.n).fill(0);
+  b.segs.forEach((s, i) => { dep[i] = s.p < 0 ? 1 : dep[s.p] + 1; if (s.p < 0) roots++; depth = Math.max(depth, dep[i]); });
+  let noun;
+  if (!P.n) noun = 'blob';
+  else if (depth >= 3) noun = 'whip';
+  else noun = `${roots > 10 ? 'many' : roots}-${P.reach > 3.2 ? 'tentacle' : 'hair'}`;
+  const adj = [];
+  if (g[GI.small] > 1.2) adj.push('hunting');
+  else if (g[GI.big] > 1.5) adj.push('wary');
+  if (size > 18) adj.push('big'); else if (size < 6) adj.push('small');
+  if (g[GI.stick] > 0.5) adj.unshift('colonial');
+  if (g[GI.keep] > 0.6) adj.unshift('green');
+  if (P.n && speedOf(g, b) < 5) adj.push('drifting');
+  return [...adj.slice(0, 2), noun].join(' ');
+}
 
 export class World {
   constructor(opt = {}) {
@@ -385,7 +404,7 @@ export class World {
       if (d < R + o.r) { o.x = x + dx / d * (R + o.r + 1); o.y = y + dy / d * (R + o.r + 1); o.anch = false; }
     }
     for (let i = 0; i < this.fn; i++) if ((this.fx[i] - x) ** 2 + (this.fy[i] - y) ** 2 < R * R) this.fage[i] = 1e9;   // 下じきになった藍藻
-    this.events.push({ t: this.t, text: '砂つぶが落ちてきた' });
+    this.events.push({ t: this.t, text: '砂つぶが落ちてきた', text_en: 'A grain of sand fell in' });
     this.sandVer = (this.sandVer || 0) + 1;
   }
 
@@ -397,7 +416,7 @@ export class World {
       this.addOrg(g, c.id, clamp(x + Math.cos(a) * d, 10, W - 10), clamp(y + Math.sin(a) * d, 10, H - 10), eSplit(g, b0) * 0.7, 0, b0);
     }
     this.tampered = true;
-    this.events.push({ t: this.t, text: `手を加えた: 「${name}」を ${n} 匹入れた` });
+    this.events.push({ t: this.t, text: `手を加えた: 「${name}」を ${n} 匹入れた`, text_en: `Changed by hand: added ${n} creatures` });
   }
 
   // 砂つぶに入りこんだ物（半径 rr）を外へ押し出す。押し出したら、外向きの向き（法線）を SN に入れて true
@@ -665,7 +684,7 @@ export class World {
     // すべていなくなっても、決まりの外から生き物を足さない（2026-11-01 ユーザー「自動でリスタートがかかるのをやめて」）。画面が知らせて、はじめからか、このまま眺めるかを選ぶ
     if (this.orgs.length === 0 && !this.extinctAt) {
       this.extinctAt = this.t;
-      this.events.push({ t: this.t, text: 'すべていなくなった' });
+      this.events.push({ t: this.t, text: 'すべていなくなった', text_en: 'Every creature is gone' });
     }
     this.histAcc += dt;
     if (this.histAcc >= this.histEvery) { this.histAcc = 0; this.record(); }

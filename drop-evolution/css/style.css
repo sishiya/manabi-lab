@@ -193,7 +193,7 @@ dialog#book { width: min(560px, calc(100% - 24px)); max-height: calc(100% - 24px
 dialog#book::backdrop { background: rgba(0,3,8,.65); }
 .bookHead { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; }
 .bookHead h2 { font: 700 18px var(--font); letter-spacing: .1em; margin: 0; }
-.bookHead span { font: 500 13px var(--mono); color: var(--sub); }
+.bookHead > span { font: 500 13px var(--mono); color: var(--sub); }
 .bookPage { display: grid; grid-template-columns: 180px 1fr; gap: 16px; align-items: start; }
 #bookBig { width: 180px; height: 150px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; display: block; }
 .bookPage b { display: block; font-size: 17px; letter-spacing: .06em; }
@@ -216,3 +216,11 @@ dialog#book form { text-align: right; }
 .stats span { white-space: nowrap; }
 .stats .gen i { font-style: normal; }
 @media (max-width: 760px) { .stats .gen i { display: none; } }   /* せまい画面は「3 代」だけ */
+/* 言語（I18N.md）: 選んでいないほうの言語を隠す。JP／EN はタイトルの右上と「このアプリについて」の中 */
+:root[lang=en] [lang=ja],:root:not([lang=en]) [lang=en]{display:none!important}
+.langsw { display: inline-flex; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.langsw button { border: 0; background: transparent; color: var(--sub); font: 700 12px var(--mono); padding: 6px 10px; cursor: pointer; }
+.langsw button.on { background: var(--ink); color: var(--paper); }
+.gateLang { position: fixed; top: 16px; right: 16px; z-index: 3; background: rgba(2,10,20,.6); }
+.helpLang { float: right; margin-left: 12px; }
+:root[lang=en] .gateBox h2 { letter-spacing: .06em; }
