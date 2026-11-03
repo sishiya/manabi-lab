@@ -22,6 +22,8 @@ export const PAGES = [
     'クラミドモナスは大きく育ってから続けて分かれ、一度に4〜16の子になる。群体の藻はみなこの分かれ方。', 0, 'a creature grows big, then divides 3 times in a row into 8 young at once (multiple fission)'],
   ['col64', o => o.colN >= 64, '64細胞の群体', '64細胞の大きな群体になった',
     '緑藻のユードリナは32〜64細胞。オオヒゲマワリ（ボルボックス）は数千の細胞で、体の細胞と子になる細胞が分かれている。', 0, 'a big 64-cell colony formed'],
+  ['col128', o => o.colN >= 128, '128細胞の群体', '128細胞をこえる群体になった',
+    '緑藻のプレオドリナは64〜128細胞で、前のほうの小さな細胞は子を作らない（体の細胞のはじまり）。オオヒゲマワリは数百から数万の細胞になる。', 0, 'a colony of over 128 cells formed'],
 ];
 // 英語の図鑑の名前と「本物では」（I18N.md: 文の多い表は、同じ鍵に英語を上書き）
 const EN = {
@@ -33,6 +35,7 @@ const EN = {
   col16: ['16-cell colony', 'The green alga Gonium is a flat 16-cell colony, and Pandorina is a 16-cell ball.'],
   fiss3: ['Multiple fission', 'Chlamydomonas grows big, then divides again and again into 4 to 16 young at once. All colonial green algae divide this way.'],
   col64: ['64-cell colony', 'The green alga Eudorina has 32 to 64 cells. Volvox has thousands, with body cells and cells that become young split apart.'],
+  col128: ['128-cell colony', 'The green alga Pleodorina has 64 to 128 cells, and the small cells at the front never make young (the start of body cells). Volvox grows to hundreds or tens of thousands of cells.'],
 };
 if (globalThis.LANG === 'en') for (const p of PAGES) { const e = EN[p[0]]; p[2] = e[0]; p[4] = e[1]; }
 export const START = globalThis.LANG === 'en'

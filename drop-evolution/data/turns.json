@@ -1,5 +1,6 @@
 [
   {"id": "hunt-colony", "title": "群体で狩る者", "sub": "4時間・約330代目 / ふつうの海（最大 40 細胞）", "hours": 4, "gen": 326, "title_en": "Colony hunters", "sub_en": "4 hours · about gen 330 / normal sea (up to 40 cells)"},
   {"id": "green-ball", "title": "大きな緑の群体", "sub": "8時間・約130代目 / 光が強い海（最大 106 細胞）", "hours": 8, "gen": 133, "title_en": "Big green colonies", "sub_en": "8 hours · about gen 130 / bright sea (up to 106 cells)"},
-  {"id": "hunt-big", "title": "大きな群体で狩る者", "sub": "8時間・約720代目 / ふつうの海（最大 64 細胞）", "hours": 8, "gen": 715, "title_en": "Big colony hunters", "sub_en": "8 hours · about gen 720 / normal sea (up to 64 cells)"}
+  {"id": "hunt-big", "title": "大きな群体で狩る者", "sub": "8時間・約720代目 / ふつうの海（最大 64 細胞）", "hours": 8, "gen": 715, "title_en": "Big colony hunters", "sub_en": "8 hours · about gen 720 / normal sea (up to 64 cells)"},
+  {"id": "green-big", "title": "もっと大きな緑の群体", "sub": "10時間・約160代目 / 光が強い海（最大 289 細胞）", "hours": 10, "gen": 160, "title_en": "Even bigger green colonies", "sub_en": "10 hours · about gen 160 / bright sea (up to 289 cells)"}
 ]
