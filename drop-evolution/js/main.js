@@ -100,6 +100,23 @@ view.addEventListener('pointerup', up);
 view.addEventListener('pointercancel', up);
 view.addEventListener('wheel', e => { e.preventDefault(); zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
 
+// はじめの寄り: 「はじめから」で入ったら、まん中近くの1匹にぐっと寄って 6 秒、そこから 24 秒かけて一滴全体へ引く。さわったらやめる（RELEASE.md 4章の9）
+let intro = null, introNext = false;
+const defZoom = () => Math.max(ren.fitZoom(), Math.min(1.3, Math.min(ren.w, ren.h) / 500));
+function startIntro() { intro = { t: 0, o: null, z0: Math.min(ren.w, ren.h) / 110 }; }
+function stepIntro(fdt) {
+  const I = intro;
+  // Worker のときは、生き物の写しが届いてから選ぶ
+  if (!I.o) { if (!world?.orgs.length) return; I.o = world.orgs.reduce((a, b) => Math.hypot(b.x - W / 2, b.y - H / 2) < Math.hypot(a.x - W / 2, a.y - H / 2) ? b : a); }
+  I.t += fdt;
+  const u = Math.min(1, Math.max(0, (I.t - 6) / 24)), e = u * u * (3 - 2 * u), zd = defZoom();
+  if (!I.o.dead) { I.x = I.o.x; I.y = I.o.y; }
+  ren.cam.z = Math.exp(Math.log(I.z0) + (Math.log(zd) - Math.log(I.z0)) * e);
+  ren.cam.x = I.x + (W / 2 - I.x) * e; ren.cam.y = I.y + (H / 2 - I.y) * e; clampCam();
+  if (u >= 1) intro = null;
+}
+view.addEventListener('pointerdown', () => { intro = null; }, true);
+view.addEventListener('wheel', () => { intro = null; }, true);
 function zoomAt(sx, sy, k) {
   const before = ren.toWorld(sx, sy);
   ren.cam.z = Math.min(12, Math.max(ren.fitZoom(), ren.cam.z * k));
@@ -115,6 +132,7 @@ function pick(sx, sy) {
 }
 
 function select(o) {
+  if (o) intro = null;
   sel = o; follow = !!o; selClade = o ? o.clade : null;
   $('card').hidden = !o;
   document.body.classList.toggle('picked', !!o);
@@ -138,7 +156,7 @@ $('graph').addEventListener('click', e => {
 $('play').onclick = () => setPlaying(!playing);
 function setPlaying(p) { playing = p; sim.run(speed, playing); $('play').textContent = p ? '❚❚' : '▶'; $('play').setAttribute('aria-label', p ? '止める' : '動かす'); }
 document.querySelectorAll('[data-speed]').forEach(b => b.onclick = () => setSpeed(+b.dataset.speed));
-function setSpeed(s) { speed = s; sim.run(speed, playing); $('speedBtn').textContent = `×${s}`; openPop(null); document.querySelectorAll('[data-speed]').forEach(b => b.classList.toggle('on', +b.dataset.speed === s)); if (!playing) setPlaying(true); }
+function setSpeed(s) { speed = s; sim.run(speed, playing); $('speedBtn').textContent = `×${s}`; $('speedBtn').classList.remove('slow'); openPop(null); document.querySelectorAll('[data-speed]').forEach(b => b.classList.toggle('on', +b.dataset.speed === s)); if (!playing) setPlaying(true); }
 document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
   graph.mode = b.dataset.mode;
   document.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('on', x === b));
@@ -238,6 +256,7 @@ $('mNewYes').onclick = async () => {
   }
   seed = (seed * 7919 + 13) % 100000;
   size = newSize; sand = newSand; pop = newPop;
+  introNext = true;   // 画面側で回すときは、次の行の中ですぐ onWorld が呼ばれる
   sim.newWorld({ seed, size, sand, founders: pop === 150 ? undefined : pop, foodRate: +$('food').value, light: +$('light').value, flow: +$('flow').value });
   startWorld('新しく始めました');
 };
@@ -246,9 +265,10 @@ function onWorld() {
   world = sim.world;
   if (q.has('test')) sim.set('profOn', true);   // 計算の部分ごとの時間も測る
   extinctShown = false;
-  ren.ghosts = []; ren.prev.clear();
+  ren.ghosts = []; ren.prev.clear(); ren.eatPrev = null; ren.flashes = [];
   ren.cam.x = W / 2; ren.cam.y = H / 2; ren.cam.z = Math.max(ren.fitZoom(), Math.min(1.3, Math.min(ren.w, ren.h) / 500)); clampCam();
-  select(null); lastEvent = 0; seen = null; book = new Map();
+  select(null); lastEvent = 0; seen = null; book = new Map(); intro = null;
+  if (introNext) { introNext = false; startIntro(); }
 }
 function startWorld(msg) {
   playingBeforeMenu = true; fromTitle = false;
@@ -393,6 +413,7 @@ function frame(now) {
       if (by) select(by); else { const same = world.orgs.find(o => o.clade === gone.clade); same ? select(same) : select(null); }
     });
   }
+  if (intro) stepIntro(fdt);
   if (sel && follow) {
     // 札とグラフにかくれない所（空いている所のまん中）に追う1匹を置く
     const fx = (focus.x - ren.w / 2) / ren.cam.z, fy = (focus.y - ren.h / 2) / ren.cam.z;
@@ -407,9 +428,15 @@ function frame(now) {
   if (uiT <= 0) {
     uiT = 0.25;
     $('sTime').textContent = fmtT(world.t);
+    // 進化の時計は代（本物の実験も「何百代で群体になった」と代で数える。RELEASE.md 4章の7）
+    $('sGen').textContent = world.orgs.length ? Math.round(world.orgs.reduce((a, o) => a + o.gen, 0) / world.orgs.length) + 1 : '–';
     checkExtinct();
     $('sTampered').hidden = !world.tampered;
-    $('sRate').textContent = playing && simRate < speed * 0.8 ? `いまは ×${Math.round(simRate)}` : '';
+    // 選んだ速さが出ないときは、ボタンに出せている速さを書く（RELEASE.md 4章の10）
+    const slow = playing && simRate < speed * 0.8;
+    $('speedBtn').textContent = `×${slow ? Math.max(1, Math.round(simRate)) : speed}`;
+    $('speedBtn').classList.toggle('slow', slow);
+    $('speedBtn').title = slow ? `×${speed} を選んでいますが、計算が追いつかず いまは ×${Math.max(1, Math.round(simRate))} です` : 'はやさ';
     $('sPop').textContent = world.orgs.length;
     if (perfLog) $('perfText').textContent = `計算${sim.usesWorker ? '（別のコア）' : ''} ${perf.sim.toFixed(1)} ms ・ 1刻み ${sim.stepMs.toFixed(1)} ms ・ 描く ${perf.draw.toFixed(1)} ms ・ ${Math.round(perf.fps)} こま/秒 ・ ${world.orgs.length} 匹`;
     $('sClades').textContent = world.liveClades().length;
@@ -501,7 +528,7 @@ $('gateCont').onclick = async () => {
 };
 // はじめから: 消える一滴がない（つづきからがない）ときは、たずねずにすぐ始める。タイトルの間は一滴は止まっているので、うしろの一滴がそのまま「はじまり」（RELEASE.md 4章）
 $('gateNew').onclick = () => {
-  if ($('gateCont').hidden) { hideTitle(); setPlaying(true); return; }
+  if ($('gateCont').hidden) { hideTitle(); setPlaying(true); startIntro(); return; }
   fromTitle = true; openMenu(); openNew();
 };
 // もどる: ブラウザの前のページへ（前のページがなければ保管庫へ）

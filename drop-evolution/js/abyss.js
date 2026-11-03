@@ -242,7 +242,7 @@ export function drawAbyss(ren, world, sel, time) {
   // 藍藻: またたく小さな火花（明るさを4段にまとめて描く）
   const ss = Math.max(1.6, 1.8 / z);
   for (let b = 0; b < 4; b++) {
-    g.fillStyle = `rgba(${ABYSS.food},${(0.16 + b * 0.08).toFixed(2)})`; g.beginPath();
+    g.fillStyle = `rgba(${ABYSS.food},${(0.34 + b * 0.1).toFixed(2)})`; g.beginPath();
     for (let i = 0; i < world.fn; i++) {
       const x = world.fx[i], y = world.fy[i];
       if (x < tl.x || x > br.x || y < tl.y || y > br.y || world.fage[i] >= 1e8) continue;
@@ -333,6 +333,8 @@ export function drawAbyss(ren, world, sel, time) {
   }
 
   lap('crisp');
+  // 食べた瞬間: 食べた数がふえた生き物の口に、小さな光の輪（藍藻は緑、生き物を狩ったら琥珀）。札の数を前のこまとくらべるだけ（決まりは増やさない。RELEASE.md 4章の6）
+  eatFlash(ren, g, vis, time, z);
   // ── 選んだ1匹（琥珀）と、感じる範囲 ──
   if (sel && !sel.dead) {
     const r = sel.r, P = pose(sel, time), a = sel.a + (P ? P.wob : 0), ca = Math.cos(a), sa = Math.sin(a);
@@ -407,6 +409,29 @@ function motes(ren, g, time, rayAt) {
   }
 }
 
+function eatFlash(ren, g, vis, time, z) {
+  const prev = ren.eatPrev || (ren.eatPrev = new Map()), fl = ren.flashes || (ren.flashes = []), now = new Map();
+  for (const o of vis) {
+    const p = prev.get(o.id);
+    if (p && (o.ate > p[0] || o.prey > p[1]) && fl.length < 400) {
+      const ma = o.a + o.g[GI.mouth];
+      fl.push({ o, x: Math.cos(ma) * o.r, y: Math.sin(ma) * o.r, r: o.r, t0: time, hunt: o.prey > p[1] });
+    }
+    now.set(o.id, [o.ate, o.prey]);
+  }
+  ren.eatPrev = now;
+  let k = 0;
+  for (const f of fl) {
+    const u = (time - f.t0) / 0.7;
+    if (u < 0 || u >= 1 || f.o.dead) continue;
+    fl[k++] = f;
+    const x = f.o.x + f.x, y = f.o.y + f.y, R = Math.max(1.5 / z, f.r * (0.35 + 0.5 * u));
+    g.strokeStyle = f.hunt ? `rgba(255,200,97,${(1 - u) * 0.9})` : `rgba(${ABYSS.sym},${(1 - u) * 0.8})`;
+    g.lineWidth = Math.max(1 / z, f.r * 0.1) * (f.hunt ? 1.6 : 1);
+    g.beginPath(); g.arc(x, y, R, 0, TAU); g.stroke();
+  }
+  fl.length = k;
+}
 // くっきりの光を WebGL で（2D の描き方と同じ形・同じ色。上の if (!gC) の中と対になっている）
 function crispGL(gC, ren, world, vis, glow, poses, sel, time, tl, br) {
   const c = ren.cam, z = c.z, cv = ren.cv, PF = ren.prof; let t0 = performance.now();
@@ -418,7 +443,7 @@ function crispGL(gC, ren, world, vis, glow, poses, sel, time, tl, br) {
     const x = world.fx[i], y = world.fy[i];
     if (x < tl.x || x > br.x || y < tl.y || y > br.y || world.fage[i] >= 1e8) continue;
     const b = Math.max(0, Math.sin(time * 2 + i * 1.7)) * 3.99 | 0;
-    gC.disc(x, y, ss / 2, rgba(ABYSS.food, 0.16 + b * 0.08));
+    gC.disc(x, y, ss / 2, rgba(ABYSS.food, 0.34 + b * 0.1));
   }
   // 死んだ体のかけら
   const lp = Math.max(0.6 / z, 0.7), cp = rgba(ABYSS.glow, 0.22);
