@@ -18,7 +18,7 @@ window.MODES = window.MODES || {};
       { say: '<b>下でつかんだまま、まん中をのばす</b>と、頭が上へ。青い矢印が動いている所（幹の上をすべる）。', ring: 'mid', layers: { stuck: true, tforce: false, move: true } },
       { say: '<b>上で巻いてつかんでから、下を放す</b>。いつも、どこかが止まっている。', ring: 'front', layers: { stuck: true, tforce: false, move: true } },
       { say: '<b>上でつかんだまま、まん中をちぢめる</b>と、下が引き上がる。これをくり返して登る。', ring: 'rear', layers: { stuck: true, tforce: false, move: true } },
-      { say: '赤は重さ、緑は止まっている所が<b>支える摩擦</b>、黄色は<b>締めつけ</b>。落ちないのに要る力の4倍くらい締めつけている（本物のヘビの測定から）。', layers: { stuck: true, tforce: true, move: false } },
+      { say: '赤は重さ、緑は止まっている所が<b>支える摩擦</b>、黄色は<b>締めつけ</b>。落ちないのに要る力の4倍で締めつけている（推定。棒を登る本物のヘビは3倍より大きいことが多い）。', layers: { stuck: true, tforce: true, move: false } },
       { say: '<b>試してみよう</b>: 下を先に放すと…／幹を太くすると…', act: [['下を先に放す', () => UI.set('order', 'wrong')], ['幹を 6 cm に', () => UI.setSlider('dia', 6)], ['もとにもどす', () => { UI.set('order', 'right'); UI.setSlider('dia', 2); }]], layers: { stuck: true, tforce: true, move: true } },
     ],
     make() { M.s = TREE.make(Object.assign({}, TP)); M.hist = []; M.speed = null; },
@@ -64,18 +64,18 @@ window.MODES = window.MODES || {};
     },
     refresh(A) {
       const r = $('ruler'), res = $('result'), s = M.s, p = s.p, W = p.mass * 9.81;
-      if (s.fell) r.innerHTML = `<span class="bad">すべり落ちた！</span> ${!s.encircle ? '180° より多く巻けないので、締めつけられない' : 'どこも止まっていない時間があった'}`;
+      if (s.fell) r.innerHTML = `<span class="bad">すべり落ちた！</span> ${!s.encircle ? '180° に届かない（この計算では、180° 以下は締めつけられないと決めている）' : 'どこも止まっていない時間があった'}`;
       else {
         const U = M.speed, sq = s.sqN * s.lg / W;
         r.innerHTML = `${U == null ? '' : `上へ 秒速 <span class="big">${f1(U * 100)}</span> cm（1分で ${f0(U * 6000)} cm）・`}締めつけ 体重の <span class="big">${f1(sq)}</span> 倍`;
       }
       const circ = Math.PI * (p.D + p.d) * 100;
       let t;
-      if (!s.encircle) t = `幹のまわり ${f0(circ)} cm: 1か所で巻けるのは ${f0(s.wrapDeg)}° だけ。180° より多く巻けないと強く締めつけられない（本物のコーンスネークも 5.7 cm 以上の立った柱は登れなかった）。`;
+      if (!s.encircle) t = `幹のまわり ${f0(circ)} cm: 1か所で巻けるのは ${f0(s.wrapDeg)}° だけ。この計算では 180° 以下は締めつけられないと決めているので落ちる（推定）。本物のコーンスネークも 5.7 cm の立った柱は登れなかったが、180° より多く巻いていた。`;
       else if (p.order === 'wrong') t = '下を先に放すと、上をつかむまでのあいだ、どこも止まっていない。重さを支えられない。';
       else if (s.lm < 0.15) t = `幹のまわり ${f0(circ)} cm: つかむのに 2×${f0(s.lg * 100)} cm 使うので、のび縮みできるのは ${f0(s.lm * 100)} cm だけ。ゆっくりしか登れない。`;
       else if (p.safety < 1.3) t = `締めつけ ${p.safety.toFixed(1)} 倍: ぎりぎり。動きの途中で、支える摩擦が足りなくなる（この計算では 約1.1倍 より弱いと落ちる）。`;
-      else if (p.scales === 'flat') t = 'ウロコを立てない: 静止摩擦が 0.88 → 0.35。同じ余裕で支えるのに、約2.5倍 強く締めつけている。';
+      else if (p.scales === 'flat') t = 'ウロコを立てない: 静止摩擦が 0.88 → 0.35（発泡スチロールの上の値）。同じ余裕で支えるのに、約2.5倍 強く締めつけている。';
       else t = `幹のまわり ${f0(circ)} cm。つかむ所 ${f0(s.lg * 100)} cm（${f0(s.wrapDeg)}° 巻く）×2、のび縮みする所 ${f0(s.lm * 100)} cm。`;
       res.textContent = t; res.classList.toggle('bad', s.fell || !s.encircle || p.order === 'wrong');
       const ph = (p.order === 'wrong' ? PHASE_W : PHASE)[s.phase || 1];
