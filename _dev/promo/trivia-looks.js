@@ -293,6 +293,71 @@ TL.LOOKS = {
     };
   } },
 };
+// ---- リソグラフ（多色）: 紙の版画の絵を、何色かのインクの網点で刷る（2026-11-03 ユーザー: 2色では赤・緑などが出せない）----
+// 色ごとに「どのインクを何割のせれば近いか」を前もって表（LUT、1辺 24）にしておき、インクごとに角度の違う網点・版ずれで刷る。
+// 暗い無彩色（字・輪郭）は1色目のインクだけで刷る（読みやすく）。mainOnly: 主役の絵（TK.drawArt の層）だけ全部のインク、ほかは最初の2色
+TL.RISO_INK = { blue: [0, 120, 191], pink: [255, 72, 176], yellow: [255, 232, 0], green: [0, 169, 92], red: [241, 80, 96], federal: [61, 85, 136], scarlet: [214, 70, 52], mustard: [214, 164, 40] };
+TL.risoLUT = function (inks, sat) {
+  const N = 24, K = inks.length, T = inks.map(c => c.map(v => v / 255)), P = [0.965, 0.957, 0.933], lv = K <= 3 ? [0, 0.2, 0.4, 0.6, 0.8, 1] : [0, 0.33, 0.66, 1];
+  const combos = []; (function rec(i, cur) { if (i === K) { combos.push(cur.slice()); return; } for (const v of lv) { cur[i] = v; rec(i + 1, cur); } })(0, []);
+  const out = combos.map(c => [0, 1, 2].map(ch => { let r = P[ch]; for (let k = 0; k < K; k++) r *= 1 - c[k] * (1 - T[k][ch]); return r; }));
+  const lut = new Float32Array(N * N * N * K);
+  for (let r = 0; r < N; r++) for (let g = 0; g < N; g++) for (let b = 0; b < N; b++) {
+    let t = [r / (N - 1), g / (N - 1), b / (N - 1)];
+    const m = (t[0] + t[1] + t[2]) / 3; t = t.map(v => clamp(m + (v - m) * sat, 0, 1)).map((v, i) => v * P[i]);   // 彩度を上げてから
+    let best = 0, bd = 1e9;
+    for (let q = 0; q < combos.length; q++) { const o = out[q]; let d = (o[0] - t[0]) ** 2 + (o[1] - t[1]) ** 2 + (o[2] - t[2]) ** 2; for (const v of combos[q]) d += v * 0.004; if (d < bd) { bd = d; best = q; } }
+    lut.set(combos[best], ((r * N + g) * N + b) * K);
+  }
+  return { N, K, lut };
+};
+TL.risoMulti = function (o) {
+  const inks = o.inks.map(n => TL.RISO_INK[n]), K = inks.length, full = TL.risoLUT(inks, o.sat ?? 1.6), two = o.mainOnly ? TL.risoLUT(inks.slice(0, 2), o.sat ?? 1.6) : null;
+  const ang = [0.26, 1.31, 0.0, 0.79, 1.05].slice(0, K), offs = [[0, 0], [2, 1], [-1, 2], [1, -2], [-2, -1]].slice(0, K), P = [246, 244, 238];
+  let cov = null;
+  return function (g) {
+    const c = g.canvas, w = c.width, h = c.height, n = w * h;
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); const im = g.getImageData(0, 0, w, h), px = im.data;
+    const mask = o.mainOnly && TL._art ? TL._art.getContext('2d').getImageData(0, 0, w, h).data : null;
+    if (!cov || cov.length !== n * K) cov = new Float32Array(n * K);
+    const pr = 239, pg = 230, pb = 210;   // 版画の紙の色 → 白い紙とみなす
+    for (let i = 0; i < n; i++) {
+      const r = Math.min(1, px[i * 4] / pr), gg = Math.min(1, px[i * 4 + 1] / pg), b = Math.min(1, px[i * 4 + 2] / pb), L = 0.2126 * r + 0.7152 * gg + 0.0722 * b, s = Math.max(r, gg, b) - Math.min(r, gg, b);
+      if (L < 0.32 && s < 0.22) { for (let k = 0; k < K; k++) cov[i * K + k] = k === 0 ? clamp((0.5 - L) * 2.2, 0.6, 1) : 0; continue; }   // 字・輪郭は1色目だけ
+      const T = mask && mask[i * 4 + 3] < 128 ? two : full, N = T.N, base = ((Math.round(r * (N - 1)) * N + Math.round(gg * (N - 1))) * N + Math.round(b * (N - 1))) * T.K;
+      for (let k = 0; k < K; k++) cov[i * K + k] = k < T.K ? T.lut[base + k] : 0;
+    }
+    const f = 2 * Math.PI / (4.2 * RES), ca = ang.map(Math.cos), sa = ang.map(Math.sin), oi = offs.map(([dx, dy]) => (dy * RES * w + dx * RES));
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x, gr = (TL.noise(x, y) - 0.5) * 0.1, mot = (TL.mottle(x, y) - 0.5) * 0.16, pgn = 1 + (TL.noise(x * 3, y * 7) - 0.5) * 0.05;
+      let R = P[0] * pgn, G = P[1] * pgn, B = P[2] * pgn;
+      for (let k = 0; k < K; k++) {
+        const j = clamp(i - oi[k], 0, n - 1), cv = cov[j * K + k]; if (cv < 0.05) continue;
+        const th = (Math.cos((x * ca[k] + y * sa[k]) * f) + Math.cos((-x * sa[k] + y * ca[k]) * f)) * 0.25 + 0.5;
+        const a = clamp(Math.min(1, cv * 1.2) * (0.8 + 0.4 * (cv > 0.55 ? 0.5 : 1 - th)) + gr, 0, 1) * (0.9 + mot), ink = inks[k];
+        R *= 1 - a * (1 - ink[0] / 255); G *= 1 - a * (1 - ink[1] / 255); B *= 1 - a * (1 - ink[2] / 255);
+      }
+      px[i * 4] = R; px[i * 4 + 1] = G; px[i * 4 + 2] = B;
+    }
+    g.putImageData(im, 0, 0); g.restore();
+  };
+};
+TL.artLayer = function (g, t, draw) {   // 主役の絵を別の層に描いてから重ねる（主役の所を見分けるため。影はつけない）
+  const c = g.canvas; if (!TL._art) { TL._art = document.createElement('canvas'); TL._art.width = c.width; TL._art.height = c.height; }
+  const a = TL._art.getContext('2d', { willReadFrequently: true }); a.setTransform(1, 0, 0, 1, 0, 0); a.clearRect(0, 0, c.width, c.height); a.setTransform(RES, 0, 0, RES, 0, 0); a.globalAlpha = g.globalAlpha; draw(a, t);
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(TL._art, 0, 0); g.restore();
+};
+const risoLook = (o) => ({ planet: null, apply() {
+  PL.walker = plateWalker; LOOK.planet = TL.LOOKS.globe.planet; PL.MIN = KYO; PL.STYLE.tintA = o.tintA ?? 1.8;
+  if (o.mainOnly) TK.drawArt = TL.artLayer;
+  TK.bg = g => { g.fillStyle = PL.PAPER; g.fillRect(0, 0, PW, PH); };   // 紙は平らに（四すみを暗くすると、黄のインクで刷られてしまう）
+  TK.finish = TL.risoMulti(o);
+} });
+TL.LOOKS.riso3 = risoLook({ inks: ['blue', 'pink', 'yellow'] });
+TL.LOOKS.riso4 = risoLook({ inks: ['blue', 'red', 'yellow', 'green'] });
+TL.LOOKS.rmain = risoLook({ inks: ['blue', 'pink', 'yellow', 'green'], mainOnly: true });
+TL.LOOKS.rmuted = risoLook({ inks: ['federal', 'scarlet', 'mustard'], sat: 1.4 });
+
 function navyPlanet(g, cx, cy, r, f = 1) {   // 前の紺の星（グラデーションの丸と、緑の楕円）
   g.save(); g.globalAlpha *= f;
   const gr = g.createRadialGradient(cx - r * 0.35, cy - r * 0.35, r * 0.1, cx, cy, r); gr.addColorStop(0, '#5fa8ff'); gr.addColorStop(1, '#1d4fa3');
