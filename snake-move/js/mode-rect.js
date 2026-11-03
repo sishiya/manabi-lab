@@ -26,7 +26,14 @@ window.MODES = window.MODES || {};
     reset() { M.make(); },
     baseScale: c => Math.min(c.w * 0.9 / M.s.p.L, c.h * 4),
     snap(c) { c.x = M.s.X + M.s.p.L / 2; c.y = 0; },
-    follow(c, k) { c.x += (M.s.X + M.s.p.L / 2 - c.x) * k; },
+    follow(c, k) {
+      const xc = M.s.X + M.s.p.L / 2;
+      if (!c.fix) { c.x += (xc - c.x) * k; return; }
+      // 地面に固定: ヘビがはしへ近づいたら、前へカメラを動かす（動かないあいだは地面が止まって見える）
+      const vw = c.w / c.s;
+      if (!c.pan && Math.abs(xc - c.x) > vw * 0.08) c.pan = [xc + vw * 0.06, 0];
+      if (c.pan) { c.x += (c.pan[0] - c.x) * k * 0.5; if (Math.abs(c.pan[0] - c.x) < vw * 0.005) c.pan = null; }
+    },
     advance(dt, A) {
       const s = M.s;
       let left = dt;
@@ -47,10 +54,43 @@ window.MODES = window.MODES || {};
       const s = M.s, p = s.p, N = RECT.N, ds = p.L / N, gy = M.gy(c), H = Math.max(14, BODY_H * c.s);
       g.fillStyle = C.sky; g.fillRect(0, 0, c.w, c.h);
       g.fillStyle = C.ground; g.fillRect(0, gy, c.w, c.h - gy);
-      // 地面の目もり（地面に止まっている目印。1 cm ごと）
-      g.strokeStyle = C.line; g.lineWidth = 1;
-      const x0 = c.x - c.w / 2 / c.s, x1 = c.x + c.w / 2 / c.s;
-      for (let x = Math.floor(x0 / 0.01) * 0.01; x <= x1; x += 0.01) { const X = M.sx(c, x), big = Math.abs(Math.round(x * 100) % 10) === 0; g.beginPath(); g.moveTo(X, gy); g.lineTo(X, gy + (big ? 9 : 4)); g.stroke(); }
+      // 地面の断面（砂つぶ・小石。地面に止まっている目印。並びは場所から決まる）
+      const x0 = c.x - c.w / 2 / c.s, x1 = c.x + c.w / 2 / c.s, cell = 0.01;
+      const grains = [[], [], []], pebbles = [];
+      for (let i = Math.floor(x0 / cell) - 1; i <= x1 / cell; i++)
+        for (let j = 0; j * cell * c.s < c.h - gy; j++) {
+          const n = 1 + Math.floor(DRAWG.hash(i, j, 31) * 3);
+          for (let k = 0; k < n; k++) {
+            const X = M.sx(c, (i + DRAWG.hash(i, j, 32 + k)) * cell), Y = gy + 3 + (j + DRAWG.hash(i, j, 36 + k)) * cell * c.s, a = DRAWG.hash(i, j, 40 + k);
+            if (k === 0 && DRAWG.hash(i, j, 45) < 0.07) pebbles.push([X, Y, Math.max(2, (0.002 + 0.003 * a) * c.s), a]);
+            else grains[Math.min(2, Math.floor(a * 3))].push(X, Y, Math.max(0.8, (0.0004 + 0.0008 * a) * c.s));
+          }
+        }
+      grains.forEach((L, b) => {
+        g.fillStyle = `rgba(200,180,140,${(0.18 + 0.1 * b).toFixed(2)})`; g.beginPath();
+        for (let k = 0; k < L.length; k += 3) { g.moveTo(L[k] + L[k + 2], L[k + 1]); g.arc(L[k], L[k + 1], L[k + 2], 0, 6.2832); }
+        g.fill();
+      });
+      g.strokeStyle = 'rgba(210,190,150,.4)'; g.lineWidth = 1; g.fillStyle = 'rgba(90,75,55,.6)'; g.beginPath();
+      for (const [X, Y, r, a] of pebbles) { g.moveTo(X + r, Y); g.ellipse(X, Y, r, r * (0.55 + 0.3 * a), a * 3, 0, 6.2832); }
+      g.fill(); g.stroke();
+      // 地面の表面の小さなでこぼこ（砂つぶ。地面に止まっている）
+      g.fillStyle = 'rgba(200,180,140,.55)'; g.beginPath();
+      for (let i = Math.floor(x0 / 0.004); i * 0.004 <= x1; i++) {
+        const a = DRAWG.hash(i, 0, 50); if (a < 0.45) continue;
+        const X = M.sx(c, (i + DRAWG.hash(i, 0, 51)) * 0.004), r = Math.max(0.8, (0.0003 + 0.0007 * a) * c.s);
+        g.moveTo(X + r, gy); g.arc(X, gy, r, Math.PI, 2 * Math.PI);
+      }
+      g.fill();
+      // 目もり（1 cm ごと、10 cm ごとに数字。地面の下のふち）
+      g.strokeStyle = C.line; g.lineWidth = 1; g.fillStyle = C.muted; g.font = '11px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center';
+      const ry = Math.min(c.h - 40, gy + 26), lab = 0.1 * c.s >= 48 ? 10 : 0.2 * c.s >= 48 ? 20 : 50;   // 数字は 48 px 以上あける
+      g.fillStyle = 'rgba(11,20,28,.6)'; g.fillRect(0, ry, c.w, 18); g.fillStyle = C.muted;
+      for (let x = Math.floor(x0 / 0.01) * 0.01; x <= x1; x += 0.01) {
+        const X = M.sx(c, x), cm = Math.round(x * 100), big = cm % 10 === 0;
+        g.beginPath(); g.moveTo(X, ry); g.lineTo(X, ry + (big ? 6 : 3)); g.stroke();
+        if (big && cm % lab === 0) g.fillText(`${cm} cm`, X, ry + 15);
+      }
       // 体（背骨の棒）
       const xa = M.sx(c, s.X), xb = M.sx(c, s.X + p.L);
       g.fillStyle = C.body; g.strokeStyle = C.edge; g.lineWidth = 1.5;
@@ -83,7 +123,7 @@ window.MODES = window.MODES || {};
       }
       // 印の位置と時間のグラフ（Lissmann 1950 の図3と同じ見方）
       if (A.layers.plot && M.plot.length > 2) {
-        const pw = Math.min(260, c.w - 120), ph = Math.min(90, gy - H - 40), px = c.w - pw - 10, py = 52;
+        const py = c.w < 520 ? 96 : 52, pw = Math.min(260, c.w - 120), ph = Math.min(90, gy - H - py + 12), px = c.w - pw - 10;
         if (ph > 30) {
           g.fillStyle = 'rgba(11,20,28,.85)'; g.fillRect(px, py, pw, ph);
           const t1 = s.t, t0 = t1 - 8, xs = M.plot.map(q => q[1]).concat(M.plot.map(q => q[2]));

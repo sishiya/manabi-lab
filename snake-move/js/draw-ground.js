@@ -239,5 +239,5 @@
     return best;
   }
 
-  window.DRAWG = { scene, hitTest, toScreen: W, C, BODY_D, arrow, radius, ring };
+  window.DRAWG = { scene, hitTest, toScreen: W, C, BODY_D, arrow, radius, ring, hash };
 })();
