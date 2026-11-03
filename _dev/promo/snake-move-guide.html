@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="snake-common.js"></script>
+<script>
+'use strict';
+// 台本: ヘビが進むしくみ ― 使い方と見どころ（横長の説明動画、ライオンつき。2026-11-03）
+// 日本語の字幕は上に焼きこみ、下は YouTube の字幕（CC。英語）にあける。アプリの図を画面いっぱいに、タブ・試すのボタンは「札」で左に。
+// アプリの順（地面をうねる → 横ばい → まっすぐ → 木を登る）に、各タブの「つぎへ ▶」の案内と「試す」をなぞる。「枝をわたる」は隠したので出さない
+// 正直さ: 「実物と合った」と言うのは、アプリの「実物とくらべた結果」で ◯ のもの（地面をうねる速さ 0.22 ± 0.08・横ばいの「すべらない」）だけ。
+//   速さの数は「計算では」。木の太さの限界は「この計算では」「推定」。まっすぐ・横ばい（平面）のすべりは実物と合ったと言わない
+// 測った条件（setup でアプリに計算させる。ログ measure に出る。はじめからの計算で、表 MSEG の各場面のはじめから 12 秒）:
+//   flat / lift = 地面をうねる・布・坂 0°・「全部べったり」/「曲がった所を浮かせる」の「1回うねるごとに体長の …%」
+//   board = 同じ・なめらかな板・浮かせる。slip / slipLow = 横ばい・立体・砂、持ち上げ 57°（1.0 rad）/ 6°（0.1 rad）の
+//   「ふれている所のすべり 体の速さの …%」（12〜21 秒の 10 回の平均。速さの札の数はその瞬間の値なので 4〜8% でゆれる）。rv = まっすぐ・布・止まる時間 42% の秒速
+const END = 150, DUR = END + IDENT_CLOSE;
+const CWG = 760, SX = 1520, SY = 180;   // 図は上の字幕の帯（0〜SY）の下に置く（右上の小窓・グラフが字幕に重ならないように）。   // アプリの図は幅 760（css px）を左の 1520 に。右の 400 はライオンと速さの札の場所（木の拡大の窓・ウロコの拡大がライオンに隠れないように）
+const SEG = [
+  { a: 0, b: 13, mode: 'ground', tour: 0, pre: 4, zoom: 1.0 },
+  { a: 13, b: 19.5, mode: 'ground', tour: 1, pre: 4, zoom: 1.0 },
+  { a: 19.5, b: 26.5, mode: 'ground', tour: 2, pre: 4, zoom: 1.0 },
+  { a: 26.5, b: 33, mode: 'ground', tour: 3, pre: 4, zoom: 1.0 },
+  { a: 33, b: 40, mode: 'ground', tour: 4, pre: 4, zoom: 1.0 },
+  { a: 40, b: 47, mode: 'ground', tour: 5, pre: 6, zoom: 1.0 },
+  { a: 47, b: 55, mode: 'ground', tour: 6, pre: 4, zoom: 1.0, set: [['lift', '0']], ev: [{ t: 50.4, set: [['lift', '1']] }] },
+  { a: 55, b: 67, mode: 'ground', tour: 6, pre: 4, zoom: 1.0, ev: [{ t: 56.0, set: [['surf', 'board']] }, { t: 61.6, set: [['surf', 'same'], ['lift', '0']] }] },
+  { a: 67, b: 74, mode: 'side', tour: 1, pre: 3, zoom: 1.0 },
+  { a: 74, b: 80.5, mode: 'side', tour: 2, pre: 3, zoom: 1.0 },
+  { a: 80.5, b: 87, mode: 'side', tour: 3, pre: 3, zoom: 1.0 },
+  { a: 87, b: 93, mode: 'side', tour: 4, pre: 8, zoom: 1.0 },
+  { a: 93, b: 99.5, mode: 'side', tour: 5, pre: 3, zoom: 1.0, ev: [{ t: 94.2, set: [['av', 0.1]] }] },
+  { a: 99.5, b: 106, mode: 'straight', tour: 1, pre: 2, zoom: 1.2 },
+  { a: 106, b: 112.5, mode: 'straight', tour: 3, pre: 2, zoom: 1.2 },
+  { a: 112.5, b: 119, mode: 'straight', tour: 4, pre: 4, zoom: 1.2 },
+  { a: 119, b: 125.5, mode: 'tree', tour: 1, pre: 0.5 },
+  { a: 125.5, b: 131.5, mode: 'tree', tour: 3, pre: 0.5 },
+  { a: 131.5, b: 137, mode: 'tree', tour: 6, pre: 0.5, ev: [{ t: 132.4, set: [['order', 'wrong']] }] },
+  { a: 137, b: 999, mode: 'tree', tour: 6, pre: 0.5, ev: [{ t: 137.8, set: [['dia', 6]] }] },
+];
+// 数を測る場面（録画には使わない）
+const MSEG = [
+  { a: 0, b: 20, mode: 'ground', set: [['lift', '0']] },
+  { a: 20, b: 40, mode: 'ground' },
+  { a: 40, b: 60, mode: 'ground', set: [['surf', 'board']] },
+  { a: 60, b: 80, mode: 'side' },
+  { a: 80, b: 100, mode: 'side', set: [['av', 0.1]] },
+  { a: 100, b: 120, mode: 'straight' },
+];
+const M = { flat: '?', lift: '?', board: '?', slip: '?', slipLow: '?', rv: '?' };
+
+// ---- ボタンの札（アプリではタブは図の上、試すは図の下。ここでは左に）----
+const CH = {
+  modes: { x: 40, y: 220, title: '進み方（図の上のタブ）', btns: ['地面をうねる', '横ばい', 'まっすぐ', '木を登る'], cols: 2 },
+  next: { x: 40, y: 220, title: '図の左上', btns: ['つぎへ ▶'], cols: 1 },
+  lift: { x: 40, y: 220, title: '試す: 持ち上げ', btns: ['曲がった所を浮かせる', '全部べったり'], cols: 1 },
+  surf: { x: 40, y: 220, title: '試す: 地面', btns: ['布（ざらざら）', 'なめらかな板', '摩擦をどの向きも同じに'], cols: 1 },
+  av: { x: 40, y: 220, title: '試す: 持ち上げ（スライダー）', btns: ['57°（はじめ）', '6°'], cols: 2 },
+  order: { x: 40, y: 220, title: '試す: 順番', btns: ['上をつかんでから下を放す', '下を先に放す'], cols: 1 },
+  dia: { x: 40, y: 220, title: '試す: 幹の太さ（スライダー）', btns: ['2 cm（はじめ）', '6 cm'], cols: 2 },
+};
+const SHOW = [
+  ['modes', 6.8, 12.8, t => 0],
+  ['next', 12.4, 18.6, t => -1],
+  ['lift', 47.2, 54.8, t => t < 50.4 ? 1 : 0],
+  ['surf', 55.2, 66.8, t => t < 56 ? 0 : t < 61.6 ? 1 : 2],
+  ['lift', 61.0, 66.8, t => t < 61.6 ? 0 : 1, 290],
+  ['modes', 66.4, 72.6, t => t < 67 ? 0 : 1],
+  ['av', 93.2, 99.2, t => t < 94.2 ? 0 : 1],
+  ['modes', 98.9, 105, t => t < 99.5 ? 1 : 2],
+  ['modes', 118.4, 124.6, t => t < 119 ? 2 : 3],
+  ['order', 131.6, 136.8, t => t < 132.4 ? 0 : 1],
+  ['dia', 137.1, 142.0, t => t < 137.8 ? 0 : 1],
+];
+const chipAt = (k, dy) => dy ? { ...CH[k], y: CH[k].y + dy } : CH[k];
+const B = (k, i, dy) => btnRect(chipAt(k, dy), i);
+let CUR = [];
+let CAPS = [];
+function makeCaps() {
+  CAPS = [
+    { a: 6.8, b: 12.8, main: '進み方は4つ。まずは「地面をうねる」', sub: '体をタップすると、そこにはたらく力の説明が出る',
+      en: ['Four ways of moving. First, "Slithering" (地面をうねる)', 'Tap the body to see the forces acting there'] },
+    { a: 13.2, b: 19.3, main: 'はじめての人は「つぎへ ▶」を押していくだけ', sub: '体の曲がりを波にして、頭から尾へ送る（黄色の輪が波の山）',
+      en: ['First time? Just keep pressing "Next" (つぎへ ▶)', 'The bend travels as a wave from head to tail (yellow rings mark the crests)'] },
+    { a: 19.7, b: 26.3, main: 'おなかのウロコは、前へすべりやすく横へすべりにくい', sub: '布の上の摩擦: 前 0.11・後ろ 0.14・横 0.19（右下が拡大。形は模式図）',
+      en: ['Belly scales slide easily forward but resist sliding sideways', 'Friction on cloth: forward 0.11, backward 0.14, sideways 0.19 (close-up at lower right, shape is schematic)'] },
+    { a: 26.7, b: 32.8, main: '曲がった所は少し浮かせ、まっすぐな所で地面を押す', sub: '黄色い線が、地面を押している所',
+      en: ['The curves are lifted a little; the straighter parts press on the ground', 'Yellow lines: where the body presses down'] },
+    { a: 33.2, b: 39.8, main: '体を横へ押すと、地面が押し返す', sub: 'その前向きの分（緑）で進む。赤は引きずる分',
+      en: ['Push the ground sideways and it pushes back', 'The forward part of that push (green) drives the snake. Red is drag'] },
+    { a: 40.2, b: 46.8, main: '目もりと頭の通った跡で、進む向きと速さが見える', sub: '青はすべる向き。前だけでなく横へもすべる',
+      en: ['The scale and the head’s trail show direction and speed', 'Blue: the direction each point slides. It slides sideways too, not only forward'] },
+    { a: 47.4, b: 54.8, main: '試す: 曲がった所を浮かせると、速くなる', sub: `計算では1回うねるごとに体長の ${M.flat}% → ${M.lift}%（実物 22 ± 8%）`,
+      en: ['Try it: lifting the curves makes it faster', `Computed: ${M.flat}% → ${M.lift}% of a body length per wave (real snakes: 22 ± 8%)`] },
+    { a: 56.2, b: 61.4, main: '地面を「なめらかな板」にすると、絵も変わる', sub: `前と横の摩擦がほぼ同じになり、計算では体長の ${M.board}% に`,
+      en: ['Switch the ground to a "smooth board" and the picture changes', `Forward and sideways friction become almost equal; computed: ${M.board}% of a body length per wave`] },
+    { a: 61.8, b: 66.8, main: 'どの向きも同じ摩擦で、全部べったりだと', sub: '前へ進めず、計算では少し後ろへ下がる',
+      en: ['Same friction in every direction, with the whole body down', 'It can’t move forward; in the calculation it even slips back a little'] },
+    { a: 67.4, b: 73.8, main: '横ばい: 体の向きに対して、ななめ横へ進む', sub: '左右と上下の2つの波。右上は横から見た高さ',
+      en: ['Sidewinding: moving diagonally sideways to the body', 'Two waves, side-to-side and up-and-down. Upper right: the height seen from the side'] },
+    { a: 74.2, b: 80.3, main: '黄色が地面にふれている所（2〜3か所）', sub: 'ほかは持ち上げて、アーチにして前へ運ぶ',
+      en: ['Yellow: where the body touches the ground (2–3 spots)', 'The rest is lifted into arches and carried forward'] },
+    { a: 80.7, b: 86.8, main: 'ふれている所は、ほとんど止まっている', sub: `計算では、すべりは体の速さの平均 ${M.slip}%（すべりが少ない形を選んで計算）`,
+      en: ['The touching spots barely move', `Computed slip: ${M.slip}% of the body speed on average (computed with a low-slip body shape)`] },
+    { a: 87.2, b: 92.8, main: 'ふれた所が、ななめの平行な跡を残す', sub: '本物の砂にも、平行な線の跡が残る',
+      en: ['The touching spots leave slanted, parallel tracks', 'Real snakes leave parallel line tracks in sand too'] },
+    { a: 94.4, b: 99.3, main: '試す: 持ち上げを小さくすると、すべりだす', sub: `計算では、すべり（平均）が体の速さの ${M.slip}% → ${M.slipLow}%`,
+      en: ['Try it: lift less, and it starts to slip', `Computed average slip: ${M.slip}% → ${M.slipLow}% of the body speed`] },
+    { a: 99.9, b: 105.8, main: 'まっすぐ: 体を曲げずに進む（ボアなど）', sub: '青い点（背骨）は、同じ速さで進む',
+      en: ['Straight (rectilinear): moving without bending, like a boa', 'The blue dots (the backbone) move at a steady speed'] },
+    { a: 106.2, b: 112.3, main: 'おなかの皮だけが、止まる・進むをくり返す', sub: '縮んだ皮が地面に止まり（緑）、その波が頭から尾へ',
+      en: ['Only the belly skin stops and moves, again and again', 'Bunched skin holds still on the ground (green); the wave runs head to tail'] },
+    { a: 112.7, b: 118.8, main: 'グラフ: 背骨はなめらか、皮は止まっては進む', sub: `計算では秒速 ${M.rv} cm（歩幅 4.5 cm・1回 3 秒と決めた値から）`,
+      en: ['Graph: the backbone moves smoothly; the skin stops and goes', `Computed: ${M.rv} cm/s (from the set step of 4.5 cm every 3 s)`] },
+    { a: 119.4, b: 125.3, main: '木を登る: 細い幹に2か所巻きつけて、つかむ', sub: '緑の線は幹に止まっている所。右の窓が拡大',
+      en: ['Climbing: coil around a thin trunk in two places to grip', 'Green lines: parts holding still on the trunk. Close-ups at right'] },
+    { a: 125.7, b: 131.3, main: '上でつかんでから、下を放す', sub: 'いつも、どこかが止まっている（Savidge ほか 2021 の観察）',
+      en: ['Grip above first, then let go below', 'Some part is always holding still (observed by Savidge et al. 2021)'] },
+    { a: 132.6, b: 136.8, main: '順番を逆にすると、すべり落ちる', sub: 'どこも止まっていない時間ができ、重さを支えられない',
+      en: ['Do it in the opposite order and it slides down', 'For a moment nothing holds still, so nothing supports the weight'] },
+    { a: 137.6, b: 142.0, main: '幹を 6 cm にすると、登れない', sub: 'この計算では、1か所で 180° まで巻けないから（推定）',
+      en: ['Make the trunk 6 cm thick and it can’t climb', 'In this calculation, one coil can’t wrap past 180° (an estimate)'] },
+  ];
+}
+const NAME = 'ヘビが進むしくみ', NAME_EN = 'How Snakes Move';
+const CREDIT = 'おもな出どころ: Hu ほか（2009）・Marvi ほか（2014）・Astley ほか（2015）・Lissmann（1950）・Newman & Jayne（2018）・Astley & Jayne（2007）・Savidge ほか（2021）・Marvi & Hu（2012）・Byrnes & Jayne（2014）。体の形の動きは決めて与え、どこへ進むかは力のつりあいで計算。重さの配り方・木の上の巻ける長さなどは推定';
+
+const MUSIC = { style: 'journey', root: 116.54, stopAt: END, cues: [{ t: END, type: 'jingle' }] };
+const EXP = [[0, 'calm'], [7, 'smile'], [11, 'calm'], [13.4, 'smile'], [17, 'calm'], [19.8, 'think'], [24, 'calm'], [27, 'calm'], [33.4, 'wow'], [37, 'calm'],
+  [40.4, 'think'], [44, 'calm'], [47.6, 'smile'], [51, 'wow'], [53.5, 'calm'], [56.4, 'think'], [60, 'calm'], [62, 'shock'], [65, 'calm'],
+  [67.6, 'wow'], [71, 'calm'], [74.4, 'smile'], [78, 'calm'], [81, 'wow'], [84, 'proud'], [86.5, 'calm'], [87.4, 'smile'], [91, 'calm'], [94.4, 'think'], [97, 'shock'], [99, 'calm'],
+  [100, 'smile'], [104, 'calm'], [106.4, 'wow'], [110, 'calm'], [113, 'think'], [117, 'calm'], [119.6, 'smile'], [123, 'calm'], [125.9, 'proud'], [129, 'calm'],
+  [132.8, 'shock'], [135.5, 'sad'], [137.8, 'think'], [140, 'calm'], [END - 7.6, 'smile']];
+promoStart({
+  name: 'ヘビが進むしくみ（使い方）', out: 'snake-move-guide', src: '../../snake-move/index.html', iw: 1280, ih: 800, dur: DUR, peek: 36,
+  inject: SN_INJECT,
+  music: MUSIC,
+  ready: w => !!LION.api && w.__snmo && w.UI && w.draw,
+  async setup(w) {
+    snSize(w, CWG, 450);
+    const y = () => sleep(0);   // ページを止めすぎない（DevTools が待てるように）
+    const per = r => { const m = r.match(/体長の\s*(\d+)%/); return m ? m[1] : '?'; };
+    M.flat = per(snProbe(w, MSEG, 12).ruler);
+    await y(); M.lift = per(snProbe(w, MSEG, 32).ruler);
+    await y(); M.board = per(snProbe(w, MSEG, 52).ruler);
+    const slipAvg = a => { let s = 0, n = 0; for (let t = a + 12; t < a + 21.5; t += 1) { const m = snProbe(w, MSEG, t).ruler.match(/すべり 体の速さの\s*(\d+)%/); if (m) { s += +m[1]; n++; } } return n ? String(Math.round(s / n)) : '?'; };
+    await y(); snK = -1; M.slip = slipAvg(60);
+    await y(); snK = -1; M.slipLow = slipAvg(80);
+    { const m = snProbe(w, MSEG, 112).ruler.match(/秒速\s*([\d.]+)/); M.rv = m ? m[1] : '?'; }
+    snK = -1;
+    console.log('measure', JSON.stringify(M));
+    makeCaps();
+    snK = -1;
+    CUR = [
+      { t: 6.9, x: 700, y: 700 }, { t: 7.6, ...B('modes', 0) }, { t: 8.0, ...B('modes', 0), click: true },
+      { t: 12.6, ...B('next', 0) }, { t: 13.0, ...B('next', 0), click: true },
+      { t: 14.6, x: 600, y: 760, hide: true },
+      { t: 48.6, x: 600, y: 760 }, { t: 49.8, ...B('lift', 0) }, { t: 50.4, ...B('lift', 0), click: true },
+      { t: 52, x: 600, y: 760, hide: true },
+      { t: 55.0, x: 600, y: 760 }, { t: 55.6, ...B('surf', 1) }, { t: 56.0, ...B('surf', 1), click: true },
+      { t: 60.6, ...B('surf', 2) }, { t: 61.2, ...B('surf', 2), click: true }, { t: 61.45, ...B('lift', 1, 290) }, { t: 61.6, ...B('lift', 1, 290), click: true },
+      { t: 63, x: 600, y: 900, hide: true },
+      { t: 66.2, x: 600, y: 760 }, { t: 66.7, ...B('modes', 1) }, { t: 67.0, ...B('modes', 1), click: true },
+      { t: 68.6, x: 600, y: 760, hide: true },
+      { t: 93.2, x: 600, y: 760 }, { t: 93.9, ...B('av', 1) }, { t: 94.2, ...B('av', 1), click: true },
+      { t: 95.6, x: 600, y: 760, hide: true },
+      { t: 98.6, x: 600, y: 760 }, { t: 99.2, ...B('modes', 2) }, { t: 99.5, ...B('modes', 2), click: true },
+      { t: 101, x: 600, y: 760, hide: true },
+      { t: 118.2, x: 600, y: 760 }, { t: 118.7, ...B('modes', 3) }, { t: 119.0, ...B('modes', 3), click: true },
+      { t: 120.6, x: 600, y: 760, hide: true },
+      { t: 131.5, x: 600, y: 760 }, { t: 132.1, ...B('order', 1) }, { t: 132.4, ...B('order', 1), click: true },
+      { t: 133.8, x: 600, y: 760, hide: true },
+      { t: 137.0, x: 600, y: 760 }, { t: 137.5, ...B('dia', 1) }, { t: 137.8, ...B('dia', 1), click: true },
+      { t: 139.4, x: 600, y: 760, hide: true },
+    ];
+    const talk = lionSetup({ caps: CAPS, cur: CUR, exp: EXP, end: END, bye: END - 5.8 });
+    MUSIC.cues.push(...talk);
+    return w.document.getElementById('cv');
+  },
+  subs: () => guideSubs(END, NAME, NAME_EN, CAPS),
+  renderAt(t, w) { snRender(w, SEG, t); },
+  drawSource(g, w, OW, OH) {
+    const cv = w.document.getElementById('cv');
+    const k = OW / PW;
+    g.fillStyle = '#0b141c'; g.fillRect(0, 0, OW, OH);
+    g.drawImage(cv, 0, SY * k, SX * k, (PH - SY) * k);
+    g.fillStyle = 'rgba(166,224,122,0.25)'; g.fillRect(SX * k, 0, 2 * k, OH);
+  },
+  overlay(g, t, w) {
+    const s = snSeg(SEG, t), f = fade(t, 6.8, END - 7.8, 0.4);
+    const [ra, rb] = snRun(SEG, s);
+    snModeName(g, t, Math.max(ra, 6.8), Math.min(rb, END - 7.8), SN_NAME[s.mode], SX + 24, 236, 44);
+    const yb = snReadout(g, w, SX + 16, 268, PW - SX - 32, f, 25) || 268;
+    snLegend(g, w, SX + 26, yb + 26, f * 0.95, 21, PW - SX - 50);
+    for (const [k, a, b, on, dy] of SHOW) drawChip(g, chipAt(k, dy), on(t), fade(t, a, b, 0.4));
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS, true);
+    drawGuideChrome(g, t, END, NAME, CREDIT);
+    drawLion(g, t);
+  },
+  errors: w => w.__snmoErr,
+});
+lionOpen();
+</script>
+</body>
+</html>

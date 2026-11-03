@@ -1,0 +1,34 @@
+1
+00:00:00,600 --> 00:00:05,600
+Como as cobras se movem
+Sem pernas, como elas avançam?
+
+2
+00:00:05,800 --> 00:00:11,000
+As escamas da barriga resistem a deslizar de lado
+Atrito sobre tecido: para frente 0,11, para trás 0,14, de lado 0,19
+
+3
+00:00:11,400 --> 00:00:16,800
+A parte para a frente do empurrão do chão (verde) a impulsiona
+Calculado: 22% do comprimento do corpo por onda (cobras reais: 22 ± 8%)
+
+4
+00:00:17,200 --> 00:00:22,800
+Movimento lateral: só uns dois pontos tocam o chão
+Esses pontos quase não se movem; só as partes levantadas avançam
+
+5
+00:00:23,200 --> 00:00:28,800
+Em linha reta: avançar sem se curvar
+Só a pele da barriga para e avança, sem parar
+
+6
+00:00:29,200 --> 00:00:35,000
+Escalar: primeiro agarrar em cima, depois soltar embaixo
+Sempre há uma parte parada no tronco
+
+7
+00:00:35,200 --> 00:00:40,000
+Como as cobras se movem
+Quatro jeitos de se mover, calculados no seu navegador

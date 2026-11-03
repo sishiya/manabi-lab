@@ -371,5 +371,39 @@
 "Puedes cambiar la hora del día y las nubes // El sol y la luna están en su posición real de hoy, a 33°N 140°E",
 "Si el agua es poco profunda, se ve el fondo de arena // Las olas largas tocan el fondo y se vuelven más lentas y cortas (a 3,5 m, el 42 % de la altura en aguas profundas)",
 "Cómo crecen las olas // Funciona en el navegador (PC o móvil). Cambia la app a inglés con el botón EN"
+],
+"snake-move-short": [
+"Cómo se mueven las serpientes // Sin patas, ¿cómo avanzan?",
+"Las escamas del vientre resisten deslizarse de lado // Fricción sobre tela: adelante 0,11, atrás 0,14, de lado 0,19",
+"La parte hacia adelante del empuje del suelo (verde) la impulsa // Calculado: 22 % del largo del cuerpo por onda (serpientes reales: 22 ± 8 %)",
+"Reptación lateral: solo unos dos puntos tocan el suelo // Esos puntos casi no se mueven; solo avanzan las partes levantadas",
+"En línea recta: avanzar sin doblarse // Solo la piel del vientre se detiene y avanza una y otra vez",
+"Trepar: primero agarrar arriba, luego soltar abajo // Siempre hay una parte quieta sobre el tronco",
+"Cómo se mueven las serpientes // Cuatro formas de moverse, calculadas en tu navegador"
+],
+"snake-move-guide": [
+"Cómo se mueven las serpientes // Cómo usar la app y qué mirar",
+"Cuatro formas de moverse. Primero, «Ondular» (地面をうねる) // Toca el cuerpo para ver las fuerzas que actúan ahí",
+"¿Primera vez? Solo pulsa «Siguiente» (つぎへ ▶) // La curva viaja como una onda de la cabeza a la cola (los anillos amarillos marcan las crestas)",
+"Las escamas del vientre se deslizan fácil hacia adelante, pero no de lado // Fricción sobre tela: adelante 0,11, atrás 0,14, de lado 0,19 (ampliación abajo a la derecha, forma esquemática)",
+"Las curvas se levantan un poco; las partes más rectas presionan el suelo // Líneas amarillas: donde el cuerpo presiona",
+"Empuja el suelo de lado y el suelo empuja de vuelta // La parte hacia adelante de ese empuje (verde) la impulsa. Rojo es el arrastre",
+"La escala y el rastro de la cabeza muestran la dirección y la velocidad // Azul: hacia dónde se desliza cada punto. También se desliza de lado, no solo hacia adelante",
+"Pruébalo: levantar las curvas la hace más rápida // Calculado: de 9 % a 22 % del largo del cuerpo por onda (serpientes reales: 22 ± 8 %)",
+"Cambia el suelo a una «tabla lisa» y el dibujo cambia // La fricción hacia adelante y de lado es casi igual; calculado: 13 % del largo del cuerpo por onda",
+"Misma fricción en todas direcciones, con todo el cuerpo apoyado // No puede avanzar; en el cálculo incluso retrocede un poco",
+"Reptación lateral: avanza en diagonal respecto al cuerpo // Dos ondas, de lado a lado y de arriba abajo. Arriba a la derecha: la altura vista de lado",
+"Amarillo: donde el cuerpo toca el suelo (2–3 puntos) // El resto se levanta en arcos y se lleva hacia adelante",
+"Los puntos que tocan el suelo casi no se mueven // Deslizamiento calculado: 4 % de la velocidad del cuerpo en promedio (calculado con una forma del cuerpo que desliza poco)",
+"Los puntos de contacto dejan huellas paralelas en diagonal // Las serpientes reales también dejan huellas de líneas paralelas en la arena",
+"Pruébalo: levanta menos y empieza a deslizarse // Deslizamiento promedio calculado: de 4 % a 54 % de la velocidad del cuerpo",
+"En línea recta (rectilínea): avanzar sin doblarse, como una boa // Los puntos azules (la columna) avanzan a velocidad constante",
+"Solo la piel del vientre se detiene y avanza, una y otra vez // La piel recogida queda quieta en el suelo (verde); la onda va de la cabeza a la cola",
+"Gráfica: la columna avanza suave; la piel se detiene y avanza // Calculado: 1,45 cm/s (del paso fijado de 4,5 cm cada 3 s)",
+"Trepar: enrollarse en un tronco delgado en dos lugares para agarrarse // Líneas verdes: partes quietas sobre el tronco. Ampliaciones a la derecha",
+"Primero agarrar arriba, luego soltar abajo // Siempre hay una parte quieta (observado por Savidge et al. 2021)",
+"Hazlo en el orden inverso y se resbala hacia abajo // Por un momento nada está quieto, así que nada sostiene el peso",
+"Con un tronco de 6 cm no puede trepar // En este cálculo, una vuelta no pasa de 180° (una estimación)",
+"Cómo se mueven las serpientes // Funciona en tu navegador (PC o móvil). Por ahora el texto de la app está en japonés"
 ]
 }

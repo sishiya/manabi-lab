@@ -1,0 +1,35 @@
+{
+  "videoId": "AH0A83Ou7DQ",
+  "file": "_dev/promo/out/snake-move-guide.mp4",
+  "thumbnail": "_dev/promo/thumbs/snake-move-guide.jpg",
+  "privacy": "private",
+  "captions": { "en": "_dev/promo/out/snake-move-guide.en.srt", "es": "_dev/promo/subs/snake-move-guide.es.srt", "ko": "_dev/promo/subs/snake-move-guide.ko.srt", "pt": "_dev/promo/subs/snake-move-guide.pt.srt", "zh-TW": "_dev/promo/subs/snake-move-guide.zh-TW.srt" },
+  "title": "ヘビが進むしくみ ― 使い方と見どころ（ウロコの摩擦・横ばい・まっすぐ・木登り）",
+  "description": "ヘビには足がないのに、どうやって前へ進むのでしょう。地面をうねる・横ばい・まっすぐ・木を登るの4つの進み方を、体の形と摩擦の式で計算して見せるブラウザのアプリ「ヘビが進むしくみ」の、使い方と見どころです。おなかのウロコは横へすべりにくく、地面が押し返す力の前向きの分で進みます。横ばいでは地面にふれた所がほとんど止まり、まっすぐ進むときはおなかの皮だけが止まる・進むをくり返します。木では上でつかんでから下を放します。\n\n0:00 はじめに・4つの進み方\n0:13 地面をうねる（波・ウロコの摩擦・押し返す力）\n0:47 試す: 浮かせる・地面を変える\n1:07 横ばい\n1:39 まっすぐ\n1:59 木を登る\n2:22 おわりに\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/snake-move/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\nD. L. Hu, J. Nirody, T. Scott, M. J. Shelley (2009) PNAS 106:10081–10085「The mechanics of slithering locomotion」（ウロコの摩擦・うねりの式・持ち上げ）\nH. Marvi ほか (2014) Science 346:224–229「Sidewinding with minimal slip」（横ばいの2つの波・2か所でふれる・跡の角度）\nH. C. Astley ほか (2015) PNAS 112:6200–6205（横ばいで止まっている所 44%）\nH. W. Lissmann (1950) J. Exp. Biol. 26:368–379（まっすぐ進む: 背骨は一定・皮は止まっては進む）\nS. J. Newman, B. C. Jayne (2018) J. Exp. Biol. 221「Crawling without wiggling」（ボアの皮のずれ・止まる時間）\nH. C. Astley, B. C. Jayne (2007) J. Exp. Biol. 210:3862–3872（コーンスネークの木登り・180° より多く巻く）\nJ. A. Savidge ほか (2021) Current Biology 31:R7–R8（上をつかんでから下を放す）\nH. Marvi, D. L. Hu (2012) J. R. Soc. Interface 9:3067–3080（ウロコを立てた摩擦・押す力の余裕）\nG. Byrnes, B. C. Jayne (2014) Biology Letters 10:20140434（棒をつかむ力の余裕）\n体の形の動き（うねり・巻きつき）は決めて与え、どこへどれだけ進むかは力のつりあいで計算しています。持ち上げのときの重さの配り方、木の上でつかみ1か所に巻ける長さ（11 cm）、締めつけの余裕（4倍）などは推定です。速さの数は計算の値です。\n\n音楽: プログラムで合成したオリジナルの音です。\n\n#ヘビ #摩擦 #生き物のしくみ #まなびラボ",
+  "tags": [
+    "ヘビが進むしくみ",
+    "ヘビ",
+    "へび",
+    "蛇",
+    "動物",
+    "使い方",
+    "摩擦",
+    "ウロコ",
+    "横ばい",
+    "木登り",
+    "シミュレーション",
+    "物理",
+    "生き物のしくみ",
+    "まなびラボ",
+    "しし屋",
+    "How Snakes Move",
+    "snake locomotion",
+    "sidewinding"
+  ],
+  "localizations": {
+    "en": {
+      "title": "How Snakes Move — App Guide: Scale Friction, Sidewinding, Straight Crawling, Climbing",
+      "description": "Snakes have no legs, so how do they move forward? This is a guide to \"How Snakes Move\", a browser app that computes four ways of moving (slithering, sidewinding, straight-line crawling and climbing a trunk) from the body's shape and friction. The belly scales resist sliding sideways, so the forward part of the ground's push-back drives the snake. In sidewinding the touching spots barely move; in straight crawling only the belly skin stops and goes; on a trunk the snake grips above before letting go below. Turn on English subtitles (CC).\n\n0:00 Intro: four ways of moving\n0:13 Slithering (the wave, scale friction, the ground pushing back)\n0:47 Try it: lifting, changing the ground\n1:07 Sidewinding\n1:39 Straight (rectilinear)\n1:59 Climbing a trunk\n2:22 Outro\n\nTry the app (runs in your browser, PC or phone; the app's on-screen text is in Japanese for now):\nhttps://sishiya.github.io/manabi-lab/snake-move/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nMain sources:\nD. L. Hu, J. Nirody, T. Scott, M. J. Shelley (2009) PNAS 106:10081–10085, \"The mechanics of slithering locomotion\" (scale friction, wave shape, lifting)\nH. Marvi et al. (2014) Science 346:224–229, \"Sidewinding with minimal slip\" (two waves, two contact spots, track angle)\nH. C. Astley et al. (2015) PNAS 112:6200–6205 (44% of the body static in sidewinding)\nH. W. Lissmann (1950) J. Exp. Biol. 26:368–379 (rectilinear motion: steady backbone, stop-and-go skin)\nS. J. Newman, B. C. Jayne (2018) J. Exp. Biol. 221, \"Crawling without wiggling\" (boa skin shift and static time)\nH. C. Astley, B. C. Jayne (2007) J. Exp. Biol. 210:3862–3872 (corn snakes climbing; wrapping more than 180°)\nJ. A. Savidge et al. (2021) Current Biology 31:R7–R8 (grip above before releasing below)\nH. Marvi, D. L. Hu (2012) J. R. Soc. Interface 9:3067–3080 (friction with raised scales; safety margin of pushing force)\nG. Byrnes, B. C. Jayne (2014) Biology Letters 10:20140434 (safety margin of gripping)\nThe body's shape changes (waves, coiling) are prescribed; where and how far the body goes is computed from the balance of forces. The weight distribution when lifting, the coil length per grip on a trunk (11 cm) and the gripping margin (4×) are estimates. Speeds are computed values.\n\nMusic: original sounds synthesized by code.\n\n#Snakes #Physics #Biology"
+    }
+  }
+}

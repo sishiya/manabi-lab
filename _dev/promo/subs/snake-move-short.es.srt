@@ -1,0 +1,34 @@
+1
+00:00:00,600 --> 00:00:05,600
+Cómo se mueven las serpientes
+Sin patas, ¿cómo avanzan?
+
+2
+00:00:05,800 --> 00:00:11,000
+Las escamas del vientre resisten deslizarse de lado
+Fricción sobre tela: adelante 0,11, atrás 0,14, de lado 0,19
+
+3
+00:00:11,400 --> 00:00:16,800
+La parte hacia adelante del empuje del suelo (verde) la impulsa
+Calculado: 22 % del largo del cuerpo por onda (serpientes reales: 22 ± 8 %)
+
+4
+00:00:17,200 --> 00:00:22,800
+Reptación lateral: solo unos dos puntos tocan el suelo
+Esos puntos casi no se mueven; solo avanzan las partes levantadas
+
+5
+00:00:23,200 --> 00:00:28,800
+En línea recta: avanzar sin doblarse
+Solo la piel del vientre se detiene y avanza una y otra vez
+
+6
+00:00:29,200 --> 00:00:35,000
+Trepar: primero agarrar arriba, luego soltar abajo
+Siempre hay una parte quieta sobre el tronco
+
+7
+00:00:35,200 --> 00:00:40,000
+Cómo se mueven las serpientes
+Cuatro formas de moverse, calculadas en tu navegador

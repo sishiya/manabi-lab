@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="snake-common.js"></script>
+<script>
+'use strict';
+// 台本: ヘビが進むしくみ（ショート、40秒＋締め。?short で縦長に録る。2026-11-03）
+// 地面をうねる（ウロコの摩擦 → 押し返す力の前向きの分）→ 横ばい → まっすぐ → 木を登る。「枝をわたる」は隠したので出さない
+// 正直さ: 「実物と合った」と言うのは、アプリの「実物とくらべた結果」で ◯ のもの（地面をうねる速さ 体長の 0.22 ± 0.08）だけ。速さは「計算では」
+// 測った条件（setup でアプリに計算させる。ログ measure に出る）:
+//   M.per  = 地面をうねる・布・曲がった所を浮かせる・坂 0°、はじめから 4 秒＋7 秒進めた時の「1回うねるごとに体長の …%」（2026-11-03 は 22）
+const V = new URLSearchParams(location.search).has('short');
+const SEG = [
+  { a: 0, b: 11.2, mode: 'ground', tour: 0, pre: 4, zoom: 1.5, ev: [{ t: 5.6, tour: 2 }] },
+  { a: 11.2, b: 17.0, mode: 'ground', tour: 4, pre: 4, zoom: 1.5 },
+  { a: 17.0, b: 23.0, mode: 'side', tour: 3, pre: 3, zoom: 1.4 },
+  { a: 23.0, b: 29.0, mode: 'straight', tour: 2, pre: 2, zoom: 1.2 },
+  { a: 29.0, b: 99, mode: 'tree', tour: 3, pre: 0.5 },
+];
+const M = { per: '?' };
+let CAPS = [];
+function makeCaps() {
+  CAPS = [
+    { a: 5.8, b: 11.0, main: 'おなかのウロコは、横へすべりにくい', sub: '布の上の摩擦: 前 0.11・後ろ 0.14・横 0.19',
+      en: ['The belly scales resist sliding sideways', 'Friction on cloth: forward 0.11, backward 0.14, sideways 0.19'] },
+    { a: 11.4, b: 16.8, main: '前向きの力（緑）で進む', sub: `計算では1回うねるごとに体長の ${M.per}%（実物 22 ± 8%）`,
+      en: ['The forward push from the ground (green) drives it', `Computed: ${M.per}% of a body length per wave (real snakes: 22 ± 8%)`] },
+    { a: 17.2, b: 22.8, main: '地面にふれるのは2か所ほど', sub: 'ふれた所はほとんど止まり、持ち上げた所だけが動く',
+      en: ['Sidewinding: only about two spots touch the ground', 'Those spots barely move; only the lifted parts travel'] },
+    { a: 23.2, b: 28.8, main: '体を曲げずに、まっすぐ進む', sub: 'おなかの皮だけが、止まる・進むをくり返す',
+      en: ['Straight: moving without bending', 'Only the belly skin keeps stopping and moving'] },
+    { a: 29.2, b: 35.0, main: '上でつかんでから、下を放す', sub: 'いつも、どこかが幹に止まっている',
+      en: ['Climbing: grip above first, then let go below', 'Some part is always holding still on the trunk'] },
+  ];
+}
+const NAME = 'ヘビが進むしくみ', NAME_EN = 'How Snakes Move';
+const Q = '足がないのに、どうやって進む？', Q_EN = 'No legs, so how do they move?';
+const END_LINE = '4つの進み方を、ブラウザで計算して見られます', END_EN = 'Four ways of moving, computed in your browser';
+const CREDIT = 'おもな出どころ: Hu ほか 2009・Marvi ほか 2014・Astley ほか 2015・Lissmann 1950・Newman & Jayne 2018・Astley & Jayne 2007・Savidge ほか 2021・Marvi & Hu 2012・Byrnes & Jayne 2014。体の形の動きは決めて与え、どこへ進むかは力のつりあいで計算';
+const CW = 540, CHH = 500, Y0 = 170;   // アプリの図（css px）。動画では幅 1080・上から Y0
+promoStart({
+  name: NAME, out: 'snake-move', src: '../../snake-move/index.html', iw: 960, ih: 600, dur: SHORT_END + IDENT_CLOSE, peek: 14,
+  inject: SN_INJECT,
+  music: { style: 'journey', root: 116.54, stopAt: SHORT_END, cues: [{ t: SHORT_END, type: 'jingle' }] },
+  ready: w => w.__snmo && w.UI && w.draw,
+  setup(w) {
+    snSize(w, V ? CW : 960, V ? CHH : 540);
+    const p = snProbe(w, SEG, 15.5);
+    const m = p.ruler.match(/体長の\s*(\d+)%/); M.per = m ? m[1] : '?';
+    console.log('measure', JSON.stringify(M), p.ruler);
+    makeCaps();
+    snK = -1;
+    return w.document.getElementById('cv');
+  },
+  subs: () => shortSubs(NAME, NAME_EN, Q, Q_EN, CAPS, END_LINE, END_EN),
+  renderAt(t, w) { snRender(w, SEG, t); },
+  drawSource(g, w, OW, OH) {
+    const cv = w.document.getElementById('cv'), k = OW / PW;
+    g.fillStyle = '#0d1820'; g.fillRect(0, 0, OW, OH);
+    if (V) g.drawImage(cv, 0, Y0 * k, OW, OW * cv.height / cv.width);
+    else g.drawImage(cv, 0, 0, OW, OH);
+  },
+  overlay(g, t, w) {
+    const f = fade(t, 0.3, 35.2, 0.4), s = snSeg(SEG, t);
+    if (V) {
+      const yb = Y0 + PW * CHH / CW;
+      const [ra, rb] = snRun(SEG, s);
+      snModeName(g, t, Math.max(ra, IDENT_MINI + 0.3), Math.min(rb, 35.2), SN_NAME[s.mode], PW / 2, 100, 64, 'center');
+      snReadout(g, w, 40, 1450, PW - 80, t > 5.6 ? f : 0, 32);
+      snLegend(g, w, 50, yb + 26, f * 0.95, 22, PW - 100);
+    } else {
+      const [ra, rb] = snRun(SEG, s);
+      snModeName(g, t, Math.max(ra, IDENT_MINI + 0.3), Math.min(rb, 35.2), SN_NAME[s.mode], 60, 90);
+      snReadout(g, w, 40, 130, 900, t > 5.6 ? f : 0, 28);
+    }
+    drawCaps(g, t, CAPS);
+    drawShortChrome(g, t, NAME, Q, END_LINE, CREDIT);
+  },
+  errors: w => w.__snmoErr,
+});
+</script>
+</body>
+</html>

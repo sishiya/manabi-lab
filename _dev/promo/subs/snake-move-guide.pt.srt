@@ -1,0 +1,114 @@
+1
+00:00:00,600 --> 00:00:06,600
+Como as cobras se movem
+Como usar o app e o que observar
+
+2
+00:00:06,800 --> 00:00:12,800
+Quatro jeitos de se mover. Primeiro, «Ondular» (地面をうねる)
+Toque no corpo para ver as forças que agem ali
+
+3
+00:00:13,200 --> 00:00:19,300
+Primeira vez? É só ir apertando «Próximo» (つぎへ ▶)
+A curva viaja como uma onda da cabeça à cauda (os anéis amarelos marcam as cristas)
+
+4
+00:00:19,700 --> 00:00:26,300
+As escamas da barriga deslizam fácil para a frente, mas não de lado
+Atrito sobre tecido: para frente 0,11, para trás 0,14, de lado 0,19 (ampliação embaixo à direita, forma esquemática)
+
+5
+00:00:26,700 --> 00:00:32,800
+As curvas ficam um pouco levantadas; as partes mais retas pressionam o chão
+Linhas amarelas: onde o corpo pressiona
+
+6
+00:00:33,200 --> 00:00:39,800
+Empurre o chão de lado e ele empurra de volta
+A parte para a frente desse empurrão (verde) move a cobra. Vermelho é o arrasto
+
+7
+00:00:40,200 --> 00:00:46,800
+A régua e o rastro da cabeça mostram a direção e a velocidade
+Azul: para onde cada ponto desliza. Ele desliza de lado também, não só para a frente
+
+8
+00:00:47,400 --> 00:00:54,800
+Experimente: levantar as curvas deixa mais rápido
+Calculado: de 9% a 22% do comprimento do corpo por onda (cobras reais: 22 ± 8%)
+
+9
+00:00:56,200 --> 00:01:01,400
+Troque o chão por uma «tábua lisa» e o desenho muda
+O atrito para a frente e de lado fica quase igual; calculado: 13% do comprimento do corpo por onda
+
+10
+00:01:01,800 --> 00:01:06,800
+Mesmo atrito em todas as direções, com o corpo todo apoiado
+Não consegue avançar; no cálculo até recua um pouco
+
+11
+00:01:07,400 --> 00:01:13,800
+Movimento lateral: avança na diagonal em relação ao corpo
+Duas ondas, de um lado ao outro e para cima e para baixo. No canto superior direito: a altura vista de lado
+
+12
+00:01:14,200 --> 00:01:20,300
+Amarelo: onde o corpo toca o chão (2–3 pontos)
+O resto é levantado em arcos e levado para a frente
+
+13
+00:01:20,700 --> 00:01:26,800
+Os pontos que tocam o chão quase não se movem
+Deslizamento calculado: 4% da velocidade do corpo, em média (calculado com uma forma de corpo que desliza pouco)
+
+14
+00:01:27,200 --> 00:01:32,800
+Os pontos de contato deixam rastros paralelos e inclinados
+Cobras reais também deixam rastros de linhas paralelas na areia
+
+15
+00:01:34,400 --> 00:01:39,300
+Experimente: levante menos e ela começa a deslizar
+Deslizamento médio calculado: de 4% a 54% da velocidade do corpo
+
+16
+00:01:39,900 --> 00:01:45,800
+Em linha reta (retilíneo): avançar sem se curvar, como uma jiboia
+Os pontos azuis (a coluna) avançam a uma velocidade constante
+
+17
+00:01:46,200 --> 00:01:52,300
+Só a pele da barriga para e avança, de novo e de novo
+A pele franzida fica parada no chão (verde); a onda vai da cabeça à cauda
+
+18
+00:01:52,700 --> 00:01:58,800
+Gráfico: a coluna avança suave; a pele para e avança
+Calculado: 1,45 cm/s (do passo definido de 4,5 cm a cada 3 s)
+
+19
+00:01:59,400 --> 00:02:05,300
+Escalar: enrolar-se num tronco fino em dois lugares para agarrar
+Linhas verdes: partes paradas no tronco. Ampliações à direita
+
+20
+00:02:05,700 --> 00:02:11,300
+Primeiro agarrar em cima, depois soltar embaixo
+Sempre há uma parte parada (observado por Savidge et al. 2021)
+
+21
+00:02:12,600 --> 00:02:16,800
+Na ordem inversa, ela escorrega para baixo
+Por um momento nada fica parado, então nada sustenta o peso
+
+22
+00:02:17,600 --> 00:02:22,000
+Com um tronco de 6 cm, ela não consegue subir
+Neste cálculo, uma volta não passa de 180° (uma estimativa)
+
+23
+00:02:22,200 --> 00:02:30,000
+Como as cobras se movem
+Funciona no navegador (PC ou celular). Por enquanto o texto do app está em japonês

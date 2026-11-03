@@ -371,5 +371,39 @@
 "Dá para mudar a hora do dia e as nuvens // O sol e a lua estão na posição real de hoje, a 33°N 140°E",
 "Deixe a água rasa e o fundo de areia aparece // Ondas longas sentem o fundo e ficam mais lentas e curtas (a 3,5 m, 42 % da altura em águas profundas)",
 "Como as ondas crescem // Funciona no navegador (PC ou celular). Mude o app para inglês com o botão EN"
+],
+"snake-move-short": [
+"Como as cobras se movem // Sem pernas, como elas avançam?",
+"As escamas da barriga resistem a deslizar de lado // Atrito sobre tecido: para frente 0,11, para trás 0,14, de lado 0,19",
+"A parte para a frente do empurrão do chão (verde) a impulsiona // Calculado: 22% do comprimento do corpo por onda (cobras reais: 22 ± 8%)",
+"Movimento lateral: só uns dois pontos tocam o chão // Esses pontos quase não se movem; só as partes levantadas avançam",
+"Em linha reta: avançar sem se curvar // Só a pele da barriga para e avança, sem parar",
+"Escalar: primeiro agarrar em cima, depois soltar embaixo // Sempre há uma parte parada no tronco",
+"Como as cobras se movem // Quatro jeitos de se mover, calculados no seu navegador"
+],
+"snake-move-guide": [
+"Como as cobras se movem // Como usar o app e o que observar",
+"Quatro jeitos de se mover. Primeiro, «Ondular» (地面をうねる) // Toque no corpo para ver as forças que agem ali",
+"Primeira vez? É só ir apertando «Próximo» (つぎへ ▶) // A curva viaja como uma onda da cabeça à cauda (os anéis amarelos marcam as cristas)",
+"As escamas da barriga deslizam fácil para a frente, mas não de lado // Atrito sobre tecido: para frente 0,11, para trás 0,14, de lado 0,19 (ampliação embaixo à direita, forma esquemática)",
+"As curvas ficam um pouco levantadas; as partes mais retas pressionam o chão // Linhas amarelas: onde o corpo pressiona",
+"Empurre o chão de lado e ele empurra de volta // A parte para a frente desse empurrão (verde) move a cobra. Vermelho é o arrasto",
+"A régua e o rastro da cabeça mostram a direção e a velocidade // Azul: para onde cada ponto desliza. Ele desliza de lado também, não só para a frente",
+"Experimente: levantar as curvas deixa mais rápido // Calculado: de 9% a 22% do comprimento do corpo por onda (cobras reais: 22 ± 8%)",
+"Troque o chão por uma «tábua lisa» e o desenho muda // O atrito para a frente e de lado fica quase igual; calculado: 13% do comprimento do corpo por onda",
+"Mesmo atrito em todas as direções, com o corpo todo apoiado // Não consegue avançar; no cálculo até recua um pouco",
+"Movimento lateral: avança na diagonal em relação ao corpo // Duas ondas, de um lado ao outro e para cima e para baixo. No canto superior direito: a altura vista de lado",
+"Amarelo: onde o corpo toca o chão (2–3 pontos) // O resto é levantado em arcos e levado para a frente",
+"Os pontos que tocam o chão quase não se movem // Deslizamento calculado: 4% da velocidade do corpo, em média (calculado com uma forma de corpo que desliza pouco)",
+"Os pontos de contato deixam rastros paralelos e inclinados // Cobras reais também deixam rastros de linhas paralelas na areia",
+"Experimente: levante menos e ela começa a deslizar // Deslizamento médio calculado: de 4% a 54% da velocidade do corpo",
+"Em linha reta (retilíneo): avançar sem se curvar, como uma jiboia // Os pontos azuis (a coluna) avançam a uma velocidade constante",
+"Só a pele da barriga para e avança, de novo e de novo // A pele franzida fica parada no chão (verde); a onda vai da cabeça à cauda",
+"Gráfico: a coluna avança suave; a pele para e avança // Calculado: 1,45 cm/s (do passo definido de 4,5 cm a cada 3 s)",
+"Escalar: enrolar-se num tronco fino em dois lugares para agarrar // Linhas verdes: partes paradas no tronco. Ampliações à direita",
+"Primeiro agarrar em cima, depois soltar embaixo // Sempre há uma parte parada (observado por Savidge et al. 2021)",
+"Na ordem inversa, ela escorrega para baixo // Por um momento nada fica parado, então nada sustenta o peso",
+"Com um tronco de 6 cm, ela não consegue subir // Neste cálculo, uma volta não passa de 180° (uma estimativa)",
+"Como as cobras se movem // Funciona no navegador (PC ou celular). Por enquanto o texto do app está em japonês"
 ]
 }
