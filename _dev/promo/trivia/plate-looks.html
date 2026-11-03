@@ -183,7 +183,7 @@ function fly(g, x, y, s) {
   g.lineWidth = 5; [[-10, 0, -22, 22], [10, 0, 6, 24], [25, 0, 34, 24]].forEach(([a, b, c, d]) => { g.beginPath(); g.moveTo(a, b); g.lineTo(c, d); g.stroke(); });
   g.restore();
 }
-function sceneSpider(g, u) {
+function sceneSpider(g, u, plate = false) {
   paper(g);
   // 台（左の板・右の茎）。木目の線
   const plank = gg => { gg.beginPath(); gg.rect(-20, 1010, 360, 120); };
@@ -197,7 +197,12 @@ function sceneSpider(g, u) {
   const path = (x1, color, dash) => { g.save(); g.setLineDash(dash); g.lineCap = 'round'; g.strokeStyle = color; g.lineWidth = 7; g.beginPath(); for (let i = 0; i <= 60; i++) { const [x, y] = arc(250, x1, 380, i / 60); i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); g.restore(); };
   path(860, '#3f7a4a', [2, 16]); path(650, RED, [26, 14]);
   const [sx, sy] = arc(250, 650, 380, u);
-  spider(g, sx, sy, 1.7, lerp(-0.45, 0.45, u));
+  if (plate && SPIDER.complete && SPIDER.naturalWidth) {   // B: 古い図鑑の図（上から見た図）を、頭を進む向きに向けて道すじに沿わせる
+    const ang = Math.atan2(-Math.cos(Math.PI * u) * Math.PI * 380, 400) + Math.PI / 2, h = 430, w = h * SPIDER.naturalWidth / SPIDER.naturalHeight;
+    g.save(); g.translate(sx, sy - 60); g.rotate(ang);
+    g.globalAlpha = 0.45; g.fillStyle = '#9a6a3a'; g.beginPath(); g.ellipse(0, -h * 0.12, w * 0.2, h * 0.17, 0, 0, TAU); g.ellipse(0, h * 0.2, w * 0.21, h * 0.2, 0, 0, TAU); g.fill();   // 手彩色
+    g.globalAlpha = 1; g.drawImage(SPIDER, -w / 2, -h / 2, w, h); g.restore();
+  } else spider(g, sx, sy, 1.7, lerp(-0.45, 0.45, u));
   // 書きこみ（道すじのそばに）
   text(g, '緑の光 … ぴったり', 790, 740, 50, MIN, '#3f7a4a');
   text(g, '赤い光 … 手前に落ちる', 560, 1075, 50, MIN, RED);
@@ -213,11 +218,13 @@ function sceneSpider(g, u) {
   text(g, '前の目の網膜は 4 段', lx - 60, ly + lr + 50, 42, MIN, INK);
   text(g, '赤い光の中で跳ぶと？', PW / 2, 180, 68, MIN, INK);
   caption(g, ['答え：手前に落ちる', '緑の光ではぴったりなのに'], 1450 - 200);
-  text(g, '道すじは模式（どれだけ手前かは描いていない）', PW / 2, 1400, 30, KYO, INK, { bold: false });
+  text(g, '道すじは模式（どれだけ手前かは描いていない）' + (plate ? '／図: J. H. Emerton (1891)' : ''), PW / 2, 1400, 30, KYO, INK, { bold: false });
 }
+const SPIDER = new Image(); SPIDER.src = 'art/emerton-1891-p19-fig2.png'; SPIDER.onload = () => draw();
 
 const SCENES = [
   { name: 'A 地球（コードだけ）', note: '星を画面の下に大きく。かげは2方向の斜線と緯線、色はうすく手でさしたように。数字は道すじに沿って書きこみ、時計は懐中時計の線画に。', draw: sceneEarth },
+  { name: 'B 生き物（古い図鑑の図）', note: 'クモは Emerton（1891年、パブリックドメイン）の図をそのまま使い、色だけうすくさした。元は上から見た図なので、頭を跳ぶ向きに向けて道すじに沿わせている。', draw: (g, u) => sceneSpider(g, u, true) },
   { name: 'A 生き物（コードだけ）', note: 'ハエトリグモを横から（顔と牙は描かない決まり）。脚は関節で折れる太い線。答えの2本の道すじに書きこみ、網膜はルーペで寄って見せる。生き物はコードだけだと形がまだ記号っぽい。', draw: sceneSpider },
 ];
 const grid = document.getElementById('grid'), figs = [];
