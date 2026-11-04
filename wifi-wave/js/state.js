@@ -140,6 +140,12 @@ const PRESETS=[
     now:L('<b>まっさらな部屋。</b>壁は何もありません。電波は円を描いて広がり、遠くなるほど弱まります。',
       '<b>An empty room.</b> There are no walls. Radio waves spread out in circles and get weaker the farther they go.'),
     build(){}},
+  // WiFi sensing: its own small grid and screen (sense.js, sense-ui.js); the main grid is left empty
+  {key:'sense', name:L('人がいると','Someone in the room'), sub:L('電波で動きを感じる','Sensing motion by WiFi'), sense:true,
+    router:[1,1], phone:[1,1], hint:'',
+    now:L('<b>人がいると電波が変わる。</b>ルーターが短い電波を出し、部屋のすみの受信機がそれを受けとります。人の体は電波を吸ったり跳ね返したりするので、人が動くと受けとる電波の形が変わります。',
+      '<b>A person changes the waves.</b> The router sends a short burst of radio waves and a receiver in the corner picks it up. A human body absorbs and reflects radio waves, so when someone moves, the received waves change shape.'),
+    build(){}},
 ];
 
 function loadPreset(key){
@@ -156,6 +162,8 @@ function loadPreset(key){
   document.querySelectorAll('.preset').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===key));
   wallsKey='';
   updateLegend();
+  S.sense=!!p.sense; document.body.classList.toggle('sense',S.sense);
+  if(typeof senseEnter==='function'){ if(S.sense) senseEnter(); else senseLeave(); }   // sense-ui.js
 }
 function resetField(){ sim.clear(); S.lastChange=0; }
 function mapChanged(){ sim.upload(); S.lastChange=sim.n; wallsKey=''; }

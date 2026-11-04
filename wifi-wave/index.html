@@ -22,6 +22,17 @@
       <canvas id="gl"></canvas>
       <canvas id="ov"></canvas>
       <div id="glerr" hidden></div>
+      <button class="btn tour-next" id="btnTour" hidden></button>
+    </div>
+    <div id="senseBox" hidden>
+      <canvas id="csiCv"></canvas>
+      <div class="sense-row"><span id="senseMotion"></span><span class="mono" id="senseCount"></span></div>
+      <p id="senseCap"></p>
+      <div class="row" id="senseBtns">
+        <button class="btn" id="btnPerson"></button>
+        <button class="btn" id="btnEye" hidden></button>
+        <button class="btn" id="btnSensePlay"></button>
+      </div>
     </div>
     <p id="hint"></p>
   </main>
@@ -36,7 +47,7 @@
       <p lang="en">How does WiFi spread through a home, and how much do walls weaken it? A simulation of radio waves, seen from above.</p>
     </header>
 
-    <section class="card" id="readout">
+    <section class="card hide-sense" id="readout">
       <div class="ro-top"><span class="lbl"><span lang="ja">スマホの受信</span><span lang="en">PHONE SIGNAL</span></span><span class="bars" id="roBars"><i></i><i></i><i></i><i></i></span></div>
       <div class="ro-num"><b id="roVal">—</b><small id="roUnit">dBm</small></div>
       <div id="roVerdict"></div>
@@ -45,7 +56,7 @@
       <p class="ro-note" lang="en">* The numbers are a rough guide. Furniture, floors and ceilings are left out, so in a real home the signal is often a little weaker.</p>
     </section>
 
-    <section>
+    <section class="hide-sense">
       <h2><span lang="ja">表示</span><span lang="en">VIEW</span></h2>
       <div class="seg" id="segMode">
         <button data-v="wave" aria-pressed="true"><span lang="ja">波の動き</span><span lang="en">Waves</span></button>
@@ -56,7 +67,7 @@
       <label class="chk" id="chkSmooth" hidden><input type="checkbox" id="optSmooth" checked> <span lang="ja">干渉のまだらをならす（実際のWiFiに近い）</span><span lang="en">Smooth out the interference spots (closer to real WiFi)</span></label>
     </section>
 
-    <section>
+    <section class="hide-sense">
       <h2><span lang="ja">周波数</span><span lang="en">FREQUENCY</span></h2>
       <div class="seg" id="segFreq">
         <button data-v="2.4" aria-pressed="true">2.4 GHz</button>
@@ -65,7 +76,7 @@
       <p class="cap" id="freqCap"></p>
     </section>
 
-    <section>
+    <section class="hide-sense">
       <h2><span lang="ja">時間</span><span lang="en">TIME</span></h2>
       <div class="row">
         <button class="btn" id="btnPlay"></button>
@@ -80,7 +91,7 @@
       <div class="presets" id="presets"></div>
     </section>
 
-    <section>
+    <section class="hide-sense">
       <h2><span lang="ja">壁を描く</span><span lang="en">DRAW WALLS</span></h2>
       <div class="tools" id="tools"></div>
       <div class="row"><button class="btn" id="btnUndo"><span lang="ja">元に戻す</span><span lang="en">Undo</span></button></div>
@@ -125,6 +136,14 @@
         <p><b>簡単にしたところ</b>: 床と天井、家具の大半、コンクリートの中の鉄筋は入れていません。電波の向き（偏波）は、電場が床に垂直な1通りだけです。周波数は1つだけ（2.4GHz帯は 2.437GHz＝チャンネル6、5GHz帯は 5.2GHz＝チャンネル40）で、実際の WiFi のように幅のある周波数は使っていません。</p>
         <p>電波の届き方を知るためのものです。実際の家での強さは、ルーターの機種や置き方、家具、人の動きで大きく変わります。体への影響を示すものではありません。</p>
       </details>
+      <details class="sense-only">
+        <summary>WiFi で人の動きがわかる？</summary>
+        <p>WiFi の電波は、送るたびに「どの周波数がどれだけ届いたか」を受信機が測っています（CSI＝チャンネルの状態の情報）。届きにくい周波数の分を受信機で直すためのものです。この部屋では 20MHz の幅を 52本に分けた強さを、下の棒で見せています（IEEE 802.11a/g と同じ並び）。</p>
+        <p>人の体は電波を吸ったり跳ね返したりするので、人が動くと 52本の形が変わります。<b>形のゆれ（分散）が、誰もいないときのゆれの3倍をこえたら「動きあり」</b>としています。電波の強さのゆれで人の動きを見つける、昔からあるやり方（Youssef ほか 2007）を 52本に広げたものです。ゆれは直近20回の測定で見ます。雑音は1本ずつばらばらですが、人の影響はとなりの周波数どうしで似ているので、52本を半分ずつにまとめてならしてから比べています（本物の機器もフィルターなどで同じことをします）。</p>
+        <p><b>この計算で簡単にしたところ</b>: 2次元なので、人は床から天井までの柱になり、床・天井の反射もありません。そのため人の影響は本物より大きめに出ます。センシングは 2.4GHz だけです（5GHz はこのマス目では細かさが足りません）。棒は強さ（振幅）だけで、本物の機器では、測るたびにずれる位相はそのままでは使えません。</p>
+        <p><b>受信機の雑音は推定です</b>: 1回ごとに、全体の強さが少しとび（自動で音量を合わせるしくみ）、52本それぞれに約5%のゆれをのせています（WiFi カードで測った、止まった部屋のゆれ「90%は平均の10%以下」を目安にしました）。</p>
+        <p><b>時間</b>: 電波の動き（1回の測定）は実際の数十億倍ゆっくり見せています。人は1回の測定で1.5cm 進みます。本物の機器は1秒に数十〜100回ほど測るので、人の歩きもかなりゆっくりです（下の数字）。</p>
+      </details>
       <details>
         <summary>おもな出どころ</summary>
         <ul class="src">
@@ -133,7 +152,10 @@
           <li>IEEE Std 802.11（無線 LAN の規格）: チャンネルと周波数（チャンネル6＝2437MHz、チャンネル40＝5200MHz）</li>
           <li>Taflove と Hagness（2005）『Computational Electrodynamics: The Finite-Difference Time-Domain Method』第3版, Artech House: マクスウェル方程式をマス目と時間のきざみで解く方法（FDTD 法）</li>
           <li>Gabriel（1996）「Compilation of the Dielectric Properties of Body Tissues at RF and Microwave Frequencies」米空軍の報告書 AL/OE-TR-1996-0037: 体の組織の電気の性質（人の体の値の目安）</li>
-          <li>人の体・お湯の値、受信の強さの境目（−55〜−85dBm）、ルーターの出力（20dBm）、壁の厚さは<b>目安・推定</b>です</li>
+          <li class="sense-only">Youssef, Mah, Agrawala（2007）「Challenges: Device-free Passive Localization for Wireless Environments」MobiCom 2007: 電波の強さのゆれ（分散）で人の動きを見つける方法</li>
+          <li class="sense-only">Wang, Gao, Mao, Pandey「CSI-based Fingerprinting for Indoor Localization: A Deep Learning Approach」IEEE Transactions on Vehicular Technology（arXiv 1603.07080, 2016）: 止まった部屋で測った CSI の強さのゆれ（Intel 5300。雑音の推定の目安）</li>
+          <li class="sense-only">IEEE Std 802.11: 20MHz のチャンネルの 52本の周波数（間隔 312.5kHz）</li>
+          <li>人の体・お湯の値、受信の強さの境目（−55〜−85dBm）、ルーターの出力（20dBm）、壁の厚さ、センシングの受信機の雑音は<b>目安・推定</b>です</li>
         </ul>
         <p>使っているもの: 文字に Dela Gothic One・Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）。</p>
       </details></div>
@@ -172,6 +194,14 @@
         <p><b>What is simplified</b>: there are no floors or ceilings, most furniture is left out, and there is no steel inside the concrete. The waves have only one direction (polarization), with the electric field standing straight up from the floor. Only one frequency is used for each band (2.437 GHz = channel 6 for 2.4 GHz, and 5.2 GHz = channel 40 for 5 GHz), not the range of frequencies real WiFi uses.</p>
         <p>This is for learning how radio waves travel. The strength in a real home changes a lot with the router model, where it is placed, furniture and people moving around. It does not show any effects on the body.</p>
       </details>
+      <details class="sense-only">
+        <summary>Can WiFi tell when someone moves?</summary>
+        <p>Every time a WiFi signal arrives, the receiver measures how much of each frequency got through (CSI, channel state information). It needs this to correct for the frequencies that arrive weakly. In this room, the bars below show the strength of 52 slices of a 20 MHz channel (the same layout as IEEE 802.11a/g).</p>
+        <p>A human body absorbs and reflects radio waves, so when someone moves, the shape of the 52 bars changes. <b>When the shape wobbles (its variance) more than 3 times as much as in the empty room, the app says “movement”.</b> This is an old way of spotting people from wobbles in signal strength (Youssef et al. 2007), extended to the 52 bars. The wobble is taken over the last 20 measurements. The noise differs from slice to slice, but a person changes neighbouring frequencies alike, so the 52 bars are averaged in two halves first (real devices do the same with filters and similar tricks).</p>
+        <p><b>What is simplified</b>: the simulation is 2-D, so the person is a column from floor to ceiling, and there are no floor or ceiling reflections. That makes the person’s effect larger than in real life. Sensing uses 2.4 GHz only (this grid is too coarse for 5 GHz). The bars show strength (amplitude) only; in real devices the phase shifts at random between measurements and cannot be used as it is.</p>
+        <p><b>The receiver noise is an estimate</b>: each measurement gets a small jump in overall strength (from the automatic gain control) and about 5% wobble on each of the 52 bars (based on WiFi-card measurements in a still room, where 90% of the wobbles were below 10% of the average).</p>
+        <p><b>Time</b>: the waves (one measurement) are shown billions of times slower than real life. The person moves 1.5 cm per measurement. Real devices measure tens to about 100 times a second, so the person’s walk is slowed down a lot too (see the number below the bars).</p>
+      </details>
       <details>
         <summary>Main sources</summary>
         <ul class="src">
@@ -180,7 +210,10 @@
           <li>IEEE Std 802.11 (the wireless LAN standard): channels and frequencies (channel 6 = 2437 MHz, channel 40 = 5200 MHz)</li>
           <li>Taflove and Hagness (2005), <i>Computational Electrodynamics: The Finite-Difference Time-Domain Method</i>, 3rd ed., Artech House: how to solve Maxwell’s equations step by step on a grid (the FDTD method)</li>
           <li>Gabriel (1996), “Compilation of the Dielectric Properties of Body Tissues at RF and Microwave Frequencies”, US Air Force report AL/OE-TR-1996-0037: electrical properties of body tissues (used as a guide for the human body)</li>
-          <li>The values for the human body and water, the signal strength lines (−55 to −85 dBm), the router output (20 dBm) and the wall thicknesses are <b>rough guides and estimates</b></li>
+          <li class="sense-only">Youssef, Mah and Agrawala (2007), “Challenges: Device-free Passive Localization for Wireless Environments”, MobiCom 2007: spotting people from the wobble (variance) of signal strength</li>
+          <li class="sense-only">Wang, Gao, Mao and Pandey, “CSI-based Fingerprinting for Indoor Localization: A Deep Learning Approach”, IEEE Transactions on Vehicular Technology (arXiv 1603.07080, 2016): CSI strength wobble measured in a still room (Intel 5300; a guide for the noise estimate)</li>
+          <li class="sense-only">IEEE Std 802.11: the 52 frequencies of a 20 MHz channel (312.5 kHz apart)</li>
+          <li>The values for the human body and water, the signal strength lines (−55 to −85 dBm), the router output (20 dBm), the wall thicknesses and the receiver noise in the sensing room are <b>rough guides and estimates</b></li>
         </ul>
         <p>Fonts: Dela Gothic One, Zen Kaku Gothic New and IBM Plex Mono (SIL Open Font License).</p>
       </details></div>
@@ -195,3 +228,4 @@
 <script src="js/draw.js"></script>
 <script src="js/main.js"></script>
 <script src="js/sense.js"></script>
+<script src="js/sense-ui.js"></script>

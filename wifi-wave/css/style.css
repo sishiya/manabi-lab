@@ -126,4 +126,32 @@ details b{color:var(--ink);font-weight:500}
   .chk{min-height:36px}
   .chk input{width:18px;height:18px;flex:none}
   summary{padding:8px 0}
+  #senseBtns .btn,.tour-next{min-height:36px}
+}
+
+/* WiFi sensing room (sense-ui.js): the bars sit right under the map, both stay pinned on phones */
+body.sense .hide-sense,body.sense #hint{display:none!important}
+body:not(.sense) .sense-only{display:none!important}
+#senseBox{display:flex;flex-direction:column;gap:4px}
+#csiCv{display:block;width:100%;height:84px;border-radius:6px;background:#08101f}
+body.sense-wf #csiCv{height:140px}
+.sense-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+#senseMotion b{font-weight:700}
+#senseCap{margin:0;font-size:13px;color:var(--ink);line-height:1.55;min-height:3.1em;max-width:72ch}
+#senseCap b{color:var(--accent);font-weight:500}
+#senseBtns .btn{font-size:13px}
+.tour-next{position:absolute;right:10px;bottom:10px;z-index:2;background:var(--accent);color:#1a1406;border-color:transparent;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.45)}
+@media (max-width:860px) and (orientation:portrait){
+  body.sense #frame{width:min(100%,calc((100svh - 330px)*1.6))}
+  #csiCv{height:70px} body.sense-wf #csiCv{height:118px}
+  #senseCap{font-size:12.5px;min-height:0}
+  .tour-next{right:6px;bottom:6px;padding:5px 10px}
+}
+@media (orientation:landscape) and (max-height:560px){
+  #csiCv{height:60px} body.sense-wf #csiCv{height:96px}
+  #senseCap{font-size:12px;min-height:0}
+  /* map + bars fill the screen; the caption and buttons are a short scroll below them */
+  body.sense #stage{overflow-y:auto}
+  body.sense #frame{flex:none;height:calc(100svh - 82px)}
+  body.sense.sense-wf #frame{height:calc(100svh - 118px)}
 }

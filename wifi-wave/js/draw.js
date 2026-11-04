@@ -74,20 +74,21 @@ function drawOverlay(now){
 }
 const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-function display(){
+// g: the grid to show (the sensing room passes its own small grid and router, in its cells)
+function display(g=sim,src=S.line?null:S.router){
   gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,cv.width,cv.height);
   gl.useProgram(dispP.p);gl.bindVertexArray(vao);
-  gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,sim.tex[sim.cur]);
-  gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,sim.mt);
+  gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,g.tex[g.cur]);
+  gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,g.mt);
   const u=dispP.u;
-  gl.uniform1i(u.uS,0);gl.uniform1i(u.uM,1);
-  gl.uniform2f(u.uView,cv.width,cv.height);gl.uniform1i(u.uMode,S.mode==='wave'?0:1);
-  gl.uniform2f(u.uSrc,S.line?-1e4:Math.round(S.router[0])+.5,S.line?0:Math.round(S.router[1])+.5);
+  gl.uniform1i(u.uS,0);gl.uniform1i(u.uM,1);gl.uniform2f(u.uGrid,g.w,g.h);
+  gl.uniform2f(u.uView,cv.width,cv.height);gl.uniform1i(u.uMode,S.mode==='wave'||S.sense?0:1);
+  gl.uniform2f(u.uSrc,src?Math.round(src[0])+.5:-1e4,src?Math.round(src[1])+.5:0);
   gl.uniform1i(u.uLine,S.line?1:0);
   gl.uniform1f(u.uC,CAL[S.freq].C);gl.uniform1f(u.uRef,CAL[S.freq].L);
   gl.uniform1f(u.uFS,20*Math.log10(FREQ[S.freq].mhz)-27.55);
   gl.uniform1f(u.uSmooth,S.smooth?lambdaCells(FREQ[S.freq].ghz)*.5:0);
-  gl.uniform1f(u.uComp,S.comp?1:0);
+  gl.uniform1f(u.uComp,S.comp||S.sense?1:0);
   gl.uniform3fv(u.uMatCol,new Float32Array(MATS.flatMap(m=>m.rgb||[0,0,0])));
   gl.uniform1fv(u.uMatA,new Float32Array(MATS.map(m=>m.al||0)));
   gl.drawArrays(gl.TRIANGLES,0,3);
@@ -109,6 +110,7 @@ function fmtOku(x){
 let last=performance.now(), ftAvg=16, cap=64, frame=0, stepsPerSec=0;
 function loop(now){
   try{
+    if(S.sense){senseFrame(now);frame++;requestAnimationFrame(loop);return;}   // sense-ui.js
     const dt=now-last;last=now;ftAvg+= (Math.min(dt,100)-ftAvg)*.05;
     if(ftAvg>30&&cap>2)cap=Math.max(2,Math.floor(cap*.9));else if(ftAvg<19&&cap<64)cap++;
     const want=SPEEDS[S.speedIdx], steps=S.paused?0:Math.min(want,cap);

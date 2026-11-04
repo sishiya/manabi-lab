@@ -38,9 +38,9 @@ precision highp float; precision highp int;
 uniform sampler2D uS; uniform sampler2D uM;
 uniform vec2 uView; uniform int uMode; uniform vec2 uSrc; uniform int uLine;
 uniform float uC; uniform float uRef; uniform float uFS; uniform float uSmooth; uniform float uComp;
-uniform vec3 uMatCol[8]; uniform float uMatA[8];
+uniform vec3 uMatCol[8]; uniform float uMatA[8]; uniform vec2 uGrid;
 out vec4 o;
-const float W=1280., H=800., DX=0.0075;
+const float DX=0.0075;
 vec3 heat(float d){
   float xs[8]=float[](-95.,-85.,-75.,-67.,-55.,-45.,-35.,-25.);
   vec3 cs[8]=vec3[](vec3(.03,.04,.09),vec3(.12,.16,.42),vec3(.22,.36,.78),vec3(.16,.68,.62),vec3(.58,.87,.37),vec3(1.,.84,.30),vec3(1.,.55,.25),vec3(1.,.95,.88));
@@ -49,12 +49,12 @@ vec3 heat(float d){
   return cs[7];
 }
 float hash(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453); }
-float eAt(vec2 c){ ivec2 q=clamp(ivec2(c),ivec2(0),ivec2(1279,799)); return texelFetch(uS,q,0).b; }
+float eAt(vec2 c){ ivec2 q=clamp(ivec2(c),ivec2(0),ivec2(uGrid)-1); return texelFetch(uS,q,0).b; }
 float lg(float x){ return log(x)*0.4342944819; }
 void main(){
   vec2 uv=gl_FragCoord.xy/uView;
-  vec2 c=vec2(uv.x*W,(1.-uv.y)*H);
-  ivec2 p=clamp(ivec2(c),ivec2(0),ivec2(1279,799));
+  vec2 c=vec2(uv.x*uGrid.x,(1.-uv.y)*uGrid.y);
+  ivec2 p=clamp(ivec2(c),ivec2(0),ivec2(uGrid)-1);
   vec4 s=texelFetch(uS,p,0);
   int id=clamp(int(texelFetch(uM,p,0).r*255.+.5),0,7);
   float r=max(length(c-uSrc),4.);
@@ -86,7 +86,7 @@ void main(){
     col=mix(col,vec3(0.),clamp(ln,0.,1.)*.45);
   }
   // 1 m grid
-  float cpp=W/uView.x;
+  float cpp=uGrid.x/uView.x;
   vec2 g=abs(fract(c/133.3333+.5)-.5)*133.3333;
   if(min(g.x,g.y)<cpp*.7) col=mix(col,vec3(.65,.75,.95),.10);
   if(id>0){

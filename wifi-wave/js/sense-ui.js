@@ -1,0 +1,230 @@
+'use strict';
+if(!window.__wwGL) throw new Error("wifi-wave: WebGL2 の準備ができなかったので止める");   // gl.js が止まったとき
+// ================= sensing room: screen, person, tour (PLAN.md 段階B) =================
+// One measurement = one FDTD run of the pulse (sense.js Run), spread over a few frames.
+// Between measurements the person walks 1.5 cm toward where the finger points.
+const SE={tour:0, run:null, person:null, target:null, leaving:false, ang:0, base:null, baseDb:null,
+  motion:new Motion(), amp:null, hist:[], count:0, rate:0, lastDone:0, chunk:1024,
+  paused:false, eye:false, reveal:false, guess:null, dragging:false};
+const STEP_M=.015;                 // m walked per measurement
+const REAL_RATE=1/STEP_M;          // measurements per second that make 1.5 cm a step at a walk of 1 m/s (~67/s)
+const TOUR_N=6, DOOR=[5.3,1.8], CENTER=[3.0,1.9];
+const sCell=m=>m/DX;               // metres → cells of the small grid
+const sPx=m=>m/DX*(W/SN.W)*scale;  // metres → css px on the map
+const meters=c=>c*DX*(SN.W/W);     // main-map cell → metres in the room
+
+function senseEnter(){
+  SE.tour=0; SE.person=null; SE.target=null; SE.leaving=false; SE.eye=false; SE.reveal=false; SE.guess=null;
+  SE.hist=[]; SE.count=0; SE.rate=0; SE.lastDone=0; SE.run=null; SE.paused=false;
+  SROOM.empty=false; SROOM.person=null;
+  if(S.freq!=='2.4') $('segFreq').querySelector('[data-v="2.4"]').click();   // sensing is 2.4 GHz only (PLAN)
+  SE.base=csi(); SE.baseDb=SE.base.amp.slice();          // the empty room, remembered once (no noise)
+  SE.motion=new Motion(); SE.motion.calibrate(SE.base.H);
+  $('senseBox').hidden=false; $('btnTour').hidden=false; ov.style.cursor='default';
+  setTour(0);
+}
+function senseLeave(){
+  SE.run=null; $('senseBox').hidden=true; $('btnTour').hidden=true;
+  document.body.classList.remove('sense-wf'); ov.style.cursor='crosshair';
+}
+
+// ---------- tour: one new thing per step ----------
+const TOUR=[
+  L('ルーター（黄色）が短い電波を出します。電波は壁や窓で跳ね返り、いくつもの道を通って、すみの<b>受信機</b>に届きます。',
+    'The router (yellow) sends a short burst of radio waves. They bounce off the walls and the window and reach the <b>receiver</b> in the corner along many paths.'),
+  L('受信機は、届いた電波を<b>周波数ごとに52本に分けて</b>強さを測ります（下の棒）。白い線は、誰もいない部屋のときの形です。',
+    'The receiver splits the arriving waves into <b>52 frequency slices</b> and measures the strength of each (the bars below). The white marks show the shape when the room is empty.'),
+  L('人が入ってきました。<b>図の上をドラッグすると、人がそこへ歩きます。</b>棒の形がどう変わるか見てみよう。',
+    'Someone has come in. <b>Drag on the map and the person walks there.</b> Watch how the shape of the bars changes.'),
+  L('棒の形を時間の順に並べました（下の帯。右がいま）。<b>色は誰もいないときとの差。</b>人が止まっていても、受信機の雑音で少しちらつきます。',
+    'Here the bar shapes are lined up in time (the strip below; now is on the right). <b>The colour is the difference from the empty room.</b> Even when the person stands still, receiver noise makes it flicker a little.'),
+  L(`ゆれが、誰もいないときのゆれの<b>${MOTION.k}倍</b>をこえたら「動きあり」。本物の機器も、ゆれの大きさで決めています。人を止めたり歩かせたりしてみよう。`,
+    `When the wobble is more than <b>${MOTION.k} times</b> the wobble of the empty room, it says “movement”. Real devices decide the same way. Try making the person stop and walk.`),
+  L('<b>「ルーターの目で見る」</b>を押すと地図が消え、棒だけになります。ルーターに見えるのはこれだけ。人はどこにいる？',
+    'Press <b>“See it as the router does”</b>: the map disappears and only the bars remain. That is all the router gets. Where is the person?'),
+];
+function setTour(i){
+  SE.tour=i;
+  if(i>=2&&!SE.person&&!SE.leaving) personIn();
+  document.body.classList.toggle('sense-wf',i>=3);
+  $('btnTour').innerHTML=i<TOUR_N-1?L(`つぎへ ▶ <small>${i+1}/${TOUR_N}</small>`,`Next ▶ <small>${i+1}/${TOUR_N}</small>`):L('最初から','Start over');
+  $('btnPerson').hidden=i<2; $('btnEye').hidden=i<5;
+  caption(); buttons(); texts();
+}
+$('btnTour').onclick=()=>{ if(SE.tour<TOUR_N-1) setTour(SE.tour+1); else { SE.eye=false; SE.reveal=false; setTour(0); } };
+function caption(){
+  let t=TOUR[SE.tour];
+  if(SE.eye&&!SE.reveal) t=L('ルーターに見えるのは下の棒だけ。人は部屋の中を歩いています。<b>いると思う所をタップ</b>して答えよう。',
+    'All the router gets is the bars below. The person is walking around the room. <b>Tap where you think they are.</b>');
+  if(SE.eye&&SE.reveal&&SE.guess){
+    const d=Math.hypot(SE.guess[0]-SE.person[0],SE.guess[1]-SE.person[1]);
+    t=d<.6?L(`答え: <b>${d.toFixed(1)} m</b>。近い！ でも棒から当てたのではなく、たまたまかもしれません。何回かためしてみよう。`,
+      `Answer: <b>${d.toFixed(1)} m</b> off. Close! But was it the bars, or luck? Try a few more times.`)
+      :L(`答え: <b>${d.toFixed(1)} m</b> はなれていました。送信1つ・受信1つの棒だけで、前もって学習もしないと、「動いた」はわかっても<b>「どこか」はほとんどわかりません</b>。`,
+      `Answer: you were <b>${d.toFixed(1)} m</b> off. With one sender, one receiver and no training beforehand, the bars tell you <b>that</b> someone moved, but <b>hardly where</b>.`);
+  }
+  $('senseCap').innerHTML=t;
+}
+function buttons(){
+  $('btnPerson').textContent=SE.person&&!SE.leaving?L('人を部屋から出す','Send the person out'):L('人を部屋に入れる','Let the person in');
+  $('btnPerson').disabled=SE.eye;
+  $('btnEye').textContent=!SE.eye?L('ルーターの目で見る','See it as the router does'):SE.reveal?L('もう一度','Try again'):L('地図にもどす','Back to the map');
+  $('btnSensePlay').textContent=SE.paused?L('再生','Play'):L('一時停止','Pause');
+}
+$('btnPerson').onclick=()=>{ if(SE.person&&!SE.leaving){SE.leaving=true;SE.target=DOOR.slice();} else personIn(); buttons(); };
+$('btnEye').onclick=()=>{
+  if(!SE.eye){SE.eye=true;SE.reveal=false;SE.guess=null;if(!SE.person||SE.leaving)personIn();SE.target=randomSpot();}
+  else if(SE.reveal){SE.reveal=false;SE.guess=null;SE.target=randomSpot();}
+  else {SE.eye=false;SE.target=null;}
+  caption(); buttons();
+};
+$('btnSensePlay').onclick=()=>{SE.paused=!SE.paused;buttons();};
+function personIn(){ SE.person=DOOR.slice(); SE.target=CENTER.slice(); SE.leaving=false; SE.ang=Math.PI/2; }
+function randomSpot(){ const [x0,y0,x1,y1]=SROOM.inside; return [x0+.3+Math.random()*(x1-x0-.6), y0+.3+Math.random()*(y1-y0-.6)]; }
+const clampRoom=([x,y])=>{const [x0,y0,x1,y1]=SROOM.inside;return [Math.max(x0,Math.min(x1,x)),Math.max(y0,Math.min(y1,y))];};
+
+// ---------- measuring ----------
+function startMeasure(){
+  if(SE.person&&SE.target){
+    const dx=SE.target[0]-SE.person[0], dy=SE.target[1]-SE.person[1], d=Math.hypot(dx,dy);
+    if(d>.004){
+      const s=Math.min(d,STEP_M); SE.person=[SE.person[0]+dx/d*s, SE.person[1]+dy/d*s];
+      // shoulders across the walking direction; turn at most 6° per measurement
+      let a=Math.atan2(dy,dx)+Math.PI/2, da=Math.atan2(Math.sin(a-SE.ang),Math.cos(a-SE.ang));
+      if(Math.abs(da)>Math.PI/2) da-=Math.sign(da)*Math.PI;      // the ellipse looks the same turned by 180°
+      SE.ang+=Math.max(-.105,Math.min(.105,da));
+    } else if(SE.leaving){ SE.person=null; SE.target=null; SE.leaving=false; buttons(); }
+    else if(SE.eye&&!SE.reveal) SE.target=randomSpot();
+  }
+  SROOM.person=SE.person; SROOM.ang=SE.ang; sBuild();
+  SE.run=new Run(pulse);
+}
+function finishMeasure(){
+  const c=csiOf(SE.run.out()); SE.run=null;
+  SE.amp=noisyAmp(c.H); SE.motion.push(SE.amp);
+  SE.hist.push(SE.amp.map((a,k)=>20*Math.log10(Math.max(a,1e-12))-SE.baseDb[k])); if(SE.hist.length>240) SE.hist.shift();
+  const t=performance.now(); if(SE.lastDone){const r=1000/(t-SE.lastDone);SE.rate=SE.rate?SE.rate+(r-SE.rate)*.15:r;} SE.lastDone=t;
+  SE.count++; texts();
+}
+function measureOnce(){   // one whole measurement now (debug and hidden tabs)
+  if(!SE.run) startMeasure();
+  while(!SE.run.advance(1e9));
+  finishMeasure();
+}
+function senseFrame(now){
+  if(!SE.paused){
+    if(!SE.run) startMeasure();
+    const t=performance.now(), done=SE.run.advance(SE.chunk), el=performance.now()-t;
+    // keep each frame's share of GPU work near 10 ms, so the page stays smooth on slow phones too.
+    // At most 1024 steps (13 ns) a frame, so the pulse can be seen spreading out
+    if(el>14) SE.chunk=Math.max(256,Math.round(SE.chunk*.8)); else if(el<7) SE.chunk=Math.min(1024,Math.round(SE.chunk*1.25));
+    if(done) finishMeasure();
+  }
+  display(ssim,[sCell(SROOM.router[0]),sCell(SROOM.router[1])]);
+  drawSense(now); drawCsi(); placeTour();
+}
+let tourPos='';
+function placeTour(){   // keep つぎへ in the map's top right corner, clear of the receiver (the frame can be larger than the map)
+  const fr=$('frame').getBoundingClientRect(), cr=cv.getBoundingClientRect(), k=`${fr.right-cr.right|0},${cr.top-fr.top|0}`;
+  if(k===tourPos) return; tourPos=k;
+  const b=$('btnTour').style; b.right=(fr.right-cr.right+6)+'px'; b.top=(cr.top-fr.top+6)+'px'; b.bottom='auto';
+}
+
+// ---------- texts under the bars ----------
+function texts(){
+  const m=SE.motion, show=SE.tour>=4&&SE.hist.length>=MOTION.win;
+  $('senseMotion').innerHTML=show?L(`動き: <b style="color:${m.moving?'var(--accent)':'var(--muted)'}">${m.moving?'あり':'なし'}</b>　ゆれ ×${m.ratio.toFixed(1)}（${MOTION.k}倍で「あり」）`,
+    `Movement: <b style="color:${m.moving?'var(--accent)':'var(--muted)'}">${m.moving?'yes':'no'}</b>　wobble ×${m.ratio.toFixed(1)} (“yes” above ×${MOTION.k})`):'';
+  const slow=SE.rate>0?Math.max(1,Math.round(REAL_RATE/SE.rate)):0;
+  $('senseCount').textContent=L(`測定 ${SE.count}回`,`${SE.count} measurements`)+(slow&&SE.person?L(`・人の歩きは本物の約1/${slow}`,` · walking about 1/${slow} of real speed`):'')+(SE.paused?L('・一時停止中',' · paused'):'');
+}
+
+// ---------- the map overlay ----------
+function drawSense(now){
+  const c=octx;
+  c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,ov.width,ov.height);c.setTransform(dpr,0,0,dpr,0,0);
+  const P=([x,y])=>[sPx(x),sPx(y)], small=W*scale<560, fs=small?10:12;
+  c.textAlign='center';c.textBaseline='middle';
+  const hide=SE.eye&&!SE.reveal;
+  if(hide){
+    c.fillStyle='#060b16';c.fillRect(0,0,W*scale,H*scale);
+    c.strokeStyle='rgba(170,200,255,.35)';c.lineWidth=1.5;c.setLineDash([5,5]);
+    const [a,b]=P([.45,.45]),[e,f]=P([5.55,3.3]);c.strokeRect(a,b,e-a,f-b);c.setLineDash([]);
+    c.font=`500 ${small?11:14}px 'Zen Kaku Gothic New',sans-serif`;c.fillStyle='rgba(225,235,255,.8)';
+    c.fillText(L('ルーターには部屋の中は見えません','The router cannot see inside the room'),W*scale/2,H*scale*.45);
+    c.font=`500 ${fs}px 'Zen Kaku Gothic New',sans-serif`;c.fillStyle='rgba(225,235,255,.6)';
+    c.fillText(L('人はどこ？ タップして答えよう','Where is the person? Tap to answer'),W*scale/2,H*scale*.45+(small?18:24));
+  } else {
+    c.font=`500 ${fs}px 'Zen Kaku Gothic New',sans-serif`;
+    for(const [t,x,y] of [[L('窓','Window'),3.0,.62],[L('ドア','Door'),5.3,1.18]]){const [sx,sy]=P([x,y]);const w=c.measureText(t).width+8;c.fillStyle='rgba(8,14,28,.55)';c.fillRect(sx-w/2,sy-fs*.75,w,fs*1.5);c.fillStyle='rgba(225,235,255,.8)';c.fillText(t,sx,sy);}
+    // where the person is heading
+    if(SE.person&&SE.target&&!SE.eye&&Math.hypot(SE.target[0]-SE.person[0],SE.target[1]-SE.person[1])>.03){
+      const [tx,ty]=P(SE.target),[px,py]=P(SE.person);
+      c.strokeStyle='rgba(255,201,90,.7)';c.lineWidth=1.5;c.setLineDash([4,4]);c.beginPath();c.moveTo(px,py);c.lineTo(tx,ty);c.stroke();
+      c.beginPath();c.arc(tx,ty,small?6:9,0,7);c.stroke();c.setLineDash([]);
+    }
+    if(SE.person){const [px,py]=P(SE.person);c.font=`700 ${fs}px 'Zen Kaku Gothic New',sans-serif`;c.fillStyle='rgba(8,14,28,.7)';const t=L('人','Person'),w=c.measureText(t).width+8;c.fillRect(px-w/2,py-sPx(.23)-fs*1.6,w,fs*1.4);c.fillStyle='#9cc4ff';c.fillText(t,px,py-sPx(.23)-fs*.9);}
+    if(SE.reveal&&SE.guess){
+      const [gx,gy]=P(SE.guess),[px,py]=P(SE.person);
+      c.strokeStyle='#fff';c.lineWidth=1.5;c.setLineDash([3,4]);c.beginPath();c.moveTo(gx,gy);c.lineTo(px,py);c.stroke();c.setLineDash([]);
+      c.strokeStyle='#ff6b6b';c.lineWidth=3;const r=small?6:9;c.beginPath();c.moveTo(gx-r,gy-r);c.lineTo(gx+r,gy+r);c.moveTo(gx+r,gy-r);c.lineTo(gx-r,gy+r);c.stroke();
+      c.font=`700 ${fs}px 'Zen Kaku Gothic New',sans-serif`;c.fillStyle='#ff9d9d';c.fillText(L('あなたの答え','Your guess'),gx,gy+r+fs);
+    }
+  }
+  // router
+  {const [rx,ry]=P(SROOM.router);
+    c.fillStyle='#ffc95a';c.strokeStyle='#1a1406';c.lineWidth=2;c.beginPath();c.arc(rx,ry,small?7:9,0,7);c.fill();c.stroke();
+    c.font=`700 ${small?9:12}px 'Zen Kaku Gothic New',sans-serif`;const t=L('ルーター','Router'),w=c.measureText(t).width+8;
+    c.fillStyle='rgba(8,14,28,.7)';c.fillRect(rx-w/2,ry+(small?10:13),w,small?13:17);c.fillStyle='#ffd88a';c.fillText(t,rx,ry+(small?16.5:21.5));}
+  // receiver
+  {const [qx,qy]=P(SROOM.rx), q=small?.75:1;
+    c.fillStyle='#0b1322';c.strokeStyle='#e8eefb';c.lineWidth=2*q;c.beginPath();c.roundRect(qx-9*q,qy-6*q,18*q,12*q,2*q);c.fill();c.stroke();
+    c.strokeStyle='#e8eefb';c.lineWidth=1.5*q;c.beginPath();c.moveTo(qx+5*q,qy-6*q);c.lineTo(qx+5*q,qy-13*q);c.stroke();
+    c.font=`700 ${small?9:12}px 'Zen Kaku Gothic New',sans-serif`;const t=L('受信機','Receiver'),w=c.measureText(t).width+8;
+    c.fillStyle='rgba(8,14,28,.7)';c.fillRect(qx-w/2,qy-(small?28:36),w,small?13:17);c.fillStyle='#e8eefb';c.fillText(t,qx,qy-(small?21.5:27.5));}
+  // scale bar
+  const bx=14,by=H*scale-14,bl=sPx(1);
+  c.strokeStyle='rgba(225,235,255,.8)';c.lineWidth=2;c.beginPath();c.moveTo(bx,by-5);c.lineTo(bx,by);c.lineTo(bx+bl,by);c.lineTo(bx+bl,by-5);c.stroke();
+  c.textAlign='left';c.font=`500 11px 'IBM Plex Mono',monospace`;c.fillStyle='rgba(225,235,255,.85)';c.fillText('1 m',bx+bl+6,by-3);
+}
+
+// ---------- the 52 bars and the time strip ----------
+const ccv=$('csiCv'), cctx=ccv.getContext('2d');
+function drawCsi(){
+  const r=ccv.getBoundingClientRect(), w=Math.round(r.width*dpr), h=Math.round(r.height*dpr);
+  if(!w||!h) return;
+  if(ccv.width!==w||ccv.height!==h){ccv.width=w;ccv.height=h;}
+  const c=cctx; c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,r.width,r.height);
+  const W2=r.width, wf=SE.tour>=3, hb=wf?Math.round(r.height*.48):r.height, pad=6, top=15, bot=12;
+  c.font=`500 10px 'Zen Kaku Gothic New',sans-serif`;c.textBaseline='middle';c.textAlign='left';c.fillStyle='rgba(200,215,240,.75)';
+  if(SE.tour<1){c.fillText(L('受信機が測った電波は、つぎで見せます','The receiver’s measurement comes next'),pad,hb/2);return;}
+  c.fillText(L('受信機に届いた電波の強さ（周波数ごと・52本）','Strength at the receiver (per frequency, 52 slices)'),pad,8);
+  c.textAlign='right';c.fillStyle='rgba(255,255,255,.85)';c.fillText(L('白い線: 誰もいないとき','white: empty room'),W2-pad,8);
+  // 1 dB ≈ 1/14 of the bar height: a person's few-dB change shows, and standing in the way (−5…−10 dB) still fits
+  const mean=SE.baseDb.reduce((a,b)=>a+b,0)/52, lo=mean-11, hi=mean+3, y0=hb-bot+8, yh=y0-top;
+  const Y=db=>y0-Math.max(0,Math.min(1,(db-lo)/(hi-lo)))*yh, bw=(W2-2*pad)/52;
+  if(SE.amp) for(let k=0;k<52;k++){const db=20*Math.log10(Math.max(SE.amp[k],1e-12)), y=Y(db);c.fillStyle='#4cc9f0';c.fillRect(pad+k*bw+bw*.12,y,bw*.76,y0-y);}
+  c.fillStyle='rgba(255,255,255,.9)';for(let k=0;k<52;k++){c.fillRect(pad+k*bw,Y(SE.baseDb[k])-1,bw,2);}
+  if(!wf) return;
+  // time strip: one column per measurement, newest on the right; colour = difference from the empty room
+  const t0=hb+16, th=r.height-t0-2, cw=Math.max(2,Math.min(4,(W2-2*pad)/120)), ncol=Math.floor((W2-2*pad)/cw), rh=th/52;
+  c.fillStyle='rgba(200,215,240,.75)';c.textAlign='left';c.fillText(L('誰もいないときとの差（時間 →）','Difference from the empty room (time →)'),pad,hb+8);
+  c.textAlign='right';c.fillStyle='#ffb347';c.fillText(L('強い','up'),W2-pad-34,hb+8);c.fillStyle='#4cc9f0';c.fillText(L('弱い','down'),W2-pad,hb+8);
+  const hs=SE.hist.slice(-ncol);
+  hs.forEach((col,i)=>{const x=W2-pad-(hs.length-i)*cw;
+    for(let k=0;k<52;k++){const v=Math.max(-1,Math.min(1,col[k]/6));
+      c.fillStyle=v>=0?`rgba(255,179,71,${.08+.92*v})`:`rgba(76,201,240,${.08-.92*v})`;c.fillRect(x,t0+k*rh,cw+.5,rh+.5);}});
+}
+
+// ---------- pointer (from ui.js) ----------
+function senseDown(e){
+  const p=toCell(e), m=[meters(p[0]),meters(p[1])];
+  try{ov.setPointerCapture(e.pointerId);}catch(_){}
+  if(SE.eye&&!SE.reveal){ SE.guess=m; SE.reveal=true; caption(); buttons(); return; }
+  if(SE.eye||SE.tour<2||!SE.person||SE.leaving) return;
+  SE.target=clampRoom(m); SE.dragging=true;
+}
+function senseMove(e){ if(!SE.dragging) return; const p=toCell(e); SE.target=clampRoom([meters(p[0]),meters(p[1])]); }
+function senseUp(){ SE.dragging=false; }
+
+window.__ww.senseUI={SE,setTour,measureOnce,drawCsi,drawSense,texts};

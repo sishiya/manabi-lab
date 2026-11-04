@@ -180,6 +180,7 @@ const toCell=e=>{const r=ov.getBoundingClientRect();return [(e.clientX-r.left)/s
 const clampC=p=>[Math.max(45,Math.min(W-46,p[0])),Math.max(45,Math.min(H-46,p[1]))];
 let drag=null;
 ov.addEventListener('pointerdown',e=>{
+  if(S.sense){senseDown(e);return;}   // sense-ui.js
   const p=toCell(e), hitR=(e.pointerType==='touch'?28:20)/scale;
   try{ov.setPointerCapture(e.pointerId);}catch(_){}
   if(Math.hypot(p[0]-S.phone[0],p[1]-S.phone[1])<hitR){drag={kind:'phone'};return;}
@@ -191,6 +192,7 @@ ov.addEventListener('pointerdown',e=>{
   drag={kind:'wall',p0:p,p1:p};
 });
 ov.addEventListener('pointermove',e=>{
+  if(S.sense){senseMove(e);return;}
   const p=toCell(e); S.hover=p;
   if(!drag){
     if(S.tool==='move'||true){const near=Math.hypot(p[0]-S.phone[0],p[1]-S.phone[1])<20/scale||(!S.line&&Math.hypot(p[0]-S.router[0],p[1]-S.router[1])<20/scale);
@@ -206,6 +208,7 @@ ov.addEventListener('pointermove',e=>{
   }
 });
 function endDrag(){
+  if(S.sense){senseUp();return;}
   if(drag&&drag.kind==='wall'){
     // a tap (no line) draws nothing, so drop its undo step too; otherwise the next 元に戻す would seem to do nothing
     if(Math.hypot(drag.p1[0]-drag.p0[0],drag.p1[1]-drag.p0[1])<2) S.undo.pop();
