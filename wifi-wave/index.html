@@ -127,7 +127,7 @@
         <p>直接届いた波と、壁ではね返った波が重なると、山と山が重なる所は強く、山と谷が重なる所は弱くなります。「電波の強さ」で「ならす」を外すと、半波長（約6cm）ごとのまだらが見えます。</p>
         <p>実際のWiFiは少しずつ違う周波数をまとめて使うので、まだらは平均されます。それでも、スマホを数cm動かすだけで速度が変わることがあるのはこのためです。</p>
       </details>
-      <details>
+      <details class="hide-sense">
         <summary>このシミュレーションのしくみ</summary>
         <p>床から上を見た2次元の世界で、電場の波の方程式（マクスウェル方程式）をそのまま解いています。1マス0.75cm、1280×800マス（9.6m×6m）、1ステップは12.5ピコ秒。計算はGPUで行います。</p>
         <p><b>材料</b>（石こうボード・木・ガラス・レンガ・コンクリート）の電気の性質（誘電率と導電率）は、国際電気通信連合の勧告 ITU-R P.2040 の表の値です。ツールの「壁1枚で −X dB」は、同じ勧告にある板を通る電波の式で計算しています。マス目が粗いと板の中の波がうまく表せず弱まりが大きく出すぎる（5GHzのコンクリートで −59dB）ので、材料ごとに、計算でも壁1枚の弱まりがこの式の値と同じになるよう、計算用の値を合わせ直しています。<b>金属</b>は電波を通さないものとして扱っています。</p>
@@ -138,11 +138,12 @@
       </details>
       <details class="sense-only">
         <summary>WiFi で人の動きがわかる？</summary>
+        <p>この部屋は 6m×3.75m を 800×500マス（1マス0.75cm）に分け、ほかの間取りと同じ電場の波の式を GPU で解いています。</p>
         <p>WiFi の電波は、送るたびに「どの周波数がどれだけ届いたか」を受信機が測っています（CSI＝チャンネルの状態の情報）。届きにくい周波数の分を受信機で直すためのものです。この部屋では 20MHz の幅を 52本に分けた強さを、下の棒で見せています（IEEE 802.11a/g と同じ並び）。</p>
-        <p>人の体は電波を吸ったり跳ね返したりするので、人が動くと 52本の形が変わります。<b>形のゆれ（分散）が、誰もいないときのゆれの3倍をこえたら「動きあり」</b>としています。電波の強さのゆれで人の動きを見つける、昔からあるやり方（Youssef ほか 2007）を 52本に広げたものです。ゆれは直近20回の測定で見ます。雑音は1本ずつばらばらですが、人の影響はとなりの周波数どうしで似ているので、52本を半分ずつにまとめてならしてから比べています（本物の機器もフィルターなどで同じことをします）。</p>
-        <p><b>この計算で簡単にしたところ</b>: 2次元なので、人は床から天井までの柱になり、床・天井の反射もありません。そのため人の影響は本物より大きめに出ます。センシングは 2.4GHz だけです（5GHz はこのマス目では細かさが足りません）。棒は強さ（振幅）だけで、本物の機器では、測るたびにずれる位相はそのままでは使えません。</p>
-        <p><b>受信機の雑音は推定です</b>: 1回ごとに、全体の強さが少しとび（自動で音量を合わせるしくみ）、52本それぞれに約5%のゆれをのせています（WiFi カードで測った、止まった部屋のゆれ「90%は平均の10%以下」を目安にしました）。</p>
-        <p><b>時間</b>: 電波の動き（1回の測定）は実際の数十億倍ゆっくり見せています。人は1回の測定で1.5cm 進みます。本物の機器は1秒に数十〜100回ほど測るので、人の歩きもかなりゆっくりです（下の数字）。</p>
+        <p>人の体は電波を吸ったり跳ね返したりするので、人が動くと 52本の形が変わります。<b>形のゆれ（分散）が、誰もいないときのゆれの3倍をこえたら「動きあり」</b>としています。電波の強さのゆれで人の動きを見つける、昔からあるやり方（Youssef ほか 2007）を 52本に広げたものです。ゆれは直近20回の測定で見ます。雑音をならすため、じっさいに比べているのは<b>「周波数の低い半分」と「高い半分」の強さの比</b>が、どれだけゆれたかです（研究でも、雑音をならすためにフィルターなどを使います）。そのため、この比を変えない形の変化は見のがします。</p>
+        <p><b>この計算で簡単にしたところ</b>: 2次元なので、人は床から天井までの柱になり、床・天井の反射もありません。そのぶん人の影響は大きめに出やすく、いっぽう体の値（誘電率）を小さくしたぶん反射は小さめに出ます。合わせて本物と同じ大きさとは言えません。センシングは 2.4GHz だけです（5GHz はこのマス目では細かさが足りません）。棒は強さ（振幅）だけで、本物の機器では、測るたびにずれる位相はそのままでは使えません。</p>
+        <p><b>受信機の雑音は推定です</b>: 1回ごとに、全体の強さが少しとび（自動で音量を合わせるしくみ）、52本それぞれに約5%のゆれをのせています（52本のゆれは、WiFi カードで測った止まった部屋のゆれ「90%は平均の10%以下」を目安にしました。全体のとび 0.5dB は根拠の数字のない推定です）。<b>雑音は周波数ごとにばらばら</b>と仮定しています。本物の雑音はとなりどうしで似ていることも多く、家具やドアも動くので、誰も動いていないのに「動きあり」になることもあります。</p>
+        <p><b>時間</b>: 1回の測定で送る電波（約100ナノ秒ぶん）を、0.1秒あまりかけて見せています（百万倍ほどゆっくり）。計算に時間がかかるので、人は1回の測定で1.5cm しか進めません。そのぶん、ふつうに歩く速さ（秒速約1m）の約1/○になります（棒の下の数字）。</p><p><b>パルス</b>: 本物の WiFi は、決まった形の短い信号で測ります。この計算は、52本を1回で求めるために、幅の広い短いパルスを送っています。</p>
       </details>
       <details>
         <summary>おもな出どころ</summary>
@@ -185,7 +186,7 @@
         <p>When a wave that arrives directly overlaps with a wave reflected off a wall, the signal is stronger where crest meets crest and weaker where crest meets trough. In “Signal strength”, untick “Smooth out” to see spots about every half wavelength (about 6 cm).</p>
         <p>Real WiFi uses many slightly different frequencies at once, so the spots average out. Still, this is why your speed can change when you move your phone just a few centimeters.</p>
       </details>
-      <details>
+      <details class="hide-sense">
         <summary>How this simulation works</summary>
         <p>In a 2D world seen from above, it solves the wave equation for the electric field (Maxwell’s equations) as it is. Each cell is 0.75 cm, the grid is 1280 × 800 cells (9.6 m × 6 m), and each time step is 12.5 picoseconds. The calculation runs on the GPU.</p>
         <p>The electrical properties (permittivity and conductivity) of the <b>materials</b> (gypsum board, wood, glass, brick and concrete) come from the tables in ITU-R Recommendation P.2040 of the International Telecommunication Union. The “−X dB per wall” numbers on the tools are calculated with the formula for waves passing through a slab from the same recommendation. A coarse grid cannot show the waves inside a slab well and makes the loss far too large (−59 dB for concrete at 5 GHz), so for each material we re-tuned the values used in the calculation so that one wall loses the same amount as this formula. <b>Metal</b> is treated as letting no radio waves through.</p>
@@ -196,11 +197,12 @@
       </details>
       <details class="sense-only">
         <summary>Can WiFi tell when someone moves?</summary>
+        <p>This room is 6 m × 3.75 m on a grid of 800 × 500 cells (0.75 cm each), solved on the GPU with the same wave equation as the other floor plans.</p>
         <p>Every time a WiFi signal arrives, the receiver measures how much of each frequency got through (CSI, channel state information). It needs this to correct for the frequencies that arrive weakly. In this room, the bars below show the strength of 52 slices of a 20 MHz channel (the same layout as IEEE 802.11a/g).</p>
-        <p>A human body absorbs and reflects radio waves, so when someone moves, the shape of the 52 bars changes. <b>When the shape wobbles (its variance) more than 3 times as much as in the empty room, the app says “movement”.</b> This is an old way of spotting people from wobbles in signal strength (Youssef et al. 2007), extended to the 52 bars. The wobble is taken over the last 20 measurements. The noise differs from slice to slice, but a person changes neighbouring frequencies alike, so the 52 bars are averaged in two halves first (real devices do the same with filters and similar tricks).</p>
-        <p><b>What is simplified</b>: the simulation is 2-D, so the person is a column from floor to ceiling, and there are no floor or ceiling reflections. That makes the person’s effect larger than in real life. Sensing uses 2.4 GHz only (this grid is too coarse for 5 GHz). The bars show strength (amplitude) only; in real devices the phase shifts at random between measurements and cannot be used as it is.</p>
-        <p><b>The receiver noise is an estimate</b>: each measurement gets a small jump in overall strength (from the automatic gain control) and about 5% wobble on each of the 52 bars (based on WiFi-card measurements in a still room, where 90% of the wobbles were below 10% of the average).</p>
-        <p><b>Time</b>: the waves (one measurement) are shown billions of times slower than real life. The person moves 1.5 cm per measurement. Real devices measure tens to about 100 times a second, so the person’s walk is slowed down a lot too (see the number below the bars).</p>
+        <p>A human body absorbs and reflects radio waves, so when someone moves, the shape of the 52 bars changes. <b>When the shape wobbles (its variance) more than 3 times as much as in the empty room, the app says “movement”.</b> This is an old way of spotting people from wobbles in signal strength (Youssef et al. 2007), extended to the 52 bars. The wobble is taken over the last 20 measurements. To smooth out the noise, what is actually compared is <b>the ratio between the strength of the lower half and the upper half of the frequencies</b>, and how much it wobbles (research also uses filters and similar tricks to smooth noise). So a change that keeps this ratio the same is missed.</p>
+        <p><b>What is simplified</b>: the simulation is 2-D, so the person is a column from floor to ceiling, and there are no floor or ceiling reflections. That tends to make the person’s effect larger, while the body’s permittivity, set lower than real, makes reflections smaller. Together, the size is not the same as in real life. Sensing uses 2.4 GHz only (this grid is too coarse for 5 GHz). The bars show strength (amplitude) only; in real devices the phase shifts at random between measurements and cannot be used as it is.</p>
+        <p><b>The receiver noise is an estimate</b>: each measurement gets a small jump in overall strength (from the automatic gain control) and about 5% wobble on each of the 52 bars (the wobble of the 52 bars is based on WiFi-card measurements in a still room, where 90% of the wobbles were below 10% of the average; the 0.5 dB jump is an estimate with no measured number behind it). <b>The noise is assumed to differ from one frequency to the next.</b> Real noise is often similar on neighbouring frequencies, and furniture and doors move too, so real devices sometimes say “movement” when nobody is moving.</p>
+        <p><b>Time</b>: the waves sent for one measurement (about 100 nanoseconds’ worth) are shown over a little more than 0.1 s, about a million times slower. Because the calculation takes time, the person can only move 1.5 cm per measurement, so they walk at about 1/N of a normal walking speed (about 1 m per second; see the number below the bars).</p><p><b>The pulse</b>: real WiFi measures with a short signal of a fixed shape. This simulation sends a short, wide pulse instead, to get all 52 slices in one go.</p>
       </details>
       <details>
         <summary>Main sources</summary>

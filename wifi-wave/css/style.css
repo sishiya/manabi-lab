@@ -144,7 +144,8 @@ body.sense-wf #csiCv{height:140px}
 @media (max-width:860px) and (orientation:portrait){
   body.sense #frame{width:min(100%,calc((100svh - 330px)*1.6))}
   #csiCv{height:70px} body.sense-wf #csiCv{height:118px}
-  #senseCap{font-size:12.5px;min-height:0}
+  #senseCap{font-size:13px;min-height:0}
+  #senseLower{display:flex;flex-direction:column;gap:8px}
   .tour-next{right:6px;bottom:6px;padding:5px 10px}
 }
 @media (orientation:landscape) and (max-height:560px){
