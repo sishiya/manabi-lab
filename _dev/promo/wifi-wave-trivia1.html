@@ -11,10 +11,14 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく wifi-wave-1（型A ぜんぶ逆）「電子レンジは“水の周波数”じゃない」。台本は trivia/wifi-wave.md。?short で録る
 // C. Baird（West Texas A&M, 2014）: 水の共振ではない・周波数は規制で割り当て。H. Föll（Kiel 大）: 水の損失の山は およそ 5〜100GHz、
+// 絵は図鑑の版画（PL.*）。電子レンジ・ルーター・食べものの断面を版画の道具で。
 // 2.45GHz はそれより下で中まで入る。吸収の山と断面の温まり方は模式図（計算ではない）。健康の話はしない。WiFi ch6 = 2437MHz
 const DUR = 30;
 const subs = [
@@ -30,96 +34,143 @@ const cues = [
   { t: 8.0, type: 'whoosh' }, { t: 9.0, type: 'pop' }, { t: 11.0, type: 'pop' }, { t: 15.0, type: 'whoosh' }, { t: 16.2, type: 'ding' },
   { t: 22.0, type: 'whoosh' }, { t: 23.5, type: 'rise' }, { t: 28.0, type: 'ding' },
 ];
-// 周波数の軸（対数、1〜1000 GHz）
+/// 周波数の軸（対数、1〜1000 GHz）
 const AX0 = 110, AX1 = 860, fx = f => AX0 + (Math.log10(f) / 3) * (AX1 - AX0);
 const absorb = f => Math.exp(-((Math.log10(f) - 1.35) ** 2) / 0.35);   // 模式の山（形はたとえ）
 
-function cross(g, cx, cy, rx, ry, k) {
-  g.save(); g.strokeStyle = TK.C.red; g.lineWidth = 20; g.lineCap = 'round'; g.globalAlpha *= k;
-  g.beginPath(); g.moveTo(cx - rx, cy - ry); g.lineTo(cx + rx, cy + ry); g.moveTo(cx + rx, cy - ry); g.lineTo(cx - rx, cy + ry); g.stroke(); g.restore();
-}
-function axis(g, y, h, k) {
-  g.save();
-  g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 4; g.beginPath(); g.moveTo(AX0, y); g.lineTo(AX1, y); g.stroke();
-  for (const [f, l] of [[1, '1'], [10, '10'], [100, '100'], [1000, '1000']]) { g.beginPath(); g.moveTo(fx(f), y); g.lineTo(fx(f), y + 16); g.stroke(); TK.text(g, l, fx(f), y + 48, 38, { color: TK.C.sub, bold: false }); }
-  TK.text(g, '周波数（GHz）', AX1, y + 100, 38, { align: 'right', color: TK.C.sub, bold: false });
-  // 山（5〜100GHz をうすく）
-  g.fillStyle = 'rgba(95,212,255,0.12)'; g.fillRect(fx(5), y - h, fx(100) - fx(5), h);
-  g.strokeStyle = TK.C.acc2; g.lineWidth = 7; g.beginPath();
-  const n = Math.floor(200 * k);
-  for (let i = 0; i <= n; i++) { const f = Math.pow(10, 3 * i / 200), x = fx(f), yy = y - h * 0.9 * absorb(f); i ? g.lineTo(x, yy) : g.moveTo(x, yy); }
-  g.stroke();
+// ---- 図鑑の版画（PL.*）の道具で描く ----
+// 朱の × （字の横に。字には重ねない）
+function cross(g, cx, cy, r, k) {
+  if (k <= 0) return;
+  g.save(); g.globalAlpha *= clamp(k, 0, 1);
+  PL.ink(g, gg => { gg.moveTo(cx - r, cy - r); gg.lineTo(cx + r, cy + r); gg.moveTo(cx + r, cy - r); gg.lineTo(cx - r, cy + r); }, 20, PL.RED);
   g.restore();
 }
-function food(g, cx, cy, r, inner) {   // 断面: 外側だけ熱い（inner=0）か、中まで（inner=1）
-  g.save();
-  const gr = g.createRadialGradient(cx, cy, 0, cx, cy, r);
-  if (inner) { gr.addColorStop(0, 'rgba(255,120,80,0.85)'); gr.addColorStop(1, 'rgba(255,90,70,0.95)'); }
-  else { gr.addColorStop(0, 'rgba(95,168,255,0.7)'); gr.addColorStop(0.78, 'rgba(95,168,255,0.7)'); gr.addColorStop(0.9, 'rgba(255,90,70,0.95)'); gr.addColorStop(1, 'rgba(255,60,40,1)'); }
-  g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
-  g.strokeStyle = '#fff'; g.lineWidth = 4; g.stroke(); g.restore();
+// 電子レンジ（ななめ前から。扉の窓の網目・つまみ2つ・表示窓・足）。x, y は前の面の左上、w は幅
+function oven(g, x, y, w) {
+  const h = w * 0.58, d = w * 0.22, front = PL.rect(x, y, w, h);
+  const top = PL.poly([[x, y], [x + d, y - d * 0.55], [x + w + d, y - d * 0.55], [x + w, y]]);
+  const side = PL.poly([[x + w, y], [x + w + d, y - d * 0.55], [x + w + d, y + h - d * 0.55], [x + w, y + h]]);
+  PL.tint(g, top, PL.T.sand, 0.5); PL.ink(g, top, 4);
+  PL.tint(g, side, PL.T.gray, 0.7); PL.hatch(g, side, { angle: 1.3, gap: 8, w: 1.8, cx: x + w, cy: y }); PL.ink(g, side, 4);
+  PL.tint(g, front, PL.T.sand, 0.4); PL.ink(g, front, 5);
+  const dw = w * 0.68, win = PL.rect(x + w * 0.07, y + h * 0.16, dw - w * 0.1, h * 0.66);
+  PL.ink(g, PL.rect(x + w * 0.03, y + h * 0.08, dw, h * 0.84), 3.5);   // 扉
+  PL.tint(g, win, PL.T.gray, 0.75); PL.hatch(g, win, { angle: 0.7, gap: 10, w: 1.4, cx: x, cy: y });
+  PL.ink(g, gg => { for (let i = 0; i < 9; i++) for (let j = 0; j < 5; j++) PL.circle(x + w * 0.1 + i * (dw - w * 0.16) / 8, y + h * 0.24 + j * h * 0.12, 1.8)(gg); }, 1.6);   // 網目（金属の板の小さな穴）
+  PL.ink(g, win, 3.5);
+  PL.ink(g, gg => { gg.moveTo(x + dw - w * 0.01, y + h * 0.3); gg.lineTo(x + dw - w * 0.01, y + h * 0.7); }, 6);   // 取っ手
+  const px = x + dw + w * 0.06, pw = w - dw - w * 0.1;
+  const disp = PL.rect(px, y + h * 0.12, pw, h * 0.14); PL.tint(g, disp, PL.T.sea, 0.6); PL.ink(g, disp, 3);
+  [0.48, 0.74].forEach(k => { const c = PL.circle(px + pw / 2, y + h * k, pw * 0.3); PL.tint(g, c, PL.T.gray, 0.7); PL.hatch(g, c, { angle: 0.6, gap: 5, w: 1.2, not: PL.circle(px + pw / 2 - 4, y + h * k - 4, pw * 0.3) }); PL.ink(g, c, 3); PL.ink(g, gg => { gg.moveTo(px + pw / 2, y + h * k); gg.lineTo(px + pw / 2, y + h * k - pw * 0.24); }, 3); });
+  PL.ink(g, gg => { [0.08, 0.92].forEach(k => { gg.moveTo(x + w * k - 12, y + h + 10); gg.lineTo(x + w * k + 12, y + h + 10); }); }, 7);   // 足
 }
+// ルーター（箱・アンテナ2本・ランプ）。x, y は箱の下のまん中
 function router(g, x, y, s) {
-  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = '#e8f0ff'; g.lineWidth = 6;
-  g.beginPath(); g.roundRect(-70, -20, 140, 50, 12); g.moveTo(-40, -20); g.lineTo(-55, -80); g.moveTo(40, -20); g.lineTo(55, -80); g.stroke();
-  g.fillStyle = TK.C.green; g.beginPath(); g.arc(-30, 5, 6, 0, Math.PI * 2); g.arc(-10, 5, 6, 0, Math.PI * 2); g.fill(); g.restore();
+  const w = 150 * s, h = 34 * s, d = 30 * s;
+  const front = PL.rect(x - w / 2, y - h, w, h), top = PL.poly([[x - w / 2, y - h], [x - w / 2 + d, y - h - d * 0.5], [x + w / 2 + d, y - h - d * 0.5], [x + w / 2, y - h]]);
+  const side = PL.poly([[x + w / 2, y - h], [x + w / 2 + d, y - h - d * 0.5], [x + w / 2 + d, y - d * 0.5], [x + w / 2, y]]);
+  [[-0.32, -0.12], [0.36, 0.1]].forEach(([k, a]) => {   // アンテナ（細長い棒）
+    const bx = x + w * k + d * 0.5, by = y - h - d * 0.25, L = 120 * s, ex = bx + Math.sin(a) * L, ey = by - Math.cos(a) * L, ww = 7 * s;
+    const ant = PL.poly([[bx - ww, by], [ex - ww * 0.8, ey], [ex + ww * 0.8, ey], [bx + ww, by]]);
+    PL.tint(g, ant, PL.T.gray, 0.8); PL.ink(g, ant, 3.5);
+  });
+  PL.tint(g, top, PL.T.sand, 0.55); PL.ink(g, top, 4);
+  PL.tint(g, side, PL.T.gray, 0.8); PL.hatch(g, side, { angle: 1.3, gap: 6, w: 1.5, cx: x, cy: y }); PL.ink(g, side, 4);
+  PL.tint(g, front, PL.T.sand, 0.45); PL.ink(g, front, 4.5);
+  [0, 1, 2, 3].forEach(i => { const c = PL.circle(x - w * 0.36 + i * w * 0.1, y - h / 2, 4.5 * s); PL.tint(g, c, i < 3 ? PL.GREEN : PL.T.gold, 0.95); PL.ink(g, c, 1.6); });
+}
+function axis(g, y, h, k) {
+  // 山（5〜100GHz の帯をうすく）
+  const band = PL.rect(fx(5), y - h, fx(100) - fx(5), h);
+  PL.tint(g, band, PL.T.sky, 0.35); PL.hatch(g, band, { angle: -0.9, gap: 22, w: 1.2, color: 'rgba(35,28,21,0.35)', cx: fx(5), cy: y });
+  // 模式の山（下を手彩色）
+  const n = Math.floor(200 * k);
+  if (n > 1) {
+    const pts = []; for (let i = 0; i <= n; i++) { const f = Math.pow(10, 3 * i / 200); pts.push([fx(f), y - h * 0.9 * absorb(f)]); }
+    const under = gg => { gg.moveTo(pts[0][0], y); pts.forEach(p => gg.lineTo(...p)); gg.lineTo(pts[pts.length - 1][0], y); gg.closePath(); };
+    PL.tint(g, under, PL.T.sea, 0.55); PL.hatch(g, under, { angle: 0.8, gap: 10, w: 1.5, cx: AX0, cy: y });
+    PL.ink(g, gg => pts.forEach((p, i) => i ? gg.lineTo(...p) : gg.moveTo(...p)), 6);
+  }
+  PL.ink(g, gg => { gg.moveTo(AX0, y); gg.lineTo(AX1 + 30, y); gg.moveTo(AX0, y); gg.lineTo(AX0, y - h - 20); for (let e = 0; e <= 3; e++) for (let m = 1; m < 10; m++) { const f = Math.pow(10, e) * m; if (f > 1000) break; gg.moveTo(fx(f), y); gg.lineTo(fx(f), y + (m === 1 ? 18 : 9)); } }, 3.5);
+  for (const [f, l] of [[1, '1'], [10, '10'], [100, '100'], [1000, '1000']]) PL.label(g, l, fx(f), y + 48, 38, { color: '#4a3f33', bold: false });
+  PL.label(g, '周波数（GHz）', AX1 + 30, y + 100, 38, { align: 'right', color: '#4a3f33', bold: false });
+}
+// 食べものの断面（切ったじゃがいものような形）。inner=0: 外側だけ熱い／1: 中まで温まる。上から電波が入る（模式）
+function food(g, cx, cy, r, inner, t) {
+  const blob = gg => { for (let i = 0; i <= 48; i++) { const a = i / 48 * Math.PI * 2, rr = r * (1 + 0.05 * Math.sin(a * 3 + 1) + 0.03 * Math.sin(a * 5)); gg[i ? 'lineTo' : 'moveTo'](cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.86); } gg.closePath(); };
+  const inS = k => gg => { for (let i = 0; i <= 48; i++) { const a = i / 48 * Math.PI * 2, rr = r * k * (1 + 0.05 * Math.sin(a * 3 + 1) + 0.03 * Math.sin(a * 5)); gg[i ? 'lineTo' : 'moveTo'](cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.86); } gg.closePath(); };
+  if (inner) { PL.tint(g, blob, PL.T.rust, 0.75); PL.tint(g, inS(0.6), PL.T.rust, 0.35); PL.hatch(g, blob, { angle: 0.7, gap: 9, w: 1.6, not: inS(0.35), cx, cy }); }
+  else { PL.tint(g, blob, PL.T.sky, 0.8); const ring = gg => { blob(gg); inS(0.8)(gg); }; g.save(); g.beginPath(); ring(g); g.clip('evenodd'); PL.tint(g, blob, PL.RED, 0.75); PL.hatch(g, blob, { angle: 0.7, gap: 7, w: 1.8, cx, cy }); g.restore(); PL.ink(g, inS(0.8), 2); }
+  PL.ink(g, blob, 5);
+  // 上から入る電波（波の線）。高い周波数はすぐ消える、2.45GHz は中まで
+  const depth = inner ? r * 1.5 : r * 0.28, lam = inner ? 46 : 16;
+  PL.ink(g, gg => { [-0.45, 0, 0.45].forEach(dx => { const x0 = cx + dx * r; for (let i = 0; i <= 60; i++) { const yy = cy - r * 1.4 + i / 60 * (r * 0.55 + depth), amp = 10 * Math.exp(-Math.max(0, yy - (cy - r * 0.86)) / (depth * 0.5)), x = x0 + Math.sin(yy / lam * Math.PI * 2 - t * 8) * amp; gg[i ? 'lineTo' : 'moveTo'](x, yy); } }); }, 3, '#2f5f7a');
 }
 
 function draw(g, t) {
   // 0〜2.5: フック
   if (t < 2.5) {
-    g.save(); g.globalAlpha = TK.pop(t, 0.1, 0.4);
-    TK.card(g, 110, 300, 740, 220); TK.text(g, '電子レンジ ＝ 水の共振', PW / 2 - 60, 410, 74); g.restore();
-    cross(g, PW / 2 - 60, 410, 320, 90, TK.pop(t, 1.0, 0.3));
-    TK.text(g, '2.45GHz', PW / 2 - 60, 600, 56, { color: TK.C.sub });
-    TK.hook(g, t, 1.1, 2.5, '水の周波数…[じゃない]', { y: 820, size: 96 });
+    g.save(); g.globalAlpha *= clamp(TK.pop(t, 0.1, 0.4), 0, 1);
+    TK.card(g, 70, 220, 760, 200); TK.text(g, '電子レンジ ＝ 水の共振', 450, 320, 74, { maxw: 700 });
+    g.restore();
+    cross(g, 945, 320, 70, TK.pop(t, 1.0, 0.3));
+    g.save(); g.globalAlpha *= fade(t, -1, 2.5, 0.3); oven(g, 150, 520, 520);
+    PL.leader(g, 640, 580, 805, 580); PL.label(g, '2.45GHz', 820, 580, 56, { align: 'left', color: '#4a3f33' }); g.restore();
+    TK.hook(g, t, 1.1, 2.5, '水の周波数…[じゃない]', { y: 960, size: 96 });
   }
   // 2.5〜8: 吸収の山（模式図）
   if (t >= 2.5 && t < 8.0) {
-    TK.text(g, '水が電波から熱をもらう度合い', PW / 2 - 60, 230, 50, { color: TK.C.sub });
+    PL.label(g, '水が電波から熱をもらう度合い', 110, 230, 50, { align: 'left', color: '#4a3f33' });
     axis(g, 760, 420, clamp((t - 3.4) / 1.6, 0, 1));
-    g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.setLineDash([14, 10]); g.beginPath(); g.moveTo(fx(2.45), 330); g.lineTo(fx(2.45), 760); g.stroke(); g.restore();
-    TK.text(g, 'レンジ 2.45', fx(2.45) + 14, 310, 40, { align: 'left', color: TK.C.acc });
-    if (t > 5.6) { g.save(); g.globalAlpha = TK.pop(t, 5.6, 0.4); TK.text(g, 'いちばんの山は、もっと右', fx(20), 980, 54, { color: TK.C.acc2 }); g.restore(); }
+    g.save(); g.setLineDash([14, 10]); PL.ink(g, gg => { gg.moveTo(fx(2.45), 330); gg.lineTo(fx(2.45), 760); }, 5, PL.RED); g.restore();
+    PL.label(g, 'レンジ 2.45', fx(2.45) + 14, 310, 40, { align: 'left', color: PL.RED });
+    if (t > 5.6) { g.save(); g.globalAlpha *= clamp(TK.pop(t, 5.6, 0.4), 0, 1); PL.label(g, 'いちばんの山は、もっと右 →', fx(20), 980, 54, { color: '#2f5f7a' }); g.restore(); }
     TK.note(g, t, 3, 8, '模式図。山の位置は教科書によって幅あり（数GHz〜100GHz のあたり）', { size: 30 });
   }
   // 8〜15: 断面
   if (t >= 8.0 && t < 15.0) {
     const k1 = TK.pop(t, 9.0, 0.4), k2 = TK.pop(t, 11.0, 0.4);
-    g.save(); g.globalAlpha = clamp(k1, 0, 1); food(g, 260, 520, 170 * Math.min(1, k1), 0); TK.text(g, 'もし山の上なら', 260, 780, 46); TK.text(g, '表面だけ熱い', 260, 850, 42, { color: TK.C.red }); g.restore();
-    g.save(); g.globalAlpha = clamp(k2, 0, 1); food(g, 700, 520, 170 * Math.min(1, k2), 1); TK.text(g, '2.45GHz', 700, 780, 46, { color: TK.C.acc }); TK.text(g, '中まで温まる', 700, 850, 42, { color: TK.C.sub }); g.restore();
+    g.save(); g.globalAlpha *= clamp(k1, 0, 1); if (k1 > 0) food(g, 260, 560, 160 * Math.min(1, k1), 0, t); PL.label(g, 'もし山の上なら', 260, 820, 46); PL.label(g, '表面だけ熱い', 260, 890, 42, { color: PL.RED }); g.restore();
+    g.save(); g.globalAlpha *= clamp(k2, 0, 1); if (k2 > 0) food(g, 760, 560, 160 * Math.min(1, k2), 1, t); PL.label(g, '2.45GHz', 760, 820, 46, { color: PL.RED }); PL.label(g, '中まで温まる', 760, 890, 42, { color: '#4a3f33' }); g.restore();
+    if (t > 9.4) { g.save(); g.globalAlpha *= fade(t, 9.4, 15, 0.3); PL.label(g, '電波', 120, 290, 40, { align: 'left', color: '#2f5f7a', bold: false }); PL.leader(g, 188, 330, 160, 300, '#2f5f7a'); g.restore(); }
     TK.note(g, t, 8.5, 15, '模式図（計算ではない）', { size: 32 });
   }
   // 15〜22: 電波の決まりの帯
   if (t >= 15.0 && t < 22.0) {
     const x0 = 110, x1 = 850, f0 = 2.3, f1 = 2.6, X = f => x0 + (f - f0) / (f1 - f0) * (x1 - x0), y = 820;
-    g.save(); g.fillStyle = 'rgba(255,207,74,0.25)'; g.fillRect(X(2.4), y - 260, X(2.5) - X(2.4), 260);
-    g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 4; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke();
-    for (const f of [2.3, 2.4, 2.5, 2.6]) { g.beginPath(); g.moveTo(X(f), y); g.lineTo(X(f), y + 16); g.stroke(); TK.text(g, f.toFixed(1), X(f), y + 50, 38, { color: TK.C.sub, bold: false }); }
-    g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.beginPath(); g.moveTo(X(2.45), y - 300); g.lineTo(X(2.45), y); g.stroke();
-    g.restore();
-    TK.text(g, '2.45', X(2.45), y - 330, 48, { color: TK.C.acc });
-    TK.text(g, 'GHz', x1, y + 100, 38, { align: 'right', color: TK.C.sub, bold: false });
-    g.save(); g.globalAlpha = TK.pop(t, 16.2, 0.4);
-    TK.text(g, '電子レンジなどに使ってよい帯', PW / 2 - 60, 230, 54);
-    TK.text(g, '2.4〜2.5GHz（電波の決まり）', PW / 2 - 60, 300, 44, { color: TK.C.acc });
+    const band = PL.rect(X(2.4), y - 260, X(2.5) - X(2.4), 260);
+    PL.tint(g, band, PL.T.gold, 0.55); PL.hatch(g, band, { angle: 0.9, gap: 12, w: 1.6, cx: X(2.4), cy: y });
+    PL.ink(g, band, 3);
+    PL.ink(g, gg => { gg.moveTo(x0, y); gg.lineTo(x1, y); for (let f = 2.3; f <= 2.6001; f += 0.01) { const big = Math.abs(f * 10 - Math.round(f * 10)) < 1e-6; gg.moveTo(X(f), y); gg.lineTo(X(f), y + (big ? 18 : 8)); } }, 3.5);
+    for (const f of [2.3, 2.4, 2.5, 2.6]) PL.label(g, f.toFixed(1), X(f), y + 50, 38, { color: '#4a3f33', bold: false });
+    PL.ink(g, gg => { gg.moveTo(X(2.45), y - 300); gg.lineTo(X(2.45), y); }, 6, PL.RED);
+    PL.label(g, '2.45', X(2.45), y - 330, 48, { color: PL.RED });
+    PL.label(g, 'GHz', x1, y + 100, 38, { align: 'right', color: '#4a3f33', bold: false });
+    g.save(); g.globalAlpha *= clamp(TK.pop(t, 16.2, 0.4), 0, 1);
+    PL.label(g, '電子レンジなどに使ってよい帯', 110, 230, 54, { align: 'left' });
+    PL.label(g, '2.4〜2.5GHz（電波の決まり）', 110, 300, 44, { align: 'left', color: PL.RED });
     g.restore();
   }
-  // 22〜30: WiFi も同じ帯
+  // 22〜30: WiFi も同じ帯（となりにレンジ）
   if (t >= 22.0) {
-    const cx = PW / 2 - 60, cy = 560;
+    const cx = 760, cy = 700;
+    g.save(); g.beginPath(); g.rect(0, 350, PW, 470); g.clip();   // 電波の輪は字のない所だけ
     for (let i = 0; i < 6; i++) {
       const r = ((t - 22) * 160 + i * 90) % 540;
-      g.save(); g.strokeStyle = TK.C.acc2; g.globalAlpha = Math.max(0, 1 - r / 540) * 0.8; g.lineWidth = 5; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke(); g.restore();
+      g.save(); g.globalAlpha *= Math.max(0, 1 - r / 540) * 0.85; PL.ink(g, gg => { gg.moveTo(cx + r, cy - 60); gg.arc(cx, cy - 60, r, 0, Math.PI * 2); }, 3, '#2f5f7a'); g.restore();
     }
-    router(g, cx, cy, 1.6);
-    g.save(); g.globalAlpha = TK.pop(t, 23.5, 0.4);
-    TK.card(g, 140, 200, 680, 130, { r: 30 });
-    TK.text(g, 'WiFi も [2.4GHz 帯]', cx, 265, 66);
     g.restore();
-    if (t >= 28.0) TK.hook(g, t, 28.0, 30.0, 'レンジと WiFi、\n[おとなりさん]', { y: 930, size: 92 });
-    else TK.text(g, 'チャンネル6 ＝ 2.437GHz', cx, 900, 44, { color: TK.C.sub, bold: false });
-    TK.note(g, t, 26.5, 30, '出どころ: C. Baird（West Texas A&M, 2014）・H. Föll（Kiel 大）\nIEEE 802.11（チャンネル6）', { size: 30 });
+    oven(g, 70, 600, 360);
+    router(g, cx, cy, 1.5);
+    PL.ink(g, gg => { gg.moveTo(40, 812); gg.lineTo(1040, 812); }, 4);   // 台
+    g.save(); g.globalAlpha *= clamp(TK.pop(t, 23.5, 0.4), 0, 1);
+    TK.card(g, 140, 180, 800, 130);
+    TK.text(g, 'WiFi も [2.4GHz 帯]', PW / 2, 245, 66);
+    g.restore();
+    if (t >= 28.0) TK.hook(g, t, 28.0, 30.0, 'レンジと WiFi、\n[おとなりさん]', { y: 1000, size: 92 });
+    else PL.label(g, 'チャンネル6 ＝ 2.437GHz', cx, 900, 44, { color: '#4a3f33', bold: false });
+    TK.note(g, t, 26.5, 30, '出どころ: C. Baird（West Texas A&M, 2014）・H. Föll（Kiel 大）\nIEEE 802.11（チャンネル6）', { size: 30, y: 1476 });
   }
 }
 

@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく big-bang-3（型H 当ててみて）「太陽系でいちばん年上の惑星は？」。台本は trivia/big-bang.md。?short で録る
@@ -32,98 +35,133 @@ const cues = [
   { t: 17.0, type: 'rise' }, { t: 22.0, type: 'tick' },
 ];
 
+// 絵は「図鑑の版画」（trivia-plate.js の PL.*）。惑星は PL.sphere（地球はルックの地球儀 LOOK.planet）、木星は帯と大赤斑、火星は暗い模様と極冠。
+// 時間の帯は墨の目盛り、名前は惑星の横に置いて、線と重ねない
 function earthP(g, x, y, r) {
-  const gr = g.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r); gr.addColorStop(0, '#6fb4ff'); gr.addColorStop(1, '#1d4fa3');
-  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
-  g.fillStyle = 'rgba(89,227,154,0.7)'; g.beginPath(); g.ellipse(x - r * 0.25, y - r * 0.1, r * 0.35, r * 0.25, 0.4, 0, Math.PI * 2); g.fill();
+  if (window.LOOK && LOOK.planet) return LOOK.planet(g, x, y, r, 1);
+  PL.sphere(g, x, y, r, PL.T.sea, { inside: gg => { const p = PL.ellipse(x - r * 0.25, y - r * 0.1, r * 0.35, r * 0.25, 0.4); PL.tint(gg, p, PL.T.land, 0.8); PL.ink(gg, p, 2); } });
 }
 function marsP(g, x, y, r) {
-  const gr = g.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r); gr.addColorStop(0, '#f09a6a'); gr.addColorStop(1, '#a8401a');
-  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  PL.sphere(g, x, y, r, PL.T.rust, { a: 0.75, contour: r > 40, inside: gg => {
+    const dark = g2 => { PL.ellipse(x - r * 0.15, y + r * 0.05, r * 0.35, r * 0.18, -0.3)(g2); PL.ellipse(x + r * 0.35, y - r * 0.25, r * 0.2, r * 0.1, 0.2)(g2); };
+    PL.tint(gg, dark, PL.T.brown, 0.8);
+    const cap = PL.ellipse(x, y - r * 0.86, r * 0.32, r * 0.12); PL.tint(gg, cap, '#f4ecd8', 1); PL.ink(gg, cap, 1.6);
+  } });
 }
 function jupiterP(g, x, y, r) {
-  g.save(); g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.clip();
-  g.fillStyle = '#e8c9a0'; g.fillRect(x - r, y - r, 2 * r, 2 * r);
-  ['#c98c5a', '#b07448', '#d9a877', '#c98c5a'].forEach((c, i) => { g.fillStyle = c; g.fillRect(x - r, y - r * 0.7 + i * r * 0.42, 2 * r, r * 0.16); });
-  const sh = g.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.2, x, y, r); sh.addColorStop(0, 'rgba(255,255,255,0.15)'); sh.addColorStop(1, 'rgba(0,0,0,0.35)');
-  g.fillStyle = sh; g.fillRect(x - r, y - r, 2 * r, 2 * r);
+  const c = PL.circle(x, y, r);
+  PL.tint(g, c, PL.T.sand, 0.7);
+  g.save(); g.beginPath(); c(g); g.clip();
+  [[-0.62, 0.14, PL.T.wood], [-0.32, 0.18, PL.T.rust], [0.08, 0.2, PL.T.wood], [0.42, 0.12, PL.T.brown]].forEach(([dy, h, col]) => {
+    const b = gg => { gg.moveTo(x - r, y + dy * r); for (let q = 0; q <= 20; q++) gg.lineTo(x - r + q * r / 10, y + dy * r + Math.sin(q * 1.3 + dy * 9) * r * 0.02); gg.lineTo(x + r, y + (dy + h) * r); gg.lineTo(x - r, y + (dy + h) * r); gg.closePath(); };
+    PL.tint(g, b, col, 0.75); PL.ink(g, gg => { gg.moveTo(x - r, y + dy * r); for (let q = 0; q <= 20; q++) gg.lineTo(x - r + q * r / 10, y + dy * r + Math.sin(q * 1.3 + dy * 9) * r * 0.02); }, Math.max(1, r / 70));
+  });
+  if (r > 30) { const s = PL.ellipse(x + r * 0.3, y + r * 0.3, r * 0.17, r * 0.09); PL.tint(g, s, PL.T.rust, 1); PL.ink(g, s, Math.max(1.2, r / 80)); }   // 大赤斑
   g.restore();
+  const lit = PL.circle(x - r * 0.35, y - r * 0.3, r);
+  PL.hatch(g, c, { angle: 0.55, gap: Math.max(7, r / 20), w: Math.max(1.4, r / 110), not: lit, cx: x, cy: y });
+  PL.ink(g, c, Math.max(3, r / 40));
 }
 // 時間の帯（x0〜x1 が 0〜span 年）
 function timeline(g, t, span, items, y, f, label) {
   const x0 = 110, x1 = 950;
-  g.save(); g.globalAlpha = f;
-  g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 6; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke();
-  TK.text(g, '0', x0, y + 50, 40, { color: TK.C.sub }); TK.text(g, label, x1, y + 50, 40, { color: TK.C.sub, align: 'right' });
-  TK.text(g, '（太陽系の誕生）', x0 + 40, y + 50, 34, { color: TK.C.dim, align: 'left', bold: false });
+  g.save(); g.globalAlpha *= f;
+  PL.ink(g, gg => { gg.moveTo(x0, y); gg.lineTo(x1, y); for (let q = 0; q <= 10; q++) { const x = lerp(x0, x1, q / 10); gg.moveTo(x, y); gg.lineTo(x, y + (q % 5 ? 12 : 24)); } }, 5);
+  PL.label(g, '0', x0, y + 56, 40, { color: TK.C.sub }); PL.label(g, label, x1, y + 56, 40, { color: TK.C.sub, align: 'right' });
+  PL.label(g, '（太陽系の誕生）', x0 + 40, y + 56, 34, { color: TK.C.sub, align: 'left', bold: false });
   for (const it of items) {
     if (t < it.at) continue;
-    const k = TK.pop(t, it.at, 0.35), x = lerp(x0, x1, it.v / span);
-    g.save(); g.globalAlpha = f * clamp(k, 0, 1);
-    g.strokeStyle = it.c; g.lineWidth = 5; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - it.h); g.stroke();
-    it.draw(g, x, y - it.h - 50);
-    TK.lines(g, it.s, x + (it.dx || 0), y - it.h - 50 + (it.dy || 0), 40, { align: it.align || 'center' });
+    const k = clamp((t - it.at) / 0.35, 0, 1), x = lerp(x0, x1, it.v / span);
+    g.save(); g.globalAlpha *= k;
+    PL.ink(g, gg => { gg.moveTo(x, y); gg.lineTo(x, y - it.h); }, 4, it.c);
+    PL.ink(g, PL.circle(x, y, 9), 4, it.c);
+    it.draw(g, x, y - it.h - it.r);
+    TK.lines(g, it.s, x + (it.dx || 0), y - it.h - it.r + (it.dy || 0), 40, { align: it.align || 'center' });
     g.restore();
   }
   g.restore();
 }
 const rocks = Array.from({ length: 90 }, (_, i) => { const a = Math.sin(i * 45.1) * 1e4, b = Math.sin(i * 17.9) * 1e4; return { th: (a - Math.floor(a)) * Math.PI * 2, r: 0.25 + (b - Math.floor(b)) * 0.75 }; });
+function sun(g, x, y, r, t) {
+  PL.ink(g, gg => { for (let i = 0; i < 20; i++) { const a = i / 20 * Math.PI * 2 + t * 0.1, r0 = r + 10, r1 = r + (i % 2 ? 26 : 42); gg.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0); gg.lineTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1); } }, 3);
+  PL.sphere(g, x, y, r, PL.T.gold, { a: 0.85, contour: false });
+}
+// 隕石（でこぼこの石と切り口。形は模式）
+function meteorite(g, x, y, s) {
+  const P = [[-170, -60], [-120, -120], [-60, -150], [40, -146], [120, -100], [180, -40], [170, 50], [120, 110], [10, 160], [-90, 140], [-150, 90]].map(([a, b]) => [x + a * s, y + b * s]);
+  const rock = PL.poly(P);
+  PL.tint(g, rock, PL.T.gray, 0.85); PL.tint(g, rock, PL.T.brown, 0.3);
+  const face = PL.poly([[x - 120 * s, y - 40 * s], [x + 30 * s, y - 100 * s], [x + 130 * s, y - 10 * s], [x + 40 * s, y + 100 * s], [x - 100 * s, y + 70 * s]]);
+  PL.tint(g, face, '#e8e0cc', 0.8); PL.ink(g, face, 3);
+  PL.hatch(g, rock, { angle: 0.7, gap: 9, w: 2, not: face });
+  PL.ink(g, rock, 6);
+}
 
 function draw(g, t) {
-  // 0〜1.6: フック（3つの惑星）
+  // 0〜1.8: フック（3つの惑星）
   if (t < 1.8) {
-    const f = fade(t, -1, 1.8, 0.3);
-    g.save(); g.globalAlpha = f;
-    earthP(g, 220, 700, 80); marsP(g, 470, 700, 55); jupiterP(g, 780, 700, 190);
+    g.save(); g.globalAlpha *= fade(t, -1, 1.8, 0.3);
+    earthP(g, 210, 720, 80); marsP(g, 450, 720, 55); jupiterP(g, 770, 720, 190);
     g.restore();
     TK.hook(g, t, 0.0, 1.8, 'いちばん[年上]は？', { y: 330, size: 116 });
   }
   TK.choices(g, t, 1.6, 6.6, ['地球', '火星', '木星'], { y: 520, h: 170, think: [3.0, 6.0], reveal: 6.0, answer: 2 });
-  if (t >= 1.6 && t < 6.6) { g.save(); g.globalAlpha = fade(t, 1.6, 6.6, 0.3); TK.text(g, 'いちばん先にできた惑星は？', PW / 2, 210, 62); g.restore(); }
+  if (t >= 1.6 && t < 6.6) {
+    const f = fade(t, 1.6, 6.6, 0.3), rk = clamp((t - 6.0) / 0.35, 0, 1);
+    g.save(); g.globalAlpha *= f;
+    PL.label(g, 'いちばん先にできた惑星は？', PW / 2, 210, 62);
+    [[605, 55, earthP], [815, 42, marsP], [1025, 66, jupiterP]].forEach(([y, r, fn], i) => { g.save(); g.globalAlpha *= clamp((t - 1.6 - i * 0.18) / 0.35, 0, 1) * (i === 2 ? 1 : 1 - 0.6 * rk); fn(g, 880, y, r); g.restore(); });
+    g.restore();
+  }
   // 6.6〜12: 100万年まで
   if (t >= 6.6 && t < 12.0) {
     const f = fade(t, 6.6, 12.0, 0.3);
-    g.save(); g.globalAlpha = f; TK.text(g, '答えは [木星]', PW / 2, 230, 84); g.restore();
-    timeline(g, t, 1e6, [{ v: 0.9e6, at: 8.0, h: 260, c: TK.C.acc, s: '木星の芯\n[地球20個分]', dx: -80, align: 'right', draw: (g, x, y) => jupiterP(g, x, y, 60) }], 950, f, '100万年');
+    g.save(); g.globalAlpha *= f; PL.label(g, '答えは [木星]', 90, 230, 84, { align: 'left' }); g.restore();
+    timeline(g, t, 1e6, [{ v: 0.9e6, at: 8.0, h: 250, r: 70, c: PL.RED, s: '木星の芯\n[地球20個分]', dx: -100, align: 'right', draw: (g, x, y) => jupiterP(g, x, y, 70) }], 950, f, '100万年');
   }
   // 12〜17: 4000万年まで
   if (t >= 12.0 && t < 17.0) {
     const f = fade(t, 12.0, 17.0, 0.3);
     timeline(g, t, 4e7, [
-      { v: 0.9e6, at: 12.0, h: 520, c: TK.C.acc, s: '木星の芯', dx: 70, align: 'left', draw: (g, x, y) => jupiterP(g, x, y, 50) },
-      { v: 2e6, at: 13.0, h: 300, c: TK.C.red, s: '火星（半分の大きさ）', dx: 50, align: 'left', draw: (g, x, y) => marsP(g, x, y, 30) },
-      { v: 3e7, at: 14.6, h: 160, c: TK.C.acc2, s: '地球\n[何千万年もあと]', dx: -10, dy: -110, draw: (g, x, y) => earthP(g, x, y, 40) },
+      { v: 0.9e6, at: 12.0, h: 520, r: 50, c: PL.RED, s: '木星の芯', dx: 70, align: 'left', draw: (g, x, y) => jupiterP(g, x, y, 50) },
+      { v: 2e6, at: 13.0, h: 300, r: 32, c: '#7a4a30', s: '火星（半分の大きさ）', dx: 52, align: 'left', draw: (g, x, y) => marsP(g, x, y, 32) },
+      { v: 3e7, at: 14.6, h: 160, r: 44, c: '#2f5f7a', s: '地球\n[何千万年もあと]', dy: -118, draw: (g, x, y) => earthP(g, x, y, 44) },
     ], 950, f, '4000万年');
-    if (t > 15.5) { g.save(); g.globalAlpha = fade(t, 15.5, 17.0, 0.3); TK.text(g, '46億年を1年にすると: 木星の芯は元日の午前2時、地球は1月3日ごろ', PW / 2, 220, 34, { color: TK.C.sub, bold: false }); g.restore(); }
+    if (t > 15.5) { g.save(); g.globalAlpha *= fade(t, 15.5, 17.0, 0.3); PL.label(g, '46億年を1年にすると: 木星の芯は元日の午前2時、地球は1月3日ごろ', PW / 2, 220, 34, { color: TK.C.sub, bold: false }); g.restore(); }
   }
-  // 17〜22: 木星がかきまぜる
+  // 17〜22: 木星がかきまぜる（上から見た説明の絵）
   if (t >= 17.0 && t < 22.0) {
-    const f = fade(t, 17.0, 22.0, 0.3), cx = 540, cy = 640, RJ = 300, k = ease((t - 17.5) / 3.0);
-    g.save(); g.globalAlpha = f;
-    const sg = g.createRadialGradient(cx, cy, 0, cx, cy, 60); sg.addColorStop(0, '#fff6c8'); sg.addColorStop(0.6, '#ffc24a'); sg.addColorStop(1, 'rgba(255,140,40,0)');
-    g.fillStyle = sg; g.beginPath(); g.arc(cx, cy, 60, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = 'rgba(255,255,255,0.25)'; g.setLineDash([10, 12]); g.lineWidth = 3; g.beginPath(); g.arc(cx, cy, RJ, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
-    const ja = t * 0.5; jupiterP(g, cx + Math.cos(ja) * RJ, cy + Math.sin(ja) * RJ, 46);
-    for (const rk of rocks) {   // 木星の通り道の近くの岩が、内と外へ分かれていく（説明の絵）
-      let rr = 110 + rk.r * 330;
-      if (rr > 200 && rr < 400) rr = rr < RJ ? lerp(rr, 200, k) : lerp(rr, 400, k);
+    const cx = 540, cy = 690, RJ = 270, k = ease((t - 17.5) / 3.0);
+    g.save(); g.globalAlpha *= fade(t, 17.0, 22.0, 0.3);
+    sun(g, cx, cy, 50, t);
+    PL.dots(g, Array.from({ length: 121 }, (_, i) => [cx + Math.cos(i / 120 * Math.PI * 2) * RJ, cy + Math.sin(i / 120 * Math.PI * 2) * RJ]), { color: '#4a3f33', w: 4, dash: [3, 14] });
+    const ins = [], outs = [];
+    for (const rk of rocks) {   // 木星の通り道の近くの岩が、内と外へ分かれていく
+      let rr = 100 + rk.r * 300;
+      if (rr > 180 && rr < 360) rr = rr < RJ ? lerp(rr, 180, k) : lerp(rr, 360, k);
       const th = rk.th + t * 0.8 * Math.pow(200 / rr, 1.5);
-      g.fillStyle = rr < RJ ? '#c9b8a6' : '#9fc6ff'; g.beginPath(); g.arc(cx + Math.cos(th) * rr, cy + Math.sin(th) * rr, 6, 0, Math.PI * 2); g.fill();
+      (rr < RJ ? ins : outs).push({ x: cx + Math.cos(th) * rr, y: cy + Math.sin(th) * rr });
     }
-    TK.text(g, '木星が、[内と外]を分けた', PW / 2, 220, 70);
+    const dotsP = L => gg => L.forEach(d => PL.circle(d.x, d.y, 7)(gg));
+    PL.tint(g, dotsP(ins), PL.T.wood, 0.9); PL.ink(g, dotsP(ins), 2.2);
+    PL.tint(g, dotsP(outs), PL.T.sky, 0.9); PL.ink(g, dotsP(outs), 2.2);
+    const ja = t * 0.5; jupiterP(g, cx + Math.cos(ja) * RJ, cy + Math.sin(ja) * RJ, 44);
+    PL.label(g, '木星が、[内と外]を分けた', 90, 200, 66, { align: 'left' });
+    PL.tint(g, PL.circle(130, 1130, 9), PL.T.wood, 0.9); PL.ink(g, PL.circle(130, 1130, 9), 2.2); PL.label(g, '内がわの岩', 152, 1130, 38, { align: 'left', color: TK.C.sub });
+    PL.tint(g, PL.circle(560, 1130, 9), PL.T.sky, 0.9); PL.ink(g, PL.circle(560, 1130, 9), 2.2); PL.label(g, '外がわの岩', 582, 1130, 38, { align: 'left', color: TK.C.sub });
     g.restore();
     TK.note(g, t, 17.0, 22.0, '論文の「いちばんありそうな説明」。上から見た説明の絵', { size: 30 });
   }
   // 22〜24: 隕石の時計
   if (t >= 22.0) {
-    g.save(); g.globalAlpha = fade(t, 22.0, 26, 0.3);
-    g.fillStyle = '#6b6560'; g.beginPath();
-    [[-170, -60], [-90, -150], [60, -140], [180, -40], [150, 100], [10, 160], [-140, 110]].forEach(([dx, dy], i) => i ? g.lineTo(540 + dx, 620 + dy) : g.moveTo(540 + dx, 620 + dy)); g.closePath(); g.fill();
-    g.strokeStyle = '#fff'; g.lineWidth = 8; g.beginPath(); g.arc(540, 620, 80, 0, Math.PI * 2); g.stroke();
-    const a = t * 4; g.beginPath(); g.moveTo(540, 620); g.lineTo(540 + Math.cos(a) * 60, 620 + Math.sin(a) * 60); g.moveTo(540, 620); g.lineTo(540, 570); g.stroke();
-    TK.text(g, '隕石の中の"[原子の時計]"', PW / 2, 260, 70);
+    g.save(); g.globalAlpha *= fade(t, 22.0, 26, 0.3);
+    meteorite(g, 420, 680, 1.5);
+    PL.watch(g, 860, 470, 90, ((t - 22) * 0.6) % 1);
+    PL.leader(g, 600, 600, 760, 540);
+    PL.label(g, '隕石の中の"[原子の時計]"', 90, 230, 66, { align: 'left' });
+    PL.label(g, '隕石（形は模式）', 420, 1000, 36, { color: TK.C.sub, bold: false });
     g.restore();
-    TK.note(g, t, 22.0, 24.0, '出どころ: Kruijer ほか (2017) PNAS 114, 6712・Dauphas & Pourmand (2011) Nature 473, 489\nKleine ほか (2002) Nature 418, 952', { size: 28 });
+    TK.note(g, t, 22.0, 24.0, '出どころ: Kruijer ほか (2017) PNAS 114, 6712・Dauphas & Pourmand (2011) Nature 473, 489\nKleine ほか (2002) Nature 418, 952', { size: 28, y: 1140 });
   }
   if (t >= 6.6 && t < 17.0) TK.note(g, t, 6.6, 17.0, '隕石の同位体からの推定（と考えられています）', { size: 30 });
 }

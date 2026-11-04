@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく weed-growth-2（型G ループ）「1879年に埋めたタネが、2021年に芽を出した」。台本は trivia/weed-growth.md。?short で録る
@@ -31,78 +34,95 @@ const cues = [
   { t: 8.0, type: 'rise' }, { t: 9.4, type: 'ding' }, { t: 13.0, type: 'pop' }, { t: 16.6, type: 'whoosh' },
 ];
 const GY = 560;   // 地面の高さ
-const SOIL = '#6b4a2c';
+const SB = 1180;  // 土の断面の下のはし
 // びんの位置（5×4。地面の下）
 const BOT = Array.from({ length: 20 }, (_, i) => [210 + (i % 5) * 165, GY + 105 + Math.floor(i / 5) * 92]);
-// 口を下にしたびん
-function bottle(g, x, y, s = 1, glow = 0, seeds = true) {
+const rnd = i => { const v = Math.sin(i * 12.9898 + 78.233) * 43758.5453; return v - Math.floor(v); };
+// 口を下にした古いガラスびん（肩・首・口の輪）。中に湿った砂とタネ。mark: 朱のわく（掘るびん・残りのびん）
+function bottle(g, x, y, s = 1, mark = 0, seeds = true) {
+  if (s <= 0.01) return;
   g.save(); g.translate(x, y); g.scale(s, s);
-  if (glow > 0) { g.shadowColor = TK.C.acc; g.shadowBlur = 40 * glow * RES; }
-  g.fillStyle = 'rgba(190,230,255,0.22)'; g.strokeStyle = glow > 0 ? TK.C.acc : '#cfe0ff'; g.lineWidth = 5;
-  g.beginPath(); g.roundRect(-34, -50, 68, 74, 12); g.moveTo(-14, 24); g.lineTo(-14, 46); g.lineTo(14, 46); g.lineTo(14, 24); g.fill(); g.stroke();
-  g.shadowBlur = 0;
-  g.fillStyle = '#d8c49a'; g.fillRect(-28, -20, 56, 40);   // 砂
-  if (seeds) { g.fillStyle = '#3b2a12'; for (let j = 0; j < 9; j++) { g.beginPath(); g.ellipse(-20 + (j % 3) * 20, -10 + Math.floor(j / 3) * 12, 4, 3, 0.5, 0, Math.PI * 2); g.fill(); } }
+  const glass = gg => { gg.moveTo(-32, -50); gg.lineTo(32, -50); gg.quadraticCurveTo(36, -50, 36, -44); gg.lineTo(36, 8); gg.quadraticCurveTo(36, 22, 14, 28); gg.lineTo(12, 40); gg.lineTo(16, 42); gg.lineTo(16, 50); gg.lineTo(-16, 50); gg.lineTo(-16, 42); gg.lineTo(-12, 40); gg.lineTo(-14, 28); gg.quadraticCurveTo(-36, 22, -36, 8); gg.lineTo(-36, -44); gg.quadraticCurveTo(-36, -50, -32, -50); gg.closePath(); };
+  const sand = gg => { gg.moveTo(-31, -20); gg.quadraticCurveTo(0, -26, 31, -20); gg.lineTo(31, 6); gg.quadraticCurveTo(31, 18, 12, 24); gg.lineTo(-12, 24); gg.quadraticCurveTo(-31, 18, -31, 6); gg.closePath(); };
+  PL.tint(g, glass, PL.T.sky, 0.6);
+  PL.tint(g, sand, PL.T.sand, 0.95); PL.hatch(g, sand, { angle: 0.7, gap: 6, w: 1, cx: 0, cy: 0 });
+  if (seeds) PL.ink(g, gg => { for (let j = 0; j < 10; j++) { const sx = -22 + (j % 4) * 14 + (j > 3 ? 6 : 0), sy = -12 + Math.floor(j / 4) * 11; PL.ellipse(sx, sy, 3.6, 2.4, 0.5 + j)(gg); } }, 2.4);
+  PL.hatch(g, glass, { angle: 1.45, gap: 6, w: 1.2, not: gg => gg.rect(-60, -60, 82, 120), cx: 0, cy: 0 });   // 右がわのかげ
+  PL.ink(g, gg => { gg.moveTo(-26, -42); gg.lineTo(-26, 4); }, 2.2);   // ガラスの映りこみ（細い線）
+  PL.ink(g, glass, 4.5, mark > 0 ? PL.RED : PL.INK);
+  PL.ink(g, gg => { gg.moveTo(-16, 42); gg.lineTo(16, 42); }, 2);
   g.restore();
 }
+// 地面の断面（土・小石・草）
 function ground(g) {
-  g.fillStyle = SOIL; g.fillRect(0, GY, PW, 1100 - GY);
-  g.fillStyle = 'rgba(0,0,0,0.18)'; for (let i = 0; i < 120; i++) { const x = (i * 97) % PW, y = GY + 20 + (i * 53) % 500; g.fillRect(x, y, 8, 5); }
-  g.fillStyle = '#59e39a'; g.fillRect(0, GY - 10, PW, 12);
-  // 下の端をぼかす（字幕の上で消える）
-  const gr = g.createLinearGradient(0, 960, 0, 1110); gr.addColorStop(0, 'rgba(11,20,48,0)'); gr.addColorStop(1, 'rgba(11,20,48,1)');
-  g.fillStyle = gr; g.fillRect(0, 960, PW, 150);
+  const soil = gg => { gg.moveTo(0, GY); gg.lineTo(PW, GY); for (let x = PW; x >= 0; x -= 8) gg.lineTo(x, SB + Math.sin(x / 29) * 5); gg.closePath(); };
+  PL.tint(g, soil, PL.T.brown, 0.6); PL.hatch(g, soil, { angle: 0.3, gap: 15, w: 1.5, cx: 540, cy: 800 });
+  PL.ink(g, gg => { for (let i = 0; i < 60; i++) { const x = rnd(i) * PW, y = GY + 30 + rnd(i + 99) * (SB - GY - 50); PL.ellipse(x, y, 5 + rnd(i * 3) * 6, 3 + rnd(i * 5) * 3, rnd(i * 7) * 3)(gg); } }, 2);   // 小石
+  PL.ink(g, gg => { gg.moveTo(0, GY); gg.lineTo(PW, GY); }, 5);
+  PL.ink(g, gg => { for (let x = 0; x <= PW; x += 8) x ? gg.lineTo(x, SB + Math.sin(x / 29) * 5) : gg.moveTo(x, SB + Math.sin(x / 29) * 5); }, 3);
+  // 草（地面の上に短い葉のふさ）
+  PL.ink(g, gg => { for (let x = 20; x < PW; x += 46) { const b = rnd(x) * 10; for (let j = -2; j <= 2; j++) { gg.moveTo(x + j * 3, GY); gg.quadraticCurveTo(x + j * 6, GY - 14 - b, x + j * 10, GY - 22 - b + Math.abs(j) * 6); } } }, 2.2, PL.GREEN);
 }
-function yearCard(g, y, s, acc) {
-  TK.card(g, 290, 150, 500, 150, { r: 40 });
-  TK.text(g, s, PW / 2, 228, 96, { color: acc ? TK.C.acc : '#fff' });
+function yearCard(g, s, acc) {
+  TK.card(g, 290, 150, 500, 150);
+  TK.text(g, s, PW / 2, 228, 96, { color: acc ? PL.RED : PL.INK, maxw: 440 });
 }
+// モウズイカ（Verbascum）の芽ばえ: 丸い子葉2枚と、毛の多いたまご形の本葉が地面にひろがる（ロゼットのはじめ）
 function sprout(g, x, y, k) {
-  g.save(); g.strokeStyle = TK.C.green; g.fillStyle = TK.C.green; g.lineWidth = 8; g.lineCap = 'round';
-  const h = 120 * k; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - h); g.stroke();
-  if (k > 0.4) { const l = (k - 0.4) / 0.6 * 50; g.beginPath(); g.ellipse(x - l * 0.7, y - h + 8, l * 0.8, l * 0.35, -0.5, 0, Math.PI * 2); g.ellipse(x + l * 0.7, y - h + 8, l * 0.8, l * 0.35, 0.5, 0, Math.PI * 2); g.fill(); }
-  g.restore();
+  if (k <= 0) return;
+  const leafP = (ox, oy, a, L, W) => gg => { const c = Math.cos(a), s = Math.sin(a), P = (u, v) => [ox + c * u - s * v, oy + s * u + c * v]; gg.moveTo(...P(0, 0)); gg.bezierCurveTo(...P(L * 0.3, -W), ...P(L * 0.9, -W * 0.8), ...P(L, 0)); gg.bezierCurveTo(...P(L * 0.9, W * 0.8), ...P(L * 0.3, W), ...P(0, 0)); gg.closePath(); };
+  const k1 = clamp(k / 0.4, 0, 1), k2 = clamp((k - 0.35) / 0.65, 0, 1), cy = y - 26 * k1;
+  PL.ink(g, gg => { gg.moveTo(x, y); gg.lineTo(x, cy); }, 4, PL.GREEN);
+  [-1, 1].forEach(d => { const p = leafP(x, cy, d < 0 ? Math.PI + 0.35 : -0.35, 26 * k1, 11 * k1); PL.tint(g, p, PL.T.leaf, 0.9); PL.ink(g, p, 2.5); });   // 子葉
+  if (k2 > 0) [-1, 1].forEach(d => {   // 本葉（毛が多い）
+    const a = d < 0 ? Math.PI + 0.12 : -0.12, L = 120 * k2, W = 44 * k2, oy = y - 8, p = leafP(x, oy, a, L, W);
+    PL.tint(g, p, PL.T.leaf, 0.85); PL.hatch(g, p, { angle: 0.4, gap: 6, w: 1.2, not: gg => gg.rect(x - 200, oy - 200, 400, 200), cx: x, cy: oy }); PL.ink(g, p, 3);
+    PL.ink(g, gg => { gg.moveTo(x, oy); gg.lineTo(x + Math.cos(a) * L * 0.9, oy + Math.sin(a) * L * 0.9); for (let i = 0; i < 14; i++) { const u = (i + 0.5) / 14, side = i % 2 ? 1 : -1, wv = W * 0.85 * Math.sin(Math.PI * Math.min(1, u * 1.05)) * side, qx = x + Math.cos(a) * L * u - Math.sin(a) * wv, qy = oy + Math.sin(a) * L * u + Math.cos(a) * wv; gg.moveTo(qx, qy); gg.lineTo(qx - Math.sin(a) * side * 6, qy + Math.cos(a) * side * 6); } }, 1.2);   // 主脈と、ふちの毛
+  });
 }
 
 function draw(g, t) {
   // 0〜4: びんを埋める
   if (t < 4.0) {
     ground(g);
-    const k = ease((t - 1.5) / 1.2), x = PW / 2, y = lerp(GY - 120, GY + 200, k);
+    const k = ease((t - 1.5) / 1.2), x = PW / 2, y = lerp(GY - 55, GY + 200, k);
     bottle(g, x, y, 1.8);
     if (t < 1.4) TK.hook(g, t, 0, 1.4, '[1879]年', { y: 250, size: 170 });
-    else { yearCard(g, 0, '1879年', false); TK.text(g, 'タネ＋湿った砂、口を下に', PW / 2, 360, 46, { color: TK.C.sub }); }
+    else {
+      yearCard(g, '1879年', false); TK.text(g, 'タネ＋湿った砂、口を下に', PW / 2, 360, 46, { color: TK.C.sub });
+      if (t > 2.8) { g.save(); g.globalAlpha *= fade(t, 2.8, 4, 0.3); PL.leader(g, x + 30, y - 20, 790, 440); PL.label(g, '23種 × 50粒', 800, 430, 42, { align: 'left', bold: false }); g.restore(); }
+    }
   }
   // 4〜8: 20本。1本ずつ掘る
   if (t >= 4.0 && t < 8.0) {
     ground(g);
     const dug = Math.floor(clamp((t - 4.6) / 0.22 + 1, 0, 15));
-    BOT.forEach(([x, y], i) => { if (i >= dug) bottle(g, x, y, 0.82 * TK.pop(t, 4.0 + i * 0.03, 0.3)); });
+    BOT.forEach(([x, y], i) => { if (i >= dug) bottle(g, x, y, 0.82 * clamp(TK.pop(t, 4.0 + i * 0.03, 0.3), 0, 1.1), i === dug ? 1 : 0); else PL.ink(g, PL.ellipse(x, y, 34, 40), 2, 'rgba(30,26,22,0.35)'); });   // 掘ったあとはうすい輪
     const yr = Math.round(lerp(1879, 2021, clamp((t - 4.6) / 3.4, 0, 1)));
-    yearCard(g, 0, yr + '年', false);
+    yearCard(g, yr + '年', false);
     TK.text(g, '残り ' + (20 - dug) + ' 本', PW / 2, 360, 52, { color: TK.C.sub });
   }
   // 8〜13: 2021年のびん（16本目）から芽
   if (t >= 8.0 && t < 13.0) {
     ground(g);
     BOT.forEach(([x, y], i) => { if (i >= 16) bottle(g, x, y, 0.82); });
-    const k = ease((t - 8.0) / 0.9), x = BOT[15][0], y = lerp(BOT[15][1], GY - 75, k);
-    bottle(g, lerp(x, PW / 2, k), y, lerp(0.82, 1.6, k), k);
+    const k = ease((t - 8.0) / 0.9), x = BOT[15][0], y = lerp(BOT[15][1], GY - 85, k);
+    bottle(g, lerp(x, 330, k), y, lerp(0.82, 1.6, k), 1);
     const sk = clamp((t - 9.2) / 1.5, 0, 1);
-    if (sk > 0) sprout(g, PW / 2 + 160, GY - 12, sk);
-    yearCard(g, 0, '2021年', true);
+    if (sk > 0) sprout(g, 760, GY - 4, sk);
+    yearCard(g, '2021年', true);
     TK.text(g, '[142年目]・16本目のびん', PW / 2, 360, 56);
-    if (t > 10.2) { g.save(); g.globalAlpha = fade(t, 10.2, 13, 0.3); TK.text(g, 'モウズイカのなかま（Verbascum）20粒が芽を出した', PW / 2, 1050, 38, { color: TK.C.sub, bold: false }); g.restore(); }
+    if (t > 10.2) { g.save(); g.globalAlpha = fade(t, 10.2, 13, 0.3); TK.card(g, 60, 1030, 960, 110); TK.text(g, 'モウズイカのなかま（Verbascum）20粒が芽を出した', PW / 2, 1085, 38, { color: TK.C.sub, bold: false, maxw: 900 }); g.restore(); }
   }
   // 13〜18: 残り4本。次は2040年 → 1879年へ戻る
   if (t >= 13.0) {
     ground(g);
-    const gl = 0.5 + 0.5 * Math.sin(t * 4);
-    BOT.forEach(([x, y], i) => { if (i >= 16) bottle(g, PW / 2 + (i - 17.5) * 220, GY + 220, 1.5, gl); });
-    yearCard(g, 0, t < 16.6 ? '次は 2040年' : '1879年', t < 16.6);
+    const wob = Math.sin(t * 4) * 0.04;
+    BOT.forEach(([x, y], i) => { if (i >= 16) { g.save(); g.translate(PW / 2 + (i - 17.5) * 220, GY + 260); g.rotate(wob * (i % 2 ? 1 : -1)); bottle(g, 0, 0, 1.5, 1); g.restore(); } });
+    yearCard(g, t < 16.6 ? '次は 2040年' : '1879年', t < 16.6);
     TK.text(g, '残り [4] 本', PW / 2, 360, 56);
   }
-  if (t >= 8 && t < 16.6) TK.note(g, t, 8, 16.6, '芽を出したのはモウズイカのなかま。エノコログサではありません', { size: 32 });
+  if (t >= 8 && t < 16.0) TK.note(g, t, 8, 16.0, '芽を出したのはモウズイカのなかま。エノコログサではありません', { size: 32 });
   if (t >= 16.0 && t < 18.0) TK.note(g, t, 16.0, 18.0, '出どころ: Michigan State Univ. W. J. Beal Botanical Garden「Beal Seed Experiment」', { size: 28 });
 }
 

@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく animal-senses-1（型A ぜんぶ逆）「色センサー12種類のシャコは、色の見分けがヘタ」。台本は trivia/animal-senses.md。?short で録る
@@ -33,8 +36,10 @@ const cues = [
   { t: 21.0, type: 'whoosh' }, { t: 24.4, type: 'pop' }, { t: 27.0, type: 'ding' },
 ];
 
-// 波長（nm）→ 色（おおよそ。紫外線は紫で代用）
-function wl(l, a = 1) {
+//// 絵は「図鑑の版画」（trivia-plate.js の PL.*）。シャコはモンハナシャコの横向き（頭胸甲・腹の6節・尾扇・柄の先の目と中央の帯・
+// 触角の鱗片・たたむ捕脚）を、手彩色＋斜線＋墨の線で。色見本は手彩色の四角に墨のわく
+// 波長（nm）→ 色（おおよそ。紫外線は紫で代用）。手彩色に合うよう、少しくすませる
+function wlRGB(l) {
   let r = 0, g = 0, b = 0;
   if (l < 380) { r = 0.45; g = 0.2; b = 0.9; }
   else if (l < 440) { r = -(l - 440) / 60; b = 1; }
@@ -44,146 +49,235 @@ function wl(l, a = 1) {
   else if (l < 645) { r = 1; g = -(l - 645) / 65; }
   else r = 1;
   const f = l > 700 ? 0.3 + 0.7 * (750 - l) / 50 : l < 420 && l >= 380 ? 0.3 + 0.7 * (l - 380) / 40 : 1;
-  const c = x => Math.round(255 * Math.pow(clamp(x * f, 0, 1), 0.8));
-  return `rgba(${c(r)},${c(g)},${c(b)},${a})`;
+  return [r, g, b].map(x => 255 * Math.pow(clamp(x * f, 0, 1), 0.8));
 }
+function wl(l, a = 1) { const [r, g, b] = wlRGB(l), m = (c, k) => Math.round(c * 0.78 + k * 0.22); return `rgba(${m(r, 150)},${m(g, 130)},${m(b, 100)},${a})`; }
 const L0 = 300, L1 = 720, AX0 = 120, AX1 = 960;
 const lx = l => AX0 + (AX1 - AX0) * (l - L0) / (L1 - L0);
 function spectrumAxis(g, y) {
-  for (let l = L0; l < L1; l += 2) { g.fillStyle = wl(l); g.fillRect(lx(l), y, lx(l + 2) - lx(l) + 1, 22); }
-  for (const l of [300, 400, 500, 600, 700]) TK.text(g, l + '', lx(l), y + 56, 34, { color: TK.C.sub, bold: false });
-  TK.text(g, 'nm（光の波長）', AX1, y + 100, 32, { color: TK.C.dim, bold: false, align: 'right' });
+  g.save(); for (let l = L0; l < L1; l += 3) { g.fillStyle = wl(l, 0.8); g.fillRect(lx(l), y, lx(l + 3) - lx(l) + 0.5, 22); } g.restore();
+  PL.hatch(g, PL.rect(AX0, y, AX1 - AX0, 22), { angle: 0.9, gap: 9, w: 1.4, color: 'rgba(35,28,21,0.35)' });
+  PL.ink(g, PL.rect(AX0, y, AX1 - AX0, 22), 3);
+  PL.ink(g, gg => { for (let l = 300; l <= 720; l += 20) { gg.moveTo(lx(l), y + 22); gg.lineTo(lx(l), y + 22 + (l % 100 ? 7 : 14)); } }, 2.5);
+  for (const l of [300, 400, 500, 600, 700]) PL.label(g, l + '', lx(l), y + 56, 32, { color: TK.C.sub, bold: false });
+  PL.label(g, 'nm（光の波長）', AX1, y + 100, 32, { color: TK.C.sub, bold: false, align: 'right' });
 }
 function hump(g, peak, w, y, h, k, a = 1) {
-  g.save(); g.strokeStyle = wl(peak, a); g.fillStyle = wl(peak, 0.18 * a); g.lineWidth = 5;
-  g.beginPath(); g.moveTo(lx(L0), y);
-  for (let l = L0; l <= L1; l += 3) g.lineTo(lx(l), y - h * k * Math.exp(-0.5 * Math.pow((l - peak) / w, 2)));
-  g.lineTo(lx(L1), y); g.fill(); g.stroke(); g.restore();
+  if (k <= 0) return;
+  const path = gg => { gg.moveTo(lx(L0), y); for (let l = L0; l <= L1; l += 3) gg.lineTo(lx(l), y - h * k * Math.exp(-0.5 * Math.pow((l - peak) / w, 2))); gg.lineTo(lx(L1), y); };
+  g.save(); g.globalAlpha *= a;
+  g.beginPath(); path(g); g.closePath(); g.fillStyle = wl(peak, 0.22); g.fill();   // グラフの面（うすく。手彩色のぼかしは重いので使わない）
+  PL.ink(g, path, 4, wl(peak));
+  g.restore();
 }
 const MANTIS = [315, 340, 380, 410, 440, 470, 500, 530, 560, 600, 640, 690];
-function redX(g, x, y, r, k) {
-  if (k <= 0) return;
-  g.save(); g.strokeStyle = TK.C.red; g.lineWidth = r * 0.16; g.lineCap = 'round'; g.globalAlpha *= clamp(k, 0, 1);
-  const s = r * (0.7 + 0.3 * TK.back(k));
-  g.beginPath(); g.moveTo(x - s, y - s); g.lineTo(x + s, y + s); g.moveTo(x + s, y - s); g.lineTo(x - s, y + s); g.stroke();
-  g.restore();
-}
-// シャコ（横から、線画）
-function shrimp(g, x, y, s, t) {
-  g.save(); g.translate(x, y); g.scale(s, s);
-  g.strokeStyle = '#7ff0c8'; g.fillStyle = 'rgba(60,180,140,0.35)'; g.lineWidth = 5; g.lineJoin = 'round';
-  for (let i = 0; i < 6; i++) { g.beginPath(); g.ellipse(-40 - i * 42, 4 * Math.sin(t * 3 + i), 30, 36 - i * 2, 0, 0, Math.PI * 2); g.fill(); g.stroke(); }
-  g.beginPath(); g.ellipse(20, 0, 46, 34, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-  // 柄の先の目
-  for (const [dx, dy] of [[40, -70], [64, -60]]) {
-    g.beginPath(); g.moveTo(30, -26); g.lineTo(dx, dy + 14); g.stroke();
-    g.fillStyle = '#ffcf4a'; g.beginPath(); g.ellipse(dx, dy, 13, 18, 0.3, 0, Math.PI * 2); g.fill(); g.stroke();
-    g.strokeStyle = '#ff7a4a'; g.lineWidth = 3; g.beginPath(); g.moveTo(dx - 12, dy); g.lineTo(dx + 12, dy); g.stroke(); g.strokeStyle = '#7ff0c8'; g.lineWidth = 5;   // 中央の帯
+
+// ---- 形を作る道具（ローカル座標を画面へ写す）----
+function mapper(x0, y0, s) { return (x, y) => [x0 + x * s, y0 + y * s]; }
+const pathOf = (m, cmds) => g => {
+  for (const c of cmds) {
+    const p = []; for (let i = 1; i < c.length; i += 2) p.push(...m(c[i], c[i + 1]));
+    if (c[0] === 'M') g.moveTo(...p); else if (c[0] === 'L') g.lineTo(...p); else if (c[0] === 'Q') g.quadraticCurveTo(...p); else g.closePath();
   }
-  // 捕脚
-  g.beginPath(); g.moveTo(50, 20); g.lineTo(100, 50); g.lineTo(80, 80); g.stroke();
+};
+const ell = (cx, cy, rx, ry, rot = 0, n = 32) => { const a = []; for (let i = 0; i < n; i++) { const t = i / n * Math.PI * 2, x = Math.cos(t) * rx, y = Math.sin(t) * ry; a.push([i ? 'L' : 'M', cx + x * Math.cos(rot) - y * Math.sin(rot), cy + x * Math.sin(rot) + y * Math.cos(rot)]); } a.push(['Z']); return a; };
+// 太さのある脚（点の列と太さ）→ 道
+function limb(pts, ws) {
+  const U = [], D = [];
+  pts.forEach((p, i) => {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+    let dx = b[0] - a[0], dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+    U.push([p[0] - dy * ws[i] / 2, p[1] + dx * ws[i] / 2]); D.push([p[0] + dy * ws[i] / 2, p[1] - dx * ws[i] / 2]);
+  });
+  return [['M', ...U[0]], ...U.slice(1).map(p => ['L', ...p]), ...D.reverse().map(p => ['L', ...p]), ['Z']];
+}
+// ---- モンハナシャコ（右向き・横から）。x, y は腹の線のまん中、s は大きさ ----
+function shrimp(g, x, y, s, t, o = {}) {
+  const m = mapper(x, y, s), P = c => pathOf(m, c), lw = Math.max(1.6, 2.2 * s), ow = Math.max(2.4, 3.6 * s), gap = Math.max(5, 6 * s);
+  const sway = Math.sin(t * 2.2) * 3;
+  g.save(); g.globalAlpha *= o.alpha ?? 1;
+  // 向こうがわの脚と触角（うすく）
+  g.save(); g.globalAlpha *= 0.45;
+  PL.ink(g, P([['M', 58, -16], ['L', 70, 18], ['M', 38, -16], ['L', 44, 22], ['M', 18, -16], ['L', 18, 22]]), lw * 1.4, '#7a4a30');
+  PL.ink(g, P([['M', 150, -74], ['Q', 210, -120 + sway, 270, -112 + sway]]), lw, PL.INK);
+  g.restore();
+  // 腹の6節（後ろへ少しずつ細く）と尾扇
+  const segs = [];
+  for (let i = 0; i < 6; i++) {
+    const xa = -10 - i * 38, xb = xa - 40, ha = 60 - i * 2.5, hb = 60 - (i + 1) * 2.5, bend = Math.sin(t * 2 + i * 0.6) * 1.5;
+    segs.push([['M', xa, -ha + bend], ['Q', (xa + xb) / 2, -ha - 8 + bend, xb, -hb + bend], ['L', xb + 2, -4], ['Q', (xa + xb) / 2, 2, xa, -4], ['Z']]);
+  }
+  const tel = [['M', -238, -48], ['Q', -268, -46, -296, -30], ['Q', -304, -18, -292, -8], ['Q', -262, -2, -236, -6], ['Z']];
+  const uro = [['M', -232, -14], ['Q', -270, 4, -300, 20], ['Q', -282, 26, -250, 14], ['Q', -238, 4, -232, -14], ['Z']];
+  // 泳ぎ脚（腹の下のふさ）
+  PL.ink(g, P(segs.slice(0, 5).flatMap((_, i) => { const xa = -26 - i * 38, w = Math.sin(t * 6 + i) * 4; return [['M', xa, -2], ['L', xa - 10 + w, 16], ['M', xa - 8, -2], ['L', xa - 20 + w, 13]]; })), lw, '#7a4a30');
+  const PP = cs => g2 => cs.forEach(c => P(c)(g2));   // いくつかの形を1つの道に（手彩色の回数をへらす）
+  PL.tint(g, PP([uro, tel]), PL.T.rust, 0.7); PL.ink(g, PP([uro, tel]), ow * 0.8);
+  PL.ink(g, P([['M', -246, -42], ['L', -286, -26], ['M', -246, -28], ['L', -290, -16]]), lw * 0.8);   // 尾節のすじ
+  const shift = c => c.map(q => q.length > 1 ? [q[0], ...q.slice(1).map((v, j) => j % 2 ? v - 22 : v)] : q);
+  PL.tint(g, PP(segs), PL.T.leaf, 0.75);
+  PL.tint(g, PP(segs.map((_, i) => ell(-30 - i * 38, -22, 7, 4))), PL.T.gold, 0.8);   // 節ごとの斑点
+  PL.hatch(g, PP(segs), { angle: 0.7, gap, w: lw * 0.8, not: PP(segs.map(shift)) });
+  PL.ink(g, PP(segs), ow);
+  PL.ink(g, PP(segs.map((_, i) => [['M', -14 - i * 38, -40 + i * 1.5], ['L', -46 - i * 38, -40 + i * 1.5]])), lw * 0.8);   // せなかの稜線
+  // 胸の3つの節（細い）
+  const tho = [['M', 22, -62], ['Q', 4, -66, -12, -60], ['L', -10, -4], ['Q', 6, 0, 22, -14], ['Z']];
+  PL.tint(g, P(tho), PL.T.leaf, 0.75); PL.hatch(g, P(tho), { angle: 0.7, gap, w: lw * 0.8 }); PL.ink(g, P(tho), ow);
+  PL.ink(g, P([['M', 10, -64], ['L', 10, -8], ['M', -2, -63], ['L', -2, -6]]), lw);
+  // 歩脚（3対）
+  const legs = [[58, -16, 66, 6, 76, 22], [38, -16, 40, 6, 48, 24], [18, -16, 14, 6, 20, 24]].map(([a, b, c, d, e, f]) => limb([[a, b], [c, d], [e, f]], [8, 6, 4]));
+  PL.tint(g, PP(legs), PL.T.rust, 0.85); PL.ink(g, PP(legs), lw * 1.1);
+  // 頭胸甲
+  const car = [['M', 20, -64], ['Q', 64, -80, 112, -66], ['L', 126, -52], ['Q', 124, -32, 108, -24], ['L', 22, -14], ['Q', 14, -38, 20, -64], ['Z']];
+  PL.tint(g, P(car), PL.T.leaf, 0.85);
+  PL.hatch(g, P(car), { angle: 0.7, gap, w: lw * 0.8, not: P([['M', 20, -86], ['L', 126, -86], ['L', 126, -52], ['L', 20, -46], ['Z']]) });
+  PL.ink(g, P(car), ow);
+  PL.ink(g, P([['M', 40, -60], ['Q', 72, -64, 104, -54], ['M', 62, -22], ['Q', 60, -44, 70, -66]]), lw * 0.8);
+  // 捕脚（たたんだ「こぶし」。腕節 → 前節を後ろへ折り返す → 指節のこぶ）
+  const mer = limb([[104, -28], [128, -8], [150, 12]], [18, 20, 16]), pro = limb([[150, 14], [124, 22], [96, 26]], [14, 13, 10]);
+  PL.tint(g, PP([mer, pro]), PL.T.rust, 0.9); PL.hatch(g, PP([mer, pro]), { angle: -0.6, gap, w: lw * 0.8 }); PL.ink(g, PP([mer, pro]), ow * 0.9);
+  const club = P(ell(152, 16, 11, 10)); PL.tint(g, club, PL.T.rose, 0.95); PL.ink(g, club, ow * 0.8);
+  PL.ink(g, P([['M', 96, 32], ['L', 140, 26]]), lw);   // 指節（前節にそってたたむ）
+  // 触角（3本に分かれる第1触角・第2触角の鱗片）
+  PL.ink(g, P([['M', 128, -66], ['Q', 170, -100, 196, -128 + sway], ['M', 196, -128 + sway], ['Q', 230, -150 + sway, 262, -150 + sway], ['M', 196, -128 + sway], ['Q', 236, -136 + sway, 274, -126 + sway], ['M', 196, -128 + sway], ['Q', 224, -116 + sway, 262, -100 + sway]]), lw * 1.1);
+  const scale = P(ell(152, -44, 26, 9, -0.35)); PL.tint(g, scale, PL.T.rose, 0.9); PL.ink(g, scale, lw * 1.2);
+  PL.ink(g, P([['M', 132, -50], ['L', 172, -52]]), lw * 0.8);
+  // 柄の先の目（2つ。中央の帯で上下に分かれる）
+  [[134, -96, 0.45], [150, -104, 1]].forEach(([ex, ey, a]) => {
+    g.save(); g.globalAlpha *= a;
+    PL.ink(g, P([['M', 120, -62], ['Q', ex - 8, ey + 24, ex, ey + 12]]), lw * 2.4, '#5a6a3a');
+    const eye = P(ell(ex, ey, 13, 17, 0.3));
+    PL.tint(g, eye, PL.T.gold, 0.9);
+    PL.hatch(g, eye, { angle: 0.8, gap: Math.max(3, 2.6 * s), w: lw * 0.5 }); PL.hatch(g, eye, { angle: -0.8, gap: Math.max(3, 2.6 * s), w: lw * 0.5 });
+    const band = P([['M', ex - 15, ey - 2], ['L', ex + 11, ey - 9], ['L', ex + 13, ey - 3], ['L', ex - 13, ey + 4], ['Z']]);
+    PL.tint(g, band, PL.T.rust, 1); PL.ink(g, band, lw * 0.7);
+    PL.ink(g, eye, ow * 0.7);
+    g.restore();
+  });
   g.restore();
 }
-function eyeIcon(g, x, y, r) {
-  g.save(); g.strokeStyle = '#fff'; g.lineWidth = 5;
-  g.beginPath(); g.moveTo(x - r, y); g.quadraticCurveTo(x, y - r * 0.8, x + r, y); g.quadraticCurveTo(x, y + r * 0.8, x - r, y); g.stroke();
-  g.fillStyle = '#5fd4ff'; g.beginPath(); g.arc(x, y, r * 0.3, 0, Math.PI * 2); g.fill();
+// 人の目（正面。まぶた・虹彩・ひとみ・まつげ）
+function humanEye(g, x, y, r) {
+  const lid = gg => { gg.moveTo(x - r, y); gg.quadraticCurveTo(x, y - r * 0.85, x + r, y); gg.quadraticCurveTo(x, y + r * 0.7, x - r, y); gg.closePath(); };
+  PL.tint(g, lid, '#f4ecd8', 0.6);
+  g.save(); g.beginPath(); lid(g); g.clip();
+  const iris = PL.circle(x, y, r * 0.38); PL.tint(g, iris, PL.T.brown, 0.85); PL.hatch(g, iris, { angle: 0.8, gap: 4, w: 1.2, cx: x, cy: y });
+  PL.tint(g, PL.circle(x, y, r * 0.16), PL.INK, 0.9); PL.ink(g, iris, 2.5);
   g.restore();
+  PL.ink(g, lid, 4);
+  PL.ink(g, gg => { for (let k = -2; k <= 2; k++) { const u = k / 3, px = x + u * r, py = y - r * 0.85 * (1 - u * u) * 0.5 - 2; gg.moveTo(px, py); gg.lineTo(px + u * 10, py - 12); } gg.moveTo(x - r * 1.05, y - r * 0.55); gg.quadraticCurveTo(x, y - r * 1.15, x + r * 1.05, y - r * 0.55); }, 2.4);
+}
+// 朱の判
+function stamp(g, x, y, k, s = 'ウソ') {
+  if (k <= 0) return;
+  g.save(); g.globalAlpha *= clamp(k * 3, 0, 1); g.translate(x, y); g.rotate(-0.22); const q = TK.back(k); g.scale(q, q);
+  PL.ink(g, PL.circle(0, 0, 140), 10, PL.RED); PL.ink(g, PL.circle(0, 0, 122), 3, PL.RED);
+  PL.label(g, s, 0, 6, 96, { color: PL.RED });
+  g.restore();
+}
+// 色見本（手彩色の四角＋二重の墨のわく）
+function swatch(g, x, y, w, h, l) {
+  const r = PL.rect(x, y, w, h);
+  PL.tint(g, r, wl(l), 1); PL.tint(g, r, wl(l), 0.6);
+  PL.ink(g, r, 6); PL.ink(g, PL.rect(x + 12, y + 12, w - 24, h - 24), 1.5);
 }
 
 function draw(g, t) {
   // 0〜3: フック
   if (t < 3.0) {
-    g.save(); g.globalAlpha = fade(t, -1, 3.0, 0.3);
-    shrimp(g, 600, 1010, 1.6, t);
+    g.save(); g.globalAlpha *= fade(t, -1, 3.0, 0.3);
+    TK.lines(g, 'シャコは人より\n[色]が見える', 90, 330, 112, { align: 'left' });
+    shrimp(g, 590, 1060, 1.55, t);
+    PL.leader(g, 590 + 150 * 1.55, 1060 - 120 * 1.55, 480, 806); PL.label(g, '色センサー12種類', 320, 800, 40, { color: TK.C.sub });
     g.restore();
-    TK.hook(g, t, 0.0, 3.0, 'シャコは人より\n色が見える', { y: 420, size: 120 });
-    if (t > 1.0) redX(g, 540, 420, 200, (t - 1.0) / 0.3);
-    if (t > 1.6) { g.save(); g.globalAlpha = TK.pop(t, 1.6) * fade(t, 1.6, 3.0, 0.25); TK.text(g, '[ウソ]', 540, 760, 130, { stroke: 'rgba(0,0,0,0.6)' }); g.restore(); }
+    if (t > 1.0) stamp(g, 790, 600, (t - 1.0) / 0.3);
   }
   // 3〜9: センサーの数 3 と 12
   if (t >= 3.0 && t < 9.0) {
-    g.save(); g.globalAlpha = fade(t, 3.0, 9.0, 0.3);
-    eyeIcon(g, 170, 260, 50);
-    TK.text(g, '人の目 [3種類]', 250, 260, 60, { align: 'left' });
+    g.save(); g.globalAlpha *= fade(t, 3.0, 9.0, 0.3);
+    humanEye(g, 175, 255, 62);
+    PL.label(g, '人の目 [3種類]', 270, 255, 60, { align: 'left' });
     const k1 = TK.out((t - 3.3) / 1.0);
+    PL.ink(g, gg => { gg.moveTo(AX0, 540); gg.lineTo(AX1, 540); }, 3);
     hump(g, 420, 28, 540, 200, k1); hump(g, 534, 42, 540, 200, k1); hump(g, 564, 45, 540, 200, k1);
     if (t > 5.5) {
-      shrimp(g, 210, 660, 0.55, t);
-      TK.text(g, 'シャコ [12種類]', 280, 650, 60, { align: 'left' });
-      MANTIS.forEach((p, i) => { const k = TK.out((t - 5.8 - i * 0.12) / 0.6); if (k > 0) hump(g, p, 9, 960, 220, k); });
+      g.save(); g.globalAlpha *= clamp((t - 5.5) / 0.4, 0, 1);
+      shrimp(g, 210, 670, 0.4, t);
+      PL.label(g, 'シャコ [12種類]', 340, 650, 60, { align: 'left' });
+      g.restore();
+      MANTIS.forEach((p, i) => hump(g, p, 9, 960, 200, TK.out((t - 5.8 - i * 0.12) / 0.6)));
     }
-    spectrumAxis(g, 975);
+    spectrumAxis(g, 965);
     g.restore();
   }
   // 9〜17: 2つの色がだんだん近づく
   if (t >= 9.0 && t < 17.0) {
-    g.save(); g.globalAlpha = fade(t, 9.0, 17.0, 0.3);
-    // 差: 60 nm → 1 nm（9.5〜15 秒で）
-    const k = clamp((t - 9.5) / 5.0, 0, 1), d = 60 * Math.pow(1 / 60, k), c0 = 560;
-    TK.text(g, 'この2つの色、ちがう？', PW / 2, 220, 60, { color: TK.C.sub });
-    const pw = 360, py = 290, ph = 300;
-    g.fillStyle = wl(c0 - d / 2); g.beginPath(); g.roundRect(PW / 2 - pw - 20, py, pw, ph, 24); g.fill();
-    g.fillStyle = wl(c0 + d / 2); g.beginPath(); g.roundRect(PW / 2 + 20, py, pw, ph, 24); g.fill();
-    TK.text(g, '差 ' + (d >= 10 ? Math.round(d) : d.toFixed(1)) + ' nm', PW / 2, 670, 80, { color: TK.C.acc });
-    // 人とシャコの答え
-    const hy = 820, sy = 990;
-    eyeIcon(g, 200, hy, 50);
-    TK.text(g, '人', 290, hy, 56, { align: 'left' });
-    TK.text(g, d > 1.2 ? 'ちがう！' : 'ぎりぎり', 700, hy, 60, { color: TK.C.green });
-    shrimp(g, 200, sy + 30, 0.6, t);
-    TK.text(g, 'シャコ', 290, sy, 56, { align: 'left' });
+    g.save(); g.globalAlpha *= fade(t, 9.0, 17.0, 0.3);
+    const k = clamp((t - 9.5) / 5.0, 0, 1), d = 60 * Math.pow(1 / 60, k), c0 = 560;   // 差: 60 nm → 1 nm
+    PL.label(g, 'この2つの色、ちがう？', 90, 210, 58, { align: 'left', color: TK.C.sub });
+    swatch(g, 100, 280, 400, 300, c0 - d / 2); swatch(g, 560, 280, 400, 300, c0 + d / 2);
+    PL.label(g, '差 [' + (d >= 10 ? Math.round(d) : d.toFixed(1)) + ' nm]', 960, 650, 76, { align: 'right' });
+    // 人とシャコの答え（表のように罫線で区切る）
+    const hy = 800, sy = 990;
+    PL.ink(g, gg => { [720, 895, 1080].forEach(yy => { gg.moveTo(90, yy); gg.lineTo(990, yy); }); }, 2, 'rgba(35,28,21,0.5)');
+    humanEye(g, 170, hy, 46);
+    PL.label(g, '人', 260, hy, 56, { align: 'left' });
+    PL.label(g, d > 1.2 ? 'ちがう！' : 'ぎりぎり', 960, hy, 60, { align: 'right', color: PL.GREEN });
+    shrimp(g, 180, sy + 28, 0.36, t);
+    PL.label(g, 'シャコ', 300, sy, 56, { align: 'left' });
     const sameS = d < 20;
-    TK.text(g, sameS ? '同じ…？' : 'ちがう！', 700, sy, 60, { color: sameS ? TK.C.red : TK.C.green });
+    PL.label(g, sameS ? '同じ…？' : 'ちがう！', 960, sy, 60, { align: 'right', color: sameS ? PL.RED : PL.GREEN });
     g.restore();
   }
   // 17〜21: オレンジと黄色くらい
   if (t >= 17.0 && t < 21.0) {
-    g.save(); g.globalAlpha = fade(t, 17.0, 21.0, 0.3);
-    TK.text(g, 'シャコが見分けられるのは、このくらいの差から', PW / 2, 220, 46, { color: TK.C.sub });
-    const pw = 360, py = 300, ph = 360;
-    g.fillStyle = wl(580); g.beginPath(); g.roundRect(PW / 2 - pw - 20, py, pw, ph, 30); g.fill();
-    g.fillStyle = wl(602); g.beginPath(); g.roundRect(PW / 2 + 20, py, pw, ph, 30); g.fill();
-    TK.text(g, '黄色', PW / 2 - pw / 2 - 20, py + ph + 60, 56);
-    TK.text(g, 'オレンジ', PW / 2 + pw / 2 + 20, py + ph + 60, 56);
-    TK.text(g, '（差 約20 nm）', PW / 2, py + ph + 140, 44, { color: TK.C.sub });
+    g.save(); g.globalAlpha *= fade(t, 17.0, 21.0, 0.3);
+    PL.label(g, 'シャコが見分けられるのは、', 90, 200, 50, { align: 'left', color: TK.C.sub });
+    PL.label(g, 'このくらいの差から', 90, 268, 50, { align: 'left', color: TK.C.sub });
+    swatch(g, 100, 340, 400, 340, 580); swatch(g, 580, 340, 400, 340, 602);
+    PL.label(g, '黄色', 300, 735, 56); PL.label(g, 'オレンジ', 780, 735, 56);
+    spectrumAxis(g, 930);
+    const a = lx(580), b = lx(602);
+    PL.ink(g, gg => { gg.moveTo(a, 918); gg.lineTo(a, 900); gg.lineTo(b, 900); gg.lineTo(b, 918); }, 5, PL.RED);
+    PL.leader(g, (a + b) / 2, 900, (a + b) / 2 - 60, 850, PL.RED);
+    PL.label(g, '差 約[20 nm]', (a + b) / 2 - 70, 822, 46, { align: 'right' });
     g.restore();
   }
   // 21〜27: 帯でなでるように見る → おおまかな仲間に決める
   if (t >= 21.0 && t < 27.0) {
-    g.save(); g.globalAlpha = fade(t, 21.0, 27.0, 0.3);
-    const x0 = 120, x1 = 960, y0 = 260, y1 = 860;
-    // 花だん（なめらかな色）。24秒からは12の仲間に丸める
-    const q = clamp((t - 24.2) / 0.6, 0, 1);
-    const cell = 30;
+    g.save(); g.globalAlpha *= fade(t, 21.0, 27.0, 0.3);
+    const x0 = 120, x1 = 960, y0 = 290, y1 = 870, q = clamp((t - 24.2) / 0.6, 0, 1), cell = 30;
+    g.save();   // 花だん（なめらかな色）。24秒からは12の仲間に丸める（手彩色のようにうすく）
     for (let y = y0; y < y1; y += cell) for (let x = x0; x < x1; x += cell) {
       const u = (x - x0) / (x1 - x0), v = (y - y0) / (y1 - y0);
       const l = 420 + 260 * (0.5 + 0.35 * Math.sin(u * 5 + v * 3) + 0.15 * Math.cos(v * 7 - u * 2));
       let near = MANTIS[0]; for (const p of MANTIS) if (Math.abs(p - l) < Math.abs(near - l)) near = p;
-      g.fillStyle = wl(l + (near - l) * q); g.fillRect(x, y, cell + 1, cell + 1);
+      g.fillStyle = wl(l + (near - l) * q, 0.45); g.fillRect(x, y, cell + 0.5, cell + 0.5);
     }
-    // 目の帯が上下に走る
-    const sy = y0 + (y1 - y0) * (0.5 + 0.45 * Math.sin((t - 21) * 2.2));
-    g.fillStyle = 'rgba(11,20,48,0.45)'; g.fillRect(x0, y0, x1 - x0, sy - 30 - y0); g.fillRect(x0, sy + 30, x1 - x0, y1 - sy - 30);
-    g.strokeStyle = TK.C.acc; g.lineWidth = 5; g.strokeRect(x0, sy - 30, x1 - x0, 60);
-    g.strokeStyle = 'rgba(160,190,255,0.5)'; g.lineWidth = 3; g.strokeRect(x0, y0, x1 - x0, y1 - y0);
-    TK.text(g, q > 0.5 ? '12の「なかま」に すぐ分ける' : '目の帯で なでるように見る', PW / 2, 200, 54, { color: TK.C.acc });
-    TK.text(g, '（シャコの見え方の想像図）', PW / 2, 910, 40, { color: TK.C.sub, bold: false });
+    g.restore();
+    // 目の帯が上下に走る。帯の外は斜線でかげに
+    const sy = y0 + 30 + (y1 - y0 - 60) * (0.5 + 0.5 * Math.sin((t - 21) * 2.2));
+    PL.hatch(g, gg => { gg.rect(x0, y0, x1 - x0, sy - 30 - y0); gg.rect(x0, sy + 30, x1 - x0, y1 - sy - 30); }, { angle: 0.7, gap: 8, w: 2.2 });
+    PL.ink(g, PL.rect(x0, sy - 30, x1 - x0, 60), 6, PL.RED);
+    PL.ink(g, PL.rect(x0, y0, x1 - x0, y1 - y0), 5); PL.ink(g, PL.rect(x0 - 12, y0 - 12, x1 - x0 + 24, y1 - y0 + 24), 1.5);
+    PL.label(g, q > 0.5 ? '12の「なかま」に すぐ分ける' : '目の帯で なでるように見る', 90, 210, 54, { align: 'left', color: q > 0.5 ? PL.RED : PL.INK });
+    PL.label(g, '（シャコの見え方の想像図）', x1, 940, 38, { align: 'right', color: TK.C.sub, bold: false });
     g.restore();
   }
   // 27〜30: まとめ
   if (t >= 27.0) {
-    g.save(); g.globalAlpha = fade(t, 27.0, 30.5, 0.3);
-    TK.text(g, 'たくさん', 300, 520, 100, { color: '#fff' });
-    TK.text(g, '≠', 540, 520, 120, { color: TK.C.red });
-    TK.text(g, 'くわしい', 780, 520, 100, { color: TK.C.acc });
-    shrimp(g, 600, 820, 1.1, t);
+    g.save(); g.globalAlpha *= fade(t, 27.0, 30.5, 0.3);
+    PL.label(g, 'センサーが たくさん', 90, 330, 76, { align: 'left' });
+    PL.label(g, '≠ [くわしく見える]', 150, 450, 76, { align: 'left' });
+    shrimp(g, 560, 900, 1.2, t);
+    PL.leader(g, 560 + 150 * 1.2, 900 - 112 * 1.2, 820, 640); PL.label(g, '12種類', 820, 608, 44, { color: TK.C.sub });
+    PL.leader(g, 560 + 152 * 1.2, 900 + 16 * 1.2, 860, 990); PL.label(g, '捕脚', 900, 1020, 40, { color: TK.C.sub });
     g.restore();
   }
   if (t >= 3.0 && t < 9.0) TK.note(g, t, 3.0, 9.0, '感度の山の形は模式（シャコは 300〜720 nm に12種類）', { size: 30 });
-  if (t >= 9.0 && t < 21.0) TK.note(g, t, 9.0, 21.0, '約12〜25 nm は1種類のシャコ・1つの課題の結果（報道・解説の値）\n人の約1 nm は 490・590 nm あたり（Wright & Pitt 1934）', { size: 28 });
+  if (t >= 9.0 && t < 21.0) TK.note(g, t, 9.0, 21.0, '約12〜25 nm は1種類のシャコ・1つの課題の結果（報道・解説の値）\n人の約1 nm は 490・590 nm あたり（Wright & Pitt 1934）', { size: 28, y: 1140 });
   if (t >= 21.0 && t < 27.0) TK.note(g, t, 21.0, 27.0, '「なでて、すぐ決める」しくみは著者の説', { size: 30 });
-  if (t >= 27.0) TK.note(g, t, 27.0, 30.0, '出どころ: Thoen, How, Chiou & Marshall (2014)\nScience 343: 411–413', { size: 30 });
+  if (t >= 27.0) TK.note(g, t, 27.0, 30.0, '出どころ: Thoen, How, Chiou & Marshall (2014)\nScience 343: 411–413', { size: 30, y: 1140 });
 }
 
 triviaStart({ out: 'animal-senses-trivia1', voice: 'auto', dur: DUR, draw, subs, cues, peek: 1.0 });

@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく wave-growth-2（型A ぜんぶ逆）「波が来ても、水はほとんど進んでいない」。台本は trivia/wave-growth.md。?short で録る
@@ -29,30 +32,40 @@ const cues = [
   { t: 0.05, type: 'pop' }, { t: 0.8, type: 'buzz' }, { t: 3.0, type: 'whoosh' }, { t: 7.0, type: 'ding' },
   { t: 10.0, type: 'whoosh' }, { t: 17.0, type: 'pop' }, { t: 19.5, type: 'ding' },
 ];
-const Y0 = 470, LAM = 700, K = 2 * Math.PI / LAM, A = 70, OM = 2 * Math.PI / 2.6;   // 画面の上の波（周期 2.6 秒で描く）
+const Y0 = 520, LAM = 700, K = 2 * Math.PI / LAM, A = 70, OM = 2 * Math.PI / 2.6;   // 画面の上の波（周期 2.6 秒で描く）
 const surf = (x, t) => Y0 - A * Math.cos(K * x - OM * t);
+const YB = 975;   // 断面の下のはし（ここで切って見せる。海はもっと深い）
 // 水の粒（もとの位置 x0・深さ d px）の今の位置
 function parcel(x0, d, t) {
   const r = A * Math.exp(-K * d), ph = K * x0 - OM * t;
   return [x0 + r * Math.sin(ph), Y0 + d - r * Math.cos(ph), r];
 }
+// 下のはしは、図鑑の断面のように波うつ切り口
+const cutY = x => YB + Math.sin(x / 37) * 6 + Math.sin(x / 13) * 3;
 function sea(g, t) {
-  g.fillStyle = '#123a73'; g.beginPath(); g.moveTo(0, 1100);
-  for (let x = 0; x <= PW; x += 6) g.lineTo(x, surf(x, t));
-  g.lineTo(PW, 1100); g.closePath(); g.fill();
-  g.strokeStyle = '#5fd4ff'; g.lineWidth = 6; g.beginPath();
-  for (let x = 0; x <= PW; x += 6) { const y = surf(x, t); x ? g.lineTo(x, y) : g.moveTo(x, y); }
-  g.stroke();
-  const gr = g.createLinearGradient(0, 1000, 0, 1110); gr.addColorStop(0, 'rgba(11,20,48,0)'); gr.addColorStop(1, 'rgba(11,20,48,1)'); g.fillStyle = gr; g.fillRect(0, 1000, PW, 110);
+  const water = gg => { gg.moveTo(0, cutY(0)); for (let x = 0; x <= PW; x += 6) gg.lineTo(x, surf(x, t)); for (let x = PW; x >= 0; x -= 6) gg.lineTo(x, cutY(x)); gg.closePath(); };
+  PL.tint(g, water, PL.T.sea, 0.55);
+  PL.hatch(g, water, { angle: 0.04, gap: 18, w: 1.6, not: gg => gg.rect(-50, 0, PW + 100, Y0 + 260), cx: 540, cy: 900 });   // 深い所だけ横の線（暗くなる）
+  PL.ink(g, gg => { for (let x = 0; x <= PW; x += 6) { const y = surf(x, t); x ? gg.lineTo(x, y) : gg.moveTo(x, y); } }, 6);
+  PL.ink(g, gg => { for (let x = 0; x <= PW; x += 6) x ? gg.lineTo(x, cutY(x)) : gg.moveTo(x, cutY(x)); }, 3);
+  // 水面の下のうすい「波の形」の線（深いほどゆれが小さい。線形の式のまま）
+  PL.ink(g, gg => { [40, 110].forEach(d => { const r = A * Math.exp(-K * d); for (let x = 0; x <= PW; x += 6) { const y = Y0 + d - r * Math.cos(K * x - OM * t); x ? gg.lineTo(x, y) : gg.moveTo(x, y); } }); }, 1.3);
 }
+// 葉っぱ（たまご形の葉、葉柄・主脈・側脈）
 function leaf(g, x, y, ang) {
-  g.save(); g.translate(x, y - 8); g.rotate(ang); g.fillStyle = '#7fd18b';
-  g.beginPath(); g.ellipse(0, 0, 44, 16, 0, 0, Math.PI * 2); g.fill();
-  g.strokeStyle = '#3f8a4a'; g.lineWidth = 3; g.beginPath(); g.moveTo(-40, 0); g.lineTo(40, 0); g.stroke(); g.restore();
+  g.save(); g.translate(x, y - 10); g.rotate(ang);
+  const blade = gg => { gg.moveTo(-46, 0); gg.bezierCurveTo(-30, -26, 22, -24, 48, 0); gg.bezierCurveTo(22, 20, -30, 22, -46, 0); gg.closePath(); };
+  PL.tint(g, blade, PL.T.leaf, 0.85);
+  PL.hatch(g, blade, { angle: 1.0, gap: 6, w: 1.4, not: gg => gg.rect(-60, -40, 120, 40), cx: 0, cy: 0 });
+  PL.ink(g, blade, 3.5);
+  PL.ink(g, gg => { gg.moveTo(-62, 4); gg.lineTo(44, 0); for (let i = -2; i <= 2; i++) { const px = i * 14; gg.moveTo(px, 0); gg.lineTo(px + 12, -13); gg.moveTo(px, 0); gg.lineTo(px + 12, 13); } }, 1.8);
+  g.restore();
 }
-function arrowR(g, x, y, col, s) {
-  g.fillStyle = col; g.beginPath(); g.moveTo(x, y - 18); g.lineTo(x + 70, y - 18); g.lineTo(x + 70, y - 38); g.lineTo(x + 110, y); g.lineTo(x + 70, y + 38); g.lineTo(x + 70, y + 18); g.lineTo(x, y + 18); g.fill();
-  TK.text(g, s, x + 55, y + 70, 40, { color: col });
+// 右向きの矢（墨の輪郭＋朱の手彩色）
+function arrowR(g, x, y, s) {
+  const a = PL.poly([[x, y - 16], [x + 70, y - 16], [x + 70, y - 36], [x + 112, y], [x + 70, y + 36], [x + 70, y + 16], [x, y + 16]]);
+  PL.tint(g, a, PL.RED, 0.75); PL.hatch(g, a, { angle: 0.6, gap: 8, w: 1.8, cx: x, cy: y }); PL.ink(g, a, 4);
+  PL.label(g, s, x + 140, y, 44, { align: 'left' });
 }
 
 function draw(g, t) {
@@ -60,40 +73,52 @@ function draw(g, t) {
   // 葉っぱ（表面の粒）と、その通り道
   const x0 = 540;
   if (t >= 3.0) {
-    g.save(); g.strokeStyle = 'rgba(255,207,74,0.9)'; g.lineWidth = 5; g.setLineDash([10, 10]); g.beginPath();
     const n = Math.round(clamp((t - 3.2) / 2.6, 0, 1) * 80);
-    for (let i = 0; i <= n; i++) { const [x, y] = parcel(x0, 0, 3.2 + i / 80 * 2.6); i ? g.lineTo(x, y) : g.moveTo(x, y); }
-    g.stroke(); g.restore();
+    if (n > 1) PL.dots(g, Array.from({ length: n + 1 }, (_, i) => parcel(x0, 0, 3.2 + i / 80 * 2.6)), { dash: [3, 13], w: 6 });
   }
-  const [lx, ly] = parcel(x0, 0, t);
-  leaf(g, lx, ly, -A * K * Math.sin(K * lx - OM * t));
   // 10〜: 水の中の粒の円
   if (t >= 10.0) {
     const k = clamp((t - 10.2) / 1.0, 0, 1);
-    for (let d = 60; d <= 420; d += 60) for (let xx = 120; xx <= 960; xx += 120) {
-      if (xx === x0 && d < 60) continue;
-      const [px, py, r] = parcel(xx, d, t);
-      g.globalAlpha = k * 0.35; g.strokeStyle = '#cfe0ff'; g.lineWidth = 2; g.beginPath(); g.arc(xx, Y0 + d, r, 0, Math.PI * 2); g.stroke();
-      g.globalAlpha = k; g.fillStyle = '#ffffff'; g.beginPath(); g.arc(px, py, 9, 0, Math.PI * 2); g.fill();
+    g.save(); g.globalAlpha *= k * 0.45;
+    PL.ink(g, gg => { for (let d = 60; d <= 360; d += 60) for (let xx = 120; xx <= 960; xx += 120) { const r = A * Math.exp(-K * d); PL.circle(xx, Y0 + d, r)(gg); } }, 1.6);
+    g.restore();
+    g.save(); g.globalAlpha *= k;
+    for (let d = 60; d <= 360; d += 60) for (let xx = 120; xx <= 960; xx += 120) {
+      const [px, py] = parcel(xx, d, t), c = PL.circle(px, py, 9); PL.tint(g, c, PL.T.gold, 0.95); PL.ink(g, c, 3);
     }
-    g.globalAlpha = 1;
-    if (t < 17.0) { arrowR(g, 130, 230, TK.C.acc, '形・エネルギー'); TK.text(g, '水の粒は その場で円', 700, 230, 46, { color: '#fff' }); }
+    g.restore();
+    if (t < 17.0) {
+      g.save(); g.globalAlpha *= fade(t, 10, 17, 0.3);
+      arrowR(g, 90, 200, '進むのは 形・エネルギー');
+      const c = PL.circle(118, 300, 11); PL.tint(g, c, PL.T.gold, 0.95); PL.ink(g, c, 3); PL.ink(g, PL.circle(118, 300, 30), 2);
+      PL.label(g, '水の粒は その場で円', 230, 300, 44, { align: 'left' });
+      g.restore();
+    }
   }
+  const [lx, ly] = parcel(x0, 0, t);
+  leaf(g, lx, ly, -A * K * Math.sin(K * lx - OM * t));
   // 17〜: 波長の半分の深さ
   if (t >= 17.0) {
     const yd = Y0 + LAM / 2, k = clamp((t - 17.2) / 0.6, 0, 1);
-    g.save(); g.globalAlpha = k; g.strokeStyle = TK.C.acc; g.lineWidth = 5; g.setLineDash([16, 12]); g.beginPath(); g.moveTo(40, yd); g.lineTo(1000, yd); g.stroke(); g.restore();
-    g.save(); g.globalAlpha = k;
-    // 波長の目盛り
-    g.strokeStyle = '#fff'; g.lineWidth = 4; g.beginPath(); g.moveTo(190, 300); g.lineTo(190 + LAM, 300); g.moveTo(190, 285); g.lineTo(190, 315); g.moveTo(190 + LAM, 285); g.lineTo(190 + LAM, 315); g.stroke();
-    TK.text(g, '波の長さ', 190 + LAM / 2, 260, 44);
-    TK.text(g, '波の長さの半分の深さ', PW / 2, yd + 50, 44, { color: TK.C.acc });
-    if (t > 19.5) TK.text(g, '円は表面の [約1/23]', PW / 2, yd + 120, 60);
+    g.save(); g.globalAlpha *= k;
+    g.save(); g.setLineDash([16, 12]); PL.ink(g, gg => { gg.moveTo(40, yd); gg.lineTo(1040, yd); }, 4, PL.RED); g.restore();
+    // 波の長さの目盛り（山から山まで）
+    PL.ink(g, gg => { gg.moveTo(190, 330); gg.lineTo(190 + LAM, 330); gg.moveTo(190, 312); gg.lineTo(190, 348); gg.moveTo(190 + LAM, 312); gg.lineTo(190 + LAM, 348); for (let i = 1; i < 10; i++) { gg.moveTo(190 + LAM * i / 10, 330); gg.lineTo(190 + LAM * i / 10, i === 5 ? 346 : 340); } }, 3);
+    PL.label(g, '波の長さ', 190 + LAM / 2, 280, 44);
+    // 深さの目盛り（左のはし）
+    PL.ink(g, gg => { gg.moveTo(40, Y0); gg.lineTo(40, yd); for (let i = 0; i <= 5; i++) { const y = Y0 + (yd - Y0) * i / 5; gg.moveTo(40, y); gg.lineTo(58, y); } }, 3);
+    PL.leader(g, 960, yd, 900, 1030, PL.RED);
+    PL.label(g, '波の長さの半分の深さ', 880, 1035, 44, { align: 'right' });
+    if (t > 19.5) { g.save(); g.globalAlpha *= fade(t, 19.5, 99, 0.3); PL.label(g, '円は表面の [約1/23]', 880, 1115, 58, { align: 'right' }); g.restore(); }
     g.restore();
   }
-  if (t < 1.6) {
-    TK.hook(g, t, 0, 1.6, '波といっしょに、\n水も進む', { y: 270, size: 100 });
-    if (t > 0.8) { const x = TK.out((t - 0.8) / 0.25); g.strokeStyle = TK.C.red; g.lineWidth = 26; g.lineCap = 'round'; g.beginPath(); g.moveTo(180, 180); g.lineTo(180 + 720 * x, 180 + 180 * x); if (x > 0.5) { const y = (x - 0.5) * 2; g.moveTo(900, 180); g.lineTo(900 - 720 * y, 180 + 180 * y); } g.stroke(); }
+  if (t < 1.6) {   // フック: 「波といっしょに、水も進む」に朱の × （字には重ねない）
+    const f = fade(t, -1, 1.6, 0.25);
+    g.save(); g.globalAlpha *= f;
+    PL.label(g, '波といっしょに、', 70, 220, 92, { align: 'left' });
+    PL.label(g, '水も進む', 70, 335, 92, { align: 'left' });
+    if (t > 0.8) { const x = TK.out((t - 0.8) / 0.25); PL.ink(g, gg => { gg.moveTo(690, 280); gg.lineTo(690 + 140 * x, 280 + 140 * x); if (x > 0.5) { const y = (x - 0.5) * 2; gg.moveTo(830, 280); gg.lineTo(830 - 140 * y, 280 + 140 * y); } }, 24, PL.RED); }
+    g.restore();
   }
   if (t >= 3.0 && t < 23) TK.note(g, t, 3, 23, '沖（深い所）の波。円は少しずつ前へずれ（ストークス・ドリフト）、浜でくだけた波は水が進みます', { size: 28 });
   if (t >= 23) TK.note(g, t, 23, 25, '出どころ: Chamberlin, Shaw & Rich「Our World Ocean」13.7（CC BY 4.0）', { size: 30 });

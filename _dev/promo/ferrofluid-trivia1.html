@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく ferrofluid-1（型A ぜんぶ逆）「トゲの間かくを決めるのは、磁石じゃない」。台本は trivia/ferrofluid.md。?short で録る
@@ -33,14 +36,21 @@ const cues = [
   { t: 21.0, type: 'whoosh' }, { t: 23.0, type: 'rise' }, { t: 26.0, type: 'ding' }, { t: 29.0, type: 'whoosh' },
 ];
 
-// トゲの皿（ななめ上から）。lam: 間かく（mm）、H: 高さ（px）
+/// トゲの皿（ななめ上から。図鑑の版画で）。lam: 間かく（mm）、H: 高さ（px）
 const CX = 540, CY = 720, RX = 440, RY = 190;
+const CONE_FILL = '#b3ada2';   // 灰色の手彩色を紙にのせた色
 function dish(g, lam, H, o = {}) {
   const L = lam * PXMM, sq = RY / RX;
-  // 皿と液
-  g.save();
-  g.fillStyle = '#0a0d18'; g.strokeStyle = 'rgba(200,220,255,0.6)'; g.lineWidth = 4;
-  g.beginPath(); g.ellipse(CX, CY, RX, RY, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  // 皿（ふちの厚み＋側面）
+  const side = g2 => { g2.ellipse(CX, CY, RX + 26, RY + 12, 0, 0, Math.PI); g2.lineTo(CX - RX - 26, CY + 44); g2.ellipse(CX, CY + 44, RX + 26, RY + 12, 0, Math.PI, 0, true); g2.closePath(); };
+  PL.tint(g, side, PL.T.gray, 0.7); PL.hatch(g, side, { angle: 1.2, gap: 9, w: 1.8, not: PL.rect(0, 0, CX - 120, PH) }); PL.ink(g, side, 4);
+  const rim = PL.ellipse(CX, CY, RX + 26, RY + 12);
+  PL.tint(g, rim, PL.T.gray, 0.45); PL.ink(g, rim, 4);
+  // 液（黒い磁性流体）
+  const liq = PL.ellipse(CX, CY, RX, RY);
+  PL.tint(g, liq, PL.T.gray, 0.95); PL.tint(g, liq, PL.T.brown, 0.4);
+  PL.hatch(g, liq, { angle: 0.1, gap: 7, w: 1.4, cx: CX, cy: CY });
+  PL.ink(g, liq, 3);
   const pts = [];
   const rows = Math.ceil(RX / (L * 0.866)) + 1, cols = Math.ceil(RX / L) + 1;
   for (let j = -rows; j <= rows; j++) for (let i = -cols; i <= cols; i++) {
@@ -49,26 +59,34 @@ function dish(g, lam, H, o = {}) {
     pts.push([X, Y]);
   }
   pts.sort((a, b) => a[1] - b[1]);
+  const lw = Math.max(1.1, Math.min(2.2, L / 40));
   for (const [X, Y] of pts) {
     const x = CX + X, y = CY + Y * sq, w = L * 0.42, h = H * (o.hk ? o.hk(X, Y) : 1);
     if (h < 1) continue;
-    const gr = g.createLinearGradient(x - w, 0, x + w, 0);
-    gr.addColorStop(0, '#121a30'); gr.addColorStop(0.55, '#33476e'); gr.addColorStop(0.7, '#8fb0e8'); gr.addColorStop(1, '#0d1222');
-    g.fillStyle = gr;
-    g.beginPath(); g.moveTo(x - w, y); g.quadraticCurveTo(x - w * 0.25, y - h * 0.35, x, y - h); g.quadraticCurveTo(x + w * 0.25, y - h * 0.35, x + w, y);
-    g.ellipse(x, y, w, w * sq, 0, 0, Math.PI); g.fill();
+    const cone = g2 => { g2.moveTo(x - w, y); g2.quadraticCurveTo(x - w * 0.25, y - h * 0.35, x, y - h); g2.quadraticCurveTo(x + w * 0.25, y - h * 0.35, x + w, y); g2.ellipse(x, y, w, w * sq, 0, 0, Math.PI); g2.closePath(); };
+    g.fillStyle = CONE_FILL; g.beginPath(); cone(g); g.fill();   // トゲは数が多いので、手彩色（紙を重ねる）ではなく同じ色のべたで（重い描き方をくり返さない）
+    // かげ（右がわ）: てっぺんからすそへの線（円すいにそった版画の線）
+    PL.ink(g, gg => { for (let k = 0; k <= 6; k++) { const u = 0.05 + k / 6 * 0.95, bx = x + w * u, by = y + Math.sqrt(Math.max(0, 1 - u * u)) * w * sq; gg.moveTo(x + w * 0.04, y - h * 0.94); gg.quadraticCurveTo(x + w * u * 0.3, y - h * 0.3, bx, by); } }, lw);
+    // 左がわの細いかげ（光る所は紙のまま）
+    PL.ink(g, gg => { const bx = x - w * 0.85, by = y + Math.sqrt(1 - 0.72) * w * sq; gg.moveTo(x - w * 0.04, y - h * 0.9); gg.quadraticCurveTo(x - w * 0.3, y - h * 0.3, bx, by); }, lw * 0.8);
+    PL.ink(g, cone, lw * 1.4);
   }
-  g.restore();
   return pts;
 }
-// 間かくのものさし（手前の2本のあいだ）
-function measure(g, lam, H, label, color = TK.C.acc) {
-  const L = lam * PXMM, y = CY + RY + 50;
-  g.save(); g.strokeStyle = color; g.fillStyle = color; g.lineWidth = 5;
-  g.beginPath(); g.moveTo(CX - L / 2, y); g.lineTo(CX + L / 2, y); g.stroke();
-  [CX - L / 2, CX + L / 2].forEach(x => { g.beginPath(); g.moveTo(x, y - 18); g.lineTo(x, y + 18); g.stroke(); });
-  g.restore();
-  TK.text(g, label, CX, y + 58, 60, { color });
+// 間かくのものさし（皿の下）。目もりつき
+function measure(g, lam, H, label, color = PL.RED) {
+  const L = lam * PXMM, y = CY + RY + 82;
+  PL.ink(g, gg => { gg.moveTo(CX - L / 2, y - 60); gg.lineTo(CX - L / 2, y + 18); gg.moveTo(CX + L / 2, y - 60); gg.lineTo(CX + L / 2, y + 18); }, 2, 'rgba(35,28,21,0.6)');   // トゲから下ろした補助線
+  PL.ink(g, gg => { gg.moveTo(CX - L / 2, y); gg.lineTo(CX + L / 2, y); for (let m = 0; m <= lam; m += 1) { const x = CX - L / 2 + m * PXMM; gg.moveTo(x, y); gg.lineTo(x, y + (m % 5 ? 8 : 14)); } }, 3, color);
+  PL.ink(g, gg => { gg.moveTo(CX - L / 2, y - 18); gg.lineTo(CX - L / 2, y + 18); gg.moveTo(CX + L / 2, y - 18); gg.lineTo(CX + L / 2, y + 18); }, 5, color);
+  PL.label(g, label, CX, y + 70, 60, { color });
+}
+// 馬てい形の磁石（N・S の極は灰色）
+function magnet(g, mx, my, s = 1) {
+  const r0 = 50 * s, r1 = 112 * s, leg = 70 * s;
+  const U = g2 => { g2.moveTo(mx - r1, my + leg); g2.lineTo(mx - r1, my); g2.arc(mx, my, r1, Math.PI, 0); g2.lineTo(mx + r1, my + leg); g2.lineTo(mx + r0, my + leg); g2.lineTo(mx + r0, my); g2.arc(mx, my, r0, 0, Math.PI, true); g2.lineTo(mx - r0, my + leg); g2.closePath(); };
+  PL.tint(g, U, PL.T.rust, 0.85); PL.hatch(g, U, { angle: 0.8, gap: 8, w: 1.8, not: PL.rect(0, 0, mx, PH) }); PL.ink(g, U, 5);
+  [-1, 1].forEach(sg => { const p = PL.rect(sg < 0 ? mx - r1 : mx + r0, my + leg, r1 - r0, 44 * s); PL.tint(g, p, PL.T.gray, 0.8); PL.hatch(g, p, { angle: 0.8, gap: 7, w: 1.4 }); PL.ink(g, p, 5); });
 }
 
 function draw(g, t) {
@@ -81,7 +99,7 @@ function draw(g, t) {
   if (t >= 2.2 && t < 8.0) {
     dish(g, LE, 130);
     if (t > 3.2) measure(g, LE, 130, '9.98 mm');
-    TK.text(g, 'トゲとトゲの間', PW / 2, 300, 62);
+    PL.label(g, 'トゲとトゲの間', PW / 2, 300, 62);
     TK.note(g, t, 2.6, 8, 'ある研究の液（APG512a）が、トゲの出はじめるとき。模式図', { size: 32 });
   }
   // 8〜14: 磁石を強く → 高くなるが、間かくはほぼ同じ
@@ -89,33 +107,30 @@ function draw(g, t) {
     const k = ease((t - 8.4) / 3.0), H = lerp(70, 230, k);
     dish(g, LE, H);
     measure(g, LE, H, '≒ 10 mm のまま');
-    // 磁石の強さのメーター
-    TK.text(g, '磁石の強さ', 140, 230, 44, { align: 'left', color: TK.C.sub });
-    g.fillStyle = 'rgba(255,255,255,0.12)'; g.beginPath(); g.roundRect(400, 208, 560, 44, 22); g.fill();
-    g.fillStyle = TK.C.red; g.beginPath(); g.roundRect(400, 208, Math.max(44, 560 * (0.35 + 0.65 * k)), 44, 22); g.fill();
+    // 磁石の強さのメーター（目もりつき）
+    PL.label(g, '磁石の強さ', 140, 230, 44, { align: 'left', color: TK.C.sub });
+    const bar = PL.rect(400, 210, 560 * (0.35 + 0.65 * k), 40);
+    PL.tint(g, bar, PL.T.rust, 0.85); PL.hatch(g, bar, { angle: 0.9, gap: 10, w: 2 });
+    PL.ink(g, PL.rect(400, 210, 560, 40), 4);
+    PL.ink(g, gg => { for (let i = 1; i < 10; i++) { gg.moveTo(400 + i * 56, 250); gg.lineTo(400 + i * 56, 262); } }, 2);
     TK.note(g, t, 8.4, 14, '強い磁場では間かくが少し変わることも測られている', { size: 32 });
   }
   // 14〜21: 式
   if (t >= 14.0 && t < 21.0) {
-    TK.text(g, 'トゲの間かく', PW / 2, 300, 60, { color: TK.C.sub });
+    PL.label(g, 'トゲの間かく', PW / 2, 300, 60, { color: TK.C.sub });
     const p = clamp(TK.pop(t, 14.4, 0.4), 0, 1.2);
     g.save(); g.globalAlpha = clamp(p, 0, 1);
-    TK.text(g, '＝ 2π ×', 160, 520, 76, { align: 'left' });
-    TK.text(g, '√', 560, 520, 150);
-    g.strokeStyle = '#fff'; g.lineWidth = 5; g.beginPath(); g.moveTo(600, 440); g.lineTo(1000, 440); g.stroke();
-    TK.text(g, '表面張力', 800, 480, 60);
-    g.beginPath(); g.moveTo(640, 525); g.lineTo(960, 525); g.stroke();
-    TK.text(g, '密度 × [重力]', 800, 580, 60);
+    PL.label(g, '＝ 2π ×', 120, 520, 76, { align: 'left' });
+    PL.ink(g, gg => { gg.moveTo(470, 520); gg.lineTo(500, 505); gg.lineTo(540, 640); gg.lineTo(590, 400); gg.lineTo(1000, 400); }, 6);   // ルートの記号
+    PL.label(g, '表面張力', 800, 460, 60);
+    PL.ink(g, gg => { gg.moveTo(640, 522); gg.lineTo(960, 522); }, 5);
+    PL.label(g, '密度 × [重力]', 800, 584, 60);
     g.restore();
     if (t > 16.4) {
       g.save(); g.globalAlpha = fade(t, 16.4, 21, 0.3);
-      // 磁石（U 字）に ×
-      const mx = 540, my = 830;
-      g.strokeStyle = TK.C.red; g.lineWidth = 34; g.lineCap = 'butt';
-      g.beginPath(); g.arc(mx, my, 80, Math.PI, 0, true); g.stroke();
-      g.strokeStyle = '#ddd'; g.beginPath(); g.moveTo(mx - 80, my); g.lineTo(mx - 80, my + 40); g.moveTo(mx + 80, my); g.lineTo(mx + 80, my + 40); g.stroke();
-      if (t > 17.8) { g.strokeStyle = TK.C.red; g.lineWidth = 16; g.lineCap = 'round'; g.beginPath(); g.moveTo(mx - 140, my - 100); g.lineTo(mx + 140, my + 120); g.moveTo(mx + 140, my - 100); g.lineTo(mx - 140, my + 120); g.stroke(); }
-      TK.text(g, '磁石は、式に[入っていない]', PW / 2, 1040, 56, { acc: TK.C.red });
+      magnet(g, 540, 790);
+      if (t > 17.8) PL.ink(g, gg => { gg.moveTo(400, 690); gg.lineTo(680, 930); gg.moveTo(680, 690); gg.lineTo(400, 930); }, 16, PL.RED);
+      PL.label(g, '磁石は、式に[入っていない]', PW / 2, 1040, 56);
       g.restore();
     }
     TK.note(g, t, 14.4, 21, 'トゲが出はじめるときの式（Rosensweig の解析）', { size: 32 });
@@ -124,18 +139,18 @@ function draw(g, t) {
   if (t >= 21.0 && t < 29.0) {
     const k = ease((t - 22.4) / 3.0), lam = lerp(LE, LM, k);
     dish(g, lam, 150);
-    measure(g, lam, 150, lam.toFixed(1) + ' mm', k > 0.98 ? TK.C.acc : '#fff');
-    TK.card(g, 260, 190, 560, 130, { r: 60 });
-    TK.text(g, k < 0.5 ? '地球（重力 9.8）' : '[月]（重力 1.6）', PW / 2, 255, 60);
+    measure(g, lam, 150, lam.toFixed(1) + ' mm', k > 0.98 ? PL.RED : PL.INK);
+    TK.card(g, 260, 190, 560, 130);
+    PL.label(g, k < 0.5 ? '地球（重力 9.8）' : '[月]（重力 1.6）', PW / 2, 255, 60);
     TK.note(g, t, 21.4, 29, '計算では（重力だけ変えた。月で実験した人はいない）', { size: 32 });
   }
   // 29〜35: 地球にもどる
   if (t >= 29.0) {
     const k = ease((t - 29.0) / 1.2), lam = lerp(LM, LE, k);
     dish(g, lam, 150);
-    TK.text(g, '並べているのは', PW / 2, 250, 56, { color: TK.C.sub });
-    TK.text(g, '[地球の重力]', PW / 2, 340, 90);
-    TK.note(g, t, 31.5, 35, '出どころ: Gollwitzer ほか (2007) J. Fluid Mech. 571:455（arXiv:nlin/0604009）\n月の重力: NASA Moon Fact Sheet', { size: 28 });
+    PL.label(g, '並べているのは', PW / 2, 250, 56, { color: TK.C.sub });
+    PL.label(g, '[地球の重力]', PW / 2, 340, 90);
+    TK.note(g, t, 31.5, 35, '出どころ: Gollwitzer ほか (2007) J. Fluid Mech. 571:455（arXiv:nlin/0604009）\n月の重力: NASA Moon Fact Sheet', { size: 28, y: 1100 });   // 2行なので絵の下に（クレジットと重ねない）
   }
 }
 

@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく phonograph-1（型H 当ててみて）「エジソンが考えた蓄音機の使いみち、1番は？」。台本は trivia/phonograph.md。?short で録る
@@ -31,81 +34,115 @@ const cues = [
 ];
 const LIST = ['手紙・口述筆記', '本の朗読（目の見えない人のため）', '話し方の練習', '音楽', '家族の記録', 'オルゴール・おもちゃ', 'しゃべる時計', '広告・演説・電話の改良 …'];
 
+// ---- 絵は「図鑑の版画」（trivia-plate.js の PL.*）----
+// 封筒（ふた・切手・封ろう）
 function envelope(g, x, y, w, h) {
-  g.save(); g.strokeStyle = '#e8f0ff'; g.lineWidth = 6; g.fillStyle = 'rgba(244,247,255,0.08)'; g.lineJoin = 'round';
-  g.beginPath(); g.rect(x, y, w, h); g.fill(); g.stroke();
-  g.beginPath(); g.moveTo(x, y); g.lineTo(x + w / 2, y + h * 0.55); g.lineTo(x + w, y); g.stroke(); g.restore();
+  const p = PL.rect(x, y, w, h);
+  PL.tint(g, p, '#f4ead6', 0.95); PL.hatch(g, PL.rect(x, y + h * 0.7, w, h * 0.3), { angle: 0.8, gap: 10, w: 1.4 }); PL.ink(g, p, 6);
+  PL.ink(g, gg => { gg.moveTo(x, y); gg.lineTo(x + w / 2, y + h * 0.55); gg.lineTo(x + w, y); gg.moveTo(x, y + h); gg.lineTo(x + w * 0.4, y + h * 0.45); gg.moveTo(x + w, y + h); gg.lineTo(x + w * 0.6, y + h * 0.45); }, 3);
+  const st = PL.rect(x + w - 90, y + 20, 64, 76); PL.tint(g, st, PL.T.rose, 0.8); PL.ink(g, st, 3); PL.ink(g, PL.rect(x + w - 82, y + 28, 48, 60), 1.4);
+  const seal = PL.circle(x + w / 2, y + h * 0.55, 30); PL.tint(g, seal, PL.RED, 0.9); PL.ink(g, seal, 3, PL.RED);
 }
-function wave(g, x, y, w, amp, t, c = TK.C.acc, ph = 0) {
-  g.save(); g.strokeStyle = c; g.lineWidth = 6; g.beginPath();
-  for (let i = 0; i <= 80; i++) { const u = i / 80, xx = x + u * w, yy = y + amp * Math.sin(u * 22 + t * 8 + ph) * Math.sin(u * Math.PI) * (0.6 + 0.4 * Math.sin(u * 5 + t)); i ? g.lineTo(xx, yy) : g.moveTo(xx, yy); }
-  g.stroke(); g.restore();
+// すず箔の帯と、なぞった溝（深さの山と谷）。amp: 溝の深さ
+function foilGroove(g, x, y, w, amp, t, ph = 0) {
+  const band = PL.rect(x, y - 70, w, 140);
+  PL.tint(g, band, PL.T.gray, 0.45); PL.hatch(g, band, { angle: 0.9, gap: 14, w: 1.2 }); PL.ink(g, band, 4);
+  PL.ink(g, gg => { for (let i = 0; i <= 120; i++) { const u = i / 120, xx = x + 20 + u * (w - 40), yy = y + amp * Math.sin(u * 22 + t * 8 + ph) * Math.sin(u * Math.PI) * (0.6 + 0.4 * Math.sin(u * 5 + t)); i ? gg.lineTo(xx, yy) : gg.moveTo(xx, yy); } }, 5, PL.RED);
+}
+// 録音のしくみの断面: 口の筒・振動板・針・すず箔を巻いた筒
+function mechanism(g, t, s) {
+  const vib = Math.sin(t * 40) * 10 * s(1);
+  // 声（空気の波。口の筒へ向かう弧）
+  g.save(); g.globalAlpha *= s(0);
+  PL.ink(g, gg => { for (let i = 0; i < 4; i++) { const r = 40 + i * 34 + ((t * 60) % 34); gg.moveTo(100 + Math.cos(-0.6) * r, 420 + Math.sin(-0.6) * r); gg.arc(100, 420, r, -0.6, 0.6); } }, 4, PL.RED);
+  PL.label(g, '声', 150, 260, 52, { color: PL.RED }); PL.leader(g, 180, 400, 150, 300, PL.RED);
+  g.restore();
+  // 口の筒と振動板
+  g.save(); g.globalAlpha *= s(1);
+  const cone = PL.poly([[250, 370], [330, 310], [330, 530], [250, 470]]);
+  PL.tint(g, cone, PL.T.wood, 0.8); PL.hatch(g, cone, { angle: 0.8, gap: 8, w: 1.4, not: PL.rect(240, 300, 100, 120) }); PL.ink(g, cone, 5);
+  PL.ink(g, gg => { gg.moveTo(340, 300); gg.quadraticCurveTo(352 + vib, 420, 340, 540); }, 7);
+  PL.leader(g, 346, 320, 420, 230); PL.label(g, '振動板', 420, 195, 44, { align: 'left' });
+  g.restore();
+  // 針（振動板のまん中から、筒の上へ）
+  g.save(); g.globalAlpha *= s(2);
+  const tipY = 470 + vib * 0.6;
+  PL.ink(g, gg => { gg.moveTo(350, 420); gg.lineTo(520, 420); gg.lineTo(560, tipY); }, 6, TK.C.acc2);
+  PL.leader(g, 470, 418, 600, 330, TK.C.acc2); PL.label(g, '針', 620, 320, 46, { color: TK.C.acc2, align: 'left' });
+  g.restore();
+  // すず箔を巻いた筒（横から。らせんの溝）
+  g.save(); g.globalAlpha *= s(3);
+  const drum = PL.rect(470, 480, 420, 300), cap = PL.ellipse(890, 630, 34, 150);
+  PL.tint(g, drum, PL.T.gray, 0.55); PL.hatch(g, drum, { angle: 0.9, gap: 10, w: 1.4, not: PL.rect(460, 470, 440, 150) }); PL.ink(g, drum, 5);
+  PL.tint(g, cap, PL.T.brown, 0.6); PL.ink(g, cap, 4);
+  PL.ink(g, gg => { for (let i = 0; i < 12; i++) { const x = 490 + i * 34; gg.moveTo(x, 480); gg.quadraticCurveTo(x + 10, 630, x, 780); } }, 1.6, 'rgba(35,28,21,0.5)');   // らせんの溝のすじ
+  PL.ink(g, gg => { gg.moveTo(890, 630); gg.lineTo(1000, 630); gg.lineTo(1000, 700); gg.lineTo(1040, 700); }, 6);   // 軸と手回しのハンドル
+  PL.leader(g, 680, 790, 680, 870); PL.label(g, 'すず箔を巻いた筒', 680, 905, 44);
+  // 溝の断面（拡大）: 深さの山と谷
+  const zx = 120, zy = 1090, zw = 840;
+  PL.ink(g, PL.rect(zx, zy - 70, zw, 130), 3);
+  PL.tint(g, gg => { gg.moveTo(zx, zy - 20); for (let i = 0; i <= 120; i++) { const u = i / 120; gg.lineTo(zx + u * zw, zy - 20 + 26 * Math.max(0, Math.sin(u * 30 - t * 6)) * (0.5 + 0.5 * Math.sin(u * 4 + t))); } gg.lineTo(zx + zw, zy + 60); gg.lineTo(zx, zy + 60); gg.closePath(); }, PL.T.gray, 0.7);
+  PL.ink(g, gg => { gg.moveTo(zx, zy - 20); for (let i = 0; i <= 120; i++) { const u = i / 120; gg.lineTo(zx + u * zw, zy - 20 + 26 * Math.max(0, Math.sin(u * 30 - t * 6)) * (0.5 + 0.5 * Math.sin(u * 4 + t))); } }, 4, PL.RED);
+  PL.label(g, 'すず箔の溝（断面・拡大）', zx, zy - 98, 36, { align: 'left', bold: false });
+  g.restore();
 }
 
 function draw(g, t) {
   // 0〜8: 3択
   if (t < 8.0) {
-    TK.card(g, 120, 190, 720, 130, { r: 30 });
-    TK.text(g, '1878年 エジソンの「使いみち」', PW / 2 - 60, 255, 56);
-    if (t < 3.0) { g.save(); g.globalAlpha = TK.pop(t, 0.1, 0.4) * fade(t, 0, 3.0, 0.25); TK.text(g, '[最初に]書いたのは？', PW / 2 - 60, 415, 76, { stroke: 'rgba(0,0,0,0.6)' }); g.restore(); }
-    TK.choices(g, t, 0.2, 8.0, ['音楽を聴く', '手紙と口述筆記', 'しゃべるおもちゃ'], { y: 520, h: 160, gap: 30, answer: 1, reveal: 5.0, think: [3.0, 5.0], size: 62 });
+    PL.label(g, '1878年 エジソンの「使いみち」', 100, 230, 54, { align: 'left' });
+    PL.ink(g, gg => { gg.moveTo(100, 280); gg.lineTo(900, 280); }, 3);
+    if (t < 3.0) { g.save(); g.globalAlpha *= clamp(TK.pop(t, 0.1, 0.4), 0, 1) * fade(t, 0, 3.0, 0.25); PL.label(g, '[最初に]書いたのは？', PW / 2, 400, 76); g.restore(); }
+    TK.choices(g, t, 0.2, 8.0, ['音楽を聴く', '手紙と口述筆記', 'しゃべるおもちゃ'], { y: 520, h: 160, gap: 30, think: [3.0, 5.0], size: 62 });
+    if (t >= 5.0) {   // 答えは朱の二重わくで（札の中はぬらない）
+      const y = 520 + 190; g.save(); g.globalAlpha *= clamp((t - 5.0) / 0.35, 0, 1) * fade(t, 0.2, 8.0, 0.3);
+      PL.ink(g, PL.rect(78, y - 12, PW - 156, 184), 7, PL.RED); PL.ink(g, PL.circle(170, y + 80, 58), 6, PL.RED);
+      g.restore();
+    }
   }
   // 8〜12: 声のまま手紙
   if (t >= 8.0 && t < 12.0) {
-    const k = TK.pop(t, 8.2, 0.4);
-    g.save(); g.globalAlpha = k; envelope(g, 250, 330, 460, 300); g.restore();
-    wave(g, 290, 760, 380, 60 * k, t);
-    TK.text(g, '声のまま、手紙に', PW / 2 - 60, 920, 60, { color: TK.C.sub });
+    const k = clamp(TK.pop(t, 8.2, 0.4), 0, 1);
+    g.save(); g.globalAlpha *= k; envelope(g, 160, 300, 520, 330); g.restore();
+    foilGroove(g, 120, 790, 840, 50 * k, t);
+    PL.leader(g, 900, 760, 940, 650); PL.label(g, 'すず箔', 940, 615, 40);
+    PL.label(g, '声のまま、手紙に', PW / 2, 960, 60);
   }
-  // 12〜20: リスト
+  // 12〜20: 本文に書かれた順（古い雑誌の段のような枠）
   if (t >= 12.0 && t < 20.0) {
-    TK.text(g, '本文に書かれた順', PW / 2 - 60, 220, 48, { color: TK.C.sub });
+    PL.label(g, '本文に書かれた順', 100, 210, 50, { align: 'left' });
+    const fx = 90, fy = 260, fw = 900, fh = 760;
+    PL.ink(g, PL.rect(fx, fy, fw, fh), 5); PL.ink(g, PL.rect(fx + 10, fy + 10, fw - 20, fh - 20), 1.5);
     LIST.forEach((s, i) => {
       const a = 12.4 + i * 0.6; if (t < a) return;
-      const hot = i === 3 || i === 6, first = i === 0, y = 310 + i * 92;
-      g.save(); g.globalAlpha = TK.pop(t, a, 0.3);
-      if (hot || first) TK.card(g, 100, y - 40, 760, 80, { r: 20, fill: first ? 'rgba(89,227,154,0.18)' : 'rgba(255,207,74,0.2)', stroke: first ? TK.C.green : TK.C.acc });
-      TK.text(g, s, 140, y, i === 7 ? 40 : 50, { align: 'left', color: first ? TK.C.green : hot ? TK.C.acc : (i === 7 ? TK.C.dim : '#fff') });
+      const hot = i === 3 || i === 6, first = i === 0, y = 330 + i * 88;
+      g.save(); g.globalAlpha *= clamp(TK.pop(t, a, 0.3), 0, 1);
+      PL.label(g, String(i + 1), 150, y, 34, { color: 'rgba(35,28,21,0.55)', bold: false });
+      PL.label(g, s, 200, y, i === 7 ? 40 : 50, { align: 'left', color: first ? PL.GREEN : hot ? PL.RED : (i === 7 ? '#6a5f52' : PL.INK) });
+      if (first || hot) PL.ink(g, gg => { gg.moveTo(200, y + 36); gg.lineTo(200 + Math.min(700, s.length * 50), y + 36); }, 4, first ? PL.GREEN : PL.RED);
       g.restore();
     });
     TK.note(g, t, 13, 20, '本文に番号はない（書かれた順）', { size: 32 });
   }
   // 20〜28: 声 → 振動板 → 針 → 溝
-  if (t >= 20.0 && t < 28.0) {
-    const s = i => clamp((t - 20.3 - i * 1.2) / 0.4, 0, 1);
-    g.save(); g.globalAlpha = s(0); wave(g, 70, 420, 220, 70, t); TK.text(g, '声', 180, 300, 48, { color: TK.C.acc }); g.restore();
-    const vib = Math.sin(t * 40) * 10 * s(1);
-    g.save(); g.globalAlpha = s(1); g.strokeStyle = '#e8f0ff'; g.lineWidth = 8;
-    g.beginPath(); g.moveTo(340, 300); g.quadraticCurveTo(360 + vib, 420, 340, 540); g.stroke(); TK.text(g, '振動板', 345, 250, 44, { color: TK.C.sub }); g.restore();
-    g.save(); g.globalAlpha = s(2); g.strokeStyle = TK.C.acc2; g.lineWidth = 6;
-    g.beginPath(); g.moveTo(352, 420); g.lineTo(520, 420); g.lineTo(560, 470 + vib * 0.6); g.stroke(); TK.text(g, '針', 470, 370, 44, { color: TK.C.acc2 }); g.restore();
-    // すず箔を巻いた筒と溝（断面）
-    g.save(); g.globalAlpha = s(3);
-    TK.card(g, 520, 490, 380, 330, { r: 60, fill: 'rgba(200,210,230,0.18)', stroke: '#cfe0ff' });
-    g.strokeStyle = TK.C.acc; g.lineWidth = 5; g.beginPath();
-    for (let i = 0; i <= 80; i++) { const u = i / 80, x = 540 + u * 340, y = 560 + 20 * Math.sin(u * 30 - t * 6) * (0.5 + 0.5 * Math.sin(u * 4 + t)); i ? g.lineTo(x, y) : g.moveTo(x, y); }
-    g.stroke();
-    TK.text(g, 'すず箔の溝', 710, 880, 44, { color: TK.C.sub });
-    g.restore();
-  }
+  if (t >= 20.0 && t < 28.0) mechanism(g, t, i => clamp((t - 20.3 - i * 1.2) / 0.4, 0, 1));
   // 28〜35: なぞるたびにすり減る（推定の絵）
   if (t >= 28.0) {
-    g.save(); g.globalAlpha = TK.pop(t, 28.1, 0.4);
-    TK.card(g, 120, 190, 720, 150, { r: 30, fill: 'rgba(255,207,74,0.16)', stroke: TK.C.acc });
-    TK.text(g, '「[50〜100回] くり返せる」', PW / 2 - 60, 245, 60); TK.text(g, '（エジソンの見込み）', PW / 2 - 60, 305, 38, { color: TK.C.sub, bold: false });
+    g.save(); g.globalAlpha *= clamp(TK.pop(t, 28.1, 0.4), 0, 1);
+    PL.label(g, '「[50〜100回] くり返せる」', 100, 240, 60, { align: 'left' });
+    PL.label(g, '（エジソンの見込み）', 110, 310, 38, { align: 'left', bold: false });
     g.restore();
     if (t > 30.0) {
-      const wear = clamp((t - 30.0) / 3.0, 0, 1);
-      g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 7; g.beginPath();
-      for (let i = 0; i <= 120; i++) { const u = i / 120, x = 120 + u * 720, y = 620 + 110 * (1 - wear * 0.92) * Math.sin(u * 26) * (0.6 + 0.4 * Math.sin(u * 5)); i ? g.lineTo(x, y) : g.moveTo(x, y); }
-      g.stroke(); g.restore();
-      // なぞる針
-      const nx = 120 + 720 * (((t - 30) * 1.3) % 1);
-      g.save(); g.fillStyle = TK.C.acc2; g.beginPath(); g.moveTo(nx, 470); g.lineTo(nx - 14, 440); g.lineTo(nx + 14, 440); g.closePath(); g.fill(); g.restore();
-      TK.text(g, 'なぞるたびに、溝がすり減る', PW / 2 - 60, 860, 54, { color: TK.C.sub });
+      const wear = clamp((t - 30.0) / 3.0, 0, 1), band = PL.rect(100, 500, 880, 240);
+      PL.tint(g, band, PL.T.gray, 0.45); PL.hatch(g, band, { angle: 0.9, gap: 14, w: 1.2 }); PL.ink(g, band, 4);
+      PL.ink(g, gg => { for (let i = 0; i <= 120; i++) { const u = i / 120, x = 120 + u * 840, y = 620 + 90 * (1 - wear * 0.92) * Math.sin(u * 26) * (0.6 + 0.4 * Math.sin(u * 5)); i ? gg.lineTo(x, y) : gg.moveTo(x, y); } }, 6, PL.RED);
+      const nx = 120 + 840 * (((t - 30) * 1.3) % 1), nd = PL.poly([[nx, 495], [nx - 16, 420], [nx + 16, 420]]);   // なぞる針
+      PL.tint(g, nd, TK.C.acc2, 0.9); PL.ink(g, nd, 3);
+      PL.ink(g, gg => { gg.moveTo(nx, 420); gg.lineTo(nx, 380); }, 5);
+      PL.label(g, 'なぞるたびに、溝がすり減る', PW / 2, 860, 54);
     }
     TK.note(g, t, 30.0, 32.5, 'すり減り方はアプリのモデルの推定の絵', { size: 32 });
-    TK.note(g, t, 32.5, 35, '出どころ: T. A. Edison「The Phonograph and Its Future」\nNorth American Review 126（1878）', { size: 30 });
+    TK.note(g, t, 32.5, 35, '出どころ: T. A. Edison「The Phonograph and Its Future」\nNorth American Review 126（1878）', { size: 30, y: 1100 });   // 2行の注は帯の上に
   }
 }
 

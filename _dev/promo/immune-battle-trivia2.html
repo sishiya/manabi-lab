@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく immune-2（型B もしも計算）「もしも体が、ウイルスをまったく止めなかったら」。台本は trivia/immune-battle.md。?short で録る
@@ -31,40 +34,49 @@ const cues = [
   { t: 13.6, type: 'pop' }, { t: 15.0, type: 'pop' }, { t: 16.4, type: 'pop' }, { t: 17.8, type: 'pop' }, { t: 19.2, type: 'rise' },
   { t: 22.0, type: 'whoosh' }, { t: 28.0, type: 'ding' },
 ];
+/// 絵は「図鑑の版画」（PL.*）。のどの表面の細胞を上から見た図（六角の並び・核つき）。細胞はまとめて1つの道にして、手彩色と墨を1回ずつ
 // 六角形の細胞の並び（中心から近い順）
-const HR = 30, CX = 540, CY = 650, cells = [];
-for (let q = -14; q <= 14; q++) for (let r = -14; r <= 14; r++) {
-  const x = CX + HR * 1.5 * q, y = CY + HR * Math.sqrt(3) * (r + q / 2);
-  if (x < 70 || x > 1010 || y < 330 || y > 1000) continue;
-  cells.push({ x, y, d: Math.hypot(x - CX, y - CY) + ((q * 7 + r * 13) % 5) * 6 });
+const HR = 30, CX = 540, CY = 650;
+function makeCells(cx, cy, x0, x1, y0, y1) {
+  const out = [];
+  for (let q = -16; q <= 16; q++) for (let r = -16; r <= 16; r++) {
+    const x = cx + HR * 1.5 * q, y = cy + HR * Math.sqrt(3) * (r + q / 2);
+    if (x < x0 || x > x1 || y < y0 || y > y1) continue;
+    out.push({ x, y, d: Math.hypot(x - cx, y - cy) + ((q * 7 + r * 13) % 5) * 6, s: (q * 31 + r * 17) & 7 });
+  }
+  return out.sort((a, b) => a.d - b.d);
 }
-cells.sort((a, b) => a.d - b.d);
-function hex(g, x, y, r) { g.beginPath(); for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; i ? g.lineTo(x + r * Math.cos(a), y + r * Math.sin(a)) : g.moveTo(x + r * Math.cos(a), y + r * Math.sin(a)); } g.closePath(); }
-// n 個を赤く（n 個以上は全部）。grey: 灰色になった（使いきった）割合
-function grid(g, n, o = {}) {
-  cells.forEach((c, i) => {
-    hex(g, c.x, c.y, HR - 3);
-    const on = i < n;
-    g.fillStyle = on ? (o.used && i < o.used ? 'rgba(140,150,170,0.45)' : 'rgba(255,107,107,0.75)') : 'rgba(95,212,255,0.10)';
-    g.strokeStyle = on ? 'rgba(255,160,160,0.9)' : 'rgba(160,190,255,0.25)'; g.lineWidth = 2;
-    g.fill(); g.stroke();
-  });
+const cells = makeCells(CX, CY, 70, 1010, 330, 1000);
+const hexP = (x, y, r) => g => { for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; g[i ? 'lineTo' : 'moveTo'](x + r * Math.cos(a), y + r * Math.sin(a)); } g.closePath(); };
+// n 個を感染（n 個以上は全部）。used: 使いきった（灰色）数
+function grid(g, n, o = {}, list = cells) {
+  const pick = f => gg => list.forEach((c, i) => { if (f(i)) hexP(c.x, c.y, HR - 2)(gg); });
+  const used = o.used || 0;
+  PL.tint(g, pick(i => i >= n), PL.T.rose, 0.18);
+  const inf = pick(i => i < n && i >= used), gone = pick(i => i < n && i < used);
+  PL.tint(g, inf, PL.RED, 0.6); PL.hatch(g, inf, { angle: 0.8, gap: 7, w: 1.3 });
+  PL.tint(g, gone, PL.T.gray, 0.75);
+  const nuc = gg => list.forEach((c, i) => PL.ellipse(c.x + (c.s - 3.5) * 1.5, c.y + (c.s % 3 - 1) * 2, 8, 6, c.s)(gg));   // 核
+  PL.tint(g, nuc, PL.T.brown, 0.5); PL.ink(g, nuc, 1.2, 'rgba(35,28,21,0.55)');
+  PL.ink(g, gg => list.forEach(c => hexP(c.x, c.y, HR - 2)(gg)), 1.8);
 }
 const fmtJa = v => v >= 10000 ? (v >= 1e6 ? Math.round(v / 10000).toLocaleString('ja-JP') + '万' : (v / 10000).toFixed(v < 1e5 ? 1 : 0) + '万') : Math.round(v).toLocaleString('ja-JP');
+const tissueClip = g => { g.beginPath(); g.rect(40, 300, PW - 80, 730); g.clip(); };
 
 function draw(g, t) {
   // 0〜8: 1個 → ウイルスを出しはじめる
   if (t < 8.0) {
     grid(g, 1);
     const p = 0.5 + 0.5 * Math.sin(t * 5);
-    g.save(); g.strokeStyle = `rgba(255,107,107,${0.4 + 0.5 * p})`; g.lineWidth = 6; g.beginPath(); g.arc(CX, CY, 46 + 8 * p, 0, Math.PI * 2); g.stroke(); g.restore();
-    TK.text(g, t < 3 ? '[1個] → ？' : '', PW / 2, 220, 100);
+    g.save(); g.globalAlpha *= 0.5 + 0.5 * p; PL.ink(g, PL.circle(CX, CY, 46 + 8 * p), 5, PL.RED); g.restore();
+    if (t < 3) PL.label(g, '[1個] → ？', PW / 2, 220, 100);
     if (t >= 3.0) {
       const hrs = Math.min(6, (t - 3.2) / 2.4 * 6);
-      TK.card(g, 290, 160, 500, 120, { r: 60 });
-      TK.text(g, Math.max(0, Math.floor(hrs)) + ' 時間後', PW / 2, 222, 70, { color: hrs >= 6 ? TK.C.acc : '#fff' });
+      TK.card(g, 290, 160, 500, 120);
+      TK.text(g, Math.max(0, Math.floor(hrs)) + ' 時間後', PW / 2, 222, 70, { color: hrs >= 6 ? PL.RED : PL.INK });
       if (hrs >= 6) {   // ウイルスの粒が外へ
-        for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 + i, d = 40 + ((t - 5.6) * 140 + i * 23) % 260; g.fillStyle = TK.C.acc; g.beginPath(); g.arc(CX + Math.cos(a) * d, CY + Math.sin(a) * d, 7, 0, Math.PI * 2); g.fill(); }
+        const parts = gg => { for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 + i, d = 40 + ((t - 5.6) * 140 + i * 23) % 260; PL.circle(CX + Math.cos(a) * d, CY + Math.sin(a) * d, 9)(gg); } };
+        PL.tint(g, parts, PL.RED, 0.85); PL.ink(g, parts, 2.5);
       }
     }
   }
@@ -72,7 +84,7 @@ function draw(g, t) {
   if (t >= 8.0 && t < 13.0) {
     const n = 1 + Math.round(21 * ease((t - 8.4) / 1.2));
     grid(g, n);
-    TK.card(g, 290, 160, 500, 120, { r: 60 });
+    TK.card(g, 290, 160, 500, 120);
     TK.text(g, '1 → [' + n + ']', PW / 2, 222, 80);
     TK.note(g, t, 9.0, 13, '人から人ではなく、体の中の「細胞から細胞」の数', { size: 30 });
   }
@@ -82,7 +94,7 @@ function draw(g, t) {
     const gi = clamp(Math.floor((t - 13.6) / 1.4), 0, 4), v = gens[gi];
     const frac = Math.log(v) / Math.log(gens[4]);
     grid(g, Math.round(cells.length * clamp(frac * frac * 1.02, 0, 1)));
-    TK.card(g, 130, 140, 820, 160, { r: 40, fill: 'rgba(11,20,48,0.92)' });
+    TK.card(g, 130, 140, 820, 160);
     TK.lines(g, 'もしも\n' + (gi + 1) + '回目', 250, 220, 46, { color: TK.C.sub });
     TK.text(g, '[' + fmtJa(v) + ']個', 640, 220, 92);
     TK.note(g, t, 13.6, 22, 'もしもの計算（絵の細胞の数は目安）', { size: 32 });
@@ -91,24 +103,27 @@ function draw(g, t) {
   if (t >= 22.0 && t < 28.0) {
     const k = ease((t - 22.3) / 2.0);
     grid(g, cells.length, { used: Math.round(cells.length * k) });
-    // インターフェロンの合図（青い波が広がる）
-    for (let i = 0; i < 4; i++) {
-      const r = ((t - 22.5) * 260 + i * 160) % 640; if (t < 22.5) break;
-      g.save(); g.strokeStyle = `rgba(95,212,255,${0.7 * (1 - r / 640)})`; g.lineWidth = 8; g.beginPath(); g.arc(CX, CY, r, 0, Math.PI * 2); g.stroke(); g.restore();
+    if (t >= 22.5) {   // インターフェロンの合図（藍の輪が広がる）。細胞の図の中だけ
+      g.save(); tissueClip(g);
+      for (let i = 0; i < 4; i++) { const r = ((t - 22.5) * 260 + i * 160) % 640; g.save(); g.globalAlpha *= 0.85 * (1 - r / 640); PL.ink(g, PL.circle(CX, CY, r), 7, TK.C.acc2); g.restore(); }
+      g.restore();
     }
-    TK.card(g, 130, 140, 820, 160, { r: 40, fill: 'rgba(11,20,48,0.92)' });
+    TK.card(g, 130, 140, 820, 160);
     TK.lines(g, '細胞が足りなくなる\n＋ [インターフェロン]の合図', PW / 2, 220, 52);
     TK.note(g, t, 22.5, 28, 'モデルの中のしくみをイメージした絵', { size: 30 });
   }
-  // 28〜35: 結論
+  // 28〜35: 結論（下に、はじまったばかりの細胞の図と時計）
   if (t >= 28.0) {
     const f = fade(t, 28, 36, 0.3); g.save(); g.globalAlpha = f;
-    TK.card(g, 110, 330, 860, 420);
-    TK.lines(g, '研究者の結論\n抗ウイルス薬は\n[できるだけ早く]', PW / 2, 540, 80);
+    TK.card(g, 110, 300, 860, 420);
+    TK.lines(g, '研究者の結論\n抗ウイルス薬は\n[できるだけ早く]', PW / 2, 510, 80);
+    grid(g, 3, {}, small);
+    PL.watch(g, 965, 935, 62, 0.08);
     g.restore();
-    TK.note(g, t, 29.5, 35, 'モデルの値（大人の実験感染 H1N1 に合わせた計算）\n出どころ: Baccam ほか (2006) J Virol 80:7590', { size: 30 });
+    TK.note(g, t, 29.5, 35, 'モデルの値（大人の実験感染 H1N1 に合わせた計算）\n出どころ: Baccam ほか (2006) J Virol 80:7590', { size: 30, y: 1150 });
   }
 }
+const small = makeCells(500, 920, 130, 840, 800, 1050);
 
 triviaStart({ out: 'immune-battle-trivia2', dur: DUR, draw, subs, cues, peek: 1.5 });
 </script>

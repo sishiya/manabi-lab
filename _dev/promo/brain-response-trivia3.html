@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく brain-3（型G ループ）「痛みは2回やってくる」。台本は trivia/brain-response.md。?short で録る
@@ -27,75 +30,106 @@ const subs = [
 const cues = [
   { t: 0.05, type: 'pop' }, { t: 2.3, type: 'tick' }, { t: 6.0, type: 'whoosh' }, { t: 7.4, type: 'thud' }, { t: 11.0, type: 'pop' }, { t: 11.6, type: 'tick' }, { t: 12.6, type: 'thud' }, { t: 14.0, type: 'pop' },
 ];
-const FAST = '#5fd4ff', SLOW = '#ff8a6b';
+// 絵は「図鑑の版画」（trivia-plate.js の PL.*）。脳の波は方眼の上の墨の線、山の下を手彩色。神経は太い（さやつき）・細いの2本
+const FAST = TK.C.acc2, SLOW = PL.RED;   // 速い神経は藍、遅い神経は朱
 const AX0 = 120, AX1 = 940, AMAX = 1.5;   // 時間の線（0〜1.5 秒）
 const sx = s => AX0 + (AX1 - AX0) * s / AMAX;
+const line = pts => g => pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
+const fadeIn = (g, f, fn) => { g.save(); g.globalAlpha *= f; fn(); g.restore(); };
 
 // 時間の線と、2つの山。k1・k2 は山の出る具合（0〜1）、cut は描く時刻の上限
 function timeline(g, y, k1, k2, cut, o = {}) {
-  g.save();
-  g.strokeStyle = 'rgba(207,224,255,0.6)'; g.lineWidth = 4; g.beginPath(); g.moveTo(AX0, y); g.lineTo(AX1, y); g.stroke();
-  if (o.ticks !== false) for (const s of [0, 0.5, 1.0, 1.5]) { const x = sx(s); g.beginPath(); g.moveTo(x, y - 10); g.lineTo(x, y + 10); g.stroke(); TK.text(g, s.toFixed(1) + '秒', x, y + 215, 34, { color: TK.C.dim, bold: false }); }
+  PL.ink(g, gg => { for (let s = 0; s <= AMAX + 1e-6; s += 0.1) { gg.moveTo(sx(s), y - 250); gg.lineTo(sx(s), y + 180); } for (let d = -240; d <= 180; d += 60) { gg.moveTo(AX0, y + d); gg.lineTo(AX1, y + d); } }, 1, 'rgba(35,28,21,0.16)');   // 方眼
+  PL.ink(g, line([[AX0, y], [AX1, y]]), 4);
+  if (o.ticks !== false) for (const s of [0, 0.5, 1.0, 1.5]) { const x = sx(s); PL.ink(g, line([[x, y - 12], [x, y + 12]]), 4); PL.label(g, s.toFixed(1) + '秒', x, y + 215, 34, { color: TK.C.sub, bold: false }); }
   // 波（1回目は目安の位置、2回目は 0.806 s の負の山と 1.033 s の正の山）
-  const wave = s => {
-    const a = k1 * 220 * Math.exp(-Math.pow((s - 0.30) / 0.05, 2));
-    const b = k2 * (250 * Math.exp(-Math.pow((s - 0.806) / 0.07, 2)) - 170 * Math.exp(-Math.pow((s - 1.033) / 0.08, 2)));
-    return a + b;
-  };
-  g.lineWidth = 8; g.lineJoin = 'round';
-  g.beginPath();
-  for (let s = 0; s <= Math.min(cut, AMAX); s += 0.005) { const x = sx(s), yy = y - wave(s); s === 0 ? g.moveTo(x, yy) : g.lineTo(x, yy); }
-  g.strokeStyle = '#fff'; g.stroke();
-  g.restore();
+  const w1 = s => k1 * 220 * Math.exp(-Math.pow((s - 0.30) / 0.05, 2));
+  const w2 = s => k2 * (250 * Math.exp(-Math.pow((s - 0.806) / 0.07, 2)) - 170 * Math.exp(-Math.pow((s - 1.033) / 0.08, 2)));
+  const end = Math.min(cut, AMAX), pts = [];
+  for (let s = 0; s <= end + 1e-9; s += 0.005) pts.push([sx(s), y - w1(s) - w2(s)]);
+  if (pts.length < 2) return;
+  const area = (a, b, col) => { const P = pts.filter(([x]) => x >= sx(a) && x <= sx(b)); if (P.length > 2) { const p = PL.poly([[P[0][0], y], ...P, [P[P.length - 1][0], y]]); PL.tint(g, p, col, 0.75); PL.hatch(g, p, { angle: 0.8, gap: 9, w: 1.3 }); } };
+  area(0.15, 0.45, PL.T.sea); area(0.6, 0.93, PL.T.rose); area(0.93, 1.25, PL.T.rose);
+  PL.ink(g, line(pts), 6);
 }
-// 足の線画（横から）。toe の所に箱。hit 0〜1 で光る
-function foot(g, x, y, s, hit) {
-  g.save(); g.translate(x, y); g.scale(s, s);
-  g.strokeStyle = 'rgba(207,224,255,0.9)'; g.fillStyle = 'rgba(30,50,100,0.6)'; g.lineWidth = 6 / s; g.lineJoin = 'round';
-  g.beginPath(); g.moveTo(-60, -260); g.lineTo(-60, -60); g.quadraticCurveTo(-70, 0, -10, 0); g.lineTo(220, 0);
-  g.quadraticCurveTo(260, 0, 255, -30); g.quadraticCurveTo(250, -55, 180, -70); g.quadraticCurveTo(60, -100, 40, -160); g.lineTo(40, -260); g.fill(); g.stroke();
-  // 箱（たんすの角）
-  g.fillStyle = 'rgba(160,120,80,0.6)'; g.strokeStyle = 'rgba(230,200,160,0.9)'; g.fillRect(262, -140, 120, 140); g.strokeRect(262, -140, 120, 140);
-  if (hit > 0) { g.globalAlpha = hit; g.strokeStyle = TK.C.acc; g.lineWidth = 6 / s; for (let i = 0; i < 6; i++) { const a = -Math.PI / 2 + (i - 2.5) * 0.4; g.beginPath(); g.moveTo(255 + Math.cos(a) * 50, -40 + Math.sin(a) * 50); g.lineTo(255 + Math.cos(a) * 95, -40 + Math.sin(a) * 95); g.stroke(); } }
-  g.restore();
+// 神経の線維。myelin: さや（ふし）のある太い線維
+function fiber(g, x0, x1, y, myelin, k = 1) {
+  const xe = lerp(x0, x1, k);
+  if (myelin) {
+    PL.ink(g, line([[x0, y], [xe, y]]), 4);
+    for (let x = x0 + 6; x + 56 < xe; x += 66) { const sh = PL.rect(x, y - 15, 56, 30); PL.tint(g, sh, PL.T.sand, 0.9); PL.hatch(g, PL.rect(x, y + 4, 56, 11), { angle: 0.8, gap: 6, w: 1.2 }); PL.ink(g, sh, 3); }
+  } else {
+    PL.ink(g, gg => { gg.moveTo(x0, y); for (let x = x0; x <= xe; x += 8) gg.lineTo(x, y + Math.sin(x * 0.05) * 4); }, 3);
+  }
+}
+// 足（横から。つま先は右）と、たんすの角。hit 0〜1 で墨のぶつかり線
+const FOOT = [[-40, -300], [-42, -200], [-46, -124], [-60, -66], [-60, -22], [-44, -2], [0, 0], [200, 0], [250, -4], [262, -18], [254, -34], [220, -42], [150, -58], [84, -82], [42, -112], [32, -152], [36, -300]];
+function smoothP(pts, m) { return g => { const P = pts.map(p => m(p[0], p[1])), n = P.length, mid = i => { const a = P[i % n], b = P[(i + 1) % n]; return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; }; g.moveTo(...mid(n - 1)); for (let i = 0; i < n; i++) g.quadraticCurveTo(...P[i], ...mid(i)); g.closePath(); }; }
+function foot(g, x, y, s, hit, boxX) {
+  const m = (a, b) => [x + a * s, y + b * s], ft = smoothP(FOOT, m);
+  PL.tint(g, ft, PL.T.sand, 0.75);
+  PL.hatch(g, ft, { angle: 0.8, gap: 9, w: 1.5, not: smoothP(FOOT.map(([a, b]) => [a + 14, b - 18]), m) });
+  PL.ink(g, gg => {
+    [[214, -40, 226, -6], [196, -44, 206, -4], [178, -50, 186, -4]].forEach(([a, b, c, d]) => { gg.moveTo(...m(a, b)); gg.quadraticCurveTo(...m(c + 6, (b + d) / 2), ...m(c, d)); });   // 指のさかい
+    gg.moveTo(...m(-24, -108)); gg.arc(...m(-14, -100), 10 * s, Math.PI, Math.PI * 2.6);   // くるぶし
+  }, 2);
+  const nail = PL.ellipse(...m(240, -26), 9 * s, 5 * s, 0.3); PL.tint(g, nail, PL.T.rose, 0.9); PL.ink(g, nail, 2);
+  PL.ink(g, ft, 5);
+  const cuff = PL.rect(...m(-56, -350), 108 * s, 70 * s); PL.tint(g, cuff, PL.T.sea, 0.6); PL.hatch(g, cuff, { angle: 0.8, gap: 9, w: 1.5 }); PL.ink(g, cuff, 5);   // ズボンのすそ
+  // たんすの角（場所は動かない）
+  const bx = boxX, by = y, bw = 250, bh = 360, box = PL.rect(bx, by - bh, bw, bh);
+  PL.tint(g, box, PL.T.wood, 0.75);
+  PL.ink(g, gg => { for (let k = 0; k < 11; k++) { const yy = by - bh + 14 + k * 32; gg.moveTo(bx + 6, yy); for (let xx = bx + 6; xx < bx + bw; xx += 20) gg.lineTo(xx, yy + Math.sin(xx * 0.05 + k) * 3); } }, 1, 'rgba(35,28,21,0.4)');   // 木目
+  PL.hatch(g, PL.rect(bx, by - bh, 18, bh), { angle: 0.8, gap: 6, w: 1.3 });
+  PL.ink(g, gg => { gg.rect(bx + 30, by - bh + 30, bw - 30, 140); gg.rect(bx + 30, by - bh + 190, bw - 30, 140); }, 3);   // 引き出し
+  [by - bh + 100, by - bh + 260].forEach(yy => { const kn = PL.circle(bx + 90, yy, 9); PL.tint(g, kn, PL.T.brown, 0.9); PL.ink(g, kn, 2.5); });
+  PL.ink(g, box, 5);
+  if (hit > 0) fadeIn(g, hit, () => PL.ink(g, gg => { for (let i = 0; i < 6; i++) { const a = -Math.PI / 2 - 0.5 + (i - 2.5) * 0.36, cx = bx - 4, cy = y - 30; gg.moveTo(cx + Math.cos(a) * 60, cy + Math.sin(a) * 60); gg.lineTo(cx + Math.cos(a) * 110, cy + Math.sin(a) * 110); } }, 6, PL.RED));
 }
 
 function draw(g, t) {
   if (t < 2.0) {
     timeline(g, 880, 1, 1, AMAX, { ticks: false });
-    TK.hook(g, t, 0, 2.0, '痛みは、\n[2回]やってくる', { y: 470, size: 130 });
+    TK.hook(g, t, 0, 2.0, '痛みは、\n[2回]やってくる', { y: 420, size: 130 });
   }
   if (t >= 2.0 && t < 11.0) {
-    const f = fade(t, 2, 11, 0.3); g.save(); g.globalAlpha = f;
-    const cut = t < 6 ? clamp((t - 2.2) / 0.6, 0, 1) * 0.55 : 0.55 + clamp((t - 6.2) / 1.4, 0, 1) * 0.95;
-    timeline(g, 700, 1, t >= 6 ? 1 : 0, cut);
-    TK.text(g, '脳の波（つついてから）', PW / 2, 150, 44, { color: TK.C.sub, bold: false });
-    if (t >= 2.8) {
-      TK.card(g, sx(0.30) - 150, 220, 300, 150, { stroke: FAST, lw: 5 });
-      TK.lines(g, '1回目\n[チクッ]', sx(0.30), 295, 52, { acc: FAST });
-    }
-    if (t >= 7.4) {
-      TK.card(g, sx(0.92) - 140, 210, 320, 170, { stroke: SLOW, lw: 5 });
-      TK.lines(g, '2回目\n[ジーン]', sx(0.92) + 20, 295, 56, { acc: SLOW });
-      TK.text(g, '約 1 秒おくれ', sx(0.92), 1010, 54, { color: SLOW });
-    }
-    if (t >= 3.0 && t < 6.0) TK.text(g, '速い神経', sx(0.30), 1010, 54, { color: FAST });
-    g.restore();
-    if (t >= 7.4) TK.note(g, t, 7.4, 11, '2回目の波 0.81秒・1.03秒（手の甲などへのレーザーで測定）\n1回目の時刻は目安の位置', { size: 30 });
+    fadeIn(g, fade(t, 2, 11, 0.3), () => {
+      const cut = t < 6 ? clamp((t - 2.2) / 0.6, 0, 1) * 0.55 : 0.55 + clamp((t - 6.2) / 1.4, 0, 1) * 0.95;
+      timeline(g, 700, 1, t >= 6 ? 1 : 0, cut);
+      PL.label(g, '脳の波（つついてから）', AX0, 150, 44, { align: 'left', color: TK.C.sub, bold: false });
+      if (t >= 2.8) {
+        PL.leader(g, sx(0.30), 470, sx(0.30), 370, FAST);
+        TK.lines(g, '1回目\n[チクッ]', sx(0.30), 285, 52, { font: PL.MIN, acc: FAST });
+      }
+      if (t >= 7.4) {
+        PL.leader(g, sx(0.806), 440, sx(0.92), 370, SLOW);
+        TK.lines(g, '2回目\n[ジーン]', sx(0.92) + 20, 285, 56, { font: PL.MIN, acc: SLOW });
+        PL.label(g, '約 1 秒おくれ', sx(0.92), 990, 54, { color: SLOW });
+        fiber(g, sx(0.92) - 200, sx(0.92) + 160, 1075, false, clamp((t - 7.4) / 1.2, 0, 1));
+        PL.label(g, '細い', sx(0.92) - 220, 1075, 34, { align: 'right', color: TK.C.sub, bold: false });
+      }
+      if (t >= 3.0 && t < 6.0) {
+        PL.label(g, '速い神経', sx(0.30) + 40, 990, 54, { color: FAST });
+        fiber(g, AX0, sx(0.30) + 200, 1075, true, clamp((t - 3.0) / 0.5, 0, 1));
+        PL.label(g, '太い・さやつき', sx(0.30) + 300, 1075, 34, { align: 'left', color: TK.C.sub, bold: false });
+      }
+    });
+    if (t >= 7.4) TK.note(g, t, 7.4, 11, '2回目の波 0.81秒・1.03秒（手の甲などへのレーザーで測定）\n1回目の時刻は目安の位置', { size: 30, y: 1160 });
   }
   if (t >= 11.0 && t < 14.0) {
-    const f = fade(t, 11, 14, 0.3); g.save(); g.globalAlpha = f;
-    const k = ease((t - 11.0) / 0.6);
-    foot(g, 150 + 60 * k, 860, 1.8, t > 11.6 ? clamp(1 - (t - 11.6) / 0.5, 0, 1) : 0);
-    if (t > 11.6) TK.text(g, 'チクッ', 420, 330, 80, { color: FAST });
-    if (t > 12.6) { const kk = TK.pop(t, 12.6, 0.35); g.save(); g.translate(720, 470); g.scale(kk, kk); TK.text(g, 'ジーン…', 0, 0, 96, { color: SLOW }); g.restore(); }
-    g.restore();
+    fadeIn(g, fade(t, 11, 14, 0.3), () => {
+      const k = ease((t - 11.0) / 0.6);
+      PL.ink(g, line([[60, 960], [PW - 60, 960]]), 4); PL.ink(g, gg => { for (let x = 70; x < PW - 60; x += 24) { gg.moveTo(x, 964); gg.lineTo(x - 12, 980); } }, 1.4);   // 床
+      foot(g, 110 + 60 * k, 960, 1.6, t > 11.6 ? clamp(1 - (t - 11.6) / 0.5, 0, 1) : 0, 110 + 60 + 262 * 1.6 - 10);
+      if (t > 11.6) PL.label(g, 'チクッ', 380, 300, 80, { color: FAST });
+      if (t > 12.6) { const kk = TK.pop(t, 12.6, 0.35); g.save(); g.translate(760, 470); g.scale(kk, kk); PL.label(g, 'ジーン…', 0, 0, 96, { color: SLOW }); g.restore(); }
+    });
     TK.note(g, t, 11.2, 14, '足の小指は、たとえの絵です', { size: 30 });
   }
   if (t >= 14.0) {
     timeline(g, 880, 1, 1, AMAX, { ticks: false });
-    TK.hook(g, t, 14.0, 16.0, '痛みは、\n[2回]やってくる', { y: 470, size: 130 });
-    TK.note(g, t, 14.0, 16, '出どころ: Azevedo ほか (2016) Arq Neuropsiquiatr 74:223\nKandel ほか『Principles of Neural Science』第5版', { size: 30 });
+    TK.hook(g, t, 14.0, 16.0, '痛みは、\n[2回]やってくる', { y: 420, size: 130 });
+    TK.note(g, t, 14.0, 16, '出どころ: Azevedo ほか (2016) Arq Neuropsiquiatr 74:223\nKandel ほか『Principles of Neural Science』第5版', { size: 30, y: 1150 });
   }
 }
 

@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく piano-hand-1（型H 当ててみて）「1秒に何音？」。台本は trivia/piano-hand.md。?short で録る
@@ -34,55 +37,130 @@ const cues = [
 // 鍵盤の打鍵の音（細かい tick を 1秒に30。耳で速さがわかるように。音量は小さく）
 for (let s = 10.4; s < 14.4; s += 1 / 30) cues.push({ t: s, type: 'tick', v: 0.35 });
 
-// 鍵盤（白鍵 N 本）。lit: 光っている白鍵の番号の集合
+/// ---- 図鑑の版画の道具で描く部品（PL.*）----
+const TAU = Math.PI * 2;
+// なめらかな閉じた形（点のあいだを2次曲線でつなぐ）
+const curvy = pts => g => {
+  const n = pts.length, mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const m0 = mid(pts[n - 1], pts[0]); g.moveTo(m0[0], m0[1]);
+  for (let i = 0; i < n; i++) { const p = pts[i], q = mid(p, pts[(i + 1) % n]); g.quadraticCurveTo(p[0], p[1], q[0], q[1]); }
+  g.closePath();
+};
+// 鍵盤（上から）。lit: 押されている白鍵の番号の集合。ふた（木）・赤いフェルト・白鍵・黒鍵
+// 同じ色の鍵はまとめて1回でぬる（筆のルックはぬるたびにぼかすので、回数を少なく）
 function keyboard(g, x0, y0, w, h, n, lit) {
-  const kw = w / n;
-  for (let i = 0; i < n; i++) {
-    g.fillStyle = lit.has(i) ? TK.C.acc : 'rgba(235,240,255,0.92)';
-    g.fillRect(x0 + i * kw + 2, y0, kw - 4, h);
-  }
-  g.fillStyle = '#0b1430';
-  for (let i = 0; i < n - 1; i++) { if ([2, 6].includes(i % 7)) continue; g.fillRect(x0 + (i + 1) * kw - kw * 0.3, y0, kw * 0.6, h * 0.6); }
+  const kw = w / n, bh = h * 0.6, lid = PL.rect(x0 - 24, y0 - 62, w + 48, 54);
+  PL.tint(g, lid, PL.T.wood, 0.8);
+  PL.hatch(g, lid, { angle: 0.2, gap: 9, w: 2, not: PL.rect(x0 - 24, y0 - 62, w + 48, 26) });
+  PL.ink(g, gg => { for (let k = 0; k < 3; k++) { const yy = y0 - 54 + k * 9; gg.moveTo(x0 - 20, yy); for (let x = x0 - 20; x <= x0 + w + 20; x += 40) gg.lineTo(x, yy + Math.sin(x * 0.013 + k * 1.7) * 2.5); } }, 1.3);
+  PL.ink(g, lid, 5);
+  PL.ink(g, gg => { gg.moveTo(x0, y0 - 4); gg.lineTo(x0 + w, y0 - 4); }, 5, PL.RED);   // フェルト
+  const keys = on => gg => { for (let i = 0; i < n; i++) if (lit.has(i) === on) gg.rect(x0 + i * kw, y0, kw, h); };
+  PL.tint(g, keys(false), PL.T.sand, 0.22);
+  if (lit.size) { PL.tint(g, keys(true), PL.T.gold, 0.85); PL.hatch(g, keys(true), { angle: 0.9, gap: 8, w: 1.8 }); }
+  PL.ink(g, gg => { keys(false)(gg); keys(true)(gg); }, 3);
+  PL.ink(g, gg => { for (let i = 0; i < n; i++) { const yy = y0 + h - (lit.has(i) ? 22 : 14); gg.moveTo(x0 + i * kw + 3, yy); gg.lineTo(x0 + (i + 1) * kw - 3, yy); } }, 1.4);   // 手前のふち（押した鍵は沈む）
+  const blacks = []; for (let i = 0; i < n - 1; i++) if (![2, 6].includes(i % 7)) blacks.push(x0 + (i + 1) * kw - kw * 0.3);
+  const bp = gg => blacks.forEach(bx => gg.rect(bx, y0, kw * 0.6, bh));
+  PL.tint(g, bp, PL.INK, 0.9); PL.ink(g, bp, 3);
+  PL.ink(g, gg => blacks.forEach(bx => { gg.moveTo(bx + kw * 0.14, y0 + 8); gg.lineTo(bx + kw * 0.14, y0 + bh - 14); }), 2, 'rgba(239,230,210,0.55)');   // つやの線
 }
-function smallCard(g, x, y, s, k, hit) {
+// 1秒の文字盤（30の目盛り）。k 個まで朱
+function dial(g, cx, cy, r, k) {
+  const face = PL.circle(cx, cy, r);
+  PL.tint(g, face, PL.T.sand, 0.4);
+  const rim = gg => { gg.moveTo(cx + r + 18, cy); gg.arc(cx, cy, r + 18, 0, TAU); gg.moveTo(cx + r, cy); gg.arc(cx, cy, r, 0, TAU, true); };
+  PL.tint(g, rim, PL.T.wood, 0.75); PL.hatch(g, rim, { angle: 0.6, gap: 8, w: 1.8, not: PL.circle(cx - 14, cy - 14, r + 18) });
+  PL.ink(g, PL.circle(cx, cy, r + 18), 6); PL.ink(g, face, 3); PL.ink(g, PL.circle(cx, cy, r * 0.62), 1.4);
+  const tick = (sel, r0) => gg => { for (let i = 0; i < 30; i++) { if (!sel(i)) continue; const a = -Math.PI / 2 + i / 30 * TAU, c = Math.cos(a), s = Math.sin(a); gg.moveTo(cx + c * r * r0, cy + s * r * r0); gg.lineTo(cx + c * r * 0.93, cy + s * r * 0.93); } };
+  PL.ink(g, tick(i => i >= k && i % 5, 0.8), 3); PL.ink(g, tick(i => i >= k && !(i % 5), 0.8), 5);
+  if (k > 0) PL.ink(g, tick(i => i < k, 0.7), 10, PL.RED);
+  const a = -Math.PI / 2 + Math.min(k, 30) / 30 * TAU;
+  PL.ink(g, gg => { gg.moveTo(cx, cy); gg.lineTo(cx + Math.cos(a) * r * 0.58, cy + Math.sin(a) * r * 0.58); }, 6);
+  PL.tint(g, PL.circle(cx, cy, 10), PL.INK, 1);
+}
+// 手（手の甲を上から）。cx, wy は手首、dir=1 で右手（親指が左）、dir=-1 で左手。press[i]: 0〜1（指が鍵を押して短く見える）
+// 指はまとめて1回でぬる（筆のルックはぬるたびにぼかすので、回数を少なく）
+const FING = [{ x: -62, y: -166, L: 202, w: 38, a: -0.10 }, { x: -21, y: -174, L: 222, w: 40, a: -0.03 }, { x: 21, y: -170, L: 210, w: 37, a: 0.04 }, { x: 60, y: -154, L: 170, w: 32, a: 0.13 }];
+const THUMB = { x: -60, y: -40, L: 135, w: 46, a: -0.6 };
+function capsule(bx, by, a, L, w) {
+  const dx = Math.sin(a), dy = -Math.cos(a), nx = Math.cos(a), ny = Math.sin(a), h = w / 2, cx = bx + dx * (L - h), cy = by + dy * (L - h);
+  return g => { g.moveTo(bx + nx * h, by + ny * h); g.lineTo(cx + nx * h, cy + ny * h); g.arc(cx, cy, h, a, a - Math.PI, true); g.lineTo(bx - nx * h, by - ny * h); g.closePath(); };
+}
+function digitGeo(f, s, dir, cx, wy, press, crease) {   // 指1本の形（道）と先の位置
+  const bx = cx + dir * f.x * s, by = wy + f.y * s, a = dir * f.a, L = f.L * s * (1 - 0.13 * press), w = f.w * s;
+  const dx = Math.sin(a), dy = -Math.cos(a), nx = Math.cos(a), ny = Math.sin(a);
+  return {
+    body: capsule(bx, by, a, L, w), lit: capsule(bx - w * 0.28, by - w * 0.08, a, L, w),
+    crease: gg => crease.forEach(q => { const x = bx + dx * L * q, y = by + dy * L * q; gg.moveTo(x - nx * w * 0.3, y - ny * w * 0.3); gg.quadraticCurveTo(x + dx * 5, y + dy * 5, x + nx * w * 0.3, y + ny * w * 0.3); }),
+    nail: PL.ellipse(bx + dx * (L - w * 0.72), by + dy * (L - w * 0.72), w * 0.29, w * 0.42, a), on: press > 0.3,
+    tip: [bx + dx * L, by + dy * L, dx, dy],
+  };
+}
+function hand(g, cx, wy, s, dir, press = [0, 0, 0, 0, 0]) {
+  const P = (x, y) => [cx + dir * x * s, wy + y * s];
+  const cuff = PL.poly([P(-78, 26), P(78, 26), P(84, 96), P(-84, 96)]);
+  PL.tint(g, cuff, PL.T.sky, 0.6); PL.hatch(g, cuff, { angle: 1.2, gap: 8, w: 1.8 }); PL.ink(g, cuff, 4);
+  const D = [digitGeo(THUMB, s, dir, cx, wy, press[0], [0.62]), ...FING.map((f, i) => digitGeo(f, s, dir, cx, wy, press[i + 1], [0.5, 0.74]))];
+  const all = k => gg => D.forEach(d => d[k](gg));
+  PL.tint(g, all('body'), PL.T.rose, 0.5);
+  PL.hatch(g, all('body'), { angle: 0.75, gap: 7, w: 1.6, not: all('lit') });
+  PL.ink(g, all('body'), 4); PL.ink(g, all('crease'), 1.8);
+  const nails = on => gg => D.forEach(d => { if (d.on === on) d.nail(gg); });
+  PL.tint(g, nails(false), PL.T.sand, 0.7); if (D.some(d => d.on)) PL.tint(g, nails(true), PL.T.gold, 0.7); PL.ink(g, all('nail'), 2);
+  const palm = curvy([P(-62, 34), P(62, 34), P(80, -40), P(86, -130), P(78, -176), P(40, -200), P(0, -206), P(-44, -202), P(-82, -186), P(-94, -130), P(-92, -70), P(-76, -10)]);
+  g.save(); g.beginPath(); palm(g); g.fillStyle = PL.PAPER; g.fill(); g.restore();   // 指の根もとを手の甲でかくす（下じき）
+  PL.tint(g, palm, PL.T.rose, 0.5);
+  PL.hatch(g, palm, { angle: 0.75, gap: 8, w: 1.8, not: curvy([P(-70, 20), P(40, 20), P(56, -40), P(62, -130), P(52, -186), P(-60, -200), P(-104, -150), P(-100, -60)]) });
+  PL.ink(g, gg => FING.forEach(f => { const [x1, y1] = P(f.x * 0.45, 20), [x2, y2] = P(f.x, f.y - 22); gg.moveTo(x1, y1); gg.quadraticCurveTo((x1 + x2) / 2 + dir * f.x * 0.1 * s, (y1 + y2) / 2, x2, y2); }), 1.6, 'rgba(35,28,21,0.55)');   // 手の甲の腱
+  PL.ink(g, gg => FING.forEach(f => { const [x, y] = P(f.x, f.y - 26); gg.moveTo(x - 12 * s, y + 4 * s); gg.quadraticCurveTo(x, y - 6 * s, x + 12 * s, y + 4 * s); }), 2);   // 指の付け根の関節のふくらみ
+  PL.ink(g, palm, 4);
+  return D.map(d => d.tip);
+}
+function smallCard(g, x, y, s, k) {
   g.save(); g.globalAlpha *= k;
-  TK.card(g, x - 130, y - 80, 260, 160, { fill: hit ? 'rgba(255,207,74,0.55)' : 'rgba(20,34,72,0.9)', stroke: hit ? TK.C.acc : undefined, lw: hit ? 8 : 3 });
-  TK.text(g, s, x, y, 76, { color: hit ? '#fff' : TK.C.acc2 });
+  TK.card(g, x - 130, y - 80, 260, 160, {});
+  PL.label(g, s, x, y + 4, 76);
   g.restore();
 }
+// 鍵盤の上を行ったり来たり（n は打った数）。光る白鍵2つ
+function runLit(n) { const lit = new Set(); if (n >= 0) { const p = n % 28, k = p < 14 ? 4 + p : 4 + 28 - p; lit.add(k); lit.add(k + 1); } return lit; }
 
 function draw(g, t) {
   // 0〜3: フック
   if (t < 3.0) {
     TK.hook(g, t, 0.0, 3.0, '1秒に\n[何音]？', { y: 380, size: 170 });
-    [['5音', 250], ['12音', 540], ['30音', 830]].forEach(([s, x], i) => smallCard(g, x, 820, s, TK.pop(t, 0.5 + i * 0.15) * fade(t, -1, 3, 0.3), false));
+    [['5音', 250], ['12音', 540], ['30音', 830]].forEach(([s, x], i) => smallCard(g, x, 820, s, TK.pop(t, 0.5 + i * 0.15) * fade(t, -1, 3, 0.3)));
+    g.save(); g.globalAlpha = fade(t, -1, 3, 0.3); keyboard(g, 90, 1020, 900, 160, 21, new Set()); g.restore();
   }
   // 3〜6.5: 当ててみて
   if (t >= 3.0 && t < 6.5) {
     TK.choices(g, t, 3.0, 6.5, ['1秒に 5音', '1秒に 12音', '1秒に 30音'], { y: 420, answer: 2, reveal: 6.35, think: [3.4, 6.3] });
   }
-  // 6.5〜10: 1分で1800
+  // 6.5〜10: 1分で1800（右に1分の懐中時計、下に鍵盤）
   if (t >= 6.5 && t < 10.0) {
+    const f = fade(t, 6.5, 10, 0.3), k = clamp((t - 6.9) / 1.6, 0, 1);
     TK.text(g, '1秒に [30音]', PW / 2, 330, 110);
     TK.count(g, t, 6.9, 10.0, 0, 1800, { y: 640, size: 220, dur: 1.6, label: '1分で', unit: '音' });
+    g.save(); g.globalAlpha = f;
+    PL.watch(g, 140, 470, 62, k);
+    PL.label(g, '1分', 140, 580, 44, { color: TK.C.sub });
+    keyboard(g, 90, 975, 900, 170, 21, runLit(Math.floor(k * 160)));
+    g.restore();
   }
-  // 10〜15: 鍵盤が1秒に30回光る（模式）＋1秒の時計
+  // 10〜15: 鍵盤が1秒に30回光る（模式）＋1秒の文字盤
   if (t >= 10.0 && t < 15.0) {
     const f = fade(t, 10, 15, 0.3), s = t - 10.4, n = s >= 0 ? Math.floor(s * 30) : -1;
+    const k = s >= 0 ? (n % 30) + 1 : 0, cx = 340, cy = 470, r = 180;
     g.save(); g.globalAlpha = f;
-    // 30個の点が1秒でうまる
-    const k = s >= 0 ? (n % 30) + 1 : 0, cx = PW / 2, cy = 420, r = 170;
-    for (let i = 0; i < 30; i++) {
-      const a = -Math.PI / 2 + i / 30 * Math.PI * 2;
-      g.fillStyle = i < k ? TK.C.acc : 'rgba(255,255,255,0.15)';
-      g.beginPath(); g.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 16, 0, Math.PI * 2); g.fill();
-    }
-    TK.text(g, '1秒', cx, cy - 20, 70, { color: TK.C.sub });
-    TK.text(g, k + ' 音', cx, cy + 50, 64, { color: TK.C.acc });
-    const lit = new Set(); if (n >= 0) { const p = n % 28; lit.add(p < 14 ? 4 + p : 4 + 28 - p); lit.add((p < 14 ? 4 + p : 4 + 28 - p) + 1); }
-    keyboard(g, 100, 760, 860, 260, 22, lit);
+    dial(g, cx, cy, r, k);
+    PL.label(g, '1秒で1周', cx, 230, 48, { color: TK.C.sub });
+    PL.leader(g, cx + r * 0.62, cy + r * 0.62 + 30, 700, 640);
+    PL.label(g, '目盛り1つ＝1音', 710, 668, 42, { align: 'left', color: TK.C.sub });
+    PL.label(g, k + ' 音', 760, 470, 110, { color: PL.RED });
+    keyboard(g, 90, 830, 900, 250, 22, runLit(n));
     g.restore();
-    TK.note(g, t, 10.4, 15, '30音は楽譜が求める数（だれかを測った数ではない）\n鍵盤の光り方は速さを見せる模式で、曲の音ではありません', { size: 30 });
+    TK.note(g, t, 10.4, 15, '30音は楽譜が求める数（だれかを測った数ではない）\n鍵盤の光り方は速さを見せる模式で、曲の音ではありません', { size: 30, y: 1140 });
   }
   // 15〜20: 棒でくらべる
   if (t >= 15.0 && t < 20.0) {
@@ -94,32 +172,32 @@ function draw(g, t) {
     ], { y: 380, gap: 220, stagger: 0.6 });
     TK.note(g, t, 15.5, 20, 'キーボードは英文を写して打つオンラインのテスト（16万人あまり）', { size: 30 });
   }
-  // 20〜23: 10本の指に3回ずつ
+  // 20〜23: 10本の指に3回ずつ（両手の甲。指が1秒に3回ずつ鍵を押す）
   if (t >= 20.0 && t < 23.0) {
     const f = fade(t, 20, 23, 0.3);
     g.save(); g.globalAlpha = f;
-    [[300, -1], [780, 1]].forEach(([hx, sgn], h) => {
-      TK.text(g, h ? '右手' : '左手', hx, 300, 50, { color: TK.C.sub });
-      for (let i = 0; i < 5; i++) {
-        const k = TK.pop(t, 20.2 + (h * 5 + i) * 0.08), x = hx + (i - 2) * 82;
-        const fi = h ? i : 4 - i, L = [120, 190, 210, 195, 150][fi];
-        const y1 = 760, y0 = y1 - L - (fi === 0 ? -60 : 0);
-        g.save(); g.globalAlpha *= k;
-        g.strokeStyle = '#cfe0ff'; g.lineWidth = 50; g.lineCap = 'round';
-        g.beginPath(); g.moveTo(x, y1); g.lineTo(x, y0); g.stroke();
-        TK.text(g, '3', x, y0 - 70, 60, { color: TK.C.acc });
+    [[300, -1], [780, 1]].forEach(([hx, dir], h) => {
+      PL.label(g, h ? '右手' : '左手', hx, 300, 50, { color: TK.C.sub });
+      const press = [0, 1, 2, 3, 4].map(i => Math.pow(Math.max(0, Math.sin((t - 20.2) * 3 * TAU + (h * 5 + i) * 1.3)), 4) * (t > 20.2 ? 1 : 0));
+      const tips = hand(g, hx, 960, 1.15, dir, press);
+      tips.forEach(([x, y, dx, dy], i) => {
+        const L = (i ? FING[i - 1].L : THUMB.L) * 1.15 * 0.13 * press[i];   // 押していないときの指先の上に置く（指が動いても重ならない）
+        const k = TK.pop(t, 20.2 + (h * 5 + i) * 0.08);
+        g.save(); g.globalAlpha *= clamp(k, 0, 1);
+        PL.label(g, '3', x + dx * (L + 48), y + dy * (L + 48), 54, { color: PL.RED });
         g.restore();
-      }
-      TK.card(g, hx - 200, 760, 400, 160, { r: 60, fill: 'rgba(207,224,255,0.18)', stroke: 'rgba(207,224,255,0.6)' });
+      });
     });
-    TK.text(g, '1本あたり 1秒に[約3回]', PW / 2, 1010, 64);
+    PL.label(g, '1本あたり 1秒に[約3回]', PW / 2, 1110, 64);
     g.restore();
   }
-  // 23〜26: 30にもどる
+  // 23〜26: 30にもどる（左に数字、右に1秒の文字盤）
   if (t >= 23.0) {
-    TK.text(g, '1秒に', PW / 2, 330, 80, { color: TK.C.sub });
-    TK.text(g, '[30]音', PW / 2, 560, 260);
-    TK.note(g, t, 23.2, 26, '出どころ: Münte, Altenmüller & Jäncke (2002) Nat. Rev. Neurosci. 3:473\nDhakal ほか (2018) CHI', { size: 30 });
+    PL.label(g, '1秒に', 110, 400, 80, { align: 'left', color: TK.C.sub });
+    PL.label(g, '[30]音', 100, 590, 210, { align: 'left' });
+    dial(g, 820, 500, 150, 30);
+    keyboard(g, 90, 860, 900, 220, 21, runLit(Math.floor((t - 23) * 30)));
+    TK.note(g, t, 23.2, 26, '出どころ: Münte, Altenmüller & Jäncke (2002) Nat. Rev. Neurosci. 3:473\nDhakal ほか (2018) CHI', { size: 30, y: 1140 });
   }
 }
 

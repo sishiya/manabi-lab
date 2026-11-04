@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく railgun-2（型A ぜんぶ逆）「レールガンは未来の兵器…じゃない。100年前の特許」。台本は trivia/railgun.md。?short で録る
@@ -30,89 +33,133 @@ const cues = [
   { t: 18.0, type: 'pop' }, { t: 19.5, type: 'buzz' }, { t: 24.0, type: 'whoosh' }, { t: 25.0, type: 'rise' }, { t: 26.2, type: 'ding' },
 ];
 
+// ---- 図鑑の版画の道具で描く部品（PL.*）。筆のルックはぬるたびにぼかすので、同じ色はまとめて1回でぬる ----
+const BLUE = '#2f5f7a';
 function cross(g, cx, cy, r, k) {
-  g.save(); g.strokeStyle = TK.C.red; g.lineWidth = 22; g.lineCap = 'round'; g.globalAlpha *= k;
-  g.beginPath(); g.moveTo(cx - r, cy - r * 0.6); g.lineTo(cx + r, cy + r * 0.6); g.moveTo(cx + r, cy - r * 0.6); g.lineTo(cx - r, cy + r * 0.6); g.stroke(); g.restore();
+  g.save(); g.globalAlpha *= clamp(k, 0, 1);
+  PL.ink(g, gg => { gg.moveTo(cx - r, cy - r * 0.6); gg.lineTo(cx + r, cy + r * 0.6); gg.moveTo(cx + r, cy - r * 0.6); gg.lineTo(cx - r, cy + r * 0.6); }, 22, PL.RED);
+  g.restore();
+}
+// 古い特許の紙（すみの折れ・朱の印・小さなしくみの図。字の所はあける）
+function sheet(g, x, y, w, h, o = {}) {
+  const fold = 60, p = PL.poly([[x, y], [x + w - fold, y], [x + w, y + fold], [x + w, y + h], [x, y + h]]);
+  g.save(); g.beginPath(); p(g); g.fillStyle = 'rgba(244,236,218,0.95)'; g.fill(); g.restore();   // 下じき（字が読めるように）
+  PL.tint(g, p, PL.T.sand, 0.35);
+  const ear = PL.poly([[x + w - fold, y], [x + w - fold, y + fold], [x + w, y + fold]]);
+  PL.tint(g, ear, PL.T.wood, 0.6); PL.hatch(g, ear, { angle: 0.8, gap: 6, w: 1.4 }); PL.ink(g, ear, 3);
+  PL.ink(g, p, 5); PL.ink(g, PL.rect(x + 14, y + 14, w - fold - 28, h - 28), 1.4, 'rgba(35,28,21,0.5)');
+  if (o.sketch) {   // 下のあいた所に、しくみの小さな図（レール2本と弾）
+    const sx = x + 60, sy = y + h - 190, sw = w - 340;
+    const rr = gg => { gg.rect(sx, sy, sw, 12); gg.rect(sx, sy + 110, sw, 12); };
+    PL.tint(g, rr, PL.T.rust, 0.5); PL.ink(g, rr, 3);
+    const ar = PL.rect(sx + sw * 0.65, sy - 8, 20, 138); PL.tint(g, ar, PL.T.gold, 0.7); PL.ink(g, ar, 3);
+    PL.ink(g, gg => { gg.moveTo(sx - 30, sy + 6); gg.lineTo(sx, sy + 6); gg.moveTo(sx - 30, sy + 116); gg.lineTo(sx, sy + 116); gg.moveTo(sx - 30, sy + 6); gg.lineTo(sx - 30, sy + 40); gg.moveTo(sx - 30, sy + 116); gg.lineTo(sx - 30, sy + 82); gg.moveTo(sx - 48, sy + 40); gg.lineTo(sx - 12, sy + 40); gg.moveTo(sx - 40, sy + 82); gg.lineTo(sx - 20, sy + 82); }, 2.4);   // 電池の記号
+    PL.ink(g, gg => { gg.moveTo(sx + 10, sy + 150); gg.lineTo(sx + sw, sy + 150); for (let i = 0; i <= 10; i++) { gg.moveTo(sx + 10 + (sw - 10) * i / 10, sy + 150); gg.lineTo(sx + 10 + (sw - 10) * i / 10, sy + 158); } }, 1.4, 'rgba(35,28,21,0.5)');
+    const sealX = x + w - 150, sealY = y + h - 120;   // 朱の印
+    PL.ink(g, PL.circle(sealX, sealY, 62), 5, PL.RED); PL.ink(g, PL.circle(sealX, sealY, 50), 1.6, PL.RED);
+    PL.ink(g, gg => { for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; gg.moveTo(sealX + Math.cos(a) * 18, sealY + Math.sin(a) * 18); gg.lineTo(sealX + Math.cos(a) * 42, sealY + Math.sin(a) * 42); } }, 2, PL.RED);
+  }
 }
 // しくみの線画（特許の文の説明をもとに自分で描いた）。step で部品を順に出す
 function rails(g, t, a) {
   const x0 = 120, x1 = 900, yt = 330, yb = 700, bx = 640;
   const s = i => clamp((t - a - i * 1.6) / 0.4, 0, 1);
-  g.save(); g.lineCap = 'round';
+  g.save();
   // 1 レール
-  g.globalAlpha = s(0); g.strokeStyle = '#e8f0ff'; g.lineWidth = 16;
-  g.beginPath(); g.moveTo(x0, yt); g.lineTo(x1, yt); g.moveTo(x0, yb); g.lineTo(x1, yb); g.stroke();
-  TK.text(g, 'レール', x0, yt - 50, 42, { align: 'left', color: TK.C.sub });
+  g.globalAlpha = s(0);
+  const rr = gg => { gg.rect(x0, yt - 14, x1 - x0, 28); gg.rect(x0, yb - 14, x1 - x0, 28); };
+  PL.tint(g, rr, PL.T.rust, 0.6); PL.hatch(g, rr, { angle: 0.3, gap: 7, w: 1.6, not: gg => { gg.rect(x0, yt - 14, x1 - x0, 12); gg.rect(x0, yb - 14, x1 - x0, 12); } }); PL.ink(g, rr, 5);
+  PL.label(g, 'レール', x0, yt - 56, 42, { align: 'left', color: TK.C.sub });
   // 弾（電流を渡す）
-  g.fillStyle = '#9fb3d9'; g.beginPath(); g.roundRect(bx - 22, yt - 10, 44, yb - yt + 20, 10); g.fill();
-  TK.text(g, '弾', bx, yt - 50, 42, { color: TK.C.sub });
+  const ar = PL.rect(bx - 22, yt - 18, 44, yb - yt + 36);
+  PL.tint(g, ar, PL.T.gold, 0.8); PL.hatch(g, ar, { angle: 0.9, gap: 7, w: 1.6, not: PL.rect(bx - 22, yt - 18, 20, yb - yt + 36) }); PL.ink(g, ar, 5);
+  PL.label(g, '弾', bx, yt - 56, 42, { color: TK.C.sub });
   // 2 電流（上のレール → 弾 → 下のレール）
-  g.globalAlpha = s(1); g.strokeStyle = TK.C.acc; g.lineWidth = 7;
-  g.beginPath(); g.moveTo(x0 + 20, yt + 30); g.lineTo(bx - 40, yt + 30); g.lineTo(bx - 40, yb - 30); g.lineTo(x0 + 20, yb - 30); g.stroke();
-  const ar = (x, y, dx, dy) => { g.beginPath(); g.moveTo(x - dx * 22 - dy * 16, y - dy * 22 + dx * 16); g.lineTo(x, y); g.lineTo(x - dx * 22 + dy * 16, y - dy * 22 - dx * 16); g.stroke(); };
-  ar(380, yt + 30, 1, 0); ar(bx - 40, 520, 0, 1); ar(380, yb - 30, -1, 0);
-  TK.text(g, '電流', 380, yt + 80, 42, { color: TK.C.acc });
-  // 3 磁場（レールのあいだ。手前に出てくる向きの印）
-  g.globalAlpha = s(2); g.strokeStyle = TK.C.acc2; g.fillStyle = TK.C.acc2; g.lineWidth = 4;
-  for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) { const x = 230 + i * 120, y = 490 + j * 90; g.beginPath(); g.arc(x, y, 18, 0, Math.PI * 2); g.stroke(); g.beginPath(); g.arc(x, y, 6, 0, Math.PI * 2); g.fill(); }
-  TK.text(g, '磁場（レールのあいだ）', 120, yb + 70, 42, { color: TK.C.acc2, align: 'left' });
+  g.globalAlpha = s(1);
+  PL.ink(g, gg => {
+    gg.moveTo(x0 + 20, yt + 30); gg.lineTo(bx - 40, yt + 30); gg.lineTo(bx - 40, yb - 30); gg.lineTo(x0 + 20, yb - 30);
+    [[380, yt + 30, 1, 0], [bx - 40, 520, 0, 1], [380, yb - 30, -1, 0]].forEach(([x, y, dx, dy]) => { gg.moveTo(x - dx * 22 - dy * 16, y - dy * 22 + dx * 16); gg.lineTo(x, y); gg.lineTo(x - dx * 22 + dy * 16, y - dy * 22 - dx * 16); });
+  }, 7, PL.RED);
+  PL.label(g, '電流', 380, yt + 84, 42, { color: PL.RED });
+  // 3 磁場（レールのあいだ。手前に出てくる向きの印 ⊙）
+  g.globalAlpha = s(2);
+  const dots = gg => { for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) PL.circle(230 + i * 120, 490 + j * 90, 6)(gg); };
+  PL.ink(g, gg => { for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) PL.circle(230 + i * 120, 490 + j * 90, 18)(gg); }, 4, BLUE);
+  PL.tint(g, dots, BLUE, 1);
+  PL.label(g, '磁場（レールのあいだ）', 120, yb + 72, 42, { color: BLUE, align: 'left' });
   // 4 押す力
-  g.globalAlpha = s(3); g.strokeStyle = TK.C.green; g.lineWidth = 14;
+  g.globalAlpha = s(3);
   const pk = 30 * Math.sin(Math.max(0, t - a - 4.8) * 5) ** 2;
-  g.beginPath(); g.moveTo(bx + 40, 515); g.lineTo(bx + 200 + pk, 515); g.lineTo(bx + 160 + pk, 475); g.moveTo(bx + 200 + pk, 515); g.lineTo(bx + 160 + pk, 555); g.stroke();
-  TK.text(g, '前へ押す力', bx + 130, 600, 42, { color: TK.C.green });
+  PL.ink(g, gg => { gg.moveTo(bx + 40, 515); gg.lineTo(bx + 200 + pk, 515); gg.moveTo(bx + 160 + pk, 475); gg.lineTo(bx + 200 + pk, 515); gg.lineTo(bx + 160 + pk, 555); }, 14, PL.GREEN);
+  PL.label(g, '前へ押す力', bx + 160, 612, 42, { color: PL.GREEN });
   g.restore();
+}
+// 船（横から。試験艦の形は写さない、ふつうの船の線画）
+function ship(g, x, y, s) {
+  const P = (u, v) => [x + u * s, y + v * s];
+  const hull = PL.poly([P(-130, 0), P(150, 0), P(126, 34), P(-118, 34)]);
+  const top = PL.poly([P(-60, 0), P(-60, -34), P(-20, -34), P(-20, -62), P(30, -62), P(30, -34), P(70, -34), P(70, 0)]);
+  PL.tint(g, hull, PL.T.gray, 0.6); PL.hatch(g, hull, { angle: 0.4, gap: 6, w: 1.4, not: PL.rect(0, 0, PW, y + 14 * s) }); PL.ink(g, hull, 4);
+  PL.tint(g, top, PL.T.gray, 0.35); PL.ink(g, top, 3);
+  PL.ink(g, gg => { gg.moveTo(...P(5, -62)); gg.lineTo(...P(5, -96)); for (let i = 0; i < 4; i++) { const [a, b] = P(-50 + i * 30, -18); gg.moveTo(a, b); gg.lineTo(a + 14 * s, b); } }, 2.4);
+  PL.ink(g, gg => { for (let k = 0; k < 3; k++) { const yy = y + (40 + k * 16) * s; gg.moveTo(x - 220 * s, yy); for (let u = -220; u <= 240; u += 20) gg.lineTo(x + u * s, yy + Math.sin(u * 0.08 + k) * 3); } }, 1.8, BLUE);   // 波
 }
 
 function draw(g, t) {
   // 0〜3: フック
   if (t < 3.0) {
-    const k = TK.pop(t, 0.1, 0.4);
-    g.save(); g.globalAlpha = k; TK.card(g, 140, 300, 680, 180); TK.text(g, 'SF の未来兵器', PW / 2 - 60, 390, 84); g.restore();
-    cross(g, PW / 2 - 60, 390, 230, TK.pop(t, 1.0, 0.3));
+    const k = clamp(TK.pop(t, 0.1, 0.4), 0, 1);
+    g.save(); g.globalAlpha = k; TK.card(g, 80, 300, 600, 180); PL.label(g, 'SF の未来兵器', 380, 390, 80); g.restore();
+    const kx = clamp(TK.pop(t, 1.0, 0.3), 0, 1.2);   // 字の上にはかけず、となりに朱の×の印
+    g.save(); g.globalAlpha *= clamp(kx, 0, 1); PL.ink(g, PL.circle(850, 390, 110), 8, PL.RED); g.restore();
+    cross(g, 850, 390, 70 * kx, kx);
+    if (t > 1.8) { g.save(); g.globalAlpha = clamp(TK.pop(t, 1.8, 0.4), 0, 1); sheet(g, 650, 880, 330, 300); g.restore(); }
     TK.hook(g, t, 1.8, 3.0, 'じつは [1922年]', { y: 700, size: 130 });
   }
   // 3〜10: 特許
   if (t >= 3.0 && t < 10.0) {
-    const k = TK.pop(t, 3.2, 0.4);
+    const k = clamp(TK.pop(t, 3.2, 0.4), 0, 1);
     g.save(); g.globalAlpha = k;
-    TK.card(g, 100, 220, 760, 600, { fill: 'rgba(244,247,255,0.06)' });
-    TK.text(g, 'アメリカの特許', PW / 2 - 60, 300, 48, { color: TK.C.sub });
-    TK.text(g, 'No. 1,421,435', PW / 2 - 60, 390, 76, { color: '#fff' });
+    sheet(g, 100, 220, 760, 900, { sketch: true });
+    PL.label(g, 'アメリカの特許', PW / 2 - 60, 300, 48, { color: TK.C.sub });
+    PL.label(g, 'No. 1,421,435', PW / 2 - 60, 390, 76);
+    PL.ink(g, gg => { gg.moveTo(200, 450); gg.lineTo(760, 450); }, 2);
     g.restore();
-    if (t > 4.4) { g.save(); g.globalAlpha = TK.pop(t, 4.4, 0.35); TK.text(g, '1919年  出願', PW / 2 - 60, 510, 66); g.restore(); }
-    if (t > 5.6) { g.save(); g.globalAlpha = TK.pop(t, 5.6, 0.35); TK.text(g, '[1922年]  特許', PW / 2 - 60, 610, 86); g.restore(); }
-    if (t > 6.8) { g.save(); g.globalAlpha = TK.pop(t, 6.8, 0.35); TK.text(g, 'A. L. O. Fauchon-Villeplée（フランス）', PW / 2 - 60, 740, 38, { color: TK.C.sub, bold: false }); g.restore(); }
+    if (t > 4.4) { g.save(); g.globalAlpha = clamp(TK.pop(t, 4.4, 0.35), 0, 1); PL.label(g, '1919年  出願', PW / 2 - 60, 530, 66); g.restore(); }
+    if (t > 5.6) { g.save(); g.globalAlpha = clamp(TK.pop(t, 5.6, 0.35), 0, 1); PL.label(g, '[1922年]  特許', PW / 2 - 60, 640, 86); g.restore(); }
+    if (t > 6.8) { g.save(); g.globalAlpha = clamp(TK.pop(t, 6.8, 0.35), 0, 1); PL.label(g, 'A. L. O. Fauchon-Villeplée（フランス）', PW / 2 - 60, 760, 38, { color: TK.C.sub, bold: false, maxw: 640 }); g.restore(); }
   }
   // 10〜18: しくみ
   if (t >= 10.0 && t < 18.0) {
-    TK.text(g, 'しくみ（特許の文をもとに描いた図）', PW / 2 - 60, 170, 44, { color: TK.C.sub });
+    PL.label(g, 'しくみ（特許の文をもとに描いた図）', PW / 2 - 60, 170, 44, { color: TK.C.sub });
     rails(g, t, 10.4);
     TK.note(g, t, 15.5, 18, '特許には、巻き線で別に磁場を作る形もふくまれる', { size: 32 });
   }
-  // 18〜24: 足りなかった電源
+  // 18〜24: 足りなかった電源（点線の箱＝まだ無いもの）
   if (t >= 18.0 && t < 24.0) {
-    const k = TK.pop(t, 18.2, 0.4);
+    const k = clamp(TK.pop(t, 18.2, 0.4), 0, 1);
     g.save(); g.globalAlpha = k;
-    TK.card(g, 300, 260, 360, 440, { r: 26 });
-    g.fillStyle = 'rgba(255,255,255,0.08)'; g.beginPath(); g.roundRect(330, 290, 300, 380, 16); g.fill();
-    TK.text(g, '？', PW / 2 - 60, 480, 200, { color: TK.C.acc });
+    g.save(); g.setLineDash([22, 16]); PL.ink(g, PL.rect(300, 260, 360, 440), 6); g.restore();
+    PL.ink(g, gg => { gg.moveTo(660, 420); gg.lineTo(760, 420); gg.lineTo(760, 380); gg.lineTo(980, 380); gg.moveTo(660, 540); gg.lineTo(760, 540); gg.lineTo(760, 580); gg.lineTo(980, 580); }, 4);   // 線（レールへ）
+    const rr = gg => { gg.rect(800, 372, 180, 16); gg.rect(800, 572, 180, 16); }; PL.tint(g, rr, PL.T.rust, 0.6); PL.ink(g, rr, 3);
+    TK.card(g, 330, 290, 300, 380);
+    PL.label(g, '？', PW / 2 - 60, 480, 200, { color: PL.RED });
     g.restore();
-    if (t > 19.5) { g.save(); g.globalAlpha = fade(t, 19.5, 24, 0.3); TK.text(g, '一瞬で [大電流] を出す箱', PW / 2 - 60, 820, 66); TK.text(g, '（1919年には、まだ無かった）', PW / 2 - 60, 920, 44, { color: TK.C.sub, bold: false }); g.restore(); }
+    if (t > 19.5) { g.save(); g.globalAlpha = fade(t, 19.5, 24, 0.3); PL.label(g, '一瞬で [大電流] を出す箱', PW / 2 - 60, 820, 66); PL.label(g, '（1919年には、まだ無かった）', PW / 2 - 60, 920, 44, { color: TK.C.sub, bold: false }); g.restore(); }
   }
-  // 24〜30: 100年
+  // 24〜30: 100年（年の目もり）
   if (t >= 24.0) {
-    const k = TK.out((t - 24.6) / 1.4), x0 = 130, x1 = 830, y = 560;
-    g.save(); g.strokeStyle = 'rgba(255,255,255,0.25)'; g.lineWidth = 10; g.lineCap = 'round'; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke();
-    g.strokeStyle = TK.C.acc; g.beginPath(); g.moveTo(x0, y); g.lineTo(lerp(x0, x1, k), y); g.stroke();
-    g.fillStyle = '#fff'; g.beginPath(); g.arc(x0, y, 20, 0, Math.PI * 2); g.fill();
-    if (k >= 1) { g.fillStyle = TK.C.acc; g.beginPath(); g.arc(x1, y, 24, 0, Math.PI * 2); g.fill(); }
-    g.restore();
-    TK.text(g, '1922', x0, y - 80, 72);
-    TK.text(g, '特許', x0, y + 80, 44, { color: TK.C.sub });
-    if (k >= 1) { TK.text(g, '2025', x1, y - 80, 72, { color: TK.C.acc }); TK.text(g, '海の上で試験', x1 - 30, y + 80, 44, { color: TK.C.sub }); }
-    if (t > 26.2) { g.save(); g.globalAlpha = TK.pop(t, 26.2, 0.4); TK.text(g, '約 [100年]', PW / 2 - 60, 360, 110); g.restore(); }
-    TK.note(g, t, 26.5, 30, '出どころ: US Patent 1,421,435（1922）\n防衛装備庁 技術シンポジウム2025「電磁加速システムの洋上射撃試験」', { size: 30 });
+    const k = TK.out((t - 24.6) / 1.4), x0 = 130, x1 = 830, y = 560, X = yr => lerp(x0, x1, (yr - 1922) / (2025 - 1922));
+    PL.ink(g, gg => { gg.moveTo(x0, y); gg.lineTo(x1, y); for (let yr = 1930; yr <= 2020; yr += 10) { gg.moveTo(X(yr), y - 14); gg.lineTo(X(yr), y + 14); } }, 4, 'rgba(35,28,21,0.45)');
+    PL.ink(g, gg => { gg.moveTo(x0, y); gg.lineTo(lerp(x0, x1, k), y); }, 10, PL.RED);
+    const a = PL.circle(x0, y, 20); PL.tint(g, a, PL.T.sand, 0.8); PL.ink(g, a, 4);
+    if (k >= 1) { const b = PL.circle(x1, y, 24); PL.tint(g, b, PL.RED, 0.85); PL.ink(g, b, 4); }
+    PL.label(g, '1922', x0, y - 80, 72);
+    PL.label(g, '特許', x0, y + 80, 44, { color: TK.C.sub });
+    if (k >= 1) { PL.label(g, '2025', x1, y - 80, 72, { color: PL.RED }); PL.label(g, '海の上で試験', x1 - 30, y + 80, 44, { color: TK.C.sub }); }
+    if (k >= 1) { g.save(); g.globalAlpha = clamp((t - 26.0) / 0.5, 0, 1); ship(g, 760, 800, 1.3); g.restore(); }
+    if (t > 26.2) { g.save(); g.globalAlpha = clamp(TK.pop(t, 26.2, 0.4), 0, 1); PL.label(g, '約 [100年]', PW / 2 - 60, 360, 110); g.restore(); }
+    TK.note(g, t, 26.5, 30, '出どころ: US Patent 1,421,435（1922）\n防衛装備庁 技術シンポジウム2025「電磁加速システムの洋上射撃試験」', { size: 30, y: 1140 });
   }
 }
 

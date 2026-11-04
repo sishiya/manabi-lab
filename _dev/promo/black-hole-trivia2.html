@@ -12,6 +12,8 @@
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
 <script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく black-hole-2（型A ぜんぶ逆）「大きなブラックホールは、平均すると空気より軽い」。台本は trivia/black-hole.md。?short で録る
@@ -141,7 +143,7 @@ function cube(g, x, y, s) {
   PL.hatch(g, lf, { angle: 1.2, gap: 12, w: 1.8, cx: x, cy: y });
   PL.hatch(g, rt, { angle: 0.5, gap: 7, w: 2, cx: x, cy: y }); PL.hatch(g, rt, { angle: -0.8, gap: 9, w: 1.8, cx: x, cy: y });
   [top, lf, rt].forEach(p => PL.ink(g, p, 4));
-  PL.label(g, '1 cm', x - q * 0.55, y + s * 0.95, 26, { bold: false, rot: 0.52 });
+  PL.label(g, '1 cm', x - q * 0.5 - 24, y + s * 0.75 + 40, 26, { bold: false, rot: 0.52 });
 }
 // 重さ（太陽の何倍、log10）を時刻で
 function logM(t) {

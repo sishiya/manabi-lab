@@ -11,13 +11,16 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく eye-optics-2（型H 当ててみて）「暗い星は、まっすぐ見ると消える」。台本は trivia/eye-optics.md。?short で録る
 // 出どころ: Curcio ほか (1990) J Comp Neurol 292:497–523（桿体のない区域の横の直径 0.350 mm＝1.25°、桿体 平均 9200万個。要旨）。
 // 網膜の分布のグラフは形だけの模式（値は描いていない）。星が消える演出は分かりやすくするため（実際は暗さ・慣れぐあいで変わる）
 const DUR = 25;
-const ROD = '#8fb4ff', CONE = '#ffcf4a';
+const ROD = '#2f5f7a', CONE = '#a8740f';   // 桿体・錐体の線の色（図鑑の版画の墨の色）
 const subs = [
   { a: 0.0, b: 1.6, ja: 'この星、どこを見ると いちばん見える？', en: 'Where should you look to see this star best?', noBurn: true },
   { a: 1.6, b: 4.0, ja: '暗い星を見たい。どこを見る？', en: 'You want to see a faint star. Where do you look?' },
@@ -34,34 +37,37 @@ const cues = [
 ];
 const rnd = (i, j = 0) => { const s = Math.sin(i * 12.9898 + j * 78.233) * 43758.5453; return s - Math.floor(s); };
 
-// 星空の窓。gx, gy: 見ているところ。star: 暗い星の位置。見ているところのまわり（桿体のない所）は暗い星が消える
+/// 星空の窓（古い星図のように: 手彩色の夜空＋細い斜線、星は紙の色の点に墨のふち）。
+// gx, gy: 見ているところ。star: 暗い星の位置。見ているところのまわり（桿体のない所）は暗い星が消える
 function sky(g, t, x, y, w, h, gx, gy, o = {}) {
-  g.save();
-  g.fillStyle = '#050a1c'; g.strokeStyle = 'rgba(160,190,255,0.5)'; g.lineWidth = 4;
-  g.beginPath(); g.roundRect(x, y, w, h, 30); g.fill(); g.stroke();
-  g.beginPath(); g.roundRect(x, y, w, h, 30); g.clip();
-  for (let i = 0; i < 70; i++) { const sx = x + rnd(i) * w, sy = y + rnd(i, 1) * h, b = 0.25 + 0.5 * rnd(i, 2); g.fillStyle = `rgba(255,255,255,${b})`; g.beginPath(); g.arc(sx, sy, 1.5 + 2 * rnd(i, 3), 0, Math.PI * 2); g.fill(); }
-  // 暗い星
+  const box = PL.rect(x, y, w, h);
+  PL.tint(g, box, PL.T.sea, 0.95); PL.tint(g, box, PL.T.brown, 0.35);
+  PL.hatch(g, box, { angle: 0.15, gap: 7, w: 1.3, color: 'rgba(35,28,21,0.55)' });
+  g.save(); g.beginPath(); box(g); g.clip();
+  // 星座のような細い線と、ふつうの星
+  PL.ink(g, gg => { for (let i = 0; i < 6; i++) { gg.moveTo(x + rnd(i) * w, y + rnd(i, 1) * h); gg.lineTo(x + rnd(i + 1) * w, y + rnd(i + 1, 1) * h); } }, 1.2, 'rgba(239,230,210,0.35)');
+  for (let i = 0; i < 70; i++) {
+    const sx = x + rnd(i) * w, sy = y + rnd(i, 1) * h, r = 1.8 + 3 * rnd(i, 3);
+    g.fillStyle = PL.PAPER; g.beginPath(); g.arc(sx, sy, r, 0, Math.PI * 2); g.fill();
+    if (r > 3.6) PL.ink(g, gg => { gg.moveTo(sx - r * 2.2, sy); gg.lineTo(sx + r * 2.2, sy); gg.moveTo(sx, sy - r * 2.2); gg.lineTo(sx, sy + r * 2.2); }, 1.4, PL.PAPER);
+  }
+  // 暗い星（見ているところに近いと消える）
   const sx = o.sx ?? x + w / 2, sy = o.sy ?? y + h / 2;
   const d = Math.hypot(sx - gx, sy - gy), vis = clamp((d - 45) / 50, 0, 1) * (o.vis ?? 1);
-  const glow = 0.25 + 0.75 * vis;
-  const gr = g.createRadialGradient(sx, sy, 0, sx, sy, 50);
-  gr.addColorStop(0, `rgba(220,235,255,${0.85 * glow})`); gr.addColorStop(1, 'rgba(220,235,255,0)');
-  g.fillStyle = gr; g.beginPath(); g.arc(sx, sy, 50, 0, Math.PI * 2); g.fill();
-  g.fillStyle = `rgba(255,255,255,${0.15 + 0.85 * vis})`; g.beginPath(); g.arc(sx, sy, 7, 0, Math.PI * 2); g.fill();
+  g.save(); g.globalAlpha *= 0.12 + 0.88 * vis;
+  g.fillStyle = PL.PAPER; g.beginPath(); g.arc(sx, sy, 9, 0, Math.PI * 2); g.fill();
+  PL.ink(g, gg => { for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2, l = i % 2 ? 18 : 30; gg.moveTo(sx + Math.cos(a) * 13, sy + Math.sin(a) * 13); gg.lineTo(sx + Math.cos(a) * l, sy + Math.sin(a) * l); } }, 2.4, PL.PAPER);
   g.restore();
+  g.restore();
+  PL.ink(g, box, 5); PL.ink(g, PL.rect(x - 10, y - 10, w + 20, h + 20), 1.6);   // 二重のわく
   // 見ているところ（十字）
-  if (o.gaze !== false) {
-    g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 4;
-    g.beginPath(); g.arc(gx, gy, 26, 0, Math.PI * 2); g.moveTo(gx - 44, gy); g.lineTo(gx - 30, gy); g.moveTo(gx + 30, gy); g.lineTo(gx + 44, gy); g.moveTo(gx, gy - 44); g.lineTo(gx, gy - 30); g.moveTo(gx, gy + 30); g.lineTo(gx, gy + 44); g.stroke();
-    g.restore();
-  }
+  if (o.gaze !== false) PL.ink(g, gg => { gg.moveTo(gx + 26, gy); gg.arc(gx, gy, 26, 0, Math.PI * 2); gg.moveTo(gx - 44, gy); gg.lineTo(gx - 30, gy); gg.moveTo(gx + 30, gy); gg.lineTo(gx + 44, gy); gg.moveTo(gx, gy - 44); gg.lineTo(gx, gy - 30); gg.moveTo(gx, gy + 30); gg.lineTo(gx, gy + 44); }, 5, PL.RED);
 }
 function redX(g, x, y, r, k) {
   if (k <= 0) return;
-  g.save(); g.strokeStyle = TK.C.red; g.lineWidth = r * 0.18; g.lineCap = 'round'; g.globalAlpha *= clamp(k, 0, 1);
+  g.save(); g.globalAlpha *= clamp(k, 0, 1);
   const s = r * (0.7 + 0.3 * TK.back(k));
-  g.beginPath(); g.moveTo(x - s, y - s); g.lineTo(x + s, y + s); g.moveTo(x + s, y - s); g.lineTo(x - s, y + s); g.stroke();
+  PL.ink(g, gg => { gg.moveTo(x - s, y - s); gg.lineTo(x + s, y + s); gg.moveTo(x + s, y - s); gg.lineTo(x - s, y + s); }, r * 0.18, PL.RED);
   g.restore();
 }
 
@@ -71,87 +77,98 @@ const ex = e => GX0 + (GX1 - GX0) * (e + EMAX) / (2 * EMAX);
 const rodF = e => { const a = Math.abs(e); return a < 0.625 ? 0 : 0.9 * (1 - Math.exp(-(a - 0.625) / 2.6)); };
 const coneF = e => 0.95 * Math.exp(-Math.abs(e) / 0.35) + 0.05;
 function retinaGraph(g, t, k) {
-  g.save();
-  g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 3;
-  g.beginPath(); g.moveTo(GX0, GY); g.lineTo(GX1, GY); g.stroke();
-  TK.text(g, '← 網膜のまん中から →', 540, GY + 50, 38, { color: TK.C.sub, bold: false });
-  const curve = (f, c, kk) => {
-    g.strokeStyle = c; g.lineWidth = 7; g.lineJoin = 'round'; g.beginPath();
-    const n = 400;
-    for (let i = 0; i <= n; i++) { const e = -EMAX + 2 * EMAX * i / n, X = ex(e), Y = GY - GH * f(e) * kk; i ? g.lineTo(X, Y) : g.moveTo(X, Y); }
-    g.stroke();
-  };
-  curve(rodF, ROD, TK.out(k * 1.5));
-  curve(coneF, CONE, TK.out(k * 1.5 - 0.3));
+  const curve = (f, kk) => { const n = 400, P = []; for (let i = 0; i <= n; i++) { const e = -EMAX + 2 * EMAX * i / n; P.push([ex(e), GY - GH * f(e) * kk]); } return P; };
+  const area = P => g2 => { g2.moveTo(GX0, GY); P.forEach(p => g2.lineTo(...p)); g2.lineTo(GX1, GY); g2.closePath(); };
+  const line = P => g2 => P.forEach((p, i) => i ? g2.lineTo(...p) : g2.moveTo(...p));
+  const R = curve(rodF, TK.out(k * 1.5)), C = curve(coneF, TK.out(k * 1.5 - 0.3));
+  PL.tint(g, area(R), PL.T.sky, 0.6); PL.tint(g, area(C), PL.T.gold, 0.6);
+  PL.ink(g, line(R), 6, ROD); PL.ink(g, line(C), 6, CONE);
+  // 軸と目もり（5度ごと）
+  PL.ink(g, gg => { gg.moveTo(GX0, GY); gg.lineTo(GX1, GY); for (let e = -10; e <= 10; e += 5) { gg.moveTo(ex(e), GY); gg.lineTo(ex(e), GY + 14); } }, 4);
+  for (let e = -10; e <= 10; e += 5) PL.label(g, Math.abs(e) + '°', ex(e), GY + 38, 28, { color: TK.C.sub, bold: false });
+  PL.label(g, '← 網膜のまん中から →', 540, GY + 86, 36, { color: TK.C.sub, bold: false });
   // 桿体のない所
   if (k > 0.5) {
-    const a = clamp((k - 0.5) * 3, 0, 1);
-    g.globalAlpha = a;
-    g.fillStyle = 'rgba(255,107,107,0.25)'; g.fillRect(ex(-0.625), GY - GH - 20, ex(0.625) - ex(-0.625), GH + 20);
-    g.strokeStyle = TK.C.red; g.lineWidth = 3; g.setLineDash([8, 6]);
-    g.beginPath(); g.moveTo(ex(-0.625), GY); g.lineTo(ex(-0.625), GY - GH - 20); g.moveTo(ex(0.625), GY); g.lineTo(ex(0.625), GY - GH - 20); g.stroke(); g.setLineDash([]);
-    TK.text(g, '桿体 0本', 540, GY - GH - 60, 56, { color: TK.C.red });
-    TK.text(g, '直径 約1.2度', 540, GY - GH - 115, 44, { color: TK.C.sub });
+    const a = clamp((k - 0.5) * 3, 0, 1), z = PL.rect(ex(-0.625), GY - GH - 20, ex(0.625) - ex(-0.625), GH + 20);
+    g.save(); g.globalAlpha *= a;
+    PL.hatch(g, z, { angle: 0.8, gap: 9, w: 2, color: PL.RED });
+    g.save(); g.setLineDash([8, 6]); PL.ink(g, gg => { gg.moveTo(ex(-0.625), GY); gg.lineTo(ex(-0.625), GY - GH - 20); gg.moveTo(ex(0.625), GY); gg.lineTo(ex(0.625), GY - GH - 20); }, 3, PL.RED); g.restore();
+    PL.label(g, '桿体 0本', 540, GY - GH - 60, 56, { color: PL.RED });
+    PL.label(g, '直径 約1.2度', 540, GY - GH - 115, 44, { color: TK.C.sub });
+    g.restore();
   }
-  g.restore();
-  TK.text(g, '暗さのセンサー（桿体）', 120, 940, 42, { align: 'left', color: ROD });
-  TK.text(g, '色のセンサー（錐体）', 120, 1000, 42, { align: 'left', color: CONE });
+  // 凡例（見本の線つき）
+  [[ROD, PL.T.sky, '暗さのセンサー（桿体）', 970], [CONE, PL.T.gold, '色のセンサー（錐体）', 1035]].forEach(([c, tc, s, y]) => {
+    PL.tint(g, PL.rect(120, y - 14, 60, 28), tc, 0.6); PL.ink(g, gg => { gg.moveTo(120, y - 14); gg.lineTo(180, y - 14); }, 6, c);
+    PL.label(g, s, 200, y, 42, { align: 'left', color: c });
+  });
 }
 
-// 腕をのばした指（横から）
+// 腕をのばした人（横顔）と、立てた人さし指
+const HEAD = [['M', 105, 660], ['Q', 105, 575, 180, 572], ['Q', 232, 575, 236, 630], ['L', 254, 668], ['L', 236, 678], ['Q', 240, 700, 226, 716], ['Q', 205, 727, 188, 724], ['L', 186, 760], ['L', 140, 760], ['L', 142, 716], ['Q', 105, 700, 105, 660], ['Z']];
+const pathC = cmds => g => { for (const c of cmds) { if (c[0] === 'M') g.moveTo(c[1], c[2]); else if (c[0] === 'L') g.lineTo(c[1], c[2]); else if (c[0] === 'Q') g.quadraticCurveTo(c[1], c[2], c[3], c[4]); else g.closePath(); } };
 function armFinger(g, t, k) {
-  const hx = 170, hy = 650;
-  g.save(); g.strokeStyle = '#cfe0ff'; g.lineWidth = 6; g.lineCap = 'round'; g.lineJoin = 'round';
-  g.beginPath(); g.arc(hx, hy, 70, 0, Math.PI * 2); g.stroke();             // 頭
-  g.beginPath(); g.moveTo(hx + 10, hy + 70); g.lineTo(hx + 10, hy + 330); g.stroke(); // 胴
-  g.beginPath(); g.moveTo(hx + 10, hy + 110); g.lineTo(hx + 10 + 700 * k, hy + 40 - 20 * k); g.stroke(); // 腕
-  g.restore();
-  g.fillStyle = '#fff'; g.beginPath(); g.arc(hx + 40, hy - 10, 8, 0, Math.PI * 2); g.fill();   // 目
-  if (k >= 1) {
-    const fx = hx + 710, fy = hy + 20;
-    g.save(); g.fillStyle = '#ffd9c0'; g.beginPath(); g.roundRect(fx - 14, fy - 110, 28, 110, 14); g.fill(); g.restore();
-    const a = clamp((t - 18.4) / 0.6, 0, 1);
-    g.save(); g.globalAlpha *= a; g.strokeStyle = TK.C.acc; g.lineWidth = 3;
-    g.beginPath(); g.moveTo(hx + 40, hy - 10); g.lineTo(fx - 14, fy - 100); g.moveTo(hx + 40, hy - 10); g.lineTo(fx + 14, fy - 100); g.stroke();
-    g.restore();
-    if (t > 18.6) { g.save(); g.globalAlpha *= TK.pop(t, 18.6); TK.text(g, '指1本 ≒ [約1度]', 600, 420, 72); g.restore(); }
-  }
+  const ax = 210 + 640 * k, ay = 772 - 60 * k;   // 手の位置（腕がのびる）
+  // 胴（服）
+  const body = PL.poly([[128, 752], [204, 752], [236, 790], [244, 1000], [100, 1000], [104, 790]]);
+  PL.tint(g, body, PL.T.sea, 0.6); PL.hatch(g, body, { angle: 0.8, gap: 9, w: 1.8, not: PL.rect(0, 0, 180, 1100) }); PL.ink(g, body, 5);
+  // 腕（そで＋手首）
+  const ux = ax - 214, uy = ay - 776, ul = Math.hypot(ux, uy) || 1, nx = -uy / ul, ny = ux / ul;
+  const arm = PL.poly([[214 + nx * 22, 776 + ny * 22], [ax + nx * 16, ay + ny * 16], [ax - nx * 16, ay - ny * 16], [214 - nx * 22, 776 - ny * 22]]);
+  PL.tint(g, arm, PL.T.sea, 0.6); PL.hatch(g, arm, { angle: 0.8, gap: 8, w: 1.6, not: PL.poly([[214 - nx * 2, 776 - ny * 2], [ax - nx * 2, ay - ny * 2], [ax - nx * 40, ay - ny * 40], [214 - nx * 40, 776 - ny * 40]]) }); PL.ink(g, arm, 5);
+  // にぎった手と、立てた人さし指
+  const fist = g2 => { g2.moveTo(ax - 8, ay - 22); g2.quadraticCurveTo(ax + 40, ay - 34, ax + 46, ay - 4); g2.quadraticCurveTo(ax + 48, ay + 26, ax + 12, ay + 26); g2.quadraticCurveTo(ax - 10, ay + 24, ax - 8, ay - 22); g2.closePath(); };
+  const finger = g2 => { g2.moveTo(ax + 14, ay - 26); g2.lineTo(ax + 14, ay - 120); g2.quadraticCurveTo(ax + 28, ay - 136, ax + 42, ay - 120); g2.lineTo(ax + 42, ay - 26); g2.closePath(); };
+  [fist, finger].forEach(p => { PL.tint(g, p, PL.T.rose, 0.75); PL.hatch(g, p, { angle: 0.7, gap: 6, w: 1.2, not: PL.rect(ax - 60, ay - 160, 80, 210) }); PL.ink(g, p, 4); });
+  PL.ink(g, gg => { gg.moveTo(ax + 18, ay - 110); gg.quadraticCurveTo(ax + 28, ay - 104, ax + 38, ay - 110); gg.moveTo(ax + 18, ay - 70); gg.lineTo(ax + 38, ay - 70); for (let i = 0; i < 3; i++) { gg.moveTo(ax + 44, ay - 8 + i * 11); gg.lineTo(ax + 30, ay - 6 + i * 11); } }, 1.6);   // つめ・ふし・にぎった指
+  // 頭（横顔）。髪・耳・目
+  const head = pathC(HEAD);
+  PL.tint(g, head, PL.T.rose, 0.7);
+  g.save(); g.beginPath(); head(g); g.clip(); PL.tint(g, g2 => { g2.moveTo(100, 690); g2.quadraticCurveTo(140, 600, 238, 612); g2.lineTo(238, 560); g2.lineTo(100, 560); g2.closePath(); }, PL.T.brown, 0.9); g.restore();
+  PL.hatch(g, head, { angle: 0.7, gap: 7, w: 1.4, not: PL.rect(150, 500, 200, 300) });
+  PL.ink(g, head, 5);
+  const ear = PL.ellipse(158, 668, 11, 19); PL.tint(g, ear, PL.T.rose, 0.8); PL.ink(g, ear, 2.6);
+  PL.ink(g, gg => { gg.moveTo(204, 640); gg.quadraticCurveTo(214, 632, 224, 640); gg.quadraticCurveTo(214, 646, 204, 640); }, 2.4);
+  g.fillStyle = PL.INK; g.beginPath(); g.arc(216, 640, 3.5, 0, Math.PI * 2); g.fill();
+  return { ex: 216, ey: 640, fx0: ax + 14, fx1: ax + 42, fy: ay - 128 };
 }
 
 function draw(g, t) {
   // 0〜10: 当ててみて
   if (t < 10.0) {
-    const f = fade(t, -1, 10.0, 0.3);
-    g.save(); g.globalAlpha = f;
-    if (t < 6.0) {
-      sky(g, t, 290, 120, 500, 220, 0, 0, { gaze: false });
-    }
-    g.restore();
+    if (t < 6.0) { g.save(); g.globalAlpha = fade(t, -1, 6.0, 0.3); sky(g, t, 290, 120, 500, 220, 0, 0, { gaze: false }); g.restore(); }
     TK.hook(g, t, 0.0, 1.6, 'この星、どこを見ると\n[いちばん見える？]', { y: 700, size: 92 });
     TK.choices(g, t, 1.6, 6.3, ['まっすぐ見る', '少し横を見る', '目を細める'], { y: 600, h: 150, gap: 28, size: 64, reveal: 6.0, answer: 1, think: [4.0, 6.0] });
-    if (t >= 6.0) {
-      // 6〜8 まっすぐ見ると消える → 8〜10 少し横を見ると見える
-      g.save(); g.globalAlpha = fade(t, 6.0, 10.0, 0.3);
+    if (t >= 6.3) {
+      // まっすぐ見ると消える → 8〜10 少し横を見ると見える
+      g.save(); g.globalAlpha = fade(t, 6.3, 10.0, 0.3);
       const cx = 540, cy = 560, off = ease(clamp((t - 8.0) / 0.8, 0, 1)) * 160;
-      TK.text(g, t < 8.0 ? 'A まっすぐ見ると…' : 'B 少し横を見ると', PW / 2, 230, 64, { color: t < 8.0 ? TK.C.red : TK.C.green });
-      sky(g, t, 110, 310, 860, 520, cx + off, cy - off * 0.3, { sx: cx, sy: cy, vis: t < 8.0 ? 1 - 0.0 : 1 });
+      PL.label(g, t < 8.0 ? 'A まっすぐ見ると…' : 'B 少し横を見ると', PW / 2, 230, 64, { color: t < 8.0 ? PL.RED : PL.GREEN });
+      sky(g, t, 110, 310, 860, 520, cx + off, cy - off * 0.3, { sx: cx, sy: cy });
       if (t > 7.4 && t < 8.0) redX(g, cx, cy, 50, (t - 7.4) / 0.3);
-      if (t > 9.0) { g.save(); g.globalAlpha *= TK.pop(t, 9.0); TK.text(g, '見えた！', cx - 10, cy + 110, 60, { color: TK.C.green }); g.restore(); }
-      g.save(); TK.text(g, '＋ ＝ 見ているところ', PW / 2, 900, 40, { color: TK.C.acc, bold: false }); g.restore();
+      if (t > 9.0) { g.save(); g.globalAlpha *= clamp(TK.pop(t, 9.0), 0, 1); PL.leader(g, cx - 16, cy + 30, 430, 862, PL.GREEN); PL.label(g, '見えた！', 430, 900, 56, { color: PL.GREEN }); g.restore(); }
+      PL.label(g, '＋ ＝ 見ているところ', 960, 900, 38, { align: 'right', color: PL.RED, bold: false });
       g.restore();
     }
   }
   // 10〜17: 網膜のまん中には桿体がない
   if (t >= 10.0 && t < 17.0) {
     g.save(); g.globalAlpha = fade(t, 10.0, 17.0, 0.3);
-    TK.text(g, '網膜の細胞の数（形だけの模式）', PW / 2, 190, 54, { color: TK.C.sub });
+    PL.label(g, '網膜の細胞の数（形だけの模式）', PW / 2, 190, 54, { color: TK.C.sub });
     retinaGraph(g, t, clamp((t - 10.3) / 2.4, 0, 1));
     g.restore();
   }
   // 17〜21: 腕をのばした指1本ぶん
   if (t >= 17.0 && t < 21.0) {
     g.save(); g.globalAlpha = fade(t, 17.0, 21.0, 0.3);
-    armFinger(g, t, ease(clamp((t - 17.2) / 1.0, 0, 1)));
+    const k = ease(clamp((t - 17.2) / 1.0, 0, 1)), p = armFinger(g, t, k);
+    if (k >= 1) {
+      const a = clamp((t - 18.4) / 0.6, 0, 1);
+      g.save(); g.globalAlpha *= a;
+      PL.dots(g, [[p.ex, p.ey], [p.fx0, p.fy]], { w: 4, dash: [3, 10] }); PL.dots(g, [[p.ex, p.ey], [p.fx1, p.fy]], { w: 4, dash: [3, 10] });
+      g.restore();
+      if (t > 18.6) { g.save(); g.globalAlpha *= clamp(TK.pop(t, 18.6), 0, 1); PL.label(g, '指1本 ≒ [約1度]', 560, 420, 72); g.restore(); }
+    }
     g.restore();
   }
   // 21〜25: 少しずらして見る ＋ 9200万個
@@ -159,13 +176,13 @@ function draw(g, t) {
     g.save(); g.globalAlpha = fade(t, 21.0, 25.5, 0.3);
     const cx = 540, cy = 640, off = 70 + 90 * ease(clamp((t - 21.2) / 1.0, 0, 1));
     sky(g, t, 110, 420, 860, 440, cx + off, cy + off * 0.3, { sx: cx, sy: cy });
-    if (t > 22.6) { g.save(); g.globalAlpha *= TK.pop(t, 22.6); TK.text(g, '桿体 約[9200万]個', PW / 2, 280, 84, { stroke: 'rgba(0,0,0,0.6)' }); g.restore(); }
+    if (t > 22.6) { g.save(); g.globalAlpha *= clamp(TK.pop(t, 22.6), 0, 1); PL.label(g, '桿体 約[9200万]個', PW / 2, 280, 84); g.restore(); }
     g.restore();
   }
   if (t >= 6.0 && t < 10.0) TK.note(g, t, 6.0, 10.0, '星が消える絵は分かりやすくするため（実際は暗さ・慣れぐあいで変わる）', { size: 30 });
   if (t >= 10.0 && t < 17.0) TK.note(g, t, 10.0, 17.0, '桿体のない所: 直径 0.35 mm（1.25°）。曲線の形は模式', { size: 30 });
   if (t >= 17.0 && t < 21.0) TK.note(g, t, 17.0, 21.0, '「指1本で約1度」は目安（腕の長さで変わる）', { size: 30 });
-  if (t >= 21.0) TK.note(g, t, 21.0, 25.0, '出どころ: Curcio ほか (1990)\nJ Comp Neurol 292: 497–523', { size: 30 });
+  if (t >= 21.0) TK.note(g, t, 21.0, 25.0, '出どころ: Curcio ほか (1990)\nJ Comp Neurol 292: 497–523', { size: 30, y: 1150 });   // 2行なので絵の下に（クレジットと重ねない）
 }
 
 triviaStart({ out: 'eye-optics-trivia2', dur: DUR, draw, subs, cues, peek: 1.0 });

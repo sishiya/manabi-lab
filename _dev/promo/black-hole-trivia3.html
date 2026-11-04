@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく black-hole-3（型H 当ててみて）「大きいブラックホールほど、落ちてもちぎれない」。台本は trivia/black-hole.md。?short で録る
@@ -31,80 +34,133 @@ const cues = [
   { t: 18.0, type: 'pop' }, { t: 23.0, type: 'thud' },
 ];
 
-function hole(g, x, y, r, f = 1) {
+// 絵は「図鑑の版画」（trivia-plate.js の PL.*）。ブラックホールは black-hole-trivia2 と同じ描き方（古い天文書の銅版画: 円盤の同心線・
+// 曲がって見えるおくの光・墨のべたの影）。落ちる人は影絵（PL.walker）を縦にのばし、頭と足の引っぱりを朱の矢印で
+const TAU = Math.PI * 2;
+const ringC = (x, y, ro, ri) => gg => { gg.moveTo(x + ro, y); gg.arc(x, y, ro, 0, TAU); gg.moveTo(x + ri, y); gg.arc(x, y, ri, TAU, 0, true); };
+const ringE = (x, y, rxo, ryo, rxi, ryi, rot) => gg => {
+  gg.moveTo(x + Math.cos(rot) * rxo, y + Math.sin(rot) * rxo); gg.ellipse(x, y, rxo, ryo, rot, 0, TAU);
+  gg.moveTo(x + Math.cos(rot) * rxi, y + Math.sin(rot) * rxi); gg.ellipse(x, y, rxi, ryi, rot, TAU, 0, true);
+};
+const half = (x, y, rot, side) => gg => {
+  const dx = Math.cos(rot), dy = Math.sin(rot), nx = -dy * side, ny = dx * side, L = 4000;
+  gg.moveTo(x - dx * L, y - dy * L); gg.lineTo(x + dx * L, y + dy * L); gg.lineTo(x + dx * L + nx * L, y + dy * L + ny * L); gg.lineTo(x - dx * L + nx * L, y - dy * L + ny * L); gg.closePath();
+};
+const clipTo = (g, path, fn) => { g.save(); g.beginPath(); path(g); g.clip(); fn(); g.restore(); };
+const ROT = -0.12, DO = [2.35, 0.4], DI = [1.12, 0.17];
+function disk(g, x, y, r, t, w, ow) {
+  const dk = ringE(x, y, DO[0] * r, DO[1] * r, DI[0] * r, DI[1] * r, ROT);
+  PL.tint(g, dk, PL.T.gold, 0.6);
+  PL.tint(g, ringE(x, y, DO[0] * r, DO[1] * r, 1.9 * r, 0.31 * r, ROT), PL.T.rust, 0.45);
+  PL.hatch(g, dk, { angle: 1.15, gap: Math.max(5, r / 15), w, not: PL.circle(x - r * 1.2, y, r * 2.0), cx: x, cy: y });
+  const N = clamp(Math.round(r / 18), 4, 11);
+  for (let i = 1; i < N; i++) {
+    const u = i / N, rx = lerp(DI[0], DO[0], u) * r, ry = lerp(DI[1], DO[1], u) * r;
+    g.save();
+    if (i % 2) { g.setLineDash([r * 0.42, r * 0.2]); g.lineDashOffset = -t * r * 1.6 / Math.sqrt(rx / r); }
+    PL.ink(g, PL.ellipse(x, y, rx, ry, ROT), w * (1.4 - 0.7 * u));
+    g.restore();
+  }
+  PL.ink(g, PL.ellipse(x, y, DO[0] * r, DO[1] * r, ROT), ow * 0.75);
+  PL.ink(g, PL.ellipse(x, y, DI[0] * r, DI[1] * r, ROT), ow * 0.6);
+}
+function shadow(g, x, y, r) { const sh = PL.circle(x, y, r); PL.tint(g, sh, PL.INK, 1); PL.tint(g, sh, PL.INK, 0.8); PL.ink(g, sh, Math.max(3, r / 42)); }
+function lensed(g, x, y, r, w) {
+  const oc = k => [x, y - 0.16 * r * k, r * (1.02 + 0.44 * k)];
+  const band = gg => { const [ox, oy, orr] = oc(1); gg.moveTo(ox + orr, oy); gg.arc(ox, oy, orr, 0, TAU); gg.moveTo(x + r * 1.02, y); gg.arc(x, y, r * 1.02, TAU, 0, true); };
+  PL.tint(g, band, PL.T.gold, 0.55);
+  PL.tint(g, ringC(x, y, r * 1.08, r), PL.T.rust, 0.5);
+  PL.hatch(g, band, { angle: 1.1, gap: Math.max(5, r / 16), w, not: PL.circle(x - r * 1.5, y - r * 0.2, r * 2.0), cx: x, cy: y });
+  [0, 0.3, 0.68, 1].forEach((k, i) => { const [ox, oy, orr] = oc(k); PL.ink(g, PL.circle(ox, oy, orr), w * (i === 3 ? 1.6 : 1.4 - k * 0.6)); });
+}
+function hole(g, x, y, r, t, f = 1) {
   g.save(); g.globalAlpha *= f;
-  const gl = g.createRadialGradient(x, y, r * 0.9, x, y, r * 1.8);
-  gl.addColorStop(0, 'rgba(255,170,80,0.8)'); gl.addColorStop(0.4, 'rgba(255,120,40,0.3)'); gl.addColorStop(1, 'rgba(255,120,40,0)');
-  g.fillStyle = gl; g.beginPath(); g.arc(x, y, r * 1.8, 0, Math.PI * 2); g.fill();
-  g.lineWidth = Math.max(3, r * 0.07); g.strokeStyle = 'rgba(255,214,150,0.9)'; g.beginPath(); g.arc(x, y, r * 1.1, 0, Math.PI * 2); g.stroke();
-  g.fillStyle = '#000'; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  const w = Math.max(1.3, r / 95), ow = Math.max(3, r / 42);
+  clipTo(g, half(x, y, ROT, -1), () => disk(g, x, y, r, t, w, ow));
+  lensed(g, x, y, r, w);
+  shadow(g, x, y, r);
+  clipTo(g, half(x, y, ROT, 1), () => disk(g, x, y, r, t, w, ow));
   g.restore();
 }
-// 足から落ちる棒の人。stretch: 縦に何倍のびるか、thin: 横の細さ
-function faller(g, x, y, s, stretch = 1, thin = 1, color = '#fff') {
-  g.save(); g.translate(x, y); g.scale(s * thin, s * stretch);
-  g.strokeStyle = color; g.lineWidth = 7 / Math.max(thin, 0.3); g.lineCap = 'round';
-  g.beginPath(); g.moveTo(0, -40); g.lineTo(-14, 0); g.moveTo(0, -40); g.lineTo(14, 0); g.moveTo(0, -40); g.lineTo(0, -82);
-  g.moveTo(0, -74); g.lineTo(-24, -100); g.moveTo(0, -74); g.lineTo(24, -100); g.stroke();
-  g.fillStyle = color; g.beginPath(); g.ellipse(0, -100, 14, 14, 0, 0, Math.PI * 2); g.fill();
-  g.restore();
+// 足から落ちる人（影絵）。x, y は足もと、stretch: 縦に何倍のびるか、thin: 横の細さ
+function faller(g, x, y, s, stretch = 1, thin = 1) {
+  g.save(); g.translate(x, y); g.scale(thin, stretch); PL.walker(g, 0, 0, 0, 0, s); g.restore();
+}
+// 頭と足の引っぱり（下向きの朱の矢印。長さのちがい＝引っぱりの差）
+function pulls(g, x, yHead, yFoot, lh, lf) {
+  PL.ink(g, gg => [[yHead, lh], [yFoot, lf]].forEach(([y, l]) => { gg.moveTo(x, y); gg.lineTo(x, y + l); gg.moveTo(x - 12, y + l - 16); gg.lineTo(x, y + l); gg.lineTo(x + 12, y + l - 16); }), 6, PL.RED);
 }
 
 function draw(g, t) {
-  // 0〜1.6: フック（小さい穴と大きい穴、まん中に人）
+  // 0〜1.8: フック（小さいブラックホールと大きいブラックホール、あいだに人）
   if (t < 1.8) {
     const f = fade(t, -1, 1.8, 0.3);
-    hole(g, 230, 780, 70, f); hole(g, 760, 820, 190, f);
-    faller(g, 470, 760, 1.6);
+    hole(g, 210, 800, 52, t, f); hole(g, 775, 820, 128, t, f);
+    g.save(); g.globalAlpha *= f;
+    faller(g, 410, 860, 0.62);
+    PL.label(g, '太陽の10倍', 210, 905, 36, { color: TK.C.sub }); PL.label(g, '太陽の400万倍', 775, 1040, 36, { color: TK.C.sub });
+    g.restore();
     TK.hook(g, t, 0.0, 1.8, '地平線で\n[引きちぎられる]のは？', { y: 330, size: 120 });
   }
   // 1.6〜6: 2択（考える時間 3〜6）
   TK.choices(g, t, 1.6, 6.8, ['太陽の[10倍]の\nブラックホール', '太陽の[400万倍]\n（天の川のまん中）'].map(s => s.replace('\n', ' ')), { y: 560, h: 200, reveal: 6.0, answer: 0, think: [3.0, 6.0], size: 58 });
-  if (t >= 1.6 && t < 6.8) { g.save(); g.globalAlpha = fade(t, 1.6, 6.8, 0.3); TK.text(g, '引きちぎられるのは？', PW / 2, 230, 70); g.restore(); }
+  if (t >= 1.6 && t < 6.8) { g.save(); g.globalAlpha *= fade(t, 1.6, 6.8, 0.3); PL.label(g, '引きちぎられるのは？', 90, 230, 70, { align: 'left' }); g.restore(); }
   // 6.8〜12: A のびる人
   if (t >= 6.8 && t < 12.0) {
     const f = fade(t, 6.8, 12.0, 0.3), k = ease((t - 7.0) / 3.5);
-    hole(g, 540, 1010, 90, f);
-    g.save(); g.globalAlpha = f;
-    faller(g, 540, lerp(600, 900, k), 1.8, 1 + 1.3 * k, 1 - 0.7 * k);
-    TK.text(g, 'A 太陽の10倍', PW / 2, 230, 64, { color: TK.C.sub });
-    TK.card(g, 140, 300, 800, 130);
-    TK.text(g, '頭と足の差 [2000万 G]', PW / 2, 365, 70);
+    hole(g, 540, 1040, 90, t, f);
+    g.save(); g.globalAlpha *= f;
+    const yf = lerp(640, 930, k), st = 1 + 1.3 * k, H = 258 * 0.75 * st;
+    faller(g, 540, yf, 0.75, st, 1 - 0.7 * k);
+    if (k > 0.15) pulls(g, 650, yf - H + 10, yf - 40, 30 + 10 * k, 30 + 150 * k);
+    PL.label(g, 'A 太陽の10倍', 90, 220, 60, { align: 'left', color: TK.C.sub });
+    PL.label(g, '頭と足の差 [2000万 G]', 90, 320, 70, { align: 'left' });
     g.restore();
   }
   // 12〜18: B ふつうに通過
   if (t >= 12.0 && t < 18.0) {
     const f = fade(t, 12.0, 18.0, 0.3), k = ease((t - 12.4) / 4.5);
-    hole(g, 540, 2350, 1400, f);   // 大きすぎて、ふちだけ見える
-    g.save(); g.globalAlpha = f;
-    faller(g, 540, lerp(640, 1020, k), 1.8);
-    TK.text(g, 'B 太陽の400万倍（天の川のまん中）', PW / 2, 230, 54, { color: TK.C.sub });
-    TK.card(g, 140, 300, 800, 130);
-    TK.text(g, '頭と足の差 [1万分の1 G]', PW / 2, 365, 70);
+    g.save(); g.globalAlpha *= f;
+    const RB = 1400, CY = 2350;   // 大きすぎて、ふちだけ見える
+    g.save(); g.beginPath(); g.rect(0, 0, PW, 1190); g.clip();   // 字幕の帯より下には描かない
+    PL.tint(g, ringC(540, CY, RB * 1.05, RB), PL.T.rust, 0.5); PL.ink(g, PL.circle(540, CY, RB * 1.05), 2);
+    shadow(g, 540, CY, RB);
+    g.restore();
+    const yf = lerp(660, 1030, k), H = 258 * 0.75;
+    faller(g, 540, yf, 0.75);
+    pulls(g, 650, yf - H + 10, yf - 40, 36, 36);
+    PL.label(g, 'B 太陽の400万倍（天の川のまん中）', 90, 220, 52, { align: 'left', color: TK.C.sub });
+    PL.label(g, '頭と足の差 [1万分の1 G]', 90, 320, 70, { align: 'left' });
+    PL.leader(g, 900, CY - Math.sqrt(RB * RB - 360 * 360) - 6, 900, 880); PL.label(g, '地平線', 900, 848, 40, { color: TK.C.sub });
     g.restore();
   }
-  // 18〜23: なぜ
+  // 18〜23: なぜ（3段の理屈と、右に小さな図）
   if (t >= 18.0 && t < 23.0) {
     const f = fade(t, 18.0, 23.0, 0.3);
-    g.save(); g.globalAlpha = f;
+    g.save(); g.globalAlpha *= f;
     const rows = [['地平線の大きさ', '重さに比例'], ['引っぱりの差', '距離の3乗で弱まる'], ['地平線での差', '[重さの2乗]で弱まる']];
     rows.forEach(([a, b], i) => {
-      const k = TK.pop(t, 18.3 + i * 1.0, 0.35); if (k <= 0) return;
-      g.save(); g.globalAlpha = f * clamp(k, 0, 1);
-      const y = 330 + i * 230;
-      TK.card(g, 110, y - 85, 860, 170, i === 2 ? { stroke: TK.C.acc, lw: 6 } : {});
-      TK.text(g, a, PW / 2, y - 32, 50, { color: TK.C.sub });
-      TK.text(g, b, PW / 2, y + 36, 66);
-      if (i < 2) TK.text(g, '↓', PW / 2, y + 115, 50, { color: TK.C.dim });
+      const k = clamp((t - 18.3 - i * 1.0) / 0.35, 0, 1); if (k <= 0) return;
+      g.save(); g.globalAlpha *= k;
+      const y = 300 + i * 240;
+      PL.label(g, a, 110, y - 34, 46, { align: 'left', color: TK.C.sub });
+      PL.label(g, b, 110, y + 36, 64, { align: 'left' });
+      if (i < 2) PL.ink(g, gg => { gg.moveTo(140, y + 88); gg.lineTo(140, y + 160); gg.moveTo(126, y + 144); gg.lineTo(140, y + 160); gg.lineTo(154, y + 144); }, 4);
+      if (i === 0) { shadow(g, 810, y, 16); shadow(g, 930, y, 62); }
+      if (i === 1) {
+        PL.ink(g, gg => { gg.moveTo(780, y - 80); gg.lineTo(780, y + 70); gg.lineTo(1010, y + 70); }, 3);
+        PL.ink(g, gg => { for (let q = 0; q <= 40; q++) { const u = q / 40, x = 790 + u * 210, v = 1 / Math.pow(1 + u * 4, 3); q ? gg.lineTo(x, y + 66 - v * 140) : gg.moveTo(x, y + 66 - v * 140); } }, 5, PL.RED);
+      }
+      if (i === 2) PL.ink(g, gg => { gg.moveTo(110, y + 84); gg.lineTo(760, y + 84); }, 5, PL.RED);
       g.restore();
     });
-    TK.text(g, '重さ 40万倍 → 差は 1600億分の1', PW / 2, 1010, 44, { color: TK.C.sub, bold: false });
+    if (t > 21.0) PL.label(g, '重さ 40万倍 → 差は 1600億分の1', 90, 1060, 44, { align: 'left', color: TK.C.sub, bold: false });
     g.restore();
   }
   // 23〜25: でも出られない
   if (t >= 23.0) {
-    hole(g, 540, 650, 260);
-    TK.note(g, t, 23.0, 25.0, '出どころ: EHT Collaboration (2022) First Sgr A* Results I・IV（約400万倍）\nΔa ≈ 2GM·L / r³（ニュートンの近似）', { size: 28 });
+    hole(g, 540, 660, 200, t, fade(t, 23, 26, 0.3));
+    TK.note(g, t, 23.0, 25.0, '出どころ: EHT Collaboration (2022) First Sgr A* Results I・IV（約400万倍）\nΔa ≈ 2GM·L / r³（ニュートンの近似）', { size: 28, y: 1140 });
   }
   if (t >= 6.8 && t < 23.0) TK.note(g, t, 6.8, 23.0, '身長2mの人が、足から落ちたときの目安', { size: 32 });
 }

@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく net-route-1（型H 当ててみて）「シカゴ→ニューヨーク、速いのはどっち？」。台本は trivia/net-route.md。?short で録る
@@ -35,94 +38,210 @@ const cues = [
   { t: 25.0, type: 'pop' }, { t: 28.0, type: 'thud' }, { t: 31.0, type: 'whoosh' },
 ];
 
-// 地図（2つの点。形はかざり）
-function map(g, y, k, o = {}) {
-  const ax = 150, bx = 810;
-  g.save(); g.globalAlpha *= k;
-  if (o.paths) {
-    // 光ファイバー（地面にそって少し曲がる）と電波（鉄塔をつないでほぼまっすぐ）
-    g.strokeStyle = TK.C.acc2; g.lineWidth = 7; g.beginPath(); g.moveTo(ax, y);
-    for (let i = 1; i <= 40; i++) { const x = lerp(ax, bx, i / 40); g.lineTo(x, y + 150 * Math.sin(i / 40 * Math.PI) + 18 * Math.sin(i * 1.3)); }
-    g.stroke();
-    g.strokeStyle = TK.C.acc; g.lineWidth = 5; g.setLineDash([16, 10]); g.beginPath(); g.moveTo(ax, y); g.lineTo(bx, y - 4); g.stroke(); g.setLineDash([]);
-    for (let i = 1; i < 6; i++) tower(g, lerp(ax, bx, i / 6), y - 2, 0.85);
-  } else {
-    g.strokeStyle = 'rgba(160,190,255,0.5)'; g.lineWidth = 4; g.setLineDash([10, 12]); g.beginPath(); g.moveTo(ax, y); g.lineTo(bx, y); g.stroke(); g.setLineDash([]);
+/// ---- 絵は「図鑑の版画」（trivia-plate.js の PL.*）----
+// 地図: 五大湖のまわり（湖・海岸の形は経度・緯度のおおよその点。正距円筒、北緯41°で横を縮める）。道すじは模式
+const LON0 = -89, LON1 = -72, LAT0 = 38.6, LAT1 = 46.3, KX = Math.cos(41 * Math.PI / 180);
+const MICH = [[-87.5, 41.62], [-87.8, 42.3], [-87.9, 43.0], [-87.7, 43.9], [-87.5, 44.5], [-87.0, 45.2], [-86.4, 45.8], [-85.5, 45.95], [-85.0, 45.75], [-85.4, 45.2], [-86.2, 44.6], [-86.45, 43.95], [-86.2, 42.8], [-86.5, 42.1], [-86.9, 41.7]];
+const HURON = [[-84.4, 45.95], [-84.4, 45.6], [-83.4, 45.1], [-83.3, 44.3], [-83.9, 43.9], [-83.5, 43.6], [-82.5, 43.0], [-81.7, 43.3], [-81.7, 44.2], [-81.3, 44.9], [-80.5, 44.6], [-80.8, 45.5], [-81.5, 45.9], [-83.5, 46.1]];
+const ERIE = [[-83.45, 41.7], [-82.7, 41.45], [-81.7, 41.5], [-80.1, 42.15], [-78.9, 42.85], [-79.6, 42.85], [-80.8, 42.6], [-82.0, 42.0], [-83.1, 42.05]];
+const ONT = [[-79.8, 43.25], [-79.0, 43.25], [-77.6, 43.25], [-76.2, 43.5], [-76.3, 44.2], [-77.5, 44.0], [-79.4, 43.65]];
+const SEA = [[-71, 38.0], [-75.1, 38.0], [-75.1, 38.8], [-75.45, 39.2], [-75.55, 39.6], [-75.25, 39.35], [-74.95, 38.93], [-74.4, 39.35], [-74.05, 40.0], [-74.0, 40.45], [-73.95, 40.57], [-73.0, 40.68], [-71, 40.9]];
+const SOUND = [[-73.75, 40.85], [-73.0, 40.95], [-71, 41.05], [-71, 41.3], [-73.0, 41.2], [-73.6, 41.0]];
+const CHI = [-87.63, 41.88], NJ = [-74.23, 40.58];
+const FIBER = [CHI, [-87.0, 41.6], [-85.5, 41.5], [-84.0, 41.3], [-82.5, 41.05], [-81.0, 40.95], [-79.5, 40.9], [-78.0, 40.75], [-76.5, 40.8], [-75.2, 40.62], NJ];
+function proj(M) { return ([lo, la]) => [M.x + (lo - LON0) * KX * M.s, M.y + (LAT1 - la) * M.s]; }
+const polyOf = (pts, P) => PL.poly(pts.map(P));
+// 地図。M: {x, y, s}。o.paths: 道すじ（fiber / radio の見える割合 0〜1）、o.cityLabels
+function map(g, M, f, o = {}) {
+  const P = proj(M), w = (LON1 - LON0) * KX * M.s, h = (LAT1 - LAT0) * M.s, box = PL.rect(M.x, M.y, w, h);
+  g.save(); g.globalAlpha *= f;
+  g.save(); g.beginPath(); box(g); g.clip();
+  PL.tint(g, box, PL.T.land, 0.32);
+  // 経線・緯線（2°ごと）
+  PL.ink(g, gg => { for (let lo = -88; lo <= LON1; lo += 2) { const [x] = P([lo, 0]); gg.moveTo(x, M.y); gg.lineTo(x, M.y + h); } for (let la = 40; la <= LAT1; la += 2) { const [, y] = P([0, la]); gg.moveTo(M.x, y); gg.lineTo(M.x + w, y); } }, 1, 'rgba(35,28,21,0.28)');
+  [MICH, HURON, ERIE, ONT, SEA, SOUND].forEach(L => {
+    const p = polyOf(L, P);
+    PL.tint(g, p, PL.T.sea, 0.75);
+    PL.hatch(g, p, { angle: 0, gap: 9, w: 1.3, color: 'rgba(47,95,122,0.55)' });   // 水は横の細い線（古い地図のように）
+    PL.ink(g, p, 3);
+  });
+  if (o.fiber > 0) {   // 光ファイバー（地面の下、道にそって）
+    const n = Math.max(2, Math.ceil(FIBER.length * o.fiber)), pts = FIBER.slice(0, n).map(P);
+    PL.ink(g, gg => pts.forEach(([x, y], i) => i ? gg.lineTo(x, y) : gg.moveTo(x, y)), 7, TK.C.acc2);
   }
-  for (const [x, s] of [[ax, 'シカゴ'], [bx, 'ニュージャージー']]) {
-    g.fillStyle = '#fff'; g.beginPath(); g.arc(x, y, 16, 0, Math.PI * 2); g.fill();
-    TK.text(g, s, x, y + 56, 40, { color: TK.C.sub });
+  if (o.radio > 0) {   // 電波（鉄塔から鉄塔へ、まっすぐ）
+    const a = P(CHI), b = P(NJ), e = [lerp(a[0], b[0], o.radio), lerp(a[1], b[1], o.radio)];
+    PL.dots(g, [a, e], { dash: [14, 12], w: 5 });
+    for (let i = 1; i < 9; i++) if (i / 9 <= o.radio) { const k = i / 9; tower(g, lerp(a[0], b[0], k), lerp(a[1], b[1], k), 0.22); }
   }
-  if (!o.paths) TK.text(g, '約 1,180 km', (ax + bx) / 2, y - 40, 36, { color: TK.C.dim, bold: false });
+  [CHI, NJ].forEach(c => { const [x, y] = P(c); PL.tint(g, PL.circle(x, y, 12), PL.RED, 0.9); PL.ink(g, PL.circle(x, y, 12), 4); });
   g.restore();
+  // わく（二重）と、北の矢じるし・縮尺
+  PL.ink(g, box, 6); PL.ink(g, PL.rect(M.x - 10, M.y - 10, w + 20, h + 20), 1.6);
+  const nx = M.x + w - 50, ny = M.y + 70, arrow = PL.poly([[nx, ny - 40], [nx + 16, ny + 18], [nx, ny + 6], [nx - 16, ny + 18]]);
+  PL.tint(g, arrow, PL.INK, 0.9); PL.ink(g, arrow, 3);
+  const km = 200 / 111 * M.s, sx = M.x + 30, sy = M.y + h - 34;   // 200km（緯度1°≒111km）
+  PL.ink(g, gg => { gg.moveTo(sx, sy); gg.lineTo(sx + km, sy); gg.moveTo(sx, sy - 10); gg.lineTo(sx, sy + 10); gg.moveTo(sx + km / 2, sy - 6); gg.lineTo(sx + km / 2, sy + 6); gg.moveTo(sx + km, sy - 10); gg.lineTo(sx + km, sy + 10); }, 3);
+  if (o.cityLabels) {   // 町の名前は地図の下に（地図の線と重ねない）
+    const ly = M.y + h + 58;
+    [[CHI, 'シカゴ'], [NJ, 'ニュージャージー']].forEach(([c, s]) => { const [x, y] = P(c); PL.leader(g, x, y, x, ly - 26); PL.label(g, s, x, ly, 40); });
+    if (o.dist) PL.label(g, '約 1,180 km', (P(CHI)[0] + P(NJ)[0]) / 2 - 20, ly, 36, { bold: false });
+  }
+  g.restore();
+  return { P, w, h };
 }
-// 電波の鉄塔（格子の三角）
+// 電波の鉄塔（格子の四角すい＋パラボラ）。x, y は根もと
 function tower(g, x, y, s) {
   g.save(); g.translate(x, y); g.scale(s, s);
-  g.strokeStyle = '#e8f0ff'; g.lineWidth = 5;
-  g.beginPath(); g.moveTo(-40, 60); g.lineTo(0, -90); g.lineTo(40, 60);
-  for (let i = 0; i < 4; i++) { const y0 = 60 - i * 37, y1 = y0 - 37, w0 = 40 * (y0 + 90) / 150, w1 = 40 * (y1 + 90) / 150; g.moveTo(-w0, y0); g.lineTo(w1, y1); g.moveTo(w0, y0); g.lineTo(-w1, y1); }
-  g.stroke();
-  g.strokeStyle = TK.C.acc; g.lineWidth = 4; for (const r of [24, 44]) { g.beginPath(); g.arc(0, -90, r, -0.7, 0.7); g.stroke(); g.beginPath(); g.arc(0, -90, r, Math.PI - 0.7, Math.PI + 0.7); g.stroke(); }
+  const H = 300, wb = 52, wt = 10, lx = k => lerp(wb, wt, k), legs = PL.poly([[-wb, 0], [-wt, -H], [wt, -H], [wb, 0]]);
+  PL.tint(g, legs, PL.T.gray, 0.35);
+  PL.ink(g, gg => { for (let i = 0; i < 6; i++) { const k0 = i / 6, k1 = (i + 1) / 6, y0 = -H * k0, y1 = -H * k1; gg.moveTo(-lx(k0), y0); gg.lineTo(lx(k1), y1); gg.moveTo(lx(k0), y0); gg.lineTo(-lx(k1), y1); gg.moveTo(-lx(k1), y1); gg.lineTo(lx(k1), y1); } }, 4);
+  PL.ink(g, gg => { gg.moveTo(-wb, 0); gg.lineTo(-wt, -H); gg.moveTo(wb, 0); gg.lineTo(wt, -H); gg.moveTo(0, -H); gg.lineTo(0, -H - 40); }, 8);
+  [[-1, -H * 0.82], [1, -H * 0.66]].forEach(([d, yy]) => {   // パラボラ（横から見た皿）
+    const dish = PL.ellipse(d * (lx(-yy / H) + 20), yy, 14, 34);
+    PL.tint(g, dish, PL.T.sand, 0.9); PL.hatch(g, dish, { angle: 0.6, gap: 6, w: 1.5 }); PL.ink(g, dish, 4);
+  });
+  PL.ink(g, gg => { gg.moveTo(-wb - 20, 0); gg.lineTo(wb + 20, 0); }, 6);
   g.restore();
+}
+// 包み（パケット）: 紙の小包にひも。x, y が中心
+function parcel(g, x, y, s, col) {
+  const b = PL.rect(x - 34 * s, y - 24 * s, 68 * s, 48 * s);
+  PL.tint(g, b, col, 0.85); PL.hatch(g, b, { angle: 0.8, gap: 6, w: 1.4, not: PL.rect(x - 40 * s, y - 30 * s, 60 * s, 40 * s) }); PL.ink(g, b, 4);
+  PL.ink(g, gg => { gg.moveTo(x, y - 24 * s); gg.lineTo(x, y + 24 * s); gg.moveTo(x - 34 * s, y); gg.lineTo(x + 34 * s, y); }, 2.4);
+}
+// 光ファイバーの断面図（被覆・クラッド・コア）。x0〜x1、中心 y
+function fiberTube(g, x0, x1, y) {
+  const jac = PL.rect(x0, y - 52, x1 - x0, 104), clad = PL.rect(x0, y - 34, x1 - x0, 68), core = PL.rect(x0, y - 15, x1 - x0, 30);
+  PL.tint(g, jac, PL.T.gray, 0.6); PL.hatch(g, jac, { angle: 0.8, gap: 10, w: 2, not: PL.rect(x0 - 10, y - 70, x1 - x0 + 20, 70) });
+  PL.tint(g, clad, PL.T.sky, 0.6); PL.tint(g, core, PL.T.sky, 0.35);
+  PL.ink(g, jac, 5); PL.ink(g, gg => { clad(gg); }, 2.4); PL.ink(g, gg => { core(gg); }, 1.6);
+  const cap = PL.ellipse(x1, y, 18, 52); PL.tint(g, cap, PL.T.gray, 0.8); PL.ink(g, cap, 4); PL.ink(g, PL.ellipse(x1, y, 7, 15), 2);
+}
+// km の目盛り（道の下）
+function ruler(g, x0, x1, y) {
+  PL.ink(g, gg => { gg.moveTo(x0, y); gg.lineTo(x1, y); for (let i = 0; i <= 12; i++) { const x = lerp(x0, x1, i / 12), l = i % 6 ? 8 : 16; gg.moveTo(x, y); gg.lineTo(x, y + l); } }, 2.4);
+}
+// 閉じた目（まばたき）
+function blinkEye(g, x, y, s, k) {   // k: 0 開く〜1 閉じる
+  const up = lerp(-60, 30, k) * s, lid = PL.poly(Array.from({ length: 25 }, (_, i) => { const a = i / 24, xx = x + (a - 0.5) * 220 * s; return [xx, y + Math.sin(a * Math.PI) * up]; }).concat(Array.from({ length: 25 }, (_, i) => { const a = 1 - i / 24, xx = x + (a - 0.5) * 220 * s; return [xx, y + Math.sin(a * Math.PI) * 50 * s]; })));
+  PL.tint(g, lid, PL.T.rose, 0.45);
+  if (k < 0.8) { g.save(); g.beginPath(); lid(g); g.clip(); const iris = PL.circle(x, y + 8 * s, 40 * s); PL.tint(g, iris, PL.T.brown, 0.8); PL.hatch(g, iris, { angle: 0.7, gap: 6, w: 1.6 }); PL.ink(g, iris, 3); PL.tint(g, PL.circle(x, y + 8 * s, 15 * s), PL.INK, 0.9); g.restore(); }
+  PL.ink(g, lid, 5);
+  PL.ink(g, gg => { for (let i = 1; i < 8; i++) { const a = i / 8, xx = x + (a - 0.5) * 220 * s, yy = y + Math.sin(a * Math.PI) * up; gg.moveTo(xx, yy); gg.lineTo(xx + (a - 0.5) * 30 * s, yy - 26 * s * (1 - k * 0.4)); } }, 3);
+}
+// 金貨の山（積んだ硬貨）。x, y は根もとのまん中
+function coinStack(g, x, y, n, r) {
+  for (let i = 0; i < n; i++) {
+    const yy = y - i * r * 0.32, side = PL.poly([[x - r, yy - r * 0.3], [x + r, yy - r * 0.3], [x + r, yy], [x - r, yy]]);
+    const body = gg => { side(gg); PL.ellipse(x, yy, r, r * 0.3)(gg); };
+    PL.tint(g, body, PL.T.gold, 0.8); PL.hatch(g, body, { angle: 1.1, gap: 7, w: 1.6, not: PL.rect(x - r - 5, yy - r, r * 1.1, r * 2) });
+    PL.ink(g, gg => { gg.moveTo(x - r, yy - r * 0.3); gg.lineTo(x - r, yy); gg.ellipse(x, yy, r, r * 0.3, 0, Math.PI, 0, true); gg.lineTo(x + r, yy - r * 0.3); }, 3);
+  }
+  const ty = y - (n - 1) * r * 0.32 - r * 0.3;
+  const tp = PL.ellipse(x, ty, r, r * 0.3); PL.tint(g, tp, PL.T.gold, 0.9); PL.ink(g, tp, 3.4); PL.ink(g, PL.ellipse(x, ty, r * 0.62, r * 0.18), 1.6);
 }
 
 function draw(g, t) {
-  // 0〜10: 2択
+  // 0〜10: 2択（上に地図、下に選択肢）
   if (t < 10.0) {
-    map(g, 230, TK.pop(t, 0.0, 0.4));
-    TK.choices(g, t, 0.3, 10.0, ['光ファイバー（光）', '電波の鉄塔（電波）'], { y: 520, h: 180, answer: 1, reveal: 5.0, think: [3.0, 5.0], size: 60 });
-    if (t < 3.0) TK.hook(g, t, 0.0, 3.0, '速いのは [どっち]？', { y: 1090, size: 100 });
-    if (t >= 5.0) { const k = TK.pop(t, 5.6, 0.4); g.save(); g.globalAlpha = fade(t, 5.6, 10, 0.3); tower(g, 820, 1030, 0.7 * k); g.restore(); }
+    const M = { x: 80, y: 110, s: 54 };
+    map(g, M, TK.pop(t, 0.0, 0.4), { cityLabels: true, dist: t < 5.0, radio: t >= 5.0 ? clamp((t - 5.4) / 1.6, 0, 1) : 0 });
+    // 答えは朱の二重わくと丸じるしで（札の中をぬると字の下が濃くなるので、ぬらない）
+    TK.choices(g, t, 0.3, 10.0, ['光ファイバー（光）', '電波の鉄塔（電波）'], { y: 860, h: 160, gap: 30, think: [3.0, 5.0], size: 60 });
+    if (t >= 5.0) {
+      const k = clamp((t - 5.0) / 0.35, 0, 1), y = 860 + 190; g.save(); g.globalAlpha *= k * fade(t, 0.3, 10.0, 0.3);
+      PL.ink(g, PL.rect(78, y - 12, PW - 156, 184), 7, PL.RED); PL.ink(g, PL.circle(170, y + 80, 62), 6, PL.RED);
+      g.restore();
+    }
+    if (t < 3.0) TK.hook(g, t, 0.0, 3.0, '速いのは [どっち]？', { y: PL.SUBY, size: 100 });
   }
   // 10〜17: 並走（ガラスの中の光と、空気の中の電波）
   if (t >= 10.0 && t < 17.0) {
-    const x0 = 110, x1 = 850, u = clamp((t - 10.6) / 2.5, 0, 1.6);
-    const lanes = [
-      { y: 330, label: '光ファイバー（ガラスの中の光）', v: 1 / 1.47, c: TK.C.acc2 },
-      { y: 650, label: '電波（空気の中）', v: 1.0, c: TK.C.acc },
-    ];
-    lanes.forEach((L, i) => {
-      TK.text(g, L.label, x0, L.y - 80, 46, { align: 'left', color: TK.C.sub });
-      g.save();
-      g.strokeStyle = i === 0 ? 'rgba(95,212,255,0.35)' : 'rgba(255,255,255,0.15)'; g.lineWidth = i === 0 ? 70 : 4;
-      if (i === 1) g.setLineDash([8, 14]);
-      g.lineCap = 'round'; g.beginPath(); g.moveTo(x0, L.y); g.lineTo(x1, L.y); g.stroke(); g.setLineDash([]);
-      const p = clamp(u * L.v, 0, 1), x = lerp(x0, x1, p);
-      g.fillStyle = L.c; g.shadowColor = L.c; g.shadowBlur = 30; g.beginPath(); g.arc(x, L.y, 26, 0, Math.PI * 2); g.fill();
-      g.restore();
-      if (p >= 1) TK.text(g, 'とうちゃく', x1 - 10, L.y + 80, 40, { align: 'right', color: L.c });
-    });
-    if (t > 13.1) { g.save(); g.globalAlpha = fade(t, 13.1, 17, 0.3); TK.card(g, 220, 840, 520, 100, { r: 50 }); TK.text(g, 'ガラスは [約3割] おそい', PW / 2 - 60, 890, 52); g.restore(); }
+    const x0 = 110, x1 = 900, u = clamp((t - 10.6) / 2.5, 0, 1.6);
+    // 上: 光ファイバーの断面
+    PL.label(g, '光ファイバー', x0, 210, 54, { align: 'left', color: TK.C.acc2 });
+    PL.label(g, 'ガラスの中を、反射しながら進む光', x0, 270, 36, { align: 'left', bold: false });
+    fiberTube(g, x0, x1, 400);
+    const p1 = clamp(u / 1.47, 0, 1), px = lerp(x0, x1 - 30, p1);
+    PL.ink(g, gg => { for (let k = 0; k <= 40; k++) { const xx = px - 220 + k * 5.5; if (xx < x0) continue; const ph = (xx - x0) / 55, zy = 400 + 13 * (2 * Math.abs(ph % 2 - 1) - 1); k && xx - 5.5 >= x0 ? gg.lineTo(xx, zy) : gg.moveTo(xx, zy); } }, 4, PL.RED);   // 光（コアのかべで全反射）
+    ruler(g, x0, x1, 478);
+    PL.leader(g, x0 + 40, 434, x0 + 40, 560); PL.label(g, '被覆', x0 + 40, 590, 34, { bold: false });
+    PL.leader(g, x0 + 220, 386, x0 + 220, 560); PL.label(g, 'コア（ガラス）', x0 + 220, 590, 34, { bold: false });
+    if (p1 >= 1) PL.label(g, 'とうちゃく', x1, 650, 42, { align: 'right', color: TK.C.acc2 });
+    // 下: 電波（鉄塔から鉄塔へ、空気の中）
+    const ty = 1010, top = ty - 300 * 0.62 - 10;
+    PL.label(g, '電波の鉄塔', x0, 680, 54, { align: 'left', color: PL.RED });
+    PL.label(g, '空気の中を、ほぼ光の速さ', x0, 738, 36, { align: 'left', bold: false });
+    tower(g, x0 + 30, ty, 0.62); tower(g, x1 - 30, ty, 0.62);
+    PL.ink(g, gg => { gg.moveTo(30, ty); gg.lineTo(PW - 30, ty); }, 4);
+    PL.hatch(g, PL.rect(30, ty, PW - 60, 26), { angle: 0.9, gap: 12, w: 2 });
+    const p2 = clamp(u, 0, 1), wx = lerp(x0 + 70, x1 - 70, p2);
+    PL.ink(g, gg => { for (let k = 0; k <= 60; k++) { const xx = wx - 240 + k * 4; if (xx < x0 + 70) continue; const zy = top + 16 * Math.sin((xx - x0) / 18); (k === 0 || xx - 4 < x0 + 70) ? gg.moveTo(xx, zy) : gg.lineTo(xx, zy); } }, 4, PL.RED);
+    if (p2 >= 1) PL.label(g, 'とうちゃく', x1 - 100, ty + 70, 42, { align: 'right', color: PL.RED });
+    if (t > 13.1) { g.save(); g.globalAlpha *= fade(t, 13.1, 17, 0.3); PL.label(g, 'ガラスは [約3割] おそい', PW / 2, 1150, 56); g.restore(); }
     TK.note(g, t, 10.3, 17, '約3割＝ガラスの屈折率 約1.47 の目安', { size: 32 });
   }
-  // 17〜25: 片道の時間の帯
+  // 17〜25: 片道の時間の帯＋ミリ秒の目盛り
   if (t >= 17.0 && t < 25.0) {
-    TK.text(g, 'シカゴ → ニュージャージー 片道', PW / 2 - 60, 230, 50, { color: TK.C.sub });
-    const M = 7.2;
+    PL.label(g, 'シカゴ → ニュージャージー　片道', 110, 200, 50, { align: 'left' });
+    const M = 7.2, X0 = 110, W = PW - 220, xm = ms => X0 + W * ms / M;
     TK.bars(g, t, 17.1, 25.0, [
-      { label: '光の限界（まっすぐ・真空）', v: 3.93 / M, color: 'rgba(255,255,255,0.55)', text: '3.93 ms' },
-      { label: 'まっすぐに掘った光ファイバー', v: 6.65 / M, color: TK.C.acc2, text: '6.65 ms' },
-      { label: '電波の鉄塔（推定）', v: 4.7 / M, color: TK.C.acc, text: '4.2〜5.2 ms' },
+      { label: '光の限界（まっすぐ・真空）', v: 3.93 / M, text: '3.93 ms' },
+      { label: 'まっすぐに掘った光ファイバー', v: 6.65 / M, text: '6.65 ms' },
+      { label: '電波の鉄塔（推定）', v: 4.7 / M, text: '4.2〜5.2 ms' },
     ], { y: 330, gap: 210, stagger: 0.5, size: 48 });
-    if (t > 21.0) { g.save(); g.globalAlpha = fade(t, 21.0, 25, 0.3); TK.text(g, 'さらに 約[2ミリ秒] 速い', PW / 2 - 60, 1000, 70); g.restore(); }
+    const ay = 960;
+    PL.ink(g, gg => { gg.moveTo(X0, ay); gg.lineTo(X0 + W, ay); for (let ms = 0; ms <= 7; ms++) { gg.moveTo(xm(ms), ay); gg.lineTo(xm(ms), ay + 18); } for (let ms = 0.5; ms < 7.2; ms += 1) { gg.moveTo(xm(ms), ay); gg.lineTo(xm(ms), ay + 9); } }, 3);
+    for (let ms = 0; ms <= 7; ms++) PL.label(g, String(ms), xm(ms), ay + 44, 30, { bold: false });
+    PL.label(g, 'ミリ秒', X0 + W, ay - 30, 30, { align: 'right', bold: false });
+    if (t > 21.0) {
+      g.save(); g.globalAlpha *= fade(t, 21.0, 25, 0.3);
+      PL.ink(g, gg => { gg.moveTo(xm(4.7), ay); gg.lineTo(xm(6.65), ay); }, 10, PL.RED);
+      PL.label(g, 'さらに 約[2ミリ秒] 速い', PW / 2, 1110, 66);
+      g.restore();
+    }
     TK.note(g, t, 17.5, 25, '電波の 4.2〜5.2ms は論文の推定', { size: 32 });
   }
-  // 25〜31: 2ミリ秒と 5億ドル
+  // 25〜31: 2ミリ秒と、まばたき。そして 5億ドル
   if (t >= 25.0 && t < 31.0) {
-    TK.count(g, t, 25.0, 31.0, 0, 2, { y: 360, size: 220, dur: 0.8, unit: 'ミリ秒', fmt: v => v.toFixed(1) });
-    if (t > 26.0) { g.save(); g.globalAlpha = fade(t, 26.0, 31, 0.3); TK.text(g, 'まばたきの 約[100分の1]', PW / 2 - 60, 620, 62); g.restore(); }
-    if (t > 28.0) { const k = TK.pop(t, 28.0, 0.4); g.save(); g.globalAlpha = k; TK.card(g, 120, 740, 720, 200, { fill: 'rgba(255,207,74,0.18)', stroke: TK.C.acc }); TK.text(g, '合わせて [5億ドル] 以上', PW / 2 - 60, 840, 72); g.restore(); }
-    TK.note(g, t, 28.3, 31, '光ファイバーと電波の網を合わせた設備と5年の運用の見積もり\nまばたきは 0.1〜0.15 秒の目安', { size: 30 });
+    const k0 = TK.out((t - 25.0) / 0.8);
+    PL.label(g, (2 * k0).toFixed(1) + ' ミリ秒', 100, 250, 116, { align: 'left', color: PL.RED });
+    blinkEye(g, 900, 250, 0.7, 0.5 + 0.5 * Math.sin(t * 2.2));
+    if (t > 26.0) {   // まばたき（100〜150ミリ秒）の帯と、2ミリ秒の細い帯
+      g.save(); g.globalAlpha *= fade(t, 26.0, 31, 0.3);
+      const X0 = 110, W = 860, xm = ms => X0 + W * ms / 150, y = 430;
+      const blink = PL.rect(X0, y, xm(100) - X0, 60), more = PL.rect(xm(100), y, xm(150) - xm(100), 60);
+      PL.tint(g, blink, PL.T.rose, 0.7); PL.hatch(g, blink, { angle: 0.9, gap: 12, w: 2.2 }); PL.ink(g, blink, 4);
+      PL.hatch(g, more, { angle: 0.9, gap: 20, w: 1.6 }); PL.ink(g, more, 2);
+      const two = PL.rect(X0, y + 100, xm(2) - X0, 60); PL.tint(g, two, PL.RED, 0.9); PL.ink(g, two, 3, PL.RED);
+      PL.ink(g, gg => { gg.moveTo(X0, y - 20); gg.lineTo(X0, y + 180); }, 4);
+      PL.label(g, 'まばたき 0.1〜0.15 秒', X0 + 10, y - 50, 38, { align: 'left', bold: false });
+      PL.leader(g, xm(2) + 4, y + 130, X0 + 120, y + 130, PL.RED);
+      PL.label(g, '2ミリ秒', X0 + 140, y + 130, 40, { align: 'left', color: PL.RED });
+      PL.label(g, 'まばたきの 約[100分の1]', PW / 2, y + 250, 56);
+      g.restore();
+    }
+    if (t > 28.0) {
+      const k = TK.pop(t, 28.0, 0.4); g.save(); g.globalAlpha *= clamp(k, 0, 1);
+      [[230, 1000, 7], [330, 1010, 10], [440, 995, 5], [190, 1020, 3]].forEach(([x, y, n]) => coinStack(g, x, y, n, 52));
+      PL.label(g, '合わせて', 560, 850, 46, { align: 'left' });
+      PL.label(g, '[5億ドル] 以上', 560, 940, 80, { align: 'left' });
+      g.restore();
+    }
+    TK.note(g, t, 28.3, 31, '光ファイバーと電波の網を合わせた設備と5年の運用の見積もり\nまばたきは 0.1〜0.15 秒の目安', { size: 30, y: 1140 });   // 2行の注は帯の上に（下のクレジットと重ねない）
   }
-  // 31〜35: 道の長さ
+  // 31〜35: 道の長さ（地図の上の2本の道）
   if (t >= 31.0) {
-    map(g, 520, TK.pop(t, 31.0, 0.4), { paths: true });
-    g.save(); g.globalAlpha = fade(t, 31.3, 35, 0.3);
-    TK.text(g, '光ファイバー（地面にそって）', 480, 760, 48, { color: TK.C.acc2 });
-    TK.text(g, '電波（鉄塔から鉄塔へ、まっすぐ）', 480, 330, 48, { color: TK.C.acc });
+    const M = { x: 80, y: 360, s: 58 }, k = clamp((t - 31.2) / 1.5, 0, 1);
+    const { P } = map(g, M, TK.pop(t, 31.0, 0.4), { cityLabels: true, fiber: k, radio: k });
+    g.save(); g.globalAlpha *= fade(t, 31.3, 35, 0.3);
+    const a = P(CHI), b = P(NJ), r = [lerp(a[0], b[0], 0.5), lerp(a[1], b[1], 0.5)], f = P(FIBER[7]);
+    PL.leader(g, r[0], r[1], r[0], 290, PL.RED); PL.label(g, '電波（鉄塔から鉄塔へ、まっすぐ）', r[0], 255, 42, { color: PL.RED });
+    if (k >= 0.75) PL.leader(g, f[0], f[1], f[0], 940, TK.C.acc2);
+    PL.label(g, '光ファイバー（地面にそって）', f[0], 975, 42, { color: TK.C.acc2 });
     g.restore();
-    TK.note(g, t, 32.0, 35, '出どころ: Laughlin, Aguirre, Grundfest (2014)\nFinancial Review 49:283–312（arXiv:1302.5966）', { size: 30 });
+    TK.note(g, t, 32.0, 35, '出どころ: Laughlin, Aguirre, Grundfest (2014)\nFinancial Review 49:283–312（arXiv:1302.5966）', { size: 30, y: 1130 });
   }
 }
 

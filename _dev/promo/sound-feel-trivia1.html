@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく sound-feel-1（型H 当ててみて）「悲鳴が無視できない理由は？」。台本は trivia/sound-feel.md。?short で録る
@@ -44,83 +47,123 @@ const cues = [
   { t: 17.0, type: 'whoosh' }, { t: 19.0, type: 'am', fm: 60, d: 1.2, f: 880, v: 0.7 }, { t: 23.0, type: 'whoosh' }, { t: 25.0, type: 'rise' },
 ];
 
-// 1秒ぶんの波形（音の大きさのゆれ fm 回/秒）を x0〜x1 に。振幅 A。ゆれの包絡を塗る＋細い中身
+const BLUE = TK.C.acc2;
+// ---- 版画の道具（このページだけ。PL.* を組み合わせる）----
+const TAU = Math.PI * 2;
+// ローカル座標（右向き・足もとが y=0）から画面へ写す。dir=-1 で左向き
+function mapper(x0, y0, s, rot = 0, dir = 1) { const c = Math.cos(rot), n = Math.sin(rot); return (x, y) => { x *= dir; return [x0 + s * (x * c - y * n), y0 + s * (x * n + y * c)]; }; }
+// ローカル座標で道を作る。b(P) の P: M・L・Q・Z と E（楕円）
+const lp = (m, b) => g => {
+  const P = { M: (x, y) => g.moveTo(...m(x, y)), L: (x, y) => g.lineTo(...m(x, y)), Q: (a, c, x, y) => g.quadraticCurveTo(...m(a, c), ...m(x, y)), Z: () => g.closePath(),
+    E: (cx, cy, rx, ry, rot = 0) => { for (let i = 0; i <= 40; i++) { const t = i / 40 * TAU, x = Math.cos(t) * rx, y = Math.sin(t) * ry, p = m(cx + x * Math.cos(rot) - y * Math.sin(rot), cy + x * Math.sin(rot) + y * Math.cos(rot)); i ? g.lineTo(...p) : g.moveTo(...p); } g.closePath(); } };
+  b(P);
+};
+// 手彩色＋かげの斜線＋墨の輪郭。o.lit: 光の当たる所（斜線を抜く）
+function solid(g, path, color, o = {}) {
+  PL.tint(g, path, color, o.a ?? 0.65);
+  if (o.hatch !== false) PL.hatch(g, path, { angle: o.angle ?? 0.7, gap: o.gap ?? 9, w: o.hw ?? 1.8, not: o.lit, cx: o.cx, cy: o.cy });
+  PL.ink(g, path, o.w ?? 5, o.ink || PL.INK);
+}
+// 墨の矢印（頭は手彩色＋輪郭）
+function arrowPL(g, x0, y0, x1, y1, color = PL.INK, w = 8) {
+  const a = Math.atan2(y1 - y0, x1 - x0), h = w * 3.4;
+  PL.ink(g, gg => { gg.moveTo(x0, y0); gg.lineTo(x1 - Math.cos(a) * h * 0.7, y1 - Math.sin(a) * h * 0.7); }, w, color);
+  const head = PL.poly([[x1, y1], [x1 - Math.cos(a - 0.42) * h, y1 - Math.sin(a - 0.42) * h], [x1 - Math.cos(a + 0.42) * h, y1 - Math.sin(a + 0.42) * h]]);
+  PL.tint(g, head, color, 1); PL.ink(g, head, Math.max(2, w * 0.45), color);
+}
+// 答えの札: 手彩色の札（筆のルックでは字の下が濃くなり字と重なる）をやめ、紙の札に朱の二重わくで示す
+function answerChoices(g, t, a, b, opts, o) {
+  const card = TK.card; TK.card = (gg, x, y, w, h) => card(gg, x, y, w, h, {});
+  try { TK.choices(g, t, a, b, opts, o); } finally { TK.card = card; }
+  if (t < (o.reveal ?? Infinity) || t < a || t > b) return;
+  const y = (o.y ?? PH * 0.34) + o.answer * ((o.h || 190) + (o.gap ?? 40)), h = o.h || 190, f = clamp((t - o.reveal) / 0.35, 0, 1) * fade(t, a, b, 0.3);
+  g.save(); g.globalAlpha *= f; PL.ink(g, PL.rect(78, y - 12, PW - 156, h + 24), 6, PL.RED); PL.ink(g, PL.rect(90, y, PW - 180, h), 3, PL.RED); g.restore();
+}
+
+// 1秒ぶんの波形（音の大きさのゆれ fm 回/秒）を x0〜x1 に。振幅 A。ゆれの包絡に手彩色＋細い中身＋墨のふち
 function wave(g, x0, x1, y, A, fm, t, o = {}) {
-  const N = Math.round(x1 - x0), m = o.m ?? 0.9;
+  const N = Math.round(x1 - x0), m = o.m ?? 0.9, col = o.color || BLUE;
   const env = u => (1 - m / 2) + (m / 2) * Math.sin(2 * Math.PI * fm * u + t * (o.drift ?? 6));
-  g.save();
-  g.fillStyle = o.fill || 'rgba(95,212,255,0.30)'; g.beginPath();
-  for (let i = 0; i <= N; i++) { const u = i / N; g.lineTo(x0 + i, y - A * env(u)); }
-  for (let i = N; i >= 0; i--) { const u = i / N; g.lineTo(x0 + i, y + A * env(u)); }
-  g.closePath(); g.fill();
-  g.strokeStyle = o.color || TK.C.acc2; g.lineWidth = 2; g.beginPath();
-  for (let i = 0; i <= N; i += 1) { const u = i / N, c = Math.sin(i * 1.7 + t * 40); g.lineTo(x0 + i, y + A * env(u) * c); }
-  g.stroke();
-  g.lineWidth = 4; g.beginPath(); for (let i = 0; i <= N; i += 2) { const u = i / N; g.lineTo(x0 + i, y - A * env(u)); } g.stroke();
-  g.restore();
+  const shape = gg => { for (let i = 0; i <= N; i += 2) { const u = i / N; gg.lineTo(x0 + i, y - A * env(u)); } for (let i = N; i >= 0; i -= 2) { const u = i / N; gg.lineTo(x0 + i, y + A * env(u)); } gg.closePath(); };
+  PL.tint(g, shape, o.tint || PL.T.sky, 0.55);
+  PL.ink(g, gg => { for (let i = 0; i <= N; i++) { const u = i / N, c = Math.sin(i * 1.7 + t * 40); i ? gg.lineTo(x0 + i, y + A * env(u) * c) : gg.moveTo(x0 + i, y + A * env(u) * c); } }, 1, o.inner || 'rgba(35,28,21,0.35)');
+  PL.ink(g, gg => { for (let i = 0; i <= N; i += 2) { const u = i / N; i ? gg.lineTo(x0 + i, y - A * env(u)) : gg.moveTo(x0 + i, y - A * env(u)); } gg.moveTo(x0, y + A * env(0)); for (let i = 0; i <= N; i += 2) { const u = i / N; gg.lineTo(x0 + i, y + A * env(u)); } }, 4, col);
+  PL.ink(g, gg => { gg.moveTo(x0, y + A + 26); gg.lineTo(x1, y + A + 26); for (let k = 0; k <= 10; k++) { const x = x0 + (x1 - x0) * k / 10; gg.moveTo(x, y + A + 26); gg.lineTo(x, y + A + (k % 5 ? 36 : 44)); } }, 2.5);   // 時間の目盛り（0.1秒ごと）
 }
 // ゆれの速さの横軸（対数、1〜1000 回/秒）
 const AX = { x0: 110, x1: 960, y: 760 };
 const fx = f => AX.x0 + (AX.x1 - AX.x0) * Math.log10(f) / 3;
 function axis(g) {
-  g.save(); g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 4;
-  g.beginPath(); g.moveTo(AX.x0, AX.y); g.lineTo(AX.x1, AX.y); g.stroke();
-  for (const f of [1, 10, 100, 1000]) { g.beginPath(); g.moveTo(fx(f), AX.y - 14); g.lineTo(fx(f), AX.y + 14); g.stroke(); TK.text(g, String(f), fx(f), AX.y + 50, 40, { color: TK.C.sub, bold: false }); }
+  PL.ink(g, gg => { gg.moveTo(AX.x0, AX.y); gg.lineTo(AX.x1, AX.y); for (const f of [1, 10, 100, 1000]) { gg.moveTo(fx(f), AX.y - 14); gg.lineTo(fx(f), AX.y + 14); } for (let d = 0; d < 3; d++) for (let k = 2; k < 10; k++) { const x = fx(k * 10 ** d); gg.moveTo(x, AX.y); gg.lineTo(x, AX.y + 8); } }, 4);
+  for (const f of [1, 10, 100, 1000]) TK.text(g, String(f), fx(f), AX.y + 50, 40, { color: TK.C.sub, bold: false });
   TK.text(g, '音の大きさが 1秒に ゆれる回数', PW / 2, AX.y + 120, 44, { color: TK.C.sub });
+}
+function band(g, f0, f1, y, h, color, label, k = 1, lc = PL.INK) {
+  if (k <= 0) return;
+  g.save(); g.globalAlpha *= Math.min(1, k);
+  const r = PL.rect(fx(f0), y, Math.max(24, fx(f1) - fx(f0)), h);
+  solid(g, r, color, { a: 0.75, gap: 9, hw: 1.6, w: 4 });
+  PL.ink(g, gg => { gg.moveTo((fx(f0) + fx(f1)) / 2, y + h); gg.lineTo((fx(f0) + fx(f1)) / 2, AX.y - 16); }, 2, 'rgba(35,28,21,0.5)');
+  TK.text(g, label, (fx(f0) + fx(f1)) / 2, y - 36, 44, { color: lc });
   g.restore();
 }
-function band(g, f0, f1, y, h, color, label, k = 1) {
-  g.save(); g.globalAlpha *= k;
-  g.fillStyle = color; g.beginPath(); g.roundRect(fx(f0), y, Math.max(24, fx(f1) - fx(f0)), h, 16); g.fill();
-  TK.text(g, label, (fx(f0) + fx(f1)) / 2, y - 36, 44, { color: '#fff' });
-  g.restore();
-}
-// 頭の横の線画と、扁桃体の位置（だいたいの場所）
+// 脳を横から（左が顔の向き）。扁桃体（だいたいの場所）を朱に
 function brain(g, t, k) {
   const cx = 540, cy = 640;
-  g.save(); g.strokeStyle = '#cfe0ff'; g.lineWidth = 6;
-  g.beginPath(); g.ellipse(cx, cy, 300, 220, 0, Math.PI * 0.95, Math.PI * 2.05); g.stroke();   // 大脳の上
-  g.beginPath(); g.moveTo(cx - 297, cy + 30); g.quadraticCurveTo(cx - 280, cy + 180, cx - 120, cy + 190); g.quadraticCurveTo(cx + 40, cy + 200, cx + 120, cy + 150); g.quadraticCurveTo(cx + 250, cy + 170, cx + 300, cy + 20); g.stroke();
-  g.beginPath(); g.moveTo(cx + 40, cy + 190); g.quadraticCurveTo(cx + 60, cy + 240, cx + 50, cy + 270); g.stroke();   // 脳幹
-  g.lineWidth = 3; g.strokeStyle = 'rgba(207,224,255,0.4)';
-  for (let i = 0; i < 5; i++) { g.beginPath(); g.arc(cx - 160 + i * 80, cy - 40 + (i % 2) * 40, 60, Math.PI * 1.1, Math.PI * 1.9); g.stroke(); }
-  // 扁桃体
-  const ax = cx - 60, ay = cy + 110, r = 26 + 6 * Math.sin(t * 8) * k;
-  const gr = g.createRadialGradient(ax, ay, 0, ax, ay, r * 4);
-  gr.addColorStop(0, `rgba(255,107,107,${0.9 * k})`); gr.addColorStop(1, 'rgba(255,107,107,0)');
-  g.fillStyle = gr; g.beginPath(); g.arc(ax, ay, r * 4, 0, Math.PI * 2); g.fill();
-  g.fillStyle = k > 0.1 ? TK.C.red : 'rgba(255,255,255,0.5)'; g.beginPath(); g.ellipse(ax, ay, r, r * 0.7, 0.3, 0, Math.PI * 2); g.fill();
+  const cere = gg => { gg.moveTo(cx - 290, cy + 40); gg.bezierCurveTo(cx - 330, cy - 160, cx - 120, cy - 250, cx + 60, cy - 225); gg.bezierCurveTo(cx + 260, cy - 205, cx + 330, cy - 60, cx + 295, cy + 60); gg.bezierCurveTo(cx + 280, cy + 120, cx + 200, cy + 120, cx + 130, cy + 110); gg.bezierCurveTo(cx + 60, cy + 180, cx - 60, cy + 200, cx - 150, cy + 170); gg.bezierCurveTo(cx - 240, cy + 150, cx - 280, cy + 100, cx - 290, cy + 40); gg.closePath(); };
+  const cbl = gg => { gg.moveTo(cx + 140, cy + 110); gg.bezierCurveTo(cx + 210, cy + 125, cx + 280, cy + 110, cx + 285, cy + 160); gg.bezierCurveTo(cx + 280, cy + 215, cx + 180, cy + 225, cx + 120, cy + 190); gg.closePath(); };
+  const stem = gg => { gg.moveTo(cx + 40, cy + 160); gg.quadraticCurveTo(cx + 95, cy + 170, cx + 110, cy + 190); gg.lineTo(cx + 100, cy + 300); gg.lineTo(cx + 55, cy + 300); gg.quadraticCurveTo(cx + 55, cy + 220, cx + 40, cy + 160); gg.closePath(); };
+  solid(g, stem, PL.T.rose, { a: 0.5, gap: 7, hw: 1.4, w: 4 });
+  solid(g, cbl, PL.T.rose, { a: 0.55, gap: 6, hw: 1.4, w: 4, lit: gg => { gg.save(); gg.translate(-10, -25); cbl(gg); gg.restore(); } });
+  PL.ink(g, gg => { for (let i = 0; i < 4; i++) { gg.moveTo(cx + 140, cy + 140 + i * 18); gg.quadraticCurveTo(cx + 210, cy + 125 + i * 20, cx + 275, cy + 150 + i * 14); } }, 1.5);
+  PL.tint(g, cere, PL.T.rose, 0.5);
+  PL.hatch(g, cere, { angle: 0.7, gap: 10, w: 1.6, not: gg => { gg.save(); gg.translate(-40, -60); cere(gg); gg.restore(); } });
+  g.save(); g.beginPath(); cere(g); g.clip();   // しわ（脳回）
+  PL.ink(g, gg => {
+    gg.moveTo(cx - 40, cy - 225); gg.bezierCurveTo(cx - 10, cy - 150, cx - 60, cy - 60, cx - 30, cy + 20);   // 中心溝
+    gg.moveTo(cx - 230, cy + 60); gg.bezierCurveTo(cx - 120, cy + 10, cx, cy + 20, cx + 120, cy - 10);       // 外側溝
+    for (let i = 0; i < 9; i++) { const a = -2.8 + i * 0.32, r1 = 150, x = cx + Math.cos(a) * r1 * 1.4, y = cy + Math.sin(a) * r1; gg.moveTo(x, y); gg.quadraticCurveTo(x + 30 * Math.cos(a + 1.4), y + 30 * Math.sin(a + 1.4), x + 50 * Math.cos(a + 0.6), y + 50 * Math.sin(a + 0.6)); }
+    for (let i = 0; i < 4; i++) { gg.moveTo(cx - 200 + i * 80, cy + 120 - (i % 2) * 15); gg.quadraticCurveTo(cx - 170 + i * 80, cy + 95, cx - 140 + i * 80, cy + 125); }
+  }, 2.2);
   g.restore();
-  TK.text(g, '扁桃体（危ないかどうかを決める所）', PW / 2, 950, 42, { color: TK.C.red });
+  PL.ink(g, cere, 6);
+  // 扁桃体（側頭葉の奥。点線で「中にある」）
+  const ax = cx - 60, ay = cy + 110, r = 26, am = PL.ellipse(ax, ay, r, r * 0.65, 0.3);
+  PL.tint(g, am, k > 0.1 ? PL.RED : PL.T.gray, 0.4 + 0.5 * k);
+  g.save(); g.setLineDash([6, 6]); PL.ink(g, am, 3, k > 0.1 ? PL.RED : PL.INK); g.restore();
+  if (k > 0.1) { const p = (t * 1.6) % 1; g.save(); g.globalAlpha *= k * (1 - p); PL.ink(g, PL.ellipse(ax, ay, r * (1.3 + p), r * 0.65 * (1.3 + p), 0.3), 3, PL.RED); g.restore(); }   // 強く働く（墨の輪がひろがる）
+  PL.leader(g, ax, ay + 18, 360, 905, PL.RED);
+  PL.label(g, '前', 200, 640, 36, { color: TK.C.sub, bold: false });
+  TK.text(g, '扁桃体（危ないかどうかを決める所）', PW / 2, 950, 42, { color: PL.RED });
 }
 
 function draw(g, t) {
   // 0〜12: 3択（4〜6 は考える時間、6 で答え）
   if (t < 12.0) {
     if (t < 6.0) {
-      wave(g, 110, 960, 320, 60 + 8 * Math.sin(t * 30), 70, t, { m: 1 });
+      wave(g, 110, 960, 285, 46 + 6 * Math.sin(t * 30), 70, t, { m: 1, color: PL.RED, tint: PL.T.rose });
       TK.hook(g, t, 0.0, 6.0, '悲鳴が [耳に刺さる] 理由は？', { y: 175, size: 72 });
     }
-    TK.choices(g, t, 0.6, 9.0, ['高いから', '大きいから', 'ザラザラだから'], { y: 620, h: 130, gap: 28, think: [4.0, 6.0], reveal: 6.0, answer: 2 });
+    answerChoices(g, t, 0.6, 9.0, ['高いから', '大きいから', 'ザラザラだから'], { y: 620, h: 130, gap: 28, think: [4.0, 6.0], reveal: 6.0, answer: 2 });
     if (t >= 9.0) {
       g.save(); g.globalAlpha = fade(t, 9.0, 12.0, 0.3);
       TK.text(g, '悲鳴の「音の大きさ」のゆれ（1秒ぶん）', PW / 2, 330, 46, { color: TK.C.sub });
-      wave(g, 110, 960, 560, 150, 70, t, { m: 1, color: TK.C.acc, fill: 'rgba(255,207,74,0.25)' });
-      TK.text(g, '1秒に [30〜150回]', PW / 2, 860, 90, { stroke: 'rgba(0,0,0,0.5)' });
+      wave(g, 110, 960, 560, 150, 70, t, { m: 1, color: PL.RED, tint: PL.T.rose });
+      TK.text(g, '1秒に [30〜150回]', PW / 2, 900, 90);
       g.restore();
     }
   }
   // 12〜17: 話し声とくらべる
   if (t >= 12.0 && t < 17.0) {
     g.save(); g.globalAlpha = fade(t, 12.0, 17.0, 0.3);
-    TK.text(g, 'ふつうの話し声（1秒ぶん）', PW / 2, 260, 48, { color: TK.C.sub });
-    wave(g, 110, 960, 430, 110, 4.5, t, { m: 1, drift: 1 });
-    TK.text(g, '1秒に 4〜5回', PW / 2, 600, 56, { color: TK.C.acc2 });
+    TK.text(g, 'ふつうの話し声（1秒ぶん）', PW / 2, 240, 48, { color: TK.C.sub });
+    wave(g, 110, 960, 400, 100, 4.5, t, { m: 1, drift: 1 });
+    TK.text(g, '1秒に 4〜5回', PW / 2, 590, 56, { color: BLUE });
     if (t > 14.4) {
       g.save(); g.globalAlpha *= fade(t, 14.4, 17.0, 0.3);
-      TK.text(g, '悲鳴（1秒ぶん）', PW / 2, 710, 48, { color: TK.C.sub });
-      wave(g, 110, 960, 870, 110, 70, t, { m: 1, color: TK.C.acc, fill: 'rgba(255,207,74,0.25)' });
-      TK.text(g, '1秒に 30〜150回', PW / 2, 1040, 56, { color: TK.C.acc });
+      TK.text(g, '悲鳴（1秒ぶん）', PW / 2, 700, 48, { color: TK.C.sub });
+      wave(g, 110, 960, 850, 100, 70, t, { m: 1, color: PL.RED, tint: PL.T.rose });
+      TK.text(g, '1秒に 30〜150回', PW / 2, 1040, 56, { color: PL.RED });
       g.restore();
     }
     g.restore();
@@ -130,12 +173,9 @@ function draw(g, t) {
     g.save(); g.globalAlpha = fade(t, 17.0, 23.0, 0.3);
     TK.text(g, 'ゆれの速さの地図', PW / 2, 260, 60, { color: TK.C.sub });
     axis(g);
-    band(g, 4, 5, 640, 70, 'rgba(95,212,255,0.85)', '話し声', 1);
-    band(g, 30, 150, 640, 70, 'rgba(255,207,74,0.85)', '悲鳴', 1);
-    if (t > 18.6) {
-      const k = TK.pop(t, 18.6);
-      band(g, 30, 150, 470, 70, 'rgba(255,107,107,0.85)', '警報・目覚まし', k);
-    }
+    band(g, 4, 5, 640, 70, PL.T.sea, '話し声', 1, BLUE);
+    band(g, 30, 150, 640, 70, PL.T.gold, '悲鳴', 1);
+    if (t > 18.6) band(g, 30, 150, 470, 70, PL.T.rust, '警報・目覚まし', TK.pop(t, 18.6), PL.RED);
     g.restore();
   }
   // 23〜30: 脳
@@ -143,11 +183,11 @@ function draw(g, t) {
     g.save(); g.globalAlpha = fade(t, 23.0, 30.5, 0.3);
     TK.text(g, 'ゆれを [足しただけ] の音でも', PW / 2, 260, 64);
     brain(g, t, clamp((t - 24.6) / 0.6, 0, 1));
-    if (t > 26.5) { g.save(); g.globalAlpha *= TK.pop(t, 26.5); TK.text(g, '左右どっちから？ → 速く・正確に', PW / 2, 1050, 48, { color: TK.C.acc }); g.restore(); }
+    if (t > 26.5) { g.save(); g.globalAlpha *= Math.min(1, TK.pop(t, 26.5)); TK.text(g, '左右どっちからか、[速く・正確に]', PW / 2, 1060, 48); g.restore(); }
     g.restore();
   }
   if (t >= 12.0 && t < 23.0) TK.note(g, t, 12.0, 23.0, '話し声の 4〜5回 は報道の解説の値（AIP Inside Science）。波形は合成した模式図', { size: 28 });
-  if (t >= 27.0) TK.note(g, t, 27.0, 30.0, '出どころ: Arnal, Flinker, Kleinschmidt, Giraud & Poeppel (2015)\nCurrent Biology 25(15): 2051–2056', { size: 30 });
+  if (t >= 27.0) TK.note(g, t, 27.0, 30.0, '出どころ: Arnal, Flinker, Kleinschmidt, Giraud & Poeppel (2015)\nCurrent Biology 25(15): 2051–2056', { size: 30, y: 1135 });
 }
 
 triviaStart({ out: 'sound-feel-trivia1', voice: 'auto', dur: DUR, draw, subs, cues, peek: 1.5 });

@@ -12,6 +12,8 @@
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
 <script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく tiny-earth-1（型B もしも計算）「歩いたら人工衛星」。台本は trivia/tiny-earth.md。?short で録る
@@ -98,8 +100,8 @@ function draw(g, t) {
     if (t < 21.0) { th = -0.4 + (t - 20) * 0.4; rr = 1; } else { th = orbitTheta(u); rr = orbitR(th); }
     const [x, y] = onPlanet(th, rr);
     person(g, x, y, th, t < 21.0 ? t * 9 : 0, 1.5);
-    PL.watch(g, PW - 210, 300, 95, u);   // 懐中時計で 84 分
-    PL.label(g, '1周 [' + Math.round(u * 84) + ' 分]', PW - 210, 450, 64);   // 時計の下に（星の上の人と重ねない）
+    PL.watch(g, PW - 130, 160, 70, u);   // 懐中時計で 84 分
+    PL.label(g, '1周 [' + Math.round(u * 84) + ' 分]', PW - 230, 160, 60, { align: 'right' });   // 時計の左に（星の上を回る人より上）
     TK.note(g, t, 21, 26, '1000倍の早送り／人は大きく描いています', { size: 32 });
   }
   // 26〜32: ジャンプすると戻れない
@@ -109,9 +111,9 @@ function draw(g, t) {
     const rr = 1 + (j > 0 ? j * 0.28 + j * j * 0.04 : 0);
     const [x, y] = onPlanet(th, rr);
     person(g, x, y, Math.sin(j * 2) * 0.4, 0, Math.max(0.6, 1.8 - j * 0.25));
-    PL.label(g, 'もどれない速さ', 90, 240, 56, { align: 'left' });
-    PL.label(g, '秒速 [1.76 m]', 90, 330, 96, { align: 'left' });
-    if (j > 0) PL.leader(g, x + 40, y - 60, 560, 360, PL.RED);
+    PL.label(g, 'もどれない速さ', PW - 70, 220, 48, { align: 'right' });   // 右上に（まっすぐ上へ飛ぶ人と重ねない）
+    PL.label(g, '秒速 [1.76 m]', PW - 70, 305, 72, { align: 'right' });
+    if (j > 0) PL.leader(g, x + 40, y - 60, 640, 345, PL.RED);
     if (t > 29.0) { g.save(); g.globalAlpha = fade(t, 29, 32, 0.3); TK.text(g, '地球で30cm跳ぶ人の踏み切り＝秒速2.4m', PW / 2, 1150, 40, { color: TK.C.sub, bold: false }); g.restore(); }
   }
   if (t >= 3 && t < 20) TK.note(g, t, 3, 20, '空気・山・でこぼこのない、理想の計算', { size: 32 });

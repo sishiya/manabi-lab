@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく muscle-2（型A ぜんぶ逆）「筋肉痛がひどい日、筋肉はまだ育っていない」。台本は trivia/muscle-growth.md。?short で録る
@@ -31,28 +34,33 @@ const cues = [
   { t: 15.0, type: 'pop' }, { t: 21.0, type: 'whoosh' }, { t: 23.0, type: 'ding' }, { t: 28.0, type: 'pop' }, { t: 33.0, type: 'pop' },
 ];
 
-// 筋線維の縦の断面（サルコメア）。dmg 0〜1 で Z線が乱れ、すき間（むくみ）が出る
-function fibers(g, x0, y0, w, h, dmg, t) {
-  g.save();
+// ---- 図鑑の版画の部品 ----
+const many = ps => g => ps.forEach(p => p(g));
+// 筋線維の縦の断面（サルコメアの並び）。dmg 0〜1 で Z線が乱れ（朱）、すき間にむくみ（水色の粒）が出る
+function fibers(g, x0, y0, w, h, dmg, t, labels = true) {
   const rows = 5, rh = h / rows, cols = 9, cw = w / cols;
+  const bands = [], abands = [], zOk = [], zHit = [], drops = [];
   for (let r = 0; r < rows; r++) {
     const y = y0 + r * rh;
-    g.fillStyle = 'rgba(255,140,140,0.18)'; g.fillRect(x0, y + 6, w, rh - 12);
+    bands.push(PL.rect(x0, y + 8, w, rh - 16));
     for (let c = 0; c <= cols; c++) {
-      const hit = ((r * 7 + c * 3) % 5 === 0) && c > 0 && c < cols;
-      const jx = hit ? dmg * 22 * Math.sin(r * 2 + c) : 0, x = x0 + c * cw;
-      g.strokeStyle = hit && dmg > 0.3 ? `rgba(255,107,107,${0.6 + 0.4 * dmg})` : 'rgba(207,224,255,0.85)'; g.lineWidth = 6;
-      g.beginPath();
-      if (hit && dmg > 0) { g.moveTo(x + jx, y + 8); g.lineTo(x - jx, y + rh * 0.35); g.lineTo(x + jx * 1.4, y + rh * 0.65); g.lineTo(x - jx, y + rh - 8); }
-      else { g.moveTo(x, y + 8); g.lineTo(x, y + rh - 8); }
-      g.stroke();
-      // 太いフィラメント（Z線のあいだの短い帯）
-      if (c < cols) { g.fillStyle = 'rgba(255,170,150,0.5)'; g.fillRect(x + cw * 0.25 + (hit ? jx * 0.5 : 0), y + rh * 0.3, cw * 0.5, rh * 0.4); }
+      const hit = ((r * 7 + c * 3) % 5 === 0) && c > 0 && c < cols, jx = hit ? dmg * 22 * Math.sin(r * 2 + c) : 0, x = x0 + c * cw;
+      if (hit && dmg > 0) zHit.push(gg => { gg.moveTo(x + jx, y + 10); gg.lineTo(x - jx, y + rh * 0.35); gg.lineTo(x + jx * 1.4, y + rh * 0.65); gg.lineTo(x - jx, y + rh - 10); });
+      else zOk.push(gg => { gg.moveTo(x, y + 10); gg.lineTo(x, y + rh - 10); });
+      if (c < cols) abands.push(PL.rect(x + cw * 0.25 + (hit ? jx * 0.5 : 0), y + rh * 0.28, cw * 0.5, rh * 0.44));   // 太いフィラメント（A帯）
     }
-    // むくみ（すき間に水色の点）
-    if (dmg > 0.4 && r < rows - 1) { g.fillStyle = `rgba(95,212,255,${0.5 * (dmg - 0.4) / 0.6})`; for (let i = 0; i < 6; i++) { g.beginPath(); g.arc(x0 + (i * 151 + r * 67) % w, y + rh, 8 + 4 * Math.sin(t * 3 + i), 0, Math.PI * 2); g.fill(); } }
+    if (dmg > 0.4 && r < rows - 1) for (let i = 0; i < 6; i++) drops.push(PL.circle(x0 + (i * 151 + r * 67) % w, y + rh, 8 + 4 * Math.sin(t * 3 + i)));
   }
-  g.restore();
+  const B = many(bands), A = many(abands);
+  PL.tint(g, B, PL.T.rose, 0.45); PL.hatch(g, B, { angle: 0.9, gap: 12, w: 1.4 });
+  PL.tint(g, A, PL.T.rust, 0.7);
+  PL.ink(g, gg => { for (let r = 0; r < rows; r++) { const y = y0 + r * rh; for (let k = 1; k < 4; k++) { gg.moveTo(x0, y + rh * (0.28 + k * 0.11)); gg.lineTo(x0 + w, y + rh * (0.28 + k * 0.11)); } } }, 1.2, 'rgba(35,28,21,0.35)');   // 細いフィラメントのすじ
+  PL.ink(g, B, 3); PL.ink(g, many(zOk), 5);
+  if (zHit.length) PL.ink(g, many(zHit), 6, dmg > 0.3 ? PL.RED : PL.INK);
+  if (drops.length) { g.save(); g.globalAlpha *= (dmg - 0.4) / 0.6; const D = many(drops); PL.tint(g, D, PL.T.sea, 0.9); PL.ink(g, D, 2.5, '#2f5f7a'); g.restore(); }
+  if (!labels) return;
+  PL.leader(g, x0 + cw, y0 - 6, x0 + cw + 60, y0 - 50, TK.C.sub); PL.label(g, 'Z線', x0 + cw + 70, y0 - 66, 34, { align: 'left', color: TK.C.sub, bold: false });
+  PL.leader(g, x0 + cw * 3.5, y0 + rh * 0.3, x0 + cw * 4.3, y0 - 50, TK.C.sub); PL.label(g, '太いフィラメント（ちぢめる糸）', x0 + cw * 4.3 + 10, y0 - 66, 32, { align: 'left', color: TK.C.sub, bold: false });
 }
 // 週ごとのグラフ（0〜10週）。syn: 作る速さ、thick: 太さ（どちらも形はイメージ）
 const GX0 = 130, GX1 = 950, GY = 900, GH = 520;
@@ -60,32 +68,34 @@ const gx = w => GX0 + (GX1 - GX0) * w / 10;
 const syn = w => 0.35 + 0.6 * Math.exp(-Math.pow((w - 0.7) / 0.9, 2)) + 0.12 * clamp((w - 1.5) / 2, 0, 1);
 const thick = w => 0.12 + 0.55 * clamp((w - 2.2) / 7.8, 0, 1) * (0.6 + 0.4 * clamp((w - 2.2) / 7.8, 0, 1));
 function graph(g, upto, o = {}) {
-  g.save();
-  g.strokeStyle = 'rgba(207,224,255,0.6)'; g.lineWidth = 4; g.beginPath(); g.moveTo(GX0, GY - GH); g.lineTo(GX0, GY); g.lineTo(GX1, GY); g.stroke();
-  for (const w of [1, 3, 10]) { const x = gx(w); g.beginPath(); g.moveTo(x, GY - 10); g.lineTo(x, GY + 10); g.stroke(); TK.text(g, w + '週', x, GY + 44, 38, { color: TK.C.sub, bold: false }); }
-  const line = (f, color, lw) => { g.strokeStyle = color; g.lineWidth = lw; g.lineJoin = 'round'; g.beginPath(); for (let w = 0; w <= upto; w += 0.05) { const x = gx(w), y = GY - GH * f(w); w ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); };
-  line(syn, TK.C.acc, 9);
-  if (o.thick) line(thick, TK.C.green, 9);
-  TK.text(g, '材料を作る速さ', GX0 + 20, GY - GH - 90, 42, { align: 'left', color: TK.C.acc });
-  if (o.thick) { const u = Math.min(upto, 10), right = u > 6; TK.text(g, '筋肉の太さ', right ? GX1 : gx(u) + 20, GY - GH * thick(u) - (right ? 50 : 0), 42, { align: right ? 'right' : 'left', color: TK.C.green }); }
-  g.restore();
+  PL.ink(g, gg => { gg.moveTo(GX0, GY - GH); gg.lineTo(GX0, GY); gg.lineTo(GX1, GY); for (let w = 1; w <= 10; w++) { gg.moveTo(gx(w), GY); gg.lineTo(gx(w), GY + ([1, 3, 10].includes(w) ? 14 : 7)); } }, 4);
+  for (const w of [1, 3, 10]) PL.label(g, w + '週', gx(w), GY + 48, 38, { color: TK.C.sub, bold: false });
+  const line = (f, color) => PL.ink(g, gg => { for (let w = 0; w <= upto; w += 0.05) { const x = gx(w), y = GY - GH * f(w); w ? gg.lineTo(x, y) : gg.moveTo(x, y); } }, 9, color);
+  // 線の下をうすく手彩色
+  const area = f => g2 => { g2.moveTo(gx(0), GY); for (let w = 0; w <= upto; w += 0.1) g2.lineTo(gx(w), GY - GH * f(w)); g2.lineTo(gx(upto), GY); g2.closePath(); };
+  PL.tint(g, area(syn), PL.T.rose, 0.35);
+  if (o.thick) { PL.tint(g, area(thick), PL.T.leaf, 0.45); PL.hatch(g, area(thick), { angle: 0.9, gap: 10, w: 1.4 }); }
+  line(syn, PL.RED);
+  if (o.thick) line(thick, PL.GREEN);
+  PL.label(g, '材料を作る速さ', GX0 + 20, GY - GH - 90, 42, { align: 'left', color: PL.RED });
+  if (o.thick) { const u = Math.min(upto, 10), right = u > 6; PL.label(g, '筋肉の太さ', right ? GX1 - 30 : gx(u) + 24, GY - GH * thick(u) - (right ? 60 : 30), 42, { align: right ? 'right' : 'left', color: PL.GREEN }); }
 }
 
 function draw(g, t) {
-  // 0〜2: 「筋肉痛＝育ってる証拠」に ×
+  // 0〜2: 「筋肉痛＝育ってる証拠」に ×（字には重ねない）
   if (t < 2.0) {
-    TK.card(g, 110, 520, 860, 220);
+    TK.card(g, 110, 360, 860, 200);
+    PL.label(g, '筋肉痛 ＝ 育ってる証拠', PW / 2, 460, 78);
     const k = TK.pop(t, 0.35, 0.3);
-    if (t > 0.35) { g.save(); g.strokeStyle = 'rgba(255,107,107,0.8)'; g.lineWidth = 34; g.lineCap = 'round'; g.globalAlpha = clamp(k, 0, 1); const r = 260 * k; g.beginPath(); g.moveTo(PW / 2 - r * 1.5, 630 - r); g.lineTo(PW / 2 + r * 1.5, 630 + r); g.moveTo(PW / 2 + r * 1.5, 630 - r); g.lineTo(PW / 2 - r * 1.5, 630 + r); g.stroke(); g.restore(); }
-    TK.text(g, '筋肉痛 ＝ 育ってる証拠', PW / 2, 630, 78, { stroke: 'rgba(0,0,0,0.8)' });
+    if (t > 0.35) { g.save(); g.globalAlpha = clamp(k, 0, 1); const r = 170 * k; PL.ink(g, gg => { gg.moveTo(PW / 2 - r, 820 - r); gg.lineTo(PW / 2 + r, 820 + r); gg.moveTo(PW / 2 + r, 820 - r); gg.lineTo(PW / 2 - r, 820 + r); }, 34, PL.RED); g.restore(); }
   }
   // 2〜8: 筋線維の傷
   if (t >= 2.0 && t < 8.0) {
     const f = fade(t, 2, 8, 0.3); g.save(); g.globalAlpha = f;
     const dmg = ease((t - 3.4) / 1.6);
-    TK.text(g, '筋線維（縦の断面）', PW / 2, 250, 48, { color: TK.C.sub, bold: false });
-    fibers(g, 110, 330, 860, 620, dmg, t);
-    if (dmg > 0.9) { TK.text(g, '[傷]（筋肉痛が出るような）', PW / 2, 1020, 56); }
+    PL.label(g, '筋線維（縦の断面）', 90, 220, 48, { align: 'left', color: TK.C.sub, bold: false });
+    fibers(g, 110, 370, 860, 580, dmg, t);
+    if (dmg > 0.9) PL.label(g, '[傷]（筋肉痛が出るような）', PW / 2, 1030, 56);
     g.restore();
     TK.note(g, t, 2.4, 8, '赤い線＝乱れた Z線、水色＝むくみ（イメージ）', { size: 30 });
   }
@@ -93,17 +103,17 @@ function draw(g, t) {
   if (t >= 8.0 && t < 28.0) {
     const f = fade(t, 8, 28, 0.3); g.save(); g.globalAlpha = f;
     const upto = t < 15 ? 1.6 * ease((t - 8.4) / 2.0) : t < 21 ? 1.6 : 1.6 + 8.4 * ease((t - 21.4) / 3.5);
-    graph(g, upto, { thick: t >= 15 });
-    if (t >= 9.6 && t < 21) { const x = gx(0.7), y = GY - GH * syn(0.7); g.fillStyle = TK.C.acc; g.beginPath(); g.arc(x, y, 16, 0, Math.PI * 2); g.fill(); TK.text(g, 'いちばん高い', x + 50, y - 10, 44, { align: 'left', color: TK.C.acc }); }
+    graph(g, Math.max(0.05, upto), { thick: t >= 15 });
+    if (t >= 9.6 && t < 21) { const x = gx(0.7), y = GY - GH * syn(0.7), c = PL.circle(x, y, 16); PL.tint(g, c, PL.RED, 1); PL.ink(g, c, 3, PL.RED); PL.label(g, 'いちばん高い', x + 50, y - 30, 44, { align: 'left', color: PL.RED }); }
     if (t >= 15.4 && t < 21) {
-      const k = TK.pop(t, 15.4, 0.35); g.save(); g.translate(gx(1), GY - GH * 0.5); g.scale(k, k);
-      TK.card(g, -120, -60, 240, 110, { r: 30, fill: 'rgba(95,212,255,0.25)', stroke: TK.C.acc2, lw: 5 }); TK.text(g, '修理', 0, -4, 64, { color: '#fff' }); g.restore();
-      TK.text(g, '太さは、まだ動かない', PW / 2, GY + 120, 50, { color: TK.C.green });
+      const k = clamp(TK.pop(t, 15.4, 0.35), 0, 1.2); g.save(); g.translate(gx(1) + 200, GY - GH * 0.45); g.scale(k, k);
+      TK.card(g, -120, -60, 240, 110); PL.label(g, '修理', 0, -4, 64, { color: '#2f5f7a' }); g.restore();
+      PL.label(g, '太さは、まだ動かない', PW / 2, GY + 120, 50, { color: PL.GREEN });
     }
     if (t >= 23.0) {
       g.save(); g.globalAlpha *= fade(t, 23, 28, 0.3);
-      g.strokeStyle = TK.C.green; g.lineWidth = 4; g.setLineDash([10, 10]); for (const w of [3, 10]) { g.beginPath(); g.moveTo(gx(w), GY); g.lineTo(gx(w), GY - GH); g.stroke(); } g.setLineDash([]);
-      TK.text(g, 'ここから [作った分が太さに]', PW / 2, GY + 120, 50);
+      g.save(); g.setLineDash([10, 10]); PL.ink(g, gg => { for (const w of [3, 10]) { gg.moveTo(gx(w), GY); gg.lineTo(gx(w), GY - GH); } }, 4, PL.GREEN); g.restore();
+      PL.label(g, 'ここから [作った分が太さに]', PW / 2, GY + 120, 50);
       g.restore();
     }
     g.restore();
@@ -112,11 +122,12 @@ function draw(g, t) {
   // 28〜35: 研究 → まとめ
   if (t >= 28.0) {
     const f = fade(t, 28, 36, 0.3); g.save(); g.globalAlpha = f;
-    TK.card(g, 110, 300, 860, 460);
-    if (t < 33.0) TK.lines(g, '10週間\n材料を作る量を\n[毎日はかった]', PW / 2, 530, 80);
-    else TK.lines(g, '傷は\n育つための\n[条件ではない]', PW / 2, 530, 84);
+    TK.card(g, 110, 260, 860, 460);
+    if (t < 33.0) TK.lines(g, '10週間\n材料を作る量を\n[毎日はかった]', PW / 2, 490, 80);
+    else TK.lines(g, '傷は\n育つための\n[条件ではない]', PW / 2, 490, 84);
+    fibers(g, 230, 790, 620, 230, t < 33 ? 0 : 0.6, t, false);
     g.restore();
-    TK.note(g, t, 29.0, 35, '傷をはかった研究で、筋肉痛の強さは、はかっていません\n出どころ: Damas ほか (2016) J Physiol 594:5209・Damas ほか (2018) Eur J Appl Physiol', { size: 28 });
+    TK.note(g, t, 29.0, 35, '傷をはかった研究で、筋肉痛の強さは、はかっていません\n出どころ: Damas ほか (2016) J Physiol 594:5209・Damas ほか (2018) Eur J Appl Physiol', { size: 28, y: 1135 });
   }
 }
 

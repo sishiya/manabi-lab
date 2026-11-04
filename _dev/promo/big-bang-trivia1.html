@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく big-bang-1（型B もしも計算）「生まれたばかりの月は、空にこんなに大きかった」。台本は trivia/big-bang.md。?short で録る
@@ -33,59 +36,68 @@ const cues = [
   { t: 15.0, type: 'whoosh' }, { t: 17.0, type: 'pop' }, { t: 18.6, type: 'ding' }, { t: 21.0, type: 'whoosh' }, { t: 27.0, type: 'thud' },
 ];
 
+// 絵は「図鑑の版画」（trivia-plate.js の PL.*）。夜空は横の細い斜線（銅版画の空）と小さな星、月は PL.sphere に海（暗い所）とクレーター、
+// 地面は斜線のかげ、とけた岩は手彩色と朱の波線。上から見た図の地球・ぶつかる星も PL.sphere
+const rnd = (i, k = 1) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
+const MARIA = [[-0.3, -0.2, 0.28, 0.2], [0.25, 0.12, 0.22, 0.16], [0.05, 0.45, 0.16, 0.11], [-0.42, 0.32, 0.12, 0.1], [0.38, -0.32, 0.12, 0.08]];
 function moon(g, x, y, r, f = 1) {
+  if (r < 0.5) return;
   g.save(); g.globalAlpha *= f;
-  const gl = g.createRadialGradient(x, y, r * 0.95, x, y, r * 1.35);
-  gl.addColorStop(0, 'rgba(255,240,210,0.35)'); gl.addColorStop(1, 'rgba(255,240,210,0)');
-  g.fillStyle = gl; g.beginPath(); g.arc(x, y, r * 1.35, 0, Math.PI * 2); g.fill();
-  const gr = g.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
-  gr.addColorStop(0, '#f4efe2'); gr.addColorStop(1, '#a9a395');
-  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
-  g.fillStyle = 'rgba(90,90,100,0.28)';   // 海（形はかざり）
-  [[-0.3, -0.2, 0.28], [0.25, 0.15, 0.22], [0.05, 0.45, 0.16], [-0.4, 0.35, 0.12]].forEach(([dx, dy, rr]) => { g.beginPath(); g.arc(x + dx * r, y + dy * r, rr * r, 0, Math.PI * 2); g.fill(); });
+  PL.sphere(g, x, y, r, PL.T.gray, { a: 0.35, light: [-0.6, -0.7], contour: false, inside: gg => {
+    const m = g2 => MARIA.forEach(([dx, dy, rx, ry]) => PL.ellipse(x + dx * r, y + dy * r, rx * r, ry * r, 0.4)(g2));
+    PL.tint(gg, m, '#7a7468', 0.6);
+    if (r > 40) PL.ink(gg, g2 => { for (let i = 0; i < 14; i++) { const a = rnd(i) * 6.28, d = Math.sqrt(rnd(i, 2)) * 0.85, cr = r * (0.03 + rnd(i, 3) * 0.05), cx = x + Math.cos(a) * d * r, cy = y + Math.sin(a) * d * r; g2.moveTo(cx + cr, cy); g2.arc(cx, cy, cr, 0, 6.28); } }, Math.max(1.4, r / 140));
+  } });
   g.restore();
 }
-// 空と地平線（lava: 0〜1 で地面がとけた岩に）
-function sky(g, t, lava = 0) {
-  g.fillStyle = '#081024'; g.fillRect(0, HZ, PW, PH - HZ);
+// 空と地平線の図（わくの中）。空は紙のまま（字を置くので）、星は左右のはしだけ。地面は斜線、lava: 0〜1 でとけた岩に
+const PANEL = [40, 100, 1000, 990];   // わく（y 100〜1090）
+function sky(g, t, holes = [], lava = 0) {
+  const [px, py, pw, ph] = PANEL, by = py + ph;
+  g.save(); g.beginPath(); g.rect(px, py, pw, ph); g.clip();
+  PL.ink(g, gg => { for (let i = 0; i < 40; i++) { const side = i % 2, x = side ? 985 + rnd(i) * 40 : 52 + rnd(i) * 30, y = 140 + rnd(i, 2) * (HZ - 220), s = 3 + rnd(i, 3) * 5; gg.moveTo(x - s, y); gg.lineTo(x + s, y); gg.moveTo(x, y - s); gg.lineTo(x, y + s); } }, 2);
+  const edge = gg => { for (let x = 0; x <= PW; x += 40) { const y = HZ - 18 - Math.sin(x * 0.006) * 14 - Math.sin(x * 0.021) * 6; x ? gg.lineTo(x, y) : gg.moveTo(x, y); } };
+  const ground = gg => { edge(gg); gg.lineTo(PW, by); gg.lineTo(0, by); gg.closePath(); };
+  PL.tint(g, ground, PL.T.brown, 0.55 * (1 - lava));
   if (lava > 0) {
-    g.save(); g.globalAlpha = lava;
-    const gr = g.createLinearGradient(0, HZ, 0, HZ + 300); gr.addColorStop(0, '#ff8a3a'); gr.addColorStop(1, '#5a1406');
-    g.fillStyle = gr; g.fillRect(0, HZ, PW, 300);
-    g.strokeStyle = 'rgba(255,220,120,0.8)'; g.lineWidth = 4;
-    for (let i = 0; i < 9; i++) { const y = HZ + 30 + i * 30, ph = t * 1.5 + i; g.beginPath(); for (let x = 0; x <= PW; x += 30) { const yy = y + Math.sin(x * 0.012 + ph) * 8; x ? g.lineTo(x, yy) : g.moveTo(x, yy); } g.stroke(); }
+    g.save(); g.globalAlpha *= lava;
+    PL.tint(g, ground, PL.T.rust, 0.85);
+    PL.ink(g, gg => { for (let i = 0; i < 3; i++) { const y = HZ + 12 + i * 24, ph2 = t * 1.5 + i; for (let x = 0; x <= PW; x += 30) { const yy = y + Math.sin(x * 0.012 + ph2) * 6; x ? gg.lineTo(x, yy) : gg.moveTo(x, yy); } } }, 3, PL.RED);
     g.restore();
   }
-  g.strokeStyle = 'rgba(160,190,255,0.6)'; g.lineWidth = 4; g.beginPath(); g.moveTo(0, HZ); g.lineTo(PW, HZ); g.stroke();
+  PL.hatch(g, ground, { angle: 0.5, gap: 10, w: 2 });
+  PL.ink(g, edge, 5);
+  g.restore();
+  PL.ink(g, PL.rect(px, py, pw, ph), 5); PL.ink(g, PL.rect(px - 10, py - 10, pw + 20, ph + 20), 1.5);
 }
 // ぶつかって円盤 → 集まって月（上から見た図）
 const debris = Array.from({ length: 220 }, (_, i) => { const a = Math.sin(i * 91.7) * 1e4, b = Math.sin(i * 27.3) * 1e4; return { th: (a - Math.floor(a)) * Math.PI * 2, rr: 1.4 + (b - Math.floor(b)) * 2.6, s: 2 + ((a * 7) % 1 + 1) % 1 * 4 }; });
 function topView(g, t) {
   const cx = 540, cy = 640, ER = 95;   // 地球の半径の絵（6,371km）
-  // 地球
-  const gr = g.createRadialGradient(cx - 30, cy - 30, 10, cx, cy, ER);
-  gr.addColorStop(0, t < 9 ? '#ffb070' : '#7aa8e0'); gr.addColorStop(1, t < 9 ? '#a8401a' : '#2a4f8f');
-  g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, ER, 0, Math.PI * 2); g.fill();
+  PL.sphere(g, cx, cy, ER, t < 9 ? PL.T.rust : PL.T.sea, { a: 0.7, light: [-0.7, -0.6] });
   if (t < 4.6) {   // ぶつかりにくる星
     const k = ease((t - 3.2) / 1.4), x = lerp(cx + 520, cx + ER + 30, k), y = lerp(cy - 380, cy - 40, k);
-    g.fillStyle = '#c96a4a'; g.beginPath(); g.arc(x, y, 52, 0, Math.PI * 2); g.fill();
+    PL.dots(g, [[cx + 560, cy - 430], [x + 20, y - 30]], { color: '#4a3f33', w: 4, dash: [4, 14] });
+    PL.sphere(g, x, y, 52, PL.T.rose, { a: 0.75, light: [-0.7, -0.6], contour: false });
     return;
   }
   const spread = clamp((t - 4.6) / 1.5, 0, 1), gather = clamp((t - 9.5) / 3.5, 0, 1);
   const mx = cx + Math.cos(-0.6) * ER * 3.5, my = cy + Math.sin(-0.6) * ER * 3.5;   // 月ができる所（地球の中心から 約3.5 倍）
-  g.fillStyle = 'rgba(255,220,180,0.85)';
-  for (const d of debris) {
+  const pts = debris.map(d => {
     const th = d.th + t * 0.6 / Math.pow(d.rr, 1.5);
     let x = cx + Math.cos(th) * ER * (1 + (d.rr - 1) * spread), y = cy + Math.sin(th) * ER * (1 + (d.rr - 1) * spread);
-    x = lerp(x, mx, ease(gather)); y = lerp(y, my, ease(gather));
-    g.globalAlpha = 1 - 0.9 * ease(gather); g.beginPath(); g.arc(x, y, d.s, 0, Math.PI * 2); g.fill();
-  }
-  g.globalAlpha = 1;
+    return [lerp(x, mx, ease(gather)), lerp(y, my, ease(gather)), d.s];
+  });
+  g.save(); g.globalAlpha *= 1 - 0.9 * ease(gather);
+  PL.tint(g, gg => pts.forEach(([x, y, s]) => PL.circle(x, y, s + 1)(gg)), PL.T.rust, 0.9);
+  PL.ink(g, gg => pts.forEach(([x, y, s]) => PL.circle(x, y, s + 1)(gg)), 1.6);
+  g.restore();
   if (gather > 0) moon(g, mx, my, 26 * ease(gather), ease(gather));
   if (gather >= 1) {   // 距離の線
-    g.save(); g.globalAlpha = fade(t, 13.0, 15.0, 0.3);
-    g.strokeStyle = TK.C.acc; g.lineWidth = 4; g.setLineDash([12, 10]); g.beginPath(); g.moveTo(cx, cy); g.lineTo(mx, my); g.stroke(); g.setLineDash([]);
-    TK.text(g, '約2万2千km', 820, 600, 52, { color: TK.C.acc });
+    g.save(); g.globalAlpha *= fade(t, 13.0, 15.0, 0.3);
+    PL.dots(g, [[cx + 70, cy - 48], [mx - 22, my + 15]], { color: PL.RED, w: 5, dash: [8, 12] });
+    PL.leader(g, (cx + mx) / 2 + 10, (cy + my) / 2 + 8, 760, 650, PL.RED);
+    PL.label(g, '約[2万2千km]', 870, 690, 50);
     g.restore();
   }
 }
@@ -93,51 +105,58 @@ function topView(g, t) {
 function draw(g, t) {
   // 0〜3: フック（大きな月）
   if (t < 3.0) {
-    sky(g, t);
-    g.save(); g.beginPath(); g.rect(0, 0, PW, HZ); g.clip(); moon(g, 540, 780, R_NEW * PX_PER_DEG / 2, fade(t, -1, 3, 0.3)); g.restore();
-    TK.hook(g, t, 0.0, 3.0, 'これ、\n[本当にあった空]', { y: 260, size: 110 });
+    const r = R_NEW * PX_PER_DEG / 2;
+    sky(g, t, [[540, 780, r + 4]]);
+    g.save(); g.beginPath(); g.rect(0, 0, PW, HZ - 30); g.clip(); moon(g, 540, 780, r, fade(t, -1, 3, 0.3)); g.restore();
+    TK.hook(g, t, 0.0, 3.0, 'これ、\n[本当にあった空]', { y: 270, size: 110 });
   }
   // 3〜15: ぶつかる → 円盤 → 月
   if (t >= 3.0 && t < 15.0) {
-    g.save(); g.globalAlpha = fade(t, 3.0, 15.0, 0.3);
+    g.save(); g.globalAlpha *= fade(t, 3.0, 15.0, 0.3);
     topView(g, t);
-    TK.text(g, t < 9 ? '45億年ほど前' : 'かけらが集まって月に', PW / 2, 230, 64);
-    if (t >= 10.0) TK.text(g, '計算では [1年たらず]', PW / 2, 920, 60);
+    PL.label(g, t < 9 ? '45億年ほど前' : 'かけらが集まって月に', 90, 170, 62, { align: 'left' });
+    PL.label(g, '上から見た図', 90, 240, 36, { align: 'left', color: TK.C.sub, bold: false });
+    if (t >= 10.0) PL.label(g, '計算では [1年たらず]', 90, 1120, 60, { align: 'left' });
     g.restore();
     TK.note(g, t, 3.0, 9.0, '大きな星がぶつかって月ができた、と考えられています（有力な説）', { size: 30 });
     TK.note(g, t, 9.0, 15.0, '上から見た図。内側の円盤の分まで入れると約100年（Salmon & Canup 2012）', { size: 30 });
   }
   // 15〜21: いまの月とならべる
   if (t >= 15.0 && t < 21.0) {
-    const f = fade(t, 15.0, 21.0, 0.3);
-    g.save(); g.globalAlpha = f;
-    sky(g, t);
-    g.save(); g.beginPath(); g.rect(0, 0, PW, HZ); g.clip();
-    moon(g, 640, 700, R_NEW * PX_PER_DEG / 2);
-    moon(g, 170, 520, R_NOW * PX_PER_DEG / 2);
+    const r = R_NEW * PX_PER_DEG / 2, r0 = R_NOW * PX_PER_DEG / 2;
+    g.save(); g.globalAlpha *= fade(t, 15.0, 21.0, 0.3);
+    sky(g, t, [[650, 700, r + 4], [170, 520, r0 + 6]]);
+    g.save(); g.beginPath(); g.rect(0, 0, PW, HZ - 30); g.clip();
+    moon(g, 650, 700, r); moon(g, 170, 520, r0);
     g.restore();
-    TK.text(g, 'いま', 170, 600, 44, { color: TK.C.sub });
-    TK.text(g, 'できたて', 640, 340, 48, { color: TK.C.sub });
-    if (t > 17.0) TK.text(g, '幅で [約20倍]', PW / 2, 220, 84);
+    PL.leader(g, 170, 520 + r0 + 4, 170, 580); PL.label(g, 'いま', 170, 612, 44, { color: TK.C.sub });
+    PL.label(g, 'できたて', 650, 345, 48, { color: TK.C.sub });
+    if (t > 17.0) PL.label(g, '幅で [約20倍]', 115, 215, 84, { align: 'left' });
     g.restore();
-    TK.note(g, t, 15.5, 21.0, '腕をのばして: いまの月は5円玉の穴、できたての月は手のひらくらい\n月の真下の地面から見た計算（地球の中心からなら約17倍）', { size: 28 });
+    TK.note(g, t, 15.5, 21.0, '腕をのばして: いまの月は5円玉の穴、できたての月は手のひらくらい\n月の真下の地面から見た計算（地球の中心からなら約17倍）', { size: 28, y: 1140 });
   }
   // 21〜27: 遠ざかって小さくなる
   if (t >= 21.0 && t < 27.0) {
     const k = ease((t - 21.3) / 5.0), d = Math.exp(lerp(Math.log(16130), Math.log(378030), k));
-    const deg = 2 * Math.atan(1737 / d) * 180 / Math.PI;
-    g.save(); g.globalAlpha = fade(t, 21.0, 27.0, 0.3);
-    sky(g, t);
-    moon(g, 540, 700, deg * PX_PER_DEG / 2);
-    TK.card(g, 220, 180, 640, 120);
-    TK.text(g, '地球から ' + ((d + 6371) / 1e4).toFixed(1) + '万km', PW / 2, 240, 62);
+    const r = 2 * Math.atan(1737 / d) * 180 / Math.PI * PX_PER_DEG / 2;
+    g.save(); g.globalAlpha *= fade(t, 21.0, 27.0, 0.3);
+    sky(g, t, [[540, 700, r + 4]]);
+    moon(g, 540, 700, r);
+    PL.label(g, '地球から [' + ((d + 6371) / 1e4).toFixed(1) + '万km]', 115, 200, 64, { align: 'left' });
+    // 地球と月の距離のものさし（いまの距離まで）
+    const X = dd => 160 + 800 * (dd + 6371) / 384400, y = 1155;
+    PL.ink(g, gg => { gg.moveTo(160, y); gg.lineTo(960, y); for (let q = 0; q <= 4; q++) { gg.moveTo(160 + q * 200, y - 10); gg.lineTo(160 + q * 200, y + 10); } }, 3);
+    PL.sphere(g, 140, y, 20, PL.T.sea, { a: 0.8, contour: false });
+    moon(g, X(d), y, 8);
+    PL.label(g, 'いま', 960, y - 36, 32, { color: TK.C.sub, bold: false });
     g.restore();
   }
   // 27〜30: 地面はとけた岩
   if (t >= 27.0) {
-    sky(g, t, ease((t - 27.0) / 0.8));
-    g.save(); g.beginPath(); g.rect(0, 0, PW, HZ); g.clip(); moon(g, 540, 780, R_NEW * PX_PER_DEG / 2); g.restore();
-    TK.note(g, t, 27.6, 30.0, '出どころ: Ida, Canup & Stewart (1997) Nature 389, 353・Salmon & Canup (2012)\nKleine ほか (2002) Nature 418, 952', { size: 28 });
+    const r = R_NEW * PX_PER_DEG / 2;
+    sky(g, t, [[540, 780, r + 4]], ease((t - 27.0) / 0.8));
+    g.save(); g.beginPath(); g.rect(0, 0, PW, HZ - 30); g.clip(); moon(g, 540, 780, r); g.restore();
+    TK.note(g, t, 27.6, 30.0, '出どころ: Ida, Canup & Stewart (1997) Nature 389, 353・Salmon & Canup (2012)\nKleine ほか (2002) Nature 418, 952', { size: 28, y: 1140 });
   }
 }
 

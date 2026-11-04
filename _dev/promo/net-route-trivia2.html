@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく net-route-2（型A ぜんぶ逆）「海底ケーブルを切るのはサメ…じゃない」。台本は trivia/net-route.md。?short で録る
@@ -30,104 +33,177 @@ const cues = [
   { t: 23.0, type: 'whoosh' }, { t: 24.6, type: 'buzz' }, { t: 25.6, type: 'whoosh' }, { t: 28.0, type: 'ding' },
 ];
 
-// サメ（丸い線画。こわくしない）
-function shark(g, x, y, s, t) {
-  g.save(); g.translate(x, y); g.scale(s, s); g.rotate(Math.sin(t * 2) * 0.04);
-  g.strokeStyle = '#cfe0ff'; g.fillStyle = 'rgba(160,190,255,0.16)'; g.lineWidth = 6; g.lineJoin = 'round';
-  g.beginPath(); g.moveTo(-170, 0); g.quadraticCurveTo(-40, -90, 150, -10); g.quadraticCurveTo(170, 10, 140, 25); g.quadraticCurveTo(-20, 70, -170, 0); g.fill(); g.stroke();
-  g.beginPath(); g.moveTo(-20, -50); g.lineTo(10, -120); g.lineTo(50, -42); g.stroke();   // 背びれ
-  const w = Math.sin(t * 5) * 20;
-  g.beginPath(); g.moveTo(-165, 0); g.lineTo(-230, -60 + w); g.lineTo(-215, 0); g.lineTo(-230, 55 + w); g.closePath(); g.fill(); g.stroke();   // 尾
-  g.fillStyle = '#cfe0ff'; g.beginPath(); g.arc(100, -14, 7, 0, Math.PI * 2); g.fill();
-  g.beginPath(); g.moveTo(40, 30); g.lineTo(10, 70); g.lineTo(70, 34); g.stroke();   // 胸びれ
+//// ---- 絵は「図鑑の版画」（trivia-plate.js の PL.*）----
+// サメ（横から見た図鑑の図。口は閉じて、こわくしない）。右向き、x, y が体のまん中
+const SHARK = [[200, 5], [185, -14], [160, -28], [100, -42], [20, -50], [-60, -42], [-140, -22], [-192, -7], [-192, 7], [-150, 16], [-60, 32], [40, 36], [130, 26], [180, 14]];
+const SHFIN = [
+  [[16, -48], [-6, -122], [-50, -44]],                    // 背びれ
+  [[-128, -26], [-142, -50], [-154, -20]],                // 第2背びれ
+  [[78, 28], [22, 104], [44, 34]],                        // 胸びれ
+  [[-78, 31], [-102, 58], [-112, 26]],                    // 腹びれ
+  [[-150, 17], [-166, 38], [-174, 12]],                   // しりびれ
+];
+function shark(g, x, y, s, t, o = {}) {
+  const sw = Math.sin(t * 4) * 0.08;
+  const m = (px, py) => { const bend = px < -60 ? (px + 60) * (px + 60) * 0.0009 * Math.sin(t * 4) * 40 / 40 : 0; return [x + px * s, y + (py + bend) * s]; };
+  const tail = [[-188, -8], [-282, -104 + sw * 200], [-252, -18], [-276, 46 + sw * 200], [-188, 8]];
+  const P = pts => PL.poly(pts.map(([a, b]) => m(a, b)));
+  g.save(); g.globalAlpha *= o.alpha ?? 1;
+  [tail, ...SHFIN].forEach((f, i) => { const p = P(f); PL.tint(g, p, PL.T.gray, 0.8); PL.hatch(g, p, { angle: 0.8, gap: Math.max(6, 9 * s), w: 1.6 }); PL.ink(g, p, Math.max(3, 4.5 * s)); });
+  const body = P(SHARK);
+  PL.tint(g, body, PL.T.sand, 0.5);
+  g.save(); g.beginPath(); body(g); g.clip();   // 背中は灰色（腹は白っぽい。サメの「かくれる色」）
+  PL.tint(g, P([[220, -80], [-220, -80], [-220, -2], [-60, 6], [60, 8], [220, -2]]), PL.T.gray, 0.85);
+  g.restore();
+  PL.hatch(g, body, { angle: 0.75, gap: Math.max(6, 10 * s), w: 1.6, not: P([[220, -10], [-220, -10], [-220, 60], [220, 60]]) });
+  PL.ink(g, body, Math.max(3, 5 * s));
+  PL.ink(g, gg => { for (let i = 0; i < 5; i++) { const gx = 118 - i * 9; const [a, b] = m(gx, -18), [c, d] = m(gx - 4, 14); gg.moveTo(a, b); gg.quadraticCurveTo(...m(gx + 3, 0), c, d); } }, Math.max(1.6, 2.4 * s));   // えら
+  PL.ink(g, gg => { const [a, b] = m(176, 14), [c, d] = m(142, 22); gg.moveTo(a, b); gg.quadraticCurveTo(...m(160, 22), c, d); }, Math.max(1.6, 2.4 * s));   // 口（閉じている）
+  const [ex, ey] = m(152, -12); PL.tint(g, PL.circle(ex, ey, 6 * s), PL.INK, 1);
+  PL.ink(g, gg => { const [a, b] = m(-60, 4), [c, d] = m(170, 2); gg.moveTo(a, b); gg.quadraticCurveTo(...m(60, 12), c, d); }, Math.max(1.2, 1.6 * s), 'rgba(35,28,21,0.6)');   // 側線
   g.restore();
 }
-function cable(g, y, t, cut = -1) {
-  g.save(); g.strokeStyle = '#7c8fb8'; g.lineWidth = 16; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(60, y); g.lineTo(900, y); g.stroke();
-  g.fillStyle = TK.C.acc;
-  for (let i = 0; i < 5; i++) { const x = 60 + ((t * 300 + i * 170) % 840); g.beginPath(); g.arc(x, y, 7, 0, Math.PI * 2); g.fill(); }
-  g.restore();
+// 海底ケーブル（海の底に寝ている。手前の切り口に層が見える）。x0〜x1、中心 y、太さ r
+function cable(g, x0, x1, y, r, t) {
+  const side = PL.rect(x0, y - r, x1 - x0, 2 * r);
+  PL.tint(g, side, PL.T.gray, 0.7); PL.hatch(g, side, { angle: 0.9, gap: 9, w: 1.8, not: PL.rect(x0 - 10, y - r - 10, x1 - x0 + 20, r * 0.9) }); PL.ink(g, side, 5);
+  PL.ink(g, gg => { for (let x = x0 + 30; x < x1; x += 44) { gg.moveTo(x, y - r); gg.quadraticCurveTo(x + 12, y, x, y + r); } }, 1.4, 'rgba(35,28,21,0.45)');   // より線のすじ
+  // 切り口: ポリエチレン → 銅 → 鋼線 → 光ファイバー
+  const cx = x1, L = [[r, PL.T.gray], [r * 0.72, PL.T.rust], [r * 0.58, PL.T.sand], [r * 0.3, PL.T.gold]];
+  L.forEach(([rr, c]) => { const e = PL.ellipse(cx, y, rr * 0.45, rr); PL.tint(g, e, c, 0.9); PL.ink(g, e, 3); });
+  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; PL.ink(g, PL.ellipse(cx + Math.cos(a) * r * 0.2, y + Math.sin(a) * r * 0.44, r * 0.05, r * 0.1), 1.6); }
+  PL.ink(g, gg => { for (let i = 0; i < 4; i++) { gg.moveTo(cx + 2, y - r * 0.12 + i * r * 0.08); gg.arc(cx, y - r * 0.12 + i * r * 0.08, 2, 0, Math.PI * 2); } }, 2, PL.RED);
+  return cx;
 }
-function cross(g, cx, cy, r, k) {
-  g.save(); g.strokeStyle = TK.C.red; g.lineWidth = 22; g.lineCap = 'round'; g.globalAlpha *= k;
-  g.beginPath(); g.moveTo(cx - r, cy - r); g.lineTo(cx + r, cy + r); g.moveTo(cx + r, cy - r); g.lineTo(cx - r, cy + r); g.stroke(); g.restore();
+function seabed(g, y) {
+  const sand = PL.poly([[0, y], ...Array.from({ length: 28 }, (_, i) => [i * 40, y + Math.sin(i * 1.7) * 8]), [PW, y], [PW, y + 140], [0, y + 140]]);
+  PL.tint(g, sand, PL.T.sand, 0.65); PL.hatch(g, sand, { angle: 0.15, gap: 11, w: 1.6 }); PL.ink(g, gg => { gg.moveTo(0, y); for (let i = 0; i < 28; i++) gg.lineTo(i * 40, y + Math.sin(i * 1.7) * 8); gg.lineTo(PW, y); }, 4);
 }
+function waterLines(g, y0, y1) { PL.ink(g, gg => { for (let y = y0; y < y1; y += 70) for (let x = 40 + (y % 140 ? 60 : 0); x < PW - 80; x += 260) { gg.moveTo(x, y); gg.quadraticCurveTo(x + 30, y - 8, x + 60, y); gg.quadraticCurveTo(x + 90, y + 8, x + 120, y); } }, 1.6, 'rgba(47,95,122,0.5)'); }
+function cross(g, cx, cy, r, k) { if (k <= 0) return; g.save(); g.globalAlpha *= clamp(k, 0, 1); PL.ink(g, gg => { gg.moveTo(cx - r, cy - r); gg.lineTo(cx + r, cy + r); gg.moveTo(cx + r, cy - r); gg.lineTo(cx - r, cy + r); }, 18, PL.RED); g.restore(); }
+// 船のいかり（ストックレスアンカー）。x, y は輪のまん中
 function anchor(g, x, y, s) {
-  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = '#e8f0ff'; g.lineWidth = 8; g.lineCap = 'round';
-  g.beginPath(); g.arc(0, -70, 16, 0, Math.PI * 2); g.moveTo(0, -54); g.lineTo(0, 60); g.moveTo(-36, -30); g.lineTo(36, -30);
-  g.moveTo(-60, 20); g.quadraticCurveTo(-50, 70, 0, 70); g.quadraticCurveTo(50, 70, 60, 20); g.stroke(); g.restore();
-}
-function net(g, x, y, s) {
-  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = '#e8f0ff'; g.lineWidth = 4;
-  g.beginPath(); g.moveTo(-70, -60); g.quadraticCurveTo(0, -90, 70, -60); g.lineTo(40, 60); g.quadraticCurveTo(0, 80, -40, 60); g.closePath(); g.stroke();
-  for (let i = 1; i < 5; i++) { g.beginPath(); g.moveTo(lerp(-70, -40, i / 5), lerp(-60, 60, i / 5)); g.lineTo(lerp(70, 40, i / 5), lerp(-60, 60, i / 5)); g.stroke(); g.beginPath(); g.moveTo(lerp(-70, 70, i / 5), -65); g.lineTo(lerp(-40, 40, i / 5), 66); g.stroke(); }
+  g.save(); g.translate(x, y); g.scale(s, s);
+  const shank = PL.poly([[-10, 16], [10, 16], [12, 150], [-12, 150]]);
+  const fl = d => PL.poly([[0, 150], [d * 20, 170], [d * 70, 150], [d * 92, 96], [d * 74, 110], [d * 52, 140], [d * 14, 136]]);
+  [shank, fl(-1), fl(1)].forEach(p => { PL.tint(g, p, PL.T.gray, 0.8); PL.hatch(g, p, { angle: 0.8, gap: 7, w: 1.6, not: PL.rect(-200, -100, 196, 400) }); PL.ink(g, p, 5); });
+  PL.ink(g, PL.circle(0, 0, 18), 7);
+  PL.ink(g, gg => { gg.moveTo(0, -18); gg.quadraticCurveTo(-30, -60, -10, -100); }, 4);   // くさり
+  for (let i = 0; i < 3; i++) PL.ink(g, PL.ellipse(-12 - i * 2, -36 - i * 22, 7, 12, -0.3), 3);
   g.restore();
+}
+// 漁の網（底引き網。上に浮き、下におもり）。x, y は口のまん中
+function net(g, x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s);
+  const mesh = PL.poly([[-90, -50], [90, -50], [60, 70], [0, 92], [-60, 70]]);
+  PL.tint(g, mesh, PL.T.leaf, 0.25);
+  g.save(); g.beginPath(); mesh(g); g.clip();
+  PL.ink(g, gg => { for (let k = -12; k <= 12; k++) { gg.moveTo(k * 16 - 100, -60); gg.lineTo(k * 16 + 60, 100); gg.moveTo(k * 16 + 100, -60); gg.lineTo(k * 16 - 60, 100); } }, 1.6);
+  g.restore();
+  PL.ink(g, mesh, 4);
+  for (let i = 0; i < 5; i++) { const f = PL.ellipse(-80 + i * 40, -56, 12, 8); PL.tint(g, f, PL.T.gold, 0.9); PL.ink(g, f, 3); }   // 浮き
+  for (let i = 0; i < 4; i++) PL.tint(g, PL.circle(-50 + i * 33, 76 + Math.abs(i - 1.5) * -6, 7), PL.INK, 1);   // おもり
+  g.restore();
+}
+// 包み（パケット）
+function parcel(g, x, y, s, col) {
+  const b = PL.rect(x - 30 * s, y - 22 * s, 60 * s, 44 * s);
+  PL.tint(g, b, col, 0.9); PL.hatch(g, b, { angle: 0.8, gap: 6, w: 1.4, not: PL.rect(x - 36 * s, y - 28 * s, 54 * s, 36 * s) }); PL.ink(g, b, 4);
+  PL.ink(g, gg => { gg.moveTo(x, y - 22 * s); gg.lineTo(x, y + 22 * s); gg.moveTo(x - 30 * s, y); gg.lineTo(x + 30 * s, y); }, 2.4);
 }
 
 function draw(g, t) {
-  // 0〜3: フック
+  // 0〜3: フック（海の底のケーブルと、サメに ✕）
   if (t < 3.0) {
-    cable(g, 760, t);
-    shark(g, 500, 520, 1.3, t);
-    g.save(); g.globalAlpha = TK.pop(t, 0.2, 0.3); TK.text(g, 'ケーブルを切る犯人？', 480, 250, 84, { color: '#fff' }); g.restore();
-    cross(g, 480, 520, 180, TK.pop(t, 1.3, 0.3));
+    waterLines(g, 420, 840);
+    seabed(g, 960);
+    cable(g, -20, 860, 920, 34, t);
+    shark(g, 470, 620, 1.3, t);
+    g.save(); g.globalAlpha *= clamp(TK.pop(t, 0.2, 0.3), 0, 1); PL.label(g, 'ケーブルを切る[犯人]？', 100, 230, 84, { align: 'left' }); g.restore();
+    cross(g, 470, 620, 170, TK.pop(t, 1.3, 0.3));
   }
-  // 3〜10: 0件
+  // 3〜10: 8年間で 0件（左に大きな 0、右に年ごとの帳面）
   if (t >= 3.0 && t < 10.0) {
-    TK.text(g, '2007〜2014年（8年間）', PW / 2 - 60, 250, 60, { color: TK.C.sub });
-    TK.text(g, '魚・サメにかまれた故障', PW / 2 - 60, 340, 56);
-    g.save(); g.globalAlpha = TK.pop(t, 4.4, 0.4); TK.text(g, '0 件', PW / 2 - 60, 560, 260, { color: TK.C.acc, stroke: 'rgba(0,0,0,0.5)' }); g.restore();
-    shark(g, 480, 900, 0.7, t);
+    PL.label(g, '2007〜2014年（8年間）', 100, 210, 56, { align: 'left' });
+    PL.label(g, '魚・サメにかまれた故障', 100, 290, 50, { align: 'left', bold: false });
+    const tx = 620, tw = 360, ty = 380, rh = 66;
+    PL.ink(g, PL.rect(tx, ty, tw, rh * 8), 5); PL.ink(g, PL.rect(tx - 8, ty - 8, tw + 16, rh * 8 + 16), 1.5);
+    PL.ink(g, gg => { for (let i = 1; i < 8; i++) { gg.moveTo(tx, ty + i * rh); gg.lineTo(tx + tw, ty + i * rh); } gg.moveTo(tx + 180, ty); gg.lineTo(tx + 180, ty + rh * 8); }, 1.8);
+    for (let i = 0; i < 8; i++) {
+      const k = clamp((t - 3.4 - i * 0.12) / 0.3, 0, 1); if (k <= 0) continue;
+      g.save(); g.globalAlpha *= k;
+      PL.label(g, String(2007 + i), tx + 90, ty + i * rh + rh / 2, 38, { bold: false });
+      PL.label(g, '0', tx + 270, ty + i * rh + rh / 2, 42, { color: PL.RED });
+      g.restore();
+    }
+    g.save(); g.globalAlpha *= clamp(TK.pop(t, 4.4, 0.4), 0, 1);
+    PL.label(g, '0', 300, 560, 300, { color: PL.RED });
+    PL.label(g, '件', 300, 780, 80);
+    g.restore();
+    shark(g, 520, 1040, 0.62, t);
   }
   // 10〜15: 0.5%（100マスのうち半マス）
   if (t >= 10.0 && t < 15.0) {
-    TK.text(g, '1959〜2006年', PW / 2 - 60, 230, 60, { color: TK.C.sub });
-    const n = 10, sz = 58, x0 = PW / 2 - 60 - n * sz / 2, y0 = 300;
-    for (let i = 0; i < 100; i++) {
-      const k = clamp((t - 10.2 - i * 0.008) / 0.2, 0, 1), x = x0 + (i % n) * sz, y = y0 + Math.floor(i / n) * sz;
-      g.save(); g.globalAlpha = k; g.fillStyle = 'rgba(160,190,255,0.18)'; g.fillRect(x + 4, y + 4, sz - 8, sz - 8); g.restore();
+    PL.label(g, '1959〜2006年', 100, 210, 56, { align: 'left' });
+    PL.label(g, 'ケーブルの故障 ぜんぶ＝100マス', 100, 285, 40, { align: 'left', bold: false });
+    const n = 10, sz = 62, x0 = 230, y0 = 350;
+    const cnt = Math.round(clamp((t - 10.2) / 0.9, 0, 1) * 100);   // マスは左上から順に出る（まとめて1回でぬる）
+    const cells = gg => { for (let i = 0; i < cnt; i++) PL.rect(x0 + (i % n) * sz + 5, y0 + Math.floor(i / n) * sz + 5, sz - 10, sz - 10)(gg); };
+    if (cnt > 0) { PL.tint(g, cells, PL.T.sea, 0.35); PL.ink(g, cells, 2); }
+    if (t > 11.2) {
+      const half = PL.rect(x0 + 5, y0 + 5, (sz - 10) / 2, sz - 10);
+      PL.tint(g, half, PL.RED, 0.9); PL.hatch(g, half, { angle: 0.8, gap: 6, w: 1.6 });
+      PL.leader(g, x0 + 18, y0 + 30, 120, y0 + 30, PL.RED);
+      PL.label(g, '魚にかまれた故障 [0.5%]', PW / 2, 1020, 62);
     }
-    if (t > 11.2) { g.save(); g.fillStyle = TK.C.red; g.globalAlpha = 0.5 + 0.5 * Math.sin(t * 8) ** 2; g.fillRect(x0 + 4, y0 + 4, (sz - 8) / 2, sz - 8); g.restore(); TK.text(g, '魚にかまれた故障 [0.5%]', PW / 2 - 60, 960, 62); }
   }
-  // 15〜23: 円グラフ
+  // 15〜23: 円グラフ（いかりと網）
   if (t >= 15.0 && t < 23.0) {
-    const cx = 330, cy = 530, r = 230, k = TK.out((t - 15.6) / 1.4);
-    g.save();
-    g.fillStyle = 'rgba(255,255,255,0.1)'; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
-    g.fillStyle = TK.C.acc; g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * 0.65 * k); g.closePath(); g.fill();
-    g.fillStyle = 'rgba(255,207,74,0.45)'; g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, r, -Math.PI / 2 + Math.PI * 2 * 0.65 * k, -Math.PI / 2 + Math.PI * 2 * 0.75 * k); g.closePath(); g.fill();
-    g.restore();
-    if (k > 0.9) TK.text(g, 'いかりと網 [65〜75%]', PW / 2 - 60, 930, 68);
-    if (t > 18.0) { g.save(); g.globalAlpha = TK.pop(t, 18.0, 0.35); anchor(g, 720, 400, 1.1); TK.text(g, '船のいかり', 720, 520, 48); g.restore(); }
-    if (t > 18.6) { g.save(); g.globalAlpha = TK.pop(t, 18.6, 0.35); net(g, 720, 700, 1.0); TK.text(g, '漁の網', 720, 820, 48); g.restore(); }
-    TK.text(g, 'ケーブルの故障のうち', PW / 2 - 60, 220, 48, { color: TK.C.sub });
+    PL.label(g, 'ケーブルの故障のうち', 100, 210, 48, { align: 'left' });
+    const cx = 330, cy = 560, r = 220, k = TK.out((t - 15.6) / 1.4), A0 = -Math.PI / 2, A1 = A0 + Math.PI * 2 * 0.65 * k, A2 = A0 + Math.PI * 2 * 0.75 * k;
+    const all = PL.circle(cx, cy, r), w1 = gg => { gg.moveTo(cx, cy); gg.arc(cx, cy, r, A0, A1); gg.closePath(); }, w2 = gg => { gg.moveTo(cx, cy); gg.arc(cx, cy, r, A1, A2); gg.closePath(); };
+    PL.tint(g, all, PL.T.sky, 0.3);
+    PL.tint(g, w1, PL.T.rust, 0.8); PL.hatch(g, w1, { angle: 0.7, gap: 12, w: 2.2, cx, cy });
+    PL.tint(g, w2, PL.T.rust, 0.35); PL.hatch(g, w2, { angle: -0.7, gap: 16, w: 1.6, cx, cy });
+    PL.ink(g, all, 6); if (k > 0.02) { PL.ink(g, w1, 3); PL.ink(g, w2, 2); }
+    PL.ink(g, gg => { for (let i = 0; i < 20; i++) { const a = A0 + i / 20 * Math.PI * 2; gg.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); gg.lineTo(cx + Math.cos(a) * (r + (i % 5 ? 10 : 20)), cy + Math.sin(a) * (r + (i % 5 ? 10 : 20))); } }, 2.4);   // 5%ごとの目盛り
+    if (k > 0.9) {
+      PL.leader(g, cx + Math.cos(A1) * r * 0.85, cy + Math.sin(A1) * r * 0.85, 140, 870, PL.INK);   // 65〜75% の所から
+      PL.label(g, 'いかりと網 [65〜75%]', 100, 910, 64, { align: 'left' });
+    }
+    if (t > 18.0) { g.save(); g.globalAlpha *= clamp(TK.pop(t, 18.0, 0.35), 0, 1); anchor(g, 800, 290, 1.0); PL.label(g, '船のいかり', 800, 520, 46); g.restore(); }
+    if (t > 18.6) { g.save(); g.globalAlpha *= clamp(TK.pop(t, 18.6, 0.35), 0, 1); net(g, 800, 680, 1.1); PL.label(g, '漁の網', 800, 830, 46); g.restore(); }
     TK.note(g, t, 16, 23, '割合は資料・年で幅がある（ITU は8割以上とも）', { size: 32 });
   }
-  // 23〜30: 切れても遠回り（網の図）
+  // 23〜30: 切れても遠回り（海底ケーブルの網の図。たとえ）
   if (t >= 23.0) {
+    waterLines(g, 280, 900);
     const N = [[150, 400], [420, 300], [700, 380], [850, 640], [600, 820], [300, 760], [470, 560]];
     const E = [[0, 1], [1, 2], [2, 3], [0, 5], [5, 4], [4, 3], [1, 6], [6, 4], [0, 6]];
-    const cutE = 2;   // 2→3 を切る（a: 0→1→2→3 の道、b: 0→5→4→3）
-    const cut = t > 24.6;
-    g.save(); g.lineCap = 'round';
+    const cutE = 2, cut = t > 24.6;
     E.forEach(([a, b], i) => {
-      g.strokeStyle = i === cutE && cut ? 'rgba(255,107,107,0.8)' : '#7c8fb8'; g.lineWidth = 10;
-      if (i === cutE && cut) { const [x1, y1] = N[a], [x2, y2] = N[b], mx = (x1 + x2) / 2, my = (y1 + y2) / 2; g.beginPath(); g.moveTo(x1, y1); g.lineTo(mx - 14, my - 20); g.moveTo(mx + 14, my + 20); g.lineTo(x2, y2); g.stroke(); }
-      else { g.beginPath(); g.moveTo(...N[a]); g.lineTo(...N[b]); g.stroke(); }
+      const [x1, y1] = N[a], [x2, y2] = N[b], mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+      const seg = (p, q) => gg => { gg.moveTo(...p); gg.lineTo(...q); };
+      if (i === cutE && cut) { PL.ink(g, seg([x1, y1], [mx - 12, my - 22]), 9, PL.RED); PL.ink(g, seg([mx + 12, my + 22], [x2, y2]), 9, PL.RED); }
+      else { PL.ink(g, seg([x1, y1], [x2, y2]), 11); PL.ink(g, seg([x1, y1], [x2, y2]), 5, '#c9c2b0'); }
     });
-    N.forEach(([x, y], i) => { g.fillStyle = i === 0 || i === 3 ? TK.C.acc2 : '#e8f0ff'; g.beginPath(); g.arc(x, y, i === 0 || i === 3 ? 30 : 20, 0, Math.PI * 2); g.fill(); });
-    g.restore();
-    TK.text(g, '出発', 150, 330, 44, { color: TK.C.acc2 }); TK.text(g, 'とうちゃく', 850, 710, 44, { color: TK.C.acc2, align: 'right' });
-    // 包みが進む
+    N.forEach(([x, y], i) => {
+      const end = i === 0 || i === 3, c = PL.circle(x, y, end ? 30 : 20);
+      PL.tint(g, c, end ? PL.T.gold : PL.T.sand, 0.95); PL.hatch(g, c, { angle: 0.7, gap: 6, w: 1.4, not: PL.circle(x - 6, y - 6, end ? 30 : 20) }); PL.ink(g, c, 5);
+    });
+    PL.label(g, '出発', 150, 330, 44); PL.label(g, 'とうちゃく', 960, 708, 40);
     const path = cut ? [0, 5, 4, 3] : [0, 1, 2, 3], st = cut ? 25.6 : 23.2, u = ((t - st) / 2.2) % 1;
     if (t >= st && (cut || t < 24.6)) {
       const segs = path.length - 1, p = u * segs, i = Math.min(segs - 1, Math.floor(p)), f = p - i;
       const [x1, y1] = N[path[i]], [x2, y2] = N[path[i + 1]];
-      g.save(); g.fillStyle = TK.C.acc; g.shadowColor = TK.C.acc; g.shadowBlur = 25; g.beginPath(); g.arc(lerp(x1, x2, f), lerp(y1, y2, f), 22, 0, Math.PI * 2); g.fill(); g.restore();
+      parcel(g, lerp(x1, x2, f), lerp(y1, y2, f), 1, PL.T.gold);
     }
-    if (cut) { g.save(); g.globalAlpha = TK.pop(t, 24.6, 0.3); TK.text(g, 'ここが切れた', 810, 480, 40, { color: TK.C.red, align: 'right' }); g.restore(); }
-    TK.note(g, t, 26.5, 30, '出どころ: ICPC の分析（Fibre Systems・Lightwave 2015 の報道による）\n網の図はたとえ', { size: 30 });
+    if (cut) {
+      g.save(); g.globalAlpha *= clamp(TK.pop(t, 24.6, 0.3), 0, 1);
+      PL.leader(g, 775, 510, 740, 470, PL.RED); PL.label(g, 'ここが切れた', 725, 455, 40, { align: 'right', color: PL.RED });
+      g.restore();
+    }
+    TK.note(g, t, 26.5, 30, '出どころ: ICPC の分析（Fibre Systems・Lightwave 2015 の報道による）\n網の図はたとえ', { size: 30, y: 1120 });   // 2行の注は帯の上に
   }
 }
 

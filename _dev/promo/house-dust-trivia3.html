@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく house-dust-3（型C この動画のあいだに）「1日に、1円玉1枚ぶん」。台本は trivia/house-dust.md。?short で録る
@@ -30,88 +33,106 @@ const cues = [
   { t: 10.0, type: 'rise' }, { t: 12.6, type: 'ding' }, { t: 14.0, type: 'ding' }, { t: 16.0, type: 'whoosh' },
   { t: 18.0, type: 'pop' }, { t: 19.0, type: 'pop' }, { t: 24.0, type: 'pop' }, { t: 26.5, type: 'ding' },
 ];
-const SKIN = '#f3d6c4', OIL = '#ffcf4a', O3 = '#7fe0ff';
 const rnd = (i, k = 1) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
+// 絵は「図鑑の版画」（PL.*）。小さな粒はまとめて1つの道にして、手彩色と墨を1回ずつ
+const SKIN = PL.T.rose, OIL = PL.T.gold, O3 = PL.T.sea;
+const flakeAt = (x, y, r, i) => g => { const n = 5; for (let j = 0; j < n; j++) { const a = j / n * Math.PI * 2 + i, rr = r * (0.6 + rnd(i * 5 + j, 3) * 0.6); g[j ? 'lineTo' : 'moveTo'](x + Math.cos(a) * rr * 1.4, y + Math.sin(a) * rr * 0.7); } g.closePath(); };
 
-function person(g, x, y, s, t) {
-  g.save(); g.translate(x, y); g.scale(s, s);
-  g.strokeStyle = '#fff'; g.lineWidth = 8; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(0, -40); g.lineTo(-20, 0); g.moveTo(0, -40); g.lineTo(20, 0); g.moveTo(0, -40); g.lineTo(0, -95);
-  g.moveTo(0, -85); g.lineTo(-24, -55); g.moveTo(0, -85); g.lineTo(24, -55); g.stroke();
-  g.fillStyle = '#fff'; g.beginPath(); g.arc(0, -112, 16, 0, Math.PI * 2); g.fill();
-  g.restore();
-  // かけら（小さな点が少しずつ落ちる）
-  for (let i = 0; i < 26; i++) {
-    const ph = (t * 0.25 + rnd(i)) % 1, px = x + (rnd(i, 2) - 0.5) * 70 * s, py = y - (110 - ph * 110) * s;
-    g.globalAlpha = 0.8 * (1 - ph * 0.6); g.fillStyle = SKIN; g.beginPath(); g.arc(px, py, 4, 0, Math.PI * 2); g.fill();
-  }
-  g.globalAlpha = 1;
+// 立っている人（影絵）と、落ちる皮ふのかけら
+function person(g, x, y, t) {
+  const floor = PL.rect(140, y, 800, 18);
+  PL.tint(g, floor, PL.T.wood, 0.6); PL.hatch(g, floor, { angle: 0.9, gap: 8, w: 1.4 }); PL.ink(g, floor, 3);
+  PL.walker(g, x, y, 0, 0, 1.7);
+  const fl = [];
+  for (let i = 0; i < 26; i++) { const ph = (t * 0.25 + rnd(i)) % 1; fl.push([x + (rnd(i, 2) - 0.5) * 240, y - 380 + ph * 370, 5 + rnd(i, 4) * 3, i]); }
+  const path = gg => fl.forEach(f => flakeAt(...f)(gg));
+  PL.tint(g, path, SKIN, 0.9); PL.ink(g, path, 1.6);
+  const pile = gg => { gg.moveTo(x - 150, y); gg.quadraticCurveTo(x, y - 14, x + 150, y); gg.closePath(); };   // 床にたまったかけら
+  PL.tint(g, pile, SKIN, 0.8); PL.ink(g, pile, 2);
 }
-// 「この動画のあいだに」の量（右上の下）
+// 「この動画のあいだに」の量
 function shedNow(g, t) {
   const lo = t * 30 / 3600, hi = t * 90 / 3600;
-  TK.card(g, 140, 300, 800, 120, { r: 40 });
-  TK.text(g, 'この動画のあいだに  ' + lo.toFixed(2) + '〜' + hi.toFixed(2) + ' mg', PW / 2, 360, 52);
+  TK.card(g, 140, 300, 800, 120);
+  TK.text(g, 'この動画のあいだに  ' + lo.toFixed(2) + '〜' + hi.toFixed(2) + ' mg', PW / 2, 360, 52, { maxw: 740 });
 }
+// 1円玉（アルミのうすい銀色。ふちの輪と、わかぎの模様は線で）
 function coin(g, x, y, r, k) {
   if (k <= 0) return;
-  g.save(); g.translate(x, y); g.scale(k, k);
-  g.fillStyle = '#d6dbe2'; g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.fill();
-  g.strokeStyle = '#9aa3ad'; g.lineWidth = 6; g.beginPath(); g.arc(0, 0, r - 12, 0, Math.PI * 2); g.stroke();
-  TK.text(g, '1', 0, 4, r * 0.9, { color: '#5b6470', blur: 0 });
-  g.restore();
+  r *= k; const c = PL.circle(x, y, r);
+  PL.tint(g, c, PL.T.gray, 0.75);
+  PL.hatch(g, c, { angle: 0.7, gap: 8, w: 1.4, not: PL.circle(x - r * 0.22, y - r * 0.22, r), cx: x, cy: y });
+  PL.ink(g, PL.circle(x, y, r * 0.9), 2.5);
+  PL.ink(g, gg => { gg.moveTo(x + r * 0.45, y + r * 0.62); gg.quadraticCurveTo(x + r * 0.5, y + r * 0.2, x + r * 0.42, y - r * 0.2); for (let j = 0; j < 3; j++) { const yy = y + r * (0.38 - j * 0.22); gg.moveTo(x + r * 0.47, yy); gg.quadraticCurveTo(x + r * 0.62, yy - r * 0.12, x + r * 0.7, yy - r * 0.06); gg.moveTo(x + r * 0.46, yy - r * 0.04); gg.quadraticCurveTo(x + r * 0.32, yy - r * 0.16, x + r * 0.24, yy - r * 0.1); } }, 2.4);   // 若木
+  PL.ink(g, c, 4);
+  TK.text(g, '1', x - r * 0.15, y + 4, r * 0.95, { color: '#4a4f57' });
 }
+// 皮ふのかけら（拡大）。角質の細胞（平たい多角形）のさかい目と、油の粒
 function flake(g, t) {
   const cx = PW / 2, cy = 640;
-  g.save(); g.translate(cx, cy);
-  g.fillStyle = SKIN; g.globalAlpha = 0.9; g.beginPath();
-  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, r = 230 + Math.sin(i * 2.7) * 50; i ? g.lineTo(Math.cos(a) * r * 1.3, Math.sin(a) * r * 0.8) : g.moveTo(Math.cos(a) * r * 1.3, Math.sin(a) * r * 0.8); }
-  g.closePath(); g.fill(); g.globalAlpha = 1;
-  const k = clamp((t - 18.0) / 1.5, 0, 1);
-  for (let i = 0; i < 14; i++) {
-    const x = (rnd(i, 3) - 0.5) * 520, y = (rnd(i, 4) - 0.5) * 300, r = (14 + rnd(i, 5) * 18) * TK.back(clamp(k * 1.5 - i * 0.04, 0, 1));
-    g.fillStyle = OIL; g.globalAlpha = 0.85; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
-  }
-  g.restore(); g.globalAlpha = 1;
+  const pts = Array.from({ length: 14 }, (_, i) => { const a = i / 14 * Math.PI * 2, r = 230 + Math.sin(i * 2.7) * 50; return [cx + Math.cos(a) * r * 1.3, cy + Math.sin(a) * r * 0.8]; });
+  const body = PL.poly(pts);
+  PL.tint(g, body, SKIN, 0.7);
+  g.save(); g.beginPath(); body(g); g.clip();
+  PL.ink(g, gg => {   // 細胞のさかい目（ずらした六角のあみ）
+    for (let row = -4; row <= 4; row++) for (let col = -6; col <= 6; col++) {
+      const x = cx + col * 92 + (row % 2) * 46 + (rnd(row * 13 + col, 7) - 0.5) * 20, y = cy + row * 70;
+      for (let j = 0; j < 6; j++) { const a = j / 6 * Math.PI * 2 + 0.5, b = (j + 1) / 6 * Math.PI * 2 + 0.5; gg.moveTo(x + Math.cos(a) * 52, y + Math.sin(a) * 40); gg.lineTo(x + Math.cos(b) * 52, y + Math.sin(b) * 40); }
+    }
+  }, 1.5, 'rgba(120,60,50,0.55)');
+  g.restore();
+  PL.hatch(g, body, { angle: 0.6, gap: 10, w: 1.5, not: PL.ellipse(cx - 40, cy - 30, 340, 200) });
+  PL.ink(g, body, 5);
+  const k = clamp((t - 18.0) / 1.5, 0, 1), drops = [];
+  for (let i = 0; i < 14; i++) { const r = (14 + rnd(i, 5) * 18) * clamp(TK.back(clamp(k * 1.5 - i * 0.04, 0, 1)), 0, 1.3); if (r > 1) drops.push([cx + (rnd(i, 3) - 0.5) * 520, cy + (rnd(i, 4) - 0.5) * 300, r]); }
+  drops.forEach(([x, y, r]) => PL.sphere(g, x, y, r, OIL, { contour: false, ow: 2.5, a: 0.9 }));
+  PL.leader(g, 90 + 230, 470, 240, 425); PL.label(g, '角質の細胞', 90, 410, 40, { align: 'left', color: TK.C.sub });
+  return drops;
 }
-// オゾンの点が、かけらの油に当たって消える
+// オゾン（O が3つ、くの字）。list: [x, y, a]
+function ozoneMols(g, list) {
+  if (!list.length) return;
+  const path = gg => list.forEach(([x, y]) => { PL.circle(x - 13, y + 6, 9)(gg); PL.circle(x, y - 4, 9)(gg); PL.circle(x + 13, y + 6, 9)(gg); });
+  PL.tint(g, path, O3, 0.85); PL.ink(g, path, 2);
+}
 function ozone(g, t) {
   const cx = PW / 2, cy = 700, k = clamp((t - 24.6) / 4.0, 0, 1);
-  g.fillStyle = SKIN; g.globalAlpha = 0.9; g.beginPath(); g.ellipse(cx, cy + 160, 330, 90, 0, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
-  for (let i = 0; i < 9; i++) { g.fillStyle = OIL; g.beginPath(); g.arc(cx - 260 + i * 65, cy + 140 + Math.sin(i) * 20, 16, 0, Math.PI * 2); g.fill(); }
-  const n = 60;
+  const body = PL.ellipse(cx, cy + 160, 330, 90);
+  PL.tint(g, body, SKIN, 0.7); PL.hatch(g, body, { angle: 0.6, gap: 10, w: 1.5, not: PL.ellipse(cx - 20, cy + 140, 330, 90) }); PL.ink(g, body, 4);
+  for (let i = 0; i < 9; i++) PL.sphere(g, cx - 260 + i * 65, cy + 140 + Math.sin(i) * 20, 16, OIL, { contour: false, ow: 2.5 });
+  const n = 60, mols = [];
   for (let i = 0; i < n; i++) {
-    const gone = i < n * 0.15 && rnd(i, 9) < 0.95 && k > (i / (n * 0.15)) * 0.9;   // 最大 15% ほどが消える
-    const x = cx - 420 + rnd(i, 6) * 840, y0 = 320 + rnd(i, 7) * 360;
+    const x = cx - 420 + rnd(i, 6) * 840, y0 = 430 + rnd(i, 7) * 270;
     let y = y0 + Math.sin(t * 2 + i) * 12, a = 1;
-    if (i < n * 0.15) { const p = clamp(k * 1.1 - i / (n * 0.15) * 0.9, 0, 1); y = lerp(y0, cy + 130, p); a = 1 - clamp((p - 0.85) / 0.15, 0, 1); }
-    if (a <= 0) continue;
-    g.globalAlpha = a; g.fillStyle = O3; g.beginPath(); g.arc(x, y, 12, 0, Math.PI * 2); g.fill();
+    if (i < n * 0.15) { const p = clamp(k * 1.1 - i / (n * 0.15) * 0.9, 0, 1); y = lerp(y0, cy + 130, p); a = 1 - clamp((p - 0.85) / 0.15, 0, 1); }   // 最大 15% ほどが油に当たって消える
+    if (a > 0.5) mols.push([x, y]);
   }
-  g.globalAlpha = 1;
-  TK.text(g, '● オゾン', 200, 320, 44, { align: 'left', color: O3 });
-  TK.text(g, '● 皮ふの油', 560, 320, 44, { align: 'left', color: OIL });
-  if (t > 26.5) { g.save(); g.globalAlpha = clamp((t - 26.5) / 0.4, 0, 1); TK.text(g, 'オゾン [−2〜15%]', PW / 2, 1010, 68); g.restore(); }
+  ozoneMols(g, mols);
+  ozoneMols(g, [[220, 350]]); PL.label(g, 'オゾン', 260, 350, 44, { align: 'left', color: TK.C.acc2 });
+  PL.sphere(g, 590, 350, 16, OIL, { contour: false, ow: 2.5 }); PL.label(g, '皮ふの油', 625, 350, 44, { align: 'left', color: '#8a6420' });
+  if (t > 26.5) { g.save(); g.globalAlpha = clamp((t - 26.5) / 0.4, 0, 1); PL.label(g, 'オゾン [−2〜15%]', PW / 2, 1020, 68); g.restore(); }
 }
 
 function draw(g, t) {
   TK.clock(g, t, 0, DUR, { label: '' });
   if (t < 10.0) {
-    person(g, PW / 2, 1000, 3.2, t);
+    person(g, PW / 2, 1100, t);
     if (t < 1.8) TK.hook(g, t, 0, 1.8, 'この動画のあいだにも、\nあなたは…', { y: 470, size: 96 });
     else shedNow(g, t);
-    if (t > 4.4) { g.save(); g.globalAlpha = clamp((t - 4.4) / 0.3, 0, 1); TK.card(g, 200, 450, 680, 120, { r: 40 }); TK.text(g, '1時間 [30〜90 mg]', PW / 2, 510, 64); g.restore(); }
+    if (t > 4.4) { g.save(); g.globalAlpha = clamp((t - 4.4) / 0.3, 0, 1); TK.card(g, 200, 450, 680, 120); TK.text(g, '1時間 [30〜90 mg]', PW / 2, 510, 64); g.restore(); }
+    if (t > 2.0) { g.save(); g.globalAlpha = clamp((t - 2.0) / 0.4, 0, 1); PL.leader(g, PW / 2 + 110, 1080, 830, 980); PL.label(g, '皮ふのかけら', 840, 940, 40, { color: TK.C.sub }); g.restore(); }
   } else if (t < 16.0) {
     const h = 24 * TK.out((t - 10.4) / 2.2);
-    TK.text(g, '早送り  ' + Math.floor(h) + ' 時間', PW / 2, 330, 60, { color: TK.C.sub });
-    TK.text(g, (h * 30 / 1000).toFixed(1) + '〜' + (h * 90 / 1000).toFixed(1) + ' g', PW / 2, 470, 120, { color: TK.C.acc });
+    PL.label(g, '早送り  ' + Math.floor(h) + ' 時間', PW / 2, 330, 60, { color: TK.C.sub });
+    PL.label(g, (h * 30 / 1000).toFixed(1) + '〜' + (h * 90 / 1000).toFixed(1) + ' g', PW / 2, 470, 120, { color: PL.RED });
+    PL.ink(g, gg => { gg.moveTo(260, 548); gg.lineTo(820, 548); }, 3);
     coin(g, 400, 760, 130, TK.pop(t, 12.6, 0.4));
     coin(g, 690, 760, 130, TK.pop(t, 14.0, 0.4) * 0.999);
-    if (t > 12.6) TK.text(g, '1円玉 = 1 g', PW / 2, 960, 48, { color: TK.C.sub });
+    if (t > 12.6) PL.label(g, '1円玉 = 1 g', PW / 2, 960, 48, { color: TK.C.sub });
   } else if (t < 24.0) {
-    TK.text(g, '皮ふのかけら（ルーペで）', PW / 2, 300, 56, { color: TK.C.sub });
-    flake(g, t);
-    if (t > 19.0) { g.save(); g.globalAlpha = clamp((t - 19) / 0.4, 0, 1); TK.text(g, '皮ふの油（スクアレン など）', PW / 2, 990, 54, { color: OIL }); g.restore(); }
+    PL.label(g, '皮ふのかけら（ルーペで）', 80, 330, 56, { align: 'left', color: TK.C.sub });   // 右上の時計と重ねない
+    const drops = flake(g, t);
+    if (t > 19.0) { g.save(); g.globalAlpha = clamp((t - 19) / 0.4, 0, 1); const d = drops[drops.length - 1]; if (d) PL.leader(g, d[0], d[1] + d[2], PW / 2, 950); PL.label(g, '皮ふの油（スクアレン など）', PW / 2, 1000, 54, { color: '#8a6420' }); g.restore(); }
   } else ozone(g, t);
   if (t >= 3.6 && t < 16) TK.note(g, t, 3.6, 16, '平均の目安。人・服・動きでちがい、多くは服やふとんに残ります', { size: 32 });
   if (t >= 24 && t < 27.8) TK.note(g, t, 24, 27.8, 'デンマークの家と保育園のほこりを調べた研究から', { size: 32 });

@@ -11,14 +11,16 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく metamorphosis-1（型F かけあい）「イモムシのときの記憶、ガになっても残る？」。台本は trivia/metamorphosis.md。?short で録る
 // 数字は Blackiston, Silva Casey & Weiss (2008) PLoS ONE 3(3):e1736: 酢酸エチルのあと弱い電気を8回、5齢 78%・成虫 77% がさけた、
 // 3齢で教えると 5齢では 81% 覚えていたが成虫では覚えていなかった、洗った蛹でも残る・においをつけた（教えていない）蛹はさけない。
-// 聞き手のセリフは字幕を黄色（[ ] でかこむ）。電気はいたそうに描かない（小さな稲妻の印だけ）
+// 聞き手のセリフは字幕を朱（[ ] でかこむ）。電気はいたそうに描かない（小さな稲妻の印だけ）
 const DUR = 40;
-const Q = TK.C.acc, SKY = '#5fd4ff', VERM = '#ff7a4a', ODOR = '#c79bff';
 const subs = [
   { who: 'a', a: 0.0, b: 2.4, ja: 'ドロドロになっても、記憶は残る？', en: 'Turned to goo — does the memory survive?', noBurn: true },
   { who: 'q', a: 2.4, b: 5.0, ja: '[さなぎの中って、ぜんぶドロドロでしょ？\nじゃあ、記憶も消える？]', en: '“Isn’t a pupa just goo inside?\nThen the memory is gone, right?”' },
@@ -39,194 +41,343 @@ const cues = [
   { t: 14.0, type: 'ding' }, { t: 16.0, type: 'whoosh' }, { t: 17.0, type: 'rise' }, { t: 22.0, type: 'whoosh' }, { t: 26.0, type: 'ding' },
   { t: 30.0, type: 'pop' }, { t: 33.0, type: 'ding' }, { t: 34.6, type: 'buzz' }, { t: 36.0, type: 'whoosh' }, { t: 38.2, type: 'buzz' },
 ];
+// ---- タバコスズメガ（Manduca sexta）を図鑑の版画の道具 PL.* で描く ----
+// 幼虫: 緑・横に7本のななめの白いすじ（上がわに黒いふち）・お尻の近くの赤い角（尾角）・胸の3対の脚・腹の4対の腹脚＋尾脚・気門の列
+// さなぎ: 赤茶・頭の下に「水さしの取っ手」のような口（口吻のさや）・翅のさやの線・腹の節・お尻のとげ
+// ガ: 細長くとがった前翅（灰褐色にぎざぎざの線と白い点）・小さな後翅（黒と白の帯）・太い胸・腹の横に黄色い点の列・先が曲がった触角
+const TAU = Math.PI * 2;
+const rnd = (i, j = 0) => { const v = Math.sin(i * 12.9898 + j * 78.233) * 43758.5453; return v - Math.floor(v); };
+function mapper(x0, y0, s, rot = 0, dir = 1) { const c = Math.cos(rot), n = Math.sin(rot); return (x, y) => { x *= dir; return [x0 + s * (x * c - y * n), y0 + s * (x * n + y * c)]; }; }
+const polyM = (m, pts, close = true) => g => { pts.forEach(([x, y], i) => { const q = m(x, y); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); if (close) g.closePath(); };
+const linesM = (m, segs) => g => segs.forEach(seg => seg.forEach(([x, y], i) => { const q = m(x, y); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }));
+const ellPts = (cx, cy, rx, ry, rot = 0, n = 32) => Array.from({ length: n }, (_, i) => { const a = i / n * TAU, x = Math.cos(a) * rx, y = Math.sin(a) * ry; return [cx + x * Math.cos(rot) - y * Math.sin(rot), cy + x * Math.sin(rot) + y * Math.cos(rot)]; });
+const qPts = (p0, c, p1, n = 10) => Array.from({ length: n + 1 }, (_, i) => { const t = i / n, a = (1 - t) * (1 - t), b = 2 * t * (1 - t), d = t * t; return [a * p0[0] + b * c[0] + d * p1[0], a * p0[1] + b * c[1] + d * p1[1]]; });
+const shift = (pts, dx, dy) => pts.map(([x, y]) => [x + dx, y + dy]);
+const many = ps => g => ps.forEach(p => p(g));   // いくつかの形を1つの道に（手彩色・輪郭をまとめて1回で描く。録画と確かめを軽くする）
+function arrow(g, x0, y0, x1, y1, w = 5, col = PL.INK) {
+  const a = Math.atan2(y1 - y0, x1 - x0), h = 24;
+  PL.ink(g, gg => { gg.moveTo(x0, y0); gg.lineTo(x1, y1); gg.moveTo(x1 - Math.cos(a - 0.45) * h, y1 - Math.sin(a - 0.45) * h); gg.lineTo(x1, y1); gg.lineTo(x1 - Math.cos(a + 0.45) * h, y1 - Math.sin(a + 0.45) * h); }, w, col);
+}
 
-// ---- 線画 ----
-// イモムシ（横向き。x, y は頭、dir=1 で右向き）。mem: 記憶の点の明るさ 0〜1
-function cater(g, x, y, s, t, o = {}) {
-  const dir = o.dir ?? 1, n = 9, sp = 26 * s;
-  g.save(); g.lineWidth = 4 * s;
-  for (let i = n - 1; i >= 0; i--) {
-    const px = x - dir * i * sp, py = y + Math.sin(t * 6 - i * 0.8) * 4 * s * (o.wig ?? 1);
-    const r = (i === 0 ? 20 : 17 + 3 * Math.sin(Math.PI * i / n)) * s;
-    g.fillStyle = i === 0 ? '#2f8f5f' : '#3fbf7f'; g.strokeStyle = '#9ff0c4';
-    g.beginPath(); g.arc(px, py, r, 0, Math.PI * 2); g.fill(); g.stroke();
-    if (i === n - 1) { g.beginPath(); g.moveTo(px - dir * r * 0.4, py - r * 0.8); g.lineTo(px - dir * r * 1.1, py - r * 1.9); g.stroke(); }   // しっぽの角
-  }
-  if (o.mem != null) memDot(g, x + dir * 2 * s, y - 4 * s, s, t, o.mem);
+// 幼虫の体の節（尾から: A10 尾・A9・A8（角）・A7〜A1・T3・T2・T1）
+const HW_SEG = [30, 18, 26, 24, 24, 24, 24, 24, 24, 24, 22, 20, 18];
+const HW_X0 = -150, HW_X1 = 120;
+const HW_B = (() => { const tot = HW_SEG.reduce((a, b) => a + b, 0); let x = HW_X0; const b = [x]; HW_SEG.forEach(w => { x += w / tot * (HW_X1 - HW_X0); b.push(x); }); return b; })();
+const hwH = x => { const u = (x - HW_X0) / (HW_X1 - HW_X0); return 50 * (u < 0.1 ? Math.pow(Math.sin(Math.PI / 2 * Math.max(0, u) / 0.1), 0.55) : u > 0.82 ? 1 - 0.3 * (u - 0.82) / 0.18 : 1); };
+const segOf = x => { for (let i = 0; i < HW_SEG.length; i++) if (x < HW_B[i + 1]) return i; return HW_SEG.length - 1; };
+// 横から。x, y は足もと（体のまん中）、頭が右（dir=-1 で左）。o: t（はううごき）, wig, mem（頭の記憶の印 0〜1）, rot
+function hornworm(g, x, y, s, o = {}) {
+  const dir = o.dir ?? 1, m = mapper(x, y, s, o.rot || 0, dir), t = o.t || 0, wig = o.wig ?? 1;
+  const lift = xx => -wig * 5 * Math.max(0, Math.sin(t * 5 - xx * 0.028));
+  const yb = xx => -15 + lift(xx);
+  const frac = xx => { const i = segOf(xx); return (xx - HW_B[i]) / (HW_B[i + 1] - HW_B[i]); };
+  const top = (dy = 0) => { const a = []; for (let xx = HW_X0; xx <= HW_X1 + 0.1; xx += 4) a.push([xx, yb(xx) - hwH(xx) - 2.2 * Math.sin(Math.PI * frac(xx)) + dy]); return a; };
+  const bot = () => { const a = []; for (let xx = HW_X1; xx >= HW_X0 - 0.1; xx -= 4) a.push([xx, yb(xx) + 2 * Math.sin(Math.PI * frac(xx))]); return a; };
+  const bodyPts = dy => [...top(dy), ...bot().map(([a, b]) => [a, b + dy])];
+  const body = polyM(m, bodyPts(0)), lw = Math.max(1.4, 1.5 * s), ow = Math.max(2.4, 3 * s);
+  g.save(); g.globalAlpha *= o.alpha ?? 1;
+  // 脚（腹脚 A6〜A3・尾脚 A10・胸脚 T3〜T1）
+  const legs = [];
+  [0, 4, 5, 6, 7].forEach(i => { const cx = (HW_B[i] + HW_B[i + 1]) / 2 + (i ? 0 : 4), b = yb(cx) + 1, l = lift(cx); legs.push([[cx - 9, b], [cx + 9, b], [cx + 8, l - 4], [cx + 3, l], [cx - 4, l], [cx - 8, l - 4]]); });
+  [10, 11, 12].forEach(i => { const cx = (HW_B[i] + HW_B[i + 1]) / 2, b = yb(cx) + 1; legs.push([[cx - 5, b], [cx + 5, b], [cx + 7, b + 9], [cx + 9, b + 13], [cx + 2, b + 10]]); });
+  const legP = many(legs.map(L => polyM(m, L))); PL.tint(g, legP, PL.T.leaf, 0.85); PL.ink(g, legP, lw * 1.2);
+  PL.ink(g, linesM(m, [0, 4, 5, 6, 7].map(i => { const cx = (HW_B[i] + HW_B[i + 1]) / 2 + (i ? 0 : 4), l = lift(cx); return [[cx - 5, l - 1.5], [cx + 5, l - 1.5]]; })), lw * 1.4);   // 腹脚の先のかぎ
+  // 体
+  PL.tint(g, body, PL.T.leaf, 0.8); PL.tint(g, body, PL.T.land, 0.35);
+  g.save(); g.beginPath(); body(g); g.clip();
+  PL.ink(g, linesM(m, HW_B.slice(1, -1).map(bx => [[bx, yb(bx) - hwH(bx) - 4], [bx, yb(bx) + 4]])), lw * 0.8, 'rgba(35,28,21,0.7)');   // 節の境
+  PL.ink(g, linesM(m, HW_B.slice(1, -2).flatMap((bx, i) => [0.33, 0.66].map(k => { const xx = bx + k * (HW_B[i + 2] - bx); return [[xx, yb(xx) - hwH(xx) - 2], [xx, yb(xx) + 2]]; }))), lw * 0.45, 'rgba(35,28,21,0.25)');   // 小さな輪（環節のしわ）
+  // ななめの白いすじ（A7〜A1。前の下から、後ろの上へ）。上がわに黒いふち
+  const st = []; for (let i = 3; i <= 9; i++) { const x0 = HW_B[i + 1] - 2, x1 = x0 - 46; st.push([[x0, yb(x0) - hwH(x0) * 0.2], [x1, yb(x1) - hwH(x1) * 0.92]]); }
+  PL.ink(g, linesM(m, st), Math.max(2.5, 4 * s), '#f4eedc');
+  PL.ink(g, linesM(m, st.map(([a, b]) => [[a[0] - 1, a[1] - 4.5], [b[0] - 1, b[1] - 4.5]])), lw * 1.1);
+  PL.hatch(g, body, { angle: 0.75, gap: Math.max(7, 4 * s), w: lw, not: polyM(m, bodyPts(-20)) });
   g.restore();
-}
-// さなぎ（横向き）
-function pupa(g, x, y, s, t, o = {}) {
-  g.save(); g.lineWidth = 4 * s; g.fillStyle = '#7a4f2a'; g.strokeStyle = '#e0b07a';
-  g.beginPath(); g.ellipse(x, y, 90 * s, 38 * s, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-  g.lineWidth = 2.5 * s;
-  for (let i = 1; i < 6; i++) { const xx = x - 70 * s + i * 24 * s; g.beginPath(); g.moveTo(xx, y - 30 * s); g.quadraticCurveTo(xx + 6 * s, y, xx, y + 30 * s); g.stroke(); }
-  if (o.mem != null) memDot(g, x + 70 * s, y - 6 * s, s, t, o.mem);
+  // 気門（A8〜A1・T1）
+  const spi = many([2, 3, 4, 5, 6, 7, 8, 9, 12].map(i => { const cx = (HW_B[i] + HW_B[i + 1]) / 2 + 3; return polyM(m, ellPts(cx, yb(cx) - hwH(cx) * 0.3, 2.6, 4.2, 0, 12)); }));
+  PL.tint(g, spi, PL.INK, 0.85); PL.ink(g, spi, lw * 0.7, '#f4eedc');
+  PL.ink(g, body, ow);
+  // 尾角（A8 の背から後ろへ反る。タバコスズメガは赤い）
+  const hx = (HW_B[2] + HW_B[3]) / 2 + 4, hy = yb(hx) - hwH(hx) + 1, cl = qPts([hx, hy], [hx + 4, hy - 34], [hx - 26, hy - 44], 10);
+  const hornPts = [...cl.map(([px, py], i) => [px + 6 * (1 - i / 10) + 0.6, py]), ...cl.slice().reverse().map(([px, py], i) => [px - 6 * (i / 10) - 0.6, py])];
+  const horn = polyM(m, hornPts); PL.tint(g, horn, PL.T.rust, 0.95); PL.ink(g, horn, lw * 1.4);
+  // 頭（小さく丸い。単眼の点）
+  const hb = yb(HW_X1), head = polyM(m, ellPts(HW_X1 + 12, hb - 21, 18, 22, 0.25, 28));
+  PL.tint(g, head, PL.T.leaf, 0.95); PL.ink(g, head, ow);
+  PL.ink(g, linesM(m, [[[HW_X1 + 20, hb - 3], [HW_X1 + 27, hb + 2], [HW_X1 + 23, hb + 5]], [[HW_X1 + 13, hb - 30], [HW_X1 + 22, hb - 22]]]), lw);
+  PL.ink(g, many([[HW_X1 + 22, hb - 14], [HW_X1 + 25, hb - 9]].map(([a, b]) => polyM(m, ellPts(a, b, 1.2, 1.2, 0, 8)))), Math.max(2, 2.4 * s));
   g.restore();
+  if (o.mem != null) { const [mx, my] = m(HW_X1 + 10, hb - 24); memDot(g, mx, my, Math.max(0.7, s), o.mem); }
 }
-// ガ（上から見た形）
-function moth(g, x, y, s, t, o = {}) {
-  g.save(); g.lineWidth = 4 * s; g.strokeStyle = '#d8c8a8';
-  const fl = o.flap ? Math.sin(t * 10) * 0.12 : 0;
-  for (const sd of [-1, 1]) {
-    g.save(); g.translate(x, y); g.scale(sd * (1 - Math.abs(fl)), 1);
-    g.fillStyle = 'rgba(150,120,90,0.85)';
-    g.beginPath(); g.moveTo(6 * s, -20 * s); g.quadraticCurveTo(80 * s, -70 * s, 120 * s, -40 * s); g.quadraticCurveTo(90 * s, 0, 8 * s, 6 * s); g.closePath(); g.fill(); g.stroke();
-    g.fillStyle = 'rgba(120,95,75,0.85)';
-    g.beginPath(); g.moveTo(8 * s, 6 * s); g.quadraticCurveTo(80 * s, 20 * s, 70 * s, 55 * s); g.quadraticCurveTo(30 * s, 60 * s, 6 * s, 30 * s); g.closePath(); g.fill(); g.stroke();
-    g.beginPath(); g.moveTo(3 * s, -38 * s); g.quadraticCurveTo(14 * s, -60 * s, 30 * s, -66 * s); g.stroke();   // 触角
+// 上から（通路の中を進む）。x, y は体のまん中、頭が rot の向き
+function hornwormTop(g, x, y, s, o = {}) {
+  const m = mapper(x, y, s, o.rot || 0), t = o.t || 0, lw = Math.max(1.4, 1.5 * s), ow = Math.max(2.4, 3 * s);
+  const w = xx => hwH(xx) * 0.46 * (1 + 0.05 * Math.sin(t * 5 - xx * 0.028));
+  const sway = xx => Math.sin(t * 3 - xx * 0.02) * 4 * (o.wig ?? 1);
+  const pts = dy => { const a = []; for (let xx = HW_X0; xx <= HW_X1 + 0.1; xx += 5) a.push([xx, sway(xx) - w(xx) + dy]); for (let xx = HW_X1; xx >= HW_X0 - 0.1; xx -= 5) a.push([xx, sway(xx) + w(xx) + dy]); return a; };
+  const body = polyM(m, pts(0));
+  g.save(); g.globalAlpha *= o.alpha ?? 1;
+  const pl = many([4, 5, 6, 7].flatMap(i => { const cx = (HW_B[i] + HW_B[i + 1]) / 2; return [-1, 1].map(sd => polyM(m, ellPts(cx, sway(cx) + sd * (w(cx) + 3), 6, 4, 0, 12))); })); PL.tint(g, pl, PL.T.leaf, 0.85); PL.ink(g, pl, lw);
+  PL.tint(g, body, PL.T.leaf, 0.8); PL.tint(g, body, PL.T.land, 0.35);
+  g.save(); g.beginPath(); body(g); g.clip();
+  PL.ink(g, linesM(m, HW_B.slice(1, -1).map(bx => [[bx, sway(bx) - 30], [bx, sway(bx) + 30]])), lw);
+  PL.ink(g, linesM(m, [3, 4, 5, 6, 7, 8, 9].flatMap(i => [-1, 1].map(sd => { const x0 = HW_B[i + 1] - 2; return [[x0, sway(x0) + sd * w(x0)], [x0 - 18, sway(x0 - 18) + sd * w(x0 - 18) * 0.45]]; }))), Math.max(3, 4.5 * s), '#f4eedc');
+  PL.ink(g, linesM(m, [[[HW_X0 + 30, 0], [HW_X1, 0]].map(([a]) => [a, sway(a)])]), lw * 0.6, 'rgba(35,28,21,0.5)');   // 背のまん中の線
+  PL.hatch(g, body, { angle: 0.75, gap: Math.max(7, 4 * s), w: lw, not: polyM(m, pts(-12)) });
+  g.restore();
+  PL.ink(g, body, ow);
+  const hx = (HW_B[2] + HW_B[3]) / 2, horn = polyM(m, [[hx + 6, sway(hx) - 5], [hx - 30, sway(hx - 30)], [hx + 6, sway(hx) + 5]]);
+  PL.tint(g, horn, PL.T.rust, 0.95); PL.ink(g, horn, lw * 1.3);
+  const head = polyM(m, ellPts(HW_X1 + 14, sway(HW_X1), 17, 17, 0, 24));
+  PL.tint(g, head, PL.T.leaf, 0.95); PL.ink(g, head, ow);
+  g.restore();
+  if (o.mem != null) { const [mx, my] = m(HW_X1 + 12, sway(HW_X1)); memDot(g, mx, my, Math.max(0.7, s), o.mem); }
+}
+
+// さなぎ（横から。x, y はまん中、頭が右）。長さ約 200（s=1）
+const PU_X0 = -92, PU_X1 = 90;
+const puR = x => { const u = (x - PU_X0) / (PU_X1 - PU_X0); return 36 * (u < 0.45 ? 0.16 + 0.84 * Math.pow(Math.max(0, u) / 0.45, 0.6) : Math.sqrt(Math.max(0, 1 - Math.pow((u - 0.45) / 0.55, 5)))); };
+const puPts = (dx = 0, dy = 0) => { const a = []; for (let x = PU_X0; x <= PU_X1 + 0.1; x += 3) a.push([x + dx, -puR(x) + dy]); for (let x = PU_X1; x >= PU_X0 - 0.1; x -= 3) a.push([x + dx, puR(x) * 0.95 + dy]); return a; };
+function pupa(g, x, y, s, o = {}) {
+  const m = mapper(x, y, s, o.rot || 0, o.dir ?? 1), lw = Math.max(1.4, 1.5 * s), ow = Math.max(2.6, 3.2 * s), body = polyM(m, puPts());
+  g.save(); g.globalAlpha *= o.alpha ?? 1;
+  // お尻のとげ（cremaster）
+  const cr = polyM(m, [[PU_X0 + 2, -5], [PU_X0 - 16, 0], [PU_X0 + 2, 5]]); PL.tint(g, cr, PL.T.brown, 0.9); PL.ink(g, cr, lw * 1.2);
+  if (!o.cut) { PL.tint(g, body, PL.T.rust, 0.6); PL.tint(g, body, PL.T.brown, 0.55); }
+  else PL.tint(g, body, PL.T.sand, 0.35);
+  if (!o.cut) {
+    g.save(); g.beginPath(); body(g); g.clip();
+    PL.ink(g, linesM(m, [-78, -64, -50, -36, -22, -8].map(sx => qPts([sx, -40], [sx - 7, 0], [sx, 40], 8))), lw);   // 腹の節
+    PL.ink(g, linesM(m, [qPts([52, -40], [30, 6], [-8, 40], 12), qPts([60, -40], [46, 0], [10, 40], 12)]), lw);   // 翅のさや・触角のさや
+    PL.ink(g, linesM(m, [qPts([78, -32], [64, -10], [70, 10], 6)]), lw * 0.8);   // 頭と胸の境
+    PL.hatch(g, body, { angle: 0.7, gap: Math.max(7, 4 * s), w: lw, not: polyM(m, puPts(4, -16)) });
     g.restore();
+    PL.ink(g, many([-71, -57, -43, -29, -15].map(sx => polyM(m, ellPts(sx, -6, 1, 2, 0, 10)))), Math.max(1.6, 2 * s));   // 気門
   }
-  g.fillStyle = '#6b5440'; g.beginPath(); g.ellipse(x, y + 10 * s, 11 * s, 48 * s, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-  if (o.mem != null) memDot(g, x, y - 30 * s, s, t, o.mem);
+  PL.ink(g, body, ow);
+  // 口吻のさや（水さしの取っ手）
+  if (!o.cut) {
+    const c = qPts([78, 18], [124, 70], [40, 33], 14), hp = [...c.map(([a, b], i) => [a + 3.5 * Math.sin(i / 14 * Math.PI), b + 3.5]), ...c.slice().reverse().map(([a, b]) => [a, b - 3])];
+    const h = polyM(m, hp); PL.tint(g, h, PL.T.brown, 0.85); PL.ink(g, h, lw * 1.2);
+  }
   g.restore();
+  if (o.mem != null) { const [mx, my] = m(66, -6); memDot(g, mx, my, Math.max(0.7, s), o.mem); }
 }
-function memDot(g, x, y, s, t, k) {
-  if (k <= 0) { g.save(); g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 3; g.setLineDash([4, 4]); g.beginPath(); g.arc(x, y, 9 * s, 0, Math.PI * 2); g.stroke(); g.restore(); return; }
-  g.save();
-  const r = (8 + 2 * Math.sin(t * 5)) * s;
-  const gr = g.createRadialGradient(x, y, 0, x, y, r * 3.2);
-  gr.addColorStop(0, `rgba(255,230,120,${0.9 * k})`); gr.addColorStop(1, 'rgba(255,207,74,0)');
-  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r * 3.2, 0, Math.PI * 2); g.fill();
-  g.fillStyle = `rgba(255,250,210,${k})`; g.beginPath(); g.arc(x, y, r * 0.8, 0, Math.PI * 2); g.fill();
+
+// ガ（上から。標本のように翅を広げる）。x, y は胸のまん中。o: fold（0 広げる〜1 たたむ）, flap, t, mem
+// 左右の翅は同じ形を鏡に写し、手彩色・斜線・輪郭は左右まとめて1回ずつ描く
+function moth(g, x, y, s, o = {}) {
+  const t = o.t || 0, fold = o.fold || 0, fl = o.flap ? Math.sin(t * 9) * 0.1 : 0, lw = Math.max(1.3, 1.4 * s), ow = Math.max(2.4, 3 * s);
+  g.save(); g.globalAlpha *= o.alpha ?? 1;
+  const mm = mapper(x, y, s, o.rot || 0);
+  PL.ink(g, many([-1, 1].map(sd => linesM(mm, [qPts([sd * 5, -78], [sd * 14, -118], [sd * 44, -126], 10), [[sd * 44, -126], [sd * 50, -122]]]))), Math.max(1.8, 2.6 * s));   // 触角（先がかぎに曲がる）
+  const sides = [-1, 1].map(sd => {
+    const m = mapper(x, y, s, o.rot || 0, sd);
+    const wm = (bx, by, a) => (px, py) => { const dx = px - bx, dy = py - by, c = Math.cos(a), n = Math.sin(a); return m(bx + dx * c - dy * n, by + dx * n + dy * c); };
+    return { hm: wm(12, -18, fold * 0.95 + fl * 0.6), fm: wm(11, -38, fold * 1.05 + fl) };
+  });
+  // 後翅（小さい。黒と白の帯）
+  const hw = [...qPts([12, -30], [70, -36], [94, -8], 8), ...qPts([94, -8], [96, 24], [58, 30], 8).slice(1), ...qPts([58, 30], [24, 24], [12, 2], 8).slice(1)];
+  const hp = many(sides.map(S => polyM(S.hm, hw)));
+  PL.tint(g, hp, PL.T.gray, 0.7);
+  g.save(); g.beginPath(); hp(g); g.clip();
+  PL.ink(g, many(sides.map(S => linesM(S.hm, [qPts([66, -40], [90, 4], [44, 36], 10), qPts([80, -40], [104, 6], [56, 42], 10)]))), Math.max(3, 6 * s), 'rgba(35,28,21,0.85)');
   g.restore();
-}
-function arrow(g, x0, y0, x1, y1, c = 'rgba(255,255,255,0.6)', w = 6) {
-  const a = Math.atan2(y1 - y0, x1 - x0);
-  g.save(); g.strokeStyle = c; g.fillStyle = c; g.lineWidth = w; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1 - Math.cos(a) * 20, y1 - Math.sin(a) * 20); g.stroke();
-  g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 - Math.cos(a - 0.45) * 30, y1 - Math.sin(a - 0.45) * 30); g.lineTo(x1 - Math.cos(a + 0.45) * 30, y1 - Math.sin(a + 0.45) * 30); g.closePath(); g.fill();
+  PL.ink(g, hp, ow * 0.8);
+  // 前翅（細長く、先がとがる。灰褐色にぎざぎざの横線）
+  const fw = [...qPts([10, -52], [74, -66], [160, -48], 10), ...qPts([160, -48], [134, -18], [104, 0], 8).slice(1), ...qPts([104, 0], [54, -4], [12, -26], 8).slice(1)];
+  const fp = many(sides.map(S => polyM(S.fm, fw)));
+  PL.tint(g, fp, PL.T.gray, 0.85); PL.tint(g, fp, PL.T.brown, 0.35);
+  g.save(); g.beginPath(); fp(g); g.clip();
+  const zig = (x0, x1, n) => Array.from({ length: n + 1 }, (_, i) => { const k = i / n; return [lerp(x0, x1, k) + (i % 2 ? 5 : -5), lerp(-66, 14, k)]; });
+  PL.ink(g, many(sides.map(S => linesM(S.fm, [[[14, -44], [146, -42]], [[16, -38], [128, -16]], [[18, -34], [112, 2]], [[18, -32], [92, 8]]]))), lw * 0.45, 'rgba(35,28,21,0.55)');   // 翅脈
+  PL.ink(g, many(sides.map(S => linesM(S.fm, [zig(52, 36, 8), zig(104, 82, 9)]))), lw * 1.1);
+  PL.ink(g, many(sides.map(S => linesM(S.fm, [qPts([138, -52], [116, -22], [104, 14], 8)]))), Math.max(2.5, 5 * s), 'rgba(35,28,21,0.55)');
+  PL.hatch(g, fp, { angle: 0.9, gap: Math.max(7, 3.6 * s), w: lw * 0.8, not: many(sides.map(S => polyM(S.fm, shift(fw, 0, -16)))) });
   g.restore();
+  const spot = many(sides.map(S => polyM(S.fm, ellPts(66, -40, 4.5, 3, 0, 10)))); PL.tint(g, spot, '#f4eedc', 0.95); PL.ink(g, spot, lw * 0.7);   // 白い点
+  PL.ink(g, fp, ow);
+  // 体: 腹（黄色い点が6対）・胸（太く毛深い）・頭（大きな目）
+  const abPts = [...qPts([-14, -18], [-19, 30], [-3, 90], 10), [0, 96], ...qPts([3, 90], [19, 30], [14, -18], 10)];
+  const ab = polyM(mm, abPts);
+  PL.tint(g, ab, PL.T.gray, 0.9); PL.tint(g, ab, PL.T.brown, 0.3);
+  g.save(); g.beginPath(); ab(g); g.clip();
+  PL.ink(g, linesM(mm, [2, 15, 28, 41, 54, 67, 80].map(yy => qPts([-20, yy], [0, yy + 5], [20, yy], 6))), lw * 0.8);
+  const spots = many([8, 21, 34, 47, 60, 73].flatMap((yy, i) => [-1, 1].map(sd => polyM(mm, ellPts(sd * (12 - i * 1.6), yy, 4, 4, 0, 10)))));
+  PL.tint(g, spots, PL.T.gold, 1); PL.ink(g, spots, lw * 0.9);
+  PL.hatch(g, ab, { angle: 0.9, gap: Math.max(7, 3.6 * s), w: lw * 0.8, not: polyM(mm, shift(abPts, -7, 0)) });
+  g.restore();
+  PL.ink(g, ab, ow);
+  const thP = ellPts(0, -44, 18, 27, 0, 30), th = polyM(mm, thP);
+  PL.tint(g, th, PL.T.gray, 0.95); PL.tint(g, th, PL.T.brown, 0.4);
+  PL.ink(g, linesM(mm, [qPts([-10, -64], [-14, -44], [-8, -22], 6), qPts([10, -64], [14, -44], [8, -22], 6)]), Math.max(2, 3.5 * s), 'rgba(35,28,21,0.7)');   // 胸の濃いすじ
+  PL.ink(g, linesM(mm, Array.from({ length: 18 }, (_, i) => { const a = i / 18 * TAU, cx = Math.cos(a) * 18, cy = -44 + Math.sin(a) * 27; return [[cx, cy], [cx * 1.18, -44 + (cy + 44) * 1.12]]; })), lw * 0.8);   // 胸の毛
+  PL.ink(g, th, ow);
+  const hd = polyM(mm, ellPts(0, -74, 11, 9, 0, 20)); PL.tint(g, hd, PL.T.gray, 0.95); PL.ink(g, hd, ow * 0.8);
+  const eyes = many([-1, 1].map(sd => polyM(mm, ellPts(sd * 10, -76, 5, 6, 0, 12)))); PL.tint(g, eyes, PL.INK, 0.9); PL.ink(g, eyes, lw);
+  g.restore();
+  if (o.mem != null) { const [mx, my] = mm(0, -74); memDot(g, mx, my, Math.max(0.7, s), o.mem); }
 }
-// 弱い電気の印（小さな稲妻。いたそうに描かない）
-function spark(g, x, y, k) {
-  if (k <= 0) return;
-  g.save(); g.globalAlpha *= k; g.strokeStyle = '#fff3a0'; g.lineWidth = 6; g.lineJoin = 'round';
-  g.beginPath(); g.moveTo(x - 6, y - 34); g.lineTo(x + 10, y - 6); g.lineTo(x - 8, y + 2); g.lineTo(x + 6, y + 32); g.stroke();
+// 記憶の印（朱の小さな丸。消えたら点線の輪だけ）
+function memDot(g, x, y, s, k) {
+  const r = 7 * s;
+  if (k <= 0.02) { g.save(); g.setLineDash([4, 5]); PL.ink(g, PL.circle(x, y, r * 1.5), 2.5); g.restore(); return; }
+  g.save(); g.globalAlpha *= clamp(k, 0, 1);
+  const c = PL.circle(x, y, r); PL.tint(g, c, PL.RED, 0.9); PL.ink(g, c, 2.5, PL.RED); PL.ink(g, PL.circle(x, y, r * 1.6), 2, PL.RED);
   g.restore();
 }
 
-// Y字の通路。左の腕ににおい。p: 通路のうえの位置（0=下はし、1=分かれ目、2=腕のはし）、side: -1 左／1 右
-const YM = { cx: 540, base: 1030, jy: 790, ay: 510, ax: 230 };
+// ---- 通路（Y字。上から見た図。左の腕ににおい）----
+const YM = { cx: 540, base: 1040, jy: 800, ay: 530, ax: 230, hw: 70 };
+function ymazePts(hw) {
+  const { cx, base, jy, ay, ax } = YM, L = Math.hypot(ax, jy - ay), d = [ax / L, (ay - jy) / L], n = [-d[1], d[0]];
+  const p1 = [cx + hw, jy + n[1] * hw + (hw - n[0] * hw) / d[0] * d[1]];
+  const E = [cx + ax, ay], eo = [E[0] + n[0] * hw + d[0] * (hw - 70), E[1] + n[1] * hw + d[1] * (hw - 70)], ei = [E[0] - n[0] * hw + d[0] * (hw - 70), E[1] - n[1] * hw + d[1] * (hw - 70)];
+  const crotch = [cx, jy - n[1] * hw + (n[0] * hw / d[0]) * d[1]];
+  const R = [[cx + hw, base + hw - 70], p1, eo, ei, crotch];
+  return [...R, ...R.slice(0, 4).reverse().map(([x, y]) => [2 * cx - x, y])];
+}
 function maze(g, t, o = {}) {
-  const { cx, base, jy, ay, ax } = YM;
-  const path = () => { g.beginPath(); g.moveTo(cx, base); g.lineTo(cx, jy); g.lineTo(cx - ax, ay); g.moveTo(cx, jy); g.lineTo(cx + ax, ay); };
-  g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
-  path(); g.strokeStyle = 'rgba(160,190,255,0.55)'; g.lineWidth = 150; g.stroke();
-  path(); g.strokeStyle = '#122045'; g.lineWidth = 138; g.stroke();
-  g.restore();
-  // においの雲（左の腕）
+  const { cx, jy, ay, ax } = YM, inner = ymazePts(70), outer = ymazePts(88), Y = PL.poly(inner);
+  const wall = gg => { PL.poly(outer)(gg); PL.poly(inner.slice().reverse())(gg); };
+  PL.tint(g, Y, PL.T.sand, 0.4);
   if (o.odor !== false) {
-    g.save();
-    for (let i = 0; i < 26; i++) {
-      const u = ((i * 0.137 + t * 0.12) % 1), px = cx - ax * (0.25 + 0.85 * u) + Math.sin(i * 7.1 + t) * 26, py = jy - (jy - ay) * (0.25 + 0.85 * u) + Math.cos(i * 3.3 + t * 1.3) * 26;
-      g.fillStyle = `rgba(199,155,255,${0.55 * Math.sin(Math.PI * u)})`; g.beginPath(); g.arc(px, py, 10 + (i % 3) * 4, 0, Math.PI * 2); g.fill();
-    }
+    g.save(); g.beginPath(); Y(g); g.clip();
+    PL.tint(g, PL.rect(0, 0, cx, jy + 10), PL.T.rose, 0.4);
+    PL.ink(g, gg => {   // においのゆらぎ（左の腕を外へ流れる）
+      for (let i = 0; i < 9; i++) {
+        const u = (i / 9 + t * 0.12) % 1, px = cx - ax * (0.15 + 0.8 * u) + Math.sin(i * 7.1) * 30, py = jy - (jy - ay) * (0.15 + 0.8 * u) + Math.cos(i * 3.3) * 30;
+        gg.moveTo(px - 18, py); gg.bezierCurveTo(px - 8, py - 12, px + 2, py + 12, px + 16, py);
+      }
+    }, 3.5, 'rgba(140,70,90,0.75)');
     g.restore();
-    TK.text(g, 'におい', cx - ax - 20, ay - 110, 46, { color: ODOR });
-    TK.text(g, 'なし', cx + ax + 20, ay - 110, 46, { color: TK.C.sub });
+  }
+  PL.tint(g, wall, PL.T.wood, 0.6); PL.hatch(g, wall, { angle: 0.9, gap: 8, w: 2 });
+  PL.ink(g, PL.poly(inner), 5); PL.ink(g, PL.poly(outer), 3);
+  if (o.odor !== false) {
+    PL.label(g, 'におい', cx - ax - 30, ay - 120, 46, { color: '#7a3a4a' });
+    PL.label(g, 'なし', cx + ax + 30, ay - 120, 46, { color: TK.C.sub });
   }
 }
 function mazePos(p, side) {
   const { cx, base, jy, ay, ax } = YM;
-  if (p <= 1) return [cx, lerp(base, jy, p), -Math.PI / 2];
-  const u = Math.min(p - 1, 1); return [cx + side * ax * u, lerp(jy, ay, u), Math.atan2(ay - jy, side * ax)];
+  if (p <= 1) return [cx, lerp(base - 60, jy, p), -Math.PI / 2];
+  const u = Math.min(p - 1, 1) * 0.62; return [cx + side * ax * u, lerp(jy, ay, u), Math.atan2(ay - jy, side * ax)];
 }
-// 通路の中の虫（イモムシは頭の向きに合わせて回す）
 function bugInMaze(g, t, p, side, kind, mem) {
-  const [x, y, ang] = mazePos(p, side);
-  g.save(); g.translate(x, y); g.rotate(ang);
-  if (kind === 'cater') cater(g, 0, 0, 1.0, t, { mem });
-  else { g.rotate(Math.PI / 2); moth(g, 0, 0, 0.75, t, { mem, flap: true }); }
-  g.restore();
+  const [x, y, ang] = mazePos(p, side), moving = p > 0 && p < 2;
+  if (kind === 'cater') hornwormTop(g, x, y, 0.7, { rot: ang, t: moving ? t : 0, mem });
+  else moth(g, x, y, 0.8, { rot: ang + Math.PI / 2, fold: 1, mem });
 }
-// 結果の大きな数字（通路の上）
 function bigPct(g, t, a, b, v, label) {
   TK.count(g, t, a, b, 0, v, { y: 200, size: 150, dur: 1.0, fmt: x => Math.round(x) + '%' });
-  if (t > a + 0.6 && t < b) { g.save(); g.globalAlpha = fade(t, a + 0.6, b, 0.25); TK.text(g, label, PW / 2, 310, 46, { color: TK.C.sub }); g.restore(); }
+  if (t > a + 0.6 && t < b) { g.save(); g.globalAlpha = fade(t, a + 0.6, b, 0.25); TK.text(g, label, PW / 2, 312, 46, { color: TK.C.sub }); g.restore(); }
 }
-
+// 弱い電気の印（小さな稲妻。いたそうに描かない）
+function spark(g, x, y, k) {
+  if (k <= 0) return;
+  g.save(); g.globalAlpha *= k;
+  const b = PL.poly([[x + 4, y - 34], [x - 14, y + 2], [x - 1, y + 2], [x - 8, y + 34], [x + 14, y - 6], [x + 1, y - 6], [x + 10, y - 34]]);
+  PL.tint(g, b, PL.T.gold, 1); PL.ink(g, b, 3);
+  g.restore();
+}
+// 筋肉の束（横すじ入り）
+function muscle(g, x, y, w, h, a, al = 1) {
+  g.save(); g.globalAlpha *= al; g.translate(x, y); g.rotate(a);
+  const r = PL.rect(-w / 2, -h / 2, w, h);
+  PL.tint(g, r, PL.T.rust, 0.9);
+  PL.ink(g, gg => { for (let xx = -w / 2 + 7; xx < w / 2; xx += 8) { gg.moveTo(xx, -h / 2); gg.lineTo(xx, h / 2); } }, 1.2, 'rgba(35,28,21,0.6)');
+  PL.ink(g, r, 2.5);
+  g.restore();
+}
 // さなぎの中（断面の模式図）。k: 0→1 で筋肉がこわれ、神経がのびる
+const PI_S = 4.2, PI_X = 540, PI_Y = 650;
 function pupaInside(g, t, k) {
-  const cx = 540, cy = 640, rx = 400, ry = 190;
-  g.save();
-  g.fillStyle = 'rgba(122,79,42,0.35)'; g.strokeStyle = '#e0b07a'; g.lineWidth = 6;
-  g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-  g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); g.clip();
-  // 筋肉（朱色の帯）→ かけらになって散る
-  for (let i = 0; i < 7; i++) {
-    const x0 = cx - 300 + i * 90, y0 = cy - 120;
-    for (let j = 0; j < 6; j++) {
-      const sd = Math.sin(i * 12.9 + j * 78.2) * 43758.5, r = sd - Math.floor(sd);
-      const dx = (r - 0.5) * 160 * k, dy = (Math.cos(i * 3 + j) * 0.5 + 0.3) * 160 * k;
-      g.globalAlpha = 1 - 0.75 * k;
-      g.fillStyle = VERM;
-      g.save(); g.translate(x0 + dx, y0 + j * 14 + dy); g.rotate(k * (r - 0.5) * 3);
-      g.fillRect(-36 + 30 * k, -6, 72 - 60 * k, 11); g.restore();
-    }
-  }
-  g.globalAlpha = 1;
-  // 脳と神経（空色）は残る。腹の神経の索と神経節、枝がのびる
-  const ny = cy + 95;
-  g.strokeStyle = SKY; g.fillStyle = SKY; g.lineWidth = 9; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(cx + 300, cy - 20); g.quadraticCurveTo(cx + 260, ny, cx + 180, ny); g.lineTo(cx - 330, ny); g.stroke();
-  g.beginPath(); g.ellipse(cx + 300, cy - 40, 46, 36, 0, 0, Math.PI * 2); g.fill();   // 脳
-  for (let i = 0; i < 7; i++) {
-    const gx = cx + 150 - i * 75;
-    g.beginPath(); g.arc(gx, ny, 15, 0, Math.PI * 2); g.fill();
-    const L = 30 + 70 * k;
-    g.lineWidth = 4;
-    g.beginPath(); g.moveTo(gx, ny); g.lineTo(gx - L * 0.5, ny - L); g.moveTo(gx, ny); g.lineTo(gx + L * 0.4, ny - L * 0.9); g.stroke();
-    g.lineWidth = 9;
+  const m = mapper(PI_X, PI_Y, PI_S), body = polyM(m, puPts());
+  pupa(g, PI_X, PI_Y, PI_S, { cut: true });
+  g.save(); g.beginPath(); body(g); g.clip();
+  // 筋肉（体のかべにそった束）→ かけらになって散る
+  for (let i = 0; i < 8; i++) for (let j = 0; j < 2; j++) {
+    const [mx, my] = m(-64 + i * 16 + j * 8, -22 + j * 10), r = rnd(i, j);
+    const dx = (r - 0.5) * 150 * k, dy = (0.4 + rnd(j, i) * 0.6) * 120 * k;
+    muscle(g, mx + dx, my + dy, 64 * (1 - 0.7 * k), 26, k * (r - 0.5) * 3, 1 - 0.7 * k);
   }
   g.restore();
+  // 脳と神経（腹がわのくさり）は残る
+  const cord = [m(66, -12), m(52, 20), m(30, 22), m(-70, 22)];
+  PL.ink(g, gg => { gg.moveTo(...cord[0]); gg.quadraticCurveTo(...cord[1], ...cord[2]); gg.lineTo(...cord[3]); }, 10, '#3f6f88');
+  PL.ink(g, gg => { gg.moveTo(...cord[0]); gg.quadraticCurveTo(...cord[1], ...cord[2]); gg.lineTo(...cord[3]); }, 4, '#9cc4d6');
+  const brain = polyM(m, ellPts(66, -14, 11, 9, 0.3, 20));
+  PL.tint(g, brain, PL.T.sea, 0.95); PL.hatch(g, brain, { angle: 0.8, gap: 7, w: 1.5, cx: PI_X, cy: PI_Y }); PL.ink(g, brain, 4);
+  for (let i = 0; i < 7; i++) {
+    const [gx, gy] = m(34 - i * 16, 22), L = 34 + 70 * k, gc = PL.circle(gx, gy, 15);
+    PL.ink(g, gg => { gg.moveTo(gx, gy); gg.quadraticCurveTo(gx - L * 0.2, gy - L * 0.6, gx - L * 0.5, gy - L); gg.moveTo(gx, gy); gg.quadraticCurveTo(gx + L * 0.3, gy - L * 0.5, gx + L * 0.4, gy - L * 0.9); }, 3, '#3f6f88');
+    PL.tint(g, gc, PL.T.sea, 0.95); PL.ink(g, gc, 3.5);
+  }
   // 凡例
-  const ly = 960;
-  g.fillStyle = VERM; g.fillRect(150, ly - 16, 60, 32);
-  TK.text(g, 'こわれて材料に（筋肉など）', 230, ly, 44, { align: 'left' });
-  g.fillStyle = SKY; g.fillRect(150, ly + 64, 60, 32);
-  TK.text(g, '残って作りかえ（脳・神経）', 230, ly + 80, 44, { align: 'left' });
+  const ly = 960, sw = (y, col) => { const r = PL.rect(150, y - 18, 60, 36); PL.tint(g, r, col, 0.9); PL.hatch(g, r, { angle: 0.9, gap: 8, w: 1.6 }); PL.ink(g, r, 3.5); };
+  sw(ly, PL.T.rust); PL.label(g, 'こわれて材料に（筋肉など）', 235, ly, 44, { align: 'left' });
+  sw(ly + 80, PL.T.sea); PL.label(g, '残って作りかえ（脳・神経）', 235, ly + 80, 44, { align: 'left' });
+}
+// 水のしずく
+function drop(g, x, y, r, a = 1) {
+  g.save(); g.globalAlpha *= a;
+  const d = PL.poly([...Array.from({ length: 13 }, (_, i) => { const th = Math.PI * (i / 12); return [x + Math.cos(th) * r, y + Math.sin(th) * r]; }), [x, y - r * 2.1]]);
+  PL.tint(g, d, PL.T.sea, 0.8); PL.ink(g, d, 2.5);
+  g.restore();
 }
 
 function draw(g, t) {
-  // 0〜5: イモムシ → さなぎ → ガ。記憶の点が光ったまま
+  // 0〜5: イモムシ → さなぎ → ガ（左上から右下へ）。記憶の印がついたまま
   if (t < 5.0) {
-    const y = 800, f = fade(t, -1, 5.0, 0.3);
+    const f = fade(t, -1, 5.0, 0.3);
     g.save(); g.globalAlpha = f;
-    if (t > 0.0) { g.save(); g.globalAlpha *= TK.pop(t, 0.0); cater(g, 300, y, 1.1, t, { mem: 1 }); g.restore(); }
-    if (t > 0.8) { arrow(g, 335, y, 395, y); }
-    if (t > 1.0) { g.save(); g.globalAlpha *= TK.pop(t, 1.0); pupa(g, 520, y, 1.25, t, { mem: 1 }); g.restore(); }
-    if (t > 1.6) { arrow(g, 640, y, 700, y); }
-    if (t > 1.8) { g.save(); g.globalAlpha *= TK.pop(t, 1.8); moth(g, 835, y - 10, 1.1, t, { mem: t > 2.6 ? 0.5 + 0.5 * Math.sin(t * 4) : 1, flap: true }); g.restore(); }
-    if (t > 2.4) TK.text(g, '？', 835, y - 170, 120, { color: Q });
+    if (t > 0.0) { g.save(); g.globalAlpha *= clamp(TK.pop(t, 0.0), 0, 1); hornworm(g, 270, 660, 1.2, { t, mem: 1 }); g.restore(); }
+    if (t > 0.8) arrow(g, 440, 690, 480, 745);
+    if (t > 1.0) { g.save(); g.globalAlpha *= clamp(TK.pop(t, 1.0), 0, 1); pupa(g, 590, 820, 1.45, { mem: 1 }); g.restore(); }
+    if (t > 1.6) arrow(g, 735, 885, 770, 925);
+    if (t > 1.8) { g.save(); g.globalAlpha *= clamp(TK.pop(t, 1.8), 0, 1); moth(g, 840, 1050, 1.05, { t, flap: true, mem: t > 2.6 ? 0.5 + 0.5 * Math.sin(t * 4) : 1 }); g.restore(); }
+    if (t > 2.4) PL.label(g, '？', 990, 830, 120, { color: PL.RED });
     g.restore();
-    TK.hook(g, t, 0.0, 2.4, 'ドロドロになっても\n[記憶は残る？]', { y: 360, size: 112 });
-    if (t > 2.4) { g.save(); g.globalAlpha = fade(t, 2.4, 5.0, 0.3); TK.text(g, 'タバコスズメガ', PW / 2, 1000, 48, { color: TK.C.sub }); g.restore(); }
+    TK.hook(g, t, 0.0, 2.4, 'ドロドロになっても\n[記憶は残る？]', { y: 330, size: 112 });
+    if (t > 2.4) {
+      g.save(); g.globalAlpha = fade(t, 2.4, 5.0, 0.3);
+      PL.label(g, 'タバコスズメガ', 90, 1010, 56, { align: 'left', color: PL.INK });
+      PL.label(g, '（さなぎを経て ガになる）', 90, 1080, 36, { align: 'left', color: TK.C.sub, bold: false });
+      PL.label(g, 'イモムシ', 300, 720, 38, { color: TK.C.sub, bold: false }); PL.label(g, 'さなぎ', 470, 905, 38, { color: TK.C.sub, bold: false });
+      g.restore();
+    }
   }
   // 5〜12: 教える（におい → 弱い電気、8回）
   if (t >= 5.0 && t < 12.0) {
     const f = fade(t, 5.0, 12.0, 0.3);
     g.save(); g.globalAlpha = f;
-    // まっすぐな管の中のイモムシ。においが流れてきて、すこしあとに弱い電気
-    const y = 640;
-    g.lineCap = 'round';
-    g.strokeStyle = 'rgba(160,190,255,0.55)'; g.lineWidth = 210; g.beginPath(); g.moveTo(190, y); g.lineTo(900, y); g.stroke();
-    g.strokeStyle = '#122045'; g.lineWidth = 196; g.stroke();
+    // 横から見た管。左からにおいが流れてきて、すこしあとに弱い電気
+    const y0 = 520, y1 = 790, x0 = 120, x1 = 950;
+    const room = PL.rect(x0, y0, x1 - x0, y1 - y0), wt = PL.rect(x0, y0 - 22, x1 - x0, 22), wb = PL.rect(x0, y1, x1 - x0, 22);
+    PL.tint(g, room, PL.T.sky, 0.25);
+    [wt, wb].forEach(w => { PL.tint(g, w, PL.T.wood, 0.6); PL.hatch(g, w, { angle: 0.9, gap: 8, w: 2 }); PL.ink(g, w, 4); });
+    const end = PL.rect(x1, y0 - 22, 22, y1 - y0 + 44); PL.tint(g, end, PL.T.wood, 0.6); PL.hatch(g, end, { angle: 0.9, gap: 8, w: 2 }); PL.ink(g, end, 4);
     const rep = t < 8.6 ? (t - 5.0) / 3.6 : ((t - 8.6) % 0.45) / 0.45;   // 1回目はゆっくり、あとは速く
-    for (let i = 0; i < 14; i++) {
-      const u = clamp(rep * 1.6 - i * 0.04, 0, 1), px = 200 + u * 600 + Math.sin(i * 5) * 20, py = y + Math.cos(i * 3.1 + t * 2) * 34;
-      if (u > 0 && u < 1) { g.fillStyle = `rgba(199,155,255,${0.6 * Math.sin(Math.PI * u)})`; g.beginPath(); g.arc(px, py, 12, 0, Math.PI * 2); g.fill(); }
-    }
-    cater(g, 800, y, 1.5, t, { mem: clamp((t - 6.5) / 5, 0.15, 1) });
-    spark(g, 680, y - 110, rep > 0.7 ? 1 - (rep - 0.7) / 0.3 : 0);
-    TK.text(g, '① におい', 330, 420, 54, { color: ODOR });
-    TK.text(g, '② 弱い電気', 700, 420, 54, { color: '#fff3a0' });
+    g.save(); g.beginPath(); room(g); g.clip();
+    PL.ink(g, gg => {
+      for (let i = 0; i < 12; i++) {
+        const u = clamp(rep * 1.6 - i * 0.05, 0, 1); if (u <= 0 || u >= 1) continue;
+        const px = x0 + 20 + u * 300 + Math.sin(i * 5) * 20, py = (y0 + y1) / 2 + Math.cos(i * 3.1) * 50;
+        gg.moveTo(px - 20, py); gg.bezierCurveTo(px - 8, py - 13, px + 4, py + 13, px + 18, py);
+      }
+    }, 3.5, 'rgba(140,70,90,0.75)');
     g.restore();
-    TK.text(g, 'におい: 酢酸エチル（接着剤や除光液にも使われる）', PW / 2, 830, 34, { color: TK.C.sub, bold: false });
+    hornworm(g, 700, y1, 1.55, { t, mem: clamp((t - 6.5) / 5, 0.15, 1) });
+    spark(g, 700, 590, rep > 0.7 ? 1 - (rep - 0.7) / 0.3 : 0);
+    PL.label(g, '① におい', 280, 440, 54, { color: '#7a3a4a' });
+    PL.label(g, '② 弱い電気', 720, 440, 54, { color: PL.INK });
+    g.restore();
+    TK.text(g, 'におい: 酢酸エチル（接着剤や除光液にも使われる）', PW / 2, 880, 34, { color: TK.C.sub, bold: false });
     if (t >= 8.6) {
       const n = Math.min(8, 1 + Math.floor((t - 8.6) / 0.45) + 1);
       g.save(); g.globalAlpha = fade(t, 8.6, 12, 0.2);
-      TK.text(g, '× ' + n + ' 回', PW / 2, 260, 120, { color: n >= 8 ? TK.C.acc : '#fff' });
+      PL.label(g, '× ' + n + ' 回', 300, 270, 120, { color: n >= 8 ? PL.RED : PL.INK });
       g.restore();
     }
   }
@@ -241,9 +392,9 @@ function draw(g, t) {
   if (t >= 16.0 && t < 22.0) {
     const k = ease(clamp((t - 17.0) / 4.0, 0, 1));
     g.save(); g.globalAlpha = fade(t, 16.0, 22.0, 0.3);
-    TK.text(g, 'さなぎの中（模式図）', PW / 2, 280, 60, { color: TK.C.sub });
+    PL.label(g, 'さなぎの中（模式図）', 90, 290, 60, { align: 'left', color: TK.C.sub });
     pupaInside(g, t, k);
-    if (t > 19.0) memDot(g, 840, 600, 1.4, t, 1);
+    if (t > 19.0) { const [bx, by] = mapper(PI_X, PI_Y, PI_S)(66, -14); memDot(g, bx, by, 1.4, 1); PL.leader(g, bx + 18, by - 40, 900, 400, PL.RED); PL.label(g, '脳は残る', 900, 370, 44, { color: PL.RED }); }
     g.restore();
   }
   // 22〜30: ガで試す → 77%（何もしないガはほぼ半々）
@@ -254,12 +405,12 @@ function draw(g, t) {
   }
   if (t >= 26.0 && t < 30.0) {
     g.save(); g.globalAlpha = fade(t, 26.0, 30.0, 0.3);
-    moth(g, 540, 930, 1.0, t, { mem: 1, flap: true });
+    moth(g, 560, 990, 1.45, { t, mem: 1, flap: true });
     g.restore();
     bigPct(g, t, 26.0, 30.0, 77, 'ガの 77% が「におい」をさけた');
     TK.bars(g, t, 26.6, 30.0, [
-      { label: 'イモムシのとき教えたガ', v: 0.77, color: TK.C.acc, text: '77%' },
-      { label: '何も教えていないガ', v: 0.5, color: 'rgba(200,215,255,0.7)', text: 'ほぼ半々' },
+      { label: 'イモムシのとき教えたガ', v: 0.77, text: '77%' },
+      { label: '何も教えていないガ', v: 0.5, text: 'ほぼ半々' },
     ], { y: 440, gap: 170, size: 44, stagger: 0.5 });
   }
   // 30〜36: においが残っていただけ？ → 2つの確かめ
@@ -272,16 +423,18 @@ function draw(g, t) {
     ];
     for (const c of cards) {
       if (t < c.a) continue;
-      g.save(); g.globalAlpha *= TK.pop(t, c.a);
+      const cx = c.x + 225;
+      g.save(); g.globalAlpha *= clamp(TK.pop(t, c.a), 0, 1);
       TK.card(g, c.x, 200, 450, 820);
-      TK.lines(g, c.title, c.x + 225, 300, 44, { maxw: 410 });
-      pupa(g, c.x + 225, 560, 1.4, t, { mem: c.ok ? 1 : 0 });
-      if (c.ok) { for (let i = 0; i < 7; i++) { const u = (t * 0.8 + i / 7) % 1; g.fillStyle = `rgba(95,212,255,${0.8 * (1 - u)})`; g.beginPath(); g.ellipse(c.x + 90 + i * 45, 420 + u * 80, 7, 11, 0, 0, Math.PI * 2); g.fill(); } }
-      else { for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2 + t * 0.6; g.fillStyle = 'rgba(199,155,255,0.55)'; g.beginPath(); g.arc(c.x + 225 + Math.cos(a) * 170, 560 + Math.sin(a) * 85, 9, 0, Math.PI * 2); g.fill(); } }
+      TK.lines(g, c.title, cx, 300, 44, { maxw: 410 });
+      pupa(g, cx - 8, 600, 1.55, { mem: c.ok ? 1 : 0 });
+      if (c.ok) { for (let i = 0; i < 6; i++) { const u = (t * 0.8 + i / 6) % 1; drop(g, c.x + 105 + i * 48, 420 + u * 70, 9, 1 - u); } }
+      else PL.ink(g, gg => { for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + t * 0.6, px = cx + Math.cos(a) * 165, py = 590 + Math.sin(a) * 92; gg.moveTo(px - 16, py); gg.bezierCurveTo(px - 6, py - 11, px + 4, py + 11, px + 15, py); } }, 3.5, 'rgba(140,70,90,0.75)');
       if (t > c.r) {
-        g.save(); g.globalAlpha *= TK.pop(t, c.r);
-        TK.text(g, c.ok ? '○' : '×', c.x + 225, 770, 150, { color: c.ok ? TK.C.green : TK.C.red });
-        TK.text(g, c.res, c.x + 225, 930, 50, { color: c.ok ? TK.C.green : TK.C.red });
+        g.save(); g.globalAlpha *= clamp(TK.pop(t, c.r), 0, 1);
+        if (c.ok) PL.ink(g, PL.circle(cx, 790, 62), 12, PL.GREEN);
+        else PL.ink(g, gg => { gg.moveTo(cx - 55, 735); gg.lineTo(cx + 55, 845); gg.moveTo(cx + 55, 735); gg.lineTo(cx - 55, 845); }, 12, PL.RED);
+        PL.label(g, c.res, cx, 930, 50, { color: c.ok ? PL.GREEN : PL.RED });
         g.restore();
       }
       g.restore();
@@ -292,19 +445,19 @@ function draw(g, t) {
   if (t >= 36.0) {
     const f = fade(t, 36.0, 40.5, 0.3);
     g.save(); g.globalAlpha = f;
-    TK.text(g, '3齢（若いころ）に教えると', PW / 2, 260, 64, { color: TK.C.sub });
-    cater(g, 380, 560, 0.95, t, { mem: 1 });
-    TK.text(g, 'イモムシのうちは', 270, 680, 42, { color: TK.C.sub });
-    TK.text(g, '81% 覚えていた', 270, 750, 56, { color: TK.C.acc });
-    arrow(g, 520, 600, 620, 600);
+    PL.label(g, '3齢（若いころ）に教えると', 90, 260, 64, { align: 'left', color: TK.C.sub });
+    hornworm(g, 270, 640, 0.8, { t, mem: 1 });
+    PL.label(g, 'イモムシのうちは', 270, 740, 42, { color: TK.C.sub });
+    PL.label(g, '81% 覚えていた', 270, 810, 56, { color: PL.RED });
+    arrow(g, 500, 590, 620, 590);
     const k = clamp((t - 37.4) / 0.8, 0, 1);
-    moth(g, 800, 560, 1.05, t, { mem: k < 1 ? 1 - k : 0, flap: true });
-    if (t > 38.0) { g.save(); g.globalAlpha *= TK.pop(t, 38.0); TK.text(g, 'ガでは', 800, 700, 42, { color: TK.C.sub }); TK.text(g, '覚えていなかった', 800, 770, 56, { color: TK.C.red }); g.restore(); }
+    moth(g, 830, 600, 0.95, { t, flap: true, mem: k < 1 ? 1 - k : 0 });
+    if (t > 38.0) { g.save(); g.globalAlpha *= clamp(TK.pop(t, 38.0), 0, 1); PL.label(g, 'ガでは', 810, 740, 42, { color: TK.C.sub }); PL.label(g, '覚えていなかった', 810, 810, 56, { color: PL.INK }); g.restore(); }
     g.restore();
   }
   if (t >= 5.0 && t < 12.0) TK.note(g, t, 5.0, 12.0, '電気は、ごく弱いもの', { size: 32 });
   if (t >= 16.0 && t < 22.0) TK.note(g, t, 16.0, 22.0, '器官ごとの色わけの模式図（細胞1つずつではない）', { size: 32 });
-  if (t >= 37.0) TK.note(g, t, 37.0, 40.0, '出どころ: Blackiston, Silva Casey & Weiss (2008)\nPLoS ONE 3(3): e1736', { size: 30 });
+  if (t >= 37.0) TK.note(g, t, 37.0, 40.0, '出どころ: Blackiston, Silva Casey & Weiss (2008) PLoS ONE 3(3): e1736', { size: 28 });
 }
 
 triviaStart({ out: 'metamorphosis-trivia1', dur: DUR, draw, subs, cues, peek: 1.5, voice: 'auto' });

@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく god-view-2（型B もしも計算）「人類のエネルギーで地球をこなごなにするには何年？」。台本は trivia/god-view.md。?short で録る
@@ -31,54 +34,65 @@ const cues = [
   { t: 16.0, type: 'ding' }, { t: 18.0, type: 'pop' }, { t: 22.0, type: 'whoosh' }, { t: 24.0, type: 'ding' },
 ];
 
-// 地球のかけら（扇形）。s: 0 で集まった地球、1 で遠くへ
+/// 地球のかけら（扇形の断面: 内がわ＝核、外がわ＝マントルと地殻）。s: 0 で集まった地球、1 で遠くへ
 const CX = 540, CY = 640, ER = 210;
 const SHARDS = [];
 for (let ring = 0; ring < 2; ring++) for (let i = 0; i < (ring ? 18 : 9); i++) {
   const n = ring ? 18 : 9, r = Math.sin((i + ring * 40) * 33.7) * 1e4, u = r - Math.floor(r);
-  SHARDS.push({ a0: i / n * Math.PI * 2, a1: (i + 1) / n * Math.PI * 2, r0: ring ? 0.55 : 0, r1: ring ? 1 : 0.55, sp: (ring ? 1.0 : 0.55) * (0.7 + 0.6 * u), spin: (u - 0.5) * 2, col: ring ? (i % 3 ? '#3d7fd6' : '#59c08a') : '#c96a4a' });
+  SHARDS.push({ a0: i / n * Math.PI * 2, a1: (i + 1) / n * Math.PI * 2, r0: ring ? 0.55 : 0, r1: ring ? 1 : 0.55, sp: (ring ? 1.0 : 0.55) * (0.7 + 0.6 * u), spin: (u - 0.5) * 2, ring, sea: i % 3 !== 0 });
 }
 function shards(g, s, f = 1) {
   g.save(); g.globalAlpha *= f;
-  // まん中の芯（とけた鉄）
-  const cg = g.createRadialGradient(CX, CY, 0, CX, CY, ER * 0.3); cg.addColorStop(0, '#fff0b0'); cg.addColorStop(1, '#ff8a3a');
+  if (s < 0.015) { if (window.LOOK && LOOK.planet) LOOK.planet(g, CX, CY, ER, 1); g.restore(); return; }   // まだ割れていない（本物の地形の地球）
+  // かけらごとの置き場所（道を作るときだけ座標をずらす。手彩色は同じ色をまとめて1回でぬる＝軽く）
+  const place = (g2, p) => { const am = (p.a0 + p.a1) / 2, rm = ER * (p.r0 + p.r1) / 2, d = s * p.sp * 520; g2.translate(CX + Math.cos(am) * (rm + d), CY + Math.sin(am) * (rm + d)); g2.rotate(s * p.spin * 2); g2.translate(-Math.cos(am) * rm, -Math.sin(am) * rm); };
+  const wedge = (p, r0, r1, dx = 0, dy = 0) => g2 => { g2.save(); place(g2, p); g2.translate(dx, dy); g2.moveTo(Math.cos(p.a0) * ER * r1, Math.sin(p.a0) * ER * r1); g2.arc(0, 0, ER * r1, p.a0, p.a1); g2.arc(0, 0, ER * r0, p.a1, p.a0, true); g2.closePath(); g2.restore(); };
+  const union = (pred, r0, r1) => g2 => SHARDS.filter(pred).forEach(p => wedge(p, r0 ?? p.r0, r1 ?? p.r1)(g2));
+  PL.tint(g, union(p => p.ring, 0.55, 0.92), PL.T.rust, 0.7);             // マントル
+  PL.tint(g, union(p => p.ring && p.sea, 0.92, 1), PL.T.sea, 0.9);         // 海
+  PL.tint(g, union(p => p.ring && !p.sea, 0.92, 1), PL.T.land, 0.9);       // 陸
+  PL.tint(g, union(p => !p.ring), PL.T.gold, 0.85);                        // 核（鉄）
   for (const p of SHARDS) {
-    const am = (p.a0 + p.a1) / 2, rm = ER * (p.r0 + p.r1) / 2, d = s * p.sp * 520;
-    const ox = CX + Math.cos(am) * (rm + d), oy = CY + Math.sin(am) * (rm + d);
-    g.save(); g.translate(ox, oy); g.rotate(s * p.spin * 2); g.translate(-Math.cos(am) * rm, -Math.sin(am) * rm);
-    g.fillStyle = p.col; g.strokeStyle = 'rgba(11,20,48,0.9)'; g.lineWidth = 3;
-    g.beginPath(); g.arc(0, 0, ER * p.r1, p.a0, p.a1); g.arc(0, 0, ER * p.r0, p.a1, p.a0, true); g.closePath(); g.fill(); g.stroke();
-    g.restore();
+    const all = wedge(p, p.r0, p.r1);
+    if (p.ring) {
+      PL.ink(g, wedge(p, 0.92, 1), 1.6);
+      PL.ink(g, gg => { gg.save(); place(gg, p); for (let k = 1; k < 3; k++) { const rr = ER * (0.55 + k * 0.12); gg.moveTo(Math.cos(p.a0) * rr, Math.sin(p.a0) * rr); gg.arc(0, 0, rr, p.a0, p.a1); } gg.restore(); }, 1.2, 'rgba(35,28,21,0.5)');   // 層のすじ
+    } else PL.ink(g, gg => { gg.save(); place(gg, p); const rr = ER * 0.35; gg.moveTo(Math.cos(p.a0) * rr, Math.sin(p.a0) * rr); gg.arc(0, 0, rr, p.a0, p.a1); gg.restore(); }, 1.2, 'rgba(35,28,21,0.5)');   // 内核のさかい
+    PL.ink(g, all, 3.5);
   }
-  g.fillStyle = cg; g.globalAlpha *= clamp(1 - s * 3, 0, 1); g.beginPath(); g.arc(CX, CY, ER * 0.3, 0, Math.PI * 2); g.fill();
+  // かげの斜線（光は左上から。かけらごとに光の当たる所を抜く）
+  PL.hatch(g, union(() => true), { angle: 0.8, gap: 8, w: 1.5, not: g2 => SHARDS.forEach(p => wedge(p, p.r0, p.r1, -14, -14)(g2)) });
   g.restore();
 }
-function sun(g, x, y, r) {
-  const gl = g.createRadialGradient(x, y, r * 0.8, x, y, r * 1.6); gl.addColorStop(0, 'rgba(255,190,80,0.5)'); gl.addColorStop(1, 'rgba(255,140,40,0)');
-  g.fillStyle = gl; g.beginPath(); g.arc(x, y, r * 1.6, 0, Math.PI * 2); g.fill();
-  const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, '#fffbe0'); gr.addColorStop(0.5, '#ffd25a'); gr.addColorStop(1, '#f08a24');
-  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+// 矢印（墨）
+function arrow(g, x0, y0, x1, y1, col = PL.INK, w = 6, hd = 22) {
+  const a = Math.atan2(y1 - y0, x1 - x0);
+  PL.ink(g, gg => { gg.moveTo(x0, y0); gg.lineTo(x1, y1); gg.moveTo(x1 - hd * Math.cos(a - 0.45), y1 - hd * Math.sin(a - 0.45)); gg.lineTo(x1, y1); gg.lineTo(x1 - hd * Math.cos(a + 0.45), y1 - hd * Math.sin(a + 0.45)); }, w, col);
+}
+// 太陽（古い図鑑の版画: 手彩色の球・黒点・まっすぐな光とゆらぐ光を交互に）
+function sun(g, x, y, r, t) {
+  PL.ink(g, gg => { for (let i = 0; i < 32; i++) { const a = i / 32 * Math.PI * 2 + t * 0.05, r0 = r * 1.08, r1 = r * (i % 2 ? 1.28 : 1.4); if (i % 2) { gg.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0); for (let k = 0; k <= 8; k++) { const rr = lerp(r0, r1, k / 8), da = Math.sin(k * 1.6) * 0.02; gg.lineTo(x + Math.cos(a + da) * rr, y + Math.sin(a + da) * rr); } } else { gg.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0); gg.lineTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1); } } }, 4, '#a8740f');
+  PL.sphere(g, x, y, r, PL.T.gold, { a: 0.85, light: [-0.6, -0.7], contour: false, inside: gg => { [[-0.3, 0.2, 0.06], [0.25, -0.1, 0.04], [0.1, 0.35, 0.05]].forEach(([dx, dy, rr]) => { const sp = PL.circle(x + dx * r, y + dy * r, rr * r); PL.tint(gg, sp, PL.T.brown, 0.9); PL.ink(gg, sp, 2); }); } });
 }
 
 function draw(g, t) {
   // 0〜3: ちぎれて散る
   if (t < 3.0) {
-    shards(g, TK.out((t - 0.5) / 2.0) * 0.7);
-    TK.hook(g, t, 0.0, 3.0, 'これに要る\n[エネルギー]は？', { y: 270, size: 100 });
+    shards(g, TK.out((t - 0.5) / 2.0) * 0.5);   // 画面の中で散る（字と重ねない）
+    TK.hook(g, t, 0.0, 3.0, 'これに要る\n[エネルギー]は？', { y: PL.SUBY, size: 100 });
   }
   // 3〜9: 重力で引きもどす → それに勝つエネルギー
   if (t >= 3.0 && t < 9.0) {
     const f = fade(t, 3.0, 9.0, 0.3);
-    const s = t < 5.5 ? lerp(0.7, 0.04, ease((t - 3.0) / 2.5)) : 0.04 + 0.02 * Math.sin(t * 6);
+    const s = t < 5.5 ? lerp(0.5, 0.04, ease((t - 3.0) / 2.5)) : 0.04 + 0.02 * Math.sin(t * 6);
     shards(g, s, f);
     g.save(); g.globalAlpha = f;
     if (t < 6.0) {
-      g.strokeStyle = TK.C.acc2; g.lineWidth = 6;
-      for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2, r1 = 470, r2 = 330; g.beginPath(); g.moveTo(CX + Math.cos(a) * r1, CY + Math.sin(a) * r1); g.lineTo(CX + Math.cos(a) * r2, CY + Math.sin(a) * r2); g.stroke(); }
-      TK.text(g, '自分の重力で、引きもどす', PW / 2, 230, 64);
+      for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + Math.PI / 8, r1 = 410, r2 = 290; arrow(g, CX + Math.cos(a) * r1, CY + Math.sin(a) * r1, CX + Math.cos(a) * r2, CY + Math.sin(a) * r2, TK.C.acc2, 7, 24); }
+      if (t > 4.2) PL.label(g, '自分の重力で、引きもどす', PW / 2, 180, 64);   // かけらが寄ってから
     } else {
-      TK.card(g, 150, 170, 780, 150);
-      TK.text(g, '約 [2×10³²] ジュール', PW / 2, 245, 80);
+      TK.card(g, 150, 150, 780, 140);
+      PL.label(g, '約 [2×10³²] ジュール', PW / 2, 220, 80);
     }
     g.restore();
     TK.note(g, t, 6.0, 9.0, 'かけらを全部、無限に遠くへとばす最低のエネルギー（一様な球の計算 3GM²/5R）', { size: 28 });
@@ -87,12 +101,16 @@ function draw(g, t) {
   if (t >= 9.0 && t < 16.0) {
     const f = fade(t, 9.0, 16.0, 0.3);
     g.save(); g.globalAlpha = f;
-    TK.text(g, '人類が1年に使うエネルギー', PW / 2, 260, 56, { color: TK.C.sub });
-    TK.text(g, '約 [600] エクサジュール', PW / 2, 360, 76);
-    TK.text(g, '＝ 6×10²⁰ ジュール', PW / 2, 450, 48, { color: TK.C.sub, bold: false });
-    TK.text(g, 'ぜんぶつぎこむと…', PW / 2, 640, 60);
+    PL.label(g, '人類が1年に使うエネルギー', PW / 2, 250, 56, { color: TK.C.sub });
+    PL.label(g, '約 [600] エクサジュール', PW / 2, 350, 76);
+    PL.label(g, '＝ 6×10²⁰ ジュール', PW / 2, 440, 48, { color: TK.C.sub, bold: false });
+    // 小さな地球へ、毎年つぎこむ
+    if (window.LOOK && LOOK.planet) LOOK.planet(g, 210, 640, 90, 1);
+    arrow(g, 330, 640, 400, 640, PL.RED, 6, 22);
+    PL.label(g, 'ぜんぶつぎこむと…', 430, 640, 58, { align: 'left' });
     const n = Math.floor(Math.abs(Math.sin(Math.floor(t * 12) * 12.9898) * 43758.5453) % 9000) + 1000;
-    TK.text(g, n.toLocaleString('ja-JP') + ' 億年？', PW / 2, 820, 130, { color: TK.C.dim });
+    PL.label(g, n.toLocaleString('ja-JP') + ' 億年？', PW / 2, 850, 130, { color: TK.C.sub });
+    PL.ink(g, gg => { gg.moveTo(200, 935); gg.lineTo(880, 935); }, 3);
     g.restore();
     TK.note(g, t, 9.0, 16.0, 'いまのペースで（2025年の世界のエネルギー供給）', { size: 30 });
   }
@@ -100,20 +118,20 @@ function draw(g, t) {
   if (t >= 16.0 && t < 22.0) {
     TK.count(g, t, 16.0, 22.0, 0, 4000, { y: 380, size: 170, dur: 0.9, fmt: v => '約' + Math.round(v).toLocaleString('ja-JP') + '億年' });
     TK.bars(g, t, 17.6, 22.0, [
-      { label: '宇宙の年齢', v: 138 / 4000, color: TK.C.acc2 },
-      { label: 'こなごなにするまで', v: 1, color: TK.C.acc, text: '約30倍' },
+      { label: '宇宙の年齢', v: 138 / 4000 },
+      { label: 'こなごなにするまで', v: 1, text: '約30倍' },
     ], { y: 640, gap: 190, stagger: 0.6 });
-    if (t > 17.6) { g.save(); g.globalAlpha = fade(t, 17.6, 22.0, 0.3); TK.text(g, '138億年', 210, 718, 42, { align: 'left', color: TK.C.sub }); g.restore(); }
+    if (t > 17.6) { g.save(); g.globalAlpha = fade(t, 17.6, 22.0, 0.3); PL.label(g, '138億年', 210, 718, 42, { align: 'left', color: TK.C.sub }); g.restore(); }
   }
   // 22〜28: 太陽なら約1週間
   if (t >= 22.0) {
     const f = fade(t, 22.0, 30, 0.3);
     g.save(); g.globalAlpha = f;
-    sun(g, 540, 560, 220);
-    TK.text(g, '太陽が出す光なら', PW / 2, 220, 64);
-    if (t > 23.6) TK.text(g, '[約1週間]ぶん', PW / 2, 920, 110);
+    sun(g, 540, 560, 200, t);
+    PL.label(g, '太陽が出す光なら', PW / 2, 200, 64);
+    if (t > 23.6) PL.label(g, '[約1週間]ぶん', PW / 2, 930, 110);
     g.restore();
-    TK.note(g, t, 26.0, 28.0, '出どころ: NASA Earth Fact Sheet・NASA Sun Fact Sheet（光の強さ 3.828×10²⁶ W）\nEnergy Institute (2026) Statistical Review of World Energy', { size: 28 });
+    TK.note(g, t, 26.0, 28.0, '出どころ: NASA Earth Fact Sheet・NASA Sun Fact Sheet（光の強さ 3.828×10²⁶ W）\nEnergy Institute (2026) Statistical Review of World Energy', { size: 28, y: 1080 });   // 2行なので絵の下に（クレジットと重ねない）
   }
 }
 

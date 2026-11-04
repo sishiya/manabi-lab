@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく phage-2（型H）「ウイルスの頭の中は、シャンパンの10倍の圧力」。台本は trivia/phage.md
@@ -27,82 +30,111 @@ const subs = [
 const cues = [{ t: 0.05, type: 'pop' }, { t: 2.2, type: 'tick' }, { t: 3.2, type: 'tick' }, { t: 4.2, type: 'ding' }, { t: 8.0, type: 'whoosh' },
   { t: 15.0, type: 'pop' }, { t: 17.4, type: 'rise' }, { t: 21.0, type: 'whoosh' }, { t: 22.0, type: 'thud' }];
 
-function phage(g, x, y, s, legs = 1, c = '#5fd4ff', fill = 'rgba(95,212,255,0.15)') {
-  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = c; g.lineWidth = 5; g.lineJoin = 'round'; g.lineCap = 'round';
-  g.fillStyle = fill;
-  g.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; g.lineTo(Math.cos(a) * 40, -150 + Math.sin(a) * 46); } g.closePath(); g.fill(); g.stroke();
-  g.beginPath(); g.moveTo(0, -104); g.lineTo(0, -30); g.stroke();
-  g.strokeRect(-12, -30, 24, 12);
-  for (const sd of [-1, 1]) for (const k of [0.5, 1]) { g.beginPath(); g.moveTo(sd * 10, -20); g.lineTo(sd * (20 + 30 * k * legs), -10); g.lineTo(sd * (24 + 36 * k * legs), 0); g.stroke(); }
+// ---- 絵は「図鑑の版画」（trivia-plate.js の PL.*）。ファージの形は T4 の形のイメージ（測ったのは φ29）----
+// ファージ（細長い20面体の頭・えり・縞のあるしっぽのさや・基盤・折れ曲がった尾繊維）。y は足先。legs: 0〜1 で開く。o.empty で頭がからに近い
+function phage(g, x, y, s, legs = 1, o = {}) {
+  g.save(); g.globalAlpha *= o.alpha ?? 1; g.translate(x, y); g.scale(s, s);
+  const lw = 4;
+  const head = PL.poly([[0, -212], [40, -188], [40, -128], [0, -104], [-40, -128], [-40, -188]]);
+  PL.tint(g, head, PL.T.sky, o.empty ? 0.25 : 0.7);
+  if (!o.empty) PL.ink(g, gg => { for (let i = 0; i < 5; i++) { gg.moveTo(26 - i * 3, -158); gg.ellipse(0, -158, 26 - i * 5, 34 - i * 6, 0, 0, Math.PI * 2); } }, 1.3, '#4a3f33');   // 中の DNA
+  PL.hatch(g, head, { angle: 0.7, gap: 7, w: 1.3, not: PL.poly([[-60, -230], [0, -230], [0, -90], [-60, -90]]), cx: 0, cy: 0 });
+  PL.ink(g, head, lw);
+  const collar = PL.rect(-15, -104, 30, 8), sheath = PL.rect(-12, -96, 24, 64), plate = PL.poly([[-28, -32], [28, -32], [22, -20], [-22, -20]]);
+  [collar, sheath, plate].forEach(p => { PL.tint(g, p, PL.T.sand, 0.85); PL.ink(g, p, lw * 0.8); });
+  PL.ink(g, gg => { for (let yy = -90; yy < -32; yy += 7) { gg.moveTo(-12, yy); gg.lineTo(12, yy); } }, lw * 0.4);
+  PL.ink(g, gg => {
+    for (const sd of [-1, 1]) for (const k of [0.75, 1]) { gg.moveTo(sd * 22, -26); gg.lineTo(sd * (30 + 52 * legs * k), -62 + 34 * (1 - legs)); gg.lineTo(sd * (34 + 50 * legs * k), 0); }
+    for (const sd of [-1, 1]) { gg.moveTo(sd * 12, -20); gg.lineTo(sd * 16, -6); }
+  }, lw * 0.8);
   g.restore();
 }
+// シャンパンの瓶（なで肩・首の針金とすず箔・ラベル・底のくぼみ）。x, y は胴のまん中
 function bottle(g, x, y, s) {
-  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = '#9fe0a8'; g.lineWidth = 6; g.lineJoin = 'round'; g.fillStyle = 'rgba(89,227,154,0.12)';
-  g.beginPath(); g.moveTo(-18, -150); g.lineTo(-18, -90); g.quadraticCurveTo(-55, -60, -55, -20); g.lineTo(-55, 90); g.quadraticCurveTo(-55, 100, -45, 100);
-  g.lineTo(45, 100); g.quadraticCurveTo(55, 100, 55, 90); g.lineTo(55, -20); g.quadraticCurveTo(55, -60, 18, -90); g.lineTo(18, -150); g.closePath(); g.fill(); g.stroke();
-  g.fillStyle = '#e8c9a8'; g.fillRect(-20, -172, 40, 24);
+  g.save(); g.translate(x, y); g.scale(s, s);
+  const body = gg => { gg.moveTo(-17, -170); gg.lineTo(-17, -96); gg.bezierCurveTo(-20, -60, -58, -48, -58, -10); gg.lineTo(-58, 120); gg.lineTo(58, 120); gg.lineTo(58, -10); gg.bezierCurveTo(58, -48, 20, -60, 17, -96); gg.lineTo(17, -170); gg.closePath(); };
+  PL.tint(g, body, PL.T.leaf, 0.85);
+  PL.hatch(g, body, { angle: 0.8, gap: 7, w: 1.6, not: PL.rect(-80, -200, 90, 340), cx: 0, cy: 0 });
+  const foil = PL.poly([[-19, -196], [19, -196], [19, -130], [-19, -130]]); PL.tint(g, foil, PL.T.gold, 0.95); PL.ink(g, foil, 3);
+  PL.ink(g, gg => { gg.moveTo(-19, -160); gg.lineTo(19, -150); gg.moveTo(-19, -150); gg.lineTo(19, -160); }, 1.6);
+  const label = PL.rect(-50, 10, 100, 70); PL.tint(g, label, '#fbf6ea', 0.95); PL.ink(g, label, 3); PL.ink(g, gg => { gg.moveTo(-34, 36); gg.lineTo(34, 36); gg.moveTo(-26, 54); gg.lineTo(26, 54); }, 2);
+  PL.ink(g, gg => { gg.moveTo(-40, 120); gg.quadraticCurveTo(0, 100, 40, 120); }, 2);   // 底のくぼみ
+  PL.ink(g, gg => { for (let i = 0; i < 6; i++) { const bx = -30 + (i * 17) % 60, by = -20 - i * 10; gg.moveTo(bx + 3, by); gg.arc(bx, by, 3, 0, Math.PI * 2); } }, 1.6);   // 泡
+  PL.ink(g, body, 5);
   g.restore();
+}
+// 細菌の体の一部（下に大きく）。二重の膜
+function cellPart(g, x0, x1, y0, y1) {
+  const r = (y1 - y0) / 2, cap = (a, b, c, d) => gg => { const rr = (d - b) / 2; gg.moveTo(a + rr, b); gg.lineTo(c - rr, b); gg.arc(c - rr, b + rr, rr, -Math.PI / 2, Math.PI / 2); gg.lineTo(a + rr, d); gg.arc(a + rr, b + rr, rr, Math.PI / 2, Math.PI * 1.5); gg.closePath(); };
+  const out = cap(x0, y0, x1, y1);
+  PL.tint(g, out, PL.T.leaf, 0.5);
+  g.save(); g.beginPath(); out(g); g.clip(); PL.hatch(g, PL.rect(x0, (y0 + y1) / 2 + 40, x1 - x0, r), { angle: 0.7, gap: 10, w: 1.4 }); g.restore();
+  PL.ink(g, gg => { for (let i = 0; i < 30; i++) { const px = x0 + 80 + ((i * 97) % (x1 - x0 - 160)), py = y0 + 50 + ((i * 61) % (y1 - y0 - 100)); gg.moveTo(px + 3, py); gg.arc(px, py, 3, 0, Math.PI * 2); } }, 2);
+  PL.ink(g, cap(x0 + 14, y0 + 14, x1 - 14, y1 - 14), 2); PL.ink(g, out, 6);
 }
 
 function draw(g, t) {
   if (t < 8.0) {
     const f = fade(t, -1, 8.0, 0.3);
     TK.hook(g, t, 0.0, 2.0, '中の圧力、高いのは？', { y: 190, size: 96 });
-    g.save(); g.globalAlpha = f;
-    bottle(g, 230, 420, 1.0); phage(g, 850, 520, 1.3);
+    g.save(); g.globalAlpha *= f;
+    bottle(g, 230, 450, 1.0); phage(g, 850, 560, 1.25);
     g.restore();
-    TK.choices(g, t, 0.15, 8.0, ['シャンパンの瓶', '同じくらい', 'ウイルスの頭'], { y: 620, h: 140, gap: 22, size: 70, reveal: 4.2, answer: 2, think: [1.4, 4.2] });
-    if (t > 4.6) { g.save(); g.globalAlpha = fade(t, 4.6, 8.0, 0.3); TK.text(g, '約60気圧', 760, 620 + 2 * 162 + 70, 56, { color: '#fff' }); g.restore(); }
+    // 答えは朱の二重わくで（札の中はぬらない）
+    TK.choices(g, t, 0.15, 8.0, ['シャンパンの瓶', '同じくらい', 'ウイルスの頭'], { y: 620, h: 140, gap: 22, size: 70, think: [1.4, 4.2] });
+    if (t >= 4.2) {
+      const y = 620 + 2 * 162; g.save(); g.globalAlpha *= clamp((t - 4.2) / 0.35, 0, 1) * fade(t, 0.15, 8.0, 0.3);
+      PL.ink(g, PL.rect(78, y - 12, PW - 156, 164), 7, PL.RED); PL.ink(g, PL.circle(170, y + 70, 56), 6, PL.RED);
+      g.restore();
+    }
+    if (t > 4.6) { g.save(); g.globalAlpha *= fade(t, 4.6, 8.0, 0.3); PL.label(g, '約[60気圧]', 820, 620 + 2 * 162 + 70, 56); g.restore(); }
   }
-  // 8〜15: DNA のひもがモーターで頭へ
+  // 8〜15: DNA のひもがモーターで頭へ（頭の断面）
   if (t >= 8.0 && t < 15.0) {
-    const f = fade(t, 8.0, 15.0, 0.3), k = clamp((t - 8.4) / 5.5, 0, 1), cx = PW / 2, hy = 470;
-    g.save(); g.globalAlpha = f;
-    // 頭（大きく）
-    g.strokeStyle = TK.C.acc2; g.lineWidth = 7; g.fillStyle = 'rgba(95,212,255,0.10)';
-    g.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; g.lineTo(cx + Math.cos(a) * 230, hy + Math.sin(a) * 260); } g.closePath(); g.fill(); g.stroke();
-    // 中のDNA（ぐるぐる、k で増える）
-    g.save(); g.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; g.lineTo(cx + Math.cos(a) * 220, hy + Math.sin(a) * 250); } g.clip();
-    g.strokeStyle = TK.C.acc; g.lineWidth = 5; g.beginPath();
-    const n = Math.floor(600 * k); for (let i = 0; i < n; i++) { const a = i * 0.21, r = 200 - (i / 600) * 180; const x = cx + Math.cos(a) * r, y = hy + Math.sin(a) * r * 1.05; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+    const f = fade(t, 8.0, 15.0, 0.3), k = clamp((t - 8.4) / 5.5, 0, 1), cx = 430, hy = 470;
+    g.save(); g.globalAlpha *= f;
+    const hp = (rx, ry) => PL.poly(Array.from({ length: 6 }, (_, i) => { const a = Math.PI / 6 + i * Math.PI / 3; return [cx + Math.cos(a) * rx, hy + Math.sin(a) * ry]; }));
+    const head = hp(230, 260);
+    PL.tint(g, head, PL.T.sky, 0.45);
+    g.save(); g.beginPath(); hp(214, 244)(g); g.clip();
+    const n = Math.floor(600 * k);
+    if (n > 1) PL.ink(g, gg => { for (let i = 0; i < n; i++) { const a = i * 0.21, r = 200 - (i / 600) * 180, x = cx + Math.cos(a) * r, y = hy + Math.sin(a) * r * 1.05; i ? gg.lineTo(x, y) : gg.moveTo(x, y); } }, 4, PL.RED);
     g.restore();
-    // 入口のモーター（輪）と、外のひも
-    const my = hy + 260;
-    g.strokeStyle = TK.C.red; g.lineWidth = 12; g.beginPath(); g.ellipse(cx, my + 20, 60, 22, 0, 0, 7); g.stroke();
-    TK.text(g, 'モーター', cx + 190, my + 20, 50, { color: TK.C.red });
-    const len = 420 * (1 - k);
-    g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.beginPath();
-    for (let i = 0; i <= 60; i++) { const u = i / 60, y = my + 30 + u * len; const x = cx + Math.sin(u * 14 + t * 6) * 40 * u; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
-    TK.text(g, 'DNA', cx - 120, my + 120, 50, { color: TK.C.acc });
+    PL.hatch(g, gg => { head(gg); }, { angle: 0.7, gap: 14, w: 1.6, not: hp(200, 230) });   // 殻の厚み
+    PL.ink(g, head, 7); PL.ink(g, hp(214, 244), 2);
+    // 入口のモーター（5つの部品の輪）
+    const my = hy + 270;
+    for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2 + t * 3, ex = cx + Math.cos(a) * 46, ey = my + Math.sin(a) * 16, p = PL.ellipse(ex, ey, 20, 12); PL.tint(g, p, PL.T.rust, 0.9); PL.ink(g, p, 3); }
+    PL.leader(g, cx + 70, my, 760, my + 10, PL.RED); PL.label(g, 'モーター', 780, my + 10, 50, { align: 'left', color: PL.RED });
+    const len = 360 * (1 - k);
+    if (len > 4) PL.ink(g, gg => { for (let i = 0; i <= 60; i++) { const u = i / 60, y = my + 30 + u * len, x = cx + Math.sin(u * 14 + t * 6) * 40 * u; i ? gg.lineTo(x, y) : gg.moveTo(x, y); } }, 5, PL.RED);
+    PL.leader(g, cx - 10, my + 60, 260, my + 120); PL.label(g, 'DNA', 200, my + 120, 50, { color: PL.RED });
+    PL.leader(g, cx + 160, hy - 160, 760, 300); PL.label(g, 'ファージの頭', 780, 300, 44, { align: 'left' });
     g.restore();
   }
   // 15〜21: 力くらべ
   if (t >= 15.0 && t < 21.0) {
-    TK.text(g, '押す力（ピコニュートン）', PW / 2, 320, 54, { color: TK.C.sub });
+    PL.label(g, '押す力（ピコニュートン）', 110, 320, 54, { align: 'left' });
     TK.bars(g, t, 15.0, 21.0, [
-      { label: '筋肉を動かす分子のモーター（ミオシン）', v: 5 / 64, color: TK.C.acc2, text: '' },
-      { label: 'ファージ φ29 のモーター', v: 60 / 64, color: TK.C.acc, text: '57〜60' },
+      { label: '筋肉を動かす分子のモーター（ミオシン）', v: 5 / 64, text: '' },
+      { label: 'ファージ φ29 のモーター', v: 60 / 64, text: '57〜60' },
     ], { y: 470, gap: 280, stagger: 1.2, size: 46 });
-    if (t > 15.6) { g.save(); g.globalAlpha = fade(t, 15.6, 21, 0.3); TK.text(g, '約5', 260, 470 + 72 + 0, 44, { color: '#fff', align: 'left' }); g.restore(); }
-    if (t > 17.4) { g.save(); g.globalAlpha = fade(t, 17.4, 21, 0.3); TK.text(g, '[10倍以上]', PW / 2, 940, 96); g.restore(); }
+    if (t > 15.6) { g.save(); g.globalAlpha *= fade(t, 15.6, 21, 0.3); PL.label(g, '約5', 260, 542, 44, { align: 'left', color: PL.RED }); g.restore(); }
+    if (t > 17.4) { g.save(); g.globalAlpha *= fade(t, 17.4, 21, 0.3); PL.label(g, '[10倍以上]', PW / 2, 1000, 96); g.restore(); }
   }
   // 21〜25: 細菌に刺さって、DNA が流れこむ
   if (t >= 21.0) {
-    const f = fade(t, 21.0, 26, 0.3), k = clamp((t - 22.0) / 1.6, 0, 1), cx = PW / 2;
-    g.save(); g.globalAlpha = f;
-    g.fillStyle = 'rgba(89,227,154,0.15)'; g.strokeStyle = TK.C.green; g.lineWidth = 7;
-    g.beginPath(); g.roundRect(120, 760, 840, 300, 150); g.fill(); g.stroke();
-    TK.text(g, '細菌', 820, 990, 48, { color: TK.C.green });
+    const f = fade(t, 21.0, 26, 0.3), k = clamp((t - 22.0) / 1.6, 0, 1), cx = 470;
+    g.save(); g.globalAlpha *= f;
+    cellPart(g, 100, 880, 760, 1060);
+    PL.leader(g, 860, 860, 930, 720); PL.label(g, '細菌', 930, 685, 48);
     const drop = TK.out((t - 21.0) / 0.9);
-    phage(g, cx, lerp(500, 770, drop), 2.0, clamp((t - 21.8) / 0.3, 0, 1), TK.C.acc2, k > 0 ? `rgba(95,212,255,${0.15 * (1 - k)})` : 'rgba(95,212,255,0.15)');
-    if (k > 0) {   // DNA が中へ
-      g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.beginPath();
-      for (let i = 0; i <= 80; i++) { const u = i / 80 * k, y = 790 + u * 200, x = cx + Math.sin(u * 20) * 120 * u; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
-    }
+    phage(g, cx, lerp(500, 775, drop), 2.0, clamp((t - 21.8) / 0.3, 0, 1), { empty: k > 0.5 });
+    if (k > 0) PL.ink(g, gg => { for (let i = 0; i <= 80; i++) { const u = i / 80 * k, y = 790 + u * 200, x = cx + Math.sin(u * 20) * 120 * u; i ? gg.lineTo(x, y) : gg.moveTo(x, y); } }, 5, PL.RED);
     g.restore();
   }
   if (t >= 4.4 && t < 21.0) TK.note(g, t, 4.4, 21.0, '測ったのはファージ φ29（Smith ほか 2001）。絵は形のイメージ', { size: 30 });
-  if (t >= 23.0) TK.note(g, t, 23.0, 25.0, '出どころ: Smith ほか (2001) Nature 413, 748–752\nUC Berkeley の発表 (2001-10-18)', { size: 30 });
+  if (t >= 23.0) TK.note(g, t, 23.0, 25.0, '出どころ: Smith ほか (2001) Nature 413, 748–752\nUC Berkeley の発表 (2001-10-18)', { size: 30, y: 1130 });   // 2行の注は帯の上に
 }
 
 triviaStart({ out: 'phage-trivia2', voice: 'auto', dur: DUR, draw, subs, cues, peek: 1.5 });

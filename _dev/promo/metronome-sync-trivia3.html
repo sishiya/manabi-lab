@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく metronome-sync-3（型H 当ててみて）「拍手がそろうと、音は？」。台本は trivia/metronome-sync.md。?short で録る
@@ -30,6 +33,25 @@ const cues = [
   { t: 5.2, type: 'ding' }, { t: 9.0, type: 'whoosh' }, { t: 15.0, type: 'whoosh' }, { t: 17.0, type: 'pop' },
   { t: 21.0, type: 'whoosh' }, { t: 26.0, type: 'rise' },
 ];
+// 選択肢（TK.choices と同じ並び）。答えの札は金色にぬらず、朱の二重わくで示す（字の下を濃くしない）
+function choices(g, t, a, b, opts, o = {}) {
+  if (t < a || t > b) return;
+  const f = fade(t, a, b, 0.3), y0 = o.y ?? PH * 0.34, h = o.h || 190, gap = o.gap || 40;
+  const rv = o.reveal ?? Infinity, ans = o.answer ?? -1, rk = clamp((t - rv) / 0.35, 0, 1);
+  g.save(); g.globalAlpha *= f;
+  opts.forEach((s, i) => {
+    const k = TK.out((t - a - i * 0.18) / 0.35), y = y0 + i * (h + gap), x = 90, w = PW - 180, hit = i === ans && rk > 0;
+    g.save(); g.globalAlpha *= k * (ans >= 0 && i !== ans ? 1 - 0.6 * rk : 1);
+    TK.card(g, x, y, w, h);
+    if (hit) { g.save(); g.globalAlpha *= rk; PL.ink(g, PL.rect(x - 10, y - 10, w + 20, h + 20), 6, PL.RED); g.restore(); }
+    PL.ink(g, PL.circle(x + 80, y + h / 2, 46), 5, hit ? PL.RED : PL.INK);
+    TK.text(g, 'ABCDE'[i], x + 80, y + h / 2 + 2, 60, { color: hit ? PL.RED : PL.INK });
+    TK.text(g, s, x + 160, y + h / 2, o.size || 64, { align: 'left', maxw: w - 200, color: hit ? PL.RED : PL.INK });
+    g.restore();
+  });
+  if (o.think && t >= o.think[0] && t < o.think[1] + 0.3) { const [p, q] = o.think; PL.watch(g, PW / 2, y0 - 150, 70, clamp((t - p) / (q - p), 0, 1)); }
+  g.restore();
+}
 const OPTS = ['大きくなる', '小さくなる'];
 
 // 拍手の音（模式）: N 人の手。ばらばら（速い・ばらつき大）とそろう（間かく2倍・ばらつき小）
@@ -45,67 +67,94 @@ function level(s, sync) {
   }
   return a;
 }
+// ---- 図鑑の版画の部品 ----
+// 拍手する両手（親指がわから見た形）。k: 0 はなれる〜1 合わさる
+const HAND = [[-20, 0], [-25, -46], [-24, -96], [-14, -122], [2, -126], [16, -114], [21, -64], [30, -62], [40, -84], [48, -78], [38, -44], [22, -18], [20, 0]];
+function hands(g, x, y, s, k) {
+  [-1, 1].forEach(sd => {
+    const gap = (1 - k) * 60 + 22, a = sd * (0.32 + 0.25 * (1 - k)), c = Math.cos(a), n = Math.sin(a);
+    const P = ([px, py]) => { px *= -sd; return [x + sd * gap * s + s * (px * c - py * n), y + s * (px * n + py * c)]; };
+    const p = PL.poly(HAND.map(P));
+    PL.tint(g, p, PL.T.rose, 0.6); PL.hatch(g, p, { angle: 0.9, gap: Math.max(7, 5 * s), w: 1.6, not: PL.poly(HAND.map(([a1, b1]) => P([a1 + 8, b1 - 6]))) }); PL.ink(g, p, Math.max(3, 3.5 * s));
+    PL.ink(g, gg => { [[-6, -118, -8, -70], [6, -118, 4, -70]].forEach(([a1, b1, a2, b2]) => { gg.moveTo(...P([a1, b1])); gg.lineTo(...P([a2, b2])); }); const q = P([-22, -14]); gg.moveTo(...q); gg.lineTo(...P([20, -14])); }, Math.max(1.4, 1.6 * s));   // 指のすき間・手首
+    const cuff = PL.poly([[-24, 0], [24, 0], [26, 30], [-26, 30]].map(P)); PL.tint(g, cuff, PL.T.sea, 0.6); PL.hatch(g, cuff, { angle: 0.9, gap: 7, w: 1.4 }); PL.ink(g, cuff, Math.max(3, 3.5 * s));
+  });
+  if (k > 0.85) PL.ink(g, gg => { [-1, 1].forEach(sd => { for (let i = 0; i < 3; i++) { const a = -Math.PI / 2 + sd * (0.5 + i * 0.35); gg.moveTo(x + Math.cos(a) * 150 * s, y - 70 * s + Math.sin(a) * 150 * s); gg.lineTo(x + Math.cos(a) * 190 * s, y - 70 * s + Math.sin(a) * 190 * s); } }); }, 4, PL.RED);   // ぱちっ
+}
+// 天井からつるしたマイク
+function mic(g, x, y0, y1) {
+  PL.ink(g, gg => { gg.moveTo(x - 140, y0); gg.lineTo(x + 140, y0); }, 6);
+  PL.hatch(g, PL.rect(x - 140, y0 - 30, 280, 30), { angle: 0.9, gap: 8, w: 1.6 });
+  PL.ink(g, gg => { gg.moveTo(x, y0); gg.lineTo(x, y1 - 60); }, 3);
+  const body = PL.poly([[x - 14, y1 - 60], [x + 14, y1 - 60], [x + 10, y1 - 10], [x - 10, y1 - 10]]), head = PL.ellipse(x, y1, 22, 26);
+  PL.tint(g, body, PL.T.gray, 0.85); PL.ink(g, body, 3);
+  PL.tint(g, head, PL.T.gray, 0.7); g.save(); g.beginPath(); head(g); g.clip(); PL.ink(g, gg => { for (let i = -3; i <= 3; i++) { gg.moveTo(x - 30, y1 + i * 7); gg.lineTo(x + 30, y1 + i * 7); gg.moveTo(x + i * 7, y1 - 30); gg.lineTo(x + i * 7, y1 + 30); } }, 1.2); g.restore(); PL.ink(g, head, 3.5);
+}
 function wave(g, t, sync, y, h, label) {
   const x0 = 90, x1 = 990;
-  g.save(); g.strokeStyle = TK.C.acc2; g.lineWidth = 3; g.beginPath();
-  let sum = 0, n = 0;
-  for (let x = x0; x <= x1; x += 3) { const s = t * 0.8 + (x - x0) / (x1 - x0) * 2.2, v = level(s, sync); sum += v; n++; const yy = y - Math.min(1, v / 20) * h; x === x0 ? g.moveTo(x, yy) : g.lineTo(x, yy); }
-  g.stroke();
+  let sum = 0, n = 0; const pts = [];
+  for (let x = x0; x <= x1; x += 3) { const s = t * 0.8 + (x - x0) / (x1 - x0) * 2.2, v = level(s, sync); sum += v; n++; pts.push([x, y - Math.min(1, v / 20) * h]); }
+  const area = PL.poly([[x0, y], ...pts, [x1, y]]);
+  PL.tint(g, area, PL.T.sea, 0.5);
+  PL.ink(g, gg => pts.forEach(([a, b], i) => i ? gg.lineTo(a, b) : gg.moveTo(a, b)), 2.5);
   const avg = sum / n, ay = y - Math.min(1, avg / 20) * h;
-  g.strokeStyle = TK.C.acc; g.lineWidth = 5; g.setLineDash([16, 10]); g.beginPath(); g.moveTo(x0, ay); g.lineTo(x1, ay); g.stroke(); g.setLineDash([]);
-  g.restore();
-  g.strokeStyle = 'rgba(255,255,255,0.4)'; g.lineWidth = 3; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke();
-  TK.text(g, label, x0, y - h - 30, 44, { align: 'left', color: TK.C.sub });
-  TK.text(g, '平均', x1, ay - 26, 36, { align: 'right', color: TK.C.acc });
+  g.save(); g.setLineDash([16, 10]); PL.ink(g, gg => { gg.moveTo(x0, ay); gg.lineTo(x1, ay); }, 5, PL.RED); g.restore();
+  PL.ink(g, gg => { gg.moveTo(x0, y); gg.lineTo(x1, y); gg.moveTo(x0, y); gg.lineTo(x0, y - h - 10); for (let i = 1; i <= 4; i++) { gg.moveTo(x0, y - h * i / 4); gg.lineTo(x0 + 12, y - h * i / 4); } }, 3);
+  PL.label(g, label, x0 + 20, y - h - 50, 44, { align: 'left', color: TK.C.sub });
+  PL.label(g, '平均', x1, y - h - 50, 36, { align: 'right', color: PL.RED });
+  PL.leader(g, x1 - 40, ay - 4, x1 - 40, y - h - 25, PL.RED);
 }
 
 function draw(g, t) {
   // 0〜5: 2択
   if (t < 5.0) {
-    TK.text(g, '拍手が[そろう]と、', PW / 2, 300, 76);
-    TK.text(g, '会場の音は？', PW / 2, 400, 76);
-    TK.choices(g, t, 0.0, 5.0, OPTS, { y: 700, h: 170, think: [3.0, 5.0], size: 72 });
+    PL.label(g, '拍手が[そろう]と、', 90, 290, 76, { align: 'left' });
+    PL.label(g, '会場の音は？', 90, 390, 76, { align: 'left' });
+    hands(g, 860, 470, 1.15, 0.5 + 0.5 * Math.cos(t * 9));
+    choices(g, t, 0.0, 5.0, OPTS, { y: 700, h: 170, think: [3.0, 5.0], size: 72 });
   }
   // 5〜9: 答え
   if (t >= 5.0 && t < 9.0) {
-    TK.text(g, '答え', PW / 2, 500, 60, { color: TK.C.sub });
-    TK.choices(g, t, 5.0, 9.0, OPTS, { y: 640, h: 170, reveal: 5.2, answer: 1, size: 72 });
+    PL.label(g, '答え', 90, 520, 60, { align: 'left', color: TK.C.sub });
+    choices(g, t, 5.0, 9.0, OPTS, { y: 640, h: 170, reveal: 5.2, answer: 1, size: 72 });
   }
   // 9〜15: 天井のマイクの音（ばらばら → そろう）
   if (t >= 9.0 && t < 15.0) {
     const sync = ease((t - 11.0) / 1.5);
-    TK.text(g, '天井のマイクの音', PW / 2, 230, 60);
-    wave(g, t, sync, 760, 380, sync < 0.5 ? 'ばらばら' : 'そろった');
-    TK.text(g, sync < 0.5 ? '音がとぎれない' : '山は高いけど、[すきま]があく', PW / 2, 1000, 50, { color: '#fff' });
+    PL.label(g, '天井のマイクの音', 90, 230, 60, { align: 'left' });
+    mic(g, 870, 130, 330);
+    wave(g, t, sync, 820, 380, sync < 0.5 ? 'ばらばら' : 'そろった');
+    PL.label(g, sync < 0.5 ? '音がとぎれない' : '山は高いけど、[すきま]があく', PW / 2, 1010, 50);
     TK.note(g, t, 9.4, 15, '模式図（Néda ほか 2000 の結果を形で）', { size: 32 });
   }
-  // 15〜21: 1人がたたく間かく → そろう瞬間 2倍
+  // 15〜26: 1人がたたく間かく → そろう瞬間 2倍 → 速くすると くずれる
   if (t >= 15.0 && t < 26.0) {
     const x0 = 140, x1 = 960, yb = 900, yt = 400;
-    TK.text(g, '1人がたたく [間かく]', PW / 2, 230, 64);
-    g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 3; g.beginPath(); g.moveTo(x0, yt - 20); g.lineTo(x0, yb); g.lineTo(x1, yb); g.stroke();
-    TK.text(g, '時間 →', x1, yb + 40, 36, { align: 'right', color: TK.C.sub, bold: false });
-    // 間かくの線: 短い → 急に2倍 → だんだん短く → くずれる（形だけ）
+    PL.label(g, '1人がたたく [間かく]', 90, 230, 64, { align: 'left' });
+    PL.ink(g, gg => { gg.moveTo(x0, yt - 20); gg.lineTo(x0, yb); gg.lineTo(x1, yb); for (let i = 1; i <= 8; i++) { const x = lerp(x0, x1, i / 8); gg.moveTo(x, yb); gg.lineTo(x, yb - 12); } [1, 2].forEach(v => { gg.moveTo(x0, yb - v * 220); gg.lineTo(x0 + 14, yb - v * 220); }); }, 3);
+    g.save(); g.setLineDash([6, 10]); PL.ink(g, gg => [1, 2].forEach(v => { gg.moveTo(x0 + 20, yb - v * 220); gg.lineTo(x1, yb - v * 220); }), 1.5, 'rgba(35,28,21,0.4)'); g.restore();
+    PL.label(g, '×1', x0 - 20, yb - 220, 34, { align: 'right', color: TK.C.sub, bold: false });
+    PL.label(g, '×2', x0 - 20, yb - 440, 34, { align: 'right', color: TK.C.sub, bold: false });
+    PL.label(g, '時間 →', x1, yb + 40, 36, { align: 'right', color: TK.C.sub, bold: false });
     const iv = u => u < 0.3 ? 1 : u < 0.62 ? 2 : lerp(2, 1.05, (u - 0.62) / 0.38);
     const show = clamp((t - 15.2) / 10.0, 0, 1);
-    g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 7; g.beginPath();
-    for (let k = 0; k <= 200 * show; k++) { const u = k / 200, x = lerp(x0, x1, u), y = yb - iv(u) * 220 + (u < 0.3 || u > 0.85 ? Math.sin(k * 1.7) * 10 : 0); k ? g.lineTo(x, y) : g.moveTo(x, y); }
-    g.stroke(); g.restore();
-    if (show > 0.33) TK.text(g, '[2倍]（ゆっくり）→ そろう', lerp(x0, x1, 0.46), yb - 2 * 220 - 50, 44);
-    if (t > 21.0 && show > 0.7) TK.text(g, '速くすると [くずれる]', lerp(x0, x1, 0.72), yb - 60, 44, { acc: TK.C.red });
+    PL.ink(g, gg => { for (let k = 0; k <= 200 * show; k++) { const u = k / 200, x = lerp(x0, x1, u), y = yb - iv(u) * 220 + (u < 0.3 || u > 0.85 ? Math.sin(k * 1.7) * 10 : 0); k ? gg.lineTo(x, y) : gg.moveTo(x, y); } }, 7, PL.RED);
+    if (show > 0.33) PL.label(g, '[2倍]（ゆっくり）→ そろう', lerp(x0, x1, 0.46), yb - 2 * 220 - 50, 44);
+    if (t > 21.0 && show > 0.7) PL.label(g, '速くすると [くずれる]', lerp(x0, x1, 0.68), yb - 70, 44);
+    hands(g, 250, 1090, 0.75, 0.5 + 0.5 * Math.cos(t * (show < 0.3 || show > 0.85 ? 12 : 6)));
     TK.note(g, t, 15.4, 26, '模式図（論文に Hz の数字はないので、高さは目安）', { size: 32 });
   }
   // 26〜30: そろう ↔ くずれる をくり返す
   if (t >= 26.0) {
     const x0 = 100, x1 = 980, y = 700;
-    TK.text(g, 'そろい具合', 100, 360, 44, { align: 'left', color: TK.C.sub });
-    g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 7; g.beginPath();
+    PL.label(g, 'そろい具合', 100, 340, 44, { align: 'left', color: TK.C.sub });
+    PL.ink(g, gg => { gg.moveTo(x0, y - 300); gg.lineTo(x0, y + 10); gg.lineTo(x1, y + 10); }, 3);
     const k = clamp((t - 26.1) / 2.5, 0, 1);
-    for (let i = 0; i <= 300 * k; i++) { const u = i / 300, x = lerp(x0, x1, u), s = 0.5 + 0.5 * Math.tanh(4 * Math.sin(u * Math.PI * 6 - 1)), yy = y - s * 280; i ? g.lineTo(x, yy) : g.moveTo(x, yy); }
-    g.stroke(); g.restore();
-    TK.text(g, 'そろう', x1, y - 310, 40, { align: 'right', color: TK.C.green });
-    TK.text(g, 'くずれる', x1, y + 40, 40, { align: 'right', color: TK.C.red });
-    TK.note(g, t, 26.4, 30, '出どころ: Néda, Ravasz, Brechet, Vicsek, Barabási (2000) Nature 403:849\n「The sound of many hands clapping」', { size: 28 });
+    PL.ink(g, gg => { for (let i = 0; i <= 300 * k; i++) { const u = i / 300, x = lerp(x0, x1, u), s = 0.5 + 0.5 * Math.tanh(4 * Math.sin(u * Math.PI * 6 - 1)), yy = y - s * 280; i ? gg.lineTo(x, yy) : gg.moveTo(x, yy); } }, 7, PL.RED);
+    PL.label(g, 'そろう', x1, y - 330, 40, { align: 'right', color: PL.GREEN });
+    PL.label(g, 'くずれる', x1, y + 60, 40, { align: 'right', color: PL.RED });
+    hands(g, 540, 990, 0.8, 0.5 + 0.5 * Math.cos(t * 9));
+    TK.note(g, t, 26.4, 30, '出どころ: Néda, Ravasz, Brechet, Vicsek, Barabási (2000) Nature 403:849\n「The sound of many hands clapping」', { size: 28, y: 1140 });
   }
 }
 

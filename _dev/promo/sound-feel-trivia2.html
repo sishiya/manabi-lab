@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく sound-feel-2（型A ぜんぶ逆）「黒板の音がいやなのは、高い音のせいじゃない」。台本は trivia/sound-feel.md。?short で録る
@@ -33,66 +36,120 @@ const cues = [
   { t: 12.0, type: 'whoosh' }, { t: 13.2, type: 'rise' }, { t: 18.0, type: 'whoosh' }, { t: 22.2, type: 'ding' }, { t: 26.0, type: 'ding' },
 ];
 
+const BLUE = TK.C.acc2;
+// ---- 版画の道具（このページだけ。PL.* を組み合わせる）----
+const TAU = Math.PI * 2;
+// ローカル座標（右向き・足もとが y=0）から画面へ写す。dir=-1 で左向き
+function mapper(x0, y0, s, rot = 0, dir = 1) { const c = Math.cos(rot), n = Math.sin(rot); return (x, y) => { x *= dir; return [x0 + s * (x * c - y * n), y0 + s * (x * n + y * c)]; }; }
+// ローカル座標で道を作る。b(P) の P: M・L・Q・Z と E（楕円）
+const lp = (m, b) => g => {
+  const P = { M: (x, y) => g.moveTo(...m(x, y)), L: (x, y) => g.lineTo(...m(x, y)), Q: (a, c, x, y) => g.quadraticCurveTo(...m(a, c), ...m(x, y)), Z: () => g.closePath(),
+    E: (cx, cy, rx, ry, rot = 0) => { for (let i = 0; i <= 40; i++) { const t = i / 40 * TAU, x = Math.cos(t) * rx, y = Math.sin(t) * ry, p = m(cx + x * Math.cos(rot) - y * Math.sin(rot), cy + x * Math.sin(rot) + y * Math.cos(rot)); i ? g.lineTo(...p) : g.moveTo(...p); } g.closePath(); } };
+  b(P);
+};
+// 手彩色＋かげの斜線＋墨の輪郭。o.lit: 光の当たる所（斜線を抜く）
+function solid(g, path, color, o = {}) {
+  PL.tint(g, path, color, o.a ?? 0.65);
+  if (o.hatch !== false) PL.hatch(g, path, { angle: o.angle ?? 0.7, gap: o.gap ?? 9, w: o.hw ?? 1.8, not: o.lit, cx: o.cx, cy: o.cy });
+  PL.ink(g, path, o.w ?? 5, o.ink || PL.INK);
+}
+// 墨の矢印（頭は手彩色＋輪郭）
+function arrowPL(g, x0, y0, x1, y1, color = PL.INK, w = 8) {
+  const a = Math.atan2(y1 - y0, x1 - x0), h = w * 3.4;
+  PL.ink(g, gg => { gg.moveTo(x0, y0); gg.lineTo(x1 - Math.cos(a) * h * 0.7, y1 - Math.sin(a) * h * 0.7); }, w, color);
+  const head = PL.poly([[x1, y1], [x1 - Math.cos(a - 0.42) * h, y1 - Math.sin(a - 0.42) * h], [x1 - Math.cos(a + 0.42) * h, y1 - Math.sin(a + 0.42) * h]]);
+  PL.tint(g, head, color, 1); PL.ink(g, head, Math.max(2, w * 0.45), color);
+}
+// 答えの札: 手彩色の札（筆のルックでは字の下が濃くなり字と重なる）をやめ、紙の札に朱の二重わくで示す
+function answerChoices(g, t, a, b, opts, o) {
+  const card = TK.card; TK.card = (gg, x, y, w, h) => card(gg, x, y, w, h, {});
+  try { TK.choices(g, t, a, b, opts, o); } finally { TK.card = card; }
+  if (t < (o.reveal ?? Infinity) || t < a || t > b) return;
+  const y = (o.y ?? PH * 0.34) + o.answer * ((o.h || 190) + (o.gap ?? 40)), h = o.h || 190, f = clamp((t - o.reveal) / 0.35, 0, 1) * fade(t, a, b, 0.3);
+  g.save(); g.globalAlpha *= f; PL.ink(g, PL.rect(78, y - 12, PW - 156, h + 24), 6, PL.RED); PL.ink(g, PL.rect(90, y, PW - 180, h), 3, PL.RED); g.restore();
+}
+
 function redX(g, x, y, r, k) {
   if (k <= 0) return;
-  g.save(); g.strokeStyle = TK.C.red; g.lineWidth = r * 0.16; g.lineCap = 'round'; g.globalAlpha *= clamp(k, 0, 1);
-  const s = r * (0.7 + 0.3 * TK.back(k));
-  g.beginPath(); g.moveTo(x - s, y - s); g.lineTo(x + s, y + s); g.moveTo(x + s, y - s); g.lineTo(x - s, y + s); g.stroke();
+  g.save(); g.globalAlpha *= clamp(k, 0, 1);
+  const s = r * (0.7 + 0.3 * TK.back(clamp(k, 0, 1)));
+  PL.ink(g, gg => { gg.moveTo(x - s, y - s); gg.lineTo(x + s, y + s); gg.moveTo(x + s, y - s); gg.lineTo(x - s, y + s); }, r * 0.13, PL.RED);
   g.restore();
 }
-// 顔（m: -1 いや 〜 +1 平気）
+// 聞いている人の顔（正面）。m: -1 いや（目をつぶり耳をふさぐ）〜 +1 平気
 function face(g, x, y, r, m) {
-  g.save();
-  const c = m < 0 ? TK.C.red : TK.C.green;
-  g.strokeStyle = c; g.lineWidth = r * 0.08; g.fillStyle = 'rgba(20,34,72,0.9)';
-  g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); g.stroke();
-  g.fillStyle = c;
-  if (m < -0.3) {   // ぎゅっとつぶった目
-    g.lineCap = 'round';
-    for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(x + sd * r * 0.5, y - r * 0.38); g.lineTo(x + sd * r * 0.25, y - r * 0.25); g.lineTo(x + sd * r * 0.5, y - r * 0.12); g.stroke(); }
-  } else { for (const sd of [-1, 1]) { g.beginPath(); g.arc(x + sd * r * 0.35, y - r * 0.25, r * 0.09, 0, Math.PI * 2); g.fill(); } }
-  g.beginPath(); g.moveTo(x - r * 0.42, y + r * 0.38); g.quadraticCurveTo(x, y + r * 0.38 + m * r * 0.35, x + r * 0.42, y + r * 0.38); g.stroke();
-  g.restore();
+  const head = PL.ellipse(x, y, r * 0.82, r), lw = Math.max(2.5, r * 0.04);
+  const neck = PL.rect(x - r * 0.3, y + r * 0.8, r * 0.6, r * 0.4); solid(g, neck, PL.T.rose, { a: 0.5, hatch: false, w: lw });
+  [-1, 1].forEach(sd => { const ear = PL.ellipse(x + sd * r * 0.84, y + r * 0.05, r * 0.14, r * 0.24); PL.tint(g, ear, PL.T.rose, 0.6); PL.ink(g, ear, lw); });
+  PL.tint(g, head, PL.T.sand, 0.65);
+  PL.hatch(g, head, { angle: 0.8, gap: Math.max(6, r * 0.07), w: lw * 0.5, not: PL.ellipse(x - r * 0.2, y - r * 0.12, r * 0.82, r), cx: x, cy: y });
+  const hair = gg => { gg.moveTo(x - r * 0.84, y - r * 0.05); gg.bezierCurveTo(x - r * 0.95, y - r * 1.15, x + r * 0.95, y - r * 1.15, x + r * 0.84, y - r * 0.05); gg.quadraticCurveTo(x + r * 0.6, y - r * 0.55, x + r * 0.1, y - r * 0.5); gg.quadraticCurveTo(x - r * 0.5, y - r * 0.45, x - r * 0.84, y - r * 0.05); gg.closePath(); };
+  PL.tint(g, hair, PL.T.brown, 0.9); PL.hatch(g, hair, { angle: 1.1, gap: Math.max(5, r * 0.06), w: lw * 0.5, cx: x, cy: y });
+  PL.ink(g, head, lw * 1.3); PL.ink(g, hair, lw);
+  const c = m < 0 ? PL.RED : PL.GREEN;
+  PL.ink(g, gg => {
+    for (const sd of [-1, 1]) {
+      if (m < -0.3) { gg.moveTo(x + sd * r * 0.5, y - r * 0.12); gg.lineTo(x + sd * r * 0.24, y - r * 0.02); gg.lineTo(x + sd * r * 0.5, y + r * 0.08); gg.moveTo(x + sd * r * 0.55, y - r * 0.3); gg.lineTo(x + sd * r * 0.18, y - r * 0.2); }   // ぎゅっとつぶった目・寄せた眉
+      else { gg.moveTo(x + sd * r * 0.5, y - r * 0.26); gg.quadraticCurveTo(x + sd * r * 0.35, y - r * 0.34, x + sd * r * 0.18, y - r * 0.26); }
+    }
+    gg.moveTo(x, y + r * 0.05); gg.lineTo(x - r * 0.06, y + r * 0.25); gg.lineTo(x + r * 0.04, y + r * 0.27);   // 鼻
+    gg.moveTo(x - r * 0.3, y + r * 0.5); gg.quadraticCurveTo(x, y + r * 0.5 + m * r * 0.25, x + r * 0.3, y + r * 0.5);   // 口
+  }, lw, PL.INK);
+  if (m >= -0.3) [-1, 1].forEach(sd => { const e = PL.circle(x + sd * r * 0.34, y - r * 0.1, r * 0.07); PL.tint(g, e, PL.INK, 1); });
+  if (m < -0.3) [-1, 1].forEach(sd => {   // 耳をふさぐ手
+    const hx = x + sd * r * 0.92, hy = y + r * 0.05, hand = PL.ellipse(hx, hy, r * 0.2, r * 0.32, sd * 0.2);
+    const arm = PL.poly([[hx - r * 0.12, hy + r * 0.25], [hx + r * 0.12, hy + r * 0.25], [hx + sd * r * 0.25 + r * 0.1, y + r * 1.25], [hx + sd * r * 0.25 - r * 0.15, y + r * 1.25]]);
+    solid(g, arm, PL.T.rose, { a: 0.55, gap: 6, hw: 1.2, w: lw });
+    solid(g, hand, PL.T.rose, { a: 0.65, gap: 6, hw: 1.2, w: lw });
+    PL.ink(g, gg => { for (let k = -1; k <= 1; k++) { gg.moveTo(hx - sd * r * 0.05, hy + k * r * 0.1); gg.lineTo(hx + sd * r * 0.14, hy + k * r * 0.1 - r * 0.02); } }, lw * 0.6);
+  });
+  if (m > 0.3) PL.ink(g, gg => { gg.arc(x, y, r * 1.25, -2.4, -0.7); }, lw * 0.7, c);
 }
 // 音の高さの帯（3つ）。cut: どの帯を消したか（0〜1 のふたつ）
-const BAND = [{ n: '低い', c: '#5fd4ff' }, { n: 'まん中', c: '#ffcf4a' }, { n: '高い', c: '#c79bff' }];
+const BAND = [{ n: '低い', c: PL.T.sea, l: BLUE }, { n: 'まん中', c: PL.T.gold, l: '#8a6a1a' }, { n: '高い', c: PL.T.rose, l: '#8a4a5a' }];
 function bands(g, t, y, cutHi, cutMid) {
   const x0 = 110, w = 860 / 3;
   BAND.forEach((b, i) => {
-    const cut = i === 2 ? cutHi : i === 1 ? cutMid : 0;
-    const x = x0 + i * w;
+    const cut = i === 2 ? cutHi : i === 1 ? cutMid : 0, x = x0 + i * w;
     g.save(); g.globalAlpha *= 1 - 0.8 * cut;
-    g.fillStyle = b.c;
-    for (let j = 0; j < 14; j++) {
-      const bx = x + 10 + j * (w - 20) / 14, h = 60 + 140 * Math.abs(Math.sin(j * 1.7 + i * 2.3 + t * 7 * (1 + j % 3) * 0.3));
-      g.fillRect(bx, y - h, (w - 20) / 14 - 4, h);
-    }
+    const bars = gg => { for (let j = 0; j < 14; j++) { const bx = x + 10 + j * (w - 20) / 14, h = 60 + 140 * Math.abs(Math.sin(j * 1.7 + i * 2.3 + t * 7 * (1 + j % 3) * 0.3)); gg.rect(bx, y - h, (w - 20) / 14 - 4, h); } };
+    PL.tint(g, bars, b.c, 0.85); PL.hatch(g, bars, { angle: 0.9, gap: 9, w: 1.4 }); PL.ink(g, bars, 2.2);
     g.restore();
-    TK.text(g, b.n, x + w / 2, y + 50, 48, { color: cut > 0.5 ? TK.C.dim : b.c });
-    if (cut > 0) {   // はさみの線
-      g.save(); g.strokeStyle = TK.C.red; g.lineWidth = 6; g.setLineDash([16, 10]); g.globalAlpha *= clamp(cut * 2, 0, 1);
-      g.strokeRect(x + 4, y - 230, w - 8, 240); g.restore();
-      if (cut > 0.6) TK.text(g, '消した', x + w / 2, y - 270, 44, { color: TK.C.red });
+    TK.text(g, b.n, x + w / 2, y + 50, 48, { color: cut > 0.5 ? TK.C.dim : b.l });
+    if (cut > 0) {   // はさみで切った線
+      g.save(); g.globalAlpha *= clamp(cut * 2, 0, 1); g.setLineDash([16, 10]); PL.ink(g, PL.rect(x + 4, y - 230, w - 8, 240), 4, PL.RED); g.restore();
+      if (cut > 0.6) TK.text(g, '消した', x + w / 2, y - 270, 44, { color: PL.RED });
     }
   });
-  g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 3; g.beginPath(); g.moveTo(110, y); g.lineTo(970, y); g.stroke();
+  PL.ink(g, gg => { gg.moveTo(110, y); gg.lineTo(970, y); }, 3);
 }
 // 周波数の軸（対数、100〜10000 Hz）
 const FX0 = 120, FX1 = 960, fx = f => FX0 + (FX1 - FX0) * (Math.log10(f) - 2) / 2;
+// 黒板（木のわく・板・チョークの粉・ひっかいた指のあと）
+function blackboard(g) {
+  const frame = PL.rect(190, 850, 700, 280), board = PL.rect(212, 872, 656, 236);
+  solid(g, frame, PL.T.wood, { a: 0.75, gap: 8, hw: 1.6, w: 5 });
+  PL.tint(g, board, '#2f4a3c', 0.95); PL.hatch(g, board, { angle: 0.3, gap: 14, w: 1.2, color: 'rgba(240,235,220,0.18)' }); PL.ink(g, board, 4);
+  PL.ink(g, gg => { for (let i = 0; i < 4; i++) { gg.moveTo(330 + i * 34, 900 + i * 4); gg.quadraticCurveTo(400 + i * 34, 990, 470 + i * 34, 1078); } }, 4, 'rgba(244,239,226,0.85)');
+  PL.ink(g, gg => { gg.moveTo(560, 930); gg.lineTo(720, 930); gg.moveTo(580, 970); gg.lineTo(690, 970); }, 3, 'rgba(244,239,226,0.5)');   // チョークの字のあと
+  const chalk = PL.rect(700, 1112, 70, 14); PL.tint(g, chalk, '#f4efe2', 1); PL.ink(g, chalk, 2.5);
+}
+// 耳（横から）
+function ear(g, x, y, s) {
+  const m = mapper(x, y, s);
+  const outer = lp(m, P => { P.M(30, -170); P.Q(-110, -200, -100, -20); P.Q(-95, 80, -30, 120); P.Q(0, 150, -20, 190); P.Q(40, 210, 60, 150); P.Q(70, 60, 50, 0); P.Q(80, -110, 30, -170); P.Z(); });
+  solid(g, outer, PL.T.rose, { a: 0.6, gap: 8, hw: 1.6, w: 6, lit: lp(m, P => P.E(-40, -40, 110, 160)) });
+  PL.ink(g, lp(m, P => { P.M(10, -130); P.Q(-70, -140, -60, -20); P.Q(-55, 60, -5, 90); P.M(-10, -60); P.Q(-35, 0, 5, 40); }), 4);
+  const canal = lp(m, P => P.E(22, 10, 14, 22)); PL.tint(g, canal, PL.T.brown, 0.9); PL.ink(g, canal, 3);
+}
 
 function draw(g, t) {
   // 0〜4: フック
   if (t < 4.0) {
     TK.hook(g, t, 0.0, 4.0, '黒板の音がいやなのは\n高いから', { y: 420, size: 100 });
-    if (t > 1.8) redX(g, 540, 420, 190, (t - 1.8) / 0.3);
-    if (t > 2.4) { g.save(); g.globalAlpha = TK.pop(t, 2.4) * fade(t, 2.4, 4.0, 0.25); TK.text(g, '[ちがう]', 540, 720, 130, { stroke: 'rgba(0,0,0,0.6)' }); g.restore(); }
-    g.save(); g.globalAlpha = fade(t, -1, 4.0, 0.3);
-    // 黒板（線画。音は流さない）
-    g.fillStyle = '#1f4a3a'; g.strokeStyle = '#a07a50'; g.lineWidth = 14;
-    g.beginPath(); g.roundRect(200, 860, 680, 260, 10); g.fill(); g.stroke();
-    g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 4;
-    for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(330 + i * 40, 900); g.lineTo(480 + i * 40, 1080); g.stroke(); }
-    g.restore();
+    if (t > 1.8) redX(g, 830, 476, 62, (t - 1.8) / 0.3);   // 「高いから」の横に × の印（字には重ねない）
+    if (t > 2.4) { g.save(); g.globalAlpha = Math.min(1, TK.pop(t, 2.4)) * fade(t, 2.4, 4.0, 0.25); TK.text(g, '[ちがう]', 540, 715, 130); g.restore(); }
+    g.save(); g.globalAlpha = fade(t, -1, 4.0, 0.3); blackboard(g); g.restore();
   }
   // 4〜12: 帯を消す実験
   if (t >= 4.0 && t < 12.0) {
@@ -101,30 +158,31 @@ function draw(g, t) {
     const cutHi = t < 8.0 ? clamp((t - 5.2) / 0.5, 0, 1) : 0;
     const cutMid = t >= 8.0 ? clamp((t - 9.0) / 0.5, 0, 1) : 0;
     bands(g, t, 640, cutHi, cutMid);
-    if (t > 6.4 && t < 8.0) { g.save(); g.globalAlpha *= TK.pop(t, 6.4); face(g, 400, 880, 90, -1); TK.text(g, 'いやなまま', 640, 880, 64, { color: TK.C.red }); g.restore(); }
-    if (t > 10.2) { g.save(); g.globalAlpha *= TK.pop(t, 10.2); face(g, 400, 880, 90, 0.8); TK.text(g, 'ぐっと楽に', 640, 880, 64, { color: TK.C.green }); g.restore(); }
+    if (t > 6.4 && t < 8.0) { g.save(); g.globalAlpha *= Math.min(1, TK.pop(t, 6.4)); face(g, 360, 900, 90, -1); TK.text(g, 'いやなまま', 720, 900, 64, { color: PL.RED }); g.restore(); }
+    if (t > 10.2) { g.save(); g.globalAlpha *= Math.min(1, TK.pop(t, 10.2)); face(g, 360, 900, 90, 0.8); TK.text(g, 'ぐっと楽に', 720, 900, 64, { color: PL.GREEN }); g.restore(); }
     g.restore();
   }
   // 12〜18: 2000〜4000 Hz
   if (t >= 12.0 && t < 18.0) {
     g.save(); g.globalAlpha = fade(t, 12.0, 18.0, 0.3);
     TK.text(g, '2011年の実験', PW / 2, 220, 56, { color: TK.C.sub });
-    const y = 680;
-    const k = TK.out((t - 12.8) / 1.0);
-    g.fillStyle = `rgba(255,207,74,${0.35 * k})`; g.fillRect(fx(2000), y - 300, fx(4000) - fx(2000), 300);
-    g.strokeStyle = TK.C.acc; g.lineWidth = 4; g.globalAlpha *= 1; g.strokeRect(fx(2000), y - 300, fx(4000) - fx(2000), 300 * k);
-    g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 3; g.beginPath(); g.moveTo(FX0, y); g.lineTo(FX1, y); g.stroke();
-    for (const [f, s] of [[100, '100'], [1000, '1000'], [10000, '10000']]) { g.beginPath(); g.moveTo(fx(f), y); g.lineTo(fx(f), y + 16); g.stroke(); TK.text(g, s, fx(f), y + 50, 36, { color: TK.C.sub, bold: false }); }
-    TK.text(g, 'Hz（音の高さ）', FX1, y + 100, 34, { color: TK.C.dim, bold: false, align: 'right' });
-    if (k > 0.3) TK.text(g, '2000〜4000 Hz', (fx(2000) + fx(4000)) / 2, y - 340, 52, { color: TK.C.acc });
+    const y = 680, k = TK.out((t - 12.8) / 1.0);
+    if (k > 0.01) { const r = PL.rect(fx(2000), y - 300 * k, fx(4000) - fx(2000), 300 * k); PL.tint(g, r, PL.T.gold, 0.6); PL.hatch(g, r, { angle: 0.9, gap: 12, w: 1.6 }); PL.ink(g, r, 4, PL.RED); }
+    PL.ink(g, gg => { gg.moveTo(FX0, y); gg.lineTo(FX1, y); for (const f of [100, 1000, 10000]) { gg.moveTo(fx(f), y); gg.lineTo(fx(f), y + 16); } for (let d = 2; d < 4; d++) for (let q = 2; q < 10; q++) { gg.moveTo(fx(q * 10 ** d), y); gg.lineTo(fx(q * 10 ** d), y + 8); } }, 3);
+    for (const [f, s] of [[100, '100'], [1000, '1000'], [10000, '10000']]) TK.text(g, s, fx(f), y + 50, 36, { color: TK.C.sub, bold: false });
+    TK.text(g, 'Hz（音の高さ）', FX1, y + 100, 34, { color: TK.C.sub, bold: false, align: 'right' });
+    if (k > 0.3) TK.text(g, '2000〜4000 Hz', (fx(2000) + fx(4000)) / 2, y - 340, 52, { color: PL.RED });
     // ピアノの右はし
     if (t > 14.5) {
       g.save(); g.globalAlpha *= clamp((t - 14.5) / 0.5, 0, 1);
-      const ky = 815, kw = 26, n = 30;
-      for (let i = 0; i < n; i++) { const x = 1000 - 120 - (n - i) * kw; g.fillStyle = '#f2f2f2'; g.fillRect(x, ky, kw - 3, 150); }
-      for (let i = 0; i < n; i++) { if ([1, 3, 6, 8, 10].includes(i % 12)) { const x = 1000 - 120 - (n - i) * kw + kw * 0.6; g.fillStyle = '#111'; g.fillRect(x, ky, kw * 0.7, 92); } }
-      g.fillStyle = 'rgba(255,207,74,0.6)'; g.fillRect(1000 - 120 - 13 * kw, ky, 12 * kw, 150);
-      TK.text(g, 'ピアノの右はし近く（いちばん上の音 約4186 Hz）', PW / 2, ky + 190, 38, { color: TK.C.sub });
+      const ky = 830, kw = 26, n = 30, X = i => 1000 - 120 - (n - i) * kw;
+      const whites = gg => { for (let i = 0; i < n; i++) gg.rect(X(i), ky, kw - 3, 150); };
+      PL.tint(g, whites, '#f4efe2', 1);
+      PL.tint(g, PL.rect(X(n - 12), ky, 12 * kw, 150), PL.T.gold, 0.7);
+      PL.ink(g, whites, 2);
+      const blacks = gg => { for (let i = 0; i < n; i++) if ([1, 3, 6, 8, 10].includes(i % 12)) gg.rect(X(i) + kw * 0.6, ky, kw * 0.7, 92); };
+      PL.tint(g, blacks, PL.INK, 1); PL.ink(g, blacks, 2);
+      TK.text(g, 'ピアノの右はし近く（いちばん上の音 約4186 Hz）', PW / 2, ky + 200, 38, { color: TK.C.sub });
       g.restore();
     }
     g.restore();
@@ -138,10 +196,10 @@ function draw(g, t) {
       TK.card(g, c.x, 300, 450, 700);
       TK.text(g, c.s, c.x + 225, 380, 50, { maxw: 410 });
       const m = t < 21.5 ? 0 : c.m * TK.out((t - 21.5) / 0.6);
-      face(g, c.x + 225, 620, 130, m);
+      face(g, c.x + 225, 630, 120, m);
       if (t > 22.2) {
-        g.save(); g.globalAlpha *= TK.pop(t, 22.2);
-        TK.text(g, c.m < 0 ? 'いや' : 'いやさが 下がった', c.x + 225, 880, c.m < 0 ? 64 : 50, { color: c.m < 0 ? TK.C.red : TK.C.green });
+        g.save(); g.globalAlpha *= Math.min(1, TK.pop(t, 22.2));
+        TK.text(g, c.m < 0 ? 'いや' : 'いやさが 下がった', c.x + 225, 900, c.m < 0 ? 64 : 50, { color: c.m < 0 ? PL.RED : PL.GREEN });
         g.restore();
       }
     }
@@ -150,23 +208,20 @@ function draw(g, t) {
   // 26〜30: 耳 ＋ 頭の中
   if (t >= 26.0) {
     g.save(); g.globalAlpha = fade(t, 26.0, 30.5, 0.3);
-    // 耳（線画）
-    g.strokeStyle = '#5fd4ff'; g.lineWidth = 12; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(330, 470); g.bezierCurveTo(200, 420, 170, 700, 300, 740); g.bezierCurveTo(330, 760, 330, 820, 290, 840); g.stroke();
-    g.beginPath(); g.moveTo(300, 540); g.bezierCurveTo(240, 560, 250, 660, 300, 650); g.stroke();
-    TK.text(g, '耳', 270, 940, 72, { color: '#5fd4ff' });
-    TK.text(g, '＋', 540, 650, 110, { color: '#fff' });
+    ear(g, 280, 640, 1.1);
+    TK.text(g, '耳', 270, 940, 72, { color: BLUE });
+    TK.text(g, '＋', 540, 650, 110);
     // 頭の中（考えのふきだし）
-    g.strokeStyle = TK.C.acc; g.lineWidth = 10;
-    g.beginPath(); g.ellipse(800, 620, 170, 130, 0, 0, Math.PI * 2); g.stroke();
-    for (const [x, y, r] of [[690, 790, 26], [660, 850, 16]]) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke(); }
-    TK.text(g, '？', 800, 620, 110, { color: TK.C.acc });
-    TK.text(g, '頭の中', 820, 940, 72, { color: TK.C.acc });
+    const bub = PL.ellipse(800, 620, 170, 130);
+    PL.tint(g, bub, PL.T.sky, 0.4); PL.ink(g, bub, 7, PL.RED);
+    for (const [x, y, r] of [[690, 790, 26], [660, 850, 16]]) { const c = PL.circle(x, y, r); PL.tint(g, c, PL.T.sky, 0.4); PL.ink(g, c, 5, PL.RED); }
+    TK.text(g, '？', 800, 620, 110, { color: PL.RED });
+    TK.text(g, '頭の中', 820, 940, 72, { color: PL.RED });
     g.restore();
   }
   if (t >= 4.0 && t < 12.0) TK.note(g, t, 4.0, 12.0, '帯の分け方は模式。Halpern, Blake & Hillenbrand (1986)', { size: 30 });
   if (t >= 12.0 && t < 26.0) TK.note(g, t, 12.0, 26.0, '2011年は学会での発表（Reuter & Oehler、米国音響学会）', { size: 30 });
-  if (t >= 26.0) TK.note(g, t, 26.0, 30.0, '出どころ: Halpern ほか (1986) Percept Psychophys 39(2): 77–80\nReuter & Oehler (2011) 米国音響学会の発表', { size: 30 });
+  if (t >= 26.0) TK.note(g, t, 26.0, 30.0, '出どころ: Halpern ほか (1986) Percept Psychophys 39(2): 77–80\nReuter & Oehler (2011) 米国音響学会の発表', { size: 30, y: 1120 });
 }
 
 triviaStart({ out: 'sound-feel-trivia2', voice: 'auto', dur: DUR, draw, subs, cues, peek: 1.0 });

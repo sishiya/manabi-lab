@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく quantum-2（型H 当ててみて）「光をさえぎる板を1枚ふやすと明るくなる」。台本は trivia/quantum.md。?short で録る
@@ -31,28 +34,49 @@ const cues = [
   { t: 9.4, type: 'ding' }, { t: 10.2, type: 'rise' }, { t: 14.0, type: 'pop' }, { t: 15.5, type: 'pop' }, { t: 17.0, type: 'pop' }, { t: 20.0, type: 'ding' },
 ];
 
+// 偏光板（正面から見た丸）。金のわく・灰色の膜・通す向きの細い線・わくの目じるし。線の向き＝通す向き
 function plate(g, x, y, deg, f = 1) {
   g.save(); g.globalAlpha *= f;
-  g.fillStyle = 'rgba(150,175,215,0.22)'; g.strokeStyle = 'rgba(200,220,255,0.75)'; g.lineWidth = 5;
-  g.beginPath(); g.arc(x, y, PR, 0, Math.PI * 2); g.fill(); g.stroke();
-  g.save(); g.beginPath(); g.arc(x, y, PR - 4, 0, Math.PI * 2); g.clip();
-  g.translate(x, y); g.rotate(deg * Math.PI / 180);
-  g.strokeStyle = 'rgba(220,235,255,0.45)'; g.lineWidth = 3;
-  for (let d = -PR; d <= PR; d += 22) { g.beginPath(); g.moveTo(d, -PR); g.lineTo(d, PR); g.stroke(); }
+  const r = deg * Math.PI / 180;
+  const tab = PL.poly([[x + PR + 8, y - 16], [x + PR + 44, y - 12], [x + PR + 44, y + 12], [x + PR + 8, y + 16]]);   // つまみ
+  PL.tint(g, tab, PL.T.wood, 0.8); PL.ink(g, tab, 3);
+  const rim = gg => { gg.moveTo(x + PR + 16, y); gg.arc(x, y, PR + 16, 0, Math.PI * 2); gg.moveTo(x + PR, y); gg.arc(x, y, PR, 0, Math.PI * 2, true); };
+  PL.tint(g, rim, PL.T.gold, 0.7); PL.hatch(g, rim, { angle: 0.7, gap: 6, w: 1.4, not: PL.circle(x - 8, y - 8, PR + 16) });
+  const film = PL.circle(x, y, PR);
+  PL.tint(g, film, PL.T.gray, 0.35);
+  g.save(); g.beginPath(); film(g); g.clip();
+  PL.ink(g, gg => { for (let d = -PR; d <= PR; d += 16) { gg.moveTo(x + Math.cos(r) * d - Math.sin(r) * PR, y + Math.sin(r) * d + Math.cos(r) * PR); gg.lineTo(x + Math.cos(r) * d + Math.sin(r) * PR, y + Math.sin(r) * d - Math.cos(r) * PR); } }, 1.6, 'rgba(35,28,21,0.55)');
   g.restore();
-  TK.text(g, deg + '°', x - PR - 30, y, 46, { align: 'right', color: TK.C.sub });
+  PL.ink(g, PL.circle(x, y, PR + 16), 5); PL.ink(g, film, 2.4);
+  PL.ink(g, gg => { gg.moveTo(x + Math.sin(r) * (PR + 2), y - Math.cos(r) * (PR + 2)); gg.lineTo(x + Math.sin(r) * (PR + 24), y - Math.cos(r) * (PR + 24)); }, 6, PL.RED);   // 目じるし（通す向き）
+  g.globalAlpha *= clamp((x - 300) / 100, 0, 1);   // すべりこむあいだは目もりの字を出さない（画面の外にはみ出さない）
+  if (x > 300) PL.label(g, deg + '°', x - PR - 46, y, 46, { align: 'right', color: TK.C.sub });
   g.restore();
 }
 // 光の帯（上から下）。a: 明るさ 0〜1、pol: 向き（度。null はばらばら）
 function beam(g, y0, y1, a, pol, t) {
   if (a <= 0.001) return;
-  g.save();
-  g.fillStyle = `rgba(255,230,140,${0.12 + 0.6 * Math.sqrt(a)})`; g.fillRect(X - 34, y0, 68, y1 - y0);
-  const ym = (y0 + y1) / 2, L = 46;
-  g.strokeStyle = `rgba(255,255,255,${0.4 + 0.6 * Math.sqrt(a)})`; g.lineWidth = 6; g.lineCap = 'round';
-  const arrow = deg => { const r = deg * Math.PI / 180, dx = Math.sin(r) * L, dy = -Math.cos(r) * L; g.beginPath(); g.moveTo(X + 110 - dx, ym - dy); g.lineTo(X + 110 + dx, ym + dy); g.stroke(); };
+  const b = PL.rect(X - 34, y0, 68, y1 - y0);
+  PL.tint(g, b, PL.T.gold, 0.15 + 0.75 * Math.sqrt(a));
+  PL.ink(g, gg => { gg.moveTo(X - 34, y0); gg.lineTo(X - 34, y1); gg.moveTo(X + 34, y0); gg.lineTo(X + 34, y1); }, 1.6, 'rgba(35,28,21,0.45)');
+  const ym = (y0 + y1) / 2, L = 40, ax = X + 110;
+  const arrow = deg => {   // ふるえる向き（両はしに矢じり）
+    const r = deg * Math.PI / 180, dx = Math.sin(r) * L, dy = -Math.cos(r) * L, hx = Math.sin(r), hy = -Math.cos(r), nx = -hy, ny = hx;
+    PL.ink(g, gg => { gg.moveTo(ax - dx, ym - dy); gg.lineTo(ax + dx, ym + dy);
+      [[1, ax + dx, ym + dy], [-1, ax - dx, ym - dy]].forEach(([s, ex, ey]) => { gg.moveTo(ex - s * hx * 14 + nx * 9, ey - s * hy * 14 + ny * 9); gg.lineTo(ex, ey); gg.lineTo(ex - s * hx * 14 - nx * 9, ey - s * hy * 14 - ny * 9); }); }, 4, PL.INK);
+  };
+  g.save(); g.globalAlpha *= 0.4 + 0.6 * Math.sqrt(a);
   if (pol === null) [0, 45, 90, 135].forEach(arrow); else arrow(pol);
   g.restore();
+}
+function lamp(g) {   // 上の光の出口（筒）
+  const c = PL.rect(X - 60, 205, 120, 30);
+  PL.tint(g, c, PL.T.brown, 0.8); PL.hatch(g, c, { angle: 0.4, gap: 7, w: 1.6 }); PL.ink(g, c, 4);
+}
+function screen(g, a) {   // 下の白い紙（とどいた光の明るさ）
+  const s = PL.rect(X - 120, 1086, 240, 26);
+  PL.tint(g, s, PL.PAPER, 1); if (a > 0) PL.tint(g, PL.ellipse(X, 1099, 40, 11), PL.T.gold, 0.2 + 0.8 * Math.sqrt(a));
+  PL.ink(g, s, 4);
 }
 const pctText = v => (v === 12.5 ? '12.5' : String(Math.round(v))) + '%';
 
@@ -63,38 +87,37 @@ function draw(g, t) {
   if (showPlates) {
     const f = t < 6.0 ? 1 : fade(t, 9.4, 30, 0.3);
     g.save(); g.globalAlpha = f;
-    // 光
-    const ys = [235, YS[0] - PR, YS[0] + PR, YS[1] - PR, YS[1] + PR, YS[2] - PR, YS[2] + PR, 1080];
+    const ys = [235, YS[0] - PR, YS[0] + PR, YS[1] - PR, YS[1] + PR, YS[2] - PR, YS[2] + PR, 1086];
+    lamp(g);
     beam(g, ys[0], ys[1], 1, null, t);
     if (third) { beam(g, ys[2], ys[3], 0.5, 0, t); beam(g, ys[4], ys[5], 0.25, 45, t); }
     else beam(g, ys[2], ys[5], 0.5, 0, t);   // 1枚目のあと、90° の板まで
     const out = third ? 0.125 * ease((t - 10.2) / 0.6) : 0;
     beam(g, ys[6], ys[7], out, 90, t);
-    // 板
+    screen(g, out);
     plate(g, X, YS[0], 0);
     if (inK > 0) plate(g, lerp(-200, X, inK), YS[1], 45);
     plate(g, X, YS[2], 90);
-    // 出口の明るさ
     const pv = third ? 12.5 * ease((t - 10.2) / 0.6) : 0;
-    TK.text(g, pv >= 12.4 ? '12.5%' : pv.toFixed(1).replace('.0', '') + '%', X + 250, 1040, 80, { color: third ? TK.C.acc : TK.C.red });
+    PL.label(g, pv >= 12.4 ? '12.5%' : pv.toFixed(1).replace('.0', '') + '%', X + 300, 1040, 80, { color: PL.RED });
     g.restore();
     // 14〜20: 板ごとの割合
     if (t >= 14.0 && t < 20.0) {
       const items = [[(ys[2] + ys[3]) / 2, '50%', 14.0], [(ys[4] + ys[5]) / 2, '25%', 15.5]];
-      items.forEach(([y, s, a]) => { if (t > a) { g.save(); g.globalAlpha = fade(t, a, 20, 0.3); TK.text(g, s, X + 250, y, 62, { color: TK.C.acc }); g.restore(); } });
+      items.forEach(([y, s, a]) => { if (t > a) { g.save(); g.globalAlpha = fade(t, a, 20, 0.3); PL.label(g, s, X + 300, y, 62, { color: PL.RED }); g.restore(); } });
       TK.note(g, t, 14.0, 20.0, '光の粒1個ずつでも、同じ割合で通る（どれが通るかは確率）', { size: 30 });
     }
   }
   // 0〜3: フック
-  if (t < 3.0) TK.hook(g, t, 0.0, 3.0, '2枚で[真っ暗]', { y: 175, size: 96 });
-  if (t >= 3.0 && t < 6.0) { g.save(); g.globalAlpha = fade(t, 3.0, 6.0, 0.3); TK.text(g, 'あいだに [もう1枚] 足すと？', PW / 2, 175, 74); g.restore(); }
+  if (t < 3.0) TK.hook(g, t, 0.0, 3.0, '2枚で[真っ暗]', { y: 140, size: 96 });
+  if (t >= 3.0 && t < 6.0) { g.save(); g.globalAlpha = fade(t, 3.0, 6.0, 0.3); PL.label(g, 'あいだに [もう1枚] 足すと？', PW / 2, 150, 70); g.restore(); }
   // 6〜9.4: 3択
   TK.choices(g, t, 6.0, 9.4, ['0%のまま', 'もっと暗い', '明るくなる'], { y: 520, h: 170, think: [6.4, 9.4] });
-  if (t >= 9.4 && t < 14.0) { g.save(); g.globalAlpha = fade(t, 9.4, 14.0, 0.3); TK.text(g, '答えは [C] 明るくなる', PW / 2, 175, 74); g.restore(); }
-  if (t >= 14.0 && t < 20.0) { g.save(); g.globalAlpha = fade(t, 14.0, 20.0, 0.3); TK.text(g, '通るたびに、向きが[45°]回る', PW / 2, 175, 70); g.restore(); }
+  if (t >= 9.4 && t < 14.0) { g.save(); g.globalAlpha = fade(t, 9.4, 14.0, 0.3); PL.label(g, '答えは [C] 明るくなる', PW / 2, 150, 72); g.restore(); }
+  if (t >= 14.0 && t < 20.0) { g.save(); g.globalAlpha = fade(t, 14.0, 20.0, 0.3); PL.label(g, '通るたびに、向きが[45°]回る', PW / 2, 150, 68); g.restore(); }
   if (t >= 20.0) {
-    g.save(); g.globalAlpha = fade(t, 20.0, 23, 0.3); TK.text(g, 'ふやすと、[明るくなる]', PW / 2, 175, 84); g.restore();
-    TK.note(g, t, 20.4, 22.0, '理想の板での値（本物の板は少し吸う）\n出どころ: HyperPhysics「Crossed Polarizers」・マリュスの法則（Hecht『Optics』）', { size: 28 });
+    g.save(); g.globalAlpha = fade(t, 20.0, 23, 0.3); PL.label(g, 'ふやすと、[明るくなる]', PW / 2, 150, 80); g.restore();
+    TK.note(g, t, 20.4, 22.0, '理想の板での値（本物の板は少し吸う）\n出どころ: HyperPhysics「Crossed Polarizers」・マリュスの法則（Hecht『Optics』）', { size: 28, y: 1155 });
   }
 }
 

@@ -145,7 +145,7 @@ TK.card = function (g, x, y, w, h, o = {}) {   // 札は角ばった紙のラベ
   g.save();
   const hi = /255,\s*207|ffcf4a/i.test(o.fill || '') || /ffcf4a/i.test(o.stroke || '');
   g.fillStyle = 'rgba(244,236,218,0.94)'; g.fillRect(x, y, w, h);
-  if (hi) PL.tint(g, PL.rect(x, y, w, h), PL.T.gold, 0.55);
+  if (hi) PL.tint(g, PL.rect(x, y, w, h), PL.T.gold, 0.3);
   g.strokeStyle = hi ? PL.RED : PL.INK; g.lineWidth = hi ? 6 : 4; g.strokeRect(x, y, w, h);
   g.lineWidth = 1.5; g.strokeRect(x + 9, y + 9, w - 18, h - 18);
   g.restore();
@@ -204,10 +204,17 @@ TK.clock = function (g, t, a, b, o = {}) {   // 経った時間（右上）。�
   TK.text(g, (o.label || '') + s.toFixed(1) + ' 秒', PW - 140, 220, 50, { color: PL.RED });
   g.restore();
 };
+PL.backing = function (g, s, x, y, size, font) {   // 字の下に紙を敷く（注やクレジットが絵の上に来ても読めるように）
+  const ls = String(s).split('\n'); g.save(); g.font = Math.round(size) + 'px ' + font;
+  const w = Math.min(PW - 40, Math.max(...ls.map(l => g.measureText(TK.plain(l)).width))), h = ls.length * size * 1.3;
+  g.fillStyle = PL.PATCH; g.fillRect(x - w / 2 - 18, y - h / 2 - 6, w + 36, h + 12); g.restore();
+};
 TK.note = function (g, t, a, b, s, o = {}) {
   if (t < a || t > b) return;
   g.save(); g.globalAlpha *= fade(t, a, b, 0.3) * 0.9;
-  TK.lines(g, s, PW / 2, o.y ?? PL.SUBY + 135, o.size || 30, { color: '#4a3f33', bold: false, font: PL.KYO });
+  const y = o.y ?? PL.SUBY + 160, size = o.size || 30, n = String(s).split('\n').length; PL.backing(g, s, PW / 2, y, size, PL.KYO);
+  PL._noteBottom = Math.max(PL._noteBottom || 0, y + (n - 1) / 2 * size * 1.3 + size / 2);   // クレジットはこの下へ（2行の注と重ねない）
+  TK.lines(g, s, PW / 2, y, size, { color: '#4a3f33', bold: false, font: PL.KYO });
   g.restore();
 };
 TK.progress = function (g, t, end) {   // 上のはしの細い墨の線
@@ -215,9 +222,10 @@ TK.progress = function (g, t, end) {   // 上のはしの細い墨の線
   g.fillStyle = 'rgba(35,28,21,0.12)'; g.fillRect(0, 0, PW, 8);
   g.fillStyle = PL.RED; g.fillRect(0, 0, PW * clamp(t / end, 0, 1), 8);
 };
+PL.bandH = n => 46 + n * 39;   // 字幕の帯の半分の高さ（2行で 124。注とクレジットは帯の下 PL.SUBY+160・+197）
 TK.subtitle = function (g, t, subs) {   // 字幕は紙の帯（上下に罫線）。字は教科書体
   const s = subs.find(x => t >= x.a && t < x.b && !x.noBurn); if (!s) return;
-  const f = fade(t, s.a, s.b, 0.12), y = PL.SUBY, n =String(s.ja).split('\n').length, hh = 70 + n * 40;
+  const f = fade(t, s.a, s.b, 0.12), y = PL.SUBY, n = String(s.ja).split('\n').length, hh = PL.bandH(n);
   g.save(); g.globalAlpha *= f;
   g.fillStyle = 'rgba(239,230,210,0.94)'; g.fillRect(0, y - hh, PW, hh * 2);
   PL.ink(g, gg => { gg.moveTo(60, y - hh + 10); gg.lineTo(PW - 60, y - hh + 10); gg.moveTo(60, y + hh - 10); gg.lineTo(PW - 60, y + hh - 10); }, 3);
@@ -225,4 +233,4 @@ TK.subtitle = function (g, t, subs) {   // 字幕は紙の帯（上下に罫線�
   TK.lines(g, s.ja, PW / 2, y, s.size || 62, { font: PL.KYO, lh: 1.25 });
   g.restore();
 };
-TK.credit = function (g, s) { g.save(); g.globalAlpha *= 0.75; TK.text(g, s, PW / 2, PL.SUBY + 172, 24, { color: '#4a3f33', bold: false, font: PL.KYO }); g.restore(); };   // 注の下に小さく
+TK.credit = function (g, s) { const y = Math.max(PL.SUBY + 197, (PL._noteBottom || 0) + 26); PL._noteBottom = 0; g.save(); PL.backing(g, s, PW / 2, y, 24, PL.KYO); g.globalAlpha *= 0.75; TK.text(g, s, PW / 2, y, 24, { color: '#4a3f33', bold: false, font: PL.KYO }); g.restore(); };   // 注の下に小さく

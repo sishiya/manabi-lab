@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく hair-2（型B もしも計算）「太ももの毛がずっと伸びたら、何cm？」。台本は trivia/hair-removal.md。?short で録る
@@ -29,93 +32,196 @@ const cues = [
   { t: 0.05, type: 'rise' }, { t: 3.0, type: 'pop' }, { t: 6.0, type: 'ding' }, { t: 8.0, type: 'whoosh' }, { t: 9.6, type: 'rise' },
   { t: 14.0, type: 'pop' }, { t: 16.5, type: 'ding' }, { t: 21.0, type: 'whoosh' }, { t: 24.0, type: 'pop' }, { t: 26.0, type: 'ding' },
 ];
-const HAIR = '#5fd4ff', SKIN_Y = 900, HX = 540;
-
-function skin(g) {
-  g.save(); g.fillStyle = 'rgba(255,190,160,0.12)'; g.fillRect(60, SKIN_Y, 960, 90);
-  g.strokeStyle = 'rgba(255,200,170,0.8)'; g.lineWidth = 5; g.beginPath(); g.moveTo(60, SKIN_Y); g.lineTo(1020, SKIN_Y); g.stroke(); g.restore();
-}
-function hair(g, x, base, L, o = {}) {
-  g.save();
-  g.strokeStyle = 'rgba(207,224,255,0.5)'; g.lineWidth = 4;
-  g.beginPath(); g.moveTo(x - 20, SKIN_Y); g.lineTo(x - 20, SKIN_Y + 70); g.moveTo(x + 20, SKIN_Y); g.lineTo(x + 20, SKIN_Y + 70); g.stroke();
-  g.fillStyle = o.rest ? 'rgba(207,224,255,0.35)' : HAIR; g.beginPath(); g.ellipse(x, base + 70, 22, 18, 0, 0, Math.PI * 2); g.fill();
-  g.strokeStyle = HAIR; g.lineWidth = 10; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(x, base + 60); g.lineTo(x, base - L); g.stroke();
+// ---- 皮ふの断面（教科書の図のように）。表皮・真皮・皮下脂肪、毛穴と毛 ----
+// 絵は「図鑑の版画」（PL.*）。人のからだは皮ふの断面だけ（からだの形は描かない）
+const TAU = Math.PI * 2;
+const rnd = i => { const v = Math.sin(i * 12.9898 + 78.233) * 43758.5453; return v - Math.floor(v); };
+const surfY = (x, ys) => ys + Math.sin(x * 0.031) * 2.5;
+// x0〜x1、表面 ys、下のはし yb。o.fat: 皮下脂肪の高さ
+function skinBlock(g, x0, x1, ys, yb, o = {}) {
+  const ep = 26, fat = o.fat ?? 0;
+  const surf = gg => { gg.moveTo(x0, surfY(x0, ys)); for (let x = x0; x <= x1; x += 12) gg.lineTo(x, surfY(x, ys)); };
+  const basal = x => ys + ep + Math.sin(x * 0.05) * 7;   // 表皮の下のなみ（真皮乳頭）
+  const epi = gg => { surf(gg); gg.lineTo(x1, basal(x1)); for (let x = x1; x >= x0; x -= 8) gg.lineTo(x, basal(x)); gg.closePath(); };
+  const derm = gg => { gg.moveTo(x0, basal(x0)); for (let x = x0; x <= x1; x += 8) gg.lineTo(x, basal(x)); gg.lineTo(x1, yb - fat); gg.lineTo(x0, yb - fat); gg.closePath(); };
+  PL.tint(g, derm, PL.T.sand, 0.5);
+  // 真皮のすじ（コラーゲンの束。波うつ細い線）
+  g.save(); g.beginPath(); derm(g); g.clip();
+  PL.ink(g, gg => { for (let y = ys + ep + 26, k = 0; y < yb - fat - 8; y += 22, k++) for (let x = x0 + (k % 2) * 30; x < x1; x += 70) { const l = 34 + rnd(k * 9 + x) * 20; gg.moveTo(x, y); gg.quadraticCurveTo(x + l / 2, y - 7, x + l, y + 1); } }, 1.3, 'rgba(90,66,44,0.45)');
   g.restore();
+  if (fat > 0) {   // 皮下脂肪（脂肪の粒の集まり）
+    const fz = PL.rect(x0, yb - fat, x1 - x0, fat);
+    PL.tint(g, fz, PL.T.gold, 0.45);
+    g.save(); g.beginPath(); fz(g); g.clip();
+    const cells = gg => { for (let y = yb - fat + 18, k = 0; y < yb + 30; y += 34, k++) for (let x = x0 + (k % 2) * 20; x < x1 + 30; x += 40) PL.ellipse(x, y, 19, 16)(gg); };
+    PL.ink(g, cells, 1.8, 'rgba(70,52,30,0.6)');
+    g.restore();
+    PL.ink(g, gg => { gg.moveTo(x0, yb - fat); gg.lineTo(x1, yb - fat); }, 2.5);
+  }
+  PL.tint(g, epi, PL.T.rose, 0.75);
+  PL.hatch(g, epi, { angle: 1.2, gap: 7, w: 1.3 });
+  PL.ink(g, gg => { gg.moveTo(x0, basal(x0)); for (let x = x0; x <= x1; x += 8) gg.lineTo(x, basal(x)); }, 2);
+  // 切り口（左右のはしと下）。ぎざぎざに切った標本のように
+  PL.ink(g, gg => { [x0, x1].forEach((x, i) => { gg.moveTo(x, surfY(x, ys)); for (let y = ys; y <= yb; y += 18) gg.lineTo(x + (rnd(y + i * 50) - 0.5) * 6, y); }); gg.moveTo(x0, yb); for (let x = x0; x <= x1; x += 22) gg.lineTo(x, yb + (rnd(x) - 0.5) * 6); }, 3);
+  PL.ink(g, surf, 5);
 }
-// 日数の札
-function dayCard(g, days, hl) {
-  const s = days < 365 ? Math.round(days) + ' 日' : (days / 365).toFixed(1) + ' 年';
-  TK.card(g, 260, 150, 560, 130, { r: 60, stroke: hl ? TK.C.acc : 'rgba(160,190,255,0.35)', lw: hl ? 6 : 3 });
-  TK.text(g, '伸びた日数  ' + s, PW / 2, 215, 64, { color: hl ? TK.C.acc : '#fff' });
+// 毛穴（毛包）。x は毛の中心、ys は皮ふの表面、d は毛球の中心までの深さ。o.club: 休止期（毛球がなく、こん棒の形）
+function follicle(g, x, ys, d, o = {}) {
+  const by = ys + d, sw = 28, top = surfY(x, ys);
+  // 皮脂腺（毛穴のわきのふくろ）と、立毛筋（ななめの細い筋肉）
+  const seb = gg => { PL.ellipse(x - sw - 20, ys + 74, 20, 30, 0.35)(gg); PL.ellipse(x - sw - 30, ys + 104, 14, 18, 0.2)(gg); };
+  PL.tint(g, seb, PL.T.gold, 0.8); PL.ink(g, gg => { for (let k = 0; k < 5; k++) PL.circle(x - sw - 22 + (rnd(k) - 0.5) * 16, ys + 66 + k * 9, 3)(gg); }, 1.4); PL.ink(g, seb, 3);
+  const mus = PL.poly([[x + sw + 2, ys + d * 0.55 - 10], [x + sw + 2, ys + d * 0.55 + 8], [x + sw + 92, ys + 34], [x + sw + 84, ys + 26]]);
+  PL.tint(g, mus, PL.T.rust, 0.6); PL.ink(g, gg => { for (let k = 1; k < 5; k++) { const q = k / 5; gg.moveTo(lerp(x + sw + 2, x + sw + 88, q), lerp(ys + d * 0.55 - 6, ys + 28, q)); gg.lineTo(lerp(x + sw + 2, x + sw + 88, q) + 3, lerp(ys + d * 0.55 + 6, ys + 34, q)); } }, 1.2); PL.ink(g, mus, 2.5);
+  // 毛包のかべ（外と内の2本の線）。休止期は短く、下がすぼまる
+  const sheath = o.club
+    ? gg => { gg.moveTo(x - sw, top); gg.lineTo(x - sw + 2, by - 24); gg.quadraticCurveTo(x - 20, by + 22, x, by + 24); gg.quadraticCurveTo(x + 20, by + 22, x + sw - 2, by - 24); gg.lineTo(x + sw, top); gg.closePath(); }
+    : gg => { gg.moveTo(x - sw, top); gg.lineTo(x - sw - 4, by - 40); gg.quadraticCurveTo(x - 50, by + 8, x - 26, by + 40); gg.quadraticCurveTo(x, by + 54, x + 26, by + 40); gg.quadraticCurveTo(x + 50, by + 8, x + sw + 4, by - 40); gg.lineTo(x + sw, top); gg.closePath(); };
+  PL.tint(g, sheath, PL.T.rose, 0.6);
+  PL.hatch(g, sheath, { angle: 0.95, gap: 8, w: 1.4, not: PL.rect(x - 80, ys - 20, 80, d + 120) });
+  PL.ink(g, gg => { gg.moveTo(x - sw + 9, top + 4); gg.lineTo(x - sw + 7, by - 34); gg.moveTo(x + sw - 9, top + 4); gg.lineTo(x + sw - 7, by - 34); }, 1.4, 'rgba(35,28,21,0.6)');
+  PL.ink(g, sheath, 3.5);
+  if (!o.club) {   // 毛球（毛を作る所）と、その下から入りこむ毛乳頭
+    const bulb = gg => { gg.moveTo(x - 30, by - 30); gg.quadraticCurveTo(x - 44, by + 16, x - 18, by + 36); gg.lineTo(x - 12, by + 14); gg.quadraticCurveTo(x, by - 6, x + 12, by + 14); gg.lineTo(x + 18, by + 36); gg.quadraticCurveTo(x + 44, by + 16, x + 30, by - 30); gg.closePath(); };
+    PL.tint(g, bulb, PL.T.brown, 0.75); PL.hatch(g, bulb, { angle: 0.7, gap: 5, w: 1.2, cx: x, cy: by }); PL.ink(g, bulb, 3);
+    const pap = gg => { gg.moveTo(x - 12, by + 50); gg.lineTo(x - 12, by + 14); gg.quadraticCurveTo(x, by - 6, x + 12, by + 14); gg.lineTo(x + 12, by + 50); };
+    PL.tint(g, pap, PL.T.rose, 1); PL.ink(g, pap, 2.5);
+  } else {   // 毛乳頭は下に残る（次の毛のもと）
+    const pap = PL.ellipse(x, by + 46, 13, 11); PL.tint(g, pap, PL.T.rose, 1); PL.ink(g, pap, 2.5);
+    PL.ink(g, gg => { gg.moveTo(x, by + 24); gg.lineTo(x, by + 35); }, 2);
+  }
+}
+// 毛1本（毛幹）。根もと (x, y0) から長さ L。o.rot: 根もとを中心に回す・o.blunt: 剃った平らな先・o.club: 休止期のこん棒の根
+function shaft(g, x, y0, L, o = {}) {
+  if (L < 2) return;
+  const w = o.w ?? 13, lean = o.lean ?? 0.05, rot = o.rot || 0, c = Math.cos(rot), sn = Math.sin(rot), n = 30;
+  const P = (px, py) => { const dx = px - x, dy = py - y0; return [x + dx * c - dy * sn, y0 + dx * sn + dy * c]; };
+  const ctr = s => [x + lean * L * s * s, y0 - L * s];
+  const wid = s => o.blunt ? w : w * (s < 0.82 ? 1 : 0.15 + 0.85 * (1 - s) / 0.18);
+  const Lp = [], Rp = [];
+  for (let i = 0; i <= n; i++) { const s = i / n, [cx, cy] = ctr(s), hw = wid(s) / 2; Lp.push(P(cx - hw, cy)); Rp.push(P(cx + hw, cy)); }
+  const path = gg => { if (o.club) { const q = P(x, y0 + 10); gg.moveTo(...Lp[0]); gg.quadraticCurveTo(q[0] - w * 0.9, q[1] + 6, q[0], q[1] + 6); gg.quadraticCurveTo(q[0] + w * 0.9, q[1] + 6, ...Rp[0]); } else gg.moveTo(...Lp[0]); Rp.forEach((p, i) => { if (!o.club || i) gg.lineTo(...p); }); for (let i = n; i >= 0; i--) gg.lineTo(...Lp[i]); gg.closePath(); };
+  PL.tint(g, path, o.color || PL.T.brown, 0.95);
+  const lit = gg => { for (let i = 0; i <= n; i++) gg[i ? 'lineTo' : 'moveTo'](Lp[i][0] - 30, Lp[i][1]); for (let i = n; i >= 0; i--) gg.lineTo((Lp[i][0] + Rp[i][0]) / 2, (Lp[i][1] + Rp[i][1]) / 2); gg.closePath(); };
+  PL.hatch(g, path, { angle: 0.3 + rot, gap: 4.5, w: 1.1, not: lit });
+  PL.ink(g, gg => { for (let s = 0.06; s < 0.8; s += 14 / Math.max(14, L)) { const [cx, cy] = ctr(s), hw = wid(s) / 2; const a = P(cx - hw, cy + 2), b = P(cx + hw * 0.3, cy - 4); gg.moveTo(...a); gg.lineTo(...b); } }, 1, 'rgba(35,28,21,0.7)');   // キューティクルのうろこ
+  PL.ink(g, path, 2.6);
+}
+// 長さのものさし（縦）。x、下 y1・上 y2
+function ruler(g, x, y1, y2, col = PL.INK) {
+  PL.ink(g, gg => { gg.moveTo(x, y1); gg.lineTo(x, y2); gg.moveTo(x - 14, y1); gg.lineTo(x + 14, y1); gg.moveTo(x - 14, y2); gg.lineTo(x + 14, y2); for (let y = y1 - 30; y > y2 + 4; y -= 30) { gg.moveTo(x - 7, y); gg.lineTo(x, y); } }, 3, col);
+}
+
+const SKIN_Y = 900, HX = 540, PX_DAY = 140 / 54;
+// 日めくりの暦（右上）。days: 伸びた日数
+function calendar(g, days, hl) {
+  const x = 640, y = 150, w = 340, h = 290, page = PL.rect(x, y, w, h), head = PL.rect(x, y, w, 56);
+  PL.tint(g, page, PL.T.sand, 0.35); PL.hatch(g, PL.rect(x + w - 16, y + 56, 16, h - 56), { angle: 0.8, gap: 6, w: 1.4 });
+  PL.tint(g, head, PL.RED, 0.55); PL.ink(g, head, 3); PL.ink(g, page, hl ? 6 : 4, hl ? PL.RED : PL.INK);
+  [x + 70, x + w - 70].forEach(cx => { PL.ink(g, PL.circle(cx, y + 2, 10), 4); PL.ink(g, gg => { gg.moveTo(cx, y - 18); gg.lineTo(cx, y + 14); }, 5); });   // とじ輪
+  const big = days < 365 ? String(Math.round(days)) : (days / 365).toFixed(1), unit = days < 365 ? '日' : '年';
+  PL.label(g, '伸びた日数', x + w / 2, y + h + 34, 32, { color: TK.C.sub, bold: false });   // 名前は暦の下に（朱の帯の上に字を置かない）
+  PL.label(g, big, x + w / 2 - 30, y + 170, 120, { color: hl ? PL.RED : PL.INK });
+  PL.label(g, unit, x + w - 50, y + 205, 54);
+}
+// 周期の帯（上）。stages: [名前, 始め, 終わり]。u: いまの所
+function cycleStrip(g, stages, u) {
+  const X0 = 90, W = 900, cur = stages.findIndex(p => u >= p[1] && u < p[2]);
+  stages.forEach((p, i) => {
+    const q = PL.rect(X0 + p[1] * W, 170, (Math.min(1, p[2]) - p[1]) * W, 40), on = i === cur;
+    PL.tint(g, q, [PL.T.leaf, PL.T.gold, PL.T.gray, PL.T.rust][i], on ? 0.85 : 0.35); if (on) PL.hatch(g, q, { angle: 0.8, gap: 9, w: 1.4 }); PL.ink(g, q, on ? 5 : 3, on ? PL.RED : PL.INK);
+    PL.label(g, p[0], X0 + (p[1] + Math.min(1, p[2])) / 2 * W, 255, 40, { color: on ? PL.RED : TK.C.sub });
+  });
+  PL.ink(g, gg => { const x = X0 + u * W; gg.moveTo(x, 162); gg.lineTo(x - 12, 140); gg.lineTo(x + 12, 140); gg.closePath(); }, 5, PL.RED);
 }
 
 function draw(g, t) {
   // 0〜8: 54 日まで伸びる（54日で 140 画素）
-  const PX_DAY = 140 / 54;
   if (t < 8.0) {
-    skin(g);
+    skinBlock(g, 70, 1010, SKIN_Y, 1185, { fat: 70 });
+    follicle(g, HX, SKIN_Y, 200);
     const days = t < 3 ? 54 * 0.6 * ease(t / 3) : 54 * 0.6 + 54 * 0.4 * ease((t - 3.2) / 2.6);
-    hair(g, HX, SKIN_Y, days * PX_DAY);
-    if (t < 3.0) TK.text(g, 'もしも[止まらなかったら]？', PW / 2, 330, 76);
-    else dayCard(g, days, days > 53.5);
-    if (t >= 6.0) TK.text(g, '太もも（男性）はここで止まる', PW / 2, SKIN_Y - 230, 46, { color: TK.C.sub });
+    shaft(g, HX, SKIN_Y + 190, 190 + days * PX_DAY, { lean: 0 });
+    if (t < 3.0) PL.label(g, 'もしも[止まらなかったら]？', PW / 2, 330, 76);
+    else calendar(g, days, days > 53.5);
+    if (t >= 6.0) {
+      g.save(); g.globalAlpha = fade(t, 6, 8.3, 0.3);
+      PL.dots(g, [[HX - 170, SKIN_Y - 140], [HX + 170, SKIN_Y - 140]], { color: PL.RED, w: 5, dash: [2, 12] });
+      PL.label(g, 'ここで止まる', 120, SKIN_Y - 140, 46, { align: 'left' });
+      PL.label(g, '太もも（男性）', 120, SKIN_Y - 200, 36, { align: 'left', color: TK.C.sub, bold: false });
+      g.restore();
+    }
   }
   // 8〜14: 3年 → 5年。毛は画面の上をつきぬける
   if (t >= 8.0 && t < 14.0) {
-    skin(g);
+    skinBlock(g, 70, 1010, SKIN_Y, 1185, { fat: 70 });
+    follicle(g, HX, SKIN_Y, 200);
     const k = ease((t - 8.4) / 4.0), days = lerp(54, 1826, k);
-    const L = days * PX_DAY;
-    hair(g, HX, SKIN_Y, L);
-    // 54 日の印
-    g.strokeStyle = TK.C.acc; g.lineWidth = 4; g.setLineDash([10, 10]); g.beginPath(); g.moveTo(HX - 160, SKIN_Y - 140); g.lineTo(HX + 160, SKIN_Y - 140); g.stroke(); g.setLineDash([]);
-    TK.text(g, '54日', HX + 230, SKIN_Y - 140, 44, { color: TK.C.acc });
-    dayCard(g, days, days > 1094);
-    if (days > 1094) TK.text(g, '[20〜34倍]', PW / 2, 420, 110, { stroke: 'rgba(0,0,0,0.8)' });
+    shaft(g, HX, SKIN_Y + 190, 190 + days * PX_DAY, { lean: 0 });
+    PL.dots(g, [[HX - 170, SKIN_Y - 140], [HX + 170, SKIN_Y - 140]], { color: PL.RED, w: 5, dash: [2, 12] });
+    PL.label(g, '54日', HX + 200, SKIN_Y - 140, 44, { align: 'left', color: PL.RED });
+    calendar(g, days, days > 1094);
+    if (days > 1094) { PL.label(g, '[20〜34倍]', 80, 600, 90, { align: 'left', maxw: 420 }); PL.label(g, 'の長さ', 80, 690, 48, { align: 'left' }); }
     TK.note(g, t, 8.6, 14, '頭の毛の伸びる時期 3〜5年（一例）', { size: 32 });
   }
-  // 14〜21: ものさし 1cm → 20〜34cm
+  // 14〜21: ものさし 1cm → 20〜34cm（毛を横にねかせて当てる）
   if (t >= 14.0 && t < 21.0) {
     const f = fade(t, 14, 21, 0.3); g.save(); g.globalAlpha = f;
-    const x0 = 130, y = 640, cm = 22;   // 1cm＝22画素（34cm で 748 画素）
-    g.strokeStyle = 'rgba(207,224,255,0.8)'; g.lineWidth = 4; g.strokeRect(x0, y, 34 * cm + 40, 110);
-    for (let c = 0; c <= 34; c++) { const x = x0 + 20 + c * cm, long = c % 5 === 0; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + (long ? 46 : 26)); g.stroke(); if (c % 10 === 0) TK.text(g, String(c), x, y + 80, 34, { color: TK.C.dim, bold: false }); }
+    const x0 = 130, y = 640, cm = 22, rx = x0 + 20;   // 1cm＝22画素（34cm で 748 画素）
+    const body = PL.rect(x0, y, 34 * cm + 40, 110), edge = PL.rect(x0, y + 110, 34 * cm + 40, 16);
+    PL.tint(g, body, PL.T.wood, 0.45); PL.tint(g, edge, PL.T.wood, 0.85); PL.hatch(g, edge, { angle: 0.9, gap: 7, w: 1.6 });
+    PL.ink(g, gg => { for (let c = 0; c <= 34; c++) { const x = rx + c * cm; gg.moveTo(x, y); gg.lineTo(x, y + (c % 5 === 0 ? 40 : 22)); } }, 2.4);
+    PL.ink(g, gg => { body(gg); edge(gg); }, 4);
+    [0, 10, 20, 30].forEach(c => PL.label(g, String(c), rx + c * cm, y + 72, 32, { color: TK.C.sub, bold: false }));
+    PL.label(g, 'cm', x0 + 34 * cm + 70, y + 60, 34, { color: TK.C.sub, bold: false });
     const k1 = ease((t - 14.4) / 0.6), k2 = ease((t - 15.4) / 1.6);
-    g.strokeStyle = HAIR; g.lineWidth = 12; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(x0 + 20, y - 60); g.lineTo(x0 + 20 + cm * 1 * k1, y - 60); g.stroke();
-    TK.text(g, 'いま 1cm', x0 + 20, y - 120, 46, { align: 'left', color: TK.C.sub });
+    shaft(g, rx, y - 50, cm * k1 + 1, { rot: Math.PI / 2, lean: 0, w: 11 });
+    PL.label(g, 'いま 1cm', rx, y - 120, 46, { align: 'left', color: TK.C.sub });
     if (t > 15.4) {
-      g.strokeStyle = TK.C.acc; g.beginPath(); g.moveTo(x0 + 20, y + 180); g.lineTo(x0 + 20 + cm * lerp(1, 34, k2), y + 180); g.stroke();
-      g.fillStyle = 'rgba(255,207,74,0.25)'; g.fillRect(x0 + 20 + cm * 20, y + 150, cm * 14 * k2, 60);
-      if (k2 >= 1) TK.text(g, '[20〜34cm]（推定）', PW / 2, y + 300, 76);
+      const r = PL.rect(rx + cm * 20, y + 150, cm * 14 * k2, 64);
+      PL.tint(g, r, PL.T.gold, 0.6); PL.hatch(g, r, { angle: 0.9, gap: 10, w: 1.6 }); PL.ink(g, r, 3, PL.RED);   // 20〜34cm のはば
+      shaft(g, rx, y + 182, cm * lerp(1, 34, k2), { rot: Math.PI / 2, lean: 0, w: 11 });
+      if (k2 >= 1) PL.label(g, '[20〜34cm]（推定）', PW / 2, y + 320, 76);
     }
-    TK.text(g, 'cm', x0 + 34 * cm + 70, y + 80, 34, { color: TK.C.dim, bold: false });
     g.restore();
-    TK.note(g, t, 14.4, 21, '「同じ速さなら」の仮定の計算。頭の毛は速く伸びるので\n実際はもっと長くなるはず。1cm は例', { size: 30 });
+    TK.note(g, t, 14.4, 21, '「同じ速さなら」の仮定の計算。頭の毛は速く伸びるので\n実際はもっと長くなるはず。1cm は例', { size: 30, y: 1150 });
   }
-  // 21〜26: 実際は止まって、休んで、抜ける
+  // 21〜26: 実際は止まって、休んで、抜ける（毛穴の断面）
   if (t >= 21.0 && t < 26.0) {
-    skin(g);
     const u = clamp((t - 21.2) / 4.4, 0, 1);
-    const stages = [['伸びる', 0, 0.3], ['止まる', 0.3, 0.45], ['休む', 0.45, 0.75], ['抜ける', 0.75, 1.01]];
-    const cur = stages.find(s => u >= s[1] && u < s[2]);
-    stages.forEach((s, i) => { const x = 90 + i * 232, on = s === cur; TK.card(g, x, 160, 212, 110, { r: 30, fill: on ? 'rgba(255,207,74,0.25)' : 'rgba(20,34,72,0.85)', stroke: on ? TK.C.acc : 'rgba(160,190,255,0.35)', lw: on ? 6 : 3 }); TK.text(g, s[0], x + 106, 215, 50, { color: on ? '#fff' : TK.C.dim }); });
-    const L = 140 * Math.min(1, u / 0.3), sink = u > 0.3 ? Math.min(1, (u - 0.3) / 0.3) * 40 : 0;
-    const dy = u > 0.75 ? -200 * (u - 0.75) / 0.25 : 0;
-    g.save(); g.translate(0, dy); if (u > 0.75) g.globalAlpha = 1 - (u - 0.75) / 0.25 * 0.8;
-    hair(g, HX, SKIN_Y - sink, L, { rest: u > 0.45 });
-    g.restore();
-    if (u > 0.8) { const k = (u - 0.8) / 0.2; g.save(); g.globalAlpha = k; hair(g, HX, SKIN_Y, 30 * k); g.restore(); TK.text(g, '新しい毛', HX + 150, SKIN_Y - 60, 44, { color: TK.C.sub, align: 'left' }); }
+    cycleStrip(g, [['伸びる', 0, 0.3], ['止まる', 0.3, 0.45], ['休む', 0.45, 0.75], ['抜ける', 0.75, 1.01]], u);
+    const ys = 640, x = 680;
+    skinBlock(g, 330, 1010, ys, 1190, { fat: 90 });
+    const sink = u < 0.3 ? 0 : Math.min(1, (u - 0.3) / 0.15), d = lerp(400, 230, sink), club = u > 0.45;
+    follicle(g, x, ys, d, { club });
+    const L = 140 * Math.min(1, 0.3 + u / 0.3 * 0.7);
+    let lift = 0, rot = 0, a = 1;
+    if (u > 0.75) { const e = (u - 0.75) / 0.25; lift = 90 * e; rot = 0.9 * e * e; a = 1 - 0.8 * e; }
+    const r0 = d - (club ? 10 : 20);
+    g.save(); g.globalAlpha *= a; shaft(g, x, ys + r0 - lift, L + r0, { club, rot, lean: 0 }); g.restore();
+    if (u > 0.8) {
+      const k = (u - 0.8) / 0.2; g.save(); g.globalAlpha *= k; shaft(g, x, ys + r0, r0 + 30 * k, { w: 10, lean: 0 }); g.restore();
+      PL.leader(g, x - 8, ys - 20 * k, 290, 470); PL.label(g, '新しい毛', 270, 470, 44, { align: 'right' });
+    }
+    PL.leader(g, x - 30, ys + 14, 290, 560); PL.label(g, '皮ふの表面', 270, 560, 38, { align: 'right' });
+    if (!club) { PL.leader(g, x - 34, ys + d, 290, ys + d); PL.label(g, '毛球', 270, ys + d, 40, { align: 'right' }); }
+    else { PL.leader(g, x - 12, ys + d + 46, 290, ys + d + 46); PL.label(g, '毛乳頭', 270, ys + d + 46, 40, { align: 'right' }); PL.label(g, '（次の毛のもと）', 270, ys + d + 92, 32, { align: 'right', color: TK.C.sub, bold: false }); }
     TK.note(g, t, 21.4, 26, '太もも（男性）は、伸びる時期が約54日', { size: 32 });
   }
-  // 26〜30
+  // 26〜30: まとめ（字）と、となりあう3つの毛穴（伸びる・休む・生えかわる）
   if (t >= 26.0) {
     const f = fade(t, 26, 30.5, 0.3); g.save(); g.globalAlpha = f;
-    TK.card(g, 110, 330, 860, 400);
-    TK.lines(g, '伸びすぎないのは\n[早く休む]から', PW / 2, 530, 88);
+    PL.label(g, '伸びすぎないのは', 80, 360, 80, { align: 'left' });
+    PL.label(g, '[早く休む]から', 80, 480, 100, { align: 'left' });
+    PL.ink(g, gg => { gg.moveTo(80, 552); gg.lineTo(760, 552); }, 3);
+    const ys = 900;
+    skinBlock(g, 90, 990, ys, 1080, { fat: 40 });
+    follicle(g, 250, ys, 120); shaft(g, 250, ys + 110, 110 + 120, { lean: 0 });
+    follicle(g, 540, ys, 80, { club: true }); shaft(g, 540, ys + 70, 70 + 120, { club: true, lean: 0 });
+    follicle(g, 830, ys, 110); shaft(g, 830, ys + 100, 100 + 30, { w: 10, lean: 0 });
+    [['伸びる', 250], ['休む', 540], ['生えかわる', 830]].forEach(([s, x]) => PL.label(g, s, x, ys - 200, 44, { color: TK.C.sub }));
     g.restore();
-    TK.note(g, t, 27.0, 30, '出どころ: Seago & Ebling (1985) Br J Dermatol 113:9\nWolfram (2003) J Am Acad Dermatol 48:S106', { size: 30 });
+    TK.note(g, t, 27.0, 30, '出どころ: Seago & Ebling (1985) Br J Dermatol 113:9\nWolfram (2003) J Am Acad Dermatol 48:S106', { size: 30, y: 1150 });
   }
 }
 

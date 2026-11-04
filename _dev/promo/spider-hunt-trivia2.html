@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく spider-hunt-2（型G 15秒ループ）「ハエは、飛ぶ0.2秒前に向きを決めている」。台本は trivia/spider-hunt.md。?short で録る
@@ -29,63 +32,128 @@ const cues = [
 ];
 
 // ハエの目の視界（六角形の個眼）に影がふくらむ。k: 0〜1 の影の大きさ
+// ---- 版画の道具（このページだけ。PL.* を組み合わせる）----
+const TAU = Math.PI * 2;
+// ローカル座標（右向き・足もとが y=0）から画面へ写す。dir=-1 で左向き
+function mapper(x0, y0, s, rot = 0, dir = 1) { const c = Math.cos(rot), n = Math.sin(rot); return (x, y) => { x *= dir; return [x0 + s * (x * c - y * n), y0 + s * (x * n + y * c)]; }; }
+// ローカル座標で道を作る。b(P) の P: M・L・Q・Z と E（楕円）
+const lp = (m, b) => g => {
+  const P = { M: (x, y) => g.moveTo(...m(x, y)), L: (x, y) => g.lineTo(...m(x, y)), Q: (a, c, x, y) => g.quadraticCurveTo(...m(a, c), ...m(x, y)), Z: () => g.closePath(),
+    E: (cx, cy, rx, ry, rot = 0) => { for (let i = 0; i <= 40; i++) { const t = i / 40 * TAU, x = Math.cos(t) * rx, y = Math.sin(t) * ry, p = m(cx + x * Math.cos(rot) - y * Math.sin(rot), cy + x * Math.sin(rot) + y * Math.cos(rot)); i ? g.lineTo(...p) : g.moveTo(...p); } g.closePath(); } };
+  b(P);
+};
+// 手彩色＋かげの斜線＋墨の輪郭。o.lit: 光の当たる所（斜線を抜く）
+function solid(g, path, color, o = {}) {
+  PL.tint(g, path, color, o.a ?? 0.65);
+  if (o.hatch !== false) PL.hatch(g, path, { angle: o.angle ?? 0.7, gap: o.gap ?? 9, w: o.hw ?? 1.8, not: o.lit, cx: o.cx, cy: o.cy });
+  PL.ink(g, path, o.w ?? 5, o.ink || PL.INK);
+}
+// 墨の矢印（頭は手彩色＋輪郭）
+function arrowPL(g, x0, y0, x1, y1, color = PL.INK, w = 8) {
+  const a = Math.atan2(y1 - y0, x1 - x0), h = w * 3.4;
+  PL.ink(g, gg => { gg.moveTo(x0, y0); gg.lineTo(x1 - Math.cos(a) * h * 0.7, y1 - Math.sin(a) * h * 0.7); }, w, color);
+  const head = PL.poly([[x1, y1], [x1 - Math.cos(a - 0.42) * h, y1 - Math.sin(a - 0.42) * h], [x1 - Math.cos(a + 0.42) * h, y1 - Math.sin(a + 0.42) * h]]);
+  PL.tint(g, head, color, 1); PL.ink(g, head, Math.max(2, w * 0.45), color);
+}
+// 答えの札: 手彩色の札（筆のルックでは字の下が濃くなり字と重なる）をやめ、紙の札に朱の二重わくで示す
+function answerChoices(g, t, a, b, opts, o) {
+  const card = TK.card; TK.card = (gg, x, y, w, h) => card(gg, x, y, w, h, {});
+  try { TK.choices(g, t, a, b, opts, o); } finally { TK.card = card; }
+  if (t < (o.reveal ?? Infinity) || t < a || t > b) return;
+  const y = (o.y ?? PH * 0.34) + o.answer * ((o.h || 190) + (o.gap ?? 40)), h = o.h || 190, f = clamp((t - o.reveal) / 0.35, 0, 1) * fade(t, a, b, 0.3);
+  g.save(); g.globalAlpha *= f; PL.ink(g, PL.rect(78, y - 12, PW - 156, h + 24), 6, PL.RED); PL.ink(g, PL.rect(90, y, PW - 180, h), 3, PL.RED); g.restore();
+}
+
+// spider-hunt-trivia1.html のハエと同じ描き方（横から・頭は左）
+const pathOf = (m, cmds, dx = 0, dy = 0) => g => {
+  for (const c of cmds) {
+    const p = []; for (let i = 1; i < c.length; i += 2) p.push(...m(c[i] + dx, c[i + 1] + dy));
+    if (c[0] === 'M') g.moveTo(...p); else if (c[0] === 'L') g.lineTo(...p); else if (c[0] === 'Q') g.quadraticCurveTo(...p); else g.closePath();
+  }
+};
+const ellCmds = (cx, cy, rx, ry, rot = 0, n = 40) => {
+  const a = [];
+  for (let i = 0; i < n; i++) { const t = i / n * TAU, x = Math.cos(t) * rx, y = Math.sin(t) * ry; a.push([i ? 'L' : 'M', cx + x * Math.cos(rot) - y * Math.sin(rot), cy + x * Math.sin(rot) + y * Math.cos(rot)]); }
+  a.push(['Z']); return a;
+};
+const lerpP = (a, b, k) => [lerp(a[0], b[0], k), lerp(a[1], b[1], k)];
+
+// ハエの目の視界（六角形の個眼）に影がふくらむ。k: 0〜1 の影の大きさ
 function flyEye(g, cx, cy, R, k, f = 1) {
   g.save(); g.globalAlpha *= f;
-  g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.clip();
-  g.fillStyle = 'rgba(120,170,255,0.12)'; g.fillRect(cx - R, cy - R, 2 * R, 2 * R);
+  const disk = PL.circle(cx, cy, R);
+  g.save(); g.beginPath(); disk(g); g.clip();
   const s = 34, h = s * Math.sqrt(3) / 2, sx = cx - R * 0.35, sy = cy - R * 0.1, sr = 20 + k * R * 1.1;
-  for (let row = -Math.ceil(R / h) - 1; row <= Math.ceil(R / h) + 1; row++) {
-    for (let col = -Math.ceil(R / s) - 1; col <= Math.ceil(R / s) + 1; col++) {
-      const x = cx + col * s * 1.5, y = cy + row * h * 2 + (col & 1 ? h : 0);
-      const dark = Math.hypot(x - sx, y - sy) < sr;
-      g.beginPath();
-      for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; g.lineTo(x + Math.cos(a) * s * 0.96, y + Math.sin(a) * s * 0.96); }
-      g.closePath();
-      g.fillStyle = dark ? 'rgba(5,8,20,0.92)' : 'rgba(160,200,255,0.10)'; g.fill();
-      g.strokeStyle = 'rgba(160,200,255,0.35)'; g.lineWidth = 2; g.stroke();
-    }
+  const lit = [], dark = [];
+  for (let row = -Math.ceil(R / h) - 1; row <= Math.ceil(R / h) + 1; row++) for (let col = -Math.ceil(R / s) - 1; col <= Math.ceil(R / s) + 1; col++) {
+    const x = cx + col * s * 1.5, y = cy + row * h * 2 + (col & 1 ? h : 0);
+    (Math.hypot(x - sx, y - sy) < sr ? dark : lit).push([x, y]);
   }
+  const hexes = (list, sc) => gg => list.forEach(([x, y]) => { for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3, px = x + Math.cos(a) * s * sc, py = y + Math.sin(a) * s * sc; i ? gg.lineTo(px, py) : gg.moveTo(px, py); } gg.closePath(); });
+  PL.tint(g, hexes(lit, 0.96), PL.T.rust, 0.35);
+  PL.tint(g, hexes(dark, 0.96), PL.INK, 0.85);
+  PL.hatch(g, hexes(dark, 0.96), { angle: 0.8, gap: 7, w: 1.6 });
+  PL.ink(g, hexes(lit.concat(dark), 0.96), 1.6, 'rgba(35,28,21,0.55)');
+  PL.hatch(g, disk, { angle: 0.6, gap: 12, w: 1.4, not: PL.circle(cx - R * 0.35, cy - R * 0.35, R) });   // 丸いふくらみのかげ
   g.restore();
-  g.strokeStyle = 'rgba(200,215,255,0.6)'; g.lineWidth = 5; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.stroke();
+  PL.ink(g, disk, 6);
+  g.restore();
 }
-// 横から見たハエ（頭は左）。lean: 重心を右へずらす量（0〜1）、push: 脚ののび（0〜1）
+// 横から見たハエ（頭は左）。lean: 重心を右へずらす量（0〜1）、push: 脚ののび（0〜1）。重心の点の画面の位置を返す
 function flySide(g, x, y, lean, push, s = 1) {
-  g.save(); g.translate(x, y); g.scale(s, s);
-  g.strokeStyle = '#e8eefc'; g.fillStyle = 'rgba(232,238,252,0.16)'; g.lineWidth = 4; g.lineCap = 'round'; g.lineJoin = 'round';
-  const bx = lean * 26, by = -70 - push * 40 + lean * 6;
-  // 脚3本（先は地面の同じ所。体が動くと角度が変わる）
-  [[-40, -24], [0, -6], [40, 14]].forEach(([fx, hx]) => {
-    const kx = (fx + hx + bx) / 2 + 6, ky = by + 10 - (1 - push) * 24;
-    g.beginPath(); g.moveTo(hx + bx, by + 22); g.lineTo(kx, ky + 20); g.lineTo(fx, 0); g.stroke();
+  const m = mapper(x, y, s), bx = lean * 7, by = -push * 18, mb = (px, py) => m(px + bx, py + by);
+  const ow = Math.max(2.2, 2.4 * s), lw = Math.max(1, 0.9 * s);
+  const wing = [['M', -4, -44], ['Q', 26, -61, 62, -45], ['Q', 38, -33, 0, -39], ['Z']];
+  // 脚: 付け根（体といっしょに動く）→ ひざ → 足先（地面の同じ所）
+  const legs = [[[-14, -22], [-37, 0]], [[-6, -20], [5, 0]], [[4, -20], [33, 0]]];
+  const legPath = sh => g2 => legs.forEach(([hip, foot]) => {
+    const H = [hip[0] + bx + sh, hip[1] + by], F = [foot[0] + sh, foot[1]], K = [(H[0] + F[0]) / 2 + (foot[0] < 0 ? -6 : 6), (H[1] + F[1]) / 2 - 7 + push * 5];
+    pathOf(m, [['M', ...H], ['L', ...K], ['L', ...F]])(g2);
   });
-  // 羽（たたんだ形）
-  g.beginPath(); g.ellipse(bx + 40, by - 26, 62, 16, -0.25, 0, Math.PI * 2); g.fill(); g.stroke();
-  g.beginPath(); g.ellipse(bx + 34, by + 4, 52, 26, 0.08, 0, Math.PI * 2); g.fill(); g.stroke();   // 腹
-  g.beginPath(); g.ellipse(bx - 14, by - 2, 32, 28, 0, 0, Math.PI * 2); g.fill(); g.stroke();     // 胸
-  g.beginPath(); g.arc(bx - 56, by - 6, 20, 0, Math.PI * 2); g.fill(); g.stroke();                // 頭
-  // 重心の点
-  g.fillStyle = TK.C.acc; g.beginPath(); g.arc(bx + 6, by + 4, 11, 0, Math.PI * 2); g.fill();
+  g.save(); g.globalAlpha *= 0.45; PL.ink(g, legPath(6), Math.max(2, 2.4 * s)); PL.tint(g, pathOf(mb, wing, 7, -5), PL.T.sky, 0.4); PL.ink(g, pathOf(mb, wing, 7, -5), ow * 0.6); g.restore();
+  const ab = pathOf(mb, ellCmds(22, -26, 22, 12.5, 0.12)), th = pathOf(mb, ellCmds(-6, -31, 17, 15)), hd = pathOf(mb, ellCmds(-28, -30, 11, 13)), eye = pathOf(mb, ellCmds(-29, -32, 8.5, 10.5, 0.2));
+  [[ab, PL.T.gray], [th, PL.T.gray], [hd, PL.T.sand]].forEach(([p, c], i) => {
+    PL.tint(g, p, c, 0.8);
+    PL.hatch(g, p, { angle: 0.8, gap: Math.max(4.5, 3 * s), w: lw * 1.2, not: i === 0 ? pathOf(mb, ellCmds(24, -33, 22, 12.5, 0.12)) : i === 1 ? pathOf(mb, ellCmds(-3, -38, 17, 15)) : pathOf(mb, ellCmds(-26, -36, 11, 13)) });
+  });
+  g.save(); g.beginPath(); ab(g); g.clip();
+  PL.ink(g, gg => [10, 19, 28, 36].forEach(sx => pathOf(mb, [['M', sx, -40], ['Q', sx + 4, -26, sx, -12]])(gg)), lw * 1.4);
   g.restore();
-  return [x + (bx + 6) * s, y + (by + 4) * s];
+  PL.tint(g, eye, PL.T.rust, 0.9);
+  PL.hatch(g, eye, { angle: 0.8, gap: Math.max(3, 2 * s), w: lw * 0.7 }); PL.hatch(g, eye, { angle: -0.8, gap: Math.max(3, 2 * s), w: lw * 0.7 });
+  [ab, th, hd].forEach(p => PL.ink(g, p, ow)); PL.ink(g, eye, ow * 0.6);
+  PL.ink(g, gg => {
+    for (let k = 0; k < 9; k++) { const t = Math.PI * (1.15 + k / 9 * 0.7), cx = -6 + Math.cos(t) * 17, cy = -31 + Math.sin(t) * 15; pathOf(mb, [['M', cx, cy], ['L', cx + Math.cos(t) * 5 + 3, cy + Math.sin(t) * 6]])(gg); }
+    pathOf(mb, [['M', -34, -41], ['L', -38, -47], ['L', -41, -46]])(gg);
+    pathOf(mb, [['M', -30, -18], ['L', -32, -10], ['L', -35, -8]])(gg);
+  }, lw * 1.3);
+  PL.ink(g, legPath(0), Math.max(2.2, 2.8 * s));
+  const wp = pathOf(mb, wing); PL.tint(g, wp, PL.T.sky, 0.45);
+  PL.ink(g, gg => { [[60, -46], [52, -38], [40, -35.5], [30, -35]].forEach(([ex, ey], i) => pathOf(mb, [['M', -2, -41], ['Q', 24, -48 + i * 3, ex, ey]])(gg)); }, lw * 1.1);
+  PL.ink(g, wp, ow * 0.8);
+  // 重心の点（朱）
+  const [cx, cy] = mb(4, -28), dot = PL.circle(cx, cy, 11);
+  PL.tint(g, dot, PL.RED, 1); PL.ink(g, dot, 3, PL.RED);
+  return [cx, cy];
 }
+// 上から近づく物の影（斜線の円と点線のふち）
 function shadowBlob(g, x, y, r, f = 1) {
   g.save(); g.globalAlpha *= f;
-  const gr = g.createRadialGradient(x, y, r * 0.3, x, y, r);
-  gr.addColorStop(0, 'rgba(0,0,0,0.85)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
-  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
-  g.strokeStyle = 'rgba(200,215,255,0.35)'; g.setLineDash([10, 12]); g.lineWidth = 3; g.beginPath(); g.arc(x, y, r * 0.7, 0, Math.PI * 2); g.stroke();
+  const c = PL.circle(x, y, r * 0.75);
+  PL.tint(g, c, PL.INK, 0.35); PL.hatch(g, c, { angle: 0.8, gap: 8, w: 2, cx: x, cy: y }); PL.hatch(g, PL.circle(x, y, r * 0.45), { angle: -0.8, gap: 8, w: 2, cx: x, cy: y });
+  g.setLineDash([10, 12]); PL.ink(g, PL.circle(x, y, r), 3, 'rgba(35,28,21,0.6)');
   g.restore();
 }
-function arrow(g, x0, y0, x1, y1, col, w = 10) {
-  const a = Math.atan2(y1 - y0, x1 - x0);
-  g.save(); g.strokeStyle = col; g.fillStyle = col; g.lineWidth = w; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1 - Math.cos(a) * w * 2, y1 - Math.sin(a) * w * 2); g.stroke();
-  g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 - Math.cos(a - 0.45) * w * 4, y1 - Math.sin(a - 0.45) * w * 4); g.lineTo(x1 - Math.cos(a + 0.45) * w * 4, y1 - Math.sin(a + 0.45) * w * 4); g.closePath(); g.fill();
-  g.restore();
+function ground(g, y) {
+  const s = PL.rect(100, y, 860, 26); PL.tint(g, s, PL.T.wood, 0.5);
+  PL.ink(g, gg => { for (let x = 120; x < 960; x += 40) { gg.moveTo(x, y + 4); gg.lineTo(x - 16, y + 22); } }, 1.5);
+  PL.ink(g, gg => { gg.moveTo(100, y); gg.lineTo(960, y); }, 4);
 }
 function timer(g, s, hot) {
-  TK.card(g, 300, 170, 480, 130, { r: 65, stroke: hot ? TK.C.acc : undefined, lw: hot ? 6 : 3 });
-  TK.text(g, (s <= -0.005 ? '−' : '') + Math.abs(s).toFixed(2) + ' 秒', PW / 2, 236, 80, { color: hot ? TK.C.acc : '#fff' });
+  TK.card(g, 300, 170, 480, 130);
+  if (hot) PL.ink(g, PL.rect(290, 160, 500, 150), 5, PL.RED);
+  PL.watch(g, 365, 235, 40, (s + 0.2) / 0.2 * 0.75);
+  TK.text(g, (s <= -0.005 ? '−' : '') + Math.abs(s).toFixed(2) + ' 秒', 425, 236, 70, { color: hot ? PL.RED : PL.INK, align: 'left' });
 }
 
 function draw(g, t) {
@@ -95,17 +163,18 @@ function draw(g, t) {
     TK.hook(g, t, 0.0, 2.2, '飛び立つ [0.2秒前]に\n向きは決まっている', { y: 300, size: 104 });
     TK.note(g, t, 0.3, 2.2, 'ハエの目に映る影（模式）', { size: 32 });
   }
-  const GY = 940, FX = 470;
+  const GY = 940, FX = 540, S = 4.2;
   // 2.2〜7: 構えの直し（−0.20 → 0 秒）
   if (t >= 2.2 && t < 7.0) {
     const f = fade(t, 2.2, 7.0, 0.25), k = clamp((t - 2.6) / 4.2, 0, 1), s = -0.2 + 0.2 * k;
     g.save(); g.globalAlpha = f;
-    shadowBlob(g, 180, 620, 120 + k * 90);
-    g.strokeStyle = 'rgba(200,215,255,0.55)'; g.lineWidth = 4; g.beginPath(); g.moveTo(100, GY); g.lineTo(960, GY); g.stroke();
-    const [mx, my] = flySide(g, FX, GY, TK.ease ? ease(k) : k, 0, 2.2);
-    if (k > 0.15) arrow(g, mx, my - 130, mx + 60 + 120 * ease(k), my - 130, TK.C.acc, 8);
-    TK.text(g, '重心', mx, my - 190, 46, { color: TK.C.acc });
-    TK.text(g, '影', 180, 400, 50, { color: TK.C.sub });
+    shadowBlob(g, 170, 600, 120 + k * 90);
+    ground(g, GY);
+    const [mx, my] = flySide(g, FX, GY, ease(k), 0, S);
+    if (k > 0.15) arrowPL(g, mx, my - 230, mx + 60 + 120 * ease(k), my - 230, PL.RED, 8);
+    PL.leader(g, mx, my - 14, mx, my - 200, PL.RED);
+    TK.text(g, '重心', mx - 70, my - 230, 46, { color: PL.RED, align: 'right' });
+    TK.text(g, '影', 170, 350, 50, { color: TK.C.sub });
     timer(g, s, false);
     g.restore();
   }
@@ -113,13 +182,14 @@ function draw(g, t) {
   if (t >= 7.0 && t < 11.0) {
     const f = fade(t, 7.0, 11.0, 0.25), u = clamp((t - 7.1) / 1.6, 0, 1);
     g.save(); g.globalAlpha = f;
-    shadowBlob(g, 180, 620, 210);
-    g.strokeStyle = 'rgba(200,215,255,0.55)'; g.lineWidth = 4; g.beginPath(); g.moveTo(100, GY); g.lineTo(960, GY); g.stroke();
+    shadowBlob(g, 170, 600, 210);
+    ground(g, GY);
     const push = clamp(u * 4, 0, 1), fly = TK.out(clamp((u - 0.2) / 0.8, 0, 1));
-    if (u > 0.3) arrow(g, FX - 60, GY - 120, FX + 160, GY - 420, TK.C.green, 12);
-    flySide(g, FX + fly * 220, GY - fly * 300, 1, push, 2.2 - fly * 0.5);
-    timer(g, Math.min(0.2, (t - 7.0) * 0.1) * 0, true);
-    TK.text(g, '飛び立ち', PW / 2, 350, 52, { color: TK.C.acc });
+    if (u > 0.3) arrowPL(g, FX - 40, GY - 160, FX + 200, GY - 470, PL.GREEN, 12);
+    flySide(g, FX + fly * 220, GY - fly * 300, 1, push, S - fly * 1.2);
+    timer(g, 0, true);
+    TK.text(g, '飛び立ち', 880, 335, 52, { color: PL.RED });
+    TK.text(g, '影', 170, 350, 50, { color: TK.C.sub });
     g.restore();
   }
   // 11〜15: もう一度、影がふくらみはじめる（最初へつながる）

@@ -23,6 +23,7 @@
 | 3D の素材の元（Poly Haven の CC0。空の HDRI・地面・木 island_tree_01/02、約120MB） | `../3d-library/polyhaven/`（list.tsv・list-ships.tsv に取ってきた URL。船 dutch_ship_large_01/02・medium、cannon_01 も） | 写さない | list.tsv の URL か polyhaven.com から取りなおす。アプリが使う絵は `chess-battle/assets/`、作りなおしは `chess-battle/tools/build-env.py` |
 | 3D の素材の元（Quaternius の CC0 パック4つ、約424MB） | `../3d-library/quaternius/`（zips/ と展開したもの） | 写さない（大きい） | itch.io の quaternius（Universal Base Characters・Modular Character Outfits - Fantasy・Universal Animation Library・LowPoly Animated Animals）から無料で取りなおす。アプリが使う glb は Git の `chess-battle/assets/` にある。作りなおしは `chess-battle/tools/build-soldiers.py` |
 | 読み上げの VOICEVOX ENGINE（GPU 版 0.26.0、約3GB） | `%USERPROFILE%\tools\voicevox-nv\windows-nvidia\`（声の wav は `_dev/promo/out/voice/`） | 写さない（大きい） | GitHub の VOICEVOX/voicevox_engine の Releases から windows-nvidia の 7z を取りなおす。声は `_dev/tools/voicevox-lines.mjs` で作りなおせる（`_dev/promo/trivia/README.md`） |
+| うんちくショートの BGM「Sneaky Snitch」（Kevin MacLeod、CC BY 4.0） | `_dev/promo/out/bgm/kevin-sneaky-snitch.ogg`（Git の外） | 写さない | incompetech.com から mp3 を取りなおし、`ffmpeg -i <mp3> -c:a libvorbis -q:a 5 kevin-sneaky-snitch.ogg`。使う所は `_dev/promo/trivia-style.js` |
 | 古いメモ | `PUBLISH.local.md`（以前の Artifact の URL） | 写す | 要らない（Artifact は使わない） |
 
 ## 新しい PC で戻す順

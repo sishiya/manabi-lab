@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく immune-1（型H 当ててみて）「抗体が半分に減るまで、何年？」。台本は trivia/immune-battle.md。?short で録る
@@ -32,77 +35,89 @@ const cues = [
   { t: 9.0, type: 'whoosh' }, { t: 10.0, type: 'rise' }, { t: 13.2, type: 'ding' }, { t: 16.0, type: 'pop' }, { t: 22.0, type: 'whoosh' }, { t: 29.0, type: 'pop' },
 ];
 const LX = 290, RX = 790, HY = 640;   // 砂時計2つの位置
-
-// 砂時計。top は上の砂の残り（0〜1）
-function hourglass(g, x, y, h, top, color, o = {}) {
-  const w = h * 0.55;
-  g.save(); g.translate(x, y);
-  g.strokeStyle = o.stroke || 'rgba(207,224,255,0.9)'; g.lineWidth = 6; g.lineJoin = 'round';
-  const shape = () => { g.beginPath(); g.moveTo(-w / 2, -h / 2); g.lineTo(w / 2, -h / 2); g.lineTo(18, 0); g.lineTo(w / 2, h / 2); g.lineTo(-w / 2, h / 2); g.lineTo(-18, 0); g.closePath(); };
+const rnd = (i, k = 1) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
+// 絵は「図鑑の版画」（PL.*）
+// 砂時計（木の台と柱・ふくらんだガラス・砂）。top は上の砂の残り（0〜1）
+function hourglass(g, x, y, h, top, color) {
+  const w = h * 0.55, n = 14;
+  const side = (s, gg, rev) => {   // s: -1 左, 1 右。上から下へ（rev で下から上）
+    const P = [[x + s * w / 2, y - h / 2], [x + s * w / 2, y - h * 0.16], [x + s * 15, y - h * 0.05], [x + s * 13, y], [x + s * 15, y + h * 0.05], [x + s * w / 2, y + h * 0.16], [x + s * w / 2, y + h / 2]];
+    const Q = rev ? P.slice().reverse() : P;
+    gg.lineTo(...Q[0]); gg.bezierCurveTo(...Q[1], ...Q[2], ...Q[3]); gg.bezierCurveTo(...Q[4], ...Q[5], ...Q[6]);
+  };
+  const glass = gg => { gg.moveTo(x - w / 2, y - h / 2); side(1, gg); side(-1, gg, true); gg.closePath(); };
+  PL.tint(g, glass, PL.T.sky, 0.18);
   // 砂
-  g.save(); shape(); g.clip();
-  g.fillStyle = color;
-  const ht = (h / 2) * Math.sqrt(top);   // 上の砂（下にたまる形）
-  g.fillRect(-w / 2, -ht + 0, w, ht);
-  const hb = (h / 2) * Math.sqrt(1 - top) * 0.9;
-  g.fillRect(-w / 2, h / 2 - hb, w, hb);
-  if (top > 0.002 && top < 0.999) g.fillRect(-3, 0, 6, h / 2);
+  const ht = (h / 2) * Math.sqrt(top) * 0.92, hb = (h / 2) * Math.sqrt(1 - top) * 0.9;
+  const sand = gg => {
+    if (ht > 2) { gg.moveTo(x - w, y - ht); gg.quadraticCurveTo(x, y - ht + 16, x + w, y - ht); gg.lineTo(x + w, y); gg.lineTo(x - w, y); gg.closePath(); }
+    if (hb > 2) { gg.moveTo(x - w, y + h / 2); gg.lineTo(x - w, y + h / 2 - hb + 14); gg.quadraticCurveTo(x, y + h / 2 - hb - 22, x + w, y + h / 2 - hb + 14); gg.lineTo(x + w, y + h / 2); gg.closePath(); }
+    if (top > 0.002 && top < 0.999) gg.rect(x - 3, y, 6, h / 2 - hb);
+  };
+  g.save(); g.beginPath(); glass(g); g.clip();
+  PL.tint(g, sand, color, 0.85);
+  g.save(); g.beginPath(); sand(g); g.clip(); PL.ink(g, gg => { for (let i = 0; i < 120; i++) PL.circle(x + (rnd(i, 2) - 0.5) * w, y + (rnd(i, 3) - 0.5) * h, 1.6)(gg); }, 1.6, 'rgba(35,28,21,0.5)'); g.restore();   // 砂つぶ
+  PL.ink(g, sand, 2);
   g.restore();
-  shape(); g.stroke();
-  g.lineWidth = 10; g.beginPath(); g.moveTo(-w / 2 - 20, -h / 2); g.lineTo(w / 2 + 20, -h / 2); g.moveTo(-w / 2 - 20, h / 2); g.lineTo(w / 2 + 20, h / 2); g.stroke();
-  g.restore();
+  PL.hatch(g, glass, { angle: 1.2, gap: 9, w: 1.3, not: PL.rect(x - w, y - h, w * 1.62, h * 2) });   // ガラスの右はしのかげ
+  PL.ink(g, gg => { gg.moveTo(x - w / 2 + 16, y - h / 2 + 30); gg.lineTo(x - w / 2 + 16, y - h * 0.2); }, 3, 'rgba(255,255,255,0.8)');   // 光るすじ
+  PL.ink(g, glass, 4);
+  // 柱（ろくろで削った木）と、上下の台
+  [-1, 1].forEach(s => { const px = x + s * (w / 2 + 22), post = gg => { gg.moveTo(px - 6, y - h / 2); gg.lineTo(px - 6, y + h / 2); gg.lineTo(px + 6, y + h / 2); gg.lineTo(px + 6, y - h / 2); gg.closePath(); PL.ellipse(px, y, 11, 22)(gg); PL.ellipse(px, y - h * 0.3, 10, 14)(gg); PL.ellipse(px, y + h * 0.3, 10, 14)(gg); };
+    PL.tint(g, post, PL.T.wood, 0.85); PL.ink(g, post, 3); });
+  [-1, 1].forEach(s => { const yy = s < 0 ? y - h / 2 - 26 : y + h / 2, plate = PL.rect(x - w / 2 - 40, yy, w + 80, 26);
+    PL.tint(g, plate, PL.T.wood, 0.85); PL.hatch(g, plate, { angle: 0.9, gap: 8, w: 1.5 }); PL.ink(g, plate, 4); });
 }
-// 抗体（Y の形）
+// 抗体（Y の形。重い鎖2本＋軽い鎖2本）
 function antibody(g, x, y, s, ang, color) {
-  g.save(); g.translate(x, y); g.rotate(ang); g.scale(s, s);
-  g.strokeStyle = color; g.lineWidth = 9; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(0, 40); g.lineTo(0, 0); g.lineTo(-26, -34); g.moveTo(0, 0); g.lineTo(26, -34); g.stroke();
-  g.restore();
+  const c = Math.cos(ang), sn = Math.sin(ang), P = (px, py) => [x + (px * c - py * sn) * s, y + (px * sn + py * c) * s];
+  const heavy = gg => { gg.moveTo(...P(0, 40)); gg.lineTo(...P(0, 0)); gg.lineTo(...P(-26, -34)); gg.moveTo(...P(0, 0)); gg.lineTo(...P(26, -34)); };
+  const light = gg => { gg.moveTo(...P(-12, -2)); gg.lineTo(...P(-34, -30)); gg.moveTo(...P(12, -2)); gg.lineTo(...P(34, -30)); };
+  PL.ink(g, heavy, 13 * s); PL.ink(g, heavy, 7 * s, color);
+  PL.ink(g, light, 7 * s); PL.ink(g, light, 3 * s, PL.T.rose);
+}
+// ウイルス（球と、表面のとげ）
+function virus(g, cx, cy, R) {
+  PL.sphere(g, cx, cy, R, PL.T.rose, { a: 0.6 });
+  const spikes = gg => { for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; gg.moveTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R); gg.lineTo(cx + Math.cos(a) * (R + 24), cy + Math.sin(a) * (R + 24)); } };
+  const knobs = gg => { for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; PL.circle(cx + Math.cos(a) * (R + 32), cy + Math.sin(a) * (R + 32), 9)(gg); } };
+  PL.ink(g, spikes, 5); PL.tint(g, knobs, PL.T.rust, 0.9); PL.ink(g, knobs, 3);
 }
 
 function draw(g, t) {
-  // 0〜9: 砂時計2つ
+  // 0〜16: 砂時計2つ
   if (t < 16.0) {
     const f = t < 9 ? 1 : fade(t, -1, 16, 0.3);
     g.save(); g.globalAlpha = f;
     const yrs = t < 4.4 ? 0 : t < 9 ? 11 * ease((t - 4.4) / 2.0) : 11 + 190 * ease((t - 9.6) / 3.6);
-    const lt = Math.max(0, 1 - yrs / 11) * 0.5 + (yrs >= 11 ? 0 : 0.5) * (1 - yrs / 11);   // 左: 11年で上の砂が半分に（＝減りきり）
-    const leftTop = 1 - Math.min(1, yrs / 11) * 0.5;
+    const leftTop = 1 - Math.min(1, yrs / 11) * 0.5;   // 左: 11年で上の砂が半分に
     const rightTop = 1 - Math.min(1, yrs / 200) * 0.5;
     const ldim = t >= 9.0 ? 0.45 : 1;
-    g.save(); g.globalAlpha *= ldim; hourglass(g, LX, HY, 520, leftTop, 'rgba(95,212,255,0.8)'); g.restore();
-    hourglass(g, RX, HY, 520, rightTop, 'rgba(255,207,74,0.85)');
-    TK.text(g, '破傷風', LX, HY + 330, 64, { color: TK.C.acc2 });
-    TK.text(g, 'はしか', RX, HY + 330, 64, { color: TK.C.acc });
-    if (t >= 4.4) TK.text(g, Math.round(Math.min(yrs, 11)) + ' 年', LX, HY - 340, 70, { color: yrs >= 10.9 ? TK.C.acc2 : '#fff' });
-    if (t >= 9.6) TK.text(g, yrs >= 200 ? '200年以上' : Math.round(yrs) + ' 年', RX, HY - 340, 70, { color: yrs >= 200 ? TK.C.acc : '#fff' });
-    if (t >= 9.6 && t < 16) {
-      const yr = 2026 + Math.round(yrs);
-      TK.text(g, '西暦 ' + yr + ' 年' + (yrs >= 200 ? '…' : ''), PW / 2, 1075, 48, { color: TK.C.sub, bold: false });
-    }
+    g.save(); g.globalAlpha *= ldim; hourglass(g, LX, HY, 520, leftTop, PL.T.sea); g.restore();
+    hourglass(g, RX, HY, 520, rightTop, PL.T.gold);
+    PL.label(g, '破傷風', LX, HY + 340, 64, { color: TK.C.acc2 });
+    PL.label(g, 'はしか', RX, HY + 340, 64, { color: PL.RED });
+    if (t >= 4.4) PL.label(g, Math.round(Math.min(yrs, 11)) + ' 年', LX, HY - 340, 70, { color: yrs >= 10.9 ? TK.C.acc2 : PL.INK });
+    if (t >= 9.6) PL.label(g, yrs >= 200 ? '200年以上' : Math.round(yrs) + ' 年', RX, HY - 340, 70, { color: yrs >= 200 ? PL.RED : PL.INK });
+    if (t >= 9.6 && t < 16) PL.label(g, '西暦 ' + (2026 + Math.round(yrs)) + ' 年' + (yrs >= 200 ? '…' : ''), PW / 2, 1090, 48, { color: TK.C.sub, bold: false });
     g.restore();
-    if (t < 2.0) TK.hook(g, t, 0, 2.0, '抗体が半分に減るまで\n長いのは？', { y: 230, size: 80 });
-    if (t >= 2.0 && t < 4.0) {   // 考える時間の輪
-      const k = (t - 2.0) / 2.0, cx = PW / 2, cy = 190, r = 70;
-      g.lineWidth = 14; g.strokeStyle = 'rgba(255,255,255,0.15)'; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();
-      g.strokeStyle = TK.C.acc; g.beginPath(); g.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - k)); g.stroke();
-      TK.text(g, String(Math.max(1, Math.ceil(2 - (t - 2.0)))), cx, cy + 4, 72);
-    }
+    if (t < 2.0) TK.hook(g, t, 0, 2.0, '抗体が半分に減るまで\n長いのは？', { y: 210, size: 80 });
+    if (t >= 2.0 && t < 4.0) PL.watch(g, PW / 2, 200, 70, (t - 2.0) / 2.0);   // 考える時間は懐中時計で
     if (t >= 9.6) TK.note(g, t, 9.6, 16, '抗体の量が半分になるまでの年数（病気にかからない期間とはちがいます）', { size: 30 });
   }
   // 16〜22: 棒でくらべる
   if (t >= 16.0 && t < 22.0) {
-    TK.text(g, '抗体が半分に減るまで', PW / 2, 220, 56, { color: TK.C.sub });
+    PL.label(g, '抗体が半分に減るまで', PW / 2, 220, 56, { color: TK.C.sub });
     TK.bars(g, t, 16.0, 22.0, [
-      { label: '破傷風', v: 11 / 210, color: TK.C.acc2, text: '' },
-      { label: 'ジフテリア', v: 19 / 210, color: TK.C.acc2, text: '' },
-      { label: '水ぼうそう', v: 50 / 210, color: TK.C.green, text: '50年' },
-      { label: 'はしか・おたふく', v: 1.0, color: TK.C.acc, text: '200年以上' },
-    ], { y: 330, gap: 190, stagger: 0.35 });
+      { label: '破傷風', v: 11 / 210, text: '' },
+      { label: 'ジフテリア', v: 19 / 210, text: '' },
+      { label: '水ぼうそう', v: 50 / 210, text: '50年' },
+      { label: 'はしか・おたふく', v: 1.0, text: '200年以上' },
+    ], { y: 310, gap: 232, stagger: 0.35 });   // 数字（棒の下）と次の名前が重ならない間かく
     if (t > 17.2) {   // 短い棒は数字を外に
       g.save(); g.globalAlpha = fade(t, 17.2, 22, 0.3);
-      TK.text(g, '11年', 110 + 96, 330 + 72, 44, { align: 'left', color: '#fff' });
-      TK.text(g, '19年', 110 + 160, 330 + 190 + 72, 44, { align: 'left', color: '#fff' });
+      PL.label(g, '11年', 110 + 96, 310 + 72, 44, { align: 'left', color: PL.RED });
+      PL.label(g, '19年', 110 + 160, 310 + 232 + 72, 44, { align: 'left', color: PL.RED });
       g.restore();
     }
     TK.note(g, t, 16.5, 22, 'はしか・おたふくは、測った期間をのばした推定', { size: 30 });
@@ -110,28 +125,28 @@ function draw(g, t) {
   // 22〜29: 抗体がウイルスにくっつく（線の図）
   if (t >= 22.0 && t < 29.0) {
     const f = fade(t, 22, 29, 0.3); g.save(); g.globalAlpha = f;
-    const cx = PW / 2, cy = 600, R = 150;
-    g.fillStyle = 'rgba(255,107,107,0.25)'; g.strokeStyle = TK.C.red; g.lineWidth = 6;
-    g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill(); g.stroke();
-    for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; g.beginPath(); g.moveTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R); g.lineTo(cx + Math.cos(a) * (R + 26), cy + Math.sin(a) * (R + 26)); g.stroke(); g.beginPath(); g.arc(cx + Math.cos(a) * (R + 32), cy + Math.sin(a) * (R + 32), 8, 0, Math.PI * 2); g.stroke(); }
-    TK.text(g, 'ウイルス', cx, cy, 48, { color: '#fff' });
+    const cx = PW / 2, cy = 610, R = 150;
+    virus(g, cx, cy, R);
     for (let i = 0; i < 8; i++) {
       const a = i / 8 * Math.PI * 2 + 0.2, k = ease((t - 22.4 - i * 0.25) / 1.2);
-      const d = lerp(520, R + 80, k), x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d * 0.95;
-      antibody(g, x, y, 1.3, a - Math.PI / 2 + Math.PI, TK.C.acc);
+      const d = lerp(440, R + 80, k), x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d * 0.75;
+      antibody(g, x, y, 1.3, a - Math.PI / 2 + Math.PI, PL.T.gold);
     }
-    TK.card(g, 110, 140, 860, 130, { r: 40 });
-    TK.text(g, '45人の血を、最長 [26年] はかった', PW / 2, 205, 56);
+    PL.leader(g, cx + R * 0.95, cy - R * 0.25, 860, 590); PL.label(g, 'ウイルス', 1040, 565, 46, { align: 'right' });
+    if (t > 23.6) { PL.leader(g, cx - 248, cy + 40, 160, 880); PL.label(g, '抗体', 160, 920, 46, { color: '#8a6420' }); }
+    TK.card(g, 110, 96, 860, 112);
+    TK.text(g, '45人の血を、最長 [26年] はかった', PW / 2, 152, 54);
     g.restore();
     TK.note(g, t, 22.5, 29, '抗体（Y）がウイルスにくっつく、イメージの絵', { size: 30 });
   }
   // 29〜35: 人の一生より長い
   if (t >= 29.0) {
     const f = fade(t, 29, 36, 0.3); g.save(); g.globalAlpha = f;
-    TK.card(g, 110, 330, 860, 400);
-    TK.lines(g, 'はしかの抗体\n[人の一生より]\nずっと長もち（推定）', PW / 2, 530, 76);
+    TK.card(g, 110, 300, 860, 400);
+    TK.lines(g, 'はしかの抗体\n[人の一生より]\nずっと長もち（推定）', PW / 2, 500, 76);
+    hourglass(g, PW / 2, 900, 240, 0.97, PL.T.gold);
     g.restore();
-    TK.note(g, t, 30.5, 35, '推定（約15〜26年の測定をのばした計算）・接種は医師・公的機関の案内で\n出どころ: Amanna, Carlson, Slifka (2007) N Engl J Med 357:1903', { size: 28 });
+    TK.note(g, t, 30.5, 35, '推定（約15〜26年の測定をのばした計算）・接種は医師・公的機関の案内で\n出どころ: Amanna, Carlson, Slifka (2007) N Engl J Med 357:1903', { size: 28, y: 1150 });
   }
 }
 

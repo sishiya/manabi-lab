@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく quantum-1（型A ぜんぶ逆）「太陽の中心は、核融合には熱さが足りない」。台本は trivia/quantum.md。?short で録る
@@ -30,63 +33,67 @@ const cues = [
   { t: 13.0, type: 'whoosh' }, { t: 16.2, type: 'ding' }, { t: 21.0, type: 'pop' }, { t: 26.0, type: 'whoosh' },
 ];
 
-function sun(g, x, y, r, t, f = 1) {
+// ---- 図鑑の版画の道具で描く部品（PL.*）----
+const TAU = Math.PI * 2, BLUE = '#2f5f7a';
+const prnd = i => { const v = Math.sin(i * 12.9898 + 78.233) * 43758.5453; return v - Math.floor(v); };
+// 太陽（手彩色の球・黒点・粒々の表面・ふちの紅炎）。core: 中心の位置を点線で
+function sun(g, x, y, r, t, f = 1, o = {}) {
   g.save(); g.globalAlpha *= f;
-  const gl = g.createRadialGradient(x, y, r * 0.8, x, y, r * 1.5); gl.addColorStop(0, 'rgba(255,190,80,0.5)'); gl.addColorStop(1, 'rgba(255,140,40,0)');
-  g.fillStyle = gl; g.beginPath(); g.arc(x, y, r * 1.5, 0, Math.PI * 2); g.fill();
-  const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, '#fffbe0'); gr.addColorStop(0.5, '#ffd25a'); gr.addColorStop(1, '#f08a24');
-  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  PL.ink(g, gg => {   // ふちの紅炎（墨の短いうねり）
+    for (let i = 0; i < 28; i++) {
+      const a = i / 28 * TAU + 0.1, l = r * (0.05 + 0.06 * prnd(i)), b = a + 0.05 * Math.sin(t * 2 + i);
+      gg.moveTo(x + Math.cos(a) * (r + 6), y + Math.sin(a) * (r + 6));
+      gg.quadraticCurveTo(x + Math.cos(b + 0.04) * (r + l * 1.2), y + Math.sin(b + 0.04) * (r + l * 1.2), x + Math.cos(b) * (r + l), y + Math.sin(b) * (r + l));
+    }
+  }, 3, PL.RED);
+  PL.sphere(g, x, y, r, PL.T.gold, { a: 0.85, light: [-0.6, -0.8], contour: false, inside: gg => {
+    PL.tint(gg, PL.circle(x, y, r), PL.T.rust, 0.25);
+    PL.ink(gg, g2 => { for (let i = 0; i < 260; i++) { const a = prnd(i) * TAU, d = Math.sqrt(prnd(i + 500)) * r * 0.96, px = x + Math.cos(a) * d, py = y + Math.sin(a) * d; g2.moveTo(px + 3, py); g2.arc(px, py, 3, 0, TAU); } }, 1.2, 'rgba(35,28,21,0.45)');   // 粒々の表面
+    [[-0.35, 0.2, 0.06], [-0.25, 0.26, 0.035], [0.3, -0.3, 0.045]].forEach(([u, v, s]) => { const sp = PL.circle(x + u * r, y + v * r, s * r); PL.tint(gg, sp, PL.INK, 0.85); PL.ink(gg, PL.circle(x + u * r, y + v * r, s * r * 1.7), 1.6); });   // 黒点
+  } });
+  if (o.core) { g.save(); g.setLineDash([10, 10]); PL.ink(g, PL.circle(x, y, r * 0.25), 3, PL.RED); g.restore(); PL.ink(g, gg => { gg.moveTo(x - 8, y - 8); gg.lineTo(x + 8, y + 8); gg.moveTo(x + 8, y - 8); gg.lineTo(x - 8, y + 8); }, 4, PL.RED); }
   g.restore();
 }
-function thermo(g, x, y, h, k, label) {   // 温度計（k: 0〜1 の高さ）
-  g.save();
-  g.fillStyle = 'rgba(255,255,255,0.15)'; g.strokeStyle = '#fff'; g.lineWidth = 5;
-  g.beginPath(); g.roundRect(x - 22, y - h, 44, h, 22); g.fill(); g.stroke();
-  g.beginPath(); g.arc(x, y + 20, 40, 0, Math.PI * 2); g.fillStyle = TK.C.red; g.fill(); g.stroke();
-  g.fillStyle = TK.C.red; g.fillRect(x - 12, y - h * k, 24, h * k + 10);
-  if (label) TK.text(g, label, x, y + 100, 44, { color: TK.C.sub });
-  g.restore();
+function thermo(g, x, y, h, k) {   // 温度計（k: 0〜1 の高さ）。ガラスの管・目盛り・赤い液
+  const tube = g2 => { g2.moveTo(x - 22, y); g2.lineTo(x - 22, y - h + 22); g2.arc(x, y - h + 22, 22, Math.PI, 0); g2.lineTo(x + 22, y); g2.closePath(); };
+  PL.tint(g, tube, PL.T.sky, 0.3);
+  const liq = PL.rect(x - 10, y - h * k, 20, h * k + 20);
+  PL.tint(g, liq, PL.RED, 0.85);
+  const bulb = PL.circle(x, y + 20, 40);
+  PL.tint(g, bulb, PL.RED, 0.85); PL.hatch(g, bulb, { angle: 0.7, gap: 7, w: 1.6, not: PL.circle(x - 12, y + 8, 40), cx: x, cy: y });
+  PL.ink(g, tube, 5); PL.ink(g, bulb, 5);
+  PL.ink(g, gg => { for (let i = 1; i < 10; i++) { const yy = y - h * i / 10; gg.moveTo(x + 22, yy); gg.lineTo(x + (i % 5 ? 36 : 48), yy); } }, 2.4);
+  PL.ink(g, gg => { gg.moveTo(x - 12, y - h + 30); gg.lineTo(x - 12, y - 20); }, 2, 'rgba(239,230,210,0.8)');   // ガラスのつや
 }
-function proton(g, x, y, r = 46) {
-  g.save();
-  const gr = g.createRadialGradient(x - r * 0.3, y - r * 0.3, 4, x, y, r); gr.addColorStop(0, '#ffb3b3'); gr.addColorStop(1, '#d9434f');
-  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
-  TK.text(g, '＋', x, y + 2, r * 1.2, { blur: 0 });
-  g.restore();
+function proton(g, x, y, r = 46) {   // 陽子（球＋墨の「＋」。字ではなく線で）
+  PL.sphere(g, x, y, r, PL.T.rose, { contour: false, a: 0.75 });
+  PL.ink(g, gg => { gg.moveTo(x - r * 0.42, y); gg.lineTo(x + r * 0.42, y); gg.moveTo(x, y - r * 0.42); gg.lineTo(x, y + r * 0.42); }, 7);
 }
 // 波束が壁に当たり、大部分ははね返り、少しだけ向こうへ（鏡の像の考え方で描く。形は説明用）
 function wave(g, t) {
-  const y0 = 640, xb = 600, w = 50, x0 = 140, v = 120, tau = t - 13.4;
+  const y0 = 640, xb = 600, w = 50, v = 120, tau = t - 13.4, x0 = 140;
   const xc = x0 + v * Math.max(0, tau), xr = 2 * xb - xc, xt = xc + w, sig = 70, k = 0.09;
   const env = d => Math.exp(-(d * d) / (2 * sig * sig));
-  // 壁
-  g.save();
-  g.fillStyle = 'rgba(255,107,107,0.25)'; g.strokeStyle = TK.C.red; g.lineWidth = 4;
-  g.fillRect(xb, y0 - 260, w, 360); g.strokeRect(xb, y0 - 260, w, 360);
-  TK.text(g, '反発の壁', xb + w / 2, y0 - 300, 44, { color: TK.C.red });
-  g.strokeStyle = 'rgba(255,255,255,0.25)'; g.lineWidth = 2; g.beginPath(); g.moveTo(60, y0); g.lineTo(980, y0); g.stroke();
-  g.strokeStyle = TK.C.acc2; g.lineWidth = 6; g.beginPath();
-  let first = true;
-  for (let x = 60; x <= 980; x += 3) {
-    let a = 0;
-    if (x < xb) a = env(x - xc) * Math.cos(k * (x - xc) - t * 6) + 0.92 * env(x - xr) * Math.cos(k * (x - xr) + t * 6);
-    else if (x > xb + w) a = 0.28 * env(x - xt) * Math.cos(k * (x - xt) - t * 6);
-    else a = 0;
-    const y = y0 - a * 150;
-    if (x >= xb && x <= xb + w) { first = true; continue; }
-    first ? g.moveTo(x, y) : g.lineTo(x, y); first = false;
-  }
-  g.stroke();
-  if (xt > xb + w + 60) { g.globalAlpha = clamp((xt - xb - w - 60) / 80, 0, 1); TK.lines(g, '少しだけ\n[向こうへ]', 830, y0 + 210, 50); }
-  g.restore();
+  const wall = PL.rect(xb, y0 - 260, w, 360);
+  PL.tint(g, wall, PL.T.rose, 0.7); PL.hatch(g, wall, { angle: 0.8, gap: 8, w: 1.8 }); PL.ink(g, wall, 5, PL.RED);
+  PL.leader(g, xb + w / 2, y0 - 266, xb + w / 2 + 120, y0 - 330, PL.RED);
+  PL.label(g, '反発の壁', xb + w / 2 + 130, y0 - 350, 44, { align: 'left', color: PL.RED });
+  PL.ink(g, gg => { gg.moveTo(60, y0); gg.lineTo(xb, y0); gg.moveTo(xb + w, y0); gg.lineTo(980, y0); for (let x = 100; x <= 980; x += 80) { if (x > xb - 10 && x < xb + w + 10) continue; gg.moveTo(x, y0 - 8); gg.lineTo(x, y0 + 8); } }, 1.6, 'rgba(35,28,21,0.45)');
+  const seg = (a, b, fn) => PL.ink(g, gg => { for (let x = a; x <= b; x += 3) { const yy = y0 - fn(x) * 150; x === a ? gg.moveTo(x, yy) : gg.lineTo(x, yy); } }, 6, BLUE);
+  seg(60, xb - 1, x => env(x - xc) * Math.cos(k * (x - xc) - t * 6) + 0.92 * env(x - xr) * Math.cos(k * (x - xr) + t * 6));
+  seg(xb + w + 1, 980, x => 0.28 * env(x - xt) * Math.cos(k * (x - xt) - t * 6));
+  PL.label(g, 'くる波', 180, 470, 40, { color: TK.C.sub });
+  if (xt > xb + w + 60) { g.save(); g.globalAlpha *= clamp((xt - xb - w - 60) / 80, 0, 1); TK.lines(g, '少しだけ\n[向こうへ]', 830, y0 + 230, 50); g.restore(); }
 }
 
 function draw(g, t) {
   // 0〜2.6 と 26〜28（ループ）: 太陽と温度計
   if (t < 2.6 || t >= 26.0) {
     const f = t < 2.6 ? 1 : fade(t, 26.0, 30, 0.3);
-    sun(g, 470, 720, 280, t, f);
-    g.save(); g.globalAlpha = f; thermo(g, 880, 840, 420, 0.25, ''); TK.text(g, '1570万度', 880, 960, 48, { color: TK.C.sub }); g.restore();
+    sun(g, 430, 760, 270, t, f, { core: true });
+    g.save(); g.globalAlpha = f; thermo(g, 900, 860, 420, 0.25);
+    PL.leader(g, 430, 760, 640, 1110, PL.RED); PL.label(g, '中心', 690, 1110, 40, { align: 'left', color: PL.RED });
+    PL.label(g, '1570万度', 900, 990, 48, { color: TK.C.sub }); g.restore();
     TK.hook(g, t >= 26.0 ? t - 26.0 : t, 0.0, 2.6, '核融合には\n[熱さが足りない]', { y: 260, size: 116 });
   }
   // 2.6〜7: 陽子どうしが近づいて、はね返る
@@ -94,32 +101,33 @@ function draw(g, t) {
     const f = fade(t, 2.6, 7.0, 0.3), u = (t - 3.0) / 1.4;
     const gap = u < 1 ? lerp(380, 70, ease(u)) : lerp(70, 380, ease((u - 1) * 0.7));
     g.save(); g.globalAlpha = f;
-    proton(g, 540 - gap, 620); proton(g, 540 + gap, 620);
-    if (u > 0.85 && u < 1.6) { g.globalAlpha = f * (1 - Math.abs(u - 1.1) / 0.6); g.strokeStyle = TK.C.red; g.lineWidth = 8; g.setLineDash([16, 12]); g.beginPath(); g.moveTo(540, 450); g.lineTo(540, 790); g.stroke(); g.setLineDash([]); }
-    g.globalAlpha = f;
-    TK.text(g, '水素の原子核（陽子）', PW / 2, 260, 60, { color: TK.C.sub });
-    if (t > 4.4) TK.text(g, 'プラスどうし → [反発]', PW / 2, 920, 70);
+    if (gap > 200) PL.ink(g, gg => { [-1, 1].forEach(s => { const x = 540 + s * gap; for (let k = 1; k <= 3; k++) { gg.moveTo(x - s * 60 - s * k * 26, 620 - 20); gg.lineTo(x - s * 80 - s * k * 26, 620); gg.lineTo(x - s * 60 - s * k * 26, 620 + 20); } }); }, 2.4, 'rgba(35,28,21,0.5)');   // 進む向きの印
+    proton(g, 540 - gap, 620, 60); proton(g, 540 + gap, 620, 60);
+    if (u > 0.85 && u < 1.6) { g.save(); g.globalAlpha = f * (1 - Math.abs(u - 1.1) / 0.6); g.setLineDash([16, 12]); PL.ink(g, gg => { gg.moveTo(540, 470); gg.lineTo(540, 770); }, 8, PL.RED); g.restore(); }
+    PL.label(g, '水素の原子核（陽子）', PW / 2, 260, 60, { color: TK.C.sub });
+    if (t > 4.4) PL.label(g, 'プラスどうし → [反発]', PW / 2, 920, 70);
     g.restore();
   }
-  // 7〜13: 要る温度と、太陽の中心
+  // 7〜13: 要る温度と、太陽の中心（同じ目もりの棒）
   if (t >= 7.0 && t < 13.0) {
-    TK.text(g, '温度（ふつうの物理の見つもり）', PW / 2, 250, 52, { color: TK.C.sub });
+    PL.label(g, '温度（ふつうの物理の見つもり）', PW / 2, 250, 52, { color: TK.C.sub });
     g.save(); g.globalAlpha = fade(t, 7.0, 13.0, 0.3);
-    [[400, '壁をこえるのに要る温度', 1, TK.C.red, 7.3], [640, '太陽の中心（同じ目もりで）', 1.571e7 / 1e10, TK.C.acc, 8.5]].forEach(([y, s, v, c, a0]) => {
-      TK.text(g, s, 110, y, 52, { align: 'left', color: TK.C.sub });
-      g.fillStyle = 'rgba(255,255,255,0.10)'; g.beginPath(); g.roundRect(110, y + 40, 860, 64, 12); g.fill();
-      const k = TK.out((t - a0) / 0.9); g.fillStyle = c; g.fillRect(110, y + 40, Math.max(4, 860 * v * k), 64);
+    [[400, '壁をこえるのに要る温度', 1, PL.T.rose, 7.3], [640, '太陽の中心（同じ目もりで）', 1.571e7 / 1e10, PL.T.gold, 8.5]].forEach(([y, s, v, c, a0]) => {
+      PL.label(g, s, 110, y, 52, { align: 'left', color: TK.C.sub });
+      PL.ink(g, PL.rect(110, y + 40, 860, 64), 2, 'rgba(35,28,21,0.4)');
+      const k = TK.out((t - a0) / 0.9), bar = PL.rect(110, y + 40, Math.max(4, 860 * v * k), 64);
+      PL.tint(g, bar, c, 0.8); PL.hatch(g, bar, { angle: 0.9, gap: 10, w: 2 }); PL.ink(g, bar, 4, v > 0.5 ? PL.RED : PL.INK);
     });
-    if (t > 7.9) TK.text(g, '約100億度', 950, 472, 46, { align: 'right', color: '#0b1430', blur: 0 });
+    if (t > 7.9) PL.label(g, '約100億度', 970, 540, 46, { align: 'right', color: PL.RED });
     g.restore();
-    if (t > 8.8) { g.save(); g.globalAlpha = fade(t, 8.8, 13.0, 0.3); TK.text(g, '← 1570万度（0.16%）', 140, 712, 52, { align: 'left', color: TK.C.acc }); g.restore(); }
-    if (t > 10.4) { g.save(); g.globalAlpha = fade(t, 10.4, 13.0, 0.3); TK.text(g, '[数百倍]も足りない', PW / 2, 930, 86); g.restore(); }
+    if (t > 8.8) { g.save(); g.globalAlpha = fade(t, 8.8, 13.0, 0.3); PL.leader(g, 116, 744, 160, 790, PL.RED); PL.label(g, '1570万度（0.16%）', 175, 800, 52, { align: 'left', color: PL.RED }); g.restore(); }
+    if (t > 10.4) { g.save(); g.globalAlpha = fade(t, 10.4, 13.0, 0.3); PL.label(g, '[数百倍]も足りない', PW / 2, 990, 86); g.restore(); }
     TK.note(g, t, 7.0, 13.0, '原子核が 1fm（1000兆分の1m）まで近づく熱さの目安。教科書で10億〜100億度の幅', { size: 28 });
   }
   // 13〜21: トンネル効果
   if (t >= 13.0 && t < 21.0) {
     g.save(); g.globalAlpha = fade(t, 13.0, 21.0, 0.3);
-    TK.text(g, '粒は"[波]"でもある', PW / 2, 220, 74);
+    PL.label(g, '粒は"[波]"でもある', PW / 2, 220, 74);
     wave(g, t);
     g.restore();
     TK.note(g, t, 13.0, 21.0, 'すり抜けるのは確率の話（ほんの一部だけ）。波の形は説明のための絵', { size: 30 });
@@ -127,12 +135,12 @@ function draw(g, t) {
   // 21〜26: 太陽にもどる
   if (t >= 21.0 && t < 26.0) {
     const f = fade(t, 21.0, 26.0, 0.3);
-    sun(g, 540, 650, 300, t, f);
+    sun(g, 600, 720, 300, t, f);
     g.save(); g.globalAlpha = f;
     TK.card(g, 120, 180, 840, 150);
-    TK.text(g, 'トンネル効果がなければ', PW / 2, 255, 64);
+    PL.label(g, 'トンネル効果がなければ', PW / 2, 255, 64);
     g.restore();
-    TK.note(g, t, 22.0, 26.0, '出どころ: NASA Sun Fact Sheet（中心 1.571×10⁷ K）・van Kerkwijk, AST221 講義資料 L7-4（トロント大学）\nトンネル効果: Gamow (1928)、星への応用: Atkinson & Houtermans (1929)', { size: 26 });
+    TK.note(g, t, 22.0, 26.0, '出どころ: NASA Sun Fact Sheet（中心 1.571×10⁷ K）・van Kerkwijk, AST221 講義資料 L7-4（トロント大学）\nトンネル効果: Gamow (1928)、星への応用: Atkinson & Houtermans (1929)', { size: 26, y: 1135 });
   }
 }
 

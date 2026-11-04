@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく ga-creatures-1（型F 2人のかけあい）「テストを見やぶって、プログラムが死んだふりをした」。台本は trivia/ga-creatures.md、直しは trivia/REVIEW.md
@@ -39,17 +42,20 @@ const cues = [
   { t: 27.0, type: 'pop' }, { t: 29.6, type: 'tick' }, { t: 31.0, type: 'tick' }, { t: 34.0, type: 'whoosh' }, { t: 38.0, type: 'pop' },
 ];
 
-// 決まった乱数（毎回同じ絵）
+/// 決まった乱数（毎回同じ絵）
 const rnd = (i, k = 0) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
-// 点の生きもの: 体（丸）＋短いしっぽ。still=1 で動かない（灰色）
+// 点の生きもの（図鑑の版画の小さな単細胞のように）: 卵形の体＋核＋むち毛。still=1 で動かない（灰色）
 function critter(g, x, y, t, i, o = {}) {
-  const still = o.still || 0, r = o.r || 16, col = o.color || TK.C.green;
+  const still = o.still || 0, r = o.r || 16, col = o.color || PL.T.leaf;
   const wig = (1 - still) * Math.sin(t * 9 + i * 2.1) * 0.6, ang = (o.ang ?? rnd(i, 5) * 6.28) + wig * 0.3;
   g.save(); g.translate(x, y); g.rotate(ang);
-  g.strokeStyle = still > 0.5 ? 'rgba(200,200,210,0.7)' : col; g.lineWidth = 4; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(-r, 0); g.quadraticCurveTo(-r * 1.8, wig * r, -r * 2.5, 0); g.stroke();
-  g.fillStyle = still > 0.5 ? 'rgba(170,170,185,0.85)' : col;
-  g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.fill();
+  PL.ink(g, gg => { gg.moveTo(-r * 1.1, 0); gg.bezierCurveTo(-r * 1.6, wig * r * 1.2, -r * 2.1, -wig * r * 1.2, -r * 2.7, wig * r * 0.6); }, 2.6);   // むち毛
+  const body = PL.ellipse(0, 0, r * 1.2, r * 0.85), dead = still > 0.5;
+  // 数が多いので、手彩色（紙を重ねる重い描き方）ではなく、手彩色を紙にのせた色のべたと、かげの短い線で
+  g.fillStyle = dead ? '#cbc5b8' : col === PL.T.rust ? '#dcb08f' : '#b8c6a2'; g.beginPath(); body(g); g.fill();
+  PL.ink(g, gg => { for (let k = -2; k <= 2; k++) { const a = 0.9 + k * 0.28; gg.moveTo(Math.cos(a) * r * 0.55, Math.sin(a) * r * 0.4); gg.lineTo(Math.cos(a) * r * 1.05, Math.sin(a) * r * 0.75); } }, 1.2);
+  PL.ink(g, body, 2.6);
+  g.fillStyle = PL.INK; g.beginPath(); g.arc(r * 0.35, -r * 0.05, r * 0.22, 0, Math.PI * 2); g.fill();   // 核
   g.restore();
 }
 // 箱の中で動く点の位置
@@ -59,25 +65,27 @@ function wander(i, t, box, still = 0) {
   return [bx + m + (bw - 2 * m) * (0.5 + 0.45 * Math.sin(tt * (0.3 + rnd(i, 1) * 0.5) + rnd(i, 2) * 6.28)),
           by + m + (bh - 2 * m) * (0.5 + 0.45 * Math.sin(tt * (0.25 + rnd(i, 3) * 0.5) + rnd(i, 4) * 6.28))];
 }
+// 箱（実験の容器の断面のように: 手彩色＋二重のわく。テストの箱は朱の点線）
 function box(g, b, label, o = {}) {
-  const [x, y, w, h] = b;
-  g.save(); g.strokeStyle = o.color || 'rgba(160,190,255,0.7)'; g.lineWidth = 5; g.setLineDash(o.dash || []);
-  g.fillStyle = o.fill || 'rgba(20,34,72,0.5)'; g.beginPath(); g.roundRect(x, y, w, h, 24); g.fill(); g.stroke(); g.restore();
-  if (label) TK.text(g, label, x + w / 2, y - 40, o.size || 46, { color: o.labelColor || TK.C.sub });
+  const [x, y, w, h] = b, p = PL.rect(x, y, w, h);
+  PL.tint(g, p, o.test ? PL.T.gold : PL.T.sky, o.test ? 0.3 : 0.35);
+  PL.ink(g, gg => { for (let yy = y + 40; yy < y + h; yy += 60) { gg.moveTo(x + 14, yy); gg.lineTo(x + 34, yy); } }, 2, 'rgba(35,28,21,0.5)');   // 目もり
+  if (o.test) { g.save(); g.setLineDash([14, 10]); PL.ink(g, p, 5, PL.RED); g.restore(); }
+  else { PL.ink(g, p, 5); PL.ink(g, PL.rect(x + 9, y + 9, w - 18, h - 18), 1.4); }
+  if (label) PL.label(g, label, x + w / 2, y - 40, o.size || 46, { color: o.test ? PL.RED : TK.C.sub });
 }
 const BIG = [90, 330, 560, 640], TEST = [710, 470, 280, 360];
 // 系図（家系図の線）。k: 0〜1 で描く量
 function tree(g, k, t) {
-  const x0 = PW / 2, y0 = 300, levels = 4;
+  const x0 = PW / 2, y0 = 320, levels = 4;
   let nodes = [[x0, y0]];
-  g.save(); g.lineWidth = 5; g.lineCap = 'round';
   for (let L = 0; L < levels; L++) {
-    const next = [], dy = 170, spread = 190 / Math.pow(2, L) + 15;
-    nodes.forEach(([x, y], j) => {
+    const next = [], dy = 150, spread = 190 / Math.pow(2, L) + 15;
+    nodes.forEach(([x, y]) => {
       [-1, 1].forEach(s => {
         const nx = x + s * spread, ny = y + dy, lk = clamp(k * levels - L, 0, 1);
         if (lk <= 0) return;
-        g.strokeStyle = 'rgba(160,190,255,0.6)'; g.beginPath(); g.moveTo(x, y); g.lineTo(lerp(x, nx, lk), lerp(y, ny, lk)); g.stroke();
+        PL.ink(g, gg => { gg.moveTo(x, y); gg.lineTo(x, y + dy * 0.45 * Math.min(1, lk * 2)); if (lk > 0.5) { gg.lineTo(lerp(x, nx, (lk - 0.5) * 2), y + dy * 0.45); } if (lk >= 1) gg.lineTo(nx, ny); }, 4);   // 家系図の かぎの線
         next.push([nx, ny]);
       });
     });
@@ -86,7 +94,15 @@ function tree(g, k, t) {
     if (!nodes.length) break;
   }
   nodes.forEach(([x, y], j) => critter(g, x, y, t, 90 + j, { r: 12, ang: Math.PI / 2 }));
-  g.restore();
+  // 見張りの目（虫めがね）
+  if (k > 0.3) {
+    const a = clamp((k - 0.3) / 0.3, 0, 1), mx = 860, my = 330;
+    g.save(); g.globalAlpha *= a;
+    const lens = PL.circle(mx, my, 60);
+    PL.tint(g, lens, PL.T.sky, 0.5); PL.hatch(g, lens, { angle: -0.7, gap: 8, w: 1.4, not: PL.circle(mx - 16, my - 16, 60) }); PL.ink(g, lens, 6);
+    PL.ink(g, gg => { gg.moveTo(mx + 42, my + 42); gg.lineTo(mx + 100, my + 100); }, 16);
+    g.restore();
+  }
 }
 
 function draw(g, t) {
@@ -110,32 +126,35 @@ function draw(g, t) {
     g.save(); g.globalAlpha = f;
     const big = [60, 470, 600, 500];
     box(g, big, 'ふつうの場所', { size: 42 });
-    box(g, TEST, 'テストの箱', { color: TK.C.acc, labelColor: TK.C.acc, dash: [14, 10], size: 42 });
+    box(g, TEST, 'テストの箱', { test: true, size: 42 });
     for (let i = 0; i < 26; i++) { const [x, y] = wander(i, t, big); critter(g, x, y, t, i); }
     // 1匹（赤）がつままれて移る
-    const k = TK.out((t - 8.6) / 1.4), [sx, sy] = wander(99, 8.6, big), ex = TEST[0] + TEST[2] / 2, ey = TEST[1] + TEST[3] / 2;
+    const k = TK.out((t - 8.6) / 1.4), [sx, sy] = wander(99, 8.6, big), ex = TEST[0] + TEST[2] / 2, ey = TEST[1] + TEST[3] / 2 + 30;
     const fast = t > 10.5, gone = clamp((t - 12.2) / 0.6, 0, 1);
     const x = lerp(sx, ex, k) + (fast ? Math.sin(t * 30) * 60 * (1 - gone) : 0), y = lerp(sy, ey, k) - Math.sin(Math.PI * k) * 160;
+    if (k > 0 && k < 1) PL.dots(g, Array.from({ length: 21 }, (_, j) => { const u = j / 20 * k; return [lerp(sx, ex, u), lerp(sy, ey, u) - Math.sin(Math.PI * u) * 160]; }), { w: 4, dash: [3, 12] });
     g.globalAlpha = f * (1 - gone);
-    critter(g, x, y, t * (fast ? 3 : 1), 99, { color: TK.C.red, r: 20 });
+    critter(g, x, y, t * (fast ? 3 : 1), 99, { color: PL.T.rust, r: 20 });
+    if (gone > 0) { g.globalAlpha = f * gone; PL.ink(g, gg => { gg.moveTo(ex - 40, ey - 40); gg.lineTo(ex + 40, ey + 40); gg.moveTo(ex + 40, ey - 40); gg.lineTo(ex - 40, ey + 40); }, 10, PL.RED); }
     g.globalAlpha = f;
-    if (fast) TK.text(g, '速い！', ex, TEST[1] + 60, 50, { color: TK.C.red });
-    if (t > 11.6) { g.globalAlpha = f * TK.pop(t, 11.6, 0.3); TK.text(g, '→ 消す', ex, TEST[1] + TEST[3] + 60, 56, { color: TK.C.red }); }
+    if (fast) PL.label(g, '速い！', ex, TEST[1] + 55, 50, { color: PL.RED });
+    if (t > 11.6) { g.globalAlpha = f * clamp(TK.pop(t, 11.6, 0.3), 0, 1); PL.label(g, '→ 消す', ex, TEST[1] + TEST[3] + 60, 56, { color: PL.RED }); }
     g.restore();
   }
   // 15〜19: グラフ（平ら → また上がる）
   if (t >= 15.0 && t < 19.0) {
     const f = fade(t, 15.0, 19.0, 0.3);
     g.save(); g.globalAlpha = f;
-    TK.text(g, '増える速さ', PW / 2, 280, 60, { color: TK.C.sub });
+    PL.label(g, '増える速さ', 140, 300, 56, { align: 'left', color: TK.C.sub });
     const x0 = 140, x1 = 940, yb = 920, k = clamp((t - 15.2) / 3.0, 0, 1);
-    g.strokeStyle = 'rgba(255,255,255,0.4)'; g.lineWidth = 4; g.beginPath(); g.moveTo(x0, 380); g.lineTo(x0, yb); g.lineTo(x1, yb); g.stroke();
-    TK.text(g, '世代 →', x1 - 60, yb + 50, 40, { color: TK.C.sub, bold: false });
     const yOf = u => u < 0.55 ? 760 + Math.sin(u * 40) * 6 : 760 - Math.pow((u - 0.55) / 0.45, 1.6) * 330;
-    g.strokeStyle = TK.C.acc; g.lineWidth = 9; g.beginPath();
-    for (let i = 0; i <= 100; i++) { const u = k * i / 100, x = lerp(x0, x1, u); i ? g.lineTo(x, yOf(u)) : g.moveTo(x, yOf(u)); }
-    g.stroke();
-    if (k > 0.7) { g.globalAlpha = f * clamp((k - 0.7) / 0.2, 0, 1); TK.text(g, 'また上がる…', 760, 360, 60, { color: TK.C.red }); }
+    const P = Array.from({ length: 101 }, (_, i) => { const u = k * i / 100; return [lerp(x0, x1, u), yOf(u)]; });
+    PL.tint(g, g2 => { g2.moveTo(x0, yb); P.forEach(p => g2.lineTo(...p)); g2.lineTo(P[100][0], yb); g2.closePath(); }, PL.T.gold, 0.45);
+    PL.ink(g, gg => { gg.moveTo(x0, 380); gg.lineTo(x0, yb); gg.lineTo(x1, yb); for (let i = 1; i <= 8; i++) { gg.moveTo(lerp(x0, x1, i / 8), yb); gg.lineTo(lerp(x0, x1, i / 8), yb + 12); } }, 4);
+    PL.label(g, '世代 →', x1 - 60, yb + 54, 40, { color: TK.C.sub, bold: false });
+    PL.ink(g, gg => P.forEach((p, i) => i ? gg.lineTo(...p) : gg.moveTo(...p)), 8, PL.RED);
+    if (k > 0.3) { g.save(); g.setLineDash([10, 10]); PL.ink(g, gg => { gg.moveTo(lerp(x0, x1, 0.12), 640); gg.lineTo(lerp(x0, x1, 0.12), yb); }, 2); g.restore(); PL.label(g, 'テスト開始', lerp(x0, x1, 0.12) + 14, 610, 34, { align: 'left', color: TK.C.sub }); }
+    if (k > 0.7) { g.globalAlpha = f * clamp((k - 0.7) / 0.2, 0, 1); PL.label(g, 'また上がる…', 680, 360, 60, { color: PL.RED }); }
     g.restore();
     TK.note(g, t, 15.0, 19.0, 'グラフの形はイメージ（論文に図はない）', { size: 32 });
   }
@@ -145,14 +164,14 @@ function draw(g, t) {
     g.save(); g.globalAlpha = f;
     const big = [60, 470, 600, 500];
     box(g, big, 'ふつうの場所', { size: 42 });
-    box(g, TEST, 'テストの箱', { color: TK.C.acc, labelColor: TK.C.acc, dash: [14, 10], size: 42 });
+    box(g, TEST, 'テストの箱', { test: true, size: 42 });
     for (let i = 0; i < 26; i++) { const [x, y] = wander(i, t * 1.8, big); critter(g, x, y, t * 2, i); }
-    const ex = TEST[0] + TEST[2] / 2, ey = TEST[1] + TEST[3] / 2, still = clamp((t - 19.8) / 0.6, 0, 1);
+    const ex = TEST[0] + TEST[2] / 2, ey = TEST[1] + TEST[3] / 2 + 40, still = clamp((t - 19.8) / 0.6, 0, 1);
     critter(g, ex + Math.sin(t * 30) * 50 * (1 - still), ey, t, 77, { still, r: 22, ang: Math.PI / 2 * still });
     if (still >= 1) {
-      g.globalAlpha = f * TK.pop(t, 20.5, 0.4);
-      TK.text(g, '…', ex + 40, ey - 70, 70, { color: '#fff' });
-      if (t > 23.0) { g.globalAlpha = f * TK.pop(t, 23.0, 0.4); TK.card(g, 200, 200, 680, 130, { r: 65 }); TK.text(g, '[死んだふり]', PW / 2, 266, 84); }
+      g.globalAlpha = f * clamp(TK.pop(t, 20.5, 0.4), 0, 1);
+      PL.label(g, '…', ex + 50, ey - 80, 70);
+      if (t > 23.0) { g.globalAlpha = f * clamp(TK.pop(t, 23.0, 0.4), 0, 1); TK.card(g, 200, 190, 680, 130); PL.label(g, '[死んだふり]', PW / 2, 256, 84); }
     }
     g.restore();
   }
@@ -162,36 +181,36 @@ function draw(g, t) {
     g.save(); g.globalAlpha = f;
     const big = [60, 470, 600, 560], same = clamp((t - 27.4) / 1.2, 0, 1);
     box(g, big, 'ふつうの場所', { size: 42 });
-    box(g, TEST, same < 1 ? 'テストの箱' : 'そっくりにした箱', { color: same < 1 ? TK.C.acc : 'rgba(160,190,255,0.7)', labelColor: TK.C.sub, dash: same < 1 ? [14, 10] : [], size: 42 });
+    box(g, TEST, same < 1 ? 'テストの箱' : 'そっくりにした箱', { test: same < 1, size: 42 });
     for (let i = 0; i < 26; i++) { const [x, y] = wander(i, t * 1.8, big); critter(g, x, y, t * 2, i); }
     // 3匹: それぞれ、くじで動く／止まる（1秒ごとに切りかわる）
     for (let j = 0; j < 3; j++) {
       const slot = Math.floor(t * 1.2 + j * 0.37), on = t > 29.6 && rnd(slot, j + 20) > 0.5;
       const cx = TEST[0] + TEST[2] / 2, cy = TEST[1] + 80 + j * 105;
-      critter(g, cx + (on ? Math.sin(t * 30 + j) * 50 : 0), cy, t * (on ? 3 : 0), 60 + j, { still: on ? 0 : 1, r: 18, color: TK.C.red, ang: on ? undefined : Math.PI / 2 });
+      critter(g, cx + (on ? Math.sin(t * 30 + j) * 50 : 0), cy, t * (on ? 3 : 0), 60 + j, { still: on ? 0 : 1, r: 18, color: PL.T.rust, ang: on ? undefined : Math.PI / 2 });
     }
-    if (t > 29.6) { g.globalAlpha = f * TK.pop(t, 29.6, 0.4); TK.card(g, 200, 200, 680, 130, { r: 65 }); TK.text(g, '[ときどきだけ] ズル', PW / 2, 266, 76); }
+    if (t > 29.6) { g.globalAlpha = f * clamp(TK.pop(t, 29.6, 0.4), 0, 1); TK.card(g, 200, 190, 680, 130); PL.label(g, '[ときどきだけ] ズル', PW / 2, 256, 76); }
     g.restore();
   }
   // 34〜40: 系図ごと見張る
   if (t >= 34.0) {
     const f = fade(t, 34.0, 41, 0.3);
     g.save(); g.globalAlpha = f;
-    TK.text(g, '親 → 子 → 孫 …の系図ごと見張る', PW / 2, 220, 54, { color: TK.C.sub });
+    PL.label(g, '親 → 子 → 孫 …の系図ごと見張る', PW / 2, 220, 54, { color: TK.C.sub });
     tree(g, clamp((t - 34.2) / 2.6, 0, 1), t);
     g.restore();
     TK.note(g, t, 34.0, 37.6, '「死んだふり」は論文のことば。プログラムに意思があるわけではない', { size: 30 });
   }
-  // 話す人の札（字幕の上）
+  // 話す人の札（字幕の帯のすぐ上）
   const s = subs.find(x => t >= x.a && t < x.b && !x.noBurn);
   if (s) {
     g.save(); g.globalAlpha = fade(t, s.a, s.b, 0.12);
-    const isA = s.who === 'A', ty = PH * 0.615 - (s.ja.split(String.fromCharCode(10)).length - 1) * 41 - 78;
-    TK.card(g, PW / 2 - 110, ty - 28, 220, 56, { r: 28, fill: isA ? 'rgba(95,212,255,0.25)' : 'rgba(255,207,74,0.22)', stroke: isA ? TK.C.acc2 : TK.C.acc });
-    TK.text(g, isA ? 'ききて' : 'こたえる人', PW / 2, ty + 1, 34, { color: isA ? TK.C.acc2 : TK.C.acc });
+    const isA = s.who === 'A', ty = PL.SUBY - PL.bandH(s.ja.split(String.fromCharCode(10)).length) - 44;
+    TK.card(g, PW / 2 - 130, ty - 32, 260, 64);   // 札は紙のまま（色をぬると字が読みにくい）。だれの声かは字の色で
+    PL.label(g, isA ? 'ききて' : 'こたえる人', PW / 2, ty + 1, 38, { color: isA ? TK.C.acc2 : PL.RED });
     g.restore();
   }
-  if (t >= 37.6) TK.note(g, t, 37.6, 40.0, '出どころ: Lehman ほか (2020) Artificial Life 26(2)\n（arXiv:1803.03453。C. Ofria の Avida の実験）', { size: 30 });
+  if (t >= 37.6) TK.note(g, t, 37.6, 40.0, '出どころ: Lehman ほか (2020) Artificial Life 26(2)\n（arXiv:1803.03453。C. Ofria の Avida の実験）', { size: 30, y: 1050 });   // 2行なので絵の下に（クレジットと重ねない）
 }
 
 triviaStart({ out: 'ga-creatures-trivia1', dur: DUR, draw, subs, cues, peek: 1.5, voice: 'auto' });

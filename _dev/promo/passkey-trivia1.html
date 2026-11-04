@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく passkey-1（型A ぜんぶ逆）「パスキーは指紋をサイトに送っている…じゃない」。台本は trivia/passkey.md。?short で録る
@@ -31,101 +34,130 @@ const cues = [
   { t: 16.0, type: 'whoosh' }, { t: 17.0, type: 'pop' }, { t: 23.0, type: 'whoosh' }, { t: 24.6, type: 'pop' }, { t: 26.0, type: 'buzz' }, { t: 27.4, type: 'ding' },
 ];
 
-// 指（指紋のうず）
+/// ---- 絵は「図鑑の版画」（trivia-plate.js の PL.*）。本物のログイン画面に似せない（入力欄・ボタン・ロゴは描かない）----
+// 指先（はら側から見た人さし指。指紋のうず・関節のしわ・つめのふち）。x, y は指先の丸みの中心
 function finger(g, x, y, s) {
-  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = '#e8f0ff'; g.lineWidth = 5;
-  g.beginPath(); g.moveTo(-60, 140); g.lineTo(-60, -20); g.arc(0, -20, 60, Math.PI, 0); g.lineTo(60, 140); g.stroke();
-  g.strokeStyle = TK.C.acc2; g.lineWidth = 3.5;
-  for (let i = 0; i < 5; i++) { g.beginPath(); g.ellipse(0, -10, 12 + i * 9, 18 + i * 11, 0, Math.PI * 1.05, Math.PI * 2.95); g.stroke(); }
+  g.save(); g.translate(x, y); g.scale(s, s);
+  const out = gg => { gg.moveTo(-58, 260); gg.lineTo(-62, 10); gg.bezierCurveTo(-64, -80, 64, -80, 62, 10); gg.lineTo(58, 260); };
+  const shape = gg => { out(gg); gg.closePath(); };
+  PL.tint(g, shape, PL.T.rose, 0.6);
+  PL.hatch(g, shape, { angle: 0.9, gap: 9, w: 1.6, not: gg => { gg.rect(-80, -100, 110, 400); }, cx: 0, cy: 0 });
+  g.save(); g.beginPath(); PL.ellipse(0, 0, 46, 58)(g); g.clip();   // 指紋（うずまき）
+  PL.ink(g, gg => { for (let i = 0; i < 9; i++) { const rx = 6 + i * 6, ry = 9 + i * 7.5; gg.moveTo(rx * Math.cos(0.4), 4 + ry * Math.sin(0.4)); gg.ellipse(0, 4, rx, ry, 0, 0.4, Math.PI * 2 - 0.2); } }, 2.2, '#6a3a2e');
+  g.restore();
+  PL.ink(g, gg => { [[96, 0.7], [104, 0.5], [190, 0.7], [198, 0.5]].forEach(([yy]) => { gg.moveTo(-50, yy); gg.quadraticCurveTo(0, yy + 10, 50, yy); }); }, 2);   // 関節のしわ
+  PL.ink(g, gg => { gg.moveTo(-50, -38); gg.quadraticCurveTo(0, -66, 50, -38); }, 2.4, 'rgba(35,28,21,0.6)');   // つめのふち（向こうがわ）
+  PL.ink(g, out, 6);
   g.restore();
 }
-// 家（サイト）。名前は出さない
+// 家（サイトのたとえ）。木の骨組み・れんが・窓。o.keyhole で扉に鍵穴
 function house(g, x, y, s, o = {}) {
-  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = '#e8f0ff'; g.lineWidth = 6; g.lineJoin = 'round'; g.fillStyle = 'rgba(160,190,255,0.10)';
-  g.beginPath(); g.moveTo(-120, -10); g.lineTo(0, -120); g.lineTo(120, -10); g.lineTo(100, -10); g.lineTo(100, 120); g.lineTo(-100, 120); g.lineTo(-100, -10); g.closePath(); g.fill(); g.stroke();
-  g.beginPath(); g.roundRect(-30, 30, 60, 90, 6); g.stroke();
-  if (o.keyhole) keyhole(g, 0, 70, 0.7, TK.C.acc);
+  g.save(); g.translate(x, y); g.scale(s, s);
+  const wall = PL.rect(-100, -10, 200, 130), roof = PL.poly([[-128, -6], [0, -124], [128, -6]]), door = PL.rect(-30, 30, 60, 90);
+  PL.tint(g, wall, PL.T.sand, 0.7); PL.hatch(g, wall, { angle: 0.8, gap: 8, w: 1.4, not: PL.rect(-120, -20, 160, 160), cx: 0, cy: 0 });
+  PL.ink(g, gg => { for (let r = 0; r < 6; r++) { const yy = -10 + r * 22; gg.moveTo(-100, yy); gg.lineTo(100, yy); for (let c = 0; c < 8; c++) { const xx = -100 + c * 28 + (r % 2) * 14; if (xx > -100 && xx < 100) { gg.moveTo(xx, yy); gg.lineTo(xx, yy + 22); } } } }, 1, 'rgba(35,28,21,0.35)');   // れんが
+  PL.tint(g, roof, PL.T.rust, 0.85); PL.hatch(g, roof, { angle: -0.6, gap: 8, w: 1.6, not: PL.poly([[-160, -6], [0, -150], [0, -6]]), cx: 0, cy: 0 });
+  PL.ink(g, gg => { for (let i = 1; i < 6; i++) { const yy = -124 + i * 20; const hw = (yy + 124) / 118 * 128; gg.moveTo(-hw, yy); gg.lineTo(hw, yy); } }, 1.4, 'rgba(35,28,21,0.5)');   // かわら
+  PL.ink(g, roof, 6); PL.ink(g, wall, 6);
+  [[-70, 10], [40, 10]].forEach(([wx, wy]) => { const w = PL.rect(wx, wy, 30, 34); PL.tint(g, w, PL.T.sky, 0.8); PL.ink(g, w, 3); PL.ink(g, gg => { gg.moveTo(wx + 15, wy); gg.lineTo(wx + 15, wy + 34); gg.moveTo(wx, wy + 17); gg.lineTo(wx + 30, wy + 17); }, 1.6); });
+  PL.tint(g, door, PL.T.wood, 0.9); PL.ink(g, gg => { for (let i = 1; i < 4; i++) { gg.moveTo(-30 + i * 15, 30); gg.lineTo(-30 + i * 15, 120); } }, 1.2, 'rgba(35,28,21,0.5)'); PL.ink(g, door, 4);
+  if (o.keyhole) keyhole(g, 0, 74, 0.7);
   g.restore();
 }
-function keyhole(g, x, y, s, c) {
-  g.save(); g.translate(x, y); g.scale(s, s); g.fillStyle = c;
-  g.beginPath(); g.arc(0, -14, 16, 0, Math.PI * 2); g.moveTo(-9, -6); g.lineTo(-16, 30); g.lineTo(16, 30); g.lineTo(9, -6); g.closePath(); g.fill(); g.restore();
+// 鍵穴（墨でぬる）
+function keyhole(g, x, y, s, col = PL.INK) {
+  const p = gg => { gg.moveTo(x + 16 * s, y - 14 * s); gg.arc(x, y - 14 * s, 16 * s, 0, Math.PI * 2); gg.moveTo(x - 9 * s, y - 4 * s); gg.lineTo(x - 16 * s, y + 30 * s); gg.lineTo(x + 16 * s, y + 30 * s); gg.lineTo(x + 9 * s, y - 4 * s); gg.closePath(); };
+  PL.tint(g, p, col, 0.95); PL.ink(g, p, Math.max(2, 3 * s), col);
 }
-// スマホと金庫
+// スマホ（画面には金庫の絵だけ。入力欄やボタンは描かない）。open: 0〜1 で金庫の扉があく
 function phoneVault(g, x, y, s, open) {
   g.save(); g.translate(x, y); g.scale(s, s);
-  g.strokeStyle = '#e8f0ff'; g.lineWidth = 6; g.beginPath(); g.roundRect(-110, -200, 220, 400, 30); g.stroke();
-  g.fillStyle = 'rgba(160,190,255,0.12)'; g.strokeStyle = TK.C.acc; g.lineWidth = 6;
-  g.beginPath(); g.roundRect(-75, -110, 150, 150, 14); g.fill(); g.stroke();
-  // 金庫のダイヤル（開くと回る）
-  g.save(); g.translate(0, -35); g.rotate(open * Math.PI); g.strokeStyle = TK.C.acc; g.beginPath(); g.arc(0, 0, 32, 0, Math.PI * 2); g.moveTo(0, -32); g.lineTo(0, -14); g.stroke(); g.restore();
-  g.restore();
-}
-// 色の模様の札（サインのたとえ）。seed で毎回ちがう模様
-function sigCard(g, x, y, w, h, seed, k = 1) {
-  g.save(); g.globalAlpha *= k; TK.card(g, x, y, w, h, { r: 18, fill: 'rgba(244,247,255,0.92)', stroke: TK.C.acc });
-  const cols = ['#ff6b6b', '#ffcf4a', '#59e39a', '#5fd4ff', '#a98bff'];
-  for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) {
-    const v = Math.abs(Math.sin(seed * 12.9898 + i * 78.233 + j * 37.719) * 43758.5453) % 1;
-    g.fillStyle = cols[Math.floor(v * 5)]; g.fillRect(x + 20 + i * (w - 40) / 4 + 4, y + 18 + j * (h - 36) / 3 + 4, (w - 40) / 4 - 8, (h - 36) / 3 - 8);
+  const body = PL.rect(-110, -200, 220, 400), scr = PL.rect(-92, -170, 184, 330);
+  PL.tint(g, body, PL.T.gray, 0.5); PL.hatch(g, PL.rect(90, -200, 20, 400), { angle: 0.8, gap: 7, w: 1.4, cx: 0, cy: 0 }); PL.ink(g, body, 7);
+  PL.ink(g, scr, 3); PL.ink(g, gg => { gg.moveTo(-20, -186); gg.lineTo(20, -186); }, 4);
+  // 金庫（鉄の箱・ちょうつがい・ダイヤル）
+  const box = PL.rect(-72, -100, 144, 150), inside = PL.rect(-62, -90, 124, 130);
+  PL.tint(g, box, PL.T.gray, 0.85); PL.hatch(g, box, { angle: 0.8, gap: 7, w: 1.6, not: PL.rect(-90, -120, 120, 120), cx: 0, cy: 0 }); PL.ink(g, box, 5);
+  if (open > 0) {   // 扉が手前に開く（横幅がせまくなる）
+    PL.tint(g, inside, PL.INK, 0.75);
+    const kx = PL.poly([[-10, -20], [26, -20], [26, -10], [10, -10], [10, 0], [-10, 0]]);   // 中の鍵（秘密鍵）
+    PL.tint(g, PL.circle(-26, -15, 14), PL.T.gold, 1); PL.tint(g, kx, PL.T.gold, 1); PL.ink(g, PL.circle(-26, -15, 14), 2.4, PL.T.gold);
+    const w = 124 * Math.cos(open * Math.PI * 0.42), door = PL.poly([[-62, -90], [-62 + w, -90 - 20 * open], [-62 + w, 40 + 20 * open], [-62, 40]]);
+    PL.tint(g, door, PL.T.gray, 0.95); PL.hatch(g, door, { angle: 0.8, gap: 7, w: 1.4, cx: 0, cy: 0 }); PL.ink(g, door, 4);
+  } else {
+    PL.ink(g, inside, 2.4);
+    const dial = PL.circle(10, -25, 30); PL.tint(g, dial, PL.T.sand, 0.9); PL.ink(g, dial, 4);
+    PL.ink(g, gg => { for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; gg.moveTo(10 + Math.cos(a) * 22, -25 + Math.sin(a) * 22); gg.lineTo(10 + Math.cos(a) * 30, -25 + Math.sin(a) * 30); } gg.moveTo(10, -25); gg.lineTo(10, -47); }, 2);
+    PL.ink(g, gg => { gg.moveTo(48, -60); gg.lineTo(48, 10); }, 6);   // 取っ手
   }
+  PL.ink(g, gg => { gg.moveTo(-72, -80); gg.lineTo(-80, -80); gg.moveTo(-72, 30); gg.lineTo(-80, 30); }, 6);   // ちょうつがい
+  PL.ink(g, PL.circle(0, 130, 16), 3);   // 指をあてる所
   g.restore();
 }
-function cross(g, cx, cy, r, k) {
-  g.save(); g.strokeStyle = TK.C.red; g.lineWidth = 18; g.lineCap = 'round'; g.globalAlpha *= k;
-  g.beginPath(); g.moveTo(cx - r, cy - r); g.lineTo(cx + r, cy + r); g.moveTo(cx + r, cy - r); g.lineTo(cx - r, cy + r); g.stroke(); g.restore();
-}
-// わるもの（かわいい影。こわくしない）
-function thief(g, x, y, s) {
-  g.save(); g.translate(x, y); g.scale(s, s); g.fillStyle = 'rgba(120,130,160,0.9)';
-  g.beginPath(); g.arc(0, -70, 40, 0, Math.PI * 2); g.fill(); g.beginPath(); g.roundRect(-45, -30, 90, 110, 30); g.fill();
-  g.fillStyle = '#0b1430'; g.fillRect(-36, -82, 72, 18); g.fillStyle = '#fff'; g.beginPath(); g.arc(-14, -73, 5, 0, Math.PI * 2); g.arc(14, -73, 5, 0, Math.PI * 2); g.fill();
+// サイン（その場かぎり）: 紙の小片に、墨の筆跡と朱の封印。seed で毎回ちがう形
+function sigCard(g, x, y, w, h, seed, k = 1) {
+  g.save(); g.globalAlpha *= k;
+  const r = i => { const v = Math.sin(seed * 12.9898 + i * 78.233) * 43758.5453; return v - Math.floor(v); };
+  const p = PL.rect(x, y, w, h); PL.tint(g, p, '#fbf6ea', 0.95); PL.hatch(g, PL.rect(x + w - 12, y, 12, h), { angle: 0.8, gap: 6, w: 1.4 }); PL.ink(g, p, 4);
+  PL.ink(g, gg => { gg.moveTo(x + 18, y + h * 0.55); for (let i = 1; i <= 12; i++) gg.quadraticCurveTo(x + 18 + (i - 0.5) * (w - 90) / 12, y + h * (0.2 + r(i) * 0.6), x + 18 + i * (w - 90) / 12, y + h * (0.35 + r(i + 20) * 0.35)); }, 3);
+  const n = 5 + Math.floor(r(40) * 4), cx = x + w - 40, cy = y + h * 0.6, seal = PL.poly(Array.from({ length: n * 2 }, (_, i) => { const a = i / (n * 2) * Math.PI * 2 + r(41), rr = i % 2 ? 13 : 22; return [cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]; }));
+  PL.tint(g, seal, PL.RED, 0.9); PL.ink(g, seal, 2.4, PL.RED);
   g.restore();
 }
+function cross(g, cx, cy, r, k) { if (k <= 0) return; g.save(); g.globalAlpha *= clamp(k, 0, 1); PL.ink(g, gg => { gg.moveTo(cx - r, cy - r); gg.lineTo(cx + r, cy + r); gg.moveTo(cx + r, cy - r); gg.lineTo(cx - r, cy + r); }, 16, PL.RED); g.restore(); }
 
 function draw(g, t) {
   // 0〜3: 指 → 家 に ✕
   if (t < 3.0) {
-    finger(g, 200, 560, 1.4);
-    house(g, 740, 560, 1.3);
+    finger(g, 220, 600, 1.2);
+    house(g, 790, 640, 1.3);
     const k = clamp((t - 0.8) / 0.7, 0, 1);
-    g.save(); g.strokeStyle = TK.C.acc2; g.lineWidth = 8; g.setLineDash([18, 12]); g.beginPath(); g.moveTo(310, 520); g.lineTo(lerp(310, 580, k), 520); g.stroke(); g.restore();
-    cross(g, 450, 520, 90, TK.pop(t, 1.5, 0.3));
+    PL.dots(g, [[340, 600], [lerp(340, 600, k), 600]], { dash: [4, 20], w: 9, color: PL.INK });
+    cross(g, 470, 600, 80, TK.pop(t, 1.5, 0.3));
     TK.hook(g, t, 0.2, 3.0, '指紋は [送られない]', { y: 260, size: 110 });
-    TK.text(g, 'サイト', 740, 760, 44, { color: TK.C.sub });
+    PL.label(g, 'サイト', 790, 860, 44);
   }
   // 3〜9: スマホの中で金庫をあける
   if (t >= 3.0 && t < 9.0) {
-    const open = clamp((t - 6.0) / 0.8, 0, 1);
-    phoneVault(g, PW / 2 - 60, 560, 1.5, open);
-    g.save(); g.globalAlpha = TK.pop(t, 4.4, 0.4); finger(g, PW / 2 - 60, 860, 0.7); g.restore();
-    if (open > 0) { g.save(); g.globalAlpha = open; TK.text(g, 'あいた', PW / 2 - 60, 220, 60, { color: TK.C.green }); g.restore(); }
+    const open = clamp((t - 6.0) / 0.8, 0, 1), X = 400, Y = 620, S = 1.5;
+    phoneVault(g, X, Y, S, open);
+    const fk = clamp(TK.pop(t, 4.4, 0.4), 0, 1);
+    g.save(); g.globalAlpha *= fk; finger(g, X, Y + 130 * S + 34 + (1 - fk) * 80, 0.55); g.restore();
+    PL.leader(g, X + 72 * S, Y - 60 * S, 760, 330); PL.label(g, '金庫', 770, 290, 48, { align: 'left' });
+    PL.label(g, '（スマホの中）', 770, 350, 34, { bold: false, align: 'left' });
+    if (fk > 0.5) { PL.leader(g, X + 30, Y + 130 * S, 800, 900); PL.label(g, '指で確かめる', 800, 945, 40); }
+    if (open > 0) { g.save(); g.globalAlpha *= open; PL.leader(g, X - 30, Y - 50, 800, 600, PL.RED); PL.label(g, 'あいた', 800, 560, 56, { color: PL.RED }); g.restore(); }
     TK.note(g, t, 3.5, 9, '指紋や顔のデータは、スマホの外へ出ない', { size: 32 });
   }
   // 9〜16: その場かぎりのサイン
   if (t >= 9.0 && t < 16.0) {
-    phoneVault(g, 220, 520, 0.9, 1);
-    house(g, 740, 520, 1.0);
+    phoneVault(g, 220, 620, 0.9, 1);
+    house(g, 800, 640, 1.0);
     const n = Math.floor((t - 10.2) / 2.0), u = ((t - 10.2) % 2.0) / 1.4;
-    if (t >= 10.2 && u <= 1) { const x = lerp(260, 620, TK.out(u)), y = 500 - Math.sin(u * Math.PI) * 120; sigCard(g, x - 90, y - 60, 180, 120, n + 1); }
-    if (t >= 10.2) TK.text(g, 'サイン ' + (n + 1) + ' 回目', PW / 2 - 60, 230, 56, { color: TK.C.acc });
-    TK.text(g, '毎回ちがう模様', PW / 2 - 60, 820, 48, { color: TK.C.sub });
+    if (t >= 10.2 && u <= 1) { const x = lerp(250, 650, TK.out(u)), y = 520 - Math.sin(u * Math.PI) * 120; sigCard(g, x - 90, y - 55, 180, 110, n + 1); }
+    if (t >= 10.2) PL.label(g, 'サイン ' + (n + 1) + ' 回目', 100, 230, 56, { align: 'left', color: PL.RED });
+    for (let i = 0; i < Math.min(3, n); i++) sigCard(g, 610 + i * 34, 880 + i * 22, 150, 90, i + 1, 0.55);   // 前のサイン（使い終わり）
+    PL.label(g, '毎回ちがうサイン', 100, 960, 48, { align: 'left' });
   }
   // 16〜23: サイトには鍵穴の形だけ
   if (t >= 16.0 && t < 23.0) {
-    house(g, PW / 2 - 60, 520, 2.0, { keyhole: t > 17.0 });
-    if (t > 17.0) { g.save(); g.globalAlpha = TK.pop(t, 17.0, 0.4); TK.text(g, '鍵穴の形（公開鍵）', PW / 2 - 60, 860, 56, { color: TK.C.acc }); g.restore(); }
-    if (t > 19.0) { g.save(); g.globalAlpha = TK.pop(t, 19.0, 0.4); TK.card(g, 200, 180, 560, 110, { r: 55 }); TK.text(g, '合言葉は 持っていない', PW / 2 - 60, 235, 52); g.restore(); }
+    house(g, 440, 600, 2.1, { keyhole: t > 17.0 });
+    if (t > 17.0) { g.save(); g.globalAlpha *= clamp(TK.pop(t, 17.0, 0.4), 0, 1); PL.leader(g, 440, 600 + 82 * 2.1, 440, 920, PL.RED); PL.label(g, '鍵穴の形（公開鍵）', 440, 960, 56, { color: PL.RED }); g.restore(); }
+    if (t > 19.0) { g.save(); g.globalAlpha *= clamp(TK.pop(t, 19.0, 0.4), 0, 1); PL.label(g, '合言葉は 持っていない', 100, 240, 54, { align: 'left' }); PL.ink(g, gg => { gg.moveTo(100, 285); gg.lineTo(680, 285); }, 3); g.restore(); }
   }
-  // 23〜30: 鍵穴の形を盗まれても、開かない → 安心
+  // 23〜30: 鍵穴の形を盗まれても、鍵は作れない → 安心
   if (t >= 23.0) {
-    house(g, 280, 540, 1.3, { keyhole: true });
-    const k = TK.out((t - 23.4) / 1.0);
-    thief(g, lerp(560, 720, k), 600, 1.5);
-    if (t > 24.6) { g.save(); g.globalAlpha = TK.pop(t, 24.6, 0.3); keyhole(g, 580, 600, 1.4, TK.C.acc); g.restore(); }
-    if (t > 26.0) { g.save(); g.globalAlpha = TK.pop(t, 26.0, 0.3); TK.card(g, 520, 760, 380, 100, { r: 50, fill: 'rgba(255,107,107,0.2)', stroke: TK.C.red }); TK.text(g, '鍵は作れない', 710, 810, 50, { color: TK.C.red }); g.restore(); }
-    if (t > 27.4) { g.save(); g.globalAlpha = TK.pop(t, 27.4, 0.4); TK.text(g, 'だから [安心]', PW / 2 - 60, 250, 90); g.restore(); }
-    TK.note(g, t, 26.5, 30, '出どころ: FIDO Alliance「How Passkeys Work」・W3C Web Authentication Level 3\n同期するパスキーは、鍵が暗号化されて自分の端末どうしを移ることがある', { size: 28 });
+    house(g, 280, 620, 1.3, { keyhole: true });
+    const k = TK.out((t - 23.4) / 1.0), wx = lerp(600, 760, k);
+    PL.walker(g, wx, 880, 0, k < 1 ? t * 9 : 0, 1.15);
+    if (t > 24.6) {   // 写しとった鍵穴の形（紙の型紙）
+      g.save(); g.globalAlpha *= clamp(TK.pop(t, 24.6, 0.3), 0, 1);
+      const p = PL.rect(wx - 150, 590, 110, 140); PL.tint(g, p, '#fbf6ea', 0.95); PL.ink(g, p, 4); keyhole(g, wx - 95, 660, 1.3);
+      g.restore();
+    }
+    if (t > 26.0) { g.save(); g.globalAlpha *= clamp(TK.pop(t, 26.0, 0.3), 0, 1); PL.label(g, '鍵は作れない', 690, 960, 54, { color: PL.RED }); g.restore(); }
+    if (t > 27.4) { g.save(); g.globalAlpha *= clamp(TK.pop(t, 27.4, 0.4), 0, 1); PL.label(g, 'だから [安心]', 100, 260, 90, { align: 'left' }); g.restore(); }
+    TK.note(g, t, 26.5, 30, '出どころ: FIDO Alliance「How Passkeys Work」・W3C Web Authentication Level 3\n同期するパスキーは、鍵が暗号化されて自分の端末どうしを移ることがある', { size: 28, y: 1100 });   // 2行の注は帯の上に
   }
 }
 

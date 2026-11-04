@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく phage-3（型F かけあい）「ウイルスは、なかまと合図を送りあう」。台本は trivia/phage.md。?short で録る
@@ -36,145 +39,149 @@ const cues = [
   { t: 28.0, type: 'pop' }, { t: 30.0, type: 'pop' }, { t: 31.0, type: 'tick' }, { t: 31.6, type: 'tick' },
 ];
 const AA = ['S', 'A', 'I', 'R', 'G', 'A'], AA2 = ['G', 'M', 'P', 'R', 'G', 'A'];
-
-// 細菌（カプセル形）
+// ---- 絵は「図鑑の版画」（trivia-plate.js の PL.*）。ファージに顔は描かない（色と札で見分ける）----
+const capP = (w, h) => gg => { gg.moveTo(-w + h, -h); gg.lineTo(w - h, -h); gg.arc(w - h, 0, h, -Math.PI / 2, Math.PI / 2); gg.lineTo(-w + h, h); gg.arc(-w + h, 0, h, Math.PI / 2, Math.PI * 1.5); gg.closePath(); };
+// 細菌（棒の形。二重の膜・中の粒）。o.burst で膜が破れて切れ切れに
 function bacterium(g, x, y, s, o = {}) {
   g.save(); g.translate(x, y); g.rotate(o.ang || 0); g.scale(s, s);
-  g.fillStyle = o.fill || 'rgba(89,227,154,0.16)'; g.strokeStyle = o.stroke || TK.C.green; g.lineWidth = 6 / Math.max(0.6, s);
-  if (o.burst) g.setLineDash([22, 18]);
-  g.beginPath(); g.roundRect(-150, -60, 300, 120, 60); g.fill(); g.stroke();
+  const out = capP(150, 60);
+  PL.tint(g, out, o.burst ? PL.T.rose : PL.T.leaf, o.burst ? 0.35 : 0.55);
+  g.save(); g.beginPath(); out(g); g.clip(); PL.hatch(g, PL.rect(-170, 15, 340, 60), { angle: 0.7, gap: 9, w: 1.4, cx: 0, cy: 0 }); g.restore();
+  PL.ink(g, gg => { for (let i = 0; i < 18; i++) { const px = -120 + ((i * 53) % 240), py = -36 + ((i * 37) % 72); gg.moveTo(px + 2.5, py); gg.arc(px, py, 2.5, 0, Math.PI * 2); } }, 2);
+  if (o.burst) { g.save(); g.setLineDash([26, 20]); PL.ink(g, out, 6, PL.RED); g.restore(); }
+  else { PL.ink(g, capP(140, 50), 2); PL.ink(g, out, 6); }
   g.restore();
 }
-// ファージ（頭＝六角形・しっぽ・足）。y は足先。tilt で頭をかたむける（うなずき）
+// ファージ（T4 の形のイメージ）。y は足先。tilt でかたむける（うなずき）、col で頭の色
 function phage(g, x, y, s, o = {}) {
-  const c = o.c || TK.C.acc2;
-  g.save(); g.translate(x, y); g.rotate(o.tilt || 0); g.scale(s, s); g.strokeStyle = c; g.lineWidth = 5 / Math.max(0.5, s); g.lineJoin = 'round'; g.lineCap = 'round';
-  g.fillStyle = o.fill || 'rgba(95,212,255,0.15)';
-  g.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; g.lineTo(Math.cos(a) * 40, -150 + Math.sin(a) * 46); } g.closePath(); g.fill(); g.stroke();
-  if (o.eyes) { g.fillStyle = c; for (const ex of [-6, 18]) { g.beginPath(); g.arc(ex * o.eyes, -152, 5, 0, 7); g.fill(); } }
-  g.beginPath(); g.moveTo(0, -104); g.lineTo(0, -30); g.stroke();
-  g.strokeRect(-12, -30, 24, 12);
-  for (const sd of [-1, 1]) for (const k of [0.5, 1]) { g.beginPath(); g.moveTo(sd * 10, -20); g.lineTo(sd * (20 + 30 * k), -10); g.lineTo(sd * (24 + 36 * k), 0); g.stroke(); }
+  g.save(); g.translate(x, y); g.rotate(o.tilt || 0); g.scale(s, s);
+  const lw = 4;
+  const head = PL.poly([[0, -212], [40, -188], [40, -128], [0, -104], [-40, -128], [-40, -188]]);
+  PL.tint(g, head, o.col || PL.T.sky, 0.75);
+  if (s > 0.6) PL.hatch(g, head, { angle: 0.7, gap: 7, w: 1.3, not: PL.poly([[-60, -230], [0, -230], [0, -90], [-60, -90]]), cx: 0, cy: 0 });
+  if (s > 0.6) PL.ink(g, gg => { gg.moveTo(-40, -188); gg.lineTo(0, -168); gg.lineTo(40, -188); gg.moveTo(0, -168); gg.lineTo(0, -128); gg.moveTo(-40, -128); gg.lineTo(0, -128); gg.lineTo(40, -128); gg.moveTo(0, -212); gg.lineTo(0, -168); }, lw * 0.4);
+  PL.ink(g, head, lw);
+  const collar = PL.rect(-15, -104, 30, 8), sheath = PL.rect(-12, -96, 24, 64), plate = PL.poly([[-28, -32], [28, -32], [22, -20], [-22, -20]]);
+  [collar, sheath, plate].forEach(p => { PL.tint(g, p, PL.T.sand, 0.85); PL.ink(g, p, lw * 0.8); });
+  PL.ink(g, gg => {
+    for (let yy = -90; yy < -32; yy += 7) { gg.moveTo(-12, yy); gg.lineTo(12, yy); }
+    for (const sd of [-1, 1]) for (const k of [0.75, 1]) { gg.moveTo(sd * 22, -26); gg.lineTo(sd * (30 + 52 * k), -62); gg.lineTo(sd * (34 + 50 * k), 0); }
+  }, lw * 0.6);
   g.restore();
 }
-// 合図（6つのアミノ酸がつながった短い鎖）
-function signal(g, x, y, s, letters, c = TK.C.acc, rot = 0) {
+// 合図（6つのアミノ酸がつながった短い鎖）。letters は玉の下に書く（大きいときだけ）
+function signal(g, x, y, s, letters, col = PL.T.gold, rot = 0) {
   g.save(); g.translate(x, y); g.rotate(rot); g.scale(s, s);
-  g.strokeStyle = c; g.lineWidth = 4 / s; g.beginPath(); g.moveTo(-50, 0); g.lineTo(50, 0); g.stroke();
-  for (let i = 0; i < 6; i++) {
-    g.fillStyle = c; g.beginPath(); g.arc(-50 + i * 20, 0, 9, 0, 7); g.fill();
-    if (letters && s > 1.5) { setFont(g, 11, true); g.fillStyle = '#0b1430'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(letters[i], -50 + i * 20, 1); }
-  }
+  PL.ink(g, gg => { gg.moveTo(-50, 0); gg.lineTo(50, 0); }, 3);
+  const beads = gg => { for (let i = 0; i < 6; i++) PL.circle(-50 + i * 20, 0, 9)(gg); };
+  PL.tint(g, beads, col, 0.95); PL.ink(g, beads, s > 1.5 ? 1.2 : 2.4);
   g.restore();
+  if (letters && s > 1.5) letters.forEach((c, i) => PL.label(g, c, x + (-50 + i * 20) * s, y + 26 * s + 6, 9 * s, { color: PL.INK }));
 }
-// DNA（細菌の中の輪）。k: ファージのDNAが入りこむ量
+// DNA（細菌の中の輪）。phageK: ファージの DNA が入りこむ量
 function dnaRing(g, x, y, rx, ry, phageK) {
-  g.save(); g.strokeStyle = 'rgba(207,224,255,0.55)'; g.lineWidth = 4;
-  g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); g.stroke();
-  if (phageK > 0) { g.strokeStyle = TK.C.acc2; g.lineWidth = 9; g.beginPath(); g.ellipse(x, y, rx, ry, 0, -0.5, -0.5 + 1.0 * phageK); g.stroke(); }
-  g.restore();
+  PL.ink(g, PL.ellipse(x, y, rx, ry), 3, '#4a3f33');
+  if (phageK > 0) PL.ink(g, gg => { gg.moveTo(x + Math.cos(-0.5) * rx, y + Math.sin(-0.5) * ry); gg.ellipse(x, y, rx, ry, 0, -0.5, -0.5 + 1.0 * phageK); }, 9, PL.RED);
 }
-// 聞き手／答える人の札（字幕の上）
+// 聞き手／答える人の札（字幕の帯のすぐ上、左に）
 function tag(g, t) {
   const s = subs.find(x => t >= x.a && t < x.b && !x.noBurn); if (!s) return;
-  const q = s.who === 'q', f = fade(t, s.a, s.b, 0.12);
-  g.save(); g.globalAlpha = f;
-  const lines = s.ja.split('\n').length, y = PH * 0.615 - (lines - 1) * 42 - 82;
-  const w = 210, x = PW / 2 - w / 2;
-  TK.card(g, x, y - 30, w, 60, { r: 30, fill: q ? 'rgba(95,212,255,0.25)' : 'rgba(255,207,74,0.25)', stroke: q ? TK.C.acc2 : TK.C.acc });
-  TK.text(g, q ? '聞き手' : '答える人', PW / 2, y + 2, 34, { color: q ? TK.C.acc2 : TK.C.acc });
+  const q = s.who === 'q', f = fade(t, s.a, s.b, 0.12), n = s.ja.split('\n').length, y = PL.SUBY - PL.bandH(n) - 36;
+  g.save(); g.globalAlpha *= f;
+  const w = 200, x = 80; TK.card(g, x, y - 28, w, 56);
+  TK.text(g, q ? '聞き手' : '答える人', x + w / 2, y + 1, 34, { color: q ? TK.C.acc2 : PL.RED });
   g.restore();
 }
 // 散らばった合図の位置（決まった乱数）
-const SPOTS = Array.from({ length: 40 }, (_, i) => [270 + (i * 7919) % 680, 330 + (i * 104729) % 640, (i * 0.7) % 3]);
+const SPOTS = Array.from({ length: 40 }, (_, i) => [300 + (i * 137) % 650, 380 + (i * 263) % 590, (i * 0.7) % 3]);
 
 function draw(g, t) {
   // 0〜4.6: 2つのファージが向き合う
   if (t < 4.6) {
     const f = fade(t, 0, 4.6, 0.3);
-    g.save(); g.globalAlpha = f;
-    phage(g, 330, 900, 2.2, { eyes: 1, tilt: 0.08 + Math.sin(t * 3) * 0.03 });
-    phage(g, 750, 900, 2.2, { eyes: -1, tilt: -0.08, c: TK.C.acc, fill: 'rgba(255,207,74,0.14)' });
-    TK.text(g, '聞き手', 330, 980, 44, { color: TK.C.acc2 });
-    TK.text(g, '答える人', 750, 980, 44, { color: TK.C.acc });
+    g.save(); g.globalAlpha *= f;
+    phage(g, 330, 900, 2.2, { tilt: 0.08 + Math.sin(t * 3) * 0.03 });
+    phage(g, 750, 900, 2.2, { tilt: -0.08, col: PL.T.gold });
+    PL.label(g, '聞き手', 330, 975, 44, { color: TK.C.acc2 });
+    PL.label(g, '答える人', 750, 975, 44, { color: PL.RED });
     g.restore();
     TK.hook(g, t, 0.0, 2.4, 'え、ウイルスって\n[会話する]の？', { y: 300, size: 112 });
-    if (t >= 2.4) { g.save(); g.globalAlpha = fade(t, 2.4, 4.6, 0.25); TK.text(g, '細菌にとりつくウイルス（ファージ）', PW / 2, 260, 52, { color: TK.C.sub }); TK.text(g, '見つかったのは [2017年]', PW / 2, 360, 72); g.restore(); }
+    if (t >= 2.4) { g.save(); g.globalAlpha *= fade(t, 2.4, 4.6, 0.25); PL.label(g, '細菌にとりつくウイルス（ファージ）', PW / 2, 250, 50); PL.label(g, '見つかったのは [2017年]', PW / 2, 350, 72); g.restore(); }
   }
   // 4.6〜9: 細菌の中で2つの道
   if (t >= 4.6 && t < 9.0) {
     const f = fade(t, 4.6, 9.0, 0.3);
-    g.save(); g.globalAlpha = f;
-    bacterium(g, PW / 2, 330, 1.3);
-    phage(g, PW / 2, 252, 0.5);
-    g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 6; g.lineCap = 'round';
+    g.save(); g.globalAlpha *= f;
+    bacterium(g, PW / 2, 340, 1.3);
+    phage(g, PW / 2, 262, 0.5);
     const k = TK.out((t - 5.0) / 0.8);
-    g.beginPath(); g.moveTo(PW / 2, 430); g.lineTo(lerp(PW / 2, 280, k), lerp(430, 560, k)); g.moveTo(PW / 2, 430); g.lineTo(lerp(PW / 2, 800, k), lerp(430, 560, k)); g.stroke();
+    PL.ink(g, gg => { gg.moveTo(PW / 2, 440); gg.lineTo(lerp(PW / 2, 290, k), lerp(440, 580, k)); gg.moveTo(PW / 2, 440); gg.lineTo(lerp(PW / 2, 790, k), lerp(440, 580, k)); }, 5);
     if (t > 6.0) {   // 破って増える
-      const p = TK.pop(t, 6.0, 0.4); g.globalAlpha = f * clamp(p, 0, 1);
-      bacterium(g, 280, 760, 0.95, { burst: true, stroke: TK.C.red, fill: 'rgba(255,107,107,0.10)' });
-      for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + 0.3, r = 130 + 40 * clamp((t - 6.3) / 1.2, 0, 1); phage(g, 280 + Math.cos(a) * r, 790 + Math.sin(a) * r * 0.6, 0.32); }
-      TK.text(g, '破って増える', 280, 960, 52, { color: TK.C.red });
+      g.save(); g.globalAlpha *= clamp(TK.pop(t, 6.0, 0.4), 0, 1);
+      bacterium(g, 280, 760, 0.95, { burst: true });
+      for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + 0.3, r = 130 + 40 * clamp((t - 6.3) / 1.2, 0, 1); phage(g, 280 + Math.cos(a) * r, 800 + Math.sin(a) * r * 0.55, 0.3); }
+      PL.label(g, '破って増える', 280, 965, 50, { color: PL.RED });
+      g.restore();
     }
     if (t > 7.2) {   // もぐって待つ
-      const p = TK.pop(t, 7.2, 0.4); g.globalAlpha = f * clamp(p, 0, 1);
+      g.save(); g.globalAlpha *= clamp(TK.pop(t, 7.2, 0.4), 0, 1);
       bacterium(g, 800, 760, 0.95);
       dnaRing(g, 800, 760, 95, 32, clamp((t - 7.5) / 1.0, 0, 1));
-      TK.text(g, 'DNAにもぐって待つ', 800, 960, 52, { color: TK.C.acc2 });
+      PL.label(g, 'DNAにもぐって待つ', 800, 965, 50, { color: TK.C.acc2 });
+      g.restore();
     }
     g.restore();
   }
   // 9〜16: 破れた細菌から 6つのアミノ酸の合図
   if (t >= 9.0 && t < 16.0) {
     const f = fade(t, 9.0, 16.0, 0.3);
-    g.save(); g.globalAlpha = f;
-    bacterium(g, PW / 2, 470, 1.4, { burst: true, stroke: TK.C.red, fill: 'rgba(255,107,107,0.08)' });
+    g.save(); g.globalAlpha *= f;
+    bacterium(g, PW / 2, 470, 1.4, { burst: true });
     const k = clamp((t - 9.2) / 1.6, 0, 1);
-    for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2, r = 120 + 230 * TK.out(k); phage(g, PW / 2 + Math.cos(a) * r, 500 + Math.sin(a) * r * 0.55, 0.36); }
-    for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2 + 0.26, r = 60 + 280 * TK.out(clamp((t - 10.2) / 2.0, 0, 1)); if (t > 10.2) signal(g, PW / 2 + Math.cos(a) * r, 470 + Math.sin(a) * r * 0.6, 0.9, null, TK.C.acc, a); }
+    for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2, r = 120 + 230 * TK.out(k); phage(g, PW / 2 + Math.cos(a) * r, 520 + Math.sin(a) * r * 0.5, 0.34); }
+    if (t > 10.2) for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2 + 0.26, r = 60 + 280 * TK.out(clamp((t - 10.2) / 2.0, 0, 1)); signal(g, PW / 2 + Math.cos(a) * r, 470 + Math.sin(a) * r * 0.55, 0.9, null, PL.T.gold, a); }
     if (t > 12.2) {
-      g.globalAlpha = f * TK.pop(t, 12.2, 0.4);
-      TK.card(g, 150, 760, 780, 220, { r: 40, fill: 'rgba(11,20,48,0.9)' });
-      signal(g, PW / 2, 840, 3.2, AA, TK.C.acc);
-      TK.text(g, '合図＝アミノ酸 [6つ]', PW / 2, 930, 54);
+      g.globalAlpha = f * clamp(TK.pop(t, 12.2, 0.4), 0, 1);
+      TK.card(g, 150, 750, 780, 255);
+      signal(g, PW / 2, 805, 3.2, AA);
+      PL.label(g, '合図＝アミノ酸 [6つ]', PW / 2, 958, 52);
     }
     g.restore();
-    TK.note(g, t, 9.4, 16.0, '別のファージ（枯草菌の SPβ のなかま）の話。\nアプリの T4 にはこのしくみはない', { size: 30 });
+    TK.note(g, t, 9.4, 16.0, '別のファージ（枯草菌の SPβ のなかま）の話。\nアプリの T4 にはこのしくみはない', { size: 30, y: 1060 });   // 2行の注は帯の上に
   }
   // 16〜24: 合図がふえる → あとから入ったファージは「待つ」
   if (t >= 16.0 && t < 24.0) {
     const f = fade(t, 16.0, 24.0, 0.3), lvl = clamp((t - 16.2) / 4.0, 0, 1);
-    g.save(); g.globalAlpha = f;
+    g.save(); g.globalAlpha *= f;
     const n = Math.floor(lvl * SPOTS.length);
-    for (let i = 0; i < n; i++) { const [x, y, r] = SPOTS[i]; signal(g, x + Math.sin(t + i) * 8, y + Math.cos(t * 0.8 + i) * 8, 0.7, null, 'rgba(255,207,74,0.75)', r); }
-    // 濃さのメーター（左）
-    const mx = 120, my = 360, mh = 560;
-    TK.card(g, mx - 10, my - 10, 80, mh + 20, { r: 40, fill: 'rgba(11,20,48,0.85)' });
-    g.fillStyle = TK.C.acc; g.beginPath(); g.roundRect(mx + 8, my + mh - (mh - 16) * lvl - 8, 44, (mh - 16) * lvl, 22); g.fill();
-    TK.text(g, '合図の濃さ', mx + 30, my - 50, 40, { color: TK.C.acc, align: 'left' });
-    // あとから来たファージと細菌
+    for (let i = 0; i < n; i++) { const [x, y, r] = SPOTS[i]; signal(g, x + Math.sin(t + i) * 8, y + Math.cos(t * 0.8 + i) * 8, 0.7, null, PL.T.gold, r); }
+    // 濃さのメーター（左。目盛りつきの管）
+    const mx = 120, my = 360, mh = 560, tube = PL.rect(mx, my, 60, mh), lv = PL.rect(mx, my + mh * (1 - lvl), 60, mh * lvl);
+    if (lvl > 0) { PL.tint(g, lv, PL.T.gold, 0.9); PL.hatch(g, lv, { angle: 0.8, gap: 9, w: 1.6 }); }
+    PL.ink(g, tube, 5); PL.ink(g, gg => { for (let i = 1; i < 10; i++) { gg.moveTo(mx + 60, my + i * mh / 10); gg.lineTo(mx + 60 + (i % 5 ? 12 : 24), my + i * mh / 10); } }, 2.4);
+    PL.label(g, '合図の濃さ', mx - 10, 290, 40, { align: 'left' });
     bacterium(g, 640, 760, 1.15);
     dnaRing(g, 640, 760, 115, 38, clamp((t - 21.6) / 1.4, 0, 1));
     const pk = TK.out((t - 18.4) / 1.8);
-    phage(g, 640, lerp(330, 693, pk), 0.75, { c: '#ffffff', fill: 'rgba(255,255,255,0.12)' });
+    phage(g, 640, lerp(340, 700, pk), 0.75, { col: '#f4ead6' });
     if (t > 21.6) {
-      g.globalAlpha = f * TK.pop(t, 21.6, 0.4);
-      TK.card(g, 420, 860, 440, 100, { r: 50 });
-      TK.text(g, '→ [待つ]ほう', 640, 910, 58);
+      g.globalAlpha = f * clamp(TK.pop(t, 21.6, 0.4), 0, 1);
+      TK.card(g, 420, 870, 440, 100);
+      PL.label(g, '→ [待つ]ほう', 640, 920, 58);
     }
     g.restore();
   }
   // 24〜30: 細菌が残る。ファージごとにちがう「ことば」
   if (t >= 24.0 && t < 30.0) {
     const f = fade(t, 24.0, 30.0, 0.3);
-    g.save(); g.globalAlpha = f;
-    for (let i = 0; i < 6; i++) bacterium(g, 220 + (i % 3) * 320, 330 + Math.floor(i / 3) * 170, 0.7, { ang: (i % 2 ? 0.15 : -0.1) });
-    TK.text(g, '細菌が[のこる]', PW / 2, 220, 60, { color: '#fff' });
+    g.save(); g.globalAlpha *= f;
+    for (let i = 0; i < 6; i++) bacterium(g, 220 + (i % 3) * 320, 350 + Math.floor(i / 3) * 170, 0.7, { ang: (i % 2 ? 0.15 : -0.1) });
+    PL.label(g, '細菌が[のこる]', PW / 2, 230, 60);
     if (t > 26.8) {
-      g.globalAlpha = f * TK.pop(t, 26.8, 0.4);
-      TK.text(g, 'ファージごとの“ことば”', PW / 2, 730, 54, { color: TK.C.sub });
-      signal(g, 330, 860, 2.6, AA, TK.C.acc); TK.text(g, 'SAIRGA', 330, 940, 44, { color: TK.C.acc });
-      signal(g, 750, 860, 2.6, AA2, '#ff9ad5'); TK.text(g, 'GMPRGA', 750, 940, 44, { color: '#ff9ad5' });
+      g.globalAlpha = f * clamp(TK.pop(t, 26.8, 0.4), 0, 1);
+      PL.label(g, 'ファージごとの“ことば”', PW / 2, 700, 54);
+      signal(g, 300, 800, 2.6, null); PL.label(g, 'SAIRGA', 300, 880, 44, { color: PL.RED });
+      signal(g, 780, 800, 2.6, null, PL.T.rose); PL.label(g, 'GMPRGA', 780, 880, 44, { color: '#8a3a5a' });
     }
     g.restore();
     TK.note(g, t, 24.4, 30.0, '「食べつくさないため」は研究者の解釈', { size: 32 });
@@ -182,13 +189,13 @@ function draw(g, t) {
   // 30〜35: 2つのファージがうなずく
   if (t >= 30.0) {
     const f = fade(t, 30.0, 36, 0.3), nod = Math.max(0, Math.sin((t - 30.8) * 5)) * (t > 30.8 && t < 32.2 ? 0.18 : 0);
-    g.save(); g.globalAlpha = f;
-    phage(g, 330, 900, 2.2, { eyes: 1, tilt: 0.08 + nod });
-    phage(g, 750, 900, 2.2, { eyes: -1, tilt: -0.08 - nod, c: TK.C.acc, fill: 'rgba(255,207,74,0.14)' });
+    g.save(); g.globalAlpha *= f;
+    phage(g, 330, 900, 2.2, { tilt: 0.08 + nod });
+    phage(g, 750, 900, 2.2, { tilt: -0.08 - nod, col: PL.T.gold });
     g.restore();
-    TK.note(g, t, 30.4, 32.8, '「会話」「空気をよむ」はたとえ。意思はなく、\n合図の濃さで遺伝子のスイッチが切りかわるしくみ', { size: 30 });
+    TK.note(g, t, 30.4, 32.8, '「会話」「空気をよむ」はたとえ。意思はなく、\n合図の濃さで遺伝子のスイッチが切りかわるしくみ', { size: 30, y: 1060 });
   }
-  if (t >= 32.8) TK.note(g, t, 32.8, 35.0, '出どころ: Erez ほか (2017) Nature 541, 488–493\n絵は形のイメージ', { size: 30 });
+  if (t >= 32.8) TK.note(g, t, 32.8, 35.0, '出どころ: Erez ほか (2017) Nature 541, 488–493\n絵は形のイメージ', { size: 30, y: 1060 });
   tag(g, t);
 }
 

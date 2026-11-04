@@ -11,10 +11,14 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく wifi-wave-2（型E 桁）「スマホに届くのは、ルーターの10億分の1」。台本は trivia/wifi-wave.md。?short で録る
 // 自由空間の損失 L = 32.4 + 20 log f(MHz) + 20 log d(km)（ITU-R P.525）、f = 2437MHz（ch6）:
+// 絵は図鑑の版画（PL.*）。ルーター・スマホ・壁の断面・札束を版画の道具で。
 // 1m → 40.1dB（約1万分の1）、10m → 60.1dB（約100万分の1）。ルーター 20dBm（0.1W）と壁ごし −70dBm は目安 → 90dB = 10億分の1（0.1nW）
 const DUR = 35;
 const subs = [
@@ -32,26 +36,61 @@ const cues = [
   { t: 26.0, type: 'pop' }, { t: 28.0, type: 'tick' }, { t: 32.0, type: 'rise' },
 ];
 
+// ---- 図鑑の版画（PL.*）の道具で描く ----
+// ルーター（箱・アンテナ2本・ランプ）。x, y は箱のまん中
 function router(g, x, y, s) {
-  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = '#e8f0ff'; g.lineWidth = 6;
-  g.beginPath(); g.roundRect(-70, -20, 140, 50, 12); g.moveTo(-40, -20); g.lineTo(-55, -80); g.moveTo(40, -20); g.lineTo(55, -80); g.stroke();
-  g.fillStyle = TK.C.green; g.beginPath(); g.arc(-30, 5, 6, 0, Math.PI * 2); g.arc(-10, 5, 6, 0, Math.PI * 2); g.fill(); g.restore();
+  const w = 150 * s, h = 34 * s, d = 30 * s, yb = y + h / 2;
+  const front = PL.rect(x - w / 2, yb - h, w, h), top = PL.poly([[x - w / 2, yb - h], [x - w / 2 + d, yb - h - d * 0.5], [x + w / 2 + d, yb - h - d * 0.5], [x + w / 2, yb - h]]);
+  const side = PL.poly([[x + w / 2, yb - h], [x + w / 2 + d, yb - h - d * 0.5], [x + w / 2 + d, yb - d * 0.5], [x + w / 2, yb]]);
+  [[-0.32, -0.12], [0.36, 0.1]].forEach(([k, a]) => {
+    const bx = x + w * k + d * 0.5, by = yb - h - d * 0.25, L = 110 * s, ex = bx + Math.sin(a) * L, ey = by - Math.cos(a) * L, ww = 7 * s;
+    const ant = PL.poly([[bx - ww, by], [ex - ww * 0.8, ey], [ex + ww * 0.8, ey], [bx + ww, by]]);
+    PL.tint(g, ant, PL.T.gray, 0.8); PL.ink(g, ant, 3.5);
+  });
+  PL.tint(g, top, PL.T.sand, 0.55); PL.ink(g, top, 4);
+  PL.tint(g, side, PL.T.gray, 0.8); PL.hatch(g, side, { angle: 1.3, gap: 6, w: 1.5, cx: x, cy: y }); PL.ink(g, side, 4);
+  PL.tint(g, front, PL.T.sand, 0.45); PL.ink(g, front, 4.5);
+  [0, 1, 2, 3].forEach(i => { const c = PL.circle(x - w * 0.36 + i * w * 0.1, yb - h / 2, 4.5 * s); PL.tint(g, c, i < 3 ? PL.GREEN : PL.T.gold, 0.95); PL.ink(g, c, 1.6); });
 }
+// スマートフォン（正面。画面・受話口・カメラ・横のボタン）。x, y はまん中
 function phone(g, x, y, s) {
-  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = '#e8f0ff'; g.lineWidth = 5;
-  g.beginPath(); g.roundRect(-34, -64, 68, 128, 14); g.stroke(); g.beginPath(); g.moveTo(-10, 50); g.lineTo(10, 50); g.stroke(); g.restore();
+  const w = 72 * s, h = 140 * s, r = 11 * s;
+  const body = gg => { gg.moveTo(x - w / 2 + r, y - h / 2); gg.arcTo(x + w / 2, y - h / 2, x + w / 2, y + h / 2, r); gg.arcTo(x + w / 2, y + h / 2, x - w / 2, y + h / 2, r); gg.arcTo(x - w / 2, y + h / 2, x - w / 2, y - h / 2, r); gg.arcTo(x - w / 2, y - h / 2, x + w / 2, y - h / 2, r); gg.closePath(); };
+  const edge = PL.rect(x + w / 2 - 1, y - h / 2 + r, 5 * s, h - 2 * r);
+  PL.tint(g, edge, PL.T.gray, 0.8); PL.ink(g, edge, Math.max(1.5, 2 * s));
+  PL.tint(g, body, PL.T.gray, 0.55); PL.ink(g, body, Math.max(2.5, 3.6 * s));
+  const scr = PL.rect(x - w / 2 + 5 * s, y - h / 2 + 16 * s, w - 10 * s, h - 32 * s);
+  PL.tint(g, scr, PL.T.sky, 0.7); PL.hatch(g, scr, { angle: 0.8, gap: Math.max(5, 6 * s), w: Math.max(1, 1.1 * s), not: PL.poly([[x - w, y - h], [x + w, y - h], [x - w, y + h * 0.1]]), cx: x, cy: y }); PL.ink(g, scr, Math.max(1.5, 2 * s));
+  PL.ink(g, gg => { gg.moveTo(x - 9 * s, y - h / 2 + 8 * s); gg.lineTo(x + 9 * s, y - h / 2 + 8 * s); PL.circle(x + 18 * s, y - h / 2 + 8 * s, 2.2 * s)(gg); gg.moveTo(x - w / 2 - 2, y - h * 0.2); gg.lineTo(x - w / 2 - 2, y - h * 0.05); }, Math.max(1.5, 2.2 * s));
 }
-function rings(g, cx, cy, t, maxR, alpha = 0.8) {
+// 電波の輪（広がる。字の所はよける: holes = [[x, y, w, h], ...]、上下は y0〜y1 だけ）
+function rings(g, cx, cy, t, maxR, alpha = 0.8, o = {}) {
+  g.save(); g.beginPath(); g.rect(0, o.y0 ?? 100, PW, (o.y1 ?? 1190) - (o.y0 ?? 100)); (o.holes || []).forEach(([x, y, w, h]) => g.rect(x, y, w, h)); g.clip('evenodd');
   for (let i = 0; i < 6; i++) {
     const r = ((t * 150 + i * maxR / 6) % maxR);
-    g.save(); g.strokeStyle = TK.C.acc2; g.globalAlpha = Math.max(0, 1 - r / maxR) * alpha; g.lineWidth = 5; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke(); g.restore();
+    g.save(); g.globalAlpha *= Math.max(0, 1 - r / maxR) * alpha; PL.ink(g, gg => { gg.moveTo(cx + r, cy); gg.arc(cx, cy, r, 0, Math.PI * 2); }, 3, '#2f5f7a'); g.restore();
   }
+  g.restore();
 }
 function frac(g, t, a, s, y) {
-  g.save(); g.globalAlpha = TK.pop(t, a, 0.4);
-  TK.card(g, 150, y - 80, 660, 160, { r: 40, fill: 'rgba(255,207,74,0.16)', stroke: TK.C.acc });
-  TK.text(g, s, PW / 2 - 60, y, 88, { color: TK.C.acc });
+  g.save(); g.globalAlpha *= clamp(TK.pop(t, a, 0.4), 0, 1);
+  TK.card(g, 150, y - 80, 660, 160);
+  TK.text(g, s, PW / 2 - 60, y, 88, { color: PL.RED });
   g.restore();
+}
+// 壁の断面（しっくいの板）
+function wall(g, x, y0, y1) {
+  const r = PL.rect(x - 14, y0, 28, y1 - y0);
+  PL.tint(g, r, PL.T.gray, 0.8); PL.hatch(g, r, { angle: 0.8, gap: 7, w: 1.6, cx: x, cy: y0 }); PL.ink(g, r, 4);
+}
+// 1万円札の束を積んだかたまり（10億円のたとえ。束の数は飾り）
+function moneyBlock(g, x, y, w, h, d) {
+  const front = PL.rect(x, y, w, h), top = PL.poly([[x, y], [x + d, y - d * 0.55], [x + w + d, y - d * 0.55], [x + w, y]]), side = PL.poly([[x + w, y], [x + w + d, y - d * 0.55], [x + w + d, y + h - d * 0.55], [x + w, y + h]]);
+  PL.tint(g, front, '#c9c39a', 0.85); PL.tint(g, top, '#d8d2aa', 0.75); PL.tint(g, side, '#a9a47a', 0.85);
+  PL.hatch(g, side, { angle: 1.2, gap: 8, w: 1.6, cx: x + w, cy: y });
+  PL.ink(g, gg => { for (let i = 1; i < 10; i++) { gg.moveTo(x, y + h * i / 10); gg.lineTo(x + w, y + h * i / 10); gg.moveTo(x + w, y + h * i / 10); gg.lineTo(x + w + d, y + h * i / 10 - d * 0.55); } for (let j = 1; j < 6; j++) { gg.moveTo(x + w * j / 6, y); gg.lineTo(x + w * j / 6, y + h); } }, 1.6);   // 束のさかい
+  PL.ink(g, gg => { for (let j = 0; j < 6; j++) for (let i = 0; i < 10; i++) { const bx = x + w * (j + 0.5) / 6; gg.moveTo(bx - 4, y + h * i / 10 + 3); gg.lineTo(bx - 4, y + h * (i + 1) / 10 - 3); } }, 4, PL.RED);   // 帯
+  PL.ink(g, front, 4); PL.ink(g, top, 4); PL.ink(g, side, 4);
 }
 
 function draw(g, t) {
@@ -59,69 +98,70 @@ function draw(g, t) {
   if (t < 2.5) {
     TK.hook(g, t, 0.0, 2.5, '[10億分の1]', { y: 380, size: 150 });
     TK.text(g, '1 / 1,000,000,000', PW / 2 - 60, 560, 64, { color: TK.C.sub });
-    g.save(); g.globalAlpha = TK.pop(t, 0.6, 0.4); phone(g, PW / 2 - 60, 820, 0.35); g.restore();
+    g.save(); g.globalAlpha *= clamp(TK.pop(t, 0.6, 0.4), 0, 1);
+    router(g, 200, 880, 0.9); phone(g, 760, 860, 0.8);
+    PL.dots(g, [[300, 860], [690, 860]], { dash: [3, 16], w: 6, color: '#2f5f7a' });
+    g.restore();
   }
   // 2.5〜7: ルーター 0.1W
   if (t >= 2.5 && t < 7.0) {
-    rings(g, PW / 2 - 60, 640, t, 420);
+    rings(g, PW / 2 - 60, 640, t, 420, 0.8, { y0: 400 });
     router(g, PW / 2 - 60, 640, 1.8);
     TK.count(g, t, 3.2, 7.0, 0, 0.1, { y: 290, size: 140, dur: 0.8, fmt: v => v.toFixed(2).replace(/0$/, '') + ' W', label: 'ルーターが出す電波（目安）' });
   }
   // 7〜19: 1m・10m の輪（何もない空間）
   if (t >= 7.0 && t < 19.0) {
-    const cx = 200, cy = 600, ten = t >= 13.0, k = ten ? TK.out((t - 13.2) / 1.0) : 0;
+    const cx = 200, cy = 620, ten = t >= 13.0, k = ten ? TK.out((t - 13.2) / 1.0) : 0;
     const r1 = lerp(330, 66, k), r10 = lerp(3300, 660, k);   // 1m の輪 → 10m の輪へ引く
-    rings(g, cx, cy, t, Math.min(700, ten ? r10 : r1 * 1.2), 0.5);
+    const l1 = ten ? [cx + r1 + 30, cy - 110] : [cx + r1 + 70, cy - 10], l10 = [cx + Math.min(r10, 2000) - 70, cy - 150];
+    const holes = [[l1[0] - 10, l1[1] - 34, 120, 68]]; if (ten && r10 < 900) holes.push([l10[0] - 130, l10[1] - 34, 140, 68]);
+    rings(g, cx, cy, t, Math.min(700, ten ? r10 : r1 * 1.2), 0.5, { y0: 350, holes });
     router(g, cx, cy, 1.1);
-    g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.setLineDash([16, 12]);
-    g.beginPath(); g.arc(cx, cy, r1, -1.2, 1.2); g.stroke();
-    if (ten) { g.beginPath(); g.arc(cx, cy, r10, -0.55, 0.55); g.stroke(); }
+    g.save(); g.setLineDash([16, 12]);
+    PL.ink(g, gg => { gg.moveTo(cx + Math.cos(-1.2) * r1, cy + Math.sin(-1.2) * r1); gg.arc(cx, cy, r1, -1.2, 1.2); if (ten) { gg.moveTo(cx + Math.cos(-0.55) * r10, cy + Math.sin(-0.55) * r10); gg.arc(cx, cy, r10, -0.55, 0.55); } }, 5, PL.RED);
     g.restore();
-    phone(g, cx + (ten ? r10 : r1), cy, 0.9);
-    TK.text(g, '1 m', cx + r1, cy - 120 - (ten ? 0 : 20), 48, { color: TK.C.acc });
-    if (ten) TK.text(g, '10 m', cx + r10 - 30, cy - 160, 48, { color: TK.C.acc, align: 'right' });
+    phone(g, cx + (ten ? r10 : r1), cy, 0.85);
+    PL.label(g, '1 m', l1[0], l1[1], 48, { align: 'left', color: PL.RED });
+    if (ten && r10 < 900) PL.label(g, '10 m', l10[0], l10[1], 48, { align: 'right', color: PL.RED });
     if (!ten) frac(g, t, 8.4, '1万分の1', 260); else frac(g, t, 14.4, '100万分の1', 260);
-    TK.note(g, t, 8, 19, '何もない空間の計算（ITU-R P.525、2.437GHz）\n本当の部屋は反射で強くも弱くもなる', { size: 30 });
+    TK.note(g, t, 8, 19, '何もない空間の計算（ITU-R P.525、2.437GHz）\n本当の部屋は反射で強くも弱くもなる', { size: 30, y: 1476 });
   }
-  // 19〜26: 壁を通るたびに暗く
+  // 19〜26: 壁を通るたびに弱く（波の高さで。壁ごとに 0.6 倍の絵）
   if (t >= 19.0 && t < 26.0) {
-    const walls = [380, 560, 740];
-    const y = 600;
+    const walls = [380, 560, 740], y = 620, xr = Math.min(880, 230 + (t - 19.5) * 500);
     router(g, 160, y, 1.1);
-    // 波の帯（壁を通るたびにうすく）
-    for (let x = 230; x < 880; x += 6) {
-      const n = walls.filter(w => x > w).length, on = (t - 19.5) * 500 > x - 230;
-      if (!on) continue;
-      const a = Math.pow(0.35, n) * (0.5 + 0.5 * Math.sin((x - t * 300) / 20));
-      g.save(); g.fillStyle = TK.C.acc2; g.globalAlpha = 0.15 + 0.85 * a * Math.pow(1, 1); g.fillRect(x, y - 110 * Math.pow(0.6, n), 4, 220 * Math.pow(0.6, n)); g.restore();
+    if (xr > 236) {
+      const amp = x => 110 * Math.pow(0.6, walls.filter(w => x > w).length), wy = x => y - amp(x) * Math.sin((x - t * 300) / 20);
+      const env = gg => { gg.moveTo(230, y - amp(230)); for (let x = 230; x <= xr; x += 4) gg.lineTo(x, y - amp(x)); for (let x = xr; x >= 230; x -= 4) gg.lineTo(x, y + amp(x)); gg.closePath(); };
+      PL.tint(g, env, PL.T.sky, 0.45);
+      PL.ink(g, gg => { for (let x = 230; x <= xr; x += 3) x > 230 ? gg.lineTo(x, wy(x)) : gg.moveTo(x, wy(x)); }, 4, '#2f5f7a');
     }
-    walls.forEach((w, i) => { g.save(); g.globalAlpha = TK.pop(t, 20 + i, 0.3); g.fillStyle = 'rgba(200,210,230,0.55)'; g.fillRect(w - 12, y - 220, 24, 440); g.restore(); });
-    phone(g, 860, y, 0.9);
-    TK.text(g, '壁', 380, y + 270, 44, { color: TK.C.sub });
+    walls.forEach((w, i) => { const k = clamp(TK.pop(t, 20 + i, 0.3), 0, 1); if (k > 0) { g.save(); g.globalAlpha *= k; wall(g, w, y - 220, y + 220); g.restore(); } });
+    phone(g, 860, y, 0.85);
+    if (t > 20.2) { PL.leader(g, 380, y + 225, 380, y + 262); PL.label(g, '壁', 380, y + 295, 44, { color: '#4a3f33' }); }
     if (t > 23.2) frac(g, t, 23.2, '10億分の1', 260);
-    TK.note(g, t, 19.5, 26, 'ルーター 0.1W・壁ごし −70dBm は目安\n（0.1W → 0.0000000001W）', { size: 30 });
+    TK.note(g, t, 19.5, 26, 'ルーター 0.1W・壁ごし −70dBm は目安\n（0.1W → 0.0000000001W）', { size: 30, y: 1476 });
   }
   // 26〜32: 10億円のうち1円
   if (t >= 26.0 && t < 32.0) {
-    const k = TK.pop(t, 26.2, 0.4);
-    g.save(); g.globalAlpha = clamp(k, 0, 1);
-    // 1万円札の束を積んだ山（10億円＝10万枚）のたとえ: 大きな四角
-    TK.card(g, 130, 230, 700, 560, { r: 20, fill: 'rgba(89,227,154,0.14)', stroke: TK.C.green });
-    TK.text(g, '10億円', PW / 2 - 60, 510, 120, { color: TK.C.green });
+    const k = clamp(TK.pop(t, 26.2, 0.4), 0, 1);
+    g.save(); g.globalAlpha *= k;
+    PL.label(g, '10億円', 120, 260, 110, { align: 'left', color: PL.GREEN });
+    moneyBlock(g, 130, 420, 600, 420, 160);
     g.restore();
     if (t > 28.0) {
-      g.save(); g.globalAlpha = TK.pop(t, 28.0, 0.3);
-      g.fillStyle = TK.C.acc; g.beginPath(); g.arc(800, 760, 12, 0, Math.PI * 2); g.fill();
-      g.strokeStyle = TK.C.acc; g.lineWidth = 4; g.beginPath(); g.moveTo(790, 770); g.lineTo(720, 880); g.stroke();
-      TK.text(g, 'このうち 1円', 720, 920, 56, { color: TK.C.acc, align: 'right' });
+      g.save(); g.globalAlpha *= clamp(TK.pop(t, 28.0, 0.3), 0, 1);
+      const c = PL.circle(870, 880, 13); PL.tint(g, c, PL.T.gray, 0.9); PL.ink(g, c, 3);   // 1円玉（直径 2cm の絵。大きさは比べていない）
+      PL.leader(g, 870, 895, 870, 970, PL.RED);
+      PL.label(g, 'このうち 1円', 1000, 1010, 56, { color: PL.RED, align: 'right' });
       g.restore();
     }
   }
   // 32〜35: スマホの耳
   if (t >= 32.0) {
-    phone(g, PW / 2 - 60, 560, 2.6);
-    for (let i = 0; i < 3; i++) { g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 8; g.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(t * 4 - i)); g.beginPath(); g.arc(PW / 2 - 60, 560, 220 + i * 50, -2.6, -0.55); g.stroke(); g.restore(); }
-    TK.note(g, t, 32.2, 35, '出どころ: ITU-R P.525-5（2024）自由空間の式\nIEEE 802.11（チャンネル6 = 2437MHz）', { size: 30 });
+    phone(g, PW / 2 - 60, 600, 2.4);
+    for (let i = 0; i < 3; i++) { g.save(); g.globalAlpha *= 0.4 + 0.6 * Math.abs(Math.sin(t * 4 - i)); PL.ink(g, gg => { gg.moveTo(PW / 2 - 60 + Math.cos(-2.6) * (230 + i * 50), 600 + Math.sin(-2.6) * (230 + i * 50)); gg.arc(PW / 2 - 60, 600, 230 + i * 50, -2.6, -0.55); }, 8, PL.RED); g.restore(); }
+    TK.note(g, t, 32.2, 35, '出どころ: ITU-R P.525-5（2024）自由空間の式\nIEEE 802.11（チャンネル6 = 2437MHz）', { size: 30, y: 1476 });
   }
 }
 

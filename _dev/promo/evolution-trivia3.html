@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく evolution-3（型A ぜんぶ逆）「恐竜の時代に草はなかった、はまちがい」。台本は trivia/evolution.md。?short で録る
@@ -30,191 +33,210 @@ const cues = [
   { t: 19.0, type: 'rise' }, { t: 21.0, type: 'pop' }, { t: 22.4, type: 'ding' },
 ];
 
-// シダ（地面から生える葉）
+/// 絵は「図鑑の版画」（trivia-plate.js の PL.*）。恐竜・シダ・ふんの化石・顕微鏡の粒を手彩色＋かげの斜線＋墨の線で
+const line = pts => g => pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
+const fadeIn = (g, f, fn) => { g.save(); g.globalAlpha *= f; fn(); g.restore(); };
+const smoothP = (pts, m) => g => {
+  const P = pts.map(p => m(p[0], p[1])), n = P.length, mid = i => { const a = P[i % n], b = P[(i + 1) % n]; return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; };
+  g.moveTo(...mid(n - 1)); for (let i = 0; i < n; i++) g.quadraticCurveTo(...P[i], ...mid(i)); g.closePath();
+};
+const FROND_G = '#4f7a3e';
+// シダ（地面から生える葉）。小葉はまとめて1つの道に
 function fern(g, x, y, s, sway) {
-  g.save(); g.translate(x, y); g.scale(s, s); g.rotate(sway);
-  g.strokeStyle = '#3f9c6a'; g.lineWidth = 4; g.lineCap = 'round';
-  for (const sd of [-1, 1]) {
-    g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(sd * 40, -90, sd * 110, -150); g.stroke();
-    for (let i = 1; i < 7; i++) {
-      const u = i / 7, px = sd * (110 * u * u + 20 * u), py = -150 * u;
-      g.beginPath(); g.moveTo(px, py); g.lineTo(px + sd * 26 * (1 - u * 0.5), py - 22); g.stroke();
-      g.beginPath(); g.moveTo(px, py); g.lineTo(px - sd * 6, py - 30 * (1 - u * 0.4)); g.stroke();
+  const c = Math.cos(sway), n = Math.sin(sway), m = (a, b) => [x + s * (a * c - b * n), y + s * (a * n + b * c)];
+  const stems = [], leaves = [];
+  for (const sd of [-1, 1]) for (const L of [1, 0.7]) {
+    const tip = [sd * 110 * L, -150 * L - (L < 1 ? 40 : 0)], ctl = [sd * 40 * L, -90 * L - (L < 1 ? 30 : 0)];
+    stems.push([[0, 0], ctl, tip]);
+    for (let i = 1; i < 8; i++) {
+      const u = i / 8, px = (1 - u) * (1 - u) * 0 + 2 * (1 - u) * u * ctl[0] + u * u * tip[0], py = 2 * (1 - u) * u * ctl[1] + u * u * tip[1], l = 26 * (1 - u * 0.6) * L;
+      leaves.push([[px, py], [px + sd * l * 0.6, py - l * 0.9], [px + sd * l, py - l * 0.2]]);
+      leaves.push([[px, py], [px - sd * l * 0.2, py - l * 1.0], [px + sd * l * 0.3, py - l * 0.8]]);
     }
   }
-  g.restore();
+  const lp = gg => leaves.forEach(([a, b, d]) => { gg.moveTo(...m(...a)); gg.quadraticCurveTo(...m(...b), ...m(...d)); gg.closePath(); });
+  PL.tint(g, lp, PL.T.leaf, 0.85);
+  PL.ink(g, lp, 1.6, FROND_G);
+  PL.ink(g, gg => stems.forEach(([a, b, d]) => { gg.moveTo(...m(...a)); gg.quadraticCurveTo(...m(...b), ...m(...d)); }), 4, FROND_G);
 }
-// 草のひとかたまり（k: 0〜1 で伸びる）
-function grassTuft(g, x, y, s, k) {
-  if (k <= 0) return;
-  g.save(); g.translate(x, y); g.scale(s, s);
-  g.strokeStyle = '#9be36a'; g.lineWidth = 4; g.lineCap = 'round';
-  for (let i = -3; i <= 3; i++) {
-    const h = (60 + 25 * Math.cos(i * 1.3)) * k;
-    g.beginPath(); g.moveTo(i * 6, 0); g.quadraticCurveTo(i * 10, -h * 0.6, i * 18, -h); g.stroke();
-  }
-  g.restore();
+// 草のかたまり（k: 0〜1 で伸びる）。tufts: [[x, y, s, k], ...] をまとめて描く
+function grass(g, tufts) {
+  PL.ink(g, gg => tufts.forEach(([x, y, s, k]) => { if (k <= 0) return; for (let i = -3; i <= 3; i++) { const h = (60 + 25 * Math.cos(i * 1.3)) * k * s; gg.moveTo(x + i * 6 * s, y); gg.quadraticCurveTo(x + i * 10 * s, y - h * 0.6, x + i * 18 * s, y - h); } }), 4, '#5f8f3c');
 }
-// 首の長い恐竜（ティタノサウルス類のイメージ。線画）
+// 首の長い恐竜（ティタノサウルス類のイメージ。左向き、足もと y=0）。neck: 0 上を向く → 1 地面へ下ろす
+const SP_BODY = [[-150, -190], [-110, -255], [-20, -278], [80, -262], [180, -232], [300, -182], [420, -112], [482, -82], [410, -96], [290, -140], [170, -162], [110, -122], [20, -96], [-80, -100], [-150, -128], [-172, -160]];
+const SP_FL = [[-132, -175], [-124, -110], [-120, -60], [-126, -8], [-134, 0], [-66, 0], [-70, -8], [-68, -60], [-72, -110], [-70, -175]], SP_HL = [[52, -190], [62, -110], [66, -60], [56, -8], [50, 0], [118, 0], [114, -8], [112, -60], [116, -110], [124, -190]];   // 柱のような足（足先は平ら）
 function sauropod(g, x, y, s, neck = 0) {
-  g.save(); g.translate(x, y); g.scale(s, s);
-  g.strokeStyle = '#cfe0ff'; g.fillStyle = 'rgba(207,224,255,0.10)'; g.lineWidth = 5; g.lineJoin = 'round'; g.lineCap = 'round';
-  // からだ
-  g.beginPath(); g.ellipse(0, -150, 170, 85, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-  // しっぽ
-  g.beginPath(); g.moveTo(160, -170); g.quadraticCurveTo(320, -160, 420, -90); g.quadraticCurveTo(320, -125, 165, -125); g.stroke();
-  // 首と頭（neck: 0 上を向く → 1 地面へ下ろす）
-  const hx = lerp(-330, -300, neck), hy = lerp(-420, -40, neck);
-  g.beginPath(); g.moveTo(-140, -200); g.quadraticCurveTo(lerp(-300, -260, neck), lerp(-300, -170, neck), hx, hy); g.stroke();
-  g.beginPath(); g.moveTo(-110, -150); g.quadraticCurveTo(lerp(-240, -230, neck), lerp(-250, -120, neck), hx + 10, hy + 26); g.stroke();
-  g.beginPath(); g.ellipse(hx - 22, hy + 10, 34, 20, lerp(-0.2, 0.9, neck), 0, Math.PI * 2); g.fill(); g.stroke();
-  // 足
-  for (const lx of [-110, -50, 60, 120]) { g.beginPath(); g.moveTo(lx, -90); g.lineTo(lx + 6, 0); g.stroke(); }
-  g.restore();
+  const m = (a, b) => [x + a * s, y + b * s], W = v => Math.max(1.2, v * s);
+  const hatchOpts = (p, dx, dy) => ({ angle: 0.75, gap: Math.max(6, 10 * s), w: W(1.6), not: p });
+  [SP_FL, SP_HL].forEach(L => { const p = PL.poly(L.map(([a, b]) => m(a + 34, b - 6))); fadeIn(g, 0.75, () => { PL.tint(g, p, PL.T.gray, 1); PL.hatch(g, p, { angle: 0.75, gap: Math.max(5, 8 * s), w: W(1.4) }); PL.ink(g, p, W(4)); }); });   // 向こうの足
+  [SP_FL, SP_HL].forEach(L => {
+    const p = PL.poly(L.map(([a, b]) => m(a, b))); PL.tint(g, p, PL.T.sand, 0.75); PL.hatch(g, p, { angle: 0.75, gap: Math.max(5, 8 * s), w: W(1.4), not: PL.poly(L.map(([a, b]) => m(a - 20, b))) });
+    PL.ink(g, gg => { [-50, -30].forEach(b => { gg.moveTo(...m(L[2][0] + 4, b)); gg.lineTo(...m(L[7][0] - 4, b + 3)); }); }, W(1.6));   // しわ
+    PL.ink(g, p, W(5));
+  });
+  const body = smoothP(SP_BODY, m);
+  g.fillStyle = '#efe6d2'; g.beginPath(); body(g); g.fill();   // 足のつけ根をかくす（紙の色でぬってから色をのせる）
+  PL.tint(g, body, PL.T.sand, 0.7);
+  PL.hatch(g, body, hatchOpts(smoothP(SP_BODY.map(([a, b]) => [a - 6, b - 40]), m)));
+  PL.ink(g, gg => { for (let a = -100; a < 330; a += 26) { const yy = a < 80 ? -270 + Math.abs(a - (-20)) * 0.08 : -262 + (a - 80) * 0.36; PL.circle(...m(a, yy + 16), 5 * s)(gg); } }, W(2));   // 背中のよろい（皮骨）
+  PL.ink(g, body, W(5));
+  // 首（太さが先へ細くなる帯）と頭
+  const P0 = [-120, -215], C = [lerp(-300, -260, neck), lerp(-330, -170, neck)], P1 = [lerp(-330, -300, neck), lerp(-420, -40, neck)];
+  const B = u => [(1 - u) ** 2 * P0[0] + 2 * (1 - u) * u * C[0] + u * u * P1[0], (1 - u) ** 2 * P0[1] + 2 * (1 - u) * u * C[1] + u * u * P1[1]];
+  const D = u => [2 * (1 - u) * (C[0] - P0[0]) + 2 * u * (P1[0] - C[0]), 2 * (1 - u) * (C[1] - P0[1]) + 2 * u * (P1[1] - C[1])];
+  const U = [], Lo = [];
+  for (let i = 0; i <= 24; i++) { const u = i / 24, [px, py] = B(u), [dx, dy] = D(u), l = Math.hypot(dx, dy) || 1, w = lerp(92, 30, u) / 2; U.push([px + dy / l * w, py - dx / l * w]); Lo.push([px - dy / l * w, py + dx / l * w]); }
+  const neckP = gg => { gg.moveTo(...m(...U[0])); U.forEach(p => gg.lineTo(...m(...p))); Lo.slice().reverse().forEach(p => gg.lineTo(...m(...p))); gg.closePath(); };
+  PL.tint(g, neckP, PL.T.sand, 0.7);
+  PL.hatch(g, neckP, { angle: 0.75, gap: Math.max(6, 10 * s), w: W(1.6), not: gg => { gg.moveTo(...m(...U[0])); U.forEach(p => gg.lineTo(...m(...p))); B(1); Lo.slice().reverse().forEach(([a, b], i) => gg.lineTo(...m(lerp(a, U[24 - i][0], 0.6), lerp(b, U[24 - i][1], 0.6)))); gg.closePath(); } });
+  PL.ink(g, gg => { gg.moveTo(...m(...U[3])); U.slice(4).forEach(p => gg.lineTo(...m(...p))); gg.moveTo(...m(...Lo[3])); Lo.slice(4).forEach(p => gg.lineTo(...m(...p))); }, W(5));
+  PL.ink(g, gg => { for (let i = 5; i < 23; i += 3) { gg.moveTo(...m(...U[i])); gg.lineTo(...m(lerp(U[i][0], Lo[i][0], 0.35), lerp(U[i][1], Lo[i][1], 0.35))); } }, W(1.6));   // 首のしわ
+  const [dx, dy] = D(1), l = Math.hypot(dx, dy) || 1, ax = dx / l, ay = dy / l, hm = (a, b) => m(P1[0] + ax * a - ay * b, P1[1] + ay * a + ax * b);
+  const HEAD = [[-12, -15], [18, -19], [44, -12], [56, -2], [50, 9], [14, 16], [-12, 12]];
+  const head = smoothP(HEAD, hm); PL.tint(g, head, PL.T.sand, 0.8); PL.ink(g, head, W(4));
+  PL.ink(g, PL.circle(...hm(18, -6), 3.5 * s), W(2.5));
+  PL.ink(g, gg => { gg.moveTo(...hm(30, 6)); gg.lineTo(...hm(52, 4)); }, W(1.8));   // 口
 }
 // 景色（地面 y=gy）。grassK で草が生える
 function scene(g, t, gy, grassK, neck) {
-  g.strokeStyle = 'rgba(184,100,42,0.8)'; g.lineWidth = 5; g.beginPath(); g.moveTo(60, gy); g.lineTo(PW - 60, gy); g.stroke();
-  g.fillStyle = 'rgba(184,100,42,0.12)'; g.fillRect(60, gy, PW - 120, 90);
-  const fx = [130, 300, 790, 900];
-  fx.forEach((x, i) => fern(g, x, gy, 1.0 + 0.2 * (i % 2), Math.sin(t * 1.2 + i) * 0.04));
-  sauropod(g, 560, gy, 1.0, neck);
-  for (let i = 0; i < 11; i++) grassTuft(g, 100 + i * 85 + (i % 3) * 12, gy, 0.8 + 0.3 * ((i * 7) % 3) / 2, clamp(grassK * 11 - i * 0.6, 0, 1));
+  const soil = PL.rect(60, gy, PW - 120, 90);
+  PL.tint(g, soil, PL.T.sand, 0.6); PL.hatch(g, soil, { angle: 0.8, gap: 12, w: 1.4 });
+  PL.ink(g, line([[60, gy], [PW - 60, gy]]), 5);
+  [130, 300, 790, 900].forEach((x, i) => fern(g, x, gy, 1.0 + 0.2 * (i % 2), Math.sin(t * 1.2 + i) * 0.04));
+  sauropod(g, 560, gy, 0.95, neck);
+  grass(g, Array.from({ length: 11 }, (_, i) => [100 + i * 85 + (i % 3) * 12, gy, 0.8 + 0.3 * ((i * 7) % 3) / 2, clamp(grassK * 11 - i * 0.6, 0, 1)]));
 }
 // ふんの化石（でこぼこの塊）
 function coprolite(g, cx, cy, s) {
-  g.save(); g.translate(cx, cy); g.scale(s, s);
-  g.fillStyle = 'rgba(160,112,70,0.55)'; g.strokeStyle = '#d9a874'; g.lineWidth = 5;
-  g.beginPath();
-  for (let i = 0; i <= 40; i++) { const a = i / 40 * Math.PI * 2, r = 1 + 0.08 * Math.sin(a * 5) + 0.05 * Math.cos(a * 9); g.lineTo(Math.cos(a) * 170 * r, Math.sin(a) * 105 * r); }
-  g.closePath(); g.fill(); g.stroke();
-  g.strokeStyle = 'rgba(217,168,116,0.5)'; g.lineWidth = 3;
-  for (let i = 0; i < 4; i++) { g.beginPath(); g.arc(-60 + i * 45, -10 + (i % 2) * 30, 20 + i * 4, 0.3, 2.4); g.stroke(); }
-  g.restore();
+  const pts = Array.from({ length: 40 }, (_, i) => { const a = i / 40 * Math.PI * 2, r = 1 + 0.08 * Math.sin(a * 5) + 0.05 * Math.cos(a * 9); return [Math.cos(a) * 170 * r, Math.sin(a) * 105 * r]; });
+  const m = (a, b) => [cx + a * s, cy + b * s], p = PL.poly(pts.map(([a, b]) => m(a, b)));
+  PL.tint(g, p, PL.T.brown, 0.7);
+  PL.hatch(g, p, { angle: 0.8, gap: 9, w: 1.6, not: PL.poly(pts.map(([a, b]) => m(a - 30, b - 34))) });
+  PL.ink(g, gg => { for (let i = 0; i < 4; i++) { const [a, b] = m(-60 + i * 45, -10 + (i % 2) * 30); gg.moveTo(a + Math.cos(0.3) * (20 + i * 4) * s, b + Math.sin(0.3) * (20 + i * 4) * s); gg.arc(a, b, (20 + i * 4) * s, 0.3, 2.4); } gg.moveTo(...m(-120, -40)); gg.lineTo(...m(-70, 10)); gg.lineTo(...m(-90, 50)); }, 2.2);   // しま・ひび
+  PL.ink(g, p, 5);
 }
 // インドのかたち（ざっくりのイメージ）
 function india(g, cx, cy, s) {
   const P = [[-0.35, -1], [0.05, -0.95], [0.25, -0.7], [0.55, -0.6], [0.85, -0.55], [0.7, -0.35], [0.45, -0.25], [0.35, 0.05], [0.12, 0.45], [0.0, 0.95], [-0.15, 0.55], [-0.35, 0.1], [-0.45, -0.25], [-0.75, -0.35], [-0.6, -0.6], [-0.4, -0.7]];
-  g.save(); g.translate(cx, cy); g.scale(s, s);
-  g.fillStyle = 'rgba(95,212,255,0.10)'; g.strokeStyle = TK.C.acc2; g.lineWidth = 4 / s; g.lineJoin = 'round';
-  g.beginPath(); P.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); g.fill(); g.stroke();
-  g.restore();
+  const p = PL.poly(P.map(([x, y]) => [cx + x * s, cy + y * s]));
+  PL.tint(g, p, PL.T.land, 0.6); PL.hatch(g, p, { angle: 0.8, gap: 11, w: 1.4, not: PL.poly(P.map(([x, y]) => [cx + x * s - 14, cy + y * s - 14])) });
+  PL.ink(g, gg => { P.forEach(([x, y], i) => { const X = cx + x * s * 1.07, Y = cy + y * s * 1.07; i ? gg.lineTo(X, Y) : gg.moveTo(X, Y); }); gg.closePath(); }, 1.4, TK.C.acc2);   // 海岸の外の線
+  PL.ink(g, p, 4);
 }
 // プラントオパール（草の細胞の形をしたガラスの粒）。5つの形
 function phytolith(g, kind, x, y, s, rot) {
-  g.save(); g.translate(x, y); g.rotate(rot); g.scale(s, s);
-  g.strokeStyle = 'rgba(220,245,255,0.95)'; g.fillStyle = 'rgba(160,220,255,0.22)'; g.lineWidth = 3 / s;
-  g.shadowColor = TK.C.acc2; g.shadowBlur = 12 * RES;
-  g.beginPath();
-  if (kind === 0) { g.moveTo(-1, -0.5); g.quadraticCurveTo(0, -0.1, 1, -0.5); g.lineTo(1, 0.5); g.quadraticCurveTo(0, 0.1, -1, 0.5); g.closePath(); }   // くら形
-  else if (kind === 1) { g.ellipse(-0.55, 0, 0.5, 0.4, 0, 0, Math.PI * 2); g.moveTo(1.05, 0); g.ellipse(0.55, 0, 0.5, 0.4, 0, 0, Math.PI * 2); }   // ふたこぶ
-  else if (kind === 2) { g.moveTo(-0.7, 0.6); g.lineTo(-0.45, -0.6); g.lineTo(0.45, -0.6); g.lineTo(0.7, 0.6); g.closePath(); }   // 台形
-  else if (kind === 3) { for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; g.ellipse(Math.cos(a) * 0.5, Math.sin(a) * 0.5, 0.36, 0.36, 0, 0, Math.PI * 2); } }   // 十字
-  else { g.moveTo(-0.9, 0.2); g.quadraticCurveTo(-0.2, -0.9, 0.9, -0.3); g.quadraticCurveTo(0.4, 0.7, -0.9, 0.2); g.closePath(); }   // おうぎ
-  g.fill(); g.stroke();
-  g.restore();
+  const c = Math.cos(rot), n = Math.sin(rot), m = (a, b) => [x + s * (a * c - b * n), y + s * (a * n + b * c)];
+  const p = gg => {
+    if (kind === 0) { gg.moveTo(...m(-1, -0.5)); gg.quadraticCurveTo(...m(0, -0.1), ...m(1, -0.5)); gg.lineTo(...m(1, 0.5)); gg.quadraticCurveTo(...m(0, 0.1), ...m(-1, 0.5)); gg.closePath(); }   // くら形
+    else if (kind === 1) { PL.ellipse(...m(-0.55, 0), 0.5 * s, 0.4 * s, rot)(gg); PL.ellipse(...m(0.55, 0), 0.5 * s, 0.4 * s, rot)(gg); }   // ふたこぶ
+    else if (kind === 2) { PL.poly([m(-0.7, 0.6), m(-0.45, -0.6), m(0.45, -0.6), m(0.7, 0.6)])(gg); }   // 台形
+    else if (kind === 3) { for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; PL.circle(...m(Math.cos(a) * 0.5, Math.sin(a) * 0.5), 0.36 * s)(gg); } }   // 十字
+    else { gg.moveTo(...m(-0.9, 0.2)); gg.quadraticCurveTo(...m(-0.2, -0.9), ...m(0.9, -0.3)); gg.quadraticCurveTo(...m(0.4, 0.7), ...m(-0.9, 0.2)); gg.closePath(); }   // おうぎ
+  };
+  g.fillStyle = 'rgba(244,236,218,0.8)'; g.beginPath(); p(g); g.fill();   // すきとおったガラス（紙の色）
+  PL.tint(g, p, PL.T.sky, 0.6);
+  PL.ink(g, p, 3, TK.C.acc2);
+  PL.ink(g, gg => { const [a, b] = m(-0.3, -0.25), [d, e] = m(0.1, -0.35); gg.moveTo(a, b); gg.lineTo(d, e); }, 2.5, 'rgba(244,236,218,0.95)');   // 光る所
 }
 // 赤いバツ
 function cross(g, cx, cy, r, k) {
-  g.save(); g.strokeStyle = TK.C.red; g.lineWidth = 26; g.lineCap = 'round'; g.globalAlpha *= clamp(k * 2, 0, 1);
+  if (k <= 0) return;
   const a = r * clamp(k * 2, 0, 1), b = r * clamp(k * 2 - 1, 0, 1);
-  g.beginPath(); g.moveTo(cx - r, cy - r); g.lineTo(cx - r + 2 * a, cy - r + 2 * a); g.stroke();
-  if (b > 0) { g.beginPath(); g.moveTo(cx + r, cy - r); g.lineTo(cx + r - 2 * b, cy - r + 2 * b); g.stroke(); }
-  g.restore();
+  PL.ink(g, line([[cx - r, cy - r], [cx - r + 2 * a, cy - r + 2 * a]]), 24, PL.RED);
+  if (b > 0) PL.ink(g, line([[cx + r, cy - r], [cx + r - 2 * b, cy - r + 2 * b]]), 24, PL.RED);
 }
 
 function draw(g, t) {
   // 0〜2: シダだけの恐竜の景色に「×」
   if (t < 2.0) {
-    const f = fade(t, 0, 2.0, 0.2);
-    g.save(); g.globalAlpha = f; scene(g, t, 900, 0, 0); g.restore();
+    fadeIn(g, fade(t, 0, 2.0, 0.2), () => scene(g, t, 900, 0, 0));
     cross(g, PW / 2, 640, 170, (t - 0.5) / 0.5);
     TK.hook(g, t, 0.0, 2.0, '恐竜の時代に草はない\n…は[ウソ]', { y: 260, size: 104 });
   }
   // 2〜7: 年表。恐竜の時代 → 草の化石は 5500万年前
   if (t >= 2.0 && t < 7.0) {
     const f = fade(t, 2.0, 7.0, 0.3);
-    g.save(); g.globalAlpha = f;
-    TK.text(g, '2005年までの年表', PW / 2, 220, 60, { color: TK.C.sub });
-    const x0 = 120, x1 = 960, y = 640;
-    const xOf = ma => x0 + (x1 - x0) * (76 - ma) / 32;   // 7600万年前〜4400万年前
-    const k = TK.out((t - 2.2) / 1.0);
-    g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 6; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(x0, y); g.lineTo(lerp(x0, x1, k), y); g.stroke();
-    // 恐竜の時代の帯
-    g.fillStyle = 'rgba(255,107,107,0.22)'; g.fillRect(x0, y - 70, (xOf(66) - x0) * k, 140);
-    TK.text(g, '恐竜の時代', (x0 + xOf(66)) / 2, y - 120, 54, { color: TK.C.red });
-    g.strokeStyle = TK.C.red; g.lineWidth = 5; g.beginPath(); g.moveTo(xOf(66), y - 90); g.lineTo(xOf(66), y + 90); g.stroke();
-    TK.text(g, '6600万年前', xOf(66) - 14, y + 130, 46, { color: TK.C.sub, align: 'right' });
-    // 草の化石
-    if (t > 3.6) {
-      const p = TK.pop(t, 3.6, 0.4), gx = xOf(55);
-      g.save(); g.globalAlpha = f * clamp(p, 0, 1);
-      grassTuft(g, gx, y - 10, 1.4, p);
-      g.fillStyle = TK.C.green; g.beginPath(); g.arc(gx, y, 16, 0, Math.PI * 2); g.fill();
-      TK.text(g, '草の化石', gx, y - 170, 54, { color: TK.C.green });
-      TK.text(g, '5500万年前', gx + 14, y + 130, 46, { color: TK.C.green, align: 'left' });
-      g.restore();
-    }
-    if (t > 5.0) {
-      g.globalAlpha = f * fade(t, 5.0, 7.0, 0.25);
-      const a = xOf(66), b = xOf(55);
-      g.strokeStyle = TK.C.acc; g.lineWidth = 5; g.beginPath(); g.moveTo(a + 10, y + 220); g.lineTo(b - 10, y + 220); g.stroke();
-      g.fillStyle = TK.C.acc; for (const [px, d] of [[a + 10, 1], [b - 10, -1]]) { g.beginPath(); g.moveTo(px, y + 220); g.lineTo(px + d * 24, y + 206); g.lineTo(px + d * 24, y + 234); g.fill(); }
-      TK.text(g, '[約1000万年]のすきま', PW / 2, y + 290, 56);
-    }
-    g.restore();
+    fadeIn(g, f, () => {
+      PL.label(g, '2005年までの年表', 120, 220, 60, { align: 'left', color: TK.C.sub });
+      const x0 = 120, x1 = 960, y = 640;
+      const xOf = ma => x0 + (x1 - x0) * (76 - ma) / 32;   // 7600万年前〜4400万年前
+      const k = TK.out((t - 2.2) / 1.0);
+      // 恐竜の時代の帯
+      const band = PL.rect(x0, y - 70, (xOf(66) - x0) * k, 140);
+      PL.tint(g, band, PL.T.rose, 0.6); PL.hatch(g, band, { angle: 0.8, gap: 14, w: 1.4, color: PL.RED });
+      if (k > 0.9) sauropod(g, 300, y + 62, 0.22, 0.6);
+      PL.ink(g, line([[x0, y], [lerp(x0, x1, k), y]]), 6);
+      PL.ink(g, gg => { for (let ma = 76; ma >= 44; ma -= 2) { const x = xOf(ma); if (x <= lerp(x0, x1, k)) { gg.moveTo(x, y); gg.lineTo(x, y + (ma % 10 ? 10 : 20)); } } }, 2.5);
+      PL.label(g, '恐竜の時代', (x0 + xOf(66)) / 2, y - 120, 54, { color: PL.RED });
+      PL.ink(g, line([[xOf(66), y - 90], [xOf(66), y + 90]]), 5, PL.RED);
+      PL.label(g, '6600万年前', xOf(66) - 14, y + 130, 46, { color: TK.C.sub, align: 'right' });
+      // 草の化石
+      if (t > 3.6) {
+        const p = TK.pop(t, 3.6, 0.4), gx = xOf(55);
+        fadeIn(g, clamp(p, 0, 1), () => {
+          grass(g, [[gx, y - 10, 1.4, p]]);
+          const d = PL.circle(gx, y, 16); PL.tint(g, d, PL.GREEN, 1); PL.ink(g, d, 3);
+          PL.label(g, '草の化石', gx, y - 170, 54, { color: PL.GREEN });
+          PL.label(g, '5500万年前', gx + 14, y + 130, 46, { color: PL.GREEN, align: 'left' });
+        });
+      }
+      if (t > 5.0) fadeIn(g, fade(t, 5.0, 7.0, 0.25), () => {
+        const a = xOf(66), b = xOf(55);
+        PL.ink(g, line([[a + 10, y + 220], [b - 10, y + 220]]), 5, PL.RED);
+        [[a + 10, 1], [b - 10, -1]].forEach(([px, d]) => { const h = PL.poly([[px, y + 220], [px + d * 24, y + 206], [px + d * 24, y + 234]]); PL.tint(g, h, PL.RED, 1); PL.ink(g, h, 2, PL.RED); });
+        PL.label(g, '[約1000万年]のすきま', PW / 2, y + 290, 56);
+      });
+    });
   }
   // 7〜14: インドの恐竜のふんの化石
   if (t >= 7.0 && t < 14.0) {
     const f = fade(t, 7.0, 14.0, 0.3);
-    g.save(); g.globalAlpha = f;
-    india(g, 330, 470, 240);
-    g.fillStyle = TK.C.acc; g.beginPath(); g.arc(330 + 0.05 * 240, 470 - 0.25 * 240, 14, 0, Math.PI * 2); g.fill();
-    TK.text(g, 'インド', 330, 210, 56, { color: TK.C.acc2 });
-    sauropod(g, 790, 620, 0.62, 0.2);
-    TK.text(g, '首の長い恐竜', 760, 290, 44, { color: TK.C.sub });
-    TK.text(g, '（ティタノサウルス類）', 760, 345, 36, { color: TK.C.sub, bold: false });
-    if (t > 9.0) {
-      const p = TK.pop(t, 9.0, 0.5);
-      g.save(); g.translate(PW / 2, 860); g.scale(p, p); g.translate(-PW / 2, -860);
-      coprolite(g, PW / 2, 860, 1.0);
-      g.restore();
-      TK.text(g, '恐竜のふんの化石', PW / 2, 1010, 52, { color: '#ffd9b0' });
-    }
-    if (t > 11.4) { g.globalAlpha = f * fade(t, 11.4, 14.0, 0.25); TK.text(g, '約[6500万年前]', PW / 2 + 260, 720, 52); }
-    g.restore();
+    fadeIn(g, f, () => {
+      india(g, 330, 470, 240);
+      const mk = PL.circle(330 + 0.05 * 240, 470 - 0.25 * 240, 14); PL.tint(g, mk, PL.RED, 1); PL.ink(g, mk, 3);
+      PL.label(g, 'インド', 330, 170, 56, { color: TK.C.acc2 });
+      sauropod(g, 770, 620, 0.58, 0.2);
+      PL.label(g, '首の長い恐竜', 760, 290, 44, { color: TK.C.sub });
+      PL.label(g, '（ティタノサウルス類）', 760, 345, 36, { color: TK.C.sub, bold: false });
+      if (t > 9.0) {
+        const p = TK.pop(t, 9.0, 0.5);
+        coprolite(g, PW / 2, 860, Math.max(0.01, p));
+        PL.leader(g, 330 + 12, 410 + 14, PW / 2 - 60, 790, PL.RED);
+        PL.label(g, '恐竜のふんの化石', PW / 2, 1020, 52, { color: PL.T.brown });
+      }
+      if (t > 11.4) fadeIn(g, fade(t, 11.4, 14.0, 0.25), () => PL.label(g, '約[6500万年前]', PW / 2 + 270, 720, 52));
+    });
   }
   // 14〜19: 顕微鏡の中の粒（プラントオパール）5種類
   if (t >= 14.0 && t < 19.0) {
     const f = fade(t, 14.0, 19.0, 0.3), cx = PW / 2, cy = 630, R = 360;
-    g.save(); g.globalAlpha = f;
-    TK.text(g, '顕微鏡でのぞくと', PW / 2, 210, 56, { color: TK.C.sub });
-    g.save(); g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.clip();
-    g.fillStyle = 'rgba(80,58,40,0.55)'; g.fillRect(cx - R, cy - R, 2 * R, 2 * R);
-    for (let i = 0; i < 60; i++) { g.fillStyle = 'rgba(217,168,116,0.25)'; g.beginPath(); g.arc(cx - R + (i * 389) % (2 * R), cy - R + (i * 241) % (2 * R), 6 + (i % 4) * 3, 0, Math.PI * 2); g.fill(); }
-    const pos = [[-170, -150], [140, -170], [0, 10], [-180, 170], [170, 160]];
-    pos.forEach(([dx, dy], i) => { const p = TK.pop(t, 14.4 + i * 0.25, 0.35); if (p > 0) phytolith(g, i, cx + dx, cy + dy, 62 * p, 0.3 * Math.sin(i * 2 + t * 0.4)); });
-    g.restore();
-    g.strokeStyle = '#cfe0ff'; g.lineWidth = 8; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.stroke();
-    if (t > 15.4) {
-      g.globalAlpha = f * fade(t, 15.4, 19.0, 0.25);
-      TK.card(g, 240, 1010 - 52, 600, 104, { r: 52 });
-      TK.text(g, '草の粒が [5種類]', PW / 2, 1010, 58);
-    }
-    g.restore();
-    TK.note(g, t, 14.6, 19.0, 'プラントオパール: 植物の細胞にできるガラス質の粒。\n草にしかない形のものがある', { size: 30 });
+    fadeIn(g, f, () => {
+      PL.label(g, '顕微鏡でのぞくと', 120, 210, 56, { align: 'left', color: TK.C.sub });
+      const view = PL.circle(cx, cy, R);
+      PL.tint(g, view, PL.T.brown, 0.55);
+      g.save(); g.beginPath(); view(g); g.clip();
+      const bits = gg => { for (let i = 0; i < 60; i++) PL.circle(cx - R + (i * 389) % (2 * R), cy - R + (i * 241) % (2 * R), 6 + (i % 4) * 3)(gg); };
+      PL.tint(g, bits, PL.T.sand, 0.6); PL.ink(g, bits, 1.2, 'rgba(35,28,21,0.4)');
+      const pos = [[-170, -150], [140, -170], [0, 10], [-180, 170], [170, 160]];
+      pos.forEach(([dx, dy], i) => { const p = TK.pop(t, 14.4 + i * 0.25, 0.35); if (p > 0) phytolith(g, i, cx + dx, cy + dy, 62 * p, 0.3 * Math.sin(i * 2 + t * 0.4)); });
+      g.restore();
+      PL.hatch(g, view, { angle: 0.7, gap: 10, w: 1.5, not: PL.circle(cx - 40, cy - 40, R) });   // 視野のふちのかげ
+      PL.ink(g, view, 10); PL.ink(g, PL.circle(cx, cy, R + 18), 3);
+      if (t > 15.4) fadeIn(g, fade(t, 15.4, 19.0, 0.25), () => PL.label(g, '草の粒が [5種類]', PW / 2, 1050, 58));
+    });
+    TK.note(g, t, 14.6, 19.0, 'プラントオパール: 植物の細胞にできるガラス質の粒。\n草にしかない形のものがある', { size: 30, y: 1150 });
   }
   // 19〜25: 景色の地面に草が生える
   if (t >= 19.0) {
     const f = fade(t, 19.0, 26, 0.3);
-    g.save(); g.globalAlpha = f;
-    scene(g, t, 900, clamp((t - 19.4) / 2.2, 0, 1), clamp((t - 20.6) / 1.2, 0, 1));
-    if (t > 21.0) { g.globalAlpha = f * TK.pop(t, 21.0, 0.4); TK.text(g, '恐竜は[草も]食べていた', PW / 2, 280, 82, { stroke: 'rgba(0,0,0,0.6)' }); }
-    g.restore();
-    TK.note(g, t, 21.4, 23.2, '草原はまだない。草は食べたもののほんの一部\n（歯は草をすりつぶす形ではない）', { size: 30 });
+    fadeIn(g, f, () => {
+      scene(g, t, 900, clamp((t - 19.4) / 2.2, 0, 1), clamp((t - 20.6) / 1.2, 0, 1));
+      if (t > 21.0) fadeIn(g, TK.pop(t, 21.0, 0.4), () => PL.label(g, '恐竜は[草も]食べていた', PW / 2, 280, 82));
+    });
+    TK.note(g, t, 21.4, 23.2, '草原はまだない。草は食べたもののほんの一部\n（歯は草をすりつぶす形ではない）', { size: 30, y: 1150 });
   }
-  if (t >= 23.2) TK.note(g, t, 23.2, 25.0, '出どころ: Prasad ほか (2005) Science 310, 1177–1180\n絵は形のイメージ', { size: 30 });
+  if (t >= 23.2) TK.note(g, t, 23.2, 25.0, '出どころ: Prasad ほか (2005) Science 310, 1177–1180\n絵は形のイメージ', { size: 30, y: 1150 });
 }
 
 triviaStart({ out: 'evolution-trivia3', voice: 'auto', dur: DUR, draw, subs, cues, peek: 1.5 });

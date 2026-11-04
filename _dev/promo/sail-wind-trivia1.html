@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく sail-wind-1（型H 当ててみて）「追い風だけで、風より速く走れる？」。台本は trivia/sail-wind.md。?short で録る
@@ -33,110 +36,169 @@ const cues = [
   { t: 20.0, type: 'whoosh' }, { t: 27.0, type: 'pop' }, { t: 28.6, type: 'rise' }, { t: 30.2, type: 'ding' }, { t: 34.0, type: 'whoosh' },
 ];
 const OPTS = ['ムリ', 'できる'];
+const BLUE = TK.C.acc2;
 
-// 風の線（左 → 右へ流れる）。speed は 1 秒に動く px
-function windLines(g, t, speed, y0, y1, color = 'rgba(95,212,255,0.55)') {
-  g.save(); g.strokeStyle = color; g.lineWidth = 5; g.lineCap = 'round';
-  for (let i = 0; i < 9; i++) {
-    const y = y0 + (y1 - y0) * (i + 0.5) / 9, x = ((t * speed + i * 237) % 1300) - 150;
-    g.beginPath(); g.moveTo(x, y); g.lineTo(x + 110, y); g.lineTo(x + 92, y - 12); g.moveTo(x + 110, y); g.lineTo(x + 92, y + 12); g.stroke();
+// ---- 版画の道具（このページだけ。PL.* を組み合わせる）----
+const TAU = Math.PI * 2;
+// ローカル座標（右向き・足もとが y=0）から画面へ写す。dir=-1 で左向き
+function mapper(x0, y0, s, rot = 0, dir = 1) { const c = Math.cos(rot), n = Math.sin(rot); return (x, y) => { x *= dir; return [x0 + s * (x * c - y * n), y0 + s * (x * n + y * c)]; }; }
+// ローカル座標で道を作る。b(P) の P: M・L・Q・Z と E（楕円）
+const lp = (m, b) => g => {
+  const P = { M: (x, y) => g.moveTo(...m(x, y)), L: (x, y) => g.lineTo(...m(x, y)), Q: (a, c, x, y) => g.quadraticCurveTo(...m(a, c), ...m(x, y)), Z: () => g.closePath(),
+    E: (cx, cy, rx, ry, rot = 0) => { for (let i = 0; i <= 40; i++) { const t = i / 40 * TAU, x = Math.cos(t) * rx, y = Math.sin(t) * ry, p = m(cx + x * Math.cos(rot) - y * Math.sin(rot), cy + x * Math.sin(rot) + y * Math.cos(rot)); i ? g.lineTo(...p) : g.moveTo(...p); } g.closePath(); } };
+  b(P);
+};
+// 手彩色＋かげの斜線＋墨の輪郭。o.lit: 光の当たる所（斜線を抜く）
+function solid(g, path, color, o = {}) {
+  PL.tint(g, path, color, o.a ?? 0.65);
+  if (o.hatch !== false) PL.hatch(g, path, { angle: o.angle ?? 0.7, gap: o.gap ?? 9, w: o.hw ?? 1.8, not: o.lit, cx: o.cx, cy: o.cy });
+  PL.ink(g, path, o.w ?? 5, o.ink || PL.INK);
+}
+// 墨の矢印（頭は手彩色＋輪郭）
+function arrowPL(g, x0, y0, x1, y1, color = PL.INK, w = 8) {
+  const a = Math.atan2(y1 - y0, x1 - x0), h = w * 3.4;
+  PL.ink(g, gg => { gg.moveTo(x0, y0); gg.lineTo(x1 - Math.cos(a) * h * 0.7, y1 - Math.sin(a) * h * 0.7); }, w, color);
+  const head = PL.poly([[x1, y1], [x1 - Math.cos(a - 0.42) * h, y1 - Math.sin(a - 0.42) * h], [x1 - Math.cos(a + 0.42) * h, y1 - Math.sin(a + 0.42) * h]]);
+  PL.tint(g, head, color, 1); PL.ink(g, head, Math.max(2, w * 0.45), color);
+}
+// 答えの札: 手彩色の札（筆のルックでは字の下が濃くなり字と重なる）をやめ、紙の札に朱の二重わくで示す
+function answerChoices(g, t, a, b, opts, o) {
+  const card = TK.card; TK.card = (gg, x, y, w, h) => card(gg, x, y, w, h, {});
+  try { TK.choices(g, t, a, b, opts, o); } finally { TK.card = card; }
+  if (t < (o.reveal ?? Infinity) || t < a || t > b) return;
+  const y = (o.y ?? PH * 0.34) + o.answer * ((o.h || 190) + (o.gap ?? 40)), h = o.h || 190, f = clamp((t - o.reveal) / 0.35, 0, 1) * fade(t, a, b, 0.3);
+  g.save(); g.globalAlpha *= f; PL.ink(g, PL.rect(78, y - 12, PW - 156, h + 24), 6, PL.RED); PL.ink(g, PL.rect(90, y, PW - 180, h), 3, PL.RED); g.restore();
+}
+
+// 風の線（左 → 右へ流れる筆の払い）。speed は 1 秒に動く px
+function windLines(g, t, speed, y0, y1, n = 9, f = 1) {
+  g.save(); g.globalAlpha *= 0.7 * f;
+  for (let i = 0; i < n; i++) {
+    const y = y0 + (y1 - y0) * (i + 0.5) / n, x = ((t * speed + i * 237) % 1300) - 150;
+    PL.ink(g, gg => { gg.moveTo(x, y); gg.quadraticCurveTo(x + 55, y - 6, x + 110, y); gg.moveTo(x + 92, y - 12); gg.lineTo(x + 110, y); gg.lineTo(x + 92, y + 12); }, 4, BLUE);
   }
   g.restore();
 }
-function arrow(g, x0, y0, x1, y1, color, w = 10) {
-  g.save(); g.strokeStyle = color; g.fillStyle = color; g.lineWidth = w; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
-  const a = Math.atan2(y1 - y0, x1 - x0), h = w * 3;
-  g.beginPath(); g.moveTo(x1 + Math.cos(a) * h * 0.5, y1 + Math.sin(a) * h * 0.5); g.lineTo(x1 - Math.cos(a - 0.5) * h, y1 - Math.sin(a - 0.5) * h); g.lineTo(x1 - Math.cos(a + 0.5) * h, y1 - Math.sin(a + 0.5) * h); g.fill();
-  g.restore();
+// 車輪（ゴムのふち・リム・スポーク）
+function wheel(g, m, cx, cy, r, ang) {
+  const tire = lp(m, P => P.E(cx, cy, r, r)), rim = lp(m, P => P.E(cx, cy, r * 0.68, r * 0.68));
+  solid(g, tire, PL.T.brown, { a: 0.85, gap: 6, hw: 1.4, lit: lp(m, P => P.E(cx - r * 0.3, cy - r * 0.3, r, r)), w: 4 });
+  PL.tint(g, rim, PL.T.sand, 0.8); PL.ink(g, rim, 2.5);
+  PL.ink(g, lp(m, P => { for (let k = 0; k < 3; k++) { const a = ang + k * TAU / 3; P.M(cx, cy); P.L(cx + Math.cos(a) * r * 0.66, cy + Math.sin(a) * r * 0.66); } }), 2.5);
+  PL.ink(g, lp(m, P => P.E(cx, cy, r * 0.12, r * 0.12)), 3);
 }
-// 帆の車（押されるだけ）
-function sailCart(g, x, y) {
-  g.save(); g.strokeStyle = '#fff'; g.lineWidth = 5;
-  g.strokeRect(x - 90, y - 30, 180, 30);
-  [x - 60, x + 60].forEach(cx => { g.beginPath(); g.arc(cx, y + 10, 22, 0, Math.PI * 2); g.stroke(); });
-  g.beginPath(); g.moveTo(x, y - 30); g.lineTo(x, y - 300); g.stroke();
-  g.fillStyle = 'rgba(255,207,74,0.25)'; g.strokeStyle = TK.C.acc;
-  g.beginPath(); g.moveTo(x, y - 290); g.quadraticCurveTo(x + 70, y - 170, x, y - 50); g.closePath(); g.fill(); g.stroke();
-  g.restore();
+// 地面（干上がった湖の平らな土。ひび）。off は流れる量（px）
+function ground(g, x0, x1, y, off = 0) {
+  const top = PL.rect(x0, y, x1 - x0, 34);
+  PL.tint(g, top, PL.T.sand, 0.7); PL.hatch(g, top, { angle: 0.25, gap: 8, w: 1.4 });
+  PL.ink(g, gg => { for (let k = 0; k < 14; k++) { const x = x0 + ((k * 83 - off) % (x1 - x0) + (x1 - x0)) % (x1 - x0); gg.moveTo(x, y + 6); gg.lineTo(x + 12, y + 18); gg.lineTo(x + 6, y + 30); } }, 1.8);
+  PL.ink(g, gg => { gg.moveTo(x0, y); gg.lineTo(x1, y); }, 5);
 }
-// プロペラの車（線画）。spin は回転の角度、wheel は車輪の角度
-function propCart(g, x, y, s, spin, wheel) {
-  g.save(); g.translate(x, y); g.scale(s, s);
-  g.strokeStyle = '#fff'; g.lineWidth = 5 / s * 1.2; g.lineJoin = 'round';
-  g.beginPath(); g.moveTo(-170, -40); g.lineTo(150, -40); g.lineTo(190, -10); g.lineTo(-170, -10); g.closePath(); g.stroke();   // 車体
-  [[-120, 0], [130, 0]].forEach(([cx, cy]) => {
-    g.beginPath(); g.arc(cx, cy + 20, 34, 0, Math.PI * 2); g.stroke();
-    g.beginPath(); for (let k = 0; k < 3; k++) { const a = wheel + k * Math.PI * 2 / 3; g.moveTo(cx, cy + 20); g.lineTo(cx + Math.cos(a) * 34, cy + 20 + Math.sin(a) * 34); } g.stroke();
-  });
-  g.beginPath(); g.moveTo(-20, -40); g.lineTo(-20, -420); g.stroke();   // 柱
-  // チェーン（車輪 → プロペラ）
-  g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.setLineDash([14, 10]); g.lineDashOffset = -wheel * 40;
-  g.beginPath(); g.moveTo(-120, 20); g.lineTo(-30, -410); g.moveTo(-110, 30); g.lineTo(-10, -410); g.stroke(); g.restore();
-  // プロペラ（横から見た2枚。回ると長さが変わる）
-  const L = 190 * Math.cos(spin);
-  g.strokeStyle = TK.C.acc2; g.lineWidth = 16; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(-20, -420 - L); g.lineTo(-20, -420 + L); g.stroke();
-  g.fillStyle = '#fff'; g.beginPath(); g.arc(-20, -420, 14, 0, Math.PI * 2); g.fill();
+// 押されるだけの帆の車（陸のヨット）。x, y は地面（右向き）
+function sailCart(g, x, y, s, ang = 0) {
+  const m = mapper(x, y, s);
+  wheel(g, m, -120, -26, 26, ang); wheel(g, m, 130, -22, 22, ang * 1.2);
+  const plank = lp(m, P => { P.M(-160, -52); P.L(150, -47); P.Q(172, -44, 166, -34); P.L(-160, -36); P.Z(); });
+  solid(g, plank, PL.T.wood, { gap: 7, hw: 1.4, lit: lp(m, P => { P.M(-160, -60); P.L(170, -55); P.L(170, -44); P.L(-160, -48); P.Z(); }), w: 4 });
+  PL.ink(g, lp(m, P => { P.M(-120, -36); P.L(-120, -26); P.M(130, -36); P.L(130, -22); }), 4);
+  const mast = lp(m, P => { P.M(-16, -50); P.L(-4, -50); P.L(-7, -342); P.L(-13, -342); P.Z(); });
+  solid(g, mast, PL.T.wood, { hatch: false, w: 3.5 });
+  const sail = lp(m, P => { P.M(-16, -334); P.Q(-70, -200, -156, -86); P.L(-18, -86); P.Z(); });
+  solid(g, sail, PL.T.sand, { a: 0.6, gap: 10, hw: 1.3, lit: lp(m, P => { P.M(-6, -334); P.Q(-60, -200, -146, -96); P.L(-8, -96); P.Z(); }), w: 4 });
+  PL.ink(g, lp(m, P => { [-140, -190, -240, -290].forEach(yy => { const k = (yy + 334) / 248, lx = -16 - 140 * k * k; P.M(-18, yy); P.L(lx + 6, yy + 6); }); }), 1.6);   // 帆の縫い目
+  PL.ink(g, lp(m, P => { P.M(-12, -84); P.L(-164, -84); }), 5);   // ブーム
+}
+// プロペラの車（線画・横から）。spin はプロペラ、ang は車輪の角度
+const PC = { hub: [-10, -462], rear: [-150, -34], front: [160, -34] };
+function propCart(g, x, y, s, spin, ang, o = {}) {
+  const m = mapper(x, y, s);
+  wheel(g, m, ...PC.rear, 34, ang); wheel(g, m, ...PC.front, 34, ang);
+  const pod = lp(m, P => { P.M(-210, -58); P.Q(-205, -104, -120, -108); P.L(110, -104); P.Q(225, -96, 228, -70); P.Q(226, -44, 160, -42); P.L(-180, -42); P.Q(-212, -42, -210, -58); P.Z(); });
+  solid(g, pod, PL.T.gray, { a: 0.7, gap: 8, lit: lp(m, P => { P.M(-215, -80); P.Q(-205, -124, -120, -128); P.L(110, -124); P.Q(225, -116, 238, -84); P.L(-215, -66); P.Z(); }), w: 4.5 });
+  PL.ink(g, lp(m, P => { P.M(-170, -60); P.L(150, -58); }), 1.6);   // 胴の継ぎ目
+  const canopy = lp(m, P => P.E(118, -108, 52, 22));
+  solid(g, canopy, PL.T.sky, { a: 0.75, gap: 6, hw: 1.2, lit: lp(m, P => P.E(110, -116, 52, 22)), w: 3.5 });
+  const pylon = lp(m, P => { P.M(-36, -104); P.L(16, -104); P.L(-2, -452); P.L(-18, -452); P.Z(); });
+  solid(g, pylon, PL.T.wood, { gap: 7, hw: 1.4, lit: lp(m, P => { P.M(-46, -104); P.L(6, -104); P.L(-12, -452); P.L(-28, -452); P.Z(); }), w: 4 });
+  // チェーン（車輪 → プロペラ）。走ると流れる
+  g.save(); g.setLineDash([12 * s, 9 * s]); g.lineDashOffset = -ang * 30 * s;
+  PL.ink(g, lp(m, P => { P.M(PC.rear[0] - 8, PC.rear[1]); P.L(PC.hub[0] - 8, PC.hub[1] + 12); P.M(PC.rear[0] + 8, PC.rear[1]); P.L(PC.hub[0] + 8, PC.hub[1] + 12); }), Math.max(2.5, 4 * s), PL.RED);
   g.restore();
+  // プロペラ（横から見た2枚。回ると見かけの長さが変わる）
+  const L = 220 * Math.cos(spin), [hx, hy] = PC.hub;
+  const blade = d => lp(m, P => { P.M(hx, hy); P.Q(hx - 18, hy - d * 0.45, hx - 3, hy - d); P.Q(hx + 16, hy - d * 0.5, hx, hy); P.Z(); });
+  [L, -L].forEach(d => solid(g, blade(d), PL.T.wood, { a: 0.8, gap: 6, hw: 1.2, w: 3.5 }));
+  const hub = lp(m, P => P.E(hx, hy, 18, 24));
+  solid(g, hub, PL.T.gray, { a: 0.8, gap: 5, hw: 1.2, w: 3.5 });
+  return m;
 }
 
 function draw(g, t) {
   // 0〜5: 2択＋考える時間
   if (t < 5.0) {
     windLines(g, t, 300, 110, 200);
-    TK.text(g, '真後ろの風だけで', PW / 2, 260, 70);
-    TK.text(g, '[風より速く] 走れる？', PW / 2, 360, 84);
+    TK.text(g, '真後ろの風だけで', PW / 2, 270, 70);
+    TK.text(g, '[風より速く] 走れる？', PW / 2, 370, 84);
     TK.choices(g, t, 0.0, 5.0, OPTS, { y: 640, h: 170, think: [3.0, 5.0], size: 72 });
+    ground(g, 60, 1020, 1150);
+    sailCart(g, 780, 1150, 0.5, t * 2);
+    windLines(g, t, 300, 1060, 1130, 3, 0.8);
   }
   // 5〜10: 押されるだけの帆。速さが風に近づくと、押す力が 0 に
   if (t >= 5.0 && t < 10.0) {
     const tau = t - 5.2, v = 1 - 1 / (1 + Math.max(0, tau) * 1.1);   // 風に近づく（形だけ）
-    windLines(g, t, 420, 420, 860, 'rgba(95,212,255,0.4)');
-    const x = 300 + 280 * v;
-    g.save(); g.translate(x, 900); g.scale(1.7, 1.7); sailCart(g, 0, 0); g.restore();
-    const F = Math.pow(1 - v, 2);
-    if (F > 0.02) arrow(g, x - 60, 620, x - 60 + 300 * F, 620, TK.C.red, 14);
-    TK.text(g, '押す力', x - 90, 620, 48, { color: TK.C.red, align: 'right' });
+    const x = 420 + 260 * v, s = 1.5, GY = 940;
+    windLines(g, t, 420, 690, 900, 7, 0.8);
+    ground(g, 40, 1040, GY, v * 300);
+    sailCart(g, x, GY, s, v * 9);
+    // 押す力（帆の後ろから）
+    const F = Math.pow(1 - v, 2), ex = x - 80 * s, ey = GY - 200 * s;
+    if (F > 0.02) arrowPL(g, ex - 40 - 210 * F, ey, ex, ey, PL.RED, 10);
+    PL.leader(g, Math.max(70, ex - 30 - 105 * F), ey - 4, 150, 545, PL.RED);
+    PL.label(g, '押す力', 90, 510, 48, { align: 'left', color: PL.RED });
     // 速さの棒
-    TK.text(g, '風', 120, 230, 44, { align: 'left', color: TK.C.acc2 });
-    g.fillStyle = TK.C.acc2; g.fillRect(220, 214, 760, 30);
-    TK.text(g, '車', 120, 290, 44, { align: 'left', color: TK.C.acc });
-    g.fillStyle = TK.C.acc; g.fillRect(220, 274, 760 * v, 30);
-    if (t > 8.2) { g.save(); g.globalAlpha = fade(t, 8.2, 10, 0.3); TK.text(g, '風に [追いつけない]', PW / 2, 1040, 64, { acc: TK.C.red }); g.restore(); }
+    TK.text(g, '風', 120, 230, 44, { align: 'left', color: BLUE });
+    solid(g, PL.rect(220, 214, 760, 30), PL.T.sea, { gap: 8, hw: 1.4, w: 3.5 });
+    TK.text(g, '車', 120, 290, 44, { align: 'left', color: PL.RED });
+    if (v > 0.01) solid(g, PL.rect(220, 274, 760 * v, 30), PL.T.rust, { gap: 8, hw: 1.4, w: 3.5 });
+    PL.ink(g, gg => { gg.moveTo(980, 200); gg.lineTo(980, 318); }, 3);   // 風の速さの目盛り
+    if (t > 8.2) { g.save(); g.globalAlpha = fade(t, 8.2, 10, 0.3); TK.text(g, '風に [追いつけない]', PW / 2, 1080, 64, { acc: PL.RED }); g.restore(); }
   }
   // 10〜14: 答え
   if (t >= 10.0 && t < 14.0) {
     TK.text(g, '答え', PW / 2, 500, 60, { color: TK.C.sub });
-    TK.choices(g, t, 10.0, 14.0, OPTS, { y: 640, h: 170, reveal: 10.2, answer: 1, size: 72 });
+    answerChoices(g, t, 10.0, 14.0, OPTS, { y: 640, h: 170, reveal: 10.2, answer: 1, size: 72 });
+    ground(g, 60, 1020, 1185);
+    propCart(g, 850, 1185, 0.22, t * 14, t * 5);
   }
   // 14〜20: プロペラの車のしくみ
   if (t >= 14.0 && t < 20.0) {
-    const ground = 900;
-    g.strokeStyle = 'rgba(255,255,255,0.4)'; g.lineWidth = 4; g.beginPath(); g.moveTo(60, ground + 52); g.lineTo(1020, ground + 52); g.stroke();
-    propCart(g, 560, ground, 1.15, t * 14, t * 5);
-    const labels = [{ s: '① 車輪が回る', x: 330, y: 1020, at: 14.6 }, { s: '② チェーン', x: 240, y: 620, at: 15.6 }, { s: '③ プロペラが回る', x: 720, y: 200, at: 16.6 }];
-    labels.forEach(l => { if (t > l.at) { g.save(); g.globalAlpha = fade(t, l.at, 20, 0.3); TK.text(g, l.s, l.x, l.y, 50, { color: TK.C.acc }); g.restore(); } });
-    if (t > 17.6) { g.save(); g.globalAlpha = fade(t, 17.6, 20, 0.3); arrow(g, 440, 350, 160, 350, TK.C.acc2, 12); TK.text(g, '空気を後ろへ', 300, 290, 44, { color: TK.C.acc2 }); g.restore(); }
+    const GY = 960;
+    ground(g, 60, 1020, GY, t * 40);
+    propCart(g, 560, GY, 1.0, t * 14, t * 5);
+    const lab = (at, f) => { if (t > at) { g.save(); g.globalAlpha = fade(t, at, 20, 0.3); f(); g.restore(); } };
+    lab(14.6, () => { PL.leader(g, 410, 940, 300, 1030, PL.RED); PL.label(g, '① 車輪が回る', 260, 1075, 50, { color: PL.RED }); });
+    lab(15.6, () => { PL.leader(g, 482, 705, 340, 705, PL.RED); PL.label(g, '② チェーン', 210, 705, 50, { color: PL.RED }); });
+    lab(16.6, () => { PL.leader(g, 572, 470, 625, 290, PL.RED); PL.label(g, '③ プロペラが回る', 610, 255, 46, { align: 'left', color: PL.RED }); });
+    lab(17.6, () => { arrowPL(g, 480, 440, 170, 440, BLUE, 10); PL.label(g, '空気を後ろへ', 310, 375, 46, { color: BLUE }); });
     TK.note(g, t, 14.4, 20, '線画（形はおおまか）', { size: 32 });
   }
   // 20〜27: 車から見ると、地面は速く、空気はゆっくり後ろへ
   if (t >= 20.0 && t < 27.0) {
-    const ground = 820;
-    // 車から見た地面（2.8 の速さ）と空気（1.8 の速さ）が後ろ（左）へ
-    g.save(); g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 6;
-    for (let i = 0; i < 12; i++) { const x = 1100 - ((t * 2.8 * 260 + i * 100) % 1200); g.beginPath(); g.moveTo(x, ground + 60); g.lineTo(x - 40, ground + 90); g.stroke(); }
-    g.beginPath(); g.moveTo(40, ground + 56); g.lineTo(1040, ground + 56); g.stroke();
+    const GY = 860;
+    ground(g, 40, 1040, GY, t * 2.8 * 260);
+    // 空気（1.8 の速さで後ろへ）
+    g.save(); g.globalAlpha *= 0.7;
+    for (let i = 0; i < 6; i++) { const y = 290 + i * 28, x = 1100 - ((t * 1.8 * 260 + i * 173) % 1200); PL.ink(g, gg => { gg.moveTo(x, y); gg.quadraticCurveTo(x - 45, y + 5, x - 90, y); }, 4, BLUE); }
     g.restore();
-    g.save(); g.strokeStyle = 'rgba(95,212,255,0.45)'; g.lineWidth = 5;
-    for (let i = 0; i < 8; i++) { const y = 230 + i * 34, x = 1100 - ((t * 1.8 * 260 + i * 173) % 1200); g.beginPath(); g.moveTo(x, y); g.lineTo(x - 90, y); g.stroke(); }
-    g.restore();
-    propCart(g, 640, ground, 1.0, t * 16, -t * 8);
-    TK.card(g, 70, 470, 420, 190, { r: 30 });
+    propCart(g, 660, GY, 0.9, t * 16, -t * 8);
+    arrowPL(g, 1000, 950, 300, 950, PL.INK, 9); PL.label(g, '地面', 250, 950, 44, { align: 'right' });
+    arrowPL(g, 1000, 220, 550, 220, BLUE, 9); PL.label(g, '空気', 500, 220, 44, { align: 'right', color: BLUE });
+    TK.card(g, 70, 470, 420, 190);
     TK.text(g, '車から見ると', 280, 510, 36, { color: TK.C.sub, bold: false });
     TK.text(g, '地面 ← [速い]', 280, 565, 50);
-    TK.text(g, '空気 ← ゆっくり', 280, 625, 46, { color: TK.C.acc2 });
-    TK.text(g, 'ちがう速さの2つの間で、エネルギーをもらう', PW / 2, 1060, 40, { color: TK.C.sub, bold: false });
+    TK.text(g, '空気 ← ゆっくり', 280, 625, 46, { color: BLUE });
+    TK.text(g, 'ちがう速さの2つの間で、エネルギーをもらう', PW / 2, 1070, 40, { color: TK.C.sub, bold: false });
     TK.note(g, t, 20.4, 27, '風の 2.8 倍で走っているときの見え方（線の速さは目安）', { size: 32 });
   }
   // 27〜34: 記録の数字
@@ -146,23 +208,28 @@ function draw(g, t) {
       { label: '追い風', v: 16 / 50, color: TK.C.acc2, text: '16 km/h' },
       { label: 'プロペラの車', v: 45 / 50, color: TK.C.acc, text: '45 km/h' },
     ], { y: 340, gap: 240, stagger: 1.2 });
-    if (t > 30.0) { const p = clamp(TK.pop(t, 30.0, 0.4), 0, 1.3); g.save(); g.globalAlpha = clamp(p, 0, 1); TK.text(g, '風の [2.8倍]', PW / 2, 920, 110 * Math.min(1, p)); g.restore(); }
+    ground(g, 60, 1020, 1170, t * 60);
+    propCart(g, 830, 1170, 0.42, t * 16, t * 6);
+    if (t > 30.0) { const p = clamp(TK.pop(t, 30.0, 0.4), 0, 1.3); g.save(); g.globalAlpha = clamp(p, 0, 1); TK.text(g, '風の [2.8倍]', 110, 950, 110 * Math.min(1, p), { align: 'left' }); g.restore(); }
     TK.note(g, t, 27.5, 34, '突風ではなく、ずっと吹いていた風での比（協会の記録）', { size: 32 });
   }
   // 34〜40: 論争とエネルギーの出どころ
   if (t >= 34.0) {
     const p = clamp(TK.pop(t, 34.2, 0.4), 0, 1.2);
     g.save(); g.globalAlpha = clamp(p, 0, 1);
-    TK.card(g, 120, 220, 840, 200, { r: 36 });
+    TK.card(g, 120, 220, 840, 200);
     TK.text(g, '専門家どうしでも', PW / 2, 280, 50, { color: TK.C.sub });
     TK.text(g, '「ありえない」と[大論争]', PW / 2, 360, 66);
     g.restore();
     if (t > 35.6) {
       g.save(); g.globalAlpha = fade(t, 35.6, 40, 0.3);
-      TK.text(g, 'エネルギーの出どころ', PW / 2, 600, 52, { color: TK.C.sub });
-      TK.text(g, '[風] と [地面] の速さの差', PW / 2, 700, 80);
+      TK.text(g, 'エネルギーの出どころ', PW / 2, 560, 52, { color: TK.C.sub });
+      TK.text(g, '[風] と [地面] の速さの差', PW / 2, 660, 80);
       g.restore();
     }
+    ground(g, 60, 1020, 1140, t * 2.8 * 120);
+    propCart(g, 600, 1140, 0.5, t * 16, -t * 8);
+    windLines(g, t, 260, 830, 900, 3, 0.8);
     TK.note(g, t, 36.5, 40, '出どころ: NALSA（北米陸上帆走協会）Downwind の記録（2010-07-02）', { size: 30 });
   }
 }

@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく ferrofluid-2（型F 会話）「生まれはロケットの燃料、でも…」。台本は trivia/ferrofluid.md。?short で録る
@@ -38,12 +41,16 @@ const cues = [
   { t: 22.0, type: 'thud' }, { t: 25.6, type: 'whoosh' }, { t: 26.0, type: 'pop' }, { t: 27.6, type: 'pop' }, { t: 30.0, type: 'rise' }, { t: 31.0, type: 'ding' },
 ];
 
-// トゲの皿（ferrofluid-trivia1 の模式図を小さくしたもの）。cx, cy: 皿のまん中、rx: 横の半径、H: トゲの高さ
+/// トゲの皿（ferrofluid-trivia1 の模式図を小さくしたもの。図鑑の版画で）。cx, cy: 皿のまん中、rx: 横の半径、H: トゲの高さ
+const CONE_FILL = '#b3ada2';   // 灰色の手彩色を紙にのせた色
 function dish(g, cx, cy, rx, H) {
   const ry = rx * 0.43, L = rx / 6.2, sq = ry / rx;
-  g.save();
-  g.fillStyle = '#0a0d18'; g.strokeStyle = 'rgba(200,220,255,0.6)'; g.lineWidth = 4;
-  g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  const side = g2 => { g2.ellipse(cx, cy, rx + 20, ry + 10, 0, 0, Math.PI); g2.lineTo(cx - rx - 20, cy + 36); g2.ellipse(cx, cy + 36, rx + 20, ry + 10, 0, Math.PI, 0, true); g2.closePath(); };
+  PL.tint(g, side, PL.T.gray, 0.7); PL.hatch(g, side, { angle: 1.2, gap: 9, w: 1.8, not: PL.rect(0, 0, cx - 80, PH) }); PL.ink(g, side, 4);
+  const rim = PL.ellipse(cx, cy, rx + 20, ry + 10); PL.tint(g, rim, PL.T.gray, 0.45); PL.ink(g, rim, 4);
+  const liq = PL.ellipse(cx, cy, rx, ry);
+  PL.tint(g, liq, PL.T.gray, 0.95); PL.tint(g, liq, PL.T.brown, 0.4); PL.hatch(g, liq, { angle: 0.1, gap: 7, w: 1.4, cx, cy }); PL.ink(g, liq, 3);
+  if (H < 1) return;
   const pts = [], rows = Math.ceil(rx / (L * 0.866)) + 1, cols = Math.ceil(rx / L) + 1;
   for (let j = -rows; j <= rows; j++) for (let i = -cols; i <= cols; i++) {
     const X = (i + (j & 1) * 0.5) * L, Y = j * L * 0.866;
@@ -51,102 +58,105 @@ function dish(g, cx, cy, rx, H) {
     pts.push([X, Y]);
   }
   pts.sort((a, b) => a[1] - b[1]);
+  const lw = Math.max(1.1, Math.min(2.2, L / 40));
   for (const [X, Y] of pts) {
-    const x = cx + X, y = cy + Y * sq, w = L * 0.42;
-    if (H < 1) continue;
-    const gr = g.createLinearGradient(x - w, 0, x + w, 0);
-    gr.addColorStop(0, '#121a30'); gr.addColorStop(0.55, '#33476e'); gr.addColorStop(0.7, '#8fb0e8'); gr.addColorStop(1, '#0d1222');
-    g.fillStyle = gr;
-    g.beginPath(); g.moveTo(x - w, y); g.quadraticCurveTo(x - w * 0.25, y - H * 0.35, x, y - H); g.quadraticCurveTo(x + w * 0.25, y - H * 0.35, x + w, y);
-    g.ellipse(x, y, w, w * sq, 0, 0, Math.PI); g.fill();
+    const x = cx + X, y = cy + Y * sq, w = L * 0.42, h = H;
+    const cone = g2 => { g2.moveTo(x - w, y); g2.quadraticCurveTo(x - w * 0.25, y - h * 0.35, x, y - h); g2.quadraticCurveTo(x + w * 0.25, y - h * 0.35, x + w, y); g2.ellipse(x, y, w, w * sq, 0, 0, Math.PI); g2.closePath(); };
+    g.fillStyle = CONE_FILL; g.beginPath(); cone(g); g.fill();   // トゲは数が多いので、手彩色（紙を重ねる）ではなく同じ色のべたで（重い描き方をくり返さない）
+    PL.ink(g, gg => { for (let k = 0; k <= 5; k++) { const u = 0.05 + k / 5 * 0.95, bx = x + w * u, by = y + Math.sqrt(Math.max(0, 1 - u * u)) * w * sq; gg.moveTo(x + w * 0.04, y - h * 0.94); gg.quadraticCurveTo(x + w * u * 0.3, y - h * 0.3, bx, by); } }, lw);
+    PL.ink(g, cone, lw * 1.4);
   }
-  g.restore();
 }
-// ロケットの線画。x: まん中、y: 下のはし、s: 大きさ
+// ロケット（横から。図鑑の版画で）。x: まん中、y: 下のはし、s: 大きさ
 function rocket(g, x, y, s, t) {
-  g.save(); g.translate(x, y); g.scale(s, s);
-  g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = 'rgba(220,232,255,0.9)'; g.lineWidth = 5; g.fillStyle = 'rgba(20,34,72,0.9)';
-  g.beginPath(); g.moveTo(-50, -60); g.lineTo(-50, -330); g.quadraticCurveTo(-50, -420, 0, -470); g.quadraticCurveTo(50, -420, 50, -330); g.lineTo(50, -60); g.closePath(); g.fill(); g.stroke();
-  g.beginPath(); g.moveTo(-50, -150); g.lineTo(-100, -40); g.lineTo(-50, -60); g.moveTo(50, -150); g.lineTo(100, -40); g.lineTo(50, -60); g.stroke();
-  g.beginPath(); g.arc(0, -320, 22, 0, Math.PI * 2); g.stroke();
-  g.strokeStyle = TK.C.acc; g.setLineDash([10, 8]); g.beginPath(); g.roundRect(-34, -260, 68, 170, 10); g.stroke(); g.setLineDash([]);   // 燃料タンク
-  const f = 0.8 + 0.2 * Math.sin(t * 30);
-  g.fillStyle = 'rgba(255,160,60,0.85)'; g.beginPath(); g.moveTo(-30, -58); g.quadraticCurveTo(0, 60 * f + 20, 30, -58); g.closePath(); g.fill();
+  g.save(); g.translate(x, y); g.scale(s, s); const k = 1 / s;
+  const body = g2 => { g2.moveTo(-50, -60); g2.lineTo(-50, -330); g2.quadraticCurveTo(-50, -420, 0, -470); g2.quadraticCurveTo(50, -420, 50, -330); g2.lineTo(50, -60); g2.closePath(); };
+  const finL = PL.poly([[-50, -150], [-100, -40], [-100, -10], [-50, -60]]), finR = PL.poly([[50, -150], [100, -40], [100, -10], [50, -60]]);
+  const nozzle = PL.poly([[-30, -60], [30, -60], [40, -30], [-40, -30]]);
+  // 炎（ゆらぐ）
+  const f = 0.8 + 0.2 * Math.sin(t * 30), fl = g2 => { g2.moveTo(-34, -32); g2.quadraticCurveTo(-20, 40 * f, 0, 80 * f + 20); g2.quadraticCurveTo(20, 40 * f, 34, -32); g2.closePath(); };
+  PL.tint(g, fl, PL.T.gold, 0.9); PL.ink(g, gg => { gg.moveTo(-14, -30); gg.quadraticCurveTo(-6, 20 * f, 0, 50 * f); gg.moveTo(14, -30); gg.quadraticCurveTo(6, 20 * f, 0, 50 * f); }, 2 * k, PL.RED); PL.ink(g, fl, 3 * k, PL.RED);
+  [finL, finR].forEach(p => { PL.tint(g, p, PL.T.rust, 0.85); PL.hatch(g, p, { angle: 0.8, gap: 7 * k, w: 1.4 * k, cx: 0, cy: 0 }); PL.ink(g, p, 4 * k); });
+  PL.tint(g, nozzle, PL.T.gray, 0.9); PL.hatch(g, nozzle, { angle: 0.8, gap: 6 * k, w: 1.3 * k, cx: 0, cy: 0 }); PL.ink(g, nozzle, 4 * k);
+  PL.tint(g, body, PL.T.sand, 0.55);
+  PL.hatch(g, body, { angle: 1.3, gap: 7 * k, w: 1.4 * k, not: PL.rect(-80, -500, 100, 500), cx: 0, cy: 0 });   // 右がかげ
+  PL.ink(g, gg => { [-370, -280, -90].forEach(yy => { gg.moveTo(-50, yy); gg.lineTo(50, yy); }); }, 2 * k);   // 段のつなぎ目
+  PL.ink(g, body, 5 * k);
+  const win = PL.circle(0, -320, 22); PL.tint(g, win, PL.T.sky, 0.9); PL.ink(g, win, 4 * k);
+  g.save(); g.setLineDash([10, 8]); PL.ink(g, PL.rect(-34, -260, 68, 160), 3 * k, PL.RED); g.restore();   // 燃料タンク
   g.restore();
 }
 // タンク（模式図）。中のまん中 (TX, TY)、幅 TW・高さ TH。下にポンプの口
 const TX = 480, TY = 620, TW = 400, TH = 480;
+const capsule = (pad = 0) => g2 => g2.roundRect(TX - TW / 2 - pad, TY - TH / 2 - pad, TW + pad * 2, TH + pad * 2, TW / 2 + pad);
 function tank(g, o = {}) {
-  g.save(); g.lineJoin = 'round';
-  g.fillStyle = 'rgba(10,15,32,0.85)'; g.strokeStyle = 'rgba(200,220,255,0.75)'; g.lineWidth = 6;
-  g.beginPath(); g.roundRect(TX - TW / 2, TY - TH / 2, TW, TH, TW / 2); g.fill(); g.stroke();
+  PL.tint(g, capsule(0), PL.T.sky, 0.25);
+  g.save(); g.beginPath(); capsule(16)(g); capsule(0)(g); g.clip('evenodd'); PL.tint(g, PL.rect(0, 0, PW, PH), PL.T.gray, 0.7); PL.hatch(g, PL.rect(TX + 40, 0, 400, PH), { angle: 0.8, gap: 7, w: 1.4 }); g.restore();   // かべ（右がかげ）
+  PL.ink(g, capsule(16), 5); PL.ink(g, capsule(0), 2.4);
   // ポンプの口（下の管）
-  g.fillStyle = 'rgba(20,34,72,0.95)';
-  g.beginPath(); g.rect(TX - 30, TY + TH / 2 - 4, 60, 90); g.fill(); g.stroke();
-  g.restore();
-  TK.text(g, 'ポンプの口', TX + 150, TY + TH / 2 + 50, 38, { color: TK.C.sub, bold: false });
+  const pipe = PL.rect(TX - 30, TY + TH / 2 + 12, 60, 80);
+  PL.tint(g, pipe, PL.T.gray, 0.8); PL.hatch(g, pipe, { angle: 0.9, gap: 7, w: 1.4, not: PL.rect(TX - 40, TY, 40, TH) }); PL.ink(g, pipe, 4);
+  PL.leader(g, TX + 32, TY + TH / 2 + 50, TX + 120, TY + TH / 2 + 50); PL.label(g, 'ポンプの口', TX + 136, TY + TH / 2 + 50, 38, { align: 'left', color: TK.C.sub, bold: false });
 }
 // 液のかたまり（ふわふわ浮く）。k: 真ん中/口へ寄る度合い、mode: 'center' | 'outlet'
 const BLOBS = [[-90, -130, 40], [85, -90, 34], [-45, 30, 44], [95, 70, 30], [-100, 120, 28], [30, -165, 26], [45, 140, 34]];
+function drop(g, x, y, rx, ry) {
+  const p = PL.ellipse(x, y, rx, ry);
+  PL.tint(g, p, PL.T.gold, 0.75);
+  PL.hatch(g, p, { angle: 0.7, gap: 6, w: 1.2, not: PL.ellipse(x - rx * 0.35, y - ry * 0.35, rx, ry), cx: x, cy: y });
+  PL.ink(g, p, 3);
+}
 function blobs(g, t, k, mode, dots) {
-  g.save();
   BLOBS.forEach(([bx, by, r], i) => {
     let x = TX + bx + 14 * Math.sin(t * 0.9 + i * 1.7), y = TY + by + 14 * Math.cos(t * 0.8 + i * 2.3);
     const tx = TX, ty = mode === 'outlet' ? TY + TH / 2 - 40 : TY;
     x = lerp(x, tx + (mode === 'center' ? bx * 0.12 : 0), k); y = lerp(y, ty + (mode === 'center' ? by * 0.12 : 0), k);
-    g.fillStyle = 'rgba(255,170,70,0.55)'; g.strokeStyle = 'rgba(255,200,120,0.9)'; g.lineWidth = 3;
-    g.beginPath(); g.arc(x, y, r * (mode === 'center' ? lerp(1, 0.0, k) : lerp(1, 0.5, k)), 0, Math.PI * 2); g.fill(); g.stroke();
-    if (dots > 0) {
-      g.fillStyle = '#1a1a1a';
-      for (let d = 0; d < 7; d++) { const a = d * 2.4 + i, rr = r * 0.6 * ((d * 37 % 10) / 10); if (d / 7 < dots) { g.beginPath(); g.arc(x + Math.cos(a) * rr, y + Math.sin(a) * rr, 5, 0, Math.PI * 2); g.fill(); } }
+    const rr = r * (mode === 'center' ? lerp(1, 0.0, k) : lerp(1, 0.5, k));
+    if (rr < 1) return;
+    drop(g, x, y, rr, rr);
+    if (dots > 0) {   // 酸化鉄の粉（墨の点）
+      g.fillStyle = PL.INK;
+      for (let d = 0; d < 7; d++) { const a = d * 2.4 + i, q = rr * 0.6 * ((d * 37 % 10) / 10); if (d / 7 < dots) { g.beginPath(); g.arc(x + Math.cos(a) * q, y + Math.sin(a) * q, 4.5, 0, Math.PI * 2); g.fill(); } }
     }
   });
-  if (mode === 'center' && k > 0) {   // まん中のひとつのかたまり
-    const R = 150 * ease(k);
-    g.fillStyle = 'rgba(255,170,70,0.55)'; g.strokeStyle = 'rgba(255,200,120,0.9)'; g.lineWidth = 4;
-    g.beginPath(); g.ellipse(TX, TY, R, R * 0.85, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-  }
-  g.restore();
+  if (mode === 'center' && k > 0) { const R = 150 * ease(k); if (R > 1) drop(g, TX, TY, R, R * 0.85); }   // まん中のひとつのかたまり
 }
 // 電磁石（口のまわりの巻き線）
 function magnet(g, a = 1, off) {
   g.save(); g.globalAlpha *= a;
-  const y = TY + TH / 2 + 40, col = off ? 'rgba(160,170,190,0.6)' : TK.C.red;
-  g.strokeStyle = col; g.lineWidth = 6;
-  for (let i = 0; i < 5; i++) { g.beginPath(); g.ellipse(TX, y - 30 + i * 15, 62, 14, 0, 0, Math.PI); g.stroke(); }
-  TK.text(g, '電磁石', TX - 170, y, 40, { color: col });
+  const y = TY + TH / 2 + 52, col = off ? 'rgba(35,28,21,0.4)' : PL.RED;
+  const core = PL.rect(TX - 66, y - 34, 132, 64);
+  if (!off) PL.tint(g, core, PL.T.rust, 0.4);
+  PL.ink(g, gg => { for (let i = 0; i < 6; i++) { gg.moveTo(TX + 64, y - 30 + i * 12); gg.ellipse(TX, y - 30 + i * 12, 64, 12, 0, 0, Math.PI); } }, 4, col);
+  PL.label(g, '電磁石', TX - 100, y, 40, { align: 'right', color: col });
   g.restore();
 }
-// スピーカー（円すいと、すき間の液）
+// スピーカー（断面: 磁石・すき間の液・振動板）
 function speaker(g, x, y, t) {
-  g.save(); g.lineJoin = 'round'; g.strokeStyle = 'rgba(220,232,255,0.9)'; g.lineWidth = 5; g.fillStyle = 'rgba(20,34,72,0.9)';
-  g.beginPath(); g.moveTo(x - 30, y - 50); g.lineTo(x + 50, y - 120); g.lineTo(x + 50, y + 120); g.lineTo(x - 30, y + 50); g.closePath(); g.fill(); g.stroke();
-  g.beginPath(); g.rect(x - 110, y - 60, 80, 120); g.fill(); g.stroke();   // 磁石
-  g.fillStyle = '#0c0c14'; g.strokeStyle = TK.C.acc; g.lineWidth = 4;
-  g.beginPath(); g.roundRect(x - 40, y - 54, 16, 108, 6); g.fill(); g.stroke();   // すき間の液
-  g.strokeStyle = TK.C.red; g.lineWidth = 4; g.globalAlpha *= 0.8;
-  for (let i = 0; i < 3; i++) { const yy = y - 110 - i * 0; g.beginPath(); for (let k = 0; k <= 10; k++) { const xx = x - 110 + i * 34, py = y - 80 - k * 8; g[k ? 'lineTo' : 'moveTo'](xx + 6 * Math.sin(k * 0.9 + t * 6), py); } g.stroke(); }
-  g.restore();
+  const mag = PL.rect(x - 110, y - 60, 80, 120), cone = PL.poly([[x - 30, y - 50], [x + 50, y - 120], [x + 50, y + 120], [x - 30, y + 50]]), gap = PL.rect(x - 40, y - 54, 14, 108);
+  PL.tint(g, mag, PL.T.gray, 0.8); PL.hatch(g, mag, { angle: 0.8, gap: 7, w: 1.6 }); PL.ink(g, mag, 4);
+  PL.tint(g, cone, PL.T.sand, 0.7); PL.ink(g, gg => { for (let i = 1; i < 4; i++) { const xx = x - 30 + i * 20; gg.moveTo(xx, y - 50 - i * 17.5); gg.lineTo(xx, y + 50 + i * 17.5); } }, 1.4); PL.ink(g, cone, 4);
+  PL.tint(g, gap, PL.T.gray, 1); PL.tint(g, gap, PL.T.brown, 0.6); PL.ink(g, gap, 3, PL.RED);   // すき間の液（黒）
+  PL.ink(g, gg => { for (let i = 0; i < 3; i++) { const xx = x - 100 + i * 30; for (let k = 0; k <= 8; k++) { const py = y - 76 - k * 6; gg[k ? 'lineTo' : 'moveTo'](xx + 6 * Math.sin(k * 0.9 + t * 6), py); } } }, 3, PL.RED);   // 熱が逃げる
 }
 // 回る軸のシール（軸が壁をつらぬき、すき間に液の輪）
 function shaft(g, x, y, t) {
-  g.save(); g.strokeStyle = 'rgba(220,232,255,0.9)'; g.lineWidth = 5; g.fillStyle = 'rgba(20,34,72,0.9)';
-  g.beginPath(); g.rect(x - 25, y - 120, 50, 92); g.rect(x - 25, y + 28, 50, 92); g.fill(); g.stroke();   // 壁
-  g.fillStyle = 'rgba(200,210,230,0.25)'; g.beginPath(); g.rect(x - 170, y - 20, 340, 40); g.fill(); g.stroke();   // 軸
-  for (let i = 0; i < 6; i++) { const xx = x - 170 + ((i * 60 + t * 120) % 340); g.beginPath(); g.moveTo(xx, y - 20); g.lineTo(xx - 14, y + 20); g.stroke(); }
-  g.fillStyle = '#0c0c14'; g.strokeStyle = TK.C.acc; g.lineWidth = 4;
-  g.beginPath(); g.roundRect(x - 25, y - 30, 50, 10, 4); g.fill(); g.stroke();
-  g.beginPath(); g.roundRect(x - 25, y + 20, 50, 10, 4); g.fill(); g.stroke();
-  g.restore();
+  const w1 = PL.rect(x - 25, y - 120, 50, 90), w2 = PL.rect(x - 25, y + 30, 50, 90), sh = PL.rect(x - 170, y - 20, 340, 40);
+  PL.tint(g, sh, PL.T.sand, 0.7); PL.hatch(g, sh, { angle: 0.1, gap: 6, w: 1.2, not: PL.rect(x - 200, y - 30, 400, 30) });
+  PL.ink(g, gg => { for (let i = 0; i < 6; i++) { const xx = x - 160 + ((i * 60 + t * 120) % 320); gg.moveTo(xx, y - 20); gg.lineTo(xx - 14, y + 20); } }, 2);   // 回るすじ
+  PL.ink(g, sh, 4);
+  [w1, w2].forEach(p => { PL.tint(g, p, PL.T.gray, 0.8); PL.hatch(g, p, { angle: 0.8, gap: 7, w: 1.6 }); PL.ink(g, p, 4); });
+  [PL.rect(x - 25, y - 30, 50, 10), PL.rect(x - 25, y + 20, 50, 10)].forEach(p => { PL.tint(g, p, PL.T.gray, 1); PL.tint(g, p, PL.T.brown, 0.6); PL.ink(g, p, 2.6, PL.RED); });
 }
+// 話す人の札（字幕の帯のすぐ上）
 function tag(g, t) {
   const s = subs.find(x => t >= x.a && t < x.b && !x.noBurn); if (!s) return;
   const q = s.who === 'q', f = fade(t, s.a, s.b, 0.12);
   g.save(); g.globalAlpha = f;
-  const lines = s.ja.split('\n').length, y = PH * 0.615 - (lines - 1) * 42 - 82;
+  const lines = s.ja.split('\n').length, y = PL.SUBY - PL.bandH(lines) - 46;
   const w = 210, x = PW / 2 - w / 2;
-  TK.card(g, x, y - 30, w, 60, { r: 30, fill: q ? 'rgba(95,212,255,0.25)' : 'rgba(255,207,74,0.25)', stroke: q ? TK.C.acc2 : TK.C.acc });
-  TK.text(g, q ? '聞き手' : '答える人', PW / 2, y + 2, 34, { color: q ? TK.C.acc2 : TK.C.acc });
+  TK.card(g, x - 20, y - 32, w + 40, 64);   // 札は紙のまま。だれの声かは字の色で
+  PL.label(g, q ? '聞き手' : '答える人', PW / 2, y + 2, 38, { color: q ? TK.C.acc2 : PL.RED });
   g.restore();
 }
 
@@ -154,22 +164,22 @@ function draw(g, t) {
   // 0〜3: フック。トゲ＋ロケット
   if (t < 3.0) {
     dish(g, 330, 880, 270, 90 * ease(t / 0.8));
-    rocket(g, 760, 1060, 1.1, t);
+    rocket(g, 780, 1040, 1.1, t);
     TK.hook(g, t, 0.2, 3.0, 'これ、[ロケットの燃料]に\nなるはずだった', { y: 330, size: 84 });
   }
   // 3〜9: 1960年代 NASA。無重力で燃料が浮く
   if (t >= 3.0 && t < 9.0) {
     const k = TK.pop(t, 3.3, 0.4);
     g.save(); g.globalAlpha = clamp(k, 0, 1);
-    TK.text(g, '[1960年代]  NASA', TX, 250, 72);
-    TK.text(g, '宇宙のロケットの燃料タンク（模式図）', TX, 330, 40, { color: TK.C.sub, bold: false });
+    PL.label(g, '[1960年代]  NASA', TX, 230, 72);
+    PL.label(g, '宇宙のロケットの燃料タンク（模式図）', TX, 310, 40, { color: TK.C.sub, bold: false });
     g.restore();
     tank(g); blobs(g, t, 0, 'free', 0);
-    if (t > 5.5) { g.save(); g.globalAlpha = fade(t, 5.5, 9, 0.3); TK.text(g, '?', TX, TY + TH / 2 - 60, 80, { color: TK.C.red }); g.restore(); }
+    if (t > 5.5) { g.save(); g.globalAlpha = fade(t, 5.5, 9, 0.3); PL.label(g, '？', TX - 110, TY + TH / 2 + 56, 80, { color: PL.RED }); g.restore(); }
   }
   // 9〜15: 酸化鉄の粉 → 電磁石で口へ
   if (t >= 9.0 && t < 15.0) {
-    TK.text(g, '燃料 ＋ [酸化鉄の細かい粉]', TX, 270, 56);
+    PL.label(g, '燃料 ＋ [酸化鉄の細かい粉]', TX, 270, 56);
     tank(g);
     const dots = clamp((t - 9.4) / 1.2, 0, 1), k = ease((t - 11.6) / 2.2);
     blobs(g, t, k, 'outlet', dots);
@@ -177,30 +187,24 @@ function draw(g, t) {
   }
   // 15〜22: 液はまん中に集まる → 仕切り板で足りた
   if (t >= 15.0 && t < 22.0) {
-    if (t < 20.0) TK.text(g, '無重力のタンクでは', TX, 270, 52, { color: TK.C.sub });
+    if (t < 20.0) PL.label(g, '無重力のタンクでは', TX, 270, 52, { color: TK.C.sub });
     tank(g);
     const k = ease((t - 15.4) / 2.0);
     blobs(g, t, k, 'center', 0);
     if (t > 17.6) {   // 仕切り板（バッフル）
       g.save(); g.globalAlpha = clamp((t - 17.6) / 0.4, 0, 1);
-      g.strokeStyle = TK.C.green; g.lineWidth = 8; g.lineCap = 'round';
-      [[-1, 1]].forEach(() => {
-        g.beginPath(); g.moveTo(TX - 110, TY + 60); g.lineTo(TX - 35, TY + TH / 2 - 20); g.stroke();
-        g.beginPath(); g.moveTo(TX + 110, TY + 60); g.lineTo(TX + 35, TY + TH / 2 - 20); g.stroke();
-      });
-      g.fillStyle = 'rgba(255,170,70,0.55)'; g.beginPath(); g.moveTo(TX - 70, TY + 100); g.lineTo(TX + 70, TY + 100); g.lineTo(TX + 30, TY + TH / 2 - 10); g.lineTo(TX - 30, TY + TH / 2 - 10); g.closePath(); g.fill();
-      TK.text(g, '仕切り板', TX + 250, TY + 20, 40, { color: TK.C.green });
+      const wedge = PL.poly([[TX - 70, TY + 100], [TX + 70, TY + 100], [TX + 30, TY + TH / 2 - 10], [TX - 30, TY + TH / 2 - 10]]);
+      PL.tint(g, wedge, PL.T.gold, 0.6); PL.ink(g, wedge, 2);
+      PL.ink(g, gg => { gg.moveTo(TX - 110, TY + 60); gg.lineTo(TX - 35, TY + TH / 2 - 20); gg.moveTo(TX + 110, TY + 60); gg.lineTo(TX + 35, TY + TH / 2 - 20); }, 9, PL.GREEN);
+      PL.leader(g, TX + 92, TY + 110, TX + 250, TY + 40, PL.GREEN); PL.label(g, '仕切り板', TX + 330, TY + 20, 40, { color: PL.GREEN });
       g.restore();
     }
-    if (t > 18.6) {
-      g.save(); g.globalAlpha = fade(t, 18.6, 22, 0.2); g.strokeStyle = TK.C.green; g.lineWidth = 12;
-      g.beginPath(); g.arc(TX, TY + 140, 150, 0, Math.PI * 2); g.stroke(); g.restore();
-    }
+    if (t > 18.6) { g.save(); g.globalAlpha = fade(t, 18.6, 22, 0.2); g.setLineDash([14, 10]); PL.ink(g, PL.circle(TX, TY + 140, 150), 6, PL.GREEN); g.restore(); }
     if (t > 20.0) {
       magnet(g, fade(t, 20.0, 22, 0.2), true);
       g.save(); g.globalAlpha = fade(t, 20.0, 22, 0.2);
-      TK.card(g, TX - 200, 230, 400, 80, { r: 40, fill: 'rgba(255,107,107,0.2)', stroke: TK.C.red });
-      TK.text(g, '磁石は 出番なし', TX, 271, 44, { color: TK.C.red });
+      TK.card(g, TX - 200, 230, 400, 80);
+      PL.label(g, '磁石は 出番なし', TX, 271, 44, { color: PL.RED });
       g.restore();
     }
   }
@@ -208,24 +212,21 @@ function draw(g, t) {
   if (t >= 22.0 && t < 30.0) {
     if (t < 25.6) {
       rocket(g, TX, 950, 1.25, t);
-      if (t > 22.4) {
-        g.save(); g.globalAlpha = fade(t, 22.4, 25.6, 0.2); g.strokeStyle = TK.C.red; g.lineWidth = 16; g.lineCap = 'round';
-        g.beginPath(); g.moveTo(TX - 200, 400); g.lineTo(TX + 200, 900); g.moveTo(TX + 200, 400); g.lineTo(TX - 200, 900); g.stroke(); g.restore();
-      }
-      TK.text(g, 'ロケットの燃料には', TX, 270, 56, { color: TK.C.sub });
+      if (t > 22.4) { g.save(); g.globalAlpha = fade(t, 22.4, 25.6, 0.2); PL.ink(g, gg => { gg.moveTo(TX - 200, 400); gg.lineTo(TX + 200, 900); gg.moveTo(TX + 200, 400); gg.lineTo(TX - 200, 900); }, 16, PL.RED); g.restore(); }
+      PL.label(g, 'ロケットの燃料には', TX, 270, 56, { color: TK.C.sub });
     } else {
-      TK.text(g, 'いまの使いみち', TX, 250, 56, { color: TK.C.sub });
+      PL.label(g, 'いまの使いみち', TX, 250, 56, { color: TK.C.sub });
       const k1 = TK.pop(t, 25.9, 0.4), k2 = TK.pop(t, 27.5, 0.4);
       g.save(); g.globalAlpha = clamp(k1, 0, 1);
-      TK.card(g, 110, 320, 740, 320, { r: 30 });
-      speaker(g, 300, 480, t);
-      TK.lines(g, 'スピーカーを\n[冷やす]', 620, 450, 50);
+      TK.card(g, 100, 320, 880, 320);
+      speaker(g, 300, 490, t);
+      TK.lines(g, 'スピーカーを\n[冷やす]', 700, 450, 50);
       g.restore();
       if (t > 27.5) {
         g.save(); g.globalAlpha = clamp(k2, 0, 1);
-        TK.card(g, 110, 670, 740, 320, { r: 30 });
+        TK.card(g, 100, 670, 880, 320);
         shaft(g, 300, 830, t);
-        TK.lines(g, '回る軸の\nすき間を[ふさぐ]', 640, 800, 50);
+        TK.lines(g, '回る軸の\nすき間を[ふさぐ]', 720, 800, 48);
         g.restore();
       }
     }
@@ -233,10 +234,10 @@ function draw(g, t) {
   // 30〜35: トゲにもどる
   if (t >= 30.0) {
     dish(g, TX, 800, 340, 120 * ease((t - 30) / 0.8));
-    TK.card(g, 140, 220, 680, 200, { r: 36 });
-    TK.text(g, 'ロケットの燃料に使われた回数', TX, 280, 44, { color: TK.C.sub });
-    TK.text(g, '[0 回]', TX, 365, 90);
-    TK.note(g, t, 31.5, 35, '出どころ: R. S. Arrighi, NASA Glenn (2021)\n“Novel Rocket Fuel Spawned Ferrofluid Industry”・特許 US 3,215,572（1965）', { size: 28 });
+    TK.card(g, 140, 220, 680, 200);
+    PL.label(g, 'ロケットの燃料に使われた回数', TX, 280, 44, { color: TK.C.sub });
+    PL.label(g, '[0 回]', TX, 365, 90);
+    TK.note(g, t, 31.5, 35, '出どころ: R. S. Arrighi, NASA Glenn (2021)\n“Novel Rocket Fuel Spawned Ferrofluid Industry”・特許 US 3,215,572（1965）', { size: 28, y: 1080 });   // 2行なので絵の下に（クレジットと重ねない）
   }
   tag(g, t);
 }

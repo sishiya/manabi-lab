@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく air-flow-1（型A ぜんぶ逆）「24時間換気は2時間で全部入れかわる…じゃない」。台本は trivia/air-flow.md。?short で録る
@@ -32,10 +35,12 @@ const cues = [
   { t: 7.0, type: 'whoosh' }, { t: 11.6, type: 'ding' }, { t: 12.0, type: 'buzz' }, { t: 19.4, type: 'ding' },
   { t: 21.6, type: 'tick' }, { t: 23.8, type: 'tick' }, { t: 26.0, type: 'rise' },
 ];
-const OLD = '#ff9f45', NEW = '#5fd4ff';
+// 絵は「図鑑の版画」（trivia-plate.js の PL.*）。部屋は断面図（かべ・床に斜線）、空気はひと筆の渦（前の空気＝赤茶、外の空気＝藍）
+const OLD = '#a85a32', NEW = '#2f5f7a';
 const rnd = (i, k = 1) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
-const RX0 = 120, RX1 = 960, RY0 = 230, RY1 = 600;   // 部屋
-const GX0 = 190, GX1 = 940, GY0 = 700, GY1 = 1040;  // グラフ（0〜8時間・0〜100%）
+const ROOM = { x0: 120, x1: 940, y0: 270, y1: 600 };   // 部屋（中の空気の所）
+const GX0 = 190, GX1 = 940, GY0 = 720, GY1 = 1060;    // グラフ（0〜8時間・0〜100%）
+const WALL = 24;
 const remain = h => Math.exp(-0.5 * h);
 // 動画の時刻 → 部屋の中の時間（時間）
 function hours(t) {
@@ -44,89 +49,152 @@ function hours(t) {
   if (t < 26) return lerp(2, 6, clamp((t - 20.2) / 5, 0, 1));
   return lerp(6, 8, clamp((t - 26) / 3, 0, 1));
 }
-
-function room(g, t, mode, h) {
-  g.strokeStyle = '#cfe0ff'; g.lineWidth = 7; g.strokeRect(RX0, RY0, RX1 - RX0, RY1 - RY0);
-  // 給気口（左上）・換気扇（右下）
-  g.fillStyle = TK.C.bg0; g.fillRect(RX0 - 6, RY0 + 30, 12, 70); g.fillRect(RX1 - 6, RY1 - 110, 12, 70);
-  TK.text(g, '給気口', RX0 + 80, RY0 - 34, 40, { color: NEW });
-  TK.text(g, '換気扇', RX1 - 80, RY1 + 40, 40, { color: OLD });
-  const fan = t * 6; g.save(); g.translate(RX1 + 40, RY1 - 75); g.rotate(fan); g.strokeStyle = '#cfe0ff'; g.lineWidth = 6;
-  for (let j = 0; j < 3; j++) { g.rotate(Math.PI * 2 / 3); g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 28); g.stroke(); } g.restore();
-  // 粒
-  const n = 260, front = mode === 'plug' ? lerp(RX0, RX1, clamp((t - 7.6) / 3.8, 0, 1)) : -1, fr = remain(h);
+// 空気のひと筆（小さな渦）を色ごとに1本の道にまとめる
+function swirls(g, list, color, w) {
+  if (!list.length) return;
+  PL.ink(g, gg => list.forEach(([x, y, a, r]) => { gg.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r); gg.arc(x, y, r, a, a + 4.4); }), w, color);
+}
+// 部屋の断面。mode: none（前の空気だけ）・plug（左から押し出す）・mix（よく混ざる）。fr: 前の空気の割合。B: 部屋の四角
+function room(g, t, mode, fr, B = ROOM, o = {}) {
+  const { x0, x1, y0, y1 } = B, W = x1 - x0, H = y1 - y0, vs = o.small ? 0.6 : 1;
+  const v0 = y0 + 30 * vs, v1 = y0 + 100 * vs, f0 = y1 - 110 * vs, f1 = y1 - 40 * vs;   // 給気口（左上）・換気扇（右下）のすきま
+  const front = mode === 'plug' ? lerp(x0, x1, clamp((t - 7.6) / 3.8, 0, 1)) : -1;
+  const inside = PL.rect(x0, y0, W, H);
+  // 中の空気の色（うすい手彩色）
+  if (mode === 'plug') { if (front > x0) PL.tint(g, PL.rect(x0, y0, front - x0, H), PL.T.sky, 0.5); PL.tint(g, PL.rect(front, y0, x1 - front, H), PL.T.rust, 0.3); }
+  else { PL.tint(g, inside, PL.T.rust, 0.3 * fr + 0.02); if (fr < 1) PL.tint(g, inside, PL.T.sky, 0.5 * (1 - fr)); }
+  // 空気の渦
+  const n = o.small ? 60 : 150, olds = [], news = [], amp = mode === 'mix' ? 26 : 8, r = o.small ? 7 : 10;
   for (let i = 0; i < n; i++) {
-    const x = RX0 + 20 + ((rnd(i) * (RX1 - RX0 - 40) + Math.sin(t * 0.8 + i) * 14 * (mode === 'mix' ? 2 : 0.5)) + (RX1 - RX0 - 40)) % (RX1 - RX0 - 40);
-    const y = RY0 + 20 + rnd(i, 2) * (RY1 - RY0 - 40) + Math.cos(t * 0.7 + i * 1.3) * 10;
+    const x = x0 + 18 + ((rnd(i) * (W - 36) + Math.sin(t * 0.8 + i) * amp) % (W - 36) + (W - 36)) % (W - 36);
+    const y = y0 + 18 + rnd(i, 2) * (H - 36) + Math.cos(t * 0.7 + i * 1.3) * 6;
     let old = true;
-    if (mode === 'plug') old = x > front;
-    else if (mode === 'mix') old = rnd(i, 3) < fr;
-    g.fillStyle = old ? OLD : NEW; g.beginPath(); g.arc(x, y, 9, 0, Math.PI * 2); g.fill();
+    if (mode === 'plug') old = x > front; else if (mode === 'mix') old = rnd(i, 3) < fr;
+    (old ? olds : news).push([x, y, rnd(i, 5) * 6.28 + t * (mode === 'mix' ? 2 : 0.6), r]);
   }
-  if (mode === 'plug') { g.strokeStyle = NEW; g.lineWidth = 6; g.setLineDash([16, 12]); g.beginPath(); g.moveTo(front, RY0); g.lineTo(front, RY1); g.stroke(); g.setLineDash([]); }
+  swirls(g, olds, OLD, o.small ? 3 : 4); swirls(g, news, NEW, o.small ? 3 : 4);
+  if (mode === 'plug' && front > x0) PL.dots(g, [[front, y0 + 6], [front, y1 - 6]], { color: NEW, w: 6, dash: [10, 14] });
+  // かべ・天井・床（断面は斜線）
+  const walls = gg => {
+    PL.rect(x0 - WALL, y0 - WALL, W + WALL * 2, WALL)(gg); PL.rect(x0 - WALL, y1, W + WALL * 2, WALL)(gg);
+    PL.rect(x0 - WALL, y0, WALL, v0 - y0)(gg); PL.rect(x0 - WALL, v1, WALL, y1 - v1)(gg);
+    PL.rect(x1, y0, WALL, f0 - y0)(gg); PL.rect(x1, f1, WALL, y1 - f1)(gg);
+  };
+  PL.tint(g, walls, PL.T.gray, 0.6); PL.hatch(g, walls, { angle: 0.8, gap: 8, w: 2 }); PL.ink(g, walls, 5);
+  // 給気口のよろい板と、入ってくる空気の矢
+  PL.ink(g, gg => { for (let k = 0; k < 4; k++) { const yy = v0 + 8 * vs + k * 18 * vs; gg.moveTo(x0 - WALL, yy); gg.lineTo(x0, yy + 9 * vs); } }, 2.4);
+  const ay = (v0 + v1) / 2, aw = 64 * vs;
+  PL.ink(g, gg => { gg.moveTo(x0 - WALL - aw, ay); gg.lineTo(x0 - WALL - 8, ay); gg.moveTo(x0 - WALL - 24, ay - 12); gg.lineTo(x0 - WALL - 8, ay); gg.lineTo(x0 - WALL - 24, ay + 12); }, 4, NEW);
+  // 換気扇（回る羽根）と、出ていく空気の矢
+  const fx = x1 + WALL / 2, fy = (f0 + f1) / 2, fr2 = 30 * vs, hub = PL.circle(fx, fy, fr2);
+  PL.tint(g, hub, PL.T.sand, 0.6); PL.ink(g, hub, 4);
+  PL.ink(g, gg => { for (let j = 0; j < 3; j++) { const a = t * 6 + j * Math.PI * 2 / 3; gg.moveTo(fx, fy); gg.quadraticCurveTo(fx + Math.cos(a + 0.5) * fr2 * 0.7, fy + Math.sin(a + 0.5) * fr2 * 0.7, fx + Math.cos(a) * fr2 * 0.9, fy + Math.sin(a) * fr2 * 0.9); } }, 4);
+  const ex = x1 + WALL + 12, el = 50 * vs;
+  PL.ink(g, gg => { gg.moveTo(ex, fy); gg.lineTo(ex + el, fy); gg.moveTo(ex + el - 16, fy - 12); gg.lineTo(ex + el, fy); gg.lineTo(ex + el - 16, fy + 12); }, 4, OLD);
+  if (o.labels !== false) {
+    PL.leader(g, x0 - WALL / 2, v0 - 4, x0 + 50, y0 - 46); PL.label(g, '給気口', x0 + 62, y0 - 62, 40, { align: 'left', color: NEW });
+    PL.leader(g, fx, f1 + 6, x1 - 60, y1 + 52); PL.label(g, '換気扇', x1 - 60, y1 + 80, 40, { color: OLD });
+  }
 }
 function legend(g, y) {
-  g.fillStyle = OLD; g.beginPath(); g.arc(300, y, 16, 0, Math.PI * 2); g.fill(); TK.text(g, '前の空気', 330, y, 44, { align: 'left', color: OLD });
-  g.fillStyle = NEW; g.beginPath(); g.arc(620, y, 16, 0, Math.PI * 2); g.fill(); TK.text(g, '外の空気', 650, y, 44, { align: 'left', color: NEW });
+  swirls(g, [[150, y, 0.5, 14]], OLD, 5); PL.label(g, '前の空気', 180, y, 44, { align: 'left', color: OLD });
+  swirls(g, [[440, y, 0.5, 14]], NEW, 5); PL.label(g, '外の空気', 470, y, 44, { align: 'left', color: NEW });
 }
-function graph(g, t, h, showNaive) {
+// 2003年からの家（小さな立面図）。x, y は左下
+function house(g, x, y) {
+  const wall = PL.rect(x, y - 150, 230, 150), roof = PL.poly([[x - 22, y - 150], [x + 115, y - 250], [x + 252, y - 150]]);
+  PL.tint(g, wall, PL.T.sand, 0.6); PL.hatch(g, wall, { angle: 0.7, gap: 12, w: 2, not: PL.rect(x - 40, y - 190, 150, 200) }); PL.ink(g, wall, 6);
+  PL.tint(g, roof, PL.T.rust, 0.6); PL.hatch(g, roof, { angle: -0.4, gap: 10, w: 2 }); PL.ink(g, roof, 6);
+  const win = PL.rect(x + 30, y - 120, 70, 60), door = PL.rect(x + 145, y - 100, 50, 100);
+  PL.tint(g, win, PL.T.sky, 0.7); PL.ink(g, win, 4); PL.ink(g, gg => { gg.moveTo(x + 65, y - 120); gg.lineTo(x + 65, y - 60); }, 3);
+  PL.tint(g, door, PL.T.wood, 0.7); PL.ink(g, door, 4);
+  PL.ink(g, PL.circle(x + 205, y - 128, 11), 3); PL.ink(g, PL.circle(x + 18, y - 135, 8), 3);   // 換気扇・給気口のふた
+  PL.hatch(g, PL.rect(x - 40, y, 310, 16), { angle: 0.8, gap: 9, w: 2 });
+  PL.ink(g, gg => { gg.moveTo(x - 40, y); gg.lineTo(x + 270, y); }, 5);
+}
+function graph(g, t, h, naiveA) {
   const X = hh => lerp(GX0, GX1, hh / 8), Y = p => lerp(GY1, GY0, p);
-  g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 4; g.beginPath(); g.moveTo(GX0, GY0); g.lineTo(GX0, GY1); g.lineTo(GX1, GY1); g.stroke();
-  [0, 2, 4, 6, 8].forEach(v => TK.text(g, v + '時間', X(v), GY1 + 36, 32, { color: TK.C.dim, bold: false }));
-  TK.text(g, '100%', GX0 - 18, Y(1), 32, { align: 'right', color: TK.C.dim, bold: false });
-  TK.text(g, '0%', GX0 - 18, Y(0), 32, { align: 'right', color: TK.C.dim, bold: false });
-  TK.text(g, '前の空気の残り', GX0 + 20, GY0 - 34, 40, { align: 'left', color: OLD });
-  if (showNaive) {   // 名前どおりの直線
-    g.save(); g.strokeStyle = 'rgba(255,255,255,0.55)'; g.setLineDash([14, 12]); g.lineWidth = 5;
-    g.beginPath(); g.moveTo(X(0), Y(1)); g.lineTo(X(2), Y(0)); g.stroke(); g.restore();
-    TK.text(g, '名前どおりなら', X(0.15), Y(0.2), 34, { align: 'left', color: TK.C.dim });
+  PL.ink(g, gg => { [0.25, 0.5, 0.75, 1].forEach(p => { gg.moveTo(GX0, Y(p)); gg.lineTo(GX1, Y(p)); }); }, 1, 'rgba(35,28,21,0.25)');   // 目盛りの細い線
+  PL.ink(g, gg => { gg.moveTo(GX0, GY0 - 10); gg.lineTo(GX0, GY1); gg.lineTo(GX1 + 10, GY1); for (let v = 0; v <= 8; v++) { gg.moveTo(X(v), GY1); gg.lineTo(X(v), GY1 + (v % 2 ? 8 : 16)); } }, 4);
+  [0, 2, 4, 6, 8].forEach(v => PL.label(g, v + '時間', X(v), GY1 + 44, 30, { color: TK.C.sub, bold: false }));
+  PL.label(g, '100%', GX0 - 16, Y(1), 30, { align: 'right', color: TK.C.sub, bold: false });
+  PL.label(g, '0%', GX0 - 16, Y(0), 30, { align: 'right', color: TK.C.sub, bold: false });
+  PL.label(g, '前の空気の残り', GX0 + 10, GY0 - 40, 40, { align: 'left', color: OLD });
+  if (naiveA > 0) {   // 名前どおりの直線
+    g.save(); g.globalAlpha *= naiveA; g.setLineDash([14, 12]);
+    PL.ink(g, gg => { gg.moveTo(X(0), Y(1)); gg.lineTo(X(2), Y(0)); }, 4, '#4a3f33'); g.setLineDash([]);
+    PL.leader(g, X(0.9), Y(0.55), X(1.95), Y(0.84), '#4a3f33');
+    PL.label(g, '名前どおりなら', X(2.0), Y(0.88), 34, { align: 'left', color: '#4a3f33' });
+    g.restore();
   }
   if (h > 0) {
-    g.strokeStyle = OLD; g.lineWidth = 9; g.lineJoin = 'round'; g.beginPath();
-    for (let i = 0; i <= 120; i++) { const hh = h * i / 120; i ? g.lineTo(X(hh), Y(remain(hh))) : g.moveTo(X(hh), Y(remain(hh))); }
-    g.stroke();
-    g.fillStyle = OLD; g.beginPath(); g.arc(X(h), Y(remain(h)), 14, 0, Math.PI * 2); g.fill();
+    const pts = []; for (let i = 0; i <= 120; i++) { const hh = h * i / 120; pts.push([X(hh), Y(remain(hh))]); }
+    const area = gg => { gg.moveTo(X(0), GY1); pts.forEach(p => gg.lineTo(...p)); gg.lineTo(X(h), GY1); gg.closePath(); };
+    PL.tint(g, area, PL.T.rust, 0.45); PL.hatch(g, area, { angle: 0.9, gap: 12, w: 2, cx: GX0, cy: GY1 });
+    PL.ink(g, gg => pts.forEach((p, i) => i ? gg.lineTo(...p) : gg.moveTo(...p)), 7, OLD);
+    const e = pts[pts.length - 1], dot = PL.circle(e[0], e[1], 12); PL.tint(g, dot, PL.T.rust, 0.9); PL.ink(g, dot, 4);
   }
   [[2, '37%', 19.2], [4, '14%', 21.6], [6, '5%', 23.8]].forEach(([hh, s, a]) => {
     if (t < a || h < hh - 0.01) return;
-    g.save(); g.globalAlpha = clamp((t - a) / 0.3, 0, 1);
-    g.strokeStyle = 'rgba(255,207,74,0.6)'; g.lineWidth = 3; g.setLineDash([8, 8]); g.beginPath(); g.moveTo(X(hh), GY1); g.lineTo(X(hh), Y(remain(hh))); g.stroke(); g.setLineDash([]);
-    TK.text(g, s, X(hh) + 10, Y(remain(hh)) - 46, 56, { color: TK.C.acc });
+    g.save(); g.globalAlpha *= clamp((t - a) / 0.3, 0, 1);
+    const px = X(hh), py = Y(remain(hh)), lx = px + 85, ly = py - 120;
+    g.setLineDash([8, 8]); PL.ink(g, gg => { gg.moveTo(px, GY1); gg.lineTo(px, py); }, 2.5, PL.RED); g.setLineDash([]);
+    PL.leader(g, px, py, lx - 12, ly + 32, PL.RED);
+    PL.label(g, s, lx, ly, 56, { color: PL.RED });
     g.restore();
   });
 }
 
 function draw(g, t) {
-  // 0〜2.2: フック
+  // 0〜2.2: フック（言い伝えに、朱の「ウソ」の判）
   if (t < 2.2) {
-    TK.hook(g, t, 0, 2.2, '2時間で、空気が\n[全部]入れかわる', { y: 420, size: 112 });
-    if (t > 0.8) {
-      const x = TK.out((t - 0.8) / 0.25);
-      g.strokeStyle = TK.C.red; g.lineWidth = 28; g.lineCap = 'round'; g.beginPath();
-      g.moveTo(170, 300); g.lineTo(170 + 740 * x, 300 + 240 * x);
-      if (x > 0.5) { const y = (x - 0.5) * 2; g.moveTo(910, 300); g.lineTo(910 - 740 * y, 300 + 240 * y); }
-      g.stroke();
+    g.save(); g.globalAlpha *= fade(t, -1, 2.2, 0.25);
+    TK.lines(g, '「2時間で、空気が\n　[全部]入れかわる」', 90, 360, 92, { align: 'left', lh: 1.3 });
+    if (t > 0.8) {   // 朱の判（ななめに押す）
+      const k = TK.back((t - 0.8) / 0.3);
+      g.save(); g.globalAlpha *= clamp((t - 0.8) / 0.12, 0, 1); g.translate(800, 640); g.rotate(-0.22); g.scale(k, k);
+      PL.ink(g, PL.circle(0, 0, 150), 10, PL.RED); PL.ink(g, PL.circle(0, 0, 132), 3, PL.RED);
+      PL.label(g, 'ウソ', 0, 6, 104, { color: PL.RED });
+      g.restore();
     }
-    if (t > 1.1) { g.save(); g.globalAlpha = clamp((t - 1.1) / 0.3, 0, 1); TK.text(g, '→ 2時間後も [37%] は前の空気', PW / 2, 760, 64); g.restore(); }
+    if (t > 1.1) { g.save(); g.globalAlpha *= clamp((t - 1.1) / 0.3, 0, 1); PL.label(g, '→ 2時間後も [37%] は前の空気', 90, 860, 56, { align: 'left' }); g.restore(); }
+    room(g, t, 'none', 1, { x0: 160, x1: 880, y0: 970, y1: 1150 }, { small: true, labels: false });
+    g.restore();
     return;
   }
   // 2.2〜7: 24時間換気の家
   if (t < 7.0) {
-    room(g, t, 'none', 0); legend(g, 700);
-    TK.card(g, 240, 780, 600, 150, { r: 40 });
-    TK.text(g, '1時間に [0.5回]', PW / 2, 830, 72);
-    TK.text(g, '（部屋の空気の半分ぶん）', PW / 2, 895, 38, { color: TK.C.sub, bold: false });
+    g.save(); g.globalAlpha *= fade(t, 2.2, 7.0, 0.25);
+    room(g, t, 'none', 1); legend(g, 700);
+    PL.label(g, '1時間に [0.5回]', 110, 820, 76, { align: 'left' });
+    PL.label(g, '（部屋の空気の半分ぶん）', 114, 895, 38, { align: 'left', color: TK.C.sub, bold: false });
+    // 部屋の空気の量の帯: その半分に色
+    const bar = PL.rect(120, 960, 400, 56), k = clamp((t - 3.6) / 1.0, 0, 1);
+    PL.tint(g, bar, PL.T.rust, 0.25);
+    if (k > 0) { const half = PL.rect(120, 960, 200 * k, 56); PL.tint(g, half, PL.T.sky, 0.8); PL.hatch(g, half, { angle: 0.9, gap: 10, w: 2, cx: 120, cy: 960 }); }
+    PL.ink(g, bar, 5); PL.ink(g, gg => { gg.moveTo(320, 948); gg.lineTo(320, 1028); }, 3);
+    PL.label(g, '1時間で入れかえる量', 120, 1066, 34, { align: 'left', color: NEW });
+    PL.label(g, '部屋ぜんぶ', 536, 988, 34, { align: 'left', color: TK.C.sub, bold: false });
+    house(g, 740, 1080);
+    PL.label(g, '2003年〜の家', 855, 760, 40);
+    PL.leader(g, 855, 786, 855, 822);
+    g.restore();
     return;
   }
   const h = hours(t);
-  if (t < 12.0) { room(g, t, 'plug', 0); TK.text(g, '名前どおりなら…（押し出すだけ）', PW / 2, RY0 - 100, 46, { color: TK.C.sub }); }
-  else room(g, t, 'mix', h);
+  if (t < 12.0) { room(g, t, 'plug', 1); PL.label(g, '名前どおりなら…（押し出すだけ）', 1000, 140, 44, { align: 'right', color: TK.C.sub }); }
+  else room(g, t, 'mix', remain(h));
   if (t >= 12.0) {
-    TK.card(g, 330, 120, 420, 90, { r: 45 });
-    TK.text(g, h.toFixed(1) + ' 時間後', PW / 2, 166, 54, { color: '#fff' });
+    PL.watch(g, 960, 150, 52, (h % 12) / 12);
+    PL.label(g, h.toFixed(1) + ' 時間後', 880, 150, 56, { align: 'right' });
   }
-  graph(g, t, h, t >= 7.0);
-  if (t >= 26.0) { g.save(); g.globalAlpha = fade(t, 26.2, 30, 0.3); TK.text(g, '0% には [ならない]', 660, GY0 + 110, 56); g.restore(); }
+  graph(g, t, h, t < 20 ? 1 : 1 - clamp((t - 20) / 0.5, 0, 1));
+  if (t >= 26.0) {
+    g.save(); g.globalAlpha *= fade(t, 26.2, 30, 0.3);
+    PL.label(g, '0% には [ならない]', GX1, 770, 56, { align: 'right' });
+    PL.leader(g, lerp(GX0, GX1, h / 8), lerp(GY1, GY0, remain(h)), GX1 - 40, 802, PL.RED);
+    g.restore();
+  }
   if (t >= 12 && t < 27.6) TK.note(g, t, 12, 27.6, 'よく混ざる部屋（完全混合）のモデルの値。実際の部屋はよどみで場所ごとにちがいます', { size: 30 });
   if (t >= 27.6) TK.note(g, t, 27.6, 30, '出どころ: 滋賀県「シックハウス対策について」・Sandberg & Sjöberg (1983)', { size: 30 });
 }

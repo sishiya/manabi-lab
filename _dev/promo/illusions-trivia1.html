@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく illusions-1（型H 当ててみて）「ジグザグの線は何本？」（曲がり盲）。台本は trivia/illusions.md。?short で録る
@@ -52,10 +55,10 @@ function waveRow(g, y, zig, first) {
   g.restore();
 }
 const rowY = i => WAVE.top + i * WAVE.gap + (i >= WAVE.n ? WAVE.split : 0);
-// 切りかわる所（下の6本ではてっぺん）に印
+// 切りかわる所（下の6本ではてっぺん）に朱の輪
 function marks(g, t, a) {
   const { x0, x1, lam, A } = WAVE, k = clamp((t - a) / 0.4, 0, 1);
-  g.save(); g.globalAlpha *= k; g.strokeStyle = TK.C.acc; g.lineWidth = 5;
+  g.save(); g.globalAlpha *= k; g.strokeStyle = PL.RED; g.lineWidth = 5;
   for (let i = WAVE.n; i < WAVE.n + 2; i++) {
     const y = rowY(i);
     for (let x = x0 + lam / 4; x < x1; x += lam / 2) {
@@ -65,51 +68,51 @@ function marks(g, t, a) {
   }
   g.restore();
 }
+// 錯視の図は、版画の本にはさんだ「刷りの図版」として描く: 紙の上に灰色の板（二重のわく）。線は正確な線（筆の線にしない。錯視がこわれるので）
+const PLATE = { x: 40, y: 362, w: 940, h: 742 };
+function plate(g, w) {
+  const v = Math.round(128 + 127 * w), { x, y, w: W, h } = PLATE;
+  g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(x, y, W, h);
+  PL.ink(g, PL.rect(x - 14, y - 14, W + 28, h + 28), 2);   // 外のわく（細い）
+  PL.ink(g, PL.rect(x, y, W, h), 5);
+  PL.ink(g, gg => { for (const [cx, cy] of [[x - 14, y - 14], [x + W + 14, y - 14], [x - 14, y + h + 14], [x + W + 14, y + h + 14]]) { gg.moveTo(cx - 10, cy); gg.lineTo(cx + 10, cy); gg.moveTo(cx, cy - 10); gg.lineTo(cx, cy + 10); } }, 2);   // 四すみの見当
+}
 
 function draw(g, t) {
-  // 背景: 灰色（10〜14 秒だけ白へ）
+  // 図版の地: 灰色（10〜14 秒だけ白へ）
   const w = t < 10.0 ? 0 : t < 11.2 ? ease((t - 10.0) / 1.2) : t < 14.0 ? 1 : t < 14.8 ? 1 - ease((t - 14.0) / 0.8) : 0;
-  const v = Math.round(128 + 127 * w);
-  g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(0, 0, PW, PH);
+  plate(g, w);
   for (let i = 0; i < 2 * WAVE.n; i++) waveRow(g, rowY(i), i >= WAVE.n, i % 2);
-  // 下の字幕・注の所は、いつもの紺（灰色の上だと注が読めないので）
-  { const gr = g.createLinearGradient(0, 1105, 0, PH); gr.addColorStop(0, TK.C.bg1); gr.addColorStop(1, TK.C.bg0); g.fillStyle = gr; g.fillRect(0, 1105, PW, PH - 1105); }
+  if (t < 18.0) PL.label(g, 'Takahashi (2017) の図にならって', PLATE.x + PLATE.w, PLATE.y + PLATE.h + 50, 30, { align: 'right', color: TK.C.sub, bold: false });
   if (t >= 14.6 && t < 18.0) {
     g.save(); g.globalAlpha = fade(t, 14.6, 18.0, 0.3); marks(g, t, 14.8); g.restore();
   }
-  // 上の文字（線にかからない所）
-  const dark = w > 0.5 ? '#0b1430' : '#fff';
-  if (t < 4.0) TK.hook(g, t, 0.0, 4.0, '[ジグザグ]の線は\n何本？', { y: 255, size: 92 });
-  if (t >= 4.0 && t < 7.0) {
-    // 考える時間の輪（3秒）
-    const k = clamp((t - 4.0) / 3.0, 0, 1), cx = PW / 2, cy = 225, r = 74;
-    g.save(); g.lineWidth = 16; g.strokeStyle = 'rgba(0,0,0,0.25)'; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();
-    g.strokeStyle = TK.C.acc; g.beginPath(); g.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - k)); g.stroke(); g.restore();
-    TK.text(g, String(Math.max(1, Math.ceil(7.0 - t))), cx, cy + 4, 84, { stroke: 'rgba(0,0,0,0.5)' });
-  }
+  // 上の文字（図版にかからない所）
+  if (t < 4.0) TK.hook(g, t, 0.0, 4.0, '[ジグザグ]の線は\n何本？', { y: 228, size: 92 });
+  if (t >= 4.0 && t < 7.0) PL.watch(g, PW / 2, 220, 80, clamp((t - 4.0) / 3.0, 0, 1));   // 考える時間（3秒）は懐中時計で
   if (t >= 7.0 && t < 10.4) {
     g.save(); g.globalAlpha = fade(t, 7.0, 10.4, 0.25);
     const k = TK.pop(t, 7.0, 0.4); g.translate(PW / 2, 225); g.scale(0.6 + 0.4 * k, 0.6 + 0.4 * k); g.translate(-PW / 2, -225);
-    TK.text(g, '答え  [0本]', PW / 2, 225, 120, { stroke: 'rgba(0,0,0,0.6)' });
+    PL.label(g, '答え  [0本]', PW / 2, 225, 120);
     g.restore();
   }
   if (t >= 10.4 && t < 14.0) {
     g.save(); g.globalAlpha = fade(t, 10.4, 14.0, 0.3);
-    TK.text(g, '背景を 白に', PW / 2, 225, 96, { color: dark, blur: 0 });
+    PL.label(g, '地を 白に', PW / 2, 225, 96);
     g.restore();
   }
   if (t >= 14.6 && t < 18.0) {
     g.save(); g.globalAlpha = fade(t, 14.6, 18.0, 0.3);
-    TK.lines(g, '白 ⇄ 黒 が\n[てっぺん]で入れかわる', PW / 2, 225, 70, { stroke: 'rgba(0,0,0,0.6)' });
+    TK.lines(g, '白 ⇄ 黒 が\n[てっぺん]で入れかわる', PW / 2, 225, 70, { font: PL.MIN });
     g.restore();
   }
   if (t >= 18.0) {
     g.save(); g.globalAlpha = fade(t, 18.0, 20.5, 0.3);
-    TK.text(g, '曲がり盲（2017）', PW / 2, 225, 100, { stroke: 'rgba(0,0,0,0.6)' });
+    PL.label(g, '曲がり盲（2017）', PW / 2, 225, 100);
     g.restore();
   }
   if (t >= 14.6 && t < 18.0) TK.note(g, t, 14.6, 18.0, '「角に見える」理由は著者の説（ゆるいカーブを見るしくみより、角を見るしくみが勝つ）', { size: 28 });
-  if (t >= 18.0) TK.note(g, t, 18.0, 20.0, '出どころ: Takahashi K. (2017) Curvature Blindness Illusion\ni-Perception 8(6)　絵は論文の図にならってプログラムで描いた', { size: 28 });
+  if (t >= 18.0) TK.note(g, t, 18.0, 20.0, '出どころ: Takahashi K. (2017) Curvature Blindness Illusion\ni-Perception 8(6)　絵は論文の図にならってプログラムで描いた', { size: 26, y: 1162 });
 }
 
 triviaStart({ out: 'illusions-trivia1', voice: 'auto', dur: DUR, draw, subs, cues, peek: 1.5, bgOpts: { grid: false } });

@@ -11,10 +11,14 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく weed-growth-1（型H 当ててみて）「マダケの花は120年に1度。しかも世界中で同時に咲く」。台本は trivia/weed-growth.md。?short で録る
 // 記録の年: 999年・1114年・1700年代はじめ・1844〜47年・1960年代後半（Ed Yong, National Geographic 2015）。
+// 絵は図鑑の版画（PL.*）。マダケの稈・節・2本ずつの枝・笹の葉・小穂の花をそれらしく。
 // 1960年代の同時開花の場所は台本で国名をたしかめていないので、地図に国名を出さず「何千kmはなれた場所」とだけ描く
 const DUR = 35;
 const subs = [
@@ -31,88 +35,167 @@ const cues = [
   { t: 14.0, type: 'whoosh' }, { t: 17.0, type: 'rise' }, { t: 18.0, type: 'ding' }, { t: 22.0, type: 'whoosh' }, { t: 24.5, type: 'tick' }, { t: 25.5, type: 'tick' },
   { t: 28.0, type: 'pop' }, { t: 29.5, type: 'pop' }, { t: 30.5, type: 'pop' }, { t: 31.5, type: 'ding' },
 ];
-const BAMBOO = '#7fd18b', FLOWER = '#ffe08a';
-// 竹1本（節つき）
-function culm(g, x, base, h, w = 16, col = BAMBOO) {
-  g.fillStyle = col; g.fillRect(x - w / 2, base - h, w, h);
-  g.fillStyle = 'rgba(0,0,0,0.35)'; for (let y = base - 60; y > base - h; y -= 70) g.fillRect(x - w / 2 - 2, y, w + 4, 6);
-  g.strokeStyle = col; g.lineWidth = 5; g.lineCap = 'round';
-  for (let y = base - h + 40; y < base - 100; y += 140) { g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 50, y - 20, x + 80, y + 10); g.stroke(); g.beginPath(); g.moveTo(x, y + 70); g.quadraticCurveTo(x - 50, y + 50, x - 80, y + 80); g.stroke(); }
+// ---- マダケ（Phyllostachys）を図鑑の版画（PL.*）で ----
+// 稈（かん）は節ごとに輪が2本（稈の輪と、さやの落ちたあと）。枝は上のほうの節から2本ずつ、左右かわりばんこに出る。
+// 枝の出る側の節の間には、たてのみぞ。葉は細長い笹の葉が枝先に3〜5枚。花は小さな穂（小穂）がかたまり、黄色い葯（やく）がたれる
+const rnd = i => { const v = Math.sin(i * 12.9898 + 78.233) * 43758.5453; return v - Math.floor(v); };
+// 笹の葉1枚（付け根 x, y、向き a、長さ L）
+function bladePath(x, y, a, L) {
+  const w = L * 0.13, c = Math.cos(a), s = Math.sin(a), P = (u, v) => [x + c * u - s * v, y + s * u + c * v];
+  return gg => { gg.moveTo(...P(0, 0)); gg.quadraticCurveTo(...P(L * 0.25, -w), ...P(L * 0.55, -w * 0.7)); gg.quadraticCurveTo(...P(L * 0.85, -w * 0.3), ...P(L, 0)); gg.quadraticCurveTo(...P(L * 0.8, w * 0.35), ...P(L * 0.5, w * 0.7)); gg.quadraticCurveTo(...P(L * 0.2, w * 0.8), ...P(0, 0)); gg.closePath(); };
 }
-// 花（穂のかたまり）
+// 葉と花は、ためておいて最後にまとめて描く（筆のルックはぬるたびにぼかすので、1枚ずつだと重い）
+let BATCH = null;
+function flush(g) {
+  const b = BATCH; BATCH = null; if (!b) return;
+  if (b.blades.length) { const p = gg => b.blades.forEach(f => f(gg)); PL.tint(g, p, PL.T.leaf, 0.85); PL.ink(g, p, b.lw); PL.ink(g, gg => b.veins.forEach(f => f(gg)), 1.1); }
+  if (b.spk.length) { const p = gg => b.spk.forEach(f => f(gg)), a = gg => b.anth.forEach(f => f(gg)); PL.tint(g, p, PL.T.sand, 0.95); PL.ink(g, p, 2); PL.ink(g, gg => b.fil.forEach(f => f(gg)), 1.2); PL.tint(g, a, PL.T.gold, 1); PL.ink(g, a, 1.4); }
+}
+function leaves(g, x, y, dir, L, seed) {
+  const own = !BATCH; if (own) BATCH = { blades: [], veins: [], spk: [], anth: [], fil: [], lw: 1.6 };
+  BATCH.lw = Math.max(BATCH.lw, Math.min(2.6, L * 0.03));
+  const n = 3 + Math.floor(rnd(seed) * 2);
+  for (let i = 0; i < n; i++) {
+    const a = (dir > 0 ? 0.35 : Math.PI - 0.35) + (i - (n - 1) / 2) * 0.42 * dir + (rnd(seed + i) - 0.5) * 0.2;
+    BATCH.blades.push(bladePath(x, y, a, L * (0.8 + rnd(seed * 3 + i) * 0.35)));
+    BATCH.veins.push(gg => { gg.moveTo(x, y); gg.lineTo(x + Math.cos(a) * L * 0.8, y + Math.sin(a) * L * 0.8); });   // 中のすじ
+  }
+  if (own) flush(g);
+}
+// 稈1本。x は根もと、base は地面、h は高さ、w は太さ。o.flower: 0〜1 で枝先に花
+function culm(g, x, base, h, w = 16, o = {}) {
+  const top = base - h, sway = o.sway ?? 0, X = y => x + sway * ((base - y) / h) ** 2 * h * 0.08, W = y => w * (1 - 0.35 * (base - y) / h);
+  const body = gg => { gg.moveTo(X(base) - W(base) / 2, base); for (let y = base; y >= top; y -= 10) gg.lineTo(X(y) - W(y) / 2, y); for (let y = top; y <= base; y += 10) gg.lineTo(X(y) + W(y) / 2, y); gg.closePath(); };
+  PL.tint(g, body, '#8fae5a', 0.8);
+  PL.hatch(g, body, { angle: 1.35, gap: Math.max(4, w * 0.3), w: Math.max(1, w * 0.07), not: gg => { for (let y = base; y >= top; y -= 10) gg.rect(X(y) - W(y), y - 10, W(y) * 1.1, 12); }, cx: x, cy: base });
+  PL.ink(g, body, Math.max(2, w * 0.16));
+  // 節（下ほど間がつまる）。節ごとに輪2本
+  const nodes = []; let y = base - h * 0.06, step = h * 0.07;
+  while (y > top + h * 0.05) { nodes.push(y); y -= step; step *= 1.12; }
+  PL.ink(g, gg => nodes.forEach(ny => { const ww = W(ny) / 2 + 1.5; gg.moveTo(X(ny) - ww, ny); gg.quadraticCurveTo(X(ny), ny + w * 0.18, X(ny) + ww, ny); gg.moveTo(X(ny) - ww * 0.9, ny + w * 0.22); gg.quadraticCurveTo(X(ny), ny + w * 0.36, X(ny) + ww * 0.9, ny + w * 0.22); }), Math.max(1.4, w * 0.11));
+  // 上のほうの節から枝（2本ずつ）と葉。枝の出る側にたてのみぞ
+  const own = !BATCH; if (own) BATCH = { blades: [], veins: [], spk: [], anth: [], fil: [], lw: 1.6 };
+  if (o.leaves !== false) nodes.forEach((ny, i) => {
+    if (i < nodes.length * 0.45) return;
+    const dir = i % 2 ? 1 : -1, bx = X(ny) + dir * W(ny) / 2, bl = Math.min(h * 0.22, 26 + w * 3.2);
+    PL.ink(g, gg => { gg.moveTo(X(ny) + dir * W(ny) * 0.25, ny - 4); gg.lineTo(X(ny) + dir * W(ny) * 0.25, ny - step * 0.5); }, Math.max(1, w * 0.06));
+    const ex = bx + dir * bl, ey = ny - bl * 0.45, ex2 = bx + dir * bl * 0.7, ey2 = ny - bl * 0.9;
+    PL.ink(g, gg => { gg.moveTo(bx, ny); gg.lineTo(ex, ey); gg.moveTo(bx, ny - 2); gg.lineTo(ex2, ey2); }, Math.max(1.4, w * 0.12));
+    leaves(g, ex, ey, dir, bl * 0.9, i * 7 + (o.seed || 0)); leaves(g, ex2, ey2, dir, bl * 0.75, i * 11 + 3 + (o.seed || 0));
+    if (o.flower > 0) { flower(g, ex + dir * 6, ey + 8, o.flower * Math.min(1, w / 14)); }
+  });
+  if (own) flush(g);
+  return { top: [X(top), top] };
+}
+// 花（小穂のかたまり＋たれた葯）。k: 0〜1 の大きさ
 function flower(g, x, y, k) {
-  if (k <= 0) return;
-  g.save(); g.translate(x, y); g.scale(k, k); g.fillStyle = FLOWER;
-  for (let j = 0; j < 7; j++) { const a = j / 7 * Math.PI * 2; g.beginPath(); g.ellipse(Math.cos(a) * 14, Math.sin(a) * 14, 12, 5, a, 0, Math.PI * 2); g.fill(); }
-  g.restore();
+  if (k <= 0.02) return;
+  const own = !BATCH; if (own) BATCH = { blades: [], veins: [], spk: [], anth: [], fil: [], lw: 1.6 };
+  for (let j = 0; j < 5; j++) {   // 小穂（細いだ円）と、糸でたれる葯（やく）
+    const a = -1.2 + j * 0.6, L = (26 + (j % 2) * 6) * k;
+    BATCH.spk.push(PL.ellipse(x + Math.cos(a) * L * 0.5, y + Math.sin(a) * L * 0.5 + 6 * k, L * 0.5, 5 * k, a));
+    const ax = x + Math.cos(a) * L * 0.9, ay = y + Math.sin(a) * L * 0.9 + 6 * k;
+    BATCH.fil.push(gg => { gg.moveTo(ax, ay); gg.lineTo(ax + 2 * k, ay + 14 * k); });
+    BATCH.anth.push(PL.ellipse(ax + 2 * k, ay + 18 * k, 2.4 * k, 5 * k));
+  }
+  if (own) flush(g);
 }
 // 年表（たて）
 const EVENTS = [[999, '999年', 6.4], [1114, '1114年', 7.6], [1720, '1700年代はじめ', 8.8], [1845, '1844〜47年', 10.0], [1967, '1960年代後半', 11.4]];
-const YY = y => lerp(300, 1000, (y - 980) / (2030 - 980));
+const YY = y => lerp(320, 1080, (y - 980) / (2030 - 980));
 function timeline(g, t) {
-  g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 6; g.beginPath(); g.moveTo(380, YY(980)); g.lineTo(380, YY(2030)); g.stroke();
-  [1000, 1500, 2000].forEach(y => TK.text(g, y + '', 340, YY(y), 32, { align: 'right', color: TK.C.dim, bold: false }));
+  const ax = 330;
+  PL.ink(g, gg => { gg.moveTo(ax, YY(980)); gg.lineTo(ax, YY(2030)); for (let y = 1000; y <= 2000; y += 50) { gg.moveTo(ax - (y % 500 ? 10 : 22), YY(y)); gg.lineTo(ax, YY(y)); } }, 4);
+  [1000, 1500, 2000].forEach(y => PL.label(g, y + '', ax - 36, YY(y), 32, { align: 'right', color: '#4a3f33', bold: false }));
   EVENTS.forEach(([y, s, a], i) => {
     const k = TK.pop(t, a, 0.35); if (k <= 0) return;
-    g.save(); g.globalAlpha = clamp(k, 0, 1);
-    flower(g, 380, YY(y), k * 1.2);
-    TK.text(g, s, 430, YY(y), 54, { align: 'left', color: i === 4 ? TK.C.acc : '#fff' });
+    g.save(); g.globalAlpha *= clamp(k, 0, 1);
+    PL.ink(g, gg => { gg.moveTo(ax, YY(y)); gg.lineTo(ax + 40, YY(y)); }, 3);
+    flower(g, ax + 60, YY(y) - 14, clamp(k, 0, 1.3) * 1.1);
+    PL.label(g, s, ax + 130, YY(y), 54, { align: 'left', color: i === 4 ? PL.RED : PL.INK });
     g.restore();
   });
+  // 右はしに、ふだんの竹（花のない稈）
+  culm(g, 960, 1180, 860, 22, { sway: 0.3, seed: 5 });
+  // 間の長さ（1844〜47 → 1960年代後半 ≈ 120年）
+  if (t > 11.6) {
+    g.save(); g.globalAlpha *= fade(t, 11.6, 14, 0.3);
+    PL.ink(g, gg => { gg.moveTo(ax - 120, YY(1845)); gg.lineTo(ax - 120, YY(1967)); gg.moveTo(ax - 132, YY(1845)); gg.lineTo(ax - 108, YY(1845)); gg.moveTo(ax - 132, YY(1967)); gg.lineTo(ax - 108, YY(1967)); }, 4, PL.RED);
+    PL.label(g, '約120年', ax - 146, (YY(1845) + YY(1967)) / 2, 40, { align: 'right', color: PL.RED });
+    g.restore();
+  }
 }
 // はなれた場所の竹が同時に咲く（場所は飾り。国名は出さない）
-const SPOTS = [[230, 420], [820, 360], [560, 760], [190, 900], [880, 860]];
+const SPOTS = [[230, 520], [820, 470], [560, 820], [190, 1000], [880, 980]];
 function world(g, t) {
-  g.strokeStyle = 'rgba(160,190,255,0.25)'; g.lineWidth = 3; g.setLineDash([12, 12]);
-  g.beginPath(); SPOTS.forEach(([x, y], i) => { SPOTS.forEach(([x2, y2], j) => { if (j > i) { g.moveTo(x, y); g.lineTo(x2, y2); } }); }); g.stroke(); g.setLineDash([]);
-  const bloom = TK.pop(t, 17.0, 0.5);
-  SPOTS.forEach(([x, y]) => {
-    for (let j = -1; j <= 1; j++) culm(g, x + j * 34, y + 70, 160, 12);
-    for (let j = -1; j <= 1; j++) flower(g, x + j * 34 + 14, y - 80 + Math.abs(j) * 12, bloom);
+  g.save(); g.globalAlpha *= 0.6;
+  SPOTS.forEach(([x, y], i) => SPOTS.forEach(([x2, y2], j) => { if (j > i) PL.dots(g, [[x, y - 60], [x2, y2 - 60]], { color: PL.INK, w: 3, dash: [2, 12] }); }));
+  g.restore();
+  const bloom = clamp(TK.pop(t, 17.0, 0.5), 0, 1.2);
+  BATCH = { blades: [], veins: [], spk: [], anth: [], fil: [], lw: 1.6 };   // 15本の葉と花をまとめて
+  SPOTS.forEach(([x, y], s) => {
+    const gr = PL.ellipse(x, y + 4, 90, 14); PL.tint(g, gr, PL.T.brown, 0.5); PL.hatch(g, gr, { angle: 0.1, gap: 6, w: 1.4 }); PL.ink(g, gr, 2.5);
+    for (let j = -1; j <= 1; j++) culm(g, x + j * 34, y, 170 - Math.abs(j) * 25, 10, { flower: bloom, seed: s * 13 + j, sway: j * 0.4 });
   });
-  TK.text(g, '何千km はなれた場所', PW / 2, 230, 60, { color: TK.C.sub });
-  if (t > 17.0) { g.save(); g.globalAlpha = clamp((t - 17) / 0.4, 0, 1); TK.text(g, '[同じころ] に開花', PW / 2, 1040, 64); g.restore(); }
+  flush(g);
+  PL.label(g, '何千km はなれた場所', PW / 2, 230, 60, { color: '#4a3f33' });
+  if (t > 17.0) { g.save(); g.globalAlpha *= clamp((t - 17) / 0.4, 0, 1); PL.label(g, '[同じころ] に開花', PW / 2, 1150, 64); g.restore(); }
 }
 // 地下茎でつながった竹と、同じ時計
 function rhizome(g, t) {
-  const GY = 700;
-  g.fillStyle = '#4a3420'; g.fillRect(0, GY, PW, 360);
-  const gr = g.createLinearGradient(0, 940, 0, 1070); gr.addColorStop(0, 'rgba(11,20,48,0)'); gr.addColorStop(1, 'rgba(11,20,48,1)'); g.fillStyle = gr; g.fillRect(0, 940, PW, 130);
-  const k = clamp((t - 22.4) / 2.0, 0, 1), xs = [160, 360, 560, 760, 920];
-  g.strokeStyle = '#d9b77a'; g.lineWidth = 16; g.lineCap = 'round'; g.beginPath(); g.moveTo(100, GY + 120); g.lineTo(lerp(100, 980, k), GY + 120); g.stroke();
+  const GY = 760, SB = 1000, k = clamp((t - 22.4) / 2.0, 0, 1), xs = [160, 360, 560, 760, 920], RY = GY + 110, xe = lerp(80, 1000, k);
+  const soil = gg => { gg.moveTo(0, GY); gg.lineTo(PW, GY); for (let x = PW; x >= 0; x -= 8) gg.lineTo(x, SB + Math.sin(x / 31) * 6); gg.closePath(); };
+  PL.tint(g, soil, PL.T.brown, 0.55); PL.hatch(g, soil, { angle: 0.35, gap: 14, w: 1.6, cx: 540, cy: 900 });
+  PL.ink(g, gg => { gg.moveTo(0, GY); gg.lineTo(PW, GY); }, 5); PL.ink(g, gg => { for (let x = 0; x <= PW; x += 8) x ? gg.lineTo(x, SB + Math.sin(x / 31) * 6) : gg.moveTo(x, SB + Math.sin(x / 31) * 6); }, 3);
+  // 地下茎（節があって、節から根）
+  const rz = gg => { gg.rect(80, RY - 9, xe - 80, 18); };
+  PL.tint(g, rz, PL.T.sand, 0.95); PL.ink(g, rz, 4);
+  PL.ink(g, gg => { for (let x = 110; x < xe - 10; x += 46) { gg.moveTo(x, RY - 10); gg.lineTo(x, RY + 10); for (let r = -1; r <= 1; r += 2) { gg.moveTo(x, RY + 9); gg.quadraticCurveTo(x + r * 14, RY + 40, x + r * 8 + (rnd(x) - 0.5) * 20, RY + 70 + rnd(x + 1) * 30); } } }, 2);
   xs.forEach((x, i) => {
-    if (lerp(100, 980, k) < x) return;
-    g.strokeStyle = '#d9b77a'; g.lineWidth = 10; g.beginPath(); g.moveTo(x, GY + 120); g.lineTo(x, GY); g.stroke();
-    culm(g, x, GY, 330, 16);
-    // 時計（みな同じ針）
-    const cx = x, cy = GY - 400, a = t * 2.2;
-    g.strokeStyle = '#fff'; g.lineWidth = 5; g.beginPath(); g.arc(cx, cy, 36, 0, Math.PI * 2); g.stroke();
-    g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.sin(a) * 26, cy - Math.cos(a) * 26); g.moveTo(cx, cy); g.lineTo(cx + Math.sin(a / 12) * 18, cy - Math.cos(a / 12) * 18); g.stroke();
+    if (xe < x) return;
+    const sh = PL.rect(x - 7, GY, 14, RY - GY - 9); PL.tint(g, sh, PL.T.sand, 0.95); PL.ink(g, sh, 3);
+    culm(g, x, GY, 330, 18, { seed: i * 9, sway: (i - 2) * 0.15 });
+    PL.watch(g, x, GY - 420, 34, (t * 2.2 / (Math.PI * 2)) % 1);   // 時計（みな同じ針）
   });
-  TK.text(g, '地下茎', 240, GY + 175, 46, { color: '#d9b77a' });
-  TK.text(g, 'どれも [同じ時計]', PW / 2, 200, 66);
+  PL.leader(g, 300, RY, 300, SB + 60);
+  PL.label(g, '地下茎（ここから新しい竹）', 320, SB + 70, 44, { align: 'left' });
+  PL.label(g, 'どれも [同じ時計]', PW / 2, 210, 66);
 }
 function factors(g, t) {
-  TK.text(g, '120 =', PW / 2, 420, 140, { color: TK.C.acc });
+  PL.label(g, '120 =', 120, 420, 140, { align: 'left', color: PL.RED });
   const fs = ['2', '2', '2', '3', '5'];
   fs.forEach((f, i) => {
     const k = TK.pop(t, 29.4 + i * 0.3, 0.35); if (k <= 0) return;
     const x = 150 + i * 195;
-    g.save(); g.globalAlpha = clamp(k, 0, 1);
-    TK.card(g, x - 70, 560, 140, 170, { r: 30 });
-    TK.text(g, f, x, 650, 120 * k);
+    g.save(); g.globalAlpha *= clamp(k, 0, 1);
+    TK.card(g, x - 70, 560, 140, 170);
+    TK.text(g, f, x, 650, 120 * Math.min(k, 1.1));
     if (i < 4) TK.text(g, '×', x + 98, 645, 60, { color: TK.C.sub });
     g.restore();
   });
-  if (t > 31.5) { g.save(); g.globalAlpha = fade(t, 31.5, 36, 0.3); TK.card(g, 380, 830, 320, 90, { r: 45, fill: 'rgba(255,107,107,0.18)', stroke: TK.C.red }); TK.text(g, '仮説', PW / 2, 876, 54, { color: TK.C.red }); g.restore(); }
+  if (t > 31.5) { g.save(); g.globalAlpha *= fade(t, 31.5, 36, 0.3); TK.card(g, 600, 830, 320, 90); TK.text(g, '仮説', 760, 876, 54, { color: PL.RED }); g.restore(); }
+  // 左下に、花の咲いた枝
+  g.save(); g.globalAlpha *= fade(t, 28, 40, 0.4);
+  PL.ink(g, gg => { gg.moveTo(80, 1180); gg.quadraticCurveTo(160, 1050, 330, 960); }, 6);
+  leaves(g, 200, 1060, 1, 110, 4); leaves(g, 300, 975, -1, 90, 9);
+  [[150, 1105, 1.4], [250, 1010, 1.5], [335, 955, 1.3]].forEach(([x, y, s]) => flower(g, x, y, s));
+  PL.leader(g, 360, 980, 470, 1000); PL.label(g, '竹の花（小さな穂）', 490, 1000, 40, { align: 'left', bold: false });
+  g.restore();
+}
+
+// 選択肢: 答えの札は、手彩色をしかずに朱の太いわくで（筆のルックでは札の手彩色が字の下でにじみ、字と重なって見えるため）
+function choices(g, ...a) {
+  const card = TK.card;
+  TK.card = (gg, x, y, w, h, o = {}) => { card(gg, x, y, w, h, {}); if (o.fill) PL.ink(gg, PL.rect(x + 4, y + 4, w - 8, h - 8), 7, PL.RED); };
+  try { TK.choices(g, ...a); } finally { TK.card = card; }
 }
 
 function draw(g, t) {
   if (t < 6.0) {
     TK.text(g, '竹の花は、何年に1回？', PW / 2, 220, 84);
-    TK.choices(g, t, 0, 6.0, ['毎年', '12年', '120年'], { y: 560, h: 130, gap: 30, size: 84, answer: 2, reveal: 3.4, think: [1.4, 3.4] });
-    if (t > 3.8) { g.save(); g.globalAlpha = clamp((t - 3.8) / 0.3, 0, 1); TK.text(g, '（マダケ）', PW / 2, 400, 60, { color: TK.C.sub }); g.restore(); }
-  } else if (t < 14.0) { TK.text(g, 'マダケの花の記録', PW / 2, 200, 64, { color: TK.C.sub }); timeline(g, t); }
+    choices(g, t, 0, 6.0, ['毎年', '12年', '120年'], { y: 560, h: 130, gap: 30, size: 84, answer: 2, reveal: 3.4, think: [1.4, 3.4] });
+    if (t > 3.8) { g.save(); g.globalAlpha = clamp((t - 3.8) / 0.3, 0, 1); TK.text(g, '（マダケ）', PW / 2, 330, 60, { color: TK.C.sub }); g.restore(); }
+  } else if (t < 14.0) { PL.label(g, 'マダケの花の記録', 120, 210, 64, { align: 'left', color: '#4a3f33' }); timeline(g, t); }
   else if (t < 22.0) world(g, t);
   else if (t < 28.0) rhizome(g, t);
   else factors(g, t);

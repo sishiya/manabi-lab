@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく phonograph-2（型A ぜんぶ逆）「世界最古の録音はエジソン…じゃない」。台本は trivia/phonograph.md。?short で録る
@@ -32,98 +35,111 @@ const cues = [
 ];
 const sig = u => Math.sin(u * 40) * (0.5 + 0.5 * Math.sin(u * 7)) * Math.exp(-((u - 0.5) ** 2) * 3) + 0.25 * Math.sin(u * 95);
 
-function cross(g, cx, cy, rx, ry, k) {
-  g.save(); g.strokeStyle = TK.C.red; g.lineWidth = 20; g.lineCap = 'round'; g.globalAlpha *= k;
-  g.beginPath(); g.moveTo(cx - rx, cy - ry); g.lineTo(cx + rx, cy + ry); g.moveTo(cx + rx, cy - ry); g.lineTo(cx - rx, cy + ry); g.stroke(); g.restore();
-}
-// すすの紙に、線をひっかいて描く（u まで）
+// ---- 絵は「図鑑の版画」（trivia-plate.js の PL.*）。本物の紙の写真は使わない（すすの紙と線は自分で描いたたとえ）----
+function cross(g, cx, cy, r, k) { if (k <= 0) return; g.save(); g.globalAlpha *= clamp(k, 0, 1); PL.ink(g, gg => { gg.moveTo(cx - r, cy - r); gg.lineTo(cx + r, cy + r); gg.moveTo(cx + r, cy - r); gg.lineTo(cx - r, cy + r); }, 18, PL.RED); g.restore(); }
+// すすを塗った紙に、豚の毛の針で線をひっかく（u まで）。紙のふちは少し波うつ
 function soot(g, x, y, w, h, u) {
-  g.save();
-  g.fillStyle = '#23262e'; g.fillRect(x, y, w, h);
-  g.strokeStyle = '#e8e2d0'; g.lineWidth = 3; g.beginPath();
+  const p = PL.poly([[x, y], [x + w, y + 6], [x + w - 4, y + h], [x + 6, y + h - 4]]);
+  PL.tint(g, p, '#2a2622', 0.9);
+  PL.hatch(g, p, { angle: 0.2, gap: 9, w: 1, color: 'rgba(120,110,95,0.35)' });   // すすのむら
+  PL.ink(g, p, 5);
   const n = Math.floor(240 * u);
-  for (let i = 0; i <= n; i++) { const v = i / 240, xx = x + 20 + v * (w - 40), yy = y + h / 2 + sig(v) * h * 0.3; i ? g.lineTo(xx, yy) : g.moveTo(xx, yy); }
-  g.stroke();
-  if (u > 0 && u < 1) { const v = n / 240; g.fillStyle = TK.C.acc; g.beginPath(); g.arc(x + 20 + v * (w - 40), y + h / 2 + sig(v) * h * 0.3, 10, 0, Math.PI * 2); g.fill(); }
+  if (n > 1) PL.ink(g, gg => { for (let i = 0; i <= n; i++) { const v = i / 240, xx = x + 20 + v * (w - 40), yy = y + h / 2 + sig(v) * h * 0.3; i ? gg.lineTo(xx, yy) : gg.moveTo(xx, yy); } }, 3, '#efe6d2');
+  if (u > 0 && u < 1) {   // 針（毛）と、それをつけた振動板の腕
+    const v = n / 240, px = x + 20 + v * (w - 40), py = y + h / 2 + sig(v) * h * 0.3;
+    PL.ink(g, gg => { gg.moveTo(px, py); gg.lineTo(px - 30, y - 70); }, 3, PL.RED);
+    const arm = PL.rect(px - 60, y - 100, 60, 30); PL.tint(g, arm, PL.T.wood, 0.9); PL.ink(g, arm, 3);
+  }
+}
+// 目
+function eye(g, x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s);
+  const lid = gg => { gg.moveTo(-90, 0); gg.quadraticCurveTo(0, -80, 90, 0); gg.quadraticCurveTo(0, 80, -90, 0); gg.closePath(); };
+  PL.tint(g, lid, '#fbf6ea', 0.9);
+  const iris = PL.circle(0, 0, 32); PL.tint(g, iris, PL.T.brown, 0.85); PL.hatch(g, iris, { angle: 0.7, gap: 6, w: 1.4, cx: 0, cy: 0 }); PL.ink(g, iris, 3);
+  PL.tint(g, PL.circle(0, 0, 13), PL.INK, 1);
+  PL.ink(g, lid, 6);
+  PL.ink(g, gg => { for (let i = 1; i < 8; i++) { const a = i / 8, xx = -90 + a * 180, yy = -Math.sin(a * Math.PI) * 40; gg.moveTo(xx, yy); gg.lineTo(xx + (a - 0.5) * 30, yy - 22); } }, 3);
   g.restore();
 }
-function eye(g, x, y, s) {
-  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = '#e8f0ff'; g.lineWidth = 6;
-  g.beginPath(); g.moveTo(-90, 0); g.quadraticCurveTo(0, -80, 90, 0); g.quadraticCurveTo(0, 80, -90, 0); g.stroke();
-  g.beginPath(); g.arc(0, 0, 30, 0, Math.PI * 2); g.stroke(); g.fillStyle = '#e8f0ff'; g.beginPath(); g.arc(0, 0, 12, 0, Math.PI * 2); g.fill(); g.restore();
-}
-function speaker(g, x, y, s, t, on) {
-  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = '#e8f0ff'; g.lineWidth = 6; g.lineJoin = 'round';
-  g.beginPath(); g.moveTo(-60, -25); g.lineTo(-30, -25); g.lineTo(10, -60); g.lineTo(10, 60); g.lineTo(-30, 25); g.lineTo(-60, 25); g.closePath(); g.stroke();
-  if (on) { g.strokeStyle = TK.C.acc; for (let i = 0; i < 3; i++) { g.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(t * 4 - i)); g.beginPath(); g.arc(20, 0, 30 + i * 24, -0.7, 0.7); g.stroke(); } }
+// 聴くためのラッパ（音の出口）。on で音の弧
+function horn(g, x, y, s, t, on) {
+  g.save(); g.translate(x, y); g.scale(s, s);
+  const bell = gg => { gg.moveTo(-70, -10); gg.lineTo(-10, -12); gg.quadraticCurveTo(30, -20, 60, -70); gg.lineTo(60, 70); gg.quadraticCurveTo(30, 20, -10, 12); gg.lineTo(-70, 10); gg.closePath(); };
+  PL.tint(g, bell, PL.T.gold, 0.8); PL.hatch(g, bell, { angle: 0.8, gap: 7, w: 1.4, not: PL.rect(-80, -80, 160, 72), cx: 0, cy: 0 }); PL.ink(g, bell, 5);
+  PL.ink(g, PL.ellipse(60, 0, 14, 70), 4);
+  if (on) PL.ink(g, gg => { for (let i = 0; i < 3; i++) { const r = 34 + i * 26 + ((t * 40) % 26); gg.moveTo(70 + Math.cos(-0.7) * r, Math.sin(-0.7) * r); gg.arc(70, 0, r, -0.7, 0.7); } }, 4, PL.RED);
   g.restore();
 }
 
 function draw(g, t) {
   // 0〜3: フック
   if (t < 3.0) {
-    g.save(); g.globalAlpha = TK.pop(t, 0.1, 0.4);
-    TK.card(g, 110, 280, 740, 220);
-    TK.text(g, '最古の録音', PW / 2 - 60, 345, 60, { color: TK.C.sub });
-    TK.text(g, '＝ エジソン（1877）', PW / 2 - 60, 435, 72);
+    g.save(); g.globalAlpha *= clamp(TK.pop(t, 0.1, 0.4), 0, 1);
+    TK.card(g, 90, 280, 680, 220);
+    PL.label(g, '最古の録音', 430, 345, 58);
+    PL.label(g, '＝ エジソン（1877）', 430, 435, 58);
     g.restore();
-    cross(g, PW / 2 - 60, 390, 300, 90, TK.pop(t, 1.0, 0.3));
+    cross(g, 910, 390, 80, TK.pop(t, 1.0, 0.3));   // 札の横に朱の ✕（字の上には描かない）
     TK.hook(g, t, 1.8, 3.0, 'じつは [1860年]', { y: 720, size: 130 });
   }
   // 3〜10: すすの紙に線
   if (t >= 3.0 && t < 10.0) {
-    g.save(); g.globalAlpha = TK.pop(t, 3.1, 0.4);
-    TK.text(g, '1860年4月9日  パリ', PW / 2 - 60, 230, 66, { color: TK.C.acc });
-    TK.text(g, 'É.-L. スコット', PW / 2 - 60, 320, 50);
+    g.save(); g.globalAlpha *= clamp(TK.pop(t, 3.1, 0.4), 0, 1);
+    PL.label(g, '1860年4月9日  パリ', 100, 220, 64, { align: 'left', color: PL.RED });
+    PL.label(g, 'É.-L. スコット', 100, 305, 50, { align: 'left' });
     g.restore();
-    soot(g, 90, 420, 780, 360, clamp((t - 4.0) / 4.5, 0, 1));
-    TK.text(g, 'すすを塗った紙（線は自分で描いたたとえ）', PW / 2 - 60, 840, 36, { color: TK.C.dim, bold: false });
+    soot(g, 90, 480, 900, 340, clamp((t - 4.0) / 4.5, 0, 1));
+    PL.label(g, 'すすを塗った紙（線は自分で描いたたとえ）', 540, 880, 36, { bold: false });
     TK.note(g, t, 3.5, 10, 'いまわかっている最古の録音の一つ', { size: 32 });
   }
   // 10〜17: 見るための記録
   if (t >= 10.0 && t < 17.0) {
-    soot(g, 90, 220, 780, 260, 1);
-    eye(g, 300, 650, 1.2);
-    speaker(g, 660, 650, 1.4, t, false);
-    cross(g, 660, 650, 90, 90, TK.pop(t, 11.0, 0.3));
-    TK.text(g, '見る', 300, 790, 56, { color: TK.C.green });
-    TK.text(g, '聴く機械はなかった', 660, 790, 46, { color: TK.C.red });
+    soot(g, 90, 220, 900, 260, 1);
+    eye(g, 300, 680, 1.2);
+    horn(g, 700, 680, 1.4, t, false);
+    cross(g, 720, 680, 100, TK.pop(t, 11.0, 0.3));
+    PL.label(g, '見る', 300, 830, 56, { color: PL.GREEN });
+    PL.label(g, '聴く機械はなかった', 720, 830, 46, { color: PL.RED });
   }
   // 17〜25: 2008年、撮って計算で音に
   if (t >= 17.0 && t < 25.0) {
     const k = clamp((t - 18.0) / 3.0, 0, 1);
-    soot(g, 90, 300, 780, 260, 1);
-    g.save(); g.strokeStyle = TK.C.acc2; g.lineWidth = 6; g.shadowColor = TK.C.acc2; g.shadowBlur = 20;
-    const sx = 90 + 780 * k; g.beginPath(); g.moveTo(sx, 280); g.lineTo(sx, 580); g.stroke(); g.restore();
-    TK.text(g, '細かく撮る', 480, 620, 44, { color: TK.C.acc2 });
-    g.save(); g.globalAlpha = TK.pop(t, 21.5, 0.4); TK.text(g, '[2008年]（148年後）', PW / 2 - 60, 210, 70); g.restore();
-    if (t > 21.5) { speaker(g, PW / 2 - 60, 800, 1.4, t, true); TK.text(g, '計算で音に', PW / 2 - 60, 940, 48, { color: TK.C.acc }); }
+    soot(g, 90, 320, 900, 260, 1);
+    const sx = 90 + 900 * k;
+    PL.ink(g, gg => { gg.moveTo(sx, 300); gg.lineTo(sx, 600); }, 6, TK.C.acc2);   // 撮る線
+    PL.ink(g, gg => { gg.moveTo(sx - 10, 300); gg.lineTo(sx + 10, 300); gg.moveTo(sx - 10, 600); gg.lineTo(sx + 10, 600); }, 4, TK.C.acc2);
+    PL.label(g, '細かく撮る', 540, 650, 44, { color: TK.C.acc2 });
+    g.save(); g.globalAlpha *= clamp(TK.pop(t, 21.5, 0.4), 0, 1); PL.label(g, '[2008年]（148年後）', 100, 220, 68, { align: 'left' }); g.restore();
+    if (t > 21.5) { horn(g, 440, 820, 1.3, t, true); PL.label(g, '計算で音に', 440, 960, 48, { color: PL.RED }); }
     TK.note(g, t, 18, 25, '復元した音はこの動画では流しません', { size: 32 });
   }
   // 25〜31: 形 → 数 → 音
   if (t >= 25.0 && t < 31.0) {
-    const rows = [{ y: 300, l: '線の形' }, { y: 560, l: '数（点の高さ）' }, { y: 820, l: '音の波' }];
+    const rows = [{ y: 330, l: '線の形' }, { y: 600, l: '数（点の高さ）' }, { y: 870, l: '音の波' }];
     rows.forEach((r, i) => {
-      const k = TK.pop(t, 25.2 + i * 1.2, 0.4); if (k <= 0) return;
-      g.save(); g.globalAlpha = clamp(k, 0, 1);
-      TK.text(g, r.l, 110, r.y - 110, 44, { align: 'left', color: TK.C.sub });
-      if (i === 0) { g.strokeStyle = '#e8e2d0'; g.lineWidth = 4; g.beginPath(); for (let j = 0; j <= 160; j++) { const v = j / 160, x = 110 + v * 740, y = r.y + sig(v) * 70; j ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
-      if (i === 1) { g.fillStyle = TK.C.acc2; for (let j = 0; j <= 40; j++) { const v = j / 40, x = 110 + v * 740, y = r.y + sig(v) * 70; g.beginPath(); g.arc(x, y, 7, 0, Math.PI * 2); g.fill(); g.fillRect(x - 1.5, r.y, 3, y - r.y); } }
-      if (i === 2) { g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.beginPath(); for (let j = 0; j <= 160; j++) { const v = j / 160, x = 110 + v * 740, y = r.y + sig((v + t * 0.3) % 1) * 70; j ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
+      const k = clamp(TK.pop(t, 25.2 + i * 1.2, 0.4), 0, 1); if (k <= 0) return;
+      g.save(); g.globalAlpha *= k;
+      PL.label(g, r.l, 110, r.y - 115, 44, { align: 'left' });
+      PL.ink(g, gg => { gg.moveTo(110, r.y); gg.lineTo(850, r.y); }, 1.4, 'rgba(35,28,21,0.4)');   // 基準の線
+      if (i === 0) PL.ink(g, gg => { for (let j = 0; j <= 160; j++) { const v = j / 160, x = 110 + v * 740, y = r.y + sig(v) * 70; j ? gg.lineTo(x, y) : gg.moveTo(x, y); } }, 4);
+      if (i === 1) { PL.ink(g, gg => { for (let j = 0; j <= 40; j++) { const v = j / 40, x = 110 + v * 740, y = r.y + sig(v) * 70; gg.moveTo(x, r.y); gg.lineTo(x, y); } }, 2.4, TK.C.acc2); const dots = gg => { for (let j = 0; j <= 40; j++) { const v = j / 40; PL.circle(110 + v * 740, r.y + sig(v) * 70, 7)(gg); } }; PL.tint(g, dots, TK.C.acc2, 0.95); PL.ink(g, dots, 2, TK.C.acc2); }
+      if (i === 2) PL.ink(g, gg => { for (let j = 0; j <= 160; j++) { const v = j / 160, x = 110 + v * 740, y = r.y + sig((v + t * 0.3) % 1) * 70; j ? gg.lineTo(x, y) : gg.moveTo(x, y); } }, 6, PL.RED);
+      if (i > 0) { PL.ink(g, gg => { gg.moveTo(950, r.y - 220); gg.lineTo(950, r.y - 70); gg.moveTo(935, r.y - 90); gg.lineTo(950, r.y - 70); gg.lineTo(965, r.y - 90); }, 4); }   // 下へ（↓）
       g.restore();
     });
   }
   // 31〜35: 年表
   if (t >= 31.0) {
-    const items = [{ y: 1860, l: '見るための記録', c: '#e8e2d0', a: 31.6 }, { y: 1877, l: '聴きかえせる録音（エジソン）', c: TK.C.acc, a: 32.2 }, { y: 2008, l: '1860年の線を、計算で音に', c: TK.C.acc2, a: 32.8 }];
-    g.save(); g.strokeStyle = 'rgba(255,255,255,0.3)'; g.lineWidth = 8; g.beginPath(); g.moveTo(170, 260); g.lineTo(170, 900); g.stroke(); g.restore();
+    const items = [{ y: 1860, l: '見るための記録', c: PL.INK, a: 31.6 }, { y: 1877, l: '聴きかえせる録音（エジソン）', c: PL.RED, a: 32.2 }, { y: 2008, l: '1860年の線を、計算で音に', c: TK.C.acc2, a: 32.8 }];
+    PL.ink(g, gg => { gg.moveTo(170, 240); gg.lineTo(170, 940); for (let i = 0; i < 15; i++) { gg.moveTo(170, 250 + i * 46); gg.lineTo(150, 250 + i * 46); } }, 4);
     items.forEach((it, i) => {
       if (t < it.a) return;
       const y = 300 + i * 270;
-      g.save(); g.globalAlpha = TK.pop(t, it.a, 0.35);
-      g.fillStyle = it.c; g.beginPath(); g.arc(170, y, 22, 0, Math.PI * 2); g.fill();
-      TK.text(g, String(it.y), 230, y - 30, 72, { align: 'left', color: it.c });
-      TK.text(g, it.l, 230, y + 50, 46, { align: 'left' });
+      g.save(); g.globalAlpha *= clamp(TK.pop(t, it.a, 0.35), 0, 1);
+      const dot = PL.circle(170, y, 22); PL.tint(g, dot, i === 1 ? PL.T.rust : i === 2 ? PL.T.sky : PL.T.gray, 0.95); PL.ink(g, dot, 4);
+      PL.label(g, String(it.y), 230, y - 30, 72, { align: 'left', color: it.c });
+      PL.label(g, it.l, 230, y + 50, 46, { align: 'left' });
       g.restore();
     });
     TK.note(g, t, 32.2, 35, '出どころ: First Sounds（firstsounds.org）', { size: 30 });

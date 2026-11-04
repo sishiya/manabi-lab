@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく piano-hand-3（型A ぜんぶ逆）「指は1本ずつ動かせる…じゃない」。台本は trivia/piano-hand.md。?short で録る
@@ -32,99 +35,170 @@ const cues = [
   { t: 13.0, type: 'whoosh' }, { t: 14.4, type: 'pop' }, { t: 17.0, type: 'ding' }, { t: 21.0, type: 'whoosh' }, { t: 22.4, type: 'thud' }, { t: 26.0, type: 'pop' },
 ];
 
-// 手の甲を上から（模式）。bend[i]: 0〜1（i = 0 親指 … 4 小指）。右手
-const FING = [{ dx: -190, L: 150, ang: -0.7, w: 62 }, { dx: -105, L: 230, ang: -0.08, w: 54 }, { dx: -15, L: 260, ang: 0, w: 56 }, { dx: 75, L: 240, ang: 0.07, w: 54 }, { dx: 158, L: 185, ang: 0.17, w: 48 }];
-function hand(g, cx, cy, bend, o = {}) {
-  g.save();
-  g.lineCap = 'round';
-  FING.forEach((F, i) => {
-    const b = bend[i] || 0, L = F.L * (1 - 0.55 * b), bx = cx + F.dx, by = cy - (i === 0 ? 40 : 150);
-    const ex = bx + Math.sin(F.ang) * L, ey = by - Math.cos(F.ang) * L;
-    g.strokeStyle = o.col && o.col[i] ? o.col[i] : (b > 0.05 ? 'rgba(207,224,255,0.65)' : '#cfe0ff'); g.lineWidth = F.w;
-    g.beginPath(); g.moveTo(bx, by); g.lineTo(ex, ey); g.stroke();
-    if (o.ripple && o.ripple[i]) {
-      const r = o.ripple[i], ph = (o.t * 1.4 + i * 0.13) % 1;
-      g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 6;
-      for (let k = 0; k < 2; k++) { const p = (ph + k * 0.5) % 1; g.globalAlpha = (1 - p) * 0.9; g.beginPath(); g.arc(ex, ey, 30 + p * r, 0, Math.PI * 2); g.stroke(); }
-      g.restore();
-    }
-  });
-  g.fillStyle = 'rgba(207,224,255,0.9)';
-  g.beginPath(); g.roundRect(cx - 230, cy - 170, 450, 300, 110); g.fill();
-  g.restore();
+/// ---- 図鑑の版画の道具で描く部品（PL.*）----
+const TAU = Math.PI * 2;
+const curvy = pts => g => {   // なめらかな閉じた形
+  const n = pts.length, mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const m0 = mid(pts[n - 1], pts[0]); g.moveTo(m0[0], m0[1]);
+  for (let i = 0; i < n; i++) { const p = pts[i], q = mid(p, pts[(i + 1) % n]); g.quadraticCurveTo(p[0], p[1], q[0], q[1]); }
+  g.closePath();
+};
+function capsule(bx, by, a, L, w) {   // 指の形（根もと → 丸い先）
+  const dx = Math.sin(a), dy = -Math.cos(a), nx = Math.cos(a), ny = Math.sin(a), h = w / 2, cx = bx + dx * (L - h), cy = by + dy * (L - h);
+  return g => { g.moveTo(bx + nx * h, by + ny * h); g.lineTo(cx + nx * h, cy + ny * h); g.arc(cx, cy, h, a, a - Math.PI, true); g.lineTo(bx - nx * h, by - ny * h); g.closePath(); };
 }
-function crossX(g, x, y, s, k) {
-  g.save(); g.globalAlpha *= k; g.strokeStyle = TK.C.red; g.lineWidth = 22; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(x - s, y - s); g.lineTo(x + s, y + s); g.moveTo(x + s, y - s); g.lineTo(x - s, y + s); g.stroke(); g.restore();
+// 手の甲を上から（右手。親指が左）。bend[i]: 0〜1（i = 0 親指 … 4 小指）。上から見ると、曲げた指は短く見え、つめが向こうへかくれる
+// 指はまとめて1回でぬる（筆のルックはぬるたびにぼかすので、回数を少なく）。hiIdx の指だけ金と朱で
+const FING = [{ x: -62, y: -166, L: 202, w: 38, a: -0.10 }, { x: -21, y: -174, L: 222, w: 40, a: -0.03 }, { x: 21, y: -170, L: 210, w: 37, a: 0.04 }, { x: 60, y: -154, L: 170, w: 32, a: 0.13 }];
+const THUMB = { x: -60, y: -40, L: 135, w: 46, a: -0.6 };
+function digitGeo(f, s, cx, wy, b, crease) {
+  const bx = cx + f.x * s, by = wy + f.y * s, a = f.a, L = f.L * s * (1 - 0.55 * b), w = f.w * s;
+  const dx = Math.sin(a), dy = -Math.cos(a), nx = Math.cos(a), ny = Math.sin(a);
+  const cr = (x, y, ww, k) => gg => { gg.moveTo(x - nx * ww, y - ny * ww); gg.quadraticCurveTo(x + dx * k, y + dy * k, x + nx * ww, y + ny * ww); };
+  return {
+    b, body: capsule(bx, by, a, L, w), lit: capsule(bx - w * 0.28, by - w * 0.08, a, L, w),
+    crease: gg => { crease.forEach(q => cr(bx + dx * L * q, by + dy * L * q, w * 0.3, 6)(gg)); if (b >= 0.5) cr(bx + dx * (L - w * 0.5), by + dy * (L - w * 0.5), w * 0.32, 10)(gg); },
+    nail: PL.ellipse(bx + dx * (L - w * 0.72), by + dy * (L - w * 0.72), w * 0.29, w * 0.42 * (1 - b), a),
+    tip: [bx + dx * L, by + dy * L],
+  };
+}
+function hand(g, cx, wy, s, bend = [0, 0, 0, 0, 0], hiIdx = -1) {
+  const P = (x, y) => [cx + x * s, wy + y * s];
+  const cuff = PL.poly([P(-78, 26), P(78, 26), P(82, 70), P(-82, 70)]);
+  PL.tint(g, cuff, PL.T.sky, 0.6); PL.hatch(g, cuff, { angle: 1.2, gap: 9, w: 2 }); PL.ink(g, cuff, 5);
+  PL.ink(g, gg => { const [x1, y1] = P(-80, 50), [x2, y2] = P(80, 50); gg.moveTo(x1, y1); gg.lineTo(x2, y2); }, 1.6);
+  const D = [digitGeo(THUMB, s, cx, wy, bend[0], [0.62]), ...FING.map((f, i) => digitGeo(f, s, cx, wy, bend[i + 1], [0.5, 0.74]))];
+  const sel = (k, pick) => gg => D.forEach((d, i) => { if (pick(i, d)) d[k](gg); });
+  const norm = i => i !== hiIdx, hi = i => i === hiIdx;
+  PL.tint(g, sel('body', norm), PL.T.rose, 0.5);
+  if (hiIdx >= 0) PL.tint(g, sel('body', hi), PL.T.gold, 0.75);
+  PL.hatch(g, sel('body', () => true), { angle: 0.75, gap: 8, w: 1.8, not: sel('lit', () => true) });
+  PL.ink(g, sel('body', norm), 4); if (hiIdx >= 0) PL.ink(g, sel('body', hi), 6, PL.RED);
+  PL.ink(g, sel('crease', () => true), 2);
+  const nl = sel('nail', (i, d) => d.b < 0.4);
+  PL.tint(g, nl, PL.T.sand, 0.7); PL.ink(g, nl, 2.4);
+  const palm = curvy([P(-62, 34), P(62, 34), P(80, -40), P(86, -130), P(78, -176), P(40, -200), P(0, -206), P(-44, -202), P(-82, -186), P(-94, -130), P(-92, -70), P(-76, -10)]);
+  g.save(); g.beginPath(); palm(g); g.fillStyle = PL.PAPER; g.fill(); g.restore();   // 指の根もとを手の甲でかくす（下じき）
+  PL.tint(g, palm, PL.T.rose, 0.5);
+  PL.hatch(g, palm, { angle: 0.75, gap: 9, w: 2, not: curvy([P(-70, 20), P(40, 20), P(56, -40), P(62, -130), P(52, -186), P(-60, -200), P(-104, -150), P(-100, -60)]) });
+  PL.ink(g, gg => FING.forEach(f => { const [x1, y1] = P(f.x * 0.45, 20), [x2, y2] = P(f.x, f.y - 22); gg.moveTo(x1, y1); gg.quadraticCurveTo((x1 + x2) / 2 + f.x * 0.1 * s, (y1 + y2) / 2, x2, y2); }), 2, 'rgba(35,28,21,0.55)');   // 手の甲の腱
+  PL.ink(g, gg => FING.forEach(f => { const [x, y] = P(f.x, f.y - 26); gg.moveTo(x - 12 * s, y + 4 * s); gg.quadraticCurveTo(x, y - 6 * s, x + 12 * s, y + 4 * s); }), 2.4);
+  PL.ink(g, palm, 5);
+  return D.map(d => d.tip);
+}
+// 波紋（墨の細い輪。大きいものは朱）
+function ripple(g, x, y, r, ph, big) {
+  for (let k = 0; k < 2; k++) {
+    const p = (ph + k * 0.5) % 1;
+    g.save(); g.globalAlpha *= (1 - p) * 0.9;
+    PL.ink(g, PL.circle(x, y, 30 + p * r), big ? 6 : 3, big ? PL.RED : PL.INK);
+    g.restore();
+  }
+}
+// 鍵盤（上から）。lit: 押されている白鍵の番号の集合。ふた（木）・赤いフェルト・白鍵・黒鍵
+// 同じ色の鍵はまとめて1回でぬる（筆のルックはぬるたびにぼかすので、回数を少なく）
+function keyboard(g, x0, y0, w, h, n, lit) {
+  const kw = w / n, bh = h * 0.6, lid = PL.rect(x0 - 24, y0 - 62, w + 48, 54);
+  PL.tint(g, lid, PL.T.wood, 0.8);
+  PL.hatch(g, lid, { angle: 0.2, gap: 9, w: 2, not: PL.rect(x0 - 24, y0 - 62, w + 48, 26) });
+  PL.ink(g, gg => { for (let k = 0; k < 3; k++) { const yy = y0 - 54 + k * 9; gg.moveTo(x0 - 20, yy); for (let x = x0 - 20; x <= x0 + w + 20; x += 40) gg.lineTo(x, yy + Math.sin(x * 0.013 + k * 1.7) * 2.5); } }, 1.3);
+  PL.ink(g, lid, 5);
+  PL.ink(g, gg => { gg.moveTo(x0, y0 - 4); gg.lineTo(x0 + w, y0 - 4); }, 5, PL.RED);   // フェルト
+  const keys = on => gg => { for (let i = 0; i < n; i++) if (lit.has(i) === on) gg.rect(x0 + i * kw, y0, kw, h); };
+  PL.tint(g, keys(false), PL.T.sand, 0.22);
+  if (lit.size) { PL.tint(g, keys(true), PL.T.gold, 0.85); PL.hatch(g, keys(true), { angle: 0.9, gap: 8, w: 1.8 }); }
+  PL.ink(g, gg => { keys(false)(gg); keys(true)(gg); }, 3);
+  PL.ink(g, gg => { for (let i = 0; i < n; i++) { const yy = y0 + h - (lit.has(i) ? 22 : 14); gg.moveTo(x0 + i * kw + 3, yy); gg.lineTo(x0 + (i + 1) * kw - 3, yy); } }, 1.4);   // 手前のふち（押した鍵は沈む）
+  const blacks = []; for (let i = 0; i < n - 1; i++) if (![2, 6].includes(i % 7)) blacks.push(x0 + (i + 1) * kw - kw * 0.3);
+  const bp = gg => blacks.forEach(bx => gg.rect(bx, y0, kw * 0.6, bh));
+  PL.tint(g, bp, PL.INK, 0.9); PL.ink(g, bp, 3);
+  PL.ink(g, gg => blacks.forEach(bx => { gg.moveTo(bx + kw * 0.14, y0 + 8); gg.lineTo(bx + kw * 0.14, y0 + bh - 14); }), 2, 'rgba(239,230,210,0.55)');   // つやの線
+}
+// 前腕から指先まで（手のひらがわ・すかした解剖図の模式）。k1: 中・薬・小の筋肉、k2: 人さし指の腱
+const TIPS = [[420, 220], [525, 190], [625, 212], [712, 268]], NAMES = ['人さし指', '中指', '薬指', '小指'];
+function forearm(g, k1, k2) {
+  const AP = [[330, 1190], [380, 940], [410, 700], [392, 600], [382, 470], [420, 430], [530, 418], [630, 424], [700, 442], [720, 520], [688, 640], [700, 760], [740, 960], [780, 1190]];
+  const arm = curvy(AP);
+  PL.tint(g, arm, PL.T.rose, 0.32);
+  PL.hatch(g, arm, { angle: 0.75, gap: 10, w: 1.6, not: curvy(AP.map(([x, y]) => [x - 34, y])) });
+  // 指（すかした輪郭）
+  const bases = [[438, 440], [528, 430], [618, 436], [694, 460]];
+  const fp = [...TIPS.map(([x, y], i) => { const [bx, by] = bases[i], a = Math.atan2(x - bx, by - y); return capsule(bx, by, a, Math.hypot(x - bx, y - by) + 20, [44, 46, 43, 36][i]); }), capsule(440, 585, -0.85, 190, 50)];
+  const fingers = gg => fp.forEach(p => p(gg));
+  PL.tint(g, fingers, PL.T.rose, 0.32); PL.ink(g, fingers, 4);
+  PL.ink(g, arm, 5);
+  PL.ink(g, gg => { gg.moveTo(400, 640); gg.quadraticCurveTo(540, 655, 690, 640); gg.moveTo(402, 660); gg.quadraticCurveTo(540, 676, 688, 660); }, 1.6, 'rgba(35,28,21,0.6)');   // 手首のしわ
+  // 筋肉のかたまり（紡錘形）: 中・薬・小は1つ（金）、人さし指はべつ（青）
+  const big = curvy([[600, 700], [668, 790], [690, 930], [660, 1080], [600, 1150], [540, 1080], [515, 930], [540, 790]]);
+  const idx = curvy([[440, 720], [478, 800], [484, 930], [462, 1060], [434, 1110], [408, 1060], [400, 930], [410, 800]]);
+  [[big, PL.T.gold, 0.3 + 0.55 * k1, 600, PL.RED, k1], [idx, PL.T.sea, 0.25 + 0.5 * k2, 442, '#2f5f7a', k2]].forEach(([p, c, a, mx, col, k]) => {
+    PL.tint(g, p, c, a);
+    g.save(); g.beginPath(); p(g); g.clip();
+    PL.ink(g, gg => { for (let d = -80; d <= 80; d += 13) { gg.moveTo(mx + d * 0.4, 700); gg.quadraticCurveTo(mx + d, 930, mx + d * 0.4, 1150); } }, 1.4, 'rgba(35,28,21,0.55)');   // 筋の線維
+    g.restore();
+    PL.hatch(g, p, { angle: 0.75, gap: 8, w: 1.6, not: g2 => { g2.rect(0, 0, mx + 10, PH); } });
+    PL.ink(g, p, k > 0.5 ? 6 : 4, k > 0.5 ? col : PL.INK);
+  });
+  // 腱（筋肉から指先へ）。人さし指は早く分かれる
+  TIPS.forEach(([x, y], i) => {
+    const from = i === 0 ? [442, 724] : [570 + (i - 1) * 30, 706], col = i === 0 ? '#2f5f7a' : PL.RED;
+    PL.ink(g, gg => { gg.moveTo(from[0], from[1]); gg.bezierCurveTo(from[0], 560, x, 520, x, y + 22); }, 7, col);
+    PL.ink(g, PL.circle(x, y + 22, 9), 3, col);
+  });
 }
 
 function draw(g, t) {
+  const W0 = 1000, S = 1.4;   // 手首の高さと手の大きさ
   // 0〜3: フック
   if (t < 3.0) {
-    g.save(); g.globalAlpha = fade(t, -1, 3, 0.3); hand(g, PW / 2, 900, [0, 0, 0, 0, 0]); g.restore();
+    g.save(); g.globalAlpha = fade(t, -1, 3, 0.3); hand(g, PW / 2, W0, S); g.restore();
     TK.hook(g, t, 0.0, 3.0, '指は [1本ずつ]\n動かせない', { y: 300, size: 120 });
   }
   // 3〜7: やってみて（薬指が曲がり、つられて中指・小指も少し）
   if (t >= 3.0 && t < 7.0) {
     const b = 0.5 - 0.5 * Math.cos(clamp((t - 4.0) / 2.4, 0, 1) * Math.PI * 2);
     g.save(); g.globalAlpha = fade(t, 3, 7, 0.3);
-    hand(g, PW / 2, 860, [0, 0, b * 0.25, b, b * 0.3], { col: [0, 0, 0, TK.C.acc, 0] });
-    TK.text(g, '薬指', PW / 2 + 75 + 20, 330, 56, { color: TK.C.acc });
+    hand(g, PW / 2, W0, S, [0, 0, b * 0.25, b, b * 0.3], 3);
+    PL.leader(g, 585, 445, 640, 372, PL.RED);
+    PL.label(g, '薬指', 650, 330, 56, { color: PL.RED });
     g.restore();
   }
   // 7〜13: つられ方の波紋（大・小の2段。値ではない）
   if (t >= 7.0 && t < 13.0) {
     g.save(); g.globalAlpha = fade(t, 7, 13, 0.3);
-    hand(g, PW / 2, 900, [0, 0, 0, 0, 0], { t, ripple: t > 7.6 ? [40, 40, 110, 110, 40] : null });
-    TK.card(g, 200, 180, 680, 110, { r: 55 });
-    TK.text(g, 'つられやすさ　[大]＝中指・薬指', PW / 2, 236, 50);
+    const tips = hand(g, PW / 2, W0, S);
+    if (t > 7.6) [40, 40, 110, 110, 40].forEach((r, i) => ripple(g, tips[i][0], tips[i][1], r, (t * 1.4 + i * 0.13) % 1, r > 50));
+    TK.card(g, 160, 170, 760, 120, {});
+    PL.label(g, 'つられやすさ　[大]＝中指・薬指', PW / 2, 232, 50);
     g.restore();
-    TK.note(g, t, 7.6, 13, '10人を測った研究（Häger-Ross & Schieber 2000）\n波紋は「大・小」の2段の模式で、測った値ではありません', { size: 30 });
+    TK.note(g, t, 7.6, 13, '10人を測った研究（Häger-Ross & Schieber 2000）\n波紋は「大・小」の2段の模式で、測った値ではありません', { size: 30, y: 1150 });
   }
   // 13〜21: 前腕の筋肉と腱（模式）
   if (t >= 13.0 && t < 21.0) {
-    const f = fade(t, 13, 21, 0.3);
+    const f = fade(t, 13, 21, 0.3), k1 = clamp((t - 13.6) / 0.6, 0, 1), k2 = clamp((t - 17.2) / 0.6, 0, 1);
     g.save(); g.globalAlpha = f;
-    // 前腕（下）から指先（上）へ。指先の位置
-    const tips = [[330, 230], [470, 200], [610, 220], [740, 270]], names = ['人さし指', '中指', '薬指', '小指'];
-    g.strokeStyle = 'rgba(207,224,255,0.25)'; g.lineWidth = 6; g.beginPath(); g.roundRect(300, 600, 480, 470, 120); g.stroke();
-    TK.text(g, '前腕', 860, 820, 44, { color: TK.C.sub, align: 'left' });
-    // 筋肉のかたまり: 中・薬・小は1つ（黄）、人さし指はべつ（青）
-    const k1 = clamp((t - 13.6) / 0.6, 0, 1), k2 = clamp((t - 17.2) / 0.6, 0, 1);
-    g.fillStyle = `rgba(255,207,74,${0.25 + 0.45 * k1})`; g.strokeStyle = TK.C.acc; g.lineWidth = 4;
-    g.beginPath(); g.ellipse(600, 870, 140, 170, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-    g.fillStyle = `rgba(95,212,255,${0.2 + 0.5 * k2})`; g.strokeStyle = TK.C.acc2;
-    g.beginPath(); g.ellipse(400, 880, 70, 150, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-    // 腱
-    g.lineCap = 'round';
-    tips.forEach(([x, y], i) => {
-      const from = i === 0 ? [400, 730] : [560 + (i - 1) * 40, 700];
-      g.strokeStyle = i === 0 ? TK.C.acc2 : TK.C.acc; g.lineWidth = 9;
-      g.beginPath(); g.moveTo(from[0], from[1]); g.quadraticCurveTo(i === 0 ? 380 : 560 + (i - 1) * 50, 470, x, y); g.stroke();
-      g.fillStyle = '#cfe0ff'; g.beginPath(); g.arc(x, y, 22, 0, Math.PI * 2); g.fill();
-      TK.text(g, names[i], x, y - 60, 38, { color: TK.C.sub });
-    });
-    if (t > 17.2) { g.strokeStyle = TK.C.acc2; g.lineWidth = 5; g.setLineDash([10, 10]); g.beginPath(); g.arc(400, 720, 60, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
-      TK.text(g, '早く分かれる', 400, 640, 40, { color: TK.C.acc2 }); }
+    forearm(g, k1, k2);
+    TIPS.forEach(([x, y], i) => PL.label(g, NAMES[i], x + [-30, 0, 20, 60][i], y - 58, 38, { color: TK.C.sub }));
+    PL.leader(g, 742, 880, 830, 820); PL.label(g, '前腕', 845, 820, 44, { align: 'left', color: TK.C.sub });
+    if (k1 > 0) { g.save(); g.globalAlpha *= k1; PL.leader(g, 672, 1000, 790, 1060, PL.RED); PL.label(g, 'ほぼ1つの筋肉', 1050, 1060, 40, { align: 'right', color: PL.RED }); g.restore(); }
+    if (t > 17.2) { g.save(); g.globalAlpha *= k2; PL.leader(g, 442, 724, 300, 780, '#2f5f7a'); PL.label(g, '早く分かれる', 190, 820, 40, { color: '#2f5f7a' }); g.restore(); }
     g.restore();
-    TK.note(g, t, 13.6, 21, '指先を曲げる筋肉（深指屈筋）の模式。色ぬり・形はかんたんにしています\nつられるわけは、ほかにも（指どうしのつながり・脳の動かし方）', { size: 30 });
+    TK.note(g, t, 13.6, 21, '指先を曲げる筋肉（深指屈筋）の模式。色ぬり・形はかんたんにしています\nつられるわけは、ほかにも（指どうしのつながり・脳の動かし方）', { size: 30, y: 1150 });
   }
   // 21〜26: 鍵盤を薬指で押す
   if (t >= 21.0 && t < 26.0) {
     const f = fade(t, 21, 26, 0.3), p = clamp((t - 22.0) / 0.4, 0, 1) * (1 - clamp((t - 23.4) / 0.4, 0, 1));
+    const hx = PW / 2 - 40, kx = 120, kw = 840 / 7, ringX = hx + (21 + 210 * Math.sin(0.04)) * S, key = Math.floor((ringX - kx) / kw);
     g.save(); g.globalAlpha = f;
-    const kx = 120, kw = 840 / 7;
-    // 鍵盤は奥（上）に。黒鍵は奥がわ
-    for (let i = 0; i < 7; i++) { g.fillStyle = i === 4 && p > 0.5 ? TK.C.acc : 'rgba(235,240,255,0.92)'; g.fillRect(kx + i * kw + 3, 300, kw - 6, 300); }
-    g.fillStyle = '#0b1430'; [0, 1, 3, 4, 5].forEach(i => g.fillRect(kx + (i + 1) * kw - kw * 0.3, 300, kw * 0.6, 170));
-    hand(g, PW / 2 - 70, 900, [0, 0, p * 0.2, p * 0.6, p * 0.25], { col: [0, 0, 0, TK.C.acc, 0] });
+    keyboard(g, kx, 300, 840, 320, 7, p > 0.5 ? new Set([key]) : new Set());
+    hand(g, hx, 900, S, [0, 0, p * 0.2, p * 0.6, p * 0.25], 3);
     g.restore();
   }
   // 26〜30: 最初の手
   if (t >= 26.0) {
-    hand(g, PW / 2, 900, [0, 0, 0, 0, 0]);
-    TK.text(g, '指は 1本ずつ 動かせない', PW / 2, 300, 72);
-    TK.note(g, t, 26.4, 30, '出どころ: Häger-Ross & Schieber (2000) J. Neurosci. 20:8542\nLoyola Univ. Chicago Gross Anatomy Dissector「Flexor digitorum profundus」', { size: 30 });
+    hand(g, PW / 2, W0, S);
+    PL.label(g, '指は 1本ずつ 動かせない', PW / 2, 300, 72);
+    TK.note(g, t, 26.4, 30, '出どころ: Häger-Ross & Schieber (2000) J. Neurosci. 20:8542\nLoyola Univ. Chicago Gross Anatomy Dissector「Flexor digitorum profundus」', { size: 30, y: 1150 });
   }
 }
 

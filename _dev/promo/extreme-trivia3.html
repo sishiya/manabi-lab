@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく extreme-3（型H 当ててみて）「37℃のお湯が沸くのはどこ？」。台本は trivia/extreme.md。?short で録る
@@ -33,6 +36,36 @@ const cues = [
 ];
 const OPTS = ['富士山の頂上', '旅客機の高さ（10 km）', '高さ 19 km'];
 
+/// 高さのものさし（0〜20 km）。図鑑の版画（PL.*）で
+const RX = 210, RX1 = 960, RY0 = 1020, RY1 = 350, ZMAX = 24000;   // 上に少しあけて、19 km のコップが空の中に入るように
+const zy = z => RY0 + (RY1 - RY0) * z / ZMAX;
+// 山（富士山・エベレスト）。x0〜x1 がすそ、top が頂上の y、snow は雪の線の割合
+function mountain(g, x0, x1, yb, top, snow = 0.22, seed = 1) {
+  const xm = (x0 + x1) / 2, H = yb - top, P = [[x0, yb]];
+  for (let i = 1; i < 12; i++) { const u = i / 12, x = lerp(x0, x1, u), h = (1 - Math.abs(u - 0.5) * 2) ** 1.25; P.push([x, yb - H * h + Math.sin(i * 2.7 + seed) * H * 0.02]); }
+  P.push([x1, yb]);
+  const m = PL.poly(P);
+  PL.tint(g, m, PL.T.brown, 0.55);
+  // 雪（頂上のまわり。ぎざぎざの線）
+  const sy = top + H * snow, sp = [[xm - (sy - top) / H * (x1 - x0) * 0.5 * 0.85, sy]];
+  for (let i = 1; i < 6; i++) sp.push([lerp(sp[0][0], 2 * xm - sp[0][0], i / 6), sy + (i % 2 ? 16 : -4)]);
+  sp.push([2 * xm - sp[0][0], sy], [xm, top - 4]);
+  const cap = g2 => { g2.save(); g2.restore(); PL.poly(sp)(g2); };
+  g.save(); g.beginPath(); m(g); g.clip(); PL.tint(g, cap, '#ffffff', 0.75); g.restore();
+  PL.hatch(g, m, { angle: 0.9, gap: 10, w: 2, not: PL.poly([[x0 - 20, yb + 20], [xm, top - 20], [xm + 6, yb + 20]]) });   // 右の斜面がかげ
+  PL.ink(g, gg => { for (let i = 0; i < 5; i++) { const u = 0.25 + i * 0.1; gg.moveTo(xm, top + 8); gg.lineTo(lerp(xm, lerp(x0, x1, u + 0.05), 0.55), lerp(top, yb, 0.55)); } }, 1.4);   // 谷のすじ
+  PL.ink(g, m, 5);
+}
+// 旅客機（横から。右向き）。x, y が胴体のまん中
+function airliner(g, x, y, s = 1) {
+  g.save(); g.translate(x, y); g.scale(s, s); const k = 1 / s;
+  const body = g2 => { g2.moveTo(-90, -6); g2.lineTo(70, -8); g2.quadraticCurveTo(96, -6, 100, 4); g2.quadraticCurveTo(90, 10, 70, 10); g2.lineTo(-80, 10); g2.lineTo(-100, -2); g2.closePath(); };
+  const tail = PL.poly([[-78, -6], [-100, -46], [-86, -46], [-56, -6]]);
+  const wing = PL.poly([[-8, 2], [-40, 30], [-26, 30], [24, 4]]);
+  [tail, body, wing].forEach(p => { PL.tint(g, p, PL.T.gray, 0.6); PL.hatch(g, p, { angle: 0.6, gap: 5 * k, w: 1.2 * k, not: PL.rect(-200, -200, 400, 200 + 2), cx: 0, cy: 0 }); PL.ink(g, p, 2.6 * k); });
+  PL.ink(g, gg => { for (let i = 0; i < 9; i++) { gg.moveTo(-50 + i * 13, -1); gg.lineTo(-46 + i * 13, -1); } }, 2.4 * k);   // 窓
+  g.restore();
+}
 // 標準大気（0〜20 km）
 function pressure(z) {
   const h = 6356766 * z / (6356766 + z);
@@ -45,32 +78,51 @@ function psat(T) {
 }
 function boil(p) { let lo = 273.16, hi = 400; for (let i = 0; i < 50; i++) { const m = (lo + hi) / 2; if (psat(m) < p) lo = m; else hi = m; } return (lo + hi) / 2 - 273.15; }
 
-// 高さのものさし（0〜20 km）
-const RX = 210, RY0 = 1020, RY1 = 350, ZMAX = 20000;
-const zy = z => RY0 + (RY1 - RY0) * z / ZMAX;
 function ruler(g) {
-  const gr = g.createLinearGradient(0, RY0, 0, RY1);
-  gr.addColorStop(0, 'rgba(95,170,255,0.35)'); gr.addColorStop(1, 'rgba(10,15,40,0.4)');
-  g.fillStyle = gr; g.fillRect(RX, RY1, PW - 120 - RX, RY0 - RY1);
-  g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 4; g.beginPath(); g.moveTo(RX, RY0); g.lineTo(RX, RY1); g.stroke();
-  for (let z = 0; z <= 20000; z += 5000) { g.beginPath(); g.moveTo(RX - 24, zy(z)); g.lineTo(RX, zy(z)); g.stroke(); TK.text(g, z / 1000 + ' km', RX - 34, zy(z), 36, { align: 'right', color: TK.C.sub, bold: false }); }
-  // 富士山（線）
-  g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 4; g.beginPath(); g.moveTo(RX + 10, RY0); g.lineTo(RX + 170, zy(3776)); g.lineTo(RX + 330, RY0); g.stroke();
+  // 空（下ほど青くこい手彩色。11 km より上の成層圏は灰色を重ねる）
+  [[0, 0.22], [0, 0.12], [5000, 0.08]].forEach(([z, a], i) => PL.tint(g, PL.rect(RX, RY1, RX1 - RX, zy(z) - RY1 + (i ? 0 : 0)), PL.T.sky, a));
+  PL.tint(g, PL.rect(RX, RY1, RX1 - RX, zy(11000) - RY1), PL.T.gray, 0.22);
+  g.save(); g.setLineDash([4, 10]); PL.ink(g, gg => { gg.moveTo(RX, zy(11000)); gg.lineTo(RX1, zy(11000)); }, 2, 'rgba(35,28,21,0.5)'); g.restore();
+  // 地面
+  const ground = PL.rect(RX, RY0, RX1 - RX, 24);
+  PL.tint(g, ground, PL.T.land, 0.7); PL.hatch(g, ground, { angle: 0.9, gap: 9, w: 2 }); PL.ink(g, ground, 4);
+  PL.ink(g, PL.rect(RX, RY1, RX1 - RX, RY0 - RY1), 4);
+  for (let z = 0; z <= 20000; z += 1000) PL.ink(g, gg => { gg.moveTo(RX - (z % 5000 ? 12 : 26), zy(z)); gg.lineTo(RX, zy(z)); }, z % 5000 ? 2.4 : 4);
+  for (let z = 0; z <= 20000; z += 5000) PL.label(g, z / 1000 + ' km', RX - 36, zy(z), 34, { align: 'right', color: TK.C.sub, bold: false });
+  mountain(g, RX + 8, RX + 340, RY0, zy(3776), 0.25, 1);
 }
-// コップ（湯気・泡つき）。bub: 0〜1 で泡の多さ
-function cup(g, x, y, temp, bub, t) {
-  g.save(); g.strokeStyle = '#fff'; g.lineWidth = 5;
-  g.fillStyle = 'rgba(95,212,255,0.35)'; g.beginPath(); g.moveTo(x - 50, y - 90); g.lineTo(x - 40, y); g.lineTo(x + 40, y); g.lineTo(x + 50, y - 90); g.closePath(); g.fill(); g.stroke();
-  for (let i = 0; i < Math.round(14 * bub); i++) { const ph = (t * 1.5 + i * 0.37) % 1, bx = x - 30 + ((i * 37) % 60); g.fillStyle = 'rgba(255,255,255,0.8)'; g.beginPath(); g.arc(bx, y - 10 - ph * 70, 5 + 3 * ph, 0, Math.PI * 2); g.fill(); }
+// コップ（湯気・泡つき）。x, y はコップの底のまん中、bub: 0〜1 で泡の多さ、s は大きさ
+function cup(g, x, y, bub, t, s = 1) {
+  g.save(); g.translate(x, y); g.scale(s, s); const k = 1 / s;
+  const glass = PL.poly([[-52, -96], [-42, 0], [42, 0], [52, -96]]), water = PL.poly([[-49, -70], [-42, 0], [42, 0], [49, -70]]);
+  PL.tint(g, water, PL.T.sea, 0.6);
+  PL.hatch(g, water, { angle: 0.8, gap: 6 * k, w: 1.2 * k, not: PL.rect(-60, -100, 70, 120), cx: 0, cy: 0 });
+  // 泡（底から上る）
+  const n = Math.round(16 * bub);
+  for (let i = 0; i < n; i++) { const ph = (t * 1.5 + i * 0.37) % 1, bx = -30 + ((i * 37) % 60), r = 4 + 4 * ph; PL.ink(g, PL.circle(bx, -6 - ph * 60, r), 2 * k); }
+  // 湯気（沸いているとき）
+  if (bub > 0.5) PL.ink(g, gg => { for (let i = 0; i < 3; i++) { const x0 = -24 + i * 24, ph = (t * 0.8 + i * 0.3) % 1; gg.moveTo(x0, -104); for (let u = 0; u <= 1; u += 0.1) gg.lineTo(x0 + Math.sin(u * 7 + t * 3 + i) * 8, -104 - u * 46 - ph * 6); } }, 2.4 * k, 'rgba(35,28,21,0.6)');
+  PL.ink(g, gg => { gg.moveTo(-49, -70); gg.lineTo(49, -70); }, 2.4 * k, TK.C.acc2);
+  PL.ink(g, glass, 4 * k);
+  PL.ink(g, gg => { gg.moveTo(-40, -88); gg.lineTo(-34, -20); }, 2 * k, 'rgba(35,28,21,0.4)');   // ガラスのつや
   g.restore();
-  TK.text(g, temp, x + 90, y - 50, 44, { align: 'left', color: TK.C.acc });
+}
+// 温度計（コップの横）
+function thermo(g, x, y, temp, s = 1) {
+  const tube = PL.rect(x - 9 * s, y - 120 * s, 18 * s, 110 * s), bulb = PL.circle(x, y, 18 * s), lv = clamp((temp - 0) / 100, 0, 1);
+  PL.tint(g, tube, '#ffffff', 0.6);
+  PL.tint(g, PL.rect(x - 9 * s, y - 10 * s - 110 * s * lv, 18 * s, 110 * s * lv), PL.T.rust, 0.9);
+  PL.tint(g, bulb, PL.T.rust, 0.9); PL.ink(g, tube, 3); PL.ink(g, bulb, 3);
+  PL.ink(g, gg => { for (let i = 0; i <= 10; i++) { const yy = y - 10 * s - 110 * s * i / 10; gg.moveTo(x + 9 * s, yy); gg.lineTo(x + (i % 5 ? 15 : 22) * s, yy); } }, 2);
 }
 
 function draw(g, t) {
   // 0〜5: 3択と考える時間
   if (t < 5.0) {
-    cup(g, 470, 300, '37℃', 0, t);
-    TK.text(g, 'このお湯が、[ぐつぐつ]沸くのは？', PW / 2, 400, 62);
+    cup(g, 470, 320, 0, t);
+    thermo(g, 600, 300, 37, 0.9);
+    PL.label(g, '[37℃]', 640, 220, 50, { align: 'left' });
+    PL.label(g, 'このお湯が、[ぐつぐつ]沸くのは？', PW / 2, 420, 62);
     TK.choices(g, t, 0.0, 5.0, OPTS, { y: 700, h: 140, gap: 30, think: [3.0, 5.0], size: 60 });
   }
   // 5〜21: コップが上へ。沸く温度が下がる
@@ -81,30 +133,38 @@ function draw(g, t) {
     else if (t < 15) z = lerp(3776, 10000, ease((t - 10.2) / 2.4));
     else z = lerp(10000, 19185, ease((t - 15.2) / 2.8));
     const T = boil(pressure(z));
-    TK.card(g, 340, 150, 600, 160, { r: 40 });
-    TK.text(g, '水が沸く温度', 640, 195, 40, { color: TK.C.sub });
-    TK.text(g, T.toFixed(0) + ' ℃', 640, 260, 84, { color: T < 38 ? TK.C.acc : '#fff' });
-    cup(g, 620, zy(z) + 45, '', T < 38 ? 1 : 0.15, t);
-    TK.text(g, (z / 1000).toFixed(1) + ' km', 720, zy(z) - 20, 44, { align: 'left' });
-    [[3776, '富士山 87℃', 5.5], [10000, '旅客機 66℃', 12.8]].forEach(([zz, s, a]) => { if (t > a) { g.strokeStyle = 'rgba(255,255,255,0.35)'; g.setLineDash([8, 8]); g.lineWidth = 3; g.beginPath(); g.moveTo(RX, zy(zz)); g.lineTo(PW - 120, zy(zz)); g.stroke(); g.setLineDash([]); TK.text(g, s, PW - 140, zy(zz) + 30, 36, { align: 'right', color: TK.C.sub }); } });
-    if (t > 18.4) { const p = clamp(TK.pop(t, 18.4, 0.35), 0, 1.2); g.save(); g.globalAlpha = clamp(p, 0, 1); TK.card(g, 260, 520, 280, 120, { fill: 'rgba(255,207,74,0.85)', stroke: TK.C.acc, r: 30 }); TK.text(g, '答え ③', 400, 580, 64, { color: '#0b1430', blur: 0 }); g.restore(); }
+    [[3776, '富士山 87℃', 5.5], [10000, '旅客機 66℃', 12.8]].forEach(([zz, s, a]) => {
+      if (t <= a) return;
+      g.save(); g.setLineDash([8, 10]); PL.ink(g, gg => { gg.moveTo(RX, zy(zz)); gg.lineTo(RX1, zy(zz)); }, 3, 'rgba(35,28,21,0.55)'); g.restore();
+      PL.label(g, s, RX1 - 20, zy(zz) + 34, 36, { align: 'right', color: TK.C.sub });
+    });
+    if (t > 12.8) airliner(g, 380, zy(10000) - 34, 1.3);
+    cup(g, 620, zy(z) - 4, T < 38 ? 1 : 0.15, t);
+    // 読みとり（地面の下に。動くコップと重ねない）
+    TK.card(g, 120, 1060, 840, 120);
+    PL.label(g, '高さ ' + (z / 1000).toFixed(1) + ' km', 170, 1120, 42, { align: 'left' });
+    PL.label(g, '沸く温度 ' + T.toFixed(0) + ' ℃', 915, 1120, 48, { align: 'right', color: T < 38 ? PL.RED : PL.INK });
+    if (t > 18.4) { const p = clamp(TK.pop(t, 18.4, 0.35), 0, 1.2); g.save(); g.globalAlpha = clamp(p, 0, 1); TK.card(g, 250, 470, 280, 120); PL.label(g, '答え ③', 390, 530, 64, { color: PL.RED }); g.restore(); }
     TK.note(g, t, 5.3, 21, '標準大気の気圧で計算（その日の天気で少し変わる）', { size: 32 });
   }
   // 21〜27: 気圧が地上の16分の1
   if (t >= 21.0 && t < 27.0) {
-    TK.text(g, '空気の重さ（気圧）', PW / 2, 250, 60, { color: TK.C.sub });
+    PL.label(g, '空気の重さ（気圧）', PW / 2, 250, 60, { color: TK.C.sub });
     TK.bars(g, t, 21.2, 27.0, [
-      { label: '地上', v: 1, color: TK.C.acc2, text: '1013 hPa' },
-      { label: '高さ 19 km', v: 1 / 16.1, color: TK.C.acc, text: '' },
+      { label: '地上', v: 1, text: '1013 hPa' },
+      { label: '高さ 19 km', v: 1 / 16.1, text: '' },
     ], { y: 400, gap: 240, stagger: 0.9 });
-    TK.text(g, '63 hPa', 110, 800, 44, { align: 'left', color: TK.C.acc });
-    if (t > 23.4) { g.save(); g.globalAlpha = fade(t, 23.4, 27, 0.3); TK.text(g, '地上の [16分の1]', PW / 2, 960, 84); g.restore(); }
+    if (t > 22.4) PL.label(g, '63 hPa', 110, 800, 44, { align: 'left', color: PL.RED });
+    if (t > 23.4) { g.save(); g.globalAlpha = fade(t, 23.4, 27, 0.3); PL.label(g, '地上の [16分の1]', PW / 2, 960, 84); g.restore(); }
   }
-  // 27〜30: コメントの問い
+  // 27〜30: コメントの問い（エベレストの頂上にコップ）
   if (t >= 27.0) {
-    cup(g, 470, 560, '？℃', 0.5, t);
-    TK.text(g, 'エベレストの頂上（8,849 m）なら？', PW / 2, 330, 58);
-    TK.note(g, t, 27.2, 30, '出どころ: Wagner & Pruss (2002) J. Phys. Chem. Ref. Data（IAPWS-95）\nU.S. Standard Atmosphere 1976（NOAA・NASA・USAF）', { size: 28 });
+    mountain(g, 140, 940, 1070, 620, 0.3, 4);
+    cup(g, 540, 620, 0.5, t, 1.4);
+    thermo(g, 680, 600, 70, 1);
+    PL.label(g, '？℃', 720, 500, 60, { align: 'left', color: PL.RED });
+    PL.label(g, 'エベレストの頂上（8,849 m）なら？', PW / 2, 330, 58);
+    TK.note(g, t, 27.2, 30, '出どころ: Wagner & Pruss (2002) J. Phys. Chem. Ref. Data（IAPWS-95）\nU.S. Standard Atmosphere 1976（NOAA・NASA・USAF）', { size: 28, y: 1130 });   // 2行なので絵の下に（クレジットと重ねない）
   }
 }
 

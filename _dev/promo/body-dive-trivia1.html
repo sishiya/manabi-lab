@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく body-dive-1（型A ぜんぶ逆）「腸の広さ＝テニスコート、はまちがい」。台本は trivia/body-dive.md。?short で録る
@@ -30,131 +33,174 @@ const cues = [
   { t: 0.05, type: 'thud' }, { t: 0.5, type: 'buzz' }, { t: 2.0, type: 'whoosh' }, { t: 7.0, type: 'pop' }, { t: 10.5, type: 'tick' },
   { t: 13.0, type: 'whoosh' }, { t: 14.0, type: 'rise' }, { t: 16.2, type: 'ding' }, { t: 19.0, type: 'pop' }, { t: 24.0, type: 'whoosh' }, { t: 28.0, type: 'ding' },
 ];
-const PX = 33;   // 1 m あたりの画素（コートの絵）
-const CCX = 540, CCY = 680;   // コートの中心
+// 絵は「図鑑の版画」（trivia-plate.js の PL.*）。コートは手彩色＋斜線のかげ＋墨の線、腸の壁は図鑑の断面図のように
+const PX = 30;   // 1 m あたりの画素（コートの絵）
+const CCX = 640, CCY = 620;   // コートの中心（少し右に寄せ、左に引き出し線の字）
+const line = pts => g => pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
+const fadeIn = (g, f, fn) => { g.save(); g.globalAlpha *= f; fn(); g.restore(); };
 
-// コートの線画（縦向き）。L×W m、中に線を何本か。color で色
+// コートの版画（縦向き）。L×W m。o.tennis: シングルスの線・サービスライン・ネット
 function court(g, L, W, o = {}) {
-  const h = L * PX, w = W * PX, x = CCX - w / 2, y = CCY - h / 2;
-  g.save();
-  g.fillStyle = o.fill || 'rgba(95,212,255,0.10)'; g.strokeStyle = o.color || 'rgba(207,224,255,0.9)'; g.lineWidth = o.lw || 5;
-  g.fillRect(x, y, w, h); g.strokeRect(x, y, w, h);
-  if (o.tennis) {   // シングルスの線・サービスライン・ネット
-    const s = 1.37 * PX * (w / (10.97 * PX));
-    g.lineWidth = 3; g.beginPath();
-    g.moveTo(x + s, y); g.lineTo(x + s, y + h); g.moveTo(x + w - s, y); g.lineTo(x + w - s, y + h);
-    const sv = 6.40 / 23.77 * h; g.moveTo(x + s, CCY - sv); g.lineTo(x + w - s, CCY - sv); g.moveTo(x + s, CCY + sv); g.lineTo(x + w - s, CCY + sv);
-    g.moveTo(CCX, CCY - sv); g.lineTo(CCX, CCY + sv); g.stroke();
-    g.lineWidth = 7; g.strokeStyle = '#fff'; g.beginPath(); g.moveTo(x - 20, CCY); g.lineTo(x + w + 20, CCY); g.stroke();
+  const h = L * PX, w = W * PX, x = CCX - w / 2, y = CCY - h / 2, r = PL.rect(x, y, w, h);
+  PL.tint(g, r, o.col || PL.T.land, o.a ?? 0.5);
+  PL.hatch(g, r, { angle: 0.9, gap: 15, w: 1.6, not: PL.rect(x - 14, y - 14, w, h) });   // 右と下のふちだけ、かげの斜線
+  PL.ink(g, r, o.lw || 6);
+  if (o.tennis) {
+    const s = 1.37 * PX, sv = 6.40 * PX;
+    PL.ink(g, gg => { line([[x + s, y], [x + s, y + h]])(gg); line([[x + w - s, y], [x + w - s, y + h]])(gg); line([[x + s, CCY - sv], [x + w - s, CCY - sv]])(gg); line([[x + s, CCY + sv], [x + w - s, CCY + sv]])(gg); line([[CCX, CCY - sv], [CCX, CCY + sv]])(gg); }, 3);
+    PL.ink(g, line([[x - 24, CCY], [x + w + 24, CCY]]), 7);   // ネット
+    [x - 24, x + w + 24].forEach(px => { const post = PL.circle(px, CCY, 8); PL.tint(g, post, PL.T.wood, 0.9); PL.ink(g, post, 3); });
+    PL.ink(g, gg => { for (let xx = x - 18; xx < x + w + 20; xx += 12) { gg.moveTo(xx, CCY - 6); gg.lineTo(xx + 6, CCY + 6); } }, 1.2);   // ネットの網目
   }
-  g.restore();
   return { x, y, w, h };
+}
+// 開いた本（教科書）
+function book(g, x, y, w, h) {
+  const L = PL.poly([[x, y + 14], [x + w / 2, y], [x + w / 2, y + h], [x, y + h + 14]]), R = PL.poly([[x + w / 2, y], [x + w, y + 14], [x + w, y + h + 14], [x + w / 2, y + h]]);
+  [L, R].forEach(p => PL.tint(g, p, PL.T.sand, 0.7));
+  PL.hatch(g, R, { angle: 1.0, gap: 10, w: 1.4, not: PL.rect(x + w / 2, y - 20, w * 0.36, h + 60) });
+  PL.ink(g, gg => { for (let k = 0; k < 7; k++) { const yy = y + 40 + k * (h - 70) / 6; gg.moveTo(x + 22, yy + 12); gg.lineTo(x + w / 2 - 22, yy); gg.moveTo(x + w / 2 + 22, yy); gg.lineTo(x + w - 22 - (k === 6 ? 60 : 0), yy + 12); } }, 2);
+  PL.ink(g, gg => { L(gg); R(gg); }, 5);
+}
+// 腸の壁の断面。k: ひだと絨毛の育ち（0 で平ら）。base: 粘膜の付け根の高さ
+function gutWall(g, x0, x1, base, k, o = {}) {
+  const top = [];
+  for (let x = x0; x <= x1; x += 3) {
+    const fold = Math.max(0, Math.sin((x - x0) / (x1 - x0) * Math.PI * 4)) * 150 * k;
+    const ph = (x - x0) / 22, vil = Math.pow(Math.max(0, Math.sin(ph * Math.PI)), 0.7) * 54 * k;   // 指のような絨毛（先が丸い）
+    top.push([x, base - fold - vil]);
+  }
+  const muc = PL.poly([...top, [x1, base + 40], [x0, base + 40]]), mus = PL.rect(x0, base + 40, x1 - x0, 46);
+  PL.tint(g, muc, PL.T.rose, 0.7);
+  PL.hatch(g, muc, { angle: 0.8, gap: 11, w: 1.5, not: PL.poly([...top.map(([x, y]) => [x - 6, y - 10]), [x1, base - 8], [x0, base - 8]]) });
+  PL.tint(g, mus, PL.T.rust, 0.6);
+  PL.ink(g, gg => { for (let x = x0 + 8; x < x1; x += 16) { gg.moveTo(x, base + 46); gg.lineTo(x + 8, base + 80); } }, 1.4);   // 筋の層のすじ
+  PL.ink(g, line(top), 4); PL.ink(g, mus, 4);
+  if (k > 0.3) PL.ink(g, gg => { for (let x = x0 + 11; x < x1; x += 22) { const i = Math.round((x - x0) / 3); if (top[i]) { gg.moveTo(x, base + 30); gg.lineTo(x, top[i][1] + 14); } } }, 1.2, PL.RED);   // 絨毛の中の細い血管
+  return top;
 }
 
 function draw(g, t) {
   // 0〜2: テニスコートに大きな ×
   if (t < 2.0) {
-    court(g, 23.77, 10.97, { tennis: true });
-    const k = TK.pop(t, 0.35, 0.3);
-    if (t > 0.35) {
-      g.save(); g.strokeStyle = TK.C.red; g.lineWidth = 46; g.lineCap = 'round'; g.globalAlpha = clamp(k, 0, 1);
-      const r = 300 * k; g.beginPath(); g.moveTo(CCX - r, CCY - r); g.lineTo(CCX + r, CCY + r); g.moveTo(CCX + r, CCY - r); g.lineTo(CCX - r, CCY + r); g.stroke(); g.restore();
-    }
-    TK.card(g, 120, 1010, 840, 210, { fill: 'rgba(11,20,48,0.92)' });
-    TK.lines(g, '腸の広さ＝テニスコート\nは、[まちがい]', PW / 2, 1115, 78, { stroke: 'rgba(0,0,0,0.6)' });
-  }
-  // 2〜7: 教科書の数字がコートに重なる
-  if (t >= 2.0 && t < 7.0) {
-    const f = fade(t, 2, 7, 0.3); g.save(); g.globalAlpha = f;
     const r = court(g, 23.77, 10.97, { tennis: true });
-    const k = ease((t - 2.6) / 1.2);
-    g.fillStyle = `rgba(255,207,74,${0.35 * k})`; g.fillRect(r.x, r.y, r.w, r.h * k);
-    TK.card(g, 110, 120, 860, 140, { r: 40 });
-    TK.text(g, '教科書  [200〜300 m²] くらい', PW / 2, 190, 62);
-    g.restore();
+    PL.leader(g, r.x - 8, CCY - 250, 330, 420); PL.label(g, 'テニスコート', 300, 380, 46, { align: 'right' });
+    PL.label(g, '23.77 × 10.97 m', 300, 450, 34, { align: 'right', bold: false });
+    const k = TK.pop(t, 0.35, 0.3);
+    if (t > 0.35) fadeIn(g, clamp(k, 0, 1), () => { const d = 260 * k; PL.ink(g, gg => { line([[CCX - d, CCY - d], [CCX + d, CCY + d]])(gg); line([[CCX + d, CCY - d], [CCX - d, CCY + d]])(gg); }, 40, PL.RED); });
+    TK.lines(g, '腸の広さ＝テニスコート\nは、[まちがい]', PW / 2, 1110, 78);
+  }
+  // 2〜7: 教科書の数字がコートにぴったり重なる
+  if (t >= 2.0 && t < 7.0) {
+    fadeIn(g, fade(t, 2, 7, 0.3), () => {
+      const r = court(g, 23.77, 10.97, { tennis: true });
+      const k = ease((t - 2.6) / 1.2);
+      if (k > 0) { PL.tint(g, PL.rect(r.x, r.y, r.w, r.h * k), PL.T.gold, 0.55); PL.hatch(g, PL.rect(r.x, r.y, r.w, r.h * k), { angle: -0.8, gap: 22, w: 1.4, color: PL.RED }); }
+      book(g, 70, 520, 330, 210);
+      PL.leader(g, 380, 560, r.x + 30, r.y + 120);
+      PL.label(g, '教科書  [200〜300 m²] くらい', PW / 2, 180, 62);
+    });
     TK.note(g, t, 3, 7, 'テニスコート（ダブルス）は約260 m²', { size: 32 });
   }
   // 7〜13: 2014年に測りなおした（論文の名前の文字だけ）
   if (t >= 7.0 && t < 13.0) {
-    const f = fade(t, 7, 13, 0.3); g.save(); g.globalAlpha = f;
-    const k = TK.pop(t, 7.2, 0.4);
-    g.translate(PW / 2, 600); g.scale(0.85 + 0.15 * k, 0.85 + 0.15 * k); g.translate(-PW / 2, -600);
-    TK.card(g, 130, 330, 820, 560, { fill: 'rgba(240,244,255,0.95)', stroke: 'rgba(160,190,255,0.6)' });
-    TK.text(g, 'Surface area of the', PW / 2, 450, 56, { color: '#132247', blur: 0 });
-    TK.text(g, 'digestive tract', PW / 2, 525, 56, { color: '#132247', blur: 0 });
-    TK.text(g, '– revisited', PW / 2, 600, 56, { color: '#132247', blur: 0 });
-    TK.text(g, 'Helander & Fändriks, 2014', PW / 2, 700, 40, { color: '#3a4a70', bold: false, blur: 0 });
-    g.fillStyle = 'rgba(19,34,71,0.15)'; for (let i = 0; i < 3; i++) g.fillRect(220, 760 + i * 32, 640 - i * 120, 14);
-    g.restore();
-    if (t > 10.0) { g.save(); g.globalAlpha = fade(t, 10, 13, 0.3); TK.text(g, '（腸の広さを）[測りなおした]', PW / 2, 230, 64); g.restore(); }
+    fadeIn(g, fade(t, 7, 13, 0.3), () => {
+      const k = TK.pop(t, 7.2, 0.4);
+      g.save(); g.translate(PW / 2, 600); g.scale(0.85 + 0.15 * k, 0.85 + 0.15 * k); g.translate(-PW / 2, -600);
+      const sheet = PL.poly([[150, 330], [870, 330], [930, 390], [930, 890], [150, 890]]), fold = PL.poly([[870, 330], [930, 390], [870, 390]]);
+      g.fillStyle = 'rgba(244,236,218,0.96)'; g.beginPath(); sheet(g); g.fill();
+      PL.tint(g, sheet, PL.T.sand, 0.35);
+      PL.hatch(g, PL.poly([[930, 400], [950, 420], [950, 910], [170, 910], [150, 890], [930, 890]]), { angle: 0.8, gap: 7, w: 1.4 });   // 紙の影
+      PL.tint(g, fold, PL.T.gray, 0.6); PL.ink(g, sheet, 5); PL.ink(g, fold, 3);
+      TK.text(g, 'Surface area of the', PW / 2, 450, 56);
+      TK.text(g, 'digestive tract', PW / 2, 525, 56);
+      TK.text(g, '– revisited', PW / 2, 600, 56);
+      TK.text(g, 'Helander & Fändriks, 2014', PW / 2, 700, 40, { bold: false, color: '#4a3f33' });
+      PL.ink(g, gg => { for (let i = 0; i < 3; i++) { gg.moveTo(230, 770 + i * 34); gg.lineTo(850 - i * 120, 770 + i * 34); } }, 4, 'rgba(35,28,21,0.35)');
+      g.restore();
+      // 物差し（測りなおす）
+      const ru = PL.rect(150, 975, 780, 70), rk = ease((t - 8.0) / 1.5);
+      PL.tint(g, ru, PL.T.wood, 0.7); PL.hatch(g, PL.rect(150, 1025, 780, 20), { angle: 0.9, gap: 8, w: 1.4 }); PL.ink(g, ru, 5);
+      PL.ink(g, gg => { for (let i = 0; i <= 39; i++) { const x = 170 + i * 19.5; gg.moveTo(x, 975); gg.lineTo(x, 975 + (i % 10 ? (i % 5 ? 16 : 26) : 38)); } }, 2);
+      if (rk > 0) PL.dots(g, [[170, 960], [170 + 740 * rk, 960]], { w: 6 });
+    });
+    if (t > 10.0) fadeIn(g, fade(t, 10, 13, 0.3), () => PL.label(g, '（腸の広さを）[測りなおした]', PW / 2, 230, 64));
   }
   // 13〜19: コートが縮んで、バドミントンコートの半分に
   if (t >= 13.0 && t < 19.0) {
-    const f = fade(t, 13, 19, 0.3); g.save(); g.globalAlpha = f;
-    const k = ease((t - 13.6) / 2.4);
-    // もとのテニスコートの輪郭（点線で残す）
-    g.save(); g.setLineDash([14, 12]); g.strokeStyle = 'rgba(207,224,255,0.35)'; g.lineWidth = 3;
-    g.strokeRect(CCX - 10.97 * PX / 2, CCY - 23.77 * PX / 2, 10.97 * PX, 23.77 * PX); g.restore();
-    const L = lerp(23.77, 6.70, k), W = lerp(10.97, 6.10, k);
-    const r = court(g, L, W, { fill: 'rgba(255,207,74,0.25)', color: TK.C.acc, lw: 6 });
-    if (k >= 1) {
-      // 32 m² を、半面の中に（同じ縮尺）
-      const a = Math.sqrt(32), s = a * PX;
-      g.fillStyle = 'rgba(89,227,154,0.45)'; g.fillRect(CCX - s / 2, CCY - s / 2, s, s);
-      TK.text(g, 'バドミントンコートの半分', PW / 2, r.y + r.h + 70, 48, { color: TK.C.acc });
-    }
-    TK.card(g, 240, 110, 600, 140, { r: 40 });
-    const v = lerp(260, 32, k);
-    TK.text(g, '約 ' + Math.round(v) + ' m²', PW / 2, 180, 80, { color: k >= 1 ? TK.C.green : '#fff' });
-    g.restore();
+    fadeIn(g, fade(t, 13, 19, 0.3), () => {
+      const k = ease((t - 13.6) / 2.4), W0 = 10.97 * PX, H0 = 23.77 * PX;
+      PL.dots(g, [[CCX - W0 / 2, CCY - H0 / 2], [CCX + W0 / 2, CCY - H0 / 2], [CCX + W0 / 2, CCY + H0 / 2], [CCX - W0 / 2, CCY + H0 / 2], [CCX - W0 / 2, CCY - H0 / 2]], { color: 'rgba(35,28,21,0.45)', w: 3, dash: [14, 12] });
+      if (k < 0.5) { PL.leader(g, CCX - W0 / 2 - 6, CCY + 300, 300, 1010, 'rgba(35,28,21,0.6)'); PL.label(g, 'テニスコート', 300, 1050, 40, { color: TK.C.sub, bold: false }); }
+      const r = court(g, lerp(23.77, 6.70, k), lerp(10.97, 6.10, k), { col: PL.T.gold, a: 0.5 });
+      if (k >= 1) {   // バドミントンの半面の線（上のはしがネット）
+        const sl = 0.46 * PX, ss = r.y + 1.98 * PX, ls = r.y + r.h - 0.76 * PX;
+        PL.ink(g, gg => { line([[r.x + sl, r.y], [r.x + sl, r.y + r.h]])(gg); line([[r.x + r.w - sl, r.y], [r.x + r.w - sl, r.y + r.h]])(gg); line([[r.x, ss], [r.x + r.w, ss]])(gg); line([[r.x, ls], [r.x + r.w, ls]])(gg); line([[CCX, ss], [CCX, r.y + r.h]])(gg); }, 2.5);
+        PL.ink(g, line([[r.x - 20, r.y], [r.x + r.w + 20, r.y]]), 7);
+        const s = Math.sqrt(32) * PX, sq = PL.rect(CCX - s / 2, CCY - s / 2, s, s);   // 32 m² を、半面の中に（同じ縮尺）
+        PL.tint(g, sq, PL.T.rose, 0.8); PL.hatch(g, sq, { angle: 0.8, gap: 10, w: 1.6 }); PL.ink(g, sq, 4, PL.RED);
+        PL.leader(g, CCX + 40, r.y + r.h - 4, CCX + 40, 1010); PL.label(g, 'バドミントンコートの半分', CCX, 1050, 46);
+        PL.leader(g, CCX - s / 2 + 10, CCY + s / 2 - 10, 260, 820, PL.RED); PL.label(g, '腸の内側（ぜんぶ）', 260, 860, 42, { color: PL.RED });
+      }
+      const v = lerp(260, 32, k);
+      PL.label(g, '約 ' + Math.round(v) + ' m²', PW / 2, 180, 84, { color: k >= 1 ? PL.RED : PL.INK });
+    });
     TK.note(g, t, 13.6, 19, '絵は同じ縮尺／人によってちがう、平均の値', { size: 32 });
   }
-  // 19〜24: 畳 20 枚（4×5、1枚 0.91×1.82 m）
+  // 19〜24: 畳 20 枚（1枚 0.91×1.82 m を、5列×4段）。あとで6畳の部屋3つを朱でかこむ
   if (t >= 19.0 && t < 24.0) {
-    const f = fade(t, 19, 24, 0.3); g.save(); g.globalAlpha = f;
-    const tw = 180, th = 90, x0 = CCX - 2.5 * tw, y0 = 280;   // 横向きの畳を 5列×4段（ずらさずに並べる）
-    for (let i = 0; i < 20; i++) {
-      const c = i % 5, rr = Math.floor(i / 5), k = TK.pop(t, 19.3 + i * 0.08, 0.3);
-      if (k <= 0) continue;
-      const x = x0 + c * tw, y = y0 + rr * (th + 6) * 2;
-      g.save(); g.globalAlpha = f * clamp(k, 0, 1);
-      g.fillStyle = 'rgba(89,227,154,0.22)'; g.strokeStyle = 'rgba(160,230,190,0.85)'; g.lineWidth = 4;
-      g.fillRect(x + 4, y, tw - 8, th * 2 - 8); g.strokeRect(x + 4, y, tw - 8, th * 2 - 8);
-      g.restore();
-    }
-    TK.card(g, 240, 100, 600, 140, { r: 40 });
-    TK.text(g, '畳 [約20枚]', PW / 2, 170, 74);
-    g.restore();
+    fadeIn(g, fade(t, 19, 24, 0.3), () => {
+      const tw = 176, th = 88, x0 = PW / 2 - 2.5 * tw, y0 = 330;
+      for (let i = 0; i < 20; i++) {
+        const c = i % 5, rr = Math.floor(i / 5), k = TK.pop(t, 19.3 + i * 0.08, 0.3);
+        if (k <= 0) continue;
+        const x = x0 + c * tw, y = y0 + rr * th, m = PL.rect(x + 3, y + 3, tw - 6, th - 6);
+        fadeIn(g, clamp(k, 0, 1), () => {
+          PL.tint(g, m, PL.T.land, 0.45);
+          PL.ink(g, gg => { for (let yy = y + 12; yy < y + th - 8; yy += 7) { gg.moveTo(x + 8, yy); gg.lineTo(x + tw - 8, yy); } }, 1, 'rgba(35,28,21,0.35)');   // い草の目
+          PL.tint(g, PL.rect(x + 3, y + 3, tw - 6, 9), PL.T.brown, 0.9); PL.tint(g, PL.rect(x + 3, y + th - 12, tw - 6, 9), PL.T.brown, 0.9);   // へり
+          PL.ink(g, m, 3);
+        });
+      }
+      if (t > 21.0) fadeIn(g, clamp((t - 21) / 0.4, 0, 1), () => {
+        const room = (c, r, w, h) => PL.ink(g, PL.rect(x0 + c * tw + 8, y0 + r * th + 8, w * tw - 16, h * th - 16), 6, PL.RED);
+        room(0, 0, 3, 2); room(0, 2, 3, 2); room(3, 0, 2, 3);
+        PL.leader(g, x0 + 4 * tw, y0 + 3.5 * th, x0 + 4 * tw, y0 + 4 * th + 110); PL.label(g, 'のこり2枚', x0 + 4 * tw, y0 + 4 * th + 150, 40);
+        PL.label(g, '[6畳] の部屋 ×3', x0, y0 + 4 * th + 150, 50, { align: 'left' });
+      });
+      PL.label(g, '畳 [約20枚]', PW / 2, 190, 78);
+    });
+    TK.note(g, t, 19.3, 24, '1畳＝約1.62 m² で計算', { size: 32 });
   }
   // 24〜28: 平らな管 → ひだ＋毛（絨毛）で 60〜120倍
   if (t >= 24.0 && t < 28.0) {
-    const f = fade(t, 24, 28, 0.3); g.save(); g.globalAlpha = f;
-    const k = ease((t - 24.4) / 1.6);
-    TK.text(g, '腸の内側（断面のイメージ）', PW / 2, 220, 44, { color: TK.C.sub, bold: false });
-    // 上: 平らな管の壁
-    g.strokeStyle = 'rgba(207,224,255,0.8)'; g.lineWidth = 6; g.beginPath(); g.moveTo(110, 400); g.lineTo(970, 400); g.stroke();
-    TK.text(g, '平らな管', 110, 350, 44, { align: 'left', color: TK.C.sub });
-    // 下: ひだ＋絨毛
-    g.strokeStyle = TK.C.acc; g.lineWidth = 5; g.beginPath();
-    const base = 860;
-    for (let x = 110; x <= 970; x += 4) {
-      const fold = Math.max(0, Math.sin((x - 110) / 860 * Math.PI * 4)) * 150 * k;
-      const vil = Math.pow(Math.max(0, Math.sin((x - 110) / 860 * Math.PI * 60)), 3) * 60 * k;
-      const y = base - fold - vil; x === 110 ? g.moveTo(x, y) : g.lineTo(x, y);
-    }
-    g.stroke();
-    TK.text(g, 'ひだ＋毛（絨毛）', 110, 560, 44, { align: 'left', color: TK.C.acc });
-    if (k > 0.8) TK.text(g, '[60〜120倍] の広さ', PW / 2, 990, 66);
-    g.restore();
+    fadeIn(g, fade(t, 24, 28, 0.3), () => {
+      const k = ease((t - 24.4) / 1.6);
+      PL.label(g, '腸の内側（断面の模式）', 90, 200, 44, { align: 'left', color: TK.C.sub, bold: false });
+      gutWall(g, 110, 970, 360, 0);
+      PL.label(g, '平らな管', 110, 300, 46, { align: 'left' });
+      const top = gutWall(g, 110, 970, 860, k);
+      if (k > 0.5) {
+        const pk = top[Math.round((217 - 110) / 3)], pv = top[Math.round((550 - 110) / 3)];
+        PL.leader(g, 217, pk[1] - 4, 330, 560); PL.label(g, 'ひだ', 330, 520, 46, { align: 'left' });
+        PL.leader(g, 682, top[Math.round((682 - 110) / 3)][1] - 4, 760, 560, PL.RED); PL.label(g, '毛（絨毛）', 760, 520, 46, { color: PL.RED });
+      }
+      if (k > 0.8) PL.label(g, '[60〜120倍] の広さ', PW / 2, 1030, 66);
+    });
   }
-  // 28〜30: 最大で約10倍
+  // 28〜30: 最大で約10倍（同じ縮尺の四角でくらべる）
   if (t >= 28.0) {
-    const f = fade(t, 28, 30.5, 0.3); g.save(); g.globalAlpha = f;
-    TK.card(g, 110, 330, 860, 420);
-    TK.lines(g, '教科書の値は\n最大で [約10倍]\n大きかった', PW / 2, 540, 86);
-    g.restore();
+    fadeIn(g, fade(t, 28, 30.5, 0.3), () => {
+      TK.lines(g, '教科書の値は\n最大で [約10倍]\n大きかった', 90, 330, 80, { align: 'left' });
+      const S = 13, a = Math.sqrt(300) * S, b = Math.sqrt(32) * S, X = 470, Y = 680;
+      const A = PL.rect(X, Y, a, a), B = PL.rect(X + a - b, Y + a - b, b, b);
+      PL.tint(g, A, PL.T.gold, 0.5); PL.hatch(g, A, { angle: -0.8, gap: 20, w: 1.4, not: B }); PL.ink(g, A, 5);
+      PL.tint(g, B, PL.T.rose, 0.85); PL.hatch(g, B, { angle: 0.8, gap: 9, w: 1.5 }); PL.ink(g, B, 4, PL.RED);
+      PL.leader(g, X + 10, Y + 10, 300, 660); PL.label(g, '教科書 300 m²', 300, 620, 40, { align: 'right' });
+      PL.leader(g, X + a - b + 6, Y + a - 6, 300, 950, PL.RED); PL.label(g, '測った値 32 m²', 300, 990, 40, { align: 'right', color: PL.RED });
+    });
   }
-  if (t >= 26.8) TK.note(g, t, 26.8, 30, '約10倍＝300÷32 の計算（200 なら約6倍）\n出どころ: Helander & Fändriks (2014) Scand J Gastroenterol 49:681', { size: 30 });
+  if (t >= 26.8) TK.note(g, t, 26.8, 30, '約10倍＝300÷32 の計算（200 なら約6倍）\n出どころ: Helander & Fändriks (2014) Scand J Gastroenterol 49:681', { size: 30, y: 1150 });
 }
 
 triviaStart({ out: 'body-dive-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });

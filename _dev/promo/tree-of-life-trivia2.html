@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく tree-of-life-2（型H）「ワニにいちばん近い、いまの生きものは？」。台本は trivia/tree-of-life.md
@@ -28,60 +31,138 @@ const subs = [
 const cues = [{ t: 0.05, type: 'pop' }, { t: 2.2, type: 'tick' }, { t: 3.2, type: 'tick' }, { t: 4.2, type: 'ding' }, { t: 8.0, type: 'whoosh' },
   { t: 9.4, type: 'pop' }, { t: 14.0, type: 'whoosh' }, { t: 15.8, type: 'pop' }, { t: 20.0, type: 'whoosh' }, { t: 21.4, type: 'buzz' }];
 
-function st(g, c, w = 6) { g.strokeStyle = c; g.lineWidth = w; g.lineJoin = 'round'; g.lineCap = 'round'; }
-function croc(g, x, y, s, c = '#9fe0a8') {
-  g.save(); g.translate(x, y); g.scale(s, s); st(g, c, 6); g.fillStyle = 'rgba(89,227,154,0.10)';
-  g.beginPath(); g.moveTo(-260, 0); g.quadraticCurveTo(-200, -40, -60, -40); g.lineTo(120, -36); g.lineTo(250, -14); g.lineTo(250, 4); g.lineTo(120, 14);
-  g.quadraticCurveTo(-60, 30, -180, 20); g.quadraticCurveTo(-240, 14, -260, 0); g.closePath(); g.fill(); g.stroke();
-  for (let i = 0; i < 7; i++) { g.beginPath(); g.moveTo(-150 + i * 30, -40); g.lineTo(-135 + i * 30, -56); g.lineTo(-120 + i * 30, -40); g.stroke(); }   // 背のでこぼこ
-  [[-110, 20], [40, 16]].forEach(([lx, ly]) => { g.beginPath(); g.moveTo(lx, ly); g.lineTo(lx - 14, ly + 36); g.lineTo(lx + 6, ly + 36); g.stroke(); });
-  g.fillStyle = c; g.beginPath(); g.arc(100, -32, 7, 0, 7); g.fill();
-  g.restore();
+const LC = '#5a4a7a', RC = '#7a5530';
+// ---- 版画の道具（このページだけ。PL.* を組み合わせる）----
+const TAU = Math.PI * 2;
+// ローカル座標（右向き・足もとが y=0）から画面へ写す。dir=-1 で左向き
+function mapper(x0, y0, s, rot = 0, dir = 1) { const c = Math.cos(rot), n = Math.sin(rot); return (x, y) => { x *= dir; return [x0 + s * (x * c - y * n), y0 + s * (x * n + y * c)]; }; }
+// ローカル座標で道を作る。b(P) の P: M・L・Q・Z と E（楕円）
+const lp = (m, b) => g => {
+  const P = { M: (x, y) => g.moveTo(...m(x, y)), L: (x, y) => g.lineTo(...m(x, y)), Q: (a, c, x, y) => g.quadraticCurveTo(...m(a, c), ...m(x, y)), Z: () => g.closePath(),
+    E: (cx, cy, rx, ry, rot = 0) => { for (let i = 0; i <= 40; i++) { const t = i / 40 * TAU, x = Math.cos(t) * rx, y = Math.sin(t) * ry, p = m(cx + x * Math.cos(rot) - y * Math.sin(rot), cy + x * Math.sin(rot) + y * Math.cos(rot)); i ? g.lineTo(...p) : g.moveTo(...p); } g.closePath(); } };
+  b(P);
+};
+// 手彩色＋かげの斜線＋墨の輪郭。o.lit: 光の当たる所（斜線を抜く）
+function solid(g, path, color, o = {}) {
+  PL.tint(g, path, color, o.a ?? 0.65);
+  if (o.hatch !== false) PL.hatch(g, path, { angle: o.angle ?? 0.7, gap: o.gap ?? 9, w: o.hw ?? 1.8, not: o.lit, cx: o.cx, cy: o.cy });
+  PL.ink(g, path, o.w ?? 5, o.ink || PL.INK);
 }
+// 墨の矢印（頭は手彩色＋輪郭）
+function arrowPL(g, x0, y0, x1, y1, color = PL.INK, w = 8) {
+  const a = Math.atan2(y1 - y0, x1 - x0), h = w * 3.4;
+  PL.ink(g, gg => { gg.moveTo(x0, y0); gg.lineTo(x1 - Math.cos(a) * h * 0.7, y1 - Math.sin(a) * h * 0.7); }, w, color);
+  const head = PL.poly([[x1, y1], [x1 - Math.cos(a - 0.42) * h, y1 - Math.sin(a - 0.42) * h], [x1 - Math.cos(a + 0.42) * h, y1 - Math.sin(a + 0.42) * h]]);
+  PL.tint(g, head, color, 1); PL.ink(g, head, Math.max(2, w * 0.45), color);
+}
+// 答えの札: 手彩色の札（筆のルックでは字の下が濃くなり字と重なる）をやめ、紙の札に朱の二重わくで示す
+function answerChoices(g, t, a, b, opts, o) {
+  const card = TK.card; TK.card = (gg, x, y, w, h) => card(gg, x, y, w, h, {});
+  try { TK.choices(g, t, a, b, opts, o); } finally { TK.card = card; }
+  if (t < (o.reveal ?? Infinity) || t < a || t > b) return;
+  const y = (o.y ?? PH * 0.34) + o.answer * ((o.h || 190) + (o.gap ?? 40)), h = o.h || 190, f = clamp((t - o.reveal) / 0.35, 0, 1) * fade(t, a, b, 0.3);
+  g.save(); g.globalAlpha *= f; PL.ink(g, PL.rect(78, y - 12, PW - 156, h + 24), 6, PL.RED); PL.ink(g, PL.rect(90, y, PW - 180, h), 3, PL.RED); g.restore();
+}
+
+// ワニ（横から・頭は右）。背のうろこの列・歯・目・脚
+function croc(g, x, y, s) {
+  const m = mapper(x, y, s), w = Math.max(2.5, 4 * s);
+  const legs = [[-110, 14, -1], [40, 12, 1]];
+  legs.forEach(([lx, ly]) => { const l = lp(m, P => { P.M(lx - 14, ly - 6); P.Q(lx - 26, ly + 20, lx - 22, ly + 36); P.L(lx + 8, ly + 38); P.Q(lx + 2, ly + 18, lx + 16, ly - 4); P.Z(); }); solid(g, l, PL.T.leaf, { a: 0.6, gap: 6, hw: 1.2, w: w * 0.8 }); });
+  const body = lp(m, P => { P.M(-262, 0); P.Q(-200, -40, -60, -40); P.L(110, -36); P.Q(150, -36, 172, -26); P.L(250, -14); P.Q(258, -6, 250, 4); P.L(120, 14); P.Q(-60, 30, -180, 18); P.Q(-240, 12, -262, 0); P.Z(); });
+  PL.tint(g, body, PL.T.leaf, 0.7);
+  g.save(); g.beginPath(); body(g); g.clip();
+  PL.ink(g, lp(m, P => { for (let x = -220; x < 120; x += 22) { P.M(x, -40); P.L(x - 4, 12); } P.M(-250, -2); P.L(110, -10); }), Math.max(1, 1.2 * s), 'rgba(35,28,21,0.45)');   // うろこの区切り
+  g.restore();
+  PL.hatch(g, body, { angle: 0.7, gap: Math.max(5, 7 * s), w: Math.max(1.1, 1.3 * s), not: lp(m, P => { P.M(-270, -10); P.Q(-200, -60, -60, -60); P.L(260, -34); P.L(260, -12); P.L(-270, -2); P.Z(); }) });
+  PL.ink(g, body, w);
+  PL.ink(g, lp(m, P => { for (let i = 0; i < 9; i++) { const x0 = -170 + i * 30; P.M(x0, -40); P.L(x0 + 12, -54); P.L(x0 + 24, -40); } }), w * 0.8);   // 背のでこぼこ
+  PL.ink(g, lp(m, P => { P.M(140, -6); P.L(250, -6); for (let x = 150; x < 245; x += 14) { P.M(x, -6); P.L(x + 5, 2); } }), Math.max(1.2, 1.6 * s));   // 口と歯
+  const eye = lp(m, P => P.E(118, -38, 9, 7)); PL.tint(g, eye, PL.T.gold, 1); PL.ink(g, eye, w * 0.7);
+  PL.ink(g, lp(m, P => { P.M(118, -44); P.L(118, -32); }), w * 0.7);
+}
+// 小さな絵（系統樹の葉の上）。x, y は足もとのまん中
+function bird(g, x, y, s) {   // ハト（横から・頭は右）
+  const m = mapper(x, y, s), w = Math.max(2.5, 4 * s);
+  PL.ink(g, lp(m, P => { P.M(-6, -24); P.L(-10, 0); P.M(10, -24); P.L(8, 0); P.M(-16, 0); P.L(-2, 0); P.M(2, 0); P.L(16, 0); }), w * 0.8, PL.RED);
+  const tail = lp(m, P => { P.M(-40, -44); P.L(-92, -38); P.L(-88, -24); P.L(-36, -30); P.Z(); }); solid(g, tail, PL.T.gray, { a: 0.7, gap: 6, hw: 1.2, w: w * 0.8 });
+  const body = lp(m, P => { P.M(-44, -40); P.Q(-30, -70, 20, -64); P.Q(52, -60, 50, -36); P.Q(36, -18, 0, -20); P.Q(-30, -22, -44, -40); P.Z(); });
+  PL.tint(g, body, PL.T.gray, 0.7); PL.hatch(g, body, { angle: 0.7, gap: 6, w: 1.2, not: lp(m, P => P.E(0, -54, 50, 18)) }); PL.ink(g, body, w);
+  const wing = lp(m, P => { P.M(-30, -46); P.Q(0, -60, 26, -48); P.Q(0, -34, -30, -46); P.Z(); }); PL.tint(g, wing, PL.T.sky, 0.6); PL.ink(g, wing, w * 0.7);
+  const head = lp(m, P => P.E(44, -72, 15, 14)); PL.tint(g, head, PL.T.gray, 0.9); PL.ink(g, head, w);
+  PL.tint(g, lp(m, P => { P.M(40, -60); P.Q(56, -58, 50, -44); P.L(36, -50); P.Z(); }), PL.T.leaf, 0.8);   // 首の色
+  const beak = lp(m, P => { P.M(57, -76); P.L(72, -71); P.L(57, -67); P.Z(); }); PL.tint(g, beak, PL.T.sand, 1); PL.ink(g, beak, w * 0.6);
+  const eye = lp(m, P => P.E(48, -74, 3, 3)); PL.tint(g, eye, PL.RED, 1);
+}
+function turtle(g, x, y, s) {   // カメ（横から・頭は右）
+  const m = mapper(x, y, s), w = Math.max(2.5, 4 * s);
+  [[-40], [36]].forEach(([lx]) => { const l = lp(m, P => { P.M(lx - 12, -16); P.L(lx - 14, 0); P.L(lx + 12, 0); P.L(lx + 12, -16); P.Z(); }); solid(g, l, PL.T.land, { a: 0.6, hatch: false, w: w * 0.8 }); });
+  const head = lp(m, P => { P.M(50, -20); P.Q(70, -40, 84, -34); P.Q(96, -26, 84, -16); P.Q(70, -12, 50, -12); P.Z(); }); solid(g, head, PL.T.land, { a: 0.65, gap: 5, hw: 1.1, w: w * 0.8 });
+  const shell = lp(m, P => { P.M(-62, -14); P.Q(-58, -74, 0, -76); P.Q(58, -74, 62, -14); P.Z(); });
+  PL.tint(g, shell, PL.T.wood, 0.8); PL.hatch(g, shell, { angle: 0.7, gap: 6, w: 1.3, not: lp(m, P => P.E(-14, -58, 60, 30)) });
+  PL.ink(g, lp(m, P => { P.M(-30, -66); P.L(-26, -14); P.M(0, -76); P.L(0, -14); P.M(30, -66); P.L(26, -14); P.M(-56, -40); P.Q(0, -50, 56, -40); }), Math.max(1.2, 1.6 * s));   // こうらの板
+  PL.ink(g, shell, w); PL.ink(g, lp(m, P => { P.M(-66, -14); P.L(66, -14); }), w);
+  PL.tint(g, lp(m, P => P.E(80, -30, 3, 3)), PL.INK, 1);
+}
+function lizard(g, x, y, s) {   // トカゲ（横から・頭は右）。長いしっぽ
+  const m = mapper(x, y, s), w = Math.max(2.5, 4 * s);
+  [[-30, 1], [30, -1]].forEach(([lx, d]) => PL.ink(g, lp(m, P => { P.M(lx, -20); P.L(lx - 12 * d, -6); P.L(lx - 4 * d, 0); P.L(lx + 8 * d, 0); }), w * 0.8));
+  const body = lp(m, P => { P.M(-110, -10); P.Q(-60, -18, -30, -30); P.Q(0, -38, 40, -30); P.Q(64, -40, 82, -30); P.Q(92, -24, 80, -18); P.Q(50, -14, 30, -16); P.Q(-20, -10, -60, -14); P.Q(-90, -10, -110, -10); P.Z(); });
+  PL.tint(g, body, PL.T.land, 0.75);
+  PL.ink(g, lp(m, P => { for (let x = -50; x < 40; x += 14) { P.M(x, -32); P.L(x + 6, -20); } }), Math.max(1, 1.2 * s), 'rgba(35,28,21,0.5)');   // 背の模様
+  PL.hatch(g, body, { angle: 0.7, gap: 6, w: 1.2, not: lp(m, P => { P.M(-120, -30); P.L(100, -50); P.L(100, -26); P.L(-120, -16); P.Z(); }) });
+  PL.ink(g, body, w);
+  PL.tint(g, lp(m, P => P.E(70, -30, 3, 3)), PL.INK, 1);
+}
+
 // 系統樹（葉: トカゲ・ヘビ／カメ／ワニ／鳥）
 const LEAF = { liz: 190, tur: 410, cro: 630, bird: 840 }, YL = 400;
 const NODE = { arch: [735, 620], turt: [572, 780], root: [381, 930] };
-function vline(g, x, y1, y2, k) { g.beginPath(); g.moveTo(x, y1); g.lineTo(x, lerp(y1, y2, k)); g.stroke(); }
+function vline(g, x, y1, y2, k, c) { if (k > 0) PL.ink(g, gg => { gg.moveTo(x, y1); gg.lineTo(x, lerp(y1, y2, k)); }, 8, c); }
+function hline(g, x1, x2, y, c) { PL.ink(g, gg => { gg.moveTo(x1, y); gg.lineTo(x2, y); }, 8, c); const n = PL.circle((x1 + x2) / 2, y, 8); PL.tint(g, n, c, 1); }
 function tree(g, t) {
   const k1 = clamp((t - 8.3) / 0.8, 0, 1), k2 = clamp((t - 14.3) / 0.8, 0, 1), k3 = clamp((t - 20.2) / 0.8, 0, 1);
   // ワニ＋鳥（主竜類）
-  st(g, TK.C.acc, 8); vline(g, LEAF.cro, YL, NODE.arch[1], k1); vline(g, LEAF.bird, YL, NODE.arch[1], k1);
-  if (k1 >= 1) { g.beginPath(); g.moveTo(LEAF.cro, NODE.arch[1]); g.lineTo(LEAF.bird, NODE.arch[1]); g.stroke(); }
-  TK.text(g, 'ワニ', LEAF.cro, YL - 50, 58, { color: '#c8f5cf' }); TK.text(g, '鳥', LEAF.bird, YL - 50, 58, { color: TK.C.acc });
+  vline(g, LEAF.cro, YL, NODE.arch[1], k1, PL.RED); vline(g, LEAF.bird, YL, NODE.arch[1], k1, PL.RED);
+  if (k1 >= 1) hline(g, LEAF.cro, LEAF.bird, NODE.arch[1], PL.RED);
+  croc(g, LEAF.cro, 300, 0.32); bird(g, LEAF.bird, 300, 0.95);
+  TK.text(g, 'ワニ', LEAF.cro, YL - 50, 58, { color: PL.INK }); TK.text(g, '鳥', LEAF.bird, YL - 50, 58, { color: PL.RED });
   if (t > 9.4) {   // 恐竜（いまはいない）の枝
-    g.save(); g.globalAlpha *= clamp((t - 9.4) / 0.5, 0, 1); g.setLineDash([12, 10]); st(g, 'rgba(255,255,255,0.45)', 6);
-    g.beginPath(); g.moveTo(NODE.arch[0], NODE.arch[1]); g.lineTo(NODE.arch[0], 500); g.stroke(); g.setLineDash([]);
-    TK.card(g, NODE.arch[0] - 170, 446, 340, 52, { r: 26, fill: 'rgba(11,20,48,0.92)', stroke: 'rgba(255,255,255,0.25)', lw: 2 });
-    TK.text(g, '恐竜（鳥以外は絶滅）', NODE.arch[0], 472, 34, { color: '#fff', bold: false });
-    TK.text(g, '主竜類', NODE.arch[0], NODE.arch[1] + 45, 40, { color: TK.C.acc, bold: false });
+    g.save(); g.globalAlpha *= clamp((t - 9.4) / 0.5, 0, 1);
+    g.save(); g.setLineDash([12, 10]); PL.ink(g, gg => { gg.moveTo(LEAF.bird, 570); gg.lineTo(875, 505); }, 5, 'rgba(35,28,21,0.5)'); g.restore();   // 鳥の枝から分かれた恐竜（いまはいない）
+    TK.text(g, '恐竜', 965, 470, 40, { bold: false });
+    TK.text(g, '鳥以外は絶滅', 965, 518, 28, { bold: false, color: TK.C.sub });
+    TK.text(g, '主竜類', NODE.arch[0] - 14, NODE.arch[1] + 34, 40, { color: PL.RED, bold: false, align: 'right' });
     g.restore();
   }
   if (t < 14.0) return;
-  st(g, '#ffb07a', 8); vline(g, LEAF.tur, YL, NODE.turt[1], k2); vline(g, NODE.arch[0], NODE.arch[1], NODE.turt[1], k2);
-  if (k2 >= 1) { g.beginPath(); g.moveTo(LEAF.tur, NODE.turt[1]); g.lineTo(NODE.arch[0], NODE.turt[1]); g.stroke(); }
-  TK.text(g, 'カメ', LEAF.tur, YL - 50, 58, { color: '#ffe2c4' });
+  vline(g, LEAF.tur, YL, NODE.turt[1], k2, RC); vline(g, NODE.arch[0], NODE.arch[1], NODE.turt[1], k2, RC);
+  if (k2 >= 1) hline(g, LEAF.tur, NODE.arch[0], NODE.turt[1], RC);
+  g.save(); g.globalAlpha *= clamp((t - 14.0) / 0.4, 0, 1); turtle(g, LEAF.tur, 300, 0.95); g.restore();
+  TK.text(g, 'カメ', LEAF.tur, YL - 50, 58, { color: RC });
   if (t < 20.0) return;
-  st(g, '#c9a6ff', 8); vline(g, LEAF.liz, YL, NODE.root[1], k3); vline(g, NODE.turt[0], NODE.turt[1], NODE.root[1], k3);
-  if (k3 >= 1) { g.beginPath(); g.moveTo(LEAF.liz, NODE.root[1]); g.lineTo(NODE.turt[0], NODE.root[1]); g.stroke(); }
-  TK.text(g, 'トカゲ・ヘビ', LEAF.liz, YL - 50, 54, { color: '#e2d4ff' });
-  if (t > 21.4) { g.save(); g.globalAlpha *= TK.pop(t, 21.4, 0.35); TK.text(g, 'いちばん遠い', 290, 990, 52, { color: TK.C.red }); g.restore(); }
+  vline(g, LEAF.liz, YL, NODE.root[1], k3, LC); vline(g, NODE.turt[0], NODE.turt[1], NODE.root[1], k3, LC);
+  if (k3 >= 1) hline(g, LEAF.liz, NODE.turt[0], NODE.root[1], LC);
+  g.save(); g.globalAlpha *= clamp((t - 20.0) / 0.4, 0, 1); lizard(g, LEAF.liz, 300, 0.85); g.restore();
+  TK.text(g, 'トカゲ・ヘビ', LEAF.liz, YL - 50, 44, { color: LC });
+  if (t > 21.4) { g.save(); g.globalAlpha *= Math.min(1, TK.pop(t, 21.4, 0.35)); TK.text(g, 'いちばん遠い', 290, 990, 52, { color: PL.RED }); g.restore(); }
 }
 
 function draw(g, t) {
   if (t < 8.0) {
     const f = fade(t, -1, 8.0, 0.3);
     TK.hook(g, t, 0.0, 2.0, 'ワニにいちばん近い\nいまの生きものは？', { y: 210, size: 92 });
-    g.save(); g.globalAlpha = f; croc(g, PW / 2, 440, 1.2); g.restore();
-    TK.choices(g, t, 0.15, 8.0, ['トカゲ', 'カメ', 'ハト（鳥）'], { y: 640, h: 140, gap: 22, size: 76, reveal: 4.2, answer: 2, think: [1.4, 4.2] });
+    g.save(); g.globalAlpha = f; croc(g, PW / 2, 392, 1.0); g.restore();
+    answerChoices(g, t, 0.15, 8.0, ['トカゲ', 'カメ', 'ハト（鳥）'], { y: 700, h: 140, gap: 22, size: 76, reveal: 4.2, answer: 2, think: [1.4, 4.2] });
   }
   if (t >= 8.0) {
     const f = fade(t, 8.0, 26, 0.3);
     g.save(); g.globalAlpha = f;
-    TK.text(g, 'いまいる生きものの系統（形は簡略）', PW / 2, 200, 46, { color: TK.C.sub });
+    TK.text(g, 'いまいる生きものの系統（形は簡略）', PW / 2, 180, 46, { color: TK.C.sub });
     tree(g, t);
     g.restore();
   }
-  if (t >= 14.0 && t < 22.6) TK.note(g, t, 14.0, 22.6, 'カメの位置は、形の研究とDNAの研究で長く意見が分かれていた\n（いまは DNA の結論が主流。1,145 か所の DNA で確かめた研究）', { size: 30 });
+  if (t >= 14.0 && t < 22.6) TK.note(g, t, 14.0, 22.6, 'カメの位置は、形の研究とDNAの研究で長く意見が分かれていた\n（いまは DNA の結論が主流。1,145 か所の DNA で確かめた研究）', { size: 30, y: 1120 });
   if (t >= 22.6) TK.note(g, t, 22.6, 25.0, '出どころ: Crawford ほか (2012) Biology Letters 8, 783–786', { size: 30 });
 }
 

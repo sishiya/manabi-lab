@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく metronome-sync-1（型A ぜんぶ逆）「橋がゆれたから、人がそろった」。台本は trivia/metronome-sync.md。?short で録る
@@ -62,50 +65,74 @@ const SIM = (() => {
 })();
 const snapAt = u => SIM.snaps[Math.min(SIM.snaps.length - 1, Math.max(0, Math.round(u * (SIM.snaps.length - 1))))];
 
-// 橋（上から）。人は点、色は足の位相（同じ色＝足並みがそろっている）
+// ---- 図鑑の版画の部品 ----
+const PHC = [PL.T.rust, PL.T.gold, PL.T.leaf, PL.T.sea, PL.T.sky, PL.T.rose];   // 足を出すタイミング（位相）を6つの色に
+function arrowV(g, x, y0, y1, w = 7, col = PL.RED) {   // 両はしに矢じりのない、片向きの矢印
+  const d = Math.sign(y1 - y0), h = 18;
+  PL.ink(g, gg => { gg.moveTo(x, y0); gg.lineTo(x, y1); gg.moveTo(x - h * 0.8, y1 - d * h); gg.lineTo(x, y1); gg.lineTo(x + h * 0.8, y1 - d * h); }, w, col);
+}
+// 橋（上から）。人は上から見た小さな人（肩と頭）。色＝足を出すタイミング（同じ色＝足並みがそろっている）
 function deckTop(g, t, snap, o = {}) {
   const x0 = 90, x1 = 990, cy = o.y ?? 640, w = 220;
   const ph = SIM.OM * t * 0.5;   // 見やすいよう半分の速さで
   const sway = (o.sway ?? (snap.A / SIM.amax)) * 46 * Math.sin(ph);
   g.save(); g.translate(0, sway);
-  g.fillStyle = 'rgba(160,190,255,0.12)'; g.strokeStyle = 'rgba(200,220,255,0.7)'; g.lineWidth = 5;
-  g.beginPath(); g.rect(x0, cy - w / 2, x1 - x0, w); g.fill(); g.stroke();
+  const deck = PL.rect(x0, cy - w / 2, x1 - x0, w);
+  PL.tint(g, deck, PL.T.gray, 0.45);
+  PL.ink(g, gg => { for (let x = x0 + 30; x < x1; x += 30) { gg.moveTo(x, cy - w / 2); gg.lineTo(x, cy + w / 2); } }, 1.2, 'rgba(35,28,21,0.3)');   // 床の板
+  [cy - w / 2 - 14, cy + w / 2].forEach(yy => { const r = PL.rect(x0, yy, x1 - x0, 14); PL.tint(g, r, PL.T.gray, 0.8); PL.hatch(g, r, { angle: 0.9, gap: 7, w: 1.4 }); PL.ink(g, r, 3); });   // 手すり
+  PL.ink(g, deck, 4);
+  const groups = PHC.map(() => []);
   for (let i = 0; i < snap.N; i++) {
     const p = SIM.pos[i], rel = snap.rel[i] + ph;
     const x = x0 + 20 + ((p[0] + t * 0.02 * (i % 2 ? 1 : -1)) % 1 + 1) % 1 * (x1 - x0 - 40), y = cy - w / 2 + 18 + p[1] * (w - 36) + Math.sin(rel) * 7;
-    g.fillStyle = `hsl(${((rel / (2 * Math.PI)) % 1 + 1) % 1 * 360},85%,65%)`;
-    g.beginPath(); g.arc(x, y, 8, 0, Math.PI * 2); g.fill();
+    groups[Math.floor((((rel / (2 * Math.PI)) % 1 + 1) % 1) * 6) % 6].push([x, y, i % 2 ? 1 : -1]);
   }
+  groups.forEach((G, k) => {
+    if (!G.length) return;
+    const body = gg => G.forEach(([x, y]) => { gg.moveTo(x + 6, y); gg.ellipse(x, y, 6, 10, 0, 0, Math.PI * 2); });
+    PL.tint(g, body, PHC[k], 1);
+    PL.ink(g, body, 1.6);
+  });
+  PL.ink(g, gg => { for (let i = 0; i < snap.N; i++) { const p = SIM.pos[i], rel = snap.rel[i] + ph, x = x0 + 20 + ((p[0] + t * 0.02 * (i % 2 ? 1 : -1)) % 1 + 1) % 1 * (x1 - x0 - 40), y = cy - w / 2 + 18 + p[1] * (w - 36) + Math.sin(rel) * 7, d = i % 2 ? 1 : -1; gg.moveTo(x + d * 4 + 3.5, y); gg.arc(x + d * 4, y, 3.5, 0, Math.PI * 2); } }, 3);   // 頭（進む向き）
   g.restore();
-  // 横ゆれの矢印
-  if (o.arrows !== false) {
-    g.save(); g.globalAlpha = 0.5 + 0.5 * Math.abs(Math.sin(ph)); g.strokeStyle = TK.C.acc; g.lineWidth = 8; g.lineCap = 'round';
-    [140, 940].forEach(x => { g.beginPath(); g.moveTo(x, cy - w / 2 - 90); g.lineTo(x, cy - w / 2 - 30); g.moveTo(x - 14, cy - w / 2 - 76); g.lineTo(x, cy - w / 2 - 92); g.lineTo(x + 14, cy - w / 2 - 76);
-      g.moveTo(x, cy + w / 2 + 30); g.lineTo(x, cy + w / 2 + 90); g.moveTo(x - 14, cy + w / 2 + 76); g.lineTo(x, cy + w / 2 + 92); g.lineTo(x + 14, cy + w / 2 + 76); g.stroke(); });
+  if (o.arrows !== false) {   // 横ゆれの矢印
+    g.save(); g.globalAlpha *= 0.5 + 0.5 * Math.abs(Math.sin(ph));
+    [140, 940].forEach(x => { arrowV(g, x, cy - w / 2 - 30, cy - w / 2 - 95); arrowV(g, x, cy + w / 2 + 30, cy + w / 2 + 95); });
     g.restore();
   }
 }
-// 橋（横から）の線画
-function bridgeSide(g, t, y, amp = 0) {
-  const sw = Math.sin(t * 4) * amp;
-  g.save(); g.strokeStyle = 'rgba(200,220,255,0.85)'; g.lineWidth = 6; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(70, y); g.lineTo(1010, y); g.stroke();   // 床
-  [[300, 70], [780, 70]].forEach(([x, h]) => { g.beginPath(); g.moveTo(x - 30, y - h); g.lineTo(x, y + 120); g.lineTo(x + 30, y - h); g.stroke(); });   // Y 形の柱
-  g.lineWidth = 3; g.strokeStyle = 'rgba(200,220,255,0.55)';   // 低いケーブル
-  g.beginPath(); g.moveTo(70, y - 20); g.quadraticCurveTo(185, y - 4, 300, y - 70); g.quadraticCurveTo(540, y + 10, 780, y - 70); g.quadraticCurveTo(895, y - 4, 1010, y - 20); g.stroke();
-  g.strokeStyle = 'rgba(95,212,255,0.35)'; g.lineWidth = 3;   // 川
-  for (let k = 0; k < 3; k++) { g.beginPath(); for (let x = 70; x <= 1010; x += 20) { const yy = y + 160 + k * 30 + Math.sin(x * 0.03 + t * 2 + k) * 6; x === 70 ? g.moveTo(x, yy) : g.lineTo(x, yy); } g.stroke(); }
-  g.restore();
-  return sw;
+// 橋（横から）。ミレニアム橋: 低いつり橋（ケーブルは床とほぼ同じ高さ）、川の中に Y 形の柱が2本
+function bridgeSide(g, t, y, o = {}) {
+  const x0 = o.x0 ?? 70, x1 = o.x1 ?? 1010, k = (x1 - x0) / 940, X = v => x0 + v * k;
+  const river = PL.rect(x0 - 20, y + 120, x1 - x0 + 40, 110);
+  PL.tint(g, river, PL.T.sea, 0.45);
+  PL.ink(g, gg => { for (let i = 0; i < 3; i++) { const yy = y + 145 + i * 28; for (let x = x0; x <= x1; x += 16) { const v = yy + Math.sin(x * 0.03 + t * 2 + i) * 5; x === x0 ? gg.moveTo(x, v) : gg.lineTo(x, v); } } }, 1.6, 'rgba(35,28,21,0.5)');
+  [[x0 - 20, X(60)], [X(880), x1 + 20]].forEach(([a, b]) => { const bank = PL.poly([[a, y + 10], [b, y + 10], [b, y + 230], [a, y + 230]]); PL.tint(g, bank, PL.T.sand, 0.7); PL.hatch(g, bank, { angle: 0.9, gap: 9, w: 1.8 }); PL.ink(g, bank, 4); });   // 岸
+  [X(230), X(710)].forEach(px => {   // Y 形の柱
+    const pier = PL.poly([[px - 12, y + 230], [px + 12, y + 230], [px + 12, y + 30], [px + 40, y - 40], [px + 28, y - 46], [px, y + 6], [px - 28, y - 46], [px - 40, y - 40], [px - 12, y + 30]]);
+    PL.tint(g, pier, PL.T.gray, 0.85); PL.hatch(g, pier, { angle: 0.9, gap: 8, w: 1.8 }); PL.ink(g, pier, 4);
+  });
+  const deck = PL.rect(x0, y - 8, x1 - x0, 16);
+  PL.tint(g, deck, PL.T.gray, 0.7); PL.hatch(g, deck, { angle: 0.9, gap: 7, w: 1.4 }); PL.ink(g, deck, 4);
+  PL.ink(g, gg => { gg.moveTo(x0, y - 26); gg.quadraticCurveTo(X(115), y - 10, X(230) - 34, y - 44); gg.quadraticCurveTo(X(470), y + 6, X(710) - 34, y - 44); gg.quadraticCurveTo(X(825), y - 10, x1, y - 26); }, 3);   // 低いケーブル
+  PL.ink(g, gg => { for (let x = x0 + 30; x < x1; x += 40) { gg.moveTo(x, y - 8); gg.lineTo(x, y - 22); } }, 1.4, 'rgba(35,28,21,0.6)');   // 手すり
 }
-// メトロノーム（36〜40秒）
-function metronome(g, x, y, ang, color) {
-  g.save(); g.translate(x, y);
-  g.strokeStyle = 'rgba(200,220,255,0.8)'; g.lineWidth = 4;
-  g.beginPath(); g.moveTo(-50, 0); g.lineTo(-24, -190); g.lineTo(24, -190); g.lineTo(50, 0); g.closePath(); g.stroke();
-  g.rotate(ang); g.strokeStyle = color; g.lineWidth = 6; g.beginPath(); g.moveTo(0, -20); g.lineTo(0, -170); g.stroke();
-  g.fillStyle = color; g.fillRect(-12, -140, 24, 18);
-  g.restore();
+// メトロノーム（横から）。x, y は底のまん中、ang は振り子の角度
+function metronome(g, x, y, ang) {
+  const body = PL.poly([[x - 50, y], [x - 24, y - 190], [x + 24, y - 190], [x + 50, y]]);
+  PL.tint(g, body, PL.T.wood, 0.75); PL.hatch(g, body, { angle: 0.9, gap: 8, w: 1.6, not: PL.poly([[x - 50, y], [x - 24, y - 190], [x + 2, y - 190], [x - 4, y]]) }); PL.ink(g, body, 4);
+  const face = PL.poly([[x - 26, y - 30], [x - 12, y - 170], [x + 12, y - 170], [x + 26, y - 30]]); PL.tint(g, face, PL.T.sand, 0.8); PL.ink(g, face, 2);
+  PL.ink(g, gg => { for (let i = 0; i < 9; i++) { const yy = y - 50 - i * 13; gg.moveTo(x - 6, yy); gg.lineTo(x + 6, yy); } }, 1.2, 'rgba(35,28,21,0.6)');   // 目盛り
+  const c = Math.cos(ang), s = Math.sin(ang), P = (px, py) => [x + px * c - py * s, y - 22 + px * s + py * c];
+  PL.ink(g, gg => { gg.moveTo(...P(0, 0)); gg.lineTo(...P(0, -170)); }, 5);
+  const wgt = PL.poly([P(-12, -130), P(12, -130), P(12, -110), P(-12, -110)]); PL.tint(g, wgt, PL.T.gold, 1); PL.ink(g, wgt, 3);
+}
+function meter(g, y, label, v, col) {
+  PL.label(g, label, 110, y, 40, { align: 'left', color: TK.C.sub });
+  const box = PL.rect(380, y - 20, 580, 40), bar = PL.rect(380, y - 20, Math.max(8, 580 * v), 40);
+  PL.tint(g, bar, col, 0.85); PL.hatch(g, bar, { angle: 0.9, gap: 9, w: 1.6 }); PL.ink(g, box, 3);
+  PL.ink(g, gg => { for (let i = 1; i < 10; i++) { gg.moveTo(380 + i * 58, y + 20); gg.lineTo(380 + i * 58, y + (i % 5 ? 12 : 4)); } }, 1.6);   // 目盛り
 }
 
 function draw(g, t) {
@@ -113,27 +140,35 @@ function draw(g, t) {
   if (t < 2.2) {
     deckTop(g, t + 30, snapAt(1), { y: 620 });
     TK.hook(g, t, 0.0, 2.2, '原因と結果が、\n[逆]。', { y: 1010, size: 120 });
-    TK.text(g, '上から見た歩道橋', PW / 2, 300, 44, { color: TK.C.sub, bold: false });
+    PL.label(g, '上から見た歩道橋', 90, 330, 44, { align: 'left', color: TK.C.sub, bold: false });
   }
   // 2.2〜7: 2000年 ロンドン
   if (t >= 2.2 && t < 7.0) {
-    bridgeSide(g, t, 700);
-    TK.card(g, 150, 210, 780, 230, { r: 36 });
-    TK.text(g, '2000年 [6月10日]', PW / 2, 280, 72);
-    TK.text(g, 'ロンドン・テムズ川の新しい歩道橋', PW / 2, 370, 46, { color: TK.C.sub });
-    TK.text(g, '開通の日', PW / 2, 1040, 50, { color: TK.C.sub });
+    bridgeSide(g, t, 690);
+    PL.label(g, '2000年 [6月10日]', 90, 280, 72, { align: 'left' });
+    PL.label(g, 'ロンドン・テムズ川の新しい歩道橋', 90, 370, 46, { align: 'left', color: TK.C.sub });
+    PL.ink(g, gg => { gg.moveTo(90, 418); gg.lineTo(820, 418); }, 3);
+    PL.leader(g, 510, 676, 600, 560, TK.C.sub); PL.label(g, '開通の日', 610, 530, 46, { align: 'left', color: TK.C.sub });
+    PL.leader(g, 237, 730, 170, 1000, TK.C.sub); PL.label(g, 'Y 形の柱', 170, 1035, 38, { color: TK.C.sub, bold: false });
+    PL.leader(g, 470, 690, 470, 1000, TK.C.sub); PL.label(g, '低いケーブル', 500, 1035, 38, { color: TK.C.sub, bold: false });
     TK.note(g, t, 2.6, 7, '線画（形はおおまか）', { size: 32 });
   }
   // 7〜12: 0.25 g、2日後に通行止め
   if (t >= 7.0 && t < 12.0) {
-    TK.count(g, t, 7.0, 12.0, 0, 0.25, { y: 440, size: 190, dur: 1.4, label: '横の揺れ（最大）', fmt: v => v.toFixed(2) + ' g' });
-    TK.text(g, '＝ 重力の [4分の1]', PW / 2, 640, 64);
+    const f = fade(t, 7, 12, 0.3), k = TK.out((t - 7.0) / 1.4), A = Math.sin(t * 5) * 14 * k;
+    g.save(); g.globalAlpha = f;
+    bridgeSide(g, t, 290, { x0: 160, x1: 920 });
+    [250, 830].forEach(x => { arrowV(g, x, 225, 225 - 50 - A); });
+    PL.label(g, '横の揺れ（最大）', 90, 620, 46, { align: 'left', color: TK.C.sub });
+    PL.label(g, (0.25 * k).toFixed(2) + ' g', 90, 750, 170, { align: 'left', color: PL.RED });
+    PL.label(g, '＝ 重力の [4分の1]', 90, 890, 64, { align: 'left' });
+    g.restore();
     if (t > 9.8) {
       const p = clamp(TK.pop(t, 9.8, 0.35), 0, 1.2);
       g.save(); g.globalAlpha = clamp(p, 0, 1);
-      g.translate(PW / 2, 880); g.rotate(-0.06); g.scale(p, p);
-      TK.card(g, -330, -80, 660, 160, { fill: 'rgba(255,107,107,0.2)', stroke: TK.C.red, lw: 8, r: 20 });
-      TK.text(g, '2日後に [通行止め]', 0, 0, 70, { acc: TK.C.red });
+      g.translate(600, 1060); g.rotate(-0.06); g.scale(p, p);
+      TK.card(g, -330, -80, 660, 160);
+      PL.label(g, '2日後に [通行止め]', 0, 0, 66);
       g.restore();
     }
   }
@@ -141,55 +176,66 @@ function draw(g, t) {
   if (t >= 12.0 && t < 17.0) {
     const s = snapAt(0.12);
     deckTop(g, t, s, { y: 620, sway: 0, arrows: false });
-    TK.text(g, '足並みを [そろえた] から？', PW / 2, 300, 70);
-    TK.text(g, '点＝人。色＝足を出すタイミング', PW / 2, 920, 40, { color: TK.C.sub, bold: false });
+    PL.label(g, '足並みを [そろえた] から？', 90, 300, 70, { align: 'left' });
+    PL.label(g, '1つ＝1人。色＝足を出すタイミング', 90, 860, 40, { align: 'left', color: TK.C.sub, bold: false });
+    PHC.forEach((c, i) => { const e = PL.ellipse(130 + i * 44, 930, 9, 14); PL.tint(g, e, c, 1); PL.ink(g, e, 2); });
+    PL.label(g, '色が同じ ＝ 足並みがそろう', 420, 930, 36, { align: 'left', color: TK.C.sub, bold: false });
     TK.note(g, t, 12.4, 17, '人と橋の動きは Strogatz ほか（2005）のモデル', { size: 32 });
   }
   // 17〜25: 人数をふやす → ある所で、ゆれとそろいが同時に
   if (t >= 17.0 && t < 25.0) {
     const u = clamp((t - 17.3) / 7.2, 0, 1), s = snapAt(u * 0.98);
-    deckTop(g, t, s, { y: 600 });
-    // 人数と、そろい具合のメーター
-    const bar = (y, label, v, color) => {
-      TK.text(g, label, 110, y, 40, { align: 'left', color: TK.C.sub });
-      g.fillStyle = 'rgba(255,255,255,0.12)'; g.beginPath(); g.roundRect(380, y - 22, 580, 44, 22); g.fill();
-      g.fillStyle = color; g.beginPath(); g.roundRect(380, y - 22, Math.max(44, 580 * v), 44, 22); g.fill();
-    };
-    bar(220, '人数', s.N / 300, TK.C.acc2);
-    bar(290, 'そろい具合', s.R, TK.C.acc);
-    bar(940, '橋のゆれ', s.A / SIM.amax, TK.C.red);
+    deckTop(g, t, s, { y: 620 });
+    meter(g, 230, '人数', s.N / 300, PL.T.sea);
+    meter(g, 300, 'そろい具合', s.R, PL.T.gold);
+    meter(g, 960, '橋のゆれ', s.A / SIM.amax, PL.T.rust);
     TK.note(g, t, 17.3, 25, 'Strogatz ほか（2005）のモデルで計算。ゆれは大きく描いています', { size: 32 });
   }
-  // 25〜31: ひとつの輪
+  // 25〜31: ひとつの輪（まん中で、ゆれる床の上の人）
   if (t >= 25.0 && t < 31.0) {
-    const cx = PW / 2, cy = 620, R = 290;
+    const cx = PW / 2, cy = 640, R = 300;
     const items = [{ a: -Math.PI / 2, s: '橋が[ゆれる]', at: 25.6 }, { a: Math.PI / 6, s: '人が[そろう]', at: 26.6 }, { a: Math.PI * 5 / 6, s: 'もっと[ゆれる]', at: 28.1 }];
-    g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 10; g.lineCap = 'round';
     const k = clamp((t - 25.4) / 3.2, 0, 1), spin = t * 0.6;
-    g.beginPath(); g.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * k); g.stroke();
-    if (k >= 1) { for (let i = 0; i < 3; i++) { const a = spin + i * Math.PI * 2 / 3, x = cx + Math.cos(a) * R, y = cy + Math.sin(a) * R;
-      g.save(); g.translate(x, y); g.rotate(a + Math.PI / 2); g.fillStyle = TK.C.acc; g.beginPath(); g.moveTo(22, 0); g.lineTo(-14, -18); g.lineTo(-14, 18); g.fill(); g.restore(); } }
-    g.restore();
-    items.forEach(it => { if (t < it.at) return; const p = clamp(TK.pop(t, it.at, 0.35), 0, 1.2);
+    PL.ink(g, gg => { gg.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * k); }, 9, PL.RED);
+    if (k >= 1) for (let i = 0; i < 3; i++) {
+      const a = spin + i * Math.PI * 2 / 3, x = cx + Math.cos(a) * R, y = cy + Math.sin(a) * R, ca = Math.cos(a + Math.PI / 2), sa = Math.sin(a + Math.PI / 2);
+      const tri = PL.poly([[x + ca * 24, y + sa * 24], [x - ca * 14 - sa * 18, y - sa * 14 + ca * 18], [x - ca * 14 + sa * 18, y - sa * 14 - ca * 18]]);
+      PL.tint(g, tri, PL.RED, 1); PL.ink(g, tri, 3, PL.RED);
+    }
+    const sw = Math.sin(t * 3.2) * 18;   // まん中: ゆれる床と、それに合わせて歩く人
+    const fl = PL.rect(cx - 150 + sw, cy + 110, 300, 18); PL.tint(g, fl, PL.T.gray, 0.8); PL.hatch(g, fl, { angle: 0.9, gap: 7, w: 1.4 }); PL.ink(g, fl, 3);
+    PL.walker(g, cx - 40 + sw, cy + 110, Math.sin(t * 3.2) * 0.08, t * 3.2, 0.62);
+    PL.walker(g, cx + 50 + sw, cy + 110, Math.sin(t * 3.2) * 0.08, t * 3.2 + 0.2, 0.62);
+    PL.ink(g, gg => { gg.moveTo(cx - 230, cy + 160); gg.lineTo(cx + 230, cy + 160); gg.moveTo(cx - 205, cy + 145); gg.lineTo(cx - 230, cy + 160); gg.lineTo(cx - 205, cy + 175); gg.moveTo(cx + 205, cy + 145); gg.lineTo(cx + 230, cy + 160); gg.lineTo(cx + 205, cy + 175); }, 4, TK.C.sub);
+    items.forEach(it => {
+      if (t < it.at) return; const p = clamp(TK.pop(t, it.at, 0.35), 0, 1.2);
       const x = cx + Math.cos(it.a) * R, y = cy + Math.sin(it.a) * R;
-      g.save(); g.globalAlpha = clamp(p, 0, 1); TK.card(g, x - 190, y - 60, 380, 120, { r: 60 }); TK.text(g, it.s, x, y, 56); g.restore(); });
+      g.save(); g.globalAlpha = clamp(p, 0, 1); TK.card(g, x - 190, y - 60, 380, 120); PL.label(g, it.s, x, y, 56); g.restore();
+    });
   }
-  // 31〜36: 試験 約160人
+  // 31〜36: 試験 約160人（小さな人1つ＝10人）
   if (t >= 31.0 && t < 36.0) {
-    TK.count(g, t, 31.0, 36.0, 0, 160, { y: 520, size: 230, dur: 1.2, label: '試験（2000年12月）', fmt: v => '約' + Math.round(v) + '人' });
-    if (t > 32.6) { g.save(); g.globalAlpha = fade(t, 32.6, 36, 0.3); TK.text(g, 'それより少ないと、[何も起きない]', PW / 2, 820, 56); g.restore(); }
+    const k = TK.out((t - 31.0) / 1.2), n = Math.round(160 * k), f = fade(t, 31, 36, 0.3);
+    g.save(); g.globalAlpha = f;
+    PL.label(g, '試験（2000年12月）', 90, 300, 48, { align: 'left', color: TK.C.sub });
+    PL.label(g, '約' + n + '人', 90, 440, 170, { align: 'left', color: PL.RED });
+    const deck = PL.rect(80, 760, 920, 16); PL.tint(g, deck, PL.T.gray, 0.8); PL.hatch(g, deck, { angle: 0.9, gap: 7, w: 1.4 }); PL.ink(g, deck, 3);
+    for (let i = 0; i < Math.floor(n / 10); i++) PL.walker(g, 120 + i * 54, 760, 0, t * 6 + i * 1.3, 0.5);
+    PL.label(g, '人の絵 1つ ＝ 10人', 990, 820, 34, { align: 'right', color: TK.C.sub, bold: false });
+    g.restore();
+    if (t > 32.6) { g.save(); g.globalAlpha = fade(t, 32.6, 36, 0.3); PL.label(g, 'それより少ないと、[何も起きない]', PW / 2, 960, 56); g.restore(); }
     TK.note(g, t, 31.5, 36, '人数は資料により 156〜166人', { size: 32 });
   }
-  // 36〜40: 板の上のメトロノーム（そろっていく線画）
+  // 36〜40: 板の上のメトロノーム（そろっていく）
   if (t >= 36.0) {
-    const k = clamp((t - 36.2) / 2.0, 0, 1), ph0 = [0, 2.1, 4.0, 1.2, 3.1];
-    g.save(); g.translate(Math.sin(t * 6) * 6 * k, 0);
-    g.strokeStyle = 'rgba(200,220,255,0.8)'; g.lineWidth = 6; g.beginPath(); g.moveTo(100, 760); g.lineTo(980, 760); g.stroke();
-    for (let i = 0; i < 5; i++) { const ph = t * 6 + ph0[i] * (1 - k); metronome(g, 180 + i * 180, 750, 0.45 * Math.sin(ph), `hsl(${((ph / (2 * Math.PI)) % 1) * 360},85%,65%)`); }
-    g.restore();
-    [260, 820].forEach(x => { g.strokeStyle = 'rgba(200,220,255,0.5)'; g.lineWidth = 4; g.beginPath(); g.arc(x, 790, 26, 0, Math.PI * 2); g.stroke(); });
-    TK.text(g, '動く板の上のメトロノーム', PW / 2, 320, 54, { color: TK.C.sub });
-    TK.note(g, t, 36.5, 40, '出どころ: Strogatz ほか (2005) Nature 438:43・D. P. Taylor「Damper Retrofit of the London\nMillennium Footbridge」（Taylor Devices）・phys.org (2005)', { size: 28 });
+    const k = clamp((t - 36.2) / 2.0, 0, 1), ph0 = [0, 2.1, 4.0, 1.2, 3.1], dx = Math.sin(t * 6) * 6 * k;
+    const board = PL.rect(100 + dx, 760, 880, 22); PL.tint(g, board, PL.T.wood, 0.8); PL.hatch(g, board, { angle: 0.9, gap: 7, w: 1.6 }); PL.ink(g, board, 4);
+    for (let i = 0; i < 5; i++) { const ph = t * 6 + ph0[i] * (1 - k); metronome(g, 180 + i * 180 + dx, 760, 0.45 * Math.sin(ph)); }
+    [260, 820].forEach(x => { const c = PL.circle(x, 808, 26); PL.tint(g, c, PL.T.gray, 0.8); PL.hatch(g, c, { angle: 0.9, gap: 7, w: 1.4, cx: x, cy: 808 }); PL.ink(g, c, 4); });   // 下の転がる缶
+    PL.ink(g, gg => { gg.moveTo(80, 836); gg.lineTo(1000, 836); }, 3);
+    PL.label(g, '動く板の上のメトロノーム', 90, 320, 54, { align: 'left', color: TK.C.sub });
+    PL.leader(g, 820, 830, 900, 940, TK.C.sub); PL.label(g, '転がる缶', 900, 975, 38, { color: TK.C.sub, bold: false });
+    TK.note(g, t, 36.5, 40, '出どころ: Strogatz ほか (2005) Nature 438:43・D. P. Taylor「Damper Retrofit of the London Millennium Footbridge」\n（Taylor Devices）・phys.org (2005)', { size: 28, y: 1140 });
   }
 }
 

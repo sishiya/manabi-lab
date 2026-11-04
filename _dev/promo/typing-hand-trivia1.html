@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく typing-hand-1（型H 当ててみて）「キーを押している時間、速い人と遅い人でどれだけちがう？」。台本は trivia/typing-hand.md。?short で録る
@@ -35,80 +38,133 @@ const SLOW_GAP = [0.42, 0.55, 0.47];                                            
 const TXT = 'THE QUICK BROWN';
 function seq(gaps, dur) { let s = 0.05; const out = []; for (let i = 0; i <= gaps.length; i++) { out.push({ a: s, b: s + dur, k: TXT[i] || '' }); s += gaps[i] || 0; } return out; }
 const FAST = seq(FAST_GAP, 0.104), SLOW = seq(SLOW_GAP, 0.129);
-const TL = { x0: 110, x1: 950, span: 1.0 };
-const tx = s => TL.x0 + (TL.x1 - TL.x0) * s / TL.span;
+const TLN = { x0: 110, x1: 950, span: 1.0 };
+const tx = s => TLN.x0 + (TLN.x1 - TLN.x0) * s / TLN.span;
 const PLAY = [12.8, 17.6];   // 再生の線が 0 → 1.6 秒を動く時刻
-for (const b of FAST.concat(SLOW)) cues.push({ t: PLAY[0] + (PLAY[1] - PLAY[0]) * b.a / TL.span, type: 'tick' });
+for (const b of FAST.concat(SLOW)) cues.push({ t: PLAY[0] + (PLAY[1] - PLAY[0]) * b.a / TLN.span, type: 'tick' });
 
-// キー1つ（上から見た模式）。down: 0〜1 の沈み
-function key(g, cx, cy, size, ch, down, col) {
-  const d = down * size * 0.06;
-  g.save();
-  g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.roundRect(cx - size / 2, cy - size / 2 + size * 0.08, size, size, size * 0.14); g.fill();
-  g.fillStyle = down > 0.5 ? 'rgba(95,212,255,0.30)' : 'rgba(30,48,96,0.95)'; g.strokeStyle = col || 'rgba(200,215,255,0.7)'; g.lineWidth = 5;
-  g.beginPath(); g.roundRect(cx - size / 2, cy - size / 2 + d, size, size, size * 0.14); g.fill(); g.stroke();
-  TK.text(g, ch, cx, cy + d, size * 0.42, { color: '#fff', blur: 0 });
+// ---- 図鑑の版画の道具（PL.*）で描くキーボード ----
+// キー1つ（ななめ上から見たキートップ。手前の面が見える）。x, y は上の面のまん中、w は幅、down: 0〜1 の沈み
+function keyCap(g, x, y, w, ch, down, o = {}) {
+  const d = down * w * 0.1, y0 = y - w * 0.24 + d, y1 = y + w * 0.2 + d, yb = y + w * 0.36;
+  const top = PL.poly([[x - w * 0.35, y0], [x + w * 0.35, y0], [x + w * 0.41, y1], [x - w * 0.41, y1]]);
+  const front = PL.poly([[x - w * 0.41, y1], [x + w * 0.41, y1], [x + w * 0.46, yb], [x - w * 0.46, yb]]);
+  const right = PL.poly([[x + w * 0.35, y0], [x + w * 0.41, y1], [x + w * 0.46, yb], [x + w * 0.42, y0 + w * 0.05]]);
+  g.save(); g.fillStyle = '#f4efe2'; [top, front, right].forEach(pp => { g.beginPath(); pp(g); g.fill(); }); g.restore();   // 下の台の線がすけないよう、紙でうめる
+  PL.tint(g, front, PL.T.brown, 0.45); PL.hatch(g, front, { angle: 1.25, gap: Math.max(6, w * 0.045), w: Math.max(1.4, w * 0.011), cx: x, cy: yb });
+  PL.tint(g, right, PL.T.gray, 0.6); PL.hatch(g, right, { angle: -0.3, gap: Math.max(6, w * 0.04), w: Math.max(1.4, w * 0.011), cx: x, cy: yb });
+  PL.ink(g, front, Math.max(2.5, w * 0.022)); PL.ink(g, right, Math.max(2.5, w * 0.022)); PL.ink(g, top, Math.max(3, w * 0.026));
+  if (ch) PL.label(g, ch, x, (y0 + y1) / 2, w * 0.3, { color: down > 0.5 ? PL.RED : PL.INK });
+}
+// キーの台（うすい板と、手前の厚み）。キーを置く前に描く
+function plate(g, cx, cy, hw, w) {
+  const top = PL.poly([[cx - hw + w * 0.08, cy - w * 0.38], [cx + hw - w * 0.08, cy - w * 0.38], [cx + hw, cy + w * 0.46], [cx - hw, cy + w * 0.46]]);
+  const edge = PL.poly([[cx - hw, cy + w * 0.46], [cx + hw, cy + w * 0.46], [cx + hw, cy + w * 0.58], [cx - hw, cy + w * 0.58]]);
+  PL.tint(g, top, PL.T.gray, 0.45); PL.hatch(g, top, { angle: 0.25, gap: 16, w: 1.6, cx, cy });
+  PL.tint(g, edge, PL.T.brown, 0.55); PL.hatch(g, edge, { angle: 1.1, gap: 7, w: 2, cx, cy });
+  PL.ink(g, top, Math.max(3, w * 0.025)); PL.ink(g, edge, Math.max(3, w * 0.025));
+}
+// J K L の3つ。K が押される
+function keyRow(g, cx, cy, w, down) {
+  plate(g, cx, cy, w * 1.62, w);
+  keyCap(g, cx - w * 1.04, cy, w, 'J', 0); keyCap(g, cx + w * 1.04, cy, w, 'L', 0); keyCap(g, cx, cy, w, 'K', down);
+}
+const pressK = t => { const ph = (t * 1.6) % 1; return ph < 0.06 ? ph / 0.06 : ph < 0.2 ? 1 : ph < 0.26 ? 1 - (ph - 0.2) / 0.06 : 0; };   // 押して約0.1秒で離す（絵のため）
+// 指で押す矢印（朱）。y は矢の先
+function pushArrow(g, x, y, k) {
+  if (k <= 0.05) return;
+  g.save(); g.globalAlpha *= k;
+  PL.ink(g, gg => { gg.moveTo(x, y - 110); gg.lineTo(x, y); gg.moveTo(x - 22, y - 30); gg.lineTo(x, y); gg.lineTo(x + 22, y - 30); }, 7, PL.RED);
   g.restore();
 }
-function row(g, t, y, list, label, col, upto, showOverlap) {
-  TK.text(g, label, TL.x0, y - 110, 50, { align: 'left', color: col });
-  g.strokeStyle = 'rgba(200,215,255,0.35)'; g.lineWidth = 3; g.beginPath(); g.moveTo(TL.x0, y + 66); g.lineTo(TL.x1, y + 66); g.stroke();
+// 時間の線の1段（帯＝押している間）。字は帯の上（ならび0）と下（ならび1）のすきまに置く
+function row(g, t, y, list, label, tintC, upto, showOverlap) {
+  PL.label(g, label, TLN.x0, y - 175, 50, { align: 'left' });
+  // 目もりの線
+  PL.ink(g, gg => { gg.moveTo(TLN.x0, y + 120); gg.lineTo(TLN.x1, y + 120); }, 3);
+  for (let s = 0; s <= TLN.span + 1e-6; s += 0.05) { const big = Math.abs(s * 4 - Math.round(s * 4)) < 1e-6; PL.ink(g, gg => { gg.moveTo(tx(s), y + 120); gg.lineTo(tx(s), y + (big ? 140 : 130)); }, big ? 3 : 1.5); }
   list.forEach((b, i) => {
     if (b.a > upto) return;
-    const lane = i % 2;   // 重なりが見えるよう、1つおきに少しずらす
-    const x = tx(b.a), w = tx(Math.min(b.b, upto)) - x, yy = y - 60 + lane * 56;
-    g.fillStyle = col; g.globalAlpha = 0.85; g.beginPath(); g.roundRect(x, yy, Math.max(4, w), 56, 10); g.fill(); g.globalAlpha = 1;
-    if (b.k.trim() && w > 30) TK.text(g, b.k, x + w / 2, yy + 28, 40, { color: '#0b1430', blur: 0 });
+    const lane = i % 2, x = tx(b.a), w = Math.max(4, tx(Math.min(b.b, upto)) - x), yy = y - 60 + lane * 56;
+    const r = PL.rect(x, yy, w, 56);
+    PL.tint(g, r, tintC, 0.75); PL.hatch(g, r, { angle: 0.8, gap: 9, w: 1.8, cx: x, cy: yy }); PL.ink(g, r, 3.5);
+    if (b.k.trim() && w > 30) PL.label(g, b.k, x + w / 2, lane ? yy + 90 : yy - 32, 36, { bold: false });
   });
   if (showOverlap) list.forEach((b, i) => {
     if (i > 0 && list[i - 1].b > b.a && b.a <= upto) {
-      const x = tx(b.a), w = tx(list[i - 1].b) - x;
-      g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.globalAlpha = 0.7 + 0.3 * Math.sin(t * 8);
-      g.beginPath(); g.roundRect(x - 4, y - 70, w + 8, 132, 8); g.stroke(); g.restore();
+      const x = tx(b.a), w = tx(list[i - 1].b) - x, r = PL.rect(x - 3, y - 62, w + 6, 116);
+      g.save(); g.globalAlpha *= 0.75 + 0.25 * Math.sin(t * 8);
+      PL.hatch(g, r, { angle: -0.8, gap: 7, w: 2.2, color: PL.RED, cx: x, cy: y }); PL.ink(g, r, 4, PL.RED);
+      g.restore();
     }
   });
+  if (upto < TLN.span) {   // いまの時刻（目もりの下の朱の三角）
+    const x = tx(upto); PL.ink(g, gg => { gg.moveTo(x, y + 124); gg.lineTo(x - 14, y + 150); gg.lineTo(x + 14, y + 150); gg.closePath(); }, 4, PL.RED);
+  }
+}
+
+// 選択肢: 答えの札は、手彩色をしかずに朱の太いわくで（筆のルックでは札の手彩色が字の下でにじみ、字と重なって見えるため）
+function choices(g, ...a) {
+  const card = TK.card;
+  TK.card = (gg, x, y, w, h, o = {}) => { card(gg, x, y, w, h, {}); if (o.fill) PL.ink(gg, PL.rect(x + 4, y + 4, w - 8, h - 8), 7, PL.RED); };
+  try { TK.choices(g, ...a); } finally { TK.card = card; }
 }
 
 function draw(g, t) {
   // 0〜3: フック（キーが押されて、離れる）
   if (t < 3.0) {
-    const ph = (t * 1.6) % 1, down = ph < 0.25 ? 1 : 0;
-    g.save(); g.globalAlpha = fade(t, -1, 3, 0.3); key(g, PW / 2, 800, 330, 'K', down); g.restore();
+    const dn = pressK(t);
+    g.save(); g.globalAlpha = fade(t, -1, 3, 0.3); keyRow(g, PW / 2 + 40, 860, 250, dn); pushArrow(g, PW / 2 + 40, 680, dn); g.restore();
     TK.hook(g, t, 0.0, 3.0, '速い人と遅い人\n押している時間の[ちがい]は？', { y: 340, size: 100 });
   }
   // 3〜8: 当ててみて
   if (t >= 3.0 && t < 8.0) {
-    TK.choices(g, t, 3.0, 8.0, ['5倍ちがう', '2倍ちがう', 'ほぼ同じ'], { y: 420, answer: 2, reveal: 7.6, think: [4.0, 7.5] });
+    choices(g, t, 3.0, 8.0, ['5倍ちがう', '2倍ちがう', 'ほぼ同じ'], { y: 420, answer: 2, reveal: 7.6, think: [4.0, 7.5] });
   }
-  // 8〜12.5: 押している長さの棒
+  // 8〜12.5: 押している長さの棒（下にキーの絵と、押してから離すまでの説明）
   if (t >= 8.0 && t < 12.5) {
     TK.text(g, 'キーを押している長さ（平均）', PW / 2, 300, 56, { color: TK.C.sub });
     TK.bars(g, t, 8.0, 12.5, [
       { label: '速い人（上位10%）', v: 0.104 / 0.15, color: TK.C.acc2, text: '0.104 秒' },
       { label: '遅い人（下位10%）', v: 0.129 / 0.15, color: TK.C.green, text: '0.129 秒' },
     ], { y: 440, gap: 260, stagger: 0.5 });
+    g.save(); g.globalAlpha = fade(t, 8.6, 12.5, 0.3);
+    const dn = pressK(t); keyCap(g, 330, 1030, 180, 'K', dn); plateLine(g);
+    PL.leader(g, 450, 1010, 560, 1010);
+    PL.label(g, '押してから 離すまで', 580, 1010, 44, { align: 'left', bold: false });
+    g.restore();
   }
   // 12.5〜24: 時間の線に帯
   if (t >= 12.5 && t < 24.0) {
-    const f = fade(t, 12.5, 24.0, 0.3), upto = clamp((t - PLAY[0]) / (PLAY[1] - PLAY[0]), 0, 1) * TL.span;
+    const f = fade(t, 12.5, 24.0, 0.3), upto = clamp((t - PLAY[0]) / (PLAY[1] - PLAY[0]), 0, 1) * TLN.span;
     g.save(); g.globalAlpha = f;
-    TK.text(g, '押している間 ＝ 帯', PW / 2, 220, 50, { color: TK.C.sub });
-    row(g, t, 470, FAST, '速い人', TK.C.acc2, upto, t > 18.5);
-    row(g, t, 800, SLOW, '遅い人', TK.C.green, upto, false);
-    // 目もり
-    for (let s = 0; s <= TL.span + 1e-6; s += 0.25) { TK.text(g, s.toFixed(2) + '秒', tx(s), 920, 30, { color: TK.C.dim, bold: false }); }
-    if (upto < TL.span) { g.strokeStyle = TK.C.acc; g.lineWidth = 4; g.beginPath(); g.moveTo(tx(upto), 330); g.lineTo(tx(upto), 880); g.stroke(); }
-    if (t > 18.8) TK.text(g, '重なり ＝ 離す前に次を押した', PW / 2, 1010, 50, { color: TK.C.acc });
+    // 見本の帯（左上をさけて、右に）
+    const lr = PL.rect(600, 180, 90, 40); PL.tint(g, lr, PL.T.sea, 0.75); PL.hatch(g, lr, { angle: 0.8, gap: 9, w: 1.8, cx: 600, cy: 180 }); PL.ink(g, lr, 3.5);
+    PL.label(g, '＝ 押している間', 710, 200, 42, { align: 'left', bold: false });
+    row(g, t, 520, FAST, '速い人', PL.T.sea, upto, t > 18.5);
+    row(g, t, 900, SLOW, '遅い人', PL.T.leaf, upto, false);
+    for (let s = 0; s <= TLN.span + 1e-6; s += 0.25) PL.label(g, s.toFixed(2) + '秒', tx(s), 1075, 30, { color: '#4a3f33', bold: false });
+    if (t > 18.8) PL.label(g, '朱 ＝ [離す前に次を押した]', PW / 2, 1150, 50);
     g.restore();
     TK.note(g, t, 13, 24, '帯の並びは模式（間かくの平均を論文の値に合わせた）', { size: 32 });
   }
-  // 24〜30: キーにもどる
+  // 24〜30: キーにもどる（押す時間はみんな同じ・差は押していない時間）
   if (t >= 24.0) {
-    const ph = (t * 1.6) % 1, down = ph < 0.25 ? 1 : 0;
-    key(g, PW / 2, 620, 300, 'K', down);
-    TK.note(g, t, 25.0, 30.0, '英文を写して打つオンラインのテスト・16万人あまり（自分から参加した人）\n出どころ: Dhakal, Feit, Kristensson & Oulasvirta (2018) CHI', { size: 30 });
+    const dn = pressK(t);
+    keyRow(g, 470, 700, 230, dn); pushArrow(g, 470, 530, dn);
+    g.save(); g.globalAlpha = fade(t, 24.3, 40, 0.3);
+    PL.label(g, '押す長さ（みんな）', 110, 280, 44, { align: 'left', bold: false });
+    PL.label(g, '[約0.1秒]', 110, 350, 56, { align: 'left' });
+    PL.label(g, 'すきま', 640, 280, 44, { align: 'left', bold: false });
+    PL.label(g, '英文を写して打つオンラインのテスト・16万人あまり（自分から参加した人）', PW / 2, 1000, 32, { color: '#4a3f33', bold: false });
+    PL.label(g, '0.12〜[0.48秒]', 640, 350, 56, { align: 'left' });
+    PL.leader(g, 430, 660, 300, 390); PL.leader(g, 590, 700, 720, 390);
+    g.restore();
+    TK.note(g, t, 25.0, 30.0, '出どころ: Dhakal, Feit, Kristensson & Oulasvirta (2018) CHI', { size: 30 });
   }
 }
+// 1つだけのキーの下の台の線
+function plateLine(g) { PL.ink(g, gg => { gg.moveTo(200, 1100); gg.lineTo(460, 1100); }, 4); PL.hatch(g, PL.rect(200, 1100, 260, 14), { angle: 1.1, gap: 7, w: 2 }); }
 
 triviaStart({ out: 'typing-hand-trivia1', voice: 'auto', dur: DUR, draw, subs, cues, peek: 1.5 });
 </script>

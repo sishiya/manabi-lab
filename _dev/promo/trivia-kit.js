@@ -253,6 +253,7 @@ TK.fitVoice = function (cfg, lines) {
 };
 
 function triviaStart(cfg) {
+  if (TK.ready && !cfg._ready) { TK.ready.then(() => triviaStart(Object.assign({}, cfg, { _ready: true }))); return; }   // 決まったルックの読みこみ待ち（trivia-style.js）
   if (cfg.voice === 'auto') {   // 声の一覧を先に読んでから始める（なければ字幕だけ）
     fetch(`out/voice/${cfg.voiceOut || cfg.out}/voice.json`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null).then(j => {
       const lines = Array.isArray(j) ? j : (j && j.lines) || [];
@@ -294,6 +295,7 @@ function triviaStart(cfg) {
       try { const buf = await ctx.decodeAudioData(await (await fetch(v.file)).arrayBuffer()); const s = ctx.createBufferSource(); s.buffer = buf; s.connect(out); s.start(v.t); } catch (e) { }
     }
   };
+  TK._run = { end: END, subs };
   promoStart({
     name: 'うんちく: ' + cfg.out, out: cfg.out, src: 'blank.html', iw: 400, ih: 300, dur: DUR, peek: cfg.peek || 2,
     subs: subs.map(s => ({ a: s.a, b: s.b, ja: TK.plain(s.ja), en: s.en })),
@@ -305,11 +307,13 @@ function triviaStart(cfg) {
     overlay(g, t) {
       if (t < END) {
         TK.bg(g, t, cfg.bgOpts || {});
+        TK._phase = 'draw';   // 重なりの確かめ（__triviaOverlap）が、本編の絵の字と字幕などを分けるため
         if (TK.drawArt) TK.drawArt(g, t, cfg.draw); else cfg.draw(g, t);   // ルックによっては絵だけ別の層に描いて影をつける（trivia-looks.js）
+        TK._phase = 'ui'; if (TK._beforeSub) TK._beforeSub(g, t, subs);
         TK.subtitle(g, t, subs);
         const credit = [cfg.voiceCredit && '声: ' + cfg.voiceCredit, isFile0 && TK.BGM_CREDIT].filter(Boolean).join('　'); if (credit) TK.credit(g, credit);
         if (cfg.progress !== false) TK.progress(g, t, END);
-        drawIdentMini(g, t, 0.3, 0.8);
+        TK._phase = null; drawIdentMini(g, t, 0.3, 0.8);
         if (TK.finish) TK.finish(g, t);   // ルックの仕上げ（絵全体にかける。trivia-looks.js）
       } else {
         g.globalAlpha = 1; g.fillStyle = '#000'; g.fillRect(0, 0, PW, PH);
@@ -318,3 +322,80 @@ function triviaStart(cfg) {
     },
   });
 }
+
+// ---- 文字と絵の重なりの確かめ（record-promo.ps1 -Overlap から。2026-11-04）----
+// step 秒ごとに描きながら、本編の絵の中の字（TK.text・fillText）を1つずつ見る:
+//   line: 字を書く前、その四角の中に線（紙と大きくちがう所）がある  tint: 字の下が色ぬりの上（カードの上なら気にしない）
+//   cover: 字のあとに上から絵や帯が描かれた  text: 字どうしが重なる  out: 画面の外にはみ出す  band: 字幕の帯の下に絵が隠れる（tint と band は弱い。目で見て決める）
+// 返すのは重なりの一覧。sheet を渡すと、見つけたコマに枠を描いて out/<sheet>.jpg に並べる
+window.__triviaOverlap = async (step = 0.25, sheet = '') => {
+  const P = CanvasRenderingContext2D.prototype, F = P.fillText, run = TK._run, found = new Map();
+  const pc = document.createElement('canvas'); pc.width = PW; pc.height = PH; const pg = pc.getContext('2d'); TK.bg(pg, 0, {});
+  const pd = pg.getImageData(PW / 2 - 50, PH - 120, 100, 100).data, paper = [0, 1, 2].map(k => { let s = 0; for (let i = k; i < pd.length; i += 4) s += pd[i]; return s / (pd.length / 4); });
+  const far = (d, i, lim) => Math.max(Math.abs(d[i] - paper[0]), Math.abs(d[i + 1] - paper[1]), Math.abs(d[i + 2] - paper[2])) > lim;
+  let recs = [], group = null, ctx = null;
+  const boxOf = (c, s, x, y) => {   // その字の四角（キャンバスの画素）
+    const m = c.measureText(s), T = c.getTransform(), l = x - m.actualBoundingBoxLeft, r = x + m.actualBoundingBoxRight, u = y - m.actualBoundingBoxAscent, d = y + m.actualBoundingBoxDescent;
+    const pts = [[l, u], [r, u], [l, d], [r, d]].map(([px, py]) => [T.a * px + T.c * py + T.e, T.b * px + T.d * py + T.f]);
+    return [Math.min(...pts.map(p => p[0])), Math.min(...pts.map(p => p[1])), Math.max(...pts.map(p => p[0])), Math.max(...pts.map(p => p[1]))];
+  };
+  const grab = (c, b) => { const x = Math.max(0, Math.floor(b[0])), y = Math.max(0, Math.floor(b[1])), w = Math.min(c.canvas.width, Math.ceil(b[2])) - x, h = Math.min(c.canvas.height, Math.ceil(b[3])) - y; return w > 0 && h > 0 ? c.getImageData(x, y, w, h).data : new Uint8ClampedArray(0); };
+  const under = (c, b) => {   // line: 紙とも、その四角のふつうの色（札の色）ともちがう所。べたの札の上の字は tint にする
+    const d = grab(c, [b[0] + 2, b[1] + 2, b[2] - 2, b[3] - 2]), n = d.length / 4; if (!n) return [0, 0];
+    const med = [0, 1, 2].map(k => { const v = []; for (let i = k; i < d.length; i += 4 * 7) v.push(d[i]); v.sort((x, y) => x - y); return v[v.length >> 1]; });
+    let line = 0, tint = 0;
+    for (let i = 0; i < d.length; i += 4) { const fm = Math.max(Math.abs(d[i] - med[0]), Math.abs(d[i + 1] - med[1]), Math.abs(d[i + 2] - med[2])) > 70; if (far(d, i, 70) && fm) line++; else if (far(d, i, 28)) tint++; }
+    return [line / n, tint / n];
+  };
+  P.fillText = function (s, x, y, mw) {
+    if (TK._phase && String(s).trim()) {
+      ctx = this; const b = boxOf(this, s, x, y);
+      if (TK._phase === 'draw' && this.globalAlpha > 0.35) { const [l, ti] = under(this, b); if (group) { group.b.push(b); group.line = Math.max(group.line, l); group.tint = Math.max(group.tint, ti); } else recs.push({ s: String(s), b: [b], line: l, tint: ti, ph: 'draw' }); }
+      else if (TK._phase === 'ui' && this.globalAlpha > 0.35) { const [l] = under(this, b); recs.push({ s: String(s), b: [b], line: l, ph: 'ui' }); }   // 字幕・クレジットなど
+    }
+    return F.call(this, s, x, y, mw);
+  };
+  const TT = TK.text;
+  TK.text = function (g, s, ...a) {
+    if (group || TK._phase !== 'draw') return TT.call(this, g, s, ...a);
+    group = { s: TK.plain(s), b: [], line: 0, tint: 0, ph: 'draw' }; const r = TT.call(this, g, s, ...a), gr = group; group = null;
+    if (gr.b.length) { gr.b = [[Math.min(...gr.b.map(q => q[0])), Math.min(...gr.b.map(q => q[1])), Math.max(...gr.b.map(q => q[2])), Math.max(...gr.b.map(q => q[3]))]]; gr.snap = grab(g, gr.b[0]); recs.push(gr); }
+    return r;
+  };
+  let bandArt = 0;
+  TK._beforeSub = (g, t, subs) => {   // 字幕の帯がかくす所に、絵があるか
+    const s = subs.find(x => t >= x.a && t < x.b && !x.noBurn); bandArt = 0; if (!s || !PL.bandH) return;
+    const hh = PL.bandH(String(s.ja).split('\n').length), T = g.getTransform(), d = grab(g, [0, (PL.SUBY - hh) * T.d, PW * T.a, (PL.SUBY + hh) * T.d]); let n = 0; for (let i = 0; i < d.length; i += 16) if (far(d, i, 70)) n++; bandArt = n / (d.length / 16);
+  };
+  const add = (kind, s, t, v, b) => { const k = kind + '|' + s; const f = found.get(k); if (f) { f.t1 = t; f.v = Math.max(f.v, v); } else found.set(k, { kind, s, t0: t, t1: t, v, b, tPeek: t }); };
+  try {
+    for (let t = step / 2; t < run.end; t += step) {
+      recs = []; await window.__promoPeek(t); const c = ctx; if (!c) continue;
+      const W = c.canvas.width, H = c.canvas.height, k = W / PW;
+      for (const r of recs) {
+        const b = r.b[0];
+        if (b[0] < 6 * k || b[1] < 6 * k || b[2] > W - 6 * k || b[3] > H - 6 * k) add('out', r.s, t, 1, b);
+        if (r.line > 0.03) add('line', r.s, t, r.line, b); else if (r.tint > 0.25) add('tint', r.s, t, r.tint, b);
+        if (r.ph !== 'draw') continue;
+        if (r.snap) { const d = grab(c, b); let ch = 0; for (let i = 0; i < d.length; i += 4) if (Math.abs(d[i] - r.snap[i]) + Math.abs(d[i + 1] - r.snap[i + 1]) + Math.abs(d[i + 2] - r.snap[i + 2]) > 60) ch++; if (ch / (d.length / 4) > 0.04) add('cover', r.s, t, ch / (d.length / 4), b); }
+      }
+      for (let i = 0; i < recs.length; i++) for (let j = i + 1; j < recs.length; j++) {
+        const A = recs[i].b[0], B = recs[j].b[0], w = Math.min(A[2], B[2]) - Math.max(A[0], B[0]), h = Math.min(A[3], B[3]) - Math.max(A[1], B[1]);
+        if (w > 0 && h > 0) { const v = w * h / Math.min((A[2] - A[0]) * (A[3] - A[1]), (B[2] - B[0]) * (B[3] - B[1])); if (v > 0.15) add('text', recs[i].s + ' ／ ' + recs[j].s, t, v, [Math.min(A[0], B[0]), Math.min(A[1], B[1]), Math.max(A[2], B[2]), Math.max(A[3], B[3])]); }
+      }
+      if (bandArt > 0.02) add('band', '字幕の帯の下', t, bandArt, [0, (PL.SUBY - 130) * k, W, (PL.SUBY + 130) * k]);
+    }
+  } finally { P.fillText = F; TK.text = TT; TK._beforeSub = null; }
+  const list = [...found.values()].map(f => ({ kind: f.kind, s: f.s, t: f.t0.toFixed(2) + '〜' + f.t1.toFixed(2), v: +f.v.toFixed(3), tPeek: +(f.t0 + f.t1) / 2, b: f.b.map(Math.round) }));
+  if (sheet && list.length) {   // 見つけたコマ（最大16）に枠を描いて並べる
+    const weak = f => f.kind === 'tint' || f.kind === 'band', pick = list.filter(f => !weak(f)).concat(list.filter(weak)).slice(0, 16), cols = 4, sw = 480, sh = 853;
+    const cv = document.createElement('canvas'); cv.width = sw * cols; cv.height = sh * Math.ceil(pick.length / cols); const cg = cv.getContext('2d');
+    for (let i = 0; i < pick.length; i++) {
+      const f = pick[i]; await window.__promoPeek(f.tPeek); const src = ctx.canvas, sx = (i % cols) * sw, sy = Math.floor(i / cols) * sh, k = sw / src.width;
+      cg.drawImage(src, sx, sy, sw, sh); cg.strokeStyle = weak(f) ? '#f90' : '#f00'; cg.lineWidth = 3; cg.strokeRect(sx + f.b[0] * k, sy + f.b[1] * k, (f.b[2] - f.b[0]) * k, (f.b[3] - f.b[1]) * k);
+      cg.fillStyle = '#000'; cg.fillRect(sx, sy + sh - 34, sw, 34); cg.fillStyle = '#fff'; cg.font = '20px sans-serif'; cg.fillText(`${f.kind} ${f.tPeek.toFixed(1)}s ${f.s}`.slice(0, 40), sx + 6, sy + sh - 10);
+    }
+    const bl = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.85)); await fetch(`out/${sheet}.jpg`, { method: 'PUT', body: bl });
+  }
+  return list;
+};

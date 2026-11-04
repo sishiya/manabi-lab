@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく animal-senses-3（型G ループ）「トナカイには、雪の上のエサが黒く見える」。台本は trivia/animal-senses.md。?short で録る
@@ -28,86 +31,112 @@ const cues = [
   { t: 0.05, type: 'pop' }, { t: 3.0, type: 'whoosh' }, { t: 4.2, type: 'ding' }, { t: 7.0, type: 'pop' }, { t: 8.2, type: 'pop' },
   { t: 11.0, type: 'whoosh' }, { t: 13.6, type: 'whoosh' },
 ];
+// 絵は「図鑑の版画」（trivia-plate.js の PL.*）。雪原の1枚の図を、人の目（手彩色）と紫外線の白黒（墨のこさ）で描き分け、境めを朱の線でぬぐう。
+// トナカイ（横から。がっしりした胴・たてがみ・後ろへ反ってから前へ曲がる枝角と、顔の前の「シャベル」）、オオカミ（横から）、
+// ハナゴケのなかま（低い株に、こまかく枝分かれ）
 const rnd = (i, j = 0) => { const s = Math.sin(i * 12.9898 + j * 78.233) * 43758.5453; return s - Math.floor(s); };
-const mix = (a, b, k) => a.map((v, i) => Math.round(v + (b[i] - v) * k));
-const rgb = c => `rgb(${c[0]},${c[1]},${c[2]})`;
-// 色: [人の目, 紫外線の白黒]
-const COL = {
-  sky: [[120, 150, 205], [120, 120, 120]],
-  snow: [[236, 242, 252], [246, 246, 246]],
-  snow2: [[214, 224, 242], [226, 226, 226]],
-  lichen: [[214, 218, 200], [28, 28, 28]],
-  wolf: [[226, 222, 210], [62, 62, 62]],
-  deer: [[120, 100, 80], [90, 90, 90]],
+const BX = 70, BY = 260, BW = 940, BH = 800;
+function mapper(x0, y0, s, dir = 1) { return (x, y) => [x0 + s * x * dir, y0 + s * y]; }
+const pathOf = (m, pts, close = true) => g => { pts.forEach((p, i) => { if (p.length > 2) { const c = m(p[0], p[1]), e = m(p[2], p[3]); g.quadraticCurveTo(c[0], c[1], e[0], e[1]); } else if (i) g.lineTo(...m(p[0], p[1])); else g.moveTo(...m(p[0], p[1])); }); if (close) g.closePath(); };
+function limb(pts, ws) {
+  const U = [], D = [];
+  pts.forEach((p, i) => {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+    let dx = b[0] - a[0], dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+    U.push([p[0] - dy * ws[i] / 2, p[1] + dx * ws[i] / 2]); D.push([p[0] + dy * ws[i] / 2, p[1] - dx * ws[i] / 2]);
+  });
+  return [...U, ...D.reverse()];
+}
+// 2つの見え方の色。uv: 紫外線の白黒（想像図）
+const PAL = {
+  eye: { sky: [PL.T.sky, 0.55], lichen: ['#cfd2b4', 0.95], deer: [PL.T.brown, 0.8], light: [PL.T.sand, 0.75], wolf: [PL.T.gray, 0.8], hill: [PL.T.sky, 0.18] },
+  uv: { sky: [PL.T.gray, 0.75], lichen: ['#2a2622', 0.9], deer: ['#5a554e', 0.8], light: ['#6a655e', 0.7], wolf: ['#3a3631', 0.85], hill: [PL.T.gray, 0.05] },
 };
-const C = (name, k) => rgb(mix(COL[name][0], COL[name][1], k));
-const BX = 70, BY = 250, BW = 940, BH = 820;
-
-function reindeer(g, x, y, s, col, line) {
-  g.save(); g.translate(x, y); g.scale(s, s); g.fillStyle = col; g.strokeStyle = line; g.lineWidth = 4; g.lineCap = 'round'; g.lineJoin = 'round';
-  // 脚
-  for (const lx of [-70, -45, 50, 75]) { g.beginPath(); g.moveTo(lx, 20); g.lineTo(lx + 4, 120); g.lineWidth = 10; g.strokeStyle = col; g.stroke(); }
-  g.lineWidth = 4; g.strokeStyle = line;
-  g.beginPath(); g.ellipse(0, 0, 105, 50, 0, 0, Math.PI * 2); g.fill(); g.stroke();                       // 胴
-  g.beginPath(); g.moveTo(80, -20); g.lineTo(130, -90); g.lineTo(160, -80); g.lineTo(120, 0); g.closePath(); g.fill(); g.stroke();   // 首
-  g.beginPath(); g.ellipse(170, -95, 42, 22, 0.3, 0, Math.PI * 2); g.fill(); g.stroke();                 // 頭
-  // 角
-  g.lineWidth = 6;
-  g.beginPath(); g.moveTo(150, -112); g.quadraticCurveTo(120, -190, 160, -250); g.moveTo(132, -170); g.lineTo(100, -200); g.moveTo(142, -215); g.lineTo(115, -245);
-  g.moveTo(165, -112); g.quadraticCurveTo(170, -180, 210, -230); g.moveTo(178, -165); g.lineTo(205, -185); g.stroke();
-  g.restore();
+function reindeer(g, x, y, s, P) {
+  const m = mapper(x, y, s), ow = Math.max(2.4, 4 * s), lw = Math.max(1.4, 2 * s);
+  const legs = [[[-84, -86], [-96, -44], [-86, -4]], [[52, -84], [46, -40], [44, -4]], [[-104, -92], [-120, -46], [-108, -4]], [[74, -86], [78, -42], [78, -4]]];
+  legs.forEach((L, i) => { const p = pathOf(m, limb(L, [26, 14, 11])); g.save(); if (i < 2) g.globalAlpha *= 0.7; PL.tint(g, p, ...P.deer); PL.hatch(g, p, { angle: 0.6, gap: 7, w: lw * 0.8 }); PL.ink(g, p, ow * 0.8); g.restore();
+    const f = L[2], hoof = pathOf(m, [[f[0] - 9, f[1] - 2], [f[0] + 11, f[1] - 2], [f[0] + 14, f[1] + 6], [f[0] - 11, f[1] + 6]]); PL.tint(g, hoof, PL.INK, 0.8); PL.ink(g, hoof, lw); });
+  const body = pathOf(m, [[-124, -150], [-40, -164, 40, -170], [80, -186, 100, -212], [118, -238, 140, -244], [166, -244, 176, -232], [200, -210], [204, -198], [196, -190], [170, -196, 152, -196], [130, -180, 118, -150], [104, -112, 84, -84], [20, -72, -60, -78], [-112, -84, -128, -112], [-134, -132, -124, -150]]);
+  PL.tint(g, body, ...P.deer);
+  const neck = pathOf(m, [[150, -196], [128, -176, 118, -150], [104, -112, 84, -84], [70, -110], [96, -150], [120, -186]]);   // 白っぽい首とたてがみ
+  PL.tint(g, neck, ...P.light);
+  PL.hatch(g, body, { angle: 0.7, gap: 8, w: lw, not: pathOf(m, [[-124, -170], [100, -190], [100, -140], [-124, -128]]) });
+  PL.ink(g, body, ow);
+  PL.ink(g, gg => { for (let k = 0; k < 9; k++) { const a = m(122 - k * 5, -176 + k * 10), b = m(110 - k * 5, -168 + k * 12); gg.moveTo(...a); gg.lineTo(...b); } }, lw);   // たてがみの毛
+  PL.ink(g, pathOf(m, [[-128, -134], [-140, -122], [-132, -114]], false), ow * 0.8);   // しっぽ
+  const ear = pathOf(m, [[140, -240], [126, -262], [150, -246]]); PL.tint(g, ear, ...P.deer); PL.ink(g, ear, lw * 1.2);
+  PL.ink(g, gg => { const e = m(168, -224); gg.moveTo(e[0] + 4 * s, e[1]); gg.arc(e[0], e[1], 4 * s, 0, Math.PI * 2); const n = m(198, -204), n2 = m(192, -200); gg.moveTo(...n); gg.lineTo(...n2); }, lw * 1.2);
+  // 枝角（奥の1本はうすく）
+  [[0.5, -14, -6], [1, 0, 0]].forEach(([a, dx, dy]) => {
+    g.save(); g.globalAlpha *= a;
+    const B = (px, py) => [px + dx, py + dy];
+    PL.ink(g, pathOf(m, [B(150, -244), [...B(104, -300), ...B(118, -370)], [...B(132, -420), ...B(188, -440)]], false), ow * 1.6, '#4a3a2a');
+    PL.ink(g, pathOf(m, [B(112, -320), B(80, -350), B(120, -360), B(96, -396), B(126, -398), B(118, -430), B(150, -420), B(168, -452)], false), ow * 1.1, '#4a3a2a');
+    if (a === 1) { const sh = pathOf(m, [[152, -248], [172, -268, 196, -270], [204, -258], [188, -252, 168, -244]]); PL.tint(g, sh, PL.T.wood, 0.8); PL.ink(g, sh, ow * 0.8, '#4a3a2a'); }   // 眉の上のシャベル
+    g.restore();
+  });
 }
-function wolf(g, x, y, s, col, line) {
-  g.save(); g.translate(x, y); g.scale(s, s); g.fillStyle = col; g.strokeStyle = line; g.lineWidth = 4; g.lineJoin = 'round';
-  for (const lx of [-50, -30, 35, 55]) { g.fillRect(lx - 6, 10, 12, 70); }
-  g.beginPath(); g.ellipse(0, 0, 75, 32, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-  g.beginPath(); g.moveTo(-70, -5); g.quadraticCurveTo(-120, 10, -125, 50); g.lineTo(-110, 45); g.quadraticCurveTo(-100, 15, -68, 10); g.fill(); g.stroke();   // しっぽ
-  g.beginPath(); g.moveTo(55, -15); g.lineTo(95, -50); g.lineTo(100, -75); g.lineTo(110, -52); g.lineTo(140, -35); g.lineTo(105, -15); g.lineTo(70, 10); g.closePath(); g.fill(); g.stroke();
-  g.restore();
+function wolf(g, x, y, s, P) {   // 左向き
+  const m = mapper(x, y, s, -1), ow = Math.max(2.2, 3.6 * s), lw = Math.max(1.2, 1.8 * s);
+  [[[-56, -54], [-72, -28], [-62, 0]], [[66, -54], [70, -26], [70, 0]], [[-40, -54], [-54, -28], [-46, 0]], [[52, -54], [52, -26], [50, 0]]].forEach((L, i) => {
+    const p = pathOf(m, limb(L, [16, 9, 8])); g.save(); if (i > 1) g.globalAlpha *= 0.7; PL.tint(g, p, ...P.wolf); PL.ink(g, p, ow * 0.7); g.restore();
+  });
+  const tail = pathOf(m, [[-74, -76], [-104, -66, -110, -30], [-100, -22], [-92, -46, -70, -62]]);
+  PL.tint(g, tail, ...P.wolf); PL.hatch(g, tail, { angle: -0.6, gap: 6, w: lw * 0.8 }); PL.ink(g, tail, ow * 0.8);
+  const body = pathOf(m, [[-74, -78], [-10, -88, 52, -86], [72, -92, 92, -112], [96, -126], [102, -140], [106, -124], [114, -118], [140, -104, 152, -98], [146, -88], [120, -86, 104, -80], [92, -62, 76, -56], [10, -46, -50, -50], [-80, -56, -74, -78]]);
+  PL.tint(g, body, ...P.wolf); PL.hatch(g, body, { angle: 0.7, gap: 7, w: lw, not: pathOf(m, [[-80, -100], [110, -130], [110, -84], [-80, -66]]) }); PL.ink(g, body, ow);
+  PL.ink(g, gg => { const e = m(112, -110); gg.moveTo(e[0] + 3 * s, e[1]); gg.arc(e[0], e[1], 3 * s, 0, Math.PI * 2); for (let k = 0; k < 6; k++) { const a = m(80 - k * 6, -96 + k * 7), b = m(72 - k * 6, -88 + k * 8); gg.moveTo(...a); gg.lineTo(...b); } }, lw);
 }
-// 雪原の場面。k: 0=人の目、1=紫外線の白黒
-function scene(g, t, k, showWolf) {
-  g.fillStyle = C('sky', k); g.fillRect(BX, BY, BW, BH);
-  g.fillStyle = C('snow2', k); g.beginPath(); g.moveTo(BX, BY + 330); g.quadraticCurveTo(BX + 300, BY + 270, BX + 560, BY + 320); g.quadraticCurveTo(BX + 800, BY + 360, BX + BW, BY + 300); g.lineTo(BX + BW, BY + BH); g.lineTo(BX, BY + BH); g.fill();
-  g.fillStyle = C('snow', k); g.beginPath(); g.moveTo(BX, BY + 420); g.quadraticCurveTo(BX + 400, BY + 380, BX + BW, BY + 440); g.lineTo(BX + BW, BY + BH); g.lineTo(BX, BY + BH); g.fill();
-  // コケ（ハナゴケのなかま）のかたまり
-  g.fillStyle = C('lichen', k);
-  for (let i = 0; i < 26; i++) {
-    const x = BX + 30 + rnd(i) * (BW - 60), y = BY + 450 + rnd(i, 1) * (BH - 480), r = 14 + rnd(i, 2) * 26;
-    for (let j = 0; j < 5; j++) { g.beginPath(); g.arc(x + (rnd(i, j + 3) - 0.5) * r * 1.6, y + (rnd(i, j + 9) - 0.5) * r * 0.6, r * (0.4 + 0.4 * rnd(i, j + 5)), 0, Math.PI * 2); g.fill(); }
-  }
-  if (showWolf > 0) { g.save(); g.globalAlpha *= showWolf; wolf(g, BX + 720, BY + 330, 0.85, C('wolf', k), k > 0.5 ? 'rgba(0,0,0,0.3)' : 'rgba(180,180,200,0.6)'); g.restore(); }
-  reindeer(g, BX + 230, BY + 600, 1.05, C('deer', k), k > 0.5 ? 'rgba(50,50,50,0.9)' : 'rgba(60,40,30,0.8)');
+// ハナゴケの株（まとめて1つの道に）
+const LICHEN = Array.from({ length: 24 }, (_, i) => ({ x: BX + 40 + rnd(i) * (BW - 80), y: BY + 470 + rnd(i, 1) * (BH - 500), r: 18 + rnd(i, 2) * 24 })).filter(c => !(c.x > BX + 80 && c.x < BX + 470 && c.y < BY + 640));
+function lichens(g, P) {
+  const dome = gg => LICHEN.forEach(({ x, y, r }) => { gg.moveTo(x - r * 1.3, y); gg.quadraticCurveTo(x - r * 1.1, y - r * 1.2, x, y - r); gg.quadraticCurveTo(x + r * 1.1, y - r * 1.2, x + r * 1.3, y); gg.closePath(); });
+  PL.tint(g, dome, ...P.lichen); PL.ink(g, dome, 2.4);
+  PL.ink(g, gg => LICHEN.forEach(({ x, y, r }, i) => { for (let k = 0; k < 6; k++) { const bx = x + (k / 5 - 0.5) * r * 1.8, by = y - 2, h = r * (0.55 + 0.4 * rnd(i, k)); gg.moveTo(bx, by); gg.lineTo(bx, by - h * 0.55); gg.lineTo(bx - 5, by - h); gg.moveTo(bx, by - h * 0.55); gg.lineTo(bx + 5, by - h * 0.95); } }), 1.4);
+}
+// 雪原の場面。uv: 紫外線の白黒
+function scene(g, uv, showWolf) {
+  const P = uv ? PAL.uv : PAL.eye;
+  const sky = gg => { gg.moveTo(BX, BY); gg.lineTo(BX + BW, BY); gg.lineTo(BX + BW, BY + 300); gg.quadraticCurveTo(BX + 800, BY + 360, BX + 560, BY + 320); gg.quadraticCurveTo(BX + 300, BY + 270, BX, BY + 330); gg.closePath(); };
+  PL.tint(g, sky, ...P.sky);
+  const far = gg => { gg.moveTo(BX, BY + 330); gg.quadraticCurveTo(BX + 300, BY + 270, BX + 560, BY + 320); gg.quadraticCurveTo(BX + 800, BY + 360, BX + BW, BY + 300); gg.lineTo(BX + BW, BY + 440); gg.quadraticCurveTo(BX + 400, BY + 380, BX, BY + 420); gg.closePath(); };
+  PL.tint(g, far, ...P.hill);
+  PL.hatch(g, gg => { gg.moveTo(BX, BY + 420); gg.quadraticCurveTo(BX + 400, BY + 380, BX + BW, BY + 440); gg.lineTo(BX + BW, BY + 470); gg.quadraticCurveTo(BX + 400, BY + 410, BX, BY + 450); gg.closePath(); }, { angle: 0.25, gap: 9, w: 1.4 });   // 雪のふちのかげ
+  PL.ink(g, gg => { gg.moveTo(BX, BY + 330); gg.quadraticCurveTo(BX + 300, BY + 270, BX + 560, BY + 320); gg.quadraticCurveTo(BX + 800, BY + 360, BX + BW, BY + 300); gg.moveTo(BX, BY + 420); gg.quadraticCurveTo(BX + 400, BY + 380, BX + BW, BY + 440); }, 3);
+  lichens(g, P);
+  if (showWolf > 0) { g.save(); g.globalAlpha *= showWolf; wolf(g, BX + 740, BY + 340, 0.85, P); g.restore(); }
+  reindeer(g, BX + 250, BY + 700, 1.05, P);
 }
 
 function draw(g, t) {
   // 紫外線の白黒への切りかえ（ワイプ）: 3.0〜4.0 で左→右、13.6〜14.6 で戻る
   const wipeIn = clamp((t - 3.0) / 1.0, 0, 1), wipeOut = clamp((t - 13.6) / 1.0, 0, 1);
   const showWolf = clamp((t - 7.0) / 0.6, 0, 1);
-  g.save();
-  g.beginPath(); g.roundRect(BX, BY, BW, BH, 30); g.clip();
-  scene(g, t, 0, showWolf);
+  const panel = PL.rect(BX, BY, BW, BH);
+  g.save(); g.beginPath(); panel(g); g.clip();
+  scene(g, false, showWolf);
   const wx = BX + BW * ease(wipeIn) * (1 - ease(wipeOut));
   if (wx > BX + 1) {
-    g.save(); g.beginPath(); g.rect(BX, BY, wx - BX, BH); g.clip(); scene(g, t, 1, showWolf); g.restore();
-    if (wipeIn < 1 || wipeOut > 0) { g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.beginPath(); g.moveTo(wx, BY); g.lineTo(wx, BY + BH); g.stroke(); }
+    g.save(); g.beginPath(); g.rect(BX, BY, wx - BX, BH); g.clip(); TK.bg(g); scene(g, true, showWolf); g.restore();
+    if (wipeIn < 1 || wipeOut > 0) PL.ink(g, gg => { gg.moveTo(wx, BY); gg.lineTo(wx, BY + BH); }, 6, PL.RED);
   }
-  // 冬の薄明かり（11〜14.6）
-  const dusk = clamp((t - 11.0) / 1.2, 0, 1) * (1 - clamp((t - 13.6) / 1.0, 0, 1));
-  if (dusk > 0) { g.fillStyle = `rgba(40,70,170,${0.35 * dusk})`; g.fillRect(BX, BY, BW, BH); }
+  const dusk = clamp((t - 11.0) / 1.2, 0, 1) * (1 - clamp((t - 13.6) / 1.0, 0, 1));   // 冬の薄明かり（11〜14.6）
+  if (dusk > 0) PL.tint(g, panel, '#3a5a9a', 0.35 * dusk);
   g.restore();
-  g.save(); g.strokeStyle = 'rgba(160,190,255,0.5)'; g.lineWidth = 4; g.beginPath(); g.roundRect(BX, BY, BW, BH, 30); g.stroke(); g.restore();
-  // 見出し
+  PL.ink(g, panel, 6); PL.ink(g, PL.rect(BX - 12, BY - 12, BW + 24, BH + 24), 1.5);
+  // 見出し（わくの上）とラベル（わくの外に置いて、引き出し線でつなぐ）
   const uv = wipeIn > 0.5 && wipeOut < 0.5;
-  TK.text(g, uv ? '紫外線で見ると（白黒・想像図）' : '人の目で見ると', PW / 2, 190, 58, { color: uv ? TK.C.acc : TK.C.sub });
+  PL.label(g, uv ? '紫外線で見ると（白黒・想像図）' : '人の目で見ると', BX, 150, 52, { align: 'left', color: uv ? PL.RED : TK.C.sub });
   if (t > 4.2 && t < 11.0) {
-    g.save(); g.globalAlpha = TK.pop(t, 4.2) * fade(t, 4.2, 11.0, 0.3);
-    TK.text(g, 'エサのコケ', BX + 640, BY + 700, 46, { color: '#000', blur: 0, stroke: 'rgba(255,255,255,0.9)' });
+    const c = LICHEN.reduce((a, b) => (b.x > BX + 520 && b.y > a.y ? b : a), LICHEN[0]);
+    g.save(); g.globalAlpha *= clamp((t - 4.2) / 0.3, 0, 1) * fade(t, 4.2, 11.0, 0.3);
+    PL.leader(g, c.x, c.y - c.r * 0.5, BX + BW - 120, BY + BH + 42); PL.label(g, 'エサのコケ', BX + BW, BY + BH + 68, 44, { align: 'right' });
     g.restore();
   }
   if (t > 8.2 && t < 11.0) {
-    g.save(); g.globalAlpha = TK.pop(t, 8.2) * fade(t, 8.2, 11.0, 0.3);
-    TK.text(g, 'オオカミ', BX + 720, BY + 220, 46, { color: '#000', blur: 0, stroke: 'rgba(255,255,255,0.9)' });
+    g.save(); g.globalAlpha *= clamp((t - 8.2) / 0.3, 0, 1) * fade(t, 8.2, 11.0, 0.3);
+    PL.leader(g, BX + 740 - 20, BY + 340 - 80, BX + BW - 120, BY - 34); PL.label(g, 'オオカミ', BX + BW, BY - 52, 44, { align: 'right' });
     g.restore();
   }
   if (t >= 3.0 && t < 7.0) TK.note(g, t, 3.0, 7.0, 'トナカイの角膜・水晶体は 約300〜320 nm の紫外線まで通す', { size: 30 });

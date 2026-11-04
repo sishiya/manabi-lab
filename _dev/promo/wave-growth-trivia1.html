@@ -11,11 +11,14 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく wave-growth-1（型E ズーム）「カリフォルニアの浜の波は、地球の反対がわ近くの嵐から来ていた」。台本は trivia/wave-growth.md。?short で録る
 // Munk, Miller, Snodgrass & Barber (1963): 1959年9月、南緯60度・東経111度付近の嵐 → San Clemente Island（北緯33度・西経118.5度）。
-// きょり約15,300km、0.03Hz（約33秒）6.7日・26.5m/s、0.07Hz（約14秒）15.5日・11.4m/s。地球儀は陸の形を描かない（緯線・経線と点だけ）
+// きょり約15,300km、0.03Hz（約33秒）6.7日・26.5m/s、0.07Hz（約14秒）15.5日・11.4m/s。絵は図鑑の版画（PL.*）。地球儀の陸は ETOPO1（TL.ELEV、1度ごと）の海抜0mの線
 const DUR = 35;
 const subs = [
   { a: 0.0, b: 1.6, ja: 'この波、どこから来た？', en: 'Where did this wave come from?', noBurn: true },
@@ -32,9 +35,9 @@ const cues = [
   { t: 10.0, type: 'rise' }, { t: 13.6, type: 'thud' }, { t: 17.0, type: 'whoosh' }, { t: 22.0, type: 'ding' },
   { t: 25.0, type: 'pop' }, { t: 27.4, type: 'ding' }, { t: 30.0, type: 'ding' }, { t: 31.0, type: 'whoosh' },
 ];
-const D2R = Math.PI / 180;
+// D2R（度 → ラジアン）は trivia-looks.js のものを使う
 const CAL = [33.0, -118.5], STORM = [-60, 111], AUS = [-25, 134];
-const CX0 = 540, CY0 = 700, CF = [-15, -170], RF = 370;
+const CX0 = 540, CY0 = 740, CF = [-15, -170], RF = 320;
 let SCX = CX0, SCY = CY0;
 // 正射図法（中心 c=[lat,lon]、半径 R）。見えない側は null
 function proj(p, c, R) {
@@ -56,47 +59,95 @@ function view(t) {
   SCX = fx - (fx - CX0) * R / RF; SCY = fy - (fy - CY0) * R / RF;
   return { c: CF, R, k };
 }
+// 正射図法の逆（画面の点 → 緯度・経度）。地球の外は null
+function unproj(x, y, c, R) {
+  const nx = (x - SCX) / R, ny = (SCY - y) / R, rho = Math.hypot(nx, ny); if (rho > 1) return null;
+  const f0 = c[0] * D2R, l0 = c[1] * D2R, cc = Math.asin(rho), sc = Math.sin(cc), ccs = Math.cos(cc);
+  const lat = rho < 1e-9 ? f0 : Math.asin(ccs * Math.sin(f0) + ny * sc * Math.cos(f0) / rho);
+  const lon = l0 + Math.atan2(nx * sc, rho * Math.cos(f0) * ccs - ny * Math.sin(f0) * sc);
+  return [lat / D2R, lon / D2R];
+}
+// 陸（海抜0mより上）の形を、あらい格子の標高から作る。形の画像＋海岸線の線分（マーチングスクエア）
+const LAND = { key: '' };
+function landLayer(v) {
+  const key = SCX.toFixed(1) + ',' + SCY.toFixed(1) + ',' + v.R.toFixed(1); if (LAND.key === key) return LAND;
+  const S = 4, x0 = Math.max(0, SCX - v.R), x1 = Math.min(PW, SCX + v.R), y0 = Math.max(80, SCY - v.R), y1 = Math.min(1200, SCY + v.R);
+  const nx = Math.max(2, Math.ceil((x1 - x0) / S) + 1), ny = Math.max(2, Math.ceil((y1 - y0) / S) + 1), H = new Float32Array(nx * ny);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const p = unproj(x0 + i * S, y0 + j * S, v.c, v.R); H[j * nx + i] = p ? TL.elev(p[0], p[1]) : -9999; }
+  const W = (nx - 1) * S, Hh = (ny - 1) * S;
+  const c = document.createElement('canvas'); c.width = nx; c.height = ny; const cx = c.getContext('2d'), im = cx.createImageData(nx, ny);
+  for (let k = 0; k < nx * ny; k++) if (H[k] > 0) im.data[k * 4 + 3] = 255;
+  cx.putImageData(im, 0, 0);
+  const lc = document.createElement('canvas'); lc.width = Math.ceil(W); lc.height = Math.ceil(Hh); const lx = lc.getContext('2d');
+  lx.imageSmoothingEnabled = true; lx.drawImage(c, 0, 0, W, Hh); lx.globalCompositeOperation = 'source-in'; lx.fillStyle = PL.T.land; lx.fillRect(0, 0, lc.width, lc.height);
+  const segs = [], at = (i, j) => H[j * nx + i], P = (i, j, i2, j2) => { const a = at(i, j), b = at(i2, j2), u = a / (a - b); return [x0 + lerp(i, i2, u) * S, y0 + lerp(j, j2, u) * S]; };
+  for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
+    const a = at(i, j), b = at(i + 1, j), cc = at(i + 1, j + 1), d = at(i, j + 1);
+    if (a < -9000 || b < -9000 || cc < -9000 || d < -9000) continue;
+    const e = []; if ((a > 0) !== (b > 0)) e.push(P(i, j, i + 1, j)); if ((b > 0) !== (cc > 0)) e.push(P(i + 1, j, i + 1, j + 1)); if ((cc > 0) !== (d > 0)) e.push(P(i + 1, j + 1, i, j + 1)); if ((d > 0) !== (a > 0)) e.push(P(i, j + 1, i, j));
+    if (e.length >= 2) segs.push([e[0], e[1]]); if (e.length === 4) segs.push([e[2], e[3]]);
+  }
+  Object.assign(LAND, { key, img: lc, x0, y0, segs });
+  return LAND;
+}
 function globe(g, t, v) {
-  const { c, R } = v;
-  g.save(); g.beginPath(); g.arc(SCX, SCY, R, 0, Math.PI * 2);
-  const gr = g.createRadialGradient(SCX - R * 0.3, SCY - R * 0.3, R * 0.1, SCX, SCY, R); gr.addColorStop(0, '#1f5aa8'); gr.addColorStop(1, '#0d2a5c');
-  g.fillStyle = gr; g.fill(); g.clip();
-  g.strokeStyle = 'rgba(160,190,255,0.25)'; g.lineWidth = 2;
-  for (let lat = -75; lat <= 75; lat += 15) { g.beginPath(); let on = false; for (let lon = -180; lon <= 180; lon += 3) { const [x, y, vis] = proj([lat, lon], c, R); if (vis) { on ? g.lineTo(x, y) : g.moveTo(x, y); on = true; } else on = false; } g.stroke(); }
-  for (let lon = -180; lon < 180; lon += 20) { g.beginPath(); let on = false; for (let lat = -88; lat <= 88; lat += 3) { const [x, y, vis] = proj([lat, lon], c, R); if (vis) { on ? g.lineTo(x, y) : g.moveTo(x, y); on = true; } else on = false; } g.stroke(); }
-  g.restore();
-  g.strokeStyle = 'rgba(160,190,255,0.5)'; g.lineWidth = 4; g.beginPath(); g.arc(SCX, SCY, R, 0, Math.PI * 2); g.stroke();
+  const { c, R } = v, disc = PL.circle(SCX, SCY, R);
+  PL.tint(g, disc, PL.T.sea, 0.5);
+  const L = landLayer(v);   // 陸: 手彩色＋海岸線の墨
+  g.save(); g.beginPath(); disc(g); g.clip(); g.globalAlpha *= 0.75; g.drawImage(L.img, L.x0, L.y0); g.restore();
+  g.save(); g.beginPath(); disc(g); g.clip(); PL.ink(g, gg => L.segs.forEach(([p, q]) => { gg.moveTo(p[0], p[1]); gg.lineTo(q[0], q[1]); }), 2.2); g.restore();
+  // かげ（光は左上から）
+  PL.hatch(g, disc, { angle: 0.55, gap: 14, w: 2, not: PL.circle(SCX - R * 0.3, SCY - R * 0.3, R), cx: SCX, cy: SCY });
+  // 緯線（15度ごと）・経線（20度ごと）
+  const grat = gg => {
+    for (let lat = -75; lat <= 75; lat += 15) { let on = false; for (let lon = -180; lon <= 180; lon += 3) { const [x, y, vis] = proj([lat, lon], c, R); if (vis) { on ? gg.lineTo(x, y) : gg.moveTo(x, y); on = true; } else on = false; } }
+    for (let lon = -180; lon < 180; lon += 20) { let on = false; for (let lat = -88; lat <= 88; lat += 3) { const [x, y, vis] = proj([lat, lon], c, R); if (vis) { on ? gg.lineTo(x, y) : gg.moveTo(x, y); on = true; } else on = false; } }
+  };
+  g.save(); g.beginPath(); disc(g); g.clip(); g.globalAlpha *= 0.5; PL.ink(g, grat, 1.4); g.restore();
+  PL.ink(g, disc, 6);
 }
-function dot(g, p, v, col, r, label, align = 'left', dy = 0) {
+// 点（朱の丸）。ラベルは地球儀の外のすきまに置いて、引き出し線でつなぐ
+function dot(g, p, v, r, label, lx, ly, align = 'left') {
   const [x, y, vis] = proj(p, v.c, v.R); if (!vis) return;
-  g.fillStyle = col; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
-  if (label) TK.lines(g, label, x + (align === 'left' ? 30 : -30), y + dy, 40, { align, color: col });
+  if (label) {   // 引いている間は地球儀の上に来るので、字の下に紙を敷く
+    g.save(); g.fillStyle = PL.PATCH; g.fillRect(lx - 400, ly - 50, 410, 112); g.restore();
+    PL.leader(g, x, y, lx + (align === 'left' ? -14 : -250), ly + 58); TK.lines(g, label, lx, ly, 38, { align });
+  }
+  const cc = PL.circle(x, y, r); PL.tint(g, cc, PL.RED, 0.8); PL.ink(g, cc, 4);
 }
+// 嵐（うずまきの雲。墨の筆の線3本）
 function storm(g, p, v, t, k) {
   const [x, y, vis] = proj(p, v.c, v.R); if (!vis || k <= 0) return;
-  g.save(); g.translate(x, y); g.rotate(-t * 2); g.globalAlpha = k; g.strokeStyle = '#ffffff'; g.lineWidth = 6;
-  for (let j = 0; j < 3; j++) { g.rotate(Math.PI * 2 / 3); g.beginPath(); for (let i = 0; i <= 30; i++) { const a = i / 30 * 2.6, r = 10 + i * 2.2; i ? g.lineTo(Math.cos(a) * r, Math.sin(a) * r) : g.moveTo(Math.cos(a) * r, Math.sin(a) * r); } g.stroke(); }
+  g.save(); g.globalAlpha *= k;
+  const cloud = PL.circle(x, y, 62); PL.tint(g, cloud, PL.T.gray, 0.7);
+  PL.ink(g, gg => { for (let j = 0; j < 3; j++) { const a0 = -t * 2 + j * Math.PI * 2 / 3; for (let i = 0; i <= 30; i++) { const a = a0 + i / 30 * 2.6, r = 8 + i * 1.8; i ? gg.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r) : gg.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r); } } }, 5);
   g.restore();
 }
-// 海の断面（長いうねり）
+// 海の断面（長いうねり）。浜と、たれ下がった旗（風がない）
 function sea(g, t, amp = 50) {
-  const y0 = 720;
-  g.fillStyle = '#123a73'; g.beginPath(); g.moveTo(0, 1100);
-  for (let x = 0; x <= PW; x += 6) g.lineTo(x, y0 + Math.sin(x / 260 - t * 1.4) * amp);
-  g.lineTo(PW, 1100); g.closePath(); g.fill();
-  g.strokeStyle = '#5fd4ff'; g.lineWidth = 6; g.beginPath();
-  for (let x = 0; x <= PW; x += 6) { const y = y0 + Math.sin(x / 260 - t * 1.4) * amp; x ? g.lineTo(x, y) : g.moveTo(x, y); }
-  g.stroke();
-  g.fillStyle = '#d8c49a'; g.beginPath(); g.moveTo(760, 1100); g.lineTo(PW, 760); g.lineTo(PW, 1100); g.closePath(); g.fill();   // 浜
-  const gr = g.createLinearGradient(0, 980, 0, 1110); gr.addColorStop(0, 'rgba(11,20,48,0)'); gr.addColorStop(1, 'rgba(11,20,48,1)'); g.fillStyle = gr; g.fillRect(0, 980, PW, 130);
-  TK.text(g, '風 0 m/s', 200, 300, 48, { color: TK.C.sub });
+  const y0 = 760, yb = 1180, wy = x => y0 + Math.sin(x / 260 - t * 1.4) * amp;
+  const water = gg => { gg.moveTo(0, yb); for (let x = 0; x <= PW; x += 6) gg.lineTo(x, wy(x)); gg.lineTo(PW, yb); gg.closePath(); };
+  PL.tint(g, water, PL.T.sea, 0.6);
+  PL.hatch(g, water, { angle: 0.05, gap: 16, w: 1.8, not: gg => { gg.rect(-50, 0, PW + 100, y0 + 120); }, cx: 540, cy: 900 });   // 深い所だけ横の線
+  PL.ink(g, gg => { for (let x = 0; x <= PW; x += 6) x ? gg.lineTo(x, wy(x)) : gg.moveTo(x, wy(x)); }, 6);
+  PL.ink(g, gg => { for (let k = 1; k <= 2; k++) for (let x = 0; x <= PW; x += 6) { const y = y0 + k * 40 + Math.sin(x / 260 - t * 1.4) * amp * (1 - k * 0.3); x ? gg.lineTo(x, y) : gg.moveTo(x, y); } }, 1.4);   // 水の中の補助線（下ほどゆれが小さい）
+  const beach = PL.poly([[760, yb], [PW + 10, 790], [PW + 10, yb]]);
+  PL.tint(g, beach, PL.T.sand, 0.85); PL.hatch(g, beach, { angle: -0.6, gap: 11, w: 1.8, not: PL.poly([[700, 500], [PW + 10, 790], [PW + 10, 960]]) }); PL.ink(g, gg => { gg.moveTo(760, yb); gg.lineTo(PW + 10, 790); }, 6);
+  // 旗ざお（たれ下がった旗＝風なし）
+  const px = 1000, py = 860;
+  PL.ink(g, gg => { gg.moveTo(px, py); gg.lineTo(px, py - 300); }, 6);
+  const flag = gg => { gg.moveTo(px - 2, py - 296); gg.quadraticCurveTo(px - 14, py - 230, px - 6, py - 160); gg.lineTo(px - 32, py - 172); gg.quadraticCurveTo(px - 40, py - 240, px - 6, py - 294); gg.closePath(); };
+  PL.tint(g, flag, PL.RED, 0.6); PL.ink(g, flag, 4);
+  PL.leader(g, px - 36, py - 230, 760, 300);
+  PL.label(g, '風 0 m/s', 740, 300, 48, { align: 'right' });
+  PL.ink(g, gg => { gg.moveTo(0, yb); gg.lineTo(PW, yb); }, 4);
 }
 
 function draw(g, t) {
   if (t < 4.0 || t >= 31.0) {
     sea(g, t);
-    if (t < 1.6) TK.hook(g, t, 0, 1.6, 'この波、\n[どこから]来た？', { y: 430, size: 120 });
-    if (t >= 31.0) { g.save(); g.globalAlpha = fade(t, 31, 40, 0.4); TK.text(g, '[15,300 km] 先の嵐から', PW / 2, 430, 76); g.restore(); }
+    if (t < 1.6) TK.hook(g, t, 0, 1.6, 'この波、\n[どこから]来た？', { y: 480, size: 120 });
+    if (t >= 31.0) { g.save(); g.globalAlpha = fade(t, 31, 40, 0.4); PL.label(g, '[15,300 km] 先の嵐から', 80, 500, 72, { align: 'left' }); g.restore(); }
     if (t >= 31.6) TK.note(g, t, 31.6, 35, '出どころ: Munk, Miller, Snodgrass & Barber (1963) Phil. Trans. R. Soc. A', { size: 30 });
     return;
   }
@@ -105,40 +156,39 @@ function draw(g, t) {
   // ズームの段の名前
   if (t < 10.0) {
     const names = ['浜', '沖', '太平洋', '地球'], i = Math.min(3, Math.floor(v.k * 3.999));
-    TK.card(g, 340, 150, 400, 110, { r: 55 }); TK.text(g, names[i], PW / 2, 205, 64);
+    TK.card(g, 340, 150, 400, 110); TK.text(g, names[i], PW / 2, 205, 64);
   }
-  dot(g, CAL, v, TK.C.acc, 16, 'カリフォルニア\n（San Clemente島）', 'right', -60);
-  if (t > 9.0) dot(g, AUS, v, 'rgba(255,255,255,0.6)', 8, 'オーストラリア', 'left');
+  dot(g, CAL, v, 13, 'カリフォルニア\n（San Clemente島）', 1050, 370, 'right');
+  if (t > 9.0) { const [x, y, vis] = proj(AUS, v.c, v.R); if (vis) { g.save(); g.globalAlpha *= fade(t, 9, 99, 0.3); PL.leader(g, x, y, 130, 455); PL.label(g, 'オーストラリア', 40, 425, 38, { align: 'left', bold: false }); g.restore(); } }
   const sk = clamp((t - 10.6) / 1.0, 0, 1);
   storm(g, STORM, v, t, sk);
-  if (t > 13.6) { const [x, y] = proj(STORM, v.c, v.R); TK.lines(g, '嵐\n南緯60度・東経111度', x + 60, y - 70, 40, { align: 'left', color: '#fff' }); }
-  // 大円の道
+  if (t > 13.6) { const [x, y] = proj(STORM, v.c, v.R); g.save(); g.globalAlpha *= fade(t, 13.6, 99, 0.3); PL.leader(g, x - 30, y + 55, 140, 1090); PL.label(g, '嵐（南緯60度・東経111度）', 60, 1118, 38, { align: 'left' }); g.restore(); }
+  // 大円の道（朱の点線）
   if (t > 17.0) {
     const u = clamp((t - 17.4) / 4.4, 0, 1);
-    g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 7; g.setLineDash([18, 12]); g.beginPath();
-    for (let i = 0; i <= 80; i++) { const [x, y] = proj(gc(u * i / 80), v.c, v.R); i ? g.lineTo(x, y) : g.moveTo(x, y); }
-    g.stroke(); g.restore();
+    PL.dots(g, Array.from({ length: 81 }, (_, i) => { const [x, y] = proj(gc(u * i / 80), v.c, v.R); return [x, y]; }), { dash: [4, 16], w: 7 });
     if (t < 25.0) {
-      TK.card(g, 240, 150, 600, 120, { r: 50 });
-      TK.text(g, '約 ' + Math.round(15300 * u).toLocaleString('ja-JP') + ' km', PW / 2, 210, 72, { color: u >= 1 ? TK.C.acc : '#fff' });
+      TK.card(g, 240, 150, 600, 120);
+      TK.text(g, '約 ' + Math.round(15300 * u).toLocaleString('ja-JP') + ' km', PW / 2, 210, 72, { color: u >= 1 ? PL.RED : PL.INK });
       if (t > 22.0) { g.save(); g.globalAlpha = fade(t, 22, 25, 0.3); TK.text(g, '地球1周（約4万km）の約0.4', PW / 2, 305, 40, { color: TK.C.sub, bold: false }); g.restore(); }
     }
   }
-  // 2つの波の到着（15.5日を 5秒で）
+  // 2つの波の到着（15.5日を 5秒で）。波の群れの印（長い波は線の間が広い）
   if (t >= 25.0) {
     const days = clamp((t - 25.4) / 4.6, 0, 1) * 15.5;
-    [[6.7, '#ffcf4a', '33秒の波', 0], [15.5, '#5fd4ff', '14秒の波', 1]].forEach(([d, col, s, row]) => {
+    [[6.7, PL.T.gold, '33秒の波', 0], [15.5, PL.T.sea, '14秒の波', 1]].forEach(([d, col, s, row]) => {
       const u = clamp(days / d, 0, 1), [x, y] = proj(gc(u), v.c, v.R);
-      g.fillStyle = col; g.beginPath(); g.arc(x, y, 18, 0, Math.PI * 2); g.fill();
+      const blob = PL.ellipse(x, y, 24, 16); PL.tint(g, blob, col, 0.95); PL.hatch(g, blob, { angle: 1.4, gap: row ? 6 : 11, w: 2, cx: x, cy: y }); PL.ink(g, blob, 4);
       const by = 140 + row * 70;
-      TK.text(g, s, 130, by + 30, 46, { align: 'left', color: col });
-      TK.text(g, u >= 1 ? '[' + d + ' 日]で着いた' : '…', 950, by + 30, 46, { align: 'right', color: '#fff', acc: col });
+      const sw = PL.ellipse(130, by + 30, 22, 15); PL.tint(g, sw, col, 0.95); PL.hatch(g, sw, { angle: 1.4, gap: row ? 6 : 11, w: 2, cx: 130, cy: by }); PL.ink(g, sw, 3);
+      TK.text(g, s, 170, by + 30, 46, { align: 'left' });
+      TK.text(g, u >= 1 ? '[' + d + ' 日]で着いた' : '…', 950, by + 30, 46, { align: 'right' });
     });
     TK.text(g, Math.floor(days) + ' 日目', PW / 2, 300, 44, { color: TK.C.sub });
   }
   if (t >= 31.6) TK.note(g, t, 31.6, 35, '出どころ: Munk, Miller, Snodgrass & Barber (1963) Phil. Trans. R. Soc. A', { size: 30 });
   if (t >= 4 && t < 31.6) TK.note(g, t, 4, 31.6, '1963年の解析。嵐の場所はのちの研究で一部見直されたが、インド洋の嵐とされる', { size: 30 });
-  if (t >= 25 && t < 31) TK.note(g, t, 25, 31, '速さ: 33秒の波 秒速26.5m・14秒の波 秒速11.4m', { y: PH * 0.712 + 44, size: 30 });
+  if (t >= 25 && t < 31) TK.note(g, t, 25, 31, '速さ: 33秒の波 秒速26.5m・14秒の波 秒速11.4m', { y: 1172, size: 30 });
 }
 
 triviaStart({ out: 'wave-growth-trivia1', voice: 'auto', dur: DUR, draw, subs, cues, peek: 1.0 });

@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく evolution-2（型G ループ）「1日が19時間半のまま10億年」。台本は trivia/evolution.md
@@ -27,38 +30,48 @@ const subs = [
 const cues = [{ t: 0.05, type: 'pop' }, { t: 2.0, type: 'whoosh' }, { t: 3.0, type: 'thud' }, { t: 6.0, type: 'whoosh' }, { t: 7.4, type: 'rise' },
   { t: 11.0, type: 'pop' }, { t: 13.0, type: 'ding' }, { t: 15.0, type: 'whoosh' }, { t: 17.0, type: 'pop' }];
 
+/// 絵は「図鑑の版画」（trivia-plate.js の PL.*）。時計は紙の文字盤、地球・月・太陽は手彩色の球、力は墨の矢印
+const line = pts => g => pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
+const fadeIn = (g, f, fn) => { g.save(); g.globalAlpha *= f; fn(); g.restore(); };
 // 19.5時間で1周する時計
 function clock(g, t, cx, cy, r, f = 1) {
-  g.save(); g.globalAlpha *= f;
-  g.fillStyle = 'rgba(20,34,72,0.9)'; g.strokeStyle = '#cfe0ff'; g.lineWidth = 8; g.beginPath(); g.arc(cx, cy, r, 0, 7); g.fill(); g.stroke();
-  for (let h = 0; h < 19.5; h += 0.5) {
-    const a = -Math.PI / 2 + h / 19.5 * Math.PI * 2, big = h % 1 === 0, r0 = r * (big ? 0.84 : 0.9);
-    g.strokeStyle = big ? '#fff' : 'rgba(255,255,255,0.4)'; g.lineWidth = big ? 5 : 3;
-    g.beginPath(); g.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); g.lineTo(cx + Math.cos(a) * r * 0.96, cy + Math.sin(a) * r * 0.96); g.stroke();
-    if (big && h % 3 === 0 && h > 0) TK.text(g, String(h), cx + Math.cos(a) * r * 0.68, cy + Math.sin(a) * r * 0.68, r * 0.13, { color: TK.C.sub });
-  }
-  // 19.5 の所に印（12時の位置＝0 と 19.5 が重なる）
-  TK.text(g, '19.5 | 0', cx, cy - r * 0.66, r * 0.12, { color: TK.C.acc });
-  const a = -Math.PI / 2 + (t * 0.25 % 1) * Math.PI * 2;
-  g.strokeStyle = TK.C.acc; g.lineWidth = 10; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * r * 0.75, cy + Math.sin(a) * r * 0.75); g.stroke();
-  g.fillStyle = TK.C.acc; g.beginPath(); g.arc(cx, cy, 14, 0, 7); g.fill();
-  g.restore();
+  fadeIn(g, f, () => {
+    const face = PL.circle(cx, cy, r);
+    PL.tint(g, face, PL.T.sand, 0.55);
+    PL.hatch(g, face, { angle: 0.7, gap: 12, w: 1.5, not: PL.circle(cx - r * 0.08, cy - r * 0.08, r) });
+    PL.ink(g, face, 10); PL.ink(g, PL.circle(cx, cy, r * 0.97), 2);
+    PL.ink(g, gg => { for (let h = 0; h < 19.5; h += 0.5) { const a = -Math.PI / 2 + h / 19.5 * Math.PI * 2, r0 = r * (h % 1 === 0 ? 0.84 : 0.9); if (h % 1 === 0) continue; gg.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); gg.lineTo(cx + Math.cos(a) * r * 0.95, cy + Math.sin(a) * r * 0.95); } }, 2.5);
+    PL.ink(g, gg => { for (let h = 0; h < 19.5; h += 1) { const a = -Math.PI / 2 + h / 19.5 * Math.PI * 2; gg.moveTo(cx + Math.cos(a) * r * 0.82, cy + Math.sin(a) * r * 0.82); gg.lineTo(cx + Math.cos(a) * r * 0.95, cy + Math.sin(a) * r * 0.95); } }, 5);
+    for (let h = 3; h < 19.5; h += 3) { const a = -Math.PI / 2 + h / 19.5 * Math.PI * 2; PL.label(g, String(h), cx + Math.cos(a) * r * 0.66, cy + Math.sin(a) * r * 0.66, r * 0.13, { color: TK.C.sub }); }
+    PL.label(g, '19.5 | 0', cx, cy - r * 0.64, r * 0.12, { color: PL.RED });   // 12時の位置＝0 と 19.5 が重なる
+    const a = -Math.PI / 2 + (t * 0.25 % 1) * Math.PI * 2;
+    PL.ink(g, line([[cx, cy], [cx + Math.cos(a) * r * 0.5, cy + Math.sin(a) * r * 0.5]]), 10, PL.RED);   // 針は数字の内がわまで
+    const hub = PL.circle(cx, cy, 16); PL.tint(g, hub, PL.RED, 1); PL.ink(g, hub, 3);
+  });
 }
 function earth(g, cx, cy, r, t) {
-  g.save();
-  g.fillStyle = 'rgba(95,168,255,0.35)'; g.beginPath(); g.ellipse(cx, cy, r * 1.12, r * 0.95, 0.35, 0, 7); g.fill();   // 潮のふくらみ
-  const gr = g.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r); gr.addColorStop(0, '#5fa8ff'); gr.addColorStop(1, '#1d4fa3');
-  g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, r, 0, 7); g.fill();
+  const bulge = PL.ellipse(cx, cy, r * 1.12, r * 0.95, 0.35);   // 潮のふくらみ
+  PL.tint(g, bulge, PL.T.sea, 0.45); PL.hatch(g, bulge, { angle: -0.8, gap: 10, w: 1.4, color: TK.C.acc2 }); PL.ink(g, bulge, 3, TK.C.acc2);
+  if (window.LOOK && LOOK.planet) LOOK.planet(g, cx, cy, r, 1); else PL.sphere(g, cx, cy, r, PL.T.sea);
   // 回る向き（左回りの矢印）
-  g.strokeStyle = '#fff'; g.lineWidth = 6; g.beginPath(); g.arc(cx, cy, r * 0.6, -0.4 - t, 1.6 - t); g.stroke();
-  g.restore();
+  const a0 = -0.4 - t, a1 = 1.6 - t, R = r * 0.6;
+  PL.ink(g, gg => gg.arc(cx, cy, R, a0, a1), 7, 'rgba(244,236,218,0.95)');
+  const hx = cx + Math.cos(a0) * R, hy = cy + Math.sin(a0) * R, tx = Math.sin(a0), ty = -Math.cos(a0);
+  const head = PL.poly([[hx + tx * 24, hy + ty * 24], [hx - ty * 14, hy + tx * 14], [hx + ty * 14, hy - tx * 14]]); PL.tint(g, head, PL.PAPER, 1); PL.ink(g, head, 2);
 }
-function arrow(g, x1, y1, x2, y2, c, w = 14) {
-  const a = Math.atan2(y2 - y1, x2 - x1);
-  g.save(); g.strokeStyle = c; g.fillStyle = c; g.lineWidth = w; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2 - Math.cos(a) * w * 2, y2 - Math.sin(a) * w * 2); g.stroke();
-  g.beginPath(); g.moveTo(x2, y2); g.lineTo(x2 - Math.cos(a - 0.45) * w * 3.2, y2 - Math.sin(a - 0.45) * w * 3.2); g.lineTo(x2 - Math.cos(a + 0.45) * w * 3.2, y2 - Math.sin(a + 0.45) * w * 3.2); g.closePath(); g.fill();
-  g.restore();
+function arrow(g, x1, y1, x2, y2, c, w = 12) {
+  const a = Math.atan2(y2 - y1, x2 - x1), L = w * 3.2;
+  PL.ink(g, line([[x1, y1], [x2 - Math.cos(a) * L * 0.8, y2 - Math.sin(a) * L * 0.8]]), w, c);
+  const head = PL.poly([[x2, y2], [x2 - Math.cos(a - 0.45) * L, y2 - Math.sin(a - 0.45) * L], [x2 - Math.cos(a + 0.45) * L, y2 - Math.sin(a + 0.45) * L]]);
+  PL.tint(g, head, c, 1); PL.ink(g, head, 3, c);
+}
+function moon(g, x, y, r) {
+  PL.sphere(g, x, y, r, PL.T.gray, { contour: false, ow: 4 });
+  [[-0.3, -0.2, 0.22], [0.25, 0.3, 0.15], [0.1, -0.45, 0.1]].forEach(([dx, dy, rr]) => PL.ink(g, PL.circle(x + dx * r, y + dy * r, rr * r), 2));   // クレーター
+}
+function sun(g, x, y, r) {
+  PL.sphere(g, x, y, r, PL.T.gold, { a: 0.9, contour: false, ow: 4 });
+  PL.ink(g, gg => { for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; gg.moveTo(x + Math.cos(a) * (r + 12), y + Math.sin(a) * (r + 12)); gg.lineTo(x + Math.cos(a) * (r + (i % 2 ? 26 : 38)), y + Math.sin(a) * (r + (i % 2 ? 26 : 38))); } }, 4, PL.RED);
 }
 
 function draw(g, t) {
@@ -66,52 +79,51 @@ function draw(g, t) {
     const f = t < 2 ? fade(t, -1, 2.0, 0.25) : clamp((t - 17.0) / 0.5, 0, 1);
     clock(g, t, PW / 2, 700, 300, f);
     if (t < 2.0) TK.hook(g, t, 0.0, 2.0, '1日＝[19時間半]\n10億年以上', { y: 220, size: 100 });
-    else { g.save(); g.globalAlpha = f; TK.text(g, '1日＝[19時間半]', PW / 2, 260, 100); g.restore(); }
+    else fadeIn(g, f, () => PL.label(g, '1日＝[19時間半]', PW / 2, 260, 100));
   }
   if (t >= 2.0 && t < 11.0) {
-    const f = fade(t, 2.0, 11.0, 0.3), cx = PW / 2, cy = 640;
-    g.save(); g.globalAlpha = f;
-    earth(g, cx, cy, 190, t * 0.8);
-    // 月（右）
-    g.fillStyle = '#d8d8e0'; g.beginPath(); g.arc(920, 330, 50, 0, 7); g.fill();
-    TK.text(g, '月', 920, 420, 44, { color: TK.C.sub });
-    if (t > 3.0) { g.globalAlpha = f * TK.pop(t, 3.0, 0.35); arrow(g, cx + 160, cy - 220, cx - 120, cy - 260, TK.C.red); TK.text(g, 'ブレーキ', cx + 30, cy - 330, 60, { color: TK.C.red }); }
-    if (t > 6.0) {
-      g.globalAlpha = f * fade(t, 6.0, 11.0, 0.3);
-      // 太陽（左下）と大気
-      g.fillStyle = TK.C.acc; g.shadowColor = TK.C.acc; g.shadowBlur = 30 * RES; g.beginPath(); g.arc(130, 930, 60, 0, 7); g.fill(); g.shadowBlur = 0;
-      TK.text(g, '太陽', 130, 1025, 40, { color: TK.C.sub });
-      g.strokeStyle = 'rgba(255,207,74,0.5)'; g.lineWidth = 10; g.beginPath(); g.arc(cx, cy, 225, 0, 7); g.stroke();
-      if (t > 7.4) { g.globalAlpha = f * TK.pop(t, 7.4, 0.35); arrow(g, cx - 160, cy + 250, cx + 120, cy + 290, TK.C.green); TK.text(g, 'アクセル（大気の波）', cx, cy + 370, 56, { color: TK.C.green }); }
-    }
-    g.restore();
+    const cx = PW / 2, cy = 640;
+    fadeIn(g, fade(t, 2.0, 11.0, 0.3), () => {
+      if (t > 6.0) fadeIn(g, fade(t, 6.0, 11.0, 0.3), () => PL.dots(g, Array.from({ length: 73 }, (_, i) => [cx + Math.cos(i / 72 * Math.PI * 2) * 232, cy + Math.sin(i / 72 * Math.PI * 2) * 232]), { color: PL.T.rust, w: 6, dash: [3, 12] }));   // 太陽であたためられた大気
+      earth(g, cx, cy, 190, t * 0.8);
+      moon(g, 920, 330, 50);
+      PL.label(g, '月', 920, 420, 44, { color: TK.C.sub });
+      if (t > 3.0) fadeIn(g, TK.pop(t, 3.0, 0.35), () => { arrow(g, cx + 160, cy - 230, cx - 120, cy - 270, PL.RED); PL.label(g, 'ブレーキ', cx + 30, cy - 340, 60, { color: PL.RED }); });
+      if (t > 6.0) fadeIn(g, fade(t, 6.0, 11.0, 0.3), () => {
+        sun(g, 130, 930, 60);
+        PL.label(g, '太陽', 130, 1045, 40, { color: TK.C.sub });
+        PL.leader(g, cx + 164, cy + 164, 860, 900, PL.T.rust); PL.label(g, '大気', 900, 935, 40, { color: TK.C.sub });
+        if (t > 7.4) fadeIn(g, TK.pop(t, 7.4, 0.35), () => { arrow(g, cx - 160, cy + 260, cx + 120, cy + 300, PL.GREEN); PL.label(g, 'アクセル（大気の波）', cx - 20, cy + 380, 56, { color: PL.GREEN }); });
+      });
+    });
   }
   if (t >= 11.0 && t < 17.0) {
-    const f = fade(t, 11.0, 17.0, 0.3);
-    g.save(); g.globalAlpha = f;
-    TK.text(g, '1日の長さ', PW / 2, 230, 60, { color: TK.C.sub });
-    const x0 = 140, x1 = 920, yb = 900, yOf = h => yb - (h - 10) * 34, xOf = ga => lerp(x0, x1, (40 - ga) / 40);   // ga: 億年前
-    g.strokeStyle = 'rgba(255,255,255,0.4)'; g.lineWidth = 4; g.beginPath(); g.moveTo(x0, 330); g.lineTo(x0, yb); g.lineTo(x1, yb); g.stroke();
-    TK.text(g, '40億年前', x0 + 20, yb + 45, 36, { color: TK.C.sub, bold: false }); TK.text(g, 'いま', x1, yb + 45, 36, { color: TK.C.sub, bold: false });
-    const pts = [[40, 12], [30, 15.5], [20, 19.5], [6, 19.5], [0, 24]];
-    const k = clamp((t - 11.2) / 2.0, 0, 1), tot = pts.length - 1;
-    g.strokeStyle = TK.C.acc2; g.lineWidth = 8; g.beginPath();
-    for (let i = 0; i <= 100; i++) { const u = k * i / 100 * tot, s = Math.min(tot - 1, Math.floor(u)), w = u - s; const ga = lerp(pts[s][0], pts[s + 1][0], w), h = lerp(pts[s][1], pts[s + 1][1], w); i ? g.lineTo(xOf(ga), yOf(h)) : g.moveTo(xOf(ga), yOf(h)); }
-    g.stroke();
-    if (t > 13.0) {
-      g.globalAlpha = f * TK.pop(t, 13.0, 0.35);
-      g.strokeStyle = TK.C.acc; g.lineWidth = 14; g.beginPath(); g.moveTo(xOf(20), yOf(19.5)); g.lineTo(xOf(6), yOf(19.5)); g.stroke();
-      TK.text(g, '19.5時間のまま', (xOf(20) + xOf(6)) / 2, yOf(19.5) - 60, 52, { color: TK.C.acc });
-      TK.text(g, '20億〜6億年前', (xOf(20) + xOf(6)) / 2, yOf(19.5) + 50, 38, { color: TK.C.sub, bold: false });
-      TK.text(g, '24', xOf(0) - 30, yOf(24) - 40, 44, { color: '#fff' });
-    }
-    if (t > 15.0) {
-      g.globalAlpha = f * TK.pop(t, 15.0, 0.35);
-      g.setLineDash([12, 10]); g.strokeStyle = TK.C.red; g.lineWidth = 6; g.beginPath(); g.moveTo(xOf(20), yOf(19.5)); g.lineTo(xOf(0), 300); g.stroke(); g.setLineDash([]);
-      TK.text(g, 'この力がないと 60時間超', 600, 330, 46, { color: TK.C.red });
-    }
-    g.restore();
-    TK.note(g, t, 11.4, 16.4, '線の形はイメージ（数字は19.5時間と24時間）。60時間超はモデルの値\n始まりは資料で22億〜20億年前と幅がある', { size: 30 });
+    fadeIn(g, fade(t, 11.0, 17.0, 0.3), () => {
+      PL.label(g, '1日の長さ', 140, 230, 60, { align: 'left', color: TK.C.sub });
+      const x0 = 140, x1 = 920, yb = 900, yOf = h => yb - (h - 10) * 34, xOf = ga => lerp(x0, x1, (40 - ga) / 40);   // ga: 億年前
+      PL.ink(g, gg => { for (let ga = 5; ga <= 40; ga += 5) { gg.moveTo(xOf(ga), 330); gg.lineTo(xOf(ga), yb); } for (let h = 12; h <= 26; h += 2) { gg.moveTo(x0, yOf(h)); gg.lineTo(x1, yOf(h)); } }, 1, 'rgba(35,28,21,0.15)');   // 方眼
+      PL.ink(g, line([[x0, 330], [x0, yb], [x1, yb]]), 5);
+      PL.ink(g, gg => { for (let ga = 0; ga <= 40; ga += 5) { gg.moveTo(xOf(ga), yb); gg.lineTo(xOf(ga), yb + (ga % 10 ? 9 : 16)); } }, 3);
+      PL.label(g, '40億年前', x0 + 20, yb + 45, 36, { color: TK.C.sub, bold: false }); PL.label(g, 'いま', x1, yb + 45, 36, { color: TK.C.sub, bold: false });
+      const pts = [[40, 12], [30, 15.5], [20, 19.5], [6, 19.5], [0, 24]];
+      const k = clamp((t - 11.2) / 2.0, 0, 1), tot = pts.length - 1, P = [];
+      for (let i = 0; i <= 100; i++) { const u = k * i / 100 * tot, s = Math.min(tot - 1, Math.floor(u)), w = u - s; P.push([xOf(lerp(pts[s][0], pts[s + 1][0], w)), yOf(lerp(pts[s][1], pts[s + 1][1], w))]); }
+      const under = PL.poly([[P[0][0], yb], ...P, [P[P.length - 1][0], yb]]);
+      PL.tint(g, under, PL.T.sky, 0.5); PL.hatch(g, under, { angle: 0.8, gap: 14, w: 1.3 });
+      PL.ink(g, line(P), 7, TK.C.acc2);
+      if (t > 13.0) fadeIn(g, TK.pop(t, 13.0, 0.35), () => {
+        PL.ink(g, line([[xOf(20), yOf(19.5)], [xOf(6), yOf(19.5)]]), 14, PL.RED);
+        PL.label(g, '19.5時間のまま', xOf(20) + 50, yOf(19.5) - 70, 48, { align: 'right', color: PL.RED });
+        PL.ink(g, gg => { [xOf(20), xOf(6)].forEach(x => { gg.moveTo(x, yOf(19.5) + 8); gg.lineTo(x, yb - 4); }); }, 1.6, PL.RED);
+        PL.label(g, '20億〜6億年前', (xOf(20) + xOf(6)) / 2, yb + 45, 38, { color: PL.RED, bold: false });
+        PL.label(g, '24時間', xOf(0) + 16, yOf(24) + 10, 40, { align: 'left' });
+      });
+      if (t > 15.0) fadeIn(g, TK.pop(t, 15.0, 0.35), () => {
+        PL.dots(g, [[xOf(20), yOf(19.5)], [xOf(0), 300]], { w: 6, dash: [12, 10] });
+        PL.label(g, 'この力がないと 60時間超', 170, 330, 46, { align: 'left', color: PL.RED });
+      });
+    });
+    TK.note(g, t, 11.4, 16.4, '線の形はイメージ（数字は19.5時間と24時間）。60時間超はモデルの値\n始まりは資料で22億〜20億年前と幅がある', { size: 30, y: 1150 });
   }
   if (t >= 16.4) TK.note(g, t, 16.4, 18.0, '出どころ: Wu ほか (2023) Science Advances', { size: 30 });
 }

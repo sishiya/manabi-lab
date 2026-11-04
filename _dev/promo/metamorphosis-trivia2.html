@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく metamorphosis-2（型A ぜんぶ逆）「さなぎの中は『ぜんぶドロドロ』じゃない」。台本は trivia/metamorphosis.md。?short で録る
@@ -18,7 +21,6 @@
 // Levine & Truman (1985) J Neurosci（幼虫の運動ニューロンの多くは生き残り、成虫の筋肉へつなぎ直す）。どちらも要旨で確認（台本の記録）。
 // REVIEW: 題名に「死ぬ」を使わない。「羽化のときにしか使わなかった神経」→「羽化のころの仕事を終えた神経（と考えられている）」
 const DUR = 35;
-const SKY = '#5fd4ff', VERM = '#ff7a4a', TEAL = '#3fe0c0';
 const subs = [
   { a: 0.0, b: 4.0, ja: 'さなぎの中はドロドロのスープ。…[半分ウソ]', en: 'A pupa is just soup inside. …Half wrong.', noBurn: true },
   { a: 4.0, b: 8.0, ja: 'たしかに、イモムシの筋肉の多くは', en: 'True, most caterpillar muscles' },
@@ -37,192 +39,334 @@ const cues = [
   { t: 26.5, type: 'tick' }, { t: 27.0, type: 'tick' }, { t: 27.5, type: 'tick' }, { t: 28.0, type: 'tick' }, { t: 29.0, type: 'ding' },
   { t: 32.0, type: 'ding' },
 ];
+// ---- タバコスズメガ（Manduca sexta）を図鑑の版画の道具 PL.* で描く ----
+// 幼虫: 緑・横に7本のななめの白いすじ（上がわに黒いふち）・お尻の近くの赤い角（尾角）・胸の3対の脚・腹の4対の腹脚＋尾脚・気門の列
+// さなぎ: 赤茶・頭の下に「水さしの取っ手」のような口（口吻のさや）・翅のさやの線・腹の節・お尻のとげ
+// ガ: 細長くとがった前翅（灰褐色にぎざぎざの線と白い点）・小さな後翅（黒と白の帯）・太い胸・腹の横に黄色い点の列・先が曲がった触角
+const TAU = Math.PI * 2;
+const rnd = (i, j = 0) => { const v = Math.sin(i * 12.9898 + j * 78.233) * 43758.5453; return v - Math.floor(v); };
+function mapper(x0, y0, s, rot = 0, dir = 1) { const c = Math.cos(rot), n = Math.sin(rot); return (x, y) => { x *= dir; return [x0 + s * (x * c - y * n), y0 + s * (x * n + y * c)]; }; }
+const polyM = (m, pts, close = true) => g => { pts.forEach(([x, y], i) => { const q = m(x, y); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); if (close) g.closePath(); };
+const linesM = (m, segs) => g => segs.forEach(seg => seg.forEach(([x, y], i) => { const q = m(x, y); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }));
+const ellPts = (cx, cy, rx, ry, rot = 0, n = 32) => Array.from({ length: n }, (_, i) => { const a = i / n * TAU, x = Math.cos(a) * rx, y = Math.sin(a) * ry; return [cx + x * Math.cos(rot) - y * Math.sin(rot), cy + x * Math.sin(rot) + y * Math.cos(rot)]; });
+const qPts = (p0, c, p1, n = 10) => Array.from({ length: n + 1 }, (_, i) => { const t = i / n, a = (1 - t) * (1 - t), b = 2 * t * (1 - t), d = t * t; return [a * p0[0] + b * c[0] + d * p1[0], a * p0[1] + b * c[1] + d * p1[1]]; });
+const shift = (pts, dx, dy) => pts.map(([x, y]) => [x + dx, y + dy]);
+const many = ps => g => ps.forEach(p => p(g));   // いくつかの形を1つの道に（手彩色・輪郭をまとめて1回で描く。録画と確かめを軽くする）
+function arrow(g, x0, y0, x1, y1, w = 5, col = PL.INK) {
+  const a = Math.atan2(y1 - y0, x1 - x0), h = 24;
+  PL.ink(g, gg => { gg.moveTo(x0, y0); gg.lineTo(x1, y1); gg.moveTo(x1 - Math.cos(a - 0.45) * h, y1 - Math.sin(a - 0.45) * h); gg.lineTo(x1, y1); gg.lineTo(x1 - Math.cos(a + 0.45) * h, y1 - Math.sin(a + 0.45) * h); }, w, col);
+}
 
-// ---- 線画（metamorphosis-trivia1 と同じ形） ----
-function pupa(g, x, y, s) {
-  g.save(); g.lineWidth = 4 * s; g.fillStyle = '#7a4f2a'; g.strokeStyle = '#e0b07a';
-  g.beginPath(); g.ellipse(x, y, 90 * s, 38 * s, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-  g.lineWidth = 2.5 * s;
-  for (let i = 1; i < 6; i++) { const xx = x - 70 * s + i * 24 * s; g.beginPath(); g.moveTo(xx, y - 30 * s); g.quadraticCurveTo(xx + 6 * s, y, xx, y + 30 * s); g.stroke(); }
+// 幼虫の体の節（尾から: A10 尾・A9・A8（角）・A7〜A1・T3・T2・T1）
+const HW_SEG = [30, 18, 26, 24, 24, 24, 24, 24, 24, 24, 22, 20, 18];
+const HW_X0 = -150, HW_X1 = 120;
+const HW_B = (() => { const tot = HW_SEG.reduce((a, b) => a + b, 0); let x = HW_X0; const b = [x]; HW_SEG.forEach(w => { x += w / tot * (HW_X1 - HW_X0); b.push(x); }); return b; })();
+const hwH = x => { const u = (x - HW_X0) / (HW_X1 - HW_X0); return 50 * (u < 0.1 ? Math.pow(Math.sin(Math.PI / 2 * Math.max(0, u) / 0.1), 0.55) : u > 0.82 ? 1 - 0.3 * (u - 0.82) / 0.18 : 1); };
+const segOf = x => { for (let i = 0; i < HW_SEG.length; i++) if (x < HW_B[i + 1]) return i; return HW_SEG.length - 1; };
+// 横から。x, y は足もと（体のまん中）、頭が右（dir=-1 で左）。o: t（はううごき）, wig, mem（頭の記憶の印 0〜1）, rot
+function hornworm(g, x, y, s, o = {}) {
+  const dir = o.dir ?? 1, m = mapper(x, y, s, o.rot || 0, dir), t = o.t || 0, wig = o.wig ?? 1;
+  const lift = xx => -wig * 5 * Math.max(0, Math.sin(t * 5 - xx * 0.028));
+  const yb = xx => -15 + lift(xx);
+  const frac = xx => { const i = segOf(xx); return (xx - HW_B[i]) / (HW_B[i + 1] - HW_B[i]); };
+  const top = (dy = 0) => { const a = []; for (let xx = HW_X0; xx <= HW_X1 + 0.1; xx += 4) a.push([xx, yb(xx) - hwH(xx) - 2.2 * Math.sin(Math.PI * frac(xx)) + dy]); return a; };
+  const bot = () => { const a = []; for (let xx = HW_X1; xx >= HW_X0 - 0.1; xx -= 4) a.push([xx, yb(xx) + 2 * Math.sin(Math.PI * frac(xx))]); return a; };
+  const bodyPts = dy => [...top(dy), ...bot().map(([a, b]) => [a, b + dy])];
+  const body = polyM(m, bodyPts(0)), lw = Math.max(1.4, 1.5 * s), ow = Math.max(2.4, 3 * s);
+  g.save(); g.globalAlpha *= o.alpha ?? 1;
+  // 脚（腹脚 A6〜A3・尾脚 A10・胸脚 T3〜T1）
+  const legs = [];
+  [0, 4, 5, 6, 7].forEach(i => { const cx = (HW_B[i] + HW_B[i + 1]) / 2 + (i ? 0 : 4), b = yb(cx) + 1, l = lift(cx); legs.push([[cx - 9, b], [cx + 9, b], [cx + 8, l - 4], [cx + 3, l], [cx - 4, l], [cx - 8, l - 4]]); });
+  [10, 11, 12].forEach(i => { const cx = (HW_B[i] + HW_B[i + 1]) / 2, b = yb(cx) + 1; legs.push([[cx - 5, b], [cx + 5, b], [cx + 7, b + 9], [cx + 9, b + 13], [cx + 2, b + 10]]); });
+  const legP = many(legs.map(L => polyM(m, L))); PL.tint(g, legP, PL.T.leaf, 0.85); PL.ink(g, legP, lw * 1.2);
+  PL.ink(g, linesM(m, [0, 4, 5, 6, 7].map(i => { const cx = (HW_B[i] + HW_B[i + 1]) / 2 + (i ? 0 : 4), l = lift(cx); return [[cx - 5, l - 1.5], [cx + 5, l - 1.5]]; })), lw * 1.4);   // 腹脚の先のかぎ
+  // 体
+  PL.tint(g, body, PL.T.leaf, 0.8); PL.tint(g, body, PL.T.land, 0.35);
+  g.save(); g.beginPath(); body(g); g.clip();
+  PL.ink(g, linesM(m, HW_B.slice(1, -1).map(bx => [[bx, yb(bx) - hwH(bx) - 4], [bx, yb(bx) + 4]])), lw * 0.8, 'rgba(35,28,21,0.7)');   // 節の境
+  PL.ink(g, linesM(m, HW_B.slice(1, -2).flatMap((bx, i) => [0.33, 0.66].map(k => { const xx = bx + k * (HW_B[i + 2] - bx); return [[xx, yb(xx) - hwH(xx) - 2], [xx, yb(xx) + 2]]; }))), lw * 0.45, 'rgba(35,28,21,0.25)');   // 小さな輪（環節のしわ）
+  // ななめの白いすじ（A7〜A1。前の下から、後ろの上へ）。上がわに黒いふち
+  const st = []; for (let i = 3; i <= 9; i++) { const x0 = HW_B[i + 1] - 2, x1 = x0 - 46; st.push([[x0, yb(x0) - hwH(x0) * 0.2], [x1, yb(x1) - hwH(x1) * 0.92]]); }
+  PL.ink(g, linesM(m, st), Math.max(2.5, 4 * s), '#f4eedc');
+  PL.ink(g, linesM(m, st.map(([a, b]) => [[a[0] - 1, a[1] - 4.5], [b[0] - 1, b[1] - 4.5]])), lw * 1.1);
+  PL.hatch(g, body, { angle: 0.75, gap: Math.max(7, 4 * s), w: lw, not: polyM(m, bodyPts(-20)) });
+  g.restore();
+  // 気門（A8〜A1・T1）
+  const spi = many([2, 3, 4, 5, 6, 7, 8, 9, 12].map(i => { const cx = (HW_B[i] + HW_B[i + 1]) / 2 + 3; return polyM(m, ellPts(cx, yb(cx) - hwH(cx) * 0.3, 2.6, 4.2, 0, 12)); }));
+  PL.tint(g, spi, PL.INK, 0.85); PL.ink(g, spi, lw * 0.7, '#f4eedc');
+  PL.ink(g, body, ow);
+  // 尾角（A8 の背から後ろへ反る。タバコスズメガは赤い）
+  const hx = (HW_B[2] + HW_B[3]) / 2 + 4, hy = yb(hx) - hwH(hx) + 1, cl = qPts([hx, hy], [hx + 4, hy - 34], [hx - 26, hy - 44], 10);
+  const hornPts = [...cl.map(([px, py], i) => [px + 6 * (1 - i / 10) + 0.6, py]), ...cl.slice().reverse().map(([px, py], i) => [px - 6 * (i / 10) - 0.6, py])];
+  const horn = polyM(m, hornPts); PL.tint(g, horn, PL.T.rust, 0.95); PL.ink(g, horn, lw * 1.4);
+  // 頭（小さく丸い。単眼の点）
+  const hb = yb(HW_X1), head = polyM(m, ellPts(HW_X1 + 12, hb - 21, 18, 22, 0.25, 28));
+  PL.tint(g, head, PL.T.leaf, 0.95); PL.ink(g, head, ow);
+  PL.ink(g, linesM(m, [[[HW_X1 + 20, hb - 3], [HW_X1 + 27, hb + 2], [HW_X1 + 23, hb + 5]], [[HW_X1 + 13, hb - 30], [HW_X1 + 22, hb - 22]]]), lw);
+  PL.ink(g, many([[HW_X1 + 22, hb - 14], [HW_X1 + 25, hb - 9]].map(([a, b]) => polyM(m, ellPts(a, b, 1.2, 1.2, 0, 8)))), Math.max(2, 2.4 * s));
+  g.restore();
+  if (o.mem != null) { const [mx, my] = m(HW_X1 + 10, hb - 24); memDot(g, mx, my, Math.max(0.7, s), o.mem); }
+}
+// 上から（通路の中を進む）。x, y は体のまん中、頭が rot の向き
+function hornwormTop(g, x, y, s, o = {}) {
+  const m = mapper(x, y, s, o.rot || 0), t = o.t || 0, lw = Math.max(1.4, 1.5 * s), ow = Math.max(2.4, 3 * s);
+  const w = xx => hwH(xx) * 0.46 * (1 + 0.05 * Math.sin(t * 5 - xx * 0.028));
+  const sway = xx => Math.sin(t * 3 - xx * 0.02) * 4 * (o.wig ?? 1);
+  const pts = dy => { const a = []; for (let xx = HW_X0; xx <= HW_X1 + 0.1; xx += 5) a.push([xx, sway(xx) - w(xx) + dy]); for (let xx = HW_X1; xx >= HW_X0 - 0.1; xx -= 5) a.push([xx, sway(xx) + w(xx) + dy]); return a; };
+  const body = polyM(m, pts(0));
+  g.save(); g.globalAlpha *= o.alpha ?? 1;
+  const pl = many([4, 5, 6, 7].flatMap(i => { const cx = (HW_B[i] + HW_B[i + 1]) / 2; return [-1, 1].map(sd => polyM(m, ellPts(cx, sway(cx) + sd * (w(cx) + 3), 6, 4, 0, 12))); })); PL.tint(g, pl, PL.T.leaf, 0.85); PL.ink(g, pl, lw);
+  PL.tint(g, body, PL.T.leaf, 0.8); PL.tint(g, body, PL.T.land, 0.35);
+  g.save(); g.beginPath(); body(g); g.clip();
+  PL.ink(g, linesM(m, HW_B.slice(1, -1).map(bx => [[bx, sway(bx) - 30], [bx, sway(bx) + 30]])), lw);
+  PL.ink(g, linesM(m, [3, 4, 5, 6, 7, 8, 9].flatMap(i => [-1, 1].map(sd => { const x0 = HW_B[i + 1] - 2; return [[x0, sway(x0) + sd * w(x0)], [x0 - 18, sway(x0 - 18) + sd * w(x0 - 18) * 0.45]]; }))), Math.max(3, 4.5 * s), '#f4eedc');
+  PL.ink(g, linesM(m, [[[HW_X0 + 30, 0], [HW_X1, 0]].map(([a]) => [a, sway(a)])]), lw * 0.6, 'rgba(35,28,21,0.5)');   // 背のまん中の線
+  PL.hatch(g, body, { angle: 0.75, gap: Math.max(7, 4 * s), w: lw, not: polyM(m, pts(-12)) });
+  g.restore();
+  PL.ink(g, body, ow);
+  const hx = (HW_B[2] + HW_B[3]) / 2, horn = polyM(m, [[hx + 6, sway(hx) - 5], [hx - 30, sway(hx - 30)], [hx + 6, sway(hx) + 5]]);
+  PL.tint(g, horn, PL.T.rust, 0.95); PL.ink(g, horn, lw * 1.3);
+  const head = polyM(m, ellPts(HW_X1 + 14, sway(HW_X1), 17, 17, 0, 24));
+  PL.tint(g, head, PL.T.leaf, 0.95); PL.ink(g, head, ow);
+  g.restore();
+  if (o.mem != null) { const [mx, my] = m(HW_X1 + 12, sway(HW_X1)); memDot(g, mx, my, Math.max(0.7, s), o.mem); }
+}
+
+// さなぎ（横から。x, y はまん中、頭が右）。長さ約 200（s=1）
+const PU_X0 = -92, PU_X1 = 90;
+const puR = x => { const u = (x - PU_X0) / (PU_X1 - PU_X0); return 36 * (u < 0.45 ? 0.16 + 0.84 * Math.pow(Math.max(0, u) / 0.45, 0.6) : Math.sqrt(Math.max(0, 1 - Math.pow((u - 0.45) / 0.55, 5)))); };
+const puPts = (dx = 0, dy = 0) => { const a = []; for (let x = PU_X0; x <= PU_X1 + 0.1; x += 3) a.push([x + dx, -puR(x) + dy]); for (let x = PU_X1; x >= PU_X0 - 0.1; x -= 3) a.push([x + dx, puR(x) * 0.95 + dy]); return a; };
+function pupa(g, x, y, s, o = {}) {
+  const m = mapper(x, y, s, o.rot || 0, o.dir ?? 1), lw = Math.max(1.4, 1.5 * s), ow = Math.max(2.6, 3.2 * s), body = polyM(m, puPts());
+  g.save(); g.globalAlpha *= o.alpha ?? 1;
+  // お尻のとげ（cremaster）
+  const cr = polyM(m, [[PU_X0 + 2, -5], [PU_X0 - 16, 0], [PU_X0 + 2, 5]]); PL.tint(g, cr, PL.T.brown, 0.9); PL.ink(g, cr, lw * 1.2);
+  if (!o.cut) { PL.tint(g, body, PL.T.rust, 0.6); PL.tint(g, body, PL.T.brown, 0.55); }
+  else PL.tint(g, body, PL.T.sand, 0.35);
+  if (!o.cut) {
+    g.save(); g.beginPath(); body(g); g.clip();
+    PL.ink(g, linesM(m, [-78, -64, -50, -36, -22, -8].map(sx => qPts([sx, -40], [sx - 7, 0], [sx, 40], 8))), lw);   // 腹の節
+    PL.ink(g, linesM(m, [qPts([52, -40], [30, 6], [-8, 40], 12), qPts([60, -40], [46, 0], [10, 40], 12)]), lw);   // 翅のさや・触角のさや
+    PL.ink(g, linesM(m, [qPts([78, -32], [64, -10], [70, 10], 6)]), lw * 0.8);   // 頭と胸の境
+    PL.hatch(g, body, { angle: 0.7, gap: Math.max(7, 4 * s), w: lw, not: polyM(m, puPts(4, -16)) });
+    g.restore();
+    PL.ink(g, many([-71, -57, -43, -29, -15].map(sx => polyM(m, ellPts(sx, -6, 1, 2, 0, 10)))), Math.max(1.6, 2 * s));   // 気門
+  }
+  PL.ink(g, body, ow);
+  // 口吻のさや（水さしの取っ手）
+  if (!o.cut) {
+    const c = qPts([78, 18], [124, 70], [40, 33], 14), hp = [...c.map(([a, b], i) => [a + 3.5 * Math.sin(i / 14 * Math.PI), b + 3.5]), ...c.slice().reverse().map(([a, b]) => [a, b - 3])];
+    const h = polyM(m, hp); PL.tint(g, h, PL.T.brown, 0.85); PL.ink(g, h, lw * 1.2);
+  }
+  g.restore();
+  if (o.mem != null) { const [mx, my] = m(66, -6); memDot(g, mx, my, Math.max(0.7, s), o.mem); }
+}
+
+// ガ（上から。標本のように翅を広げる）。x, y は胸のまん中。o: fold（0 広げる〜1 たたむ）, flap, t, mem
+// 左右の翅は同じ形を鏡に写し、手彩色・斜線・輪郭は左右まとめて1回ずつ描く
+function moth(g, x, y, s, o = {}) {
+  const t = o.t || 0, fold = o.fold || 0, fl = o.flap ? Math.sin(t * 9) * 0.1 : 0, lw = Math.max(1.3, 1.4 * s), ow = Math.max(2.4, 3 * s);
+  g.save(); g.globalAlpha *= o.alpha ?? 1;
+  const mm = mapper(x, y, s, o.rot || 0);
+  PL.ink(g, many([-1, 1].map(sd => linesM(mm, [qPts([sd * 5, -78], [sd * 14, -118], [sd * 44, -126], 10), [[sd * 44, -126], [sd * 50, -122]]]))), Math.max(1.8, 2.6 * s));   // 触角（先がかぎに曲がる）
+  const sides = [-1, 1].map(sd => {
+    const m = mapper(x, y, s, o.rot || 0, sd);
+    const wm = (bx, by, a) => (px, py) => { const dx = px - bx, dy = py - by, c = Math.cos(a), n = Math.sin(a); return m(bx + dx * c - dy * n, by + dx * n + dy * c); };
+    return { hm: wm(12, -18, fold * 0.95 + fl * 0.6), fm: wm(11, -38, fold * 1.05 + fl) };
+  });
+  // 後翅（小さい。黒と白の帯）
+  const hw = [...qPts([12, -30], [70, -36], [94, -8], 8), ...qPts([94, -8], [96, 24], [58, 30], 8).slice(1), ...qPts([58, 30], [24, 24], [12, 2], 8).slice(1)];
+  const hp = many(sides.map(S => polyM(S.hm, hw)));
+  PL.tint(g, hp, PL.T.gray, 0.7);
+  g.save(); g.beginPath(); hp(g); g.clip();
+  PL.ink(g, many(sides.map(S => linesM(S.hm, [qPts([66, -40], [90, 4], [44, 36], 10), qPts([80, -40], [104, 6], [56, 42], 10)]))), Math.max(3, 6 * s), 'rgba(35,28,21,0.85)');
+  g.restore();
+  PL.ink(g, hp, ow * 0.8);
+  // 前翅（細長く、先がとがる。灰褐色にぎざぎざの横線）
+  const fw = [...qPts([10, -52], [74, -66], [160, -48], 10), ...qPts([160, -48], [134, -18], [104, 0], 8).slice(1), ...qPts([104, 0], [54, -4], [12, -26], 8).slice(1)];
+  const fp = many(sides.map(S => polyM(S.fm, fw)));
+  PL.tint(g, fp, PL.T.gray, 0.85); PL.tint(g, fp, PL.T.brown, 0.35);
+  g.save(); g.beginPath(); fp(g); g.clip();
+  const zig = (x0, x1, n) => Array.from({ length: n + 1 }, (_, i) => { const k = i / n; return [lerp(x0, x1, k) + (i % 2 ? 5 : -5), lerp(-66, 14, k)]; });
+  PL.ink(g, many(sides.map(S => linesM(S.fm, [[[14, -44], [146, -42]], [[16, -38], [128, -16]], [[18, -34], [112, 2]], [[18, -32], [92, 8]]]))), lw * 0.45, 'rgba(35,28,21,0.55)');   // 翅脈
+  PL.ink(g, many(sides.map(S => linesM(S.fm, [zig(52, 36, 8), zig(104, 82, 9)]))), lw * 1.1);
+  PL.ink(g, many(sides.map(S => linesM(S.fm, [qPts([138, -52], [116, -22], [104, 14], 8)]))), Math.max(2.5, 5 * s), 'rgba(35,28,21,0.55)');
+  PL.hatch(g, fp, { angle: 0.9, gap: Math.max(7, 3.6 * s), w: lw * 0.8, not: many(sides.map(S => polyM(S.fm, shift(fw, 0, -16)))) });
+  g.restore();
+  const spot = many(sides.map(S => polyM(S.fm, ellPts(66, -40, 4.5, 3, 0, 10)))); PL.tint(g, spot, '#f4eedc', 0.95); PL.ink(g, spot, lw * 0.7);   // 白い点
+  PL.ink(g, fp, ow);
+  // 体: 腹（黄色い点が6対）・胸（太く毛深い）・頭（大きな目）
+  const abPts = [...qPts([-14, -18], [-19, 30], [-3, 90], 10), [0, 96], ...qPts([3, 90], [19, 30], [14, -18], 10)];
+  const ab = polyM(mm, abPts);
+  PL.tint(g, ab, PL.T.gray, 0.9); PL.tint(g, ab, PL.T.brown, 0.3);
+  g.save(); g.beginPath(); ab(g); g.clip();
+  PL.ink(g, linesM(mm, [2, 15, 28, 41, 54, 67, 80].map(yy => qPts([-20, yy], [0, yy + 5], [20, yy], 6))), lw * 0.8);
+  const spots = many([8, 21, 34, 47, 60, 73].flatMap((yy, i) => [-1, 1].map(sd => polyM(mm, ellPts(sd * (12 - i * 1.6), yy, 4, 4, 0, 10)))));
+  PL.tint(g, spots, PL.T.gold, 1); PL.ink(g, spots, lw * 0.9);
+  PL.hatch(g, ab, { angle: 0.9, gap: Math.max(7, 3.6 * s), w: lw * 0.8, not: polyM(mm, shift(abPts, -7, 0)) });
+  g.restore();
+  PL.ink(g, ab, ow);
+  const thP = ellPts(0, -44, 18, 27, 0, 30), th = polyM(mm, thP);
+  PL.tint(g, th, PL.T.gray, 0.95); PL.tint(g, th, PL.T.brown, 0.4);
+  PL.ink(g, linesM(mm, [qPts([-10, -64], [-14, -44], [-8, -22], 6), qPts([10, -64], [14, -44], [8, -22], 6)]), Math.max(2, 3.5 * s), 'rgba(35,28,21,0.7)');   // 胸の濃いすじ
+  PL.ink(g, linesM(mm, Array.from({ length: 18 }, (_, i) => { const a = i / 18 * TAU, cx = Math.cos(a) * 18, cy = -44 + Math.sin(a) * 27; return [[cx, cy], [cx * 1.18, -44 + (cy + 44) * 1.12]]; })), lw * 0.8);   // 胸の毛
+  PL.ink(g, th, ow);
+  const hd = polyM(mm, ellPts(0, -74, 11, 9, 0, 20)); PL.tint(g, hd, PL.T.gray, 0.95); PL.ink(g, hd, ow * 0.8);
+  const eyes = many([-1, 1].map(sd => polyM(mm, ellPts(sd * 10, -76, 5, 6, 0, 12)))); PL.tint(g, eyes, PL.INK, 0.9); PL.ink(g, eyes, lw);
+  g.restore();
+  if (o.mem != null) { const [mx, my] = mm(0, -74); memDot(g, mx, my, Math.max(0.7, s), o.mem); }
+}
+// 記憶の印（朱の小さな丸。消えたら点線の輪だけ）
+function memDot(g, x, y, s, k) {
+  const r = 7 * s;
+  if (k <= 0.02) { g.save(); g.setLineDash([4, 5]); PL.ink(g, PL.circle(x, y, r * 1.5), 2.5); g.restore(); return; }
+  g.save(); g.globalAlpha *= clamp(k, 0, 1);
+  const c = PL.circle(x, y, r); PL.tint(g, c, PL.RED, 0.9); PL.ink(g, c, 2.5, PL.RED); PL.ink(g, PL.circle(x, y, r * 1.6), 2, PL.RED);
   g.restore();
 }
-function moth(g, x, y, s, t) {
-  g.save(); g.lineWidth = 4 * s; g.strokeStyle = '#d8c8a8';
-  const fl = Math.sin(t * 10) * 0.12;
-  for (const sd of [-1, 1]) {
-    g.save(); g.translate(x, y); g.scale(sd * (1 - Math.abs(fl)), 1);
-    g.fillStyle = 'rgba(150,120,90,0.85)';
-    g.beginPath(); g.moveTo(6 * s, -20 * s); g.quadraticCurveTo(80 * s, -70 * s, 120 * s, -40 * s); g.quadraticCurveTo(90 * s, 0, 8 * s, 6 * s); g.closePath(); g.fill(); g.stroke();
-    g.fillStyle = 'rgba(120,95,75,0.85)';
-    g.beginPath(); g.moveTo(8 * s, 6 * s); g.quadraticCurveTo(80 * s, 20 * s, 70 * s, 55 * s); g.quadraticCurveTo(30 * s, 60 * s, 6 * s, 30 * s); g.closePath(); g.fill(); g.stroke();
-    g.beginPath(); g.moveTo(3 * s, -38 * s); g.quadraticCurveTo(14 * s, -60 * s, 30 * s, -66 * s); g.stroke();
+
+// 筋肉の束（横すじ入り）
+function muscle(g, x, y, w, h, a, al = 1, col = PL.T.rust) {
+  if (al <= 0.01 || w < 2) return;
+  g.save(); g.globalAlpha *= al; g.translate(x, y); g.rotate(a);
+  const r = PL.rect(-w / 2, -h / 2, w, h);
+  PL.tint(g, r, col, 0.9);
+  PL.ink(g, gg => { for (let xx = -w / 2 + 7; xx < w / 2; xx += 8) { gg.moveTo(xx, -h / 2); gg.lineTo(xx, h / 2); } }, 1.2, 'rgba(35,28,21,0.6)');
+  PL.hatch(g, r, { angle: 0.9, gap: 7, w: 1.4, not: PL.rect(-w / 2, -h / 2, w, h * 0.45) });
+  PL.ink(g, r, 2.5);
+  g.restore();
+}
+const NERVE = '#3f6f88';
+// 神経の細胞（細胞体・核・短い枝）
+function soma(g, x, y, r) {
+  PL.ink(g, gg => { for (let i = 0; i < 5; i++) { const a = Math.PI * (0.6 + i * 0.2), l = r * (1.4 + rnd(i, 4) * 0.6); gg.moveTo(x + Math.cos(a) * r * 0.8, y + Math.sin(a) * r * 0.8); gg.quadraticCurveTo(x + Math.cos(a + 0.2) * l, y + Math.sin(a + 0.2) * l, x + Math.cos(a - 0.1) * l * 1.3, y + Math.sin(a - 0.1) * l * 1.3); } }, 4, NERVE);
+  const c = PL.circle(x, y, r);
+  PL.tint(g, c, PL.T.sea, 0.9); PL.hatch(g, c, { angle: 0.8, gap: 8, w: 1.8, not: PL.circle(x - r * 0.35, y - r * 0.35, r), cx: x, cy: y }); PL.ink(g, c, 4);
+  const n = PL.circle(x + r * 0.1, y - r * 0.05, r * 0.32); PL.tint(g, n, PL.T.sea, 1); PL.ink(g, n, 2.5);
+}
+// さなぎの断面。km: 筋肉がこわれる 0→1、kn: 神経の枝がのびる 0→1、kb: 翅・脚の芽が育つ 0→1
+const PI_S = 4.4, PI_X = 540, PI_Y = 650;
+function pupaInside(g, t, km, kn, kb) {
+  const m = mapper(PI_X, PI_Y, PI_S), body = polyM(m, puPts());
+  pupa(g, PI_X, PI_Y, PI_S, { cut: true });
+  g.save(); g.beginPath(); body(g); g.clip();
+  for (let i = 0; i < 8; i++) for (let j = 0; j < 2; j++) {   // 筋肉 → かけら → とけて材料に
+    const [mx, my] = m(-62 + i * 16, -22 + j * 9), r = rnd(i, j);
+    const dx = (r - 0.5) * 150 * km, dy = (0.4 + rnd(j, i) * 0.6) * 110 * km;
+    muscle(g, mx + dx, my + dy, 58 * (1 - 0.75 * km), 30 * (1 - 0.3 * km), km * (r - 0.5) * 3, 1 - 0.8 * km);
+  }
+  if (km > 0.4) {   // 材料の粒（うすい）
+    g.save(); g.globalAlpha *= (km - 0.4) / 0.6;
+    PL.ink(g, gg => { for (let i = 0; i < 70; i++) { const px = PI_X - 330 + rnd(i, 3) * 620, py = PI_Y - 110 + rnd(i, 5) * 200 + Math.sin(t + i) * 5; gg.moveTo(px + 4, py); gg.arc(px, py, 4, 0, TAU); } }, 2, PL.T.rust);
     g.restore();
   }
-  g.fillStyle = '#6b5440'; g.beginPath(); g.ellipse(x, y + 10 * s, 11 * s, 48 * s, 0, 0, Math.PI * 2); g.fill(); g.stroke();
   g.restore();
-}
-// 赤い×（共通にない部品）
-function redX(g, x, y, r, k) {
-  if (k <= 0) return;
-  g.save(); g.strokeStyle = TK.C.red; g.lineWidth = r * 0.16; g.lineCap = 'round'; g.globalAlpha *= clamp(k, 0, 1);
-  const s = r * (0.7 + 0.3 * TK.back(k));
-  g.beginPath(); g.moveTo(x - s, y - s); g.lineTo(x + s, y + s); g.moveTo(x + s, y - s); g.lineTo(x - s, y + s); g.stroke();
-  g.restore();
-}
-function arrow(g, x0, y0, x1, y1, c = 'rgba(255,255,255,0.6)', w = 6) {
-  const a = Math.atan2(y1 - y0, x1 - x0);
-  g.save(); g.strokeStyle = c; g.fillStyle = c; g.lineWidth = w; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1 - Math.cos(a) * 20, y1 - Math.sin(a) * 20); g.stroke();
-  g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 - Math.cos(a - 0.45) * 30, y1 - Math.sin(a - 0.45) * 30); g.lineTo(x1 - Math.cos(a + 0.45) * 30, y1 - Math.sin(a + 0.45) * 30); g.closePath(); g.fill();
-  g.restore();
-}
-const rnd = (i, j = 0) => { const s = Math.sin(i * 12.9898 + j * 78.233) * 43758.5453; return s - Math.floor(s); };
-
-// さなぎの断面。km: 筋肉がこわれる 0→1、kn: 神経の枝がのびる 0→1、kb: 翅・脚の芽が育つ 0→1
-function pupaInside(g, t, km, kn, kb) {
-  const cx = 540, cy = 640, rx = 410, ry = 200;
-  g.save();
-  g.fillStyle = 'rgba(122,79,42,0.35)'; g.strokeStyle = '#e0b07a'; g.lineWidth = 6;
-  g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-  g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); g.clip();
-  // 筋肉（朱色の帯）→ かけら → 溶けて材料に
+  if (kb > 0) {   // 翅の芽（背がわ）と脚の芽（腹がわ）
+    const wing = polyM(m, ellPts(26, -14, 8 + 34 * kb, 4 + 12 * kb, -0.35, 28));
+    PL.tint(g, wing, PL.T.leaf, 0.85); PL.hatch(g, wing, { angle: -0.6, gap: 7, w: 1.5 });
+    PL.ink(g, linesM(m, [[[26 - 30 * kb, -4], [26 + 30 * kb, -24]], [[26 - 20 * kb, 2], [26 + 26 * kb, -16]]]), 1.6);   // 翅脈のもと
+    PL.ink(g, wing, 3.5);
+    for (let i = 0; i < 3; i++) { const lx = 40 + i * 9, lg = polyM(m, [[lx - 2.5, 14], [lx + 2.5, 14], [lx + 3 + 4 * kb, 16 + 14 * kb], [lx - 1 + 4 * kb, 16 + 14 * kb]]); PL.tint(g, lg, PL.T.leaf, 0.85); PL.ink(g, lg, 3); }
+  }
+  // 脳と神経（腹がわのくさり）は残る
+  const cord = [m(66, -12), m(52, 24), m(30, 26), m(-70, 26)];
+  PL.ink(g, gg => { gg.moveTo(...cord[0]); gg.quadraticCurveTo(...cord[1], ...cord[2]); gg.lineTo(...cord[3]); }, 10, NERVE);
+  PL.ink(g, gg => { gg.moveTo(...cord[0]); gg.quadraticCurveTo(...cord[1], ...cord[2]); gg.lineTo(...cord[3]); }, 4, '#9cc4d6');
+  const brain = polyM(m, ellPts(66, -14, 11, 9, 0.3, 20));
+  PL.tint(g, brain, PL.T.sea, 0.95); PL.hatch(g, brain, { angle: 0.8, gap: 7, w: 1.5, cx: PI_X, cy: PI_Y }); PL.ink(g, brain, 4);
   for (let i = 0; i < 7; i++) {
-    const x0 = cx - 300 + i * 90, y0 = cy - 130;
-    for (let j = 0; j < 6; j++) {
-      const r = rnd(i, j);
-      const dx = (r - 0.5) * 170 * km, dy = (Math.cos(i * 3 + j) * 0.5 + 0.3) * 150 * km;
-      g.globalAlpha = 1 - 0.8 * km;
-      g.fillStyle = VERM;
-      g.save(); g.translate(x0 + dx, y0 + j * 14 + dy); g.rotate(km * (r - 0.5) * 3);
-      g.fillRect(-36 + 30 * km, -6, 72 - 60 * km, 11); g.restore();
-    }
+    const [gx, gy] = m(34 - i * 16, 26), L = 30 + 60 * kn, gc = PL.circle(gx, gy, 15);
+    PL.ink(g, gg => { gg.moveTo(gx, gy); gg.quadraticCurveTo(gx - L * 0.2, gy - L * 0.6, gx - L * 0.5, gy - L); gg.moveTo(gx, gy); gg.quadraticCurveTo(gx + L * 0.3, gy - L * 0.5, gx + L * 0.4, gy - L * 0.9); }, 3, NERVE);
+    PL.tint(g, gc, PL.T.sea, 0.95); PL.ink(g, gc, 3.5);
   }
-  // 材料の粒（うすい）
-  if (km > 0.4) {
-    g.globalAlpha = (km - 0.4) / 0.6 * 0.5;
-    for (let i = 0; i < 60; i++) { g.fillStyle = '#ffb38a'; g.beginPath(); g.arc(cx - 360 + rnd(i, 3) * 720, cy - 150 + rnd(i, 5) * 260 + Math.sin(t + i) * 6, 4, 0, Math.PI * 2); g.fill(); }
-  }
-  g.globalAlpha = 1;
-  // 翅・脚の芽（青緑）
-  if (kb > 0) {
-    g.fillStyle = TEAL; g.strokeStyle = '#bff8ec'; g.lineWidth = 3;
-    const w = 40 + 170 * kb;
-    g.beginPath(); g.ellipse(cx + 40, cy - 40, w, 26 + 50 * kb, -0.35, 0, Math.PI * 2); g.fill(); g.stroke();
-    for (let i = 0; i < 3; i++) { const lx = cx + 140 + i * 50; g.beginPath(); g.roundRect(lx, cy + 120, 18, 20 + 50 * kb, 9); g.fill(); g.stroke(); }
-  }
-  // 脳と神経（空色）は残る
-  const ny = cy + 95;
-  g.strokeStyle = SKY; g.fillStyle = SKY; g.lineWidth = 9; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(cx + 300, cy - 20); g.quadraticCurveTo(cx + 260, ny, cx + 180, ny); g.lineTo(cx - 330, ny); g.stroke();
-  g.beginPath(); g.ellipse(cx + 300, cy - 40, 46, 36, 0, 0, Math.PI * 2); g.fill();
-  for (let i = 0; i < 7; i++) {
-    const gx = cx + 150 - i * 75;
-    g.beginPath(); g.arc(gx, ny, 15, 0, Math.PI * 2); g.fill();
-    const L = 30 + 70 * kn;
-    g.lineWidth = 4;
-    g.beginPath(); g.moveTo(gx, ny); g.lineTo(gx - L * 0.5, ny - L); g.moveTo(gx, ny); g.lineTo(gx + L * 0.4, ny - L * 0.9); g.stroke();
-    g.lineWidth = 9;
-  }
-  g.restore();
 }
 function legend(g, items, y) {
-  items.forEach(([c, s], i) => { g.fillStyle = c; g.fillRect(150, y + i * 76 - 16, 60, 32); TK.text(g, s, 230, y + i * 76, 44, { align: 'left' }); });
+  items.forEach(([c, s], i) => { const yy = y + i * 80, r = PL.rect(150, yy - 18, 60, 36); PL.tint(g, r, c, 0.9); PL.hatch(g, r, { angle: 0.9, gap: 8, w: 1.6 }); PL.ink(g, r, 3.5); PL.label(g, s, 235, yy, 44, { align: 'left' }); });
+}
+function redX(g, x, y, r, k) {
+  if (k <= 0) return;
+  const s = r * (0.7 + 0.3 * TK.back(clamp(k, 0, 1)));
+  g.save(); g.globalAlpha *= clamp(k, 0, 1);
+  PL.ink(g, gg => { gg.moveTo(x - s, y - s); gg.lineTo(x + s, y + s); gg.moveTo(x + s, y - s); gg.lineTo(x - s, y + s); }, r * 0.16, PL.RED);
+  g.restore();
 }
 
 // 1つの運動ニューロンのつなぎ直し（12〜20秒）
 function rewire(g, t) {
   const bx = 220, by = 640;
-  const kOld = clamp((t - 14.0) / 1.2, 0, 1);    // イモムシの筋肉が消える
-  const kNew = clamp((t - 15.4) / 1.6, 0, 1);    // ガの筋肉ができる
-  const kAx = clamp((t - 16.4) / 1.6, 0, 1);     // 軸索がのび直す
-  // イモムシの筋肉（上）
-  g.save(); g.globalAlpha *= 1 - 0.85 * kOld;
-  g.fillStyle = VERM; g.beginPath(); g.roundRect(660, 400, 280, 90, 45); g.fill();
-  g.restore();
-  TK.text(g, 'イモムシの筋肉', 800, 340, 44, { color: VERM });
-  if (kOld > 0.5) redX(g, 800, 445, 60, (kOld - 0.5) * 2);
-  // ガの筋肉（下）
-  if (kNew > 0) {
-    g.save(); g.globalAlpha *= kNew; g.fillStyle = TEAL;
-    g.beginPath(); g.roundRect(660, 790, 280 * kNew, 90, 45); g.fill();
-    g.restore();
-    TK.text(g, 'ガの筋肉', 800, 940, 44, { color: TEAL });
-  }
+  const kOld = clamp((t - 14.0) / 1.2, 0, 1), kNew = clamp((t - 15.4) / 1.6, 0, 1), kAx = clamp((t - 16.4) / 1.6, 0, 1);
+  // イモムシの筋肉（上）。束が3本、こわれてうすくなる
+  for (let i = 0; i < 3; i++) muscle(g, 800 + (rnd(i, 1) - 0.5) * 40 * kOld, 420 + i * 30 + 40 * kOld * rnd(i, 2), 280 * (1 - 0.4 * kOld), 26, kOld * (rnd(i, 3) - 0.5), 1 - 0.85 * kOld);
+  PL.label(g, 'イモムシの筋肉', 800, 340, 44, { color: '#8a4a2a' });
+  if (kOld > 0.5) redX(g, 800, 450, 60, (kOld - 0.5) * 2);
+  // ガの筋肉（下）。新しい束がのびる
+  if (kNew > 0) for (let i = 0; i < 3; i++) muscle(g, 660 + 140 * kNew, 800 + i * 30, 280 * kNew, 26, 0, kNew, PL.T.leaf);
+  if (kNew > 0) { g.save(); g.globalAlpha *= kNew; PL.label(g, 'ガの筋肉', 800, 950, 44, { color: PL.GREEN }); g.restore(); }
   // 軸索: はじめは上の筋肉へ。切れたあと、下へのび直す
-  g.save(); g.strokeStyle = SKY; g.lineWidth = 10; g.lineCap = 'round';
-  if (kOld < 0.6) { const L = 1 - kOld / 0.6; g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(450, by - 30, bx + (660 - bx) * L, by + (445 - by) * L); g.stroke(); }
+  const ax = (x1, y1, cx, cy) => { PL.ink(g, gg => { gg.moveTo(bx, by); gg.quadraticCurveTo(cx, cy, x1, y1); }, 11, NERVE); PL.ink(g, gg => { gg.moveTo(bx, by); gg.quadraticCurveTo(cx, cy, x1, y1); }, 4, '#9cc4d6'); };
+  if (kOld < 0.6) { const L = 1 - kOld / 0.6; ax(bx + (660 - bx) * L, by + (450 - by) * L, 450, by - 30); }
   else if (kAx > 0) {
-    const ex = bx + (660 - bx) * kAx, ey = by + (835 - by) * kAx;
-    g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(bx + (450 - bx) * kAx, by + 20 * kAx, ex, ey); g.stroke();
-    g.fillStyle = SKY; g.beginPath(); g.arc(ex, ey, 14, 0, Math.PI * 2); g.fill();
+    const ex = bx + (660 - bx) * kAx, ey = by + (830 - by) * kAx;
+    ax(ex, ey, bx + (450 - bx) * kAx, by + 20 * kAx);
+    PL.ink(g, gg => { for (let i = -1; i <= 1; i++) { gg.moveTo(ex, ey); gg.lineTo(ex + 18, ey + i * 14); } }, 3, NERVE);   // のびる先（成長円錐）
   }
-  // 細胞体（ずっと光ったまま）
-  const gl = g.createRadialGradient(bx, by, 0, bx, by, 110);
-  gl.addColorStop(0, 'rgba(95,212,255,0.55)'); gl.addColorStop(1, 'rgba(95,212,255,0)');
-  g.fillStyle = gl; g.beginPath(); g.arc(bx, by, 110, 0, Math.PI * 2); g.fill();
-  g.fillStyle = SKY; g.beginPath(); g.arc(bx, by, 46, 0, Math.PI * 2); g.fill();
-  g.restore();
-  TK.text(g, '神経の細胞', bx, by + 100, 44, { color: SKY });
-  TK.text(g, '生き残る', bx, by + 160, 50, { color: TK.C.green });
-  if (kAx >= 1) { g.save(); g.globalAlpha *= TK.pop(t, 18.0); TK.text(g, 'つなぎ直し', 450, 900, 52, { color: TK.C.acc }); g.restore(); }
+  soma(g, bx, by, 46);
+  PL.label(g, '神経の細胞', bx, by + 160, 44, { color: NERVE });
+  PL.label(g, '生き残る', bx, by + 220, 50, { color: PL.GREEN });
+  if (kAx >= 1) { g.save(); g.globalAlpha *= clamp(TK.pop(t, 18.0), 0, 1); PL.label(g, 'つなぎ直し', 470, 900, 52, { color: PL.RED }); g.restore(); }
 }
 
 // 羽化のあと、お腹の神経節の細胞が約半分消える（24〜32秒）
 const GANG = [];
 for (let gi = 0; gi < 4; gi++) for (let j = 0; j < 12; j++) GANG.push({ gi, j, die: false, r: rnd(gi * 13 + j, 9) });
-{ // 神経節ごとにちょうど半分を選ぶ（模式）
-  for (let gi = 0; gi < 4; gi++) { const ns = GANG.filter(n => n.gi === gi).sort((a, b) => a.r - b.r); ns.slice(0, 6).forEach((n, k) => { n.die = true; n.order = gi * 0.35 + k * 0.25; }); }
-}
+for (let gi = 0; gi < 4; gi++) { const ns = GANG.filter(n => n.gi === gi).sort((a, b) => a.r - b.r); ns.slice(0, 6).forEach((n, k) => { n.die = true; n.order = gi * 0.35 + k * 0.25; }); }   // 神経節ごとにちょうど半分（模式）
 function neuronDeath(g, t) {
-  moth(g, 540, 380, 1.4, t);
-  TK.text(g, 'ガ（羽化のあと）', 540, 220, 46, { color: TK.C.sub });
-  // お腹の神経のくさり
+  moth(g, 620, 380, 1.35, { t });
+  PL.label(g, 'ガ（羽化のあと）', 90, 190, 46, { align: 'left', color: TK.C.sub });
   const y = 760;
-  g.save(); g.strokeStyle = SKY; g.lineWidth = 8;
-  g.beginPath(); g.moveTo(120, y); g.lineTo(940, y); g.stroke(); g.restore();
-  const kd = (t - 26.4);
-  let alive = 0;
+  PL.ink(g, gg => { gg.moveTo(120, y); gg.lineTo(960, y); }, 10, NERVE); PL.ink(g, gg => { gg.moveTo(120, y); gg.lineTo(960, y); }, 4, '#9cc4d6');
+  PL.leader(g, 628, 500, 880, 648, TK.C.sub);
+  const kd = t - 26.4;
   for (let gi = 0; gi < 4; gi++) {
-    const gx = 220 + gi * 210;
-    TK.card(g, gx - 90, y - 110, 180, 220, { r: 60, fill: 'rgba(20,34,72,0.9)', stroke: 'rgba(95,212,255,0.6)' });
+    const gx = 220 + gi * 210, ge = PL.ellipse(gx, y, 92, 106);
+    PL.tint(g, ge, PL.T.sea, 0.3); PL.hatch(g, ge, { angle: 0.8, gap: 10, w: 1.4, not: PL.ellipse(gx - 20, y - 26, 92, 106), cx: gx, cy: y }); PL.ink(g, ge, 4);
     for (const n of GANG.filter(n => n.gi === gi)) {
       const px = gx - 55 + (n.j % 4) * 37, py = y - 70 + Math.floor(n.j / 4) * 70;
       const k = n.die ? clamp((kd - n.order) / 0.5, 0, 1) : 0;
-      if (k < 1) alive++;
-      if (k >= 1) { g.save(); g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 3; g.setLineDash([4, 4]); g.beginPath(); g.arc(px, py, 13, 0, Math.PI * 2); g.stroke(); g.restore(); }
-      else { g.fillStyle = `rgba(95,212,255,${1 - k})`; g.beginPath(); g.arc(px, py, 13 * (1 - 0.4 * k), 0, Math.PI * 2); g.fill(); }
+      if (k >= 1) { g.save(); g.setLineDash([4, 5]); PL.ink(g, PL.circle(px, py, 13), 2.5, 'rgba(35,28,21,0.6)'); g.restore(); }
+      else { g.save(); g.globalAlpha *= 1 - k; const c = PL.circle(px, py, 13 * (1 - 0.4 * k)); PL.tint(g, c, PL.T.sea, 1); PL.ink(g, c, 3); g.restore(); }
     }
   }
-  TK.text(g, 'お腹の神経のかたまり（模式）', 540, 920, 40, { color: TK.C.sub });
-  // 日にち（羽化から 0 → 2 日）
+  PL.label(g, 'お腹の神経のかたまり（模式）', 540, 920, 40, { color: TK.C.sub });
   const day = clamp((t - 25.0) / 4.0, 0, 1) * 2;
-  TK.card(g, 340, 510, 400, 100, { r: 50 });
-  TK.text(g, '羽化から ' + day.toFixed(1) + ' 日', 540, 562, 52);
-  if (t > 29.0) { g.save(); g.globalAlpha *= TK.pop(t, 29.0); TK.text(g, '約 50% が消える', 540, 1040, 72, { color: TK.C.acc }); g.restore(); }
+  TK.card(g, 110, 530, 400, 96);
+  PL.label(g, '羽化から [' + day.toFixed(1) + ' 日]', 310, 578, 50);
+  if (t > 29.0) { g.save(); g.globalAlpha *= clamp(TK.pop(t, 29.0), 0, 1); PL.label(g, '約 [50%] が消える', 540, 1050, 72); g.restore(); }
 }
 
 function draw(g, t) {
-  // 0〜4: フック。「ドロドロのスープ」に半分だけ×
+  // 0〜4: フック。「ドロドロのスープ」…でも半分は残る（右半分に ×）
   if (t < 4.0) {
     const f = fade(t, -1, 4.0, 0.3);
     g.save(); g.globalAlpha = f;
-    TK.hook(g, t, 0.0, 4.0, 'さなぎの中は\nドロドロのスープ', { y: 420, size: 108 });
-    if (t > 1.6) {
-      // 右半分にだけ ×（半分ウソ）
-      redX(g, 760, 500, 90, (t - 1.6) / 0.3);
-      g.save(); g.globalAlpha *= TK.pop(t, 2.3); TK.text(g, '…[半分ウソ]', PW / 2, 700, 110, { stroke: 'rgba(0,0,0,0.6)' }); g.restore();
-    }
-    // さなぎの断面：左はドロドロ、右は神経が残る
+    TK.hook(g, t, 0.0, 4.0, 'さなぎの中は\nドロドロのスープ', { y: 380, size: 108 });
     if (t > 0.6) {
-      g.save(); g.globalAlpha *= TK.pop(t, 0.6);
-      const cx = 540, cy = 980;
-      g.fillStyle = 'rgba(122,79,42,0.45)'; g.strokeStyle = '#e0b07a'; g.lineWidth = 6;
-      g.beginPath(); g.ellipse(cx, cy, 330, 140, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-      g.save(); g.beginPath(); g.ellipse(cx, cy, 330, 140, 0, 0, Math.PI * 2); g.clip();
-      for (let i = 0; i < 30; i++) { g.fillStyle = 'rgba(255,170,120,0.5)'; g.beginPath(); g.arc(cx - 300 + rnd(i) * 300, cy - 110 + rnd(i, 2) * 220 + Math.sin(t * 2 + i) * 8, 10 + rnd(i, 4) * 14, 0, Math.PI * 2); g.fill(); }
-      g.strokeStyle = SKY; g.lineWidth = 8; g.beginPath(); g.moveTo(cx - 20, cy + 40); g.lineTo(cx + 300, cy + 40); g.stroke();
-      g.fillStyle = SKY; for (let i = 0; i < 4; i++) { g.beginPath(); g.arc(cx + 40 + i * 70, cy + 40, 13, 0, Math.PI * 2); g.fill(); }
-      g.restore(); g.restore();
+      g.save(); g.globalAlpha *= clamp(TK.pop(t, 0.6), 0, 1);
+      const S = 4.0, cx = 540, cy = 960, m = mapper(cx, cy, S), body = polyM(m, puPts());
+      pupa(g, cx, cy, S, { cut: true });
+      g.save(); g.beginPath(); body(g); g.clip();
+      for (let i = 0; i < 26; i++) { const px = cx - 300 + rnd(i) * 290, py = cy - 100 + rnd(i, 2) * 200 + Math.sin(t * 2 + i) * 6, c = PL.circle(px, py, 10 + rnd(i, 4) * 16); PL.tint(g, c, i % 3 ? PL.T.rust : PL.T.sand, 0.75); PL.ink(g, c, 2.5); }
+      g.restore();
+      const cord = [m(66, -12), m(52, 24), m(30, 26), m(-4, 26)];
+      PL.ink(g, gg => { gg.moveTo(...cord[0]); gg.quadraticCurveTo(...cord[1], ...cord[2]); gg.lineTo(...cord[3]); }, 9, NERVE);
+      for (let i = 0; i < 3; i++) { const [gx, gy] = m(30 - i * 14, 26), c = PL.circle(gx, gy, 13); PL.tint(g, c, PL.T.sea, 0.95); PL.ink(g, c, 3); }
+      const br = polyM(m, ellPts(66, -14, 11, 9, 0.3, 20)); PL.tint(g, br, PL.T.sea, 0.95); PL.ink(g, br, 4);
+      PL.ink(g, gg => { gg.moveTo(cx, cy - 175); gg.lineTo(cx, cy + 175); }, 3, 'rgba(35,28,21,0.5)');
+      g.restore();
+    }
+    if (t > 1.6) {
+      redX(g, 740, 960, 100, (t - 1.6) / 0.3);   // 右半分は、スープではない
+      g.save(); g.globalAlpha *= clamp(TK.pop(t, 2.3), 0, 1); PL.label(g, '…[半分ウソ]', PW / 2, 690, 110); g.restore();
     }
     g.restore();
   }
@@ -230,15 +374,15 @@ function draw(g, t) {
   if (t >= 4.0 && t < 12.0) {
     const km = ease(clamp((t - 5.0) / 5.5, 0, 1));
     g.save(); g.globalAlpha = fade(t, 4.0, 12.0, 0.3);
-    TK.text(g, 'さなぎの中（模式図）', PW / 2, 300, 60, { color: TK.C.sub });
+    PL.label(g, 'さなぎの中（模式図）', 90, 300, 60, { align: 'left', color: TK.C.sub });
     pupaInside(g, t, km, 0, 0);
-    legend(g, [[VERM, 'こわれて材料に（筋肉の多く）']], 960);
+    legend(g, [[PL.T.rust, 'こわれて材料に（筋肉の多く）']], 980);
     g.restore();
   }
   // 12〜20: 神経の細胞は生き残って、つなぎ直す
   if (t >= 12.0 && t < 20.0) {
     g.save(); g.globalAlpha = fade(t, 12.0, 20.0, 0.3);
-    TK.text(g, '体を動かす神経（運動ニューロン）', PW / 2, 240, 54, { color: TK.C.sub });
+    PL.label(g, '体を動かす神経（運動ニューロン）', PW / 2, 230, 54, { color: TK.C.sub });
     rewire(g, t);
     g.restore();
   }
@@ -246,9 +390,9 @@ function draw(g, t) {
   if (t >= 20.0 && t < 24.0) {
     const kb = ease(clamp((t - 20.5) / 3.0, 0, 1));
     g.save(); g.globalAlpha = fade(t, 20.0, 24.0, 0.3);
-    TK.text(g, 'さなぎの中（模式図）', PW / 2, 300, 60, { color: TK.C.sub });
+    PL.label(g, 'さなぎの中（模式図）', 90, 300, 60, { align: 'left', color: TK.C.sub });
     pupaInside(g, t, 1, 1, kb);
-    legend(g, [[SKY, '残って作りかえ（脳・神経）'], [TEAL, '新しく作る（翅・脚）']], 960);
+    legend(g, [[PL.T.sea, '残って作りかえ（脳・神経）'], [PL.T.leaf, '新しく作る（翅・脚）']], 980);
     g.restore();
   }
   // 24〜32: 羽化のあと、神経の約半分が消える
@@ -257,26 +401,31 @@ function draw(g, t) {
     neuronDeath(g, t);
     g.restore();
   }
-  // 32〜35: まとめ
+  // 32〜35: まとめ（4つの工程。右に小さな印）
   if (t >= 32.0) {
     g.save(); g.globalAlpha = fade(t, 32.0, 35.5, 0.3);
-    const steps = [['こわす', VERM], ['残して\nつなぎ直す', SKY], ['新しく作る', TEAL], ['片づける', '#c9d4ff']];
-    steps.forEach(([s, c], i) => {
+    const steps = ['こわす', '残して\nつなぎ直す', '新しく作る', '片づける'];
+    steps.forEach((s, i) => {
       const a = 32.1 + i * 0.35; if (t < a) return;
       const y = 330 + i * 190;
-      g.save(); g.globalAlpha *= TK.pop(t, a);
-      TK.card(g, 240, y - 75, 600, 150, { stroke: c, lw: 5 });
-      TK.text(g, (i + 1) + '', 310, y, 72, { color: c });
-      TK.lines(g, s, 580, y, 54, { color: '#fff' });
+      g.save(); g.globalAlpha *= clamp(TK.pop(t, a), 0, 1);
+      TK.card(g, 200, y - 75, 680, 150);
+      PL.label(g, (i + 1) + '', 270, y, 72, { color: PL.RED });
+      TK.lines(g, s, 540, y, 54);
+      const ix = 790;
+      if (i === 0) { muscle(g, ix - 18, y - 14, 40, 18, -0.4); muscle(g, ix + 16, y + 16, 34, 18, 0.5); }
+      else if (i === 1) soma(g, ix, y, 22);
+      else if (i === 2) { const w = PL.ellipse(ix, y, 42, 20, -0.35); PL.tint(g, w, PL.T.leaf, 0.85); PL.hatch(g, w, { angle: -0.6, gap: 7, w: 1.5 }); PL.ink(g, w, 3.5); }
+      else { g.save(); g.setLineDash([4, 5]); PL.ink(g, PL.circle(ix - 16, y, 14), 2.5); PL.ink(g, PL.circle(ix + 20, y, 14), 2.5); g.restore(); }
       g.restore();
-      if (i < 3) arrow(g, 540, y + 78, 540, y + 112, 'rgba(255,255,255,0.5)', 5);
+      if (i < 3) arrow(g, 540, y + 80, 540, y + 112, 4, 'rgba(35,28,21,0.6)');
     });
     g.restore();
   }
   if (t >= 4.0 && t < 12.0) TK.note(g, t, 4.0, 12.0, '器官ごとの色わけの模式図（細胞1つずつではない）', { size: 32 });
   if (t >= 12.0 && t < 20.0) TK.note(g, t, 12.0, 20.0, 'Levine & Truman (1985) J Neurosci', { size: 32 });
   if (t >= 24.0 && t < 32.0) TK.note(g, t, 24.0, 32.0, '点の数は模式。日にちは要旨からの目安', { size: 32 });
-  if (t >= 32.0) TK.note(g, t, 32.0, 35.0, '出どころ: Truman & Schwartz (1984) J Neurosci 4(1):274–280\nLevine & Truman (1985) J Neurosci', { size: 30 });
+  if (t >= 32.0) TK.note(g, t, 32.0, 35.0, '出どころ: Truman & Schwartz (1984) J Neurosci 4(1):274–280／Levine & Truman (1985) J Neurosci', { size: 26 });
 }
 
 triviaStart({ out: 'metamorphosis-trivia2', voice: 'auto', dur: DUR, draw, subs, cues, peek: 1.5 });

@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく crt-pixels-2（型A ぜんぶ逆）「ブラウン管は“絵”を映していない」。台本は trivia/crt-pixels.md。?short で録る
@@ -30,29 +33,45 @@ const cues = [
   { t: 10.0, type: 'pop' }, { t: 11.2, type: 'ding' }, { t: 16.0, type: 'whoosh' }, { t: 17.0, type: 'rise' }, { t: 19.6, type: 'ding' },
   { t: 23.0, type: 'whoosh' }, { t: 24.2, type: 'pop' },
 ];
+// 絵は「図鑑の版画」（trivia-plate.js の PL.*）。テレビは木の箱、画面は光っていない蛍光面の灰色、光った行は手彩色の帯、光る点は朱
 const SX = 90, SY = 200, SW = 780, SH = 585;   // 画面（4:3）
-
+const line = pts => g => pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
+const fadeIn = (g, f, fn) => { g.save(); g.globalAlpha *= f; fn(); g.restore(); };
+// テレビの箱と、光っていない画面
+function tv(g, x, y, w, h) {
+  const cab = PL.rect(x - 44, y - 44, w + 88, h + 88), scr = PL.rect(x, y, w, h);
+  PL.tint(g, cab, PL.T.wood, 0.8);
+  PL.ink(g, gg => { for (let k = 0; k < 8; k++) { const yy = y - 34 + k * (h + 70) / 7; gg.moveTo(x - 40, yy); for (let xx = x - 40; xx < x + w + 44; xx += 24) gg.lineTo(xx, yy + Math.sin(xx * 0.03 + k * 1.3) * 4); } }, 1, 'rgba(35,28,21,0.35)');   // 木目
+  PL.hatch(g, PL.rect(x + w + 20, y - 44, 24, h + 88), { angle: 0.8, gap: 7, w: 1.4 }); PL.hatch(g, PL.rect(x - 44, y + h + 20, w + 88, 24), { angle: 0.8, gap: 7, w: 1.4 });
+  PL.ink(g, cab, 6);
+  PL.tint(g, scr, PL.T.gray, 0.85);
+  PL.hatch(g, scr, { angle: 0.7, gap: 9, w: 1.2, color: 'rgba(35,28,21,0.45)' }); PL.hatch(g, scr, { angle: -0.7, gap: 9, w: 1.2, color: 'rgba(35,28,21,0.3)' });
+  PL.ink(g, scr, 5); PL.ink(g, PL.rect(x - 14, y - 14, w + 28, h + 28), 2);
+}
+// 光る点（朱の丸と、墨の短い線）
+function spot(g, x, y, r) {
+  const c = PL.circle(x, y, r); PL.tint(g, c, PL.RED, 0.95); PL.ink(g, c, 3);
+  PL.ink(g, gg => { for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; gg.moveTo(x + Math.cos(a) * (r + 8), y + Math.sin(a) * (r + 8)); gg.lineTo(x + Math.cos(a) * (r + 22), y + Math.sin(a) * (r + 22)); } }, 3, PL.RED);
+}
 // 光る点が行をぬる。s は「何行目まで進んだか」（小数）、rows は行の数、decay は何行ぶんで消えるか（推定の絵）
 function scan(g, s, rows, decay) {
-  g.save();
-  g.fillStyle = '#05070f'; g.fillRect(SX, SY, SW, SH);
-  g.strokeStyle = 'rgba(200,220,255,0.6)'; g.lineWidth = 4; g.strokeRect(SX, SY, SW, SH);
+  tv(g, SX, SY, SW, SH);
   const lh = SH / rows, cur = Math.floor(s), fx = s - cur;
-  for (let k = 0; k <= decay * 4; k++) {
-    const j = cur - k; if (j < 0 && j + rows < 0) break;
-    const row = ((j % rows) + rows) % rows, y = SY + (row + 0.5) * lh;
+  g.save(); g.beginPath(); g.rect(SX, SY, SW, SH); g.clip();
+  const bins = [[], [], [], []];   // 明るさの段ごとに帯をまとめてぬる（筆のルックの手彩色は重いので）
+  for (let k = decay * 4; k >= 0; k--) {
+    const j = cur - k, row = ((j % rows) + rows) % rows, y = SY + (row + 0.5) * lh;
     const age = Math.max(0, s - (j + 1)), a = k === 0 ? 1 : Math.exp(-age / decay);
-    if (a < 0.02) continue;
-    const x1 = SX + SW * (k === 0 ? fx : 1);
-    const gr = g.createLinearGradient(SX, 0, x1, 0);
-    gr.addColorStop(0, `rgba(95,212,255,${0.05 * a})`); gr.addColorStop(1, `rgba(150,230,255,${0.75 * a})`);
-    g.fillStyle = k === 0 ? gr : `rgba(95,212,255,${0.55 * a})`;
-    g.fillRect(SX, y - lh * 0.32, x1 - SX, lh * 0.64);
+    if (a < 0.08) continue;
+    bins[Math.min(3, Math.floor(a * 4))].push([y, SX + SW * (k === 0 ? fx : 1)]);
   }
-  const y = SY + ((cur % rows) + 0.5) * lh, x = SX + SW * fx;
-  g.fillStyle = '#fff'; g.shadowColor = '#bff0ff'; g.shadowBlur = 40;
-  g.beginPath(); g.arc(x, y, Math.max(10, lh * 0.45), 0, Math.PI * 2); g.fill();
+  bins.forEach((B, lv) => {
+    if (!B.length) return;
+    PL.tint(g, gg => B.forEach(([y, x1]) => gg.rect(SX, y - lh * 0.32, x1 - SX, lh * 0.64)), PL.T.gold, 0.3 + 0.22 * lv);
+    if (lv >= 1) PL.ink(g, gg => B.forEach(([y, x1]) => { gg.moveTo(SX, y - lh * 0.32); gg.lineTo(x1, y - lh * 0.32); gg.moveTo(SX, y + lh * 0.32); gg.lineTo(x1, y + lh * 0.32); }), 1.4, `rgba(35,28,21,${0.15 * lv + 0.1})`);
+  });
   g.restore();
+  spot(g, SX + SW * fx, SY + ((cur % rows) + 0.5) * lh, Math.max(9, lh * 0.38));
 }
 const HEART = ['..XX...XX..', '.XXXX.XXXX.', 'XXXXXXXXXXX', 'XXXXXXXXXXX', '.XXXXXXXXX.', '..XXXXXXX..', '...XXXXX...', '....XXX....', '.....X.....'];
 
@@ -60,55 +79,56 @@ function draw(g, t) {
   // 0〜3: 速い走査（点が1つだけ）
   if (t < 3.0) {
     scan(g, t * 33, 30, 4);
-    TK.hook(g, t, 1.2, 3.0, '光っているのは [1つの点] だけ', { y: 900, size: 72 });
+    TK.hook(g, t, 1.2, 3.0, '光っているのは [1つの点] だけ', { y: 960, size: 72 });
   }
   // 3〜10: スローモーション
   if (t >= 3.0 && t < 10.0) {
     scan(g, (t - 3.0) * 2.4, 16, 2.5);
-    TK.text(g, 'スローモーション', SX, SY - 50, 44, { align: 'left', color: TK.C.sub });
-    TK.note(g, t, 3.5, 10, '動いているのは「光る場所」（電子は奥から画面へ飛ぶ）\n光の消え方は、かんたんにした推定の絵', { size: 30 });
+    PL.label(g, 'スローモーション', SX - 40, SY - 80, 44, { align: 'left', color: TK.C.sub });
+    PL.leader(g, SX + SW - 40, SY + SH + 50, SX + SW - 40, 930); PL.label(g, '光っていない所（蛍光面）', SX + SW - 40, 970, 38, { align: 'right', color: TK.C.sub, bold: false });
+    TK.note(g, t, 3.5, 10, '動いているのは「光る場所」（電子は奥から画面へ飛ぶ）\n光の消え方は、かんたんにした推定の絵', { size: 30, y: 1460 });
   }
   // 10〜16: 1秒に 15,734 行
   if (t >= 10.0 && t < 16.0) {
     scan(g, t * 33, 30, 4);
-    g.save(); g.fillStyle = 'rgba(11,20,48,0.55)'; g.fillRect(SX, SY, SW, SH); g.restore();
-    TK.count(g, t, 10.2, 16.0, 0, 15734, { y: SY + SH / 2, size: 170, dur: 1.0, unit: '行／秒' });
+    fadeIn(g, clamp((t - 10.2) / 0.12, 0, 1), () => { g.fillStyle = 'rgba(244,239,226,1)'; g.fillRect(SX + 40, SY + 130, SW - 80, SH - 230); PL.ink(g, PL.rect(SX + 40, SY + 130, SW - 80, SH - 230), 3); });   // 字の下の紙（字より先に出て、字が消えてから消える）
+    TK.count(g, t, 10.2, 16.0, 0, 15734, { y: SY + SH / 2 - 40, size: 130, dur: 1.0, unit: '行／秒' });
     TK.note(g, t, 11, 16, '4.5MHz ÷ 286 ＝ 15,734 Hz（カラーの NTSC。日本・アメリカなど）', { size: 30 });
   }
   // 16〜23: 横切る速さ
   if (t >= 16.0 && t < 23.0) {
-    const u = ((t - 16.0) / 1.2) % 1;
-    g.save(); g.strokeStyle = 'rgba(200,220,255,0.6)'; g.lineWidth = 4; g.strokeRect(SX, 230, SW, 260); g.restore();
-    g.save(); g.fillStyle = '#fff'; g.shadowColor = '#bff0ff'; g.shadowBlur = 40; g.beginPath(); g.arc(SX + SW * u, 360, 16, 0, Math.PI * 2); g.fill(); g.restore();
-    g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 4; g.beginPath(); g.moveTo(SX, 530); g.lineTo(SX + SW, 530); g.moveTo(SX, 510); g.lineTo(SX, 550); g.moveTo(SX + SW, 510); g.lineTo(SX + SW, 550); g.stroke(); g.restore();
-    TK.text(g, '21型の横幅 約43cm を 0.0000636秒 で', PW / 2 - 60, 590, 42, { color: TK.C.acc });
+    const u = ((t - 16.0) / 1.2) % 1, strip = PL.rect(SX, 230, SW, 260);
+    PL.tint(g, strip, PL.T.gray, 0.85); PL.hatch(g, strip, { angle: 0.7, gap: 9, w: 1.2, color: 'rgba(35,28,21,0.4)' });
+    PL.tint(g, PL.rect(SX, 342, SW * u, 36), PL.T.gold, 0.95);
+    PL.ink(g, strip, 5);
+    spot(g, SX + SW * u, 360, 15);
+    PL.ink(g, gg => { line([[SX, 530], [SX + SW, 530]])(gg); line([[SX, 510], [SX, 550]])(gg); line([[SX + SW, 510], [SX + SW, 550]])(gg); }, 4, PL.RED);
+    PL.label(g, '21型の横幅 約43cm を 0.0000636秒 で', PW / 2 - 60, 590, 42, { color: PL.RED });
     TK.bars(g, t, 17.0, 23.0, [
       { label: '光る点が横切る（21型）', v: 6.7 / 8, color: TK.C.acc, text: '6.7 km/秒 以上' },
       { label: '国際宇宙ステーション', v: 7.66 / 8, color: TK.C.acc2, text: '約7.7 km/秒' },
-    ], { y: 670, gap: 170, stagger: 0.6, size: 42 });
-    TK.note(g, t, 17.5, 23, '1行の時間をまるごと使った計算（本当はもっと速い）\n21型 4:3 の横幅は対角 53.3cm からの目安', { size: 30 });
+    ], { y: 670, gap: 230, stagger: 0.6, size: 42 });
+    TK.note(g, t, 17.5, 23, '1行の時間をまるごと使った計算（本当はもっと速い）\n21型 4:3 の横幅は対角 53.3cm からの目安', { size: 30, y: 1150 });
   }
   // 23〜30: 液晶 ⇔ ブラウン管（自作のハート）
   if (t >= 23.0) {
     const px = 60, w = HEART[0].length, h = HEART.length, x0 = PW / 2 - 60 - w * px / 2, y0 = 260;
-    const split = PW / 2 - 60 + Math.sin((t - 23) * 1.1) * 220;
-    g.save(); g.fillStyle = '#05070f'; g.fillRect(x0 - 40, y0 - 40, w * px + 80, h * px + 80); g.restore();
-    HEART.forEach((row, r) => [...row].forEach((c, k) => {
-      if (c !== 'X') return;
-      const x = x0 + k * px, y = y0 + r * px;
-      // 左＝液晶（くっきりした四角）
-      g.save(); g.beginPath(); g.rect(0, 0, split, PH); g.clip();
-      g.fillStyle = '#ff5a7a'; g.fillRect(x, y, px, px); g.restore();
-      // 右＝ブラウン管（行の帯とすきま、にじみ）
-      g.save(); g.beginPath(); g.rect(split, 0, PW, PH); g.clip();
-      g.fillStyle = '#ff5a7a'; g.shadowColor = '#ff5a7a'; g.shadowBlur = 26;
-      for (let i = 0; i < 3; i++) g.fillRect(x - 4, y + i * px / 3 + 3, px + 8, px / 3 - 9);
-      g.restore();
-    }));
-    g.save(); g.strokeStyle = '#fff'; g.lineWidth = 4; g.beginPath(); g.moveTo(split, y0 - 60); g.lineTo(split, y0 + h * px + 60); g.stroke(); g.restore();
-    TK.text(g, '液晶', x0 - 10, y0 + h * px + 110, 48, { align: 'left', color: TK.C.sub });
-    TK.text(g, 'ブラウン管', x0 + w * px + 10, y0 + h * px + 110, 48, { align: 'right', color: TK.C.sub });
-    TK.note(g, t, 27, 30, '出どころ: R. Hoffner, TV Technology（2008）\n国際宇宙ステーションの速さ 約7.66km/s（NASA）', { size: 30 });
+    const split = PW / 2 - 60 + Math.sin((t - 23) * 1.1) * 220, bg = PL.rect(x0 - 40, y0 - 40, w * px + 80, h * px + 80);
+    PL.tint(g, bg, PL.T.gray, 0.85); PL.hatch(g, bg, { angle: 0.7, gap: 9, w: 1.2, color: 'rgba(35,28,21,0.4)' });
+    g.save(); g.beginPath(); g.rect(0, 0, split, PH); g.clip();   // 左＝液晶（くっきりした四角）
+    const cells = []; HEART.forEach((row, r) => [...row].forEach((c, k) => { if (c === 'X') cells.push([x0 + k * px, y0 + r * px]); }));
+    const sq = gg => cells.forEach(([x, y]) => gg.rect(x, y, px, px));
+    PL.tint(g, sq, PL.T.rose, 1); PL.tint(g, sq, PL.RED, 0.35); PL.ink(g, sq, 1.5, 'rgba(35,28,21,0.5)');
+    g.restore();
+    g.save(); g.beginPath(); g.rect(split, 0, PW, PH); g.clip();   // 右＝ブラウン管（行の帯とすきま。帯のはしは少しにじむ）
+    const bands = (gg, sh) => cells.forEach(([x, y]) => { for (let i = 0; i < 3; i++) PL.ellipse(x + px / 2, y + i * px / 3 + px / 6, px * (0.56 - sh), px / 6 - 3 - sh * 50)(gg); });
+    PL.tint(g, gg => bands(gg, 0), PL.T.rose, 0.6); PL.tint(g, gg => bands(gg, 0.08), PL.RED, 0.45);
+    g.restore();
+    PL.ink(g, bg, 5);
+    PL.ink(g, line([[split, y0 - 70], [split, y0 + h * px + 70]]), 5);
+    PL.label(g, '液晶', x0 - 10, y0 + h * px + 120, 48, { align: 'left', color: TK.C.sub });
+    PL.label(g, 'ブラウン管', x0 + w * px + 10, y0 + h * px + 120, 48, { align: 'right', color: TK.C.sub });
+    TK.note(g, t, 27, 30, '出どころ: R. Hoffner, TV Technology（2008）\n国際宇宙ステーションの速さ 約7.66km/s（NASA）', { size: 30, y: 1150 });
   }
 }
 

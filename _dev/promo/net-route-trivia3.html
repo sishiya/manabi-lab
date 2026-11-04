@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく net-route-3（型F 会話）「ハトでインターネット、本当にやった」。台本は trivia/net-route.md。?short で録る
@@ -38,179 +41,205 @@ const cues = [
   { t: 34.5, type: 'whoosh' }, { t: 37.2, type: 'ding' },
 ];
 
-// ハトの線画（右向き）。x, y は胴の中心。flap は羽ばたきの位相、paper で足に紙
+/// ---- 絵は「図鑑の版画」（trivia-plate.js の PL.*）----
+// カワラバト（伝書鳩）を横から。右向き、x, y は胴のまん中。o.fly で羽を広げる（flap は羽ばたきの位相）、o.paper で足に紙の筒
+const PIG = [[118, -92], [104, -97], [96, -104], [80, -112], [62, -105], [52, -84], [20, -58], [-40, -46], [-90, -30], [-150, -14], [-162, -4], [-150, 6], [-80, 10], [-20, 30], [40, 24], [70, -8], [82, -50], [96, -80], [113, -87]];
+const PWING = [[46, -52], [-20, -58], [-100, -32], [-150, -12], [-108, 2], [-40, 8], [22, -4], [52, -30]];
 function pigeon(g, x, y, s, flap, o = {}) {
-  g.save(); g.translate(x, y); g.scale(s * (o.flip ? -1 : 1), s);
-  g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = 5 / s * s;
-  g.strokeStyle = '#e8f0ff'; g.fillStyle = 'rgba(160,190,255,0.18)';
-  // 胴
-  g.beginPath(); g.ellipse(0, 0, 70, 38, -0.12, 0, Math.PI * 2); g.fill(); g.stroke();
-  // しっぽ
-  g.beginPath(); g.moveTo(-62, 4); g.lineTo(-118, -6); g.lineTo(-112, 22); g.closePath(); g.fill(); g.stroke();
-  // 頭とくちばし
-  g.beginPath(); g.arc(70, -34, 24, 0, Math.PI * 2); g.fill(); g.stroke();
-  g.fillStyle = TK.C.acc; g.beginPath(); g.moveTo(92, -38); g.lineTo(114, -30); g.lineTo(92, -26); g.closePath(); g.fill();
-  g.fillStyle = '#e8f0ff'; g.beginPath(); g.arc(76, -40, 4, 0, Math.PI * 2); g.fill();
-  // 羽（上下に）
-  const w = Math.sin(flap);
-  g.fillStyle = 'rgba(95,212,255,0.22)'; g.strokeStyle = TK.C.acc2;
-  g.beginPath(); g.moveTo(-20, -18); g.quadraticCurveTo(-10, -18 - 90 * w, 40, -24 - 110 * w); g.quadraticCurveTo(30, -20 - 40 * w, 26, -12); g.closePath(); g.fill(); g.stroke();
-  // 足と紙
-  g.strokeStyle = '#e8f0ff';
-  g.beginPath(); g.moveTo(10, 34); g.lineTo(4, 62); g.moveTo(26, 32); g.lineTo(24, 60); g.stroke();
-  if (o.paper !== false) {
-    g.fillStyle = '#fff'; g.strokeStyle = TK.C.acc; g.lineWidth = 3;
-    g.beginPath(); g.roundRect(-4, 44, 22, 34, 4); g.fill(); g.stroke();
+  const d = o.flip ? -1 : 1, m = (px, py) => [x + d * px * s, y + py * s], P = pts => PL.poly(pts.map(([a, b]) => m(a, b)));
+  const lw = Math.max(2.4, 4 * s);
+  g.save(); g.globalAlpha *= o.alpha ?? 1;
+  if (o.fly) {   // 向こうがわの羽（うすく）
+    const w = Math.sin(flap), far = P([[30, -50], [-30, -50], [-70 + 20 * w, -60 - 150 * w], [-10 + 30 * w, -70 - 175 * w], [40, -60 - 80 * w]]);
+    g.save(); g.globalAlpha *= 0.5; PL.tint(g, far, PL.T.gray, 0.6); PL.ink(g, far, lw * 0.7); g.restore();
+  }
+  // 足（赤い）
+  if (!o.fly) PL.ink(g, gg => { [[0, 28], [16, 26]].forEach(([a, b]) => { gg.moveTo(...m(a, b)); gg.lineTo(...m(a + 4, 62)); gg.lineTo(...m(a + 22, 64)); gg.moveTo(...m(a + 4, 62)); gg.lineTo(...m(a - 10, 64)); }); }, lw * 0.9, '#a8503a');
+  else PL.ink(g, gg => { gg.moveTo(...m(-40, 14)); gg.lineTo(...m(-80, 30)); }, lw * 0.9, '#a8503a');
+  const body = P(PIG);
+  PL.tint(g, body, PL.T.gray, 0.75);
+  PL.tint(g, P([[80, -100], [56, -84], [30, -50], [62, -26], [80, -50]]), PL.T.leaf, 0.55);   // 首の緑むらさきの光る羽
+  PL.tint(g, P([[62, -46], [30, -40], [40, -14], [68, -10]]), PL.T.rose, 0.5);
+  PL.hatch(g, body, { angle: 0.75, gap: Math.max(5, 8 * s), w: Math.max(1.2, 1.6 * s), not: P(PIG.map(([a, b]) => [a + 10, b - 26])) });
+  PL.ink(g, body, lw);
+  if (!o.fly) {   // たたんだ羽と、2本の黒い帯
+    const wing = P(PWING); PL.tint(g, wing, PL.T.gray, 0.6); PL.ink(g, wing, lw * 0.8);
+    PL.ink(g, gg => { [[-14, -50, -22, 2], [-40, -44, -50, 4]].forEach(([a, b, c, e]) => { gg.moveTo(...m(a, b)); gg.quadraticCurveTo(...m(a - 14, (b + e) / 2), ...m(c, e)); }); }, lw * 1.6);
+    PL.ink(g, gg => { for (let i = 0; i < 4; i++) { gg.moveTo(...m(-100 + i * 12, -24)); gg.lineTo(...m(-128 + i * 12, -2)); } }, lw * 0.5);
+  }
+  PL.ink(g, gg => { gg.moveTo(...m(-138, -12)); gg.lineTo(...m(-140, 4)); gg.moveTo(...m(-146, -10)); gg.lineTo(...m(-148, 4)); }, lw * 1.4);   // しっぽの先の黒い帯
+  const beak = P([[100, -98], [122, -92], [100, -86]]); PL.tint(g, beak, PL.T.brown, 0.9); PL.ink(g, beak, lw * 0.6);
+  PL.tint(g, P([[98, -100], [106, -98], [100, -94]]), '#ffffff', 0.9);   // 鼻こぶ（白）
+  const [ex, ey] = m(86, -98); PL.ink(g, PL.circle(ex, ey, 5 * s), lw * 0.6, PL.RED); PL.tint(g, PL.circle(ex, ey, 2.6 * s), PL.INK, 1);
+  if (o.fly) {   // 手前の羽（風切り羽の指）
+    const w = Math.sin(flap), tip = [-60 + 30 * w, -70 - 150 * w];
+    const wing = P([[40, -52], [-30, -52], [tip[0] - 30, tip[1] + 30], tip, [tip[0] + 40, tip[1] - 4], [50, -66 - 90 * w]]);
+    PL.tint(g, wing, PL.T.gray, 0.75); PL.hatch(g, wing, { angle: -0.6, gap: Math.max(5, 8 * s), w: Math.max(1.2, 1.5 * s) }); PL.ink(g, wing, lw);
+    PL.ink(g, gg => { for (let i = 1; i < 5; i++) { const k = i / 5; gg.moveTo(...m(lerp(-20, 40, k), -54)); gg.lineTo(...m(lerp(tip[0] - 20, tip[0] + 36, k), lerp(tip[1] + 24, tip[1], k))); } }, lw * 0.5);
+  }
+  if (o.paper) {   // 足に結んだ紙の筒
+    const c = o.fly ? [-70, 22] : [8, 46], tube = P([[c[0] - 6, c[1] - 10], [c[0] + 18, c[1] - 10], [c[0] + 18, c[1] + 10], [c[0] - 6, c[1] + 10]]);
+    PL.tint(g, tube, PL.T.sand, 1); PL.ink(g, tube, lw * 0.7); PL.ink(g, gg => { gg.moveTo(...m(c[0] + 6, c[1] - 10)); gg.lineTo(...m(c[0] + 6, c[1] + 10)); }, lw * 0.5, PL.RED);
   }
   g.restore();
 }
-// 紙の包み（16進の行を印刷した紙）
-function paper(g, x, y, w, h, k = 1, label) {
+// 包みを印刷した紙（16進の数字の行は細い墨の点線であらわす。字にしない）
+function sheet(g, x, y, w, h, k = 1) {
   g.save(); g.globalAlpha *= k;
-  g.fillStyle = '#f4f7ff'; g.beginPath(); g.roundRect(x, y, w, h, 10); g.fill();
-  g.fillStyle = '#8796b8';
-  for (let i = 0; i < 6; i++) for (let j = 0; j < 4; j++) g.fillRect(x + 18 + j * (w - 36) / 4, y + 22 + i * (h - 40) / 6, (w - 36) / 4 - 12, 8);
-  if (label) TK.text(g, label, x + w / 2, y + h + 34, 34, { color: TK.C.sub, bold: false });
+  const p = PL.rect(x, y, w, h); PL.tint(g, p, '#fbf6ea', 0.95); PL.hatch(g, PL.rect(x + w - 16, y, 16, h), { angle: 0.8, gap: 6, w: 1.4 }); PL.ink(g, p, 5);
+  PL.ink(g, gg => { for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) { const xx = x + 22 + j * (w - 44) / 8, yy = y + 30 + i * (h - 50) / 8; gg.moveTo(xx, yy); gg.lineTo(xx + (w - 44) / 8 - 14, yy); } }, Math.max(1.5, w / 90));
   g.restore();
 }
-function tag(g, t) {
-  const s = subs.find(x => t >= x.a && t < x.b && !x.noBurn); if (!s) return;
-  const q = s.who === 'q', f = fade(t, s.a, s.b, 0.12);
-  g.save(); g.globalAlpha = f;
-  const lines = s.ja.split('\n').length, y = PH * 0.615 - (lines - 1) * 42 - 82;
-  const w = 210, x = PW / 2 - w / 2;
-  TK.card(g, x, y - 30, w, 60, { r: 30, fill: q ? 'rgba(95,212,255,0.25)' : 'rgba(255,207,74,0.25)', stroke: q ? TK.C.acc2 : TK.C.acc });
-  TK.text(g, q ? '聞き手' : '答える人', PW / 2, y + 2, 34, { color: q ? TK.C.acc2 : TK.C.acc });
+// 番号の札（ひもつき）
+function slip(g, x, y, n, f = 1) {
+  g.save(); g.globalAlpha *= f;
+  const p = PL.poly([[x - 70, y - 90], [x + 70, y - 90], [x + 70, y + 90], [x - 70, y + 90]]);
+  PL.tint(g, p, PL.T.sand, 0.55); PL.hatch(g, PL.rect(x + 54, y - 90, 16, 180), { angle: 0.8, gap: 6, w: 1.4 }); PL.ink(g, p, 5);
+  PL.ink(g, PL.circle(x, y - 66, 8), 3); PL.ink(g, gg => { gg.moveTo(x, y - 74); gg.quadraticCurveTo(x + 20, y - 120, x - 4, y - 150); }, 3);
+  PL.label(g, String(n), x, y + 12, 100, { color: PL.INK });
   g.restore();
+}
+function tag(g, t) {   // 字幕の上に「聞き手」「答える人」の札（紙の札・墨のわく）
+  const s = subs.find(x => t >= x.a && t < x.b && !x.noBurn); if (!s) return;
+  const q = s.who === 'q', f = fade(t, s.a, s.b, 0.12), n = s.ja.split('\n').length, y = PL.SUBY - PL.bandH(n) - 36;
+  g.save(); g.globalAlpha *= f;
+  const w = 200, x = 80; TK.card(g, x, y - 28, w, 56);
+  TK.text(g, q ? '聞き手' : '答える人', x + w / 2, y + 1, 34, { color: q ? TK.C.acc2 : PL.RED });
+  g.restore();
+}
+// ベルゲン（7つの山にかこまれた港町。ブリッゲンの三角屋根の木の家）
+function bergen(g) {
+  const hills = PL.poly([[40, 900], [140, 700], [250, 650], [360, 760], [470, 620], [600, 700], [720, 640], [860, 760], [1040, 720], [1040, 900]]);
+  PL.tint(g, hills, PL.T.leaf, 0.55); PL.hatch(g, hills, { angle: 1.1, gap: 11, w: 1.8, not: PL.poly([[0, 900], [140, 660], [250, 600], [360, 720], [470, 570], [600, 660], [720, 600], [860, 720], [1080, 680], [1080, 900]]) }); PL.ink(g, hills, 5);
+  const cols = [PL.T.rust, PL.T.gold, '#f4ead6', PL.T.rust, PL.T.wood, PL.T.gold, PL.T.rose];
+  for (let i = 0; i < 7; i++) {
+    const x = 110 + i * 120, h = 110 + (i % 3) * 22, hs = PL.poly([[x, 900], [x, 900 - h], [x + 50, 900 - h - 70], [x + 100, 900 - h], [x + 100, 900]]);
+    PL.tint(g, hs, cols[i], 0.85); PL.hatch(g, PL.rect(x + 70, 900 - h, 30, h), { angle: 0.8, gap: 7, w: 1.4 }); PL.ink(g, hs, 4);
+    PL.ink(g, gg => { for (let yy = 900 - h + 14; yy < 900; yy += 14) { gg.moveTo(x + 4, yy); gg.lineTo(x + 96, yy); } }, 1, 'rgba(35,28,21,0.4)');
+    PL.ink(g, PL.rect(x + 38, 900 - h + 20, 24, 30), 2.4);
+  }
+  const sea = PL.rect(30, 900, PW - 60, 90); PL.tint(g, sea, PL.T.sea, 0.6); PL.hatch(g, sea, { angle: 0, gap: 12, w: 1.4, color: 'rgba(47,95,122,0.6)' });
+  PL.ink(g, gg => { gg.moveTo(30, 900); gg.lineTo(PW - 30, 900); }, 5);
 }
 
 function draw(g, t) {
-  // 0〜3: フック「ping 53分」
+  // 0〜3: フック「ping 53分」（ping の行が打ち出される紙の帯）
   if (t < 3.0) {
-    TK.card(g, 70, 170, PW - 260, 120, { r: 18, fill: 'rgba(5,10,24,0.92)' });
-    g.save(); g.globalAlpha = clamp((t - 0.2) / 0.3, 0, 1);
+    const strip = PL.rect(70, 170, PW - 140, 120); PL.tint(g, strip, '#fbf6ea', 0.9); PL.ink(g, strip, 5); PL.ink(g, PL.rect(80, 180, PW - 160, 100), 1.4);
     const line = '$ ping … icmp_seq=0 time=3211900.8 ms';
-    TK.text(g, line.slice(0, Math.floor(clamp((t - 0.2) / 1.2, 0, 1) * line.length)), 110, 230, 38, { align: 'left', color: TK.C.green, bold: false, blur: 0 });
+    g.save(); g.globalAlpha *= clamp((t - 0.2) / 0.3, 0, 1);
+    TK.text(g, line.slice(0, Math.floor(clamp((t - 0.2) / 1.2, 0, 1) * line.length)), 110, 230, 38, { align: 'left', color: PL.INK, bold: false, font: '"Courier New", monospace' });
     g.restore();
-    pigeon(g, lerp(-160, PW + 160, t / 3.0), 860 - Math.sin(t * 2.2) * 40, 1.6, t * 14);
+    pigeon(g, lerp(-160, PW + 160, t / 3.0), 1000 - Math.sin(t * 2.2) * 30, 1.25, t * 14, { fly: true, paper: true });
     TK.hook(g, t, 0.3, 3.0, 'ping [53分]？', { y: 520, size: 170 });
   }
-  // 3〜8: RFC 1149
+  // 3〜8: RFC 1149（古い文書の1ページ）とエイプリルフールの判子
   if (t >= 3.0 && t < 8.0) {
-    const k = TK.pop(t, 3.2, 0.4);
-    TK.card(g, 140, 220, PW - 400, 420);
-    g.save(); g.globalAlpha = k;
-    TK.text(g, 'RFC 1149', PW / 2 - 60, 330, 110, { color: TK.C.acc });
-    TK.text(g, '1990年4月1日', PW / 2 - 60, 450, 64);
-    TK.text(g, '「ハトで IP の包みを送る決まり」', PW / 2 - 60, 560, 44, { color: TK.C.sub, bold: false });
+    const k = clamp(TK.pop(t, 3.2, 0.4), 0, 1);
+    g.save(); g.globalAlpha *= k;
+    const doc = PL.rect(110, 190, 620, 500); PL.tint(g, doc, '#fbf6ea', 0.95); PL.hatch(g, PL.rect(714, 190, 16, 500), { angle: 0.8, gap: 6, w: 1.4 }); PL.ink(g, doc, 5);
+    PL.label(g, 'RFC 1149', 150, 280, 100, { align: 'left', color: PL.RED });
+    PL.label(g, '1990年4月1日', 150, 390, 60, { align: 'left' });
+    PL.label(g, '「ハトで IP の包みを送る決まり」', 150, 470, 38, { align: 'left', bold: false });
+    PL.ink(g, gg => { for (let i = 0; i < 5; i++) { gg.moveTo(150, 540 + i * 30); gg.lineTo(150 + 520 - (i % 2) * 120, 540 + i * 30); } }, 2, 'rgba(35,28,21,0.45)');   // 本文の行
     g.restore();
-    if (t > 4.0) { g.save(); g.globalAlpha = fade(t, 4.0, 8.0, 0.3); TK.card(g, 280, 730, 400, 90, { r: 45, fill: 'rgba(255,107,107,0.2)', stroke: TK.C.red }); TK.text(g, 'エイプリルフール', 480, 776, 46, { color: TK.C.red }); g.restore(); }
-    pigeon(g, 760, 940, 1.1, t * 3, { paper: false });
+    if (t > 4.0) {
+      g.save(); g.globalAlpha *= fade(t, 4.0, 8.0, 0.3); g.translate(470, 800); g.rotate(-0.08);
+      PL.ink(g, PL.rect(-232, -64, 464, 128), 7, PL.RED); PL.ink(g, PL.rect(-220, -52, 440, 104), 2, PL.RED);
+      PL.label(g, 'エイプリルフール', 0, 2, 46, { color: PL.RED });
+      g.restore();
+    }
+    pigeon(g, 830, 1060, 1.35, 0, {});
   }
   // 8〜14: 2001年 ベルゲン
   if (t >= 8.0 && t < 14.0) {
-    const k = TK.pop(t, 8.1, 0.4);
-    g.save(); g.globalAlpha = k;
-    TK.text(g, '2001年4月28日', PW / 2 - 60, 260, 96, { color: TK.C.acc });
-    TK.text(g, 'ノルウェー・ベルゲン', PW / 2 - 60, 380, 64);
+    g.save(); g.globalAlpha *= clamp(TK.pop(t, 8.1, 0.4), 0, 1);
+    PL.label(g, '2001年4月28日', 100, 250, 92, { align: 'left', color: PL.RED });
+    PL.label(g, 'ノルウェー・ベルゲン', 100, 370, 60, { align: 'left' });
     g.restore();
-    // かんたんな町の線（家と山）
-    g.save(); g.strokeStyle = 'rgba(160,190,255,0.55)'; g.lineWidth = 4; g.beginPath();
-    g.moveTo(80, 900); g.lineTo(260, 640); g.lineTo(420, 820); g.lineTo(560, 600); g.lineTo(760, 880); g.lineTo(900, 900); g.stroke();
-    for (let i = 0; i < 6; i++) { const x = 150 + i * 120, h = 70 + (i % 3) * 20; g.strokeRect(x, 900 - h, 80, h); g.beginPath(); g.moveTo(x - 6, 900 - h); g.lineTo(x + 40, 860 - h); g.lineTo(x + 86, 900 - h); g.stroke(); }
-    g.beginPath(); g.moveTo(60, 900); g.lineTo(940, 900); g.stroke(); g.restore();
-    if (t > 10.5) pigeon(g, lerp(120, 820, clamp((t - 10.5) / 3.5, 0, 1)), 540 - Math.sin((t - 10.5) * 2) * 30, 1.0, t * 14);
+    bergen(g);
+    if (t > 10.5) pigeon(g, lerp(80, 980, clamp((t - 10.5) / 3.5, 0, 1)), 660 - Math.sin((t - 10.5) * 2) * 20, 0.85, t * 14, { fly: true, paper: true });
   }
-  // 14〜20: 紙 → 足 → 飛ぶ → 読み取り
+  // 14〜20: 紙に印刷 → 足に → 飛ぶ → 読み取り
   if (t >= 14.0 && t < 20.0) {
-    const steps = [
-      { a: 14.2, s: '印刷' }, { a: 15.5, s: '足に' }, { a: 17.0, s: '飛ぶ' }, { a: 18.6, s: '読み取り' },
-    ];
+    const steps = [{ a: 14.2, s: '印刷' }, { a: 15.5, s: '足に' }, { a: 17.0, s: '飛ぶ' }, { a: 18.6, s: '読み取り' }];
     steps.forEach((st, i) => {
-      const k = TK.pop(t, st.a, 0.35), x = 150 + i * 230;
-      g.save(); g.globalAlpha = k;
-      TK.card(g, x - 95, 230, 190, 80, { r: 40, fill: i === 3 ? 'rgba(89,227,154,0.2)' : 'rgba(20,34,72,0.9)' });
-      TK.text(g, (i + 1) + ' ' + st.s, x, 272, 40, { color: i === 3 ? TK.C.green : '#fff' });
-      if (i < 3) { g.strokeStyle = TK.C.dim; g.lineWidth = 4; g.beginPath(); g.moveTo(x + 100, 270); g.lineTo(x + 130, 270); g.stroke(); }
+      const k = clamp(TK.pop(t, st.a, 0.35), 0, 1), x = 150 + i * 230; if (k <= 0) return;
+      g.save(); g.globalAlpha *= k;
+      PL.ink(g, PL.circle(x - 60, 270, 30), 4, i === 3 ? PL.RED : PL.INK);
+      PL.label(g, String(i + 1), x - 60, 272, 36, { color: i === 3 ? PL.RED : PL.INK });
+      PL.label(g, st.s, x - 20, 272, 40, { align: 'left' });
       g.restore();
     });
-    if (t < 15.5) paper(g, 340, 450, 300, 380, TK.pop(t, 14.2, 0.4), 'IP の包み（16進の数字）');
-    else if (t < 17.0) { const k = ease((t - 15.5) / 1.2); paper(g, lerp(340, 485, k), lerp(450, 760, k), lerp(300, 30, k), lerp(380, 44, k), 1); pigeon(g, 470, 700, 1.6, 0, { paper: k > 0.98 }); }
-    else if (t < 18.6) { const k = (t - 17.0) / 1.6; pigeon(g, lerp(470, PW + 200, k), 700 - k * 260, 1.6, t * 16); }
+    if (t < 15.5) { sheet(g, 340, 420, 300, 380, clamp(TK.pop(t, 14.2, 0.4), 0, 1)); PL.label(g, 'IP の包み（16進の数字）', 490, 850, 36, { bold: false }); }
+    else if (t < 17.0) { const k = ease((t - 15.5) / 1.2); if (k < 0.98) sheet(g, lerp(340, 470, k), lerp(420, 780, k), lerp(300, 24, k), lerp(380, 30, k), 1); pigeon(g, 470, 720, 1.6, 0, { paper: k >= 0.98 }); }
+    else if (t < 18.6) { const k = (t - 17.0) / 1.6; pigeon(g, lerp(470, PW + 250, k), 760 - k * 120, 1.4, t * 16, { fly: true, paper: true }); }
     else {
-      const k = clamp((t - 18.6) / 1.2, 0, 1);
-      paper(g, 340, 450, 300, 380, 1);
-      g.save(); g.strokeStyle = TK.C.green; g.lineWidth = 8; g.shadowColor = TK.C.green; g.shadowBlur = 20;
-      const y = 450 + 380 * k; g.beginPath(); g.moveTo(320, y); g.lineTo(660, y); g.stroke(); g.restore();
-      TK.text(g, '→ コンピューターへ', PW / 2 - 60, 940, 48, { color: TK.C.green });
+      const k = clamp((t - 18.6) / 1.2, 0, 1), y = 420 + 380 * k;
+      sheet(g, 340, 420, 300, 380, 1);
+      PL.ink(g, gg => { gg.moveTo(310, y); gg.lineTo(670, y); }, 7, PL.RED);   // 読み取りの光の線
+      PL.label(g, '→ コンピューターへ', 490, 900, 48, { color: PL.RED });
     }
   }
-  // 20〜27: 結果
+  // 20〜27: 結果（帳面と、9枚の紙の筒）
   if (t >= 20.0 && t < 27.0) {
-    TK.text(g, '結果', PW / 2 - 60, 220, 64, { color: TK.C.sub });
-    const rows = [
-      { a: 22.3, l: '送った', v: '9 個', c: '#fff' },
-      { a: 23.1, l: '返ってきた', v: '4 個', c: TK.C.green },
-      { a: 23.9, l: 'なくなった', v: '55 %', c: TK.C.red },
-      { a: 24.8, l: '往復', v: '53〜106 分', c: TK.C.acc },
-    ];
+    PL.label(g, '結果', 100, 200, 64, { align: 'left' });
+    const rows = [{ a: 22.3, l: '送った', v: '9 個' }, { a: 23.1, l: '返ってきた', v: '4 個' }, { a: 23.9, l: 'なくなった', v: '55 %' }, { a: 24.8, l: '往復', v: '[53〜106 分]' }];
+    const tx = 90, tw = PW - 180, ty = 270, rh = 120;
+    PL.ink(g, PL.rect(tx, ty, tw, rh * 4), 5); PL.ink(g, PL.rect(tx - 8, ty - 8, tw + 16, rh * 4 + 16), 1.5);
+    PL.ink(g, gg => { for (let i = 1; i < 4; i++) { gg.moveTo(tx, ty + i * rh); gg.lineTo(tx + tw, ty + i * rh); } gg.moveTo(tx + 330, ty); gg.lineTo(tx + 330, ty + rh * 4); }, 1.8);
     rows.forEach((r, i) => {
-      const k = TK.pop(t, r.a, 0.35), y = 330 + i * 170;
-      g.save(); g.globalAlpha = k;
-      TK.card(g, 90, y - 65, PW - 300, 130, { r: 26, fill: i === 3 ? 'rgba(255,207,74,0.18)' : 'rgba(20,34,72,0.9)', stroke: i === 3 ? TK.C.acc : undefined });
-      TK.text(g, r.l, 140, y, 52, { align: 'left', color: TK.C.sub });
-      TK.text(g, r.v, PW - 260, y, 76, { align: 'right', color: r.c });
+      const k = clamp(TK.pop(t, r.a, 0.35), 0, 1); if (k <= 0) return;
+      g.save(); g.globalAlpha *= k; const y = ty + i * rh + rh / 2;
+      PL.label(g, r.l, tx + 40, y, 50, { align: 'left', bold: false });
+      PL.label(g, r.v, tx + tw - 40, y, 72, { align: 'right', color: i === 2 ? PL.RED : PL.INK });
       g.restore();
     });
-    TK.note(g, t, 25.0, 27.0, 'ふつうの ping は 数〜数十ミリ秒（目安）\nなくなったのは、ハトのかごの閉め忘れなど（報告より）', { size: 32 });
+    for (let i = 0; i < 9; i++) {   // 9枚の紙の筒。返ってきた4枚は手彩色、なくなった5枚は点線
+      const x = 150 + i * 98, y = 880, got = i < 4, k = clamp((t - 23.1) / 0.4, 0, 1), c = PL.rect(x - 22, y - 50, 44, 100);
+      if (t < 22.3) continue;
+      if (got || k <= 0) { PL.tint(g, c, PL.T.sand, 0.9); PL.hatch(g, c, { angle: 0.8, gap: 7, w: 1.4, not: PL.rect(x - 30, y - 60, 30, 120) }); PL.ink(g, c, 4); PL.ink(g, gg => { gg.moveTo(x - 22, y); gg.lineTo(x + 22, y); }, 3, PL.RED); }
+      else { g.save(); g.setLineDash([8, 8]); PL.ink(g, c, 3, 'rgba(35,28,21,0.6)'); g.restore(); }
+    }
+    TK.note(g, t, 25.0, 27.0, 'ふつうの ping は 数〜数十ミリ秒（目安）\nなくなったのは、ハトのかごの閉め忘れなど（報告より）', { size: 32, y: 1060 });   // 2行の注は帯の上に
   }
   // 27〜34: 返ってきた順番
   if (t >= 27.0 && t < 34.0) {
-    TK.text(g, '返ってきた順', PW / 2 - 60, 240, 60, { color: TK.C.sub });
-    const order = [0, 4, 2, 1];
-    order.forEach((n, i) => {
-      const a = 27.4 + i * 0.8, k = TK.out((t - a) / 0.5), x = 150 + i * 200;
+    PL.label(g, '返ってきた順', 100, 200, 60, { align: 'left' });
+    [0, 4, 2, 1].forEach((n, i) => {
+      const a = 27.4 + i * 0.8, k = TK.out((t - a) / 0.5), x = 180 + i * 240;
       if (t < a) return;
-      g.save(); g.globalAlpha = clamp(k * 2, 0, 1);
-      const y = lerp(140, 470, k);
-      TK.card(g, x - 75, y - 90, 150, 180, { r: 20, fill: 'rgba(244,247,255,0.95)', stroke: TK.C.acc });
-      TK.text(g, String(n), x, y, 110, { color: '#0b1430', blur: 0 });
-      TK.text(g, (i + 1) + '番目', x, y + 140, 36, { color: TK.C.sub, bold: false });
-      g.restore();
+      slip(g, x, lerp(200, 520, k), n, clamp(k * 2, 0, 1));
+      g.save(); g.globalAlpha *= clamp(k * 2, 0, 1); PL.label(g, (i + 1) + '番目', x, 680, 36, { bold: false }); g.restore();
     });
-    if (t > 31.0) {
-      g.save(); g.globalAlpha = fade(t, 31.0, 34.0, 0.3);
-      TK.text(g, '0 → [4] → [2] → [1]', PW / 2 - 60, 820, 72);
-      g.restore();
-    }
+    if (t > 31.0) { g.save(); g.globalAlpha *= fade(t, 31.0, 34.0, 0.3); PL.label(g, '0 → [4] → [2] → [1]', PW / 2, 840, 72); g.restore(); }
   }
   // 34〜40: 番号で並べなおしてから描く（たとえの図）
   if (t >= 34.0) {
-    // スマホの形
-    const px = 230, py = 170, pw = 500, ph = 700;
-    TK.card(g, px, py, pw, ph, { r: 50, fill: 'rgba(5,10,24,0.9)', stroke: 'rgba(200,220,255,0.6)', lw: 6 });
-    const arrive = [{ n: 0, a: 34.4 }, { n: 4, a: 34.9 }, { n: 2, a: 35.4 }, { n: 1, a: 35.9 }, { n: 3, a: 37.2 }];
-    const done = t >= 37.2;
+    const px = 250, py = 170, pw = 520, ph = 720, body = PL.rect(px, py, pw, ph);
+    PL.tint(g, body, PL.T.gray, 0.35); PL.hatch(g, PL.rect(px + pw - 22, py, 22, ph), { angle: 0.8, gap: 7, w: 1.6 }); PL.ink(g, body, 7); PL.ink(g, PL.rect(px + 20, py + 40, pw - 40, ph - 90), 3);
+    PL.ink(g, PL.circle(px + pw / 2, py + ph - 25, 12), 3);
+    const arrive = [{ n: 0, a: 34.4 }, { n: 4, a: 34.9 }, { n: 2, a: 35.4 }, { n: 1, a: 35.9 }, { n: 3, a: 37.2 }], done = t >= 37.2;
+    const cols = [PL.T.leaf, PL.T.sea, PL.T.gold, PL.T.rose, PL.T.rust];
     for (let n = 0; n < 5; n++) {
-      const ar = arrive.find(x => x.n === n), got = t >= ar.a, y = py + 60 + n * 120;
+      const ar = arrive.find(x => x.n === n), got = t >= ar.a, y = py + 70 + n * 118, bar = PL.rect(px + 140, y, pw - 180, 92);
       const blocked = !done && got && arrive.filter(x => x.n < n).some(x => t < x.a);
       g.save();
       if (got) {
-        g.globalAlpha = clamp((t - ar.a) / 0.3, 0, 1) * (blocked ? 0.35 : 1);
-        g.fillStyle = blocked ? 'rgba(160,190,255,0.35)' : (n % 2 ? 'rgba(95,212,255,0.55)' : 'rgba(89,227,154,0.55)');
-        g.beginPath(); g.roundRect(px + 40, y, pw - 80, 100, 14); g.fill();
-        TK.text(g, n + '番', px + 80, y + 50, 40, { align: 'left', color: '#fff' });
+        g.globalAlpha *= clamp((t - ar.a) / 0.3, 0, 1) * (blocked ? 0.35 : 1);
+        PL.tint(g, bar, cols[n], 0.7); PL.hatch(g, bar, { angle: 0.8, gap: 10, w: 1.6 }); PL.ink(g, bar, 4);
+        PL.label(g, n + '番', px + 85, y + 46, 40);
       } else {
-        g.setLineDash([12, 10]); g.strokeStyle = TK.C.red; g.lineWidth = 4;
-        g.beginPath(); g.roundRect(px + 40, y, pw - 80, 100, 14); g.stroke();
-        TK.text(g, n + '番を待っている…', px + pw / 2, y + 50, 38, { color: TK.C.red, bold: false });
+        g.setLineDash([12, 10]); PL.ink(g, bar, 3, PL.RED); g.setLineDash([]);
+        PL.label(g, n + '番', px + 85, y + 46, 40, { color: PL.RED });
+        PL.label(g, 'を待っている…', px + 160, y + 46, 34, { align: 'left', color: PL.RED, bold: false });
       }
       g.restore();
     }
-    if (done) { g.save(); g.globalAlpha = fade(t, 37.2, 40, 0.3); TK.text(g, 'そろった！', PW / 2 - 60, py + ph + 55, 56, { color: TK.C.green }); g.restore(); }
+    if (done) { g.save(); g.globalAlpha *= fade(t, 37.2, 40, 0.3); PL.label(g, 'そろった！', PW / 2, py + ph + 60, 56, { color: PL.GREEN }); g.restore(); }
     TK.note(g, t, 34.2, 37.0, 'たとえの図。並べなおすのは TCP のしくみ（ping そのものではない）', { size: 30 });
   }
-  if (t >= 37.0) TK.note(g, t, 37.0, 40.0, '出どころ: Bergen Linux User Group の報告と ping のログ（2001）\nD. Waitzman, RFC 1149（1990）', { size: 30 });
+  if (t >= 37.0) TK.note(g, t, 37.0, 40.0, '出どころ: Bergen Linux User Group の報告と ping のログ（2001）\nD. Waitzman, RFC 1149（1990）', { size: 30, y: 1060 });
   tag(g, t);
 }
 

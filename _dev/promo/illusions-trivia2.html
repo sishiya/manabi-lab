@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく illusions-2（型A ぜんぶ逆）「この錯覚、効かない人たちがいる」。台本は trivia/illusions.md。?short で録る
@@ -36,10 +39,11 @@ const cues = [
   { t: 23.0, type: 'whoosh' }, { t: 30.0, type: 'pop' },
 ];
 
+/// 錯視の図（ミュラー・リヤーの線）は、錯視が効くように筆の線（PL.ink）ではなく正確な線で描く。まわりの絵は「図鑑の版画」（PL.*）
 // ミュラー・リヤーの線。fins: -1 内向き（矢じり）、+1 外向き（矢羽）。L: 軸の長さ
 function ml(g, cx, y, L, fins, o = {}) {
   const a = 0.62, f = o.fin || 95, x0 = cx - L / 2, x1 = cx + L / 2;
-  g.save(); g.strokeStyle = o.color || '#fff'; g.lineWidth = o.lw || 10; g.lineCap = 'round';
+  g.save(); g.strokeStyle = o.color || PL.INK; g.lineWidth = o.lw || 10; g.lineCap = 'round';
   g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y);
   for (const [x, s] of [[x0, -1], [x1, 1]]) {
     const dx = -s * fins * Math.cos(a) * f;
@@ -51,37 +55,49 @@ function pair(g, t, o = {}) {
   ml(g, 540, o.y1 ?? 470, 520, 1, o);
   ml(g, 540, o.y2 ?? 760, o.L2 ?? 520, -1, o);
 }
-function guides(g, k, y1, y2) {   // 同じ長さを示す点線
+function guides(g, k, y1, y2) {   // 同じ長さを示す朱の点線
   if (k <= 0) return;
-  g.save(); g.globalAlpha *= k; g.strokeStyle = TK.C.acc; g.lineWidth = 4; g.setLineDash([12, 12]);
-  for (const x of [280, 800]) { g.beginPath(); g.moveTo(x, y1 - 120); g.lineTo(x, y2 + 120); g.stroke(); }
+  g.save(); g.globalAlpha *= k;
+  for (const x of [280, 800]) PL.dots(g, [[x, y1 - 120], [x, y2 + 120]], { w: 5, dash: [3, 14] });
   g.restore();
 }
-// 16の社会（点の並び。地図の代わり。どこかは示さない）
+// 16の社会（調べた用紙の束。どこかは示さない）。1枚ずつ、小さなミュラー・リヤーの図
 function dots16(g, t, a) {
   for (let i = 0; i < 16; i++) {
-    const k = TK.pop(t, a + i * 0.08, 0.3), x = 210 + (i % 4) * 220, y = 440 + Math.floor(i / 4) * 140;
-    g.save(); g.globalAlpha *= k; g.fillStyle = i === 15 ? TK.C.acc : TK.C.acc2;
-    g.beginPath(); g.arc(x, y, 30 * k, 0, Math.PI * 2); g.fill(); g.restore();
+    const k = clamp(TK.pop(t, a + i * 0.08, 0.3), 0, 1.15), x = 210 + (i % 4) * 220, y = 440 + Math.floor(i / 4) * 140;
+    if (k <= 0) continue;
+    g.save(); g.globalAlpha *= clamp(k, 0, 1);
+    const w = 170 * k, h = 100 * k, card = PL.rect(x - w / 2, y - h / 2, w, h);
+    PL.tint(g, card, i === 15 ? PL.T.gold : PL.T.sand, 0.5); PL.hatch(g, PL.rect(x + w / 2 - 10, y - h / 2, 10, h), { angle: 0.8, gap: 5, w: 1.2 });
+    PL.ink(g, card, i === 15 ? 5 : 3, i === 15 ? PL.RED : PL.INK);
+    ml(g, x, y - 20 * k, 90 * k, 1, { lw: 3, fin: 18 * k }); ml(g, x, y + 22 * k, 90 * k, -1, { lw: 3, fin: 18 * k });
+    g.restore();
   }
 }
-// 四角い部屋（直角だらけ）と、丸い家（線画）
+// 直角の部屋（奥の壁・床・天井・左右の壁。手前から見た図）と、丸い家
 function boxRoom(g, cx, cy, s) {
-  g.save(); g.strokeStyle = '#cfe0ff'; g.lineWidth = 5;
-  const w = 180 * s, h = 150 * s, d = 70 * s;
-  g.strokeRect(cx - w / 2, cy - h / 2, w, h);
-  g.beginPath(); g.moveTo(cx - w / 2, cy - h / 2); g.lineTo(cx - w / 2 - d, cy - h / 2 - d); g.moveTo(cx + w / 2, cy - h / 2); g.lineTo(cx + w / 2 + d, cy - h / 2 - d);
-  g.moveTo(cx - w / 2, cy + h / 2); g.lineTo(cx - w / 2 - d, cy + h / 2 + d); g.moveTo(cx + w / 2, cy + h / 2); g.lineTo(cx + w / 2 + d, cy + h / 2 + d); g.stroke();
-  g.strokeStyle = TK.C.acc; g.lineWidth = 6;   // 角のところ（矢羽の形に見える）
-  g.beginPath(); g.moveTo(cx - w / 2, cy - h / 2 - 1); g.lineTo(cx - w / 2, cy + h / 2 + 1); g.stroke();
-  g.restore();
+  const w = 180 * s, h = 150 * s, d = 70 * s, L = cx - w / 2, R = cx + w / 2, T = cy - h / 2, B = cy + h / 2;
+  const back = PL.rect(L, T, w, h), floor = PL.poly([[L, B], [R, B], [R + d, B + d], [L - d, B + d]]), ceil = PL.poly([[L, T], [R, T], [R + d, T - d], [L - d, T - d]]);
+  const left = PL.poly([[L, T], [L, B], [L - d, B + d], [L - d, T - d]]), right = PL.poly([[R, T], [R, B], [R + d, B + d], [R + d, T - d]]);
+  PL.tint(g, back, PL.T.sand, 0.5);
+  PL.tint(g, floor, PL.T.wood, 0.7); PL.ink(g, gg => { for (let k = 1; k < 5; k++) { const q = k / 5; gg.moveTo(lerp(L, L - d, 0) + w * q, B); gg.lineTo(L - d + (w + 2 * d) * q, B + d); } }, 1.4);   // 床板
+  PL.tint(g, ceil, PL.T.gray, 0.3);
+  [left, right].forEach(p => { PL.tint(g, p, PL.T.gray, 0.5); PL.hatch(g, p, { angle: 1.2, gap: 7, w: 1.3 }); });
+  const win = PL.rect(cx - 40 * s, cy - 40 * s, 80 * s, 56 * s); PL.tint(g, win, PL.T.sky, 0.6); PL.ink(g, win, 3); PL.ink(g, gg => { gg.moveTo(cx, cy - 40 * s); gg.lineTo(cx, cy + 16 * s); }, 2);
+  PL.ink(g, gg => { [back, floor, ceil, left, right].forEach(p => p(gg)); }, 4);
+  g.save(); g.strokeStyle = PL.RED; g.lineWidth = 7; g.lineCap = 'round'; g.beginPath(); g.moveTo(L, T); g.lineTo(L, B); g.moveTo(L - d * 0.6, T - d * 0.6); g.lineTo(L, T); g.lineTo(L - d * 0.6, T - d * 0.6 + 0); g.moveTo(L, T); g.lineTo(L + 50 * s, T); g.moveTo(L, B); g.lineTo(L - d * 0.6, B + d * 0.6); g.moveTo(L, B); g.lineTo(L + 50 * s, B); g.stroke(); g.restore();   // 部屋のすみ（矢羽の形）
 }
 function roundHut(g, cx, cy, s) {
-  g.save(); g.strokeStyle = '#e6d2a8'; g.lineWidth = 5;
-  g.beginPath(); g.ellipse(cx, cy + 40 * s, 140 * s, 30 * s, 0, 0, Math.PI * 2); g.stroke();
-  g.beginPath(); g.moveTo(cx - 140 * s, cy + 40 * s); g.quadraticCurveTo(cx - 120 * s, cy - 110 * s, cx, cy - 120 * s); g.quadraticCurveTo(cx + 120 * s, cy - 110 * s, cx + 140 * s, cy + 40 * s); g.stroke();
-  g.beginPath(); g.ellipse(cx, cy - 4 * s, 40 * s, 44 * s, 0, Math.PI, 0); g.stroke();
+  const ground = PL.ellipse(cx, cy + 40 * s, 170 * s, 30 * s);
+  PL.tint(g, ground, PL.T.sand, 0.6); PL.ink(g, ground, 2.5);
+  const dome = gg => { gg.moveTo(cx - 140 * s, cy + 40 * s); gg.quadraticCurveTo(cx - 120 * s, cy - 110 * s, cx, cy - 120 * s); gg.quadraticCurveTo(cx + 120 * s, cy - 110 * s, cx + 140 * s, cy + 40 * s); gg.closePath(); };
+  PL.tint(g, dome, PL.T.wood, 0.7);
+  g.save(); g.beginPath(); dome(g); g.clip();
+  PL.ink(g, gg => { for (let k = -6; k <= 6; k++) { gg.moveTo(cx + k * 22 * s, cy + 44 * s); gg.quadraticCurveTo(cx + k * 18 * s, cy - 60 * s, cx + k * 4 * s, cy - 124 * s); } for (let y = cy - 80 * s; y < cy + 40 * s; y += 26 * s) { gg.moveTo(cx - 160 * s, y); gg.quadraticCurveTo(cx, y - 20 * s, cx + 160 * s, y); } }, 1.5, 'rgba(90,60,30,0.6)');   // 草や枝を編んだ屋根
   g.restore();
+  PL.hatch(g, dome, { angle: 0.7, gap: 8, w: 1.4, not: PL.ellipse(cx - 60 * s, cy - 50 * s, 130 * s, 150 * s) });
+  const door = gg => { gg.moveTo(cx - 36 * s, cy + 40 * s); gg.lineTo(cx - 36 * s, cy); gg.quadraticCurveTo(cx, cy - 50 * s, cx + 36 * s, cy); gg.lineTo(cx + 36 * s, cy + 40 * s); gg.closePath(); };
+  PL.tint(g, door, PL.T.brown, 0.9); PL.ink(g, door, 3); PL.ink(g, dome, 4);
 }
 
 function draw(g, t) {
@@ -90,71 +106,67 @@ function draw(g, t) {
     pair(g, t);
     guides(g, clamp((t - 3.2) / 0.4, 0, 1), 470, 760);
     TK.hook(g, t, 0.0, 2.6, '同じ長さ。でも\n[全員]がだまされるわけじゃない', { y: 210, size: 74 });
-    if (t >= 3.2) { g.save(); g.globalAlpha = fade(t, 3.2, 5.0, 0.3); TK.text(g, 'どちらも 同じ長さ', PW / 2, 1000, 56, { color: TK.C.acc }); g.restore(); }
+    if (t >= 3.2) { g.save(); g.globalAlpha = fade(t, 3.2, 5.0, 0.3); PL.label(g, 'どちらも 同じ長さ', PW / 2, 1000, 56, { color: PL.RED }); g.restore(); }
   }
-  // 5〜8: 「錯覚は人類共通」に ×
+  // 5〜8: 「錯覚は人類共通」に ×（× は字の右に。字に重ねない）
   if (t >= 5.0 && t < 8.0) {
     g.save(); g.globalAlpha = fade(t, 5.0, 8.0, 0.25) * 0.35; pair(g, t); g.restore();
     g.save(); g.globalAlpha = fade(t, 5.0, 8.0, 0.25);
     TK.card(g, 140, 520, 800, 180);
-    TK.text(g, '錯覚は 人類共通', PW / 2, 610, 84);
-    if (t > 6.4) {
-      const k = TK.pop(t, 6.4, 0.3); g.strokeStyle = TK.C.red; g.lineWidth = 22; g.lineCap = 'round';
-      g.beginPath(); g.moveTo(540 - 170 * k, 610 - 170 * k); g.lineTo(540 + 170 * k, 610 + 170 * k); g.moveTo(540 + 170 * k, 610 - 170 * k); g.lineTo(540 - 170 * k, 610 + 170 * k); g.stroke();
-    }
+    PL.label(g, '錯覚は 人類共通', 190, 610, 76, { align: 'left' });
+    if (t > 6.4) { const k = clamp(TK.pop(t, 6.4, 0.3), 0, 1.2), r = 52 * k; PL.ink(g, gg => { gg.moveTo(860 - r, 610 - r); gg.lineTo(860 + r, 610 + r); gg.moveTo(860 + r, 610 - r); gg.lineTo(860 - r, 610 + r); }, 16, PL.RED); }
     g.restore();
   }
   // 8〜12: 16の社会
   if (t >= 8.0 && t < 12.0) {
     g.save(); g.globalAlpha = fade(t, 8.0, 12.0, 0.3);
-    TK.text(g, '1960年代  [16の社会]で測った', PW / 2, 270, 62);
+    PL.label(g, '1960年代  [16の社会]で測った', PW / 2, 270, 62);
     dots16(g, t, 8.3);
-    TK.text(g, 'そのうち14は、小さな伝統社会', PW / 2, 1020, 44, { color: TK.C.sub });
+    PL.label(g, 'そのうち14は、小さな伝統社会', PW / 2, 1020, 44, { color: TK.C.sub });
     g.restore();
   }
   // 12〜16: 長さを合わせる（下の線を短く・長く。同じに見えた所で止める）
   if (t >= 12.0 && t < 16.0) {
-    const u = clamp((t - 12.3) / 3.0, 0, 1), L2 = 520 + Math.sin(u * Math.PI * 1.5) * 90 * (1 - u) - 90 * ease(u) * 0;
+    const u = clamp((t - 12.3) / 3.0, 0, 1), L2 = 520 + Math.sin(u * Math.PI * 1.5) * 90 * (1 - u);
     g.save(); g.globalAlpha = fade(t, 12.0, 16.0, 0.3);
-    TK.text(g, '下の線の長さを、同じに見えるまで動かす', PW / 2, 270, 46, { color: TK.C.sub });
+    PL.label(g, '下の線の長さを、同じに見えるまで動かす', PW / 2, 270, 46, { color: TK.C.sub });
     pair(g, t, { L2 });
-    g.fillStyle = TK.C.acc;
-    for (const s of [-1, 1]) { g.beginPath(); const x = 540 + s * (L2 / 2 + 130); g.moveTo(x, 760); g.lineTo(x - s * 40, 735); g.lineTo(x - s * 40, 785); g.fill(); }
+    for (const s of [-1, 1]) { const x = 540 + s * (L2 / 2 + 130), tri = PL.poly([[x, 760], [x - s * 40, 735], [x - s * 40, 785]]); PL.tint(g, tri, PL.RED, 0.8); PL.ink(g, tri, 3, PL.RED); }
     g.restore();
   }
   // 16〜23: 棒グラフ（2本だけ）
   if (t >= 16.0 && t < 23.0) {
-    TK.text(g, '同じに見えるのに 何%長くした？', PW / 2, 270, 56, { color: TK.C.sub });
+    PL.label(g, '同じに見えるのに 何%長くした？', PW / 2, 270, 56, { color: TK.C.sub });
     TK.bars(g, t, 16.2, 23.0, [
-      { label: 'アメリカの大学生', v: 0.2 / 0.25, color: TK.C.acc, text: '約20%' },
+      { label: 'アメリカの大学生', v: 0.2 / 0.25, text: '約20%' },
     ], { y: 420 });
     if (t >= 19.5) TK.bars(g, t, 19.5, 23.0, [
-      { label: 'カラハリ砂漠のサンの人たち', v: 0.0, color: TK.C.acc2, text: '' },
+      { label: 'カラハリ砂漠のサンの人たち', v: 0.0, text: '' },
     ], { y: 680 });
-    if (t >= 20.4) { g.save(); g.globalAlpha = fade(t, 20.4, 23.0, 0.3); TK.text(g, '[ほぼ 0%]', 640, 752, 64, { align: 'left' }); g.restore(); }
+    if (t >= 20.4) { g.save(); g.globalAlpha = fade(t, 20.4, 23.0, 0.3); PL.label(g, '[ほぼ 0%]', 640, 752, 64, { align: 'left' }); g.restore(); }
     TK.note(g, t, 16.2, 23.0, '値は Henrich ほか (2010) の図2（16の社会）から。ほかの14の社会はこの間', { size: 30, y: 1030 });
   }
   // 23〜30: 直角の部屋 ／ 丸い家
   if (t >= 23.0 && t < 30.0) {
     g.save(); g.globalAlpha = fade(t, 23.0, 30.0, 0.3);
-    TK.text(g, '研究者の[説]', PW / 2, 260, 70);
-    g.save(); g.globalAlpha *= TK.pop(t, 23.3); boxRoom(g, 290, 600, 1.0); g.restore();
-    g.save(); g.globalAlpha *= TK.pop(t, 24.6); roundHut(g, 790, 620, 1.0); g.restore();
-    TK.text(g, 'まっすぐな壁・直角の角', 290, 860, 40, { color: TK.C.sub });
-    TK.text(g, '丸い家・ひらけた土地', 790, 860, 40, { color: TK.C.sub });
-    if (t > 26.0) { g.save(); g.globalAlpha *= fade(t, 26.0, 30, 0.3); TK.text(g, '部屋のすみの線は、矢羽の形', PW / 2, 990, 46, { color: TK.C.acc }); g.restore(); }
+    PL.label(g, '研究者の[説]', PW / 2, 260, 70);
+    g.save(); g.globalAlpha *= clamp(TK.pop(t, 23.3), 0, 1); boxRoom(g, 290, 600, 1.0); g.restore();
+    g.save(); g.globalAlpha *= clamp(TK.pop(t, 24.6), 0, 1); roundHut(g, 790, 620, 1.0); g.restore();
+    PL.label(g, 'まっすぐな壁・直角の角', 290, 860, 40, { color: TK.C.sub });
+    PL.label(g, '丸い家・ひらけた土地', 790, 860, 40, { color: TK.C.sub });
+    if (t > 26.0) { g.save(); g.globalAlpha *= fade(t, 26.0, 30, 0.3); PL.label(g, '部屋のすみの線は、矢羽の形', PW / 2, 990, 46, { color: PL.RED }); g.restore(); }
     g.restore();
   }
   // 30〜35: 最初の2本に戻る
   if (t >= 30.0) {
     pair(g, t);
     g.save(); g.globalAlpha = fade(t, 30.0, 35.5, 0.3);
-    TK.text(g, 'あなたは [何%] だまされた？', PW / 2, 230, 74, { stroke: 'rgba(0,0,0,0.5)' });
+    PL.label(g, 'あなたは [何%] だまされた？', PW / 2, 230, 74);
     g.restore();
   }
   if (t >= 8.0 && t < 16.0) TK.note(g, t, 8.0, 16.0, '測ったのは60年前（Segall ほか 1966）。いまの人が同じとは限らない', { size: 30 });
   if (t >= 23.0 && t < 30.0) TK.note(g, t, 23.0, 30.0, '原因は説。「文化のせいとは言い切れない」という反論もある（2025）', { size: 30 });
-  if (t >= 32.0) TK.note(g, t, 32.0, 35.0, '出どころ: Henrich, Heine & Norenzayan (2010) Behavioral and Brain Sciences 33\nSegall, Campbell & Herskovits (1966)', { size: 28 });
+  if (t >= 32.0) TK.note(g, t, 32.0, 35.0, '出どころ: Henrich, Heine & Norenzayan (2010) Behavioral and Brain Sciences 33\nSegall, Campbell & Herskovits (1966)', { size: 28, y: 1150 });
 }
 
 triviaStart({ out: 'illusions-trivia2', voice: 'auto', dur: DUR, draw, subs, cues, peek: 1.5 });

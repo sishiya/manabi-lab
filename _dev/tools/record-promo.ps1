@@ -11,6 +11,7 @@
 #   ふだんはヘッドレスで GPU を使って描く。GPU で絵がおかしいときは -Soft（ソフトウェアで描く。とても遅い）
 #   -AudioOnly: 録画しなおさずに音だけ作りなおす（__promoAudio → out/<out>.wav → ffmpeg で mp4 の音を差しかえ。映像はそのまま）。
 #     古い mp4 は out/<out>.before-<Reason>.mp4 に残す（-Reason の既定は loud）。音量の確かめは check-loudness.ps1
+#   -Overlap: うんちくショートで、文字と絵の重なりを確かめる（__triviaOverlap。一覧を出し、見つけたコマを out/overlap-<out>.jpg に。録画の前）
 #   -Visible: 見える窓で開く（ヘッドレスで H.264 に書き出せないときや、god-view のように地図の読みこみを見たいとき）
 # 見終わった peek-・check- の jpg は消す（README: 見終わったら消す）。out/ は Git に入れない。
 param(
@@ -19,6 +20,7 @@ param(
   [string]$Peek,
   [string]$Check,
   [switch]$NoRecord,
+  [switch]$Overlap,
   [switch]$AudioOnly,
   [string]$Reason = 'loud',
   [switch]$Visible,
@@ -60,6 +62,14 @@ try {
   }
   if ($state -ne 'ready') { Show-Log $ws; throw "準備できなかった（$state）" }
   Write-Host "準備できた（$(Elapsed)）。字幕データ out/$out.ja.srt・.en.srt も保存ずみ"
+
+  # --- 0. 文字と絵の重なり（うんちく） ---
+  if ($Overlap) {
+    $ov = Invoke-CdpEval $ws "window.__triviaOverlap(0.25, 'overlap-$out').then(l => JSON.stringify(l))" -TimeoutSec 900 | ConvertFrom-Json
+    $strong = @($ov | Where-Object { $_.kind -ne 'tint' -and $_.kind -ne 'band' })
+    Write-Host "重なり: $($strong.Count) 件（弱いもの: 色の上・帯の下 $($ov.Count - $strong.Count) 件）$(if ($ov) { '。コマは _dev/promo/out/overlap-' + $out + '.jpg' })"
+    foreach ($o in $ov) { Write-Host ("  {0,-5} {1,-12} {2,6}  {3}" -f $o.kind, $o.t, $o.v, $o.s) }
+  }
 
   # --- 1. 確かめ用のコマ（録画の前） ---
   if ($peekTs.Count) {

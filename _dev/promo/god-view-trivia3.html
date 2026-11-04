@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく god-view-3（型D 3つ並べる）「すわっているだけで、30秒に1万km」。台本は trivia/god-view.md。?short で録る
@@ -32,40 +35,58 @@ const cues = [
   { t: 18.0, type: 'rise' }, { t: 20.0, type: 'pop' }, { t: 22.4, type: 'ding' }, { t: 27.0, type: 'tick' }, { t: 30.0, type: 'ding' },
 ];
 
-function seated(g, x, y, s) {   // いすにすわる棒の人。x,y はいすの足もと
-  g.save(); g.translate(x, y); g.scale(s, s); g.lineCap = 'round'; g.lineJoin = 'round';
-  g.strokeStyle = 'rgba(160,190,255,0.7)'; g.lineWidth = 8;
-  g.beginPath(); g.moveTo(-60, 0); g.lineTo(-60, -90); g.lineTo(40, -90); g.lineTo(40, 0); g.moveTo(-60, -90); g.lineTo(-60, -200); g.stroke();
-  g.strokeStyle = '#fff'; g.lineWidth = 9;
-  g.beginPath(); g.moveTo(-40, -100); g.lineTo(-40, -200); g.moveTo(-40, -100); g.lineTo(40, -100); g.lineTo(40, 0); g.lineTo(70, 0);
-  g.moveTo(-40, -180); g.lineTo(10, -140); g.lineTo(40, -150); g.stroke();
-  g.fillStyle = '#fff'; g.beginPath(); g.arc(-40, -228, 24, 0, Math.PI * 2); g.fill();
+// いすにすわる人（横から。図鑑の版画の影絵）。x,y はいすの足もと
+function seated(g, x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s); const k = 1 / s;
+  // いす（木）
+  const seat = PL.rect(-70, -100, 120, 14), back = PL.rect(-78, -230, 14, 144);
+  [seat, back].forEach(p => { PL.tint(g, p, PL.T.wood, 0.85); PL.hatch(g, p, { angle: 0.9, gap: 5 * k, w: 1.2 * k, cx: 0, cy: 0 }); PL.ink(g, p, 3 * k); });
+  PL.ink(g, gg => { gg.moveTo(-66, -86); gg.lineTo(-66, 0); gg.moveTo(42, -86); gg.lineTo(42, 0); gg.moveTo(-60, -50); gg.lineTo(36, -50); }, 7 * k);
+  // 人（墨の影絵）
+  g.strokeStyle = PL.INK; g.lineCap = 'round'; g.lineJoin = 'round';
+  g.lineWidth = 26; g.beginPath(); g.moveTo(-40, -118); g.lineTo(-40, -215); g.stroke();           // 胴
+  g.lineWidth = 22; g.beginPath(); g.moveTo(-40, -112); g.lineTo(38, -112); g.lineTo(44, -14); g.stroke();   // もも・すね
+  g.lineWidth = 12; g.beginPath(); g.moveTo(44, -8); g.lineTo(72, -6); g.stroke();                  // 足
+  g.lineWidth = 15; g.beginPath(); g.moveTo(-36, -198); g.lineTo(0, -150); g.lineTo(34, -158); g.stroke();   // 腕（ひざの上に）
+  g.fillStyle = PL.INK; g.beginPath(); g.arc(-36, -246, 28, 0, Math.PI * 2); g.fill();            // 頭
   g.restore();
 }
+// 地球（本物の地形）。回って見えるよう、経線を重ねる
 function earth(g, x, y, r, rot, f = 1) {
-  g.save(); g.globalAlpha *= f;
-  const gr = g.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.1, x, y, r);
-  gr.addColorStop(0, '#5fa8ff'); gr.addColorStop(1, '#1d4fa3');
-  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
-  g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.clip();
-  g.strokeStyle = 'rgba(255,255,255,0.18)'; g.lineWidth = 2;   // 経線（回って見える）
-  for (let i = 0; i < 12; i++) { const a = rot + i * Math.PI / 6, c = Math.cos(a); if (Math.sin(a) < 0) continue; g.beginPath(); g.ellipse(x, y, Math.abs(c) * r, r, 0, 0, Math.PI * 2); g.stroke(); }
+  if (window.LOOK && LOOK.planet) LOOK.planet(g, x, y, r, f);
+  if (r < 60) return;
+  g.save(); g.globalAlpha *= f; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.clip();
+  PL.ink(g, gg => { for (let i = 0; i < 12; i++) { const a = rot + i * Math.PI / 6, c = Math.cos(a); if (Math.sin(a) < 0) continue; gg.moveTo(x, y - r); gg.ellipse(x, y, Math.abs(c) * r, r, 0, -Math.PI / 2, Math.PI / 2, c < 0); } }, 1.4, 'rgba(35,28,21,0.45)');
   g.restore();
+}
+// 太陽（手彩色の球＋光の線）
+function sunP(g, x, y, r) {
+  PL.ink(g, gg => { for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; gg.moveTo(x + Math.cos(a) * r * 1.15, y + Math.sin(a) * r * 1.15); gg.lineTo(x + Math.cos(a) * r * (i % 2 ? 1.4 : 1.6), y + Math.sin(a) * r * (i % 2 ? 1.4 : 1.6)); } }, Math.max(2.5, r / 20), '#a8740f');
+  PL.sphere(g, x, y, r, PL.T.gold, { a: 0.85, light: [-0.6, -0.7], contour: false });
 }
 function meter(g, t, a, b, v, unit, o = {}) {   // 30秒で動く距離の数字
   if (t < a || t > b) return;
   g.save(); g.globalAlpha = fade(t, a, b, 0.3);
-  TK.text(g, '30秒で', PW / 2, o.y - 120, 48, { color: TK.C.sub });
+  PL.label(g, '30秒で', PW / 2, o.y - 120, 48, { color: TK.C.sub });
   const k = TK.out((t - a) / 1.6);
-  TK.text(g, (o.fmt || (x => Math.round(x).toLocaleString('ja-JP')))(v * k) + ' ' + unit, PW / 2, o.y, o.size || 150, { color: TK.C.acc, stroke: 'rgba(0,0,0,0.5)' });
+  PL.label(g, (o.fmt || (x => Math.round(x).toLocaleString('ja-JP')))(v * k) + ' ' + unit, PW / 2, o.y, o.size || 150, { color: PL.RED });
   g.restore();
 }
-// 宇宙の残り火（宇宙背景放射）っぽい、ぼんやりした背景（かざり）
-const blobs = Array.from({ length: 70 }, (_, i) => { const r = Math.sin(i * 12.9898) * 43758.5453; const f = r - Math.floor(r); const r2 = Math.sin(i * 78.233) * 12345.678; const f2 = r2 - Math.floor(r2); return [f * PW, 120 + f2 * 1000, 60 + ((f * 7) % 1) * 120, (f2 * 3) % 1]; });
-function cmb(g, f) {
-  g.save(); g.globalAlpha *= f * 0.5;
-  for (const [x, y, r, c] of blobs) { const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, c < 0.5 ? 'rgba(255,140,90,0.55)' : 'rgba(90,150,255,0.55)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, 2 * r, 2 * r); }
+// 宇宙の残り火（宇宙背景放射）の全天の地図（だ円の中のむら。形はかざり）
+const blobs = Array.from({ length: 46 }, (_, i) => { const r = Math.sin(i * 12.9898) * 43758.5453; const f = r - Math.floor(r); const r2 = Math.sin(i * 78.233) * 12345.678; const f2 = r2 - Math.floor(r2); return [f * 2 - 1, f2 * 2 - 1, 0.12 + ((f * 7) % 1) * 0.16, (f2 * 3) % 1]; });
+function cmbMap(g, cx, cy, rx, ry) {
+  const ell = PL.ellipse(cx, cy, rx, ry);
+  PL.tint(g, ell, PL.T.sky, 0.5);
+  g.save(); g.beginPath(); ell(g); g.clip();
+  for (const [u, v, r, c] of blobs) { const p = PL.ellipse(cx + u * rx, cy + v * ry, r * rx, r * ry * 1.4, u * 2); PL.tint(g, p, c < 0.5 ? PL.T.rose : PL.T.sea, 0.6); }
+  PL.ink(g, gg => { for (let k = -2; k <= 2; k++) { gg.moveTo(cx - rx, cy + k * ry / 3); gg.lineTo(cx + rx, cy + k * ry / 3); } for (let k = -2; k <= 2; k++) { gg.moveTo(cx + k * rx / 3, cy - ry); gg.ellipse(cx, cy, Math.abs(k) * rx / 3, ry, 0, -Math.PI / 2, Math.PI / 2, k < 0); } }, 1, 'rgba(35,28,21,0.35)');
   g.restore();
+  PL.ink(g, ell, 4);
+}
+// 矢印（墨）
+function arrow(g, x0, y0, x1, y1, col = PL.INK, w = 10, hd = 36) {
+  const a = Math.atan2(y1 - y0, x1 - x0);
+  PL.ink(g, gg => { gg.moveTo(x0, y0); gg.lineTo(x1, y1); gg.moveTo(x1 - hd * Math.cos(a - 0.45), y1 - hd * Math.sin(a - 0.45)); gg.lineTo(x1, y1); gg.lineTo(x1 - hd * Math.cos(a + 0.45), y1 - hd * Math.sin(a + 0.45)); }, w, col);
 }
 
 function draw(g, t) {
@@ -75,55 +96,54 @@ function draw(g, t) {
   // 0〜3: フック
   if (t < 3.0) {
     seated(g, 560, 1080, 1.6);
-    TK.hook(g, t, 0.0, 3.0, 'この30秒で、\nあなたは[何km]動く？', { y: 380, size: 112 });
+    TK.hook(g, t, 0.0, 3.0, 'この30秒で、\nあなたは[何km]動く？', { y: 420, size: 112 });
   }
   // 3〜10: 自転
   if (t >= 3.0 && t < 10.0) {
     const f = fade(t, 3.0, 10.0, 0.3);
-    TK.text(g, '① 地球の自転', PW / 2, 330, 68);
-    const rot = t * 0.8, x = 540, y = 620, r = 210;
+    PL.label(g, '① 地球の自転', PW / 2, 340, 68);
+    const rot = t * 0.8, x = 540, y = 640, r = 210;
     earth(g, x, y, r, rot, f);
     // 日本のあたり（北緯36°）の点が、手前を横切る
     const lat = 36 * Math.PI / 180, ph = ((t - 3.0) * 0.8) % (Math.PI * 2) - 1.2;
-    if (Math.cos(ph) > 0) { g.save(); g.globalAlpha = f; g.fillStyle = TK.C.acc; g.beginPath(); g.arc(x + Math.sin(ph) * r * Math.cos(lat), y - r * Math.sin(lat), 16, 0, Math.PI * 2); g.fill(); g.restore(); }
-    meter(g, t, 4.0, 10.0, 11.3, 'km', { y: 1000, fmt: v => v.toFixed(1) });
+    PL.ink(g, gg => { gg.ellipse(x, y - r * Math.sin(lat), r * Math.cos(lat), r * 0.12, 0, 0, Math.PI); }, 2.4, PL.RED);   // 北緯36°の線
+    if (Math.cos(ph) > 0) { g.save(); g.globalAlpha = f; const p = PL.circle(x + Math.sin(ph) * r * Math.cos(lat), y - r * Math.sin(lat) + Math.cos(ph) * r * 0.12, 15); PL.tint(g, p, PL.T.gold, 1); PL.ink(g, p, 5, PL.RED); g.restore(); }
+    meter(g, t, 4.0, 10.0, 11.3, 'km', { y: 1030, fmt: v => v.toFixed(1) });
   }
   // 10〜18: 公転
   if (t >= 10.0 && t < 18.0) {
     const f = fade(t, 10.0, 18.0, 0.3), cx = 540, cy = 560, R = 320;
-    TK.text(g, '② 太陽のまわりの公転', PW / 2, 330, 68);
+    PL.label(g, '② 太陽のまわりの公転', PW / 2, 340, 68);
     g.save(); g.globalAlpha = f;
-    g.strokeStyle = 'rgba(255,255,255,0.25)'; g.lineWidth = 3; g.setLineDash([10, 12]); g.beginPath(); g.ellipse(cx, cy, R, R * 0.42, 0, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
-    const sg = g.createRadialGradient(cx, cy, 0, cx, cy, 80); sg.addColorStop(0, '#fff6c8'); sg.addColorStop(0.6, '#ffc24a'); sg.addColorStop(1, 'rgba(255,140,40,0)');
-    g.fillStyle = sg; g.beginPath(); g.arc(cx, cy, 80, 0, Math.PI * 2); g.fill();
+    g.save(); g.setLineDash([10, 12]); PL.ink(g, PL.ellipse(cx, cy, R, R * 0.42), 3); g.restore();
+    sunP(g, cx, cy, 60);
     g.restore();
-    const a = 0.6 + (t - 10) * 0.5;
-    earth(g, cx + Math.cos(a) * R, cy + Math.sin(a) * R * 0.42, 34, t, f);
-    meter(g, t, 11.0, 18.0, 893, 'km', { y: 880 });
-    if (t > 14.0) { g.save(); g.globalAlpha = fade(t, 14.0, 18.0, 0.3); TK.text(g, '東京〜札幌（直線 約830km）より遠い', PW / 2, 1010, 44, { color: TK.C.sub, bold: false }); g.restore(); }
+    const a = 0.6 + (t - 10) * 0.5, ex = cx + Math.cos(a) * R, ey = cy + Math.sin(a) * R * 0.42;
+    g.save(); g.globalAlpha = f; arrow(g, ex - Math.sin(a) * 30, ey + Math.cos(a) * 13, ex - Math.sin(a) * 110, ey + Math.cos(a) * 46, PL.RED, 5, 18); g.restore();   // 進む向き
+    earth(g, ex, ey, 34, t, f);
+    meter(g, t, 11.0, 18.0, 893, 'km', { y: 900 });
+    if (t > 14.0) { g.save(); g.globalAlpha = fade(t, 14.0, 18.0, 0.3); PL.label(g, '東京〜札幌（直線 約830km）より遠い', PW / 2, 1030, 44, { color: TK.C.sub, bold: false }); g.restore(); }
     TK.note(g, t, 11.0, 18.0, '平均の速さ 秒速29.78km（季節で少しかわる）', { size: 30 });
   }
   // 18〜27: 宇宙の残り火にくらべて
   if (t >= 18.0 && t < 27.0) {
     const f = fade(t, 18.0, 27.0, 0.4);
-    cmb(g, f);
-    TK.text(g, '③ 宇宙の残り火にくらべて', PW / 2, 330, 64);
-    // 太陽系（点）が矢印の向きに進む
+    PL.label(g, '③ 宇宙の残り火にくらべて', PW / 2, 330, 64);
     g.save(); g.globalAlpha = f;
-    const x0 = 260 + ((t - 18) * 30) % 80, y0 = 470;
-    g.strokeStyle = TK.C.acc; g.fillStyle = TK.C.acc; g.lineWidth = 12; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(x0 + 80, y0); g.lineTo(x0 + 520, y0); g.stroke();
-    g.beginPath(); g.moveTo(x0 + 560, y0); g.lineTo(x0 + 500, y0 - 36); g.lineTo(x0 + 500, y0 + 36); g.fill();
-    const sg = g.createRadialGradient(x0, y0, 0, x0, y0, 60); sg.addColorStop(0, '#fff6c8'); sg.addColorStop(0.6, '#ffc24a'); sg.addColorStop(1, 'rgba(255,140,40,0)');
-    g.fillStyle = sg; g.beginPath(); g.arc(x0, y0, 60, 0, Math.PI * 2); g.fill();
-    TK.text(g, '太陽系ごと 秒速370km', 540, 565, 50);
+    cmbMap(g, 190, 470, 110, 56);   // 全天の地図（左に小さく）
+    // 太陽系（小さな太陽）が矢印の向きに進む
+    const x0 = 400 + ((t - 18) * 30) % 80, y0 = 470;
+    PL.dots(g, [[330, y0], [x0 - 50, y0]], { w: 5, dash: [3, 14] });
+    arrow(g, x0 + 60, y0, x0 + 470, y0, PL.RED, 12, 40);
+    sunP(g, x0, y0, 34);
+    PL.label(g, '太陽系ごと 秒速370km', 600, 548, 50);
     g.restore();
-    meter(g, t, 20.0, 27.0, 11095, 'km', { y: 770, size: 120 });
+    meter(g, t, 20.0, 27.0, 11095, 'km', { y: 752, size: 110 });
     if (t > 22.4) {   // 地球の直径とくらべる
       TK.bars(g, t, 22.4, 27.0, [
-        { label: '30秒で動く', v: 11095 / 12742, color: TK.C.acc, text: '1万1095 km' },
-        { label: '地球の直径', v: 1, color: TK.C.acc2, text: '1万2742 km' },
-      ], { y: 845, gap: 145, size: 44, stagger: 0.3 });
+        { label: '30秒で動く', v: 11095 / 12742, text: '1万1095 km' },
+        { label: '地球の直径', v: 1, text: '1万2742 km' },
+      ], { y: 882, gap: 138, size: 44, stagger: 0.3 });
     }
     TK.note(g, t, 18.0, 27.0, '宇宙背景放射（宇宙の残り火）を止まった目印にしたときの速さ', { size: 30 });
   }
@@ -133,14 +153,14 @@ function draw(g, t) {
     g.save(); g.globalAlpha = f;
     const rows = [['自転', V.spin, 1], ['公転', V.orbit, 0], ['宇宙の残り火にくらべて', V.cmb, 0]];
     rows.forEach(([s, v, d], i) => {
-      const y = 380 + i * 210;
+      const y = 400 + i * 200;
       TK.card(g, 90, y - 80, 900, 160);
-      TK.text(g, s, 130, y - 32, 44, { align: 'left', color: TK.C.sub, maxw: 760 });
-      TK.text(g, (v * tt).toLocaleString('ja-JP', { maximumFractionDigits: d }) + ' km', 950, y + 28, 76, { align: 'right', color: i === 2 ? TK.C.acc : '#fff' });
+      PL.label(g, s, 130, y - 32, 44, { align: 'left', color: TK.C.sub, maxw: 760 });
+      PL.label(g, (v * tt).toLocaleString('ja-JP', { maximumFractionDigits: d }) + ' km', 950, y + 28, 76, { align: 'right', color: i === 2 ? PL.RED : PL.INK });
     });
-    if (t >= 30.0) TK.text(g, '[地球1個ぶん]近く', PW / 2, 1000, 90);
+    if (t >= 30.0) PL.label(g, '[地球1個ぶん]近く', PW / 2, 960, 90);
     g.restore();
-    TK.note(g, t, 27.0, 30.6, '出どころ: NASA Earth Fact Sheet・Planck Collaboration (2020) A&A 641, A1\n自転は東京（北緯35.7°）', { size: 28 });
+    TK.note(g, t, 27.0, 30.6, '出どころ: NASA Earth Fact Sheet・Planck Collaboration (2020) A&A 641, A1\n自転は東京（北緯35.7°）', { size: 28, y: 1090 });   // 2行なので絵の下に（クレジットと重ねない）
   }
 }
 

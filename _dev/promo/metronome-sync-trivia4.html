@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく metronome-sync-2（型F 会話）「ホイヘンスは、寝こんでいた」。台本は trivia/metronome-sync.md。?short で録る
@@ -50,59 +53,58 @@ function shiftAt(t) {   // ずらした量（15.6 で 1.5 rad、16.4〜19.3 で 
 }
 function angs(t) { return [AMP * Math.sin(WS * t), AMP * Math.sin(WS * t + Math.PI + shiftAt(t))]; }
 
-// 振り子時計の線画。x, y はかけた所（上のまん中）。s: 大きさ、ang: 振り子の角度、min: 長い針（分）
+// 振り子時計（17世紀の箱の時計の線画）。x, y はかけた所（上のまん中）。s: 大きさ、ang: 振り子の角度、min: 長い針（分）
 function pclock(g, x, y, s, ang, o = {}) {
-  g.save(); g.translate(x, y); g.scale(s, s);
-  g.lineJoin = 'round'; g.lineCap = 'round';
-  // 箱
-  g.fillStyle = 'rgba(20,34,72,0.85)'; g.strokeStyle = 'rgba(200,220,255,0.75)'; g.lineWidth = 5;
-  g.beginPath(); g.moveTo(-70, 20); g.lineTo(0, -20); g.lineTo(70, 20); g.lineTo(85, 20); g.lineTo(85, 460); g.lineTo(-85, 460); g.lineTo(-85, 20); g.closePath(); g.fill(); g.stroke();
-  // 文字盤
-  g.fillStyle = '#0a0f20'; g.beginPath(); g.arc(0, 90, 58, 0, Math.PI * 2); g.fill(); g.stroke();
-  g.strokeStyle = 'rgba(200,220,255,0.6)'; g.lineWidth = 3;
-  for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; g.beginPath(); g.moveTo(Math.sin(a) * 46, 90 - Math.cos(a) * 46); g.lineTo(Math.sin(a) * 54, 90 - Math.cos(a) * 54); g.stroke(); }
+  const P = (px, py) => [x + px * s, y + py * s], lw = Math.max(2, 3 * s), ow = Math.max(3, 4.5 * s);
+  const hood = PL.poly([P(-78, 24), P(0, -18), P(78, 24)]), cas = PL.poly([P(-85, 24), P(85, 24), P(85, 460), P(-85, 460)]);
+  PL.tint(g, cas, PL.T.wood, 0.75); PL.tint(g, hood, PL.T.wood, 0.9);
+  PL.ink(g, gg => { for (let i = 0; i < 5; i++) { const xx = -70 + i * 34; gg.moveTo(...P(xx, 30)); gg.bezierCurveTo(...P(xx + 6, 160), ...P(xx - 6, 300), ...P(xx + 4, 455)); } }, lw * 0.4, 'rgba(35,28,21,0.4)');   // 木目
+  PL.hatch(g, cas, { angle: 0.9, gap: Math.max(7, 8 * s), w: lw * 0.6, not: PL.poly([P(-85, 24), P(40, 24), P(40, 460), P(-85, 460)]) });
+  PL.ink(g, cas, ow); PL.ink(g, hood, ow);
+  const win = PL.rect(...P(-66, 165), 132 * s, 282 * s); PL.tint(g, win, PL.T.brown, 0.55); PL.ink(g, win, lw);   // 振り子の窓
+  const dial = PL.circle(...P(0, 90), 58 * s); PL.tint(g, dial, PL.T.sand, 0.9); PL.ink(g, dial, ow);
+  PL.ink(g, gg => { for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; gg.moveTo(...P(Math.sin(a) * 44, 90 - Math.cos(a) * 44)); gg.lineTo(...P(Math.sin(a) * 53, 90 - Math.cos(a) * 53)); } }, lw * 0.8);
   const mn = (o.min ?? 10) / 60 * Math.PI * 2, hr = ((o.hour ?? 3) + (o.min ?? 10) / 60) / 12 * Math.PI * 2;
-  g.strokeStyle = '#fff'; g.lineWidth = 5; g.beginPath(); g.moveTo(0, 90); g.lineTo(Math.sin(hr) * 30, 90 - Math.cos(hr) * 30); g.stroke();
-  g.strokeStyle = o.minColor || '#fff'; g.lineWidth = 4; g.beginPath(); g.moveTo(0, 90); g.lineTo(Math.sin(mn) * 48, 90 - Math.cos(mn) * 48); g.stroke();
-  // 振り子の窓
-  g.strokeStyle = 'rgba(200,220,255,0.35)'; g.lineWidth = 3; g.strokeRect(-70, 165, 140, 280);
-  g.translate(0, 172); g.rotate(ang);
-  g.strokeStyle = o.color || TK.C.acc; g.lineWidth = 5; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 225); g.stroke();
-  g.fillStyle = o.color || TK.C.acc; g.beginPath(); g.arc(0, 235, 24, 0, Math.PI * 2); g.fill();
+  PL.ink(g, gg => { gg.moveTo(...P(0, 90)); gg.lineTo(...P(Math.sin(hr) * 28, 90 - Math.cos(hr) * 28)); }, ow * 1.1);
+  PL.ink(g, gg => { gg.moveTo(...P(0, 90)); gg.lineTo(...P(Math.sin(mn) * 46, 90 - Math.cos(mn) * 46)); }, ow * 0.8, o.minColor || PL.INK);
+  // 振り子（棒とおもり）
+  const px = x, py = y + 172 * s, c = Math.cos(ang), n = Math.sin(ang), Q = (u, v) => [px + s * (u * c - v * n), py + s * (u * n + v * c)];
+  g.save(); g.beginPath(); win(g); g.clip();
+  PL.ink(g, gg => { gg.moveTo(...Q(0, 0)); gg.lineTo(...Q(0, 225)); }, ow);
+  const bob = PL.circle(...Q(0, 235), 24 * s); PL.tint(g, bob, o.bob || PL.T.gold, 1); PL.hatch(g, bob, { angle: 0.8, gap: Math.max(7, 6 * s), w: lw * 0.6, not: PL.circle(...Q(-8, 227), 24 * s) }); PL.ink(g, bob, ow * 0.9);
   g.restore();
 }
 // 木の梁（時計をかける横木）。dx: 横のずれ（大げさに）
 function beam(g, y, dx = 0, o = {}) {
-  g.save();
-  g.fillStyle = 'rgba(190,140,80,0.35)'; g.strokeStyle = o.hi ? TK.C.acc : 'rgba(230,190,140,0.85)'; g.lineWidth = o.hi ? 6 : 4;
-  g.beginPath(); g.roundRect(110 + dx, y - 28, PW - 340, 56, 8); g.fill(); g.stroke();
-  g.strokeStyle = 'rgba(230,190,140,0.35)'; g.lineWidth = 2;
-  for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(140 + dx, y - 12 + i * 12); g.bezierCurveTo(360 + dx, y - 20 + i * 12, 560 + dx, y - 2 + i * 12, 830 + dx, y - 10 + i * 12); g.stroke(); }
-  g.restore();
+  const b = PL.rect(110 + dx, y - 28, PW - 340, 56);
+  PL.tint(g, b, PL.T.wood, 0.8);
+  PL.ink(g, gg => { for (let i = 0; i < 3; i++) { gg.moveTo(140 + dx, y - 12 + i * 12); gg.bezierCurveTo(360 + dx, y - 20 + i * 12, 560 + dx, y - 2 + i * 12, 830 + dx, y - 10 + i * 12); } }, 1.6, 'rgba(35,28,21,0.45)');
+  PL.hatch(g, b, { angle: 0.9, gap: 8, w: 1.6, not: PL.rect(110 + dx, y - 28, PW - 340, 30) });
+  PL.ink(g, b, o.hi ? 7 : 5, o.hi ? PL.RED : PL.INK);
 }
-// ベッドの線画（寝ている人は頭の丸だけ）
+// ベッド（寝ている人は頭と髪だけ）
 function bed(g, x, y, s) {
-  g.save(); g.translate(x, y); g.scale(s, s);
-  g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = 'rgba(200,220,255,0.75)'; g.lineWidth = 5;
-  g.fillStyle = 'rgba(20,34,72,0.85)';
-  g.beginPath(); g.roundRect(-380, -150, 40, 230, 10); g.fill(); g.stroke();             // 頭の板
-  g.beginPath(); g.roundRect(-340, -20, 700, 60, 10); g.fill(); g.stroke();              // ふとん台
-  g.beginPath(); g.moveTo(-340, 40); g.lineTo(-340, 80); g.moveTo(360, 40); g.lineTo(360, 80); g.stroke();
-  g.fillStyle = 'rgba(95,212,255,0.18)'; g.strokeStyle = TK.C.acc2;
-  g.beginPath(); g.moveTo(-190, -20); g.bezierCurveTo(-120, -90, 220, -90, 350, -24); g.lineTo(350, -20); g.closePath(); g.fill(); g.stroke();   // 掛けぶとん
-  g.fillStyle = 'rgba(244,247,255,0.9)'; g.strokeStyle = 'rgba(200,220,255,0.9)';
-  g.beginPath(); g.ellipse(-280, -40, 55, 22, 0, 0, Math.PI * 2); g.fill(); g.stroke();   // まくら
-  g.fillStyle = 'rgba(20,34,72,0.95)'; g.beginPath(); g.arc(-245, -70, 36, 0, Math.PI * 2); g.fill(); g.stroke();   // 頭
-  g.restore();
+  const P = (px, py) => [x + px * s, y + py * s], R = (a, b, w, h) => PL.rect(...P(a, b), w * s, h * s), ow = Math.max(3, 4.5 * s);
+  const head = R(-380, -150, 40, 230), frame = R(-340, -20, 700, 60);
+  [head, frame].forEach(p => { PL.tint(g, p, PL.T.wood, 0.8); PL.hatch(g, p, { angle: 0.9, gap: 8, w: 1.6 }); PL.ink(g, p, ow); });
+  PL.ink(g, gg => { gg.moveTo(...P(-340, 40)); gg.lineTo(...P(-340, 80)); gg.moveTo(...P(360, 40)); gg.lineTo(...P(360, 80)); }, ow * 1.4);
+  const pillow = PL.ellipse(...P(-280, -40), 58 * s, 22 * s); PL.tint(g, pillow, '#f4eedc', 0.9); PL.ink(g, pillow, ow * 0.8);
+  const hd = PL.circle(...P(-245, -66), 34 * s); PL.tint(g, hd, PL.T.rose, 0.6); PL.ink(g, hd, ow * 0.9);
+  const hair = PL.poly([P(-278, -64), P(-272, -92), P(-245, -102), P(-216, -90), P(-226, -78), P(-250, -84), P(-262, -62)]); PL.tint(g, hair, PL.T.brown, 0.9); PL.hatch(g, hair, { angle: 0.4, gap: 7, w: 1.4 }); PL.ink(g, hair, ow * 0.7);
+  const blanket = PL.poly([P(-200, -20), ...qB(P(-200, -20), P(-120, -96), P(220, -92), P(352, -24)), P(352, -20)]);
+  PL.tint(g, blanket, PL.T.sea, 0.55); PL.hatch(g, blanket, { angle: 0.9, gap: 9, w: 1.6, not: PL.poly([P(-200, -60), P(360, -90), P(360, -120), P(-200, -120)]) });
+  PL.ink(g, gg => { for (let i = 1; i < 5; i++) { gg.moveTo(...P(-200 + i * 110, -24)); gg.quadraticCurveTo(...P(-190 + i * 110, -50), ...P(-200 + i * 110 + 20, -78)); } }, 1.6, 'rgba(35,28,21,0.5)');   // ふとんのしわ
+  PL.ink(g, blanket, ow);
 }
-function tag(g, t) {
+function qB(p0, c1, c2, p1, n = 16) { return Array.from({ length: n + 1 }, (_, i) => { const t = i / n, a = (1 - t) ** 3, b = 3 * t * (1 - t) ** 2, c = 3 * t * t * (1 - t), d = t ** 3; return [a * p0[0] + b * c1[0] + c * c2[0] + d * p1[0], a * p0[1] + b * c1[1] + c * c2[1] + d * p1[1]]; }); }
+function tag(g, t) {   // 字幕の帯のすぐ上に「聞き手」「答える人」の札
   const s = subs.find(x => t >= x.a && t < x.b && !x.noBurn); if (!s) return;
   const q = s.who === 'q', f = fade(t, s.a, s.b, 0.12);
   g.save(); g.globalAlpha = f;
-  const lines = s.ja.split('\n').length, y = PH * 0.615 - (lines - 1) * 42 - 82;
-  const w = 210, x = PW / 2 - w / 2;
-  TK.card(g, x, y - 30, w, 60, { r: 30, fill: q ? 'rgba(95,212,255,0.25)' : 'rgba(255,207,74,0.25)', stroke: q ? TK.C.acc2 : TK.C.acc });
-  TK.text(g, q ? '聞き手' : '答える人', PW / 2, y + 2, 34, { color: q ? TK.C.acc2 : TK.C.acc });
+  const lines = s.ja.split('\n').length, y = PL.SUBY - PL.bandH(lines) - 42;
+  const w = 220, x = PW / 2 - w / 2;
+  TK.card(g, x, y - 30, w, 60, {});
+  PL.label(g, q ? '聞き手' : '答える人', PW / 2, y + 2, 34, { color: q ? '#2f5f7a' : PL.RED });
   g.restore();
 }
 // 2つの時計を梁にかけた場面
@@ -110,18 +112,20 @@ const BY = 400, X1 = 330, X2 = 690;
 function twoClocks(g, t, o = {}) {
   const [a1, a2] = angs(t), dx = o.wob ? 7 * Math.sin(WS * t) : 0;
   beam(g, BY, dx, o);
-  pclock(g, X1 + dx, BY + 20, o.s || 1, a1, { color: TK.C.acc, min: o.min, hour: o.hour });
-  pclock(g, X2 + dx, BY + 20, o.s || 1, a2, { color: TK.C.acc2, min: o.min, hour: o.hour, minColor: o.minColor });
+  pclock(g, X1 + dx, BY + 20, o.s || 1, a1, { min: o.min, hour: o.hour });
+  pclock(g, X2 + dx, BY + 20, o.s || 1, a2, { bob: PL.T.sea, min: o.min, hour: o.hour, minColor: o.minColor });
 }
+function ok(g, x, y, rx, ry, k) { g.save(); g.globalAlpha *= k; PL.ink(g, PL.ellipse(x, y, rx, ry), 12, PL.GREEN); g.restore(); }
+function ng(g, x0, y0, x1, y1, k) { g.save(); g.globalAlpha *= k; PL.ink(g, gg => { gg.moveTo(x0, y0); gg.lineTo(x1, y1); gg.moveTo(x1, y0); gg.lineTo(x0, y1); }, 14, PL.RED); g.restore(); }
 
 function draw(g, t) {
   // 0〜3: フック。時計2つ＋ベッド「1665年2月」
   if (t < 3.0) {
     const [a1, a2] = angs(t + 9);
-    TK.text(g, '[1665年2月]', PW / 2 - 60, 290, 80);
+    PL.label(g, '[1665年2月]', PW / 2 - 60, 290, 80);
     beam(g, 400);
-    pclock(g, X1, 420, 0.68, a1, { color: TK.C.acc });
-    pclock(g, X2, 420, 0.68, a2, { color: TK.C.acc2 });
+    pclock(g, X1, 420, 0.68, a1);
+    pclock(g, X2, 420, 0.68, a2, { bob: PL.T.sea });
     bed(g, 520, 960, 1.0);
     TK.hook(g, t, 0.15, 1.7, 'だれが\n見つけた？', { y: 1130, size: 110 });
   }
@@ -129,90 +133,80 @@ function draw(g, t) {
   if (t >= 3.0 && t < 9.0) {
     const k = TK.pop(t, 3.3, 0.4);
     g.save(); g.globalAlpha = clamp(k, 0, 1);
-    TK.card(g, 120, 220, PW - 360, 300, { r: 36 });
-    TK.text(g, '1665年 [2月26日]', PW / 2 - 60, 300, 76);
-    TK.text(g, 'ホイヘンス（オランダ）', PW / 2 - 60, 390, 54);
-    TK.text(g, '父への手紙より', PW / 2 - 60, 465, 44, { color: TK.C.sub, bold: false });
+    TK.card(g, 120, 200, PW - 360, 300);
+    PL.label(g, '1665年 [2月26日]', PW / 2 - 60, 280, 76);
+    PL.label(g, 'ホイヘンス（オランダ）', PW / 2 - 60, 370, 54);
+    PL.label(g, '父への手紙より', PW / 2 - 60, 445, 44, { color: TK.C.sub, bold: false });
     g.restore();
     const [a1, a2] = angs(t + 9);
-    pclock(g, 300, 550, 0.5, a1, { color: TK.C.acc });
-    pclock(g, 560, 550, 0.5, a2, { color: TK.C.acc2 });
-    bed(g, 520, 895, 0.85);
-    TK.note(g, t, 3.6, 9, 'なぜベッドにいたのかは、手紙に書かれていない', { size: 32 });
+    beam(g, 545);
+    pclock(g, 330, 560, 0.5, a1);
+    pclock(g, 590, 560, 0.5, a2, { bob: PL.T.sea });
+    bed(g, 520, 920, 0.85);
+    TK.note(g, t, 3.6, 9, 'なぜベッドにいたのかは、手紙に書かれていない', { size: 32, y: 1045 });
   }
   // 9〜15: 逆向きにそろう
   if (t >= 9.0 && t < 15.0) {
-    TK.text(g, '2つの振り子', PW / 2 - 60, 280, 60, { color: TK.C.sub });
+    PL.label(g, '2つの振り子', PW / 2 - 60, 280, 60, { color: TK.C.sub });
     twoClocks(g, t);
     if (t > 11.6) {
       g.save(); g.globalAlpha = fade(t, 11.6, 15, 0.3);
-      TK.card(g, 260, 905, 440, 90, { r: 45, fill: 'rgba(255,207,74,0.18)', stroke: TK.C.acc });
-      TK.text(g, '[逆向き]にそろう', PW / 2 - 60, 951, 50);
+      TK.card(g, 260, 925, 440, 90);
+      PL.label(g, '[逆向き]にそろう', PW / 2 - 60, 971, 50);
+      const [a1, a2] = angs(t);   // 振れる向きの矢印（おもりの下）
+      [[X1, a1], [X2, a2]].forEach(([x, a]) => { const d = Math.sign(Math.cos(WS * t) * (x === X1 ? 1 : -1)) || 1; PL.ink(g, gg => { gg.moveTo(x - 40 * d, 895); gg.lineTo(x + 40 * d, 895); gg.moveTo(x + 22 * d, 883); gg.lineTo(x + 40 * d, 895); gg.lineTo(x + 22 * d, 907); }, 4, PL.RED); });
       g.restore();
     }
   }
   // 15〜21: ずらす → 30分 → また元どおり
   if (t >= 15.0 && t < 21.0) {
     const k = clamp((t - 16.4) / 2.9, 0, 1), m = Math.round(30 * ease(k));
-    twoClocks(g, t, { min: 10 + 30 * ease(k), hour: 3, minColor: TK.C.red });
+    twoClocks(g, t, { min: 10 + 30 * ease(k), hour: 3, minColor: PL.RED });
     if (t > 15.4 && t < 16.4) {   // 押した印
       g.save(); g.globalAlpha = fade(t, 15.4, 16.4, 0.15);
-      g.strokeStyle = TK.C.red; g.fillStyle = TK.C.red; g.lineWidth = 8; g.lineCap = 'round';
-      g.beginPath(); g.moveTo(X2 + 230, 820); g.lineTo(X2 + 120, 820); g.stroke();
-      g.beginPath(); g.moveTo(X2 + 100, 820); g.lineTo(X2 + 135, 798); g.lineTo(X2 + 135, 842); g.closePath(); g.fill();
-      TK.text(g, 'ずらす', X2 + 170, 770, 44, { color: TK.C.red });
+      PL.ink(g, gg => { gg.moveTo(X2 + 230, 820); gg.lineTo(X2 + 110, 820); gg.moveTo(X2 + 135, 800); gg.lineTo(X2 + 108, 820); gg.lineTo(X2 + 135, 840); }, 8, PL.RED);
+      PL.label(g, 'ずらす', X2 + 175, 765, 44, { color: PL.RED });
       g.restore();
     }
-    TK.card(g, 290, 200, 380, 120, { r: 60 });
-    TK.text(g, t < 16.4 ? 'ずれた！' : (k < 1 ? m + ' 分' : '[30分]で元どおり'), PW / 2 - 60, 262, k < 1 ? 64 : 52, { color: k < 1 ? '#fff' : TK.C.acc });
-    TK.note(g, t, 16.4, 21, '絵の時間はちぢめてある（本当は 30 分）', { size: 32, y: 1000 });
+    TK.card(g, 240, 200, 480, 120);
+    PL.label(g, t < 16.4 ? 'ずれた！' : (k < 1 ? m + ' 分' : '[30分]で元どおり'), PW / 2 - 60, 262, k < 1 ? 64 : 52, { color: k < 1 ? PL.INK : PL.RED });
+    TK.note(g, t, 16.4, 21, '絵の時間はちぢめてある（本当は 30 分）', { size: 32, y: 960 });
   }
   // 21〜28: 空気？ × → 木の梁 ○
   if (t >= 21.0 && t < 28.0) {
     const air = t < 24.6;
     twoClocks(g, t, { wob: !air, hi: !air });
     if (air) {
-      // 空気の流れ（波線）
-      g.save(); g.globalAlpha = fade(t, 21.2, 24.6, 0.3) * 0.8; g.strokeStyle = TK.C.acc2; g.lineWidth = 4;
-      for (let i = 0; i < 4; i++) {
-        const y = 700 + i * 50; g.beginPath();
-        for (let x = 420; x <= 600; x += 6) { const yy = y + 12 * Math.sin((x - 420) / 22 + t * 5 + i); x === 420 ? g.moveTo(x, yy) : g.lineTo(x, yy); }
-        g.stroke();
-      }
+      g.save(); g.globalAlpha = fade(t, 21.2, 24.6, 0.3) * 0.85;
+      PL.ink(g, gg => { for (let i = 0; i < 4; i++) { const y = 700 + i * 50; for (let x = 420; x <= 600; x += 6) { const yy = y + 12 * Math.sin((x - 420) / 22 + t * 5 + i); x === 420 ? gg.moveTo(x, yy) : gg.lineTo(x, yy); } } }, 4, '#2f5f7a');
       g.restore();
-      TK.card(g, 240, 200, 480, 120, { r: 60 });
-      TK.text(g, '空気の流れ？', PW / 2 - 60, 262, 60);
-      if (t > 22.4) {
-        g.save(); g.globalAlpha = fade(t, 22.4, 24.6, 0.2); g.strokeStyle = TK.C.red; g.lineWidth = 16; g.lineCap = 'round';
-        g.beginPath(); g.moveTo(420, 660); g.lineTo(600, 880); g.moveTo(600, 660); g.lineTo(420, 880); g.stroke(); g.restore();
-      }
+      TK.card(g, 240, 200, 480, 120);
+      PL.label(g, '空気の流れ？', PW / 2 - 60, 262, 60);
+      if (t > 22.4) ng(g, 420, 660, 600, 880, fade(t, 22.4, 24.6, 0.2));
     } else {
-      TK.card(g, 150, 200, 660, 120, { r: 60, fill: 'rgba(89,227,154,0.18)', stroke: TK.C.green });
-      TK.text(g, '[木の梁]が ほんの少し動く', PW / 2 - 60, 262, 54);
-      if (t > 25.6) {   // ○
-        g.save(); g.globalAlpha = fade(t, 25.6, 28, 0.2); g.strokeStyle = TK.C.green; g.lineWidth = 14;
-        g.beginPath(); g.ellipse(PW / 2 - 60, BY, 420, 80, 0, 0, Math.PI * 2); g.stroke(); g.restore();
-      }
-      TK.note(g, t, 24.8, 28, '梁の動きは大げさに描いた（本当は目に見えないほど）', { size: 32, y: 1000 });
+      TK.card(g, 150, 200, 660, 120);
+      PL.label(g, '[木の梁]が ほんの少し動く', PW / 2 - 60, 262, 54);
+      if (t > 25.6) ok(g, PW / 2 - 60, BY, 420, 80, fade(t, 25.6, 28, 0.2));
+      TK.note(g, t, 24.8, 28, '梁の動きは大げさに描いた（本当は目に見えないほど）', { size: 32, y: 960 });
     }
   }
   // 28〜35: 340年後の再現
   if (t >= 28.0) {
     const k = TK.pop(t, 28.3, 0.4);
     g.save(); g.globalAlpha = clamp(k, 0, 1);
-    TK.card(g, 150, 190, PW - 420, 160, { r: 40 });
-    TK.text(g, '約340年後', PW / 2 - 60, 250, 64, { color: TK.C.acc });
-    TK.text(g, '同じつくりの時計で再現', PW / 2 - 60, 315, 44, { color: TK.C.sub, bold: false });
+    TK.card(g, 150, 170, PW - 420, 160);
+    PL.label(g, '約340年後', PW / 2 - 60, 230, 64, { color: PL.RED });
+    PL.label(g, '同じつくりの時計で再現', PW / 2 - 60, 295, 44, { color: TK.C.sub, bold: false });
     g.restore();
     twoClocks(g, t, { s: 0.9 });
     if (t > 29.6) {
       g.save(); g.globalAlpha = fade(t, 29.6, 35, 0.3);
-      TK.card(g, 240, 880, 480, 90, { r: 45, fill: 'rgba(255,207,74,0.18)', stroke: TK.C.acc });
-      TK.text(g, 'いつも [逆向き]', PW / 2 - 60, 926, 50);
+      TK.card(g, 240, 870, 480, 90);
+      PL.label(g, 'いつも [逆向き]', PW / 2 - 60, 916, 50);
       g.restore();
     }
     TK.note(g, t, 29.6, 31.6, '再現でも、そろわずに止まってしまうこともあった', { size: 32 });
-    TK.note(g, t, 31.8, 35, '出どころ: Pikovsky ほか (2001) Synchronization 付録A1（1665年の手紙）\nBennett ほか (2002) Proc. R. Soc. A 458:563・Scientific American (2000)', { size: 28 });
+    TK.note(g, t, 31.8, 35, '出どころ: Pikovsky ほか (2001) Synchronization 付録A1（1665年の手紙）\nBennett ほか (2002) Proc. R. Soc. A 458:563・Scientific American (2000)', { size: 28, y: 1030 });
   }
   tag(g, t);
 }

@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく pitch-physics-2（型B もしも計算）「もしも月で変化球を投げたら」。台本は trivia/pitch-physics.md。?short で録る
@@ -36,92 +39,143 @@ const cues = [
   { t: 19.0, type: 'whoosh' }, { t: 21.6, type: 'tick' }, { t: 25.0, type: 'whoosh' }, { t: 26.0, type: 'pop' },
 ];
 const NAMES = ['ストレートの回転', 'カーブの回転', 'スライダーの回転', '回転なし'];
-const COLS = ['#ffcf4a', '#ff6b6b', '#59e39a', '#5fd4ff'];
+const COLS = ['#a87a1e', PL.RED, PL.GREEN, '#2f5f7a'];   // 手彩色の墨の色（金・朱・緑・藍）
 
+// 野球のボール（革の手彩色・かげ・赤い縫い目）。何個もまとめて1回でぬる（筆のルックはぬるたびにぼかすので、回数を少なく）
+// B: [{ x, y, r, tint, ring }]
+function balls(g, B) {
+  if (!B.length) return;
+  const un = (L, f) => gg => L.forEach(b => f(b)(gg));
+  PL.tint(g, un(B.filter(b => !b.tint), b => PL.circle(b.x, b.y, b.r)), PL.T.sand, 0.35);
+  const hl = B.filter(b => b.tint); if (hl.length) PL.tint(g, un(hl, b => PL.circle(b.x, b.y, b.r)), hl[0].tint, 0.8);
+  const big = B.filter(b => b.r >= 10);
+  if (big.length) PL.hatch(g, un(big, b => PL.circle(b.x, b.y, b.r)), { angle: 0.7, gap: 4.5, w: 1.2, not: un(big, b => PL.circle(b.x - b.r * 0.35, b.y - b.r * 0.35, b.r)) });
+  const seam = b => gg => { const { x, y, r } = b, R = r * 0.95, c1 = x - r * 1.3, c2 = x + r * 1.3; gg.moveTo(c1 + R * Math.cos(-0.8), y + R * Math.sin(-0.8)); gg.arc(c1, y, R, -0.8, 0.8); gg.moveTo(c2 + R * Math.cos(Math.PI + 0.8), y + R * Math.sin(Math.PI + 0.8)); gg.arc(c2, y, R, Math.PI + 0.8, Math.PI - 0.8, true); };
+  PL.ink(g, un(B, seam), Math.max(1.2, B[0].r / 9), PL.RED);
+  const cols = [...new Set(B.map(b => b.ring || PL.INK))];
+  cols.forEach(c => { const L = B.filter(b => (b.ring || PL.INK) === c); PL.ink(g, un(L, b => PL.circle(b.x, b.y, b.r)), Math.max(2.4, L[0].r / 6), c); });
+}
+const baseball = (g, x, y, r, o = {}) => balls(g, [Object.assign({ x, y, r }, o)]);
 // 捕手の目（遠近）
 const CAMY = -1.2, CAMZ = 0.9, FOC = 900, CCX = 600, CCY = 560;
 const proj = (x, y, z) => { const d = y - CAMY; return [CCX + FOC * x / d, CCY - FOC * (z - CAMZ) / d]; };
+function field(g, moon) {   // 地面（遠いほどつまる横線）。地球は芝とマウンド、月は灰色の砂とクレーター
+  const top = CCY + 30, turf = PL.rect(30, top, PW - 60, 1190 - top);
+  PL.tint(g, turf, moon ? PL.T.gray : PL.T.land, 0.3);
+  PL.ink(g, gg => { for (let k = 1; k < 9; k++) { const d = 1.6 + k * k * 0.45, y = CCY + FOC * CAMZ / d; if (y < 1190 && y > top + 6) { gg.moveTo(30, y); gg.lineTo(PW - 30, y); } } }, 1.2, 'rgba(35,28,21,0.3)');
+  if (moon) [[180, 700, 70], [880, 640, 46], [900, 960, 90]].forEach(([x, y, r]) => crater(g, x, y, r));
+  else {
+    const [mx, my] = proj(0, 18.44, 0), rx = FOC * 2.7 / (18.44 - CAMY), mound = PL.ellipse(mx, my, rx, 10);
+    PL.tint(g, mound, PL.T.sand, 0.85); PL.ink(g, mound, 3);
+  }
+  PL.ink(g, gg => { gg.moveTo(30, top); gg.lineTo(PW - 30, top); }, 2);
+}
+function crater(g, x, y, r) {   // 上から少しななめに見たクレーター（ふちと内がわのかげ）
+  const rim = PL.ellipse(x, y, r, r * 0.3), pit = PL.ellipse(x + r * 0.05, y + r * 0.03, r * 0.8, r * 0.22);
+  PL.tint(g, rim, PL.T.gray, 0.5);
+  PL.hatch(g, pit, { angle: 0.4, gap: 6, w: 1.5, not: PL.ellipse(x + r * 0.3, y + r * 0.08, r * 0.8, r * 0.22) });
+  PL.ink(g, rim, 3); PL.ink(g, gg => { gg.moveTo(x - r * 0.75, y); gg.ellipse(x + r * 0.05, y + r * 0.03, r * 0.8, r * 0.22, 0, Math.PI, 0); }, 2);
+}
 function zone(g) {
   const [x0, y0] = proj(-0.215, 0.43, 1.05), [x1, y1] = proj(0.215, 0.43, 0.48);
-  g.strokeStyle = 'rgba(255,255,255,0.4)'; g.lineWidth = 4; g.strokeRect(x0, y0, x1 - x0, y1 - y0);
-  const [gx0, gy] = proj(-3, 0.43, 0), [gx1] = proj(3, 0.43, 0);
-  g.strokeStyle = 'rgba(255,255,255,0.25)'; g.beginPath(); g.moveTo(gx0, gy); g.lineTo(gx1, gy); g.stroke();
+  PL.ink(g, gg => { for (let k = 1; k < 3; k++) { const x = lerp(x0, x1, k / 3), y = lerp(y0, y1, k / 3); gg.moveTo(x, y0); gg.lineTo(x, y1); gg.moveTo(x0, y); gg.lineTo(x1, y); } }, 1.4, 'rgba(35,28,21,0.45)');
+  PL.ink(g, PL.rect(x0, y0, x1 - x0, y1 - y0), 5);
 }
-function paths(g, set, k, o = {}) {
+function paths(g, set, k, o = {}) {   // 計算した道すじをそのまま
   set.forEach((s, b) => {
     const m = Math.floor(k * (s.p.length - 1));
-    g.strokeStyle = o.color || COLS[b]; g.lineWidth = o.lw || 6; g.beginPath();
-    for (let i = 0; i <= m; i++) { const [x, y] = proj(...s.p[i]); i ? g.lineTo(x, y) : g.moveTo(x, y); }
-    g.stroke();
-    if (m > 0) { const q = s.p[m], [x, y] = proj(...q); g.fillStyle = '#fff'; g.beginPath(); g.arc(x, y, Math.max(5, FOC * 0.037 / (q[1] - CAMY)), 0, Math.PI * 2); g.fill(); }
+    if (m > 0) PL.ink(g, gg => { for (let i = 0; i <= m; i++) { const [x, y] = proj(...s.p[i]); i ? gg.lineTo(x, y) : gg.moveTo(x, y); } }, o.lw || 6, o.color || COLS[b]);
   });
+  if (o.balls === false) return;
+  balls(g, set.map((s, b) => { const m = Math.floor(k * (s.p.length - 1)); if (m <= 0) return null; const q = s.p[m], [x, y] = proj(...q); return { x, y, r: Math.max(6, FOC * 0.037 / (q[1] - CAMY)), ring: o.color ? PL.INK : COLS[b] }; }).filter(Boolean));
 }
-// 月面（でこぼこの線と、クレーター）
-function moonGround(g) {
-  g.fillStyle = 'rgba(180,185,200,0.18)'; g.fillRect(0, 1010, PW, 60);
-  g.strokeStyle = 'rgba(220,225,240,0.6)'; g.lineWidth = 4; g.beginPath();
-  for (let x = 0; x <= PW; x += 20) { const y = 1010 + Math.sin(x * 0.013) * 8 + Math.sin(x * 0.05) * 3; x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
-  [[200, 1040, 60], [760, 1035, 40]].forEach(([x, y, r]) => { g.beginPath(); g.ellipse(x, y, r, r * 0.25, 0, 0, Math.PI * 2); g.stroke(); });
+// 月面を横から（でこぼこの地面・砂の層・クレーターの断面）と、空の地球
+function moonGround(g, base = 1010) {
+  const surf = x => base + Math.sin(x * 0.013) * 8 + Math.sin(x * 0.05) * 3 - (Math.abs(x - 230) < 90 ? 24 * Math.cos((x - 230) / 90 * Math.PI / 2) ** 2 * -1 : 0);
+  const land = gg => { gg.moveTo(0, 1190); for (let x = 0; x <= PW; x += 12) gg.lineTo(x, surf(x)); gg.lineTo(PW, 1190); gg.closePath(); };
+  PL.tint(g, land, PL.T.gray, 0.55);
+  PL.hatch(g, land, { angle: 0.8, gap: 11, w: 1.8 });
+  PL.ink(g, gg => { for (let k = 0; k < 2; k++) { const y0 = base + 50 + k * 45; gg.moveTo(0, y0); for (let x = 0; x <= PW; x += 30) gg.lineTo(x, y0 + Math.sin(x * 0.02 + k * 2) * 5); } }, 1.4, 'rgba(35,28,21,0.5)');   // 砂の層
+  PL.ink(g, gg => { for (let x = 0; x <= PW; x += 12) x ? gg.lineTo(x, surf(x)) : gg.moveTo(x, surf(x)); }, 5);
+  [[620, -7, 9], [690, -4, 5], [900, -10, 7], [420, -1, 6]].map(([x, y, r]) => [x, base + y, r]).forEach(([x, y, r]) => { const s = PL.ellipse(x, y - r * 0.4, r * 1.6, r); PL.tint(g, s, PL.T.gray, 0.8); PL.ink(g, s, 2.4); });   // 石
+}
+function earth(g, x, y, r) {   // 月の空の地球
+  PL.sphere(g, x, y, r, PL.T.sea, { light: [-1, -0.3], inside: gg => { const p = gg2 => { PL.ellipse(x - r * 0.25, y - r * 0.2, r * 0.32, r * 0.22, -0.4)(gg2); PL.ellipse(x + r * 0.3, y + r * 0.3, r * 0.25, r * 0.15, 0.3)(gg2); }; PL.tint(gg, p, PL.T.land, 0.8); PL.ink(gg, p, 2); } });
+}
+function legend(g, y) {
+  NAMES.forEach((n, i) => {
+    const x = 120 + (i % 2) * 450, yy = y + Math.floor(i / 2) * 58;
+    PL.ink(g, gg => { gg.moveTo(x, yy); gg.lineTo(x + 50, yy); }, 7, COLS[i]);
+    PL.label(g, n, x + 66, yy, 34, { align: 'left', color: TK.C.sub, bold: false });
+  });
 }
 
 function draw(g, t) {
   // 0〜2.2: フック（月面）
   if (t < 2.2) {
-    moonGround(g);
-    TK.hook(g, t, 0.0, 2.2, '月で、[カーブ]を\n投げたら？', { y: 560, size: 120 });
+    moonGround(g); earth(g, 850, 300, 80);
+    TK.hook(g, t, 0.0, 2.2, '月で、[カーブ]を\n投げたら？', { y: 640, size: 120 });
   }
   // 2.2〜7: 地球。4本がそれぞれ曲がる
   if (t >= 2.2 && t < 7.0) {
-    zone(g);
+    field(g, false); zone(g);
     paths(g, EARTH, clamp((t - 2.8) / 2.0, 0, 1));
-    TK.text(g, '[地球]（空気あり）', PW / 2, 220, 64);
-    TK.text(g, '同じ速さ・同じ向きで、回転だけちがう4球', PW / 2, 300, 36, { color: TK.C.sub, bold: false });
-    NAMES.forEach((n, i) => { g.fillStyle = COLS[i]; g.fillRect(150 + (i % 2) * 420, 1010 + Math.floor(i / 2) * 56, 40, 14); TK.text(g, n, 205 + (i % 2) * 420, 1017 + Math.floor(i / 2) * 56, 34, { align: 'left', color: TK.C.sub, bold: false }); });
+    PL.label(g, '[地球]（空気あり）', PW / 2, 220, 64);
+    PL.label(g, '同じ速さ・同じ向きで、回転だけちがう4球', PW / 2, 300, 36, { color: TK.C.sub, bold: false });
+    TK.card(g, 90, 1040, 900, 140); legend(g, 1082);
     TK.note(g, t, 2.6, 7, '152 km/h・捕手の目から。アプリのモデルで計算', { size: 32 });
   }
   // 7〜12: 月。4本が1本に
   if (t >= 7.0 && t < 12.0) {
-    zone(g);
-    g.save(); g.globalAlpha = 0.25; paths(g, EARTH, 1, { lw: 4 }); g.restore();
-    paths(g, MOON, clamp((t - 7.8) / 2.0, 0, 1), { color: '#fff', lw: 8 });
-    TK.text(g, '[月]（空気なし・重力 1/6）', PW / 2, 220, 64);
-    if (t > 10.2) { g.save(); g.globalAlpha = fade(t, 10.2, 12, 0.3); TK.text(g, '4本とも [同じ線]', PW / 2, 1010, 72); g.restore(); }
+    field(g, true); zone(g);
+    g.save(); g.globalAlpha = 0.3; paths(g, EARTH, 1, { lw: 4, balls: false }); g.restore();
+    paths(g, MOON, clamp((t - 7.8) / 2.0, 0, 1), { color: PL.INK, lw: 8 });
+    PL.label(g, '[月]（空気なし・重力 1/6）', PW / 2, 220, 64);
+    if (t > 10.2) { g.save(); g.globalAlpha = fade(t, 10.2, 12, 0.3); g.fillStyle = PL.PAPER; g.fillRect(240, 1040, 600, 130); TK.card(g, 240, 1040, 600, 130); PL.label(g, '4本とも [同じ線]', PW / 2, 1105, 72); g.restore(); }
     TK.note(g, t, 7.4, 12, 'うすい線は地球の4本。月は同じ向きで投げると高めに着く', { size: 32 });
   }
   // 12〜19: 落ちる量
   if (t >= 12.0 && t < 19.0) {
-    TK.text(g, '152 km/h の球が、ホームまでに落ちる高さ', PW / 2, 230, 46, { color: TK.C.sub });
+    PL.label(g, '152 km/h の球が、ホームまでに落ちる高さ', PW / 2, 230, 46, { color: TK.C.sub });
     TK.bars(g, t, 12.2, 19.0, [
       { label: '地球・回転なし', v: 80 / 85, color: TK.C.acc2, text: '約 80 cm' },
       { label: '地球・ストレートの回転', v: 31 / 85, color: TK.C.green, text: '約 31 cm' },
       { label: '月（空気なし）… [12 cm]', v: 12.4 / 85, color: TK.C.acc, text: '' },
     ], { y: 340, gap: 210, stagger: 0.8 });
+    g.save(); g.globalAlpha = fade(t, 12.4, 19, 0.3); earth(g, 230, 1050, 70); moonSmall(g, 470, 1070, 30); PL.label(g, '重力 [1/6]', 760, 1060, 56); g.restore();
     TK.note(g, t, 12.4, 19, '計算（放してからホームまで 16.5 m）', { size: 32 });
   }
   // 19〜25: 標高 1600 m の球場
   if (t >= 19.0 && t < 25.0) {
-    TK.text(g, 'ストレートが落ちる高さ', PW / 2, 230, 50, { color: TK.C.sub });
+    PL.label(g, 'ストレートが落ちる高さ', PW / 2, 230, 50, { color: TK.C.sub });
     TK.bars(g, t, 19.2, 25.0, [
       { label: 'ふつうの球場（空気 1.2 kg/m³）', v: 31 / 50, color: TK.C.green, text: '31 cm' },
       { label: '標高 1600 m（空気 約8割）', v: 40 / 50, color: TK.C.red, text: '40 cm' },
     ], { y: 360, gap: 240, stagger: 0.9 });
-    if (t > 21.6) { g.save(); g.globalAlpha = fade(t, 21.6, 25, 0.3); TK.text(g, '[9 cm] 低く着く', PW / 2, 900, 80); g.restore(); }
+    g.save(); g.globalAlpha = fade(t, 19.2, 25, 0.3); mountain(g, 760, 1150); g.restore();
+    if (t > 21.6) { g.save(); g.globalAlpha = fade(t, 21.6, 25, 0.3); PL.label(g, '[9 cm] 低く着く', 330, 950, 80); g.restore(); }
     TK.note(g, t, 19.4, 25, '空気の割合は気温で変わる（目安）。計算', { size: 32 });
   }
   // 25〜30: 月で何球投げても同じ線
   if (t >= 25.0) {
-    moonGround(g);
-    const L = MOON[0].p;
-    g.save(); g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 5; g.setLineDash([12, 12]); g.beginPath();
-    L.forEach((q, i) => { const x = lerp(140, 940, (16.64 - q[1]) / 16.2), y = 900 - (q[2] - 0.4) * 300; i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke(); g.restore();
+    moonGround(g, 880); earth(g, 920, 220, 55);
+    const L = MOON[0].p, X = q => lerp(140, 940, (16.64 - q[1]) / 16.2), Y = q => 900 - (q[2] - 0.4) * 300;
+    PL.dots(g, L.map(q => [X(q), Y(q)]), { color: PL.INK, w: 5, dash: [12, 12] });
     for (let b = 0; b < 4; b++) {
       const u = ((t - 25.2) * 0.9 - b * 0.25); if (u < 0) continue; const k = u % 1, i = Math.floor(k * (L.length - 1)), q = L[i];
-      const x = lerp(140, 940, (16.64 - q[1]) / 16.2), y = 900 - (q[2] - 0.4) * 300;
-      g.fillStyle = COLS[b]; g.beginPath(); g.arc(x, y, 16, 0, Math.PI * 2); g.fill();
+      baseball(g, X(q), Y(q), 18, { ring: COLS[b] });
     }
-    TK.text(g, 'どの回転でも、[同じ道]', PW / 2, 380, 70);
-    TK.note(g, t, 26.0, 30, '出どころ: A. M. Nathan (2011) Baseball Prospectus・J. Kalk (2008) The Hardball Times\n月の重力: NASA Moon Fact Sheet。計算は pitch-physics のモデル', { size: 28 });
+    PL.label(g, 'どの回転でも、[同じ道]', PW / 2, 380, 70);
+    TK.note(g, t, 26.0, 30, '出どころ: A. M. Nathan (2011) Baseball Prospectus・J. Kalk (2008) The Hardball Times\n月の重力: NASA Moon Fact Sheet。計算は pitch-physics のモデル', { size: 28, y: 1140 });
   }
+}
+function moonSmall(g, x, y, r) { PL.sphere(g, x, y, r, PL.T.gray, { contour: false }); [[-0.3, -0.2, 0.22], [0.35, 0.25, 0.16]].forEach(([u, v, s]) => PL.ink(g, PL.circle(x + u * r, y + v * r, s * r), 1.6)); }
+function mountain(g, x, y) {   // 標高 1600 m の山と球場（かざり）
+  const m = PL.poly([[x - 280, y], [x - 120, y - 190], [x - 60, y - 150], [x + 40, y - 250], [x + 260, y]]);
+  PL.tint(g, m, PL.T.brown, 0.45); PL.hatch(g, m, { angle: 0.9, gap: 9, w: 1.8, not: PL.poly([[x - 400, y], [x - 120, y - 190], [x - 60, y - 150], [x + 40, y - 250], [x + 40, y]]) }); PL.ink(g, m, 4);
+  const snow = PL.poly([[x + 40, y - 250], [x + 82, y - 202], [x + 50, y - 210], [x + 20, y - 196], [x - 4, y - 214]]); PL.tint(g, snow, PL.PAPER, 1); PL.ink(g, snow, 3);
+  PL.ink(g, gg => { gg.moveTo(x - 300, y); gg.lineTo(x + 280, y); }, 4);
+  PL.leader(g, x + 40, y - 254, x + 40, y - 300); PL.label(g, '1600 m', x + 40, y - 330, 36, { color: TK.C.sub });
 }
 
 triviaStart({ out: 'pitch-physics-trivia2', voice: 'auto', dur: DUR, draw, subs, cues, peek: 1.5 });

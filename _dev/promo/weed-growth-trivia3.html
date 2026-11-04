@@ -11,10 +11,14 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく weed-growth-3（型E ズーム）「畑の土 1m² に、雑草のタネが最大16万粒」。台本は trivia/weed-growth.md。?short で録る
 // 1株 3,811粒（green foxtail、Kegode & Forcella）・生きたタネ 600〜162,000粒/m²（Forcella ほか 1992、アメリカのコーンベルト）
+// 絵は図鑑の版画（PL.*）。エノコログサは株立ちの茎・細長い葉・うなだれる円柱の穂と剛毛。
 // 10cm 四方に最大 1,620粒（点は 1,620 個そのまま描く）。芽を出すのは最大 30%（giant foxtail の値）
 const DUR = 30;
 const subs = [
@@ -30,69 +34,105 @@ const cues = [
   { t: 0.05, type: 'pop' }, { t: 1.8, type: 'rise' }, { t: 3.6, type: 'ding' }, { t: 4.0, type: 'whoosh' }, { t: 6.0, type: 'whoosh' },
   { t: 10.0, type: 'rise' }, { t: 12.6, type: 'ding' }, { t: 16.0, type: 'whoosh' }, { t: 18.6, type: 'ding' }, { t: 22.0, type: 'pop' }, { t: 23.2, type: 'rise' }, { t: 26.0, type: 'whoosh' },
 ];
-const SEED = '#e6c27a', LEAF = '#7fd18b', SOIL = '#5a3e26';
 const rnd = (i, k = 1) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
+// ---- エノコログサ（Setaria viridis）を図鑑の版画（PL.*）で ----
+// 株もとから何本も茎（稈）が立ち、節から細長い葉。茎の先に円柱形の穂（ふさふさの剛毛）が、少しうなだれる
+const fr = (ox, oy, a) => (u, v) => [ox + Math.sin(a) * u + Math.cos(a) * v, oy - Math.cos(a) * u + Math.sin(a) * v];   // u: 上へ（a だけ傾く）、v: 右へ
+function spike(g, ox, oy, a, s, t, j) {
+  const L = 120 * s, W = 15 * s, P = fr(ox, oy, a), wd = u => W * Math.pow(Math.sin(Math.PI * clamp(0.08 + u / L * 0.9, 0, 1)), 0.6);
+  const body = gg => { for (let u = 0; u <= L; u += L / 16) gg[u ? 'lineTo' : 'moveTo'](...P(u, -wd(u))); for (let u = L; u >= 0; u -= L / 16) gg.lineTo(...P(u, wd(u))); gg.closePath(); };
+  // 剛毛（穂のまわりに、斜め上へ）
+  PL.ink(g, gg => { for (let i = 0; i < 26; i++) { const u = (i + 0.5) / 26 * L * 0.95, side = i % 2 ? 1 : -1, b = wd(u), l = (10 + rnd(i, j) * 8) * s; const [x1, y1] = P(u, side * b * 0.9), [x2, y2] = P(u + l * 0.7, side * (b + l * 0.7)); gg.moveTo(x1, y1); gg.lineTo(x2, y2); } }, Math.max(1, 1.1 * s), '#4f6a2a');
+  PL.tint(g, body, '#a9b85a', 0.9);
+  PL.hatch(g, body, { angle: a + 0.9, gap: Math.max(4, 4 * s), w: Math.max(1, 0.9 * s), not: gg => { for (let u = 0; u <= L; u += L / 16) gg[u ? 'lineTo' : 'moveTo'](...P(u, -wd(u) - 2)); for (let u = L; u >= 0; u -= L / 16) gg.lineTo(...P(u, 1)); gg.closePath(); } });
+  PL.ink(g, gg => { for (let i = 0; i < 9; i++) { const u = (i + 0.7) / 10 * L; [-0.45, 0.25].forEach(v => { const [x, y] = P(u, v * wd(u)); PL.ellipse(x, y, 2.6 * s, 1.6 * s, a - Math.PI / 2)(gg); }); } }, Math.max(1, 1 * s));   // 小穂の粒
+  PL.ink(g, body, Math.max(1.6, 2.2 * s));
+}
 function plant(g, t, x, base, s) {
-  g.save(); g.translate(x, base); g.scale(s, s);
-  g.strokeStyle = LEAF; g.lineWidth = 6; g.lineCap = 'round';
-  for (let j = -2; j <= 2; j++) {
-    const a = j * 0.22, L = 380 - Math.abs(j) * 40, tx = Math.sin(a) * L, ty = -Math.cos(a) * L;
-    g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(tx * 0.3, ty * 0.6, tx, ty); g.stroke();
-    // 穂（ふさふさ）
-    g.save(); g.translate(tx, ty); g.rotate(a + 0.25 + Math.sin(t * 1.5 + j) * 0.04);
-    g.fillStyle = '#b9d87a'; g.beginPath(); g.ellipse(0, -60, 18, 70, 0, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = 'rgba(220,240,170,0.8)'; g.lineWidth = 2; for (let k = 0; k < 14; k++) { const yy = -120 + k * 9; g.beginPath(); g.moveTo(-14, yy); g.lineTo(-30, yy - 12); g.moveTo(14, yy); g.lineTo(30, yy - 12); g.stroke(); }
-    g.restore();
-  }
-  g.strokeStyle = LEAF; g.lineWidth = 8; [[-1, 160], [1, 140]].forEach(([d, L]) => { g.beginPath(); g.moveTo(0, -20); g.quadraticCurveTo(d * L * 0.6, -L * 0.5, d * L, -L * 0.2); g.stroke(); });
-  g.restore();
+  const culms = [[-0.34, 330], [-0.16, 390], [0.02, 420], [0.2, 370], [0.38, 300]];
+  culms.forEach(([a0, L], j) => {
+    const sway = Math.sin(t * 1.5 + j) * 0.03, a1 = a0 * 1.5 + sway;   // 先ほど外へ開く
+    const pt = u => { const k = u / L, a = lerp(a0 * 0.5, a1, k); return [x + Math.sin(a) * u * s, base - Math.cos(a * 0.9) * u * s]; };
+    // 葉（節から。細長く、外へたれる）
+    [0.18, 0.42].forEach((k, n) => {
+      const [nx, ny] = pt(L * k), d = (j + n) % 2 ? 1 : -1, ll = (150 - n * 30) * s, lw = 8 * s;
+      const P = fr(nx, ny, a0 + d * 0.9), blade = gg => { gg.moveTo(...P(0, -lw * 0.5)); gg.quadraticCurveTo(...P(ll * 0.5, -lw * 1.0 + d * ll * 0.08), ...P(ll, d * ll * 0.35)); gg.quadraticCurveTo(...P(ll * 0.5, lw * 1.0 + d * ll * 0.08), ...P(0, lw * 0.5)); gg.closePath(); };
+      PL.tint(g, blade, PL.T.leaf, 0.85); PL.ink(g, blade, Math.max(1.4, 1.8 * s));
+    });
+    PL.ink(g, gg => { for (let u = 0; u <= L; u += 10) gg[u ? 'lineTo' : 'moveTo'](...pt(u)); }, Math.max(2, 4 * s), '#3d5a26');
+    PL.ink(g, gg => { [0.18, 0.42, 0.7].forEach(k => { const [nx, ny] = pt(L * k); gg.moveTo(nx - 4 * s, ny); gg.lineTo(nx + 4 * s, ny); }); }, Math.max(1.4, 2.4 * s));   // 節
+    const [tx, ty] = pt(L), nod = a1 + (a1 >= 0 ? 0.25 : -0.25);   // 穂は少しうなだれる
+    spike(g, tx, ty, nod, s, t, j);
+  });
+  // 株もとの葉（地面ぞいに）
+  [[-1, 160], [1, 140]].forEach(([d, L]) => { const P = fr(x, base - 6 * s, d * 1.25), ll = L * s, lw = 9 * s; const b = gg => { gg.moveTo(...P(0, -lw)); gg.quadraticCurveTo(...P(ll * 0.5, -lw + d * 10 * s), ...P(ll, d * 26 * s)); gg.quadraticCurveTo(...P(ll * 0.5, lw + d * 10 * s), ...P(0, lw)); gg.closePath(); }; PL.tint(g, b, PL.T.leaf, 0.85); PL.ink(g, b, Math.max(1.4, 1.8 * s)); });
+  return culms.map(([a0, L], j) => { const a1 = a0 * 1.5; return [x + Math.sin(a1) * L * s, base - Math.cos(a1 * 0.9) * L * s]; });   // 穂の位置（タネが落ちるもと）
+}
+// たくさんのタネ（もみに包まれた小さな粒。横じわ）。pts: [[x, y, ang], ...] をまとめて1回でぬる
+function seeds(g, pts, r, col = PL.T.sand, a = 0.95) {
+  if (!pts.length) return;
+  const p = gg => pts.forEach(([x, y, an]) => PL.ellipse(x, y, r, r * 0.62, an)(gg));
+  PL.tint(g, p, col, a); PL.ink(g, p, Math.max(1, r * 0.3));
+  if (r >= 5) PL.ink(g, gg => pts.forEach(([x, y, an]) => { const c = Math.cos(an), s = Math.sin(an); gg.moveTo(x - s * r * 0.4 - c * r * 0.2, y + c * r * 0.4 - s * r * 0.2); gg.lineTo(x + s * r * 0.4 - c * r * 0.2, y - c * r * 0.4 - s * r * 0.2); }), 1);
+}
+// 芽（細い葉2枚）。まとめて1回で
+function sprouts(g, pts, h) {
+  if (!pts.length) return;
+  PL.ink(g, gg => pts.forEach(([x, y]) => { gg.moveTo(x, y); gg.quadraticCurveTo(x - 2, y - h * 0.6, x - h * 0.45, y - h); gg.moveTo(x, y); gg.quadraticCurveTo(x + 2, y - h * 0.7, x + h * 0.35, y - h * 1.1); }), Math.max(1.6, h * 0.16), PL.GREEN);
 }
 function soilBox(g, x0, y0, w, h) {
-  g.fillStyle = SOIL; g.fillRect(x0, y0, w, h);
-  g.strokeStyle = '#cfe0ff'; g.lineWidth = 6; g.strokeRect(x0, y0, w, h);
+  const r = PL.rect(x0, y0, w, h);
+  PL.tint(g, r, PL.T.brown, 0.55); PL.hatch(g, r, { angle: 0.35, gap: 16, w: 1.5, cx: x0, cy: y0 });
+  PL.ink(g, r, 6);
 }
 
 function draw(g, t) {
   if (t < 4.0) {
-    plant(g, t, PW / 2, 1080, 1.2);
-    // こぼれるタネ
-    for (let i = 0; i < 40; i++) { const p = ((t - 1.6) * 0.6 + rnd(i)) % 1; if (t < 1.6) break; g.fillStyle = SEED; g.beginPath(); g.ellipse(PW / 2 + (rnd(i, 2) - 0.5) * 500, lerp(380, 1020, p), 7, 5, i, 0, Math.PI * 2); g.fill(); }
+    const tips = plant(g, t, 620, 1150, 1.25);
+    PL.ink(g, gg => { gg.moveTo(260, 1150); gg.lineTo(980, 1150); }, 4);   // 地面
+    // こぼれるタネ（穂から落ちる）
+    if (t >= 1.6) { const pts = []; for (let i = 0; i < 40; i++) { const p = ((t - 1.6) * 0.6 + rnd(i)) % 1, [sx, sy] = tips[i % 5]; pts.push([sx + (rnd(i, 2) - 0.5) * 60 + p * (rnd(i, 3) - 0.5) * 200, lerp(sy + 40, 1140, p), i]); } seeds(g, pts, 7); }
     if (t < 1.6) TK.hook(g, t, 0, 1.6, 'この1本から、\n[何粒]？', { y: 260, size: 110 });
-    else TK.count(g, t, 1.6, 4.0, 0, 3800, { y: 260, size: 150, dur: 1.8, unit: '粒（1株）' });
+    else TK.count(g, t, 1.6, 4.0, 0, 3800, { y: 230, size: 150, dur: 1.8, unit: '粒（1株）' });
+    if (t >= 2.2) { g.save(); g.globalAlpha *= fade(t, 2.2, 4, 0.3); PL.leader(g, tips[0][0] - 10, tips[0][1] + 60, 200, 510); PL.label(g, 'エノコログサ', 40, 480, 42, { align: 'left', bold: false }); g.restore(); }
     return;
   }
   if (t < 16.0) {
     // 引いて 1m²（ズームアウトの枠）
-    const k = ease((t - 4.4) / 2.2), S = lerp(1600, 760, k);
-    soilBox(g, PW / 2 - S / 2, 680 - S / 2, S, S);
-    if (t < 10) TK.text(g, '1 m²', PW / 2, 680 - S / 2 - 50, 64, { color: TK.C.sub }); else TK.text(g, '1 m²', PW / 2 - 330, 350, 50, { color: '#fff' });
-    if (k < 0.6) plant(g, t, PW / 2, 680, lerp(1.0, 0.3, k / 0.6));
+    const k = ease((t - 4.4) / 2.2), S = lerp(1600, 760, k), bx = PW / 2 - S / 2, by = 680 - S / 2;
+    soilBox(g, bx, by, S, S);
+    if (t < 10) { if (by - 50 > 130) PL.label(g, '1 m²', PW / 2, by - 50, 64, { color: '#4a3f33' }); } else PL.label(g, '1 m²', 60, 272, 50, { align: 'left' });
+    if (k < 0.6) { g.save(); g.globalAlpha *= 1 - clamp((k - 0.4) / 0.2, 0, 1); plant(g, t, PW / 2 + 60, 680 + 120 * lerp(1.0, 0.3, k / 0.6), lerp(1.0, 0.3, k / 0.6)); g.restore(); }
     // 点（タネ）。数は 600 → 162,000 を見た目の濃さで（描くのは代表の点）
     if (t >= 10.0) {
       const c = Math.exp(lerp(Math.log(600), Math.log(162000), TK.out((t - 10.4) / 2.4)));
-      const n = Math.round(Math.sqrt(c / 162000) * 3200);
-      for (let i = 0; i < n; i++) { g.fillStyle = SEED; g.fillRect(PW / 2 - 380 + rnd(i) * 760, 300 + rnd(i, 2) * 760, 4, 3); }
-      TK.card(g, 240, 140, 600, 120, { r: 50 });
-      TK.text(g, Math.round(c).toLocaleString('ja-JP') + ' 粒', PW / 2, 200, 76, { color: TK.C.acc });
+      const n = Math.round(Math.sqrt(c / 162000) * 3200), pts = [];
+      for (let i = 0; i < n; i++) pts.push([PW / 2 - 372 + rnd(i) * 744, 308 + rnd(i, 2) * 744, rnd(i, 3) * 3]);
+      seeds(g, pts, 3.2);
+      TK.card(g, 240, 140, 600, 120);
+      TK.text(g, Math.round(c).toLocaleString('ja-JP') + ' 粒', PW / 2, 200, 76, { color: PL.RED });
     }
     return;
   }
-  // 16〜30: 10cm 四方に 1,620粒
-  const x0 = 140, y0 = 280, S = 800;
+  // 16〜30: 10cm 四方に 1,620粒（点は 1,620 個そのまま）
+  const x0 = 190, y0 = 290, S = 700;
   soilBox(g, x0, y0, S, S);
-  TK.text(g, '10 cm 四方', PW / 2, 230, 58, { color: TK.C.sub });
+  PL.ink(g, gg => { for (let i = 0; i <= 10; i++) { const x = x0 + S * i / 10; gg.moveTo(x, y0 - 6); gg.lineTo(x, y0 - (i % 5 ? 18 : 30)); } }, 2.5);   // 1cm ごとの目盛り
+  PL.label(g, '10 cm 四方', 140, 200, 58, { align: 'left', color: '#4a3f33' });
   const n = Math.round(1620 * clamp((t - 16.4) / 2.0, 0, 1));
   const lit = t >= 22.0 ? clamp((t - 22.6) / 1.4, 0, 1) : 0;
+  const keep = [], rest = [], sp = [];
   for (let i = 0; i < n; i++) {
-    const x = x0 + 10 + rnd(i, 4) * (S - 20), y = y0 + 10 + rnd(i, 5) * (S - 20);
-    const sprout = rnd(i, 6) < 0.3 * lit;
-    if (sprout && t < 26) { g.fillStyle = LEAF; g.fillRect(x - 3, y - 10, 6, 14); }
-    else { g.fillStyle = t >= 26 && !(rnd(i, 6) < 0.3) ? 'rgba(230,194,122,0.45)' : SEED; g.fillRect(x - 2, y - 2, 5, 4); }
-    if (t >= 26 && rnd(i, 6) < 0.3) { g.fillStyle = LEAF; g.fillRect(x - 3, y - 10, 6, 14); }
+    const x = x0 + 12 + rnd(i, 4) * (S - 24), y = y0 + 16 + rnd(i, 5) * (S - 28), will = rnd(i, 6) < 0.3;
+    if ((t < 26 && rnd(i, 6) < 0.3 * lit) || (t >= 26 && will)) sp.push([x, y]);
+    else (t >= 26 ? rest : keep).push([x, y, rnd(i, 7) * 3]);
   }
-  if (t < 22) { TK.card(g, 290, 1040 - 60, 500, 100, { r: 50 }); TK.text(g, n.toLocaleString('ja-JP') + ' 粒', PW / 2, 1030, 64, { color: TK.C.acc }); }
-  else if (t < 26) { TK.card(g, 290, 980, 500, 100, { r: 50 }); TK.text(g, '芽を出す 最大[3割]', PW / 2, 1030, 56, { acc: LEAF }); }
-  else { TK.card(g, 240, 980, 600, 100, { r: 50 }); TK.text(g, 'のこり [7割] は次の年へ', PW / 2, 1030, 56, { acc: SEED }); }
+  seeds(g, keep, 4.4);
+  if (rest.length) { g.save(); g.globalAlpha *= 0.45; seeds(g, rest, 4.4); g.restore(); }
+  sprouts(g, sp, 16);
+  if (t < 22) { TK.card(g, 290, 1010, 500, 100); TK.text(g, n.toLocaleString('ja-JP') + ' 粒', PW / 2, 1060, 64, { color: PL.RED }); }
+  else if (t < 26) { TK.card(g, 290, 1010, 500, 100); TK.text(g, '芽を出す 最大[3割]', PW / 2, 1060, 56, { acc: PL.GREEN }); }
+  else { TK.card(g, 240, 1010, 600, 100); TK.text(g, 'のこり [7割] は次の年へ', PW / 2, 1060, 56 ); }
   if (t >= 16 && t < 22) TK.note(g, t, 16, 22, 'いちばん多い畑の値から。ふつうの庭の値ではありません', { size: 32 });
 }
 function notes(g, t) {

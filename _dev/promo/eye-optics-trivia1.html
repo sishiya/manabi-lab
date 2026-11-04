@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script src="../../eye-optics/js/optics.js"></script>
 <script>
 'use strict';
@@ -39,7 +42,7 @@ const cues = [
   { t: 13.0, type: 'pop' }, { t: 13.8, type: 'ding' }, { t: 16.0, type: 'whoosh' }, { t: 24.0, type: 'pop' }, { t: 26.0, type: 'ding' }, { t: 30.0, type: 'whoosh' }, { t: 32.0, type: 'ding' },
 ];
 
-// 目と光線。front: 角膜の前の屈折率、A: 調節（D）、stopR: ひとみの半径（mm）
+/// 目と光線。front: 角膜の前の屈折率、A: 調節（D）、stopR: ひとみの半径（mm）
 function makeEye(front, A, stopR) { const e = buildEye(A, 0, stopR); e.surfs[0].n1 = front; return e; }
 function rays(eye, n) {
   const out = [];
@@ -54,54 +57,70 @@ function rays(eye, n) {
   }
   return out;
 }
+const RAY = '#a8740f';   // 光線の色（黄土の墨）
+// 目の断面（図鑑の解剖図のように。手彩色＋かげの斜線＋墨の輪郭）
 function drawEye(g, eye, o = {}) {
-  g.save();
-  // 白目（球）と網膜
-  const [cx, cy] = px({ z: eye.retinaC, y: 0 });
-  g.strokeStyle = 'rgba(200,215,255,0.55)'; g.lineWidth = 4;
-  g.beginPath(); g.arc(cx, cy, OPT.retinaR * SC, 0.9, 2.62); g.stroke(); g.beginPath(); g.arc(cx, cy, OPT.retinaR * SC, -2.62, -0.9); g.stroke();
-  g.strokeStyle = '#ff9a7a'; g.lineWidth = 8;
-  g.beginPath(); g.arc(cx, cy, OPT.retinaR * SC, -0.9, 0.9); g.stroke();
+  const [cx, cy] = px({ z: eye.retinaC, y: 0 }), R = OPT.retinaR * SC;
+  // 白目（強膜）: 外がわの厚い帯。前は角膜につながる
+  const ring = (r0, r1, a0, a1) => g2 => { g2.arc(cx, cy, r1, a0, a1); g2.arc(cx, cy, r0, a1, a0, true); g2.closePath(); };
+  const scl = ring(R + 4, R + 26, -2.6, 2.6);
+  PL.tint(g, scl, PL.T.sand, 0.55);
+  PL.hatch(g, scl, { angle: 0.7, gap: 8, w: 1.6, not: PL.rect(0, 0, PW, cy - 60) });
+  PL.ink(g, g2 => { g2.arc(cx, cy, R + 26, -2.6, 2.6); }, 4);
+  PL.ink(g, g2 => { g2.arc(cx, cy, R + 4, -2.6, 2.6); }, 2);
+  // 網膜（奥の赤い帯）
+  PL.ink(g, g2 => { g2.arc(cx, cy, R, -1.0, 1.0); }, 9, PL.T.rose);
+  PL.ink(g, g2 => { g2.arc(cx, cy, R - 5, -1.0, 1.0); }, 1.6);
+  // 視神経（奥から外へ）
+  const nerve = PL.poly([[cx + R + 18, cy - 40], [PW + 20, cy - 52], [PW + 20, cy + 52], [cx + R + 18, cy + 40]]);
+  PL.tint(g, nerve, PL.T.sand, 0.7); PL.ink(g, gg => { for (let k = -2; k <= 2; k++) { gg.moveTo(cx + R + 24, cy + k * 15); gg.lineTo(PW + 20, cy + k * 19); } }, 1.2); PL.ink(g, gg => { gg.moveTo(cx + R + 20, cy - 40); gg.lineTo(PW + 20, cy - 52); gg.moveTo(cx + R + 20, cy + 40); gg.lineTo(PW + 20, cy + 52); }, 3);
   // 角膜（前の面）
   const s0 = eye.surfs[0], s1 = eye.surfs[1];
-  g.beginPath();
-  for (let y = -5.6; y <= 5.6; y += 0.2) { const [x, yy] = px({ z: sag(s0, y), y }); y === -5.6 ? g.moveTo(x, yy) : g.lineTo(x, yy); }
-  for (let y = 5.6; y >= -5.6; y -= 0.2) { const [x, yy] = px({ z: s1.z + sag(s1, y), y }); g.lineTo(x, yy); }
-  g.closePath();
-  g.fillStyle = o.corneaGlow ? `rgba(255,207,74,${0.35 + 0.25 * o.corneaGlow})` : 'rgba(180,220,255,0.25)';
-  g.fill(); g.strokeStyle = o.corneaGlow ? TK.C.acc : 'rgba(210,240,255,0.9)'; g.lineWidth = 4; g.stroke();
-  // 水晶体
+  const cor = g2 => {
+    for (let y = -5.6; y <= 5.6; y += 0.2) { const [x, yy] = px({ z: sag(s0, y), y }); y === -5.6 ? g2.moveTo(x, yy) : g2.lineTo(x, yy); }
+    for (let y = 5.6; y >= -5.6; y -= 0.2) { const [x, yy] = px({ z: s1.z + sag(s1, y), y }); g2.lineTo(x, yy); }
+    g2.closePath();
+  };
+  PL.tint(g, cor, o.corneaGlow ? PL.T.gold : PL.T.sky, o.corneaGlow ? 0.5 + 0.4 * o.corneaGlow : 0.55);
+  PL.ink(g, cor, o.corneaGlow ? 5 : 4, o.corneaGlow ? PL.RED : PL.INK);
+  // 水晶体（すじは中心の層）
   const l1 = eye.surfs[2], l2 = eye.surfs[3];
-  g.beginPath();
-  for (let y = -4.2; y <= 4.2; y += 0.2) { const [x, yy] = px({ z: l1.z + sag(l1, y), y }); y === -4.2 ? g.moveTo(x, yy) : g.lineTo(x, yy); }
-  for (let y = 4.2; y >= -4.2; y -= 0.2) { const [x, yy] = px({ z: l2.z + sag(l2, y), y }); g.lineTo(x, yy); }
-  g.closePath(); g.fillStyle = 'rgba(160,220,255,0.30)'; g.fill(); g.strokeStyle = 'rgba(210,240,255,0.85)'; g.lineWidth = 3; g.stroke();
-  // 虹彩（ひとみのふち）
+  const lens = g2 => {
+    for (let y = -4.2; y <= 4.2; y += 0.2) { const [x, yy] = px({ z: l1.z + sag(l1, y), y }); y === -4.2 ? g2.moveTo(x, yy) : g2.lineTo(x, yy); }
+    for (let y = 4.2; y >= -4.2; y -= 0.2) { const [x, yy] = px({ z: l2.z + sag(l2, y), y }); g2.lineTo(x, yy); }
+    g2.closePath();
+  };
+  const [lx] = px({ z: (l1.z + l2.z) / 2, y: 0 });
+  PL.tint(g, lens, PL.T.sky, 0.5);
+  PL.hatch(g, lens, { angle: -0.7, gap: 8, w: 1.3, not: PL.rect(0, 0, PW, Y0 + 40), cx: lx, cy: Y0 });
+  PL.ink(g, gg => { [0.45, 0.7].forEach(k => gg.ellipse(lx, Y0, 52 * k, 4.2 * SC * k, 0, 0, Math.PI * 2)); }, 1.2);
+  PL.ink(g, lens, 3.5);
+  // 虹彩（ひとみのふち）と毛様体
   const [ix] = px({ z: eye.stopZ, y: 0 });
-  g.strokeStyle = '#8a6a4a'; g.lineWidth = 12; g.lineCap = 'butt';
-  g.beginPath(); g.moveTo(ix, Y0 - eye.stopR * SC); g.lineTo(ix, Y0 - 5.4 * SC); g.moveTo(ix, Y0 + eye.stopR * SC); g.lineTo(ix, Y0 + 5.4 * SC); g.stroke();
-  g.restore();
+  [-1, 1].forEach(sg => {
+    const ir = PL.rect(ix - 7, sg > 0 ? Y0 + eye.stopR * SC : Y0 - 5.6 * SC, 14, (5.6 - eye.stopR) * SC);
+    PL.tint(g, ir, PL.T.brown, 0.9); PL.hatch(g, ir, { angle: 0.8, gap: 5, w: 1.2 }); PL.ink(g, ir, 3);
+    const cil = PL.poly([[ix + 8, Y0 + sg * 5.6 * SC], [ix + 70, Y0 + sg * 5.9 * SC], [ix + 70, Y0 + sg * 7.4 * SC], [ix - 4, Y0 + sg * 6.6 * SC]]);
+    PL.tint(g, cil, PL.T.rust, 0.6); PL.ink(g, cil, 2.6);
+    PL.ink(g, gg => { gg.moveTo(ix + 40, Y0 + sg * 5.8 * SC); gg.lineTo(lx, Y0 + sg * 4.1 * SC); }, 1.4);   // チン小帯
+  });
 }
 function drawRays(g, rs, o = {}) {
-  g.save(); g.lineWidth = 3.5; g.strokeStyle = o.color || '#ffe38a'; g.globalAlpha *= 0.95;
   for (const r of rs) {
-    g.beginPath(); const s = toZ({ z: r.pts[0].z, y: r.pts[0].y, dz: 1, dy: 0 }, -3.5); let [x, y] = px(s); g.moveTo(x, y);
-    for (const p of r.pts) { [x, y] = px(p); g.lineTo(x, y); }
-    g.stroke();
-    if (o.far) { g.save(); g.setLineDash([8, 10]); g.globalAlpha *= 0.6; g.beginPath(); [x, y] = px(r.far[0]); g.moveTo(x, y); for (const p of r.far) { [x, y] = px(p); g.lineTo(x, y); } g.stroke(); g.restore(); }
+    PL.ink(g, gg => { const s = toZ({ z: r.pts[0].z, y: r.pts[0].y, dz: 1, dy: 0 }, -3.5); gg.moveTo(...px(s)); for (const p of r.pts) gg.lineTo(...px(p)); }, 3.5, o.color || RAY);
+    if (o.far) { g.save(); g.globalAlpha *= 0.7; PL.dots(g, r.far.map(px), { color: o.color || RAY, w: 3.5, dash: [8, 10] }); g.restore(); }
   }
-  // 網膜の上の当たる幅（ぼけ）
-  const ys = rs.map(r => r.retina.y), lo = Math.min(...ys), hi = Math.max(...ys);
-  const [rx] = px(rs[0].retina);
-  g.fillStyle = 'rgba(255,240,170,0.9)'; g.fillRect(rx - 6, Y0 - hi * SC - 4, 14, Math.max(8, (hi - lo) * SC + 8));
-  g.restore();
+  // 網膜の上の当たる幅（ぼけ）。かぎの線
+  const ys = rs.map(r => r.retina.y), lo = Math.min(...ys), hi = Math.max(...ys), [rx] = px(rs[0].retina), h0 = Y0 - hi * SC - 4, h1 = Y0 - lo * SC + 4;
+  PL.ink(g, gg => { gg.moveTo(rx + 20, h0); gg.lineTo(rx + 8, h0); gg.lineTo(rx + 8, h1); gg.lineTo(rx + 20, h1); }, 6, PL.RED);
 }
 function waterFront(g, k) {   // 目の前の水
   if (k <= 0) return;
-  g.save(); g.globalAlpha *= k; g.fillStyle = WATER;
-  g.beginPath(); g.moveTo(0, 380); g.lineTo(X0 + 4, 380); g.lineTo(X0 + 4, 1060); g.lineTo(0, 1060); g.fill();
-  g.strokeStyle = 'rgba(140,200,255,0.6)'; g.lineWidth = 3; g.beginPath();
-  for (let x = 0; x <= X0; x += 6) g.lineTo(x, 380 + Math.sin(x * 0.08 + performanceT * 3) * 6); g.stroke();
+  g.save(); g.globalAlpha *= k;
+  const w = g2 => { g2.moveTo(0, 390); for (let x = 0; x <= X0 + 4; x += 6) g2.lineTo(x, 390 + Math.sin(x * 0.08 + performanceT * 3) * 6); g2.lineTo(X0 + 4, 1060); g2.lineTo(0, 1060); g2.closePath(); };
+  PL.tint(g, w, PL.T.sea, 0.55);
+  PL.ink(g, gg => { for (let y = 450; y < 1060; y += 50) { gg.moveTo(10, y); gg.lineTo(X0 - 10, y + 4); } }, 1.2, 'rgba(35,28,21,0.35)');
+  PL.ink(g, gg => { gg.moveTo(0, 390); for (let x = 0; x <= X0 + 4; x += 6) gg.lineTo(x, 390 + Math.sin(x * 0.08 + performanceT * 3) * 6); }, 3);
   g.restore();
 }
 let performanceT = 0;
@@ -116,6 +135,17 @@ function eyeScene(g, t, water, o = {}) {
   drawEye(g, eye, o);
   drawRays(g, water > 0.5 ? R_W : R_AIR, { far: water > 0.5 });
 }
+// 海の底の小さな貝（ホタテのような扇形。すじ入り）
+function shell(g, x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s); const k = 1 / s;
+  const sh = g2 => { g2.moveTo(-6, 10); g2.lineTo(-26, -6); g2.quadraticCurveTo(0, -42, 26, -6); g2.lineTo(6, 10); g2.closePath(); };
+  PL.tint(g, sh, PL.T.rose, 0.85);
+  PL.hatch(g, sh, { angle: 0.8, gap: 4 * k, w: 1 * k, not: PL.rect(-40, -60, 40, 80), cx: 0, cy: 0 });
+  PL.ink(g, gg => { for (let i = -3; i <= 3; i++) { gg.moveTo(0, 8); gg.lineTo(i * 7.5, -20 + Math.abs(i) * 4); } }, 1.2 * k);
+  PL.ink(g, gg => { gg.moveTo(-8, 10); gg.lineTo(-14, 4); gg.lineTo(-6, 4); gg.moveTo(8, 10); gg.lineTo(14, 4); gg.lineTo(6, 4); }, 1.4 * k);
+  PL.ink(g, sh, 2.4 * k);
+  g.restore();
+}
 
 function draw(g, t) {
   performanceT = t;
@@ -123,19 +153,24 @@ function draw(g, t) {
   if (t < 5.0) {
     const w = t < 1.2 ? 0 : t < 2.4 ? ease((t - 1.2) / 1.2) : t < 3.0 ? 1 : t < 3.6 ? 1 - ease((t - 3.0) / 0.6) : 0;
     eyeScene(g, t, w);
-    TK.hook(g, t, 0.0, 2.6, '水の中で\n[ぼやける理由]', { y: 195, size: 92 });
-    if (t >= 2.6) { g.save(); g.globalAlpha = fade(t, 2.6, 5.0, 0.3); TK.text(g, '空気の中の目（模型の計算）', PW / 2, 220, 52, { color: TK.C.sub }); g.restore(); }
+    TK.hook(g, t, 0.0, 2.6, '水の中で\n[ぼやける理由]', { y: 165, size: 84 });
+    if (t >= 2.6) { g.save(); g.globalAlpha = fade(t, 2.6, 5.0, 0.3); PL.label(g, '空気の中の目（模型の計算）', PW / 2, 220, 52, { color: TK.C.sub }); g.restore(); }
   }
   // 5〜9: 角膜が光る。曲げる力の約2/3
   if (t >= 5.0 && t < 9.0) {
     eyeScene(g, t, 0, { corneaGlow: 0.5 + 0.5 * Math.sin(t * 5) });
     g.save(); g.globalAlpha = fade(t, 5.0, 9.0, 0.3);
-    // 帯: 角膜 2/3 ＋ 水晶体 1/3
-    const x = 130, y = 200, W = 820, k = TK.out((t - 5.3) / 0.9);
-    g.fillStyle = TK.C.acc; g.beginPath(); g.roundRect(x, y, W * 2 / 3 * k, 70, 20); g.fill();
-    g.fillStyle = 'rgba(160,220,255,0.6)'; g.beginPath(); g.roundRect(x + W * 2 / 3, y, W / 3 * k, 70, 20); g.fill();
-    if (k > 0.8) { TK.text(g, '角膜 約2/3', x + W / 3, y + 36, 46, { color: '#0b1430', blur: 0 }); TK.text(g, '水晶体', x + W * 5 / 6, y + 36, 40, { color: '#0b1430', blur: 0 }); }
-    TK.text(g, '光を曲げる力（空気の中）', PW / 2, y - 50, 44, { color: TK.C.sub });
+    // 帯: 角膜 2/3 ＋ 水晶体 1/3（名前は帯の下に）
+    const x = 130, y = 170, W = 820, k = TK.out((t - 5.3) / 0.9);
+    const a = PL.rect(x, y, W * 2 / 3 * k, 56), b = PL.rect(x + W * 2 / 3, y, W / 3 * k, 56);
+    PL.tint(g, a, PL.T.gold, 0.85); PL.hatch(g, a, { angle: 0.9, gap: 12, w: 2 }); PL.ink(g, a, 4);
+    if (k > 0.05) { PL.tint(g, b, PL.T.sky, 0.7); PL.ink(g, b, 4); }
+    PL.label(g, '光を曲げる力（空気の中）', PW / 2, y - 40, 42, { color: TK.C.sub });
+    if (k > 0.8) { PL.label(g, '角膜 [約2/3]', x + W / 3, y + 92, 44); PL.label(g, '水晶体', x + W * 5 / 6, y + 92, 40); }
+    // 部品の名前（引き出し線）
+    PL.leader(g, X0 + 8, Y0 + 150, 96, 1050); PL.label(g, '角膜', 96, 1090, 40);
+    PL.leader(g, X0 + 4.2 * SC, Y0 + 120, 370, 960); PL.label(g, '水晶体', 384, 985, 40, { align: 'left' });   // 目の中のあいた所に
+    PL.leader(g, 905, Y0 + 196, 830, 900); PL.label(g, '網膜', 770, 900, 40);
     g.restore();
   }
   // 9〜13: 水に入ると
@@ -143,69 +178,76 @@ function draw(g, t) {
     const w = ease(clamp((t - 9.3) / 0.8, 0, 1));
     eyeScene(g, t, w);
     g.save(); g.globalAlpha = fade(t, 9.0, 13.0, 0.3);
-    TK.text(g, '屈折率  角膜 1.376 ／ 水 1.333', PW / 2, 220, 50, { color: TK.C.sub });
-    if (w > 0.6) TK.text(g, 'ピントは 網膜の ずっと後ろ →', 1010, 288, 44, { color: TK.C.acc, align: 'right' });
+    PL.label(g, '屈折率  角膜 1.376 ／ 水 1.333', PW / 2, 175, 50, { color: TK.C.sub });
+    if (w > 0.6) PL.label(g, 'ピントは 網膜の ずっと後ろ →', 1010, 245, 44, { color: PL.RED, align: 'right' });
     g.restore();
   }
   // 13〜16: ゴーグル（目の前に空気を戻す）
   if (t >= 13.0 && t < 16.0) {
     g.save(); g.globalAlpha = fade(t, 13.0, 16.0, 0.3);
-    g.fillStyle = WATER; g.fillRect(0, 380, X0 - 75, 680);
-    g.strokeStyle = '#cfe0ff'; g.lineWidth = 8; g.beginPath(); g.moveTo(X0 - 75, 440); g.lineTo(X0 - 75, 1000); g.stroke();   // ゴーグルの板
-    TK.text(g, '水', 32, 350, 40, { color: '#9fd0ff' }); TK.text(g, '空気', X0 - 20, 350, 34, { color: TK.C.sub });
+    const wat = PL.rect(0, 390, X0 - 75, 670), plate = PL.rect(X0 - 82, 430, 14, 580);
+    PL.tint(g, wat, PL.T.sea, 0.55); PL.ink(g, gg => { gg.moveTo(0, 390); gg.lineTo(X0 - 75, 390); }, 3);
+    PL.tint(g, plate, PL.T.sky, 0.8); PL.hatch(g, plate, { angle: 0.9, gap: 6, w: 1.2 }); PL.ink(g, plate, 3);   // ゴーグルの板
+    PL.label(g, '水', 32, 350, 40, { color: TK.C.acc2 }); PL.label(g, '空気', X0 - 6, 350, 34, { color: TK.C.sub });
     drawEye(g, EYE_AIR); drawRays(g, R_AIR);
-    TK.text(g, 'ゴーグル＝目の前に [空気] を戻す', PW / 2, 220, 56);
+    PL.label(g, 'ゴーグル＝目の前に [空気] を戻す', PW / 2, 220, 56);
     g.restore();
   }
   // 16〜24: 海の底の貝（地図の写真は使わない。線の図だけ）
   if (t >= 16.0 && t < 24.0) {
     g.save(); g.globalAlpha = fade(t, 16.0, 24.0, 0.3);
     TK.card(g, 120, 190, 840, 150);
-    TK.text(g, 'モーケンの人たち', PW / 2, 245, 64, { color: TK.C.acc });
-    TK.text(g, 'タイ・ミャンマーの海（アンダマン海）で暮らす', PW / 2, 305, 38, { color: TK.C.sub, bold: false });
-    // 水面・海の底・小さな貝
-    g.strokeStyle = 'rgba(140,200,255,0.7)'; g.lineWidth = 4; g.beginPath();
-    for (let x = 60; x <= 1020; x += 8) g.lineTo(x, 430 + Math.sin(x * 0.03 + t * 2) * 10); g.stroke();
-    g.fillStyle = 'rgba(95,180,255,0.12)'; g.fillRect(60, 440, 960, 560);
-    g.strokeStyle = '#c9b48a'; g.lineWidth = 5; g.beginPath();
-    for (let x = 60; x <= 1020; x += 10) g.lineTo(x, 960 + Math.sin(x * 0.012) * 18); g.stroke();
-    for (const [x, s] of [[300, 1], [620, 0.8], [820, 1.1]]) {
-      const k = TK.pop(t, 19.5 + x / 1000);
-      g.save(); g.translate(x, 940); g.scale(s * k, s * k); g.strokeStyle = '#ffe3c0'; g.lineWidth = 3; g.fillStyle = 'rgba(255,227,192,0.25)';
-      g.beginPath(); g.moveTo(-22, 8); g.quadraticCurveTo(0, -30, 22, 8); g.closePath(); g.fill(); g.stroke();
-      for (let i = -2; i <= 2; i++) { g.beginPath(); g.moveTo(0, 6); g.lineTo(i * 9, -14 + Math.abs(i) * 4); g.stroke(); }
-      g.restore();
-      if (k > 0.5) { g.strokeStyle = 'rgba(255,207,74,0.8)'; g.lineWidth = 4; g.beginPath(); g.arc(x, 935, 44 + 4 * Math.sin(t * 5), 0, Math.PI * 2); g.stroke(); }
+    PL.label(g, 'モーケンの人たち', PW / 2, 245, 64, { color: PL.RED });
+    PL.label(g, 'タイ・ミャンマーの海（アンダマン海）で暮らす', PW / 2, 305, 38, { color: TK.C.sub, bold: false });
+    // 水・海の底
+    const wave = x => 430 + Math.sin(x * 0.03 + t * 2) * 10, bed = x => 960 + Math.sin(x * 0.012) * 18;
+    const sea = g2 => { g2.moveTo(60, wave(60)); for (let x = 60; x <= 1020; x += 8) g2.lineTo(x, wave(x)); g2.lineTo(1020, bed(1020)); for (let x = 1020; x >= 60; x -= 10) g2.lineTo(x, bed(x)); g2.closePath(); };
+    const sand = g2 => { g2.moveTo(60, bed(60)); for (let x = 60; x <= 1020; x += 10) g2.lineTo(x, bed(x)); g2.lineTo(1020, 1060); g2.lineTo(60, 1060); g2.closePath(); };
+    PL.tint(g, sea, PL.T.sea, 0.4);
+    PL.ink(g, gg => { for (let y = 520; y < 920; y += 70) for (let x = 90 + (y % 140); x < 1000; x += 180) { gg.moveTo(x, y); gg.quadraticCurveTo(x + 20, y - 6, x + 40, y); } }, 1.4, 'rgba(35,28,21,0.35)');
+    PL.ink(g, gg => { gg.moveTo(60, wave(60)); for (let x = 60; x <= 1020; x += 8) gg.lineTo(x, wave(x)); }, 4);
+    PL.tint(g, sand, PL.T.sand, 0.8); PL.hatch(g, sand, { angle: 0.9, gap: 10, w: 1.8 }); PL.ink(g, gg => { gg.moveTo(60, bed(60)); for (let x = 60; x <= 1020; x += 10) gg.lineTo(x, bed(x)); }, 4);
+    // もぐる子ども（影絵）。頭を下に、ゆっくり進む
+    const sx = 820 - (t - 16) * 22, sy = 560 + (t - 16) * 14;
+    PL.walker(g, sx, sy, -1.95, t * 6, 0.62);
+    for (const [x, s] of [[300, 1.6], [620, 1.3], [820, 1.8]]) {
+      const k = clamp(TK.pop(t, 19.5 + x / 1000), 0.01, 1.2);
+      shell(g, x, bed(x) - 10, s * k);
+      if (k > 0.5) { g.save(); g.setLineDash([6, 8]); PL.ink(g, PL.circle(x, bed(x) - 22, 56 + 4 * Math.sin(t * 5)), 3, PL.RED); g.restore(); }
     }
     g.restore();
   }
   // 24〜30: 棒グラフ
   if (t >= 24.0 && t < 30.0) {
-    TK.text(g, '水の中で見分けられる しまの細かさ', PW / 2, 280, 52, { color: TK.C.sub });
+    PL.label(g, '水の中で見分けられる しまの細かさ', PW / 2, 280, 52, { color: TK.C.sub });
     TK.bars(g, t, 24.2, 30.0, [
-      { label: 'ヨーロッパの子ども', v: 2.95 / 6.5, color: TK.C.acc2, text: '2.95' },
-      { label: 'モーケンの子ども', v: 6.06 / 6.5, color: TK.C.acc, text: '6.06' },
+      { label: 'ヨーロッパの子ども', v: 2.95 / 6.5, text: '2.95' },
+      { label: 'モーケンの子ども', v: 6.06 / 6.5, text: '6.06' },
     ], { y: 420, gap: 230, stagger: 0.9 });
-    if (t > 26.0) { g.save(); g.globalAlpha = fade(t, 26.0, 30.0, 0.3); TK.text(g, '[2倍以上]', PW / 2, 930, 120, { stroke: 'rgba(0,0,0,0.5)' }); TK.text(g, '単位: 1度あたりの しまの数', PW / 2, 1040, 36, { color: TK.C.dim, bold: false }); g.restore(); }
+    if (t > 26.0) { g.save(); g.globalAlpha = fade(t, 26.0, 30.0, 0.3); PL.label(g, '[2倍以上]', PW / 2, 930, 120); PL.label(g, '単位: 1度あたりの しまの数', PW / 2, 1040, 36, { color: TK.C.sub, bold: false }); g.restore(); }
   }
-  // 30〜35: ひとみが 2.50 → 1.96 mm
+  // 30〜35: ひとみが 2.50 → 1.96 mm（正面から見た目）
   if (t >= 30.0) {
     const k = ease(clamp((t - 30.6) / 1.6, 0, 1)), d = lerp(2.50, 1.96, k);
     g.save(); g.globalAlpha = fade(t, 30.0, 35.5, 0.3);
-    // 正面から見たひとみ
-    const cx = PW / 2, cy = 600, sc = 150;
-    g.fillStyle = '#6a4e36'; g.beginPath(); g.arc(cx, cy, 330, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = 'rgba(255,220,180,0.25)'; g.lineWidth = 3;
-    for (let i = 0; i < 48; i++) { const a = i / 48 * Math.PI * 2; g.beginPath(); g.moveTo(cx + Math.cos(a) * d / 2 * sc * 1.1, cy + Math.sin(a) * d / 2 * sc * 1.1); g.lineTo(cx + Math.cos(a) * 320, cy + Math.sin(a) * 320); g.stroke(); }
-    g.fillStyle = '#05070d'; g.beginPath(); g.arc(cx, cy, d / 2 * sc, 0, Math.PI * 2); g.fill();
+    const cx = PW / 2, cy = 650, sc = 150, pr = d / 2 * sc, iris = PL.circle(cx, cy, 300);
+    PL.tint(g, iris, PL.T.brown, 0.75);
+    PL.tint(g, PL.circle(cx, cy, pr * 1.9), PL.T.rust, 0.5);   // ひとみのまわりの輪
+    PL.ink(g, gg => { for (let i = 0; i < 64; i++) { const a = i / 64 * Math.PI * 2, w = Math.sin(i * 2.3) * 0.08; gg.moveTo(cx + Math.cos(a) * pr * 1.15, cy + Math.sin(a) * pr * 1.15); gg.quadraticCurveTo(cx + Math.cos(a + w) * 200, cy + Math.sin(a + w) * 200, cx + Math.cos(a) * 292, cy + Math.sin(a) * 292); } }, 1.6);   // 虹彩のすじ
+    PL.ink(g, PL.circle(cx, cy, pr * 1.9), 2.2);
+    PL.hatch(g, iris, { angle: 0.6, gap: 10, w: 1.6, not: PL.circle(cx - 120, cy - 120, 300) });
+    PL.ink(g, iris, 6);
+    g.fillStyle = PL.INK; g.beginPath(); g.arc(cx, cy, pr, 0, Math.PI * 2); g.fill();   // ひとみ（墨でぬる）
+    // ひとみの幅の目盛り
+    PL.ink(g, gg => { gg.moveTo(cx - pr, cy + 330); gg.lineTo(cx + pr, cy + 330); gg.moveTo(cx - pr, cy + 316); gg.lineTo(cx - pr, cy + 344); gg.moveTo(cx + pr, cy + 316); gg.lineTo(cx + pr, cy + 344); }, 4, PL.RED);
     g.restore();
-    TK.card(g, 290, 190, 500, 110, { r: 55 });
-    TK.text(g, 'ひとみ ' + d.toFixed(2) + ' mm', PW / 2, 246, 64, { color: k >= 1 ? TK.C.acc : '#fff' });
-    if (t > 32.2) { g.save(); g.globalAlpha = fade(t, 32.2, 35, 0.3); TK.text(g, 'ヨーロッパの子ども 2.50 mm → モーケンの子ども 1.96 mm', PW / 2, 1010, 36, { color: TK.C.sub, bold: false }); TK.text(g, '（えんぴつの芯くらい）', PW / 2, 1060, 36, { color: TK.C.sub, bold: false }); g.restore(); }
+    TK.card(g, 290, 190, 500, 110);
+    PL.label(g, 'ひとみ ' + d.toFixed(2) + ' mm', PW / 2, 246, 64, { color: k >= 1 ? PL.RED : PL.INK });
+    if (t > 32.2) { g.save(); g.globalAlpha = fade(t, 32.2, 35, 0.3); PL.label(g, 'ヨーロッパの子ども 2.50 mm → モーケンの子ども 1.96 mm', PW / 2, 1025, 36, { color: TK.C.sub, bold: false }); PL.label(g, '（えんぴつの芯くらい）', PW / 2, 1068, 36, { color: TK.C.sub, bold: false }); g.restore(); }
   }
   if (t >= 2.6 && t < 13.0) TK.note(g, t, 2.6, 13.0, '光線は目の模型（Navarro 1985）で計算。ひとみは 4 mm で描いた', { size: 30 });
   if (t >= 24.0 && t < 33.0) TK.note(g, t, 24.0, 33.0, '2003年の子どもの測定（いまの子も同じとは限らない）', { size: 32 });
-  if (t >= 33.0) TK.note(g, t, 33.0, 35.0, '出どころ: Gislén ほか (2003) Current Biology 13(10)\n練習で伸びる: Gislén ほか (2006) Vision Research', { size: 30 });
+  if (t >= 33.0) TK.note(g, t, 33.0, 35.0, '出どころ: Gislén ほか (2003) Current Biology 13(10)\n練習で伸びる: Gislén ほか (2006) Vision Research', { size: 30, y: 1150 });   // 2行なので絵の下に（クレジットと重ねない）
 }
 
 triviaStart({ out: 'eye-optics-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });

@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく snake-move-3（型D 3つ）「ヘビのおかしな話、3つ目がいちばんおかしい」。台本は trivia/snake-move.md。?short で録る
@@ -34,36 +37,83 @@ const cues = [
   { t: 13.0, type: 'whoosh' }, { t: 14.0, type: 'rise' }, { t: 19.0, type: 'buzz' }, { t: 24.0, type: 'whoosh' }, { t: 26.0, type: 'pop' }, { t: 27.2, type: 'pop' },
   { t: 30.0, type: 'ding' }, { t: 36.0, type: 'pop' },
 ];
-const BODYC = '#cfe8de';
-
-// 上から見たヘビ（うねる線）。s: 進んだ道のり（px）
-function slither(g, x0, y0, len, s, amp = 60) {
-  const k = 2 * Math.PI / 300;
-  g.save(); g.strokeStyle = BODYC; g.lineCap = 'round'; g.lineJoin = 'round';
-  const pts = [];
-  for (let u = 0; u <= len; u += 6) { const a = amp * Math.min(1, u / 120, (len - u) / 60 + 0.3); pts.push([x0 + u, y0 + a * Math.sin(k * (u + s))]); }
-  for (let i = 1; i < pts.length; i++) {
-    const u = (i / pts.length);
-    g.lineWidth = 8 + 30 * Math.min(1, u * 2.2);
-    g.beginPath(); g.moveTo(pts[i - 1][0], pts[i - 1][1]); g.lineTo(pts[i][0], pts[i][1]); g.stroke();
-  }
-  const [hx, hy] = pts[pts.length - 1];
-  g.fillStyle = BODYC; g.beginPath(); g.ellipse(hx + 12, hy, 30, 22, 0, 0, Math.PI * 2); g.fill();
-  g.restore();
+const BLUE = TK.C.acc2;
+// ---- 版画の道具（このページだけ。PL.* を組み合わせる）----
+const TAU = Math.PI * 2;
+// ローカル座標（右向き・足もとが y=0）から画面へ写す。dir=-1 で左向き
+function mapper(x0, y0, s, rot = 0, dir = 1) { const c = Math.cos(rot), n = Math.sin(rot); return (x, y) => { x *= dir; return [x0 + s * (x * c - y * n), y0 + s * (x * n + y * c)]; }; }
+// ローカル座標で道を作る。b(P) の P: M・L・Q・Z と E（楕円）
+const lp = (m, b) => g => {
+  const P = { M: (x, y) => g.moveTo(...m(x, y)), L: (x, y) => g.lineTo(...m(x, y)), Q: (a, c, x, y) => g.quadraticCurveTo(...m(a, c), ...m(x, y)), Z: () => g.closePath(),
+    E: (cx, cy, rx, ry, rot = 0) => { for (let i = 0; i <= 40; i++) { const t = i / 40 * TAU, x = Math.cos(t) * rx, y = Math.sin(t) * ry, p = m(cx + x * Math.cos(rot) - y * Math.sin(rot), cy + x * Math.sin(rot) + y * Math.cos(rot)); i ? g.lineTo(...p) : g.moveTo(...p); } g.closePath(); } };
+  b(P);
+};
+// 手彩色＋かげの斜線＋墨の輪郭。o.lit: 光の当たる所（斜線を抜く）
+function solid(g, path, color, o = {}) {
+  PL.tint(g, path, color, o.a ?? 0.65);
+  if (o.hatch !== false) PL.hatch(g, path, { angle: o.angle ?? 0.7, gap: o.gap ?? 9, w: o.hw ?? 1.8, not: o.lit, cx: o.cx, cy: o.cy });
+  PL.ink(g, path, o.w ?? 5, o.ink || PL.INK);
 }
-function arrow(g, x0, y0, x1, y1, col, w = 10) {
-  const a = Math.atan2(y1 - y0, x1 - x0);
-  g.save(); g.strokeStyle = col; g.fillStyle = col; g.lineWidth = w; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1 - Math.cos(a) * w * 2, y1 - Math.sin(a) * w * 2); g.stroke();
-  g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 - Math.cos(a - 0.45) * w * 4, y1 - Math.sin(a - 0.45) * w * 4); g.lineTo(x1 - Math.cos(a + 0.45) * w * 4, y1 - Math.sin(a + 0.45) * w * 4); g.closePath(); g.fill();
+// 墨の矢印（頭は手彩色＋輪郭）
+function arrowPL(g, x0, y0, x1, y1, color = PL.INK, w = 8) {
+  const a = Math.atan2(y1 - y0, x1 - x0), h = w * 3.4;
+  PL.ink(g, gg => { gg.moveTo(x0, y0); gg.lineTo(x1 - Math.cos(a) * h * 0.7, y1 - Math.sin(a) * h * 0.7); }, w, color);
+  const head = PL.poly([[x1, y1], [x1 - Math.cos(a - 0.42) * h, y1 - Math.sin(a - 0.42) * h], [x1 - Math.cos(a + 0.42) * h, y1 - Math.sin(a + 0.42) * h]]);
+  PL.tint(g, head, color, 1); PL.ink(g, head, Math.max(2, w * 0.45), color);
+}
+// 答えの札: 手彩色の札（筆のルックでは字の下が濃くなり字と重なる）をやめ、紙の札に朱の二重わくで示す
+function answerChoices(g, t, a, b, opts, o) {
+  const card = TK.card; TK.card = (gg, x, y, w, h) => card(gg, x, y, w, h, {});
+  try { TK.choices(g, t, a, b, opts, o); } finally { TK.card = card; }
+  if (t < (o.reveal ?? Infinity) || t < a || t > b) return;
+  const y = (o.y ?? PH * 0.34) + o.answer * ((o.h || 190) + (o.gap ?? 40)), h = o.h || 190, f = clamp((t - o.reveal) / 0.35, 0, 1) * fade(t, a, b, 0.3);
+  g.save(); g.globalAlpha *= f; PL.ink(g, PL.rect(78, y - 12, PW - 156, h + 24), 6, PL.RED); PL.ink(g, PL.rect(90, y, PW - 180, h), 3, PL.RED); g.restore();
+}
+
+// 太さの変わる帯（点の列と太さの列）の道
+function ribbonPath(pts, ws) {
+  const U = [], D = [];
+  pts.forEach((p, i) => {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+    let dx = b[0] - a[0], dy = b[1] - a[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+    U.push([p[0] - dy * ws[i] / 2, p[1] + dx * ws[i] / 2]); D.push([p[0] + dy * ws[i] / 2, p[1] - dx * ws[i] / 2]);
+  });
+  return g => { U.forEach((p, i) => i ? g.lineTo(...p) : g.moveTo(...p)); D.reverse().forEach(p => g.lineTo(...p)); D.reverse(); g.closePath(); };
+}
+// 上から見たヘビ（うねる体）。s: 進んだ道のり（px）。顔は描かない
+function slither(g, x0, y0, len, s, amp = 60) {
+  const k = 2 * Math.PI / 300, pts = [], ws = [];
+  for (let u = 0; u <= len; u += 6) { const a = amp * Math.min(1, u / 120, (len - u) / 60 + 0.3); pts.push([x0 + u, y0 + a * Math.sin(k * (u + s))]); ws.push(6 + 32 * Math.min(1, (u / len) * 2.2)); }
+  const [hx, hy] = pts[pts.length - 1], [px, py] = pts[pts.length - 3], ha = Math.atan2(hy - py, hx - px);
+  const bodyP = ribbonPath(pts, ws), head = PL.ellipse(hx + Math.cos(ha) * 14, hy + Math.sin(ha) * 14, 30, 21, ha);
+  const both = g2 => { bodyP(g2); head(g2); };
+  PL.tint(g, both, PL.T.wood, 0.65);
+  g.save(); g.beginPath(); both(g); g.clip();   // 背中のまだら（ひし形）
+  for (let i = 8; i < pts.length - 4; i += 7) { const [x, y] = pts[i], w = ws[i] * 0.35; const d = PL.poly([[x - w * 1.3, y], [x, y - w], [x + w * 1.3, y], [x, y + w]]); PL.tint(g, d, PL.T.brown, 0.9); PL.ink(g, d, 1.4); }
   g.restore();
+  PL.hatch(g, both, { angle: 0.8, gap: 7, w: 1.5, not: g2 => { g2.save(); g2.translate(-5, -9); both(g2); g2.restore(); } });
+  PL.ink(g, both, 4.5);
+}
+// 横から見たヘビ（m のローカル座標。おなかが y=0、bx からしっぽ → 頭が右）
+function sideSnake(g, m, bx, len = 380, H = 50) {
+  const p = lp(m, P => { P.M(bx, -6); P.Q(bx + 60, -H + 6, bx + 130, -H); P.L(bx + len - 40, -H); P.Q(bx + len + 20, -H + 2, bx + len + 20, -H / 2); P.Q(bx + len + 16, 0, bx + len - 30, 0); P.L(bx + 20, 0); P.Z(); });
+  PL.tint(g, p, PL.T.wood, 0.65);
+  g.save(); g.beginPath(); p(g); g.clip();
+  for (let x = bx + 120; x < bx + len - 20; x += 46) { const b = lp(m, P => P.E(x, -H + 6, 15, 13)); PL.tint(g, b, PL.T.brown, 0.85); PL.ink(g, b, 1.4); }
+  PL.tint(g, lp(m, P => { P.M(bx, -10); P.L(bx + len + 30, -10); P.L(bx + len + 30, 0); P.L(bx, 0); P.Z(); }), PL.T.sand, 0.9);
+  PL.ink(g, lp(m, P => { for (let x = bx + 20; x < bx + len; x += 12) { P.M(x, -10); P.L(x + 2, 0); } }), 1.2);
+  g.restore();
+  PL.hatch(g, p, { angle: 0.75, gap: 7, w: 1.5, not: lp(m, P => { P.M(bx, -30); P.L(bx + len + 30, -30); P.L(bx + len + 30, -80); P.L(bx, -80); P.Z(); }) });
+  PL.ink(g, p, 4.5);
 }
 function numCards(g, t, a, y, hi) {
   [0, 1, 2].forEach(i => {
     const k = TK.pop(t, a + i * 0.2), x = 250 + i * 290;
-    g.save(); g.globalAlpha *= k;
-    TK.card(g, x - 110, y - 110, 220, 220, { fill: i === hi ? 'rgba(255,207,74,0.5)' : 'rgba(20,34,72,0.9)', stroke: i === 2 ? TK.C.acc : undefined, lw: i === 2 ? 7 : 3 });
-    TK.text(g, String(i + 1), x, y, 130, { color: i === 2 ? TK.C.acc : '#fff' });
+    if (k <= 0) return;
+    g.save(); g.globalAlpha *= Math.min(1, k);
+    TK.card(g, x - 110, y - 110, 220, 220);
+    if (i === 2) { PL.ink(g, PL.rect(x - 122, y - 122, 244, 244), 6, PL.RED); }
+    TK.text(g, String(i + 1), x, y, 130, { color: i === 2 ? PL.RED : PL.INK });
     g.restore();
   });
 }
@@ -72,28 +122,32 @@ function draw(g, t) {
   // 0〜3: フック
   if (t < 3.0) {
     TK.hook(g, t, 0.0, 3.0, 'ヘビの話\n[3つ目]が いちばん おかしい', { y: 330, size: 100 });
-    numCards(g, t, 0.5, 780, -1);
+    numCards(g, t, 0.5, 760, -1);
+    slither(g, 230, 1050, 560, t * 40, 40);
   }
   // 3〜13: ① 勢いを使わない（止めると、すぐ止まる）
   if (t >= 3.0 && t < 13.0) {
     const f = fade(t, 3, 13, 0.3), STOP = 9.0;
     g.save(); g.globalAlpha = f;
-    TK.text(g, '①', 120, 230, 90, { color: TK.C.acc });
+    TK.text(g, '①', 120, 230, 90, { color: PL.RED });
     TK.text(g, '上から見たヘビ（模式）', 200, 230, 44, { align: 'left', color: TK.C.sub });
+    // 地面（土の粒）
+    PL.ink(g, gg => { for (let i = 0; i < 40; i++) { const x = 80 + ((i * 263) % 920), y = 330 + ((i * 151) % 330); gg.moveTo(x, y); gg.lineTo(x + 6, y + 2); } }, 2, 'rgba(35,28,21,0.35)');
     // ヘビ: STOP までうねって進み、そこでぴたっと止まる
     const tt = Math.min(t, STOP) - 3.4, s = Math.max(0, tt) * 60;
     slither(g, 90 + s * 0.35, 500, 520, s);
-    if (t > STOP) { TK.text(g, 'ぴたっ', 700, 380, 60, { color: TK.C.acc }); }
+    if (t > STOP) { TK.text(g, 'ぴたっ', 820, 380, 60, { color: PL.RED }); }
     // くらべ: 勢いのある物（すべる円盤）。押すのを止めてもすべっていく
     const y2 = 860, sp = 260;
     let x2;
     if (t < STOP) x2 = 110 + Math.max(0, t - 3.4) * sp * 0.35;
     else { const d = t - STOP; x2 = 110 + (STOP - 3.4) * sp * 0.35 + sp * 0.35 * (1 - Math.exp(-d * 0.5)) / 0.5; }
-    g.strokeStyle = 'rgba(200,215,255,0.35)'; g.lineWidth = 3; g.beginPath(); g.moveTo(90, y2 + 40); g.lineTo(960, y2 + 40); g.stroke();
-    g.fillStyle = 'rgba(95,212,255,0.35)'; g.strokeStyle = TK.C.acc2; g.lineWidth = 4;
-    g.beginPath(); g.ellipse(x2, y2 + 22, 50, 18, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-    TK.text(g, 'くらべ: 氷の上の円盤（勢いで すべりつづける）', 540, y2 - 50, 38, { color: TK.C.acc2, bold: false });
-    if (t > STOP) TK.text(g, '止めた', 540, 640, 50, { color: TK.C.red });
+    const ice = PL.rect(90, y2 + 40, 870, 26); PL.tint(g, ice, PL.T.sky, 0.7); PL.ink(g, gg => { for (let x = 110; x < 960; x += 70) { gg.moveTo(x, y2 + 50); gg.lineTo(x + 30, y2 + 50); } }, 1.5, BLUE); PL.ink(g, gg => { gg.moveTo(90, y2 + 40); gg.lineTo(960, y2 + 40); }, 4);
+    const side = PL.rect(x2 - 50, y2 + 18, 100, 20), top = PL.ellipse(x2, y2 + 18, 50, 16);
+    solid(g, side, PL.T.gray, { a: 0.8, gap: 6, hw: 1.4, w: 3.5 }); PL.tint(g, top, PL.T.gray, 0.5); PL.ink(g, top, 3.5);
+    if (t > STOP) PL.ink(g, gg => { for (let k = 1; k < 4; k++) { gg.moveTo(x2 - 60 - k * 26, y2 + 22 + k * 3); gg.lineTo(x2 - 60 - k * 26 - 30, y2 + 22 + k * 3); } }, 3, BLUE);
+    TK.text(g, 'くらべ: 氷の上の円盤（勢いで すべりつづける）', 540, y2 - 60, 38, { color: BLUE, bold: false });
+    if (t > STOP) TK.text(g, '止めた', 540, 680, 50, { color: PL.RED });
     g.restore();
     TK.note(g, t, 3.4, 13, 'ミルクスネーク（30cm）の測定（Hu ほか 2009）。このくらいのヘビでの話', { size: 30 });
   }
@@ -104,23 +158,27 @@ function draw(g, t) {
     const slide = t > 18.0 ? Math.min(1, (t - 18.0) / 3.0) : 0;
     const climb = t < 18 ? (t - 13) * 18 : 90;
     g.save(); g.globalAlpha = f;
-    TK.text(g, '②', 120, 230, 90, { color: TK.C.acc });
+    TK.text(g, '②', 120, 230, 90, { color: PL.RED });
     TK.text(g, '横から見た 布の坂', 200, 230, 44, { align: 'left', color: TK.C.sub });
-    const px = 120, py = 900, L = 820, a = -ang * Math.PI / 180;
-    g.save(); g.translate(px, py); g.rotate(a);
-    g.fillStyle = 'rgba(200,215,255,0.12)'; g.fillRect(0, 0, L, 40);
-    g.strokeStyle = 'rgba(200,215,255,0.7)'; g.lineWidth = 5; g.beginPath(); g.moveTo(0, 0); g.lineTo(L, 0); g.stroke();
+    const px = 120, py = 900, L = 820, a = -ang * Math.PI / 180, m = mapper(px, py, 1, a);
+    // 坂の板と布（布は織り目）
+    const plank = lp(m, P => { P.M(0, 0); P.L(L, 0); P.L(L, 40); P.L(0, 40); P.Z(); });
+    solid(g, plank, PL.T.wood, { a: 0.6, gap: 8, hw: 1.4, w: 4 });
+    const cloth = lp(m, P => { P.M(0, -2); P.L(L, -2); P.L(L, 10); P.L(0, 10); P.Z(); });
+    PL.tint(g, cloth, PL.T.rose, 0.8); PL.ink(g, lp(m, P => { for (let x = 6; x < L; x += 10) { P.M(x, -2); P.L(x + 4, 10); } }), 1, 'rgba(35,28,21,0.5)');
+    // 台（坂の右はしを持ち上げる）
+    const [ex, ey] = m(L, 40); PL.ink(g, gg => { gg.moveTo(ex - 20, ey); gg.lineTo(ex - 20, py + 40); }, 6);
     // ヘビ（横から見た体）。登る → ずり落ちる
     const bx = 160 + climb - slide * 160;
-    g.fillStyle = 'rgba(120,200,170,0.25)'; g.strokeStyle = BODYC; g.lineWidth = 5;
-    g.beginPath(); g.roundRect(bx, -54, 380, 50, 25); g.fill(); g.stroke();
-    if (t < 18.0) arrow(g, bx + 400, -90, bx + 520, -90, TK.C.green, 8);
-    else arrow(g, bx + 260, -90, bx + 100, -90, TK.C.red, 8);
-    g.restore();
-    // 水平の線と角度
-    g.setLineDash([10, 10]); g.strokeStyle = 'rgba(200,215,255,0.4)'; g.lineWidth = 3; g.beginPath(); g.moveTo(px, py); g.lineTo(px + L, py); g.stroke(); g.setLineDash([]);
-    TK.card(g, 330, 330, 420, 150, { r: 40, stroke: ang >= 7 ? TK.C.red : undefined, lw: ang >= 7 ? 6 : 3 });
-    TK.text(g, '坂 ' + ang.toFixed(1) + '°', PW / 2, 405, 90, { color: ang >= 7 ? TK.C.red : '#fff' });
+    sideSnake(g, m, bx);
+    const A = (x0, x1, col) => { const [ax, ay] = m(x0, -90), [bx2, by] = m(x1, -90); arrowPL(g, ax, ay, bx2, by, col, 8); };
+    if (t < 18.0) A(bx + 400, bx + 520, PL.GREEN); else A(bx + 260, bx + 100, PL.RED);
+    // 水平の線と角度の弧
+    g.save(); g.setLineDash([10, 10]); PL.ink(g, gg => { gg.moveTo(px, py); gg.lineTo(px + L, py); }, 2.5, 'rgba(35,28,21,0.55)'); g.restore();
+    if (ang > 0.3) PL.ink(g, gg => { gg.arc(px, py, 300, a, 0); }, 3, PL.RED);
+    TK.card(g, 330, 330, 420, 150);
+    if (ang >= 7) PL.ink(g, PL.rect(318, 318, 444, 174), 6, PL.RED);
+    TK.text(g, '坂 ' + ang.toFixed(1) + '°', PW / 2, 405, 90, { color: ang >= 7 ? PL.RED : PL.INK });
     g.restore();
     TK.note(g, t, 13.6, 24, '布の面・ミルクスネーク。登れる限界は 7 ± 2°（Hu ほか 2009）。角度は本当の傾きで描いています', { size: 28 });
   }
@@ -128,39 +186,41 @@ function draw(g, t) {
   if (t >= 24.0 && t < 36.0) {
     const f = fade(t, 24, 36, 0.3);
     g.save(); g.globalAlpha = f;
-    TK.text(g, '③', 120, 230, 90, { color: TK.C.acc });
+    TK.text(g, '③', 120, 230, 90, { color: PL.RED });
     TK.text(g, '木を登る', 200, 230, 44, { align: 'left', color: TK.C.sub });
-    // 幹と、まきついた体（前はふつうの線、うしろは点線）
-    const tx0 = 170, tw = 130;
-    g.fillStyle = 'rgba(200,170,120,0.18)'; g.strokeStyle = 'rgba(230,205,160,0.7)'; g.lineWidth = 4;
-    g.beginPath(); g.roundRect(tx0, 320, tw, 700, 20); g.fill(); g.stroke();
-    g.lineCap = 'round';
+    // 幹（樹皮のすじ）と、まきついた体（前は帯、うしろは点線）
+    const tx0 = 170, tw = 130, trunk = PL.rect(tx0, 320, tw, 700);
+    PL.tint(g, trunk, PL.T.wood, 0.6);
+    PL.ink(g, gg => { for (let x = tx0 + 14; x < tx0 + tw; x += 22) { gg.moveTo(x, 320); for (let y = 320; y <= 1020; y += 35) gg.lineTo(x + Math.sin(y * 0.05 + x) * 4, y); } }, 1.6, 'rgba(35,28,21,0.55)');
+    PL.hatch(g, trunk, { angle: 1.2, gap: 8, w: 1.6, not: PL.rect(tx0 - 40, 300, tw * 0.62 + 40, 740) });
+    PL.ink(g, gg => { gg.moveTo(tx0, 320); gg.lineTo(tx0, 1020); gg.moveTo(tx0 + tw, 320); gg.lineTo(tx0 + tw, 1020); }, 5);
     for (let i = 0; i < 5; i++) {
       const y = 420 + i * 120;
-      g.strokeStyle = BODYC; g.lineWidth = 28; g.setLineDash([]);
-      g.beginPath(); g.moveTo(tx0 - 14, y + 50); g.lineTo(tx0 + tw + 14, y); g.stroke();
-      g.strokeStyle = 'rgba(207,232,222,0.35)'; g.lineWidth = 20; g.setLineDash([12, 14]);
-      g.beginPath(); g.moveTo(tx0 + tw + 14, y); g.lineTo(tx0 - 14, y - 70); g.stroke();
+      g.save(); g.setLineDash([12, 14]); PL.ink(g, gg => { gg.moveTo(tx0 + tw + 10, y); gg.lineTo(tx0 - 10, y - 70); }, 3, 'rgba(35,28,21,0.45)'); g.restore();
+      const coil = ribbonPath([[tx0 - 14, y + 50], [tx0 + tw / 2, y + 27], [tx0 + tw + 14, y]], [24, 28, 24]);
+      solid(g, coil, PL.T.wood, { a: 0.75, gap: 6, hw: 1.3, w: 3.5, lit: g2 => { g2.save(); g2.translate(0, -10); coil(g2); g2.restore(); } });
+      const d = PL.ellipse(tx0 + tw / 2, y + 26, 10, 7, -0.35); PL.tint(g, d, PL.T.brown, 0.9);
     }
-    g.setLineDash([]);
-    g.fillStyle = BODYC; g.beginPath(); g.ellipse(tx0 + tw / 2 - 10, 360, 26, 20, -0.4, 0, Math.PI * 2); g.fill();
+    const head = PL.ellipse(tx0 + tw / 2 - 10, 360, 28, 20, -0.4); solid(g, head, PL.T.wood, { a: 0.75, gap: 6, hw: 1.3, w: 4 });
     // 力の棒（縦）: 必要な力 = 1、出している力 = 3 より大きい
     const k1 = TK.out((t - 25.6) / 0.8), k2 = TK.out((t - 26.8) / 1.4), base = 930, unit = 160;
-    g.fillStyle = 'rgba(255,255,255,0.08)'; g.fillRect(430, base - unit * 3.6, 500, unit * 3.6);
-    g.fillStyle = TK.C.acc2; g.beginPath(); g.roundRect(480, base - unit * k1, 160, unit * k1, 12); g.fill();
-    g.fillStyle = TK.C.acc; g.beginPath(); g.roundRect(720, base - unit * 3.3 * k2, 160, unit * 3.3 * k2, 12); g.fill();
-    g.setLineDash([10, 10]); g.strokeStyle = TK.C.acc2; g.lineWidth = 4; g.beginPath(); g.moveTo(450, base - unit); g.lineTo(910, base - unit); g.stroke(); g.setLineDash([]);
-    TK.lines(g, '落ちないのに\n必要な力', 560, base + 60, 34, { color: TK.C.acc2 });
-    TK.lines(g, 'しめつけて\nいる力', 800, base + 60, 34, { color: TK.C.acc });
+    PL.ink(g, gg => { gg.moveTo(450, base); gg.lineTo(920, base); gg.moveTo(450, base); gg.lineTo(450, base - unit * 3.6); for (let k = 1; k <= 3; k++) { gg.moveTo(440, base - unit * k); gg.lineTo(460, base - unit * k); } }, 3);
+    [1, 2, 3].forEach(k => PL.label(g, k + '倍', 425, base - unit * k, 30, { align: 'right', color: TK.C.sub, bold: false }));
+    if (k1 > 0.01) solid(g, PL.rect(480, base - unit * k1, 160, unit * k1), PL.T.sea, { a: 0.7, gap: 10, hw: 1.6, w: 4 });
+    if (k2 > 0.01) solid(g, PL.rect(720, base - unit * 3.3 * k2, 160, unit * 3.3 * k2), PL.T.rust, { a: 0.7, gap: 10, hw: 1.6, w: 4 });
+    g.save(); g.setLineDash([10, 10]); PL.ink(g, gg => { gg.moveTo(460, base - unit); gg.lineTo(910, base - unit); }, 3, BLUE); g.restore();
+    TK.lines(g, '落ちないのに\n必要な力', 560, base + 60, 34, { color: BLUE });
+    TK.lines(g, 'しめつけて\nいる力', 800, base + 60, 34, { color: PL.RED });
     if (k2 > 0.9) TK.text(g, '[3倍以上]', 800, base - unit * 3.3 - 50, 56);
     g.restore();
-    TK.note(g, t, 24.6, 36, '研究の測定（木に登るヘビ5種、Byrnes & Jayne 2014）。棒は「3倍以上」を見せる模式\nアプリの計算の値ではありません', { size: 28 });
+    TK.note(g, t, 24.6, 36, '研究の測定（木に登るヘビ5種、Byrnes & Jayne 2014）。棒は「3倍以上」を見せる模式\nアプリの計算の値ではありません', { size: 28, y: 1135 });
   }
   // 36〜40: まとめ
   if (t >= 36.0) {
     numCards(g, t, 36.0, 520, -1);
     TK.text(g, 'ゆっくり・[慎重]', PW / 2, 820, 90);
-    TK.note(g, t, 36.4, 40, '出どころ: Hu, Nirody, Scott & Shelley (2009) PNAS 106:10081\nByrnes & Jayne (2014) Biology Letters 10:20140434', { size: 30 });
+    slither(g, 240, 1010, 560, (t - 36) * 25, 40);
+    TK.note(g, t, 36.4, 40, '出どころ: Hu, Nirody, Scott & Shelley (2009) PNAS 106:10081\nByrnes & Jayne (2014) Biology Letters 10:20140434', { size: 30, y: 1135 });
   }
 }
 

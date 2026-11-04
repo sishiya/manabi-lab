@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく body-dive-2（型H 当ててみて）「ゾウとイヌ、おしっこが長いのは？」。台本は trivia/body-dive.md。?short で録る
@@ -30,123 +33,178 @@ const cues = [
   { t: 0.05, type: 'pop' }, { t: 2.0, type: 'tick' }, { t: 3.0, type: 'tick' }, { t: 4.0, type: 'ding' }, { t: 6.4, type: 'ding' },
   { t: 8.0, type: 'whoosh' }, { t: 14.0, type: 'pop' }, { t: 19.0, type: 'whoosh' }, { t: 23.0, type: 'pop' },
 ];
-const LINE = 'rgba(207,224,255,0.9)', FILL = 'rgba(30,50,100,0.6)';
+// 絵は「図鑑の版画」（trivia-plate.js の PL.*）。動物は横から見た輪郭（左向き）を手彩色＋かげの斜線＋墨の線で
+const line = pts => g => pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
+const fadeIn = (g, f, fn) => { g.save(); g.globalAlpha *= f; fn(); g.restore(); };
+// なめらかな閉じた形（点のあいだの中点を通る2次曲線）。m: ローカル → 画面
+const smoothP = (pts, m) => g => {
+  const P = pts.map(p => m(p[0], p[1])), n = P.length, mid = i => { const a = P[i % n], b = P[(i + 1) % n]; return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; };
+  g.moveTo(...mid(n - 1)); for (let i = 0; i < n; i++) g.quadraticCurveTo(...P[i], ...mid(i)); g.closePath();
+};
+const mapper = (x0, y0, s) => (x, y) => [x0 + x * s, y0 + y * s];
+// 形を版画で: 手彩色＋左上から光が来るとして右下にかげの斜線＋墨の輪郭
+function plate(g, pts, m, s, col, o = {}) {
+  const p = smoothP(pts, m), lit = smoothP(pts.map(([x, y]) => [x - 10, y - 16]), m);
+  PL.tint(g, p, col, o.a ?? 0.7);
+  PL.hatch(g, p, { angle: 0.75, gap: Math.max(6, 9 * s), w: Math.max(1.2, 1.6 * s), not: lit });
+  if (o.inside) o.inside(p);
+  PL.ink(g, p, Math.max(2.5, (o.w || 5) * s));
+  return p;
+}
 
+// ---- ゾウ（左向き。足もと y=0、高さ約265）----
+const E_BODY = [[140, -232], [60, -250], [-30, -256], [-95, -268], [-150, -250], [-178, -205], [-190, -150], [-196, -80], [-188, -22], [-172, -6], [-160, -18], [-166, -80], [-160, -140], [-140, -160], [-120, -146], [-102, -128], [-104, -60], [-106, 0], [-58, 0], [-60, -90], [-30, -104], [40, -104], [68, -94], [64, 0], [114, 0], [124, -84], [150, -130], [160, -190]];
+const E_EAR = [[-112, -236], [-58, -240], [-40, -200], [-48, -148], [-80, -122], [-108, -150], [-118, -200]];
+const E_FAR = [[[-70, -90], [-72, 0], [-36, 0], [-36, -90]], [[90, -90], [86, 0], [128, 0], [134, -90]]];
 function elephant(g, x, y, s) {
-  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = LINE; g.fillStyle = FILL; g.lineWidth = 6 / s; g.lineJoin = 'round'; g.lineCap = 'round';
-  for (const lx of [-80, -30, 40, 85]) { g.beginPath(); g.roundRect(lx - 20, 30, 40, 110, 10); g.fill(); g.stroke(); }
-  g.beginPath(); g.ellipse(0, 0, 130, 85, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-  g.beginPath(); g.arc(-135, -30, 60, 0, Math.PI * 2); g.fill(); g.stroke();
-  g.beginPath(); g.ellipse(-110, -30, 38, 55, 0.2, 0, Math.PI * 2); g.fill(); g.stroke();   // 耳
-  g.beginPath(); g.moveTo(-185, -10); g.quadraticCurveTo(-230, 60, -195, 120); g.lineWidth = 22 / s; g.stroke();   // 鼻
-  g.lineWidth = 6 / s; g.beginPath(); g.moveTo(128, -10); g.lineTo(150, 40); g.stroke();   // しっぽ
-  g.fillStyle = LINE; g.beginPath(); g.arc(-150, -45, 6, 0, Math.PI * 2); g.fill();
-  g.restore();
+  const m = mapper(x, y, s);
+  E_FAR.forEach(L => { const p = smoothP([L[0], [L[1][0], L[1][1] - 8], L[1], L[2], [L[2][0], L[2][1] - 8], L[3]].map(([a, b]) => [a + 18, b - 4]), m); g.save(); g.globalAlpha *= 0.7; PL.tint(g, p, PL.T.gray, 1); PL.ink(g, p, Math.max(2, 3.5 * s)); g.restore(); });
+  plate(g, E_BODY, m, s, PL.T.gray, { inside: p => {
+    g.save(); g.beginPath(); p(g); g.clip();
+    PL.ink(g, gg => {
+      for (let k = 0; k < 9; k++) { const yy = -150 + k * 16; line([m(-196 + k * 0.3, yy), m(-168 + k * 0.6, yy + 3)])(gg); }   // 鼻のしわ
+      [-100, -56, 66, 114].forEach(lx => [-30, -18].forEach(dy => line([m(lx - 4, dy), m(lx + 30 - (lx > 0 ? 8 : 0), dy + 2)])(gg)));   // ひざ下のしわ
+      line([m(-150, -150), m(-176, -118)])(gg);   // きば
+    }, Math.max(1.2, 2 * s));
+    g.restore();
+  } });
+  plate(g, E_EAR, m, s, PL.T.rose, { a: 0.45, w: 4 });
+  PL.ink(g, gg => { gg.moveTo(...m(155, -196)); gg.quadraticCurveTo(...m(176, -150), ...m(168, -104)); }, Math.max(2, 4 * s));   // しっぽ
+  PL.ink(g, gg => { const [a, b] = m(168, -104); gg.moveTo(a, b); gg.lineTo(a + 6 * s, b + 16 * s); gg.moveTo(a, b); gg.lineTo(a - 5 * s, b + 16 * s); }, Math.max(1.5, 3 * s));
+  PL.ink(g, PL.circle(...m(-148, -214), Math.max(2, 5 * s)), Math.max(2, 4 * s));   // 目
 }
+// ---- イヌ（中くらいの犬。左向き。足もと y=0、高さ約195）----
+const D_BODY = [[-170, -124], [-150, -142], [-124, -152], [-104, -166], [-84, -158], [-66, -132], [-40, -118], [60, -118], [88, -110], [100, -84], [96, -48], [108, 0], [84, 0], [76, -40], [64, -70], [36, -72], [0, -66], [-40, -70], [-58, -64], [-60, 0], [-84, 0], [-84, -62], [-96, -88], [-112, -108], [-140, -112], [-162, -112]];
+const D_EAR = [[-96, -158], [-82, -196], [-70, -152]];
+const D_FAR = [[[30, -70], [44, 0], [64, 0], [58, -70]], [[-40, -70], [-36, 0], [-16, 0], [-20, -70]]];
 function dog(g, x, y, s) {
-  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = LINE; g.fillStyle = FILL; g.lineWidth = 6 / s; g.lineJoin = 'round'; g.lineCap = 'round';
-  for (const lx of [-55, -30, 35, 60]) { g.beginPath(); g.roundRect(lx - 9, 15, 18, 75, 8); g.fill(); g.stroke(); }
-  g.beginPath(); g.ellipse(0, 0, 85, 40, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-  g.beginPath(); g.ellipse(-95, -50, 38, 32, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-  g.beginPath(); g.ellipse(-135, -40, 26, 16, 0, 0, Math.PI * 2); g.fill(); g.stroke();   // 鼻先
-  g.beginPath(); g.ellipse(-80, -82, 12, 26, 0.4, 0, Math.PI * 2); g.fill(); g.stroke();   // 耳
-  g.beginPath(); g.moveTo(80, -10); g.quadraticCurveTo(120, -40, 115, -80); g.stroke();   // しっぽ
-  g.fillStyle = LINE; g.beginPath(); g.arc(-105, -58, 5, 0, Math.PI * 2); g.fill();
-  g.restore();
+  const m = mapper(x, y, s);
+  D_FAR.forEach(L => { const p = PL.poly(L.map(([a, b]) => m(a, b))); PL.tint(g, p, PL.T.brown, 0.9); PL.ink(g, p, Math.max(2, 4 * s)); });
+  plate(g, D_BODY, m, s, PL.T.wood, { inside: p => {
+    g.save(); g.beginPath(); p(g); g.clip();
+    PL.tint(g, smoothP([[-60, -120], [60, -122], [92, -104], [70, -92], [-40, -96]], m), PL.T.brown, 0.8);   // 背中のこい毛
+    PL.ink(g, gg => { for (let k = 0; k < 14; k++) { const xx = -50 + k * 9; line([m(xx, -104), m(xx + 7, -96)])(gg); } }, Math.max(1, 1.6 * s));   // 毛並み
+    g.restore();
+  } });
+  plate(g, D_EAR, m, s, PL.T.brown, { w: 4 });
+  PL.ink(g, gg => { gg.moveTo(...m(88, -112)); gg.quadraticCurveTo(...m(124, -126), ...m(124, -170)); }, Math.max(3, 9 * s));   // しっぽ
+  PL.ink(g, PL.circle(...m(-128, -140), Math.max(2, 4 * s)), Math.max(2, 4 * s));   // 目
+  PL.tint(g, PL.circle(...m(-168, -124), 7 * s), PL.INK, 0.9);   // 鼻
+  PL.ink(g, line([m(-162, -114), m(-138, -116)]), Math.max(1.4, 2.4 * s));   // 口
 }
+// ---- ネズミ（左向き。足もと y=0、高さ約60）----
+const M_BODY = [[-74, -18], [-58, -34], [-40, -44], [-10, -54], [30, -50], [58, -32], [64, -12], [50, 0], [30, -2], [-10, -2], [-34, -4], [-52, -6]];
 function mouse(g, x, y, s) {
-  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = LINE; g.fillStyle = FILL; g.lineWidth = 5 / s;
-  g.beginPath(); g.ellipse(0, 0, 60, 34, 0, 0, Math.PI * 2); g.fill(); g.stroke();
-  g.beginPath(); g.arc(-40, -32, 18, 0, Math.PI * 2); g.fill(); g.stroke();
-  g.beginPath(); g.moveTo(58, 5); g.quadraticCurveTo(110, 20, 120, -20); g.stroke();
-  g.fillStyle = LINE; g.beginPath(); g.arc(-48, -6, 4, 0, Math.PI * 2); g.fill();
-  g.restore();
+  const m = mapper(x, y, s);
+  PL.ink(g, gg => { gg.moveTo(...m(60, -12)); gg.bezierCurveTo(...m(104, -30), ...m(120, -78), ...m(165, -70)); }, Math.max(2, 3.4 * s));   // しっぽ
+  PL.ink(g, gg => { [[-34, -4], [-28, 0], [36, -2], [44, 0]].forEach(([a, b], i) => { if (i % 2) gg.lineTo(...m(a, b)); else gg.moveTo(...m(a, b)); }); }, Math.max(2, 3 * s));   // 足
+  plate(g, M_BODY, m, s, PL.T.gray, { w: 4 });
+  const ear = PL.ellipse(...m(-36, -50), 14 * s, 17 * s, -0.3); PL.tint(g, ear, PL.T.rose, 0.8); PL.ink(g, ear, Math.max(2, 3 * s));
+  PL.ink(g, PL.circle(...m(-56, -30), Math.max(1.5, 3 * s)), Math.max(1.5, 3 * s));
+  PL.ink(g, gg => { [-30, -24, -18].forEach(dy => line([m(-70, -20), m(-96, dy - 2)])(gg)); }, Math.max(1, 1.2 * s));   // ひげ
 }
-// タイマー（秒）
+// ストップウォッチ（秒）。字は時計の右に
 function timer(g, x, y, sec, done) {
-  TK.card(g, x - 150, y - 60, 300, 120, { r: 60, stroke: done ? TK.C.acc : 'rgba(160,190,255,0.4)', lw: done ? 6 : 3 });
-  TK.text(g, '0:' + String(Math.floor(sec)).padStart(2, '0'), x, y + 4, 72, { color: done ? TK.C.acc : '#fff' });
+  PL.watch(g, x - 70, y, 56, sec / 60);
+  PL.label(g, '0:' + String(Math.floor(sec)).padStart(2, '0'), x + 10, y + 4, 66, { align: 'left', color: done ? PL.RED : PL.INK });
 }
+const ground = (g, x0, x1, y) => { PL.ink(g, line([[x0, y], [x1, y]]), 4); PL.ink(g, gg => { for (let x = x0 + 10; x < x1; x += 22) { gg.moveTo(x, y + 4); gg.lineTo(x - 12, y + 18); } }, 1.4); };
 
 function draw(g, t) {
   // 0〜8: ゾウとイヌ → 2つのタイマー
   if (t < 8.0) {
-    const f = t < 7.6 ? 1 : fade(t, -1, 8, 0.3); g.save(); g.globalAlpha = f;
-    elephant(g, 300, 640, 1.15); dog(g, 820, 690, 1.15);
-    if (t < 4.0) TK.text(g, '？', PW / 2 + 20, 480, 150, { color: TK.C.acc });
-    if (t >= 4.0) {
-      const sec = Math.min(21, (t - 4.2) / 2.2 * 21), done = sec >= 21;
-      timer(g, 300, 930, Math.max(0, sec), done); timer(g, 820, 930, Math.max(0, sec), done);
-      if (done) TK.text(g, '[ほぼ同じ]', PW / 2, 330, 96);
-    }
-    g.restore();
-    if (t < 2.0) TK.hook(g, t, 0, 2.0, 'おしっこが長いのは\nどっち？', { y: 280, size: 96 });
+    const f = t < 7.6 ? 1 : fade(t, -1, 8, 0.3);
+    fadeIn(g, f, () => {
+      ground(g, 60, PW - 60, 800);
+      elephant(g, 280, 800, 1.2); dog(g, 850, 800, 1.15);
+      if (t < 4.0) PL.label(g, '？', PW / 2 + 20, 440, 150, { color: PL.RED });
+      if (t >= 4.0) {
+        const sec = Math.min(21, (t - 4.2) / 2.2 * 21), done = sec >= 21;
+        timer(g, 280, 930, Math.max(0, sec), done); timer(g, 850, 930, Math.max(0, sec), done);
+        if (done) PL.label(g, '[ほぼ同じ]', PW / 2, 330, 96);
+      }
+    });
+    if (t < 2.0) TK.hook(g, t, 0, 2.0, 'おしっこが長いのは\nどっち？', { y: 260, size: 96 });
     if (t >= 2.0 && t < 4.0) {
-      const k = (t - 2.0) / 2.0, cx = PW / 2, cy = 300, r = 70;
-      g.lineWidth = 14; g.strokeStyle = 'rgba(255,255,255,0.15)'; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();
-      g.strokeStyle = TK.C.acc; g.beginPath(); g.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - k)); g.stroke();
-      TK.text(g, String(Math.max(1, Math.ceil(2 - (t - 2.0)))), cx, cy + 4, 72);
+      const k = (t - 2.0) / 2.0;
+      PL.watch(g, PW / 2 - 50, 270, 66, k);
+      PL.label(g, String(Math.max(1, Math.ceil(2 - (t - 2.0)))), PW / 2 + 70, 274, 90, { color: PL.RED });
     }
     if (t >= 4.0) TK.note(g, t, 4.0, 8, '3kgより重いほ乳類の例として描いています（10倍の早送り）', { size: 30 });
   }
   // 8〜14: 膀胱の大きさ（1000倍）
   if (t >= 8.0 && t < 14.0) {
-    const f = fade(t, 8, 14, 0.3); g.save(); g.globalAlpha = f;
-    TK.text(g, '膀胱の大きさ', PW / 2, 220, 60, { color: TK.C.sub });
-    const k = ease((t - 8.4) / 1.6);
-    // 体積を面積で: 100 L の円と 100 mL の円（半径は体積の 1/2 乗でなく、見やすさのため面積比＝体積比）
-    const R1 = 290 * k, R2 = R1 / Math.sqrt(1000);
-    g.fillStyle = 'rgba(255,207,74,0.35)'; g.strokeStyle = TK.C.acc; g.lineWidth = 5;
-    g.beginPath(); g.arc(PW / 2 + 60, 660, R1, 0, Math.PI * 2); g.fill(); g.stroke();
-    g.fillStyle = 'rgba(95,212,255,0.6)'; g.strokeStyle = TK.C.acc2;
-    g.beginPath(); g.arc(150, 660, Math.max(4, R2), 0, Math.PI * 2); g.fill(); g.stroke();
-    if (k > 0.9) {
-      TK.text(g, '100 mL', 150, 580, 46, { color: TK.C.acc2 });
-      TK.text(g, '100 L', PW / 2 + 60, 660, 72, { color: '#fff' });
-      TK.text(g, '[1000倍]', PW / 2, 1060, 80);
-    }
-    g.restore();
+    fadeIn(g, fade(t, 8, 14, 0.3), () => {
+      PL.label(g, '膀胱の大きさ', 90, 220, 60, { align: 'left', color: TK.C.sub });
+      const k = ease((t - 8.4) / 1.6);
+      // 体積を面積で（面積比＝体積比）
+      const R1 = 290 * k, R2 = R1 / Math.sqrt(1000);
+      if (R1 > 4) PL.sphere(g, PW / 2 + 60, 660, R1, PL.T.gold, { a: 0.6 });
+      if (R2 > 1) PL.sphere(g, 150, 660, Math.max(5, R2), PL.T.sea, { a: 0.8, contour: false, ow: 3 });
+      if (k > 0.9) {
+        PL.leader(g, 150, 650, 150, 560); PL.label(g, '100 mL', 150, 520, 46, { color: TK.C.acc2 });
+        PL.leader(g, 830, 470, 900, 360); PL.label(g, '100 L', 900, 320, 64);
+        PL.label(g, '[1000倍]', PW / 2, 1060, 80);
+      }
+    });
     TK.note(g, t, 8.6, 14, '面積を量にあわせて描いています', { size: 30 });
   }
   // 14〜19: 体重の線と 21秒
   if (t >= 14.0 && t < 19.0) {
-    const f = fade(t, 14, 19, 0.3); g.save(); g.globalAlpha = f;
-    const y = 800, x0 = 100, x1 = 980, lx = w => x0 + (x1 - x0) * (Math.log10(w) + 2) / 6;   // 0.01 kg〜10 t（対数）
-    g.strokeStyle = 'rgba(207,224,255,0.6)'; g.lineWidth = 4; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke();
-    [[0.01, '10g'], [1, '1kg'], [100, '100kg'], [10000, '10t']].forEach(([w, s]) => { const x = lx(w); g.beginPath(); g.moveTo(x, y - 12); g.lineTo(x, y + 12); g.stroke(); TK.text(g, s, x, y + 50, 36, { color: TK.C.dim, bold: false }); });
-    TK.text(g, '体重（目もりは100倍ずつ）', x1, y + 110, 36, { align: 'right', color: TK.C.sub, bold: false });
-    const x3 = lx(3);
-    g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.setLineDash([12, 10]); g.beginPath(); g.moveTo(x3, 300); g.lineTo(x3, y); g.stroke(); g.setLineDash([]);
-    TK.text(g, '3kg', x3, 270, 50, { color: TK.C.acc });
-    const k = ease((t - 14.4) / 1.0);
-    g.fillStyle = `rgba(255,207,74,${0.25 * k})`; g.fillRect(x3, 400, (x1 - x3) * k, 300);
-    if (k > 0.8) { TK.text(g, '平均 [約21秒]', (x3 + x1) / 2, 520, 70); TK.text(g, '（±13秒）', (x3 + x1) / 2, 610, 46, { color: TK.C.sub, bold: false }); }
-    mouse(g, lx(0.03), 700, 0.6); dog(g, lx(20), 740, 0.45); elephant(g, lx(4000), 720, 0.33);
-    g.restore();
+    fadeIn(g, fade(t, 14, 19, 0.3), () => {
+      const y = 800, x0 = 100, x1 = 980, lx = w => x0 + (x1 - x0) * (Math.log10(w) + 2) / 6;   // 0.01 kg〜10 t（対数）
+      PL.ink(g, line([[x0, y], [x1, y]]), 5);
+      [[0.01, '10g'], [1, '1kg'], [100, '100kg'], [10000, '10t']].forEach(([w, s]) => { const x = lx(w); PL.ink(g, line([[x, y - 14], [x, y + 14]]), 4); PL.label(g, s, x, y + 52, 36, { color: TK.C.sub, bold: false }); });
+      PL.ink(g, gg => { for (let e = -2; e < 4; e++) for (let d = 2; d < 10; d++) { const x = lx(Math.pow(10, e) * d); if (x < x1) { gg.moveTo(x, y - 6); gg.lineTo(x, y + 6); } } }, 1.4);   // 細かい目もり
+      PL.label(g, '体重（目もりは100倍ずつ）', x1, y + 112, 36, { align: 'right', color: TK.C.sub, bold: false });
+      const x3 = lx(3);
+      PL.dots(g, [[x3, 300], [x3, y]], { w: 6, dash: [12, 12] });
+      PL.label(g, '3kg', x3, 270, 50, { color: PL.RED });
+      mouse(g, lx(0.03), y - 8, 0.8); dog(g, lx(20), y - 8, 0.5); elephant(g, lx(4000), y - 8, 0.42);
+      const k = ease((t - 14.4) / 1.0);
+      if (k > 0) {   // 3kg から右は、みな約21秒（かぎの線）
+        const xe = x3 + (x1 - x3) * k;
+        PL.ink(g, line([[x3, 640], [xe, 640]]), 6, PL.RED); PL.ink(g, line([[x3, 620], [x3, 660]]), 6, PL.RED); if (k > 0.98) PL.ink(g, line([[x1, 620], [x1, 660]]), 6, PL.RED);
+      }
+      if (k > 0.8) { PL.label(g, '平均 [約21秒]', (x3 + x1) / 2, 480, 70); PL.label(g, '（±13秒）', (x3 + x1) / 2, 565, 46, { color: TK.C.sub, bold: false }); }
+    });
     TK.note(g, t, 14.4, 19, 'ばらつきが大きい、平均の値', { size: 30 });
   }
-  // 19〜23: 尿道の長さ・太さと重力
+  // 19〜23: 尿道の長さ・太さと重力（縦の管にした模式）
   if (t >= 19.0 && t < 23.0) {
-    const f = fade(t, 19, 23, 0.3); g.save(); g.globalAlpha = f;
-    const flow = (x, y0, len, w, sp) => {
-      g.strokeStyle = LINE; g.lineWidth = 5; g.beginPath(); g.moveTo(x - w / 2, y0); g.lineTo(x - w / 2, y0 + len); g.moveTo(x + w / 2, y0); g.lineTo(x + w / 2, y0 + len); g.stroke();
-      g.fillStyle = 'rgba(255,207,74,0.75)';
-      for (let i = 0; i < 8; i++) { const yy = y0 + ((t * sp + i * len / 8) % len); g.beginPath(); g.ellipse(x, yy, w * 0.3, 10, 0, 0, Math.PI * 2); g.fill(); }
-    };
-    flow(330, 300, 180, 26, 120); flow(750, 300, 620, 70, 420);
-    TK.text(g, '小さい体', 330, 540, 48, { color: TK.C.sub }); TK.text(g, '大きい体', 750, 1000, 48, { color: TK.C.sub });
-    g.strokeStyle = TK.C.acc; g.lineWidth = 8; g.beginPath(); g.moveTo(960, 380); g.lineTo(960, 700); g.stroke();
-    g.fillStyle = TK.C.acc; g.beginPath(); g.moveTo(935, 690); g.lineTo(985, 690); g.lineTo(960, 740); g.closePath(); g.fill();
-    TK.text(g, '重力', 960, 340, 44, { color: TK.C.acc });
-    g.restore();
+    fadeIn(g, fade(t, 19, 23, 0.3), () => {
+      const flow = (x, y0, len, w, sp) => {
+        const wl = 14, L = PL.rect(x - w / 2 - wl, y0, wl, len), R = PL.rect(x + w / 2, y0, wl, len);
+        PL.tint(g, PL.rect(x - w / 2, y0, w, len), PL.T.sky, 0.3);
+        [L, R].forEach(p => { PL.tint(g, p, PL.T.rose, 0.85); PL.hatch(g, p, { angle: 0.8, gap: 7, w: 1.3 }); PL.ink(g, p, 3.5); });
+        g.save(); g.beginPath(); g.rect(x - w / 2, y0, w, len); g.clip();
+        for (let i = 0; i < 8; i++) { const yy = y0 + ((t * sp + i * len / 8) % len), d = PL.ellipse(x, yy, w * 0.3, 11); PL.tint(g, d, PL.T.gold, 0.95); PL.ink(g, d, 2.5); }
+        g.restore();
+      };
+      flow(330, 300, 180, 26, 120); flow(750, 300, 620, 70, 420);
+      PL.label(g, '小さい体', 330, 540, 48, { color: TK.C.sub });
+      PL.label(g, '大きい体', 750, 1000, 48, { color: TK.C.sub });
+      // 寸法の線（長く・太く）
+      PL.ink(g, gg => { line([[655, 300], [655, 920]])(gg); line([[640, 300], [670, 300]])(gg); line([[640, 920], [670, 920]])(gg); line([[701, 262], [799, 262]])(gg); line([[701, 248], [701, 276]])(gg); line([[799, 248], [799, 276]])(gg); }, 2.5);
+      PL.label(g, '長く', 630, 640, 42, { align: 'right' }); PL.label(g, '太く', 750, 222, 42);
+      PL.ink(g, line([[960, 400], [960, 700]]), 8, PL.RED);
+      const head = PL.poly([[935, 690], [985, 690], [960, 740]]); PL.tint(g, head, PL.RED, 0.9); PL.ink(g, head, 3, PL.RED);
+      PL.label(g, '重力', 960, 360, 44, { color: PL.RED });
+    });
     TK.note(g, t, 19.4, 23, '尿道を縦の管にした、イメージの図', { size: 30 });
   }
-  // 23〜25: ネズミ
+  // 23〜25: ネズミ（ぽたぽたと一瞬）
   if (t >= 23.0) {
-    const f = fade(t, 23, 25.5, 0.3); g.save(); g.globalAlpha = f;
-    mouse(g, PW / 2, 600, 2.2);
-    TK.text(g, '[0.01〜2秒]', PW / 2, 330, 90);
-    g.restore();
+    fadeIn(g, fade(t, 23, 25.5, 0.3), () => {
+      ground(g, 140, 940, 820);
+      mouse(g, 480, 820, 3.2);
+      const pud = PL.ellipse(722, 822, 34 * clamp((t - 23.2) / 0.8, 0.1, 1), 7); PL.tint(g, pud, PL.T.gold, 0.9); PL.ink(g, pud, 2.5);   // 小さな水たまり
+      [0, 1].forEach(i => {   // しずく（ぽたぽた）
+        const yy = 786 + ((t - 23) * 50 + i * 16) % 28, d = PL.poly([[710, yy - 12], [716, yy - 1], [710, yy + 4], [704, yy - 1]]);
+        PL.tint(g, d, PL.T.gold, 0.95); PL.ink(g, d, 2);
+      });
+      PL.label(g, '[0.01〜2秒]', PW / 2, 330, 90);
+    });
     TK.note(g, t, 23.0, 25, '出どころ: Yang, Pham, Choo, Hu (2014) PNAS 111:11932', { size: 30 });
   }
 }

@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく pitch-physics-1（型A ぜんぶ逆）「ナックルは揺れていない」。台本は trivia/pitch-physics.md。?short で録る
@@ -39,18 +42,52 @@ const cues = [
   { t: 31.0, type: 'whoosh' }, { t: 31.8, type: 'ding' },
 ];
 
+/// ---- 図鑑の版画の道具で描く部品（PL.*）----
+const TAU = Math.PI * 2, BLUE = '#2f5f7a';
+const curvy = pts => g => {   // なめらかな閉じた形
+  const n = pts.length, mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const m0 = mid(pts[n - 1], pts[0]); g.moveTo(m0[0], m0[1]);
+  for (let i = 0; i < n; i++) { const p = pts[i], q = mid(p, pts[(i + 1) % n]); g.quadraticCurveTo(p[0], p[1], q[0], q[1]); }
+  g.closePath();
+};
+// 10球の色（青 → 朱）
+const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const ballCol = b => { const a = hex(BLUE), c = hex(PL.RED), k = b / 9; return `rgb(${a.map((v, i) => Math.round(lerp(v, c[i], k))).join(',')})`; };
+// 野球のボール（革の手彩色・かげ・赤い縫い目）。何個もまとめて1回でぬる（筆のルックはぬるたびにぼかすので、回数を少なく）
+// B: [{ x, y, r, tint, ring }]
+function balls(g, B) {
+  if (!B.length) return;
+  const un = (L, f) => gg => L.forEach(b => f(b)(gg));
+  PL.tint(g, un(B.filter(b => !b.tint), b => PL.circle(b.x, b.y, b.r)), PL.T.sand, 0.35);
+  const hl = B.filter(b => b.tint); if (hl.length) PL.tint(g, un(hl, b => PL.circle(b.x, b.y, b.r)), hl[0].tint, 0.8);
+  const big = B.filter(b => b.r >= 10);
+  if (big.length) PL.hatch(g, un(big, b => PL.circle(b.x, b.y, b.r)), { angle: 0.7, gap: 4.5, w: 1.2, not: un(big, b => PL.circle(b.x - b.r * 0.35, b.y - b.r * 0.35, b.r)) });
+  const seam = b => gg => { const { x, y, r } = b, R = r * 0.95, c1 = x - r * 1.3, c2 = x + r * 1.3; gg.moveTo(c1 + R * Math.cos(-0.8), y + R * Math.sin(-0.8)); gg.arc(c1, y, R, -0.8, 0.8); gg.moveTo(c2 + R * Math.cos(Math.PI + 0.8), y + R * Math.sin(Math.PI + 0.8)); gg.arc(c2, y, R, Math.PI + 0.8, Math.PI - 0.8, true); };
+  PL.ink(g, un(B, seam), Math.max(1.2, B[0].r / 9), PL.RED);
+  const cols = [...new Set(B.map(b => b.ring || PL.INK))];
+  cols.forEach(c => { const L = B.filter(b => (b.ring || PL.INK) === c); PL.ink(g, un(L, b => PL.circle(b.x, b.y, b.r)), Math.max(2.4, L[0].r / 6), c); });
+}
+const baseball = (g, x, y, r, o = {}) => balls(g, [Object.assign({ x, y, r }, o)]);
 // 横から見た道すじ（投手 → 捕手、左 → 右）
 const SX0 = 110, SX1 = 970;
 const sx = y => SX0 + (16.64 - y) / 16.64 * (SX1 - SX0), sz = (z, base) => base - z * 260;
-function ground(g, base) {
-  g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 4;
-  g.beginPath(); g.moveTo(80, base); g.lineTo(1000, base); g.stroke();
-  g.fillStyle = 'rgba(255,255,255,0.6)'; g.fillRect(sx(16.64) - 40, base - 6, 60, 6);
-  g.fillRect(sx(0.43) - 6, base - 8, sx(0) - sx(0.43) + 16, 8);
-  TK.text(g, '投手', sx(16.64), base + 40, 36, { color: TK.C.sub, bold: false });
-  TK.text(g, 'ホーム', sx(0.2), base + 40, 36, { color: TK.C.sub, bold: false });
+function ground(g, base, ruler = true) {
+  const dirt = PL.rect(60, base, 960, 34);
+  PL.tint(g, dirt, PL.T.sand, 0.7); PL.hatch(g, dirt, { angle: 0.9, gap: 10, w: 1.8 });
+  // マウンド（高さ 25 cm を、縦の目盛りのまま）
+  const mx = sx(18.0), mound = curvy([[mx - 190, base + 2], [mx - 60, base - 64], [mx + 60, base - 64], [mx + 190, base + 2], [mx, base + 20]]);
+  PL.tint(g, mound, PL.T.sand, 0.8); PL.hatch(g, mound, { angle: 0.75, gap: 9, w: 1.8, not: PL.rect(0, 0, mx - 20, PH) }); PL.ink(g, mound, 4);
+  PL.ink(g, dirt, 4);
+  const plate = PL.rect(sx(0.43), base - 7, sx(0) - sx(0.43), 7);
+  PL.tint(g, plate, PL.PAPER, 1); PL.ink(g, plate, 3);
+  PL.label(g, '投手', sx(16.64) + 10, base + 64, 36, { color: TK.C.sub, bold: false });
+  PL.label(g, 'ホーム', sx(0.2), base + 64, 36, { color: TK.C.sub, bold: false });
+  if (ruler) {   // 距離の目盛り（ホームから）
+    const y = base + 110;
+    PL.ink(g, gg => { gg.moveTo(sx(16), y); gg.lineTo(sx(0), y); for (let m = 0; m <= 16; m++) { gg.moveTo(sx(m), y); gg.lineTo(sx(m), y - (m % 5 ? 10 : 20)); } }, 2);
+    [0, 5, 10, 15].forEach(m => PL.label(g, m + ' m', sx(m), y + 30, 28, { color: TK.C.sub, bold: false }));
+  }
 }
-function ball(g, x, y, r = 16, color = '#fff') { g.fillStyle = color; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
 
 // 7〜13秒のずれの点（イメージ。乱数は固定）
 let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -59,105 +96,155 @@ const DEV = [Array.from({ length: 28 }, () => rnd() * 2 - 1), Array.from({ lengt
 // 捕手の目（遠近）
 const CAMY = -1.2, CAMZ = 0.95, FOC = 2000, CCX = 600, CCY = 520;
 const proj = (x, y, z) => { const d = y - CAMY; return [CCX + FOC * x / d, CCY - FOC * (z - CAMZ) / d]; };
+function field(g) {   // 捕手の目の地面とマウンド
+  const turf = PL.rect(30, CCY + 40, PW - 60, 1190 - CCY - 40);
+  PL.tint(g, turf, PL.T.land, 0.3);
+  PL.ink(g, gg => { for (let k = 1; k < 9; k++) { const d = 2 + k * k * 0.5, y = CCY + FOC * CAMZ / d; if (y < 1190) { gg.moveTo(30, y); gg.lineTo(PW - 30, y); } } }, 1.2, 'rgba(35,28,21,0.35)');   // 遠いほどつまる横線
+  const [mx, my] = proj(0, 18.44, 0), rx = FOC * 2.7 / (18.44 - CAMY);
+  const mound = PL.ellipse(mx, my, rx, 18);
+  PL.tint(g, mound, PL.T.sand, 0.85); PL.hatch(g, mound, { angle: 0.3, gap: 6, w: 1.4, not: PL.ellipse(mx, my - 8, rx, 18) }); PL.ink(g, mound, 3);
+  PL.ink(g, gg => { gg.moveTo(30, CCY + 40); gg.lineTo(PW - 30, CCY + 40); }, 2);
+}
+function zone(g) {
+  const [zx0, zy0] = proj(-0.215, 0.43, 1.05), [zx1, zy1] = proj(0.215, 0.43, 0.48);
+  PL.ink(g, gg => { for (let k = 1; k < 3; k++) { const x = lerp(zx0, zx1, k / 3), y = lerp(zy0, zy1, k / 3); gg.moveTo(x, zy0); gg.lineTo(x, zy1); gg.moveTo(zx0, y); gg.lineTo(zx1, y); } }, 1.4, 'rgba(35,28,21,0.5)');
+  PL.ink(g, PL.rect(zx0, zy0, zx1 - zx0, zy1 - zy0), 5);
+  return [zx0, zy0, zx1, zy1];
+}
+// チョウ（上から。前ばね・後ろばね・脈・触角）
+function butterfly(g, x, y, s) {
+  const P = (u, v) => [x + u * s, y + v * s];
+  [-1, 1].forEach(d => {
+    const fw = curvy([P(d * 4, -6), P(d * 40, -52), P(d * 92, -60), P(d * 96, -30), P(d * 56, 2), P(d * 8, 4)]);
+    const hw = curvy([P(d * 6, 2), P(d * 58, 4), P(d * 76, 40), P(d * 50, 70), P(d * 18, 54), P(d * 4, 18)]);
+    [[hw, PL.T.gold], [fw, PL.T.rust]].forEach(([p, c]) => {
+      PL.tint(g, p, c, 0.65);
+      PL.hatch(g, p, { angle: 0.7, gap: 7, w: 1.5, not: g2 => g2.rect(0, 0, PW, y - 10 * s) });
+      PL.ink(g, p, 4);
+    });
+    PL.ink(g, gg => { [[90, -54], [94, -34], [70, -8]].forEach(([u, v]) => { const [a, b] = P(d * 6, -2), [c, e] = P(d * u, v); gg.moveTo(a, b); gg.quadraticCurveTo((a + c) / 2, (b + e) / 2 - 6 * s, c, e); }); [[64, 30], [46, 60]].forEach(([u, v]) => { const [a, b] = P(d * 6, 6), [c, e] = P(d * u, v); gg.moveTo(a, b); gg.lineTo(c, e); }); }, 1.6);   // 脈
+    const sp = PL.circle(...P(d * 72, -38), 7 * s); PL.tint(g, sp, PL.INK, 0.8);   // 目玉もよう
+    PL.ink(g, gg => { const [a, b] = P(d * 2, -26), [c, e] = P(d * 26, -70); gg.moveTo(a, b); gg.quadraticCurveTo(a + d * 4 * s, e + 20 * s, c, e); }, 2.4);   // 触角
+    PL.ink(g, PL.circle(...P(d * 26, -70), 3 * s), 3);
+  });
+  const body = PL.ellipse(x, y + 8 * s, 6 * s, 40 * s);
+  PL.tint(g, body, PL.T.brown, 0.9); PL.ink(g, body, 3);
+}
+// 弾丸（横から。とがった先・胴・底）
+function bullet(g, x, y, s) {
+  const L = 150 * s, R = 26 * s, nose = 70 * s;
+  const p = g2 => { g2.moveTo(x - L / 2, y - R); g2.lineTo(x + L / 2 - nose, y - R); g2.quadraticCurveTo(x + L / 2 - nose * 0.3, y - R, x + L / 2, y); g2.quadraticCurveTo(x + L / 2 - nose * 0.3, y + R, x + L / 2 - nose, y + R); g2.lineTo(x - L / 2, y + R); g2.closePath(); };
+  PL.tint(g, p, PL.T.gold, 0.75);
+  PL.hatch(g, p, { angle: 0.2, gap: 6, w: 1.6, not: PL.rect(0, 0, PW, y + R * 0.2) });
+  PL.ink(g, gg => { gg.moveTo(x - L / 2 + 22 * s, y - R); gg.lineTo(x - L / 2 + 22 * s, y + R); gg.moveTo(x - L / 2 + 30 * s, y - R); gg.lineTo(x - L / 2 + 30 * s, y + R); gg.moveTo(x - L / 2 + 10, y - R * 0.55); gg.lineTo(x + L / 2 - nose, y - R * 0.55); }, 1.8);
+  PL.ink(g, p, 5);
+  PL.ink(g, gg => { for (let k = 0; k < 3; k++) { const yy = y - R * 0.6 + k * R * 0.6; gg.moveTo(x - L / 2 - 30 - k * 20, yy); gg.lineTo(x - L / 2 - 110 - k * 20, yy); } }, 3, 'rgba(35,28,21,0.6)');   // まっすぐ飛ぶ線
+}
+// 1円玉（アルミ。若木のもよう）
+function coin(g, x, y, r) {
+  const c = PL.circle(x, y, r);
+  PL.tint(g, c, PL.T.gray, 0.45);
+  PL.hatch(g, c, { angle: 0.7, gap: 10, w: 1.8, not: PL.circle(x - r * 0.25, y - r * 0.25, r), cx: x, cy: y });
+  PL.ink(g, c, 6); PL.ink(g, PL.circle(x, y, r * 0.9), 2);
+  const ex = x - r * 0.45, ey = y + r * 0.15;   // 若木（左がわ。右がわの物差しとかさねない）
+  PL.ink(g, gg => { gg.moveTo(ex, ey + r * 0.45); gg.lineTo(ex, ey - r * 0.25); }, 4);
+  [[-1, -0.12], [1, -0.02], [-1, 0.12], [1, 0.22]].forEach(([d, v]) => { const lf = PL.ellipse(ex + d * r * 0.1, ey + v * r, r * 0.11, r * 0.05, d * 0.5); PL.tint(g, lf, PL.T.leaf, 0.6); PL.ink(g, lf, 2.4); });
+}
 
 function draw(g, t) {
   // 0〜2.2: フック。ジグザグに描かれがちな道すじに ×
   if (t < 2.2) {
     const base = 760;
-    ground(g, base);
-    const k = clamp(t / 0.8, 0, 1);
-    g.save(); g.setLineDash([16, 14]); g.strokeStyle = TK.C.acc2; g.lineWidth = 7; g.beginPath();
-    for (let i = 0; i <= 80 * k; i++) { const u = i / 80, x = lerp(sx(16.2), sx(0.6), u), y = base - 420 + u * 200 + Math.sin(u * Math.PI * 7) * 60; i ? g.lineTo(x, y) : g.moveTo(x, y); }
-    g.stroke(); g.restore();
-    TK.text(g, 'よく描かれる、ナックルの絵', PW / 2, 240, 44, { color: TK.C.sub, bold: false });
+    ground(g, base, false);
+    const k = clamp(t / 0.8, 0, 1), pts = [];
+    for (let i = 0; i <= 80 * k; i++) { const u = i / 80; pts.push([lerp(sx(16.2), sx(0.6), u), base - 420 + u * 200 + Math.sin(u * Math.PI * 7) * 60]); }
+    if (pts.length > 1) PL.dots(g, pts, { color: BLUE, w: 7, dash: [16, 14] });
+    PL.label(g, 'よく描かれる、ナックルの絵', PW / 2, 175, 44, { color: TK.C.sub, bold: false });
     if (t > 0.9) {
       const p = clamp(TK.pop(t, 0.9, 0.3), 0, 1.2);
-      g.save(); g.strokeStyle = TK.C.red; g.lineWidth = 30; g.lineCap = 'round';
-      g.beginPath(); g.moveTo(540 - 200 * p, 480 - 200 * p); g.lineTo(540 + 200 * p, 480 + 200 * p); g.moveTo(540 + 200 * p, 480 - 200 * p); g.lineTo(540 - 200 * p, 480 + 200 * p); g.stroke(); g.restore();
+      PL.ink(g, gg => { gg.moveTo(540 - 200 * p, 480 - 200 * p); gg.lineTo(540 + 200 * p, 480 + 200 * p); gg.moveTo(540 + 200 * p, 480 - 200 * p); gg.lineTo(540 - 200 * p, 480 + 200 * p); }, 30, PL.RED);
     }
     TK.hook(g, t, 0.0, 2.2, 'ナックルは、\n[揺れてない]。', { y: 960, size: 120 });
-    if (t > 0.6) { g.save(); g.globalAlpha = fade(t, 0.6, 2.2, 0.2); TK.text(g, '（記録の精度の中では）', PW / 2, 1150, 44, { color: TK.C.sub, bold: false }); g.restore(); }
+    if (t > 0.6) { g.save(); g.globalAlpha = fade(t, 0.6, 2.2, 0.2); PL.label(g, '（記録の精度の中では）', PW / 2, 1150, 44, { color: TK.C.sub, bold: false }); g.restore(); }
   }
   // 2.2〜7: 1/60 秒ごとの点が並ぶ（横から。計算した道すじ）
   if (t >= 2.2 && t < 7.0) {
     const base = 900;
     ground(g, base);
     const n = Math.floor(clamp((t - 2.6) / 2.8, 0, 1) * 32);
-    for (let i = 0; i <= n; i++) {
-      const j = Math.min(NP, Math.round(i / 60 / 0.545 * NP));
-      ball(g, sx(KY[j]), sz(KZ[j], base), 12, i === n ? TK.C.acc : 'rgba(255,255,255,0.85)');
-    }
-    TK.text(g, '1/60 秒ごとの [ボールの位置]', PW / 2, 300, 62);
-    TK.text(g, '112 km/h のナックル（図はモデルの道すじ）', PW / 2, 380, 38, { color: TK.C.sub, bold: false });
+    balls(g, Array.from({ length: n + 1 }, (_, i) => { const j = Math.min(NP, Math.round(i / 60 / 0.545 * NP)); return Object.assign({ x: sx(KY[j]), y: sz(KZ[j], base), r: i === n ? 16 : 12 }, i === n ? { tint: PL.T.gold, ring: PL.RED } : {}); }));
+    PL.label(g, '1/60 秒ごとの [ボールの位置]', PW / 2, 300, 62);
+    PL.label(g, '112 km/h のナックル（図はモデルの道すじ）', PW / 2, 380, 38, { color: TK.C.sub, bold: false });
     TK.note(g, t, 2.6, 7, 'ひとつの調べ: 2011年の4試合・投手2人の記録', { size: 34 });
   }
   // 7〜13: なめらかな線からのずれ（拡大）
   if (t >= 7.0 && t < 13.0) {
     const rows = [{ name: 'ふつうの球', v: 0.30, a: 7.3, y: 420 }, { name: 'ナックル', v: 0.33, a: 9.1, y: 760 }];
-    TK.text(g, 'なめらかな線からの[ずれ]', PW / 2, 220, 64);
+    PL.label(g, 'なめらかな線からの[ずれ]', PW / 2, 220, 64);
     rows.forEach((r, ri) => {
       if (t < r.a) return;
       g.save(); g.globalAlpha = clamp((t - r.a) / 0.4, 0, 1);
-      TK.card(g, 90, r.y - 130, 900, 300, { r: 30 });
-      TK.text(g, r.name, 130, r.y - 80, 46, { align: 'left', color: TK.C.sub });
-      TK.text(g, '平均 [' + r.v.toFixed(2) + ' インチ]', 950, r.y - 80, 50, { align: 'right' });
-      g.strokeStyle = TK.C.acc2; g.lineWidth = 4; g.beginPath(); g.moveTo(130, r.y + 50); g.lineTo(950, r.y + 50); g.stroke();
-      DEV[ri].forEach((d, i) => ball(g, 150 + i * 29, r.y + 50 + d * 90 * r.v / 0.33, 9, '#fff'));
+      TK.card(g, 90, r.y - 130, 900, 300);
+      PL.label(g, r.name, 130, r.y - 80, 46, { align: 'left', color: TK.C.sub });
+      PL.label(g, '平均 [' + r.v.toFixed(2) + ' インチ]', 950, r.y - 80, 50, { align: 'right' });
+      PL.ink(g, gg => { gg.moveTo(130, r.y + 50); gg.lineTo(950, r.y + 50); }, 4, BLUE);
+      PL.ink(g, gg => { for (const s of [-1, 1]) { gg.moveTo(122, r.y + 50 + s * 90); gg.lineTo(950, r.y + 50 + s * 90); } }, 1.2, 'rgba(35,28,21,0.35)');   // ずれの目もり
+      const pt = DEV[ri].map((d, i) => [150 + i * 29, r.y + 50 + d * 90 * r.v / 0.33]), dots = gg => pt.forEach(([x, y]) => PL.circle(x, y, 8)(gg));
+      PL.ink(g, gg => pt.forEach(([x, y]) => { gg.moveTo(x, r.y + 50); gg.lineTo(x, y); }), 1.6, 'rgba(179,58,34,0.7)'); PL.tint(g, dots, PL.T.sand, 0.8); PL.ink(g, dots, 2.6);
       g.restore();
     });
-    if (t > 11.0) { g.save(); g.globalAlpha = fade(t, 11, 13, 0.3); TK.text(g, 'ほぼ [同じ]', PW / 2, 1000, 76); g.restore(); }
+    if (t > 11.0) { g.save(); g.globalAlpha = fade(t, 11, 13, 0.3); PL.label(g, 'ほぼ [同じ]', PW / 2, 1020, 76); g.restore(); }
     TK.note(g, t, 7.3, 13, '縦を大きく拡大したイメージ（点の位置は作図）', { size: 32 });
   }
   // 13〜17: 0.3 インチ ≒ 7.6 mm
   if (t >= 13.0 && t < 17.0) {
-    const S = 26, k = TK.out((t - 13.3) / 0.8);   // 1 mm = 30 px
-    TK.text(g, '0.3 インチ ≒ [7.6 mm]', PW / 2, 250, 80);
-    g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 4; g.beginPath(); g.arc(540, 650, 10 * S, 0, Math.PI * 2); g.stroke();
-    g.fillStyle = TK.C.acc; g.fillRect(540, 640, 7.6 * S * k, 20);
-    g.beginPath(); g.arc(540, 650, 10, 0, Math.PI * 2); g.fill();
-    TK.text(g, '1円玉（直径 2 cm）', 540, 345, 40, { color: TK.C.sub, bold: false });
-    TK.text(g, '7.6 mm', 540 + 7.6 * S / 2, 600, 44, { color: TK.C.acc });
-    if (t > 14.6) { g.save(); g.globalAlpha = fade(t, 14.6, 17, 0.3); TK.text(g, '＝ 測る道具の [誤差] と同じくらい', PW / 2, 1050, 56); g.restore(); }
+    const S = 26, k = TK.out((t - 13.3) / 0.8);   // 1 mm = 26 px
+    PL.label(g, '0.3 インチ ≒ [7.6 mm]', PW / 2, 250, 80);
+    coin(g, 540, 650, 10 * S);
+    const bar = PL.rect(540, 638, 7.6 * S * k, 24);
+    PL.tint(g, bar, PL.RED, 0.85); PL.ink(g, bar, 3);
+    PL.ink(g, gg => { gg.moveTo(540, 700); gg.lineTo(540 + 8 * S, 700); for (let m = 0; m <= 8; m++) { gg.moveTo(540 + m * S, 700); gg.lineTo(540 + m * S, 700 - (m % 5 ? 10 : 18)); } }, 2);   // mm の目盛り
+    PL.label(g, '1円玉（直径 2 cm）', 540, 345, 40, { color: TK.C.sub, bold: false });
+    if (k > 0.9) { PL.leader(g, 540 + 7.6 * S, 636, 880, 520, PL.RED); PL.label(g, '7.6 mm', 900, 488, 44, { color: PL.RED }); }
+    if (t > 14.6) { g.save(); g.globalAlpha = fade(t, 14.6, 17, 0.3); PL.label(g, '＝ 測る道具の [誤差] と同じくらい', PW / 2, 1050, 56); g.restore(); }
     TK.note(g, t, 13.3, 17, '実物大ではありません', { size: 32 });
   }
-  // 17〜25: 捕手の目。10球の道すじ
+  // 17〜25: 捕手の目。10球の道すじ（計算した値をそのまま）
   if (t >= 17.0 && t < 25.0) {
-    const [zx0, zy0] = proj(-0.215, 0.43, 1.05), [zx1, zy1] = proj(0.215, 0.43, 0.48);
-    g.strokeStyle = 'rgba(255,255,255,0.45)'; g.lineWidth = 4; g.strokeRect(zx0, zy0, zx1 - zx0, zy1 - zy0);
-    TK.text(g, 'ストライクゾーン', (zx0 + zx1) / 2, zy0 - 30, 34, { color: TK.C.dim, bold: false });
+    field(g);
+    const [zx0, zy0] = zone(g);
+    PL.label(g, 'ストライク', zx0 - 20, zy0 + 30, 34, { align: 'right', color: TK.C.sub, bold: false }); PL.label(g, 'ゾーン', zx0 - 20, zy0 + 74, 34, { align: 'right', color: TK.C.sub, bold: false });
     const prog = clamp((t - 17.8) / 3.0, 0, 1);
     KX.forEach((xs, b) => {
       const m = Math.floor(clamp(prog * 1.6 - b * 0.06, 0, 1) * NP);
-      g.strokeStyle = `hsla(${200 - b * 18},90%,65%,0.9)`; g.lineWidth = 4; g.beginPath();
-      for (let i = 0; i <= m; i++) { const [x, y] = proj(xs[i], KY[i], KZ[i]); i ? g.lineTo(x, y) : g.moveTo(x, y); }
-      g.stroke();
-      if (m > 0) { const [x, y] = proj(xs[m], KY[m], KZ[m]); g.lineWidth = 4; g.strokeStyle = '#fff'; g.beginPath(); g.arc(x, y, Math.max(4, FOC * 0.037 / (KY[m] - CAMY)), 0, Math.PI * 2); g.stroke(); }
+      if (m > 0) PL.ink(g, gg => { for (let i = 0; i <= m; i++) { const [x, y] = proj(xs[i], KY[i], KZ[i]); i ? gg.lineTo(x, y) : gg.moveTo(x, y); } }, 4, ballCol(b));
     });
-    TK.text(g, '捕手の目から（[10球]）', PW / 2, 220, 60);
-    TK.text(g, '縫い目の向きだけ 1° ずつ変えた（16〜25°）', PW / 2, 300, 38, { color: TK.C.sub, bold: false });
+    balls(g, KX.map((xs, b) => { const m = Math.floor(clamp(prog * 1.6 - b * 0.06, 0, 1) * NP); if (m <= 0) return null; const [x, y] = proj(xs[m], KY[m], KZ[m]); return { x, y, r: Math.max(5, FOC * 0.037 / (KY[m] - CAMY)), ring: ballCol(b) }; }).filter(Boolean));
+    PL.label(g, '捕手の目から（[10球]）', PW / 2, 220, 60);
+    PL.label(g, '縫い目の向きだけ 1° ずつ変えた（16〜25°）', PW / 2, 300, 38, { color: TK.C.sub, bold: false });
     TK.note(g, t, 17.5, 25, 'モデルでは（Watts & Sawyer 1975 の縫い目の力）', { size: 32 });
   }
   // 25〜31: ホームでの10点
   if (t >= 25.0 && t < 31.0) {
     const S = 34;   // 1 cm = 34 px
-    TK.text(g, 'ホームに着いた所（捕手の目から）', PW / 2, 230, 50);
-    g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 3; g.beginPath(); g.moveTo(80, 620); g.lineTo(1000, 620); g.stroke();
+    PL.label(g, 'ホームに着いた所（捕手の目から）', PW / 2, 230, 50);
+    PL.ink(g, gg => { gg.moveTo(80, 620); gg.lineTo(1000, 620); for (let c = -13; c <= 13; c++) { const x = 540 + c * S; gg.moveTo(x, 620); gg.lineTo(x, 620 + (c % 5 ? 10 : 22)); } }, 2.4);   // 1 cm の目盛り
+    PL.label(g, '1目盛り＝1 cm', 1000, 470, 30, { align: 'right', color: TK.C.sub, bold: false });
     KX.forEach((xs, b) => {
       const x = 540 + xs[NP] * 100 * S;
       g.save(); g.globalAlpha = clamp(TK.pop(t, 25.3 + b * 0.12, 0.3), 0, 1);
-      ball(g, x, 620, 18, `hsl(${200 - b * 18},90%,65%)`);
-      TK.text(g, (16 + b) + '°', x, b % 2 ? 680 : 560, 30, { color: TK.C.sub, bold: false });
+      baseball(g, x, 600, 18, { ring: ballCol(b) });
+      PL.label(g, (16 + b) + '°', x, b % 2 ? 690 : 548, 30, { color: ballCol(b), bold: false });
       g.restore();
     });
     if (t > 27.0) {
       g.save(); g.globalAlpha = fade(t, 27, 31, 0.3);
       const xa = 540 + KX[0][NP] * 100 * S, xb = 540 + KX[9][NP] * 100 * S;
-      g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.beginPath(); g.moveTo(xb, 800); g.lineTo(xa, 800); g.stroke();
-      g.fillStyle = TK.C.acc;
-      g.beginPath(); g.moveTo(xa, 800); g.lineTo(xa - 24, 784); g.lineTo(xa - 24, 816); g.fill();
-      g.beginPath(); g.moveTo(xb, 800); g.lineTo(xb + 24, 784); g.lineTo(xb + 24, 816); g.fill();
-      TK.text(g, '約 [19 cm]', 540, 880, 72);
-      TK.text(g, '同じ投げ方・同じねらいの10球', 540, 980, 40, { color: TK.C.sub, bold: false });
+      PL.ink(g, gg => { gg.moveTo(xb, 800); gg.lineTo(xa, 800); gg.moveTo(xa, 770); gg.lineTo(xa, 830); gg.moveTo(xb, 770); gg.lineTo(xb, 830); }, 5, PL.RED);
+      PL.ink(g, PL.poly([[xa, 800], [xa - 26, 784], [xa - 26, 816]]), 4, PL.RED); PL.tint(g, PL.poly([[xa, 800], [xa - 26, 784], [xa - 26, 816]]), PL.RED, 1);
+      PL.ink(g, PL.poly([[xb, 800], [xb + 26, 784], [xb + 26, 816]]), 4, PL.RED); PL.tint(g, PL.poly([[xb, 800], [xb + 26, 784], [xb + 26, 816]]), PL.RED, 1);
+      PL.label(g, '約 [19 cm]', 540, 890, 72);
+      PL.label(g, '同じ投げ方・同じねらいの10球', 540, 990, 40, { color: TK.C.sub, bold: false });
       g.restore();
     }
     TK.note(g, t, 25.3, 31, 'モデルの計算（1° でほぼ 2 cm）', { size: 32 });
@@ -165,16 +252,13 @@ function draw(g, t) {
   // 31〜35: 研究者のまとめ
   if (t >= 31.0) {
     const p = clamp(TK.pop(t, 31.2, 0.4), 0, 1);
-    g.save(); g.globalAlpha = 0.6 * p; g.strokeStyle = TK.C.sub; g.lineWidth = 5;
-    g.beginPath(); g.ellipse(270, 520, 70, 40, -0.6, 0, Math.PI * 2); g.stroke();
-    g.beginPath(); g.ellipse(330, 520, 70, 40, 0.6, 0, Math.PI * 2); g.stroke();
-    g.restore();
-    g.save(); g.globalAlpha = p; g.fillStyle = TK.C.acc; g.beginPath(); g.moveTo(660, 490); g.lineTo(860, 490); g.quadraticCurveTo(950, 520, 860, 550); g.lineTo(660, 550); g.closePath(); g.fill(); g.restore();
-    TK.text(g, 'チョウ', 300, 660, 52, { color: TK.C.sub });
-    TK.text(g, '弾丸', 790, 660, 52, { color: TK.C.acc });
-    TK.text(g, 'より', 540, 525, 56, { color: TK.C.sub });
-    TK.text(g, '“more like bullets than butterflies”', PW / 2, 860, 42, { color: TK.C.sub, bold: false });
-    TK.note(g, t, 32.0, 35, '出どころ: A. M. Nathan (2012) Baseball Prospectus「The Knuckleball Mystique」\n縫い目の力: Watts & Sawyer (1975) Am. J. Phys. 43', { size: 28 });
+    g.save(); g.globalAlpha = 0.75 * p; butterfly(g, 270, 520, 1.4); g.restore();
+    g.save(); g.globalAlpha = p; bullet(g, 830, 520, 1.1); g.restore();
+    PL.label(g, 'チョウ', 270, 690, 52, { color: TK.C.sub });
+    PL.label(g, '弾丸', 830, 690, 52, { color: PL.RED });
+    PL.label(g, 'より', 540, 420, 56, { color: TK.C.sub });
+    PL.label(g, '“more like bullets than butterflies”', PW / 2, 860, 42, { color: TK.C.sub, bold: false });
+    TK.note(g, t, 32.0, 35, '出どころ: A. M. Nathan (2012) Baseball Prospectus「The Knuckleball Mystique」\n縫い目の力: Watts & Sawyer (1975) Am. J. Phys. 43', { size: 28, y: 1140 });
   }
 }
 

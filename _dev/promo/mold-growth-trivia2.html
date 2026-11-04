@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく mold-growth-2（型C この動画のあいだに）「この30秒で、胞子を1個」。台本は trivia/mold-growth.md。?short で録る
@@ -30,70 +33,93 @@ const cues = [
   { t: 0.05, type: 'pop' }, { t: 3.5, type: 'whoosh' }, { t: 4.2, type: 'rise' }, { t: 10.0, type: 'pop' }, { t: 14.5, type: 'ding' },
   { t: 16.0, type: 'whoosh' }, { t: 18.0, type: 'pop' }, { t: 20.0, type: 'whoosh' }, { t: 22.0, type: 'ding' }, { t: 25.0, type: 'pop' }, { t: 27.0, type: 'rise' },
 ];
-const SP = '#8fd16a', AIR = '#7fe0ff';
 const rnd = (i, k = 1) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
-// 1m³ の立方体（見下ろし気味）と胞子の点
-function cube(g, cx, cy, s, n, t, label, col = SP) {
+// ---- 図鑑の版画の部品 ----
+// 1m³ の立方体（見下ろし気味。手前の面はうすく手彩色、奥の辺は点線）と胞子の点
+function cube(g, cx, cy, s, n, t, label, o = {}) {
   const d = s * 0.45;
   const P = (x, y, z) => [cx + (x - 0.5) * s + (z - 0.5) * d, cy + (0.5 - y) * s - (z - 0.5) * d];
-  g.strokeStyle = 'rgba(207,224,255,0.7)'; g.lineWidth = 4; g.beginPath();
-  const E = [[0, 0, 0, 1, 0, 0], [0, 1, 0, 1, 1, 0], [0, 0, 0, 0, 1, 0], [1, 0, 0, 1, 1, 0], [0, 0, 1, 1, 0, 1], [0, 1, 1, 1, 1, 1], [0, 0, 1, 0, 1, 1], [1, 0, 1, 1, 1, 1], [0, 0, 0, 0, 0, 1], [1, 0, 0, 1, 0, 1], [0, 1, 0, 0, 1, 1], [1, 1, 0, 1, 1, 1]];
-  E.forEach(e => { const a = P(e[0], e[1], e[2]), b = P(e[3], e[4], e[5]); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); }); g.stroke();
-  for (let i = 0; i < n; i++) {
-    const [x, y] = P(rnd(i), rnd(i, 2) + Math.sin(t + i) * 0.01, rnd(i, 3));
-    g.fillStyle = col; g.beginPath(); g.arc(x, y, Math.max(3, s / 90), 0, Math.PI * 2); g.fill();
+  const top = PL.poly([P(0, 1, 0), P(1, 1, 0), P(1, 1, 1), P(0, 1, 1)]), side = PL.poly([P(1, 0, 0), P(1, 0, 1), P(1, 1, 1), P(1, 1, 0)]);
+  PL.tint(g, top, PL.T.sky, 0.3); PL.tint(g, side, PL.T.sky, 0.45); PL.hatch(g, side, { angle: 0.9, gap: 12, w: 1.4 });
+  g.save(); g.setLineDash([8, 10]); PL.ink(g, gg => [[0, 0, 1, 1, 0, 1], [0, 0, 1, 0, 1, 1], [0, 0, 0, 0, 0, 1]].forEach(e => { gg.moveTo(...P(e[0], e[1], e[2])); gg.lineTo(...P(e[3], e[4], e[5])); }), 2.5, 'rgba(35,28,21,0.55)'); g.restore();
+  const sp = gg => { for (let i = 0; i < n; i++) { const [x, y] = P(rnd(i), rnd(i, 2) + Math.sin(t + i) * 0.01, rnd(i, 3)), r = Math.max(3, s / 85); gg.moveTo(x + r, y); gg.arc(x, y, r, 0, Math.PI * 2); } };
+  if (n > 0) { PL.tint(g, sp, PL.T.leaf, 1); PL.ink(g, sp, 1.2, '#3f5a2a'); }
+  PL.ink(g, gg => [[0, 0, 0, 1, 0, 0], [0, 1, 0, 1, 1, 0], [0, 0, 0, 0, 1, 0], [1, 0, 0, 1, 1, 0], [0, 1, 1, 1, 1, 1], [1, 0, 1, 1, 1, 1], [0, 1, 0, 0, 1, 1], [1, 0, 0, 1, 0, 1], [1, 1, 0, 1, 1, 1]].forEach(e => { gg.moveTo(...P(e[0], e[1], e[2])); gg.lineTo(...P(e[3], e[4], e[5])); }), 4);
+  if (o.ruler) {   // 1 m の目盛り（下の辺）
+    const a = P(0, 0, 0), b = P(1, 0, 0);
+    PL.ink(g, gg => { gg.moveTo(a[0], a[1] + 30); gg.lineTo(b[0], b[1] + 30); for (let i = 0; i <= 10; i++) { const x = lerp(a[0], b[0], i / 10); gg.moveTo(x, a[1] + 30); gg.lineTo(x, a[1] + (i % 5 ? 22 : 16)); } }, 2);
+    PL.label(g, '1 m', (a[0] + b[0]) / 2, a[1] + 62, 36, { color: TK.C.sub, bold: false });
   }
-  if (label) TK.text(g, label, cx, cy + s * 0.5 + d * 0.5 + 50, 48, { color: TK.C.sub });
+  if (label) PL.label(g, label, cx, cy + s * 0.5 + d * 0.5 + (o.ruler ? 120 : 50), 48, { color: TK.C.sub });
 }
-function nose(g, x, y) {   // 横顔（線だけ）
-  g.strokeStyle = '#fff'; g.lineWidth = 8; g.lineCap = 'round'; g.lineJoin = 'round';
-  g.beginPath(); g.moveTo(x, y - 260); g.quadraticCurveTo(x - 40, y - 200, x - 30, y - 140); g.lineTo(x - 80, y - 60); g.lineTo(x - 30, y - 40);
-  g.quadraticCurveTo(x - 50, y, x - 20, y + 40); g.quadraticCurveTo(x - 40, y + 120, x + 40, y + 200); g.stroke();
+// 横顔（鼻と口のあたり。右を向く人の顔を左から見る）
+function face(g, x, y) {
+  const P = [[x + 200, y - 300], [x + 20, y - 300], [x, y - 260], [x - 30, y - 200], [x - 30, y - 140], [x - 80, y - 60], [x - 74, y - 46], [x - 30, y - 40], [x - 46, y], [x - 30, y + 20], [x - 48, y + 50], [x - 30, y + 80], [x - 40, y + 130], [x + 20, y + 200], [x + 200, y + 200]];
+  const f = PL.poly(P);
+  PL.tint(g, f, PL.T.rose, 0.5); PL.hatch(g, f, { angle: 0.9, gap: 9, w: 1.6, not: PL.poly(P.map(([a, b]) => [a - 30, b])) });
+  PL.ink(g, gg => { P.slice(1, -1).forEach(([a, b], i) => i ? gg.lineTo(a, b) : gg.moveTo(a, b)); }, 7);
+  const ns = PL.ellipse(x - 52, y - 52, 12, 6, -0.3); PL.tint(g, ns, PL.T.brown, 0.9); PL.ink(g, ns, 2.5);   // 鼻のあな
+  PL.ink(g, gg => { gg.moveTo(x - 40, y - 230); gg.quadraticCurveTo(x - 10, y - 236, x + 10, y - 222); gg.moveTo(x - 30, y - 205); gg.quadraticCurveTo(x - 10, y - 214, x + 8, y - 205); }, 3);   // 目
+}
+// 目盛りつきの筒（吸った空気の量）
+function cylinder(g, x, y0, y1, w, k) {
+  const tube = PL.rect(x - w / 2, y0, w, y1 - y0), h = (y1 - y0 - 6) * k, wt = PL.rect(x - w / 2 + 4, y1 - h, w - 8, h);
+  PL.tint(g, tube, PL.T.sky, 0.15);
+  if (h > 0) { PL.tint(g, wt, PL.T.sea, 0.65); PL.hatch(g, wt, { angle: 0.9, gap: 10, w: 1.6, not: PL.rect(x - w / 2, y1 - h, w * 0.45, h) }); }
+  PL.ink(g, gg => { for (let i = 1; i <= 11; i++) { const yy = y1 - (y1 - y0 - 6) * i / 11; gg.moveTo(x + w / 2, yy); gg.lineTo(x + w / 2 - (i % 2 ? 16 : 30), yy); } }, 2);
+  PL.ink(g, gg => { gg.moveTo(x - w / 2, y0); gg.lineTo(x - w / 2, y1); gg.lineTo(x + w / 2, y1); gg.lineTo(x + w / 2, y0); }, 6);
+}
+const spore = (g, x, y, r) => { const c = PL.circle(x, y, r); PL.tint(g, c, PL.T.leaf, 1); PL.hatch(g, c, { angle: 0.8, gap: Math.max(7, r / 3), w: 1.4, not: PL.circle(x - r * 0.3, y - r * 0.3, r), cx: x, cy: y }); PL.ink(g, c, Math.max(2, r / 8)); };
+// 菌糸（湿った所で芽を出す）
+function sprout(g, x, y, k, i) {
+  if (k <= 0) return;
+  PL.ink(g, gg => { for (let j = 0; j < 4; j++) { const a = j * 1.6 + i, L = 46 * k; gg.moveTo(x, y); gg.quadraticCurveTo(x + Math.cos(a + 0.4) * L * 0.6, y + Math.sin(a + 0.4) * L * 0.6, x + Math.cos(a) * L, y + Math.sin(a) * L); } }, 2.4, '#4f6a3a');
 }
 
 function draw(g, t) {
   TK.clock(g, t, 0, DUR);
   if (t < 3.5) {
-    cube(g, PW / 2, 760, 420, Math.floor(clamp(t / 3, 0, 1) * 60), t, null);
+    cube(g, PW / 2 - 40, 850, 400, Math.floor(clamp(t / 3, 0, 1) * 60), t, null);
     TK.hook(g, t, 0, 1.6, 'この30秒で、\nあなたは…', { y: 420, size: 110 });
-    if (t >= 1.6) TK.text(g, 'カビの [胞子]', PW / 2, 400, 90);
+    if (t >= 1.6) PL.label(g, 'カビの [胞子]', 90, 420, 90, { align: 'left' });
   } else if (t < 10.0) {
     const n = Math.round(211 * TK.out((t - 4.2) / 2.0));
-    cube(g, PW / 2, 700, 460, n, t, '1 m³（家の中）');
-    TK.text(g, n + ' 個', PW / 2, 300, 110, { color: SP });
+    cube(g, PW / 2 - 40, 740, 420, n, t, '1 m³（家の中）', { ruler: true });
+    PL.label(g, n + ' 個', 90, 280, 110, { align: 'left', color: PL.GREEN });
   } else if (t < 16.0) {
-    nose(g, 820, 640);
-    // 吸った量（いまの動画の時刻で計算）
-    const L = t * 15.9 * 1000 / 86400;
-    TK.text(g, 'この動画で吸った空気', 420, 330, 52, { color: TK.C.sub });
-    TK.text(g, L.toFixed(1) + ' L', 420, 450, 130, { color: AIR });
-    const k = clamp(L / 5.5, 0, 1);
-    g.strokeStyle = '#cfe0ff'; g.lineWidth = 6; g.strokeRect(300, 560, 240, 420);
-    g.fillStyle = 'rgba(127,224,255,0.45)'; g.fillRect(303, 977 - 414 * k, 234, 414 * k);
-    TK.text(g, '30秒で 5.5 L', 420, 1030, 46, { color: TK.C.sub });
-    for (let i = 0; i < 18; i++) { const p = (t * 0.6 + rnd(i)) % 1; g.fillStyle = 'rgba(127,224,255,0.6)'; g.beginPath(); g.arc(lerp(560, 760, p), 600 + rnd(i, 2) * 80 - p * 20, 6, 0, Math.PI * 2); g.fill(); }
+    face(g, 820, 640);
+    const L = t * 15.9 * 1000 / 86400;   // 吸った量（いまの動画の時刻で計算）
+    PL.label(g, 'この動画で吸った空気', 90, 330, 52, { align: 'left', color: TK.C.sub });
+    PL.label(g, L.toFixed(1) + ' L', 90, 450, 130, { align: 'left', color: '#2f5f7a' });
+    cylinder(g, 400, 560, 980, 220, clamp(L / 5.5, 0, 1));
+    PL.label(g, '30秒で 5.5 L', 400, 1030, 46, { color: TK.C.sub });
+    PL.ink(g, gg => { for (let i = 0; i < 12; i++) { const p = (t * 0.6 + rnd(i)) % 1, x = lerp(540, 740, p), y = 600 + rnd(i, 2) * 80 - p * 20; gg.moveTo(x - 12, y); gg.quadraticCurveTo(x, y - 8, x + 12, y); } }, 3, '#2f5f7a');   // 吸いこむ空気
   } else if (t < 20.0) {
-    nose(g, 820, 640);
+    face(g, 820, 640);
     const p = ease((t - 16.6) / 1.4);
-    g.fillStyle = SP; g.beginPath(); g.arc(lerp(220, 750, p), lerp(700, 600, p), 26, 0, Math.PI * 2); g.fill();
-    TK.text(g, '[約1個]', 420, 330, 120);
-    if (t > 18.0) { g.save(); g.globalAlpha = clamp((t - 18) / 0.4, 0, 1); TK.text(g, '1日 約3,400個', 420, 470, 60, { color: TK.C.sub }); g.restore(); }
+    spore(g, lerp(220, 735, p), lerp(700, 590, p), 26);
+    PL.label(g, '[約1個]', 90, 330, 120, { align: 'left' });
+    if (t > 18.0) { g.save(); g.globalAlpha = clamp((t - 18) / 0.4, 0, 1); PL.label(g, '1日 約3,400個', 90, 470, 60, { align: 'left', color: TK.C.sub }); g.restore(); }
+    if (t < 17.0) { PL.leader(g, 248, 700, 300, 820, TK.C.sub); PL.label(g, 'カビの胞子（大きく描いています）', 90, 860, 36, { align: 'left', color: TK.C.sub, bold: false }); }
   } else if (t < 25.0) {
-    cube(g, 290, 680, 300, 211, t, '家の中 211', SP);
-    cube(g, 780, 680, 300, Math.round(605 * TK.out((t - 20.6) / 1.4)), t, '外 605', SP);
-    TK.text(g, '1 m³ あたりの胞子', PW / 2, 300, 56, { color: TK.C.sub });
-    if (t > 22) { g.save(); g.globalAlpha = clamp((t - 22) / 0.4, 0, 1); TK.text(g, '家の中は [3分の1]', PW / 2, 1030, 64); g.restore(); }
+    cube(g, 290, 690, 300, 211, t, '家の中 211');
+    cube(g, 780, 690, 300, Math.round(605 * TK.out((t - 20.6) / 1.4)), t, '外 605');
+    PL.label(g, '1 m³ あたりの胞子', 90, 330, 56, { align: 'left', color: TK.C.sub });
+    if (t > 22) { g.save(); g.globalAlpha = clamp((t - 22) / 0.4, 0, 1); PL.label(g, '家の中は [3分の1]', PW / 2, 1030, 64); g.restore(); }
   } else {
     // 乾いた所と、湿った所に落ちた胞子
-    g.fillStyle = '#2a3a63'; g.fillRect(120, 560, 400, 360); g.fillStyle = '#28507a'; g.fillRect(560, 560, 400, 360);
-    TK.text(g, '乾いたタイル', 320, 980, 46, { color: TK.C.sub }); TK.text(g, '湿ったすみ', 760, 980, 46, { color: AIR });
+    const dry = PL.rect(120, 560, 400, 360), wet = PL.rect(560, 560, 400, 360);
+    PL.tint(g, dry, PL.T.sand, 0.4); PL.tint(g, wet, PL.T.sea, 0.45); PL.hatch(g, wet, { angle: 0.9, gap: 12, w: 1.4 });
+    PL.ink(g, gg => { [120, 560].forEach(x0 => { for (let i = 1; i < 4; i++) { gg.moveTo(x0 + i * 100, 560); gg.lineTo(x0 + i * 100, 920); gg.moveTo(x0, 560 + i * 90); gg.lineTo(x0 + 400, 560 + i * 90); } }); }, 2, 'rgba(35,28,21,0.45)');   // タイルの目地
+    for (let i = 0; i < 8; i++) { const xx = 600 + rnd(i, 11) * 320, yy = 590 + rnd(i, 12) * 300, d = PL.poly([...Array.from({ length: 9 }, (_, q) => { const a = Math.PI * q / 8; return [xx + Math.cos(a) * 8, yy + Math.sin(a) * 8]; }), [xx, yy - 18]]); PL.tint(g, d, PL.T.sea, 0.9); PL.ink(g, d, 2); }   // しずく
+    PL.ink(g, dry, 4); PL.ink(g, wet, 4);
+    PL.label(g, '乾いたタイル', 320, 980, 46, { color: TK.C.sub }); PL.label(g, '湿ったすみ', 760, 980, 46, { color: '#2f5f7a' });
     for (let i = 0; i < 10; i++) {
       const p = clamp((t - 25.2 - i * 0.12) / 1.2, 0, 1);
-      [[160, 0], [600, 1]].forEach(([x0, wet]) => {
-        const x = x0 + 40 + rnd(i, 4 + wet) * 260, y = lerp(260, 600 + rnd(i, 6) * 280, ease(p));
-        g.fillStyle = SP; g.beginPath(); g.arc(x, y, 9, 0, Math.PI * 2); g.fill();
-        const gk = wet ? clamp((t - 27.0 - i * 0.05) / 2.5, 0, 1) : 0;
-        if (gk > 0) { g.strokeStyle = SP; g.lineWidth = 3; for (let j = 0; j < 4; j++) { const a = j * 1.6 + i; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 46 * gk, y + Math.sin(a) * 46 * gk); g.stroke(); } }
+      [[160, 0], [600, 1]].forEach(([x0, w]) => {
+        const x = x0 + 40 + rnd(i, 4 + w) * 260, y = lerp(260, 600 + rnd(i, 6) * 280, ease(p));
+        sprout(g, x, y, w ? clamp((t - 27.0 - i * 0.05) / 2.5, 0, 1) : 0, i);
+        spore(g, x, y, 9);
       });
     }
   }

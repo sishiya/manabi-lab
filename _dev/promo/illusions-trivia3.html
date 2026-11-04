@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく illusions-3（型G 15秒ループ）「見つめると消える」（トロクスラー効果）。台本は trivia/illusions.md。?short で録る
@@ -18,9 +21,12 @@
 // （上の進み具合の線もこのあいだは出さない）。動画の圧縮でにじみが段になって崩れないよう、ぼけは大きめ。
 // 出どころ: Martinez-Conde ほか (2006) Neuron 49(2)（Troxler 1804 の再発見・マイクロサッカード）
 const DUR = 20;
-const FX = 540, FY = 630;   // ＋の位置（13秒で少しずらす）
+const FX = 540, FY = 680;   // ＋の位置（13秒で少しずらす）
 const BG = [196, 196, 196];
-const BLOBS = [[-250, -250, [222, 178, 190]], [250, -250, [176, 214, 184]], [-250, 250, [178, 196, 228]], [250, 250, [224, 214, 168]]];
+const D = 230;   // にじみの中心の、＋からのずれ
+const BLOBS = [[-D, -D, [222, 178, 190]], [D, -D, [176, 214, 184]], [-D, D, [178, 196, 228]], [D, D, [224, 214, 168]]];
+// 錯視の図は「刷りの図版」として紙の上に置く（二重のわく）。にじみはぼけていないと効かないので、ここだけは放射のぼかしのまま（正確な刺激）
+const PLATE = { x: 40, y: 252, w: 1000, h: 848 };
 const subs = [
   { a: 0.0, b: 3.0, ja: '＋だけを見て。目を動かさないで', en: 'Look only at the +. Don’t move your eyes', noBurn: true },
   { a: 6.0, b: 12.0, ja: '…まわりの色、消えてきた？\n画面は[1ミリも]変わっていません', en: '…Are the colors fading?\nThe picture hasn’t changed at all' },
@@ -30,25 +36,30 @@ const subs = [
 const cues = [{ t: 0.05, type: 'pop' }, { t: 12.4, type: 'whoosh' }, { t: 16.0, type: 'ding' }];
 
 function stimulus(g, fx, fy) {
-  g.fillStyle = `rgb(${BG})`; g.fillRect(0, 0, PW, 1105);
+  const { x, y, w, h } = PLATE;
+  g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip();
+  g.fillStyle = `rgb(${BG})`; g.fillRect(x, y, w, h);
   for (const [dx, dy, c] of BLOBS) {
-    const x = FX + dx, y = FY + dy, gr = g.createRadialGradient(x, y, 0, x, y, 210);
+    const bx = FX + dx, by = FY + dy, gr = g.createRadialGradient(bx, by, 0, bx, by, 210);
     gr.addColorStop(0, `rgba(${c},1)`); gr.addColorStop(0.35, `rgba(${c},0.85)`); gr.addColorStop(1, `rgba(${c},0)`);
-    g.fillStyle = gr; g.beginPath(); g.arc(x, y, 210, 0, Math.PI * 2); g.fill();
+    g.fillStyle = gr; g.beginPath(); g.arc(bx, by, 210, 0, Math.PI * 2); g.fill();
   }
+  g.restore();
   g.strokeStyle = '#222'; g.lineWidth = 6; g.beginPath(); g.moveTo(fx - 22, fy); g.lineTo(fx + 22, fy); g.moveTo(fx, fy - 22); g.lineTo(fx, fy + 22); g.stroke();
+  // わく（細い外わく＋太い内わく＋四すみの見当）
+  PL.ink(g, PL.rect(x - 14, y - 14, w + 28, h + 28), 2);
+  PL.ink(g, PL.rect(x, y, w, h), 5);
+  PL.ink(g, gg => { for (const [cx, cy] of [[x - 14, y - 14], [x + w + 14, y - 14], [x - 14, y + h + 14], [x + w + 14, y + h + 14]]) { gg.moveTo(cx - 10, cy); gg.lineTo(cx + 10, cy); gg.moveTo(cx, cy - 10); gg.lineTo(cx, cy + 10); } }, 2);
 }
 
 function draw(g, t) {
   // ＋は 12.4〜13.4 秒だけ少しずれる（目を動かさせる）
   const j = t > 12.4 && t < 13.4 ? 1 : 0;
   stimulus(g, FX + j * 140, FY - j * 90);
-  // 下の字幕の所は紺
-  { const gr = g.createLinearGradient(0, 1105, 0, PH); gr.addColorStop(0, TK.C.bg1); gr.addColorStop(1, TK.C.bg0); g.fillStyle = gr; g.fillRect(0, 1105, PW, PH - 1105); }
-  if (t < 3.0) TK.hook(g, t, 0.0, 3.0, '＋だけを見て', { y: 200, size: 96 });
-  if (t >= 16.0) { g.save(); g.globalAlpha = fade(t, 16.0, 20.5, 0.3); TK.text(g, 'トロクスラー効果（1804）', PW / 2, 200, 70, { stroke: 'rgba(0,0,0,0.5)' }); g.restore(); }
+  if (t < 3.0) TK.hook(g, t, 0.0, 3.0, '＋だけを見て', { y: 180, size: 96 });
+  if (t >= 16.0) { g.save(); g.globalAlpha = fade(t, 16.0, 20.5, 0.3); PL.label(g, 'トロクスラー効果（1804）', PW / 2, 180, 70); g.restore(); }
   if (t >= 12.0 && t < 16.0) TK.note(g, t, 12.0, 16.0, '消えない人もいます（画面の大きさ・見る距離で変わる）', { size: 30 });
-  if (t >= 16.0) TK.note(g, t, 16.0, 20.0, 'しくみ（目か脳か）は、まだ研究中\n出どころ: Martinez-Conde ほか (2006) Neuron 49(2)', { size: 28 });
+  if (t >= 16.0) TK.note(g, t, 16.0, 20.0, 'しくみ（目か脳か）は、まだ研究中\n出どころ: Martinez-Conde ほか (2006) Neuron 49(2)', { size: 25, y: 1166 });
 }
 
 triviaStart({ out: 'illusions-trivia3', voice: 'auto', dur: DUR, draw, subs, cues, peek: 1.5, progress: false, bgOpts: { grid: false } });

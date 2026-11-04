@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく ga-creatures-3（型A）「どこにもつながっていないのに、ないと動かない回路」。台本は trivia/ga-creatures.md
@@ -40,63 +43,100 @@ const USEDSET = new Set(USED.map(([i, j]) => i + ',' + j));
 // 配線: 使ったマスの、となりの使ったマスへ
 const WIRES = []; USED.forEach(([i, j]) => { [[1, 0], [0, 1]].forEach(([di, dj]) => { if (USEDSET.has((i + di) + ',' + (j + dj)) && rnd(i * 13 + j, di) > 0.25) WIRES.push([i, j, i + di, j + dj]); }); });
 
+// チップ（図鑑の版画で）: 外の包み・足・10×10 のマス。使ったマスは手彩色と中の小さな回路、灰色のマスは斜線
+const WIRE = TK.C.acc2;
+function chip(g) {
+  const x0 = GX - 24, y0 = GY - 24, w = N * (CS + GAP) - GAP + 48;
+  const pkg = PL.rect(x0, y0, w, w);
+  PL.ink(g, gg => { for (let k = 0; k < 14; k++) { const x = x0 + 30 + k * (w - 60) / 13; gg.moveTo(x, y0); gg.lineTo(x, y0 - 16); gg.moveTo(x, y0 + w); gg.lineTo(x, y0 + w + 16); } }, 7);   // 足（上と下）
+  PL.tint(g, pkg, PL.T.gray, 0.6);
+  const ix = GX - 6, iy = GY - 6, iw = w - 36;
+  PL.hatch(g, g2 => { g2.rect(x0, y0, w, w); g2.moveTo(ix, iy); g2.lineTo(ix, iy + iw); g2.lineTo(ix + iw, iy + iw); g2.lineTo(ix + iw, iy); g2.closePath(); }, { angle: 0.8, gap: 8, w: 1.4 });   // 外のわくだけ（中は逆まわりで抜く）
+  PL.ink(g, pkg, 5); PL.ink(g, PL.rect(GX - 6, GY - 6, w - 36, w - 36), 2);
+  g.fillStyle = PL.INK; g.beginPath(); g.arc(x0 + 14, y0 + 14, 5, 0, Math.PI * 2); g.fill();   // 1番ピンの印
+}
 function grid(g, t, o) {
   const lit = o.lit ?? 1, nUsed = Math.round(32 * lit);
-  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
-    const [x, y] = cell(i, j);
-    g.fillStyle = 'rgba(255,255,255,0.05)'; g.strokeStyle = 'rgba(160,190,255,0.25)'; g.lineWidth = 2;
-    g.beginPath(); g.roundRect(x, y, CS, CS, 8); g.fill(); g.stroke();
-  }
+  chip(g);
+  const allCells = g2 => { for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const [x, y] = cell(i, j); g2.rect(x, y, CS, CS); } };   // まとめて1回でぬる（軽く）
+  PL.tint(g, allCells, PL.T.sand, 0.45); PL.ink(g, allCells, 1.6);
+  const used = USED.slice(0, nUsed), usedCells = g2 => used.forEach(([i, j]) => { const [x, y] = cell(i, j); g2.rect(x, y, CS, CS); });
+  if (used.length) { PL.tint(g, usedCells, PL.T.sky, 0.85); PL.ink(g, usedCells, 3, WIRE); }
+  // 使ったマス（中に小さな回路の線）
+  USED.slice(0, nUsed).forEach(([i, j], n) => {
+    const [x, y] = cell(i, j), c = PL.rect(x, y, CS, CS);
+    PL.ink(g, gg => { const v = n % 3; gg.moveTo(x + 12, y + 20); gg.lineTo(x + 30, y + 20); gg.lineTo(x + 30, y + CS - 18); gg.lineTo(x + CS - 12, y + CS - 18); if (v) { gg.moveTo(x + 12, y + CS - 26); gg.lineTo(x + 22, y + CS - 26); } gg.moveTo(x + 40, y + 14); gg.lineTo(x + 40, y + 30); gg.lineTo(x + CS - 10, y + 30); }, 1.6);
+  });
   // 配線
-  g.strokeStyle = 'rgba(95,212,255,0.7)'; g.lineWidth = 5;
-  WIRES.forEach(([a, b, c, d], k) => { if (k / WIRES.length > lit) return; const [x1, y1] = cell(a, b), [x2, y2] = cell(c, d); g.beginPath(); g.moveTo(x1 + CS / 2, y1 + CS / 2); g.lineTo(x2 + CS / 2, y2 + CS / 2); g.stroke(); });
-  USED.slice(0, nUsed).forEach(([i, j]) => { const [x, y] = cell(i, j); g.fillStyle = 'rgba(95,212,255,0.45)'; g.strokeStyle = TK.C.acc2; g.lineWidth = 3; g.beginPath(); g.roundRect(x, y, CS, CS, 8); g.fill(); g.stroke(); });
+  WIRES.forEach(([a, b, c, d], k) => { if (k / WIRES.length > lit) return; const [x1, y1] = cell(a, b), [x2, y2] = cell(c, d); PL.ink(g, gg => { gg.moveTo(x1 + CS / 2, y1 + CS / 2); gg.lineTo(x2 + CS / 2, y2 + CS / 2); }, 5, WIRE); [[x1, y1], [x2, y2]].forEach(([xx, yy]) => { g.fillStyle = WIRE; g.beginPath(); g.arc(xx + CS / 2, yy + CS / 2, 6, 0, Math.PI * 2); g.fill(); }); });
   // 灰色のマス
-  const [gx, gy] = cell(...GREY), pulse = o.greyHi ? 0.5 + 0.5 * Math.abs(Math.sin(t * 4)) : 0;
-  g.fillStyle = o.clamped ? 'rgba(255,107,107,0.6)' : 'rgba(170,170,185,0.75)'; g.strokeStyle = o.greyHi ? `rgba(255,207,74,${0.5 + 0.5 * pulse})` : 'rgba(220,220,230,0.8)'; g.lineWidth = o.greyHi ? 6 : 3;
-  g.beginPath(); g.roundRect(gx, gy, CS, CS, 8); g.fill(); g.stroke();
-  if (o.clamped) TK.text(g, '0', gx + CS / 2, gy + CS / 2 + 2, 44, { color: '#fff' });
-  // 入口・出口
-  TK.text(g, '音 →', GX - 10, GY + 4.5 * (CS + GAP) + CS / 2, 34, { align: 'right', color: TK.C.sub });
+  const [gx, gy] = cell(...GREY), c = PL.rect(gx, gy, CS, CS);
+  if (o.clamped) PL.tint(g, c, PL.T.rose, 0.95);
+  else { PL.tint(g, c, PL.T.gray, 0.9); PL.hatch(g, c, { angle: 0.8, gap: 7, w: 1.6, cx: gx, cy: gy }); }
+  PL.ink(g, c, 3);
+  if (o.greyHi) { g.save(); g.globalAlpha *= 0.5 + 0.5 * Math.abs(Math.sin(t * 4)); PL.ink(g, PL.rect(gx - 8, gy - 8, CS + 16, CS + 16), 6, PL.RED); g.restore(); }
+  if (o.clamped) { PL.leader(g, gx + CS + 4, gy + CS / 2, 930, gy + CS / 2, PL.RED); PL.label(g, '0', 960, gy + CS / 2 + 2, 48, { color: PL.RED }); }   // 固定した値は、マスの外に引き出して
+  // 入口
+  const iy = GY + 4.5 * (CS + GAP) + CS / 2;
+  PL.label(g, '音', 70, iy, 40, { color: TK.C.sub });
+  PL.ink(g, gg => { gg.moveTo(100, iy); gg.lineTo(GX - 30, iy); gg.moveTo(GX - 48, iy - 12); gg.lineTo(GX - 30, iy); gg.lineTo(GX - 48, iy + 12); }, 4);
 }
 // 出力の表示（低い音 → 0、高い音 → 1）。bad: 0〜1 でこわれる
-function output(g, t, bad, y = 1000) {
-  TK.text(g, '出力', 150, y, 40, { color: TK.C.sub, align: 'left' });
-  const x0 = 270, x1 = 930;
-  g.strokeStyle = bad > 0.3 ? TK.C.red : TK.C.green; g.lineWidth = 6; g.beginPath();
-  for (let i = 0; i <= 160; i++) {
-    const u = i / 160, x = lerp(x0, x1, u), seg = Math.floor(u * 4 + t * 0.5) % 2;
-    let v = seg ? 1 : 0; v += bad * (Math.sin(u * 90 + t * 20) * 0.45 + (rnd(i, Math.floor(t * 8)) - 0.5) * 0.6);
-    const yy = y + 30 - clamp(v, -0.2, 1.2) * 60; i ? g.lineTo(x, yy) : g.moveTo(x, yy);
-  }
-  g.stroke();
+function output(g, t, bad, y = 1100) {
+  PL.label(g, '出力', 150, y, 40, { color: TK.C.sub, align: 'left' });
+  const x0 = 270, x1 = 930, ok = bad <= 0.3;
+  PL.ink(g, gg => { for (let k = 0; k <= 4; k++) { gg.moveTo(lerp(x0, x1, k / 4), y + 40); gg.lineTo(lerp(x0, x1, k / 4), y + 50); } gg.moveTo(x0, y + 40); gg.lineTo(x1, y + 40); }, 2, 'rgba(35,28,21,0.5)');
+  PL.ink(g, gg => {
+    for (let i = 0; i <= 160; i++) {
+      const u = i / 160, x = lerp(x0, x1, u), seg = Math.floor(u * 4 + t * 0.5) % 2;
+      let v = seg ? 1 : 0; v += bad * (Math.sin(u * 90 + t * 20) * 0.45 + (rnd(i, Math.floor(t * 8)) - 0.5) * 0.6);
+      const yy = y + 30 - clamp(v, -0.2, 1.2) * 60; i ? gg.lineTo(x, yy) : gg.moveTo(x, yy);
+    }
+  }, 6, ok ? PL.GREEN : PL.RED);
 }
 // 音の波（周期がちがう2つ）
 function waves(g, t, f) {
   g.save(); g.globalAlpha = f;
   const rows = [['低い音（1 kHz）', 1, 420], ['高い音（10 kHz）', 10, 760]];
   rows.forEach(([s, k, y]) => {
-    TK.text(g, s, 540, y - 120, 50, { color: TK.C.sub });
-    g.strokeStyle = k > 1 ? TK.C.acc : TK.C.acc2; g.lineWidth = 5; g.beginPath();
-    for (let i = 0; i <= 400; i++) { const x = 120 + i * 2.1; const yy = y - Math.sin((i / 400) * Math.PI * 2 * 2 * k - t * 6) * 70; i ? g.lineTo(x, yy) : g.moveTo(x, yy); }
-    g.stroke();
+    PL.label(g, s, 540, y - 125, 50, { color: TK.C.sub });
+    PL.ink(g, gg => { gg.moveTo(120, y); gg.lineTo(960, y); for (let i = 0; i <= 8; i++) { gg.moveTo(120 + i * 105, y - 8); gg.lineTo(120 + i * 105, y + 8); } }, 1.6, 'rgba(35,28,21,0.5)');
+    const P = Array.from({ length: 401 }, (_, i) => [120 + i * 2.1, y - Math.sin((i / 400) * Math.PI * 2 * 2 * k - t * 6) * 70]);
+    if (k === 1) PL.tint(g, g2 => { g2.moveTo(120, y); P.forEach(p => g2.lineTo(...p)); g2.lineTo(960, y); g2.closePath(); }, PL.T.sky, 0.6);
+    PL.ink(g, gg => P.forEach((p, i) => i ? gg.lineTo(...p) : gg.moveTo(...p)), 5, k > 1 ? PL.RED : WIRE);
   });
   g.restore();
+}
+// 電球（ガラス・フィラメント・口金）。heat: 0〜1
+function bulb(g, x, y, heat) {
+  const glass = g2 => { g2.moveTo(x - 22, y + 38); g2.quadraticCurveTo(x - 50, y + 10, x - 46, y - 14); g2.arc(x, y - 14, 46, Math.PI, 0); g2.quadraticCurveTo(x + 50, y + 10, x + 22, y + 38); g2.closePath(); };
+  PL.tint(g, glass, PL.T.gold, 0.15 + 0.75 * heat);
+  PL.ink(g, gg => { gg.moveTo(x - 10, y + 36); gg.lineTo(x - 10, y); gg.lineTo(x - 14, y - 10); for (let i = 0; i < 5; i++) gg.lineTo(x - 10 + i * 5, y - 10 + (i % 2 ? -8 : 0)); gg.lineTo(x + 10, y); gg.lineTo(x + 10, y + 36); }, 2.4, heat > 0.3 ? PL.RED : PL.INK);
+  PL.ink(g, glass, 4);
+  const base = PL.rect(x - 22, y + 38, 44, 30); PL.tint(g, base, PL.T.gray, 0.8); PL.hatch(g, base, { angle: 0.2, gap: 7, w: 2 }); PL.ink(g, base, 3);
+  if (heat > 0.2) { g.save(); g.globalAlpha *= heat; PL.ink(g, gg => { for (let i = 0; i < 7; i++) { const a = Math.PI * (0.75 + i / 6 * 1.5); gg.moveTo(x + Math.cos(a) * 62, y - 14 + Math.sin(a) * 62); gg.lineTo(x + Math.cos(a) * 84, y - 14 + Math.sin(a) * 84); } }, 4, PL.RED); g.restore(); }   // 熱
+}
+// 夜の窓（月と、入ってくる冷たい風）
+function nightWindow(g, x, y, w, h, t) {
+  const sky = PL.rect(x, y, w, h);
+  PL.tint(g, sky, PL.T.sea, 0.95); PL.hatch(g, sky, { angle: 0.15, gap: 6, w: 1.3 });
+  g.fillStyle = PL.PAPER; g.beginPath(); g.arc(x + w * 0.72, y + h * 0.32, 13, 0, Math.PI * 2); g.fill();
+  PL.ink(g, sky, 5); PL.ink(g, gg => { gg.moveTo(x + w / 2, y); gg.lineTo(x + w / 2, y + h); gg.moveTo(x, y + h / 2); gg.lineTo(x + w, y + h / 2); }, 4);
+  PL.ink(g, gg => { for (let i = 0; i < 3; i++) { const yy = y + 24 + i * 26, ph = (t * 40 + i * 30) % 60; gg.moveTo(x + w + 10 + ph, yy); gg.quadraticCurveTo(x + w + 30 + ph, yy - 8, x + w + 50 + ph, yy); } }, 2.4, WIRE);   // 冷たい風
 }
 
 function draw(g, t) {
   if (t < 2.0) {
     grid(g, t, { lit: 1, greyHi: true });
-    TK.hook(g, t, 0.0, 2.0, '消しても平気？', { y: 990, size: 110 });
+    TK.hook(g, t, 0.0, 2.0, '消しても平気？', { y: 1070, size: 110 });
   }
   if (t >= 2.0 && t < 9.0) {
     const f = fade(t, 2.0, 9.0, 0.3);
     waves(g, t, f);
     if (t > 5.5) {
-      g.save(); g.globalAlpha = f * TK.pop(t, 5.5, 0.35);
-      const cx = 540, cy = 980; g.strokeStyle = '#fff'; g.lineWidth = 6; g.beginPath(); g.arc(cx, cy, 55, 0, 7); g.stroke();
-      g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx, cy - 35); g.moveTo(cx, cy); g.lineTo(cx + 25, cy + 10); g.stroke();
-      g.strokeStyle = TK.C.red; g.lineWidth = 10; g.beginPath(); g.moveTo(cx - 70, cy - 70); g.lineTo(cx + 70, cy + 70); g.stroke();
+      g.save(); g.globalAlpha = f * clamp(TK.pop(t, 5.5, 0.35), 0, 1);
+      PL.watch(g, 540, 1000, 60, 0.15);
+      PL.ink(g, gg => { gg.moveTo(540 - 80, 1000 - 90); gg.lineTo(540 + 80, 1000 + 70); }, 12, PL.RED);
       g.restore();
     }
   }
@@ -104,7 +144,7 @@ function draw(g, t) {
     const f = fade(t, 9.0, 15.0, 0.3), k = clamp((t - 9.3) / 4.2, 0, 1);
     g.save(); g.globalAlpha = f;
     grid(g, t, { lit: k });
-    TK.card(g, 290, 110, 500, 100, { r: 50 }); TK.text(g, '世代 ' + Math.round(5000 * k).toLocaleString('ja-JP'), 540, 162, 60, { color: k >= 1 ? TK.C.acc : '#fff' });
+    TK.card(g, 290, 96, 500, 94); PL.label(g, '世代 ' + Math.round(5000 * k).toLocaleString('ja-JP'), 540, 145, 56, { color: k >= 1 ? PL.RED : PL.INK });
     output(g, t, 1 - k);
     g.restore();
   }
@@ -113,9 +153,9 @@ function draw(g, t) {
     g.save(); g.globalAlpha = f;
     grid(g, t, { lit: 1, greyHi: !cl, clamped: cl });
     const [gx, gy] = cell(...GREY);
-    if (!cl) TK.text(g, 'どこにもつながっていない', gx + CS / 2 - 60, gy - 40, 36, { color: TK.C.acc });
+    if (!cl) { PL.leader(g, gx + CS / 2, gy + CS + 10, 720, 990, PL.RED); PL.label(g, 'どこにもつながっていない', 720, 1020, 38, { color: PL.RED }); }
     output(g, t, cl ? clamp((t - 17.8) / 0.6, 0, 1) : 0);
-    if (cl) { g.globalAlpha = f * TK.pop(t, 18.0, 0.3); TK.text(g, '[✕] うまく動かない', 540, 160, 60, { acc: TK.C.red }); }
+    if (cl) { g.globalAlpha = f * clamp(TK.pop(t, 18.0, 0.3), 0, 1); PL.label(g, '[✕] うまく動かない', 540, 150, 60); }
     g.restore();
     TK.note(g, t, 17.6, 23.0, '「止める」＝出力を 0 か 1 に固定すること。マスの並びはイメージ', { size: 30 });
   }
@@ -124,7 +164,7 @@ function draw(g, t) {
     g.save(); g.globalAlpha = f;
     grid(g, t, { lit: 1, greyHi: true });
     const [gx, gy] = cell(...GREY), cx = gx + CS / 2, cy = gy + CS / 2;
-    for (let r = 0; r < 4; r++) { const ph = ((t - 23) * 0.8 + r / 4) % 1; g.strokeStyle = `rgba(255,207,74,${0.8 * (1 - ph)})`; g.lineWidth = 5; g.beginPath(); g.arc(cx, cy, 30 + ph * 220, 0, 7); g.stroke(); }
+    for (let r = 0; r < 4; r++) { const ph = ((t - 23) * 0.8 + r / 4) % 1; g.save(); g.globalAlpha *= 0.9 * (1 - ph); g.setLineDash([10, 10]); PL.ink(g, PL.circle(cx, cy, 40 + ph * 220), 5, PL.RED); g.restore(); }   // しみ出し（となりへ広がる）
     output(g, t, 0);
     g.restore();
     TK.note(g, t, 23.4, 30.0, '「となりへのしみ出し」は論文でも「おそらく」の説明', { size: 30 });
@@ -133,19 +173,13 @@ function draw(g, t) {
     const f = fade(t, 30.0, 36, 0.3), heat = clamp((t - 31.6) / 1.0, 0, 1);
     g.save(); g.globalAlpha = f;
     grid(g, t, { lit: 1 });
-    // 電球
-    const bx = 860, by = 170, glow = heat;
-    g.fillStyle = `rgba(255,207,74,${0.3 + 0.6 * glow})`; g.shadowColor = TK.C.acc; g.shadowBlur = 30 * glow * RES;
-    g.beginPath(); g.arc(bx, by, 45, 0, 7); g.fill(); g.shadowBlur = 0;
-    g.fillStyle = '#aab'; g.fillRect(bx - 20, by + 40, 40, 30);
-    // 窓
-    g.strokeStyle = '#cfe0ff'; g.lineWidth = 5; g.strokeRect(150, 110, 130, 120); g.beginPath(); g.moveTo(215, 110); g.lineTo(215, 230); g.stroke();
-    g.fillStyle = '#cfe0ff'; g.beginPath(); g.arc(250, 145, 12, 0, 7); g.fill();
-    TK.text(g, '温度', 540, 170, 54, { color: heat > 0.5 ? TK.C.red : TK.C.sub });
-    output(g, t, heat * 0.55);
+    bulb(g, 940, 120, heat);
+    nightWindow(g, 220, 92, 120, 96, t);
+    PL.label(g, '温度', 610, 140, 54, { color: heat > 0.5 ? PL.RED : TK.C.sub });
+    output(g, t, heat * 0.55, 1020);   // 注を絵の下に置くので、出力を少し上に
     g.restore();
   }
-  if (t >= 33.2) TK.note(g, t, 33.2, 35.0, '出どころ: Thompson, A. (1997) An Evolved Circuit, Intrinsic in Silicon,\nEntwined with Physics. ICES96, LNCS 1259', { size: 30 });
+  if (t >= 33.2) TK.note(g, t, 33.2, 35.0, '出どころ: Thompson, A. (1997) An Evolved Circuit, Intrinsic in Silicon,\nEntwined with Physics. ICES96, LNCS 1259', { size: 30, y: 1140 });   // 2行なので絵の下に（クレジットと重ねない）
 }
 
 triviaStart({ out: 'ga-creatures-trivia3', voice: 'auto', dur: DUR, draw, subs, cues, peek: 1.5 });

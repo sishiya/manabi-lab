@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく railgun-1（型B もしも計算）「コンセントでレールガンを充電したら？」。台本は trivia/railgun.md。?short で録る
@@ -35,129 +38,149 @@ const cues = [
 ];
 const MIN = 5e6 / 1500 / 60;   // 55.6 分
 
-// コンセント（日本の2つ穴）
+/// ---- 図鑑の版画の道具で描く部品（PL.*）。筆のルックはぬるたびにぼかすので、同じ色はまとめて1回でぬる ----
+// コンセント（日本の2つ穴＋アース）。glow: 0〜1 で朱の輪郭が太る（電気が流れている）
 function outlet(g, x, y, s, glow = 0) {
-  g.save(); g.translate(x, y); g.scale(s, s);
-  TK.card(g, -110, -140, 220, 280, { r: 30, fill: 'rgba(230,238,255,0.12)', stroke: '#e8f0ff', lw: 5 });
-  g.fillStyle = '#e8f0ff'; g.beginPath(); g.roundRect(-52, -50, 22, 70, 6); g.roundRect(30, -50, 22, 70, 6); g.fill();
-  g.beginPath(); g.arc(0, 75, 16, Math.PI, 0); g.lineTo(16, 92); g.lineTo(-16, 92); g.closePath(); g.fill();
-  if (glow > 0) { g.globalAlpha = glow; g.strokeStyle = TK.C.acc; g.lineWidth = 8; g.shadowColor = TK.C.acc; g.shadowBlur = 30; g.beginPath(); g.roundRect(-110, -140, 220, 280, 30); g.stroke(); }
-  g.restore();
+  const W = 110 * s, H = 140 * s, plate = PL.rect(x - W, y - H, W * 2, H * 2);
+  PL.tint(g, plate, PL.T.sand, 0.45);
+  PL.hatch(g, plate, { angle: 0.7, gap: 10, w: 1.6, not: PL.rect(x - W - 14, y - H - 14, W * 2, H * 2) });
+  PL.ink(g, plate, 5); PL.ink(g, PL.rect(x - W + 14 * s, y - H + 14 * s, W * 2 - 28 * s, H * 2 - 28 * s), 1.6);
+  PL.ink(g, gg => [-1, 1].forEach(k => { const yy = y + k * (H - 30 * s); PL.circle(x, yy, 9 * s)(gg); gg.moveTo(x - 6 * s, yy); gg.lineTo(x + 6 * s, yy); }), 2.4);   // ねじ
+  const face = PL.rect(x - 75 * s, y - 80 * s, 150 * s, 190 * s); PL.tint(g, face, PL.PAPER, 0.8); PL.ink(g, face, 3);
+  const holes = gg => { [-41, 41].forEach(dx => gg.rect(x + (dx - 11) * s, y - 50 * s, 22 * s, 70 * s)); gg.moveTo(x - 16 * s, y + 92 * s); gg.lineTo(x - 16 * s, y + 75 * s); gg.arc(x, y + 75 * s, 16 * s, Math.PI, 0); gg.lineTo(x + 16 * s, y + 92 * s); gg.closePath(); };
+  PL.tint(g, holes, PL.INK, 0.95); PL.ink(g, holes, 2);
+  if (glow > 0) PL.ink(g, plate, 4 + 8 * glow, PL.RED);
 }
-// いなずま
+// いなずま（手彩色の金＋かげ＋朱の輪郭）
 function bolt(g, x, y, s, a = 1) {
-  g.save(); g.globalAlpha *= a; g.translate(x, y); g.scale(s, s);
-  g.fillStyle = TK.C.acc; g.shadowColor = TK.C.acc; g.shadowBlur = 30;
-  g.beginPath(); g.moveTo(20, -120); g.lineTo(-50, 10); g.lineTo(0, 10); g.lineTo(-20, 120); g.lineTo(55, -20); g.lineTo(5, -20); g.closePath(); g.fill();
+  g.save(); g.globalAlpha *= clamp(a, 0, 1);
+  const P = [[20, -120], [-50, 10], [0, 10], [-20, 120], [55, -20], [5, -20]].map(([u, v]) => [x + u * s, y + v * s]), p = PL.poly(P);
+  PL.tint(g, p, PL.T.gold, 0.9); PL.hatch(g, p, { angle: 0.8, gap: 8, w: 1.8, not: PL.poly(P.map(([u, v]) => [u - 14, v - 6])) }); PL.ink(g, p, 6, PL.RED);
   g.restore();
 }
-// 電気をためる箱（メーター付き）
+// 電気をためる箱（コンデンサの棚）。label があれば上に名札（字はここ）、下にたまった量の窓
 function box(g, x, y, w, h, fill, label) {
-  TK.card(g, x, y, w, h, { r: 22 });
-  g.fillStyle = 'rgba(255,255,255,0.08)'; g.beginPath(); g.roundRect(x + 24, y + 24, w - 48, h - 48, 14); g.fill();
-  const hh = (h - 48) * clamp(fill, 0, 1);
-  g.fillStyle = TK.C.acc; g.beginPath(); g.roundRect(x + 24, y + h - 24 - hh, w - 48, Math.max(hh, 0.01), 14); g.fill();
-  if (label) TK.text(g, label, x + w / 2, y + h / 2, 56, { color: '#fff' });
+  const body = PL.rect(x, y, w, h);
+  PL.tint(g, body, PL.T.gray, 0.45);
+  PL.hatch(g, PL.rect(x + w - 26, y, 26, h), { angle: 0.9, gap: 8, w: 1.6 });
+  PL.ink(g, body, 6);
+  const tm = k => PL.rect(x + w * k - 16, y - 26, 32, 26);   // 端子（＋は朱、−は藍）
+  PL.tint(g, tm(0.3), PL.RED, 0.8); PL.tint(g, tm(0.7), PL.T.sea, 0.8); PL.ink(g, gg => { tm(0.3)(gg); tm(0.7)(gg); }, 3);
+  const wx = x + 30, wy = y + (label ? 130 : 30), ww = w - 70, wh = h - (label ? 160 : 60), hh = wh * clamp(fill, 0, 1);
+  const win = PL.rect(wx, wy, ww, wh);
+  PL.tint(g, win, PL.PAPER, 0.8);
+  if (hh > 1) { const lv = PL.rect(wx, wy + wh - hh, ww, hh); PL.tint(g, lv, PL.T.gold, 0.85); PL.hatch(g, lv, { angle: 0.9, gap: 9, w: 1.8 }); PL.ink(g, lv, 2.4); }
+  PL.ink(g, win, 3);
+  PL.ink(g, gg => { for (let i = 1; i < 10; i++) { const yy = wy + wh * i / 10; gg.moveTo(wx + ww, yy); gg.lineTo(wx + ww + (i % 5 ? 10 : 18), yy); } }, 2);   // 目盛り
+  if (label) { TK.card(g, x + 20, y + 20, w - 40, 90); PL.label(g, label, x + w / 2 - 6, y + 66, 60); }
 }
-// 発電所（冷却塔の線画。特定の発電所ではない）
+// 発電所（冷却塔2本と湯気。特定の発電所ではない）
 function plant(g, x, y, s, a) {
-  g.save(); g.globalAlpha *= a; g.translate(x, y); g.scale(s, s);
-  g.strokeStyle = '#e8f0ff'; g.lineWidth = 5; g.fillStyle = 'rgba(160,190,255,0.12)';
-  for (const dx of [-110, 110]) {
-    g.beginPath(); g.moveTo(dx - 80, 120); g.quadraticCurveTo(dx - 40, 0, dx - 55, -110); g.lineTo(dx + 55, -110); g.quadraticCurveTo(dx + 40, 0, dx + 80, 120); g.closePath(); g.fill(); g.stroke();
-  }
-  g.beginPath(); g.moveTo(-240, 120); g.lineTo(240, 120); g.stroke();
+  g.save(); g.globalAlpha *= clamp(a, 0, 1);
+  const P = (dx, u, v) => [x + (dx + u) * s, y + v * s];
+  const tw = dx => g2 => { g2.moveTo(...P(dx, -80, 120)); g2.quadraticCurveTo(...P(dx, -30, 0), ...P(dx, -55, -110)); g2.lineTo(...P(dx, 55, -110)); g2.quadraticCurveTo(...P(dx, 30, 0), ...P(dx, 80, 120)); g2.closePath(); };
+  const both = gg => { tw(-110)(gg); tw(110)(gg); };
+  PL.tint(g, both, PL.T.gray, 0.5);
+  PL.hatch(g, both, { angle: 1.2, gap: 8, w: 1.8, not: gg => { gg.rect(0, 0, x - 100 * s, PH); gg.rect(x, 0, 120 * s, PH); } });
+  PL.ink(g, gg => [-110, 110].forEach(dx => { for (let v = -80; v <= 100; v += 45) { const k = 0.5 + 0.5 * ((v + 110) / 230) ** 2; gg.moveTo(...P(dx, -55 - 25 * k + 10, v)); gg.lineTo(...P(dx, 55 + 25 * k - 10, v)); } }), 1.2, 'rgba(35,28,21,0.4)');   // 塔の帯
+  PL.ink(g, both, 4);
+  PL.ink(g, gg => [-110, 110].forEach(dx => { for (let k = 0; k < 3; k++) { const [a1, b1] = P(dx, -40 + k * 40, -118); gg.moveTo(a1, b1); gg.bezierCurveTo(a1 - 30 * s, b1 - 50 * s, a1 + 40 * s, b1 - 90 * s, a1 + 10 * s, b1 - 140 * s); } }), 2.4, 'rgba(35,28,21,0.45)');   // 湯気
+  PL.ink(g, gg => { gg.moveTo(x - 240 * s, y + 120 * s); gg.lineTo(x + 240 * s, y + 120 * s); }, 5);
   g.restore();
 }
-// 20ft コンテナ
-function container(g, x, y, w, h, k) {
-  g.save(); g.globalAlpha *= k;
-  g.fillStyle = 'rgba(95,212,255,0.18)'; g.strokeStyle = TK.C.acc2; g.lineWidth = 5;
-  g.beginPath(); g.roundRect(x, y, w, h, 8); g.fill(); g.stroke();
-  g.lineWidth = 2.5; g.beginPath(); for (let i = 1; i < 12; i++) { const xx = x + w * i / 12; g.moveTo(xx, y + 10); g.lineTo(xx, y + h - 10); } g.stroke();
-  g.restore();
+// 20ft コンテナ（波板の箱を少し上から）。n 個を縦にならべる。k(i): 出てくる具合
+function containers(g, x, y0, gap, w, h, ks) {
+  const d = 26, on = ks.map((k, i) => [k, y0 + i * gap]).filter(([k]) => k > 0.01);
+  on.forEach(([k, y]) => {
+    g.save(); g.globalAlpha *= clamp(k, 0, 1);
+    const front = PL.rect(x, y, w, h), top = PL.poly([[x, y], [x + d, y - d * 0.6], [x + w + d, y - d * 0.6], [x + w, y]]), side = PL.poly([[x + w, y], [x + w + d, y - d * 0.6], [x + w + d, y + h - d * 0.6], [x + w, y + h]]);
+    PL.tint(g, front, PL.T.sea, 0.6); PL.tint(g, side, PL.T.sea, 0.85);
+    PL.hatch(g, side, { angle: 0.3, gap: 6, w: 1.4 });
+    PL.ink(g, gg => { for (let i = 1; i < 24; i++) { const xx = x + w * i / 24; gg.moveTo(xx, y + 8); gg.lineTo(xx, y + h - 8); } }, 1.6, 'rgba(35,28,21,0.55)');   // 波板
+    PL.ink(g, gg => { [0.25, 0.75].forEach(q => { gg.moveTo(x + w + d * q, y - d * 0.6 * q + 6); gg.lineTo(x + w + d * q, y + h - d * 0.6 * q - 6); }); }, 2.4);   // 扉のかんぬき
+    PL.ink(g, gg => { front(gg); top(gg); side(gg); }, 4);
+    g.restore();
+  });
 }
 
 function draw(g, t) {
   // 0〜3: フック
   if (t < 3.0) {
     const k = TK.pop(t, 0.1, 0.4);
-    g.save(); g.globalAlpha = k; outlet(g, 300, 760, 1.3); g.restore();
-    if (t > 1.3) bolt(g, 700, 760, 1.6, TK.pop(t, 1.3, 0.3));
+    g.save(); g.globalAlpha = clamp(k, 0, 1); outlet(g, 300, 790, 1.3); g.restore();
+    if (t > 1.3) bolt(g, 720, 790, 1.6, TK.pop(t, 1.3, 0.3));
     TK.hook(g, t, 0.0, 3.0, '家のコンセントで\n[レールガン]を充電したら？', { y: 330, size: 92 });
   }
   // 3〜10: 5MJ をコンセントでためる
   if (t >= 3.0 && t < 10.0) {
     const k = clamp((t - 3.6) / 5.0, 0, 1);
-    outlet(g, 230, 640, 1.3, 0.5 + 0.5 * Math.sin(t * 6));
-    // 線
-    g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.setLineDash([18, 14]); g.lineDashOffset = -t * 120;
-    g.beginPath(); g.moveTo(380, 640); g.lineTo(520, 640); g.stroke(); g.restore();
-    box(g, 540, 380, 340, 560, k, '');
-    TK.text(g, (5 * k).toFixed(1) + ' MJ', 710, 660, 84, { color: '#fff' });
-    TK.card(g, 150, 180, 700, 130, { r: 30 });
-    TK.text(g, '充電 ' + Math.round(MIN * k) + ' 分', PW / 2 - 40, 245, 80, { color: k >= 1 ? TK.C.acc : '#fff' });
-    TK.text(g, '1500W のコンセント 1つ', 230, 870, 40, { color: TK.C.sub, bold: false });
+    outlet(g, 230, 660, 1.2, 0.5 + 0.5 * Math.sin(t * 6));
+    PL.ink(g, gg => { gg.moveTo(370, 640); gg.lineTo(580, 640); gg.moveTo(370, 680); gg.lineTo(580, 680); }, 3);   // 線（コード）
+    g.save(); g.setLineDash([18, 14]); g.lineDashOffset = -t * 120; PL.ink(g, gg => { gg.moveTo(370, 660); gg.lineTo(580, 660); }, 6, PL.RED); g.restore();   // 流れる電気
+    box(g, 580, 400, 360, 600, k, (5 * k).toFixed(1) + ' MJ');
+    TK.card(g, 150, 180, 700, 130);
+    PL.label(g, '充電 ' + Math.round(MIN * k) + ' 分', PW / 2 - 40, 245, 80, { color: k >= 1 ? PL.RED : PL.INK });
+    PL.label(g, '1500W のコンセント 1つ', 250, 900, 40, { color: TK.C.sub, bold: false });
     TK.note(g, t, 3.5, 10, '100V × 15A ＝ 1500W。5,000,000 J ÷ 1500 W ＝ 55.6 分', { size: 32 });
   }
   // 10〜17: 放電（スローモーション）
   if (t >= 10.0 && t < 17.0) {
     const u = clamp((t - 11.0) / 3.6, 0, 1);   // 0〜5.2ms
-    box(g, 50, 380, 220, 420, 1 - u, '');
-    // レール
-    const x0 = 300, x1 = 920, yt = 500, yb = 680;
-    g.save(); g.strokeStyle = '#e8f0ff'; g.lineWidth = 12; g.beginPath(); g.moveTo(x0, yt); g.lineTo(x1, yt); g.moveTo(x0, yb); g.lineTo(x1, yb); g.stroke();
-    g.strokeStyle = TK.C.acc; g.lineWidth = 4; g.beginPath(); g.moveTo(270, 460); g.lineTo(x0, yt); g.moveTo(270, 720); g.lineTo(x0, yb); g.stroke(); g.restore();
-    // 電流の流れ（上のレールは右へ、下のレールは左へ）
-    const bx = lerp(x0 + 30, x1 - 20, u * u);
-    if (u > 0 && u < 1) {
-      g.save(); g.fillStyle = TK.C.acc; g.shadowColor = TK.C.acc; g.shadowBlur = 16;
+    box(g, 50, 400, 220, 400, 1 - u, '');
+    const x0 = 300, x1 = 960, yt = 500, yb = 680;
+    // 2本のレールのあいだの磁場（紙の奥へ向かう ×）
+    PL.ink(g, gg => { for (let x = x0 + 50; x < x1; x += 80) for (const y of [560, 620]) { gg.moveTo(x - 9, y - 9); gg.lineTo(x + 9, y + 9); gg.moveTo(x + 9, y - 9); gg.lineTo(x - 9, y + 9); } }, 2, 'rgba(35,28,21,0.4)');
+    const rails = gg => [yt, yb].forEach(y => gg.rect(x0, y - 14, x1 - x0, 28));
+    PL.tint(g, rails, PL.T.rust, 0.6); PL.hatch(g, rails, { angle: 0.3, gap: 7, w: 1.6, not: gg => [yt, yb].forEach(y => gg.rect(x0, y - 14, x1 - x0, 12)) }); PL.ink(g, rails, 4);
+    PL.ink(g, gg => { gg.moveTo(270, 470); gg.lineTo(x0, yt); gg.moveTo(270, 730); gg.lineTo(x0, yb); }, 5, PL.RED);
+    const bx = lerp(x0 + 30, x1 - 30, u * u);
+    if (u > 0 && u < 1) PL.ink(g, gg => {   // 電流の向き（上のレールは右へ、下のレールは左へ）
       for (let i = 0; i < 10; i++) {
-        const p = ((t * 2.2 + i / 10) % 1);
-        g.beginPath(); g.arc(lerp(x0, bx, p), yt, 9, 0, Math.PI * 2); g.fill();
-        g.beginPath(); g.arc(lerp(bx, x0, p), yb, 9, 0, Math.PI * 2); g.fill();
+        const p = ((t * 2.2 + i / 10) % 1), xa = lerp(x0, bx - 30, p), xb2 = lerp(bx - 30, x0, p);
+        gg.moveTo(xa - 10, yt - 10); gg.lineTo(xa + 4, yt); gg.lineTo(xa - 10, yt + 10);
+        gg.moveTo(xb2 + 10, yb - 10); gg.lineTo(xb2 - 4, yb); gg.lineTo(xb2 + 10, yb + 10);
       }
-      g.restore();
-    }
-    // 弾（電流を渡す板）
-    g.save(); g.fillStyle = u > 0 && u < 1 ? TK.C.acc : '#9fb3d9'; g.beginPath(); g.roundRect(bx - 22, yt - 8, 44, yb - yt + 16, 8); g.fill(); g.restore();
-    if (u > 0 && u < 1) { g.save(); g.strokeStyle = TK.C.acc2; g.lineWidth = 7; g.beginPath(); g.moveTo(bx + 30, 590); g.lineTo(bx + 120, 590); g.lineTo(bx + 98, 568); g.moveTo(bx + 120, 590); g.lineTo(bx + 98, 612); g.stroke(); g.restore(); }
-    TK.card(g, 170, 180, 660, 120, { r: 30 });
-    TK.text(g, (0.0052 * u).toFixed(4) + ' 秒', PW / 2 - 40, 242, 80, { color: u >= 1 ? TK.C.acc : '#fff' });
-    TK.text(g, 'スローモーション（約1000分の1）', PW / 2 - 40, 920, 44, { color: TK.C.sub, bold: false });
-    TK.text(g, '電気の箱', 160, 840, 40, { color: TK.C.sub, bold: false });
+    }, 4, PL.INK);
+    const arm = PL.rect(bx - 22, yt - 16, 44, yb - yt + 32);   // 弾（電流を渡す板）
+    PL.tint(g, arm, u > 0 && u < 1 ? PL.T.gold : PL.T.gray, 0.85); PL.hatch(g, arm, { angle: 0.9, gap: 7, w: 1.6, not: PL.rect(bx - 22, yt - 16, 20, yb - yt + 32) }); PL.ink(g, arm, 5);
+    if (u > 0 && u < 1 && bx < 840) PL.ink(g, gg => { gg.moveTo(bx + 34, 590); gg.lineTo(bx + 120, 590); gg.moveTo(bx + 98, 568); gg.lineTo(bx + 120, 590); gg.lineTo(bx + 98, 612); }, 7, '#2f5f7a');
+    TK.card(g, 170, 180, 660, 120);
+    PL.label(g, (0.0052 * u).toFixed(4) + ' 秒', PW / 2 - 40, 242, 80, { color: u >= 1 ? PL.RED : PL.INK });
+    PL.label(g, 'スローモーション（約1000分の1）', PW / 2 + 60, 920, 44, { color: TK.C.sub, bold: false });
+    PL.label(g, '電気の箱', 160, 850, 40, { color: TK.C.sub, bold: false });
+    PL.leader(g, 640, yb + 20, 700, 790); PL.label(g, 'レール（約6m）', 712, 800, 38, { align: 'left', color: TK.C.sub, bold: false });
     TK.note(g, t, 10.5, 17, '0.005秒は推定（約6mを一定の加速で走るとしたときの上限）', { size: 32 });
   }
   // 17〜25: 64万倍 → 発電所1基
   if (t >= 17.0 && t < 25.0) {
-    TK.text(g, '56分 → 0.005秒', PW / 2 - 40, 230, 64, { color: TK.C.sub });
+    PL.label(g, '56分 → 0.005秒', PW / 2 - 40, 230, 64, { color: TK.C.sub });
     TK.count(g, t, 17.2, 20.5, 1, 640000, { y: 420, size: 200, dur: 1.2, unit: '倍の速さで使う', fmt: v => Math.round(v / 10000) >= 1 ? Math.round(v / 10000) + '万' : Math.round(v).toString() });
     if (t >= 20.5) {
       const k = TK.pop(t, 20.5, 0.4);
-      plant(g, PW / 2 - 40, 620, 1.3, k);
-      g.save(); g.globalAlpha = k; TK.text(g, 'そのあいだ 約[100万 kW]', PW / 2 - 40, 880, 72); TK.text(g, '＝ 大きな発電所 1基ぶん（目安）', PW / 2 - 40, 970, 44, { color: TK.C.sub, bold: false }); g.restore();
+      plant(g, PW / 2 - 40, 650, 1.3, k);
+      g.save(); g.globalAlpha = clamp(k, 0, 1); PL.label(g, 'そのあいだ 約[100万 kW]', PW / 2 - 40, 910, 72); PL.label(g, '＝ 大きな発電所 1基ぶん（目安）', PW / 2 - 40, 1000, 44, { color: TK.C.sub, bold: false }); g.restore();
     }
     TK.note(g, t, 17.5, 25, '平均の電力も推定（5MJ ÷ 0.0052秒）', { size: 32 });
   }
   // 25〜31: エネルギーの内わけ
   if (t >= 25.0 && t < 31.0) {
-    TK.text(g, '5MJ のゆくえ', PW / 2 - 40, 240, 70, { color: TK.C.sub });
-    const x = 100, w = PW - 340, y = 450, h = 240, k = TK.out((t - 25.6) / 1.0), k2 = TK.out((t - 26.6) / 1.0);
-    g.save();
-    g.fillStyle = 'rgba(255,255,255,0.08)'; g.beginPath(); g.roundRect(x, y, w, h, 24); g.fill();
-    g.fillStyle = TK.C.acc; g.beginPath(); g.roundRect(x, y, w * 0.17 * k, h, [24, 0, 0, 24]); g.fill();
-    g.fillStyle = 'rgba(255,107,107,0.55)'; g.beginPath(); g.roundRect(x + w * 0.17, y, w * 0.83 * k2, h, [0, 24, 24, 0]); g.fill();
-    g.restore();
-    if (k > 0.5) { TK.text(g, '弾', x + w * 0.085, y + h / 2, 56, { color: '#0b1430', blur: 0 }); TK.text(g, '約17%', x + w * 0.085, y + h + 60, 56, { color: TK.C.acc }); }
-    if (k2 > 0.5) { TK.text(g, '熱・磁場・火花', x + w * 0.585, y + h / 2, 56, { color: '#fff' }); TK.text(g, '約83%', x + w * 0.585, y + h + 60, 56, { color: TK.C.red }); }
+    PL.label(g, '5MJ のゆくえ', PW / 2 - 40, 240, 70, { color: TK.C.sub });
+    const x = 100, w = PW - 260, y = 450, h = 240, k = TK.out((t - 25.6) / 1.0), k2 = TK.out((t - 26.6) / 1.0);
+    PL.ink(g, PL.rect(x, y, w, h), 2, 'rgba(35,28,21,0.4)');
+    if (k > 0.01) { const a = PL.rect(x, y, w * 0.17 * k, h); PL.tint(g, a, PL.T.gold, 0.85); PL.hatch(g, a, { angle: 0.9, gap: 10, w: 2 }); PL.ink(g, a, 5); }
+    if (k2 > 0.01) { const b = PL.rect(x + w * 0.17, y, w * 0.83 * k2, h); PL.tint(g, b, PL.T.rose, 0.6); PL.hatch(g, b, { angle: -0.6, gap: 14, w: 1.6 }); PL.ink(g, b, 5); }
+    if (k > 0.5) { PL.label(g, '弾', x + w * 0.085, y - 50, 56); PL.label(g, '約17%', x + w * 0.085, y + h + 60, 56, { color: PL.RED }); }
+    if (k2 > 0.5) { PL.label(g, '熱・磁場・火花', x + w * 0.585, y - 50, 56); PL.label(g, '約83%', x + w * 0.585, y + h + 60, 56, { color: PL.RED }); }
     TK.note(g, t, 26.0, 31, '内わけはアプリのモデルの推定（弾 320g・秒速 2,297m → 0.84MJ）', { size: 32 });
   }
   // 31〜35: コンテナ4つ
   if (t >= 31.0) {
-    TK.text(g, '電気をためる箱', PW / 2 - 40, 230, 64, { color: TK.C.sub });
-    for (let i = 0; i < 4; i++) container(g, 130, 320 + i * 150, 680, 120, TK.pop(t, 31.6 + i * 0.4, 0.35));
-    if (t > 33.0) { g.save(); g.globalAlpha = fade(t, 33, 35, 0.3); TK.text(g, '20ft コンテナ [4つ]', PW / 2 - 40, 960, 64); g.restore(); }
-    TK.note(g, t, 31.5, 35, '出どころ: 防衛装備庁 技術シンポジウム2025\n「電磁加速システムの洋上射撃試験」', { size: 30 });
+    PL.label(g, '電気をためる箱', PW / 2 - 40, 230, 64, { color: TK.C.sub });
+    containers(g, 130, 300, 140, 680, 115, [0, 1, 2, 3].map(i => TK.pop(t, 31.6 + i * 0.4, 0.35)));
+    PL.ink(g, gg => { gg.moveTo(130, 890); gg.lineTo(810, 890); gg.moveTo(130, 875); gg.lineTo(130, 905); gg.moveTo(810, 875); gg.lineTo(810, 905); }, 3);
+    PL.label(g, '1つ 長さ 約6m', 470, 928, 32, { color: TK.C.sub, bold: false });
+    if (t > 33.0) { g.save(); g.globalAlpha = fade(t, 33, 35, 0.3); PL.label(g, '20ft コンテナ [4つ]', PW / 2 - 40, 1020, 64); g.restore(); }
+    TK.note(g, t, 31.5, 35, '出どころ: 防衛装備庁 技術シンポジウム2025\n「電磁加速システムの洋上射撃試験」', { size: 30, y: 1140 });
   }
 }
 

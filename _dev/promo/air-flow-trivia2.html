@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく air-flow-2（型C）「寝ているあいだ、寝室の CO₂ はどこまで上がる？」。台本は trivia/air-flow.md。?short で録る
@@ -33,52 +36,122 @@ const cues = [
   { t: 0.05, type: 'pop' }, { t: 3.5, type: 'whoosh' }, { t: 9.0, type: 'pop' }, { t: 14.0, type: 'rise' },
   { t: 15.1, type: 'buzz' }, { t: 23.6, type: 'ding' }, { t: 24.0, type: 'whoosh' }, { t: 30.0, type: 'pop' }, { t: 33.5, type: 'ding' },
 ];
-const CO = '#ff9f45', AIR = '#5fd4ff';
+// 絵は「図鑑の版画」（trivia-plate.js の PL.*）。寝室は断面図（かべ・床に斜線）、CO₂ は赤茶の小さな輪、メーターは目盛りつきの管
+const CO = '#a85a32', AIR = '#2f5f7a';
 const rnd = (i, k = 1) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
 const hours = t => t < 14 ? 0 : 8 * clamp((t - 14.2) / 9.4, 0, 1);
-const RX0 = 120, RX1 = 960, RY0 = 300, RY1 = 680;
+const RX0 = 120, RX1 = 940, RY0 = 300, RY1 = 680, WALL = 24, DOOR = 250;
+// 寝ている人の頭（あお向け・横から。顔は右上を向く）。x, y は後頭部の下
+function sleeper(g, x, y, far) {
+  g.save(); if (far) g.globalAlpha *= 0.55;
+  const head = gg => { gg.moveTo(x, y); gg.quadraticCurveTo(x - 8, y - 46, x + 30, y - 58); gg.quadraticCurveTo(x + 62, y - 64, x + 74, y - 44); gg.lineTo(x + 86, y - 40); gg.lineTo(x + 78, y - 30); gg.quadraticCurveTo(x + 82, y - 18, x + 74, y - 8); gg.quadraticCurveTo(x + 60, y + 4, x, y); gg.closePath(); };
+  PL.tint(g, head, PL.T.sand, 0.75);
+  const hair = gg => { gg.moveTo(x, y); gg.quadraticCurveTo(x - 8, y - 46, x + 30, y - 58); gg.quadraticCurveTo(x + 40, y - 60, x + 46, y - 56); gg.quadraticCurveTo(x + 20, y - 40, x + 18, y - 6); gg.closePath(); };
+  PL.tint(g, hair, PL.T.brown, 0.85); PL.hatch(g, hair, { angle: 0.9, gap: 6, w: 1.6 });
+  PL.ink(g, head, 4);
+  PL.ink(g, gg => { gg.moveTo(x + 50, y - 40); gg.lineTo(x + 60, y - 38); gg.moveTo(x + 34, y - 26); gg.quadraticCurveTo(x + 28, y - 18, x + 36, y - 14); }, 2.4);   // 閉じた目・耳
+  g.restore();
+}
+function bed(g) {
+  const frame = PL.rect(230, 610, 560, 34), head = PL.poly([[220, 500], [250, 500], [250, 680], [220, 680]]), foot = PL.rect(770, 570, 24, 110);
+  [head, foot].forEach(p => { PL.tint(g, p, PL.T.wood, 0.8); PL.hatch(g, p, { angle: 0.9, gap: 8, w: 1.8 }); PL.ink(g, p, 5); });
+  PL.tint(g, frame, PL.T.wood, 0.7); PL.hatch(g, frame, { angle: 0.9, gap: 9, w: 1.8, not: PL.rect(230, 600, 560, 14) }); PL.ink(g, frame, 5);
+  PL.ink(g, gg => { gg.moveTo(270, 644); gg.lineTo(270, 680); gg.moveTo(740, 644); gg.lineTo(740, 680); }, 7);   // 脚
+  const mat = PL.rect(250, 584, 520, 26); PL.tint(g, mat, PL.T.sand, 0.5); PL.ink(g, mat, 4);
+  const pillow = PL.ellipse(320, 572, 62, 18); PL.tint(g, pillow, PL.T.sky, 0.4); PL.ink(g, pillow, 4);
+  sleeper(g, 330, 566, true); sleeper(g, 290, 572, false);
+  // かけぶとん（ふくらみとひだ）
+  const quilt = gg => { gg.moveTo(372, 584); gg.quadraticCurveTo(380, 538, 450, 532); gg.quadraticCurveTo(560, 520, 640, 540); gg.quadraticCurveTo(700, 550, 745, 548); gg.quadraticCurveTo(772, 560, 772, 620); gg.lineTo(372, 620); gg.closePath(); };
+  PL.tint(g, quilt, PL.T.sky, 0.65); PL.hatch(g, quilt, { angle: 0.8, gap: 10, w: 2, not: gg => { gg.moveTo(372, 560); gg.quadraticCurveTo(450, 516, 640, 530); gg.lineTo(745, 535); gg.lineTo(745, 575); gg.lineTo(372, 575); gg.closePath(); } });
+  PL.ink(g, quilt, 5);
+  PL.ink(g, gg => { [[470, 540, 500, 600], [580, 534, 600, 600], [690, 546, 705, 600]].forEach(([a, b, c, d]) => { gg.moveTo(a, b); gg.quadraticCurveTo(a + 18, (b + d) / 2, c, d); }); }, 2);
+}
 function room(g, t, C, open) {
-  g.strokeStyle = '#cfe0ff'; g.lineWidth = 7; g.strokeRect(RX0, RY0, RX1 - RX0, RY1 - RY0);
-  // 給気口・ドア
-  g.fillStyle = TK.C.bg0; g.fillRect(RX0 - 6, RY0 + 30, 12, 60);
-  TK.text(g, '給気口', RX0 + 70, RY0 - 30, 38, { color: AIR });
-  const dw = open * 150; g.fillStyle = TK.C.bg0; g.fillRect(RX1 - 6, RY1 - 240, 12, 240 * open);
-  g.strokeStyle = '#d9b77a'; g.lineWidth = 10; g.beginPath(); g.moveTo(RX1, RY1 - 240); g.lineTo(RX1 - dw, RY1 - 240 + 240 * (1 - open)); g.stroke();
-  TK.text(g, open > 0.5 ? 'ドア（あけた）' : 'ドア（閉めた）', RX1 - 120, RY1 + 36, 38, { color: '#d9b77a' });
-  // ベッドと2人
-  g.fillStyle = '#3a4f86'; g.fillRect(260, 560, 460, 90); g.fillStyle = '#e6ecff';
-  [340, 470].forEach(x => { g.beginPath(); g.arc(x, 545, 26, 0, Math.PI * 2); g.fill(); });
-  g.fillStyle = '#5b72b0'; g.fillRect(380, 548, 330, 30);
-  // CO₂ の点（外より多いぶんに比例）
-  const n = Math.round((C - C0) / 2300 * 260);
-  for (let i = 0; i < n; i++) {
-    const x = RX0 + 20 + rnd(i) * (RX1 - RX0 - 40) + Math.sin(t + i) * 8, y = RY0 + 20 + rnd(i, 2) * (RY1 - RY0 - 40) + Math.cos(t * 0.8 + i) * 8;
-    g.fillStyle = CO; g.globalAlpha = 0.85; g.beginPath(); g.arc(x, y, 8, 0, Math.PI * 2); g.fill();
-  }
-  g.globalAlpha = 1;
-  // 寝息
-  [340, 470].forEach((x, j) => { const p = (t * 0.5 + j * 0.5) % 1; g.globalAlpha = 1 - p; g.fillStyle = CO; g.beginPath(); g.arc(x + 20 + p * 40, 520 - p * 60, 10, 0, Math.PI * 2); g.fill(); });
-  g.globalAlpha = 1;
+  const inside = PL.rect(RX0, RY0, RX1 - RX0, RY1 - RY0), v0 = RY0 + 30, v1 = RY0 + 90, d0 = RY1 - DOOR;
+  const k = clamp((C - C0) / 1900, 0, 1);
+  PL.tint(g, inside, PL.T.rust, 0.04 + 0.32 * k);
+  bed(g);
+  // CO₂ の小さな輪（外より多いぶんに比例）
+  const n = Math.round(k * 190);
+  if (n > 0) PL.ink(g, gg => { for (let i = 0; i < n; i++) { const x = RX0 + 18 + rnd(i) * (RX1 - RX0 - 36) + Math.sin(t + i) * 7, y = RY0 + 18 + rnd(i, 2) * (RY1 - RY0 - 36) + Math.cos(t * 0.8 + i) * 7; gg.moveTo(x + 6, y); gg.arc(x, y, 6, 0, Math.PI * 2); } }, 2.6, CO);
+  // 寝息（口から上へ、ひと筆の渦）
+  PL.ink(g, gg => [[372, 528], [412, 520]].forEach(([x, y], j) => { const p = (t * 0.5 + j * 0.5) % 1, r = 8 + p * 6, cx = x + p * 30, cy = y - p * 80; gg.moveTo(cx + r, cy); gg.arc(cx, cy, r, 0, 4.4); }), 3, CO);
+  // かべ・天井・床（右のかべはドアの所であく）
+  const walls = gg => {
+    PL.rect(RX0 - WALL, RY0 - WALL, RX1 - RX0 + WALL * 2, WALL)(gg); PL.rect(RX0 - WALL, RY1, RX1 - RX0 + WALL * 2, WALL)(gg);
+    PL.rect(RX0 - WALL, RY0, WALL, v0 - RY0)(gg); PL.rect(RX0 - WALL, v1, WALL, RY1 - v1)(gg); PL.rect(RX1, RY0, WALL, d0 - RY0)(gg);
+  };
+  PL.tint(g, walls, PL.T.gray, 0.6); PL.hatch(g, walls, { angle: 0.8, gap: 8, w: 2 }); PL.ink(g, walls, 5);
+  PL.ink(g, gg => { for (let q = 0; q < 3; q++) { const yy = v0 + 8 + q * 18; gg.moveTo(RX0 - WALL, yy); gg.lineTo(RX0, yy + 9); } }, 2.4);   // 給気口のよろい板
+  const ay = (v0 + v1) / 2;
+  PL.ink(g, gg => { gg.moveTo(RX0 - WALL - 64, ay); gg.lineTo(RX0 - WALL - 8, ay); gg.moveTo(RX0 - WALL - 24, ay - 12); gg.lineTo(RX0 - WALL - 8, ay); gg.lineTo(RX0 - WALL - 24, ay + 12); }, 4, AIR);
+  // ドア（へやの内がわへ開く。ちょうつがいは上）
+  const sw = open * 130, door = PL.poly([[RX1, d0], [RX1 + WALL - sw * 1.2, d0 + open * 18], [RX1 + WALL - sw * 1.2, RY1 - open * 18], [RX1, RY1]]);
+  const dr = open > 0.02 ? door : PL.rect(RX1, d0, WALL, DOOR);
+  PL.tint(g, dr, PL.T.wood, 0.85); PL.hatch(g, dr, { angle: 1.2, gap: 9, w: 1.8 }); PL.ink(g, dr, 5);
+  PL.ink(g, PL.circle(RX1 + WALL / 2 - sw * 0.95, RY1 - DOOR * 0.48, 5), 3);
+  if (open > 0.3) { g.save(); g.globalAlpha *= clamp((open - 0.3) / 0.4, 0, 1); PL.ink(g, gg => { for (let j = 0; j < 3; j++) { const yy = RY1 - 190 + j * 60, xx = RX1 - 30 + Math.sin(t * 3 + j) * 6; gg.moveTo(xx - 70, yy); gg.lineTo(xx + 40, yy); gg.moveTo(xx + 26, yy - 10); gg.lineTo(xx + 40, yy); gg.lineTo(xx + 26, yy + 10); } }, 4, CO); g.restore(); }
+  // ラベル
+  PL.leader(g, RX0 - WALL / 2, v0 - 4, RX0 + 50, RY0 - 46); PL.label(g, '給気口', RX0 + 62, RY0 - 62, 40, { align: 'left', color: AIR });
+  PL.leader(g, RX1 + WALL / 2, d0 - 6, RX1 - 30, RY0 - 46); PL.label(g, open > 0.5 ? 'ドア（あけた）' : 'ドア（閉めた）', RX1 - 30, RY0 - 62, 40, { align: 'right', color: '#7a5634' });
 }
 function meter(g, C) {
-  const x0 = 130, x1 = 950, y = 870, X = c => lerp(x0, x1, clamp(c / 2500, 0, 1));
-  g.fillStyle = 'rgba(255,255,255,0.1)'; g.beginPath(); g.roundRect(x0, y - 34, x1 - x0, 68, 34); g.fill();
-  g.fillStyle = C > 1000 ? CO : AIR; g.beginPath(); g.roundRect(x0, y - 34, Math.max(68, X(C) - x0), 68, 34); g.fill();
-  g.strokeStyle = TK.C.red; g.lineWidth = 6; g.beginPath(); g.moveTo(X(1000), y - 60); g.lineTo(X(1000), y + 60); g.stroke();
-  TK.text(g, '1000（ビルの基準）', X(1000), y + 92, 34, { color: TK.C.red });
-  TK.text(g, 'CO₂ ' + Math.round(C).toLocaleString('ja-JP') + ' ppm', PW / 2, y - 90, 66, { color: C > 1000 ? CO : '#fff' });
+  const x0 = 130, x1 = 950, y = 870, hh = 26, X = c => lerp(x0, x1, clamp(c / 2500, 0, 1));
+  const tube = PL.rect(x0, y - hh, x1 - x0, hh * 2), fill = PL.rect(x0, y - hh, Math.max(4, X(C) - x0), hh * 2);
+  PL.tint(g, tube, PL.T.sand, 0.25);
+  PL.tint(g, fill, C > 1000 ? PL.T.rust : PL.T.sky, 0.85); PL.hatch(g, fill, { angle: 0.9, gap: 11, w: 2, cx: x0, cy: y });
+  PL.ink(g, tube, 5);
+  PL.ink(g, gg => { for (let c = 0; c <= 2500; c += 100) { const x = X(c), l = c % 500 ? 10 : 22; gg.moveTo(x, y + hh); gg.lineTo(x, y + hh + l); } }, 3);
+  [0, 500, 1500, 2000, 2500].forEach(c => PL.label(g, String(c), X(c), y + hh + 46, 28, { color: TK.C.sub, bold: false }));
+  PL.ink(g, gg => { gg.moveTo(X(1000), y - hh - 26); gg.lineTo(X(1000), y + hh + 26); }, 6, PL.RED);
+  PL.leader(g, X(1000), y + hh + 30, X(1000) + 40, y + hh + 82, PL.RED);
+  PL.label(g, '1000（ビルの基準）', X(1000) + 48, y + hh + 100, 34, { align: 'left', color: PL.RED });
+  PL.label(g, 'CO₂ ' + Math.round(C).toLocaleString('ja-JP') + ' ppm', x0, y - 82, 62, { align: 'left', color: C > 1000 ? CO : PL.INK });
 }
-function clockCard(g, h) {
-  const m = Math.round((23 * 60 + h * 60)) % (24 * 60);
-  TK.card(g, 330, 140, 420, 110, { r: 55 });
-  TK.text(g, String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'), PW / 2, 196, 72);
+function clock(g, h) {
+  const m = Math.round(23 * 60 + h * 60) % (24 * 60);
+  PL.watch(g, 940, 165, 56, (m / 60 % 12) / 12);
+  PL.label(g, String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'), 856, 165, 72, { align: 'right' });
+}
+// 横顔（右を向く）。x, y はあごの下
+function profile(g, x, y, s) {
+  const P = (px, py) => [x + px * s, y + py * s];
+  const face = gg => {
+    gg.moveTo(...P(-60, 150)); gg.lineTo(...P(-70, 40)); gg.quadraticCurveTo(...P(-125, -40), ...P(-112, -150)); gg.quadraticCurveTo(...P(-90, -265), ...P(10, -262));
+    gg.quadraticCurveTo(...P(95, -255), ...P(108, -160)); gg.lineTo(...P(112, -135)); gg.quadraticCurveTo(...P(140, -110), ...P(148, -92)); gg.quadraticCurveTo(...P(138, -80), ...P(118, -80));
+    gg.lineTo(...P(124, -62)); gg.quadraticCurveTo(...P(114, -55), ...P(122, -44)); gg.quadraticCurveTo(...P(118, -30), ...P(110, -14)); gg.quadraticCurveTo(...P(100, 6), ...P(64, 8));
+    gg.quadraticCurveTo(...P(50, 40), ...P(58, 150)); gg.closePath();
+  };
+  PL.tint(g, face, PL.T.sand, 0.7);
+  const hair = gg => { gg.moveTo(...P(-70, 40)); gg.quadraticCurveTo(...P(-125, -40), ...P(-112, -150)); gg.quadraticCurveTo(...P(-90, -265), ...P(10, -262)); gg.quadraticCurveTo(...P(80, -258), ...P(100, -200)); gg.quadraticCurveTo(...P(20, -215), ...P(-20, -160)); gg.quadraticCurveTo(...P(-40, -60), ...P(-30, 30)); gg.closePath(); };
+  PL.tint(g, hair, PL.T.brown, 0.8);
+  PL.hatch(g, face, { angle: 0.7, gap: 9, w: 2, not: gg => PL.ellipse(x + 40 * s, y - 120 * s, 110 * s, 160 * s)(gg) });
+  PL.ink(g, face, 6);
+  PL.ink(g, gg => { const e = P(-5, -105); gg.moveTo(e[0] + 22 * s, e[1]); gg.ellipse(e[0], e[1], 22 * s, 32 * s, 0, 0, Math.PI * 2); const a = P(70, -150), b = P(92, -152); gg.moveTo(...a); gg.lineTo(...b); }, 3);   // 耳・目
+}
+function cylinder(g, L) {   // メスシリンダー（0〜0.12 L）
+  const x0 = 680, x1 = 800, top = 560, bot = 1110, Y = l => bot - l / 0.12 * (bot - top - 20);
+  const glass = PL.rect(x0, top, x1 - x0, bot - top), gas = PL.rect(x0, Y(L), x1 - x0, bot - Y(L));
+  PL.tint(g, glass, PL.T.sky, 0.18);
+  PL.tint(g, gas, PL.T.rust, 0.6); PL.hatch(g, gas, { angle: 0.9, gap: 10, w: 2, cx: x0, cy: bot });
+  PL.ink(g, gg => { gg.moveTo(x0 - 10, top - 14); gg.lineTo(x0, top); gg.lineTo(x0, bot); gg.lineTo(x1, bot); gg.lineTo(x1, top); }, 6);
+  const foot = PL.poly([[x0 - 50, bot], [x1 + 50, bot], [x1 + 60, bot + 24], [x0 - 60, bot + 24]]); PL.tint(g, foot, PL.T.gray, 0.6); PL.hatch(g, foot, { angle: 0.8, gap: 8, w: 1.8 }); PL.ink(g, foot, 5);
+  PL.ink(g, gg => { for (let l = 0.01; l <= 0.121; l += 0.01) { const yy = Y(l), w = Math.round(l * 100) % 5 ? 18 : 40; gg.moveTo(x1, yy); gg.lineTo(x1 - w, yy); } }, 2.5);
+  PL.label(g, '0.05 L', x1 + 22, Y(0.05), 32, { align: 'left', color: TK.C.sub, bold: false });
+  PL.label(g, '0.10 L', x1 + 22, Y(0.10), 32, { align: 'left', color: PL.RED });
 }
 
 function draw(g, t) {
   if (t >= 30.0) {   // あなたの分
-    const L = t * 0.003;
-    TK.text(g, 'この動画で、あなたが出した CO₂', PW / 2, 420, 56, { color: TK.C.sub });
-    TK.text(g, '約 ' + L.toFixed(2) + ' L', PW / 2, 580, 140, { color: CO });
+    const L = t * 0.003, f = fade(t, 30, 99, 0.3);
+    g.save(); g.globalAlpha *= f;
+    PL.label(g, 'この動画で、あなたが出した CO₂', 90, 260, 52, { align: 'left', color: TK.C.sub });
+    PL.label(g, '約 [' + L.toFixed(2) + ' L]', 90, 400, 128, { align: 'left' });
+    profile(g, 270, 900, 1.25);
+    // 息（口からシリンダーへ）
+    PL.ink(g, gg => { for (let j = 0; j < 4; j++) { const p = (t * 0.6 + j / 4) % 1, cx = lerp(440, 700, p), cy = 800 - Math.sin(p * Math.PI) * 120 - p * 150, r = 8 + p * 10; gg.moveTo(cx + r, cy); gg.arc(cx, cy, r, 0, 4.4); } }, 3.5, CO);
+    cylinder(g, L);
+    g.restore();
     TK.note(g, t, 30, 35, '出どころ: Persily & de Jonge (2017) Indoor Air 27:868・建築物衛生法の基準・滋賀県', { size: 28 });
     return;
   }
@@ -86,11 +159,11 @@ function draw(g, t) {
   let C = co2(h), open = 0;
   if (t >= 24.0) { open = clamp((t - 24.6) / 0.8, 0, 1); C = lerp(co2(8), 900, ease((t - 25.0) / 4.5)); }
   room(g, t, C, open);
-  clockCard(g, h);
+  clock(g, h);
   meter(g, C);
-  if (t < 1.6) TK.hook(g, t, 0, 1.6, 'ドアを閉めて\n寝たら？', { y: 480, size: 110 });
-  if (t >= 3.5 && t < 9.0) { TK.card(g, 260, 330, 560, 90, { r: 45 }); TK.text(g, '1人 1時間に 約10 L', PW / 2, 375, 50); }
-  if (t >= 9.0 && t < 14.0) { TK.card(g, 260, 330, 560, 90, { r: 45 }); TK.text(g, '換気 1時間に 0.5回', PW / 2, 375, 50, { color: AIR }); }
+  if (t < 1.6) TK.hook(g, t, 0, 1.6, 'ドアを閉めて\n寝たら？', { y: PL.SUBY, size: 110 });   // 絵と重ねないよう、字幕の帯の所に
+  if (t >= 3.5 && t < 9.0) { g.save(); g.globalAlpha *= fade(t, 3.5, 9, 0.3); PL.label(g, '1人 1時間に 約[10 L]', 130, 1090, 54, { align: 'left' }); g.restore(); }
+  if (t >= 9.0 && t < 14.0) { g.save(); g.globalAlpha *= fade(t, 9, 14, 0.3); PL.label(g, '換気 1時間に [0.5回]', 130, 1090, 54, { align: 'left', color: AIR }); g.restore(); }
   if (t >= 3.5 && t < 24) TK.note(g, t, 3.5, 24, 'モデルの値: 6畳・2人・24時間換気がきちんと働く・ドアのすき間なし', { size: 30 });
   if (t >= 24) TK.note(g, t, 24, 30, 'ドアをあけたあとの下がり方は、計算ではなく飾りです', { size: 30 });
 }

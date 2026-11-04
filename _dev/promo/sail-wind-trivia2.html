@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく sail-wind-2（型A ぜんぶ逆）「追い風がいちばん速い、はウソ」。台本は trivia/sail-wind.md。?short で録る
@@ -31,38 +34,71 @@ const cues = [
   { t: 21.0, type: 'pop' }, { t: 23.0, type: 'thud' }, { t: 26.0, type: 'pop' }, { t: 27.4, type: 'ding' },
 ];
 
-function arrow(g, x0, y0, x1, y1, color, w = 10) {
-  g.save(); g.strokeStyle = color; g.fillStyle = color; g.lineWidth = w; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
-  const a = Math.atan2(y1 - y0, x1 - x0), h = w * 3;
-  g.beginPath(); g.moveTo(x1 + Math.cos(a) * h * 0.5, y1 + Math.sin(a) * h * 0.5); g.lineTo(x1 - Math.cos(a - 0.5) * h, y1 - Math.sin(a - 0.5) * h); g.lineTo(x1 - Math.cos(a + 0.5) * h, y1 - Math.sin(a + 0.5) * h); g.fill();
-  g.restore();
+const BLUE = TK.C.acc2;
+// ---- 版画の道具（このページだけ。PL.* を組み合わせる）----
+const TAU = Math.PI * 2;
+// ローカル座標（右向き・足もとが y=0）から画面へ写す。dir=-1 で左向き
+function mapper(x0, y0, s, rot = 0, dir = 1) { const c = Math.cos(rot), n = Math.sin(rot); return (x, y) => { x *= dir; return [x0 + s * (x * c - y * n), y0 + s * (x * n + y * c)]; }; }
+// ローカル座標で道を作る。b(P) の P: M・L・Q・Z と E（楕円）
+const lp = (m, b) => g => {
+  const P = { M: (x, y) => g.moveTo(...m(x, y)), L: (x, y) => g.lineTo(...m(x, y)), Q: (a, c, x, y) => g.quadraticCurveTo(...m(a, c), ...m(x, y)), Z: () => g.closePath(),
+    E: (cx, cy, rx, ry, rot = 0) => { for (let i = 0; i <= 40; i++) { const t = i / 40 * TAU, x = Math.cos(t) * rx, y = Math.sin(t) * ry, p = m(cx + x * Math.cos(rot) - y * Math.sin(rot), cy + x * Math.sin(rot) + y * Math.cos(rot)); i ? g.lineTo(...p) : g.moveTo(...p); } g.closePath(); } };
+  b(P);
+};
+// 手彩色＋かげの斜線＋墨の輪郭。o.lit: 光の当たる所（斜線を抜く）
+function solid(g, path, color, o = {}) {
+  PL.tint(g, path, color, o.a ?? 0.65);
+  if (o.hatch !== false) PL.hatch(g, path, { angle: o.angle ?? 0.7, gap: o.gap ?? 9, w: o.hw ?? 1.8, not: o.lit, cx: o.cx, cy: o.cy });
+  PL.ink(g, path, o.w ?? 5, o.ink || PL.INK);
 }
+// 墨の矢印（頭は手彩色＋輪郭）
+function arrowPL(g, x0, y0, x1, y1, color = PL.INK, w = 8) {
+  const a = Math.atan2(y1 - y0, x1 - x0), h = w * 3.4;
+  PL.ink(g, gg => { gg.moveTo(x0, y0); gg.lineTo(x1 - Math.cos(a) * h * 0.7, y1 - Math.sin(a) * h * 0.7); }, w, color);
+  const head = PL.poly([[x1, y1], [x1 - Math.cos(a - 0.42) * h, y1 - Math.sin(a - 0.42) * h], [x1 - Math.cos(a + 0.42) * h, y1 - Math.sin(a + 0.42) * h]]);
+  PL.tint(g, head, color, 1); PL.ink(g, head, Math.max(2, w * 0.45), color);
+}
+
 // 船（上から）。heading: 船首の向き（0 = 上）、boom: 帆の角度（船に対して）
 function boat(g, x, y, heading, boom, s = 1) {
-  g.save(); g.translate(x, y); g.rotate(heading); g.scale(s, s);
-  g.strokeStyle = '#fff'; g.lineWidth = 5; g.fillStyle = 'rgba(255,255,255,0.08)';
-  g.beginPath(); g.moveTo(0, -150); g.bezierCurveTo(60, -80, 55, 90, 35, 140); g.lineTo(-35, 140); g.bezierCurveTo(-55, 90, -60, -80, 0, -150); g.fill(); g.stroke();
-  g.fillStyle = '#fff'; g.beginPath(); g.arc(0, -30, 9, 0, Math.PI * 2); g.fill();
-  g.rotate(boom); g.strokeStyle = TK.C.acc; g.lineWidth = 10; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(0, -30); g.quadraticCurveTo(18, 50, 0, 140); g.stroke();
+  const m = mapper(x, y, s, heading);
+  const hull = lp(m, P => { P.M(0, -150); P.Q(64, -70, 46, 70); P.Q(40, 130, 35, 140); P.L(-35, 140); P.Q(-40, 130, -46, 70); P.Q(-64, -70, 0, -150); P.Z(); });
+  const litHull = lp(m, P => { P.M(-14, -160); P.Q(50, -80, 32, 60); P.L(-50, 60); P.Q(-78, -80, -14, -160); P.Z(); });
+  solid(g, hull, PL.T.wood, { a: 0.6, gap: 8, hw: 1.5, lit: litHull, w: 5 });
+  g.save(); g.beginPath(); hull(g); g.clip();   // 甲板の板
+  PL.ink(g, lp(m, P => { for (let k = -3; k <= 3; k++) { P.M(k * 12, -150); P.L(k * 12, 140); } }), 1.2, 'rgba(35,28,21,0.5)');
   g.restore();
+  const cock = lp(m, P => { P.M(-24, 60); P.L(24, 60); P.L(22, 122); P.L(-22, 122); P.Z(); });   // 操縦席
+  solid(g, cock, PL.T.brown, { a: 0.7, gap: 6, hw: 1.2, w: 3 });
+  // 帆とブーム（マストのまわりに回す）
+  const mx = 0, my = -30, c = Math.cos(boom), n = Math.sin(boom), r = (px, py) => [mx + px * c - py * n, my + px * n + py * c];
+  const sail = lp(m, P => { P.M(...r(0, 0)); P.Q(...r(20, 85), ...r(0, 170)); P.Q(...r(6, 85), ...r(0, 0)); P.Z(); });
+  solid(g, sail, PL.T.sand, { a: 0.8, gap: 5, hw: 1.2, w: 4 });
+  PL.ink(g, lp(m, P => { P.M(...r(0, 0)); P.L(...r(0, 170)); }), 4);   // ブーム
+  PL.ink(g, lp(m, P => { P.M(...r(0, 150)); P.L(0, 128); }), 1.5);       // シート（帆をとめる綱）
+  const mast = lp(m, P => P.E(mx, my, 9, 9)); PL.tint(g, mast, PL.T.brown, 1); PL.ink(g, mast, 3);
 }
-// 風の矢印の列（dir: 風が吹いていく向き、ラジアン。0 = 上）
-function windField(g, t, dir, color = 'rgba(95,212,255,0.5)') {
-  g.save(); g.strokeStyle = color; g.lineWidth = 5; g.lineCap = 'round';
+// 水面のさざなみ（区切った所だけ）
+function ripples(g, y0, y1, seed = 1) {
+  PL.ink(g, gg => { for (let i = 0; i < 26; i++) { const r = k => { const v = Math.sin((i * 7 + k + seed) * 12.9898) * 43758.5453; return v - Math.floor(v); }; const x = 70 + r(1) * 940, y = y0 + r(2) * (y1 - y0); gg.moveTo(x - 22, y); gg.quadraticCurveTo(x - 11, y - 6, x, y); gg.quadraticCurveTo(x + 11, y + 6, x + 22, y); } }, 2, 'rgba(47,95,122,0.45)');
+}
+// 風の矢印の列（dir: 風が吹いていく向き、ラジアン。0 = 上）。y0〜y1 の中、skip の四角とは重ねない
+function windField(g, t, dir, y0 = 180, y1 = 1080, skip = []) {
   const dx = Math.sin(dir), dy = -Math.cos(dir);
   for (let i = 0; i < 12; i++) {
     const k = ((t * 0.5 + i * 0.37) % 1), off = (i - 5.5) * 80;
     const cx = 540 + (-dy) * off + dx * (k - 0.5) * 900, cy = 640 + dx * off + dy * (k - 0.5) * 900;
-    if (cy < 180 || cy > 1080) continue;
-    g.globalAlpha = Math.sin(k * Math.PI);
-    g.beginPath(); g.moveTo(cx - dx * 40, cy - dy * 40); g.lineTo(cx + dx * 40, cy + dy * 40); g.stroke();
+    const ax = cx - dx * 45, ay = cy - dy * 45, bx = cx + dx * 45, by = cy + dy * 45;
+    if (Math.min(ay, by) < y0 || Math.max(ay, by) > y1 || ax < 40 || bx > 1040 || ax > 1040 || bx < 40) continue;
+    if (skip.some(([l, u, r, d]) => Math.max(ax, bx) > l && Math.min(ax, bx) < r && Math.max(ay, by) > u && Math.min(ay, by) < d)) continue;
+    g.save(); g.globalAlpha *= Math.sin(k * Math.PI) * 0.85;
+    const hx = bx - dx * 16, hy = by - dy * 16;
+    PL.ink(g, gg => { gg.moveTo(ax, ay); gg.lineTo(bx, by); gg.moveTo(hx - dy * 10, hy + dx * 10); gg.lineTo(bx, by); gg.lineTo(hx + dy * 10, hy - dx * 10); }, 4, BLUE);
+    g.restore();
   }
-  g.restore();
 }
 function speedCard(g, label, v, color) {
-  TK.card(g, 260, 180, 560, 150, { r: 40 });
+  TK.card(g, 260, 180, 560, 150);
   TK.text(g, label, 540, 222, 38, { color: TK.C.sub });
   TK.text(g, '風の ' + v, 540, 285, 70, { color });
 }
@@ -70,60 +106,65 @@ function speedCard(g, label, v, color) {
 function draw(g, t) {
   // 0〜2.2: フック
   if (t < 2.2) {
-    windField(g, t, 0);
+    ripples(g, 240, 820, 3);
+    windField(g, t, 0, 180, 840);
     boat(g, 540, 600, 0, 1.35, 1.3);
-    if (t > 0.7) { const p = clamp(TK.pop(t, 0.7, 0.3), 0, 1.2); g.save(); g.strokeStyle = TK.C.red; g.lineWidth = 28; g.lineCap = 'round';
-      g.beginPath(); g.moveTo(540 - 180 * p, 600 - 180 * p); g.lineTo(540 + 180 * p, 600 + 180 * p); g.moveTo(540 + 180 * p, 600 - 180 * p); g.lineTo(540 - 180 * p, 600 + 180 * p); g.stroke(); g.restore(); }
+    if (t > 0.7) { const p = clamp(TK.pop(t, 0.7, 0.3), 0, 1.2); PL.ink(g, gg => { gg.moveTo(540 - 180 * p, 600 - 180 * p); gg.lineTo(540 + 180 * p, 600 + 180 * p); gg.moveTo(540 + 180 * p, 600 - 180 * p); gg.lineTo(540 - 180 * p, 600 + 180 * p); }, 24, PL.RED); }
     TK.hook(g, t, 0.0, 2.2, '追い風が、\n[いちばんおそい]。', { y: 1000, size: 110 });
   }
   // 2〜8: 真後ろの風 0.58 倍
   if (t >= 2.2 && t < 8.0) {
-    windField(g, t, 0);
+    ripples(g, 400, 900, 5);
+    windField(g, t, 0, 380, 920);
     boat(g, 540, 680, 0, 1.35, 1.3);
-    speedCard(g, '真後ろの風（4ノット）', '[0.58] 倍', '#fff');
-    arrow(g, 540, 1020, 540, 960, TK.C.acc2, 10);
-    TK.text(g, '風', 600, 1000, 40, { align: 'left', color: TK.C.acc2 });
+    speedCard(g, '真後ろの風（4ノット）', '[0.58] 倍', PL.INK);
+    arrowPL(g, 540, 1060, 540, 960, BLUE, 9);
+    TK.text(g, '風', 600, 1010, 44, { align: 'left', color: BLUE });
     TK.note(g, t, 2.6, 8, '計算: ある12mのヨット（YD-41）・弱い風。上から見た図', { size: 32 });
   }
   // 8〜14: 真横の風 1.26 倍
   if (t >= 8.0 && t < 14.0) {
     const k = ease((t - 8.3) / 1.6);
-    windField(g, t, Math.PI / 2 * k);   // 風の向きを、船に対して横へ（見やすいよう風を回す）
+    ripples(g, 400, 920, 5);
+    windField(g, t, Math.PI / 2 * k, 380, 940);   // 風の向きを、船に対して横へ（見やすいよう風を回す）
     boat(g, 540, 680, 0, lerp(1.35, -0.35, k), 1.3);
-    speedCard(g, k < 0.5 ? '真後ろの風' : '真横の風（4ノット）', k < 0.98 ? '…' : '[1.26] 倍', TK.C.acc);
-    if (t > 11.0) { g.save(); g.globalAlpha = fade(t, 11, 14, 0.3); TK.text(g, '[風より速い]', PW / 2, 1020, 76); g.restore(); }
+    speedCard(g, k < 0.5 ? '真後ろの風' : '真横の風（4ノット）', k < 0.98 ? '…' : '[1.26] 倍', PL.RED);
+    if (t > 11.0) { g.save(); g.globalAlpha = fade(t, 11, 14, 0.3); TK.text(g, '[風より速い]', PW / 2, 1040, 76); g.restore(); }
   }
   // 14〜21: 帆は翼。流れで前へ引っぱられる（風は左から右、船の前は上）
   if (t >= 14.0 && t < 21.0) {
     const cx = 540, cy = 660;
-    const sail = u => { const x = lerp(cx - 300, cx + 300, u), y = lerp(cy + 20, cy + 110, u) - Math.sin(u * Math.PI) * 90; return [x, y]; };
+    const sailPt = (u, d = 0) => [lerp(cx - 300, cx + 300, u), lerp(cy + 20, cy + 110, u) - Math.sin(u * Math.PI) * 90 + d * Math.sin(u * Math.PI)];
     // 流れの線（帆の上は持ち上がって速く、下はゆっくり。形だけ）
-    g.save(); g.lineWidth = 4; g.setLineDash([24, 18]);
     for (let i = 0; i < 9; i++) {
-      const y0 = cy - 330 + i * 80, above = y0 < cy + 40, near = Math.exp(-Math.abs(y0 - cy) / 220);
-      g.strokeStyle = 'rgba(95,212,255,0.55)'; g.lineDashOffset = -((t * (above ? 1.4 : 0.8)) % 1) * 84 * 3;
-      g.beginPath();
-      for (let x = 60; x <= 1020; x += 20) { const u = clamp((x - (cx - 300)) / 600, 0, 1), bump = Math.sin(u * Math.PI) * (above ? -70 : -30) * near + (x > cx + 300 ? (x - cx - 300) * 0.25 * near : u * 90 * near); const yy = y0 + bump; x === 60 ? g.moveTo(x, yy) : g.lineTo(x, yy); }
-      g.stroke();
+      const y0 = cy - 250 + i * 70, above = y0 < cy + 40, near = Math.exp(-Math.abs(y0 - cy) / 220);
+      g.save(); g.setLineDash([24, 18]); g.lineDashOffset = -((t * (above ? 1.4 : 0.8)) % 1) * 84 * 3; g.globalAlpha *= 0.75;
+      PL.ink(g, gg => { for (let x = 60; x <= 1020; x += 20) { const u = clamp((x - (cx - 300)) / 600, 0, 1), bump = Math.sin(u * Math.PI) * (above ? -70 : -30) * near + (x > cx + 300 ? 90 * near + (x - cx - 300) * 0.25 * near : u * 90 * near); const yy = y0 + bump; x === 60 ? gg.moveTo(x, yy) : gg.lineTo(x, yy); } }, 3.5, BLUE);
+      g.restore();
     }
-    g.restore();
-    g.save(); g.strokeStyle = TK.C.acc; g.lineWidth = 14; g.lineCap = 'round'; g.beginPath();
-    for (let k = 0; k <= 30; k++) { const [x, y] = sail(k / 30); k ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); g.restore();
-    TK.text(g, '風 →', 140, 250, 44, { color: TK.C.acc2, align: 'left' });
+    // 帆の断面（布の厚みを少しつけて、ふくらみに手彩色）
+    const sail = g2 => { for (let k = 0; k <= 30; k++) { const [x, y] = sailPt(k / 30); k ? g2.lineTo(x, y) : g2.moveTo(x, y); } for (let k = 30; k >= 0; k--) { const [x, y] = sailPt(k / 30, 14); g2.lineTo(x, y); } g2.closePath(); };
+    solid(g, sail, PL.T.sand, { a: 0.9, gap: 5, hw: 1.2, w: 5 });
+    const mast = PL.circle(cx - 300, cy + 20, 14); PL.tint(g, mast, PL.T.brown, 1); PL.ink(g, mast, 4);
+    PL.leader(g, cx - 300, cy + 34, 300, 900); PL.label(g, 'マスト', 300, 935, 40, { color: TK.C.sub });
+    TK.text(g, '風', 120, 250, 44, { color: BLUE, align: 'left' }); arrowPL(g, 180, 250, 300, 250, BLUE, 6);
     TK.text(g, '↑ 船の前', 940, 250, 40, { color: TK.C.sub, align: 'right', bold: false });
-    if (t > 16.4) { g.save(); g.globalAlpha = fade(t, 16.4, 21, 0.3); arrow(g, cx, cy - 40, cx - 40, cy - 330, TK.C.green, 14); TK.text(g, '引っぱる力', cx + 150, cy - 280, 54, { color: TK.C.green }); g.restore(); }
-    TK.text(g, '帆を上から見た断面（翼と同じ形）', PW / 2, 1040, 40, { color: TK.C.sub, bold: false });
+    if (t > 16.4) { g.save(); g.globalAlpha = fade(t, 16.4, 21, 0.3); arrowPL(g, cx, cy - 40, cx - 40, cy - 320, PL.GREEN, 12); TK.text(g, '引っぱる力', cx + 170, cy - 335, 54, { color: PL.GREEN }); g.restore(); }
+    TK.text(g, '帆を上から見た断面（翼と同じ形）', PW / 2, 1065, 40, { color: TK.C.sub, bold: false });
     TK.note(g, t, 14.4, 21, '模式図（流れの線は形だけ）', { size: 32 });
   }
   // 21〜26: キール
   if (t >= 21.0 && t < 26.0) {
-    windField(g, t, Math.PI / 2); boat(g, 540, 640, 0, -0.35, 1.3);
-    g.save(); g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 12; g.beginPath(); g.moveTo(540, 600); g.lineTo(540, 720); g.stroke(); g.restore();
-    TK.text(g, 'キール（船の底の板）', 640, 820, 40, { align: 'left', color: TK.C.sub });
+    const skip = [[600, 180, 1060, 300], [80, 510, 440, 610], [620, 850, 1060, 950]];
+    ripples(g, 340, 1000, 9);
+    windField(g, t, Math.PI / 2, 300, 1060, skip);
+    boat(g, 540, 640, 0, -0.35, 1.3);
+    g.save(); g.setLineDash([16, 10]); PL.ink(g, gg => { gg.moveTo(540, 590); gg.lineTo(540, 730); }, 9, 'rgba(35,28,21,0.75)'); g.restore();   // 水の中のキール（点線）
+    PL.leader(g, 548, 700, 650, 880); PL.label(g, 'キール（船の底の板）', 660, 900, 40, { align: 'left', color: TK.C.sub });
     const p = clamp((t - 21.4) / 0.8, 0, 1);
-    arrow(g, 540, 600, 540 + 280 * p, 600 - 140 * p, TK.C.green, 12);
-    if (t > 22.6) { const q = clamp((t - 22.6) / 0.6, 0, 1); arrow(g, 520, 600, 520 - 260 * q, 600, TK.C.red, 10); TK.text(g, '水がおさえる', 250, 560, 40, { color: TK.C.red }); }
-    if (t > 23.8) { const q = clamp((t - 23.8) / 0.6, 0, 1); arrow(g, 540, 560, 540, 560 - 260 * q, TK.C.acc, 14); TK.text(g, '[前へ] 進む力', 540, 230, 60); }
+    if (p > 0.02) arrowPL(g, 540, 600, 540 + 280 * p, 600 - 140 * p, PL.GREEN, 11);
+    if (t > 22.6) { const q = clamp((t - 22.6) / 0.6, 0, 1); if (q > 0.02) arrowPL(g, 520, 610, 520 - 260 * q, 610, PL.RED, 10); TK.text(g, '水がおさえる', 260, 560, 40, { color: PL.RED }); }
+    if (t > 23.8) { const q = clamp((t - 23.8) / 0.6, 0, 1); if (q > 0.02) arrowPL(g, 540, 400, 540, 400 - 90 * q, PL.RED, 14); TK.text(g, '[前へ] 進む力', 820, 240, 60); }
   }
   // 26〜30: まとめの棒
   if (t >= 26.0) {
@@ -132,7 +173,9 @@ function draw(g, t) {
       { label: '真後ろの風', v: 0.58 / 1.4, color: TK.C.acc2, text: '0.58 倍' },
       { label: '真横の風', v: 1.26 / 1.4, color: TK.C.acc, text: '1.26 倍' },
     ], { y: 380, gap: 240, stagger: 0.5 });
-    TK.note(g, t, 26.4, 30, '出どころ: Python-VPP（M. Lauber, MIT）・ORC の帆と船体の式。YD-41 の計算\n強い風では差が小さくなる', { size: 28 });
+    boat(g, 300, 950, 0, 1.35, 0.42); arrowPL(g, 300, 1075, 300, 1025, BLUE, 6);
+    boat(g, 780, 950, 0, -0.35, 0.42); arrowPL(g, 610, 950, 690, 950, BLUE, 6);
+    TK.note(g, t, 26.4, 30, '出どころ: Python-VPP（M. Lauber, MIT）・ORC の帆と船体の式。YD-41 の計算\n強い風では差が小さくなる', { size: 28, y: 1145 });
   }
 }
 

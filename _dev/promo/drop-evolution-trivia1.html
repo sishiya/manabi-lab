@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく drop-evolution-1（型G 15〜20秒ループ）「地球でいちばん多い光合成の生きものは、1988年まで見つかっていなかった」。台本は trivia/drop-evolution.md
@@ -27,22 +30,38 @@ const subs = [
 const cues = [{ t: 0.05, type: 'pop' }, { t: 2.0, type: 'rise' }, { t: 3.4, type: 'ding' }, { t: 6.0, type: 'whoosh' }, { t: 7.6, type: 'pop' },
   { t: 10.0, type: 'whoosh' }, { t: 12.4, type: 'buzz' }, { t: 15.0, type: 'thud' }, { t: 17.0, type: 'pop' }];
 
+// 絵は「図鑑の版画」（trivia-plate.js の PL.*）。しずくは手彩色＋かげの斜線＋墨の輪郭、細胞は小さな緑の粒（まとめてぬる）
 const rnd = (i, k = 0) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
-// しずくの形
-function dropPath(g, cx, cy, s) {
-  g.beginPath(); g.moveTo(cx, cy - 330 * s);
+const line = pts => g => pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
+const fadeIn = (g, f, fn) => { g.save(); g.globalAlpha *= f; fn(); g.restore(); };
+// しずくの形（道だけ）
+const dropPath = (cx, cy, s) => g => {
+  g.moveTo(cx, cy - 330 * s);
   g.bezierCurveTo(cx + 60 * s, cy - 200 * s, cx + 260 * s, cy - 40 * s, cx + 260 * s, cy + 110 * s);
   g.arc(cx, cy + 110 * s, 260 * s, 0, Math.PI);
   g.bezierCurveTo(cx - 260 * s, cy - 40 * s, cx - 60 * s, cy - 200 * s, cx, cy - 330 * s); g.closePath();
-}
+};
 function drop(g, t, cx, cy, s, n) {
-  g.save(); dropPath(g, cx, cy, s);
-  g.fillStyle = 'rgba(40,110,200,0.25)'; g.fill(); g.strokeStyle = '#7fb8ff'; g.lineWidth = 6; g.stroke(); g.clip();
-  for (let i = 0; i < n; i++) {
-    const x = cx + (rnd(i, 1) - 0.5) * 540 * s + Math.sin(t * 0.7 + i) * 6, y = cy - 300 * s + rnd(i, 2) * 680 * s + Math.cos(t * 0.6 + i) * 6;
-    g.fillStyle = `rgba(89,227,154,${0.5 + 0.4 * rnd(i, 3)})`; g.beginPath(); g.arc(x, y, 5 + rnd(i, 4) * 3, 0, 7); g.fill();
-  }
+  const d = dropPath(cx, cy, s);
+  PL.tint(g, d, PL.T.sea, 0.5);
+  g.save(); g.beginPath(); d(g); g.clip();
+  const cells = [[], []];
+  for (let i = 0; i < n; i++) cells[i % 2].push([cx + (rnd(i, 1) - 0.5) * 540 * s + Math.sin(t * 0.7 + i) * 6, cy - 300 * s + rnd(i, 2) * 680 * s + Math.cos(t * 0.6 + i) * 6, 4 + rnd(i, 4) * 3]);
+  cells.forEach((C, k) => { const p = gg => C.forEach(([x, y, r]) => PL.circle(x, y, r)(gg)); PL.tint(g, p, k ? PL.T.leaf : PL.GREEN, 0.9); PL.ink(g, p, 1.2, 'rgba(35,28,21,0.6)'); });
   g.restore();
+  PL.hatch(g, d, { angle: 0.7, gap: 12, w: 1.8, not: dropPath(cx - 70 * s, cy - 80 * s, s) });   // 右下にかげ
+  PL.ink(g, gg => { gg.moveTo(cx - 150 * s, cy - 20 * s); gg.quadraticCurveTo(cx - 170 * s, cy + 80 * s, cx - 120 * s, cy + 170 * s); }, 4, 'rgba(244,236,218,0.9)');   // 光る所（紙の白）
+  PL.ink(g, d, 7);
+}
+// 髪の毛（横から。表面のうろこ＝キューティクル）。x0..x0+w の帯
+function hair(g, x0, y0, w, h) {
+  const p = PL.rect(x0, y0, w, h);
+  PL.tint(g, p, PL.T.brown, 0.75);
+  PL.ink(g, gg => { for (let y = y0 + 20; y < y0 + h; y += 46) { gg.moveTo(x0, y + 18); for (let x = x0; x <= x0 + w; x += 20) gg.lineTo(x, y + 18 * Math.cos((x - x0) / w * Math.PI - Math.PI / 2) * -0.4 + Math.sin(x * 0.04 + y) * 4); } }, 1.6, 'rgba(35,28,21,0.55)');   // うろこのふち
+  PL.hatch(g, PL.rect(x0 + w * 0.68, y0, w * 0.32, h), { angle: 1.2, gap: 9, w: 1.6 });
+  PL.hatch(g, PL.rect(x0 + w * 0.86, y0, w * 0.14, h), { angle: -1.2, gap: 9, w: 1.6 });
+  PL.ink(g, line([[x0, y0], [x0, y0 + h]]), 6); PL.ink(g, line([[x0 + w, y0], [x0 + w, y0 + h]]), 6);
+  PL.ink(g, gg => { gg.moveTo(x0, y0); for (let x = x0; x <= x0 + w; x += 30) gg.lineTo(x, y0 + Math.sin(x * 0.05) * 8); gg.moveTo(x0, y0 + h); for (let x = x0; x <= x0 + w; x += 30) gg.lineTo(x, y0 + h + Math.sin(x * 0.05 + 2) * 8); }, 3);   // 切り口（ぎざぎざ）
 }
 
 function draw(g, t) {
@@ -53,67 +72,76 @@ function draw(g, t) {
   }
   if (t >= 2.0 && t < 6.0) {
     const f = fade(t, 2.0, 6.0, 0.3);
-    g.save(); g.globalAlpha = f * 0.35; drop(g, t, PW / 2, 700, 1.0, 600); g.restore();
+    fadeIn(g, f * 0.35, () => drop(g, t, PW / 2, 700, 1.0, 600));
     const k = TK.out((t - 2.2) / 1.2), e = Math.round(lerp(3, 27, k));
-    g.save(); g.globalAlpha = f;
-    TK.card(g, 120, 440, 840, 400, { r: 40, fill: 'rgba(11,20,48,0.85)' });
-    TK.text(g, 'およそ', PW / 2, 520, 56, { color: TK.C.sub });
-    // 3×10^e
-    setFont(g, 190, true); const w1 = g.measureText('3×10').width; setFont(g, 100, true); const w2 = g.measureText(String(e)).width;
-    let x = PW / 2 - (w1 + w2) / 2; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillStyle = TK.C.acc;
-    setFont(g, 190, true); g.fillText('3×10', x, 670); setFont(g, 100, true); g.fillText(String(e), x + w1, 600);
-    if (t > 3.4) { g.globalAlpha = f * TK.pop(t, 3.4, 0.35); TK.text(g, '＝ 3000じょ 個', PW / 2, 790, 64, { color: '#fff' }); }
-    g.restore();
+    fadeIn(g, f, () => {
+      g.fillStyle = PL.PATCH; g.fillRect(120, 440, 840, 400); PL.ink(g, PL.rect(120, 440, 840, 400), 4); PL.ink(g, PL.rect(132, 452, 816, 376), 1.5);
+      PL.label(g, 'およそ', PW / 2, 520, 56, { color: TK.C.sub });
+      // 3×10^e
+      const F = sz => 'bold ' + sz + 'px ' + PL.MIN;
+      g.font = F(190); const w1 = g.measureText('3×10').width; g.font = F(100); const w2 = g.measureText(String(e)).width;
+      const x = PW / 2 - (w1 + w2) / 2; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillStyle = PL.RED;
+      g.font = F(190); g.fillText('3×10', x, 670); g.font = F(100); g.fillText(String(e), x + w1, 600);
+      if (t > 3.4) fadeIn(g, TK.pop(t, 3.4, 0.35), () => PL.label(g, '＝ 3000じょ 個', PW / 2, 790, 64));
+    });
     TK.note(g, t, 2.4, 6.0, '海全体の年平均の推定（Flombaum ほか 2013）', { size: 32 });
   }
   if (t >= 6.0 && t < 10.0) {
-    const f = fade(t, 6.0, 10.0, 0.3);
-    g.save(); g.globalAlpha = f;
-    // 髪の毛（60µm）を 600px の帯に。細胞 0.6µm は 6px
-    const hw = 600, x0 = PW / 2 - hw / 2;
-    g.fillStyle = 'rgba(150,110,80,0.55)'; g.fillRect(x0, 300, hw, 640);
-    g.strokeStyle = 'rgba(220,180,140,0.9)'; g.lineWidth = 4; g.strokeRect(x0, 300, hw, 640);
-    for (let i = 0; i < 6; i++) { g.strokeStyle = 'rgba(220,180,140,0.35)'; g.beginPath(); g.moveTo(x0, 360 + i * 110); g.lineTo(x0 + hw, 340 + i * 110); g.stroke(); }
-    TK.text(g, '髪の毛の太さ', PW / 2, 250, 52, { color: '#e8c9a8' });
-    const k = TK.pop(t, 7.6, 0.4);
-    g.fillStyle = TK.C.green; g.shadowColor = TK.C.green; g.shadowBlur = 12 * RES; g.beginPath(); g.arc(PW / 2, 620, 3 + 3 * k, 0, 7); g.fill(); g.shadowBlur = 0;
-    if (t > 7.6) {
-      g.strokeStyle = TK.C.acc; g.lineWidth = 4; g.beginPath(); g.arc(PW / 2, 620, 50, 0, 7); g.stroke();
-      g.beginPath(); g.moveTo(PW / 2 + 35, 655); g.lineTo(PW / 2 + 120, 760); g.stroke();
-      TK.card(g, PW / 2 + 40, 760, 330, 110, { r: 30, fill: 'rgba(11,20,48,0.9)' });
-      TK.text(g, '0.6 µm', PW / 2 + 205, 815, 64, { color: TK.C.acc });
-    }
-    g.restore();
+    fadeIn(g, fade(t, 6.0, 10.0, 0.3), () => {
+      // 髪の毛（60µm）を 600px の帯に。細胞 0.6µm は 6px
+      const hw = 600, x0 = PW / 2 - hw / 2;
+      hair(g, x0, 300, hw, 640);
+      PL.label(g, '髪の毛の太さ', PW / 2, 220, 52);
+      PL.ink(g, gg => { line([[x0, 1000], [x0 + hw, 1000]])(gg); line([[x0, 980], [x0, 1020]])(gg); line([[x0 + hw, 980], [x0 + hw, 1020]])(gg); }, 4);
+      PL.label(g, '約 60 µm', PW / 2, 1055, 42, { color: TK.C.sub });
+      const k = TK.pop(t, 7.6, 0.4), c = PL.circle(PW / 2, 620, 3 + 3 * k);
+      g.fillStyle = 'rgba(244,236,218,0.95)'; g.beginPath(); PL.circle(PW / 2, 620, 12)(g); g.fill();   // まわりを紙の色にして見やすく
+      PL.tint(g, c, PL.GREEN, 1); PL.ink(g, c, 2);
+      if (t > 7.6) {
+        PL.ink(g, PL.circle(PW / 2, 620, 50), 5, PL.RED);
+        PL.leader(g, PW / 2 + 36, 655, 900, 760, PL.RED);
+        PL.label(g, '0.6 µm', 960, 800, 60, { color: PL.RED });
+      }
+    });
     TK.note(g, t, 6.4, 10.0, '髪の毛は太さ 約60µm として、同じ縮尺で描いています', { size: 30 });
   }
   if (t >= 10.0 && t < 15.0) {
-    const f = fade(t, 10.0, 15.0, 0.3);
-    g.save(); g.globalAlpha = f;
-    TK.text(g, '測る機械の画面（イメージ）', PW / 2, 220, 50, { color: TK.C.sub });
-    const x0 = 160, y0 = 980, W = 760, H = 640;
-    g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 4; g.beginPath(); g.moveTo(x0, y0 - H); g.lineTo(x0, y0); g.lineTo(x0 + W, y0); g.stroke();
-    TK.text(g, '粒の大きさ →', x0 + W - 120, y0 + 40, 36, { color: TK.C.sub, bold: false });
-    TK.text(g, '赤い光 ↑', x0 + 70, y0 - H - 30, 36, { color: TK.C.sub, bold: false });
-    // ふつうの粒（大きい・はっきり）
-    for (let i = 0; i < 70; i++) { const x = x0 + 300 + rnd(i, 1) * 420, y = y0 - 250 - rnd(i, 2) * 330; g.fillStyle = 'rgba(95,212,255,0.8)'; g.beginPath(); g.arc(x, y, 6, 0, 7); g.fill(); }
-    // かどの小さく弱い点（ノイズと思われた）
-    const k = clamp((t - 12.4) / 0.4, 0, 1);
-    for (let i = 0; i < 90; i++) { const x = x0 + 20 + rnd(i, 5) * 150, y = y0 - 20 - rnd(i, 6) * 140; g.fillStyle = `rgba(255,107,107,${0.85 - 0.5 * k})`; g.beginPath(); g.arc(x, y, 4, 0, 7); g.fill(); }
-    g.strokeStyle = TK.C.red; g.lineWidth = 4; g.setLineDash([10, 8]); g.strokeRect(x0 + 8, y0 - 175, 190, 168); g.setLineDash([]);
-    TK.text(g, '「ノイズ」？', x0 + 290, y0 - 200, 50, { color: TK.C.red });
-    if (k > 0) { g.globalAlpha = f * k; g.strokeStyle = TK.C.red; g.lineWidth = 8; g.beginPath(); g.moveTo(x0 + 8, y0 - 175); g.lineTo(x0 + 198, y0 - 7); g.moveTo(x0 + 198, y0 - 175); g.lineTo(x0 + 8, y0 - 7); g.stroke(); }
-    g.restore();
+    fadeIn(g, fade(t, 10.0, 15.0, 0.3), () => {
+      PL.label(g, '測る機械の画面（イメージ）', PW / 2, 220, 50, { color: TK.C.sub });
+      const x0 = 160, y0 = 980, W = 760, H = 640, fr = PL.rect(x0, y0 - H, W, H);
+      PL.tint(g, fr, PL.T.sand, 0.35);
+      PL.ink(g, gg => { for (let k = 1; k < 8; k++) { gg.moveTo(x0 + k * W / 8, y0 - H); gg.lineTo(x0 + k * W / 8, y0); gg.moveTo(x0, y0 - k * H / 8); gg.lineTo(x0 + W, y0 - k * H / 8); } }, 1, 'rgba(35,28,21,0.18)');   // 方眼
+      PL.ink(g, line([[x0, y0 - H], [x0, y0], [x0 + W, y0]]), 5);
+      PL.label(g, '粒の大きさ →', x0 + W - 120, y0 + 40, 36, { color: TK.C.sub, bold: false });
+      PL.label(g, '赤い光 ↑', x0 + 70, y0 - H - 30, 36, { color: TK.C.sub, bold: false });
+      // ふつうの粒（大きい・はっきり）
+      const big = gg => { for (let i = 0; i < 70; i++) PL.circle(x0 + 300 + rnd(i, 1) * 420, y0 - 250 - rnd(i, 2) * 330, 7)(gg); };
+      PL.tint(g, big, PL.T.sea, 0.9); PL.ink(g, big, 1.6);
+      // かどの小さく弱い点（ノイズと思われた）
+      const k = clamp((t - 12.4) / 0.4, 0, 1);
+      const small = gg => { for (let i = 0; i < 90; i++) PL.circle(x0 + 20 + rnd(i, 5) * 150, y0 - 20 - rnd(i, 6) * 140, 4)(gg); };
+      fadeIn(g, 1 - 0.55 * k, () => { PL.tint(g, small, PL.RED, 0.8); PL.ink(g, small, 1, 'rgba(35,28,21,0.5)'); });
+      PL.dots(g, [[x0 + 8, y0 - 175], [x0 + 198, y0 - 175], [x0 + 198, y0 - 7], [x0 + 8, y0 - 7], [x0 + 8, y0 - 175]], { w: 4, dash: [10, 8] });
+      PL.label(g, '「ノイズ」？', x0 + 300, y0 - 200, 50, { color: PL.RED });
+      if (k > 0) fadeIn(g, k, () => PL.ink(g, gg => { line([[x0 + 8, y0 - 175], [x0 + 198, y0 - 7]])(gg); line([[x0 + 198, y0 - 175], [x0 + 8, y0 - 7]])(gg); }, 8, PL.RED));
+    });
   }
   if (t >= 15.0) {
     const f = fade(t, 15.0, 21, 0.3), k = clamp((t - 17.0) / 1.5, 0, 1);
-    g.save(); g.globalAlpha = f * (1 - k);
-    TK.text(g, '論文', PW / 2, 450, 60, { color: TK.C.sub });
-    TK.text(g, '1988', PW / 2, 640, 260, { color: TK.C.acc });
-    g.restore();
-    if (k > 0) { g.save(); g.globalAlpha = f * k; drop(g, t, PW / 2, 700, 1.0, 600); g.restore(); }
+    if (k > 0.5) fadeIn(g, f * clamp(k * 2 - 1, 0, 1), () => drop(g, t, PW / 2, 700, 1.0, 600));
+    if (k < 0.5) fadeIn(g, f * (1 - clamp(k * 2, 0, 1)), () => {   // 論文（しずくの上に重ねて、うすれて消える）のページ（1988年）
+      const pg = PL.poly([[250, 330], [800, 300], [830, 1000], [280, 1030]]);
+      g.fillStyle = 'rgba(244,236,218,0.96)'; g.beginPath(); pg(g); g.fill();
+      PL.tint(g, pg, PL.T.sand, 0.35);
+      PL.hatch(g, PL.poly([[830, 1000], [850, 1012], [300, 1046], [280, 1030]]), { angle: 0.8, gap: 6, w: 1.3 });
+      PL.ink(g, pg, 5);
+      PL.label(g, '論文', 530, 430, 60, { color: TK.C.sub, rot: -0.05 });
+      PL.label(g, '1988', 540, 640, 200, { color: PL.RED, rot: -0.05 });
+      PL.ink(g, gg => { for (let i = 0; i < 5; i++) { const y = 800 + i * 40; gg.moveTo(320, y + 20 - i * 1); gg.lineTo(780 - (i === 4 ? 160 : 0), y - 6 - i * 1); } }, 4, 'rgba(35,28,21,0.35)');
+    });
     if (t < 17.4) TK.note(g, t, 15.4, 17.4, '見つけた観測は 1985〜86年、論文が 1988年', { size: 32 });
   }
-  if (t >= 17.4) TK.note(g, t, 17.4, 20.0, '出どころ: Flombaum ほか (2013) PNAS 110・Chisholm ほか (1988) Nature 334\nMIT Technology Review (2015)', { size: 30 });
+  if (t >= 17.4) TK.note(g, t, 17.4, 20.0, '出どころ: Flombaum ほか (2013) PNAS 110・Chisholm ほか (1988) Nature 334\nMIT Technology Review (2015)', { size: 30, y: 1150 });
 }
 
 triviaStart({ out: 'drop-evolution-trivia1', voice: 'auto', dur: DUR, draw, subs, cues, peek: 1.5 });

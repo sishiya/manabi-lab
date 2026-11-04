@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく railgun-3（型E 桁）「レールガンの弾は、何Gで押される？」。台本は trivia/railgun.md。?short で録る
@@ -30,60 +33,79 @@ const cues = [
   { t: 22.0, type: 'whoosh' }, { t: 22.6, type: 'rise' }, { t: 24.2, type: 'ding' },
 ];
 
-// 1円玉の線画（数字と丸だけ。デザインは写さない）
+/// ---- 図鑑の版画の道具で描く部品（PL.*）。筆のルックはぬるたびにぼかすので、同じ色はまとめて1回でぬる ----
+const BLUE = '#2f5f7a';
+// 1円玉の線画（丸と「1」の線だけ。デザインは写さない）。「1」は字ではなく墨の線で
 function coin(g, x, y, r) {
-  g.save(); g.fillStyle = 'rgba(220,228,240,0.9)'; g.strokeStyle = '#fff'; g.lineWidth = 5;
-  g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); g.stroke();
-  g.strokeStyle = 'rgba(11,20,48,0.35)'; g.lineWidth = 3; g.beginPath(); g.arc(x, y, r * 0.82, 0, Math.PI * 2); g.stroke();
-  TK.text(g, '1', x, y + 2, r * 1.1, { color: '#0b1430', blur: 0 });
-  g.restore();
+  const c = PL.circle(x, y, r);
+  PL.tint(g, c, PL.T.gray, 0.5);
+  PL.hatch(g, c, { angle: 0.7, gap: 8, w: 1.6, not: PL.circle(x - r * 0.25, y - r * 0.25, r), cx: x, cy: y });
+  PL.ink(g, c, 5); PL.ink(g, PL.circle(x, y, r * 0.82), 2);
+  PL.ink(g, gg => { gg.moveTo(x - r * 0.18, y - r * 0.32); gg.lineTo(x + r * 0.04, y - r * 0.48); gg.lineTo(x + r * 0.04, y + r * 0.46); gg.moveTo(x - r * 0.2, y + r * 0.46); gg.lineTo(x + r * 0.28, y + r * 0.46); }, Math.max(4, r / 12));
 }
-// はかり（針の角度 0〜1）
+// 台所のはかり（台・目盛り盤・朱の針）。k: 針 0〜1。label は下の窓（紙の札）に
 function scale(g, x, y, w, k, label) {
-  g.save();
-  TK.card(g, x - w / 2, y, w, w * 0.62, { r: 30 });
-  const cx = x, cy = y + w * 0.42, r = w * 0.32;
-  g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 6; g.beginPath(); g.arc(cx, cy, r, Math.PI * 1.15, Math.PI * 1.85); g.stroke();
-  const a = Math.PI * (1.15 + 0.7 * k);
-  g.strokeStyle = TK.C.red; g.lineWidth = 8; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * r * 0.95, cy + Math.sin(a) * r * 0.95); g.stroke();
-  if (label) TK.text(g, label, cx, cy + 70, 64, { color: TK.C.acc });
-  g.restore();
+  const body = PL.poly([[x - w * 0.42, y + 18], [x + w * 0.42, y + 18], [x + w / 2, y + w * 0.62], [x - w / 2, y + w * 0.62]]);
+  PL.tint(g, body, PL.T.sea, 0.45);
+  PL.hatch(g, body, { angle: 0.8, gap: 9, w: 1.8, not: PL.poly([[x - w * 0.42 - 30, y + 18], [x + w * 0.42 - 40, y + 18], [x + w / 2 - 40, y + w * 0.62], [x - w / 2 - 30, y + w * 0.62]]) });
+  PL.ink(g, body, 5);
+  const plat = PL.rect(x - w * 0.4, y, w * 0.8, 18); PL.tint(g, plat, PL.T.gray, 0.7); PL.ink(g, plat, 4);
+  const cx = x, cy = y + w * 0.24, r = w * 0.17, face = PL.circle(cx, cy, r);
+  g.save(); g.beginPath(); face(g); g.fillStyle = 'rgba(244,236,218,0.95)'; g.fill(); g.restore();
+  PL.ink(g, face, 4); PL.ink(g, PL.circle(cx, cy, r + 10), 2);
+  PL.ink(g, gg => { for (let i = 0; i <= 20; i++) { const a = Math.PI * (0.75 + 1.5 * i / 20), l = i % 5 ? 0.86 : 0.76; gg.moveTo(cx + Math.cos(a) * r * l, cy + Math.sin(a) * r * l); gg.lineTo(cx + Math.cos(a) * r * 0.94, cy + Math.sin(a) * r * 0.94); } }, 2.4);
+  const a = Math.PI * (0.75 + 1.5 * clamp(k, 0, 1));
+  PL.ink(g, gg => { gg.moveTo(cx, cy); gg.lineTo(cx + Math.cos(a) * r * 0.85, cy + Math.sin(a) * r * 0.85); }, 7, PL.RED);
+  PL.tint(g, PL.circle(cx, cy, 9), PL.INK, 1);
+  if (label) { const cy2 = y + w * 0.44; g.fillStyle = PL.PAPER; g.fillRect(x - 130, cy2, 260, 92); TK.card(g, x - 130, cy2, 260, 92); PL.label(g, label, x, cy2 + 48, 48, { color: PL.RED }); }
 }
-function person(g, x, y, s, o = {}) {
-  g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = '#fff'; g.lineWidth = 7; g.lineCap = 'round';
-  g.beginPath();
-  if (o.sit) { g.moveTo(0, -38); g.lineTo(30, -38); g.lineTo(30, 0); g.moveTo(0, -38); g.lineTo(0, -80); g.moveTo(0, -68); g.lineTo(26, -50); }
-  else { g.moveTo(0, -38); g.lineTo(-14, 0); g.moveTo(0, -38); g.lineTo(14, 0); g.moveTo(0, -38); g.lineTo(0, -80); g.moveTo(0, -70); g.lineTo(-18, -44); g.moveTo(0, -70); g.lineTo(18, -44); }
-  g.stroke(); g.fillStyle = '#fff'; g.beginPath(); g.arc(0, -96, 14, 0, Math.PI * 2); g.fill();
-  if (o.sit) { g.strokeStyle = TK.C.acc2; g.lineWidth = 5; g.beginPath(); g.moveTo(-14, -110); g.lineTo(-14, -30); g.lineTo(40, -30); g.stroke(); }
+// 立っている人（影絵）
+function person(g, x, y, s) { PL.walker(g, x, y, 0, 0, s); }
+// 座っている人（戦闘機の座席。影絵の線）。x, y は座面の後ろの下
+function pilot(g, x, y, s) {
+  const P = (u, v) => [x + u * s, y + v * s];
+  const seat = PL.poly([P(-40, 0), P(-22, -170), P(-2, -170), P(-14, -30), P(110, -30), P(110, 0)]);
+  PL.tint(g, seat, PL.T.brown, 0.6); PL.hatch(g, seat, { angle: 0.9, gap: 8, w: 1.6 }); PL.ink(g, seat, 4);
+  const stick = PL.rect(...P(140, -60), 10 * s, 60 * s); PL.tint(g, stick, PL.T.gray, 0.8); PL.ink(g, stick, 3);
+  g.save(); g.strokeStyle = PL.INK; g.lineCap = 'round'; g.lineJoin = 'round';
+  g.lineWidth = 26 * s; g.beginPath(); g.moveTo(...P(4, -42)); g.lineTo(...P(-6, -140)); g.stroke();   // 胴
+  g.lineWidth = 20 * s; g.beginPath(); g.moveTo(...P(4, -44)); g.lineTo(...P(92, -50)); g.lineTo(...P(104, 4)); g.stroke();   // 脚
+  g.lineWidth = 13 * s; g.beginPath(); g.moveTo(...P(-4, -126)); g.lineTo(...P(60, -92)); g.lineTo(...P(140, -58)); g.stroke();   // うで
+  g.fillStyle = PL.INK; g.beginPath(); g.arc(...P(-4, -172), 24 * s, 0, Math.PI * 2); g.fill();   // 頭
   g.restore();
+  const helm = g2 => { const [hx, hy] = P(-4, -172); g2.moveTo(hx - 30 * s, hy + 6 * s); g2.arc(hx, hy, 30 * s, Math.PI, 0); g2.lineTo(hx + 30 * s, hy + 6 * s); };
+  PL.ink(g, helm, 4);
 }
-function down(g, x, y, len, c, w = 12) {
-  g.save(); g.strokeStyle = c; g.lineWidth = w; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + len); g.moveTo(x - 24, y + len - 26); g.lineTo(x, y + len); g.lineTo(x + 24, y + len - 26); g.stroke(); g.restore();
+function down(g, x, y, len, c, w = 12) {   // 下向きの矢（重さ）
+  if (len < 4) return;
+  PL.ink(g, gg => { gg.moveTo(x, y); gg.lineTo(x, y + len); gg.moveTo(x - 24, y + len - 26); gg.lineTo(x, y + len); gg.lineTo(x + 24, y + len - 26); }, w, c);
+}
+function floor(g, y) {
+  const f = PL.rect(60, y, 840, 26); PL.tint(g, f, PL.T.wood, 0.5); PL.hatch(g, f, { angle: 0.9, gap: 9, w: 1.6 }); PL.ink(g, f, 4);
 }
 
 function draw(g, t) {
   // 0〜3: フック
   if (t < 3.0) {
     const k = TK.out((t - 0.8) / 0.5);
-    coin(g, PW / 2 - 60, 440 + 70 * k, 90);
     scale(g, PW / 2 - 60, 600, 520, k, k > 0.9 ? '45 kg' : '');
-    TK.hook(g, t, 0.0, 3.0, '1円玉が [45kg]', { y: 280, size: 130 });
+    coin(g, PW / 2 - 60, 420 + 90 * k, 90);
+    if (k > 0.9) { PL.leader(g, PW / 2 + 40, 470, 760, 400, PL.RED); PL.label(g, '1円玉（1 g）', 775, 370, 40, { align: 'left', color: TK.C.sub }); }
+    TK.hook(g, t, 0.0, 3.0, '1円玉が [45kg]', { y: 260, size: 130 });
   }
   // 3〜8: 1G
   if (t >= 3.0 && t < 8.0) {
-    const k = TK.pop(t, 3.3, 0.4);
-    g.save(); g.globalAlpha = k; person(g, PW / 2 - 60, 820, 3.2); down(g, PW / 2 + 140, 480, 200 * k, TK.C.acc2); g.restore();
+    const k = clamp(TK.pop(t, 3.3, 0.4), 0, 1.2);
+    g.save(); g.globalAlpha = clamp(k, 0, 1); floor(g, 822); person(g, PW / 2 - 60, 822, 1.35); down(g, PW / 2 + 140, 480, 200 * k, BLUE); g.restore();
     TK.count(g, t, 3.4, 8.0, 1, 1, { y: 330, size: 170, fmt: () => '1 G' });
-    TK.text(g, '（いまのあなた）', PW / 2 - 60, 920, 48, { color: TK.C.sub, bold: false });
+    PL.label(g, '（いまのあなた）', PW / 2 - 60, 920, 48, { color: TK.C.sub, bold: false });
   }
   // 8〜13: 9G
   if (t >= 8.0 && t < 13.0) {
-    const k = TK.pop(t, 8.3, 0.4);
-    g.save(); g.globalAlpha = k; person(g, PW / 2 - 100, 820, 3.0, { sit: true }); for (let i = 0; i < 3; i++) down(g, PW / 2 + 120 + i * 50, 440, 260 * k, TK.C.acc, 10); g.restore();
+    const k = clamp(TK.pop(t, 8.3, 0.4), 0, 1.2);
+    g.save(); g.globalAlpha = clamp(k, 0, 1); floor(g, 822); pilot(g, PW / 2 - 200, 822, 1.5); for (let i = 0; i < 3; i++) down(g, PW / 2 + 180 + i * 50, 440, 260 * k, PL.RED, 10); g.restore();
     TK.count(g, t, 8.4, 13.0, 1, 9, { y: 330, size: 170, dur: 0.9, fmt: v => Math.round(v) + ' G' });
-    TK.text(g, '（戦闘機のパイロット・目安）', PW / 2 - 60, 920, 48, { color: TK.C.sub, bold: false });
+    PL.label(g, '（戦闘機のパイロット・目安）', PW / 2 - 60, 920, 48, { color: TK.C.sub, bold: false });
   }
   // 13〜22: 桁のはしご（10倍ずつ）
   if (t >= 13.0 && t < 22.0) {
@@ -91,29 +113,32 @@ function draw(g, t) {
       { g: '10 G', w: '10 g', a: 13.6 }, { g: '100 G', w: '100 g', a: 14.6 }, { g: '1,000 G', w: '1 kg', a: 15.6 },
       { g: '1万 G', w: '10 kg', a: 16.6 }, { g: '4.5万 G', w: '45 kg', a: 17.8, hot: true },
     ];
-    TK.text(g, '1円玉の重さは', 640, 190, 40, { color: TK.C.sub, bold: false });
+    PL.label(g, '1円玉の重さは', 640, 190, 40, { color: TK.C.sub, bold: false });
+    coin(g, 860, 190, 34);
     rows.forEach((r, i) => {
       if (t < r.a) return;
-      const k = TK.pop(t, r.a, 0.35), y = 860 - i * 140;
+      const k = clamp(TK.pop(t, r.a, 0.35), 0, 1), y = 860 - i * 140;
       g.save(); g.globalAlpha = k;
-      TK.card(g, 90, y - 55, 780, 110, { r: 24, fill: r.hot ? 'rgba(255,207,74,0.25)' : 'rgba(20,34,72,0.9)', stroke: r.hot ? TK.C.acc : undefined, lw: r.hot ? 6 : 3 });
-      TK.text(g, r.g, 140, y, r.hot ? 72 : 58, { align: 'left', color: r.hot ? TK.C.acc : '#fff' });
-      TK.text(g, '→ ' + r.w, 820, y, r.hot ? 66 : 52, { align: 'right', color: r.hot ? TK.C.acc : TK.C.sub });
+      TK.card(g, 90, y - 55, 780, 110); if (r.hot) PL.ink(g, PL.rect(90, y - 55, 780, 110), 7, PL.RED);
+      PL.label(g, r.g, 140, y, r.hot ? 72 : 58, { align: 'left', color: r.hot ? PL.RED : PL.INK });
+      PL.label(g, '→ ' + r.w, 820, y, r.hot ? 66 : 52, { align: 'right', color: r.hot ? PL.RED : TK.C.sub });
+      if (i > 0) { PL.ink(g, gg => { gg.moveTo(930, y + 120); gg.lineTo(930, y + 24); gg.moveTo(914, y + 44); gg.lineTo(930, y + 24); gg.lineTo(946, y + 44); }, 4); PL.label(g, '×10', 955, y + 70, 32, { align: 'left', color: TK.C.sub }); }
       g.restore();
     });
-    TK.note(g, t, 18.2, 22, '推定の平均（初速 2,300m/s・全長 約6m を一定の加速として）\nレールは全長より短いので、本当はもっと大きい', { size: 30 });
+    TK.note(g, t, 18.2, 22, '推定の平均（初速 2,300m/s・全長 約6m を一定の加速として）\nレールは全長より短いので、本当はもっと大きい', { size: 30, y: 1140 });
   }
   // 22〜30: 0.005秒で秒速2.3km
   if (t >= 22.0) {
     const u = clamp((t - 22.6) / 1.6, 0, 1);
-    TK.card(g, 150, 190, 660, 120, { r: 30 });
-    TK.text(g, (0.0052 * u).toFixed(4) + ' 秒', PW / 2 - 60, 252, 76, { color: u >= 1 ? TK.C.acc : '#fff' });
+    TK.card(g, 150, 190, 660, 120);
+    PL.watch(g, 900, 250, 50, u);
+    PL.label(g, (0.0052 * u).toFixed(4) + ' 秒', PW / 2 - 60, 252, 76, { color: u >= 1 ? PL.RED : PL.INK });
     TK.count(g, t, 22.6, 30, 0, 2300, { y: 470, size: 160, dur: 1.6, unit: 'メートル／秒', label: '速さ', fmt: v => Math.round(v).toLocaleString('ja-JP') });
     TK.bars(g, t, 24.2, 30, [
       { label: '音（空気の中）', v: 340 / 2300, color: TK.C.acc2, text: '' },
       { label: '弾', v: 1, color: TK.C.acc, text: '約6.8倍' },
     ], { y: 660, gap: 170, stagger: 0.4, size: 44 });
-    TK.note(g, t, 27.0, 30, '出どころ: 防衛装備庁 技術シンポジウム2025「電磁加速システムの洋上射撃試験」\n1円玉 1.0g は造幣局の公表値', { size: 28 });
+    TK.note(g, t, 27.0, 30, '出どころ: 防衛装備庁 技術シンポジウム2025「電磁加速システムの洋上射撃試験」\n1円玉 1.0g は造幣局の公表値', { size: 28, y: 1140 });
   }
 }
 

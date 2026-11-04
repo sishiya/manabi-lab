@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく big-bang-2（型C あなたの体で）「あなたの体の原子、半分以上が宇宙のはじめの数分から」。台本は trivia/big-bang.md。?short で録る
@@ -29,101 +32,109 @@ const cues = [
   { t: 9.0, type: 'whoosh' }, { t: 10.5, type: 'ding' }, { t: 16.0, type: 'pop' }, { t: 18.0, type: 'pop' }, { t: 22.0, type: 'rise' }, { t: 23.5, type: 'ding' },
 ];
 
-// 人の形（線の形）に点をしきつめる。種類は 62:24:12:2 の割合
-const BODY = new Path2D();
-BODY.arc(540, 330, 85, 0, Math.PI * 2);
-BODY.roundRect(420, 430, 240, 330, 60);
-BODY.roundRect(330, 450, 80, 290, 40); BODY.roundRect(670, 450, 80, 290, 40);
-BODY.roundRect(430, 740, 100, 330, 45); BODY.roundRect(550, 740, 100, 330, 45);
+/// 絵は「図鑑の版画」（trivia-plate.js の PL.*）。人は解剖図のような正面の輪郭（頭・首・肩・腕・手・胴・脚）に、原子を小さな輪でしきつめる。
+// 原子・陽子・星は PL.sphere／手彩色の丸に墨の輪郭。元素の名前は丸の外に置いて引き出し線でつなぐ
+const COL = { H: PL.T.gold, O: PL.T.rose, C: PL.T.gray, N: PL.T.sky };
+const OY = 40;   // 人の絵を下へずらす量
+// 人の輪郭（右半分の点。x はまん中からのずれ）→ 左右を合わせる
+const HALF = [[28, 405], [30, 438], [95, 452], [135, 470], [150, 540], [160, 620], [168, 700], [172, 750], [180, 800], [162, 838], [140, 808], [138, 752], [128, 690], [118, 600], [102, 525], [100, 600], [88, 665], [106, 760], [100, 860], [82, 950], [80, 1010], [62, 1056], [92, 1080], [86, 1092], [20, 1092], [22, 1050], [26, 950], [10, 805], [0, 795]];
+const OUTLINE = [...HALF.map(([x, y]) => [540 + x, y + OY]), ...HALF.slice().reverse().map(([x, y]) => [540 - x, y + OY])];
+const bodyAt = (dx, dy) => g => { OUTLINE.forEach(([x, y], i) => i ? g.lineTo(x + dx, y + dy) : g.moveTo(x + dx, y + dy)); g.closePath(); PL.ellipse(540 + dx, 330 + OY + dy, 68, 86)(g); };
+const bodyPath = bodyAt(0, 0);
+const BODY = new Path2D(); bodyPath(BODY);
 const DOTS = (() => {
-  const c = document.createElement('canvas').getContext('2d'), out = [];
-  let i = 0;
-  for (let y = 250; y < 1080; y += 26) for (let x = 320; x < 760; x += 26) {
-    const xx = x + ((y / 26) % 2) * 13;
+  const c = document.createElement('canvas').getContext('2d'), out = []; let i = 0;
+  for (let y = 250 + OY; y < 1090 + OY; y += 24) for (let x = 360; x < 730; x += 24) {
+    const xx = x + ((y / 24) % 2) * 12;
     if (!c.isPointInPath(BODY, xx, y)) continue;
     const r = Math.sin(i * 12.9898 + 4.1) * 43758.5453, u = r - Math.floor(r); i++;
     out.push({ x: xx, y, k: u < 0.62 ? 'H' : u < 0.86 ? 'O' : u < 0.98 ? 'C' : 'N', d: u });
   }
   return out;
 })();
-const COL = { H: '#ffcf4a', O: '#ff6b6b', C: '#a9b4c8', N: '#5fd4ff' };
+const ring = (list, r) => g => list.forEach(d => PL.circle(d.x, d.y, typeof r === 'function' ? r(d) : r)(g));
 function body(g, t, lit, litCO = 0, f = 1) {
   g.save(); g.globalAlpha *= f;
-  g.translate(540, 1070); g.scale(0.9, 0.9); g.translate(-540, -1070);
-  g.strokeStyle = 'rgba(160,190,255,0.35)'; g.lineWidth = 3; g.stroke(BODY);
-  for (const d of DOTS) {
-    let a = 0.3, col = 'rgba(200,215,255,0.5)', r = 7;
-    if (d.k === 'H' && lit > d.d / 0.62) { col = COL.H; a = 1; r = 8 + Math.sin(t * 4 + d.d * 30) * 1.2; }
-    if ((d.k === 'O' || d.k === 'C' || d.k === 'N') && litCO > 0) { col = COL[d.k]; a = litCO; }
-    g.globalAlpha = f * a; g.fillStyle = col; g.beginPath(); g.arc(d.x, d.y, r, 0, Math.PI * 2); g.fill();
-  }
+  PL.tint(g, bodyPath, PL.T.sand, 0.3);
+  PL.hatch(g, bodyPath, { angle: 0.7, gap: 12, w: 1.6, not: bodyAt(-30, -12) });
+  PL.ink(g, bodyPath, 5);
+  PL.ink(g, gg => { gg.moveTo(540, 1000 + OY); gg.lineTo(540, 870 + OY); gg.moveTo(470, 470 + OY); gg.quadraticCurveTo(540, 500 + OY, 610, 470 + OY); }, 2);   // 鎖骨・脚のあいだ
+  const H = DOTS.filter(d => d.k === 'H' && lit > d.d / 0.62), rest = DOTS.filter(d => !H.includes(d) && !(litCO > 0 && d.k !== 'H'));
+  g.save(); g.globalAlpha *= 0.35; PL.ink(g, ring(rest, 6), 2); g.restore();
+  if (H.length) { const r = d => 8 + Math.sin(t * 4 + d.d * 30) * 1.2; PL.tint(g, ring(H, r), COL.H, 0.95); PL.ink(g, ring(H, r), 2.4); }
+  if (litCO > 0) ['O', 'C', 'N'].forEach(k => { const L = DOTS.filter(d => d.k === k); g.save(); g.globalAlpha *= litCO; PL.tint(g, ring(L, 7), COL[k], 0.95); PL.ink(g, ring(L, 7), 2); g.restore(); });
   g.restore();
 }
-function atom(g, x, y, r, kind, glow) {
-  g.save();
-  if (glow) { const gl = g.createRadialGradient(x, y, r * 0.5, x, y, r * 2.2); gl.addColorStop(0, 'rgba(255,207,74,0.6)'); gl.addColorStop(1, 'rgba(255,207,74,0)'); g.fillStyle = gl; g.beginPath(); g.arc(x, y, r * 2.2, 0, Math.PI * 2); g.fill(); }
-  g.fillStyle = COL[kind]; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
-  TK.text(g, kind, x, y + 2, r * 1.0, { color: '#0b1430', blur: 0 });
-  g.restore();
+function atom(g, x, y, r, kind) { PL.sphere(g, x, y, r, COL[kind], { a: 0.75, contour: r > 30 }); }
+// 星（太陽のような。ゆらぐ光の線）
+function star(g, x, y, r, t) {
+  PL.ink(g, gg => { for (let i = 0; i < 28; i++) { const a = i / 28 * Math.PI * 2 + t * 0.1, r0 = r + 14, r1 = r + (i % 2 ? 46 : 74); gg.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0); for (let q = 1; q <= 6; q++) { const rr = lerp(r0, r1, q / 6), aa = a + Math.sin(q * 1.6 + t * 2 + i) * 0.03; gg.lineTo(x + Math.cos(aa) * rr, y + Math.sin(aa) * rr); } } }, 3);
+  PL.sphere(g, x, y, r, PL.T.gold, { a: 0.8, light: [-0.6, -0.6] });
 }
 
 function draw(g, t) {
-  // 0〜3 と 22〜25: 体の点（水素が光る）
+  // 0〜3 と 22〜25: 体の点（水素がともる）
   if (t < 3.0) {
     body(g, t, ease((t - 0.6) / 1.4));
-    TK.hook(g, t, 0.0, 3.0, 'この光ってる原子、\n[138億年もの]', { y: 225, size: 74 });
+    TK.hook(g, t, 0.0, 3.0, 'この色のついた原子、\n[138億年もの]', { y: 190, size: 64 });
   }
   if (t >= 22.0) {
     body(g, t, 1, 0.5);
-    g.save(); g.globalAlpha = fade(t, 22.0, 27, 0.3); TK.text(g, '[138億年]もの', PW / 2, 170, 96); g.restore();
-    TK.note(g, t, 23.0, 25.0, '出どころ: Composition of the human body（元素の表）・NASA WMAP「Tests of Big Bang」\nHyperPhysics「Big Bang Nucleosynthesis」', { size: 28 });
+    g.save(); g.globalAlpha *= fade(t, 22.0, 27, 0.3);
+    PL.label(g, '[138億年]もの', 90, 200, 96, { align: 'left' });
+    const d = DOTS.find(q => q.k === 'H' && q.x > 640 && q.y > 600 + OY);   // 1つの水素に引き出し線
+    if (d) { PL.leader(g, d.x + 8, d.y, 860, 640); PL.label(g, '水素（黄）', 870, 612, 40, { color: TK.C.sub }); }
+    g.restore();
+    TK.note(g, t, 23.0, 25.0, '出どころ: Composition of the human body（元素の表）・NASA WMAP「Tests of Big Bang」\nHyperPhysics「Big Bang Nucleosynthesis」', { size: 28, y: 1170 });
   }
   // 3〜9: 分子と、数・重さ
   if (t >= 3.0 && t < 9.0) {
-    const f = fade(t, 3.0, 9.0, 0.3);
-    g.save(); g.globalAlpha = f;
-    TK.text(g, '水（H₂O）', PW / 2, 230, 60, { color: TK.C.sub });
-    atom(g, 540, 400, 80, 'O', false); atom(g, 420, 480, 50, 'H', true); atom(g, 660, 480, 50, 'H', true);
+    g.save(); g.globalAlpha *= fade(t, 3.0, 9.0, 0.3);
+    PL.label(g, '水（H₂O）', 90, 220, 60, { align: 'left', color: TK.C.sub });
+    PL.ink(g, gg => { gg.moveTo(540, 400); gg.lineTo(420, 480); gg.moveTo(540, 400); gg.lineTo(660, 480); }, 10);
+    atom(g, 540, 400, 80, 'O'); atom(g, 420, 480, 50, 'H'); atom(g, 660, 480, 50, 'H');
+    PL.leader(g, 596, 345, 680, 300); PL.label(g, '酸素', 690, 288, 44, { align: 'left', color: TK.C.sub });
+    PL.leader(g, 372, 486, 330, 486); PL.label(g, '水素', 318, 486, 44, { align: 'right', color: TK.C.sub });
     g.restore();
     TK.bars(g, t, 4.2, 9.0, [
       { label: '水素: 原子の数で', v: 0.62, color: TK.C.acc, text: '62%' },
       { label: '水素: 重さで', v: 0.10, color: TK.C.dim, text: '' },
     ], { y: 640, gap: 190, stagger: 1.4 });
-    if (t > 6.6) { g.save(); g.globalAlpha = fade(t, 6.6, 9.0, 0.3); TK.text(g, '約10%', 200, 1022, 48, { align: 'left', color: TK.C.sub }); g.restore(); }
+    if (t > 6.6) { g.save(); g.globalAlpha *= fade(t, 6.6, 9.0, 0.3); PL.label(g, '約10%', 200, 1022, 48, { align: 'left', color: TK.C.sub }); g.restore(); }
   }
   // 9〜16: 宇宙のはじめの数分
   if (t >= 9.0 && t < 16.0) {
-    const f = fade(t, 9.0, 16.0, 0.3), k = clamp((t - 9.6) / 4.5, 0, 1);
-    g.save(); g.globalAlpha = f;
-    const gr = g.createRadialGradient(540, 640, 0, 540, 640, 420); gr.addColorStop(0, `rgba(255,220,150,${0.5 * (1 - k)})`); gr.addColorStop(1, 'rgba(255,220,150,0)');
-    g.fillStyle = gr; g.beginPath(); g.arc(540, 640, 420, 0, Math.PI * 2); g.fill();
-    for (let i = 0; i < 60; i++) {   // 陽子（水素の芯）が散らばる
-      const a = i * 2.39996, rr = 40 + (i * 37 % 330) * (0.4 + 0.6 * k);
-      atom(g, 540 + Math.cos(a + t * 0.2) * rr, 640 + Math.sin(a + t * 0.2) * rr * 0.9, 16, 'H', false);
-    }
-    TK.card(g, 240, 180, 600, 130, { r: 65 });
-    TK.text(g, 'はじめの ' + Math.min(3, Math.floor(k * 3.99)) + ' 分', PW / 2, 245, 70, { color: k >= 1 ? TK.C.acc : '#fff' });
+    const k = clamp((t - 9.6) / 4.5, 0, 1);
+    g.save(); g.globalAlpha *= fade(t, 9.0, 16.0, 0.3);
+    // ひろがる輪（細い墨の線）と、はじめのあつい所（手彩色が うすれていく）
+    const hot = PL.circle(540, 640, 120 + 260 * k);
+    PL.tint(g, hot, PL.T.gold, 0.5 * (1 - k)); PL.hatch(g, hot, { angle: 0.4, gap: 16, w: 1.4, color: 'rgba(35,28,21,0.3)' });
+    PL.ink(g, gg => { for (let q = 0; q < 4; q++) { const r = ((t * 120 + q * 110) % 440) + 20; gg.moveTo(540 + r, 640); gg.ellipse(540, 640, r, r * 0.9, 0, 0, Math.PI * 2); } }, 1.6, 'rgba(35,28,21,0.45)');
+    const P = Array.from({ length: 60 }, (_, i) => { const a = i * 2.39996, rr = 40 + (i * 37 % 330) * (0.4 + 0.6 * k); return { x: 540 + Math.cos(a + t * 0.2) * rr, y: 640 + Math.sin(a + t * 0.2) * rr * 0.9 }; });
+    PL.tint(g, ring(P, 14), COL.H, 0.95); PL.hatch(g, ring(P, 14), { angle: 0.8, gap: 7, w: 1.3, not: g2 => P.forEach(d => PL.circle(d.x - 5, d.y - 5, 14)(g2)) }); PL.ink(g, ring(P, 14), 3);
+    PL.watch(g, 940, 210, 58, k * 3 / 60 * 12 % 1);
+    PL.label(g, 'はじめの [' + Math.min(3, Math.floor(k * 3.99)) + ' 分]', 850, 210, 70, { align: 'right' });
+    PL.tint(g, PL.circle(120, 1110, 14), COL.H, 0.95); PL.ink(g, PL.circle(120, 1110, 14), 3);
+    PL.label(g, '＝ 水素の芯（陽子）', 150, 1110, 40, { align: 'left', color: TK.C.sub });
     g.restore();
     TK.note(g, t, 9.0, 16.0, '「138億年もの」は水素の芯（原子核＝陽子）のこと。電子がついて原子になったのは約38万年後', { size: 28 });
   }
   // 16〜22: 炭素・酸素は星の中で
   if (t >= 16.0 && t < 22.0) {
-    const f = fade(t, 16.0, 22.0, 0.3);
-    g.save(); g.globalAlpha = f;
-    const sg = g.createRadialGradient(540, 520, 0, 540, 520, 200); sg.addColorStop(0, '#fff6c8'); sg.addColorStop(0.5, '#ffc24a'); sg.addColorStop(1, 'rgba(255,140,40,0)');
-    g.fillStyle = sg; g.beginPath(); g.arc(540, 520, 200, 0, Math.PI * 2); g.fill();
-    TK.text(g, '星の中', 540, 520, 60, { color: '#0b1430', blur: 0 });
-    const k = ease((t - 16.6) / 1.5);
-    atom(g, lerp(540, 300, k), lerp(520, 820, k), 48, 'C', false); atom(g, lerp(540, 540, k), lerp(520, 880, k), 54, 'O', false);
+    g.save(); g.globalAlpha *= fade(t, 16.0, 22.0, 0.3);
+    star(g, 540, 520, 150, t);
+    PL.leader(g, 540 + 150 * 0.8, 520 - 150 * 0.6, 820, 300); PL.label(g, '星の中', 830, 290, 54, { align: 'left' });
+    const k = ease((t - 16.6) / 1.5), cx = lerp(540, 300, k), cy = lerp(520, 830, k), ox = 540, oy = lerp(520, 870, k);
+    atom(g, cx, cy, 48, 'C'); atom(g, ox, oy, 54, 'O');
+    if (k > 0.95) { PL.label(g, '炭素', cx, cy + 92, 44, { color: TK.C.sub }); PL.label(g, '酸素', ox, oy + 98, 44, { color: TK.C.sub }); }
+    PL.label(g, '炭素・酸素は、あとで[星の中]で', 90, 190, 60, { align: 'left' });
     g.restore();
     if (t > 18.0) {
-      const k2 = ease((t - 18.0) / 0.8);
-      g.save(); g.globalAlpha = f * k2;
-      atom(g, 800, 840, 40, 'H', true);
-      TK.lines(g, 'ビッグバンの\nときのまま', 800, 980, 44, { color: TK.C.acc });
+      g.save(); g.globalAlpha *= fade(t, 16.0, 22.0, 0.3) * ease((t - 18.0) / 0.8);
+      atom(g, 820, 830, 40, 'H');
+      TK.lines(g, '水素は\nビッグバンの\nときのまま', 820, 990, 42, { color: PL.RED });
       g.restore();
     }
-    g.save(); g.globalAlpha = f; TK.text(g, '炭素・酸素は、あとで[星の中]で', PW / 2, 230, 64); g.restore();
   }
 }
 

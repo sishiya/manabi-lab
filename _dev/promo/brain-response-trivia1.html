@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく brain-1（型A ぜんぶ逆）「光より、音が先に脳に届く（大脳の最初の反応）」。台本は trivia/brain-response.md。?short で録る
@@ -31,139 +34,159 @@ const cues = [
   { t: 0.05, type: 'pop' }, { t: 1.8, type: 'whoosh' }, { t: 4.0, type: 'thud' }, { t: 9.0, type: 'pop' }, { t: 11.2, type: 'ding' },
   { t: 15.0, type: 'pop' }, { t: 17.0, type: 'ding' }, { t: 21.0, type: 'whoosh' }, { t: 26.0, type: 'ding' }, { t: 28.0, type: 'pop' }, { t: 33.0, type: 'pop' },
 ];
-const SOUND = '#5fd4ff', LIGHT = '#ffcf4a';
-
-// 横向きの頭（左を向く）。cx, cy が頭の中心、s が大きさ。耳と目の位置を返す
+// 絵は「図鑑の版画」（trivia-plate.js の PL.*）。頭は横からの断面図（脳のしわ・聞く場所・見る場所を手彩色で）
+const SOUND = TK.C.acc2, LIGHT = PL.RED;   // 音は藍、光は朱
+const line = pts => g => pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
+const fadeIn = (g, f, fn) => { g.save(); g.globalAlpha *= f; fn(); g.restore(); };
+const mapAt = (cx, cy, s) => (x, y) => [cx + x * s, cy + y * s];
+// 横向きの頭（左を向く）の輪郭
+const headPath = m => g => {
+  g.moveTo(...m(-140, 230)); g.lineTo(...m(-150, 130)); g.quadraticCurveTo(...m(-200, 125), ...m(-192, 80));
+  g.lineTo(...m(-210, 48)); g.lineTo(...m(-200, 18)); g.lineTo(...m(-238, -24)); g.lineTo(...m(-205, -58));
+  g.quadraticCurveTo(...m(-215, -150), ...m(-150, -200));
+  g.bezierCurveTo(...m(-60, -285), ...m(165, -265), ...m(205, -80));
+  g.bezierCurveTo(...m(222, 20), ...m(175, 110), ...m(112, 140)); g.lineTo(...m(95, 230));
+};
+// 横向きの頭。cx, cy が頭の中心、s が大きさ。o.aud / o.vis: 聞く場所・見る場所に色（0〜1）。耳と目の位置を返す
 function head(g, cx, cy, s, o = {}) {
-  g.save(); g.translate(cx, cy); g.scale(s, s);
-  g.strokeStyle = 'rgba(207,224,255,0.9)'; g.lineWidth = 6 / s; g.lineJoin = 'round'; g.lineCap = 'round';
-  g.fillStyle = 'rgba(30,50,100,0.55)';
-  g.beginPath();
-  g.moveTo(-140, 230); g.lineTo(-150, 130); g.quadraticCurveTo(-200, 125, -192, 80);
-  g.lineTo(-210, 48); g.lineTo(-200, 18); g.lineTo(-238, -24); g.lineTo(-205, -58);
-  g.quadraticCurveTo(-215, -150, -150, -200);
-  g.bezierCurveTo(-60, -285, 165, -265, 205, -80);
-  g.bezierCurveTo(222, 20, 175, 110, 112, 140); g.lineTo(95, 230);
-  g.fill(); g.stroke();
-  // 脳（うすく）
-  g.strokeStyle = 'rgba(160,190,255,0.35)'; g.lineWidth = 4 / s;
-  g.beginPath(); g.ellipse(15, -95, 172, 118, 0, 0, Math.PI * 2); g.stroke();
-  g.beginPath(); g.moveTo(-90, -40); g.quadraticCurveTo(0, -10, 80, -40); g.stroke();   // 外側溝（かざり）
-  // 光る場所
-  if (o.aud) { g.fillStyle = `rgba(95,212,255,${0.75 * o.aud})`; g.beginPath(); g.ellipse(10, -50, 62, 34, -0.1, 0, Math.PI * 2); g.fill(); }
-  if (o.vis) { g.fillStyle = `rgba(255,207,74,${0.75 * o.vis})`; g.beginPath(); g.ellipse(160, -95, 34, 62, 0.2, 0, Math.PI * 2); g.fill(); }
+  const m = mapAt(cx, cy, s), hp = headPath(m), w = Math.max(2, 5 * s);
+  PL.tint(g, hp, PL.T.sand, 0.55);
+  PL.hatch(g, hp, { angle: 0.7, gap: Math.max(6, 11 * s), w: Math.max(1, 1.6 * s), not: g2 => { g2.rect(cx - 400 * s, cy - 400 * s, 520 * s, 900 * s); } });   // 後ろ（右）がわにかげ
+  // 脳（断面）。しわ・外側溝・小脳
+  const br = PL.ellipse(...m(15, -95), 172 * s, 118 * s), cb = PL.ellipse(...m(120, -2), 58 * s, 30 * s, -0.2);
+  PL.tint(g, br, PL.T.rose, 0.55); PL.tint(g, cb, PL.T.rose, 0.7);
+  g.save(); g.beginPath(); br(g); g.clip();
+  PL.ink(g, gg => {
+    for (let k = 0; k < 7; k++) { const yy = -200 + k * 30; gg.moveTo(...m(-160, yy)); for (let x = -160; x <= 190; x += 10) gg.lineTo(...m(x, yy + Math.sin(x * 0.07 + k * 1.7) * 9 + Math.sin(x * 0.023 + k) * 6)); }
+  }, Math.max(1, 1.6 * s), 'rgba(35,28,21,0.55)');
+  g.restore();
+  g.save(); g.beginPath(); cb(g); g.clip(); PL.ink(g, gg => { for (let k = -2; k <= 2; k++) { gg.moveTo(...m(62, -2 + k * 10)); gg.lineTo(...m(178, -12 + k * 10)); } }, Math.max(1, 1.4 * s), 'rgba(35,28,21,0.55)'); g.restore();
+  if (o.aud) { const a = PL.ellipse(...m(10, -50), 62 * s, 34 * s, -0.1); fadeIn(g, o.aud, () => { PL.tint(g, a, PL.T.sea, 1); PL.hatch(g, a, { angle: -0.6, gap: 7, w: 1.2, color: SOUND }); PL.ink(g, a, Math.max(2, 5 * s), SOUND); }); }
+  if (o.vis) { const v = PL.ellipse(...m(160, -95), 34 * s, 62 * s, 0.2); fadeIn(g, o.vis, () => { PL.tint(g, v, PL.T.gold, 1); PL.hatch(g, v, { angle: -0.6, gap: 7, w: 1.2, color: LIGHT }); PL.ink(g, v, Math.max(2, 5 * s), LIGHT); }); }
+  PL.ink(g, gg => { gg.moveTo(...m(-90, -40)); gg.quadraticCurveTo(...m(0, -10), ...m(80, -40)); }, Math.max(1.5, 3 * s));   // 外側溝
+  PL.ink(g, br, Math.max(1.5, 3.5 * s)); PL.ink(g, cb, Math.max(1.2, 2.5 * s));
   // 目・耳
-  g.strokeStyle = 'rgba(207,224,255,0.9)'; g.lineWidth = 5 / s;
-  g.beginPath(); g.ellipse(-168, -70, 18, 9, 0, 0, Math.PI * 2); g.stroke();
-  g.beginPath(); g.arc(55, 15, 28, -1.9, 1.9); g.stroke();
-  g.restore();
-  return { eye: [cx - 168 * s, cy - 70 * s], ear: [cx + 55 * s, cy + 15 * s] };
+  const eye = PL.ellipse(...m(-168, -70), 18 * s, 9 * s); g.fillStyle = 'rgba(244,236,218,0.95)'; g.beginPath(); eye(g); g.fill(); PL.ink(g, eye, Math.max(1.5, 3.5 * s));
+  PL.tint(g, PL.circle(...m(-176, -70), 7 * s), PL.INK, 0.9);
+  const ear = gg => { gg.moveTo(...m(40, -12)); gg.bezierCurveTo(...m(78, -30), ...m(92, 42), ...m(50, 48)); };
+  PL.ink(g, ear, Math.max(2, 5 * s)); PL.ink(g, gg => { gg.moveTo(...m(52, 0)); gg.quadraticCurveTo(...m(70, 10), ...m(56, 28)); }, Math.max(1, 2.4 * s));
+  PL.ink(g, hp, w);
+  return { eye: m(-168, -70), ear: m(55, 15) };
 }
-// 手をたたく（2つの手のひら）。k=0 開く → 1 合わさる
-function clap(g, x, y, k, flash) {
-  g.save(); g.strokeStyle = '#fff'; g.lineWidth = 6; g.fillStyle = 'rgba(255,255,255,0.12)';
-  const d = (1 - k) * 60;
-  [-1, 1].forEach(sd => { g.beginPath(); g.ellipse(x + sd * (d + 18), y, 18, 60, sd * 0.15, 0, Math.PI * 2); g.fill(); g.stroke(); });
-  if (flash > 0) {
-    g.globalAlpha = flash; g.strokeStyle = LIGHT; g.lineWidth = 6;
-    for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2, r0 = 85, r1 = 85 + 50 * flash; g.beginPath(); g.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0); g.lineTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1); g.stroke(); }
-  }
-  g.restore();
+// 手をたたく（前から見た2つの手。指は上、親指は内がわ）。k=0 開く → 1 合わさる。flash: 墨の短い線（パン）
+const HAND = [[-26, 60], [-30, 10], [-46, -6], [-58, -30], [-50, -40], [-32, -26], [-30, -64], [-30, -104], [-22, -115], [-15, -104], [-15, -72], [-15, -114], [-7, -125], [0, -114], [0, -72], [0, -108], [8, -119], [15, -108], [15, -72], [15, -92], [22, -101], [29, -92], [30, -40], [26, 60]];
+const smoothP = (pts, m) => g => {
+  const P = pts.map(p => m(p[0], p[1])), n = P.length, mid = i => { const a = P[i % n], b = P[(i + 1) % n]; return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; };
+  g.moveTo(...mid(n - 1)); for (let i = 0; i < n; i++) g.quadraticCurveTo(...P[i], ...mid(i)); g.closePath();
+};
+function clap(g, x, y, k, flash, s = 1) {
+  const d = (1 - k) * 46 * s;
+  [-1, 1].forEach(sd => {   // sd=-1 左の手（親指は右）、1 右の手（親指は左）
+    const ox = x + sd * (d + 32 * s), rot = sd * (1 - k) * 0.25, c = Math.cos(rot), n = Math.sin(rot);
+    const m = (a, b) => { a *= -sd; return [ox + s * (a * c - b * n), y + s * (a * n + b * c)]; };
+    const p = smoothP(HAND, m);
+    PL.tint(g, p, PL.T.sand, 0.8);
+    PL.hatch(g, p, { angle: 0.8, gap: 8, w: 1.3, not: smoothP(HAND.map(([a, b]) => [a + 8 * sd, b - 10]), m) });
+    PL.ink(g, gg => { [-30, -58].forEach(b => { gg.moveTo(...m(-28, b)); gg.lineTo(...m(26, b - 4)); }); gg.moveTo(...m(-28, -6)); gg.quadraticCurveTo(...m(-8, 4), ...m(-4, 40)); }, 1.5);   // 指のつけ根・手のひらのすじ
+    PL.ink(g, p, 4);
+    const cuff = PL.poly([m(-30, 56), m(30, 56), m(32, 110), m(-32, 110)]); PL.tint(g, cuff, PL.T.sea, 0.6); PL.hatch(g, cuff, { angle: 0.8, gap: 8, w: 1.4 }); PL.ink(g, cuff, 4);   // そで
+  });
+  if (flash > 0) fadeIn(g, flash, () => PL.ink(g, gg => { for (let i = 0; i < 9; i++) { const a = -Math.PI / 2 + (i - 4) * 0.32, r0 = 150 * s, r1 = r0 + 50 * flash; gg.moveTo(x + Math.cos(a) * r0, y - 20 * s + Math.sin(a) * r0); gg.lineTo(x + Math.cos(a) * r1, y - 20 * s + Math.sin(a) * r1); } }, 6, PL.RED));
 }
 // 時間の目もり（0〜max ms）
 const TX0 = 130, TX1 = 930;
-function timeAxis(g, y, max, f = 1) {
-  g.save(); g.globalAlpha *= f;
-  g.strokeStyle = 'rgba(207,224,255,0.6)'; g.lineWidth = 4; g.beginPath(); g.moveTo(TX0, y); g.lineTo(TX1, y); g.stroke();
-  for (let m = 0; m <= max; m += 10) { const x = TX0 + (TX1 - TX0) * m / max; g.beginPath(); g.moveTo(x, y - 12); g.lineTo(x, y + 12); g.stroke(); TK.text(g, String(m), x, y + 44, 34, { color: TK.C.dim, bold: false }); }
-  g.restore();
+function timeAxis(g, y, max) {
+  PL.ink(g, line([[TX0, y], [TX1, y]]), 4);
+  for (let ms = 0; ms <= max; ms += 10) { const x = TX0 + (TX1 - TX0) * ms / max; PL.ink(g, line([[x, y - 14], [x, y + 14]]), 3); PL.label(g, String(ms), x, y + 46, 34, { color: TK.C.sub, bold: false }); }
+  PL.ink(g, gg => { for (let ms = 0; ms <= max; ms += 2) { const x = TX0 + (TX1 - TX0) * ms / max; gg.moveTo(x, y - 6); gg.lineTo(x, y + 6); } }, 1.2);
 }
-function marker(g, y, max, ms, color, label, k, below) {
+// 棒（版画の帯）。below: 字を下に
+function marker(g, y, max, ms, col, tint, label, k, below) {
   if (k <= 0) return;
-  const x = TX0 + (TX1 - TX0) * Math.min(ms, max * k) / max;
-  g.save(); g.strokeStyle = color; g.lineWidth = 12; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(TX0, y); g.lineTo(x, y); g.stroke();
-  g.fillStyle = color; g.beginPath(); g.arc(x, y, 18, 0, Math.PI * 2); g.fill();
-  if (k >= 1) TK.text(g, label, x, below ? y + 52 : y - 50, 46, { color });
-  g.restore();
+  const x = TX0 + (TX1 - TX0) * Math.min(ms, max * k) / max, bar = PL.rect(TX0, y - 16, x - TX0, 32);
+  PL.tint(g, bar, tint, 0.85); PL.hatch(g, bar, { angle: 0.9, gap: 10, w: 1.6 }); PL.ink(g, bar, 4, col);
+  if (k >= 1) PL.label(g, label, x, below ? y + 56 : y - 52, 46, { color: col });
 }
 
 function draw(g, t) {
-  // 0〜3: フック → 87万倍
-  if (t < 1.8) TK.hook(g, t, 0, 1.8, '光より、\n[音]が先に\n脳に届く', { y: 640, size: 140 });
+  // 0〜3: フック → 87万倍（下に頭）
+  if (t < 3.0 || t >= 33.0) {
+    const f = t < 3 ? 1 : fade(t, 33, 36, 0.3);
+    fadeIn(g, f, () => head(g, 620, 860, 0.85, { aud: t >= 33 ? 1 : 0 }));
+  }
+  if (t < 1.8) TK.hook(g, t, 0, 1.8, '光より、\n[音]が先に\n脳に届く', { y: 380, size: 120 });
   if (t >= 1.8 && t < 3.0) {
-    TK.count(g, t, 1.8, 3.0, 1, 870000, { y: 640, size: 170, dur: 0.6, label: '光の速さ ÷ 音の速さ', unit: '倍', fmt: v => '約' + Math.round(v / 10000).toLocaleString('ja-JP') + '万' });
+    TK.count(g, t, 1.8, 3.0, 1, 870000, { y: 400, size: 150, dur: 0.6, label: '光の速さ ÷ 音の速さ', unit: '倍', fmt: v => '約' + Math.round(v / 10000).toLocaleString('ja-JP') + '万' });
   }
   // 3〜9: 目の前でパン。目と耳に同時に届く
   if (t >= 3.0 && t < 9.0) {
-    const f = fade(t, 3, 9, 0.3); g.save(); g.globalAlpha = f;
-    const p = head(g, 660, 700, 1.15);
-    const k = ease((t - 3.4) / 0.6), hit = t >= 4.0, sx = 220, sy = 640;
-    clap(g, sx, sy, k, hit ? clamp(1 - (t - 4.0) / 0.8, 0, 1) : 0);
-    if (hit) {
-      const u = clamp((t - 4.2) / 1.6, 0, 1);
-      // 光（目へ）と音（耳へ）が同じ速さで進むように描く（この距離ではどちらも一瞬）
-      g.strokeStyle = LIGHT; g.lineWidth = 8; g.setLineDash([24, 14]);
-      g.beginPath(); g.moveTo(sx + 70, sy - 20); g.lineTo(lerp(sx + 70, p.eye[0] - 20, u), lerp(sy - 20, p.eye[1], u)); g.stroke();
-      g.setLineDash([]); g.strokeStyle = SOUND; g.lineWidth = 6;
-      for (let i = 0; i < 4; i++) { const r = 60 + (p.ear[0] - sx - 60) * clamp(u - i * 0.06, 0, 1); if (r <= 60) continue; g.globalAlpha = f * (1 - i * 0.2); g.beginPath(); g.arc(sx, sy, r, -0.25, 0.4); g.stroke(); }
-      g.globalAlpha = f;
-      if (u >= 1) {
-        TK.text(g, '光', p.eye[0] - 40, p.eye[1] - 70, 56, { color: LIGHT });
-        TK.text(g, '音', p.ear[0] + 10, p.ear[1] + 90, 56, { color: SOUND });
-        TK.card(g, 220, 230, 640, 120, { r: 60 });
-        TK.text(g, '目と耳には [同時]', PW / 2, 290, 66);
+    fadeIn(g, fade(t, 3, 9, 0.3), () => {
+      const p = head(g, 660, 700, 1.15);
+      const k = ease((t - 3.4) / 0.6), hit = t >= 4.0, sx = 210, sy = 640;
+      clap(g, sx, sy, k, hit ? clamp(1 - (t - 4.0) / 0.8, 0, 1) : 0);
+      if (hit) {
+        const u = clamp((t - 4.2) / 1.6, 0, 1);
+        // 光（目へ）と音（耳へ）が同じ速さで進むように描く（この距離ではどちらも一瞬）
+        PL.dots(g, [[sx + 100, sy - 20], [lerp(sx + 100, p.eye[0] - 24, u), lerp(sy - 20, p.eye[1], u)]], { color: LIGHT, w: 7, dash: [20, 14] });
+        for (let i = 0; i < 4; i++) {
+          const r = 60 + (p.ear[0] - sx - 60) * clamp(u - i * 0.06, 0, 1); if (r <= 60) continue;
+          fadeIn(g, 1 - i * 0.2, () => PL.ink(g, gg => { gg.moveTo(sx + r * Math.cos(-0.05), sy + r * Math.sin(-0.05)); gg.arc(sx, sy, r, -0.05, 0.4); }, 5, SOUND));
+        }
+        if (u >= 1) {
+          PL.leader(g, 380, sy - 20, 360, 520, LIGHT); PL.label(g, '光', 360, 480, 56, { color: LIGHT });
+          PL.leader(g, 420, 735, 330, 850, SOUND); PL.label(g, '音', 310, 890, 56, { color: SOUND });
+          PL.label(g, '目と耳には [同時]', PW / 2, 290, 66);
+        }
       }
-    }
-    g.restore();
+    });
   }
   // 9〜21: 大脳の反応のはじまり（音 30 ms → 光 56 ms）
   if (t >= 9.0 && t < 21.0) {
-    const f = fade(t, 9, 21, 0.3); g.save(); g.globalAlpha = f;
-    const ka = clamp((t - 9.6) / 1.6, 0, 1), kv = clamp((t - 15.4) / 1.6, 0, 1);
-    head(g, 560, 470, 0.95, { aud: ka >= 1 ? 0.6 + 0.4 * Math.abs(Math.sin(t * 4)) : 0, vis: kv >= 1 ? 0.6 + 0.4 * Math.abs(Math.sin(t * 4)) : 0 });
-    if (ka >= 1) TK.text(g, '聞く場所', 520, 280, 40, { color: SOUND });
-    if (kv >= 1) TK.text(g, '見る場所', 820, 280, 40, { color: LIGHT });
-    TK.text(g, '大脳が反応しはじめるまで（ミリ秒）', PW / 2, 755, 40, { color: TK.C.sub, bold: false });
-    timeAxis(g, 1010, 60);
-    marker(g, 920, 60, 30, SOUND, '音 30', ka, true);
-    if (t >= 9.6 && t < 15) TK.text(g, '（耳のすぐ奥の脳幹には数ミリ秒）', PW / 2, 220, 38, { color: TK.C.dim, bold: false });
-    marker(g, 850, 60, 56, LIGHT, '光 56', kv);
-    g.restore();
-    if (t >= 15.4) TK.note(g, t, 15.4, 21, '音＝脳の中の電極、光＝頭の表面の波\n測り方のちがう2つの研究のくらべ', { size: 34 });
+    fadeIn(g, fade(t, 9, 21, 0.3), () => {
+      const ka = clamp((t - 9.6) / 1.6, 0, 1), kv = clamp((t - 15.4) / 1.6, 0, 1);
+      head(g, 560, 470, 0.95, { aud: ka >= 1 ? 1 : 0, vis: kv >= 1 ? 1 : 0 });
+      if (ka >= 1) { PL.leader(g, 600, 430, 850, 590, SOUND); PL.label(g, '聞く場所', 900, 630, 42, { color: SOUND }); }
+      if (kv >= 1) { PL.leader(g, 722, 360, 880, 300, LIGHT); PL.label(g, '見る場所', 920, 260, 42, { color: LIGHT }); }
+      PL.label(g, '大脳が反応しはじめるまで（ミリ秒）', PW / 2, 730, 40, { color: TK.C.sub, bold: false });
+      timeAxis(g, 1010, 60);
+      marker(g, 920, 60, 30, SOUND, PL.T.sea, '音 30', ka, true);
+      if (t >= 9.6 && t < 15) PL.label(g, '（耳のすぐ奥の脳幹には数ミリ秒）', PW / 2, 160, 38, { color: TK.C.sub, bold: false });
+      marker(g, 850, 60, 56, LIGHT, PL.T.gold, '光 56', kv);
+    });
+    if (t >= 15.4) TK.note(g, t, 15.4, 21, '音＝脳の中の電極、光＝頭の表面の波\n測り方のちがう2つの研究のくらべ', { size: 34, y: 1140 });
   }
   // 21〜28: はなれると、音が空気を進むぶん遅れる。約9 m でそろう
   if (t >= 21.0 && t < 28.0) {
-    const f = fade(t, 21, 28, 0.3); g.save(); g.globalAlpha = f;
-    const d = 8.9 * ease((t - 21.8) / 4.0), px = 75, x0 = 170, y0 = 540;
-    // 人（小さな頭）と、音の出る所
-    head(g, x0 - 10, y0 - 40, 0.45);
-    const sx = x0 + 130 + d * px * 0.95;
-    clap(g, sx, y0 - 40, 1, 0.5 + 0.5 * Math.abs(Math.sin(t * 5)));
-    // ものさし
-    g.strokeStyle = 'rgba(207,224,255,0.6)'; g.lineWidth = 4; g.beginPath(); g.moveTo(x0 + 80, y0 + 70); g.lineTo(x0 + 80 + 9 * px, y0 + 70); g.stroke();
-    for (let m = 0; m <= 9; m += 3) { const x = x0 + 80 + m * px; g.beginPath(); g.moveTo(x, y0 + 58); g.lineTo(x, y0 + 82); g.stroke(); TK.text(g, m + 'm', x, y0 + 116, 34, { color: TK.C.dim, bold: false }); }
-    TK.card(g, 150, 210, 780, 120, { r: 60 });
-    TK.text(g, d > 8.85 ? '[約9 m] でそろう（推定）' : 'はなれる距離  ' + d.toFixed(1) + ' m', PW / 2, 270, 62);
-    // 2本の棒（大脳が反応しはじめるまで）
-    const sms = 30 + d / 343 * 1000;
-    TK.text(g, '大脳が反応しはじめるまで（ミリ秒）', PW / 2, 755, 40, { color: TK.C.sub, bold: false });
-    timeAxis(g, 1020, 60);
-    marker(g, 870, 60, 56, LIGHT, '光 56', 1);
-    marker(g, 930, 60, sms, SOUND, '音 ' + Math.round(sms), 1, true);
-    g.restore();
+    fadeIn(g, fade(t, 21, 28, 0.3), () => {
+      const d = 8.9 * ease((t - 21.8) / 4.0), px = 75, x0 = 170, y0 = 540;
+      head(g, x0 - 10, y0 - 40, 0.45);
+      const sx = x0 + 130 + d * px * 0.95;
+      clap(g, sx, y0 - 20, 1, 0.5 + 0.5 * Math.abs(Math.sin(t * 5)), 0.6);
+      // ものさし
+      const ru = PL.rect(x0 + 80, y0 + 70, 9 * px, 22); PL.tint(g, ru, PL.T.wood, 0.6); PL.ink(g, ru, 3);
+      PL.ink(g, gg => { for (let q = 0; q <= 18; q++) { const x = x0 + 80 + q * px / 2; gg.moveTo(x, y0 + 70); gg.lineTo(x, y0 + 70 + (q % 2 ? 9 : 16)); } }, 2);
+      for (let mm = 0; mm <= 9; mm += 3) PL.label(g, mm + 'm', x0 + 80 + mm * px, y0 + 126, 34, { color: TK.C.sub, bold: false });
+      PL.label(g, d > 8.85 ? '[約9 m] でそろう（推定）' : 'はなれる距離  ' + d.toFixed(1) + ' m', PW / 2, 270, 62);
+      // 2本の棒（大脳が反応しはじめるまで）
+      const sms = 30 + d / 343 * 1000;
+      PL.label(g, '大脳が反応しはじめるまで（ミリ秒）', PW / 2, 755, 40, { color: TK.C.sub, bold: false });
+      timeAxis(g, 1020, 60);
+      marker(g, 870, 60, 56, LIGHT, PL.T.gold, '光 56', 1);
+      marker(g, 930, 60, sms, SOUND, PL.T.sea, '音 ' + Math.round(sms), 1, true);
+    });
   }
   // 28〜33: それより近いと、音が先
   if (t >= 28.0 && t < 33.0) {
-    const f = fade(t, 28, 33, 0.3); g.save(); g.globalAlpha = f;
-    TK.card(g, 110, 300, 860, 400);
-    TK.lines(g, '9 m より近いと\n大脳の最初の反応は\n[音が先]', PW / 2, 500, 84);
-    TK.text(g, '「先に聞こえる」わけではありません', PW / 2, 820, 44, { color: TK.C.sub, bold: false });
-    g.restore();
+    fadeIn(g, fade(t, 28, 33, 0.3), () => {
+      TK.lines(g, '9 m より近いと\n大脳の最初の反応は\n[音が先]', 90, 380, 80, { align: 'left' });
+      PL.label(g, '「先に聞こえる」わけではありません', 90, 580, 44, { align: 'left', color: TK.C.sub, bold: false });
+      head(g, 620, 860, 0.85, { aud: 1 });
+      PL.leader(g, 640, 820, 900, 700, SOUND); PL.label(g, '先に反応', 900, 660, 42, { color: SOUND });
+    });
   }
-  if (t >= 33.0) TK.hook(g, t, 33.0, 35.0, '光より、\n[音]が先に\n脳に届く', { y: 640, size: 140 });
+  if (t >= 33.0) TK.hook(g, t, 33.0, 35.0, '光より、\n[音]が先に\n脳に届く', { y: 380, size: 120 });
   if (t >= 21.0 && t < 28.0) TK.note(g, t, 21, 28, '音の速さ 343 m/s・2つの研究の値からの計算', { size: 32 });
-  if (t >= 30.5) TK.note(g, t, 30.5, 35, '出どころ: Liégeois-Chauvel ほか (1994) EEG Clin Neurophysiol\nFoxe & Simpson (2002) Exp Brain Res', { size: 30 });
+  if (t >= 30.5) TK.note(g, t, 30.5, 35, '出どころ: Liégeois-Chauvel ほか (1994) EEG Clin Neurophysiol\nFoxe & Simpson (2002) Exp Brain Res', { size: 30, y: 1130 });
 }
 
 triviaStart({ out: 'brain-response-trivia1', dur: DUR, draw, subs, cues, peek: 1.5 });

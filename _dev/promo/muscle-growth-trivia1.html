@@ -11,6 +11,9 @@
 <script src="promo.js"></script>
 <script src="promo-audio.js"></script>
 <script src="trivia-kit.js"></script>
+<script src="trivia-plate.js"></script>
+<script src="trivia-looks.js"></script>
+<script src="trivia-style.js"></script>
 <script>
 'use strict';
 // うんちく muscle-1（型H 当ててみて）「右腕だけ鍛えたら、左腕は？」。台本は trivia/muscle-growth.md。?short で録る
@@ -30,31 +33,73 @@ const cues = [
   { t: 0.05, type: 'pop' }, { t: 3.0, type: 'tick' }, { t: 4.0, type: 'tick' }, { t: 5.0, type: 'ding' }, { t: 9.0, type: 'whoosh' }, { t: 9.6, type: 'rise' },
   { t: 15.0, type: 'pop' }, { t: 20.0, type: 'whoosh' }, { t: 26.0, type: 'pop' },
 ];
+// 選択肢（TK.choices と同じ並び）。答えの札は金色にぬらず、朱の二重わくで示す（字の下を濃くしない）
+function choices(g, t, a, b, opts, o = {}) {
+  if (t < a || t > b) return;
+  const f = fade(t, a, b, 0.3), y0 = o.y ?? PH * 0.34, h = o.h || 190, gap = o.gap || 40;
+  const rv = o.reveal ?? Infinity, ans = o.answer ?? -1, rk = clamp((t - rv) / 0.35, 0, 1);
+  g.save(); g.globalAlpha *= f;
+  opts.forEach((s, i) => {
+    const k = TK.out((t - a - i * 0.18) / 0.35), y = y0 + i * (h + gap), x = 90, w = PW - 180, hit = i === ans && rk > 0;
+    g.save(); g.globalAlpha *= k * (ans >= 0 && i !== ans ? 1 - 0.6 * rk : 1);
+    TK.card(g, x, y, w, h);
+    if (hit) { g.save(); g.globalAlpha *= rk; PL.ink(g, PL.rect(x - 10, y - 10, w + 20, h + 20), 6, PL.RED); g.restore(); }
+    PL.ink(g, PL.circle(x + 80, y + h / 2, 46), 5, hit ? PL.RED : PL.INK);
+    TK.text(g, 'ABCDE'[i], x + 80, y + h / 2 + 2, 60, { color: hit ? PL.RED : PL.INK });
+    TK.text(g, s, x + 160, y + h / 2, o.size || 64, { align: 'left', maxw: w - 200, color: hit ? PL.RED : PL.INK });
+    g.restore();
+  });
+  if (o.think && t >= o.think[0] && t < o.think[1] + 0.3) { const [p, q] = o.think; PL.watch(g, PW / 2, y0 - 150, 70, clamp((t - p) / (q - p), 0, 1)); }
+  g.restore();
+}
 
-// 正面の人（上半身）。curl 0〜1 で右腕（画面の左）がダンベルを上げる。glowL で左腕（画面の右）が光る
+// ---- 図鑑の版画の部品 ----
+// 太さの変わる帯（腕）。pts: 関節の点、ws: その点での太さ → 輪郭の点
+function limb(pts, ws, n = 6) {
+  const P = [], W = [];
+  for (let i = 0; i < pts.length - 1; i++) for (let k = 0; k < n; k++) { const u = k / n; P.push([lerp(pts[i][0], pts[i + 1][0], u), lerp(pts[i][1], pts[i + 1][1], u)]); W.push(lerp(ws[i], ws[i + 1], u) * (i === 0 ? 1 + 0.22 * Math.sin(Math.PI * u) : 1)); }   // 上腕は力こぶでふくらむ
+  P.push(pts[pts.length - 1]); W.push(ws[ws.length - 1]);
+  const L = [], R = [];
+  P.forEach((p, i) => { const a = P[Math.max(0, i - 1)], b = P[Math.min(P.length - 1, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l; L.push([p[0] + nx * W[i] / 2, p[1] + ny * W[i] / 2]); R.push([p[0] - nx * W[i] / 2, p[1] - ny * W[i] / 2]); });
+  return [...L, ...R.reverse()];
+}
+// 正面の人（上半身）。curl 0〜1 で右腕（画面の左）がダンベルを上げる。glowL で左腕（画面の右）に色がつく
 function body(g, cx, cy, s, curl, glowL, o = {}) {
-  g.save(); g.translate(cx, cy); g.scale(s, s);
-  g.lineCap = 'round'; g.lineJoin = 'round';
-  g.strokeStyle = 'rgba(207,224,255,0.9)'; g.fillStyle = 'rgba(30,50,100,0.6)'; g.lineWidth = 8;
-  g.beginPath(); g.arc(0, -150, 55, 0, Math.PI * 2); g.fill(); g.stroke();   // 頭
-  g.beginPath(); g.moveTo(-110, -70); g.lineTo(110, -70); g.lineTo(80, 140); g.lineTo(-80, 140); g.closePath(); g.fill(); g.stroke();   // 胴
-  // 右腕（画面の左）: 肩 → ひじ → 手。curl で前腕が上がる
-  const sh = [-110, -60], el = [-160, 50], a = lerp(Math.PI / 2, 1.5 * Math.PI - 0.5, curl), hand = [el[0] + Math.cos(a) * 110, el[1] + Math.sin(a) * 110];
-  g.lineWidth = 26; g.strokeStyle = 'rgba(95,212,255,0.85)';
-  g.beginPath(); g.moveTo(...sh); g.lineTo(...el); g.lineTo(...hand); g.stroke();
-  // ダンベル
-  g.save(); g.translate(...hand); g.strokeStyle = '#fff'; g.lineWidth = 10; g.beginPath(); g.moveTo(-45, 0); g.lineTo(45, 0); g.stroke();
-  g.fillStyle = '#cfe0ff'; g.fillRect(-62, -26, 18, 52); g.fillRect(44, -26, 18, 52); g.restore();
-  // 左腕（画面の右）: 休み
-  g.lineWidth = 26; g.strokeStyle = glowL > 0 ? `rgba(255,207,74,${0.5 + 0.5 * glowL})` : 'rgba(207,224,255,0.55)';
-  g.beginPath(); g.moveTo(110, -60); g.lineTo(160, 50); g.lineTo(165, 160); g.stroke();
+  const P = (x, y) => [cx + x * s, cy + y * s], PP = a => a.map(([x, y]) => P(x, y)), ow = Math.max(3, 5 * s), lw = Math.max(1.6, 2.2 * s);
+  // 腕（画面の左＝右腕は曲げる、右＝左腕は下げたまま）
+  const sh = [-112, -58], el = [-160, 52], a = lerp(Math.PI / 2, 1.5 * Math.PI - 0.5, curl), hand = [el[0] + Math.cos(a) * 112, el[1] + Math.sin(a) * 112];
+  const armR = PL.poly(PP(limb([sh, el, hand], [52, 40, 30]))), armL = PL.poly(PP(limb([[112, -58], [158, 52], [164, 166]], [52, 40, 30])));
+  const handR = PL.circle(...P(...hand), 20 * s), handL = PL.circle(...P(164, 172), 20 * s);
+  // ダンベル（手の後ろ）
+  const ca = Math.cos(a + Math.PI / 2), sa = Math.sin(a + Math.PI / 2), D = (u, v) => P(hand[0] + ca * u - sa * v, hand[1] + sa * u + ca * v);
+  PL.ink(g, gg => { gg.moveTo(...D(-48, 0)); gg.lineTo(...D(48, 0)); }, 10 * s);
+  [-1, 1].forEach(sd => { const w = PL.poly([D(sd * 44, -28), D(sd * 64, -28), D(sd * 64, 28), D(sd * 44, 28)]); PL.tint(g, w, PL.T.gray, 0.9); PL.hatch(g, w, { angle: 0.9, gap: 7, w: lw * 0.8 }); PL.ink(g, w, ow * 0.8); });
+  // 胴（シャツ）と首・頭
+  const torso = PL.poly(PP([[-112, -76], [-60, -92], [-26, -98], [26, -98], [60, -92], [112, -76], [96, 40], [84, 140], [-84, 140], [-96, 40]]));
+  PL.tint(g, torso, PL.T.sky, 0.6); PL.hatch(g, torso, { angle: 0.9, gap: 10, w: lw, not: PL.poly(PP([[-112, -76], [40, -98], [-20, 140], [-84, 140]])) });
+  PL.ink(g, gg => { gg.moveTo(...P(-26, -98)); gg.quadraticCurveTo(...P(0, -70), ...P(26, -98)); gg.moveTo(...P(-60, 0)); gg.quadraticCurveTo(...P(0, 14), ...P(60, 0)); gg.moveTo(...P(0, -70)); gg.lineTo(...P(0, 130)); }, lw, 'rgba(35,28,21,0.45)');   // えり・胸・まん中のしわ
+  PL.ink(g, torso, ow);
+  const neck = PL.rect(...P(-20, -122), 40 * s, 30 * s); PL.tint(g, neck, PL.T.rose, 0.6); PL.ink(g, neck, ow * 0.8);
+  const head = PL.ellipse(...P(0, -168), 46 * s, 56 * s); PL.tint(g, head, PL.T.rose, 0.6); PL.hatch(g, head, { angle: 0.9, gap: 8, w: lw, not: PL.ellipse(...P(-14, -176), 46 * s, 56 * s) });
+  const hair = PL.poly(PP([[-46, -170], [-44, -204], [-20, -226], [16, -226], [42, -206], [46, -172], [34, -196], [0, -204], [-30, -196]])); PL.tint(g, hair, PL.T.brown, 0.9);
+  [-1, 1].forEach(sd => { const e = PL.ellipse(...P(sd * 48, -164), 8 * s, 13 * s); PL.tint(g, e, PL.T.rose, 0.7); PL.ink(g, e, ow * 0.6); });
+  PL.ink(g, head, ow); PL.ink(g, hair, ow * 0.7);
+  PL.ink(g, gg => { [-1, 1].forEach(sd => { gg.moveTo(...P(sd * 22 - 6, -170)); gg.lineTo(...P(sd * 22 + 6, -170)); }); gg.moveTo(...P(-12, -138)); gg.quadraticCurveTo(...P(0, -132), ...P(12, -138)); }, lw * 1.3);   // 目・口
+  // 腕は胴の上に
+  PL.tint(g, armR, PL.T.rose, 0.7); PL.hatch(g, armR, { angle: 0.9, gap: 7, w: lw, not: PL.poly(PP(limb([sh, el, hand].map(([x, y]) => [x - 10, y - 6]), [52, 40, 30]))) }); PL.ink(g, armR, ow);
+  PL.tint(g, armL, glowL > 0 ? PL.T.gold : PL.T.rose, glowL > 0 ? 0.55 + 0.4 * glowL : 0.7); PL.hatch(g, armL, { angle: 0.9, gap: 7, w: lw, not: PL.poly(PP(limb([[102, -64], [148, 46], [154, 160]], [52, 40, 30]))) }); PL.ink(g, armL, glowL > 0 ? ow * 1.2 : ow, glowL > 0 ? PL.RED : PL.INK);
+  [handR, handL].forEach(h => { PL.tint(g, h, PL.T.rose, 0.7); PL.ink(g, h, ow * 0.8); });
+  PL.ink(g, gg => { gg.moveTo(...P(-150, -10)); gg.quadraticCurveTo(...P(-136, 10), ...P(-140, 34)); gg.moveTo(...P(150, -10)); gg.quadraticCurveTo(...P(136, 10), ...P(140, 34)); }, lw, 'rgba(35,28,21,0.5)');   // 力こぶの線
   // 神経の線（脳 → 両腕）
   if (o.nerve > 0) {
-    g.globalAlpha = o.nerve; g.strokeStyle = TK.C.acc; g.lineWidth = 6; g.setLineDash([14, 12]); g.lineDashOffset = -o.t * 60;
-    g.beginPath(); g.moveTo(0, -150); g.quadraticCurveTo(-40, -40, -160, 50); g.moveTo(0, -150); g.quadraticCurveTo(40, -40, 160, 50); g.stroke();
-    g.setLineDash([]); g.fillStyle = TK.C.acc; g.beginPath(); g.arc(0, -160, 22, 0, Math.PI * 2); g.fill();
+    g.save(); g.globalAlpha *= o.nerve; g.setLineDash([14 * s, 12 * s]); g.lineDashOffset = -(o.t || 0) * 60;
+    PL.ink(g, gg => { gg.moveTo(...P(0, -176)); gg.quadraticCurveTo(...P(-40, -40), ...P(-160, 52)); gg.moveTo(...P(0, -176)); gg.quadraticCurveTo(...P(40, -40), ...P(160, 52)); }, 6 * s, PL.RED);
+    g.restore();
+    g.save(); g.globalAlpha *= o.nerve;
+    const br = PL.ellipse(...P(0, -182), 28 * s, 20 * s); PL.tint(g, br, PL.T.rose, 1); PL.ink(g, br, ow * 0.8, PL.RED);
+    PL.ink(g, gg => { gg.moveTo(...P(0, -200)); gg.lineTo(...P(0, -164)); gg.moveTo(...P(-18, -186)); gg.quadraticCurveTo(...P(-10, -176), ...P(-20, -170)); gg.moveTo(...P(18, -186)); gg.quadraticCurveTo(...P(10, -176), ...P(20, -170)); }, lw, PL.RED);   // 脳のしわ
+    g.restore();
   }
-  g.restore();
 }
 
 function draw(g, t) {
@@ -63,47 +108,46 @@ function draw(g, t) {
   if (t < 9.0) {
     const f = t < 8.6 ? 1 : fade(t, -1, 9, 0.3);
     g.save(); g.globalAlpha = f;
-    body(g, PW / 2, 330, 1.1, curl, t >= 5.0 ? 0.6 + 0.4 * Math.sin(t * 6) : 0);
-    TK.text(g, '右腕', PW / 2 - 260, 170, 50, { color: TK.C.acc2 });
-    TK.text(g, '左腕', PW / 2 + 260, 170, 50, { color: t >= 5 ? TK.C.acc : TK.C.sub });
+    body(g, PW / 2, 350, 1.0, curl, t >= 5.0 ? 0.6 + 0.4 * Math.sin(t * 6) : 0);
+    PL.label(g, '右腕', 150, 300, 50, { color: '#2f5f7a' }); PL.leader(g, 380, 330, 205, 305, '#2f5f7a');
+    PL.label(g, '左腕', 930, 300, 50, { color: t >= 5 ? PL.RED : TK.C.sub }); PL.leader(g, 700, 440, 880, 315, t >= 5 ? PL.RED : TK.C.sub);
     g.restore();
-    TK.choices(g, t, 0.2, 9.0, ['弱る', '変わらない', '強くなる'], { y: 620, h: 130, gap: 24, size: 64, reveal: 5.0, answer: 2 });
-    if (t >= 3.0 && t < 5.0) {   // 考える時間の輪（人の右上に）
-      const k = (t - 3.0) / 2.0, cx = 900, cy = 250, r = 64;
-      g.lineWidth = 14; g.strokeStyle = 'rgba(255,255,255,0.15)'; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();
-      g.strokeStyle = TK.C.acc; g.beginPath(); g.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - k)); g.stroke();
-      TK.text(g, String(Math.max(1, Math.ceil(2 - (t - 3.0)))), cx, cy + 4, 64);
-    }
+    choices(g, t, 0.2, 9.0, ['弱る', '変わらない', '強くなる'], { y: 640, h: 130, gap: 24, size: 64, reveal: 5.0, answer: 2 });
+    if (t >= 3.0 && t < 5.0) PL.watch(g, 930, 470, 60, (t - 3.0) / 2.0);   // 考える時間
   }
   // 9〜15: ＋7.8%
   if (t >= 9.0 && t < 15.0) {
-    TK.count(g, t, 9.0, 15.0, 0, 7.8, { y: 560, size: 230, dur: 1.4, label: '鍛えていない左腕の力', unit: 'はじめの力に対して（平均）', fmt: v => '+' + v.toFixed(1) + '%' });
+    TK.count(g, t, 9.0, 15.0, 0, 7.8, { y: 500, size: 230, dur: 1.4, label: '鍛えていない左腕の力', unit: 'はじめの力に対して（平均）', fmt: v => '+' + v.toFixed(1) + '%' });
+    g.save(); g.globalAlpha = fade(t, 9, 15, 0.3); body(g, PW / 2, 1010, 0.62, curl, 0.8); g.restore();
     TK.note(g, t, 9.6, 15, '13の研究をまとめた値（幅 4.1〜11.6%）', { size: 32 });
   }
   // 15〜20: 2本の棒
   if (t >= 15.0 && t < 20.0) {
-    TK.text(g, '力の伸び（くらべ）', PW / 2, 280, 60, { color: TK.C.sub });
+    PL.label(g, '力の伸び（くらべ）', 90, 280, 60, { align: 'left', color: TK.C.sub });
     TK.bars(g, t, 15.0, 20.0, [
-      { label: '鍛えた右腕', v: 1.0, color: TK.C.acc2, text: '' },
-      { label: '鍛えていない左腕', v: 0.351, color: TK.C.acc, text: '約3分の1' },
+      { label: '鍛えた右腕', v: 1.0, text: '' },
+      { label: '鍛えていない左腕', v: 0.351, text: '約3分の1' },
     ], { y: 420, gap: 260, stagger: 0.8 });
+    g.save(); g.globalAlpha = fade(t, 15, 20, 0.3); body(g, PW / 2 + 180, 1010, 0.62, curl, 0.8); g.restore();
   }
   // 20〜26: 命令を出す神経
   if (t >= 20.0 && t < 26.0) {
     const f = fade(t, 20, 26, 0.3); g.save(); g.globalAlpha = f;
-    body(g, PW / 2, 560, 1.35, curl, 0.6, { nerve: clamp((t - 20.4) / 0.6, 0, 1), t });
-    TK.card(g, 150, 130, 780, 120, { r: 60 });
-    TK.text(g, '変わったのは [神経]？', PW / 2, 190, 64);
+    body(g, PW / 2, 620, 1.35, curl, 0.6, { nerve: clamp((t - 20.4) / 0.6, 0, 1), t });
+    TK.card(g, 150, 130, 780, 120);
+    PL.label(g, '変わったのは [神経]？', PW / 2, 190, 64);
+    if (t > 21.0) { PL.label(g, '脳', 820, 330, 46, { color: PL.RED }); PL.leader(g, 575, 375, 790, 335, PL.RED); }
     g.restore();
     TK.note(g, t, 20.5, 26, '考えられているしくみ（まだ言い切れない）', { size: 32 });
   }
   // 26〜30
   if (t >= 26.0) {
     const f = fade(t, 26, 30.5, 0.3); g.save(); g.globalAlpha = f;
-    TK.card(g, 110, 330, 860, 400);
-    TK.lines(g, '右腕だけでも\n[左腕も強くなる]\n（13の研究のまとめ）', PW / 2, 530, 76);
+    TK.card(g, 110, 260, 860, 400);
+    TK.lines(g, '右腕だけでも\n[左腕も強くなる]\n（13の研究のまとめ）', PW / 2, 460, 76);
+    body(g, PW / 2, 920, 0.62, curl, 0.8);
     g.restore();
-    TK.note(g, t, 27.0, 30, '出どころ: Munn, Herbert, Gandevia (2004)\nJ Appl Physiol 96:1861', { size: 30 });
+    TK.note(g, t, 27.0, 30, '出どころ: Munn, Herbert, Gandevia (2004) J Appl Physiol 96:1861', { size: 30 });
   }
 }
 
