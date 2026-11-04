@@ -48,14 +48,16 @@ function sPerson(x,y,ang=0){   // same ellipse as personM (0.46 m × 0.26 m)
 }
 
 // ---- the room: 5.1 m × 2.85 m. Outer walls concrete (window in the top one), inner walls gypsum, a wooden door ----
-const SROOM={router:[.85,.85], rx:[5.1,2.9], person:null, ang:0, empty:false,
+const SROOM={router:[.85,.85], rx:[5.1,2.9], person:null, ang:0, empty:false, door:0,   // door: opening angle (rad), hinge at the top
   inside:[.75,.75,5.25,3.0]};                 // where a person can stand (x0,y0,x1,y1)
 function sBuild(){
   ssim.ids.fill(0);
   if(!SROOM.empty){
     sWall('conc',.45,.45,2.2,.45); sWall('glass',2.2,.45,3.8,.45); sWall('conc',3.8,.45,5.55,.45);
     sWall('conc',.45,.45,.45,3.3);
-    sWall('board',5.55,.45,5.55,1.4); sWall('wood',5.55,1.4,5.55,2.2); sWall('board',5.55,2.2,5.55,3.3);
+    sWall('board',5.55,.45,5.55,1.4); sWall('board',5.55,2.2,5.55,3.3);
+    // the 0.8 m wooden door swings into the room around its top hinge
+    sWall('wood',5.55,1.4,5.55-.8*Math.sin(SROOM.door),1.4+.8*Math.cos(SROOM.door));
     sWall('board',.45,3.3,5.55,3.3);
   }
   if(SROOM.person) sPerson(SROOM.person[0],SROOM.person[1],SROOM.ang);

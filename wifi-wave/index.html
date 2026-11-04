@@ -31,6 +31,7 @@
       <div class="row" id="senseBtns">
         <button class="btn" id="btnPerson"></button>
         <button class="btn" id="btnEye" hidden></button>
+        <button class="btn" id="btnDoor" hidden></button>
         <button class="btn" id="btnSensePlay"></button>
       </div>
     </div>
@@ -145,6 +146,15 @@
         <p><b>受信機の雑音は推定です</b>: 1回ごとに、全体の強さが少しとび（自動で音量を合わせるしくみ）、52本それぞれに約5%のゆれをのせています（52本のゆれは、WiFi カードで測った止まった部屋のゆれ「90%は平均の10%以下」を目安にしました。全体のとび 0.5dB は根拠の数字のない推定です）。<b>雑音は周波数ごとにばらばら</b>と仮定しています。本物の雑音はとなりどうしで似ていることも多く、家具やドアも動くので、誰も動いていないのに「動きあり」になることもあります。</p>
         <p><b>時間</b>: 1回の測定で送る電波（約100ナノ秒ぶん）を、0.1秒あまりかけて見せています（百万倍ほどゆっくり）。計算に時間がかかるので、人は1回の測定で1.5cm しか進めません。そのぶん、ふつうに歩く速さ（秒速約1m）の約1/○になります（棒の下の数字）。</p><p><b>パルス</b>: 本物の WiFi は、決まった形の短い信号で測ります。この計算は、52本を1回で求めるために、幅の広い短いパルスを送っています。</p>
       </details>
+      <details class="sense-only">
+        <summary>研究ではどこまでわかる？</summary>
+        <p><b>動いたかどうか</b>: このアプリのやり方（ゆれの大きさ）と同じ考え方で、多くの研究があります。人でもドアでも、動けばゆれます（このアプリでもドアで確かめられます）。</p>
+        <p><b>止まっている人</b>: 止まった人はゆれないので、このやり方では見つけにくいです。本物の部屋では、家具を動かすなどで誰もいないときの形そのものも変わっていきます。べつの話として、<b>ベッドにいるとわかっている人</b>の息と心拍を、ふつうの WiFi の CSI から測った研究があります（Liu ほか 2018）。</p>
+        <p><b>どこにいるか</b>: 受信機のアンテナを3本にして、電波の来る向き・遅れ・ドップラー（動きによる周波数のずれ）を組み合わせ、送信1つ・受信1つで歩く人を追った研究があります（Widar2.0、Qian ほか 2018）。作者の報告ではまん中の値で約0.75m のずれ、ほかの研究者が自分たちの実験で作り直して比べたときは約1.1〜1.3m でした。</p>
+        <p><b>体の形（姿勢）</b>: 送るルーター1台・受けるルーター1台（それぞれアンテナ3本）の CSI から、人の体の形を推定した研究があります（DensePose from WiFi、Geng ほか、2022年12月の arXiv のプレプリント＝査読前）。答えはカメラの映像から作り、それで学習させています。16通りの部屋や置き方で試し、学習に使っていない置き方では成績（AP という点数）が 43.5 から 27.3 に下がりました。</p>
+        <p><b>決まり</b>: 2025年に、WiFi で周りを感じとる測定をやりとりするための規格（IEEE 802.11bf-2025、2025年9月26日発行）ができました。これからの機器は測りやすくなる見こみです。</p>
+        <p>まとめると、このアプリのように<b>アンテナ1本ずつで、強さ（棒）だけ</b>では、学習なしに人の位置を出すのはむずかしいです。アンテナを3本にして波のずれ（位相）も使えば、歩いている人なら約1m のずれで追えた研究があります。止まっている人の位置や体の向きは、もっとむずかしくなります。</p>
+      </details>
       <details>
         <summary>おもな出どころ</summary>
         <ul class="src">
@@ -156,6 +166,10 @@
           <li class="sense-only">Youssef, Mah, Agrawala（2007）「Challenges: Device-free Passive Localization for Wireless Environments」MobiCom 2007: 電波の強さのゆれ（分散）で人の動きを見つける方法</li>
           <li class="sense-only">Wang, Gao, Mao, Pandey「CSI-based Fingerprinting for Indoor Localization: A Deep Learning Approach」IEEE Transactions on Vehicular Technology（arXiv 1603.07080, 2016）: 止まった部屋で測った CSI の強さのゆれ（Intel 5300。雑音の推定の目安）</li>
           <li class="sense-only">IEEE Std 802.11: 20MHz のチャンネルの 52本の周波数（間隔 312.5kHz）</li>
+          <li class="sense-only">Liu, Chen, Wang, Chen, Cheng, Yang（2018）「Monitoring Vital Signs and Postures During Sleep Using WiFi Signals」IEEE Internet of Things Journal 5(3): 寝ている人の息と心拍</li>
+          <li class="sense-only">Qian ほか（2018）「Widar2.0: Passive Human Tracking with a Single Wi-Fi Link」MobiSys 2018（約0.75m は作者の報告。約1.1〜1.3m は「Single-Target Real-Time Passive WiFi Tracking」arXiv 2109.06006 と「WiVelo」arXiv 2207.14072 での比べ）</li>
+          <li class="sense-only">Geng, Huang, De la Torre（2022）「DensePose From WiFi」arXiv 2301.00250（プレプリント）: 送受信のルーター各1台・アンテナ3本ずつ（3×3）、カメラから作った答えで学習、16の部屋の並び</li>
+          <li class="sense-only">IEEE Std 802.11bf-2025「Enhancements for Wireless LAN Sensing」（2025年9月26日発行）</li>
           <li>人の体・お湯の値、受信の強さの境目（−55〜−85dBm）、ルーターの出力（20dBm）、壁の厚さ、センシングの受信機の雑音は<b>目安・推定</b>です</li>
         </ul>
         <p>使っているもの: 文字に Dela Gothic One・Zen Kaku Gothic New・IBM Plex Mono（SIL Open Font License）。</p>
@@ -204,6 +218,15 @@
         <p><b>The receiver noise is an estimate</b>: each measurement gets a small jump in overall strength (from the automatic gain control) and about 5% wobble on each of the 52 bars (the wobble of the 52 bars is based on WiFi-card measurements in a still room, where 90% of the wobbles were below 10% of the average; the 0.5 dB jump is an estimate with no measured number behind it). <b>The noise is assumed to differ from one frequency to the next.</b> Real noise is often similar on neighbouring frequencies, and furniture and doors move too, so real devices sometimes say “movement” when nobody is moving.</p>
         <p><b>Time</b>: the waves sent for one measurement (about 100 nanoseconds’ worth) are shown over a little more than 0.1 s, about a million times slower. Because the calculation takes time, the person can only move 1.5 cm per measurement, so they walk at about 1/N of a normal walking speed (about 1 m per second; see the number below the bars).</p><p><b>The pulse</b>: real WiFi measures with a short signal of a fixed shape. This simulation sends a short, wide pulse instead, to get all 52 slices in one go.</p>
       </details>
+      <details class="sense-only">
+        <summary>How far can research go?</summary>
+        <p><b>Whether something moved</b>: many studies use the same idea as this app (the size of the wobble). A person or a door: anything that moves makes the bars wobble (you can try the door in this app).</p>
+        <p><b>A person standing still</b>: a still person causes no wobble, so this method has trouble finding them. In real rooms the empty-room shape itself also changes, for example when furniture is moved. A different kind of study measured the breathing and heart rate of <b>people known to be in bed</b> from ordinary WiFi CSI (Liu et al. 2018).</p>
+        <p><b>Where someone is</b>: with three antennas on the receiver, combining the direction the waves come from, their delay and the Doppler shift (the frequency change caused by motion), a study tracked a walking person with one sender and one receiver (Widar2.0, Qian et al. 2018). The authors report a median error of about 0.75 m; other researchers who re-implemented it in their own experiments found about 1.1–1.3 m.</p>
+        <p><b>Body shape (pose)</b>: a study estimated people’s body shapes from the CSI between one sending and one receiving router, each with three antennas (DensePose from WiFi, Geng et al., an arXiv preprint from December 2022, not peer-reviewed). The answers it learned from were made from camera video. It was tried in 16 room layouts, and in layouts it had not trained on, its score (called AP) dropped from 43.5 to 27.3.</p>
+        <p><b>Rules</b>: in 2025 a standard for exchanging WiFi sensing measurements was published (IEEE 802.11bf-2025, 26 September 2025). Future devices are expected to make measuring easier.</p>
+        <p>In short: with <b>one antenna at each end and strength (the bars) only</b>, like this app, finding where a person is without training is hard. With three antennas and the phase of the waves, research has tracked a walking person to within about 1 m. Finding a still person’s position, or which way someone faces, is harder still.</p>
+      </details>
       <details>
         <summary>Main sources</summary>
         <ul class="src">
@@ -215,6 +238,10 @@
           <li class="sense-only">Youssef, Mah and Agrawala (2007), “Challenges: Device-free Passive Localization for Wireless Environments”, MobiCom 2007: spotting people from the wobble (variance) of signal strength</li>
           <li class="sense-only">Wang, Gao, Mao and Pandey, “CSI-based Fingerprinting for Indoor Localization: A Deep Learning Approach”, IEEE Transactions on Vehicular Technology (arXiv 1603.07080, 2016): CSI strength wobble measured in a still room (Intel 5300; a guide for the noise estimate)</li>
           <li class="sense-only">IEEE Std 802.11: the 52 frequencies of a 20 MHz channel (312.5 kHz apart)</li>
+          <li class="sense-only">Liu, Chen, Wang, Chen, Cheng and Yang (2018), “Monitoring Vital Signs and Postures During Sleep Using WiFi Signals”, IEEE Internet of Things Journal 5(3): breathing and heart rate of sleeping people</li>
+          <li class="sense-only">Qian et al. (2018), “Widar2.0: Passive Human Tracking with a Single Wi-Fi Link”, MobiSys 2018 (about 0.75 m as reported by the authors; about 1.1–1.3 m in the comparisons in “Single-Target Real-Time Passive WiFi Tracking”, arXiv 2109.06006, and “WiVelo”, arXiv 2207.14072)</li>
+          <li class="sense-only">Geng, Huang and De la Torre (2022), “DensePose From WiFi”, arXiv 2301.00250 (preprint): one sending and one receiving router with three antennas each (3×3), trained on answers made from camera video, 16 room layouts</li>
+          <li class="sense-only">IEEE Std 802.11bf-2025, “Enhancements for Wireless LAN Sensing” (published 26 September 2025)</li>
           <li>The values for the human body and water, the signal strength lines (−55 to −85 dBm), the router output (20 dBm), the wall thicknesses and the receiver noise in the sensing room are <b>rough guides and estimates</b></li>
         </ul>
         <p>Fonts: Dela Gothic One, Zen Kaku Gothic New and IBM Plex Mono (SIL Open Font License).</p>

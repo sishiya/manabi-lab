@@ -5,22 +5,28 @@ if(!window.__wwGL) throw new Error("wifi-wave: WebGL2 の準備ができなか�
 // Between measurements the person walks 1.5 cm toward where the finger points.
 const SE={tour:0, run:null, person:null, target:null, leaving:false, ang:0, base:null, baseDb:null,
   motion:new Motion(), amp:null, hist:[], count:0, rate:0, lastDone:0, chunk:1024,
-  paused:false, eye:false, reveal:false, guess:null, dragging:false};
+  paused:false, eye:false, reveal:false, guess:null, dragging:false, doorTo:0};
+const DOOR_STEP=1.5*Math.PI/180;   // rad per measurement: 90° in about 1 s of real time, like the person's 1.5 cm
 const STEP_M=.015;                 // m walked per measurement
 const REAL_RATE=1/STEP_M;          // measurements per second that make 1.5 cm a step at a walk of 1 m/s (~67/s)
-const TOUR_N=6, DOOR=[5.3,1.8], CENTER=[3.0,1.9];
+const TOUR_N=8, CENTER=[3.0,1.9];
+// the door: hinge at the top of the 0.8 m opening in the right wall. People come and go through it,
+// standing just outside (EXIT) while it opens; inside the room nobody may stand where the board swings
+const HINGE=[5.55,1.4], EXIT=[5.68,1.8], DOOR_OPEN=Math.PI*.45;
+const inSwing=p=>!!p&&p[0]<5.5&&Math.hypot(p[0]-HINGE[0],p[1]-HINGE[1])<1.05;
 const sCell=m=>m/DX;               // metres → cells of the small grid
 const sPx=m=>m/DX*(W/SN.W)*scale;  // metres → css px on the map
 const meters=c=>c*DX*(SN.W/W);     // main-map cell → metres in the room
 
 function senseEnter(){
   SE.tour=0; SE.person=null; SE.target=null; SE.leaving=false; SE.eye=false; SE.reveal=false; SE.guess=null;
+  SE.doorTo=0; SROOM.door=0;
   SE.hist=[]; SE.count=0; SE.rate=0; SE.lastDone=0; SE.run=null; SE.paused=false;
   SROOM.empty=false; SROOM.person=null;
   if(S.freq!=='2.4') $('segFreq').querySelector('[data-v="2.4"]').click();   // sensing is 2.4 GHz only (PLAN)
-  SE.base=csi(); SE.baseDb=SE.base.amp.slice();          // the empty room, remembered once (no noise)
-  SE.motion=new Motion(); SE.motion.calibrate(SE.base.H);
-  $('senseBox').hidden=false; $('btnTour').hidden=false; ov.style.cursor='default'; placeCap();
+  // the empty room is measured first, over a few frames like any measurement (a phone would stall on one big run)
+  SE.base=null; SE.baseDb=null; SE.calib=true; sBuild(); SE.run=new Run(pulse);
+  $('senseBox').hidden=false; $('btnTour').hidden=false; $('btnTour').disabled=true; ov.style.cursor='default'; placeCap();
   setTour(0);
 }
 // portrait phones: only the map, the bars and the movement line stay pinned; the caption and the buttons
@@ -52,25 +58,30 @@ const TOUR=[
     `It decides by <b>how much it flickers</b>, not by the colour. More than ${MOTION.k} times the flicker of the empty room means “movement”. Many studies and some products decide this way too. Try making the person stop and walk.`),
   L('<b>「ルーターの目で見る」</b>を押すと地図が消え、棒だけになります。ルーターに見えるのはこれだけ。人はどこにいる？',
     'Press <b>“See it as the router does”</b>: the map disappears and only the bars remain. That is all the router gets. Where is the person?'),
+  L('人を部屋から出して、<b>ドアを開け閉め</b>してみよう。誰もいないのに「動きあり」になることがあります（人かドアかは区別できません）。開いたまま止まると「動きなし」にもどりますが、棒は白い線とずれたままです。',
+    'Send the person out and <b>open or close the door</b>. It sometimes says “movement” although nobody is there (a door and a person look alike). Once the door stops, it says “no movement” again, but the bars stay off the white marks.'),
+  L('棒からわかるのは<b>「何かが動いた」</b>まで。じっと止まっている人はゆれないので「動きなし」です。研究でもっとわかることは、解説の「研究ではどこまでわかる？」へ。',
+    'The bars tell you <b>“something moved”</b>, and no more. A person standing still causes no wobble, so it says “no movement”. For what research can do, see “How far can research go?” in the explanation.'),
 ];
 function setTour(i){
   if(i===2&&SE.tour<2&&!SE.person) personIn();   // the person comes in only when step 3 starts
   SE.tour=i;
   document.body.classList.toggle('sense-wf',i>=3);
   $('btnTour').innerHTML=i<TOUR_N-1?L(`つぎへ ▶ <small>${i+1}/${TOUR_N}</small>`,`Next ▶ <small>${i+1}/${TOUR_N}</small>`):L('最初から','Start over');
-  $('btnPerson').hidden=i<2; $('btnEye').hidden=i<5; $('btnSensePlay').hidden=i<1;
+  $('btnPerson').hidden=i<2; $('btnEye').hidden=i<5; $('btnDoor').hidden=i<6; $('btnSensePlay').hidden=i<1;
   caption(); buttons(); texts();
 }
 // 最初から: back to the empty room as when the room was opened (the empty room's CSI is kept)
 function senseRestart(){
-  SE.person=null; SE.target=null; SE.leaving=false; SE.eye=false; SE.reveal=false; SE.guess=null; SE.answerPos=null;
-  SE.hist=[]; SE.amp=null; SE.count=0; SE.rate=0; SE.lastDone=0; SE.run=null; SE.paused=false;
+  SE.person=null; SE.target=null; SE.leaving=false; SE.eye=false; SE.reveal=false; SE.guess=null; SE.answerPos=null; SE.doorTo=0;
+  SE.hist=[]; SE.amp=null; SE.count=0; SE.rate=0; SE.lastDone=0; SE.run=null; SE.paused=false; SROOM.door=0;
   SE.motion=new Motion(); SE.motion.calibrate(SE.base.H);
   setTour(0);
 }
 $('btnTour').onclick=()=>{ if(SE.tour<TOUR_N-1) setTour(SE.tour+1); else senseRestart(); };
 function caption(){
   let t=TOUR[SE.tour];
+  if(!SE.base) t=L('誰もいない部屋を測っています…','Measuring the empty room…');
   if(SE.eye&&!SE.reveal) t=L('ルーターに見えるのは下の棒だけ。人は部屋の中を歩いています。<b>いると思う所をタップ</b>して答えよう。',
     'All the router gets is the bars below. The person is walking around the room. <b>Tap where you think they are.</b>');
   if(SE.eye&&SE.reveal&&SE.guess){
@@ -85,12 +96,15 @@ function caption(){
 function buttons(){
   $('btnPerson').textContent=SE.person&&!SE.leaving?L('人を部屋から出す','Send the person out'):L('人を部屋に入れる','Let the person in');
   $('btnPerson').disabled=SE.eye;
+  $('btnDoor').textContent=SE.doorTo?L('ドアを閉める','Close the door'):L('ドアを開ける','Open the door'); $('btnDoor').disabled=SE.eye;
   $('btnEye').textContent=!SE.eye?L('ルーターの目で見る','See it as the router does'):SE.reveal?L('もう一度','Try again'):L('地図にもどす','Back to the map');
   $('btnSensePlay').textContent=SE.paused?L('再生','Play'):L('一時停止','Pause');
 }
-$('btnPerson').onclick=()=>{ if(SE.person&&!SE.leaving){SE.leaving=true;SE.target=DOOR.slice();} else personIn(); buttons(); };
+$('btnDoor').onclick=()=>{ SE.doorTo=SE.doorTo?0:DOOR_OPEN; buttons(); };
+$('btnPerson').onclick=()=>{ if(SE.person&&!SE.leaving){SE.leaving=true;SE.target=EXIT.slice();SE.doorTo=DOOR_OPEN;} else personIn(); buttons(); };
 $('btnEye').onclick=()=>{
-  if(!SE.eye){SE.eye=true;SE.reveal=false;SE.guess=null;if(!SE.person||SE.leaving){SE.person=randomSpot();SE.leaving=false;}SE.target=randomSpot();}
+  if(!SE.eye){SE.eye=true;SE.reveal=false;SE.guess=null;SE.doorTo=SROOM.door;   // a door still moving would add its own wobble
+    if(!SE.person||SE.leaving){SE.person=randomSpot();SE.leaving=false;}SE.target=randomSpot();}
   else if(SE.reveal){SE.reveal=false;SE.guess=null;SE.target=randomSpot();}
   else {SE.eye=false;SE.target=null;}
   caption(); buttons();
@@ -98,28 +112,38 @@ $('btnEye').onclick=()=>{
 // a pause (or a hidden tab) must not count as one slow measurement in 「本物の約1/○」
 $('btnSensePlay').onclick=()=>{SE.paused=!SE.paused;SE.lastDone=0;buttons();texts();};
 document.addEventListener('visibilitychange',()=>{SE.lastDone=0;});
-function personIn(){ SE.person=DOOR.slice(); SE.target=CENTER.slice(); SE.leaving=false; SE.ang=Math.PI/2; }
-function randomSpot(){ const [x0,y0,x1,y1]=SROOM.inside; return [x0+.3+Math.random()*(x1-x0-.6), y0+.3+Math.random()*(y1-y0-.6)]; }
+function personIn(){ SE.person=EXIT.slice(); SE.target=CENTER.slice(); SE.leaving=false; SE.ang=Math.PI/2; SE.doorTo=DOOR_OPEN; }
+function randomSpot(){ const [x0,y0,x1,y1]=SROOM.inside; let p; do p=[x0+.3+Math.random()*(x1-x0-.6), y0+.3+Math.random()*(y1-y0-.6)]; while(inSwing(p)); return p; }
 const clampRoom=([x,y])=>{const [x0,y0,x1,y1]=SROOM.inside;return [Math.max(x0,Math.min(x1,x)),Math.max(y0,Math.min(y1,y))];};
 
 // ---------- measuring ----------
 function startMeasure(){
+  // the door first: a person standing where it swings stops it, as a body would
+  let doorMoved=false;
+  if(SROOM.door!==SE.doorTo&&!inSwing(SE.person)){const d=SE.doorTo-SROOM.door;SROOM.door+=Math.sign(d)*Math.min(Math.abs(d),DOOR_STEP);doorMoved=true;}
   if(SE.person&&SE.target){
     const dx=SE.target[0]-SE.person[0], dy=SE.target[1]-SE.person[1], d=Math.hypot(dx,dy);
-    if(d>.004){
-      const s=Math.min(d,STEP_M); SE.person=[SE.person[0]+dx/d*s, SE.person[1]+dy/d*s];
+    const s=Math.min(d,STEP_M), next=d>.004?[SE.person[0]+dx/d*s, SE.person[1]+dy/d*s]:SE.person;
+    // wait while the door swings through the next step, and do not pass the doorway unless it is open
+    const wait=(doorMoved&&inSwing(next))||(next[0]>5.3&&SROOM.door<DOOR_OPEN-.01);
+    if(d>.004&&!wait){
+      SE.person=next;
       // shoulders across the walking direction; turn at most 6° per measurement
       let a=Math.atan2(dy,dx)+Math.PI/2, da=Math.atan2(Math.sin(a-SE.ang),Math.cos(a-SE.ang));
       if(Math.abs(da)>Math.PI/2) da-=Math.sign(da)*Math.PI;      // the ellipse looks the same turned by 180°
       SE.ang+=Math.max(-.105,Math.min(.105,da));
-    } else if(SE.leaving){ SE.person=null; SE.target=null; SE.leaving=false; buttons(); }
-    else if(SE.eye&&!SE.reveal) SE.target=randomSpot();
+    } else if(d<=.004&&SE.leaving){ SE.person=null; SE.target=null; SE.leaving=false; buttons(); }
+    else if(d<=.004&&SE.eye&&!SE.reveal) SE.target=randomSpot();
   }
   SROOM.person=SE.person; SROOM.ang=SE.ang; sBuild();
   SE.run=new Run(pulse);
 }
 function finishMeasure(){
   const c=csiOf(SE.run.out()); SE.run=null;
+  if(SE.calib){   // the empty room, remembered once (no noise)
+    SE.calib=false; SE.base=c; SE.baseDb=c.amp.slice(); SE.motion=new Motion(); SE.motion.calibrate(c.H);
+    $('btnTour').disabled=false; caption(); return;
+  }
   SE.amp=noisyAmp(c.H); SE.motion.push(SE.amp);
   SE.hist.push(SE.amp.map((a,k)=>20*Math.log10(Math.max(a,1e-12))-SE.baseDb[k])); if(SE.hist.length>240) SE.hist.shift();
   const t=performance.now(); if(SE.lastDone){const r=1000/(t-SE.lastDone);SE.rate=SE.rate?SE.rate+(r-SE.rate)*.15:r;} SE.lastDone=t;
