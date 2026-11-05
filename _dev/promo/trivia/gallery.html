@@ -38,6 +38,7 @@
     <button id="only">選んだものだけ</button>
     <button id="voiced">声つきだけ</button>
     <button id="copy">選んだものを書き出す</button>
+    <button id="save">選んだものをファイルに保存</button>
   </div>
   <textarea id="out" rows="3" readonly></textarea>
 </header>
@@ -121,6 +122,14 @@ document.getElementById('copy').onclick = () => {
   const o = document.getElementById('out'); o.style.display = 'block';
   o.value = '選んだ: ' + [...picks].join(', '); o.select();
   try { navigator.clipboard.writeText(o.value); } catch (e) { }
+};
+// 選んだものを out/trivia-picks.json に保存する（確認用サーバー .claude/serve.ps1 がこの名前だけ受けとる）。Claude はこのファイルを読んで、アップロードの準備をする
+document.getElementById('save').onclick = async e => {
+  const b = e.target, list = items.filter(x => picks.has(x.id)).map(x => ({ id: x.id, page: x.page, title: x.title, mp4: x.mp4 }));
+  const body = JSON.stringify({ saved: new Date().toISOString(), count: list.length, picks: list }, null, 1);
+  try { const r = await fetch('../out/trivia-picks.json', { method: 'PUT', body }); b.textContent = r.ok ? `保存した（${list.length} 本）` : '保存できなかった'; }
+  catch (err) { b.textContent = '保存できなかった'; }
+  setTimeout(() => { b.textContent = '選んだものをファイルに保存'; }, 4000);
 };
 load();
 </script>
