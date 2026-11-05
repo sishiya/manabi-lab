@@ -16,6 +16,9 @@
   button.save { background: #e8a33a; color: #1a1206; border: none; border-radius: 4px; font-weight: 700; padding: 8px 16px; box-shadow: 0 2px 0 #9a6618; }
   button.save:active { transform: translateY(2px); box-shadow: none; }
   button.save:disabled { opacity: 0.6; cursor: wait; }
+  button.sub { background: transparent; color: #e8a33a; border: 1px solid #e8a33a; border-radius: 4px; padding: 7px 12px; }
+  .state { font-size: 14px; font-weight: 700; }
+  .state.dirty { color: #ffcf7a; }
   #saved { font-size: 13px; color: #c9d4f2; }
   #saved.ok { color: #9be39b; } #saved.ng { color: #ff9a8a; }
   #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; padding: 16px; }
@@ -43,10 +46,11 @@
     <select id="sort"><option value="rank">批評の順</option><option value="app">アプリ順</option><option value="type">型の順</option></select>
     <button id="only">選んだものだけ</button>
     <button id="voiced">声つきだけ</button>
-    <button id="copy">選んだものを書き出す</button>
   </div>
   <div class="act">
+    <span id="state" class="state"></span>
     <button id="save" class="save">💾 選んだものを保存（Claude に渡す）</button>
+    <button id="copy" class="sub">📋 一覧の文字をコピー</button>
     <span id="saved"></span>
   </div>
   <textarea id="out" rows="3" readonly></textarea>
@@ -120,7 +124,7 @@ function render() {
       sw.onclick = () => { alt = !alt; sw.textContent = alt ? '声つきの版を見る' : '字幕だけの版を見る'; play(); };
       d.querySelector('.meta').insertBefore(sw, d.querySelector('.pick:not(.alt)'));
     }
-    d.querySelector('.pick:not(.alt)').onclick = () => { picks.has(x.id) ? picks.delete(x.id) : picks.add(x.id); store.set('trivia-picks', [...picks]); render(); };
+    d.querySelector('.pick:not(.alt)').onclick = () => { picks.has(x.id) ? picks.delete(x.id) : picks.add(x.id); store.set('trivia-picks', [...picks]); render(); showState(); };
     grid.appendChild(d);
   }
 }
@@ -128,11 +132,21 @@ document.getElementById('sort').onchange = render;
 document.getElementById('only').onclick = e => { onlyPicked = !onlyPicked; e.target.className = onlyPicked ? 'on' : ''; render(); };
 document.getElementById('voiced').onclick = e => { onlyVoiced = !onlyVoiced; e.target.className = onlyVoiced ? 'on' : ''; render(); };
 document.getElementById('copy').onclick = () => {
-  const o = document.getElementById('out'); o.style.display = 'block';
+  const o = document.getElementById('out'), st = document.getElementById('saved'); o.style.display = 'block';
   o.value = '選んだ: ' + [...picks].join(', '); o.select();
-  try { navigator.clipboard.writeText(o.value); } catch (e) { }
+  let ok = false; try { document.execCommand('copy'); ok = true; } catch (e) { } try { navigator.clipboard.writeText(o.value); ok = true; } catch (e) { }
+  st.className = ok ? 'ok' : 'ng'; st.textContent = ok ? `✓ ${picks.size} 本の一覧をコピーしました（下の欄にも出しています）` : '下の欄の文字を選んでコピーしてください';
 };
 // 選んだものを out/trivia-picks.json に保存する（確認用サーバー .claude/serve.ps1 がこの名前だけ受けとる）。Claude はこのファイルを読んで、アップロードの準備をする
+// いま選んでいる本数と、保存したものと同じかを、いつも見えるところに出す（保存を覚えていなくてよいように）
+let savedIds = null;
+const sameAsSaved = () => savedIds && savedIds.length === picks.size && savedIds.every(id => picks.has(id));
+function showState() {
+  const el = document.getElementById('state');
+  el.textContent = `選んでいる: ${picks.size} 本` + (savedIds == null ? '（まだ保存していません）' : sameAsSaved() ? '・保存ずみ' : '・保存していない変更があります');
+  el.className = 'state' + (sameAsSaved() ? '' : ' dirty');
+}
+fetch('../out/trivia-picks.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => { if (j) savedIds = j.picks.map(x => x.id); showState(); }).catch(showState);
 document.getElementById('save').onclick = async e => {
   const b = e.target, st = document.getElementById('saved');
   const list = items.filter(x => picks.has(x.id)).map(x => ({ id: x.id, page: x.page, title: x.title, mp4: x.mp4 }));
@@ -141,6 +155,7 @@ document.getElementById('save').onclick = async e => {
   try {
     const r = await fetch('../out/trivia-picks.json', { method: 'PUT', body });
     if (!r.ok) throw new Error(r.status);
+    savedIds = list.map(x => x.id); showState();
     st.className = 'ok'; st.textContent = `✓ ${new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} に ${list.length} 本を保存しました（_dev/promo/out/trivia-picks.json）`;
   } catch (err) { st.className = 'ng'; st.textContent = '保存できませんでした（確認用サーバー localhost:8765 で開いているか見てください）'; }
   b.disabled = false;
