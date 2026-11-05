@@ -41,7 +41,7 @@ const SEASONS = ['春', '夏', '秋', '冬'];
 
 // ---- 道を作る小道具 ----
 // なめらかな閉じた道（点の3つめが 1 の所は角）
-const smooth = pts => g => {
+const smoothPath = pts => g => {
   const n = pts.length, mid = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2], m0 = mid(pts[n - 1], pts[0]);
   g.moveTo(m0[0], m0[1]);
   for (let i = 0; i < n; i++) { const p = pts[i], m = mid(p, pts[(i + 1) % n]); if (p[2]) { g.lineTo(p[0], p[1]); g.lineTo(m[0], m[1]); } else g.quadraticCurveTo(p[0], p[1], m[0], m[1]); }
@@ -65,7 +65,7 @@ function earthLimb(g, f) {
   g.restore();
 }
 function asteroid(g, x, y, s, f) {
-  const p = smooth(ROCK.map(([a, b]) => [x + a * s, y + b * s]));
+  const p = smoothPath(ROCK.map(([a, b]) => [x + a * s, y + b * s]));
   g.save(); g.globalAlpha *= f;
   for (let i = -2; i <= 2; i++) {   // うしろの速さの線（墨の細い線）
     const dx = 0.66, dy = -0.75, len = 260 - Math.abs(i) * 60, ox = x - dy * i * s * 0.35, oy = y + dx * i * s * 0.35;
@@ -124,17 +124,17 @@ const F = { ox: 40, oy: 520, s: 1.25 };
 const fp = (x, y) => [F.ox + x * F.s, F.oy + y * F.s];
 const BEADS = (() => { seed = 5; return Array.from({ length: 16 }, () => [175 + rnd() * 60, -40 + rnd() * 95, 60 + rnd() * 700]); })();   // 落ちつく所（魚の中）と落ちはじめの x
 function fishDraw(g, t) {
-  const body = smooth(xf(FISH, F.ox, F.oy, F.s));
+  const body = smoothPath(xf(FISH, F.ox, F.oy, F.s));
   PL.tint(g, body, PL.T.gray, 0.55);
-  g.save(); g.beginPath(); body(g); g.clip(); PL.tint(g, smooth(xf(FISH, F.ox, F.oy + 70, F.s)), PL.T.sand, 0.45); g.restore();   // おなかは明るい色
-  PL.hatch(g, body, { angle: 0.6, gap: 12, w: 2.4, not: smooth(xf(FISH, F.ox, F.oy - 52, F.s)), cx: F.ox, cy: F.oy });
-  PL.hatch(g, body, { angle: -0.5, gap: 12, w: 2.0, not: smooth(xf(FISH, F.ox, F.oy - 26, F.s)), cx: F.ox, cy: F.oy });
+  g.save(); g.beginPath(); body(g); g.clip(); PL.tint(g, smoothPath(xf(FISH, F.ox, F.oy + 70, F.s)), PL.T.sand, 0.45); g.restore();   // おなかは明るい色
+  PL.hatch(g, body, { angle: 0.6, gap: 12, w: 2.4, not: smoothPath(xf(FISH, F.ox, F.oy - 52, F.s)), cx: F.ox, cy: F.oy });
+  PL.hatch(g, body, { angle: -0.5, gap: 12, w: 2.0, not: smoothPath(xf(FISH, F.ox, F.oy - 26, F.s)), cx: F.ox, cy: F.oy });
   // うろこの板（背中と横に1列ずつ）
   const dia = (x, y, w, h) => PL.poly([[x - w, y], [x, y - h], [x + w, y], [x, y + h]]);
   for (let x = 200; x <= 820; x += 52) { const [px, py] = fp(x, backY(x) + 10); const d = dia(px, py, 17, 10); PL.tint(g, d, PL.T.wood, 0.7); PL.ink(g, d, 3); }
   for (let x = 290; x <= 860; x += 46) { const [px, py] = fp(x, (backY(x) + bellyY(x)) / 2 - 4); const d = dia(px, py, 14, 9); PL.tint(g, d, PL.T.wood, 0.6); PL.ink(g, d, 2.6); }
   PL.ink(g, body, 8);
-  for (const fin of FINS) { const p = smooth(xf(fin, F.ox, F.oy, F.s)); PL.tint(g, p, PL.T.brown, 0.5); PL.hatch(g, p, { angle: 1.3, gap: 9, w: 2, cx: F.ox, cy: F.oy }); PL.ink(g, p, 5); }
+  for (const fin of FINS) { const p = smoothPath(xf(fin, F.ox, F.oy, F.s)); PL.tint(g, p, PL.T.brown, 0.5); PL.hatch(g, p, { angle: 1.3, gap: 9, w: 2, cx: F.ox, cy: F.oy }); PL.ink(g, p, 5); }
   // 頭: 目・エラぶた・口・ひげ
   const [ex, ey] = fp(100, -24); g.save(); g.fillStyle = PL.INK; g.beginPath(); g.arc(ex, ey, 10, 0, Math.PI * 2); g.fill(); g.restore();
   PL.ink(g, gg => { const a = fp(210, -62), b = fp(262, 6), c = fp(222, 76); gg.moveTo(a[0], a[1]); gg.quadraticCurveTo(b[0], b[1], c[0], c[1]); }, 6);
