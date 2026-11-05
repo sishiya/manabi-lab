@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>うんちくのサムネイル</title>
+<!-- うんちくショートのサムネイル（1080×1920）。?page=<ページ名>。絵は out/thumbsrc/<ページ名>.jpg（動画のはじめの問いのコマ）、
+     下の紙に「うんちく」の判と一言を書く（筆のルックと同じ字・墨と朱）。作るのは _dev/tools/make-trivia-thumbs.ps1 -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&display=block">
+<style>
+  html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: #efe6d2; }
+  #pic { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; object-fit: cover; }
+  #paper { position: absolute; left: 0; right: 0; top: 1515px; bottom: 0; background: #efe6d2;
+    border-top: 3px solid #231c15; box-shadow: 0 -10px 0 -4px #efe6d2, 0 -10px 0 -2px #231c15; }
+  #stamp { position: absolute; left: 60px; top: 1625px; width: 170px; height: 170px; border: 7px solid #b33a22; border-radius: 6px;
+    color: #b33a22; font: 60px/1.15 'Yuji Syuku', serif; display: flex; align-items: center; justify-content: center; text-align: center;
+    transform: rotate(-6deg); opacity: 0.92; }
+  #line { position: absolute; left: 270px; right: 40px; top: 1545px; height: 340px; display: flex; align-items: center;
+    color: #231c15; font: 68px/1.45 'Yuji Syuku', serif; white-space: pre;  letter-spacing: 0.02em; }
+</style>
+<script src="trivia-thumbs.js"></script>
+</head>
+<body>
+<img id="pic" alt="">
+<div id="paper"></div>
+<div id="stamp">うん<br>ちく</div>
+<div id="line"></div>
+<script>
+const page = new URLSearchParams(location.search).get('page'), c = TRIVIA_THUMBS[page];
+document.getElementById('pic').src = `out/thumbsrc/${page}.jpg`;
+document.getElementById('line').textContent = c ? c.line : page;
+</script>
+</body>
+</html>

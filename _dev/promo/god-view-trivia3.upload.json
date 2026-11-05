@@ -1,0 +1,33 @@
+{
+  "file": "_dev/promo/out/god-view-trivia3-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/god-view-trivia3.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-13T21:00:00+09:00",
+  "captions": {
+    "en": "_dev/promo/out/god-view-trivia3-short.en.srt"
+  },
+  "title": "【うんちく】すわっているだけで、30秒に約1万km #Shorts",
+  "description": "すわっているだけでも、地球の自転で30秒に約11km、太陽のまわりの公転で約900km。宇宙のはじめの光（宇宙の残り火）にくらべると、太陽系ごと秒速370kmで、30秒に約1万1千km。地球1個ぶん近く動いています。\n\nアプリ「神の視点マップ」（宇宙の果てからクォークまでズームする地球）に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/god-view/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: NASA Earth Fact Sheet・Planck Collaboration (2020) A&A 641, A1。自転は東京（北緯35.7°）で計算しています。\n\n声: VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
+  "tags": [
+    "神の視点マップ",
+    "地球の自転",
+    "公転",
+    "宇宙",
+    "うんちく",
+    "雑学",
+    "Shorts",
+    "まなびラボ",
+    "しし屋",
+    "earth rotation",
+    "orbit",
+    "cosmic microwave background",
+    "space",
+    "did you know"
+  ],
+  "localizations": {
+    "en": {
+      "title": "Did you know? Sitting still, you move about 11,000 km in 30 seconds #Shorts",
+      "description": "Just sitting there, Earth's spin carries you about 11 km in 30 seconds, and our orbit around the Sun about 900 km. Compared with the afterglow of the early universe, the whole Solar System moves at 370 km/s: about 11,000 km in 30 seconds, almost one Earth-width. Turn on English subtitles (CC).\n\nRelated to the app \"God's-Eye Map\" (a 3D Earth you can zoom from the edge of the universe to quarks).\n\nApp (switch to English with the EN button): https://sishiya.github.io/manabi-lab/god-view/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/?lang=en\n\nSources: NASA Earth Fact Sheet; Planck Collaboration (2020) A&A 641, A1. Rotation is calculated for Tokyo (35.7 degrees N).\n\nVoice: VOICEVOX:Meimei Himari\nMusic: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#DidYouKnow #Science"
+    }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "file": "_dev/promo/out/extreme-trivia1-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/extreme-trivia1.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-11T21:00:00+09:00",
+  "captions": {
+    "en": "_dev/promo/out/extreme-trivia1-short.en.srt"
+  },
+  "title": "【うんちく】深海魚は水圧でつぶれない。じゃあ、なぜ 8,200 m より下にいない？ #Shorts",
+  "description": "魚の体はほとんど水で、つぶれません。困るのは体の中の小さな部品で、TMAO という分子で守っています。でも TMAO をふやすほど体はこくなり、8,200 m で海水と同じこさになる計算。見つかったいちばん深い魚は 8,336 m でした。\n\nアプリ「極限の世界に置いてみたら」（気圧・水圧）に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/extreme/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: Yancey ほか (2014) PNAS 111: 4461・Natural History Museum (2023)（伊豆・小笠原海溝のクサウオの仲間）。8,200 m は計算による予想です。\n\n声: VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
+  "tags": [
+    "極限の世界に置いてみたら",
+    "深海魚",
+    "水圧",
+    "TMAO",
+    "深海",
+    "うんちく",
+    "雑学",
+    "Shorts",
+    "まなびラボ",
+    "しし屋",
+    "deep sea fish",
+    "water pressure",
+    "TMAO",
+    "hadal zone",
+    "did you know"
+  ],
+  "localizations": {
+    "en": {
+      "title": "Did you know? Deep-sea fish aren't crushed by pressure. So why none below 8,200 m? #Shorts",
+      "description": "A fish is mostly water and doesn't get crushed. The trouble is the tiny parts inside, which fish protect with a molecule called TMAO. But more TMAO makes body fluids more concentrated, matching seawater at about 8,200 m by calculation. The deepest fish ever filmed: 8,336 m. Turn on English subtitles (CC).\n\nRelated to the app \"In Extreme Worlds\" (air and water pressure).\n\nApp (in Japanese for now): https://sishiya.github.io/manabi-lab/extreme/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/?lang=en\n\nSources: Yancey et al. (2014) PNAS 111: 4461; Natural History Museum (2023) (a snailfish in the Izu-Ogasawara Trench). The 8,200 m line is a calculated prediction.\n\nVoice: VOICEVOX:Meimei Himari\nMusic: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#DidYouKnow #Science"
+    }
+  }
+}

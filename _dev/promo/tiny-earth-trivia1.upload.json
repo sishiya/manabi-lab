@@ -1,0 +1,34 @@
+{
+  "videoId": "-LHviM1wGWw",
+  "file": "_dev/promo/out/tiny-earth-trivia1-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/tiny-earth-trivia1.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-07T21:00:00+09:00",
+  "captions": {
+    "en": "_dev/promo/out/tiny-earth-trivia1-short.en.srt"
+  },
+  "title": "【うんちく】地球を半径1kmにしたら、歩くだけで人工衛星 #Shorts",
+  "description": "地球を、同じ材料（同じ密度）のまま半径1kmに縮めたら、重力は6400分の1。地面すれすれを回る速さは秒速1.24mで、ふつうに歩くより少しおそいくらい。ジャンプして秒速1.76mをこえると、二度と戻れません。\n\nアプリ「ちいさな地球」（地球を同じ密度のまま小さくした星）に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/tiny-earth/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: NASA Earth Fact Sheet・Bohannon (1997) Age and Ageing（歩く速さ）。空気・山・でこぼこのない、理想の計算です。\n\n声: VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
+  "tags": [
+    "ちいさな地球",
+    "重力",
+    "人工衛星",
+    "脱出速度",
+    "うんちく",
+    "雑学",
+    "Shorts",
+    "まなびラボ",
+    "しし屋",
+    "tiny earth",
+    "gravity",
+    "orbit",
+    "escape velocity",
+    "did you know"
+  ],
+  "localizations": {
+    "en": {
+      "title": "Did you know? Shrink Earth to a 1 km radius and walking puts you in orbit #Shorts",
+      "description": "Shrink Earth to a 1 km radius, made of the same stuff, and gravity drops to 1/6400. Orbiting at ground level takes 1.24 m/s, slightly slower than walking. Jump faster than 1.76 m/s and you never come back. Turn on English subtitles (CC).\n\nRelated to the app \"A Tiny Earth\" (Earth shrunk at the same density).\n\nApp (switch to English with the EN button): https://sishiya.github.io/manabi-lab/tiny-earth/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/?lang=en\n\nSources: NASA Earth Fact Sheet; Bohannon (1997) Age and Ageing (walking speed). An idealized calculation with no air, mountains or bumps.\n\nVoice: VOICEVOX:Meimei Himari\nMusic: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#DidYouKnow #Science"
+    }
+  }
+}

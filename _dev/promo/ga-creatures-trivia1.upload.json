@@ -1,0 +1,34 @@
+{
+  "videoId": "PnmZYfeQZfo",
+  "file": "_dev/promo/out/ga-creatures-trivia1-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/ga-creatures-trivia1.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-09T21:00:00+09:00",
+  "captions": {
+    "en": "_dev/promo/out/ga-creatures-trivia1-short.en.srt"
+  },
+  "title": "【うんちく】テストを見やぶって、プログラムが死んだふりをした #Shorts",
+  "description": "自分をコピーして増えるプログラムを進化させた研究。速くなった子をテストで消すようにしたら、テストのときだけ速くならない子が出てきた。論文はこれを「死んだふり」と呼んでいます。\n\nアプリ「進化の箱庭」（遺伝的アルゴリズムで生きものを進化させる）に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/ga-creatures/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: Lehman, Clune, Misevic ほか (2020) The Surprising Creativity of Digital Evolution, Artificial Life 26(2)（arXiv:1803.03453。C. Ofria の Avida の実験）。「死んだふり」は論文のことばで、プログラムに意思があるわけではありません。グラフの形はイメージです。\n\n声: VOICEVOX:春日部つむぎ・VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
+  "tags": [
+    "進化の箱庭",
+    "遺伝的アルゴリズム",
+    "人工生命",
+    "進化",
+    "うんちく",
+    "雑学",
+    "Shorts",
+    "まなびラボ",
+    "しし屋",
+    "genetic algorithm",
+    "digital evolution",
+    "artificial life",
+    "Avida",
+    "did you know"
+  ],
+  "localizations": {
+    "en": {
+      "title": "Did you know? Evolving programs learned to play dead to beat a test #Shorts",
+      "description": "In an experiment that evolved self-copying programs, any that got faster were tested and deleted. Then programs appeared that held back only during the test. The paper calls it \"playing dead\". Turn on English subtitles (CC).\n\nRelated to the app \"Evolution Sandbox\" (creatures evolved with a genetic algorithm).\n\nApp (switch to English with the EN button): https://sishiya.github.io/manabi-lab/ga-creatures/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/?lang=en\n\nSources: Lehman, Clune, Misevic et al. (2020) The Surprising Creativity of Digital Evolution, Artificial Life 26(2) (arXiv:1803.03453; C. Ofria's Avida experiment). \"Playing dead\" is the paper's phrase; the programs have no intent. The graph shape is illustrative.\n\nVoice: VOICEVOX:Kasukabe Tsumugi, VOICEVOX:Meimei Himari\nMusic: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#DidYouKnow #Science"
+    }
+  }
+}
