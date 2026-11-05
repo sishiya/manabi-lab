@@ -17,10 +17,62 @@ precision highp float; precision highp int;
 uniform sampler2D uS; uniform ivec2 uPts[${NPROBE}];
 out vec4 o;
 void main(){ int i=int(gl_FragCoord.x)%${NPROBE}; o=vec4(texelFetch(uS,uPts[i],0).r,0.,0.,0.); }`;
-const probeP=program(PROBE_FS);
+// the whole room at 2.437 GHz from the same pulse: every cell sums u·e^{-jωn} (a DFT at one
+// frequency) every ACC_EVERY steps. The pulse has nothing above ~2.6 GHz, so sampling every 50 ps
+// (Nyquist 10 GHz) gives the same sum. Divided by the pulse's own sum, it is the steady wave a
+// continuous 2.437 GHz source would make: a still map instead of a flash per measurement
+const ACC_EVERY=4;
+const ACC_FS=`#version 300 es
+precision highp float;
+uniform sampler2D uS; uniform sampler2D uA; uniform vec2 uCS;
+out vec4 o;
+void main(){ ivec2 p=ivec2(gl_FragCoord.xy); float u=texelFetch(uS,p,0).r; o=texelFetch(uA,p,0)+vec4(u*uCS.x,-u*uCS.y,0.,0.); }`;
+// how the map is shown: 0 = the steady wave, turning slowly (uPh); 1 = stronger/weaker than the empty
+// room, as |H|² averaged over half a wavelength (the nodes of the standing wave would be noise otherwise)
+const SDISP_FS=`#version 300 es
+precision highp float; precision highp int;
+uniform sampler2D uA; uniform sampler2D uB; uniform sampler2D uM;
+uniform vec2 uView; uniform vec2 uGrid; uniform vec2 uSrc; uniform vec2 uTx; uniform float uC; uniform float uPh; uniform int uMode; uniform float uFade;
+uniform vec3 uMatCol[8]; uniform float uMatA[8];
+out vec4 o;
+vec2 H(sampler2D t,vec2 c){ ivec2 q=clamp(ivec2(c),ivec2(0),ivec2(uGrid)-1); vec2 a=texelFetch(t,q,0).rg; return vec2(a.x*uTx.x+a.y*uTx.y,a.y*uTx.x-a.x*uTx.y)/dot(uTx,uTx); }
+float hash(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453); }
+void main(){
+  vec2 uv=gl_FragCoord.xy/uView, c=vec2(uv.x*uGrid.x,(1.-uv.y)*uGrid.y);
+  ivec2 p=clamp(ivec2(c),ivec2(0),ivec2(uGrid)-1);
+  int id=clamp(int(texelFetch(uM,p,0).r*255.+.5),0,7);
+  vec3 bg=vec3(.035,.058,.105), col;
+  if(uMode==0){
+    vec2 h=H(uA,c); float v=h.x*cos(uPh)-h.y*sin(uPh);
+    float r=max(length(c-uSrc),4.), A=sqrt(2.*uC/r), t=tanh(v/A*.8);
+    col = t>0. ? mix(bg,vec3(1.,.70,.28),t) : mix(bg,vec3(.30,.79,.94),-t);
+    col += vec3(1.,.96,.88)*smoothstep(.82,1.,abs(t))*.28;
+  } else {
+    float ea=dot(H(uA,c),H(uA,c)), eb=dot(H(uB,c),H(uB,c));
+    for(int i=0;i<16;i++){ float fi=float(i)+.5, ang=fi*2.39996, rr=8.*sqrt(fi/16.); vec2 q=c+vec2(cos(ang),sin(ang))*rr;
+      vec2 a=H(uA,q), b=H(uB,q); ea+=dot(a,a); eb+=dot(b,b); }
+    float d=10.*log(max(ea,1e-30)/max(eb,1e-30))*.4342944819, v=clamp(d/6.,-1.,1.);
+    col = v>0. ? mix(bg,vec3(1.,.70,.28),v) : mix(bg,vec3(.71,.55,1.),-v);
+  }
+  col=mix(bg,col,uFade);
+  float cpp=uGrid.x/uView.x; vec2 g=abs(fract(c/133.3333+.5)-.5)*133.3333;
+  if(min(g.x,g.y)<cpp*.7) col=mix(col,vec3(.65,.75,.95),.10);
+  if(id>0){ vec3 mc=uMatCol[id]; if(id==5) mc*=.86+.28*hash(floor(c)); col=mix(col,mc,uMatA[id]); }
+  o=vec4(col,1.);
+}`;
+const probeP=program(PROBE_FS), accP=program(ACC_FS), sdispP=program(SDISP_FS);
 const recTex=mkTex(REC_W,REC_H), recFb=mkFb(recTex);
 const ssim=new Sim(SN.W,SN.H);
 const slut=makeLut(SF0/1e9);
+// acc: ping-pong pair being summed; shown: the last finished measurement; base: the empty room
+const acc=[mkTex(SN.W,SN.H),mkTex(SN.W,SN.H)], accFb=acc.map(mkFb), shownTex=mkTex(SN.W,SN.H), shownFb=mkFb(shownTex),
+  baseTex=mkTex(SN.W,SN.H), baseFb=mkFb(baseTex);
+let accCur=0;
+function copyAcc(toFb){   // keep the finished sum (same size and format: a plain blit)
+  gl.bindFramebuffer(gl.READ_FRAMEBUFFER,accFb[accCur]);gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER,toFb);
+  gl.blitFramebuffer(0,0,SN.W,SN.H,0,0,SN.W,SN.H,gl.COLOR_BUFFER_BIT,gl.NEAREST);
+  gl.bindFramebuffer(gl.READ_FRAMEBUFFER,null);gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER,null);
+}
 
 // ---- painting on the small grid (same shapes as state.js, other grid) ----
 function sWall(k,x0,y0,x1,y1){
@@ -84,6 +136,7 @@ class Run{
     this.rs=[Math.round(M(SROOM.router[0])),Math.round(M(SROOM.router[1]))];
     this.rx=new Float32Array(this.maxN); this.rowE=[]; this.n=0; this.peak=0; this.readRows=0; this.done=false;
     ssim.clear();
+    for(const f of accFb){gl.bindFramebuffer(gl.FRAMEBUFFER,f);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);}
   }
   advance(k){
     const t=performance.now(), end=Math.min(this.maxN,this.n+k), buf=Run.buf;
@@ -98,6 +151,14 @@ class Run{
       gl.viewport((n%PER_ROW)*NPROBE,(n/PER_ROW)|0,NPROBE,1);
       gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,ssim.tex[ssim.cur]);
       gl.drawArrays(gl.TRIANGLES,0,3);
+      if(n%ACC_EVERY===0){
+        gl.useProgram(accP.p);gl.bindFramebuffer(gl.FRAMEBUFFER,accFb[1-accCur]);gl.viewport(0,0,SN.W,SN.H);
+        gl.uniform1i(accP.u.uS,0);gl.uniform1i(accP.u.uA,2);gl.uniform2f(accP.u.uCS,Math.cos(OM0*n),Math.sin(OM0*n));
+        gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,acc[accCur]);
+        gl.drawArrays(gl.TRIANGLES,0,3);
+        accCur=1-accCur; gl.activeTexture(gl.TEXTURE0);
+        gl.useProgram(probeP.p);
+      }
       this.n++;
       const rows=(this.n/PER_ROW)|0;
       if(rows-this.readRows===CHECK_ROWS||this.n===this.maxN) this.read();
@@ -145,6 +206,36 @@ function csiOf(r){
   if(!txSpec){const m=Math.ceil(PULSE_T0*2)+1, tx=new Float32Array(m);for(let n=0;n<m;n++)tx[n]=pulse(n);txSpec=dft(tx,fs);}
   const H=dft(r.rx,fs).map((v,i)=>cdiv(v,txSpec[i]));
   return {H, amp:H.map(h=>20*Math.log10(cabs(h))), phase:H.map(h=>Math.atan2(h.im,h.re)), steps:r.n, ms:r.ms, gpuMs:r.gpuMs, rowE:r.rowE};
+}
+// the pulse's own sum at 2.437 GHz, sampled like the cells (every ACC_EVERY steps)
+let tx0=null;
+function txAt0(){
+  if(!tx0){let re=0,im=0;const m=Math.ceil(PULSE_T0*2)+1;for(let n=0;n<m;n+=ACC_EVERY){const p=pulse(n);re+=p*Math.cos(OM0*n);im-=p*Math.sin(OM0*n);}tx0=[re,im];}
+  return tx0;
+}
+// finished sums: keepMap() after each measurement, keepBase() for the empty room
+const keepMap=()=>copyAcc(shownFb), keepBase=()=>copyAcc(baseFb);
+function readMap(x,y,base){   // H at one cell of the kept map (for tools/sense-verify.js)
+  const b=new Float32Array(4), t=txAt0();
+  gl.bindFramebuffer(gl.READ_FRAMEBUFFER,base?baseFb:shownFb);gl.readPixels(x|0,y|0,1,1,gl.RGBA,gl.FLOAT,b);gl.bindFramebuffer(gl.READ_FRAMEBUFFER,null);
+  return cdiv(cx(b[0],b[1]),cx(t[0],t[1]));
+}
+// mode 0: the steady wave at phase ph; mode 1: difference from the empty room. fade 0..1 from black
+function sDisplay(mode,ph,fade){
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,cv.width,cv.height);
+  gl.useProgram(sdispP.p);gl.bindVertexArray(vao);
+  const u=sdispP.u, t=txAt0();
+  gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,shownTex);
+  gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,baseTex);
+  gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,ssim.mt);
+  gl.uniform1i(u.uA,0);gl.uniform1i(u.uB,1);gl.uniform1i(u.uM,2);
+  gl.uniform2f(u.uView,cv.width,cv.height);gl.uniform2f(u.uGrid,SN.W,SN.H);
+  gl.uniform2f(u.uSrc,Math.round(M(SROOM.router[0]))+.5,Math.round(M(SROOM.router[1]))+.5);
+  gl.uniform2f(u.uTx,t[0],t[1]);gl.uniform1f(u.uC,CAL['2.4'].C);gl.uniform1f(u.uPh,ph);gl.uniform1i(u.uMode,mode);gl.uniform1f(u.uFade,fade);
+  gl.uniform3fv(u.uMatCol,new Float32Array(MATS.flatMap(m=>m.rgb||[0,0,0])));
+  gl.uniform1fv(u.uMatA,new Float32Array(MATS.map(m=>m.al||0)));
+  gl.drawArrays(gl.TRIANGLES,0,3);
+  gl.activeTexture(gl.TEXTURE0);
 }
 function csi(opts={}){ sBuild(); return csiOf(sRun(pulse,opts)); }
 // the same transfer at one frequency from a continuous wave (for checking csi())
@@ -199,4 +290,4 @@ class Motion{
   get ratio(){return this.v/this.v0;}
   get moving(){return this.hist.length>=MOTION.win&&this.ratio>MOTION.k;}
 }
-window.__ww.sense={SN,SROOM,SUB,NOISE,MOTION,Motion,Run,csi,csiOf,cwAt,sRun,sBuild,pulse,subFreqs,noisyAmp,ssim};
+window.__ww.sense={SN,SROOM,SUB,NOISE,MOTION,Motion,Run,csi,csiOf,cwAt,sRun,sBuild,pulse,subFreqs,noisyAmp,ssim,keepMap,keepBase,sDisplay,txAt0,readMap};

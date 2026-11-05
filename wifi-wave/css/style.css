@@ -140,6 +140,13 @@ body.sense-wf #csiCv{height:140px}
 #senseCap{margin:0;font-size:13px;color:var(--ink);line-height:1.55;min-height:3.1em;max-width:72ch}
 #senseCap b{color:var(--accent);font-weight:500}
 #senseBtns .btn{font-size:13px}
+#btnQNext,#btnQuiz{border-color:var(--accent);color:var(--accent);font-weight:700}
+/* the quiz answers sit on the covered map, under the big wobble strip (placed by placeTour in sense-ui.js) */
+#quizAns{position:absolute;transform:translateX(-50%);z-index:2;display:flex;gap:10px}
+#quizAns .btn{white-space:nowrap;background:var(--accent);color:#1a1406;border-color:transparent;font-weight:700;padding:7px 16px;box-shadow:0 2px 10px rgba(0,0,0,.45)}
+#quizAns .btn:disabled{opacity:.4;cursor:default}
+body.sense:not(.sense-bars) #csiCv{display:none}
+#senseBtns .btn:disabled{opacity:.45;cursor:default}
 .tour-next{position:absolute;right:10px;bottom:10px;z-index:2;background:var(--accent);color:#1a1406;border-color:transparent;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.45)}
 @media (max-width:860px) and (orientation:portrait){
   body.sense #frame{width:min(100%,calc((100svh - 330px)*1.6))}
