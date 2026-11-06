@@ -134,14 +134,17 @@
 
   // ---------- Nominatim（OpenStreetMap の検索・住所） ----------
   // 利用規約: 1秒に1回まで、同じ問い合わせはキャッシュ。ここを通してだけ送る
+  // 403・429（混みすぎ・止められた）が返ったら、この画面ではもう送らない（重ねて負担をかけない。2026-11-06）
   const nomCache = new Map();
-  let nomNext = 0;
+  let nomNext = 0, nomOff = false;
   async function nominatim(url) {
     if (nomCache.has(url)) return nomCache.get(url);
+    if (nomOff) throw new Error('nominatim off');
     const wait = nomNext - Date.now();
     nomNext = Math.max(Date.now(), nomNext) + 1100;
     if (wait > 0) await new Promise(r => setTimeout(r, wait));
     const res = await fetch(url);
+    if (res.status === 403 || res.status === 429) nomOff = true;
     if (!res.ok) throw new Error('nominatim ' + res.status);
     const j = await res.json();
     nomCache.set(url, j);

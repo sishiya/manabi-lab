@@ -16,6 +16,8 @@
    - **セキュリティ**: 外へのつなぎ先（`performance` の resource の host）、外部リンクが新しいタブ＋`rel=noopener`、`eval`・`fetch`・`postMessage`・URL の値を `innerHTML` に入れていないか（Grep）、`?lang=` に変な値を入れても崩れない、localStorage に何を残すか。
    - 終わったら `resize_window` を desktop に戻す。見つけたことは upload-log に「アプリ本体」の行で。**公開の日にアプリを直すかはユーザーが決める**（動画との食いちがいが増えるため）。
 
+1c. **公開ずみの動画に著作権の申し立てが付いていないか**（2026-11-06〜。Data API では読めないので人の目で）: YouTube Studio の「コンテンツ」の「制限」の列。とくに Kevin MacLeod の曲を使ったうんちくショート。付いていたらユーザーに伝える（異議の出し方は `README.md` の「使ってよい音の出どころ」）。
+
 1・3 と 1b、2 の結果・夜の 6 のつけ忘れ・4 が済んだかの点検は、2026-10-20 から毎朝 9:50 ごろスケジュールの作業 `manabi-daily-prerelease-check` が自動で行い、upload-log に記録して commit する（push・YouTube の書きかえ・アプリの修正はしない）（ユーザーが 10/20 に「毎日やって」と頼んだ）。その報告を見て、NG と 4 をユーザーと進める。
 
 ## 夜（20:00 の公開のあと）

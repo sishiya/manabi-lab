@@ -5,6 +5,7 @@
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Meta _dev/promo/black-hole-guide.upload.json
 #       … 動画を上げる。Meta の JSON: { file, title, description, tags[], privacy, thumbnail, publishAt, localizations }（file・thumbnail はルートからの道すじ。publishAt は予約投稿の日時）
 #         localizations: { "en": { "title": "...", "description": "..." } } … 翻訳したタイトルと説明（英語で見ている人には英語が出る）
+#         synthetic: true … YouTube の「改変・合成されたコンテンツ」の表示を付ける（status.containsSyntheticMedia。書かなければ送らない。2026-11-06）
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -List
 #       … 上げた動画の ID・公開の状態・翻訳・タイトルを出す（ID は Meta の JSON の videoId に書いておく）
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Update -Meta _dev/promo/black-hole-guide.upload.json
@@ -282,6 +283,7 @@ function Invoke-Upload {
   if ($privacy -notin 'private', 'unlisted', 'public') { throw "privacy は private / unlisted / public のどれか: $privacy" }
   $size = (Get-Item $file).Length
   $status = @{ privacyStatus = $privacy; selfDeclaredMadeForKids = $false }   # 子ども向けではない（2026-10-10 にユーザーが決めた）
+  if ($null -ne $m.synthetic) { $status.containsSyntheticMedia = [bool]$m.synthetic }   # 改変・合成されたコンテンツの表示
   # 予約投稿: "publishAt": "2026-10-10T20:00:00+09:00"（日本時間なら +09:00 を付ける）。非公開で上がり、その時刻に公開される
   $when = ''
   if ($m.publishAt) {
@@ -454,6 +456,7 @@ function Set-Schedule($id, $publishAt, $h) {
     if (-not $cur) { Write-Host "動画が見つかりません: $id"; return }
     $st = @{ privacyStatus = 'private'; selfDeclaredMadeForKids = $false;
              embeddable = $cur.status.embeddable; license = $cur.status.license; publicStatsViewable = $cur.status.publicStatsViewable }
+    if ($null -ne $cur.status.containsSyntheticMedia) { $st.containsSyntheticMedia = $cur.status.containsSyntheticMedia }   # 送らないと外れることがあるので今の値を残す
     $st.publishAt = if ($publishAt) { $publishAt } else { $null }   # 予約を外すときは null を送る（省くだけだと YouTube は予約を残す。2026-10-11）
     $body = [Text.Encoding]::UTF8.GetBytes((@{ id = $id; status = $st } | ConvertTo-Json -Depth 4))
     $r = Invoke-RestMethod -Method Put -Headers $h -ContentType 'application/json; charset=UTF-8' -Body $body -Uri 'https://www.googleapis.com/youtube/v3/videos?part=status'
@@ -570,6 +573,7 @@ function Invoke-Verify {
       else { $note.Add("予約 $($want.ToOffset([TimeSpan]::FromHours(9)).ToString('M/d HH:mm'))") }
     }
     if ($st.madeForKids) { $bad.Add('子ども向けになっている') }
+    if ($null -ne $m.synthetic -and [bool]$st.containsSyntheticMedia -ne [bool]$m.synthetic) { $bad.Add("合成コンテンツの表示が JSON とちがう（YouTube $([bool]$st.containsSyntheticMedia)、JSON $([bool]$m.synthetic)）") }
     if ($st.embeddable -eq $false) { $bad.Add('埋めこみ不可') }
     if ((& $nl $sn.title) -ne (& $nl $m.title)) { $bad.Add("タイトルが JSON とちがう: $($sn.title)") }
     if ((& $nl $sn.description) -ne (& $nl $m.description)) { $bad.Add('説明（日本語）が JSON とちがう') }

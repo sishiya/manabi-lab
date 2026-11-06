@@ -81,10 +81,19 @@ YouTube に出す順番（ジャンル・サムネイルの色味が連日で重
   - 締め: `END = DUR - IDENT_CLOSE`。本編の終わりで BGM を消し（`music.stopAt: END`）、締めの画面（`drawIdent(g, t, END)`）と音の目印（`cues: [{ t: END, type: 'jingle' }]`）。ショートにも入れる。本編の字幕と終わりの画面（`drawEnd`）は END までに終える。
   - 絵は元アイコン（`_dev/sns-icon/a-lion-glasses.svg`）と同じ形・色。音は「ぽろろろんっ」（基音 260〜800 Hz、倍音は短く、2.5 kHz より上は切る）。変えるときは全部の動画で同じに。
 - **音量をそろえる**（RULES 8.6、2026-10-12〜）: 音は `promo-audio.js`（`makeAudio`）が BGM を -20 LUFS にそろえてから声・目印を足し、ピークだけ下げる（`LOUD`）。録画のログに「音量: 全体 … LUFS」が出る。録画したら・上げる前に `_dev/tools/check-loudness.ps1`。映像はそのままで音だけ作りなおすときは `record-promo.ps1 -Script <台本> [-Short] -AudioOnly`（古い mp4 は `<out>.before-loud.mp4`）。
-- BGM はコードで合成した音だけ。作るたびに、権利上問題ないかを確かめてユーザーに伝える。
+- **使ってよい音の出どころ**（2026-11-06 に整理。ここにないものを使うときは、先にユーザーと決めてこの表に足す）。作るたび・選ぶたびに、権利上問題ないかを確かめてユーザーに伝える。
+  | 出どころ | 使うところ | 説明欄に書くこと |
+  |---|---|---|
+  | コードで合成した音（`promo-audio.js`・ライオンのもごもご・目印のジングル） | どこでも | 「音楽: プログラムで合成したオリジナルの音です」 |
+  | Stable Audio 3 で作った曲（`../sound-library/`。Stability AI Community License） | 動画の BGM | 「BGM: Stable Audio 3（Stability AI）で生成」。Content ID に自分の曲として登録しない（`../AI-MUSIC.md`） |
+  | Kevin MacLeod（incompetech.com、CC BY 4.0）。いまは「Sneaky Snitch」だけ（うんちくショート、2026-11-06 ユーザーが選んだ） | 動画の BGM | `"曲名" Kevin MacLeod (incompetech.com)` / `Licensed under Creative Commons: By Attribution 4.0` / ライセンスの URL の3行（日本語の欄も英語の欄も） |
+  | VOICEVOX（春日部つむぎ・冥鳴ひまり。キャラごとの規約で商用可） | うんちくの読み上げ | 「VOICEVOX:キャラ名」 |
+  - **MacLeod の曲は、第三者が勝手に Content ID に登録して申し立てを付けてくることがある**（収益がその人に流れる）。公開の翌日に Studio の「著作権」を見る（`DAILY.md` 1c）。付いていたら、ユーザーの GO のあと Studio で異議を申し立てる（理由は「ライセンスあり」、CC BY 4.0 の URL と incompetech の曲のページを添える）。同じ曲に何度も付くなら、Stable Audio かコードの曲に置きかえる。
+  - 合成の声・AI の曲を使った動画は、upload.json に `"synthetic": true` を書くと YouTube の「改変・合成されたコンテンツ」の表示が付く（`youtube-upload.ps1`）。実在の人と見まちがう声・映像なら必須。しし屋の動画（ライオン・VOICEVOX のキャラ）はいまは付けていない。
 - **サムネイルを必ず付ける**（RULES 8.7、2026-10-12〜）: 横長は `thumbs/<app>-guide.jpg`、ショートは `thumbs/<app>-short.jpg`（同じ道具で両方できる）（`short-thumbs.js` に1行足して `_dev/tools/make-short-thumbs.ps1 -Apps <app>`）。upload.json の `thumbnail` に書く。あとから付けるのは `youtube-upload.ps1 -Thumb -Meta a.upload.json,b.upload.json`。
 - 最初のカットは入口のサムネイル（`assets/thumbs/<app>.jpg`）に近い見た目にする。生き物などの名前を画面に出すと好評。
 - 性的な内容・R18 をまぜない（RULES 9章）。出どころは説明文と終わりの画面に書く。
+- **ほかの人の写真・絵（CC BY・CC BY-SA）が動画に映るときは、説明欄に1枚ずつ作者と条件を書く**（2026-11-06〜。画面に一瞬出すだけでは足りない）。多くて書ききれないときは `credits/<app>.md` に一覧を作り、説明欄にそのリンク（`https://github.com/sishiya/manabi-lab/blob/main/_dev/promo/credits/<app>.md`）。新しく作る動画は、できれば CC0・パブリックドメイン・CC BY のものだけが映るようにする（BY-SA は動画全体の条件と食いちがうおそれがある）。見本は `credits/tree-of-life.md`。
 - **公開の前日に、翌日公開の分を最終確認・デバッグする**（RULES 8.4。`youtube-upload.ps1 -Verify`・mp4 のコマ・公開中のアプリ。結果は `upload-log.md` の「公開前の確認」）。
 - commit の前に公開前チェック（`_dev/tools/check-public.ps1`）。`out/` は Git に入れない。
 - **脱毛のしくみ**（`hair-common.js`、2026-10-27）: アプリの描画ループは使わず、場面の表 `SC` から日 `S.t`・手入れの記録 `S.events`・道具・マウスの位置を決めて `__hare.draw()` を呼ぶ（`performance.now` は動画の時刻に差しかえ）。説明動画は `{ carry: true }` で前の場面の手入れを引きつぐ（1つの肌で続ける）、`reset: true` の場面から新しい肌。アプリに `<head>` がないので `inject.top`。アプリには小さく描かせて拡大（`ZOOM`。ショートは幅 600 より狭いとスマホの絵になる）。説明動画は上の字幕の帯 `TOP` の下に断面を置く（断面の上のはしの札と光の結果の箱が字幕に重ならないように）。数は `hrProbe(t)` で確かめてから字幕に書く。
