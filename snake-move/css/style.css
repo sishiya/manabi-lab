@@ -54,12 +54,12 @@ button.on{border-color:var(--acc);color:var(--acc)}
 #readout{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--muted);padding:4px 0 8px;font-family:var(--f-mono)}
 #readout b{color:var(--ink);font-weight:500}
 #more{font-size:14px;line-height:1.8}
-#more>summary,#about>summary{cursor:pointer;font-size:15px;min-height:36px;padding:7px 0;line-height:1.5}
-#more ol,#more ul,#about ul{padding-left:20px;margin:4px 0}
-#more h3,#about h3{font-size:14px;margin:12px 0 4px}
-#about{color:var(--muted);font-size:14px;line-height:1.8}
-#about>summary{color:var(--ink)}
-#about a{color:var(--acc)}
+#more>summary,#about>summary,#about-en>summary{cursor:pointer;font-size:15px;min-height:36px;padding:7px 0;line-height:1.5}
+#more ol,#more ul,#about ul,#about-en ul{padding-left:20px;margin:4px 0}
+#more h3,#about h3,#about-en h3{font-size:14px;margin:12px 0 4px}
+#about,#about-en{color:var(--muted);font-size:14px;line-height:1.8}
+#about>summary,#about-en>summary{color:var(--ink)}
+#about a,#about-en a{color:var(--acc)}
 
 @media (max-width:640px){
   #top h1{font-size:19px}
@@ -80,3 +80,9 @@ button.on{border-color:var(--acc);color:var(--acc)}
 #modes{gap:5px}
 @media (max-width:640px){#modes button{padding:2px 8px;font-size:13px;min-height:34px}}
 @media (max-width:520px){#zoom{top:54px}#zoom button{min-width:36px;padding:2px 8px;font-size:13px}}
+/* 言語（I18N.md） */
+:root[lang=en] [lang=ja],:root:not([lang=en]) [lang=en]{display:none!important}
+.langsw{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;margin-left:auto}
+.langsw button{border:0;border-radius:0;background:none;padding:3px 8px;min-height:30px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--muted)}
+.langsw button[aria-pressed="true"]{background:var(--acc);color:#1a1a1a}
+@media (max-width:640px){.langsw{order:1}#modes{order:2;width:100%}}

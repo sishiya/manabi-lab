@@ -34,9 +34,9 @@
   }
 
   function arrow(g, x0, y0, x1, y1, col, lw = 2) {
-    const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy);
-    if (L < 3) return;
-    const ux = dx / L, uy = dy / L, hl = Math.min(9, L * 0.45);
+    const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy);
+    if (len < 3) return;
+    const ux = dx / len, uy = dy / len, hl = Math.min(9, len * 0.45);
     g.strokeStyle = col; g.fillStyle = col; g.lineWidth = lw;
     g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1 - ux * hl * 0.6, y1 - uy * hl * 0.6); g.stroke();
     g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 - ux * hl - uy * hl * 0.5, y1 - uy * hl + ux * hl * 0.5); g.lineTo(x1 - ux * hl + uy * hl * 0.5, y1 - uy * hl - ux * hl * 0.5); g.closePath(); g.fill();
@@ -109,7 +109,7 @@
             g.strokeStyle = C.stuck; g.lineWidth = 4; g.beginPath(); g.moveTo(xr, top); g.lineTo(xr, bot); g.stroke();
             g.lineWidth = 2; g.beginPath(); g.moveTo(xr - 5, top); g.lineTo(xr, top); g.moveTo(xr - 5, bot); g.lineTo(xr, bot); g.stroke();
             if (!LB.one) { g.save(); g.translate(xr + 30, (top + bot) / 2); g.rotate(-tilt);
-            g.fillStyle = C.stuck; g.font = '12px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'left'; g.fillText('止まっている', 0, 4);
+            g.fillStyle = C.stuck; g.font = '12px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'left'; g.fillText(L('止まっている', 'Still'), 0, 4);
             g.restore(); }
           }
           a = -1;
@@ -122,9 +122,9 @@
         if (s.stuck[i]) continue;
         const v = s.v[i];
         if (Math.abs(v) < 0.002) continue;
-        const L = Math.min(26, 6 + Math.abs(v) * 900) * Math.sign(v);
+        const len = Math.min(26, 6 + Math.abs(v) * 900) * Math.sign(v);
         const y = scr(cam, 0, s.z[i])[1];
-        arrow(g, xl, y, xl, y - L, C.move, 2);
+        arrow(g, xl, y, xl, y - len, C.move, 2);
       }
     }
     // 力: 重さ（重心に下向き）・止まっている所が支える摩擦（上向き）・締めつけ（巻いた所を内へ）
@@ -141,9 +141,9 @@
       for (const [zone, sq] of [[1, s.sqR], [3, s.sqF]]) {
         if (sq < 0.3 || !s.sqN) continue;
         let za = 0, n = 0; for (let i = 0; i < N; i++) if (s.zone[i] === zone) { za += s.z[i]; n++; }
-        const q = scr(cam, 0, za / n), half = R * cam.s + rad + 14, L = 6 + 4 * Math.min(4, p.safety) * sq;
-        arrow(g, q[0] - half - L, q[1], q[0] - half + 4, q[1], C.squeeze, 2.5);
-        arrow(g, q[0] + half + L, q[1], q[0] + half - 4, q[1], C.squeeze, 2.5);
+        const q = scr(cam, 0, za / n), half = R * cam.s + rad + 14, len = 6 + 4 * Math.min(4, p.safety) * sq;
+        arrow(g, q[0] - half - len, q[1], q[0] - half + 4, q[1], C.squeeze, 2.5);
+        arrow(g, q[0] + half + len, q[1], q[0] + half - 4, q[1], C.squeeze, 2.5);
       }
     }
     if (o.ring) {
@@ -158,10 +158,10 @@
       // せまい画面: いま止まって支えているつかみだけ（両方なら上）
       let up = 0, lo = 0; for (let i = 0; i < N; i++) if (s.stuck[i]) { if (s.zone[i] === 3) up++; if (s.zone[i] === 1) lo++; }
       const z = up >= lo ? 3 : 1;
-      loupe(g, s, phi, z, LB.x, LB.top, LB.w, LB.h * 2 + 8, z === 3 ? '上のつかみ' : '下のつかみ');
+      loupe(g, s, phi, z, LB.x, LB.top, LB.w, LB.h * 2 + 8, z === 3 ? L('上のつかみ', 'Upper grip') : L('下のつかみ', 'Lower grip'));
     } else {
-      loupe(g, s, phi, 3, LB.x, LB.top, LB.w, LB.h, '上のつかみ');
-      loupe(g, s, phi, 1, LB.x, LB.top + LB.h + 8, LB.w, LB.h, '下のつかみ');
+      loupe(g, s, phi, 3, LB.x, LB.top, LB.w, LB.h, L('上のつかみ', 'Upper grip'));
+      loupe(g, s, phi, 1, LB.x, LB.top + LB.h + 8, LB.w, LB.h, L('下のつかみ', 'Lower grip'));
     }
   }
 
@@ -200,11 +200,11 @@
     g.restore();
     const st = still > n * 0.6, deg = Math.round(s.wrapDeg * (zone === 1 ? s.wrapR : s.wrapF));
     g.font = '12px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'left';
-    g.fillStyle = C.ink; g.fillText(`${label}（拡大）`, x0 + 6, y0 + 14);
+    g.fillStyle = C.ink; g.fillText(L(`${label}（拡大）`, `${label} (zoom)`), x0 + 6, y0 + 14);
     g.fillStyle = 'rgba(11,20,28,.8)'; g.fillRect(x0 + 1, y0 + h - 33, w - 2, 32);
     g.fillStyle = st ? C.stuck : C.move;
-    if (deg > 20) { g.fillText(st ? '止まっている' : '動いている', x0 + 6, y0 + h - 20); g.fillText(`${deg}° 巻いている`, x0 + 6, y0 + h - 6); }
-    else g.fillText('ほどいている', x0 + 6, y0 + h - 6);
+    if (deg > 20) { g.fillText(st ? L('止まっている', 'Still') : L('動いている', 'Moving'), x0 + 6, y0 + h - 20); g.fillText(L(`${deg}° 巻いている`, `Wrapped ${deg}°`), x0 + 6, y0 + h - 6); }
+    else g.fillText(L('ほどいている', 'Unwrapped'), x0 + 6, y0 + h - 6);
   }
 
   // 体（手前ほど太く明るく、奥ほど細く暗い。奥の所は幹の前に描かない）

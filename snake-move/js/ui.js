@@ -34,7 +34,7 @@
     const M = MODES[A.mode], T = M.tour;
     if (k > T.length) k = 0;
     A.step[A.mode] = k;
-    $('next').textContent = k === 0 ? 'つぎへ ▶' : k === T.length ? 'おわり ▶' : `つぎへ ▶ ${k}/${T.length}`;
+    $('next').textContent = k === 0 ? L('つぎへ ▶', 'Next ▶') : k === T.length ? L('おわり ▶', 'Finish ▶') : L(`つぎへ ▶ ${k}/${T.length}`, `Next ▶ ${k}/${T.length}`);
     const st = k ? T[k - 1] : null;
     // 段に入るときの動き（モードが enterIntro・段の enter を持っていれば呼ぶ）
     if (k === 0 && M.enterIntro) M.enterIntro(A);

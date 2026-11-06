@@ -11,9 +11,9 @@
   const W = (cam, x, y) => [cam.w / 2 + (x - cam.x) * cam.s, cam.h / 2 - (y - cam.y) * cam.s];
 
   function arrow(g, x0, y0, x1, y1, col, lw = 2) {
-    const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy);
-    if (L < 2) return;
-    const ux = dx / L, uy = dy / L, hl = Math.min(8, L * 0.45);
+    const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy);
+    if (len < 2) return;
+    const ux = dx / len, uy = dy / len, hl = Math.min(8, len * 0.45);
     g.strokeStyle = col; g.fillStyle = col; g.lineWidth = lw;
     g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1 - ux * hl * 0.6, y1 - uy * hl * 0.6); g.stroke();
     g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 - ux * hl - uy * hl * 0.5, y1 - uy * hl + ux * hl * 0.5); g.lineTo(x1 - ux * hl + uy * hl * 0.5, y1 - uy * hl - ux * hl * 0.5); g.closePath(); g.fill();
@@ -37,7 +37,7 @@
     // 坂の向き
     if (p.slope) {
       g.fillStyle = C.muted; g.font = '13px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center';
-      g.fillText(p.slope > 0 ? `上り ${p.slope}° →` : `← 上り ${-p.slope}°`, cam.w / 2, cam.h - 12);
+      g.fillText(p.slope > 0 ? L(`上り ${p.slope}° →`, `Uphill ${p.slope}° →`) : L(`← 上り ${-p.slope}°`, `← Uphill ${-p.slope}°`), cam.w / 2, cam.h - 12);
     }
     // 頭の通った跡
     if (o.layers.trail && o.trail.length > 1) {
@@ -111,8 +111,8 @@
       for (let i = 2; i < N; i += 5) {
         const sp = Math.hypot(s.vx[i], s.vy[i]);
         if (sp < 1e-5) continue;
-        const L = 0.022 * cam.s;
-        arrow(g, P[i][0], P[i][1], P[i][0] + s.vx[i] / sp * L, P[i][1] - s.vy[i] / sp * L, C.slip, 1.6);
+        const len = 0.022 * cam.s;
+        arrow(g, P[i][0], P[i][1], P[i][0] + s.vx[i] / sp * len, P[i][1] - s.vy[i] / sp * len, C.slip, 1.6);
       }
     }
     // 地面からの力（摩擦）。進む向きへの成分が前なら緑（押してくれる）、後ろなら赤（引きずる）
@@ -158,9 +158,9 @@
           else grains[Math.min(2, Math.floor(a * 3))].push(q[0], q[1], Math.max(0.8, (0.0006 + 0.0012 * a) * cam.s));
         }
       }
-    grains.forEach((L, b) => {
+    grains.forEach((G, b) => {
       g.fillStyle = `rgba(190,215,195,${(0.15 + 0.07 * b).toFixed(2)})`; g.beginPath();
-      for (let k = 0; k < L.length; k += 3) { g.moveTo(L[k] + L[k + 2], L[k + 1]); g.arc(L[k], L[k + 1], L[k + 2], 0, 6.2832); }
+      for (let k = 0; k < G.length; k += 3) { g.moveTo(G[k] + G[k + 2], G[k + 1]); g.arc(G[k], G[k + 1], G[k + 2], 0, 6.2832); }
       g.fill();
     });
     g.strokeStyle = 'rgba(170,200,180,.32)'; g.lineWidth = 1.2; g.fillStyle = 'rgba(60,80,70,.35)'; g.beginPath();
@@ -269,8 +269,8 @@
     for (let a = 0; a <= 360; a += 6) {
       const r = a * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
       const mu = sf.mt * sn * sn + (c > 0 ? sf.mf : sf.mb) * c * c;
-      const L = mu / 0.22 * R * 0.78;
-      const X = cx + sn * L, Y = cy - c * L;
+      const len = mu / 0.22 * R * 0.78;
+      const X = cx + sn * len, Y = cy - c * len;
       a ? g.lineTo(X, Y) : g.moveTo(X, Y);
     }
     g.closePath(); g.stroke();
@@ -278,10 +278,10 @@
     arrow(g, cx, cy, cx + un / sp * R * 0.7, cy - ut / sp * R * 0.7, C.slip, 2.5);
     g.restore();
     g.fillStyle = C.ink; g.font = '12px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center';
-    g.fillText(`前 ${sf.mf.toFixed(2)}`, cx, cy - R + 14);
-    g.fillText(`後ろ ${sf.mb.toFixed(2)}`, cx, cy + R - 6);
-    g.textAlign = 'left'; g.fillText(`横 ${sf.mt.toFixed(2)}`, cx + R * 0.36, cy + 4);
-    g.fillStyle = C.muted; g.textAlign = 'right'; g.fillText('ウロコの拡大（模式図）', cx + R, cy - R - 6);
+    g.fillText(L(`前 ${sf.mf.toFixed(2)}`, `Fwd ${sf.mf.toFixed(2)}`), cx, cy - R + 14);
+    g.fillText(L(`後ろ ${sf.mb.toFixed(2)}`, `Back ${sf.mb.toFixed(2)}`), cx, cy + R - 6);
+    g.textAlign = 'left'; g.fillText(L(`横 ${sf.mt.toFixed(2)}`, `Side ${sf.mt.toFixed(2)}`), cx + R * 0.36, cy + 4);
+    g.fillStyle = C.muted; g.textAlign = 'right'; g.fillText(L('ウロコの拡大（模式図）', 'Scales close-up (diagram)'), cx + R, cy - R - 6);
   }
 
   function mix(a, b, t) {

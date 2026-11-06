@@ -2,120 +2,130 @@
 <title>ヘビが進むしくみ</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2314202c'/><path d='M10 44 C20 20 30 20 34 32 S48 46 54 20' fill='none' stroke='%23a6e07a' stroke-width='7' stroke-linecap='round'/></svg>">
 <script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<!-- seo（検索・リンクカード。_dev/tools/seo.mjs が入口の APPS から作る。手で直さない） -->
+<meta name="description" content="足のないヘビは、どうやって前へ進むのか。地面をうねる・横ばい・まっすぐ・木を登るの4つの進み方を、ウロコの摩擦と力のつりあいで計算する。体のどこが地面を押し、どこが止まっていて、どこがすべっているかが見える。地面や坂、幹の太さを変えて試せる。">
+<meta property="og:type" content="website"><meta property="og:site_name" content="まなびラボ"><meta property="og:locale" content="ja_JP"><meta property="og:locale:alternate" content="en_US">
+<meta property="og:title" content="ヘビが進むしくみ｜まなびラボ"><meta property="og:description" content="足のないヘビは、どうやって前へ進むのか。地面をうねる・横ばい・まっすぐ・木を登るの4つの進み方を、ウロコの摩擦と力のつりあいで計算する。体のどこが地面を押し、どこが止まっていて、どこがすべっているかが見える。地面や坂、幹の太さを変えて試せる。"><meta property="og:url" content="https://sishiya.github.io/manabi-lab/snake-move/">
+<meta property="og:image" content="https://sishiya.github.io/manabi-lab/assets/thumbs/snake-move.jpg"><meta property="og:image:width" content="640"><meta property="og:image:height" content="360">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@sishiya22">
+<link rel="alternate" hreflang="ja" href="https://sishiya.github.io/manabi-lab/snake-move/?lang=ja"><link rel="alternate" hreflang="en" href="https://sishiya.github.io/manabi-lab/snake-move/?lang=en"><link rel="alternate" hreflang="x-default" href="https://sishiya.github.io/manabi-lab/snake-move/">
+<!-- /seo -->
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}if(LANG==='en')document.title='How Snakes Move';</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="css/style.css?v=4">
+<link rel="stylesheet" href="css/style.css?v=6">
 
 <div id="app">
   <header id="top">
-    <h1>ヘビが進むしくみ</h1>
+    <h1><span lang="ja">ヘビが進むしくみ</span><span lang="en">How Snakes Move</span></h1>
     <div class="seg" id="modes">
-      <button data-mode="ground" class="on">地面をうねる</button>
-      <button data-mode="side">横ばい</button>
-      <button data-mode="straight">まっすぐ</button>
-      <button data-mode="branch" hidden>枝をわたる</button><!-- 2026-11-03 隠した: はさむ力に根拠がない（DEVNOTES） -->
-      <button data-mode="tree">木を登る</button>
+      <button data-mode="ground" class="on"><span lang="ja">地面をうねる</span><span lang="en">Slithering</span></button>
+      <button data-mode="side"><span lang="ja">横ばい</span><span lang="en">Sidewinding</span></button>
+      <button data-mode="straight"><span lang="ja">まっすぐ</span><span lang="en">Straight</span></button>
+      <button data-mode="branch" hidden>枝をわたる</button><!-- 2026-11-03 隠した: はさむ力に根拠がない（DEVNOTES）。戻すときは英語も -->
+      <button data-mode="tree"><span lang="ja">木を登る</span><span lang="en">Tree climbing</span></button>
     </div>
+    <span class="langsw" id="langsw"><button data-l="ja">JP</button><button data-l="en">EN</button></span>
   </header>
 
   <section id="pin">
     <div id="stage">
       <canvas id="cv"></canvas>
       <button id="next">つぎへ ▶</button>
-      <div id="zoom"><button id="bCam" class="on" title="カメラを地面に止めるか、ヘビについていくか" data-m="ground side straight branch">地面に固定</button><button id="bView" title="枝を横から見るか、真上から見るか" data-m="branch" hidden>上から</button><button id="bScale" title="おなかのウロコを見る" data-m="ground">ウロコ</button><button data-z="out" title="引く">−</button><button data-z="in" title="寄る">＋</button></div>
+      <div id="zoom"><button id="bCam" class="on" data-t="カメラを地面に止めるか、ヘビについていくか|Keep the camera fixed to the ground, or follow the snake" data-m="ground side straight branch"><span lang="ja">地面に固定</span><span lang="en">Fixed to ground</span></button><button id="bView" data-t="枝を横から見るか、真上から見るか|View the branch from the side or from above" data-m="branch" hidden>上から</button><button id="bScale" data-t="おなかのウロコを見る|See the belly scales" data-m="ground"><span lang="ja">ウロコ</span><span lang="en">Scales</span></button><button data-z="out" data-t="引く|Zoom out">−</button><button data-z="in" data-t="寄る|Zoom in">+</button></div>
       <div id="legend"></div>
       <div id="tip" hidden></div>
     </div>
     <div id="caption"><p id="say"></p><p id="ruler"></p></div>
     <div id="bar">
-      <button id="play" title="止める／動かす">❚❚ 止める</button>
-      <span class="seg" id="speeds"><button data-sp="0.25">ゆっくり</button><button data-sp="0.5">½</button><button data-sp="1" class="on">ふつう</button></span>
-      <button id="stepb" title="少しだけ進める">1コマ</button>
-      <button id="reset" title="はじめから">最初から</button>
+      <button id="play" data-t="止める／動かす|Pause / play">❚❚ <span lang="ja">止める</span><span lang="en">Pause</span></button>
+      <span class="seg" id="speeds"><button data-sp="0.25"><span lang="ja">ゆっくり</span><span lang="en">Slow</span></button><button data-sp="0.5">½</button><button data-sp="1" class="on"><span lang="ja">ふつう</span><span lang="en">Normal</span></button></span>
+      <button id="stepb" data-t="少しだけ進める|Step forward a little"><span lang="ja">1コマ</span><span lang="en">Step</span></button>
+      <button id="reset" data-t="はじめから|Start over"><span lang="ja">最初から</span><span lang="en">Restart</span></button>
     </div>
   </section>
 
   <main id="below">
     <section class="box" id="try">
-      <h2>試す <small>（いつでも変えられる。計算はそのまま続く）</small></h2>
+      <h2><span lang="ja">試す <small>（いつでも変えられる。計算はそのまま続く）</small></span><span lang="en">Try it <small>(change anything at any time; the simulation keeps running)</small></span></h2>
       <div data-m="ground">
-        <div class="row"><label>地面</label><span class="seg" id="surf">
-          <button data-v="cloth" class="on">布（ざらざら）</button><button data-v="board">なめらかな板</button><button data-v="same">摩擦をどの向きも同じに</button></span></div>
-        <div class="row"><label>持ち上げ</label><span class="seg" id="lift">
-          <button data-v="1" class="on">曲がった所を浮かせる</button><button data-v="0">全部べったり</button></span></div>
-        <div class="row"><label>坂</label><input type="range" id="slope" min="-4" max="10" step="1" value="0" aria-label="坂の傾き"><span id="slopeV">0°</span></div>
-        <div class="row"><label>ウロコ</label><span class="seg" id="dig">
-          <button data-v="0" class="on">ふつう</button><button data-v="1">坂でウロコを立てる</button></span></div>
+        <div class="row"><label><span lang="ja">地面</span><span lang="en">Ground</span></label><span class="seg" id="surf">
+          <button data-v="cloth" class="on"><span lang="ja">布（ざらざら）</span><span lang="en">Cloth (rough)</span></button><button data-v="board"><span lang="ja">なめらかな板</span><span lang="en">Smooth board</span></button><button data-v="same"><span lang="ja">摩擦をどの向きも同じに</span><span lang="en">Same friction in every direction</span></button></span></div>
+        <div class="row"><label><span lang="ja">持ち上げ</span><span lang="en">Lifting</span></label><span class="seg" id="lift">
+          <button data-v="1" class="on"><span lang="ja">曲がった所を浮かせる</span><span lang="en">Lift the curves</span></button><button data-v="0"><span lang="ja">全部べったり</span><span lang="en">Whole body flat</span></button></span></div>
+        <div class="row"><label><span lang="ja">坂</span><span lang="en">Slope</span></label><input type="range" id="slope" min="-4" max="10" step="1" value="0" data-a="坂の傾き|Slope angle"><span id="slopeV">0°</span></div>
+        <div class="row"><label><span lang="ja">ウロコ</span><span lang="en">Scales</span></label><span class="seg" id="dig">
+          <button data-v="0" class="on"><span lang="ja">ふつう</span><span lang="en">Normal</span></button><button data-v="1"><span lang="ja">坂でウロコを立てる</span><span lang="en">Raise scales on slopes</span></button></span></div>
       </div>
       <div data-m="branch" hidden>
-        <div class="row"><label>枝の太さ</label><input type="range" id="bdia" min="1.5" max="21" step="0.5" value="3" aria-label="枝の太さ"><span id="bdiaV">3 cm</span></div>
+        <div class="row"><label>枝の太さ</label><input type="range" id="bdia" min="1.5" max="21" step="0.5" value="3" data-a="枝の太さ|Branch width"><span id="bdiaV">3 cm</span></div>
         <div class="row"><label>垂らし方</label><span class="seg" id="bside">
           <button data-v="both" class="on">左右交互に</button><button data-v="one">片がわだけ</button></span></div>
-        <div class="row"><label>ループの大きさ</label><input type="range" id="bloop" min="2" max="8" step="0.5" value="4" aria-label="ループが枝の真上から左右へ回りこむ長さ（枝の表面にそって）"><span id="bloopV">4 cm</span></div>
+        <div class="row"><label>ループの大きさ</label><input type="range" id="bloop" min="2" max="8" step="0.5" value="4" data-a="ループが枝の真上から左右へ回りこむ長さ（枝の表面にそって）|How far the loop reaches around the branch from the top (along its surface)"><span id="bloopV">4 cm</span></div>
         <div class="row"><label>つかみ方</label><span class="seg" id="bpinch">
           <button data-v="1" class="on">ループで枝をはさむ</button><button data-v="0">はさまない</button></span></div>
       </div>
       <div data-m="side" hidden>
-        <div class="row"><label>計算</label><span class="seg" id="sdim">
-          <button data-v="3d" class="on">立体（持ち上げた形まで）</button><button data-v="2d">平面（前の版）</button></span></div>
-        <div class="row d3"><label>地面</label><span class="seg" id="sground">
-          <button data-v="sand" class="on">砂（やわらかい）</button><button data-v="hard">かたい地面</button></span></div>
-        <div class="row d3"><label>持ち上げ</label><input type="range" id="av" min="0.1" max="1.2" step="0.05" value="1.0" aria-label="持ち上げる角度"><span id="avV">57°</span></div>
-        <div class="row d3"><label>ふれる長さ</label><input type="range" id="c3" min="0.2" max="0.6" step="0.01" value="0.4" aria-label="地面にふれる長さの割合"><span id="c3V">40%</span></div>
-        <div class="row d2" hidden><label>地面</label><span class="seg" id="ssurf">
-          <button data-v="same" class="on">砂（どの向きも同じ摩擦とみなす）</button><button data-v="cloth">布</button></span></div>
-        <div class="row d2" hidden><label>波のずれ</label><input type="range" id="delta" min="0" max="180" step="1" value="87" aria-label="左右の波と上下の波のずれ"><span id="deltaV">87°</span></div>
-        <div class="row d2" hidden><label>ふれる長さ</label><input type="range" id="contact" min="0.15" max="0.5" step="0.01" value="0.3" aria-label="地面にふれる長さの割合"><span id="contactV">30%</span></div>
+        <div class="row"><label><span lang="ja">計算</span><span lang="en">Model</span></label><span class="seg" id="sdim">
+          <button data-v="3d" class="on"><span lang="ja">立体（持ち上げた形まで）</span><span lang="en">3D (with the lifted shape)</span></button><button data-v="2d"><span lang="ja">平面（前の版）</span><span lang="en">Flat (older version)</span></button></span></div>
+        <div class="row d3"><label><span lang="ja">地面</span><span lang="en">Ground</span></label><span class="seg" id="sground">
+          <button data-v="sand" class="on"><span lang="ja">砂（やわらかい）</span><span lang="en">Sand (soft)</span></button><button data-v="hard"><span lang="ja">かたい地面</span><span lang="en">Hard ground</span></button></span></div>
+        <div class="row d3"><label><span lang="ja">持ち上げ</span><span lang="en">Lifting</span></label><input type="range" id="av" min="0.1" max="1.2" step="0.05" value="1.0" data-a="持ち上げる角度|Lifting angle"><span id="avV">57°</span></div>
+        <div class="row d3"><label><span lang="ja">ふれる長さ</span><span lang="en">Contact length</span></label><input type="range" id="c3" min="0.2" max="0.6" step="0.01" value="0.4" data-a="地面にふれる長さの割合|Share of the body touching the ground"><span id="c3V">40%</span></div>
+        <div class="row d2" hidden><label><span lang="ja">地面</span><span lang="en">Ground</span></label><span class="seg" id="ssurf">
+          <button data-v="same" class="on"><span lang="ja">砂（どの向きも同じ摩擦とみなす）</span><span lang="en">Sand (treated as same friction in every direction)</span></button><button data-v="cloth"><span lang="ja">布</span><span lang="en">Cloth</span></button></span></div>
+        <div class="row d2" hidden><label><span lang="ja">波のずれ</span><span lang="en">Wave offset</span></label><input type="range" id="delta" min="0" max="180" step="1" value="87" data-a="左右の波と上下の波のずれ|Offset between the side-to-side wave and the up-and-down wave"><span id="deltaV">87°</span></div>
+        <div class="row d2" hidden><label><span lang="ja">ふれる長さ</span><span lang="en">Contact length</span></label><input type="range" id="contact" min="0.15" max="0.5" step="0.01" value="0.3" data-a="地面にふれる長さの割合|Share of the body touching the ground"><span id="contactV">30%</span></div>
       </div>
       <div data-m="straight" hidden>
-        <div class="row"><label>地面</label><span class="seg" id="rsurf">
-          <button data-v="cloth" class="on">布</button><button data-v="board">なめらかな板</button></span></div>
-        <div class="row"><label>止まる時間</label><input type="range" id="duty" min="0.3" max="0.7" step="0.01" value="0.42" aria-label="皮が地面に止まっている時間の割合"><span id="dutyV">42%</span></div>
+        <div class="row"><label><span lang="ja">地面</span><span lang="en">Ground</span></label><span class="seg" id="rsurf">
+          <button data-v="cloth" class="on"><span lang="ja">布</span><span lang="en">Cloth</span></button><button data-v="board"><span lang="ja">なめらかな板</span><span lang="en">Smooth board</span></button></span></div>
+        <div class="row"><label><span lang="ja">止まる時間</span><span lang="en">Time at rest</span></label><input type="range" id="duty" min="0.3" max="0.7" step="0.01" value="0.42" data-a="皮が地面に止まっている時間の割合|Share of time the skin stays still on the ground"><span id="dutyV">42%</span></div>
       </div>
       <div data-m="tree" hidden>
-        <div class="row"><label>幹の太さ</label><input type="range" id="dia" min="1.5" max="8" step="0.5" value="2" aria-label="幹の太さ"><span id="diaV">2 cm</span></div>
-        <div class="row"><label>順番</label><span class="seg" id="order">
-          <button data-v="right" class="on">上をつかんでから下を放す</button><button data-v="wrong">下を先に放す</button></span></div>
-        <div class="row"><label>締めつけ</label><input type="range" id="safety" min="0.8" max="5" step="0.1" value="4" aria-label="締めつけの強さ"><span id="safetyV">4.0 倍</span></div>
-        <div class="row"><label>ウロコ</label><span class="seg" id="scales">
-          <button data-v="dig" class="on">立てて引っかける</button><button data-v="flat">立てない</button></span></div>
-        <div class="row"><label>幹の傾き</label><span class="seg" id="tilt">
-          <button data-v="90" class="on">まっすぐ立つ</button><button data-v="45">ななめ 45°</button></span></div>
+        <div class="row"><label><span lang="ja">幹の太さ</span><span lang="en">Trunk width</span></label><input type="range" id="dia" min="1.5" max="8" step="0.5" value="2" data-a="幹の太さ|Trunk diameter"><span id="diaV">2 cm</span></div>
+        <div class="row"><label><span lang="ja">順番</span><span lang="en">Order</span></label><span class="seg" id="order">
+          <button data-v="right" class="on"><span lang="ja">上をつかんでから下を放す</span><span lang="en">Grip above, then let go below</span></button><button data-v="wrong"><span lang="ja">下を先に放す</span><span lang="en">Let go below first</span></button></span></div>
+        <div class="row"><label><span lang="ja">締めつけ</span><span lang="en">Squeeze</span></label><input type="range" id="safety" min="0.8" max="5" step="0.1" value="4" data-a="締めつけの強さ|Squeezing strength"><span id="safetyV"><span lang="ja">4.0 倍</span><span lang="en">4.0×</span></span></div>
+        <div class="row"><label><span lang="ja">ウロコ</span><span lang="en">Scales</span></label><span class="seg" id="scales">
+          <button data-v="dig" class="on"><span lang="ja">立てて引っかける</span><span lang="en">Raise them to catch</span></button><button data-v="flat"><span lang="ja">立てない</span><span lang="en">Keep them flat</span></button></span></div>
+        <div class="row"><label><span lang="ja">幹の傾き</span><span lang="en">Trunk angle</span></label><span class="seg" id="tilt">
+          <button data-v="90" class="on"><span lang="ja">まっすぐ立つ</span><span lang="en">Upright</span></button><button data-v="45"><span lang="ja">ななめ 45°</span><span lang="en">Leaning 45°</span></button></span></div>
       </div>
       <p class="note" id="result"></p>
     </section>
 
     <section class="box" id="layers">
-      <h2>見えるもの</h2>
+      <h2><span lang="ja">見えるもの</span><span lang="en">Show</span></h2>
       <div class="chips" data-m="ground side">
-        <label><input type="checkbox" data-l="press" checked> 地面を押す所</label>
-        <label data-m="ground"><input type="checkbox" data-l="force" checked> 地面からの力（摩擦）</label>
-        <label><input type="checkbox" data-l="slip"> すべる向き</label>
-        <label data-m="ground"><input type="checkbox" data-l="trail" checked> 頭の通った跡</label>
+        <label><input type="checkbox" data-l="press" checked> <span lang="ja">地面を押す所</span><span lang="en">Where it pushes the ground</span></label>
+        <label data-m="ground"><input type="checkbox" data-l="force" checked> <span lang="ja">地面からの力（摩擦）</span><span lang="en">Force from the ground (friction)</span></label>
+        <label><input type="checkbox" data-l="slip"> <span lang="ja">すべる向き</span><span lang="en">Sliding direction</span></label>
+        <label data-m="ground"><input type="checkbox" data-l="trail" checked> <span lang="ja">頭の通った跡</span><span lang="en">Path of the head</span></label>
       </div>
       <div class="chips" data-m="branch" hidden>
         <label><input type="checkbox" data-l="bstuck" checked> 止まっている所</label>
         <label><input type="checkbox" data-l="btorque" checked> 回そうとする力</label>
       </div>
       <div class="chips" data-m="straight" hidden>
-        <label><input type="checkbox" data-l="skin" checked> おなかの皮</label>
-        <label><input type="checkbox" data-l="rforce" checked> 摩擦</label>
-        <label><input type="checkbox" data-l="plot" checked> 印の動き（グラフ）</label>
+        <label><input type="checkbox" data-l="skin" checked> <span lang="ja">おなかの皮</span><span lang="en">Belly skin</span></label>
+        <label><input type="checkbox" data-l="rforce" checked> <span lang="ja">摩擦</span><span lang="en">Friction</span></label>
+        <label><input type="checkbox" data-l="plot" checked> <span lang="ja">印の動き（グラフ）</span><span lang="en">Marker motion (graph)</span></label>
       </div>
       <div class="chips" data-m="tree" hidden>
-        <label><input type="checkbox" data-l="stuck" checked> 止まっている所</label>
-        <label><input type="checkbox" data-l="tforce" checked> 力（重さ・支える摩擦・締めつけ）</label>
-        <label><input type="checkbox" data-l="move" checked> 動く向き</label>
+        <label><input type="checkbox" data-l="stuck" checked> <span lang="ja">止まっている所</span><span lang="en">Parts holding still</span></label>
+        <label><input type="checkbox" data-l="tforce" checked> <span lang="ja">力（重さ・支える摩擦・締めつけ）</span><span lang="en">Forces (weight, holding friction, squeeze)</span></label>
+        <label><input type="checkbox" data-l="move" checked> <span lang="ja">動く向き</span><span lang="en">Direction of motion</span></label>
       </div>
     </section>
 
     <details id="more" class="box">
-      <summary>くわしく見る（数字・しくみのまとめ）</summary>
+      <summary><span lang="ja">くわしく見る（数字・しくみのまとめ）</span><span lang="en">More details (numbers and how it works)</span></summary>
       <div id="readout"></div>
       <section data-m="ground">
-        <h3>地面をうねる（横うねり）</h3>
-        <ol>
+        <h3 lang="ja">地面をうねる（横うねり）</h3>
+        <ol lang="ja">
           <li><b>形はヘビが決める</b>: 体の曲がりの波を、頭から尾へ送る。</li>
           <li><b>どこへ進むかは摩擦が決める</b>: 体のどの点も、地面に対して少しずつすべっている。地面からの摩擦はすべる向きと逆向き。摩擦を全部足すと 0、体を回す力も 0 になる動き方だけが起こる（体が軽くてゆっくりなので、勢いはほとんど効かない）。</li>
           <li><b>ウロコの向き</b>: おなかの大きなウロコは後ろ向きに重なっていて、地面のでこぼこに引っかかる。布の上では、前へすべる摩擦 0.11・後ろへ 0.14・横へ 0.20（眠らせたミルクヘビを坂の上ですべらせて測った値）。横へすべりにくいので、体を横へ押すと、押し返された力に前向きの分ができる。そりやスケートの刃と同じ。</li>
@@ -123,16 +133,34 @@
           <li><b>持ち上げ</b>: いちばん曲がった所を少し浮かせ、曲がりの少ない所で地面を押すと、前へ押す力が増えて速くなる（この計算では 1回のうねりで体長の 0.09 → 0.22。論文の模型では 0.17 → 0.23 で、この計算は持ち上げの効き方がずっと大きい。重さの配り方は推定）。</li>
           <li><b>坂</b>: 重さが後ろへ引くので、少しの坂で後ろへすべりはじめる。本物は 7 ± 2° まで登れた（ウロコを立てて摩擦を上げていると考えられている。「坂でウロコを立てる」の摩擦は、Hu ほか 2009 が坂の実測に合うように選んだ値）。</li>
         </ol>
+        <h3 lang="en">Slithering (lateral undulation)</h3>
+        <ol lang="en">
+          <li><b>The snake decides the shape</b>: it sends a wave of bending along its body, from head to tail.</li>
+          <li><b>Friction decides where it goes</b>: every point of the body slides a little against the ground. Friction from the ground points opposite to the sliding. The only motion that happens is the one where all the friction adds up to zero and the turning force on the body is also zero (the body is light and slow, so momentum barely matters).</li>
+          <li><b>Which way the scales face</b>: the large belly scales overlap pointing backward and catch on bumps in the ground. On cloth, friction is 0.11 sliding forward, 0.14 backward and 0.20 sideways (measured by letting sleeping milk snakes slide down a slope). Because sliding sideways is hard, when the body pushes sideways, the push back from the ground has a forward part. It works like a sled runner or an ice skate blade.</li>
+          <li><b>Same friction everywhere means no progress</b>: if friction is the same forward, backward and sideways and the whole body presses on the ground, the forward pushes and the dragging cancel out. The snake cannot go forward and slips back a little (in this model, 0.07 body lengths back per wave; lifting the curves changes how weight is spread, so it moves forward a little). Real snakes could not move well on a smooth board either.</li>
+          <li><b>Lifting</b>: lifting the most curved parts a little and pressing down where the body is straighter adds forward push, so the snake goes faster (in this model, 0.09 → 0.22 body lengths per wave. The paper's model gives 0.17 → 0.23, so lifting has a much bigger effect here. How the weight is spread is an estimate).</li>
+          <li><b>Slopes</b>: weight pulls the snake backward, so it starts sliding back on a gentle slope. Real snakes climbed up to 7 ± 2° (they are thought to raise their scales to increase friction. The friction for "Raise scales on slopes" is the value Hu et al. 2009 chose to match their slope measurements).</li>
+        </ol>
       </section>
       <section data-m="tree" hidden>
-        <h3>木を登る（アコーディオン）</h3>
-        <ol>
+        <h3 lang="ja">木を登る（アコーディオン）</h3>
+        <ol lang="ja">
           <li><b>止まっている所が支える</b>: 幹に巻きつけて締めつけた所は、幹に対して止まっている。止まっている所の摩擦（静止摩擦）が、体全体の重さを支える。</li>
           <li><b>のびる・ちぢむ</b>: 下でつかんだまま、まん中の折りたたみを伸ばすと頭が上へ。上でつかんだまま、まん中を縮めると下が引き上がる。動く所は幹の上をすべる。</li>
           <li><b>順番</b>: 上で新しくつかんでから、下を放す（Savidge ほか 2021 の観察）。逆にすると、どこも止まっていない時間ができて、すべり落ちる。</li>
           <li><b>巻く角度</b>: 幹を 180° より多く巻くと、180° より少ないときより強く締めつけられる（Astley & Jayne 2007 の考え）。この計算では簡単に「180° 以下では締めつけられない」と決め、つかみ1か所で巻ける長さを 11 cm（推定）にしているので、太い幹では 180° に届かず落ちる。ただし本物のコーンスネークは、登れなかった 5.7 cm の柱でも 180° より多く巻いていたと書かれている。太い幹を登れない本当の理由は、この計算ではまだ出せていない。</li>
           <li><b>締めつけ</b>: 本物のヘビは、すべらないのに要る力より強く締めつける。棒を登るヘビでは、要る力の3倍より大きいことが多い（Byrnes & Jayne 2014）。せまいすき間の壁を押すコーンスネークでは最大4倍・体重の9倍（Marvi & Hu 2012）。安全のための余裕と考えられている。このアプリのはじめの値 4倍は推定。</li>
           <li><b>ウロコを立てる</b>: 起きているヘビはウロコを立てて引っかけ、静止摩擦を約2倍にする（発泡スチロールの板の上で測った値。Marvi & Hu 2012）。立てないと、同じだけ支えるのに強く締めつけなければならない。この計算は幹の上でもこの値を借りている。本物の柱（ダクトテープを巻いた柱）で測った腹の静止摩擦は 0.28 で、上向きと下向きの差ははっきりしなかった（Astley & Jayne 2007）。この値なら、要る締めつけは今の約3倍になる。</li>
+        </ol>
+        <h3 lang="en">Tree climbing (concertina)</h3>
+        <ol lang="en">
+          <li><b>The still parts hold it up</b>: where the snake wraps and squeezes the trunk, that part does not move against the trunk. Friction at those still parts (static friction) holds up the weight of the whole body.</li>
+          <li><b>Stretch and bunch up</b>: gripping below and stretching out the folded middle pushes the head up. Gripping above and bunching up the middle pulls the lower part up. The moving parts slide over the trunk.</li>
+          <li><b>Order</b>: it grips higher up first, then lets go below (observed by Savidge et al. 2021). Doing it the other way leaves a moment when nothing is holding still, and the snake slides down.</li>
+          <li><b>Wrapping angle</b>: wrapping more than 180° around the trunk allows a stronger squeeze than wrapping less (the idea in Astley &amp; Jayne 2007). To keep it simple, this model says "no squeeze at 180° or less" and lets one grip wrap 11 cm of trunk (an estimate), so on a thick trunk it cannot reach 180° and falls. But real corn snakes were reported to wrap more than 180° even on the 5.7 cm pole they could not climb. This model cannot yet explain the real reason thick trunks cannot be climbed.</li>
+          <li><b>Squeezing</b>: real snakes squeeze harder than needed to stop slipping. Snakes climbing poles often grip with more than 3 times the needed force (Byrnes &amp; Jayne 2014). Corn snakes pushing on the walls of a narrow gap used up to 4 times, or 9 times their body weight (Marvi &amp; Hu 2012). This is thought to be a safety margin. The starting value of 4 times in this app is an estimate.</li>
+          <li><b>Raising the scales</b>: awake snakes raise their scales to catch, about doubling static friction (measured on a foam board; Marvi &amp; Hu 2012). Without this, the snake must squeeze harder to hold the same weight. This model borrows that value for the trunk too. Belly static friction measured on a real pole (wrapped in duct tape) was 0.28, with no clear difference between up and down (Astley &amp; Jayne 2007). With that value, the needed squeeze would be about 3 times what it is now.</li>
         </ol>
       </section>
       <section data-m="branch" hidden>
@@ -146,8 +174,8 @@
         </ol>
       </section>
       <section data-m="side" hidden>
-        <h3>横ばい（サイドワインディング）</h3>
-        <ol>
+        <h3 lang="ja">横ばい（サイドワインディング）</h3>
+        <ol lang="ja">
           <li><b>2つの波</b>: 左右に曲げる波と、上下に持ち上げる波を、同じ速さで頭から尾へ送る。2つは4分の1周くらいずれている（ヨコバイガラガラヘビで 1.51 ± 0.17 rad ≈ 87°。Marvi ほか 2014）。立体の計算では、このずれはアーチの形に含まれていて（ほぼ 90°）、ずれの値を別に入れてはいない。</li>
           <li><b>ふれている所は止まっている</b>: 地面にふれるのはいつも2か所くらい。ふれている所は地面に対してほとんど動かず（この計算で体の速さの1割以下）、持ち上げた所だけが動く。だから、すべりやすい砂でもくずさずに進める。</li>
           <li><b>平行な跡</b>: ふれた所は地面にななめの線の跡を残す。線の長さは体の長さくらい。跡と進む向きの角度は 33 ± 8°（論文）。</li>
@@ -156,25 +184,46 @@
           <li><b>平面の計算</b>（前の版）: 体を平らな面の上の線とし、持ち上げは「地面を押す重さの配り方」だけ。なめらかな2つの波の形。ふれている所が1割ほどすべり、止まっている所は 16%。立体の計算でも、なめらかな2つの波の形だと 18% すべる → ふれる所をまっすぐ置くことが大事だと分かる。</li>
           <li>砂がくずれる・流れることは入れていない（めりこみはばねとして入れた）。</li>
         </ol>
+        <h3 lang="en">Sidewinding</h3>
+        <ol lang="en">
+          <li><b>Two waves</b>: a side-to-side bending wave and an up-and-down lifting wave travel from head to tail at the same speed. They are offset by about a quarter cycle (1.51 ± 0.17 rad ≈ 87° in sidewinder rattlesnakes; Marvi et al. 2014). In the 3D model this offset is built into the arch shape (close to 90°), not entered as a separate value.</li>
+          <li><b>The touching parts stay still</b>: the body usually touches the ground in about two places. Those parts barely move against the ground (less than 10% of the body speed in this model), and only the lifted parts move. That is how the snake can travel on loose sand without breaking it up.</li>
+          <li><b>Parallel tracks</b>: where the body touches, it leaves slanted line-shaped tracks about as long as the body. The angle between the tracks and the direction of travel is 33 ± 8° (from the paper).</li>
+          <li><b>The wave offset matters</b>: with zero offset, the lifting and the pushing direction do not line up, and the touching parts slide a lot (in the flat model, speed drops to about 30% and sliding grows to 1.5 times the body speed. The flat model's sliding does not match real snakes, so treat this as a rough guide). On steep sand slopes, real snakes lengthen the touching part to avoid slipping (41% longer from 0° to 20°).</li>
+          <li><b>3D model</b> (default): the body is a 3D curve with set side-to-side and up-and-down directions, and the ground pushes back in proportion to how deep the body sinks in (each frame it finds the height and tilt that balance the weight). The touching parts lie straight on the ground and the lifted parts form arches. In this case the touching parts slide only about 5% of the body speed, and 45% of the body is holding still (real snakes: 44%).</li>
+          <li><b>Flat model</b> (older version): the body is a curve on a flat surface, and lifting only changes how weight presses on the ground. The two waves are smooth. About 10% sliding at the touching parts, and 16% of the body holding still. Even in the 3D model, smooth two-wave shapes slide 18%, which shows that laying the touching parts straight is what matters.</li>
+          <li>Sand caving in or flowing is not included (sinking in is modeled as a spring).</li>
+        </ol>
       </section>
       <section data-m="straight" hidden>
-        <h3>まっすぐ進む（ボアなど）</h3>
-        <ol>
+        <h3 lang="ja">まっすぐ進む（ボアなど）</h3>
+        <ol lang="ja">
           <li><b>うねらない</b>: 背骨と、それにつながった所は同じ速さで進む（Lissmann 1950。若いボア 57・60 cm。Newman & Jayne 2018 は 132 cm・916 g のボアで測った。このアプリはこちらの大きさ）。</li>
           <li><b>皮だけが動く</b>: おなかの皮が背骨に対して前後にずれる。縮んだ所は地面に止まり、伸びる所は前へすべる。この波が頭から尾へ流れる（波長はウロコ 96 枚ぶん。この計算では体に約2.8＝胴の 2.5 を尾まで広げた推定）。皮は背骨に対して約 19 mm 前後にずれ、止まっているのは1回の 42%（平均）。</li>
           <li><b>足場は止まった皮</b>: 止まった皮の摩擦が体を前へ押し、前へすべる皮の摩擦が引きずる。止まっている所が足りないと、止まるはずの皮が後ろへすべる。</li>
           <li><b>筋肉</b>: 皮と肋骨をつなぐ筋肉が、止まった皮を足場に背骨を前へ引き（肋骨と皮の下の筋）、皮をもとの位置へ戻す（上の筋）。速くするときは、止まる時間を短くし、回数と大きさを増やす（Newman & Jayne 2018）。</li>
         </ol>
+        <h3 lang="en">Moving straight (boas and others)</h3>
+        <ol lang="en">
+          <li><b>No wiggling</b>: the backbone and everything attached to it move forward at the same speed (Lissmann 1950, young boas 57 and 60 cm. Newman &amp; Jayne 2018 measured a 132 cm, 916 g boa; this app uses that size).</li>
+          <li><b>Only the skin moves</b>: the belly skin shifts forward and back against the backbone. Bunched-up parts stay still on the ground, and stretching parts slide forward. This wave runs from head to tail (the wavelength is 96 scales long; this model estimates about 2.8 waves on the body by extending the 2.5 on the trunk out to the tail). The skin shifts about 19 mm against the backbone and stays still 42% of each cycle (on average).</li>
+          <li><b>The still skin is the foothold</b>: friction on the still skin pushes the body forward, and friction on the skin sliding forward drags on it. If too little skin is holding still, skin that should be still slides backward.</li>
+          <li><b>Muscles</b>: muscles linking the skin and the ribs use the still skin as a foothold to pull the backbone forward (muscles between the ribs and the skin below), and pull the skin back into place (muscles above). To go faster, a boa shortens the still time and makes more and bigger steps (Newman &amp; Jayne 2018).</li>
+        </ol>
       </section>
       <section data-m="tree" hidden>
-        <h3>ほかの登り方（このアプリではまだ計算していない）</h3>
-        <ul>
+        <h3 lang="ja">ほかの登り方（このアプリではまだ計算していない）</h3>
+        <ul lang="ja">
           <li><b>投げなわ</b>（ミナミオオガシラ）: 太い柱に体の輪を1つだけかけて、輪の中の小さな曲がりで少しずつ上がる。とてもゆっくり（秒速 0.4 cm）で、よく休む（Savidge ほか 2021）。</li>
+        </ul>
+        <h3 lang="en">Other ways to climb (not modeled in this app yet)</h3>
+        <ul lang="en">
+          <li><b>Lasso</b> (brown tree snake): it loops its body once around a thick pole and inches upward using small bends inside the loop. Very slow (0.4 cm per second), with many rests (Savidge et al. 2021).</li>
         </ul>
       </section>
     </details>
 
-    <details id="about" class="box">
+    <details id="about" class="box" lang="ja">
       <summary>このアプリについて</summary>
       <p>ヘビが足を使わずに進むしくみを、体の形と摩擦の式で計算して見せる学習用のアプリです。体の形の動き（うねり・巻きつき）は決めて与え、体全体がどこへどれだけ動くかは、力のつりあいで毎コマ計算しています。</p>
       <h3>記録・推定・目印</h3>
@@ -218,18 +267,63 @@
       <h3>使っているもの</h3>
       <p>フォント: Google Fonts（SIL Open Font License）</p>
     </details>
+    <details id="about-en" class="box" lang="en">
+      <summary>About this app</summary>
+      <p>A learning app that shows how snakes move without legs, by calculating with the body's shape and the equations of friction. The changes in body shape (waves, wrapping) are given in advance, and where and how far the whole body moves is calculated every frame from the balance of forces.</p>
+      <h3>Measured, estimated and visual aids</h3>
+      <ul>
+        <li><b>Measured (values from papers)</b>: friction on cloth and on a smooth board, the wave shape (wavelength 0.4 body lengths, amplitude 0.1 body lengths, one wave every 2 s; the bending wave was set to α 12, k 3.6 to match), length and weight of the milk snakes (Hu et al. 2009). Scale friction (raised / flat, on a foam board) and the safety margin when pushing on the walls of a gap (Marvi &amp; Hu 2012). Grip on a pole is often more than 3 times the needed force (Byrnes &amp; Jayne 2014). Corn snakes on perches: length 125 cm, weight 421 g, body width 2.1 cm, and wrapping more than 180° allows a stronger squeeze (Astley &amp; Jayne 2007). A grip needs a length of about the trunk's circumference, and the order of gripping above before letting go below (Savidge et al. 2021). On horizontal branches, concertina at every width, belly static friction 0.28, and still sections often longer than 0.25 of the trunk length (Astley &amp; Jayne 2007). The backbone moves at a steady speed while the skin stops and goes (Lissmann 1950). Boa length and weight, wavelength, wave speed, skin shift 19 mm, time at rest 42% (Newman &amp; Jayne 2018). Sidewinder rattlesnake length and weight, wave offset 1.51 rad, always touching in two places, track angle 33 ± 8°, sinking 1.4 cm into sand (Marvi et al. 2014). Holding still for 44% of the body (Astley et al. 2015).</li>
+        <li><b>Estimated</b>: how weight is spread when lifting (reduced by the square of the curvature; Hu et al. 2009 only say "put weight where curvature is zero"). Friction with scales raised on slopes (in the ratio of μf 0.3, which Hu et al. 2009 found to match their slope measurements). On trees: the order and timing of moves (4 s per cycle), the length one grip can wrap, 11 cm (fitted to the measurement that a 4.1 cm pole could be climbed and a 5.7 cm pole could not; Savidge et al. 2021's "about the circumference" is not used), no squeeze at 180° or less (the paper only says more than 180° is stronger), a squeeze margin of 4 times, how support is shared between still parts (in proportion to each one's limit), spacing of the wrapping spiral (twice the body width), the share of folded length, and an even squeeze where wrapped. Trunk friction borrows Marvi &amp; Hu 2012's value on foam (different from the 0.28 measured on the belly on the same pole, and from real tree bark). Boa body width, step length 4.5 cm (from the 19 mm skin shift), and the shape of the skin motion. Sidewinding: one wave per 2 s, and treating sand as "same friction in every direction". 3D version: side bulge of the arch 2.2 rad, up-down tilt 1.0 rad, contact length 40% (fitted to the track angle and the still share), and ground softness. Flat version: bending α 18, contact length 30%.</li>
+        <li><b>Visual aids</b>: length of force arrows (scaled to be easy to see), grains and scale marks on the ground, the close-up of scales (a simplified drawing), green lines on still parts, wave markers, dotted body behind the trunk, backbone dots and skin marks, dots on sidewinding tracks.</li>
+      </ul>
+      <h3>Simplifications</h3>
+      <ul>
+        <li>Ground: the body is a line on a flat surface. Momentum (inertia) is only included for the whole body's center and rotation. Friction does not depend on speed (only on the sliding direction). Friction while sliding (kinetic) uses the same value as when still (the paper only says they are proportional). The tail does not get thinner. Pushing the body against stones or grass (which real snakes often do) is not included.</li>
+        <li>Straight: the backbone is a straight rod that does not bend, the skin presses the ground with even weight, and static and kinetic friction are equal (same assumption as Hu et al. 2009). Skin moving forward is treated as dragging with its full weight (real snakes lift the forward-moving scales, so this overstates sliding). Changing the time at rest does not change step length or step rate. Ground friction is an estimate borrowed from milk snakes on cloth and board (Hu et al. 2009); floor friction was not measured in Newman &amp; Jayne 2018.</li>
+        <li>Sidewinding (3D): the body shape is set by side-to-side and up-and-down directions, with no twisting around its own axis. The ground is a spring that pushes back in proportion to sinking depth ("hard ground" is just a stiffer spring, so it still sinks 4 mm), and friction is the same in every direction. Tilts are assumed to be small. Sidewinding (flat): the same friction equations as slithering, with the up-and-down wave only changing how weight is spread.</li>
+        <li>Tree: the body is a single line along the trunk (up and down only). Wrapped parts press evenly on the trunk. Falling off sideways and twisting are not included.</li>
+        <li>For comparisons with real snakes, see "Compared with real snakes" below.</li>
+        <li>Do not use this for decisions about keeping snakes. Please stay away from wild snakes.</li>
+      </ul>
+      <h3>Compared with real snakes (2026-10-18)</h3>
+      <p>We entered body shape, size and timing from real measurements, then compared the motion that came out of the calculation with real measurements in the papers.</p>
+      <ul>
+        <li><b>Slithering</b>: speed 0.22 body lengths per wave (real 0.22 ± 0.08 ◯. But this depends on the estimated weight spreading when lifting and on how momentum is included; with slow motion where momentum barely matters, it drops to 0.17). Using the same shape and friction as the paper's model gives 0.12 and 0.20 instead of the paper's 0.17 (even weight) and 0.23 (lifting) ✕ (the cause is not known yet). On slopes with raised scales it nearly stops at 6° and slides back at 7° (real 7 ± 2°; the friction was fitted to slopes, so this is not a real comparison). On a smooth board it moves at half its speed on cloth (real snakes could not move well ✕).</li>
+        <li><b>Sidewinding (3D)</b>: track angle 33°, 45% of the body holding still (real 33 ± 8°, 44%; the arch size was fitted to these two, so they match by design). Sliding at the touching parts is 5% of the body speed (real: "no slipping" ◯; not fitted to a number, but the shape was chosen by trying shapes with less sliding). Smaller lifting causes sliding (in Marvi et al. 2014, "slips when lifting is too small" was the robot; for real snakes they only say they do not slip). Sinking about 1.2 cm (real sand 1.4 ± 1.3 cm; ground softness was fitted to this). Average 2.6 touching places (real: always two ✕). The speed of about 6.5 cm per second comes from the 2 s per wave (estimated).</li>
+        <li><b>Sidewinding (flat, older version)</b>: track angle 34° (fitted). Sliding 10% at touching parts and 16% holding still (✕).</li>
+        <li><b>Straight</b>: the speed of 1.5 cm per second follows from the 4.5 cm step and 3 s per cycle we entered, so it is not a real comparison (real 0.7–2.6 cm). With 42% time at rest the skin slides about 3% of a step. Real boas also slide 7% of a step when slow, but real ones slide more when slower, while the model slides more when the time at rest is shorter, so the trend is reversed ✕. Shortening the time at rest does not speed it up, because the model keeps step length and rate the same (real boas speed up with more and longer steps ✕).</li>
+        <li><b>Tree climbing</b>: it can climb up to 4 cm and falls at 5 cm or more. Real snakes also climbed up to 4.1 cm and not 5.7 cm, but the 11 cm wrap length was fitted to this boundary, so it is not a real comparison (fitted). In reality, the number of snakes that made it drops gradually as poles get thicker (4, 3, 2, 0), but the model only has climb or fall ✕. The reason for falling also differs: in the model it is "cannot reach 180°", but real snakes wrapped more than 180° even at 5.7 cm ✕. The speed of about 6 cm per second (23 cm per cycle) comes from the time and length we set, not from a calculated comparison (estimate). Speed does not change with width (real snakes are slower on thicker poles ✕). One grip does not wrap all the way around even a thin trunk (on upright poles, real snakes often coil more than once around ✕).</li>
+      </ul>
+      <h3>Main sources</h3>
+      <ul>
+        <li>D. L. Hu, J. Nirody, T. Scott, M. J. Shelley, "The mechanics of slithering locomotion", <i>PNAS</i> 106(25), 10081–10085 (2009) (<a href="https://doi.org/10.1073/pnas.0812533106" target="_blank" rel="noopener">paper</a>; friction values, wave equation, lifting, slopes)</li>
+        <li>H. Marvi, D. L. Hu, "Friction enhancement in concertina locomotion of snakes", <i>J. R. Soc. Interface</i> 9, 3067–3080 (2012) (<a href="https://doi.org/10.1098/rsif.2012.0132" target="_blank" rel="noopener">paper</a>; friction with raised scales, pushing margin up to 4 times or 9 times body weight)</li>
+        <li>G. Byrnes, B. C. Jayne, "Gripping during climbing of arboreal snakes may be safe but not economical", <i>Biology Letters</i> 10, 20140434 (2014) (<a href="https://doi.org/10.1098/rsbl.2014.0434" target="_blank" rel="noopener">paper</a>; grip is often more than 3 times the needed force)</li>
+        <li>H. C. Astley, B. C. Jayne, "Effects of perch diameter and incline on the kinematics, performance and modes of arboreal locomotion of corn snakes (<i>Elaphe guttata</i>)", <i>J. Exp. Biol.</i> 210, 3862–3872 (2007) (<a href="https://doi.org/10.1242/jeb.009050" target="_blank" rel="noopener">paper</a>; concertina on perches, thick and steep perches cannot be climbed)</li>
+        <li>J. A. Savidge, T. F. Seibert, M. Kastner, B. C. Jayne, "Lasso locomotion expands the climbing repertoire of snakes", <i>Current Biology</i> 31, R7–R8 (2021) (<a href="https://doi.org/10.1016/j.cub.2020.11.050" target="_blank" rel="noopener">paper</a>; grip above before letting go below, length about the circumference, lasso)</li>
+        <li>H. C. Astley et al., "Modulation of orthogonal body waves enables high maneuverability in sidewinding locomotion", <i>PNAS</i> 112, 6200–6205 (2015) (<a href="https://doi.org/10.1073/pnas.1418965112" target="_blank" rel="noopener">paper</a>; two waves, 44% holding still)</li>
+        <li>J. Gray, "The mechanism of locomotion in snakes", <i>J. Exp. Biol.</i> 23, 101–120 (1946) (<a href="https://doi.org/10.1242/jeb.23.2.101" target="_blank" rel="noopener">paper</a>; pushing off pegs, push is at right angles to the body)</li>
+        <li>B. C. Jayne, "What defines different modes of snake locomotion?", <i>Integr. Comp. Biol.</i> 60(1), 156–170 (2020) (<a href="https://doi.org/10.1093/icb/icaa017" target="_blank" rel="noopener">paper</a>; among stones and grass the body follows the head's path)</li>
+        <li>H. W. Lissmann, "Rectilinear locomotion in a snake (<i>Boa occidentalis</i>)", <i>J. Exp. Biol.</i> 26, 368–379 (1950) (<a href="https://doi.org/10.1242/jeb.26.4.368" target="_blank" rel="noopener">paper</a>; steady backbone, skin stops and goes, two waves, 2–3 cm per cycle)</li>
+        <li>S. J. Newman, B. C. Jayne, "Crawling without wiggling: muscular mechanisms and kinematics of rectilinear locomotion in boa constrictors", <i>J. Exp. Biol.</i> 221 (2018) (<a href="https://doi.org/10.1242/jeb.166199" target="_blank" rel="noopener">paper</a>; muscles pull the backbone using the still skin as a foothold, shorter still time to go faster)</li>
+        <li>H. Marvi et al., "Sidewinding with minimal slip: Snake and robot ascent of sandy slopes", <i>Science</i> 346, 224–229 (2014) (<a href="https://doi.org/10.1126/science.1255718" target="_blank" rel="noopener">paper</a>; 48 cm, 98 g, wave offset 1.51 rad, two touching places, track angle 33°, contact length 41% longer on slopes)</li>
+      </ul>
+      <h3>Credits</h3>
+      <p>Fonts: Google Fonts (SIL Open Font License)</p>
+    </details>
   </main>
 </div>
 
-<script src="js/ground.js?v=5"></script>
-<script src="js/tree.js?v=5"></script>
-<script src="js/rect.js?v=4"></script>
-<script src="js/side3d.js?v=5"></script>
-<script src="js/draw-ground.js?v=4"></script>
-<script src="js/draw-tree.js?v=4"></script>
-<script src="js/ui.js?v=4"></script>
-<script src="js/mode-ground.js?v=4"></script>
-<!-- 枝をわたる（隠した）: <script src="js/branch.js?v=4"></script><script src="js/mode-branch.js?v=4"></script> -->
-<script src="js/mode-rect.js?v=5"></script>
-<script src="js/mode-tree.js?v=5"></script>
-<script src="js/main.js?v=4"></script>
+<script>/* 属性の文（data-t="日本語|English" → title、data-a → aria-label）。I18N 2.2 */document.querySelectorAll('[data-t]').forEach(function(e){var p=e.dataset.t.split('|');e.title=L(p[0],p[1]);});document.querySelectorAll('[data-a]').forEach(function(e){var p=e.dataset.a.split('|');e.setAttribute('aria-label',L(p[0],p[1]));});document.querySelectorAll('#langsw button').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.l===LANG));b.onclick=function(){if(b.dataset.l!==LANG)setLang(b.dataset.l);};});</script>
+<script src="js/ground.js?v=6"></script>
+<script src="js/tree.js?v=6"></script>
+<script src="js/rect.js?v=5"></script>
+<script src="js/side3d.js?v=6"></script>
+<script src="js/draw-ground.js?v=5"></script>
+<script src="js/draw-tree.js?v=5"></script>
+<script src="js/ui.js?v=5"></script>
+<script src="js/mode-ground.js?v=5"></script>
+<!-- 枝をわたる（隠した）: <script src="js/branch.js?v=5"></script><script src="js/mode-branch.js?v=5"></script> -->
+<script src="js/mode-rect.js?v=6"></script>
+<script src="js/mode-tree.js?v=6"></script>
+<script src="js/main.js?v=5"></script>

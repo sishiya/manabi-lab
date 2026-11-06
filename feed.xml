@@ -5,8 +5,16 @@
   <link href="https://sishiya.github.io/manabi-lab/"/>
   <link rel="self" href="https://sishiya.github.io/manabi-lab/feed.xml"/>
   <id>https://sishiya.github.io/manabi-lab/feed.xml</id>
-  <updated>2026-11-03T00:00:00+09:00</updated>
+  <updated>2026-11-06T00:00:00+09:00</updated>
   <author><name>しし屋</name></author>
+  <entry>
+    <title>ヘビが進むしくみ</title>
+    <link href="https://sishiya.github.io/manabi-lab/snake-move/"/>
+    <id>https://sishiya.github.io/manabi-lab/snake-move/</id>
+    <published>2026-10-18T00:00:00+09:00</published>
+    <updated>2026-11-06T00:00:00+09:00</updated>
+    <summary>足のないヘビは、どうやって前へ進むのか。地面をうねる・横ばい・まっすぐ・木を登るの4つの進み方を、ウロコの摩擦と力のつりあいで計算する。体のどこが地面を押し、どこが止まっていて、どこがすべっているかが見える。地面や坂、幹の太さを変えて試せる。</summary>
+  </entry>
   <entry>
     <title>ひとしずくの進化</title>
     <link href="https://sishiya.github.io/manabi-lab/drop-evolution/"/>

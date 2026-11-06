@@ -13,17 +13,17 @@ window.MODES = window.MODES || {};
   // 枝のまわりの角度 a の所の、画面の上向きの高さ（枝の軸から）と、見えるか（こちらを向いているか）
   const upOf = (R, a) => R * (Math.cos(a) * Math.cos(EL) - Math.sin(a) * Math.sin(EL));
   const depOf = a => Math.sin(a + EL);
-  const PHASE = ['', '① 後ろでつかんで、まん中をのばす（頭が前へ）', '② 前でつかむ', '③ 後ろをゆるめる', '④ 前でつかんで、まん中をちぢめる（後ろが前へ）', '⑤ 後ろでつかむ', '⑥ 前をゆるめる'];
+  const PHASE = ['', L('① 後ろでつかんで、まん中をのばす（頭が前へ）', '① Grip at the back, stretch the middle (head goes forward)'), L('② 前でつかむ', '② Grip at the front'), L('③ 後ろをゆるめる', '③ Loosen the back'), L('④ 前でつかんで、まん中をちぢめる（後ろが前へ）', '④ Grip at the front, pull the middle in (back comes forward)'), L('⑤ 後ろでつかむ', '⑤ Grip at the back'), L('⑥ 前をゆるめる', '⑥ Loosen the front')];
 
   const M = {
     id: 'branch', s: null, hist: [], speed: null,
     layers: { bstuck: true, btorque: true },
-    intro: '<b>つぎへ ▶</b> で順に見る。水平な枝の上のコーンスネーク。体を左右に曲げたループで枝の上をまたぎ、ときどき止まってつかむ（Astley & Jayne 2007）。',
+    intro: L('<b>つぎへ ▶</b> で順に見る。水平な枝の上のコーンスネーク。体を左右に曲げたループで枝の上をまたぎ、ときどき止まってつかむ（Astley & Jayne 2007）。', 'Press <b>Next ▶</b> to go step by step. A corn snake on a level branch. It straddles the branch with loops bent to the left and right, and now and then stops to grip (Astley & Jayne 2007).'),
     tour: [
-      { say: '右上の窓は、<b>枝を尾のほうから見た図</b>（切り口）。体を左右に垂らして、<b>重心（黄色の点）</b>が枝の真上からずれないようにしている。', ring: 'win', layers: { bstuck: false, btorque: false } },
-      { say: '進み方は木登りと同じアコーディオン。<b>緑の所が枝に止まっている</b>（足場）。ループで枝を<b>はさんで</b>つかむ。', ring: 'stuck', layers: { bstuck: true, btorque: false } },
-      { say: '赤い矢印は、重さが体を<b>枝のまわりに回そうとする力</b>。止まっている所の摩擦（はさむ力で強くなる）が、これをおさえる。窓の下の棒が「上限の何%」。', ring: 'win', layers: { bstuck: true, btorque: true } },
-      { say: '<b>試してみよう</b>: 片がわだけに垂らすと…／はさまないと…（細い枝ほど、片よりが効く）', act: [['片がわだけ', () => UI.set('bside', 'one')], ['はさまない', () => UI.set('bpinch', '0')], ['もとにもどす', () => { UI.set('bside', 'both'); UI.set('bpinch', '1'); }]], layers: { bstuck: true, btorque: true } },
+      { say: L('右上の窓は、<b>枝を尾のほうから見た図</b>（切り口）。体を左右に垂らして、<b>重心（黄色の点）</b>が枝の真上からずれないようにしている。', 'The top-right window shows <b>the branch seen from the tail end</b> (its cut face). The body hangs down on both sides so the <b>center of mass (yellow dot)</b> stays right above the branch.'), ring: 'win', layers: { bstuck: false, btorque: false } },
+      { say: L('進み方は木登りと同じアコーディオン。<b>緑の所が枝に止まっている</b>（足場）。ループで枝を<b>はさんで</b>つかむ。', 'It moves like an accordion, the same as tree climbing. <b>Green parts are still on the branch</b> (footholds). The loops <b>pinch</b> the branch to grip it.'), ring: 'stuck', layers: { bstuck: true, btorque: false } },
+      { say: L('赤い矢印は、重さが体を<b>枝のまわりに回そうとする力</b>。止まっている所の摩擦（はさむ力で強くなる）が、これをおさえる。窓の下の棒が「上限の何%」。', 'The red arrow is the <b>turning force (twist)</b> from the weight, trying to roll the body around the branch. Friction at the still parts (stronger when pinching) holds it back. The bar under the window shows what % of the limit is used.'), ring: 'win', layers: { bstuck: true, btorque: true } },
+      { say: L('<b>試してみよう</b>: 片がわだけに垂らすと…／はさまないと…（細い枝ほど、片よりが効く）', '<b>Try it</b>: hang the body on one side only... / do not pinch... (the thinner the branch, the more a lopsided body matters)'), act: [[L('片がわだけ', 'One side only'), () => UI.set('bside', 'one')], [L('はさまない', 'No pinching'), () => UI.set('bpinch', '0')], [L('もとにもどす', 'Put it back'), () => { UI.set('bside', 'both'); UI.set('bpinch', '1'); }]], layers: { bstuck: true, btorque: true } },
     ],
     make() { M.s = BRANCH.make(Object.assign({}, BP)); M.hist = []; M.speed = null; },
     reset() { M.make(); },
@@ -41,8 +41,8 @@ window.MODES = window.MODES || {};
       for (let left = dt; left > 1e-9; left -= 0.004) { BRANCH.step(s, Math.min(0.004, left)); M.hist.push([s.t.t, s.t.Z]); }
       while (M.hist.length && M.hist[0][0] < s.t.t - s.t.p.tau) M.hist.shift();
       if (M.hist.length > 10 && s.t.t > s.t.p.tau * 0.9) { const a = M.hist[0], b = M.hist[M.hist.length - 1]; M.speed = (b[1] - a[1]) / (b[0] - a[0]); }
-      if (s.fell && s.fallT > 3) { M.reset(); A.snapCam(); A.note('もう一度、枝の上から'); }
-      if (s.t.Z > 4) { M.reset(); A.snapCam(); A.note('はじめの場所へもどした'); }
+      if (s.fell && s.fallT > 3) { M.reset(); A.snapCam(); A.note(L('もう一度、枝の上から', 'Again, from the top of the branch')); }
+      if (s.t.Z > 4) { M.reset(); A.snapCam(); A.note(L('はじめの場所へもどした', 'Moved back to the start')); }
     },
     gy: c => c.w < 520 ? Math.max(c.h * 0.6, c.h - 78) : c.h * 0.55,
     // 広い画面では、右の窓のぶん図を左へずらす（せまい画面では窓は上、枝は下）
@@ -88,7 +88,7 @@ window.MODES = window.MODES || {};
       win(g, c, s, A);
       if (s.fell) {
         g.fillStyle = 'rgba(11,20,28,.85)'; g.font = '14px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'center';
-        const msg = '枝のまわりに回って、横へ回り落ちた', tw = g.measureText(msg).width + 20;
+        const msg = L('枝のまわりに回って、横へ回り落ちた', 'It rolled around the branch and fell off the side'), tw = g.measureText(msg).width + 20;
         g.fillRect(c.w / 2 - tw / 2, 54, tw, 26); g.fillStyle = '#ff9a8b'; g.fillText(msg, c.w / 2, 72);
       }
       const rg = M.ring(A); if (rg) DRAWG.ring(g, rg, A.time);
@@ -113,15 +113,16 @@ window.MODES = window.MODES || {};
     tipPos: (i, A) => { const s = M.s; return [M.sx(A.cam, s.t.z[i]), M.gy(A.cam) - upOf(s.R, s.th[i] + s.phi) * A.cam.s]; },
     tip(i) {
       const s = M.s, t = s.t, z = t.zone[i], v = t.v[i], deg = (s.th[i] + s.phi) * 180 / Math.PI;
-      const name = ['尾', '後ろのつかみ', 'まん中（のび縮みする所）', '前のつかみ', '頭'][z];
-      const st = t.stuck[i] ? '<span style="color:var(--acc)">枝に止まっている</span>。ここの摩擦が、前へも・まわりの向きにも体を支える' :
-        Math.abs(v) < 0.001 ? 'ほとんど動いていない' : `枝の上を${v > 0 ? '前' : '後ろ'}へすべっている（秒速 ${f1(Math.abs(v) * 100)} cm）`;
-      return `<b>${name}</b><br>${st}<br>枝の真上から ${Math.abs(deg) < 3 ? 'ほぼ真上' : `${deg > 0 ? '手前' : '奥'}へ ${f0(Math.abs(deg))}°`}（窓の図では${deg > 0 ? '右' : '左'}）`;
+      const name = [L('尾', 'Tail'), L('後ろのつかみ', 'Back grip'), L('まん中（のび縮みする所）', 'Middle (stretches and shrinks)'), L('前のつかみ', 'Front grip'), L('頭', 'Head')][z];
+      const st = t.stuck[i] ? L('<span style="color:var(--acc)">枝に止まっている</span>。ここの摩擦が、前へも・まわりの向きにも体を支える', '<span style="color:var(--acc)">Still on the branch</span>. Friction here holds the body both forward and against rolling') :
+        Math.abs(v) < 0.001 ? L('ほとんど動いていない', 'Hardly moving') : L(`枝の上を${v > 0 ? '前' : '後ろ'}へすべっている（秒速 ${f1(Math.abs(v) * 100)} cm）`, `Sliding ${v > 0 ? 'forward' : 'backward'} on the branch (${f1(Math.abs(v) * 100)} cm/s)`);
+      return L(`<b>${name}</b><br>${st}<br>枝の真上から ${Math.abs(deg) < 3 ? 'ほぼ真上' : `${deg > 0 ? '手前' : '奥'}へ ${f0(Math.abs(deg))}°`}（窓の図では${deg > 0 ? '右' : '左'}）`,
+        `<b>${name}</b><br>${st}<br>From the top of the branch: ${Math.abs(deg) < 3 ? 'almost right on top' : `${f0(Math.abs(deg))}° toward the ${deg > 0 ? 'front' : 'back'}`} (${deg > 0 ? 'right' : 'left'} in the window)`);
     },
-    legend: () => [[C.stuck, '止まっている'], [C.com, '重心'], [C.grav, '回そうとする力']],
+    legend: () => [[C.stuck, L('止まっている', 'Still')], [C.com, L('重心', 'Center of mass')], [C.grav, L('回そうとする力', 'Turning force')]],
     init() {
       const vb = $('bView');
-      vb.onclick = () => { const top = EL < 1; EL = (top ? 90 : 35) * Math.PI / 180; vb.classList.toggle('on', top); vb.textContent = top ? '横から' : '上から'; };
+      vb.onclick = () => { const top = EL < 1; EL = (top ? 90 : 35) * Math.PI / 180; vb.classList.toggle('on', top); vb.textContent = top ? L('横から', 'From the side') : L('上から', 'From above'); };
       UI.slider('bdia', v => v + ' cm', v => { BP.D = v / 100; M.make(); });
       UI.seg('bside', v => { BP.side = v; M.s.p.side = v; });
       UI.slider('bloop', v => v + ' cm', v => { BP.loop = v / 100; M.s.p.loop = v / 100; });
@@ -130,16 +131,20 @@ window.MODES = window.MODES || {};
     refresh(A) {
       const r = $('ruler'), res = $('result'), s = M.s, t = s.t, p = s.p;
       const use = s.cap > 1e-12 ? Math.abs(s.tau) / s.cap : (Math.abs(s.tau) > 1e-9 ? 99 : 0);
-      if (s.fell) r.innerHTML = '<span class="bad">横へ回り落ちた！</span> 回す力が、止まっている所の摩擦をこえた';
-      else r.innerHTML = `${M.speed == null ? '' : `前へ 秒速 <span class="big">${f1(M.speed * 100)}</span> cm・`}回す力 おさえる力の上限の <span class="big">${f0(Math.min(999, use * 100))}</span>%${s.rolling ? '・<span class="bad">回っている</span>' : ''}`;
+      if (s.fell) r.innerHTML = L('<span class="bad">横へ回り落ちた！</span> 回す力が、止まっている所の摩擦をこえた', '<span class="bad">It rolled off the side!</span> The turning force beat the friction at the still parts');
+      else r.innerHTML = L(`${M.speed == null ? '' : `前へ 秒速 <span class="big">${f1(M.speed * 100)}</span> cm・`}回す力 おさえる力の上限の <span class="big">${f0(Math.min(999, use * 100))}</span>%${s.rolling ? '・<span class="bad">回っている</span>' : ''}`,
+        `${M.speed == null ? '' : `Forward <span class="big">${f1(M.speed * 100)}</span> cm/s · `}Turning force <span class="big">${f0(Math.min(999, use * 100))}</span>% of the holding limit${s.rolling ? ' · <span class="bad">rolling</span>' : ''}`);
       const above = s.yc > 0;
       let tx;
-      if (!p.pinch) tx = 'はさまない: 体の重さで押しつける分の摩擦しかなく、止まっていられる所が少ない。体が枝の上をすべり、すべっている所はまわりの向きにもおさえが効かない。';
-      else if (p.side === 'one') tx = `片がわだけに垂らす: 重心が枝の真上から ${f1(Math.abs(s.xc) * 100)} cm ずれて、いつも同じ向きに回そうとする。おさえる摩擦の腕は枝の半径なので、細い枝ほどおさえきれない。`;
-      else tx = `重心は枝の軸より ${f1(Math.abs(s.yc) * 100)} cm ${above ? '上（上にのっている＝少し回ると、回す力が増える）' : '下（ぶら下がっている＝回っても、もとにもどる）'}。左右に垂らすので、回す力はつかみなおす途中だけ出る。`;
+      if (!p.pinch) tx = L('はさまない: 体の重さで押しつける分の摩擦しかなく、止まっていられる所が少ない。体が枝の上をすべり、すべっている所はまわりの向きにもおさえが効かない。', 'No pinching: the only friction comes from the body\'s own weight pressing down, so few parts can stay still. The body slides on the branch, and sliding parts cannot hold against rolling either.');
+      else if (p.side === 'one') tx = L(`片がわだけに垂らす: 重心が枝の真上から ${f1(Math.abs(s.xc) * 100)} cm ずれて、いつも同じ向きに回そうとする。おさえる摩擦の腕は枝の半径なので、細い枝ほどおさえきれない。`,
+        `Hanging on one side only: the center of mass is ${f1(Math.abs(s.xc) * 100)} cm off the top of the branch, so it always tries to roll the same way. The friction holds with a lever as long as the branch radius, so thinner branches cannot hold it.`);
+      else tx = L(`重心は枝の軸より ${f1(Math.abs(s.yc) * 100)} cm ${above ? '上（上にのっている＝少し回ると、回す力が増える）' : '下（ぶら下がっている＝回っても、もとにもどる）'}。左右に垂らすので、回す力はつかみなおす途中だけ出る。`,
+        `The center of mass is ${f1(Math.abs(s.yc) * 100)} cm ${above ? 'above the branch axis (sitting on top, so a small roll makes the turning force grow)' : 'below the branch axis (hanging, so after a roll it swings back)'}. Because the body hangs on both sides, the turning force appears only while it changes grips.`);
       res.textContent = tx; res.classList.toggle('bad', s.fell || !p.pinch || p.side === 'one');
-      $('readout').innerHTML = `<span>いま <b>${PHASE[t.phase || 1]}</b></span><span>回った角度 <b>${f0(s.phi * 180 / Math.PI)}°</b></span><span>止まっている所 <b>${f0(t.stuckFrac * 100)}%</b></span><span>枝のまわりの摩擦 <b>${BRANCH.MU_ROLL}</b></span>`;
-      if (A.step.branch === 0 && !s.fell) $('say').innerHTML = `${M.intro}<br><span style="color:var(--acc)">いま: ${PHASE[t.phase || 1]}</span>`;
+      $('readout').innerHTML = L(`<span>いま <b>${PHASE[t.phase || 1]}</b></span><span>回った角度 <b>${f0(s.phi * 180 / Math.PI)}°</b></span><span>止まっている所 <b>${f0(t.stuckFrac * 100)}%</b></span><span>枝のまわりの摩擦 <b>${BRANCH.MU_ROLL}</b></span>`,
+        `<span>Now <b>${PHASE[t.phase || 1]}</b></span><span>Rolled angle <b>${f0(s.phi * 180 / Math.PI)}°</b></span><span>Still parts <b>${f0(t.stuckFrac * 100)}%</b></span><span>Friction around the branch <b>${BRANCH.MU_ROLL}</b></span>`);
+      if (A.step.branch === 0 && !s.fell) $('say').innerHTML = `${M.intro}<br><span style="color:var(--acc)">${L('いま', 'Now')}: ${PHASE[t.phase || 1]}</span>`;
     },
   };
   const midX = () => (M.s.t.z[0] + M.s.t.z[BRANCH.N - 1]) / 2;
@@ -205,13 +210,13 @@ window.MODES = window.MODES || {};
     }
     g.restore();
     g.font = '12px "Zen Kaku Gothic New", sans-serif'; g.textAlign = 'left'; g.fillStyle = C.ink;
-    g.fillText('枝を尾のほうから見る', W.x + 6, W.y + 14);
+    g.fillText(L('枝を尾のほうから見る', 'View from the tail end'), W.x + 6, W.y + 14);
     // おさえる力の上限に対する、回す力の棒
     const use = s.cap > 1e-12 ? Math.abs(s.tau) / s.cap : (Math.abs(s.tau) > 1e-9 ? 9 : 0), bw = W.w - 12, by = W.y + W.h - 26;
     g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(W.x + 6, by, bw, 8);
     g.fillStyle = use > 1 ? C.grav : C.stuck; g.fillRect(W.x + 6, by, bw * Math.min(1, use), 8);
     g.fillStyle = use > 1 ? '#ff9a8b' : C.muted; g.font = '11px "Zen Kaku Gothic New", sans-serif';
-    g.fillText(use > 1 ? '回す力が上限をこえた' : `回す力 上限の ${f0(use * 100)}%`, W.x + 6, by + 20);
+    g.fillText(use > 1 ? L('回す力が上限をこえた', 'Twist over the limit') : L(`回す力 上限の ${f0(use * 100)}%`, `Twist ${f0(use * 100)}% of limit`), W.x + 6, by + 20);
   }
 
   MODES.branch = M;

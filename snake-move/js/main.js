@@ -55,7 +55,7 @@ function draw() {
 APP.legend = () => legend();
 function legend() {
   const items = cur().legend(APP.mode === 'tree' ? DRAWT.C : DRAWG.C);
-  document.getElementById('legend').innerHTML = items.map(([col, t]) => `<span><i style="background:${col}"></i>${t}</span>`).join('') + '<span>※ 矢印の長さは目印</span>';
+  document.getElementById('legend').innerHTML = items.map(([col, t]) => `<span><i style="background:${col}"></i>${t}</span>`).join('') + L('<span>※ 矢印の長さは目印</span>', '<span>* Arrow lengths are not to scale</span>');
 }
 
 // さわった所の説明（ふきだし）
@@ -82,10 +82,10 @@ cv.addEventListener('wheel', e => { e.preventDefault(); zoomBy(e.deltaY < 0 ? 1.
 function zoomBy(k) { const z = APP.cam.zoom; z[APP.mode] = Math.max(0.5, Math.min(3, z[APP.mode] * k)); }
 document.querySelectorAll('#zoom [data-z]').forEach(b => b.onclick = () => zoomBy(b.dataset.z === 'in' ? 1.3 : 1 / 1.3));
 const camB = document.getElementById('bCam');
-camB.onclick = () => { APP.cam.fix = !APP.cam.fix; APP.cam.pan = null; camB.classList.toggle('on', APP.cam.fix); camB.textContent = APP.cam.fix ? '地面に固定' : 'ヘビを追う'; };
+camB.onclick = () => { APP.cam.fix = !APP.cam.fix; APP.cam.pan = null; camB.classList.toggle('on', APP.cam.fix); camB.textContent = APP.cam.fix ? L('地面に固定', 'Fixed to ground') : L('ヘビを追う', 'Follow snake'); };
 document.getElementById('bScale').onclick = () => { APP.scaleOn = !APP.scaleOn; document.getElementById('bScale').classList.toggle('on', APP.scaleOn); };
 const playB = document.getElementById('play');
-function setPlay(on) { APP.play = on; playB.textContent = on ? '❚❚ 止める' : '▶ 動かす'; }
+function setPlay(on) { APP.play = on; playB.textContent = on ? L('❚❚ 止める', '❚❚ Pause') : L('▶ 動かす', '▶ Play'); }
 playB.onclick = () => setPlay(!APP.play);
 document.getElementById('stepb').onclick = () => { setPlay(false); cur().advance(0.05, APP); UI.refresh(); };
 document.getElementById('reset').onclick = () => { cur().reset(); APP.snapCam(); tipEl.hidden = true; APP.tipI = -1; UI.refresh(); };

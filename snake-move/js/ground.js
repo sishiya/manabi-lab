@@ -7,12 +7,15 @@
   const N = 80;                 // 体を 80 個に区切る（s = 0 が尾、s = L が頭）
   const G = 9.81;
 
+  // 画面の言葉（node では L がないので日本語のまま）
+  const T = (ja, en) => typeof L === 'function' ? L(ja, en) : ja;
+
   // 計算に入れる値（出どころは index.html の「このアプリについて」）
   const SURF = {
-    cloth: { name: '布（ざらざら）', mf: 0.11, mb: 0.14, mt: 0.19 },   // Hu 2009 の当てはめ値（静止摩擦の測定 0.11 / 0.14 / 0.20）
-    board: { name: 'なめらかな板', mf: 0.14, mb: 0.14, mt: 0.16 },     // Hu 2009（どの向きもほぼ同じ）
-    same:  { name: 'どの向きも同じ', mf: 0.15, mb: 0.15, mt: 0.15 },   // ためし（ウロコの向きがないとしたら）
-    grip:  { name: '布・ウロコを立てる', mf: 0.30, mb: 0.39, mt: 0.54 }, // Hu 2009 の坂の計算（μf 0.3、μt = 1.8 μf、μb = 1.3 μf が坂の実測に合う）
+    cloth: { name: T('布（ざらざら）', 'Cloth (rough)'), mf: 0.11, mb: 0.14, mt: 0.19 },   // Hu 2009 の当てはめ値（静止摩擦の測定 0.11 / 0.14 / 0.20）
+    board: { name: T('なめらかな板', 'Smooth board'), mf: 0.14, mb: 0.14, mt: 0.16 },     // Hu 2009（どの向きもほぼ同じ）
+    same:  { name: T('どの向きも同じ', 'Same in every direction'), mf: 0.15, mb: 0.15, mt: 0.15 },   // ためし（ウロコの向きがないとしたら）
+    grip:  { name: T('布・ウロコを立てる', 'Cloth, scales raised'), mf: 0.30, mb: 0.39, mt: 0.54 }, // Hu 2009 の坂の計算（μf 0.3、μt = 1.8 μf、μb = 1.3 μf が坂の実測に合う）
   };
 
   function make(o = {}) {

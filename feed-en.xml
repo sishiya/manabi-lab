@@ -5,8 +5,16 @@
   <link href="https://sishiya.github.io/manabi-lab/?lang=en"/>
   <link rel="self" href="https://sishiya.github.io/manabi-lab/feed-en.xml"/>
   <id>https://sishiya.github.io/manabi-lab/feed-en.xml</id>
-  <updated>2026-11-03T00:00:00+09:00</updated>
+  <updated>2026-11-06T00:00:00+09:00</updated>
   <author><name>Shishiya</name></author>
+  <entry>
+    <title>How Snakes Move</title>
+    <link href="https://sishiya.github.io/manabi-lab/snake-move/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/snake-move/?lang=en</id>
+    <published>2026-10-18T00:00:00+09:00</published>
+    <updated>2026-11-06T00:00:00+09:00</updated>
+    <summary>How does a snake with no legs move forward? Four ways of moving, slithering, sidewinding, moving straight and climbing a tree, are calculated from the friction of the scales and the balance of forces. See which parts push on the ground, which hold still and which slide. Try changing the ground, the slope or the trunk width.</summary>
+  </entry>
   <entry>
     <title>Evolution in a Drop</title>
     <link href="https://sishiya.github.io/manabi-lab/drop-evolution/?lang=en"/>
