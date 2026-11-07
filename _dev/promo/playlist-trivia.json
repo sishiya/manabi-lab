@@ -1,0 +1,13 @@
+{
+  "playlistId": "PLNZSPenyVB0k",
+  "match": "*-trivia*.upload.json",
+  "privacy": "public",
+  "title": "まなびラボ ― うんちく（通しで見る）",
+  "description": "しし屋 まなびラボのアプリにまつわる、計算でたしかめた「うんちく」のショート動画をまとめました。公開した順に1本ずつ足していきます。\n\nアプリはここから（インストール不要・無料）: https://sishiya.github.io/manabi-lab/",
+  "localizations": {
+    "en": {
+      "title": "Manabi Lab ― Did You Know? (play all)",
+      "description": "\"Did you know?\" shorts by Sishiya, each one worked out by calculation and tied to a Manabi Lab app. A new one is added each time it is published. Turn on English subtitles (CC).\n\nTry the apps here (free, no install): https://sishiya.github.io/manabi-lab/?lang=en"
+    }
+  }
+}

@@ -104,7 +104,7 @@
 
 ### 上げたうんちくショート（筆のルック＋Sneaky Snitch。2026-11-06 にユーザーが見くらべページで選んだ7本）
 毎日 21:00 に1本（本編 20:00・20:05 とずらす）。サムネイルは `thumbs/<ページ名>.jpg`（`_dev/tools/make-trivia-thumbs.ps1`、中身は `trivia-thumbs.js`）。説明欄に VOICEVOX と Kevin MacLeod（CC BY 4.0）のクレジット。英語のタイトル・説明・字幕つき。
-再生リスト「まなびラボ ― うんちく」（`playlist-trivia.json`）は、1本目が公開された 11/7 21:00 のあとに置く（先に置くと空のリストが公開で作られる）。
+再生リスト「まなびラボ ― うんちく（通しで見る）」https://www.youtube.com/playlist?list=PLNZSPenyVB0k （`playlist-trivia.json`、11/7 21:00 のあとに作って1本目を入れた）。新作は毎晩 21:10 ごろの予約タスクが公開のあとに足す。
 
 | 公開 | ページ | 題名 | 動画 ID |
 |---|---|---|---|

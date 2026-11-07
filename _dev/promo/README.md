@@ -23,7 +23,7 @@ YouTube に出す順番（ジャンル・サムネイルの色味が連日で重
 - ファイル名: 台本 `<app>-trivia<番号>.html`（`?short` で録る）、`<app>-trivia<番号>.upload.json`、サムネイル `thumbs/<app>-trivia<番号>.jpg`。`*-short`・`*-guide` の名前にしないので、ショートの再生リスト・入口の動画リンクの道具には入らない。
 - 音量・サムネイル・目印・英語の字幕・前日の確認は、ほかの動画と同じ決まり（下の「毎回まもること」）。上げる・予約はユーザーの GO のあと。
 - BGM はおとライブラリ（Stable Audio 3）の曲も使える: `music: { style: 'file', file: 'out/bgm/<id>.ogg' }`（曲は `../sound-library/bgm/` から `out/bgm/` に写す。Git に入れない）。台本に `?bgm=<id>` で切りかえを付けておくと、`__promoAudio()` で音だけ作って聴きくらべられる。説明欄に「BGM: Stable Audio 3（Stability AI）で生成」。うんちく用に `promo_trivia_clock`・`promo_trivia_pop` を作った（2026-10-26）。
-- 再生リスト「まなびラボ ― うんちく」: 1本目を上げるときに `playlist-trivia.json`（`match: "*-trivia*.upload.json"`）を足す。**先に置くと、毎晩の予約タスク（`-Playlist`）が空のリストを公開で作ってしまう**ので、ユーザーの GO まで置かない。
+- 再生リスト「まなびラボ ― うんちく（通しで見る）」（公開、https://www.youtube.com/playlist?list=PLNZSPenyVB0k 、2026-11-07 ユーザーの指示で作った。設定は `playlist-trivia.json`、`match: "*-trivia*.upload.json"`）。**新作は毎回ここに足す**（ユーザーの指示）: `<page>.upload.json` に videoId を書いておけば、毎晩 21:10 ごろの予約タスク（manabi-playlist-sync）が公開のあとに公開の順で足す。
 - 予定と題材の候補は `SCHEDULE.md` の「うんちく動画」。
 
 ## 作り方
@@ -58,7 +58,7 @@ YouTube に出す順番（ジャンル・サムネイルの色味が連日で重
   - 予約日時は `_dev/tools/schedule-videos.ps1 -Start <日付>`（`SCHEDULE.md` の順に、説明動画 20:00・ショート 20:05）。`-Apply` で書き、GO のあと `-Upload` で YouTube の予約まで。
 - 上げる: `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Meta _dev/promo/<out>.upload.json`。表示された ID を JSON の `videoId` に書く。
 - 上げたあとに英語・字幕を足す・直す: `-Update -Meta …`。チャンネルの動画の一覧: `-List`。公開前の最終確認（読むだけ）: `-Verify [-Date 日付]`（RULES 8.4）。
-- 再生リスト「まなびラボ ― アプリの使い方と見どころ（通しで見る）」（公開、https://www.youtube.com/playlist?list=PLPr9GEGpKWDg 、2026-10-12 ユーザーの指示で作った）: `-Playlist`。設定は `playlist.json`（名前・説明・英語・どの upload.json を入れるか）。ショートは「まなびラボ ― ショート（通しで見る）」（https://www.youtube.com/playlist?list=PLYifG6DSkuLM 、設定は `playlist-shorts.json`）。`-Playlist` は `playlist*.json` を全部合わせる。毎晩 20:20 ごろの予約タスク（manabi-playlist-sync、Claude のアプリが開いているとき）が走らせる。**公開ずみ**の説明動画だけを公開の順に足す（予約中は足さない）ので、**動画が公開された日（20:00 のあと）に毎回走らせる**。何度走らせてもよい。`-DryRun` で足すものだけ見る。
+- 再生リスト「まなびラボ ― アプリの使い方と見どころ（通しで見る）」（公開、https://www.youtube.com/playlist?list=PLPr9GEGpKWDg 、2026-10-12 ユーザーの指示で作った）: `-Playlist`。設定は `playlist.json`（名前・説明・英語・どの upload.json を入れるか）。ショートは「まなびラボ ― ショート（通しで見る）」（https://www.youtube.com/playlist?list=PLYifG6DSkuLM 、設定は `playlist-shorts.json`）。`-Playlist` は `playlist*.json` を全部合わせる。毎晩 21:10 ごろの予約タスク（manabi-playlist-sync、Claude のアプリが開いているとき）が走らせる。**公開ずみ**の説明動画だけを公開の順に足す（予約中は足さない）ので、**動画が公開された日（20:00 のあと）に毎回走らせる**。何度走らせてもよい。`-DryRun` で足すものだけ見る。
 - **API の本数の上限で上げられないとき**: ユーザーが Studio で動画ファイルだけ上げる（「子ども向けではない」を選ぶ・非公開・予約はそこで）→ `-List` で ID を調べて JSON の `videoId` に書く → `-Update -Full -Meta …` で日本語と英語のタイトル・説明・タグ・字幕・サムネイルを入れる（上げたあとの更新は本数の上限に数えられない）。
 - **上げる・予約投稿はユーザーの GO のあとで**。予約は `publishAt`（日本時間 `+09:00`、19〜22時ごろ）。差し替えは新しく上げて、古い方はユーザーが Studio で消す（Claude は消さない）。
 - YouTube には1日に上げられる本数の上限がある（`exceeded the number of videos` が出たら日を改める）。2026-10-11 は API で8本＋Studio で3本（合わせて11本）上げても当たらなかった。API の使用量は `youtube-upload.ps1 -Quota`（記録は `_dev/tools/out/yt-quota.csv`。1日は太平洋時間の0時＝日本時間16時に切りかわる）。
