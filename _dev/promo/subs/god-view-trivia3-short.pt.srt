@@ -1,0 +1,24 @@
+1
+00:00:00,000 --> 00:00:05,680
+Você está só sentado. Quanto se move nestes 30 segundos?
+O terceiro vai mais longe
+
+2
+00:00:05,680 --> 00:00:12,680
+Um: a rotação da Terra.
+Perto do Japão, cerca de 11 km em 30 segundos
+
+3
+00:00:12,680 --> 00:00:20,680
+Dois: nossa órbita ao redor do Sol.
+Cerca de 900 km em 30 segundos
+
+4
+00:00:20,680 --> 00:00:30,030
+Três: em relação ao brilho remanescente do universo primitivo,
+todo o Sistema Solar se move a 370 km/s. Cerca de 11.000 km em 30 s
+
+5
+00:00:30,030 --> 00:00:34,270
+...e pronto, 30 segundos.
+Você acabou de se mover quase uma Terra de largura

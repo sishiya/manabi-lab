@@ -24,6 +24,7 @@ YouTube に出す順番（ジャンル・サムネイルの色味が連日で重
 - 音量・サムネイル・目印・英語の字幕・前日の確認は、ほかの動画と同じ決まり（下の「毎回まもること」）。上げる・予約はユーザーの GO のあと。
 - BGM はおとライブラリ（Stable Audio 3）の曲も使える: `music: { style: 'file', file: 'out/bgm/<id>.ogg' }`（曲は `../sound-library/bgm/` から `out/bgm/` に写す。Git に入れない）。台本に `?bgm=<id>` で切りかえを付けておくと、`__promoAudio()` で音だけ作って聴きくらべられる。説明欄に「BGM: Stable Audio 3（Stability AI）で生成」。うんちく用に `promo_trivia_clock`・`promo_trivia_pop` を作った（2026-10-26）。
 - 再生リスト「まなびラボ ― うんちく（通しで見る）」（公開、https://www.youtube.com/playlist?list=PLNZSPenyVB0k 、2026-11-07 ユーザーの指示で作った。設定は `playlist-trivia.json`、`match: "*-trivia*.upload.json"`）。**新作は毎回ここに足す**（ユーザーの指示）: `<page>.upload.json` に videoId を書いておけば、毎晩 21:10 ごろの予約タスク（manabi-playlist-sync）が公開のあとに公開の順で足す。
+- 字幕（CC）は英語＋ほかの動画と同じ4言語（es・pt・zh-TW・ko、2026-11-07〜）。`subs/<言語>.json` の名前は字幕に合わせて `<page>-short`（build-subs は `<page>.upload.json` にも書く）。上げたあと `-Captions -Lang es,pt,zh-TW,ko -Meta _dev/promo/<page>.upload.json`。
 - 予定と題材の候補は `SCHEDULE.md` の「うんちく動画」。
 
 ## 作り方

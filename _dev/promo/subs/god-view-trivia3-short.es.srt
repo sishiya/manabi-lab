@@ -1,0 +1,24 @@
+1
+00:00:00,000 --> 00:00:05,680
+Solo estás ahí sentado. ¿Cuánto te mueves en estos 30 segundos?
+El tercero es el que más lejos llega
+
+2
+00:00:05,680 --> 00:00:12,680
+Uno: el giro de la Tierra.
+Cerca de Japón, unos 11 km en 30 segundos
+
+3
+00:00:12,680 --> 00:00:20,680
+Dos: nuestra órbita alrededor del Sol.
+Unos 900 km en 30 segundos
+
+4
+00:00:20,680 --> 00:00:30,030
+Tres: frente al resplandor del universo primitivo,
+todo el sistema solar se mueve a 370 km/s. Unos 11.000 km en 30 s
+
+5
+00:00:30,030 --> 00:00:34,270
+...y ya pasaron 30 segundos.
+Acabas de moverte casi el ancho de una Tierra

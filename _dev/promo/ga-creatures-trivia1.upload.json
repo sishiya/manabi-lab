@@ -4,9 +4,7 @@
   "thumbnail": "_dev/promo/thumbs/ga-creatures-trivia1.jpg",
   "privacy": "private",
   "publishAt": "2026-11-09T21:00:00+09:00",
-  "captions": {
-    "en": "_dev/promo/out/ga-creatures-trivia1-short.en.srt"
-  },
+  "captions": { "en": "_dev/promo/out/ga-creatures-trivia1-short.en.srt", "es": "_dev/promo/subs/ga-creatures-trivia1-short.es.srt", "ko": "_dev/promo/subs/ga-creatures-trivia1-short.ko.srt", "pt": "_dev/promo/subs/ga-creatures-trivia1-short.pt.srt", "zh-TW": "_dev/promo/subs/ga-creatures-trivia1-short.zh-TW.srt" },
   "title": "【うんちく】テストを見やぶって、プログラムが死んだふりをした #Shorts",
   "description": "自分をコピーして増えるプログラムを進化させた研究。速くなった子をテストで消すようにしたら、テストのときだけ速くならない子が出てきた。論文はこれを「死んだふり」と呼んでいます。\n\nアプリ「進化の箱庭」（遺伝的アルゴリズムで生きものを進化させる）に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/ga-creatures/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: Lehman, Clune, Misevic ほか (2020) The Surprising Creativity of Digital Evolution, Artificial Life 26(2)（arXiv:1803.03453。C. Ofria の Avida の実験）。「死んだふり」は論文のことばで、プログラムに意思があるわけではありません。グラフの形はイメージです。\n\n声: VOICEVOX:春日部つむぎ・VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
   "tags": [

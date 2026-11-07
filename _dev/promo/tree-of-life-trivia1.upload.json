@@ -4,9 +4,7 @@
   "thumbnail": "_dev/promo/thumbs/tree-of-life-trivia1.jpg",
   "privacy": "private",
   "publishAt": "2026-11-12T21:00:00+09:00",
-  "captions": {
-    "en": "_dev/promo/out/tree-of-life-trivia1-short.en.srt"
-  },
+  "captions": { "en": "_dev/promo/out/tree-of-life-trivia1-short.en.srt", "es": "_dev/promo/subs/tree-of-life-trivia1-short.es.srt", "ko": "_dev/promo/subs/tree-of-life-trivia1-short.ko.srt", "pt": "_dev/promo/subs/tree-of-life-trivia1-short.pt.srt", "zh-TW": "_dev/promo/subs/tree-of-life-trivia1-short.zh-TW.srt" },
   "title": "【うんちく】ヒトデは、タコや虫より「ヒトの親せき」 #Shorts",
   "description": "動物の木は早いうちに大きく2つに分かれました。片方にタコ・虫・貝、もう片方にヒトデ・ウニ・ナマコと、魚、そしてヒト。決め手は、赤ちゃんのときに体にできる最初の穴が、口ではなくおしりになること。\n\nアプリ「いのちの系統樹」（名前のついた約225万種の木）に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/tree-of-life/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: UCMP (University of California Museum of Paleontology) Introduction to the Deuterostomia。多くの研究での分け方で、ちがう結果の解析もあります。\n\n声: VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
   "tags": [

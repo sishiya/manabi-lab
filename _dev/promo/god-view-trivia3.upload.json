@@ -4,9 +4,7 @@
   "thumbnail": "_dev/promo/thumbs/god-view-trivia3.jpg",
   "privacy": "private",
   "publishAt": "2026-11-13T21:00:00+09:00",
-  "captions": {
-    "en": "_dev/promo/out/god-view-trivia3-short.en.srt"
-  },
+  "captions": { "en": "_dev/promo/out/god-view-trivia3-short.en.srt", "es": "_dev/promo/subs/god-view-trivia3-short.es.srt", "ko": "_dev/promo/subs/god-view-trivia3-short.ko.srt", "pt": "_dev/promo/subs/god-view-trivia3-short.pt.srt", "zh-TW": "_dev/promo/subs/god-view-trivia3-short.zh-TW.srt" },
   "title": "【うんちく】すわっているだけで、30秒に約1万km #Shorts",
   "description": "すわっているだけでも、地球の自転で30秒に約11km、太陽のまわりの公転で約900km。宇宙のはじめの光（宇宙の残り火）にくらべると、太陽系ごと秒速370kmで、30秒に約1万1千km。地球1個ぶん近く動いています。\n\nアプリ「神の視点マップ」（宇宙の果てからクォークまでズームする地球）に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/god-view/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: NASA Earth Fact Sheet・Planck Collaboration (2020) A&A 641, A1。自転は東京（北緯35.7°）で計算しています。\n\n声: VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
   "tags": [

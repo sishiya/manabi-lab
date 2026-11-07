@@ -1,0 +1,26 @@
+1
+00:00:00,000 --> 00:00:03,010
+Um planeta onde só de andar você entra em órbita
+
+2
+00:00:03,010 --> 00:00:08,010
+Encolha a Terra para 1 km de raio, feita do mesmo material
+
+3
+00:00:08,010 --> 00:00:13,010
+A gravidade cai para 1/6400 da terrestre
+
+4
+00:00:13,010 --> 00:00:20,010
+Orbitar rente ao chão exige 1,24 m/s,
+um pouco menos que andar
+
+5
+00:00:20,010 --> 00:00:26,010
+Ande tão rápido rente ao chão e você decola,
+dando a volta no planeta em 84 minutos
+
+6
+00:00:26,010 --> 00:00:32,010
+Mas não pule: acima de 1,76 m/s
+você nunca mais volta

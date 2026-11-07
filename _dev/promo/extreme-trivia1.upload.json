@@ -4,9 +4,7 @@
   "thumbnail": "_dev/promo/thumbs/extreme-trivia1.jpg",
   "privacy": "private",
   "publishAt": "2026-11-11T21:00:00+09:00",
-  "captions": {
-    "en": "_dev/promo/out/extreme-trivia1-short.en.srt"
-  },
+  "captions": { "en": "_dev/promo/out/extreme-trivia1-short.en.srt", "es": "_dev/promo/subs/extreme-trivia1-short.es.srt", "ko": "_dev/promo/subs/extreme-trivia1-short.ko.srt", "pt": "_dev/promo/subs/extreme-trivia1-short.pt.srt", "zh-TW": "_dev/promo/subs/extreme-trivia1-short.zh-TW.srt" },
   "title": "【うんちく】深海魚は水圧でつぶれない。じゃあ、なぜ 8,200 m より下にいない？ #Shorts",
   "description": "魚の体はほとんど水で、つぶれません。困るのは体の中の小さな部品で、TMAO という分子で守っています。でも TMAO をふやすほど体はこくなり、8,200 m で海水と同じこさになる計算。見つかったいちばん深い魚は 8,336 m でした。\n\nアプリ「極限の世界に置いてみたら」（気圧・水圧）に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/extreme/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: Yancey ほか (2014) PNAS 111: 4461・Natural History Museum (2023)（伊豆・小笠原海溝のクサウオの仲間）。8,200 m は計算による予想です。\n\n声: VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
   "tags": [

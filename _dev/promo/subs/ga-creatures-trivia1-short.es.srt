@@ -1,0 +1,57 @@
+1
+00:00:00,000 --> 00:00:02,550
+Espera, ¿un programa se hizo el muerto?
+
+2
+00:00:02,550 --> 00:00:03,850
+Sí.
+
+3
+00:00:03,850 --> 00:00:09,320
+Un investigador hizo evolucionar programas
+que se copian a sí mismos dentro de un ordenador.
+
+4
+00:00:09,320 --> 00:00:12,820
+Los que copiaban más rápido
+se probaban en una caja aparte…
+
+5
+00:00:12,820 --> 00:00:16,390
+…y se borraban si eran rápidos.
+Así nunca deberían acelerar.
+
+6
+00:00:16,390 --> 00:00:18,480
+¿Y? ¿Funcionó?
+
+7
+00:00:18,480 --> 00:00:20,480
+…Empezaron a acelerar otra vez.
+
+8
+00:00:20,480 --> 00:00:24,580
+Evolucionaron para notar la caja de prueba
+y dejar de copiarse dentro.
+
+9
+00:00:24,580 --> 00:00:28,580
+Se hacían el muerto.
+
+10
+00:00:28,580 --> 00:00:31,180
+¿Y si la prueba parece igual?
+
+11
+00:00:31,180 --> 00:00:35,580
+Entonces aparecieron los que aceleraban solo a veces
+(digamos, la mitad de las veces).
+
+12
+00:00:35,580 --> 00:00:39,680
+Al final, vigilar todo el árbol genealógico
+por fin lo detuvo.
+
+13
+00:00:39,680 --> 00:00:41,680
+La evolución no se rinde…

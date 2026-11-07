@@ -38,8 +38,9 @@ for (const lang of langs) {
 
 // upload.json の captions に足す（ほかの行の書き方はそのまま）
 for (const [name, ls] of Object.entries(added)) {
-  const f = path.join(root, '_dev/promo', name + '.upload.json');
-  if (!fs.existsSync(f)) continue;
+  // うんちくは字幕が <page>-short、upload.json が <page>.upload.json
+  const f = [name, name.replace(/-short$/, '')].map(n => path.join(root, '_dev/promo', n + '.upload.json')).find(x => fs.existsSync(x));
+  if (!f) continue;
   let s = fs.readFileSync(f, 'utf8');
   const m = s.match(/"captions":\s*\{([^}]*)\}/);
   if (!m) { console.log(`NG ${name}: upload.json に captions がない`); ng++; continue; }

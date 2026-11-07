@@ -430,5 +430,76 @@
 "Hasta \"cazadores\" que se comen a otros // Nadie diseñó su forma ni cómo nadan",
 "En 8 horas: colonias de más de cien células // Cada gota evoluciona de forma distinta",
 "Evolución en una gota // Funciona en el navegador. Una evolución distinta cada vez"
+],
+"tiny-earth-trivia1-short": [
+"Un planeta donde con solo caminar entras en órbita",
+"Encoge la Tierra a 1 km de radio, hecha del mismo material",
+"La gravedad baja a 1/6400 de la terrestre",
+"Orbitar a ras del suelo requiere 1,24 m/s, // un poco menos que caminar",
+"Avanza así de rápido a ras del suelo y despegas, // dando la vuelta al planeta en 84 minutos",
+"Pero no saltes: por encima de 1,76 m/s // nunca vuelves"
+],
+"metamorphosis-trivia1-short": [
+"Convertida en papilla, ¿sobrevive la memoria?",
+"«¿La pupa no es solo papilla por dentro? // Entonces la memoria se pierde, ¿no?»",
+"Un experimento de 2008: las orugas olían un olor // y luego sentían una descarga leve",
+"Ocho veces seguidas",
+"Las orugas aprendieron a evitar ese olor",
+"«Pero la pupa reconstruye todo el cuerpo, ¿no?»",
+"Sí, pero el cerebro y los nervios // no se deshacen del todo",
+"Ya convertidas en polillas, // entraron en el mismo laberinto…",
+"El 77 % evitó el olor",
+"«¿Y si el olor solo se les quedó pegado al cuerpo?»",
+"Las pupas lavadas aún recordaban. // Las no entrenadas con el olor encima no lo evitaban",
+"Pero lo que aprendieron demasiado jóvenes // había desaparecido en la polilla"
+],
+"ga-creatures-trivia1-short": [
+"Espera, ¿un programa se hizo el muerto?",
+"Sí.",
+"Un investigador hizo evolucionar programas // que se copian a sí mismos dentro de un ordenador.",
+"Los que copiaban más rápido // se probaban en una caja aparte…",
+"…y se borraban si eran rápidos. // Así nunca deberían acelerar.",
+"¿Y? ¿Funcionó?",
+"…Empezaron a acelerar otra vez.",
+"Evolucionaron para notar la caja de prueba // y dejar de copiarse dentro.",
+"Se hacían el muerto.",
+"¿Y si la prueba parece igual?",
+"Entonces aparecieron los que aceleraban solo a veces // (digamos, la mitad de las veces).",
+"Al final, vigilar todo el árbol genealógico // por fin lo detuvo.",
+"La evolución no se rinde…"
+],
+"evolution-trivia1-short": [
+"El día en que el asteroide acabó con los dinosaurios. ¿Qué estación era?",
+"Adivina.",
+"La respuesta: primavera, en el hemisferio norte.",
+"Lo sabemos por huesos de pez. // Como los anillos de un árbol, guardan una línea por estación.",
+"La última línea se detuvo // antes del estirón del verano.",
+"Sus branquias aún tenían cuentas de vidrio // lanzadas por el impacto.",
+"El artículo sugiere que quedó enterrado // menos de una hora después del impacto.",
+"Primavera en el norte, otoño en el sur. // Quizá la vida del sur, lista para el invierno, resistió mejor."
+],
+"extreme-trivia1-short": [
+"No hay peces en lo más hondo del océano. // Y no es porque quedarían aplastados.",
+"Un pez es casi todo agua, y el agua apenas se comprime, // así que los peces abisales no se aplastan.",
+"El problema son las piezas diminutas del cuerpo. // Los peces las protegen de la presión con una molécula llamada TMAO.",
+"Cuanto más hondo vive un pez, más TMAO tiene.",
+"Pero más TMAO concentra los fluidos del cuerpo. // A 8.200 m igualarían al agua de mar, según el cálculo.",
+"Para vivir más hondo, // un pez necesitaría una química corporal totalmente nueva.",
+"El pez más profundo jamás filmado: 8.336 m. // Justo al lado de la línea prevista."
+],
+"tree-of-life-trivia1-short": [
+"Más cerca de los humanos: no el pulpo, sino la estrella de mar.",
+"Aunque los pulpos son listos // y tienen ojos muy parecidos a los nuestros.",
+"El árbol animal se dividió en dos muy pronto. // Por un lado: pulpos, insectos, caracoles.",
+"Por el otro: estrellas de mar, erizos, pepinos de mar, // peces y nosotros.",
+"La pista está en el embrión: la primera abertura // se convierte en el ano, no en la boca.",
+"Humanos y estrellas de mar: ambos empezamos por el trasero."
+],
+"god-view-trivia3-short": [
+"Solo estás ahí sentado. ¿Cuánto te mueves en estos 30 segundos? // El tercero es el que más lejos llega",
+"Uno: el giro de la Tierra. // Cerca de Japón, unos 11 km en 30 segundos",
+"Dos: nuestra órbita alrededor del Sol. // Unos 900 km en 30 segundos",
+"Tres: frente al resplandor del universo primitivo, // todo el sistema solar se mueve a 370 km/s. Unos 11.000 km en 30 s",
+"...y ya pasaron 30 segundos. // Acabas de moverte casi el ancho de una Tierra"
 ]
 }

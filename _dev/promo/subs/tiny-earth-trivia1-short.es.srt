@@ -1,0 +1,26 @@
+1
+00:00:00,000 --> 00:00:03,010
+Un planeta donde con solo caminar entras en órbita
+
+2
+00:00:03,010 --> 00:00:08,010
+Encoge la Tierra a 1 km de radio, hecha del mismo material
+
+3
+00:00:08,010 --> 00:00:13,010
+La gravedad baja a 1/6400 de la terrestre
+
+4
+00:00:13,010 --> 00:00:20,010
+Orbitar a ras del suelo requiere 1,24 m/s,
+un poco menos que caminar
+
+5
+00:00:20,010 --> 00:00:26,010
+Avanza así de rápido a ras del suelo y despegas,
+dando la vuelta al planeta en 84 minutos
+
+6
+00:00:26,010 --> 00:00:32,010
+Pero no saltes: por encima de 1,76 m/s
+nunca vuelves
