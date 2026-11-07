@@ -3,31 +3,73 @@
 <head>
 <meta charset="utf-8">
 <title>うんちくのサムネイル</title>
-<!-- うんちくショートのサムネイル（1080×1920）。?page=<ページ名>。絵は out/thumbsrc/<ページ名>.jpg（動画のはじめの問いのコマ）、
-     下の紙に「うんちく」の判と一言を書く（筆のルックと同じ字・墨と朱）。作るのは _dev/tools/make-trivia-thumbs.ps1 -->
+<!-- うんちくショートのサムネイル（1080×1920）。?page=<ページ名>&look=a|b|c（既定 b。2026-11-07 にユーザーが B を選んだ）。絵は out/thumbsrc/<ページ名>.png（台本の ?thumbart で撮った、字のない絵）。
+     題名・一言・「うんちく」の判はここで書く（筆のルックと同じ字・墨と朱）。作るのは _dev/tools/make-trivia-thumbs.ps1
+     YouTube の一覧はショートを上下切って 2:3 くらいで見せる（上下 150px ほど見えない）。大事なものは y 170〜1750 に入れる -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&display=block">
 <style>
-  html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: #efe6d2; }
-  #pic { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; object-fit: cover; }
-  #paper { position: absolute; left: 0; right: 0; top: 1515px; bottom: 0; background: #efe6d2;
-    border-top: 3px solid #231c15; box-shadow: 0 -10px 0 -4px #efe6d2, 0 -10px 0 -2px #231c15; }
-  #stamp { position: absolute; left: 60px; top: 1625px; width: 170px; height: 170px; border: 7px solid #b33a22; border-radius: 6px;
-    color: #b33a22; font: 60px/1.15 'Yuji Syuku', serif; display: flex; align-items: center; justify-content: center; text-align: center;
-    transform: rotate(-6deg); opacity: 0.92; }
-  #line { position: absolute; left: 270px; right: 40px; top: 1545px; height: 340px; display: flex; align-items: center;
-    color: #231c15; font: 68px/1.45 'Yuji Syuku', serif; white-space: pre;  letter-spacing: 0.02em; }
+  html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: #f3eee1; font-family: 'Yuji Syuku', serif; color: #1e1a16; }
+  #bg { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
+  .box { position: absolute; overflow: hidden; -webkit-mask-image: radial-gradient(ellipse 75% 72% at 50% 50%, #000 60%, transparent 100%); }
+  #pic { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  #title { position: absolute; left: 40px; right: 40px; text-align: center; white-space: pre; line-height: 1.18; letter-spacing: 0.02em;
+    -webkit-text-stroke: 6px currentColor; paint-order: stroke fill; }
+  #title b { color: #b5322a; font-weight: normal; }
+  #line { position: absolute; white-space: nowrap; letter-spacing: 0.04em; -webkit-text-stroke: 1px currentColor; }
+  #stamp { position: absolute; width: 150px; height: 150px; border: 7px solid #b33a22; border-radius: 6px; box-sizing: border-box; background: #f3eee1;
+    color: #b33a22; font-size: 54px; line-height: 1.1; display: flex; align-items: center; justify-content: center; text-align: center; transform: rotate(-6deg);
+    -webkit-text-stroke: 1.5px currentColor; }
+  .rule { position: absolute; height: 0; border-top: 4px solid #1e1a16; }
+  .rule::after { content: ''; position: absolute; left: 0; right: 0; top: 6px; border-top: 1.5px solid #1e1a16; }
+  #frame { position: absolute; display: none; border: 5px solid #1e1a16; outline: 2px solid #1e1a16; outline-offset: -16px; }
 </style>
 <script src="trivia-thumbs.js"></script>
 </head>
 <body>
-<img id="pic" alt="">
-<div id="paper"></div>
+<canvas id="bg" width="1080" height="1920"></canvas>
+<div id="frame"></div>
+<div class="box" id="box"><img id="pic" alt=""></div>
+<div id="title"></div>
+<div class="rule" id="rule"></div>
 <div id="stamp">うん<br>ちく</div>
 <div id="line"></div>
 <script>
-const page = new URLSearchParams(location.search).get('page'), c = TRIVIA_THUMBS[page];
-document.getElementById('pic').src = `out/thumbsrc/${page}.jpg`;
-document.getElementById('line').textContent = c ? c.line : page;
+const q = new URLSearchParams(location.search), page = q.get('page'), look = q.get('look') || 'b', c = TRIVIA_THUMBS[page] || { title: page, line: '', crop: [0, 0, 1080, 1920] };
+const $ = id => document.getElementById(id), put = (el, s) => { for (const k in s) el.style[k] = typeof s[k] === 'number' ? s[k] + 'px' : s[k]; };
+const lines = c.title.split('\n'), width = s => [...s.replace(/[\[\]]/g, '')].reduce((a, ch) => a + (ch.charCodeAt(0) < 0x100 ? 0.6 : 1), 0);
+$('title').innerHTML = lines.map(s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\[([^\]]*)\]/g, '<b>$1</b>')).join('\n');
+$('line').textContent = c.line;
+// 題名: 一番長い行が幅 960px に入る大きさ（最大 190px・題名の高さは 600px まで）
+const TW = look === 'c' ? 860 : 980, fs = Math.floor(Math.min(190, TW / (Math.max(...lines.map(width)) + 0.2), 600 / (lines.length * 1.18)));
+const TH = Math.round(lines.length * fs * 1.18);
+const lfs = Math.min(50, Math.floor(740 / width(c.line)));
+put($('title'), { fontSize: fs });
+put($('line'), { fontSize: lfs });
+// 置き場所（y は 170〜1750 の中。一覧で上下が切れても見えるように）
+let box, T;
+if (look === 'a') {        // 題名が上・絵が下・判と一言がいちばん下
+  T = 190; box = [40, T + TH + 10, 1000, 1540 - (T + TH + 10)];
+  put($('rule'), { left: 70, top: 1560, width: 940 }); put($('stamp'), { left: 70, top: 1585 }); put($('line'), { left: 250, top: 1660 - lfs * 0.7 });
+} else if (look === 'b') { // 絵が上・題名が下・判と一言がいちばん下
+  T = 1530 - TH; box = [40, 170, 1000, T - 190];
+  put($('rule'), { left: 70, top: 1560, width: 940 }); put($('stamp'), { left: 70, top: 1585 }); put($('line'), { left: 250, top: 1660 - lfs * 0.7 });
+} else {                   // 額縁: 枠の中に絵と題名、判は枠の左上にかける、一言は枠の下の段
+  put($('frame'), { display: 'block', left: 60, top: 175, width: 960, height: 1570 });
+  T = 1600 - TH; box = [100, 230, 880, T - 250];
+  $('rule').style.display = 'none'; put($('stamp'), { left: 35, top: 180, transform: 'rotate(-8deg)', width: 130, height: 130, fontSize: 46 });
+  put($('line'), { left: 0, right: 0, top: 1660, textAlign: 'center' });
+}
+put($('title'), { top: T });
+const [bx, by, bw, bh] = box; put($('box'), { left: bx, top: by, width: bw, height: bh });
+// 絵: crop の範囲を箱いっぱいに（はみ出さない大きさ、最大 2.4 倍）、まん中に。背景は絵のすみの紙の色でぬる（箱の境目を見せない）
+const img = $('pic'); img.onload = () => {
+  const g = $('bg').getContext('2d');   // 左下 360×360 の紙（きめごと）をならべる。左下はどの台本も絵がない
+  for (let yy = 0; yy < 1920; yy += 360) for (let xx = 0; xx < 1080; xx += 360) g.drawImage(img, 0, 1540, 360, 360, xx, yy, 360, 360);
+  const [x, y, w, h] = c.crop, k = Math.min(2.4, bw / w, bh / h);
+  put(img, { width: 1080 * k, transform: `translate(${(bw - w * k) / 2 - x * k}px, ${(bh - h * k) / 2 - y * k}px)` });
+  document.fonts.ready.then(() => { document.title = 'ready'; });
+};
+img.src = `out/thumbsrc/${page}.png`;
 </script>
 </body>
 </html>

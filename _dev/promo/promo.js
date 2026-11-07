@@ -17,6 +17,17 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 // 縦長（ショート）は下の約25%と右はしに YouTube の表示が重なるので、文字はその上・内側に置く
 const isVert = () => PH > PW;
 const maxW = () => PW - (isVert() ? 160 : 200);
+// ショートをスマホで見るとき、YouTube の UI がかぶる・端が切れる所（1080×1920 の座標。2026-11-07 ユーザー「外周が UI にかぶる・四すみで見切れる」）。
+// 縦に長いスマホでは左右が 100px ほど切れる。上は検索など、下はタイトル・チャンネル名、右下はいいね・コメントのボタン。大事な字と絵はこの内側に置く。
+// 確かめ: __peekSheet の並べ画像にうすい赤でのせる。うんちくの __triviaOverlap はこの外にかかる字を safe として出す
+const SHORT_SAFE = { l: 110, r: 970, t: 200, b: 1460, btnL: 880, btnT: 900 };
+const shortUnsafe = ([l, t, r, b]) => { const S = SHORT_SAFE; return l < S.l || r > S.r || t < S.t || b > S.b || (r > S.btnL && b > S.btnT); };
+function drawShortSafe(g, x, y, w, h) {
+  const S = SHORT_SAFE, k = w / 1080, P = [[S.l, S.t], [S.r, S.t], [S.r, S.btnT], [S.btnL, S.btnT], [S.btnL, S.b], [S.l, S.b]];
+  g.save(); g.beginPath(); g.rect(x, y, w, h); P.forEach(([px, py], i) => g[i ? 'lineTo' : 'moveTo'](x + px * k, y + py * k)); g.closePath();
+  g.fillStyle = 'rgba(255,0,0,0.16)'; g.fill('evenodd');
+  g.beginPath(); P.forEach(([px, py], i) => g[i ? 'lineTo' : 'moveTo'](x + px * k, y + py * k)); g.closePath(); g.strokeStyle = 'rgba(220,0,0,0.7)'; g.lineWidth = 2; g.stroke(); g.restore();
+}
 function setFont(g, size, bold) { g.font = (bold ? 'bold ' : '') + Math.round(size) + 'px ' + FONT; }
 // 幅に入らなければ、区切りのよい所（、」→ など）で2行に折る。それでも入らなければ字を小さくする
 function wrap(g, s, size, bold) {
@@ -619,7 +630,11 @@ function promoStart(cfg) {
     const sw = isVert() ? 480 : 960, sh = Math.round(sw * out.height / out.width);
     const c = document.createElement('canvas'); c.width = sw * cols; c.height = sh * rows;
     const cg = c.getContext('2d');
-    for (let i = 0; i < n; i++) { await renderAt(ts[i]); cg.drawImage(out, (i % cols) * sw, Math.floor(i / cols) * sh, sw, sh); }
+    for (let i = 0; i < n; i++) {
+      const x = (i % cols) * sw, y = Math.floor(i / cols) * sh;
+      await renderAt(ts[i]); cg.drawImage(out, x, y, sw, sh);
+      if (isVert()) drawShortSafe(cg, x, y, sw, sh);   // スマホで UI がかぶる・切れる所
+    }
     const b = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85));
     return (await fetch(`out/${name}.jpg`, { method: 'PUT', body: b })).status;
   };

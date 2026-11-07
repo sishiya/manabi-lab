@@ -92,6 +92,8 @@ YouTube に出す順番（ジャンル・サムネイルの色味が連日で重
   - **MacLeod の曲は、第三者が勝手に Content ID に登録して申し立てを付けてくることがある**（収益がその人に流れる）。公開の翌日に Studio の「著作権」を見る（`DAILY.md` 1c）。付いていたら、ユーザーの GO のあと Studio で異議を申し立てる（理由は「ライセンスあり」、CC BY 4.0 の URL と incompetech の曲のページを添える）。同じ曲に何度も付くなら、Stable Audio かコードの曲に置きかえる。
   - 合成の声・AI の曲を使った動画は、upload.json に `"synthetic": true` を書くと YouTube の「改変・合成されたコンテンツ」の表示が付く（`youtube-upload.ps1`）。実在の人と見まちがう声・映像なら必須。しし屋の動画（ライオン・VOICEVOX のキャラ）はいまは付けていない。
 - **サムネイルを必ず付ける**（RULES 8.7、2026-10-12〜）: 横長は `thumbs/<app>-guide.jpg`、ショートは `thumbs/<app>-short.jpg`（同じ道具で両方できる）（`short-thumbs.js` に1行足して `_dev/tools/make-short-thumbs.ps1 -Apps <app>`）。upload.json の `thumbnail` に書く。あとから付けるのは `youtube-upload.ps1 -Thumb -Meta a.upload.json,b.upload.json`。
+  - うんちくのサムネイルは動画のコマをそのまま使わない（2026-11-07 ユーザー「自動で切り抜かれたスクショみたい」）: 台本を `?short&thumbart=<秒>` で開いて字のない絵だけを撮り、`trivia-thumb.html` が題名を大きく書きなおす。一覧はショートを上下切って 2:3 くらいで見せるので、大事なものは y 170〜1750 に。
+- **ショートはスマホの UI を避けて置く**（2026-11-07 ユーザー「外周が UI にかぶる・四すみで見切れる」）: 縦に長いスマホでは左右が 100px ほど切れ、上は検索、下はタイトル・チャンネル名、右下はいいね・コメントのボタン。大事な字と絵は `promo.js` の `SHORT_SAFE`（x 110〜970・y 200〜1460、y 900 より下は x 880 まで。推定）の内側に。`record-promo.ps1 -Peek` の並べ画像にうすい赤でのるので、録画の前に見る。うんちくは `-Overlap` で帯にかかる字が `safe`（絵の中の字）・`safe-ui`（字幕・注・クレジット）として出る。
 - 最初のカットは入口のサムネイル（`assets/thumbs/<app>.jpg`）に近い見た目にする。生き物などの名前を画面に出すと好評。
 - 性的な内容・R18 をまぜない（RULES 9章）。出どころは説明文と終わりの画面に書く。
 - **ほかの人の写真・絵（CC BY・CC BY-SA）が動画に映るときは、説明欄に1枚ずつ作者と条件を書く**（2026-11-06〜。画面に一瞬出すだけでは足りない）。多くて書ききれないときは `credits/<app>.md` に一覧を作り、説明欄にそのリンク（`https://github.com/sishiya/manabi-lab/blob/main/_dev/promo/credits/<app>.md`）。新しく作る動画は、できれば CC0・パブリックドメイン・CC BY のものだけが映るようにする（BY-SA は動画全体の条件と食いちがうおそれがある）。見本は `credits/tree-of-life.md`。

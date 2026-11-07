@@ -252,8 +252,26 @@ TK.fitVoice = function (cfg, lines) {
   };
 };
 
+// サムネイル用（?thumbart=<秒>）: その秒の絵だけを 1080×1920 で1枚。字・字幕・進みバー・目印は描かない。
+// 字は fillText/strokeText を止めて消す（絵の中の見出しも消える）。撮るのは make-trivia-thumbs.ps1、題名は trivia-thumb.html が書く
+TK.thumbArt = function (cfg, t) {
+  PW = 1080; PH = 1920;
+  document.body.style.margin = '0';
+  document.body.innerHTML = `<canvas id="art" width="${PW * RES}" height="${PH * RES}" style="position:fixed;left:0;top:0;width:${PW}px;height:${PH}px"></canvas>`;
+  const g = document.getElementById('art').getContext('2d'); g.setTransform(RES, 0, 0, RES, 0, 0);
+  TK._run = { end: cfg.dur, subs: cfg.subs || [] };
+  TK.bg(g, t, cfg.bgOpts || {});
+  const P = CanvasRenderingContext2D.prototype, F = P.fillText, S = P.strokeText;
+  P.fillText = P.strokeText = () => { };
+  try { if (TK.drawArt) TK.drawArt(g, t, cfg.draw); else cfg.draw(g, t); } finally { P.fillText = F; P.strokeText = S; }
+  if (TK.finish) TK.finish(g, t);
+  document.title = 'thumbart-ready';
+};
+
 function triviaStart(cfg) {
   if (TK.ready && !cfg._ready) { TK.ready.then(() => triviaStart(Object.assign({}, cfg, { _ready: true }))); return; }   // 決まったルックの読みこみ待ち（trivia-style.js）
+  const thumbT = new URLSearchParams(location.search).get('thumbart');
+  if (thumbT !== null) { TK.thumbArt(cfg, +thumbT); return; }
   if (cfg.voice === 'auto') {   // 声の一覧を先に読んでから始める（なければ字幕だけ）
     fetch(`out/voice/${cfg.voiceOut || cfg.out}/voice.json`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null).then(j => {
       const lines = Array.isArray(j) ? j : (j && j.lines) || [];
@@ -327,6 +345,7 @@ function triviaStart(cfg) {
 // step 秒ごとに描きながら、本編の絵の中の字（TK.text・fillText）を1つずつ見る:
 //   line: 字を書く前、その四角の中に線（紙と大きくちがう所）がある  tint: 字の下が色ぬりの上（カードの上なら気にしない）
 //   cover: 字のあとに上から絵や帯が描かれた  text: 字どうしが重なる  out: 画面の外にはみ出す  band: 字幕の帯の下に絵が隠れる（tint と band は弱い。目で見て決める）
+//   safe: 絵の中の字がスマホで UI にかぶる・切れる所にある（promo.js SHORT_SAFE）  safe-ui: 字幕・注・クレジットが同じ所に（弱い）
 // 返すのは重なりの一覧。sheet を渡すと、見つけたコマに枠を描いて out/<sheet>.jpg に並べる
 window.__triviaOverlap = async (step = 0.25, sheet = '') => {
   const P = CanvasRenderingContext2D.prototype, F = P.fillText, run = TK._run, found = new Map();
@@ -375,6 +394,7 @@ window.__triviaOverlap = async (step = 0.25, sheet = '') => {
       for (const r of recs) {
         const b = r.b[0];
         if (b[0] < 6 * k || b[1] < 6 * k || b[2] > W - 6 * k || b[3] > H - 6 * k) add('out', r.s, t, 1, b);
+        else if (isVert() && shortUnsafe(b.map(v => v / k))) add(r.ph === 'draw' ? 'safe' : 'safe-ui', r.s, t, 1, b);   // スマホで UI がかぶる・切れる所（promo.js SHORT_SAFE）
         if (r.line > 0.03) add('line', r.s, t, r.line, b); else if (r.tint > 0.25) add('tint', r.s, t, r.tint, b);
         if (r.ph !== 'draw') continue;
         if (r.snap) { const d = grab(c, b); let ch = 0; for (let i = 0; i < d.length; i += 4) if (Math.abs(d[i] - r.snap[i]) + Math.abs(d[i + 1] - r.snap[i + 1]) + Math.abs(d[i + 2] - r.snap[i + 2]) > 60) ch++; if (ch / (d.length / 4) > 0.04) add('cover', r.s, t, ch / (d.length / 4), b); }
@@ -388,11 +408,11 @@ window.__triviaOverlap = async (step = 0.25, sheet = '') => {
   } finally { P.fillText = F; TK.text = TT; TK._beforeSub = null; }
   const list = [...found.values()].map(f => ({ kind: f.kind, s: f.s, t: f.t0.toFixed(2) + '〜' + f.t1.toFixed(2), v: +f.v.toFixed(3), tPeek: +(f.t0 + f.t1) / 2, b: f.b.map(Math.round) }));
   if (sheet && list.length) {   // 見つけたコマ（最大16）に枠を描いて並べる
-    const weak = f => f.kind === 'tint' || f.kind === 'band', pick = list.filter(f => !weak(f)).concat(list.filter(weak)).slice(0, 16), cols = 4, sw = 480, sh = 853;
+    const weak = f => f.kind === 'tint' || f.kind === 'band' || f.kind === 'safe-ui', pick = list.filter(f => !weak(f)).concat(list.filter(weak)).slice(0, 16), cols = 4, sw = 480, sh = 853;
     const cv = document.createElement('canvas'); cv.width = sw * cols; cv.height = sh * Math.ceil(pick.length / cols); const cg = cv.getContext('2d');
     for (let i = 0; i < pick.length; i++) {
       const f = pick[i]; await window.__promoPeek(f.tPeek); const src = ctx.canvas, sx = (i % cols) * sw, sy = Math.floor(i / cols) * sh, k = sw / src.width;
-      cg.drawImage(src, sx, sy, sw, sh); cg.strokeStyle = weak(f) ? '#f90' : '#f00'; cg.lineWidth = 3; cg.strokeRect(sx + f.b[0] * k, sy + f.b[1] * k, (f.b[2] - f.b[0]) * k, (f.b[3] - f.b[1]) * k);
+      cg.drawImage(src, sx, sy, sw, sh); if (f.kind.startsWith('safe')) drawShortSafe(cg, sx, sy, sw, sh); cg.strokeStyle = weak(f) ? '#f90' : '#f00'; cg.lineWidth = 3; cg.strokeRect(sx + f.b[0] * k, sy + f.b[1] * k, (f.b[2] - f.b[0]) * k, (f.b[3] - f.b[1]) * k);
       cg.fillStyle = '#000'; cg.fillRect(sx, sy + sh - 34, sw, 34); cg.fillStyle = '#fff'; cg.font = '20px sans-serif'; cg.fillText(`${f.kind} ${f.tPeek.toFixed(1)}s ${f.s}`.slice(0, 40), sx + 6, sy + sh - 10);
     }
     const bl = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.85)); await fetch(`out/${sheet}.jpg`, { method: 'PUT', body: bl });
