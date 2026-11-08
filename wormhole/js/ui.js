@@ -47,6 +47,7 @@ function updateReadouts(S, T) {
 }
 
 function updateHint(S, T) {
+  if (S.cinema) { $('hint').textContent = tourCaption(S.l, S.a); return; }
   const psi = T.psiC * 180 / Math.PI, zone = zoneOf(S), sun = S.place === 'sun';
   let t;
   const drag = S.dragMode === 'orbit' ? 'ドラッグで穴のまわりを回ると、天体との位置が変わります。' : 'ドラッグでその場の向きを変えられます。';

@@ -15,12 +15,12 @@ const R_EARTH_KM = 6371;
 const SUN_THROAT_KM = 20000;  // 太陽のそばの場面の のどの半径（太陽とくらべて見える大きさにした。仮定）
 
 const PLACES = {
-  normal: { km: 1, film: 0.22, A: { sun: nrm3([0.62, 0.52, 0.58]), gain: 1, bodies: [
+  normal: { km: 1, film: 0.22, A: { sun: nrm3([0.62, 0.52, 0.58]), gain: 0.15, bodies: [
       { c: [-14, 12, -6], R: 4.4, kind: 0 },
       { c: [21, -8, 3], R: 3.2, kind: 1 },
       { c: [-20, -13, 9], R: 1.2, kind: 2 },
     ] },
-    B: { sun: nrm3([0.42, -0.72, 0.55]), gain: 1, bodies: [
+    B: { sun: nrm3([0.42, -0.72, 0.55]), gain: 0.15, bodies: [
       { c: [24, 11, -4], R: 6.2, kind: 3 },
       { c: [12, -10, 7], R: 1.5, kind: 2 },
       { c: [-16, 12, -10], R: 2.6, kind: 1 },
@@ -30,7 +30,7 @@ const PLACES = {
   sun: { km: SUN_THROAT_KM, film: 0.15, sunDistRho: 70, A: { sun: nrm3([-1, 0, 0]), gain: 0, bodies: [
       { c: [-70, 0, 0], R: R_SUN_KM / SUN_THROAT_KM, kind: 4 }, NOBODY, NOBODY,
     ] },
-    B: { sun: nrm3([0.42, -0.72, 0.55]), gain: 1, bodies: [
+    B: { sun: nrm3([0.42, -0.72, 0.55]), gain: 0.15, bodies: [
       { c: [24, 11, -4], R: 6.2, kind: 3 },
       { c: [12, -10, 7], R: 1.5, kind: 2 },
       { c: [-16, 12, -10], R: 2.6, kind: 1 },

@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="css/style.css?v=2">
+<link rel="stylesheet" href="css/style.css?v=5">
 
 <div id="app">
   <main id="stage">
@@ -24,6 +24,7 @@
           <input id="pos" type="range" min="-1" max="1" step="0.001" value="-0.5" aria-label="カメラの位置（もとの宇宙 から のど を通って 向こうの宇宙 まで）">
           <div id="ticks"></div>
         </div>
+        <button id="btnExit" class="btn">説明へ</button>
       </div>
       <div class="trip-row look">
         <span class="dragLbl">ドラッグ:</span>
@@ -76,8 +77,8 @@
     <section>
       <h2>ワームホールの形</h2>
       <div class="presets" id="presets">
-        <button class="preset" data-p="thin" aria-pressed="true">細いのど<small>短くて口が急（論文の値）</small></button>
-        <button class="preset" data-p="tunnel" aria-pressed="false">長いトンネル<small>のどの長さ 10 km</small></button>
+        <button class="preset" data-p="tunnel" aria-pressed="true">長いトンネル<small>のどの長さ 10 km</small></button>
+        <button class="preset" data-p="thin" aria-pressed="false">細いのど<small>短くて口が急（論文の値）</small></button>
         <button class="preset" data-p="smooth" aria-pressed="false">なめらかな口<small>長さ 1 km・口が広い</small></button>
       </div>
       <details>
@@ -147,12 +148,13 @@
   </aside>
 </div>
 
-<script src="js/metric.js?v=2"></script>
-<script src="js/lut.js?v=2"></script>
-<script src="js/scene.js?v=2"></script>
-<script src="js/sky.js?v=2"></script>
-<script src="js/shader.js?v=2"></script>
-<script src="js/render.js?v=2"></script>
-<script src="js/funnel.js?v=2"></script>
-<script src="js/ui.js?v=2"></script>
-<script src="js/main.js?v=2"></script>
+<script src="js/metric.js?v=5"></script>
+<script src="js/lut.js?v=5"></script>
+<script src="js/scene.js?v=5"></script>
+<script src="js/sky.js?v=5"></script>
+<script src="js/shader.js?v=5"></script>
+<script src="js/render.js?v=5"></script>
+<script src="js/funnel.js?v=5"></script>
+<script src="js/ui.js?v=5"></script>
+<script src="js/tour.js?v=5"></script>
+<script src="js/main.js?v=5"></script>

@@ -84,6 +84,17 @@ details ul.src{margin:6px 0 0;padding-left:1.1em;color:var(--muted);font-size:12
 details ul.src li+li{margin-top:3px}
 .explain{gap:6px}
 
+/* 再生中は景色だけ。パネルの上に黒い舞台をかぶせる */
+body.cinema #stage{position:fixed;inset:0;z-index:20;padding:0 0 10px;gap:8px;background:#000;box-shadow:none}
+body.cinema #frame{flex:1;width:auto;aspect-ratio:auto}
+body.cinema #frame canvas{border-radius:0}
+body.cinema #funnelOver,body.cinema .trip-row.look,body.cinema #rayLine,body.cinema #stripLabel{display:none}
+body.cinema #trip{padding:0 16px;gap:4px}
+body.cinema #hint{order:-1;text-align:center;font-size:16px;line-height:1.5;min-height:1.5em;white-space:normal;overflow:visible}
+body.cinema{overflow:hidden}
+#btnExit{display:none}
+body.cinema #btnExit{display:block;flex:none}
+
 @media (max-width:860px) and (orientation:portrait){
   html,body{height:auto}
   #app{grid-template-columns:1fr;height:auto}
@@ -92,6 +103,7 @@ details ul.src li+li{margin-top:3px}
   #funnelOver{display:block;position:absolute;top:6px;right:6px;width:42%;aspect-ratio:320/230;background:rgba(4,6,14,.72);border:1px solid var(--line2);border-radius:6px;z-index:1}
   #funnelOver #funnelBox{background:none;border:0;border-radius:0;position:absolute;inset:0;aspect-ratio:auto}
   .trip-row{gap:8px}
+  body.cinema #hint{min-height:3em;font-size:15px}
   .btn.primary{min-width:104px;padding:0 8px;font-size:13px}
   .trip-row.look{gap:4px;flex-wrap:nowrap}
   .dragLbl{display:none}

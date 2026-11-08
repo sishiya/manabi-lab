@@ -10,11 +10,12 @@ const PRESETS = {
   tunnel: { a: 5, W: 0.05 },     // 2a = 10ρ（図 7）
   smooth: { a: 0.5, W: 0.43 },   // 2a = ρ、W = 0.43ρ（図 9）
 };
-const L_MAX = 25, START_L = 6.25, PLAY_SEC = 22;   // START_L は図 7 のカメラ（ℓ = 6.25ρ + a）
+const L_MAX = 25, START_L = 6.25;   // START_L は図 7 のカメラ（ℓ = 6.25ρ + a）
 const FRONT = () => ({ right: [0, -1, 0], up: [0, 0, 1], fwd: [1, 0, 0] });
 
-const S = { a: 0, W: 0, shape: null, preset: 'thin', place: 'normal', u: 0, l: 0, V: FRONT(), Q: [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+const S = { a: 0, W: 0, shape: null, preset: 'tunnel', place: 'normal', u: 0, l: 0, V: FRONT(), Q: [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
   mode: 0, look: 0, dragMode: 'orbit', playing: false, pick: null, ray: null, vel: [0, 0], dragging: false,
+  cinema: false, auto: false, autoK: 0, from: null, userYaw: 0, userPitch: 0, fov: 1, exitAt: 0, aaNow: 2, scale: 1, ft: 0, ftAt: 0,
   lutDirty: true, viewDirty: true, funnelDirty: true, fineAt: 0, T: null, data: new Float32Array(LUT_N * 2), W_px: 0, H_px: 0, stripPx: 0 };
 
 // スライダー u（−1〜1）と ℓ の対応。のどの円筒に区間を割り当て、外は遠いほど粗く
@@ -46,12 +47,13 @@ function syncShapeLabels() {
 }
 function markAll() { S.lutDirty = true; S.viewDirty = true; S.funnelDirty = true; S.fineAt = 0; }
 function setPos(u) { S.u = Math.max(-1, Math.min(1, u)); S.l = uToL(S.u); $('pos').value = S.u; markAll(); }
+function setL(l) { S.l = l; S.u = lToU(l); $('pos').value = S.u; markAll(); }
 
 function setPlace(p) {
   S.place = p; SCENE = PLACES[p];
   if (R.gl) applyScene();
   S.V = FRONT(); S.Q = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]; S.vel = [0, 0]; S.pick = null; S.ray = null;
-  const pr = PRESETS.thin; S.preset = 'thin'; syncPresets();
+  S.preset = p === 'sun' ? 'thin' : 'tunnel'; const pr = PRESETS[S.preset]; syncPresets();
   document.querySelectorAll('#segPlace button').forEach(b => b.setAttribute('aria-pressed', b.dataset.p === p));
   $('btnSunSide').hidden = p !== 'sun';
   setShape(pr.a, pr.W, false); syncBack();
@@ -72,8 +74,10 @@ function mulQ(m) { const q = S.Q, n = [0, 1, 2].map(j => mix2(mix2(q[0], m[0][j]
 
 // 画面の横 ax・縦 ay（ラジアン）だけ動かす。指の向きに景色がついてくる
 function turn(ax, ay) {
+  if (S.playing && S.auto) { S.userYaw += ax; S.userPitch += ay; return; }   // 再生中のドラッグは自動の向きに重ねる（離すと自動へ戻る）
   if (S.dragMode === 'orbit') { mulQ(rotMat(S.V.up, -ax)); mulQ(rotMat(S.V.right, -ay)); orthoQ(); }
   else {
+    S.auto = false;
     const V = S.V;
     let c = Math.cos(ax), s = Math.sin(ax), f = mix2(V.fwd, c, V.right, -s); V.right = mix2(V.right, c, V.fwd, s); V.fwd = f;
     c = Math.cos(ay); s = Math.sin(ay); f = mix2(V.fwd, c, V.up, s); V.up = mix2(V.up, c, V.fwd, -s); V.fwd = f;
@@ -81,8 +85,9 @@ function turn(ax, ay) {
   }
   syncBack();
 }
-function roll(a) { const V = S.V, c = Math.cos(a), s = Math.sin(a), r = mix2(V.right, c, V.up, s); V.up = mix2(V.up, c, V.right, -s); V.right = r; orthoV(); S.viewDirty = true; }
+function roll(a) { S.auto = false; const V = S.V, c = Math.cos(a), s = Math.sin(a), r = mix2(V.right, c, V.up, s); V.up = mix2(V.up, c, V.right, -s); V.right = r; orthoV(); S.viewDirty = true; }
 function levelView() {   // 傾きだけを戻す（向いている方向は変えない）
+  S.auto = false;
   const V = S.V, r = cross(V.fwd, [0, 0, 1]), n = Math.hypot(r[0], r[1], r[2]);
   if (n < 1e-3) return;
   V.right = [r[0] / n, r[1] / n, r[2] / n]; V.up = cross(V.right, V.fwd); S.viewDirty = true;
@@ -90,8 +95,8 @@ function levelView() {   // 傾きだけを戻す（向いている方向は変�
 
 function halfTan() {
   const asp = S.W_px / Math.max(1, S.H_px - S.stripPx);
-  if (asp >= 1) { const t = Math.tan(30 * Math.PI / 180); return [t * asp, t]; }
-  const t = Math.tan(38 * Math.PI / 180); return [t, t / asp];
+  if (asp >= 1) { const t = Math.tan(30 * S.fov * Math.PI / 180); return [t * asp, t]; }
+  const t = Math.tan(38 * (1 + (S.fov - 1) * 0.5) * Math.PI / 180); return [t, t / asp];   // 縦長は上下がもともと広いので、広げ方を半分に
 }
 
 // 画面の点（CSS の座標）→ 局所の向き。帯の上なら帯の向き
@@ -127,9 +132,9 @@ function tracePick() {
 
 function resize() {
   const v = $('view'), m = $('mark'), r = v.getBoundingClientRect();
-  const dpr = Math.min(1.5, window.devicePixelRatio || 1);
+  const dpr = Math.min(1.5, window.devicePixelRatio || 1) * (S.playing ? S.scale : 1);
   const w = Math.max(2, Math.round(r.width * dpr)), h = Math.max(2, Math.round(r.height * dpr));
-  S.stripPx = S.look === 1 ? Math.round(Math.min(56, r.height * 0.16) * dpr) : 0;
+  S.stripPx = S.look === 1 && !S.cinema ? Math.round(Math.min(56, r.height * 0.16) * dpr) : 0;
   if (v.width !== w || v.height !== h) { v.width = w; v.height = h; S.W_px = w; S.H_px = h; m.width = w; m.height = h; S.viewDirty = true; S.funnelDirty = true; }
   const lb = $('stripLabel'); lb.hidden = !S.stripPx; lb.style.bottom = `${S.stripPx / dpr + 3}px`;
 }
@@ -160,11 +165,22 @@ function drawMarks() {
 let lastT = 0;
 function frame(now) {
   resize();
-  const dt = lastT ? Math.min(0.05, (now - lastT) / 1000) : 0; lastT = now;
+  const dt = lastT ? Math.min(0.25, (now - lastT) / 1000) : 0; lastT = now;   // 遅い端末でも間延びしないよう、コマを飛ばして進む
   if (S.playing && dt > 0) {
-    setPos(Math.min(0.985, S.u + dt * 2 / PLAY_SEC));
-    if (S.u >= 0.985) stopPlay();
+    S.ft += (dt - S.ft) * 0.15;
+    if (now > S.ftAt) {   // 間に合わないときは、まず画素ごとの点の数、次に解像度を下げる（止まれば元に戻る）
+      S.ftAt = now + 700;
+      if (S.ft > 0.034) { if (S.aaNow > 1) S.aaNow = 1; else if (S.scale > 0.7) S.scale -= 0.17; S.ft = 0.02; }
+    }
+    const end = S.a + TOUR_END;
+    setL(Math.min(end, S.l + dt * tourSpeed(S.l, S.a)));
+    if (S.auto) applyTourCam(dt);
+    if (S.l >= end) { S.playing = false; S.exitAt = now + 2600; syncPlay(); S.lutDirty = true; }
+  } else if (S.fov !== 1 && dt > 0 && !S.auto) {   // 自動が終わったら視野をゆっくり戻す
+    S.fov += (1 - S.fov) * (1 - Math.exp(-dt * 3)); if (Math.abs(S.fov - 1) < 2e-3) S.fov = 1;
+    S.viewDirty = true;
   }
+  if (S.exitAt && now > S.exitAt) setCinema(false);
   if (!S.dragging && (Math.abs(S.vel[0]) > 2e-3 || Math.abs(S.vel[1]) > 2e-3) && dt > 0) {   // 指を離したあとも少し回り続ける
     turn(S.vel[0] * dt, S.vel[1] * dt);
     const k = Math.exp(-dt * 2.2); S.vel[0] *= k; S.vel[1] *= k;
@@ -183,18 +199,55 @@ function renderIfNeeded(now) {
     S.T = buildLUT(S.shape, S.l, S.data, false); uploadLUT(S.T); S.fineAt = 0; need = true;
   }
   if (need) {
-    drawView(S.V, S.Q, halfTan(), { mode: S.mode, stripPx: S.stripPx, rc: radius(S.shape, S.l), camS: S.l > 0 ? 1 : -1, film: S.look === 0 });
+    drawView(S.V, S.Q, halfTan(), { mode: S.mode, stripPx: S.stripPx, rc: radius(S.shape, S.l), camS: S.l > 0 ? 1 : -1, film: S.look === 0, aa: S.playing ? Math.min(S.aaNow, R.aa) : 0 });
     drawMarks(); S.viewDirty = false;
   }
   if (S.funnelDirty) { drawFunnel($('funnel'), S.shape, S.l, S.ray); S.funnelDirty = false; }
 }
 
-function startPlay() {
-  if (S.u >= 0.9) { setPos(lToU(-(S.a + START_L))); S.V = FRONT(); syncBack(); }
-  S.playing = true; lastT = 0;
-  $('btnPlay').textContent = '⏸ とめる';
+// 向きを3つの角度で組み立てる（right・up・fwd）
+function camFrom(yaw, pitch, rollA) {
+  const cp = Math.cos(pitch), sp = Math.sin(pitch), cy = Math.cos(yaw), sy = Math.sin(yaw);
+  const fwd = [cp * cy, cp * sy, sp], r0 = unit([sy, -cy, 0]), u = cross(r0, fwd), cr = Math.cos(rollA), sr = Math.sin(rollA);
+  const right = mix2(r0, cr, u, sr);
+  return { right, up: cross(right, fwd), fwd };
 }
-function stopPlay() { S.playing = false; $('btnPlay').textContent = '▶ 通りぬける'; }
+// いまの向きを角度で読む。自動は「いまの向きとの差」をゆっくり消すので、真うしろからでも回って移る
+function readCam() {
+  const f = S.V.fwd, yaw = Math.atan2(f[1], f[0]), pitch = Math.asin(Math.max(-1, Math.min(1, f[2])));
+  const r0 = unit([Math.sin(yaw), -Math.cos(yaw), 0]), u = cross(r0, f);
+  return { yaw, pitch, roll: Math.atan2(dot(S.V.right, u), dot(S.V.right, r0)) };
+}
+function applyTourCam(dt) {
+  const c = tourCam(S.l, S.a), wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
+  S.autoK = Math.min(1, S.autoK + dt / 1.6);
+  const k = 1 - S.autoK * S.autoK * (3 - 2 * S.autoK), f = S.from, c0 = tourCam(f.l, S.a);
+  if (!S.dragging && Math.abs(S.vel[0]) + Math.abs(S.vel[1]) < 0.05) { const d = Math.exp(-dt * 1.2); S.userYaw *= d; S.userPitch *= d; }
+  S.V = camFrom(c.yaw + wrap(f.yaw - c0.yaw) * k + S.userYaw, c.pitch + (f.pitch - c0.pitch) * k + S.userPitch, c.roll + (f.roll - c0.roll) * k);
+  S.fov = c.fov + (f.fov - c.fov) * k;
+  syncBack();
+}
+
+function syncPlay() {
+  $('btnPlay').textContent = S.playing ? '⏸ とめる' : S.l >= S.a + TOUR_END - 1e-3 ? '▶ もう一度' : S.cinema ? '▶ つづける' : '▶ 通りぬける';
+}
+function setCinema(on) {
+  S.exitAt = 0;
+  if (S.cinema === on) return;
+  S.cinema = on; document.body.classList.toggle('cinema', on);
+  if (!on && S.auto) { levelView(); S.auto = false; }   // 傾きを残さない
+  S.viewDirty = true; S.funnelDirty = true;
+  if (S.T) updateHint(S, S.T);
+}
+function startPlay() {
+  if (S.l >= S.a + TOUR_END - 1e-3) { setL(-(S.a + START_L)); S.V = FRONT(); syncBack(); }
+  S.pick = null; S.ray = null; S.funnelDirty = true;
+  S.vel = [0, 0]; S.userYaw = 0; S.userPitch = 0; S.from = { ...readCam(), fov: S.fov, l: S.l };
+  S.playing = true; S.auto = true; S.autoK = 0; lastT = 0; S.aaNow = 2; S.scale = 1; S.ft = 0.02; S.ftAt = performance.now() + 1000;
+  setCinema(true); syncPlay();
+}
+function pausePlay() { S.playing = false; S.exitAt = 0; S.viewDirty = true; S.lutDirty = true; syncPlay(); }   // 全画面のまま止める
+function stopPlay() { S.playing = false; setCinema(false); syncPlay(); }
 
 function isBack() { return S.V.fwd[0] < 0; }
 function syncBack() { const b = isBack(), el = $('btnBack'); el.setAttribute('aria-pressed', b); el.textContent = b ? '前を見る' : 'うしろを見る'; S.viewDirty = true; if (S.T) updateHint(S, S.T); }
@@ -228,7 +281,9 @@ function wirePointer() {
     if (pts.size > 0) return;
     v.classList.remove('drag'); S.dragging = false;
     if (down && performance.now() - down.t > 80) S.vel = [0, 0];   // 止めてから離したら回り続けない
-    if (down && !down.moved && e.type === 'pointerup') {
+    if (down && !down.moved && e.type === 'pointerup' && S.cinema) {   // 全画面では動画と同じく、押すと止まる／つづく
+      if (S.exitAt) stopPlay(); else if (S.playing) pausePlay(); else startPlay();
+    } else if (down && !down.moved && e.type === 'pointerup') {
       const r = v.getBoundingClientRect();
       S.pick = dirAtPoint(e.clientX - r.left, e.clientY - r.top, r.width, r.height);
       tracePick(); describeRay(S, S.ray); S.viewDirty = true; S.funnelDirty = true;
@@ -237,15 +292,16 @@ function wirePointer() {
     down = null;
   };
   v.addEventListener('pointerup', up); v.addEventListener('pointercancel', up);
-  v.addEventListener('wheel', e => { e.preventDefault(); if (S.playing) stopPlay(); setPos(S.u - e.deltaY * 0.0005); }, { passive: false });
+  v.addEventListener('wheel', e => { e.preventDefault(); if (S.playing || S.exitAt) pausePlay(); setPos(S.u - e.deltaY * 0.0005); syncPlay(); }, { passive: false });
 }
 
 function setSeg(sel, b) { document.querySelectorAll(sel).forEach(o => o.setAttribute('aria-pressed', o === b)); }
 
 function wireUI() {
-  $('pos').addEventListener('input', e => { if (S.playing) stopPlay(); setPos(+e.target.value); });
-  $('btnPlay').addEventListener('click', () => S.playing ? stopPlay() : startPlay());
-  $('btnBack').addEventListener('click', () => { S.vel = [0, 0]; S.V = isBack() ? FRONT() : { right: [0, 1, 0], up: [0, 0, 1], fwd: [-1, 0, 0] }; syncBack(); });
+  $('pos').addEventListener('input', e => { if (S.playing || S.exitAt) pausePlay(); setPos(+e.target.value); syncPlay(); });
+  $('btnPlay').addEventListener('click', () => S.playing ? pausePlay() : startPlay());
+  $('btnExit').addEventListener('click', stopPlay);
+  $('btnBack').addEventListener('click', () => { S.auto = false; S.vel = [0, 0]; S.V = isBack() ? FRONT() : { right: [0, 1, 0], up: [0, 0, 1], fwd: [-1, 0, 0] }; syncBack(); });
   $('btnLeft').addEventListener('click', () => { S.vel = [1.1, 0]; });
   $('btnRight').addEventListener('click', () => { S.vel = [-1.1, 0]; });
   $('btnRollL').addEventListener('click', () => roll(0.26));
@@ -271,7 +327,7 @@ function syncPresets() { document.querySelectorAll('#presets .preset').forEach(b
 function init() {
   placeFunnel();
   wirePointer(); wireUI();
-  const p = PRESETS.thin; setShape(p.a, p.W, false);
+  const p = PRESETS.tunnel; setShape(p.a, p.W, false);
   resize();
   setTimeout(() => {
     try {

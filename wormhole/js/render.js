@@ -139,7 +139,7 @@ function drawView(view, orbit, half, opt) {
   gl.uniform3fv(R.u.uRingN, new Float32Array(mulTv(orbit, SCENE.ring.axis)));
 
   // ずらして足す（RGSS）
-  const JIT = R.aa >= 4 ? [[.125, .375], [-.375, .125], [.375, -.125], [-.125, -.375]] : R.aa === 2 ? [[.25, .25], [-.25, -.25]] : [[0, 0]];
+  const aa = opt.aa || R.aa, JIT = aa >= 4 ? [[.125, .375], [-.375, .125], [.375, -.125], [-.125, -.375]] : aa === 2 ? [[.25, .25], [-.25, -.25]] : [[0, 0]];
   gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
   gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
   gl.uniform1f(R.u.uWt, 1 / JIT.length);
