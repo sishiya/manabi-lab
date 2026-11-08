@@ -1,0 +1,125 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ワームホールを通りぬける</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230b1224'/><circle cx='32' cy='32' r='15' fill='none' stroke='%237fd4ff' stroke-width='6'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css?v=1">
+
+<div id="app">
+  <main id="stage">
+    <div id="frame">
+      <canvas id="view" aria-label="ワームホールの景色。ドラッグで見回す、押すとその点の光の道すじを図に出す"></canvas>
+      <canvas id="mark"></canvas>
+      <div id="stripLabel">ぐるり一周（まん中が進む向き）</div>
+      <div id="busy">星空を作っています…</div>
+      <div id="fail" hidden></div>
+      <div id="funnelOver"></div>
+    </div>
+    <div id="trip">
+      <div class="trip-row">
+        <button id="btnPlay" class="btn primary">▶ 通りぬける</button>
+        <div class="slider">
+          <input id="pos" type="range" min="-1" max="1" step="0.001" value="-0.5" aria-label="カメラの位置（もとの宇宙 から のど を通って 向こうの宇宙 まで）">
+          <div id="ticks"></div>
+        </div>
+      </div>
+      <div class="trip-row look">
+        <button id="btnLeft" class="btn" aria-label="左へ見回す">◀ 左へ</button>
+        <button id="btnRight" class="btn" aria-label="右へ見回す">右へ ▶</button>
+        <button id="btnBack" class="btn" aria-pressed="false">うしろを見る</button>
+      </div>
+      <p id="hint"></p>
+      <p id="rayLine">景色の点を押すと、その光の来た道が図に出ます。</p>
+    </div>
+  </main>
+
+  <aside id="panel">
+    <div class="brand">
+      <h1><span class="nw">ワームホールを</span><span class="nw">通りぬける</span></h1>
+      <p>宇宙の別の場所をつなぐ、まだ見つかっていない仮想のトンネル。穴の奥に見える景色を、光を1本ずつ計算して描きます。</p>
+    </div>
+
+    <section class="card">
+      <div class="ro-top"><span class="lbl">いまの場所</span><span class="ro-tag" id="roZone"></span></div>
+      <div class="ro-num"><b id="roDist">—</b><small id="roDistU"></small></div>
+      <div class="ro-grid">
+        <span>向こうの宇宙が見える範囲</span><b id="roFar">—</b>
+        <span>穴の見かけの半径</span><b id="roHole">—</b>
+      </div>
+      <p class="ro-note">距離は、のどの半径を 1 km としたとき（論文の目安の値）。</p>
+    </section>
+
+    <section id="funnelHome">
+      <h2>光の道すじ</h2>
+      <div id="funnelBox"><canvas id="funnel"></canvas></div>
+      <p class="cap">ワームホールの面を2枚のろうとで描いた図。光はこの面に沿って進みます。高さは見やすいように作ったものです。</p>
+      <div id="rayText"></div>
+    </section>
+
+    <section>
+      <h2>ワームホールの形</h2>
+      <div class="presets" id="presets">
+        <button class="preset" data-p="thin" aria-pressed="true">細いのど<small>短くて口が急（論文の値）</small></button>
+        <button class="preset" data-p="tunnel" aria-pressed="false">長いトンネル<small>のどの長さ 10 km</small></button>
+        <button class="preset" data-p="smooth" aria-pressed="false">なめらかな口<small>長さ 1 km・口が広い</small></button>
+      </div>
+      <details>
+        <summary>形をくわしく変える</summary>
+        <label class="sl">のどの長さ <b id="vLen" class="mono"></b><input id="len" type="range" min="-3" max="1.4" step="0.01" aria-label="のどの長さ"></label>
+        <label class="sl">口のなめらかさ（レンズの幅） <b id="vWid" class="mono"></b><input id="wid" type="range" min="-2" max="0" step="0.01" aria-label="口のなめらかさ"></label>
+      </details>
+    </section>
+
+    <section>
+      <h2>空の絵</h2>
+      <div class="seg" id="segSky">
+        <button data-m="0" aria-pressed="true">星空</button>
+        <button data-m="1" aria-pressed="false">方眼（ゆがみが見える）</button>
+      </div>
+      <p class="cap">方眼は説明のための目印です。青がもとの宇宙、橙が向こうの宇宙。</p>
+    </section>
+
+    <section class="explain">
+      <details open>
+        <summary>なぜ穴の奥が見えるの</summary>
+        <p>ワームホールは、空間にあいたトンネルです。のどより細い間隔で向かってきた光はトンネルを通って反対側へ抜け、のどより外を通る光は曲げられて、もとの宇宙へ戻ります。だから穴の中には向こうの宇宙の景色が、穴のまわりにはゆがんだ自分の側の空が見えます。</p>
+        <p>のどの近くまで行くと、穴は空の半分まで広がります。のどの中心では、空のちょうど半分ずつが2つの宇宙です。</p>
+      </details>
+      <details>
+        <summary>これは本当にあるの</summary>
+        <p>見つかっていません。式の上では一般相対論で書けるトンネルですが、開いたままにするには負のエネルギーを持つ特別な物質が必要とされ、人が通れる大きさでは保てない可能性が高いと考えられています（下の論文は「おそらく。ただし確かではない」と書いています）。</p>
+      </details>
+      <details>
+        <summary>簡単にしたところ</summary>
+        <p>光の進み方は論文の式をそのまま計算していますが、次のことは入れていません。</p>
+        <ul class="src">
+          <li>場所による時間の進みの差と、体を引きのばす潮汐力（光の道すじへの影響は、論文でも無視できるとされています）。</li>
+          <li>カメラの動き（各地点に止まって見ています）。</li>
+          <li>天体までの距離（空は無限に遠い絵です）。</li>
+          <li>星の並びと2つの惑星は作りものです。「向こうの宇宙」は説明のための呼び名で、同じ宇宙の遠い場所でもかまいません。</li>
+          <li>開いたままのトンネルがあると仮定しています。</li>
+        </ul>
+      </details>
+      <details>
+        <summary>おもな出どころ</summary>
+        <ul class="src">
+          <li>James, von Tunzelmann, Franklin, Thorne (2015) "Visualizing Interstellar's Wormhole" American Journal of Physics（<a href="https://arxiv.org/abs/1502.03809" target="_blank" rel="noopener">arXiv:1502.03809</a>、<a href="https://doi.org/10.1119/1.4916949" target="_blank" rel="noopener">DOI</a>）: 時空の形（式5〜7）、光の式（式16）、「細いのど」などの値。映画『インターステラー』のワームホールのために作られた式です。</li>
+          <li>滑らかな形の確かめに使った Ellis (1973) の drainhole は、上の論文の引用によります。</li>
+          <li>描き方の参考: <a href="https://github.com/sirxemic/wormhole" target="_blank" rel="noopener">sirxemic/wormhole</a>（MIT）の、角度ごとの表を作る考え方。コードは写していません。</li>
+        </ul>
+        <h3>使っているもの</h3>
+        <p>フォント: Google Fonts（SIL Open Font License）。ライブラリは使っていません。</p>
+      </details>
+    </section>
+  </aside>
+</div>
+
+<script src="js/metric.js?v=1"></script>
+<script src="js/lut.js?v=1"></script>
+<script src="js/sky.js?v=1"></script>
+<script src="js/render.js?v=1"></script>
+<script src="js/funnel.js?v=1"></script>
+<script src="js/ui.js?v=1"></script>
+<script src="js/main.js?v=1"></script>

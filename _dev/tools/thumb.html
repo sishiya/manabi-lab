@@ -83,6 +83,8 @@ const SETUP = {
   'ferrofluid': async w => { await wait(800); w.__ff.advance(2, 1 / 30); await wait(1500); },
   // 映画の角度（開いたときのまま）。細かい段まで描き切る
   'black-hole': async w => { await wait(1500); w.__bh.renderNow(2); await wait(1500); w.__bh.renderNow(2); },
+  // のどの少し手前（穴の奥に向こうの宇宙の惑星が大きく見える）
+  'wormhole': async w => { await wait(2500); const W = w.__wo; W.setPos(W.lToU(-1.2)); W.renderNow(); await wait(800); W.renderNow(); },
   'metamorphosis': async w => { await wait(800); w.__mm.setT(1.0); await wait(1500); w.__mm.setT(1.0); },
   // 恐竜の時代（約6800万年前）。生き物が多く見える
   'evolution': async w => { click(w, '#aboutStart'); await wait(1500); w.__ev.setAge(68e6); await wait(6000); },
