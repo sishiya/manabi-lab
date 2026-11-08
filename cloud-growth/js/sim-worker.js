@@ -95,7 +95,7 @@ function tick() {
     sendFrame(false, false);
   }
   lastTick = now;
-  setTimeout(tick, 4);
+  setTimeout(tick, running ? 4 : 200);   // 止まっているあいだは間をあける（電池。RULES 9章）
 }
 
 onmessage = e => {

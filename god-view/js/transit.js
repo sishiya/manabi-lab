@@ -134,7 +134,7 @@
     try { await loadData(); } catch (e) { GV.err && GV.err('toei.js: ' + e); return; }
     drawLines();
     fetchAll();
-    if (!timer) timer = setInterval(() => { if (Date.now() - lastFetch >= POLL - 500) fetchAll(); }, POLL);
+    if (!timer) timer = setInterval(() => { if (!Power.away && Date.now() - lastFetch >= POLL - 500) fetchAll(); }, POLL);
   };
 
   GV.initTransit = function () {
@@ -142,6 +142,8 @@
     v.clock.onTick.addEventListener(() => { if (S.transit && move(false)) v.scene.requestRender(); });
     // 東京から離れて戻ってきたとき、古ければすぐ取り直す
     v.camera.moveEnd.addEventListener(() => { if (S.transit && Date.now() - lastFetch > POLL && inArea()) fetchAll(); });
+    // 離れているあいだは取らない（RULES 9章）。もどったときに古ければ取り直す
+    Power.on({ resume() { if (S.transit && Date.now() - lastFetch > POLL) fetchAll(); } });
   };
 
   // クリックしたときの説明

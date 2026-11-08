@@ -2,12 +2,13 @@
 // 安全: 押すまで鳴らさない／はじめは 0 から上げる／音量に上限（リミッター）
 'use strict';
 const Synth = (() => {
-  let ctx = null, node = null, master = null, ready = false, on = false;
+  let ctx = null, node = null, master = null, ready = false, on = false, sleepT = 0;
   let last = null;
   // 想定の大きさ（dB）→ 出力の RMS。端末の音量で本当の大きさは変わる（画面にも書く）
   const rmsOf = (L) => 0.12 * Math.pow(10, (L - 65) / 20);
 
   async function start() {
+    clearTimeout(sleepT);
     if (!ctx) {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
       await ctx.audioWorklet.addModule('js/worklet.js');
@@ -26,7 +27,10 @@ const Synth = (() => {
   }
   function stop() {
     on = false;
-    if (ready) { master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(0, ctx.currentTime, 0.08); }
+    if (ready) {
+      master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(0, ctx.currentTime, 0.08);
+      clearTimeout(sleepT); sleepT = setTimeout(() => { if (!on) ctx.suspend(); }, 600);   // 下がりきったら止める（0 のまま計算しつづけない。RULES 9章）
+    }
   }
   // parts: Psycho.partialsOf の結果（s が枠の番号）
   function send(parts, P, xfade) {   // xfade: 高さの変わった枠を、すべらせずに切りかえる（BGM の和音）

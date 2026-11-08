@@ -5,7 +5,7 @@ window.addEventListener('error', e => window.__clgrErr.push(String(e.message)));
 
 const $ = id => document.getElementById(id);
 const { SCENES } = globalThis.CS;
-const cv = $('cv'), ov = $('ov'), view = globalThis.CV.make(cv, ov), worker = new Worker('js/sim-worker.js?v=1');
+const cv = $('cv'), ov = $('ov'), view = globalThis.CV.make(cv, ov), worker = new Worker('js/sim-worker.js?v=3');
 const S = { scene: SCENES[0], meta: null, frame: null, running: true, times: [], viewIdx: -1, dragging: false, tool: 'heat', prof: null, cl: null, t: 0, ctl: {} };
 
 const LEGEND = [
@@ -132,7 +132,7 @@ function loop() {
   requestAnimationFrame(loop);
 }
 window.addEventListener('resize', () => { if (view) { view.layout(); needDraw = true; } });
-setInterval(() => { if (S.prof) globalThis.CC.draw($('chart'), S.meta, S.prof, S.cl); }, 500);
+setInterval(() => { if (S.prof && !Power.away) globalThis.CC.draw($('chart'), S.meta, S.prof, S.cl); }, 500);
 
 cv.addEventListener('webglcontextlost', e => { e.preventDefault(); $('err').hidden = false; $('err').textContent = '画面の描画が止まりました。自動で読み直します…'; });
 cv.addEventListener('webglcontextrestored', () => { location.hash = S.scene.id; location.reload(); });
@@ -140,6 +140,9 @@ if (!view) { $('err').hidden = false; $('err').textContent = 'このブラウザ
 buildScenes();
 const hash = location.hash.replace('#', '');
 select(SCENES.some(s => s.id === hash) ? hash : SCENES[0].id);
+// 画面を離れたら計算を止める（RULES 9章）。もどったら、走っていたときだけ続ける
+let wasRunning = false;
+Power.on({ pause() { wasRunning = S.running; if (wasRunning) worker.postMessage({ type: 'pause' }); }, resume() { if (wasRunning) worker.postMessage({ type: 'play' }); } });
 requestAnimationFrame(loop);
 
 // デバッグ用

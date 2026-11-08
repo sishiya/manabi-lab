@@ -141,7 +141,7 @@ async function togglePlay() {
   $play.setAttribute('aria-pressed', String(Synth.on));
 }
 $play.addEventListener('click', togglePlay);
-document.addEventListener('visibilitychange', () => { if (document.hidden && Synth.on && S.mode !== 'bgm') togglePlay(); });   // 見ていないタブで鳴りつづけない（BGM は流しっぱなし）
+Power.on({ pause() { if (Synth.on && S.mode !== 'bgm') togglePlay(); } });   // 見ていないタブで鳴りつづけない（BGM は流しっぱなし）
 
 // ---- BGM: 和音をゆっくり進める（隠れたタブでも進むよう、requestAnimationFrame ではなくタイマーで） ----
 setInterval(() => {

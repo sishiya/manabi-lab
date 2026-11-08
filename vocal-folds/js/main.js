@@ -23,7 +23,7 @@ const S = {
 function table(sex) { return S.tables[sex] || (S.tables[sex] = VoiceEstimate.prep(self.VF_TABLE, sex)); }
 
 // ---------- 音 ----------
-function audioCtx() { if (!S.actx) S.actx = new (window.AudioContext || window.webkitAudioContext)(); return S.actx; }
+function audioCtx() { if (!S.actx) S.actx = Power.audio(new (window.AudioContext || window.webkitAudioContext)()); return S.actx; }
 function play(audio, fs) {
   try {
     const ac = audioCtx(); if (ac.state === 'suspended') ac.resume();
@@ -179,6 +179,7 @@ async function recordMic() {
   clearInterval(iv); proc.disconnect(); srcN.disconnect(); stream.getTracks().forEach(t => t.stop());
   btn.disabled = false;
   const n = chunks.reduce((a, c) => a + c.length, 0), x = new Float32Array(n); let o = 0; for (const c of chunks) { x.set(c, o); o += c.length; }
+  if (n < ac.sampleRate * 2.5) { msg.textContent = '録音の途中で画面を離れたので、分析できなかった。もう一度録音してください。'; return; }   // 離れると音が止まり、録音が短くなる
   msg.textContent = '分析した（録音は保存していない）。';
   setCurrent({ name: 'マイクの声（' + SEX_JA[S.sex] + 'の表で推定）', audio: x, fs: ac.sampleRate, truth: null, from: 0.5, to: 2.9 });
 }

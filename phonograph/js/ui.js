@@ -24,6 +24,7 @@ const UI = (() => {
   async function record(maxSec = REC_SEC[st.src] || 8) {
     if (!await Audio.start()) return;
     if (st.src === 'mic' && !await Audio.useMic(true)) { micFail(); return; }
+    if (st.src === 'mic' && Power.away) return;   // 許可を待つあいだに離れた
     stop(true); st.needle = false;
     send({ t: 'src', kind: st.src, restart: true }); send({ t: 'reset' }); send({ t: 'rewind' }); S().seg = null; st.plays = 0; st.recEnd = 0; st.bounced = false;
     setMode('rec');
@@ -260,6 +261,15 @@ const UI = (() => {
   send({ t: 'gain', g: Math.pow(10, st.vol / 20) }); send({ t: 'level', dB: st.dB }); send({ t: 'src', kind: st.src });
   $('vol').value = st.vol;
   tourShow(); sync();
+
+  // ---------- 画面を離れたら止める（RULES 9章） ----------
+  // マイクは閉じて、もどったら音源がマイクのままなら開き直す。マイクの録音は録れた所までで終える（続けると、開き直すあいだの声が抜ける）。
+  // ほかの録音・再生は音（AudioContext）が止まるだけなので、離れていた時間のぶん時計をずらして続きから
+  let awayT = 0;
+  Power.on({
+    pause() { awayT = performance.now(); if (st.act && st.act.kind === 'rec' && st.src === 'mic') stop(); Audio.useMic(false); },
+    resume() { if (st.act) st.act.t0 += performance.now() - awayT; if (st.src === 'mic') setSrc('mic'); },
+  });
   return { st, sync, record, play, orig, origEnd, needle, stop, tick, onSnap, status, setSrc, setZoom, tour: TOUR };
 })();
 window.UI = UI;   // サムネイル（_dev/tools/thumb.html）から使う

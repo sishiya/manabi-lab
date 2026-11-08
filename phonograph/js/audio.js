@@ -8,7 +8,7 @@ const Audio = {
     this.starting = (async () => {
       try {
         const AC = window.AudioContext || window.webkitAudioContext;
-        this.ctx = new AC({ latencyHint: 'interactive', sampleRate: 48000 });
+        this.ctx = Power.audio(new AC({ latencyHint: 'interactive', sampleRate: 48000 }));
         await this.ctx.audioWorklet.addModule('js/worklet.js?v=2');
         this.node = new AudioWorkletNode(this.ctx, 'phono', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1] });
         this.node.port.onmessage = e => { if (this.onSnap) this.onSnap(e.data); };
@@ -23,13 +23,19 @@ const Audio = {
   },
   queue: [],
   send(m) { if (this.ready) this.node.port.postMessage(m); else this.queue.push(m); },
-  async useMic(on) {   // マイクは「マイク」を選んだときだけ開き、ほかを選んだら閉じる。録った音は残さない
+  micOn: false, micOpening: null,
+  async useMic(on) {   // マイクは「マイク」を選んだときだけ開き、ほかを選んだら・画面を離れたら閉じる。録った音は残さない
+    this.micOn = on;
     if (!on) { if (this.mic) { this.mic.getTracks().forEach(t => t.stop()); this.mic = null; } if (this.micSrc) { this.micSrc.disconnect(); this.micSrc = null; } return true; }
     if (this.mic) return true;
+    return this.micOpening || (this.micOpening = this.openMic().finally(() => { this.micOpening = null; }));
+  },
+  async openMic() {
     if (!await this.start()) return false;
     try {
-      this.mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
-      this.micSrc = this.ctx.createMediaStreamSource(this.mic); this.micSrc.connect(this.node);
+      const m = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      if (!this.micOn) { m.getTracks().forEach(t => t.stop()); return true; }   // 許可を待つあいだに離れた・ほかの音を選んだ: 開いたままにしない
+      this.mic = m; this.micSrc = this.ctx.createMediaStreamSource(m); this.micSrc.connect(this.node);
       return true;
     } catch (e) { this.err = String(e && e.message || e); return false; }
   },

@@ -94,7 +94,7 @@ function batStep(t, cam, fwd, sound) {
 
 function initAudio() {
   if (SX.audio) { SX.audio.resume(); return; }
-  const ac = new (window.AudioContext || window.webkitAudioContext)();
+  const ac = Power.audio(new (window.AudioContext || window.webkitAudioContext)());
   // one call: a 3 ms downward FM sweep (about 80 -> 25 kHz), time-expanded x10 -> 30 ms, 8 -> 2.5 kHz
   const n = Math.round(ac.sampleRate * 0.03), buf = ac.createBuffer(1, n, ac.sampleRate), d = buf.getChannelData(0);
   let ph = 0;

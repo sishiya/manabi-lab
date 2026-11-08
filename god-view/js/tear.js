@@ -549,5 +549,7 @@
     worker && worker.postMessage({ cmd: 'run', on: false });    // 見ていないあいだは計算も止める
     if (toEarth) GV.exitSpace();
   };
+  // 画面を離れたら計算も止める（RULES 9章）。もどったら enterTear と同じ条件で続きから
+  Power.on({ pause() { worker && worker.postMessage({ cmd: 'run', on: false }); }, resume() { if (worker && GV.stage === 'tear' && opt.run && (grab || torn)) worker.postMessage({ cmd: 'run', on: true }); } });
   GV._tear = { opt, get frame() { return frame; }, get ready() { return ready; }, get worker() { return worker; }, get grab() { return grab; }, get torn() { return torn; }, render: () => render(), hit: (x, y) => earthHit({ clientX: x, clientY: y }), cam: (y, p, d) => { yaw = y; pitch = p; if (d) dist = d; return { yaw, pitch, dist }; } };
 })();

@@ -84,7 +84,7 @@ const UI = (() => {
   }
   // カチの音（台ごとに少しちがう高さ）
   function audio() {
-    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } }
+    if (!ac) { try { ac = Power.audio(new (window.AudioContext || window.webkitAudioContext)()); } catch (e) { ac = null; } }
     if (ac && ac.state === 'suspended') ac.resume();
   }
   function tick(i) {

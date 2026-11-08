@@ -86,7 +86,7 @@ const VOICES = {
 function playTone(m, len, vel) {
   if (!$('chkSound').checked) return;
   try {
-    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    AC = AC || Power.audio(new (window.AudioContext || window.webkitAudioContext)());
     const f0 = 440 * Math.pow(2, (m - 69) / 12), now = AC.currentTime;
     const L = Math.max(0.08, Math.min(len || 1, 8)), v = Math.min(1, Math.max(0.05, (vel || VEL_MF) / 127));
     if (!MASTER) { MASTER = AC.createGain(); MASTER.connect(AC.destination); } // 全体の音量（つまみ）

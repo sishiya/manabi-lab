@@ -170,7 +170,7 @@ $('graph').addEventListener('click', e => {
 
 // ── 下の操作 ──
 $('play').onclick = () => setPlaying(!playing);
-function setPlaying(p) { playing = p; sim.run(speed, playing); $('play').textContent = p ? '❚❚' : '▶'; $('play').setAttribute('aria-label', p ? L('止める', 'Pause') : L('動かす', 'Play')); }
+function setPlaying(p) { playing = p; sim.run(speed, playing && !Power.away); $('play').textContent = p ? '❚❚' : '▶'; $('play').setAttribute('aria-label', p ? L('止める', 'Pause') : L('動かす', 'Play')); }
 document.querySelectorAll('[data-speed]').forEach(b => b.onclick = () => setSpeed(+b.dataset.speed));
 function setSpeed(s) { speed = s; sim.run(speed, playing); $('speedBtn').textContent = `×${s}`; $('speedBtn').classList.remove('slow'); openPop(null); document.querySelectorAll('[data-speed]').forEach(b => b.classList.toggle('on', +b.dataset.speed === s)); if (!playing) setPlaying(true); }
 document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
@@ -566,8 +566,9 @@ else showTitle();
 // メニューの「タイトルにもどる」: いまの一滴を保存して止め、タイトルを出す
 $('mTitle').onclick = () => { $('menu').close(); showTitle(); if (world) { saveBook(); Promise.resolve(sim.save()).then(refreshCont); } };
 // 30 秒ごとと、タブを閉じる・ほかのタブに移るときに、いまの一滴を保存する（このブラウザの中だけ）
-setInterval(() => { if (!title && world && playing) { sim.save(); saveBook(); } }, 30000);
+setInterval(() => { if (!title && world && playing && !Power.away) { sim.save(); saveBook(); } }, 30000);
 addEventListener('visibilitychange', () => { if (document.hidden && !title && world) { sim.save(); saveBook(); } });
+Power.on({ pause() { sim.run(speed, false); }, resume() { sim.run(speed, playing); } });   // 画面を離れたら計算を止める（RULES 9章）。もどしたら遊ぶ人の選んでいた状態へ
 addEventListener('pagehide', () => { if (!title && world) { sim.save(); saveBook(); } });
 
 

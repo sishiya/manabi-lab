@@ -32,7 +32,7 @@ function popSound(big) {
   if (!SND.on) return;
   const now = performance.now(); if (now - SND.last < 70) return; SND.last = now;
   try {
-    const A = SND.ctx || (SND.ctx = new (window.AudioContext || window.webkitAudioContext)()), t = A.currentTime;
+    const A = SND.ctx || (SND.ctx = Power.audio(new (window.AudioContext || window.webkitAudioContext)())), t = A.currentTime;
     const o = A.createOscillator(), gn = A.createGain();
     o.type = 'sine'; o.frequency.setValueAtTime(big ? 180 : 260, t); o.frequency.exponentialRampToValueAtTime(big ? 700 : 950, t + 0.08);
     gn.gain.setValueAtTime(0.0001, t); gn.gain.exponentialRampToValueAtTime(0.12, t + 0.01); gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);

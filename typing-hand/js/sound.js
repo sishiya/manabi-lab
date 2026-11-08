@@ -9,7 +9,7 @@ const SND = { vol: 2.8 }; // 2026-10-17 もうひとまわりやわらかく（�
 function sndInit() {
   if (AC) return true;
   const C = window.AudioContext || window.webkitAudioContext; if (!C) return false;
-  AC = new C();
+  AC = Power.audio(new C());
   NOISE = AC.createBuffer(1, AC.sampleRate * 0.5, AC.sampleRate);
   const d = NOISE.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   // 出口: ごく低い音（耳には「ブツッ」と聞こえる）を切る。圧縮（コンプレッサー）は音量がこまかく上下して雑音のもとになったのでやめた（2026-10-17）
@@ -39,7 +39,7 @@ function sndTone(t, f0, f1, gain, decay, pan, type) {
 // speed: 再生の速さ（触れてから底に当たるまでの時間を、再生の速さに合わせる）
 function keySound(m, up, speed) {
   if (!$('chkSound').checked || !sndInit()) return;
-  if (AC.state === 'suspended') AC.resume();
+  if (AC.state === 'suspended' && !Power.away) AC.resume();
   const k = KEYS[m]; if (!k) return;
   // 鳴らす時刻は 25ms 先（5ms では画面の処理が少し遅れると、出だしが途中から急に始まって「ブツッ」と鳴った）。毎回のゆらぎ ±6%
   const t = AC.currentTime + 0.025, r = () => 1 + (Math.random() - 0.5) * 0.12;
