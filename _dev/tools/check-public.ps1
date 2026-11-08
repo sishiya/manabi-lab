@@ -132,6 +132,23 @@ foreach ($f in $files) {
   }
 }
 
+# 電池（基本ルール。RULES 9章）: 画面を離れても止まらないもの（マイク・カメラ・音・Worker）を使うアプリに、止める処理があるか
+# 共通の部品 assets/power.js を使わず自分で止めている、裏でも動かないなど、目で確かめたアプリは _dev/tools/power-reviewed.txt に「アプリ名 理由」で書く
+$powerOk = @{}
+$powerList = Join-Path $root '_dev/tools/power-reviewed.txt'
+if (Test-Path -LiteralPath $powerList) { Get-Content -LiteralPath $powerList -Encoding UTF8 | Where-Object { $_ -and $_ -notmatch '^\s*#' } | ForEach-Object { $powerOk[($_ -split '\s+')[0]] = $true } }
+$powerApps = @($files | ForEach-Object { $_.Substring($root.Length).TrimStart('\') } | Where-Object { $_ -match '\\' } | ForEach-Object { ($_ -split '\\')[0] } | Sort-Object -Unique)
+foreach ($a in $powerApps) {
+  $dir = Join-Path $root $a
+  if ($a -match '^[_.]' -or $a -in 'tools','assets','thumbs','server','node_modules','lib' -or -not (Test-Path -LiteralPath (Join-Path $dir 'index.html'))) { continue }
+  $code = (Get-ChildItem -LiteralPath $dir -Recurse -File | Where-Object { $_.Extension -in '.js','.mjs','.html' -and $_.FullName -notmatch '\\(versions|vendor|tools|look|node_modules)\\' } | ForEach-Object { [IO.File]::ReadAllText($_.FullName, [Text.Encoding]::UTF8) }) -join "`n"
+  if ($code -match '\bPower\.(on|audio|away)' -and $code -notmatch 'assets/power\.js') { [void]$hits.Add("$a : 電池 → Power を使っているのに assets/power.js を読みこんでいない") }
+  if ($powerOk[$a]) { continue }
+  if ($code -match 'getUserMedia' -and ($code -notmatch '\bPower\.on\(' -or $code -notmatch 'getTracks\(\)')) { [void]$hits.Add("$a : 電池 → マイク・カメラを、画面を離れたときに閉じていない（Power.on と track.stop。RULES 9章）") }
+  if ($code -match 'AudioContext' -and $code -notmatch '\bPower\.(audio|on)\(|\.suspend\(') { [void]$hits.Add("$a : 電池 → AudioContext を、画面を離れたときに止めていない（Power.audio。RULES 9章）") }
+  if ($code -match 'new\s+Worker\(' -and $code -notmatch '\bPower\.on\(') { [void]$hits.Add("$a : 電池 → Worker を、画面を離れたときに止めていない（Power.on。RULES 9章）") }
+}
+
 if ($hits.Count) {
   Write-Host "公開前チェック: 要確認 $($hits.Count) 件（$($files.Count) ファイルを調べました）" -ForegroundColor Yellow
   $hits | ForEach-Object { Write-Host "  $_" }
