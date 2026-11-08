@@ -1,0 +1,45 @@
+/* 雲ができるまで（3次元の試作） */
+:root{--ink:#f2f6f8;--muted:#c3d0d8;--acc:#9fd4ff;--glass:rgba(12,22,36,.62);--line:rgba(220,235,250,.2);
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#0d1a2b;color:var(--ink);font-family:var(--f-body);overflow:hidden}
+[hidden]{display:none!important}
+#cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#cv:active{cursor:grabbing}
+#top{position:fixed;left:16px;top:12px;pointer-events:none;text-shadow:0 1px 8px rgba(0,20,40,.55)}
+#top h1{font-family:var(--f-display);font-weight:400;font-size:21px;margin:0}
+#top p{margin:3px 0 0;font-size:12.5px;color:var(--ink)}
+#top a{pointer-events:auto;color:var(--ink)}
+#reads{position:fixed;right:16px;top:12px;display:grid;grid-template-columns:repeat(4,auto);gap:0 18px;background:var(--glass);border-radius:7px;padding:7px 12px;pointer-events:none}
+#reads div{font-size:10.5px;color:var(--muted)}
+#reads b{display:block;font-family:var(--f-mono);font-size:14px;font-weight:500;color:var(--ink)}
+#dock{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);width:min(760px,calc(100vw - 32px));background:var(--glass);border-radius:10px;padding:10px 12px;backdrop-filter:blur(6px)}
+#row1{display:flex;align-items:center;gap:10px}
+#play{width:44px;height:44px;border-radius:50%;border:0;background:var(--acc);color:#0c1a2b;font-size:17px;flex:none;cursor:pointer}
+#time{font-family:var(--f-mono);font-size:16px;min-width:82px}
+#status{font-size:12.5px;color:#ffd9a8;flex:1}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.plain{background:transparent;border:1px solid var(--line);border-radius:6px;padding:0 12px;min-height:36px;font-size:12.5px;white-space:nowrap}
+#row2{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;align-items:center}
+.grp{display:flex;align-items:center;gap:6px}
+.grp>span{font-size:11.5px;color:var(--muted)}
+.chips{display:flex;gap:5px}
+.chips button{background:transparent;border:1px solid var(--line);border-radius:18px;padding:0 13px;min-height:36px;font-size:12.5px}
+.chips button.on{background:var(--acc);border-color:var(--acc);color:#0c1a2b;font-weight:700}
+#about{margin-top:6px;font-size:12.5px;color:var(--muted);line-height:1.7}
+#about summary{cursor:pointer;color:var(--ink);min-height:28px;line-height:28px}
+#aboutBody{max-height:38vh;overflow:auto;padding-right:6px}
+#about h3{font-size:12.5px;color:var(--ink);margin:10px 0 2px}
+#about ul{margin:0;padding-left:18px}
+#about p{margin:4px 0}
+#about a{color:var(--acc)}
+#err{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,18,30,.86);text-align:center;padding:24px;line-height:1.8;z-index:10}
+
+@media (max-width:760px){
+  #top h1{font-size:17px}#top p{font-size:11px}
+  #reads{top:auto;bottom:calc(100% - 92px);right:16px;left:16px;grid-template-columns:repeat(4,1fr);gap:0 6px;padding:5px 9px;top:62px;bottom:auto}
+  #reads b{font-size:12px}#reads div{font-size:9.5px}
+  #dock{bottom:10px}
+  #status{font-size:11.5px}
+  #row2{gap:6px 10px}
+}

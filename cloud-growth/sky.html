@@ -1,0 +1,59 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>雲ができるまで（3次元の試作）</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23101d2e'/><path d='M18 44a9 9 0 0 1 0-18 13 13 0 0 1 25-3 11 11 0 0 1 4 21z' fill='%23eaf4ff'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script src="../assets/power.js?v=1"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/sky.css?v=1">
+
+<canvas id="cv" aria-label="地上から見た空。なぞると見回せます"></canvas>
+<header id="top"><h1>雲ができるまで</h1><p>3次元の試作　<a href="index.html">断面の版へ</a></p></header>
+<div id="reads" role="status">
+  <div>雲の底<b id="rBase">—</b></div><div>雲のてっぺん<b id="rTop">—</b></div><div>空に占める割合<b id="rCov">0%</b></div><div>いちばん強い上昇<b id="rW">—</b></div>
+</div>
+<div id="dock">
+  <div id="row1">
+    <button id="play" aria-label="再生と一時停止" aria-pressed="true">⏸</button>
+    <span id="time">0分</span>
+    <span id="status" role="status">計算を準備しています…</span>
+    <button id="reset" class="plain">はじめから</button>
+  </div>
+  <div id="row2">
+    <div class="grp"><span>見る場所</span><div id="cams" class="chips" role="group" aria-label="見る場所">
+      <button data-v="up" class="on" aria-pressed="true">地上から</button><button data-v="far" aria-pressed="false">遠くから</button><button data-v="above" aria-pressed="false">雲の上から</button>
+    </div></div>
+    <div class="grp"><span>太陽</span><div id="suns" class="chips" role="group" aria-label="太陽">
+      <button data-v="morn" class="on" aria-pressed="true">朝</button><button data-v="noon" aria-pressed="false">昼</button><button data-v="eve" aria-pressed="false">夕</button>
+    </div></div>
+  </div>
+  <details id="about">
+    <summary>この試作について</summary>
+    <div id="aboutBody">
+      <p>晴れた日の地面の熱と湿り気から、空気の動きと水の変化を3次元で計算しています。雲の形・場所・育ち方はこの計算の結果で、形を作る雑音は足していません。</p>
+      <h3>簡単にしているところ</h3>
+      <ul>
+        <li>計算は 6.4 km 四方・高さ 4 km の範囲です（細かさ 25 m。スマホなどでは 50 m）。遠くの空は同じ範囲のくり返しです。</li>
+        <li>雨と氷は計算していません。</li>
+        <li>光の当たり方は計算の結果の雲水から求めていますが、光の散乱は近似です。雲の粒の半径は 10 µm と仮定しています。</li>
+        <li>地面の熱のむらは、形のないゆらぎとして決めて与えています（仮定）。地面の絵は目安です。</li>
+        <li>格子より小さい渦は計算していません。</li>
+      </ul>
+      <h3>おもな出どころ</h3>
+      <ul>
+        <li>式の組み立てと確かめは<a href="index.html">断面の版</a>と同じです（Khairoutdinov &amp; Randall 2003、Bolton 1980）</li>
+        <li>浅い積雲の3次元の計算の細かさ: <a href="https://arxiv.org/abs/2110.00853" target="_blank" rel="noopener">Sridhar ほか 2021</a> の BOMEX（Siebesma ほか 2003 の場面）</li>
+        <li>雲の多重散乱の近似: Wrenninge ほか（"Oz: The Great and Volumetric"、2013）</li>
+        <li>空の色: Rayleigh と Mie の散乱の1回散乱</li>
+      </ul>
+      <p>フォント: Google Fonts（SIL Open Font License）</p>
+    </div>
+  </details>
+</div>
+<div id="err" hidden></div>
+
+<script src="js/thermo.js?v=1"></script>
+<script src="js/solver.js?v=1"></script>
+<script src="js/scenes.js?v=1"></script>
+<script type="module" src="js/sky.js?v=1"></script>
