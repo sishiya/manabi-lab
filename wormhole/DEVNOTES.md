@@ -1,17 +1,17 @@
 # ワームホールを通りぬける 開発メモ
 
 ## 別セッションで続けるとき（まずここ）
-- **いまの状態**: v1（段階A）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。日本語のみ（入口へ移すときに英語対応）。
+- **いまの状態**: v2（段階A2。3D の天体・HDR・太陽のそば・穴のまわりを回る）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。日本語のみ（入口へ移すときに英語対応）。
 - **次にやること**: ユーザーの感想しだい。案は PLAN の段階B（負のエネルギーを場所ごとに、光行差、空に距離）。
 - **読む順**: PLAN.md → このファイルの「ファイル構成」→ 関係するファイルだけ。
 - **動かし方**: `.claude/launch.json` の空いているサーバー（8765 が使えないことがある。2026-11-08 は `apps-6`＝8770）で `http://localhost:<port>/wormhole/`。
-- **デバッグ用** `window.__wo`: `S`（状態）、`setPos(u)`、`uToL`・`lToU`、`renderNow(fine=true)`（細かい表で描き切る）、`look(yaw,pitch)`、`pickDir([x,y,z])`（局所の向きの光をたどる）、`readPixel(x,y)`、`err`（＝`__woErr`）。
+- **デバッグ用** `window.__wo`: `S`（状態。`S.V` カメラの向き、`S.Q` 局所→世界）、`setPos(u)`、`setPlace('normal'|'sun')`、`uToL`・`lToU`、`renderNow(fine=true)`（細かい表で描き切る）、`look(yaw,pitch)`、`orbit(ax,ay)`、`pickDir([x,y,z])`（局所の向きの光をたどる）、`readPixel(x,y)`、`err`（＝`__woErr`）。
 - **ペインが隠れているとき**: rAF が止まり大きさも 0。`resize_window` のあと `__wo.renderNow()`。
 - **区切りごとの手順**: 「確認のしかた」と smoke.ps1 → 「状態」に1行 → launcher.html の表 → 公開前チェック → commit（節目の版だけ versions/ へ。RULES 3章）。CSS・JS を変えたら index.html の `?v=` を上げる。
-- **ユーザーの好み**: 見どころは「通りぬける見え方」、動かし方は「位置スライダー1本」（2026-11-08 に選んだ）。正確さ重視。
+- **ユーザーの好み**: 見どころは「通りぬける見え方」、動かし方は「位置スライダー1本」（2026-11-08 に選んだ）。正確さ重視。v1 は「2Dっぽい」と言われ、映画のような魅力と、途中でカメラを回す操作を求められた。太陽のそばも見たい。
 
 ## ファイル構成
-読み込み順: metric → lut → sky → render → funnel → ui → main。
+読み込み順: metric → lut → scene → sky → shader → render → funnel → ui → main。
 
 | ファイル | 中身 | 主な関数・変数 |
 |---|---|---|
@@ -19,11 +19,13 @@
 | css/style.css | PC は右パネル、縦長スマホは景色＋スライダーを上に固定 | |
 | js/metric.js | 時空の形と光（node でも動く） | `makeShape` `makeEllis` `radius` `dRadius` `force` `rkStep` `stepLen` `traceRay` `criticalPsi` |
 | js/lut.js | ψ→Φ の表（2本）と引き方（node でも動く） | `buildLUT(S,l0,out,coarse)` `lookup` `LUT_N` `DELTA_MIN` |
-| js/sky.js | 2つの宇宙の空・惑星（作りもの） | `makeSkyCanvas(kind,W)` `paintPlanet` `UNIVERSES` |
-| js/render.js | WebGL2（シェーダー1本、画素ごとに表を引く・帯も描く） | `initRender` `uploadLUT` `drawView` `R` `FS` |
+| js/scene.js | 場面（ふつう／太陽のそば）の天体と太陽の値、のどを通る光の量 | `PLACES` `SCENE` `sunThroughThroat` |
+| js/sky.js | 2つの宇宙の空・銀河（作りもの） | `makeSkyCanvas(kind,W)` `makeGalaxy` `UNIVERSES` |
+| js/shader.js | シェーダーの文: `FS_SCENE`（表を引く・直線と天体の交わり・星・太陽）`FS_DOWN` `FS_UP` `FS_COMP` | `shade` `bodiesOnLine` `skyCol` `starLayer` `albedo` |
+| js/render.js | WebGL2 の段（HDR の絵 → にじみ → 仕上げ）。AA は1点ずつずらして足す | `initRender` `applyScene` `uploadLUT` `drawView` `R` |
 | js/funnel.js | ろうと図（2D） | `drawFunnel` `fnProject` `fnHeight` `FN` |
 | js/ui.js | 読み取り・説明・目盛り・図の置き場所 | `placeFunnel` `updateReadouts` `updateHint` `updateTicks` `describeRay` |
-| js/main.js | 状態・スライダーの対応・操作・ループ | `S` `PRESETS` `uToL` `lToU` `setShape` `setPos` `viewBasis` `halfTan` `dirAtPoint` `tracePick` `renderIfNeeded` `frame` |
+| js/main.js | 状態・スライダーの対応・カメラの回転・操作・ループ | `S` `PRESETS` `uToL` `lToU` `setShape` `setPos` `setPlace` `turn` `roll` `halfTan` `dirAtPoint` `rayFromSun` `tracePick` `renderIfNeeded` `frame` |
 | tools/verify.js | 物理の確かめ（`node wormhole/tools/verify.js`） | |
 
 ## しくみ
@@ -32,25 +34,32 @@
 - `traceRay`: RK4。歩幅は「口の曲がりの幅 M + のどからの距離」と「1 歩で回る角度」で抑える。のどの円筒（|ℓ| < a）は p が変わらないので口まで厳密に飛ぶ。打ち切り（ℓ = a + max(200, 30 r₀)）の先はまっすぐとして asin(b/r) を足す。
 - `buildLUT`: ℓ > 0 のカメラは鏡写し（ℓ→−ℓ、ψ→π−ψ）で ℓ ≤ 0 の表を使う。表は 0 = ψ < ψc（のどを通る）、1 = ψ > ψc（通らない）。刻みは境目からの角度の対数。`coarse` は動かしている間（8 本に1本）。止まって 180 ms で細かい表に。
 - シェーダー: 画素の向き → ψ → 表を texelFetch で手補間 → Φ → 空の向き (cosΦ, sinΦ·t̂)。空は +x が絵の真ん中。float へ描かないので拡張はいらない。4 点 RGSS。mip の段は向きの微分から `textureLod`。
-- 帯（ぐるり一周）: 同じシェーダーを下の領域に描く（`uPano` = 帯の高さ／幅）。まん中が +ℓ、左右の端が −ℓ。`dirAtPoint` で押した点の向きも同じ式。
+- 帯（ぐるり一周）: 同じシェーダーを下の領域に描く（`uPano` = 帯の高さ／幅）。まん中が +ℓ、左右の端が −ℓ。`dirAtPoint` で押した点の向きも同じ式。「レンズ効果なし」のときだけ出す。
+- 3D の天体（`shade` の後半）: 光は のどから離れるとほぼ直線なので、行き（カメラから穴へ）は o = (r_c,0,0)、d = (camS·d.x, d.y, d.z)、のど側の t の上限は √(r_c²−b²)。帰り（出たあと）は P(t) = t·u + b·v（u = (cosΦ, sinΦ·t̂)、v = (sinΦ, −cosΦ·t̂)）。`bodiesOnLine` が球と輪を調べる。本当の道すじとのずれは r ≥ 6 で最大 0.09ρ（`tools/verify.js`）。のどの近く（r < 6）に天体を置かないこと。
+- 向き: `S.Q`（局所→世界）はカメラの球面の上の位置。穴のまわりを回ると `S.Q` が変わり、見回すと `S.V` が変わる。指を離すと `S.vel` で少し回り続ける。2本指のひねりは `roll`。
+- 太陽のそば: のどの半径 2 万 km（仮定）、太陽の中心は のどから 70ρ＝140 万 km の −x。+x にいるカメラから見ると穴のうしろに太陽。向こうの宇宙から まっすぐ穴をのぞくと、光は もとの宇宙の +x（太陽と反対）へ抜けるので太陽は穴の中央に入らない。だから `btnSunSide` は `S.Q` を 180° 回してカメラの位置を −x 側にする。
+- HDR: 太陽 70（空の点）や太陽の表面 2〜3、`FS_COMP` で ACES。float へ描けない端末は RGBA8 で同じ手順（にじみが弱い）。にじみの強さは `SCENE.film`。
 - ろうと図: 面の上の位置は本当の r(ℓ)・φ。高さ `fnHeight` だけ模式（Dneg は細いのどだと埋めこみの高さがほぼ 0 で、2 枚が重なって見えるため）。
 
 ## ハマったところ
 - 表を素直に作ると 1 回 243 ms。`rkStep` の配列とクロージャをやめ、atan を 1 回にまとめ、歩幅を広げ、動かしている間は間引いて 8〜16 ms（node）。
 - 歩幅を広げたら保存量のずれが 6×10⁻⁶ に。画面では見えない大きさなので許容を 2×10⁻⁵ に。
 - 8765 は Windows の予約で使えないことがある。
+- **シェーダーのコンパイルでページが止まった（45 秒以上）**: Windows の ANGLE（D3D）は関数を全部インライン展開し、ループも展開する。`shade()` を AA で 4 回呼び、数式のノイズ（fbm の中の hash を 8 回）を何か所も使っていたのが原因。1 回に 1 点だけ描いて足す形にし（`uJit`・`uWt`）、ノイズは 32³ の 3D テクスチャから読む（`textureLod`）形で解決。シェーダーを増やすときは `shade` の呼び出しを増やさない。
 
 ## 確認のしかた（変更のたびに）
 1. `node wormhole/tools/verify.js`（Ellis の厳密解・保存量・表の誤差・境目・歩幅・割合。すべて OK）。
 2. `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/smoke.ps1 -Apps wormhole`。
-3. 開いたとき: 穴の奥に橙の惑星、まわりに星のリング。帯に今見ている範囲の白い枠。`__wo.err` が空。
+3. 開いたとき: 穴がガラス玉のように見え、左下に輪のある惑星。`__wo.err` が空。読みこみが数秒で終わる（シェーダーのコンパイルが長びいていない）。
 4. 穴の中を押す → 図に橙の道すじ、下の文「向こうの宇宙 から。のどを通ってきた光」。穴の外を押す → 青。
-5. スライダーで ℓ > 0 へ → 「向こうの宇宙」、うしろを見ると穴の中に青い空と地球のような星。
-6. ▶ で進み、押すと ⏸ に変わる。形の3つで「長いトンネル」に入口・出口の目盛り。方眼で青と橙。
-7. 幅 375px: 景色・図・スライダーが上に固定、はみ出しなし（`scrollWidth` が 375）、ボタンの高さ 36px 以上。
+5. スライダーで ℓ > 0 へ → 「向こうの宇宙」。うしろを見ると穴の中にもとの宇宙。
+6. ▶ で進み、押すと ⏸ に変わる。**進んでいる途中でドラッグして回せる**（「穴のまわりを回る」で惑星の位置が変わる、「見回す」で向きが変わる。指を離すと少し回り続ける）。形の3つで「長いトンネル」に入口・出口の目盛り。方眼で青と橙。「レンズ効果なし」でにじみが消え、帯が出る。傾けるボタン・水平に戻す。
+7. 太陽のそば: 太陽の前に暗い穴。穴の中を押すと「向こうの宇宙」、太陽を押すと「太陽の表面」。「向こうの宇宙から、穴の中の太陽をのぞく」で穴の奥に太陽。読み取りに「のどを通りぬける太陽の光」。
+8. 幅 375px: 景色・図・スライダーが上に固定、はみ出しなし（`scrollWidth` が 375）、ボタンの高さ 36px 以上。
 
 ## 状態
 - 2026-11-08 v1: 段階A。式 16 の光の表（GPU で引く）、位置スライダー、2つの宇宙、ぐるり一周の帯、ろうと図、押した光の道すじ、形のプリセット、方眼。保管庫へ。
+- 2026-11-08 v2: 段階A2。3D の惑星・月・輪（距離があり、光の計算でゆがむ）、シェーダーの細かい星、HDR・にじみ・ACES（「映画のように」／「計算そのまま」）、穴のまわりを回る／見回す（慣性・2本指のひねり・ホイール）、太陽のそばの場面。
 
 ## 残っている課題
 - 弱いスマホでの速さは未確認（表は node で細かい 60〜120 ms、動かしている間 8〜16 ms）。

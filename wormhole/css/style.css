@@ -19,7 +19,12 @@ button,input{font:inherit;color:inherit}
 
 #trip{display:flex;flex-direction:column;gap:6px;flex:none}
 .trip-row{display:flex;align-items:flex-start;gap:12px}
-.trip-row.look{gap:6px;flex-wrap:wrap}
+.trip-row.look{gap:6px;flex-wrap:wrap;align-items:center}
+.trip-row.look .seg{flex:0 1 auto;min-width:0}
+.trip-row.look .seg button{padding:0 12px;white-space:nowrap}
+.dragLbl{font-size:12px;color:var(--muted)}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+.ro-grid b{white-space:normal;text-align:right}
 .slider{flex:1;min-width:0}
 #pos{width:100%;height:36px;margin:0;touch-action:none;accent-color:var(--acc);display:block}
 #ticks{position:relative;height:16px;font-size:11px;color:var(--muted)}
@@ -88,7 +93,11 @@ details ul.src li+li{margin-top:3px}
   #funnelOver #funnelBox{background:none;border:0;border-radius:0;position:absolute;inset:0;aspect-ratio:auto}
   .trip-row{gap:8px}
   .btn.primary{min-width:104px;padding:0 8px;font-size:13px}
-  .trip-row.look .btn{flex:1;padding:0 4px;font-size:13px}
+  .trip-row.look{gap:4px;flex-wrap:nowrap}
+  .dragLbl{display:none}
+  .trip-row.look .seg{flex:1;min-width:0}
+  .trip-row.look .seg button{padding:2px 2px;font-size:11.5px;min-height:36px}
+  .trip-row.look .btn{flex:none;padding:0 8px;font-size:12px}
   #hint{font-size:12.5px;line-height:1.45}
   #rayLine{font-size:12px;line-height:1.45}
   #panel{border-left:0;border-top:1px solid var(--line);overflow:visible;padding-top:14px}

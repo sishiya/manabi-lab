@@ -1,67 +1,9 @@
-// WebGL2 の描画。画素ごとに、カメラの向き → 表（lut.js）→ 無限遠の向き → 空の絵。float のテクスチャには描かないのでスマホでも動く。
+// WebGL2 の描画。1) 画素ごとに光を計算して HDR の絵へ（shader.js） 2) にじみの段 3) 仕上げ。
+// float のテクスチャへ描けない端末では 8bit の絵で同じ手順を通す（にじみが弱くなるだけ）。
 'use strict';
 
-const VS = `#version 300 es
-in vec2 aPos; out vec2 vP;
-void main(){ vP = aPos; gl_Position = vec4(aPos, 0., 1.); }`;
-
-const FS = `#version 300 es
-precision highp float; precision highp sampler2D;
-in vec2 vP; out vec4 oC;
-uniform sampler2D uLut, uSkyA, uSkyB;
-uniform vec2 uHalf;       // 画面の半分の tan
-uniform vec2 uPx;         // 1画素の大きさ（-1〜1 の座標）
-uniform mat3 uView;       // 列 = 右・上・前（局所の座標 x=+ℓ、y・z=球面の接線）
-uniform float uPsiC, uK0, uK1, uFlip, uSkyW, uPano;
-uniform int uN, uMode;
-const float PI = 3.14159265358979, TAU = 6.28318530717959, DELTA_MIN = 1e-5;
-
-float lutPhi(float psi, out float seg){
-  float p = uFlip > .5 ? PI - psi : psi;
-  seg = p < uPsiC ? 0. : 1.;
-  float delta = abs(p - uPsiC), span = seg > .5 ? PI - uPsiC : uPsiC, K = seg > .5 ? uK1 : uK0;
-  float t = clamp(log(span / max(delta, DELTA_MIN)) / K, 0., 1.) * float(uN - 1);
-  int i = min(uN - 2, int(floor(t))), s = int(seg);
-  return mix(texelFetch(uLut, ivec2(i, s), 0).r, texelFetch(uLut, ivec2(i + 1, s), 0).r, t - float(i));
-}
-vec3 gridCol(vec3 d, float pix, float far){
-  float th = acos(clamp(d.x, -1., 1.)), az = atan(d.z, d.y), st = max(sin(th), .02);
-  float ring = abs(fract(th / (PI / 12.) + .5) - .5) * PI / 12.;
-  float rad  = abs(fract(az / (PI / 6.) + .5) - .5) * PI / 6. * st;
-  float w = pix * .55;
-  float line = max(1. - smoothstep(w * .6, w * 1.6, ring), (st > .13 ? 1. - smoothstep(w * .6, w * 1.6, rad) : 0.));
-  vec3 base = far > .5 ? vec3(.10, .05, .025) : vec3(.022, .05, .11);
-  vec3 ink  = far > .5 ? vec3(1., .63, .32) : vec3(.45, .78, 1.);
-  float hemi = smoothstep(0., pix * 2., abs(d.x));
-  return mix(base * (d.x > 0. ? 1.5 : 1.) * mix(.6, 1., hemi), ink, line * .9);
-}
-vec3 shade(vec2 pos){
-  vec3 d;
-  if (uPano > 0.) {   // 水平にぐるり一周の帯（真ん中が +ℓ、左右の端が −ℓ。uPano = 帯の高さ／幅）
-    float az = -pos.x * PI, el = pos.y * PI * uPano;
-    d = vec3(cos(el) * cos(az), cos(el) * sin(az), sin(el));
-  } else d = normalize(uView * vec3(pos * uHalf, 1.));
-  float tl = length(d.yz);
-  float psi = atan(tl, d.x);
-  float seg, phi = lutPhi(psi, seg);
-  vec2 t2 = tl > 1e-9 ? d.yz / tl : vec2(1., 0.);
-  vec3 fd = vec3(cos(phi), sin(phi) * t2);
-  float side = (seg < .5) != (uFlip > .5) ? 1. : 0.;   // 1 = 向こうの宇宙（ℓ > 0）
-  float pix = clamp(max(length(dFdx(fd)), length(dFdy(fd))), 1e-4, 1.);
-  if (uMode == 1) return gridCol(fd, pix, side);
-  vec2 uv = vec2(atan(fd.y, fd.x) / TAU + .5, acos(clamp(fd.z, -1., 1.)) / PI);
-  float lod = clamp(log2(pix * uSkyW / TAU), 0., 6.);
-  return side > .5 ? textureLod(uSkyB, uv, lod).rgb : textureLod(uSkyA, uv, lod).rgb;
-}
-void main(){
-  // 4 点でならしてふちのギザギザを減らす（RGSS）
-  vec3 c = shade(vP + uPx * vec2( .125, .375)) + shade(vP + uPx * vec2(-.375, .125))
-         + shade(vP + uPx * vec2( .375,-.125)) + shade(vP + uPx * vec2(-.125,-.375));
-  c *= .25 * 1.35;
-  oC = vec4(pow(min(c, vec3(1.)), vec3(1. / 2.2)), 1.);
-}`;
-
 const R = {};
+const BLOOM_LEVELS = 5;
 
 function compile(gl, vs, fs) {
   const mk = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
@@ -71,6 +13,7 @@ function compile(gl, vs, fs) {
   if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
   return p;
 }
+function uniforms(gl, p, names) { const u = {}; for (const n of names) u[n] = gl.getUniformLocation(p, n); return u; }
 
 function skyTexture(gl, cv) {
   const t = gl.createTexture();
@@ -84,55 +27,175 @@ function skyTexture(gl, cv) {
   return t;
 }
 
-function initRender(canvas, skyW) {
+function makeTarget(gl, w, h) {
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  if (R.hdr) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
+  else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  const fb = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+  return { tex, fb, w, h };
+}
+function freeTarget(gl, t) { gl.deleteTexture(t.tex); gl.deleteFramebuffer(t.fb); }
+
+function initRender(canvas, skyW, aa) {
   const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, depth: false, stencil: false, preserveDrawingBuffer: true });
   if (!gl) throw new Error('この端末では WebGL2 が使えません');
-  R.gl = gl; R.skyW = skyW;
-  R.prog = compile(gl, VS, FS);
-  gl.useProgram(R.prog);
+  R.gl = gl; R.skyW = skyW; R.aa = aa;
+  R.hdr = !!(gl.getExtension('EXT_color_buffer_float') || gl.getExtension('EXT_color_buffer_half_float'));
+  R.prog = compile(gl, VS, FS_SCENE);
+  R.u = uniforms(gl, R.prog, ['uLut', 'uSkyA', 'uSkyB', 'uHalf', 'uPx', 'uView', 'uOrbit', 'uPsiC', 'uK0', 'uK1', 'uFlip', 'uSkyW', 'uN', 'uMode', 'uPano', 'uRc', 'uCamS', 'uStar', 'uJit', 'uWt', 'uNoise', 'uBody', 'uKind', 'uSun', 'uRingN', 'uRingAxisW', 'uRingR', 'uSunGain']);
+  R.down = compile(gl, VS, FS_DOWN); R.uDown = uniforms(gl, R.down, ['uT', 'uTexel', 'uThresh']);
+  R.up = compile(gl, VS, FS_UP); R.uUp = uniforms(gl, R.up, ['uT', 'uTexel']);
+  R.comp = compile(gl, VS, FS_COMP); R.uComp = uniforms(gl, R.comp, ['uScene', 'uBloom', 'uStreak', 'uBloomGain', 'uStreakGain', 'uVig', 'uTexel']);
+
   const vb = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, vb);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
   gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
-  R.u = {};
-  for (const n of ['uLut', 'uSkyA', 'uSkyB', 'uHalf', 'uPx', 'uView', 'uPsiC', 'uK0', 'uK1', 'uFlip', 'uSkyW', 'uN', 'uMode', 'uPano']) R.u[n] = gl.getUniformLocation(R.prog, n);
-
   R.lut = gl.createTexture();
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, R.lut);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.NEAREST], [gl.TEXTURE_MAG_FILTER, gl.NEAREST], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
   gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, LUT_N, 2, 0, gl.RED, gl.FLOAT, null);
 
   gl.activeTexture(gl.TEXTURE1); R.skyA = skyTexture(gl, makeSkyCanvas('A', skyW));
   gl.activeTexture(gl.TEXTURE2); R.skyB = skyTexture(gl, makeSkyCanvas('B', skyW));
-  gl.uniform1i(R.u.uLut, 0); gl.uniform1i(R.u.uSkyA, 1); gl.uniform1i(R.u.uSkyB, 2);
+
+  const NS = 32, noise = new Uint8Array(NS * NS * NS), rnd = mulberry32(90125);
+  for (let i = 0; i < noise.length; i++) noise[i] = Math.floor(rnd() * 256);
+  gl.activeTexture(gl.TEXTURE6);
+  R.noise = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_3D, R.noise);
+  gl.texImage3D(gl.TEXTURE_3D, 0, gl.R8, NS, NS, NS, 0, gl.RED, gl.UNSIGNED_BYTE, noise);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  for (const w of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T, gl.TEXTURE_WRAP_R]) gl.texParameteri(gl.TEXTURE_3D, w, gl.REPEAT);
+
+  gl.useProgram(R.prog);
+  gl.uniform1i(R.u.uLut, 0); gl.uniform1i(R.u.uSkyA, 1); gl.uniform1i(R.u.uSkyB, 2); gl.uniform1i(R.u.uNoise, 6);
   gl.uniform1f(R.u.uSkyW, skyW); gl.uniform1i(R.u.uN, LUT_N);
+  applyScene();
+}
+
+function applyScene() {
+  const gl = R.gl;
+  gl.useProgram(R.prog);
+  gl.uniform1iv(R.u.uKind, new Int32Array([...SCENE.A.bodies, ...SCENE.B.bodies].map(b => b.kind)));
+  gl.uniform2f(R.u.uRingR, SCENE.ring.inner, SCENE.ring.outer);
+  gl.uniform3fv(R.u.uRingAxisW, new Float32Array(SCENE.ring.axis));
+  gl.uniform2f(R.u.uSunGain, SCENE.A.gain, SCENE.B.gain);
+}
+
+function resizeTargets(w, h) {
+  const gl = R.gl;
+  if (R.scene && R.scene.w === w && R.scene.h === h) return;
+  if (R.scene) { freeTarget(gl, R.scene); R.levels.forEach(l => { freeTarget(gl, l.down); freeTarget(gl, l.up); }); }
+  R.scene = makeTarget(gl, w, h);
+  R.levels = [];
+  let lw = w, lh = h;
+  for (let i = 0; i < BLOOM_LEVELS; i++) {
+    lw = Math.max(2, lw >> 1); lh = Math.max(2, lh >> 1);
+    R.levels.push({ down: makeTarget(gl, lw, lh), up: makeTarget(gl, lw, lh) });
+  }
 }
 
 function uploadLUT(T) {
   const gl = R.gl;
+  gl.useProgram(R.prog);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, R.lut);
   gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, LUT_N, 2, gl.RED, gl.FLOAT, T.data);
   gl.uniform1f(R.u.uPsiC, T.psiC); gl.uniform1f(R.u.uK0, T.K0); gl.uniform1f(R.u.uK1, T.K1); gl.uniform1f(R.u.uFlip, T.flip);
 }
 
-// view: { right, up, fwd }（局所の座標）、half: [tanX, tanY]、mode: 0 星空・1 方眼
-function drawView(view, half, mode, stripPx) {
+const mulTv = (Q, v) => [0, 1, 2].map(i => Q[i][0] * v[0] + Q[i][1] * v[1] + Q[i][2] * v[2]);   // Q の列 = 局所の軸（世界の座標）→ 世界から局所へ
+
+function drawFull() { R.gl.drawArrays(R.gl.TRIANGLES, 0, 3); }
+function bindTex(unit, tex) { const gl = R.gl; gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, tex); }
+
+// view: {right,up,fwd}（局所）、orbit: 列 [X,Y,Z] の配列（局所→世界）、half: [tanX,tanY]、opt: {mode,stripPx,rc,camS,film}
+function drawView(view, orbit, half, opt) {
   const gl = R.gl, c = gl.canvas;
-  gl.uniform1i(R.u.uMode, mode);
+  resizeTargets(c.width, c.height);
+  gl.useProgram(R.prog);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, R.scene.fb);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, R.lut);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, R.skyA);
+  gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, R.skyB);
+
+  gl.uniform1i(R.u.uMode, opt.mode);
+  gl.uniform1f(R.u.uRc, opt.rc); gl.uniform1f(R.u.uCamS, opt.camS); gl.uniform1f(R.u.uStar, 1);
+  gl.uniformMatrix3fv(R.u.uOrbit, false, new Float32Array([...orbit[0], ...orbit[1], ...orbit[2]]));
+  gl.uniformMatrix3fv(R.u.uView, false, new Float32Array([...view.right, ...view.up, ...view.fwd]));
+  const bodies = [...SCENE.A.bodies, ...SCENE.B.bodies], arr = new Float32Array(24);
+  bodies.forEach((b, i) => { const v = mulTv(orbit, b.c); arr.set([v[0], v[1], v[2], b.R], i * 4); });
+  gl.uniform4fv(R.u.uBody, arr);
+  gl.uniform3fv(R.u.uSun, new Float32Array([...mulTv(orbit, SCENE.A.sun), ...mulTv(orbit, SCENE.B.sun)]));
+  gl.uniform3fv(R.u.uRingN, new Float32Array(mulTv(orbit, SCENE.ring.axis)));
+
+  // ずらして足す（RGSS）
+  const JIT = R.aa >= 4 ? [[.125, .375], [-.375, .125], [.375, -.125], [-.125, -.375]] : R.aa === 2 ? [[.25, .25], [-.25, -.25]] : [[0, 0]];
+  gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+  gl.uniform1f(R.u.uWt, 1 / JIT.length);
   gl.uniform1f(R.u.uPano, 0);
   gl.viewport(0, 0, c.width, c.height);
   gl.uniform2f(R.u.uHalf, half[0], half[1]);
   gl.uniform2f(R.u.uPx, 2 / c.width, 2 / c.height);
-  gl.uniformMatrix3fv(R.u.uView, false, new Float32Array([...view.right, ...view.up, ...view.fwd]));
-  gl.drawArrays(gl.TRIANGLES, 0, 3);
-  // 下の帯（水平にぐるり一周）
-  gl.uniform1f(R.u.uPano, stripPx / c.width);
-  gl.viewport(0, 0, c.width, stripPx);
-  gl.uniform2f(R.u.uPx, 2 / c.width, 2 / stripPx);
-  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  for (const j of JIT) { gl.uniform2f(R.u.uJit, j[0], j[1]); drawFull(); }
+  if (opt.stripPx > 0) {
+    gl.enable(gl.SCISSOR_TEST); gl.scissor(0, 0, c.width, opt.stripPx); gl.clear(gl.COLOR_BUFFER_BIT); gl.disable(gl.SCISSOR_TEST);
+    gl.uniform1f(R.u.uPano, opt.stripPx / c.width);
+    gl.viewport(0, 0, c.width, opt.stripPx);
+    gl.uniform2f(R.u.uPx, 2 / c.width, 2 / opt.stripPx);
+    for (const j of JIT) { gl.uniform2f(R.u.uJit, j[0], j[1]); drawFull(); }
+  }
+  gl.disable(gl.BLEND);
+
+  // にじみ
+  const film = opt.film && opt.mode === 0;
+  if (film) {
+    gl.useProgram(R.down); gl.uniform1i(R.uDown.uT, 3);
+    let src = R.scene;
+    R.levels.forEach((l, i) => {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, l.down.fb); gl.viewport(0, 0, l.down.w, l.down.h);
+      bindTex(3, src.tex);
+      gl.uniform2f(R.uDown.uTexel, 1 / src.w, 1 / src.h);
+      gl.uniform1f(R.uDown.uThresh, i === 0 ? 1.0 : 0);
+      drawFull(); src = l.down;
+    });
+    gl.useProgram(R.up); gl.uniform1i(R.uUp.uT, 3);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+    for (let i = R.levels.length - 1; i >= 0; i--) {
+      const l = R.levels[i], from = i === R.levels.length - 1 ? l.down : R.levels[i + 1].up;
+      gl.disable(gl.BLEND);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, l.up.fb); gl.viewport(0, 0, l.up.w, l.up.h);
+      bindTex(3, from.tex);
+      gl.uniform2f(R.uUp.uTexel, 1 / from.w, 1 / from.h);
+      drawFull();
+      if (i < R.levels.length - 1) {   // 同じ段の細かい成分を足す
+        gl.enable(gl.BLEND);
+        bindTex(3, l.down.tex);
+        gl.uniform2f(R.uUp.uTexel, 1 / l.down.w, 1 / l.down.h);
+        drawFull();
+      }
+    }
+    gl.disable(gl.BLEND);
+  }
+
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.viewport(0, 0, c.width, c.height);
+  gl.useProgram(R.comp);
+  bindTex(3, R.scene.tex); bindTex(4, R.levels[0].up.tex); bindTex(5, R.levels[1].down.tex);
+  gl.uniform1i(R.uComp.uScene, 3); gl.uniform1i(R.uComp.uBloom, 4); gl.uniform1i(R.uComp.uStreak, 5);
+  gl.uniform1f(R.uComp.uBloomGain, film ? SCENE.film : 0);
+  gl.uniform1f(R.uComp.uStreakGain, film ? 0.16 : 0);
+  gl.uniform1f(R.uComp.uVig, film ? 0.5 : 0);
+  gl.uniform2f(R.uComp.uTexel, 1 / c.width, 1 / c.height);
+  drawFull();
 }

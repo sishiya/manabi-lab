@@ -1,5 +1,5 @@
-// 2つの宇宙の空（正距円筒の絵）を開いたときに作る。星の並びと惑星は作りもの（演出）。black-hole/js/sky.js をもとに。
-// 空の +x の向き（絵の真ん中）が「カメラの真うしろの向き」になる（main.js の座標）。
+// 2つの宇宙の空（正距円筒の絵）を開いたときに作る。星の並び・星雲・銀河は作りもの（演出）。black-hole/js/sky.js をもとに。
+// 細かい星はシェーダーの方（shader.js の starLayer）。ここは天の川・星雲・銀河と、うすい星。
 'use strict';
 
 function mulberry32(seed) {
@@ -38,52 +38,33 @@ function dirOf(u, v) {   // u: 0〜1（経度）、v: 0〜1（0 が北極）
 }
 const uvOf = d => [Math.atan2(d[1], d[0]) / TAU + 0.5, Math.acos(Math.max(-1, Math.min(1, d[2]))) / Math.PI];
 
-// 宇宙ごとの違い。band は天の川の色、stars は星の色
+// 宇宙ごとの違い。band は帯の色、neb は星雲の2色
 const UNIVERSES = {
-  A: { seed: 20141107, pole: [0.35, -0.55, 0.76], center: [-1, 0.25, 0], band: [0.15, 0.19, 0.30], glow: [0.008, 0.012, 0.026],
-    stars: ['#9bb0ff', '#aabfff', '#cad7ff', '#f8f7ff', '#fff4ea'], dust: 0.8 },
-  B: { seed: 77123, pole: [-0.5, 0.7, 0.5], center: [-0.9, -0.4, 0.2], band: [0.36, 0.16, 0.12], glow: [0.03, 0.012, 0.022],
-    stars: ['#ffd2a1', '#ffcc6f', '#ffe2c4', '#fff4ea', '#ffb36b'], dust: 0.5 },
+  A: { seed: 20141107, pole: [0.35, -0.55, 0.76], center: [-1, 0.25, 0], band: [0.42, 0.46, 0.62], bulge: [0.95, 0.72, 0.48],
+    neb1: [0.05, 0.10, 0.28], neb2: [0.22, 0.09, 0.20], stars: ['#9bb0ff', '#cad7ff', '#f8f7ff', '#fff4ea'], dust: 0.9 },
+  B: { seed: 77123, pole: [-0.5, 0.7, 0.5], center: [0.6, -0.8, 0.2], band: [0.62, 0.40, 0.42], bulge: [1.0, 0.62, 0.42],
+    neb1: [0.03, 0.22, 0.26], neb2: [0.38, 0.08, 0.24], stars: ['#ffd2a1', '#ffe2c4', '#fff4ea', '#bcd0ff'], dust: 0.6 },
 };
 
-// 惑星を1つ、空の絵に描く（目印）。center の向きに角半径 radDeg
-function paintPlanet(g, W, H, center, radDeg, kind) {
-  const rad = radDeg * Math.PI / 180, c = norm3(center), [cu, cv] = uvOf(c);
-  const pad = rad * 1.12, x0 = Math.floor((cu - pad / TAU / Math.cos(0)) * W), x1 = Math.ceil((cu + pad / TAU) * W);
-  const y0 = Math.floor((cv - pad / Math.PI) * H), y1 = Math.ceil((cv + pad / Math.PI) * H);
-  const rw = x1 - x0, rh = y1 - y0, img = g.getImageData(x0, y0, rw, rh), px = img.data;
-  const ex = norm3(cross3([0, 0, 1], c)), ey = cross3(c, ex);
-  const sun = norm3([0.72, -0.35, 0.6]);   // 光の来る向き（惑星の局所の座標）
-  for (let j = 0; j < rh; j++) for (let i = 0; i < rw; i++) {
-    const d = dirOf((x0 + i + 0.5) / W, (y0 + j + 0.5) / H), ca = dot3(d, c), a = Math.acos(Math.min(1, ca));
-    if (a > rad * 1.12) continue;
-    const k = (j * rw + i) * 4, sx = dot3(d, ex) / Math.sin(rad), sy = dot3(d, ey) / Math.sin(rad), rr = Math.hypot(sx, sy);
-    if (rr > 1) {   // 大気のふち
-      const glow = Math.max(0, 1 - (rr - 1) / 0.12); const hz = glow * glow * (kind === 'A' ? [0.28, 0.5, 0.95] : [0.8, 0.45, 0.2])[0];
-      const col = kind === 'A' ? [70, 130, 240] : [220, 130, 70];
-      for (let n = 0; n < 3; n++) px[k + n] = Math.min(255, px[k + n] + col[n] * glow * glow * 0.45);
-      void hz; continue;
-    }
-    const sz = Math.sqrt(Math.max(0, 1 - rr * rr)), n = [sx, sy, sz];
-    const lam = Math.max(0, dot3(n, sun));
-    const lit = Math.pow(lam, 0.8) * 0.96 + 0.015;
-    let col;
-    if (kind === 'A') {   // 海と雲の青い星
-      const land = fbm(n[0] * 3.2 + 9, n[1] * 3.2 + 4, n[2] * 3.2 + 2, 5);
-      const cloud = fbm(n[0] * 6 + 2, n[1] * 9 + 7, n[2] * 6 + 5, 5);
-      col = land > 0.53 ? [70, 120, 62] : [22, 58, 128];
-      const c2 = Math.max(0, Math.min(1, (cloud - 0.5) * 5));
-      col = col.map((v, q) => v + ([238, 242, 248][q] - v) * c2);
-    } else {   // 帯のある黄色い星
-      const lat = n[1] * 8 + 2.2 * (fbm(n[0] * 3 + 5, n[1] * 12 + 2, n[2] * 3 + 8, 4) - 0.5);
-      const b = 0.5 + 0.5 * Math.sin(lat * 3.1);
-      col = [214 + 26 * b, 150 + 50 * b, 88 + 40 * b];
-      if (Math.hypot(sx - 0.34, (sy + 0.28) * 2.2) < 0.13) col = [192, 92, 60];
-    }
-    const edge = Math.min(1, (1 - rr) / 0.015), limb = 0.55 + 0.45 * Math.pow(sz, 0.5);
-    for (let q = 0; q < 3; q++) px[k + q] = px[k + q] * (1 - edge) + edge * Math.min(255, col[q] * lit * limb);
+// 渦巻き銀河（1024 角の絵）。向こうの宇宙の目じるし
+function makeGalaxy(seed) {
+  const S = 1024, cv = document.createElement('canvas'); cv.width = S; cv.height = S;
+  const g = cv.getContext('2d'), rnd = mulberry32(seed);
+  g.fillStyle = '#000'; g.fillRect(0, 0, S, S);
+  g.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 90000; i++) {
+    const arm = i % 2, r = Math.pow(rnd(), 0.75);
+    const th = Math.log(0.03 + r) * 3.0 + arm * Math.PI + (rnd() - 0.5) * (0.45 + 0.5 * (1 - r));
+    const dr = r * 0.46 + (rnd() - 0.5) * 0.02;
+    const x = S / 2 + Math.cos(th) * dr * S, y = S / 2 + Math.sin(th) * dr * S;
+    const hot = rnd() < 0.3 && r > 0.2;
+    g.fillStyle = hot ? 'rgba(150,190,255,.32)' : r < 0.3 ? 'rgba(255,214,160,.2)' : 'rgba(255,220,200,.13)';
+    const s = hot ? 1.6 : 1.1; g.fillRect(x, y, s, s);
   }
-  g.putImageData(img, x0, y0);
+  const gr = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S * 0.14);
+  gr.addColorStop(0, 'rgba(255,236,205,1)'); gr.addColorStop(0.3, 'rgba(255,205,150,.55)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, S, S);
+  return cv;
 }
 
 function makeSkyCanvas(kind, W) {
@@ -92,8 +73,8 @@ function makeSkyCanvas(kind, W) {
   const g = cv.getContext('2d', { willReadFrequently: true });
   g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
 
-  // 1. 天の川の帯（粗い絵を引きのばす）
-  const MW = 768, MH = 384;
+  // 1. 帯と星雲（粗い絵を引きのばす）
+  const MW = 1024, MH = 512;
   const mc = document.createElement('canvas'); mc.width = MW; mc.height = MH;
   const mg = mc.getContext('2d'), img = mg.createImageData(MW, MH), px = img.data;
   const P = norm3(U.pole), t = U.center, d0 = dot3(t, P);
@@ -102,49 +83,41 @@ function makeSkyCanvas(kind, W) {
   for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) {
     const d = dirOf((i + 0.5) / MW, (j + 0.5) / MH);
     const bl = Math.asin(dot3(d, P)), gl = Math.atan2(dot3(d, Cx), dot3(d, C));
-    const n = fbm(d[0] * 3 + 11 + off, d[1] * 3 + 5, d[2] * 3 + 7, 5);
-    const n2 = fbm(d[0] * 9 + 3, d[1] * 9 + 1 + off, d[2] * 9 + 2, 4);
-    const bulge = Math.exp(-(gl * gl) / 0.5) * Math.exp(-(bl * bl) / 0.06);
-    const width = 0.16 + 0.05 * (n - 0.5);
-    let band = Math.exp(-(bl * bl) / (width * width)) * (0.45 + 0.9 * n * n) + bulge * 1.4;
-    const dust = Math.exp(-((bl - 0.02 * (n2 - 0.5)) ** 2) / 0.0016) * Math.max(0, n2 * 1.6 - 0.45);
-    band *= Math.max(0.1, 1 - dust * U.dust);
-    const k = (j * MW + i) * 4, haze = fbm(d[0] * 2, d[1] * 2, d[2] * 2, 3);
-    for (let q = 0; q < 3; q++) px[k + q] = Math.min(255, 255 * (band * U.band[q] + haze * U.glow[q] * 3));
+    const n = fbm(d[0] * 3 + 11 + off, d[1] * 3 + 5, d[2] * 3 + 7, 6);
+    const n2 = fbm(d[0] * 9 + 3, d[1] * 9 + 1 + off, d[2] * 9 + 2, 5);
+    const bulge = Math.exp(-(gl * gl) / 0.6) * Math.exp(-(bl * bl) / 0.05);
+    const width = 0.14 + 0.07 * (n - 0.5);
+    let band = Math.exp(-(bl * bl) / (width * width)) * (0.3 + 1.1 * n * n);
+    const dust = Math.exp(-((bl - 0.03 * (n2 - 0.5)) ** 2) / 0.0022) * Math.max(0, n2 * 1.9 - 0.5);
+    band *= Math.max(0.05, 1 - dust * U.dust);
+    const neb = Math.pow(Math.max(0, fbm(d[0] * 1.7 + 40, d[1] * 1.7 + off, d[2] * 1.7 + 9, 6) - 0.42) * 3.2, 2);
+    const mixN = fbm(d[0] * 2.2 + 77, d[1] * 2.2, d[2] * 2.2 + off, 4);
+    const k = (j * MW + i) * 4;
+    for (let q = 0; q < 3; q++) {
+      const b = band * U.band[q] + bulge * U.bulge[q] * (0.5 + 0.8 * n);
+      px[k + q] = Math.min(255, 255 * Math.sqrt(Math.max(0, b * 0.32 + 0.55 * neb * (U.neb1[q] * mixN * 2 + U.neb2[q] * (1 - mixN) * 2))));
+    }
     px[k + 3] = 255;
   }
   mg.putImageData(img, 0, 0);
   g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
   g.drawImage(mc, 0, 0, W, H);
 
-  // 2. 星
-  const rnd = mulberry32(U.seed), NSTAR = Math.round(11000 * W / 4096);
+  // 2. うすい星
+  const rnd = mulberry32(U.seed), NSTAR = Math.round(9000 * W / 4096);
   g.globalCompositeOperation = 'lighter';
   for (let i = 0; i < NSTAR; i++) {
     const z = rnd() * 2 - 1, ph = rnd() * TAU, s = Math.sqrt(1 - z * z), d = [s * Math.cos(ph), s * Math.sin(ph), z];
-    const [u, v] = uvOf(d), x = u * W, y = v * H, st = Math.max(0.08, Math.sin(v * Math.PI));
-    const lum = Math.pow(rnd(), 12), col = U.stars[Math.floor(rnd() * U.stars.length)];
-    if (lum < 0.03) { g.globalAlpha = 0.18 + 0.5 * rnd(); g.fillStyle = col; g.fillRect(x - 0.5 / st, y - 0.5, 1 / st, 1); continue; }
-    const rad = (0.9 + 2.2 * Math.sqrt(lum)) * W / 4096;
-    g.globalAlpha = 1;
-    for (const dx of [0, -W, W]) {
-      const gr = g.createRadialGradient(x + dx, y, 0, x + dx, y, rad);
-      gr.addColorStop(0, '#fff'); gr.addColorStop(0.25, col); gr.addColorStop(1, 'rgba(0,0,0,0)');
-      g.fillStyle = gr; g.save(); g.translate(x + dx, y); g.scale(1 / st, 1); g.translate(-(x + dx), -y);
-      g.beginPath(); g.arc(x + dx, y, rad, 0, TAU); g.fill(); g.restore();
-    }
+    const [u, v] = uvOf(d), st = Math.max(0.08, Math.sin(v * Math.PI));
+    g.globalAlpha = 0.12 + 0.4 * rnd(); g.fillStyle = U.stars[Math.floor(rnd() * U.stars.length)];
+    g.fillRect(u * W - 0.5 / st, v * H - 0.5, 1 / st, 1);
   }
-  g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  g.globalAlpha = 1;
 
-  // 3. 目印: カメラの背中側に惑星、穴の真うしろ（絵の左右の端）に明るい星（重なるとリングになる）
-  if (kind === 'A') paintPlanet(g, W, H, [Math.cos(0.1), -Math.sin(0.1), -0.04], 11, 'A');
-  else paintPlanet(g, W, H, [Math.cos(0.14), Math.sin(0.14), 0.06], 16, 'B');
-  g.globalCompositeOperation = 'lighter';
-  const rs = 7 * W / 4096, cs = kind === 'A' ? '#bfe0ff' : '#ffc890';
-  for (const x of [0, W]) {
-    const gr = g.createRadialGradient(x, H / 2, 0, x, H / 2, rs);
-    gr.addColorStop(0, '#fff'); gr.addColorStop(0.2, cs); gr.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = gr; g.fillRect(x - rs, H / 2 - rs, rs * 2, rs * 2);
+  // 3. 銀河（向こうの宇宙）。絵のまん中が +x（穴を通ってまっすぐ見える向き）
+  if (kind === 'B') {
+    const gal = makeGalaxy(4242), cx = (0.5 + 12 / 360) * W, cy = (0.5 - 6 / 180) * H, sz = W * 0.17;
+    g.save(); g.translate(cx, cy); g.rotate(-0.5); g.scale(1, 0.52); g.drawImage(gal, -sz / 2, -sz / 2, sz, sz); g.restore();
   }
   g.globalCompositeOperation = 'source-over';
   return cv;

@@ -83,6 +83,28 @@ for (const [name, S, l0] of [['映画', M.makeShape(0.005, 0.05), -6.255], ['な
   check(`向こうの宇宙の割合（${name}）`, far / tot, (1 - Math.sqrt(1 - 1 / (r0 * r0))) / 2, 2e-3);
 }
 
+// 4d) 3D の天体に使う「のどから出たあとの直線」と本当の道すじのずれ（r ≥ 6 で。単位は ρ）
+for (const [name, S] of [['映画', M.makeShape(0.005, 0.05)], ['長い', M.makeShape(5, 0.05)], ['なめらか', M.makeShape(0.5, 0.43)]]) {
+  let worst = 0, worstB = 0;
+  for (let i = 1; i < 240; i++) {
+    const psi = Math.PI * (i + 0.37) / 240, l0 = -6.26 - S.a, r = M.traceRay(S, l0, psi, { path: true });
+    if (r.side < 0 && Math.abs(psi) > Math.PI / 2) continue;   // カメラから外へ出る光は、はじめから直線
+    let turnI = 0, minR = Infinity;   // のどにいちばん近づいた所（ここより先が「帰り」の直線）
+    r.path.forEach(([l], i) => { const q = M.radius(S, l); if (q <= minR) { minR = q; turnI = i; } });
+    for (const [l, phi] of r.path.slice(turnI)) {
+      const rr = M.radius(S, l);
+      if (rr < 6 || Math.sign(l) !== r.side) continue;
+      // 点 (rr, phi) と直線 t u + b v（u = (cosΦ, sinΦ)、v = (sinΦ, −cosΦ)）の距離
+      const x = rr * Math.cos(phi), y = rr * Math.sin(phi), u = [Math.cos(r.phi), Math.sin(r.phi)], v = [Math.sin(r.phi), -Math.cos(r.phi)];
+      const off = (x * v[0] + y * v[1]) - r.b;
+      if (Math.abs(off) > worst) { worst = Math.abs(off); worstB = r.b; }
+      void u;
+    }
+  }
+  console.log(`直線のずれ（${name}、r ≥ 6）: 最大 ${worst.toFixed(3)} ρ（b = ${worstB.toFixed(2)}）`);
+  if (worst > 1.0) { bad++; console.log('NG 直線のずれが大きい'); }
+}
+
 // 5) 速さ
 const timeIt = (S, coarse) => { const t0 = Date.now(); for (let i = 0; i < 20; i++) L.buildLUT(S, -3 - i * 0.2, null, coarse); return ((Date.now() - t0) / 20).toFixed(1); };
 for (const [name, S] of [['映画', M.makeShape(0.005, 0.05)], ['長い', M.makeShape(5, 0.05)], ['なめらか', M.makeShape(0.5, 0.43)]])
