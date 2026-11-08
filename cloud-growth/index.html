@@ -1,0 +1,110 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>雲ができるまで</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23101d2e'/><path d='M18 44a9 9 0 0 1 0-18 13 13 0 0 1 25-3 11 11 0 0 1 4 21z' fill='%23eaf4ff'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css?v=1">
+
+<div id="app">
+  <header id="top"><h1>雲ができるまで</h1><p>空の条件を選ぶと、空気と水の計算で雲が育ちます</p></header>
+
+  <div id="pin">
+    <div id="viewwrap">
+      <canvas id="cv" aria-label="空の断面。指でなぞると空気を変えられます"></canvas>
+      <canvas id="ov"></canvas>
+      <div id="badge"><small>いま見えている雲（計算の結果から判定）</small><b id="clName">—</b></div>
+      <div id="err" hidden></div>
+    </div>
+    <div id="bar">
+      <button id="play" class="primary" aria-label="再生と一時停止">⏸</button>
+      <div id="trackwrap"><input id="track" type="range" min="0" max="1000" value="0" aria-label="時間"></div>
+      <span id="time">0分</span>
+    </div>
+    <div id="status" role="status">計算を準備しています…</div>
+  </div>
+
+  <main id="below">
+    <section class="pane">
+      <h2>雲の種類を選ぶ</h2>
+      <div id="scenes"></div>
+    </section>
+    <section class="pane" id="info">
+      <h2 id="scName"></h2>
+      <p id="scWhy"></p>
+      <dl id="scGiven">
+        <dt>計算で出たこと</dt><dd id="scCalc"></dd>
+        <dt>決めて与えたこと</dt><dd id="scFixed"></dd>
+      </dl>
+      <p id="scNote" class="note"></p>
+      <div id="reads"></div>
+    </section>
+    <section class="pane">
+      <h2>空をいじる</h2>
+      <div id="sliders"></div>
+      <h3>指でなぞる</h3>
+      <div id="tools" class="chips" role="group" aria-label="指の道具">
+        <button data-t="heat" class="on">あたためる</button><button data-t="cool">冷やす</button><button data-t="wet">湿らせる</button>
+      </div>
+      <p class="hint">空を押している間、その場所の空気が変わります。</p>
+      <button id="reset" class="plain">この種類をはじめから</button>
+    </section>
+    <section class="pane">
+      <h2>見え方</h2>
+      <div id="modes" class="chips" role="group" aria-label="見え方">
+        <button data-m="0" class="on">雲</button><button data-m="1">上下の風</button><button data-m="2">温度の差</button><button data-m="3">水のすがた</button>
+      </div>
+      <p id="legend" class="hint"></p>
+      <h3>高さごとの空気（0〜16 km の同じものさし）</h3>
+      <canvas id="chart" aria-label="高さごとの気温と露点"></canvas>
+      <p class="hint"><span class="k r">━</span>気温　<span class="k b">━</span>露点（これより冷えると水になる温度）　<span class="k w">┅</span>地面の空気を持ち上げた線。<span class="k h">▮</span>計算している範囲</p>
+    </section>
+  </main>
+
+  <details id="about">
+    <summary>このアプリについて</summary>
+    <p>同じ水と空気の式を使い、場面ごとに最初の空と、与えるもの（地面の熱・放射・持ち上げ）を変えています。上の「決めて与えたこと」がその場面で計算していない部分です。雲の名前は、できた雲の底の高さ・厚さ・広がり・雨から判定した目安で、WMO の分類を機械的に当てはめたものではありません。</p>
+    <h3>計算のしかた</h3>
+    <ul>
+      <li>2次元の断面の非弾性の式（高さで空気が薄くなることを入れた運動方程式）。圧力は横に FFT、縦に三重対角で解きます。</li>
+      <li>水は水蒸気＋雲の全量と、雨・雪の量を運び、エネルギーは液体・氷の静的エネルギーで保存します。雲の量と水か氷かは温度から出します。</li>
+      <li>雨は Kessler の式。雪と氷は同じ形の目安です。</li>
+    </ul>
+    <h3>簡単にしているところ</h3>
+    <ul>
+      <li>本物の雲は3次元です。2次元では特に積乱雲の形がちがいます。</li>
+      <li>水と氷の割合は温度だけで決めています（0℃〜−20℃で入れかわる。推定）。氷の過飽和と、雲の種になる粒は計算していません。</li>
+      <li>雪と氷の粒の落ちる速さ、雲の上面の放射の冷え方は目安の値（推定）です。</li>
+      <li>格子より小さい乱れは計算せず、運ぶ計算の丸めにまかせています。層積雲や霧の厚さは、格子の細かさにも左右されます。</li>
+      <li>雲の見た目の濃さは、水の量から出した光の弱まりに、奥行きの仮定を入れたものです。</li>
+    </ul>
+    <h3>確かめたこと（tools/verify.js）</h3>
+    <ul>
+      <li>飽和蒸気圧の値、エネルギーと水の保存（0.001% 以内）。</li>
+      <li>湿った中立の空の暖気塊（Bryan &amp; Fritsch 2002 と同じ形の場面）: 1000 秒で約 8.8 km。</li>
+      <li>山を越える波の縦の波長: 計算 5.6 km、理論 6.3 km。</li>
+      <li>9つの場面の雲の高さは観測と比べていません。形の見本としてごらんください。</li>
+    </ul>
+    <h3>おもな出どころ</h3>
+    <ul>
+      <li><a href="https://cloudatlas.wmo.int/en/some-useful-concepts-levels.html" target="_blank" rel="noopener">WMO International Cloud Atlas</a>（雲の分類と高さ）</li>
+      <li>Bolton 1980, Monthly Weather Review（水の飽和蒸気圧）</li>
+      <li>Murphy &amp; Koop 2005, Quarterly Journal of the Royal Meteorological Society 131（氷の飽和蒸気圧）</li>
+      <li>Klemp &amp; Wilhelmson 1978（Kessler の暖かい雨の式）。式は <a href="https://erf.readthedocs.io/en/latest/theory/Microphysics.html" target="_blank" rel="noopener">ERF の解説</a>で確認</li>
+      <li>Khairoutdinov &amp; Randall 2003（変数の組み立ての考え方）</li>
+      <li>Bryan &amp; Fritsch 2002, Monthly Weather Review 130（確かめの場面）</li>
+      <li>Weisman &amp; Klemp 1982 の空の式の形（積乱雲の最初の空だけ借りた。もとは北米の大平原の理想化）。<a href="https://arxiv.org/abs/2004.11636" target="_blank" rel="noopener">Dawson 2020</a> の記述で確認</li>
+      <li>Stevens et al. 2005, Monthly Weather Review 133（DYCOMS-II RF01。層積雲の最初の空だけ借りた）</li>
+    </ul>
+    <h3>使っているもの</h3>
+    <p>フォント: Google Fonts（SIL Open Font License）</p>
+  </details>
+</div>
+
+<script src="js/thermo.js?v=1"></script>
+<script src="js/solver.js?v=1"></script>
+<script src="js/scenes.js?v=1"></script>
+<script src="js/view.js?v=1"></script>
+<script src="js/chart.js?v=1"></script>
+<script src="js/main.js?v=1"></script>

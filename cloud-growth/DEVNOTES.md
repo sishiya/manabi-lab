@@ -1,0 +1,57 @@
+# 雲ができるまで 開発メモ
+
+## 別セッションで続けるとき（まずここ）
+- いまの状態: v002（9場面の計算＋画面）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。
+- 次にやること: PLAN.md の段階B、または下の「残っている課題」。
+- 読む順: PLAN.md → このファイルの「ファイル構成」→ 関係するファイルだけ。
+- 動かし方: サーバー apps（.claude/launch.json、ほかのセッションが使っていたら apps-2〜6）で http://localhost:8765/cloud-growth/ 。`#front` のように場面の id をつけると、その場面から始まる。デバッグ用の窓口 `window.__clgr`（`S`・`worker`・`select(id)`・`view`）、エラーは `window.__clgrErr`。
+- 物理の確かめ: `node cloud-growth/tools/verify.js`。9場面の出来: `node cloud-growth/tools/scenes-check.js [id ...]`（雲の種類・雲量・底・頂・雨を6回出す）。
+- 区切りごとの手順: 「確認のしかた」と smoke.ps1 → 「状態」に1行 → launcher.html の表 → 公開前チェック → commit（節目の版だけ versions/ へコピーしてカードに。RULES 3章）。
+- ユーザーの好み: 見え方＝横から見た空の断面／手がすること＝種類を選ぶ＋空をいじる／時間＝早送りの計算＋戻せるタイムバー（2026-11-08 に決めた）。
+
+## ファイル構成
+| ファイル | 中身 | 主な関数・変数 |
+|---|---|---|
+| index.html | 画面の骨組み・このアプリについて | |
+| css/style.css | 見た目（スマホは 760px 以下） | `#pin`（断面とバーを上に固定） |
+| js/thermo.js | 飽和・潜熱・保存量 h から温度を出す | `CT.diag`・`CT.qstar`・`CT.omN`・`CT.omP` |
+| js/solver.js | 計算の核（非弾性の2次元） | `makeSim`、中の `advectAll`・`project`・`micro`・`forcing`・`snapshot`・`restore` |
+| js/scenes.js | 9場面の空の条件、雲の判定 | `CS.SCENES`・`columnStats`・`classifyAll`・`bandName` |
+| js/sim-worker.js | Worker: 進める・タイムバーの保存・画面へ送る | `load`・`tick`・`sendFrame`・`profile`・`saveSnap` |
+| js/view.js | 断面の描画（WebGL2）＋目盛り | `CV.make`・シェーダー FS（mode 0 雲／1 上下の風／2 温度差／3 水のすがた） |
+| js/chart.js | 高さごとの気温・露点 | `CC.draw` |
+| js/main.js | 画面の組み立て・Worker とのやりとり | `select`・`S` |
+| tools/verify.js | 物理の確かめ | |
+| tools/scenes-check.js | 9場面を画面なしで回す | |
+
+読み込み順: thermo → solver → scenes → view → chart → main（Worker は importScripts で thermo・solver・scenes）。
+
+## しくみ
+- 変数は u・w・h（液体・氷の静的エネルギー cpT+gz−Ln qn−Lp qp）・qt・qp。雲の量と水／氷は温度から毎回出す（SAM の組み立て）。相が変わっても h は変わらないので、潜熱の足し引きを別に持たなくてよい。
+- 運ぶ: 方向分割の TVD（van Leer）。分割しても一様な場が保たれるように、方向ごとの擬似密度 d を更新する（Easter の方法）。
+- 圧力: 横に FFT、縦に三重対角。nx は 2 のべき乗（`NX=256`）。
+- 山: セルをふさぎ、速度を 0 にして射影を3回くり返す（FFT の解き方を保つため）。左右と上にスポンジ。
+- 場面ごとの範囲・格子: `scenes.js`。縦横比は表示がおよそ 3:1 になるように。前線だけ高さを拡大（画面に倍率）。
+- 雲の判定: `classifyAll` は WMO の高さの表（低い 0〜2km・中層 2〜7km・高い 5〜13km、温帯）に、光学的な厚さと雨を足した目安。結果から判定するので、つまみで雲が変われば名前も変わる。前線は列ごとに `bandName`。
+
+## 比べた手法（RULES 6章）
+PLAN.md の表。圧縮性（CM1・WRF）は重い、格子ボルツマンは成層と相変化がない、雑音は物理がない。非弾性＋FFT にした。
+
+## 批判役（2026-11-08 企画）
+- 直した: ケルビン・ヘルムホルツ雲は類でなく特徴と明記、霧は十種雲形の外と明記、霧のあと朝に持ち上げて層雲に、雲の名前は結果から判定、各場面に「計算で出たこと／決めて与えたこと」、0〜16km の共通のものさし、照合していない場面は「形の見本」と明記、出どころに「最初の空だけ借りた」。
+- 直さない: 地形座標（セルをふさぐ形で山の波の波長が理論と合った）。
+- あとで: 同じ範囲でつまみ1本で 積雲→積乱雲 に連続で変わる道（段階B）。巻雲の氷過飽和と粒の大きさ。薄い層の不等間隔の格子。
+
+## ハマったところ
+- verify の湿潤中立の空: θe の近似式で作ると、このモデルにとっては不安定な空になり暖気塊が速くのぼりすぎた。h が一定の空にする。
+- `.claude/serve.ps1` はポートの自動割り当ての番号でなく設定の番号で開く（Browser ペインが別の番号を教えても、ログの番号のほうへ行く）。
+
+## 確認のしかた（変更のたびに）
+1. `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/smoke.ps1 -Apps cloud-growth`（例外・読み込みの失敗・外への通信）
+2. `node cloud-growth/tools/verify.js` がすべて OK。
+3. 9場面を押して雲ができるか。タイムバーを戻す→▶で続きが計算される。つまみ・指で変わる。見え方4つ。
+4. 幅 375px で断面とバーが上に残り、横にはみ出さない。
+
+## 状態
+- 2026-11-08 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
+- 2026-11-08 v002: 計算の核・9場面・画面。

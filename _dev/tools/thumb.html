@@ -19,6 +19,8 @@ const click = (w, sel) => { const e = w.document.querySelector(sel); if (e) e.cl
 
 // アプリごとの準備（w = アプリの window）
 const SETUP = {
+  // 雲ができるまで: 積雲がいくつか育ったところ（計算は Worker なので、育つまで待つ）
+  'cloud-growth': async w => { await wait(1500); w.__clgr.worker.postMessage({ type: 'speed', v: 500 }); await wait(18000); },
   // ブラウン管のドット絵: 画面だけを窓いっぱいに（.thumb）、8ビットの冒険の全体を、まんなかで液晶｜ブラウン管に分ける（仕切りが剣士をまっぷたつに）
   'crt-pixels': async w => { await wait(1200); const C = w.__crpi; w.document.body.classList.add('thumb'); w.dispatchEvent(new w.Event('resize')); await wait(200); C.view.stopHint(); C.set({ pic: 'retro' }); C.view.focus(128, 112, 1.06); C.view.V.split = 0.5; C.simRun(0); await wait(300); },
   // クモがハエをつかまえるまで: クモが跳んでいるところ（ハエが翅を上げた直後）。3つの視界が並ぶ
