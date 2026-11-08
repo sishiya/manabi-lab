@@ -1,16 +1,17 @@
 // 雲ができるまで（3次元の試作）— 画面の組み立て。計算と描画は sky-sim.js・sky-render.js
 import { SkySim, makeBase } from './sky-sim.js';
-import { SkyRender } from './sky-render.js';
+import { SkyRender } from './sky-render.js?v=2';
 
 const $ = id => document.getElementById(id);
 const SCENE = globalThis.CS.SCENES.find(s => s.id === 'cumulus');
 const HORIZON = 3 * 3600;
 const CAMS = {
-  up:   { pos: [0, 0, 1.7],     yaw: 0.75,  pitch: 0.55, fov: 78 },
-  far:  { pos: [0, 0, 500],     yaw: 0.75,  pitch: 0.16, fov: 50 },
+  up:   { pos: [0, 0, 1.7],     yaw: 0.75,  pitch: 0.45, fov: 62 },
+  far:  { pos: [0, 0, 500],     yaw: 0.75,  pitch: 0.2, fov: 36 },
   above: { pos: [0, 0, 3750],   yaw: 0.75,  pitch: -0.3, fov: 62 },
 };
-const SUNS = { morn: { az: -150, el: 11, ex: 0.55, wb: 0.7 }, noon: { az: -130, el: 55, ex: 0.34, wb: 0.3 }, eve: { az: -125, el: 3.5, ex: 0.75, wb: 0.28 } };
+// 太陽は視線の斜め前（正面からの光だと雲が平たく見える）
+const SUNS = { morn: { az: -15, el: 13, ex: 0.5, wb: 0.85 }, noon: { az: -50, el: 58, ex: 0.34, wb: 0.5 }, eve: { az: 100, el: 2.2, ex: 0.85, wb: 0.12 } };
 const state = { running: true, cam: { ...CAMS.up, pos: [...CAMS.up.pos] }, sun: 'morn', steps: 2, dt: 1, stat: null, dirty: true, volDirty: true, lastT: 0 };
 
 function fail(msg) { const e = $('err'); e.hidden = false; e.textContent = msg; state.running = false; }
@@ -44,7 +45,7 @@ async function init() {
   const fit = () => {
     const dpr = Math.min(devicePixelRatio || 1, 1.5), MP = small ? 0.55e6 : 1.1e6;
     let w = innerWidth * dpr, h = innerHeight * dpr; const s = Math.min(1, Math.sqrt(MP / (w * h)));
-    cv.width = Math.round(w * s); cv.height = Math.round(h * s); state.dirty = true;
+    cv.width = Math.max(1, Math.round(w * s)); cv.height = Math.max(1, Math.round(h * s)); state.dirty = true;
   };
   fit(); addEventListener('resize', fit);
   const rd = new SkyRender(dev, cv, sim);

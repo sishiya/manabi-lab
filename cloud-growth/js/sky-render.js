@@ -29,19 +29,27 @@ fn beta(x:vec3f)->f32 { return max(0.,textureSampleLevel(vol,sm,x/u.dom.xyz,0.).
   let x=(vec3f(g)+.5)/dim*u.dom.xyz;
   let cell=u.dom.xyz/dim;
   var od=0.; var ds=cell.z*.75; var q=x;
-  for (var n=0; n<28; n++) {
+  for (var n=0; n<40; n++) {   // 太陽が低いと遠くの雲の影も入るので 8km 先まで
     q+=u.sun.xyz*ds*.5; od+=beta(q)*ds; q+=u.sun.xyz*ds*.5;
     if q.z>u.dom.z { break; }
-    ds*=1.12;
+    ds=min(ds*1.12,220.);
   }
   var up=0.; let dz=(u.dom.z-x.z)/10.;
   for (var n=0; n<10; n++) { up+=beta(x+vec3f(0.,0.,(f32(n)+.5)*dz))*dz; }
+  // 空がどれだけ見えているか（真上＋斜め4方向。谷や雲の下が暗くなる）
+  var vis=2.*exp(-.11*up);
+  for (var a=0; a<4; a++) {
+    let th=f32(a)*1.5708+.6; let w=vec3f(cos(th)*.7,sin(th)*.7,.7); var o4=0.; var s4=60.; var p4=x;
+    for (var n=0; n<7; n++) { p4+=w*s4*.5; o4+=beta(p4)*s4; p4+=w*s4*.5; if p4.z>u.dom.z { break; } s4*=1.35; }
+    vis+=exp(-.11*o4);
+  }
+  vis/=6.;
   var mx=0.;
   for (var a=0; a<8; a++) {
     let o=(vec3f(f32(a&1),f32((a>>1)&1),f32((a>>2)&1))-.5)*cell*1.3;
     mx=max(mx,beta(x+o));
   }
-  textureStore(out,g,vec4f(od,up,mx,0.));
+  textureStore(out,g,vec4f(od,up,mx,vis));
 }`;
 
 const skyWGSL = /* wgsl */`
@@ -89,6 +97,7 @@ fn skyAt(d:vec3f)->vec3f {
   let az=atan2(d.y,d.x); let el=max(asin(clamp(d.z,0.,1.)),.05);   // 地平線ぎりぎりは1回散乱だと暗くなりすぎるので下を切る
   return textureSampleLevel(skyT,smC,vec2f(az/6.28318+.5,sqrt(el/1.5707)),0.).rgb;
 }
+fn aces(c:vec3f)->vec3f { return (c*(2.51*c+.03))/(c*(2.43*c+.59)+.14); }
 fn hg(c:f32,g:f32)->f32 { let g2=g*g; return (1.-g2)/(12.566*pow(1.+g2-2.*g*c,1.5)); }
 fn cubicB(x:vec3f)->f32 {
   // 3次 B スプライン（8回の線形の読み出し）
@@ -109,9 +118,9 @@ fn cubicB(x:vec3f)->f32 {
 fn vb(x:vec3f)->f32 { return ${tri ? 'textureSampleLevel(vol,sm,x/r.dom.xyz,0.).r' : 'cubicB(x)'}; }
 // 表面のそばの細かい影（太陽へ 280m だけ細かく。その先は光の表）
 fn sunOD(q:vec3f,l:vec4f)->f32 {
-  let n=7; let L=280.; let ds=L/f32(n);
+  let n=6; let L=280.; let ds=L/f32(n);
   var od=0.;
-  for (var i=0; i<n; i++) { od+=max(0.,textureSampleLevel(vol,sm,(q+r.sun.xyz*(f32(i)+.5)*ds)/r.dom.xyz,0.).r)*ds; }
+  for (var i=0; i<n; i++) { od+=cubicB(q+r.sun.xyz*(f32(i)+.5)*ds)*ds; }   // 線形の補間だと格子の層が縞になる
   let far=textureSampleLevel(lt,sm,(q+r.sun.xyz*L)/r.dom.xyz,0.).r;
   return od+far;
 }
@@ -126,8 +135,9 @@ fn ms(c:f32,tau:f32)->f32 {
   let px=v.p.xy;
   let jit=fract(52.9829189*fract(dot(px,vec2f(.06711056,.00583715))+r.misc.z*.618));
   let sun=r.sun.xyz; let c=dot(d,sun);
-  let zen=skyAt(vec3f(0.,0.,1.)); let hor=skyAt(normalize(vec3f(sun.x,sun.y,.05)));
-  let amb=zen*1.6+hor*.5;
+  let zen=skyAt(vec3f(0.,0.,1.));
+  let hor=.25*(skyAt(normalize(vec3f(1.,0.,.15)))+skyAt(normalize(vec3f(-1.,0.,.15)))+skyAt(normalize(vec3f(0.,1.,.15)))+skyAt(normalize(vec3f(0.,-1.,.15))));   // 太陽の側だけでなく周りの平均
+  let amb=zen*1.2+hor*.8;
   // 背景
   var bg:vec3f; var tg=-1.;
   if d.z<-1e-5 { tg=-o.z/d.z; }
@@ -136,8 +146,8 @@ fn ms(c:f32,tau:f32)->f32 {
     let od=textureSampleLevel(lt,sm,vec3f(q.x/r.dom.x,q.y/r.dom.y,0.),0.).r;
     let col=vec3f(.075,.095,.05);
     bg=col*(r.sunCol.rgb*max(sun.z,0.)*exp(-od*.55)*.32+amb*.5);
-    let f=exp(-tg/26000.);
-    bg=mix(skyAt(normalize(vec3f(d.x,d.y,.02))),bg,f);
+    let f=exp(-tg/40000.);
+    bg=mix(skyAt(normalize(vec3f(d.x,d.y,.02)))*mix(.4,1.,smoothstep(.05,.3,sun.z)),bg,f);   // 太陽が低いと地面のもやは空ほど明るくない
   } else {
     bg=skyAt(d);
     bg+=r.sunCol.rgb*smoothstep(.99996,.99999,c)*20.;
@@ -157,13 +167,17 @@ fn ms(c:f32,tau:f32)->f32 {
     var t=t0; var Tr=1.; var L=vec3f(0.); var first=-1.;
     var ds0=14.+t*.004;
     t+=jit*ds0;
-    var i=0;
+    var i=0; var back=0.; var fine=0;
     loop {
-      if i>=${240} || t>=t1 || Tr<.012 { break; }
+      if i>=${320} || t>=t1 || Tr<.012 { break; }
       i++;
       let q=o+d*t; let ds=14.+t*.004;
       let l=textureSampleLevel(lt,sm,q/r.dom.xyz,0.);
-      if l.b<4e-6 { t+=ds*6.; continue; }
+      if l.b<4e-6 {
+        if fine>0 { fine--; t+=ds; continue; }
+        back=ds*6.; t+=back; continue;
+      }
+      if back>0. { t-=back; back=0.; fine=6; continue; }   // 飛びすぎて雲の中に入ったら戻る（遠くの雲が縞になる）
       var b=vb(q);
       if b>1e-5 {
         if first<0. {
@@ -175,9 +189,9 @@ fn ms(c:f32,tau:f32)->f32 {
         let qq=o+d*t;
         let stepT=exp(-b*ds);
         var tauS=l.r;
-        if Tr>.25 { tauS=sunOD(qq,l); }
+        if Tr>.15 { tauS=mix(l.r,sunOD(qq,l),smoothstep(.15,.4,Tr)); }   // 切りかえの等高線を出さない
         // 太陽の直接＋多重散乱、空の光、雲を透過して下へ届く光（二流近似 1/(1+0.75(1-g)τ)、g=0.85）
-        let S=r.sunCol.rgb*ms(c,tauS)*.46+amb*(.1+.9*exp(-l.g*.11))+r.sunCol.rgb*max(r.sun.z,.12)*.075/(1.+.11*l.g);
+        let S=r.sunCol.rgb*ms(c,tauS)*.46+amb*(.06+.94*l.a)+r.sunCol.rgb*max(r.sun.z,.12)*.075/(1.+.11*l.g);
         L+=Tr*(1.-stepT)*S;
         Tr*=stepT;
       }
@@ -191,7 +205,9 @@ fn ms(c:f32,tau:f32)->f32 {
   }
   // 見え方（フィルムの曲線）
   col*=r.misc.w*r.wb.rgb;
-  col=(col*(2.51*col+.03))/(col*(2.43*col+.59)+.14);
+  // 明るいところで色が黄色へずれないよう、色あいを保つ曲線と半々に
+  let m=max(max(col.r,col.g),max(col.b,1e-4));
+  col=mix(aces(col),col*aces(vec3f(m)).r/m,.6);
   col=pow(clamp(col,vec3f(0.),vec3f(1.)),vec3f(1./2.2));
   col+=(jit-.5)/255.;
   return vec4f(col,1.);
