@@ -105,9 +105,9 @@ export function trackPitch(x, fs, opt = {}) {
 // フレームの中心の時刻（秒）
 export const frameTime = (trk, f) => trk.hop * f + trk.winSec / 2;
 
-// 倍音と雑音の比: 長い窓（6 周期ぶん＝80ms。Boersma 1993 の HNR の窓）で、見つかった周期の近くの山から
+// 倍音と雑音の比: 長い窓（4.5 周期ぶん＝60ms。Praat の To Harmonicity (ac) の既定）で、見つかった周期の近くの山から
 export function hnrTrack(x, fs, trk) {
-  const N = Math.round(6 / trk.floor * fs), { win, ac, rw } = makeAc(N);
+  const N = Math.round(4.5 / trk.floor * fs), { win, ac, rw } = makeAc(N); // 4.5 周期は Praat の To Harmonicity (ac) の既定
   const hop = Math.round(trk.hop * fs), out = new Float64Array(trk.n).fill(NaN);
   const offset = Math.round((N - trk.winSec * fs) / 2);
   for (let f = 0; f < trk.n; f++) {
