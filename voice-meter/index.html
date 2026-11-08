@@ -1,0 +1,70 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>声のものさし</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23101a26'/><path d='M8 32h7l5-16 8 32 8-40 8 40 5-16h7' fill='none' stroke='%237fd6c2' stroke-width='5' stroke-linejoin='round'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css?v=1">
+<script src="../assets/power.js?v=1"></script>
+
+<div id="app">
+  <header id="top"><h1>声のものさし</h1><span class="tag">試作</span></header>
+  <div id="layout">
+    <section id="pin" aria-label="図">
+      <canvas id="cv" role="img" aria-label="選んだ数の測り方の図"></canvas>
+      <div id="now"><b id="nowName"></b><span class="val" id="nowVal"></span><span class="tier" id="nowSrc"></span></div>
+      <div id="timebar" hidden>
+        <input id="time" type="range" min="0" max="1" step="0.01" value="0" aria-label="時間">
+        <button id="play" type="button">▶ 聞く</button>
+      </div>
+    </section>
+
+    <section id="col">
+      <div class="take">
+        <div class="seg" role="group" aria-label="録り方">
+          <button type="button" data-m="hold" aria-pressed="true">「あー」をのばす<br><small>声帯の鳴り方</small></button>
+          <button type="button" data-m="speech" aria-pressed="false">ふつうに話す<br><small>抑揚・話す速さ</small></button>
+        </div>
+        <button id="rec" type="button">● 録音する</button>
+        <p class="priv">マイクの声はこの端末の中だけで計算し、どこにも送らず保存しません。閉じると消えます。</p>
+        <p id="status" hidden></p>
+        <div class="sample">
+          <div class="lbl">マイクなしで試す（合成した見本の声）</div>
+          <div class="chips">
+            <button type="button" data-p="low">低めの声</button>
+            <button type="button" data-p="high">高めの声</button>
+            <button type="button" data-p="breath">息まじり</button>
+            <button type="button" data-p="rough">ざらついた声</button>
+          </div>
+        </div>
+        <button id="erase" type="button" hidden>この録音を消す</button>
+      </div>
+
+      <h2>おもな数 <small class="note">押すと上の図が測り方にかわります</small></h2>
+      <div id="main"></div>
+      <h2>くわしく</h2>
+      <div id="more"></div>
+      <p class="note">横の線の目盛りは見やすくするための範囲で、「普通」や「良い」を表すものではありません。病気の判断には使えません。</p>
+
+      <details id="about">
+        <summary>このアプリについて</summary>
+        <p>声を、研究で使われている測り方で数にするアプリです。声の良し悪し、性別、年齢、気持ちは判定しません。学習用で、医療の判断には使えません。</p>
+        <h3>正確さについて（いまの状態）</h3>
+        <ul>
+          <li>計算は研究の定義をもとに、このアプリのために書いたものです。正解のわかる合成の声で確かめました。</li>
+          <li>Praat などの専門ソフトとの突き合わせと、本物の人の声での確かめは<strong>まだしていません</strong>。CPP などはソフトごとに値がかわります。</li>
+          <li><b>測定</b>は計算でそのまま求めた値、<b>推定</b>はモデルにあてはめて出した値、<b>マイクしだい</b>は機種や雑音で大きくかわると報告のある値です。ジッターとシマーは「あー」をのばした声だけで測ります。</li>
+          <li>高い声ではフォルマントが倍音に引かれやすくなります。ブラウザによっては雑音消しや音量の自動調整を止められず、値がゆがみます。</li>
+        </ul>
+        <h3>おもな出どころ</h3>
+        <ul id="srcs"></ul>
+        <h3>使っているもの</h3>
+        <p>フォント: Google Fonts（SIL Open Font License）。声の計算の外部ライブラリは使っていません。</p>
+      </details>
+    </section>
+  </div>
+</div>
+
+<script type="module" src="js/main.js?v=1"></script>
