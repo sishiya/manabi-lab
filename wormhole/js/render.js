@@ -52,7 +52,7 @@ function initRender(canvas, skyW, aa) {
   R.u = uniforms(gl, R.prog, ['uLut', 'uSkyA', 'uSkyB', 'uHalf', 'uPx', 'uView', 'uOrbit', 'uPsiC', 'uK0', 'uK1', 'uFlip', 'uSkyW', 'uN', 'uMode', 'uPano', 'uRc', 'uCamS', 'uStar', 'uJit', 'uWt', 'uNoise', 'uBody', 'uKind', 'uSun', 'uRingN', 'uRingAxisW', 'uRingR', 'uSunGain', 'uFarFill']);
   R.down = compile(gl, VS, FS_DOWN); R.uDown = uniforms(gl, R.down, ['uT', 'uTexel', 'uThresh']);
   R.up = compile(gl, VS, FS_UP); R.uUp = uniforms(gl, R.up, ['uT', 'uTexel']);
-  R.comp = compile(gl, VS, FS_COMP); R.uComp = uniforms(gl, R.comp, ['uScene', 'uBloom', 'uStreak', 'uBloomGain', 'uStreakGain', 'uVig', 'uTexel']);
+  R.comp = compile(gl, VS, FS_COMP); R.uComp = uniforms(gl, R.comp, ['uScene', 'uBloom', 'uBloomGain', 'uVig']);
 
   const vb = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, vb);
@@ -193,11 +193,9 @@ function drawView(view, orbit, half, opt) {
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.viewport(0, 0, c.width, c.height);
   gl.useProgram(R.comp);
-  bindTex(3, R.scene.tex); bindTex(4, R.levels[0].up.tex); bindTex(5, R.levels[1].down.tex);
-  gl.uniform1i(R.uComp.uScene, 3); gl.uniform1i(R.uComp.uBloom, 4); gl.uniform1i(R.uComp.uStreak, 5);
+  bindTex(3, R.scene.tex); bindTex(4, R.levels[0].up.tex);
+  gl.uniform1i(R.uComp.uScene, 3); gl.uniform1i(R.uComp.uBloom, 4);
   gl.uniform1f(R.uComp.uBloomGain, film ? SCENE.film : 0);
-  gl.uniform1f(R.uComp.uStreakGain, film ? 0.16 : 0);
   gl.uniform1f(R.uComp.uVig, film ? 0.5 : 0);
-  gl.uniform2f(R.uComp.uTexel, 1 / c.width, 1 / c.height);
   drawFull();
 }

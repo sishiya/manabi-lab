@@ -58,7 +58,7 @@ vec3 starLayer(vec3 d, float pix, float scale, float rad0){
   float e = rad0 * rad0 / (r * r);   // 1画素より小さい星は、そのぶん暗く（面の明るさ一定）
   float g = exp(-dist * dist / (r * r * .5));
   float T = hash1(id + 5.3);
-  vec3 col = mix(vec3(1., .72, .48), vec3(.68, .8, 1.), T);
+  vec3 col = T < .6 ? mix(vec3(1., .78, .58), vec3(1., .96, .92), T / .6) : mix(vec3(1., .96, .92), vec3(.78, .86, 1.), (T - .6) / .4);   // 黒体の色（約 3900 K・6000 K・10000 K）
   return col * g * e * m;
 }
 
@@ -72,7 +72,7 @@ vec3 skyCol(vec3 fd, float side, float pix){
   vec3 sun = uSun[side > .5 ? 1 : 0];
   float a = acos(clamp(dot(fd, sun), -1., 1.));
   float r = max(.012, pix);
-  vec3 sc = side > .5 ? vec3(1., .86, .7) : vec3(1., .95, .88);
+  vec3 sc = vec3(1., .96, .92);   // 太陽に近い星の色。ほぼ白
   float k0 = .012 / r, k1 = min(1., .03 / pix);   // 穴のふちでは像が半径の向きにだけ圧縮される（円周の向きには圧縮されない）ので、画素が太陽を含む割合は幅の比 1 乗
   c += sc * (70. * k0 * (1. - smoothstep(r * .85, r * 1.15, a)) + 2.4 * k1 * exp(-a * a / max(.0009, pix * pix))) * uSunGain[side > .5 ? 1 : 0];
   return c;
@@ -92,7 +92,7 @@ vec3 albedo(int k, vec3 n){
   if (k == 2) { float g = fbm(n * 9., 5); return vec3(.4 + .34 * g) * vec3(1., .96, .9); }
   float lat = n.z + .07 * (fbm(n * vec3(5., 5., 2.), 4) - .5);
   float b = .5 + .5 * sin(lat * 19. + 2. * sin(lat * 5.));
-  return mix(vec3(.16, .36, .66), vec3(.76, .9, .98), b) * (.8 + .36 * fbm(n * vec3(3., 3., 30.), 3));
+  return mix(vec3(.3, .46, .68), vec3(.62, .76, .9), .5 + .4 * (b - .5)) * (.8 + .36 * fbm(n * vec3(3., 3., 30.), 3));   // 海王星の色に近い、うすい青
 }
 
 float sphT(vec3 o, vec3 d, vec3 c, float R){
@@ -148,7 +148,7 @@ bool bodiesOnLine(vec3 o, vec3 d, float t0, float t1, int first, vec3 L, float p
     vec3 w = uOrbit * n;
     float gran = .42 + 1.25 * fbm(w * 80., 5) + .22 * fbm(w * 12., 4);
     float spot = smoothstep(.70, .76, fbm(w * 6.5 + 12., 4));
-    vec3 tint = mix(vec3(2.3, .62, .08), vec3(2.6, 1.15, .3), smoothstep(.0, .75, mu));   // ふちほど赤い
+    vec3 tint = mix(vec3(1.5, 1.2, .9), vec3(1.6, 1.52, 1.42), smoothstep(.0, .75, mu));   // 光球の色はほぼ白で、ふちほど少し赤い
     acc += T * tint * (1. - .6 * (1. - mu)) * gran * (1. - .8 * spot);
     return true;
   }
@@ -223,15 +223,10 @@ void main(){ vec2 uv = vP * .5 + .5; vec3 c = vec3(0.);
 
 const FS_COMP = `#version 300 es
 precision highp float; in vec2 vP; out vec4 oC;
-uniform sampler2D uScene, uBloom, uStreak; uniform float uBloomGain, uStreakGain, uVig; uniform vec2 uTexel;
+uniform sampler2D uScene, uBloom; uniform float uBloomGain, uVig;
 vec3 aces(vec3 x){ return clamp((x * (2.51 * x + .03)) / (x * (2.43 * x + .59) + .14), 0., 1.); }
 void main(){ vec2 uv = vP * .5 + .5;
   vec3 c = texture(uScene, uv).rgb;
-  if (uBloomGain > 0.) {
-    c += texture(uBloom, uv).rgb * uBloomGain;
-    vec3 s = vec3(0.);
-    for (int i = -14; i <= 14; i++) { float f = float(i), w = exp(-abs(f) / 5.); s += texture(uStreak, uv + vec2(f * uTexel.x * 9., 0.)).rgb * w; }
-    c += s * vec3(.45, .62, 1.) * uStreakGain / 10.;
-  }
+  if (uBloomGain > 0.) c += texture(uBloom, uv).rgb * uBloomGain;
   if (uVig > 0.) c *= 1. - uVig * smoothstep(.45, 1.35, length(vP * vec2(1., .85)));
   oC = vec4(pow(aces(c * 1.05), vec3(1. / 2.2)), 1.); }`;
