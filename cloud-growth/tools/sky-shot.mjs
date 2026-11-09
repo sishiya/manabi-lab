@@ -39,6 +39,7 @@ await page.evaluate(() => {
     return S.rd.canvas.toDataURL('image/png');   // WebGPU のカンバスは同じ処理の中でしか読めない
   };
 });
+if (opt.detail !== undefined) await page.evaluate(d => { window.__sky.rd.detail = d; }, +opt.detail);
 for (const p of plan) {
   const [T, list] = p.split(':');
   let r; do { r = await page.evaluate(([T]) => window.__adv(T, 20000), [+T]); } while (r.t < +T);

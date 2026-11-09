@@ -1,7 +1,7 @@
 // 雲ができるまで（3次元の試作）— 計算シェーダー。手順は solver.js と同じ（強制 → 運ぶ → 雲と浮力 → 圧力）
-// 雨と氷は省く。温度の変数は s = T + g z/cp − Lv qn/cp − S0（定数 S0 を引いて f32 の桁を守る）
+// 雨と氷は o.ice の場面だけ（入道雲）。ほかの場面の温度の変数は s = T + g z/cp − Lv qn/cp − S0（定数 S0 を引いて f32 の桁を守る）
 const COMMON = /* wgsl */`
-struct P { nx:i32, ny:i32, nz:i32, _a:i32, dx:f32, dy:f32, dz:f32, dt:f32, H:f32, E:f32, cd:f32, S0:f32, het:f32, F0:f32, kap:f32, wtau:f32 };
+struct P { nx:i32, ny:i32, nz:i32, ice:i32, dx:f32, dy:f32, dz:f32, dt:f32, H:f32, E:f32, cd:f32, S0:f32, het:f32, F0:f32, kap:f32, wtau:f32 };
 struct Prof { rc:f32, rf:f32, Tb:f32, qvb:f32, qnb:f32, p:f32, z:f32, s0:f32, qt0:f32, ub:f32, sf:f32, sp:f32, wls:f32 };
 fn cid(i:i32, j:i32, k:i32, n:vec2i) -> u32 { return u32((i & (n.x-1)) + n.x*((j & (n.y-1)) + n.y*k)); }
 `;
@@ -89,6 +89,9 @@ const g=9.81; const cp=1004.; const Lv=2.5e6; const EPS=0.62188;
 @group(0) @binding(9) var<storage,read_write> B:array<f32>;
 @group(0) @binding(10) var<storage,read_write> C:array<vec2f>;
 @group(0) @binding(11) var<storage,read_write> Um:array<f32>;
+@group(0) @binding(12) var<storage,read_write> Qp:array<f32>;
+@group(0) @binding(13) var<storage,read_write> Tm:array<f32>;
+@group(0) @binding(14) var<storage,read_write> Rain:array<f32>;
 fn id(i:i32,j:i32,k:i32)->u32 { return cid(i,j,k,vec2i(p.nx,p.ny)); }
 
 @compute @workgroup_size(8,8,4) fn force(@builtin(global_invocation_id) gi:vec3u) {
@@ -166,6 +169,117 @@ fn qsat(T:f32,pp:f32)->f32 { let e=min(es(T),0.5*pp); return EPS*e/(pp-e); }
   }
   Qn[c]=ex;
   B[c]=g*((T-f.Tb)/f.Tb+0.608*(q-qn-f.qvb)-(qn-f.qnb));
+}
+// ---- 雨と氷のある場面（o.ice）。式は thermo.js・solver.js と同じ。s = T + g z/cp − (Ln qn + Lp qp)/cp − S0
+const Lf=3.34e5; const VICE=.4; const QC0=1e-3; const QI0=1e-4;
+fn omN(T:f32)->f32 { return clamp((T-253.16)/20.,0.,1.); }
+fn omP(T:f32)->f32 { return clamp((T-268.16)/15.,0.,1.); }
+fn dOmN(T:f32)->f32 { return select(0.,.05,T>253.16 && T<273.16); }
+fn dOmP(T:f32)->f32 { return select(0.,1./15.,T>268.16 && T<283.16); }
+fn LnOf(T:f32)->f32 { return Lv+(1.-omN(T))*Lf; }
+fn LpOf(T:f32)->f32 { return Lv+(1.-omP(T))*Lf; }
+fn esi(T:f32)->f32 { return exp(9.550426-5723.265/T+3.53068*log(T)-.00728332*T); }
+fn rs(e0:f32,pp:f32)->f32 { let e=min(e0,.5*pp); return EPS*e/(pp-e); }
+fn qsw(T:f32,pp:f32)->f32 { return rs(es(T),pp); }
+fn qsi(T:f32,pp:f32)->f32 { return rs(esi(T),pp); }
+fn qstar(T:f32,pp:f32)->f32 { let o=omN(T); return o*qsw(T,pp)+(1.-o)*qsi(T,pp); }
+fn dqstar(T:f32,pp:f32)->f32 {
+  let o=omN(T); let w=qsw(T,pp); let ic=qsi(T,pp);
+  let dw=w*17.67*243.5/((T-29.65)*(T-29.65))*pp/(pp-min(es(T),.5*pp));
+  let di=ic*(5723.265/(T*T)+3.53068/T-.00728332)*pp/(pp-min(esi(T),.5*pp));
+  return dOmN(T)*(w-ic)+o*dw+(1.-o)*di;
+}
+@compute @workgroup_size(8,8,4) fn diagIce(@builtin(global_invocation_id) gi:vec3u) {
+  let i=i32(gi.x); let j=i32(gi.y); let k=i32(gi.z);
+  if i>=p.nx || j>=p.ny || k>=p.nz { return; }
+  let c=id(i,j,k); let f=pr[k];
+  let Tl=S[c]+p.S0-g*f.z/cp; let q=Q[c]; let qr=max(Qp[c],0.);
+  var Tc=Tl+Lv/cp*qr;
+  if qr>0. { for (var n=0; n<4; n++) { Tc=Tl+LpOf(Tc)/cp*qr; } }
+  let qs0=qstar(Tc,f.p);
+  var T=Tc; var qn=0.; var ex=q-qs0;
+  if q>qs0 {
+    T=max(Tc,Tm[c]);
+    for (var n=0; n<10; n++) {
+      let qs=qstar(T,f.p); let ql=max(0.,q-qs); let Ln=LnOf(T); let Lp=LpOf(T);
+      let fv=T-Ln/cp*ql-Lp/cp*qr-Tl;
+      let df=1.+Ln/cp*dqstar(T,f.p)+Lf/cp*(dOmN(T)*ql+dOmP(T)*qr);
+      let dT=clamp(-fv/df,-15.,15.);
+      T+=dT;
+      if abs(dT)<1e-3 { break; }
+    }
+    qn=max(0.,q-qstar(T,f.p)); ex=qn;
+  }
+  Qn[c]=ex; Tm[c]=T;
+  B[c]=g*((T-f.Tb)/f.Tb+.608*(q-qn-f.qvb)-(qn-f.qnb)-qr);
+}
+// 雨と雪ができる・蒸発する（Kessler の式。氷は同じ形の目安）。上のスポンジで降水も消す
+@compute @workgroup_size(8,8,4) fn micro(@builtin(global_invocation_id) gi:vec3u) {
+  let i=i32(gi.x); let j=i32(gi.y); let k=i32(gi.z);
+  if i>=p.nx || j>=p.ny || k>=p.nz { return; }
+  let c=id(i,j,k); let f=pr[k];
+  var qpc=max(Qp[c],0.); let qnc=max(Qn[c],0.);
+  if qnc>1e-10 || qpc>1e-10 {
+    let T=Tm[c]; let qv=Q[c]-qnc; let oN=omN(T); let oP=omP(T);
+    let ql=oN*qnc; let qi=(1.-oN)*qnc; let qr=oP*qpc; let qs=(1.-oP)*qpc; let rg=f.rc*1e-3; let pmb=f.p*.01;
+    var conv=0.;
+    if ql>0. { conv+=(1e-3*max(0.,ql-QC0)+select(0.,2.2*ql*pow(qr,.875),qr>1e-10)+select(0.,ql*pow(qs,.875),qs>1e-10))*p.dt; }
+    if qi>0. { conv+=(1e-3*max(0.,qi-QI0)+select(0.,1.*qi*pow(qs,.875),qs>1e-10))*p.dt; }
+    conv=min(conv,qnc);
+    var evap=0.;
+    if qpc>1e-10 && qnc<=0. {
+      let qsv=qstar(T,f.p);
+      if qv<qsv {
+        var e0=0.;
+        if qr>=1e-10 { let q0=qsw(T,f.p); let rq=rg*qr; e0+=max(0.,(1.-qv/q0)*(1.6+124.9*pow(rq,.2046))*pow(rq,.525)/(5.4e5+2.55e6/(pmb*q0))/rg); }
+        if qs>=1e-10 { let q0=qsi(T,f.p); let rq=rg*qs; e0+=max(0.,(1.-qv/q0)*(1.6+124.9*pow(rq,.2046))*pow(rq,.525)/(5.4e5+2.55e6/(pmb*q0))/rg); }
+        evap=min(e0*p.dt,min(qpc,.5*(qsv-qv)));
+      }
+    }
+    if conv>0. || evap>0. {
+      qpc+=conv-evap; Q[c]+=evap-conv;
+      S[c]+=(LnOf(T)-LpOf(T))/cp*conv;
+    }
+  }
+  if f.sp>0. { qpc*=1.-min(1.,p.dt*f.sp); }
+  Qp[c]=qpc;
+}
+fn vFall(q:f32,T:f32,k:i32)->f32 {
+  let o=omP(T); let s=sqrt(pr[0].rc/pr[k].rc);
+  let oG=clamp((T-223.16)/60.,0.,1.); let m=pr[k].rc*(1.-o)*q;
+  var v=(1.-o)*s*(oG*183.2*pow(oG*m/5.0265e9,.125)+(1.-oG)*6.684*pow((1.-oG)*m/9.4248e8,.0625));
+  if o>0. { v+=o*36.34*pow(pr[k].rc*1e-3*o*q,.1346)*s; }
+  return v;
+}
+// 落ちる（上流の差分、下から順に。速いときは細かく刻む）。雲の氷もゆっくり落ちる
+@compute @workgroup_size(32) fn fall(@builtin(global_invocation_id) gi:vec3u) {
+  let l=i32(gi.x);
+  if l>=p.nx*p.ny { return; }
+  let i=l%p.nx; let j=l/p.nx;
+  var vm=0.;
+  for (var k=0; k<p.nz; k++) { let c=id(i,j,k); if Qp[c]>1e-10 { vm=max(vm,vFall(Qp[c],Tm[c],k)); } }
+  if vm>0. {
+    let sub=max(1,i32(ceil(vm*p.dt/p.dz/.8))); let ds=p.dt/f32(sub);
+    for (var n=0; n<sub; n++) {
+      for (var k=0; k<p.nz; k++) {
+        let c=id(i,j,k); let q0=Qp[c];
+        let Fo=select(0.,pr[k].rc*q0*vFall(q0,Tm[c],k),q0>1e-10);
+        var Fi=0.;
+        if k+1<p.nz { let c2=id(i,j,k+1); let q2=Qp[c2]; if q2>1e-10 { Fi=pr[k+1].rc*q2*vFall(q2,Tm[c2],k+1); } }
+        let dq=ds*(Fi-Fo)/(pr[k].rc*p.dz);
+        Qp[c]=max(q0+dq,0.); S[c]-=LpOf(Tm[c])/cp*dq;
+        if k==0 { Rain[u32(l)]+=ds*Fo; }
+      }
+    }
+  }
+  var Fi2=0.;
+  for (var k=p.nz-1; k>=0; k--) {
+    let c=id(i,j,k); let T=Tm[c]; let qi=(1.-omN(T))*max(Qn[c],0.);
+    let Fo=select(0.,pr[k].rc*qi*VICE*sqrt(pr[0].rc/pr[k].rc),k>0 && qi>1e-9);
+    let dq=p.dt*(Fi2-Fo)/(pr[k].rc*p.dz);
+    if dq!=0. { Q[c]=max(Q[c]+dq,0.); S[c]-=LnOf(T)/cp*dq; }
+    Fi2=Fo;
+  }
 }
 @compute @workgroup_size(8,8,4) fn buoy(@builtin(global_invocation_id) gi:vec3u) {
   let i=i32(gi.x); let j=i32(gi.y); let k=i32(gi.z);
@@ -266,13 +380,14 @@ fn aL(k:i32)->f32 { if k==0 || k==p.nz { return 0.; } return pr[k].rf/(p.dz*p.dz
 
 // 画面に出す数（列ごとに雲の有無、高さごとの雲の量、風の最大）
 export const statsWGSL = COMMON + /* wgsl */`
-struct St { cover:atomic<u32>, um:atomic<u32>, vm:atomic<u32>, wm:atomic<u32>, bad:atomic<u32>, a1:u32, a2:u32, a3:u32, lev:array<atomic<u32>> };
+struct St { cover:atomic<u32>, um:atomic<u32>, vm:atomic<u32>, wm:atomic<u32>, bad:atomic<u32>, rain:atomic<u32>, a2:u32, a3:u32, lev:array<atomic<u32>> };
 @group(0) @binding(0) var<uniform> p:P;
 @group(0) @binding(1) var<storage,read> U:array<f32>;
 @group(0) @binding(2) var<storage,read> V:array<f32>;
 @group(0) @binding(3) var<storage,read> W:array<f32>;
 @group(0) @binding(4) var<storage,read> Qn:array<f32>;
 @group(0) @binding(5) var<storage,read_write> st:St;
+@group(0) @binding(6) var<storage,read> Rain:array<f32>;
 @compute @workgroup_size(32) fn main(@builtin(global_invocation_id) gi:vec3u) {
   let l=i32(gi.x);
   if l>=p.nx*p.ny { return; }
@@ -290,4 +405,5 @@ struct St { cover:atomic<u32>, um:atomic<u32>, vm:atomic<u32>, wm:atomic<u32>, b
   atomicMax(&st.um,u32(min(um,500.)*1000.));
   atomicMax(&st.vm,u32(min(vm,500.)*1000.));
   atomicMax(&st.wm,u32(min(wm,500.)*1000.));
+  atomicMax(&st.rain,u32(min(Rain[u32(l)],4000.)*1000.));
 }`;

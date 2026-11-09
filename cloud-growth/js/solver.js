@@ -222,7 +222,7 @@
           if ((qnc <= 1e-10 && qpc <= 1e-10) || mask[c]) continue;
           const Tc = T[c], oN = omN(Tc), oP = omP(Tc), ql = oN * qnc, qi = (1 - oN) * qnc, qr = oP * qpc, qs = (1 - oP) * qpc;
           let conv = 0;
-          if (ql > 0) conv += (1e-3 * Math.max(0, ql - QC0) + (qr > 1e-10 ? 2.2 * ql * Math.pow(qr, 0.875) : 0)) * dt;
+          if (ql > 0) conv += (1e-3 * Math.max(0, ql - QC0) + (qr > 1e-10 ? 2.2 * ql * Math.pow(qr, 0.875) : 0) + (cfg.graupel && qs > 1e-10 ? 1.0 * ql * Math.pow(qs, 0.875) : 0)) * dt;   // graupel: 凍った粒が過冷却の水を集める（目安）
           if (qi > 0) conv += (1e-3 * Math.max(0, qi - QI0) + (qs > 1e-10 ? 1.0 * qi * Math.pow(qs, 0.875) : 0)) * dt;
           if (conv > qnc) conv = qnc;
           let evap = 0;
@@ -291,6 +291,10 @@
     function fallSpeed(q, Tc, k) {
       const o = omP(Tc), s = Math.sqrt(rhoc[0] / rhoc[k]);
       let v = (1 - o) * VSNOW * s;
+      if (cfg.graupel && o < 1) {   // 凍った降水を温度で雪とあられに分ける（SAM の定数。Lin 1983 のあられ）
+        const oG = Math.max(0, Math.min(1, (Tc - 223.16) / 60)), m = rhoc[k] * (1 - o) * q;
+        v = (1 - o) * s * (oG * 183.2 * Math.pow(oG * m / 5.0265e9, 0.125) + (1 - oG) * 6.684 * Math.pow((1 - oG) * m / 9.4248e8, 0.0625));
+      }
       if (o > 0) v += o * 36.34 * Math.pow(rhoc[k] * 1e-3 * o * q, 0.1346) * s;
       return v;
     }

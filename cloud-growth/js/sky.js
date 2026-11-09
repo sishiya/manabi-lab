@@ -1,13 +1,26 @@
 // 雲ができるまで（3次元の試作）— 画面の組み立て。計算と描画は sky-sim.js・sky-render.js
-import { SkySim, makeBase } from './sky-sim.js?v=7';
-import { SkyRender } from './sky-render.js?v=8';
+import { SkySim, makeBase } from './sky-sim.js?v=8';
+import { SkyRender } from './sky-render.js?v=9';
 
 const $ = id => document.getElementById(id);
 const Q = new URLSearchParams(location.search);
 const YAW = 0.75;
 const cam = (z, pitch, fov, yaw = YAW) => ({ pos: [0, 0, z], yaw, pitch, fov });
 // 場面ごとの3次元の格子と視点。空の条件は本編の scenes.js をそのまま借りる
+const atR = (R, z, pitch, fov) => ({ pos: [-R * Math.cos(YAW), -R * Math.sin(YAW), z], yaw: YAW, pitch, fov });
 const SKIES = {
+  cumulonimbus: { label: '入道雲', first: 'far', ice: true, iso: true, coarseOK: true, billow: 0.5, amp: 0.3, nscale: 6000, sunRot: -72, horizon: 4500, track: 0,
+    // 本編の空は雲の底から上の湿りが 90% 以上で、最初の暖気塊のわずかな持ち上げで平たい雲の円盤ができる。3次元はここを 80% までに抑える
+    sounding(sc) { return (z, p) => { const a = sc.sounding(z, p), th = a.theta, T = th * Math.pow(p / 1e5, 0.2859), q = globalThis.CT.qsw(T, p); return { theta: th, qv: Math.min(a.qv, Math.max(0.8 * q, 0)) }; }; },
+    say: (s) => !s || s.top === null || s.top < 4000 ? 'あたたかく湿った空気のかたまりが持ち上がり、雲ができはじめました。' : s.top < 11000 ? '水蒸気が水や氷になるときの熱で浮きつづけ、ぐんぐん伸びています。' : s.rain < 0.5 ? 'てっぺんが対流圏の上の暖かい層に当たり、横へ広がりはじめました。' : '雨が地面に届きました。雨に冷やされた空気が地面を広がっていきます。',
+    nx: 256, dx: 250, nz: 112, Lz: 17920, spongeTop: 3000, noise: [0.1, 1500], zlo: 0, haze: 150000,
+    gen() {   // 本編と同じ暖気塊を丸くしたもの（中心 1.4 km、横の半径 8 km、縦の半径 1.4 km、2 K）
+      const dx = this.dxNow, nx = this.nxNow, L = nx * dx, b = this.baseNow;
+      return (S, Q_, U, c) => { for (let k = 0; k < b.nz; k++) for (let j = 0; j < nx; j++) for (let i = 0; i < nx; i++) { const r = Math.hypot(Math.hypot((i + 0.5) * dx - L / 2, (j + 0.5) * dx - L / 2) / 8000, (b.zc[k] - 1400) / 1400); if (r < 1) S[c(i, j, k)] += 2 * Math.pow(Math.cos(Math.PI * r / 2), 2); } };
+    },
+    cams: { up: atR(14000, 1.7, 0.62, 70), far: atR(34000, 300, 0.21, 40), above: atR(24000, 15500, -0.2, 58) },
+    more: ['雨・雪・あられは1つの量として計算し、温度で分けています。雲の水が雨になる式は Kessler の式、氷は同じ形の目安です（推定）。ひょう、雷、氷の過飽和は入っていません。', '最初の空は本編と同じ Weisman & Klemp の式の形ですが、湿りは 80% を上限にしています（そのままだと最初の暖気塊のわずかな持ち上げで、平たい雲の円盤ができるため）。', '地面からの熱と水は与えていません。最初の空に蓄えられた不安定さだけで育ちます。', '計算の範囲の端は反対側とつながっています。冷たい風が端をこえて戻ると、本物にはない雲が立ちます。また、上昇した空気が同じ範囲の中を沈んで戻るので、後半ほど周りの空があたたまります。このため 1 時間 15 分で止めています。', '1つの嵐だけを描き、範囲の外は描いていません。範囲のふち 4 km を薄くしているのは描画の都合です。', '雲の氷の粒は半径 30 µm と仮定しています。雨・雪・あられの光の弱まりは粒の大きさの分布の仮定から出した目安です（推定）。'],
+    src: '<a href="https://doi.org/10.1175/1520-0469(1948)005%3C0165:TDORWS%3E2.0.CO;2" target="_blank" rel="noopener">Marshall &amp; Palmer 1948</a>（雨粒の大きさの分布）／<a href="https://github.com/E3SM-Project/E3SM/blob/master/components/eam/src/physics/crm/sam/MICRO_SAM1MOM/micro_params.F90" target="_blank" rel="noopener">SAM の定数</a>（雪とあられの落ちる速さ・粒の密度）' },
   cumulus: { label: '綿雲', billow: 0.85,
     say: (s) => !s || s.cover < 0.005 ? '地面があたたまり、空気の泡がのぼっています。まだ雲はありません。' : s.top < 1500 ? '泡がのぼって冷え、水滴になる高さで雲の底ができました。' : '上の乾いた空気とまざりながら、雲が育っては消えていきます。', nx: 256, dx: 25, nz: 160, Lz: 4000, spongeTop: 800, noise: [0.2, 700], zlo: 350, cams: { up: cam(1.7, 0.56, 62), far: { ...cam(500, 0.26, 36), clip: 4500 }, above: cam(3750, -0.3, 62) },
     more: ['「遠くから」では、4.5 km より手前の雲は描いていません（近づくと格子の粗さでぼやけるため）。'] },
@@ -33,7 +46,7 @@ const SKIES = {
 };
 const SID = SKIES[Q.get('s')] ? Q.get('s') : 'cumulus', SKY = SKIES[SID], CAMS = SKY.cams;
 const SCENE = globalThis.CS.SCENES.find(s => s.id === SID);
-const HORIZON = SCENE.horizon;
+const HORIZON = SKY.horizon || SCENE.horizon;
 // 太陽は視線の斜め前（正面からの光だと雲が平たく見える）
 const SUNS = { morn: { az: -15, el: 13, ex: 0.47, wb: 0.85 }, noon: { az: -50, el: 58, ex: 0.32, wb: 0.5 }, eve: { az: 100, el: 2.2, ex: 0.85, wb: 0.12 }, dawn: { az: -15, el: -4, ex: 1.2, wb: 0.5 } };
 const SUNRISE = 7 * 3600;   // 霧の場面で地面があたたまりはじめる時刻（scenes.js）
@@ -57,6 +70,7 @@ function setupScenes() {
   $('say').textContent = SKY.say(null, SCENE.force && SKY.dawn ? 23400 : 0);
   $('aName').textContent = SCENE.name + '（' + SCENE.tag + '）';
   if (SKY.dawn) $('suns').parentElement.hidden = true;
+  $('rainRow').hidden = !SKY.ice;
   $('cams').querySelectorAll('button').forEach(b => { const on = b.dataset.v === CAM0; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
   $('aMore').innerHTML = (SKY.more || []).map(x => '<li>' + x + '</li>').join('');
   if (SKY.src) { const li = document.createElement('li'); li.innerHTML = SKY.src; $('aSrc').appendChild(li); }
@@ -74,6 +88,13 @@ async function init() {
   dev.lost.then(i => { if (i.reason !== 'destroyed') fail('GPU との接続が切れました。ページを読み直してください。'); });
   dev.addEventListener('uncapturederror', e => { window.__skyErr = (window.__skyErr || []); window.__skyErr.push(e.error.message); console.error(e.error.message); });
 
+  if (location.hash === '#verify-cb') {
+    const { runVerifyIce } = await import('./sky-verify.js');
+    const log = m => { $('status').textContent = m; (window.__skyLog = window.__skyLog || []).push(m); console.log(m); };
+    window.__skyVerify = await runVerifyIce(dev, log, { only1: Q.has('only1') });
+    log('確かめ 終わり');
+    return;
+  }
   if (location.hash === '#verify') {
     const { runVerify } = await import('./sky-verify.js');
     const log = m => { $('status').textContent = m; (window.__skyLog = window.__skyLog || []).push(m); };
@@ -84,20 +105,22 @@ async function init() {
 
   const small = Math.min(innerWidth, innerHeight) < 500 || L.maxBufferSize < 4e8 || Q.has('coarse');
   // 小さな画面: 新しい場面は格子を変えずに範囲を半分に（細かさを変えると別の結果になる）。積雲だけは 50 m で確かめ済み
-  const coarse = small && SID === 'cumulus', nx = small ? SKY.nx / 2 : SKY.nx, dx = coarse ? SKY.dx * 2 : SKY.dx, nz = +Q.get('nz') || (coarse ? SKY.nz / 2 : SKY.nz), F = SCENE.force;   // nz: 縦の細かさの影響を比べるとき
-  const base = makeBase(SCENE, nz, SKY.Lz || SCENE.Lz);
+  const coarse = small && (SID === 'cumulus' || SKY.coarseOK), nx = small ? SKY.nx / 2 : SKY.nx, dx = coarse ? SKY.dx * 2 : SKY.dx, nz = +Q.get('nz') || (coarse ? SKY.nz / 2 : SKY.nz), F = SCENE.force;   // nz: 縦の細かさの影響を比べるとき
+  const base = makeBase(SKY.sounding ? { ...SCENE, sounding: SKY.sounding(SCENE) } : SCENE, nz, SKY.Lz || SCENE.Lz);
   SKY.nxNow = nx;
-  if (small) for (const c of Object.values(CAMS)) c.pos[1] /= 2;
+  SKY.dxNow = dx; SKY.baseNow = base;
+  if (small && !SKY.coarseOK) for (const c of Object.values(CAMS)) c.pos[1] /= 2;
+  if (small && SKY.iso) { CAMS.far.pitch -= 0.14; state.cam.pitch = CAMS[CAM0].pitch; }   // 縦長の画面は下半分が操作の板に隠れるので、雲を上へ
   let gen = SKY.gen && SKY.gen(base), t0 = 0;
   if (SKY.dawn) {   // 夜のぶんは2次元の結果の平均から（tools/fog-night.js）
     const { FOG_START: st } = await import('./fog-start.js'); t0 = st.t;
     gen = (S, Q_, U, c) => { for (let k = 0; k < nz; k++) { const dS = st.s[k] - (base.h0[k] / globalThis.CT.cp - 300), dQ = st.qt[k] - base.qt0[k]; for (let j = 0; j < nx; j++) for (let i = 0; i < nx; i++) { const x = c(i, j, k); S[x] += dS; Q_[x] = Math.max(0, Q_[x] + dQ); U[x] = st.u[k]; } } };
     dawnSun(t0);
   }
-  $('aRange').textContent = `計算は ${(nx * dx / 1000).toFixed(1)} km 四方・高さ ${(base.Lz / 1000).toFixed(1)} km の範囲です（横の細かさ ${dx} m、縦 ${base.dz} m）。遠くの空は同じ範囲のくり返しです。`;
+  $('aRange').textContent = `計算は ${(nx * dx / 1000).toFixed(1)} km 四方・高さ ${(base.Lz / 1000).toFixed(1)} km の範囲です（横の細かさ ${dx} m、縦 ${base.dz} m）。${SKY.iso ? '' : '遠くの空は同じ範囲のくり返しです。'}`;
   T0 = t0;
   dev.pushErrorScope('out-of-memory');
-  const sim = new SkySim(dev, { nx, ny: nx, dx, dy: dx, base, wind: true, H: F.sfcH, E: F.sfcE, cd: F.cd, hs: F.hs, spongeTop: SKY.spongeTop ?? F.spongeTop, spongeTau: F.spongeTau || 120, het: true, hetAmp: F.het, lw: F.lw, wls: F.wls && (z => F.wls(0, z, 0)), noise: { amp: SKY.noise[0], zTop: SKY.noise[1] }, windTau: SKY.windTau ? F.windTau : 0, t0, gen });
+  const sim = new SkySim(dev, { nx, ny: nx, dx, dy: dx, base, wind: true, H: F.sfcH, E: F.sfcE, cd: F.cd, hs: F.hs, spongeTop: SKY.spongeTop ?? F.spongeTop, spongeTau: F.spongeTau || 120, het: true, hetAmp: F.het, lw: F.lw, wls: F.wls && (z => F.wls(0, z, 0)), noise: { amp: SKY.noise[0], zTop: SKY.noise[1] }, windTau: SKY.windTau ? F.windTau : 0, t0, gen, ice: SKY.ice });
   const oom = await dev.popErrorScope();
   if (oom) { if (small) return fail('GPU のメモリが足りません。'); Q.set('coarse', '1'); location.search = Q.toString(); return; }   // メモリが足りないときは粗い計算で開きなおす
   const cv = $('cv');
@@ -107,7 +130,7 @@ async function init() {
     cv.width = Math.max(1, Math.round(w * s)); cv.height = Math.max(1, Math.round(h * s)); state.dirty = true;
   };
   fit(); addEventListener('resize', fit);
-  const rd = new SkyRender(dev, cv, sim, { zlo: SKY.zlo, ground: SKY.ground, haze: SKY.haze, billow: SKY.billow, amp: SKY.amp, fine: SKY.fine, wind: SCENE.wind ? SCENE.wind(base.z0 + base.Lz / 2) : 0 });
+  const rd = new SkyRender(dev, cv, sim, { zlo: SKY.zlo, ground: SKY.ground, haze: SKY.haze, billow: SKY.billow, amp: SKY.amp, fine: SKY.fine, iso: SKY.iso, track: SKY.track, nscale: SKY.nscale && SKY.nscale * dx / SKY.dx, wind: SCENE.wind && !SKY.iso ? SCENE.wind(base.z0 + base.Lz / 2) : 0 });
   const applySun = () => { const s = SUNS[state.sun]; rd.setSun(s.az + (SKY.sunRot || 0), s.el, s.wb); state.volDirty = true; state.dirty = true; };
   applySun();
   window.__sky = { sim, rd, state, dev, CAMS, SUNS, dtMax: SCENE.dtMax, sunRot: SKY.sunRot, syncDawn() { SUNS.dawn.el = 99; dawnSun(sim.t); applySun(); } };
@@ -160,6 +183,7 @@ async function init() {
     $('rTop').textContent = s.top === null ? '—' : (s.top / 1000).toFixed(2) + ' km';
     $('rCov').textContent = Math.round(s.cover * 100) + '%';
     $('rW').textContent = s.wm.toFixed(1) + ' m/s';
+    if (SKY.ice) $('rRain').textContent = s.rain.toFixed(1) + ' mm';
     const say = SKY.say(s, sim.t); if ($('say').textContent !== say) $('say').textContent = say;
   }
   const fmtT = t => { const m = Math.floor(t / 60); return m >= 60 ? `${Math.floor(m / 60)}時間${String(m % 60).padStart(2, '0')}分` : `${m}分`; };

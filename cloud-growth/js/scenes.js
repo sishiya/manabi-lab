@@ -20,7 +20,7 @@
       sliders: ['heat', 'humid'],
     },
     {
-      id: 'cumulonimbus', name: '夏の入道雲', tag: '積乱雲', Lx: 48000, Lz: 16000, nz: 100, dtMax: 3, speed: 40, horizon: 2 * 3600,
+      id: 'cumulonimbus', name: '夏の入道雲', tag: '積乱雲', graupel: true, Lx: 48000, Lz: 16000, nz: 100, dtMax: 3, speed: 40, horizon: 2 * 3600,
       sounding: (z, p) => {
         const zt = 12000, th = z < zt ? 300 + 43 * Math.pow(z / zt, 1.25) : 343 * Math.exp(g * (z - zt) / (1004 * 213));
         const rh = z < zt ? 1 - 0.75 * Math.pow(z / zt, 1.25) : 0.25, T = th * Math.pow(p / 1e5, 0.2859);
@@ -31,7 +31,7 @@
       init: s => { s.initBubble({ x: 24000, z: 1400, rx: 8000, rz: 1400, dT: 2 }); s.addNoise(0.1, 1500); },
       why: '上のほうが冷たく乾いた空に、あたたかく湿った空気のかたまりがあると、水蒸気が水になるときの熱で浮きつづけ、対流圏のてっぺんまで届きます。',
       calc: '雲の高さ、上昇の速さ、雨と雪、地面に広がる冷たい空気', given: '最初の空（Weisman & Klemp の式の形）、最初のあたたかいかたまり、風の差',
-      note: '2次元なので本物の積乱雲とは形がちがいます。',
+      note: '2次元なので本物の積乱雲とは形がちがいます。凍った降水は温度で雪とあられに分け、落ちる速さは SAM の定数の式で出しています。',
       sliders: ['humid', 'wind'],
     },
     {
