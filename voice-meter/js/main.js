@@ -2,7 +2,7 @@
 import { analyzeVoice } from './engine/analyze.js';
 import { presetVoice, PRESETS } from './engine/synth.js';
 import { hann, powerSpec, db } from './engine/dsp.js';
-import { PARAMS, GROUPS, MAIN, byId, SOURCES } from './catalog.js';
+import { PARAMS, GROUPS, MAIN, byId, SOURCES, SEE } from './catalog.js';
 import { LENS, drawLive, clear } from './lens.js';
 import { startMic, stopMic, isRecording, startPlay, stopPlay, isPlaying, playTime } from './record.js';
 
@@ -18,7 +18,7 @@ const WHY = {
   short: '短すぎて測れませんでした。もう少し長くどうぞ。',
   unvoiced: '声帯のふるえが見つかりませんでした（ささやき声や雑音だけのときも出ます）。',
 };
-const S = { mode: 'hold', R: null, sel: 'f0_med', t: 0, source: '', sample: null, live: null };
+const S = { mode: 'hold', R: null, sel: 'f0_med', t: 0, source: '', sample: null, live: null, starting: false, last: {}, prev: null };
 
 function setStatus(msg, bad) { const e = $('status'); e.textContent = msg; e.classList.toggle('bad', !!bad); e.hidden = !msg; }
 
@@ -41,7 +41,7 @@ function draw() {
   $('nowName').textContent = p.name;
   const v = S.R.value[p.id];
   $('nowVal').textContent = Number.isFinite(v) ? `${v.toFixed(p.dp)} ${p.unit}` : '—';
-  $('nowSrc').textContent = S.source;
+  $('nowSrc').textContent = '全体の値・' + S.source;
 }
 
 const axisPct = (p, v) => {
@@ -53,10 +53,11 @@ const needs = p => ({ hold: '「あー」をのばして測れます', speech: '
 function card(p) {
   const b = document.createElement('button');
   b.className = 'card'; b.type = 'button'; b.dataset.id = p.id;
-  b.innerHTML = `<div class="head"><span class="name"></span><span class="tier ${p.tier}">${p.tier}</span><span class="v"></span></div><div class="bar"><i></i></div><p class="mean"></p><p class="how" hidden></p>`;
+  b.innerHTML = `<div class="head"><span class="name"></span><span class="tier ${p.tier}">${p.tier}</span><span class="v"></span></div><div class="bar"><i></i></div><div class="ends"><span>${p.axis[0]}</span><span class="prev"></span><span>${p.axis[1]}</span></div><p class="mean"></p><p class="how" hidden></p><p class="calc" hidden></p>`;
   b.querySelector('.name').textContent = p.name;
   b.querySelector('.mean').textContent = p.meaning;
-  b.querySelector('.how').textContent = '測り方: ' + p.how;
+  b.querySelector('.how').textContent = SEE[p.id] || '測り方: ' + p.how;
+  if (SEE[p.id]) b.querySelector('.calc').textContent = '計算: ' + p.how;
   b.addEventListener('click', () => select(p.id));
   return b;
 }
@@ -79,6 +80,9 @@ function fillCards() {
     c.querySelector('.bar i').style.left = ok ? axisPct(p, v) + '%' : '-99px';
     c.classList.toggle('sel', p.id === S.sel);
     c.querySelector('.how').hidden = p.id !== S.sel;
+    c.querySelector('.calc').hidden = p.id !== S.sel || !SEE[p.id];
+    const was = S.prev ? S.prev[p.id] : NaN;
+    c.querySelector('.prev').textContent = S.prev && Number.isFinite(was) ? '前回 ' + was.toFixed(p.dp) : '';
   });
 }
 function select(id) {
@@ -102,17 +106,19 @@ function setMode(m) {
 function highNote(R) {
   return R.value.f0_med > 250 ? ' 高い声はフォルマントが近くの倍音に引かれやすく、F1 の誤差が大きくなります。' : '';
 }
-function loadSample(id) {
-  stopPlay();
+function halt() { stopPlay(); $('play').textContent = '▶ 聞く'; }
+function loadSample(id, note) {
+  halt();
   setStatus('見本の声を計算しています…');
   document.querySelectorAll('.chips button').forEach(b => b.classList.toggle('cur', b.dataset.p === id));
   setTimeout(() => {
     const v = presetVoice(id, S.mode), R = analyzeVoice(v.x, v.sr, { mode: S.mode });
     S.sample = id;
     if (!R.ok) return setStatus(WHY[R.why], true);
-    setResult(R, `見本（合成）: ${PRESETS[id].name}`);
+    setResult(R, '見本');
     $('erase').hidden = true;
-    setStatus(`合成した見本「${PRESETS[id].name}」を${S.mode === 'hold' ? 'のばす声' : '話し声'}で測りました。設定して作った声で、実在の人の声ではありません。${highNote(R)}`);
+    S.prev = null; fillCards();
+    setStatus(`${note || ''}合成した見本「${PRESETS[id].name}」を${S.mode === 'hold' ? 'のばす声' : '話し声'}で測りました。設定して作った声で、実在の人の声ではありません。${highNote(R)}`);
   }, 30);
 }
 
@@ -124,18 +130,24 @@ function liveCanvas() {
   return { c, x, col: 0 };
 }
 async function startRec() {
-  stopPlay();
+  if (S.starting) return; // 許可を待つあいだの二度押しでマイクが2本開かないように
+  S.starting = true; $('rec').disabled = true;
+  halt();
   const chunks = []; let got = 0;
   try {
     setStatus('マイクの許可を待っています…');
     const info = await startMic(ch => { chunks.push(ch); got += ch.length; });
+    if (Power.away) { stopMic(); setStatus('画面を離れたので録音を始めませんでした。', true); return; }
     S.live = { ...liveCanvas(), chunks, sr: info.sr, got: () => got, warn: info.warn, last: 0, win: hann(LIVE_N) };
     $('rec').classList.add('on'); $('rec').textContent = '■ 止めて測る';
+    $('timebar').hidden = true; // 録音中に再生するとスピーカーの音が録音にまざる
     setStatus(S.mode === 'hold' ? '「あー」と同じ高さでのばしてください。' : 'ふつうに話してください。');
     requestAnimationFrame(liveLoop);
   } catch (e) {
     stopMic(); S.live = null;
     setStatus(e && e.name === 'NotAllowedError' ? 'マイクが許可されませんでした。下の「見本の声」で試せます。' : 'マイクを開けませんでした。下の「見本の声」で試せます。', true);
+  } finally {
+    S.starting = false; $('rec').disabled = false;
   }
 }
 function liveLoop() {
@@ -166,7 +178,7 @@ function finishRec() {
   if (!L) return;
   S.live = null;
   stopMic();
-  $('rec').classList.remove('on'); setMode(S.mode);
+  $('rec').classList.remove('on'); setMode(S.mode); $('timebar').hidden = !S.R;
   const n = L.got(), x = new Float32Array(n);
   let o = 0; for (const c of L.chunks) { x.set(c, o); o += c.length; }
   L.chunks.length = 0;
@@ -175,7 +187,8 @@ function finishRec() {
     const R = analyzeVoice(x, L.sr, { mode: S.mode });
     if (!R.ok) { draw(); return setStatus(WHY[R.why], true); }
     document.querySelectorAll('.chips button').forEach(b => b.classList.remove('cur'));
-    setResult(R, 'あなたの声（' + (S.mode === 'hold' ? 'のばす' : '話す') + '）');
+    S.prev = S.last[S.mode] || null; S.last[S.mode] = R.value; // 同じ録り方の前回の値（メモリの中だけ。消すと消える）
+    setResult(R, '自分の声');
     $('erase').hidden = false;
     const warn = L.warn.length ? ` ※ この端末では ${L.warn.join('・')} を止められず、値がゆがんでいる可能性があります。` : '';
     setStatus(`測りました（声のある時間 ${R.voicedSec.toFixed(1)} 秒）。録音は保存していません。${highNote(R)}${warn}`);
@@ -185,16 +198,21 @@ function finishRec() {
 // ----- 画面を離れたら止める（RULES 9章） -----
 Power.on({
   pause() {
-    stopPlay(); $('play').textContent = '▶ 聞く';
-    if (isRecording() || S.live) { S.live = null; stopMic(); $('rec').classList.remove('on'); setMode(S.mode); setStatus('画面を離れたので録音を止めて捨てました。', true); }
+    halt();
+    if (isRecording() || S.live) { S.live = null; stopMic(); $('rec').classList.remove('on'); setMode(S.mode); $('timebar').hidden = !S.R; draw(); setStatus('画面を離れたので録音を止めて捨てました。', true); }
   },
 });
 
 // ----- 操作 -----
-document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => { if (!S.live) { setMode(b.dataset.m); if (S.sample && $('erase').hidden) loadSample(S.sample); } }));
+document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => { if (!S.live && !S.starting) { setMode(b.dataset.m); if (S.sample && $('erase').hidden) loadSample(S.sample); } }));
 $('rec').addEventListener('click', () => (S.live ? finishRec() : startRec()));
-document.querySelectorAll('.chips button').forEach(b => b.addEventListener('click', () => { if (!S.live) loadSample(b.dataset.p); }));
-$('erase').addEventListener('click', () => { stopPlay(); S.R = null; $('erase').hidden = true; $('timebar').hidden = true; fillCards(); draw(); setStatus('録音を消しました。'); });
+function forgetMine() { S.R = null; S.last = {}; S.prev = null; }
+document.querySelectorAll('.chips button').forEach(b => b.addEventListener('click', () => {
+  if (S.live || S.starting) return;
+  if (!$('erase').hidden) { if (!confirm('録音した声の結果を消して、見本の声を表示します。よろしいですか？')) return; forgetMine(); }
+  loadSample(b.dataset.p);
+}));
+$('erase').addEventListener('click', () => { forgetMine(); loadSample(S.sample || 'low', '録音を消しました。'); });
 $('time').addEventListener('input', e => { S.t = +e.target.value; draw(); });
 
 let dragging = false;
@@ -217,7 +235,7 @@ function playLoop() {
 }
 $('play').addEventListener('click', () => {
   if (!S.R) return;
-  if (isPlaying()) { stopPlay(); $('play').textContent = '▶ 聞く'; return; }
+  if (isPlaying()) { halt(); return; }
   const from = S.t >= S.R.dur - 0.05 ? 0 : S.t;
   startPlay(S.R.x, S.R.fs, from, () => { $('play').textContent = '▶ 聞く'; });
   $('play').textContent = '■ 止める';

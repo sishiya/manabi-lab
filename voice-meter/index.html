@@ -6,11 +6,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="css/style.css?v=1">
+<link rel="stylesheet" href="css/style.css?v=2">
 <script src="../assets/power.js?v=1"></script>
 
 <div id="app">
   <header id="top"><h1>声のものさし</h1><span class="tag">試作</span></header>
+  <p id="lede">数のカードを押すと、その数をどう測ったかが図に出ます。まずは見本の声で試せます。</p>
   <div id="layout">
     <section id="pin" aria-label="図">
       <canvas id="cv" role="img" aria-label="選んだ数の測り方の図"></canvas>
@@ -28,7 +29,7 @@
           <button type="button" data-m="speech" aria-pressed="false">ふつうに話す<br><small>抑揚・話す速さ</small></button>
         </div>
         <button id="rec" type="button">● 録音する</button>
-        <p class="priv">マイクの声はこの端末の中だけで計算し、どこにも送らず保存しません。閉じると消えます。</p>
+        <p class="priv">マイクの声はこの端末の中だけで計算し、どこにも送らず保存しません。閉じると消えます。声の良し悪しや病気の判断はしません。</p>
         <p id="status" hidden></p>
         <div class="sample">
           <div class="lbl">マイクなしで試す（合成した見本の声）</div>
@@ -42,8 +43,9 @@
         <button id="erase" type="button" hidden>この録音を消す</button>
       </div>
 
-      <h2>おもな数 <small class="note">押すと上の図が測り方にかわります</small></h2>
+      <h2>おもな数 <small class="note">押すと図が測り方にかわります</small></h2>
       <div id="main"></div>
+      <p class="note">札の「測定」は計算でそのまま求めた値、「推定」はモデルにあてはめた値、「マイクしだい」は機種や雑音で大きくかわる値です。</p>
       <h2>くわしく</h2>
       <div id="more"></div>
       <p class="note">横の線の目盛りは見やすくするための範囲で、「普通」や「良い」を表すものではありません。病気の判断には使えません。</p>
@@ -54,7 +56,7 @@
         <h3>正確さについて（いまの状態）</h3>
         <ul>
           <li>計算は研究の定義をもとに、このアプリのために書いたものです。正解のわかる合成の声で確かめました。</li>
-          <li>公開されている本物の人の声 24 本（<a href="https://doi.org/10.17632/9dz247gnyb.4" target="_blank" rel="noopener">PVQD</a>、英語、CC BY 4.0）と合成した声で、専門ソフト Praat と同じ声を測りくらべました。のばす声の高さ・ジッター・HNR はほぼ同じ値です。シマーは 1 ポイントほど大きく、CPP は数 dB ちがいます（のばす声では低め、話し声では高め）。話し声の F2・F3 は 5〜6% ほど、声になっている時間は 7% ほど多めに出ることがあります。日本語の声とスマホのマイクでは<strong>まだ確かめていません</strong>。</li>
+          <li>公開されている本物の人の声 24 本（<a href="https://doi.org/10.17632/9dz247gnyb.4" target="_blank" rel="noopener">PVQD</a>、英語、CC BY 4.0）と合成した声で、専門ソフト Praat と同じ声を測りくらべました。のばす声の高さ・ジッター・HNR はほぼ同じ値です。シマーは 1 ポイントほど大きく、CPP は数 dB ちがいます（のばす声では低め、話し声では高め）。話し声の F2・F3 は 5〜6% ほど、声になっている時間は 4% ほど多めに出ることがあります。日本語の声とスマホのマイクでは<strong>まだ確かめていません</strong>。</li>
           <li><b>測定</b>は計算でそのまま求めた値、<b>推定</b>はモデルにあてはめて出した値、<b>マイクしだい</b>は機種や雑音で大きくかわると報告のある値です。ジッターとシマーは「あー」をのばした声だけで測ります。</li>
           <li>高い声ではフォルマントが倍音に引かれやすくなります。ブラウザによっては雑音消しや音量の自動調整を止められず、値がゆがみます。</li>
         </ul>
@@ -67,4 +69,4 @@
   </div>
 </div>
 
-<script type="module" src="js/main.js?v=1"></script>
+<script type="module" src="js/main.js?v=2"></script>

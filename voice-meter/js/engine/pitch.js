@@ -49,9 +49,10 @@ export function trackPitch(x, fs, opt = {}) {
   const frames = [];
   for (let f = 0; f < nF; f++) {
     const start = f * hop;
-    let localPeak = 0;
-    for (let i = 0; i < N; i++) localPeak = Math.max(localPeak, Math.abs(x[start + i] || 0));
-    const ra = ac(windowed(x, start, win));
+    const sw = windowed(x, start, win);
+    let localPeak = 0; // 窓をかけたあとの山（窓の端の音は小さく数える）
+    for (let i = 0; i < N; i++) localPeak = Math.max(localPeak, Math.abs(sw[i]));
+    const ra = ac(sw);
     const r = new Float64Array(lagMax + 2);
     for (let i = 0; i <= lagMax + 1; i++) r[i] = rw[i] > 1e-6 ? ra[i] / rw[i] : 0;
     // 無声の候補（論文の式 23）
