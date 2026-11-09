@@ -2,7 +2,7 @@
 
 ## 別セッションで続けるとき（まずここ）
 - いまの状態: v005-ui（試作。段階Aの主な部分＋Praat との突き合わせ＋本物の声）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。「手がすること」「時間の見せ方」は**ユーザーにまだ確かめていない**（寝ているあいだに作った）。
-- 次にやること: ユーザーに触ってもらう。日本語の声とスマホのマイクで確かめる（`node voice-meter/tools/praat-dump.mjs <出力> 声.wav` → `praat-compare.py <出力>`。16bit の wav を渡す。名前が `-hold` で終わると「のばす」で測る。声のファイルはリポジトリに入れない）。
+- 次にやること: ユーザーに触ってもらう。話し声のフォルマントの上限の選び方（4500Hz に偏る）を確かめる。日本語ののばした声とスマホのマイクで確かめる（`node voice-meter/tools/praat-dump.mjs <出力> 声.wav` → `praat-compare.py <出力>`。16bit の wav を渡す。名前が `-hold` で終わると「のばす」で測る。声のファイルはリポジトリに入れない）。
 - 読む順: PLAN.md → このファイルの「ファイル構成」→ 関係するファイルだけ。
 - 動かし方: サーバー apps（.claude/launch.json）で http://localhost:8765/voice-meter/ 。デバッグ用の窓口 `window.__vome`（`S`・`select(id)`・`loadSample(id)`・`setMode(m)`）、エラーは `window.__vomeErr`。測定の確かめは `node voice-meter/tools/verify.mjs`（約45秒）。
 - 区切りごとの手順: 「確認のしかた」と smoke.ps1 → 「状態」に1行 → launcher.html の表 → 公開前チェック → commit。
@@ -27,7 +27,7 @@
 | js/main.js | 画面の動き | `S`・`select`・`loadSample` |
 | tools/verify.mjs | 合成の声で確かめる | |
 | tools/praat-dump.mjs / praat-compare.py | Praat と同じ声で見くらべる（`praat-parselmouth` が要る。検証だけ、アプリには含めない） | |
-| tools/praat-pvqd.py / praat-summary.py | PVQD を等間隔に落として「のばす／話す」に切り分ける・本物の声だけ集計する（音声はリポジトリに入れない） | |
+| tools/praat-pvqd.py / praat-ja.py / praat-summary.py | PVQD・日本語の公開音声を少量落として切り分ける・本物の声だけ集計する（音声はリポジトリに入れない） | |
 
 ES モジュール（`type="module"`）。`main.js?v=` の先の import には `?v=` が付かないので、engine を変えたら確認は強制再読み込みで。
 
@@ -88,7 +88,20 @@ Walden, P. R. Perceptual Voice Qualities Database (PVQD), Mendeley Data V4（CC 
 - エンジンだけ有声のコマは 3.6% 残る。16kHz への変換が原因ではない（Praat に 16kHz を渡しても差は同じ）。1 をこえる相関の折り返しも効かなかった。声になっている割合はこの分だけ多めに出る。100 セントをこえる高さのずれは 0.59%。
 - 話し声の F2・F3 は Praat の `Track`（中性母音への引きよせ）より 5〜6% 高い。本物の声には正解がないので、どちらが正しいかは言えない。
 
-**確かめていないこと**: 日本語の本物の声、実機のスマホのマイク。eGeMAPS の全文（定義は二次資料）、日本語の母音の基準値（表が読めなかったので画面に出さない）。
+## 日本語の声（2026-11-09）
+Lingua Libre（Wikimedia Commons。CC0・CC BY 4.0・CC BY-SA 4.0 のものだけ）の話者 5 人、各 30 語をつないだ 25 秒と、LibriVox の朗読 2 人（CC0／パブリックドメイン、64kbps の MP3 なので圧縮の影響あり）の 25 秒。話し声 7 本。JSUT・JVS は商用利用に別の条件があり、Common Voice は登録が要るので使わなかった。音声はリポジトリに入れない（`tools/praat-ja.py`）。
+| 数 | 差の中央値／最大 |
+|---|---|
+| 高さ（中央値） | 0.05%／0.47% |
+| HNR | 0.24／1.32 dB |
+| F1（Track） | 2.8%／6.0% |
+| F2（Track） | 5.3%／26.5% |
+| F3（Track） | 6.1%／11.5% |
+| CPP | 1.3／2.5 dB（高い・低いの両方） |
+
+Lingua Libre の「あ」などは声のある時間が 0.14〜0.37 秒しかなく、のばす声（ジッター・シマー）は日本語では測れなかった。F2・F3 がエンジンで高めなのは英語の話し声と同じ向き。
+
+**確かめていないこと**: 日本語ののばした声、実機のスマホのマイク。eGeMAPS の全文（定義は二次資料）、日本語の母音の基準値（表が読めなかったので画面に出さない）。
 
 ## 批判役（2026-11-08）で決めたこと
 採用: 最初は5個だけ／固定する図は1枚／マイクの自動処理を止める・止まらなければ出す／録る前に「外に出ない」・消すボタン／Praat 未確認を画面に／高い声の注意／話す速さは推定／数のそばに「大きいほど」の1行。
@@ -111,3 +124,4 @@ Walden, P. R. Perceptual Voice Qualities Database (PVQD), Mendeley Data V4（CC 
 - 2026-11-09 v003-praat: Praat との突き合わせ（`tools/praat-*`）。HNR の窓を 60ms に。画面の注意書きを結果に合わせた。
 - 2026-11-09 v004-real: 本物の声（PVQD）で突き合わせ。シマーの振幅の取り方と、のばす声のフォルマントの上限の選び方を直した。
 - 2026-11-09 v005-ui: 有声の判定を Praat に近づけた。録音の状態の不具合、誤解を生む名前と札、おもな5枚の説明を批判役の指摘で直した。
+- 2026-11-09 日本語の話し声 7 人ぶんで Praat と突き合わせ（engine の変更なし）。

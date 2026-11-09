@@ -12,6 +12,7 @@ for line in open(sys.argv[1], encoding="utf-8-sig"):
 for kind in ("hold", "talk"):
     ids = [k for k in rows if k.endswith(kind)]
     print(f"\n#### {kind} n={len(ids)}")
+    if not ids: continue
     for key in "f0_med f0_p20 f0_p80 jit_loc jit_rap shim_loc shim_db shim_apq3 hnr F1 T1 T2 T3 cpp".split():
         v = sorted((abs(rows[i][key][2]), i) for i in ids if key in rows[i])
         if not v: continue
