@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="css/style.css?v=2">
+<link rel="stylesheet" href="css/style.css?v=3">
 <script src="../assets/power.js?v=1"></script>
 
 <div id="app">
@@ -56,7 +56,7 @@
         <h3>正確さについて（いまの状態）</h3>
         <ul>
           <li>計算は研究の定義をもとに、このアプリのために書いたものです。正解のわかる合成の声で確かめました。</li>
-          <li>公開されている本物の人の声 24 本（<a href="https://doi.org/10.17632/9dz247gnyb.4" target="_blank" rel="noopener">PVQD</a>、英語、CC BY 4.0）と合成した声で、専門ソフト Praat と同じ声を測りくらべました。のばす声の高さ・ジッター・HNR はほぼ同じ値です。シマーは 1 ポイントほど大きく、CPP は数 dB ちがいます（のばす声では低め、話し声では高め）。話し声の F2・F3 は 5〜6% ほど、声になっている時間は 4% ほど多めに出ることがあります。日本語の話し声 7 人ぶん（<a href="https://commons.wikimedia.org/wiki/Category:Lingua_Libre_pronunciation-jpn" target="_blank" rel="noopener">Lingua Libre</a>・<a href="https://librivox.org/" target="_blank" rel="noopener">LibriVox</a> の録音）でも、高さと HNR はほぼ同じで、F2・F3 が高めに出る傾向も同じでした。日本語の「あー」をのばした声とスマホのマイクでは<strong>まだ確かめていません</strong>。</li>
+          <li>公開されている本物の人の声 24 本（<a href="https://doi.org/10.17632/9dz247gnyb.4" target="_blank" rel="noopener">PVQD</a>、英語、CC BY 4.0）と合成した声で、専門ソフト Praat と同じ声を測りくらべました。のばす声の高さ・ジッター・HNR はほぼ同じ値です。シマーは 1 ポイントほど大きく、CPP は数 dB ちがいます（のばす声では低め、話し声では高め）。声になっている時間は 4% ほど多めに出ることがあります。話し声の F1〜F3 は、同じ時刻どうしで比べると半分以上の時刻で 1% 以内ですが、F2 の 1〜2 割、F3 の 2〜3 割の時刻では Praat より 10% 以上高く出ます（どちらが正しいかは、本物の声には正解がないのでわかりません）。日本語の話し声 7 人ぶん（<a href="https://commons.wikimedia.org/wiki/Category:Lingua_Libre_pronunciation-jpn" target="_blank" rel="noopener">Lingua Libre</a>・<a href="https://librivox.org/" target="_blank" rel="noopener">LibriVox</a> の録音）でも、高さと HNR はほぼ同じで、F2・F3 の傾向も同じでした。話し声の F2・F3 は、計算の上限の周波数を 4500Hz から 5500Hz にかえるだけで 15% ほど（人によっては 4 割以上）かわるので、目安として見てください。日本語の「あー」をのばした声とスマホのマイクでは<strong>まだ確かめていません</strong>。</li>
           <li><b>測定</b>は計算でそのまま求めた値、<b>推定</b>はモデルにあてはめて出した値、<b>マイクしだい</b>は機種や雑音で大きくかわると報告のある値です。ジッターとシマーは「あー」をのばした声だけで測ります。</li>
           <li>高い声ではフォルマントが倍音に引かれやすくなります。ブラウザによっては雑音消しや音量の自動調整を止められず、値がゆがみます。</li>
         </ul>
@@ -69,4 +69,4 @@
   </div>
 </div>
 
-<script type="module" src="js/main.js?v=2"></script>
+<script type="module" src="js/main.js?v=3"></script>

@@ -70,13 +70,12 @@ function trackRun(cands, ceiling) {
   return { path: out, cost: m / n };
 }
 
-function analyzeCeiling(x, fs, trk, runs, ceiling) {
+export function analyzeCeiling(x, fs, trk, runs, ceiling) {
   const sr = 2 * ceiling, y = resample(x, fs, sr);
   const a = Math.exp(-2 * Math.PI * 50 / sr);
   for (let i = y.length - 1; i > 0; i--) y[i] -= a * y[i - 1];
   const win = gaussian(Math.round(0.05 * sr));
   const F = NF_ARRAY(trk.n), B = NF_ARRAY(trk.n);
-  const devs = [];
   for (const [s, e] of runs) {
     const cands = [], idx = [];
     for (let f = s; f < e; f++) {
@@ -84,29 +83,41 @@ function analyzeCeiling(x, fs, trk, runs, ceiling) {
       if (c.length) { cands.push(c); idx.push(f); }
     }
     const { path } = trackRun(cands, ceiling);
-    path.forEach((p, t) => {
-      p.forEach((q, i) => { F[i][idx[t]] = q.f; B[i][idx[t]] = q.b; });
-      if (t > 0 && p[0] && p[1] && path[t - 1][0] && path[t - 1][1]) devs.push(Math.abs(Math.log(p[0].f / path[t - 1][0].f)) + Math.abs(Math.log(p[1].f / path[t - 1][1].f)));
-    });
+    path.forEach((p, t) => p.forEach((q, i) => { F[i][idx[t]] = q.f; B[i][idx[t]] = q.b; }));
   }
-  return { F, B, ceiling, devs };
+  return { F, B, ceiling };
 }
 const NF_ARRAY = n => [0, 1, 2, 3].map(() => new Float64Array(n).fill(NaN));
 
+// F1〜F3 の、となりのフレームとの変化の大きさ（対数）
+function frameJumps(F) {
+  const d = [];
+  for (let k = 0; k < 3; k++) for (let f = 1; f < F[k].length; f++) if (Number.isFinite(F[k][f - 1]) && Number.isFinite(F[k][f])) d.push(Math.abs(Math.log(F[k][f] / F[k][f - 1])));
+  return d;
+}
+
+// 話し声: となりのフレームとの変化の中央値が最小の上限を選ぶ（平均だと子音のところの飛びに引かれて低い上限へ偏る。tools/ceiling-check.mjs）。
+// ただし平均の変化が一番小さい上限の 1.2 倍をこえる上限は選ばない（高すぎる上限では F3 が別の山へ飛び、誤差が桁ちがいになる）
+function pickForSpeech(rs) {
+  const J = rs.map(r => frameJumps(r.F)), M = J.map(d => (d.length ? d.reduce((a, b) => a + b, 0) / d.length : Infinity)), lim = 1.2 * Math.min(...M);
+  let bi = 0, bs = Infinity;
+  J.forEach((d, i) => { if (M[i] > lim || !d.length) return; const s = median(d); if (s < bs) { bs = s; bi = i; } });
+  return rs[bi];
+}
+
 // runs: 声のある区間。one が true（同じ母音をのばした声）は F1・F2 のばらつき最小（Escudero の基準）で、
-// 話し声は母音がかわるので、となりのフレームとのゆれ最小で上限を選ぶ
+// 話し声は母音がかわるので pickForSpeech で上限を選ぶ
 export function trackFormants(x, fs, trk, runs, one) {
+  const rs = CEILINGS.map(c => analyzeCeiling(x, fs, trk, runs, c));
+  if (!one) return pickForSpeech(rs);
   const f0Med = median(Array.from(trk.f0).filter(v => v > 0));
   let best = null, bs = Infinity, any = null, as = Infinity;
-  for (const c of CEILINGS) {
-    const r = analyzeCeiling(x, fs, trk, runs, c);
-    let s;
-    if (one) s = std(Array.from(r.F[0]).filter(Number.isFinite).map(Math.log)) + std(Array.from(r.F[1]).filter(Number.isFinite).map(Math.log));
-    else s = r.devs.length ? r.devs.reduce((a, b) => a + b, 0) / r.devs.length : Infinity;
+  for (const r of rs) {
+    const s = std(Array.from(r.F[0]).filter(Number.isFinite).map(Math.log)) + std(Array.from(r.F[1]).filter(Number.isFinite).map(Math.log));
     if (!Number.isFinite(s)) continue;
     if (s < as) { as = s; any = r; }
     // のばす声では、ばらつきが小さくても F1 が基本周波数に張りついた上限や、F2 が母音の範囲をこえた上限は選ばない（本物の声で起きた）
-    if (one && (median(r.F[0]) < 1.25 * f0Med || median(r.F[1]) > 3500)) continue;
+    if (median(r.F[0]) < 1.25 * f0Med || median(r.F[1]) > 3500) continue;
     if (s < bs) { bs = s; best = r; }
   }
   return best || any;
