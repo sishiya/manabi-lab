@@ -1,6 +1,6 @@
 // 雲ができるまで（3次元の試作）— 画面の組み立て。計算と描画は sky-sim.js・sky-render.js
 import { SkySim, makeBase } from './sky-sim.js?v=8';
-import { SkyRender } from './sky-render.js?v=9';
+import { SkyRender } from './sky-render.js?v=10';
 
 const $ = id => document.getElementById(id);
 const Q = new URLSearchParams(location.search);
@@ -130,7 +130,7 @@ async function init() {
     cv.width = Math.max(1, Math.round(w * s)); cv.height = Math.max(1, Math.round(h * s)); state.dirty = true;
   };
   fit(); addEventListener('resize', fit);
-  const rd = new SkyRender(dev, cv, sim, { zlo: SKY.zlo, ground: SKY.ground, haze: SKY.haze, billow: SKY.billow, amp: SKY.amp, fine: SKY.fine, iso: SKY.iso, track: SKY.track, nscale: SKY.nscale && SKY.nscale * dx / SKY.dx, wind: SCENE.wind && !SKY.iso ? SCENE.wind(base.z0 + base.Lz / 2) : 0 });
+  const rd = new SkyRender(dev, cv, sim, { zlo: SKY.zlo, ground: SKY.ground, haze: SKY.haze, billow: SKY.billow, amp: SKY.iso ? SKY.amp * SKY.dx / dx : SKY.amp, fine: SKY.fine, iso: SKY.iso, track: SKY.track, nscale: SKY.nscale && SKY.nscale * dx / SKY.dx, wind: SCENE.wind && !SKY.iso ? SCENE.wind(base.z0 + base.Lz / 2) : 0 });
   const applySun = () => { const s = SUNS[state.sun]; rd.setSun(s.az + (SKY.sunRot || 0), s.el, s.wb); state.volDirty = true; state.dirty = true; };
   applySun();
   window.__sky = { sim, rd, state, dev, CAMS, SUNS, dtMax: SCENE.dtMax, sunRot: SKY.sunRot, syncDawn() { SUNS.dawn.el = 99; dawnSun(sim.t); applySun(); } };

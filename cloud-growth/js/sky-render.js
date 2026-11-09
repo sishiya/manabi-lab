@@ -10,11 +10,12 @@ struct Prof { rc:f32, rf:f32, Tb:f32, qvb:f32, qnb:f32, p:f32, z:f32, s0:f32, qt
 @group(0) @binding(2) var<storage,read> Qn:array<f32>;
 @group(0) @binding(3) var out:texture_storage_3d<rgba16float,write>;
 ${ice ? `@group(0) @binding(4) var<storage,read> Qp:array<f32>;
-@group(0) @binding(5) var<storage,read> Tm:array<f32>;` : ''}
+@group(0) @binding(5) var<storage,read> Tm:array<f32>;
+@group(0) @binding(6) var<storage,read> Qt:array<f32>;` : ''}
 fn cc(i:i32,j:i32,k:i32)->u32 { return u32(((i%p.nx+p.nx)%p.nx)+p.nx*(((j%p.ny+p.ny)%p.ny)+p.ny*k)); }
 fn bt(i:i32,j:i32,k0:i32)->f32 {
   let k=clamp(k0,0,p.nz-1); let c=cc(i,j,k);
-  ${ice ? `let o=clamp((Tm[c]-253.16)/20.,0.,1.); return 1.5*pr[k].rc*max(Qn[c],-2.5e-4)*(o/(${RHO_W}.*${RE})+(1.-o)/(${RHO_I}.*${REI}));` : `return 1.5*pr[k].rc*max(Qn[c],-2.5e-4)/(${RHO_W}.*${RE});`}
+  ${ice ? `let o=clamp((Tm[c]-253.16)/20.,0.,1.); var v=Qn[c]; if v<0. { v=max(v/max(Qt[c]-v,1e-9)*2.5e-3,-2.5e-4); }   // 未飽和は相対的な湿りで測る（上空は飽和までの差の絶対値がとても小さく、凹凸で雲になってしまう）\n  return 1.5*pr[k].rc*v*(o/(${RHO_W}.*${RE})+(1.-o)/(${RHO_I}.*${REI}));` : `return 1.5*pr[k].rc*max(Qn[c],-2.5e-4)/(${RHO_W}.*${RE});`}
 }
 ${ice ? `// 雨・雪・あられの光の弱まり: 指数分布なら β = ρq Λ / ρ粒（Marshall-Palmer の形。N0 と粒の密度は SAM の定数）
 fn sp(m:f32,rs:f32,n0:f32)->f32 { if m<1e-9 { return 0.; } return m*pow(3.14159*rs*n0/m,.25)/rs; }
@@ -196,7 +197,7 @@ fn vc(x:vec3f)->f32 {
   let rr=max(abs(x.x),abs(x.y));
   if r.iso.z<=0. && rr>r.dom.x*.5 { let m=smoothstep(.4,.6,textureSampleLevel(nz,smN,vec3f(x.xy/17300.,.5),0.).g); s-=(1.-mix(1.,m,smoothstep(.5*r.dom.x,.8*r.dom.x,rr)))*.06; }
   // 雲の底はほぼ平らで、もこもこは上の部分（底から 300m までは弱める）
-  let D=r.det2.y*r.det.w*max(textureSampleLevel(vol,sm,uvw(x),0.).g,select(.0003,56./(r.det2.y*r.det2.y),r.iso.z>0.))*mix(.45,1.,smoothstep(0.,300.,x.z-r.det2.z))*(1.-.65*textureSampleLevel(vol,sm,uvw(x),0.).a);
+  let D=r.det2.y*r.det.w*max(textureSampleLevel(vol,sm,uvw(x),0.).g,select(.0003,.0001,r.iso.z>0.))*mix(.45,1.,smoothstep(0.,300.,x.z-r.det2.z))*(1.-.65*textureSampleLevel(vol,sm,uvw(x),0.).a);
   if abs(s)>2.*D { return max(0.,s); }
   return max(0.,s+D*min(noiseAt(x),.5));   // 外へは少しだけ（浮いた粉を作らない）
 }
@@ -337,7 +338,7 @@ export class SkyRender {
     const mod = code => dev.createShaderModule({ code });
     const cp = code => dev.createComputePipeline({ layout: 'auto', compute: { module: mod(code), entryPoint: 'main' } });
     const b = (p, list) => dev.createBindGroup({ layout: p.getBindGroupLayout(0), entries: list.map((r, i) => ({ binding: i, resource: r })) });
-    this.pVol = cp(volWGSL(!!sim.o.ice)); this.bVol = b(this.pVol, [{ buffer: sim.P }, { buffer: sim.prof }, { buffer: sim.f.Qn }, this.vol.createView(), ...(sim.o.ice ? [{ buffer: sim.f.Qp }, { buffer: sim.f.Tm }] : [])]);
+    this.pVol = cp(volWGSL(!!sim.o.ice)); this.bVol = b(this.pVol, [{ buffer: sim.P }, { buffer: sim.prof }, { buffer: sim.f.Qn }, this.vol.createView(), ...(sim.o.ice ? [{ buffer: sim.f.Qp }, { buffer: sim.f.Tm }, { buffer: sim.f.Q }] : [])]);
     this.pLt = cp(lightWGSL); this.bLt = b(this.pLt, [{ buffer: this.lu }, this.vol.createView(), this.sm, this.lt.createView()]);
     this.pSky = cp(skyWGSL); this.bSky = b(this.pSky, [{ buffer: this.lu }, this.skyT.createView()]);
     const nzSize = sim.nx >= 256 ? 128 : 64;
