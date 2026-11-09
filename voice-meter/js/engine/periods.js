@@ -61,9 +61,12 @@ export function pulsesInRun(hi, sr, trk, fa, fb) {
     marks.push(pos);
     if (marks.length > 20000) break;
   }
-  // 振幅: 印の位置の山の高さ（放物線で頂点を補う）
-  const amp = marks.map(m => {
-    const o = Math.round(snap(m, sr / f00)), p = sign * (hi[o - 1] || 0), q = sign * (hi[o] || 0), s = sign * (hi[o + 1] || 0);
+  // 振幅: 印を中心にした 1 周のなかでいちばん高い山（放物線で頂点を補う）。いちばん近い山にすると、本物の声では響きのさざ波の山を拾って振幅がばらつく
+  const amp = marks.map((m, i) => {
+    const T = i + 1 < marks.length ? marks[i + 1] - m : i ? m - marks[i - 1] : sr / f00;
+    let o = Math.round(m), top = -Infinity;
+    for (let k = Math.round(m - T / 2); k <= Math.round(m + T / 2); k++) { const v = sign * (hi[k] || 0); if (v > top) { top = v; o = k; } }
+    const p = sign * (hi[o - 1] || 0), q = sign * (hi[o] || 0), s = sign * (hi[o + 1] || 0);
     return q - 0.25 * (p - s) * cubicPeak(p, q, s);
   });
   return { t: marks.map(p => p / sr), amp };

@@ -35,7 +35,8 @@ for (const jitter of [0.1, 0.5, 1, 2]) cases.push({ id: `jit-${jitter}`, mode: '
 for (const shimmer of [1, 3, 6, 10]) cases.push({ id: `shim-${shimmer}`, mode: 'hold', ...synthVoice({ f0: 150, jitter: 0.1, shimmer, noise: 0.002, dur: 3.2, seed: 8 }) });
 for (const noise of [0.02, 0.08, 0.25]) cases.push({ id: `noise-${noise}`, mode: 'hold', ...synthVoice({ f0: 150, jitter: 0.1, shimmer: 0.3, noise, dur: 3.2, seed: 9 }) });
 for (const id of Object.keys(PRESETS)) cases.push({ id: `speech-${id}`, mode: 'speech', ...presetVoice(id, 'speech') });
-for (const w of wavs) cases.push({ id: 'file-' + basename(w, '.wav'), mode: 'speech', ...readWav16(w) });
+// 手元の声: 名前が -hold で終わるものは「のばす」、ほかは「話す」として測る
+for (const w of wavs) { const id = basename(w, '.wav'); cases.push({ id: 'file-' + id, mode: id.endsWith('-hold') ? 'hold' : 'speech', ...readWav16(w) }); }
 
 const list = [];
 for (const c of cases) {

@@ -25,9 +25,11 @@ def praat(c):
 
     # 1 コマずつの高さの一致
     both, cents, eng_only, pr_only = 0, [], 0, 0
+    pitch_hz, t1 = pitch.selected_array["frequency"], pitch.get_time_from_frame_number(1)
     for t, f in zip(c["t"], c["f0"]):
-        p = pitch.get_value_at_time(t)
-        pv, ev = p == p and p > 0, f > 0
+        # get_value_at_time は補間するので、有声の区間の端で undefined になる。いちばん近いコマの値を見る
+        p = pitch_hz[min(len(pitch_hz) - 1, max(0, round((t - t1) / c["hop"])))]
+        pv, ev = p > 0, f > 0
         if pv and ev:
             both += 1
             cents.append(abs(1200 * __import__("math").log2(f / p)))

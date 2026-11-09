@@ -1,7 +1,7 @@
 // フォルマント: Burg 法の LPC の根 → 経路探索で F1〜F4 に割りあてる
 // 設定は Praat の To Formant (burg) のマニュアル（5 個・窓の実効 25ms＝全長 50ms のガウス形・50Hz からの +6dB/oct 強調）
 // 上限の周波数は話者ごとに候補を試して一番ゆれない値を選ぶ（Escudero ほか 2009 の考え方。候補の刻みは簡単にしている）
-import { resample, gaussian, burg, polyRoots, std } from './dsp.js';
+import { resample, gaussian, burg, polyRoots, std, median } from './dsp.js';
 
 export const CEILINGS = [4500, 5000, 5500, 6000, 6500];
 const NF = 4, MAX_CAND = 6;
@@ -96,15 +96,20 @@ const NF_ARRAY = n => [0, 1, 2, 3].map(() => new Float64Array(n).fill(NaN));
 // runs: 声のある区間。one が true（同じ母音をのばした声）は F1・F2 のばらつき最小（Escudero の基準）で、
 // 話し声は母音がかわるので、となりのフレームとのゆれ最小で上限を選ぶ
 export function trackFormants(x, fs, trk, runs, one) {
-  let best = null, bs = Infinity;
+  const f0Med = median(Array.from(trk.f0).filter(v => v > 0));
+  let best = null, bs = Infinity, any = null, as = Infinity;
   for (const c of CEILINGS) {
     const r = analyzeCeiling(x, fs, trk, runs, c);
     let s;
     if (one) s = std(Array.from(r.F[0]).filter(Number.isFinite).map(Math.log)) + std(Array.from(r.F[1]).filter(Number.isFinite).map(Math.log));
     else s = r.devs.length ? r.devs.reduce((a, b) => a + b, 0) / r.devs.length : Infinity;
-    if (Number.isFinite(s) && s < bs) { bs = s; best = r; }
+    if (!Number.isFinite(s)) continue;
+    if (s < as) { as = s; any = r; }
+    // のばす声では、ばらつきが小さくても F1 が基本周波数に張りついた上限や、F2 が母音の範囲をこえた上限は選ばない（本物の声で起きた）
+    if (one && (median(r.F[0]) < 1.25 * f0Med || median(r.F[1]) > 3500)) continue;
+    if (s < bs) { bs = s; best = r; }
   }
-  return best;
+  return best || any;
 }
 
 // 一様な管とみなした声の筒の長さ（cm）: F_i = (i − 1/2)·ΔF の回帰、L = c / (2ΔF)。c = 35000 cm/s（あたたかく湿った空気）
