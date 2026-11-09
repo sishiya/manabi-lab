@@ -16,7 +16,8 @@ function tourSpeed(l, a) {
 function tourCam(l, a) {
   const hold = a > 1 ? a * 0.5 : 0;
   const bump = smoothstep(-(a + 0.8), -hold, l) * (1 - smoothstep(hold, a + 0.8, l));
-  return { yaw: (a > 1 ? 0.62 : 1.4) * bump, pitch: -0.12 * bump, roll: 0.35 * bump, fov: 1 + 0.4 * bump };
+  const arrive = smoothstep(a + 2.5, a + 5.5, l);   // 着いたら、惑星のふちの日の出のほうへ向く
+  return { yaw: (a > 1 ? 0.62 : 1.4) * bump + 0.5 * arrive, pitch: -0.12 * bump + 0.04 * arrive, roll: 0.35 * bump, fov: 1 + 0.4 * bump };
 }
 
 function tourCaption(l, a) {
@@ -24,6 +25,7 @@ function tourCaption(l, a) {
   if (a <= 1 && d < 0.3) return 'のどを通過。ちょうど真ん中で、空は半分ずつ2つの宇宙に分かれます。';
   if (l < 0 && d > 2.5) return '穴の奥に見えるのは、別の宇宙です。';
   if (l < 0 && d > 0) return a > 1 ? 'まもなくトンネルの入口です。' : 'のどに近づきます。穴が空に大きく広がります。';
+  if (d <= 0 && l > 0 && d > -1.4 && a > 1) return 'まもなく出口。輪がひらいて、向こうの宇宙が広がります。';
   if (d <= 0) return '前はすべて向こうの宇宙。輪は、のどのまわりをぐるぐる回って届いた、同じ空のくり返しです。';
   if (d < 2) return '通りぬけました。前に広がるのは、向こうの宇宙です。';
   return 'ドラッグでふり返ると、通ってきた穴の中に、もとの宇宙が見えます。';

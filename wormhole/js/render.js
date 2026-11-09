@@ -92,6 +92,8 @@ function applyScene() {
   gl.uniform2f(R.u.uSunGain, SCENE.A.gain, SCENE.B.gain);
 }
 
+function setFarSunGain(g) { R.gl.useProgram(R.prog); R.gl.uniform2f(R.u.uSunGain, SCENE.A.gain, g); }
+
 function resizeTargets(w, h) {
   const gl = R.gl;
   if (R.scene && R.scene.w === w && R.scene.h === h) return;

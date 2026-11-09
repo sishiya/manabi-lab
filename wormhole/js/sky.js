@@ -61,6 +61,18 @@ function makeGalaxy(seed) {
     g.fillStyle = hot ? 'rgba(150,190,255,.32)' : r < 0.3 ? 'rgba(255,214,160,.2)' : 'rgba(255,220,200,.13)';
     const s = hot ? 1.6 : 1.1; g.fillRect(x, y, s, s);
   }
+  // 腕の内側の塵の帯（暗くする）
+  g.globalCompositeOperation = 'source-over';
+  for (let i = 0; i < 16000; i++) {
+    const arm = i % 2, r = 0.14 + 0.8 * Math.pow(rnd(), 0.8);
+    const th = Math.log(0.03 + r) * 3.0 + arm * Math.PI - 0.5 + (rnd() - 0.5) * 0.14;
+    const dr = r * 0.46, x = S / 2 + Math.cos(th) * dr * S, y = S / 2 + Math.sin(th) * dr * S;
+    g.fillStyle = 'rgba(0,0,0,.09)'; g.fillRect(x - 1.5, y - 1.5, 3, 3);
+  }
+  // 全体のにじみ（小さくして引きのばす。filter は Safari で効かないため）
+  const bl = document.createElement('canvas'); bl.width = bl.height = 96;
+  const bg = bl.getContext('2d'); bg.imageSmoothingQuality = 'high'; bg.drawImage(cv, 0, 0, 96, 96);
+  g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.55; g.imageSmoothingQuality = 'high'; g.drawImage(bl, 0, 0, S, S); g.globalAlpha = 1;
   const gr = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S * 0.14);
   gr.addColorStop(0, 'rgba(255,236,205,1)'); gr.addColorStop(0.3, 'rgba(255,205,150,.55)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
   g.fillStyle = gr; g.fillRect(0, 0, S, S);
@@ -116,7 +128,7 @@ function makeSkyCanvas(kind, W) {
 
   // 3. 銀河（向こうの宇宙）。絵のまん中が +x（穴を通ってまっすぐ見える向き）
   if (kind === 'B') {
-    const gal = makeGalaxy(4242), cx = (0.5 + 12 / 360) * W, cy = (0.5 - 6 / 180) * H, sz = W * 0.17;
+    const gal = makeGalaxy(4242), cx = (0.5 - 16 / 360) * W, cy = (0.5 - 10 / 180) * H, sz = W * 0.17;
     g.save(); g.translate(cx, cy); g.rotate(-0.5); g.scale(1, 0.52); g.drawImage(gal, -sz / 2, -sz / 2, sz, sz); g.restore();
   }
   g.globalCompositeOperation = 'source-over';

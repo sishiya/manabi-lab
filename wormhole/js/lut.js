@@ -26,6 +26,33 @@
     return { data, psiC, K0, K1, flip: l0 > 0 ? 1 : 0, N: LUT_N };
   }
 
+  // 先に作っておく表の位置 |ℓ|。形がすばやく変わる口のまわりは細かく。0 と a と lMax をかならず含む
+  function lutGrid(a, lMax) {
+    const out = [];
+    for (let l = 0; l < lMax - 1e-9;) {
+      out.push(l);
+      let h = Math.abs(l - a) < 0.4 ? 0.02 : 0.1;
+      if (l < a - 1e-9 && l + h > a) h = a - l;
+      l += h;
+    }
+    out.push(lMax);
+    return out;
+  }
+
+  // 隣の 2 枚の表を添字ごとに線形にまぜる。表の格子は ψc からの角度の対数なので、ψc はその位置の本当の値を使う。ない所は null
+  function mixLUT(S, l0, ls, tabs, out) {
+    const x = Math.abs(l0);
+    if (x > ls[ls.length - 1]) return null;
+    let lo = 0, hi = ls.length - 1;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (ls[m] <= x) lo = m; else hi = m; }
+    const A = tabs[lo], B = tabs[hi];
+    if (!A || !B) return null;
+    const f = (x - ls[lo]) / (ls[hi] - ls[lo]), n = LUT_N * 2;
+    for (let i = 0; i < n; i++) out[i] = A[i] + (B[i] - A[i]) * f;
+    const psiC = M.criticalPsi(S, -x);
+    return { data: out, psiC, K0: Math.log(psiC / DELTA_MIN), K1: Math.log((Math.PI - psiC) / DELTA_MIN), flip: l0 > 0 ? 1 : 0, N: LUT_N };
+  }
+
   // JS での引き方（シェーダーと同じ）。確かめと読み取りに使う
   function lookup(T, psi) {
     const p = T.flip ? Math.PI - psi : psi, seg = p < T.psiC ? 0 : 1;
@@ -37,6 +64,6 @@
     return { phi, side: T.flip ? -sideEff : sideEff, delta };
   }
 
-  if (typeof module !== 'undefined') module.exports = { buildLUT, lookup, LUT_N, DELTA_MIN };
-  else { window.buildLUT = buildLUT; window.lookupLUT = lookup; window.LUT_N = LUT_N; window.DELTA_MIN = DELTA_MIN; }
+  if (typeof module !== 'undefined') module.exports = { buildLUT, lookup, lutGrid, mixLUT, LUT_N, DELTA_MIN };
+  else { window.buildLUT = buildLUT; window.lookupLUT = lookup; window.lutGrid = lutGrid; window.mixLUT = mixLUT; window.LUT_N = LUT_N; window.DELTA_MIN = DELTA_MIN; }
 }

@@ -105,6 +105,30 @@ for (const [name, S] of [['映画', M.makeShape(0.005, 0.05)], ['長い', M.make
   if (worst > 1.0) { bad++; console.log('NG 直線のずれが大きい'); }
 }
 
+// 4b) 再生中に使う「先に作った表をまぜたもの」と、その場で計算した表の差（画面の向きで引いて比べる。ψc の 1〜2 画素以内は除く）
+{
+  const wrap = x => Math.abs(Math.atan2(Math.sin(x), Math.cos(x)));
+  for (const [name, S, end] of [['映画', M.makeShape(0.005, 0.05), 6.255], ['長い', M.makeShape(5, 0.05), 11.25], ['なめらか', M.makeShape(0.5, 0.43), 6.75]]) {
+    const ls = L.lutGrid(S.a, end), tabs = ls.map(l => L.buildLUT(S, -l, new Float32Array(L.LUT_N * 2), true).data);
+    const mixed = [], base = [];
+    for (let j = 0; j + 1 < ls.length; j += 3) {
+      const l = -(ls[j] + ls[j + 1]) / 2;   // 2 枚のちょうど間（いちばん差が大きい所）
+      const mix = L.mixLUT(S, l, ls, tabs, new Float32Array(L.LUT_N * 2)), direct = L.buildLUT(S, l, null, true), fine = L.buildLUT(S, l, null, false);
+      for (let i = 1; i < 2000; i += 3) {
+        const psi = Math.PI * i / 2000;
+        if (Math.abs(psi - mix.psiC) < 3e-3) continue;
+        const f = L.lookup(fine, psi).phi;
+        mixed.push(wrap(L.lookup(mix, psi).phi - f)); base.push(wrap(L.lookup(direct, psi).phi - f));
+      }
+    }
+    const pct = (a, p) => a.slice().sort((x, y) => x - y)[Math.floor(a.length * p)];
+    const m50 = pct(mixed, 0.5), m99 = pct(mixed, 0.99), b99 = pct(base, 0.99);
+    console.log(`まぜた表の角度の差（${name}）: 中央 ${m50.toExponential(1)}、99% ${m99.toExponential(1)} rad（その場の粗い表は 99% ${b99.toExponential(1)}）、位置 ${ls.length} 枚`);
+    // 基準は、今まで動かしている間に使っていた粗い表の誤差
+    if (m99 > 2 * b99 + 0.005) { bad++; console.log('NG まぜた表の差が大きい'); }
+  }
+}
+
 // 5) 速さ
 const timeIt = (S, coarse) => { const t0 = Date.now(); for (let i = 0; i < 20; i++) L.buildLUT(S, -3 - i * 0.2, null, coarse); return ((Date.now() - t0) / 20).toFixed(1); };
 for (const [name, S] of [['映画', M.makeShape(0.005, 0.05)], ['長い', M.makeShape(5, 0.05)], ['なめらか', M.makeShape(0.5, 0.43)]])

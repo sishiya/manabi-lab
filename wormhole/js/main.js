@@ -40,6 +40,7 @@ function setShape(a, W, keepU) {
   syncShapeLabels();
   updateTicks(S, l => lToU(l));
   markAll();
+  lcPrepare(a, W, a + TOUR_END);
 }
 function syncShapeLabels() {
   const k = SCENE.km, f = v => k === 1 ? `${fmt(v, v < 0.1 ? 3 : 2)} km` : `${Math.round(v * k).toLocaleString('ja-JP')} km`;
@@ -175,7 +176,7 @@ function frame(now) {
     const end = S.a + TOUR_END;
     setL(Math.min(end, S.l + dt * tourSpeed(S.l, S.a)));
     if (S.auto) applyTourCam(dt);
-    if (S.l >= end) { S.playing = false; S.exitAt = now + 2600; syncPlay(); S.lutDirty = true; }
+    if (S.l >= end) { S.playing = false; S.exitAt = now + 5000; syncPlay(); S.lutDirty = true; }
   } else if (S.fov !== 1 && dt > 0 && !S.auto) {   // 自動が終わったら視野をゆっくり戻す
     S.fov += (1 - S.fov) * (1 - Math.exp(-dt * 3)); if (Math.abs(S.fov - 1) < 2e-3) S.fov = 1;
     S.viewDirty = true;
@@ -193,12 +194,14 @@ function renderIfNeeded(now) {
   if (!R.gl) return;
   let need = S.viewDirty;
   if (S.lutDirty) {
-    S.T = buildLUT(S.shape, S.l, S.data, true); uploadLUT(S.T); S.lutDirty = false; S.fineAt = now + 180; need = true;
+    S.T = lcLookup(S.shape, S.l, S.data) || buildLUT(S.shape, S.l, S.data, true); uploadLUT(S.T); S.lutDirty = false; S.fineAt = now + 180; need = true;
     tracePick(); updateReadouts(S, S.T); updateHint(S, S.T); describeRay(S, S.ray);
   } else if (S.fineAt && now > S.fineAt && !S.playing) {
     S.T = buildLUT(S.shape, S.l, S.data, false); uploadLUT(S.T); S.fineAt = 0; need = true;
   }
   if (need) {
+    const B = SCENE.B;
+    setFarSunGain(B.gainNear === undefined ? B.gain : B.gainNear + (B.gain - B.gainNear) * smoothstep(S.a + 3.5, S.a + 5.2, S.l));
     drawView(S.V, S.Q, halfTan(), { mode: S.mode, stripPx: S.stripPx, rc: radius(S.shape, S.l), camS: S.l > 0 ? 1 : -1, film: S.look === 0, aa: S.playing ? Math.min(S.aaNow, R.aa) : 0 });
     drawMarks(); S.viewDirty = false;
   }

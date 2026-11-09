@@ -53,7 +53,7 @@ vec3 starLayer(vec3 d, float pix, float scale, float rad0){
   if (h.x > .3) return vec3(0.);
   vec3 q = id + .2 + .6 * hash3v(id + 3.1);
   float dist = length(p - q) / scale;
-  float m = pow(hash1(id + 9.7), 5.) * 30. + .5;
+  float m = pow(hash1(id + 9.7), 7.) * 46. + .16;   // 暗い星を多く、明るい星はまれに（一様だと塩をまいたように見える）
   float r = max(rad0, pix * .75);
   float e = rad0 * rad0 / (r * r);   // 1画素より小さい星は、そのぶん暗く（面の明るさ一定）
   float g = exp(-dist * dist / (r * r * .5));
@@ -68,7 +68,7 @@ vec3 skyCol(vec3 fd, float side, float pix){
   float lod = clamp(log2(pix * uSkyW / TAU), 0., 6.);
   vec3 c = side > .5 ? textureLod(uSkyB, uv, lod).rgb : textureLod(uSkyA, uv, lod).rgb;
   c = c * c * 1.5;   // 暗い所は沈めて、明るい所を残す（コントラスト）
-  if (uStar > .5) c += starLayer(w, pix, 90., 6.e-4) + starLayer(w + .37, pix, 210., 3.5e-4) * .7;
+  if (uStar > .5) c += starLayer(w, pix, 90., 6.e-4) + starLayer(w + .37, pix, 210., 3.5e-4) * .7 * (.12 + 1.5 * smoothstep(.34, .72, vnoise(w * 4. + 3.)));   // 細かい星は雲のようにムラをつける
   vec3 sun = uSun[side > .5 ? 1 : 0];
   float a = acos(clamp(dot(fd, sun), -1., 1.));
   float r = max(.012, pix);
@@ -89,9 +89,9 @@ vec3 albedo(int k, vec3 n){
     return mix(c, vec3(.96), smoothstep(.5, .72, cl));
   }
   if (k == 2) { float g = fbm(n * 9., 5); return vec3(.4 + .34 * g) * vec3(1., .96, .9); }
-  float lat = n.z + .03 * (fbm(n * 6., 4) - .5);
+  float lat = n.z + .07 * (fbm(n * vec3(5., 5., 2.), 4) - .5);
   float b = .5 + .5 * sin(lat * 19. + 2. * sin(lat * 5.));
-  return mix(vec3(.16, .36, .66), vec3(.76, .9, .98), b);
+  return mix(vec3(.16, .36, .66), vec3(.76, .9, .98), b) * (.8 + .36 * fbm(n * vec3(3., 3., 30.), 3));
 }
 
 float sphT(vec3 o, vec3 d, vec3 c, float R){
@@ -114,6 +114,11 @@ bool bodiesOnLine(vec3 o, vec3 d, float t0, float t1, int first, vec3 L, inout v
   for (int i = first; i < first + 3; i++) {
     float t = sphT(o, d, uBody[i].xyz, uBody[i].w);
     if (t > t0 && t < t1 && t < tBody) { tBody = t; hit = i; }
+  }
+  if (first == 3 && uKind[3] == 3) {   // 大きな惑星の大気のふち（逆光で光る。作りもの）
+    vec3 oc = uBody[3].xyz - o;
+    float h = length(oc - d * clamp(dot(oc, d), t0, t1)) / uBody[3].w - 1.;
+    if (h > 0. && h < .15) acc += T * vec3(.42, .68, 1.) * exp(-h / .02) * (.03 + 2.2 * pow(max(dot(d, L), 0.), 30.));
   }
   if (first == 0) {   // 輪
     float dn = dot(d, uRingN);
@@ -158,7 +163,7 @@ bool bodiesOnLine(vec3 o, vec3 d, float t0, float t1, int first, vec3 L, inout v
   vec3 col = albedo(k, uOrbit * n) * (diff * shade * 1.15 + .006);
   float fres = pow(1. - max(dot(n, -d), 0.), 3.);
   if (k == 1) col += vec3(.25, .5, 1.) * fres * (diff * .9 + .02) * .9;
-  if (k == 3) col += vec3(.45, .7, 1.) * fres * (diff * .9 + .02) * .7;
+  if (k == 3) col += vec3(.45, .7, 1.) * fres * (diff * .9 + .02 + 1.4 * pow(max(dot(d, L), 0.), 30.)) * .7;
   if (k == 0) col += vec3(.9, .7, .45) * fres * diff * .25;
   acc += T * col;
   return true;
