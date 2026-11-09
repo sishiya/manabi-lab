@@ -14,6 +14,8 @@ html,body{margin:0;height:100%;background:#0d1a2b;color:var(--ink);font-family:v
 #reads div{font-size:10.5px;color:var(--muted)}
 #reads b{display:block;font-family:var(--f-mono);font-size:14px;font-weight:500;color:var(--ink)}
 #dock{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);width:min(760px,calc(100vw - 32px));background:var(--glass);border-radius:10px;padding:10px 12px;backdrop-filter:blur(6px)}
+#row0{margin-bottom:8px}
+#scns{flex-wrap:wrap}
 #row1{display:flex;align-items:center;gap:10px}
 #play{width:44px;height:44px;border-radius:50%;border:0;background:var(--acc);color:#0c1a2b;font-size:17px;flex:none;cursor:pointer}
 #time{font-family:var(--f-mono);font-size:16px;min-width:82px}
@@ -42,4 +44,6 @@ button{font-family:inherit;color:inherit;cursor:pointer}
   #dock{bottom:10px}
   #status{font-size:11.5px}
   #row2{gap:6px 10px}
+  #row0>span{display:none}
+  #scns{flex-wrap:nowrap;gap:4px}#scns button{padding:0 8px;white-space:nowrap}
 }

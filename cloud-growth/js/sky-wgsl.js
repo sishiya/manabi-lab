@@ -1,8 +1,8 @@
 // 雲ができるまで（3次元の試作）— 計算シェーダー。手順は solver.js と同じ（強制 → 運ぶ → 雲と浮力 → 圧力）
 // 雨と氷は省く。温度の変数は s = T + g z/cp − Lv qn/cp − S0（定数 S0 を引いて f32 の桁を守る）
 const COMMON = /* wgsl */`
-struct P { nx:i32, ny:i32, nz:i32, _a:i32, dx:f32, dy:f32, dz:f32, dt:f32, H:f32, E:f32, cd:f32, S0:f32 };
-struct Prof { rc:f32, rf:f32, Tb:f32, qvb:f32, qnb:f32, p:f32, z:f32, s0:f32, qt0:f32, ub:f32, sf:f32, sp:f32 };
+struct P { nx:i32, ny:i32, nz:i32, _a:i32, dx:f32, dy:f32, dz:f32, dt:f32, H:f32, E:f32, cd:f32, S0:f32, het:f32, F0:f32, kap:f32, wtau:f32 };
+struct Prof { rc:f32, rf:f32, Tb:f32, qvb:f32, qnb:f32, p:f32, z:f32, s0:f32, qt0:f32, ub:f32, sf:f32, sp:f32, wls:f32 };
 fn cid(i:i32, j:i32, k:i32, n:vec2i) -> u32 { return u32((i & (n.x-1)) + n.x*((j & (n.y-1)) + n.y*k)); }
 `;
 
@@ -88,6 +88,7 @@ const g=9.81; const cp=1004.; const Lv=2.5e6; const EPS=0.62188;
 @group(0) @binding(8) var<storage,read_write> Qn:array<f32>;
 @group(0) @binding(9) var<storage,read_write> B:array<f32>;
 @group(0) @binding(10) var<storage,read_write> C:array<vec2f>;
+@group(0) @binding(11) var<storage,read_write> Um:array<f32>;
 fn id(i:i32,j:i32,k:i32)->u32 { return cid(i,j,k,vec2i(p.nx,p.ny)); }
 
 @compute @workgroup_size(8,8,4) fn force(@builtin(global_invocation_id) gi:vec3u) {
@@ -96,15 +97,51 @@ fn id(i:i32,j:i32,k:i32)->u32 { return cid(i,j,k,vec2i(p.nx,p.ny)); }
   let c=id(i,j,k); let f=pr[k];
   var s=S[c]; var q=max(Q[c],0.); var u=U[c]; var v=V[c]; var w=W[c];
   if f.sf>0. {
-    let fac=(1.+0.3*Het[u32(i+p.nx*j)])*f.sf*p.dt;
+    let fac=(1.+p.het*Het[u32(i+p.nx*j)])*f.sf*p.dt;
     s+=p.H*fac; q+=p.E*fac;
   }
+  if p.wtau>0. { u+=(f.ub-Um[k])*min(1.,p.dt/p.wtau); }   // 平均の風を目標へ
   if k==0 && p.cd>0. { let sp=sqrt(u*u+v*v); let dr=1./(1.+p.dt*p.cd*sp/p.dz); u*=dr; v*=dr; }
   if f.sp>0. {
     let r=min(1.,p.dt*f.sp);
     w-=r*w; u+=r*(f.ub-u); v-=r*v; s+=r*(f.s0-s); q+=r*(f.qt0-q);
   }
   S[c]=s; Q[c]=q; U[c]=u; V[c]=v; W[c]=w;
+}
+
+// 高さごとの平均の風（一段ずつ別のスレッドで足す）
+@compute @workgroup_size(1) fn umean(@builtin(global_invocation_id) gi:vec3u) {
+  let k=i32(gi.x);
+  if k>=p.nz { return; }
+  var m=0.;
+  for (var j=0; j<p.ny; j++) { var r=0.; for (var i=0; i<p.nx; i++) { r+=U[id(i,j,k)]; } m+=r/f32(p.nx); }
+  Um[k]=m/f32(p.ny);
+}
+
+// 列ごとの強制: 雲の上面の放射冷却（雲の水の量で指数的に弱まる簡単な式。推定）と、大きな場の上下の動き（上流差分）。式は solver.js の forcing と同じ
+@compute @workgroup_size(32) fn column(@builtin(global_invocation_id) gi:vec3u) {
+  let l=i32(gi.x);
+  if l>=p.nx*p.ny { return; }
+  let i=l%p.nx; let j=l/p.nx;
+  if p.F0>0. {
+    var lwp=0.; var ft=p.F0;
+    for (var k=p.nz-1; k>=0; k--) {
+      let c=id(i,j,k);
+      lwp+=pr[k].rc*max(Qn[c],0.)*p.dz;
+      let fb=p.F0*exp(-p.kap*lwp);
+      S[c]-=p.dt*(ft-fb)/(pr[k].rc*p.dz*cp);
+      ft=fb;
+    }
+  }
+  for (var k=1; k<p.nz; k++) {
+    let ww=pr[k].wls;
+    if ww==0. { continue; }
+    let c=id(i,j,k); var kk=c;
+    if ww>0. { kk=id(i,j,k-1); } else if k+1<p.nz { kk=id(i,j,k+1); }
+    let r=p.dt*ww/select(-p.dz,p.dz,ww>0.);
+    S[c]-=r*(S[c]-S[kk]);
+    Q[c]=max(Q[c]-r*(Q[c]-Q[kk]),0.);
+  }
 }
 
 fn es(T:f32)->f32 { return 611.2*exp(17.67*(T-273.15)/(T-29.65)); }

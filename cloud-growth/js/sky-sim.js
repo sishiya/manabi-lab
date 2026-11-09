@@ -1,17 +1,17 @@
 // 雲ができるまで（3次元の試作）— WebGPU の計算。式は solver.js を3次元にしたもの
 import { sweepWGSL, cellsWGSL, fftWGSL, tridiagWGSL, statsWGSL } from './sky-wgsl.js';
 
-const S0 = 300, PROF_F = 12;
+const S0 = 300, PROF_F = 13;
 const { g, cp, Lv } = globalThis.CT;
 
 // 基本の空: solver.js の静水圧の積み上げをそのまま使う（横は使わないので 4 列）
 export function makeBase(sc, nz, Lz) {
   const s = globalThis.makeSim({ ...sc, nx: 4, Lx: 400, nz, Lz, seed: false, micro: false });
-  return { nz, Lz, dz: Lz / nz, zc: s.zc, rhoc: s.rhoc, rhof: s.rhof, T0: s.T0, qv0: s.qv0, qn0: s.qn0, pc: s.pc, h0: s.h0, qt0: s.qt0, ub: s.ub };
+  return { nz, Lz, z0: sc.z0 || 0, dz: Lz / nz, zc: s.zc, rhoc: s.rhoc, rhof: s.rhof, T0: s.T0, qv0: s.qv0, qn0: s.qn0, pc: s.pc, h0: s.h0, qt0: s.qt0, ub: s.ub };
 }
 
 export class SkySim {
-  // o: { nx, ny, dx, dy, base, H, E, cd, hs, spongeTop, spongeTau, het, noise, wind(真なら基本の風) }
+  // o: { nx, ny, dx, dy, base, H(数か時刻の関数), E, cd, hs, spongeTop, spongeTau, het, hetAmp, noise, wind(真なら基本の風), lw:{F0,kappa}, wls(z), gen(最初の空を足す) }
   constructor(dev, o) {
     this.dev = dev; this.o = o;
     const { nx, ny, base } = o, nz = base.nz;
@@ -22,7 +22,8 @@ export class SkySim {
     this.f = {}; for (const k of ['U', 'V', 'W', 'S', 'Q', 'U0', 'V0', 'W0', 'T1', 'T2', 'Qn', 'B']) this.f[k] = field();
     this.C = dev.createBuffer({ size: nx * ny * nz * 8, usage: U.STORAGE | U.COPY_SRC });
     this.Het = dev.createBuffer({ size: nx * ny * 4, usage: U.STORAGE | U.COPY_DST });
-    this.P = dev.createBuffer({ size: 48, usage: U.UNIFORM | U.COPY_DST });
+    this.Um = dev.createBuffer({ size: nz * 4, usage: U.STORAGE });
+    this.P = dev.createBuffer({ size: 64, usage: U.UNIFORM | U.COPY_DST });
     this.A = dev.createBuffer({ size: 256 * 6, usage: U.UNIFORM | U.COPY_DST });
     this.prof = dev.createBuffer({ size: (nz + 1) * PROF_F * 4, usage: U.STORAGE | U.COPY_DST });
     this.tw = dev.createBuffer({ size: Math.max(nx, ny) * 8, usage: U.STORAGE | U.COPY_DST });
@@ -38,13 +39,14 @@ export class SkySim {
     const pr = new Float32Array((nz + 1) * PROF_F);
     let fsum = 0; const hs = Math.max(2 * this.dz, o.hs || 100), fk = new Float64Array(nz);
     for (let k = 0; k < nz; k++) { const f = Math.exp(-(k + 0.5) * this.dz / hs); if (f < 0.02) break; fk[k] = f; fsum += f * this.dz; }
-    const top = o.spongeTop || 0, zb = this.Lz - top;
+    const top = o.spongeTop || 0, zb = b.z0 + this.Lz - top;
     for (let k = 0; k <= nz; k++) {
       const c = Math.min(k, nz - 1), a = k * PROF_F;
       pr[a] = b.rhoc[c]; pr[a + 1] = b.rhof[k]; pr[a + 2] = b.T0[c]; pr[a + 3] = b.qv0[c]; pr[a + 4] = b.qn0[c]; pr[a + 5] = b.pc[c]; pr[a + 6] = b.zc[c];
       pr[a + 7] = b.h0[c] / cp - S0; pr[a + 8] = b.qt0[c]; pr[a + 9] = o.wind ? b.ub[c] : 0;
       pr[a + 10] = fsum > 0 && k < nz ? fk[k] / (b.rhoc[k] * fsum) : 0;
       pr[a + 11] = top > 0 && b.zc[c] > zb ? 0.5 * (1 - Math.cos(Math.PI * (b.zc[c] - zb) / top)) / (o.spongeTau || 120) : 0;
+      pr[a + 12] = o.wls ? o.wls(b.zc[c]) : 0;
     }
     dev.queue.writeBuffer(this.prof, 0, pr);
     this.pr = pr;
@@ -80,7 +82,9 @@ export class SkySim {
     const mk = (m, ep, constants) => dev.createComputePipeline({ layout: 'auto', compute: { module: m, entryPoint: ep, constants } });
     const bind = (p, list) => dev.createBindGroup({ layout: p.getBindGroupLayout(0), entries: list.map(([b, x]) => buf(b, x)) });
     const pair = (ep, list) => { const p = mk(cells, ep); return { p, bg: bind(p, list) }; };
-    this.force = pair('force', [[0, P], [1, prof], [2, f.U], [3, f.V], [4, f.W], [5, f.S], [6, f.Q], [7, Het]]);
+    this.force = pair('force', [[0, P], [1, prof], [2, f.U], [3, f.V], [4, f.W], [5, f.S], [6, f.Q], [7, Het], [11, this.Um]]);
+    this.umean = pair('umean', [[0, P], [2, f.U], [11, this.Um]]);
+    this.column = pair('column', [[0, P], [1, prof], [5, f.S], [6, f.Q], [8, f.Qn]]);
     this.diag = pair('diag', [[0, P], [1, prof], [5, f.S], [6, f.Q], [8, f.Qn], [9, f.B]]);
     this.buoy = pair('buoy', [[0, P], [4, f.W], [9, f.B]]);
     this.rhs = pair('rhs', [[0, P], [1, prof], [2, f.U], [3, f.V], [4, f.W], [10, C]]);
@@ -103,6 +107,7 @@ export class SkySim {
       const a = Math.min(k, nz - 1) * PROF_F, s0 = pr[a + 7], q0 = pr[a + 8], ub = pr[a + 9], z = pr[a + 6], nz1 = o.noise && z < o.noise.zTop;
       for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const x = c(i, j, k); s[x] = s0 + (nz1 ? o.noise.amp * (R() * 2 - 1) : 0); q[x] = q0; u[x] = ub; }
     }
+    if (o.gen) o.gen(s, q, u, c);
     if (gen) gen(s, q, u, c);
     const het = new Float32Array(nx * ny);
     if (o.het) {
@@ -118,12 +123,12 @@ export class SkySim {
     const zero = new Float32Array(n);
     dev.queue.writeBuffer(f.V, 0, zero); dev.queue.writeBuffer(f.W, 0, zero); dev.queue.writeBuffer(f.Qn, 0, zero);
     dev.queue.writeBuffer(this.Het, 0, het);
-    this.t = 0; this.flip = false;
+    this.t = o.t0 || 0; this.flip = false;
   }
   _setP(dt) {
-    const o = this.o, h = new ArrayBuffer(48), iv = new Int32Array(h, 0, 4), fv = new Float32Array(h, 16, 8);
+    const o = this.o, h = new ArrayBuffer(64), iv = new Int32Array(h, 0, 4), fv = new Float32Array(h, 16, 12), H = typeof o.H === 'function' ? o.H(this.t) : (o.H || 0);
     iv.set([this.nx, this.ny, this.nz, 0]);
-    fv.set([this.dx, this.dy, this.dz, dt, (o.H || 0) / cp, (o.E || 0) / Lv, o.cd || 0, S0]);
+    fv.set([this.dx, this.dy, this.dz, dt, H / cp, (o.E || 0) / Lv, o.cd || 0, S0, o.hetAmp ?? 0.3, o.lw ? o.lw.F0 : 0, o.lw ? o.lw.kappa : 0, o.windTau || 0]);
     this.dev.queue.writeBuffer(this.P, 0, h);
   }
   // diag だけ（確かめと最初の雲に）
@@ -135,10 +140,14 @@ export class SkySim {
     pass.dispatchWorkgroups(Math.ceil(this.nx / 8), Math.ceil(this.ny / 8), Math.ceil(this.nz / 4));
   }
   step(dt) {
-    const { dev, f, nx, ny, nz } = this;
+    const { dev, f, nx, ny, nz, o } = this;
     this._setP(dt);
     const enc = dev.createCommandEncoder();
-    let p = enc.beginComputePass(); this._cell(p, this.force); p.end();
+    let p = enc.beginComputePass();
+    if (o.windTau) { p.setPipeline(this.umean.p); p.setBindGroup(0, this.umean.bg); p.dispatchWorkgroups(nz); }
+    this._cell(p, this.force);
+    if (o.lw || o.wls) { p.setPipeline(this.column.p); p.setBindGroup(0, this.column.bg); p.dispatchWorkgroups(Math.ceil(nx * ny / 32)); }
+    p.end();
     enc.copyBufferToBuffer(f.U, 0, f.U0, 0, this.n * 4); enc.copyBufferToBuffer(f.V, 0, f.V0, 0, this.n * 4); enc.copyBufferToBuffer(f.W, 0, f.W0, 0, this.n * 4);
     p = enc.beginComputePass();
     const base = this.flip ? 3 : 0;
@@ -172,8 +181,9 @@ export class SkySim {
     const v = new Uint32Array(this.statR.getMappedRange().slice(0));
     this.statR.unmap(); this.statBusy = false;
     const area = nx * ny; let base = -1, top = -1, mid = 0;
-    for (let k = 0; k < nz; k++) { const a = v[8 + k] / area; if (a > 0.0005) { if (base < 0) base = k; top = k; mid = Math.max(mid, a); } }
-    return { cover: v[0] / area, um: v[1] / 1000, vm: v[2] / 1000, wm: v[3] / 1000, bad: v[4], base: base < 0 ? null : base * this.dz, top: top < 0 ? null : (top + 1) * this.dz, mid };
+    for (let k = 0; k < nz; k++) mid = Math.max(mid, v[8 + k] / area);
+    for (let k = 0; k < nz; k++) { const a = v[8 + k] / area; if (a > 0.0005) top = k; if (a > 0.1 * mid && a > 0.0005 && base < 0) base = k; }   // 底は雲が一番広い高さの1割をこえる高さ（ちぎれ雲に引きずられない）
+    return { cover: v[0] / area, um: v[1] / 1000, vm: v[2] / 1000, wm: v[3] / 1000, bad: v[4], base: base < 0 ? null : this.o.base.z0 + base * this.dz, top: top < 0 ? null : this.o.base.z0 + (top + 1) * this.dz, mid };
   }
   // 確かめ用: バッファを読み出す
   async read(buffer, size) {

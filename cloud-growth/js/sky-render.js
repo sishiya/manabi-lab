@@ -3,8 +3,8 @@
 const RE = 10e-6, RHO_W = 1000;
 
 const volWGSL = /* wgsl */`
-struct P { nx:i32, ny:i32, nz:i32, _a:i32, dx:f32, dy:f32, dz:f32, dt:f32, H:f32, E:f32, cd:f32, S0:f32 };
-struct Prof { rc:f32, rf:f32, Tb:f32, qvb:f32, qnb:f32, p:f32, z:f32, s0:f32, qt0:f32, ub:f32, sf:f32, sp:f32 };
+struct P { nx:i32, ny:i32, nz:i32, _a:i32, dx:f32, dy:f32, dz:f32, dt:f32, H:f32, E:f32, cd:f32, S0:f32, het:f32, F0:f32, kap:f32, _b:f32 };
+struct Prof { rc:f32, rf:f32, Tb:f32, qvb:f32, qnb:f32, p:f32, z:f32, s0:f32, qt0:f32, ub:f32, sf:f32, sp:f32, wls:f32 };
 @group(0) @binding(0) var<uniform> p:P;
 @group(0) @binding(1) var<storage,read> pr:array<Prof>;
 @group(0) @binding(2) var<storage,read> Qn:array<f32>;
@@ -93,6 +93,7 @@ struct VO { @builtin(position) p:vec4f, @location(0) uv:vec2f };
   let x=f32((i<<1u)&2u); let y=f32(i&2u);
   return VO(vec4f(x*2.-1.,y*2.-1.,0.,1.),vec2f(x*2.-1.,y*2.-1.));
 }
+fn uvw(x:vec3f)->vec3f { return (x-vec3f(0.,0.,r.dom.w))/r.dom.xyz; }   // dom.w: 計算の範囲の下の高さ
 fn skyAt(d:vec3f)->vec3f {
   let az=atan2(d.y,d.x); let el=max(asin(clamp(d.z,0.,1.)),.05);   // 地平線ぎりぎりは1回散乱だと暗くなりすぎるので下を切る
   return textureSampleLevel(skyT,smC,vec2f(az/6.28318+.5,sqrt(el/1.5707)),0.).rgb;
@@ -101,7 +102,7 @@ fn aces(c:vec3f)->vec3f { return (c*(2.51*c+.03))/(c*(2.43*c+.59)+.14); }
 fn hg(c:f32,g:f32)->f32 { let g2=g*g; return (1.-g2)/(12.566*pow(1.+g2-2.*g*c,1.5)); }
 fn cubicB(x:vec3f)->f32 {
   // 3次 B スプライン（8回の線形の読み出し）
-  let d=vec3f(textureDimensions(vol)); let q=x/r.dom.xyz*d-.5; let ip=floor(q); let f=q-ip;
+  let d=vec3f(textureDimensions(vol)); let q=uvw(x)*d-.5; let ip=floor(q); let f=q-ip;
   let f2=f*f; let f3=f2*f;
   let w0=(1.-3.*f+3.*f2-f3)/6.; let w1=(4.-6.*f2+3.*f3)/6.; let w2=(1.+3.*f+3.*f2-3.*f3)/6.; let w3=f3/6.;
   let g0=w0+w1; let g1=w2+w3;
@@ -115,13 +116,13 @@ fn cubicB(x:vec3f)->f32 {
   }
   return max(0.,s);
 }
-fn vb(x:vec3f)->f32 { return ${tri ? 'textureSampleLevel(vol,sm,x/r.dom.xyz,0.).r' : 'cubicB(x)'}; }
+fn vb(x:vec3f)->f32 { return ${tri ? 'textureSampleLevel(vol,sm,uvw(x),0.).r' : 'cubicB(x)'}; }
 // 表面のそばの細かい影（太陽へ 280m だけ細かく。その先は光の表）
 fn sunOD(q:vec3f,l:vec4f)->f32 {
   let n=6; let L=280.; let ds=L/f32(n);
   var od=0.;
   for (var i=0; i<n; i++) { od+=cubicB(q+r.sun.xyz*(f32(i)+.5)*ds)*ds; }   // 線形の補間だと格子の層が縞になる
-  let far=textureSampleLevel(lt,sm,(q+r.sun.xyz*L)/r.dom.xyz,0.).r;
+  let far=textureSampleLevel(lt,sm,uvw(q+r.sun.xyz*L),0.).r;
   return od+far;
 }
 fn ms(c:f32,tau:f32)->f32 {
@@ -144,7 +145,7 @@ fn ms(c:f32,tau:f32)->f32 {
   if tg>0. {
     let q=o+d*tg;
     let od=textureSampleLevel(lt,sm,vec3f(q.x/r.dom.x,q.y/r.dom.y,0.),0.).r;
-    let col=vec3f(.075,.095,.05);
+    let col=vec3f(r.pos.w,r.right.w,r.up.w);
     bg=col*(r.sunCol.rgb*max(sun.z,0.)*exp(-od*.55)*.32+amb*.5);
     let f=exp(-tg/40000.);
     bg=mix(skyAt(normalize(vec3f(d.x,d.y,.02)))*mix(.4,1.,smoothstep(.05,.3,sun.z)),bg,f);   // 太陽が低いと地面のもやは空ほど明るくない
@@ -154,7 +155,7 @@ fn ms(c:f32,tau:f32)->f32 {
   }
   // 雲の層
   var col=bg;
-  let zlo=350.; let zhi=r.dom.z;
+  let zlo=r.wb.w; let zhi=r.dom.w+r.dom.z;
   var t0=0.; var t1=46000.;
   var hitSlab=true;
   if abs(d.z)>1e-5 {
@@ -172,7 +173,7 @@ fn ms(c:f32,tau:f32)->f32 {
       if i>=${320} || t>=t1 || Tr<.012 { break; }
       i++;
       let q=o+d*t; let ds=14.+t*.004;
-      let l=textureSampleLevel(lt,sm,q/r.dom.xyz,0.);
+      let l=textureSampleLevel(lt,sm,uvw(q),0.);
       if l.b<4e-6 {
         if fine>0 { fine--; t+=ds; continue; }
         back=ds*6.; t+=back; continue;
@@ -182,7 +183,7 @@ fn ms(c:f32,tau:f32)->f32 {
       if b>1e-5 {
         if first<0. {
           // 最初の表面は二分法で探し直す（縞を出さない）
-          var a0=t-ds; var a1=t;
+          var a0=max(t0,t-ds); var a1=t;   // 視点が雲の中のときは手前へ行かない
           for (var n=0; n<5; n++) { let m=.5*(a0+a1); if vb(o+d*m)>1e-5 { a1=m; } else { a0=m; } }
           t=a1; first=t; b=max(b,vb(o+d*t));
         }
@@ -198,7 +199,7 @@ fn ms(c:f32,tau:f32)->f32 {
       t+=ds;
     }
     if first>=0. {
-      let f=exp(-first/26000.);
+      let f=exp(-first/r.fwd.w);
       let h=skyAt(normalize(vec3f(d.x,d.y,max(d.z,.02))));
       col=bg*Tr+(L*f+(1.-Tr)*h*(1.-f));
     }
@@ -222,8 +223,8 @@ function sunTrans(el) {
 }
 
 export class SkyRender {
-  constructor(dev, canvas, sim) {
-    this.dev = dev; this.sim = sim; this.canvas = canvas;
+  constructor(dev, canvas, sim, opt = {}) {
+    this.dev = dev; this.sim = sim; this.canvas = canvas; this.zlo = opt.zlo ?? 350; this.ground = opt.ground || [.075, .095, .05]; this.haze = opt.haze || 26000;
     this.ctx = canvas.getContext('webgpu'); this.fmt = navigator.gpu.getPreferredCanvasFormat();
     this.ctx.configure({ device: dev, format: this.fmt, alphaMode: 'opaque' });
     const T = GPUTextureUsage, f = 'rgba16float';
@@ -279,9 +280,9 @@ export class SkyRender {
     this.frame++;
     const narrow = asp < 1;
     const data = new Float32Array([
-      ...cam.pos, 0, ...rg, 0, ...up, 0, ...f, 0, ...this.sun, 0, ...this.sunCol, 0,
-      sim.Lx, sim.Ly, sim.Lz, 0, narrow ? tf : tf * asp, narrow ? tf / asp : tf, this.frame % 64, exposure,
-      ...this.wb, 0,
+      ...cam.pos, this.ground[0], ...rg, this.ground[1], ...up, this.ground[2], ...f, this.haze, ...this.sun, 0, ...this.sunCol, 0,
+      sim.Lx, sim.Ly, sim.Lz, sim.o.base.z0, narrow ? tf : tf * asp, narrow ? tf / asp : tf, this.frame % 64, exposure,
+      ...this.wb, this.zlo,
     ]);
     this.dev.queue.writeBuffer(this.ru, 0, data);
     const pass = enc.beginRenderPass({ colorAttachments: [{ view: this.ctx.getCurrentTexture().createView(), loadOp: 'clear', storeOp: 'store', clearValue: [0, 0, 0, 1] }] });
