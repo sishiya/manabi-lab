@@ -1,7 +1,7 @@
 # 画面の奥の水槽 開発メモ
 
 ## 別セッションで続けるとき（まずここ）
-- いまの状態: 段階A（水槽＋カメラの準備の案内）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。
+- いまの状態: 段階A（水槽＋カメラの準備の案内）。2026-11-10 ユーザーの指示で保管庫から外した（どこにも載せない。URL は残る）。
 - 次にやること: 本物のカメラで見え方の確かめ（ぶれの強さ `main.js` の `OneEuro` の値）。そのあと PLAN.md の段階B。
 - 読む順: PLAN.md → このファイルの「ファイル構成」→ 関係するファイルだけ。
 - 動かし方: サーバー apps〜apps-6（.claude/launch.json）で http://localhost:8765/tank-window/ 。デバッグ用の窓口 `window.__tawi`（`simRun(秒)`・`setEye(x,y,z)`・`calibrate`・`feed`）、エラーは `window.__tawiErr`。

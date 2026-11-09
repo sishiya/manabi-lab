@@ -36,10 +36,7 @@
 
 | フォルダ | アプリ |
 |---|---|
-| `tank-window/` | 画面の奥の水槽 |
 | `voice-meter/` | 声のものさし |
-| `cloud-growth/` | 雲ができるまで |
-| `wormhole/` | ワームホールを通りぬける |
 | `net-route/` | インターネットの経路 |
 | `sail-wind/` | 帆船が風で進むしくみ |
 | `spider-hunt/` | クモがハエをつかまえるまで |
