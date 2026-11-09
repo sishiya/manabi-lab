@@ -109,23 +109,25 @@ for (const [name, S] of [['映画', M.makeShape(0.005, 0.05)], ['長い', M.make
 {
   const wrap = x => Math.abs(Math.atan2(Math.sin(x), Math.cos(x)));
   for (const [name, S, end] of [['映画', M.makeShape(0.005, 0.05), 6.255], ['長い', M.makeShape(5, 0.05), 11.25], ['なめらか', M.makeShape(0.5, 0.43), 6.75]]) {
-    const ls = L.lutGrid(S.a, end), tabs = ls.map(l => L.buildLUT(S, -l, new Float32Array(L.LUT_N * 2), true).data);
+    const ls = L.lutGrid(S.a, end), tabs = ls.map(l => L.lutResidual(S, l, L.buildLUT(S, -l, new Float32Array(L.LUT_N * 2), true).data));
     const mixed = [], base = [];
-    for (let j = 0; j + 1 < ls.length; j += 3) {
+    let worst = 0, worstBase = 0, worstL = 0;
+    for (let j = 0; j + 1 < ls.length; j++) {   // 区間ごとの最大で見る（まとめた割合だと、口のすぐ外の 1 区間のずれが隠れる）
       const l = -(ls[j] + ls[j + 1]) / 2;   // 2 枚のちょうど間（いちばん差が大きい所）
       const mix = L.mixLUT(S, l, ls, tabs, new Float32Array(L.LUT_N * 2)), direct = L.buildLUT(S, l, null, true), fine = L.buildLUT(S, l, null, false);
+      let mx = 0, bx = 0;
       for (let i = 1; i < 2000; i += 3) {
         const psi = Math.PI * i / 2000;
-        if (Math.abs(psi - mix.psiC) < 3e-3) continue;
-        const f = L.lookup(fine, psi).phi;
-        mixed.push(wrap(L.lookup(mix, psi).phi - f)); base.push(wrap(L.lookup(direct, psi).phi - f));
+        if (Math.abs(psi - mix.psiC) < 0.02) continue;
+        const f = L.lookup(fine, psi).phi, em = wrap(L.lookup(mix, psi).phi - f), eb = wrap(L.lookup(direct, psi).phi - f);
+        mixed.push(em); base.push(eb); mx = Math.max(mx, em); bx = Math.max(bx, eb);
       }
+      if (mx - bx > worst - worstBase) { worst = mx; worstBase = bx; worstL = l; }
     }
     const pct = (a, p) => a.slice().sort((x, y) => x - y)[Math.floor(a.length * p)];
-    const m50 = pct(mixed, 0.5), m99 = pct(mixed, 0.99), b99 = pct(base, 0.99);
-    console.log(`まぜた表の角度の差（${name}）: 中央 ${m50.toExponential(1)}、99% ${m99.toExponential(1)} rad（その場の粗い表は 99% ${b99.toExponential(1)}）、位置 ${ls.length} 枚`);
-    // 基準は、今まで動かしている間に使っていた粗い表の誤差
-    if (m99 > 2 * b99 + 0.005) { bad++; console.log('NG まぜた表の差が大きい'); }
+    console.log(`まぜた表の角度の差（${name}）: 99% ${pct(mixed, 0.99).toExponential(1)} rad（その場の粗い表 ${pct(base, 0.99).toExponential(1)}）。粗い表よりいちばん悪い区間 ℓ = ${worstL.toFixed(3)}: 最大 ${worst.toFixed(3)}（粗い表 ${worstBase.toFixed(3)}）、位置 ${ls.length} 枚`);
+    // 基準は、今まで動かしている間に使っていた粗い表の誤差からの増えかた（長いトンネルの口のすぐ外の幅 0.005ρ で約 0.10 rad 増える。通るのは 1 コマほど）
+    if (worst > worstBase + 0.15) { bad++; console.log('NG まぜた表の差が大きい'); }
   }
 }
 

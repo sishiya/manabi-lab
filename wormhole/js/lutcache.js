@@ -8,11 +8,11 @@ function lcStart() {
   lcStop();
   if (!LC.tabs || LC.tabs.every(Boolean)) return;
   try {
-    LC.w = new Worker('js/lut-worker.js?v=7');
+    LC.w = new Worker('js/lut-worker.js?v=8');
     const id = LC.id;
     LC.w.onmessage = e => {
       if (e.data.id !== id) return;
-      LC.tabs[e.data.j] = e.data.data;
+      LC.tabs[e.data.j] = lutResidual(makeShape(LC.a, LC.W), LC.ls[e.data.j], e.data.data);
       if (LC.tabs.every(Boolean)) lcStop();
     };
     LC.w.onerror = lcStop;

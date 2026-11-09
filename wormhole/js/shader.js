@@ -13,7 +13,7 @@ uniform sampler3D uNoise;
 uniform vec2 uHalf, uPx, uJit;
 uniform float uWt;
 uniform mat3 uView, uOrbit;        // uView: 列 = 右・上・前（局所）。uOrbit: 局所 → 世界
-uniform float uPsiC, uK0, uK1, uFlip, uSkyW, uPano, uRc, uCamS, uStar;
+uniform float uPsiC, uK0, uK1, uFlip, uSkyW, uPano, uRc, uCamS, uStar, uFarFill;
 uniform int uN, uMode;
 uniform vec4 uBody[6];             // 局所の中心と半径。0〜2 が もとの宇宙、3〜5 が向こうの宇宙
 uniform vec3 uSun[2], uRingN;      // 局所
@@ -65,7 +65,7 @@ vec3 starLayer(vec3 d, float pix, float scale, float rad0){
 vec3 skyCol(vec3 fd, float side, float pix){
   vec3 w = uOrbit * fd;
   vec2 uv = vec2(atan(w.y, w.x) / TAU + .5, acos(clamp(w.z, -1., 1.)) / PI);
-  float lod = clamp(log2(pix * uSkyW / TAU), 0., 6.);
+  float lod = clamp(log2(pix * uSkyW / TAU), 0., 10.);   // 輪が画素より細い所は空の平均の色へ（しま模様のちらつきを防ぐ）
   vec3 c = side > .5 ? textureLod(uSkyB, uv, lod).rgb : textureLod(uSkyA, uv, lod).rgb;
   c = c * c * 1.5;   // 暗い所は沈めて、明るい所を残す（コントラスト）
   if (uStar > .5) c += starLayer(w, pix, 90., 6.e-4) + starLayer(w + .37, pix, 210., 3.5e-4) * .7 * (.12 + 1.5 * smoothstep(.34, .72, vnoise(w * 4. + 3.)));   // 細かい星は雲のようにムラをつける
@@ -73,7 +73,8 @@ vec3 skyCol(vec3 fd, float side, float pix){
   float a = acos(clamp(dot(fd, sun), -1., 1.));
   float r = max(.012, pix);
   vec3 sc = side > .5 ? vec3(1., .86, .7) : vec3(1., .95, .88);
-  c += sc * (70. * smoothstep(r * 1.15, r * .85, a) + 2.4 * exp(-a * a / .0009)) * uSunGain[side > .5 ? 1 : 0];
+  float k0 = .012 / r, k1 = min(1., .03 / pix);   // 穴のふちでは像が半径の向きにだけ圧縮される（円周の向きには圧縮されない）ので、画素が太陽を含む割合は幅の比 1 乗
+  c += sc * (70. * k0 * (1. - smoothstep(r * .85, r * 1.15, a)) + 2.4 * k1 * exp(-a * a / max(.0009, pix * pix))) * uSunGain[side > .5 ? 1 : 0];
   return c;
 }
 
@@ -109,7 +110,7 @@ float ringAlpha(float x){
 }
 
 // 直線 o + t d（t0〜t1）の上の天体。acc に足し、T（透過）を減らす。不透明に当たったら true
-bool bodiesOnLine(vec3 o, vec3 d, float t0, float t1, int first, vec3 L, inout vec3 acc, inout float T){
+bool bodiesOnLine(vec3 o, vec3 d, float t0, float t1, int first, vec3 L, float pix, inout vec3 acc, inout float T){
   float tBody = 1e30; int hit = -1;
   for (int i = first; i < first + 3; i++) {
     float t = sphT(o, d, uBody[i].xyz, uBody[i].w);
@@ -118,7 +119,8 @@ bool bodiesOnLine(vec3 o, vec3 d, float t0, float t1, int first, vec3 L, inout v
   if (first == 3 && uKind[3] == 3) {   // 大きな惑星の大気のふち（逆光で光る。作りもの）
     vec3 oc = uBody[3].xyz - o;
     float h = length(oc - d * clamp(dot(oc, d), t0, t1)) / uBody[3].w - 1.;
-    if (h > 0. && h < .15) acc += T * vec3(.42, .68, 1.) * exp(-h / .02) * (.03 + 2.2 * pow(max(dot(d, L), 0.), 30.));
+    float wd = max(.02, pix * 3.);   // 輪の中のように 1 画素より細くなる所は、広げて暗く（ちらつかないように）
+    if (h > 0. && h < .15) acc += T * vec3(.42, .68, 1.) * exp(-h / wd) * (.02 / wd) * (.03 + 2.2 * pow(max(dot(d, L), 0.), 30.)) * (1. - uFarFill);
   }
   if (first == 0) {   // 輪
     float dn = dot(d, uRingN);
@@ -160,7 +162,7 @@ bool bodiesOnLine(vec3 o, vec3 d, float t0, float t1, int first, vec3 L, inout v
       if (s > 0.) { float x = (length(p + s * L - uBody[0].xyz) - uRingR.x) / (uRingR.y - uRingR.x); if (x > 0. && x < 1.) shade = 1. - .75 * ringAlpha(x); }
     }
   }
-  vec3 col = albedo(k, uOrbit * n) * (diff * shade * 1.15 + .006);
+  vec3 col = albedo(k, uOrbit * n) * (diff * shade * 1.15 + .006 + (first == 3 ? uFarFill * .4 : 0.));   // uFarFill: 太陽が惑星に隠れている間、露出を上げた分の明るさ（穴の奥の惑星が黒い穴に見えないように）
   float fres = pow(1. - max(dot(n, -d), 0.), 3.);
   if (k == 1) col += vec3(.25, .5, 1.) * fres * (diff * .9 + .02) * .9;
   if (k == 3) col += vec3(.45, .7, 1.) * fres * (diff * .9 + .02 + 1.4 * pow(max(dot(d, L), 0.), 30.)) * .7;
@@ -191,12 +193,12 @@ vec3 shade(vec2 pos){
   vec3 camL = uSun[uCamS > 0. ? 1 : 0];
   if (!outward) {
     vec3 wo = vec3(uRc, 0., 0.), wd = vec3(uCamS * d.x, d.yz);
-    if (bodiesOnLine(wo, wd, .001, tEnter, camFirst, camL, acc, T)) return acc;
+    if (bodiesOnLine(wo, wd, .001, tEnter, camFirst, camL, 0., acc, T)) return acc;
   }
   // 帰り: のどから出たあとの直線 P(t) = t u + b v
   vec3 u = vec3(cos(phi), sin(phi) * t2), v = vec3(sin(phi), -cos(phi) * t2);
   int endFirst = side > .5 ? 3 : 0;
-  if (bodiesOnLine(b * v, u, outward ? tEnter : 0., 1e6, endFirst, uSun[side > .5 ? 1 : 0], acc, T)) return acc;
+  if (bodiesOnLine(b * v, u, outward ? tEnter : 0., 1e6, endFirst, uSun[side > .5 ? 1 : 0], pix, acc, T)) return acc;
   return acc + T * skyCol(fd, side, pix);
 }
 

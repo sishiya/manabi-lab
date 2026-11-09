@@ -49,7 +49,7 @@ function initRender(canvas, skyW, aa) {
   R.gl = gl; R.skyW = skyW; R.aa = aa;
   R.hdr = !!(gl.getExtension('EXT_color_buffer_float') || gl.getExtension('EXT_color_buffer_half_float'));
   R.prog = compile(gl, VS, FS_SCENE);
-  R.u = uniforms(gl, R.prog, ['uLut', 'uSkyA', 'uSkyB', 'uHalf', 'uPx', 'uView', 'uOrbit', 'uPsiC', 'uK0', 'uK1', 'uFlip', 'uSkyW', 'uN', 'uMode', 'uPano', 'uRc', 'uCamS', 'uStar', 'uJit', 'uWt', 'uNoise', 'uBody', 'uKind', 'uSun', 'uRingN', 'uRingAxisW', 'uRingR', 'uSunGain']);
+  R.u = uniforms(gl, R.prog, ['uLut', 'uSkyA', 'uSkyB', 'uHalf', 'uPx', 'uView', 'uOrbit', 'uPsiC', 'uK0', 'uK1', 'uFlip', 'uSkyW', 'uN', 'uMode', 'uPano', 'uRc', 'uCamS', 'uStar', 'uJit', 'uWt', 'uNoise', 'uBody', 'uKind', 'uSun', 'uRingN', 'uRingAxisW', 'uRingR', 'uSunGain', 'uFarFill']);
   R.down = compile(gl, VS, FS_DOWN); R.uDown = uniforms(gl, R.down, ['uT', 'uTexel', 'uThresh']);
   R.up = compile(gl, VS, FS_UP); R.uUp = uniforms(gl, R.up, ['uT', 'uTexel']);
   R.comp = compile(gl, VS, FS_COMP); R.uComp = uniforms(gl, R.comp, ['uScene', 'uBloom', 'uStreak', 'uBloomGain', 'uStreakGain', 'uVig', 'uTexel']);
@@ -92,7 +92,7 @@ function applyScene() {
   gl.uniform2f(R.u.uSunGain, SCENE.A.gain, SCENE.B.gain);
 }
 
-function setFarSunGain(g) { R.gl.useProgram(R.prog); R.gl.uniform2f(R.u.uSunGain, SCENE.A.gain, g); }
+function setFarSunGain(g, fill) { R.gl.useProgram(R.prog); R.gl.uniform2f(R.u.uSunGain, SCENE.A.gain, g); R.gl.uniform1f(R.u.uFarFill, fill); }
 
 function resizeTargets(w, h) {
   const gl = R.gl;

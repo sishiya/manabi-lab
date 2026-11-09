@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="css/style.css?v=7">
+<link rel="stylesheet" href="css/style.css?v=8">
 
 <div id="app">
   <main id="stage">
@@ -16,6 +16,7 @@
       <div id="busy">星空を作っています…</div>
       <div id="fail" hidden></div>
       <div id="funnelOver"></div>
+      <button id="btnSound" class="btn" aria-pressed="false">音: なし</button>
     </div>
     <div id="trip">
       <div class="trip-row">
@@ -130,6 +131,7 @@
           <li>星の並び・星雲・銀河・惑星は作りものです。天体の重力は入れていません。「向こうの宇宙」は説明のための呼び名で、同じ宇宙の遠い場所でもかまいません。</li>
           <li>太陽のそばの場面: のどの半径 2 万 km は、太陽とくらべて見える大きさにした仮定です。太陽の熱でのどやそれを支える物質がどうなるかは分かっていないので、計算していません。光が通りぬける量は、のどを太陽からの距離で光を受ける円として計算しています（向こう側の天体の明るさには反映していません）。本物の太陽はほぼ白く見えます。この橙色と表面の模様は演出です。周辺が暗くなるのは I(μ) = 1 − 0.6(1 − μ) の形（簡単な近似）です。</li>
           <li>向こうの宇宙の太陽は、通りぬけたあとに惑星のふちから出てくる位置に置いた演出です。惑星の大気のふちの光も作りもので、太陽の明るさは見やすく変えています（太陽が出てくる動きそのものは、位置の差からの計算です）。</li>
+          <li>再生の音（初期はオフ）は、映画のような演出として合成したものです。宇宙には音を伝える空気がないので、本当は何も聞こえません。</li>
           <li>開いたままのトンネルがあると仮定しています。</li>
         </ul>
       </details>
@@ -150,14 +152,15 @@
 </div>
 
 <script src="../assets/power.js?v=1"></script>
-<script src="js/metric.js?v=7"></script>
-<script src="js/lut.js?v=7"></script>
-<script src="js/lutcache.js?v=7"></script>
-<script src="js/scene.js?v=7"></script>
-<script src="js/sky.js?v=7"></script>
-<script src="js/shader.js?v=7"></script>
-<script src="js/render.js?v=7"></script>
-<script src="js/funnel.js?v=7"></script>
-<script src="js/ui.js?v=7"></script>
-<script src="js/tour.js?v=7"></script>
-<script src="js/main.js?v=7"></script>
+<script src="js/metric.js?v=8"></script>
+<script src="js/lut.js?v=8"></script>
+<script src="js/lutcache.js?v=8"></script>
+<script src="js/scene.js?v=8"></script>
+<script src="js/sky.js?v=8"></script>
+<script src="js/shader.js?v=10"></script>
+<script src="js/render.js?v=8"></script>
+<script src="js/funnel.js?v=8"></script>
+<script src="js/ui.js?v=8"></script>
+<script src="js/tour.js?v=8"></script>
+<script src="js/sound.js?v=8"></script>
+<script src="js/main.js?v=8"></script>

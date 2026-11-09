@@ -92,6 +92,9 @@ body.cinema #funnelOver,body.cinema .trip-row.look,body.cinema #rayLine,body.cin
 body.cinema #trip{padding:0 16px;gap:4px}
 body.cinema #hint{order:-1;text-align:center;font-size:16px;line-height:1.5;min-height:1.5em;white-space:normal;overflow:visible}
 body.cinema{overflow:hidden}
+#btnSound{display:none;position:absolute;top:10px;right:10px;z-index:2;background:rgba(20,31,57,.72)}
+#btnSound[aria-pressed="true"]{background:var(--far)}
+body.cinema #btnSound{display:block}
 #btnExit{display:none}
 body.cinema #btnExit{display:block;flex:none}
 

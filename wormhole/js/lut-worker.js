@@ -1,7 +1,7 @@
 // 再生の範囲の光の表（粗いもの）を裏で先に作る。1 枚できるごとに返す（lutcache.js が受ける）
 'use strict';
 self.window = self;
-importScripts('metric.js?v=7', 'lut.js?v=7');
+importScripts('metric.js?v=8', 'lut.js?v=8');
 
 onmessage = e => {
   const { id, a, W, ls, have } = e.data, S = makeShape(a, W);

@@ -1,6 +1,12 @@
 // 「▶ 通りぬける」の進み方。速さ・カメラの向き・字幕は、どれも位置 ℓ だけで決まる（途中で止めても、途中から再生しても同じ道）
 'use strict';
-const TOUR_END = 6.25;   // 出口からここまで進んで終わる（ρ）
+const TOUR_RC = 7.4;     // のどの中心からの距離 r がここまで来たら終わる（太陽が惑星のふちから出きる所。形によらず同じ場所）
+let TOUR_END = 6.25;     // 出口からここまで進んで終わる（ρ）。形ごとに setTourEnd で決める
+function setTourEnd(shape) {
+  let lo = 0, hi = 40;
+  for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (radius(shape, shape.a + m) < TOUR_RC) lo = m; else hi = m; }
+  TOUR_END = lo;
+}
 
 const smoothstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 

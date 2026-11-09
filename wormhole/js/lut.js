@@ -31,7 +31,7 @@
     const out = [];
     for (let l = 0; l < lMax - 1e-9;) {
       out.push(l);
-      let h = Math.abs(l - a) < 0.4 ? 0.02 : 0.1;
+      let h = Math.abs(l - a) < 0.06 ? 0.005 : Math.abs(l - a) < 0.4 ? 0.02 : 0.1;
       if (l < a - 1e-9 && l + h > a) h = a - l;
       l += h;
     }
@@ -39,7 +39,24 @@
     return out;
   }
 
-  // 隣の 2 枚の表を添字ごとに線形にまぜる。表の格子は ψc からの角度の対数なので、ψc はその位置の本当の値を使う。ない所は null
+  // のどの円筒を渡る間に回る角度（厳密）。x = |ℓ|。円筒の中と外で発散の型がちがうので、これを引いてからまぜ、その位置の値を足し戻す
+  function cylTerm(S, x, seg, psi) {
+    if (x <= S.a) return (seg ? S.a - x : S.a + x) * Math.abs(Math.tan(psi));
+    if (seg) return 0;
+    const b = Math.min(1 - 1e-12, M.radius(S, x) * Math.sin(psi));
+    return 2 * S.a * b / Math.sqrt(1 - b * b);
+  }
+  function forEachNode(S, x, fn) {
+    const psiC = M.criticalPsi(S, -x), K0 = Math.log(psiC / DELTA_MIN), K1 = Math.log((Math.PI - psiC) / DELTA_MIN);
+    for (let seg = 0; seg < 2; seg++) for (let i = 0; i < LUT_N; i++) {
+      const t = i / (LUT_N - 1), psi = seg ? Math.min(Math.PI, psiC + (Math.PI - psiC) * Math.exp(-K1 * t)) : Math.max(0, psiC - psiC * Math.exp(-K0 * t));
+      fn(seg * LUT_N + i, cylTerm(S, x, seg, psi));
+    }
+  }
+  // 先に作った表を「円筒の分を引いた残り」にする（1 枚に 1 回）
+  function lutResidual(S, x, data) { forEachNode(S, x, (k, c) => { data[k] -= c; }); return data; }
+
+  // 隣の 2 枚（lutResidual ずみ）を添字ごとに線形にまぜ、その位置の円筒の分を足す。ψc もその位置の本当の値を使う。ない所は null
   function mixLUT(S, l0, ls, tabs, out) {
     const x = Math.abs(l0);
     if (x > ls[ls.length - 1]) return null;
@@ -49,6 +66,7 @@
     if (!A || !B) return null;
     const f = (x - ls[lo]) / (ls[hi] - ls[lo]), n = LUT_N * 2;
     for (let i = 0; i < n; i++) out[i] = A[i] + (B[i] - A[i]) * f;
+    if (S.a > 0) forEachNode(S, x, (k, c) => { out[k] += c; });
     const psiC = M.criticalPsi(S, -x);
     return { data: out, psiC, K0: Math.log(psiC / DELTA_MIN), K1: Math.log((Math.PI - psiC) / DELTA_MIN), flip: l0 > 0 ? 1 : 0, N: LUT_N };
   }
@@ -64,6 +82,6 @@
     return { phi, side: T.flip ? -sideEff : sideEff, delta };
   }
 
-  if (typeof module !== 'undefined') module.exports = { buildLUT, lookup, lutGrid, mixLUT, LUT_N, DELTA_MIN };
-  else { window.buildLUT = buildLUT; window.lookupLUT = lookup; window.lutGrid = lutGrid; window.mixLUT = mixLUT; window.LUT_N = LUT_N; window.DELTA_MIN = DELTA_MIN; }
+  if (typeof module !== 'undefined') module.exports = { buildLUT, lookup, lutGrid, lutResidual, mixLUT, LUT_N, DELTA_MIN };
+  else { window.buildLUT = buildLUT; window.lookupLUT = lookup; window.lutGrid = lutGrid; window.lutResidual = lutResidual; window.mixLUT = mixLUT; window.LUT_N = LUT_N; window.DELTA_MIN = DELTA_MIN; }
 }

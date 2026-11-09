@@ -32,7 +32,7 @@ function lToU(l) {
 }
 
 function setShape(a, W, keepU) {
-  S.a = a; S.W = W; S.shape = makeShape(a, W);
+  S.a = a; S.W = W; S.shape = makeShape(a, W); setTourEnd(S.shape);
   if (keepU) S.l = uToL(S.u); else { S.l = -(a + START_L); S.u = lToU(S.l); }
   $('pos').value = S.u;
   $('len').value = Math.log10(Math.max(1e-3, 2 * a));
@@ -182,6 +182,7 @@ function frame(now) {
     S.viewDirty = true;
   }
   if (S.exitAt && now > S.exitAt) setCinema(false);
+  sndUpdate(S.l, S.a, tourSpeed(S.l, S.a), S.playing, !!S.exitAt);
   if (!S.dragging && (Math.abs(S.vel[0]) > 2e-3 || Math.abs(S.vel[1]) > 2e-3) && dt > 0) {   // 指を離したあとも少し回り続ける
     turn(S.vel[0] * dt, S.vel[1] * dt);
     const k = Math.exp(-dt * 2.2); S.vel[0] *= k; S.vel[1] *= k;
@@ -200,12 +201,12 @@ function renderIfNeeded(now) {
     S.T = buildLUT(S.shape, S.l, S.data, false); uploadLUT(S.T); S.fineAt = 0; need = true;
   }
   if (need) {
-    const B = SCENE.B;
-    setFarSunGain(B.gainNear === undefined ? B.gain : B.gainNear + (B.gain - B.gainNear) * smoothstep(S.a + 3.5, S.a + 5.2, S.l));
+    const B = SCENE.B, rise = smoothstep(S.a + 3.5, S.a + 5.2, S.l);
+    setFarSunGain(B.gainNear === undefined ? B.gain : B.gainNear + (B.gain - B.gainNear) * rise, B.gainNear === undefined ? 0 : 1 - rise);
     drawView(S.V, S.Q, halfTan(), { mode: S.mode, stripPx: S.stripPx, rc: radius(S.shape, S.l), camS: S.l > 0 ? 1 : -1, film: S.look === 0, aa: S.playing ? Math.min(S.aaNow, R.aa) : 0 });
     drawMarks(); S.viewDirty = false;
   }
-  if (S.funnelDirty) { drawFunnel($('funnel'), S.shape, S.l, S.ray); S.funnelDirty = false; }
+  if (S.funnelDirty && !S.cinema) { drawFunnel($('funnel'), S.shape, S.l, S.ray); S.funnelDirty = false; }
 }
 
 // 向きを3つの角度で組み立てる（right・up・fwd）
@@ -221,6 +222,16 @@ function readCam() {
   const r0 = unit([Math.sin(yaw), -Math.cos(yaw), 0]), u = cross(r0, f);
   return { yaw, pitch, roll: Math.atan2(dot(S.V.right, u), dot(S.V.right, r0)) };
 }
+// 回転行列の軸と角度。真うしろ（180°）は軸が決まらないので null
+function axisAngle(Q) {
+  const c = (Q[0][0] + Q[1][1] + Q[2][2] - 1) / 2, angle = Math.acos(Math.max(-1, Math.min(1, c))), s = Math.sin(angle);
+  if (angle < 1e-4 || s < 1e-3) return null;
+  return { angle, axis: [(Q[2][1] - Q[1][2]) / (2 * s), (Q[0][2] - Q[2][0]) / (2 * s), (Q[1][0] - Q[0][1]) / (2 * s)] };
+}
+function rotAbout(n, a) {
+  const c = Math.cos(a), s = Math.sin(a), t = 1 - c, [x, y, z] = n;
+  return [[t * x * x + c, t * x * y - s * z, t * x * z + s * y], [t * x * y + s * z, t * y * y + c, t * y * z - s * x], [t * x * z - s * y, t * y * z + s * x, t * z * z + c]];
+}
 function applyTourCam(dt) {
   const c = tourCam(S.l, S.a), wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
   S.autoK = Math.min(1, S.autoK + dt / 1.6);
@@ -228,6 +239,7 @@ function applyTourCam(dt) {
   if (!S.dragging && Math.abs(S.vel[0]) + Math.abs(S.vel[1]) < 0.05) { const d = Math.exp(-dt * 1.2); S.userYaw *= d; S.userPitch *= d; }
   S.V = camFrom(c.yaw + wrap(f.yaw - c0.yaw) * k + S.userYaw, c.pitch + (f.pitch - c0.pitch) * k + S.userPitch, c.roll + (f.roll - c0.roll) * k);
   S.fov = c.fov + (f.fov - c.fov) * k;
+  if (f.axis) S.Q = rotAbout(f.axis, f.angle * k);   // 穴のまわりを回っていたら、はじめの置き方へ戻す（そうしないと日の出が前に来ない）
   syncBack();
 }
 
@@ -245,7 +257,9 @@ function setCinema(on) {
 function startPlay() {
   if (S.l >= S.a + TOUR_END - 1e-3) { setL(-(S.a + START_L)); S.V = FRONT(); syncBack(); }
   S.pick = null; S.ray = null; S.funnelDirty = true;
-  S.vel = [0, 0]; S.userYaw = 0; S.userPitch = 0; S.from = { ...readCam(), fov: S.fov, l: S.l };
+  if (S.place === 'normal' && !axisAngle(S.Q) && S.Q[0][0] < 0.99) S.Q = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];   // ちょうど 180° 回っていたときだけは、なめらかに戻せないのでそのまま戻す
+  S.vel = [0, 0]; S.userYaw = 0; S.userPitch = 0; S.from = { ...readCam(), fov: S.fov, l: S.l, ...(S.place === 'normal' ? axisAngle(S.Q) : null) };
+  if (SND.on && SND.ctx && !Power.away) SND.ctx.resume();
   S.playing = true; S.auto = true; S.autoK = 0; lastT = 0; S.aaNow = 2; S.scale = 1; S.ft = 0.02; S.ftAt = performance.now() + 1000;
   setCinema(true); syncPlay();
 }
@@ -304,6 +318,7 @@ function wireUI() {
   $('pos').addEventListener('input', e => { if (S.playing || S.exitAt) pausePlay(); setPos(+e.target.value); syncPlay(); });
   $('btnPlay').addEventListener('click', () => S.playing ? pausePlay() : startPlay());
   $('btnExit').addEventListener('click', stopPlay);
+  $('btnSound').addEventListener('click', e => { if (sndSet(!SND.on)) { e.currentTarget.setAttribute('aria-pressed', SND.on); e.currentTarget.textContent = SND.on ? '音: あり' : '音: なし'; } });
   $('btnBack').addEventListener('click', () => { S.auto = false; S.vel = [0, 0]; S.V = isBack() ? FRONT() : { right: [0, 1, 0], up: [0, 0, 1], fwd: [-1, 0, 0] }; syncBack(); });
   $('btnLeft').addEventListener('click', () => { S.vel = [1.1, 0]; });
   $('btnRight').addEventListener('click', () => { S.vel = [-1.1, 0]; });
