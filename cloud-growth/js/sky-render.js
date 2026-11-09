@@ -69,11 +69,11 @@ fn beta(x:vec3f)->f32 { return max(0.,textureSampleLevel(vol,sm,x/u.dom.xyz,0.).
   var up=0.; let dz=(u.dom.z-x.z)/10.;
   for (var n=0; n<10; n++) { up+=beta(x+vec3f(0.,0.,(f32(n)+.5)*dz))*dz; }
   // 空がどれだけ見えているか（真上＋斜め4方向。谷や雲の下が暗くなる）
-  var vis=2.*exp(-.11*up);
+  var vis=2.*mix(exp(-.11*up),1./(1.+.11*up),.4);
   for (var a=0; a<4; a++) {
     let th=f32(a)*1.5708+.6; let w=vec3f(cos(th)*.7,sin(th)*.7,.7); var o4=0.; var s4=60.; var p4=x;
     for (var n=0; n<7; n++) { p4+=w*s4*.5; o4+=beta(p4)*s4; p4+=w*s4*.5; if p4.z>u.dom.z { break; } s4*=1.35; }
-    vis+=exp(-.11*o4);
+    vis+=mix(exp(-.11*o4),1./(1.+.11*o4),.4);
   }
   vis/=6.;
   var mx=0.;
@@ -133,7 +133,8 @@ struct VO { @builtin(position) p:vec4f, @location(0) uv:vec2f };
 fn uvw(x:vec3f)->vec3f { return (x-vec3f(0.,0.,r.dom.w))/r.dom.xyz; }   // dom.w: 計算の範囲の下の高さ
 fn skyAt(d:vec3f)->vec3f {
   let az=atan2(d.y,d.x); let el=max(asin(clamp(d.z,0.,1.)),.03);   // 地平線ぎりぎりは1回散乱だと暗くなりすぎるので下を切る
-  return textureSampleLevel(skyT,smC,vec2f(az/6.28318+.5,sqrt(el/1.5707)),0.).rgb;
+  let c=textureSampleLevel(skyT,smC,vec2f(az/6.28318+.5,sqrt(el/1.5707)),0.).rgb;
+  return mix(c,vec3f(dot(c,vec3f(.33)))*1.1,smoothstep(.06,0.,asin(clamp(d.z,0.,1.)))*.5);   // 地平線は白く溶ける
 }
 fn aces(c:vec3f)->vec3f { return (c*(2.51*c+.03))/(c*(2.43*c+.59)+.14); }
 fn hg(c:f32,g:f32)->f32 { let g2=g*g; return (1.-g2)/(12.566*pow(1.+g2-2.*g*c,1.5)); }
@@ -159,7 +160,7 @@ fn noiseAt(x0:vec3f)->f32 {
   // 段ごとに向きを変える（37 度。同じ粒が並んで見えないように）
   let c=.7986; let n=.6018; let rot=mat3x3f(c,n,0.,-n*.8,c*.8,.6,n*.6,-c*.6,.8);
   for (var i=0; i<3; i++) {
-    let L=800.*pow(.3665,f32(i)); let w=smoothstep(2.,8.,L/8./foot);
+    let L=800.*pow(.3665,f32(i)); let w=smoothstep(2.,8.,L/(8.+4.*f32(i))/foot);
     if w>0. {
       let t=textureSampleLevel(nz,smN,q/L,0.);
       s+=select(r.det2.w,1.,i==0)*pow(.4,f32(i)*.65)*w*(mix(t.g,t.r,r.det2.x)-.5)*2.;
@@ -170,12 +171,13 @@ fn noiseAt(x0:vec3f)->f32 {
 }
 fn vb(x:vec3f)->f32 {
   var s=${tri ? 'textureSampleLevel(vol,sm,uvw(x),0.).r' : 'cubicB(x)'};
+  if r.sun.w>0. { s-=(1.-smoothstep(r.sun.w,r.sun.w+1200.,length(x-r.pos.xyz)))*.25; }   // 手前を省く面の切り口を見せない
   if r.det.w<=0. { return max(0.,s); }
   // 計算の範囲の外は同じ雲のくり返しなので、大きな模様で間引く（推定）
   let rr=max(abs(x.x),abs(x.y));
   if rr>r.dom.x*.5 { let m=smoothstep(.4,.6,textureSampleLevel(nz,smN,vec3f(x.xy/17300.,.5),0.).g); s-=(1.-mix(1.,m,smoothstep(.5*r.dom.x,.8*r.dom.x,rr)))*.06; }
   // 雲の底はほぼ平らで、もこもこは上の部分（底から 300m までは弱める）
-  let D=r.det2.y*r.det.w*max(textureSampleLevel(vol,sm,uvw(x),0.).g,.0003)*mix(.25,1.,smoothstep(0.,300.,x.z-r.det2.z));
+  let D=r.det2.y*r.det.w*max(textureSampleLevel(vol,sm,uvw(x),0.).g,.0003)*mix(.45,1.,smoothstep(0.,300.,x.z-r.det2.z));
   if abs(s)>2.*D { return max(0.,s); }
   return max(0.,s+D*min(noiseAt(x),.5));   // 外へは少しだけ（浮いた粉を作らない）
 }
@@ -209,9 +211,10 @@ fn ms(c:f32,tau:f32)->f32 {
     let od=textureSampleLevel(lt,sm,vec3f(q.x/r.dom.x,q.y/r.dom.y,0.),0.).r;
     let m0=textureSampleLevel(nz,smN,vec3f(q.xy/9000.,.3),0.).g; let m1=textureSampleLevel(nz,smN,vec3f(q.xy/2300.,.7),0.).g;
     let col=vec3f(r.pos.w,r.right.w,r.up.w)*(.55+.9*m0)*(.75+.5*m1);   // 地面の色むら（目安）
-    bg=col*(r.sunCol.rgb*max(sun.z,0.)*mix(.35,1.,exp(-od*.3))*.32+amb*.5);
+    bg=col*(r.sunCol.rgb*max(sun.z,0.)*mix(.35,1.,exp(-od*.3))*.32+amb*.35);
     let f=exp(-tg/16000.);
-    bg=mix(skyAt(normalize(vec3f(d.x,d.y,.03))),bg,f);
+    let hz=skyAt(normalize(vec3f(d.x,d.y,.03)));
+    bg=mix(mix(hz,vec3f(dot(hz,vec3f(.33))),.3),bg,f);
   } else {
     bg=skyAt(d);
     bg+=r.sunCol.rgb*smoothstep(.99996,.99999,c)*20.;
@@ -235,7 +238,7 @@ fn ms(c:f32,tau:f32)->f32 {
     loop {
       if i>=${320} || t>=t1 || Tr<.012 { break; }
       i++;
-      let q=o+d*t; let ds=14.+t*.004; foot=max(t,1.)*r.det.z;
+      let q=o+d*t; let ds=min(14.+t*.004,max(t1-t,.5)); foot=max(t,1.)*r.det.z;
       let l=textureSampleLevel(lt,sm,uvw(q),0.);
       if l.b<4e-6 {
         if fine>0 { fine--; t+=ds; continue; }
@@ -257,14 +260,14 @@ fn ms(c:f32,tau:f32)->f32 {
         // 太陽の直接＋多重散乱、空の光、雲を透過して下へ届く光（二流近似 1/(1+0.75(1-g)τ)、g=0.85）
         var occ=1.;   // すぐ上の雲で空がさえぎられるぶん（影の中の起伏）
         if Tr>.15 { occ=exp(-.06*(vb(qq+vec3f(0.,0.,30.))+vb(qq+vec3f(0.,0.,60.))+vb(qq+vec3f(0.,0.,120.)))*30.); }
-        let S=r.sunCol.rgb*ms(c,tauS)*.46+amb*.85*occ*(.06+.94*l.a)+r.sunCol.rgb*max(r.sun.z,.12)*.075/(1.+.11*l.g);
+        let S=r.sunCol.rgb*ms(c,tauS)*.46+amb*.85*occ*(.06+.94*l.a)+r.sunCol.rgb*max(r.sun.z,.12)*.15/(1.+.11*l.g);
         L+=Tr*(1.-stepT)*S;
         Tr*=stepT;
       }
       t+=ds;
     }
     if first>=0. {
-      let f=exp(-first/r.fwd.w);
+      let f=exp(-first/r.fwd.w)*(1.-smoothstep(30000.,46000.,first));
       let h=skyAt(normalize(vec3f(d.x,d.y,max(d.z,.02))));
       col=bg*Tr+(L*f+(1.-Tr)*h*(1.-f));
     }

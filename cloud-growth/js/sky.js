@@ -1,6 +1,6 @@
 // 雲ができるまで（3次元の試作）— 画面の組み立て。計算と描画は sky-sim.js・sky-render.js
 import { SkySim, makeBase } from './sky-sim.js?v=7';
-import { SkyRender } from './sky-render.js?v=7';
+import { SkyRender } from './sky-render.js?v=8';
 
 const $ = id => document.getElementById(id);
 const Q = new URLSearchParams(location.search);
