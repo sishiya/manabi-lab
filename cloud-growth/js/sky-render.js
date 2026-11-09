@@ -9,11 +9,43 @@ struct Prof { rc:f32, rf:f32, Tb:f32, qvb:f32, qnb:f32, p:f32, z:f32, s0:f32, qt
 @group(0) @binding(1) var<storage,read> pr:array<Prof>;
 @group(0) @binding(2) var<storage,read> Qn:array<f32>;
 @group(0) @binding(3) var out:texture_storage_3d<rgba16float,write>;
+fn bt(i:i32,j:i32,k0:i32)->f32 { let k=clamp(k0,0,p.nz-1); return 1.5*pr[k].rc*max(Qn[u32(((i%p.nx+p.nx)%p.nx)+p.nx*(((j%p.ny+p.ny)%p.ny)+p.ny*k))],-2.5e-4)/(${RHO_W}.*${RE}); }
 @compute @workgroup_size(8,8,4) fn main(@builtin(global_invocation_id) g:vec3u) {
   let i=i32(g.x); let j=i32(g.y); let k=i32(g.z);
   if i>=p.nx || j>=p.ny || k>=p.nz { return; }
-  let q=Qn[u32(i+p.nx*(j+p.ny*k))];
-  textureStore(out,g,vec4f(1.5*pr[k].rc*max(q,-2.5e-4)/(${RHO_W}.*${RE}),0.,0.,0.));   // 負＝飽和に足りない（境目の補間のため）
+  textureStore(out,g,vec4f(bt(i,j,k),length(vec3f((bt(i+1,j,k)-bt(i-1,j,k))/p.dx,(bt(i,j+1,k)-bt(i,j-1,k))/p.dy,(bt(i,j,k+1)-bt(i,j,k-1))/p.dz))*.5,0.,0.));   // r: 負＝飽和に足りない（境目の補間のため）。g: 勾配の大きさ
+}`;
+
+// 格子より小さい凹凸のもと（くり返しのある3次元の模様）。r: もこもこ（Worley）、g: すじ（勾配ノイズ）。形は推定で、計算の結果ではない
+const noiseWGSL = /* wgsl */`
+@group(0) @binding(0) var out:texture_storage_3d<rgba8unorm,write>;
+fn hash(v0:vec3u)->vec3f {
+  var v=v0*1664525u+1013904223u;
+  v.x+=v.y*v.z; v.y+=v.z*v.x; v.z+=v.x*v.y;
+  v^=v>>vec3u(16u);
+  v.x+=v.y*v.z; v.y+=v.z*v.x; v.z+=v.x*v.y;
+  return vec3f(v)/4294967295.;
+}
+fn cell(c:vec3i,per:i32)->vec3u { return vec3u(((c%per)+per)%per); }
+fn worley(p:vec3f,per:i32)->f32 {
+  let ip=vec3i(floor(p)); let f=p-floor(p); var d=2.;
+  for (var x=-1; x<=1; x++) { for (var y=-1; y<=1; y++) { for (var z=-1; z<=1; z++) {
+    let o=vec3i(x,y,z); d=min(d,length(vec3f(o)+hash(cell(ip+o,per)+vec3u(u32(per)))-f));
+  } } }
+  return min(d,1.);
+}
+fn grad(p:vec3f,per:i32)->f32 {
+  let ip=vec3i(floor(p)); let f=p-floor(p); let u=f*f*f*(f*(f*6.-15.)+10.); var a:array<f32,8>;
+  for (var n=0; n<8; n++) { let o=vec3i(n&1,(n>>1)&1,(n>>2)&1); a[n]=dot(hash(cell(ip+o,per)+vec3u(7u))*2.-1.,f-vec3f(o)); }
+  return mix(mix(mix(a[0],a[1],u.x),mix(a[2],a[3],u.x),u.y),mix(mix(a[4],a[5],u.x),mix(a[6],a[7],u.x),u.y),u.z);
+}
+@compute @workgroup_size(4,4,4) fn main(@builtin(global_invocation_id) g:vec3u) {
+  let dim=vec3f(textureDimensions(out));
+  if any(vec3f(g)>=dim) { return; }
+  let p=(vec3f(g)+.5)/dim;
+  let w=(1.-worley(p*8.,8))*.625+(1.-worley(p*16.,16))*.25+(1.-worley(p*32.,32))*.125;
+  let n=grad(p*8.,8)+.5*grad(p*16.,16)+.25*grad(p*32.,32);
+  textureStore(out,g,vec4f(w,clamp(n*.7+.5,0.,1.),0.,1.));
 }`;
 
 const lightWGSL = /* wgsl */`
@@ -47,7 +79,7 @@ fn beta(x:vec3f)->f32 { return max(0.,textureSampleLevel(vol,sm,x/u.dom.xyz,0.).
   var mx=0.;
   for (var a=0; a<8; a++) {
     let o=(vec3f(f32(a&1),f32((a>>1)&1),f32((a>>2)&1))-.5)*cell*1.3;
-    mx=max(mx,beta(x+o));
+    let v=textureSampleLevel(vol,sm,(x+o)/u.dom.xyz,0.); mx=max(mx,max(0.,v.r+u.dom.w*v.g));   // dom.w: 凹凸で表面が動く幅
   }
   textureStore(out,g,vec4f(od,up,mx,vis));
 }`;
@@ -56,19 +88,21 @@ const skyWGSL = /* wgsl */`
 struct L { sun:vec4f, dom:vec4f };
 @group(0) @binding(0) var<uniform> u:L;
 @group(0) @binding(1) var out:texture_storage_2d<rgba16float,write>;
-const Rg=6360e3; const Ra=6420e3; const bR=vec3f(5.8e-6,13.5e-6,33.1e-6); const bM=vec3f(21e-6);
+const Rg=6360e3; const Ra=6420e3; const bR=vec3f(5.8e-6,13.5e-6,33.1e-6); const bM=vec3f(21e-6); const bO=vec3f(.65e-6,1.881e-6,.085e-6);
+fn ozone(h:f32)->f32 { return max(0.,1.-abs(h-25e3)/15e3); }   // オゾン層（高さ 25km を中心の三角形の分布。緑を吸うので夕方の空が濁らない）
 fn hit(o:vec3f,d:vec3f,r:f32)->f32 { let b=dot(o,d); let c=dot(o,o)-r*r; let h=b*b-c; if h<0. { return -1.; } return -b+sqrt(h); }
 fn sky(d:vec3f)->vec3f {
   let o=vec3f(0.,0.,Rg+2.); let tmax=hit(o,d,Ra); let ds=tmax/16.;
-  var sR=vec3f(0.); var sM=vec3f(0.); var oR=0.; var oM=0.;
+  var sR=vec3f(0.); var sM=vec3f(0.); var oR=0.; var oM=0.; var oO=0.;
   let mu=dot(d,u.sun.xyz); let pR=3./(16.*3.14159)*(1.+mu*mu); let gg=.76; let pM=3./(8.*3.14159)*((1.-gg*gg)*(1.+mu*mu))/((2.+gg*gg)*pow(1.+gg*gg-2.*gg*mu,1.5));
   for (var i=0; i<16; i++) {
     let x=o+d*(f32(i)+.5)*ds; let h=length(x)-Rg; let hR=exp(-h/8000.)*ds; let hM=exp(-h/1200.)*ds;
-    oR+=hR; oM+=hM;
+    oR+=hR; oM+=hM; oO+=ozone(h)*ds;
     let tl=hit(x,u.sun.xyz,Ra); let dl=tl/8.;
-    var lR=0.; var lM=0.; var ok=true;
-    for (var j=0; j<8; j++) { let y=x+u.sun.xyz*(f32(j)+.5)*dl; let hl=length(y)-Rg; if hl<0. { ok=false; break; } lR+=exp(-hl/8000.)*dl; lM+=exp(-hl/1200.)*dl; }
-    if ok { let T=exp(-(bR*(oR+lR)+bM*1.1*(oM+lM))); sR+=T*hR; sM+=T*hM; }
+    var lR=0.; var lM=0.; var lO=0.; var ok=true;
+    for (var j=0; j<8; j++) { let y=x+u.sun.xyz*(f32(j)+.5)*dl; let hl=length(y)-Rg; if hl<0. { ok=false; break; } lR+=exp(-hl/8000.)*dl; lM+=exp(-hl/1200.)*dl; lO+=ozone(hl)*dl; }
+    // 視線の側の oR を弱める: 1回散乱では地平線の青が消えて緑になる（多重散乱で戻るぶんの近似）
+    if ok { let T=exp(-(bR*(oR*.3+lR)+bM*1.1*(oM+lM)+bO*(oO+lO))); sR+=T*hR; sM+=T*hM; }
   }
   return 20.*(sR*bR*pR+sM*bM*pM);
 }
@@ -81,13 +115,16 @@ fn sky(d:vec3f)->vec3f {
 }`;
 
 const drawWGSL = (tri) => /* wgsl */`
-struct R { pos:vec4f, right:vec4f, up:vec4f, fwd:vec4f, sun:vec4f, sunCol:vec4f, dom:vec4f, misc:vec4f, wb:vec4f };
+struct R { pos:vec4f, right:vec4f, up:vec4f, fwd:vec4f, sun:vec4f, sunCol:vec4f, dom:vec4f, misc:vec4f, wb:vec4f, det:vec4f, det2:vec4f };   // det: 模様のずれ x,y、1画素の角度、強さ。det2: もこもこの割合、幅
 @group(0) @binding(0) var<uniform> r:R;
 @group(0) @binding(1) var vol:texture_3d<f32>;
 @group(0) @binding(2) var lt:texture_3d<f32>;
 @group(0) @binding(3) var skyT:texture_2d<f32>;
 @group(0) @binding(4) var sm:sampler;
 @group(0) @binding(5) var smC:sampler;
+@group(0) @binding(6) var nz:texture_3d<f32>;
+@group(0) @binding(7) var smN:sampler;
+var<private> foot:f32;
 struct VO { @builtin(position) p:vec4f, @location(0) uv:vec2f };
 @vertex fn vs(@builtin(vertex_index) i:u32)->VO {
   let x=f32((i<<1u)&2u); let y=f32(i&2u);
@@ -95,7 +132,7 @@ struct VO { @builtin(position) p:vec4f, @location(0) uv:vec2f };
 }
 fn uvw(x:vec3f)->vec3f { return (x-vec3f(0.,0.,r.dom.w))/r.dom.xyz; }   // dom.w: 計算の範囲の下の高さ
 fn skyAt(d:vec3f)->vec3f {
-  let az=atan2(d.y,d.x); let el=max(asin(clamp(d.z,0.,1.)),.05);   // 地平線ぎりぎりは1回散乱だと暗くなりすぎるので下を切る
+  let az=atan2(d.y,d.x); let el=max(asin(clamp(d.z,0.,1.)),.03);   // 地平線ぎりぎりは1回散乱だと暗くなりすぎるので下を切る
   return textureSampleLevel(skyT,smC,vec2f(az/6.28318+.5,sqrt(el/1.5707)),0.).rgb;
 }
 fn aces(c:vec3f)->vec3f { return (c*(2.51*c+.03))/(c*(2.43*c+.59)+.14); }
@@ -114,14 +151,39 @@ fn cubicB(x:vec3f)->f32 {
     let w=select(g0.x,g1.x,bx)*select(g0.y,g1.y,by)*select(g0.z,g1.z,bz);
     s+=w*textureSampleLevel(vol,sm,t,0.).r;
   }
-  return max(0.,s);
+  return s;
 }
-fn vb(x:vec3f)->f32 { return ${tri ? 'textureSampleLevel(vol,sm,uvw(x),0.).r' : 'cubicB(x)'}; }
+// 格子より小さい凹凸（推定）: 3つの大きさの模様を足す。強さは大きさの 0.65 乗（雲のふちのフラクタル次元 1.35 から）、遠くは画素より細かい分を消す
+fn noiseAt(x0:vec3f)->f32 {
+  var q=x0-vec3f(r.det.x,r.det.y,0.); var s=0.;
+  // 段ごとに向きを変える（37 度。同じ粒が並んで見えないように）
+  let c=.7986; let n=.6018; let rot=mat3x3f(c,n,0.,-n*.8,c*.8,.6,n*.6,-c*.6,.8);
+  for (var i=0; i<3; i++) {
+    let L=800.*pow(.3665,f32(i)); let w=smoothstep(2.,8.,L/8./foot);
+    if w>0. {
+      let t=textureSampleLevel(nz,smN,q/L,0.);
+      s+=select(r.det2.w,1.,i==0)*pow(.4,f32(i)*.65)*w*(mix(t.g,t.r,r.det2.x)-.5)*2.;
+    }
+    q=rot*q;
+  }
+  return s;
+}
+fn vb(x:vec3f)->f32 {
+  var s=${tri ? 'textureSampleLevel(vol,sm,uvw(x),0.).r' : 'cubicB(x)'};
+  if r.det.w<=0. { return max(0.,s); }
+  // 計算の範囲の外は同じ雲のくり返しなので、大きな模様で間引く（推定）
+  let rr=max(abs(x.x),abs(x.y));
+  if rr>r.dom.x*.5 { let m=smoothstep(.4,.6,textureSampleLevel(nz,smN,vec3f(x.xy/17300.,.5),0.).g); s-=(1.-mix(1.,m,smoothstep(.5*r.dom.x,.8*r.dom.x,rr)))*.06; }
+  // 雲の底はほぼ平らで、もこもこは上の部分（底から 300m までは弱める）
+  let D=r.det2.y*r.det.w*max(textureSampleLevel(vol,sm,uvw(x),0.).g,.0003)*mix(.25,1.,smoothstep(0.,300.,x.z-r.det2.z));
+  if abs(s)>2.*D { return max(0.,s); }
+  return max(0.,s+D*min(noiseAt(x),.5));   // 外へは少しだけ（浮いた粉を作らない）
+}
 // 表面のそばの細かい影（太陽へ 280m だけ細かく。その先は光の表）
 fn sunOD(q:vec3f,l:vec4f)->f32 {
   let n=6; let L=280.; let ds=L/f32(n);
   var od=0.;
-  for (var i=0; i<n; i++) { od+=cubicB(q+r.sun.xyz*(f32(i)+.5)*ds)*ds; }   // 線形の補間だと格子の層が縞になる
+  for (var i=0; i<n; i++) { od+=vb(q+r.sun.xyz*(f32(i)+.5)*ds)*ds; }   // 線形の補間だと格子の層が縞になる
   let far=textureSampleLevel(lt,sm,uvw(q+r.sun.xyz*L),0.).r;
   return od+far;
 }
@@ -138,17 +200,18 @@ fn ms(c:f32,tau:f32)->f32 {
   let sun=r.sun.xyz; let c=dot(d,sun);
   let zen=skyAt(vec3f(0.,0.,1.));
   let hor=.25*(skyAt(normalize(vec3f(1.,0.,.15)))+skyAt(normalize(vec3f(-1.,0.,.15)))+skyAt(normalize(vec3f(0.,1.,.15)))+skyAt(normalize(vec3f(0.,-1.,.15))));   // 太陽の側だけでなく周りの平均
-  let amb=zen*1.2+hor*.8;
+  let amb=zen*1.5+hor*.5;
   // 背景
   var bg:vec3f; var tg=-1.;
   if d.z<-1e-5 { tg=-o.z/d.z; }
   if tg>0. {
     let q=o+d*tg;
     let od=textureSampleLevel(lt,sm,vec3f(q.x/r.dom.x,q.y/r.dom.y,0.),0.).r;
-    let col=vec3f(r.pos.w,r.right.w,r.up.w);
-    bg=col*(r.sunCol.rgb*max(sun.z,0.)*exp(-od*.55)*.32+amb*.5);
-    let f=exp(-tg/40000.);
-    bg=mix(skyAt(normalize(vec3f(d.x,d.y,.02)))*mix(.4,1.,smoothstep(.05,.3,sun.z)),bg,f);   // 太陽が低いと地面のもやは空ほど明るくない
+    let m0=textureSampleLevel(nz,smN,vec3f(q.xy/9000.,.3),0.).g; let m1=textureSampleLevel(nz,smN,vec3f(q.xy/2300.,.7),0.).g;
+    let col=vec3f(r.pos.w,r.right.w,r.up.w)*(.55+.9*m0)*(.75+.5*m1);   // 地面の色むら（目安）
+    bg=col*(r.sunCol.rgb*max(sun.z,0.)*mix(.35,1.,exp(-od*.3))*.32+amb*.5);
+    let f=exp(-tg/16000.);
+    bg=mix(skyAt(normalize(vec3f(d.x,d.y,.03))),bg,f);
   } else {
     bg=skyAt(d);
     bg+=r.sunCol.rgb*smoothstep(.99996,.99999,c)*20.;
@@ -164,15 +227,15 @@ fn ms(c:f32,tau:f32)->f32 {
     if t1<=t0 { hitSlab=false; }
   } else if o.z<zlo || o.z>zhi { hitSlab=false; }
   if tg>0. { t1=min(t1,tg); }
+  t0=max(t0,r.sun.w);   // sun.w: この視点で描かない手前の距離
   if hitSlab && t1>t0 {
     var t=t0; var Tr=1.; var L=vec3f(0.); var first=-1.;
     var ds0=14.+t*.004;
-    t+=jit*ds0;
     var i=0; var back=0.; var fine=0;
     loop {
       if i>=${320} || t>=t1 || Tr<.012 { break; }
       i++;
-      let q=o+d*t; let ds=14.+t*.004;
+      let q=o+d*t; let ds=14.+t*.004; foot=max(t,1.)*r.det.z;
       let l=textureSampleLevel(lt,sm,uvw(q),0.);
       if l.b<4e-6 {
         if fine>0 { fine--; t+=ds; continue; }
@@ -185,14 +248,16 @@ fn ms(c:f32,tau:f32)->f32 {
           // 最初の表面は二分法で探し直す（縞を出さない）
           var a0=max(t0,t-ds); var a1=t;   // 視点が雲の中のときは手前へ行かない
           for (var n=0; n<5; n++) { let m=.5*(a0+a1); if vb(o+d*m)>1e-5 { a1=m; } else { a0=m; } }
-          t=a1; first=t; b=max(b,vb(o+d*t));
+          first=a1; t=a1+ds*.5; b=max(vb(o+d*t),1e-5);   // ジッターに左右されない位置から（網目の模様を出さない）
         }
         let qq=o+d*t;
         let stepT=exp(-b*ds);
         var tauS=l.r;
         if Tr>.15 { tauS=mix(l.r,sunOD(qq,l),smoothstep(.15,.4,Tr)); }   // 切りかえの等高線を出さない
         // 太陽の直接＋多重散乱、空の光、雲を透過して下へ届く光（二流近似 1/(1+0.75(1-g)τ)、g=0.85）
-        let S=r.sunCol.rgb*ms(c,tauS)*.46+amb*(.06+.94*l.a)+r.sunCol.rgb*max(r.sun.z,.12)*.075/(1.+.11*l.g);
+        var occ=1.;   // すぐ上の雲で空がさえぎられるぶん（影の中の起伏）
+        if Tr>.15 { occ=exp(-.06*(vb(qq+vec3f(0.,0.,30.))+vb(qq+vec3f(0.,0.,60.))+vb(qq+vec3f(0.,0.,120.)))*30.); }
+        let S=r.sunCol.rgb*ms(c,tauS)*.46+amb*.85*occ*(.06+.94*l.a)+r.sunCol.rgb*max(r.sun.z,.12)*.075/(1.+.11*l.g);
         L+=Tr*(1.-stepT)*S;
         Tr*=stepT;
       }
@@ -208,23 +273,23 @@ fn ms(c:f32,tau:f32)->f32 {
   col*=r.misc.w*r.wb.rgb;
   // 明るいところで色が黄色へずれないよう、色あいを保つ曲線と半々に
   let m=max(max(col.r,col.g),max(col.b,1e-4));
-  col=mix(aces(col),col*aces(vec3f(m)).r/m,.6);
+  col=mix(aces(col),col*aces(vec3f(m)).r/m,.35);
   col=pow(clamp(col,vec3f(0.),vec3f(1.)),vec3f(1./2.2));
   col+=(jit-.5)/255.;
   return vec4f(col,1.);
 }`;
 
 function sunTrans(el) {
-  const s = Math.max(0.005, Math.sin(el)), Rg = 6360e3, Ra = 6420e3, n = 24, bR = [5.8e-6, 13.5e-6, 33.1e-6], bM = 21e-6;
+  const s = Math.max(0.005, Math.sin(el)), Rg = 6360e3, Ra = 6420e3, n = 48, bR = [5.8e-6, 13.5e-6, 33.1e-6], bM = 21e-6, bO = [0.65e-6, 1.881e-6, 0.085e-6];
   const hc = Rg * s, tMax = -hc + Math.sqrt(hc * hc + Ra * Ra - Rg * Rg), dl = tMax / n;
-  let oR = 0, oM = 0;
-  for (let i = 0; i < n; i++) { const t = (i + 0.5) * dl, h = Math.sqrt(Rg * Rg + t * t + 2 * Rg * t * s) - Rg; oR += Math.exp(-h / 8000) * dl; oM += Math.exp(-h / 1200) * dl; }
-  return bR.map(b => Math.exp(-(b * oR + bM * 1.1 * oM)));
+  let oR = 0, oM = 0, oO = 0;
+  for (let i = 0; i < n; i++) { const t = (i + 0.5) * dl, h = Math.sqrt(Rg * Rg + t * t + 2 * Rg * t * s) - Rg; oR += Math.exp(-h / 8000) * dl; oM += Math.exp(-h / 1200) * dl; oO += Math.max(0, 1 - Math.abs(h - 25e3) / 15e3) * dl; }
+  return bR.map((b, i) => Math.exp(-(b * oR + bM * 1.1 * oM + bO[i] * oO)));
 }
 
 export class SkyRender {
   constructor(dev, canvas, sim, opt = {}) {
-    this.dev = dev; this.sim = sim; this.canvas = canvas; this.zlo = opt.zlo ?? 350; this.ground = opt.ground || [.075, .095, .05]; this.haze = opt.haze || 26000;
+    this.dev = dev; this.sim = sim; this.canvas = canvas; this.zlo = opt.zlo ?? 350; this.ground = opt.ground || [.11, .10, .07]; this.amp = opt.amp ?? 1; this.fine = opt.fine ?? 1; this.haze = opt.haze || 26000; this.billow = opt.billow ?? .5; this.wind = opt.wind || 0; this.detail = 1;
     this.ctx = canvas.getContext('webgpu'); this.fmt = navigator.gpu.getPreferredCanvasFormat();
     this.ctx.configure({ device: dev, format: this.fmt, alphaMode: 'opaque' });
     const T = GPUTextureUsage, f = 'rgba16float';
@@ -235,16 +300,21 @@ export class SkyRender {
     this.sm = dev.createSampler({ magFilter: 'linear', minFilter: 'linear', addressModeU: 'repeat', addressModeV: 'repeat', addressModeW: 'clamp-to-edge' });
     this.smC = dev.createSampler({ magFilter: 'linear', minFilter: 'linear', addressModeU: 'repeat', addressModeV: 'clamp-to-edge' });
     this.lu = dev.createBuffer({ size: 32, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-    this.ru = dev.createBuffer({ size: 144, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+    this.ru = dev.createBuffer({ size: 176, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const mod = code => dev.createShaderModule({ code });
     const cp = code => dev.createComputePipeline({ layout: 'auto', compute: { module: mod(code), entryPoint: 'main' } });
     const b = (p, list) => dev.createBindGroup({ layout: p.getBindGroupLayout(0), entries: list.map((r, i) => ({ binding: i, resource: r })) });
     this.pVol = cp(volWGSL); this.bVol = b(this.pVol, [{ buffer: sim.P }, { buffer: sim.prof }, { buffer: sim.f.Qn }, this.vol.createView()]);
     this.pLt = cp(lightWGSL); this.bLt = b(this.pLt, [{ buffer: this.lu }, this.vol.createView(), this.sm, this.lt.createView()]);
     this.pSky = cp(skyWGSL); this.bSky = b(this.pSky, [{ buffer: this.lu }, this.skyT.createView()]);
+    const nzSize = sim.nx >= 256 ? 128 : 64;
+    this.nz = dev.createTexture({ size: [nzSize, nzSize, nzSize], dimension: '3d', format: 'rgba8unorm', usage: T.STORAGE_BINDING | T.TEXTURE_BINDING });
+    const pNz = cp(noiseWGSL), nzEnc = dev.createCommandEncoder(), nzPass = nzEnc.beginComputePass();
+    nzPass.setPipeline(pNz); nzPass.setBindGroup(0, b(pNz, [this.nz.createView()])); nzPass.dispatchWorkgroups(nzSize / 4, nzSize / 4, nzSize / 4); nzPass.end(); dev.queue.submit([nzEnc.finish()]);
+    this.smN = dev.createSampler({ magFilter: 'linear', minFilter: 'linear', addressModeU: 'repeat', addressModeV: 'repeat', addressModeW: 'repeat' });
     const dm = mod(drawWGSL(location.search.includes('tri')));
     this.pDraw = dev.createRenderPipeline({ layout: 'auto', vertex: { module: dm, entryPoint: 'vs' }, fragment: { module: dm, entryPoint: 'fs', targets: [{ format: this.fmt }] }, primitive: { topology: 'triangle-list' } });
-    this.bDraw = b(this.pDraw, [{ buffer: this.ru }, this.vol.createView(), this.lt.createView(), this.skyT.createView(), this.sm, this.smC]);
+    this.bDraw = b(this.pDraw, [{ buffer: this.ru }, this.vol.createView(), this.lt.createView(), this.skyT.createView(), this.sm, this.smC, this.nz.createView(), this.smN]);
     this.frame = 0; this.sunDirty = true;
   }
   setSun(azDeg, elDeg, wbPow) {
@@ -265,7 +335,7 @@ export class SkyRender {
   }
   updateLight(enc) {
     const { sim } = this;
-    this.dev.queue.writeBuffer(this.lu, 0, new Float32Array([...this.sun, 0, sim.Lx, sim.Ly, sim.Lz, 0]));
+    this.dev.queue.writeBuffer(this.lu, 0, new Float32Array([...this.sun, 0, sim.Lx, sim.Ly, sim.Lz, 3 * sim.dx]));
     const p = enc.beginComputePass();
     if (this.sunDirty) { p.setPipeline(this.pSky); p.setBindGroup(0, this.bSky); p.dispatchWorkgroups(32, 16); this.sunDirty = false; }
     p.setPipeline(this.pLt); p.setBindGroup(0, this.bLt);
@@ -280,9 +350,11 @@ export class SkyRender {
     this.frame++;
     const narrow = asp < 1;
     const data = new Float32Array([
-      ...cam.pos, this.ground[0], ...rg, this.ground[1], ...up, this.ground[2], ...f, this.haze, ...this.sun, 0, ...this.sunCol, 0,
+      ...cam.pos, this.ground[0], ...rg, this.ground[1], ...up, this.ground[2], ...f, this.haze, ...this.sun, cam.clip || 0, ...this.sunCol, 0,
       sim.Lx, sim.Ly, sim.Lz, sim.o.base.z0, narrow ? tf : tf * asp, narrow ? tf / asp : tf, this.frame % 64, exposure,
       ...this.wb, this.zlo,
+      (this.wind * sim.t) % 800, 0, 2 * tf / canvas.height, this.detail * this.amp,
+      this.billow, 3 * sim.dx, sim.base ?? sim.o.base.z0, this.fine,
     ]);
     this.dev.queue.writeBuffer(this.ru, 0, data);
     const pass = enc.beginRenderPass({ colorAttachments: [{ view: this.ctx.getCurrentTexture().createView(), loadOp: 'clear', storeOp: 'store', clearValue: [0, 0, 0, 1] }] });

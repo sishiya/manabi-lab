@@ -183,6 +183,7 @@ export class SkySim {
     const area = nx * ny; let base = -1, top = -1, mid = 0;
     for (let k = 0; k < nz; k++) mid = Math.max(mid, v[8 + k] / area);
     for (let k = 0; k < nz; k++) { const a = v[8 + k] / area; if (a > 0.0005) top = k; if (a > 0.1 * mid && a > 0.0005 && base < 0) base = k; }   // 底は雲が一番広い高さの1割をこえる高さ（ちぎれ雲に引きずられない）
+    this.base = base < 0 ? null : this.o.base.z0 + base * this.dz;
     return { cover: v[0] / area, um: v[1] / 1000, vm: v[2] / 1000, wm: v[3] / 1000, bad: v[4], base: base < 0 ? null : this.o.base.z0 + base * this.dz, top: top < 0 ? null : this.o.base.z0 + (top + 1) * this.dz, mid };
   }
   // 確かめ用: バッファを読み出す

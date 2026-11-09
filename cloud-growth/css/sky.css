@@ -14,6 +14,8 @@ html,body{margin:0;height:100%;background:#0d1a2b;color:var(--ink);font-family:v
 #reads div{font-size:10.5px;color:var(--muted)}
 #reads b{display:block;font-family:var(--f-mono);font-size:14px;font-weight:500;color:var(--ink)}
 #dock{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);width:min(760px,calc(100vw - 32px));background:var(--glass);border-radius:10px;padding:10px 12px;backdrop-filter:blur(6px)}
+#bar{position:absolute;left:0;top:0;height:3px;width:0;background:var(--acc);border-radius:10px 0 0 0}
+#say{margin:0 0 8px;font-size:14px;line-height:1.5;color:var(--ink)}
 #row0{margin-bottom:8px}
 #scns{flex-wrap:wrap}
 #row1{display:flex;align-items:center;gap:10px}
@@ -27,6 +29,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 .grp>span{font-size:11.5px;color:var(--muted)}
 .chips{display:flex;gap:5px}
 .chips button{background:transparent;border:1px solid var(--line);border-radius:18px;padding:0 13px;min-height:36px;font-size:12.5px}
+.chips button:disabled{opacity:.55;cursor:default}
 .chips button.on{background:var(--acc);border-color:var(--acc);color:#0c1a2b;font-weight:700}
 #about{margin-top:6px;font-size:12.5px;color:var(--muted);line-height:1.7}
 #about summary{cursor:pointer;color:var(--ink);min-height:28px;line-height:28px}
