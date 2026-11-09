@@ -23,6 +23,7 @@
 | satellite.js | 5.0.0 | MIT | 神の視点マップ（人工衛星） | 1本だけ。使うときだけ読む |
 | astronomy-engine | 2.1.19 | MIT | 神の視点マップ（宇宙から） | 1本だけ。使うときだけ読む |
 | @mediapipe/tasks-vision | 0.10.14 | Apache-2.0 | `_dev/vtuber/`（紹介動画のライオン。公開しない道具） | wasm と顔のモデルが大きい・道具だけ |
+| @mediapipe/tasks-vision | 0.10.21 | Apache-2.0 | 画面の奥の水槽（カメラを開いたときだけ読む。顔のモデルは Google の storage.googleapis.com から） | wasm と顔のモデルが大きい・1本だけ。1.2.0 系には記録の送信先が入っているので上げるときは確かめる |
 | three.js | 0.160.0 | MIT | `mood-world/lab/`（作りかけ） | 試作。アプリになったら考える |
 | Google Fonts（Zen Kaku Gothic New・Dela Gothic One・IBM Plex Mono など） | — | SIL OFL | 入口・各アプリ | 日本語のフォントは大きく、Google が文字ごとに分けて配っているため。読めなくても OS のフォントで表示される |
 

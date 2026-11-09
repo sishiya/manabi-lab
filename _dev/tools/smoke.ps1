@@ -46,6 +46,8 @@ $allowCommon = @('^localhost$', '^127\.0\.0\.1$', '^cdnjs\.cloudflare\.com$', '^
   '^fonts\.googleapis\.com$', '^fonts\.gstatic\.com$')
 if ($isPages) { $allowCommon += @('^sishiya\.github\.io$', '^www\.googletagmanager\.com$', '(^|\.)google-analytics\.com$', '^(www\.)?google\.com$') }
 $allowApp = @{
+  # 顔を読むモデル（MediaPipe, Apache-2.0）。カメラを開いたときだけ読む
+  'tank-window' = @('^storage\.googleapis\.com$')
   # 地図・地形・写真・建物・データ源（god-view/DEVNOTES.md の「データ源」。キー不要のものだけ）
   'god-view' = @('\.gsi\.go\.jp$', '^gibs\.earthdata\.nasa\.gov$', '(^|\.)openstreetmap\.org$', '(^|\.)openfreemap\.org$',
     '^earthquake\.usgs\.gov$', '\.odpt\.org$', '^celestrak\.org$', '\.amazonaws\.com$', '\.plateau\.reearth\.io$')

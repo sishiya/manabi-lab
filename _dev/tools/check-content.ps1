@@ -28,7 +28,7 @@ foreach ($line in [IO.File]::ReadAllLines((Join-Path $PSScriptRoot 'content-word
 
 # ---- allow list of external hosts (add here when a new source is checked) ----
 $allow = @(
-  'cdnjs.cloudflare.com','cdn.jsdelivr.net','unpkg.com','fonts.googleapis.com','fonts.gstatic.com','www.googletagmanager.com',
+  'storage.googleapis.com','cdnjs.cloudflare.com','cdn.jsdelivr.net','unpkg.com','fonts.googleapis.com','fonts.gstatic.com','www.googletagmanager.com',
   'sishiya.github.io','github.com','www.youtube.com','youtube.com','x.com','twitter.com','zenn.dev','dev.to',
   'cyberjapandata.gsi.go.jp','cyberjapandata2.gsi.go.jp','maps.gsi.go.jp','www.gsi.go.jp','s3.amazonaws.com','gibs.earthdata.nasa.gov',
   'tile.openstreetmap.org','www.openstreetmap.org','openstreetmap.org','nominatim.openstreetmap.org','tiles.openfreemap.org','openfreemap.org',

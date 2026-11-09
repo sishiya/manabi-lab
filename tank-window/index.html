@@ -1,0 +1,88 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>画面の奥の水槽</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2307131f'/><rect x='12' y='16' width='40' height='32' rx='3' fill='none' stroke='%237fd8ff' stroke-width='4'/><path d='M22 32c5-6 11-6 16 0l5-4v8l-5-4c-5 6-11 6-16 0z' fill='%237fd8ff'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css?v=1">
+
+<script src="../assets/power.js?v=1"></script>
+<script type="importmap">{"imports":{
+  "three":"../lib/three@0.185.1/build/three.module.min.js",
+  "three/addons/":"../lib/three@0.185.1/examples/jsm/"}}</script>
+
+<div id="app">
+<div id="view">
+  <main id="stage">
+    <canvas id="cv"></canvas>
+    <p id="nogl" hidden>このブラウザでは 3D（WebGL）が使えないため、水槽を表示できません。</p>
+    <div id="lost" role="status" hidden>顔を見失いました。カメラの前にもどってください。</div>
+    <button id="fsOff" type="button" hidden>全画面をやめる</button>
+
+    <div id="intro">
+      <h1>画面の奥の水槽</h1>
+      <p>カメラで頭の位置を読むと、この画面が水槽をのぞく窓になります。</p>
+      <button id="start" class="primary" type="button">カメラでのぞく（準備 3 段階）</button>
+      <button id="noCam" class="link" type="button">カメラなしで見る</button>
+      <p class="small">映像はこの端末の中だけで使い、保存も送信もしません。</p>
+    </div>
+
+    <div id="coach" hidden>
+      <b>頭をゆっくり左右に動かしてみてください</b>
+      <p>奥の壁と魚はずれて、画面のふちは動きません。片目をつぶると奥行きを強く感じる人もいます。</p>
+      <p id="coachOk" role="status"></p>
+      <button id="coachClose" type="button">とじる</button>
+    </div>
+
+    <section id="guide" role="dialog" aria-modal="true" aria-label="カメラの準備" hidden>
+      <div class="panel">
+        <header><span id="gStep"></span><button id="gClose" class="link" type="button">とじる</button></header>
+        <div id="gBody"></div>
+        <footer><button id="gBack" class="quiet" type="button" hidden>もどる</button><button id="gNext" class="primary" type="button">つぎへ</button></footer>
+      </div>
+    </section>
+  </main>
+
+  <section id="bar" aria-label="操作">
+    <div class="info"><p id="status" role="status"></p><p id="nums"></p></div>
+    <div class="btns">
+      <button id="openCam" class="primary" type="button">カメラでのぞく</button>
+      <button id="stopCam" class="danger" type="button" hidden>カメラを閉じる</button>
+      <button id="recenter" type="button" hidden>真ん中を決めなおす</button>
+      <button id="howto" type="button" hidden>カメラの置き方</button>
+      <button id="fsBtn" type="button">全画面</button>
+      <button id="gridBtn" class="toggle" type="button" title="壁の細い線は本物の水槽にはない目印です"></button>
+      <button id="aboutBtn" class="link" type="button">説明</button>
+    </div>
+  </section>
+</div>
+
+  <details id="about">
+    <summary>このアプリについて</summary>
+    <p>頭の位置に合わせて、画面を窓として絵を計算します（頭に合わせた透視投影、Fish Tank VR とよばれる方法）。頭を動かすと近いものと遠いものの見え方のずれ（運動視差）が生まれ、それが奥行きの手がかりになります。</p>
+    <h3>確かなこと・推定・演出</h3>
+    <ul>
+      <li><b>計算:</b> 目の位置から画面の四すみを通る投影。画面の面にある点は、どこから見ても同じ場所に映ります。</li>
+      <li><b>推定:</b> 目の位置。両目の虹彩の間隔を 6.3 cm と仮定し、「いつもの位置」で入れた距離を基準にします。その瞬間の目は窓の真ん中の正面にあるものとし、カメラは画面と同じ面で傾いていないと考えます。レンズのゆがみは直していません。</li>
+      <li><b>演出:</b> 水槽の大きさと魚の大きさは画面に合わせたものです。魚の泳ぎ、水草のゆれ、砂の光の模様も演出で、水の屈折は入れていません。</li>
+      <li><b>※ 目印:</b> 壁の細い線は本物の水槽にはありません。奥行きをつかみやすくするための目もりです。</li>
+    </ul>
+    <p>見ている人の左右の目に別々の絵を届けてはいません。一度に一人のためのしくみで、視線も読みません。長く見て目やからだに違和感があれば休んでください。</p>
+    <h3>カメラと映像</h3>
+    <p>映像は頭の位置を読むためにこの端末の中だけで使い、保存も送信もしません。このページを離れるとカメラを閉じます。カメラについてこのアプリが残すのは、画面の大きさと距離の数字だけです。顔を読む部品（プログラムとモデル）は、カメラを開いたときに jsDelivr と Google から読みこみます。映像はそちらへ送りません。</p>
+    <h3>おもな出どころ</h3>
+    <ul>
+      <li>Colin Ware, Kevin Arthur, Kellogg S. Booth (1993) <a href="https://doi.org/10.1145/169059.169066" target="_blank" rel="noopener">Fish Tank Virtual Reality</a>. CHI '93.</li>
+      <li>Brian Rogers, Maureen Graham (1979) <a href="https://doi.org/10.1068/p080125" target="_blank" rel="noopener">Motion Parallax as an Independent Cue for Depth Perception</a>. Perception 8(2).</li>
+      <li>Géry Casiez, Nicolas Roussel, Daniel Vogel (2012) <a href="https://doi.org/10.1145/2207676.2208639" target="_blank" rel="noopener">1€ Filter</a>. CHI '12（頭の位置のぶれ取り）。</li>
+      <li><a href="https://github.com/liaru-lab/web-parallax" target="_blank" rel="noopener">liaru-lab/web-parallax</a>（MIT。顔の点から目の位置を出す計算のもと）</li>
+    </ul>
+    <h3>使っているもの</h3>
+    <p>three.js 0.185.1（3D。MIT）／MediaPipe Face Landmarker・tasks-vision 0.10.21（顔の点。Google、Apache-2.0）／フォント: Google Fonts（SIL Open Font License）</p>
+  </details>
+</div>
+
+<video id="video" playsinline muted></video>
+
+<script type="module" src="js/main.js?v=1"></script>
