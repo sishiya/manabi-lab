@@ -39,12 +39,12 @@ function dirOf(u, v) {   // u: 0〜1（経度）、v: 0〜1（0 が北極）
 const uvOf = d => [Math.atan2(d[1], d[0]) / TAU + 0.5, Math.acos(Math.max(-1, Math.min(1, d[2]))) / Math.PI];
 
 // 宇宙ごとの違い。band は帯の色、neb は星雲の2色
-// band・bulge は実際の天の川に近い、ほぼ無彩色〜黄土色。neb2 は電離水素（Hα）の赤、neb1 は反射星雲の青で、どちらも銀河面の近くにだけうすく
+// band・bulge は肉眼で見た天の川に近い、ほぼ無彩色（長時間露光の写真のように色を強めない）。neb2 は電離水素（Hα）の赤、neb1 は反射星雲の青で、どちらも銀河面の近くにごくうすく
 const UNIVERSES = {
-  A: { seed: 20141107, pole: [0.35, -0.55, 0.76], center: [-1, 0.25, 0], band: [0.60, 0.56, 0.50], bulge: [0.95, 0.80, 0.62],
-    neb1: [0.05, 0.08, 0.13], neb2: [0.42, 0.07, 0.09], stars: ['#ffd9b2', '#fff4ea', '#f8f7ff', '#cad7ff'], dust: 0.9 },
-  B: { seed: 77123, pole: [-0.5, 0.7, 0.5], center: [0.6, -0.8, 0.2], band: [0.66, 0.57, 0.46], bulge: [1.0, 0.80, 0.58],
-    neb1: [0.05, 0.08, 0.13], neb2: [0.42, 0.07, 0.09], stars: ['#ffd2a1', '#ffe2c4', '#fff4ea', '#cad7ff'], dust: 0.6 },
+  A: { seed: 20141107, pole: [0.35, -0.55, 0.76], center: [-1, 0.25, 0], band: [0.56, 0.55, 0.53], bulge: [0.82, 0.77, 0.70],
+    neb1: [0.05, 0.07, 0.09], neb2: [0.24, 0.10, 0.11], stars: ['#ffeedd', '#fff6ee', '#f8f7ff', '#e6ecff'], dust: 0.9 },
+  B: { seed: 77123, pole: [-0.5, 0.7, 0.5], center: [0.6, -0.8, 0.2], band: [0.58, 0.56, 0.52], bulge: [0.84, 0.77, 0.68],
+    neb1: [0.05, 0.07, 0.09], neb2: [0.24, 0.10, 0.11], stars: ['#ffe9d6', '#fff0e2', '#fff6ee', '#e6ecff'], dust: 0.6 },
 };
 
 // 色指数 B−V → 色温度（Ballesteros 2012）→ 黒体の明るさの比（sRGB の 3 原色の波長で。6500 K を白とする。線形の値）
@@ -60,10 +60,10 @@ function makeGalaxy(seed) {
   const N = 720, cv = document.createElement('canvas'); cv.width = N; cv.height = N;
   const g = cv.getContext('2d'), img = g.createImageData(N, N), px = img.data, rnd = mulberry32(seed);
   const cosI = 0.5, Rd = 0.2, Re = 0.055, nS = 2.5, bS = 1.9992 * nS - 0.3271, tanP = Math.tan(16 * Math.PI / 180);
-  const cBulge = colorOfBV(0.95), cDisk = colorOfBV(0.7), cYoung = colorOfBV(0.1), cHII = [1, 0.32, 0.4];   // HII 領域は Hα の赤
+  const cBulge = colorOfBV(0.95), cDisk = colorOfBV(0.7), cYoung = colorOfBV(0.45), cHII = [1, 0.6, 0.62];   // 腕は若い星と古い星がまざった平均の色。HII 領域はうすい桃色
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
     const x = (i + 0.5) / N * 2 - 1, y = (j + 0.5) / N * 2 - 1, Y = y / cosI, R = Math.hypot(x, Y), k = (j * N + i) * 4;
-    const Rb = Math.hypot(x, y / 0.72), bulge = 3 * Math.exp(-bS * (Math.pow((Rb + 1e-3) / Re, 1 / nS) - 1)) * 0.012;
+    const Rb = Math.hypot(x, y / 0.72), bulge = 1.3 * Math.exp(-bS * (Math.pow((Rb + 1e-3) / Re, 1 / nS) - 1)) * 0.012;
     const edge = 1 - Math.min(1, Math.max(0, (R - 0.72) / 0.28)) ** 2;
     let L = [bulge * cBulge[0], bulge * cBulge[1], bulge * cBulge[2]];
     if (R < 1 && edge > 0) {
@@ -71,9 +71,9 @@ function makeGalaxy(seed) {
       const phase = 2 * th - 2 * Math.log(R + 0.03) / tanP + warp;
       const arm = 0.5 + 0.5 * Math.cos(phase), clump = fbm(x * 26 + 3, Y * 26 + 7, 1.5, 4);
       const inner = Math.min(1, Math.max(0, (R - 0.07) / 0.14));   // 腕は中心のまわりにはない
-      const old = 0.75 * Math.exp(-R / Rd) * (0.9 + 0.2 * arm * inner);
-      const young = 1.5 * Math.exp(-R / (1.5 * Rd)) * Math.pow(arm, 3) * inner * Math.max(0, clump * 1.5 - 0.25);
-      const hii = 0.9 * Math.exp(-R / (1.5 * Rd)) * Math.pow(arm, 5) * inner * Math.max(0, clump - 0.66) * 6;
+      const old = 0.36 * Math.exp(-R / Rd) * (0.9 + 0.2 * arm * inner);
+      const young = 0.3 * Math.exp(-R / (1.5 * Rd)) * Math.pow(arm, 3) * inner * Math.max(0, clump * 1.5 - 0.25);
+      const hii = 0.08 * Math.exp(-R / (1.5 * Rd)) * Math.pow(arm, 5) * inner * Math.max(0, clump - 0.66) * 6;
       // 塵: 腕の内側（回転の前）の細い帯。A(λ) は波長に反比例に近い
       const lane = Math.pow(0.5 + 0.5 * Math.cos(phase - 0.95 + 0.5 * (clump - 0.5)), 8);
       const tau = 1.05 * lane * Math.exp(-R / 0.42) * Math.min(1, R / 0.12) * (0.55 + 0.9 * fbm(x * 15 + 21, Y * 15, 8.5, 4));
@@ -118,7 +118,7 @@ function makeSkyCanvas(kind, W) {
     const k = (j * MW + i) * 4;
     for (let q = 0; q < 3; q++) {
       const b = band * U.band[q] + bulge * U.bulge[q] * (0.5 + 0.8 * n);
-      px[k + q] = Math.min(255, 255 * Math.sqrt(Math.max(0, b * 0.32 + 0.22 * neb * (U.neb1[q] * mixN * 2 + U.neb2[q] * (1 - mixN) * 2))));
+      px[k + q] = Math.min(255, 255 * Math.sqrt(Math.max(0, b * 0.16 + 0.08 * neb * (U.neb1[q] * mixN * 2 + U.neb2[q] * (1 - mixN) * 2))));
     }
     px[k + 3] = 255;
   }
@@ -139,7 +139,7 @@ function makeSkyCanvas(kind, W) {
 
   // 3. 銀河（向こうの宇宙）。絵のまん中が +x（穴を通ってまっすぐ見える向き）
   if (kind === 'B') {
-    const gal = makeGalaxy(4242), cx = (0.5 + 3 / 360) * W, cy = (0.5 - 15 / 180) * H, sz = W * 0.15;
+    const gal = makeGalaxy(4242), cx = (0.5 + 3 / 360) * W, cy = (0.5 - 15 / 180) * H, sz = W * 0.11;
     g.save(); g.translate(cx, cy); g.rotate(-0.5); g.drawImage(gal, -sz / 2, -sz / 2, sz, sz); g.restore();
   }
   g.globalCompositeOperation = 'source-over';

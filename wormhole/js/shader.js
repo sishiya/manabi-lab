@@ -50,15 +50,15 @@ vec3 gridCol(vec3 d, float pix, float far){
 // 細かい星。方向の格子ごとに1つ。方向の空間で丸いので、レンズで引きのばされた所は弧になる
 vec3 starLayer(vec3 d, float pix, float scale, float rad0){
   vec3 p = d * scale, id = floor(p), h = hash3v(id);
-  if (h.x > .3) return vec3(0.);
+  if (h.x > .18) return vec3(0.);
   vec3 q = id + .2 + .6 * hash3v(id + 3.1);
   float dist = length(p - q) / scale;
-  float m = pow(hash1(id + 9.7), 7.) * 46. + .16;   // 暗い星を多く、明るい星はまれに（一様だと塩をまいたように見える）
+  float m = pow(hash1(id + 9.7), 7.) * 30. + .1;   // 暗い星を多く、明るい星はまれに（一様だと塩をまいたように見える）
   float r = max(rad0, pix * .75);
   float e = rad0 * rad0 / (r * r);   // 1画素より小さい星は、そのぶん暗く（面の明るさ一定）
   float g = exp(-dist * dist / (r * r * .5));
   float T = hash1(id + 5.3);
-  vec3 col = T < .6 ? mix(vec3(1., .78, .58), vec3(1., .96, .92), T / .6) : mix(vec3(1., .96, .92), vec3(.78, .86, 1.), (T - .6) / .4);   // 黒体の色（約 3900 K・6000 K・10000 K）
+  vec3 col = T < .6 ? mix(vec3(1., .89, .79), vec3(1., .97, .94), T / .6) : mix(vec3(1., .97, .94), vec3(.89, .93, 1.), (T - .6) / .4);   // 黒体の色（約 3900 K・6000 K・10000 K）を、暗い星が肉眼で白っぽく見えるぶん白へ寄せたもの
   return col * g * e * m;
 }
 
@@ -82,7 +82,7 @@ vec3 albedo(int k, vec3 n){
   if (k == 0) {
     float lat = dot(n, uRingAxisW) + .018 * (fbm(n * 7. + 2., 4) - .5);
     float b = .5 + .5 * sin(lat * 26. + 1.3 * sin(lat * 7.));
-    return mix(vec3(.74, .58, .38), vec3(.95, .85, .66), b) * (.82 + .3 * fbm(n * vec3(4., 4., 26.), 3));
+    return mix(vec3(.72, .66, .55), vec3(.90, .85, .75), b) * (.82 + .3 * fbm(n * vec3(4., 4., 26.), 3));
   }
   if (k == 1) {
     float land = fbm(n * 2.7 + 7., 5), cl = fbm(n * vec3(4.2, 4.2, 6.5) + 3., 5);
@@ -92,7 +92,7 @@ vec3 albedo(int k, vec3 n){
   if (k == 2) { float g = fbm(n * 9., 5); return vec3(.4 + .34 * g) * vec3(1., .96, .9); }
   float lat = n.z + .07 * (fbm(n * vec3(5., 5., 2.), 4) - .5);
   float b = .5 + .5 * sin(lat * 19. + 2. * sin(lat * 5.));
-  return mix(vec3(.3, .46, .68), vec3(.62, .76, .9), .5 + .4 * (b - .5)) * (.8 + .36 * fbm(n * vec3(3., 3., 30.), 3));   // 海王星の色に近い、うすい青
+  return mix(vec3(.45, .55, .62), vec3(.66, .74, .79), .5 + .4 * (b - .5)) * (.8 + .36 * fbm(n * vec3(3., 3., 30.), 3));   // 海王星の見た目の色に近い、灰色がかったうすい青（Irwin ほか 2024）
 }
 
 float sphT(vec3 o, vec3 d, vec3 c, float R){
@@ -120,7 +120,7 @@ bool bodiesOnLine(vec3 o, vec3 d, float t0, float t1, int first, vec3 L, float p
     vec3 oc = uBody[3].xyz - o;
     float h = length(oc - d * clamp(dot(oc, d), t0, t1)) / uBody[3].w - 1.;
     float wd = max(.02, pix * 3.);   // 輪の中のように 1 画素より細くなる所は、広げて暗く（ちらつかないように）
-    if (h > 0. && h < .15) acc += T * vec3(.42, .68, 1.) * exp(-h / wd) * (.02 / wd) * (.03 + 2.2 * pow(max(dot(d, L), 0.), 30.)) * (1. - uFarFill);
+    if (h > 0. && h < .15) acc += T * vec3(.56, .69, .86) * exp(-h / wd) * (.02 / wd) * (.03 + 2.2 * pow(max(dot(d, L), 0.), 30.)) * (1. - uFarFill);
   }
   if (first == 0) {   // 輪
     float dn = dot(d, uRingN);
@@ -134,7 +134,7 @@ bool bodiesOnLine(vec3 o, vec3 d, float t0, float t1, int first, vec3 L, float p
           float st = sphT(p, L, uBody[0].xyz, uBody[0].w);
           float sh = st > 0. ? .04 : 1.;
           float lit = (.28 + .72 * abs(dot(L, uRingN)));
-          acc += T * a * vec3(.8, .68, .5) * lit * sh * .72;
+          acc += T * a * vec3(.78, .73, .64) * lit * sh * .72;
           T *= 1. - a;
         }
       }
@@ -166,7 +166,7 @@ bool bodiesOnLine(vec3 o, vec3 d, float t0, float t1, int first, vec3 L, float p
   float fres = pow(1. - max(dot(n, -d), 0.), 3.);
   if (k == 1) col += vec3(.25, .5, 1.) * fres * (diff * .9 + .02) * .9;
   if (k == 3) col += vec3(.45, .7, 1.) * fres * (diff * .9 + .02 + 1.4 * pow(max(dot(d, L), 0.), 30.)) * .7;
-  if (k == 0) col += vec3(.9, .7, .45) * fres * diff * .25;
+  if (k == 0) col += vec3(.85, .78, .66) * fres * diff * .25;
   acc += T * col;
   return true;
 }

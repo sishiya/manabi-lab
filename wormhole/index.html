@@ -128,7 +128,7 @@
           <li>場所による時間の進みの差と、体を引きのばす潮汐力（光の道すじへの影響は、論文でも無視できるとされています）。</li>
           <li>カメラの動き（各地点に止まって見ています）。</li>
           <li>空は無限に遠い絵です。惑星と太陽は距離のある3Dの球で、のどから離れた所では光をまっすぐとして交わりを計算しています（のどの近くの曲がりは本当の式のまま）。</li>
-          <li>星の並び・星雲・銀河・惑星は作りものです。色は本物に合わせました。銀河は星の明るさの分布（円盤は指数関数、中心のふくらみは Sérsic 分布、腕は対数らせん）を足して塵で減光し、色は色指数 B−V の目安（ふくらみ 0.95、円盤 0.7、腕の若い星 0.1）から黒体の式で計算しています。天体の重力は入れていません。「向こうの宇宙」は説明のための呼び名で、同じ宇宙の遠い場所でもかまいません。</li>
+          <li>星の並び・星雲・銀河・惑星は作りものです。色は本物に合わせました。銀河は星の明るさの分布（円盤は指数関数、中心のふくらみは Sérsic 分布、腕は対数らせん）を足して塵で減光し、色は色指数 B−V の目安（ふくらみ 0.95、円盤 0.7、腕 0.45）から黒体の式で計算しています。写真のように色を強めず、肉眼で見たときに近い淡い色にしています。天体の重力は入れていません。「向こうの宇宙」は説明のための呼び名で、同じ宇宙の遠い場所でもかまいません。</li>
           <li>太陽のそばの場面: のどの半径 2 万 km は、太陽とくらべて見える大きさにした仮定です。太陽の熱でのどやそれを支える物質がどうなるかは分かっていないので、計算していません。光が通りぬける量は、のどを太陽からの距離で光を受ける円として計算しています（向こう側の天体の明るさには反映していません）。太陽の色は本物に合わせてほぼ白です。表面の模様は演出です。周辺が暗くなるのは I(μ) = 1 − 0.6(1 − μ) の形（簡単な近似）です。</li>
           <li>向こうの宇宙の太陽は、通りぬけたあとに惑星のふちから出てくる位置に置いた演出です。惑星の大気のふちの光も作りもので、太陽の明るさは見やすく変えています（太陽が出てくる動きそのものは、位置の差からの計算です）。</li>
           <li>再生の音（初期はオフ）は、映画のような演出として合成したものです。宇宙には音を伝える空気がないので、本当は何も聞こえません。</li>
@@ -140,7 +140,7 @@
         <ul class="src">
           <li>James, von Tunzelmann, Franklin, Thorne (2015) "Visualizing Interstellar's Wormhole" American Journal of Physics（<a href="https://arxiv.org/abs/1502.03809" target="_blank" rel="noopener">arXiv:1502.03809</a>、<a href="https://doi.org/10.1119/1.4916949" target="_blank" rel="noopener">DOI</a>）: 時空の形（式5〜7）、光の式（式16）、「細いのど」などの値。映画『インターステラー』のワームホールのために作られた式です。</li>
           <li>滑らかな形の確かめに使った Ellis (1973) の drainhole は、上の論文の引用によります。</li>
-          <li>色指数から色温度: Ballesteros (2012) "New insights into black bodies"。銀河のふくらみが円盤より赤い傾向: Gadotti &amp; dos Anjos (2001, <a href="https://arxiv.org/abs/astro-ph/0010638" target="_blank" rel="noopener">arXiv:astro-ph/0010638</a>)。銀河の値は、実測の傾向にならってこのアプリで決めた目安です。</li>
+          <li>色指数から色温度: Ballesteros (2012) "New insights into black bodies"。銀河のふくらみが円盤より赤い傾向: Gadotti &amp; dos Anjos (2001, <a href="https://arxiv.org/abs/astro-ph/0010638" target="_blank" rel="noopener">arXiv:astro-ph/0010638</a>)。海王星の見た目の色: Irwin ほか (2024, MNRAS)。銀河の値は、実測の傾向にならってこのアプリで決めた目安です。</li>
           <li>太陽の光度・半径、太陽定数: IAU 2015 Resolution B3（<a href="https://arxiv.org/abs/1510.07674" target="_blank" rel="noopener">arXiv:1510.07674</a>）。地球の半径 6371 km は平均の値。</li>
           <li>太陽の周辺減光 0.6: 灰色大気の Eddington 近似 I(μ)/I(1) = (2 + 3μ)/5（同じ形）。</li>
           <li>描き方の参考: <a href="https://github.com/sirxemic/wormhole" target="_blank" rel="noopener">sirxemic/wormhole</a>（MIT）の、角度ごとの表を作る考え方。コードは写していません。</li>
@@ -157,8 +157,8 @@
 <script src="js/lut.js?v=8"></script>
 <script src="js/lutcache.js?v=8"></script>
 <script src="js/scene.js?v=8"></script>
-<script src="js/sky.js?v=15"></script>
-<script src="js/shader.js?v=11"></script>
+<script src="js/sky.js?v=16"></script>
+<script src="js/shader.js?v=12"></script>
 <script src="js/render.js?v=11"></script>
 <script src="js/funnel.js?v=8"></script>
 <script src="js/ui.js?v=8"></script>
