@@ -36,7 +36,7 @@ PL.STYLE = { hatch: true, tintA: 1, flat: false, outline: true };
 PL.hatch = function (g, path, o = {}) {
   if (!PL.STYLE.hatch) return;
   g.save(); g.beginPath(); path(g); g.clip();
-  if (o.not) { g.beginPath(); g.rect(-50, -50, PW + 100, PH + 100); o.not(g); g.clip('evenodd'); }
+  if (o.not) { g.beginPath(); g.rect(-400, -400, PW + 800, PH + 800); o.not(g); g.clip('evenodd'); }   // 縦長は中央へ縮めて描くので、画面の外まで広くとる（TK.INSET）
   const ang = o.angle ?? 0.6, gap = o.gap ?? 13, L = 2400, ca = Math.cos(ang), sa = Math.sin(ang), cx = o.cx ?? PW / 2, cy = o.cy ?? PH / 2;
   g.strokeStyle = o.color || PL.INK; g.lineWidth = o.w || 3; g.lineCap = 'round'; g.beginPath();
   for (let d = -L; d <= L; d += gap) { g.moveTo(cx - ca * L - sa * d, cy - sa * L + ca * d); g.lineTo(cx + ca * L - sa * d, cy + sa * L + ca * d); }
@@ -44,7 +44,7 @@ PL.hatch = function (g, path, o = {}) {
 };
 // うすい手彩色（紙のむらを重ねて、ぬった感じに）
 PL.tint = function (g, path, color, a = 0.5) {
-  g.save(); g.beginPath(); path(g); g.clip(); g.globalAlpha *= PL.STYLE.flat ? 1 : Math.min(1, a * PL.STYLE.tintA); g.fillStyle = color; g.fillRect(-50, -50, PW + 100, PH + 100);
+  g.save(); g.beginPath(); path(g); g.clip(); g.globalAlpha *= PL.STYLE.flat ? 1 : Math.min(1, a * PL.STYLE.tintA); g.fillStyle = color; g.fillRect(-400, -400, PW + 800, PH + 800);
   if (!PL.STYLE.flat) { g.globalAlpha *= 0.5; g.globalCompositeOperation = 'multiply'; if (PL._paper) g.drawImage(PL._paper, 0, 0, PW, PH); }
   g.restore();
 };

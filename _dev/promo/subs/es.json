@@ -501,5 +501,17 @@
 "Dos: nuestra órbita alrededor del Sol. // Unos 900 km en 30 segundos",
 "Tres: frente al resplandor del universo primitivo, // todo el sistema solar se mueve a 370 km/s. Unos 11.000 km en 30 s",
 "...y ya pasaron 30 segundos. // Acabas de moverte casi el ancho de una Tierra"
+],
+"net-route-trivia3-short": [
+"P: ¿Un ping de 53 minutos? Eso debe de estar roto.",
+"R: Fue por paloma. // Empezó como un estándar del Día de los Inocentes de abril.",
+"P: ...¿De verdad alguien lo hizo?",
+"R: Un grupo de usuarios de Linux de Bergen lo hizo de verdad.",
+"R: Paquetes impresos en papel, atados a la pata de una paloma. // Se escaneaban al llegar, y la respuesta también volvía en paloma.",
+"P: ¿Y el resultado?",
+"R: 9 enviados, 4 volvieron. // Ida y vuelta: de 53 a 106 minutos.",
+"R: Y en desorden: // el número 0, el 4, el 2 y el 1.",
+"P: ¿A internet no le importa // que los paquetes lleguen desordenados?",
+"R: Buena parte de internet funciona igual: // los reordena por número y luego dibuja la página."
 ]
 }

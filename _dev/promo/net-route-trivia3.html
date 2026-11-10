@@ -126,7 +126,7 @@ function draw(g, t) {
   // 0〜3: フック「ping 53分」（ping の行が打ち出される紙の帯）
   if (t < 3.0) {
     const strip = PL.rect(70, 170, PW - 140, 120); PL.tint(g, strip, '#fbf6ea', 0.9); PL.ink(g, strip, 5); PL.ink(g, PL.rect(80, 180, PW - 160, 100), 1.4);
-    const line = '$ ping … icmp_seq=0 time=3211900.8 ms';
+    const line = '$ ping … icmp_seq=4 time=3211900.8 ms';   // いちばん速かった返事（ログの4番）。0番は 6165731.1 ms
     g.save(); g.globalAlpha *= clamp((t - 0.2) / 0.3, 0, 1);
     TK.text(g, line.slice(0, Math.floor(clamp((t - 0.2) / 1.2, 0, 1) * line.length)), 110, 230, 38, { align: 'left', color: PL.INK, bold: false, font: '"Courier New", monospace' });
     g.restore();

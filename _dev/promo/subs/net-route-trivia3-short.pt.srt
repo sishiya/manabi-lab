@@ -1,0 +1,45 @@
+1
+00:00:00,000 --> 00:00:03,530
+P: Um ping de 53 minutos? Isso deve estar quebrado.
+
+2
+00:00:03,530 --> 00:00:08,530
+R: Foi por pombo.
+Começou como um padrão de Primeiro de Abril.
+
+3
+00:00:08,530 --> 00:00:11,030
+P: ...Alguém fez isso de verdade?
+
+4
+00:00:11,030 --> 00:00:14,620
+R: Um grupo de usuários de Linux de Bergen fez de verdade.
+
+5
+00:00:14,620 --> 00:00:20,620
+R: Pacotes impressos em papel, amarrados à perna de um pombo.
+Digitalizados na chegada, e a resposta também voltava por pombo.
+
+6
+00:00:20,620 --> 00:00:22,620
+P: E o resultado?
+
+7
+00:00:22,620 --> 00:00:27,750
+R: 9 enviados, 4 voltaram.
+Ida e volta: de 53 a 106 minutos.
+
+8
+00:00:27,750 --> 00:00:32,360
+R: E fora de ordem:
+número 0, 4, 2 e depois 1.
+
+9
+00:00:32,360 --> 00:00:35,630
+P: A internet aceita
+pacotes fora de ordem?
+
+10
+00:00:35,630 --> 00:00:41,630
+R: Boa parte da internet funciona assim:
+reordena pelo número e depois desenha a página.

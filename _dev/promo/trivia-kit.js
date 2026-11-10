@@ -268,6 +268,7 @@ TK.thumbArt = function (cfg, t) {
   document.title = 'thumbart-ready';
 };
 
+TK.INSET = 0.84; TK.INSET_Y = 818;   // 縦長の絵と字幕を縮める倍率と、動かない高さ
 function triviaStart(cfg) {
   if (TK.ready && !cfg._ready) { TK.ready.then(() => triviaStart(Object.assign({}, cfg, { _ready: true }))); return; }   // 決まったルックの読みこみ待ち（trivia-style.js）
   const thumbT = new URLSearchParams(location.search).get('thumbart');
@@ -325,13 +326,17 @@ function triviaStart(cfg) {
     overlay(g, t) {
       if (t < END) {
         TK.bg(g, t, cfg.bgOpts || {});
+        // 縦長は紙の上の絵と字幕をまとめて中央へ縮める（スマホの YouTube の UI・四すみの見切れを避ける。2026-11-10 ユーザー）。y 100〜1560 が SHORT_SAFE の高さに入る
+        const inset = isVert();
+        g.save(); if (inset) { g.translate(PW / 2, TK.INSET_Y); g.scale(TK.INSET, TK.INSET); g.translate(-PW / 2, -TK.INSET_Y); }
         TK._phase = 'draw';   // 重なりの確かめ（__triviaOverlap）が、本編の絵の字と字幕などを分けるため
         if (TK.drawArt) TK.drawArt(g, t, cfg.draw); else cfg.draw(g, t);   // ルックによっては絵だけ別の層に描いて影をつける（trivia-looks.js）
         TK._phase = 'ui'; if (TK._beforeSub) TK._beforeSub(g, t, subs);
         TK.subtitle(g, t, subs);
         const credit = [cfg.voiceCredit && '声: ' + cfg.voiceCredit, isFile0 && TK.BGM_CREDIT].filter(Boolean).join('　'); if (credit) TK.credit(g, credit);
+        g.restore();
         if (cfg.progress !== false) TK.progress(g, t, END);
-        TK._phase = null; drawIdentMini(g, t, 0.3, 0.8);
+        TK._phase = null; drawIdentMini(g, t, 0.3, 0.8, inset);
         if (TK.finish) TK.finish(g, t);   // ルックの仕上げ（絵全体にかける。trivia-looks.js）
       } else {
         g.globalAlpha = 1; g.fillStyle = '#000'; g.fillRect(0, 0, PW, PH);

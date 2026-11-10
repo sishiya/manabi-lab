@@ -390,7 +390,7 @@ TL.LOOKS.brush = { planet: TL.place('brush', (x, R) => {
   };
   PL.hatch = function (g, path, o = {}) {   // かげは斜線でなく、数本の太い筆の払い（かすれ）
     g.save(); g.beginPath(); path(g); g.clip();
-    if (o.not) { g.beginPath(); g.rect(-50, -50, PW + 100, PH + 100); o.not(g); g.clip('evenodd'); }
+    if (o.not) { g.beginPath(); g.rect(-400, -400, PW + 800, PH + 800); o.not(g); g.clip('evenodd'); }
     const ang = o.angle ?? 0.6, gap = (o.gap ?? 13) * 3.2, L = 2400, ca = Math.cos(ang), sa = Math.sin(ang), cx = o.cx ?? PW / 2, cy = o.cy ?? PH / 2;
     g.strokeStyle = 'rgba(40,36,30,0.16)'; g.lineCap = 'round'; g.lineWidth = gap * 0.55; g.setLineDash([gap * 4, gap * 0.6]);
     g.beginPath(); for (let d = -L; d <= L; d += gap) { g.moveTo(cx - ca * L - sa * d, cy - sa * L + ca * d); g.lineTo(cx + ca * L - sa * d, cy + sa * L + ca * d); } g.stroke(); g.restore();
