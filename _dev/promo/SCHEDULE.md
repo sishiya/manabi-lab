@@ -112,8 +112,8 @@
 | 11/7 21:00 | tiny-earth-trivia1 | 地球を半径1kmにしたら、歩くだけで人工衛星 | -LHviM1wGWw |
 | 11/8 21:00 | metamorphosis-trivia1 | イモムシのときに覚えたこと、ガになっても覚えていた | -qI4X8cADPw |
 | 11/9 21:00 | ga-creatures-trivia1 | テストを見やぶって、プログラムが死んだふりをした | PnmZYfeQZfo |
-| 11/10 21:00 | evolution-trivia1 | 恐竜が絶滅した日、季節はいつ？ | G8M46x6ANfk |
-| 11/11 21:00 | extreme-trivia1 | 深海魚は水圧でつぶれない。じゃあ、なぜ 8,200 m より下にいない？ | 60XwutdNhcs |
+| 11/10 21:00 | evolution-trivia1 | 恐竜が絶滅した日、季節はいつ？ | 6XyUGJ_XlxQ（11/10 に中央寄せ版へ差しかえ。古い G8M46x6ANfk は予約を外して非公開） |
+| 11/11 21:00 | extreme-trivia1 | 深海魚は水圧でつぶれない。じゃあ、なぜ 8,200 m より下にいない？ | UXwgsBUAtdk（11/10 に中央寄せ版へ差しかえ。古い 60XwutdNhcs は予約を外して非公開） |
 | 11/12 21:00 | tree-of-life-trivia1 | ヒトデは、タコや虫より「ヒトの親せき」 | 2EzJngBaNpI |
 | 11/13 21:00 | god-view-trivia3 | すわっているだけで、30秒に約1万km | K2dOH2gG7Zg |
 | 未定（録画ずみ、上げる前） | net-route-trivia3 | ハトでインターネット。本当にやったら ping 53分 | まだない |
