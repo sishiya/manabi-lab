@@ -7,7 +7,7 @@ window.TRIVIA_THUMBS = {
   'ga-creatures-trivia1':  { t: 1.5, crop: [120, 440, 840, 700], title: 'プログラムが\n[死んだふり]？', line: 'テストを見やぶったプログラム' },
   'tree-of-life-trivia1':  { t: 1.0, crop: [100, 440, 880, 480], title: 'ヒトに\n[近いのは？]', line: 'ヒトデとタコ、ヒトの親せきは？' },
   'metamorphosis-trivia1': { t: 1.2, crop: [50, 470, 760, 480], title: 'ドロドロに\nなっても\n[記憶は残る？]', line: 'イモムシの記憶、ガになっても？' },
-  'extreme-trivia1':       { t: 1.5, crop: [180, 150, 820, 620], title: 'つぶれるから、\n[じゃない]。', line: '8,200 mより下に深海魚がいないわけ' },
+  'extreme-trivia1':       { t: 1.5, crop: [180, 150, 820, 620], title: 'つぶれるから、\n[じゃない]。', line: '深海魚の限界が8,200 mあたりのわけ' },
   'god-view-trivia3':      { t: 12.5, crop: [180, 140, 720, 620], title: 'この30秒で\nあなたは\n[何km]動く？', line: 'すわっているだけ。それでも動いている' },
   'net-route-trivia3':     { t: 16.8, crop: [130, 470, 680, 440], title: 'ハトで\nping [53分]？', line: '本当にハトでネットをやった' },
 };
