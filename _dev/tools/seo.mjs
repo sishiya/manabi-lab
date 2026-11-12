@@ -29,6 +29,8 @@ function block({ url, title, desc, image, w, h }) {
     `<meta property="og:image" content="${image}"><meta property="og:image:width" content="${w}"><meta property="og:image:height" content="${h}">`,
     `<meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@sishiya22">`,
     `<link rel="alternate" hreflang="ja" href="${url}?lang=ja"><link rel="alternate" hreflang="en" href="${url}?lang=en"><link rel="alternate" hreflang="x-default" href="${url}">`,
+    // 正規の URL（canonical）。hreflang の3つがそれぞれ自分を指すよう、開いた URL の ?lang= で決める（HTML は1つなので JS で置く。Search Console の「重複」対策、2026-11-12）
+    `<script>(function(){var q=new URLSearchParams(location.search).get('lang'),c=document.createElement('link');c.rel='canonical';c.href='${url}'+(q==='ja'||q==='en'?'?lang='+q:'');document.head.appendChild(c);})();</script>`,
     '<!-- /seo -->',
   ].join('\n');
 }
