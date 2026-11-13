@@ -103,11 +103,15 @@ const T = (() => {
   // 検索の結果など、COL id から木の中の場所を作って開く
   async function reveal(colId) {
     if (byCol.has(colId)) { const n = byCol.get(colId); ancestors(n).forEach(a => a.open = true); return n; }
+    // 道すじと本人は同時に。道すじの途中の子も先に全部たのんでおく（下の loadKids は同じ URL なので待たずに済む。1本ずつだと #t= のリンクで数秒かかった）
+    const selfP = API.taxon(colId);
     const path = await API.classification(colId);           // 根もと → 親
     let cur = null, k = -1;
     for (let i = path.length - 1; i >= 0; i--) if (byCol.has(path[i].id)) { cur = byCol.get(path[i].id); k = i; break; }
     if (!cur) cur = root;
-    const self = await API.taxon(colId);
+    if (cur.col && cur.canLoad && !cur.loaded) API.children(cur.col, 0, 100).catch(() => { });
+    for (const s of path.slice(k + 1)) if (!byCol.has(s.id)) API.children(s.id, 0, 100).catch(() => { });
+    const self = await selfP;
     const chain = path.slice(k + 1).concat([{ id: colId, name: self.name.scientificName, rank: self.name.rank }]);
     for (const step of chain) {
       if (cur.col && cur.canLoad && !cur.loaded) await loadKids(cur);

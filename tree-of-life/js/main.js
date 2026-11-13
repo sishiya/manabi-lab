@@ -229,6 +229,8 @@ async function fromHash() {
   if (!h) return false;
   const p = new URLSearchParams(h);
   setStatus(L('リンクの生きものをさがしています…', 'Finding the living thing in the link…'));
+  // 読みこむ間も方眼だけにしない: 界のならびを先に出しておく（見つかったらそこへ動く）
+  T.root.open = true; V.resize(); V.layout(); V.settle(); V.fit(); V.draw();
   const byKey = async (v, kind) => kind === 'n' ? T.nodes.find(x => x.name === v) : T.reveal(v);
   try {
     if (p.get('c')) {
@@ -283,6 +285,7 @@ const maxSheet = () => Math.round(innerHeight - document.getElementById('top').g
 const h1 = () => Math.min(maxSheet(), Math.round(innerHeight * 0.72));
 let sheetH = SZ.h0, sideW = SZ.w0;
 function applySize() {
+  if (!isPC()) sheetH = Math.min(sheetH, Math.max(110, maxSheet()));   // 向きを変えたときも、樹形図を 150px は残す
   app.style.setProperty('--sheet-h', sheetH + 'px');
   app.style.setProperty('--side-w', sideW + 'px');
   const big = isPC() ? sideW > (SZ.w0 + SZ.w1) / 2 : sheetH > (SZ.h0 + h1()) / 2;
@@ -320,7 +323,8 @@ function dragSize(el, horizontal) {
 }
 dragSize(grip, true);   // PC では上のつまみを左右に、スマホでは上下に
 dragSize(edge, true);
-applySize();
+// はじめの大きさはアニメなしで（CSS の 200px から縮むのが見えないように。横向きでは樹形図がはじめから広い）
+app.classList.add('dragging'); applySize(); void side.offsetHeight; app.classList.remove('dragging');
 window.addEventListener('resize', applySize);
 
 // ---------- 使い方（？）のポップアップ ----------
@@ -349,12 +353,14 @@ async function startView() {
     V.resize(); V.layout(); V.settle();
     const [W, H] = V.size;
     const b = V.bbox(V.vis.filter(n => n === mam || T.ancestors(n).includes(mam)));
-    const k = W < 600 ? 0.78 : Math.max(0.72, Math.min(0.92, (H - 40) / (b.bottom - b.top)));
-    V.cam.k = k;
     const AW = W - 56;   // 右のつまみの分をのぞいた幅
-    // 入らないとき（スマホ）: 目の名前の右に、シルエットの居場所（約 90）が見えるところまで左へ。ただし枝の分かれ目は画面に残す
+    // スマホ: narrow の名前の頭から、目の名前の右（シルエットの居場所 60）までが入るように少し縮める（0.78 のままだと幅 375 で「真獣下綱」が左で切れた）
+    const k = W < 600 ? Math.max(0.66, Math.min(0.78, (AW - 12) / (b.right + 60 - narrow.x)))
+      : Math.max(0.72, Math.min(0.92, (H - 40) / (b.bottom - b.top)));
+    V.cam.k = k;
+    // 入らないとき（スマホ）: narrow の名前の頭を左はしに（右のシルエットは少し画面の外へ出てもよい）
     V.cam.x = (b.right - b.left) * k <= AW - 24 ? (AW - (b.right - b.left) * k) / 2 - b.left * k
-      : Math.max(Math.min(12 - narrow.x * k, AW - (b.right + 90) * k), 6 - narrow.jx * k);
+      : 12 - narrow.x * k;
     V.cam.y = H / 2 - (b.top + b.bottom) / 2 * k;
     V.draw();
     if (V3.on) V3.frame(mam, 0);   // 3D でも、哺乳類から下が入るように（大きさが変わったときも）
