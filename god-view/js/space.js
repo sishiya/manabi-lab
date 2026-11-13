@@ -370,7 +370,14 @@
     const shown = [];
     for (const i of items) if (!shown.some(j => Math.abs(j.x - i.x) < 70 && Math.abs(j.y - i.y) < 14)) shown.push(i);
     items.length = 0; items.push(...shown);
-    labelsEl.innerHTML = items.map(i => `<div style="left:${i.x.toFixed(0)}px;top:${i.y.toFixed(0)}px;opacity:${i.v.toFixed(2)}">${i.name}</div>`).join('');
+    // 名前は点の右に出す。右はしではみ出す名前は点の左へ（スマホ縦で「天の川銀河」が切れていた）
+    const cw = canvas.clientWidth;
+    labelsEl.innerHTML = items.map(i => `<div${i.x + 14 + labelW(i.name) > cw ? ' class="l"' : ''} style="left:${i.x.toFixed(0)}px;top:${i.y.toFixed(0)}px;opacity:${i.v.toFixed(2)}">${i.name}</div>`).join('');
+  }
+  let measureCtx = null;
+  function labelW(s) {
+    if (!measureCtx) { measureCtx = document.createElement('canvas').getContext('2d'); measureCtx.font = '12px ' + getComputedStyle(labelsEl).fontFamily; }
+    return measureCtx.measureText(s).width;
   }
   const STAR_EN = { 'Rigil Kentaurus': 'Alpha Centauri', Proxima: 'Proxima Centauri (the nearest star)', Polaris: 'Polaris (North Star)', Vega: 'Vega', Altair: 'Altair' };
   const STAR_JA = { Sirius: 'シリウス', Canopus: 'カノープス', Arcturus: 'アークトゥルス', Vega: 'ベガ（織姫）', Capella: 'カペラ', Rigel: 'リゲル', Procyon: 'プロキオン', Betelgeuse: 'ベテルギウス', Achernar: 'アケルナル', Altair: 'アルタイル（彦星）', Aldebaran: 'アルデバラン', Antares: 'アンタレス', Spica: 'スピカ', Pollux: 'ポルックス', Fomalhaut: 'フォーマルハウト', Deneb: 'デネブ', Regulus: 'レグルス', Polaris: '北極星', 'Rigil Kentaurus': 'ケンタウルス座α星', Proxima: 'プロキシマ・ケンタウリ（いちばん近い星）', "Barnard's Star": 'バーナード星', Castor: 'カストル', Mira: 'ミラ',
