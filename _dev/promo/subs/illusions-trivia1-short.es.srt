@@ -1,0 +1,30 @@
+1
+00:00:00,000 --> 00:00:04,000
+¿Cuántas de estas líneas son zigzags?
+
+2
+00:00:04,000 --> 00:00:07,000
+Cuéntalas…
+
+3
+00:00:07,000 --> 00:00:10,300
+Ninguna. Todas son la misma onda suave
+
+4
+00:00:10,300 --> 00:00:14,300
+Pon el fondo blanco… ¿ves? Ondas
+
+5
+00:00:14,300 --> 00:00:17,480
+Cuando la línea cambia de claro a oscuro
+justo en las crestas
+
+6
+00:00:17,480 --> 00:00:19,210
+el cerebro lo lee como una esquina
+(una explicación)
+
+7
+00:00:19,210 --> 00:00:23,140
+“Ceguera a la curvatura”, descubierta en 2017.
+Otra vez: ¿cuántas?

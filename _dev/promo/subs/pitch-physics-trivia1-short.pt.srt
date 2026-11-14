@@ -1,0 +1,32 @@
+1
+00:00:00,000 --> 00:00:02,310
+A knuckleball, na verdade, não balança.
+
+2
+00:00:02,310 --> 00:00:07,110
+Alguém analisou os dados de rastreamento da bola em jogos,
+arremesso por arremesso.
+
+3
+00:00:07,110 --> 00:00:13,200
+Desvio em relação a uma curva suave:
+0,30 polegada nos arremessos normais, 0,33 na knuckleball.
+
+4
+00:00:13,200 --> 00:00:17,200
+Mais ou menos o tamanho do erro de medição.
+
+5
+00:00:17,200 --> 00:00:25,200
+Então por que ninguém acerta? Uma pequena mudança no ângulo da costura
+muda onde ela chega.
+
+6
+00:00:25,200 --> 00:00:31,200
+Um grau na costura desloca a bola uns 2 cm.
+Nem o arremessador consegue prever.
+
+7
+00:00:31,200 --> 00:00:35,270
+Como resumiu o pesquisador: a knuckleball é
+“mais bala do que borboleta”.

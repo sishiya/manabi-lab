@@ -1,0 +1,17 @@
+{
+  "videoId": "az4_L5T1Q1Y",
+  "file": "_dev/promo/out/illusions-trivia1-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/illusions-trivia1.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-16T21:00:00+09:00",
+  "captions": { "en": "_dev/promo/out/illusions-trivia1-short.en.srt", "es": "_dev/promo/subs/illusions-trivia1-short.es.srt", "ko": "_dev/promo/subs/illusions-trivia1-short.ko.srt", "pt": "_dev/promo/subs/illusions-trivia1-short.pt.srt", "zh-TW": "_dev/promo/subs/illusions-trivia1-short.zh-TW.srt" },
+  "title": "【うんちく】この中にジグザグの線は何本？ #Shorts",
+  "description": "下の6本はジグザグに見えますが、上の6本と同じ、なめらかな波です。ちがうのは、線の明るさが入れかわる場所だけ。波のてっぺんで白と黒が入れかわると、脳はそこを「角」だと読んでしまう、という説があります。2017年に高橋康介さんが見つけた「曲がり盲」という錯覚です。絵は論文の図にならってプログラムで描きました。\n\nアプリ「錯覚の美術館」に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/illusions/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: Takahashi K. (2017) Curvature Blindness Illusion. i-Perception 8(6)\n\n声: VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
+  "tags": ["錯覚の美術館", "錯視", "曲がり盲", "錯覚", "うんちく", "雑学", "Shorts", "まなびラボ", "しし屋", "curvature blindness", "optical illusion", "did you know"],
+  "localizations": {
+    "en": {
+      "title": "Did you know? How many of these lines are zigzags? #Shorts",
+      "description": "The lower lines look like zigzags, but they are the same smooth wave as the upper ones. The only difference is where the line switches from light to dark. When it switches right at the peaks, the brain reads a corner there (one explanation). This is the \"curvature blindness\" illusion, found by Kohske Takahashi in 2017. The picture is drawn by a program, following the figure in the paper. Turn on English subtitles (CC).\n\nRelated to the app \"Museum of Illusions\".\n\nApp (in Japanese for now): https://sishiya.github.io/manabi-lab/illusions/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/?lang=en\n\nSource: Takahashi K. (2017) Curvature Blindness Illusion. i-Perception 8(6).\n\nVoice: VOICEVOX:Meimei Himari\nMusic: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#DidYouKnow #Science"
+    }
+  }
+}

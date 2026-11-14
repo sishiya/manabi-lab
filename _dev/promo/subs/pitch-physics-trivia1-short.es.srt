@@ -1,0 +1,32 @@
+1
+00:00:00,000 --> 00:00:02,310
+La bola de nudillos en realidad no tiembla.
+
+2
+00:00:02,310 --> 00:00:07,110
+Alguien revisó los datos de seguimiento de la pelota en partidos,
+lanzamiento por lanzamiento.
+
+3
+00:00:07,110 --> 00:00:13,200
+Desviación de una curva suave:
+0,30 pulgadas en lanzamientos normales, 0,33 en la de nudillos.
+
+4
+00:00:13,200 --> 00:00:17,200
+Más o menos el tamaño del error de medición.
+
+5
+00:00:17,200 --> 00:00:25,200
+¿Entonces por qué nadie la batea? Un pequeño cambio en el ángulo de la costura
+cambia adónde llega.
+
+6
+00:00:25,200 --> 00:00:31,200
+Un grado de diferencia en la costura la desvía unos 2 cm.
+Ni el lanzador puede predecirlo.
+
+7
+00:00:31,200 --> 00:00:35,270
+Como lo resumió el investigador: la de nudillos es
+“más bala que mariposa”.

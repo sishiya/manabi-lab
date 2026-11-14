@@ -513,5 +513,32 @@
 "R: E fora de ordem: // número 0, 4, 2 e depois 1.",
 "P: A internet aceita // pacotes fora de ordem?",
 "R: Boa parte da internet funciona assim: // reordena pelo número e depois desenha a página."
+],
+"illusions-trivia1-short": [
+"Quantas destas linhas são zigue-zagues?",
+"Conte…",
+"Nenhuma. Todas são a mesma onda suave",
+"Deixe o fundo branco… viu? Ondas",
+"Quando a linha troca de claro para escuro // bem nos picos",
+"o cérebro lê isso como um canto // (uma explicação)",
+"“Cegueira à curvatura”, descoberta em 2017. // De novo: quantas?"
+],
+"metamorphosis-trivia3-short": [
+"10.000 vezes mais pesada em poucas semanas",
+"Uma lagarta recém-saída do ovo pesa 1 miligrama",
+"Poucas semanas depois: 12–15 gramas. // Mais de 10.000 vezes mais",
+"E cerca de 90% desse ganho vem // depois da última muda",
+"Se um bebê de 3 kg crescesse 10.000 vezes // (só multiplicação)",
+"30 toneladas. Mais ou menos um caminhão grande",
+"Depois ela refaz esse corpo dentro da pupa"
+],
+"pitch-physics-trivia1-short": [
+"A knuckleball, na verdade, não balança.",
+"Alguém analisou os dados de rastreamento da bola em jogos, // arremesso por arremesso.",
+"Desvio em relação a uma curva suave: // 0,30 polegada nos arremessos normais, 0,33 na knuckleball.",
+"Mais ou menos o tamanho do erro de medição.",
+"Então por que ninguém acerta? Uma pequena mudança no ângulo da costura // muda onde ela chega.",
+"Um grau na costura desloca a bola uns 2 cm. // Nem o arremessador consegue prever.",
+"Como resumiu o pesquisador: a knuckleball é // “mais bala do que borboleta”."
 ]
 }

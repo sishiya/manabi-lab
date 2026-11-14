@@ -1,0 +1,16 @@
+{
+  "file": "_dev/promo/out/pitch-physics-trivia1-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/pitch-physics-trivia1.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-18T21:00:00+09:00",
+  "captions": { "en": "_dev/promo/out/pitch-physics-trivia1-short.en.srt", "es": "_dev/promo/subs/pitch-physics-trivia1-short.es.srt", "ko": "_dev/promo/subs/pitch-physics-trivia1-short.ko.srt", "pt": "_dev/promo/subs/pitch-physics-trivia1-short.pt.srt", "zh-TW": "_dev/promo/subs/pitch-physics-trivia1-short.zh-TW.srt" },
+  "title": "【うんちく】ナックルボールは、じつは揺れていない #Shorts",
+  "description": "試合でボールの位置を追う記録を1球ずつ調べると、なめらかな線からのずれは、ふつうの球が0.30インチ、ナックルが0.33インチ。測る道具の誤差くらいしかありませんでした。打てないわけは、縫い目の向きが少しちがうだけで曲がる先が変わること。アプリと同じ計算では、縫い目の向きが1°ちがうと約2 cmずれます。投げた本人にも読めません。点の絵はモデルの道すじです。\n\nアプリ「変化球のしくみ」に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/pitch-physics/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: A. M. Nathan (2012) Baseball Prospectus「The Knuckleball Mystique」・縫い目の力: Watts & Sawyer (1975) Am. J. Phys. 43\n\n声: VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
+  "tags": ["変化球のしくみ", "ナックルボール", "ナックル", "野球", "変化球", "物理", "うんちく", "雑学", "Shorts", "まなびラボ", "しし屋", "knuckleball", "baseball physics", "did you know"],
+  "localizations": {
+    "en": {
+      "title": "Did you know? The knuckleball doesn't actually wobble #Shorts",
+      "description": "Someone checked the ball-tracking data from games, one pitch at a time. The deviation from a smooth curve was 0.30 inch for normal pitches and 0.33 inch for knuckleballs: about the size of the measurement error. So why can't anyone hit it? A tiny change in seam angle changes where the ball ends up. With the same physics as the app, one degree of seam angle shifts it about 2 cm. Not even the pitcher can predict it. The dotted paths are from the model. Turn on English subtitles (CC).\n\nRelated to the app \"How Pitches Break\".\n\nApp (switch to English with the EN button): https://sishiya.github.io/manabi-lab/pitch-physics/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/?lang=en\n\nSources: A. M. Nathan (2012) Baseball Prospectus, \"The Knuckleball Mystique\"; seam force: Watts & Sawyer (1975) Am. J. Phys. 43.\n\nVoice: VOICEVOX:Meimei Himari\nMusic: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#DidYouKnow #Science"
+    }
+  }
+}

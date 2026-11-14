@@ -10,4 +10,7 @@ window.TRIVIA_THUMBS = {
   'extreme-trivia1':       { t: 1.5, crop: [180, 150, 820, 620], title: 'つぶれるから、\n[じゃない]。', line: '深海魚の限界が8,200 mあたりのわけ' },
   'god-view-trivia3':      { t: 12.5, crop: [180, 140, 720, 620], title: 'この30秒で\nあなたは\n[何km]動く？', line: 'すわっているだけ。それでも動いている' },
   'net-route-trivia3':     { t: 16.8, crop: [130, 470, 680, 440], title: 'ハトで\nping [53分]？', line: '本当にハトでネットをやった' },
+  'illusions-trivia1':     { t: 1.0, crop: [60, 380, 960, 680], title: 'ジグザグの線は\n[何本？]', line: '数えてみて' },
+  'metamorphosis-trivia3': { t: 0.8, crop: [340, 600, 440, 240], title: '数週間で\n[1万倍]', line: 'イモムシ、人の赤ちゃんなら？' },
+  'pitch-physics-trivia1': { t: 22, crop: [60, 330, 960, 780], title: 'ナックルは\n[揺れていない]', line: '1球ずつ調べた人がいる' },
 };

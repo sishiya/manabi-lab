@@ -513,5 +513,32 @@
 "R: Y en desorden: // el número 0, el 4, el 2 y el 1.",
 "P: ¿A internet no le importa // que los paquetes lleguen desordenados?",
 "R: Buena parte de internet funciona igual: // los reordena por número y luego dibuja la página."
+],
+"illusions-trivia1-short": [
+"¿Cuántas de estas líneas son zigzags?",
+"Cuéntalas…",
+"Ninguna. Todas son la misma onda suave",
+"Pon el fondo blanco… ¿ves? Ondas",
+"Cuando la línea cambia de claro a oscuro // justo en las crestas",
+"el cerebro lo lee como una esquina // (una explicación)",
+"“Ceguera a la curvatura”, descubierta en 2017. // Otra vez: ¿cuántas?"
+],
+"metamorphosis-trivia3-short": [
+"10.000 veces más pesada en pocas semanas",
+"Una oruga recién salida del huevo pesa 1 miligramo",
+"Unas semanas después: 12–15 gramos. // Más de 10.000 veces más",
+"Y cerca del 90 % de ese aumento llega // después de la última muda",
+"Si un bebé de 3 kg creciera 10.000 veces // (solo multiplicar)",
+"30 toneladas. Como un camión grande",
+"Y luego rehace ese cuerpo dentro de la pupa"
+],
+"pitch-physics-trivia1-short": [
+"La bola de nudillos en realidad no tiembla.",
+"Alguien revisó los datos de seguimiento de la pelota en partidos, // lanzamiento por lanzamiento.",
+"Desviación de una curva suave: // 0,30 pulgadas en lanzamientos normales, 0,33 en la de nudillos.",
+"Más o menos el tamaño del error de medición.",
+"¿Entonces por qué nadie la batea? Un pequeño cambio en el ángulo de la costura // cambia adónde llega.",
+"Un grado de diferencia en la costura la desvía unos 2 cm. // Ni el lanzador puede predecirlo.",
+"Como lo resumió el investigador: la de nudillos es // “más bala que mariposa”."
 ]
 }

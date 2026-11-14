@@ -1,0 +1,16 @@
+{
+  "file": "_dev/promo/out/metamorphosis-trivia3-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/metamorphosis-trivia3.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-17T21:00:00+09:00",
+  "captions": { "en": "_dev/promo/out/metamorphosis-trivia3-short.en.srt", "es": "_dev/promo/subs/metamorphosis-trivia3-short.es.srt", "ko": "_dev/promo/subs/metamorphosis-trivia3-short.ko.srt", "pt": "_dev/promo/subs/metamorphosis-trivia3-short.pt.srt", "zh-TW": "_dev/promo/subs/metamorphosis-trivia3-short.zh-TW.srt" },
+  "title": "【うんちく】イモムシは数週間で1万倍。人の赤ちゃんなら？ #Shorts",
+  "description": "タバコスズメガのイモムシは、タマゴから出たときは約1ミリグラム。数週間後には12〜15グラムと、1万倍以上になります。しかも増える重さの約9割は、最後の脱皮（5齢）のあと。3キロの赤ちゃんを1万倍にすると30トン、大型トラックくらいです（ただのかけ算。トラックの重さは目安）。そしてその体を、さなぎの中で作りかえます。\n\nアプリ「さなぎの中で」に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/metamorphosis/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: Woods (2013) Functional Ecology のデータ・Grunert ほか (2015) PLoS ONE 10(5): e0127988\n\n声: VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
+  "tags": ["さなぎの中で", "タバコスズメガ", "イモムシ", "変態", "脱皮", "うんちく", "雑学", "Shorts", "まなびラボ", "しし屋", "tobacco hornworm", "caterpillar", "metamorphosis", "did you know"],
+  "localizations": {
+    "en": {
+      "title": "Did you know? A caterpillar gets 10,000 times heavier in a few weeks #Shorts",
+      "description": "A tobacco hornworm caterpillar weighs about 1 milligram when it hatches. A few weeks later it weighs 12 to 15 grams: over 10,000 times more. About 90% of that gain comes after the last molt (the 5th instar). If a 3 kg baby grew 10,000 times, it would weigh 30 tonnes, about a big truck (just multiplication; the truck weight is a rough guide). Then the caterpillar rebuilds that body inside the pupa. Turn on English subtitles (CC).\n\nRelated to the app \"Inside the Pupa\".\n\nApp (switch to English with the EN button): https://sishiya.github.io/manabi-lab/metamorphosis/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/?lang=en\n\nSources: data described in Woods (2013) Functional Ecology; Grunert et al. (2015) PLoS ONE 10(5): e0127988.\n\nVoice: VOICEVOX:Meimei Himari\nMusic: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#DidYouKnow #Science"
+    }
+  }
+}
