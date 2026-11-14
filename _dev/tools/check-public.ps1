@@ -82,8 +82,8 @@ foreach ($f in $files) {
     elseif ($ascii -match 'LIST|INFO|id3 |ID3|bext|iXML|_PMX') { [void]$hits.Add("$rel : WAV に付加情報（作者・機器など）がある（消してから公開）") }
     continue
   }
-  if ($ext -eq '.mp4' -and $rel -like 'assets\thumbs\*') {
-    # 動くサムネイル（make-motion-thumbs.ps1）: 作者・場所・題などの付加情報がないか（ffprobe）。写っている中身は目で確かめる
+  if (($ext -eq '.mp4' -and $rel -like 'assets\thumbs\*') -or $ext -eq '.m4a') {
+    # 動くサムネイル（make-motion-thumbs.ps1）と、アプリの音（m4a。例: jungle-sound/audio。2026-11-14〜）: 作者・場所・題などの付加情報がないか（ffprobe）。写っている・録れている中身は目と耳で確かめる
     $probe = Get-Command ffprobe -ErrorAction SilentlyContinue
     if (-not $probe) { [void]$hits.Add("$rel : ffprobe がなく付加情報を調べられない（目で確認）"); continue }
     $tags = & $probe.Source -v error -show_entries 'format_tags:stream_tags' -of 'default=nw=1' $f

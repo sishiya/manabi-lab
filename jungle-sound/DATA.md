@@ -46,6 +46,15 @@ Freesound の **Sonoteca Uirapuru**（Beatriz Filizola、UFF・CNPq の支援、
 - 826472: 同じ場所の森（ページ未確認）。
 - 夜の録音・夜明けの合唱・雨は、この人の分には見つからなかった。ほかを探す。
 
+## 5. 第一弾に使ったもの（ペルーの夜明け、2026-11-14 に確かめた）
+- **Hopping, Kahl & Klinck 2022**「A collection of fully-annotated soundscape recordings from the Southwestern Amazon Basin」Zenodo 10.5281/zenodo.7079124、**CC BY 4.0**（Zenodo の API で確認）。
+  - ペルー Madre de Dios、Inkaterra Reserva Amazonica（Puerto Maldonado の東約 20 km、2 km²）。2019年1月14日〜2月2日（雨季）。SWIFT（Cornell）、高さ約 1.5 m、48 kHz で録って 32 kHz の FLAC に。
+  - 7か所×3日（1/16・1/20・1/31）× 5:00〜6:00（ペルー時間）= 21時間。注釈 16,482 個、鳥 132種＋「????」（種のわからない鳥）1,684 個。**鳥以外（虫・カエル・サル）には注釈がない**。
+  - 1時間のうち鳥の注釈がある時間の割合は 57〜99%（夜明けは鳥がほとんど鳴きっぱなし）。
+  - 2.4 GB の zip は落とさず、HTTP の範囲指定で必要な7本だけ取り出した（`tools/rzip.py`）。
+- 同じマドレ・デ・ディオス州で GBIF の使える音の記録: 367 本のうち 68 本（鳥 67・サル 1）。カエル・虫の使える録音はなかった。
+- ほかに見つけた使えそうなデータ: Symes ほか 2023「Neotropical forest soundscapes with call identifications for katydids」（パナマ Barro Colorado 島、林冠 24 m、夜、キリギリス 24 種＋種のわからない声、**CC0**、Zenodo 7591959 / Dryad 10.5061/dryad.zw3r2288b）。アマゾンではないので第一弾には使わない。
+
 ## 4. 調べがつかなかったこと・確かめること
 - Xeno-canto は自動の読み込みを断る（ボット避け）ので、検索・ライセンスの確認はユーザーがブラウザで見る（回避はしない）。
 - figshare（Viruá のデータ）のライセンス。

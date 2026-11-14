@@ -1,0 +1,50 @@
+/* 熱帯雨林の音 */
+:root{--bg:#0f1f18;--panel:#152a21;--line:#2a4538;--ink:#e8f0f4;--muted:#a3b4bf;--acc:#7fd49a;--ok:#7fd49a;--ng:#ff9b7a;
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+[hidden]{display:none!important}
+#app{max-width:760px;margin:0 auto}
+#top{padding:12px 16px 4px}
+#top h1{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0}
+.sub{margin:4px 0 0;color:var(--muted);font-size:13px}
+
+/* 上に固定: 図と再生（スマホでもスクロールで消えない） */
+#pin{position:sticky;top:0;z-index:2;background:var(--bg);padding:8px 16px 10px;border-bottom:1px solid var(--line)}
+.spec-wrap{position:relative;height:150px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#081210}
+#spec{position:absolute;inset:0;width:100%;height:100%;display:block}
+.axis{position:absolute;right:4px;top:2px;bottom:2px;display:flex;flex-direction:column;justify-content:space-between;font:11px var(--f-mono);color:var(--muted);pointer-events:none}
+.spec-note{margin:4px 0 0;color:var(--muted);font-size:12px}
+.player{display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+.status{margin:0;font:14px var(--f-mono);color:var(--muted)}
+.status.on{color:var(--acc)}
+
+button{font:inherit;font-size:15px;min-height:40px;padding:8px 14px;border-radius:8px;cursor:pointer}
+button:disabled{opacity:.4;cursor:default}
+.primary{background:var(--acc);color:#0b1a12;border:none;font-weight:700}
+.primary.on{background:#ffd27a}
+.listen{background:transparent;color:var(--ink);border:1px solid var(--acc)}
+.listen.on{background:var(--acc);color:#0b1a12}
+.answer{background:#24392f;color:var(--ink);border:1px solid var(--line)}
+
+#scroll{padding:8px 16px 32px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:12px 0;line-height:1.75;font-size:14px}
+.card h2{font-size:16px;margin:0 0 6px}
+.card h3{font-size:14px;margin:12px 0 4px}
+.warn{color:var(--muted);font-size:13px}
+.ab{display:flex;gap:10px;margin:8px 0}
+.ab button{flex:1}
+.result{margin:8px 0 0;font-weight:700}
+.score{margin:2px 0 0;color:var(--muted);font:13px var(--f-mono)}
+.metrics table,#bands table{width:100%;border-collapse:collapse;font-size:13px}
+.metrics th,.metrics td,#bands th,#bands td{border-bottom:1px solid var(--line);padding:5px 4px;text-align:right}
+.metrics th:first-child,.metrics td:first-child,#bands th:first-child,#bands td:first-child{text-align:left}
+.metrics td.num,#bands td.num{font-family:var(--f-mono);white-space:nowrap}
+.metrics,#bands{overflow-x:auto}   /* 表だけ横に動かせる（ページははみ出さない） */
+.metrics td:first-child,#bands td:first-child{min-width:9em}
+.in{color:var(--ok)} .out{color:var(--ng)}
+.summary{margin:8px 0 0;font-weight:700}
+.more summary,#about summary{cursor:pointer}
+#about{color:var(--muted)}
+#about summary{color:var(--ink)}
+#about a,.card a{color:var(--acc)}
+#about ul{padding-left:18px}
