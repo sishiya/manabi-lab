@@ -1,0 +1,250 @@
+[
+ {
+  "code": "pluant1",
+  "sci": "Myrmelastes hyperythrus",
+  "en": "Plumbeous Antbird",
+  "ja": null,
+  "wikidata": "Q28863674",
+  "photo": {
+   "file": "img/pluant1.jpg",
+   "artist": "Hector Bottai",
+   "attribution": "",
+   "license": "CC BY-SA 4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Myrmelastes_hyperythrus_-_Plumbeous_antbird_%28male%29.jpg"
+  }
+ },
+ {
+  "code": "putfru1",
+  "sci": "Querula purpurata",
+  "en": "Purple-throated Fruitcrow",
+  "ja": "マエカケカザリドリ",
+  "wikidata": "Q854711",
+  "photo": {
+   "file": "img/putfru1.jpg",
+   "artist": "Hector Bottai",
+   "attribution": "",
+   "license": "CC BY-SA 4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Querula_purpurata_-_Purple-throated_Fruitcrow_%28male%29%3B_Parauapebas%2C_Par%C3%A1%2C_Brazil.jpg"
+  }
+ },
+ {
+  "code": "sobcac1",
+  "sci": "Cacicus solitarius",
+  "en": "Solitary Black Cacique",
+  "ja": "アオクロツリスドリ",
+  "wikidata": "Q944938",
+  "photo": {
+   "file": "img/sobcac1.jpg",
+   "artist": "vinicius_s_domingues",
+   "attribution": "",
+   "license": "CC BY 4.0",
+   "license_url": "https://creativecommons.org/licenses/by/4.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Cacicus_solitarius_416898267.jpg"
+  }
+ },
+ {
+  "code": "coltro1",
+  "sci": "Trogon collaris",
+  "en": "Collared Trogon",
+  "ja": "クビワキヌバネドリ",
+  "wikidata": "Q1034953",
+  "photo": {
+   "file": "img/coltro1.jpg",
+   "artist": "Alejandro  Bayer Tamayo from Armenia, Colombia",
+   "attribution": "",
+   "license": "CC BY-SA 2.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/2.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Trogon_collaris_%28Trog%C3%B3n_collarejo%29_%2814027169195%29.jpg"
+  }
+ },
+ {
+  "code": "????",
+  "sci": "unknown",
+  "en": "unknown",
+  "ja": null,
+  "wikidata": null,
+  "photo": null
+ },
+ {
+  "code": "ducgre1",
+  "sci": "Pachysylvia hypoxantha",
+  "en": "Dusky-capped Greenlet",
+  "ja": null,
+  "wikidata": "Q28846221",
+  "photo": {
+   "file": "img/ducgre1.jpg",
+   "artist": "Dominic Sherony",
+   "attribution": "",
+   "license": "CC BY-SA 2.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/2.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Dusky-capped_Greenlet_%28Hylophilus_hypoxanthus%29.jpg"
+  }
+ },
+ {
+  "code": "ruqdov",
+  "sci": "Geotrygon montana",
+  "en": "Ruddy Quail-Dove",
+  "ja": "ヤマウズラバト",
+  "wikidata": "Q173887",
+  "photo": {
+   "file": "img/ruqdov.jpg",
+   "artist": "Hector Bottai",
+   "attribution": "",
+   "license": "CC BY-SA 4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Geotrygon_montana_-_Ruddy_Quail-Dove%2C_Trememb%C3%A9%2C_S%C3%A3o_Paulo%2C_Brazil.jpg"
+  }
+ },
+ {
+  "code": "dutant2",
+  "sci": "Thamnomanes ardesiacus",
+  "en": "Dusky-throated Antshrike",
+  "ja": "ノドグロアリモズモドキ",
+  "wikidata": "Q576662",
+  "photo": {
+   "file": "img/dutant2.jpg",
+   "artist": "Hector Bottai",
+   "attribution": "",
+   "license": "CC BY-SA 4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Thamnomanes_ardesiacus_Dusky-throated_Antshrike_%28male%29%3B_Rio_Branco%2C_Acre%2C_Brazil.jpg"
+  }
+ },
+ {
+  "code": "rucant2",
+  "sci": "Formicarius colma",
+  "en": "Rufous-capped Antthrush",
+  "ja": "ズアカアリツグミ",
+  "wikidata": "Q941540",
+  "photo": {
+   "file": "img/rucant2.jpg",
+   "artist": "Dario Sanches",
+   "attribution": "",
+   "license": "CC BY-SA 2.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/2.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Formicarius_colma_-Vale_do_Ribeira%2C_Registro%2C_Sao_Paulo%2C_Brazil-8_%281%29.jpg"
+  }
+ },
+ {
+  "code": "scrpih1",
+  "sci": "Lipaugus vociferans",
+  "en": "Screaming Piha",
+  "ja": "ムジカザリドリ",
+  "wikidata": "Q1067401",
+  "photo": {
+   "file": "img/scrpih1.jpg",
+   "artist": "Hector Bottai",
+   "attribution": "",
+   "license": "CC BY-SA 4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Lipaugus_vociferans_-_Screaming_Piha%3B_Manaus%2C_Amazonas%2C_Brazil.jpg"
+  }
+ },
+ {
+  "code": "batman1",
+  "sci": "Pipra fasciicauda",
+  "en": "Band-tailed Manakin",
+  "ja": "オビオマイコドリ",
+  "wikidata": "Q539196",
+  "photo": {
+   "file": "img/batman1.jpg",
+   "artist": "Hector Bottai",
+   "attribution": "",
+   "license": "CC BY-SA 4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Pipra_fasciicauda_-_Band-tailed_manakin_%28male%29.JPG"
+  }
+ },
+ {
+  "code": "blfant1",
+  "sci": "Formicarius analis",
+  "en": "Black-faced Antthrush",
+  "ja": "カオグロアリツグミ",
+  "wikidata": "Q998408",
+  "photo": {
+   "file": "img/blfant1.jpg",
+   "artist": "Francesco Veronesi from Italy",
+   "attribution": "",
+   "license": "CC BY-SA 2.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/2.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Black-faced_Antthrush_-_Rio_Tigre_-_Costa_Rica_%2826631229751%29.jpg"
+  }
+ },
+ {
+  "code": "blfcot1",
+  "sci": "Conioptilon mcilhennyi",
+  "en": "Black-faced Cotinga",
+  "ja": "カオグロカザリドリ",
+  "wikidata": "Q1302453",
+  "photo": {
+   "file": "img/blfcot1.jpg",
+   "artist": "Hector Bottai",
+   "attribution": "",
+   "license": "CC BY-SA 4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Conioptilon_mcilhennyi_-_Black-faced_cotinga.jpg"
+  }
+ },
+ {
+  "code": "bsbeye1",
+  "sci": "Phlegopsis nigromaculata",
+  "en": "Black-spotted Bare-eye",
+  "ja": "ホノオアリドリ",
+  "wikidata": "Q903893",
+  "photo": {
+   "file": "img/bsbeye1.jpg",
+   "artist": "Vincent A. Vos",
+   "attribution": "",
+   "license": "CC BY 4.0",
+   "license_url": "https://creativecommons.org/licenses/by/4.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Phlegopsis_nigromaculata_8543335.jpg"
+  }
+ },
+ {
+  "code": "citwoo1",
+  "sci": "Dendrexetastes rufigula",
+  "en": "Cinnamon-throated Woodcreeper",
+  "ja": "カギハシオニキバシリ",
+  "wikidata": "Q595838",
+  "photo": {
+   "file": "img/citwoo1.jpg",
+   "artist": "Hector Bottai",
+   "attribution": "",
+   "license": "CC BY-SA 4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Dendexetastes_rufigula_-_Cinnamon-throated_Woodcreeper%3B_Manaus%2C_Amazonas%2C_Brazil.jpg"
+  }
+ },
+ {
+  "code": "elewoo1",
+  "sci": "Xiphorhynchus elegans",
+  "en": "Elegant Woodcreeper",
+  "ja": "クロボシオニキバシリ",
+  "wikidata": "Q1269672",
+  "photo": {
+   "file": "img/elewoo1.jpg",
+   "artist": "Cláudio Dias Timm from Rio Grande do Sul",
+   "attribution": "",
+   "license": "CC BY-SA 4.0",
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Xiphorhynchus_elegans_%28cropped%29.jpg"
+  }
+ },
+ {
+  "code": "viotro3",
+  "sci": "Trogon ramonianus",
+  "en": "Amazonian Trogon",
+  "ja": null,
+  "wikidata": "Q12846684",
+  "photo": {
+   "file": "img/viotro3.jpg",
+   "artist": "Vincent A. Vos",
+   "attribution": "",
+   "license": "CC BY 4.0",
+   "license_url": "https://creativecommons.org/licenses/by/4.0",
+   "page": "https://commons.wikimedia.org/wiki/File:Trogon_ramonianus_8253030.jpg"
+  }
+ }
+]

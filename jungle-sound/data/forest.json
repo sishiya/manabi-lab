@@ -1,0 +1,446 @@
+{
+"length_s": 180.0,
+"sr": 32000,
+"bed": {
+"file": "audio/bed.m4a",
+"kind": "fill",
+"boxes": 38
+},
+"birds_file": "audio/birds.m4a",
+"species": [
+{
+"code": "pluant1",
+"sci": "Myrmelastes hyperythrus",
+"en": "Plumbeous Antbird",
+"n": 9,
+"messy": false
+},
+{
+"code": "putfru1",
+"sci": "Querula purpurata",
+"en": "Purple-throated Fruitcrow",
+"n": 6,
+"messy": true
+},
+{
+"code": "sobcac1",
+"sci": "Cacicus solitarius",
+"en": "Solitary Black Cacique",
+"n": 6,
+"messy": false
+},
+{
+"code": "coltro1",
+"sci": "Trogon collaris",
+"en": "Collared Trogon",
+"n": 5,
+"messy": true
+},
+{
+"code": "????",
+"sci": "unknown",
+"en": "unknown",
+"n": 4,
+"messy": false
+},
+{
+"code": "ducgre1",
+"sci": "Pachysylvia hypoxantha",
+"en": "Dusky-capped Greenlet",
+"n": 4,
+"messy": false
+},
+{
+"code": "ruqdov",
+"sci": "Geotrygon montana",
+"en": "Ruddy Quail-Dove",
+"n": 4,
+"messy": false
+},
+{
+"code": "dutant2",
+"sci": "Thamnomanes ardesiacus",
+"en": "Dusky-throated Antshrike",
+"n": 3,
+"messy": false
+},
+{
+"code": "rucant2",
+"sci": "Formicarius colma",
+"en": "Rufous-capped Antthrush",
+"n": 2,
+"messy": true
+},
+{
+"code": "scrpih1",
+"sci": "Lipaugus vociferans",
+"en": "Screaming Piha",
+"n": 2,
+"messy": false
+},
+{
+"code": "batman1",
+"sci": "Pipra fasciicauda",
+"en": "Band-tailed Manakin",
+"n": 1,
+"messy": true
+},
+{
+"code": "blfant1",
+"sci": "Formicarius analis",
+"en": "Black-faced Antthrush",
+"n": 1,
+"messy": false
+},
+{
+"code": "blfcot1",
+"sci": "Conioptilon mcilhennyi",
+"en": "Black-faced Cotinga",
+"n": 1,
+"messy": false
+},
+{
+"code": "bsbeye1",
+"sci": "Phlegopsis nigromaculata",
+"en": "Black-spotted Bare-eye",
+"n": 1,
+"messy": true
+},
+{
+"code": "citwoo1",
+"sci": "Dendrexetastes rufigula",
+"en": "Cinnamon-throated Woodcreeper",
+"n": 1,
+"messy": false
+},
+{
+"code": "elewoo1",
+"sci": "Xiphorhynchus elegans",
+"en": "Elegant Woodcreeper",
+"n": 1,
+"messy": true
+},
+{
+"code": "viotro3",
+"sci": "Trogon ramonianus",
+"en": "Amazonian Trogon",
+"n": 1,
+"messy": true
+}
+],
+"events": [
+[
+"putfru1",
+3.522,
+49.3,
+10.7
+],
+[
+"coltro1",
+10.612,
+21.4,
+1.7
+],
+[
+"pluant1",
+16.728,
+45.8,
+3.1
+],
+[
+"putfru1",
+19.422,
+60.4,
+1.6
+],
+[
+"batman1",
+20.167,
+9.4,
+0.7
+],
+[
+"????",
+23.512,
+0.0,
+3.0
+],
+[
+"coltro1",
+25.212,
+23.5,
+1.6
+],
+[
+"????",
+27.112,
+3.4,
+2.5
+],
+[
+"pluant1",
+31.128,
+45.8,
+3.1
+],
+[
+"sobcac1",
+32.519,
+113.8,
+1.6
+],
+[
+"scrpih1",
+36.871,
+108.4,
+0.9
+],
+[
+"elewoo1",
+36.98,
+39.9,
+5.5
+],
+[
+"dutant2",
+44.604,
+33.0,
+6.5
+],
+[
+"putfru1",
+44.622,
+62.4,
+6.0
+],
+[
+"blfant1",
+52.117,
+10.5,
+2.3
+],
+[
+"coltro1",
+52.912,
+25.5,
+1.2
+],
+[
+"rucant2",
+53.215,
+92.7,
+4.3
+],
+[
+"putfru1",
+57.222,
+68.8,
+8.6
+],
+[
+"????",
+60.612,
+6.3,
+1.3
+],
+[
+"ruqdov",
+63.975,
+101.8,
+1.6
+],
+[
+"pluant1",
+65.728,
+45.8,
+3.1
+],
+[
+"putfru1",
+71.022,
+77.8,
+6.9
+],
+[
+"ruqdov",
+72.575,
+103.8,
+1.3
+],
+[
+"coltro1",
+77.012,
+27.1,
+1.5
+],
+[
+"pluant1",
+82.328,
+45.8,
+3.1
+],
+[
+"sobcac1",
+83.919,
+115.8,
+1.9
+],
+[
+"viotro3",
+86.351,
+126.2,
+5.7
+],
+[
+"blfcot1",
+91.986,
+13.2,
+1.2
+],
+[
+"sobcac1",
+94.919,
+118.1,
+2.1
+],
+[
+"pluant1",
+96.128,
+45.8,
+3.1
+],
+[
+"dutant2",
+98.504,
+33.0,
+6.5
+],
+[
+"putfru1",
+102.822,
+85.1,
+7.2
+],
+[
+"sobcac1",
+107.419,
+120.6,
+1.4
+],
+[
+"ruqdov",
+118.975,
+105.5,
+1.0
+],
+[
+"sobcac1",
+119.619,
+122.4,
+1.5
+],
+[
+"coltro1",
+121.612,
+29.0,
+1.4
+],
+[
+"ducgre1",
+123.84,
+30.8,
+1.8
+],
+[
+"ruqdov",
+125.575,
+106.9,
+1.1
+],
+[
+"pluant1",
+126.128,
+45.8,
+3.1
+],
+[
+"sobcac1",
+134.419,
+124.3,
+1.5
+],
+[
+"pluant1",
+140.328,
+45.8,
+3.1
+],
+[
+"ducgre1",
+140.64,
+30.8,
+1.8
+],
+[
+"citwoo1",
+142.15,
+16.3,
+4.7
+],
+[
+"ducgre1",
+149.14,
+30.8,
+1.8
+],
+[
+"pluant1",
+155.628,
+45.8,
+3.1
+],
+[
+"????",
+157.612,
+8.0,
+1.0
+],
+[
+"rucant2",
+164.815,
+97.4,
+4.0
+],
+[
+"scrpih1",
+166.971,
+109.7,
+3.7
+],
+[
+"bsbeye1",
+169.387,
+14.8,
+1.1
+],
+[
+"pluant1",
+171.328,
+45.8,
+3.1
+],
+[
+"ducgre1",
+173.64,
+30.8,
+1.8
+],
+[
+"dutant2",
+179.904,
+33.0,
+0.096
+]
+],
+"note": "events = [種, 鳴らす時刻（秒）, birds.m4a の中の位置（秒）, 長さ（秒）]"
+}

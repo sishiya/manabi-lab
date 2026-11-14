@@ -1,19 +1,23 @@
 // 熱帯雨林の音 — メイン（再生と、デバッグ用の窓口）
+// 森（第二弾。js/forest.js が声ごとに重ねて鳴らす）と、聞きくらべ（第一弾。audio/mix1〜3・ref1 をそのまま流す）は同じ音の道すじを使う
 'use strict';
 window.__jusoErr = [];
 window.addEventListener('error', e => window.__jusoErr.push(String(e.message)));
+window.addEventListener('unhandledrejection', e => window.__jusoErr.push(String(e.reason)));
 
 const $ = id => document.getElementById(id);
 const CLIP = 15, FADE = 0.3;
-const S = { info: null, ctx: null, an: null, els: {}, gains: {}, now: null, stopAt: 0, abWhich: null };
+const S = { info: null, ctx: null, an: null, els: {}, gains: {}, now: null, stopAt: 0, abWhich: null, forest: false };
 
 // 音の道すじは最初に押したときに作る（ブラウザは押す前に音を出させない）
-function graph() {
-  if (S.ctx) return;
-  S.ctx = Power.audio(new (window.AudioContext || window.webkitAudioContext)());
-  S.an = S.ctx.createAnalyser(); S.an.fftSize = 1024; S.an.smoothingTimeConstant = 0.2;
-  S.an.minDecibels = -125; S.an.maxDecibels = -65;   // 森の音は小さい（全体で -40 dBFS ほど）ので、止まっているときの図と同じくらいの明るさに
-  S.an.connect(S.ctx.destination);
+async function graph() {
+  if (!S.ctx) {
+    S.ctx = Power.audio(new (window.AudioContext || window.webkitAudioContext)());
+    S.an = S.ctx.createAnalyser(); S.an.fftSize = 1024; S.an.smoothingTimeConstant = 0.2;
+    S.an.minDecibels = -125; S.an.maxDecibels = -65;   // 森の音は小さい（全体で -40 dBFS ほど）ので、止まっているときの図と同じくらいの明るさに
+    S.an.connect(S.ctx.destination);
+  }
+  await Forest.init(S.ctx, S.an);
 }
 function el(name) {
   if (!S.els[name]) {
@@ -32,20 +36,35 @@ function level(name, at) {
   const p = L.slice(at, at + CLIP).reduce((s, d) => s + 10 ** (d / 10), 0) / CLIP; return 10 * Math.log10(p);
 }
 
-function play(name, from, len, gainDb = 0) {
-  graph(); stop(true);
+// ---- 森（第二弾）----
+let clock = 0;
+async function playForest() {
+  await graph(); stop(true); S.ctx.resume();
+  Forest.start(); S.forest = true; Spectro.start(S.an); Cards.startGlow();
+  clock = setInterval(() => { $('status').textContent = `森を再生中 ${fmt(Forest.time)} / 3:00（くり返し）`; }, 250);
+  ui();
+}
+function stopForest() {
+  if (!S.forest) return;
+  Forest.stop(); S.forest = false; clearInterval(clock); Spectro.stop(); Cards.stopGlow();
+}
+
+// ---- 聞きくらべ（第一弾）----
+async function play(name, from, len, gainDb = 0) {
+  await graph(); stop(true);
   const a = el(name), gn = S.gains[name].gain, t = S.ctx.currentTime, v = 10 ** (gainDb / 20);
   S.ctx.resume();
   gn.cancelScheduledValues(t);
   if (len) { gn.setValueAtTime(0, t); gn.linearRampToValueAtTime(v, t + FADE); } else gn.setValueAtTime(1, t);
   a.currentTime = from; S.now = { name }; S.stopAt = len ? from + len : 0;
   a.play().catch(e => { $('status').textContent = '再生できませんでした: ' + e.message; });
-  Spectro.start(S.an); $('specNote').textContent = '図: いま鳴っている音（右から流れる。たて＝音の高さ、明るい＝強い）';
+  Spectro.start(S.an);
   ui();
 }
 function stop(quiet) {
+  stopForest();
   if (S.now) S.els[S.now.name].pause();
-  S.now = null; S.abWhich = null; Spectro.stop();
+  S.now = null; S.abWhich = null; if (!S.forest) Spectro.stop();
   if (!quiet) ui();
 }
 function tick() {
@@ -56,35 +75,37 @@ function tick() {
     if (left <= FADE && !S.fading) { S.fading = true; gn.linearRampToValueAtTime(0, S.ctx.currentTime + Math.max(0.05, left)); }
     if (left <= 0) { S.fading = false; const w = S.abWhich; stop(); if (w) Compare.heardOne(w); return; }
   }
-  $('status').textContent = S.abWhich ? `${S.abWhich} を再生中 ${fmt(a.currentTime - (S.stopAt - CLIP))} / 0:${CLIP}` : `重ねた森を再生中 ${fmt(a.currentTime)} / ${fmt(a.duration || 180)}`;
+  $('status').textContent = `${S.abWhich} を再生中 ${fmt(a.currentTime - (S.stopAt - CLIP))} / 0:${CLIP}`;
 }
 function ui() {
-  const mixOn = S.now && !S.abWhich;
-  $('playMix').textContent = mixOn ? '■ 止める' : '▶ 重ねた森を聞く（3分）';
-  $('playMix').classList.toggle('on', !!mixOn);
+  $('playForest').textContent = S.forest ? '■ 止める' : '▶ 森を聞く';
+  $('playForest').classList.toggle('on', S.forest);
   for (const w of ['A', 'B']) { $('play' + w).classList.toggle('on', S.abWhich === w); $('play' + w).textContent = S.abWhich === w ? `■ ${w} を止める` : `▶ ${w} を聞く`; }
-  $('status').classList.toggle('on', !!S.now);
-  if (!S.now) $('status').textContent = '止まっています';
-  else tick();
+  $('status').classList.toggle('on', !!(S.now || S.forest));
+  if (!S.now && !S.forest) $('status').textContent = '止まっています';
+  else if (S.now) tick();
 }
 
-$('playMix').onclick = () => (S.now && !S.abWhich ? stop() : play('mix1', S.els.mix1 && S.els.mix1.currentTime < 179 ? S.els.mix1.currentTime : 0, 0));
+$('playForest').onclick = () => (S.forest ? stop() : playForest().catch(e => { $('status').textContent = '鳴らせませんでした: ' + e.message; window.__jusoErr.push(String(e)); }));
 for (const w of ['A', 'B']) {
-  $('play' + w).onclick = () => {
+  $('play' + w).onclick = async () => {
     if (S.abWhich === w) { stop(); Compare.heardOne(w); return; }
     const t = Compare.trial, other = w === 'A' ? 'B' : 'A';
     const me = level(Compare.src(w), t.at), them = level(Compare.src(other), t.at);
-    S.fading = false; play(Compare.src(w), t.at, CLIP, Math.min(me, them) - me); S.abWhich = w; ui();
+    S.fading = false; await play(Compare.src(w), t.at, CLIP, Math.min(me, them) - me); S.abWhich = w; ui();
   };
   $('pick' + w).onclick = () => { stop(); Compare.answer(w); };
 }
-Power.on({ pause() { if (S.now) stop(); }, resume() {} });   // 離れたら止める（もどっても勝手に鳴らさない）
+Power.on({ pause() { if (S.now || S.forest) stop(); }, resume() {} });   // 離れたら止める（もどっても勝手に鳴らさない）
 addEventListener('resize', () => Spectro.resize());
 
 fetch('data/mix.json').then(r => r.json()).then(info => { S.info = info; Compare.render(info); })
   .catch(e => { $('metrics').textContent = '数を読みこめませんでした: ' + e.message; window.__jusoErr.push(String(e)); });
+Promise.all([Forest.prefetch(), fetch('data/species.json').then(r => r.json())])
+  .then(([forest, species]) => { Cards.build(forest, species); $('playForest').disabled = false; ui(); })
+  .catch(e => { $('playForest').textContent = '読みこめませんでした'; window.__jusoErr.push(String(e)); });
 Compare.newTrial();
 Spectro.still();
 
 // デバッグ用: 状態を見る（RULES 5）
-window.__juso = { S, Compare, level };
+window.__juso = { S, Compare, Forest, level };

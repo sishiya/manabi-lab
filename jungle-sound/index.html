@@ -11,7 +11,7 @@
 <div id="app">
   <header id="top">
     <h1>熱帯雨林の音</h1>
-    <p class="sub">アマゾン（ペルー）の夜明け、5時25分ごろの森 ・ 第一弾: 本物らしさを測る</p>
+    <p class="sub">アマゾン（ペルー）の夜明け、5時25分ごろの森。だれの声か、どこまで分かっている？</p>
   </header>
 
   <section id="pin">
@@ -19,23 +19,39 @@
       <canvas id="spec" aria-label="音の高さと時間の図（スペクトログラム）"></canvas>
       <div class="axis"><span>16 kHz</span><span>8</span><span>0</span></div>
     </div>
-    <p id="specNote" class="spec-note">図: 重ねた森の3分ぜんぶ（左が0分、右が3分。たて＝音の高さ、明るい＝強い）</p>
     <div class="player">
-      <button id="playMix" class="primary">▶ 重ねた森を聞く（3分）</button>
+      <button id="playForest" class="primary" disabled>読みこみ中…</button>
       <p id="status" class="status" aria-live="polite">止まっています</p>
     </div>
+    <p class="now-hear"><span id="pinState"></span> ・ <span id="nowHear">止まっています</span></p>
+    <div id="cards" class="cards" aria-label="声のカード（押すと鳴らす／消す）"></div>
+    <p class="card-note">写真は同じ種の別の個体です。「種まで」は録音への専門家の注釈で決めたもので、まちがいもありえます。</p>
   </section>
 
   <main id="scroll">
     <section class="card">
-      <h2>この音は何を重ねたもの？</h2>
-      <p id="what">読みこみ中…</p>
+      <div class="groups">
+        <button id="gAll" class="grp">全部</button>
+        <button id="gKnown" class="grp">種まで分かる鳥だけ</button>
+        <button id="gUnknown" class="grp">種の分からない音だけ</button>
+      </div>
+      <p id="mixState" class="mix-state" aria-live="polite"></p>
+      <p class="hint">カードを押すと、その声を<b>鳴らす／消す</b>。「だけ」で<b>その声だけ</b>を聞けます。鳴っているあいだ、カードが光ります（消している声も、うすく光ります）。</p>
       <p class="warn">※ 画面を1回押すと音が出ます。はじめは音量を小さめに。</p>
     </section>
 
     <section class="card">
-      <h2>耳でくらべる: どちらが本物？</h2>
-      <p>A と B の片方は<b>重ねた森</b>、もう片方は<b>重ねた森の土台のもとになった、同じ時刻の本物そのまま</b>です（同じ位置の15秒。大きさはそろえてあります。虫の音は同じなので、鳥の声と、鳥を消した跡に耳をすませてください）。聞いて、本物だと思うほうを選んでください。<b>10回</b>答えたら、まとめて結果を出します。10回中9回以上当たれば「聞き分けられる」＝まだ本物らしくない、という目安です（当てずっぽうでそうなる見こみは約1%）。<br><small>※ 重ねた森は3本しかないので、何度も聞くと覚えてしまうことがあります。本物どうしの組はまだ入れていません。</small></p>
+      <h2>3つの「分かり方」</h2>
+      <p><span class="vc-kind k-sp">種まで</span> 専門家が録音を聞いて、種の名前を付けた鳥の声。</p>
+      <p><span class="vc-kind k-bird">鳥・種は不明</span> 鳥の声だとは分かるが、注釈で種が付かなかった声（この録音の注釈 16,482 個のうち 1,684 個。声が小さい・短いなど、理由はいろいろ）。</p>
+      <p><span class="vc-kind k-bed">分けられていない</span> 虫・カエルなど。この録音では鳥にしか名前が付けられていないので、だれの声かは分けられていません。アマゾンの夜の虫の声は、研究でも多くが種まで分かっていません。</p>
+      <p id="what">読みこみ中…</p>
+    </section>
+
+    <details class="card">
+      <summary>本物らしさのくらべ（第一弾）: 耳・機械・数</summary>
+      <h3>耳でくらべる: どちらが本物？</h3>
+      <p>A と B の片方は<b>重ねた森</b>、もう片方は<b>重ねた森の土台のもとになった、同じ時刻の本物そのまま</b>です（同じ位置の15秒。大きさはそろえてあります。虫の音は同じなので、鳥の声と、鳥を消した跡に耳をすませてください）。<b>10回</b>答えたら、まとめて結果を出します。10回中9回以上当たれば「聞き分けられる」＝まだ本物らしくない、という目安です（当てずっぽうでそうなる見こみは約1%）。<br><small>※ 重ねた森は3本しかないので、何度も聞くと覚えてしまうことがあります。</small></p>
       <div class="ab">
         <button id="playA" class="listen">▶ A を聞く</button>
         <button id="playB" class="listen">▶ B を聞く</button>
@@ -46,29 +62,26 @@
       </div>
       <p id="abResult" class="result" aria-live="polite">まず A と B を両方聞いてください</p>
       <p id="abScore" class="score">これまで: 0 回中 0 回当たり</p>
-    </section>
-
-    <section class="card">
-      <h2>機械でくらべる: 見分けられる？</h2>
+      <h3>機械でくらべる: 見分けられる？</h3>
       <div id="machine" class="metrics">読みこみ中…</div>
-    </section>
-
-    <section class="card">
-      <h2>数でくらべる</h2>
+      <h3>数でくらべる</h3>
       <p>本物の録音3本（場所も日もちがう）から、5時15分〜36分の3分を7区間ずつ、計21区間とって数を測り、そのばらつきの中で重ねた森がどこに来るかを見ます（5〜95% に入れば ○）。右の3列は<b>わざと悪く作った重ね方</b>で、物差しがそれを見分けられるかの確かめです。どれもアプリで流すのと同じ圧縮をした音で測っています。</p>
       <div id="metrics" class="metrics">読みこみ中…</div>
       <details class="more"><summary>高さの帯ごとの数（16帯）</summary><div id="bands"></div></details>
-    </section>
+    </details>
 
     <details id="about" class="card">
       <summary>このアプリについて・おもな出どころ</summary>
-      <p>学習用の試作です。本物の録音を切り出して重ねていますが、ひとつの場所で同時に鳴った音そのものではありません。録音の機械（32 kHz）より上の高い音（16 kHz より上。キリギリスの超音波など）は入っていません。</p>
+      <p>学習用の試作です。本物の録音を切り出して重ねていますが、ひとつの場所で同時に鳴った音そのものではありません。録音の機械（32 kHz）より上の高い音（16 kHz より上。キリギリスの超音波など）は入っていません。写真の鳥は、録音で鳴いている個体そのものではありません。</p>
       <h3>おもな出どころ</h3>
       <ul>
-        <li>録音と鳥の注釈: W. Alexander Hopping, Stefan Kahl, Holger Klinck (2022) 「A collection of fully-annotated soundscape recordings from the Southwestern Amazon Basin」 Zenodo, <a href="https://doi.org/10.5281/zenodo.7079124" target="_blank" rel="noopener">doi:10.5281/zenodo.7079124</a>（<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>）。ペルー Inkaterra Reserva Amazonica、2019年1月、5時〜6時。<br>このアプリで変えたこと: 一部を切り出した・鳥の声は注釈の高さの範囲だけ残した・重ねた・AAC に圧縮した。</li>
+        <li>録音と鳥の注釈: W. Alexander Hopping, Stefan Kahl, Holger Klinck (2022) 「A collection of fully-annotated soundscape recordings from the Southwestern Amazon Basin」 Zenodo, <a href="https://doi.org/10.5281/zenodo.7079124" target="_blank" rel="noopener">doi:10.5281/zenodo.7079124</a>（<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>）。ペルー Inkaterra Reserva Amazonica、2019年1月、5時〜6時。<br>このアプリで変えたこと: 一部を切り出した・土台は鳥の声の部分を近くの時刻の音で塗りつぶした・鳥の声はまわりの音を引いた・重ねた・AAC に圧縮した。</li>
+        <li>鳥の和名: Wikidata（CC0）のラベル（鳥類の和名の目録では確かめていません）。ラベルのない種は「和名は未確認」として英名と学名で。</li>
         <li>数のくらべ方: ACI = Pieretti, Farina & Morri (2011) Ecological Indicators 11: 868–873 ／ H = Sueur ほか (2008) PLoS ONE 3: e4065 ／ NDSI = Kasten ほか (2012) Ecological Informatics 12: 70–76 ／ ADI・AEI = Villanueva-Rivera ほか (2011) Landscape Ecology 26: 1233–1246。</li>
         <li>アマゾンの夜の虫の声の多くは種まで分かっていないこと: Do Nascimento, Pérez-Granados, Alencar & Beard (2024) Phil. Trans. R. Soc. B 379: 20230112（<b>ペルーとは別の場所</b>、ブラジル Viruá 国立公園で 1,714 の音の型に注釈。名前はなかままで）。</li>
       </ul>
+      <h3>鳥の写真（Wikimedia Commons。それぞれのライセンス）</h3>
+      <ul id="photoCredits"></ul>
       <h3>使っているもの</h3>
       <p>フォント: Google Fonts（SIL Open Font License）</p>
     </details>
@@ -77,4 +90,6 @@
 
 <script src="js/spectro.js"></script>
 <script src="js/compare.js"></script>
+<script src="js/forest.js"></script>
+<script src="js/cards.js"></script>
 <script src="js/main.js"></script>

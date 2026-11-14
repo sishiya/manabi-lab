@@ -154,7 +154,7 @@ def cut(stem, a, b, lo, hi, mode):
 
 def make_mix(seed, bed='fill', mode='sub', scale=1.0, shuffle_time=False):
     rng = random.Random(seed); base, binfo = (bed_fill() if bed == 'fill' else bed_splice()) if bed else (np.zeros(int(WLEN * SR), 'float32'), {})
-    mix = base.copy(); placed = {}; missing = {}; reuse = 0
+    mix = base.copy(); placed = {}; missing = {}; reuse = 0; events = []   # events: 第二弾でブラウザが重ねて鳴らすための表
     src_of = {}                                                # 種ごとに、並びを写す録音を1本選ぶ
     for stem in TRAIN:
         for a, b, lo, hi, sp in ann[fn(stem)]:
@@ -172,9 +172,10 @@ def make_mix(seed, bed='fill', mode='sub', scale=1.0, shuffle_time=False):
             if not pool:
                 pool = clips[sp][:]; rng.shuffle(pool)
                 if placed.get(sp): reuse += 1           # 一周使い切って、同じ切り出しをもう一度使いはじめた回数
-            seg = fade(cut(*pool.pop(), mode), int(0.05 * SR)); i = int(t * SR); seg = seg[:max(0, len(mix) - i)]
+            c = pool.pop(); seg = fade(cut(*c, mode), int(0.05 * SR)); i = int(t * SR); seg = seg[:max(0, len(mix) - i)]
             mix[i:i + len(seg)] += seg; placed[sp] = placed.get(sp, 0) + 1
-    return mix, base, dict(bed=binfo, placed=placed, missing=missing, clip_reuse_rounds=reuse)
+            events.append(dict(sp=sp, t=i / SR, clip=c[:3], dur=len(seg) / SR))
+    return mix, base, dict(bed=binfo, placed=placed, missing=missing, clip_reuse_rounds=reuse, events=events)
 
 # ---------- 物差し ----------
 def roundtrip(x):

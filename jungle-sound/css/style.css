@@ -26,6 +26,40 @@ button:disabled{opacity:.4;cursor:default}
 .listen.on{background:var(--acc);color:#0b1a12}
 .answer{background:#24392f;color:var(--ink);border:1px solid var(--line)}
 
+/* 第二弾: 声のカード（上に固定。横に並べてスクロール） */
+.now-hear{margin:6px 0 0;font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+.cards{display:flex;gap:8px;overflow-x:auto;padding:8px 2px 6px;scroll-snap-type:x proximity}
+.vc{flex:0 0 118px;display:flex;flex-direction:column;border-radius:10px;scroll-snap-align:start;
+  --lv:0;transition:box-shadow .08s}
+.vc-main{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:1px;background:#1a3328;flex:1;
+  border:2px solid var(--line);border-radius:10px 10px 0 0;padding:0 0 4px;overflow:hidden;position:relative}
+.vc-main:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.vc-main img,.vc-main .q{width:100%;height:52px;object-fit:cover;display:block;background:#0b1712}
+.vc-main .q{display:flex;align-items:center;justify-content:center;font:28px var(--f-display);color:#7d8f88}
+.vc-kind{display:inline-block;align-self:flex-start;margin:4px 6px 0;padding:0 6px;border-radius:4px;font-size:11px;line-height:18px;font-weight:700}
+.k-sp{background:#7fd49a;color:#0b1a12} .k-bird{background:#ffd27a;color:#2a1d00} .k-bed{background:#8a9a94;color:#101814}
+.vc-name{padding:0 6px;font-size:13px;font-weight:700;line-height:1.3}
+.vc-sub{padding:0 6px;font-size:10.5px;color:var(--muted);line-height:1.3}
+.vc-cnt{padding:0 6px;font-size:10.5px;color:var(--muted);font-family:var(--f-mono)}
+.vc-state{position:absolute;top:4px;right:4px;font:700 11px var(--f-mono);background:#0b1a12cc;color:var(--acc);padding:1px 5px;border-radius:4px}
+.vc-solo{border-radius:0 0 10px 10px;border:2px solid var(--line);border-top:none;background:#132a20;color:var(--ink);font-size:13px;min-height:36px;padding:2px}
+.vc.live .vc-main{border-color:rgba(255,224,130,calc(.35 + .65*var(--lv)));box-shadow:0 0 calc(4px + 14px*var(--lv)) rgba(255,214,110,calc(.25 + .6*var(--lv)))}
+.vc.off .vc-main{filter:grayscale(1);opacity:.45}
+.vc.off .vc-state{color:var(--ng)}
+.vc.off.live .vc-main{box-shadow:0 0 6px rgba(255,214,110,.25)}
+.groups{display:flex;flex-wrap:wrap;gap:8px}
+.grp{background:transparent;color:var(--ink);border:1px solid var(--line);font-size:14px}
+.mix-state{margin:8px 0 0;font-size:13px}
+.hint{color:var(--muted);font-size:13px;margin:6px 0 0}
+.boost{color:#ffd27a}
+.boost-tag{display:inline-block;background:#ffd27a;color:#2a1d00;border-radius:4px;padding:0 5px;font-weight:700}
+.card-note{margin:2px 0 0;font-size:11px;color:var(--muted)}
+.vc.solo .vc-solo{background:var(--acc);color:#0b1a12;font-weight:700}
+.vc.solo .vc-main{border-color:var(--acc)}
+.vc-sub{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#pin .spec-wrap{height:110px}
+@media (max-width:480px){ #pin .spec-wrap{height:80px} .vc{flex-basis:104px} }
+
 #scroll{padding:8px 16px 32px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:12px 0;line-height:1.75;font-size:14px}
 .card h2{font-size:16px;margin:0 0 6px}
