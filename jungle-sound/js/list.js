@@ -1,6 +1,6 @@
 // 熱帯雨林の音 — 声の一覧（下にスクロール。声の帯と同じ順・同じ番号）
 // 1行 = ON／OFF のスイッチ・番号・写真・名前・「だけ」・「次の声へ」。行を押すとその声を選ぶ（写真と出どころが開く）。
-// 選んだ声: 帯・グラフ・一覧に白い縁どり。上に固定した所に「次の声へ」「くり返す」。
+// 選んだ声: 帯と一覧に白い縁どり。
 // 確かさ: 種まで（録音への専門家の注釈で種が付いた鳥の声）／鳥・種は不明（注釈で種が付かなかった「????」）／分けられていない（土台。虫・カエルなど）
 'use strict';
 window.List = (() => {
@@ -39,15 +39,12 @@ window.List = (() => {
       sw.onclick = () => keep(sw, () => { soloCode = null; setOn(code, !isOn(code)); });
       li.querySelector('.lr-body').onclick = () => select(sel === code ? null : code);
       solo.onclick = () => keep(solo, () => { only(c => c === code, `「${short(code)}」だけ`); soloCode = code; marks(); });
-      const nx = li.querySelector('.next'); if (nx) nx.onclick = () => { select(code, true); next(); };
+      const nx = li.querySelector('.next'); if (nx) nx.onclick = () => { if (sel !== code) select(code, false); next(code); };
     }
     $('gAll').onclick = () => keep($('gAll'), () => only(() => true, '全部'));
     $('gKnown').onclick = () => keep($('gKnown'), () => only(c => kindOf(c) === 'sp', '種まで分かる鳥だけ'));
     $('gUnknown').onclick = () => keep($('gUnknown'), () => only(c => kindOf(c) !== 'sp', '種の分からない音だけ'));
-    $('selNext').onclick = next;
-    $('selLoop').onclick = () => toggleLoop();
-    $('selClear').onclick = () => select(null);
-    credits(); summary('全部'); selBar();
+    credits(); summary('全部');
   }
   const all = () => ['bed', ...order];
   // 押したボタンが画面の同じ位置に残るようにする（上の文が変わって下がずれ、となりを押しまちがえないように。2026-11-14 ユーザー）
@@ -60,9 +57,9 @@ window.List = (() => {
     const li = $('voiceList').querySelector(`[data-code="${CSS.escape(code)}"]`);
     li.classList.toggle('off', !on); li.querySelector('.sw').setAttribute('aria-pressed', on); li.querySelector('.sw-txt').textContent = on ? 'ON' : 'OFF';
     const nx = li.querySelector('.next'); if (nx) nx.disabled = !on;   // 消している声へは飛べない
-    if (!quiet) { marks(); summary(null); selBar(); onChange(); }
+    if (!quiet) { marks(); summary(null); onChange(); }
   }
-  function only(test, label) { soloCode = null; for (const c of all()) setOn(c, test(c), true); marks(); summary(label); selBar(); onChange(); }
+  function only(test, label) { soloCode = null; for (const c of all()) setOn(c, test(c), true); marks(); summary(label); onChange(); }
   function marks() {
     for (const li of $('voiceList').querySelectorAll('.lr')) {
       const s = li.dataset.code === soloCode; li.classList.toggle('solo-on', s); li.querySelector('.solo').setAttribute('aria-pressed', s);
@@ -78,20 +75,21 @@ window.List = (() => {
       `<span class="boost">${boost ? `鳥の声を +${boost} dB 大きくしています（本物より大きい）` : ''}</span>`;
     // 上に固定した所の一行は、全部鳴らしているときは出さない（消した声・「だけ」・+20 dB があるときだけ）
     const partial = on.length < all().length;
-    $('pinState').hidden = !partial && !boost;
+    if (!partial && !boost) { $('pinState').innerHTML = ''; return; }
     $('pinState').innerHTML = (soloCode ? `<b>「${short(soloCode)}」だけ</b>` : label && label !== '全部' && partial ? `<b>${label.split('（')[0]}</b>` : `鳴らしている ${on.length} / ${all().length}`) +
       (boost ? ` <span class="boost-tag">+${boost} dB</span>` : '');
   }
-  // ---- 選ぶ・次の声へ・くり返す ----
-  function select(code, keepScroll) {
-    sel = code; Forest.loop(null);
+  // ---- 選ぶ・次の声へ ----
+  // 選ぶ = 帯と一覧に白い縁どり。open のときだけ行を開いて写真と説明を出す（▶| では開かない。高さが変わらないように）
+  function select(code, open = true) {
+    sel = code;
     for (const li of $('voiceList').querySelectorAll('.lr')) {
-      const s = li.dataset.code === code, d = li.querySelector('.lr-detail');
-      li.classList.toggle('sel', s); li.querySelector('.lr-body').setAttribute('aria-expanded', s);
-      d.hidden = !s; if (s) d.innerHTML = detail(code);
-      if (s && !keepScroll) li.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      const s = li.dataset.code === code, d = li.querySelector('.lr-detail'), show = s && open;
+      li.classList.toggle('sel', s); li.querySelector('.lr-body').setAttribute('aria-expanded', show);
+      if (open || !s) { d.hidden = !show; if (show) d.innerHTML = detail(code); }
+      if (show) li.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
-    selBar(); onChange();
+    onChange();
   }
   function detail(code) {
     const s = sp[code] || {}, p = s.photo;
@@ -101,32 +99,12 @@ window.List = (() => {
       `<p><b>${nameOf(code)}</b>　<i>${s.sci}</i>${s.ja ? '' : '（和名は未確認）'}</p>` +
       (p ? `<p class="cr">写真: ${p.attribution || p.artist}（<a href="${p.page}" target="_blank" rel="noopener">Commons</a>, <a href="${p.license_url}" target="_blank" rel="noopener">${p.license}</a>）・同じ種の別の個体</p>` : '');
   }
-  function next() {
-    if (!sel || sel === 'bed') return;
-    const t = Forest.time, list = ev[sel] || []; if (!list.length) return;
+  function next(code) {
+    const t = Forest.time, list = ev[code] || []; if (!list.length) return;
     const e = list.find(x => x[1] - 1 > t + 0.3) || list[0];   // 次の声の1秒前へ（最後なら最初へ）
-    hookSeek(Math.max(0, e[1] - 1), sel);
-    if (Forest.loopAB) Forest.loop([Math.max(0, e[1] - 3), e[1] + e[3] + 3]);
-    selBar();
-  }
-  function toggleLoop() {
-    if (Forest.loopAB) { Forest.loop(null); selBar(); onChange(); return; }
-    const t = Forest.time, list = ev[sel] || []; if (!list.length) return;
-    // いまに近い声（なければ次の声）の前後3秒をくり返す
-    const e = list.reduce((b, x) => (!b || Math.abs(x[1] - t) < Math.abs(b[1] - t) ? x : b), null);
-    Forest.loop([Math.max(0, e[1] - 3), Math.min(Forest.data.length_s, e[1] + e[3] + 3)]); hookSeek(Math.max(0, e[1] - 3), sel); selBar(); onChange();
+    hookSeek(Math.max(0, e[1] - 1), code);
   }
   let hookSeek = () => {};
-  function selBar() {
-    $('selBar').hidden = !sel;
-    if (!sel) return;
-    $('selName').textContent = short(sel);
-    const bed = sel === 'bed';
-    $('selNext').hidden = bed; $('selLoop').hidden = bed;
-    $('selNext').disabled = $('selLoop').disabled = !isOn(sel);   // 消している声へは飛べない
-    $('selLoop').textContent = Forest.loopAB ? '■ くり返しをやめる' : '⟲ くり返す';
-    $('selLoop').classList.toggle('on', !!Forest.loopAB);
-  }
   function credits() {
     $('photoCredits').innerHTML = order.filter(c => sp[c] && sp[c].photo).map(c => {
       const s = sp[c], p = s.photo;

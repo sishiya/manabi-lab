@@ -66,8 +66,6 @@ window.Lanes = (() => {
       const y = top + i * rowH;
       g.fillStyle = List.isOn(r.code) ? 'rgba(255,255,230,.22)' : 'rgba(255,255,230,.07)'; g.fillRect(gut, y, W - gut, rowH);
     });
-    const ab = Forest.loopAB;
-    if (ab) { g.fillStyle = 'rgba(255,255,255,.10)'; g.fillRect(X(ab[0]), top, X(ab[1]) - X(ab[0]), rows.length * rowH); }
     const px = drag != null ? drag : X(t);
     g.fillStyle = drag != null ? '#ffd27a' : '#fff'; g.fillRect(px - 1, top, 2, rows.length * rowH);
   }

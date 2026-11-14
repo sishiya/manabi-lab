@@ -52,7 +52,6 @@ function stopForest() {
 // 時刻を変える（声の帯・「次の声へ」から）。どこへ移動したかを消えずに残す
 function seek(t, snapped) {
   Forest.seek(t); showTime(); Lanes.draw();
-  $('seekMsg').hidden = false;
   $('seekMsg').textContent = `${fmt(t)} へ移動しました` + (snapped ? `（${List.short(snapped)}の声の1秒前）` : '');
 }
 List.seekHook = seek;
@@ -122,7 +121,7 @@ Promise.all([Forest.prefetch(), fetch('data/species.json').then(r => r.json())])
     List.build(forest, species, () => Lanes.dirty());
     Lanes.setup(forest, List.order, {
       seek, select: code => List.select(code),
-      preview: t => { $('seekMsg').hidden = false; $('seekMsg').textContent = `→ ${fmt(t)}（指をはなすと、ここへ移動）`; },
+      preview: t => { $('seekMsg').textContent = `→ ${fmt(t)}（指をはなすと、ここへ移動）`; },
     });
     Lanes.stop(); Spectro.resize();
     $('playForest').disabled = false; ui();

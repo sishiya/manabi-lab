@@ -23,20 +23,14 @@
       <span id="status" class="status">0:00 / 3:00</span>
       <button id="specFold" class="fold" aria-expanded="true" aria-label="図をたたむ">図 ▴</button>
     </div>
-    <p id="pinState" class="pin-state" hidden></p>
-    <div id="selBar" class="sel-bar" hidden>
-      <span>選んだ声: <b id="selName"></b></span>
-      <button id="selNext" class="sel-btn">▶| 次の声へ</button>
-      <button id="selLoop" class="sel-btn">⟲ くり返す</button>
-      <button id="selClear" class="sel-x" aria-label="選ぶのをやめる">×</button>
-    </div>
     <div id="specBox">
       <div class="spec-wrap">
         <canvas id="spec" aria-label="音の高さと時間の図（スペクトログラム）"></canvas>
         <div class="axis"><span>16 kHz</span><span>8</span><span>0</span></div>
       </div>
     </div>
-    <p id="seekMsg" class="seek-msg" aria-live="polite" hidden></p>
+    <!-- 固定した所の状態の1行。高さはいつも同じ（出たり消えたりで下がずれないように。2026-11-14 ユーザー） -->
+    <p class="pin-line"><span id="pinState" class="pin-state"></span><span id="seekMsg" class="seek-msg" aria-live="polite"></span></p>
   </section>
 
   <main id="scroll">
