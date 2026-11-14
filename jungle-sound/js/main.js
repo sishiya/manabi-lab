@@ -49,9 +49,9 @@ function stopForest() {
   if (!S.forest) return;
   Forest.stop(); S.forest = false; clearInterval(clock); Spectro.stop(); Lanes.stop();
 }
-// 時刻を変える（声の帯・3分ぜんぶの図・「次の声へ」から）。どこへ移動したかを消えずに残す
+// 時刻を変える（声の帯・「次の声へ」から）。どこへ移動したかを消えずに残す
 function seek(t, snapped) {
-  Forest.seek(t); showTime(); Lanes.draw(); Spectro.redraw();
+  Forest.seek(t); showTime(); Lanes.draw();
   $('seekMsg').hidden = false;
   $('seekMsg').textContent = `${fmt(t)} へ移動しました` + (snapped ? `（${List.short(snapped)}の声の1秒前）` : '');
 }
@@ -105,14 +105,13 @@ for (const w of ['A', 'B']) {
 }
 Power.on({ pause() { if (S.now || S.forest) stop(); }, resume() {} });   // 離れたら止める（もどっても勝手に鳴らさない）
 addEventListener('resize', () => { Spectro.resize(); Lanes.resize(); });
-for (const b of document.querySelectorAll('[data-spec]')) b.onclick = () => Spectro.setMode(b.dataset.spec);
 $('specFold').onclick = () => {
   const open = $('specBox').hidden; $('specBox').hidden = !open;
   $('specFold').textContent = open ? '図 ▴' : '図 ▾'; $('specFold').setAttribute('aria-expanded', open);
   $('specFold').setAttribute('aria-label', open ? '図をたたむ' : '図を開く');
   if (open) Spectro.resize();
 };
-Spectro.setup({ seek, abPlaying: () => !!S.now });
+Spectro.setup(() => S.forest || !!S.now);
 
 // 本物らしさのくらべ（第一弾）は開発中だけ: 手元（localhost）で開いたときだけ出す。公開の画面では「生成した音との比べ」と勘違いされやすいため（2026-11-14 ユーザー）
 if (['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) $('devCompare').hidden = false;
@@ -120,7 +119,7 @@ fetch('data/mix.json').then(r => r.json()).then(info => { S.info = info; Compare
   .catch(e => { $('metrics').textContent = '数を読みこめませんでした: ' + e.message; window.__jusoErr.push(String(e)); });
 Promise.all([Forest.prefetch(), fetch('data/species.json').then(r => r.json())])
   .then(([forest, species]) => {
-    List.build(forest, species, () => { Lanes.dirty(); Spectro.redraw(); });
+    List.build(forest, species, () => Lanes.dirty());
     Lanes.setup(forest, List.order, {
       seek, select: code => List.select(code),
       preview: t => { $('seekMsg').hidden = false; $('seekMsg').textContent = `→ ${fmt(t)}（指をはなすと、ここへ移動）`; },

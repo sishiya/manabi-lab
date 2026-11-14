@@ -17,11 +17,11 @@ window.List = (() => {
     sp = Object.fromEntries(species.map(s => [s.code, s]));
     for (const s of forest.species) count[s.code] = s.n;
     for (const e of forest.events) (ev[e[0]] = ev[e[0]] || []).push(e);
-    order = [...forest.species.filter(s => s.code !== '????').map(s => s.code), '????'];   // 帯の行の順（多く鳴く順。種不明はいちばん下）
+    order = ['????', ...forest.species.filter(s => s.code !== '????').map(s => s.code)];   // 帯の行の順（種不明の鳥を虫・カエルのすぐ下に。あとは多く鳴く順。2026-11-14 ユーザー）
     const row = (code, i) => {
       const k = kindOf(code), s = sp[code] || {}, name = nameOf(code);
       const pic = s.photo ? `<img src="${s.photo.file}" alt="" loading="lazy">` : `<span class="q">${k === 'sp' ? '<small>写真なし</small>' : k === 'bird' ? '鳥？' : '？'}</span>`;
-      const sub = k === 'bed' ? 'だれの声か分けられていない音・ずっと鳴っている' : k === 'bird' ? `注釈で種が付かなかった鳥の声・3分で ${count[code]} 回` : `<i>${s.sci}</i>${s.ja ? '' : '（和名は未確認）'}・3分で ${count[code]} 回`;
+      const sub = k === 'bed' ? 'だれの声か分けられていない' : k === 'bird' ? `種は分からない・${count[code]} 回` : `<i>${s.sci}</i>・${count[code]} 回`;
       return `<li class="lr" data-code="${code}">
         <button class="sw" aria-pressed="true" aria-label="${name}を鳴らす／消す"><span class="sw-dot"></span><span class="sw-txt">ON</span></button>
         <button class="lr-body" aria-expanded="false" aria-label="${name}を選ぶ">
@@ -35,27 +35,34 @@ window.List = (() => {
     $('voiceList').innerHTML = row('bed', -1) + order.map(row).join('');
     for (const li of $('voiceList').querySelectorAll('.lr')) {
       const code = li.dataset.code;
-      li.querySelector('.sw').onclick = () => { soloCode = null; setOn(code, !isOn(code)); };
+      const sw = li.querySelector('.sw'), solo = li.querySelector('.solo');
+      sw.onclick = () => keep(sw, () => { soloCode = null; setOn(code, !isOn(code)); });
       li.querySelector('.lr-body').onclick = () => select(sel === code ? null : code);
-      li.querySelector('.solo').onclick = () => { only(c => c === code, `「${nameOf(code)}」だけ`); soloCode = code; marks(); };
+      solo.onclick = () => keep(solo, () => { only(c => c === code, `「${short(code)}」だけ`); soloCode = code; marks(); });
       const nx = li.querySelector('.next'); if (nx) nx.onclick = () => { select(code, true); next(); };
     }
-    $('gAll').onclick = () => only(() => true, '全部');
-    $('gKnown').onclick = () => only(c => kindOf(c) === 'sp', '種まで分かる鳥だけ');
-    $('gUnknown').onclick = () => only(c => kindOf(c) !== 'sp', '種の分からない音だけ（種の付かなかった鳥＋分けられていない音）');
+    $('gAll').onclick = () => keep($('gAll'), () => only(() => true, '全部'));
+    $('gKnown').onclick = () => keep($('gKnown'), () => only(c => kindOf(c) === 'sp', '種まで分かる鳥だけ'));
+    $('gUnknown').onclick = () => keep($('gUnknown'), () => only(c => kindOf(c) !== 'sp', '種の分からない音だけ'));
     $('selNext').onclick = next;
     $('selLoop').onclick = () => toggleLoop();
     $('selClear').onclick = () => select(null);
     credits(); summary('全部'); selBar();
   }
   const all = () => ['bed', ...order];
+  // 押したボタンが画面の同じ位置に残るようにする（上の文が変わって下がずれ、となりを押しまちがえないように。2026-11-14 ユーザー）
+  function keep(el, fn) {
+    const y0 = el.getBoundingClientRect().top; fn();
+    const dy = el.getBoundingClientRect().top - y0; if (Math.abs(dy) > 0.5) scrollBy(0, dy);
+  }
   function setOn(code, on, quiet) {
     Forest.set(code, on);
     const li = $('voiceList').querySelector(`[data-code="${CSS.escape(code)}"]`);
     li.classList.toggle('off', !on); li.querySelector('.sw').setAttribute('aria-pressed', on); li.querySelector('.sw-txt').textContent = on ? 'ON' : 'OFF';
-    if (!quiet) { marks(); summary(null); onChange(); }
+    const nx = li.querySelector('.next'); if (nx) nx.disabled = !on;   // 消している声へは飛べない
+    if (!quiet) { marks(); summary(null); selBar(); onChange(); }
   }
-  function only(test, label) { soloCode = null; for (const c of all()) setOn(c, test(c), true); marks(); summary(label); onChange(); }
+  function only(test, label) { soloCode = null; for (const c of all()) setOn(c, test(c), true); marks(); summary(label); selBar(); onChange(); }
   function marks() {
     for (const li of $('voiceList').querySelectorAll('.lr')) {
       const s = li.dataset.code === soloCode; li.classList.toggle('solo-on', s); li.querySelector('.solo').setAttribute('aria-pressed', s);
@@ -66,9 +73,9 @@ window.List = (() => {
     const on = all().filter(isOn), by = k => on.filter(c => kindOf(c) === k).length;
     const boost = !isOn('bed') && on.length > 0 ? Forest.BOOST_DB : 0;   // 虫・カエルを消して鳥だけのときは、聞きやすいように大きく
     Forest.boost(boost);
-    $('mixState').innerHTML = (label ? `<b>${label}</b> ・ ` : '') +
-      `鳴らしている声 ${on.length} / ${all().length}（種まで ${by('sp')}・種の付かなかった鳥 ${by('bird')}・分けられていない音 ${by('bed')}）` +
-      (boost ? `<br><span class="boost">虫・カエルなどを消しているあいだは、鳥の声を聞きやすいように <b>+${boost} dB</b>（約4倍の大きさに感じる）にしています。本物の森ではもっと小さく聞こえます。</span>` : '');
+    // 高さが変わらないように、いつも2行（1行目: いま鳴らしている数、2行目: 大きくしているときだけの注意）
+    $('mixState').innerHTML = `<span>${label ? `<b>${label}</b> ・ ` : ''}鳴らしている声 ${on.length} / ${all().length}</span>` +
+      `<span class="boost">${boost ? `鳥の声を +${boost} dB 大きくしています（本物より大きい）` : ''}</span>`;
     // 上に固定した所の一行は、全部鳴らしているときは出さない（消した声・「だけ」・+20 dB があるときだけ）
     const partial = on.length < all().length;
     $('pinState').hidden = !partial && !boost;
@@ -88,10 +95,11 @@ window.List = (() => {
   }
   function detail(code) {
     const s = sp[code] || {}, p = s.photo;
-    if (code === 'bed') return `<p>虫やカエルなどの声。この録音では鳥にしか名前が付けられていないので、だれの声かは分けられていません。声の帯では、行ではなく背景の灰色の波（大きさ）で出しています。</p>`;
-    if (code === '????') return `<p>鳥の声だとは分かるが、注釈で種が付かなかった声（この録音の注釈 16,482 個のうち 1,684 個）。声が小さい・短いなど、理由はいろいろです。</p>`;
-    return (p ? `<img class="big" src="${p.file}" alt="${nameOf(code)}の写真"><p class="cr">写真: ${p.attribution || p.artist}（<a href="${p.page}" target="_blank" rel="noopener">Wikimedia Commons</a>, <a href="${p.license_url}" target="_blank" rel="noopener">${p.license}</a>）。同じ種の別の個体です。</p>` : '') +
-      `<p>${nameOf(code)}（<i>${s.sci}</i>、英名 ${s.en}）。この3分で ${count[code]} 回。「種まで」は録音への専門家の注釈で決めたもので、まちがいもありえます。</p>`;
+    if (code === 'bed') return `<p>虫・カエルなど。ずっと鳴っています（上の帯の灰色の波）。</p>`;
+    if (code === '????') return `<p>鳥の声だが、種は分からない声。</p>`;
+    return (p ? `<img class="big" src="${p.file}" alt="${nameOf(code)}の写真">` : '') +
+      `<p><b>${nameOf(code)}</b>　<i>${s.sci}</i>${s.ja ? '' : '（和名は未確認）'}</p>` +
+      (p ? `<p class="cr">写真: ${p.attribution || p.artist}（<a href="${p.page}" target="_blank" rel="noopener">Commons</a>, <a href="${p.license_url}" target="_blank" rel="noopener">${p.license}</a>）・同じ種の別の個体</p>` : '');
   }
   function next() {
     if (!sel || sel === 'bed') return;
@@ -115,6 +123,7 @@ window.List = (() => {
     $('selName').textContent = short(sel);
     const bed = sel === 'bed';
     $('selNext').hidden = bed; $('selLoop').hidden = bed;
+    $('selNext').disabled = $('selLoop').disabled = !isOn(sel);   // 消している声へは飛べない
     $('selLoop').textContent = Forest.loopAB ? '■ くり返しをやめる' : '⟲ くり返す';
     $('selLoop').classList.toggle('on', !!Forest.loopAB);
   }

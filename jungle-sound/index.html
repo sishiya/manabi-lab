@@ -21,11 +21,7 @@
     <div class="player">
       <button id="playForest" class="primary" disabled>読みこみ中…</button>
       <span id="status" class="status">0:00 / 3:00</span>
-      <span class="spec-head">
-        <button class="tab" data-spec="live" aria-pressed="false">いまの音</button>
-        <button class="tab" data-spec="full" aria-pressed="true">3分</button>
-        <button id="specFold" class="fold" aria-expanded="true" aria-label="図をたたむ">図 ▴</button>
-      </span>
+      <button id="specFold" class="fold" aria-expanded="true" aria-label="図をたたむ">図 ▴</button>
     </div>
     <p id="pinState" class="pin-state" hidden></p>
     <div id="selBar" class="sel-bar" hidden>
@@ -39,7 +35,6 @@
         <canvas id="spec" aria-label="音の高さと時間の図（スペクトログラム）"></canvas>
         <div class="axis"><span>16 kHz</span><span>8</span><span>0</span></div>
       </div>
-      <p id="specNote" class="spec-note"></p>
     </div>
     <p id="seekMsg" class="seek-msg" aria-live="polite" hidden></p>
   </section>
@@ -47,9 +42,20 @@
   <main id="scroll">
     <section class="card">
       <h2>声の一覧</h2>
-      <p class="hint"><b>声の帯</b>（上）: 横が3分、1行が1つの声。色の帯は、その声を鳴らす時刻（<span class="chip k-sp">種まで</span><span class="chip k-bird">種不明の鳥</span>）。枠だけの帯は消している声。行が明るくなるのは、いま実際に音が出ているとき。背景の灰色の波は、虫・カエルなど（ずっと鳴っている）の大きさ。<b>押すとその時刻へ</b>（近くに声があれば声の1秒前へ）、<b>長押しでその声を選ぶ</b>。</p>
-      <p class="hint"><b>図</b>（上の「いまの音」「3分」）: 音の高さと時間。「いまの音」は直近の数秒が右から流れ、「3分」は全部の声を ON にした3分ぜんぶ（白い線＝いまの位置、白い箱＝選んだ声。押すとその時刻へ）。「図 ▴」でたためます。</p>
-      <p class="hint">下の一覧: 左のスイッチで<b>鳴らす／消す</b>、「だけ」で<b>その声だけ</b>、「▶|」で<b>その声の次の声へ</b>。行を押すと、その声を選んで写真と説明が開きます。番号は声の帯の行と同じです。</p>
+      <!-- 文は「まず短く、くわしくは開いて」（2026-11-14 ユーザー。RULES 9章） -->
+      <ul class="howto">
+        <li><b>ON</b> … 鳴らす／消す</li>
+        <li><b>だけ</b> … その声だけ聞く</li>
+        <li><b>▶|</b> … その声の次へ飛ぶ</li>
+        <li>上の帯を押す … その時刻へ飛ぶ</li>
+      </ul>
+      <details class="more">
+        <summary>くわしい見方</summary>
+        <p><b>上の帯</b>: 横が3分、1行が1つの声（番号は下の一覧と同じ）。色の帯がその声の鳴る時刻。枠だけの帯は消している声。いま鳴っている行は明るくなります。灰色の波は虫・カエルなどの大きさ。</p>
+        <p>帯を押すと、近くに声があれば<b>その声の1秒前</b>へ飛びます。長押しでその声を選べます。</p>
+        <p><b>緑の図</b>: いま鳴っている直近の数秒の音の高さ（たて）と強さ（明るさ）。</p>
+        <p>一覧の行を押すと、その声を選んで写真と説明が開きます。</p>
+      </details>
       <div class="groups">
         <button id="gAll" class="grp">全部</button>
         <button id="gKnown" class="grp">種まで分かる鳥だけ</button>
@@ -57,16 +63,25 @@
       </div>
       <p id="mixState" class="mix-state" aria-live="polite"></p>
       <ul id="voiceList" class="vlist"></ul>
-      <p class="card-note">写真は同じ種の別の個体です。「種まで」は録音への専門家の注釈で決めたもので、まちがいもありえます。</p>
+      <p class="card-note">写真は同じ種の別の個体です。</p>
       <p class="warn">※ 画面を1回押すと音が出ます。はじめは音量を小さめに。</p>
     </section>
 
     <section class="card">
       <h2>3つの「分かり方」</h2>
-      <p><span class="vc-kind k-sp">種まで</span> 専門家が録音を聞いて、種の名前を付けた鳥の声。</p>
-      <p><span class="vc-kind k-bird">鳥・種は不明</span> 鳥の声だとは分かるが、注釈で種が付かなかった声（この録音の注釈 16,482 個のうち 1,684 個。声が小さい・短いなど、理由はいろいろ）。</p>
-      <p><span class="vc-kind k-bed">分けられていない</span> 虫・カエルなど。この録音では鳥にしか名前が付けられていないので、だれの声かは分けられていません。アマゾンの夜の虫の声は、研究でも多くが種まで分かっていません。</p>
-      <p id="what">読みこみ中…</p>
+      <p><span class="vc-kind k-sp">種まで</span> 種の名前が分かっている鳥</p>
+      <p><span class="vc-kind k-bird">鳥・種は不明</span> 鳥だが、種は分からない</p>
+      <p><span class="vc-kind k-bed">分けられていない</span> 虫・カエルなど。だれの声か分けられていない</p>
+      <details class="more">
+        <summary>くわしく</summary>
+        <p><b>種まで</b>: 専門家が録音を聞いて、種の名前を付けた声。まちがいもありえます。</p>
+        <p><b>鳥・種は不明</b>: 鳥の声だが、種が付かなかった声（この録音の注釈 16,482 個のうち 1,684 個。声が小さい・短いなど）。</p>
+        <p><b>分けられていない</b>: この録音では鳥にしか名前が付いていません。アマゾンの夜の虫の声は、研究でも多くが種まで分かっていません。</p>
+      </details>
+      <details class="more">
+        <summary>この音の作り方</summary>
+        <p id="what">読みこみ中…</p>
+      </details>
     </section>
 
     <!-- 開発中だけ（手元の localhost で開いたときだけ出す。2026-11-14 ユーザー「生成した音との比べと勘違いしそうなので、開発中限定に」） -->
