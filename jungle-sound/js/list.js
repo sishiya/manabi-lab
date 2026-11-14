@@ -122,6 +122,16 @@ window.List = (() => {
     hookSeek(Math.max(0, e[1] - 1), code);
   }
   let hookSeek = () => {};
+  // いま鳴いている声の行を光らせる（一覧の写真のまわりが光り、行の地が少し明るくなる）。
+  // 大きさの変わらない見た目だけ（影・背景の色）を変えるので、レイアウトはずれない（2026-11-14 ユーザー）。変わった行だけ書きかえる
+  let liveNow = {};
+  function setLive(lv) {
+    for (const li of $('voiceList').querySelectorAll('.lr')) {
+      const c = li.dataset.code, on = !!lv[c];
+      if (!!liveNow[c] !== on) li.classList.toggle('live', on);
+    }
+    liveNow = { ...lv };
+  }
   function credits() {
     $('photoCredits').innerHTML = order.filter(c => sp[c] && sp[c].photo).map(c => {
       const s = sp[c], p = s.photo;
@@ -129,7 +139,7 @@ window.List = (() => {
     }).join('');
   }
   return {
-    build, select, next, isOn, short, nameOf, get sel() { return sel; }, get order() { return order; },
+    build, select, next, isOn, short, nameOf, setLive, get sel() { return sel; }, get order() { return order; },
     set seekHook(f) { hookSeek = f; }, events: code => ev[code] || [],
   };
 })();

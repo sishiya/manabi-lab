@@ -75,7 +75,7 @@ window.Lanes = (() => {
     raf = 0; if (!Forest.playing || Power.away) return;
     const lv = {};
     for (const r of [{ code: 'bed' }, ...rows]) lv[r.code] = Forest.level(r.code) > (r.code === 'bed' ? -70 : -100);
-    live = lv; chips(); draw();
+    live = lv; chips(); List.setLive(live); draw();
     raf = requestAnimationFrame(frame);
   }
   function chips() {
@@ -89,7 +89,7 @@ window.Lanes = (() => {
   function showAt(t) {
     const lv = { bed: true };
     for (const r of rows) lv[r.code] = r.ev.some(e => e[1] <= t && t < e[1] + e[3]);
-    live = lv; lastChips = ''; chips(); draw();
+    live = lv; lastChips = ''; chips(); List.setLive(live); draw();
   }
   // 鳥がいちばん多く同時に鳴いている時刻（サムネイル用）
   function busiest() {
@@ -97,7 +97,7 @@ window.Lanes = (() => {
     for (let t = 0; t < data.length_s; t += 0.25) { const n = rows.filter(r => r.ev.some(e => e[1] <= t && t < e[1] + e[3])).length; if (n > best) { best = n; bt = t; } }
     return bt;
   }
-  function stop() { if (raf) cancelAnimationFrame(raf); raf = 0; live = {}; lastChips = ''; $('nowChips').innerHTML = `<span class="chip-none">${L('▶ で鳴らすと、鳴いている声の名前が出ます', 'Press ▶ to see the names of the voices calling')}</span>`; draw(); }
+  function stop() { if (raf) cancelAnimationFrame(raf); raf = 0; live = {}; lastChips = ''; List.setLive(live); $('nowChips').innerHTML = `<span class="chip-none">${L('▶ で鳴らすと、鳴いている声の名前が出ます', 'Press ▶ to see the names of the voices calling')}</span>`; draw(); }
   function dirty() { base = null; draw(); }
 
   // ---- 押す・長押し・ドラッグ ----

@@ -88,6 +88,13 @@ details.card>summary,.more>summary{cursor:pointer}
 .lr-name{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lr-name .vc-kind{margin-left:4px;vertical-align:1px}
 .lr-sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* いま鳴いている声: 写真のまわりが光り、行の地が少し明るくなる。大きさが変わる指定（枠の太さ・余白）は使わない＝レイアウトはずれない */
+.lr{transition:background-color .12s}
+.lr-body img,.lr-body .q{transition:box-shadow .12s,filter .12s}
+.lr.live{background-color:rgba(255,214,110,.10)}
+.lr.live .lr-body img,.lr.live .lr-body .q{box-shadow:0 0 0 2px #ffd27a,0 0 12px 2px rgba(255,214,110,.75);filter:brightness(1.15)}
+.lr.live.off{background-color:rgba(255,214,110,.04)}
+.lr.live.off .lr-body img,.lr.live.off .lr-body .q{box-shadow:0 0 0 1px rgba(255,210,122,.5)}
 .lr.solo-on .solo{background:var(--acc);color:#0b1a12;font-weight:700}
 .lr-detail{flex:1 1 100%;font-size:13px;line-height:1.7;display:flex;flex-direction:column;gap:6px;padding:2px 0 4px}
 .lr-detail .big{width:100%;max-width:320px;border-radius:6px;display:block}
