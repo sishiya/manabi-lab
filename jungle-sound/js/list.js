@@ -42,8 +42,8 @@ window.List = (() => {
       const nx = li.querySelector('.next'); if (nx) nx.onclick = () => { if (sel !== code) select(code, false); next(code); };
     }
     $('gAll').onclick = () => keep($('gAll'), () => only(() => true, '全部'));
-    $('gKnown').onclick = () => keep($('gKnown'), () => only(c => kindOf(c) === 'sp', '種まで分かる鳥だけ'));
-    $('gUnknown').onclick = () => keep($('gUnknown'), () => only(c => kindOf(c) !== 'sp', '種の分からない音だけ'));
+    $('gKnown').onclick = () => keep($('gKnown'), () => only(c => kindOf(c) === 'sp', '種が分かる鳥だけ'));
+    $('gUnknown').onclick = () => keep($('gUnknown'), () => only(c => kindOf(c) !== 'sp', '種が不明の音だけ'));
     credits(); summary('全部');
   }
   const all = () => ['bed', ...order];
