@@ -1,13 +1,14 @@
 /* 熱帯雨林の音
+   下地の色はヘビが進むしくみ（紺）にそろえた（2026-11-14 ユーザー）。アクセントの緑はこのアプリのまま
    余白は2つだけ（2026-11-14 ユーザー「マージンが詰まりすぎたり離れすぎたり」）:
    --g = かたまりの中の部品どうし 8px ／ --G = かたまり（パネル）どうし 12px。部品ごとに margin を足さず、親の gap で並べる */
-:root{--bg:#0f1f18;--panel:#152a21;--line:#2a4538;--ink:#e8f0f4;--muted:#a3b4bf;--acc:#7fd49a;--ok:#7fd49a;--ng:#ff9b7a;--warn:#ffd27a;
+:root{--bg:#14202c;--panel:#192837;--line:#2c4255;--deep:#0d1720;--btn:#20334a;--ink:#e8f0f4;--muted:#a3b4bf;--acc:#7fd49a;--ok:#7fd49a;--ng:#ff9b7a;--warn:#ffd27a;
   --g:8px;--G:12px;--pad:16px;
   --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
 [hidden]{display:none!important}
 p,ul,h1,h2,h3{margin:0}
-#app{max-width:760px;margin:0 auto}
+#app{max-width:1100px;margin:0 auto}   /* ほかのアプリ（ヘビが進むしくみ）と同じ幅。2026-11-14 ユーザー */
 #top{padding:var(--G) var(--pad) var(--g);display:flex;flex-direction:column;gap:4px}
 #top h1{font-family:var(--f-display);font-weight:400;font-size:22px}
 /* 英語対応（I18N.md）: 選んでいないほうの言語を隠す・JP／EN の切りかえ */
@@ -24,7 +25,7 @@ button:disabled{opacity:.3;cursor:default}
 .primary{background:var(--acc);color:#0b1a12;border:none;font-weight:700;font-size:15px;min-height:40px;padding:8px 14px;white-space:nowrap}
 .primary.on{background:var(--warn)}
 /* ふつうのボタン（全部・種まで分かる鳥だけ・だけ・▶|・図）。同じ形・同じ大きさ */
-.btn,.fold{flex:0 0 auto;background:#132a20;color:var(--ink);border:1px solid var(--line);min-height:36px;min-width:44px;padding:2px 10px;font-size:13px;white-space:nowrap}
+.btn,.fold{flex:0 0 auto;background:var(--btn);color:var(--ink);border:1px solid var(--line);min-height:36px;min-width:44px;padding:2px 10px;font-size:13px;white-space:nowrap}
 
 /* ---- 上に固定: いま鳴いている名前 → 声の帯 → 再生の行 → 図 ---- */
 #pin{position:sticky;top:0;z-index:2;background:var(--bg);padding:var(--g) var(--pad);border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:var(--g)}
@@ -44,7 +45,7 @@ button:disabled{opacity:.3;cursor:default}
 .pin-state:not(:empty){margin-right:6px}
 .seek-msg{font:12px var(--f-mono);color:var(--warn)}
 .boost-tag{display:inline-block;background:var(--warn);color:#2a1d00;border-radius:4px;padding:0 5px;font-weight:700}
-.spec-wrap{position:relative;height:100px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#081210}
+.spec-wrap{position:relative;height:100px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--deep)}
 #spec{position:absolute;inset:0;width:100%;height:100%;display:block}
 .axis{position:absolute;right:4px;top:2px;bottom:2px;display:flex;flex-direction:column;justify-content:space-between;font:11px var(--f-mono);color:var(--muted);pointer-events:none}
 
@@ -81,7 +82,7 @@ details.card>summary,.more>summary{cursor:pointer}
 .lr.off .sw .sw-dot{background:transparent;border:1.5px solid #8a9a94;box-sizing:border-box}
 .lr-body{all:unset;box-sizing:border-box;flex:1 1 140px;display:flex;align-items:center;gap:6px;cursor:pointer;min-height:40px;min-width:0}
 .lr-body:focus-visible{outline:2px solid var(--acc)}
-.lr-body img,.lr-body .q{width:40px;height:30px;object-fit:cover;border-radius:4px;flex:0 0 auto;background:#0b1712;display:flex;align-items:center;justify-content:center;font-size:14px;color:#7d8f88}
+.lr-body img,.lr-body .q{width:40px;height:30px;object-fit:cover;border-radius:4px;flex:0 0 auto;background:var(--deep);display:flex;align-items:center;justify-content:center;font-size:14px;color:#7d8f88}
 .num{flex:0 0 auto;min-width:20px;text-align:center;border-radius:4px;font:700 11px/18px var(--f-mono)}
 .lr-text{flex:1 1 auto;display:flex;flex-direction:column;min-width:0;line-height:1.4}
 .lr-name{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -102,7 +103,7 @@ details.card>summary,.more>summary{cursor:pointer}
 .ab button{flex:1;min-height:40px;font-size:14px}
 .listen{background:transparent;color:var(--ink);border:1px solid var(--acc)}
 .listen.on{background:var(--acc);color:#0b1a12}
-.answer{background:#24392f;color:var(--ink);border:1px solid var(--line)}
+.answer{background:var(--btn);color:var(--ink);border:1px solid var(--line)}
 .result{font-weight:700}
 .score{color:var(--muted);font:13px var(--f-mono)}
 .metrics,#bands{overflow-x:auto}
@@ -112,6 +113,9 @@ details.card>summary,.more>summary{cursor:pointer}
 .metrics td.num,#bands td.num{font-family:var(--f-mono);white-space:nowrap}
 .in{color:var(--ok)} .out{color:var(--ng)}
 .summary{font-weight:700}
+
+/* ---- 広い画面: 一覧の写真を大きく（PC では写真で鳥を見分けやすく） ---- */
+@media (min-width:700px){ .lr-body img,.lr-body .q{width:64px;height:48px} .lr-name{font-size:14.5px} }
 
 /* ---- スマホ ---- */
 @media (max-width:480px){
@@ -124,3 +128,7 @@ details.card>summary,.more>summary{cursor:pointer}
   .sw{min-width:50px;padding:2px 6px}
   .lr-name .vc-kind{display:none}   /* 確かさは番号の色で分かるので、名前の横の札は出さない */
 }
+
+/* サムネイルを撮るときだけ（main.js の thumb()）: 使い方のパネルを隠して、写真の一覧を上に */
+body.thumb #scroll>.card:first-child{display:none}
+body.thumb #scroll>.card:nth-child(2) :is(h2,.groups,.mix-state),body.thumb .lr:is([data-code="bed"],[data-code="????"]){display:none}   /* 写真のある行がすぐ見えるように */

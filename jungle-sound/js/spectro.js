@@ -9,7 +9,7 @@ window.Spectro = (() => {
   function resize() {
     const r = cv.getBoundingClientRect();
     w = Math.max(1, Math.round(r.width)); h = Math.max(1, Math.round(r.height));
-    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; g.fillStyle = '#081210'; g.fillRect(0, 0, w, h); }
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; g.fillStyle = '#0d1720'; g.fillRect(0, 0, w, h); }
     col = g.createImageData(1, h);
   }
   // 暗い緑 → 黄 → 白（音の強さ）
@@ -29,7 +29,13 @@ window.Spectro = (() => {
     g.putImageData(col, w - 2, 0); g.putImageData(col, w - 1, 0);
     raf = requestAnimationFrame(frame);
   }
+  // サムネイル用: 3分ぜんぶの図（data/mix-spec.png。全部の声を ON にした音）を描く（tools/build_mix.py が作る本物の音の図）
+  function still(done) {
+    resize(); const im = new Image();
+    im.onload = () => { g.drawImage(im, 0, 0, w, h); done && done(); }; im.src = 'data/mix-spec.png';
+  }
   return {
+    still,
     setup(isPlaying) { playing = isPlaying; resize(); },
     start(analyser) { an = analyser; buf = new Uint8Array(an.frequencyBinCount); resize(); if (!raf) raf = requestAnimationFrame(frame); },
     stop() { if (raf) cancelAnimationFrame(raf); raf = 0; },

@@ -134,4 +134,10 @@ Promise.all([Forest.prefetch(), fetch('data/species.json').then(r => r.json())])
 Compare.newTrial();
 
 // デバッグ用: 状態を見る（RULES 5）
-window.__juso = { S, Compare, Forest, List, Lanes, level, seek };
+// サムネイル用（_dev/tools/thumb.html の SETUP が呼ぶ）: 鳥がいちばん多く鳴いている時刻の、帯・札・3分の図。どれも本物の状態（作った絵は足さない）
+function thumb() {
+  document.body.classList.add('thumb');
+  const t = Lanes.busiest(); Forest.seek(t); showTime(); Lanes.showAt(t); Spectro.still();
+  return t;
+}
+window.__juso = { S, Compare, Forest, List, Lanes, level, seek, thumb };

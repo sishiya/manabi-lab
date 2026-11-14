@@ -32,7 +32,7 @@ window.Lanes = (() => {
   function drawBase() {
     const off = document.createElement('canvas'); off.width = cv.width; off.height = cv.height;
     const c = off.getContext('2d'), dpr = cv.width / W; c.setTransform(dpr, 0, 0, dpr, 0, 0);
-    c.fillStyle = '#081210'; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#0d1720'; c.fillRect(0, 0, W, H);
     // 土台（虫・カエルなど。ずっと鳴っている）の大きさの波を、帯の背景に薄く
     const env = data.bed.env_db, step = data.bed.env_step_s, lo = Math.min(...env), hi = Math.max(...env), bh = rows.length * rowH;
     c.fillStyle = List.isOn('bed') ? 'rgba(160,176,170,.16)' : 'rgba(160,176,170,.05)';
@@ -85,6 +85,18 @@ window.Lanes = (() => {
     if (s !== lastChips) { $('nowChips').innerHTML = s; lastChips = s; }   // 変わったときだけ書く
   }
   function start() { if (!raf) raf = requestAnimationFrame(frame); }
+  // サムネイル用: 時刻 t の状態を、鳴らす表から作って描く（いま鳴いている行が明るくなり、札に名前）
+  function showAt(t) {
+    const lv = { bed: true };
+    for (const r of rows) lv[r.code] = r.ev.some(e => e[1] <= t && t < e[1] + e[3]);
+    live = lv; lastChips = ''; chips(); draw();
+  }
+  // 鳥がいちばん多く同時に鳴いている時刻（サムネイル用）
+  function busiest() {
+    let best = 0, bt = 0;
+    for (let t = 0; t < data.length_s; t += 0.25) { const n = rows.filter(r => r.ev.some(e => e[1] <= t && t < e[1] + e[3])).length; if (n > best) { best = n; bt = t; } }
+    return bt;
+  }
   function stop() { if (raf) cancelAnimationFrame(raf); raf = 0; live = {}; lastChips = ''; $('nowChips').innerHTML = `<span class="chip-none">${L('▶ で鳴らすと、鳴いている声の名前が出ます', 'Press ▶ to see the names of the voices calling')}</span>`; draw(); }
   function dirty() { base = null; draw(); }
 
@@ -120,5 +132,5 @@ window.Lanes = (() => {
   function pos(e) { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
   function rowAt(y) { const i = Math.floor((y - top) / rowH); return rows[i] || null; }
 
-  return { setup, resize, draw, start, stop, dirty, get rows() { return rows; } };
+  return { setup, resize, draw, start, stop, dirty, showAt, busiest, get rows() { return rows; } };
 })();
