@@ -27,8 +27,10 @@ window.Forest = (() => {
   }
   const pending = {};       // 音の道すじを作る前に押された ON／OFF
   const now = () => (ctx.currentTime - t0);               // 森の時計（くり返しをふくむ秒）
+  let loopAB = null;        // くり返す区間 [a, b]（秒。3分の中の時刻）
   function schedule() {
     if (!playing) return;
+    if (loopAB && (now() % data.length_s >= loopAB[1] || now() % data.length_s < loopAB[0] - 0.5)) { seek(loopAB[0]); return; }
     const L = data.length_s, until = now() + AHEAD;
     for (;;) {
       const e = data.events[nextIdx], at = loopN * L + (e ? e[1] : L);
@@ -57,6 +59,13 @@ window.Forest = (() => {
     for (const s of srcs) try { s.stop(); } catch (e) { }
     srcs = [];
   }
+  // 時刻を変える（再生中なら、その時刻から鳴らしなおす）
+  function seek(t) {
+    const L = data.length_s; t = Math.max(0, Math.min(L - 0.05, t));
+    const was = playing; if (was) stop();
+    pausedAt = t; if (was) start();
+  }
+  function loop(ab) { loopAB = ab; if (ab && playing) { const t = now() % data.length_s; if (t < ab[0] || t >= ab[1]) seek(ab[0]); } }
   function set(id, on) {
     pending[id] = on;
     const c = ch[id]; if (!c) return; c.on = on;
@@ -75,9 +84,9 @@ window.Forest = (() => {
   }
   let pendingBoost = 0;
   return {
-    prefetch, init, start, stop, set, level, boost, BOOST_DB,
+    prefetch, init, start, stop, set, level, boost, BOOST_DB, seek, loop, get loopAB() { return loopAB; },
     get pendingBoost() { return pendingBoost; },
     get data() { return data; }, get playing() { return playing; }, get ready() { return !!bedBuf; },
-    get time() { return ctx ? (playing ? now() : pausedAt) % data.length_s : 0; }, isOn: id => ch[id] ? ch[id].on : pending[id] !== false,
+    get time() { return data ? (playing ? now() : pausedAt) % data.length_s : 0; }, isOn: id => ch[id] ? ch[id].on : pending[id] !== false,
   };
 })();

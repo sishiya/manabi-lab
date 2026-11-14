@@ -60,6 +60,55 @@ button:disabled{opacity:.4;cursor:default}
 #pin .spec-wrap{height:110px}
 @media (max-width:480px){ #pin .spec-wrap{height:80px} .vc{flex-basis:104px} }
 
+/* 声の帯と、いま鳴いている名前の札（上に固定） */
+.chips{margin:0 0 4px;min-height:22px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:12px}
+.chip{display:inline-block;padding:0 6px;border-radius:4px;font-size:11.5px;line-height:18px;font-weight:700}
+.chip.off{background:transparent!important;border:1px dashed #5d6d67;color:#8a9a94;font-weight:400}
+.chip-lead{color:var(--muted);margin-right:2px}
+.chip-none{color:var(--muted)}
+.lanes-wrap{position:relative}
+#lanes{display:block;width:100%;touch-action:pan-y;cursor:pointer;border-radius:6px}
+#pin .player{margin-top:6px;gap:8px;flex-wrap:wrap}
+#pin .player .primary{white-space:nowrap;padding:8px 12px}
+#pin .status{font-size:12.5px;white-space:nowrap}
+.pin-state{margin:4px 0 0;font-size:12px;color:var(--muted)}
+.sel-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px;padding:4px 6px;border:1.5px solid #fff;border-radius:8px;font-size:13px}
+.sel-btn{background:#1a3328;color:var(--ink);border:1px solid var(--line);font-size:13px;min-height:36px;padding:4px 10px}
+.sel-btn.on{background:#ffd27a;color:#2a1d00}
+.sel-x{background:transparent;color:var(--muted);border:1px solid var(--line);min-height:36px;min-width:36px;padding:0;margin-left:auto}
+.spec-head{display:flex;gap:4px;align-items:center;margin-left:auto}
+.tab{background:transparent;color:var(--muted);border:1px solid var(--line);font-size:12.5px;min-height:36px;padding:4px 8px;white-space:nowrap}
+.tab.on{background:#24392f;color:var(--ink);border-color:var(--acc)}
+.fold{background:transparent;color:var(--muted);border:1px solid transparent;font-size:12px;min-height:36px;padding:4px 6px;white-space:nowrap}
+#pin .spec-wrap{height:100px;margin-top:4px}
+.seek-msg{margin:4px 0 0;font:12px var(--f-mono);color:#ffd27a}
+/* 声の一覧（下にスクロール） */
+.vlist{list-style:none;margin:8px 0;padding:0}
+.lr{display:flex;flex-wrap:wrap;align-items:center;gap:6px;border:1.5px solid transparent;border-bottom:1px solid var(--line);padding:4px 2px;border-radius:6px}
+.lr.sel{border:1.5px solid #fff}
+.lr.off .lr-body{opacity:.45;filter:grayscale(1)}
+.sw{flex:0 0 auto;display:flex;align-items:center;gap:4px;min-height:36px;min-width:58px;padding:2px 8px;border-radius:18px;border:1px solid var(--acc);background:#1f4a33;color:var(--acc);font:700 12px var(--f-mono)}
+.sw .sw-dot{width:12px;height:12px;border-radius:50%;background:var(--acc)}
+.lr.off .sw{background:transparent;border-color:#5d6d67;color:#8a9a94}
+.lr.off .sw .sw-dot{background:transparent;border:1.5px solid #8a9a94}
+.lr-body{all:unset;box-sizing:border-box;flex:1 1 140px;display:flex;align-items:center;gap:6px;cursor:pointer;min-height:40px;min-width:0}
+.lr-body:focus-visible{outline:2px solid var(--acc)}
+.lr-body img,.lr-body .q{width:40px;height:30px;object-fit:cover;border-radius:4px;flex:0 0 auto;background:#0b1712;display:flex;align-items:center;justify-content:center;font-size:14px;color:#7d8f88}
+.num{flex:0 0 auto;min-width:20px;text-align:center;border-radius:4px;font:700 11px/18px var(--f-mono)}
+.lr-text{display:flex;flex-direction:column;min-width:0}
+.lr-name{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lr-name .vc-kind{margin:0 0 0 4px;vertical-align:1px}
+.lr-sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lr-text{flex:1 1 auto}
+.solo,.next{flex:0 0 auto;background:#132a20;color:var(--ink);border:1px solid var(--line);min-height:36px;min-width:44px;padding:2px 8px;font-size:13px}
+.lr.solo-on .solo{background:var(--acc);color:#0b1a12;font-weight:700}
+.lr-detail{flex:1 1 100%;font-size:13px;line-height:1.7;color:var(--ink)}
+.lr-detail .big{width:100%;max-width:320px;border-radius:6px;display:block;margin:4px 0}
+.lr-detail .cr{font-size:11.5px;color:var(--muted)}
+@media (max-width:480px){ #pin .spec-wrap{height:56px} .spec-note{font-size:11px} #pin{padding-top:6px}
+  .lr-name .vc-kind{display:none} .sw{min-width:50px;padding:2px 6px} .lr{gap:4px}   /* 確かさは番号の色で分かるので、名前の横の札は出さない */
+  .hide-sm{display:none} #pin .player{gap:6px} #pin .status{font-size:11.5px} .tab{padding:4px 6px} .fold{padding:4px 4px} }
+
 #scroll{padding:8px 16px 32px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:12px 0;line-height:1.75;font-size:14px}
 .card h2{font-size:16px;margin:0 0 6px}

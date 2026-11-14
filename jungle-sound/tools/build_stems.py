@@ -29,9 +29,13 @@ count = {}
 for e in info['events']: count[e['sp']] = count.get(e['sp'], 0) + 1
 species = [dict(code=k, sci=names.get(k, ('', ''))[0], en=names.get(k, ('', ''))[1], n=v, messy=k in fallback)
            for k, v in sorted(count.items(), key=lambda kv: -kv[1])]
-events = [[e['sp'], round(e['t'], 3), round(offs[tuple(e['clip'])][0], 3), round(e['dur'], 3)] for e in sorted(info['events'], key=lambda e: e['t'])]
-out = dict(length_s=WLEN, sr=SR, bed=dict(file='audio/bed.m4a', **info['bed']), birds_file='audio/birds.m4a',
-           species=species, events=events, note='events = [種, 鳴らす時刻（秒）, birds.m4a の中の位置（秒）, 長さ（秒）]')
+box = {tuple(c[:3]): (c[3], c[4]) for cs in clips.values() for c in cs}   # 切り出しのもとの注釈の高さ（Hz）
+events = [[e['sp'], round(e['t'], 3), round(offs[tuple(e['clip'])][0], 3), round(e['dur'], 3), *map(round, box[tuple(e['clip'])])]
+          for e in sorted(info['events'], key=lambda e: e['t'])]
+env = 10 * np.log10(np.mean(base[:len(base) // (SR // 2) * (SR // 2)].reshape(-1, SR // 2) ** 2, 1) + 1e-12)   # 土台の大きさ（0.5 秒ごと、dBFS）
+out = dict(length_s=WLEN, sr=SR, bed=dict(file='audio/bed.m4a', env_db=[round(float(v), 1) for v in env], env_step_s=0.5, **info['bed']),
+           birds_file='audio/birds.m4a', species=species, events=events,
+           note='events = [種, 鳴らす時刻（秒）, birds.m4a の中の位置（秒）, 長さ（秒）, 注釈の低い高さ（Hz）, 高い高さ（Hz）]')
 json.dump(out, open(os.path.join(APP, 'data', 'forest.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=0)
 print('土台', len(base) / SR, '秒 ／ 鳥の切り出し', len(offs), '個・', round(len(sp_audio) / SR, 1), '秒 ／ 鳴らす', len(events), '回・', len(species), '種')
 print([ (s['code'], s['sci'], s['n']) for s in species])

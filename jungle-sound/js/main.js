@@ -36,18 +36,26 @@ function level(name, at) {
   const p = L.slice(at, at + CLIP).reduce((s, d) => s + 10 ** (d / 10), 0) / CLIP; return 10 * Math.log10(p);
 }
 
-// ---- 森（第二弾）----
+// ---- 森 ----
 let clock = 0;
+const showTime = () => { if (!S.now) $('status').textContent = `${fmt(Forest.time)} / 3:00`; };   // 止まっているかは ▶／■ のボタンで分かる
 async function playForest() {
   await graph(); stop(true); S.ctx.resume();
-  Forest.start(); S.forest = true; Spectro.start(S.an); Cards.startGlow();
-  clock = setInterval(() => { $('status').textContent = `森を再生中 ${fmt(Forest.time)} / 3:00（くり返し）`; }, 250);
+  Forest.start(); S.forest = true; Spectro.start(S.an); Lanes.start();
+  clock = setInterval(showTime, 250);
   ui();
 }
 function stopForest() {
   if (!S.forest) return;
-  Forest.stop(); S.forest = false; clearInterval(clock); Spectro.stop(); Cards.stopGlow();
+  Forest.stop(); S.forest = false; clearInterval(clock); Spectro.stop(); Lanes.stop();
 }
+// 時刻を変える（声の帯・3分ぜんぶの図・「次の声へ」から）。どこへ移動したかを消えずに残す
+function seek(t, snapped) {
+  Forest.seek(t); showTime(); Lanes.draw(); Spectro.redraw();
+  $('seekMsg').hidden = false;
+  $('seekMsg').textContent = `${fmt(t)} へ移動しました` + (snapped ? `（${List.short(snapped)}の声の1秒前）` : '');
+}
+List.seekHook = seek;
 
 // ---- 聞きくらべ（第一弾）----
 async function play(name, from, len, gainDb = 0) {
@@ -78,12 +86,11 @@ function tick() {
   $('status').textContent = `${S.abWhich} を再生中 ${fmt(a.currentTime - (S.stopAt - CLIP))} / 0:${CLIP}`;
 }
 function ui() {
-  $('playForest').textContent = S.forest ? '■ 止める' : '▶ 森を聞く';
+  $('playForest').innerHTML = S.forest ? '■ 止める' : '▶ <span class="hide-sm">森を</span>聞く';   // スマホでは「▶ 聞く」（固定した所を1行に）
   $('playForest').classList.toggle('on', S.forest);
   for (const w of ['A', 'B']) { $('play' + w).classList.toggle('on', S.abWhich === w); $('play' + w).textContent = S.abWhich === w ? `■ ${w} を止める` : `▶ ${w} を聞く`; }
   $('status').classList.toggle('on', !!(S.now || S.forest));
-  if (!S.now && !S.forest) $('status').textContent = '止まっています';
-  else if (S.now) tick();
+  if (S.now) tick(); else showTime();
 }
 
 $('playForest').onclick = () => (S.forest ? stop() : playForest().catch(e => { $('status').textContent = '鳴らせませんでした: ' + e.message; window.__jusoErr.push(String(e)); }));
@@ -97,17 +104,32 @@ for (const w of ['A', 'B']) {
   $('pick' + w).onclick = () => { stop(); Compare.answer(w); };
 }
 Power.on({ pause() { if (S.now || S.forest) stop(); }, resume() {} });   // 離れたら止める（もどっても勝手に鳴らさない）
-addEventListener('resize', () => Spectro.resize());
+addEventListener('resize', () => { Spectro.resize(); Lanes.resize(); });
+for (const b of document.querySelectorAll('[data-spec]')) b.onclick = () => Spectro.setMode(b.dataset.spec);
+$('specFold').onclick = () => {
+  const open = $('specBox').hidden; $('specBox').hidden = !open;
+  $('specFold').textContent = open ? '図 ▴' : '図 ▾'; $('specFold').setAttribute('aria-expanded', open);
+  $('specFold').setAttribute('aria-label', open ? '図をたたむ' : '図を開く');
+  if (open) Spectro.resize();
+};
+Spectro.setup({ seek, abPlaying: () => !!S.now });
 
 // 本物らしさのくらべ（第一弾）は開発中だけ: 手元（localhost）で開いたときだけ出す。公開の画面では「生成した音との比べ」と勘違いされやすいため（2026-11-14 ユーザー）
 if (['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) $('devCompare').hidden = false;
 fetch('data/mix.json').then(r => r.json()).then(info => { S.info = info; Compare.render(info); })
   .catch(e => { $('metrics').textContent = '数を読みこめませんでした: ' + e.message; window.__jusoErr.push(String(e)); });
 Promise.all([Forest.prefetch(), fetch('data/species.json').then(r => r.json())])
-  .then(([forest, species]) => { Cards.build(forest, species); $('playForest').disabled = false; ui(); })
+  .then(([forest, species]) => {
+    List.build(forest, species, () => { Lanes.dirty(); Spectro.redraw(); });
+    Lanes.setup(forest, List.order, {
+      seek, select: code => List.select(code),
+      preview: t => { $('seekMsg').hidden = false; $('seekMsg').textContent = `→ ${fmt(t)}（指をはなすと、ここへ移動）`; },
+    });
+    Lanes.stop(); Spectro.resize();
+    $('playForest').disabled = false; ui();
+  })
   .catch(e => { $('playForest').textContent = '読みこめませんでした'; window.__jusoErr.push(String(e)); });
 Compare.newTrial();
-Spectro.still();
 
 // デバッグ用: 状態を見る（RULES 5）
-window.__juso = { S, Compare, Forest, level };
+window.__juso = { S, Compare, Forest, List, Lanes, level, seek };
