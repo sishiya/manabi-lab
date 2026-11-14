@@ -55,8 +55,9 @@ details.card>summary,.more>summary{cursor:pointer}
 .more>*+*{margin-top:6px}
 .more>summary{color:var(--muted);font-size:13px}
 .howto{padding-left:1.2em;line-height:1.9}
-.tg-mini{display:inline-block;vertical-align:-3px;width:28px;height:17px;border-radius:9px;background:#34c759;position:relative}
-.tg-mini::after{content:"";position:absolute;top:2px;left:13px;width:13px;height:13px;border-radius:50%;background:#fff}
+/* 使い方の中のスイッチの絵: 押せるボタンに見えないよう、線だけの小さな絵にする */
+.tg-mini{display:inline-block;vertical-align:-2px;width:22px;height:13px;border-radius:7px;border:1.5px solid var(--muted);position:relative;box-sizing:border-box}
+.tg-mini::after{content:"";position:absolute;top:1.5px;right:1.5px;width:7px;height:7px;border-radius:50%;background:var(--muted)}
 .warn,.card-note{color:var(--muted);font-size:12px}
 .vc-kind{display:inline-block;padding:0 6px;border-radius:4px;font-size:11px;line-height:18px;font-weight:700}
 .k-sp{background:#7fd49a;color:#0b1a12} .k-bird{background:var(--warn);color:#2a1d00} .k-bed{background:#8a9a94;color:#101814}
@@ -70,10 +71,10 @@ details.card>summary,.more>summary{cursor:pointer}
 .lr.sel{border-color:#fff}
 .lr.off .lr-body{opacity:.45;filter:grayscale(1)}
 /* ON／OFF のトグルスイッチ（iPhone の設定のような形。右に寄って緑＝鳴らす） */
-.tg{all:unset;box-sizing:border-box;flex:0 0 auto;position:relative;width:50px;height:30px;border-radius:15px;background:#3a4a44;cursor:pointer;transition:background .18s}
-.tg .tg-knob{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4);transition:left .18s}
-.tg[aria-checked="true"]{background:#34c759}
-.tg[aria-checked="true"] .tg-knob{left:23px}
+.tg{all:unset;box-sizing:border-box;flex:0 0 auto;position:relative;width:40px;height:24px;border-radius:12px;background:#3a4a44;cursor:pointer;transition:background .18s}
+.tg .tg-knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.4);transition:left .18s}
+.tg[aria-checked="true"]{background:var(--acc)}   /* ON の色は「森を聞く」ボタンと同じ緑 */
+.tg[aria-checked="true"] .tg-knob{left:19px}
 .tg:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .lr-body{all:unset;box-sizing:border-box;flex:1 1 140px;display:flex;align-items:center;gap:6px;cursor:pointer;min-height:40px;min-width:0}
 .lr-body:focus-visible{outline:2px solid var(--acc)}
