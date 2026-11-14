@@ -1,0 +1,40 @@
+{
+  "videoId": "z3D0KPskT_w",
+  "file": "_dev/promo/out/jungle-sound-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/jungle-sound-short.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-17T20:05:00+09:00",
+  "captions": {
+    "en": "_dev/promo/out/jungle-sound-short.en.srt",
+    "es": "_dev/promo/subs/jungle-sound-short.es.srt",
+    "ko": "_dev/promo/subs/jungle-sound-short.ko.srt",
+    "pt": "_dev/promo/subs/jungle-sound-short.pt.srt",
+    "zh-TW": "_dev/promo/subs/jungle-sound-short.zh-TW.srt"
+  },
+  "title": "アマゾンの夜明けの森、18の声を1つずつ聞く（本物の録音） #Shorts",
+  "description": "アマゾン（ペルー）の夜明けの森には、3分のあいだに18の声。虫とカエルを消すと鳥だけが残り、「だけ」で1種だけ聞けます。いま鳴いている声は、名前と写真が光ります。本物の録音を、声ごとに分けてブラウザで重ねて鳴らすアプリ「熱帯雨林の音」から。\n\nアプリ: https://sishiya.github.io/manabi-lab/jungle-sound/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\n録音と鳥の注釈: W. Alexander Hopping, Stefan Kahl, Holger Klinck (2022)「A collection of fully-annotated soundscape recordings from the Southwestern Amazon Basin」Zenodo, https://doi.org/10.5281/zenodo.7079124 （CC BY 4.0。このアプリで、虫・カエルなどの土台と鳥の声の切り出しに分けて重ねなおしました）\n鳥の名前（和名）: Wikidata（CC0）\n鳥の紹介: 英語版 Wikipedia の記事の事実をもとに、このアプリで書いたもの\n\n鳥の写真: Wikimedia Commons（CC BY・CC BY-SA。縮小・切り抜き）。1枚ずつの作者と条件:\nhttps://github.com/sishiya/manabi-lab/blob/main/_dev/promo/credits/jungle-sound.md\n\n音: 動画の森の音は、上の録音をアプリと同じ方法で重ねたもの（BGM はなし）。最後の合図の音は、プログラムで合成したオリジナルの音です。\n\n#熱帯雨林 #野鳥 #まなびラボ",
+  "tags": [
+    "熱帯雨林の音",
+    "熱帯雨林",
+    "アマゾン",
+    "ジャングル",
+    "野鳥",
+    "鳥の声",
+    "鳴き声",
+    "環境音",
+    "自然の音",
+    "まなびラボ",
+    "しし屋",
+    "Rainforest Sounds",
+    "Amazon rainforest",
+    "dawn chorus",
+    "bird calls",
+    "Shorts"
+  ],
+  "localizations": {
+    "en": {
+      "title": "The Amazon at dawn: 18 voices, one at a time (real recordings) #Shorts",
+      "description": "In 3 minutes of the Amazon rainforest (Peru) at dawn, there are 18 voices. Mute the insects and frogs and only the birds remain; \"Solo\" lets you hear just one species. The voices calling now light up with their names and photos. From \"Rainforest Sounds\", a browser app that layers real recordings voice by voice.\n\nApp (switch the app to English with the EN button): https://sishiya.github.io/manabi-lab/jungle-sound/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/\n\nMain sources:\nRecordings and bird labels: W. Alexander Hopping, Stefan Kahl, Holger Klinck (2022), \"A collection of fully-annotated soundscape recordings from the Southwestern Amazon Basin\", Zenodo, https://doi.org/10.5281/zenodo.7079124 (CC BY 4.0; split by this app into a base layer of insects, frogs etc. and bird call clips, then layered again)\nJapanese bird names: Wikidata (CC0)\nBird descriptions: written for this app from facts in English Wikipedia articles\n\nBird photos: Wikimedia Commons (CC BY / CC BY-SA; resized and cropped). Author and license of each photo:\nhttps://github.com/sishiya/manabi-lab/blob/main/_dev/promo/credits/jungle-sound.md\n\nSound: the forest sound in this video is layered from the recordings above in the same way as the app (no background music). The closing jingle is an original sound synthesized by code.\n\n#rainforest #birdsong #Shorts"
+    }
+  }
+}

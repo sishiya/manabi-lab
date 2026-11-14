@@ -1,0 +1,94 @@
+1
+00:00:00,600 --> 00:00:06,600
+Sons da floresta tropical
+Como usar o app e o que observar
+
+2
+00:00:07,000 --> 00:00:13,000
+A floresta amazônica (Peru) ao amanhecer, por volta das 5h25
+Gravações reais divididas em uma base (insetos, sapos) e cantos de aves, sobrepostas de novo no seu navegador
+
+3
+00:00:13,300 --> 00:00:19,600
+Todos os sons vêm de gravações reais
+Gravações e rótulos das aves: Hopping, Kahl e Klinck (2022), CC BY 4.0
+
+4
+00:00:20,000 --> 00:00:26,800
+Faixas de vozes: 3 minutos na horizontal, uma linha por voz
+17 linhas de aves mais a onda cinza ao fundo (insetos, sapos etc.): 18 vozes
+
+5
+00:00:27,100 --> 00:00:33,800
+As cores mostram o quanto sabemos
+Verde: espécie conhecida. Amarelo: ave, espécie desconhecida. Cinza: não separado (insetos, sapos etc.)
+
+6
+00:00:34,100 --> 00:00:39,800
+A linha branca é o agora. Toque nas faixas para pular até lá
+Se houver um canto perto, começa 1 segundo antes
+
+7
+00:00:40,400 --> 00:00:46,800
+As vozes que cantam agora se acendem: nome e foto
+As linhas delas nas faixas também clareiam
+
+8
+00:00:47,200 --> 00:00:53,400
+Toque em uma linha para ver foto e uma breve descrição
+Fotos do Wikimedia Commons (autores e licenças na descrição)
+
+9
+00:00:54,000 --> 00:01:00,800
+ON/OFF liga ou silencia cada voz
+Desligue insetos e sapos e só as aves ficam
+
+10
+00:01:01,100 --> 00:01:07,000
+Só aves: aumentadas em +20 dB (mais alto que na realidade)
+Para que cantos baixos sejam mais fáceis de ouvir
+
+11
+00:01:07,600 --> 00:01:13,300
+Uma voz silenciada mostra só contornos nas faixas
+Ainda dá para ver quando ela canta
+
+12
+00:01:14,200 --> 00:01:21,000
+«Solo» (だけ) toca só aquela voz
+Cricrió: seu canto alcança 400 m dentro da floresta
+
+13
+00:01:21,300 --> 00:01:26,900
+▶| pula para o próximo canto daquela voz
+Depois do último, volta ao primeiro
+
+14
+00:01:27,300 --> 00:01:35,200
+Só a anambé-una
+Os machos têm penas roxo-avermelhadas na garganta; pequenos grupos comem sobretudo frutos
+
+15
+00:01:36,200 --> 00:01:42,800
+Trocar por grupos: «Só sons desconhecidos»
+Aves não identificadas mais insetos, sapos etc.
+
+16
+00:01:43,100 --> 00:01:49,600
+Três níveis de conhecimento
+Espécie conhecida (especialistas rotularam a gravação) · ave, espécie desconhecida · não separado
+
+17
+00:01:50,400 --> 00:01:56,600
+De volta a tudo em ON: a floresta ao amanhecer
+18 vozes sobrepostas em um só som
+
+18
+00:01:57,000 --> 00:02:03,800
+Quantas aves você consegue distinguir só de ouvido?
+No PC ou no celular, no seu navegador
+
+19
+00:02:04,200 --> 00:02:12,000
+Sons da floresta tropical
+Funciona no seu navegador (PC ou celular). O app está em japonês e inglês

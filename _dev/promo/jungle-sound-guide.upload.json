@@ -1,0 +1,41 @@
+{
+  "videoId": "gDhDrIq5hFY",
+  "file": "_dev/promo/out/jungle-sound-guide.mp4",
+  "thumbnail": "_dev/promo/thumbs/jungle-sound-guide.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-17T20:00:00+09:00",
+  "captions": {
+    "en": "_dev/promo/out/jungle-sound-guide.en.srt",
+    "es": "_dev/promo/subs/jungle-sound-guide.es.srt",
+    "ko": "_dev/promo/subs/jungle-sound-guide.ko.srt",
+    "pt": "_dev/promo/subs/jungle-sound-guide.pt.srt",
+    "zh-TW": "_dev/promo/subs/jungle-sound-guide.zh-TW.srt"
+  },
+  "title": "熱帯雨林の音 ― 使い方と見どころ（アマゾンの夜明け・18の声・1種だけ聞く）",
+  "description": "アマゾン（ペルー）の夜明け、5時25分ごろの森の音。本物の録音を、虫・カエルなどの「土台」と鳥の声の切り出しに分けて、ブラウザで重ねて鳴らします。3分の「声の帯」で、18の声がいつ鳴くかが一目で分かり、いま鳴いている声は名前と写真が光ります。声ごとに ON／OFF、「だけ」でその声だけ、▶| で次の鳴き声へ。種まで分かった鳥・種の分からない鳥・分けられていない虫やカエルの「3つの分かり方」も色で。ブラウザのアプリ「熱帯雨林の音」の、使い方と見どころです。\n\n0:00 はじめに\n0:20 声の帯（3分で18の声）\n0:40 いま鳴いている声と写真\n0:54 ON／OFF・鳥だけ +20 dB\n1:14 「だけ」と ▶| 次の声へ\n1:36 まとめボタンと3つの分かり方\n1:50 森ぜんぶにもどす\n\nアプリ（ブラウザで動きます。パソコン・スマホ）:\nhttps://sishiya.github.io/manabi-lab/jungle-sound/\n\nしし屋 まなびラボ（ほかのアプリ）:\nhttps://sishiya.github.io/manabi-lab/\n\nおもな出どころ:\n録音と鳥の注釈: W. Alexander Hopping, Stefan Kahl, Holger Klinck (2022)「A collection of fully-annotated soundscape recordings from the Southwestern Amazon Basin」Zenodo, https://doi.org/10.5281/zenodo.7079124 （CC BY 4.0。このアプリで、虫・カエルなどの土台と鳥の声の切り出しに分けて重ねなおしました）\n鳥の名前（和名）: Wikidata（CC0）\n鳥の紹介: 英語版 Wikipedia の記事の事実をもとに、このアプリで書いたもの\n\n鳥の写真: Wikimedia Commons（CC BY・CC BY-SA。縮小・切り抜き）。1枚ずつの作者と条件:\nhttps://github.com/sishiya/manabi-lab/blob/main/_dev/promo/credits/jungle-sound.md\n\n音: 動画の森の音は、上の録音をアプリと同じ方法で重ねたもの（BGM はなし）。案内役のライオンの声と最後の合図の音は、プログラムで合成したオリジナルの音です。\n\n#熱帯雨林 #野鳥 #まなびラボ",
+  "tags": [
+    "熱帯雨林の音",
+    "熱帯雨林",
+    "アマゾン",
+    "ジャングル",
+    "野鳥",
+    "鳥の声",
+    "鳴き声",
+    "環境音",
+    "自然の音",
+    "夜明け",
+    "使い方",
+    "まなびラボ",
+    "しし屋",
+    "Rainforest Sounds",
+    "Amazon rainforest",
+    "dawn chorus",
+    "bird calls"
+  ],
+  "localizations": {
+    "en": {
+      "title": "Rainforest Sounds — App Guide: Amazon Dawn, 18 Voices, Solo One Species",
+      "description": "A guide to \"Rainforest Sounds\", a browser app. The Amazon rainforest (Peru) at dawn, around 5:25 a.m. Real recordings are split into a base layer (insects, frogs and more) and bird call clips, then layered again in your browser. A 3-minute \"voice lanes\" chart shows when each of the 18 voices calls, and the voices calling now light up with their names and photos. Turn each voice ON or OFF, hear only one with \"Solo\", or jump to its next call with ▶|. Colors show three levels of knowing: species known, bird with species unknown, and insects and frogs not separated. Turn on English subtitles (CC).\n\n0:00 Intro\n0:20 Voice lanes (18 voices in 3 minutes)\n0:40 Voices calling now, with photos\n0:54 ON/OFF and birds only (+20 dB)\n1:14 Solo and ▶| next call\n1:36 Group buttons and three levels of knowing\n1:50 Back to the whole forest\n\nTry the app (runs in your browser, PC or phone; switch the app to English with the EN button):\nhttps://sishiya.github.io/manabi-lab/jungle-sound/\n\nShishiya Manabi Lab (more apps):\nhttps://sishiya.github.io/manabi-lab/\n\nMain sources:\nRecordings and bird labels: W. Alexander Hopping, Stefan Kahl, Holger Klinck (2022), \"A collection of fully-annotated soundscape recordings from the Southwestern Amazon Basin\", Zenodo, https://doi.org/10.5281/zenodo.7079124 (CC BY 4.0; split by this app into a base layer of insects, frogs etc. and bird call clips, then layered again)\nJapanese bird names: Wikidata (CC0)\nBird descriptions: written for this app from facts in English Wikipedia articles\n\nBird photos: Wikimedia Commons (CC BY / CC BY-SA; resized and cropped). Author and license of each photo:\nhttps://github.com/sishiya/manabi-lab/blob/main/_dev/promo/credits/jungle-sound.md\n\nSound: the forest sound in this video is layered from the recordings above in the same way as the app (no background music). The lion guide's voice and the closing jingle are original sounds synthesized by code.\n\n#rainforest #birdsong #Amazon"
+    }
+  }
+}

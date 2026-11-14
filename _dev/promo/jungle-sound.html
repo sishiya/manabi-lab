@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紹介動画づくり</title>
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<script src="../../lib/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script src="promo.js"></script>
+<script src="promo-audio.js"></script>
+<script src="jungle-common.js"></script>
+<script>
+'use strict';
+// 台本: 熱帯雨林の音（ショート、40秒＋締め。?short で縦長に録る。2026-11-14）
+// 音は BGM なし。アプリと同じ重ね方の森の音（本物の録音）がそのまま聞こえる。
+// 全部 → いま鳴いている声が光る → 虫・カエルを OFF（鳥だけ +20 dB）→ ムジカザリドリ「だけ」と ▶| → 全部にもどす
+const DUR = SHORT_END + IDENT_CLOSE;
+const SEG = [
+  { t: 0, f: 44, off: [] },
+  { t: 18.0, off: ['bed'] },
+  { t: 24.9, off: null, solo: 'scrpih1' },   // off は setup で（ムジカザリドリのほか全部）
+  { t: 25.6, f: 166, sel: 'scrpih1' },        // ▶|: 次の声の1秒前へ（アプリの List.next と同じ）
+  { t: 30.6, off: [], solo: null },
+];
+const ROWS = ['bed', 'putfru1', 'ruqdov', 'scrpih1'];
+// 置き場所（縦 1080×1920。SHORT_SAFE の x 110〜970 の中）
+const X0 = 110, WD = 860, LY = 320, ROWH = 19, PY = 704, SY = 756, SH = 130, GY = 898, RY = 950, RH = 66, RFS = 22, LW = 760;   // 一覧とまとめボタンは y 900 より下なので x 870 まで（右下はスマホのいいね・コメント）
+const CAPS = [
+  { a: 6.0, b: 11.6, main: '1行が1つの声。3分で18の声', sub: 'アマゾン（ペルー）の夜明け、本物の録音',
+    en: ['One row per voice: 18 voices in 3 minutes', 'Dawn in the Amazon (Peru), real recordings'] },
+  { a: 11.9, b: 17.6, main: 'いま鳴いている声が光る', sub: '名前の札と写真。緑は種まで、黄は種の分からない鳥',
+    en: ['The voices calling now light up', 'Name tags and photos. Green: species known. Yellow: bird, species unknown'] },
+  { a: 18.3, b: 24.4, main: '虫とカエルを OFF → 鳥の声だけ', sub: '聞きやすいように鳥は +20 dB（本物より大きい）',
+    en: ['Insects and frogs OFF: only the birds', 'Birds raised by +20 dB so you can hear them (louder than real)'] },
+  { a: 25.0, b: 30.4, main: '「だけ」で1種だけ: ムジカザリドリ', sub: '森の中で 400 m 先まで届く大きな声',
+    en: ['"Solo" plays one species: the Screaming Piha', 'A loud call that carries 400 m through the forest'] },
+  { a: 30.8, b: 35.0, main: '全部にもどすと、夜明けの森', sub: '音はすべて本物の録音から（AI の音は使っていません）',
+    en: ['Back to all: the forest at dawn', 'Every sound is from real recordings (no AI-made sound)'] },
+];
+let CUR = [], CUR_T = 0;
+promoStart({
+  name: '熱帯雨林の音', out: 'jungle-sound', src: '../../jungle-sound/index.html', iw: 1100, ih: 900, dur: DUR, peek: 20,
+  music: { style: 'none', stopAt: SHORT_END, cues: [{ t: SHORT_END, type: 'jingle' }], extra: juExtra },
+  ready: juReady,
+  async setup(w) {
+    await juLoad(w);
+    SEG[2].off = ['bed', ...JU.order.filter(c => c !== 'scrpih1')];
+    juPrep(SEG); juBuild(DUR, { end: SHORT_END });
+    // ボタンの位置（矢印の行き先）: 一度描いて測る
+    const c = document.createElement('canvas').getContext('2d');
+    const P = juList(c, X0, RY, LW, RH, ROWS, 0, RFS), G = juGroups(c, X0, GY, LW, 20);
+    CUR = [
+      { t: 16.9, x: 600, y: 900 }, { t: 17.6, ...P.bed.sw }, { t: 18.0, ...P.bed.sw, click: true }, { t: 19.2, x: 640, y: 1000, hide: true },
+      { t: 23.8, x: 640, y: 1000 }, { t: 24.6, ...P.scrpih1.solo }, { t: 24.9, ...P.scrpih1.solo, click: true },
+      { t: 25.4, ...P.scrpih1.next }, { t: 25.6, ...P.scrpih1.next, click: true }, { t: 26.8, x: 760, y: 1100, hide: true },
+      { t: 29.6, x: 500, y: 1100 }, { t: 30.3, ...G[0] }, { t: 30.6, ...G[0], click: true }, { t: 31.6, x: 300, y: 1000, hide: true },
+    ];
+    return null;
+  },
+  subs: () => shortSubs('熱帯雨林の音', 'Rainforest Sounds', 'アマゾンの夜明けの声を、1つずつ', 'The dawn chorus of the Amazon, one voice at a time', CAPS,
+    'ブラウザで、声ごとに鳴らして聞けます', 'Play each voice on its own, in your browser'),
+  renderAt(t) { CUR_T = t; },   // drawSource には時刻が来ないので、ここで覚える（promo.js は renderAt → drawSource → overlay の順）
+  drawSource(g, w, OW, OH) {
+    g.fillStyle = JU_COL.bg; g.fillRect(0, 0, OW, OH);
+    g.save(); g.scale(RES, RES); juScene(g, CUR_T); g.restore();
+  },
+  overlay(g, t) {
+    drawCursor(g, CUR, t);
+    drawCaps(g, t, CAPS);
+    drawShortChrome(g, t, '熱帯雨林の音', 'アマゾンの夜明けの声を、1つずつ', 'ブラウザで、声ごとに鳴らして聞けます',
+      'おもな出どころ: 録音と鳥の注釈 Hopping, Kahl & Klinck（2022）Zenodo、CC BY 4.0（このアプリで切り出して重ねた）。鳥の写真: Wikimedia Commons（作者と条件は説明欄）');
+  },
+  errors: w => (w.__jusoErr || []).map(String),
+  short: { iw: 1100, ih: 900 },
+});
+function juScene(g, t) {
+  juChips(g, X0, 214, WD, t, 26);
+  juLanes(g, X0, LY, WD, ROWH, t, { gut: 200, font: 16 });
+  juPlayer(g, X0, PY, t, 21);
+  juSpec(g, X0, SY, WD, SH, t, 7, 16);
+  juGroups(g, X0, GY, LW, 20, t >= 30.6 && t < 30.95 ? 0 : -1);
+  juList(g, X0, RY, LW, RH, ROWS, t, RFS);
+}
+</script>
+</body>
+</html>

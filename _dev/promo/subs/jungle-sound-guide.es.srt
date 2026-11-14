@@ -1,0 +1,94 @@
+1
+00:00:00,600 --> 00:00:06,600
+Sonidos de la selva
+Cómo usar la app y qué observar
+
+2
+00:00:07,000 --> 00:00:13,000
+La selva amazónica (Perú) al amanecer, hacia las 5:25
+Grabaciones reales separadas en una base (insectos, ranas) y cantos de aves, que se vuelven a superponer en tu navegador
+
+3
+00:00:13,300 --> 00:00:19,600
+Todos los sonidos vienen de grabaciones reales
+Grabaciones y etiquetas de aves: Hopping, Kahl y Klinck (2022), CC BY 4.0
+
+4
+00:00:20,000 --> 00:00:26,800
+Carriles de voces: 3 minutos de ancho, una fila por voz
+17 filas de aves más la onda gris del fondo (insectos, ranas, etc.): 18 voces
+
+5
+00:00:27,100 --> 00:00:33,800
+Los colores indican cuánto sabemos
+Verde: especie conocida. Amarillo: ave, especie desconocida. Gris: sin separar (insectos, ranas, etc.)
+
+6
+00:00:34,100 --> 00:00:39,800
+La línea blanca es el ahora. Toca los carriles para saltar allí
+Si hay un canto cerca, empieza 1 segundo antes
+
+7
+00:00:40,400 --> 00:00:46,800
+Las voces que suenan ahora se iluminan: nombre y foto
+Sus filas en los carriles también se aclaran
+
+8
+00:00:47,200 --> 00:00:53,400
+Toca una fila para ver una foto y una breve descripción
+Fotos de Wikimedia Commons (autores y licencias en la descripción)
+
+9
+00:00:54,000 --> 00:01:00,800
+ON/OFF activa o silencia cada voz
+Pon insectos y ranas en OFF y solo quedan las aves
+
+10
+00:01:01,100 --> 00:01:07,000
+Solo aves: subidas +20 dB (más fuerte que en la realidad)
+Para que los cantos suaves se oigan mejor
+
+11
+00:01:07,600 --> 00:01:13,300
+Una voz silenciada solo muestra contornos en los carriles
+Aún se ve cuándo canta
+
+12
+00:01:14,200 --> 00:01:21,000
+«Solo» (だけ) toca únicamente esa voz
+Piha gritón: su canto llega a 400 m dentro del bosque
+
+13
+00:01:21,300 --> 00:01:26,900
+▶| salta al siguiente canto de esa voz
+Después del último, vuelve al primero
+
+14
+00:01:27,300 --> 00:01:35,200
+Solo el querula gorjipúrpura
+Los machos tienen plumas púrpura rojizas en la garganta; en grupos pequeños comen sobre todo frutos
+
+15
+00:01:36,200 --> 00:01:42,800
+Cambiar por grupos: «Solo sonidos desconocidos»
+Aves sin identificar más insectos, ranas, etc.
+
+16
+00:01:43,100 --> 00:01:49,600
+Tres niveles de conocimiento
+Especie conocida (expertos etiquetaron la grabación) · ave, especie desconocida · sin separar
+
+17
+00:01:50,400 --> 00:01:56,600
+De vuelta a todo en ON: el bosque al amanecer
+18 voces superpuestas en un solo sonido
+
+18
+00:01:57,000 --> 00:02:03,800
+¿Cuántas aves puedes distinguir solo con el oído?
+En PC o en el móvil, en tu navegador
+
+19
+00:02:04,200 --> 00:02:12,000
+Sonidos de la selva
+Funciona en tu navegador (PC o móvil). La app está en japonés e inglés

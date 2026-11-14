@@ -540,5 +540,35 @@
 "Então por que ninguém acerta? Uma pequena mudança no ângulo da costura // muda onde ela chega.",
 "Um grau na costura desloca a bola uns 2 cm. // Nem o arremessador consegue prever.",
 "Como resumiu o pesquisador: a knuckleball é // “mais bala do que borboleta”."
+],
+"jungle-sound-short": [
+"Sons da floresta tropical // O coro do amanhecer na Amazônia, uma voz de cada vez",
+"Uma linha por voz: 18 vozes em 3 minutos // Amanhecer na Amazônia (Peru), gravações reais",
+"As vozes que cantam agora se acendem // Nomes e fotos. Verde: espécie conhecida. Amarelo: ave, espécie desconhecida",
+"Insetos e sapos em OFF: só as aves // Aves aumentadas em +20 dB para ouvir (mais alto que na realidade)",
+"«Solo» (だけ) toca uma só espécie: o cricrió // Um canto alto que alcança 400 m dentro da floresta",
+"De volta a tudo: a floresta ao amanhecer // Todos os sons vêm de gravações reais (nenhum feito por IA)",
+"Sons da floresta tropical // Ouça cada voz separadamente, no seu navegador"
+],
+"jungle-sound-guide": [
+"Sons da floresta tropical // Como usar o app e o que observar",
+"A floresta amazônica (Peru) ao amanhecer, por volta das 5h25 // Gravações reais divididas em uma base (insetos, sapos) e cantos de aves, sobrepostas de novo no seu navegador",
+"Todos os sons vêm de gravações reais // Gravações e rótulos das aves: Hopping, Kahl e Klinck (2022), CC BY 4.0",
+"Faixas de vozes: 3 minutos na horizontal, uma linha por voz // 17 linhas de aves mais a onda cinza ao fundo (insetos, sapos etc.): 18 vozes",
+"As cores mostram o quanto sabemos // Verde: espécie conhecida. Amarelo: ave, espécie desconhecida. Cinza: não separado (insetos, sapos etc.)",
+"A linha branca é o agora. Toque nas faixas para pular até lá // Se houver um canto perto, começa 1 segundo antes",
+"As vozes que cantam agora se acendem: nome e foto // As linhas delas nas faixas também clareiam",
+"Toque em uma linha para ver foto e uma breve descrição // Fotos do Wikimedia Commons (autores e licenças na descrição)",
+"ON/OFF liga ou silencia cada voz // Desligue insetos e sapos e só as aves ficam",
+"Só aves: aumentadas em +20 dB (mais alto que na realidade) // Para que cantos baixos sejam mais fáceis de ouvir",
+"Uma voz silenciada mostra só contornos nas faixas // Ainda dá para ver quando ela canta",
+"«Solo» (だけ) toca só aquela voz // Cricrió: seu canto alcança 400 m dentro da floresta",
+"▶| pula para o próximo canto daquela voz // Depois do último, volta ao primeiro",
+"Só a anambé-una // Os machos têm penas roxo-avermelhadas na garganta; pequenos grupos comem sobretudo frutos",
+"Trocar por grupos: «Só sons desconhecidos» // Aves não identificadas mais insetos, sapos etc.",
+"Três níveis de conhecimento // Espécie conhecida (especialistas rotularam a gravação) · ave, espécie desconhecida · não separado",
+"De volta a tudo em ON: a floresta ao amanhecer // 18 vozes sobrepostas em um só som",
+"Quantas aves você consegue distinguir só de ouvido? // No PC ou no celular, no seu navegador",
+"Sons da floresta tropical // Funciona no seu navegador (PC ou celular). O app está em japonês e inglês"
 ]
 }

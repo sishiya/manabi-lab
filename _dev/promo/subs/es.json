@@ -540,5 +540,35 @@
 "¿Entonces por qué nadie la batea? Un pequeño cambio en el ángulo de la costura // cambia adónde llega.",
 "Un grado de diferencia en la costura la desvía unos 2 cm. // Ni el lanzador puede predecirlo.",
 "Como lo resumió el investigador: la de nudillos es // “más bala que mariposa”."
+],
+"jungle-sound-short": [
+"Sonidos de la selva // El coro del amanecer en la Amazonía, voz por voz",
+"Una fila por voz: 18 voces en 3 minutos // Amanecer en la Amazonía (Perú), grabaciones reales",
+"Las voces que suenan ahora se iluminan // Nombres y fotos. Verde: especie conocida. Amarillo: ave, especie desconocida",
+"Insectos y ranas en OFF: solo quedan las aves // Aves subidas +20 dB para oírlas (más fuerte que en la realidad)",
+"«Solo» (だけ) toca una sola especie: el piha gritón // Un canto fuerte que llega a 400 m dentro del bosque",
+"De vuelta a todo: el bosque al amanecer // Todos los sonidos son de grabaciones reales (nada hecho con IA)",
+"Sonidos de la selva // Escucha cada voz por separado, en tu navegador"
+],
+"jungle-sound-guide": [
+"Sonidos de la selva // Cómo usar la app y qué observar",
+"La selva amazónica (Perú) al amanecer, hacia las 5:25 // Grabaciones reales separadas en una base (insectos, ranas) y cantos de aves, que se vuelven a superponer en tu navegador",
+"Todos los sonidos vienen de grabaciones reales // Grabaciones y etiquetas de aves: Hopping, Kahl y Klinck (2022), CC BY 4.0",
+"Carriles de voces: 3 minutos de ancho, una fila por voz // 17 filas de aves más la onda gris del fondo (insectos, ranas, etc.): 18 voces",
+"Los colores indican cuánto sabemos // Verde: especie conocida. Amarillo: ave, especie desconocida. Gris: sin separar (insectos, ranas, etc.)",
+"La línea blanca es el ahora. Toca los carriles para saltar allí // Si hay un canto cerca, empieza 1 segundo antes",
+"Las voces que suenan ahora se iluminan: nombre y foto // Sus filas en los carriles también se aclaran",
+"Toca una fila para ver una foto y una breve descripción // Fotos de Wikimedia Commons (autores y licencias en la descripción)",
+"ON/OFF activa o silencia cada voz // Pon insectos y ranas en OFF y solo quedan las aves",
+"Solo aves: subidas +20 dB (más fuerte que en la realidad) // Para que los cantos suaves se oigan mejor",
+"Una voz silenciada solo muestra contornos en los carriles // Aún se ve cuándo canta",
+"«Solo» (だけ) toca únicamente esa voz // Piha gritón: su canto llega a 400 m dentro del bosque",
+"▶| salta al siguiente canto de esa voz // Después del último, vuelve al primero",
+"Solo el querula gorjipúrpura // Los machos tienen plumas púrpura rojizas en la garganta; en grupos pequeños comen sobre todo frutos",
+"Cambiar por grupos: «Solo sonidos desconocidos» // Aves sin identificar más insectos, ranas, etc.",
+"Tres niveles de conocimiento // Especie conocida (expertos etiquetaron la grabación) · ave, especie desconocida · sin separar",
+"De vuelta a todo en ON: el bosque al amanecer // 18 voces superpuestas en un solo sonido",
+"¿Cuántas aves puedes distinguir solo con el oído? // En PC o en el móvil, en tu navegador",
+"Sonidos de la selva // Funciona en tu navegador (PC o móvil). La app está en japonés e inglés"
 ]
 }

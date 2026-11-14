@@ -18,6 +18,8 @@ upload-batch.ps1 が書く。1日の区切りは太平洋時間の0時（日本�
 - API の使用量の上限には 09:26（日本時間）に当たった。Google の表の値で数えて約 22,800 ポイントの時点（videos.insert を表どおり 1600 と数えると上限 10,000 を超えるので、実際の insert はもっと安い）。
 - 上限に当たったあとも videos.insert（動画を上げる）は通り、字幕（captions）だけが 403 quota で断られた。だから、上限の近くで上げると字幕のない動画ができる。
 - 600MB くらいの大きい動画は、送り終わったところで「The underlying connection was closed」が出ることがある（3回。動画はできていたが、**中身は途中までで処理が止まったまま**だった。2026-10-14 にわかった）。大きい動画は 32MB ずつ送る（Send-Resumable）。上げたら -Verify で「処理」と「長さ」を見る。
+| 2026-11-14 21:10 | jungle-sound-guide | 2 | 上がった（gDhDrIq5hFY）。11/17 20:00 予約・字幕 en・es・ko・pt・zh-TW・サムネイル。-Verify は処理中（直後）と、credits のリンクが push 前で 404 |
+| 2026-11-14 21:15 | jungle-sound-short | 2 | 上がった（z3D0KPskT_w）。11/17 20:05 予約・字幕 en・es・ko・pt・zh-TW・サムネイル |
 
 ## 公開前の確認（RULES 8.4。公開の日に、その日の分）
 
