@@ -95,9 +95,22 @@ window.List = (() => {
     const s = sp[code] || {}, p = s.photo;
     if (code === 'bed') return `<p>虫・カエルなど。ずっと鳴っています（上の帯の灰色の波）。</p>`;
     if (code === '????') return `<p>鳥の声だが、種は分からない声。</p>`;
+    // まず短く（写真・名前・紹介1〜2行）、くわしくは開いて（リンク・紹介の出どころ・写真の出どころ）。RULES 9章
+    const a = (href, t) => `<a href="${href}" target="_blank" rel="noopener">${t}</a>`, w = s.wiki || {};
+    const links = [
+      w.ja && a(`https://ja.wikipedia.org/wiki/${encodeURIComponent(w.ja)}`, 'Wikipedia（日本語）'),
+      w.en && a(`https://en.wikipedia.org/wiki/${encodeURIComponent(w.en.replace(/ /g, '_'))}`, 'Wikipedia（英語）'),
+      a(`https://ebird.org/species/${code}`, 'eBird（分布・写真）'),
+      a(`https://xeno-canto.org/species/${s.sci.replace(' ', '-')}`, 'xeno-canto（ほかの場所の声）'),
+    ].filter(Boolean).join(' ・ ');
     return (p ? `<img class="big" src="${p.file}" alt="${nameOf(code)}の写真">` : '') +
       `<p><b>${nameOf(code)}</b>　<i>${s.sci}</i>${s.ja ? '' : '（和名は未確認）'}</p>` +
-      (p ? `<p class="cr">写真: ${p.attribution || p.artist}（<a href="${p.page}" target="_blank" rel="noopener">Commons</a>, <a href="${p.license_url}" target="_blank" rel="noopener">${p.license}</a>）・同じ種の別の個体</p>` : '');
+      (s.desc ? `<p class="desc">${s.desc}</p>` : '') +
+      `<details class="more"><summary>くわしく・リンク</summary>
+        <p>${links}</p>
+        ${s.desc && w.en ? `<p class="cr">紹介文: 英語版 Wikipedia「${w.en}」（${w.checked} に読んだ版）の事実をもとに、このアプリで書いたもの。</p>` : ''}
+        ${p ? `<p class="cr">写真: ${p.attribution || p.artist}（${a(p.page, 'Commons')}, ${a(p.license_url, p.license)}）・同じ種の別の個体</p>` : ''}
+      </details>`;
   }
   function next(code) {
     const t = Forest.time, list = ev[code] || []; if (!list.length) return;
