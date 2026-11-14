@@ -1,0 +1,126 @@
+/* 熱帯雨林の音
+   余白は2つだけ（2026-11-14 ユーザー「マージンが詰まりすぎたり離れすぎたり」）:
+   --g = かたまりの中の部品どうし 8px ／ --G = かたまり（パネル）どうし 12px。部品ごとに margin を足さず、親の gap で並べる */
+:root{--bg:#0f1f18;--panel:#152a21;--line:#2a4538;--ink:#e8f0f4;--muted:#a3b4bf;--acc:#7fd49a;--ok:#7fd49a;--ng:#ff9b7a;--warn:#ffd27a;
+  --g:8px;--G:12px;--pad:16px;
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+[hidden]{display:none!important}
+p,ul,h1,h2,h3{margin:0}
+#app{max-width:760px;margin:0 auto}
+#top{padding:var(--G) var(--pad) var(--g);display:flex;flex-direction:column;gap:4px}
+#top h1{font-family:var(--f-display);font-weight:400;font-size:22px}
+/* 英語対応（I18N.md）: 選んでいないほうの言語を隠す・JP／EN の切りかえ */
+:root[lang=en] [lang=ja],:root:not([lang=en]) [lang=en]{display:none!important}
+.title-row{display:flex;align-items:center;gap:var(--g)}
+.langsw{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;margin-left:auto;flex:0 0 auto}
+.langsw button{border:0;border-radius:0;background:none;padding:3px 8px;min-height:30px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--muted)}
+.langsw button[aria-pressed="true"]{background:var(--acc);color:#0b1a12}
+.sub{color:var(--muted);font-size:13px}
+
+/* ---- ボタンの形（2種類だけ） ---- */
+button{font:inherit;cursor:pointer;border-radius:8px}
+button:disabled{opacity:.3;cursor:default}
+.primary{background:var(--acc);color:#0b1a12;border:none;font-weight:700;font-size:15px;min-height:40px;padding:8px 14px;white-space:nowrap}
+.primary.on{background:var(--warn)}
+/* ふつうのボタン（全部・種まで分かる鳥だけ・だけ・▶|・図）。同じ形・同じ大きさ */
+.btn,.fold{flex:0 0 auto;background:#132a20;color:var(--ink);border:1px solid var(--line);min-height:36px;min-width:44px;padding:2px 10px;font-size:13px;white-space:nowrap}
+
+/* ---- 上に固定: いま鳴いている名前 → 声の帯 → 再生の行 → 図 ---- */
+#pin{position:sticky;top:0;z-index:2;background:var(--bg);padding:var(--g) var(--pad);border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:var(--g)}
+.chips{min-height:20px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:12px}
+.chip{display:inline-block;padding:0 6px;border-radius:4px;font-size:11.5px;line-height:18px;font-weight:700}
+.chip.off{background:transparent!important;border:1px dashed #5d6d67;color:#8a9a94;font-weight:400}
+.chip-lead{color:var(--muted);margin-right:2px}
+.chip-none{color:var(--muted)}
+.lanes-wrap{position:relative}
+#lanes{display:block;width:100%;touch-action:pan-y;cursor:pointer;border-radius:6px}
+.player{display:flex;align-items:center;gap:var(--g);min-width:0}
+.status{font:12.5px var(--f-mono);color:var(--muted);white-space:nowrap}
+.status.on{color:var(--acc)}
+/* 状態（「〜だけ」「+20 dB」）と移動先は、再生の行の右の残り。行は足さない */
+.pin-line{flex:1 1 auto;min-width:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}
+.pin-state{color:var(--muted)}
+.pin-state:not(:empty){margin-right:6px}
+.seek-msg{font:12px var(--f-mono);color:var(--warn)}
+.boost-tag{display:inline-block;background:var(--warn);color:#2a1d00;border-radius:4px;padding:0 5px;font-weight:700}
+.spec-wrap{position:relative;height:100px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#081210}
+#spec{position:absolute;inset:0;width:100%;height:100%;display:block}
+.axis{position:absolute;right:4px;top:2px;bottom:2px;display:flex;flex-direction:column;justify-content:space-between;font:11px var(--f-mono);color:var(--muted);pointer-events:none}
+
+/* ---- 下にスクロール: パネル ---- */
+#scroll{padding:var(--G) var(--pad) 32px;display:flex;flex-direction:column;gap:var(--G)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:var(--G) 14px;font-size:14px;line-height:1.7;display:flex;flex-direction:column;gap:var(--g)}
+.card h2{font-size:16px;line-height:1.4}
+.card h3{font-size:14px}
+.card a,#about a{color:var(--acc)}
+/* 開閉（details）は、ブラウザによって flex が効かないので、となりどうしの間をあける */
+details.card{display:block}
+details.card>*+*{margin-top:var(--g)}
+details.card>summary,.more>summary{cursor:pointer}
+.more>*+*{margin-top:6px}
+.more>summary{color:var(--muted);font-size:13px}
+.howto{padding-left:1.2em;line-height:1.9}
+.warn,.card-note{color:var(--muted);font-size:12px}
+.vc-kind{display:inline-block;padding:0 6px;border-radius:4px;font-size:11px;line-height:18px;font-weight:700}
+.k-sp{background:#7fd49a;color:#0b1a12} .k-bird{background:var(--warn);color:#2a1d00} .k-bed{background:#8a9a94;color:#101814}
+
+/* ---- 声の一覧: まとめボタン → いまの状態（1行） → 行 ---- */
+.groups{display:flex;gap:6px}
+.groups .btn{flex:1 1 0;min-width:0;padding:2px 6px}   /* 3つを1行に（折り返さない。2026-11-14 ユーザー） */
+.mix-state{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5}
+.boost{color:var(--warn)}
+.vlist{list-style:none;padding:0;display:flex;flex-direction:column}
+.lr{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:4px;border:1.5px solid transparent;border-bottom-color:var(--line);border-radius:6px}
+.lr.sel{border-color:#fff}
+.lr.off .lr-body{opacity:.45;filter:grayscale(1)}
+/* ON／OFF のボタン（丸い形に点と字。ON＝緑、OFF＝灰の枠だけ） */
+.sw{flex:0 0 auto;display:flex;align-items:center;gap:4px;min-height:36px;min-width:58px;padding:2px 8px;border-radius:18px;border:1px solid var(--acc);background:#1f4a33;color:var(--acc);font:700 12px var(--f-mono)}
+.sw .sw-dot{width:12px;height:12px;border-radius:50%;background:var(--acc)}
+.lr.off .sw{background:transparent;border-color:#5d6d67;color:#8a9a94}
+.lr.off .sw .sw-dot{background:transparent;border:1.5px solid #8a9a94;box-sizing:border-box}
+.lr-body{all:unset;box-sizing:border-box;flex:1 1 140px;display:flex;align-items:center;gap:6px;cursor:pointer;min-height:40px;min-width:0}
+.lr-body:focus-visible{outline:2px solid var(--acc)}
+.lr-body img,.lr-body .q{width:40px;height:30px;object-fit:cover;border-radius:4px;flex:0 0 auto;background:#0b1712;display:flex;align-items:center;justify-content:center;font-size:14px;color:#7d8f88}
+.num{flex:0 0 auto;min-width:20px;text-align:center;border-radius:4px;font:700 11px/18px var(--f-mono)}
+.lr-text{flex:1 1 auto;display:flex;flex-direction:column;min-width:0;line-height:1.4}
+.lr-name{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lr-name .vc-kind{margin-left:4px;vertical-align:1px}
+.lr-sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lr.solo-on .solo{background:var(--acc);color:#0b1a12;font-weight:700}
+.lr-detail{flex:1 1 100%;font-size:13px;line-height:1.7;display:flex;flex-direction:column;gap:6px;padding:2px 0 4px}
+.lr-detail .big{width:100%;max-width:320px;border-radius:6px;display:block}
+.lr-detail .cr{font-size:11.5px;color:var(--muted)}
+
+/* ---- このアプリについて ---- */
+#about{color:var(--muted)}
+#about>summary{color:var(--ink)}
+#about ul{padding-left:18px;display:flex;flex-direction:column;gap:4px}
+
+/* ---- 開発用（手元だけ）: 聞きくらべ・機械・数 ---- */
+.ab{display:flex;gap:var(--g)}
+.ab button{flex:1;min-height:40px;font-size:14px}
+.listen{background:transparent;color:var(--ink);border:1px solid var(--acc)}
+.listen.on{background:var(--acc);color:#0b1a12}
+.answer{background:#24392f;color:var(--ink);border:1px solid var(--line)}
+.result{font-weight:700}
+.score{color:var(--muted);font:13px var(--f-mono)}
+.metrics,#bands{overflow-x:auto}
+.metrics table,#bands table{width:100%;border-collapse:collapse;font-size:13px}
+.metrics th,.metrics td,#bands th,#bands td{border-bottom:1px solid var(--line);padding:5px 4px;text-align:right}
+.metrics th:first-child,.metrics td:first-child,#bands th:first-child,#bands td:first-child{text-align:left;min-width:9em}
+.metrics td.num,#bands td.num{font-family:var(--f-mono);white-space:nowrap}
+.in{color:var(--ok)} .out{color:var(--ng)}
+.summary{font-weight:700}
+
+/* ---- スマホ ---- */
+@media (max-width:480px){
+  .spec-wrap{height:56px}
+  .hide-sm{display:none}
+  .primary{padding:8px 12px}
+  .status{font-size:11.5px}
+  .fold{padding:2px 8px}
+  .lr{gap:4px}
+  .sw{min-width:50px;padding:2px 6px}
+  .lr-name .vc-kind{display:none}   /* 確かさは番号の色で分かるので、名前の横の札は出さない */
+}

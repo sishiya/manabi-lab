@@ -52,7 +52,7 @@ function stopForest() {
 // 時刻を変える（声の帯・「次の声へ」から）。どこへ移動したかを消えずに残す
 function seek(t, snapped) {
   Forest.seek(t); showTime(); Lanes.draw();
-  $('seekMsg').textContent = `→ ${fmt(t)}` + (snapped ? ` ${List.short(snapped)}の手前` : '');   // 再生ボタンの行の右に入る長さに
+  $('seekMsg').textContent = `→ ${fmt(t)}` + (snapped ? L(` ${List.short(snapped)}の手前`, ` before ${List.short(snapped)}`) : '');   // 再生ボタンの行の右に入る長さに
 }
 List.seekHook = seek;
 
@@ -85,14 +85,14 @@ function tick() {
   $('status').textContent = `${S.abWhich} を再生中 ${fmt(a.currentTime - (S.stopAt - CLIP))} / 0:${CLIP}`;
 }
 function ui() {
-  $('playForest').innerHTML = S.forest ? '■ 止める' : '▶ <span class="hide-sm">森を</span>聞く';   // スマホでは「▶ 聞く」（固定した所を1行に）
+  $('playForest').innerHTML = S.forest ? L('■ 止める', '■ Stop') : L('▶ <span class="hide-sm">森を</span>聞く', '▶ Listen<span class="hide-sm"> to the forest</span>');   // スマホでは「▶ 聞く」（固定した所を1行に）
   $('playForest').classList.toggle('on', S.forest);
   for (const w of ['A', 'B']) { $('play' + w).classList.toggle('on', S.abWhich === w); $('play' + w).textContent = S.abWhich === w ? `■ ${w} を止める` : `▶ ${w} を聞く`; }
   $('status').classList.toggle('on', !!(S.now || S.forest));
   if (S.now) tick(); else showTime();
 }
 
-$('playForest').onclick = () => (S.forest ? stop() : playForest().catch(e => { $('status').textContent = '鳴らせませんでした: ' + e.message; window.__jusoErr.push(String(e)); }));
+$('playForest').onclick = () => (S.forest ? stop() : playForest().catch(e => { $('status').textContent = L('鳴らせませんでした: ', 'Could not play: ') + e.message; window.__jusoErr.push(String(e)); }));
 for (const w of ['A', 'B']) {
   $('play' + w).onclick = async () => {
     if (S.abWhich === w) { stop(); Compare.heardOne(w); return; }
@@ -104,16 +104,20 @@ for (const w of ['A', 'B']) {
 }
 Power.on({ pause() { if (S.now || S.forest) stop(); }, resume() {} });   // 離れたら止める（もどっても勝手に鳴らさない）
 addEventListener('resize', () => { Spectro.resize(); Lanes.resize(); });
+function foldLabel(open) {   // 図をたたむ／開くボタン（文字と読み上げの名前）
+  $('specFold').textContent = L(open ? '図 ▴' : '図 ▾', open ? 'Chart ▴' : 'Chart ▾'); $('specFold').setAttribute('aria-expanded', open);
+  $('specFold').setAttribute('aria-label', open ? L('図をたたむ', 'Hide the chart') : L('図を開く', 'Show the chart'));
+}
+foldLabel(true);
 $('specFold').onclick = () => {
   const open = $('specBox').hidden; $('specBox').hidden = !open;
-  $('specFold').textContent = open ? '図 ▴' : '図 ▾'; $('specFold').setAttribute('aria-expanded', open);
-  $('specFold').setAttribute('aria-label', open ? '図をたたむ' : '図を開く');
+  foldLabel(open);
   if (open) Spectro.resize();
 };
 Spectro.setup(() => S.forest || !!S.now);
 
 // 本物らしさのくらべ（第一弾）は開発中だけ: 手元（localhost）で開いたときだけ出す。公開の画面では「生成した音との比べ」と勘違いされやすいため（2026-11-14 ユーザー）
-if (['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) $('devCompare').hidden = false;
+if (['localhost', '127.0.0.1', '[::1]'].includes(location.hostname) && LANG === 'ja') $('devCompare').hidden = false;   // 開発用は日本語だけ
 fetch('data/mix.json').then(r => r.json()).then(info => { S.info = info; Compare.render(info); })
   .catch(e => { $('metrics').textContent = '数を読みこめませんでした: ' + e.message; window.__jusoErr.push(String(e)); });
 Promise.all([Forest.prefetch(), fetch('data/species.json').then(r => r.json())])
@@ -121,12 +125,12 @@ Promise.all([Forest.prefetch(), fetch('data/species.json').then(r => r.json())])
     List.build(forest, species, () => Lanes.dirty());
     Lanes.setup(forest, List.order, {
       seek, select: code => List.select(code),
-      preview: t => { $('seekMsg').textContent = `→ ${fmt(t)}（はなすと移動）`; },
+      preview: t => { $('seekMsg').textContent = L(`→ ${fmt(t)}（はなすと移動）`, `→ ${fmt(t)} (release to jump)`); },
     });
     Lanes.stop(); Spectro.resize();
     $('playForest').disabled = false; ui();
   })
-  .catch(e => { $('playForest').textContent = '読みこめませんでした'; window.__jusoErr.push(String(e)); });
+  .catch(e => { $('playForest').textContent = L('読みこめませんでした', 'Could not load'); window.__jusoErr.push(String(e)); });
 Compare.newTrial();
 
 // デバッグ用: 状態を見る（RULES 5）

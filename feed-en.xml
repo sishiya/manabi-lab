@@ -5,8 +5,16 @@
   <link href="https://sishiya.github.io/manabi-lab/?lang=en"/>
   <link rel="self" href="https://sishiya.github.io/manabi-lab/feed-en.xml"/>
   <id>https://sishiya.github.io/manabi-lab/feed-en.xml</id>
-  <updated>2026-11-06T00:00:00+09:00</updated>
+  <updated>2026-11-14T00:00:00+09:00</updated>
   <author><name>Shishiya</name></author>
+  <entry>
+    <title>Rainforest Sounds</title>
+    <link href="https://sishiya.github.io/manabi-lab/jungle-sound/?lang=en"/>
+    <id>https://sishiya.github.io/manabi-lab/jungle-sound/?lang=en</id>
+    <published>2026-11-14T00:00:00+09:00</published>
+    <updated>2026-11-14T00:00:00+09:00</updated>
+    <summary>The sound of the Amazon rainforest (Peru) at dawn, layered from real recordings: birds with known names, birds whose species is unknown, and insects and frogs not separated by who is calling. Play, mute or solo each voice, and see on a 3-minute timeline who calls when.</summary>
+  </entry>
   <entry>
     <title>How Snakes Move</title>
     <link href="https://sishiya.github.io/manabi-lab/snake-move/?lang=en"/>

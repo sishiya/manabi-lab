@@ -5,8 +5,16 @@
   <link href="https://sishiya.github.io/manabi-lab/"/>
   <link rel="self" href="https://sishiya.github.io/manabi-lab/feed.xml"/>
   <id>https://sishiya.github.io/manabi-lab/feed.xml</id>
-  <updated>2026-11-06T00:00:00+09:00</updated>
+  <updated>2026-11-14T00:00:00+09:00</updated>
   <author><name>しし屋</name></author>
+  <entry>
+    <title>熱帯雨林の音</title>
+    <link href="https://sishiya.github.io/manabi-lab/jungle-sound/"/>
+    <id>https://sishiya.github.io/manabi-lab/jungle-sound/</id>
+    <published>2026-11-14T00:00:00+09:00</published>
+    <updated>2026-11-14T00:00:00+09:00</updated>
+    <summary>アマゾン（ペルー）の夜明けの森の音を、本物の録音から重ねて鳴らす。名前が分かっている鳥、種の分からない鳥、だれの声か分けられていない虫やカエル。声ごとに鳴らす・消す・その声だけ聞くができ、3分の帯で、いつだれが鳴くかが一目で分かる。</summary>
+  </entry>
   <entry>
     <title>ヘビが進むしくみ</title>
     <link href="https://sishiya.github.io/manabi-lab/snake-move/"/>

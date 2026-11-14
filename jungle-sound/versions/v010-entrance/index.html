@@ -1,0 +1,155 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<base href="../../"><!-- 節目の版: 音・データ・写真は jungle-sound/ のものを読む（8 MB の音を複製しない）。css・js はこの版のもの -->
+<title>熱帯雨林の音</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230f1f18'/><circle cx='32' cy='32' r='15' fill='none' stroke='%237fd49a' stroke-width='6'/></svg>">
+<script>/* 言語 ja／en（I18N.md）: ?lang= → まなびラボで選んだもの（localStorage 'manabi-lang'）→ ブラウザの言語 */var LANG=(function(){var q=new URLSearchParams(location.search).get('lang'),s=null;try{s=localStorage.getItem('manabi-lang');}catch(e){}var l=q==='en'||q==='ja'?q:s==='en'||s==='ja'?s:/^ja\b/i.test(navigator.language||'ja')?'ja':'en';document.documentElement.lang=l;return l;})();function L(ja,en){return LANG==='en'?en:ja;}function setLang(l){try{localStorage.setItem('manabi-lang',l);}catch(e){}var u=new URL(location.href);u.searchParams.set('lang',l);location.href=u.href;}</script>
+<script src="../assets/power.js?v=1"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="versions/v010-entrance/css/style.css">
+
+<div id="app">
+  <header id="top">
+    <div class="title-row"><h1><span lang="ja">熱帯雨林の音</span><span lang="en">Rainforest Sounds</span></h1>
+      <span class="langsw" id="langsw"><button data-l="ja">JP</button><button data-l="en">EN</button></span></div>
+    <p class="sub"><span lang="ja">アマゾン（ペルー）の夜明け、5時25分ごろの森。だれの声か、どこまで分かっている？</span><span lang="en">Dawn in the Amazon rainforest (Peru), around 5:25 a.m. Whose voice is it, and how much do we know?</span></p>
+  </header>
+
+  <!-- 上に固定: いま鳴いている名前・声の帯（3分）・再生・選んだ声・グラフ。ここで押すと「その時刻へ移動」だけ -->
+  <section id="pin">
+    <p id="nowChips" class="chips" aria-live="off"></p>
+    <div class="lanes-wrap"><canvas id="lanes" data-a="声の帯（横が3分、1行が1つの声。押すとその時刻へ、長押しでその声を選ぶ）|Voice lanes (3 minutes across, one row per voice. Tap to jump to that time, long-press to select that voice)"></canvas></div>
+    <div class="player">
+      <button id="playForest" class="primary" disabled>読みこみ中…</button>
+      <span id="status" class="status">0:00 / 3:00</span>
+      <button id="specFold" class="fold" aria-expanded="true"></button>
+      <!-- 状態と移動先は、この行の右の残りに（行を足さない＝高さが変わらない。2026-11-14 ユーザー） -->
+      <span class="pin-line"><span id="pinState" class="pin-state"></span><span id="seekMsg" class="seek-msg" aria-live="polite"></span></span>
+    </div>
+    <div id="specBox">
+      <div class="spec-wrap">
+        <canvas id="spec" data-a="音の高さと時間の図（スペクトログラム）|Pitch over time (spectrogram)"></canvas>
+        <div class="axis"><span>16 kHz</span><span>8</span><span>0</span></div>
+      </div>
+    </div>
+  </section>
+
+  <main id="scroll">
+    <!-- 使い方（文）と、声の一覧（ボタン）はパネルを分ける。ボタンが文のグループに見えないように（2026-11-14 ユーザー） -->
+    <section class="card">
+      <h2><span lang="ja">使い方</span><span lang="en">How to use</span></h2>
+      <!-- 文は「まず短く、くわしくは開いて」（2026-11-14 ユーザー。RULES 9章） -->
+      <ul class="howto">
+        <li><b>ON</b> … <span lang="ja">鳴らす／消す</span><span lang="en">play / mute</span></li>
+        <li><b><span lang="ja">だけ</span><span lang="en">Solo</span></b> … <span lang="ja">その声だけ聞く</span><span lang="en">hear only that voice</span></li>
+        <li><b>▶|</b> … <span lang="ja">その声の次へ飛ぶ</span><span lang="en">jump to that voice's next call</span></li>
+        <li><span lang="ja">上の帯を押す … その時刻へ飛ぶ</span><span lang="en">Tap the lanes above … jump to that time</span></li>
+      </ul>
+      <details class="more" lang="en">
+        <summary>How to read it</summary>
+        <p><b>Lanes above</b>: 3 minutes across, one row per voice (the numbers match the list below). Colored bars show when that voice calls. Outlined bars are muted voices. A row lights up while it is actually sounding. The gray wave shows how loud the insects, frogs and other sounds are.</p>
+        <p>Tapping the lanes jumps to <b>1 second before</b> a nearby call. Long-press to select that voice.</p>
+        <p><b>Green chart</b>: the pitch (height) and strength (brightness) of the last few seconds.</p>
+        <p>Tap a row in the list to select it and open its photo and description.</p>
+      </details>
+      <details class="more" lang="ja">
+        <summary>くわしい見方</summary>
+        <p><b>上の帯</b>: 横が3分、1行が1つの声（番号は下の一覧と同じ）。色の帯がその声の鳴る時刻。枠だけの帯は消している声。いま鳴っている行は明るくなります。灰色の波は虫・カエルなどの大きさ。</p>
+        <p>帯を押すと、近くに声があれば<b>その声の1秒前</b>へ飛びます。長押しでその声を選べます。</p>
+        <p><b>緑の図</b>: いま鳴っている直近の数秒の音の高さ（たて）と強さ（明るさ）。</p>
+        <p>一覧の行を押すと、その声を選んで写真と説明が開きます。</p>
+      </details>
+      <p class="warn"><span lang="ja">※ 画面を1回押すと音が出ます。はじめは音量を小さめに。</span><span lang="en">* Sound starts after you press something once. Start with a low volume.</span></p>
+    </section>
+
+    <section class="card">
+      <h2><span lang="ja">声の一覧</span><span lang="en">Voices</span></h2>
+      <div class="groups">
+        <button id="gAll" class="btn"><span lang="ja">全部</span><span lang="en">All</span></button>
+        <button id="gKnown" class="btn"><span lang="ja">種が分かる鳥</span><span lang="en">Known birds</span></button>
+        <button id="gUnknown" class="btn"><span lang="ja">種が不明の音</span><span lang="en">Unknown</span></button>
+      </div>
+      <p id="mixState" class="mix-state" aria-live="polite"></p>
+      <ul id="voiceList" class="vlist"></ul>
+      <p class="card-note"><span lang="ja">写真は同じ種の別の個体です。</span><span lang="en">Photos show other individuals of the same species.</span></p>
+    </section>
+
+    <section class="card">
+      <h2><span lang="ja">3つの「分かり方」</span><span lang="en">Three levels of “knowing”</span></h2>
+      <p><span class="vc-kind k-sp"><span lang="ja">種まで</span><span lang="en">Species known</span></span> <span lang="ja">種の名前が分かっている鳥</span><span lang="en">Birds identified to species</span></p>
+      <p><span class="vc-kind k-bird"><span lang="ja">鳥・種は不明</span><span lang="en">Bird, species unknown</span></span> <span lang="ja">鳥だが、種は分からない</span><span lang="en">A bird, but the species is not known</span></p>
+      <p><span class="vc-kind k-bed"><span lang="ja">分けられていない</span><span lang="en">Not separated</span></span> <span lang="ja">虫・カエルなど。だれの声か分けられていない</span><span lang="en">Insects, frogs and more, not separated by who is calling</span></p>
+      <details class="more" lang="en">
+        <summary>More</summary>
+        <p><b>Species known</b>: an expert listened to the recording and named the species. Mistakes are possible.</p>
+        <p><b>Bird, species unknown</b>: a bird call that was not given a species (1,684 of the 16,482 labels in this recording; for example, quiet or short calls).</p>
+        <p><b>Not separated</b>: only birds were labeled in this recording. Many insect sounds of the Amazon night are not identified to species even in research.</p>
+      </details>
+      <details class="more" lang="ja">
+        <summary>くわしく</summary>
+        <p><b>種まで</b>: 専門家が録音を聞いて、種の名前を付けた声。まちがいもありえます。</p>
+        <p><b>鳥・種は不明</b>: 鳥の声だが、種が付かなかった声（この録音の注釈 16,482 個のうち 1,684 個。声が小さい・短いなど）。</p>
+        <p><b>分けられていない</b>: この録音では鳥にしか名前が付いていません。アマゾンの夜の虫の声は、研究でも多くが種まで分かっていません。</p>
+      </details>
+      <details class="more">
+        <summary><span lang="ja">この音の作り方</span><span lang="en">How this sound was made</span></summary>
+        <p id="what"></p>
+      </details>
+    </section>
+
+    <!-- 開発中だけ（手元の localhost で開いたときだけ出す。2026-11-14 ユーザー「生成した音との比べと勘違いしそうなので、開発中限定に」） -->
+    <details id="devCompare" class="card dev" lang="ja" hidden>
+      <summary>開発用: 本物らしさのくらべ（耳・機械・数。公開の画面には出ません）</summary>
+      <p><small>鳴らしている音はすべて本物の録音です。ここで測っているのは、録音を切る・塗る・引く・並べ直す、の跡がばれないかです（音を新しく作ったかどうかではありません）。数のくらべ方: ACI = Pieretti, Farina & Morri (2011) Ecological Indicators 11: 868–873 ／ H = Sueur ほか (2008) PLoS ONE 3: e4065 ／ NDSI = Kasten ほか (2012) Ecological Informatics 12: 70–76 ／ ADI・AEI = Villanueva-Rivera ほか (2011) Landscape Ecology 26: 1233–1246。</small></p>
+      <h3>耳でくらべる: どちらが本物？</h3>
+      <p>A と B の片方は<b>重ねた森</b>、もう片方は<b>重ねた森の土台のもとになった、同じ時刻の本物そのまま</b>です（同じ位置の15秒。大きさはそろえてあります。虫の音は同じなので、鳥の声と、鳥を消した跡に耳をすませてください）。<b>10回</b>答えたら、まとめて結果を出します。10回中9回以上当たれば「聞き分けられる」＝まだ本物らしくない、という目安です（当てずっぽうでそうなる見こみは約1%）。<br><small>※ 重ねた森は3本しかないので、何度も聞くと覚えてしまうことがあります。</small></p>
+      <div class="ab">
+        <button id="playA" class="listen">▶ A を聞く</button>
+        <button id="playB" class="listen">▶ B を聞く</button>
+      </div>
+      <div class="ab">
+        <button id="pickA" class="answer" disabled>A が本物</button>
+        <button id="pickB" class="answer" disabled>B が本物</button>
+      </div>
+      <p id="abResult" class="result" aria-live="polite">まず A と B を両方聞いてください</p>
+      <p id="abScore" class="score">これまで: 0 回中 0 回当たり</p>
+      <h3>機械でくらべる: 見分けられる？</h3>
+      <div id="machine" class="metrics">読みこみ中…</div>
+      <h3>数でくらべる</h3>
+      <p>本物の録音3本（場所も日もちがう）から、5時15分〜36分の3分を7区間ずつ、計21区間とって数を測り、そのばらつきの中で重ねた森がどこに来るかを見ます（5〜95% に入れば ○）。右の3列は<b>わざと悪く作った重ね方</b>で、物差しがそれを見分けられるかの確かめです。どれもアプリで流すのと同じ圧縮をした音で測っています。</p>
+      <div id="metrics" class="metrics">読みこみ中…</div>
+      <details class="more"><summary>高さの帯ごとの数（16帯）</summary><div id="bands"></div></details>
+    </details>
+
+    <details id="about" class="card">
+      <summary><span lang="ja">このアプリについて・おもな出どころ</span><span lang="en">About this app · main sources</span></summary>
+      <p lang="en">A learning prototype. Everything you hear is a real recording; no sound was made by computation or AI. But the recordings were cut out and layered, so this is not exactly what sounded at one place at one time. Sounds above the recorder’s range (above 16 kHz, such as katydid ultrasound) are not included. The birds in the photos are not the individuals in the recording.</p>
+      <p lang="ja">学習用の試作です。鳴らしている音はすべて本物の録音で、計算や AI で作った音は入っていません。ただし録音を切り出して重ねているので、ひとつの場所で同時に鳴った音そのものではありません。録音の機械（32 kHz）より上の高い音（16 kHz より上。キリギリスの超音波など）は入っていません。写真の鳥は、録音で鳴いている個体そのものではありません。</p>
+      <h3><span lang="ja">おもな出どころ</span><span lang="en">Main sources</span></h3>
+      <ul lang="en">
+        <li>Recordings and bird labels: W. Alexander Hopping, Stefan Kahl, Holger Klinck (2022) “A collection of fully-annotated soundscape recordings from the Southwestern Amazon Basin”, Zenodo, <a href="https://doi.org/10.5281/zenodo.7079124" target="_blank" rel="noopener">doi:10.5281/zenodo.7079124</a> (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>). Inkaterra Reserva Amazonica, Peru, January 2019, 5–6 a.m.<br>Changes made in this app: parts were cut out; in the background, bird calls were filled with sound from nearby moments; surrounding sound was subtracted from the bird calls; the sounds were layered and compressed to AAC.</li>
+        <li>Bird descriptions: written for this app from facts checked in the English Wikipedia article for each species (versions read on 2026-11-14). Article text was not copied. Links are under “More &amp; links” for each species.</li>
+        <li>That many insect sounds of the Amazon night are not identified to species: Do Nascimento, Pérez-Granados, Alencar &amp; Beard (2024) Phil. Trans. R. Soc. B 379: 20230112 (a <b>different place</b> from Peru: 1,714 sound types were labeled in Viruá National Park, Brazil, only to group level).</li>
+      </ul>
+      <ul lang="ja">
+        <li>録音と鳥の注釈: W. Alexander Hopping, Stefan Kahl, Holger Klinck (2022) 「A collection of fully-annotated soundscape recordings from the Southwestern Amazon Basin」 Zenodo, <a href="https://doi.org/10.5281/zenodo.7079124" target="_blank" rel="noopener">doi:10.5281/zenodo.7079124</a>（<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>）。ペルー Inkaterra Reserva Amazonica、2019年1月、5時〜6時。<br>このアプリで変えたこと: 一部を切り出した・土台は鳥の声の部分を近くの時刻の音で塗りつぶした・鳥の声はまわりの音を引いた・重ねた・AAC に圧縮した。</li>
+        <li>鳥の紹介文: 英語版 Wikipedia の各種の記事（2026-11-14 に読んだ版）で確かめた事実をもとに、このアプリで書いたもの（記事の文は写していません。各種の「くわしく・リンク」に記事へのリンク）。</li>
+        <li>鳥の和名: Wikidata（CC0）のラベル（鳥類の和名の目録では確かめていません）。ラベルのない種は「和名は未確認」として英名と学名で。</li>
+        <li>アマゾンの夜の虫の声の多くは種まで分かっていないこと: Do Nascimento, Pérez-Granados, Alencar & Beard (2024) Phil. Trans. R. Soc. B 379: 20230112（<b>ペルーとは別の場所</b>、ブラジル Viruá 国立公園で 1,714 の音の型に注釈。名前はなかままで）。</li>
+      </ul>
+      <h3><span lang="ja">鳥の写真（Wikimedia Commons。それぞれのライセンス）</span><span lang="en">Bird photos (Wikimedia Commons, each under its own license)</span></h3>
+      <ul id="photoCredits"></ul>
+      <h3><span lang="ja">使っているもの</span><span lang="en">What this app uses</span></h3>
+      <p><span lang="ja">フォント: Google Fonts（SIL Open Font License）</span><span lang="en">Fonts: Google Fonts (SIL Open Font License)</span></p>
+    </details>
+  </main>
+</div>
+
+<script src="versions/v010-entrance/js/spectro.js"></script>
+<script src="versions/v010-entrance/js/compare.js"></script>
+<script src="versions/v010-entrance/js/forest.js"></script>
+<script src="versions/v010-entrance/js/list.js"></script>
+<script src="versions/v010-entrance/js/lanes.js"></script>
+<script src="versions/v010-entrance/js/main.js"></script>
+<script>/* 属性の文（data-t="日本語|English" → title、data-a → aria-label）。I18N 2.2 */document.querySelectorAll('[data-t]').forEach(function(e){var p=e.dataset.t.split('|');e.title=L(p[0],p[1]);});document.querySelectorAll('[data-a]').forEach(function(e){var p=e.dataset.a.split('|');e.setAttribute('aria-label',L(p[0],p[1]));});document.querySelectorAll('#langsw button').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.l===LANG));b.onclick=function(){if(b.dataset.l!==LANG)setLang(b.dataset.l);};});document.title=L('熱帯雨林の音','Rainforest Sounds');</script>

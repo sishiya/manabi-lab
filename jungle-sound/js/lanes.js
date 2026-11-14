@@ -24,6 +24,7 @@ window.Lanes = (() => {
     cv.style.height = H + 'px'; cv.width = W * dpr; cv.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
     base = null; draw();
   }
+  function fit(c, t, w) { if (c.measureText(t).width <= w) return t; while (t.length > 1 && c.measureText(t + '…').width > w) t = t.slice(0, -1); return t + '…'; }
   const X = t => gut + (W - gut - 4) * t / data.length_s;
   const T = x => Math.max(0, Math.min(data.length_s, (x - gut) / (W - gut - 4) * data.length_s));
 
@@ -49,7 +50,7 @@ window.Lanes = (() => {
       if (sel) { c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.strokeRect(gut - 2, y + .5, W - gut + 1, rowH - 1); }
       // 行の名前（広い画面）／番号（スマホ。下の一覧の番号と同じ）
       c.fillStyle = on ? (sel ? '#fff' : '#cfdbd6') : '#5d6d67'; c.font = `${Math.min(11, rowH - 1)}px "Zen Kaku Gothic New", sans-serif`; c.textBaseline = 'middle';
-      c.fillText(gut > 40 ? List.short(r.code) : String(i + 1), 2, y + rowH / 2 + .5);
+      c.fillText(gut > 40 ? fit(c, List.short(r.code), gut - 6) : String(i + 1), 2, y + rowH / 2 + .5);   // 英語の名前は長いので、はみ出す分は「…」
     });
     c.fillStyle = '#8fa39b'; c.font = '10px "IBM Plex Mono", monospace'; c.textBaseline = 'alphabetic';
     for (let m = 0; m <= 3; m++) { const x = X(m * 60); c.fillRect(x, top, 1, bh); c.fillText(`${m}:00`, Math.min(W - 26, x + 2), H - 3); }
@@ -79,12 +80,12 @@ window.Lanes = (() => {
   }
   function chips() {
     const on = rows.filter(r => live[r.code]).map(r => `<span class="chip ${r.code === '????' ? 'k-bird' : 'k-sp'}${List.isOn(r.code) ? '' : ' off'}">${List.short(r.code)}</span>`);
-    const html = on.length ? on.join('') : '<span class="chip-none">鳥の声はいま鳴っていません</span>';
-    const s = `<span class="chip-lead">いま鳴いている:</span>${html}`;
+    const html = on.length ? on.join('') : `<span class="chip-none">${L('鳥の声はいま鳴っていません', 'No bird is calling right now')}</span>`;
+    const s = `<span class="chip-lead">${L('いま鳴いている:', 'Calling now:')}</span>${html}`;
     if (s !== lastChips) { $('nowChips').innerHTML = s; lastChips = s; }   // 変わったときだけ書く
   }
   function start() { if (!raf) raf = requestAnimationFrame(frame); }
-  function stop() { if (raf) cancelAnimationFrame(raf); raf = 0; live = {}; lastChips = ''; $('nowChips').innerHTML = '<span class="chip-none">▶ で鳴らすと、鳴いている声の名前が出ます</span>'; draw(); }
+  function stop() { if (raf) cancelAnimationFrame(raf); raf = 0; live = {}; lastChips = ''; $('nowChips').innerHTML = `<span class="chip-none">${L('▶ で鳴らすと、鳴いている声の名前が出ます', 'Press ▶ to see the names of the voices calling')}</span>`; draw(); }
   function dirty() { base = null; draw(); }
 
   // ---- 押す・長押し・ドラッグ ----

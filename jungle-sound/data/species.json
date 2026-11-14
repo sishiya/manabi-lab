@@ -19,7 +19,8 @@
    "en": "Plumbeous antbird",
    "en_revid": 1314719182,
    "checked": "2026-11-14"
-  }
+  },
+  "desc_en": "17–18 cm long. Males are dark gray with bare blue skin around the eye. It searches the leaf litter near the ground for insects and snails."
  },
  {
   "code": "putfru1",
@@ -41,7 +42,8 @@
    "en": "Purple-throated fruitcrow",
    "en_revid": 1380565847,
    "checked": "2026-11-14"
-  }
+  },
+  "desc_en": "A black bird, 25–30 cm long. Males have reddish-purple feathers on the throat. Small groups eat mostly fruit, and also large insects, from the middle of the forest up."
  },
  {
   "code": "sobcac1",
@@ -63,7 +65,8 @@
    "en": "Solitary cacique",
    "en_revid": 1380705604,
    "checked": "2026-11-14"
-  }
+  },
+  "desc_en": "All black with a sharp white bill (males about 27 cm). It makes many kinds of calls, mixed with gurgles and growls."
  },
  {
   "code": "coltro1",
@@ -85,7 +88,8 @@
    "en": "Collared trogon",
    "en_revid": 1353214800,
    "checked": "2026-11-14"
-  }
+  },
+  "desc_en": "25–29 cm long. Males have a shiny green back, a red belly and a white band across the chest. It perches at middle height and eats fruit, caterpillars, cicadas and more."
  },
  {
   "code": "????",
@@ -115,7 +119,8 @@
    "en": "Dusky-capped greenlet",
    "en_revid": 1380580426,
    "checked": "2026-11-14"
-  }
+  },
+  "desc_en": "A small bird, about 12 cm and 17 g. Brownish head and pale yellow belly (colors vary a little by region). It hangs upside down to pick insects off leaves."
  },
  {
   "code": "ruqdov",
@@ -137,7 +142,8 @@
    "en": "Ruddy quail-dove",
    "en_revid": 1339466808,
    "checked": "2026-11-14"
-  }
+  },
+  "desc_en": "A dove, 19–28 cm long, with a rust-colored back and face. It walks on the forest floor and mostly eats seeds."
  },
  {
   "code": "dutant2",
@@ -159,7 +165,8 @@
    "en": "Dusky-throated antshrike",
    "en_revid": 1380706039,
    "checked": "2026-11-14"
-  }
+  },
+  "desc_en": "13–14 cm long. Males are gray, females are brown. It moves with flocks of other kinds of birds and flies out to grab insects from under leaves."
  },
  {
   "code": "rucant2",
@@ -181,7 +188,8 @@
    "en": "Rufous-capped antthrush",
    "en_revid": 1379250557,
    "checked": "2026-11-14"
-  }
+  },
+  "desc_en": "About 18 cm long, with a reddish-brown crown. It lives on the dark floor of humid forests. Its song lasts 4–6 seconds, repeating one note about 14 times a second."
  },
  {
   "code": "scrpih1",
@@ -203,7 +211,8 @@
    "en": "Screaming piha",
    "en_revid": 1381432449,
    "checked": "2026-11-14"
-  }
+  },
+  "desc_en": "A gray bird, 24–26 cm long. Its call is very loud and carries up to 400 m through the forest. Males gather to call; no display has been found, so they seem to court females by voice alone."
  },
  {
   "code": "batman1",
@@ -225,7 +234,8 @@
    "en": "Band-tailed manakin",
    "en_revid": 1320593489,
    "checked": "2026-11-14"
-  }
+  },
+  "desc_en": "A small bird, 10–11 cm long. Males have a red head, a yellow face and a black back and wings. Females are dull green. It eats mostly fruit."
  },
  {
   "code": "blfant1",
@@ -247,7 +257,8 @@
    "en": "Black-faced antthrush",
    "en_revid": 1346668821,
    "checked": "2026-11-14"
-  }
+  },
+  "desc_en": "15–19 cm long. A brown bird with a black face and throat, and bluish bare skin around the eye."
  },
  {
   "code": "blfcot1",
@@ -269,7 +280,8 @@
    "en": "Black-faced cotinga",
    "en_revid": 1322282144,
    "checked": "2026-11-14"
-  }
+  },
+  "desc_en": "23–25 cm long. Black head and throat, gray body. It flies up, flutters in the air for a moment and plucks fruit such as figs."
  },
  {
   "code": "bsbeye1",
@@ -291,7 +303,8 @@
    "en": "Black-spotted bare-eye",
    "en_revid": 1380747844,
    "checked": "2026-11-14"
-  }
+  },
+  "desc_en": "About 17 cm long, with eye-catching bare red skin around the eye. It follows army ant swarms and catches the insects fleeing from the ants."
  },
  {
   "code": "citwoo1",
@@ -313,7 +326,8 @@
    "en": "Cinnamon-throated woodcreeper",
    "en_revid": 1380747862,
    "checked": "2026-11-14"
-  }
+  },
+  "desc_en": "A large woodcreeper (a bird that climbs tree trunks), 22–27 cm long, with a bright rusty throat. It sings mostly at dawn and dusk."
  },
  {
   "code": "elewoo1",
@@ -335,7 +349,8 @@
    "en": "Elegant woodcreeper",
    "en_revid": 1380580436,
    "checked": "2026-11-14"
-  }
+  },
+  "desc_en": "18–22 cm long, with a long, thin bill and pale teardrop-shaped spots on its back and chest. A bird that climbs tree trunks."
  },
  {
   "code": "viotro3",
@@ -357,6 +372,7 @@
    "en": "Amazonian trogon",
    "en_revid": 1379680570,
    "checked": "2026-11-14"
-  }
+  },
+  "desc_en": "23–25 cm long. Males have a shiny blue-black head and a bright yellow belly. Its food has not been studied well; it is thought to eat insects and fruit like its relatives."
  }
 ]

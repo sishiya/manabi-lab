@@ -50,6 +50,14 @@ window.Compare = (() => {
       `※ 重ねた森は ${mc.seeds} 本。鳥の入れ方は、この正解率がいちばん低いものを選んだので、いまの音の数字は少し有利に出ています。同じ3分の本物は1本だけなので、15秒ずつを別々に数えています。</small></p>`;
     const m = info.mixes[0], nb = m.birds.reduce((s, b) => s + b.placed, 0), unk = m.birds.find(b => b.code === '????');
     const bi = info.bed_info;
+    if (LANG === 'en') {   // 英語は、いまの作り方（土台を塗りつぶす・鳥はまわりの音を引く）だけ書く（公開の画面はこの作り方だけ）
+      $('what').innerHTML = `All sounds are real recordings made at dawn in January 2019 in one reserve (Inkaterra Reserva Amazonica, Peru). It is not exactly what sounded at one place at one time.<br>` +
+        `<b>Background</b>: a <b>continuous 3 minutes</b> from one place and one day (no joins). ${bi.boxes} boxes where experts labeled bird calls were filled with sound at the same pitch from nearby moments (within 90 s). What remains is insects, frogs and more, <b>not separated by who is calling</b>. Distant birds that were not labeled, wind, and traces of birds that were not fully filled may remain.<br>` +
+        `<b>Birds</b>: for each species, the times when real birds called in another recording were copied, and cut-out calls of the same species were placed at those times (in these 3 minutes: ${m.birds.length} kinds, ${nb} calls` +
+        (unk ? `, including ${unk.placed} <b>bird calls with unknown species</b>` : '') + `). The surrounding sound (insects and more) 1 s before and after was subtracted from each cut-out, leaving only the bird (some echo and quiet parts are lost).<br>` +
+        `Every sound is a real recording; no sound was made by computation or AI.`;
+      return;
+    }
     $('what').innerHTML = `どれも同じ保護区（ペルー Inkaterra Reserva Amazonica）で 2019年1月の夜明けに録った本物の録音です。ひとつの場所で同時に鳴った音そのものではありません。<br>` +
       (bi.kind === 'fill'
         ? `<b>土台</b>: 1か所・1日の録音の<b>連続した3分</b>（つなぎ目なし）から、鳥の声の注釈の箱 ${bi.boxes} 個を、近くの時刻（±90秒）の同じ高さの音で塗りつぶしたもの。残っているのは虫やカエルなどの声で、<b>だれの声かは分けられていません</b>。注釈されなかった遠くの鳥や風の音、塗りきれなかった鳥の声のなごりも入りえます。<br>`
