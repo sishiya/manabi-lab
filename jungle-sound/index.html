@@ -48,8 +48,10 @@
       <p id="what">読みこみ中…</p>
     </section>
 
-    <details class="card">
-      <summary>本物らしさのくらべ（第一弾）: 耳・機械・数</summary>
+    <!-- 開発中だけ（手元の localhost で開いたときだけ出す。2026-11-14 ユーザー「生成した音との比べと勘違いしそうなので、開発中限定に」） -->
+    <details id="devCompare" class="card dev" hidden>
+      <summary>開発用: 本物らしさのくらべ（耳・機械・数。公開の画面には出ません）</summary>
+      <p><small>鳴らしている音はすべて本物の録音です。ここで測っているのは、録音を切る・塗る・引く・並べ直す、の跡がばれないかです（音を新しく作ったかどうかではありません）。数のくらべ方: ACI = Pieretti, Farina & Morri (2011) Ecological Indicators 11: 868–873 ／ H = Sueur ほか (2008) PLoS ONE 3: e4065 ／ NDSI = Kasten ほか (2012) Ecological Informatics 12: 70–76 ／ ADI・AEI = Villanueva-Rivera ほか (2011) Landscape Ecology 26: 1233–1246。</small></p>
       <h3>耳でくらべる: どちらが本物？</h3>
       <p>A と B の片方は<b>重ねた森</b>、もう片方は<b>重ねた森の土台のもとになった、同じ時刻の本物そのまま</b>です（同じ位置の15秒。大きさはそろえてあります。虫の音は同じなので、鳥の声と、鳥を消した跡に耳をすませてください）。<b>10回</b>答えたら、まとめて結果を出します。10回中9回以上当たれば「聞き分けられる」＝まだ本物らしくない、という目安です（当てずっぽうでそうなる見こみは約1%）。<br><small>※ 重ねた森は3本しかないので、何度も聞くと覚えてしまうことがあります。</small></p>
       <div class="ab">
@@ -72,12 +74,11 @@
 
     <details id="about" class="card">
       <summary>このアプリについて・おもな出どころ</summary>
-      <p>学習用の試作です。本物の録音を切り出して重ねていますが、ひとつの場所で同時に鳴った音そのものではありません。録音の機械（32 kHz）より上の高い音（16 kHz より上。キリギリスの超音波など）は入っていません。写真の鳥は、録音で鳴いている個体そのものではありません。</p>
+      <p>学習用の試作です。鳴らしている音はすべて本物の録音で、計算や AI で作った音は入っていません。ただし録音を切り出して重ねているので、ひとつの場所で同時に鳴った音そのものではありません。録音の機械（32 kHz）より上の高い音（16 kHz より上。キリギリスの超音波など）は入っていません。写真の鳥は、録音で鳴いている個体そのものではありません。</p>
       <h3>おもな出どころ</h3>
       <ul>
         <li>録音と鳥の注釈: W. Alexander Hopping, Stefan Kahl, Holger Klinck (2022) 「A collection of fully-annotated soundscape recordings from the Southwestern Amazon Basin」 Zenodo, <a href="https://doi.org/10.5281/zenodo.7079124" target="_blank" rel="noopener">doi:10.5281/zenodo.7079124</a>（<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>）。ペルー Inkaterra Reserva Amazonica、2019年1月、5時〜6時。<br>このアプリで変えたこと: 一部を切り出した・土台は鳥の声の部分を近くの時刻の音で塗りつぶした・鳥の声はまわりの音を引いた・重ねた・AAC に圧縮した。</li>
         <li>鳥の和名: Wikidata（CC0）のラベル（鳥類の和名の目録では確かめていません）。ラベルのない種は「和名は未確認」として英名と学名で。</li>
-        <li>数のくらべ方: ACI = Pieretti, Farina & Morri (2011) Ecological Indicators 11: 868–873 ／ H = Sueur ほか (2008) PLoS ONE 3: e4065 ／ NDSI = Kasten ほか (2012) Ecological Informatics 12: 70–76 ／ ADI・AEI = Villanueva-Rivera ほか (2011) Landscape Ecology 26: 1233–1246。</li>
         <li>アマゾンの夜の虫の声の多くは種まで分かっていないこと: Do Nascimento, Pérez-Granados, Alencar & Beard (2024) Phil. Trans. R. Soc. B 379: 20230112（<b>ペルーとは別の場所</b>、ブラジル Viruá 国立公園で 1,714 の音の型に注釈。名前はなかままで）。</li>
       </ul>
       <h3>鳥の写真（Wikimedia Commons。それぞれのライセンス）</h3>

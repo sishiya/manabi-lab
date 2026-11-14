@@ -99,6 +99,8 @@ for (const w of ['A', 'B']) {
 Power.on({ pause() { if (S.now || S.forest) stop(); }, resume() {} });   // 離れたら止める（もどっても勝手に鳴らさない）
 addEventListener('resize', () => Spectro.resize());
 
+// 本物らしさのくらべ（第一弾）は開発中だけ: 手元（localhost）で開いたときだけ出す。公開の画面では「生成した音との比べ」と勘違いされやすいため（2026-11-14 ユーザー）
+if (['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) $('devCompare').hidden = false;
 fetch('data/mix.json').then(r => r.json()).then(info => { S.info = info; Compare.render(info); })
   .catch(e => { $('metrics').textContent = '数を読みこめませんでした: ' + e.message; window.__jusoErr.push(String(e)); });
 Promise.all([Forest.prefetch(), fetch('data/species.json').then(r => r.json())])
