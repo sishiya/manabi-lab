@@ -55,9 +55,6 @@ details.card>summary,.more>summary{cursor:pointer}
 .more>*+*{margin-top:6px}
 .more>summary{color:var(--muted);font-size:13px}
 .howto{padding-left:1.2em;line-height:1.9}
-/* 使い方の中のスイッチの絵: 押せるボタンに見えないよう、線だけの小さな絵にする */
-.tg-mini{display:inline-block;vertical-align:-2px;width:22px;height:13px;border-radius:7px;border:1.5px solid var(--muted);position:relative;box-sizing:border-box}
-.tg-mini::after{content:"";position:absolute;top:1.5px;right:1.5px;width:7px;height:7px;border-radius:50%;background:var(--muted)}
 .warn,.card-note{color:var(--muted);font-size:12px}
 .vc-kind{display:inline-block;padding:0 6px;border-radius:4px;font-size:11px;line-height:18px;font-weight:700}
 .k-sp{background:#7fd49a;color:#0b1a12} .k-bird{background:var(--warn);color:#2a1d00} .k-bed{background:#8a9a94;color:#101814}
@@ -70,12 +67,11 @@ details.card>summary,.more>summary{cursor:pointer}
 .lr{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:4px;border:1.5px solid transparent;border-bottom-color:var(--line);border-radius:6px}
 .lr.sel{border-color:#fff}
 .lr.off .lr-body{opacity:.45;filter:grayscale(1)}
-/* ON／OFF のトグルスイッチ（iPhone の設定のような形。右に寄って緑＝鳴らす） */
-.tg{all:unset;box-sizing:border-box;flex:0 0 auto;position:relative;width:40px;height:24px;border-radius:12px;background:#3a4a44;cursor:pointer;transition:background .18s}
-.tg .tg-knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.4);transition:left .18s}
-.tg[aria-checked="true"]{background:var(--acc)}   /* ON の色は「森を聞く」ボタンと同じ緑 */
-.tg[aria-checked="true"] .tg-knob{left:19px}
-.tg:focus-visible{outline:2px solid #fff;outline-offset:2px}
+/* ON／OFF のボタン（丸い形に点と字。ON＝緑、OFF＝灰の枠だけ） */
+.sw{flex:0 0 auto;display:flex;align-items:center;gap:4px;min-height:36px;min-width:58px;padding:2px 8px;border-radius:18px;border:1px solid var(--acc);background:#1f4a33;color:var(--acc);font:700 12px var(--f-mono)}
+.sw .sw-dot{width:12px;height:12px;border-radius:50%;background:var(--acc)}
+.lr.off .sw{background:transparent;border-color:#5d6d67;color:#8a9a94}
+.lr.off .sw .sw-dot{background:transparent;border:1.5px solid #8a9a94;box-sizing:border-box}
 .lr-body{all:unset;box-sizing:border-box;flex:1 1 140px;display:flex;align-items:center;gap:6px;cursor:pointer;min-height:40px;min-width:0}
 .lr-body:focus-visible{outline:2px solid var(--acc)}
 .lr-body img,.lr-body .q{width:40px;height:30px;object-fit:cover;border-radius:4px;flex:0 0 auto;background:#0b1712;display:flex;align-items:center;justify-content:center;font-size:14px;color:#7d8f88}
@@ -118,5 +114,6 @@ details.card>summary,.more>summary{cursor:pointer}
   .status{font-size:11.5px}
   .fold{padding:2px 8px}
   .lr{gap:4px}
+  .sw{min-width:50px;padding:2px 6px}
   .lr-name .vc-kind{display:none}   /* 確かさは番号の色で分かるので、名前の横の札は出さない */
 }
