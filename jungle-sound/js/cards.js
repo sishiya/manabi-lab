@@ -8,7 +8,7 @@ window.Cards = (() => {
     bird: ['鳥・種は不明', 'k-bird'],
     bed: ['分けられていない', 'k-bed'],
   };
-  let list = [], sp = {}, raf = 0, soloCode = null, lastHear = '', wasBoost = false;
+  let list = [], sp = {}, raf = 0, soloCode = null, lastHear = '';
   const kindOf = code => code === 'bed' ? 'bed' : code === '????' ? 'bird' : 'sp';
   const nameOf = code => { const k = kindOf(code), s = sp[code] || {}; return k === 'bed' ? '虫・カエルなど' : k === 'bird' ? '種の付かなかった鳥' : (s.ja || s.en); };
 
@@ -56,11 +56,10 @@ window.Cards = (() => {
     // 土台を消して鳥だけにしたときは、鳥の声が小さすぎて聞こえないので大きくする（本物の大きさではないことを書く）
     const boost = !Forest.isOn('bed') && on.length > 0 ? Forest.BOOST_DB : 0;
     Forest.boost(boost);
-    const back = wasBoost && !boost; wasBoost = !!boost;
+    // 画面の文は、いまの状態だけを書く（開発の経緯・前の状態との差は書かない。2026-11-14 ユーザー）
     $('mixState').innerHTML = (label ? `<b>${label}</b> ・ ` : '') +
       `鳴らしている声 ${on.length} / ${list.length}（種まで ${by('sp')}・種の付かなかった鳥 ${by('bird')}・分けられていない音 ${by('bed')}）` +
-      (boost ? `<br><span class="boost">鳥の声は遠くて小さいので、いまは <b>+${boost} dB</b>（感じとしては約4倍の大きさ）にしています。本物の大きさではありません。まわりの音を引いた跡の小さな雑音も一緒に大きくなります。</span>` : '') +
-      (back ? `<br><span class="boost">土台をもどしたので、鳥の声は本物どおりの小さな大きさにもどしました。</span>` : '');
+      (boost ? `<br><span class="boost">虫・カエルなどを消しているあいだは、鳥の声を聞きやすいように <b>+${boost} dB</b>（約4倍の大きさに感じる）にしています。本物の森ではもっと小さく聞こえます。</span>` : '');
     // 上に固定した部分にも、いまの状態を一行（スマホでスクロールしても見えるように）
     $('pinState').innerHTML = (soloCode ? `<b>「${nameOf(soloCode)}」だけ</b>` : label && label !== '全部' && on.length < list.length ? `<b>${label.split('（')[0]}</b>` : `鳴らしている ${on.length} / ${list.length}`) +
       (boost ? ` <span class="boost-tag">+${boost} dB</span>` : '');
