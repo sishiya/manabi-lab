@@ -22,6 +22,8 @@
       <button id="playForest" class="primary" disabled>読みこみ中…</button>
       <span id="status" class="status">0:00 / 3:00</span>
       <button id="specFold" class="fold" aria-expanded="true" aria-label="図をたたむ">図 ▴</button>
+      <!-- 状態と移動先は、この行の右の残りに（行を足さない＝高さが変わらない。2026-11-14 ユーザー） -->
+      <span class="pin-line"><span id="pinState" class="pin-state"></span><span id="seekMsg" class="seek-msg" aria-live="polite"></span></span>
     </div>
     <div id="specBox">
       <div class="spec-wrap">
@@ -29,16 +31,15 @@
         <div class="axis"><span>16 kHz</span><span>8</span><span>0</span></div>
       </div>
     </div>
-    <!-- 固定した所の状態の1行。高さはいつも同じ（出たり消えたりで下がずれないように。2026-11-14 ユーザー） -->
-    <p class="pin-line"><span id="pinState" class="pin-state"></span><span id="seekMsg" class="seek-msg" aria-live="polite"></span></p>
   </section>
 
   <main id="scroll">
+    <!-- 使い方（文）と、声の一覧（ボタン）はパネルを分ける。ボタンが文のグループに見えないように（2026-11-14 ユーザー） -->
     <section class="card">
-      <h2>声の一覧</h2>
+      <h2>使い方</h2>
       <!-- 文は「まず短く、くわしくは開いて」（2026-11-14 ユーザー。RULES 9章） -->
       <ul class="howto">
-        <li><b>ON</b> … 鳴らす／消す</li>
+        <li><span class="tg-mini" aria-hidden="true"></span> … 鳴らす／消す</li>
         <li><b>だけ</b> … その声だけ聞く</li>
         <li><b>▶|</b> … その声の次へ飛ぶ</li>
         <li>上の帯を押す … その時刻へ飛ぶ</li>
@@ -50,15 +51,19 @@
         <p><b>緑の図</b>: いま鳴っている直近の数秒の音の高さ（たて）と強さ（明るさ）。</p>
         <p>一覧の行を押すと、その声を選んで写真と説明が開きます。</p>
       </details>
+      <p class="warn">※ 画面を1回押すと音が出ます。はじめは音量を小さめに。</p>
+    </section>
+
+    <section class="card">
+      <h2>声の一覧</h2>
       <div class="groups">
-        <button id="gAll" class="grp">全部</button>
-        <button id="gKnown" class="grp">種まで分かる鳥だけ</button>
-        <button id="gUnknown" class="grp">種の分からない音だけ</button>
+        <button id="gAll" class="btn">全部</button>
+        <button id="gKnown" class="btn">種まで分かる鳥だけ</button>
+        <button id="gUnknown" class="btn">種の分からない音だけ</button>
       </div>
       <p id="mixState" class="mix-state" aria-live="polite"></p>
       <ul id="voiceList" class="vlist"></ul>
       <p class="card-note">写真は同じ種の別の個体です。</p>
-      <p class="warn">※ 画面を1回押すと音が出ます。はじめは音量を小さめに。</p>
     </section>
 
     <section class="card">

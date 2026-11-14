@@ -1,5 +1,5 @@
 // 熱帯雨林の音 — 声の一覧（下にスクロール。声の帯と同じ順・同じ番号）
-// 1行 = ON／OFF のスイッチ・番号・写真・名前・「だけ」・「次の声へ」。行を押すとその声を選ぶ（写真と出どころが開く）。
+// 1行 = ON／OFF のトグルスイッチ（iPhone の設定のような形）・番号・写真・名前・「だけ」・「次の声へ」。行を押すとその声を選ぶ（写真と出どころが開く）。
 // 選んだ声: 帯と一覧に白い縁どり。
 // 確かさ: 種まで（録音への専門家の注釈で種が付いた鳥の声）／鳥・種は不明（注釈で種が付かなかった「????」）／分けられていない（土台。虫・カエルなど）
 'use strict';
@@ -23,19 +23,19 @@ window.List = (() => {
       const pic = s.photo ? `<img src="${s.photo.file}" alt="" loading="lazy">` : `<span class="q">${k === 'sp' ? '<small>写真なし</small>' : k === 'bird' ? '鳥？' : '？'}</span>`;
       const sub = k === 'bed' ? 'だれの声か分けられていない' : k === 'bird' ? `種は分からない・${count[code]} 回` : `<i>${s.sci}</i>・${count[code]} 回`;
       return `<li class="lr" data-code="${code}">
-        <button class="sw" aria-pressed="true" aria-label="${name}を鳴らす／消す"><span class="sw-dot"></span><span class="sw-txt">ON</span></button>
+        <button class="tg" role="switch" aria-checked="true" aria-label="${name}を鳴らす"><span class="tg-knob"></span></button>
         <button class="lr-body" aria-expanded="false" aria-label="${name}を選ぶ">
           <span class="num ${KIND[k][1]}">${code === 'bed' ? '地' : i + 1}</span>${pic}
           <span class="lr-text"><span class="lr-name">${name} <span class="vc-kind ${KIND[k][1]}">${KIND[k][0]}</span></span><span class="lr-sub">${sub}</span></span>
         </button>
-        <button class="solo" aria-pressed="false" aria-label="${name}だけを聞く">だけ</button>
-        ${code === 'bed' ? '' : `<button class="next" aria-label="${name}の次の声へ移動">▶|</button>`}
+        <button class="solo btn" aria-pressed="false" aria-label="${name}だけを聞く">だけ</button>
+        ${code === 'bed' ? '' : `<button class="next btn" aria-label="${name}の次の声へ移動">▶|</button>`}
         <div class="lr-detail" hidden></div></li>`;
     };
     $('voiceList').innerHTML = row('bed', -1) + order.map(row).join('');
     for (const li of $('voiceList').querySelectorAll('.lr')) {
       const code = li.dataset.code;
-      const sw = li.querySelector('.sw'), solo = li.querySelector('.solo');
+      const sw = li.querySelector('.tg'), solo = li.querySelector('.solo');
       sw.onclick = () => keep(sw, () => { soloCode = null; setOn(code, !isOn(code)); });
       li.querySelector('.lr-body').onclick = () => select(sel === code ? null : code);
       solo.onclick = () => keep(solo, () => { only(c => c === code, `「${short(code)}」だけ`); soloCode = code; marks(); });
@@ -55,7 +55,7 @@ window.List = (() => {
   function setOn(code, on, quiet) {
     Forest.set(code, on);
     const li = $('voiceList').querySelector(`[data-code="${CSS.escape(code)}"]`);
-    li.classList.toggle('off', !on); li.querySelector('.sw').setAttribute('aria-pressed', on); li.querySelector('.sw-txt').textContent = on ? 'ON' : 'OFF';
+    li.classList.toggle('off', !on); li.querySelector('.tg').setAttribute('aria-checked', on);
     const nx = li.querySelector('.next'); if (nx) nx.disabled = !on;   // 消している声へは飛べない
     if (!quiet) { marks(); summary(null); onChange(); }
   }
@@ -70,9 +70,9 @@ window.List = (() => {
     const on = all().filter(isOn), by = k => on.filter(c => kindOf(c) === k).length;
     const boost = !isOn('bed') && on.length > 0 ? Forest.BOOST_DB : 0;   // 虫・カエルを消して鳥だけのときは、聞きやすいように大きく
     Forest.boost(boost);
-    // 高さが変わらないように、いつも2行（1行目: いま鳴らしている数、2行目: 大きくしているときだけの注意）
-    $('mixState').innerHTML = `<span>${label ? `<b>${label}</b> ・ ` : ''}鳴らしている声 ${on.length} / ${all().length}</span>` +
-      `<span class="boost">${boost ? `鳥の声を +${boost} dB 大きくしています（本物より大きい）` : ''}</span>`;
+    // 1行だけ（高さを変えない。+20 dB の注意も同じ行の後ろに）
+    $('mixState').innerHTML = `${label ? `<b>${label}</b> ・ ` : ''}鳴らしている声 ${on.length} / ${all().length}` +
+      (boost ? ` ・ <span class="boost">鳥の声を +${boost} dB（本物より大きい）</span>` : '');
     // 上に固定した所の一行は、全部鳴らしているときは出さない（消した声・「だけ」・+20 dB があるときだけ）
     const partial = on.length < all().length;
     if (!partial && !boost) { $('pinState').innerHTML = ''; return; }
