@@ -31,4 +31,4 @@
 2. GitHub からクローン（GitHub がだめなら写しの `git clone manabi-lab.bundle manabi-lab`）→ RULES 10章の設定（`core.hooksPath .githooks`・`core.quotepath false`・作者の名前とアドレス）。
 3. 写しの `repo/` の中身を、リポジトリの同じ場所に戻す。`claude-memory/` を `~/.claude/projects/<このフォルダ>/memory/` に戻す（フォルダ名はパスの記号を `-` にしたもの）。
 4. 健康診断の登録: `health.ps1 -Register`。（バックアップを再開していれば、写し先も `backup-local.ps1 -Dest "<写し先>"` で覚えさせる）
-5. YouTube を使うなら秘密を戻す（または上の表の手順で作りなおす）。`start.bat` でまなびラボが開くか、`smoke.ps1` が通るかを見る。
+5. YouTube を使うなら秘密を戻す（または上の表の手順で作りなおす）。`start.bat` でまなびラボが開くか（ログオン時の自動起動はスタートアップのショートカットで Git の外。`../しし屋/start-all.bat install` で作りなおす）、`smoke.ps1` が通るかを見る。

@@ -2,9 +2,10 @@
 # Called from start.bat in the project root. Usage: start.ps1 [app-folder]
 # Ports 8765/8766 can be reserved by Windows (excluded port ranges), so try a list and use the first that works.
 # Keep this file ASCII only: Windows PowerShell 5.1 reads BOM-less scripts in the ANSI code page.
-param([string]$App = '')
+# -NoOpen: start the server only (no browser). -Hidden: run the server without a window (stop it with shishiya's stop-all).
+param([string]$App = '', [switch]$NoOpen, [switch]$Hidden)
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)   # two levels above _dev/tools (ASCII only, see line 4)
-$ports = 8765, 8766, 8767, 8780, 8790, 18765, 28765
+$ports = 8765, 8764, 8763, 18765, 28765   # 8766-8770: Claude preview (launch.json), 8780-: Asobi, 8790-: Kurashi
 
 # a server of this project answers /index.html with the entrance page whose title is "Manabi Lab" in Japanese.
 # (Do not just look for "manabi-lab": the Asobi Lab entrance on port 8780 links to manabi-lab too, and was taken for ours.)
@@ -27,11 +28,15 @@ if ($port) {
 } else {
   $port = $ports | Where-Object { Test-Free $_ } | Select-Object -First 1
   if (-not $port) { Write-Host "no usable port in: $($ports -join ', ')"; exit 1 }
-  Write-Host "starting server on port $port (minimized window; close it to stop the server)"
-  Start-Process powershell -WindowStyle Minimized -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$root\.claude\serve.ps1`"", '-Port', $port)
+  $style = if ($Hidden) { 'Hidden' } else { 'Minimized' }
+  $how = if ($Hidden) { 'no window; stop it with shishiya stop-all.bat' } else { 'minimized window; close it to stop the server' }
+  Write-Host "starting server on port $port ($how)"
+  Start-Process powershell -WindowStyle $style -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$root\.claude\serve.ps1`"", '-Port', $port)
   for ($i = 0; $i -lt 120 -and -not (Test-Ours $port); $i++) { Start-Sleep -Milliseconds 250 }   # up to 30 s (the server can take more than 10 s to start)
   if (-not (Test-Ours $port)) { Write-Host "server did not answer on port $port"; exit 1 }
 }
 
+Write-Host "url: http://localhost:$port/"
+if ($NoOpen) { exit 0 }
 $path = if ($App) { $App.Trim('\', '/') + '/' } else { '' }
 Start-Process "http://localhost:$port/$path"

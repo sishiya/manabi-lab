@@ -30,7 +30,7 @@
 | `backup-local.ps1` | Git に入っていないもの（Claude のメモリ・*.local.*・.private-words.txt・out/）と git bundle を、リポジトリの外の写し先へ。秘密は `-IncludeSecrets` のときだけ（読まず・表示せず）。Git のフォルダの中には写さない。戻し方は `_dev/RECOVERY.md` | 写し先を決めたら health.ps1 のあと自動 |
 | `seo.mjs`（`node _dev/tools/seo.mjs [--check]`） | 入口の `APPS` から、入口と入口のアプリの head の検索・リンクカード（説明文・OGP・hreflang）と `sitemap.xml`・`feed.xml`・`feed-en.xml`（RSS／Atom）を作りなおす（`_dev/REACH.md`） | `APPS` を書きかえたとき（RULES 8.1） |
 | `rep.pl` | 文字列の置きかえ（I18N.md） | 英語対応 |
-| `start.ps1` | ローカルでまなびラボを開く（`start.bat` から） | ユーザーが開くとき |
+| `start.ps1` | ローカルでまなびラボを開く（`start.bat` から）。`-NoOpen` でサーバーだけ・`-Hidden` で窓なし。3つのラボをまとめて起動・停止するのは `../しし屋/start-all.bat`・`stop-all.bat`（ログオン時の自動起動もそこから） | ユーザーが開くとき |
 | `cdp.ps1` | Chrome を DevTools プロトコルで動かす共通の部品（smoke・record-promo が読みこむ） | — |
 
 - 結果のファイルは `_dev/tools/out/`（Git に入れない。動画の数などは公開しない）。
