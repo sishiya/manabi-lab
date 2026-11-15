@@ -1,0 +1,62 @@
+/* ちいさな地球を歩く。すきまは 8px（部品のあいだ）と 12px（かたまりのあいだ）の2つだけ */
+:root{--bg:#101a2c;--card:#16233a;--line:#2a3d5c;--ink:#e8f0f4;--muted:#a3b4bf;--acc:#7fd0ff;--go:#ffc95a;
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+
+/* 上に固定: 景色・実行のボタン・結果 */
+#band{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;flex-direction:column;gap:8px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+#stage{position:relative;height:44vh;min-height:220px;background:#05080f}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+.hud{position:absolute;top:8px;font:500 12px/1.5 var(--f-mono);white-space:pre;color:var(--ink);text-shadow:0 0 4px #000,0 0 2px #000;pointer-events:none}
+#hudL{left:10px}
+#hudR{left:10px;top:auto;bottom:8px}
+#insetBox{position:absolute;top:8px;right:8px;width:108px;pointer-events:none;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:rgba(8,14,26,.82)}
+#inset{display:block;width:106px;height:106px}
+#insetBox span{display:block;font-size:10px;line-height:16px;text-align:center;color:var(--muted)}
+#acts{display:flex;gap:8px;padding:0 12px}
+#acts button{height:44px;border-radius:8px;border:1px solid var(--line);background:var(--card);padding:0 12px;white-space:nowrap}
+#acts .sub{flex:0 0 auto}
+#acts .main{flex:1 1 auto;background:var(--go);border-color:var(--go);color:#1b1404;font-weight:700;font-size:16px}
+#acts button.held{background:#27405f;border-color:var(--acc)}
+#acts button:disabled{opacity:.4;cursor:default}
+#msg{margin:0;padding:0 12px;height:3.2em;overflow:hidden;font-size:14px}
+
+/* 下にスクロール: 決めること・数字・説明 */
+#panel{display:flex;flex-direction:column;gap:12px;padding:12px}
+h1{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0}
+h2{font-size:15px;margin:0}
+.lead{margin:0;color:var(--muted);font-size:14px}
+.card{display:flex;flex-direction:column;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.row b{font:500 14px var(--f-mono);color:var(--acc)}
+input[type=range]{width:100%;height:36px;margin:0;accent-color:var(--acc)}
+.seg,.chips{display:flex;gap:8px;flex-wrap:wrap}
+.seg button,.chips button{flex:1 1 auto;min-height:40px;border-radius:8px;border:1px solid var(--line);background:transparent;padding:0 10px;color:var(--muted)}
+.seg button.on,.chips button.on{border-color:var(--acc);color:var(--ink);background:#1d3352}
+.note{margin:0;font-size:12.5px;color:var(--muted);min-height:3.2em}
+.result{margin:0;height:6.4em;overflow:hidden;font-size:14px;color:var(--go)}
+#nums{width:100%;border-collapse:collapse;font-size:13.5px;table-layout:fixed}
+#nums tr{height:3.4em}
+#nums th{text-align:left;font-weight:400;color:var(--muted);padding:0 8px 0 0;width:52%}
+#nums td{text-align:right;font-family:var(--f-mono)}
+#nums .same td{color:var(--go)}
+details.card{display:block}
+details summary{cursor:pointer;min-height:36px;display:flex;align-items:center}
+details.card>*+*{margin-top:8px}
+details details{border-top:1px solid var(--line);padding-top:4px}
+#about{color:var(--muted);font-size:14px}
+#about summary,#about h3{color:var(--ink)}
+#about h3{font-size:14px;margin-bottom:0}
+#about ul,.plain{margin:0;padding-left:1.2em}
+a{color:var(--acc)}
+
+@media (min-width:900px){
+  #app{display:grid;grid-template-columns:minmax(0,1fr) 400px;align-items:start}
+  #band{height:100vh;border-bottom:0;border-right:1px solid var(--line)}
+  #stage{flex:1;height:auto}
+  #panel{height:100vh;overflow:auto}
+}
+@media (max-height:520px) and (max-width:899px){ #stage{height:52vh;min-height:150px} #msg{height:1.6em} }

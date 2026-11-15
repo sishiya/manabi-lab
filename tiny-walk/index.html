@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ちいさな地球を歩く</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23101a2c'/><circle cx='32' cy='32' r='15' fill='none' stroke='%237fd0ff' stroke-width='6'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css?v=1">
+
+<div id="app">
+  <section id="band">
+    <div id="stage">
+      <canvas id="cv" aria-label="目の高さの景色。ドラッグで見まわす"></canvas>
+      <div id="hudL" class="hud"></div>
+      <div id="hudR" class="hud"></div>
+      <div id="insetBox"><canvas id="inset"></canvas><span>横から見た図</span></div>
+    </div>
+    <div id="acts">
+      <button id="turnL" class="sub" aria-label="左を向く">◀</button>
+      <button id="turnR" class="sub" aria-label="右を向く">▶</button>
+      <button id="walk" class="sub">歩く</button>
+      <button id="go" class="main">跳ねる</button>
+      <button id="back" class="sub" disabled>もどる</button>
+    </div>
+    <p id="msg" role="status"></p>
+  </section>
+
+  <section id="panel">
+    <h1>ちいさな地球を歩く</h1>
+    <p class="lead">地球を同じ材料のまま小さくして、その上に立ちます。体は小さくなりません。</p>
+
+    <div class="card">
+      <div class="seg" id="toolSeg"><button data-tool="hop">自分が跳ねる</button><button data-tool="ball">ボールを投げる</button></div>
+      <label class="row"><span id="vLbl">足でける強さ</span><b id="vVal"></b></label>
+      <input id="vSl" type="range" min="0" max="1000" step="1">
+      <p class="note" id="vMarks"></p>
+      <label class="row"><span>角度</span><b id="aVal"></b></label>
+      <input id="aSl" type="range" min="0" max="90" step="1">
+      <p class="result" id="pred"></p>
+    </div>
+
+    <div class="card">
+      <label class="row"><span>星の大きさ</span><b id="rVal"></b></label>
+      <div class="chips" id="rChips"><button data-r="100">100 m</button><button data-r="1000">1 km</button><button data-r="10000">10 km</button><button data-r="1737000">月くらい</button><button data-r="6371000">地球</button></div>
+      <input id="rSl" type="range" min="0" max="1000" step="1">
+      <label class="row"><span>空気と海</span></label>
+      <div class="seg" id="airSeg"><button data-air="0">ない</button><button data-air="1">ある（仮定）</button></div>
+    </div>
+
+    <div class="card">
+      <h2>この星の数字</h2>
+      <table id="nums">
+        <tr><th>重力</th><td id="n-g"></td></tr>
+        <tr><th>体重 60 kg の人が体重計にのると</th><td id="n-w"></td></tr>
+        <tr><th>地平線まで（目の高さ 1.6 m）</th><td id="n-hz"></td></tr>
+        <tr><th>星を一周する道のり</th><td id="n-ar"></td></tr>
+        <tr><th>歩ける速さ（推定）</th><td id="n-wk"></td></tr>
+        <tr><th>地面すれすれを一周する速さ</th><td id="n-or"></td></tr>
+        <tr><th>星から飛び出す速さ</th><td id="n-es"></td></tr>
+        <tr class="same"><th>地面すれすれの一周にかかる時間</th><td>約 84 分（どの大きさでも同じ）</td></tr>
+      </table>
+    </div>
+
+    <details class="card">
+      <summary>使い方</summary>
+      <ul class="plain">
+        <li>景色をドラッグ、または ◀ ▶ … 見まわす</li>
+        <li>歩く … 押しているあいだ、向いているほうへ歩く</li>
+        <li>跳ねる／投げる … 上で決めた強さと角度で。黄色い線と輪が行き先</li>
+        <li>もどる … 出発した所へ</li>
+      </ul>
+      <p class="note">※ 目印: 黄色い線・輪・ボールの点、地面のまだら模様は、動きを見やすくするためのもので、本物にはありません。</p>
+    </details>
+
+    <details class="card" id="about">
+      <summary>このアプリについて</summary>
+      <p>地球と同じ平均の密度（5513 kg/m³）のまま、半径だけを小さくした星の上に立ちます。重力は半径に比例して弱くなります。山の高さと海の深さも同じ割合で小さくしていますが、人・木（30 m）・ボールは小さくしていません。</p>
+      <p>学習用に簡単にしています。宇宙や低い重力での体の動きを保証するものではありません。</p>
+      <details>
+        <summary>計算していること</summary>
+        <ul>
+          <li>飛ぶもの（自分・ボール）は、星の引力（距離の2乗で弱まる）と、空気が「ある」ときは空気の抵抗から、道すじを計算しています。地面に当たれば着地、当たらずに一周すれば回りつづけ、速すぎれば飛び出します。</li>
+          <li>同じ密度の星では、地面すれすれの一周はどの大きさでも約 84 分です（重力 ÷ 半径が同じため）。</li>
+          <li>歩ける速さは、歩きが走りに変わる目安（フルード数 0.5）を、弱い重力までそのまま延ばした推定です。もとの実験は地球の 0.1〜1 倍の重力で、それより弱い重力では測られていません。</li>
+          <li>足でける強さの上限は「足のする仕事は地球と同じ」と置いた、このアプリの仮定です（地球でその場とび 50 cm、しゃがむ深さ 40 cm）。本当は、軽い体をすばやく押すと筋肉は力を出しにくいので、これより小さいはずです。</li>
+        </ul>
+      </details>
+      <details>
+        <summary>簡単にしたところ</summary>
+        <ul>
+          <li>空気と海「ない」が、小さい星の本当に近い姿です。小さい星は空気を引きとめられず、海も残りません（なくなるまでのようすは「ちいさな地球」で）。このとき人は宇宙服を着ているものとします。</li>
+          <li>空気と海「ある」は仮定です。1 気圧の空気が、どの高さでも同じ濃さであるとし、海は平らな水面としています（とても小さい星では、水は表面張力で丸まるはずです）。風はありません。</li>
+          <li>星は自転せず、太陽は止まっています。重力は、中心に重さが集まった球として計算しています。</li>
+          <li>地形は本物の地球を 1°ごと（半径 1 km の星で約 17 m ごと）に間引いたもので、それより細かい起伏は足していません。そのまま縮めたので、半径 1 km の星ではエベレストも 1.4 m ほどで、地面はほとんど平らに見えます。</li>
+          <li>森の場所は緯度から決めた目安で、本物の森の地図ではありません。木は近くのものだけ描いています。</li>
+          <li>着地したら、その場で止まります（本当ははずみます）。深さ 1.35 m より深い海では浮きます。水の中も同じ速さで歩きます。</li>
+          <li>人は 70 kg・正面の面積 0.7 m²・抗力係数 1（推定）。ボールは野球のボール（145 g・直径 7.4 cm）で、抗力係数は速さによらず 0.4（推定）、投げる強さは秒速 40 m まで。</li>
+          <li>ボールが一周してもどるのは、途中の山に当たらないときだけです。場所と向きで変わります。</li>
+        </ul>
+      </details>
+      <h3>おもな出どころ</h3>
+      <ul>
+        <li>地球の半径・平均の密度: <a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html" target="_blank" rel="noopener">NASA NSSDC, Earth Fact Sheet</a></li>
+        <li>歩きから走りに変わる速さ（フルード数 0.5）: Kram, R., Domingo, A. &amp; Ferris, D. P. (1997) Effect of reduced gravity on the preferred walk-run transition speed. <i>J. Exp. Biol.</i> 200: 821–826.</li>
+        <li>地形: NOAA National Geophysical Data Center (2009) ETOPO1 1 Arc-Minute Global Relief Model. NOAA National Centers for Environmental Information（<a href="https://doi.org/10.7289/V5C8276M" target="_blank" rel="noopener">doi:10.7289/V5C8276M</a>、1°ごとに間引いて使用）。</li>
+        <li>引力・軌道・飛び出す速さ・空気の抵抗の式: 高校〜大学初年の力学の教科書の内容です。</li>
+        <li>もとになったアプリ: <a href="../tiny-earth/" target="_blank" rel="noopener">ちいさな地球</a>（星を外から見て、海・森・空気の動きを計算）</li>
+      </ul>
+      <h3>使っているもの</h3>
+      <p>three.js r128（MIT License）、フォント: Google Fonts（SIL Open Font License）</p>
+    </details>
+  </section>
+</div>
+
+<script src="../lib/three@0.128.0/build/three.min.js"></script>
+<script src="js/phys.js?v=1"></script>
+<script src="js/terrain.js?v=1"></script>
+<script src="js/world.js?v=1"></script>
+<script src="js/inset.js?v=1"></script>
+<script src="js/ui.js?v=1"></script>
+<script src="js/main.js?v=1"></script>
+</html>
