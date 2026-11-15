@@ -40,7 +40,11 @@ window.List = (() => {
       const code = li.dataset.code;
       const sw = li.querySelector('.sw'), solo = li.querySelector('.solo');
       sw.onclick = () => keep(sw, () => { soloCode = null; setOn(code, !isOn(code)); });
-      li.querySelector('.lr-body').onclick = () => select(sel === code ? null : code);
+      // スマホ: 押した行は画面の同じ位置に残す（上の行の説明が閉じて縮んでも、居場所を見失わないように）。
+      // PC: ほかの行は閉じないので合わせない。押した行を開く／閉じるだけ（2026-11-15 ユーザー）
+      const body = li.querySelector('.lr-body');
+      body.onclick = () => wide() ? (li.querySelector('.lr-detail').hidden ? select(code, true, false) : shut(li))
+                                  : keep(body, () => select(sel === code ? null : code, true, false));
       solo.onclick = () => keep(solo, () => { only(c => c === code, L(`「${short(code)}」だけ`, `Only “${short(code)}”`)); soloCode = code; marks(); });
       const nx = li.querySelector('.next'); if (nx) nx.onclick = () => { if (sel !== code) select(code, false); next(code); };
     }
@@ -84,15 +88,25 @@ window.List = (() => {
   }
   // ---- 選ぶ・次の声へ ----
   // 選ぶ = 帯と一覧に白い縁どり。open のときだけ行を開いて写真と説明を出す（▶| では開かない。高さが変わらないように）
-  function select(code, open = true) {
-    sel = code;
+  // reveal = 声の帯から選んだときだけ、一覧のその行が見えるまでスクロールする（一覧を押したときは keep で位置を保つ）
+  // スマホ: 開くのは1行だけ（ほかは閉じる）。PC（広い画面）: 開閉は押した行だけ・ほかの行は閉じない＝全部開くこともできる（2026-11-15 ユーザー）
+  const wide = () => matchMedia('(min-width:700px)').matches;
+  function select(code, open = true, reveal = true) {
+    sel = code; const many = wide();
     for (const li of $('voiceList').querySelectorAll('.lr')) {
-      const s = li.dataset.code === code, d = li.querySelector('.lr-detail'), show = s && open;
+      const s = li.dataset.code === code, d = li.querySelector('.lr-detail');
+      const show = s ? (open || !d.hidden) : (many && !d.hidden);
       li.classList.toggle('sel', s); li.querySelector('.lr-body').setAttribute('aria-expanded', show);
-      if (open || !s) { d.hidden = !show; if (show) d.innerHTML = detail(code); }
-      if (show) li.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      if (show && d.hidden) d.innerHTML = detail(li.dataset.code);
+      d.hidden = !show;
+      if (s && open && reveal) li.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
     onChange();
+  }
+  // PC で開いている行を押したとき: その行だけ閉じる（ほかの行の高さは変わらず、押した行より上も動かない）
+  function shut(li) {
+    li.querySelector('.lr-detail').hidden = true; li.querySelector('.lr-body').setAttribute('aria-expanded', false);
+    if (sel === li.dataset.code) { sel = null; li.classList.remove('sel'); onChange(); }
   }
   function detail(code) {
     const s = sp[code] || {}, p = s.photo;

@@ -158,7 +158,7 @@
 <script src="js/spectro.js?v=12"></script>
 <script src="js/compare.js?v=12"></script>
 <script src="js/forest.js?v=12"></script>
-<script src="js/list.js?v=12"></script>
+<script src="js/list.js?v=13"></script>
 <script src="js/lanes.js?v=12"></script>
 <script src="js/main.js?v=12"></script>
 <script>/* 属性の文（data-t="日本語|English" → title、data-a → aria-label）。I18N 2.2 */document.querySelectorAll('[data-t]').forEach(function(e){var p=e.dataset.t.split('|');e.title=L(p[0],p[1]);});document.querySelectorAll('[data-a]').forEach(function(e){var p=e.dataset.a.split('|');e.setAttribute('aria-label',L(p[0],p[1]));});document.querySelectorAll('#langsw button').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.l===LANG));b.onclick=function(){if(b.dataset.l!==LANG)setLang(b.dataset.l);};});document.title=L('熱帯雨林の音','Rainforest Sounds');</script>
