@@ -1,0 +1,17 @@
+{
+  "videoId": "pMu9naGyxXs",
+  "file": "_dev/promo/out/big-bang-trivia1-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/big-bang-trivia1.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-19T21:00:00+09:00",
+  "captions": { "en": "_dev/promo/out/big-bang-trivia1-short.en.srt", "es": "_dev/promo/subs/big-bang-trivia1-short.es.srt", "ko": "_dev/promo/subs/big-bang-trivia1-short.ko.srt", "pt": "_dev/promo/subs/big-bang-trivia1-short.pt.srt", "zh-TW": "_dev/promo/subs/big-bang-trivia1-short.zh-TW.srt" },
+  "title": "【うんちく】生まれたばかりの月は、空にこんなに大きかった #Shorts",
+  "description": "45億年ほど前、火星くらいの星が地球にぶつかり、とび散ったかけらが地球のまわりで円盤になって、月ができたと考えられています（有力な説）。計算では、かけらは1年たらずで集まり（内側の円盤の分まで入れると約100年）、できた場所は地球からたった2万2千km。いまの月は38万km。もし地上に立てたら、月は今の約20倍の大きさに見えたはずです（月の真下の地面から見た計算）。ただ、そのころの地面はとけた岩の海でした。絵は見かけの角度どおりに描いています。\n\nアプリ「ビッグバンから惑星まで」に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/big-bang/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: Ida, Canup & Stewart (1997) Nature 389, 353・Salmon & Canup (2012) ApJ 760, 83・Kleine ほか (2002) Nature 418, 952\n\n声: VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
+  "tags": ["ビッグバンから惑星まで", "月", "ジャイアント・インパクト", "月の誕生", "宇宙", "うんちく", "雑学", "Shorts", "まなびラボ", "しし屋", "giant impact", "moon formation", "did you know"],
+  "localizations": {
+    "en": {
+      "title": "Did you know? The newborn Moon looked this huge in the sky #Shorts",
+      "description": "About 4.5 billion years ago, a Mars-sized body is thought to have hit Earth (the leading theory). The debris formed a disk around Earth and gathered into the Moon. In simulations this took under a year (about 100 years including the inner disk), and the Moon formed just 22,000 km from Earth. Today it is 380,000 km away. Standing on the ground then, the Moon would have looked about 20 times wider (seen from directly below it). But back then the ground was a sea of molten rock. The Moon is drawn at its true angular size. Turn on English subtitles (CC).\n\nRelated to the app \"From the Big Bang to Planets\".\n\nApp (in Japanese for now): https://sishiya.github.io/manabi-lab/big-bang/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/?lang=en\n\nSources: Ida, Canup & Stewart (1997) Nature 389, 353; Salmon & Canup (2012) ApJ 760, 83; Kleine et al. (2002) Nature 418, 952.\n\nVoice: VOICEVOX:Meimei Himari\nMusic: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#DidYouKnow #Science"
+    }
+  }
+}

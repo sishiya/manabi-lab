@@ -13,4 +13,5 @@ window.TRIVIA_THUMBS = {
   'illusions-trivia1':     { t: 1.0, crop: [60, 380, 960, 680], title: 'ジグザグの線は\n[何本？]', line: '数えてみて' },
   'metamorphosis-trivia3': { t: 0.8, crop: [340, 600, 440, 240], title: '数週間で\n[1万倍]', line: 'イモムシ、人の赤ちゃんなら？' },
   'pitch-physics-trivia1': { t: 22, crop: [60, 330, 960, 780], title: 'ナックルは\n[揺れていない]', line: '1球ずつ調べた人がいる' },
+  'big-bang-trivia1':      { t: 1.5, crop: [40, 200, 1000, 900], title: 'むかしの月は\n[約20倍]', line: 'できたての月が見えた空' },
 };

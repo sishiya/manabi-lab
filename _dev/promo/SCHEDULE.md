@@ -118,9 +118,9 @@
 | 11/13 21:00 | tree-of-life-trivia1 | ヒトデは、タコや虫より「ヒトの親せき」 | zZjB1g65laI（11/11 に中央寄せ版へ差しかえ。古い 2EzJngBaNpI は予約を外して非公開） |
 | 11/14 21:00 | god-view-trivia3 | すわっているだけで、30秒に約1万km | -IzVuefwFQo（11/11 に中央寄せ版へ差しかえ。古い K2dOH2gG7Zg は予約を外して非公開） |
 | 11/15 21:00 | net-route-trivia3 | ハトでインターネット。本当にやったら ping 53分 | JDwyZXVMe2g |
-| 11/16 21:00 | illusions-trivia1 | この中にジグザグの線は何本？ | （下の段で記入） |
-| 11/17 21:00 | metamorphosis-trivia3 | イモムシは数週間で1万倍。人の赤ちゃんなら？ | （下の段で記入） |
-| 11/18 21:00 | pitch-physics-trivia1 | ナックルボールは、じつは揺れていない | （下の段で記入） |
+| 11/16 21:00 | illusions-trivia1 | この中にジグザグの線は何本？ | az4_L5T1Q1Y |
+| 11/17 21:00 | metamorphosis-trivia3 | イモムシは数週間で1万倍。人の赤ちゃんなら？ | _PWxjdcCP9Q（11/15 に上げた） |
+| 11/18 21:00 | pitch-physics-trivia1 | ナックルボールは、じつは揺れていない | FLnaG9wSUX8（11/15 に上げた） |
 
 ### 2回目の選び（2026-11-14 ユーザーが見くらべページで★。out/trivia-picks.json の29本のうち、まだ上げていない22本）
 上の4本（11/15〜11/18）は 11/14 に予約ずみ。残りは下の順で毎日 21:00。分野（いきもの・物理・宇宙・地球と暮らし）と同じアプリが続かないように並べた。
@@ -129,7 +129,7 @@
 
 | 予定 | ページ | 題名 | メモ |
 |---|---|---|---|
-| 11/19 | big-bang-trivia1 | 生まれたばかりの月は、空にこんなに大きかった | |
+| 11/19 | big-bang-trivia1 | 生まれたばかりの月は、空にこんなに大きかった | pMu9naGyxXs（11/15 に予約。字幕は en だけ。es・pt・zh-TW・ko は 11/16 17:00 のあと `-Captions -Lang es,pt,zh-TW,ko -Meta _dev/promo/big-bang-trivia1.upload.json`） |
 | 11/20 | animal-senses-trivia2 | コウモリの声は、すぐそばで大声。でも聞こえない | |
 | 11/21 | extreme-trivia3 | ぬるいお風呂のお湯（37℃）が沸とうする場所はどこ？ | |
 | 11/22 | drop-evolution-trivia1 | 地球でいちばん多い「光合成の生きもの」、見つかったのは1988年 | |
