@@ -1,0 +1,128 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ジオラマに見えるわけ</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2316222c'/><circle cx='32' cy='32' r='15' fill='none' stroke='%23ffb547' stroke-width='6'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<script src="../assets/power.js?v=1"></script>
+
+<div id="app">
+  <section id="view">
+    <div class="frame" id="frame">
+      <canvas id="cv"></canvas>
+      <svg id="guide" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <button id="pause" class="ghost" type="button" aria-pressed="false">止める</button>
+    </div>
+    <div id="result">
+      <div class="r1"><span id="rScale">—</span></div>
+      <div class="r2">
+        <span class="lab">ぼけと奥行きの合い方</span>
+        <span class="bar"><i id="rFitBar"></i></span>
+        <span id="rFit" class="num">—</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel">
+    <header id="top">
+      <h1>ジオラマに見えるわけ</h1>
+      <p class="lead">町の写真の上と下をぼかすと、模型に見えてくる。<br>つまみを動かして、見える・見えないを試そう。</p>
+    </header>
+
+    <div class="group judge">
+      <p class="hint">いまの絵は、ジオラマに見える？ 押すと設定が下に残ります。</p>
+      <div class="row">
+        <button class="judge-btn yes" id="jYes" type="button">ジオラマに見える</button>
+        <button class="judge-btn no" id="jNo" type="button">見えない</button>
+      </div>
+      <p id="jStat" class="stat">記録 0 件</p>
+    </div>
+
+    <div class="group">
+      <h2>ためしてみる</h2>
+      <div class="presets" id="presets"></div>
+    </div>
+
+    <div class="group">
+      <h2>ぼけ</h2>
+      <div class="seg" id="mode" role="radiogroup" aria-label="ぼけの作り方">
+        <button type="button" data-v="0" role="radio">なし</button>
+        <button type="button" data-v="1" role="radio">帯（写真の加工）</button>
+        <button type="button" data-v="2" role="radio">奥行き（レンズの式）</button>
+      </div>
+      <label class="sl"><span>ぼけの大きさ</span><input type="range" id="sR" min="0" max="3" step="0.05"><output id="oR"></output></label>
+      <label class="sl"><span id="lPos">帯の位置</span><input type="range" id="sPos" min="0.1" max="0.9" step="0.01"><output id="oPos"></output></label>
+      <label class="sl band-only"><span>帯の幅</span><input type="range" id="sW" min="0.02" max="0.6" step="0.01"><output id="oW"></output></label>
+      <label class="sl band-only"><span>帯の向き</span><input type="range" id="sAng" min="0" max="90" step="1"><output id="oAng"></output></label>
+      <p class="hint">ぼけの大きさ＝いちばんぼけた所の円の半径（絵の高さに対する割合）。奥行きでは、ピントの2倍の遠さでの大きさ。</p>
+      <label class="chk"><input type="checkbox" id="cGuide"> ピントの所に目印の線を出す（※ 目印）</label>
+    </div>
+
+    <div class="group">
+      <h2>撮り方</h2>
+      <label class="sl"><span>見下ろす角度</span><input type="range" id="sPitch" min="4" max="85" step="1"><output id="oPitch"></output></label>
+      <label class="sl"><span>色の濃さ</span><input type="range" id="sSat" min="0.5" max="2" step="0.05"><output id="oSat"></output></label>
+    </div>
+
+    <div class="group">
+      <h2>絵を見る大きさ（計算だけに使う）</h2>
+      <div class="seg" id="view" role="radiogroup" aria-label="絵を見るときのたての画角">
+        <button type="button" data-v="10" role="radio">手に持ったスマホ（たて10°）</button>
+        <button type="button" data-v="25" role="radio">パソコンの画面（25°）</button>
+        <button type="button" data-v="40" role="radio">撮ったときと同じ（40°）</button>
+      </div>
+      <p class="hint">同じぼけでも、絵が小さく見えるほど目に入るぼけは小さくなり、計算の模型は大きくなります。</p>
+    </div>
+
+    <div class="group">
+      <h2>動き</h2>
+      <div class="seg" id="fps" role="radiogroup" aria-label="1秒のコマ数">
+        <button type="button" data-v="60" role="radio">なめらか</button>
+        <button type="button" data-v="12" role="radio">コマ落とし 12</button>
+        <button type="button" data-v="6" role="radio">コマ落とし 6</button>
+      </div>
+      <div class="seg" id="spd" role="radiogroup" aria-label="時間の速さ">
+        <button type="button" data-v="1" role="radio">ふつうの速さ</button>
+        <button type="button" data-v="4" role="radio">早回し ×4</button>
+        <button type="button" data-v="12" role="radio">×12</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>見える・見えないの記録 <span id="logCount" class="muted"></span></h2>
+      <p class="hint">押すと、そのときの設定にもどります。この画面を閉じると消えます。</p>
+      <ol id="log"><li class="empty">まだありません。上の「ジオラマに見える／見えない」を押してください。</li></ol>
+    </div>
+
+    <details id="why">
+      <summary>なぜ模型に見えるの？</summary>
+      <p><b>ぼけの大きさから、目は距離を逆算している。</b>目のピントは近い物に合わせるほど、少し手前や奥が大きくぼける。だから「大きくぼけている」＝「すぐ目の前の小さな物を見ている」と受けとる。</p>
+      <p><b>ぼけが奥行きと合うときに効く。</b>ぼけが、絵の中の奥行き（遠近の手がかり）とつじつまの合う形のとき、模型に見えやすいことが実験で示されています（Held ほか 2010）。上から見た町は、絵の下が手前・上が奥なので、上下をぼかすと本物のレンズに近い形になります。</p>
+      <p><b>このアプリで試せる例</b>（論文の条件そのものではありません）: 帯をたてにすると、ぼけが奥行きの向きと合わなくなります。横から見ると、空が入り、手前と奥の並び方が変わります。</p>
+      <p><b>色を濃く・コマ落とし・早回し</b>は、おもちゃの色と、ぎこちなく速い動きをまねる写真の工夫。研究で確かめられたものではありません。</p>
+      <h3>画面の数の出し方</h3>
+      <p>目のレンズの口径 A（4.6 mm）、ピントの距離 z₀、別の点の距離 z のとき、ぼけの大きさ（角度）は b = A·|1/z₀ − 1/z|（Held ほか 2010）。絵の 64×40 の点で、ぼけ b と町の本当の距離 Z を集め、町を s 倍に縮めた模型を見ているとして b = (A/s)·|1/Z₀ − 1/Z| に合わせ、s を出します。「合い方」は、その式にどのくらい合うか（ぼけの場所によるちがいのうち、式で説明できる割合。このアプリの目安で、実験で確かめた値ではありません）。奥行きのぼけは式そのもので作るので、いつも 100% 近くになります。</p>
+      <p>出てくる大きさは、ぼけの大きさだけから逆算した値です。本当にどう見えるかは、ほかの手がかり（色・形・動き）や人によって変わります。仮定: 絵を「絵を見る大きさ」で選んだ画角で見ている。ぼけは円の中を一様にならした近似（レンズのぼけの形・色のにじみは入れていない）。</p>
+    </details>
+
+    <details id="about">
+      <summary>このアプリについて</summary>
+      <p>学習用に簡単にしています。町は自前で作った 3D の模型（実在の町ではありません。建物 8〜100 m・道の幅 12 m）。見え方は人によってちがいます。</p>
+      <h3>おもな出どころ</h3>
+      <ul>
+        <li>Held, R. T., Cooper, E. A., O'Brien, J. F., Banks, M. S. (2010) Using blur to affect perceived distance and size. <i>ACM Transactions on Graphics</i> 29(2): 19. <a href="https://doi.org/10.1145/1731047.1731057" target="_blank" rel="noopener">doi:10.1145/1731047.1731057</a></li>
+      </ul>
+      <h3>使っているもの</h3>
+      <p>three.js r128（MIT）。ぼかしは自前のシェーダー（考え方は glfx.js の tiltShift・three.js の被写界深度の例を参考。どちらも MIT）。フォント: Google Fonts（SIL Open Font License）</p>
+    </details>
+  </section>
+</div>
+
+<script src="../lib/three@0.128.0/build/three.min.js"></script>
+<script src="js/city.js"></script>
+<script src="js/blur.js"></script>
+<script src="js/measure.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
