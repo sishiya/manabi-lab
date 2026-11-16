@@ -19,7 +19,7 @@ const Blur = (() => {
 
   const frag = `
     uniform sampler2D tColor; uniform sampler2D tDepth;
-    uniform float uNear, uFar, uAspect, uR, uPos, uHalfW, uZ0, uKf, uSat, uCon, uH;
+    uniform float uNear, uFar, uAspect, uR, uPos, uHalfW, uZ0, uKf, uSat, uCon, uH, uExp;
     uniform vec2 uN; uniform int uMode;
     varying vec2 vUv;
     float distAt(vec2 uv) { float d = texture2D(tDepth, uv).x; return (uNear * uFar) / (uFar - (uFar - uNear) * d); }
@@ -45,7 +45,9 @@ const Blur = (() => {
           acc += w * texture2D(tColor, suv).rgb; ws += w;
         }
       }
-      vec3 c = acc / ws;
+      vec3 c = acc / ws * uExp;                                   // ここまでは光の量（リニア）でぼかす
+      c = clamp((c * (2.51 * c + 0.03)) / (c * (2.43 * c + 0.59) + 0.14), 0.0, 1.0);   // トーンマッピング（ACES の近似。Narkowicz 2015）
+      c = pow(c, vec3(1.0 / 2.2));                                // 画面の明るさへ
       float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
       c = mix(vec3(l), c, uSat);
       c = (c - 0.5) * uCon + 0.5;
@@ -53,16 +55,17 @@ const Blur = (() => {
     }`;
 
   function create(renderer) {
-    const rt = new THREE.WebGLRenderTarget(4, 4, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
+    const hdr = renderer.capabilities.isWebGL2 && renderer.extensions.has('EXT_color_buffer_float');   // 光の量を 1 をこえて持てる
+    const rt = new THREE.WebGLRenderTarget(4, 4, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, type: hdr ? THREE.HalfFloatType : THREE.UnsignedByteType });
     rt.depthTexture = new THREE.DepthTexture(4, 4); rt.depthTexture.type = THREE.UnsignedIntType;
     const mat = new THREE.ShaderMaterial({
       uniforms: {
         tColor: { value: rt.texture }, tDepth: { value: rt.depthTexture }, uNear: { value: 1 }, uFar: { value: 1 }, uAspect: { value: 1 },
         uR: { value: 0 }, uPos: { value: 0.5 }, uHalfW: { value: 0.1 }, uZ0: { value: 500 }, uKf: { value: 0 }, uSat: { value: 1 }, uCon: { value: 1 },
-        uH: { value: 4 }, uN: { value: new THREE.Vector2(0, 1) }, uMode: { value: 0 },
+        uH: { value: 4 }, uExp: { value: 1 }, uN: { value: new THREE.Vector2(0, 1) }, uMode: { value: 0 },
       },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
-      fragmentShader: frag, depthTest: false, depthWrite: false,
+      fragmentShader: frag, depthTest: false, depthWrite: false, toneMapped: false,
     });
     const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat); quad.frustumCulled = false;
     const pScene = new THREE.Scene(); pScene.add(quad);
@@ -74,7 +77,7 @@ const Blur = (() => {
         u.uNear.value = camera.near; u.uFar.value = camera.far; u.uAspect.value = camera.aspect;
         u.uMode.value = P.mode; u.uR.value = P.R; u.uPos.value = P.pos; u.uHalfW.value = P.halfW;
         u.uN.value.set(-Math.sin(P.ang), Math.cos(P.ang)); u.uZ0.value = P.z0; u.uKf.value = P.kf;
-        u.uSat.value = P.sat; u.uCon.value = 1 + (P.sat - 1) * 0.35;
+        u.uSat.value = P.sat; u.uExp.value = P.exp || 1; u.uCon.value = 1 + (P.sat - 1) * 0.35;
         renderer.setRenderTarget(rt); renderer.render(scene, camera);
         renderer.setRenderTarget(null); renderer.render(pScene, pCam);
       },

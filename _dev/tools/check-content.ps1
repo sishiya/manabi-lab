@@ -1,4 +1,4 @@
-# Content check before publishing (RULES 7.1): things check-public.ps1 cannot judge.
+﻿# Content check before publishing (RULES 7.1): things check-public.ps1 cannot judge.
 # It never blocks. It lists what a person must look at, then one last line.
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/check-content.ps1                 # all entrance apps + root pages + ../zenn articles
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/check-content.ps1 -Apps quantum   # some apps only
@@ -41,7 +41,8 @@ $allow = @(
   'patents.google.com','edison.rutgers.edu','www.thehenryford.org','hub.catalogit.app','edisontinfoil.com','instructional-resources.physics.uiowa.edu','irene.cornell7.net','www.loc.gov','journal.smpte.org','earthref.org','www.princeton.edu',
   'www.mod.go.jp','www.itmedia.co.jp',
   'gml.noaa.gov','www.pari.go.jp',
-  'www.nesdev.org'
+  'www.nesdev.org',
+  'ambientcg.com','polyhaven.com'
 )
 
 # ---- which apps ----

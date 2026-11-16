@@ -109,18 +109,20 @@
 
     <details id="about">
       <summary>このアプリについて</summary>
-      <p>学習用に簡単にしています。町は自前で作った 3D の模型（実在の町ではありません。建物 8〜100 m・道の幅 12 m）。見え方は人によってちがいます。</p>
+      <p>学習用に簡単にしています。町は自前で作った 3D の模型（実在の町ではありません。建物 7〜105 m・車道 12 m・歩道 3 m）。外壁・道・地面は写真のテクスチャ、空は写真の空。見え方は人によってちがいます。</p>
       <h3>おもな出どころ</h3>
       <ul>
         <li>Held, R. T., Cooper, E. A., O'Brien, J. F., Banks, M. S. (2010) Using blur to affect perceived distance and size. <i>ACM Transactions on Graphics</i> 29(2): 19. <a href="https://doi.org/10.1145/1731047.1731057" target="_blank" rel="noopener">doi:10.1145/1731047.1731057</a></li>
       </ul>
       <h3>使っているもの</h3>
-      <p>three.js r128（MIT）。ぼかしは自前のシェーダー（考え方は glfx.js の tiltShift・three.js の被写界深度の例を参考。どちらも MIT）。フォント: Google Fonts（SIL Open Font License）</p>
+      <p>外壁・道・地面のテクスチャ: ambientCG（CC0。Facade008・018A・019A・020A、Asphalt026C、PavingStones128、Grass004、Concrete034） <a href="https://ambientcg.com" target="_blank" rel="noopener">ambientcg.com</a><br>空: Poly Haven「Kloofendal 48d Partly Cloudy (Pure Sky)」（CC0） <a href="https://polyhaven.com" target="_blank" rel="noopener">polyhaven.com</a></p>
+      <p>three.js r128 と RGBELoader（MIT）。ぼかしは自前のシェーダー（考え方は glfx.js の tiltShift・three.js の被写界深度の例を参考。どちらも MIT）。フォント: Google Fonts（SIL Open Font License）</p>
     </details>
   </section>
 </div>
 
 <script src="../lib/three@0.128.0/build/three.min.js"></script>
+<script src="../lib/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
 <script src="js/city.js"></script>
 <script src="js/blur.js"></script>
 <script src="js/measure.js"></script>

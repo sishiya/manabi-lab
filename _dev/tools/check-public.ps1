@@ -103,6 +103,14 @@ foreach ($f in $files) {
     if ($runs.Count) { [void]$hits.Add("$rel : bin に文字列がまざっている（中身を確認）: $($runs[0])") }
     continue
   }
+  if ($ext -eq '.hdr') {
+    # 空の HDRI（例: tilt-shift/assets/sky_1k.hdr。Poly Haven の CC0）: 先頭の見出し（空行まで）に形式の行のほかの情報（作者・場所・道具など）がないか。2026-11-17〜
+    $bytes = [IO.File]::ReadAllBytes($f)
+    $head = [Text.Encoding]::ASCII.GetString($bytes, 0, [Math]::Min(512, $bytes.Length)) -split "`n`n" | Select-Object -First 1
+    $extra = @($head -split "`n" | Where-Object { $_ -and $_ -notmatch '^(#\?RADIANCE|#\?RGBE|FORMAT=32-bit_rle_(rgbe|xyze)|EXPOSURE=[0-9.eE+-]+|GAMMA=[0-9.]+|PRIMARIES=[0-9. ]+)$' })
+    if ($extra.Count) { [void]$hits.Add("$rel : hdr の見出しに付加情報がある（$($extra -join ', ')）") }
+    continue
+  }
   if ($ext -eq '.glb') {
     # 3D のモデル（例: chess-battle/assets/ の兵士。Blender で書き出し）: 先頭の JSON の部分（名前・作った道具・extras）を文字として調べる。
     # 中の画像は Blender が書きなおした JPEG（撮影情報なし）。2026-10-31〜
