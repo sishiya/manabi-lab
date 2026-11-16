@@ -1,0 +1,32 @@
+1
+00:00:00,000 --> 00:00:01,920
+Quão alto é este chamado?
+
+2
+00:00:01,920 --> 00:00:05,600
+O chamado ultrassônico de um morcego:
+quantos decibéis, a 10 cm da boca?
+
+3
+00:00:05,600 --> 00:00:07,600
+Pense…
+
+4
+00:00:07,600 --> 00:00:13,360
+A resposta é C: 122–134 dB.
+A espécie mais barulhenta passou de 140
+
+5
+00:00:13,360 --> 00:00:18,520
+A cada 10 dB, a intensidade fica 10 vezes maior.
+130 dB é um bilhão de vezes 40 dB
+
+6
+00:00:18,520 --> 00:00:23,620
+Mas é agudo demais para o ouvido humano.
+Por isso o jardim à noite fica em silêncio
+
+7
+00:00:23,620 --> 00:00:27,700
+Ele grita tão alto para captar o eco fraco
+de um pequeno inseto distante

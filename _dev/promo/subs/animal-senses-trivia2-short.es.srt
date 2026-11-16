@@ -1,0 +1,32 @@
+1
+00:00:00,000 --> 00:00:01,920
+¿Qué tan fuerte es este llamado?
+
+2
+00:00:01,920 --> 00:00:05,600
+El llamado ultrasónico de un murciélago:
+¿cuántos decibelios, a 10 cm de su boca?
+
+3
+00:00:05,600 --> 00:00:07,600
+Piénsalo…
+
+4
+00:00:07,600 --> 00:00:13,360
+La respuesta es C: 122–134 dB.
+La especie más ruidosa superó los 140
+
+5
+00:00:13,360 --> 00:00:18,520
+Cada 10 dB, la intensidad se multiplica por 10.
+130 dB es mil millones de veces 40 dB
+
+6
+00:00:18,520 --> 00:00:23,620
+Pero es demasiado agudo para el oído humano.
+Por eso el jardín de noche está en silencio
+
+7
+00:00:23,620 --> 00:00:27,700
+Grita tan fuerte para captar el débil eco
+de un insecto pequeño y lejano

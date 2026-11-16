@@ -1,0 +1,17 @@
+{
+  "videoId": "YtywfzUFCJk",
+  "file": "_dev/promo/out/animal-senses-trivia2-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/animal-senses-trivia2.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-20T21:00:00+09:00",
+  "captions": { "en": "_dev/promo/out/animal-senses-trivia2-short.en.srt", "es": "_dev/promo/subs/animal-senses-trivia2-short.es.srt", "ko": "_dev/promo/subs/animal-senses-trivia2-short.ko.srt", "pt": "_dev/promo/subs/animal-senses-trivia2-short.pt.srt", "zh-TW": "_dev/promo/subs/animal-senses-trivia2-short.zh-TW.srt" },
+  "title": "【うんちく】コウモリの声は、すぐそばで大声。でも聞こえない #Shorts",
+  "description": "コウモリは超音波を出し、そのこだまで虫をさがします。パナマの11種を測った研究では、口から10cmのところで122〜134デシベル。いちばん大きい種は140をこえました（水面の反射で少し大きめに測れたかもしれない、と論文にあります）。デシベルは10上がるごとに強さが10倍なので、130は40の10億倍の強さです。でも音が高すぎて、人の耳にはまったく聞こえません。こんな大声を出すのは、遠くの小さな虫から返ってくる、かすかなこだまを拾うためです。\n\nアプリ「いきものの感じる世界」に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/animal-senses/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: Surlykke & Kalko (2008) PLoS ONE 3(4): e2036\n\n声: VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
+  "tags": ["いきものの感じる世界", "コウモリ", "超音波", "エコーロケーション", "デシベル", "うんちく", "雑学", "Shorts", "まなびラボ", "しし屋", "bat", "echolocation", "ultrasound", "did you know"],
+  "localizations": {
+    "en": {
+      "title": "Did you know? Bat calls are deafening up close, yet you can't hear a thing #Shorts",
+      "description": "Bats send out ultrasonic calls and find insects by their echoes. A study of 11 species in Panama measured 122 to 134 dB at 10 cm from the mouth, and the loudest species topped 140 dB (the paper notes reflections off the water may have added a little). Every 10 dB means 10 times the intensity, so 130 dB is a billion times as intense as 40 dB. But the calls are far too high-pitched for human ears. Bats shout this loud to catch the faint echo of a small insect far away. Turn on English subtitles (CC).\n\nRelated to the app \"How Animals Sense the World\".\n\nApp (switch to English with the EN button): https://sishiya.github.io/manabi-lab/animal-senses/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/?lang=en\n\nSources: Surlykke & Kalko (2008) PLoS ONE 3(4): e2036.\n\nVoice: VOICEVOX:Meimei Himari\nMusic: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#DidYouKnow #Science"
+    }
+  }
+}
