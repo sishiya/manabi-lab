@@ -129,7 +129,7 @@
 
 | 予定 | ページ | 題名 | メモ |
 |---|---|---|---|
-| 11/19 | big-bang-trivia1 | 生まれたばかりの月は、空にこんなに大きかった | pMu9naGyxXs（11/15 に予約。字幕は en だけ。es・pt・zh-TW・ko は 11/16 17:00 のあと `-Captions -Lang es,pt,zh-TW,ko -Meta _dev/promo/big-bang-trivia1.upload.json`） |
+| 11/19 | big-bang-trivia1 | 生まれたばかりの月は、空にこんなに大きかった | pMu9naGyxXs（11/15 に予約。字幕5言語） |
 | 11/20 | animal-senses-trivia2 | コウモリの声は、すぐそばで大声。でも聞こえない | |
 | 11/21 | extreme-trivia3 | ぬるいお風呂のお湯（37℃）が沸とうする場所はどこ？ | |
 | 11/22 | drop-evolution-trivia1 | 地球でいちばん多い「光合成の生きもの」、見つかったのは1988年 | |
