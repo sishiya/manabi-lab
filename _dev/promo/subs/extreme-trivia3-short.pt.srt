@@ -1,0 +1,25 @@
+1
+00:00:00,000 --> 00:00:05,000
+Onde a água a 37 °C ferve?
+
+2
+00:00:05,000 --> 00:00:10,000
+No topo do monte Fuji, a água ferve a 87 °C.
+
+3
+00:00:10,000 --> 00:00:15,000
+Na altitude de um avião de passageiros: 66 °C.
+
+4
+00:00:15,000 --> 00:00:21,040
+A resposta é a C: a 19 km, 37 °C.
+Água morna, fervendo.
+
+5
+00:00:21,040 --> 00:00:27,040
+Quando a pressão do ar cai para 1/16 da do nível do mar,
+a água ferve à temperatura do corpo.
+
+6
+00:00:27,040 --> 00:00:30,080
+E no topo do Everest?

@@ -1,0 +1,38 @@
+{
+  "videoId": "mnAbSF9pMDE",
+  "file": "_dev/promo/out/extreme-trivia3-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/extreme-trivia3.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-21T21:00:00+09:00",
+  "captions": {
+    "en": "_dev/promo/out/extreme-trivia3-short.en.srt",
+    "es": "_dev/promo/subs/extreme-trivia3-short.es.srt",
+    "ko": "_dev/promo/subs/extreme-trivia3-short.ko.srt",
+    "pt": "_dev/promo/subs/extreme-trivia3-short.pt.srt",
+    "zh-TW": "_dev/promo/subs/extreme-trivia3-short.zh-TW.srt"
+  },
+  "title": "【うんちく】ぬるいお風呂のお湯（37℃）が沸とうする場所はどこ？ #Shorts",
+  "description": "水が沸く温度は、まわりの空気の重さ（気圧）で決まります。地上では100℃ですが、標準の大気で計算すると、富士山の頂上（3,776 m）で87℃、旅客機の高さ（10 km）で66℃。高さ19 kmで気圧が地上の16分の1になると、37℃、体温くらいのお湯が沸とうします。実際の気圧はその日の天気で少し変わります。\n\nアプリ「極限の世界に置いてみたら」（気圧・水圧）に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/extreme/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: Wagner & Pruss (2002) J. Phys. Chem. Ref. Data 31: 387（IAPWS-95、水の蒸気圧）・U.S. Standard Atmosphere 1976（NOAA・NASA・USAF）。温度はこの2つからの計算です。\n\n声: VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
+  "tags": [
+    "極限の世界に置いてみたら",
+    "沸点",
+    "気圧",
+    "富士山",
+    "高度",
+    "うんちく",
+    "雑学",
+    "Shorts",
+    "まなびラボ",
+    "しし屋",
+    "boiling point",
+    "air pressure",
+    "altitude",
+    "did you know"
+  ],
+  "localizations": {
+    "en": {
+      "title": "Did you know? At 19 km up, 37 °C water boils #Shorts",
+      "description": "The temperature at which water boils depends on the air pressure around it. At sea level it is 100 °C, but by the standard atmosphere it drops to 87 °C at the top of Mt. Fuji (3,776 m) and 66 °C at airliner altitude (10 km). At 19 km, where the pressure is 1/16 of sea level, water boils at 37 °C, about body temperature. Real pressure varies a little with the weather. Turn on English subtitles (CC).\n\nRelated to the app \"In Extreme Worlds\" (air and water pressure).\n\nApp (in Japanese for now): https://sishiya.github.io/manabi-lab/extreme/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/?lang=en\n\nSources: Wagner & Pruss (2002) J. Phys. Chem. Ref. Data 31: 387 (IAPWS-95, vapor pressure of water); U.S. Standard Atmosphere 1976 (NOAA, NASA, USAF). Temperatures are calculated from these two.\n\nVoice: VOICEVOX:Meimei Himari\nMusic: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#DidYouKnow #Science"
+    }
+  }
+}

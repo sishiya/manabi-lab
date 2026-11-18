@@ -25,9 +25,9 @@ const subs = [
   { a: 0.0, b: 5.0, ja: '37℃のお湯が[沸とう]するのは、どこ？', en: 'Where does 37 °C water boil?', noBurn: true },
   { a: 5.0, b: 10.0, ja: '富士山の頂上では、水は[87℃]で沸く。', en: 'At the top of Mt. Fuji, water boils at 87 °C.' },
   { a: 10.0, b: 15.0, ja: '旅客機の高さでは、[66℃]。', en: 'At airliner altitude: 66 °C.' },
-  { a: 15.0, b: 21.0, ja: '答えは③。高さ19 kmで、[37℃]。\nぬるいお湯が、ぐつぐつ。', en: 'The answer is 3: at 19 km, 37 °C.\nLukewarm water, boiling away.' },
+  { a: 15.0, b: 21.0, ja: '答えは [C]。高さ19 kmで、[37℃]。\nぬるいお湯が、ぐつぐつ。', en: 'The answer is C: at 19 km, 37 °C.\nLukewarm water, boiling away.' },
   { a: 21.0, b: 27.0, ja: '空気の重さが地上の[16分の1]になると、\n水は体温くらいで沸く。', en: 'When air pressure drops to 1/16 of sea level,\nwater boils at about body temperature.' },
-  { a: 27.0, b: 30.0, ja: 'エベレストの頂上なら、何℃だと思う？', en: 'What about the top of Everest?' },
+  { a: 27.0, b: 30.0, ja: 'エベレストの頂上なら、何℃だと思う？', yomi: 'エベレストの頂上なら、何度だと思う？', en: 'What about the top of Everest?' },
 ];
 const cues = [
   { t: 0.05, type: 'pop' }, { t: 0.25, type: 'pop' }, { t: 0.45, type: 'pop' }, { t: 3.0, type: 'tick' }, { t: 4.0, type: 'tick' },
@@ -144,7 +144,7 @@ function draw(g, t) {
     TK.card(g, 120, 1060, 840, 120);
     PL.label(g, '高さ ' + (z / 1000).toFixed(1) + ' km', 170, 1120, 42, { align: 'left' });
     PL.label(g, '沸く温度 ' + T.toFixed(0) + ' ℃', 915, 1120, 48, { align: 'right', color: T < 38 ? PL.RED : PL.INK });
-    if (t > 18.4) { const p = clamp(TK.pop(t, 18.4, 0.35), 0, 1.2); g.save(); g.globalAlpha = clamp(p, 0, 1); TK.card(g, 250, 470, 280, 120); PL.label(g, '答え ③', 390, 530, 64, { color: PL.RED }); g.restore(); }
+    if (t > 18.4) { const p = clamp(TK.pop(t, 18.4, 0.35), 0, 1.2); g.save(); g.globalAlpha = clamp(p, 0, 1); TK.card(g, 250, 470, 280, 120); PL.label(g, '答え C', 390, 530, 64, { color: PL.RED }); g.restore(); }
     TK.note(g, t, 5.3, 21, '標準大気の気圧で計算（その日の天気で少し変わる）', { size: 32 });
   }
   // 21〜27: 気圧が地上の16分の1

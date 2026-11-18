@@ -15,4 +15,5 @@ window.TRIVIA_THUMBS = {
   'pitch-physics-trivia1': { t: 22, crop: [60, 330, 960, 780], title: 'ナックルは\n[揺れていない]', line: '1球ずつ調べた人がいる' },
   'big-bang-trivia1':      { t: 1.5, crop: [40, 200, 1000, 900], title: 'むかしの月は\n[約20倍]', line: 'できたての月が見えた空' },
   'animal-senses-trivia2': { t: 1.0, crop: [100, 620, 880, 560], title: 'コウモリの声\n[130 dB 以上]', line: 'すぐそばで大声。でも聞こえない' },
+  'extreme-trivia3':       { t: 18.0, crop: [150, 160, 830, 905], title: '37℃のお湯が\n[沸とう]\nするのは？', line: '富士山の頂上なら87℃' },
 };

@@ -1,0 +1,25 @@
+1
+00:00:00,000 --> 00:00:05,000
+¿Dónde hierve el agua a 37 °C?
+
+2
+00:00:05,000 --> 00:00:10,000
+En la cima del monte Fuji, el agua hierve a 87 °C.
+
+3
+00:00:10,000 --> 00:00:15,000
+A la altura de un avión de pasajeros: 66 °C.
+
+4
+00:00:15,000 --> 00:00:21,040
+La respuesta es la C: a 19 km, 37 °C.
+Agua tibia, hirviendo.
+
+5
+00:00:21,040 --> 00:00:27,040
+Cuando la presión del aire baja a 1/16 de la del nivel del mar,
+el agua hierve a la temperatura del cuerpo.
+
+6
+00:00:27,040 --> 00:00:30,080
+¿Y en la cima del Everest?
