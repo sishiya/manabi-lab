@@ -1,0 +1,17 @@
+{
+  "videoId": "J7D3i9Mlz50",
+  "file": "_dev/promo/out/drop-evolution-trivia1-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/drop-evolution-trivia1.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-22T21:00:00+09:00",
+  "captions": { "en": "_dev/promo/out/drop-evolution-trivia1-short.en.srt", "es": "_dev/promo/subs/drop-evolution-trivia1-short.es.srt", "ko": "_dev/promo/subs/drop-evolution-trivia1-short.ko.srt", "pt": "_dev/promo/subs/drop-evolution-trivia1-short.pt.srt", "zh-TW": "_dev/promo/subs/drop-evolution-trivia1-short.zh-TW.srt" },
+  "title": "【うんちく】地球でいちばん多い「光合成の生きもの」、見つかったのは1988年 #Shorts",
+  "description": "海にすむ小さな細菌、プロクロロコッカス。地球ぜんたいで、およそ3×10の27乗（3000じょ）個いると見積もられていて、光合成をする生きものの中でいちばん数が多いと考えられています。大きさは1000分の0.6ミリほどで、髪の毛の太さの100分の1くらい。小さすぎて、海の水を測る機械に出たかすかな赤い光は、はじめは「ノイズ」だと思われていました。新しい生きものとして論文になったのは1988年です。\n\nアプリ「ひとしずくの進化」（海の水の一滴で進化を見る）に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/drop-evolution/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: Flombaum ほか (2013) PNAS 110: 9824（数の見積もり）・Chisholm ほか (1988) Nature 334: 340・MIT Technology Review (2015)（ノイズと思われた話）\n\n声: VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
+  "tags": ["ひとしずくの進化", "プロクロロコッカス", "光合成", "植物プランクトン", "海", "うんちく", "雑学", "Shorts", "まなびラボ", "しし屋", "Prochlorococcus", "photosynthesis", "ocean", "did you know"],
+  "localizations": {
+    "en": {
+      "title": "Did you know? Earth's most numerous photosynthesizer was only found in 1988 #Shorts",
+      "description": "Prochlorococcus is a tiny ocean bacterium. There are an estimated 3×10²⁷ of them worldwide, which makes it the most numerous photosynthetic organism on Earth. It is only about 0.6 thousandths of a millimeter across, roughly 1/100 the width of a hair. It is so small that its faint red glow on the instruments measuring seawater was at first taken for noise. It was described as a new organism in 1988. Turn on English subtitles (CC).\n\nRelated to the app \"Evolution in a Drop\" (evolution in one drop of seawater).\n\nApp (switch to English with the EN button): https://sishiya.github.io/manabi-lab/drop-evolution/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/?lang=en\n\nSources: Flombaum et al. (2013) PNAS 110: 9824 (abundance estimate); Chisholm et al. (1988) Nature 334: 340; MIT Technology Review (2015) (the noise story).\n\nVoice: VOICEVOX:Meimei Himari\nMusic: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#DidYouKnow #Science"
+    }
+  }
+}
