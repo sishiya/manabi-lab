@@ -3,7 +3,7 @@
 window.__tishErr = [];
 window.addEventListener('error', e => window.__tishErr.push(String(e.message)));
 
-const S = { mode: 1, R: 1, pos: 0.5, w: 0.16, ang: 0, pitch: 35, sat: 1, fps: 60, spd: 1, view: 40, exp: 0.8, guide: false, paused: false };
+const S = { scene: 'shirakawa', mode: 1, R: 1, pos: 0.5, w: 0.16, ang: 0, pitch: 35, sat: 1, fps: 60, spd: 1, view: 40, exp: 0.8, guide: false, paused: false };
 const FOV = 40, DIST = 700, AZ = 0.55;
 
 const cv = document.getElementById('cv'), frameEl = document.getElementById('frame');
@@ -26,7 +26,8 @@ const city = City.build(scene, { renderer, groundSize: Math.min(phone ? 2048 : 4
 const blur = Blur.create(renderer);
 Measure.init();
 
-let P = {}, fit = null, dirty = true, running = false, depthKey = '', ready = false;
+let P = {}, fit = null, dirty = true, running = false, depthKey = '', ready = false, photo = null;
+const sceneOf = () => SCENES.find(x => x.id === S.scene) || SCENES[0];   // 最初は写真の村（OFF で本物、ON で模型）
 
 function placeCamera() {
   const ph = S.pitch * Math.PI / 180;
@@ -35,15 +36,27 @@ function placeCamera() {
 }
 // 設定から、シェーダーと計算に渡す値を作る（ピントの距離は距離の格子から）
 function derive() {
-  const key = S.pitch + '/' + camera.aspect.toFixed(4);
-  if (key !== depthKey) { placeCamera(); Measure.readDepth(renderer, scene, camera); depthKey = key; }   // 距離の格子はカメラが変わったときだけ読む
+  const sc = sceneOf();
+  if (sc.kind === 'photo') {
+    if (!photo || photo.id !== sc.id) {   // 写真を読みおわるまでは前の絵のまま
+      photo = null; UI.showLoading(sc);
+      Photo.load(sc).then(p => { if (S.scene === sc.id) { photo = Object.assign({ id: sc.id }, p); depthKey = ''; onChange(); } }, e => { UI.showError(e); window.__tishErr.push(String(e)); });
+      return false;
+    }
+    if (depthKey !== 'photo:' + sc.id) { Measure.setZs(photo.zs); depthKey = 'photo:' + sc.id; }
+  } else {
+    photo = null;
+    const key = S.pitch + '/' + camera.aspect.toFixed(4);
+    if (key !== depthKey) { placeCamera(); Measure.readDepth(renderer, scene, camera); depthKey = key; }   // 距離の格子はカメラが変わったときだけ読む
+  }
   P = { mode: S.mode, R: S.R / 100, pos: S.pos, halfW: S.w / 2, ang: S.ang * Math.PI / 180, aspect: camera.aspect, sat: S.sat, exp: S.exp, z0: 600, kf: 0 };
   P.z0 = Measure.focusDist(P);
   P.kf = 2 * P.z0 * P.R;            // ピントの2倍の距離で、ぼけの半径が「ぼけの強さ」になるように
   fit = Measure.fit(P, S.view * Math.PI / 180);   // 絵を見るときの画角（撮ったときの画角 FOV とは別）
-  UI.showResult(fit); UI.drawGuide(P);
+  UI.showResult(fit); UI.drawGuide(P); UI.showCredit(sc);
+  return true;
 }
-function onChange() { derive(); dirty = true; kick(); }
+function onChange() { if (derive()) { dirty = true; kick(); } }
 
 function resize() {
   const r = frameEl.getBoundingClientRect();
@@ -62,14 +75,15 @@ let simT = 0, shownT = 0, last = 0;
 function advance(dt) {
   simT += dt * S.spd;
   const per = S.fps >= 60 ? 0 : S.spd / S.fps;
+  if (photo) return;                     // 写真は動かない（描き直さない）
   if (simT - shownT > per) { city.step(simT - shownT); shownT = simT; dirty = true; }
 }
-function render() { blur.render(scene, camera, P); dirty = false; }
+function render() { if (sceneOf().kind === 'photo' && !photo) return; blur.render(scene, camera, P, photo); dirty = false; }
 function loop(now) {
   const dt = last ? Math.max(0, Math.min(0.05, (now - last) / 1000)) : 0; last = now;   // 最初のコマは 0
   if (!S.paused) advance(dt);
   if (dirty) render();
-  if (S.paused && !dirty) { running = false; last = 0; return; }   // 止めているあいだは描き直さない
+  if ((S.paused || photo) && !dirty) { running = false; last = 0; return; }   // 止めているあいだ・写真は、変わらなければ描き直さない
   requestAnimationFrame(loop);
 }
 function kick() { if (!running) { running = true; last = 0; requestAnimationFrame(loop); } }
@@ -81,7 +95,7 @@ Power.on({ pause() { last = 0; }, resume() { last = 0; kick(); } });   // reques
 
 // デバッグ用: 状態・計算を見る、描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）
 window.__tish = {
-  S, get P() { return P; }, get ready() { return ready; }, get fit() { return fit; }, city,
+  S, get P() { return P; }, get ready() { return ready; }, get photo() { return !!photo; }, get fit() { return fit; }, city,
   set(p) { Object.assign(S, p); UI.syncControls(); onChange(); render(); return fit; },
   simRun(sec, dt = 1 / 60) { for (let t = 0; t < sec; t += dt) advance(dt); render(); },
 };

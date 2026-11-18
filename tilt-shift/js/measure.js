@@ -55,6 +55,7 @@ const Measure = (() => {
       const z = Zs[k]; if (!(z < ZMAX)) continue;
       const [u, v] = uvOf(k);
       const r = P.mode === 1 ? Blur.cocBand(u, v, P) : P.mode === 2 ? Blur.cocDepth(z, P) : 0;
+      if (P.mode === 2 && r >= Blur.CMAX * 0.999) continue;   // 描けるぼけの上限に張りついた所（とても近い所）は、ぼけが式どおりでないので外す
       pts.push({ z, r });
     }
     if (pts.length < 20) return { ok: false, why: 'sky' };
@@ -72,5 +73,6 @@ const Measure = (() => {
     const s = A / best.k;
     return { ok: true, blur: true, s, Z0, eye: s * Z0, corr: best.fit, n: pts.length };
   }
-  return { init, readDepth, focusDist, fit, A, get Zs() { return Zs; } };
+  function setZs(a) { Zs.set(a); }   // 写真の場面: 推定した奥行きから作った距離の格子（photo.js）
+  return { init, readDepth, setZs, focusDist, fit, A, get Zs() { return Zs; } };
 })();

@@ -20,7 +20,7 @@ const click = (w, sel) => { const e = w.document.querySelector(sel); if (e) e.cl
 // アプリごとの準備（w = アプリの window）
 const SETUP = {
   // ジオラマに見えるわけ（画面ができたら、いちばん映える場面にする）
-  'tilt-shift': async w => { for (let i = 0; i < 100 && !(w.__tish && w.__tish.ready); i++) await wait(200); await wait(800); },
+  'tilt-shift': async w => { for (let i = 0; i < 100 && !(w.__tish && w.__tish.ready && w.__tish.photo); i++) await wait(200); w.__tish.set({ sat: 1.3, R: 1.2 }); await wait(800); },
   // ちいさな地球を歩く（画面ができたら、いちばん映える場面にする）
   'tiny-walk': async w => { await wait(1500); },
   // 熱帯雨林の音: 音は鳴らさない

@@ -25,6 +25,10 @@ const UI = (() => {
     for (const k in sliders) { $(sliders[k]).value = S[k]; $(outs[k]).textContent = fmt[k](S[k]); }
     for (const [id, key] of [['mode', 'mode'], ['fps', 'fps'], ['spd', 'spd'], ['view', 'view']])
       for (const b of $(id).querySelectorAll('button')) { const on = +b.dataset.v === S[key]; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); }
+    const sc = SCENES.find(x => x.id === S.scene) || SCENES[0];
+    for (const b of $('scene').children) { const on = b.dataset.v === S.scene; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); }
+    $('sceneNote').textContent = sc.name + '。' + sc.note;
+    document.body.classList.toggle('m-photo', sc.kind === 'photo');
     document.body.classList.toggle('m-depth', S.mode === 2);
     document.body.classList.toggle('m-none', S.mode === 0);
     $('lPos').textContent = S.mode === 2 ? 'ピントの位置' : '帯の位置';
@@ -45,6 +49,14 @@ const UI = (() => {
       const b = document.createElement('button'); b.type = 'button'; b.textContent = name;
       b.addEventListener('click', () => set(Object.assign({}, p), i)); $('presets').appendChild(b);
     });
+    SCENES.forEach(sc => {   // 場面のボタン（写真は小さな見本つき）
+      const b = document.createElement('button'); b.type = 'button'; b.dataset.v = sc.id; b.setAttribute('role', 'radio');
+      b.style.backgroundImage = `url(${sc.thumb || sc.img})`;
+      b.innerHTML = `<span>${sc.short}</span>`; b.title = sc.name;
+      b.addEventListener('click', () => set({ scene: sc.id }, activePreset)); $('scene').appendChild(b);
+    });
+    $('photoCredits').innerHTML = SCENES.filter(s => s.kind === 'photo').map(s =>   // 写真の出どころ（このアプリについて）
+      `<li>${s.name}（${s.note.split('（')[0]}）: ${s.credit.who}「${s.credit.title}」${s.credit.lic} <a href="${s.credit.url}" target="_blank" rel="noopener">Wikimedia Commons</a></li>`).join('');
     $('jYes').addEventListener('click', () => judge(true));
     $('jNo').addEventListener('click', () => judge(false));
     syncControls();
@@ -71,7 +83,9 @@ const UI = (() => {
 
   function summary(st) {
     const m = st.mode === 0 ? 'ぼけなし' : `${MODE[st.mode]} ${fmt.R(st.R)}` + (st.mode === 1 ? `・向き ${st.ang}°` : '');
-    return `${m}・見下ろし ${st.pitch}°・見る ${st.view}°・色 ${fmt.sat(st.sat)}・${st.fps >= 60 ? 'なめらか' : 'コマ' + st.fps}・${st.spd === 1 ? '等速' : '×' + st.spd}`;
+    const sc = SCENES.find(x => x.id === st.scene) || SCENES[0];
+    if (sc.kind === 'photo') return `${sc.short}（写真）・${m}・色 ${fmt.sat(st.sat)}・見る ${st.view}°`;
+    return `${sc.short}・${m}・見下ろし ${st.pitch}°・見る ${st.view}°・色 ${fmt.sat(st.sat)}・${st.fps >= 60 ? 'なめらか' : 'コマ' + st.fps}・${st.spd === 1 ? '等速' : '×' + st.spd}`;
   }
   function judge(yes) {
     const st = Object.assign({}, S); delete st.paused; delete st.guide;
@@ -113,5 +127,12 @@ const UI = (() => {
     }
     g.innerHTML = s;
   }
-  return { init, showResult, drawGuide, syncControls };
+  function showLoading(sc) { $('rScale').textContent = `「${sc.name}」の写真を読んでいます…`; }
+  function showError(e) { $('rScale').textContent = '写真を読めませんでした。通信を確かめて、もう一度場面を選んでください。'; }
+  function showCredit(sc) {
+    const c = $('credit');
+    if (sc.kind === 'photo') c.innerHTML = `写真: ${sc.credit.who}（${sc.credit.lic}）<a href="${sc.credit.url}" target="_blank" rel="noopener">Wikimedia Commons</a>。3:2 に切り取り、ぼけと色はこのアプリで加工。奥行きは推定`;
+    else c.textContent = 'つくった 3D の町（外壁・道: ambientCG、空: Poly Haven。どちらも CC0）';
+  }
+  return { init, showResult, drawGuide, syncControls, showLoading, showError, showCredit };
 })();

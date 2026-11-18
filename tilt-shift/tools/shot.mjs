@@ -17,7 +17,7 @@ await page.waitForFunction(() => window.__tish && window.__tish.fit && window.__
 for (const sp of specs.length ? specs : ['default={}']) {
   const i = sp.indexOf('='), name = sp.slice(0, i), st = JSON.parse(sp.slice(i + 1));
   const f = await page.evaluate(st => { window.__tish.set(Object.assign({ paused: true }, st)); return window.__tish.fit; }, st);
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(st.scene && st.scene !== 'town' ? 2500 : 300);
   await page.locator('#frame').screenshot({ path: path.join(outDir, name + '.png') });
   console.log(name, f && f.s ? '1/' + Math.round(1 / f.s) : '-', f && f.corr != null ? f.corr.toFixed(2) : '-');
 }
