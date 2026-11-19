@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="css/style.css">
 <script src="../assets/power.js?v=1"></script>
+<script type="importmap">{ "imports": { "three": "../lib/three@0.185.1/build/three.module.min.js", "three/addons/": "../lib/three@0.185.1/examples/jsm/","@sparkjsdev/spark": "https://cdn.jsdelivr.net/npm/@sparkjsdev/spark@2.4.0/dist/spark.module.min.js" } }</script>
 
 <div id="app">
   <section id="view">
@@ -70,6 +71,10 @@
     <div class="group">
       <h2>撮り方</h2>
       <label class="sl three-only"><span>見下ろす角度</span><input type="range" id="sPitch" min="4" max="85" step="1"><output id="oPitch"></output></label>
+      <label class="sl splat-only"><span>見下ろす角度</span><input type="range" id="sEl" min="5" max="60" step="1"><output id="oEl"></output></label>
+      <label class="sl splat-only"><span>横に回す</span><input type="range" id="sYaw" min="-40" max="40" step="1"><output id="oYaw"></output></label>
+      <label class="sl splat-only"><span>画角（たて）</span><input type="range" id="sFov" min="20" max="90" step="1"><output id="oFov"></output></label>
+      <p class="hint splat-only">撮ったとき（見下ろす 15°・横 0°・画角 50°）から離れるほど、3D がくずれます。画角は、町が同じ大きさに写るよう近づいたり離れたりします。</p>
       <label class="sl"><span>色の濃さ</span><input type="range" id="sSat" min="0.5" max="2" step="0.05"><output id="oSat"></output></label>
     </div>
 
@@ -125,7 +130,8 @@
       <h3>使っているもの</h3>
       <p>写真（Wikimedia Commons。3:2 に切り取り、ぼけと色はこのアプリで加工）:</p>
       <ul id="photoCredits"></ul>
-      <p>写真の奥行きの推定: Depth Anything V2 Small（Apache-2.0。手元で一度だけ計算して、結果の絵を置いています） <a href="https://github.com/DepthAnything/Depth-Anything-V2" target="_blank" rel="noopener">github.com/DepthAnything</a></p>
+      <p>動画から 3D: 動画のコマ 189 枚からカメラの位置を COLMAP（BSD）で求め、Brush（Apache-2.0）で 3D ガウシアンを学習（手元で一度だけ計算）。空と、空に浮いたもやは切りとっています。大きさは教会の塔の高さ（約 40〜49 m）から決めた推定です。表示は Spark（MIT） <a href="https://github.com/sparkjsdev/spark" target="_blank" rel="noopener">github.com/sparkjsdev/spark</a> と three.js r185（MIT）。</p>
+      <p>写真の奥行きの推定:Depth Anything V2 Small（Apache-2.0。手元で一度だけ計算して、結果の絵を置いています） <a href="https://github.com/DepthAnything/Depth-Anything-V2" target="_blank" rel="noopener">github.com/DepthAnything</a></p>
       <p>3D の町の外壁・道・地面のテクスチャ: ambientCG（CC0。Facade008・018A・019A・020A、Asphalt026C、PavingStones128、Grass004、Concrete034） <a href="https://ambientcg.com" target="_blank" rel="noopener">ambientcg.com</a><br>空: Poly Haven「Kloofendal 48d Partly Cloudy (Pure Sky)」（CC0） <a href="https://polyhaven.com" target="_blank" rel="noopener">polyhaven.com</a></p>
       <p>three.js r128 と RGBELoader（MIT）。ぼかしは自前のシェーダー（考え方は glfx.js の tiltShift・three.js の被写界深度の例を参考。どちらも MIT）。フォント: Google Fonts（SIL Open Font License）</p>
     </details>

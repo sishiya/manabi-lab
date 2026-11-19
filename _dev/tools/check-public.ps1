@@ -30,7 +30,7 @@ $rules = @(
   @{ n = 'Artifact の URL（PUBLISH.local.md に書く）'; r = 'claude\.ai/(code/)?artifacts?/[A-Za-z0-9-]{8,}' }
 )
 # GitHub's no-reply commit address is meant to be public (it is on every commit anyway)
-$allow = @('(?i)@example\.(com|org|net)$', '(?i)^noreply@', '(?i)@users\.noreply\.github\.com$', '^sishiya-support@googlegroups.com$', '^jhlywa@gmail\.com$')   # jhlywa = lib/chess.js@1.4.0 の作者（BSD の著作権表示。消せない）
+$allow = @('(?i)@example\.(com|org|net)$', '(?i)^noreply@', '(?i)@users\.noreply\.github\.com$', '^sishiya-support@googlegroups.com$', '^jhlywa@gmail\.com$', '^05-09-2016$')   # jhlywa = lib/chess.js@1.4.0 の作者（BSD の著作権表示。消せない）。05-09-2016 = tilt-shift の動画の題の日付（電話番号ではない）
 # 数値だけの .bin で、たまたま 12 字以上の文字に見える並びがあり、目で確かめて付加情報ではなかったもの（ファイル = 見えた並び）
 $allowBin = @{ 'sail-wind\data\yd41-push.bin' = 'YDT&U"UK8#nY' }   # int16 の力の表（2026-10-29）
 
@@ -95,11 +95,13 @@ foreach ($f in $files) {
     # 外のライブラリの wasm（例: lib/three@0.185.1/examples/jsm/libs/draco/gltf/draco_decoder.wasm。CDN から取ったまま。2026-10-31〜）: 中身はプログラムなので文字は調べない
     continue
   }
-  if ($ext -eq '.bin') {
+  if ($ext -eq '.bin' -or $ext -eq '.splat') {
     # 数値だけのデータ（例: tiny-earth/data/etopo1deg.bin の高さの表）: 長い文字列（作者名・場所などの付加情報）がまざっていないか
+    # .splat（3D ガウシアン）と tilt-shift/assets/splat の float の点の表は、数がたまたま 12〜19 字の並びになるので 24 字から見る（2026-11-19〜）
     $bytes = [IO.File]::ReadAllBytes($f)
     $ascii = [Text.Encoding]::GetEncoding(28591).GetString($bytes)   # Latin-1（ASCII だと 128 以上が「?」になって文字に見える)
-    $runs = @([regex]::Matches($ascii, '[\x20-\x7e]{12,}') | ForEach-Object { $_.Value } | Where-Object { $_ -ne $allowBin[$rel] })
+    $minRun = if ($ext -eq '.splat' -or $rel -like 'tilt-shift\assets\splat\*') { 24 } else { 12 }
+    $runs = @([regex]::Matches($ascii, "[\x20-\x7e]{$minRun,}") | ForEach-Object { $_.Value } | Where-Object { $_ -ne $allowBin[$rel] })
     if ($runs.Count) { [void]$hits.Add("$rel : bin に文字列がまざっている（中身を確認）: $($runs[0])") }
     continue
   }

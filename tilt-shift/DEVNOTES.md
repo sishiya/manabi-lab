@@ -1,7 +1,7 @@
 # ジオラマに見えるわけ 開発メモ
 
 ## 別セッションで続けるとき（まずここ）
-- いまの状態: v004-scenes（本物の写真6枚＋3D の町の二本立て）。最初は「村」の写真で開く。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。英語なし。
+- いまの状態: v004-scenes＋段階C2（本物の写真6枚＋動画から作った 3D「港の町」＋3D の町）。最初は「村」の写真で開く。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。英語なし。
 - 次にやること: 段階C（動画から 3D）の続き。手元の試しは `look/`（Git に入れない。splat.html・splatgrid.mjs・cams.py・crop.py、作業の素材は look/hindeloopen/）。結果は「状態」の 2026-11-19。案: 学習の設定（歩数・SH の次数）、ぼけを入れて見え方を見る、アプリの場面に足すか決める。ほか、案: 写真の場面を足す（手順は下の「写真の場面の足し方」）、3D の町を角度の実験用に軽く整える（blur.js の SSAO・FXAA は入れた。川・森・山並みは書きかけで捨てた）、動画の場面（PLAN 段階C）。
 - 読む順: PLAN.md → このファイルの「ファイル構成」→ 関係するファイルだけ。
 - 動かし方: サーバー apps〜apps-6（.claude/launch.json）で http://localhost:8765/tilt-shift/ 。デバッグ用の窓口 `window.__tish`（`set({mode:1, ang:90, pitch:5})` で設定して計算の結果を返す・`fit`・`P`・`simRun(秒)`）、エラーは `window.__tishErr`。
@@ -24,9 +24,12 @@
 | js/blur.js | 後処理（3D: SSAO → ぼけと色 → FXAA。写真: ぼけと色だけ）。CPU 用に同じ式 | `Blur.create`・`render(scene, camera, P, photo)`・`cocBand`・`cocDepth`・`RAMP`・`CMAX` |
 | js/measure.js | 距離の格子 64×40（3D は読みもどし、写真は `setZs`）と、Held の式の当てはめ | `Measure.readDepth`・`setZs`・`focusDist`・`fit` |
 | js/ui.js | 場面のボタン・つまみ・ためしてみる6つ・結果の文・記録・目印の線・出どころの1行 | `UI.init`・`showResult`・`showCredit`・`drawGuide`・`PRESETS` |
+| js/splat.js | 動画から作った 3D の場面（ES モジュール。選んだときだけ import()）。three r185＋Spark で見えない canvas に描き、本体はそれを写真と同じ道でぼかす。距離の絵は点（-pts.bin）を投げて作る | `create(sc, sky)` → `setView(el, yaw, fov, aspect)`・`draw(w,h)`・`depth()` |
+| assets/splat/ | 港の町の 3D（`.splat` 4 MB）・距離用の点・見る位置の基準・見本の絵 | |
+| tools/splat-pack.py | 手元だけ: Brush の .ply → 切りとり・地面 y=0・単位 m に直して .splat などを書く | 使い方はファイルの頭 |
 | js/main.js | three.js の用意・カメラ・場面の切りかえ・ループ（コマ落とし。写真は変わったときだけ描く）・窓口 | `S`（設定。`S.scene`）・`derive`・`advance`・`window.__tish` |
 
-読み込み順: three.min.js（../lib r128）→ RGBELoader → scenes → city → photo → blur → measure → ui → main。power.js は head。
+読み込み順: importmap（three r185＝../lib、three/addons、Spark＝jsDelivr。splat.js だけが使う）→ three.min.js（../lib r128）→ RGBELoader → scenes → city → photo → blur → measure → ui → main。power.js は head。
 
 ## しくみ
 - ぼけの半径 r は「絵の高さを1とした割合」。帯: 線（角度 ang、中心は法線方向に pos−0.5）からの距離 dd が halfW をこえたら RAMP=0.35 かけて R まで直線で増える。奥行き: r = kf·|1/z0 − 1/z|、kf = 2·z0·R（ピントの2倍の距離で r = R）、上限 `CMAX` 0.09（計算では上限に張りついた点を外す）。
@@ -63,10 +66,12 @@
 2b. ぼけを入れても絵がずれない・拡大しない（OFF と ON を重ねてくらべる）。
 3. 「ジオラマに見える／見えない」を押すと、ボタンの下に「記録 n 件」、下の記録に1行。記録を押すと設定がもどる。
 4. 止める → 動かない・描き直さない。動かす → 続きから。コマ落としで車がカクカク。
+4b. 「港の町 3D」: 本物のクリックで選び、絵が出て結果の文が出る。見下ろす角度・横・画角を動かすと絵と数が変わる。数秒たつと requestAnimationFrame が止まる。3D の町の見下ろす角度のつまみは出ない。
 5. 幅 393px（iPhone 16）と 375px で、絵と結果が上に固定、横にはみ出さない。
 6. 裏にして、もどすと続きから（音・Worker・タイマーなし）。
 
 ## 状態
+- 2026-11-19 段階C2: ユーザー「まずアプリでみたい」。港の町の 3D を場面に足した（見下ろす角度 5〜60°・横に回す ±40°・画角 20〜90°、画角はドリーズーム）。縮尺は教会の塔（40〜49 m）から 1 単位 ≈ 37 m（ドローンは約 130 m、町まで約 470 m）。目安（帯・ぼけ1%）: 撮ったまま ≈1/880・86%、見下ろす 35° ≈1/2,400・92%、5° ≈1/290・71%、画角 25° ≈1/3,400、80° ≈1/300、帯をたてで 0%、奥行きで 100%。落ち着いたら描き直しを止める。960px 以上で右の列が 40px はみ出していたのを直した（#view に min-width:0）。
 - 2026-11-19 段階C1（手元だけ・`look/`）: ユーザーが港の町（Hindeloopen、FreKoMovie、CC BY 3.0）を選び、自分でダウンロード（Wikimedia は連絡先のない名乗りの取り込みを 429 で断る）。49〜112 秒を 3 コマ／秒で 189 枚 → COLMAP 4.2.1（GPU、sequential_matcher → global_mapper）で 189 枚すべて位置が出た（誤差 0.42 px）→ Brush v0.3.0 で 3 万歩（約 8 分）。撮った角度ではほぼ本物。空ともやを切ると（`look/crop.py` 高さ 2・横 40・大きさ 1）見下ろす +15° まで良い、+30° は粗い、+45° 以上は崩れる。横 ±30°・画角 ×0.5〜×2 は使える。海は波が動くので透ける。1 万歩のほうが 3 万歩より筋が少なくきれいだった。ドローンの高さは一定、見下ろす角度は 15〜28°。
 - 2026-11-18 v004-scenes: ユーザー「OFF にするとリアルな現実の風景なのに、ON にすると途端にジオラマ」「いろいろなシチュエーションで」。批判役（見た目）が「3D を直してもゲームの町止まり。写真が主・3D は角度の実験用の二本立て」をすすめ、ユーザーが二本立てを選んだ。Wikimedia Commons の写真6枚（村・町と川・入り江・列車・ビル・畑。ユーザーが選んだ）＋Depth Anything V2 Small の推定の奥行き。ぼけで絵がずれる不具合を直した。3D の後処理に SSAO と FXAA。
 - 2026-11-16 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。

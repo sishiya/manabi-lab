@@ -13,7 +13,7 @@
 | three.js のおまけ（`examples/js/` のブルーム一式6本） | 0.128.0 | MIT（同上） | ピアノを弾く手 | jsDelivr `three@0.128.0/examples/js/…` |
 | three.js のおまけ（`examples/js/loaders/RGBELoader.js`。HDR の空を読む） | 0.128.0 | MIT（同上） | ジオラマに見えるわけ | jsDelivr `three@0.128.0/examples/js/loaders/RGBELoader.js`（2026-11-17） |
 | chess.js（`dist/esm/chess.js`。ES モジュール） | 1.4.0 | BSD-2-Clause（`chess.js@1.4.0/LICENSE`） | 名局の戦場（アプリと `chess-battle/tools/verify.mjs` の両方で読む） | jsDelivr `chess.js@1.4.0/dist/esm/chess.js`（2026-10-31） |
-| three.js（`build/three.module.min.js`＋`three.core.min.js`、`examples/jsm/` の GLTFLoader・OrbitControls・SkeletonUtils・BufferGeometryUtils・SortUtils・postprocessing（EffectComposer・RenderPass・ShaderPass・OutputPass・UnrealBloomPass・Pass・MaskPass）・shaders（Copy・LuminosityHighPass・Output）・BokehPass と BokehShader（ピントのぼけ。虫の版の見本）・DRACOLoader と libs/draco/gltf（Draco の解く部品。Apache-2.0、libs/draco/README.md）。ES モジュール） | 0.185.1 | MIT（`three@0.185.1/LICENSE`） | 名局の戦場（海戦。importmap で読む） | jsDelivr `three@0.185.1/…`（2026-10-31） |
+| three.js（`build/three.module.min.js`＋`three.core.min.js`、`examples/jsm/` の GLTFLoader・OrbitControls・SkeletonUtils・BufferGeometryUtils・SortUtils・postprocessing（EffectComposer・RenderPass・ShaderPass・OutputPass・UnrealBloomPass・Pass・MaskPass）・shaders（Copy・LuminosityHighPass・Output）・BokehPass と BokehShader（ピントのぼけ。虫の版の見本）・DRACOLoader と libs/draco/gltf（Draco の解く部品。Apache-2.0、libs/draco/README.md）。ES モジュール） | 0.185.1 | MIT（`three@0.185.1/LICENSE`） | 名局の戦場（海戦。importmap で読む）・ジオラマに見えるわけ（港の町の 3D を描く Spark の土台。importmap） | jsDelivr `three@0.185.1/…`（2026-10-31） |
 | mp4-muxer（`build/mp4-muxer.min.js`） | 5.1.3 | MIT（`mp4-muxer@5.1.3/LICENSE`） | 紹介動画の台本 `_dev/promo/*.html`（29本。mp4 を作りなおすのに必要） | jsDelivr `mp4-muxer@5.1.3/build/mp4-muxer.min.js` |
 
 ## CDN のままのもの（理由つき）
@@ -26,6 +26,7 @@
 | @mediapipe/tasks-vision | 0.10.14 | Apache-2.0 | `_dev/vtuber/`（紹介動画のライオン。公開しない道具） | wasm と顔のモデルが大きい・道具だけ |
 | @mediapipe/tasks-vision | 0.10.21 | Apache-2.0 | 画面の奥の水槽（カメラを開いたときだけ読む。顔のモデルは Google の storage.googleapis.com から） | wasm と顔のモデルが大きい・1本だけ。1.2.0 系には記録の送信先が入っているので上げるときは確かめる |
 | three.js | 0.160.0 | MIT | `mood-world/lab/`（作りかけ） | 試作。アプリになったら考える |
+| Spark（`@sparkjsdev/spark`、`dist/spark.module.min.js`。3D ガウシアンを three.js で描く。three の r180 以上と `three/addons/postprocessing/Pass.js` が要る → `three@0.185.1` を importmap で） | 2.4.0 | MIT | ジオラマに見えるわけ（港の町の 3D。2026-11-19） | 1本のアプリだけ・2.8 MB と大きい |
 | Google Fonts（Zen Kaku Gothic New・Dela Gothic One・IBM Plex Mono など） | — | SIL OFL | 入口・各アプリ | 日本語のフォントは大きく、Google が文字ごとに分けて配っているため。読めなくても OS のフォントで表示される |
 
 - ライセンスは各パッケージの `package.json` の `license` と LICENSE ファイルで確かめた（2026-10-12）。

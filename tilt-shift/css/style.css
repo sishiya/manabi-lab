@@ -61,6 +61,7 @@ button{font:inherit;color:inherit}
 body.m-photo .three-only{opacity:.35;pointer-events:none}
 body.m-photo #pause{display:none}   /* 写真は動かないので、止めるボタンは出さない */
 body.m-photo .photo-msg{display:inline}
+body:not(.m-splat) .splat-only,body.m-splat .sl.three-only{display:none}   /* 動画から作った 3D の場面だけのつまみ */
 .chk{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;min-height:36px}
 body.m-depth .band-only,body.m-none .band-only{opacity:.35;pointer-events:none}
 body.m-none .sl:has(#sR),body.m-none .sl:has(#sPos){opacity:.35;pointer-events:none}
@@ -88,7 +89,7 @@ details b{color:var(--ink)}
 /* 広い画面: 絵を左に固定、つまみを右に */
 @media (min-width:960px){
   #app{flex-direction:row;align-items:flex-start}
-  #view{flex:1;height:100vh;justify-content:center;padding:16px;box-shadow:none}
+  #view{flex:1;min-width:0;height:100vh;justify-content:center;padding:16px;box-shadow:none}
   .frame,#result{width:min(100%,calc((100vh - 120px) * 1.5))}
   #panel{width:400px;flex:none;height:100vh;overflow:auto;margin:0}
 }

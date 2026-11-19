@@ -35,6 +35,11 @@ const SCENES = [
     anchors: [[0.5, 0.05, 500], [0.6, 0.55, 1600]],
     credit: { who: 'Karelj', lic: 'パブリックドメイン', title: 'Kvasiny from air K1-1.jpg', url: 'https://commons.wikimedia.org/wiki/File:Kvasiny_from_air_K1-1.jpg' },
     note: 'チェコ・クヴァシニ（空から）' },
+  // 動画から作った 3D（tools/splat-pack.py）。縮尺は教会の塔（40〜49 m）から決めた推定（1 単位 ≈ 37 m）
+  { id: 'harbor', kind: 'splat', name: '港の町（動画から 3D）', short: '港の町 3D',
+    splat: 'assets/splat/hindeloopen.splat', pts: 'assets/splat/hindeloopen-pts.bin', view: 'assets/splat/hindeloopen-view.json', thumb: 'assets/splat/hindeloopen-t.jpg',
+    credit: { who: 'FreKoMovie', lic: 'CC BY 3.0', title: '216. Hindeloopen 05-09-2016.webm', url: 'https://commons.wikimedia.org/wiki/File:216._Hindeloopen_05-09-2016.webm' },
+    note: 'オランダ・ヒンデローペン。ドローンの動画から作った 3D なので、角度と画角を変えられる' },
   { id: 'town', kind: '3d', name: 'つくった町（3D）', short: '3D の町', thumb: 'assets/photo/town-thumb.jpg',
     note: '角度・動きを変えられる。CG なので、写真ほど本物には見えない' },
 ];

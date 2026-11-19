@@ -3,7 +3,7 @@
 window.__tishErr = [];
 window.addEventListener('error', e => window.__tishErr.push(String(e.message)));
 
-const S = { scene: 'shirakawa', mode: 1, R: 1, pos: 0.5, w: 0.16, ang: 0, pitch: 35, sat: 1, fps: 60, spd: 1, view: 40, exp: 0.8, guide: false, paused: false };
+const S = { scene: 'shirakawa', mode: 1, R: 1, pos: 0.5, w: 0.16, ang: 0, pitch: 35, el: 15, yaw: 0, fov: 50, sat: 1, fps: 60, spd: 1, view: 40, exp: 0.8, guide: false, paused: false };
 const FOV = 40, DIST = 700, AZ = 0.55;
 
 const cv = document.getElementById('cv'), frameEl = document.getElementById('frame');
@@ -27,6 +27,8 @@ const blur = Blur.create(renderer);
 Measure.init();
 
 let P = {}, fit = null, dirty = true, running = false, depthKey = '', ready = false, photo = null;
+// 動画から作った 3D: splat は js/splat.js が返すもの。Spark は奥の並べ替えを裏で進めるので、視点を変えたあと何コマか描きつづける（settle）
+let splat = null, splatLoading = '', settle = 0, bw = 2, bh = 2;
 const sceneOf = () => SCENES.find(x => x.id === S.scene) || SCENES[0];   // 最初は写真の村（OFF で本物、ON で模型）
 
 function placeCamera() {
@@ -37,7 +39,32 @@ function placeCamera() {
 // 設定から、シェーダーと計算に渡す値を作る（ピントの距離は距離の格子から）
 function derive() {
   const sc = sceneOf();
-  if (sc.kind === 'photo') {
+  if (sc.kind === 'splat') {
+    if (!splat || splat.id !== sc.id) {
+      photo = null;
+      if (splatLoading !== sc.id) {
+        splatLoading = sc.id; UI.showLoading(sc);
+        import('./splat.js').then(m => m.create(sc, '#a9c3dd')).then(o => {
+          splatLoading = ''; if (splat) splat.dispose();
+          splat = Object.assign(o, { id: sc.id });
+          const tex = new THREE.Texture(o.canvas); tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false;
+          splat.photo = { tex, dtex: null, alpha: 1, beta: 0, zs: null }; depthKey = '';
+          if (S.scene === sc.id) onChange();
+        }, e => { splatLoading = ''; UI.showError(e); window.__tishErr.push(String(e)); });
+      }
+      return false;
+    }
+    const key = 'splat:' + [S.el, S.yaw, S.fov, camera.aspect.toFixed(4)].join('/');
+    if (key !== depthKey) {   // 視点が変わったときだけ、距離の絵と格子を作りなおす
+      splat.setView(S.el, S.yaw, S.fov, camera.aspect);
+      const d = splat.depth(), ph = splat.photo;
+      if (!ph.dtex || ph.dtex.image.width !== d.w) { ph.dtex = new THREE.DataTexture(d.data, d.w, d.h, THREE.RGBAFormat); ph.dtex.minFilter = ph.dtex.magFilter = THREE.NearestFilter; }
+      else ph.dtex.image.data.set(d.data);
+      ph.dtex.needsUpdate = true; ph.alpha = d.alpha; ph.zs = d.zs;
+      Measure.setZs(d.zs); depthKey = key; settle = 40;
+    }
+    photo = splat.photo;
+  } else if (sc.kind === 'photo') {
     if (!photo || photo.id !== sc.id) {   // 写真を読みおわるまでは前の絵のまま
       photo = null; UI.showLoading(sc);
       Photo.load(sc).then(p => { if (S.scene === sc.id) { photo = Object.assign({ id: sc.id }, p); depthKey = ''; onChange(); } }, e => { UI.showError(e); window.__tishErr.push(String(e)); });
@@ -64,7 +91,7 @@ function resize() {
   let dpr = Math.min(1.5, window.devicePixelRatio || 1);
   if (r.width * r.height * dpr * dpr > 2.2e6) dpr = Math.sqrt(2.2e6 / (r.width * r.height));   // 画素数の上限（電池と発熱）
   const w = Math.max(2, Math.round(r.width * dpr)), h = Math.max(2, Math.round(r.height * dpr));
-  renderer.setPixelRatio(1); renderer.setSize(w, h, false);
+  renderer.setPixelRatio(1); renderer.setSize(w, h, false); bw = w; bh = h;
   camera.aspect = r.width / Math.max(1, r.height);
   blur.setSize(w, h);
   onChange();
@@ -78,7 +105,12 @@ function advance(dt) {
   if (photo) return;                     // 写真は動かない（描き直さない）
   if (simT - shownT > per) { city.step(simT - shownT); shownT = simT; dirty = true; }
 }
-function render() { if (sceneOf().kind === 'photo' && !photo) return; blur.render(scene, camera, P, photo); dirty = false; }
+function render() {
+  const k = sceneOf().kind;
+  if (k !== '3d' && !photo) return;
+  if (k === 'splat') { splat.draw(bw, bh); photo.tex.needsUpdate = true; if (settle > 0) settle--; }
+  blur.render(scene, camera, P, photo); dirty = settle > 0;
+}
 function loop(now) {
   const dt = last ? Math.max(0, Math.min(0.05, (now - last) / 1000)) : 0; last = now;   // 最初のコマは 0
   if (!S.paused) advance(dt);

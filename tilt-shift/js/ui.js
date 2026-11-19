@@ -17,9 +17,10 @@ const UI = (() => {
   const fmt = {
     R: v => v.toFixed(2).replace(/0$/, '') + ' %', pos: v => (v < 0.45 ? '下より ' : v > 0.55 ? '上より ' : 'まん中 ') + Math.round(v * 100),
     w: v => Math.round(v * 100) + ' %', ang: v => v + '°', pitch: v => v + '°', sat: v => '×' + v.toFixed(2),
+    el: v => v + '°', yaw: v => (v > 0 ? '右へ ' : v < 0 ? '左へ ' : '') + Math.abs(v) + '°', fov: v => v + '°',
   };
-  const sliders = { R: 'sR', pos: 'sPos', w: 'sW', ang: 'sAng', pitch: 'sPitch', sat: 'sSat' };
-  const outs = { R: 'oR', pos: 'oPos', w: 'oW', ang: 'oAng', pitch: 'oPitch', sat: 'oSat' };
+  const sliders = { R: 'sR', pos: 'sPos', w: 'sW', ang: 'sAng', pitch: 'sPitch', sat: 'sSat', el: 'sEl', yaw: 'sYaw', fov: 'sFov' };
+  const outs = { R: 'oR', pos: 'oPos', w: 'oW', ang: 'oAng', pitch: 'oPitch', sat: 'oSat', el: 'oEl', yaw: 'oYaw', fov: 'oFov' };
 
   function syncControls() {
     for (const k in sliders) { $(sliders[k]).value = S[k]; $(outs[k]).textContent = fmt[k](S[k]); }
@@ -28,7 +29,8 @@ const UI = (() => {
     const sc = SCENES.find(x => x.id === S.scene) || SCENES[0];
     for (const b of $('scene').children) { const on = b.dataset.v === S.scene; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); }
     $('sceneNote').textContent = sc.name + '。' + sc.note;
-    document.body.classList.toggle('m-photo', sc.kind === 'photo');
+    document.body.classList.toggle('m-photo', sc.kind !== '3d');   // 写真と動画の 3D は動かない
+    document.body.classList.toggle('m-splat', sc.kind === 'splat');
     document.body.classList.toggle('m-depth', S.mode === 2);
     document.body.classList.toggle('m-none', S.mode === 0);
     $('lPos').textContent = S.mode === 2 ? 'ピントの位置' : '帯の位置';
@@ -55,8 +57,8 @@ const UI = (() => {
       b.innerHTML = `<span>${sc.short}</span>`; b.title = sc.name;
       b.addEventListener('click', () => set({ scene: sc.id }, activePreset)); $('scene').appendChild(b);
     });
-    $('photoCredits').innerHTML = SCENES.filter(s => s.kind === 'photo').map(s =>   // 写真の出どころ（このアプリについて）
-      `<li>${s.name}（${s.note.split('（')[0]}）: ${s.credit.who}「${s.credit.title}」${s.credit.lic} <a href="${s.credit.url}" target="_blank" rel="noopener">Wikimedia Commons</a></li>`).join('');
+    $('photoCredits').innerHTML = SCENES.filter(s => s.credit).map(s =>   // 写真・動画の出どころ（このアプリについて）
+      `<li>${s.name}（${s.note.split(/[（。]/)[0]}）: ${s.kind === 'splat' ? '動画 ' : ''}${s.credit.who}「${s.credit.title}」${s.credit.lic} <a href="${s.credit.url}" target="_blank" rel="noopener">Wikimedia Commons</a></li>`).join('');
     $('jYes').addEventListener('click', () => judge(true));
     $('jNo').addEventListener('click', () => judge(false));
     syncControls();
@@ -85,6 +87,7 @@ const UI = (() => {
     const m = st.mode === 0 ? 'ぼけなし' : `${MODE[st.mode]} ${fmt.R(st.R)}` + (st.mode === 1 ? `・向き ${st.ang}°` : '');
     const sc = SCENES.find(x => x.id === st.scene) || SCENES[0];
     if (sc.kind === 'photo') return `${sc.short}（写真）・${m}・色 ${fmt.sat(st.sat)}・見る ${st.view}°`;
+    if (sc.kind === 'splat') return `${sc.short}・${m}・見下ろし ${st.el}°・横 ${st.yaw}°・画角 ${st.fov}°・見る ${st.view}°・色 ${fmt.sat(st.sat)}`;
     return `${sc.short}・${m}・見下ろし ${st.pitch}°・見る ${st.view}°・色 ${fmt.sat(st.sat)}・${st.fps >= 60 ? 'なめらか' : 'コマ' + st.fps}・${st.spd === 1 ? '等速' : '×' + st.spd}`;
   }
   function judge(yes) {
@@ -127,11 +130,12 @@ const UI = (() => {
     }
     g.innerHTML = s;
   }
-  function showLoading(sc) { $('rScale').textContent = `「${sc.name}」の写真を読んでいます…`; }
-  function showError(e) { $('rScale').textContent = '写真を読めませんでした。通信を確かめて、もう一度場面を選んでください。'; }
+  function showLoading(sc) { $('rScale').textContent = `「${sc.name}」を読んでいます…`; }
+  function showError(e) { $('rScale').textContent = '読めませんでした。通信を確かめて、もう一度場面を選んでください。'; }
   function showCredit(sc) {
     const c = $('credit');
     if (sc.kind === 'photo') c.innerHTML = `写真: ${sc.credit.who}（${sc.credit.lic}）<a href="${sc.credit.url}" target="_blank" rel="noopener">Wikimedia Commons</a>。3:2 に切り取り、ぼけと色はこのアプリで加工。奥行きは推定`;
+    else if (sc.kind === 'splat') c.innerHTML = `動画: ${sc.credit.who}（${sc.credit.lic}）<a href="${sc.credit.url}" target="_blank" rel="noopener">Wikimedia Commons</a>。動画のコマから 3D を作り、ぼけと色はこのアプリで加工。大きさは推定`;
     else c.textContent = 'つくった 3D の町（外壁・道: ambientCG、空: Poly Haven。どちらも CC0）';
   }
   return { init, showResult, drawGuide, syncControls, showLoading, showError, showCredit };
