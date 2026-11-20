@@ -1,0 +1,22 @@
+1
+00:00:00,000 --> 00:00:04,990
+Un televisor CRT nunca muestra una imagen completa.
+El haz solo toca un único punto.
+
+2
+00:00:04,990 --> 00:00:11,990
+Ese punto brillante pinta la pantalla, línea por línea.
+
+3
+00:00:11,990 --> 00:00:17,990
+Más de 15.000 líneas por segundo.
+
+4
+00:00:17,990 --> 00:00:24,990
+En una pantalla de 21 pulgadas, el punto cruza a más de 6,7 km/s,
+casi la velocidad de la Estación Espacial.
+
+5
+00:00:24,990 --> 00:00:31,990
+Bandas de luz, línea por línea. Los espacios entre ellas
+hacían que el pixel art se viera suave.

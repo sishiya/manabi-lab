@@ -603,5 +603,12 @@
 "Mide 0,6 milésimas de milímetro: // unas 100 veces más delgado que un cabello.",
 "Es tan pequeño que su brillo en los instrumentos // al principio se tomó por ruido.",
 "Recibió nombre hace muy poco: Prochlorococcus. // El fotosintetizador más numeroso de la Tierra."
+],
+"crt-pixels-trivia2-short": [
+"Un televisor CRT nunca muestra una imagen completa. // El haz solo toca un único punto.",
+"Ese punto brillante pinta la pantalla, línea por línea.",
+"Más de 15.000 líneas por segundo.",
+"En una pantalla de 21 pulgadas, el punto cruza a más de 6,7 km/s, // casi la velocidad de la Estación Espacial.",
+"Bandas de luz, línea por línea. Los espacios entre ellas // hacían que el pixel art se viera suave."
 ]
 }

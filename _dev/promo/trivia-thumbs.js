@@ -16,5 +16,6 @@ window.TRIVIA_THUMBS = {
   'big-bang-trivia1':      { t: 1.5, crop: [40, 200, 1000, 900], title: 'むかしの月は\n[約20倍]', line: 'できたての月が見えた空' },
   'animal-senses-trivia2': { t: 1.0, crop: [100, 620, 880, 560], title: 'コウモリの声\n[130 dB 以上]', line: 'すぐそばで大声。でも聞こえない' },
   'drop-evolution-trivia1': { t: 1.0, crop: [200, 380, 680, 720], title: 'いちばん多い\n光合成の生物\n[いつ見つかった？]', line: '数は3000じょ個。でも小さすぎた' },
+  'crt-pixels-trivia2':    { t: 6.5, crop: [50, 170, 860, 660], title: 'ブラウン管が\n光らせたのは\n[1つの点]だけ', line: '横切る速さは秒速6.7km以上' },
   'extreme-trivia3':       { t: 18.0, crop: [150, 160, 830, 905], title: '37℃のお湯が\n[沸とう]\nするのは？', line: '富士山の頂上なら87℃' },
 };

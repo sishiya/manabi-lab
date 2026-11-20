@@ -1,0 +1,17 @@
+{
+  "videoId": "Sf4stARs1mE",
+  "file": "_dev/promo/out/crt-pixels-trivia2-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/crt-pixels-trivia2.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-23T21:00:00+09:00",
+  "captions": { "en": "_dev/promo/out/crt-pixels-trivia2-short.en.srt", "es": "_dev/promo/subs/crt-pixels-trivia2-short.es.srt", "ko": "_dev/promo/subs/crt-pixels-trivia2-short.ko.srt", "pt": "_dev/promo/subs/crt-pixels-trivia2-short.pt.srt", "zh-TW": "_dev/promo/subs/crt-pixels-trivia2-short.zh-TW.srt" },
+  "title": "【うんちく】ブラウン管が光らせていたのは、いつも「1つの点」だけ #Shorts",
+  "description": "ブラウン管のテレビは、絵をまるごと映していたわけではありません。電子のビームが当たって光っているのは、いつも画面の1つの点だけ。その光る点が1行ずつ画面をぬっていき、カラーの NTSC（日本・アメリカなど）では1秒に15,734行（4.5MHz ÷ 286）。21型の画面なら、点が横切る速さは秒速6.7km以上で、国際宇宙ステーション（秒速 約7.7km）に近い速さです。1行ずつの光の帯とそのすきまが、ドット絵をやわらかく見せていました。\n\n動いているのは「光る場所」で、電子そのものは奥から画面へ飛んでいます。速さは1行の時間をまるごと使った計算で、本当はもっと速くなります。21型 4:3 の横幅は対角 53.3cm からの目安です。光の消え方の絵は、かんたんにした推定です。ハートのドット絵は自作で、実在のゲームの絵は使っていません。\n\nアプリ「ブラウン管のドット絵」（同じ絵を液晶とブラウン管で見くらべる）に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/crt-pixels/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: R. Hoffner「Will the End of NTSC Be the End of 59.94?」TV Technology (2008)（1秒の行の数）・NASA（国際宇宙ステーションの速さの目安）\n\n声: VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
+  "tags": ["ブラウン管のドット絵", "ブラウン管", "CRT", "走査線", "ドット絵", "NTSC", "うんちく", "雑学", "Shorts", "まなびラボ", "しし屋", "scanline", "pixel art", "did you know"],
+  "localizations": {
+    "en": {
+      "title": "Did you know? A CRT only ever lit up a single dot #Shorts",
+      "description": "A CRT TV never showed a whole picture at once. The electron beam only ever lit up one dot on the screen. That glowing dot painted the screen line by line: 15,734 lines every second in color NTSC (Japan, the US and others; 4.5 MHz ÷ 286). On a 21-inch screen the dot crosses at over 6.7 km/s, close to the speed of the International Space Station (about 7.7 km/s). The bands of light and the gaps between them made pixel art look soft. Turn on English subtitles (CC).\n\nWhat moves is the glowing spot; the electrons themselves fly from the back of the tube to the screen. The speed uses the whole line time, so the real figure is even higher. The width of a 21-inch 4:3 screen is estimated from its 53.3 cm diagonal. The fading glow is a simplified, estimated drawing. The heart is our own pixel art, not from any real game.\n\nRelated to the app \"Pixel Art on a CRT\" (the same picture on an LCD and a CRT, side by side).\n\nApp (switch to English with the EN button): https://sishiya.github.io/manabi-lab/crt-pixels/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/?lang=en\n\nSources: R. Hoffner, \"Will the End of NTSC Be the End of 59.94?\" TV Technology (2008) (lines per second); NASA (ISS speed).\n\nVoice: VOICEVOX:Meimei Himari\nMusic: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#DidYouKnow #Science"
+    }
+  }
+}
