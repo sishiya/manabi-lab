@@ -1,0 +1,16 @@
+{
+  "file": "_dev/promo/out/illusions-trivia2-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/illusions-trivia2.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-24T21:00:00+09:00",
+  "captions": { "en": "_dev/promo/out/illusions-trivia2-short.en.srt", "es": "_dev/promo/subs/illusions-trivia2-short.es.srt", "ko": "_dev/promo/subs/illusions-trivia2-short.ko.srt", "pt": "_dev/promo/subs/illusions-trivia2-short.pt.srt", "zh-TW": "_dev/promo/subs/illusions-trivia2-short.zh-TW.srt" },
+  "title": "【うんちく】有名な錯覚「矢羽の線」、効かない人たちがいた #Shorts",
+  "description": "矢羽の向きだけがちがう2本の線は、同じ長さでも長さがちがって見えます（ミュラー・リヤーの錯覚）。1960年代、世界の16の社会で、2本が同じに見えるまで長さを合わせてもらう調べがありました。アメリカの大学生は、片方を約2割長くしないと同じに見えませんでした。カラハリ砂漠で狩りと採集をして暮らすサンの人たちは、ほぼ0で、だまされていませんでした。\n\n研究者の説は「まっすぐな壁と直角の角に囲まれて育つと、目がそれに合わせてしまう」というものです。これは説で、文化や環境のせいとは言い切れないという反論もあります。目のよしあしではなく、育った環境で見え方のくせがちがう、という話です。調べたのは約60年前で、いまの人たちが同じとは限りません。棒の長さは論文の図から読んだ目安です。\n\nアプリ「錯覚の美術館」に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/illusions/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: Henrich, Heine & Norenzayan (2010) The weirdest people in the world? Behavioral and Brain Sciences 33: 61–83（もとの調べは Segall, Campbell & Herskovits 1966）\n\n声: VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
+  "tags": ["錯覚の美術館", "錯視", "ミュラー・リヤー錯視", "錯覚", "うんちく", "雑学", "Shorts", "まなびラボ", "しし屋", "Muller-Lyer illusion", "optical illusion", "did you know"],
+  "localizations": {
+    "en": {
+      "title": "Did you know? The famous arrow illusion barely works on some people #Shorts",
+      "description": "Two lines of the same length look different when only the direction of their arrow fins changes (the Müller-Lyer illusion). In the 1960s, researchers in 16 societies around the world asked people to adjust one line until both looked equal. US college students needed one line about 20% longer before they looked the same. The San foragers of the Kalahari Desert showed almost no effect: they were not fooled. Turn on English subtitles (CC).\n\nOne theory is that growing up surrounded by straight walls and right angles tunes how our eyes judge lines. It is only a theory, and some researchers argue culture or environment may not explain it. This is not about better or worse eyesight, but about habits of seeing shaped by surroundings. The measurements are about 60 years old and may not hold for people today. The bar lengths are approximate values read from the paper's figure.\n\nRelated to the app \"Museum of Illusions\".\n\nApp (in Japanese for now): https://sishiya.github.io/manabi-lab/illusions/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/?lang=en\n\nSource: Henrich, Heine & Norenzayan (2010) The weirdest people in the world? Behavioral and Brain Sciences 33: 61–83 (original study: Segall, Campbell & Herskovits 1966).\n\nVoice: VOICEVOX:Meimei Himari\nMusic: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#DidYouKnow #Science"
+    }
+  }
+}

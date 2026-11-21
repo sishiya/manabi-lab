@@ -144,7 +144,7 @@ function draw(g, t) {
       { label: 'カラハリ砂漠のサンの人たち', v: 0.0, text: '' },
     ], { y: 680 });
     if (t >= 20.4) { g.save(); g.globalAlpha = fade(t, 20.4, 23.0, 0.3); PL.label(g, '[ほぼ 0%]', 640, 752, 64, { align: 'left' }); g.restore(); }
-    TK.note(g, t, 16.2, 23.0, '値は Henrich ほか (2010) の図2（16の社会）から。ほかの14の社会はこの間', { size: 30, y: 1030 });
+    TK.note(g, t, 16.2, 23.0, '値は Henrich ほか (2010) の図2（16の社会）から\nほかの14の社会はこの間', { size: 30, y: 1030 });
   }
   // 23〜30: 直角の部屋 ／ 丸い家
   if (t >= 23.0 && t < 30.0) {
@@ -164,9 +164,9 @@ function draw(g, t) {
     PL.label(g, 'あなたは [何%] だまされた？', PW / 2, 230, 74);
     g.restore();
   }
-  if (t >= 8.0 && t < 16.0) TK.note(g, t, 8.0, 16.0, '測ったのは60年前（Segall ほか 1966）。いまの人が同じとは限らない', { size: 30 });
-  if (t >= 23.0 && t < 30.0) TK.note(g, t, 23.0, 30.0, '原因は説。「文化のせいとは言い切れない」という反論もある（2025）', { size: 30 });
-  if (t >= 32.0) TK.note(g, t, 32.0, 35.0, '出どころ: Henrich, Heine & Norenzayan (2010) Behavioral and Brain Sciences 33\nSegall, Campbell & Herskovits (1966)', { size: 28, y: 1150 });
+  if (t >= 8.0 && t < 16.0) TK.note(g, t, 8.0, 16.0, '測ったのは60年前（Segall ほか 1966）\nいまの人が同じとは限らない', { size: 30, y: 1130 });
+  if (t >= 23.0 && t < 30.0) TK.note(g, t, 23.0, 30.0, '原因は説。「文化のせいとは言い切れない」\nという反論もある（2025）', { size: 30, y: 1130 });
+  if (t >= 32.0) TK.note(g, t, 32.0, 35.0, '出どころ: Henrich, Heine & Norenzayan (2010)\nBehavioral and Brain Sciences 33\nSegall, Campbell & Herskovits (1966)', { size: 28, y: 1150 });
 }
 
 triviaStart({ out: 'illusions-trivia2', voice: 'auto', dur: DUR, draw, subs, cues, peek: 1.5 });
