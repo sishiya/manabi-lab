@@ -26,7 +26,7 @@ const UI = {
     if (flowing && !s.blocked) {
       const len = Model.tubeLength(s), spLen = S.ui.sp ? S.ui.sp.len : null, cm = v => (v / 10).toFixed(1);
       nums = `管の長さ ${cm(len)} cm ／ いちばん短い道 ${spLen != null ? cm(spLen) : '—'} cm`;
-      if (settled && spLen != null && Math.abs(len - spLen) < 0.02 * spLen) good = 'いちばん短い道だけが残りました';
+      if (settled && spLen != null) good = Math.abs(len - spLen) < 0.03 * spLen ? 'いちばん短い道だけが残りました' : `いちばん短い道より ${Math.round(100 * (len / spLen - 1))}% 長い道も残っています`;
     } else if (one && (s.reached[s.foods[0]] || Model.lumpTotal(s) > 0)) {
       const V = Model.volume(s), b = Model.lumpTotal(s);
       nums = `体のうち、かたまりになっている分 ${Math.round(100 * b / Math.max(1e-9, V + b))}%`;
@@ -44,7 +44,7 @@ const UI = {
     $('bSpeed').setAttribute('aria-pressed', S.speedI > 0);
     for (const [id, md] of [['mFood', 'food'], ['mWall', 'wall']]) { $(id).classList.toggle('on', S.mode === md); $(id).setAttribute('aria-pressed', S.mode === md); }
     $('hint').textContent = S.mode === 'food'
-      ? '空いたマスを押す → エサを置く（2つまで）。ドラッグで動かす'
+      ? 'エサをドラッグ → 動かす（エサを押してから、行き先を押してもよい）'
       : 'マスのさかいめを押す → 壁ができる・消える';
   },
 
@@ -69,13 +69,18 @@ const UI = {
     return cand.length ? cand[0][1] : -1;
   },
 
-  toggleWall(e) {
-    const s = S.s, gr = s.g;
-    if (e < 0) return;
-    // ふさぐ: その通路の管はなくなる。ひらく: 新しい通路（粘液の跡なし）。粘菌がとなりにいれば、伸びて入っていける
-    if (gr.open[e]) { if (s.D[e] > 0) Model.toBlob(s, Model.L(s, e) * Math.sqrt(s.D[e])); gr.open[e] = 0; s.D[e] = 0; s.fa[e] = 0; s.fb[e] = 0; }   // ふさいだ所の体はエサの上へ
-    else { gr.open[e] = 1; s.D[e] = 0; s.fa[e] = 0; s.fb[e] = 0; s.trailT[e] = -1e9; }
-    Draw._paths = null;
+  toggleWall(me) {
+    const s = S.s, gr = s.g, m = gr.maze;
+    if (me < 0 || !m) return;
+    // 迷路の通路（マスのさかいめ）を開け閉めし、細かい網の線をそれに合わせる。ふさいだ所の管の体はかたまりへ。新しく通れる線は跡なし
+    const was = Uint8Array.from(gr.open);
+    m.open[me] = m.open[me] ? 0 : 1;
+    if (gr.cross) Graph.syncMaze(gr);
+    for (let e = 0; e < gr.nE; e++) {
+      if (was[e] && !gr.open[e]) { if (s.D[e] > 0) Model.toBlob(s, Model.L(s, e) * Math.sqrt(s.D[e])); s.D[e] = 0; s.fa[e] = 0; s.fb[e] = 0; }
+      else if (!was[e] && gr.open[e]) { s.D[e] = 0; s.fa[e] = 0; s.fb[e] = 0; s.trailT[e] = -1e9; }
+    }
+    Draw._paths = null; s.dvol = null;
     changed();
   },
   moveFood(i, c) { const s = S.s; if (s.foods.includes(c)) return; s.foods[i] = c; Model.resetField(s, i); changed(); },

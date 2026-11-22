@@ -29,7 +29,7 @@
         <button id="bSpeed" class="tog" aria-pressed="false"></button>
       </div>
       <div class="row seg" role="group" aria-label="迷路をさわると">
-        <button id="mFood" class="tog">エサを置く</button>
+        <button id="mFood" class="tog">エサを動かす</button>
         <button id="mWall" class="tog">壁をつくる・けす</button>
       </div>
       <p id="hint" class="hint"></p>
@@ -46,7 +46,7 @@
     <div class="grp text">
       <ul class="how">
         <li>黄色が粘菌。本物の速さ（1時間に約2cm）で伸びて、迷路を探ります。</li>
-        <li>赤がエサ。空いたマスを押すと置けます。</li>
+        <li>赤がエサ（2つ）。ドラッグで動かせます。</li>
         <li>よく流れる管は太り、流れない管はやせて消えます。</li>
       </ul>
       <details>
@@ -65,7 +65,7 @@
         <ul>
           <li><b>演出</b>: エサの物質は、本物の100倍の速さで広げています（本物はとてもおそい）。往復流は1.5秒ごと（本物は約2分）。通路ごとの伸びる速さのばらつき、先端の膜、管のうねりも見た目のためです。</li>
           <li><b>仮定</b>（本当の値が分かっていないもの）: 1マス 5mm／伸びる速さ 2cm/時（研究は「1時間に数センチ」）／いちばん速い先端は平均の3倍まで／気づく濃さはエサの所の1%、濃いほうへ1.5倍・うすいほうへ0.5倍／物質はエサから4cmほどで薄くなる／粘液の跡は消えず、跡のある所へは0.2倍の速さ／管の式の時間の単位は1時間／半径がもとの約3割になった管は消える。</li>
-          <li><b>簡単にしたところ</b>: 管の網は迷路のマスの中心を結ぶ線。体の量は全体で一定（実際は、エサを食べて増える）。実験では迷路のあちこちにかけらを置きましたが、ここではまん中の1つから。物質はブドウ糖を代表にしています。</li>
+          <li><b>簡単にしたところ</b>: 管の網は、1マスを 3×3 に分けた細かい網の線から選ばれます（本物はもっと細かい）。体の量は全体で一定（実際は、エサを食べて増える）。実験では迷路のあちこちにかけらを置きましたが、ここではまん中の1つから。物質はブドウ糖を代表にしています。</li>
           <li>これはモデルの計算で、粘菌を測った値ではありません。</li>
         </ul>
       </details>
@@ -88,8 +88,8 @@
 </div>
 
 <script src="js/maze.js?v=1"></script>
-<script src="js/graph.js?v=2"></script>
-<script src="js/model.js?v=17"></script>
-<script src="js/draw.js?v=16"></script>
-<script src="js/ui.js?v=12"></script>
-<script src="js/main.js?v=5"></script>
+<script src="js/graph.js?v=4"></script>
+<script src="js/model.js?v=20"></script>
+<script src="js/draw.js?v=18"></script>
+<script src="js/ui.js?v=14"></script>
+<script src="js/main.js?v=7"></script>

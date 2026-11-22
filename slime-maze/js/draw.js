@@ -65,24 +65,30 @@ const Draw = {
 
   frame(g2, w, h, s, ui) {
     const g = s.g, L = Draw.layout(g, w, h), C = Draw.C, cs = L.cs;
+    const T = L.sc * (g.tubeMM || g.unit * 0.42);         // いちばん太い管の太さ（画面）
+    const F = L.sc * (g.cellMM || g.unit);                 // 記号の大きさのもと（迷路のマス）
     g2.fillStyle = C.bg; g2.fillRect(0, 0, w, h);
     const b = g.bounds;
     g2.fillStyle = C.floor; g2.fillRect(L.X(b.x0), L.Y(b.y0), (b.x1 - b.x0) * L.sc, (b.y1 - b.y0) * L.sc);
 
     // エサから広がる物質（※ 目印。色の濃さは対数。粘菌が気づく濃さより上は少し濃く）
     if (ui.showChem) {
-      for (let i = 0; i < g.N; i++) {
-        const c = s.c[i]; if (c < 1e-3) continue;
-        const a = 0.05 + 0.4 * Math.min(1, Math.log10(c / 1e-3) / 3);   // 0.1% で薄く、気づく 1% で中くらい、エサの近くほど濃い
-        const [x, y] = Draw.P(L, g, i);
-        g2.fillStyle = `rgba(${C.chem},${a})`;
-        if (g.maze) g2.fillRect(x - cs / 2, y - cs / 2, cs, cs); else { g2.beginPath(); g2.arc(x, y, cs * 0.5, 0, 6.283); g2.fill(); }
-      }
+      const shade = (x, y, wpx, hpx, c) => {
+        if (c < 1e-3) return;
+        g2.fillStyle = `rgba(${C.chem},${0.05 + 0.4 * Math.min(1, Math.log10(c / 1e-3) / 3)})`;   // 0.1% で薄く、気づく 1% で中くらい、エサの近くほど濃い
+        g2.fillRect(x, y, wpx, hpx);
+      };
+      if (g.maze && g.k) {   // 細かい網の迷路: マスごとにならして塗る（点ごとだと、まだら模様になる）
+        const m = g.maze, k = g.k, Wf = m.W * k, sum = new Float64Array(m.W * m.H);
+        for (let i = 0; i < g.N; i++) sum[Math.floor(Math.floor(i / Wf) / k) * m.W + Math.floor((i % Wf) / k)] += s.c[i];
+        const cw = g.cellMM * L.sc;
+        for (let c = 0; c < m.W * m.H; c++) shade(L.X((c % m.W) * g.cellMM), L.Y(Math.floor(c / m.W) * g.cellMM), cw + 0.5, cw + 0.5, sum[c] / (k * k));
+      } else for (let i = 0; i < g.N; i++) { const [x, y] = Draw.P(L, g, i); shade(x - cs / 2, y - cs / 2, cs, cs, s.c[i]); }
     }
 
     // 粘液の跡（一度粘菌がいた線。粘菌は跡をさける: Reid ほか 2012）。うすい白っぽいすじ
     if (ui.showTrail !== false) {
-      g2.strokeStyle = 'rgba(225,215,170,0.13)'; g2.lineCap = 'round'; g2.lineWidth = Math.max(2, cs * 0.46);
+      g2.strokeStyle = 'rgba(225,215,170,0.13)'; g2.lineCap = 'round'; g2.lineWidth = Math.max(2, T * 1.1);
       g2.beginPath();
       for (let e = 0; e < g.nE; e++) {
         if (!g.open[e] || !Model.trail(s, e) || s.D[e] > 0) continue;
@@ -99,7 +105,7 @@ const Draw = {
       const tube = s.D[e] > 0, part = !tube && (s.fa[e] > 0 || s.fb[e] > 0);
       if (!tube && !part) continue;
       const D = tube ? s.D[e] : 0.55, al = Draw.alpha(D); if (al <= 0) continue;
-      const pa = Draw.path(L, g, e), wd = cs * 0.42 * Draw.width(D) * (0.92 + 0.16 * ((Draw.hash(e * 7) % 100) / 100));
+      const pa = Draw.path(L, g, e), wd = T * Draw.width(D) * (0.92 + 0.16 * ((Draw.hash(e * 7) % 100) / 100));
       const th = 0.45 + 0.55 * Draw.width(D);   // 細い管ほど薄くて淡い（本物も、厚いほど濃い黄色で、薄い所は半透明）
       if (tube) segs.push({ pa, u0: 0, u1: 1, wd, al, th });
       else { if (s.fa[e] > 0) segs.push({ pa, u0: 0, u1: s.fa[e], wd, al, th }); if (s.fb[e] > 0) segs.push({ pa, u0: 1 - s.fb[e], u1: 1, wd, al, th }); }
@@ -107,7 +113,7 @@ const Draw = {
     const nodeW = new Float64Array(g.N);   // 点のまわりのいちばん太い管
     for (let e = 0; e < g.nE; e++) {
       if (!(s.D[e] > 0) || !g.open[e]) continue;
-      const wd = cs * 0.42 * Draw.width(s.D[e]) * Draw.alpha(s.D[e]);
+      const wd = T * Draw.width(s.D[e]) * Draw.alpha(s.D[e]);
       nodeW[g.ea[e]] = Math.max(nodeW[g.ea[e]], wd); nodeW[g.eb[e]] = Math.max(nodeW[g.eb[e]], wd);
     }
     const layers = [[C.halo, 2.1, 0], [C.outer, 1, 0], [C.inner, 0.62, 1], [C.core, 0.26, 1]];
@@ -123,7 +129,7 @@ const Draw = {
       g2.fillStyle = C.grain;
       for (let e = 0; e < g.nE; e++) {
         const D = s.D[e]; if (!g.open[e] || D < 0.05 || s.Qs[e] < 1e-3) continue;
-        const pa = Draw.path(L, g, e), r = Math.max(0.8, cs * 0.035 * Draw.width(D));
+        const pa = Draw.path(L, g, e), r = Math.max(0.8, T * 0.09 * Draw.width(D));
         for (let k = 0; k < 3; k++) {
           const u = ((ui.ph[e] + k / 3 + (Draw.hash(e) % 50) / 150) % 1 + 1) % 1, [x, y] = Draw.at(pa, u);
           g2.globalAlpha = 0.55 * Draw.alpha(D) * Math.sin(Math.PI * u);
@@ -140,7 +146,7 @@ const Draw = {
       for (const [f, dir] of [[s.fa[e], 1], [s.fb[e], -1]]) {
         if (!(f > 0)) continue;
         const [x, y, tx, ty] = Draw.at(pa, dir > 0 ? f : 1 - f);
-        Draw.fan(g2, x, y, tx * dir, ty * dir, cs * 0.42, Draw.hash(e * 3 + (dir > 0 ? 1 : 2)));
+        Draw.fan(g2, x, y, tx * dir, ty * dir, T * 1.0, Draw.hash(e * 3 + (dir > 0 ? 1 : 2)));
       }
     }
 
@@ -149,7 +155,7 @@ const Draw = {
       if (!s.reached[i]) continue;
       const k = i === s.start ? Math.max(0, 1 - s.t / 1.5) : Math.max(0, 1 - (s.t - s.arrive[i]) / 1.0);
       if (k <= 0) continue;
-      const [x, y] = Draw.P(L, g, i), r = cs * (0.26 + 0.14 * k);
+      const [x, y] = Draw.P(L, g, i), r = T * (0.6 + 0.35 * k);
       const gr = g2.createRadialGradient(x, y, 0, x, y, r);
       gr.addColorStop(0, `rgba(242,201,58,${0.7 * k})`); gr.addColorStop(0.7, `rgba(242,201,58,${0.3 * k})`); gr.addColorStop(1, 'rgba(242,201,58,0)');
       g2.fillStyle = gr; g2.beginPath(); g2.arc(x, y, r, 0, 6.283); g2.fill();
@@ -160,7 +166,7 @@ const Draw = {
 
     // いちばん短い道（※ 目印。本物には無い線）
     if (ui.showShortest && ui.sp) {
-      g2.strokeStyle = C.mark; g2.lineWidth = Math.max(1.5, cs * 0.05); g2.setLineDash([cs * 0.18, cs * 0.14]);
+      g2.strokeStyle = C.mark; g2.lineWidth = Math.max(1.5, F * 0.05); g2.setLineDash([F * 0.18, F * 0.14]);
       g2.beginPath();
       let c = s.foods[0]; let [x, y] = Draw.P(L, g, c); g2.moveTo(x, y);
       for (const e of ui.sp.edges) { c = Graph.other(g, e, c); [x, y] = Draw.P(L, g, c); g2.lineTo(x, y); }
@@ -171,15 +177,15 @@ const Draw = {
     for (let i = 0; i < g.N; i++) {
       const bl = s.lump[i]; if (!(bl >= 0.05) || !s.reached[i]) continue;
       const [x, y] = Draw.P(L, g, i), onFood = s.foods.includes(i);
-      g2.globalAlpha = onFood ? 0.82 : 1; Draw.blob(g2, x, y, cs * Math.min(0.62, 0.26 + 0.06 * Math.sqrt(bl)), Draw.hash(i + 11)); g2.globalAlpha = 1;
+      g2.globalAlpha = onFood ? 0.82 : 1; Draw.blob(g2, x, y, F * Math.min(0.75, 0.22 + 0.55 * Math.sqrt(bl / (s.M0 || 1))), Draw.hash(i + 11)); g2.globalAlpha = 1;
     }
     // エサ（記号。かたまりの上に描いて、いつも見えるように）と、選んでいる印
     s.foods.forEach((f, i) => {
-      const [x, y] = ui.drag && ui.drag.i === i ? Draw.P(L, g, ui.drag.c) : Draw.P(L, g, f), r = cs * 0.27;
-      g2.fillStyle = C.food; g2.strokeStyle = C.foodRing; g2.lineWidth = Math.max(1.5, cs * 0.04);
+      const [x, y] = ui.drag && ui.drag.i === i ? Draw.P(L, g, ui.drag.c) : Draw.P(L, g, f), r = F * 0.27;
+      g2.fillStyle = C.food; g2.strokeStyle = C.foodRing; g2.lineWidth = Math.max(1.5, F * 0.04);
       g2.beginPath(); g2.arc(x, y, r, 0, 6.283); g2.fill(); g2.stroke();
       if (ui.sel === i) { g2.strokeStyle = C.sel; g2.lineWidth = 3; g2.beginPath(); g2.arc(x, y, r * 1.35, 0, 6.283); g2.stroke(); }
-      g2.fillStyle = C.foodInk; g2.font = `700 ${Math.max(9, Math.round(cs * 0.24))}px 'Zen Kaku Gothic New', sans-serif`;
+      g2.fillStyle = C.foodInk; g2.font = `700 ${Math.max(9, Math.round(F * 0.24))}px 'Zen Kaku Gothic New', sans-serif`;
       g2.textAlign = 'center'; g2.textBaseline = 'middle'; g2.fillText('エサ', x, y + 1);
     });
     return L;

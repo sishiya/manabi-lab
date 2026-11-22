@@ -60,7 +60,7 @@ const Model = {
     s.start = start; s.src = start; s.reached[start] = 1; s.growing = true; s.share.fill(1);
     // かけらの体の量: 迷路の全部の通路を、ふつうの太さの管でうめられるくらい（体の量は、伸びても減っても全体で保つ）
     let M0 = 0; for (let e = 0; e < g.nE; e++) if (g.open[e]) M0 += Model.L(s, e) * Math.sqrt(0.75);
-    s.lump[start] = M0;
+    s.lump[start] = M0; s.M0 = M0;
   },
 
   // 物質の拡散（開いた線だけを通る。迷路の壁は通さない）。エサの所はいつも 1
@@ -273,6 +273,7 @@ const Model = {
     const foodsIn = s.foods.filter(f => s.reached[f]);
     if (Model.flowing(s)) {
       s.mode = 'pair';
+      s.share.fill(1);   // エサとエサのあいだを流れているときも、まだ探していない通路へはふつうの速さで伸びる（跡のある所へは出ない）
       const ok = Model.solve(s, s.foods[s.swap ? 1 : 0], [s.foods[s.swap ? 0 : 1]], Model.I0);
       s.blocked = !ok;
       if (!ok) { s.mode = 'none'; s.Q.fill(0); }   // つながっていなければ流れはない（管はやせていく）
@@ -321,6 +322,6 @@ const Model = {
   shortest(s) { return s.foods.length === 2 ? Graph.shortest(s.g, s.foods[0], s.foods[1]) : null; },
 
   // 落ち着いたか（表示のためだけ。時間は止めない）
-  settled(s) { return Model.flowing(s) && !s.growing && !s.blocked && s.tFlow > 1 && s.maxRate < 1e-3; },
+  settled(s) { return Model.flowing(s) && !s.growing && !s.blocked && s.tFlow > 1 && s.maxRate < 3e-3; },   // 細かい網では、長さの近い道どうしの決着がとてもおそい（Tero 2007: μ=1 では道の選ばれ方がおそい）ので、少しゆるめに
 };
 window.Model = Model;

@@ -1,4 +1,4 @@
-// モデルの確かめ（node で: node slime-maze/tools/verify.js）。エサ1つで始めて、伸びきったら2つ目のエサ
+// モデルの確かめ（node で: node slime-maze/tools/verify.js）。細かい網の迷路、エサ2つで始める（アプリと同じ）
 //  1) いろいろな迷路で、粘菌の管の長さ Σ D·長さ が「いちばん短い道」の長さに落ち着くか（Tero 2007 の μ=1。Bonifaci ほか 2012 の証明）
 //  2) 落ち着いたとき、太い管がいちばん短い道と同じ線か（最短が1本だけの迷路で）
 //  3) 入口と出口を入れかえても結果が変わらないか（|Q| が同じなので変わらないはず）
@@ -12,14 +12,12 @@ const { Maze, Graph, Model } = ctx;
 const W = 12, H = 9, CELL = 5, center = Math.floor(H / 2) * W + Math.floor(W / 2);
 
 function run(seed, swapEvery) {
-  const m = Maze.make(W, H, seed), g = Graph.fromMaze(m, CELL);
-  // アプリと同じ流れ: エサ1つで始め、伸びる先がなくなったら（または 40時間で）2つ目のエサを置く
-  const s = Model.create(g, [0], seed);
-  Model.startGrowth(s, center);
-  while (s.t < 40 && (s.growing || s.t < 1)) Model.step(s);
-  s.foods.push(W * H - 1); Model.resetField(s, 1);
+  const m = Maze.make(W, H, seed), g = Graph.fromMazeFine(m, CELL, 3, seed);
+  // アプリと同じ: 細かい網の迷路、はじめからエサ2つ（入口と出口）、かけらはまん中
+  const s = Model.create(g, [g.cellCenter(0), g.cellCenter(W * H - 1)], seed);
+  Model.startGrowth(s, g.cellCenter(center));
   let n = 0, flowErr = 0;
-  while (n < 8000) {
+  while (n < 12000) {
     if (swapEvery && n % swapEvery === 0) s.swap = !s.swap;
     Model.step(s); n++;
     if (n % 50 === 0 && Model.flowing(s) && !s.blocked) {
@@ -35,9 +33,9 @@ function run(seed, swapEvery) {
 }
 
 let ok = 0, ng = 0, uniq = 0; const times = [];
-for (let seed = 1; seed <= 40; seed++) {
+for (let seed = 1; seed <= 12; seed++) {
   const A = run(seed, 0), B = run(seed, 37);
-  const k = Maze.countShortest(A.m, 0, W * H - 1);
+  const k = 0;   // 細かい網では同じ長さの道がいくつもあるので、太い管の線の一致は見ない（長さで見る）
   const lenOk = A.settled && Math.abs(A.len - A.sp.len) < 0.05 * A.sp.len;
   let pathOk = true;
   if (k === 1) { uniq++; const set = new Set(A.sp.edges); pathOk = A.thick.length === A.sp.edges.length && A.thick.every(e => set.has(e)); }

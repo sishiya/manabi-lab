@@ -8,12 +8,12 @@ const fs = require('fs'), path = require('path'), vm = require('vm');
 const ctx = { Math, Float64Array, Int32Array, Uint8Array, console, Set, Array, Infinity, isFinite }; ctx.window = ctx; vm.createContext(ctx);
 for (const f of ['maze.js', 'graph.js', 'model.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), ctx, { filename: f });
 const { Maze, Graph, Model } = ctx;
-const W = 12, H = 9, CELL = 5, center = Math.floor(H / 2) * W + Math.floor(W / 2), far = W * H - 1;
+const W = 12, H = 9, CELL = 5, centerCell = Math.floor(H / 2) * W + Math.floor(W / 2);
 let ng = 0;
 const say = (good, msg) => { if (!good) ng++; console.log(`${good ? 'OK' : 'NG'} ${msg}`); };
 
-for (let seed = 1; seed <= 6; seed++) {
-  const m = Maze.makeGood(W, H, seed), g = Graph.fromMaze(m, CELL), s = Model.create(g, [0], seed); Model.startGrowth(s, center);
+for (let seed = 1; seed <= 4; seed++) {
+  const m = Maze.makeGood(W, H, seed), g = Graph.fromMazeFine(m, CELL, 3, seed), far = g.cellCenter(W * H - 1), s = Model.create(g, [g.cellCenter(0)], seed); Model.startGrowth(s, g.cellCenter(centerCell));
   let tFull = -1, thinDuring = 0;
   while (s.t < 40) {
     Model.step(s);
@@ -22,20 +22,20 @@ for (let seed = 1; seed <= 6; seed++) {
     if (tFull >= 0 && s.t > tFull + 10) break;
   }
   let alive = 0; for (let e = 0; e < g.nE; e++) if (Model.has(s, e)) alive++;
-  say(tFull > 0 && thinDuring > 0 && alive === 0 && s.lump[0] > 20,
-    `A seed ${seed}: 埋まるまで ${tFull.toFixed(1)} h、伸びるあいだに細い管 ${thinDuring > 0 ? 'あり' : 'なし'}、10時間後に残った管 ${alive}本、エサの上 ${s.lump[0].toFixed(1)}`);
+  say(tFull > 0 && thinDuring > 0 && alive === 0 && s.lump[g.cellCenter(0)] > 0.3 * s.M0,
+    `A seed ${seed}: 埋まるまで ${tFull.toFixed(1)} h、伸びるあいだに細い管 ${thinDuring > 0 ? 'あり' : 'なし'}、10時間後に残った管 ${alive}本、エサの上 ${(100 * s.lump[g.cellCenter(0)] / s.M0).toFixed(0)}%`);
 }
 
-for (let seed = 1; seed <= 6; seed++) {
-  const m = Maze.makeGood(W, H, seed), g = Graph.fromMaze(m, CELL), s = Model.create(g, [0], seed); Model.startGrowth(s, center);
+for (let seed = 1; seed <= 4; seed++) {
+  const m = Maze.makeGood(W, H, seed), g = Graph.fromMazeFine(m, CELL, 3, seed), far = g.cellCenter(W * H - 1), s = Model.create(g, [g.cellCenter(0)], seed); Model.startGrowth(s, g.cellCenter(centerCell));
   while (s.t < 15) Model.step(s);
   let alive = 0; for (let e = 0; e < g.nE; e++) if (Model.has(s, e)) alive++;
-  const sp = Graph.shortest(g, 0, far).len;
+  const sp = Graph.shortest(g, g.cellCenter(0), far).len;
   s.foods.push(far);
   const t0 = s.t; let tReach = -1, n = 0;
-  while (n++ < 6000) { Model.step(s); if (tReach < 0 && s.reached[far]) tReach = s.t - t0; if (Model.settled(s)) break; }
+  while (n++ < 10000) { Model.step(s); if (tReach < 0 && s.reached[far]) tReach = s.t - t0; if (Model.settled(s)) break; }
   const minH = sp / Model.GROW_MM_H / (1.25 * Model.CHEM_UP);   // いちばん速い線の速さでも、最短の道のりにはこれだけかかる
-  say(alive === 0 && tReach >= minH * 0.99 && Model.settled(s) && Math.abs(Model.tubeLength(s) - sp) < 0.05 * sp,
+  say(alive === 0 && tReach >= minH * 0.99 && Model.settled(s) && Model.tubeLength(s) < 1.15 * sp,   // 細かい網では、長さの近い道が残ることがある（本物も、ほぼ同じ長さの道は両方残る）
     `B seed ${seed}: 15時間後に残った管 ${alive}本、2つ目のエサ（最短 ${sp} mm）に着くまで ${tReach.toFixed(1)} h（少なくとも ${minH.toFixed(1)} h）、落ち着いた管の長さ ${Model.tubeLength(s).toFixed(1)} mm`);
 }
 

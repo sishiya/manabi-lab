@@ -16,19 +16,22 @@ const S = {
   acc: 0, swapT: 0, L: null,
 };
 
+// 地図（いまは迷路。将来は日本の道路も同じ形の Graph で）。はじめのエサの点 foods0 と、かけらの点 start を持つ
 function newMaze(seed) {
   S.seed = seed;
   const m = Maze.makeGood(W, H, seed);
-  const gr = Graph.fromMaze(m, CELL_MM);  // モデルと絵は点と線の地図だけを見る（将来は道路の地図も同じ形で）
-  S.s = Model.create(gr, [0], seed);      // はじめのエサは1つ（左上）
-  S.ui.ph = new Float64Array(m.nE);
+  // 1マスを 3×3 の細かい網に（管が角の内側を近道したり、Y 字に分かれたりできる）
+  const gr = Graph.fromMazeFine(m, CELL_MM, 3, seed);
+  S.world = { g: gr, foods0: [gr.cellCenter(0), gr.cellCenter(W * H - 1)], start: gr.cellCenter(Math.floor(H / 2) * W + Math.floor(W / 2)) };
+  S.s = Model.create(gr, S.world.foods0, seed);   // はじめのエサは2つ（迷路の入口と出口）
+  S.ui.ph = new Float64Array(gr.nE);
   restart();
 }
 function restart() {
-  S.s.foods.length = 1;                 // エサは1つにもどす
-  Model.resetField(S.s, 0);
-  Model.startGrowth(S.s, Math.floor(H / 2) * W + Math.floor(W / 2));   // かけらは迷路のまん中
-  S.ui.sp = null; S.ui.sel = -1;
+  S.s.foods = S.world.foods0.slice();
+  Model.resetField(S.s, 0); Model.resetField(S.s, 1);
+  Model.startGrowth(S.s, S.world.start);   // かけらは地図のまん中
+  S.ui.sp = Model.shortest(S.s); S.ui.sel = -1;
   S.run = true; S.acc = 0;
   kick();
 }
