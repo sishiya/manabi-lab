@@ -10,8 +10,8 @@ const Draw = {
   C: {
     bg: '#0f1620', floor: '#151f29', wall: '#3d4d5e', wallTop: '#5b6f83',
     halo: 'rgba(214,160,20,0.16)', outer: '#b9820f', inner: '#f2c93a', core: 'rgba(255,241,176,0.55)', grain: 'rgba(255,248,214,0.9)',
-    food: '#ff6f5c', foodRing: '#ffffff', foodInk: '#ffffff',   // エサは記号（粘菌の黄色・物質の青とまぎれない色）
-    mark: '#e8f0f4', sel: '#7fd3ff', chem: '95,180,230',
+    food: '#ff6f5c', foodRing: '#ffffff', foodInk: '#ffffff',   // エサは記号（粘菌の黄色・物質の色とまぎれない色）
+    mark: '#e8f0f4', sel: '#7fd3ff', chem: '255,111,92',
   },
 
   // 地図を画面に合わせて置く。P(i) で点の画面の位置、cs は「よくある線の長さ」の画面の長さ

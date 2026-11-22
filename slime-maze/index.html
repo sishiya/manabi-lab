@@ -34,7 +34,7 @@
         <button id="mWall" class="tog">道をふさぐ・ひらく</button>
       </div>
       <p id="hint" class="hint"></p>
-      <label class="chk"><input type="checkbox" id="cChem" checked> エサから広がる物質を青で見せる（※ 目印）</label>
+      <label class="chk"><input type="checkbox" id="cChem" checked> エサから広がる物質をエサと同じ色で見せる（※ 目印）</label>
       <label class="chk"><input type="checkbox" id="cShort"> いちばん短い道を点線で重ねる（※ 目印）</label>
       <div class="row">
         <button id="bRestart" class="act">最初から広げなおす</button>
@@ -46,7 +46,7 @@
       <ul class="how">
         <li>まん中の粘菌のかけらが、本物の速さ（1時間に約2cm）で伸びて迷路を探ります。</li>
         <li>伸びる先のなくなった枝はやせ、体はエサの上に集まっていきます。</li>
-        <li>空いたマスを押してエサをもう1つ置けます。粘菌はそれを知らず、エサから広がる物質（青）がとどくか、また探しに出たときに見つけます。</li>
+        <li>空いたマスを押してエサをもう1つ置けます。粘菌はそれを知らず、エサから広がる物質（エサと同じ赤）がとどくか、また探しに出たときに見つけます。</li>
         <li>2つのエサがつながると、エサとエサを結ぶ管だけが残っていきます。</li>
         <li>管の太さの決まりは1つだけ。よく流れる管は太り、流れない管はやせます。</li>
         <li>これはモデルの計算で、粘菌を測った値ではありません。</li>
@@ -114,6 +114,6 @@
 <script src="js/maze.js?v=1"></script>
 <script src="js/graph.js?v=2"></script>
 <script src="js/model.js?v=16"></script>
-<script src="js/draw.js?v=14"></script>
+<script src="js/draw.js?v=15"></script>
 <script src="js/ui.js?v=11"></script>
 <script src="js/main.js?v=5"></script>
