@@ -49,12 +49,22 @@ details p,details li{font-size:14px;line-height:1.8}
 details ul{margin:4px 0 8px;padding-left:1.2em}
 details b{color:var(--ink);font-weight:700}
 
+/* 日本の道路の拡大・縮小（絵の右上に重ねる。押しても絵の大きさは変わらない） */
+.zoom{position:absolute;top:8px;right:8px;display:flex;gap:4px}
+.zoom>button{min-height:36px;min-width:40px;padding:4px 8px;font-size:15px;background:rgba(21,33,48,.88);border:1px solid var(--line);border-radius:8px}
+button:disabled{opacity:.4;cursor:default}
+
 /* 広い画面と、スマホの横向き: 迷路を左、ボタンと説明を右に */
 @media (min-width:900px),(orientation:landscape) and (max-height:520px){
   #app{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);grid-template-areas:"top top" "stage panel"}
   #top{grid-area:top}
   #stage{grid-area:stage;align-self:start}
   #panel{grid-area:panel}
+}
+/* PC: 絵を画面の幅いっぱい・高さいっぱいに（地図は中に収まるよう置く）。ボタンと説明は右の列 */
+@media (min-width:900px) and (min-height:521px){
+  #app{max-width:none;grid-template-columns:minmax(0,1fr) minmax(320px,380px)}
+  #view{aspect-ratio:auto!important;height:calc(100vh - 9em - 84px);min-height:360px;max-height:none}
 }
 @media (orientation:landscape) and (max-height:520px){
   #top{display:none}

@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="css/style.css?v=4">
+<link rel="stylesheet" href="css/style.css?v=5">
 
 <div id="app">
   <header id="top">
@@ -13,7 +13,9 @@
   </header>
 
   <section id="stage">
-    <div id="view"><canvas id="cv" aria-label="迷路と粘菌の管"></canvas></div>
+    <div id="view"><canvas id="cv" aria-label="迷路と粘菌の管"></canvas>
+      <div id="zoom" class="zoom" hidden><button id="zIn" aria-label="拡大">＋</button><button id="zOut" aria-label="縮小">－</button><button id="zAll" aria-label="全体を見る">全体</button></div>
+    </div>
     <div id="status" aria-live="polite">
       <div id="phase"></div>
       <div id="clock"></div>
@@ -42,6 +44,7 @@
         <label class="chk"><input type="checkbox" id="cShort"> いちばん短い道（※ 目印）</label>
       </div>
       <div class="row">
+        <button id="bDel" class="act" disabled>エサをとる</button>
         <button id="bRestart" class="act">最初から</button>
         <button id="bNew" class="act">新しい迷路</button>
       </div>
@@ -50,7 +53,7 @@
     <div class="grp text">
       <ul class="how">
         <li>黄色が粘菌。本物の速さ（1時間に約2cm）で伸びて、迷路を探ります。</li>
-        <li>赤がエサ（2つ）。ドラッグで動かせます。</li>
+        <li>赤がエサ。あいた所を押すと足せます（10こまで）。ドラッグで動かせます。</li>
         <li>よく流れる管は太り、流れない管はやせて消えます。</li>
       </ul>
       <details>
@@ -61,6 +64,7 @@
           <li><b>伸びる先端</b>: 先端の膜は、後ろの管から押しこまれた流れでふくらみます（Le Verge-Serandour・Alim）。太い管でつながった先端ほど速く伸び、流れの来ない枝は止まって、やせて消えます。</li>
           <li><b>粘液の跡</b>: 通ったあとには粘液が残り、粘菌はその跡をさけて、まだ探していない所へ伸びます（Reid ほか 2012）。画面のうすい白いすじが跡です。</li>
           <li><b>エサの気配</b>: エサから出た物質がとどくと、粘菌は濃いほうへ伸びます（Ueda ほか 1975）。エサの上にいて気配もなければ、体はエサの上に集まって、とどまります（Tero ほか 2007）。</li>
+          <li><b>エサが3つ以上</b>: 関東の地図の形の寒天に、36の町の場所へエサを置き、東京から伸ばした実験では、鉄道の網に似た網ができました（Tero ほか 2010）。線路や道の情報はあたえず、海は寒天のふち、山と湖は光を当てて避けさせました。ここではその論文の決まり（毎回ランダムにエサを1つ入口・1つ出口にする）で計算し、エサを全部いちばん短くつなぐ網（最小全域木）と長さをくらべます。</li>
           <li><b>往復流</b>: 管の中の粒は、行ったり来たりする流れです（本物は約2分ごと）。</li>
         </ul>
       </details>
@@ -69,7 +73,7 @@
         <ul>
           <li><b>演出</b>: エサの物質は、本物の100倍の速さで広げています（本物はとてもおそい）。往復流は1.5秒ごと（本物は約2分）。通路ごとの伸びる速さのばらつき、先端の膜、管のうねりも見た目のためです。</li>
           <li><b>仮定</b>（本当の値が分かっていないもの）: 1マス 5mm／伸びる速さ 2cm/時（研究は「1時間に数センチ」）／いちばん速い先端は平均の3倍まで／気づく濃さはエサの所の1%、濃いほうへ1.5倍・うすいほうへ0.5倍／物質はエサから4cmほどで薄くなる／粘液の跡は消えず、跡のある所へは0.2倍の速さ／管の式の時間の単位は1時間／半径がもとの約3割になった管は消える。</li>
-          <li><b>簡単にしたところ</b>: 管の網は、迷路では1マスを 3×3 に分けた細かい網の線から、日本では主な道路の線から選ばれます（本物はもっと細かい）。日本の地図は 1mm を 5km として、寒天の上にのせた大きさで計算しています（東京〜大阪は約 10cm）。体の量は全体で一定（実際は、エサを食べて増える）。実験では迷路のあちこちにかけらを置きましたが、ここではまん中の1つから。物質はブドウ糖を代表にしています。</li>
+          <li><b>簡単にしたところ</b>: 管の網は、迷路では1マスを 3×3 に分けた細かい網の線から、日本では主な道路の線から選ばれます（本物はもっと細かい）。日本の地図は 1mm を 5km として、寒天の上にのせた大きさで計算しています（東京〜大阪は約 10cm）。日本の道路では、粘菌は道路の上しか通れません（Tero ほか 2010 の実験は、道のない寒天の上を自由に伸びました）。エサが3つ以上のときの式の値（I0=2、γ=1.8）は論文の値で、「網の形が落ち着いた」は太い管の長さが24時間かわらないこととしました。体の量は全体で一定（実際は、エサを食べて増える）。実験では迷路のあちこちにかけらを置きましたが、ここではまん中の1つから。物質はブドウ糖を代表にしています。</li>
           <li>これはモデルの計算で、粘菌を測った値ではありません。</li>
         </ul>
       </details>
@@ -77,6 +81,7 @@
         <summary>このアプリについて（出どころ）</summary>
         <ul>
           <li>Tero A., Kobayashi R., Nakagaki T. (2007) A mathematical model for adaptive transport network in path finding by true slime mold. <i>J. Theor. Biol.</i> 244: 553–564（<a href="https://eprints.lib.hokudai.ac.jp/repo/huscap/all/28041/JTB244-4.pdf" target="_blank" rel="noopener">北海道大学のリポジトリ</a>）— 管の式・往復流の周期・管が数時間で組みかわること・体がエサの上に集まること</li>
+          <li>Tero A. ほか (2010) Rules for biologically inspired adaptive network design. <i>Science</i> 327: 439–442（<a href="https://www.science.org/doi/10.1126/science.1177894" target="_blank" rel="noopener">Science</a>）— エサが3つ以上のときの決まり・関東の鉄道の網の実験</li>
           <li>Nakagaki T., Yamada H., Tóth Á. (2000) Maze-solving by an amoeboid organism. <i>Nature</i> 407: 470（<a href="https://www.nature.com/articles/35035159" target="_blank" rel="noopener">Nature</a>）— 迷路の実験</li>
           <li>Patino-Ramirez F. ほか (2019) Substrate composition directs slime molds behavior. <i>Sci. Rep.</i> 9: 15444（<a href="https://www.nature.com/articles/s41598-019-50872-z" target="_blank" rel="noopener">Scientific Reports</a>）— 伸びる速さ</li>
           <li>Reid C. R. ほか (2012) Slime mold uses an externalized spatial "memory" to navigate in complex environments. <i>PNAS</i> 109: 17490（<a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3491460" target="_blank" rel="noopener">PMC</a>）— 粘液の跡をさけること</li>
@@ -93,8 +98,8 @@
 </div>
 
 <script src="js/maze.js?v=1"></script>
-<script src="js/graph.js?v=5"></script>
-<script src="js/model.js?v=20"></script>
-<script src="js/draw.js?v=19"></script>
-<script src="js/ui.js?v=16"></script>
-<script src="js/main.js?v=9"></script>
+<script src="js/graph.js?v=6"></script>
+<script src="js/model.js?v=21"></script>
+<script src="js/draw.js?v=22"></script>
+<script src="js/ui.js?v=17"></script>
+<script src="js/main.js?v=10"></script>

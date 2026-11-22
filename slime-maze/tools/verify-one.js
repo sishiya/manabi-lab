@@ -31,7 +31,7 @@ for (let seed = 1; seed <= 4; seed++) {
   while (s.t < 15) Model.step(s);
   let alive = 0; for (let e = 0; e < g.nE; e++) if (Model.has(s, e)) alive++;
   const sp = Graph.shortest(g, g.cellCenter(0), far).len;
-  s.foods.push(far);
+  Model.addFood(s, far);
   const t0 = s.t; let tReach = -1, n = 0;
   while (n++ < 10000) { Model.step(s); if (tReach < 0 && s.reached[far]) tReach = s.t - t0; if (Model.settled(s)) break; }
   const minH = sp / Model.GROW_MM_H / (1.25 * Model.CHEM_UP);   // いちばん速い線の速さでも、最短の道のりにはこれだけかかる

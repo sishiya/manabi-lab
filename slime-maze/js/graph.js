@@ -115,6 +115,22 @@ const Graph = {
     return { edges: edges.reverse(), len: dist[b] };
   },
 
+  // エサ全部をいちばん短くつなぐ網（エサどうしのいちばん短い道で、最小全域木。プリム法）。{ edges: 線の番号（重なりなし）, len: 線の長さの和 mm }
+  mst(g, foods) {
+    const n = foods.length, P = [];
+    for (let i = 0; i < n; i++) { P.push([]); for (let j = 0; j < n; j++) P[i].push(j > i ? Graph.shortest(g, foods[i], foods[j]) : null); }
+    const path = (i, j) => i < j ? P[i][j] : P[j][i];
+    const inT = new Uint8Array(n); inT[0] = 1; const set = new Set();
+    for (let k = 1; k < n; k++) {
+      let best = null, bj = -1;
+      for (let i = 0; i < n; i++) if (inT[i]) for (let j = 0; j < n; j++) if (!inT[j]) { const p = path(i, j); if (p && (!best || p.len < best.len)) { best = p; bj = j; } }
+      if (!best) return null;   // つながっていないエサがある
+      inT[bj] = 1; for (const e of best.edges) set.add(e);
+    }
+    let len = 0; for (const e of set) len += g.len[e];
+    return { edges: [...set], len };
+  },
+
   // 画面の点（mm）にいちばん近い点。maxMM より遠ければ -1
   nearest(g, x, y, maxMM = Infinity) {
     let best = -1, bd = maxMM * maxMM;

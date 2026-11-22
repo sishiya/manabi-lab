@@ -15,10 +15,12 @@ const Draw = {
   },
 
   // 地図を画面に合わせて置く。P(i) で点の画面の位置、cs は「よくある線の長さ」の画面の長さ
-  layout(g, w, h) {
-    const b = g.bounds, pad = 10, sc = Math.min((w - 2 * pad) / (b.x1 - b.x0), (h - 2 * pad) / (b.y1 - b.y0));
-    const ox = (w - sc * (b.x1 - b.x0)) / 2 - b.x0 * sc, oy = (h - sc * (b.y1 - b.y0)) / 2 - b.y0 * sc;
-    return { sc, ox, oy, cs: g.unit * sc, X: x => ox + x * sc, Y: y => oy + y * sc };
+  //  view（日本の道路の拡大・移動）があれば、倍率 z で、(cx, cy) mm を画面のまん中に。sc0 は全体が入る倍率
+  layout(g, w, h, view) {
+    const b = g.bounds, pad = 10, sc0 = Math.min((w - 2 * pad) / (b.x1 - b.x0), (h - 2 * pad) / (b.y1 - b.y0));
+    let sc = sc0, ox = (w - sc * (b.x1 - b.x0)) / 2 - b.x0 * sc, oy = (h - sc * (b.y1 - b.y0)) / 2 - b.y0 * sc, z = 1;
+    if (view) { z = view.z; sc = sc0 * z; ox = w / 2 - view.cx * sc; oy = h / 2 - view.cy * sc; }
+    return { sc, sc0, z, ox, oy, w, h, cs: g.unit * sc, X: x => ox + x * sc, Y: y => oy + y * sc };
   },
   P(L, g, i) { return [L.X(g.x[i]), L.Y(g.y[i])]; },
   toMM(L, px, py) { return [(px - L.ox) / L.sc, (py - L.oy) / L.sc]; },
@@ -63,10 +65,10 @@ const Draw = {
     const [ex, ey] = Draw.at(pa, u1); g2.lineTo(ex, ey);
   },
 
-  frame(g2, w, h, s, ui) {
-    const g = s.g, L = Draw.layout(g, w, h), C = Draw.C, cs = L.cs;
+  frame(g2, w, h, s, ui, view) {
+    const g = s.g, L = Draw.layout(g, w, h, view), C = Draw.C, cs = L.cs;
     const T = L.sc * (g.tubeMM || g.unit * 0.42);         // いちばん太い管の太さ（画面）
-    const F = L.sc * (g.symbolMM || g.cellMM || g.unit);   // 記号の大きさのもと（迷路のマス・地図はきめた大きさ）
+    const F = L.sc0 * Math.pow(L.z, 0.3) * (g.symbolMM || g.cellMM || g.unit);   // 記号の大きさのもと（迷路のマス・地図はきめた大きさ。拡大しても少ししか大きくしない）
     g2.fillStyle = C.bg; g2.fillRect(0, 0, w, h);
     const b = g.bounds;
     if (g.land) {   // 地図: 陸（寒天の色）と、粘菌が通れる道（うすい線）
@@ -88,7 +90,15 @@ const Draw = {
         for (let i = 0; i < g.N; i++) sum[Math.floor(Math.floor(i / Wf) / k) * m.W + Math.floor((i % Wf) / k)] += s.c[i];
         const cw = g.cellMM * L.sc;
         for (let c = 0; c < m.W * m.H; c++) shade(L.X((c % m.W) * g.cellMM), L.Y(Math.floor(c / m.W) * g.cellMM), cw + 0.5, cw + 0.5, sum[c] / (k * k));
-      } else for (let i = 0; i < g.N; i++) { const [x, y] = Draw.P(L, g, i); shade(x - cs / 2, y - cs / 2, cs, cs, s.c[i]); }
+      } else {   // 道路の地図: 物質は道に沿って広がるので、道の線を太めに塗る（線の両はしの濃さの平均）
+        g2.lineCap = 'butt'; g2.lineWidth = Math.max(3, T * 2);
+        for (let e = 0; e < g.nE; e++) {
+          if (!g.open[e]) continue;
+          const c = (s.c[g.ea[e]] + s.c[g.eb[e]]) / 2; if (c < 1e-3) continue;
+          g2.strokeStyle = `rgba(${C.chem},${0.06 + 0.3 * Math.min(1, Math.log10(c / 1e-3) / 3)})`;
+          g2.beginPath(); Draw.trace(g2, Draw.path(L, g, e), 0, 1); g2.stroke();
+        }
+      }
     }
 
     // 粘液の跡（一度粘菌がいた線。粘菌は跡をさける: Reid ほか 2012）。うすい白っぽいすじ
@@ -173,8 +183,7 @@ const Draw = {
     if (ui.showShortest && ui.sp) {
       g2.strokeStyle = C.mark; g2.lineWidth = Math.max(1.5, F * 0.05); g2.setLineDash([F * 0.18, F * 0.14]);
       g2.beginPath();
-      let c = s.foods[0]; let [x, y] = Draw.P(L, g, c); g2.moveTo(x, y);
-      for (const e of ui.sp.edges) { c = Graph.other(g, e, c); [x, y] = Draw.P(L, g, c); g2.lineTo(x, y); }
+      for (const e of ui.sp.edges) Draw.trace(g2, Draw.path(L, g, e), 0, 1);   // エサ3つ以上のときは、いちばん短くつなぐ網（枝分かれする）
       g2.stroke(); g2.setLineDash([]);
     }
 

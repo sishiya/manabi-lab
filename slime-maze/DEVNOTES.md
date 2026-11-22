@@ -1,8 +1,8 @@
 # 粘菌が迷路を解くまで 開発メモ
 
 ## 別セッションで続けるとき（まずここ）
-- いまの状態: v012-japan（段階A、動く試作）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。push はまだ。
-- 次にやること: 落ち着くまでの時間（迷路で約 110 時間、日本で 50〜100 時間）をどうするか相談。日本の地図で、エサを3つ以上（Tero 2010 の決まり）にするか相談。動くサムネイル（make-motion-thumbs.ps1 -Apps slime-maze）はまだ撮っていない。
+- いまの状態: v013-multi（段階A、動く試作）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。push はまだ。
+- 次にやること: Tero 2010 の実験にならう「道のない陸の上を自由に伸びる」日本の地図（陸の形の細かい網＋都市のエサ）を作るか相談（いまの日本の道路は道路の上しか通れない）。落ち着くまでの時間（迷路で約 110 時間）をどうするか相談。動くサムネイル（make-motion-thumbs.ps1 -Apps slime-maze）はまだ撮っていない。
 - 読む順: PLAN.md → このファイルの「ファイル構成」「しくみ」→ 関係するファイルだけ。
 - 動かし方: サーバー apps（.claude/launch.json）で http://localhost:8765/slime-maze/ 。デバッグ用の窓口 `window.__slma`（`simRun(秒)` … 描かずに進める、`restart()`・`newMaze(種)`・`addFood(点)`、`S`、`Model`・`Maze`）、エラーは `window.__slmaErr`。
 - 区切りごとの手順: 「確認のしかた」と smoke.ps1 → 「状態」に1行 → launcher.html の表 → 公開前チェック → commit（節目の版だけ versions/ へコピーしてカードに。RULES 3章）。
@@ -17,12 +17,13 @@
 | js/graph.js | 点と線の地図（Graph）。迷路から作る `fromMaze`、ダイクストラの `shortest`、`nearest`、`other` | 下の「点と線の地図」 |
 | js/model.js | 伸びる・粘液の跡・物質の拡散・Physarum ソルバー。Graph だけを見る | `Model.create`・`startGrowth`・`diffuse`・`resetField`・`pull`・`grow`・`retract`・`solve`・`fronts`・`flowing`・`step`・`volume`・`tubeLength`・`settled` |
 | js/draw.js | 描画（物質・管3層・粒・先端の扇・膜・壁・目印・かたまり・エサ）。Graph の座標で描く | `Draw.frame`・`layout`・`path`（うねり）・`fan`・`blob`・`oat`・`walls` |
-| js/ui.js | ボタン・さわり方・状態の文 | `UI.init`・`status`・`hit`・`nearestEdge`・`toggleWall`・`moveFood`・`addFood`・`clock` |
+| js/ui.js | ボタン・さわり方・状態の文・拡大と移動 | `UI.init`・`status`・`hit`・`nearestEdge`・`toggleWall`・`moveFood`・`addFood`・`removeFood`・`viewAll`・`zoomAt`・`pan`・`clock` |
 | js/main.js | 状態 `S`・時間の進め方・描画ループ・デバッグ窓口 | `newMaze`・`restart`・`changed`・`step`・`kick` |
 | tools/verify.js | モデルの確かめ（node。エサ2つ、40の迷路） | |
 | tools/verify-one.js | エサ1つから始めるときと、物質の拡散の確かめ（node） | |
 | tools/build-japan.mjs | Natural Earth から日本の道路の地図 data/japan.json を作る（node） | |
 | tools/verify-japan.js | 日本の道路の地図の確かめ（node） | |
+| tools/verify-multi.js | エサが3つ以上の確かめ（node。Tero 2010 の決まり） | |
 | data/japan.json | 日本の道路の地図（Graph の形） | |
 
 読み込み順: maze → graph → model → draw → ui → main（main の最後で `UI.init()`・`newMaze`）。
@@ -45,6 +46,17 @@
 - `node slime-maze/tools/build-japan.mjs` → `data/japan.json`（約 95 KB。点 988・線 1106・道 約 17,000 km・島 138）。日本のあたりにすっぽり入る島を日本とし、その上の道路だけ。4 km の格子で点を合わせ、分かれ目のあいだを約 15 km ごとに区切り、10 km 未満の線は両はしをまとめる（短い線があると、100 倍にした物質の拡散を細かく分けて進めることになり重くなった）。1 mm = 5 km（東京〜大阪 約 10 cm）。都市（東京・大阪・名古屋・札幌・仙台・広島・福岡・鹿児島）はいちばん近い点。北海道は本州と道でつながっていない（Natural Earth の道路にない）。
 - `Graph.fromData`、`newJapan()`（fetch して1回だけ読む）、地図の切りかえボタン（`UI.setMap`。日本では壁・新しい迷路をかくす、絵の縦横比を地図に）。絵は陸（寒天の色）と通れる道（うすい線）。エサは東京・大阪、かけらは名古屋。
 - 確かめ: `node slime-maze/tools/verify-japan.js`（東京〜大阪 54 時間で 535/533 km、仙台〜広島 92 時間、東京〜福岡 105 時間。どれも最短の道とほぼ同じ）。
+
+## エサが3つ以上・拡大・PC の幅（v013、2026-11-23 ユーザー「３つ以上、任意でエサをおけるように」「日本の道路の拡大縮小移動」「PC版は横幅を広く」）
+- エサ: あいた所を押すと足す（`Model.MAX_FOODS` = 10 まで）。エサを押して選ぶ →「エサをとる」（`bDel`。1つは残す）。`Model.setFoods`・`addFood`・`removeFood` で物質の濃さの表 `s.cs` をエサと同じ数に。
+- エサが2つ: これまでどおり Tero 2007（μ=1）。3つ以上（`Model.multi`）: Tero ほか 2010 Science の決まり（PDF を pypdf で読んで確かめた）: 毎回、粘菌のいるエサからランダムに入口1つ・出口1つ、f(Q)=Q^γ/(1+Q^γ)、`MULTI_I0` = 2、`GAMMA` = 1.8。`flowing` は「粘菌のいるエサが2つ以上」。
+- 管の長さ（3つ以上）は `NET_D` = 0.05 より太い管の長さの和。くらべる目安は `Graph.mst`（エサどうしのいちばん短い道で最小全域木。Tero 2010 も MST で割ってくらべた）。
+- 落ち着いた（3つ以上）: 毎回入口が変わり太さが1時間ならしても1〜2割ゆれるので、「全部のエサに着いて、網の形（太い管の長さ）が `SETTLE_H` = 24 時間かわらない」とした。12時間・太さの重みつきでは、ゆれで判定できず、8時間では遅い管の消えのあとで形がかわった（28.4 → 22.9 cm）。
+- 粒の向き: 3つ以上では、ならした向きつきの流量 `s.Qd` で（毎回入口が変わるので）。
+- 確かめ: `node slime-maze/tools/verify-multi.js`（迷路エサ4つ ×2、日本エサ6つ。全部つながる・落ち着く・最小全域木の 0.8〜2.5 倍）。2026-11-23: 迷路 1.50 倍・1.09 倍（50〜78 時間）、日本 1.67 倍（40 時間）。
+- 拡大・移動（日本の道路だけ）: `S.view` = { z, cx, cy }（`Draw.layout` に渡す。`sc0` は全体の倍率）。ホイール・2本指・エサ以外のドラッグ（6px 以上動いたらエサを足さない）・右上の ＋／－／全体（`#zoom`）。管は本物の大きさどおり太くなり、エサの記号は z^0.3 でしか大きくしない。
+- 道路の地図の物質の色は、道の線に沿って塗る（点ごとの四角だと、拡大するとまだらになった）。
+- PC（幅 900px 以上・高さ 521px 以上）: `#app` の幅の上限をなくし、絵は幅いっぱい・高さ `100vh − 状態の欄`。地図は中に収まるよう置く。ボタンと説明は右の 320〜380px の列。
 
 ## しくみ
 - 迷路: 12×9 マス、1マス 5 mm（仮定）。深さ優先で掘ったあと、残った壁の 12% をぬいて道を何通りにも。左上と右下のいちばん短い道が1本だけの迷路を種を進めて探す（`makeGood`）。
@@ -90,6 +102,7 @@
 3. 「道をふさぐ・ひらく」→ 残った道のさかいめを本物のクリック → 別の道に落ち着き直す。エサをドラッグ → 新しい最短の長さになる。
 4. 幅 375px・393px で、横にはみ出さない（scrollWidth）・状態の欄の高さが変わらない・迷路が上に固定。横向き（852×393）で左右に並ぶ。
 5. `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/smoke.ps1 -Apps slime-maze`
+6. `node slime-maze/tools/verify-japan.js` と `node slime-maze/tools/verify-multi.js` → NG なし。日本の道路で、＋・ホイール・ドラッグで拡大と移動（ドラッグではエサが増えない）、あいた所を本物のクリックでエサが増える。PC（1600×900）で絵が幅いっぱい。
 
 ## 状態
 - 2026-11-22 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
@@ -104,3 +117,4 @@
 - 2026-11-22 v010-real-forage: 先端どうしの取りあい（流れこむ量で伸びる速さ）、体の量を保つ、粘液の跡は消えず跡のある所へは 0.2 倍（エサの上なら出ない）、跡を画面に描く、物質が減る長さ 40 mm。画面の文をしぼってたたむ形に（使い方3行＋しくみ・本物とちがうところ・出どころ）、段階の文を短く。確かめの計算をアプリと同じ流れ（エサ1つで始め、伸びきったら2つ目）に。verify 40/40、verify-one NG なし。
 - 2026-11-22 v011-fine-net: 迷路を細かい網（1マス 3×3、ななめもつなぐ、点を少しずらす）に。はじめのエサを2つに。エサ2つのあいだを流れているときも未探索の通路へは伸びる。落ち着いた判定をゆるめ、少し長い道に落ち着いたらそう出す。物質の色はマスごとにならす。verify 12/12（細かい網、時間がかかるので 12 迷路）、verify-one NG なし。
 - 2026-11-22 v012-japan: 地図の切りかえ（迷路／日本の道路）。Natural Earth から日本の道路の地図を作る道具と data/japan.json。出どころ・README に Natural Earth。verify 12/12（迷路）、verify-japan 3/3。
+- 2026-11-23 v013-multi: エサを3つ以上（10こまで。Tero 2010 の決まり・最小全域木とくらべる）・エサをとる、日本の道路の拡大・縮小・移動、PC で横幅いっぱい。verify-multi 3/3。

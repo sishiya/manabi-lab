@@ -13,6 +13,7 @@ const DOT_SPEED = 1.6;            // 粒の速さ（マス/秒、流量 1・D 1 
 const S = {
   s: null, run: true, speedI: 0, mode: 'food', seed: 7,
   ui: { dots: true, ph: null, showShortest: false, showChem: true, sp: null, sel: -1, drag: null },
+  view: null,   // 日本の道路の拡大・移動 { z: 倍率, cx, cy: 画面のまん中に来る所（mm）}。迷路では null
   acc: 0, swapT: 0, L: null,
 };
 
@@ -39,6 +40,7 @@ async function newJapan() {
 function setWorld(w) {
   S.world = w;
   S.s = Model.create(w.g, w.foods0, S.seed);   // はじめのエサは2つ
+  S.view = w.kind === 'japan' ? UI.viewAll(w.g) : null;
   S.ui.ph = new Float64Array(w.g.nE);
   Draw._paths = null;
   UI.setMap(w.kind);
@@ -46,8 +48,7 @@ function setWorld(w) {
   restart();
 }
 function restart() {
-  S.s.foods = S.world.foods0.slice();
-  Model.resetField(S.s, 0); Model.resetField(S.s, 1);
+  Model.setFoods(S.s, S.world.foods0);
   Model.startGrowth(S.s, S.world.start);   // かけらは地図のまん中
   S.ui.sp = Model.shortest(S.s); S.ui.sel = -1;
   S.run = true; S.acc = 0;
@@ -79,12 +80,12 @@ function step(dtReal) {
     const gr = s.g, ph = S.ui.ph;
     for (let e = 0; e < gr.nE; e++) {
       if (s.Qs[e] < 1e-3 || s.D[e] < 1e-2) continue;
-      ph[e] += dtReal * DOT_SPEED * Math.sign(s.Q[e]) * Math.min(3, s.Qs[e] / Math.sqrt(s.D[e]));
+      ph[e] += dtReal * DOT_SPEED * Math.sign(Model.multi(s) ? s.Qd[e] : s.Q[e]) * Math.min(3, s.Qs[e] / Math.sqrt(s.D[e]));
     }
   }
   UI.status();
 }
-function draw() { if (S.s) S.L = Draw.frame(g, cv.clientWidth, cv.clientHeight, S.s, S.ui); }
+function draw() { if (S.s) S.L = Draw.frame(g, cv.clientWidth, cv.clientHeight, S.s, S.ui, S.view); }
 
 // 再生中はずっと動かす（止めるのは「止める」を押したときだけ）。画面を離れるとブラウザが requestAnimationFrame を止める
 let last = 0, looping = false;
