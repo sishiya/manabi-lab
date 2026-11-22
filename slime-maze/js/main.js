@@ -5,13 +5,13 @@ window.addEventListener('error', e => window.__slmaErr.push(String(e.message)));
 
 const cv = document.getElementById('cv');
 const g = cv.getContext('2d');
-const W = 12, H = 9;              // 迷路のマスの数（スマホの幅 375px で 1マス約 30px）
-const RATE = 1;                   // 「速さ ×1」で 1秒に進むモデルの時間
-const SWAP_SEC = 1.5;             // 入口と出口を入れかえる間隔（本物の往復流は約2分。見やすくした演出）
-const DOT_SPEED = 1.6;            // 粒の速さ（マス/秒、流量 1・D 1 の管で）
+const W = 12, H = 9;              // 迷路のマスの数（1マス 5 mm と仮定 → 6 × 4.5 cm。スマホの幅 375px で 1マス約 30px）
+const SPEEDS = [{ h: 1 / 6, label: '1秒＝10分' }, { h: 1, label: '1秒＝1時間' }];  // 画面の1秒で進む本物の時間（時間 h）
+const SWAP_SEC = 1.5;             // 入口と出口を入れかえる間隔（画面の秒。本物の往復流は約2分ごと。見やすくした演出）
+const DOT_SPEED = 1.6;            // 粒の速さ（マス/秒、流量 1・D 1 の管で。表示だけ）
 
 const S = {
-  s: null, run: true, speed: 1, mode: 'food', seed: 7, done: false,
+  s: null, run: true, speedI: 0, mode: 'food', seed: 7,
   ui: { dots: true, ph: null, showShortest: false, sp: null, sel: -1, drag: null },
   acc: 0, swapT: 0, L: null,
 };
@@ -19,20 +19,21 @@ const S = {
 function newMaze(seed) {
   S.seed = seed;
   const m = Maze.makeGood(W, H, seed);
-  S.s = Model.create(m, [0, W * H - 1], seed);
+  S.s = Model.create(m, [0], seed);     // はじめのエサは1つ（左上）
   S.ui.ph = new Float64Array(m.nE);
   restart();
 }
 function restart() {
-  Model.startSpread(S.s);
-  S.ui.sp = Model.shortest(S.s); S.ui.sel = -1;
-  S.done = false; S.run = true; S.acc = 0;
+  S.s.foods.length = 1;                 // エサは1つにもどす
+  Model.startGrowth(S.s);
+  S.ui.sp = null; S.ui.sel = -1;
+  S.run = true; S.acc = 0;
   kick();
 }
-// 迷路やエサを変えたとき: いちばん短い道を求め直し、止まっていたら動かす
+// 迷路やエサを変えたとき
 function changed() {
   S.ui.sp = Model.shortest(S.s);
-  S.s.pPrev = null; S.done = false; S.run = true;
+  S.s.pPrev = null; S.s.tFlow = 0;
   kick();
 }
 
@@ -48,11 +49,9 @@ function step(dtReal) {
   if (S.run) {
     S.swapT += dtReal;
     if (S.swapT > SWAP_SEC) { S.swapT = 0; s.swap = !s.swap; }
-    S.acc += dtReal * RATE * S.speed;
+    S.acc += dtReal * SPEEDS[S.speedI].h;
     let n = 0;
-    while (S.acc >= Model.DT && n < 200) { Model.step(s); S.acc -= Model.DT; n++; if (s.blocked) break; }
-    if (s.blocked) { S.acc = 0; S.run = false; }
-    if (Model.settled(s)) { S.done = true; S.run = false; }
+    while (S.acc >= Model.DT && n < 100) { Model.step(s); S.acc -= Model.DT; n++; }
     // 粒を流す（u は ea → eb の向き）
     const m = s.m, ph = S.ui.ph;
     for (let e = 0; e < m.nE; e++) {
@@ -64,7 +63,7 @@ function step(dtReal) {
 }
 function draw() { if (S.s) S.L = Draw.frame(g, cv.clientWidth, cv.clientHeight, S.s, S.ui); }
 
-// 動いているあいだだけ描き直す（止まった画面は描き直さない。電池。RULES 9章）
+// 再生中はずっと動かす（止めるのは「止める」を押したときだけ）。画面を離れるとブラウザが requestAnimationFrame を止める
 let last = 0, looping = false;
 function loop(now) {
   const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now; // 最初のコマは now が last より前のことがある
@@ -84,6 +83,7 @@ resize();
 // デバッグ用: 状態を見る・描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）
 window.__slma = {
   S, Model, Maze,
-  simRun(sec, dt = 1 / 30) { for (let t = 0; t < sec; t += dt) step(dt); draw(); return { t: S.s.t, len: Model.tubeLength(S.s), done: S.done }; },
+  simRun(sec, dt = 1 / 30) { for (let t = 0; t < sec; t += dt) step(dt); draw(); return { hours: S.s.t, len: Model.tubeLength(S.s), settled: Model.settled(S.s) }; },
   newMaze, restart,
+  addFood(c) { if (S.s.foods.length < 2) { S.s.foods.push(c); changed(); } },
 };

@@ -20,21 +20,54 @@ const Draw = {
     g.fillStyle = C.bg; g.fillRect(0, 0, w, h);
     g.fillStyle = C.floor; g.fillRect(L.ox, L.oy, cs * m.W, cs * m.H);
 
-    // 粘菌の管（下にぼかした広い線、上に芯）
+    // 伸びている先端のまわりは、管になる前の膜（シート）。着いたばかりのマスほど広く、時間がたつと管だけになる（演出の目安: 約1時間）
+    for (let c = 0; c < m.W * m.H; c++) {
+      if (!s.reached[c]) continue;
+      const age = s.t - s.arrive[c], k = c === s.start ? Math.max(0, 1 - s.t / 2) : Math.max(0, 1 - age / 1.0);
+      if (k <= 0) continue;
+      const [x, y] = Draw.center(L, m, c), r = cs * (0.3 + 0.18 * k);
+      const gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, `rgba(240,201,58,${0.55 * k})`); gr.addColorStop(1, 'rgba(240,201,58,0)');
+      g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+    }
+
+    // 粘菌の管（下にぼかした広い線、上に芯）。伸びている途中の通路は、伸びたところまで
     g.lineCap = 'round';
+    const seg = (e, D, pass) => {
+      const [x1, y1] = Draw.center(L, m, m.ea[e]), [x2, y2] = Draw.center(L, m, m.eb[e]);
+      const wd = cs * 0.5 * Draw.width(D);
+      g.strokeStyle = pass ? C.slime : C.slimeDim;
+      g.lineWidth = pass ? Math.max(1, wd) : Math.max(2, wd * 1.8);
+      g.beginPath();
+      if (s.fa[e] + s.fb[e] >= 1 || !s.fa[e] && !s.fb[e]) { g.moveTo(x1, y1); g.lineTo(x2, y2); }
+      else {
+        if (s.fa[e] > 0) { g.moveTo(x1, y1); g.lineTo(x1 + (x2 - x1) * s.fa[e], y1 + (y2 - y1) * s.fa[e]); }
+        if (s.fb[e] > 0) { g.moveTo(x2, y2); g.lineTo(x2 + (x1 - x2) * s.fb[e], y2 + (y1 - y2) * s.fb[e]); }
+      }
+      g.stroke();
+    };
     for (let pass = 0; pass < 2; pass++) {
       for (let e = 0; e < m.nE; e++) {
-        const D = s.D[e]; if (!m.open[e] || D <= 0) continue;
+        if (!m.open[e]) continue;
+        const growingE = s.D[e] <= 0 && (s.fa[e] > 0 || s.fb[e] > 0);
+        const D = growingE ? 0.6 : s.D[e]; if (D <= 0) continue;
         const al = Draw.alpha(D); if (al <= 0) continue;
-        const [x1, y1] = Draw.center(L, m, m.ea[e]), [x2, y2] = Draw.center(L, m, m.eb[e]);
-        const wd = cs * 0.5 * Draw.width(D);
-        g.globalAlpha = al;
-        g.strokeStyle = pass ? C.slime : C.slimeDim;
-        g.lineWidth = pass ? Math.max(1, wd) : Math.max(2, wd * 1.8);
-        g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+        g.globalAlpha = al; seg(e, D, pass);
       }
     }
     g.globalAlpha = 1;
+    // 伸びている先端（扇のように広がる、ぼんやりした前の縁）
+    for (let e = 0; e < m.nE; e++) {
+      if (!m.open[e] || s.D[e] > 0) continue;
+      const [x1, y1] = Draw.center(L, m, m.ea[e]), [x2, y2] = Draw.center(L, m, m.eb[e]);
+      for (const [f, ax, ay, bx, by] of [[s.fa[e], x1, y1, x2, y2], [s.fb[e], x2, y2, x1, y1]]) {
+        if (!(f > 0)) continue;
+        const x = ax + (bx - ax) * f, y = ay + (by - ay) * f, r = cs * 0.36;
+        const gr = g.createRadialGradient(x, y, 0, x, y, r);
+        gr.addColorStop(0, 'rgba(240,201,58,0.85)'); gr.addColorStop(0.55, 'rgba(240,201,58,0.35)'); gr.addColorStop(1, 'rgba(240,201,58,0)');
+        g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+      }
+    }
 
     // 管の中の粒（往復流）。速さ = 流量 ÷ 断面（断面は半径の2乗 ∝ D^(1/2)）。向きはいまの流れの向き
     if (ui.dots) {
@@ -73,14 +106,15 @@ const Draw = {
       g.stroke(); g.setLineDash([]);
     }
 
-    // 置いた粘菌のかけら（広がっているあいだだけ）
-    if (s.spread) {
-      g.fillStyle = C.slime;
-      for (const c of s.spread.seeds) { const [x, y] = Draw.center(L, m, c); g.beginPath(); g.arc(x, y, cs * 0.28, 0, Math.PI * 2); g.fill(); }
+    // 置いた粘菌のかけら（はじめの30分ほど、かたまりとして見せる）
+    if (s.start >= 0 && s.t < 0.5) {
+      const [x, y] = Draw.center(L, m, s.start);
+      g.globalAlpha = 1 - s.t / 0.5; g.fillStyle = C.slime;
+      g.beginPath(); g.arc(x, y, cs * 0.26, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
     }
 
-    // エサ（オートミールのかたまり）。迷路が埋まってから置く
-    if (s.fed) s.foods.forEach((f, i) => {
+    // エサ（オートミールのかたまり）
+    s.foods.forEach((f, i) => {
       const [x, y] = Draw.center(L, m, ui.drag && ui.drag.i === i ? ui.drag.c : f), r = cs * 0.34;
       g.fillStyle = C.food; g.strokeStyle = ui.sel === i ? C.sel : C.foodInk; g.lineWidth = ui.sel === i ? 3 : 1.5;
       g.beginPath(); g.roundRect(x - r, y - r, 2 * r, 2 * r, r * 0.35); g.fill(); g.stroke();

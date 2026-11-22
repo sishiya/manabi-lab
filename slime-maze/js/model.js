@@ -1,71 +1,73 @@
-// 粘菌の管の網のモデル（Physarum ソルバー）
-//   Tero, Kobayashi, Nakagaki (2007) J. Theor. Biol. 244: 553–564 の式 (5)(6) を、迷路のマス目の網にそのまま使う（無次元）
-//     Q_ij = D_ij / L_ij · (p_i − p_j)            … 管の流量（ハーゲン・ポアズイユ。D は半径の4乗に比例する「通りやすさ」）
-//     Σ_i Q_ij = 0（入口と出口のほかの節）、入口から I0 が入り、出口から I0 が出る … ネットワークのポアソン方程式
-//     dD/dt = f(|Q|) − D,  f(Q) = Q^μ, μ = 1      … よく流れる管は太り、流れない管はやせる（Type I。μ=1 なら最短の道が残る、4章）
-//   時間の進め方は論文と同じ半陰的: D(n+1) = (D(n) + δt·f(|Q(n)|)) / (1 + δt)
-//   式どおり D は 0 にならない（流れのない管は e^(−t) でやせ続ける）。計算のために下限 FLOOR だけ置く
+// 粘菌のモデル: 伸びて迷路を探る（本物の速さ）＋ 管の網の太り・やせ（Physarum ソルバー）
+//
+// 時間はすべて「本物の時間（時間 h）」で進める。
+//  伸びる: 先端は 1時間に約 2 cm（Patino-Ramirez ほか 2019「1時間に数センチ」）。1マス = 5 mm と仮定（画面に書く）。
+//          開いた通路を、粘菌がいるマスから連続して伸びる（両はしから伸びた先端が出会えば1本の管になる）。
+//          通路ごとに速さを ±25% ばらつかせる（同じ速さで進む機械らしさを消すため。ばらつきの大きさは推定）。
+//  管の太り・やせ: Tero, Kobayashi, Nakagaki (2007) J. Theor. Biol. 244 の式 (5)(6)（無次元）をエサが2つのときに解く
+//     Q_ij = D_ij / L_ij · (p_i − p_j)（ハーゲン・ポアズイユ）、入口のエサから I0 が入り出口のエサから出る
+//     dD/dt = |Q| − D（μ=1）、半陰的に D ← (D + δt|Q|)/(1+δt)、はじめの D は [0.5, 1.0] の一様乱数
+//   モデルの時間 1 を 1時間とする（Tero 2007「管は数時間でこわれ、作り直される」から。1時間で e 分の1 にやせ、数時間でほぼ消える）。
+//   式どおり D は 0 にしない（下限 FLOOR は行列のためだけ）。
 'use strict';
 
 const Model = {
-  FLOOR: 1e-9,     // D の下限（式では 0 にならない。行列が解けなくなるのを防ぐためだけの値）
-  THIN: 1e-4,      // これより細い管は絵では見えない（draw.js の alpha。数えるのには使わない）
-  DT: 0.05,        // 1回の時間の進み（モデルの時間）
-  L: 1,            // マスとマスのあいだの管の長さ（どれも同じ）
-  I0: 1,           // 入口から入り出口から出る流れの量（無次元で 1）
+  FLOOR: 1e-9,
+  DT: 0.05,          // 管の計算の1回の時間（時間 h）
+  L: 1,              // マスとマスのあいだの管の長さ（どれも同じ）
+  I0: 1,
+  CELL_MM: 5,        // 1マスの大きさ（仮定）
+  GROW_MM_H: 20,     // 先端の伸びる速さ（mm/時）。Patino-Ramirez ほか 2019「1時間に数センチ」から 2 cm/時
 
   create(maze, foods, seed) {
+    const N = maze.W * maze.H, nE = maze.nE;
     return {
       m: maze, foods: foods.slice(), rng: makeRng(seed ^ 0x9e3779b9),
-      D: new Float64Array(maze.nE), Q: new Float64Array(maze.nE), Qs: new Float64Array(maze.nE),
-      p: new Float64Array(maze.W * maze.H), pPrev: null,
-      t: 0, blocked: false, maxRate: 0, swap: false, fed: false,
-      spread: null,  // 広がっている途中なら { dist: 辺ごとの順番, k: いまどこまで, max }
+      D: new Float64Array(nE), Q: new Float64Array(nE), Qs: new Float64Array(nE),
+      fa: new Float64Array(nE), fb: new Float64Array(nE), vk: new Float64Array(nE), // ea 側・eb 側から伸びた長さ（0〜1）、速さのばらつき
+      reached: new Uint8Array(N), arrive: new Float64Array(N),   // 粘菌がいるマス、そこへ着いた時刻
+      p: new Float64Array(N), pPrev: null,
+      t: 0, tFlow: 0, blocked: false, maxRate: 0, swap: false, start: -1, growing: false,
     };
   },
 
-  has(s, e) { return s.m.open[e] && s.D[e] > 0; },   // 粘菌がいる通路（どんなに細くても）
+  has(s, e) { return s.m.open[e] && s.D[e] > 0; },   // 管になった通路（どんなに細くても）
+  full(s, e) { return s.fa[e] + s.fb[e] >= 1; },
 
-  // 迷路いっぱいに広げる。迷路のまん中に置いた1つのかけらから、開いた通路を近い順にうめる。エサは埋まりきってから置く（s.fed）
-  // 実験（中垣ほか 2000）は迷路のあちこちにかけらを置き、つながって1つになってから。ここは 2026-11-22 ユーザーの希望で1つから（画面にも書く）
-  // 広がる速さと順は見やすくした演出で、計算していない（画面の「簡単にしたところ」に書く）
-  SPREAD_STEPS: 60,   // 広がりきるまでの回数（×1 で約3秒）。迷路の大きさによらず同じ時間で埋まる
-  startSpread(s) {
-    const m = s.m, N = m.W * m.H, dist = new Int32Array(m.nE).fill(-1), seenN = new Int32Array(N).fill(-1);
-    s.D.fill(0); s.Q.fill(0); s.Qs.fill(0); s.pPrev = null; s.t = 0; s.fed = false;
-    // かけら: まん中のマス（エサのマスなら、となり）
+  // 迷路のまん中に1つのかけらを置いて、伸びはじめる
+  startGrowth(s) {
+    const m = s.m, N = m.W * m.H;
+    s.D.fill(0); s.Q.fill(0); s.Qs.fill(0); s.fa.fill(0); s.fb.fill(0); s.reached.fill(0); s.arrive.fill(0);
+    s.pPrev = null; s.t = 0; s.tFlow = 0; s.blocked = false; s.maxRate = 0;
+    for (let e = 0; e < m.nE; e++) s.vk[e] = 0.75 + 0.5 * s.rng();
     let c0 = Math.floor(m.H / 2) * m.W + Math.floor(m.W / 2);
     if (s.foods.includes(c0)) c0 = (c0 + 1) % N;
-    const seeds = [c0];
-    const q = [];
-    for (const c of seeds) { seenN[c] = 0; q.push(c); }
-    for (let qi = 0; qi < q.length; qi++) {
-      const c = q[qi];
-      for (const e of m.adj[c]) {
-        if (!m.open[e]) continue;
-        const n = Maze.other(m, e, c);
-        if (dist[e] < 0) dist[e] = seenN[c] + 1;
-        if (seenN[n] < 0) { seenN[n] = seenN[c] + 1; q.push(n); }
+    s.start = c0; s.reached[c0] = 1; s.growing = true;
+  },
+
+  // 伸びる（dh 時間ぶん）。両はしの長さの和が 1 になった通路は管になる（はじめの太さは [0.5, 1.0] の一様乱数）
+  grow(s, dh) {
+    const m = s.m, v = Model.GROW_MM_H / Model.CELL_MM * dh;  // マス
+    let any = false;
+    for (let e = 0; e < m.nE; e++) {
+      if (!m.open[e] || Model.full(s, e)) continue;
+      const ra = s.reached[m.ea[e]], rb = s.reached[m.eb[e]];
+      if (!ra && !rb) continue;
+      any = true;
+      if (ra) s.fa[e] += v * s.vk[e];
+      if (rb) s.fb[e] += v * s.vk[e];
+      if (s.fa[e] + s.fb[e] >= 1) {
+        const k = s.fa[e] / (s.fa[e] + s.fb[e]); s.fa[e] = k; s.fb[e] = 1 - k;
+        s.D[e] = 0.5 + 0.5 * s.rng();
+        for (const c of [m.ea[e], m.eb[e]]) if (!s.reached[c]) { s.reached[c] = 1; s.arrive[c] = s.t; }
       }
     }
-    let max = 0; for (let e = 0; e < m.nE; e++) if (dist[e] > max) max = dist[e];
-    s.spread = { dist, k: 0, max, seeds };
-    s.blocked = false;
-  },
-  // 広がりを進める。届いた管は、はじめの太さ [0.5, 1.0] の一様乱数（Tero 2007 の4章と同じ）。埋まりきったらエサを置く
-  stepSpread(s, dk) {
-    const sp = s.spread, m = s.m, k0 = sp.k; sp.k += dk;
-    for (let e = 0; e < m.nE; e++) {
-      const d = sp.dist[e];
-      if (d > k0 && d <= sp.k && m.open[e]) s.D[e] = 0.5 + 0.5 * s.rng();
-    }
-    if (sp.k >= sp.max) { s.spread = null; s.fed = true; s.t = 0; }
+    s.growing = any;
   },
 
   // 入口 a から出口 b へ I0 を流したときの圧力と流量を解く（前処理つき共役勾配法。論文は ICCG）
   solve(s, a, b, I0) {
     const m = s.m, N = m.W * m.H;
-    // a と管でつながっている節だけを解く
     const idx = new Int32Array(N).fill(-1), list = [a]; idx[a] = 0;
     for (let qi = 0; qi < list.length; qi++) for (const e of m.adj[list[qi]]) {
       if (!Model.has(s, e)) continue; const n = Maze.other(m, e, list[qi]); if (idx[n] < 0) { idx[n] = list.length; list.push(n); }
@@ -105,14 +107,21 @@ const Model = {
     return true;
   },
 
-  // 1回進める。エサが管でつながっていなければ進めずに blocked を立てる
-  // 入口と出口は swap で入れかえられる（Tero 2007: その瞬間、一方のエサが入口・もう一方が出口。|Q| は同じなので太さの変わり方は変わらない）
+  // エサが2つあって、どちらにも粘菌がいるとき、管の網が流れに合わせて変わる
+  flowing(s) { return s.foods.length === 2 && s.foods.every(f => s.reached[f]); },
+
+  // DT（時間）ぶん進める
+  // 入口と出口は swap で入れかえられる（Tero 2007: その瞬間、一方のエサが入口・もう一方が出口。|Q| は同じなので太さの変わり方は同じ）
   step(s) {
-    if (s.spread) { Model.stepSpread(s, Math.max(0.2, s.spread.max / Model.SPREAD_STEPS)); return; }
+    const dt = Model.DT, m = s.m;
+    Model.grow(s, dt);
+    s.t += dt;
+    s.maxRate = 0;
+    if (!Model.flowing(s)) { s.blocked = false; s.Q.fill(0); return; }
     const a = s.foods[s.swap ? 1 : 0], b = s.foods[s.swap ? 0 : 1];
     if (!Model.solve(s, a, b, Model.I0)) { s.blocked = true; return; }
     s.blocked = false;
-    const dt = Model.DT, m = s.m; let maxRate = 0;
+    let maxRate = 0;
     for (let e = 0; e < m.nE; e++) {
       if (!Model.has(s, e)) continue;
       const f = Math.abs(s.Q[e]);                       // f(Q) = Q^μ, μ = 1
@@ -122,15 +131,15 @@ const Model = {
       s.Qs[e] += (Math.abs(s.Q[e]) - s.Qs[e]) * 0.1;    // 粒の速さ用に、ならした流量（表示だけ）
     }
     s.maxRate = maxRate;
-    s.t += dt;
+    s.tFlow += dt;
   },
 
-  // 粘菌の管の長さ  Σ D·L / I0 。μ=1 で落ち着くと、最短の道の長さになる（最短の道の管は D=1、ほかは 0 に近づく）
+  // 粘菌の管の長さ  Σ D·L / I0 。μ=1 で落ち着くと、最短の道の長さになる
   tubeLength(s) { let L = 0; for (let e = 0; e < s.m.nE; e++) if (Model.has(s, e)) L += s.D[e] * Model.L; return L / Model.I0; },
 
-  shortest(s) { return Maze.shortest(s.m, s.foods[0], s.foods[1]); },
+  shortest(s) { return s.foods.length === 2 ? Maze.shortest(s.m, s.foods[0], s.foods[1]) : null; },
 
-  // 落ち着いたか: 太さの変わる速さが十分小さい（広がっている途中・つながっていないときは落ち着いていない）
-  settled(s) { return !s.spread && !s.blocked && s.t > 1 && s.maxRate < 3e-4; },
+  // 落ち着いたか（表示のためだけ。時間は止めない）
+  settled(s) { return Model.flowing(s) && !s.growing && !s.blocked && s.tFlow > 1 && s.maxRate < 1e-3; },
 };
 window.Model = Model;

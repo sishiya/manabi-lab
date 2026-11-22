@@ -1,4 +1,4 @@
-// 画面の操作: ボタン・さわり方（エサを動かす／道をふさぐ・ひらく）・いまの状態の表示
+// 画面の操作: ボタン・さわり方（エサを置く・動かす／道をふさぐ・ひらく）・いまの状態の表示
 // main.js より先に読む（S・kick などは押されたときに使う）
 'use strict';
 
@@ -6,38 +6,44 @@ const $ = id => document.getElementById(id);
 
 const UI = {
   _last: '',
+  clock(h) { const m = Math.floor(h * 60 + 1e-6); return m < 60 ? `${m}分` : `${Math.floor(m / 60)}時間${String(m % 60).padStart(2, '0')}分`; },
+
   // いまの段階と数字（場所は先にとってあるので、文が変わっても高さは変わらない）
   status() {
     const s = S.s; if (!s) return;
-    let phase, nums = '', good = '';
-    const spLen = S.ui.sp ? S.ui.sp.length : null;
-    if (s.spread) phase = '① まん中に置いた粘菌のかけらが伸びて、迷路を埋めています';
-    else if (s.blocked) phase = 'エサとエサのあいだに、通れる道がありません。壁をひらいてください';
-    else if (S.done) phase = '④ 落ち着きました';
-    else if (!S.run) phase = '一時停止中';
-    else if (s.t < 2) phase = '② 迷路が埋まったので、入口と出口にエサを置きました';
-    else phase = '③ 流れの少ない管がやせていきます';
-    if (!s.spread && !s.blocked) {
-      const len = Model.tubeLength(s);
+    const one = s.foods.length < 2, flowing = Model.flowing(s), settled = Model.settled(s);
+    let phase;
+    if (s.blocked) phase = 'エサとエサのあいだに通れる道がありません。壁をひらいてください';
+    else if (one && s.growing) phase = s.reached[s.foods[0]] ? '① 迷路を探っています。エサにたどりつきました' : '① まん中のかけらが伸びて、迷路を探っています';
+    else if (one) phase = '② 迷路が埋まりました。空いたマスを押して、エサをもう1つ置いてみましょう';
+    else if (!flowing) phase = '新しいエサの所まで、まだ粘菌が来ていません';
+    else if (settled) phase = '④ 落ち着いています（流れはつづいています）';
+    else phase = '③ エサからエサへ流れ、流れの少ない管がやせていきます';
+    if (!S.run) phase = '一時停止中 — ' + phase;
+    let nums = '', good = '';
+    if (flowing && !s.blocked) {
+      const len = Model.tubeLength(s), spLen = S.ui.sp ? S.ui.sp.length : null;
       nums = `管の長さ ${len.toFixed(1)} マス分 ／ いちばん短い道 ${spLen ?? '—'} マス`;
-      if (S.done && spLen != null && Math.abs(len - spLen) < 0.5) good = 'いちばん短い道だけが残りました';
-    } else if (s.spread) nums = 'まだ流れの計算は始まっていません';
-    const key = phase + nums + good + S.run + S.speed + S.mode;
+      if (settled && spLen != null && Math.abs(len - spLen) < 0.5) good = 'いちばん短い道だけが残りました';
+    }
+    const clock = `経過 ${UI.clock(s.t)}`;
+    const key = phase + nums + good + clock + S.run + S.speedI + S.mode;
     if (key === UI._last) return; UI._last = key;
     $('phase').textContent = phase;
+    $('clock').textContent = clock;
     $('nums').textContent = nums;
     $('good').textContent = good;
     $('good').classList.toggle('on', !!good);
     $('bRun').textContent = S.run ? '⏸ 止める' : '▶ 進める';
-    $('bSpeed').textContent = `速さ ×${S.speed}`;
-    $('bSpeed').setAttribute('aria-pressed', S.speed > 1);
+    $('bSpeed').textContent = `速さ ${SPEEDS[S.speedI].label}`;
+    $('bSpeed').setAttribute('aria-pressed', S.speedI > 0);
     for (const [id, md] of [['mFood', 'food'], ['mWall', 'wall']]) { $(id).classList.toggle('on', S.mode === md); $(id).setAttribute('aria-pressed', S.mode === md); }
     $('hint').textContent = S.mode === 'food'
-      ? 'エサをドラッグして動かす（エサを押してから、行き先のマスを押してもよい）'
+      ? '空いたマスを押すとエサを置く（2つまで）。エサはドラッグで動かす'
       : 'マスとマスのさかいめを押すと、壁ができる・なくなる';
   },
 
-  // 画面の点 → マス（迷路の外なら -1）と、マスの中の位置（0〜1）
+  // 画面の点 → マス（迷路の外なら null）と、マスの中の位置
   hit(x, y) {
     const L = S.L, m = S.s.m; if (!L) return null;
     const fx = (x - L.ox) / L.cs, fy = (y - L.oy) / L.cs;
@@ -59,21 +65,17 @@ const UI = {
   toggleWall(e) {
     const s = S.s, m = s.m;
     if (e < 0) return;
-    if (m.open[e]) { m.open[e] = 0; s.D[e] = 0; }
-    else { m.open[e] = 1; s.D[e] = s.spread ? 0 : Model.FLOOR; } // 通路ができても、そこにはまだ管がない（式の下限の細さから始まる）
+    // ふさぐ: その通路の管はなくなる。ひらく: 粘菌がとなりにいれば、また伸びて入っていく
+    if (m.open[e]) { m.open[e] = 0; s.D[e] = 0; s.fa[e] = 0; s.fb[e] = 0; }
+    else { m.open[e] = 1; s.D[e] = 0; s.fa[e] = 0; s.fb[e] = 0; }
     changed();
   },
-  moveFood(i, c) {
-    const s = S.s; if (s.foods.includes(c)) return;
-    s.foods[i] = c; changed();
-  },
+  moveFood(i, c) { const s = S.s; if (s.foods.includes(c)) return; s.foods[i] = c; changed(); },
+  addFood(c) { const s = S.s; if (s.foods.length >= 2 || s.foods.includes(c)) return false; s.foods.push(c); changed(); return true; },
 
   init() {
-    $('bRun').onclick = () => {
-      if (S.run) S.run = false; else { S.run = true; S.done = false; }
-      kick();
-    };
-    $('bSpeed').onclick = () => { S.speed = S.speed === 1 ? 4 : 1; UI.status(); };
+    $('bRun').onclick = () => { S.run = !S.run; kick(); };
+    $('bSpeed').onclick = () => { S.speedI = (S.speedI + 1) % SPEEDS.length; UI.status(); };
     $('mFood').onclick = () => { S.mode = 'food'; S.ui.sel = -1; UI.status(); draw(); };
     $('mWall').onclick = () => { S.mode = 'wall'; S.ui.sel = -1; UI.status(); draw(); };
     $('bRestart').onclick = () => restart();
@@ -84,8 +86,8 @@ const UI = {
     let down = null;
     cv.addEventListener('pointerdown', ev => {
       const h = UI.hit(...pos(ev)); if (!h) return;
-      down = { h, moved: false };
-      if (S.mode === 'food' && S.s.fed) {   // エサは迷路が埋まってから置かれる
+      down = { h };
+      if (S.mode === 'food') {
         const i = S.s.foods.indexOf(h.c);
         if (i >= 0) { S.ui.drag = { i, c: h.c }; cv.setPointerCapture(ev.pointerId); kick(); }
       }
@@ -93,7 +95,7 @@ const UI = {
     cv.addEventListener('pointermove', ev => {
       if (!S.ui.drag) return;
       const h = UI.hit(...pos(ev)); if (!h) return;
-      if (h.c !== S.ui.drag.c) { S.ui.drag.c = h.c; down && (down.moved = true); draw(); }
+      if (h.c !== S.ui.drag.c) { S.ui.drag.c = h.c; draw(); }
     });
     cv.addEventListener('pointerup', ev => {
       const h = UI.hit(...pos(ev)), d = S.ui.drag;
@@ -103,6 +105,7 @@ const UI = {
           if (d.c !== S.s.foods[d.i] && !S.s.foods.includes(d.c)) { S.ui.sel = -1; UI.moveFood(d.i, d.c); }
           else S.ui.sel = S.ui.sel === d.i ? -1 : d.i;   // 動かさずに離した → 選ぶ（もう一度で外す）
         } else if (h && S.ui.sel >= 0) { const i = S.ui.sel; S.ui.sel = -1; UI.moveFood(i, h.c); }
+        else if (h) UI.addFood(h.c);                     // 空いたマス → エサを置く（2つまで）
         draw();
       } else if (S.mode === 'wall' && h && down) {
         UI.toggleWall(UI.nearestEdge(h));

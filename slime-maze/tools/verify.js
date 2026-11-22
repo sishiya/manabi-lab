@@ -13,16 +13,16 @@ const { Maze, Model } = ctx;
 function run(seed, swapEvery, W = 12, H = 9) {
   const m = Maze.make(W, H, seed);
   const s = Model.create(m, [0, W * H - 1], seed);
-  Model.startSpread(s);
+  Model.startGrowth(s);
   let n = 0, flowErr = 0;
   while (n < 200000) {
     if (swapEvery && n % swapEvery === 0) s.swap = !s.swap;
     Model.step(s); n++;
-    if (!s.spread && n % 50 === 0) {
+    if (n % 50 === 0) {
       // 入口のまわりの流れの合計
       const a = s.foods[s.swap ? 1 : 0]; let out = 0;
       for (const e of m.adj[a]) if (Model.has(s, e)) out += (m.ea[e] === a ? 1 : -1) * s.Q[e];
-      flowErr = Math.max(flowErr, Math.abs(out - Model.I0));
+      if (Model.flowing(s) && !s.blocked) flowErr = Math.max(flowErr, Math.abs(out - Model.I0));
     }
     if (Model.settled(s)) break;
   }
@@ -53,5 +53,5 @@ for (let seed = 1; seed <= 40; seed++) {
   if (!good) console.log(`NG seed ${seed}: 最短 ${A.sp.length}（${k}本） 管の長さ ${A.len.toFixed(2)} 入れかえ ${B.len.toFixed(2)} 太い管 ${A.thick.length} 流れの誤差 ${A.flowErr.toExponential(1)} t=${A.t.toFixed(1)}`);
 }
 times.sort((a, b) => a - b);
-console.log(`OK ${ok} / NG ${ng}（最短が1本だけの迷路 ${uniq}）。落ち着くまでのモデルの時間: 中央 ${times[times.length >> 1].toFixed(0)}、最大 ${times[times.length - 1].toFixed(0)}`);
+console.log(`OK ${ok} / NG ${ng}（最短が1本だけの迷路 ${uniq}）。落ち着くまでの時間（時間 h、伸びるところから）: 中央 ${times[times.length >> 1].toFixed(0)}、最大 ${times[times.length - 1].toFixed(0)}`);
 process.exit(ng ? 1 : 0);
