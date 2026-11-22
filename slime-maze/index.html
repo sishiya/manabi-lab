@@ -1,0 +1,93 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>粘菌が迷路を解くまで</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230f1620'/><circle cx='32' cy='32' r='15' fill='none' stroke='%23f0c93a' stroke-width='6'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css?v=1">
+
+<div id="app">
+  <header id="top">
+    <h1>粘菌が迷路を解くまで</h1>
+    <p class="lead">迷路いっぱいの粘菌から、2つのエサを結ぶ管だけが残る。</p>
+  </header>
+
+  <section id="stage">
+    <div id="view"><canvas id="cv" aria-label="迷路と粘菌の管"></canvas></div>
+    <div id="status" aria-live="polite">
+      <div id="phase"></div>
+      <div id="nums"></div>
+      <div id="good"></div>
+    </div>
+  </section>
+
+  <section id="panel">
+    <div class="grp">
+      <div class="row">
+        <button id="bRun" class="primary"></button>
+        <button id="bSpeed" class="tog" aria-pressed="false"></button>
+      </div>
+      <div class="row seg" role="group" aria-label="迷路をさわると">
+        <button id="mFood" class="tog">エサを動かす</button>
+        <button id="mWall" class="tog">道をふさぐ・ひらく</button>
+      </div>
+      <p id="hint" class="hint"></p>
+      <label class="chk"><input type="checkbox" id="cShort"> いちばん短い道を点線で重ねる（※ 目印）</label>
+      <div class="row">
+        <button id="bRestart" class="act">最初から広げなおす</button>
+        <button id="bNew" class="act">新しい迷路</button>
+      </div>
+    </div>
+
+    <div class="grp text">
+      <ul class="how">
+        <li>よく流れる管は太り、流れない管はやせる。決まりはこれだけです。</li>
+        <li>エサを動かしたり、道をふさいだりすると、また別の道に落ち着きます。</li>
+        <li>これはモデルの計算で、粘菌を測った値ではありません。</li>
+      </ul>
+      <details>
+        <summary>しくみ（くわしく）</summary>
+        <p>粘菌（モジホコリ）は、ゲルの壁でできた管の網です。管の壁が縮んだりゆるんだりして、中の原形質が行ったり来たり流れます（往復流。本物は約2分ごと）。</p>
+        <p>迷路の実験では、まず粘菌を迷路いっぱいに広げ、入口と出口にエサを置きます。すると行き止まりや遠回りの管がやせて消え、2つのエサをいちばん短い道で結ぶ管が残りました（中垣ほか 2000）。迷路を「探して」解くのではなく、全部の道を同時に使ってから、使われない道を捨てています。</p>
+        <p>このアプリは、Tero・小林・中垣（2007）のモデルをそのまま計算しています。</p>
+        <ul>
+          <li>管の流れ: 細い管を流れる液体の式（ハーゲン・ポアズイユ）。電気回路の電流と同じ計算で、入口のエサから入った量がそのまま出口のエサから出ます。</li>
+          <li>管の太さ: 流れが多いほど太り、流れが少ないとやせる（dD/dt = |Q| − D）。D は管の通りやすさで、半径の4乗に比例します。絵の管の太さは D の4乗根（＝半径）です。</li>
+          <li>「管の長さ」は、管の通りやすさ D × 長さ を全部足した値です。落ち着くと、いちばん短い道の長さに近づきます。このモデルでは最短の道が必ず残ることが、数学でも証明されています（Bonifaci ほか 2012）。</li>
+          <li>粒は管の中の流れの向きと速さ（流量 ÷ 断面）を表します。</li>
+        </ul>
+      </details>
+      <details>
+        <summary>簡単にしたところ</summary>
+        <ul>
+          <li>管の網は、迷路のマスの中心どうしを結ぶ線にしています。本物の管はもっと細かい網です。</li>
+          <li>流れを押し出すのはエサの所の粘菌だけで、管は受け身としています（論文と同じ仮定）。</li>
+          <li>入口と出口は1.5秒ごとに入れかえています（往復流）。本物は約2分ごとです。入れかえても管の太り方は変わりません。</li>
+          <li>はじめに迷路いっぱいに広がる速さと順番は、見やすくした演出で、計算していません。</li>
+          <li>式では、やせた管も完全には0になりません。そのため道をふさぐと、ごく細く残った管がまた太ります。</li>
+          <li>時間は「モデルの時間」で、本物の時間には直していません。</li>
+        </ul>
+      </details>
+    </div>
+  </section>
+
+  <details id="about">
+    <summary>このアプリについて</summary>
+    <p>学習用に簡単にしています。画面の動きは、下の研究の式を計算したものです。</p>
+    <h3>おもな出どころ</h3>
+    <ul>
+      <li>Tero A., Kobayashi R., Nakagaki T. (2007) A mathematical model for adaptive transport network in path finding by true slime mold. <i>Journal of Theoretical Biology</i> 244: 553–564（<a href="https://eprints.lib.hokudai.ac.jp/repo/huscap/all/28041/JTB244-4.pdf" target="_blank" rel="noopener">北海道大学のリポジトリ</a>）— 式・計算の進め方・はじめの管の太さ・往復流の周期</li>
+      <li>Nakagaki T., Yamada H., Tóth Á. (2000) Maze-solving by an amoeboid organism. <i>Nature</i> 407: 470（<a href="https://www.nature.com/articles/35035159" target="_blank" rel="noopener">Nature</a>）— 迷路の実験</li>
+      <li>Bonifaci V., Mehlhorn K., Varma G. (2012) Physarum can compute shortest paths（<a href="https://arxiv.org/abs/1106.0423" target="_blank" rel="noopener">arXiv</a>）— このモデルが最短の道に落ち着くことの証明</li>
+    </ul>
+    <h3>使っているもの</h3>
+    <p>フォント: Google Fonts（SIL Open Font License）</p>
+  </details>
+</div>
+
+<script src="js/maze.js?v=1"></script>
+<script src="js/model.js?v=2"></script>
+<script src="js/draw.js?v=2"></script>
+<script src="js/ui.js?v=2"></script>
+<script src="js/main.js?v=1"></script>
