@@ -11,10 +11,12 @@ const UI = {
     const s = S.s; if (!s) return;
     let phase, nums = '', good = '';
     const spLen = S.ui.sp ? S.ui.sp.length : null;
-    if (s.spread) phase = '① 粘菌が迷路いっぱいに広がっています';
+    if (s.spread) phase = '① 置いた粘菌のかけらが伸びてつながり、迷路を埋めています';
     else if (s.blocked) phase = 'エサとエサのあいだに、通れる道がありません。壁をひらいてください';
-    else if (S.done) phase = '③ 落ち着きました';
-    else phase = S.run ? '② 流れの少ない管がやせていきます' : '一時停止中';
+    else if (S.done) phase = '④ 落ち着きました';
+    else if (!S.run) phase = '一時停止中';
+    else if (s.t < 2) phase = '② 迷路が埋まったので、入口と出口にエサを置きました';
+    else phase = '③ 流れの少ない管がやせていきます';
     if (!s.spread && !s.blocked) {
       const len = Model.tubeLength(s);
       nums = `管の長さ ${len.toFixed(1)} マス分 ／ いちばん短い道 ${spLen ?? '—'} マス`;
@@ -83,7 +85,7 @@ const UI = {
     cv.addEventListener('pointerdown', ev => {
       const h = UI.hit(...pos(ev)); if (!h) return;
       down = { h, moved: false };
-      if (S.mode === 'food') {
+      if (S.mode === 'food' && S.s.fed) {   // エサは迷路が埋まってから置かれる
         const i = S.s.foods.indexOf(h.c);
         if (i >= 0) { S.ui.drag = { i, c: h.c }; cv.setPointerCapture(ev.pointerId); kick(); }
       }

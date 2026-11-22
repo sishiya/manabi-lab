@@ -19,20 +19,31 @@ const Model = {
       m: maze, foods: foods.slice(), rng: makeRng(seed ^ 0x9e3779b9),
       D: new Float64Array(maze.nE), Q: new Float64Array(maze.nE), Qs: new Float64Array(maze.nE),
       p: new Float64Array(maze.W * maze.H), pPrev: null,
-      t: 0, blocked: false, maxRate: 0, swap: false,
+      t: 0, blocked: false, maxRate: 0, swap: false, fed: false,
       spread: null,  // 広がっている途中なら { dist: 辺ごとの順番, k: いまどこまで, max }
     };
   },
 
   has(s, e) { return s.m.open[e] && s.D[e] > 0; },   // 粘菌がいる通路（どんなに細くても）
 
-  // 迷路いっぱいに広げる（実験と同じはじまり: 迷路を粘菌で埋める）。エサのまわりから、開いた通路を近い順にうめる
+  // 迷路いっぱいに広げる（実験と同じはじまり: 中垣ほか 2000 は迷路のあちこちに粘菌のかけらを置き、つながって迷路を埋めてから、エサを置いた）
+  // かけらの場所（迷路のあちこちに SEEDS 個）から、開いた通路を近い順にうめる。エサは埋まりきってから置く（s.fed）
   // 広がる速さと順は見やすくした演出で、計算していない（画面の「簡単にしたところ」に書く）
+  SEEDS: 6,
   startSpread(s) {
-    const m = s.m, dist = new Int32Array(m.nE).fill(-1), seenN = new Int32Array(m.W * m.H).fill(-1);
-    s.D.fill(0); s.Q.fill(0); s.Qs.fill(0); s.pPrev = null; s.t = 0;
+    const m = s.m, N = m.W * m.H, dist = new Int32Array(m.nE).fill(-1), seenN = new Int32Array(N).fill(-1);
+    s.D.fill(0); s.Q.fill(0); s.Qs.fill(0); s.pPrev = null; s.t = 0; s.fed = false;
+    // かけら: 迷路を SEEDS 個のかたまりに分けて、それぞれの中のランダムなマスに1つ（散らばるように）
+    const seeds = [];
+    for (let k = 0; k < Model.SEEDS; k++) {
+      const half = k % 2;
+      const x =Math.min(m.W - 1, Math.floor(((k >> 1) + s.rng()) * m.W / Math.ceil(Model.SEEDS / 2)));
+      const y = Math.min(m.H - 1, Math.floor((half + s.rng()) * m.H / 2));
+      const c = y * m.W + x;
+      if (!seeds.includes(c) && !s.foods.includes(c)) seeds.push(c);
+    }
     const q = [];
-    for (const f of s.foods) { seenN[f] = 0; q.push(f); }
+    for (const c of seeds) { seenN[c] = 0; q.push(c); }
     for (let qi = 0; qi < q.length; qi++) {
       const c = q[qi];
       for (const e of m.adj[c]) {
@@ -43,17 +54,17 @@ const Model = {
       }
     }
     let max = 0; for (let e = 0; e < m.nE; e++) if (dist[e] > max) max = dist[e];
-    s.spread = { dist, k: 0, max };
+    s.spread = { dist, k: 0, max, seeds };
     s.blocked = false;
   },
-  // 広がりを進める。届いた管は、はじめの太さ [0.5, 1.0] の一様乱数（Tero 2007 の4章と同じ）
+  // 広がりを進める。届いた管は、はじめの太さ [0.5, 1.0] の一様乱数（Tero 2007 の4章と同じ）。埋まりきったらエサを置く
   stepSpread(s, dk) {
     const sp = s.spread, m = s.m, k0 = sp.k; sp.k += dk;
     for (let e = 0; e < m.nE; e++) {
       const d = sp.dist[e];
       if (d > k0 && d <= sp.k && m.open[e]) s.D[e] = 0.5 + 0.5 * s.rng();
     }
-    if (sp.k >= sp.max) s.spread = null;
+    if (sp.k >= sp.max) { s.spread = null; s.fed = true; s.t = 0; }
   },
 
   // 入口 a から出口 b へ I0 を流したときの圧力と流量を解く（前処理つき共役勾配法。論文は ICCG）
@@ -102,7 +113,7 @@ const Model = {
   // 1回進める。エサが管でつながっていなければ進めずに blocked を立てる
   // 入口と出口は swap で入れかえられる（Tero 2007: その瞬間、一方のエサが入口・もう一方が出口。|Q| は同じなので太さの変わり方は変わらない）
   step(s) {
-    if (s.spread) { Model.stepSpread(s, 0.35); return; }
+    if (s.spread) { Model.stepSpread(s, 0.2); return; }
     const a = s.foods[s.swap ? 1 : 0], b = s.foods[s.swap ? 0 : 1];
     if (!Model.solve(s, a, b, Model.I0)) { s.blocked = true; return; }
     s.blocked = false;

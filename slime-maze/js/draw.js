@@ -73,8 +73,14 @@ const Draw = {
       g.stroke(); g.setLineDash([]);
     }
 
-    // エサ（オートミールのかたまり）
-    s.foods.forEach((f, i) => {
+    // 置いた粘菌のかけら（広がっているあいだだけ）
+    if (s.spread) {
+      g.fillStyle = C.slime;
+      for (const c of s.spread.seeds) { const [x, y] = Draw.center(L, m, c); g.beginPath(); g.arc(x, y, cs * 0.28, 0, Math.PI * 2); g.fill(); }
+    }
+
+    // エサ（オートミールのかたまり）。迷路が埋まってから置く
+    if (s.fed) s.foods.forEach((f, i) => {
       const [x, y] = Draw.center(L, m, ui.drag && ui.drag.i === i ? ui.drag.c : f), r = cs * 0.34;
       g.fillStyle = C.food; g.strokeStyle = ui.sel === i ? C.sel : C.foodInk; g.lineWidth = ui.sel === i ? 3 : 1.5;
       g.beginPath(); g.roundRect(x - r, y - r, 2 * r, 2 * r, r * 0.35); g.fill(); g.stroke();
