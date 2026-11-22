@@ -13,7 +13,7 @@ const Draw = {
 
   // 管の見た目の太さ（0〜1）。半径は D^(1/4)（D は半径の4乗に比例）。とても細い管は薄くして見えなくする
   width(D) { return Math.pow(Math.min(1, D), 0.25); },
-  alpha(D) { return Math.max(0, Math.min(1, Math.log10(D / 1e-4) / 2)); },  // D = 1e-2 で 1、1e-4 で 0（半径は 1割まで細くなったら薄くしはじめる）
+  alpha(D) { return Math.max(0, Math.min(1, Math.log10(D / Model.GONE))); },  // D = 0.1 で 1、消える太さ（Model.GONE = 0.01）で 0
 
   frame(g, w, h, s, ui) {
     const m = s.m, L = Draw.layout(m, w, h), C = Draw.C, cs = L.cs;

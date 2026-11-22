@@ -18,6 +18,7 @@ const Model = {
   I0: 1,
   CELL_MM: 5,        // 1マスの大きさ（仮定）
   GROW_MM_H: 20,     // 先端の伸びる速さ（mm/時）。Patino-Ramirez ほか 2019「1時間に数センチ」から 2 cm/時
+  GONE: 1e-2,        // これより細くなった管は消えて、その通路から体が引きあげる（半径はもとの約3割。流れのない管は約4〜5時間でここまでやせる: Tero 2007「数時間で組みかわる」）
 
   create(maze, foods, seed) {
     const N = maze.W * maze.H, nE = maze.nE;
@@ -26,8 +27,9 @@ const Model = {
       D: new Float64Array(nE), Q: new Float64Array(nE), Qs: new Float64Array(nE),
       fa: new Float64Array(nE), fb: new Float64Array(nE), vk: new Float64Array(nE), // ea 側・eb 側から伸びた長さ（0〜1）、速さのばらつき
       reached: new Uint8Array(N), arrive: new Float64Array(N),   // 粘菌がいるマス、そこへ着いた時刻
+      visited: new Uint8Array(nE),   // この探索で一度伸びた通路（消えたあと、また伸びなおさないように）
       p: new Float64Array(N), pPrev: null,
-      t: 0, tFlow: 0, blocked: false, maxRate: 0, swap: false, start: -1, growing: false, mode: 'front', blob: [0, 0],
+      t: 0, tFlow: 0, blocked: false, maxRate: 0, swap: false, start: -1, growing: false, exploring: false, mode: 'front', blob: [0, 0],
     };
   },
 
@@ -37,32 +39,64 @@ const Model = {
   // 迷路のまん中に1つのかけらを置いて、伸びはじめる
   startGrowth(s) {
     const m = s.m, N = m.W * m.H;
-    s.D.fill(0); s.Q.fill(0); s.Qs.fill(0); s.fa.fill(0); s.fb.fill(0); s.reached.fill(0); s.arrive.fill(0);
+    s.D.fill(0); s.Q.fill(0); s.Qs.fill(0); s.fa.fill(0); s.fb.fill(0); s.reached.fill(0); s.arrive.fill(0); s.visited.fill(0);
     s.pPrev = null; s.t = 0; s.tFlow = 0; s.blocked = false; s.maxRate = 0; s.blob = [0, 0]; s.mode = 'front';
     for (let e = 0; e < m.nE; e++) s.vk[e] = 0.75 + 0.5 * s.rng();
     let c0 = Math.floor(m.H / 2) * m.W + Math.floor(m.W / 2);
     if (s.foods.includes(c0)) c0 = (c0 + 1) % N;
-    s.start = c0; s.reached[c0] = 1; s.growing = true;
+    s.start = c0; s.reached[c0] = 1; s.growing = true; s.exploring = true;
+  },
+
+  // また探しはじめる（エサを置いた・動かした、壁をひらいたとき）。いま管も伸びかけもない通路は、また伸びてよい
+  explore(s) {
+    const m = s.m;
+    for (let e = 0; e < m.nE; e++) if (!(s.D[e] > 0) && !(s.fa[e] > 0) && !(s.fb[e] > 0)) s.visited[e] = 0;
+    s.exploring = true; s.growing = true;
   },
 
   // 伸びる（dh 時間ぶん）。両はしの長さの和が 1 になった通路は管になる（はじめの太さは [0.5, 1.0] の一様乱数）
+  // 探しているあいだ（exploring）だけ。伸びた管の体はエサの上のかたまりから出す（かたまりがあれば）
   grow(s, dh) {
+    if (!s.exploring) { s.growing = false; return; }
     const m = s.m, v = Model.GROW_MM_H / Model.CELL_MM * dh;  // マス
     let any = false;
     for (let e = 0; e < m.nE; e++) {
       if (!m.open[e] || Model.full(s, e)) continue;
+      if (s.visited[e] && !(s.fa[e] > 0) && !(s.fb[e] > 0)) continue;
       const ra = s.reached[m.ea[e]], rb = s.reached[m.eb[e]];
       if (!ra && !rb) continue;
-      any = true;
+      any = true; s.visited[e] = 1;
       if (ra) s.fa[e] += v * s.vk[e];
       if (rb) s.fb[e] += v * s.vk[e];
       if (s.fa[e] + s.fb[e] >= 1) {
         const k = s.fa[e] / (s.fa[e] + s.fb[e]); s.fa[e] = k; s.fb[e] = 1 - k;
         s.D[e] = 0.5 + 0.5 * s.rng();
+        Model.takeBlob(s, Model.L * Math.sqrt(s.D[e]));
         for (const c of [m.ea[e], m.eb[e]]) if (!s.reached[c]) { s.reached[c] = 1; s.arrive[c] = s.t; }
       }
     }
     s.growing = any;
+    if (!any) s.exploring = false;
+  },
+  takeBlob(s, v) {
+    const ins = s.foods.map((f, i) => i).filter(i => (s.blob[i] || 0) > 0);
+    for (const i of ins) s.blob[i] = Math.max(0, s.blob[i] - v / ins.length);
+  },
+
+  // とても細くなった管は消え、体はその通路から引きあげる。管も伸びかけもなくなったマスには、もう粘菌はいない（エサの上のかたまりは残る）
+  retract(s) {
+    const m = s.m; let gone = false;
+    for (let e = 0; e < m.nE; e++) if (s.D[e] > 0 && s.D[e] < Model.GONE) { s.D[e] = 0; s.fa[e] = 0; s.fb[e] = 0; gone = true; }
+    if (!gone) return;
+    for (let c = 0; c < m.W * m.H; c++) {
+      if (!s.reached[c]) continue;
+      let keep = s.foods.some((f, i) => f === c && (s.blob[i] || 0) > 0.05);
+      for (const e of m.adj[c]) {
+        if (keep) break;
+        if (s.D[e] > 0 || (m.ea[e] === c && s.fa[e] > 0) || (m.eb[e] === c && s.fb[e] > 0)) keep = true;
+      }
+      if (!keep) s.reached[c] = 0;
+    }
   },
 
   // 入口 a から I0 を入れ、出口 sinks（1つ以上）から等しく I0/n ずつ出したときの圧力と流量を解く（前処理つき共役勾配法。論文は ICCG）
@@ -117,8 +151,10 @@ const Model = {
   // 伸びている先端のマス（まだ管になっていない通路の、粘菌がいる側のはし）
   fronts(s) {
     const m = s.m, set = new Set();
+    if (!s.exploring) return [];
     for (let e = 0; e < m.nE; e++) {
       if (!m.open[e] || Model.full(s, e)) continue;
+      if (s.visited[e] && !(s.fa[e] > 0) && !(s.fb[e] > 0)) continue;   // 消えたあとの通路は先端ではない
       if (s.reached[m.ea[e]]) set.add(m.ea[e]);
       if (s.reached[m.eb[e]]) set.add(m.eb[e]);
     }
@@ -167,6 +203,7 @@ const Model = {
       s.foods.forEach((f, i) => { if (s.reached[f]) s.blob[i] = Math.max(0, (s.blob[i] || 0) - dV / foodsIn.length); });
     }
     s.maxRate = maxRate;
+    Model.retract(s);
     if (s.mode === 'pair') s.tFlow += dt;
   },
 

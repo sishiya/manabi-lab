@@ -30,8 +30,9 @@ function restart() {
   S.run = true; S.acc = 0;
   kick();
 }
-// 迷路やエサを変えたとき
+// 迷路やエサを変えたとき: 粘菌はまた伸びて探しはじめる（エサの場所は知らない）
 function changed() {
+  Model.explore(S.s);
   S.ui.sp = Model.shortest(S.s);
   S.s.pPrev = null; S.s.tFlow = 0;
   kick();

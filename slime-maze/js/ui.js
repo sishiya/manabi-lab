@@ -15,8 +15,8 @@ const UI = {
     let phase;
     if (s.blocked) phase = 'エサとエサのあいだに通れる道がありません。壁をひらいてください';
     else if (one && s.growing) phase = s.reached[s.foods[0]] ? '① エサにたどりつきました。伸びる先へ流れ、止まった枝はやせていきます' : '① かけらが伸びて迷路を探り、行き止まりの枝はやせていきます';
-    else if (one) phase = '② 伸びる先がなくなり、体がエサの上に集まっていきます。空いたマスを押すとエサをもう1つ置けます';
-    else if (!flowing) phase = '新しいエサの所まで、まだ粘菌が来ていません';
+    else if (one) phase = Model.volume(s) > 0.5 ? '② 伸びる先がなくなり、体がエサの上に集まっていきます。空いたマスを押すとエサをもう1つ置けます' : '② 体がエサの上に集まりました。空いたマスを押すと、エサをもう1つ置けます';
+    else if (!flowing) phase = 'まわりへ伸びて、新しいエサを探しています';
     else if (settled) phase = '④ 落ち着いています（流れはつづいています）';
     else phase = '③ エサからエサへ流れ、流れの少ない管がやせていきます';
     if (!S.run) phase = '一時停止中 — ' + phase;
