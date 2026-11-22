@@ -15,16 +15,22 @@ const UI = {
     let phase;
     if (s.blocked) phase = 'エサとエサのあいだに通れる道がありません。壁をひらいてください';
     else if (one && s.growing) phase = s.reached[s.foods[0]] ? '① エサにたどりつきました。伸びる先へ流れ、止まった枝はやせていきます' : '① かけらが伸びて迷路を探り、行き止まりの枝はやせていきます';
-    else if (one) phase = Model.volume(s) > 0.5 ? '② 伸びる先がなくなり、体がエサの上に集まっていきます。空いたマスを押すとエサをもう1つ置けます' : '② 体がエサの上に集まりました。空いたマスを押すと、エサをもう1つ置けます';
-    else if (!flowing) phase = 'まわりへ伸びて、新しいエサを探しています';
-    else if (settled) phase = '④ 落ち着いています（流れはつづいています）';
-    else phase = '③ エサからエサへ流れ、流れの少ない管がやせていきます';
+    else if (one) phase = Model.volume(s) > 0.5 ? '② 伸びる先がなくなり、体がエサの上に集まっていきます' : '② 体がエサの上に集まりました。粘液の跡がうすれると（1日と仮定）また探しに出ます';
+    else if (!flowing) {
+      const k = s.foods.findIndex(f => !s.reached[f]);
+      let sense = false; for (let i = 0; k >= 0 && i < s.g.N; i++) if (s.reached[i] && s.cs[k][i] >= Model.C_TH) { sense = true; break; }
+      phase = sense ? '③ 新しいエサの物質に気づいて、そちらへ伸びています'
+        : s.growing ? '③ まわりへ伸びて探しています。新しいエサのことは、まだ知りません'
+        : '③ 新しいエサの物質はまだとどいていません。粘液の跡がうすれると探しに出ます';
+    }
+    else if (settled) phase = '⑤ 落ち着いています（流れはつづいています）';
+    else phase = '④ エサからエサへ流れ、流れの少ない管がやせていきます';
     if (!S.run) phase = '一時停止中 — ' + phase;
     let nums = '', good = '';
     if (flowing && !s.blocked) {
-      const len = Model.tubeLength(s), spLen = S.ui.sp ? S.ui.sp.length : null;
-      nums = `管の長さ ${len.toFixed(1)} マス分 ／ いちばん短い道 ${spLen ?? '—'} マス`;
-      if (settled && spLen != null && Math.abs(len - spLen) < 0.5) good = 'いちばん短い道だけが残りました';
+      const len = Model.tubeLength(s), spLen = S.ui.sp ? S.ui.sp.len : null, cm = v => (v / 10).toFixed(1);
+      nums = `管の長さ ${cm(len)} cm ／ いちばん短い道 ${spLen != null ? cm(spLen) : '—'} cm`;
+      if (settled && spLen != null && Math.abs(len - spLen) < 0.02 * spLen) good = 'いちばん短い道だけが残りました';
     } else if (one && s.reached[s.foods[0]]) {
       const V = Model.volume(s), b = s.blob[0] || 0;
       nums = `管に残っている体 ${Math.round(100 * V / Math.max(1e-9, V + b))}% ／ エサの上に集まった体 ${Math.round(100 * b / Math.max(1e-9, V + b))}%`;
@@ -46,16 +52,18 @@ const UI = {
       : 'マスとマスのさかいめを押すと、壁ができる・なくなる';
   },
 
-  // 画面の点 → マス（迷路の外なら null）と、マスの中の位置
+  // 画面の点 → いちばん近い点（地図の外・遠すぎるなら null）と、mm の位置
   hit(x, y) {
-    const L = S.L, m = S.s.m; if (!L) return null;
-    const fx = (x - L.ox) / L.cs, fy = (y - L.oy) / L.cs;
-    if (fx < 0 || fy < 0 || fx >= m.W || fy >= m.H) return null;
-    return { c: Math.floor(fy) * m.W + Math.floor(fx), fx, fy };
+    const L = S.L, gr = S.s.g; if (!L) return null;
+    const [mx, my] = Draw.toMM(L, x, y), b = gr.bounds;
+    if (mx < b.x0 || my < b.y0 || mx > b.x1 || my > b.y1) return null;
+    const c = Graph.nearest(gr, mx, my, gr.unit * 0.8);
+    return c < 0 ? null : { c, mx, my };
   },
-  // いちばん近いマスのさかいめ（内側の辺だけ）
+  // いちばん近いマスのさかいめ（迷路のときだけ。内側の辺だけ）
   nearestEdge(h) {
-    const m = S.s.m, cx = Math.floor(h.fx), cy = Math.floor(h.fy), u = h.fx - cx, v = h.fy - cy;
+    const gr = S.s.g, m = gr.maze; if (!m) return -1;
+    const fx = h.mx / gr.cellMM, fy = h.my / gr.cellMM, cx = Math.floor(fx), cy = Math.floor(fy), u = fx - cx, v = fy - cy;
     const cand = [];
     if (cx > 0) cand.push([u, cy * (m.W - 1) + cx - 1]);
     if (cx < m.W - 1) cand.push([1 - u, cy * (m.W - 1) + cx]);
@@ -66,15 +74,16 @@ const UI = {
   },
 
   toggleWall(e) {
-    const s = S.s, m = s.m;
+    const s = S.s, gr = s.g;
     if (e < 0) return;
-    // ふさぐ: その通路の管はなくなる。ひらく: 粘菌がとなりにいれば、また伸びて入っていく
-    if (m.open[e]) { m.open[e] = 0; s.D[e] = 0; s.fa[e] = 0; s.fb[e] = 0; }
-    else { m.open[e] = 1; s.D[e] = 0; s.fa[e] = 0; s.fb[e] = 0; }
+    // ふさぐ: その通路の管はなくなる。ひらく: 新しい通路（粘液の跡なし）。粘菌がとなりにいれば、伸びて入っていける
+    if (gr.open[e]) { if (s.D[e] > 0) Model.toBlob(s, Model.L(s, e) * Math.sqrt(s.D[e])); gr.open[e] = 0; s.D[e] = 0; s.fa[e] = 0; s.fb[e] = 0; }   // ふさいだ所の体はエサの上へ
+    else { gr.open[e] = 1; s.D[e] = 0; s.fa[e] = 0; s.fb[e] = 0; s.trailT[e] = -1e9; }
+    Draw._paths = null;
     changed();
   },
-  moveFood(i, c) { const s = S.s; if (s.foods.includes(c)) return; s.foods[i] = c; changed(); },
-  addFood(c) { const s = S.s; if (s.foods.length >= 2 || s.foods.includes(c)) return false; s.foods.push(c); changed(); return true; },
+  moveFood(i, c) { const s = S.s; if (s.foods.includes(c)) return; s.foods[i] = c; Model.resetField(s, i); changed(); },
+  addFood(c) { const s = S.s; if (s.foods.length >= 2 || s.foods.includes(c)) return false; s.foods.push(c); Model.resetField(s, s.foods.length - 1); changed(); return true; },
 
   init() {
     $('bRun').onclick = () => { S.run = !S.run; kick(); };
@@ -84,6 +93,7 @@ const UI = {
     $('bRestart').onclick = () => restart();
     $('bNew').onclick = () => newMaze(S.seed + 1000 + Math.floor(Math.random() * 100000));
     $('cShort').onchange = e => { S.ui.showShortest = e.target.checked; draw(); };
+    $('cChem').onchange = e => { S.ui.showChem = e.target.checked; draw(); };
 
     const pos = ev => { const r = cv.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };
     let down = null;

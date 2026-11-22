@@ -57,6 +57,6 @@ details p,details li{font-size:14px;line-height:1.8}
 }
 @media (orientation:landscape) and (max-height:520px){
   #top{display:none}
-  #view{max-height:calc(100vh - 100px)}
+  #view{max-height:calc(100vh - 150px)}
   #stage{top:0}
 }

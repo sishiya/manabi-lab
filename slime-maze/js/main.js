@@ -5,34 +5,35 @@ window.addEventListener('error', e => window.__slmaErr.push(String(e.message)));
 
 const cv = document.getElementById('cv');
 const g = cv.getContext('2d');
-const W = 12, H = 9;              // 迷路のマスの数（1マス 5 mm と仮定 → 6 × 4.5 cm。スマホの幅 375px で 1マス約 30px）
+const W = 12, H = 9, CELL_MM = 5; // 迷路のマスの数と1マスの大きさ（5 mm と仮定 → 6 × 4.5 cm。スマホの幅 375px で 1マス約 30px）
 const SPEEDS = [{ h: 2 / 3, label: '1秒＝40分' }, { h: 2, label: '1秒＝2時間' }, { h: 1 / 6, label: '1秒＝10分' }];  // 画面の1秒で進む本物の時間（時間 h）
 const SWAP_SEC = 1.5;             // 入口と出口を入れかえる間隔（画面の秒。本物の往復流は約2分ごと。見やすくした演出）
 const DOT_SPEED = 1.6;            // 粒の速さ（マス/秒、流量 1・D 1 の管で。表示だけ）
 
 const S = {
   s: null, run: true, speedI: 0, mode: 'food', seed: 7,
-  ui: { dots: true, ph: null, showShortest: false, sp: null, sel: -1, drag: null },
+  ui: { dots: true, ph: null, showShortest: false, showChem: true, sp: null, sel: -1, drag: null },
   acc: 0, swapT: 0, L: null,
 };
 
 function newMaze(seed) {
   S.seed = seed;
   const m = Maze.makeGood(W, H, seed);
-  S.s = Model.create(m, [0], seed);     // はじめのエサは1つ（左上）
+  const gr = Graph.fromMaze(m, CELL_MM);  // モデルと絵は点と線の地図だけを見る（将来は道路の地図も同じ形で）
+  S.s = Model.create(gr, [0], seed);      // はじめのエサは1つ（左上）
   S.ui.ph = new Float64Array(m.nE);
   restart();
 }
 function restart() {
   S.s.foods.length = 1;                 // エサは1つにもどす
-  Model.startGrowth(S.s);
+  Model.resetField(S.s, 0);
+  Model.startGrowth(S.s, Math.floor(H / 2) * W + Math.floor(W / 2));   // かけらは迷路のまん中
   S.ui.sp = null; S.ui.sel = -1;
   S.run = true; S.acc = 0;
   kick();
 }
-// 迷路やエサを変えたとき: 粘菌はまた伸びて探しはじめる（エサの場所は知らない）
+// 迷路やエサを変えたとき（粘菌はエサを置いたことを知らない。物質がとどくか、粘液の跡がうすれてまた探しに出たときに見つける）
 function changed() {
-  Model.explore(S.s);
   S.ui.sp = Model.shortest(S.s);
   S.s.pPrev = null; S.s.tFlow = 0;
   kick();
@@ -54,8 +55,8 @@ function step(dtReal) {
     let n = 0;
     while (S.acc >= Model.DT && n < 100) { Model.step(s); S.acc -= Model.DT; n++; }
     // 粒を流す（u は ea → eb の向き）
-    const m = s.m, ph = S.ui.ph;
-    for (let e = 0; e < m.nE; e++) {
+    const gr = s.g, ph = S.ui.ph;
+    for (let e = 0; e < gr.nE; e++) {
       if (s.Qs[e] < 1e-3 || s.D[e] < 1e-2) continue;
       ph[e] += dtReal * DOT_SPEED * Math.sign(s.Q[e]) * Math.min(3, s.Qs[e] / Math.sqrt(s.D[e]));
     }
@@ -86,5 +87,5 @@ window.__slma = {
   S, Model, Maze,
   simRun(sec, dt = 1 / 30) { for (let t = 0; t < sec; t += dt) step(dt); draw(); return { hours: S.s.t, len: Model.tubeLength(S.s), settled: Model.settled(S.s) }; },
   newMaze, restart,
-  addFood(c) { if (S.s.foods.length < 2) { S.s.foods.push(c); changed(); } },
+  addFood(c) { UI.addFood(c); },
 };
