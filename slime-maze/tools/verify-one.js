@@ -22,8 +22,8 @@ for (let seed = 1; seed <= 6; seed++) {
     if (tFull >= 0 && s.t > tFull + 10) break;
   }
   let alive = 0; for (let e = 0; e < g.nE; e++) if (Model.has(s, e)) alive++;
-  say(tFull > 0 && thinDuring > 0 && alive === 0 && s.blob[0] > 20,
-    `A seed ${seed}: 埋まるまで ${tFull.toFixed(1)} h、伸びるあいだに細い管 ${thinDuring > 0 ? 'あり' : 'なし'}、10時間後に残った管 ${alive}本、エサの上 ${s.blob[0].toFixed(1)}`);
+  say(tFull > 0 && thinDuring > 0 && alive === 0 && s.lump[0] > 20,
+    `A seed ${seed}: 埋まるまで ${tFull.toFixed(1)} h、伸びるあいだに細い管 ${thinDuring > 0 ? 'あり' : 'なし'}、10時間後に残った管 ${alive}本、エサの上 ${s.lump[0].toFixed(1)}`);
 }
 
 for (let seed = 1; seed <= 6; seed++) {
@@ -42,7 +42,7 @@ for (let seed = 1; seed <= 6; seed++) {
 { // C: 1本の線の列（まっすぐな通路）で、4マス先が 1% になる時間
   const m = Maze.make(W, 1, 1), g = Graph.fromMaze(m, CELL), s = Model.create(g, [0], 1);
   let t = 0; while (s.cs[0][4] < Model.C_TH && t < 200) { Model.diffuse(s, Model.DT); t += Model.DT; }
-  const Dc = Model.DIFF_M2_S * 3600 * 1e6, x = 4 * CELL, est = x * x / (13.2 * Dc);   // c = erfc(x / 2√(Dt)) = 0.01 → t = x² / (4·1.82² Dc)
-  say(t > est * 0.67 && t < est * 1.5, `C 物質が 20 mm 先で 1% になるまで ${t.toFixed(1)} h（式の見積もり ${est.toFixed(1)} h。マス目の計算なので 1.5 倍以内なら可）`);
+  const Dc = Model.DIFF_M2_S * 3600 * 1e6 * Model.DIFF_BOOST, x = 4 * CELL, est = x * x / (13.2 * Dc);   // c = erfc(x / 2√(Dt)) = 0.01 → t = x² / (4·1.82² Dc)
+  say(t > est * 0.67 && t < est * 1.5, `C 物質が 20 mm 先で 1% になるまで ${t.toFixed(2)} h（${Model.DIFF_BOOST}倍の演出つき）（式の見積もり ${est.toFixed(2)} h。マス目の計算なので 1.5 倍以内なら可）`);
 }
 process.exit(ng ? 1 : 0);

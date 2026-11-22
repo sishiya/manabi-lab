@@ -3,14 +3,15 @@
 //  - 管: 少し暗い黄土色の壁 ＋ 明るい黄色の中身 ＋ 中を流れる明るい芯。太さは半径 ∝ D^(1/4)（ポアズイユの D は半径の4乗）
 //  - 迷路の通路の中の管は、まっすぐでなく少しうねる（線ごとに決まった形。道路の地図では道どおりに描く）
 //  - 伸びている先端: 扇のように広がる薄い膜（ファン）＋ 中に細い筋（レビュー: 先端は薄い原形質のシートが流れでふくらむ）
-//  - エサの上: 集まった体のかたまり（量に合わせた大きさ、ふちは少しでこぼこ）
+//  - 体のかたまり: 管にならずに集まった体（量に合わせた大きさ、ふちは少しでこぼこ）。エサは記号（赤い丸）
 'use strict';
 
 const Draw = {
   C: {
     bg: '#0f1620', floor: '#151f29', wall: '#3d4d5e', wallTop: '#5b6f83',
     halo: 'rgba(214,160,20,0.16)', outer: '#b9820f', inner: '#f2c93a', core: 'rgba(255,241,176,0.55)', grain: 'rgba(255,248,214,0.9)',
-    food: '#d8c08c', foodDark: '#a98b55', foodInk: '#3a2410', mark: '#e8f0f4', sel: '#7fd3ff', chem: '95,180,230',
+    food: '#ff6f5c', foodRing: '#ffffff', foodInk: '#ffffff',   // エサは記号（粘菌の黄色・物質の青とまぎれない色）
+    mark: '#e8f0f4', sel: '#7fd3ff', chem: '95,180,230',
   },
 
   // 地図を画面に合わせて置く。P(i) で点の画面の位置、cs は「よくある線の長さ」の画面の長さ
@@ -71,8 +72,8 @@ const Draw = {
     // エサから広がる物質（※ 目印。色の濃さは対数。粘菌が気づく濃さより上は少し濃く）
     if (ui.showChem) {
       for (let i = 0; i < g.N; i++) {
-        const c = s.c[i]; if (c < 1e-4) continue;
-        const a = Math.min(1, Math.log10(c / 1e-4) / 4) * (c >= Model.C_TH ? 0.42 : 0.2);
+        const c = s.c[i]; if (c < 1e-3) continue;
+        const a = 0.05 + 0.4 * Math.min(1, Math.log10(c / 1e-3) / 3);   // 0.1% で薄く、気づく 1% で中くらい、エサの近くほど濃い
         const [x, y] = Draw.P(L, g, i);
         g2.fillStyle = `rgba(${C.chem},${a})`;
         if (g.maze) g2.fillRect(x - cs / 2, y - cs / 2, cs, cs); else { g2.beginPath(); g2.arc(x, y, cs * 0.5, 0, 6.283); g2.fill(); }
@@ -155,14 +156,17 @@ const Draw = {
       g2.stroke(); g2.setLineDash([]);
     }
 
-    // エサ（オートミールのかけら）と、その上に集まった体（エサを包むように半透明で重ねる。面積 ∝ 量）
+    // 集まった体のかたまり（エサの上なら、エサを包むように半透明で重ねる。エサを動かしても、かたまりはその場に残る。面積 ∝ 量）
+    for (let i = 0; i < g.N; i++) {
+      const bl = s.lump[i]; if (!(bl >= 0.05) || !s.reached[i]) continue;
+      const [x, y] = Draw.P(L, g, i), onFood = s.foods.includes(i);
+      g2.globalAlpha = onFood ? 0.82 : 1; Draw.blob(g2, x, y, cs * Math.min(0.62, 0.26 + 0.06 * Math.sqrt(bl)), Draw.hash(i + 11)); g2.globalAlpha = 1;
+    }
+    // エサ（記号。かたまりの上に描いて、いつも見えるように）と、選んでいる印
     s.foods.forEach((f, i) => {
-      const [x, y] = ui.drag && ui.drag.i === i ? Draw.P(L, g, ui.drag.c) : Draw.P(L, g, f), r = cs * 0.3;
-      Draw.oat(g2, x, y, r, Draw.hash(i * 13 + 5));
-      const bl = s.blob[i] || 0;
-      if (s.reached[f] && bl >= 0.05 && !(ui.drag && ui.drag.i === i)) {
-        g2.globalAlpha = 0.82; Draw.blob(g2, x, y, cs * Math.min(0.62, 0.26 + 0.06 * Math.sqrt(bl)), Draw.hash(f + 11)); g2.globalAlpha = 1;
-      }
+      const [x, y] = ui.drag && ui.drag.i === i ? Draw.P(L, g, ui.drag.c) : Draw.P(L, g, f), r = cs * 0.27;
+      g2.fillStyle = C.food; g2.strokeStyle = C.foodRing; g2.lineWidth = Math.max(1.5, cs * 0.04);
+      g2.beginPath(); g2.arc(x, y, r, 0, 6.283); g2.fill(); g2.stroke();
       if (ui.sel === i) { g2.strokeStyle = C.sel; g2.lineWidth = 3; g2.beginPath(); g2.arc(x, y, r * 1.35, 0, 6.283); g2.stroke(); }
       g2.fillStyle = C.foodInk; g2.font = `700 ${Math.max(9, Math.round(cs * 0.24))}px 'Zen Kaku Gothic New', sans-serif`;
       g2.textAlign = 'center'; g2.textBaseline = 'middle'; g2.fillText('エサ', x, y + 1);
@@ -200,14 +204,6 @@ const Draw = {
     const gr = g2.createRadialGradient(x - R * 0.2, y - R * 0.2, 0, x, y, R);
     gr.addColorStop(0, '#ffe680'); gr.addColorStop(1, C.inner);
     g2.fillStyle = gr; pathB(0.82); g2.fill();
-  },
-
-  // オートミールのかけら（ふちが少し角ばった、明るい黄土色の板）
-  oat(g2, x, y, r, h) {
-    const C = Draw.C, n = 7;
-    g2.beginPath();
-    for (let i = 0; i <= n; i++) { const a = i / n * 6.283 + (h % 10) * 0.1, rr = r * (0.85 + ((h >> (i * 2)) % 4) * 0.06); i ? g2.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr * 0.85) : g2.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr * 0.85); }
-    g2.closePath(); g2.fillStyle = C.food; g2.fill(); g2.strokeStyle = C.foodDark; g2.lineWidth = 1.2; g2.stroke();
   },
 
   // 迷路の壁

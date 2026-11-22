@@ -20,6 +20,8 @@ const Model = {
   GROW_MM_H: 20,     // 先端の伸びる速さ（mm/時）。Patino-Ramirez ほか 2019「1時間に数センチ」から 2 cm/時
   GONE: 1e-2,        // これより細くなった管は消えて、その線から体が引きあげる（半径はもとの約3割。流れのない管は約4〜5時間でここまでやせる）
   DIFF_M2_S: 6.7e-10,  // ブドウ糖の水の中での拡散係数（m²/秒。教科書の値。寒天の中ではすこし遅い）
+  DECAY_LEN_MM: 30,  // 物質は少しずつ分解・吸収されて減る（仮定）。広がりと減りがつりあう長さ（エサから 30 mm で約 1/e。これがないと、長い時間で迷路じゅうが同じ濃さになって、向きが分からなくなる）
+  DIFF_BOOST: 100,   // 見やすくするため、物質は本物の100倍の速さで広げる（演出。2026-11-22 ユーザー「伸びる様子を眺めるアプリの本質とは関係ないので、特別にもっと早くていい」）
   C_TH: 0.01,        // 粘菌が気づく濃さ（エサの所を 1 とした割合）。本当の値は分からないので仮定
   CHEM_UP: 1.5, CHEM_DOWN: 0.5,   // 気づいた所では、濃いほうへの線は 1.5 倍の速さで伸び、うすいほうへは 0.5 倍（仮定）
   TRAIL_H: 24,       // 粘液の跡が残る時間（Reid ほか 2012: 一度探した所をさける）。どのくらい残るかは分からないので 1日と仮定
@@ -35,7 +37,8 @@ const Model = {
       cs: [new Float64Array(N), new Float64Array(N)],   // エサごとの、広がる物質の濃さ（エサの所 = 1）
       c: new Float64Array(N),        // 全部のエサの物質の和（絵のため）
       p: new Float64Array(N), pPrev: null,
-      t: 0, tFlow: 0, blocked: false, maxRate: 0, swap: false, start: -1, growing: false, mode: 'front', blob: [0, 0],
+      t: 0, tFlow: 0, blocked: false, maxRate: 0, swap: false, start: -1, growing: false, mode: 'front',
+      lump: new Float64Array(N),   // 点ごとの体のかたまり（管にならずに集まっている体の量。エサの上にできることが多いが、エサを動かしても、かたまりはその場に残る）
     };
   },
 
@@ -50,7 +53,7 @@ const Model = {
     const g = s.g;
     s.D.fill(0); s.Q.fill(0); s.Qs.fill(0); s.fa.fill(0); s.fb.fill(0); s.reached.fill(0); s.arrive.fill(0);
     s.trailT.fill(-1e9); s.c.fill(0); for (const f of s.cs) f.fill(0);
-    s.pPrev = null; s.t = 0; s.tFlow = 0; s.blocked = false; s.maxRate = 0; s.blob = [0, 0]; s.mode = 'front';
+    s.pPrev = null; s.t = 0; s.tFlow = 0; s.blocked = false; s.maxRate = 0; s.lump.fill(0); s.mode = 'front';
     for (let e = 0; e < g.nE; e++) s.vk[e] = 0.75 + 0.5 * s.rng();
     s.start = start; s.reached[start] = 1; s.growing = true;
   },
@@ -59,7 +62,7 @@ const Model = {
   //   線（通路）の網の上の有限体積の形: 点 i の体積 V_i = Σ 線の長さ/2（断面は共通なので省く）、線の流束 = Dc (c_b − c_a) / 長さ
   //   → 線の長さがそろっていない地図（道路）でも物質の量が保たれる。安定のため、必要なら1回を細かく分けて進める
   diffuse(s, dh) {
-    const g = s.g, Dc = Model.DIFF_M2_S * 3600 * 1e6;   // mm²/時
+    const g = s.g, Dc = Model.DIFF_M2_S * 3600 * 1e6 * Model.DIFF_BOOST;   // mm²/時（演出で速くしている）
     if (!s.dvol || s.dvolOpen !== Model.openSig(g)) {
       s.dvol = new Float64Array(g.N); let kmax = 0;
       const ksum = new Float64Array(g.N);
@@ -78,7 +81,8 @@ const Model = {
           const a = g.ea[e], b = g.eb[e], f = Dc * (c[b] - c[a]) / g.len[e] * dt;
           d[a] += f; d[b] -= f;
         }
-        for (let i = 0; i < g.N; i++) if (s.dvol[i] > 0) c[i] += d[i] / s.dvol[i];
+        const decay = Math.exp(-Dc / (Model.DECAY_LEN_MM * Model.DECAY_LEN_MM) * dt);   // 減る速さ λ = Dc / 長さ²
+        for (let i = 0; i < g.N; i++) if (s.dvol[i] > 0) c[i] = (c[i] + d[i] / s.dvol[i]) * decay;
         c[food] = 1;
       }
       for (let i = 0; i < g.N; i++) s.c[i] += c[i];
@@ -130,14 +134,20 @@ const Model = {
     for (let e = 0; e < g.nE; e++) if (s.D[e] > 0 || s.fa[e] > 0 || s.fb[e] > 0) s.trailT[e] = s.t;   // いまいる線に粘液が残る
     s.growing = any;
   },
-  toBlob(s, v) {   // 体をエサの上のかたまりへもどす（着いているエサが2つなら半分ずつ）
-    const ins = s.foods.map((f, i) => i).filter(i => s.reached[s.foods[i]]);
-    for (const i of ins) s.blob[i] = (s.blob[i] || 0) + v / ins.length;
+  // 体をかたまりへもどす: 粘菌がいるエサの上（2つなら半分ずつ）。エサの上にいなければ、いまあるかたまりへ（量に合わせて）
+  toBlob(s, v) {
+    const ins = s.foods.filter(f => s.reached[f]);
+    if (ins.length) { for (const f of ins) s.lump[f] += v / ins.length; return; }
+    const tot = Model.lumpTotal(s);
+    if (tot > 0) for (let i = 0; i < s.g.N; i++) if (s.lump[i] > 0) s.lump[i] += v * s.lump[i] / tot;
   },
+  // 伸びた管の体は、かたまりから出す（量に合わせて）
   takeBlob(s, v) {
-    const ins = s.foods.map((f, i) => i).filter(i => (s.blob[i] || 0) > 0);
-    for (const i of ins) s.blob[i] = Math.max(0, s.blob[i] - v / ins.length);
+    const tot = Model.lumpTotal(s); if (!(tot > 0)) return;
+    const k = Math.max(0, 1 - v / tot);
+    for (let i = 0; i < s.g.N; i++) s.lump[i] *= k;
   },
+  lumpTotal(s) { let a = 0; for (let i = 0; i < s.g.N; i++) a += s.lump[i]; return a; },
 
   // とても細くなった管は消え、体はその線から引きあげる。管も伸びかけもなくなった点には、もう粘菌はいない（エサの上のかたまりは残る）
   retract(s) {
@@ -146,7 +156,7 @@ const Model = {
     if (!gone) return;
     for (let c = 0; c < g.N; c++) {
       if (!s.reached[c]) continue;
-      let keep = s.foods.some((f, i) => f === c && (s.blob[i] || 0) > 0.05);
+      let keep = s.lump[c] > 0.05;   // かたまりがある点には、粘菌がいる
       for (const e of g.adj[c]) {
         if (keep) break;
         if (s.D[e] > 0 || (g.ea[e] === c && s.fa[e] > 0) || (g.eb[e] === c && s.fb[e] > 0)) keep = true;
@@ -186,7 +196,7 @@ const Model = {
     for (let i = 0; i < n; i++) { z[i] = r[i] / diag[i]; pv[i] = z[i]; }
     let rz = 0; for (let i = 0; i < n; i++) rz += r[i] * z[i];
     let r0 = 0; for (let i = 0; i < n; i++) r0 += rhs[i] * rhs[i] / diag[i];
-    for (let it = 0; it < 6 * n + 50 && rz > 1e-24 * r0; it++) {
+    for (let it = 0; it < 20 * n + 50 && rz > 1e-24 * r0; it++) {
       mul(pv, Ap); let pAp = 0; for (let i = 0; i < n; i++) pAp += pv[i] * Ap[i];
       if (!(pAp > 0)) break;
       const al = rz / pAp;
@@ -238,7 +248,9 @@ const Model = {
       if (!ok) { s.mode = 'none'; s.Q.fill(0); }   // つながっていなければ流れはない（管はやせていく）
     } else {
       s.blocked = false;
-      const fr = Model.fronts(s), src = foodsIn.length ? foodsIn[0] : s.start;
+      const fr = Model.fronts(s);
+      let src = foodsIn.length ? foodsIn[0] : s.start;   // 流れの入口: エサ。エサの上にいなければ、いちばん大きいかたまり
+      if (!foodsIn.length) { let best = 0; for (let i = 0; i < g.N; i++) if (s.lump[i] > best) { best = s.lump[i]; src = i; } }
       if (fr.length && Model.solve(s, src, fr, Model.I0)) { s.mode = 'front'; if (s.swap) for (let e = 0; e < g.nE; e++) s.Q[e] = -s.Q[e]; }
       else { s.mode = 'none'; s.Q.fill(0); }
     }
@@ -252,10 +264,10 @@ const Model = {
       s.D[e] = d1;
       s.Qs[e] += (Math.abs(s.Q[e]) - s.Qs[e]) * 0.1;    // 粒の速さ用に、ならした流量（表示だけ）
     }
-    // やせた管の体は、エサの上のかたまりへ（太った分はかたまりから）。エサに着く前は先端へ行ったとして数えない
-    if (foodsIn.length) {
+    // やせた管の体はかたまりへ（太った分はかたまりから）。エサにもかたまりにも着く前は、先端へ行ったとして数えない
+    if (foodsIn.length || Model.lumpTotal(s) > 0) {
       const dV = Model.volume(s) - V0;
-      s.foods.forEach((f, i) => { if (s.reached[f]) s.blob[i] = Math.max(0, (s.blob[i] || 0) - dV / foodsIn.length); });
+      if (dV < 0) Model.toBlob(s, -dV); else Model.takeBlob(s, dV);
     }
     s.maxRate = maxRate;
     Model.retract(s);

@@ -15,7 +15,9 @@ const UI = {
     let phase;
     if (s.blocked) phase = 'エサとエサのあいだに通れる道がありません。壁をひらいてください';
     else if (one && s.growing) phase = s.reached[s.foods[0]] ? '① エサにたどりつきました。伸びる先へ流れ、止まった枝はやせていきます' : '① かけらが伸びて迷路を探り、行き止まりの枝はやせていきます';
-    else if (one) phase = Model.volume(s) > 0.5 ? '② 伸びる先がなくなり、体がエサの上に集まっていきます' : '② 体がエサの上に集まりました。粘液の跡がうすれると（1日と仮定）また探しに出ます';
+    else if (one) phase = Model.volume(s) > 0.5 ? (s.reached[s.foods[0]] ? '② 伸びる先がなくなり、体がエサの上に集まっていきます' : '② 伸びる先がなくなり、体がかたまりに集まっていきます')
+      : s.reached[s.foods[0]] ? '② 体がエサの上に集まりました。粘液の跡がうすれると（1日と仮定）また探しに出ます'
+      : '② 体はかたまりになって、その場にとどまっています。粘液の跡がうすれると（1日と仮定）探しに出ます';
     else if (!flowing) {
       const k = s.foods.findIndex(f => !s.reached[f]);
       let sense = false; for (let i = 0; k >= 0 && i < s.g.N; i++) if (s.reached[i] && s.cs[k][i] >= Model.C_TH) { sense = true; break; }
@@ -31,9 +33,9 @@ const UI = {
       const len = Model.tubeLength(s), spLen = S.ui.sp ? S.ui.sp.len : null, cm = v => (v / 10).toFixed(1);
       nums = `管の長さ ${cm(len)} cm ／ いちばん短い道 ${spLen != null ? cm(spLen) : '—'} cm`;
       if (settled && spLen != null && Math.abs(len - spLen) < 0.02 * spLen) good = 'いちばん短い道だけが残りました';
-    } else if (one && s.reached[s.foods[0]]) {
-      const V = Model.volume(s), b = s.blob[0] || 0;
-      nums = `管に残っている体 ${Math.round(100 * V / Math.max(1e-9, V + b))}% ／ エサの上に集まった体 ${Math.round(100 * b / Math.max(1e-9, V + b))}%`;
+    } else if (one && (s.reached[s.foods[0]] || Model.lumpTotal(s) > 0)) {
+      const V = Model.volume(s), b = Model.lumpTotal(s);
+      nums = `管に残っている体 ${Math.round(100 * V / Math.max(1e-9, V + b))}% ／ かたまりに集まった体 ${Math.round(100 * b / Math.max(1e-9, V + b))}%`;
     }
     const clock = `経過 ${UI.clock(s.t)}`;
     const key = phase + nums + good + clock + S.run + S.speedI + S.mode;
