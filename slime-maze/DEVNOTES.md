@@ -2,7 +2,7 @@
 
 ## 別セッションで続けるとき（まずここ）
 - いまの状態: v002-solver（段階A、動く試作）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。push はまだ。
-- 次にやること: ユーザーに「手がすること・時間の見せ方」（PLAN の「形」）と、「いま上げたアプリ案」が粘菌の迷路でよかったかを確かめる → 段階B（管に寄るズーム・μ のつまみ）。動くサムネイル（make-motion-thumbs.ps1 -Apps slime-maze）はまだ撮っていない。
+- 次にやること: ユーザーに「手がすること・時間の見せ方」（PLAN の「形」）を確かめる（粘菌の迷路でよいことは 2026-11-22 に確かめた）→ 段階B（管に寄るズーム・μ のつまみ）。動くサムネイル（make-motion-thumbs.ps1 -Apps slime-maze）はまだ撮っていない。
 - 読む順: PLAN.md → このファイルの「ファイル構成」「しくみ」→ 関係するファイルだけ。
 - 動かし方: サーバー apps（.claude/launch.json）で http://localhost:8765/slime-maze/ 。デバッグ用の窓口 `window.__slma`（`simRun(秒)` … 描かずに進める、`restart()`・`newMaze(種)`、`S`）、エラーは `window.__slmaErr`。
 - 区切りごとの手順: 「確認のしかた」と smoke.ps1 → 「状態」に1行 → launcher.html の表 → 公開前チェック → commit（節目の版だけ versions/ へコピーしてカードに。RULES 3章）。
