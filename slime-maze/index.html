@@ -44,6 +44,7 @@
     <div class="grp text">
       <ul class="how">
         <li>まん中の粘菌のかけらが、本物の速さ（1時間に約2cm）で伸びて迷路を探ります。</li>
+        <li>伸びる先のなくなった枝はやせ、体はエサの上に集まっていきます。</li>
         <li>空いたマスを押してエサをもう1つ置くと、エサとエサを結ぶ管だけが残っていきます。</li>
         <li>よく流れる管は太り、流れない管はやせる。決まりはこれだけです。</li>
         <li>これはモデルの計算で、粘菌を測った値ではありません。</li>
@@ -53,7 +54,13 @@
         <p>粘菌（モジホコリ）は、ゲルの壁でできた管の網です。管の壁が縮んだりゆるんだりして、中の原形質が行ったり来たり流れます（往復流。本物は約2分ごと）。</p>
         <p>迷路の実験では、まず迷路のあちこちに粘菌のかけらを置き、つながって迷路いっぱいになってから、入口と出口にエサを置きます。すると行き止まりや遠回りの管がやせて消え、2つのエサをいちばん短い道で結ぶ管が残りました（中垣ほか 2000）。迷路を「探して」解くのではなく、全部の道を同時に使ってから、使われない道を捨てています。</p>
         <p>粘菌は1時間に数センチの速さで伸びます（Patino-Ramirez ほか 2019）。管は数時間でこわれたり作り直されたりします（Tero ほか 2007）。</p>
-        <p>エサが2つになってからの管の太り・やせは、Tero・小林・中垣（2007）のモデルをそのまま計算しています。</p>
+        <p>エサにつながっていない、先の開いた管は消えやすく、体のほとんどはエサの上に集まります（Tero ほか 2007 にまとめられた観察）。伸びている先端の膜は、上流から流れを押しこまれてふくらみます（Le Verge-Serandour・Alim）。</p>
+        <p>管の太り・やせは、Tero・小林・中垣（2007）のモデルで計算しています。流れの入口と出口は次のように決めています。</p>
+        <ul>
+          <li>エサが1つで、まだ伸びている先端があるとき: エサ（着く前は、もとのかけら）から、伸びている先端へ等しく分かれて流れます（先端を出口にする方法は Almeida 2021 と同じ）。行き止まりで止まった枝には流れがなくなり、やせていきます。</li>
+          <li>伸びる先がなくなり、エサも1つのとき: 流れがなくなり、管はすべてやせます。やせた分の体は、エサの上に集まるとしています。</li>
+          <li>エサが2つのとき: 一方のエサが入口、もう一方が出口です（Tero ほか 2007）。</li>
+        </ul>
         <ul>
           <li>管の流れ: 細い管を流れる液体の式（ハーゲン・ポアズイユ）。電気回路の電流と同じ計算で、入口のエサから入った量がそのまま出口のエサから出ます。</li>
           <li>管の太さ: 流れが多いほど太り、流れが少ないとやせる（dD/dt = |Q| − D）。D は管の通りやすさで、半径の4乗に比例します。絵の管の太さは D の4乗根（＝半径）です。</li>
@@ -71,6 +78,7 @@
           <li>伸びる速さは1時間に2cm（研究の「1時間に数センチ」から選んだ値）。通路ごとに速さを少しずつ変えているのは、見た目のための演出です。先端のまわりの膜の広がり方も演出です。</li>
           <li>1マスを5mmと仮定しています（迷路は横6cm・たて4.5cm）。</li>
           <li>エサのにおいに引きよせられること（走化性）は入れていません。粘菌はエサの方向を知らずに伸びます。</li>
+          <li>「先端へ等しく分かれて流れる」「やせた分の体がエサの上に集まる」は、上の観察と研究に合わせた推定です。体の量は管の断面（半径の2乗）× 長さで数えています。</li>
           <li>管の太り・やせの式の時間の単位を1時間としています（管が数時間で組みかわる、という観察から決めた仮定）。</li>
           <li>式では、やせた管も完全には0になりません。そのため道をふさぐと、ごく細く残った管がまた太ります。</li>
         </ul>
@@ -86,6 +94,8 @@
       <li>Tero A., Kobayashi R., Nakagaki T. (2007) A mathematical model for adaptive transport network in path finding by true slime mold. <i>Journal of Theoretical Biology</i> 244: 553–564（<a href="https://eprints.lib.hokudai.ac.jp/repo/huscap/all/28041/JTB244-4.pdf" target="_blank" rel="noopener">北海道大学のリポジトリ</a>）— 式・計算の進め方・はじめの管の太さ・往復流の周期（約2分）・管が数時間で組みかわること</li>
       <li>Patino-Ramirez F., Boussard A., Arson C., Dussutour A. (2019) Substrate composition directs slime molds behavior. <i>Scientific Reports</i> 9: 15444（<a href="https://www.nature.com/articles/s41598-019-50872-z" target="_blank" rel="noopener">Scientific Reports</a>）— 伸びる速さ（1時間に数センチ）</li>
       <li>Nakagaki T., Yamada H., Tóth Á. (2000) Maze-solving by an amoeboid organism. <i>Nature</i> 407: 470（<a href="https://www.nature.com/articles/35035159" target="_blank" rel="noopener">Nature</a>）— 迷路の実験</li>
+      <li>Le Verge-Serandour M., Alim K. Physarum polycephalum: Smart network adaptation. <i>Annual Review of Condensed Matter Physics</i>（<a href="https://arxiv.org/abs/2306.09063" target="_blank" rel="noopener">arXiv</a>）— 伸びる先端の膜が流れでふくらむこと</li>
+      <li>Almeida R. F. F. (2021) Formation and Optimisation of Vein Networks in Physarum. 修士論文（<a href="https://arxiv.org/abs/2305.12244" target="_blank" rel="noopener">arXiv</a>）— 入口の流れを、ふちの節（出口）に等しく分ける方法・体の量の数え方</li>
       <li>Bonifaci V., Mehlhorn K., Varma G. (2012) Physarum can compute shortest paths（<a href="https://arxiv.org/abs/1106.0423" target="_blank" rel="noopener">arXiv</a>）— このモデルが最短の道に落ち着くことの証明</li>
     </ul>
     <h3>使っているもの</h3>
@@ -94,7 +104,7 @@
 </div>
 
 <script src="js/maze.js?v=1"></script>
-<script src="js/model.js?v=6"></script>
-<script src="js/draw.js?v=4"></script>
-<script src="js/ui.js?v=5"></script>
-<script src="js/main.js?v=2"></script>
+<script src="js/model.js?v=7"></script>
+<script src="js/draw.js?v=6"></script>
+<script src="js/ui.js?v=6"></script>
+<script src="js/main.js?v=3"></script>

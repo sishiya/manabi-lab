@@ -113,6 +113,15 @@ const Draw = {
       g.beginPath(); g.arc(x, y, cs * 0.26, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
     }
 
+    // エサの上に集まった体（やせた管の分。面積 ∝ 量）
+    s.foods.forEach((f, i) => {
+      const b = s.blob[i] || 0; if (!s.reached[f] || b < 0.05) return;
+      const [x, y] = Draw.center(L, m, f), r = cs * Math.min(0.95, 0.3 + 0.09 * Math.sqrt(b));
+      const gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, 'rgba(240,201,58,1)'); gr.addColorStop(0.75, 'rgba(240,201,58,0.9)'); gr.addColorStop(1, 'rgba(240,201,58,0)');
+      g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+    });
+
     // エサ（オートミールのかたまり）
     s.foods.forEach((f, i) => {
       const [x, y] = Draw.center(L, m, ui.drag && ui.drag.i === i ? ui.drag.c : f), r = cs * 0.34;

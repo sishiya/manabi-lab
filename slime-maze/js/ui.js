@@ -14,8 +14,8 @@ const UI = {
     const one = s.foods.length < 2, flowing = Model.flowing(s), settled = Model.settled(s);
     let phase;
     if (s.blocked) phase = 'エサとエサのあいだに通れる道がありません。壁をひらいてください';
-    else if (one && s.growing) phase = s.reached[s.foods[0]] ? '① 迷路を探っています。エサにたどりつきました' : '① まん中のかけらが伸びて、迷路を探っています';
-    else if (one) phase = '② 迷路が埋まりました。空いたマスを押して、エサをもう1つ置いてみましょう';
+    else if (one && s.growing) phase = s.reached[s.foods[0]] ? '① エサにたどりつきました。伸びる先へ流れ、止まった枝はやせていきます' : '① かけらが伸びて迷路を探り、行き止まりの枝はやせていきます';
+    else if (one) phase = '② 伸びる先がなくなり、体がエサの上に集まっていきます。空いたマスを押すとエサをもう1つ置けます';
     else if (!flowing) phase = '新しいエサの所まで、まだ粘菌が来ていません';
     else if (settled) phase = '④ 落ち着いています（流れはつづいています）';
     else phase = '③ エサからエサへ流れ、流れの少ない管がやせていきます';
@@ -25,6 +25,9 @@ const UI = {
       const len = Model.tubeLength(s), spLen = S.ui.sp ? S.ui.sp.length : null;
       nums = `管の長さ ${len.toFixed(1)} マス分 ／ いちばん短い道 ${spLen ?? '—'} マス`;
       if (settled && spLen != null && Math.abs(len - spLen) < 0.5) good = 'いちばん短い道だけが残りました';
+    } else if (one && s.reached[s.foods[0]]) {
+      const V = Model.volume(s), b = s.blob[0] || 0;
+      nums = `管に残っている体 ${Math.round(100 * V / Math.max(1e-9, V + b))}% ／ エサの上に集まった体 ${Math.round(100 * b / Math.max(1e-9, V + b))}%`;
     }
     const clock = `経過 ${UI.clock(s.t)}`;
     const key = phase + nums + good + clock + S.run + S.speedI + S.mode;

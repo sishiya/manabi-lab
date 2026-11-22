@@ -6,7 +6,7 @@ window.addEventListener('error', e => window.__slmaErr.push(String(e.message)));
 const cv = document.getElementById('cv');
 const g = cv.getContext('2d');
 const W = 12, H = 9;              // 迷路のマスの数（1マス 5 mm と仮定 → 6 × 4.5 cm。スマホの幅 375px で 1マス約 30px）
-const SPEEDS = [{ h: 1 / 6, label: '1秒＝10分' }, { h: 1, label: '1秒＝1時間' }];  // 画面の1秒で進む本物の時間（時間 h）
+const SPEEDS = [{ h: 2 / 3, label: '1秒＝40分' }, { h: 2, label: '1秒＝2時間' }, { h: 1 / 6, label: '1秒＝10分' }];  // 画面の1秒で進む本物の時間（時間 h）
 const SWAP_SEC = 1.5;             // 入口と出口を入れかえる間隔（画面の秒。本物の往復流は約2分ごと。見やすくした演出）
 const DOT_SPEED = 1.6;            // 粒の速さ（マス/秒、流量 1・D 1 の管で。表示だけ）
 
