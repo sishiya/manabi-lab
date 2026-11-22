@@ -13,21 +13,15 @@ const UI = {
     const s = S.s; if (!s) return;
     const one = s.foods.length < 2, flowing = Model.flowing(s), settled = Model.settled(s);
     let phase;
-    if (s.blocked) phase = 'エサとエサのあいだに通れる道がありません。壁をひらいてください';
-    else if (one && s.growing) phase = s.reached[s.foods[0]] ? '① エサにたどりつきました。伸びる先へ流れ、止まった枝はやせていきます' : '① かけらが伸びて迷路を探り、行き止まりの枝はやせていきます';
-    else if (one) phase = Model.volume(s) > 0.5 ? (s.reached[s.foods[0]] ? '② 伸びる先がなくなり、体がエサの上に集まっていきます' : '② 伸びる先がなくなり、体がかたまりに集まっていきます')
-      : s.reached[s.foods[0]] ? '② 体がエサの上に集まりました。粘液の跡がうすれると（1日と仮定）また探しに出ます'
-      : '② 体はかたまりになって、その場にとどまっています。粘液の跡がうすれると（1日と仮定）探しに出ます';
-    else if (!flowing) {
-      const k = s.foods.findIndex(f => !s.reached[f]);
-      let sense = false; for (let i = 0; k >= 0 && i < s.g.N; i++) if (s.reached[i] && s.cs[k][i] >= Model.C_TH) { sense = true; break; }
-      phase = sense ? '③ 新しいエサの物質に気づいて、そちらへ伸びています'
-        : s.growing ? '③ まわりへ伸びて探しています。新しいエサのことは、まだ知りません'
-        : '③ 新しいエサの物質はまだとどいていません。粘液の跡がうすれると探しに出ます';
-    }
-    else if (settled) phase = '⑤ 落ち着いています（流れはつづいています）';
-    else phase = '④ エサからエサへ流れ、流れの少ない管がやせていきます';
-    if (!S.run) phase = '一時停止中 — ' + phase;
+    const k2 = s.foods.findIndex(f => !s.reached[f]);
+    let sense = false; for (let i = 0; k2 >= 0 && i < s.g.N; i++) if (s.reached[i] && s.cs[k2][i] >= Model.C_TH) { sense = true; break; }
+    const onFood = s.foods.some(f => s.reached[f]);
+    if (s.blocked) phase = 'エサへの道が壁でふさがっています';
+    else if (flowing) phase = settled ? '⑤ 落ち着きました（流れはつづきます）' : '④ エサからエサへ流れ、遠回りの管がやせていきます';
+    else if (sense) phase = '③ エサの気配に気づき、そちらへ伸びています';
+    else if (s.growing) phase = onFood ? '① 伸びながら、使わない枝はやせていきます' : '① 伸びて、迷路を探っています';
+    else if (Model.volume(s) > 0.5) phase = '② 伸びる先がなくなり、体が集まっていきます';
+    else phase = onFood ? '② エサの上で、かたまりになっています' : '② かたまりになって、とどまっています';
     let nums = '', good = '';
     if (flowing && !s.blocked) {
       const len = Model.tubeLength(s), spLen = S.ui.sp ? S.ui.sp.len : null, cm = v => (v / 10).toFixed(1);
@@ -35,9 +29,9 @@ const UI = {
       if (settled && spLen != null && Math.abs(len - spLen) < 0.02 * spLen) good = 'いちばん短い道だけが残りました';
     } else if (one && (s.reached[s.foods[0]] || Model.lumpTotal(s) > 0)) {
       const V = Model.volume(s), b = Model.lumpTotal(s);
-      nums = `管に残っている体 ${Math.round(100 * V / Math.max(1e-9, V + b))}% ／ かたまりに集まった体 ${Math.round(100 * b / Math.max(1e-9, V + b))}%`;
+      nums = `体のうち、かたまりになっている分 ${Math.round(100 * b / Math.max(1e-9, V + b))}%`;
     }
-    const clock = `経過 ${UI.clock(s.t)}`;
+    const clock = `経過 ${UI.clock(s.t)}` + (S.run ? '' : '（止めています）');
     const key = phase + nums + good + clock + S.run + S.speedI + S.mode;
     if (key === UI._last) return; UI._last = key;
     $('phase').textContent = phase;
@@ -50,8 +44,8 @@ const UI = {
     $('bSpeed').setAttribute('aria-pressed', S.speedI > 0);
     for (const [id, md] of [['mFood', 'food'], ['mWall', 'wall']]) { $(id).classList.toggle('on', S.mode === md); $(id).setAttribute('aria-pressed', S.mode === md); }
     $('hint').textContent = S.mode === 'food'
-      ? '空いたマスを押すとエサを置く（2つまで）。エサはドラッグで動かす'
-      : 'マスとマスのさかいめを押すと、壁ができる・なくなる';
+      ? '空いたマスを押す → エサを置く（2つまで）。ドラッグで動かす'
+      : 'マスのさかいめを押す → 壁ができる・消える';
   },
 
   // 画面の点 → いちばん近い点（地図の外・遠すぎるなら null）と、mm の位置

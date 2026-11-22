@@ -5,12 +5,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="stylesheet" href="css/style.css?v=4">
 
 <div id="app">
   <header id="top">
     <h1>粘菌が迷路を解くまで</h1>
-    <p class="lead">1つのかけらから伸びた粘菌が、迷路を探り、エサとエサを結ぶ管だけを残す。</p>
   </header>
 
   <section id="stage">
@@ -30,90 +29,67 @@
         <button id="bSpeed" class="tog" aria-pressed="false"></button>
       </div>
       <div class="row seg" role="group" aria-label="迷路をさわると">
-        <button id="mFood" class="tog">エサを置く・動かす</button>
-        <button id="mWall" class="tog">道をふさぐ・ひらく</button>
+        <button id="mFood" class="tog">エサを置く</button>
+        <button id="mWall" class="tog">壁をつくる・けす</button>
       </div>
       <p id="hint" class="hint"></p>
-      <label class="chk"><input type="checkbox" id="cChem" checked> エサから広がる物質をエサと同じ色で見せる（※ 目印）</label>
-      <label class="chk"><input type="checkbox" id="cShort"> いちばん短い道を点線で重ねる（※ 目印）</label>
+      <div class="chks">
+        <label class="chk"><input type="checkbox" id="cChem" checked> エサの気配（※ 目印）</label>
+        <label class="chk"><input type="checkbox" id="cShort"> いちばん短い道（※ 目印）</label>
+      </div>
       <div class="row">
-        <button id="bRestart" class="act">最初から広げなおす</button>
+        <button id="bRestart" class="act">最初から</button>
         <button id="bNew" class="act">新しい迷路</button>
       </div>
     </div>
 
     <div class="grp text">
       <ul class="how">
-        <li>まん中の粘菌のかけらが、本物の速さ（1時間に約2cm）で伸びて迷路を探ります。</li>
-        <li>伸びる先のなくなった枝はやせ、体はエサの上に集まっていきます。</li>
-        <li>空いたマスを押してエサをもう1つ置けます。粘菌はそれを知らず、エサから広がる物質（エサと同じ赤）がとどくか、また探しに出たときに見つけます。</li>
-        <li>2つのエサがつながると、エサとエサを結ぶ管だけが残っていきます。</li>
-        <li>管の太さの決まりは1つだけ。よく流れる管は太り、流れない管はやせます。</li>
-        <li>これはモデルの計算で、粘菌を測った値ではありません。</li>
+        <li>黄色が粘菌。本物の速さ（1時間に約2cm）で伸びて、迷路を探ります。</li>
+        <li>赤がエサ。空いたマスを押すと置けます。</li>
+        <li>よく流れる管は太り、流れない管はやせて消えます。</li>
       </ul>
       <details>
-        <summary>しくみ（くわしく）</summary>
-        <p>粘菌（モジホコリ）は、ゲルの壁でできた管の網です。管の壁が縮んだりゆるんだりして、中の原形質が行ったり来たり流れます（往復流。本物は約2分ごと）。</p>
-        <p>迷路の実験では、まず迷路のあちこちに粘菌のかけらを置き、つながって迷路いっぱいになってから、入口と出口にエサを置きます。すると行き止まりや遠回りの管がやせて消え、2つのエサをいちばん短い道で結ぶ管が残りました（中垣ほか 2000）。迷路を「探して」解くのではなく、全部の道を同時に使ってから、使われない道を捨てています。</p>
-        <p>粘菌は1時間に数センチの速さで伸びます（Patino-Ramirez ほか 2019）。管は数時間でこわれたり作り直されたりします（Tero ほか 2007）。</p>
-        <p>エサにつながっていない、先の開いた管は消えやすく、体のほとんどはエサの上に集まります（Tero ほか 2007 にまとめられた観察）。伸びている先端の膜は、上流から流れを押しこまれてふくらみます（Le Verge-Serandour・Alim）。</p>
-        <p>粘菌は、自分が通ったあとの粘液をさけて、まだ探していない所へ伸びます（Reid ほか 2012）。ブドウ糖などの物質には、ある濃さ以上で寄っていきます（Ueda ほか 1975）。本物の物質は、寒天や水の中をとてもゆっくり広がります（ブドウ糖なら、2cm 先に少しとどくのに半日ほど）。このアプリでは、見やすくするため100倍の速さで広げています。</p>
-        <p>管の太り・やせは、Tero・小林・中垣（2007）のモデルで計算しています。流れの入口と出口は次のように決めています。</p>
+        <summary>しくみ</summary>
         <ul>
-          <li>エサが1つで、まだ伸びている先端があるとき: エサ（着く前は、もとのかけら）から、伸びている先端へ等しく分かれて流れます（先端を出口にする方法は Almeida 2021 と同じ）。行き止まりで止まった枝には流れがなくなり、やせていきます。</li>
-          <li>伸びる先がなくなり、エサも1つのとき: 流れがなくなり、管はすべてやせます。やせた分の体は、エサの上に集まるとしています。</li>
-          <li>とても細くなった管（半径がもとの約3割）は消え、体はその通路から引きあげます。</li>
-          <li>エサが2つのとき: 一方のエサが入口、もう一方が出口です（Tero ほか 2007）。</li>
-        </ul>
-        <ul>
-          <li>管の流れ: 細い管を流れる液体の式（ハーゲン・ポアズイユ）。電気回路の電流と同じ計算で、入口のエサから入った量がそのまま出口のエサから出ます。</li>
-          <li>管の太さ: 流れが多いほど太り、流れが少ないとやせる（dD/dt = |Q| − D）。D は管の通りやすさで、半径の4乗に比例します。絵の管の太さは D の4乗根（＝半径）です。</li>
-          <li>「管の長さ」は、管の通りやすさ D × 長さ を全部足した値です。落ち着くと、いちばん短い道の長さに近づきます。このモデルでは最短の道が必ず残ることが、数学でも証明されています（Bonifaci ほか 2012）。</li>
-          <li>粒は管の中の流れの向きを表します。速さは流量 ÷ 断面に比べて決めていますが、見やすく調整した演出です。</li>
+          <li><b>迷路の実験</b>: 迷路いっぱいの粘菌に、入口と出口のエサを置くと、2つを結ぶいちばん短い管だけが残ります（中垣ほか 2000）。探して解くのではなく、全部の道を使ってから、使わない道を捨てています。</li>
+          <li><b>管の太さ</b>: 管の流れは細い管の液体の式（ハーゲン・ポアズイユ）で計算し、流れが多い管ほど太らせます（Tero・小林・中垣 2007 のモデル）。このモデルでは、いちばん短い道が残ることが証明されています（Bonifaci ほか 2012）。</li>
+          <li><b>伸びる先端</b>: 先端の膜は、後ろの管から押しこまれた流れでふくらみます（Le Verge-Serandour・Alim）。太い管でつながった先端ほど速く伸び、流れの来ない枝は止まって、やせて消えます。</li>
+          <li><b>粘液の跡</b>: 通ったあとには粘液が残り、粘菌はその跡をさけて、まだ探していない所へ伸びます（Reid ほか 2012）。画面のうすい白いすじが跡です。</li>
+          <li><b>エサの気配</b>: エサから出た物質がとどくと、粘菌は濃いほうへ伸びます（Ueda ほか 1975）。エサの上にいて気配もなければ、体はエサの上に集まって、とどまります（Tero ほか 2007）。</li>
+          <li><b>往復流</b>: 管の中の粒は、行ったり来たりする流れです（本物は約2分ごと）。</li>
         </ul>
       </details>
       <details>
-        <summary>簡単にしたところ</summary>
+        <summary>本物とちがうところ</summary>
         <ul>
-          <li>管の網は、迷路のマスの中心どうしを結ぶ線にしています。本物の管はもっと細かい網です。</li>
-          <li>流れを押し出すのはエサの所の粘菌だけで、管は受け身としています（論文と同じ仮定）。</li>
-          <li>入口と出口は1.5秒ごとに入れかえています（往復流）。本物は約2分ごとです。入れかえても管の太り方は変わりません。</li>
-          <li>実験では迷路のあちこちにかけらを置き、それがつながって1つになりました。このアプリでは、まん中の1つのかけらから伸ばしています。</li>
-          <li>伸びる速さは1時間に2cm（研究の「1時間に数センチ」から選んだ値）。通路ごとに速さを少しずつ変えているのは、見た目のための演出です。先端のまわりの膜の広がり方も演出です。</li>
-          <li>1マスを5mmと仮定しています（迷路は横6cm・たて4.5cm）。</li>
-          <li>粘菌が気づく物質の濃さ（エサの所の1%）、気づいたときに濃いほうへ1.5倍・うすいほうへ0.5倍の速さで伸びること、粘液の跡が1日残ることは、本当の値が分からないので決めた仮定です。物質の広がり方は水の中のブドウ糖の値で、寒天ではすこし遅くなります。</li>
-          <li>2つのエサにつながって食べているあいだは、前に探した所へはもう探しに出ないとしています（栄養のある所では探しに出るのがおそい、という観察 Patino-Ramirez ほか 2019 からの推定。本物は、少しずつ探しに出ることもあります）。</li>
-          <li>エサ（オートミール）から出る物質はブドウ糖だけではありません。ここでは代表としてブドウ糖の広がり方を使っています。本物は広がるのがとても遅いので、このアプリでは100倍の速さにしています（演出）。物質は少しずつ分解されて減り、エサから3cmほどで薄くなるとしています（仮定）。</li>
-          <li>「先端へ等しく分かれて流れる」「やせた分の体がエサの上に集まる」は、上の観察と研究に合わせた推定です。体の量は管の断面（半径の2乗）× 長さで数えています。</li>
-          <li>管の太り・やせの式の時間の単位を1時間としています（管が数時間で組みかわる、という観察から決めた仮定）。</li>
-          <li>管が消える太さ（半径がもとの約3割）は、見やすさと「数時間で組みかわる」に合わせて決めた値です。道をふさぐと、残っている体からまた伸びて、別の道を探します。</li>
+          <li><b>演出</b>: エサの物質は、本物の100倍の速さで広げています（本物はとてもおそい）。往復流は1.5秒ごと（本物は約2分）。通路ごとの伸びる速さのばらつき、先端の膜、管のうねりも見た目のためです。</li>
+          <li><b>仮定</b>（本当の値が分かっていないもの）: 1マス 5mm／伸びる速さ 2cm/時（研究は「1時間に数センチ」）／いちばん速い先端は平均の3倍まで／気づく濃さはエサの所の1%、濃いほうへ1.5倍・うすいほうへ0.5倍／物質はエサから4cmほどで薄くなる／粘液の跡は消えず、跡のある所へは0.2倍の速さ／管の式の時間の単位は1時間／半径がもとの約3割になった管は消える。</li>
+          <li><b>簡単にしたところ</b>: 管の網は迷路のマスの中心を結ぶ線。体の量は全体で一定（実際は、エサを食べて増える）。実験では迷路のあちこちにかけらを置きましたが、ここではまん中の1つから。物質はブドウ糖を代表にしています。</li>
+          <li>これはモデルの計算で、粘菌を測った値ではありません。</li>
         </ul>
+      </details>
+      <details id="about">
+        <summary>このアプリについて（出どころ）</summary>
+        <ul>
+          <li>Tero A., Kobayashi R., Nakagaki T. (2007) A mathematical model for adaptive transport network in path finding by true slime mold. <i>J. Theor. Biol.</i> 244: 553–564（<a href="https://eprints.lib.hokudai.ac.jp/repo/huscap/all/28041/JTB244-4.pdf" target="_blank" rel="noopener">北海道大学のリポジトリ</a>）— 管の式・往復流の周期・管が数時間で組みかわること・体がエサの上に集まること</li>
+          <li>Nakagaki T., Yamada H., Tóth Á. (2000) Maze-solving by an amoeboid organism. <i>Nature</i> 407: 470（<a href="https://www.nature.com/articles/35035159" target="_blank" rel="noopener">Nature</a>）— 迷路の実験</li>
+          <li>Patino-Ramirez F. ほか (2019) Substrate composition directs slime molds behavior. <i>Sci. Rep.</i> 9: 15444（<a href="https://www.nature.com/articles/s41598-019-50872-z" target="_blank" rel="noopener">Scientific Reports</a>）— 伸びる速さ</li>
+          <li>Reid C. R. ほか (2012) Slime mold uses an externalized spatial "memory" to navigate in complex environments. <i>PNAS</i> 109: 17490（<a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3491460" target="_blank" rel="noopener">PMC</a>）— 粘液の跡をさけること</li>
+          <li>Ueda T. ほか (1975) Threshold phenomena in chemoreception and taxis in slime mold Physarum polycephalum. <i>J. Gen. Physiol.</i> 65: 223（<a href="https://rupress.org/jgp/article/65/2/223/31266/Threshold-phenomena-in-chemoreception-and-taxis-in" target="_blank" rel="noopener">J Gen Physiol</a>）— ある濃さ以上で寄っていくこと</li>
+          <li>Le Verge-Serandour M., Alim K. Physarum polycephalum: Smart network adaptation. <i>Annu. Rev. Condens. Matter Phys.</i>（<a href="https://arxiv.org/abs/2306.09063" target="_blank" rel="noopener">arXiv</a>）— 先端の膜が流れでふくらむこと</li>
+          <li>Almeida R. F. F. (2021) Formation and Optimisation of Vein Networks in Physarum. 修士論文（<a href="https://arxiv.org/abs/2305.12244" target="_blank" rel="noopener">arXiv</a>）— 先端を流れの出口にする考え方・体の量の数え方</li>
+          <li>Bonifaci V., Mehlhorn K., Varma G. (2012) Physarum can compute shortest paths（<a href="https://arxiv.org/abs/1106.0423" target="_blank" rel="noopener">arXiv</a>）— 最短の道が残ることの証明</li>
+        </ul>
+        <p>フォント: Google Fonts（SIL Open Font License）</p>
       </details>
     </div>
   </section>
-
-  <details id="about">
-    <summary>このアプリについて</summary>
-    <p>学習用に簡単にしています。画面の動きは、下の研究の式を計算したものです。</p>
-    <h3>おもな出どころ</h3>
-    <ul>
-      <li>Tero A., Kobayashi R., Nakagaki T. (2007) A mathematical model for adaptive transport network in path finding by true slime mold. <i>Journal of Theoretical Biology</i> 244: 553–564（<a href="https://eprints.lib.hokudai.ac.jp/repo/huscap/all/28041/JTB244-4.pdf" target="_blank" rel="noopener">北海道大学のリポジトリ</a>）— 式・計算の進め方・はじめの管の太さ・往復流の周期（約2分）・管が数時間で組みかわること</li>
-      <li>Patino-Ramirez F., Boussard A., Arson C., Dussutour A. (2019) Substrate composition directs slime molds behavior. <i>Scientific Reports</i> 9: 15444（<a href="https://www.nature.com/articles/s41598-019-50872-z" target="_blank" rel="noopener">Scientific Reports</a>）— 伸びる速さ（1時間に数センチ）・栄養のある所では探しに出るのがおそいこと</li>
-      <li>Nakagaki T., Yamada H., Tóth Á. (2000) Maze-solving by an amoeboid organism. <i>Nature</i> 407: 470（<a href="https://www.nature.com/articles/35035159" target="_blank" rel="noopener">Nature</a>）— 迷路の実験</li>
-      <li>Reid C. R., Latty T., Dussutour A., Beekman M. (2012) Slime mold uses an externalized spatial "memory" to navigate in complex environments. <i>PNAS</i> 109: 17490–17494（<a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3491460" target="_blank" rel="noopener">PMC</a>）— 通ったあとの粘液をさけること</li>
-      <li>Ueda T., Muratsugu M., Kurihara K., Kobatake Y. (1975) Threshold phenomena in chemoreception and taxis in slime mold Physarum polycephalum. <i>Journal of General Physiology</i> 65: 223（<a href="https://rupress.org/jgp/article/65/2/223/31266/Threshold-phenomena-in-chemoreception-and-taxis-in" target="_blank" rel="noopener">J Gen Physiol</a>）— ブドウ糖などに、ある濃さ以上で寄っていくこと</li>
-      <li>Le Verge-Serandour M., Alim K. Physarum polycephalum: Smart network adaptation. <i>Annual Review of Condensed Matter Physics</i>（<a href="https://arxiv.org/abs/2306.09063" target="_blank" rel="noopener">arXiv</a>）— 伸びる先端の膜が流れでふくらむこと</li>
-      <li>Almeida R. F. F. (2021) Formation and Optimisation of Vein Networks in Physarum. 修士論文（<a href="https://arxiv.org/abs/2305.12244" target="_blank" rel="noopener">arXiv</a>）— 入口の流れを、ふちの節（出口）に等しく分ける方法・体の量の数え方</li>
-      <li>Bonifaci V., Mehlhorn K., Varma G. (2012) Physarum can compute shortest paths（<a href="https://arxiv.org/abs/1106.0423" target="_blank" rel="noopener">arXiv</a>）— このモデルが最短の道に落ち着くことの証明</li>
-    </ul>
-    <h3>使っているもの</h3>
-    <p>フォント: Google Fonts（SIL Open Font License）</p>
-  </details>
 </div>
 
 <script src="js/maze.js?v=1"></script>
 <script src="js/graph.js?v=2"></script>
-<script src="js/model.js?v=16"></script>
-<script src="js/draw.js?v=15"></script>
-<script src="js/ui.js?v=11"></script>
+<script src="js/model.js?v=17"></script>
+<script src="js/draw.js?v=16"></script>
+<script src="js/ui.js?v=12"></script>
 <script src="js/main.js?v=5"></script>

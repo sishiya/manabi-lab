@@ -20,11 +20,12 @@ const Model = {
   GROW_MM_H: 20,     // 先端の伸びる速さ（mm/時）。Patino-Ramirez ほか 2019「1時間に数センチ」から 2 cm/時
   GONE: 1e-2,        // これより細くなった管は消えて、その線から体が引きあげる（半径はもとの約3割。流れのない管は約4〜5時間でここまでやせる）
   DIFF_M2_S: 6.7e-10,  // ブドウ糖の水の中での拡散係数（m²/秒。教科書の値。寒天の中ではすこし遅い）
-  DECAY_LEN_MM: 30,  // 物質は少しずつ分解・吸収されて減る（仮定）。広がりと減りがつりあう長さ（エサから 30 mm で約 1/e。これがないと、長い時間で迷路じゅうが同じ濃さになって、向きが分からなくなる）
+  DECAY_LEN_MM: 40,  // 物質は少しずつ分解・吸収されて減る（仮定）。広がりと減りがつりあう長さ（エサから 40 mm で約 1/e。迷路の中ならどこでも 1% はとどく。これがないと、長い時間で迷路じゅうが同じ濃さになって、向きが分からなくなる）
   DIFF_BOOST: 100,   // 見やすくするため、物質は本物の100倍の速さで広げる（演出。2026-11-22 ユーザー「伸びる様子を眺めるアプリの本質とは関係ないので、特別にもっと早くていい」）
   C_TH: 0.01,        // 粘菌が気づく濃さ（エサの所を 1 とした割合）。本当の値は分からないので仮定
   CHEM_UP: 1.5, CHEM_DOWN: 0.5,   // 気づいた所では、濃いほうへの線は 1.5 倍の速さで伸び、うすいほうへは 0.5 倍（仮定）
-  TRAIL_H: 24,       // 粘液の跡が残る時間（Reid ほか 2012: 一度探した所をさける）。どのくらい残るかは分からないので 1日と仮定
+  TRAIL_SLOW: 0.2,   // 粘液の跡のある線へは、この倍率でしか伸びない（Reid ほか 2012: 一度探した所をさけるが、跡しかなければ探しまわれる。倍率は仮定）。跡は残りつづける
+  SHARE_MAX: 3,      // 先端の伸びる速さは、そこへ流れこむ量に比べる（平均で GROW_MM_H）。いちばん速くても平均の3倍まで（仮定）
 
   create(g, foods, seed) {
     const N = g.N, nE = g.nE;
@@ -38,6 +39,7 @@ const Model = {
       c: new Float64Array(N),        // 全部のエサの物質の和（絵のため）
       p: new Float64Array(N), pPrev: null,
       t: 0, tFlow: 0, blocked: false, maxRate: 0, swap: false, start: -1, growing: false, mode: 'front',
+      share: new Float64Array(N).fill(1), src: -1,   // 先端の点に流れこむ量（平均を 1）、流れの入口
       lump: new Float64Array(N),   // 点ごとの体のかたまり（管にならずに集まっている体の量。エサの上にできることが多いが、エサを動かしても、かたまりはその場に残る）
     };
   },
@@ -45,7 +47,7 @@ const Model = {
   L(s, e) { return s.g.len[e] / s.g.unit; },             // 式の中の長さ（無次元）
   has(s, e) { return s.g.open[e] && s.D[e] > 0; },       // 管になった線（どんなに細くても）
   full(s, e) { return s.fa[e] + s.fb[e] >= 1; },
-  trail(s, e) { return s.t - s.trailT[e] < Model.TRAIL_H; },
+  trail(s, e) { return s.trailT[e] > -1e8; },          // 粘液の跡がある（一度粘菌がいた）線
   explored(s, e) { return s.trailT[e] > -1e8; },
 
   // start の点に1つのかけらを置いて、伸びはじめる（物質はエサを置いたときから広がりはじめる）
@@ -55,7 +57,10 @@ const Model = {
     s.trailT.fill(-1e9); s.c.fill(0); for (const f of s.cs) f.fill(0);
     s.pPrev = null; s.t = 0; s.tFlow = 0; s.blocked = false; s.maxRate = 0; s.lump.fill(0); s.mode = 'front';
     for (let e = 0; e < g.nE; e++) s.vk[e] = 0.75 + 0.5 * s.rng();
-    s.start = start; s.reached[start] = 1; s.growing = true;
+    s.start = start; s.src = start; s.reached[start] = 1; s.growing = true; s.share.fill(1);
+    // かけらの体の量: 迷路の全部の通路を、ふつうの太さの管でうめられるくらい（体の量は、伸びても減っても全体で保つ）
+    let M0 = 0; for (let e = 0; e < g.nE; e++) if (g.open[e]) M0 += Model.L(s, e) * Math.sqrt(0.75);
+    s.lump[start] = M0;
   },
 
   // 物質の拡散（開いた線だけを通る。迷路の壁は通さない）。エサの所はいつも 1
@@ -102,11 +107,12 @@ const Model = {
       const c = s.cs[k];
       if (c[a] >= Model.C_TH) { sense = true; if (c[b] > c[a] && !s.reached[b]) up = true; }
     });
-    if (!started && !(sense && up)) {
-      if (Model.trail(s, e)) return 0;
-      if (Model.explored(s, e) && Model.flowing(s)) return 0;
+    let k = sense ? (up ? Model.CHEM_UP : Model.CHEM_DOWN) : 1;
+    if (!started && !(sense && up) && Model.trail(s, e)) {
+      if (s.foods.some(f => s.reached[f])) return 0;   // エサの上にいて（食べていて）気配もなければ、跡のある所へ探しに出ない（Tero 2007: 体はエサの上に集まる）
+      k *= Model.TRAIL_SLOW;            // エサがなければ、跡のある所へも、ゆっくり探しに出る
     }
-    return sense ? (up ? Model.CHEM_UP : Model.CHEM_DOWN) : 1;
+    return k;
   },
 
   // 伸びる（dh 時間ぶん）。両はしの割合の和が 1 になった線は管になる（はじめの太さは [0.5, 1.0] の一様乱数）
@@ -114,12 +120,23 @@ const Model = {
   grow(s, dh) {
     const g = s.g, vmm = Model.GROW_MM_H * dh;
     let any = false;
+    const mass = Model.lumpTotal(s) > 1e-3 ? 1 : 0;   // 体（かたまり）が尽きたら伸びられない
+    // 先端の点ごとに、いま伸びている線の数（流れこむ量を分ける）
+    const nOut = new Float64Array(g.N); let sides = 0, fronts = 0;
+    for (let e = 0; e < g.nE; e++) {
+      if (!g.open[e] || Model.full(s, e)) continue;
+      const a = g.ea[e], b = g.eb[e];
+      if (s.reached[a] && Model.pull(s, e, a, b, s.fa[e] > 0)) { if (!nOut[a]) fronts++; nOut[a]++; sides++; }
+      if (s.reached[b] && Model.pull(s, e, b, a, s.fb[e] > 0)) { if (!nOut[b]) fronts++; nOut[b]++; sides++; }
+    }
+    const kAvg = fronts ? sides / fronts : 1;
+    const sp = i => mass * Math.min(Model.SHARE_MAX, s.share[i]) * kAvg / Math.max(1, nOut[i]);   // 流れこむ量に比べた速さ
     for (let e = 0; e < g.nE; e++) {
       if (!g.open[e] || Model.full(s, e)) continue;
       const a = g.ea[e], b = g.eb[e], ra = s.reached[a], rb = s.reached[b];
       if (!ra && !rb) continue;
-      const ka = ra ? Model.pull(s, e, a, b, s.fa[e] > 0) : 0, kb = rb ? Model.pull(s, e, b, a, s.fb[e] > 0) : 0;
-      if (!ka && !kb) continue;
+      const ka = ra ? Model.pull(s, e, a, b, s.fa[e] > 0) * sp(a) : 0, kb = rb ? Model.pull(s, e, b, a, s.fb[e] > 0) * sp(b) : 0;
+      if (!(ka > 0) && !(kb > 0)) continue;
       any = true;
       const v = vmm / g.len[e] * s.vk[e];
       s.fa[e] += v * ka;
@@ -139,13 +156,24 @@ const Model = {
     const ins = s.foods.filter(f => s.reached[f]);
     if (ins.length) { for (const f of ins) s.lump[f] += v / ins.length; return; }
     const tot = Model.lumpTotal(s);
-    if (tot > 0) for (let i = 0; i < s.g.N; i++) if (s.lump[i] > 0) s.lump[i] += v * s.lump[i] / tot;
+    if (tot > 0) { for (let i = 0; i < s.g.N; i++) if (s.lump[i] > 0) s.lump[i] += v * s.lump[i] / tot; }
+    else if (s.src >= 0) s.lump[s.src] += v;   // かたまりがなければ、流れの入口（体の中心）へ
   },
   // 伸びた管の体は、かたまりから出す（量に合わせて）
   takeBlob(s, v) {
     const tot = Model.lumpTotal(s); if (!(tot > 0)) return;
     const k = Math.max(0, 1 - v / tot);
     for (let i = 0; i < s.g.N; i++) s.lump[i] *= k;
+  },
+  // 管でエサとつながっているかたまりは、エサの上へ寄せる（体は1つにつながっている。つながっていないかたまりは、その場に残る）
+  gather(s) {
+    const g = s.g, ins = s.foods.filter(f => s.reached[f]); if (!ins.length) return;
+    const seen = new Uint8Array(g.N), q = [];
+    for (const f of ins) { seen[f] = 1; q.push(f); }
+    for (let qi = 0; qi < q.length; qi++) for (const e of g.adj[q[qi]]) { if (!Model.has(s, e)) continue; const n = Graph.other(g, e, q[qi]); if (!seen[n]) { seen[n] = 1; q.push(n); } }
+    let moved = 0;
+    for (let i = 0; i < g.N; i++) if (seen[i] && s.lump[i] > 0 && !ins.includes(i)) { moved += s.lump[i]; s.lump[i] = 0; }
+    if (moved) for (const f of ins) s.lump[f] += moved / ins.length;
   },
   lumpTotal(s) { let a = 0; for (let i = 0; i < s.g.N; i++) a += s.lump[i]; return a; },
 
@@ -165,8 +193,9 @@ const Model = {
     }
   },
 
-  // 入口 a から I0 を入れ、出口 sinks（1つ以上）から等しく I0/n ずつ出したときの圧力と流量を解く（前処理つき共役勾配法。論文は ICCG）
-  // 出口がいくつもあるとき（伸びる先端）は、Almeida (2021) の「入口の流れを、ふちの節（出口）に等しく分ける」と同じ
+  // 入口 a から I0 を入れ、出口 sinks（1つ以上。どれも圧力 0）から出したときの圧力と流量を解く（前処理つき共役勾配法。論文は ICCG）
+  // 出口がいくつもあるとき（伸びる先端）は、どの先端も圧力 0 にする: 太く短い管でつながった先端ほど多く流れこむ（先端どうしの取りあい）。
+  //  Almeida (2021) は等しく分けたが、先端の膜は上流から押しこまれた流れでふくらむ（Le Verge-Serandour & Alim）ので、流れこむ量は管しだいとした
   solve(s, a, sinks, I0) {
     const g = s.g, N = g.N, C = e => s.D[e] / Model.L(s, e);
     const idx = new Int32Array(N).fill(-1), list = [a]; idx[a] = 0;
@@ -174,24 +203,25 @@ const Model = {
       if (!Model.has(s, e)) continue; const n = Graph.other(g, e, list[qi]); if (idx[n] < 0) { idx[n] = list.length; list.push(n); }
     }
     s.Q.fill(0); s.p.fill(0);
+    s.comp = new Uint8Array(N); for (const c of list) s.comp[c] = 1;   // 入口とつながっている点
     const out = (Array.isArray(sinks) ? sinks : [sinks]).filter(c => c !== a && idx[c] >= 0);
     if (!out.length) return false;
-    const b = out[0];
-    // 出口の1つ b の圧力を 0 に固定し（b からは残りが出る）、残りの節で  Σ D/L (p_i − p_j) = 入る量  を解く
-    const n = list.length, ib = idx[b], diag = new Float64Array(n), rhs = new Float64Array(n);
+    // 出口の圧力を 0 に固定し、残りの節で  Σ D/L (p_i − p_j) = 入る量  を解く
+    const n = list.length, fixed = new Uint8Array(n), diag = new Float64Array(n), rhs = new Float64Array(n);
+    for (const c of out) fixed[idx[c]] = 1;
     for (let i = 0; i < n; i++) for (const e of g.adj[list[i]]) if (Model.has(s, e)) diag[i] += C(e);
-    rhs[idx[a]] = I0; for (let k = 1; k < out.length; k++) rhs[idx[out[k]]] -= I0 / out.length;
-    diag[ib] = 1; rhs[ib] = 0;
+    rhs[idx[a]] = I0;
+    for (let i = 0; i < n; i++) if (fixed[i]) { diag[i] = 1; rhs[i] = 0; }
     const mul = (x, y) => {
       for (let i = 0; i < n; i++) {
-        if (i === ib) { y[i] = x[i]; continue; }
+        if (fixed[i]) { y[i] = x[i]; continue; }
         const c = list[i]; let v = diag[i] * x[i];
-        for (const e of g.adj[c]) { if (!Model.has(s, e)) continue; const j = idx[Graph.other(g, e, c)]; if (j !== ib) v -= C(e) * x[j]; }
+        for (const e of g.adj[c]) { if (!Model.has(s, e)) continue; const j = idx[Graph.other(g, e, c)]; if (!fixed[j]) v -= C(e) * x[j]; }
         y[i] = v;
       }
     };
     const x = new Float64Array(n), r = new Float64Array(n), z = new Float64Array(n), pv = new Float64Array(n), Ap = new Float64Array(n);
-    if (s.pPrev) for (let i = 0; i < n; i++) if (i !== ib) x[i] = s.pPrev[list[i]]; // 前の答えから始めると速い
+    if (s.pPrev) for (let i = 0; i < n; i++) if (!fixed[i]) x[i] = s.pPrev[list[i]]; // 前の答えから始めると速い
     mul(x, Ap); for (let i = 0; i < n; i++) r[i] = rhs[i] - Ap[i];
     for (let i = 0; i < n; i++) { z[i] = r[i] / diag[i]; pv[i] = z[i]; }
     let rz = 0; for (let i = 0; i < n; i++) rz += r[i] * z[i];
@@ -251,7 +281,17 @@ const Model = {
       const fr = Model.fronts(s);
       let src = foodsIn.length ? foodsIn[0] : s.start;   // 流れの入口: エサ。エサの上にいなければ、いちばん大きいかたまり
       if (!foodsIn.length) { let best = 0; for (let i = 0; i < g.N; i++) if (s.lump[i] > best) { best = s.lump[i]; src = i; } }
-      if (fr.length && Model.solve(s, src, fr, Model.I0)) { s.mode = 'front'; if (s.swap) for (let e = 0; e < g.nE; e++) s.Q[e] = -s.Q[e]; }
+      s.src = src; s.share.fill(1);
+      if (fr.length && Model.solve(s, src, fr, Model.I0)) {
+        s.mode = 'front';
+        // 先端の点に流れこむ量（先端の数で割った平均を 1 とする）。入口そのものが先端なら 1
+        const fin = fr.filter(f => f !== src && s.comp[f]);
+        for (const f of fin) {
+          let q = 0; for (const e of g.adj[f]) if (Model.has(s, e)) q += g.eb[e] === f ? s.Q[e] : -s.Q[e];
+          s.share[f] = Math.max(0, q) * fin.length / Model.I0;
+        }
+        if (s.swap) for (let e = 0; e < g.nE; e++) s.Q[e] = -s.Q[e];
+      }
       else { s.mode = 'none'; s.Q.fill(0); }
     }
     const V0 = Model.volume(s);
@@ -270,6 +310,7 @@ const Model = {
       if (dV < 0) Model.toBlob(s, -dV); else Model.takeBlob(s, dV);
     }
     s.maxRate = maxRate;
+    Model.gather(s);
     Model.retract(s);
     if (s.mode === 'pair') s.tFlow += dt;
   },

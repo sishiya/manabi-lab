@@ -1,4 +1,4 @@
-// モデルの確かめ（node で: node slime-maze/tools/verify.js）。エサが2つ（はじめから両方ある）
+// モデルの確かめ（node で: node slime-maze/tools/verify.js）。エサ1つで始めて、伸びきったら2つ目のエサ
 //  1) いろいろな迷路で、粘菌の管の長さ Σ D·長さ が「いちばん短い道」の長さに落ち着くか（Tero 2007 の μ=1。Bonifaci ほか 2012 の証明）
 //  2) 落ち着いたとき、太い管がいちばん短い道と同じ線か（最短が1本だけの迷路で）
 //  3) 入口と出口を入れかえても結果が変わらないか（|Q| が同じなので変わらないはず）
@@ -13,10 +13,13 @@ const W = 12, H = 9, CELL = 5, center = Math.floor(H / 2) * W + Math.floor(W / 2
 
 function run(seed, swapEvery) {
   const m = Maze.make(W, H, seed), g = Graph.fromMaze(m, CELL);
-  const s = Model.create(g, [0, W * H - 1], seed);
+  // アプリと同じ流れ: エサ1つで始め、伸びる先がなくなったら（または 40時間で）2つ目のエサを置く
+  const s = Model.create(g, [0], seed);
   Model.startGrowth(s, center);
+  while (s.t < 40 && (s.growing || s.t < 1)) Model.step(s);
+  s.foods.push(W * H - 1); Model.resetField(s, 1);
   let n = 0, flowErr = 0;
-  while (n < 6000) {
+  while (n < 8000) {
     if (swapEvery && n % swapEvery === 0) s.swap = !s.swap;
     Model.step(s); n++;
     if (n % 50 === 0 && Model.flowing(s) && !s.blocked) {

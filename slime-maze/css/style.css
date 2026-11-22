@@ -43,17 +43,18 @@ button.act{background:var(--panel);border:1px dashed var(--line);color:var(--mut
 details summary{cursor:pointer;color:var(--ink);min-height:32px;line-height:32px}
 details{color:var(--muted)}
 details p,details li{font-size:14px;line-height:1.8}
-#about{padding:0 16px 24px;font-size:14px;line-height:1.8}
-#about h3{font-size:15px;color:var(--ink);margin:12px 0 4px}
 #about a{color:var(--acc)}
+#about li{word-break:break-word}
+.chks{display:flex;flex-wrap:wrap;gap:0 var(--gap2)}
+details ul{margin:4px 0 8px;padding-left:1.2em}
+details b{color:var(--ink);font-weight:700}
 
 /* 広い画面と、スマホの横向き: 迷路を左、ボタンと説明を右に */
 @media (min-width:900px),(orientation:landscape) and (max-height:520px){
-  #app{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);grid-template-areas:"top top" "stage panel" "about about"}
+  #app{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);grid-template-areas:"top top" "stage panel"}
   #top{grid-area:top}
   #stage{grid-area:stage;align-self:start}
   #panel{grid-area:panel}
-  #about{grid-area:about}
 }
 @media (orientation:landscape) and (max-height:520px){
   #top{display:none}

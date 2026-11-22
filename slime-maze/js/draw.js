@@ -80,6 +80,17 @@ const Draw = {
       }
     }
 
+    // 粘液の跡（一度粘菌がいた線。粘菌は跡をさける: Reid ほか 2012）。うすい白っぽいすじ
+    if (ui.showTrail !== false) {
+      g2.strokeStyle = 'rgba(225,215,170,0.13)'; g2.lineCap = 'round'; g2.lineWidth = Math.max(2, cs * 0.46);
+      g2.beginPath();
+      for (let e = 0; e < g.nE; e++) {
+        if (!g.open[e] || !Model.trail(s, e) || s.D[e] > 0) continue;
+        const pa = Draw.path(L, g, e); Draw.trace(g2, pa, 0, 1);
+      }
+      g2.stroke();
+    }
+
     // 管（伸びかけの部分もふくむ）。層ごとに全部の線を描くと、つなぎ目が1つの体のようになじむ
     g2.lineCap = 'round'; g2.lineJoin = 'round';
     const segs = [];
