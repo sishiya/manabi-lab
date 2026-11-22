@@ -36,7 +36,8 @@
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Playlist [-DryRun]
 #       … 再生リスト（_dev/promo/playlist*.json。1ファイル1リスト: playlist.json＝説明動画、playlist-shorts.json＝ショート）を作る／名前・説明・英語を合わせ、match に当たる upload.json の動画のうち
 #         **公開ずみ**のものを publishAt の順に足す（予約中・非公開は足さない。もう入っているものは足さない）。何度走らせてもよい。
-#         作ったら playlist.json の playlistId に書く。-DryRun は読むだけ（足すものを出す）
+#         整える（2026-11-22〜）: match に当たらない動画・重なりは外し、公開の順にならべなおす（毎晩の manabi-playlist-sync でも走る）
+#         作ったら playlist.json の playlistId に書く。-DryRun は読むだけ（足す・外す・ならべなおすものを出す）
 #         dir を書くと、そのフォルダ（ルートからの道すじ）の upload.json を見る（あそびラボ: "../ゲーム/_dev/promo"）
 #   powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/youtube-upload.ps1 -Channel [-DryRun]
 #       … チャンネルの説明・キーワード・英語の説明・バナーを _dev/promo/channel.json に合わせる（channels.update 50・バナーを上げると ＋50 ポイント）。
@@ -349,10 +350,12 @@ function Invoke-List {
   try {
     $ch = Invoke-RestMethod -Headers $h -Uri 'https://www.googleapis.com/youtube/v3/channels?part=contentDetails&mine=true'
     $pl = $ch.items[0].contentDetails.relatedPlaylists.uploads
-    $items = (Invoke-RestMethod -Headers $h -Uri "https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&maxResults=50&playlistId=$pl").items
+    # 50 本をこえたら次のページも読む（2026-11-22。1ページ 50 本まで）
+    $items = @(); $tok = ''
+    do { $r = Invoke-RestMethod -Headers $h -Uri "https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&maxResults=50&playlistId=$pl$(if ($tok) { "&pageToken=$tok" })"; $items += @($r.items); $tok = $r.nextPageToken } while ($tok)
     if (-not $items) { Write-Host 'まだ動画がありません'; return }
-    $ids = ($items | ForEach-Object { $_.contentDetails.videoId }) -join ','
-    $vs = (Invoke-RestMethod -Headers $h -Uri "https://www.googleapis.com/youtube/v3/videos?part=snippet,status,localizations&id=$ids").items
+    $all = @($items | ForEach-Object { $_.contentDetails.videoId }); $vs = @()
+    for ($i = 0; $i -lt $all.Count; $i += 50) { $vs += @((Invoke-RestMethod -Headers $h -Uri "https://www.googleapis.com/youtube/v3/videos?part=snippet,status,localizations&id=$(($all[$i..([Math]::Min($i + 49, $all.Count - 1))]) -join ',')").items) }
   } catch { throw "一覧を取れませんでした（403 なら -Auth をやり直してください）: $(Get-ErrText $_)" }
   foreach ($v in $vs) {
     $st = $v.status.privacyStatus
@@ -621,7 +624,7 @@ function Invoke-Verify {
 }
 
 # ---- -Playlist: 再生リストを作る／合わせ、公開ずみの動画を公開の順に足す（playlists 50・playlistItems.insert 50 ポイント／本）----
-# 再生リストは _dev/promo/playlist*.json に1つずつ（playlist.json＝説明動画、playlist-shorts.json＝ショート）。全部を順に合わせる
+# 再生リストは _dev/promo/playlist*.json に1つずつ（playlist.json＝説明動画、playlist-shorts.json＝ショート、あそびラボは playlist-asobi.json・playlist-asobi-shorts.json）。全部を順に合わせる
 function Invoke-Playlist {
   $fail = 0
   foreach ($f in Get-ChildItem (Join-Path $root '_dev/promo') -Filter 'playlist*.json' | Sort-Object Name) {
@@ -669,11 +672,44 @@ function Sync-Playlist([string]$pf) {
     }
   }
   # 入っている動画と、YouTube 側の公開の状態
-  $have = @()
+  $have = @(); $items = @()
   # 作った直後は playlistItems.list が 404 を返す（2026-10-12）。作ったばかりなら中は空なので読まない
   if ($plId -and $p.playlistId) {
-    try { $have = @((Invoke-RestMethod -Headers $h -Uri "https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&maxResults=50&playlistId=$plId").items | ForEach-Object { $_.contentDetails.videoId }) }
+    try {
+      $tok = ''
+      do {
+        $r = Invoke-RestMethod -Headers $h -Uri "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&maxResults=50&playlistId=$plId$(if ($tok) { "&pageToken=$tok" })"
+        $items += @($r.items); $tok = $r.nextPageToken
+      } while ($tok)
+      $items = @($items | Sort-Object { [int]$_.snippet.position })
+      $have = @($items | ForEach-Object { $_.contentDetails.videoId })
+    }
     catch { throw "再生リストの中を読めませんでした: $(Get-ErrText $_)" }
+  }
+  # 整える1: match に当たらない動画（別の種類・消した動画）と、2本目からの重なりを外す（playlistItems.delete 50 ポイント／本。2026-11-22）
+  if ($items.Count) {
+    $wantIds = @($want | ForEach-Object { $_.id }); $seen = @{}
+    foreach ($it in @($items)) {
+      $vid = $it.contentDetails.videoId
+      $why = if ($wantIds -notcontains $vid) { 'この再生リストの種類ではない' } elseif ($seen[$vid]) { '重なり' } else { $null }
+      $seen[$vid] = $true
+      if (-not $why) { continue }
+      if ($DryRun) { Write-Host "（-DryRun）外す（$why）: $($it.snippet.title)  https://youtu.be/$vid"; continue }
+      try { Invoke-RestMethod -Method Delete -Headers $h -Uri "https://www.googleapis.com/youtube/v3/playlistItems?id=$($it.id)" | Out-Null; $items = @($items | Where-Object { $_.id -ne $it.id }); Write-Host "外しました（$why）: $($it.snippet.title)  https://youtu.be/$vid" }
+      catch { Write-Host "外せませんでした: https://youtu.be/$vid`: $(Get-ErrText $_)" }
+    }
+    $have = @($items | ForEach-Object { $_.contentDetails.videoId })
+  }
+  # exclude: この名前の upload.json の動画が入っていたら外す（1つのリストを説明動画とショートに分けたとき。playlistItems.delete 50 ポイント／本）
+  if ($p.exclude -and $items.Count) {
+    $out = @(Get-ChildItem $dir -Filter $p.exclude | ForEach-Object { (Get-Content -Raw -Encoding UTF8 $_.FullName | ConvertFrom-Json).videoId } | Where-Object { $_ })
+    foreach ($it in $items) {
+      $vid = $it.contentDetails.videoId
+      if ($out -notcontains $vid) { continue }
+      if ($DryRun) { Write-Host "（-DryRun）外す: https://youtu.be/$vid"; continue }
+      try { Invoke-RestMethod -Method Delete -Headers $h -Uri "https://www.googleapis.com/youtube/v3/playlistItems?id=$($it.id)" | Out-Null; $have = @($have | Where-Object { $_ -ne $vid }); Write-Host "外しました: https://youtu.be/$vid" }
+      catch { Write-Host "外せませんでした: https://youtu.be/$vid`: $(Get-ErrText $_)" }
+    }
   }
   try { $vs = @((Invoke-RestMethod -Headers $h -Uri "https://www.googleapis.com/youtube/v3/videos?part=status&id=$(($want | ForEach-Object { $_.id }) -join ',')").items) }
   catch { throw "動画の状態を読めませんでした: $(Get-ErrText $_)" }
@@ -690,6 +726,34 @@ function Sync-Playlist([string]$pf) {
       Invoke-RestMethod -Method Post -Headers $h -ContentType 'application/json; charset=UTF-8' -Body ([Text.Encoding]::UTF8.GetBytes(($b | ConvertTo-Json -Depth 5))) -Uri 'https://www.googleapis.com/youtube/v3/playlistItems?part=snippet' | Out-Null
       $have += $w.id; $added++; Write-Host "足しました: $($w.name)  https://youtu.be/$($w.id)"
     } catch { Write-Host "足せませんでした: $($w.name): $(Get-ErrText $_)" }
+  }
+  # 整える2: 公開の順（publishAt）にならべなおす（playlistItems.update 50 ポイント／本。2026-11-22）
+  # 足したあとの並びを読みなおし、前から順に、ちがう位置の動画だけ正しい位置へ動かす
+  if ($plId -and $p.playlistId -and @($have).Count -gt 1) {
+    $cur = @()
+    if ($DryRun) { $cur = @($items | ForEach-Object { [pscustomobject]@{ id = $_.id; vid = $_.contentDetails.videoId } }) }
+    else {
+      try { $tok = ''; do { $r = Invoke-RestMethod -Headers $h -Uri "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=$plId$(if ($tok) { "&pageToken=$tok" })"; $cur += @($r.items | ForEach-Object { [pscustomobject]@{ id = $_.id; vid = $_.snippet.resourceId.videoId; pos = [int]$_.snippet.position } }); $tok = $r.nextPageToken } while ($tok); $cur = @($cur | Sort-Object pos) }
+      catch { Write-Host "並びを読めませんでした: $(Get-ErrText $_)"; $cur = @() }
+    }
+    $wid = @($want | ForEach-Object { $_.id }); $seen2 = @{}
+    $cur = @($cur | Where-Object { $ok = ($wid -contains $_.vid) -and -not $seen2[$_.vid]; $seen2[$_.vid] = $true; $ok })   # -DryRun では外すはずの動画がまだあるので、数えない
+    $order = @($want | Where-Object { ($cur | ForEach-Object { $_.vid }) -contains $_.id } | ForEach-Object { $_.id })
+    $moved = 0
+    for ($i = 0; $i -lt $order.Count; $i++) {
+      if ($cur[$i].vid -eq $order[$i]) { continue }
+      $it = $cur | Where-Object { $_.vid -eq $order[$i] } | Select-Object -First 1
+      $nm = ($want | Where-Object { $_.id -eq $order[$i] } | Select-Object -First 1).name
+      if ($DryRun) { Write-Host "（-DryRun）ならべなおす: $nm を $($i + 1) 番目へ（いまは $([array]::IndexOf(@($cur | ForEach-Object { $_.vid }), $order[$i]) + 1) 番目）" }
+      else {
+        $b = @{ id = $it.id; snippet = @{ playlistId = $plId; position = $i; resourceId = @{ kind = 'youtube#video'; videoId = $order[$i] } } }
+        try { Invoke-RestMethod -Method Put -Headers $h -ContentType 'application/json; charset=UTF-8' -Body ([Text.Encoding]::UTF8.GetBytes(($b | ConvertTo-Json -Depth 5))) -Uri 'https://www.googleapis.com/youtube/v3/playlistItems?part=snippet' | Out-Null; $moved++ }
+        catch { Write-Host "動かせませんでした: $nm`: $(Get-ErrText $_)"; continue }
+      }
+      $rest = @($cur | Where-Object { $_.vid -ne $order[$i] })
+      $cur = @($rest | Select-Object -First $i) + @($it) + @($rest | Select-Object -Skip $i)
+    }
+    if ($moved) { Write-Host "公開の順にならべなおしました: $moved 本" }
   }
   Write-Host "再生リスト: $(@($have).Count) 本（今回 $added 本）。まだ公開されていないので待つ: $(if ($wait) { $wait -join '、' } else { 'なし' })"
   if ($plId) { Write-Host "通しで見る: https://www.youtube.com/playlist?list=$plId" }
