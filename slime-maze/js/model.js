@@ -26,22 +26,17 @@ const Model = {
 
   has(s, e) { return s.m.open[e] && s.D[e] > 0; },   // 粘菌がいる通路（どんなに細くても）
 
-  // 迷路いっぱいに広げる（実験と同じはじまり: 中垣ほか 2000 は迷路のあちこちに粘菌のかけらを置き、つながって迷路を埋めてから、エサを置いた）
-  // かけらの場所（迷路のあちこちに SEEDS 個）から、開いた通路を近い順にうめる。エサは埋まりきってから置く（s.fed）
+  // 迷路いっぱいに広げる。迷路のまん中に置いた1つのかけらから、開いた通路を近い順にうめる。エサは埋まりきってから置く（s.fed）
+  // 実験（中垣ほか 2000）は迷路のあちこちにかけらを置き、つながって1つになってから。ここは 2026-11-22 ユーザーの希望で1つから（画面にも書く）
   // 広がる速さと順は見やすくした演出で、計算していない（画面の「簡単にしたところ」に書く）
-  SEEDS: 6,
+  SPREAD_STEPS: 60,   // 広がりきるまでの回数（×1 で約3秒）。迷路の大きさによらず同じ時間で埋まる
   startSpread(s) {
     const m = s.m, N = m.W * m.H, dist = new Int32Array(m.nE).fill(-1), seenN = new Int32Array(N).fill(-1);
     s.D.fill(0); s.Q.fill(0); s.Qs.fill(0); s.pPrev = null; s.t = 0; s.fed = false;
-    // かけら: 迷路を SEEDS 個のかたまりに分けて、それぞれの中のランダムなマスに1つ（散らばるように）
-    const seeds = [];
-    for (let k = 0; k < Model.SEEDS; k++) {
-      const half = k % 2;
-      const x =Math.min(m.W - 1, Math.floor(((k >> 1) + s.rng()) * m.W / Math.ceil(Model.SEEDS / 2)));
-      const y = Math.min(m.H - 1, Math.floor((half + s.rng()) * m.H / 2));
-      const c = y * m.W + x;
-      if (!seeds.includes(c) && !s.foods.includes(c)) seeds.push(c);
-    }
+    // かけら: まん中のマス（エサのマスなら、となり）
+    let c0 = Math.floor(m.H / 2) * m.W + Math.floor(m.W / 2);
+    if (s.foods.includes(c0)) c0 = (c0 + 1) % N;
+    const seeds = [c0];
     const q = [];
     for (const c of seeds) { seenN[c] = 0; q.push(c); }
     for (let qi = 0; qi < q.length; qi++) {
@@ -113,7 +108,7 @@ const Model = {
   // 1回進める。エサが管でつながっていなければ進めずに blocked を立てる
   // 入口と出口は swap で入れかえられる（Tero 2007: その瞬間、一方のエサが入口・もう一方が出口。|Q| は同じなので太さの変わり方は変わらない）
   step(s) {
-    if (s.spread) { Model.stepSpread(s, 0.2); return; }
+    if (s.spread) { Model.stepSpread(s, Math.max(0.2, s.spread.max / Model.SPREAD_STEPS)); return; }
     const a = s.foods[s.swap ? 1 : 0], b = s.foods[s.swap ? 0 : 1];
     if (!Model.solve(s, a, b, Model.I0)) { s.blocked = true; return; }
     s.blocked = false;

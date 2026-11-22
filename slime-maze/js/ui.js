@@ -11,7 +11,7 @@ const UI = {
     const s = S.s; if (!s) return;
     let phase, nums = '', good = '';
     const spLen = S.ui.sp ? S.ui.sp.length : null;
-    if (s.spread) phase = '① 置いた粘菌のかけらが伸びてつながり、迷路を埋めています';
+    if (s.spread) phase = '① まん中に置いた粘菌のかけらが伸びて、迷路を埋めています';
     else if (s.blocked) phase = 'エサとエサのあいだに、通れる道がありません。壁をひらいてください';
     else if (S.done) phase = '④ 落ち着きました';
     else if (!S.run) phase = '一時停止中';
