@@ -19,7 +19,7 @@ const UI = {
     if (s.blocked) phase = 'エサへの道が壁でふさがっています';
     else if (flowing) phase = settled ? '⑤ 落ち着きました（流れはつづきます）' : '④ エサからエサへ流れ、遠回りの管がやせていきます';
     else if (sense) phase = '③ エサの気配に気づき、そちらへ伸びています';
-    else if (s.growing) phase = onFood ? '① 伸びながら、使わない枝はやせていきます' : '① 伸びて、迷路を探っています';
+    else if (s.growing) phase = onFood ? '① 伸びながら、使わない枝はやせていきます' : '① 伸びて、まわりを探っています';
     else if (Model.volume(s) > 0.5) phase = '② 伸びる先がなくなり、体が集まっていきます';
     else phase = onFood ? '② エサの上で、かたまりになっています' : '② かたまりになって、とどまっています';
     let nums = '', good = '';
@@ -44,7 +44,7 @@ const UI = {
     $('bSpeed').setAttribute('aria-pressed', S.speedI > 0);
     for (const [id, md] of [['mFood', 'food'], ['mWall', 'wall']]) { $(id).classList.toggle('on', S.mode === md); $(id).setAttribute('aria-pressed', S.mode === md); }
     $('hint').textContent = S.mode === 'food'
-      ? 'エサをドラッグ → 動かす（エサを押してから、行き先を押してもよい）'
+      ? (S.mapKind === 'japan' ? 'エサ（赤）をドラッグ → 別の町へ動かす' : 'エサをドラッグ → 動かす（エサを押してから、行き先を押してもよい）')
       : 'マスのさかいめを押す → 壁ができる・消える';
   },
 
@@ -53,7 +53,7 @@ const UI = {
     const L = S.L, gr = S.s.g; if (!L) return null;
     const [mx, my] = Draw.toMM(L, x, y), b = gr.bounds;
     if (mx < b.x0 || my < b.y0 || mx > b.x1 || my > b.y1) return null;
-    const c = Graph.nearest(gr, mx, my, gr.unit * 0.8);
+    const c = Graph.nearest(gr, mx, my, Math.max(gr.unit * 0.8, 22 / L.sc));   // 指でも押せるように、画面で 22px 以内
     return c < 0 ? null : { c, mx, my };
   },
   // いちばん近いマスのさかいめ（迷路のときだけ。内側の辺だけ）
@@ -68,6 +68,18 @@ const UI = {
     cand.sort((a, b) => a[0] - b[0]);
     return cand.length ? cand[0][1] : -1;
   },
+
+  // 地図を切りかえたとき: 迷路だけの操作（壁・新しい迷路）は日本の道路ではかくす。絵の縦横の比を地図に合わせる
+  setMap(kind) {
+    S.mapKind = kind;
+    for (const [id, k] of [['mapMaze', 'maze'], ['mapJapan', 'japan']]) { $(id).classList.toggle('on', kind === k); $(id).setAttribute('aria-pressed', kind === k); }
+    $('mWall').hidden = kind !== 'maze'; $('bNew').hidden = kind !== 'maze';
+    if (kind !== 'maze') S.mode = 'food';
+    const b = S.s ? S.world.g.bounds : S.world.g.bounds;
+    $('view').style.aspectRatio = `${(b.x1 - b.x0).toFixed(1)} / ${(b.y1 - b.y0).toFixed(1)}`;
+    UI._last = '';
+  },
+  loading(on) { $('phase').textContent = on ? '地図を読みこんでいます…' : ''; },
 
   toggleWall(me) {
     const s = S.s, gr = s.g, m = gr.maze;
@@ -93,6 +105,8 @@ const UI = {
     $('mWall').onclick = () => { S.mode = 'wall'; S.ui.sel = -1; UI.status(); draw(); };
     $('bRestart').onclick = () => restart();
     $('bNew').onclick = () => newMaze(S.seed + 1000 + Math.floor(Math.random() * 100000));
+    $('mapMaze').onclick = () => { if (S.mapKind !== 'maze') newMaze(S.seed); };
+    $('mapJapan').onclick = () => { if (S.mapKind !== 'japan') newJapan(); };
     $('cShort').onchange = e => { S.ui.showShortest = e.target.checked; draw(); };
     $('cChem').onchange = e => { S.ui.showChem = e.target.checked; draw(); };
 

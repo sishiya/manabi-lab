@@ -66,10 +66,15 @@ const Draw = {
   frame(g2, w, h, s, ui) {
     const g = s.g, L = Draw.layout(g, w, h), C = Draw.C, cs = L.cs;
     const T = L.sc * (g.tubeMM || g.unit * 0.42);         // いちばん太い管の太さ（画面）
-    const F = L.sc * (g.cellMM || g.unit);                 // 記号の大きさのもと（迷路のマス）
+    const F = L.sc * (g.symbolMM || g.cellMM || g.unit);   // 記号の大きさのもと（迷路のマス・地図はきめた大きさ）
     g2.fillStyle = C.bg; g2.fillRect(0, 0, w, h);
     const b = g.bounds;
-    g2.fillStyle = C.floor; g2.fillRect(L.X(b.x0), L.Y(b.y0), (b.x1 - b.x0) * L.sc, (b.y1 - b.y0) * L.sc);
+    if (g.land) {   // 地図: 陸（寒天の色）と、粘菌が通れる道（うすい線）
+      g2.fillStyle = C.floor; g2.strokeStyle = 'rgba(120,145,170,0.35)'; g2.lineWidth = 1;
+      for (const poly of g.land) { g2.beginPath(); poly.forEach(([x, y], i) => i ? g2.lineTo(L.X(x), L.Y(y)) : g2.moveTo(L.X(x), L.Y(y))); g2.closePath(); g2.fill(); g2.stroke(); }
+      g2.strokeStyle = 'rgba(150,175,200,0.28)'; g2.lineWidth = Math.max(1, T * 0.5); g2.lineCap = 'round'; g2.lineJoin = 'round';
+      g2.beginPath(); for (let e = 0; e < g.nE; e++) if (g.open[e]) Draw.trace(g2, Draw.path(L, g, e), 0, 1); g2.stroke();
+    } else { g2.fillStyle = C.floor; g2.fillRect(L.X(b.x0), L.Y(b.y0), (b.x1 - b.x0) * L.sc, (b.y1 - b.y0) * L.sc); }
 
     // エサから広がる物質（※ 目印。色の濃さは対数。粘菌が気づく濃さより上は少し濃く）
     if (ui.showChem) {

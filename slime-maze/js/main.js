@@ -16,15 +16,33 @@ const S = {
   acc: 0, swapT: 0, L: null,
 };
 
-// 地図（いまは迷路。将来は日本の道路も同じ形の Graph で）。はじめのエサの点 foods0 と、かけらの点 start を持つ
+// 地図: 迷路か日本の道路。どちらも点と線の Graph で、はじめのエサの点 foods0 と、かけらの点 start を持つ
 function newMaze(seed) {
   S.seed = seed;
   const m = Maze.makeGood(W, H, seed);
   // 1マスを 3×3 の細かい網に（管が角の内側を近道したり、Y 字に分かれたりできる）
   const gr = Graph.fromMazeFine(m, CELL_MM, 3, seed);
-  S.world = { g: gr, foods0: [gr.cellCenter(0), gr.cellCenter(W * H - 1)], start: gr.cellCenter(Math.floor(H / 2) * W + Math.floor(W / 2)) };
-  S.s = Model.create(gr, S.world.foods0, seed);   // はじめのエサは2つ（迷路の入口と出口）
-  S.ui.ph = new Float64Array(gr.nE);
+  setWorld({ kind: 'maze', g: gr, foods0: [gr.cellCenter(0), gr.cellCenter(W * H - 1)], start: gr.cellCenter(Math.floor(H / 2) * W + Math.floor(W / 2)) });
+}
+// 日本の道路（Natural Earth。tools/build-japan.mjs で作った data/japan.json）。エサは東京と大阪、かけらは名古屋
+let japanData = null;
+async function newJapan() {
+  if (!japanData) {
+    UI.loading(true);
+    try { japanData = await (await fetch('data/japan.json?v=2')).json(); }
+    catch (e) { UI.loading(false); window.__slmaErr.push('地図を読めませんでした: ' + e.message); return; }
+    UI.loading(false);
+  }
+  const gr = Graph.fromData(japanData), c = gr.cities;
+  setWorld({ kind: 'japan', g: gr, foods0: [c['東京'], c['大阪']], start: c['名古屋'] });
+}
+function setWorld(w) {
+  S.world = w;
+  S.s = Model.create(w.g, w.foods0, S.seed);   // はじめのエサは2つ
+  S.ui.ph = new Float64Array(w.g.nE);
+  Draw._paths = null;
+  UI.setMap(w.kind);
+  resize();
   restart();
 }
 function restart() {

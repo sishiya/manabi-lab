@@ -84,6 +84,18 @@ const Graph = {
       if (!ok1 || !ok2) g.open[e] = 0;
     }
   },
+  // 地図のデータ（tools/build-japan.mjs が作る data/japan.json）から Graph を作る
+  fromData(d) {
+    const N = d.N, nE = d.ea.length, adj = Array.from({ length: N }, () => []);
+    for (let e = 0; e < nE; e++) { adj[d.ea[e]].push(e); adj[d.eb[e]].push(e); }
+    const len = Float64Array.from(d.len), sorted = Array.from(len).sort((a, b) => a - b);
+    return {
+      N, nE, x: Float64Array.from(d.x), y: Float64Array.from(d.y), ea: Int32Array.from(d.ea), eb: Int32Array.from(d.eb), len,
+      open: new Uint8Array(nE).fill(1), adj, pts: d.pts.map(p => p || null),
+      wobble: false, maze: null, unit: sorted[sorted.length >> 1], widthMM: 2, tubeMM: 1.6, symbolMM: 14, scale: d.kmPerMM * 1000,
+      land: d.land, cities: d.cities, kmPerMM: d.kmPerMM, bounds: d.bounds,
+    };
+  },
   other(g, e, i) { return g.ea[e] === i ? g.eb[e] : g.ea[e]; },
 
   // a から b へのいちばん短い道（線の長さで。ダイクストラ法）。{ edges: 線の番号の列, len: 長さ mm }。届かなければ null

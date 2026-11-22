@@ -37,3 +37,6 @@ _dev/tools/out/
 drop-evolution/look/
 _dev/drop-evolution/
 tilt-shift/look/
+
+# 粘菌が迷路を解くまで: 地図を作るための元データ（大きいので Git に入れない。取り方は slime-maze/DEVNOTES.md）
+slime-maze/tools/raw/

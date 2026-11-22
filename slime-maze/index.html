@@ -24,6 +24,10 @@
 
   <section id="panel">
     <div class="grp">
+      <div class="row seg" role="group" aria-label="地図">
+        <button id="mapMaze" class="tog">迷路</button>
+        <button id="mapJapan" class="tog">日本の道路</button>
+      </div>
       <div class="row">
         <button id="bRun" class="primary"></button>
         <button id="bSpeed" class="tog" aria-pressed="false"></button>
@@ -65,7 +69,7 @@
         <ul>
           <li><b>演出</b>: エサの物質は、本物の100倍の速さで広げています（本物はとてもおそい）。往復流は1.5秒ごと（本物は約2分）。通路ごとの伸びる速さのばらつき、先端の膜、管のうねりも見た目のためです。</li>
           <li><b>仮定</b>（本当の値が分かっていないもの）: 1マス 5mm／伸びる速さ 2cm/時（研究は「1時間に数センチ」）／いちばん速い先端は平均の3倍まで／気づく濃さはエサの所の1%、濃いほうへ1.5倍・うすいほうへ0.5倍／物質はエサから4cmほどで薄くなる／粘液の跡は消えず、跡のある所へは0.2倍の速さ／管の式の時間の単位は1時間／半径がもとの約3割になった管は消える。</li>
-          <li><b>簡単にしたところ</b>: 管の網は、1マスを 3×3 に分けた細かい網の線から選ばれます（本物はもっと細かい）。体の量は全体で一定（実際は、エサを食べて増える）。実験では迷路のあちこちにかけらを置きましたが、ここではまん中の1つから。物質はブドウ糖を代表にしています。</li>
+          <li><b>簡単にしたところ</b>: 管の網は、迷路では1マスを 3×3 に分けた細かい網の線から、日本では主な道路の線から選ばれます（本物はもっと細かい）。日本の地図は 1mm を 5km として、寒天の上にのせた大きさで計算しています（東京〜大阪は約 10cm）。体の量は全体で一定（実際は、エサを食べて増える）。実験では迷路のあちこちにかけらを置きましたが、ここではまん中の1つから。物質はブドウ糖を代表にしています。</li>
           <li>これはモデルの計算で、粘菌を測った値ではありません。</li>
         </ul>
       </details>
@@ -81,6 +85,7 @@
           <li>Almeida R. F. F. (2021) Formation and Optimisation of Vein Networks in Physarum. 修士論文（<a href="https://arxiv.org/abs/2305.12244" target="_blank" rel="noopener">arXiv</a>）— 先端を流れの出口にする考え方・体の量の数え方</li>
           <li>Bonifaci V., Mehlhorn K., Varma G. (2012) Physarum can compute shortest paths（<a href="https://arxiv.org/abs/1106.0423" target="_blank" rel="noopener">arXiv</a>）— 最短の道が残ることの証明</li>
         </ul>
+        <p>日本の道路と陸の形: Made with Natural Earth（1:10m Roads・Land。パブリックドメイン。<a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">naturalearthdata.com</a>）。主な道路だけで、細い道は入っていません。</p>
         <p>フォント: Google Fonts（SIL Open Font License）</p>
       </details>
     </div>
@@ -88,8 +93,8 @@
 </div>
 
 <script src="js/maze.js?v=1"></script>
-<script src="js/graph.js?v=4"></script>
+<script src="js/graph.js?v=5"></script>
 <script src="js/model.js?v=20"></script>
-<script src="js/draw.js?v=18"></script>
-<script src="js/ui.js?v=14"></script>
-<script src="js/main.js?v=7"></script>
+<script src="js/draw.js?v=19"></script>
+<script src="js/ui.js?v=16"></script>
+<script src="js/main.js?v=9"></script>
