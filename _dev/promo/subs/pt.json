@@ -578,8 +578,7 @@
 "Hoje ela está a 380.000 km. Se alguém estivesse no chão naquela época, // a Lua pareceria cerca de 20 vezes maior",
 "Desde então, a Lua foi se afastando aos poucos // até onde está agora",
 "...mas naquela época o chão era um mar de rocha derretida. // Ninguém poderia ter ficado lá"
-]
-,
+],
 "animal-senses-trivia2-short": [
 "Quão alto é este chamado?",
 "O chamado ultrassônico de um morcego: // quantos decibéis, a 10 cm da boca?",
@@ -621,5 +620,17 @@
 "Os san, caçadores-coletores do Kalahari: quase zero. // Não foram enganados.",
 "Uma teoria: crescer entre paredes retas // e ângulos retos ajusta o jeito de ver.",
 "Quanto você foi enganado?"
+],
+"ferrofluid-trivia2-short": [
+"P: Para que foi inventado este líquido preto cheio de espinhos?",
+"R: Para combustível de foguete.",
+"R: A NASA, nos anos 1960. No espaço, o combustível flutua dentro do tanque // e pode não chegar à entrada da bomba.",
+"R: A ideia foi misturar pó fino de óxido de ferro no combustível // e puxá-lo com um ímã.",
+"P: Genial.",
+"R: Mas descobriram que, sem gravidade, o líquido se junta no meio do tanque, // e simples defletores bastavam para levá-lo à bomba.",
+"P: Peraí, então nem precisou?",
+"R: Nunca foi usado como combustível de foguete.",
+"R: Mas hoje ele resfria alto-falantes // e veda as folgas de eixos que giram.",
+"P: O fracasso que foi mais longe."
 ]
 }

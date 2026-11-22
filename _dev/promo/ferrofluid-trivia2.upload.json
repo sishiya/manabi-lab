@@ -1,0 +1,17 @@
+{
+  "videoId": "RWKFLCrN38o",
+  "file": "_dev/promo/out/ferrofluid-trivia2-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/ferrofluid-trivia2.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-25T21:00:00+09:00",
+  "captions": { "en": "_dev/promo/out/ferrofluid-trivia2-short.en.srt", "es": "_dev/promo/subs/ferrofluid-trivia2-short.es.srt", "ko": "_dev/promo/subs/ferrofluid-trivia2-short.ko.srt", "pt": "_dev/promo/subs/ferrofluid-trivia2-short.pt.srt", "zh-TW": "_dev/promo/subs/ferrofluid-trivia2-short.zh-TW.srt" },
+  "title": "【うんちく】磁性流体はロケットの燃料のために作られた。でも一度も使われなかった #Shorts",
+  "description": "磁石を近づけるとトゲトゲになる黒い液体「磁性流体」。生まれは1960年代はじめの NASA の研究所です。宇宙ではタンクの中の燃料が浮いて、エンジンのポンプの口にとどかないかもしれない。そこで燃料に細かい酸化鉄の粒をまぜ、電磁石で口へ吸いよせる案が考えられました。\n\nところが、重力の小さいところでは液はタンクの真ん中に集まるとわかり、仕切り板でポンプへ導けば足りました。ロケットの燃料には使われませんでしたが、いまはスピーカーの冷却や、回る軸のすき間をふさぐシールに使われています。タンクの中の絵は、しくみを伝えるための模式図です。\n\nアプリ「磁性流体の実験皿」に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/ferrofluid/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: R. S. Arrighi (NASA Glenn Research Center, 2021) \"Novel Rocket Fuel Spawned Ferrofluid Industry\"・米国特許 US 3,215,572（1965）\n\n声: VOICEVOX:春日部つむぎ・VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
+  "tags": ["磁性流体の実験皿", "磁性流体", "NASA", "ロケット", "うんちく", "雑学", "Shorts", "まなびラボ", "しし屋", "ferrofluid", "NASA history", "did you know"],
+  "localizations": {
+    "en": {
+      "title": "Did you know? Ferrofluid was invented for rocket fuel — and never used for it #Shorts",
+      "description": "Ferrofluid is the black liquid that grows spikes near a magnet. It was born at a NASA research center in the early 1960s. In space, fuel floats around inside the tank and might not reach the engine's pump inlet, so the idea was to mix fine iron oxide particles into the fuel and pull it to the inlet with an electromagnet. Turn on English subtitles (CC).\n\nBut it turned out that in low gravity the liquid gathers in the middle of the tank, and simple baffles were enough to guide it to the pump. Ferrofluid was never used as rocket fuel, but today it cools loudspeakers and seals the gaps around spinning shafts. The tank drawings are simplified diagrams to show the idea.\n\nRelated to the app \"Ferrofluid Dish\".\n\nApp (in Japanese for now): https://sishiya.github.io/manabi-lab/ferrofluid/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/?lang=en\n\nSource: R. S. Arrighi (NASA Glenn Research Center, 2021) \"Novel Rocket Fuel Spawned Ferrofluid Industry\"; US Patent 3,215,572 (1965).\n\nVoice: VOICEVOX:Kasukabe Tsumugi, VOICEVOX:Meimei Himari\nMusic: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#DidYouKnow #Science"
+    }
+  }
+}

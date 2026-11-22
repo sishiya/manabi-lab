@@ -19,4 +19,5 @@ window.TRIVIA_THUMBS = {
   'illusions-trivia2':     { t: 1.0, crop: [140, 380, 800, 560], title: '矢羽の錯覚\n[効かない]\n人たちがいた', line: '2本は同じ長さ' },
   'crt-pixels-trivia2':    { t: 6.5, crop: [50, 170, 860, 660], title: 'ブラウン管が\n光らせたのは\n[1つの点]だけ', line: '横切る速さは秒速6.7km以上' },
   'extreme-trivia3':       { t: 18.0, crop: [150, 160, 830, 905], title: '37℃のお湯が\n[沸とう]\nするのは？', line: '富士山の頂上なら87℃' },
+  'ferrofluid-trivia2':    { t: 1.0, crop: [40, 480, 1000, 640], title: 'これ、\n[ロケットの燃料]\nになるはずだった', line: '燃料に使われた回数は0回' },
 };

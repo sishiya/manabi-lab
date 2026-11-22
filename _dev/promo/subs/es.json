@@ -578,8 +578,7 @@
 "Hoy está a 380.000 km. Si alguien hubiera estado en el suelo entonces, // la Luna se habría visto unas 20 veces más ancha",
 "Desde entonces, la Luna se ha alejado poco a poco // hasta donde está ahora",
 "...pero entonces el suelo era un mar de roca fundida. // Nadie podría haber estado allí"
-]
-,
+],
 "animal-senses-trivia2-short": [
 "¿Qué tan fuerte es este llamado?",
 "El llamado ultrasónico de un murciélago: // ¿cuántos decibelios, a 10 cm de su boca?",
@@ -621,5 +620,17 @@
 "Los san, cazadores-recolectores del Kalahari: casi cero. // No se dejaban engañar.",
 "Una teoría: crecer entre paredes rectas // y ángulos rectos afina cómo vemos.",
 "¿Cuánto te engañó a ti?"
+],
+"ferrofluid-trivia2-short": [
+"P: ¿Para qué se inventó este líquido negro con púas?",
+"R: Para combustible de cohetes.",
+"R: La NASA, en los años 60. En el espacio, el combustible flota dentro del tanque // y podría no llegar a la entrada de la bomba.",
+"R: La idea fue mezclar polvo fino de óxido de hierro en el combustible // y atraerlo con un imán.",
+"P: Genial.",
+"R: Pero se descubrió que sin gravedad el líquido se junta en el centro del tanque, // y bastaban unos deflectores para guiarlo a la bomba.",
+"P: Espera, ¿entonces no hizo falta?",
+"R: Nunca se usó como combustible de cohetes.",
+"R: Pero hoy enfría altavoces // y sella los huecos de ejes que giran.",
+"P: El fracaso que llegó más lejos."
 ]
 }

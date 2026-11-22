@@ -1,0 +1,43 @@
+1
+00:00:00,000 --> 00:00:02,740
+P: ¿Para qué se inventó este líquido negro con púas?
+
+2
+00:00:02,740 --> 00:00:04,050
+R: Para combustible de cohetes.
+
+3
+00:00:04,050 --> 00:00:10,370
+R: La NASA, en los años 60. En el espacio, el combustible flota dentro del tanque
+y podría no llegar a la entrada de la bomba.
+
+4
+00:00:10,370 --> 00:00:15,810
+R: La idea fue mezclar polvo fino de óxido de hierro en el combustible
+y atraerlo con un imán.
+
+5
+00:00:15,810 --> 00:00:17,610
+P: Genial.
+
+6
+00:00:17,610 --> 00:00:23,810
+R: Pero se descubrió que sin gravedad el líquido se junta en el centro del tanque,
+y bastaban unos deflectores para guiarlo a la bomba.
+
+7
+00:00:23,810 --> 00:00:25,870
+P: Espera, ¿entonces no hizo falta?
+
+8
+00:00:25,870 --> 00:00:29,470
+R: Nunca se usó como combustible de cohetes.
+
+9
+00:00:29,470 --> 00:00:33,950
+R: Pero hoy enfría altavoces
+y sella los huecos de ejes que giran.
+
+10
+00:00:33,950 --> 00:00:38,950
+P: El fracaso que llegó más lejos.

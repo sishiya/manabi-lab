@@ -237,7 +237,7 @@ function draw(g, t) {
     TK.card(g, 140, 220, 680, 200);
     PL.label(g, 'ロケットの燃料に使われた回数', TX, 280, 44, { color: TK.C.sub });
     PL.label(g, '[0 回]', TX, 365, 90);
-    TK.note(g, t, 31.5, 35, '出どころ: R. S. Arrighi, NASA Glenn (2021)\n“Novel Rocket Fuel Spawned Ferrofluid Industry”・特許 US 3,215,572（1965）', { size: 28, y: 1080 });   // 2行なので絵の下に（クレジットと重ねない）
+    TK.note(g, t, 31.5, 35, '出どころ: R. S. Arrighi, NASA Glenn (2021)\n“Novel Rocket Fuel Spawned Ferrofluid Industry”\n特許 US 3,215,572（1965）', { size: 28, y: 1070 });   // 3行（1行が長いとスマホの安全な枠の外にかかる）なので絵の下に（クレジットと重ねない）
   }
   tag(g, t);
 }
