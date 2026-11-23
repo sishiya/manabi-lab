@@ -67,7 +67,13 @@ const Draw = {
 
   frame(g2, w, h, s, ui, view) {
     const g = s.g, L = Draw.layout(g, w, h, view), C = Draw.C, cs = L.cs;
-    const DD = Model.multi(s) ? s.Dm : s.D;   // 描く太さ（エサが3つ以上は、ならした太さ。毎回の組でちらつかないように）
+    // 描く太さ: エサが3つ以上は、ならした太さを、いちばん太い管で割ったもの（エサが多いと、どの管も細いので。消える太さも同じくらべ方）
+    let DD = s.D;
+    if (Model.multi(s) && s.mode === 'pair') {
+      let ref = 0; for (let e = 0; e < g.nE; e++) if (s.D[e] > 0 && s.Qs[e] > 1e-3 && s.Dm[e] > ref) ref = s.Dm[e];   // 流れが来ている管の中で（消える太さと同じくらべ方）
+      ref = Math.min(1, ref) || 1; const buf = Draw._dd && Draw._dd.length === g.nE ? Draw._dd : (Draw._dd = new Float64Array(g.nE));
+      for (let e = 0; e < g.nE; e++) buf[e] = s.Dm[e] / ref; DD = buf;
+    } else if (Model.multi(s)) DD = s.Dm;
     const T = L.sc * (g.tubeMM || g.unit * 0.42);         // いちばん太い管の太さ（画面）
     const F = L.sc0 * Math.pow(L.z, 0.3) * (g.symbolMM || g.cellMM || g.unit);   // 記号の大きさのもと（迷路のマス・地図はきめた大きさ。拡大しても少ししか大きくしない）
     g2.fillStyle = C.bg; g2.fillRect(0, 0, w, h);

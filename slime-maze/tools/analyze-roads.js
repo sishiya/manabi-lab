@@ -8,6 +8,8 @@ for (const f of ['maze.js', 'cities.js', 'graph.js', 'model.js']) vm.runInContex
 const { Graph, Model } = ctx;
 const data = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'japan.json'), 'utf8'));
 const elev = process.env.NO_MOUNTAIN ? null : JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'japan-elev.json'), 'utf8'));   // NO_MOUNTAIN=1 で山なし
+// 山の値を変えてくらべる: LIGHT=低い所m,高い所m,伸びる速さを減らす割合,やせる速さを増やす割合（ふつうは 200,1000,0.8,2）
+if (process.env.LIGHT) { const [lo, hi, sl, dc] = process.env.LIGHT.split(',').map(Number); Object.assign(Graph, { LIGHT_LOW: lo, LIGHT_HIGH: hi }); Object.assign(Model, { LIGHT_SLOW: sl, LIGHT_DECAY: dc }); }
 const g = Graph.fromLand(data, 3, 7, elev), c = g.cities;
 // 道路までの近さ: 0.5 mm の格子に、道路の線から 2 mm 以内の所をしるす
 const CELL = 0.25, NEAR = +(process.env.NEAR_MM || 1), b = g.bounds, GW = Math.ceil((b.x1 - b.x0) / CELL) + 1, GH = Math.ceil((b.y1 - b.y0) / CELL) + 1, near = new Uint8Array(GW * GH);
@@ -30,9 +32,15 @@ const names = sets[process.argv[2]] || (process.argv[2] ? process.argv[2].split(
 const foods = process.argv[2] === '県庁45' ? [...new Set(Object.values(g.places))] : names.map(k => c[k]).filter(i => i >= 0);
 console.log(`陸の網のどこでも: ${(100 * share(all)).toFixed(0)}%（道路の近くの陸の割合）`);
 const m = Graph.mst(g, foods); console.log(`いちばん短くつなぐ網: ${(100 * share(m.edges)).toFixed(0)}%（${Math.round(m.len * g.kmPerMM)} km）`);
+// 山をよけていちばん短くつなぐ網: 線の重さ = 長さ ×(1 + 3·光)（光の当たる管は3倍やせやすいので、そのぶん「遠い」とみる）で最小全域木
+if (g.light) {
+  const w = e => g.len[e] * (1 + 3 * g.light[e]), gw = Object.assign({}, g, { len: Float64Array.from({ length: g.nE }, (_, e) => w(e)) }), mw = Graph.mst(gw, foods);
+  let km = 0; for (const e of mw.edges) km += g.len[e];
+  console.log(`山をよけて短くつなぐ網: ${(100 * share(mw.edges)).toFixed(0)}%（${Math.round(km * g.kmPerMM)} km）`);
+}
 for (const seed of (process.argv.slice(3).length ? process.argv.slice(3).map(Number) : [3, 4, 5])) {
   const s = Model.create(g, foods, seed); Model.startGrowth(s, c['東京']);
-  let n = 0; while (n++ < 6000 && !Model.settled(s)) Model.step(s);
-  const net = []; for (let e = 0; e < g.nE; e++) if (Model.has(s, e) && s.D[e] >= Model.NET_D) net.push(e);
-  console.log(`粘菌（種 ${seed}）: ${(100 * share(net)).toFixed(0)}%（網 ${Math.round(Model.tubeLength(s) * g.kmPerMM)} km、${s.t.toFixed(0)} 時間${Model.settled(s) ? 'で落ち着いた' : '・まだ'}）`);
+  let n = 0, tAll = -1; while (n++ < 6000 && !Model.settled(s)) { Model.step(s); if (tAll < 0 && foods.every(f => s.reached[f])) tAll = s.t; }
+  const net = []; for (let e = 0; e < g.nE; e++) if (Model.has(s, e) && s.Dm[e] >= Model.NET_D) net.push(e);   // 網の長さと同じ数え方（ならした太さ）
+  console.log(`粘菌（種 ${seed}）: ${(100 * share(net)).toFixed(0)}%（網 ${Math.round(Model.tubeLength(s) * g.kmPerMM)} km、全部に着くまで ${tAll.toFixed(0)} 時間、${s.t.toFixed(0)} 時間${Model.settled(s) ? 'で落ち着いた' : '・まだ'}）`);
 }

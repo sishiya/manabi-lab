@@ -29,6 +29,9 @@ const Model = {
   // エサが3つ以上のとき: Tero ほか (2010) Science 327 の決まり（PDF で確かめた）。毎回ランダムにエサを1つ入口・別の1つを出口にし、
   //  dD/dt = f(|Q|) − D、f(Q) = Q^γ/(1+Q^γ)。論文の「ふつうの結果」の値 I0 = 2、γ = 1.8
   MULTI_I0: 2, GAMMA: 1.8,
+  GONE_MULTI: 3e-3,  // エサが3つ以上で流れているとき、消える太さ（流れのある管のいちばん太い管に対する割合。半径で約2割）。山の中の町へ1本の管が、流れの来ないあいだに消えないよう GONE より小さく
+  SOLVE_MIN: 1e-6,   // これより細い管は、流れの計算から外す（流れはほぼ 0。計算を速くするため）
+  MULTI_SUB: 4,      // エサが3つ以上のとき、1回（DT = 3分）を何組に分けて流すか（1組あたり 45秒。本物の往復流は約2分ごと）
   MAX_FOODS: 50,
   // 光（山。地図に g.light があるときだけ）: Tero ほか 2010 は、高い所ほど強い光を当てて粘菌を低い所へ通した（粘菌は光をさける）。
   //  光の当たる線では、伸びる速さが (1 − LIGHT_SLOW·光) 倍になり、管がやせる速さが (1 + LIGHT_DECAY·光) 倍になる（どちらも仮定）
@@ -89,7 +92,7 @@ const Model = {
     s.c.fill(0);
     s.foods.forEach((food, k) => {
       const c = s.cs[k], d = new Float64Array(g.N);
-      if (s.reached[food] && c[food] === 1) { for (let i = 0; i < g.N; i++) s.c[i] += c[i]; return; }   // 粘菌が着いたエサの物質は、もう粘菌を引きよせないので、計算を止めて（絵のために）そのまま残す。エサが多いときに軽くするため
+      if (Model.eating(s, food) && c[food] === 1) { for (let i = 0; i < g.N; i++) s.c[i] += c[i]; return; }   // 粘菌が着いたエサの物質は、もう粘菌を引きよせないので、計算を止めて（絵のために）そのまま残す。エサが多いときに軽くするため
       for (let it = 0; it < sub; it++) {
         d.fill(0);
         for (let e = 0; e < g.nE; e++) {
@@ -112,6 +115,26 @@ const Model = {
   addFood(s, c) { s.foods.push(c); s.cs.push(new Float64Array(s.g.N)); s.lenHist = []; },
   removeFood(s, i) { s.foods.splice(i, 1); s.cs.splice(i, 1); s.lenHist = []; },
   multi(s) { return s.foods.length >= 3; },
+  // 粘菌が「食べている」エサか: 着いていて、エサが3つ以上のときは、管の網（いちばん多くのエサがのっている、管でつながったかたまり）に入っていること。
+  //  網から切れて取り残されたエサ（かたまりだけがのっている）は、また物質で引きよせ、網からつなぎ直しに伸びる（取り残された体も、本物なら探しに出て、いずれ合わさる）
+  eating(s, f) { return s.reached[f] && (!s.fOn || s.fOn[f]); },
+  // 管の網に入っているエサをしるす（s.fOn）。取り残されたエサの数 s.isoN
+  linkFoods(s) {
+    const g = s.g;
+    if (!Model.multi(s)) { s.fOn = null; s.isoN = 0; return; }
+    const comp = s._comp || (s._comp = new Int32Array(g.N)); comp.fill(-1);
+    let best = -1, bestN = 0, id = 0;
+    for (const f of s.foods) {
+      if (!s.reached[f] || comp[f] >= 0) continue;
+      const q = [f]; comp[f] = id;
+      for (let i = 0; i < q.length; i++) for (const e of g.adj[q[i]]) { if (!Model.has(s, e)) continue; const o = Graph.other(g, e, q[i]); if (comp[o] < 0) { comp[o] = id; q.push(o); } }
+      let n = 0; for (const h of s.foods) if (comp[h] === id) n++;
+      if (n > bestN) { bestN = n; best = id; }
+      id++;
+    }
+    const on = s.fOn || (s.fOn = new Uint8Array(g.N)); on.fill(0); s.isoN = 0;
+    for (const f of s.foods) { if (s.reached[f] && comp[f] === best) on[f] = 1; else if (s.reached[f]) s.isoN++; }
+  },
 
   // 粘菌のいる点 a から、線 e（向こうは b）へ伸びる速さの倍率。0 なら伸びない
   //  まだ伸びはじめていない線は、粘液の跡があればさける。ただし、まだ着いていないエサの物質に気づいていて、向こうのほうが濃ければ伸びる（寄っていく）
@@ -119,7 +142,7 @@ const Model = {
   pull(s, e, a, b, started) {
     let sense = false, up = false;
     s.foods.forEach((f, k) => {
-      if (s.reached[f]) return;                         // もう着いたエサには、引きよせられない
+      if (Model.eating(s, f)) return;                   // もう食べているエサには、引きよせられない（網から取り残されたエサには、また引きよせられる）
       const c = s.cs[k];
       if (c[a] >= Model.C_TH) { sense = true; if (c[b] > c[a] && !s.reached[b]) up = true; }
     });
@@ -192,8 +215,14 @@ const Model = {
     const g = s.g; let gone = false;
     // エサが3つ以上: 毎回ランダムな1組だけに流すので、エサが多いと、町へ1本だけの管には流れがたまにしか来ず、太さが大きくゆれる。
     //  そのゆれは計算のしかた（往復流の代わりにランダムな組を使う）から来るので、消えるかどうかは、ならした太さ Dm で決める（Tero 2007「管は流れがないと数時間でこわれる」）
-    const dv = Model.multi(s) ? s.Dm : s.D;
-    for (let e = 0; e < g.nE; e++) if (s.D[e] > 0 && dv[e] < Model.GONE) { s.D[e] = 0; s.Dm[e] = 0; s.fa[e] = 0; s.fb[e] = 0; gone = true; }
+    //  エサが3つ以上のとき、消える太さは、いちばん太い管の GONE 倍（半径で約3割）。エサが多いと、どの組にも流れはたまにしか来ないので、
+    //  どの管もエサ2つのときより細い（Tero 2010 のモデルには消える太さはない。消えるのは、このアプリの決まり）
+    const multi = Model.multi(s), dv = multi ? s.Dm : s.D;
+    //  いちばん太い管は、流れが来ている管（ならした流量 Qs がある管）の中で見る。つなぎ直しに伸びたばかりの管は、太く生まれるがまだ流れがないので入れない
+    //  （入れると、くらべる太さが急に上がって、網の細い枝が消え、また取り残しが出る、をくり返した）
+    let ref = 1; if (multi && s.mode === 'pair') { ref = 0; for (let e = 0; e < g.nE; e++) if (s.D[e] > 0 && s.Qs[e] > 1e-3 && dv[e] > ref) ref = dv[e]; ref = Math.min(1, ref) || 1; }
+    const thr = multi && s.mode === 'pair' ? Model.GONE_MULTI * ref : Model.GONE;
+    for (let e = 0; e < g.nE; e++) if (s.D[e] > 0 && dv[e] < thr) { s.D[e] = 0; s.Dm[e] = 0; s.fa[e] = 0; s.fb[e] = 0; gone = true; }
     if (!gone) return;
     for (let c = 0; c < g.N; c++) {
       if (!s.reached[c]) continue;
@@ -210,10 +239,10 @@ const Model = {
   // 出口がいくつもあるとき（伸びる先端）は、どの先端も圧力 0 にする: 太く短い管でつながった先端ほど多く流れこむ（先端どうしの取りあい）。
   //  Almeida (2021) は等しく分けたが、先端の膜は上流から押しこまれた流れでふくらむ（Le Verge-Serandour & Alim）ので、流れこむ量は管しだいとした
   solve(s, a, sinks, I0) {
-    const g = s.g, N = g.N, C = e => s.D[e] / Model.L(s, e);
+    const g = s.g, N = g.N, C = e => s.D[e] / Model.L(s, e), use = e => Model.has(s, e) && s.D[e] > Model.SOLVE_MIN;   // ほとんど閉じた管（SOLVE_MIN 以下）は流れに入れない（解きにくくなるだけで、流れはほぼ 0）
     const idx = new Int32Array(N).fill(-1), list = [a]; idx[a] = 0;
     for (let qi = 0; qi < list.length; qi++) for (const e of g.adj[list[qi]]) {
-      if (!Model.has(s, e)) continue; const n = Graph.other(g, e, list[qi]); if (idx[n] < 0) { idx[n] = list.length; list.push(n); }
+      if (!use(e)) continue; const n = Graph.other(g, e, list[qi]); if (idx[n] < 0) { idx[n] = list.length; list.push(n); }
     }
     s.Q.fill(0); s.p.fill(0);
     s.comp = new Uint8Array(N); for (const c of list) s.comp[c] = 1;   // 入口とつながっている点
@@ -222,14 +251,22 @@ const Model = {
     // 出口の圧力を 0 に固定し、残りの節で  Σ D/L (p_i − p_j) = 入る量  を解く
     const n = list.length, fixed = new Uint8Array(n), diag = new Float64Array(n), rhs = new Float64Array(n);
     for (const c of out) fixed[idx[c]] = 1;
-    for (let i = 0; i < n; i++) for (const e of g.adj[list[i]]) if (Model.has(s, e)) diag[i] += C(e);
+    for (let i = 0; i < n; i++) for (const e of g.adj[list[i]]) if (use(e)) diag[i] += C(e);
     rhs[idx[a]] = I0;
     for (let i = 0; i < n; i++) if (fixed[i]) { diag[i] = 1; rhs[i] = 0; }
+    // となりの表（行ごとに、となりの番号と D/L）を1回だけ作る。くり返しの中は配列を読むだけにする（速さのため）
+    const rs = new Int32Array(n + 1), cj = [], cv = [];
+    for (let i = 0; i < n; i++) {
+      rs[i] = cj.length;
+      if (!fixed[i]) { const c = list[i]; for (const e of g.adj[c]) { if (!use(e)) continue; const j = idx[Graph.other(g, e, c)]; if (!fixed[j]) { cj.push(j); cv.push(C(e)); } } }
+    }
+    rs[n] = cj.length;
+    const CJ = Int32Array.from(cj), CV = Float64Array.from(cv);
     const mul = (x, y) => {
       for (let i = 0; i < n; i++) {
         if (fixed[i]) { y[i] = x[i]; continue; }
-        const c = list[i]; let v = diag[i] * x[i];
-        for (const e of g.adj[c]) { if (!Model.has(s, e)) continue; const j = idx[Graph.other(g, e, c)]; if (!fixed[j]) v -= C(e) * x[j]; }
+        let v = diag[i] * x[i];
+        for (let k = rs[i], k1 = rs[i + 1]; k < k1; k++) v -= CV[k] * x[CJ[k]];
         y[i] = v;
       }
     };
@@ -250,7 +287,7 @@ const Model = {
     }
     for (let i = 0; i < n; i++) s.p[list[i]] = x[i];
     s.pPrev = s.p.slice();
-    for (let e = 0; e < g.nE; e++) if (Model.has(s, e)) s.Q[e] = C(e) * (s.p[g.ea[e]] - s.p[g.eb[e]]);
+    for (let e = 0; e < g.nE; e++) if (use(e)) s.Q[e] = C(e) * (s.p[g.ea[e]] - s.p[g.eb[e]]);
     return true;
   },
 
@@ -283,19 +320,44 @@ const Model = {
     Model.grow(s, dt);
     s.t += dt;
     s.maxRate = 0;
-    const foodsIn = s.foods.filter(f => s.reached[f]);
+    Model.linkFoods(s);
+    const foodsIn = s.foods.filter(f => s.reached[f]), foodsOn = s.fOn ? foodsIn.filter(f => s.fOn[f]) : foodsIn;
     const multi = Model.multi(s);
+    // 管の太さを dtt 時間ぶん進める（dD/dt = f(|Q|) − D）
+    let maxRate = 0, V0 = 0, did = false;
+    const upd = dtt => {
+      if (!did) { V0 = Model.volume(s); did = true; }
+      const sig = multi && s.mode === 'pair';
+      for (let e = 0; e < g.nE; e++) {
+        if (!Model.has(s, e)) continue;
+        const q = Math.abs(s.Q[e]), f = sig ? Math.pow(q, Model.GAMMA) / (1 + Math.pow(q, Model.GAMMA)) : q;   // エサ2つ: f(Q) = Q^μ, μ = 1（Tero 2007）。3つ以上: シグモイド（Tero 2010）
+        const d0 = s.D[e], d1 = Math.max(Model.FLOOR, (d0 + dtt * f) / (1 + dtt * (g.light ? 1 + Model.LIGHT_DECAY * g.light[e] : 1)));   // 光の当たる管は早くやせる
+        maxRate = Math.max(maxRate, Math.abs(d1 - d0) / dtt);
+        s.D[e] = d1;
+        s.Dm[e] += (d1 - s.Dm[e]) * dtt / Model.DM_TAU;   // ならした太さ（エサが3つ以上のときに使う）
+        s.Qs[e] += (Math.abs(s.Q[e]) - s.Qs[e]) * 0.1 * dtt / dt;    // 粒の速さ用に、ならした流量（表示だけ）
+        s.Qd[e] += (s.Q[e] - s.Qd[e]) * 0.1 * dtt / dt;              // 粒の向き用に、ならした向きつきの流量（表示だけ）
+      }
+    };
     if (Model.flowing(s)) {
       s.mode = 'pair';
       s.share.fill(1);   // エサとエサのあいだを流れているときも、まだ探していない通路へはふつうの速さで伸びる（跡のある所へは出ない）
       let ok;
       if (!multi) ok = Model.solve(s, s.foods[s.swap ? 1 : 0], [s.foods[s.swap ? 0 : 1]], Model.I0);
       else {
-        // Tero 2010: 粘菌のいるエサから、ランダムに入口と出口を1つずつ。つながっていない組なら、別の組をためす
-        const R = foodsIn.slice(); ok = false;
-        for (let tries = 0; tries < 2 * R.length && !ok; tries++) {
-          const a = R[Math.floor(s.rng() * R.length)]; let b = R[Math.floor(s.rng() * (R.length - 1))]; if (b === a) b = R[R.length - 1];
-          ok = Model.solve(s, a, [b], Model.MULTI_I0);
+        // Tero 2010: 粘菌のいるエサから、ランダムに入口と出口を1つずつ。つながっていない組なら、別の組をためす。
+        //  1回（DT）を MULTI_SUB に分けて、それぞれ別の組で流す（論文の「1回ごとに1組」の1回を短くしただけ。エサが多いと、町へ1本だけの管には
+        //  何時間も流れが来ないことがあり、そのあいだに消えてしまっていた。1回を短くすると、組の選ばれ方のむらが小さくなる）
+        const R = foodsOn.length >= 2 ? foodsOn : foodsIn.slice(), K = s.foods.every(f => s.reached[f]) ? Model.MULTI_SUB : 1; ok = false;   // 全部のエサに着くまで（広がっているあいだ）は管が多く計算が重いので1組
+        for (let k = 0; k < K; k++) {
+          let okk = false;
+          for (let tries = 0; tries < 2 * R.length && !okk; tries++) {
+            const a = R[Math.floor(s.rng() * R.length)]; let b = R[Math.floor(s.rng() * (R.length - 1))]; if (b === a) b = R[R.length - 1];
+            okk = Model.solve(s, a, [b], Model.MULTI_I0);
+          }
+          if (!okk) s.Q.fill(0);
+          ok = ok || okk;
+          upd(dt / K);
         }
       }
       s.blocked = !ok;
@@ -318,18 +380,7 @@ const Model = {
       }
       else { s.mode = 'none'; s.Q.fill(0); }
     }
-    const V0 = Model.volume(s);
-    let maxRate = 0;
-    for (let e = 0; e < g.nE; e++) {
-      if (!Model.has(s, e)) continue;
-      const q = Math.abs(s.Q[e]), f = multi && s.mode === 'pair' ? Math.pow(q, Model.GAMMA) / (1 + Math.pow(q, Model.GAMMA)) : q;   // エサ2つ: f(Q) = Q^μ, μ = 1（Tero 2007）。3つ以上: シグモイド（Tero 2010）
-      const d0 = s.D[e], d1 = Math.max(Model.FLOOR, (d0 + dt * f) / (1 + dt * (g.light ? 1 + Model.LIGHT_DECAY * g.light[e] : 1)));   // 光の当たる管は早くやせる
-      maxRate = Math.max(maxRate, Math.abs(d1 - d0) / dt);
-      s.D[e] = d1;
-      s.Dm[e] += (d1 - s.Dm[e]) * dt / Model.DM_TAU;   // ならした太さ（エサが3つ以上のときに使う）
-      s.Qs[e] += (Math.abs(s.Q[e]) - s.Qs[e]) * 0.1;    // 粒の速さ用に、ならした流量（表示だけ）
-      s.Qd[e] += (s.Q[e] - s.Qd[e]) * 0.1;              // 粒の向き用に、ならした向きつきの流量（表示だけ。エサが3つ以上だと毎回入口が変わるので）
-    }
+    if (!did) upd(dt);   // エサが3つ以上で流れているとき以外は、1回ぶんまとめて
     // やせた管の体はかたまりへ（太った分はかたまりから）。エサにもかたまりにも着く前は、先端へ行ったとして数えない
     if (foodsIn.length || Model.lumpTotal(s) > 0) {
       const dV = Model.volume(s) - V0;
@@ -341,15 +392,15 @@ const Model = {
     if (s.mode === 'pair') s.tFlow += dt;
     // 落ち着いたかを見るための管の長さの記録（1時間ごと）
     if (!s.lenHist) s.lenHist = [];
-    //  エサが3つ以上のときの網の形（NET_D より太い管の長さ）を1時間ごとに残す
-    if (Math.floor(s.t + 1e-9) !== Math.floor(s.t - dt + 1e-9)) { s.lenHist.push(Model.tubeLength(s)); if (s.lenHist.length > Model.SETTLE_H) s.lenHist.shift(); }
+    //  エサが3つ以上のときの網の形（管の本数）を1時間ごとに残す
+    if (Math.floor(s.t + 1e-9) !== Math.floor(s.t - dt + 1e-9)) { let n = 0; for (let e = 0; e < g.nE; e++) if (Model.has(s, e)) n++; s.lenHist.push(n); if (s.lenHist.length > Model.SETTLE_H) s.lenHist.shift(); }   // 管の本数（網の形）。長さは毎回の組で数%ゆれるので使わない
   },
 
   // 粘菌の管の長さ（mm）  Σ D·長さ / I0 。μ=1 で落ち着くと、最短の道の長さになる
   //  エサが3つ以上のときは、ある太さ（NET_D）より太い管の長さの和
   tubeLength(s) {
     let L = 0;
-    if (Model.multi(s)) { for (let e = 0; e < s.g.nE; e++) if (Model.has(s, e) && s.Dm[e] >= Model.NET_D) L += s.g.len[e]; return L; }
+    if (Model.multi(s)) { for (let e = 0; e < s.g.nE; e++) if (Model.has(s, e) && s.Dm[e] >= Model.NET_D && s.Qs[e] > 1e-3) L += s.g.len[e]; return L; }   // 流れが来ている管だけ（つなぎ直しに伸びている管は、網ではなく探しているところ）
     for (let e = 0; e < s.g.nE; e++) if (Model.has(s, e)) L += s.D[e] * s.g.len[e]; return L / Model.I0;
   },
 
@@ -360,10 +411,10 @@ const Model = {
   settled(s) {
     if (!Model.multi(s)) return Model.flowing(s) && !s.growing && !s.blocked && s.tFlow > 1 && s.maxRate < 3e-3;
     // エサが3つ以上: 毎回入口と出口が変わるので、太さはいつもゆれる（1時間ならしても1〜2割）。
-    //  そこで「網の形」で見る: 全部のエサに着いて、NET_D より太い管の長さが SETTLE_H 時間かわらなければ
+    //  そこで「網の形」で見る: 全部のエサに着いて、管の本数が SETTLE_H 時間かわらなければ
     const h = s.lenHist || [];
     if (!s.foods.every(f => s.reached[f]) || s.growing || s.blocked || h.length < Model.SETTLE_H) return false;
-    const mx = Math.max(...h), mn = Math.min(...h); return mx > 0 && (mx - mn) < 0.005 * mx;
+    return h[0] > 0 && h.every(v => v === h[0]);   // 管の本数が SETTLE_H 時間かわらない
   },   // 細かい網では、長さの近い道どうしの決着がとてもおそい（Tero 2007: μ=1 では道の選ばれ方がおそい）ので、少しゆるめに
 };
 window.Model = Model;
