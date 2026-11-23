@@ -47,7 +47,7 @@ STAGES.push({
       vec3 c = mix(vec3(0.15, 0.148, 0.142), hint * 0.6, 0.4) * (0.8 + 0.3 * clamp(l * 2.5, 0.0, 1.0));
       vec3 q = vec3(vWP.x, 0.0, vWP.z);
       c *= 0.88 + 0.22 * kF(q * 0.12);
-      vec2 tl = q.xz / 1.5; c *= 1.0 - 0.08 * (step(0.95, fract(tl.x)) + step(0.95, fract(tl.y)));   // コンクリートの目地
+      vec2 tl = q.xz / 1.5; c *= 1.0 - 0.08 * (1.0 - smoothstep(0.05, 0.3, fwidth(tl.x))) * (step(0.95, fract(tl.x)) + step(0.95, fract(tl.y)));   // コンクリートの目地
       diffuseColor.rgb = c;`);
     terrain(SPAN, ctx.phone ? 160 : 320, nearMat).receiveShadow = true;
     // 外の地面: 中は近くの地面の下へ少しさげる（重なりのちらつきをさける）
@@ -85,11 +85,11 @@ STAGES.push({
     try { lines = await linesP; } catch (e) { console.warn('roads', e); }
     const yAt = (x, z) => { const h = hgt(lonOf(x), latOf(z)); return isNaN(h) ? 0 : h - H0; };
     const CARCLS = ['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'minor'];
-    const GC = RealRoads.graph(lines, L => CARCLS.includes(L.cls) && !L.tunnel, 1500);
+    const GC = RealRoads.graph(lines, L => CARCLS.includes(L.cls) && L.cls !== 'motorway' && !L.tunnel && !L.bridge, 1500);   // 高架の首都高・橋の上は、地面の高さで描くと下の道と重なるので走らせない
     const GP = RealRoads.graph(lines.map(L => Object.assign({}, L, { oneway: 0 })), L => !L.tunnel && (CARCLS.includes(L.cls) || (L.cls === 'path' && /footway|pedestrian|path/.test(L.sub || ''))), 1100);
     const nodeY = G => G.P.map(([x, z]) => yAt(x, z));
     const YC = nodeY(GC), YP = nodeY(GP);
-    const GAPS = { motorway: 45, trunk: 30, primary: 30, secondary: 45, tertiary: 70, minor: 220 };
+    const GAPS = { motorway: 60, trunk: 45, primary: 45, secondary: 70, tertiary: 110, minor: 320 };   // 車の間隔（1車線あたり m）。信号のない交差点で待つので、少なめに
     const lanesC = e => e.w >= 12 ? [1.75, 5.25] : e.w >= 9 ? [e.w / 4] : [e.w / 4];   // 左側通行: 進む向きの左へ。広い道は 2 車線
     const carsN = Math.round(GC.edges.reduce((a, e) => a + e.len * lanesC(e).length / (GAPS[e.cls] || 1e9), 0) * (ctx.phone ? 0.5 : 1));
     const MC = RealRoads.movers(GC, { n: carsN, lanes: lanesC, v: e => ({ motorway: 16, trunk: 13, primary: 12, secondary: 10, tertiary: 8, minor: 5 })[e.cls] || 5, weight: e => lanesC(e).length / (GAPS[e.cls] || 1e9), len: 4.6, gap: 2.5, follow: true, turnR: 7, yawRate: 1.5, vScale: r => 0.7 + 0.6 * r() }, Kit.rnd);
@@ -107,7 +107,7 @@ STAGES.push({
     function place() {
       MC.list.forEach((it, i) => { const [x, z, ry] = MC.at(it); C.set(i, x, z, ry, YC[it.e.a] + (YC[it.e.b] - YC[it.e.a]) * it.s / it.e.len); });
       if (C) C.done();
-      MP.list.forEach((it, i) => { const [x, z, ry] = MP.at(it); ppl.set(i, x, z, ry, it.ph, YP[it.e.a] + (YP[it.e.b] - YP[it.e.a]) * it.s / it.e.len); });
+      MP.list.forEach((it, i) => { const [x, z, ry] = MP.at(it); ppl.set(i, x, z, ry, it.ph, YP[it.e.a] + (YP[it.e.b] - YP[it.e.a]) * it.s / it.e.len, it.amp || 0.8); });
       if (ppl) ppl.done();
     }
     if (C || ppl) place();

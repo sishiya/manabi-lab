@@ -10,6 +10,11 @@ const RealStreets = (() => {
   // 白線の種類: 0 なし・1 外側線だけ・2 2車線（白の破線の中央線）・3 広い道（黄色2本＋車線）・4 一方通行の広い道（車線の破線）
   const markOf = (L, w) => L.cls === 'service' ? 0 : L.cls === 'minor' ? 1 : L.oneway ? (w >= 7 ? 4 : 1) : w >= 12 ? 3 : 2;
   const SEG = 4;
+  const AA_PRE = `
+    // 細い線のちらつきをふせぐ: 画素の大きさ（fwidth）より細い線は、太さのかわりに薄さで出す
+    float aaL(float d, float hw) { float f = fwidth(d) + 1e-4; float a = clamp((hw - d) / f + 0.5, 0.0, 1.0); return mix(a, 2.0 * hw / (2.0 * hw + f), smoothstep(hw, 4.0 * hw, f)); }
+    float aaJ(float x, float k) { return (1.0 - smoothstep(0.05, 0.3, fwidth(x))) * k; }
+`;
 
   // 線 → 帯の形。o: { width(L), y(x, z) → 高さ, lift（地面からの浮き）, kind(L) }
   function ribbons(lines, o, J) {
@@ -63,29 +68,29 @@ const RealStreets = (() => {
       float wear = 0.75 + 0.25 * kN(vec3(v * 0.7, u * 3.0, 1.0));
       float line = 0.0; vec3 lc = white;
       if (dj > 7.0) {
-        if (K >= 1.0 && K < 3.5 || K > 3.5) line = max(line, step(abs(abs(u) - (w * 0.5 - 0.35)), 0.075));   // 外側線
-        if (K > 1.5 && K < 2.5) line = max(line, step(abs(u), 0.075) * step(fract(v / 10.0), 0.5));    // 中央の破線
-        if (K > 2.5 && K < 3.5) { float y2 = step(abs(abs(u) - 0.25), 0.075); if (y2 > 0.5) { line = 1.0; lc = yel; }
-          line = max(line, step(abs(abs(u) - w * 0.25), 0.075) * step(fract(v / 10.0), 0.5)); }      // 黄色の中央線と車線
-        if (K > 3.5) line = max(line, step(abs(u), 0.075) * step(fract(v / 10.0), 0.5));
+        if (K >= 1.0 && K < 3.5 || K > 3.5) line = max(line, aaL(abs(abs(u) - (w * 0.5 - 0.35)), 0.075));   // 外側線
+        if (K > 1.5 && K < 2.5) line = max(line, aaL(abs(u), 0.075) * step(fract(v / 10.0), 0.5));    // 中央の破線
+        if (K > 2.5 && K < 3.5) { float y2 = aaL(abs(abs(u) - 0.25), 0.075); if (y2 > 0.5) { line = 1.0; lc = yel; }
+          line = max(line, aaL(abs(abs(u) - w * 0.25), 0.075) * step(fract(v / 10.0), 0.5)); }      // 黄色の中央線と車線
+        if (K > 3.5) line = max(line, aaL(abs(u), 0.075) * step(fract(v / 10.0), 0.5));
       } else if (K >= 2.0 && dj > 1.5) {
-        line = step(dj, 5.8) * step(fract((u + 50.0) / 0.9), 0.5);   // 横断歩道（交差点の手前）
-        line = max(line, step(abs(dj - 6.5), 0.2) * step(0.0, -u + 0.0) * 1.0);   // 停止線（左側の車線だけ）
+        line = step(dj, 5.8) * mix(step(fract((u + 50.0) / 0.9), 0.5), 0.5, smoothstep(0.2, 0.6, fwidth(u / 0.9)));   // 横断歩道（交差点の手前。遠くでは縞を平均に）
+        line = max(line, aaL(abs(dj - 6.5), 0.2) * step(0.0, -u + 0.0) * 1.0);   // 停止線（左側の車線だけ）
       }
       c = mix(c, lc * wear, line * 0.92);
-      diffuseColor.rgb = c; gRough = mix(0.92, 0.7, line);`);
+      diffuseColor.rgb = c; gRough = mix(0.92, 0.7, line);`, AA_PRE);
     wrap(m, 'attribute vec4 aRd; attribute float aKind; varying vec4 vRd; varying float vKind;', 'vRd = aRd; vKind = aKind;', 'varying vec4 vRd; varying float vKind;');
     return m;
   }
   function walkMat() {   // 歩道の舗装（30 cm の平板・目地・ところどころ点字ブロック）
     const m = Kit.mat('real-walk', { roughness: 0.9 }, `
       float u = vRd.x, v = vRd.y, w = vRd.z;
-      vec2 q = vec2(u, v) / 0.3; float j = step(0.92, fract(q.x)) + step(0.92, fract(q.y));
+      vec2 q = vec2(u, v) / 0.3; float j = aaJ(q.x, step(0.92, fract(q.x))) + aaJ(q.y, step(0.92, fract(q.y)));
       vec3 c = vec3(0.32, 0.31, 0.29) * (0.88 + 0.2 * kH2(floor(q))) * (1.0 - 0.15 * min(1.0, j));
       c *= 0.85 + 0.25 * kF(vec3(vWP.x, 0.0, vWP.z) * 0.1);
-      float tact = step(abs(abs(u) - (w * 0.5 - 1.6)), 0.15);
+      float tact = aaL(abs(abs(u) - (w * 0.5 - 1.6)), 0.15);
       c = mix(c, vec3(0.55, 0.42, 0.08), tact * 0.85);
-      diffuseColor.rgb = c;`);
+      diffuseColor.rgb = c;`, AA_PRE);
     wrap(m, 'attribute vec4 aRd; varying vec4 vRd;', 'vRd = aRd;', 'varying vec4 vRd;');
     return m;
   }
@@ -94,9 +99,9 @@ const RealStreets = (() => {
       float u = vRd.x, v = vRd.y;
       vec3 c = vec3(0.17, 0.155, 0.14) * (0.8 + 0.4 * kN(vec3(vWP.x, 0.0, vWP.z) * 5.0));
       c = mix(c, vec3(0.13, 0.12, 0.11), step(abs(u), 1.25) * step(fract(v / 0.6), 0.35));
-      float r = step(abs(abs(u) - 0.53), 0.04);
+      float r = aaL(abs(abs(u) - 0.53), 0.04);
       c = mix(c, vec3(0.35, 0.33, 0.3), r); gMetal = r * 0.6; gRough = mix(0.9, 0.4, r);
-      diffuseColor.rgb = c;`);
+      diffuseColor.rgb = c;`, AA_PRE);
     wrap(m, 'attribute vec4 aRd; varying vec4 vRd;', 'vRd = aRd;', 'varying vec4 vRd;');
     return m;
   }
@@ -136,20 +141,21 @@ const RealStreets = (() => {
     const J = new Set([...deg].filter(([, v]) => v >= 3).map(([k]) => k));
     const wOf = L => W[L.cls] ? (L.oneway && L.cls !== 'minor' && L.cls !== 'service' ? W[L.cls] * 0.55 : W[L.cls]) : 0;
     const out = [];
-    const add = (g, m, recv = true) => { const me = new THREE.Mesh(g, m); me.receiveShadow = recv; scene.add(me); out.push(me); return me; };
+    // 重なりの順は、数 cm の浮きでは遠くで深さの精度が足りずちらつく → 深さのずらし（polygonOffset）で決める（layer が大きいほど上）
+    const add = (g, m, recv = true, layer = 1) => { m.polygonOffset = true; m.polygonOffsetFactor = -layer; m.polygonOffsetUnits = -layer * 4; const me = new THREE.Mesh(g, m); me.receiveShadow = recv; scene.add(me); out.push(me); return me; };
     // 歩道（通りの下）→ 道 → 線路の順。浮きで重なりの順を決める
-    add(ribbons(lines.filter(L => /trunk|primary|secondary|tertiary/.test(L.cls)), { width: L => wOf(L) + 7, y, lift: 0.04 }, J), walkMat());
-    add(ribbons(lines.filter(L => /footway|pedestrian/.test(L.sub || '')), { width: L => L.sub === 'pedestrian' ? 8 : 3, y, lift: 0.05 }, J), walkMat());
-    add(ribbons(lines.filter(L => W[L.cls]), { width: wOf, y, lift: 0.09, kind: markOf }, J), roadMat());
-    add(ribbons(lines.filter(L => L.cls === 'rail' && /rail|subway/.test(L.sub || '')), { width: () => 3.2, y, lift: 0.07 }, J), railMat());
+    add(ribbons(lines.filter(L => /trunk|primary|secondary|tertiary/.test(L.cls)), { width: L => wOf(L) + 7, y, lift: 0.04 }, J), walkMat(), true, 2);
+    add(ribbons(lines.filter(L => /footway|pedestrian/.test(L.sub || '')), { width: L => L.sub === 'pedestrian' ? 8 : 3, y, lift: 0.05 }, J), walkMat(), true, 3);
+    add(ribbons(lines.filter(L => W[L.cls]), { width: wOf, y, lift: 0.09, kind: markOf }, J), roadMat(), true, 5);
+    add(ribbons(lines.filter(L => L.cls === 'rail' && /rail|subway/.test(L.sub || '')), { width: () => 3.2, y, lift: 0.07 }, J), railMat(), true, 6);
     // 面
     const P = (d.polys || []).filter(p => p.outer.some(([x, z]) => Math.hypot(x, z) < R));
     const green = P.filter(p => p.layer === 'landcover' && p.cls === 'grass' || p.layer === 'landuse' && /pitch|playground|cemetery|park/.test(p.cls) || p.layer === 'park');
     const wood = P.filter(p => p.layer === 'landcover' && p.cls === 'wood');
     const water = P.filter(p => p.layer === 'water');
-    add(polyGeo(green.concat(wood), y, 0.06), grassMat());
-    add(polyGeo(P.filter(p => p.layer === 'landuse' && /school|kindergarten|university|college/.test(p.cls)), y, 0.045), dirtMat());
-    if (water.length) add(polyGeo(water, y, 0.08), Kit.water({ name: 'real', deep: '#20343a' }), false);
+    add(polyGeo(green.concat(wood), y, 0.06), grassMat(), true, 4);
+    add(polyGeo(P.filter(p => p.layer === 'landuse' && /school|kindergarten|university|college/.test(p.cls)), y, 0.045), dirtMat(), true, 1);
+    if (water.length) add(polyGeo(water, y, 0.08), Kit.water({ name: 'real', deep: '#20343a' }), false, 4);
 
     // ---- 木 ----
     const T = [], rnd = Kit.rnd, LEAF = ['#3f4a2c', '#4a5a35', '#38432a', '#525c3a', '#454f30', '#3a4230'];   // 町の木は暗いオリーブ色（ほこりをかぶる）
@@ -174,6 +180,8 @@ const RealStreets = (() => {
         if (gg > r * 1.08 && gg > b * 1.04 && gg > 45 && gg < 170 && rnd() < 0.18) T.push({ x: x + (rnd() - 0.5) * step, z: z + (rnd() - 0.5) * step, y: y(x, z), h: 4 + rnd() * 5, r: 1.6 + rnd() * 1.6, c: LEAF[(rnd() * LEAF.length) | 0] });
       }
     }
+    // 上限の本数までは、駅（原点）に近い木から（読みこみの順で並木が切られたり残ったりしない）
+    T.sort((a, b) => (a.x * a.x + a.z * a.z) - (b.x * b.x + b.z * b.z));
     if (T.length) Kit.trees(scene, T.slice(0, o.phone ? 2500 : 6000));   // 1本 約 600 三角形（影でもう1回）
     return { meshes: out, trees: T.length };
   }

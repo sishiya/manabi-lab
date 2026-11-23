@@ -164,9 +164,9 @@ STAGES.push({
       for (const ln of lanes) for (const c of ln.items) { const [x, z, ry, out] = Traffic.at(ln, c.s); C.set(k++, x, z, ry, out ? -80 : 0); }
       C.done();
       walkers.forEach((w, i) => {
-        if (w.park) { ppl.set(i, w.x, w.z, w.ry || 0, t * 4.4 * w.v + w.ph); return; }
+        if (w.park) { ppl.set(i, w.x, w.z, w.ry || 0, t * Kit.gait(w.v)[0] * w.v + w.ph, 0, Kit.gait(w.v)[1]); return; }
         const x = w.along ? w.off : w.s, z = w.along ? w.s : w.off;
-        ppl.set(i, x, z, w.along ? (w.v > 0 ? 0 : Math.PI) : (w.v > 0 ? Math.PI / 2 : -Math.PI / 2), t * 4.4 * Math.abs(w.v) + w.ph);
+        ppl.set(i, x, z, w.along ? (w.v > 0 ? 0 : Math.PI) : (w.v > 0 ? Math.PI / 2 : -Math.PI / 2), t * Kit.gait(w.v)[0] * Math.abs(w.v) + w.ph, 0, Kit.gait(w.v)[1]);
       });
       ppl.done();
     }

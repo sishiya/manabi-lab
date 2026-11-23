@@ -36,7 +36,7 @@ const RealRoads = (() => {
             const lon = (x + g[i] / E) / n * 360 - 180, m = Math.PI - 2 * Math.PI * (y + g[i + 1] / E) / n, lat = 180 / Math.PI * Math.atan(Math.sinh(m));
             pts.push(toXZ(lon, lat));
           }
-          lines.push({ cls: p.class, sub: p.subclass, oneway: p.oneway || 0, tunnel: p.brunnel === 'tunnel', pts });
+          lines.push({ cls: p.class, sub: p.subclass, oneway: p.oneway || 0, tunnel: p.brunnel === 'tunnel', bridge: p.brunnel === 'bridge', pts });
         }
       }
     }).catch(() => {}));
@@ -85,7 +85,10 @@ const RealRoads = (() => {
       const it = { e, s: rnd() * e.len, lane: lanes[(rnd() * lanes.length) | 0], v: 0, sc, v0: o.v(e) * sc, nx: null, ph: rnd() * 6.28, k: i };
       it.nx = next(G, e, rnd); e.items.push(it); list.push(it);
     }
-    const TR = o.turnR || 6, YAWR = o.yawRate || 2.5;
+    const TR = o.turnR || 6, YAWR = o.yawRate || 2.5, locks = new Map();   // 交差点の順番（点 → 入っている車）
+    // 点につながる隣の点の数（入る道も出る道も）。3 以上が交差点（一方通行の交差点は、出る道だけ数えると 2 になる）
+    const nb = G.P.map(() => new Set()); for (const e of G.edges) { nb[e.a].add(e.b); nb[e.b].add(e.a); }
+    const deg = n => nb[n].size;
     // 角を曲線で: 点（交差点・折れ目）の手前 r と先 r を、2次ベジェでつなぐ
     // 角の半径: 横のずれ（車線・歩道）より大きく（内側の点が角で一気に動かない）。辺の長さの半分まで
     function corner(e, nx, it) { return Math.min(Math.max(TR, it ? Math.abs(it.lane) + 1.5 : TR), e.len / 2, nx.len / 2); }
@@ -131,12 +134,53 @@ const RealRoads = (() => {
     list.forEach(it => pose(it, 0));
     function step(dt) {
       if (o.follow) for (const e of G.edges) if (e.items.length > 1) e.items.sort((a, b) => a.s - b.s);
+      // 前方の見張り用の格子（8 m 升）
+      const grid = new Map();
+      if (o.follow) for (const it of list) { const k = Math.floor(it.x / 8) * 100003 + Math.floor(it.z / 8); (grid.get(k) || grid.set(k, []).get(k)).push(it); }
       for (const it of list) {
         let free = 1e9;
         if (o.follow) {
           const arr = it.e.items, j = arr.indexOf(it);
-          for (let q = j + 1; q < arr.length; q++) if (Math.abs(arr[q].lane - it.lane) < 1) { free = arr[q].s - it.s - o.len - o.gap; break; }
-          if (free > 1e8 && it.nx) { const rest = it.e.len - it.s; for (const b of it.nx.items) if (Math.abs(b.lane - it.lane) < 1) free = Math.min(free, rest + b.s - o.len - o.gap); }
+          const near = b => Math.abs(b.lane - it.lane) < 1 || Math.abs((b.laneS ?? b.lane) - (it.laneS ?? it.lane)) < 1.6;   // 車線を移る途中の車も前の車として見る
+          for (let q = j + 1; q < arr.length; q++) if (near(arr[q])) { free = arr[q].s - it.s - o.len - o.gap; break; }
+          if (free > 1e8 && it.nx) { const rest = it.e.len - it.s; for (const b of it.nx.items) if (near(b)) free = Math.min(free, rest + b.s - o.len - o.gap); }
+          // 交差点（3本以上の道の点）: 入る順番。先に入った車が通りぬけるまで、手前（角の曲線の入り口の 3 m 前）で待つ
+          //   同じ道から続く車・向かい合ってまっすぐ進む車どうしは、同時に入ってよい。待ちが 12 秒をこえたら入る（行きづまりをさける）
+          if (it.nx && deg(it.e.b) > 2) {
+            const node = it.e.b, r = corner(it.e, it.nx, it), dn = it.e.len - it.s - r, H = (locks.get(node) || []).filter(h => h.it.e.b === node || h.it.lockNode === node);   // 出し直した車などの古い順番は捨てる
+            locks.set(node, H);
+            const ok = h => h.it === it || h.in === it.e || (Math.abs(h.in.dx * it.e.dx + h.in.dz * it.e.dz + 1) < 0.3 && h.in.dx * h.out.dx + h.in.dz * h.out.dz > 0.8 && it.e.dx * it.nx.dx + it.e.dz * it.nx.dz > 0.8);
+            if (dn < 12) {
+              // 先の道が詰まっているときは入らない（交差点の中で止まって横の流れをふさがない）
+              let room = 1e9; for (const b of it.nx.items) if (near(b)) room = Math.min(room, b.s);
+              const exitOk = room > corner(it.e, it.nx, it) + o.len + o.gap + 2;
+              if (exitOk && (H.every(ok) || (it.wait || 0) > 12) || H.some(h => h.it === it)) { if (!H.some(h => h.it === it)) { H.push({ it, in: it.e, out: it.nx }); locks.set(node, H); } it.wait = 0; }
+              else { free = Math.min(free, dn - 3); it.wait = (it.wait || 0) + dt; }
+            }
+          }
+        }
+        // 前方の見張り: 進む向きの前 8 m・横 2 m に別の車がいたら、その手前で止まる（道がつながっていない所・折れ目でも重ならない）
+        if (o.follow) {
+          const hx = Math.sin(it.ry), hz = Math.cos(it.ry), gx = Math.floor(it.x / 8), gz = Math.floor(it.z / 8); let blk = 1e9;
+          for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (const q of grid.get((gx + a) * 100003 + gz + b) || []) {
+            if (q === it) continue; const dx = q.x - it.x, dz = q.z - it.z, f = dx * hx + dz * hz, lat = Math.abs(dx * hz - dz * hx);
+            const qx = Math.sin(q.ry), qz = Math.cos(q.ry);
+            if (f > 0 && f < 8 && lat < 2) {   // すぐ前にいる
+              const g2 = -dx * qx - dz * qz, lat2 = Math.abs(-dx * qz + dz * qx);
+              if (g2 > 0 && g2 < 8 && lat2 < 2 && it.k < q.k) continue;   // おたがいに前に見える（合流）: 番号の小さい車が先
+              blk = Math.min(blk, f); continue;
+            }
+            // ぶつかりの予測: 今の速さのまま進むと、2.5 秒以内に 2.6 m より近づくか（交わる道・合流）。相手のほうが前にいるなら、こちらが待つ
+            const wx = qx * q.v - hx * it.v, wz = qz * q.v - hz * it.v, w2 = wx * wx + wz * wz;
+            if (w2 < 1e-4) continue;
+            const tc = -(dx * wx + dz * wz) / w2, miss = Math.hypot(dx + wx * tc, dz + wz * tc);
+            if (tc > 0 && tc < 2.5 && miss < 2.6) {
+              const g2 = -dx * qx - dz * qz;   // 相手から見た、こちらの前後
+              if (f > g2 || (Math.abs(f - g2) < 0.5 && it.k > q.k)) blk = Math.min(blk, o.len + Math.max(0, Math.min(3, f - 3)));   // こちらが後ろ側 → 今の所で止まって待つ
+            }
+            continue;
+          }
+          if (blk < 1e9) { it.sw = (it.sw || 0) + dt; if (it.sw < 5) free = Math.min(free, blk - o.len); } else it.sw = 0;   // 5 秒待っても動けないときは見張りを外す（にらみ合い・行きづまりの輪をほどく）
         }
         let vMax = Math.max(0, Math.min(o.v(it.e) * it.sc, free / 1.3));   // 目標の速さ = 道の目安 × その人・車の好み
         // 曲がる前の減速: 曲がる角度 θ・角の半径 r から、曲がれる速さ √(a·R)（横の加速度 a = 2 m/s²）、R = r / tan(θ/2)。手前から b = 2.5 m/s² で落とす
@@ -152,16 +196,24 @@ const RealRoads = (() => {
         else if (it.pe && it.s < it.cr) cz = it.cr / (it.cr + Math.abs(it.laneS ?? it.lane));
         it.s += it.v * cz * dt;
         while (it.s > it.e.len) {
-          const nx = it.nx || next(G, it.e, rnd); if (!nx) { it.s = it.e.len; break; }
+          const nx = it.nx || next(G, it.e, rnd);
+          if (!nx) {   // 行き止まり（地図の端）: 別の道の、前があいている所へ出し直す（場面の外なので見えない）
+            const arr0 = it.e.items; arr0.splice(arr0.indexOf(it), 1);
+            let e2 = pickEdge(); for (let t = 0; t < 20 && e2.items.some(b => b.s < 15); t++) e2 = pickEdge();
+            it.e = e2; it.s = 0; it.pe = null; it.cr = 0; it.v = 0; e2.items.push(it); it.nx = next(G, e2, rnd); it.ry = undefined;
+            const ls = o.lanes(e2); it.lane = it.laneS = ls[(rnd() * ls.length) | 0];
+            break;
+          }
           it.s -= it.e.len;
           const arr = it.e.items; arr.splice(arr.indexOf(it), 1);
-          it.cr = corner(it.e, nx, it); it.pe = it.e;
+          it.cr = corner(it.e, nx, it); it.pe = it.e; it.lockNode = it.e.b;
           it.e = nx; nx.items.push(it); it.nx = next(G, nx, rnd);
           // 車線は同じ側（左右の符号が同じ）でいちばん近いものへ（道を横切らない）
           const lanes = o.lanes(nx);
           if (!lanes.includes(it.lane)) { const same = lanes.filter(l => Math.sign(l) === Math.sign(it.lane) || l === 0); const L = same.length ? same : lanes; it.lane = L.reduce((a, b) => Math.abs(b - it.lane) < Math.abs(a - it.lane) ? b : a); }
         }
-        it.ph += it.v * dt * 3.4;   // 足の運びは本当の速さで   // 人の歩きの位相（1歩 ≈ 0.9 m）
+        if (it.lockNode !== undefined && (it.s > it.cr + 2 || it.e.a !== it.lockNode)) { const H = locks.get(it.lockNode); if (H) { const k = H.findIndex(h => h.it === it); if (k >= 0) H.splice(k, 1); } it.lockNode = undefined; }   // 交差点を出たら順番を返す
+        if (!o.follow) { const [k, amp] = Kit.gait(it.v); it.ph += it.v * dt * k; it.amp = amp; }   // 脚の運びは本当の速さと歩幅から（滑らない）   // 人の歩きの位相（1歩 ≈ 0.9 m）
         pose(it, dt);
       }
     }

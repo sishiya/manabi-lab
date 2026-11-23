@@ -291,18 +291,23 @@ const Kit = (() => {
       b.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(0, -a, -Math.atan2(L, up), 'YXZ')));
       b.translate(0, yb + 0.06, 0); wood.push([b, 1]);
     }
+    // 芯: 樹冠の中の詰まった葉（すき間から空や地面が見えず、房が宙に浮いて見えない）
+    { const g = new THREE.IcosahedronGeometry(1, 1); g.scale(w * 0.78, vr * 0.74, w * 0.78); g.translate(0, cy - vr * 0.04, 0);
+      const P = g.attributes.position; for (let j = 0; j < P.count; j++) { const f = 0.88 + R() * 0.2; P.setXYZ(j, P.getX(j) * f, P.getY(j) * f, P.getZ(j) * f); }
+      g.computeVertexNormals(); crown.push([g, 0.62]); }
     const n = 26;
-    for (let i = 0; i < n; i++) {   // 葉の房: 樹冠の外側寄りに（半径の 0.55〜1）。上ほど多い
-      const u = R() * 2 - 1, ph = R() * 6.283, cu = Math.sqrt(1 - u * u), k = 0.55 + 0.45 * Math.sqrt(R());
-      const ux = cu * Math.cos(ph), uy = Math.abs(u) * (u > -0.35 ? 1 : -0.6), uz = cu * Math.sin(ph);
-      const px = ux * w * k, py = cy + uy * vr * k, pz = uz * w * k, s = (0.24 + R() * 0.14) * Math.min(w, vr) * 1.15;
+    for (let i = 0; i < n; i++) {   // 葉の房: 芯の表面のまわり（半径の 0.5〜0.85）に、大きめに重ねる。下側は少なめ
+      let u = R() * 2 - 1; if (u < -0.3) u = -0.3 + (u + 0.3) * 0.5;
+      const ph = R() * 6.283, cu = Math.sqrt(1 - u * u), k = 0.5 + 0.35 * Math.sqrt(R());
+      const ux = cu * Math.cos(ph), uy = u, uz = cu * Math.sin(ph);
+      const px = ux * w * k, py = cy + uy * vr * k, pz = uz * w * k, s = (0.3 + R() * 0.14) * Math.min(w, vr) * 1.2;
       const g = new THREE.IcosahedronGeometry(1, 0); g.scale(s, s * 0.75, s);
       g.rotateY(R() * 6.283); g.translate(px, py, pz);
       // 面の向き: 房の向きと、樹冠の中心からの向きをまぜる
       const P = g.attributes.position, N = g.attributes.normal;
       for (let j = 0; j < P.count; j++) {
         const rx = P.getX(j) / w, ry = (P.getY(j) - cy) / vr, rz = P.getZ(j) / w, rl = Math.hypot(rx, ry, rz) || 1;
-        const nx = N.getX(j) * 0.25 + rx / rl * 0.75, ny = N.getY(j) * 0.25 + ry / rl * 0.75, nz = N.getZ(j) * 0.25 + rz / rl * 0.75, nl = Math.hypot(nx, ny, nz);
+        const nx = N.getX(j) * 0.12 + rx / rl * 0.88, ny = N.getY(j) * 0.12 + ry / rl * 0.88, nz = N.getZ(j) * 0.12 + rz / rl * 0.88, nl = Math.hypot(nx, ny, nz);
         N.setXYZ(j, nx / nl, ny / nl, nz / nl);
       }
       crown.push([g, 0.75 + R() * 0.45]);   // 房ごとの明るさ（日の当たり方・葉の色のちがい）
@@ -334,12 +339,14 @@ const Kit = (() => {
     // 輪郭（面が横を向く所）では、葉のすき間を抜く（ふちがレースのように見える。真ん中はつまったまま）
     vec3 fN = normalize(cross(dFdx(vViewPosition), dFdy(vViewPosition)));   // 本当の面の向き（なめらかにした向きではなく）
     float edgeV = abs(dot(fN, normalize(vViewPosition)));
-    if (edgeV < 0.3 && kN(vWP * 3.2 + vRnd * 11.0) > 0.3 + edgeV * 1.6) discard;
+    if (edgeV < 0.35 && kN(vWP * 7.0 + vRnd * 11.0) * 0.6 + kN(vWP * 2.5) * 0.4 > 0.3 + edgeV * 1.5) discard;   // ふちは細かく抜く（葉の1枚ずつの大きさに近づける）
     if (dot(normalize(vNormal), normalize(-vViewPosition)) < 0.0) diffuseColor.rgb *= 0.0 + 0.6;   // 奥を向く房（すき間から見える）は暗め、でも黒くしない
-    diffuseColor.rgb *= mix(0.45, 1.12, smoothstep(0.38, 0.62, n1)) * (0.88 + 0.24 * n2);   // 葉のすき間の陰
+    diffuseColor.rgb *= mix(0.5, 1.1, smoothstep(0.38, 0.62, n1)) * (0.85 + 0.3 * n2);   // 葉のすき間の陰
+    diffuseColor.rgb *= 0.78 + 0.44 * kH2(floor(vWP.xz * 9.0) + floor(vWP.y * 9.0));   // 葉の1枚ずつの明るさのちがい（細かい粒）
     diffuseColor.rgb *= mix(0.55, 1.0, smoothstep(-0.2, 0.6, vON.y));   // 下を向く面は暗い
     gNP = (vec3(kN(vWP * 3.0), kN(vWP * 3.0 + 7.0), kN(vWP * 3.0 + 13.0)) - 0.5) * 0.9;
-    gRough = 0.85;`);
+    gRough = 0.85;
+    gEmis = diffuseColor.rgb * vec3(0.16, 0.2, 0.08);   // 葉を透かす光（日陰の側も真っ黒にならない）`);
   const barkMat = () => mat('bark', { roughness: 0.95, color: '#3a2e24' }, `diffuseColor.rgb *= 0.8 + 0.3 * kN(vWP * vec3(6.0, 1.5, 6.0));`);
   // list: [{x, z, y?, h（高さ）, r（樹冠の半径）, type:'broad'|'conifer', c}]
   function trees(scene, list, o = {}) {
@@ -362,8 +369,10 @@ const Kit = (() => {
   }
 
   // ---- 人（脚2・胴・腕2・首と頭・髪。身長 約 1.7 m。歩くと脚と腕が振れる＝頂点シェーダで、人ごとの位相） ----
-  const SHIRT = ['#e8e6e0', '#f2f2ee', '#22252b', '#1c2d4f', '#7d8794', '#a6342c', '#c9b04a', '#3d6c9e', '#d7b49e', '#56734a', '#d98a9a', '#2a2a2a', '#5a4a3e', '#8c8a84'];
-  const PANTS = ['#1d2230', '#2a2c33', '#3b4150', '#6d6355', '#1a1a1c', '#8c8f96', '#33476e', '#c9c2b2', '#4a3a30'];
+  // 服の色: 町の人は黒・紺・チャコール・灰・白・ベージュ・茶が多い（数を重みに）。色物は1割ほど、くすんだ色で
+  const SHIRT = [].concat(Array(6).fill('#1c1c1e'), Array(3).fill('#24293a'), Array(3).fill('#3a3b3e'), Array(3).fill('#6e6e6c'), Array(4).fill('#d8d6d0'), Array(2).fill('#b9ab92'), Array(2).fill('#5a4a3c'),
+    ['#8f8670', '#4f5440', '#7b8a99', '#8a3b34', '#b59a4c', '#5b7590', '#b98c8c', '#4f6a55']);
+  const PANTS = [].concat(Array(6).fill('#1a1a1c'), Array(3).fill('#22283a'), Array(3).fill('#3c3e44'), Array(2).fill('#3d5070'), Array(2).fill('#a89f8c'), ['#5c564c', '#6f6a5e', '#2f2a26']);
   // 部品: 0 左脚・1 右脚・2 胴・3 左腕・4 右腕・5 頭・6 髪。脚は腰（y 0.86）、腕は肩（y 1.38）が回転の中心
   const personGeo = (() => {
     const pos = [], nor = [], part = [];
@@ -406,6 +415,9 @@ const Kit = (() => {
       q.y += abs(cos(aAnim.x)) * 0.035 * aAnim.y;   // 一歩ごとに体が少し上下する
       return q;
     }`;
+  // 歩き方: 速さ v（m/s）→ [脚の位相の進み（rad/m）, 脚の振れ]。1歩の長さ ≈ 0.26 + 0.33 v m（大人。1.34 m/s で約 0.7 m）、
+  //   2歩（脚の1往復 = 2π）で 2 歩幅すすむ。脚は腰（高さ 0.86 m）から振るので、振れの角度 = 2·asin(歩幅 / 2 / 0.86)（シェーダーの 0.5 倍の振れに合わせる）
+  function gait(v) { const L = 0.26 + 0.33 * Math.abs(v); return [Math.PI / L, 2 * Math.asin(Math.min(0.9, L / 1.72))]; }
   // list: [{x, z, y?, ry, shirt, pants, scale}]。返す: { set(k, x, z, ry, 位相, y, 振れ), lie(k, ...), done() }
   function people(scene, list) {
     const n = list.length; if (!n) return null;
@@ -483,11 +495,17 @@ const Kit = (() => {
     for (const sz of [-1, 1]) for (const sx of [-1, 1]) { const wh = new THREE.CylinderGeometry(C.r, C.r, 0.22, 8, 1); wh.rotateZ(Math.PI / 2); wh.translate(sx * (C.w / 2 - 0.12), C.r, sz * C.wx); parts.push([wh, 1]); }
     carGeo[k] = merge(parts); glassGeo[k] = extrude(C.glass, C.w + 0.03, 0.03);
   }
-  const PAINT = ['#f4f4f2', '#f4f4f2', '#f4f4f2', '#e9e9e6', '#c9ccd0', '#1b1b1e', '#1b1b1e', '#8e959c', '#8e959c', '#5a6068', '#8a1f1a', '#1d2f5c', '#d9cfb8', '#2f4a3a', '#6a7d93'];
+  // 車の色: 日本の車の色の割合に寄せる（白・パール 約 35%・黒 約 20%・銀と灰 約 20%・紺・茶・ベージュ・赤ほか）
+  const PAINT = [].concat(Array(5).fill('#ecebe6'), Array(2).fill('#e2e0d8'), Array(4).fill('#141416'), Array(2).fill('#a9adb1'), Array(2).fill('#6d7176'),
+    ['#46494e', '#1e2a40', '#4a3b30', '#b8ab92', '#6e1c1a', '#2f3a33', '#7a8590']);
   // 車体の塗装（つや）・タイヤ（黒いゴム＋銀のホイール）・前の白いライト・後ろの赤いランプ
   const paintMat = () => {
-    const m = mat('paint', { roughness: 0.25, metalness: 0.45 }, `
-      gRough = 0.2 + 0.12 * kN(vWP * 0.7);
+    // 塗装: 色の層の上にクリアのつや（空の映りこみを強めに。金属っぽさは銀・灰だけ少し）。下ほど砂ぼこり
+    const m = mat('paint', { roughness: 0.2, metalness: 0.1, envMapIntensity: 1.3 }, `
+      gRough = 0.12 + 0.06 * kN(vWP * 0.7);
+      float lum = dot(diffuseColor.rgb, vec3(0.3, 0.6, 0.1));
+      gMetal = (lum > 0.08 && lum < 0.5) ? 0.35 : 0.05;
+      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.3, 0.28, 0.25), 0.25 * (1.0 - smoothstep(0.3, 0.9, vOP.y)));
       if (vW > 0.5) { diffuseColor.rgb = vec3(0.025); gRough = 0.85; gMetal = 0.0; }   // タイヤ
       else {
         if (vOP.y < 0.45) { diffuseColor.rgb *= 0.35; gRough = 0.7; }   // 下まわり・バンパーの下
@@ -501,7 +519,7 @@ const Kit = (() => {
       sh.fragmentShader = 'varying float vW;\n' + sh.fragmentShader; };
     return m;
   };
-  const glassMat = () => mat('carglass', { color: '#0b0d10', roughness: 0.05, metalness: 0.6 });
+  const glassMat = () => mat('carglass', { color: '#07090b', roughness: 0.04, metalness: 0.2, envMapIntensity: 1.4 });   // 濃い色の窓に空が映る
   // list: [{kind, c}]。返す: { set(k, x, z, ry, y) }
   function cars(scene, list) {
     const out = { set: null, n: list.length, meshes: [] };
@@ -565,6 +583,6 @@ const Kit = (() => {
     g.rotation.x = -Math.PI / 2; g.position.y = y; g.receiveShadow = true; scene.add(g); return g;
   }
 
-  return { time, rnd, setSeed, pick, lin, ENV, mat, G, box, inst, setInst, building, gable, hip, roofTile, trees, people, cars, carLen, CAR, water,
+  return { time, rnd, setSeed, pick, lin, ENV, mat, G, box, inst, setInst, building, gable, hip, roofTile, gait, trees, people, cars, carLen, CAR, water,
     canvas, canvasTex, photoImg, groundPlane, farGround, PAINT, SHIRT };
 })();
