@@ -4,7 +4,8 @@
 // 呼ぶのは設定やカメラが変わったときだけ（毎コマではない）。
 'use strict';
 const Measure = (() => {
-  const GW = 64, GH = 40, A = 0.0046, ZMAX = 2500;
+  const GW = 64, GH = 40, A = 0.0046;
+  let ZMAX = 2500;   // これより遠い点（空・遠くのかすみ）は使わない。場面とカメラの近さで決める（main.js）
   let rt, mat, buf, Zs = new Float32Array(GW * GH);
 
   function init() {
@@ -73,6 +74,5 @@ const Measure = (() => {
     const s = A / best.k;
     return { ok: true, blur: true, s, Z0, eye: s * Z0, corr: best.fit, n: pts.length };
   }
-  function setZs(a) { Zs.set(a); }   // 写真の場面: 推定した奥行きから作った距離の格子（photo.js）
-  return { init, readDepth, setZs, focusDist, fit, A, get Zs() { return Zs; } };
+  return { init, readDepth, focusDist, fit, A, get Zs() { return Zs; }, set zmax(v) { ZMAX = v; } };
 })();

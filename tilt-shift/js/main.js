@@ -1,90 +1,67 @@
-// ジオラマに見えるわけ — メイン（町・カメラ・描画ループ・デバッグ用の窓口）
+// ジオラマに見えるわけ — メイン（場面の切りかえ・カメラ・描画ループ・デバッグ用の窓口）
 'use strict';
 window.__tishErr = [];
 window.addEventListener('error', e => window.__tishErr.push(String(e.message)));
 
-const S = { scene: 'shirakawa', mode: 1, R: 1, pos: 0.5, w: 0.16, ang: 0, pitch: 35, el: 15, yaw: 0, fov: 50, sat: 1, fps: 60, spd: 1, view: 40, exp: 0.8, guide: false, paused: false };
-const FOV = 40, DIST = 700, AZ = 0.55;
+const S = { stage: 'city', mode: 1, R: 1, pos: 0.5, w: 0.16, ang: 0, pitch: 34, yaw: 32, dist: 620, tx: 0, tz: 0, sat: 1.15, fps: 60, spd: 1, view: 25, exp: 0.62, guide: false, paused: false };
+const FOV = 40;
 
 const cv = document.getElementById('cv'), frameEl = document.getElementById('frame');
 const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: false, powerPreference: 'high-performance' });
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const phone = matchMedia('(pointer: coarse)').matches || Math.min(screen.width, screen.height) < 700;
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0.55, 0.68, 0.85);                  // 空の HDRI が届くまで
-scene.fog = new THREE.Fog(new THREE.Color(0.62, 0.70, 0.80), 1600, 7000);   // 空気の遠近（遠くはかすむ）
-const camera = new THREE.PerspectiveCamera(FOV, 1.5, 5, 9000);
-scene.add(new THREE.HemisphereLight('#cfe2ff', '#5a5446', 0.15));
-const sun = new THREE.DirectionalLight('#fff1dc', 3.2);
-sun.position.set(-600, 360, -200); sun.castShadow = true;   // 低め（約 29°）・横から少し向こう側: 影がカメラの側へ伸びて見える
-Object.assign(sun.shadow.camera, { left: -950, right: 950, top: 950, bottom: -950, near: 10, far: 2600 }); sun.shadow.camera.updateProjectionMatrix();   // 変えたら必ず（忘れると影の範囲が初めの 10 m 四方のまま）
-const SH = Math.min(phone ? 2048 : 4096, renderer.capabilities.maxTextureSize);
-sun.shadow.mapSize.set(SH, SH); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.4; sun.shadow.radius = 2;
-scene.add(sun);
-
-const city = City.build(scene, { renderer, groundSize: Math.min(phone ? 2048 : 4096, renderer.capabilities.maxTextureSize) }, () => { depthKey = ''; ready = true; onChange(); });
+const camera = new THREE.PerspectiveCamera(FOV, 1.5, 2, 70000);
 const blur = Blur.create(renderer);
 Measure.init();
 
-let P = {}, fit = null, dirty = true, running = false, depthKey = '', ready = false, photo = null;
-// 動画から作った 3D: splat は js/splat.js が返すもの。Spark は奥の並べ替えを裏で進めるので、視点を変えたあと何コマか描きつづける（settle）
-let splat = null, splatLoading = '', settle = 0, bw = 2, bh = 2;
-const sceneOf = () => SCENES.find(x => x.id === S.scene) || SCENES[0];   // 最初は写真の村（OFF で本物、ON で模型）
+let stage = null, loading = '', P = {}, fit = null, dirty = true, running = false, ready = false, measureAt = 0, camKey = '';
+const defOf = id => STAGES.find(s => s.id === id) || STAGES[0];
+
+// 場面を読む（作るのに 0.5〜2 秒）。カメラは場面の決まりの位置へ
+function loadStage(id, keepView) {
+  const def = defOf(id); loading = id; ready = false; UI.showLoading(def);
+  if (!keepView) Object.assign(S, { pitch: def.view.pitch, yaw: def.view.yaw, dist: def.view.dist, tx: def.view.x, tz: def.view.z });
+  setTimeout(() => World.load(id, renderer, { phone, shadow: Math.min(phone ? 2048 : 4096, renderer.capabilities.maxTextureSize) }).then(st => {
+    if (loading !== id) return;
+    stage = st; loading = ''; ready = true; camKey = ''; simT = shownT = 0; UI.loaded();
+    UI.syncControls(); onChange(); kick();
+  }, e => { loading = ''; UI.showError(e); window.__tishErr.push(String(e && e.stack || e)); console.error(e); }), 30);
+}
 
 function placeCamera() {
-  const ph = S.pitch * Math.PI / 180;
-  camera.position.set(Math.sin(AZ) * Math.cos(ph) * DIST, Math.sin(ph) * DIST + 2, Math.cos(AZ) * Math.cos(ph) * DIST);
-  camera.lookAt(0, 0, 0); camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+  const v = stage.def.view, ph = S.pitch * Math.PI / 180, yr = S.yaw * Math.PI / 180;
+  camera.position.set(S.tx + Math.sin(yr) * Math.cos(ph) * S.dist, (v.y || 0) + Math.sin(ph) * S.dist + 1.6, S.tz + Math.cos(yr) * Math.cos(ph) * S.dist);
+  camera.near = Math.max(1, S.dist * 0.004); camera.far = 70000;
+  camera.lookAt(S.tx, v.y || 0, S.tz); camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+}
+// 距離の格子を読みなおす（カメラが止まってから。動かしているあいだは前の結果のまま）
+function measure() {
+  if (!stage) return;
+  Measure.zmax = Math.max(2500, S.dist * 3.5);
+  Measure.readDepth(renderer, stage.scene, camera);
+  camKey = [S.pitch, S.yaw, S.dist, S.tx, S.tz, camera.aspect.toFixed(4), S.stage].join('/');
 }
 // 設定から、シェーダーと計算に渡す値を作る（ピントの距離は距離の格子から）
 function derive() {
-  const sc = sceneOf();
-  if (sc.kind === 'splat') {
-    if (!splat || splat.id !== sc.id) {
-      photo = null;
-      if (splatLoading !== sc.id) {
-        splatLoading = sc.id; UI.showLoading(sc);
-        import('./splat.js').then(m => m.create(sc, '#a9c3dd')).then(o => {
-          splatLoading = ''; if (splat) splat.dispose();
-          splat = Object.assign(o, { id: sc.id });
-          const tex = new THREE.Texture(o.canvas); tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false;
-          splat.photo = { tex, dtex: null, alpha: 1, beta: 0, zs: null }; depthKey = '';
-          if (S.scene === sc.id) onChange();
-        }, e => { splatLoading = ''; UI.showError(e); window.__tishErr.push(String(e)); });
-      }
-      return false;
-    }
-    const key = 'splat:' + [S.el, S.yaw, S.fov, camera.aspect.toFixed(4)].join('/');
-    if (key !== depthKey) {   // 視点が変わったときだけ、距離の絵と格子を作りなおす
-      splat.setView(S.el, S.yaw, S.fov, camera.aspect);
-      const d = splat.depth(), ph = splat.photo;
-      if (!ph.dtex || ph.dtex.image.width !== d.w) { ph.dtex = new THREE.DataTexture(d.data, d.w, d.h, THREE.RGBAFormat); ph.dtex.minFilter = ph.dtex.magFilter = THREE.NearestFilter; }
-      else ph.dtex.image.data.set(d.data);
-      ph.dtex.needsUpdate = true; ph.alpha = d.alpha; ph.zs = d.zs;
-      Measure.setZs(d.zs); depthKey = key; settle = 40;
-    }
-    photo = splat.photo;
-  } else if (sc.kind === 'photo') {
-    if (!photo || photo.id !== sc.id) {   // 写真を読みおわるまでは前の絵のまま
-      photo = null; UI.showLoading(sc);
-      Photo.load(sc).then(p => { if (S.scene === sc.id) { photo = Object.assign({ id: sc.id }, p); depthKey = ''; onChange(); } }, e => { UI.showError(e); window.__tishErr.push(String(e)); });
-      return false;
-    }
-    if (depthKey !== 'photo:' + sc.id) { Measure.setZs(photo.zs); depthKey = 'photo:' + sc.id; }
-  } else {
-    photo = null;
-    const key = S.pitch + '/' + camera.aspect.toFixed(4);
-    if (key !== depthKey) { placeCamera(); Measure.readDepth(renderer, scene, camera); depthKey = key; }   // 距離の格子はカメラが変わったときだけ読む
-  }
-  P = { mode: S.mode, R: S.R / 100, pos: S.pos, halfW: S.w / 2, ang: S.ang * Math.PI / 180, aspect: camera.aspect, sat: S.sat, exp: S.exp, z0: 600, kf: 0 };
+  if (!stage) return false;
+  placeCamera();
+  P = { mode: S.mode, R: S.R / 100, pos: S.pos, halfW: S.w / 2, ang: S.ang * Math.PI / 180, aspect: camera.aspect, sat: S.sat, exp: S.exp * (stage.def.exp || 1), z0: 600, kf: 0, target: new THREE.Vector3(S.tx, 0, S.tz) };
   P.z0 = Measure.focusDist(P);
   P.kf = 2 * P.z0 * P.R;            // ピントの2倍の距離で、ぼけの半径が「ぼけの強さ」になるように
   fit = Measure.fit(P, S.view * Math.PI / 180);   // 絵を見るときの画角（撮ったときの画角 FOV とは別）
-  UI.showResult(fit); UI.drawGuide(P); UI.showCredit(sc);
+  UI.showResult(fit); UI.drawGuide(P);
   return true;
 }
-function onChange() { if (derive()) { dirty = true; kick(); } }
+function onChange() {
+  if (S.stage !== (stage && stage.def.id) && loading !== S.stage) { loadStage(S.stage); return; }
+  if (!stage || loading) return;
+  placeCamera();
+  const key = [S.pitch, S.yaw, S.dist, S.tx, S.tz, camera.aspect.toFixed(4), S.stage].join('/');
+  if (key !== camKey) measureAt = performance.now() + 150;   // カメラが変わった → 少し待って測る
+  derive(); dirty = true; kick();
+}
 
+let bw = 2, bh = 2;
 function resize() {
   const r = frameEl.getBoundingClientRect();
   if (r.width < 2 || r.height < 2) return;   // 隠れたタブでは大きさ 0 になる（RULES 6）
@@ -97,37 +74,35 @@ function resize() {
   onChange();
 }
 
-// 時間: simT は町の時間、shownT は絵に出ている時間。コマ落としのときは 1/fps 秒ごとにだけ車を動かして描く
+// 時間: simT は場面の時間、shownT は絵に出ている時間。コマ落としのときは 1/fps 秒ごとにだけ動かして描く
 let simT = 0, shownT = 0, last = 0;
 function advance(dt) {
+  if (!stage) return;
   simT += dt * S.spd;
   const per = S.fps >= 60 ? 0 : S.spd / S.fps;
-  if (photo) return;                     // 写真は動かない（描き直さない）
-  if (simT - shownT > per) { city.step(simT - shownT); shownT = simT; dirty = true; }
+  if (simT - shownT > per) { stage.step(Math.min(0.5, simT - shownT)); shownT = simT; dirty = true; }
 }
-function render() {
-  const k = sceneOf().kind;
-  if (k !== '3d' && !photo) return;
-  if (k === 'splat') { splat.draw(bw, bh); photo.tex.needsUpdate = true; if (settle > 0) settle--; }
-  blur.render(scene, camera, P, photo); dirty = settle > 0;
-}
+function render() { if (stage && ready) { blur.render(stage.scene, camera, P); dirty = false; } }
 function loop(now) {
   const dt = last ? Math.max(0, Math.min(0.05, (now - last) / 1000)) : 0; last = now;   // 最初のコマは 0
+  if (measureAt && now >= measureAt) { measureAt = 0; measure(); derive(); dirty = true; }
   if (!S.paused) advance(dt);
   if (dirty) render();
-  if ((S.paused || photo) && !dirty) { running = false; last = 0; return; }   // 止めているあいだ・写真は、変わらなければ描き直さない
+  if ((S.paused || !stage) && !dirty && !measureAt) { running = false; last = 0; return; }   // 止めているあいだは、変わらなければ描き直さない
   requestAnimationFrame(loop);
 }
 function kick() { if (!running) { running = true; last = 0; requestAnimationFrame(loop); } }
 
 UI.init(S, onChange);
+Controls.init(cv, S, () => Object.assign({}, defOf(S.stage).view), () => { UI.syncControls(); onChange(); });
 new ResizeObserver(resize).observe(frameEl);
 resize();
+loadStage(S.stage);
 Power.on({ pause() { last = 0; }, resume() { last = 0; kick(); } });   // requestAnimationFrame は裏で止まる。もどったら最初のコマの dt を 0 に
 
 // デバッグ用: 状態・計算を見る、描かずに進める（ペインが隠れていると requestAnimationFrame が止まるため。RULES 5）
 window.__tish = {
-  S, get P() { return P; }, get ready() { return ready; }, get photo() { return !!photo; }, get fit() { return fit; }, city,
-  set(p) { Object.assign(S, p); UI.syncControls(); onChange(); render(); return fit; },
-  simRun(sec, dt = 1 / 60) { for (let t = 0; t < sec; t += dt) advance(dt); render(); },
+  S, get P() { return P; }, get ready() { return ready; }, get fit() { return fit; }, get stage() { return stage; }, camera, renderer,
+  set(p) { Object.assign(S, p); UI.syncControls(); onChange(); if (stage && !loading) { measure(); derive(); render(); } return fit; },
+  simRun(sec, dt = 1 / 30) { for (let t = 0; t < sec; t += dt) advance(dt); render(); },
 };

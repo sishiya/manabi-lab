@@ -1,6 +1,5 @@
 /* ジオラマに見えるわけ */
 :root{--bg:#16222c;--panel:#1c2a35;--line:rgba(170,210,235,.16);--ink:#e8f0f4;--muted:#a3b4bf;--dim:#71859a;--acc:#ffb547;
-  --yes:#7fd18b;--no:#ff8f7a;--warn:#ffcf6a;
   --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
@@ -11,10 +10,14 @@ button{font:inherit;color:inherit}
 /* 絵と結果は上に固定（スマホでつまみを動かしても見える） */
 #view{position:sticky;top:0;z-index:2;background:var(--bg);padding:8px 8px 0;display:flex;flex-direction:column;gap:8px;box-shadow:0 6px 12px rgba(0,0,0,.25)}
 .frame{position:relative;width:min(100%,calc(46vh * 1.5));aspect-ratio:3/2;margin:0 auto;border-radius:6px;overflow:hidden;background:#000}
-#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#cv:active{cursor:grabbing}
+.busy{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:8px 16px;border-radius:18px;background:rgba(10,20,28,.7);font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none}
+.frame.loading .busy{opacity:1}
 #guide{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #guide line{stroke:#fff;stroke-width:1.5;stroke-dasharray:6 5;vector-effect:non-scaling-stroke;opacity:.85}
-#pause{position:absolute;right:8px;bottom:8px;min-height:36px;padding:0 14px;border-radius:18px;border:1px solid rgba(255,255,255,.5);background:rgba(10,20,28,.55);cursor:pointer;font-size:13px}
+#pause,#home{position:absolute;right:8px;bottom:8px;min-height:36px;padding:0 14px;border-radius:18px;border:1px solid rgba(255,255,255,.5);background:rgba(10,20,28,.55);cursor:pointer;font-size:13px}
+#home{right:auto;left:8px}
 #pause[aria-pressed=true]{background:var(--acc);color:#1a1206;border-color:var(--acc)}
 
 #result{width:min(100%,calc(46vh * 1.5));margin:0 auto;padding:0 4px 8px;display:flex;flex-direction:column;gap:4px}
@@ -34,14 +37,6 @@ button{font:inherit;color:inherit}
 .muted{color:var(--muted)}
 .row{display:flex;gap:8px}
 
-/* 記録する（外に結果が残る）ボタン: 大きく塗り。切りかえのボタンとは形を分ける */
-.judge-btn{flex:1;min-height:48px;border-radius:24px;border:0;font-weight:700;font-size:15px;cursor:pointer}
-.judge-btn.yes{background:var(--yes);color:#0d2412}
-.judge-btn.no{background:var(--no);color:#2d0e08}
-.judge-btn:active{transform:translateY(1px)}
-.stat{margin:0;font-size:12px;color:var(--muted);line-height:1.5;min-height:3em}
-.stat b.yes{color:var(--yes)}.stat b.no{color:var(--no)}
-
 /* 切りかえ（状態を変えるだけ）: 枠の四角 */
 .presets,.seg{display:flex;flex-wrap:wrap;gap:8px}
 .presets button,.seg button{min-height:36px;padding:0 12px;border-radius:6px;border:1px solid var(--line);background:transparent;cursor:pointer;font-size:13px}
@@ -50,32 +45,14 @@ button{font:inherit;color:inherit}
 .sl{display:grid;grid-template-columns:7.5em 1fr 6.5em;align-items:center;gap:8px;font-size:13px;min-height:36px}
 .sl input{width:100%;accent-color:var(--acc)}
 .sl output{font-family:var(--f-mono);font-size:12px;color:var(--muted);text-align:right}
-.credit{margin:0;font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:1.5em}
-.credit a{color:var(--muted)}
 .scenes{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
 .scenes button{position:relative;aspect-ratio:3/2;border-radius:6px;border:2px solid var(--line);background:#0c141c center/cover no-repeat;cursor:pointer;padding:0;overflow:hidden}
 .scenes button span{position:absolute;left:0;right:0;bottom:0;padding:2px 6px;font-size:12px;background:rgba(8,14,20,.72);text-align:left}
 .scenes button.on{border-color:var(--acc)}
 .scenes button.on span{color:var(--acc)}
-.photo-msg{display:none;font-size:11px;letter-spacing:0}
-body.m-photo .three-only{opacity:.35;pointer-events:none}
-body.m-photo #pause{display:none}   /* 写真は動かないので、止めるボタンは出さない */
-body.m-photo .photo-msg{display:inline}
-body:not(.m-splat) .splat-only,body.m-splat .sl.three-only{display:none}   /* 動画から作った 3D の場面だけのつまみ */
 .chk{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;min-height:36px}
 body.m-depth .band-only,body.m-none .band-only{opacity:.35;pointer-events:none}
 body.m-none .sl:has(#sR),body.m-none .sl:has(#sPos){opacity:.35;pointer-events:none}
-
-#log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;max-height:360px;overflow:auto}
-#log .empty{font-size:12px;color:var(--dim)}
-#log button{width:100%;text-align:left;display:grid;grid-template-columns:auto 1fr;gap:2px 8px;padding:8px;border-radius:6px;border:1px solid var(--line);background:rgba(255,255,255,.03);cursor:pointer;font-size:12px}
-#log li.new button{animation:flash 1.2s ease-out}
-@keyframes flash{from{border-color:var(--acc);background:rgba(255,181,71,.18)}}
-#log .tag{grid-row:span 2;align-self:center;padding:2px 8px;border-radius:10px;font-weight:700}
-#log .tag.yes{background:var(--yes);color:#0d2412}
-#log .tag.no{background:var(--no);color:#2d0e08}
-#log .s{color:var(--ink)}
-#log .c{color:var(--muted);font-family:var(--f-mono);font-size:11px}
 
 details{color:var(--muted);font-size:14px;line-height:1.8}
 details summary{cursor:pointer;color:var(--ink);min-height:36px;display:flex;align-items:center}

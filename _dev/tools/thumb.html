@@ -22,7 +22,7 @@ const SETUP = {
   // 粘菌が迷路を解くまで（画面ができたら、いちばん映える場面にする）
   'slime-maze': async w => { await wait(800); w.__slma.simRun(4); },
   // ジオラマに見えるわけ（画面ができたら、いちばん映える場面にする）
-  'tilt-shift': async w => { for (let i = 0; i < 100 && !(w.__tish && w.__tish.ready && w.__tish.photo); i++) await wait(200); w.__tish.set({ sat: 1.3, R: 1.2 }); await wait(800); },
+  'tilt-shift': async w => { for (let i = 0; i < 100 && !(w.__tish && w.__tish.ready); i++) await wait(200); w.__tish.set({ sat: 1.3, R: 1.2, paused: true }); await wait(800); },
   // ちいさな地球を歩く（画面ができたら、いちばん映える場面にする）
   'tiny-walk': async w => { await wait(1500); },
   // 熱帯雨林の音: 音は鳴らさない

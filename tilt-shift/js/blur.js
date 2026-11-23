@@ -62,13 +62,12 @@ const Blur = (() => {
 
   // 2. ぼけと色
   const frag = `
-    uniform sampler2D tColor; uniform sampler2D tDepth; uniform sampler2D tAO; uniform sampler2D tPhoto; uniform sampler2D tPD;
-    uniform float uNear, uFar, uAspect, uR, uPos, uHalfW, uZ0, uKf, uSat, uCon, uH, uExp, uAOk, uAlpha, uBeta;
-    uniform vec2 uN; uniform int uMode, uPhoto;
+    uniform sampler2D tColor; uniform sampler2D tDepth; uniform sampler2D tAO;
+    uniform float uNear, uFar, uAspect, uR, uPos, uHalfW, uZ0, uKf, uSat, uCon, uH, uExp, uAOk;
+    uniform vec2 uN; uniform int uMode;
     varying vec2 vUv;
-    // 距離の逆数（1/m）。3D は深さの絵から、写真は推定した奥行き D（16bit を R・G に分けたもの）から α·D + β
+    // 距離の逆数（1/m）。深さの絵から
     float invz(vec2 uv) {
-      if (uPhoto == 1) { vec2 rg = texture2D(tPD, uv).rg * 255.0; return uAlpha * (rg.x * 256.0 + rg.y) / 65535.0 + uBeta; }
       float d = texture2D(tDepth, uv).x; return (uFar - (uFar - uNear) * d) / (uNear * uFar);
     }
     float coc(vec2 uv) {
@@ -81,7 +80,6 @@ const Blur = (() => {
       return 0.0;
     }
     vec3 lit(vec2 uv) {
-      if (uPhoto == 1) return pow(texture2D(tPhoto, uv).rgb, vec3(2.2));   // 写真はガンマをはずして光の量に
       return texture2D(tColor, uv).rgb * mix(1.0, texture2D(tAO, uv).r, uAOk);
     }
     void main() {
@@ -101,12 +99,9 @@ const Blur = (() => {
         }
       }
       vec3 c = acc / ws;                                          // ここまでは光の量（リニア）でぼかす
-      if (uPhoto == 1) c = pow(c, vec3(1.0 / 2.2));              // 写真は元の明るさにもどすだけ（ぼけなしなら元の写真と同じ）
-      else {
-        c *= uExp;
-        c = clamp((c * (2.51 * c + 0.03)) / (c * (2.43 * c + 0.59) + 0.14), 0.0, 1.0);   // トーンマッピング（ACES の近似。Narkowicz 2015）
-        c = pow(c, vec3(1.0 / 2.2));                              // 画面の明るさへ
-      }
+      c *= uExp;
+      c = clamp((c * (2.51 * c + 0.03)) / (c * (2.43 * c + 0.59) + 0.14), 0.0, 1.0);   // トーンマッピング（ACES の近似。Narkowicz 2015）
+      c = pow(c, vec3(1.0 / 2.2));                                // 画面の明るさへ
       float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
       c = mix(vec3(l), c, uSat);
       c = (c - 0.5) * uCon + 0.5;
@@ -115,13 +110,12 @@ const Blur = (() => {
 
   // 3. FXAA＋周辺減光＋粒子（動かない粒子。ちらつかせない）
   const finFrag = `
-    uniform sampler2D tIn; uniform vec2 uPx; uniform float uAspect; uniform int uRaw; varying vec2 vUv;
+    uniform sampler2D tIn; uniform vec2 uPx; uniform float uAspect; varying vec2 vUv;
     float lu(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
     void main() {
       vec3 nw = texture2D(tIn, vUv + vec2(-1.0, -1.0) * uPx).rgb, ne = texture2D(tIn, vUv + vec2(1.0, -1.0) * uPx).rgb;
       vec3 sw = texture2D(tIn, vUv + vec2(-1.0, 1.0) * uPx).rgb, se = texture2D(tIn, vUv + vec2(1.0, 1.0) * uPx).rgb;
       vec3 m = texture2D(tIn, vUv).rgb;
-      if (uRaw == 1) { gl_FragColor = vec4(m, 1.0); return; }   // 写真はそのまま（角のならし・周辺減光・粒子をかけない）
       float lnw = lu(nw), lne = lu(ne), lsw = lu(sw), lse = lu(se), lm = lu(m);
       float lmin = min(lm, min(min(lnw, lne), min(lsw, lse))), lmax = max(lm, max(max(lnw, lne), max(lsw, lse)));
       vec2 dir = vec2(-((lnw + lne) - (lsw + lse)), (lnw + lsw) - (lne + lse));
@@ -154,9 +148,8 @@ const Blur = (() => {
       tColor: { value: rt.texture }, tDepth: { value: rt.depthTexture }, tAO: { value: ao2.texture }, uNear: { value: 1 }, uFar: { value: 1 }, uAspect: { value: 1 },
       uR: { value: 0 }, uPos: { value: 0.5 }, uHalfW: { value: 0.1 }, uZ0: { value: 500 }, uKf: { value: 0 }, uSat: { value: 1 }, uCon: { value: 1 },
       uH: { value: 4 }, uExp: { value: 1 }, uAOk: { value: 0.85 }, uN: { value: new THREE.Vector2(0, 1) }, uMode: { value: 0 },
-      tPhoto: { value: null }, tPD: { value: null }, uPhoto: { value: 0 }, uAlpha: { value: 1 }, uBeta: { value: 0 },
     });
-    const fin = pass(finFrag, { tIn: { value: mid.texture }, uPx: { value: new THREE.Vector2() }, uAspect: { value: 1 }, uRaw: { value: 0 } });
+    const fin = pass(finFrag, { tIn: { value: mid.texture }, uPx: { value: new THREE.Vector2() }, uAspect: { value: 1 } });
     const pCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     return {
       setSize(w, h) {
@@ -165,21 +158,17 @@ const Blur = (() => {
         aoP.u.uPx.value.set(1 / hw, 1 / hh); aoB.u.uPx.value.set(1 / hw, 1 / hh);
         main.u.uH.value = h; fin.u.uPx.value.set(1 / w, 1 / h);
       },
-      // photo: { tex, dtex, alpha, beta }（写真の場面のとき）。null なら 3D の町を描く
-      render(scene, camera, P, photo) {
-        const u = main.u, ph = !!photo;
-        u.uPhoto.value = fin.u.uRaw.value = ph ? 1 : 0;
-        if (ph) { u.tPhoto.value = photo.tex; u.tPD.value = photo.dtex; u.uAlpha.value = photo.alpha; u.uBeta.value = photo.beta; }
+      render(scene, camera, P) {
+        const u = main.u;
         u.uNear.value = camera.near; u.uFar.value = camera.far; u.uAspect.value = camera.aspect; fin.u.uAspect.value = camera.aspect;
         u.uMode.value = P.mode; u.uR.value = P.R; u.uPos.value = P.pos; u.uHalfW.value = P.halfW;
         u.uN.value.set(-Math.sin(P.ang), Math.cos(P.ang)); u.uZ0.value = P.z0; u.uKf.value = P.kf;
         u.uSat.value = P.sat; u.uExp.value = P.exp || 1; u.uCon.value = 1 + (P.sat - 1) * 0.35;
         aoP.u.uProj.value.copy(camera.projectionMatrix); aoP.u.uProjInv.value.copy(camera.projectionMatrixInverse);
-        if (!ph) {
-          renderer.setRenderTarget(rt); renderer.render(scene, camera);
-          renderer.setRenderTarget(ao1); renderer.render(aoP.sc, pCam);
-          renderer.setRenderTarget(ao2); renderer.render(aoB.sc, pCam);
-        }
+        aoP.u.uRad.value = Math.max(1.5, Math.min(6, camera.position.distanceTo(P.target || camera.position) / 150));   // 寄るほど小さな半径
+        renderer.setRenderTarget(rt); renderer.render(scene, camera);
+        renderer.setRenderTarget(ao1); renderer.render(aoP.sc, pCam);
+        renderer.setRenderTarget(ao2); renderer.render(aoB.sc, pCam);
         renderer.setRenderTarget(mid); renderer.render(main.sc, pCam);
         renderer.setRenderTarget(null); renderer.render(fin.sc, pCam);
       },
