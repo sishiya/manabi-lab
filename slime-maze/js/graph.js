@@ -155,11 +155,17 @@ const Graph = {
       roads: d.ea.map((a, e) => [[d.x[a], d.y[a]], ...(d.pts[e] || []), [d.x[d.eb[e]], d.y[d.eb[e]]]]),
     };
     // 都市 → いちばん近い、ほかの点とつながっている網の点
+    const near = (x, y) => { let best = -1, bd = Infinity; for (let i = 0; i < N; i++) { if (!adj[i].length) continue; const dd = (xs[i] - x) ** 2 + (ys[i] - y) ** 2; if (dd < bd) { bd = dd; best = i; } } return best; };
     g.cities = {};
-    for (const [k, c] of Object.entries(d.cities)) {
-      let best = -1, bd = Infinity;
-      for (let i = 0; i < N; i++) { if (!adj[i].length) continue; const dd = (xs[i] - d.x[c]) ** 2 + (ys[i] - d.y[c]) ** 2; if (dd < bd) { bd = dd; best = i; } }
-      g.cities[k] = best;
+    for (const [k, c] of Object.entries(d.cities)) g.cities[k] = near(d.x[c], d.y[c]);
+    // 経度・緯度の町（cities.js の県庁所在地）。投影は tools/build-japan.mjs と同じ（正距円筒、緯度 36° で）
+    g.places = {};
+    if (d.proj && window.CAPITALS) {
+      const P = d.proj, cos0 = Math.cos(P.lat0 * Math.PI / 180);
+      for (const [k, [lon, lat]] of Object.entries(window.CAPITALS)) {
+        const px = P.R * (lon - P.lon0) * Math.PI / 180 * cos0, py = -P.R * (lat - P.lat0) * Math.PI / 180;
+        g.places[k] = near((px - P.x0) / d.kmPerMM, (py - P.y0) / d.kmPerMM);
+      }
     }
     return g;
   },

@@ -158,7 +158,7 @@ let x0 = Math.min(...x), y0 = Math.min(...y), x1 = Math.max(...x), y1 = Math.max
 const pad = 40;   // km
 x0 -= pad; y0 -= pad; x1 += pad; y1 += pad;
 const toMM = ([px, py]) => [mm(px - x0), mm(py - y0)];
-const out = { N, x: x.map(v => mm(v - x0)), y: y.map(v => mm(v - y0)), ea: [], eb: [], len: [], pts: [], land: [], cities: {}, kmPerMM: KM_PER_MM, bounds: { x0: 0, y0: 0, x1: mm(x1 - x0), y1: mm(y1 - y0) } };
+const out = { N, x: x.map(v => mm(v - x0)), y: y.map(v => mm(v - y0)), ea: [], eb: [], len: [], pts: [], land: [], cities: {}, kmPerMM: KM_PER_MM, proj: { lat0: LAT0, lon0: LON0, R, x0: Math.round(x0 * 1000) / 1000, y0: Math.round(y0 * 1000) / 1000 }, bounds: { x0: 0, y0: 0, x1: mm(x1 - x0), y1: mm(y1 - y0) } };
 EA.forEach((a, e) => {
   if (remap[a] < 0 || remap[EB[e]] < 0) return;
   out.ea.push(remap[a]); out.eb.push(remap[EB[e]]); out.len.push(Math.round(LEN[e] / KM_PER_MM * 100) / 100);

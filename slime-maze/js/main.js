@@ -29,7 +29,6 @@ function newMaze(seed) {
 //  kind 'japan' … 日本の道路: 道路の上だけを通れる。エサは東京と大阪、かけらは名古屋
 //  kind 'land'  … 日本の陸: 道の情報なしで、陸の形の細かい網の上を自由に伸びる（Tero ほか 2010 の実験のように、かけらは東京、エサは都市）
 let japanData = null, landGraph = null;
-const LAND_FOODS = ['東京', '仙台', '名古屋', '大阪', '広島', '福岡', '鹿児島'];   // 札幌は津軽海峡でつながらないので置かない
 async function newJapan(kind = 'japan') {
   if (!japanData) {
     UI.loading(true);
@@ -40,7 +39,8 @@ async function newJapan(kind = 'japan') {
   if (kind === 'land') {
     if (!landGraph) { UI.loading(true, '陸の網を作っています…'); await new Promise(r => setTimeout(r, 30)); landGraph = Graph.fromLand(japanData, 3, 7); UI.loading(false); }
     const c = landGraph.cities;
-    setWorld({ kind: 'land', g: landGraph, foods0: LAND_FOODS.map(k => c[k]), start: c['東京'] });
+    // エサは県庁所在地 45（cities.js。実験は関東のおもな町 36）。同じ網の点になったものは1つに
+    setWorld({ kind: 'land', g: landGraph, foods0: [...new Set(Object.values(landGraph.places))], start: c['東京'] });
     return;
   }
   const gr = Graph.fromData(japanData), c = gr.cities;

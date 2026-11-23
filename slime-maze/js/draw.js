@@ -67,6 +67,7 @@ const Draw = {
 
   frame(g2, w, h, s, ui, view) {
     const g = s.g, L = Draw.layout(g, w, h, view), C = Draw.C, cs = L.cs;
+    const DD = Model.multi(s) ? s.Dm : s.D;   // 描く太さ（エサが3つ以上は、ならした太さ。毎回の組でちらつかないように）
     const T = L.sc * (g.tubeMM || g.unit * 0.42);         // いちばん太い管の太さ（画面）
     const F = L.sc0 * Math.pow(L.z, 0.3) * (g.symbolMM || g.cellMM || g.unit);   // 記号の大きさのもと（迷路のマス・地図はきめた大きさ。拡大しても少ししか大きくしない）
     g2.fillStyle = C.bg; g2.fillRect(0, 0, w, h);
@@ -143,7 +144,7 @@ const Draw = {
       if (!g.open[e]) continue;
       const tube = s.D[e] > 0, part = !tube && (s.fa[e] > 0 || s.fb[e] > 0);
       if (!tube && !part) continue;
-      const D = tube ? s.D[e] : 0.55, al = Draw.alpha(D); if (al <= 0) continue;
+      const D = tube ? DD[e] : 0.55, al = Draw.alpha(D); if (al <= 0) continue;
       const pa = Draw.path(L, g, e), wd = T * Draw.width(D) * (0.92 + 0.16 * ((Draw.hash(e * 7) % 100) / 100));
       const th = 0.45 + 0.55 * Draw.width(D);   // 細い管ほど薄くて淡い（本物も、厚いほど濃い黄色で、薄い所は半透明）
       if (tube) segs.push({ pa, u0: 0, u1: 1, wd, al, th });
@@ -152,7 +153,7 @@ const Draw = {
     const nodeW = new Float64Array(g.N);   // 点のまわりのいちばん太い管
     for (let e = 0; e < g.nE; e++) {
       if (!(s.D[e] > 0) || !g.open[e]) continue;
-      const wd = T * Draw.width(s.D[e]) * Draw.alpha(s.D[e]);
+      const wd = T * Draw.width(DD[e]) * Draw.alpha(DD[e]);
       nodeW[g.ea[e]] = Math.max(nodeW[g.ea[e]], wd); nodeW[g.eb[e]] = Math.max(nodeW[g.eb[e]], wd);
     }
     const layers = [[C.halo, 2.1, 0], [C.outer, 1, 0], [C.inner, 0.62, 1], [C.core, 0.26, 1]];
@@ -167,7 +168,7 @@ const Draw = {
     if (ui.dots) {
       g2.fillStyle = C.grain;
       for (let e = 0; e < g.nE; e++) {
-        const D = s.D[e]; if (!g.open[e] || D < 0.05 || s.Qs[e] < 1e-3) continue;
+        const D = DD[e]; if (!g.open[e] || D < 0.05 || s.Qs[e] < 1e-3) continue;
         const pa = Draw.path(L, g, e), r = Math.max(0.8, T * 0.09 * Draw.width(D));
         for (let k = 0; k < 3; k++) {
           const u = ((ui.ph[e] + k / 3 + (Draw.hash(e) % 50) / 150) % 1 + 1) % 1, [x, y] = Draw.at(pa, u);
@@ -219,12 +220,12 @@ const Draw = {
     }
     // エサ（記号。かたまりの上に描いて、いつも見えるように）と、選んでいる印
     s.foods.forEach((f, i) => {
-      const [x, y] = ui.drag && ui.drag.i === i ? Draw.P(L, g, ui.drag.c) : Draw.P(L, g, f), r = F * 0.27;
-      g2.fillStyle = C.food; g2.strokeStyle = C.foodRing; g2.lineWidth = Math.max(1.5, F * 0.04);
+      const [x, y] = ui.drag && ui.drag.i === i ? Draw.P(L, g, ui.drag.c) : Draw.P(L, g, f), r = F * 0.27 * Math.min(1, Math.sqrt(8 / s.foods.length));   // エサが多いときは小さく
+      g2.fillStyle = C.food; g2.strokeStyle = C.foodRing; g2.lineWidth = Math.max(1, Math.min(F * 0.04, r * 0.18));
       g2.beginPath(); g2.arc(x, y, r, 0, 6.283); g2.fill(); g2.stroke();
       if (ui.sel === i) { g2.strokeStyle = C.sel; g2.lineWidth = 3; g2.beginPath(); g2.arc(x, y, r * 1.35, 0, 6.283); g2.stroke(); }
       g2.fillStyle = C.foodInk; g2.font = `700 ${Math.max(9, Math.round(F * 0.24))}px 'Zen Kaku Gothic New', sans-serif`;
-      g2.textAlign = 'center'; g2.textBaseline = 'middle'; g2.fillText('エサ', x, y + 1);
+      g2.textAlign = 'center'; g2.textBaseline = 'middle'; if (r >= 9) g2.fillText('エサ', x, y + 1);   // 小さいときは字を書かない
     });
     return L;
   },

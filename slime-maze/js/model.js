@@ -2,7 +2,7 @@
 // 地図は点と線のグラフ（graph.js の Graph）。迷路のマス目は知らない（将来、道路の地図にもそのまま使える）。
 //
 // 時間はすべて「本物の時間（時間 h）」、長さは mm で進める。
-//  伸びる: 先端は 1時間に約 2 cm（Patino-Ramirez ほか 2019「1時間に数センチ」）。
+//  伸びる: 縁は 1時間に約 0.9 cm（Tero ほか 2010 の図1で測った。Patino-Ramirez ほか 2019 も「1時間に数センチ」まで）。
 //          開いた線を、粘菌がいる点から連続して伸びる（両はしから伸びた先端が出会えば1本の管になる）。
 //          線ごとに速さを ±25% ばらつかせる（同じ速さで進む機械らしさを消すための演出）。
 //          一度通った線には粘液が残り、しばらくさける（Reid ほか 2012）。エサからの物質に気づくと、濃いほうへ伸びる（Ueda ほか 1975 の走化性）。
@@ -17,7 +17,7 @@ const Model = {
   FLOOR: 1e-9,       // 行列が解けなくなるのを防ぐための下限
   DT: 0.05,          // 1回の時間（時間 h）
   I0: 1,
-  GROW_MM_H: 20,     // 先端の伸びる速さ（mm/時）。Patino-Ramirez ほか 2019「1時間に数センチ」から 2 cm/時
+  GROW_MM_H: 13,     // 先端の伸びる速さ（網の線にそって mm/時）。Tero ほか 2010 の図1（17 cm の寒天、東京から 5時間で半径 約4.3 cm・8時間で約7 cm・11時間で約9.5 cm＝縁は約 0.9 cm/時）に、日本の陸の地図で 5時間の半径が合うように決めた（三角の網はジグザグなので、線にそった速さは縁の速さより少し速い）
   GONE: 1e-2,        // これより細くなった管は消えて、その線から体が引きあげる（半径はもとの約3割。流れのない管は約4〜5時間でここまでやせる）
   DIFF_M2_S: 6.7e-10,  // ブドウ糖の水の中での拡散係数（m²/秒。教科書の値。寒天の中ではすこし遅い）
   DECAY_LEN_MM: 40,  // 物質は少しずつ分解・吸収されて減る（仮定）。広がりと減りがつりあう長さ（エサから 40 mm で約 1/e。迷路の中ならどこでも 1% はとどく。これがないと、長い時間で迷路じゅうが同じ濃さになって、向きが分からなくなる）
@@ -25,19 +25,20 @@ const Model = {
   C_TH: 0.01,        // 粘菌が気づく濃さ（エサの所を 1 とした割合）。本当の値は分からないので仮定
   CHEM_UP: 1.5, CHEM_DOWN: 0.5,   // 気づいた所では、濃いほうへの線は 1.5 倍の速さで伸び、うすいほうへは 0.5 倍（仮定）
   TRAIL_SLOW: 0.2,   // 粘液の跡のある線へは、この倍率でしか伸びない（Reid ほか 2012: 一度探した所をさけるが、跡しかなければ探しまわれる。倍率は仮定）。跡は残りつづける
-  SHARE_MAX: 3,      // 先端の伸びる速さは、そこへ流れこむ量に比べる（平均で GROW_MM_H）。いちばん速くても平均の3倍まで（仮定）
+  SHARE_FULL: 0.2,   // 先端へ流れこむ量が、平均のこの割合より少ないとおそくなる（仮定）。それ以上なら同じ速さ（Tero 2010 の図1: 縁はほぼ円く、同じ速さで広がる）
   // エサが3つ以上のとき: Tero ほか (2010) Science 327 の決まり（PDF で確かめた）。毎回ランダムにエサを1つ入口・別の1つを出口にし、
   //  dD/dt = f(|Q|) − D、f(Q) = Q^γ/(1+Q^γ)。論文の「ふつうの結果」の値 I0 = 2、γ = 1.8
   MULTI_I0: 2, GAMMA: 1.8,
-  MAX_FOODS: 10,
+  MAX_FOODS: 50,
   SETTLE_H: 24,      // エサが3つ以上のとき、網の形がこの時間かわらなければ「落ち着いた」とする（表示だけ）
-  NET_D: 0.05,       // エサが3つ以上のとき、管の長さに数える太さ（これより細い管はやせて消えていくところ）
+  NET_D: 0.02,       // エサが3つ以上のとき、管の長さに数える太さ（ならした太さ Dm で。これより細い管はやせて消えていくところ）
+  DM_TAU: 2,         // エサが3つ以上のとき、太さを何時間でならすか（下の Dm）
 
   create(g, foods, seed) {
     const N = g.N, nE = g.nE;
     return {
       g, foods: foods.slice(), rng: makeRng(seed ^ 0x9e3779b9),
-      D: new Float64Array(nE), Q: new Float64Array(nE), Qs: new Float64Array(nE), Qd: new Float64Array(nE),
+      D: new Float64Array(nE), Q: new Float64Array(nE), Qs: new Float64Array(nE), Qd: new Float64Array(nE), Dm: new Float64Array(nE),
       fa: new Float64Array(nE), fb: new Float64Array(nE), vk: new Float64Array(nE), // ea 側・eb 側から伸びた割合（0〜1）、速さのばらつき
       reached: new Uint8Array(N), arrive: new Float64Array(N),   // 粘菌がいる点、そこへ着いた時刻
       trailT: new Float64Array(nE),  // その線に最後に粘菌がいた時刻（粘液の跡）
@@ -59,7 +60,7 @@ const Model = {
   // start の点に1つのかけらを置いて、伸びはじめる（物質はエサを置いたときから広がりはじめる）
   startGrowth(s, start) {
     const g = s.g;
-    s.D.fill(0); s.Q.fill(0); s.Qs.fill(0); s.fa.fill(0); s.fb.fill(0); s.reached.fill(0); s.arrive.fill(0);
+    s.D.fill(0); s.Dm.fill(0); s.Q.fill(0); s.Qs.fill(0); s.fa.fill(0); s.fb.fill(0); s.reached.fill(0); s.arrive.fill(0);
     s.trailT.fill(-1e9); s.c.fill(0); for (const f of s.cs) f.fill(0);
     s.pPrev = null; s.lenHist = []; s.Qd.fill(0); s.t = 0; s.tFlow = 0; s.blocked = false; s.maxRate = 0; s.lump.fill(0); s.mode = 'front';
     for (let e = 0; e < g.nE; e++) s.vk[e] = 0.75 + 0.5 * s.rng();
@@ -85,6 +86,7 @@ const Model = {
     s.c.fill(0);
     s.foods.forEach((food, k) => {
       const c = s.cs[k], d = new Float64Array(g.N);
+      if (s.reached[food] && c[food] === 1) { for (let i = 0; i < g.N; i++) s.c[i] += c[i]; return; }   // 粘菌が着いたエサの物質は、もう粘菌を引きよせないので、計算を止めて（絵のために）そのまま残す。エサが多いときに軽くするため
       for (let it = 0; it < sub; it++) {
         d.fill(0);
         for (let e = 0; e < g.nE; e++) {
@@ -120,7 +122,8 @@ const Model = {
     });
     let k = sense ? (up ? Model.CHEM_UP : Model.CHEM_DOWN) : 1;
     if (!started && !(sense && up) && Model.trail(s, e)) {
-      if (s.foods.some(f => s.reached[f])) return 0;   // エサの上にいて（食べていて）気配もなければ、跡のある所へ探しに出ない（Tero 2007: 体はエサの上に集まる）
+      if (s.foods.some(f => s.reached[f]) && !s.blocked) return 0;   // エサの上にいて（食べていて）気配もなければ、跡のある所へ探しに出ない（Tero 2007: 体はエサの上に集まる）。
+      //  ただし、いるエサどうしが管でつながっていない（blocked）ときは、つなぎ直すために、跡のある所へもゆっくり探しに出る
       k *= Model.TRAIL_SLOW;            // エサがなければ、跡のある所へも、ゆっくり探しに出る
     }
     return k;
@@ -132,17 +135,9 @@ const Model = {
     const g = s.g, vmm = Model.GROW_MM_H * dh;
     let any = false;
     const mass = Model.lumpTotal(s) > 1e-3 ? 1 : 0;   // 体（かたまり）が尽きたら伸びられない
-    // 先端の点ごとに、いま伸びている線の数（流れこむ量を分ける）
-    const nOut = new Float64Array(g.N); let sides = 0, fronts = 0;
-    for (let e = 0; e < g.nE; e++) {
-      if (!g.open[e] || Model.full(s, e)) continue;
-      const a = g.ea[e], b = g.eb[e];
-      if (s.reached[a] && Model.pull(s, e, a, b, s.fa[e] > 0)) { if (!nOut[a]) fronts++; nOut[a]++; sides++; }
-      if (s.reached[b] && Model.pull(s, e, b, a, s.fb[e] > 0)) { if (!nOut[b]) fronts++; nOut[b]++; sides++; }
-    }
-    const kAvg = fronts ? sides / fronts : 1;
-    //  1本の線の速さも、平均の SHARE_MAX 倍まで（三角の網では、伸びる先が1本だけの先端に流れが集まって、平均の何倍にもなったため）
-    const sp = i => mass * Math.min(Model.SHARE_MAX, Math.min(Model.SHARE_MAX, s.share[i]) * kAvg / Math.max(1, nOut[i]));   // 流れこむ量に比べた速さ
+    // 先端の速さ: 流れが来ている先端は、どれもほぼ同じ速さで進む（Tero ほか 2010 の図1: 縁はつながったまま、ほぼ円く、5〜11時間で一定の速さで広がる）。
+    //  流れがほとんど来ない先端（入口から来る量が平均の SHARE_FULL 倍より少ない）は、それに比べておそくなり、来なければ止まる
+    const sp = i => mass * Math.min(1, s.share[i] / Model.SHARE_FULL);
     for (let e = 0; e < g.nE; e++) {
       if (!g.open[e] || Model.full(s, e)) continue;
       const a = g.ea[e], b = g.eb[e], ra = s.reached[a], rb = s.reached[b];
@@ -150,12 +145,12 @@ const Model = {
       const ka = ra ? Model.pull(s, e, a, b, s.fa[e] > 0) * sp(a) : 0, kb = rb ? Model.pull(s, e, b, a, s.fb[e] > 0) * sp(b) : 0;
       if (!(ka > 0) && !(kb > 0)) continue;
       any = true;
-      const v = vmm / g.len[e];   // 流れこむ量・物質へ寄る・線ごとのばらつきを合わせても、平均の SHARE_MAX 倍（6 cm/時）まで
-      s.fa[e] += v * Math.min(Model.SHARE_MAX, ka * s.vk[e]);
-      s.fb[e] += v * Math.min(Model.SHARE_MAX, kb * s.vk[e]);
+      const v = vmm / g.len[e];   // 線ごとのばらつき（演出）をかける。物質へ寄る 1.5 倍とあわせても CHEM_UP 倍まで
+      s.fa[e] += v * Math.min(Model.CHEM_UP, ka * s.vk[e]);
+      s.fb[e] += v * Math.min(Model.CHEM_UP, kb * s.vk[e]);
       if (s.fa[e] + s.fb[e] >= 1) {
         const k = s.fa[e] / (s.fa[e] + s.fb[e]); s.fa[e] = k; s.fb[e] = 1 - k;
-        s.D[e] = 0.5 + 0.5 * s.rng();
+        s.D[e] = 0.5 + 0.5 * s.rng(); s.Dm[e] = s.D[e];
         Model.takeBlob(s, Model.L(s, e) * Math.sqrt(s.D[e]));
         for (const c of [a, b]) if (!s.reached[c]) { s.reached[c] = 1; s.arrive[c] = s.t; }
       }
@@ -192,7 +187,10 @@ const Model = {
   // とても細くなった管は消え、体はその線から引きあげる。管も伸びかけもなくなった点には、もう粘菌はいない（エサの上のかたまりは残る）
   retract(s) {
     const g = s.g; let gone = false;
-    for (let e = 0; e < g.nE; e++) if (s.D[e] > 0 && s.D[e] < Model.GONE) { s.D[e] = 0; s.fa[e] = 0; s.fb[e] = 0; gone = true; }
+    // エサが3つ以上: 毎回ランダムな1組だけに流すので、エサが多いと、町へ1本だけの管には流れがたまにしか来ず、太さが大きくゆれる。
+    //  そのゆれは計算のしかた（往復流の代わりにランダムな組を使う）から来るので、消えるかどうかは、ならした太さ Dm で決める（Tero 2007「管は流れがないと数時間でこわれる」）
+    const dv = Model.multi(s) ? s.Dm : s.D;
+    for (let e = 0; e < g.nE; e++) if (s.D[e] > 0 && dv[e] < Model.GONE) { s.D[e] = 0; s.Dm[e] = 0; s.fa[e] = 0; s.fb[e] = 0; gone = true; }
     if (!gone) return;
     for (let c = 0; c < g.N; c++) {
       if (!s.reached[c]) continue;
@@ -325,6 +323,7 @@ const Model = {
       const d0 = s.D[e], d1 = Math.max(Model.FLOOR, (d0 + dt * f) / (1 + dt));
       maxRate = Math.max(maxRate, Math.abs(d1 - d0) / dt);
       s.D[e] = d1;
+      s.Dm[e] += (d1 - s.Dm[e]) * dt / Model.DM_TAU;   // ならした太さ（エサが3つ以上のときに使う）
       s.Qs[e] += (Math.abs(s.Q[e]) - s.Qs[e]) * 0.1;    // 粒の速さ用に、ならした流量（表示だけ）
       s.Qd[e] += (s.Q[e] - s.Qd[e]) * 0.1;              // 粒の向き用に、ならした向きつきの流量（表示だけ。エサが3つ以上だと毎回入口が変わるので）
     }
@@ -347,7 +346,7 @@ const Model = {
   //  エサが3つ以上のときは、ある太さ（NET_D）より太い管の長さの和
   tubeLength(s) {
     let L = 0;
-    if (Model.multi(s)) { for (let e = 0; e < s.g.nE; e++) if (Model.has(s, e) && s.D[e] >= Model.NET_D) L += s.g.len[e]; return L; }
+    if (Model.multi(s)) { for (let e = 0; e < s.g.nE; e++) if (Model.has(s, e) && s.Dm[e] >= Model.NET_D) L += s.g.len[e]; return L; }
     for (let e = 0; e < s.g.nE; e++) if (Model.has(s, e)) L += s.D[e] * s.g.len[e]; return L / Model.I0;
   },
 
