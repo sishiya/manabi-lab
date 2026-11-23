@@ -56,14 +56,14 @@ const World = (() => {
 
     // 太陽（低め・横から。影が見えるように）と、空・地面からの光
     const sunDir = new THREE.Vector3().setFromSphericalCoords(1, (90 - (def.sun?.el ?? 32)) * Math.PI / 180, (def.sun?.az ?? -70) * Math.PI / 180);
-    const sun = new THREE.DirectionalLight('#fff0dc', def.sun?.power ?? 3.0);
+    const sun = new THREE.DirectionalLight(def.sun?.color || '#fff0dc', def.sun?.power ?? 3.0);
     const R = def.size || 900;
     sun.position.copy(sunDir).multiplyScalar(R * 2); sun.target.position.set(def.view.x, 0, def.view.z); sun.position.add(sun.target.position);
     sun.castShadow = true;
     Object.assign(sun.shadow.camera, { left: -R, right: R, top: R, bottom: -R, near: 10, far: R * 5 }); sun.shadow.camera.updateProjectionMatrix();
     sun.shadow.mapSize.set(opt.shadow, opt.shadow); sun.shadow.bias = -0.0003; sun.shadow.normalBias = R / 2000; sun.shadow.radius = 2;
     scene.add(sun, sun.target);
-    scene.add(new THREE.HemisphereLight('#bcd3ee', '#6b6250', 0.16));   // 影の中も空と地面の照り返しで少し明るい
+    scene.add(new THREE.HemisphereLight('#bcd3ee', '#6b6250', def.hemi ?? 0.16));   // 影の中も空と地面の照り返しで少し明るい
 
     Kit.setSeed(def.seed || 7);
     const ctx = { renderer, phone: opt.phone, horizon: haze, redraw: opt.redraw };

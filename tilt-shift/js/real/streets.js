@@ -59,7 +59,7 @@ const RealStreets = (() => {
       float pch = step(0.72, kN(vec3(floor(v / 7.0), floor(u / 2.5), 3.0)));
       c *= mix(1.0, 0.8 + 0.25 * kN(vec3(v, u, 9.0) * 0.3), pch * 0.8);
       if (K >= 2.0) { float tr = abs(u) - w * 0.25; c *= 1.0 - 0.1 * smoothstep(0.9, 0.2, abs(abs(tr) - 0.9)); }
-      vec3 white = vec3(0.62, 0.62, 0.6), yel = vec3(0.6, 0.45, 0.12);
+      vec3 white = vec3(0.5, 0.5, 0.48), yel = vec3(0.42, 0.34, 0.15);
       float wear = 0.75 + 0.25 * kN(vec3(v * 0.7, u * 3.0, 1.0));
       float line = 0.0; vec3 lc = white;
       if (dj > 7.0) {
@@ -152,7 +152,7 @@ const RealStreets = (() => {
     if (water.length) add(polyGeo(water, y, 0.08), Kit.water({ name: 'real', deep: '#20343a' }), false);
 
     // ---- 木 ----
-    const T = [], rnd = Kit.rnd, LEAF = ['#4f6a2e', '#5a7533', '#47622c', '#6f8236', '#7d8f3a', '#3f5a2c'];
+    const T = [], rnd = Kit.rnd, LEAF = ['#3f4a2c', '#4a5a35', '#38432a', '#525c3a', '#454f30', '#3a4230'];   // 町の木は暗いオリーブ色（ほこりをかぶる）
     const inside = (p, x, z) => { let c = false; const r = p.outer; for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const [xi, zi] = r[i], [xj, zj] = r[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; };
     const fill = (p, per) => { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const [x, z] of p.outer) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
       const n = Math.min(4000, (x1 - x0) * (z1 - z0) / per); for (let i = 0; i < n; i++) { const x = x0 + rnd() * (x1 - x0), z = z0 + rnd() * (z1 - z0); if (inside(p, x, z)) T.push({ x, z, y: y(x, z), h: 7 + rnd() * 8, r: 2.5 + rnd() * 2.5, c: LEAF[(rnd() * LEAF.length) | 0] }); } };
@@ -160,9 +160,9 @@ const RealStreets = (() => {
     for (const p of green) if (p.layer === 'park' || p.sub === 'park') fill(p, 150);
     // 並木（広い通りの両側。歩道の車道より 1.5 m）
     for (const L of lines) if (/trunk|primary|secondary/.test(L.cls)) {
-      const w = wOf(L), c = LEAF[(rnd() * LEAF.length) | 0];
+      const w = wOf(L), c = LEAF[(rnd() * LEAF.length) | 0], sc = 0.6 + rnd() * 0.8;
       for (let i = 0; i + 1 < L.pts.length; i++) { const [ax, az] = L.pts[i], [bx, bz] = L.pts[i + 1], len = Math.hypot(bx - ax, bz - az), dx = (bx - ax) / len, dz = (bz - az) / len;
-        for (let s = rnd() * 10; s < len; s += 9 + rnd() * 5) for (const side of L.oneway ? [1] : [-1, 1]) { if (rnd() < 0.15) continue; const x = ax + dx * s + dz * side * (w / 2 + 1.5), z = az + dz * s - dx * side * (w / 2 + 1.5); T.push({ x, z, y: y(x, z), h: 7 + rnd() * 4, r: 2.2 + rnd() * 1.5, c }); } }
+        for (let s = rnd() * 10; s < len; s += 9 + rnd() * 5) for (const side of L.oneway ? [1] : [-1, 1]) { if (rnd() < 0.15) continue; const x = ax + dx * s + dz * side * (w / 2 + 1.5), z = az + dz * s - dx * side * (w / 2 + 1.5); T.push({ x, z, y: y(x, z), h: (7 + rnd() * 4) * sc, r: (2.2 + rnd() * 1.5) * sc, c }); } }
     }
     // 空中写真で緑の所（庭・植えこみ）。4 m ごとに色を見て、緑なら木を1本
     if (o.photo) {

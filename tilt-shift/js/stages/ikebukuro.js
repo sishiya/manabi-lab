@@ -8,7 +8,7 @@ STAGES.push({
   credit: '建物: 3D都市モデル（Project PLATEAU）国土交通省／地面: 地理院タイル（シームレス空中写真・標高）／道: OpenFreeMap © OpenMapTiles Data from OpenStreetMap',
   // 原点は池袋駅の東口のあたり。カメラはサンシャイン60 の展望台（東へ約 600 m・高さ約 230 m）
   view: { x: 0, z: 0, y: 0, dist: 520, pitch: 25, yaw: 80, min: 120, max: 2500, range: 1500 },   // サンシャイン60 の西の窓の外（高さ約 225 m）
-  sun: { el: 40, az: -30, power: 3.0 },
+  sun: { el: 24, az: -20, power: 4.2, color: '#ffe2bc' }, hemi: 0.06,   // 午後の低い日（暖かい色）。空からの光は弱く、影の面との差を大きく
   async build(scene, ctx) {
     const LON0 = 139.7125, LAT0 = 35.7300, toXZ = RealTiles.local(LON0, LAT0);
     const P = 'https://assets.cms.plateau.reearth.io/assets/';
