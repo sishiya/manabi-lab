@@ -49,13 +49,30 @@ STAGES.push({
     const T = { field: 25, road: 70, asphalt: 95, yard: 150, river: 205, grass: 245 };
     const col = (t, r = 0) => `rgb(${t},${Math.round(r * 255)},0)`;   // R: 種類・G: 田ごとのちがい・B: 穴
     g.fillStyle = col(T.grass); g.fillRect(0, 0, S, S);
-    const FW = 30, FL = 100;
-    for (let x = -span / 2; x < span / 2; x += FW) for (let z = -span / 2; z < span / 2; z += FL) { g.fillStyle = col(T.field, rnd()); rect(x + 0.5, z + 2.2, x + FW - 0.5, z + FL - 0.4); }
-    g.fillStyle = col(T.road, 0.5);
-    for (let z = -span / 2; z < span / 2; z += 2 * FL) rect(-span / 2, z - 0.4, span / 2, z + 2.2);   // 東西の農道（2枚ごと。あいだは用水路）
-    for (let x = -span / 2; x < span / 2; x += FW * 4) rect(x - 2, -span / 2, x + 2, span / 2);   // 南北の農道
-    g.fillStyle = col(T.river, 0.5);
-    for (let z = -span / 2 + FL; z < span / 2; z += 2 * FL) rect(-span / 2, z - 0.4, span / 2, z + 0.6);   // 用水路
+    const FW = 30, FL = 100;   // ほ場整備のあとの田んぼ1枚
+    // 谷を東西にいくつかの区に分け、区ごとに区画の向き（±7°）と大きさを変える（整備した年と地形で、本物もそろわない）
+    const T2 = { paddy: 25, crop: 42 };
+    const ns = [];   // 南北の農道（橋と軽トラックの道すじに使う）: [cx, ang, xr]（区のまん中・向き・区の中での x）
+    let zx = -span / 2;
+    while (zx < span / 2) {
+      const zw = 380 + rnd() * 320, ang = (rnd() - 0.5) * 0.24, old = rnd() < 0.3;   // old: 整備の前の小さな田（20×45 m）
+      const fw = old ? 20 : FW, fl = old ? 45 : FL, road = old ? 3 : 4;
+      g.save(); g.beginPath(); g.rect(X(zx), 0, zw * k, S); g.clip();
+      g.translate(X(zx + zw / 2), X(0)); g.rotate(ang); g.translate(-X(zx + zw / 2), -X(0));
+      for (let x = zx - 200; x < zx + zw + 200; x += fw) for (let z = -span / 2 - 200; z < span / 2 + 200; z += fl) {
+        const crop = rnd() < 0.12;   // 畑（大豆・野菜）
+        g.fillStyle = col(crop ? T2.crop : T2.paddy, rnd()); rect(x + 0.4, z + 0.4, x + fw - 0.4, z + fl - 0.4);
+      }
+      g.fillStyle = col(T.road, 0.5);
+      for (let z = -span / 2 - 200; z < span / 2 + 200; z += 2 * fl) rect(zx - 200, z - road / 2, zx + zw + 200, z + road / 2);   // 東西の農道（2枚ごと）
+      for (let x = zx - 200 + fw * 4; x < zx + zw + 200; x += fw * 4) { rect(x - road / 2, -span / 2 - 200, x + road / 2, span / 2 + 200); if (x > zx + 15 && x < zx + zw - 15) ns.push([zx + zw / 2, ang, x]); }   // 南北の農道
+      g.fillStyle = col(T.river, 0.5);
+      for (let z = -span / 2 - 200 + fl; z < span / 2 + 200; z += 2 * fl) rect(zx - 200, z - 0.5, zx + zw + 200, z + 0.5);   // 用水路
+      g.restore();
+      g.fillStyle = col(T.grass, 0.5); rect(zx - 1.5, -span / 2, zx + 1.5, span / 2);   // 区のさかいの草
+      zx += zw;
+    }
+    const nsAt = ([cx, a, xr], z) => [cx + (xr - cx) * Math.cos(a) - z * Math.sin(a), (xr - cx) * Math.sin(a) + z * Math.cos(a)];
     // 川と土手
     const rz = x => 150 + 30 * Math.sin(x / 300);
     g.fillStyle = 'rgb(245,200,255)';   // B = 255: 穴（川と土手は下の別の形で作る）
@@ -72,18 +89,23 @@ STAGES.push({
     }
     for (const v of vill) { g.fillStyle = col(T.yard, 0.5); for (let q = 0; q < 14; q++) { const a = rnd() * 6.283, rr = v.r * (0.3 + rnd() * 0.6); g.beginPath(); g.ellipse(X(v.x + Math.cos(a) * rr * 0.8), X(v.z + Math.sin(a) * rr * 0.6), v.r * k * (0.35 + rnd() * 0.3), v.r * k * (0.3 + rnd() * 0.25), rnd() * 3, 0, 6.283); g.fill(); } }   // 形のふぞろいな集落
     const mask = new THREE.CanvasTexture(cv); mask.encoding = THREE.LinearEncoding; mask.magFilter = mask.minFilter = THREE.NearestFilter; mask.generateMipmaps = false;   // 種類の数をまぜない
-    const floorMat = Kit.mat('paddy', { map: mask, roughness: 0.9, envMapIntensity: 1.0 }, `
+    const floorMat = Kit.mat('paddy', { map: mask, roughness: 0.9, envMapIntensity: 1.4 }, `
       vec3 m = diffuseColor.rgb; float ty = m.r * 255.0, rr = m.g;
       vec3 c; float rough = 0.9, metal = 0.0;
-      if (ty < 50.0) {   // 田んぼ: 若い稲のすき間に水（空が映る）
-        float cover = clamp(rr < 0.12 ? 0.1 + 0.4 * rr : 0.28 + 0.35 * rr + 0.2 * (kN(vWP * 0.6) - 0.5), 0.04, 0.9);   // 植えたばかり（ほとんど水）から、育った田まで
+      if (ty < 35.0) {   // 田んぼ: 若い稲のすき間に水（空が映る）
+        float cover = clamp(rr < 0.35 ? 0.06 + 0.4 * rr : 0.25 + 0.4 * (rr - 0.35) + 0.15 * (kN(vWP * 0.6) - 0.5), 0.04, 0.7);   // 植えたばかり（ほとんど水）から、少し育った田まで
         float rows = 0.5 + 0.5 * sin(vWP.z * 20.9);   // 植えた列（30 cm）
         cover *= mix(0.75, 1.15, rows);
         vec3 rice = vec3(0.08, 0.14, 0.035) * (0.8 + 0.4 * kN(vWP * 1.7)) * mix(0.85, 1.1, rr);
-        vec3 water = vec3(0.07, 0.062, 0.048) * (0.8 + 0.4 * kN(vWP * 0.2));   // にごった水と泥
+        vec3 water = vec3(0.035, 0.034, 0.028) * (0.8 + 0.4 * kN(vWP * 0.2));   // にごった水（暗いので空の映りこみが目立つ）
         c = mix(water, rice, cover); rough = mix(0.02, 0.85, cover);
         gNP = (vec3(kN(vec3(vWP.xz * 0.7, uTime * 0.3)), 0.0, kN(vec3(vWP.xz * 0.7 + 5.0, uTime * 0.3))) - 0.5) * 0.06 * (1.0 - cover);
-      } else if (ty < 82.0) { c = vec3(0.22, 0.2, 0.17) * (0.75 + 0.4 * kN(vWP * 2.0)); c = mix(c, vec3(0.13, 0.18, 0.07), 0.45 * smoothstep(0.5, 0.7, kN(vWP * 0.9))); }   // 砂利の農道（草がまじる）
+      } else if (ty < 50.0) {   // 畑: 大豆（こい緑）と、うねのある野菜畑（土と緑のすじ）
+        float rowsU = smoothstep(0.3, 0.7, 0.5 + 0.5 * sin(vWP.x * 6.3));
+        vec3 soil = vec3(0.11, 0.085, 0.06) * (0.8 + 0.4 * kN(vWP * 1.3));
+        vec3 leaf = vec3(0.05, 0.09, 0.025) * (0.8 + 0.4 * kN(vWP * 2.1));
+        c = rr < 0.5 ? mix(soil, leaf, rowsU * (0.3 + rr)) : leaf * (0.75 + 0.3 * kN(vWP * 0.7));
+      } else if (ty < 82.0) { c = vec3(0.15, 0.14, 0.12) * (0.75 + 0.4 * kN(vWP * 2.0)); c = mix(c, vec3(0.1, 0.15, 0.05), 0.5 * smoothstep(0.45, 0.7, kN(vWP * 0.9))); }   // 砂利の農道（草がまじる）
       else if (ty < 120.0) { c = vec3(0.17, 0.17, 0.18) * (0.85 + 0.3 * kN(vWP * 1.5)); rough = 0.8; }
       else if (ty < 180.0) { c = mix(vec3(0.24, 0.23, 0.2), vec3(0.09, 0.13, 0.05), smoothstep(0.35, 0.6, kF(vWP * 0.12))) * (0.85 + 0.3 * kN(vWP * 2.0)); }   // 集落の地面（砂利と庭・畑）
       else if (ty < 225.0) {   // 川・用水路
@@ -113,7 +135,14 @@ STAGES.push({
     const river = new THREE.Mesh(rg, Kit.water({ name: 'river', deep: '#2a3528', chop: 0.35, speed: 1.4 })); river.material.side = THREE.DoubleSide; scene.add(river);
     // 橋（南北の農道が川をわたる所）
     const br = [];
-    for (let x = -span / 2; x < span / 2; x += FW * 4) if (Math.abs(x) < 1300) br.push({ x, y: 2.6, z: rz(x), sx: 4.5, sy: 0.6, sz: 42, c: '#9a968c' }, { x: x - 2.2, y: 3.2, z: rz(x), sx: 0.2, sy: 0.9, sz: 42, c: '#c4c0b6' }, { x: x + 2.2, y: 3.2, z: rz(x), sx: 0.2, sy: 0.9, sz: 42, c: '#c4c0b6' }, { x, y: -1.6, z: rz(x), sx: 1.2, sy: 4.2, sz: 1.2, c: '#9a968c' });
+    for (const r of ns) {
+      let t = 150, x = 0, z = 0;   // 道の上の位置 t を、川の中心線と交わるまで近づける
+      for (let it = 0; it < 6; it++) { [x, z] = nsAt(r, t); t += (rz(x) - z) / Math.cos(r[1]); }
+      [x, z] = nsAt(r, t);
+      if (Math.abs(x) > 1300) continue;
+      const ry = -r[1], ox = Math.cos(ry) * 2.2, oz = -Math.sin(ry) * 2.2;
+      br.push({ x, y: 2.6, z, sx: 4.5, sy: 0.6, sz: 42, ry, c: '#9a968c' }, { x: x - ox, y: 3.2, z: z - oz, sx: 0.2, sy: 0.9, sz: 42, ry, c: '#c4c0b6' }, { x: x + ox, y: 3.2, z: z + oz, sx: 0.2, sy: 0.9, sz: 42, ry, c: '#c4c0b6' }, { x, y: -1.6, z, sx: 1.2, sy: 4.2, sz: 1.2, ry, c: '#9a968c' });
+    }
     Kit.inst(scene, Kit.box, Kit.mat('bridge', { roughness: 0.8 }, Kit.G.grime(0.8)), br);
 
     // ---- 集落の家（大きな瓦屋根の母屋・納屋・倉）と屋敷林 ----
@@ -140,9 +169,9 @@ STAGES.push({
     // 山の木（ふち）と、谷にぽつぽつ
     for (let i = 0; i < (ctx.phone ? 6000 : 12000); i++) {
       const x = (rnd() - 0.5) * 3600, z = (rnd() - 0.5) * 3600, h = H(x, z);
-      if (h < 0.8 || h > 400 || (h > 25 && rnd() < 0.6)) continue;   // 山すそ（谷のふち）に多く
+      if (h < 0.8 || h > 400 || (h > 12 && rnd() < 0.85)) continue;   // 山すそ（谷のふち）に多く。奥の山は地形の式の樹冠で
       const con = fbm(x * 0.006 + 3, z * 0.006 + 3) > 0.52;
-      TR.push({ x, y: h - 1, z, h: con ? 18 + rnd() * 8 : 12 + rnd() * 6, r: con ? 2.8 + rnd() : 4 + rnd() * 2.5, type: con ? 'conifer' : 'broad', c: con ? pick(['#1c2c17', '#22341c', '#1a2814']) : pick(['#33491f', '#3b5424', '#2c401b', '#41592a']) });
+      TR.push({ x, y: h - 1, z, h: con ? 18 + rnd() * 8 : 12 + rnd() * 6, r: con ? 2.2 + rnd() * 0.8 : 3 + rnd() * 1.8, type: con ? 'conifer' : 'broad', c: con ? pick(['#1c2c17', '#22341c', '#1a2814']) : pick(['#33491f', '#3b5424', '#2c401b', '#41592a']) });
     }
     for (let x = -1400; x < 1400; x += 14) if (rnd() < 0.35) TR.push({ x, z: rz(x) + (rnd() < 0.5 ? -1 : 1) * 26, h: 8 + rnd() * 5, r: 2.5 + rnd() * 1.5 });
     Kit.trees(scene, TR, { lumps: 3 });
@@ -157,7 +186,7 @@ STAGES.push({
     // ---- 車（県道）と軽トラック（農道） ----
     const lanes = [];
     for (const [o, dir] of [[-2, 1], [2, -1]]) { const ln = Traffic.lane(dir > 0 ? [[-1600, RZ0 + o], [1600, RZ0 + o]] : [[1600, RZ0 + o], [-1600, RZ0 + o]], { v0: 14 }); for (let i = 0; i < 9; i++) { const kind = rnd() < 0.12 ? 'truck' : rnd() < 0.4 ? 'kei' : 'sedan'; Traffic.add(ln, { s: rnd() * 3200, len: Kit.carLen(kind), kind }); } lanes.push(ln); }
-    for (let x = -span / 2 + FW * 4; x < span / 2; x += FW * 8) { const ln = Traffic.lane(rnd() < 0.5 ? [[x, -800], [x, 800]] : [[x, 800], [x, -800]], { v0: 6 }); Traffic.add(ln, { s: rnd() * 1600, len: 3.4, kind: 'ktruck', c: pick(['#f4f4f2', '#f4f4f2', '#e9e9e6', '#8e959c']) }); lanes.push(ln); }
+    for (const r of ns) { if (rnd() < 0.55) continue; const a = nsAt(r, -800), b = nsAt(r, 800); const ln = Traffic.lane(rnd() < 0.5 ? [a, b] : [b, a], { v0: 6 }); Traffic.add(ln, { s: rnd() * 1600, len: 3.4, kind: 'ktruck', c: pick(['#f4f4f2', '#f4f4f2', '#e9e9e6', '#8e959c']) }); lanes.push(ln); }
     const parked = [];
     for (const v of vill) for (let i = 0; i < 6; i++) parked.push({ kind: rnd() < 0.6 ? 'ktruck' : 'kei', x: v.x + (rnd() - 0.5) * v.r, z: v.z + (rnd() - 0.5) * v.r * 0.6, ry: rnd() * 6, c: '#f2f2f0' });
     const moving = lanes.flatMap(l => l.items);

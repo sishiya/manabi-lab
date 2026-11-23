@@ -13,18 +13,18 @@ STAGES.push({
     const XW = 1400;
 
     // ---- 海（浅い所はうすい色、波の白い線は岸へ寄せる） ----
-    const sea = new THREE.Mesh(new THREE.PlaneGeometry(60000, 30000), Kit.water({ name: 'beach', deep: '#1b4a5a', chop: 0.6, extra: `
+    const sea = new THREE.Mesh(new THREE.PlaneGeometry(60000, 30000), Kit.water({ name: 'beach', deep: '#1b4a5a', chop: 0.6, env: 0.32, extra: `
       float d = zs(vWP.x) - vWP.z;   // 岸からの距離（m）
-      vec3 shallow = vec3(0.16, 0.3, 0.27), sand = vec3(0.38, 0.33, 0.24);
+      vec3 shallow = vec3(0.09, 0.17, 0.15), sand = vec3(0.22, 0.19, 0.14);   // 浅い所は底の砂がすけて見える
       diffuseColor.rgb = mix(sand, shallow, smoothstep(0.0, 6.0, d));
       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.025, 0.08, 0.1), smoothstep(8.0, 90.0, d));
       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.012, 0.04, 0.06), smoothstep(150.0, 600.0, d));
       float ph = d / 16.0 + uTime * 0.11 + 0.15 * kN(vec3(vWP.x * 0.03, 0.0, uTime * 0.1));
       float crest = smoothstep(0.88, 0.96, fract(ph)) * (1.0 - smoothstep(0.96, 1.0, fract(ph))) * smoothstep(0.35, 0.7, kN(vec3(vWP.x * 0.02, floor(ph), 1.0)));   // 波は場所でとぎれる
       float brk = smoothstep(55.0, 18.0, d) * smoothstep(-1.0, 3.0, d);   // 砕けるのは岸から 18〜55 m より内側
-      float foam = crest * brk * (0.55 + 0.6 * kN(vec3(vWP.x * 0.35, vWP.z * 0.8, uTime * 0.3)));
-      foam += smoothstep(4.0, 0.0, d) * (0.5 + 0.5 * kN(vec3(vWP.x * 0.5, vWP.z * 1.5, uTime * 0.4))) * (0.6 + 0.4 * sin(uTime * 0.7 + vWP.x * 0.01));   // 波打ちぎわの泡
-      foam += smoothstep(0.6, 0.9, kN(vec3(vWP.x * 0.4, vWP.z * 0.6, uTime * 0.2))) * brk * 0.4;   // 砕けたあとの泡
+      float foam = crest * brk * smoothstep(0.25, 0.75, kF(vec3(vWP.x * 0.12, vWP.z * 0.3, uTime * 0.15)));   // 波頭は細い線で、ところどころ切れる
+      foam += smoothstep(3.5, 0.0, d) * smoothstep(0.2, 0.8, kF(vec3(vWP.x * 0.25, vWP.z * 0.8, uTime * 0.3))) * (0.6 + 0.4 * sin(uTime * 0.7 + vWP.x * 0.01));   // 波打ちぎわの泡
+      foam += smoothstep(0.55, 0.85, kF(vec3(vWP.x * 0.15, vWP.z * 0.25, uTime * 0.1))) * brk * 0.3;   // 砕けたあとの泡（大きなまだら）
       foam = clamp(foam, 0.0, 1.0);
       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.7, 0.72, 0.72), foam);
       gNP *= 1.0 - foam; gRough = mix(gRough, 0.8, foam);`, pre: GZS }));
@@ -35,7 +35,7 @@ STAGES.push({
     const pos = sandG.attributes.position;
     for (let i = 0; i < pos.count; i++) { const x = pos.getX(i), z = pos.getZ(i), d = z - zs(x); pos.setY(i, d < 0 ? d * 0.08 : Math.min(1.6, d * 0.035) + 0.02 * Math.sin(x * 0.7) * Math.sin(z * 0.9)); }
     sandG.computeVertexNormals();
-    const sand = new THREE.Mesh(sandG, Kit.mat('sand', { color: lin('#bfae8a'), roughness: 0.95 }, `
+    const sand = new THREE.Mesh(sandG, Kit.mat('sand', { color: lin('#a89878'), roughness: 0.95 }, `
       float d = vWP.z - zs(vWP.x);
       vec3 c = diffuseColor.rgb * (0.9 + 0.2 * kF(vWP * 0.3) + 0.12 * (kN(vWP * 6.0) - 0.5));
       c *= mix(0.55, 1.0, smoothstep(0.0, 9.0, d));          // ぬれた砂

@@ -9,10 +9,10 @@ STAGES.push({
   async build(scene, ctx) {
     const { rnd, pick, lin } = Kit;
     const QX = 700, WY = -2.6;   // 岸壁の長さの半分・水面の高さ
-    const CC = ['#3a6f96', '#3a6f96', '#2f5a7e', '#7f3b2e', '#8a4030', '#7f3b2e', '#d6d4cc', '#c9c6be', '#6f7478', '#5d6266', '#365640', '#b0662e', '#24324f', '#a39883', '#9a8a3a'];   // くすんだ色が多い
+    const CC = ['#3a5f80', '#3a5f80', '#34506a', '#7a3d30', '#7a3d30', '#84422f', '#c9c6be', '#bdbab2', '#6f7478', '#6f7478', '#5d6266', '#3c5244', '#8c5a34', '#2a3348'];   // 赤茶・青・灰・白が多い（くすんだ色）
 
     // ---- 水と陸 ----
-    const water = new THREE.Mesh(new THREE.PlaneGeometry(60000, 30000), Kit.water({ name: 'sea', deep: '#0f2329', chop: 0.55 }));
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(60000, 30000), Kit.water({ name: 'sea', deep: '#14211f', chop: 0.7, env: 0.3, extra: `diffuseColor.rgb *= 0.8 + 0.4 * kF(vec3(vWP.xz * 0.004, uTime * 0.01)); gNP += (vec3(kN(vec3(vWP.xz * 0.02, uTime * 0.05)), 0.0, kN(vec3(vWP.xz * 0.02 + 7.0, uTime * 0.05))) - 0.5) * 0.25; gRough = 0.1 + 0.06 * kN(vec3(vWP.xz * 0.01, 2.0));` }));
     water.rotation.x = -Math.PI / 2; water.position.set(0, WY, -15000 - 0.5); scene.add(water);
     const land = new THREE.Mesh(new THREE.PlaneGeometry(60000, 30000), Kit.mat('farland', { color: lin('#8a8778'), roughness: 1 }, Kit.G.ground(1.4, 0.05)));
     land.rotation.x = -Math.PI / 2; land.position.set(0, -0.06, 15000); land.receiveShadow = true; scene.add(land);
@@ -49,7 +49,7 @@ STAGES.push({
       }
     }
     // 船の上のコンテナ・船
-    const ships = [{ x: -250, z: -24, L: 290, W: 40 }, { x: 230, z: -24, L: 230, W: 32 }];
+    const ships = [{ x: -240, z: -27, L: 330, W: 46 }, { x: 250, z: -24, L: 260, W: 36 }];
     const hullShape = (L, W) => { const s = new THREE.Shape(); s.moveTo(-L / 2, -W / 2); s.lineTo(L / 2 - W * 1.2, -W / 2); s.quadraticCurveTo(L / 2, -W / 2, L / 2 + 4, 0); s.quadraticCurveTo(L / 2, W / 2, L / 2 - W * 1.2, W / 2); s.lineTo(-L / 2, W / 2); s.lineTo(-L / 2, -W / 2); return s; };
     const hullFn = `
       float y = vWP.y;
@@ -81,24 +81,32 @@ STAGES.push({
       else c *= 0.9 + 0.15 * smoothstep(0.3, 0.5, abs(fract(vWP.x / 0.6) - 0.5));
       c *= 1.0 - 0.3 * smoothstep(0.45, 0.75, kF(vWP * 0.4 + vRnd * 17.0));   // さびと汚れ
       c *= 0.85 + 0.3 * vRnd;
-      c = mix(vec3(dot(c, vec3(0.3, 0.55, 0.15))), c, 0.7);   // 日にやけて色があせる
+      c = mix(vec3(dot(c, vec3(0.3, 0.55, 0.15))), c, 0.6);   // 日にやけて色があせる
       diffuseColor.rgb = c; gRough = 0.55 + 0.2 * vRnd;`);
     Kit.inst(scene, Kit.box, contMat, boxes);
 
     // ---- ガントリークレーン（脚・はり・ブーム）・照明の塔 ----
+    // 岸壁のコンテナクレーン（STS）: 門形の脚（高さ約 45 m）、海へ約 60 m のびる2本のはり、てっぺんの A 形の塔（約 75 m）と斜めの張り
+    const boxMid = new THREE.BoxGeometry(1, 1, 1);   // まん中が原点の箱（斜めの張りに）
     const crane = [], cranes = [];
+    const strut = (x, y0, z0, y1, z1, w, c) => { const dy = y1 - y0, dz = z1 - z0, L = Math.hypot(dy, dz); crane.push({ x, y: (y0 + y1) / 2, z: (z0 + z1) / 2, sx: w, sy: w, sz: L, rx: -Math.atan2(dy, dz), c, mid: true }); };
+    const RED = '#b8442e', WH = '#d6d3cc';
     for (let i = 0; i < 6; i++) {
       const cx = -QX + 120 + i * 220 + (rnd() - 0.5) * 30; cranes.push(cx);
-      for (const dz of [8, 38]) for (const dx of [-9, 9]) crane.push({ x: cx + dx, z: dz, sx: 1.6, sy: 46, sz: 1.6, c: '#c84a30' });
-      for (const dx of [-9, 9]) crane.push({ x: cx + dx, y: 44, z: 5, sx: 1.8, sy: 3.2, sz: 70, c: '#c84a30' });   // 陸から海へのはり
-      crane.push({ x: cx, y: 40, z: -18, sx: 18, sy: 2.2, sz: 2, c: '#d9d6cf' });
-      crane.push({ x: cx, y: 46.5, z: -10, sx: 20, sy: 1.6, sz: 64, c: '#d9d6cf' });   // ブーム
-      crane.push({ x: cx, y: 47, z: 33, sx: 12, sy: 6, sz: 10, c: '#e5e2da' });   // 機械室
-      for (const dz of [8, 38]) crane.push({ x: cx, y: 14, z: dz, sx: 18, sy: 1.4, sz: 1.4, c: '#c84a30' });
-      crane.push({ x: cx, y: 30, z: -8, sx: 3, sy: 2, sz: 3, c: '#3a3a3a' });   // つり具
+      const col = i % 3 === 2 ? WH : RED;
+      for (const dz of [8, 38]) for (const dx of [-8, 8]) crane.push({ x: cx + dx, z: dz, sx: 1.6, sy: 45, sz: 1.6, c: col });   // 脚
+      for (const dz of [8, 38]) crane.push({ x: cx, y: 13, z: dz, sx: 17.6, sy: 1.4, sz: 1.4, c: col }, { x: cx, y: 43, z: dz, sx: 17.6, sy: 2, sz: 1.6, c: col });
+      for (const dx of [-8, 8]) { crane.push({ x: cx + dx, y: 43, z: 23, sx: 1.6, sy: 2, sz: 31, c: col }); strut(cx + dx, 2, 8, 30, 36, 0.7, col); }   // 横のはりと筋かい
+      for (const dx of [-6, 6]) crane.push({ x: cx + dx, y: 45, z: -5, sx: 1.8, sy: 2.6, sz: 112, c: WH });   // ブーム（海側 −61 m 〜 陸側 +51 m）
+      for (const dx of [-6, 6]) { strut(cx + dx, 47, 30, 76, 30, 1.4, col); strut(cx + dx, 76, 30, 47.5, -58, 0.5, col); strut(cx + dx, 76, 30, 47.5, -25, 0.5, col); strut(cx + dx, 76, 30, 47.5, 50, 0.5, col); }   // A 形の塔と張り
+      crane.push({ x: cx, y: 75, z: 30, sx: 13, sy: 1.6, sz: 1.6, c: col });
+      crane.push({ x: cx, y: 47.5, z: 42, sx: 13, sy: 5, sz: 9, c: '#dcd9d2' });   // 機械室
+      const ty = -20 - rnd() * 25;   // トロリー（海の上のどこか）とつり具
+      crane.push({ x: cx, y: 47.6, z: ty, sx: 10, sy: 3, sz: 6, c: '#cfccc5' }, { x: cx, y: 20 + rnd() * 15, z: ty, sx: 3, sy: 1.2, sz: 12.4, c: '#d0a42a' });
     }
     for (let x = -QX + 60; x < QX; x += 180) for (const z of [70, 260, 420]) crane.push({ x, z, sx: 0.8, sy: 32, sz: 0.8, c: '#9a9a94' }, { x, y: 32, z, sx: 4, sy: 1.5, sz: 1.5, c: '#d8d8d0' });
-    Kit.inst(scene, Kit.box, Kit.mat('craneSteel', { roughness: 0.55, metalness: 0.3 }, Kit.G.grime(0.9)), crane);
+    Kit.inst(scene, boxMid, Kit.mat('craneSteel', { roughness: 0.55, metalness: 0.3 }, Kit.G.grime(0.9)), crane.filter(c => c.mid));
+    Kit.inst(scene, Kit.box, Kit.mat('craneSteel', { roughness: 0.55, metalness: 0.3 }, Kit.G.grime(0.9)), crane.filter(c => !c.mid));
 
     // ---- 倉庫と事務所・港の外の町 ----
     const T0 = Town.create();

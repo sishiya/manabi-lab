@@ -44,8 +44,8 @@ const World = (() => {
     const scene = new THREE.Scene();
     scene.background = sky || new THREE.Color(0.6, 0.7, 0.85);
     scene.environment = env;
-    const haze = horizon.clone().multiplyScalar(def.hazeBright || 1);
-    scene.fog = new THREE.FogExp2(haze, def.haze || 0.00012);
+    const haze = horizon.clone().multiplyScalar(def.hazeBright || 1).lerp(new THREE.Color(0.62, 0.74, 0.95).multiplyScalar(horizon.r + horizon.g + horizon.b ? (horizon.r + horizon.g + horizon.b) / 3 : 1), 0.25);   // 空の地平線の色に、少し青（遠くは青白くかすむ）
+    scene.fog = new THREE.FogExp2(haze, (def.haze || 0.00012) * 1.25);
 
     // 太陽（低め・横から。影が見えるように）と、空・地面からの光
     const sunDir = new THREE.Vector3().setFromSphericalCoords(1, (90 - (def.sun?.el ?? 32)) * Math.PI / 180, (def.sun?.az ?? -70) * Math.PI / 180);
@@ -56,7 +56,7 @@ const World = (() => {
     Object.assign(sun.shadow.camera, { left: -R, right: R, top: R, bottom: -R, near: 10, far: R * 5 }); sun.shadow.camera.updateProjectionMatrix();
     sun.shadow.mapSize.set(opt.shadow, opt.shadow); sun.shadow.bias = -0.0003; sun.shadow.normalBias = R / 2000; sun.shadow.radius = 2;
     scene.add(sun, sun.target);
-    scene.add(new THREE.HemisphereLight('#bcd3ee', '#6b6250', 0.12));
+    scene.add(new THREE.HemisphereLight('#bcd3ee', '#6b6250', 0.22));   // 影の中も空と地面の照り返しで少し明るい
 
     Kit.setSeed(def.seed || 7);
     const ctx = { renderer, phone: opt.phone, horizon: haze };

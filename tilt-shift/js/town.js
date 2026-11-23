@@ -67,13 +67,14 @@ const Town = (() => {
       else if (center > 0.6 && w > 18 && d > 18 && k < 0.16) style = 'office';
       else style = k < 0.38 ? 'mansion' : k < 0.64 ? 'tile' : k < 0.9 ? 'shop' : (center > 0.5 && k < 0.93 ? 'office' : 'house');
       if (style === 'office') { h = 28 + 90 * Math.pow(rnd(), 2) * center + 15 * rnd(); c = pick(C.GLASS); }
-      else if (style === 'mansion') { h = 2.9 * (3 + ((rnd() * (rural > 0.5 ? 4 : 11 * (0.4 + center))) | 0)) + 1; c = pick(C.MANSION); }
-      else if (style === 'tile') { h = 3.6 * (3 + ((rnd() * 9 * (0.3 + center)) | 0)); c = pick(C.TILE); }
+      else if (style === 'mansion') { h = 2.9 * (3 + ((rnd() * (rural > 0.5 ? 4 : 9 * (0.3 + center))) | 0)) + 1; c = pick(C.MANSION); }
+      else if (style === 'tile') { h = 3.6 * (2 + ((rnd() * 7 * (0.3 + center)) | 0)); c = pick(C.TILE); }
       else if (style === 'shop') { h = 3.2 * (2 + ((rnd() * 3) | 0)); c = pick(C.SHOP); }
       else { h = 5.6 + rnd() * 1.2; c = pick(C.HOUSE); }
       return { style, h, c };
     }
     function finish(scene) {
+      for (const s in B) for (const b of B[s]) if (typeof b.c === 'string') b.c = Kit.lin(b.c).offsetHSL((rnd() - 0.5) * 0.03, (rnd() - 0.5) * 0.06, 0).multiplyScalar(0.82 + rnd() * 0.3);   // 建物ごとに色と明るさをずらす
       for (const s in B) if (B[s].length) Kit.inst(scene, Kit.box, Kit.building(s), B[s]);
       Kit.inst(scene, Kit.gable, Kit.roofTile(), roofs);
       Kit.inst(scene, Kit.box, Kit.mat('roofthing', { roughness: 0.7 }, Kit.G.grime(0.8)), extras);
@@ -124,7 +125,7 @@ const Town = (() => {
     for (const r of RX) if (r.w >= 12) for (const q of [-r.w / 4 - 0.8, -r.w / 4 + 0.8, r.w / 4 - 0.8, r.w / 4 + 0.8]) rect(r.c + q - 0.35, A(r), r.c + q + 0.35, B(r));
     for (const r of RZ) if (r.w >= 12) for (const q of [-r.w / 4 - 0.8, -r.w / 4 + 0.8, r.w / 4 - 0.8, r.w / 4 + 0.8]) rect(A(r), r.c + q - 0.35, B(r), r.c + q + 0.35);
     // 公園・駐車場
-    for (const [x0, z0, x1, z1] of parks) { g.fillStyle = pat(grass, 4); rect(x0, z0, x1, z1); g.fillStyle = 'rgba(60,70,30,.25)'; rect(x0, z0, x1, z1);
+    for (const [x0, z0, x1, z1] of parks) { g.fillStyle = pat(grass, 4); rect(x0, z0, x1, z1); g.fillStyle = 'rgba(70,72,40,.45)'; rect(x0, z0, x1, z1);
       g.fillStyle = 'rgba(190,175,150,.9)'; rect(x0 + 4, (z0 + z1) / 2 - 1.5, x1 - 4, (z0 + z1) / 2 + 1.5); rect((x0 + x1) / 2 - 1.5, z0 + 4, (x0 + x1) / 2 + 1.5, z1 - 4); }
     for (const [x0, z0, x1, z1] of lots) { g.fillStyle = pat(asp, 6); rect(x0, z0, x1, z1); g.fillStyle = 'rgba(60,60,64,.3)'; rect(x0, z0, x1, z1);
       g.fillStyle = 'rgba(230,230,224,.8)'; for (let x = x0 + 1; x < x1 - 2; x += 2.5) rect(x, z0 + 1, x + 0.12, z0 + 5.5); }

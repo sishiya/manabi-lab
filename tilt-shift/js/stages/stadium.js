@@ -34,7 +34,7 @@ STAGES.push({
     const grassImg = await Kit.photoImg('Grass004');
     const ground = await Town.paint({ S, span, RX, RZ, walk, lots, foot: T0.foot, yards: T0.yards, base: 'conc',
       draw(g, rect, pat) {
-        g.fillStyle = pat(grassImg, 4); rect(-150 + 8, -130 + 6, 150 - 6, 130 - 8); g.fillStyle = 'rgba(60,70,40,.3)'; rect(-150 + 8, -130 + 6, 150 - 6, 130 - 8);   // 敷地の芝生
+        g.fillStyle = pat(grassImg, 4); rect(-150 + 8, -130 + 6, 150 - 6, 130 - 8); g.fillStyle = 'rgba(66,70,40,.55)'; rect(-150 + 8, -130 + 6, 150 - 6, 130 - 8);   // 敷地の芝生
         g.fillStyle = 'rgba(150,144,134,1)'; rect(-PL / 2 - 45, -PW / 2 - 42, PL / 2 + 45, PW / 2 + 42);   // スタンドのまわりの舗装
         g.fillStyle = 'rgba(120,115,106,.5)'; for (let x = -PL / 2 - 45; x < PL / 2 + 45; x += 6) rect(x, -PW / 2 - 42, x + 0.15, PW / 2 + 42);
         // 芝: 刈った向きで明るさのちがう縞（5.5 m ごと）
@@ -65,7 +65,7 @@ STAGES.push({
       { cx: 0, cz: -(PW / 2 + M + 4), len: PL + 2 * M, nx: 0, nz: -1 }, { cx: 0, cz: PW / 2 + M + 4, len: PL + 2 * M, nx: 0, nz: 1 },
       { cx: -(PL / 2 + M + 4), cz: 0, len: PW + 2 * M, nx: -1, nz: 0 }, { cx: PL / 2 + M + 4, cz: 0, len: PW + 2 * M, nx: 1, nz: 0 },
     ];
-    const SEAT = ['#2a4f8a', '#2a4f8a', '#c8c8c4'];
+    const SEAT = ['#2c4a6e', '#2c4a6e', '#2a4566'];
     for (const sd of sides) {
       const along = sd.nz !== 0;   // x の向きにのびる
       for (let r = 0; r < N; r++) {
@@ -75,7 +75,7 @@ STAGES.push({
         const fill = 0.82 + 0.1 * rnd();
         for (let s = -sd.len / 2 + 0.3; s < sd.len / 2; s += 0.55) if (rnd() < fill) {
           const px = along ? sd.cx + s : x, pz = along ? z : sd.cz + s;
-          crowd.push({ x: px + (rnd() - 0.5) * 0.1, y: y0, z: pz, sx: 0.44, sy: 0.75 + rnd() * 0.15, sz: 0.38, c: pick(['#c8202a', '#c8202a', '#c8202a', '#f0f0ec', '#1b1b1e', '#e8d23a', '#2a4f8a', '#6d7a88', '#d7b49e']) });
+          crowd.push({ x: px + (rnd() - 0.5) * 0.1, y: y0, z: pz, sx: 0.44, sy: 0.75 + rnd() * 0.15, sz: 0.38, c: pick(['#9a2a2a', '#9a2a2a', '#b8b6b0', '#2a2a2c', '#2a2a2c', '#3a4658', '#5d6670', '#7a5a48', '#8a8f96']) });   // 服の色（ホームの赤が多め・くすんだ色）
         }
       }
       const back = N * RUN + 1, H = 1.2 + N * RISE;
@@ -109,7 +109,7 @@ STAGES.push({
     for (const [x0, z0, x1, z1] of T0.yards) if (rnd() < 0.4) TR.push({ x: x0 + 1.5 + rnd() * (x1 - x0 - 3), z: z0 + 1.5 + rnd() * (z1 - z0 - 3), h: 3 + rnd() * 3, r: 1 + rnd() * 1.2 });
     Kit.trees(scene, TR);
     const parked = [];
-    for (const [x0, z0, x1, z1] of lots) for (let z = z0 + 3; z < z1 - 3; z += 6.5) for (let x = x0 + 2; x < x1 - 2; x += 2.5) if (rnd() < 0.85) parked.push({ kind: rnd() < 0.25 ? 'kei' : rnd() < 0.15 ? 'van' : 'sedan', x, z, ry: (Math.floor((z - z0) / 6.5) % 2) * Math.PI });
+    for (const [x0, z0, x1, z1] of lots) for (let z = z0 + 3; z < z1 - 3; z += 6.5) for (let x = x0 + 2; x < x1 - 2; x += 2.5) if (rnd() < 0.6) parked.push({ kind: rnd() < 0.25 ? 'kei' : rnd() < 0.15 ? 'van' : 'sedan', x, z, ry: (Math.floor((z - z0) / 6.5) % 2) * Math.PI });
     const C = Kit.cars(scene, parked); parked.forEach((p, i) => C.set(i, p.x, p.z, p.ry)); C.done();
 
     // ---- 選手・審判・ボール ----
