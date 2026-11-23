@@ -105,8 +105,7 @@
         <li>Held, R. T., Cooper, E. A., O'Brien, J. F., Banks, M. S. (2010) Using blur to affect perceived distance and size. <i>ACM Transactions on Graphics</i> 29(2): 19. <a href="https://doi.org/10.1145/1731047.1731057" target="_blank" rel="noopener">doi:10.1145/1731047.1731057</a></li>
       </ul>
       <h3>使っているもの</h3>
-      <p>道・歩道・芝・コンクリートのテクスチャ: ambientCG（CC0。Asphalt026C、PavingStones128、Grass004、Concrete034） <a href="https://ambientcg.com" target="_blank" rel="noopener">ambientcg.com</a><br>空: Poly Haven「Kloofendal 48d Partly Cloudy (Pure Sky)」（CC0） <a href="https://polyhaven.com" target="_blank" rel="noopener">polyhaven.com</a><br>建物の壁・木・水・人・車などは、このアプリの中で式から描いています（池袋をのぞく）。</p>
-      <p>池袋（本物の町）の建物: 3D都市モデル（Project PLATEAU）国土交通省 <a href="https://www.mlit.go.jp/plateau/" target="_blank" rel="noopener">mlit.go.jp/plateau</a>（豊島区・新宿区・文京区・北区・板橋区、2025年度。航空写真の質感つき LOD2）。地面: 地理院タイル（シームレス空中写真・標高 5 m／10 m メッシュ） <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院</a>。車と人が動く道: OpenFreeMap（© OpenMapTiles、Data from OpenStreetMap） <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">openstreetmap.org/copyright</a>。どれも開いたときに配信元から読みます。車と人の動きはこのアプリの計算です（信号はなく、本物の交通量ではありません）。建物の質感と地面は写真そのもので、写したときの光と影が入っています。</p>
+      <p>道・歩道・芝・コンクリートのテクスチャ: ambientCG（CC0。Asphalt026C、PavingStones128、Grass004、Concrete034） <a href="https://ambientcg.com" target="_blank" rel="noopener">ambientcg.com</a><br>空: Poly Haven「Kloofendal 48d Partly Cloudy (Pure Sky)」（CC0） <a href="https://polyhaven.com" target="_blank" rel="noopener">polyhaven.com</a><br>建物の壁・木・水・人・車などは、このアプリの中で式から描いています。外から読むデータはありません。</p>
       <p>three.js r128 と RGBELoader（MIT）。ぼかしは自前のシェーダー（考え方は glfx.js の tiltShift・three.js の被写界深度の例を参考。どちらも MIT）。フォント: Google Fonts（SIL Open Font License）</p>
     </details>
   </section>
@@ -114,19 +113,14 @@
 
 <script src="../lib/three@0.128.0/build/three.min.js"></script>
 <script src="../lib/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
-<script src="../lib/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-<script src="../lib/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
 <script src="js/kit.js"></script>
 <script src="js/traffic.js"></script>
 <script src="js/town.js"></script>
 <script src="js/world.js"></script>
-<script src="js/real/tiles.js"></script>
 <script src="js/real/bldgmat.js"></script>
-<script src="js/real/ground.js"></script>
-<script src="js/real/mvt.js"></script>
 <script src="js/real/roads.js"></script>
 <script src="js/real/streets.js"></script>
-<script src="js/stages/ikebukuro.js"></script>
+<script src="js/real/gen.js"></script>
 <script src="js/stages/city.js"></script>
 <script src="js/stages/rail.js"></script>
 <script src="js/stages/port.js"></script>

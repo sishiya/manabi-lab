@@ -1,5 +1,4 @@
-// ジオラマに見えるわけ — 本物の道（OpenStreetMap）の上を、車と人が動く
-//   道の線: OpenFreeMap のベクトルタイル（z14）の transportation 層。出典「OpenFreeMap © OpenMapTiles Data from OpenStreetMap」
+// ジオラマに見えるわけ — 道の網の上を、車と人が動く（道の線は js/real/gen.js が式で作る。形は OpenStreetMap の道と同じ { cls, oneway, pts }）
 //   道の頂点を 1 m 単位でまとめて点にし、点と点を結ぶ「網」を作る。車も人も、網の辺を進み、点に着くと次の辺を選ぶ（まっすぐに近い辺ほど選びやすい）。
 //   車: 左側通行（進む向きの左へ、車線の半分ずらす）・一方通行は片向き・トンネルはのぞく・前の車との間をあける（追従のかんたんなモデル）。交差点の信号はない。
 //   人: 歩行者の道（footway・pedestrian）と、通りの両側の歩道（道の幅の半分＋1.5 m）。駅（原点）に近いほど多い。
@@ -10,40 +9,6 @@ const RealRoads = (() => {
   const GAP = { motorway: 45, trunk: 30, primary: 30, secondary: 45, tertiary: 70, minor: 180, service: 1e9 };   // 車の間隔（m・1車線あたり、平均）
   const tx = (lon, z) => (lon + 180) / 360 * 2 ** z;
   const ty = (lat, z) => { const s = Math.sin(lat * Math.PI / 180); return (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * 2 ** z; };
-
-  // 原点のまわり radius m の道の線を読む → [{ cls, sub, oneway, tunnel, pts: [[x, z], ...] }]
-  async function load(lon0, lat0, radius, toXZ) {
-    const tj = await (await fetch('https://tiles.openfreemap.org/planet')).json();
-    const z = 14, k = 180 / Math.PI / 6378137, dLat = radius * k, dLon = dLat / Math.cos(lat0 * Math.PI / 180);
-    const x0 = Math.floor(tx(lon0 - dLon, z)), x1 = Math.floor(tx(lon0 + dLon, z)), y0 = Math.floor(ty(lat0 + dLat, z)), y1 = Math.floor(ty(lat0 - dLat, z));
-    const lines = [], polys = [], jobs = [];
-    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) jobs.push(fetch(tj.tiles[0].replace('{z}', z).replace('{x}', x).replace('{y}', y)).then(r => r.ok ? r.arrayBuffer() : null).then(buf => {
-      if (!buf) return;
-      const D = RealMVT.decode(buf, ['transportation', 'landcover', 'landuse', 'water', 'park']), L = D.transportation; if (!L) return;
-      const E = L.extent, n = 2 ** z;
-      const conv = g => { const pts = []; for (let i = 0; i < g.length; i += 2) { const lon = (x + g[i] / E) / n * 360 - 180, m = Math.PI - 2 * Math.PI * (y + g[i + 1] / E) / n, lat = 180 / Math.PI * Math.atan(Math.sinh(m)); pts.push(toXZ(lon, lat)); } return pts; };
-      // 面（芝・林・運動場・学校・墓地・水など）: 外の輪と穴（向きで分ける）
-      for (const name of ['landcover', 'landuse', 'water', 'park']) { const A = D[name]; if (!A) continue;
-        for (const f of A.features) { if (f.type !== 3) continue; let cur = null;
-          for (const g of f.geom) { const r = conv(g); let ar = 0; for (let i = 0; i < r.length; i++) { const [x0_, z0_] = r[i], [x1_, z1_] = r[(i + 1) % r.length]; ar += x0_ * z1_ - x1_ * z0_; }
-            if (ar > 0 || !cur) { cur = { layer: name, cls: f.props.class, sub: f.props.subclass, outer: r, holes: [] }; polys.push(cur); } else cur.holes.push(r); } } }
-      for (const f of L.features) {
-        if (f.type !== 2) continue;
-        const p = f.props;
-        for (const g of f.geom) {
-          const pts = [];
-          for (let i = 0; i < g.length; i += 2) {
-            const lon = (x + g[i] / E) / n * 360 - 180, m = Math.PI - 2 * Math.PI * (y + g[i + 1] / E) / n, lat = 180 / Math.PI * Math.atan(Math.sinh(m));
-            pts.push(toXZ(lon, lat));
-          }
-          lines.push({ cls: p.class, sub: p.subclass, oneway: p.oneway || 0, tunnel: p.brunnel === 'tunnel', bridge: p.brunnel === 'bridge', pts });
-        }
-      }
-    }).catch(() => {}));
-    await Promise.all(jobs);
-    lines.polys = polys;   // 面は線の配列にぶらさげて返す
-    return lines;
-  }
 
   // 線 → 向きのある辺の網。keep(line) で使う線を選ぶ。辺: { a, b（点の番号）, len, dx, dz, cls, w }
   function graph(lines, keep, radius) {
@@ -220,5 +185,5 @@ const RealRoads = (() => {
     function at(it) { return [it.x, it.z, it.ry]; }
     return { list, step, at };
   }
-  return { load, graph, movers, W };
+  return { graph, movers, W };
 })();

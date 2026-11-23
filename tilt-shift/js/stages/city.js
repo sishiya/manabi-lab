@@ -1,187 +1,96 @@
-// 場面: 町なかの交差点（駅前の商店街から住宅地へ）。手本は名古屋・池袋を高い所から見た写真（look/ref、手元だけ）
-//   ・大通りは2本だけ。あとは幅 9〜11 m の通り、6 m ほどの生活道路、4 m の路地（区画ごと・行き止まりも）
-//   ・建物は敷地いっぱいに建ち、隣とくっつく壁には窓がない。2〜5 階が多く、高いマンションや事務所はときどき
-//   ・信号のある交差点で車が止まり、歩道を人が歩く。路地には電柱と電線。単位 m
+// 場面: 駅前の町（式で作る。外から何も読まないので、開いてすぐ見られる）
+//   道・区画・建物は js/real/gen.js、道の 3D と白線・歩道・木は js/real/streets.js、建物の質感は js/real/bldgmat.js、車と人は js/real/roads.js
+//   （本物の池袋のデータで作って直してきた部品を、式で作った町に当てている）
 'use strict';
 STAGES.push({
-  id: 'city', name: '町なかの交差点', short: '町', seed: 11, size: 700, haze: 0.0008, hazeTint: '#d0d1cd', hazeBright: 1.0,
-  note: 'ビルと家のつまった町。信号で車が止まり、歩道を人が歩く',
-  view: { x: 0, z: 0, y: 0, dist: 450, pitch: 42, yaw: 32, min: 120, max: 1400, range: 520 },
-  sun: { el: 36, az: -60, power: 3.8 },
+  id: 'city', name: '駅前の町', short: '町', seed: 11, size: 900, haze: 0.0009, hazeTint: '#d3d2cc',
+  note: '駅のまわりにビルと家がつまった町。車と人が道を行き来する',
+  view: { x: 0, z: 20, y: 0, dist: 450, pitch: 42, yaw: 32, min: 80, max: 2200, range: 1400 },
+  sun: { el: 24, az: -20, power: 4.2, color: '#ffe2bc' }, hemi: 0.06,   // 午後の低い日（暖かい色）。空からの光は弱く、影の面との差を大きく
   async build(scene, ctx) {
-    const { rnd, pick, lin } = Kit;
-    const CORE = 600, OUT = 1300;
-    // 道: c（中心）・w（幅）。大通り 24 m（歩道 4 m）・通り 10 m（歩道 2.5 m）・生活道路 6 m
-    function roads(main) {
-      const r = [{ c: 0, w: main }];
-      for (const dir of [1, -1]) {
-        let c = 0, sinceMid = 0;
-        while (Math.abs(c) < OUT) {
-          c += dir * (45 + rnd() * 50); sinceMid++;
-          const mid = sinceMid >= 3 && rnd() < 0.5;
-          if (mid) sinceMid = 0;
-          r.push({ c, w: mid ? 9 + rnd() * 2 : 5 + rnd() * 1.5 });
-        }
-      }
-      return r.sort((a, b) => a.c - b.c);
-    }
-    const RX = roads(24), RZ = roads(18);
-    const walk = w => (w >= 16 ? 4 : w >= 9 ? 2.5 : 0);
+    const { rnd, pick } = Kit;
+    const T = TownGen.make({ ext: 2200 });
 
-    // ---- 区画（道に囲まれた所）。大きい区画には路地（幅 4 m）を通す。路地は区画の中だけ ----
-    const alleysX = [], alleysZ = [], blocks = [];
-    for (let i = 0; i < RX.length - 1; i++) for (let j = 0; j < RZ.length - 1; j++) {
-      const x0 = RX[i].c + RX[i].w / 2 + walk(RX[i].w), x1 = RX[i + 1].c - RX[i + 1].w / 2 - walk(RX[i + 1].w);
-      const z0 = RZ[j].c + RZ[j].w / 2 + walk(RZ[j].w), z1 = RZ[j + 1].c - RZ[j + 1].w / 2 - walk(RZ[j + 1].w);
-      if (x1 - x0 < 8 || z1 - z0 < 8) continue;
-      const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, r = Math.hypot(cx, cz);
-      if (r > OUT) continue;
-      // 路地: 長い向きに直角に、区画の端から端まで（ときどき途中まで＝行き止まり）
-      if (Math.max(x1 - x0, z1 - z0) > 55 && rnd() < 0.75) {
-        const alongZ = x1 - x0 > z1 - z0, aw = 3.6 + rnd() * 0.8;
-        const lo = alongZ ? x0 : z0, hi = alongZ ? x1 : z1, m = lo + (hi - lo) * (0.35 + rnd() * 0.3);
-        const dead = rnd() < 0.3, a = alongZ ? z0 : x0, b = alongZ ? z1 : x1, end = dead ? a + (b - a) * (0.5 + rnd() * 0.3) : b;
-        (alongZ ? alleysX : alleysZ).push({ c: m, w: aw, a, b: end });
-        if (alongZ) blocks.push([x0, z0, m - aw / 2, z1, r], [m + aw / 2, z0, x1, z1, r]);
-        else blocks.push([x0, z0, x1, m - aw / 2, r], [x0, m + aw / 2, x1, z1, r]);
-      } else blocks.push([x0, z0, x1, z1, r]);
-    }
-
-    // ---- 区画を敷地に分けて、建物を置く（js/town.js） ----
-    const T0 = Town.create(), parks = [], lots = [], foot = T0.foot;
-    for (const [x0, z0, x1, z1, r] of blocks) {
-      const center = Math.max(0, 1 - r / 450), rural = r < 260 ? 0.02 : r < 600 ? 0.4 : 0.82;
-      if (r < CORE && rnd() < 0.025) { parks.push([x0, z0, x1, z1]); continue; }
-      // 中心の近くには、区画まるごとの大きな建物（デパート・駅ビル・オフィス）と、ときどき高い塔
-      if (r < 480 && x1 - x0 > 30 && z1 - z0 > 30 && rnd() < 0.16 * (1 - r / 480) + 0.04) {
-        const tall = rnd() < 0.35;
-        const k = tall ? { style: rnd() < 0.5 ? 'office' : 'mansion', h: 60 + rnd() * 70 } : { style: pick(['tile', 'tile', 'shop', 'brick']), h: 18 + rnd() * 22 };
-        k.c = pick(k.style === 'office' ? Town.C.GLASS : k.style === 'mansion' ? Town.C.MANSION : k.style === 'brick' ? Town.C.BRICK : Town.C.TILE);
-        T0.building(x0, z0, x1, z1, k, [x0, z0, x1, z1]);
-        continue;
-      }
-      const parcels = []; T0.split(x0, z0, x1, z1, parcels, rural > 0.5 ? 10 : 9 + rnd() * 6);
-      for (const p of parcels) {
-        if (rnd() < 0.06) { lots.push(p); continue; }   // 小さな駐車場（コインパーキング）・空き地
-        T0.building(...p, T0.kindOf(center, rural, p[2] - p[0], p[3] - p[1]), [x0, z0, x1, z1]);
+    // ---- 地面: コンクリートと土のむら・目地（遠くでは目地を薄く） ----
+    const groundMat = Kit.mat('town-ground', { roughness: 0.92 }, `
+      vec3 q = vec3(vWP.x, 0.0, vWP.z);
+      vec3 c = vec3(0.15, 0.148, 0.142) * (0.8 + 0.35 * kF(q * 0.05)) * (0.9 + 0.2 * kF(q * 0.4));
+      vec2 tl = q.xz / 1.5; c *= 1.0 - 0.08 * (1.0 - smoothstep(0.05, 0.3, fwidth(tl.x))) * (step(0.95, fract(tl.x)) + step(0.95, fract(tl.y)));
+      diffuseColor.rgb = c;`);
+    const g = new THREE.Mesh(new THREE.PlaneGeometry(2 * T.EXT + 400, 2 * T.EXT + 400), groundMat); g.rotation.x = -Math.PI / 2; g.receiveShadow = true; scene.add(g);
+    Kit.farGround(scene, '#77746c', -0.3);
+    // 駅前の広場（敷石）・駐車場（アスファルトと白い区切り線）
+    const plazaMat = Kit.mat('town-plaza', { roughness: 0.9 }, `
+      vec2 q = vWP.xz / 0.6; float j = (1.0 - smoothstep(0.05, 0.3, fwidth(q.x))) * (step(0.93, fract(q.x)) + step(0.93, fract(q.y)));
+      vec3 c = vec3(0.34, 0.32, 0.29) * (0.88 + 0.2 * kH2(floor(q))) * (1.0 - 0.15 * min(1.0, j));
+      c = mix(c, vec3(0.22, 0.2, 0.18), step(0.5, fract(vWP.x / 12.0 + 0.25)) * 0.25);   // 敷石の色の帯
+      diffuseColor.rgb = c;`);
+    const lotMat = Kit.mat('town-lot', { roughness: 0.9 }, `
+      vec3 c = vec3(0.11, 0.11, 0.108) * (0.85 + 0.3 * kF(vec3(vWP.x, 0.0, vWP.z) * 0.2));
+      float u = fract(vWP.x / 2.5); float ln = (1.0 - smoothstep(0.1, 0.4, fwidth(vWP.x / 2.5))) * step(abs(u - 0.5), 0.03);
+      c = mix(c, vec3(0.5, 0.5, 0.48), ln * 0.85);
+      diffuseColor.rgb = c;`);
+    const bedMat = Kit.mat('town-railbed', { roughness: 0.95 }, `
+      vec3 q = vec3(vWP.x, 0.0, vWP.z);
+      diffuseColor.rgb = vec3(0.16, 0.145, 0.13) * (0.75 + 0.35 * kF(q * 0.3)) * (0.9 + 0.2 * kN(q * 4.0));`);
+    for (const [list, m] of [[T.plazas, plazaMat], [T.lots, lotMat], [[T.railBed], bedMat]]) {
+      m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -4;
+      for (const p of list) {
+        const [[x0, z0], , [x1, z1]] = p.outer, pg = new THREE.PlaneGeometry(x1 - x0, z1 - z0); pg.rotateX(-Math.PI / 2); pg.translate((x0 + x1) / 2, 0.03, (z0 + z1) / 2);
+        const me = new THREE.Mesh(pg, m); me.receiveShadow = true; scene.add(me);
       }
     }
-    T0.finish(scene);
 
-    // ---- 地面の絵（js/town.js の Town.paint）。路地は a〜b の範囲だけ ----
-    const big = ctx.phone ? 2048 : 4096, coreSpan = 2 * CORE + 260, outSpan = 2 * OUT + 300;
-    const AX = RX.concat(alleysX), AZ = RZ.concat(alleysZ);
-    const G0 = { RX: AX, RZ: AZ, walk, parks, lots, foot, yards: T0.yards };
-    Kit.groundPlane(scene, coreSpan, await Town.paint(Object.assign({ S: big, span: coreSpan }, G0)), 0.9);
-    Kit.groundPlane(scene, outSpan, await Town.paint(Object.assign({ S: big / 2, span: outSpan }, G0)), 0.9).position.y = -0.04;
-    Kit.farGround(scene, '#8b8880');   // 遠くの地面は町の色（家並みのすき間の道と屋根）
-    Town.farHouses(scene, 22000, OUT + 40, OUT + 3200, null, { city: true });   // 町の外（遠く）もずっと町がつづく
-
-    // ---- 木（大通りの並木・公園・家の庭）。種類で色と形を変える（ケヤキ・イチョウ・常緑樹） ----
-    const T = [], LEAF = ['#4f6a2e', '#5a7533', '#47622c', '#6f8236', '#7d8f3a', '#3f5a2c'];
-    for (const [x0, z0, x1, z1] of parks) for (let n = 0; n < (x1 - x0) * (z1 - z0) / 90; n++) T.push({ x: x0 + 3 + rnd() * (x1 - x0 - 6), z: z0 + 3 + rnd() * (z1 - z0 - 6), h: 7 + rnd() * 7, r: 2.5 + rnd() * 3, c: pick(LEAF) });
-    for (const [list, along] of [[RX, true], [RZ, false]]) for (const r of list) if (r.w >= 16) {
-      const c = pick(LEAF);
-      for (let s = -OUT; s < OUT; s += 9 + rnd() * 7) for (const o of [-1, 1]) {
-        const p = r.c + o * (r.w / 2 + 1.3), q = s + (rnd() - 0.5) * 2;
-        if ((along ? RZ : RX).some(rr => Math.abs(rr.c - q) < rr.w / 2 + walk(rr.w) + 5) || rnd() < 0.1) continue;
-        T.push({ x: along ? p : q, z: along ? q : p, h: 7 + rnd() * 4, r: 2.4 + rnd() * 1.6, c: rnd() < 0.8 ? c : pick(LEAF) });
-      }
+    // ---- 架線の柱（線路の両側に 50 m ごと）と、はり ----
+    const cat = [];
+    for (let x = -T.EXT; x < T.EXT; x += 50) {
+      for (const z of [-56, -24]) cat.push({ x, z, sx: 0.3, sy: 8, sz: 0.3, c: '#8a8a84' });
+      cat.push({ x, y: 7.6, z: -40, sx: 0.25, sy: 0.35, sz: 32.5, c: '#7d7d78' });
     }
-    for (const [x0, z0, x1, z1] of T0.yards) if (rnd() < 0.35) T.push({ x: x0 + 1.5 + rnd() * (x1 - x0 - 3), z: z0 + 1.5 + rnd() * (z1 - z0 - 3), h: 3 + rnd() * 4, r: 1.2 + rnd() * 1.5, c: pick(LEAF), type: rnd() < 0.3 ? 'conifer' : 'broad' });
-    Kit.trees(scene, T);
+    Kit.inst(scene, Kit.box, Kit.mat('catenary', { roughness: 0.6, metalness: 0.4 }), cat);
+    // ---- 建物（1つの形。質感は bldgmat）----
+    const bm = new THREE.Mesh(T.geo, RealBldg.material()); bm.castShadow = bm.receiveShadow = true; scene.add(bm);
 
-    // ---- 電柱と電線（生活道路と路地。片側に 30 m ごと） ----
-    const poles = [], arms = [], wire = [];
-    const sag = (a, b, h, n = 4) => { for (let i = 0; i < n; i++) { const t0 = i / n, t1 = (i + 1) / n, y = t => h - 0.6 * 4 * t * (1 - t);
-      wire.push(a[0] + (b[0] - a[0]) * t0, y(t0), a[1] + (b[1] - a[1]) * t0, a[0] + (b[0] - a[0]) * t1, y(t1), a[1] + (b[1] - a[1]) * t1); } };
-    const line = (along, c, from, to) => {
-      let prev = null;
-      for (let s = from; s < to; s += 28 + rnd() * 6) {
-        if (Math.hypot(along ? c : s, along ? s : c) > OUT) { prev = null; continue; }
-        const x = along ? c : s, z = along ? s : c;
-        poles.push({ x, z, sx: 0.32, sy: 11.5 + rnd(), sz: 0.32, c: '#9a978f' });
-        arms.push(along ? { x, y: 10.4, z, sx: 1.6, sy: 0.12, sz: 0.12, c: '#6f6d68' } : { x, y: 10.4, z, sx: 0.12, sy: 0.12, sz: 1.6, c: '#6f6d68' });
-        if (rnd() < 0.3) arms.push({ x: x + (along ? 0.35 : 0), y: 8.2, z: z + (along ? 0 : 0.35), sx: 0.55, sy: 1.0, sz: 0.55, c: '#7a7a74' });   // 変圧器
-        if (prev) for (const [o, h] of [[-0.7, 10.45], [0, 10.45], [0.7, 10.45], [0, 7.2]]) sag(along ? [prev[0] + o, prev[1]] : [prev[0], prev[1] + o], along ? [x + o, z] : [x, z + o], h);
-        prev = [x, z];
-      }
-    };
-    for (const r of RX) if (r.w < 9) line(true, r.c + r.w / 2 + 0.4, -OUT, OUT);
-    for (const r of RZ) if (r.w < 9) line(false, r.c + r.w / 2 + 0.4, -OUT, OUT);
-    for (const r of alleysX) line(true, r.c + r.w / 2 + 0.2, r.a + 3, r.b);
-    for (const r of alleysZ) line(false, r.c + r.w / 2 + 0.2, r.a + 3, r.b);
-    const poleG = new THREE.CylinderGeometry(0.13, 0.19, 1, 6); poleG.translate(0, 0.5, 0);
-    Kit.inst(scene, poleG, Kit.mat('pole', { roughness: 0.8 }), poles);
-    Kit.inst(scene, Kit.box, Kit.mat('arm', { roughness: 0.6, metalness: 0.3 }), arms, { cast: false });
-    const wg = new THREE.BufferGeometry(); wg.setAttribute('position', new THREE.Float32BufferAttribute(wire, 3));
-    scene.add(new THREE.LineSegments(wg, new THREE.LineBasicMaterial({ color: lin('#26282a'), transparent: true, opacity: 0.7 })));
+    // ---- 道の 3D（白線・横断歩道・歩道）・線路・公園・学校の庭・並木と公園の木 ----
+    const ST = RealStreets.build(scene, T.lines, () => 0, { radius: T.EXT, phone: ctx.phone });
+    const YT = [], LEAF = ['#3f4a2c', '#4a5a35', '#38432a', '#525c3a'];   // 家の庭の木（小さめ）
+    for (const [x0, z0, x1, z1] of T.yards) if (rnd() < 0.3 && Math.hypot(x0, z0) < 1500) YT.push({ x: x0 + 1 + rnd() * (x1 - x0 - 2), z: z0 + 1 + rnd() * (z1 - z0 - 2), h: 3 + rnd() * 4, r: 1.2 + rnd() * 1.4, c: pick(LEAF), type: rnd() < 0.25 ? 'conifer' : 'broad' });
+    YT.sort((a, b) => (a.x * a.x + a.z * a.z) - (b.x * b.x + b.z * b.z));
+    if (YT.length) Kit.trees(scene, YT.slice(0, ctx.phone ? 800 : 2500));
 
-    // ---- 車（車線ごと。大通りと通りは信号で止まる。生活道路はたまに） ----
-    const lanes = [], period = 40;
-    const green = (t, ph) => ((t + ph) % period) < period / 2 - 3;   // 南北と東西で交互に青（黄と全赤の 3 秒）
-    for (const [list, other, along] of [[RX, RZ, true], [RZ, RX, false]]) for (const r of list) {
-      if (Math.abs(r.c) > CORE + 100) continue;
-      if (r.w < 9 && rnd() < 0.5) continue;
-      const offs = r.w >= 16 ? [-r.w / 4 - 1.6, -r.w / 4 + 1.6, r.w / 4 - 1.6, r.w / 4 + 1.6] : r.w >= 9 ? [-r.w / 4, r.w / 4] : [rnd() < 0.5 ? -1.4 : 1.4];
-      for (const o of offs) {
-        const dir = o < 0 ? -1 : 1, E = OUT + 100;
-        const path = along ? [[r.c + o, -E * dir], [r.c + o, E * dir]] : [[-E * dir, r.c + o], [E * dir, r.c + o]];
-        const stops = [];
-        if (r.w >= 9) for (const q of other) if (q.w >= 9 && Math.abs(q.c) < CORE + 100) {
-          const at = dir > 0 ? q.c - q.w / 2 - walk(q.w) - 4 : q.c + q.w / 2 + walk(q.w) + 4;
-          stops.push({ s: at * dir + E, red: t => !green(t, along ? 0 : period / 2) });
-        }
-        const ln = Traffic.lane(path, { v0: r.w >= 16 ? 14 : r.w >= 9 ? 10 : 6, stops });
-        const n = Math.round(2 * E / (r.w >= 16 ? 30 : r.w >= 9 ? 50 : 160));
-        for (let i = 0; i < n; i++) { const kind = rnd() < 0.04 ? 'bus' : rnd() < 0.08 ? 'truck' : rnd() < 0.18 ? 'van' : rnd() < 0.35 ? 'kei' : 'sedan';
-          Traffic.add(ln, { s: rnd() * 2 * E, len: Kit.carLen(kind), kind, v0: ln.v0 * (0.85 + rnd() * 0.3) }); }
-        lanes.push(ln);
-      }
-    }
-    // 駐車場: 2列（向かい合わせ）。白と銀の車が多い
+    // ---- 車と人（js/real/roads.js）----
+    const CARCLS = ['trunk', 'primary', 'secondary', 'tertiary', 'minor'];
+    const GC = RealRoads.graph(T.lines, L => CARCLS.includes(L.cls), 1500);
+    const GP = RealRoads.graph(T.lines.map(L => Object.assign({}, L, { oneway: 0 })), L => CARCLS.includes(L.cls) || L.cls === 'path', 1100);
+    const GAPS = { trunk: 45, primary: 45, secondary: 70, tertiary: 110, minor: 320 };   // 車の間隔（1車線あたり m）
+    const lanesC = e => e.w >= 12 ? [1.75, 5.25] : [e.w / 4];   // 左側通行: 進む向きの左へ。広い道は 2 車線
+    const carsN = Math.round(GC.edges.reduce((a, e) => a + e.len * lanesC(e).length / (GAPS[e.cls] || 1e9), 0) * (ctx.phone ? 0.5 : 1));
+    const MC = RealRoads.movers(GC, { n: carsN, lanes: lanesC, v: e => ({ trunk: 13, primary: 12, secondary: 10, tertiary: 8, minor: 5 })[e.cls] || 5, weight: e => lanesC(e).length / (GAPS[e.cls] || 1e9), len: 4.6, gap: 2.5, follow: true, turnR: 7, yawRate: 1.5, vScale: r => 0.7 + 0.6 * r() }, rnd);
+    const kinds = MC.list.map(() => { const r = rnd(); return r < 0.04 ? 'bus' : r < 0.1 ? 'truck' : r < 0.22 ? 'van' : r < 0.42 ? 'kei' : 'sedan'; });
+    const C = MC.list.length ? Kit.cars(scene, kinds.map(kind => ({ kind }))) : null;
+    // 人: 通り（三次以上）は両側の歩道、生活道路は道のはし、歩行者の道はまん中あたり
+    const isWalk = e => e.cls === 'path';
+    const lanesP = e => isWalk(e) ? [-2, 0, 2] : /primary|secondary|tertiary|trunk/.test(e.cls) ? [e.w / 2 + 1.6, -(e.w / 2 + 1.6)] : [e.w / 2 - 0.6, -(e.w / 2 - 0.6)];
+    const MP = RealRoads.movers(GP, { n: ctx.phone ? 1000 : 2500, lanes: lanesP, v: () => 1.25, weight: e => { const [x, z] = GP.P[e.a]; return Math.exp(-Math.hypot(x, z) / 350) * (isWalk(e) ? 4 : e.cls === 'minor' ? 0.6 : 1); }, len: 0.5, gap: 0.3, follow: false, turnR: 2.5, yawRate: 3,
+      // 歩く速さ: 平均 1.34 m/s・ばらつき 0.2 m/s の正規分布（Bohannon 1997 の大人の自然な速さ）。1 割はゆっくり（0.7〜0.9 m/s）
+      vScale: r => { if (r() < 0.1) return (0.7 + 0.2 * r()) / 1.25; const g = Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(6.2832 * r()); return Math.min(1.9, Math.max(0.9, 1.34 + 0.2 * g)) / 1.25; } }, rnd);
+    const ppl = MP.list.length ? Kit.people(scene, MP.list.map(() => ({ x: 0, z: 0 }))) : null;
+    // 駐車場の車（止まっている）
     const parked = [];
-    for (const [x0, z0, x1, z1] of lots) for (const [zz, ry] of [[z0 + 3, 0], [z1 - 3, Math.PI]]) if (z1 - z0 > 11 || ry === 0)
-      for (let x = x0 + 1.6; x < x1 - 1.3; x += 2.5) if (rnd() < 0.75) parked.push({ x, z: zz, ry, kind: rnd() < 0.35 ? 'kei' : rnd() < 0.15 ? 'van' : 'sedan' });
-    for (const [x0, z0, x1, z1] of T0.yards) if (rnd() < 0.45) parked.push({ x: x0 + 1.5 + rnd() * Math.max(0, x1 - x0 - 3), z: z0 + 2.6, ry: rnd() < 0.5 ? 0 : Math.PI, kind: rnd() < 0.5 ? 'kei' : 'sedan' });
-    const all = lanes.flatMap(l => l.items).concat(parked);
-    const C = Kit.cars(scene, all);
-    const nMove = lanes.reduce((a, l) => a + l.items.length, 0);
-    parked.forEach((p, i) => C.set(nMove + i, p.x, p.z, p.ry));
+    for (const p of T.lots) { const [[x0, z0], , [x1, z1]] = p.outer; if (Math.hypot(x0, z0) > 1500) continue;
+      for (const [zz, ry] of [[z0 + 3, 0], [z1 - 3, Math.PI]]) if (z1 - z0 > 11 || ry === 0) for (let x = x0 + 1.25; x < x1 - 1.25; x += 2.5) if (rnd() < 0.7) parked.push({ x, z: zz, ry, kind: rnd() < 0.35 ? 'kei' : rnd() < 0.15 ? 'van' : 'sedan' }); }
+    if (parked.length) { const PC = Kit.cars(scene, parked); parked.forEach((p, i) => PC.set(i, p.x, p.z, p.ry)); PC.done(); }
 
-    // ---- 人（大通りと通りの歩道を行き来する・公園を歩く） ----
-    const walkers = [];
-    for (const [list, along] of [[RX, true], [RZ, false]]) for (const r of list) if (r.w >= 9 && Math.abs(r.c) < CORE) for (let n = 0; n < (r.w >= 16 ? 90 : 30); n++) {
-      const side = rnd() < 0.5 ? -1 : 1, off = r.c + side * (r.w / 2 + 0.5 + rnd() * (walk(r.w) - 1.0));
-      walkers.push({ along, off, s: (rnd() * 2 - 1) * CORE, v: (rnd() < 0.5 ? -1 : 1) * (1.1 + rnd() * 0.5), ph: rnd() * 6 });
-    }
-    for (const [x0, z0, x1, z1] of parks) for (let n = 0; n < 12; n++) walkers.push({ along: rnd() < 0.5, park: [x0, z0, x1, z1], off: 0, s: 0, v: 0.6 + rnd() * 0.6, ph: rnd() * 6, x: x0 + 4 + rnd() * (x1 - x0 - 8), z: z0 + 4 + rnd() * (z1 - z0 - 8) });
-    const ppl = Kit.people(scene, walkers.map(() => ({ x: 0, z: 0 })));
-
-    let t = 0;
     function place() {
-      let k = 0;
-      for (const ln of lanes) for (const c of ln.items) { const [x, z, ry, out] = Traffic.at(ln, c.s); C.set(k++, x, z, ry, out ? -80 : 0); }
-      C.done();
-      walkers.forEach((w, i) => {
-        if (w.park) { ppl.set(i, w.x, w.z, w.ry || 0, t * Kit.gait(w.v)[0] * w.v + w.ph, 0, Kit.gait(w.v)[1]); return; }
-        const x = w.along ? w.off : w.s, z = w.along ? w.s : w.off;
-        ppl.set(i, x, z, w.along ? (w.v > 0 ? 0 : Math.PI) : (w.v > 0 ? Math.PI / 2 : -Math.PI / 2), t * Kit.gait(w.v)[0] * Math.abs(w.v) + w.ph, 0, Kit.gait(w.v)[1]);
-      });
-      ppl.done();
+      if (C) { MC.list.forEach((it, i) => { const [x, z, ry] = MC.at(it); C.set(i, x, z, ry, 0); }); C.done(); }
+      if (ppl) { MP.list.forEach((it, i) => { const [x, z, ry] = MP.at(it); ppl.set(i, x, z, ry, it.ph, 0, it.amp || 0.8); }); ppl.done(); }
     }
     place();
+    let t = 0;
     return {
-      step(dt) {
-        t += dt; Kit.time.value = t;
-        for (const ln of lanes) Traffic.step(ln, dt, t);
-        for (const w of walkers) {
-          if (w.park) { w.ry = (w.ry || 0) + (Math.sin(t * 0.3 + w.ph) * 0.02); w.x += Math.sin(w.ry) * w.v * dt; w.z += Math.cos(w.ry) * w.v * dt;
-            const [x0, z0, x1, z1] = w.park; if (w.x < x0 + 3 || w.x > x1 - 3 || w.z < z0 + 3 || w.z > z1 - 3) { w.ry += Math.PI; w.x = Math.min(x1 - 3, Math.max(x0 + 3, w.x)); w.z = Math.min(z1 - 3, Math.max(z0 + 3, w.z)); } continue; }
-          w.s += w.v * dt; if (w.s > CORE) w.s -= 2 * CORE; if (w.s < -CORE) w.s += 2 * CORE;
-        }
-        place();
-      },
+      step(dt) { t += dt; Kit.time.value = t; MC.step(dt); MP.step(dt); place(); return true; },
+      get movers() { return { MC, MP }; },   // 確かめ用
+      get counts() { return { cars: MC.list.length, people: MP.list.length, buildings: T.nBuildings, trees: ST.trees }; },
     };
   },
 });

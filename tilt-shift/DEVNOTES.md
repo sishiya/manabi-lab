@@ -1,7 +1,7 @@
 # ジオラマに見えるわけ 開発メモ
 
 ## 別セッションで続けるとき（まずここ）
-- いまの状態: 段階G（2026-11-23）: **池袋（本物の町）**を足して最初の場面に。建物は PLATEAU（航空写真の質感つき LOD2）、地面は地理院の空中写真と 5 m の標高を、開いたときに配信元から読む（このサイトには置かない）。手本の写真（サンシャイン60 から池袋駅）と同じ位置から見る。その前に v005-full3d ＋町の作り直し（段階F）。町は本物の写真（名古屋・池袋、手元の look/ref だけ）を手本に作り直し、ぼかしの最初の設定は撮りくらべで決めた値（ぼけ 2・帯 10 %・位置 0.45・色 ×1.6、町は 450 m・42°）。完全 3D の場面6つ（町・駅・港・競技場・海・田んぼ）。写真と動画の 3D の場面、「見える／見えない」の記録は外した（ユーザーの指示）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。英語なし。
+- いまの状態: 段階H（2026-11-24）: 最初の場面は **駅前の町**（`city`。式で作る。外から何も読まない＝開いてすぐ）。池袋（PLATEAU・地理院・OSM をその場で読む）はユーザーの指示でやめ、池袋で作って直した部品（`js/real/` の建物の質感・道の 3D と白線・車と人の動き・木）を、式で作る町（`js/real/gen.js`）に当てた。ぼかしの最初の値は段階F（ぼけ 2・帯 10 %・位置 0.45・色 ×1.6）。
 - 次にやること（案）: ユーザーの順番は「町 → ほかの場面」。残り: 競技場（観客・選手がいっせいに向きを変える・絵がチープ。ユーザーの指摘）、木（近くで見るとかたまり）、遠くの窓の縞、ほかの場面にも町の手本の写真を探して同じ手順で。批判役の前の残り（駅前の小物・海の流木や足あと・競技場の屋根の骨組み）。スマホ実機での重さ（田んぼ・町が重い）。場面を足すなら遊園地（観覧車）・高速道路のジャンクション・スキー場。
 - 読む順: PLAN.md の「段階E」→ このファイルの「ファイル構成」→ 関係するファイルだけ。
 - 動かし方: サーバー apps〜apps-6（.claude/launch.json）で http://localhost:8765/tilt-shift/ 。デバッグ用の窓口 `window.__tish`（`set({stage:'port', mode:1, pitch:20})` で設定して計算の結果を返す・`fit`・`P`・`stage`・`simRun(秒)`）、エラーは `window.__tishErr`。
@@ -17,7 +17,7 @@
 | js/town.js | 家並み（区画を細長い敷地に分けて建物を置く。敷地いっぱい・区画の端でない辺は窓なし・段々・塔）と細部の本当の形（ベランダの床と手すり3種・隔て板・ふとん・階段室・屋上の室外機の列・水槽・塔屋・フェンス・アンテナ・看板）、地面の絵（道の色むらとつぎはぎ・中央線・横断歩道・公園・駐車場・庭） | `Town.create()` → `split`・`building(x0,z0,x1,z1,k,区画)`・`kindOf`・`finish`・`D`、`Town.paint(o)`・`farHouses(…, {city})`・`detailMats` |
 | js/traffic.js | 道すじ（折れ線）の上を前との間をあけて進む物。赤信号・駅で止まる | `Traffic.lane`・`add`・`step`・`at` |
 | js/world.js | 場面の入れ物（空の HDRI・太陽・かすみ・作りなおし）。かすみは距離の1乗の指数（fog_fragment を差しかえ）、色は空の写真の地平線の平均 | `STAGES`・`World.load(id, renderer, opt)` |
-| js/stages/*.js | 場面: ikebukuro（池袋・本物の町。最初）・city（町なかの交差点）・rail（線路と駅）・port（コンテナの港）・stadium（サッカー場）・beach（夏の海水浴場）・village（田んぼの村） | `STAGES.push({ id, view, sun, build })` |
+| js/stages/*.js | 場面: city（駅前の町。最初）・rail（線路と駅）・port（コンテナの港）・stadium（サッカー場）・beach（夏の海水浴場）・village（田んぼの村） | `STAGES.push({ id, view, sun, build })` |
 | js/controls.js | 絵をさわってカメラ（1本指で回す・つまむ／ホイールで寄る・2本指／右ドラッグでずらす） | `Controls.init` |
 | js/blur.js | 後処理（SSAO → ぼけと色 → FXAA）。CPU 用に同じ式 | `Blur.create`・`render(scene, camera, P)`・`cocBand`・`cocDepth` |
 | js/measure.js | 距離の格子 64×40 の読みもどしと、Held の式の当てはめ | `Measure.readDepth`・`focusDist`・`fit`・`zmax` |
@@ -27,13 +27,12 @@
 | assets/thumb/*.jpg | 場面ボタンの見本（288×192。shot.mjs で撮って切り取り） | |
 | tools/shot.mjs | 手元だけ: 絵を撮る。`--gpu` で GPU（速い）。設定の `run` で時間を進める | `node tilt-shift/tools/shot.mjs <出力> --gpu a='{"stage":"rail","mode":0,"run":20}'` |
 | tools/eval.mjs | 手元だけ: ページで JS の式を評価する（デバッグ） | |
-| js/real/tiles.js・ground.js | 本物の町: PLATEAU の 3D Tiles を読む（見かけの粗さで細かく・ECEF → 東上南）・地理院の空中写真と標高の地面 | `RealTiles.create(scene, url, o)` → `update(camera, H, fov)`・`RealGround.photo`・`dem` |
-| js/real/bldgmat.js・streets.js | 本物の町を 3D で描く: PLATEAU の建物の属性 → 用途ごとの質感（`RealBldg.kind`・`material`）、OSM の道・面 → 道の帯と白線・歩道・線路・芝・水・木（`RealStreets.build`） | |
-| js/real/roads.js・mvt.js | 本物の町の道（OpenFreeMap のベクトルタイル）の網と、その上を動く車・人（`RealRoads.load`・`graph`・`movers`）。mvt.js は god-view の写し | |
-| js/stages/ikebukuro.js | 場面: 池袋（本物の町）。5 つの区の tileset・地面・質感のない建物の材質・車と人・影の板 | `view(camera, H)`（main の render から） |
+| js/real/bldgmat.js・streets.js | 建物の用途ごとの質感（`RealBldg.material`。頂点の aBld = 種類・1階の高さ・乱数・足もと）、道の線 → 道の帯と白線・歩道・線路・芝・水・木（`RealStreets.build`） | |
+| js/real/gen.js | 駅前の町を式で作る: 不規則な格子の道（OSM と同じ形の線 { cls, oneway, pts }）・線路と駅・広場・公園・学校・駐車場、区画を敷地に分けた建物の形（箱・切妻・パラペット・塔屋、aBld） | `TownGen.make({ ext })` → `{ lines, geo, yards, plazas, lots, railBed }` |
+| js/real/roads.js | 道の網と、その上を動く車・人（曲がり方・交差点の順番・前方の見張り・歩幅） | `RealRoads.graph`・`movers` |
 | look/ref/ | 手元だけ（Git に入れない）: 町の手本の写真（Wikimedia Commons。名古屋・池袋・六本木） | |
 
-読み込み順: three.min.js（../lib r128）→ RGBELoader → kit → traffic → town → world → stages/* → blur → measure → controls → ui → main。power.js は head。
+読み込み順: three.min.js（../lib r128）→ RGBELoader → kit → traffic → town → world → real/bldgmat → real/roads → real/streets → real/gen → stages/* → blur → measure → controls → ui → main。power.js は head。
 
 ## しくみ
 - ぼけ・計算は以前と同じ（帯: 線からの距離で RAMP=0.35 かけて R まで。奥行き: r = kf·|1/z0 − 1/z|。Held の式 b = A·|1/z0 − 1/z| を 64×40 の点に当てはめて s）。距離の格子はカメラが止まって 150 ms たってから読む（動かしているあいだは前の結果）。遠い点（max(2500, 近さ×3.5) m より先）は使わない。
@@ -71,6 +70,7 @@
 6. 裏にして、もどすと続きから（音・Worker・タイマーなし）。
 
 ## 状態
+- 2026-11-24 段階H 開いてすぐ（ユーザー「実際の地形でなくなってもいいので、開始時の読み込みをなくして」→ 選んだのは「式で作る町」）。池袋の場面と js/real/tiles.js・ground.js・mvt.js、lib の GLTFLoader・DRACOLoader、smoke の外への通信の許可を外した。js/real/gen.js: 大通り・通り（決まった位置）＋間隔 45〜80 m の生活道路（12 % の区間は切れて行き止まりや大きな区画）、東西の線路4本（100 m ごとに点。両端だけだと町の範囲の外として捨てられた）と砂利・架線、北に駅ビル、南に広場、区画を敷地に分けて駅からの距離で種類と高さ、家は切妻。約 9 万棟・車 約 3,300 台・人 2,500 人。
 - 2026-11-23 段階G 池袋（本物の町）（ユーザー「あらゆる手段をつかって写真とみまごう3D空間を」）。手続きで作る町には限りがあるので、本物のデータへ。神の視点マップで確かめずみの PLATEAU（CORS ○・商用可・出典の表示）と地理院タイルを使う。
   - `js/real/tiles.js`: tileset.json の木をたどり、見かけの粗さ（geometricError を画素に直す。パソコン 24・スマホ 40 画素）で細かくする。子が描けるまで親を見せる。同じ画像の部品は1つにまとめ、画面の外は描かない。b3dm → glb を GLTFLoader（r128）＋DRACOLoader で。座標は Y 上 → Z 上、CESIUM_RTC、ECEF → 東・上・南。高さは楕円体高 − ジオイド高（区ごと）− 原点の標高。原点から 2.6 km まで。読みためは 320 個（スマホ 120）まで、長く見ていない物から捨てる。
   - `js/real/ground.js`: シームレス空中写真（近く 3.2 km は z18 を 4096 画素、外 12 km は z14 を 2048 画素）と dem5a_png（5 m）の地面。

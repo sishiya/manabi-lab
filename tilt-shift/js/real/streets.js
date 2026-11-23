@@ -89,7 +89,7 @@ const RealStreets = (() => {
       vec3 c = vec3(0.32, 0.31, 0.29) * (0.88 + 0.2 * kH2(floor(q))) * (1.0 - 0.15 * min(1.0, j));
       c *= 0.85 + 0.25 * kF(vec3(vWP.x, 0.0, vWP.z) * 0.1);
       float tact = aaL(abs(abs(u) - (w * 0.5 - 1.6)), 0.15);
-      c = mix(c, vec3(0.55, 0.42, 0.08), tact * 0.85);
+      c = mix(c, vec3(0.4, 0.32, 0.1), tact * 0.75);
       diffuseColor.rgb = c;`, AA_PRE);
     wrap(m, 'attribute vec4 aRd; varying vec4 vRd;', 'vRd = aRd;', 'varying vec4 vRd;');
     return m;
