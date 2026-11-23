@@ -50,7 +50,7 @@ const UI = {
     const nF = s.foods.length, full = nF >= Model.MAX_FOODS;
     $('hint').textContent = S.mode === 'food'
       ? (S.ui.sel >= 0 ? '選んだエサ → 行き先を押すと動く／「エサをとる」で取る'
-        : (full ? `エサは${Model.MAX_FOODS}こまで。` : 'あいた所を押す → エサを足す。') + 'エサはドラッグで動かす' + (S.mapKind === 'japan' ? '。地図は2本指・ホイール・ドラッグで動かす' : ''))
+        : (full ? `エサは${Model.MAX_FOODS}こまで。` : 'あいた所を押す → エサを足す。') + 'エサはドラッグで動かす' + (S.mapKind !== 'maze' ? '。地図は2本指・ホイール・ドラッグで動かす' : ''))
       : 'マスのさかいめを押す → 壁ができる・消える';
     $('bDel').disabled = !(S.mode === 'food' && S.ui.sel >= 0 && nF > 1);
   },
@@ -79,14 +79,14 @@ const UI = {
   // 地図を切りかえたとき: 迷路だけの操作（壁・新しい迷路）は日本の道路ではかくす。絵の縦横の比を地図に合わせる
   setMap(kind) {
     S.mapKind = kind;
-    for (const [id, k] of [['mapMaze', 'maze'], ['mapJapan', 'japan']]) { $(id).classList.toggle('on', kind === k); $(id).setAttribute('aria-pressed', kind === k); }
-    $('mWall').hidden = kind !== 'maze'; $('bNew').hidden = kind !== 'maze'; $('zoom').hidden = kind !== 'japan';
+    for (const [id, k] of [['mapMaze', 'maze'], ['mapJapan', 'japan'], ['mapLand', 'land']]) { $(id).classList.toggle('on', kind === k); $(id).setAttribute('aria-pressed', kind === k); }
+    $('mWall').hidden = kind !== 'maze'; $('bNew').hidden = kind !== 'maze'; $('zoom').hidden = kind === 'maze'; $('lRoads').hidden = kind !== 'land';
     if (kind !== 'maze') S.mode = 'food';
     const b = S.world.g.bounds;
     $('view').style.aspectRatio = `${(b.x1 - b.x0).toFixed(1)} / ${(b.y1 - b.y0).toFixed(1)}`;
     UI._last = '';
   },
-  loading(on) { $('phase').textContent = on ? '地図を読みこんでいます…' : ''; },
+  loading(on, msg) { $('phase').textContent = on ? (msg || '地図を読みこんでいます…') : ''; },
 
   toggleWall(me) {
     const s = S.s, gr = s.g, m = gr.maze;
@@ -126,7 +126,9 @@ const UI = {
     $('bRestart').onclick = () => restart();
     $('bNew').onclick = () => newMaze(S.seed + 1000 + Math.floor(Math.random() * 100000));
     $('mapMaze').onclick = () => { if (S.mapKind !== 'maze') newMaze(S.seed); };
-    $('mapJapan').onclick = () => { if (S.mapKind !== 'japan') newJapan(); };
+    $('mapJapan').onclick = () => { if (S.mapKind !== 'japan') newJapan('japan'); };
+    $('mapLand').onclick = () => { if (S.mapKind !== 'land') newJapan('land'); };
+    $('cRoads').onchange = e => { S.ui.showRoads = e.target.checked; draw(); };
     $('cShort').onchange = e => { S.ui.showShortest = e.target.checked; draw(); };
     $('cChem').onchange = e => { S.ui.showChem = e.target.checked; draw(); };
 

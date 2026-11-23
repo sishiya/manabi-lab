@@ -25,14 +25,23 @@ function newMaze(seed) {
   const gr = Graph.fromMazeFine(m, CELL_MM, 3, seed);
   setWorld({ kind: 'maze', g: gr, foods0: [gr.cellCenter(0), gr.cellCenter(W * H - 1)], start: gr.cellCenter(Math.floor(H / 2) * W + Math.floor(W / 2)) });
 }
-// 日本の道路（Natural Earth。tools/build-japan.mjs で作った data/japan.json）。エサは東京と大阪、かけらは名古屋
-let japanData = null;
-async function newJapan() {
+// 日本の地図（Natural Earth。tools/build-japan.mjs で作った data/japan.json）
+//  kind 'japan' … 日本の道路: 道路の上だけを通れる。エサは東京と大阪、かけらは名古屋
+//  kind 'land'  … 日本の陸: 道の情報なしで、陸の形の細かい網の上を自由に伸びる（Tero ほか 2010 の実験のように、かけらは東京、エサは都市）
+let japanData = null, landGraph = null;
+const LAND_FOODS = ['東京', '仙台', '名古屋', '大阪', '広島', '福岡', '鹿児島'];   // 札幌は津軽海峡でつながらないので置かない
+async function newJapan(kind = 'japan') {
   if (!japanData) {
     UI.loading(true);
     try { japanData = await (await fetch('data/japan.json?v=2')).json(); }
     catch (e) { UI.loading(false); window.__slmaErr.push('地図を読めませんでした: ' + e.message); return; }
     UI.loading(false);
+  }
+  if (kind === 'land') {
+    if (!landGraph) { UI.loading(true, '陸の網を作っています…'); await new Promise(r => setTimeout(r, 30)); landGraph = Graph.fromLand(japanData, 3, 7); UI.loading(false); }
+    const c = landGraph.cities;
+    setWorld({ kind: 'land', g: landGraph, foods0: LAND_FOODS.map(k => c[k]), start: c['東京'] });
+    return;
   }
   const gr = Graph.fromData(japanData), c = gr.cities;
   setWorld({ kind: 'japan', g: gr, foods0: [c['東京'], c['大阪']], start: c['名古屋'] });
@@ -40,7 +49,7 @@ async function newJapan() {
 function setWorld(w) {
   S.world = w;
   S.s = Model.create(w.g, w.foods0, S.seed);   // はじめのエサは2つ
-  S.view = w.kind === 'japan' ? UI.viewAll(w.g) : null;
+  S.view = w.kind !== 'maze' ? UI.viewAll(w.g) : null;
   S.ui.ph = new Float64Array(w.g.nE);
   Draw._paths = null;
   UI.setMap(w.kind);
@@ -108,6 +117,6 @@ resize();
 window.__slma = {
   S, Model, Maze,
   simRun(sec, dt = 1 / 30) { for (let t = 0; t < sec; t += dt) step(dt); draw(); return { hours: S.s.t, len: Model.tubeLength(S.s), settled: Model.settled(S.s) }; },
-  newMaze, restart,
+  newMaze, restart, newJapan,
   addFood(c) { UI.addFood(c); },
 };

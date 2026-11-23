@@ -96,6 +96,73 @@ const Graph = {
       land: d.land, cities: d.cities, kmPerMM: d.kmPerMM, bounds: d.bounds,
     };
   },
+  // 陸の形の細かい網（道の情報なし。Tero ほか 2010 の実験: 陸の形の寒天の上を、粘菌は自由に伸びた）
+  //  data/japan.json の陸の形の中に、間隔 h mm の三角の格子（どの向きにも同じように伸びられる）。点は少しずらす（格子の並びが見えないように）
+  //  海峡: 陸から BUF mm（1 mm = 5 km）より近い海は陸とみなす（幅 約10 km より狭い海はわたれる）→ 関門・明石・鳴門のようなせまい海峡はつながり、津軽海峡（約 20 km）はつながらない
+  //   （陸の形は簡単にしてあるので、せまい海峡は本物より広い。そのため 5 km とした）
+  //  都市は、いちばん近い網の点に
+  fromLand(d, h = 3, seed = 1) {
+    const BUF = 1.0, rng = makeRng(seed ^ 0x51ed), polys = d.land.map(p => {
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const [x, y] of p) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+      return { p, x0: x0 - BUF, y0: y0 - BUF, x1: x1 + BUF, y1: y1 + BUF };
+    });
+    const onLand = (x, y) => {
+      for (const P of polys) {
+        if (x < P.x0 || x > P.x1 || y < P.y0 || y > P.y1) continue;
+        const p = P.p; let inside = false;
+        for (let i = 0, j = p.length - 1; i < p.length; j = i++) {
+          const [xi, yi] = p[i], [xj, yj] = p[j];
+          if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+        }
+        if (inside) return true;
+        for (let i = 0, j = p.length - 1; i < p.length; j = i++) {   // 陸の外: 岸から BUF より近いか
+          const [xi, yi] = p[i], [xj, yj] = p[j];
+          if (Math.abs(x - xi) > BUF + Math.abs(xj - xi) || Math.abs(y - yi) > BUF + Math.abs(yj - yi)) continue;
+          const dx = xj - xi, dy = yj - yi, t = Math.max(0, Math.min(1, ((x - xi) * dx + (y - yi) * dy) / (dx * dx + dy * dy || 1)));
+          if (Math.hypot(x - xi - t * dx, y - yi - t * dy) < BUF) return true;
+        }
+      }
+      return false;
+    };
+    const b = d.bounds, rh = h * Math.sqrt(3) / 2, R = Math.ceil((b.y1 - b.y0) / rh) + 1, C = Math.ceil((b.x1 - b.x0) / h) + 2;
+    const id = new Int32Array(R * C).fill(-1), xs = [], ys = [];
+    for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
+      const x0 = b.x0 + c * h + (r & 1 ? h / 2 : 0), y0 = b.y0 + r * rh;
+      if (!onLand(x0, y0)) continue;
+      id[r * C + c] = xs.length;
+      xs.push(x0 + (rng() - 0.5) * 0.4 * h); ys.push(y0 + (rng() - 0.5) * 0.4 * h);
+    }
+    const ea = [], eb = [], len = [];
+    const link = (i, j) => {
+      if (i < 0 || j < 0) return;
+      for (const t of [0.25, 0.5, 0.75]) if (!onLand(xs[i] + (xs[j] - xs[i]) * t, ys[i] + (ys[j] - ys[i]) * t)) return;   // 海をまたぐ線は作らない
+      ea.push(i); eb.push(j); len.push(Math.hypot(xs[j] - xs[i], ys[j] - ys[i]));
+    };
+    for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
+      const i = id[r * C + c]; if (i < 0) continue;
+      if (c + 1 < C) link(i, id[r * C + c + 1]);
+      if (r + 1 < R) { const c0 = r & 1 ? c : c - 1; if (c0 >= 0) link(i, id[(r + 1) * C + c0]); if (c0 + 1 < C) link(i, id[(r + 1) * C + c0 + 1]); }
+    }
+    const N = xs.length, nE = ea.length, adj = Array.from({ length: N }, () => []);
+    for (let e = 0; e < nE; e++) { adj[ea[e]].push(e); adj[eb[e]].push(e); }
+    const g = {
+      N, nE, x: Float64Array.from(xs), y: Float64Array.from(ys), ea: Int32Array.from(ea), eb: Int32Array.from(eb), len: Float64Array.from(len),
+      open: new Uint8Array(nE).fill(1), adj, pts: null,
+      wobble: false, maze: null, unit: h, widthMM: h, tubeMM: 2.4, symbolMM: 14, scale: d.kmPerMM * 1000,
+      land: d.land, kmPerMM: d.kmPerMM, bounds: d.bounds, showNet: false,
+      // くらべる目印の道路（本物の道路の線。粘菌は知らない）
+      roads: d.ea.map((a, e) => [[d.x[a], d.y[a]], ...(d.pts[e] || []), [d.x[d.eb[e]], d.y[d.eb[e]]]]),
+    };
+    // 都市 → いちばん近い、ほかの点とつながっている網の点
+    g.cities = {};
+    for (const [k, c] of Object.entries(d.cities)) {
+      let best = -1, bd = Infinity;
+      for (let i = 0; i < N; i++) { if (!adj[i].length) continue; const dd = (xs[i] - d.x[c]) ** 2 + (ys[i] - d.y[c]) ** 2; if (dd < bd) { bd = dd; best = i; } }
+      g.cities[k] = best;
+    }
+    return g;
+  },
   other(g, e, i) { return g.ea[e] === i ? g.eb[e] : g.ea[e]; },
 
   // a から b へのいちばん短い道（線の長さで。ダイクストラ法）。{ edges: 線の番号の列, len: 長さ mm }。届かなければ null

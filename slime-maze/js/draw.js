@@ -74,8 +74,10 @@ const Draw = {
     if (g.land) {   // 地図: 陸（寒天の色）と、粘菌が通れる道（うすい線）
       g2.fillStyle = C.floor; g2.strokeStyle = 'rgba(120,145,170,0.35)'; g2.lineWidth = 1;
       for (const poly of g.land) { g2.beginPath(); poly.forEach(([x, y], i) => i ? g2.lineTo(L.X(x), L.Y(y)) : g2.moveTo(L.X(x), L.Y(y))); g2.closePath(); g2.fill(); g2.stroke(); }
-      g2.strokeStyle = 'rgba(150,175,200,0.28)'; g2.lineWidth = Math.max(1, T * 0.5); g2.lineCap = 'round'; g2.lineJoin = 'round';
-      g2.beginPath(); for (let e = 0; e < g.nE; e++) if (g.open[e]) Draw.trace(g2, Draw.path(L, g, e), 0, 1); g2.stroke();
+      if (g.showNet !== false) {   // 日本の道路: 通れる道。日本の陸（寒天の上を自由に伸びる）では網を描かない
+        g2.strokeStyle = 'rgba(150,175,200,0.28)'; g2.lineWidth = Math.max(1, T * 0.5); g2.lineCap = 'round'; g2.lineJoin = 'round';
+        g2.beginPath(); for (let e = 0; e < g.nE; e++) if (g.open[e]) Draw.trace(g2, Draw.path(L, g, e), 0, 1); g2.stroke();
+      }
     } else { g2.fillStyle = C.floor; g2.fillRect(L.X(b.x0), L.Y(b.y0), (b.x1 - b.x0) * L.sc, (b.y1 - b.y0) * L.sc); }
 
     // エサから広がる物質（※ 目印。色の濃さは対数。粘菌が気づく濃さより上は少し濃く）
@@ -90,6 +92,20 @@ const Draw = {
         for (let i = 0; i < g.N; i++) sum[Math.floor(Math.floor(i / Wf) / k) * m.W + Math.floor((i % Wf) / k)] += s.c[i];
         const cw = g.cellMM * L.sc;
         for (let c = 0; c < m.W * m.H; c++) shade(L.X((c % m.W) * g.cellMM), L.Y(Math.floor(c / m.W) * g.cellMM), cw + 0.5, cw + 0.5, sum[c] / (k * k));
+      } else if (g.showNet === false) {   // 日本の陸: 網の点ごとに、まるく塗る（となりと重なって、なめらかな広がりに見える）
+        //  別の絵に描いてから、ぼかして重ねる（点ごとの丸がまだらに見えないように）
+        const r = g.unit * L.sc * 0.7, cvs = Draw._chemCv || (Draw._chemCv = document.createElement('canvas'));
+        if (cvs.width !== g2.canvas.width || cvs.height !== g2.canvas.height) { cvs.width = g2.canvas.width; cvs.height = g2.canvas.height; }
+        const o = cvs.getContext('2d'); o.setTransform(g2.getTransform()); o.clearRect(0, 0, w, h);
+        o.fillStyle = `rgb(${C.chem})`;
+        for (let i = 0; i < g.N; i++) {
+          const c = s.c[i]; if (c < 1e-3) continue;
+          const [x, y] = Draw.P(L, g, i); if (x < -r || y < -r || x > w + r || y > h + r) continue;
+          o.globalAlpha = 0.06 + 0.3 * Math.min(1, Math.log10(c / 1e-3) / 3);
+          o.beginPath(); o.arc(x, y, r, 0, 6.283); o.fill();
+        }
+        const dpr = g2.getTransform().a || 1; g2.save(); g2.setTransform(1, 0, 0, 1, 0, 0); g2.filter = `blur(${Math.max(1, r * 0.6 * dpr)}px)`;
+        g2.globalAlpha = 0.85; g2.drawImage(cvs, 0, 0); g2.restore();
       } else {   // 道路の地図: 物質は道に沿って広がるので、道の線を太めに塗る（線の両はしの濃さの平均）
         g2.lineCap = 'butt'; g2.lineWidth = Math.max(3, T * 2);
         for (let e = 0; e < g.nE; e++) {
@@ -99,6 +115,14 @@ const Draw = {
           g2.beginPath(); Draw.trace(g2, Draw.path(L, g, e), 0, 1); g2.stroke();
         }
       }
+    }
+
+    // くらべる目印: 本物の道路（日本の陸のとき。粘菌は道路を知らない。Tero ほか 2010 は鉄道の網とくらべた）
+    if (ui.showRoads && g.roads) {
+      g2.strokeStyle = 'rgba(127,211,255,0.55)'; g2.lineWidth = 1.2; g2.lineCap = 'round'; g2.lineJoin = 'round';
+      g2.beginPath();
+      for (const r of g.roads) r.forEach(([x, y], i) => i ? g2.lineTo(L.X(x), L.Y(y)) : g2.moveTo(L.X(x), L.Y(y)));
+      g2.stroke();
     }
 
     // 粘液の跡（一度粘菌がいた線。粘菌は跡をさける: Reid ほか 2012）。うすい白っぽいすじ

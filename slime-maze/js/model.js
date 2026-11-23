@@ -141,7 +141,8 @@ const Model = {
       if (s.reached[b] && Model.pull(s, e, b, a, s.fb[e] > 0)) { if (!nOut[b]) fronts++; nOut[b]++; sides++; }
     }
     const kAvg = fronts ? sides / fronts : 1;
-    const sp = i => mass * Math.min(Model.SHARE_MAX, s.share[i]) * kAvg / Math.max(1, nOut[i]);   // 流れこむ量に比べた速さ
+    //  1本の線の速さも、平均の SHARE_MAX 倍まで（三角の網では、伸びる先が1本だけの先端に流れが集まって、平均の何倍にもなったため）
+    const sp = i => mass * Math.min(Model.SHARE_MAX, Math.min(Model.SHARE_MAX, s.share[i]) * kAvg / Math.max(1, nOut[i]));   // 流れこむ量に比べた速さ
     for (let e = 0; e < g.nE; e++) {
       if (!g.open[e] || Model.full(s, e)) continue;
       const a = g.ea[e], b = g.eb[e], ra = s.reached[a], rb = s.reached[b];
@@ -149,9 +150,9 @@ const Model = {
       const ka = ra ? Model.pull(s, e, a, b, s.fa[e] > 0) * sp(a) : 0, kb = rb ? Model.pull(s, e, b, a, s.fb[e] > 0) * sp(b) : 0;
       if (!(ka > 0) && !(kb > 0)) continue;
       any = true;
-      const v = vmm / g.len[e] * s.vk[e];
-      s.fa[e] += v * ka;
-      s.fb[e] += v * kb;
+      const v = vmm / g.len[e];   // 流れこむ量・物質へ寄る・線ごとのばらつきを合わせても、平均の SHARE_MAX 倍（6 cm/時）まで
+      s.fa[e] += v * Math.min(Model.SHARE_MAX, ka * s.vk[e]);
+      s.fb[e] += v * Math.min(Model.SHARE_MAX, kb * s.vk[e]);
       if (s.fa[e] + s.fb[e] >= 1) {
         const k = s.fa[e] / (s.fa[e] + s.fb[e]); s.fa[e] = k; s.fb[e] = 1 - k;
         s.D[e] = 0.5 + 0.5 * s.rng();
