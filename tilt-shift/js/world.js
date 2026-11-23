@@ -44,7 +44,7 @@ const World = (() => {
     const def = STAGES.find(s => s.id === id) || STAGES[0];
     await waitSky;
     if (!env && sky) env = new THREE.PMREMGenerator(renderer).fromEquirectangular(sky).texture;
-    if (cur) { dispose(cur.scene); cur = null; }
+    if (cur) { cur.api.dispose && cur.api.dispose(); dispose(cur.scene); cur = null; }
     const scene = new THREE.Scene();
     scene.background = sky || new THREE.Color(0.6, 0.7, 0.85);
     scene.environment = env;
@@ -66,9 +66,9 @@ const World = (() => {
     scene.add(new THREE.HemisphereLight('#bcd3ee', '#6b6250', 0.16));   // 影の中も空と地面の照り返しで少し明るい
 
     Kit.setSeed(def.seed || 7);
-    const ctx = { renderer, phone: opt.phone, horizon: haze };
+    const ctx = { renderer, phone: opt.phone, horizon: haze, redraw: opt.redraw };
     const api = await def.build(scene, ctx) || {};
-    cur = { def, scene, step: api.step || (() => {}), sun };
+    cur = { def, scene, step: api.step || (() => {}), view: api.view, api, sun };
     return cur;
   }
   return { load, get cur() { return cur; }, get horizon() { return horizon; } };

@@ -28,6 +28,7 @@ const UI = (() => {
       for (const b of $(id).querySelectorAll('button')) { const on = +b.dataset.v === S[key]; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); }
     for (const b of $('scene').children) { const on = b.dataset.v === S.stage; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); }
     $('sceneNote').textContent = def.note;
+    $('credit').hidden = !def.credit; $('credit').textContent = def.credit ? '出典: ' + def.credit : '';
     document.body.classList.toggle('m-depth', S.mode === 2);
     document.body.classList.toggle('m-none', S.mode === 0);
     $('lPos').textContent = S.mode === 2 ? 'ピントの位置' : '帯の位置';

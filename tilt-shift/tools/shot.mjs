@@ -19,10 +19,15 @@ await page.goto(srv.origin + '/tilt-shift/');
 await page.waitForFunction(() => window.__tish && window.__tish.ready, null, { timeout: 180000 });
 for (const sp of specs.length ? specs : ['default={}']) {
   const i = sp.indexOf('='), name = sp.slice(0, i), st = JSON.parse(sp.slice(i + 1));
-  const run = st.run || 0; delete st.run;
+  const run = st.run || 0, wait = st.wait || 0; delete st.run; delete st.wait;
   await page.evaluate(st => window.__tish.set(Object.assign({ paused: true }, st)), st);
   if (st.stage) await page.waitForFunction(id => window.__tish.ready && window.__tish.stage && window.__tish.stage.def.id === id, st.stage, { timeout: 180000 });
   const f = await page.evaluate(([st, run]) => { window.__tish.set(st); if (run) window.__tish.simRun(run); return window.__tish.fit; }, [st, run]);
+  if (wait) {   // 本物の町: タイルを読み終えて、しばらく増えなくなるまで待つ（最大 wait 秒）
+    const t0 = Date.now(); let calm = 0;
+    while (Date.now() - t0 < wait * 1000 && calm < 6) { await page.waitForTimeout(500); const n = await page.evaluate(() => { window.__tish.set({}); return window.__tish.stage.api.loading || 0; }); calm = n ? 0 : calm + 1; }
+    console.log('  loaded in', ((Date.now() - t0) / 1000).toFixed(1), 's');
+  }
   await page.waitForTimeout(400);
   await page.locator('#frame').screenshot({ path: path.join(outDir, name + '.png') });
   console.log(name, f && f.s ? '1/' + Math.round(1 / f.s) : '-', f && f.corr != null ? f.corr.toFixed(2) : '-', JSON.stringify(await page.evaluate(() => window.__tishErr)));

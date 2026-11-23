@@ -48,6 +48,8 @@ if ($isPages) { $allowCommon += @('^sishiya\.github\.io$', '^www\.googletagmanag
 $allowApp = @{
   # 顔を読むモデル（MediaPipe, Apache-2.0）。カメラを開いたときだけ読む
   'tank-window' = @('^storage\.googleapis\.com$')
+  # 池袋（本物の町）: PLATEAU の建物と地理院の空中写真・標高（god-view と同じ配信元。tilt-shift/DEVNOTES の「本物の町」）
+  'tilt-shift' = @('^cyberjapandata\.gsi\.go\.jp$', '\.plateau\.reearth\.io$')
   # 地図・地形・写真・建物・データ源（god-view/DEVNOTES.md の「データ源」。キー不要のものだけ）
   'god-view' = @('\.gsi\.go\.jp$', '^gibs\.earthdata\.nasa\.gov$', '(^|\.)openstreetmap\.org$', '(^|\.)openfreemap\.org$',
     '^earthquake\.usgs\.gov$', '\.odpt\.org$', '^celestrak\.org$', '\.amazonaws\.com$', '\.plateau\.reearth\.io$')
@@ -59,6 +61,7 @@ $ignoreFail = @('/favicon\.ico$')
 $ignoreApp = @{
   # 地理院の標高タイルは、データのない所（海など）で 404 を返す（ふつうのこと）
   'god-view' = @('cyberjapandata\.gsi\.go\.jp/xyz/dem')
+  'tilt-shift' = @('cyberjapandata\.gsi\.go\.jp/xyz/dem')
 }
 
 function Short([string]$s, [int]$n = 160) { $s = ($s -replace '\s+', ' ').Trim(); if ($s.Length -gt $n) { $s.Substring(0, $n) + '…' } else { $s } }

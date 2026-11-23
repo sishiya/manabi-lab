@@ -3,7 +3,7 @@
 window.__tishErr = [];
 window.addEventListener('error', e => window.__tishErr.push(String(e.message)));
 
-const S = { stage: 'city', mode: 1, R: 2, pos: 0.45, w: 0.1, ang: 0, pitch: 42, yaw: 32, dist: 450, tx: 0, tz: 0, sat: 1.6, fps: 60, spd: 1, view: 25, exp: 0.62, fov: 40, guide: false, paused: false };   // fov: 撮るときの縦の画角（手本の写真と見くらべるとき用。画面では変えない）
+const S = { stage: 'ikebukuro', mode: 1, R: 2, pos: 0.45, w: 0.1, ang: 0, pitch: 42, yaw: 32, dist: 450, tx: 0, tz: 0, sat: 1.6, fps: 60, spd: 1, view: 25, exp: 0.62, fov: 40, guide: false, paused: false };   // fov: 撮るときの縦の画角（手本の写真と見くらべるとき用。画面では変えない）
 const FOV = 40;
 
 const cv = document.getElementById('cv'), frameEl = document.getElementById('frame');
@@ -21,7 +21,8 @@ const defOf = id => STAGES.find(s => s.id === id) || STAGES[0];
 function loadStage(id, keepView) {
   const def = defOf(id); loading = id; ready = false; UI.showLoading(def);
   if (!keepView) Object.assign(S, { pitch: def.view.pitch, yaw: def.view.yaw, dist: def.view.dist, tx: def.view.x, tz: def.view.z });
-  setTimeout(() => World.load(id, renderer, { phone, shadow: Math.min(phone ? 2048 : 4096, renderer.capabilities.maxTextureSize) }).then(st => {
+  setTimeout(() => World.load(id, renderer, { phone, shadow: Math.min(phone ? 2048 : 4096, renderer.capabilities.maxTextureSize),
+    redraw: () => { dirty = true; measureAt = performance.now() + 400; kick(); } }).then(st => {   // 本物の町: タイルが読めたら描き直し、距離の格子も測りなおす
     if (loading !== id) return;
     stage = st; loading = ''; ready = true; camKey = ''; simT = shownT = 0; UI.loaded();
     UI.syncControls(); onChange(); kick();
@@ -82,7 +83,12 @@ function advance(dt) {
   const per = S.fps >= 60 ? 0 : S.spd / S.fps;
   if (simT - shownT > per) { stage.step(Math.min(0.5, simT - shownT)); shownT = simT; dirty = true; }
 }
-function render() { if (stage && ready) { blur.render(stage.scene, camera, P); dirty = false; } }
+const creditEl = document.getElementById('credit');
+function render() {
+  if (!stage || !ready) return;
+  if (stage.view) { stage.view(camera, bh); const n = stage.api.loading || 0; creditEl.dataset.busy = n ? '建物を読みこみ中' : ''; }   // 本物の町: 見えるタイルを決める
+  blur.render(stage.scene, camera, P); dirty = false;
+}
 function loop(now) {
   const dt = last ? Math.max(0, Math.min(0.05, (now - last) / 1000)) : 0; last = now;   // 最初のコマは 0
   if (measureAt && now >= measureAt) { measureAt = 0; measure(); derive(); dirty = true; }
