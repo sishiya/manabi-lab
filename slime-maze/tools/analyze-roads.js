@@ -3,11 +3,12 @@
 //  くらべ: 陸の網のどこでも（道路がどれくらい密か）、エサをいちばん短くつなぐ網（最小全域木。まっすぐに近い）
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm');
-const ctx = { Math, Float64Array, Int32Array, Uint8Array, console, Set, Array, Object, Infinity, isFinite }; ctx.window = ctx; vm.createContext(ctx);
+const ctx = { Math, Float64Array, Float32Array, Int32Array, Uint8Array, console, Set, Array, Object, Infinity, isFinite, atob }; ctx.window = ctx; vm.createContext(ctx);
 for (const f of ['maze.js', 'cities.js', 'graph.js', 'model.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), ctx, { filename: f });
 const { Graph, Model } = ctx;
 const data = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'japan.json'), 'utf8'));
-const g = Graph.fromLand(data, 3, 7), c = g.cities;
+const elev = process.env.NO_MOUNTAIN ? null : JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'japan-elev.json'), 'utf8'));   // NO_MOUNTAIN=1 で山なし
+const g = Graph.fromLand(data, 3, 7, elev), c = g.cities;
 // 道路までの近さ: 0.5 mm の格子に、道路の線から 2 mm 以内の所をしるす
 const CELL = 0.25, NEAR = +(process.env.NEAR_MM || 1), b = g.bounds, GW = Math.ceil((b.x1 - b.x0) / CELL) + 1, GH = Math.ceil((b.y1 - b.y0) / CELL) + 1, near = new Uint8Array(GW * GH);
 for (const r of g.roads) for (let k = 1; k < r.length; k++) {

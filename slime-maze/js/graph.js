@@ -101,7 +101,7 @@ const Graph = {
   //  海峡: 陸から BUF mm（1 mm = 5 km）より近い海は陸とみなす（幅 約10 km より狭い海はわたれる）→ 関門・明石・鳴門のようなせまい海峡はつながり、津軽海峡（約 20 km）はつながらない
   //   （陸の形は簡単にしてあるので、せまい海峡は本物より広い。そのため 5 km とした）
   //  都市は、いちばん近い網の点に
-  fromLand(d, h = 3, seed = 1) {
+  fromLand(d, h = 3, seed = 1, elev = null) {
     const BUF = 1.0, rng = makeRng(seed ^ 0x51ed), polys = d.land.map(p => {
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
       for (const [x, y] of p) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
@@ -167,8 +167,26 @@ const Graph = {
         g.places[k] = near((px - P.x0) / d.kmPerMM, (py - P.y0) / d.kmPerMM);
       }
     }
+    // 山（Tero ほか 2010 の実験: 高い所ほど強い光を当てて、粘菌を低い所に通した）。点の標高 → 線の「光」0〜1
+    if (elev && d.proj) {
+      const P = d.proj, cos0 = Math.cos(P.lat0 * Math.PI / 180), bin = atob(elev.b64), E = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) E[i] = bin.charCodeAt(i);
+      const at = (fi, fj) => E[Math.max(0, Math.min(elev.nLat - 1, fi)) * elev.nLon + Math.max(0, Math.min(elev.nLon - 1, fj))];
+      g.elev = new Float32Array(N);
+      for (let i = 0; i < N; i++) {
+        const px = xs[i] * d.kmPerMM + P.x0, py = ys[i] * d.kmPerMM + P.y0;
+        const lon = P.lon0 + px / (P.R * cos0) * 180 / Math.PI, lat = P.lat0 - py / P.R * 180 / Math.PI;
+        const fi = (lat - elev.lat0) / elev.step, fj = (lon - elev.lon0) / elev.step, i0 = Math.floor(fi), j0 = Math.floor(fj), u = fi - i0, v = fj - j0;
+        g.elev[i] = elev.unitM * ((1 - u) * ((1 - v) * at(i0, j0) + v * at(i0, j0 + 1)) + u * ((1 - v) * at(i0 + 1, j0) + v * at(i0 + 1, j0 + 1)));   // 4点から補間
+      }
+      g.light = new Float32Array(nE);
+      for (let e = 0; e < nE; e++) g.light[e] = Graph.lightOf(Math.max(g.elev[ea[e]], g.elev[eb[e]]));
+    }
     return g;
   },
+  // 標高 → 光の強さ（0〜1）。LIGHT_LOW m より低い所は暗く、LIGHT_HIGH m より高い所は いちばん明るい（あいだは直線。値は仮定）
+  LIGHT_LOW: 200, LIGHT_HIGH: 1000,
+  lightOf(m) { return Math.max(0, Math.min(1, (m - Graph.LIGHT_LOW) / (Graph.LIGHT_HIGH - Graph.LIGHT_LOW))); },
   other(g, e, i) { return g.ea[e] === i ? g.eb[e] : g.ea[e]; },
 
   // a から b へのいちばん短い道（線の長さで。ダイクストラ法）。{ edges: 線の番号の列, len: 長さ mm }。届かなければ null

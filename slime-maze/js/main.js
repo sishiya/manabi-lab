@@ -37,7 +37,11 @@ async function newJapan(kind = 'japan') {
     UI.loading(false);
   }
   if (kind === 'land') {
-    if (!landGraph) { UI.loading(true, '陸の網を作っています…'); await new Promise(r => setTimeout(r, 30)); landGraph = Graph.fromLand(japanData, 3, 7); UI.loading(false); }
+    if (!landGraph) {
+      UI.loading(true, '陸の網を作っています…');
+      let elev = null; try { elev = await (await fetch('data/japan-elev.json?v=1')).json(); } catch (e) { window.__slmaErr.push('標高を読めませんでした: ' + e.message); }
+      await new Promise(r => setTimeout(r, 30)); landGraph = Graph.fromLand(japanData, 3, 7, elev); UI.loading(false);
+    }
     const c = landGraph.cities;
     // エサは県庁所在地 45（cities.js。実験は関東のおもな町 36）。同じ網の点になったものは1つに
     setWorld({ kind: 'land', g: landGraph, foods0: [...new Set(Object.values(landGraph.places))], start: c['東京'] });

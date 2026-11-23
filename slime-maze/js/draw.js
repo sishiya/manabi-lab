@@ -81,6 +81,24 @@ const Draw = {
       }
     } else { g2.fillStyle = C.floor; g2.fillRect(L.X(b.x0), L.Y(b.y0), (b.x1 - b.x0) * L.sc, (b.y1 - b.y0) * L.sc); }
 
+    // 山に当てる光（日本の陸。Tero ほか 2010 は、高い所ほど強い光を当てた）。白っぽく明るいほど光が強い。拡大・移動のたびだけ描き直す
+    if (g.elev) {
+      const key = [L.sc, L.ox, L.oy, w, h, g2.canvas.width].join(), M = Draw._mtn || (Draw._mtn = { cvs: document.createElement('canvas'), key: '' });
+      if (M.key !== key) {
+        M.key = key; M.cvs.width = g2.canvas.width; M.cvs.height = g2.canvas.height;
+        const o = M.cvs.getContext('2d'), r = g.unit * L.sc * 0.75, dpr = g2.getTransform().a || 1;
+        o.setTransform(g2.getTransform()); o.clearRect(0, 0, w, h); o.fillStyle = '#dfe9f2';
+        for (let i = 0; i < g.N; i++) {
+          const k = Graph.lightOf(g.elev[i]); if (k <= 0) continue;
+          const [x, y] = Draw.P(L, g, i); if (x < -r || y < -r || x > w + r || y > h + r) continue;
+          o.globalAlpha = 0.28 * k; o.beginPath(); o.arc(x, y, r, 0, 6.283); o.fill();
+        }
+        const t = document.createElement('canvas'); t.width = M.cvs.width; t.height = M.cvs.height;
+        const tc = t.getContext('2d'); tc.filter = `blur(${Math.max(1, r * 0.5 * dpr)}px)`; tc.drawImage(M.cvs, 0, 0); M.cvs = t;
+      }
+      g2.save(); g2.setTransform(1, 0, 0, 1, 0, 0); g2.drawImage(M.cvs, 0, 0); g2.restore();
+    }
+
     // エサから広がる物質（※ 目印。色の濃さは対数。粘菌が気づく濃さより上は少し濃く）
     if (ui.showChem) {
       const shade = (x, y, wpx, hpx, c) => {

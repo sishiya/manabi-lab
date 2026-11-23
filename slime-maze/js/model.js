@@ -30,6 +30,9 @@ const Model = {
   //  dD/dt = f(|Q|) − D、f(Q) = Q^γ/(1+Q^γ)。論文の「ふつうの結果」の値 I0 = 2、γ = 1.8
   MULTI_I0: 2, GAMMA: 1.8,
   MAX_FOODS: 50,
+  // 光（山。地図に g.light があるときだけ）: Tero ほか 2010 は、高い所ほど強い光を当てて粘菌を低い所へ通した（粘菌は光をさける）。
+  //  光の当たる線では、伸びる速さが (1 − LIGHT_SLOW·光) 倍になり、管がやせる速さが (1 + LIGHT_DECAY·光) 倍になる（どちらも仮定）
+  LIGHT_SLOW: 0.8, LIGHT_DECAY: 2,
   SETTLE_H: 24,      // エサが3つ以上のとき、網の形がこの時間かわらなければ「落ち着いた」とする（表示だけ）
   NET_D: 0.02,       // エサが3つ以上のとき、管の長さに数える太さ（ならした太さ Dm で。これより細い管はやせて消えていくところ）
   DM_TAU: 2,         // エサが3つ以上のとき、太さを何時間でならすか（下の Dm）
@@ -145,7 +148,7 @@ const Model = {
       const ka = ra ? Model.pull(s, e, a, b, s.fa[e] > 0) * sp(a) : 0, kb = rb ? Model.pull(s, e, b, a, s.fb[e] > 0) * sp(b) : 0;
       if (!(ka > 0) && !(kb > 0)) continue;
       any = true;
-      const v = vmm / g.len[e];   // 線ごとのばらつき（演出）をかける。物質へ寄る 1.5 倍とあわせても CHEM_UP 倍まで
+      const v = vmm / g.len[e] * (g.light ? 1 - Model.LIGHT_SLOW * g.light[e] : 1);   // 線ごとのばらつき（演出）をかける。物質へ寄る 1.5 倍とあわせても CHEM_UP 倍まで。光の当たる所はおそい
       s.fa[e] += v * Math.min(Model.CHEM_UP, ka * s.vk[e]);
       s.fb[e] += v * Math.min(Model.CHEM_UP, kb * s.vk[e]);
       if (s.fa[e] + s.fb[e] >= 1) {
@@ -320,7 +323,7 @@ const Model = {
     for (let e = 0; e < g.nE; e++) {
       if (!Model.has(s, e)) continue;
       const q = Math.abs(s.Q[e]), f = multi && s.mode === 'pair' ? Math.pow(q, Model.GAMMA) / (1 + Math.pow(q, Model.GAMMA)) : q;   // エサ2つ: f(Q) = Q^μ, μ = 1（Tero 2007）。3つ以上: シグモイド（Tero 2010）
-      const d0 = s.D[e], d1 = Math.max(Model.FLOOR, (d0 + dt * f) / (1 + dt));
+      const d0 = s.D[e], d1 = Math.max(Model.FLOOR, (d0 + dt * f) / (1 + dt * (g.light ? 1 + Model.LIGHT_DECAY * g.light[e] : 1)));   // 光の当たる管は早くやせる
       maxRate = Math.max(maxRate, Math.abs(d1 - d0) / dt);
       s.D[e] = d1;
       s.Dm[e] += (d1 - s.Dm[e]) * dt / Model.DM_TAU;   // ならした太さ（エサが3つ以上のときに使う）

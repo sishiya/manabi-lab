@@ -4,12 +4,13 @@
 //  全部のエサに着くまでの時間（Tero 2010 の図1: 関東 17 cm で約16時間。日本は約 30 cm なので、それより長くてよい）も出す
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm');
-const ctx = { Math, Float64Array, Int32Array, Uint8Array, console, Set, Array, Object, Infinity, isFinite }; ctx.window = ctx; vm.createContext(ctx);
+const ctx = { Math, Float64Array, Float32Array, Int32Array, Uint8Array, console, Set, Array, Object, Infinity, isFinite, atob }; ctx.window = ctx; vm.createContext(ctx);
 for (const f of ['maze.js', 'cities.js', 'graph.js', 'model.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), ctx, { filename: f });
 const { Graph, Model } = ctx;
 const data = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'japan.json'), 'utf8'));
 let t0 = Date.now();
-const g = Graph.fromLand(data, 3, 7), c = g.cities;
+const elev = process.env.NO_MOUNTAIN ? null : JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'japan-elev.json'), 'utf8'));   // NO_MOUNTAIN=1 で山なし
+const g = Graph.fromLand(data, 3, 7, elev), c = g.cities;
 const foods = [...new Set(Object.values(g.places))];   // 県庁所在地 45（アプリのはじめと同じ）
 console.log(`網: 点 ${g.N}・線 ${g.nE}（作るのに ${Date.now() - t0} ms）、エサ ${foods.length}`);
 // 都市どうしが陸でつながっているか（札幌は津軽海峡でつながらないはず）
