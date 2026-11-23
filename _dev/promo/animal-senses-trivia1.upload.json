@@ -1,0 +1,17 @@
+{
+  "videoId": "2WkQjsOXyjM",
+  "file": "_dev/promo/out/animal-senses-trivia1-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/animal-senses-trivia1.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-26T21:00:00+09:00",
+  "captions": { "en": "_dev/promo/out/animal-senses-trivia1-short.en.srt", "es": "_dev/promo/subs/animal-senses-trivia1-short.es.srt", "ko": "_dev/promo/subs/animal-senses-trivia1-short.ko.srt", "pt": "_dev/promo/subs/animal-senses-trivia1-short.pt.srt", "zh-TW": "_dev/promo/subs/animal-senses-trivia1-short.zh-TW.srt" },
+  "title": "【うんちく】色センサー12種類のシャコ、色の見分けは人よりずっとヘタ #Shorts",
+  "description": "人の目の色センサーは3種類。シャコ（モンハナシャコのなかま）は、紫外線から赤まで12種類もあります。ところが、2つの色を見分けさせる実験では、シャコは波長がおよそ12〜25ナノメートルはなれないと区別できませんでした。人は場所によっては約1ナノメートルの差でも見分けられます。研究者は、シャコは細かくくらべるかわりに、目を動かしてなでるように見て「これは赤のなかま」とすばやく決める、別のやり方をしているのではないかと考えています。\n\n12〜25ナノメートルは1種類のシャコ・1つの課題の結果で、報道や解説で紹介された値です。「なでて、すぐ決める」しくみは著者の説です。感度の山の形とシャコの見え方の絵は模式図です。\n\nアプリ「いきものの感じる世界」に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/animal-senses/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: Thoen, How, Chiou & Marshall (2014) \"A different form of color vision in mantis shrimp\" Science 343: 411–413・人の値は Wright & Pitt (1934) の測定\n\n声: VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
+  "tags": ["いきものの感じる世界", "シャコ", "モンハナシャコ", "色覚", "目", "うんちく", "雑学", "Shorts", "まなびラボ", "しし屋", "mantis shrimp", "color vision", "did you know"],
+  "localizations": {
+    "en": {
+      "title": "Did you know? Mantis shrimp have 12 color receptors but tell colors apart worse than us #Shorts",
+      "description": "Human eyes have 3 kinds of color receptors. Mantis shrimp have 12, from ultraviolet to red. Yet when tested on telling two colors apart, mantis shrimp needed the wavelengths to differ by about 12–25 nanometers. Humans, in some parts of the spectrum, can tell apart a difference of about 1 nanometer. The researchers suggest that instead of fine comparison, mantis shrimp sweep their eyes across a scene and quickly decide \"that's in the red group\" — a different strategy. Turn on English subtitles (CC).\n\nThe 12–25 nm figure comes from one species and one task, as reported in news and commentary. The \"sweep and decide fast\" mechanism is the authors' hypothesis. The sensitivity curves and the mantis-shrimp view are simplified illustrations.\n\nRelated to the app \"How Animals Sense the World\".\n\nApp: https://sishiya.github.io/manabi-lab/animal-senses/?lang=en\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/?lang=en\n\nSource: Thoen, How, Chiou & Marshall (2014) \"A different form of color vision in mantis shrimp\" Science 343: 411–413; human values from Wright & Pitt (1934).\n\nVoice: VOICEVOX:Meimei Himari\nMusic: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#DidYouKnow #Science"
+    }
+  }
+}
