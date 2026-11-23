@@ -29,7 +29,13 @@ const UI = {
       const len = Model.tubeLength(s), spLen = S.ui.sp ? S.ui.sp.len : null, multi = Model.multi(s);
       nums = multi ? `管の網 ${ln(len)} ／ いちばん短くつなぐ網 ${spLen != null ? ln(spLen) : '—'}`
                    : `管の長さ ${ln(len)} ／ いちばん短い道 ${spLen != null ? ln(spLen) : '—'}`;
-      if (settled && spLen != null) good = multi ? `網の形が落ち着きました（いちばん短くつなぐ網の ${(len / spLen).toFixed(2)} 倍）`
+      // 日本の陸: Tero ほか 2010 と同じ物差し（長さ・近さ・切れにくさ）で、実験の粘菌とくらべる（かっこの中が実験。全部のエサに着いてから、1時間ごとに測る）
+      if (S.mapKind === 'land' && multi && S.ui.sp && s.foods.every(f => s.reached[f]) && !s.growing) {
+        if (!s._met || Math.floor(s._met.t) !== Math.floor(s.t)) s._met = { t: s.t, v: Metrics.compare(s, S.ui.sp) };
+        const v = s._met.v, P = Metrics.PAPER;
+        if (v.ok) good = `実験とくらべる: 長さ ${v.tl.toFixed(2)}倍（${P.tl}）・近さ ${v.md.toFixed(2)}（${P.md}）・切れにくさ ${v.ft.toFixed(2)}（${P.ft}）`;
+      }
+      else if (settled && spLen != null) good = multi ? `網の形が落ち着きました（いちばん短くつなぐ網の ${(len / spLen).toFixed(2)} 倍）`
         : Math.abs(len - spLen) < 0.03 * spLen ? 'いちばん短い道だけが残りました' : `いちばん短い道より ${Math.round(100 * (len / spLen - 1))}% 長い道も残っています`;
     } else if (one && (s.reached[s.foods[0]] || Model.lumpTotal(s) > 0)) {
       const V = Model.volume(s), b = Model.lumpTotal(s);

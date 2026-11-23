@@ -115,6 +115,14 @@ const Model = {
   addFood(s, c) { s.foods.push(c); s.cs.push(new Float64Array(s.g.N)); s.lenHist = []; },
   removeFood(s, i) { s.foods.splice(i, 1); s.cs.splice(i, 1); s.lenHist = []; },
   multi(s) { return s.foods.length >= 3; },
+  // ランダムにエサを1つ選ぶ（but と同じものは除く）。s.fw（エサ→重み）があれば重みに比べて（論文のモデルは東京を7つのエサとして重くした）
+  pickFood(s, R, but) {
+    let tot = 0; for (const f of R) if (f !== but) tot += s.fw && s.fw.has(f) ? s.fw.get(f) : 1;
+    let r = s.rng() * tot;
+    for (const f of R) { if (f === but) continue; r -= s.fw && s.fw.has(f) ? s.fw.get(f) : 1; if (r <= 0) return f; }
+    for (let i = R.length - 1; i >= 0; i--) if (R[i] !== but) return R[i];
+    return R[0];
+  },
   // 粘菌が「食べている」エサか: 着いていて、エサが3つ以上のときは、管の網（いちばん多くのエサがのっている、管でつながったかたまり）に入っていること。
   //  網から切れて取り残されたエサ（かたまりだけがのっている）は、また物質で引きよせ、網からつなぎ直しに伸びる（取り残された体も、本物なら探しに出て、いずれ合わさる）
   eating(s, f) { return s.reached[f] && (!s.fOn || s.fOn[f]); },
@@ -352,7 +360,7 @@ const Model = {
         for (let k = 0; k < K; k++) {
           let okk = false;
           for (let tries = 0; tries < 2 * R.length && !okk; tries++) {
-            const a = R[Math.floor(s.rng() * R.length)]; let b = R[Math.floor(s.rng() * (R.length - 1))]; if (b === a) b = R[R.length - 1];
+            const a = Model.pickFood(s, R, -1), b = Model.pickFood(s, R, a);
             okk = Model.solve(s, a, [b], Model.MULTI_I0);
           }
           if (!okk) s.Q.fill(0);
