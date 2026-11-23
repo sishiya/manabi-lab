@@ -16,11 +16,17 @@ const RealRoads = (() => {
     const tj = await (await fetch('https://tiles.openfreemap.org/planet')).json();
     const z = 14, k = 180 / Math.PI / 6378137, dLat = radius * k, dLon = dLat / Math.cos(lat0 * Math.PI / 180);
     const x0 = Math.floor(tx(lon0 - dLon, z)), x1 = Math.floor(tx(lon0 + dLon, z)), y0 = Math.floor(ty(lat0 + dLat, z)), y1 = Math.floor(ty(lat0 - dLat, z));
-    const lines = [], jobs = [];
+    const lines = [], polys = [], jobs = [];
     for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) jobs.push(fetch(tj.tiles[0].replace('{z}', z).replace('{x}', x).replace('{y}', y)).then(r => r.ok ? r.arrayBuffer() : null).then(buf => {
       if (!buf) return;
-      const L = RealMVT.decode(buf, ['transportation']).transportation; if (!L) return;
+      const D = RealMVT.decode(buf, ['transportation', 'landcover', 'landuse', 'water', 'park']), L = D.transportation; if (!L) return;
       const E = L.extent, n = 2 ** z;
+      const conv = g => { const pts = []; for (let i = 0; i < g.length; i += 2) { const lon = (x + g[i] / E) / n * 360 - 180, m = Math.PI - 2 * Math.PI * (y + g[i + 1] / E) / n, lat = 180 / Math.PI * Math.atan(Math.sinh(m)); pts.push(toXZ(lon, lat)); } return pts; };
+      // 面（芝・林・運動場・学校・墓地・水など）: 外の輪と穴（向きで分ける）
+      for (const name of ['landcover', 'landuse', 'water', 'park']) { const A = D[name]; if (!A) continue;
+        for (const f of A.features) { if (f.type !== 3) continue; let cur = null;
+          for (const g of f.geom) { const r = conv(g); let ar = 0; for (let i = 0; i < r.length; i++) { const [x0_, z0_] = r[i], [x1_, z1_] = r[(i + 1) % r.length]; ar += x0_ * z1_ - x1_ * z0_; }
+            if (ar > 0 || !cur) { cur = { layer: name, cls: f.props.class, sub: f.props.subclass, outer: r, holes: [] }; polys.push(cur); } else cur.holes.push(r); } } }
       for (const f of L.features) {
         if (f.type !== 2) continue;
         const p = f.props;
@@ -35,6 +41,7 @@ const RealRoads = (() => {
       }
     }).catch(() => {}));
     await Promise.all(jobs);
+    lines.polys = polys;   // 面は線の配列にぶらさげて返す
     return lines;
   }
 

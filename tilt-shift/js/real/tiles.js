@@ -39,6 +39,16 @@ const RealTiles = (() => {
   }
   const YUP = new THREE.Matrix4().makeRotationX(Math.PI / 2);
   function drop() { this.array = new this.array.constructor(0); }
+  // 建物ごとの属性を頂点へ配る: aBld = batch(属性, 番号) が返す [a, b, c]（用途の種類・1階の高さ・建物ごとの乱数）と、w = その建物のいちばん低い所の高さ（three の y）
+  function batchAttr(geo, mat, bt, fn) {
+    const id = geo.attributes._batchid, pos = geo.attributes.position, e = mat.elements, n = pos.count;
+    const nb = (bt['bldg:usage'] || bt.gml_id || []).length || 1, base = new Float32Array(nb).fill(1e9), per = [];
+    for (let i = 0; i < n; i++) { const b = id.getX(i) | 0, y = e[1] * pos.getX(i) + e[5] * pos.getY(i) + e[9] * pos.getZ(i) + e[13]; if (y < base[b]) base[b] = y; }
+    for (let b = 0; b < nb; b++) per.push(fn(bt, b));
+    const A = new Float32Array(n * 4);
+    for (let i = 0; i < n; i++) { const b = id.getX(i) | 0, v = per[b] || [0, 3, 0]; A[i * 4] = v[0]; A[i * 4 + 1] = v[1]; A[i * 4 + 2] = v[2]; A[i * 4 + 3] = base[b] < 1e8 ? base[b] : 0; }
+    geo.setAttribute('aBld', new THREE.BufferAttribute(A, 4));
+  }
   // 1つのタイルの中で、同じ画像（質感）を使う部品を1つの形にまとめる（描く回数を減らす。PLATEAU は 1 タイル 4〜6 部品で画像は1枚）
   function mergeByMap(sceneObj) {
     sceneObj.updateMatrixWorld(true);
@@ -47,7 +57,7 @@ const RealTiles = (() => {
     const out = new THREE.Group();
     for (const list of groups.values()) {
       const parts = list.map(m => { let g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone(); g.applyMatrix4(m.matrixWorld); return g; });
-      const names = ['position', 'normal', 'uv', 'color'].filter(k => parts.every(g => g.attributes[k]));
+      const names = Object.keys(parts[0].attributes).filter(k => parts.every(g => g.attributes[k]));
       const geo = new THREE.BufferGeometry();
       for (const k of names) {
         const n = parts.reduce((a, g) => a + g.attributes[k].array.length, 0), size = parts[0].attributes[k].itemSize, arr = new Float32Array(n);
@@ -82,16 +92,18 @@ const RealTiles = (() => {
       fetch(base + n.uri).then(r => r.arrayBuffer()).then(buf => {
         const dv = new DataView(buf), ftj = dv.getUint32(12, true), ftb = dv.getUint32(16, true), btj = dv.getUint32(20, true), btb = dv.getUint32(24, true);
         const ft = ftj ? JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 28, ftj))) : {};
+        const bt = o.batch && btj ? JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 28 + ftj + ftb, btj))) : null;   // 建物ごとの属性（用途・階数・高さ）
         const glb = buf.slice(28 + ftj + ftb + btj + btb);
-        return new Promise((ok, ng) => loader().parse(glb, '', g => ok([g, ft]), ng));
-      }).then(([g, ft]) => {
+        return new Promise((ok, ng) => loader().parse(glb, '', g => ok([g, ft, bt]), ng));
+      }).then(([g, ft, bt]) => {
         loading--;
         if (!alive) return;
         const rtc = (g.parser.json.extensions && g.parser.json.extensions.CESIUM_RTC && g.parser.json.extensions.CESIUM_RTC.center) || ft.RTC_CENTER || [0, 0, 0];
         const T = new THREE.Matrix4().makeTranslation(rtc[0], rtc[1], rtc[2]);
         const obj = mergeByMap(g.scene); obj.matrixAutoUpdate = false;
         obj.matrix.copy(M).multiply(T).multiply(YUP); obj.updateMatrixWorld(true);
-        obj.traverse(m => { if (m.isMesh) { if (!m.geometry.attributes.normal) m.geometry.computeVertexNormals(); m.material = o.material(m.material, !!m.material.map, !!m.geometry.attributes.color); m.castShadow = m.receiveShadow = false; m.geometry.computeBoundingSphere(); m.frustumCulled = true;   // 写真の建物は影を作らない（写真に影が入っている。影の計算が重い）。画面の外の部品は描かない（範囲は配列を捨てる前に求める）
+        if (bt) obj.traverse(m => { if (m.isMesh && m.geometry.attributes._batchid) batchAttr(m.geometry, obj.matrix, bt, o.batch); });
+        obj.traverse(m => { if (m.isMesh) { if (!m.geometry.attributes.normal) m.geometry.computeVertexNormals(); m.material = o.material(m.material, !!m.material.map, !!m.geometry.attributes.color); m.castShadow = m.receiveShadow = !!o.shadow; m.geometry.computeBoundingSphere(); m.frustumCulled = true;   // 写真の建物は影を作らない（写真に影が入っている。影の計算が重い）。画面の外の部品は描かない（範囲は配列を捨てる前に求める）
           const g = m.geometry; for (const k in g.attributes) g.attributes[k].onUpload(drop); if (g.index) g.index.onUpload(drop); } });   // GPU へ送ったら、JS の配列は捨てる（メモリ）
         n.obj = obj; n.state = 2; n.used = performance.now(); obj.visible = false; group.add(obj);   // 読み終えた時刻も「使った」にする（兄弟を待つあいだに捨てない）
         o.onLoad && o.onLoad();

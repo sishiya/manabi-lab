@@ -1,10 +1,10 @@
 // 場面: 池袋（本物の町）。建物は PLATEAU（国土交通省の 3D 都市モデル。航空写真の質感つき LOD2）、地面は国土地理院の空中写真と標高
 //   手本の写真（サンシャイン60 から西の池袋駅を見る）と同じ位置にカメラを置く。データはその場で配信元から読む（このサイトには置かない）
-//   建物と地面の色は写真そのもの（写したときの日の光と影が入っている）なので、光を当てずにそのまま出す（明るさだけ合わせる）
+//   建物は形と属性（用途・階数・高さ）だけを使い、質感はこのアプリで描いて光と影を当てる（写真を貼ると、のっぺりして解像度が足りず、車や人と質感が合わない）
 'use strict';
 STAGES.push({
   id: 'ikebukuro', name: '池袋（本物の町）', short: '池袋', seed: 3, size: 900, haze: 0.0009, hazeTint: '#d3d2cc', real: true,
-  note: '本物の建物と航空写真で作った池袋。サンシャイン60 から駅を見る',
+  note: '本物の建物の形と道で作った池袋。サンシャイン60 から駅を見る',
   credit: '建物: 3D都市モデル（Project PLATEAU）国土交通省／地面: 地理院タイル（シームレス空中写真・標高）／道: OpenFreeMap © OpenMapTiles Data from OpenStreetMap',
   // 原点は池袋駅の東口のあたり。カメラはサンシャイン60 の展望台（東へ約 600 m・高さ約 230 m）
   view: { x: 0, z: 0, y: 0, dist: 520, pitch: 25, yaw: 80, min: 120, max: 2500, range: 1500 },   // サンシャイン60 の西の窓の外（高さ約 225 m）
@@ -12,12 +12,12 @@ STAGES.push({
   async build(scene, ctx) {
     const LON0 = 139.7125, LAT0 = 35.7300, toXZ = RealTiles.local(LON0, LAT0);
     const P = 'https://assets.cms.plateau.reearth.io/assets/';
-    const WARDS = [   // [名前, ジオイド高 m, LOD2（質感つき）の tileset]
-      ['豊島区', 37.29, 'a6/85dfbe-994a-4da4-90fc-ec7f4661d469/13116_toshima-ku_pref_2025_citygml_1_op_bldg_3dtiles_13116_toshima-ku_lod2/tileset.json'],
-      ['新宿区', 37.11, '00/bed0bd-f882-4cde-b942-21d0f8d2ddc2/13104_shinjuku-ku_pref_2025_citygml_1_op_bldg_3dtiles_13104_shinjuku-ku_lod2/tileset.json'],
-      ['文京区', 37.10, 'c6/c5c89a-859d-4dce-8e25-04e02a39b270/13105_bunkyo-ku_pref_2025_citygml_1_op_bldg_3dtiles_13105_bunkyo-ku_lod2/tileset.json'],
-      ['北区', 37.50, 'fc/e0156d-7dbe-45a0-a379-0d62ae2348d8/13117_kita-ku_pref_2025_citygml_1_op_bldg_3dtiles_13117_kita-ku_lod2/tileset.json'],
-      ['板橋区', 37.73, '17/6b90ce-370e-4787-9c83-4c7905d0d82a/13119_itabashi-ku_pref_2025_citygml_1_op_bldg_3dtiles_13119_itabashi-ku_lod2/tileset.json'],
+    const WARDS = [   // [名前, ジオイド高 m, LOD2（質感なし。形と属性だけ。質感はこのアプリで描く）の tileset]
+      ['豊島区', 37.29, '00/c773a5-1b08-48bc-9f65-958952afd4db/13116_toshima-ku_pref_2025_citygml_1_op_bldg_3dtiles_13116_toshima-ku_lod2_no_texture/tileset.json'],
+      ['新宿区', 37.11, '2f/d4f9a7-13ad-43cb-b984-033803199eab/13104_shinjuku-ku_pref_2025_citygml_1_op_bldg_3dtiles_13104_shinjuku-ku_lod2_no_texture/tileset.json'],
+      ['文京区', 37.10, 'ed/58552b-52fc-484b-99c0-b1313e2d717d/13105_bunkyo-ku_pref_2025_citygml_1_op_bldg_3dtiles_13105_bunkyo-ku_lod2_no_texture/tileset.json'],
+      ['北区', 37.50, '31/7809c7-4856-4b02-9667-43769ada845b/13117_kita-ku_pref_2025_citygml_1_op_bldg_3dtiles_13117_kita-ku_lod2_no_texture/tileset.json'],
+      ['板橋区', 37.73, 'fa/9dd850-4b6b-4c55-b32e-081a5f23c8da/13119_itabashi-ku_pref_2025_citygml_1_op_bldg_3dtiles_13119_itabashi-ku_lod2_no_texture/tileset.json'],
     ];
     const K = 1.25;   // 写真の色を、そのまま近い明るさで出す係数（露出 0.62 と ACES のあと）
 
@@ -39,7 +39,17 @@ STAGES.push({
       g.computeVertexNormals();
       const m = new THREE.Mesh(g, mat); m.receiveShadow = true; scene.add(m); return m;
     }
-    terrain(SPAN, ctx.phone ? 160 : 320, groundMat(near));
+    // 近くの地面: 空中写真は大きくぼかした色の手がかりだけ（細かい所はコンクリートの目地とむら）。光と影を受ける
+    const nearTex = Kit.canvasTex(near); nearTex.anisotropy = 4;
+    const nearMat = Kit.mat('real-ground', { map: nearTex, roughness: 0.92 }, `
+      vec3 hint = texture2D(map, vUv, 4.5).rgb;   // 写真をぼかした色（mip を上げて読む）
+      float l = dot(hint, vec3(0.3, 0.55, 0.15));
+      vec3 c = mix(vec3(0.15, 0.148, 0.142), hint * 0.6, 0.4) * (0.8 + 0.3 * clamp(l * 2.5, 0.0, 1.0));
+      vec3 q = vec3(vWP.x, 0.0, vWP.z);
+      c *= 0.88 + 0.22 * kF(q * 0.12);
+      vec2 tl = q.xz / 1.5; c *= 1.0 - 0.08 * (step(0.95, fract(tl.x)) + step(0.95, fract(tl.y)));   // コンクリートの目地
+      diffuseColor.rgb = c;`);
+    terrain(SPAN, ctx.phone ? 160 : 320, nearMat).receiveShadow = true;
     // 外の地面: 中は近くの地面の下へ少しさげる（重なりのちらつきをさける）
     terrain(OUTER, 200, groundMat(outer), -0.6);
 
@@ -62,12 +72,13 @@ STAGES.push({
       } else { c *= 0.85 + 0.25 * kF(vWP * 0.08); }
       diffuseColor.rgb = c;`);
     plain.userData.shared = true;
+    const BM = RealBldg.material();   // 本物の形の建物の質感（js/real/bldgmat.js）
     const tilesMat = (m, hasMap, hasCol) => {
       if (hasMap) { m.map.encoding = THREE.sRGBEncoding; m.map.anisotropy = 8; return new THREE.MeshBasicMaterial({ map: m.map, color: TINT, vertexColors: false }); }
       // 質感のない建物（駅ビルの一部・遠くの粗い版）: 頂点の色（ないときは明るい灰）に光を当てて、面の向きがわかるように
       return plain;
     };
-    const sets = WARDS.map(([name, geoid, url]) => RealTiles.create(scene, P + url, { lon0: LON0, lat0: LAT0, h0: geoid + H0, radius: 2600, sse: ctx.phone ? 40 : 24, keep: ctx.phone ? 150 : 400, material: tilesMat, onLoad: () => ctx.redraw && ctx.redraw() }));   // radius: 2.6 km より先はかすみで 94 % 以上かくれる → 読まない（地面の写真だけ）
+    const sets = WARDS.map(([name, geoid, url]) => RealTiles.create(scene, P + url, { lon0: LON0, lat0: LAT0, h0: geoid + H0, radius: 2600, sse: ctx.phone ? 40 : 24, keep: ctx.phone ? 150 : 400, material: () => BM, batch: RealBldg.kind, shadow: true, onLoad: () => ctx.redraw && ctx.redraw() }));   // radius: 2.6 km より先はかすみで 94 % 以上かくれる → 読まない（地面の写真だけ）
 
     // ---- 車と人（OpenStreetMap の道。js/real/roads.js）----
     let lines = [];
@@ -89,9 +100,8 @@ STAGES.push({
     const MP = RealRoads.movers(GP, { n: ctx.phone ? 1000 : 2500, lanes: lanesP, v: () => 1.25, weight: e => { const [x, z] = GP.P[e.a]; return Math.exp(-Math.hypot(x, z) / 350) * (isWalk(e) ? 3 : e.cls === 'minor' ? 0.6 : 1); }, len: 0.5, gap: 0.3, follow: false }, Kit.rnd);
     const ppl = MP.list.length ? Kit.people(scene, MP.list.map(() => ({ x: 0, z: 0 }))) : null;
     // 車と人の影を、写真の地面に落とす（地面の写真には光を当てないので、影だけを重ねる板）
-    const shadowG = new THREE.PlaneGeometry(SPAN * 0.7, SPAN * 0.7, 160, 160); shadowG.rotateX(-Math.PI / 2);
-    { const p = shadowG.attributes.position; for (let i = 0; i < p.count; i++) p.setY(i, yAt(p.getX(i), p.getZ(i)) + 0.08); }
-    const shadowM = new THREE.Mesh(shadowG, new THREE.ShadowMaterial({ opacity: 0.4, depthWrite: false })); shadowM.receiveShadow = true; scene.add(shadowM);
+    // 地面の 3D（道・歩道・線路・芝・林・水・木）。js/real/streets.js
+    const ST = RealStreets.build(scene, lines, yAt, { radius: 1500, phone: ctx.phone, photo: near, span: SPAN });
     function place() {
       MC.list.forEach((it, i) => { const [x, z, ry] = MC.at(it); C.set(i, x, z, ry, YC[it.e.a] + (YC[it.e.b] - YC[it.e.a]) * it.s / it.e.len); });
       if (C) C.done();
@@ -107,7 +117,7 @@ STAGES.push({
       get loading() { return sets.reduce((a, s) => a + s.loading, 0); },
       step(dt) { t += dt; Kit.time.value = t; if (!C && !ppl) return false; MC.step(dt); MP.step(dt); place(); return true; },
       dispose() { sets.forEach(s => s.dispose()); },
-      get counts() { return { cars: MC.list.length, people: MP.list.length, lines: lines.length }; },
+      get counts() { return { cars: MC.list.length, people: MP.list.length, lines: lines.length, trees: ST.trees }; },
     };
   },
 });
