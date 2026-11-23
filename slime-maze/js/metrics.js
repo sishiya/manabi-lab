@@ -16,11 +16,12 @@ const Metrics = {
     let sum = 0, pairs = 0, unreach = 0;
     for (let i = 0; i < foods.length; i++) {
       const dist = new Map([[foods[i], 0]]), done = new Set(), heap = [[0, foods[i]]];
+      const push = it => { heap.push(it); let k = heap.length - 1; while (k > 0) { const p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break; [heap[p], heap[k]] = [heap[k], heap[p]]; k = p; } };
+      const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let k = 0; for (;;) { const l = 2 * k + 1, r = l + 1; let m = k; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === k) break; [heap[m], heap[k]] = [heap[k], heap[m]]; k = m; } } return top; };
       while (heap.length) {
-        let m = 0; for (let k = 1; k < heap.length; k++) if (heap[k][0] < heap[m][0]) m = k;
-        const [d, u] = heap[m]; heap[m] = heap[heap.length - 1]; heap.pop();
+        const [d, u] = pop();
         if (done.has(u)) continue; done.add(u);
-        for (const e of adj.get(u) || []) { const v = Graph.other(g, e, u), nd = d + g.len[e]; if (nd < (dist.has(v) ? dist.get(v) : Infinity)) { dist.set(v, nd); heap.push([nd, v]); } }
+        for (const e of adj.get(u) || []) { const v = Graph.other(g, e, u), nd = d + g.len[e]; if (nd < (dist.has(v) ? dist.get(v) : Infinity)) { dist.set(v, nd); push([nd, v]); } }
       }
       for (let j = i + 1; j < foods.length; j++) { if (dist.has(foods[j])) { sum += dist.get(foods[j]); pairs++; } else unreach++; }
     }
@@ -35,15 +36,34 @@ const Metrics = {
       }
       links.push(chain);
     }
-    const conn = skip => { const sk = new Set(skip), q = [foods[0]], vis = new Set(q);
-      for (let i = 0; i < q.length; i++) for (const e of adj.get(q[i]) || []) { if (sk.has(e)) continue; const v = Graph.other(g, e, q[i]); if (!vis.has(v)) { vis.add(v); q.push(v); } }
-      return foods.every(f => vis.has(f)); };
-    let bridges = 0; for (const L of links) if (!conn(L)) bridges++;
+    // 切れると分かれるつなぎ（橋）を、1回の深さ優先探索で（タージャンの方法）。橋のうち、両がわにエサがあるものを数える
+    //  つなぎを、両はしの分かれ目どうしを結ぶ1本の辺とみる（同じ2点を結ぶつなぎが2本あれば、どちらも橋ではない）
+    const ends = links.map(L => { const deg = new Map(); for (const e of L) for (const v of [g.ea[e], g.eb[e]]) deg.set(v, (deg.get(v) || 0) + 1);
+      const js = [...deg].filter(([v, c]) => c === 1 || isJ(v)).map(([v]) => v); return js.length >= 2 ? [js[0], js[1]] : [js[0] ?? g.ea[L[0]], js[0] ?? g.ea[L[0]]]; });
+    const ladj = new Map(); ends.forEach(([a, b], k) => { if (a === b) return; for (const [u, v] of [[a, b], [b, a]]) { let l = ladj.get(u); if (!l) ladj.set(u, l = []); l.push([v, k]); } });
+    const tin = new Map(), low = new Map(), sub = new Map(); let timer = 0, bridges = 0; const nF = foods.length;
+    for (const root of ladj.keys()) {
+      if (tin.has(root)) continue;
+      const st = [[root, -1, 0]]; tin.set(root, timer); low.set(root, timer); timer++; sub.set(root, isFood.has(root) ? 1 : 0);
+      while (st.length) {
+        const top = st[st.length - 1], [u, pk] = top, nb = ladj.get(u) || [];
+        if (top[2] < nb.length) {
+          const [v, k] = nb[top[2]++]; if (k === pk) continue;
+          if (tin.has(v)) low.set(u, Math.min(low.get(u), tin.get(v)));
+          else { tin.set(v, timer); low.set(v, timer); timer++; sub.set(v, isFood.has(v) ? 1 : 0); st.push([v, k, 0]); }
+        } else {
+          st.pop();
+          if (st.length) { const p = st[st.length - 1][0]; low.set(p, Math.min(low.get(p), low.get(u))); sub.set(p, sub.get(p) + sub.get(u));
+            if (low.get(u) > tin.get(p)) { const fs = sub.get(u); if (fs > 0 && fs < nF) bridges++; } }
+        }
+      }
+    }
     let len = 0; for (const e of edges) len += g.len[e];
     return { len, md: pairs ? sum / pairs : NaN, unreach, links: links.length, bridges };
   },
   // いまの粘菌の網（流れが来ている管）
   net(s) { const out = []; for (let e = 0; e < s.g.nE; e++) if (Model.has(s, e) && s.Qs[e] > 1e-3) out.push(e); return out; },
+  netLen(s) { let L = 0; for (let e = 0; e < s.g.nE; e++) if (Model.has(s, e) && s.Qs[e] > 1e-3) L += s.g.len[e]; return L; },
   // 粘菌の網を、最小全域木 mst（{edges}）とくらべる → { tl, md, ft, ok }（全部のエサがつながっていなければ ok = false）
   compare(s, mst) {
     const M = Metrics._mst && Metrics._mst.key === mst ? Metrics._mst.m : (Metrics._mst = { key: mst, m: Metrics.measure(s.g, s.foods, mst.edges) }).m;

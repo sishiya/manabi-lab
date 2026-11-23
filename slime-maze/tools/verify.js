@@ -22,7 +22,7 @@ function run(seed, swapEvery) {
     Model.step(s); n++;
     if (n % 50 === 0 && Model.flowing(s) && !s.blocked) {
       const a = s.foods[s.swap ? 1 : 0]; let out = 0;
-      for (const e of g.adj[a]) if (Model.has(s, e)) out += (g.ea[e] === a ? 1 : -1) * s.Q[e];
+      for (const e of g.adj[a]) out += (g.ea[e] === a ? 1 : -1) * s.Q[e];   // 解いたときの流れ（同じ回の終わりにやせて消えた管の流れも入れる。消えた管を外すと、その分が誤差に見えた）
       flowErr = Math.max(flowErr, Math.abs(out - Model.I0));
     }
     if (Model.settled(s)) break;

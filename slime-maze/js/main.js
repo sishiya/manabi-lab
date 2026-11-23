@@ -28,8 +28,19 @@ function newMaze(seed) {
 // 日本の地図（Natural Earth。tools/build-japan.mjs で作った data/japan.json）
 //  kind 'japan' … 日本の道路: 道路の上だけを通れる。エサは東京と大阪、かけらは名古屋
 //  kind 'land'  … 日本の陸: 道の情報なしで、陸の形の細かい網の上を自由に伸びる（Tero ほか 2010 の実験のように、かけらは東京、エサは都市）
-let japanData = null, landGraph = null;
+let japanData = null, landGraph = null, kantoGraph = null;
+//  kind 'kanto' … 関東（実験）: Tero ほか 2010 の実験と同じ形（幅 17 cm、太平洋の海岸がふち）。東京に粘菌、関東のおもな町 36 にエサ（data/kanto.json）
 async function newJapan(kind = 'japan') {
+  if (kind === 'kanto') {
+    if (!kantoGraph) {
+      UI.loading(true, '関東の網を作っています…');
+      try { const d = await (await fetch('data/kanto.json?v=1')).json(); await new Promise(r => setTimeout(r, 30)); kantoGraph = Graph.fromLand(d, 3, 7); }
+      catch (e) { UI.loading(false); window.__slmaErr.push('関東の地図を読めませんでした: ' + e.message); return; }
+      UI.loading(false);
+    }
+    setWorld({ kind: 'kanto', g: kantoGraph, foods0: [...new Set(Object.values(kantoGraph.places))], start: kantoGraph.places['東京'] });
+    return;
+  }
   if (!japanData) {
     UI.loading(true);
     try { japanData = await (await fetch('data/japan.json?v=2')).json(); }

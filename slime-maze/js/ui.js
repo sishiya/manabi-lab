@@ -30,7 +30,7 @@ const UI = {
       nums = multi ? `管の網 ${ln(len)} ／ いちばん短くつなぐ網 ${spLen != null ? ln(spLen) : '—'}`
                    : `管の長さ ${ln(len)} ／ いちばん短い道 ${spLen != null ? ln(spLen) : '—'}`;
       // 日本の陸: Tero ほか 2010 と同じ物差し（長さ・近さ・切れにくさ）で、実験の粘菌とくらべる（かっこの中が実験。全部のエサに着いてから、1時間ごとに測る）
-      if (S.mapKind === 'land' && multi && S.ui.sp && s.foods.every(f => s.reached[f]) && !s.growing) {
+      if ((S.mapKind === 'land' || S.mapKind === 'kanto') && multi && spLen != null && s.foods.every(f => s.reached[f]) && Metrics.netLen(s) < 3 * spLen) {   // 全部の町に着いて、膜がやせて網になったら（長さがいちばん短くつなぐ網の3倍より短く。広がっている膜は網ではなく、測るのも重い）
         if (!s._met || Math.floor(s._met.t) !== Math.floor(s.t)) s._met = { t: s.t, v: Metrics.compare(s, S.ui.sp) };
         const v = s._met.v, P = Metrics.PAPER;
         if (v.ok) good = `実験とくらべる: 長さ ${v.tl.toFixed(2)}倍（${P.tl}）・近さ ${v.md.toFixed(2)}（${P.md}）・切れにくさ ${v.ft.toFixed(2)}（${P.ft}）`;
@@ -85,8 +85,8 @@ const UI = {
   // 地図を切りかえたとき: 迷路だけの操作（壁・新しい迷路）は日本の道路ではかくす。絵の縦横の比を地図に合わせる
   setMap(kind) {
     S.mapKind = kind;
-    for (const [id, k] of [['mapMaze', 'maze'], ['mapJapan', 'japan'], ['mapLand', 'land']]) { $(id).classList.toggle('on', kind === k); $(id).setAttribute('aria-pressed', kind === k); }
-    $('mWall').hidden = kind !== 'maze'; $('bNew').hidden = kind !== 'maze'; $('zoom').hidden = kind === 'maze'; $('lRoads').hidden = kind !== 'land';
+    for (const [id, k] of [['mapMaze', 'maze'], ['mapJapan', 'japan'], ['mapLand', 'land'], ['mapKanto', 'kanto']]) { $(id).classList.toggle('on', kind === k); $(id).setAttribute('aria-pressed', kind === k); }
+    $('mWall').hidden = kind !== 'maze'; $('bNew').hidden = kind !== 'maze'; $('zoom').hidden = kind === 'maze'; $('lRoads').hidden = kind !== 'land' && kind !== 'kanto';
     if (kind !== 'maze') S.mode = 'food';
     const b = S.world.g.bounds;
     $('view').style.aspectRatio = `${(b.x1 - b.x0).toFixed(1)} / ${(b.y1 - b.y0).toFixed(1)}`;
@@ -134,6 +134,7 @@ const UI = {
     $('mapMaze').onclick = () => { if (S.mapKind !== 'maze') newMaze(S.seed); };
     $('mapJapan').onclick = () => { if (S.mapKind !== 'japan') newJapan('japan'); };
     $('mapLand').onclick = () => { if (S.mapKind !== 'land') newJapan('land'); };
+    $('mapKanto').onclick = () => { if (S.mapKind !== 'kanto') newJapan('kanto'); };
     $('cRoads').onchange = e => { S.ui.showRoads = e.target.checked; draw(); };
     $('cShort').onchange = e => { S.ui.showShortest = e.target.checked; draw(); };
     $('cChem').onchange = e => { S.ui.showChem = e.target.checked; draw(); };

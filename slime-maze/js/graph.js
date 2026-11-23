@@ -152,22 +152,24 @@ const Graph = {
       wobble: false, maze: null, unit: h, widthMM: h, tubeMM: 2.4, symbolMM: 14, scale: d.kmPerMM * 1000,
       land: d.land, kmPerMM: d.kmPerMM, bounds: d.bounds, showNet: false,
       // くらべる目印の道路（本物の道路の線。粘菌は知らない）
-      roads: d.ea.map((a, e) => [[d.x[a], d.y[a]], ...(d.pts[e] || []), [d.x[d.eb[e]], d.y[d.eb[e]]]]),
+      roads: d.roadLines || d.ea.map((a, e) => [[d.x[a], d.y[a]], ...(d.pts[e] || []), [d.x[d.eb[e]], d.y[d.eb[e]]]]),   // 関東の地図は線のまま持っている
     };
     // 都市 → いちばん近い、ほかの点とつながっている網の点
     const near = (x, y) => { let best = -1, bd = Infinity; for (let i = 0; i < N; i++) { if (!adj[i].length) continue; const dd = (xs[i] - x) ** 2 + (ys[i] - y) ** 2; if (dd < bd) { bd = dd; best = i; } } return best; };
     g.cities = {};
-    for (const [k, c] of Object.entries(d.cities)) g.cities[k] = near(d.x[c], d.y[c]);
-    // 経度・緯度の町（cities.js の県庁所在地）。投影は tools/build-japan.mjs と同じ（正距円筒、緯度 36° で）
+    for (const [k, c] of Object.entries(d.cities || {})) g.cities[k] = near(d.x[c], d.y[c]);
+    // 経度・緯度の町（地図データの cityLL。なければ cities.js の県庁所在地）。投影は地図を作った道具と同じ（正距円筒）
     g.places = {};
-    if (d.proj && window.CAPITALS) {
+    const LL = d.cityLL || window.CAPITALS;
+    if (d.proj && LL) {
       const P = d.proj, cos0 = Math.cos(P.lat0 * Math.PI / 180);
-      for (const [k, [lon, lat]] of Object.entries(window.CAPITALS)) {
+      for (const [k, [lon, lat]] of Object.entries(LL)) {
         const px = P.R * (lon - P.lon0) * Math.PI / 180 * cos0, py = -P.R * (lat - P.lat0) * Math.PI / 180;
         g.places[k] = near((px - P.x0) / d.kmPerMM, (py - P.y0) / d.kmPerMM);
       }
     }
     // 山（Tero ほか 2010 の実験: 高い所ほど強い光を当てて、粘菌を低い所に通した）。点の標高 → 線の「光」0〜1
+    elev = elev || d.elev;   // 関東の地図は標高を中に持っている
     if (elev && d.proj) {
       const P = d.proj, cos0 = Math.cos(P.lat0 * Math.PI / 180), bin = atob(elev.b64), E = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) E[i] = bin.charCodeAt(i);

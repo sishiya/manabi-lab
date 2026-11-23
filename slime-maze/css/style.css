@@ -34,6 +34,8 @@ button.tog.on,button.tog[aria-pressed="true"]{border-color:var(--acc);background
 .seg>button{border-radius:0}
 .seg>button:first-child{border-radius:10px 0 0 10px}
 .seg>button:last-child{border-radius:0 10px 10px 0;border-left:none}
+.seg>button+button{border-left:none}
+.maps>button{padding:6px 4px;font-size:14px;white-space:nowrap}   /* 地図は4つ。スマホの幅でも1行に */
 button.act{background:var(--panel);border:1px dashed var(--line);color:var(--muted)}
 .hint{margin:0;min-height:3em;font-size:13px;color:var(--muted);line-height:1.5}
 .chk{font-size:14px;display:flex;align-items:center;gap:var(--gap1);min-height:36px}
