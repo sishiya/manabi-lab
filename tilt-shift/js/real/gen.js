@@ -145,6 +145,7 @@ const TownGen = (() => {
         continue;
       }
       box(b.x0, b.z0, b.x1, b.z1, 0, b.h, A);
+      if (Math.hypot((b.x0 + b.x1) / 2, (b.z0 + b.z1) / 2) > 1200) continue;   // 遠くは屋上のふちと塔屋を省く（かすみで見えない。作る時間）
       // パラペット（屋上のふちの立ち上がり 0.9 m・厚さ 0.25 m）
       const t = 0.25, yp = b.h + 0.9;
       box(b.x0, b.z0, b.x1, b.z0 + t, b.h, yp, A); box(b.x0, b.z1 - t, b.x1, b.z1, b.h, yp, A);

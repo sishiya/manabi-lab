@@ -9,7 +9,7 @@ STAGES.push({
   sun: { el: 24, az: -20, power: 4.2, color: '#ffe2bc' }, hemi: 0.06,   // 午後の低い日（暖かい色）。空からの光は弱く、影の面との差を大きく
   async build(scene, ctx) {
     const { rnd, pick } = Kit;
-    const T = TownGen.make({ ext: 2200 });
+    const T = TownGen.make({ ext: ctx.phone ? 1500 : 2200 });   // スマホは作る時間と重さのため町を狭く
 
     // ---- 地面: コンクリートと土のむら・目地（遠くでは目地を薄く） ----
     const groundMat = Kit.mat('town-ground', { roughness: 0.92 }, `
