@@ -4,11 +4,12 @@ const UI = (() => {
   const $ = id => document.getElementById(id);
   const PRESETS = [
     ['ぼけなし', { mode: 0, sat: 1.15, fps: 60, spd: 1 }],
-    ['上と下をぼかす', { mode: 1, R: 1, pos: 0.5, w: 0.16, ang: 0, sat: 1.15, fps: 60, spd: 1 }],
-    ['＋色を濃く＋コマ落とし', { mode: 1, R: 1, pos: 0.5, w: 0.16, ang: 0, sat: 1.6, fps: 6, spd: 4 }],
-    ['帯をたてに', { mode: 1, R: 1, pos: 0.5, w: 0.16, ang: 90, sat: 1.15, fps: 60, spd: 1 }],
-    ['真横に近く', { mode: 1, R: 1, pos: 0.5, w: 0.16, ang: 0, sat: 1.15, pitch: 6 }],
-    ['レンズどおりのぼけ', { mode: 2, R: 1, pos: 0.5, sat: 1.15, fps: 60, spd: 1 }],
+    // ぼけ 2 %・帯 10 %・帯は少し下・色 ×1.6: 6 つの場面で撮りくらべ、批判役がいちばん模型に見えると選んだ値（DEVNOTES）
+    ['上と下をぼかす', { mode: 1, R: 2, pos: 0.45, w: 0.1, ang: 0, sat: 1.6, fps: 60, spd: 1 }],
+    ['＋色を濃く＋コマ落とし', { mode: 1, R: 2, pos: 0.45, w: 0.1, ang: 0, sat: 1.9, fps: 6, spd: 4 }],
+    ['帯をたてに', { mode: 1, R: 2, pos: 0.5, w: 0.1, ang: 90, sat: 1.6, fps: 60, spd: 1 }],
+    ['真横に近く', { mode: 1, R: 2, pos: 0.5, w: 0.1, ang: 0, sat: 1.6, pitch: 6 }],
+    ['レンズどおりのぼけ', { mode: 2, R: 2, pos: 0.45, sat: 1.6, fps: 60, spd: 1 }],
   ];
   let S, onChange, activePreset = 1;
 

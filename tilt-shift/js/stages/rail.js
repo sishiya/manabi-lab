@@ -161,10 +161,10 @@ STAGES.push({
     const tmp = new THREE.Object3D();
     function placeTrains() {
       for (const [ln, it] of trains) {
-        const [x0, z0] = Traffic.at(ln, it.s), dir = ln === lanes[0] || ln === lanes[1] ? 1 : -1;
+        const [x0, z0, , out] = Traffic.at(ln, it.s), dir = ln === lanes[0] || ln === lanes[1] ? 1 : -1;
         for (let k = 0; k < it.n; k++) {
           const off = (k - (it.n - 1) / 2) * 20.5;
-          tmp.position.set(x0 - dir * off, 0.5, z0); tmp.rotation.set(0, 0, 0); tmp.scale.set(19.8, 1, 1); tmp.updateMatrix();
+          tmp.position.set(x0 - dir * off, out ? -80 : 0.5, z0); tmp.rotation.set(0, 0, 0); tmp.scale.set(19.8, 1, 1); tmp.updateMatrix();
           carM.setMatrixAt(it.first + k, tmp.matrix);
         }
       }
@@ -208,7 +208,7 @@ STAGES.push({
     function place() {
       placeTrains();
       let k = 0;
-      for (const ln of carLanes) for (const c of ln.items) { const [x, z, ry] = Traffic.at(ln, c.s); C.set(k++, x, z, ry); }
+      for (const ln of carLanes) for (const c of ln.items) { const [x, z, ry, out] = Traffic.at(ln, c.s); C.set(k++, x, z, ry, out ? -80 : 0); }
       C.done();
     }
     place();
@@ -222,7 +222,7 @@ STAGES.push({
           if (p.wait) return;
           p.x += Math.sin(p.ry) * p.v * dt; p.z += Math.cos(p.ry) * p.v * dt;
           if (p.x < plaza[0] || p.x > plaza[2] || p.z < plaza[1] + 1 || p.z > plaza[1] + 9) { p.ry += Math.PI; }
-          ppl.set(i, p.x, p.z, p.ry, Math.sin(t * 7 + i));
+          ppl.set(i, p.x, p.z, p.ry, t * 6 + i);
         });
         ppl.done();
         place();

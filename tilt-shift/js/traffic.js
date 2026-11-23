@@ -12,12 +12,14 @@ const Traffic = (() => {
     }
     return { seg, L, loop: !!o.loop, y: o.y || 0, v0: o.v0 || 12, stops: o.stops || [], items: [] };
   }
+  // 返す: [x, z, 向き, 道の外か]。端のある道では、道の外（はじめの前・終わりのあと）にいる物は見せない
   function at(ln, s) {
-    s = ((s % ln.L) + ln.L) % ln.L;
+    const out = !ln.loop && (s < 0 || s > ln.L);
+    s = ln.loop ? ((s % ln.L) + ln.L) % ln.L : Math.min(ln.L, Math.max(0, s));
     let lo = 0, hi = ln.seg.length - 1;
     while (lo < hi) { const m = (lo + hi + 1) >> 1; if (ln.seg[m].s0 <= s) lo = m; else hi = m - 1; }
     const g = ln.seg[lo], t = s - g.s0;
-    return [g.x0 + g.dx * t, g.z0 + g.dz * t, Math.atan2(g.dx, g.dz)];
+    return [g.x0 + g.dx * t, g.z0 + g.dz * t, Math.atan2(g.dx, g.dz), out];
   }
   // 物を道に置く: { s, len, v0, gap（止まったときの間 m）, Th（車間時間 s）, a（加速）, b（減速） }
   function add(ln, it) {
@@ -25,8 +27,8 @@ const Traffic = (() => {
   }
   // stops: [{ s, red: t => bool, dwell? }]。dwell（駅）: その位置で dwell 秒止まってから出る
   function step(ln, dt, t) {
-    const it = ln.items; if (!it.length) return;
-    it.sort((a, b) => a.s - b.s);
+    if (!ln.items.length) return;
+    const it = ln.items.slice().sort((a, b) => a.s - b.s);   // 並べ替えは写しで（items の順＝絵の番号を変えない）
     for (let i = 0; i < it.length; i++) {
       const c = it[i]; let free = Infinity;
       const nx = it[(i + 1) % it.length];

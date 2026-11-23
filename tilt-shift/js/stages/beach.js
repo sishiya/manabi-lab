@@ -130,9 +130,9 @@ STAGES.push({
     let t = 0;
     function place() {
       let k = 0;
-      for (const ln of lanes) for (const c of ln.items) { const [x, z, ry] = Traffic.at(ln, c.s); C.set(k++, x, z, ry); }
+      for (const ln of lanes) for (const c of ln.items) { const [x, z, ry, out] = Traffic.at(ln, c.s); C.set(k++, x, z, ry, out ? -80 : 0); }
       C.done();
-      walkers.forEach((w, i) => { const z = zs(w.x) + w.d; ppl.set(nStatic + i, w.x, z, w.v > 0 ? Math.PI / 2 : -Math.PI / 2, Math.sin(t * 6 + w.ph), Math.max(-0.2, w.d * 0.035)); });
+      walkers.forEach((w, i) => { const z = zs(w.x) + w.d; ppl.set(nStatic + i, w.x, z, w.v > 0 ? Math.PI / 2 : -Math.PI / 2, t * 6 + w.ph, Math.max(-0.2, w.d * 0.035)); });
       swim.forEach((w, i) => { const z = zs(w.x) - w.d; ppl.set(nStatic + walkers.length + i, w.x, z, w.ry, 0, -1.25 + 0.08 * Math.sin(t * 1.3 + w.ph)); });
       ppl.done();
       boats.forEach((b, i) => {

@@ -197,7 +197,7 @@ STAGES.push({
     Kit.people(scene, P);
 
     let t = 0;
-    function place() { let i = 0; for (const ln of lanes) for (const c of ln.items) { const [x, z, ry] = Traffic.at(ln, c.s); C.set(i++, x, z, ry, 0.05); } C.done(); }
+    function place() { let i = 0; for (const ln of lanes) for (const c of ln.items) { const [x, z, ry, out] = Traffic.at(ln, c.s); C.set(i++, x, z, ry, out ? -80 : 0.05); } C.done(); }
     place();
     return { step(dt) { t += dt; Kit.time.value = t; for (const ln of lanes) Traffic.step(ln, dt, t); place(); } };
   },

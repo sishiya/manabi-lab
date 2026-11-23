@@ -16,13 +16,17 @@ THREE.ShaderChunk.fog_fragment = `#ifdef USE_FOG
 #endif`;
 
 const World = (() => {
-  let env = null, sky = null, horizon = new THREE.Color(0.75, 0.82, 0.9);
+  let env = null, sky = null, horizon = new THREE.Color(0.75, 0.82, 0.9), skyLow = new THREE.Color(0.8, 0.85, 0.9);
   const waitSky = new Promise(ok => new THREE.RGBELoader().setDataType(THREE.FloatType).load('assets/sky_1k.hdr', hdr => {
     // 地平線の少し上の明るさの平均を、かすみの色にする（空の写真とかすみの色をそろえる）
     const { data, width, height } = hdr.image, row0 = Math.round(height * 0.47), row1 = Math.round(height * 0.5);
     let r = 0, g = 0, b = 0, n = 0;
     for (let y = row0; y < row1; y++) for (let x = 0; x < width; x++) { const i = (y * width + x) * 4; r += data[i]; g += data[i + 1]; b += data[i + 2]; n++; }
     horizon.setRGB(r / n, g / n, b / n);
+    // 地平線の少し上（仰角 5〜15° ほど）の空の明るさ。町のかすみは、この明るさにそろえる（かすみが空より暗いと地平線に帯が出る）
+    r = g = b = n = 0;
+    for (let y = Math.round(height * 0.41); y < Math.round(height * 0.47); y++) for (let x = 0; x < width; x++) { const i = (y * width + x) * 4; r += data[i]; g += data[i + 1]; b += data[i + 2]; n++; }
+    skyLow.setRGB(r / n, g / n, b / n);
     hdr.mapping = THREE.EquirectangularReflectionMapping; sky = hdr; ok();
   }, undefined, () => ok()));
 
@@ -44,7 +48,10 @@ const World = (() => {
     const scene = new THREE.Scene();
     scene.background = sky || new THREE.Color(0.6, 0.7, 0.85);
     scene.environment = env;
-    const haze = horizon.clone().multiplyScalar(def.hazeBright || 1).lerp(new THREE.Color(0.62, 0.74, 0.95).multiplyScalar(horizon.r + horizon.g + horizon.b ? (horizon.r + horizon.g + horizon.b) / 3 : 1), 0.25);   // 空の地平線の色に、少し青（遠くは青白くかすむ）
+    const hb = (horizon.r + horizon.g + horizon.b) / 3 || 1, lum = c => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+    let haze;
+    if (def.hazeTint) { const t = new THREE.Color(def.hazeTint).convertSRGBToLinear(); haze = t.multiplyScalar(lum(skyLow) / lum(t) * (def.hazeBright || 1)); }   // 町の上は、ちりで暖かい白。明るさは地平線の少し上の空
+    else haze = horizon.clone().multiplyScalar(def.hazeBright || 1).lerp(new THREE.Color(0.62, 0.74, 0.95).multiplyScalar(hb), 0.25);   // 空の地平線の色に、少し青（遠くは青白くかすむ）
     scene.fog = new THREE.FogExp2(haze, (def.haze || 0.00012) * 1.25);
 
     // 太陽（低め・横から。影が見えるように）と、空・地面からの光
@@ -56,7 +63,7 @@ const World = (() => {
     Object.assign(sun.shadow.camera, { left: -R, right: R, top: R, bottom: -R, near: 10, far: R * 5 }); sun.shadow.camera.updateProjectionMatrix();
     sun.shadow.mapSize.set(opt.shadow, opt.shadow); sun.shadow.bias = -0.0003; sun.shadow.normalBias = R / 2000; sun.shadow.radius = 2;
     scene.add(sun, sun.target);
-    scene.add(new THREE.HemisphereLight('#bcd3ee', '#6b6250', 0.22));   // 影の中も空と地面の照り返しで少し明るい
+    scene.add(new THREE.HemisphereLight('#bcd3ee', '#6b6250', 0.16));   // 影の中も空と地面の照り返しで少し明るい
 
     Kit.setSeed(def.seed || 7);
     const ctx = { renderer, phone: opt.phone, horizon: haze };

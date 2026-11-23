@@ -82,20 +82,24 @@ const Blur = (() => {
     vec3 lit(vec2 uv) {
       return texture2D(tColor, uv).rgb * mix(1.0, texture2D(tAO, uv).r, uAOk);
     }
+    // ぼけに入れる点の明るさの上限（白の約 3 倍）。太陽を映したガラスの1画素が、ぼけの中で大きな白い玉にならないように
+    vec3 litB(vec2 uv) { vec3 c = lit(uv); float m = max(c.r, max(c.g, c.b)), lim = 3.0 / uExp; return m > lim ? c * (lim / m) : c; }
     void main() {
       vec3 acc = lit(vUv); float ws = 1.0;
       float r = coc(vUv), cz = uMode == 2 ? invz(vUv) : 0.0;
       if (r * uH > 0.5) {
+        acc = litB(vUv);
+        float rot = fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453) * 6.2831853;   // 点の並びを画素ごとに回す（網目の模様を出さない。動かないので、ちらつかない）
         for (int i = 0; i < 64; i++) {
           float t = float(i) + 0.5;
-          float rr = sqrt(t / 64.0) * r, a = t * 2.3999632;
+          float rr = sqrt(t / 64.0) * r, a = t * 2.3999632 + rot;
           vec2 o = vec2(cos(a), sin(a)) * rr;
           vec2 suv = vUv + vec2(o.x / uAspect, o.y);
           // 帯（写真の加工）: 円の中を同じ重みで（片がわの点だけ足すと、ぼけが大きくなる向きへ絵がずれて拡大して見える）
           // 奥行き: 前にあって、ぼけが中心まで届かない点だけ外す（ピントの合った前の物が、うしろのぼけへにじまないように）。ほかは同じ重み
           float w = 1.0;
           if (uMode == 2 && invz(suv) > cz) w = clamp((coc(suv) - rr) * uH + 1.0, 0.0, 1.0);
-          acc += w * lit(suv); ws += w;
+          acc += w * litB(suv); ws += w;
         }
       }
       vec3 c = acc / ws;                                          // ここまでは光の量（リニア）でぼかす

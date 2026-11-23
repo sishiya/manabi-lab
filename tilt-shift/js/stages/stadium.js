@@ -153,7 +153,7 @@ STAGES.push({
       }
     }
     function place() {
-      pl.forEach((p, i) => ppl.set(i, p.x, p.z, p.ry, p.v > 0.3 ? Math.sin(t * 11 + i) : 0));
+      pl.forEach((p, i) => ppl.set(i, p.x, p.z, p.ry, p.v > 0.3 ? t * 11 + i : 0, 0, Math.min(1.3, p.v / 3)));
       ppl.done(); ballM.position.set(ball.x, 0.11, ball.z);
     }
     place();

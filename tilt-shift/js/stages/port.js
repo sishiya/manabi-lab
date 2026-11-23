@@ -168,7 +168,7 @@ STAGES.push({
     function place() {
       items.forEach((c, i) => {
         const ln = loops.find(l => l.items.includes(c));
-        const [x, z, ry] = Traffic.at(ln, c.s); C.set(i, x, z, ry);
+        const [x, z, ry, out] = Traffic.at(ln, c.s); C.set(i, x, z, ry, out ? -80 : 0);
         tmp.position.set(x - Math.sin(ry) * 1.2, onTr[i] ? 1.3 : -20, z - Math.cos(ry) * 1.2); tmp.rotation.set(0, ry + Math.PI / 2, 0); tmp.scale.set(BL * 0.5, BH, BW); tmp.updateMatrix(); trCont.setMatrixAt(i, tmp.matrix);
       });
       C.done(); trCont.instanceMatrix.needsUpdate = true;

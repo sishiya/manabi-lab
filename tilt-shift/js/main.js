@@ -3,7 +3,7 @@
 window.__tishErr = [];
 window.addEventListener('error', e => window.__tishErr.push(String(e.message)));
 
-const S = { stage: 'city', mode: 1, R: 1, pos: 0.5, w: 0.16, ang: 0, pitch: 34, yaw: 32, dist: 620, tx: 0, tz: 0, sat: 1.15, fps: 60, spd: 1, view: 25, exp: 0.62, guide: false, paused: false };
+const S = { stage: 'city', mode: 1, R: 2, pos: 0.45, w: 0.1, ang: 0, pitch: 42, yaw: 32, dist: 450, tx: 0, tz: 0, sat: 1.6, fps: 60, spd: 1, view: 25, exp: 0.62, fov: 40, guide: false, paused: false };   // fov: 撮るときの縦の画角（手本の写真と見くらべるとき用。画面では変えない）
 const FOV = 40;
 
 const cv = document.getElementById('cv'), frameEl = document.getElementById('frame');
@@ -31,7 +31,7 @@ function loadStage(id, keepView) {
 function placeCamera() {
   const v = stage.def.view, ph = S.pitch * Math.PI / 180, yr = S.yaw * Math.PI / 180;
   camera.position.set(S.tx + Math.sin(yr) * Math.cos(ph) * S.dist, (v.y || 0) + Math.sin(ph) * S.dist + 1.6, S.tz + Math.cos(yr) * Math.cos(ph) * S.dist);
-  camera.near = Math.max(1, S.dist * 0.004); camera.far = 70000;
+  camera.fov = S.fov; camera.near = Math.max(1, S.dist * 0.004); camera.far = 70000;
   camera.lookAt(S.tx, v.y || 0, S.tz); camera.updateProjectionMatrix(); camera.updateMatrixWorld();
 }
 // 距離の格子を読みなおす（カメラが止まってから。動かしているあいだは前の結果のまま）
