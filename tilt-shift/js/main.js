@@ -22,7 +22,7 @@ function loadStage(id, keepView) {
   const def = defOf(id); loading = id; ready = false; UI.showLoading(def);
   if (!keepView) Object.assign(S, { pitch: def.view.pitch, yaw: def.view.yaw, dist: def.view.dist, tx: def.view.x, tz: def.view.z });
   setTimeout(() => World.load(id, renderer, { phone, shadow: Math.min(phone ? 2048 : 4096, renderer.capabilities.maxTextureSize),
-    redraw: () => { dirty = true; measureAt = performance.now() + 400; kick(); } }).then(st => {   // 本物の町: タイルが読めたら描き直し、距離の格子も測りなおす
+    redraw: () => { dirty = true; if (!measureAt) measureAt = performance.now() + 1500; kick(); } }).then(st => {   // 本物の町: タイルが読めたら描き直し、距離の格子も測りなおす
     if (loading !== id) return;
     stage = st; loading = ''; ready = true; camKey = ''; simT = shownT = 0; UI.loaded();
     UI.syncControls(); onChange(); kick();
@@ -81,7 +81,7 @@ function advance(dt) {
   if (!stage) return;
   simT += dt * S.spd;
   const per = S.fps >= 60 ? 0 : S.spd / S.fps;
-  if (simT - shownT > per) { stage.step(Math.min(0.5, simT - shownT)); shownT = simT; dirty = true; }
+  if (simT - shownT > per) { const moved = stage.step(Math.min(0.5, simT - shownT)); shownT = simT; if (moved !== false) dirty = true; }   // step が false を返す場面（動く物なし）は描き直さない
 }
 const creditEl = document.getElementById('credit');
 function render() {

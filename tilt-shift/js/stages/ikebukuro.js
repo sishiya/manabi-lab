@@ -60,19 +60,20 @@ STAGES.push({
         if (win > 0.5) { gRough = 0.08; gMetal = 0.5; }
       } else { c *= 0.85 + 0.25 * kF(vWP * 0.08); }
       diffuseColor.rgb = c;`);
+    plain.userData.shared = true;
     const tilesMat = (m, hasMap, hasCol) => {
       if (hasMap) { m.map.encoding = THREE.sRGBEncoding; m.map.anisotropy = 8; return new THREE.MeshBasicMaterial({ map: m.map, color: TINT, vertexColors: false }); }
       // 質感のない建物（駅ビルの一部・遠くの粗い版）: 頂点の色（ないときは明るい灰）に光を当てて、面の向きがわかるように
       return plain;
     };
-    const sets = WARDS.map(([name, geoid, url]) => RealTiles.create(scene, P + url, { lon0: LON0, lat0: LAT0, h0: geoid + H0, radius: 4200, sse: ctx.phone ? 24 : 12, keep: ctx.phone ? 120 : 320, material: tilesMat, onLoad: () => ctx.redraw && ctx.redraw() }));
+    const sets = WARDS.map(([name, geoid, url]) => RealTiles.create(scene, P + url, { lon0: LON0, lat0: LAT0, h0: geoid + H0, radius: 2600, sse: ctx.phone ? 40 : 24, keep: ctx.phone ? 150 : 400, material: tilesMat, onLoad: () => ctx.redraw && ctx.redraw() }));   // radius: 2.6 km より先はかすみで 94 % 以上かくれる → 読まない（地面の写真だけ）
 
     let t = 0;
     return {
       // カメラが動いた・タイルが読めたときに、見せるタイルを決め直す
       view(camera, H) { let ch = false; for (const s of sets) ch = s.update(camera, H, camera.fov * Math.PI / 180) || ch; return ch; },
       get loading() { return sets.reduce((a, s) => a + s.loading, 0); },
-      step(dt) { t += dt; Kit.time.value = t; },
+      step(dt) { t += dt; Kit.time.value = t; return false; },   // 動く物がないので、描き直さない（電池）
       dispose() { sets.forEach(s => s.dispose()); },
     };
   },
