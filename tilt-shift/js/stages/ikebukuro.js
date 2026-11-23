@@ -5,7 +5,7 @@
 STAGES.push({
   id: 'ikebukuro', name: '池袋（本物の町）', short: '池袋', seed: 3, size: 900, haze: 0.0009, hazeTint: '#d3d2cc', real: true,
   note: '本物の建物と航空写真で作った池袋。サンシャイン60 から駅を見る',
-  credit: '建物: 3D都市モデル（Project PLATEAU）国土交通省／地面: 地理院タイル（シームレス空中写真・標高）',
+  credit: '建物: 3D都市モデル（Project PLATEAU）国土交通省／地面: 地理院タイル（シームレス空中写真・標高）／道: OpenFreeMap © OpenMapTiles Data from OpenStreetMap',
   // 原点は池袋駅の東口のあたり。カメラはサンシャイン60 の展望台（東へ約 600 m・高さ約 230 m）
   view: { x: 0, z: 0, y: 0, dist: 520, pitch: 25, yaw: 80, min: 120, max: 2500, range: 1500 },   // サンシャイン60 の西の窓の外（高さ約 225 m）
   sun: { el: 40, az: -30, power: 3.0 },
@@ -21,6 +21,7 @@ STAGES.push({
     ];
     const K = 1.25;   // 写真の色を、そのまま近い明るさで出す係数（露出 0.62 と ACES のあと）
 
+    const linesP = RealRoads.load(LON0, LAT0, 1600, toXZ);   // 道の線（地面と同時に読みはじめる）
     // ---- 地面: 標高（5 m メッシュ）と空中写真。近く 3.2 km は細かく、外 12 km は粗く ----
     const SPAN = 3200, OUTER = 12000;
     const [hgt, near, outer] = await Promise.all([
@@ -68,13 +69,45 @@ STAGES.push({
     };
     const sets = WARDS.map(([name, geoid, url]) => RealTiles.create(scene, P + url, { lon0: LON0, lat0: LAT0, h0: geoid + H0, radius: 2600, sse: ctx.phone ? 40 : 24, keep: ctx.phone ? 150 : 400, material: tilesMat, onLoad: () => ctx.redraw && ctx.redraw() }));   // radius: 2.6 km より先はかすみで 94 % 以上かくれる → 読まない（地面の写真だけ）
 
+    // ---- 車と人（OpenStreetMap の道。js/real/roads.js）----
+    let lines = [];
+    try { lines = await linesP; } catch (e) { console.warn('roads', e); }
+    const yAt = (x, z) => { const h = hgt(lonOf(x), latOf(z)); return isNaN(h) ? 0 : h - H0; };
+    const CARCLS = ['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'minor'];
+    const GC = RealRoads.graph(lines, L => CARCLS.includes(L.cls) && !L.tunnel, 1500);
+    const GP = RealRoads.graph(lines.map(L => Object.assign({}, L, { oneway: 0 })), L => !L.tunnel && (CARCLS.includes(L.cls) || (L.cls === 'path' && /footway|pedestrian|path/.test(L.sub || ''))), 1100);
+    const nodeY = G => G.P.map(([x, z]) => yAt(x, z));
+    const YC = nodeY(GC), YP = nodeY(GP);
+    const GAPS = { motorway: 45, trunk: 30, primary: 30, secondary: 45, tertiary: 70, minor: 220 };
+    const lanesC = e => e.w >= 12 ? [1.75, 5.25] : e.w >= 9 ? [e.w / 4] : [e.w / 4];   // 左側通行: 進む向きの左へ。広い道は 2 車線
+    const carsN = Math.round(GC.edges.reduce((a, e) => a + e.len * lanesC(e).length / (GAPS[e.cls] || 1e9), 0) * (ctx.phone ? 0.5 : 1));
+    const MC = RealRoads.movers(GC, { n: carsN, lanes: lanesC, v: e => ({ motorway: 16, trunk: 13, primary: 12, secondary: 10, tertiary: 8, minor: 5 })[e.cls] || 5, weight: e => lanesC(e).length / (GAPS[e.cls] || 1e9), len: 4.6, gap: 2.5, follow: true }, Kit.rnd);
+    const kinds = MC.list.map(() => { const r = Kit.rnd(); return r < 0.04 ? 'bus' : r < 0.1 ? 'truck' : r < 0.22 ? 'van' : r < 0.42 ? 'kei' : 'sedan'; });
+    const C = MC.list.length ? Kit.cars(scene, kinds.map(kind => ({ kind }))) : null;
+    const isWalk = e => e.cls === 'path';
+    const lanesP = e => isWalk(e) ? [-1, 0, 1] : [e.w / 2 + 1.4, -(e.w / 2 + 1.4)];   // 歩行者の道はまん中あたり、通りは両側の歩道
+    const MP = RealRoads.movers(GP, { n: ctx.phone ? 1000 : 2500, lanes: lanesP, v: () => 1.25, weight: e => { const [x, z] = GP.P[e.a]; return Math.exp(-Math.hypot(x, z) / 350) * (isWalk(e) ? 3 : e.cls === 'minor' ? 0.6 : 1); }, len: 0.5, gap: 0.3, follow: false }, Kit.rnd);
+    const ppl = MP.list.length ? Kit.people(scene, MP.list.map(() => ({ x: 0, z: 0 }))) : null;
+    // 車と人の影を、写真の地面に落とす（地面の写真には光を当てないので、影だけを重ねる板）
+    const shadowG = new THREE.PlaneGeometry(SPAN * 0.7, SPAN * 0.7, 160, 160); shadowG.rotateX(-Math.PI / 2);
+    { const p = shadowG.attributes.position; for (let i = 0; i < p.count; i++) p.setY(i, yAt(p.getX(i), p.getZ(i)) + 0.08); }
+    const shadowM = new THREE.Mesh(shadowG, new THREE.ShadowMaterial({ opacity: 0.4, depthWrite: false })); shadowM.receiveShadow = true; scene.add(shadowM);
+    function place() {
+      MC.list.forEach((it, i) => { const [x, z, ry] = MC.at(it); C.set(i, x, z, ry, YC[it.e.a] + (YC[it.e.b] - YC[it.e.a]) * it.s / it.e.len); });
+      if (C) C.done();
+      MP.list.forEach((it, i) => { const [x, z, ry] = MP.at(it); ppl.set(i, x, z, ry, it.ph, YP[it.e.a] + (YP[it.e.b] - YP[it.e.a]) * it.s / it.e.len); });
+      if (ppl) ppl.done();
+    }
+    if (C || ppl) place();
+
     let t = 0;
     return {
       // カメラが動いた・タイルが読めたときに、見せるタイルを決め直す
       view(camera, H) { let ch = false; for (const s of sets) ch = s.update(camera, H, camera.fov * Math.PI / 180) || ch; return ch; },
       get loading() { return sets.reduce((a, s) => a + s.loading, 0); },
-      step(dt) { t += dt; Kit.time.value = t; return false; },   // 動く物がないので、描き直さない（電池）
+      step(dt) { t += dt; Kit.time.value = t; if (!C && !ppl) return false; MC.step(dt); MP.step(dt); place(); return true; },
       dispose() { sets.forEach(s => s.dispose()); },
+      get counts() { return { cars: MC.list.length, people: MP.list.length, lines: lines.length }; },
     };
   },
 });

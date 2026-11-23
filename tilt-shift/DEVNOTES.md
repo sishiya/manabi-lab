@@ -28,7 +28,8 @@
 | tools/shot.mjs | 手元だけ: 絵を撮る。`--gpu` で GPU（速い）。設定の `run` で時間を進める | `node tilt-shift/tools/shot.mjs <出力> --gpu a='{"stage":"rail","mode":0,"run":20}'` |
 | tools/eval.mjs | 手元だけ: ページで JS の式を評価する（デバッグ） | |
 | js/real/tiles.js・ground.js | 本物の町: PLATEAU の 3D Tiles を読む（見かけの粗さで細かく・ECEF → 東上南）・地理院の空中写真と標高の地面 | `RealTiles.create(scene, url, o)` → `update(camera, H, fov)`・`RealGround.photo`・`dem` |
-| js/stages/ikebukuro.js | 場面: 池袋（本物の町）。5 つの区の tileset・地面・質感のない建物の材質 | `view(camera, H)`（main の render から） |
+| js/real/roads.js・mvt.js | 本物の町の道（OpenFreeMap のベクトルタイル）の網と、その上を動く車・人（`RealRoads.load`・`graph`・`movers`）。mvt.js は god-view の写し | |
+| js/stages/ikebukuro.js | 場面: 池袋（本物の町）。5 つの区の tileset・地面・質感のない建物の材質・車と人・影の板 | `view(camera, H)`（main の render から） |
 | look/ref/ | 手元だけ（Git に入れない）: 町の手本の写真（Wikimedia Commons。名古屋・池袋・六本木） | |
 
 読み込み順: three.min.js（../lib r128）→ RGBELoader → kit → traffic → town → world → stages/* → blur → measure → controls → ui → main。power.js は head。
@@ -73,6 +74,7 @@
   - `js/real/tiles.js`: tileset.json の木をたどり、見かけの粗さ（geometricError を画素に直す。パソコン 24・スマホ 40 画素）で細かくする。子が描けるまで親を見せる。同じ画像の部品は1つにまとめ、画面の外は描かない。b3dm → glb を GLTFLoader（r128）＋DRACOLoader で。座標は Y 上 → Z 上、CESIUM_RTC、ECEF → 東・上・南。高さは楕円体高 − ジオイド高（区ごと）− 原点の標高。原点から 2.6 km まで。読みためは 320 個（スマホ 120）まで、長く見ていない物から捨てる。
   - `js/real/ground.js`: シームレス空中写真（近く 3.2 km は z18 を 4096 画素、外 12 km は z14 を 2048 画素）と dem5a_png（5 m）の地面。
   - 建物と地面は写真そのもの（写したときの光と影）なので光を当てずに出す（MeshBasic、明るさ ×1.25、少し暖かく）。質感のない建物（駅ビルの一部・遠くの粗い版）は、世界の法線から窓の帯と汚れを描く。
+  - 車と人（`js/real/roads.js`・`mvt.js`＝神の視点マップの解読器の写し）: OpenFreeMap の z14 の道（transportation）を 1 m 単位の点でつないだ網。車は左側通行・一方通行・トンネルのぞく・前の車との間をあける（信号なし）、道の種類ごとの間隔から数を決める（約 4,000 台、スマホは半分）。人は歩行者の道と通りの両側の歩道、駅に近いほど多い（2,500 人、スマホ 1,000 人）。高さは標高を点ごとに。影は写真の地面の上に ShadowMaterial の板で影だけ。1コマの計算 2.7 ms（パソコン）。
   - 豊島区・新宿区・文京区・北区・板橋区（2025 年度）。出典は絵の上（#credit）と「このアプリについて」。動作確認の外への通信は smoke.ps1 の allowApp に。
 - 2026-11-23 段階F 町のクオリティアップ（ユーザー「全体的にチープ。まず町。手本の写真を3Dで忠実に再現、批判役を立てる。通常カメラでリアルにしてから、ティルトシフトでいちばんジオラマ感の出る設定を探す」）。
   - 不具合: 車が後ろ向き（押し出した形の前が −z だった）→ 前を +z に。車がパカパカ入れかわる（毎コマ並べ替えた items の順で絵の番号を振っていた）→ 並べ替えは写しで。道の端で反対の端に一瞬出る → 道の外は隠す（Traffic.at の4つめ）。

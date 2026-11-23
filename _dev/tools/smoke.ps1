@@ -49,7 +49,7 @@ $allowApp = @{
   # 顔を読むモデル（MediaPipe, Apache-2.0）。カメラを開いたときだけ読む
   'tank-window' = @('^storage\.googleapis\.com$')
   # 池袋（本物の町）: PLATEAU の建物と地理院の空中写真・標高（god-view と同じ配信元。tilt-shift/DEVNOTES の「本物の町」）
-  'tilt-shift' = @('^cyberjapandata\.gsi\.go\.jp$', '\.plateau\.reearth\.io$')
+  'tilt-shift' = @('^cyberjapandata\.gsi\.go\.jp$', '\.plateau\.reearth\.io$', '^tiles\.openfreemap\.org$')
   # 地図・地形・写真・建物・データ源（god-view/DEVNOTES.md の「データ源」。キー不要のものだけ）
   'god-view' = @('\.gsi\.go\.jp$', '^gibs\.earthdata\.nasa\.gov$', '(^|\.)openstreetmap\.org$', '(^|\.)openfreemap\.org$',
     '^earthquake\.usgs\.gov$', '\.odpt\.org$', '^celestrak\.org$', '\.amazonaws\.com$', '\.plateau\.reearth\.io$')
