@@ -1,0 +1,32 @@
+1
+00:00:00,000 --> 00:00:01,940
+¿El 80% del polvo de casa es piel muerta?
+
+2
+00:00:01,940 --> 00:00:04,760
+Se oye mucho, pero no parece haber estudios que lo confirmen
+
+3
+00:00:04,760 --> 00:00:10,810
+Un estudio de EE. UU. de 2009 usó un modelo por computadora
+para rastrear de dónde viene el polvo en casas donde se entra con zapatos
+
+4
+00:00:10,810 --> 00:00:16,110
+Respuesta: más del 60% viene de afuera:
+tierra de los zapatos y partículas del aire exterior
+
+5
+00:00:16,110 --> 00:00:19,680
+En las casas japonesas, donde se quitan los zapatos,
+la parte de afuera quizá sea menor
+
+6
+00:00:19,680 --> 00:00:26,680
+La piel también está ahí.
+Pero no es el ingrediente principal
+
+7
+00:00:26,680 --> 00:00:31,680
+El atajo para tener menos polvo…
+quizá sea la puerta de entrada

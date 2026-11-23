@@ -1,0 +1,17 @@
+{
+  "videoId": "oAn5srULGA4",
+  "file": "_dev/promo/out/house-dust-trivia1-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/house-dust-trivia1.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-27T21:00:00+09:00",
+  "captions": { "en": "_dev/promo/out/house-dust-trivia1-short.en.srt", "es": "_dev/promo/subs/house-dust-trivia1-short.es.srt", "ko": "_dev/promo/subs/house-dust-trivia1-short.ko.srt", "pt": "_dev/promo/subs/house-dust-trivia1-short.pt.srt", "zh-TW": "_dev/promo/subs/house-dust-trivia1-short.zh-TW.srt" },
+  "title": "【うんちく】アメリカの家では、ほこりの6割は外から #Shorts",
+  "description": "「家のほこりの8割は人の皮ふ」とよく聞きますが、それを確かめた研究は見つかりません。2009年のアメリカの研究は、土足で暮らす家のほこりがどこから来るかを、コンピューターのモデルで追いかけました。答えは、6割以上が外から。靴についた土と、窓やすき間から入る外の空気の粒です。皮ふも入っていますが、主役ではありませんでした。\n\n6割以上は、アメリカ中西部の家のコンピューターのモデルによる推定で、家・季節・土足かどうかで変わります。靴をぬぐ日本の家で確かめた数字はありません。「玄関が近道かも」は研究の結論ではなく、そこからの思いつきです。絵は模式図です。\n\nアプリ「ほこりが積もるまで」に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/house-dust/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: Layton & Beamer (2009) \"Migration of Contaminated Soil and Airborne Particulates to Indoor Dust\" Environmental Science & Technology 43: 8199–8205\n\n声: VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
+  "tags": ["ほこりが積もるまで", "ほこり", "ハウスダスト", "掃除", "土足", "うんちく", "雑学", "Shorts", "まなびラボ", "しし屋", "house dust", "did you know"],
+  "localizations": {
+    "en": {
+      "title": "Did you know? In US homes, over 60% of house dust comes from outdoors #Shorts",
+      "description": "You often hear that 80% of house dust is dead skin, but no study seems to back it up. A 2009 US study used a computer model to trace where dust comes from in homes where people wear shoes indoors. The answer: over 60% comes from outdoors — soil tracked in on shoes and particles from outside air coming through windows and gaps. Skin is in there too, but it isn't the main ingredient. Turn on English subtitles (CC).\n\nThe \"over 60%\" figure is a model estimate for homes in the US Midwest; it varies with the house, the season and whether shoes are worn indoors. There is no measured figure for Japanese homes, where shoes come off. \"Your front door might be the shortcut\" is our own idea, not the study's conclusion. The pictures are simplified illustrations.\n\nRelated to the app \"How Dust Settles\".\n\nApp (in Japanese for now): https://sishiya.github.io/manabi-lab/house-dust/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/?lang=en\n\nSource: Layton & Beamer (2009) \"Migration of Contaminated Soil and Airborne Particulates to Indoor Dust\" Environmental Science & Technology 43: 8199–8205\n\nVoice: VOICEVOX:Meimei Himari\nMusic: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#DidYouKnow #Science"
+    }
+  }
+}

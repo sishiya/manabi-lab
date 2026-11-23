@@ -1,0 +1,32 @@
+1
+00:00:00,000 --> 00:00:01,940
+80% da poeira de casa é pele morta?
+
+2
+00:00:01,940 --> 00:00:04,760
+Muita gente diz isso, mas parece não haver estudo que confirme
+
+3
+00:00:04,760 --> 00:00:10,810
+Um estudo dos EUA de 2009 usou um modelo de computador
+para rastrear de onde vem a poeira em casas onde se entra de sapato
+
+4
+00:00:10,810 --> 00:00:16,110
+Resposta: mais de 60% vem de fora —
+terra dos sapatos e partículas do ar externo
+
+5
+00:00:16,110 --> 00:00:19,680
+Em casas japonesas, onde se tiram os sapatos,
+a parte de fora talvez seja menor
+
+6
+00:00:19,680 --> 00:00:26,680
+A pele também está lá.
+Mas não é o ingrediente principal
+
+7
+00:00:26,680 --> 00:00:31,680
+O atalho para ter menos poeira…
+talvez seja a porta de entrada

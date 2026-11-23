@@ -20,6 +20,7 @@
 // REVIEW の直し: 「アメリカ（土足）の家のモデル」を大きめに・「根拠がない」→「確かめた研究が見つからない」・最後の「玄関」は「かも」まで。
 // 6割以上は Layton & Beamer (2009) のアメリカ中西部の家のコンピューターのモデル（ScienceDaily の紹介）。円グラフは 60:40 で描き、字は「以上／以下」
 const DUR = 30;
+const THUMB = new URLSearchParams(location.search).has('thumbart');   // サムネイル用の絵（字を消す）のとき
 const subs = [
   { a: 0.0, b: 1.8, ja: 'ほこりの8割は人の皮ふ？', en: 'Is 80% of house dust dead skin?', noBurn: true },
   { a: 1.8, b: 4.0, ja: 'よく聞くけど、\n[確かめた研究]が見つからない', en: 'You hear it a lot, but no study seems to back it up' },
@@ -102,9 +103,10 @@ function house(g, t, k) {
     else air.push([lerp(HR + 120, HL + 60 + rnd(i, 6) * 680, p), lerp(760 + rnd(i, 7) * 80, HB - 10 - rnd(i, 8) * 6, ease(p)), 6, i]);
   }
   grains(g, soil, SOIL); grains(g, air, AIR, true);
-  PL.label(g, '玄関', 75, 690, 40, { color: TK.C.sub });
-  if (t > 5.0) { g.save(); g.globalAlpha = fade(t, 5.0, 10, 0.3); arrow(g, 20, 900, 240, 900, PL.T.brown); PL.label(g, '靴の土', 40, 1125, 44, { align: 'left', color: '#7a5a3a' }); g.restore(); }
-  if (t > 6.2) { g.save(); g.globalAlpha = fade(t, 6.2, 10, 0.3); arrow(g, 1070, 775, 840, 775, TK.C.acc2); PL.leader(g, HR + 30, 690, 990, 470, TK.C.acc2); PL.label(g, '窓・すき間から', 1050, 440, 40, { align: 'right', color: TK.C.acc2 }); g.restore(); }
+  PL.label(g, '玄関', 215, 700, 40, { color: TK.C.sub });   // 左はし（x 110 より左）はスマホで切れるので、家の中に
+  if (t > 5.0) { g.save(); g.globalAlpha = fade(t, 5.0, 10, 0.3); arrow(g, 20, 900, 240, 900, PL.T.brown); PL.label(g, '靴の土', 120, 845, 44, { align: 'left', color: '#7a5a3a' }); g.restore(); }
+  if (t > 6.2) { g.save(); g.globalAlpha = fade(t, 6.2, 10, 0.3); arrow(g, 1070, 775, 840, 775, TK.C.acc2); if (!THUMB) PL.leader(g, HR - 4, 705, 860, 668, TK.C.acc2);   // サムネイルでは札の字が消えるので線も描かない
+    PL.label(g, '窓・すき間から', 890, 640, 40, { align: 'right', color: TK.C.acc2 }); g.restore(); }
 }
 // 円グラフ（外 60・中 40 として描く）。名前はグラフの外に、引き出し線で
 function pie(g, t, cx, cy, r) {
@@ -208,14 +210,14 @@ function draw(g, t) {
   if (t >= 10.0 && t < 18.0) {
     modelTag(g, 230);
     pie(g, t, PW / 2, 600, 250);
-    if (t > 14.5) { g.save(); g.globalAlpha = fade(t, 14.5, 18, 0.3); PL.label(g, '日本の家（靴をぬぐ）は、たしかめた数字なし', PW / 2, 1070, 40, { color: TK.C.sub, bold: false }); g.restore(); }
+    if (t > 14.5) { g.save(); g.globalAlpha = fade(t, 14.5, 18, 0.3); PL.label(g, '日本の家（靴をぬぐ）は、', PW / 2 - 40, 1015, 38, { color: TK.C.sub, bold: false }); PL.label(g, 'たしかめた数字なし', PW / 2 - 40, 1062, 38, { color: TK.C.sub, bold: false }); g.restore(); }
   }
   // 18〜25: ルーペ
   if (t >= 18.0 && t < 25.0) { PL.label(g, '積もったほこりの中', PW / 2, 230, 60, { color: TK.C.sub }); loupe(g, t); }
   // 25〜30: 玄関
   if (t >= 25.0) { doorMat(g, t); if (t < 27.8) TK.note(g, t, 25.2, 27.8, '研究の結論ではなく、そこからの思いつきです', { size: 32 }); }
-  if (t >= 4 && t < 18) TK.note(g, t, 4, 18, 'アメリカ中西部の家のコンピューターのモデル（推定）。家・季節・土足かどうかで変わります', { size: 30 });
-  if (t >= 27.8) TK.note(g, t, 27.8, 30.0, '出どころ: Layton & Beamer (2009) Environ. Sci. Technol. 43:8199', { size: 30 });
+  if (t >= 4 && t < 18) TK.note(g, t, 4, 18, 'アメリカ中西部の家のコンピューターのモデル（推定）\n家・季節・土足かどうかで変わります', { size: 30, y: 1140 });
+  if (t >= 27.8) TK.note(g, t, 27.8, 30.0, '出どころ: Layton & Beamer (2009)\nEnviron. Sci. Technol. 43:8199', { size: 30, y: 1140 });
 }
 
 triviaStart({ out: 'house-dust-trivia1', voice: 'auto', dur: DUR, draw, subs, cues, peek: 1.5 });
