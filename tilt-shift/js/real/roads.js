@@ -81,9 +81,54 @@ const RealRoads = (() => {
     const pickEdge = () => { const r = rnd() * tot; let lo = 0, hi = cum.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (cum[m] < r) lo = m + 1; else hi = m; } return edges[lo]; };
     for (let i = 0; i < o.n; i++) {
       const e = pickEdge(), lanes = o.lanes(e);
-      const it = { e, s: rnd() * e.len, lane: lanes[(rnd() * lanes.length) | 0], v: 0, v0: o.v(e) * (0.8 + rnd() * 0.4), nx: null, ph: rnd() * 6.28, k: i };
+      const sc = o.vScale ? o.vScale(rnd) : 0.8 + rnd() * 0.4;   // 速さの好みは1台・1人ごと
+      const it = { e, s: rnd() * e.len, lane: lanes[(rnd() * lanes.length) | 0], v: 0, sc, v0: o.v(e) * sc, nx: null, ph: rnd() * 6.28, k: i };
       it.nx = next(G, e, rnd); e.items.push(it); list.push(it);
     }
+    const TR = o.turnR || 6, YAWR = o.yawRate || 2.5;
+    // 角を曲線で: 点（交差点・折れ目）の手前 r と先 r を、2次ベジェでつなぐ
+    // 角の半径: 横のずれ（車線・歩道）より大きく（内側の点が角で一気に動かない）。辺の長さの半分まで
+    function corner(e, nx, it) { return Math.min(Math.max(TR, it ? Math.abs(it.lane) + 1.5 : TR), e.len / 2, nx.len / 2); }
+    function pose(it, dt) {
+      const e = it.e, [ax, az] = G.P[e.a];
+      let x = ax + e.dx * it.s, z = az + e.dz * it.s, tx = e.dx, tz = e.dz;
+      let P0, P1, P2, u = -1, d0 = null;
+      if (it.nx && it.s > e.len - corner(e, it.nx, it)) { const r = corner(e, it.nx, it), [bx, bz] = G.P[e.b]; P0 = [bx - e.dx * r, bz - e.dz * r]; P1 = [bx, bz]; P2 = [bx + it.nx.dx * r, bz + it.nx.dz * r]; u = (it.s - (e.len - r)) / (2 * r); d0 = [e.dx, e.dz, it.nx.dx, it.nx.dz]; }
+      else if (it.pe && it.s < it.cr) { const r = it.cr; P0 = [ax - it.pe.dx * r, az - it.pe.dz * r]; P1 = [ax, az]; P2 = [ax + e.dx * r, az + e.dz * r]; u = 0.5 + it.s / (2 * r); d0 = [it.pe.dx, it.pe.dz, e.dx, e.dz]; }
+      if (u >= 0 && d0[0] * d0[2] + d0[1] * d0[3] < -0.9) {
+        // Uターン（行き止まり）: 曲線は折り返しの点で向きが決まらないので、点のまわりを半円で回る（向きを右回りに π）
+        const [bx, bz] = P1, rr = Math.hypot(P1[0] - P0[0], P1[1] - P0[1]);
+        if (u < 0.25 || u > 0.75) {   // 手前と先はまっすぐ（点へ向かう・点から出る）
+          const k = u < 0.25 ? 1 - u / 0.25 : (u - 0.75) / 0.25, dx = u < 0.25 ? -d0[0] : d0[2], dz = u < 0.25 ? -d0[1] : d0[3];
+          x = bx + dx * rr * k; z = bz + dz * rr * k; tx = u < 0.25 ? d0[0] : d0[2]; tz = u < 0.25 ? d0[1] : d0[3];
+          u = -2;
+        }
+      }
+      if (u >= 0 && d0[0] * d0[2] + d0[1] * d0[3] < -0.9) {
+        const a = Math.PI * Math.min(1, Math.max(0, (u - 0.25) * 2)), sgn = -1;
+        const c = Math.cos(sgn * a), sn = Math.sin(sgn * a);
+        tx = d0[0] * c - d0[1] * sn; tz = d0[0] * sn + d0[1] * c;
+        // 左の向き（tz, −tx）が、はじめは左、まん中で前を向くほうへ回す
+        const mid = Math.cos(sgn * Math.PI / 2), ms = Math.sin(sgn * Math.PI / 2), fx = d0[0] * mid - d0[1] * ms, fz = d0[0] * ms + d0[1] * mid;
+        if (fz * d0[0] - fx * d0[1] < 0) { const c2 = Math.cos(-sgn * a), s2 = Math.sin(-sgn * a); tx = d0[0] * c2 - d0[1] * s2; tz = d0[0] * s2 + d0[1] * c2; }
+        x = P1[0]; z = P1[1]; u = -2;
+      }
+      if (u >= 0) {
+        const w0 = (1 - u) * (1 - u), w1 = 2 * u * (1 - u), w2 = u * u;
+        x = w0 * P0[0] + w1 * P1[0] + w2 * P2[0]; z = w0 * P0[1] + w1 * P1[1] + w2 * P2[1];
+        tx = (1 - u) * (P1[0] - P0[0]) + u * (P2[0] - P1[0]); tz = (1 - u) * (P1[1] - P0[1]) + u * (P2[1] - P1[1]);
+        const l = Math.hypot(tx, tz); if (l > 1e-6) { tx /= l; tz /= l; } else { tx = e.dx; tz = e.dz; }
+      }
+      // 車線（横のずれ）も、急に変えずにゆっくり
+      if (it.laneS === undefined) it.laneS = it.lane;
+      it.laneS += Math.max(-dt * 1.2, Math.min(dt * 1.2, it.lane - it.laneS));
+      it.x = x + tz * it.laneS; it.z = z - tx * it.laneS;
+      // 向きは、進む向きへ一定の速さまでで回す（Uターンのとがりも、くるっと回る）
+      const ry = Math.atan2(tx, tz);
+      if (it.ry === undefined || !dt) it.ry = ry;
+      else { let d = ry - it.ry; d = Math.atan2(Math.sin(d), Math.cos(d)); it.ry += Math.max(-YAWR * dt, Math.min(YAWR * dt, d)); }
+    }
+    list.forEach(it => pose(it, 0));
     function step(dt) {
       if (o.follow) for (const e of G.edges) if (e.items.length > 1) e.items.sort((a, b) => a.s - b.s);
       for (const it of list) {
@@ -93,24 +138,34 @@ const RealRoads = (() => {
           for (let q = j + 1; q < arr.length; q++) if (Math.abs(arr[q].lane - it.lane) < 1) { free = arr[q].s - it.s - o.len - o.gap; break; }
           if (free > 1e8 && it.nx) { const rest = it.e.len - it.s; for (const b of it.nx.items) if (Math.abs(b.lane - it.lane) < 1) free = Math.min(free, rest + b.s - o.len - o.gap); }
         }
-        const vMax = Math.max(0, Math.min(it.v0 * (o.v(it.e) / (o.v(it.e) || 1)), free / 1.3));
+        let vMax = Math.max(0, Math.min(o.v(it.e) * it.sc, free / 1.3));   // 目標の速さ = 道の目安 × その人・車の好み
+        // 曲がる前の減速: 曲がる角度 θ・角の半径 r から、曲がれる速さ √(a·R)（横の加速度 a = 2 m/s²）、R = r / tan(θ/2)。手前から b = 2.5 m/s² で落とす
+        if (o.follow && it.nx) {
+          const c = Math.max(-1, Math.min(1, it.e.dx * it.nx.dx + it.e.dz * it.nx.dz)), th = Math.acos(c);
+          if (th > 0.25) { const R = corner(it.e, it.nx, it) / Math.tan(Math.min(1.5, th) / 2), vT = Math.max(1.5, Math.sqrt(2 * R)), d = Math.max(0, it.e.len - it.s - corner(it.e, it.nx, it));
+            vMax = Math.min(vMax, Math.sqrt(vT * vT + 2 * 2.5 * d)); }
+        }
         it.v = vMax > it.v ? Math.min(vMax, it.v + 2 * dt) : Math.max(vMax, it.v - 6 * dt);
-        it.s += it.v * dt;
+        // 角を回るあいだは、横にずれた点（歩道・車線）がふつうの速さで動くように、中心の進みを r / (r + |ずれ|) にする
+        let cz = 1;
+        if (it.nx && it.s > it.e.len - corner(it.e, it.nx, it)) { const r = corner(it.e, it.nx, it); cz = r / (r + Math.abs(it.laneS ?? it.lane)); }
+        else if (it.pe && it.s < it.cr) cz = it.cr / (it.cr + Math.abs(it.laneS ?? it.lane));
+        it.s += it.v * cz * dt;
         while (it.s > it.e.len) {
           const nx = it.nx || next(G, it.e, rnd); if (!nx) { it.s = it.e.len; break; }
           it.s -= it.e.len;
           const arr = it.e.items; arr.splice(arr.indexOf(it), 1);
+          it.cr = corner(it.e, nx, it); it.pe = it.e;
           it.e = nx; nx.items.push(it); it.nx = next(G, nx, rnd);
-          const lanes = o.lanes(nx); if (!lanes.includes(it.lane)) it.lane = lanes[(rnd() * lanes.length) | 0];
+          // 車線は同じ側（左右の符号が同じ）でいちばん近いものへ（道を横切らない）
+          const lanes = o.lanes(nx);
+          if (!lanes.includes(it.lane)) { const same = lanes.filter(l => Math.sign(l) === Math.sign(it.lane) || l === 0); const L = same.length ? same : lanes; it.lane = L.reduce((a, b) => Math.abs(b - it.lane) < Math.abs(a - it.lane) ? b : a); }
         }
-        it.ph += it.v * dt * 3.4;   // 人の歩きの位相（1歩 ≈ 0.9 m）
+        it.ph += it.v * dt * 3.4;   // 足の運びは本当の速さで   // 人の歩きの位相（1歩 ≈ 0.9 m）
+        pose(it, dt);
       }
     }
-    // 位置と向き: 辺の上の点から左へ lane m
-    function at(it) {
-      const e = it.e, [ax, az] = G.P[e.a], x = ax + e.dx * it.s + e.dz * it.lane, z = az + e.dz * it.s - e.dx * it.lane;
-      return [x, z, Math.atan2(e.dx, e.dz)];
-    }
+    function at(it) { return [it.x, it.z, it.ry]; }
     return { list, step, at };
   }
   return { load, graph, movers, W };

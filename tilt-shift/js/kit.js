@@ -266,38 +266,99 @@ const Kit = (() => {
     if (abs(vON.z) > 0.9 && abs(vON.y) < 0.1) diffuseColor.rgb = vec3(0.5, 0.48, 0.44) * (0.8 + 0.3 * kN(vWP * 2.0));   // 妻の壁
     gRough = 0.55 + 0.3 * kN(vWP * 0.8);`);
 
-  // ---- 木（いくつかのかたまり。葉のすき間の陰を、ノイズで色と向きにする） ----
-  const lump = new THREE.IcosahedronGeometry(1, 1);
-  const cone = new THREE.ConeGeometry(1, 1, 7, 2, true); cone.translate(0, 0.5, 0);
-  const trunk = new THREE.CylinderGeometry(0.12, 0.18, 1, 5); trunk.translate(0, 0.5, 0);
-  const leafMat = () => mat('leaf', { roughness: 0.85 }, `
-    float n1 = kF(vWP * 1.4 + vRnd * 30.0), n2 = kN(vWP * 4.5);
-    float hole = smoothstep(0.42, 0.62, n1);
-    diffuseColor.rgb *= mix(0.32, 1.15, hole) * (0.85 + 0.3 * n2);
-    diffuseColor.rgb *= mix(0.55, 1.0, clamp((vOP.y + 0.6) * 0.9, 0.0, 1.0));   // 下側は暗い
-    gNP = (vec3(kN(vWP * 3.0), kN(vWP * 3.0 + 7.0), kN(vWP * 3.0 + 13.0)) - 0.5) * 1.6;
-    gRough = 0.8;`);
+  // ---- 木（あらかじめ作った樹形の型をならべる。型は高さ 1。幹・枝＋葉の房のかたまり） ----
+  //   広葉樹: 幹が途中で 3〜4 本の枝に分かれ、その先と樹冠の外側に葉の房（小さな多面体）を 22 個。房の面の向きは樹冠全体の丸みと混ぜる（光がやわらかくまわる）
+  //   針葉樹: ぎざぎざのふちの円すいを 6 段かさねる
+  //   型は幅と高さの比ごとに用意し、木の r / h にいちばん近い型を、そのまま（縦横同じ倍率で）大きくする（引きのばすと面の向きが狂う）
+  function mergeTone(parts) {
+    const pos = [], nor = [], col = [];
+    for (const [g0, tone] of parts) { const g = g0.index ? g0.toNonIndexed() : g0, P = g.attributes.position, N = g.attributes.normal;
+      for (let i = 0; i < P.count; i++) { pos.push(P.getX(i), P.getY(i), P.getZ(i)); nor.push(N.getX(i), N.getY(i), N.getZ(i)); col.push(tone, tone, tone); } }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    return g;
+  }
+  function broadType(w, seed) {
+    let sd = seed; const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    const yb = 0.32 + R() * 0.1, cy = (yb + 1) / 2, vr = (1 - yb) / 2;   // 樹冠の下の高さ・中心・縦の半径（横の半径は w）
+    const crown = [], wood = [];
+    const tr = new THREE.CylinderGeometry(0.022, 0.034, yb + 0.12, 6); tr.translate(0, (yb + 0.12) / 2, 0); wood.push([tr, 1]);
+    const nb = 3 + (R() < 0.5 ? 1 : 0);
+    for (let i = 0; i < nb; i++) {   // 枝: 幹の上から外へ・上へ
+      const a = i / nb * 6.283 + R() * 0.8, L = 0.45 * w + R() * 0.15 * w, up = 0.12 + R() * 0.12;
+      const b = new THREE.CylinderGeometry(0.009, 0.018, 1, 5); b.translate(0, 0.5, 0);
+      const len = Math.hypot(L, up); b.scale(1, len, 1);
+      b.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(0, -a, -Math.atan2(L, up), 'YXZ')));
+      b.translate(0, yb + 0.06, 0); wood.push([b, 1]);
+    }
+    const n = 26;
+    for (let i = 0; i < n; i++) {   // 葉の房: 樹冠の外側寄りに（半径の 0.55〜1）。上ほど多い
+      const u = R() * 2 - 1, ph = R() * 6.283, cu = Math.sqrt(1 - u * u), k = 0.55 + 0.45 * Math.sqrt(R());
+      const ux = cu * Math.cos(ph), uy = Math.abs(u) * (u > -0.35 ? 1 : -0.6), uz = cu * Math.sin(ph);
+      const px = ux * w * k, py = cy + uy * vr * k, pz = uz * w * k, s = (0.24 + R() * 0.14) * Math.min(w, vr) * 1.15;
+      const g = new THREE.IcosahedronGeometry(1, 0); g.scale(s, s * 0.75, s);
+      g.rotateY(R() * 6.283); g.translate(px, py, pz);
+      // 面の向き: 房の向きと、樹冠の中心からの向きをまぜる
+      const P = g.attributes.position, N = g.attributes.normal;
+      for (let j = 0; j < P.count; j++) {
+        const rx = P.getX(j) / w, ry = (P.getY(j) - cy) / vr, rz = P.getZ(j) / w, rl = Math.hypot(rx, ry, rz) || 1;
+        const nx = N.getX(j) * 0.25 + rx / rl * 0.75, ny = N.getY(j) * 0.25 + ry / rl * 0.75, nz = N.getZ(j) * 0.25 + rz / rl * 0.75, nl = Math.hypot(nx, ny, nz);
+        N.setXYZ(j, nx / nl, ny / nl, nz / nl);
+      }
+      crown.push([g, 0.75 + R() * 0.45]);   // 房ごとの明るさ（日の当たり方・葉の色のちがい）
+    }
+    return { crown: mergeTone(crown), wood: mergeTone(wood), w, cy, vr };
+  }
+  function coniferType(w, seed) {
+    let sd = seed; const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    const crown = [], wood = [];
+    const tr = new THREE.CylinderGeometry(0.012, 0.022, 0.5, 5); tr.translate(0, 0.25, 0); wood.push([tr, 1]);
+    const tiers = 6;
+    for (let i = 0; i < tiers; i++) {
+      const t = i / tiers, y0 = 0.12 + t * 0.8, rr = w * (1 - t * 0.82) * (0.9 + R() * 0.2), hh = 0.28 - t * 0.1;
+      const g = new THREE.ConeGeometry(rr, hh, 10, 1, true); g.translate(0, y0 + hh / 2, 0);
+      const P = g.attributes.position;
+      for (let j = 0; j < P.count; j++) if (P.getY(j) < y0 + 0.01) { const f = 0.75 + R() * 0.5; P.setX(j, P.getX(j) * f); P.setZ(j, P.getZ(j) * f); P.setY(j, P.getY(j) - R() * 0.03); }   // ふちをぎざぎざ・少したれる
+      g.computeVertexNormals();
+      crown.push([g, 0.8 + R() * 0.35]);
+    }
+    return { crown: mergeTone(crown), wood: mergeTone(wood), w, cy: 0.55, vr: 0.45 };
+  }
+  let TYPES = null;
+  const treeTypes = () => TYPES || (TYPES = {
+    broad: [0.22, 0.3, 0.38, 0.48, 0.6].map((w, i) => broadType(w, 101 + i * 37)),
+    conifer: [0.14, 0.2].map((w, i) => coniferType(w, 503 + i * 41)),
+  });
+  const leafMat = () => mat('leaf', { roughness: 0.85, vertexColors: true }, `
+    float n1 = kF(vWP * 1.6 + vRnd * 30.0), n2 = kN(vWP * 5.0);
+    // 輪郭（面が横を向く所）では、葉のすき間を抜く（ふちがレースのように見える。真ん中はつまったまま）
+    vec3 fN = normalize(cross(dFdx(vViewPosition), dFdy(vViewPosition)));   // 本当の面の向き（なめらかにした向きではなく）
+    float edgeV = abs(dot(fN, normalize(vViewPosition)));
+    if (edgeV < 0.3 && kN(vWP * 3.2 + vRnd * 11.0) > 0.3 + edgeV * 1.6) discard;
+    if (dot(normalize(vNormal), normalize(-vViewPosition)) < 0.0) diffuseColor.rgb *= 0.0 + 0.6;   // 奥を向く房（すき間から見える）は暗め、でも黒くしない
+    diffuseColor.rgb *= mix(0.45, 1.12, smoothstep(0.38, 0.62, n1)) * (0.88 + 0.24 * n2);   // 葉のすき間の陰
+    diffuseColor.rgb *= mix(0.55, 1.0, smoothstep(-0.2, 0.6, vON.y));   // 下を向く面は暗い
+    gNP = (vec3(kN(vWP * 3.0), kN(vWP * 3.0 + 7.0), kN(vWP * 3.0 + 13.0)) - 0.5) * 0.9;
+    gRough = 0.85;`);
+  const barkMat = () => mat('bark', { roughness: 0.95, color: '#3a2e24' }, `diffuseColor.rgb *= 0.8 + 0.3 * kN(vWP * vec3(6.0, 1.5, 6.0));`);
   // list: [{x, z, y?, h（高さ）, r（樹冠の半径）, type:'broad'|'conifer', c}]
   function trees(scene, list, o = {}) {
-    const L = [], C = [], T = [];
+    const TT = treeTypes(), by = new Map();
     for (const t of list) {
-      const y = t.y || 0, h = t.h, r = t.r, c = lin(t.c || pick(['#4d6b2c', '#55732f', '#435f2a', '#5d7b37', '#3f5b2c'])).multiplyScalar(0.8 + rnd() * 0.35);
-      if (t.type === 'conifer') {
-        C.push({ x: t.x, y: y + h * 0.18, z: t.z, sx: r, sy: h * 0.86, sz: r, ry: rnd() * 6, c });
-      } else {
-        // 樹冠は小さなかたまりをたくさん（上は丸く、横に広がり、下は平ら）。かたまりごとに色を少しずらす
-        const n = o.lumps || (r > 2 ? 8 : r > 1.3 ? 5 : 3);
-        for (let i = 0; i < n; i++) {
-          const a = rnd() * 6.28, d = i === 0 ? 0 : r * (0.3 + rnd() * 0.5), rr = r * (i === 0 ? 0.7 : 0.38 + rnd() * 0.22);
-          const cc = c.clone().multiplyScalar(0.85 + rnd() * 0.3);
-          L.push({ x: t.x + Math.cos(a) * d, y: y + h - r * 0.8 + (i === 0 ? 0 : (rnd() - 0.45) * r * 0.7 - d * 0.25), z: t.z + Math.sin(a) * d, sx: rr, sy: rr * (0.75 + rnd() * 0.2), sz: rr, ry: rnd() * 6, c: cc });
-        }
-      }
-      if (!o.noTrunk) T.push({ x: t.x, y, z: t.z, sx: r * 0.35, sy: h * (t.type === 'conifer' ? 0.3 : 0.7), sz: r * 0.35, c: '#4a3b2c' });
+      const con = t.type === 'conifer', set = con ? TT.conifer : TT.broad, ratio = t.r / t.h;
+      let best = 0; set.forEach((v, i) => { if (Math.abs(v.w - ratio) < Math.abs(set[best].w - ratio)) best = i; });
+      if (!con && rnd() < 0.35) best = Math.max(0, Math.min(set.length - 1, best + (rnd() < 0.5 ? -1 : 1)));   // 同じ比でも型をまぜる
+      const key = (con ? 'c' : 'b') + best;
+      if (!by.has(key)) by.set(key, { T: set[best], list: [] });
+      const c = lin(t.c || pick(['#4d6b2c', '#55732f', '#435f2a', '#5d7b37', '#3f5b2c'])).multiplyScalar(0.8 + rnd() * 0.35);
+      const s = t.h * (0.92 + rnd() * 0.16);
+      by.get(key).list.push({ x: t.x, y: t.y || 0, z: t.z, sx: s, sy: s, sz: s, ry: rnd() * 6.283, c });
     }
-    const m = leafMat();
-    inst(scene, lump, m, L); inst(scene, cone, m, C);
-    if (T.length) inst(scene, trunk, mat('trunk', { roughness: 0.95 }), T, { cast: false });
+    const lm = leafMat(), bm = barkMat();
+    for (const { T, list: L } of by.values()) {
+      inst(scene, T.crown, lm, L);
+      if (!o.noTrunk) inst(scene, T.wood, bm, L.map(b => Object.assign({}, b, { c: null })), { cast: false });
+    }
   }
 
   // ---- 人（脚2・胴・腕2・首と頭・髪。身長 約 1.7 m。歩くと脚と腕が振れる＝頂点シェーダで、人ごとの位相） ----
@@ -395,7 +456,7 @@ const Kit = (() => {
   // ---- 車（横から見た形を押し出し、角を丸める。車体＋タイヤ4本＋窓） ----
   function extrude(pts, w, bev = 0.06) {
     const s = new THREE.Shape(); pts.forEach(([x, y], i) => i ? s.lineTo(x, y) : s.moveTo(x, y));
-    const g = new THREE.ExtrudeGeometry(s, { depth: w - 2 * bev, bevelEnabled: bev > 0, bevelSize: bev, bevelThickness: bev, bevelSegments: 2 });
+    const g = new THREE.ExtrudeGeometry(s, { depth: w - 2 * bev, bevelEnabled: bev > 0, bevelSize: bev, bevelThickness: bev, bevelSegments: 1 });
     g.translate(0, 0, -(w - 2 * bev) / 2); g.rotateY(-Math.PI / 2);
     return g;   // 長さの向きが z（前が +z。進む向き ry と同じ）
   }
@@ -419,7 +480,7 @@ const Kit = (() => {
   const carGeo = {}, glassGeo = {};
   for (const k in CAR) {
     const C = CAR[k], parts = [[extrude(C.body, C.w), 0]];
-    for (const sz of [-1, 1]) for (const sx of [-1, 1]) { const wh = new THREE.CylinderGeometry(C.r, C.r, 0.22, 12); wh.rotateZ(Math.PI / 2); wh.translate(sx * (C.w / 2 - 0.12), C.r, sz * C.wx); parts.push([wh, 1]); }
+    for (const sz of [-1, 1]) for (const sx of [-1, 1]) { const wh = new THREE.CylinderGeometry(C.r, C.r, 0.22, 8, 1); wh.rotateZ(Math.PI / 2); wh.translate(sx * (C.w / 2 - 0.12), C.r, sz * C.wx); parts.push([wh, 1]); }
     carGeo[k] = merge(parts); glassGeo[k] = extrude(C.glass, C.w + 0.03, 0.03);
   }
   const PAINT = ['#f4f4f2', '#f4f4f2', '#f4f4f2', '#e9e9e6', '#c9ccd0', '#1b1b1e', '#1b1b1e', '#8e959c', '#8e959c', '#5a6068', '#8a1f1a', '#1d2f5c', '#d9cfb8', '#2f4a3a', '#6a7d93'];

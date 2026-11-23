@@ -171,10 +171,10 @@ const RealStreets = (() => {
       for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
         const x = (i + 0.5) * step - o.span / 2, z = (j + 0.5) * step - o.span / 2; if (Math.hypot(x, z) > R * 0.9) continue;
         const k = (j * N + i) * 4, r = px[k], gg = px[k + 1], b = px[k + 2];
-        if (gg > r * 1.08 && gg > b * 1.04 && gg > 45 && gg < 170 && rnd() < 0.55) T.push({ x: x + (rnd() - 0.5) * step, z: z + (rnd() - 0.5) * step, y: y(x, z), h: 4 + rnd() * 5, r: 1.6 + rnd() * 1.6, c: LEAF[(rnd() * LEAF.length) | 0] });
+        if (gg > r * 1.08 && gg > b * 1.04 && gg > 45 && gg < 170 && rnd() < 0.18) T.push({ x: x + (rnd() - 0.5) * step, z: z + (rnd() - 0.5) * step, y: y(x, z), h: 4 + rnd() * 5, r: 1.6 + rnd() * 1.6, c: LEAF[(rnd() * LEAF.length) | 0] });
       }
     }
-    if (T.length) Kit.trees(scene, T.slice(0, o.phone ? 6000 : 16000));
+    if (T.length) Kit.trees(scene, T.slice(0, o.phone ? 2500 : 6000));   // 1本 約 600 三角形（影でもう1回）
     return { meshes: out, trees: T.length };
   }
   return { build, W };

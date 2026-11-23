@@ -45,8 +45,25 @@ const RealBldg = (() => {
       float shop = (K > 0.5 && K < 3.5 && y < 3.6) ? 1.0 : 0.0;
       if (K > 4.5) {   // 大きな店: 大きなパネル・横の細い窓の帯がたまに・上に店の名前の帯
         vec2 pn = vec2(along / 3.0, y / 1.5); c *= 0.95 + 0.07 * kH2(floor(pn)) - 0.06 * (step(0.96, fract(pn.x)) + step(0.94, fract(pn.y)));
+        // 柱型（9 m ごと）: 明るい縦の帯と、その横の陰
+        float pil = fract(along / 9.0);
+        c *= 1.0 + 0.1 * step(pil, 0.06) - 0.14 * step(0.06, pil) * step(pil, 0.09);
+        // ガラスの区画（区画ごとに 4 割）: 縦横の桟と、空の映りこみ
+        float bay = floor(along / 27.0), gb = step(kH2(vec2(bay, rr * 17.0)), 0.4) * step(8.0, y) * step(y, vBld.y * 0.0 + 999.0);
+        if (gb > 0.5 && fract(along / 27.0) > 0.08 && fract(along / 27.0) < 0.92) {
+          vec2 m = vec2(fract(along / 1.5), fract(y / fh));
+          float mull = 1.0 - step(0.05, m.x) * step(m.x, 0.95) * step(0.04, m.y) * step(m.y, 0.96);
+          c = mix(vec3(0.07, 0.085, 0.1) * (0.8 + 0.5 * kH2(floor(vec2(along / 1.5, y / fh)))), vec3(0.3, 0.3, 0.29), mull); rough = mix(0.05, 0.5, mull); metal = mix(0.6, 0.2, mull);
+        }
         float band = step(fract(y / (fh * 3.0)), 0.12) * step(8.0, y);
-        c = mix(c, vec3(0.06, 0.07, 0.08), band * 0.85);
+        c = mix(c, vec3(0.06, 0.07, 0.08), band * 0.85 * (1.0 - gb));
+        // 縦長の垂れ幕・看板の面（店の名前はなし。色の面と、文字の行に見えるすじ）
+        float vb = floor(along / 13.0), vh = kH2(vec2(vb, rr * 29.0)), vf = fract(along / 13.0);
+        if (vh > 0.72 && vf > 0.35 && vf < 0.6 && y > 6.0 && y < 6.0 + fh * (3.0 + 3.0 * vh)) {
+          vec3 bc = vh > 0.93 ? vec3(0.3, 0.1, 0.08) : vh > 0.86 ? vec3(0.09, 0.11, 0.18) : vh > 0.79 ? vec3(0.5, 0.48, 0.45) : vec3(0.1, 0.15, 0.1);
+          c = bc * (1.0 - 0.25 * step(0.6, fract(y * 0.8)) * step(0.15, fract(vf * 4.0)) * step(fract(vf * 4.0), 0.85));
+          rough = 0.5; metal = 0.0;
+        }
         if (y < 4.0) { float g = step(0.08, fract(along / 6.0)) * step(0.3, y) * step(y, 3.2); c = mix(c, vec3(0.04), g); }
         inW = 0.0;
       }
@@ -92,6 +109,19 @@ const RealBldg = (() => {
       float q = fract(rr * 7.31);
       vec3 rc = q < 0.55 ? vec3(0.26 + q * 0.22) : q < 0.72 ? vec3(0.26, 0.27, 0.26) : q < 0.86 ? vec3(0.27, 0.25, 0.22) : vec3(0.45, 0.45, 0.43);
       rc *= 1.0 - 0.25 * smoothstep(0.6, 0.8, kF(vWP * 0.4 + rr * 9.0));   // しみ
+      // 屋上の機械（室外機・送風機）: 3 m の升ごとに、ときどき箱を描く（上から見た明るい天板・黒い羽根の丸・一方に落ちる影）
+      if (K > 0.5 && y > 7.0) {
+        vec2 q = vWP.xz / 3.0, cell = floor(q), f = fract(q);
+        float h2 = kH2(cell + rr * 7.0);
+        if (h2 > 0.8) {
+          vec2 d = abs(f - 0.5);
+          float box = step(d.x, 0.3) * step(d.y, 0.22), sh = step(d.x, 0.3) * step(abs(f.y - 0.5 - 0.12), 0.22) * (1.0 - box);
+          float fan = step(length((f - 0.5) * vec2(1.0, 1.35)), 0.13);
+          rc = mix(rc, rc * 0.55, sh);
+          rc = mix(rc, vec3(0.5, 0.5, 0.48) * (0.9 + 0.2 * h2), box);
+          rc = mix(rc, vec3(0.05), box * fan);
+        }
+      }
       rc *= 1.0 - 0.06 * (1.0 - smoothstep(0.0, 0.04, abs(fract(vWP.x + rr * 3.0) - 0.5) - 0.46));
       rc *= 0.9 + 0.18 * kF(vWP * vec3(0.12, 0.0, 0.12) + rr * 13.0);
       c = rc; rough = 0.9;

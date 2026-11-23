@@ -92,12 +92,14 @@ STAGES.push({
     const GAPS = { motorway: 45, trunk: 30, primary: 30, secondary: 45, tertiary: 70, minor: 220 };
     const lanesC = e => e.w >= 12 ? [1.75, 5.25] : e.w >= 9 ? [e.w / 4] : [e.w / 4];   // 左側通行: 進む向きの左へ。広い道は 2 車線
     const carsN = Math.round(GC.edges.reduce((a, e) => a + e.len * lanesC(e).length / (GAPS[e.cls] || 1e9), 0) * (ctx.phone ? 0.5 : 1));
-    const MC = RealRoads.movers(GC, { n: carsN, lanes: lanesC, v: e => ({ motorway: 16, trunk: 13, primary: 12, secondary: 10, tertiary: 8, minor: 5 })[e.cls] || 5, weight: e => lanesC(e).length / (GAPS[e.cls] || 1e9), len: 4.6, gap: 2.5, follow: true }, Kit.rnd);
+    const MC = RealRoads.movers(GC, { n: carsN, lanes: lanesC, v: e => ({ motorway: 16, trunk: 13, primary: 12, secondary: 10, tertiary: 8, minor: 5 })[e.cls] || 5, weight: e => lanesC(e).length / (GAPS[e.cls] || 1e9), len: 4.6, gap: 2.5, follow: true, turnR: 7, yawRate: 1.5, vScale: r => 0.7 + 0.6 * r() }, Kit.rnd);
     const kinds = MC.list.map(() => { const r = Kit.rnd(); return r < 0.04 ? 'bus' : r < 0.1 ? 'truck' : r < 0.22 ? 'van' : r < 0.42 ? 'kei' : 'sedan'; });
     const C = MC.list.length ? Kit.cars(scene, kinds.map(kind => ({ kind }))) : null;
     const isWalk = e => e.cls === 'path';
     const lanesP = e => isWalk(e) ? [-1, 0, 1] : [e.w / 2 + 1.4, -(e.w / 2 + 1.4)];   // 歩行者の道はまん中あたり、通りは両側の歩道
-    const MP = RealRoads.movers(GP, { n: ctx.phone ? 1000 : 2500, lanes: lanesP, v: () => 1.25, weight: e => { const [x, z] = GP.P[e.a]; return Math.exp(-Math.hypot(x, z) / 350) * (isWalk(e) ? 3 : e.cls === 'minor' ? 0.6 : 1); }, len: 0.5, gap: 0.3, follow: false }, Kit.rnd);
+    const MP = RealRoads.movers(GP, { n: ctx.phone ? 1000 : 2500, lanes: lanesP, v: () => 1.25, weight: e => { const [x, z] = GP.P[e.a]; return Math.exp(-Math.hypot(x, z) / 350) * (isWalk(e) ? 3 : e.cls === 'minor' ? 0.6 : 1); }, len: 0.5, gap: 0.3, follow: false, turnR: 2.5, yawRate: 3,
+      // 歩く速さ: 平均 1.34 m/s・ばらつき 0.2 m/s の正規分布（Bohannon 1997 の大人の自然な速さ）。1 割はゆっくり（0.7〜0.9 m/s）
+      vScale: r => { if (r() < 0.1) return (0.7 + 0.2 * r()) / 1.25; const g = Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(6.2832 * r()); return Math.min(1.9, Math.max(0.9, 1.34 + 0.2 * g)) / 1.25; } }, Kit.rnd);
     const ppl = MP.list.length ? Kit.people(scene, MP.list.map(() => ({ x: 0, z: 0 }))) : null;
     // 車と人の影を、写真の地面に落とす（地面の写真には光を当てないので、影だけを重ねる板）
     // 地面の 3D（道・歩道・線路・芝・林・水・木）。js/real/streets.js
@@ -117,6 +119,7 @@ STAGES.push({
       get loading() { return sets.reduce((a, s) => a + s.loading, 0); },
       step(dt) { t += dt; Kit.time.value = t; if (!C && !ppl) return false; MC.step(dt); MP.step(dt); place(); return true; },
       dispose() { sets.forEach(s => s.dispose()); },
+      get movers() { return { MC, MP }; },   // 確かめ用
       get counts() { return { cars: MC.list.length, people: MP.list.length, lines: lines.length, trees: ST.trees }; },
     };
   },
