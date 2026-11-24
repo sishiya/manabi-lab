@@ -21,5 +21,6 @@ window.TRIVIA_THUMBS = {
   'extreme-trivia3':       { t: 18.0, crop: [150, 160, 830, 905], title: '37℃のお湯が\n[沸とう]\nするのは？', line: '富士山の頂上なら87℃' },
   'ferrofluid-trivia2':    { t: 1.0, crop: [40, 480, 1000, 640], title: 'これ、\n[ロケットの燃料]\nになるはずだった', line: '燃料に使われた回数は0回' },
   'animal-senses-trivia1': { t: 0.9, crop: [60, 700, 960, 460], title: 'シャコは\n人より\n[色が見える？]', line: '色センサー12種類。でも…' },
+  'big-bang-trivia3':      { t: 1.0, crop: [40, 520, 1000, 400], title: 'いちばん\n[年上]の\n惑星は？', line: '地球・火星・木星のうち' },
   'house-dust-trivia1':    { t: 8.5, crop: [60, 360, 960, 740], title: 'ほこりの\n[8割]は\n人の皮ふ？', line: '確かめた研究が見つからない' },
 };

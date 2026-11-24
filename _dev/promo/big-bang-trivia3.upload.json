@@ -1,0 +1,17 @@
+{
+  "videoId": "7f5hMzrlza4",
+  "file": "_dev/promo/out/big-bang-trivia3-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/big-bang-trivia3.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-28T21:00:00+09:00",
+  "captions": { "en": "_dev/promo/out/big-bang-trivia3-short.en.srt", "es": "_dev/promo/subs/big-bang-trivia3-short.es.srt", "ko": "_dev/promo/subs/big-bang-trivia3-short.ko.srt", "pt": "_dev/promo/subs/big-bang-trivia3-short.pt.srt", "zh-TW": "_dev/promo/subs/big-bang-trivia3-short.zh-TW.srt" },
+  "title": "【うんちく】太陽系でいちばん年上の惑星は？ #Shorts",
+  "description": "地球・火星・木星のうち、いちばん先にできたのは木星です。隕石の中の原子（同位体）を時計のように使うと、太陽系ができて100万年たたないうちに、木星には地球20個分ほどの芯ができていたと推定されています。火星は200万年ほどで今の半分の大きさに。地球ができあがったのは、それより何千万年もあとでした（研究によって3千万〜1億年ほどの幅があります）。\n\n先にできた木星の重力がまわりの岩をかきまぜて、太陽系の内がわと外がわを分けた、というのは論文の「いちばんありそうな説明」です。数字はどれも隕石からの推定で、絵は模式図です。\n\nアプリ「ビッグバンから惑星まで」に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/big-bang/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: Kruijer ほか (2017) PNAS 114, 6712・Dauphas & Pourmand (2011) Nature 473, 489・Kleine ほか (2002) Nature 418, 952\n\n声: VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
+  "tags": ["ビッグバンから惑星まで", "木星", "太陽系", "惑星の誕生", "隕石", "宇宙", "うんちく", "雑学", "Shorts", "まなびラボ", "しし屋", "Jupiter", "planet formation", "did you know"],
+  "localizations": {
+    "en": {
+      "title": "Did you know? The oldest planet in our Solar System #Shorts",
+      "description": "Of Earth, Mars and Jupiter, Jupiter formed first. Using atoms (isotopes) inside meteorites as clocks, scientists estimate that within a million years of the Solar System's birth, Jupiter already had a core of about 20 Earth masses. Mars reached half its present size in about 2 million years. Earth was finished tens of millions of years later (studies range from about 30 to 100 million years). Turn on English subtitles (CC).\n\nThat the early Jupiter's gravity stirred the rocks and split the inner and outer Solar System is the paper's \"most likely explanation\". All the numbers are estimates from meteorites, and the pictures are simplified illustrations.\n\nRelated to the app \"From the Big Bang to Planets\".\n\nApp (in Japanese for now): https://sishiya.github.io/manabi-lab/big-bang/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/?lang=en\n\nSources: Kruijer et al. (2017) PNAS 114, 6712; Dauphas & Pourmand (2011) Nature 473, 489; Kleine et al. (2002) Nature 418, 952.\n\nVoice: VOICEVOX:Meimei Himari\nMusic: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#DidYouKnow #Science"
+    }
+  }
+}

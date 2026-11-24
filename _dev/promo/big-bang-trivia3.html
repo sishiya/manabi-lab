@@ -64,7 +64,7 @@ function jupiterP(g, x, y, r) {
 }
 // 時間の帯（x0〜x1 が 0〜span 年）
 function timeline(g, t, span, items, y, f, label) {
-  const x0 = 110, x1 = 950;
+  const x0 = 110, x1 = 860;   // y 900 より下は x 880 までがスマホの安全な枠
   g.save(); g.globalAlpha *= f;
   PL.ink(g, gg => { gg.moveTo(x0, y); gg.lineTo(x1, y); for (let q = 0; q <= 10; q++) { const x = lerp(x0, x1, q / 10); gg.moveTo(x, y); gg.lineTo(x, y + (q % 5 ? 12 : 24)); } }, 5);
   PL.label(g, '0', x0, y + 56, 40, { color: TK.C.sub }); PL.label(g, label, x1, y + 56, 40, { color: TK.C.sub, align: 'right' });
@@ -161,7 +161,7 @@ function draw(g, t) {
     PL.label(g, '隕石の中の"[原子の時計]"', 90, 230, 66, { align: 'left' });
     PL.label(g, '隕石（形は模式）', 420, 1000, 36, { color: TK.C.sub, bold: false });
     g.restore();
-    TK.note(g, t, 22.0, 24.0, '出どころ: Kruijer ほか (2017) PNAS 114, 6712・Dauphas & Pourmand (2011) Nature 473, 489\nKleine ほか (2002) Nature 418, 952', { size: 28, y: 1140 });
+    TK.note(g, t, 22.0, 24.0, '出どころ: Kruijer ほか (2017) PNAS 114, 6712\nDauphas & Pourmand (2011) Nature 473, 489\nKleine ほか (2002) Nature 418, 952', { size: 28, y: 1110 });
   }
   if (t >= 6.6 && t < 17.0) TK.note(g, t, 6.6, 17.0, '隕石の同位体からの推定（と考えられています）', { size: 30 });
 }

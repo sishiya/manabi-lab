@@ -1,0 +1,26 @@
+1
+00:00:00,000 --> 00:00:03,090
+Qual planeta do Sistema Solar se formou primeiro?
+
+2
+00:00:03,090 --> 00:00:06,850
+A: Terra   B: Marte   C: Júpiter
+
+3
+00:00:06,850 --> 00:00:12,770
+A resposta é C, Júpiter.
+Em menos de um milhão de anos, já tinha um núcleo de 20 Terras
+
+4
+00:00:12,770 --> 00:00:18,200
+Marte chegou à metade do tamanho em 2 milhões de anos.
+A Terra só ficou pronta dezenas de milhões de anos depois
+
+5
+00:00:18,200 --> 00:00:24,250
+Acredita-se que a gravidade do jovem Júpiter agitou as rochas
+e separou o Sistema Solar interno do externo
+
+6
+00:00:24,250 --> 00:00:27,260
+Como sabemos? Pelos relógios atômicos dentro dos meteoritos
