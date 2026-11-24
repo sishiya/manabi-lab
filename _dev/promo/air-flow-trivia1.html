@@ -20,6 +20,7 @@
 // よく混ざる部屋（完全混合）: 前の空気の残り = e^(−0.5×時間)。2時間 37%・4時間 14%・6時間 5%（8時間 1.8%）
 // 粒の色は「残りの割合」に合わせて決めているだけ（粒の動きを計算したものではない）
 const DUR = 30;
+const THUMB = new URLSearchParams(location.search).has('thumbart');   // サムネイル用の絵（字を消す）のときは、札の引き出し線・時計も描かない
 const subs = [
   { a: 0.0, b: 2.2, ja: '「2時間で全部入れかわる」…はウソ', en: '“All the air is replaced in 2 hours” — not true', noBurn: true },
   { a: 2.2, b: 4.6, ja: '2003年からの家は、\n[24時間換気]が決まり', en: 'Homes built since 2003 in Japan\nmust have 24-hour ventilation' },
@@ -39,7 +40,7 @@ const cues = [
 const OLD = '#a85a32', NEW = '#2f5f7a';
 const rnd = (i, k = 1) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
 const ROOM = { x0: 120, x1: 940, y0: 270, y1: 600 };   // 部屋（中の空気の所）
-const GX0 = 190, GX1 = 940, GY0 = 720, GY1 = 1060;    // グラフ（0〜8時間・0〜100%）
+const GX0 = 190, GX1 = 860, GY0 = 710, GY1 = 1000;    // グラフ（0〜8時間・0〜100%）。y 900 より下は x 880 までがスマホの安全な枠
 const WALL = 24;
 const remain = h => Math.exp(-0.5 * h);
 // 動画の時刻 → 部屋の中の時間（時間）
@@ -91,7 +92,7 @@ function room(g, t, mode, fr, B = ROOM, o = {}) {
   PL.ink(g, gg => { for (let j = 0; j < 3; j++) { const a = t * 6 + j * Math.PI * 2 / 3; gg.moveTo(fx, fy); gg.quadraticCurveTo(fx + Math.cos(a + 0.5) * fr2 * 0.7, fy + Math.sin(a + 0.5) * fr2 * 0.7, fx + Math.cos(a) * fr2 * 0.9, fy + Math.sin(a) * fr2 * 0.9); } }, 4);
   const ex = x1 + WALL + 12, el = 50 * vs;
   PL.ink(g, gg => { gg.moveTo(ex, fy); gg.lineTo(ex + el, fy); gg.moveTo(ex + el - 16, fy - 12); gg.lineTo(ex + el, fy); gg.lineTo(ex + el - 16, fy + 12); }, 4, OLD);
-  if (o.labels !== false) {
+  if (o.labels !== false && !THUMB) {
     PL.leader(g, x0 - WALL / 2, v0 - 4, x0 + 50, y0 - 46); PL.label(g, '給気口', x0 + 62, y0 - 62, 40, { align: 'left', color: NEW });
     PL.leader(g, fx, f1 + 6, x1 - 60, y1 + 52); PL.label(g, '換気扇', x1 - 60, y1 + 80, 40, { color: OLD });
   }
@@ -134,12 +135,12 @@ function graph(g, t, h, naiveA) {
     PL.ink(g, gg => pts.forEach((p, i) => i ? gg.lineTo(...p) : gg.moveTo(...p)), 7, OLD);
     const e = pts[pts.length - 1], dot = PL.circle(e[0], e[1], 12); PL.tint(g, dot, PL.T.rust, 0.9); PL.ink(g, dot, 4);
   }
-  [[2, '37%', 19.2], [4, '14%', 21.6], [6, '5%', 23.8]].forEach(([hh, s, a]) => {
+  [[2, '37%', 19.2, 60], [4, '14%', 21.6, 120], [6, '5%', 23.8, 120]].forEach(([hh, s, a, up]) => {   // 37% は「0% には ならない」と重ならないよう低めに
     if (t < a || h < hh - 0.01) return;
     g.save(); g.globalAlpha *= clamp((t - a) / 0.3, 0, 1);
-    const px = X(hh), py = Y(remain(hh)), lx = px + 85, ly = py - 120;
+    const px = X(hh), py = Y(remain(hh)), lx = px + (up < 100 ? 110 : 85), ly = py - up;
     g.setLineDash([8, 8]); PL.ink(g, gg => { gg.moveTo(px, GY1); gg.lineTo(px, py); }, 2.5, PL.RED); g.setLineDash([]);
-    PL.leader(g, px, py, lx - 12, ly + 32, PL.RED);
+    if (!THUMB) PL.leader(g, px, py, lx - 12, ly + 32, PL.RED);
     PL.label(g, s, lx, ly, 56, { color: PL.RED });
     g.restore();
   });
@@ -185,7 +186,7 @@ function draw(g, t) {
   if (t < 12.0) { room(g, t, 'plug', 1); PL.label(g, '名前どおりなら…（押し出すだけ）', 1000, 140, 44, { align: 'right', color: TK.C.sub }); }
   else room(g, t, 'mix', remain(h));
   if (t >= 12.0) {
-    PL.watch(g, 960, 150, 52, (h % 12) / 12);
+    if (!THUMB) PL.watch(g, 960, 150, 52, (h % 12) / 12);
     PL.label(g, h.toFixed(1) + ' 時間後', 880, 150, 56, { align: 'right' });
   }
   graph(g, t, h, t < 20 ? 1 : 1 - clamp((t - 20) / 0.5, 0, 1));
@@ -195,8 +196,8 @@ function draw(g, t) {
     PL.leader(g, lerp(GX0, GX1, h / 8), lerp(GY1, GY0, remain(h)), GX1 - 40, 802, PL.RED);
     g.restore();
   }
-  if (t >= 12 && t < 27.6) TK.note(g, t, 12, 27.6, 'よく混ざる部屋（完全混合）のモデルの値。実際の部屋はよどみで場所ごとにちがいます', { size: 30 });
-  if (t >= 27.6) TK.note(g, t, 27.6, 30, '出どころ: 滋賀県「シックハウス対策について」・Sandberg & Sjöberg (1983)', { size: 30 });
+  if (t >= 12 && t < 27.6) TK.note(g, t, 12, 27.6, 'よく混ざる部屋（完全混合）のモデルの値\n実際の部屋はよどみで場所ごとにちがいます', { size: 30, y: 1140 });
+  if (t >= 27.6) TK.note(g, t, 27.6, 30, '出どころ: 滋賀県「シックハウス対策について」\nSandberg & Sjöberg (1983)', { size: 30, y: 1140 });
 }
 
 triviaStart({ out: 'air-flow-trivia1', voice: 'auto', dur: DUR, draw, subs, cues, peek: 1.0 });

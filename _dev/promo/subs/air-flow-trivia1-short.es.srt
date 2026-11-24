@@ -1,0 +1,38 @@
+1
+00:00:00,000 --> 00:00:02,360
+«Todo el aire se renueva en 2 horas»: no es verdad
+
+2
+00:00:02,360 --> 00:00:05,660
+En Japón, las casas construidas desde 2003
+deben tener ventilación las 24 horas
+
+3
+00:00:05,660 --> 00:00:09,020
+Cada hora renueva
+la mitad del volumen de aire de la habitación
+
+4
+00:00:09,020 --> 00:00:14,020
+Según esa lógica, todo el aire
+debería ser nuevo en 2 horas
+
+5
+00:00:14,020 --> 00:00:19,110
+Pero el aire nuevo se mezcla enseguida,
+así que parte de él también sale
+
+6
+00:00:19,110 --> 00:00:23,110
+Después de 2 horas,
+todavía queda el 37% del aire viejo
+
+7
+00:00:23,110 --> 00:00:29,110
+14% a las 4 horas,
+y solo baja al 5% a las 6
+
+8
+00:00:29,110 --> 00:00:33,200
+En una habitación bien mezclada,
+el aire viejo nunca llega del todo a cero

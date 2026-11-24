@@ -1,0 +1,17 @@
+{
+  "videoId": "nI1p8bl_BuQ",
+  "file": "_dev/promo/out/air-flow-trivia1-short.mp4",
+  "thumbnail": "_dev/promo/thumbs/air-flow-trivia1.jpg",
+  "privacy": "private",
+  "publishAt": "2026-11-29T21:00:00+09:00",
+  "captions": { "en": "_dev/promo/out/air-flow-trivia1-short.en.srt", "es": "_dev/promo/subs/air-flow-trivia1-short.es.srt", "ko": "_dev/promo/subs/air-flow-trivia1-short.ko.srt", "pt": "_dev/promo/subs/air-flow-trivia1-short.pt.srt", "zh-TW": "_dev/promo/subs/air-flow-trivia1-short.zh-TW.srt" },
+  "title": "【うんちく】24時間換気は「2時間で全部入れかわる」…じゃない #Shorts",
+  "description": "2003年からの日本の家には、24時間換気が決まりになりました。1時間に、部屋の空気の半分ぶんを入れかえる（換気回数 0.5回）。名前どおりなら2時間で全部入れかわりそうですが、入ってきた外の空気はすぐに部屋の空気と混ざり、出ていく空気には新しい空気もまじっています。よく混ざる部屋なら、2時間たっても前の空気が37%、4時間で14%、6時間でやっと5%。ゼロにはなりません。\n\n数字は、部屋の空気がすぐ全体に混ざるとしたモデル（完全混合）の値です（前の空気の残り＝e^(−0.5×時間)）。実際の部屋はよどみがあり、場所ごとにちがいます。空気の粒の色は残りの割合に合わせた模式図です。\n\nアプリ「空気の流れの見える部屋」に関係する話です。\n\nアプリ: https://sishiya.github.io/manabi-lab/air-flow/\n\nしし屋 まなびラボ（ほかのアプリ）: https://sishiya.github.io/manabi-lab/\n\n出どころ: 滋賀県「シックハウス対策について」（建築基準法の換気の決まり）・Sandberg & Sjöberg (1983)\n\n声: VOICEVOX:冥鳴ひまり\nBGM: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#うんちく #雑学 #まなびラボ",
+  "tags": ["空気の流れの見える部屋", "24時間換気", "換気", "換気回数", "シックハウス", "空気", "うんちく", "雑学", "Shorts", "まなびラボ", "しし屋", "ventilation", "air change rate", "did you know"],
+  "localizations": {
+    "en": {
+      "title": "Did you know? 24-hour ventilation does NOT replace all the air in 2 hours #Shorts",
+      "description": "In Japan, homes built since 2003 must have 24-hour ventilation that swaps in half the room's volume of air every hour (0.5 air changes per hour). By the name alone, all the air should be new after 2 hours. But incoming air mixes with the room air right away, so some of the new air leaves again too. In a well-mixed room, 37% of the old air is still there after 2 hours, 14% after 4 hours, and only 5% after 6. It never quite reaches zero. Turn on English subtitles (CC).\n\nThe numbers come from a perfectly mixed room model (old air remaining = e^(−0.5 × hours)). Real rooms have stagnant spots, so it varies from place to place. The air particles are a simplified illustration colored to match the remaining share.\n\nRelated to the app \"Seeing Airflow at Home\".\n\nApp (switch to English with the EN button): https://sishiya.github.io/manabi-lab/air-flow/\n\nShishiya Manabi Lab (more apps): https://sishiya.github.io/manabi-lab/?lang=en\n\nSources: Shiga Prefecture, \"Sick house measures\" (ventilation rules in Japan's Building Standards Act); Sandberg & Sjöberg (1983).\n\nVoice: VOICEVOX:Meimei Himari\nMusic: \"Sneaky Snitch\" Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons: By Attribution 4.0\nhttps://creativecommons.org/licenses/by/4.0/\n\n#DidYouKnow #Science"
+    }
+  }
+}

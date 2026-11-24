@@ -1,0 +1,38 @@
+1
+00:00:00,000 --> 00:00:02,360
+“Todo o ar é trocado em 2 horas” — não é verdade
+
+2
+00:00:02,360 --> 00:00:05,660
+No Japão, casas construídas desde 2003
+precisam ter ventilação 24 horas
+
+3
+00:00:05,660 --> 00:00:09,020
+A cada hora, troca
+metade do volume de ar do cômodo
+
+4
+00:00:09,020 --> 00:00:14,020
+Por essa lógica, todo o ar
+seria novo depois de 2 horas
+
+5
+00:00:14,020 --> 00:00:19,110
+Mas o ar novo se mistura na hora,
+então parte dele também sai
+
+6
+00:00:19,110 --> 00:00:23,110
+Depois de 2 horas,
+ainda restam 37% do ar antigo
+
+7
+00:00:23,110 --> 00:00:29,110
+14% depois de 4 horas,
+e só cai para 5% depois de 6
+
+8
+00:00:29,110 --> 00:00:33,200
+Num cômodo bem misturado,
+o ar antigo nunca chega a zero
