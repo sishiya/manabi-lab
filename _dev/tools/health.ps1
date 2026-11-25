@@ -78,7 +78,10 @@ try {
   if ($port) {
     # 1本ずつ別に回す（1本で Chrome との接続が切れても、ほかは調べられるように）。並びは smoke.ps1 と同じ
     $apps = @('_root') + (Get-ChildItem $root -Directory | Where-Object {
-        $_.Name -notmatch '^[_.]|^assets$' -and (Test-Path (Join-Path $_.FullName 'index.html')) } | ForEach-Object { $_.Name })
+        $_.Name -notmatch '^[_.]|^assets$' -and (Test-Path (Join-Path $_.FullName 'index.html')) -and
+        # あそびラボへ移したアプリの旧 URL（RULES 8.3）は、移った先へ飛ぶだけのページなので調べない（smoke.ps1 と同じ）
+        ([IO.File]::ReadAllText((Join-Path $_.FullName 'index.html'), [Text.Encoding]::UTF8) -notmatch 'http-equiv="refresh"')
+      } | ForEach-Object { $_.Name })
     $smokeLast = Join-Path $outDir 'smoke-last.json'
     foreach ($a in $apps) {
       if (Test-Path $smokeLast) { Remove-Item $smokeLast -Force }
