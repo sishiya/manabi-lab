@@ -131,7 +131,7 @@ function draw(g, t) {
   if (t > 4.2 && t < 11.0) {
     const c = LICHEN.reduce((a, b) => (b.x > BX + 520 && b.y > a.y ? b : a), LICHEN[0]);
     g.save(); g.globalAlpha *= clamp((t - 4.2) / 0.3, 0, 1) * fade(t, 4.2, 11.0, 0.3);
-    PL.leader(g, c.x, c.y - c.r * 0.5, BX + BW - 120, BY + BH + 42); PL.label(g, 'エサのコケ', BX + BW, BY + BH + 68, 44, { align: 'right' });
+    PL.leader(g, c.x, c.y - c.r * 0.5, 800, 732); PL.label(g, 'エサのコケ', 870, 706, 44, { align: 'right' });   // わくの下はスマホの枠の外・字幕の帯にかかるので、わくの中の雪の上に
     g.restore();
   }
   if (t > 8.2 && t < 11.0) {
@@ -139,9 +139,9 @@ function draw(g, t) {
     PL.leader(g, BX + 740 - 20, BY + 340 - 80, BX + BW - 120, BY - 34); PL.label(g, 'オオカミ', BX + BW, BY - 52, 44, { align: 'right' });
     g.restore();
   }
-  if (t >= 3.0 && t < 7.0) TK.note(g, t, 3.0, 7.0, 'トナカイの角膜・水晶体は 約300〜320 nm の紫外線まで通す', { size: 30 });
-  if (t >= 7.0 && t < 11.0) TK.note(g, t, 7.0, 11.0, '「くっきり見えて役に立つ」は著者の説（見つけている実験ではない）', { size: 30 });
-  if (t >= 11.0) TK.note(g, t, 11.0, 15.0, '出どころ: Hogg ほか (2011) J Exp Biol 214: 2014–2019', { size: 30 });
+  if (t >= 3.0 && t < 7.0) TK.note(g, t, 3.0, 7.0, 'トナカイの角膜・水晶体は\n約300〜320 nm の紫外線まで通す', { size: 30, y: 1140 });
+  if (t >= 7.0 && t < 11.0) TK.note(g, t, 7.0, 11.0, '「くっきり見えて役に立つ」は著者の説\n（見つけている実験ではない）', { size: 30, y: 1140 });
+  if (t >= 11.0) TK.note(g, t, 11.0, 15.0, '出どころ: Hogg ほか (2011)\nJ Exp Biol 214: 2014–2019', { size: 30, y: 1140 });
 }
 
 triviaStart({ out: 'animal-senses-trivia3', voice: 'auto', dur: DUR, draw, subs, cues, peek: 1.0 });

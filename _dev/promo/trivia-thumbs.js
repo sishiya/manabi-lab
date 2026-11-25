@@ -23,5 +23,6 @@ window.TRIVIA_THUMBS = {
   'animal-senses-trivia1': { t: 0.9, crop: [60, 700, 960, 460], title: 'シャコは\n人より\n[色が見える？]', line: '色センサー12種類。でも…' },
   'big-bang-trivia3':      { t: 1.0, crop: [40, 520, 1000, 400], title: 'いちばん\n[年上]の\n惑星は？', line: '地球・火星・木星のうち' },
   'air-flow-trivia1':      { t: 24.0, crop: [60, 230, 1000, 820], title: '2時間で\n空気は\n[全部入れかわる？]', line: '2時間後も37%は前の空気' },
+  'animal-senses-trivia3': { t: 3.5, crop: [60, 250, 960, 820], title: 'トナカイは\n[紫外線]が\n見える', line: '雪の上でエサが黒く浮かぶ…説' },
   'house-dust-trivia1':    { t: 8.5, crop: [60, 360, 960, 740], title: 'ほこりの\n[8割]は\n人の皮ふ？', line: '確かめた研究が見つからない' },
 };
