@@ -1,0 +1,62 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>見え方の発明室</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2314202c'/><circle cx='32' cy='32' r='15' fill='none' stroke='%23ffc95a' stroke-width='6'/></svg>">
+<script>/* アクセス解析 Google Analytics 4（GitHub Pages で開いたときだけ。ローカル・Artifact では読まない。RULES 8.1） */(function(){if(location.hostname!=='sishiya.github.io')return;var id='G-E2VPYKV2Y9',s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+id;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());gtag('config',id,{allow_google_signals:false,allow_ad_personalization_signals:false});})();</script>
+<script src="../assets/power.js?v=1"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css?v=4">
+
+<div id="app">
+  <div id="pin">
+    <header id="top">
+      <h1>見え方の発明室</h1>
+      <nav id="tabs" role="tablist">
+        <button role="tab" data-mode="memory">① 記憶</button>
+        <button role="tab" data-mode="future">② 未来の霧</button>
+        <button role="tab" data-mode="influence">③ 影響の光</button>
+      </nav>
+    </header>
+    <main id="stage"><canvas id="cv"></canvas><div id="hud"></div></main>
+  </div>
+  <section id="panel">
+    <p id="lead"></p>
+    <div id="controls"></div>
+    <details id="how"><summary>しくみ</summary><div id="howBody"></div></details>
+    <details id="about">
+      <summary>このアプリについて</summary>
+      <p>絵の描き方の「あたりまえ」をひとつ外してみる試作です。外したかわりに、研究や物理で計算した量を置いています。学習用に簡単にしています。</p>
+      <h3>近い先行例</h3>
+      <p>使っている量（注意・ずれの広がり・ひずみエネルギー）は、どれも昔から研究されているものです。新しいのは、それを「絵の描き方」として使うところです。2026年11月に調べた範囲では、同じ描き方の例は見つかりませんでした。ただし、世界で初めてとは言えません。</p>
+      <ul>
+        <li>① 読んでいる文字のまわりだけ見せて、ほかの文字を置きかえる視線の実験（McConkie &amp; Rayner 1975）。視線の先だけ細かく描いて計算を軽くする技術（フォビエイテッド・レンダリング）。</li>
+        <li>② 少しずつちがう二重振り子をたくさん重ねて、ばらけていく動画。結果の幅を、ありうる結果を次々に見せて伝える図（Hypothetical Outcome Plots、Hullman ほか 2015）。台風の予報円。GPS の行き先を点の散らばりで見せる研究（Williamson ほか 2006）。</li>
+        <li>③ 透明な模型に力をかけ、偏光で応力を光の模様として見る「光弾性」（19世紀から）。橋づくりゲームの、部材の力を色で見せる表示。構造計算の、ひずみエネルギーの色分け図。</li>
+      </ul>
+      <h3>おもな出どころ</h3>
+      <ul>
+        <li>Rensink, R. A. (2000). The dynamic representation of scenes. <i>Visual Cognition</i> 7, 17–42.</li>
+        <li>Simons, D. J., &amp; Levin, D. T. (1997). Change blindness. <i>Trends in Cognitive Sciences</i> 1, 261–267.</li>
+        <li>Luck, S. J., &amp; Vogel, E. K. (1997). The capacity of visual working memory for features and conjunctions. <i>Nature</i> 390, 279–281.</li>
+        <li>Hollingworth, A., &amp; Henderson, J. M. (2002). Accurate visual memory for previously attended objects in natural scenes. <i>J. Exp. Psychol.: Human Perception and Performance</i> 28, 113–136.</li>
+        <li>McConkie, G. W., &amp; Rayner, K. (1975). The span of the effective stimulus during a fixation in reading. <i>Perception &amp; Psychophysics</i> 17, 578–586.</li>
+        <li>Lorenz, E. N. (1963). Deterministic nonperiodic flow. <i>Journal of the Atmospheric Sciences</i> 20, 130–141.</li>
+        <li>Molteni, F. ほか (1996). The ECMWF Ensemble Prediction System. <i>Q. J. R. Meteorol. Soc.</i> 122, 73–119.</li>
+        <li>Williamson, J., Strachan, S., &amp; Murray-Smith, R. (2006). It's a long way to Monte Carlo: probabilistic display in GPS navigation.</li>
+        <li>Hullman, J., Resnick, P., &amp; Adar, E. (2015). Hypothetical Outcome Plots outperform error bars and violin plots for inferences about reliability of variable ordering. <i>PLOS ONE</i> 10(11), e0142444.</li>
+        <li>Bendsøe, M. P., &amp; Sigmund, O. (2003). <i>Topology Optimization</i>. Springer.</li>
+      </ul>
+      <h3>使っているもの</h3>
+      <p>フォント: Google Fonts（SIL Open Font License）</p>
+    </details>
+  </section>
+</div>
+
+<script src="js/main.js?v=4"></script>
+<script src="js/memory-scene.js?v=4"></script>
+<script src="js/memory.js?v=4"></script>
+<script src="js/future.js?v=4"></script>
+<script src="js/truss.js?v=4"></script>
+<script src="js/influence.js?v=4"></script>
+<script>RI.start();</script>

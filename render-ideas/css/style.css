@@ -1,0 +1,53 @@
+/* 見え方の発明室 */
+:root{--bg:#14202c;--bg2:#1b2a38;--line:#2c4052;--ink:#e8f0f4;--muted:#a3b4bf;--acc:#ffc95a;--cool:#8fd3ff;
+  --f-display:'Dela Gothic One','Yu Gothic',sans-serif;--f-body:'Zen Kaku Gothic New','Yu Gothic',system-ui,sans-serif;--f-mono:'IBM Plex Mono',Consolas,monospace;color-scheme:dark}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+
+/* スマホ: 絵を上に固定し、下をスクロール */
+#app{display:flex;flex-direction:column;min-height:100%}
+#pin{position:sticky;top:0;z-index:2;background:var(--bg)}
+#top{display:flex;flex-direction:column;gap:8px;padding:10px 12px 8px}
+#top h1{font-family:var(--f-display);font-weight:400;font-size:19px;margin:0}
+#tabs{display:flex;gap:6px}
+#tabs button{flex:1;min-height:38px;padding:4px 6px;border:1px solid var(--line);border-radius:19px;background:transparent;color:var(--muted);font:500 14px var(--f-body);cursor:pointer;white-space:nowrap}
+#tabs button[aria-selected=true]{background:var(--acc);border-color:var(--acc);color:#14202c;font-weight:700}
+#stage{position:relative;height:54vh;min-height:280px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);touch-action:none}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+#hud{position:absolute;left:10px;bottom:8px;right:10px;font:500 12px var(--f-mono);color:var(--muted);pointer-events:none;min-height:16px}
+
+#panel{display:flex;flex-direction:column;gap:12px;padding:12px 16px 32px}
+#lead{margin:0;font-size:15px;line-height:1.7;min-height:3.4em}
+#lead b{color:var(--acc);font-weight:700}
+#controls{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;flex-direction:column;gap:4px}
+.row label{display:flex;justify-content:space-between;font-size:14px;color:var(--muted)}
+.row label output{font-family:var(--f-mono);color:var(--ink)}
+.row input[type=range]{width:100%;height:28px;accent-color:var(--acc)}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+/* 状態を切りかえるボタン（枠） */
+.tg{min-height:38px;padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg2);color:var(--ink);font:500 14px var(--f-body);cursor:pointer}
+.tg[aria-pressed=true]{border-color:var(--cool);color:var(--cool)}
+/* 何かが起きるボタン（塗り） */
+.act{min-height:38px;padding:6px 14px;border:0;border-radius:8px;background:var(--cool);color:#14202c;font:700 14px var(--f-body);cursor:pointer}
+.note{margin:0;font-size:13px;color:var(--muted);line-height:1.6;min-height:1.6em}
+.note b{color:var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--muted)}
+.legend i{display:inline-block;width:22px;height:8px;border-radius:4px;vertical-align:middle;margin-right:4px}
+
+details{color:var(--muted);font-size:14px;line-height:1.8}
+details summary{cursor:pointer;color:var(--ink);min-height:32px;display:flex;align-items:center}
+details h3{font-size:14px;color:var(--ink);margin:12px 0 4px}
+details ul{padding-left:20px;margin:4px 0}
+details a{color:var(--acc)}
+
+/* 広い画面: 絵を左、操作を右 */
+@media (min-width:860px){
+  #app{flex-direction:row;height:100%}
+  #pin{flex:1;display:flex;flex-direction:column;position:static;min-width:0}
+  #top{flex-direction:row;align-items:center;gap:16px}
+  #tabs{max-width:460px;flex:1}
+  #stage{flex:1;height:auto;border-bottom:0}
+  #panel{width:380px;flex:none;overflow-y:auto;border-left:1px solid var(--line);padding-top:16px}
+}
