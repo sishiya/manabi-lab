@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="css/style.css?v=4">
+<link rel="stylesheet" href="css/style.css?v=11">
 
 <div id="app">
   <div id="pin">
@@ -17,6 +17,7 @@
         <button role="tab" data-mode="future">② 未来の霧</button>
         <button role="tab" data-mode="influence">③ 影響の光</button>
       </nav>
+      <nav id="variants" aria-label="題材"></nav>
     </header>
     <main id="stage"><canvas id="cv"></canvas><div id="hud"></div></main>
   </div>
@@ -45,6 +46,14 @@
         <li>Molteni, F. ほか (1996). The ECMWF Ensemble Prediction System. <i>Q. J. R. Meteorol. Soc.</i> 122, 73–119.</li>
         <li>Williamson, J., Strachan, S., &amp; Murray-Smith, R. (2006). It's a long way to Monte Carlo: probabilistic display in GPS navigation.</li>
         <li>Hullman, J., Resnick, P., &amp; Adar, E. (2015). Hypothetical Outcome Plots outperform error bars and violin plots for inferences about reliability of variable ordering. <i>PLOS ONE</i> 10(11), e0142444.</li>
+        <li>Palmer, T. N. (1993). Extended-range atmospheric prediction and the Lorenz model. <i>Bull. Amer. Meteor. Soc.</i> 74, 49–65.</li>
+        <li>Shadden, S. C., Lekien, F., &amp; Marsden, J. E. (2005). Definition and properties of Lagrangian coherent structures from finite-time Lyapunov exponents in two-dimensional aperiodic flows. <i>Physica D</i> 212, 271–304.</li>
+        <li>Haller, G. (2011). A variational theory of hyperbolic Lagrangian Coherent Structures. <i>Physica D</i> 240, 574–598.</li>
+        <li>Alciatore, D. G. (2004). <i>The Illustrated Principles of Pool and Billiards</i>. Sterling.（ビリヤードの代表値）</li>
+        <li>Paine, R. T. (1966). Food web complexity and species diversity. <i>American Naturalist</i> 100, 65–75.</li>
+        <li>Yodzis, P. (1988). The indeterminacy of ecological interactions as perceived through perturbation experiments. <i>Ecology</i> 69, 508–515.</li>
+        <li>Wood, A. J., &amp; Wollenberg, B. F. <i>Power Generation, Operation, and Control</i>. Wiley.（直流潮流）</li>
+        <li>Honda「星座図鑑 オリオン座」（鼓星・平家星・源氏星の呼び名）</li>
         <li>Bendsøe, M. P., &amp; Sigmund, O. (2003). <i>Topology Optimization</i>. Springer.</li>
       </ul>
       <h3>使っているもの</h3>
@@ -53,10 +62,18 @@
   </section>
 </div>
 
-<script src="js/main.js?v=4"></script>
-<script src="js/memory-scene.js?v=4"></script>
-<script src="js/memory.js?v=4"></script>
-<script src="js/future.js?v=4"></script>
-<script src="js/truss.js?v=4"></script>
-<script src="js/influence.js?v=4"></script>
+<script src="js/main.js?v=11"></script>
+<script src="js/memory-scene.js?v=11"></script>
+<script src="js/memory.js?v=11"></script>
+<script src="js/memory-sky.js?v=11"></script>
+<script src="js/memory-tank.js?v=11"></script>
+<script src="js/future.js?v=11"></script>
+<script src="js/fog.js?v=11"></script>
+<script src="js/future-billiards.js?v=11"></script>
+<script src="js/future-lorenz.js?v=11"></script>
+<script src="js/future-flow.js?v=11"></script>
+<script src="js/truss.js?v=11"></script>
+<script src="js/influence.js?v=11"></script>
+<script src="js/influence-foodweb.js?v=11"></script>
+<script src="js/influence-grid.js?v=11"></script>
 <script>RI.start();</script>

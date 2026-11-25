@@ -13,6 +13,11 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
 #tabs{display:flex;gap:6px}
 #tabs button{flex:1;min-height:38px;padding:4px 6px;border:1px solid var(--line);border-radius:19px;background:transparent;color:var(--muted);font:500 14px var(--f-body);cursor:pointer;white-space:nowrap}
 #tabs button[aria-selected=true]{background:var(--acc);border-color:var(--acc);color:#14202c;font-weight:700}
+/* 題材の切りかえ（タブより小さく、横にスクロール） */
+#variants{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;min-height:34px}
+#variants::-webkit-scrollbar{display:none}
+#variants button{flex:none;min-height:34px;padding:4px 12px;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--muted);font:500 13px var(--f-body);cursor:pointer;white-space:nowrap}
+#variants button[aria-pressed=true]{border-color:var(--cool);color:var(--cool);background:rgba(143,211,255,.08)}
 #stage{position:relative;height:54vh;min-height:280px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);touch-action:none}
 #cv{position:absolute;inset:0;width:100%;height:100%;display:block}
 #hud{position:absolute;left:10px;bottom:8px;right:10px;font:500 12px var(--f-mono);color:var(--muted);pointer-events:none;min-height:16px}
@@ -46,7 +51,8 @@ details a{color:var(--acc)}
 @media (min-width:860px){
   #app{flex-direction:row;height:100%}
   #pin{flex:1;display:flex;flex-direction:column;position:static;min-width:0}
-  #top{flex-direction:row;align-items:center;gap:16px}
+  #top{flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px 16px}
+  #variants{flex-basis:100%}
   #tabs{max-width:460px;flex:1}
   #stage{flex:1;height:auto;border-bottom:0}
   #panel{width:380px;flex:none;overflow-y:auto;border-left:1px solid var(--line);padding-top:16px}

@@ -1,10 +1,10 @@
 # 見え方の発明室 開発メモ
 
 ## 別セッションで続けるとき（まずここ）
-- いまの状態: v002-three-ideas（段階A。3つの試作が動く）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。
-- 次にやること: ユーザーに3つを見てもらい、どれを伸ばすか決める（PLAN の段階B以降）。④ズームで時間・⑤ホログラム画面は先行例が近いので作っていない。作るかどうかはユーザーに相談する。
+- いまの状態: v003-variants（段階B。①〜③それぞれに題材のちがう版。全部で10）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。
+- 次にやること: ユーザーに10の版を見てもらい、どれを伸ばすか決める（ユーザーは②に手ごたえ。2026-11-26）。④ズームで時間・⑤ホログラム画面は先行例が近いので作っていない。作るかどうかはユーザーに相談する。
 - 読む順: PLAN.md（先行例の表）→ このファイルの「ファイル構成」→ 関係するファイルだけ。
-- 動かし方: サーバー apps（.claude/launch.json）で http://localhost:8765/render-ideas/ 。タブは URL の `#memory`・`#future`・`#influence`。デバッグ用の窓口 `window.__reid`（`simRun(秒)`・`RI`）、`__reidMemory`・`__reidFuture`（`check(秒)`＝計算の確かめ）・`__reidInfluence`（`Truss`・`toggleMember(e)`）。エラーは `window.__reidErr`。
+- 動かし方: サーバー apps（.claude/launch.json）で http://localhost:8765/render-ideas/ 。版は URL の `#memory`・`#memory-sky`・`#memory-tank`・`#future`・`#future-billiards`・`#future-lorenz`・`#future-flow`・`#influence`・`#influence-foodweb`・`#influence-grid`。デバッグ用の窓口 `window.__reid`（`simRun(秒)`・`RI`）、`__reidMemory`・`__reidFuture`（`check(秒)`＝計算の確かめ）・`__reidInfluence`（`Truss`・`toggleMember(e)`）。エラーは `window.__reidErr`。
 - js を直したら `index.html` の `?v=` を上げる（キャッシュで古い js が読まれたことがある）。
 - 区切りごとの手順: 「確認のしかた」と smoke.ps1 → 「状態」に1行 → launcher.html の表 → 公開前チェック → commit（節目の版だけ versions/ へコピーしてカードに。RULES 3章）。
 - ユーザーの好み: 「スタッキングに固執しない。新しいスタンダード、または『その発想はなかった』（実用はさておき）」。先行例があるものは作らない。
@@ -20,8 +20,16 @@
 | js/future.js | ② 未来の霧: 振り子・二重振り子・くぎの玉、64本のアンサンブル、霧の描き方 | `P1/P2/P3`・`work`（1コマ6msまで）・`finish`（言い当てられる時間）・`check` |
 | js/truss.js | ③ のトラス橋の計算（剛性行列・コレスキー・ひずみエネルギー） | `Truss.solve(truckX, removed)`・`sag` |
 | js/influence.js | ③ 影響の光: 感度を光に・水に映る光・部材を抜く | `draw`・`toggleMember`・`brightest` |
+| js/memory-sky.js | ①-B 冬の星空（星はいつも点、注意で星座の線、西洋／日本の呼び名） | `S`（星）・`WEST`・`JAPAN`・`build` |
+| js/memory-tank.js | ①-C 水槽（言葉ではなく色のかたまりにほどける。模様を変える試し） | `KINDS`・`drawFish`・`changeOne` |
+| js/fog.js | ②の霧の共通の部品（本を G 組に分けて描く＝重なるほど濃い） | `Fog.draw/spread/gauss/warmToCool` |
+| js/future-billiards.js | ②-B ビリヤード（すべり→転がり、球ごとの色の霧、穴に入る見こみ） | `stepAll`・`simulate`・`work` |
+| js/future-lorenz.js | ②-C ローレンツ（3D の蝶、羽の予報、予報しやすさの色ぬり） | `rk`・`computeFog`・`paintWork` |
+| js/future-flow.js | ②-D 流れに浮かぶ葉（ダブルジャイヤ、FTLE の地図） | `vel`・`computeFog`・`ftleWork` |
+| js/influence-foodweb.js | ③-B 食物網（一般化ロトカ・ヴォルテラ、感度、連鎖して消える） | `analyze`・`step`・`EATS` |
+| js/influence-grid.js | ③-C 夜の街の電力網（直流潮流、島ごと、停電・容量こえ） | `solve`・`toggle` |
 
-読み込み順: power.js（head）→ main.js → memory-scene.js → memory.js → future.js → truss.js → influence.js → `RI.start()`。
+読み込み順: power.js（head）→ main.js → memory-scene.js → memory.js → memory-sky.js → memory-tank.js → future.js → fog.js → future-billiards.js → future-lorenz.js → future-flow.js → truss.js → influence.js → influence-foodweb.js → influence-grid.js → `RI.start()`。版は `RI.add({ id, group, label })` で足す（group＝タブ、label＝題材の名前。最初に足したものがタブの最初の版）。
 
 ## しくみ
 ### ① 見ていないところは言葉にもどる
@@ -47,7 +55,15 @@
 - 予想と実際: 上の弦は 光 11〜17% に対し、抜くと +100〜280%。少し弱めたときの値と、まるごと抜いたときの値はちがう（画面にも書く）。
 - 両はしピンにしていたときは、地面が下の弦の代わりに引っぱり、下の弦がほとんど光らなかった。右をころにした。
 
+### 段階B（題材のちがう版）
+- ②-B ビリヤード: 球 28.6 mm、すべり摩擦 0.2、転がりの抵抗 0.1 m/s²、はね返り 球 0.93・クッション 0.75、刻み 1/500 s、48 本。v と u（回転×半径）を分けて持ち、すべりのあいだ v −= μg ŝ、u += 2.5 μg ŝ（そろう点で止める）→ 真ん中を突くと 5/7 の速さで転がる。回転は球どうしでやりとりしない。1本 20 ms ほどなので1コマ 8 ms まで少しずつ。霧の画面座標は本数か画面が変わったときだけ作りなおす。
+- ②-C ローレンツ: σ=10・ρ=28・β=8/3、刻み 0.005、200 本、4コマに1回計算（約 7 ms）。始まりは羽の分かれ目の手前（中心近くをゆっくり回る所から始まると変化が見えない）。初めの値 H=5・ずれ 0.03。
+- ②-D 流れ: A=0.1・ε=0.25・ω=2π/10、刻み 0.05、64 本。FTLE は格子 100×50（幅 600 未満は 60×30）、T=10、1コマ 6 ms まで。
+- ③-B 食物網: 値は node で決めた（10種すべてプラス、5% ずらして 3000 で元にもどる＝安定）。抜いたときの連鎖（node で確かめた）: 草→ウサギ・バッタ・カエル・キツネ、木の実→小鳥・タカ、バッタ→カエル、ネズミ→キツネ、タカ→カエル。ほかはなし。
+- ③-C 電力網: 68 本、発電所3つ。光の割合の合計 1。切ると停電が出る電線・容量をこえる電線がある（例: 幹線を切ると 14〜16 本こえる）。停電すると送る量が減るので C が下がることがある（メモに書く）。
+
 ## ハマったところ
+- キャンバスの1本のパスの中では、線が重なっても濃くならない（和集合で1回だけぬられる）。霧は本を何組かに分けて描く（fog.js）。
 - 最初のコマは dt が 0 なので step が「変化なし」を返し、描くのが止まった → 起こした直後の3コマは必ず回す（main.js の `kick`）。
 - 8765 番はほかのセッションのサーバーが使っていることがある → apps-4（8768）などで確かめる。
 - js がキャッシュされて古いまま読まれた → `?v=` を付けた。
@@ -61,6 +77,7 @@
 - スマホで指が見る所をかくす → 目を上にずらした（直した）。
 - どの案にも「ふつうの描き方」へ切りかえるボタン（直した）。
 - ②「いまの位置を描かず霧だけ」「測るで霧がしぼむ」→ 段階Bの案に回した（いまは物を薄く描く）。
+- 段階Bの批判役（2026-11-26）: ビリヤードにすべり→転がり（直した）、確率は10%きざみと本数を出す（直した）、食物網は −A⁻¹ の押しつづけ感度・安定の確かめ・絶滅は積分で判定（直した）、電力網は島ごとに解く・発電のない島は停電・容量こえを出す（直した）、ローレンツは羽の確率で（直した）、FTLE は前向き＝はね返す尾根・厳密な LCS ではない（画面に書いた）。和名で同じ星を別の形に（直した。釣鐘星は確かめられず使わない）。サイコロ・小惑星の鍵穴・渋滞は次の案。
 
 ## 確認のしかた（変更のたびに）
 1. `powershell -NoProfile -ExecutionPolicy Bypass -File _dev/tools/smoke.ps1 -Apps render-ideas`（例外・読み込みの失敗・外への通信）
@@ -72,5 +89,6 @@
 7. 裏にしてもどすと続きから動く（描画は requestAnimationFrame だけ。Worker・setInterval・音はなし）。
 
 ## 状態
+- 2026-11-26 v003-variants: ユーザー「②が将来使えそう。題材がいまいちなだけかも。それぞれ見栄えの違う別バージョンを2〜3個ずつ」→ ①に星空・水槽、②にビリヤード・ローレンツ・流れに浮かぶ葉、③に食物網・夜の街の電力網を足した（タブの下に題材の切りかえ）。
 - 2026-11-26 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
 - 2026-11-26 v002-three-ideas: 先行例を調べ（①②③は同じ描き方が見つからず、④⑤は近い例あり）、3つの試作を作った。批判役の指摘を入れた。

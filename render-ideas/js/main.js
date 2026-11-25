@@ -11,7 +11,9 @@ const RI = window.RI = (() => {
   const modes = {}, order = [];
   let cur = null, running = false, last = 0, w = 1, h = 1;
 
-  function add(m) { modes[m.id] = m; order.push(m.id); }
+  // 実験は group（タブ ①②③）ごとに、題材のちがう版（label）を並べる
+  const lastOf = {};
+  function add(m) { m.group = m.group || m.id; modes[m.id] = m; order.push(m.id); }
 
   function resize() {
     const r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -36,8 +38,14 @@ const RI = window.RI = (() => {
   function select(id) {
     if (!modes[id]) id = order[0];
     if (cur) cur.leave?.();
-    cur = modes[id];
-    for (const b of document.querySelectorAll('#tabs button')) b.setAttribute('aria-selected', b.dataset.mode === id);
+    cur = modes[id]; lastOf[cur.group] = id;
+    for (const b of document.querySelectorAll('#tabs button')) b.setAttribute('aria-selected', b.dataset.mode === cur.group);
+    // 題材の切りかえ（同じ group の版）
+    const vs = document.getElementById('variants'); vs.innerHTML = '';
+    for (const vid of order.filter(k => modes[k].group === cur.group)) {
+      const b = document.createElement('button'); b.textContent = modes[vid].label || vid;
+      b.setAttribute('aria-pressed', vid === id); b.addEventListener('click', () => select(vid)); vs.appendChild(b);
+    }
     document.getElementById('lead').innerHTML = cur.lead;
     document.getElementById('howBody').innerHTML = cur.how;
     const c = document.getElementById('controls'); c.innerHTML = '';
@@ -81,7 +89,7 @@ const RI = window.RI = (() => {
   function hud(s) { document.getElementById('hud').textContent = s; }
 
   function start() {
-    for (const b of document.querySelectorAll('#tabs button')) b.addEventListener('click', () => select(b.dataset.mode));
+    for (const b of document.querySelectorAll('#tabs button')) b.addEventListener('click', () => select(lastOf[b.dataset.mode] || b.dataset.mode));
     window.addEventListener('resize', resize);
     window.addEventListener('hashchange', () => select(location.hash.slice(1)));
     resize();
