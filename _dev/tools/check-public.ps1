@@ -100,7 +100,8 @@ foreach ($f in $files) {
     # .splat（3D ガウシアン）と tilt-shift/assets/splat の float の点の表は、数がたまたま 12〜19 字の並びになるので 24 字から見る（2026-11-19〜）
     $bytes = [IO.File]::ReadAllBytes($f)
     $ascii = [Text.Encoding]::GetEncoding(28591).GetString($bytes)   # Latin-1（ASCII だと 128 以上が「?」になって文字に見える)
-    $minRun = if ($ext -eq '.splat' -or $rel -like 'tilt-shift\assets\splat\*') { 24 } else { 12 }
+    # big-bang/data の記録（岩の位置・速さの float の表。tools/record.ps1 が作る）も同じ（2026-11-26〜）
+    $minRun = if ($ext -eq '.splat' -or $rel -like 'tilt-shift\assets\splat\*' -or $rel -like 'big-bang\data\*') { 24 } else { 12 }
     $runs = @([regex]::Matches($ascii, "[\x20-\x7e]{$minRun,}") | ForEach-Object { $_.Value } | Where-Object { $_ -ne $allowBin[$rel] })
     if ($runs.Count) { [void]$hits.Add("$rel : bin に文字列がまざっている（中身を確認）: $($runs[0])") }
     continue

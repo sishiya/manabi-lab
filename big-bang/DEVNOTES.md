@@ -21,6 +21,8 @@
 | js/ui.js | ひとこと・案内「つぎへ」（7段）・数え・いちばん大きい岩の表 | `UI`・`TOUR` |
 | js/main.js | 起動・粒の数を決める・まわす・ボタン・`__biba` | `boot`・`start`・`pickN`・`frame` |
 | tools/verify.mjs | 物理の検証（node big-bang/tools/verify.mjs [kepler|collide|headon|heat|disk|all]） | |
+| tools/record.ps1・record.html | 場面④ の記録をこの PC の GPU で作る（ヘッドレス Chrome）。`-Out big-bang/data/disk`、試しは `-Years 1000 -Frames 20 -Full 5 -Out big-bang/data/test` を `?rec=test` で | |
+| data/disk.json・disk-frames.bin・disk-full.bin | 場面④ の記録（岩 4096 個・10 万年・600 コマ・完全な記録 120。計 約 15MB）。無いと再生が 404 になり何も映らない | |
 
 読み込み: `index.html` は `js/main.js` を `type="module"` で読む（ほかは import）。
 
@@ -58,3 +60,4 @@
 - 2026-10-20 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
 - 2026-10-20 v002-stageA: 場面④（岩 1024〜32768 個・重力全部の組・ぶつかり LS2012・かけら・熱・アルミニウム26・かきまぜ・案内7段）。GPU と JS の計算が合うことを確かめた。サムネイルは GPU つきヘッドレスの画面から手で切りぬいた（make-thumbs は WebGPU 無しで撮るため）。
 - 2026-10-20 v003-near: ユーザー「何がおきているのか、なにをすると何がおきるのか直感的でなかった」→ 方向を選んでもらい「近くで見る」。いっしょに回るカメラ、指で輪の中の岩を寄せる（押さえる → くっつく、速く動かす → 砕ける）、ぶつかった所に印と文字、指の横に寄せる速さ、案内の文を直した。
+- 2026-11-26 場面④ の記録を作った（`tools/record.ps1` の既定の値: 岩 4096 個・F 100・10 万年・600 コマ・完全な記録 120・seed 1。RTX 5070 で約 9 分、2560 万歩、結末は岩 34 個・地球の 0.05 倍より大きい星 6 個）。それまで記録が無く、健康診断と公開中の保管庫版で data/disk.json が 404 だった。再生・時間のつまみ・結末へ・さわって分かれるを Browser ペインで確かめた。
