@@ -1,7 +1,7 @@
 # 見え方の発明室 開発メモ
 
 ## 別セッションで続けるとき（まずここ）
-- いまの状態: v004-stacking（段階C。①〜③の10の版＋④積み重ね（スプライトスタッキング）の4つ）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。
+- いまの状態: v004-stacking（段階C。①〜③の10の版＋④積み重ね（スプライトスタッキング）の4つ）。どこにも載せない（2026-11-26 ユーザーの指示で保管庫から外した）。URL を知っている人だけ開ける。
 - 次にやること: ユーザーに10の版を見てもらい、どれを伸ばすか決める（ユーザーは②に手ごたえ。2026-11-26）。④ズームで時間・⑤ホログラム画面は先行例が近いので作っていない。作るかどうかはユーザーに相談する。
 - 読む順: PLAN.md（先行例の表）→ このファイルの「ファイル構成」→ 関係するファイルだけ。
 - 動かし方: サーバー apps（.claude/launch.json）で http://localhost:8765/render-ideas/ 。版は URL の `#memory`・`#memory-sky`・`#memory-tank`・`#future`・`#future-billiards`・`#future-lorenz`・`#future-flow`・`#influence`・`#influence-foodweb`・`#influence-grid`・`#stack-time`・`#stack-focus`・`#stack-glass`・`#stack-jelly`。デバッグ用の窓口 `window.__reid`（`simRun(秒)`・`RI`）、`__reidMemory`・`__reidFuture`（`check(秒)`＝計算の確かめ）・`__reidInfluence`（`Truss`・`toggleMember(e)`）。エラーは `window.__reidErr`。
