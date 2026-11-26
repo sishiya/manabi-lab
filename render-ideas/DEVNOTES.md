@@ -1,10 +1,10 @@
 # 見え方の発明室 開発メモ
 
 ## 別セッションで続けるとき（まずここ）
-- いまの状態: v003-variants（段階B。①〜③それぞれに題材のちがう版。全部で10）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。
+- いまの状態: v004-stacking（段階C。①〜③の10の版＋④積み重ね（スプライトスタッキング）の4つ）。保管庫（archive.html）に掲載。入口には載せない（RULES 8.1）。
 - 次にやること: ユーザーに10の版を見てもらい、どれを伸ばすか決める（ユーザーは②に手ごたえ。2026-11-26）。④ズームで時間・⑤ホログラム画面は先行例が近いので作っていない。作るかどうかはユーザーに相談する。
 - 読む順: PLAN.md（先行例の表）→ このファイルの「ファイル構成」→ 関係するファイルだけ。
-- 動かし方: サーバー apps（.claude/launch.json）で http://localhost:8765/render-ideas/ 。版は URL の `#memory`・`#memory-sky`・`#memory-tank`・`#future`・`#future-billiards`・`#future-lorenz`・`#future-flow`・`#influence`・`#influence-foodweb`・`#influence-grid`。デバッグ用の窓口 `window.__reid`（`simRun(秒)`・`RI`）、`__reidMemory`・`__reidFuture`（`check(秒)`＝計算の確かめ）・`__reidInfluence`（`Truss`・`toggleMember(e)`）。エラーは `window.__reidErr`。
+- 動かし方: サーバー apps（.claude/launch.json）で http://localhost:8765/render-ideas/ 。版は URL の `#memory`・`#memory-sky`・`#memory-tank`・`#future`・`#future-billiards`・`#future-lorenz`・`#future-flow`・`#influence`・`#influence-foodweb`・`#influence-grid`・`#stack-time`・`#stack-focus`・`#stack-glass`・`#stack-jelly`。デバッグ用の窓口 `window.__reid`（`simRun(秒)`・`RI`）、`__reidMemory`・`__reidFuture`（`check(秒)`＝計算の確かめ）・`__reidInfluence`（`Truss`・`toggleMember(e)`）。エラーは `window.__reidErr`。
 - js を直したら `index.html` の `?v=` を上げる（キャッシュで古い js が読まれたことがある）。
 - 区切りごとの手順: 「確認のしかた」と smoke.ps1 → 「状態」に1行 → launcher.html の表 → 公開前チェック → commit（節目の版だけ versions/ へコピーしてカードに。RULES 3章）。
 - ユーザーの好み: 「スタッキングに固執しない。新しいスタンダード、または『その発想はなかった』（実用はさておき）」。先行例があるものは作らない。
@@ -28,8 +28,13 @@
 | js/future-flow.js | ②-D 流れに浮かぶ葉（ダブルジャイヤ、FTLE の地図） | `vel`・`computeFog`・`ftleWork` |
 | js/influence-foodweb.js | ③-B 食物網（一般化ロトカ・ヴォルテラ、感度、連鎖して消える） | `analyze`・`step`・`EATS` |
 | js/influence-grid.js | ③-C 夜の街の電力網（直流潮流、島ごと、停電・容量こえ） | `solve`・`toggle` |
+| js/stack.js | ④の共通: スプライトスタッキングの向き・角度・輪切りの置き方・回す操作 | `Stack.view/at/slice/pointer/spin` |
+| js/stack-time.js | ④-A 時間を積む（太陽系の時刻ごとの絵を積む→らせん。ケプラー） | `pos`（ケプラーの方程式） |
+| js/stack-focus.js | ④-B ピント送り（細胞 28 枚、ぼけの段階、積む／ふつうの顕微鏡／共焦点） | `build`・`OBJ` |
+| js/stack-glass.js | ④-C 透ける光（クラゲ、multiply で1枚ごとに吸う＝ランベルト・ベール） | `radii`・`JELLY/GONAD` |
+| js/stack-jelly.js | ④-D 輪切りに物理（プリン、輪切りごとのばねの輪、上下はずれのばね） | `sub`・`K_IN/K_V` |
 
-読み込み順: power.js（head）→ main.js → memory-scene.js → memory.js → memory-sky.js → memory-tank.js → future.js → fog.js → future-billiards.js → future-lorenz.js → future-flow.js → truss.js → influence.js → influence-foodweb.js → influence-grid.js → `RI.start()`。版は `RI.add({ id, group, label })` で足す（group＝タブ、label＝題材の名前。最初に足したものがタブの最初の版）。
+読み込み順: power.js（head）→ main.js → memory-scene.js → memory.js → memory-sky.js → memory-tank.js → future.js → fog.js → future-billiards.js → future-lorenz.js → future-flow.js → truss.js → influence.js → influence-foodweb.js → influence-grid.js → stack.js → stack-time.js → stack-focus.js → stack-glass.js → stack-jelly.js → `RI.start()`。④のタブは group 'stack-time'。版は `RI.add({ id, group, label })` で足す（group＝タブ、label＝題材の名前。最初に足したものがタブの最初の版）。
 
 ## しくみ
 ### ① 見ていないところは言葉にもどる
@@ -62,6 +67,13 @@
 - ③-B 食物網: 値は node で決めた（10種すべてプラス、5% ずらして 3000 で元にもどる＝安定）。抜いたときの連鎖（node で確かめた）: 草→ウサギ・バッタ・カエル・キツネ、木の実→小鳥・タカ、バッタ→カエル、ネズミ→キツネ、タカ→カエル。ほかはなし。
 - ③-C 電力網: 68 本、発電所3つ。光の割合の合計 1。切ると停電が出る電線・容量をこえる電線がある（例: 幹線を切ると 14〜16 本こえる）。停電すると送る量が減るので C が下がることがある（メモに書く）。
 
+### 段階C（④ 積み重ね。2026-11-26 ユーザー「スタッキング系じゃないものをオーダーしたけど、せっかくなのでスタッキング系もいくつか試作して」）
+- 最初に出した4案をそのまま。先行例の調べはしていない（スプライトスタッキング自体は既にある手法。新しさの主張はしない）。
+- ④-A: 長半径・離心率は丸めた値、彗星は架空（a=1.3, e=0.65）。150 枚、上がいま。
+- ④-B: 28 枚・220px、ぼけは縮小→拡大の5段階。合成は lighter（蛍光は足し算）。共焦点はピントの1枚だけ。
+- ④-C: 1枚ごとに multiply で通す割合 T を掛ける（かさ 0.955/0.975/0.99、生殖腺 0.9/0.74/0.86）。値は見た目で決めた。
+- ④-D: 22 枚 × 22 点。K_IN 900・K_BEND 150・K_V 6000・ねばり 1.6、刻み 1/600。K_V が小さい（160）と、いちばんゆっくりした揺れが約7秒周期になり、皿の速いゆれに上がついてこなかった → K_V を上げ、皿のゆれを 6 rad/s に。値は見た目で決めた。
+
 ## ハマったところ
 - キャンバスの1本のパスの中では、線が重なっても濃くならない（和集合で1回だけぬられる）。霧は本を何組かに分けて描く（fog.js）。
 - 最初のコマは dt が 0 なので step が「変化なし」を返し、描くのが止まった → 起こした直後の3コマは必ず回す（main.js の `kick`）。
@@ -89,6 +101,7 @@
 7. 裏にしてもどすと続きから動く（描画は requestAnimationFrame だけ。Worker・setInterval・音はなし）。
 
 ## 状態
+- 2026-11-26 v004-stacking: タブ④「積み重ね」に、時間を積む（惑星）・ピント送り（細胞）・透ける光（クラゲ）・輪切りに物理（プリン）を足した。
 - 2026-11-26 v003-variants: ユーザー「②が将来使えそう。題材がいまいちなだけかも。それぞれ見栄えの違う別バージョンを2〜3個ずつ」→ ①に星空・水槽、②にビリヤード・ローレンツ・流れに浮かぶ葉、③に食物網・夜の街の電力網を足した（タブの下に題材の切りかえ）。
 - 2026-11-26 v001-start: new-app.ps1 で雛形を作った（保管庫にカード）。
 - 2026-11-26 v002-three-ideas: 先行例を調べ（①②③は同じ描き方が見つからず、④⑤は近い例あり）、3つの試作を作った。批判役の指摘を入れた。

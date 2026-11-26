@@ -11,7 +11,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
 #top{display:flex;flex-direction:column;gap:8px;padding:10px 12px 8px}
 #top h1{font-family:var(--f-display);font-weight:400;font-size:19px;margin:0}
 #tabs{display:flex;gap:6px}
-#tabs button{flex:1;min-height:38px;padding:4px 6px;border:1px solid var(--line);border-radius:19px;background:transparent;color:var(--muted);font:500 14px var(--f-body);cursor:pointer;white-space:nowrap}
+#tabs button{flex:1;min-height:38px;padding:4px 4px;border:1px solid var(--line);border-radius:19px;background:transparent;color:var(--muted);font:500 13px var(--f-body);cursor:pointer;white-space:nowrap}
 #tabs button[aria-selected=true]{background:var(--acc);border-color:var(--acc);color:#14202c;font-weight:700}
 /* 題材の切りかえ（タブより小さく、横にスクロール） */
 #variants{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;min-height:34px}
